@@ -82,9 +82,15 @@ static void chunk_dump(struct chunk *chunk, FILE *stream)
     for (i=0; i < n_array_size(chunk->pkgs); i++) {
         struct pkg *pkg = n_array_nth(chunk->pkgs, i);
         fprintf(stream, "%s\n", pkg_filename_s(pkg));
+        //fprintf(stream, "%s\n", pkg->name);
     }
 }
 
+ 
+int pridef_cmp_pri(struct pridef *pridef1, struct pridef *pridef2)
+{
+    return pridef1->pri - pridef2->pri;
+}
 
 static 
 int read_pridef(char *buf, int buflen, struct pridef **pridef,
@@ -151,7 +157,7 @@ tn_array *read_split_conf(const char *fpath)
         return 0;
 
     nline = 0;
-    defs = n_array_new(64, free, NULL);
+    defs = n_array_new(64, free, (tn_fn_cmp)pridef_cmp_pri);
     
     while (fgets(buf, sizeof(buf), vf->vf_stream)) {
         struct pridef *pd = NULL;
@@ -169,8 +175,11 @@ tn_array *read_split_conf(const char *fpath)
     }
     
     vfile_close(vf);
+
+    if (rc) 
+        n_array_sort(defs);
     
-    if (rc == 0) {
+    else {
         n_array_free(defs);
         defs = NULL;
     }
@@ -183,14 +192,21 @@ void set_pri(int deep, struct pkg *pkg, int pri)
 {
     int i;
 
-    
-#if 0    
-    if (pkg->pri != 0 &&
-        !(pkg->pri > 0 && pri < 0) &&
-        !(pkg->pri > 0 && pri > pkg->pri))
-        return;
-#endif        
+    if (pkg->pri != 0) {
+        if (pri > 0 && pkg->pri < 0) { /* priorities < 0 are stronger */
+            msg_i(3, deep, "skip pri %d %s [%d]\n", pri, pkg_snprintf_s(pkg),
+                  pkg->pri);
+            return;
+        }
 
+        if (pri < 0 && pkg->pri < pri) { /* higher priorities are sticky */
+            msg_i(3, deep, "skip pri %d %s [%d]\n", pri, pkg_snprintf_s(pkg),
+                  pkg->pri);
+            return;
+        }
+    }
+    
+    
     pkg->pri = pri;
     
     msg_i(3, deep, "pri %d %s\n", pri, pkg_snprintf_s(pkg));
