@@ -241,7 +241,7 @@ static void show_reqs(struct pkg *pkg)
         int n = 0;
 
         ncol = IDENT;
-        printf_c(PRCOLOR_CYAN, "%-16s", "Prereqs:");
+        printf_c(PRCOLOR_CYAN, "%-16s", "PreReqs:");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
                 
@@ -660,7 +660,7 @@ static void show_description(struct pkg *pkg, unsigned flags)
 {
     struct pkguinf  *pkgu;
     char            timbuf[30];
-    char            *unit = "kB";
+    char            unit = 'K';
     const char      *group;
     double          pkgsize;
 
@@ -726,25 +726,24 @@ static void show_description(struct pkg *pkg, unsigned flags)
         printf("\n");
     }
 
-    unit = "kB";
     pkgsize = pkg->size/1024;
-    if (pkgsize > 1000) {
+    if (pkgsize >= 1024) {
         pkgsize /= 1024;
-        unit = "MB";
+        unit = 'M';
     }
 
     printf_c(PRCOLOR_CYAN, "%-16s", "Size:");
-    printf("%.1f %s (%d B)\n", pkgsize, unit, pkg->size);
+    printf("%.1f %cB (%d B)\n", pkgsize, unit, pkg->size);
 
-    unit = "kB";
+    unit = 'K';
     if (pkg->fsize > 0) {
         pkgsize = pkg->fsize/1024;
-        if (pkgsize > 1000) {
+        if (pkgsize >= 1024) {
             pkgsize /= 1024;
-            unit = "MB";
+            unit = 'M';
         }
         printf_c(PRCOLOR_CYAN, "%-16s", "Package size:");
-        printf("%.1f %s (%d B)\n", pkgsize, unit, pkg->fsize);
+        printf("%.1f %cB (%d B)\n", pkgsize, unit, pkg->fsize);
     }
     
     if (pkg->pkgdir && pkg->pkgdir->path) {

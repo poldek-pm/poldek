@@ -391,15 +391,15 @@ int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg, const tn_array *evrs)
         if (flags & OPT_LS_LONG) {
             char timbuf[30];
             char sizbuf[30];
-            char unit = 'k';
+            char unit = 'K';
             double pkgsize = pkg->size/1024;
 
-            if (pkgsize > 1000) {
+            if (pkgsize >= 1024) {
                 pkgsize /= 1024;
-                unit = 'm';
+                unit = 'M';
             }
 
-            snprintf(sizbuf, sizeof(sizbuf), "%.1f%c", pkgsize, unit);
+            snprintf(sizbuf, sizeof(sizbuf), "%.1f %cB", pkgsize, unit);
             
             if (pkg->btime)
                 strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
@@ -437,21 +437,18 @@ int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg, const tn_array *evrs)
             fprintf(out_stream, "\n");
             
         } else if (flags & OPT_LS_LONG) {
-            char *unit;
-            int val;
+            char unit = 'K';
+            double val=size;
         
-            if (size > 1000) {
-                unit = "MB";
-                val = size/1000;
-            } else {
-                unit = "kB";
-                val = size;
+            if (val >= 1024) {
+                val /= 1024;
+                unit = 'M';
             }
             
             sh_printf_c(out_stream, PRCOLOR_YELLOW,
                         ngettext_n_packages_fmt(npkgs), npkgs);
             sh_printf_c(out_stream, PRCOLOR_YELLOW,
-                        ", %d %s\n", val, unit);
+                        ", %.1f %cB\n", val, unit);
         }
     }
 
