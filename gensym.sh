@@ -31,6 +31,10 @@ done
 # libpoldek hack - add constans
 if [ "$libNAME" = "libpoldek" ]; then
     nm --defined-only $LIB | pcregrep '^\w+\s+[RB]' | awk '{print $3}' | grep -v poldek_conf_| grep poldek_ | sort -u >> $out
+
+# provide rpmlog to cover rpmlib's one -- haaack 
+    nm --defined-only $LIB | pcregrep '\brpmlog\b' | awk '{print $3}' >> $out
+
 fi
 
 

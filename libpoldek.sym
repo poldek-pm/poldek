@@ -305,3 +305,4 @@ poldek_BANNER
 poldek_BUG_MAILADDR
 poldek_VERBOSE
 poldek_VERSION_BANNER
+rpmlog
