@@ -58,7 +58,8 @@ struct pkgdir_module pkgdir_module_dir = {
     NULL,
     NULL,
     NULL,
-    NULL, 
+    NULL,
+    NULL,
     NULL
 };
 

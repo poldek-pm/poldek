@@ -319,7 +319,7 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
     vfile_close(vf);
     //nerr++;
     /* outdated and no patches || package duplicates */
-    if (nerr || npatch == 0 || pkgdir_uniq(pkgdir) > 0) {
+    if (nerr || npatch == 0 || pkgdir__uniq(pkgdir) > 0) {
         nerr++;
         
     } else {
@@ -338,7 +338,7 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
         snprintf(path, sizeof(path), "%s/%s", dn, pndir_packages_incdir);
         if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath)) {
             verbose--; /* verbosity need to be reorganized... */
-            pkgdir_rmf(tmpath, NULL);
+            pkgdir__rmf(tmpath, NULL);
             verbose++;
         }
         msg(1, "_\n");

@@ -52,8 +52,8 @@ struct pkgdir {
     time_t              ts;               /* timestamp */
 
     tn_array            *removed_pkgs;    /* for diffs, removed packages */
-    time_t              ts_orig;          /* for pathes, ts of .orig idx */
-
+    time_t              orig_ts;          /* for pathes, ts of .orig idx */
+    char                *orig_idxpath;
 
     char                *lc_lang;         /* configured languages ($LC_LANG format) */
     tn_hash             *avlangs_h; 
@@ -122,15 +122,15 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 #define PKGDIR_CREAT_NOPATCH    (1 << 5) /* don't create diff */
 #define PKGDIR_CREAT_NOCOMPR    (1 << 6) /* create uncompressed index (NFY) */
 
-int pkgdir_save(struct pkgdir *pkgdir, const char *type,
-                const char *path, unsigned flags);
+int pkgdir_save(struct pkgdir *pkgdir, unsigned flags);
 
-#define pkgdir_create_idx(p, t, path, f) pkgdir_save(p, t, path, f)
+int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
+                   const char *path, unsigned flags);
 
 struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2);
 struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *pkgdir2);
 
-int pkgdir_update(struct pkgdir *pkgdir, int *npatches);
+int pkgdir_update(struct pkgdir *pkgdir);
 int pkgdir_update_a(const struct source *src);
 
 
@@ -147,11 +147,11 @@ const char *pkgdir_type_default_compr(const char *type);
 
 int pkgdir_isremote(struct pkgdir *pkgdir);
 
+#if 0   /* not implemented, use source_clean() instead */
 #define PKGDIR_CLEAN_IDX    (1 << 0)
 #define PKGDIR_CLEAN_CACHE  (1 << 1)
-
 int pkgdir_clean_cache(const char *type, const char *path, unsigned flags);
-
+#endif
 
 struct pkgdir_type_uinf {
     char name[32];

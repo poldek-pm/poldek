@@ -83,9 +83,19 @@ struct pkgdir_module pkgdir_module_pndir = {
     pndir_m_update_a,
     NULL, 
     do_free,
+    pndir_localidxpath,
     posthook_diff, 
 };
 
+
+const char *pndir_localidxpath(struct pkgdir *pkgdir)
+{
+    struct pndir *idx = pkgdir->mod_data;
+    
+    if (idx && idx->_vf) 
+        return vfile_localpath(idx->_vf);
+    return pkgdir->idxpath;
+}
 
 static
 int posthook_diff(struct pkgdir *pd1, struct pkgdir* pd2, struct pkgdir *diff)
@@ -432,7 +442,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     
     pkgdir->flags |= pkgdir_flags;
     pkgdir->ts = ts;
-    pkgdir->ts_orig = ts_orig;
+    pkgdir->orig_ts = ts_orig;
     if (ts_orig)
         pkgdir->flags |= PKGDIR_DIFF;
     
@@ -444,11 +454,11 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             n_hash_insert(pkgdir->avlangs_h,
                           (const char*)n_array_nth(avlangs, i), NULL);
             
-        pkgdir_setup_langs(pkgdir);
+        pkgdir__setup_langs(pkgdir);
         if (pkgdir->langs) {
             for (i=0; i < n_array_size(pkgdir->langs); i++) {
                 const char *lang = n_array_nth(pkgdir->langs, i);
-                if (!open_dscr(&idx, pkgdir->ts_orig, lang)) {
+                if (!open_dscr(&idx, pkgdir->orig_ts, lang)) {
                     nerr++;
                     break;
                 }

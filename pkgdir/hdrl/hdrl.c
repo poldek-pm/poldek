@@ -60,6 +60,7 @@ struct pkgdir_module pkgdir_module_hdrl = {
     do_update_a,
     NULL,
     NULL,
+    NULL,
     NULL
 };
 

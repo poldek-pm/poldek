@@ -49,7 +49,8 @@ static int do_unlink(const char *path)
     return vf_localunlink(path);
 }
 
-int pkgdir_rmf(const char *dirpath, const char *mask) 
+
+int pkgdir__rmf(const char *dirpath, const char *mask) 
 {
     struct dirent  *ent;
     DIR            *dir;
@@ -104,7 +105,7 @@ int pkgdir_rmf(const char *dirpath, const char *mask)
                 do_unlink(path);
                 
             else if (S_ISDIR(st.st_mode))
-                pkgdir_rmf(path, mask);
+                pkgdir__rmf(path, mask);
         }
     }
     
@@ -113,17 +114,17 @@ int pkgdir_rmf(const char *dirpath, const char *mask)
 }
 
 
-int pkgdir_cache_clean(const char *path, const char *mask)
+int pkgdir__cache_clean(const char *path, const char *mask)
 {
     char tmpath[PATH_MAX], path_i[PATH_MAX];
 
     if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath))
-        pkgdir_rmf(tmpath, mask);
+        pkgdir__rmf(tmpath, mask);
 
     /* DUPA */
     n_snprintf(path_i, sizeof(path_i), "%s/%s", path, "packages.i");
     if (vf_localdirpath(tmpath, sizeof(tmpath), path_i) < (int)sizeof(tmpath))
-        pkgdir_rmf(tmpath, mask);
+        pkgdir__rmf(tmpath, mask);
     
     return 1;
 }

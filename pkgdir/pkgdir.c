@@ -67,8 +67,7 @@ tn_hash *pkgdir_strip_langs(struct pkgdir *pkgdir)
     return avlh;
 }
 
-
-void pkgdir_setup_langs(struct pkgdir *pkgdir)
+void pkgdir__setup_langs(struct pkgdir *pkgdir)
 {
     tn_array *avlangs;
 
@@ -132,8 +131,8 @@ char *pkgdir_setup_pkgprefix(const char *path)
 }
 
 static
-int pkgdir_make_idxpath(char *dpath, int size, const char *type,
-                        const char *path, const char *fn, const char *ext)
+int make_idxpath(char *dpath, int size, const char *type,
+                 const char *path, const char *fn, const char *ext)
 {
     int n;
     char *endp;
@@ -164,14 +163,14 @@ int pkgdir_make_idxpath(char *dpath, int size, const char *type,
     return n;
 }
 
-char *pkgdir_idxpath(char *dpath, int dsize,
-                     const char *path, const char *type, const char *compress)
+char *pkgdir__make_idxpath(char *dpath, int dsize, const char *path,
+                          const char *type, const char *compress)
 {
     const char *fn;
     int n;
     
     if ((fn = pkgdir_type_default_idxfn(type)) != NULL) {
-        n = pkgdir_make_idxpath(dpath, dsize, type, path, fn, compress);
+        n = make_idxpath(dpath, dsize, type, path, fn, compress);
         if (n > 0)
             return dpath;
     }
@@ -215,7 +214,8 @@ struct pkgdir *pkgdir_malloc(void)
     pkgdir->ts = 0;
 
     pkgdir->removed_pkgs = NULL;
-    pkgdir->ts_orig = 0;
+    pkgdir->orig_ts = 0;
+    pkgdir->orig_idxpath = NULL;
 
     //pkgdir->avlangs = NULL;
     pkgdir->langs = NULL;
@@ -254,26 +254,23 @@ int pkgdir_update_a(const struct source *src)
 		logn(LOGERR, _("%s: this type of source is not updateable"), src->type);
 		return 0;
 	}
-    pkgdir_idxpath(idxpath, sizeof(idxpath), src->path, src->type,
+    pkgdir__make_idxpath(idxpath, sizeof(idxpath), src->path, src->type,
                    src->compress);
     return mod->update_a(src, idxpath);
 }
 
 
-int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
+int pkgdir_update(struct pkgdir *pkgdir)
 {
 	int rc = 0;
     enum pkgdir_uprc uprc = PKGDIR_UPRC_NIL;
-    
-    if (npatches)
-        *npatches = 0;
     
 	if (pkgdir->mod->update == NULL)
 		return 0;
 
 	rc = pkgdir->mod->update(pkgdir, &uprc);
 	if (rc && uprc == PKGDIR_UPRC_UPDATED)
-		rc = pkgdir_create_idx(pkgdir, pkgdir->type, NULL, 0);
+		rc = pkgdir_save(pkgdir, PKGDIR_CREAT_NOPATCH);
     
     if (!rc && uprc == PKGDIR_UPRC_ERR_DESYNCHRONIZED) {
         if (pkgdir->src && (pkgdir->src->flags & PKGSOURCE_AUTOUPA)) {
@@ -284,7 +281,6 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
             logn(LOGWARN, _("%s: desynchronized index, try --upa"),
                  pkgdir_idstr(pkgdir));
         }
-        
     }
 	
 	return rc;
@@ -378,7 +374,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 
     DBGF("pkgdir_open_ext[%s] %s, %s%s\n", type, path,
          pkg_prefix ? "prefix = ":"", pkg_prefix ? pkg_prefix : "", pkgdir);
-    pkgdir_idxpath(idxpath, sizeof(idxpath), path, type, compress);
+    pkgdir__make_idxpath(idxpath, sizeof(idxpath), path, type, compress);
     
     if (pkg_prefix) 
         pkgdir->path = n_strdup(pkg_prefix);
@@ -433,21 +429,11 @@ void pkgdir_free(struct pkgdir *pkgdir)
 {
 
     DBGF("%p %s\n", pkgdir,  pkgdir_idstr(pkgdir));
-    if (pkgdir->name) {
-        free(pkgdir->name);
-        pkgdir->name = NULL;
-    }
+    n_cfree(&pkgdir->name);
+    n_cfree(&pkgdir->path);
+    n_cfree(&pkgdir->idxpath);
+    n_cfree(&pkgdir->orig_idxpath);
     
-    if (pkgdir->path) {
-        free(pkgdir->path);
-        pkgdir->path = NULL;
-    }
-
-    if (pkgdir->idxpath) {
-        free(pkgdir->idxpath);
-        pkgdir->idxpath = NULL;
-    }
-
     if (pkgdir->depdirs) {
         n_array_free(pkgdir->depdirs);
         pkgdir->depdirs = NULL;
@@ -557,7 +543,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         n_array_sort(pkgdir->pkgs);
         
         if ((ldflags & PKGDIR_LD_NOUNIQ) == 0)
-            pkgdir_uniq(pkgdir);
+            pkgdir__uniq(pkgdir);
 
         for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
@@ -565,9 +551,9 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         }
         
         if (pkgdir->depdirs == NULL)
-            pkgdir_setup_depdirs(pkgdir);
+            pkgdir__setup_depdirs(pkgdir);
 
-        pkgdir_setup_langs(pkgdir);
+        pkgdir__setup_langs(pkgdir);
     }
     
     msgn(3, ngettext("%d package loaded",
@@ -580,8 +566,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     return rc;
 }
 
-
-int pkgdir_uniq(struct pkgdir *pkgdir) 
+int pkgdir__uniq(struct pkgdir *pkgdir) 
 {
     int n = 0;
 
@@ -663,7 +648,7 @@ static void is_depdir_req(const struct capreq *req, tn_array *depdirs)
 }
 
 
-void pkgdir_setup_depdirs(struct pkgdir *pkgdir) 
+void pkgdir__setup_depdirs(struct pkgdir *pkgdir) 
 {
     int i;
 
@@ -684,6 +669,14 @@ void pkgdir_setup_depdirs(struct pkgdir *pkgdir)
                             pkgdir->depdirs);
     }
 }
+
+const char *pkgdir_localidxpath(struct pkgdir *pkgdir)
+{
+    if (pkgdir->mod->localidxpath)
+        return pkgdir->mod->localidxpath(pkgdir);
+    return pkgdir->idxpath;
+}
+
 
 static 
 int do_create(struct pkgdir *pkgdir, const char *type,
@@ -712,11 +705,13 @@ int do_create(struct pkgdir *pkgdir, const char *type,
         pkgdir->mod_data = NULL;
     }
 
-    
     if (pkgdir->mod->create == NULL) {
         logn(LOGERR, _("%s: this type of source could not be created"), type);
         return 0;
     }
+
+    if ((pkgdir->flags & PKGDIR_PATCHED) == 0 || pkgdir->ts == 0)
+        pkgdir->ts = time(NULL);
     
     rc = pkgdir->mod->create(pkgdir, path, flags);
     
@@ -728,106 +723,122 @@ int do_create(struct pkgdir *pkgdir, const char *type,
     return rc;
 }
 
+int pkgdir_save(struct pkgdir *pkgdir, unsigned flags) 
+{
+    return pkgdir_save_as(pkgdir, pkgdir->type,
+                          pkgdir_localidxpath(pkgdir), flags);
+}
 
-int pkgdir_save(struct pkgdir *pkgdir, const char *type,
-                const char *path, unsigned flags)
+
+int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
+                   const char *path, unsigned flags)
 {
     struct pkgdir               *orig, *diff;
 	const struct pkgdir_module  *mod;
-    int                         nerr = 0;
-    tn_hash                     *avlh, *avlh_tmp;
+    const char                  *idxpath = NULL;
+    tn_hash                     *avlangs_h, *avlangs_h_tmp;
+    int                         nerr = 0, loadorig = 0;
 
-    if (type == NULL)
+
+    n_assert(pkgdir->idxpath);
+    mod = pkgdir->mod;
+    if (type) {
+        if (!pkgdir_is_type(pkgdir, type))
+            mod = find_module(type);
+        
+    } else {
         type = pkgdir->type;
-    
-    if (path == NULL)
-        path = pkgdir->idxpath;
-	
-    if (type != NULL && strcmp(type, pkgdir->type) != 0) 
-		mod = find_module(type);
-	else
- 		mod = pkgdir->mod;
-    
-	if (mod == NULL)
-		return 0;
+        if (path == NULL)
+            idxpath = pkgdir_localidxpath(pkgdir);
+    }
 
-    avlh = avlh_tmp = NULL;
+	if (mod == NULL) {
+        logn(LOGERR, "%s: no such pkgdir type", type);
+		return 0;
+    }
+    
+    avlangs_h = avlangs_h_tmp = NULL;
     if (flags & PKGDIR_CREAT_MINi18n) {
         n_assert(flags & PKGDIR_CREAT_NOPATCH);
-        if ((avlh = pkgdir_strip_langs(pkgdir))) {
-            avlh_tmp = pkgdir->avlangs_h;
-            pkgdir->avlangs_h = avlh;
+        if ((avlangs_h = pkgdir_strip_langs(pkgdir))) {
+            avlangs_h_tmp = pkgdir->avlangs_h;
+            pkgdir->avlangs_h = avlangs_h;
         }
     }
     
     if ((flags & PKGDIR_CREAT_NOUNIQ) == 0 &&
         (pkgdir->flags & (PKGDIR_DIFF | PKGDIR_UNIQED)) == 0) {
         n_assert(0);
-        pkgdir_uniq(pkgdir);
-    }
-	
-    if ((flags & PKGDIR_CREAT_NOPATCH) ||
-        (mod->cap_flags & PKGDIR_CAP_UPDATEABLE_INC) == 0 ||
-        access(path, R_OK) != 0) {
-        
-        if (!do_create(pkgdir, type, path, flags))
-            nerr++;
-        goto l_end;
+        pkgdir__uniq(pkgdir);
     }
 
-    if (pkgdir->prev_pkgdir) {
-        orig = pkgdir->prev_pkgdir;
+    orig = NULL;
+    loadorig = 1;
 
+    if (pkgdir_isremote(pkgdir))
+        loadorig = 0;
+    
+    else if (flags & PKGDIR_CREAT_NOPATCH)
+        loadorig = 0;
+    
+    else if ((mod->cap_flags & PKGDIR_CAP_UPDATEABLE_INC) == 0)
+        loadorig = 0;
+    
+    else if (idxpath && access(idxpath, R_OK) != 0)
+        loadorig = 0;
+
+#if 0        
         /* the same and not changed */
-    } else if ((pkgdir->flags & PKGDIR_CHANGED) == 0 && 
-               strcmp(pkgdir->path, path) == 0) {
+    if ((pkgdir->flags & PKGDIR_CHANGED) == 0 && 
+           (path && strcmp(pkgdir->path, path) == 0))
         goto l_end;
-
-    } else {
+#endif
+    
+    if (loadorig) {
+        const char *orig_path;
         char orig_name[64];
-        n_snprintf(orig_name, sizeof(orig_name), "previous %s",
-                   vf_url_slim_s(path, 0));
-        if ((orig = pkgdir_open(path, NULL, type, orig_name))) {
-            if (pkgdir_load(orig, NULL, 0) <= 0) {
-                pkgdir_free(orig);
-                orig = NULL;
-            }
+
+        orig_path = path ? path : idxpath ? idxpath : pkgdir->path;
+        n_assert(orig_path);
+        n_snprintf(orig_name, sizeof(orig_name), "previous %s", 
+                   vf_url_slim_s(orig_path, 0));
+
+        orig = pkgdir_open_ext(orig_path, pkgdir->path, type,
+                               orig_name, NULL, 0, pkgdir->lc_lang);
+        if (orig && pkgdir_load(orig, NULL, 0) <= 0) {
+            pkgdir_free(orig);
+            orig = NULL;
         }
     }
 
-
-    if (nerr == 0) {
-        unlink(path);
-        if (!do_create(pkgdir, type, path, flags))
-            nerr++;
-    }
+    n_assert(nerr == 0);
+    if (!do_create(pkgdir, type, path, flags))
+        nerr++;
     
     if (nerr == 0 && orig) {
         if (orig->ts > pkgdir->ts) {
             logn(LOGWARN, _("clock skew detected; create index with fake "
                             "timestamp %lu %lu"), orig->ts, pkgdir->ts);
         }
-
+        
         if (orig->ts >= pkgdir->ts) 
             pkgdir->ts = orig->ts + 1;
         
         if ((diff = pkgdir_diff(orig, pkgdir))) {
             diff->ts = pkgdir->ts;
-            if (!do_create(diff, type, path, flags))
+            if (!do_create(diff, type, NULL, flags))
                 nerr++;
-        }
-
-        if (orig != pkgdir->prev_pkgdir) {
-            pkgdir_free(orig);
-            orig = NULL;
         }
     }
     
-    
- l_end:
-    if (avlh_tmp) {
-        pkgdir->avlangs_h = avlh_tmp;
-        n_hash_free(avlh);
+    if (orig && orig != pkgdir->prev_pkgdir) {
+        pkgdir_free(orig);
+        orig = NULL;
+    } 
+ 
+    if (avlangs_h_tmp) {
+        pkgdir->avlangs_h = avlangs_h_tmp;
+        n_hash_free(avlangs_h);
     }
     
     return nerr == 0;

@@ -74,7 +74,8 @@ struct pkgdir_module pkgdir_module_yum = {
     do_update_a,
     NULL, 
     do_free,
-    NULL, 
+    NULL,
+    NULL
 };
 
 

@@ -43,12 +43,12 @@
 #include "pdir.h"
 
 static
-int difftoc_vacuum(const char *idxpath, const char *diffpath,
-                   const char *suffix);
+int pdir_difftoc_vacuum(const char *idxpath, const char *diffpath,
+                        const char *suffix);
 
 static
-int difftoc_update(const char *diffpath, const char *suffix,
-                   const char *line, int line_len);
+int pdir_difftoc_update(const char *diffpath, const char *suffix,
+                        const char *line, int line_len);
 
 
 static
@@ -99,7 +99,7 @@ void put_fheader(tn_stream *st, const char *name, struct pkgdir *pkgdir)
     
     if (pkgdir->flags & PKGDIR_DIFF) {
         strftime(datestr, sizeof(datestr),
-             "%a, %d %b %Y %H:%M:%S GMT", gmtime(&pkgdir->ts_orig));
+                 "%a, %d %b %Y %H:%M:%S GMT", gmtime(&pkgdir->orig_ts));
         n_stream_printf(st, ", %d removed (diff from %s)",
                         pkgdir->removed_pkgs ?
                         n_array_size(pkgdir->removed_pkgs) : 0,
@@ -176,7 +176,7 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     
     if ((pkgdir->flags & PKGDIR_DIFF) && (pkgdir->flags & PKGDIR_UNIQED) == 0) {
         n_assert((flags & PKGDIR_CREAT_NOUNIQ) == 0);
-        pkgdir_uniq(pkgdir);
+        pkgdir__uniq(pkgdir);
     }
 
     idx = pkgdir->mod_data;
@@ -184,12 +184,13 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     if (pkgdir->ts == 0) 
         pkgdir->ts = time(0);
 
-    if (pathname == NULL && idx && idx->vf) 
-        pathname = vfile_localpath(idx->vf);
-
-    if (pathname == NULL && pkgdir->idxpath)
-        pathname = pkgdir->idxpath;
-
+    if (pathname == NULL) {
+        if (pkgdir->flags & PKGDIR_DIFF)
+            pathname = pkgdir->orig_idxpath;
+        else
+            pathname = pdir_localidxpath(pkgdir);
+    }
+    
     n_assert(pathname);
     orig_pathname = pathname;
     
@@ -202,7 +203,7 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
         char *dn, *bn;
 
         strftime(tstr, sizeof(tstr), "%Y.%m.%d-%H.%M.%S",
-                 gmtime(&pkgdir->ts_orig));
+                 gmtime(&pkgdir->orig_ts));
         
         snprintf(suffix, sizeof(suffix), ".diff.%s", tstr);
         snprintf(difftoc_suffix, sizeof(difftoc_suffix), "%s",
@@ -232,7 +233,6 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     
 
     do_unlink(path);
-
     if ((vf = vfile_open(path, VFT_TRURLIO, VFM_RW)) == NULL) {
 		nerr++;
 		goto l_end;
@@ -246,7 +246,7 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
 
     if (pkgdir->flags & PKGDIR_DIFF) {
         n_stream_printf(vf->vf_tnstream, "%%%s%lu\n", pdir_tag_ts_orig,
-                        pkgdir->ts_orig);
+                        pkgdir->orig_ts);
 
         if (pkgdir->removed_pkgs) {
             n_stream_printf(vf->vf_tnstream, "%%%s", pdir_tag_removed);
@@ -283,10 +283,7 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
         //pkgroup_idx_store_st(pkgdir->pkgroups, vf->vf_tnstream);
     }
         
-    
-
     n_stream_printf(vf->vf_tnstream, "%%%s\n", pdir_tag_endhdr);
-
 
     if (pkgdir->pkgs == NULL)
         goto l_close;
@@ -318,9 +315,9 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
         
         line_len = n_snprintf(line, sizeof(line), "%s %lu %s %lu\n", 
                               n_basenam(path), pkgdir->ts,
-                              idx->mdd_orig, pkgdir->ts_orig);
+                              idx->mdd_orig, pkgdir->orig_ts);
         
-        if (!difftoc_update(pathname, difftoc_suffix, line, line_len)) {
+        if (!pdir_difftoc_update(pathname, difftoc_suffix, line, line_len)) {
             nerr++;
             goto l_end;
         }
@@ -333,41 +330,39 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
 		nerr++;
     
     if (pkgdir->flags & PKGDIR_DIFF)
-        difftoc_vacuum(orig_pathname, pathname, difftoc_suffix);
-	
+        pdir_difftoc_vacuum(orig_pathname, pathname, difftoc_suffix);
 	
  l_end:
-	
     return nerr == 0;
 }
 
 static
-int difftoc_update(const char *diffpath, const char *suffix,
-                   const char *line, int line_len)
+int pdir_difftoc_update(const char *diffpath, const char *suffix,
+                        const char *line, int line_len)
 {
     char path[PATH_MAX];
     struct vfile *vf;
-    int rc;
+    int rc = 0;
         
     if (mkidx_pathname(path, sizeof(path), diffpath, suffix) == NULL)
         return 0;
     
-    if ((vf = vfile_open(path, VFT_TRURLIO, VFM_APPEND)) == NULL)
-		return 0;
-    
-    rc = (n_stream_write(vf->vf_tnstream, line, line_len) == line_len);
-    vfile_close(vf);
-    
+    if ((vf = vfile_open(path, VFT_TRURLIO, VFM_APPEND))) {
+        rc = (n_stream_write(vf->vf_tnstream, line, line_len) == line_len);
+        vfile_close(vf);
+    }
+    DBGF("%s: added %s: [%s]\n", path, line, rc ? "OK" : "FAILED");
     return rc;
 }
 
 
 static
-int difftoc_vacuum(const char *idxpath, const char *diffpath, const char *suffix) 
+int pdir_difftoc_vacuum(const char *idxpath, const char *diffpath,
+                        const char *suffix)
 {
     tn_array     *lines; 
-    char         line[2048], *dn, *bn;
-    char         tmp[PATH_MAX], difftoc_path[PATH_MAX], difftoc_path_bak[PATH_MAX];
+    char         line[2048], *dn, *bn, tmp[PATH_MAX];
+    char         difftoc_path[PATH_MAX], difftoc_path_bak[PATH_MAX];
     struct stat  st_idx, st;
     struct vfile *vf;
     int          lineno, i, len;
@@ -410,7 +405,6 @@ int difftoc_vacuum(const char *idxpath, const char *diffpath, const char *suffix
         n_array_free(lines);
         return 0;
     }
-
     
     lineno = 0;
     diffs_size = 0;
@@ -436,14 +430,14 @@ int difftoc_vacuum(const char *idxpath, const char *diffpath, const char *suffix
             *l = '\0';
             continue;
         }
-        DBGF("path = %s %ld, %ld, %ld\n", path, st.st_size, diffs_size,
+        DBGF("path = (%s) %ld, %ld, %ld\n", path, st.st_size, diffs_size,
              st_idx.st_size);
         
         if (lineno) {
             if (vf_valid_path(path)) {
                 char *p;
                 
-                msgn(1, _("Removing outdated %s"), n_basenam(path));
+                msgn(1, _("Removing outdated diff %s"), n_basenam(path));
                 unlink(path);
                 if ((p = strrchr(path, '.')) && strcmp(p, ".gz") == 0) {
                     strcpy(p, ".mdd");

@@ -51,8 +51,7 @@
 #include "pkgmisc.h"
 #include "pkgroup.h"
 
-int pdir_v016compat = 0;      /* public */
-
+int pdir_v016compat = 0;              /* public */
 struct pkg_data {
     off_t          nodep_files_offs;  /* no dep files offset in index */
     off_t          pkguinf_offs;
@@ -69,6 +68,8 @@ static int do_update(struct pkgdir *pkgdir, int *npatches);
 static int do_update_a(const struct source *src, const char *idxpath);
 //static int do_unlink(const char *path, unsigned flags);
 static void do_free(struct pkgdir *pkgdir);
+
+const char *pdir_localidxpath(struct pkgdir *pkgdir);
 
 static
 int posthook_diff(struct pkgdir *pd1, struct pkgdir* pd2, struct pkgdir *diff);
@@ -89,10 +90,20 @@ struct pkgdir_module pkgdir_module_pdir = {
     pdir_create,
     do_update, 
     do_update_a,
-    NULL, 
+    NULL,
     do_free,
+    pdir_localidxpath,
     posthook_diff, 
 };
+
+const char *pdir_localidxpath(struct pkgdir *pkgdir)
+{
+    struct pdir *idx = pkgdir->mod_data;
+    
+    if (idx && idx->vf) 
+        return vfile_localpath(idx->vf);
+    return pkgdir->idxpath;
+}
 
 
 static
@@ -446,7 +457,7 @@ int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     }
 
     if (nerr == 0)
-        if (pkgdir_uniq(pkgdir) > 0) { /* duplicates? -> error */
+        if (pkgdir__uniq(pkgdir) > 0) { /* duplicates? -> error */
             *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
             nerr++;
         }
@@ -458,7 +469,7 @@ int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
         snprintf(path, sizeof(path), "%s/%s", dn, pdir_packages_incdir);
         if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath)) {
             verbose--; /* verbosity need to be reorganized... */
-            pkgdir_rmf(tmpath, NULL);
+            pkgdir__rmf(tmpath, NULL);
             verbose++;
         }
         msg(1, "_\n");
@@ -687,7 +698,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     pkgdir->flags |= pkgdir_flags;
     pkgdir->pkgroups = pkgroups;
     pkgdir->ts = ts;
-    pkgdir->ts_orig = ts_orig;
+    pkgdir->orig_ts = ts_orig;
     pkgdir->removed_pkgs = removed_pkgs;
     if (ts_orig)
         pkgdir->flags |= PKGDIR_DIFF;

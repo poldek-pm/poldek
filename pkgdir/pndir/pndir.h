@@ -101,4 +101,6 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname,
 int pndir_m_update_a(const struct source *src, const char *idxpath);
 int pndir_m_update(struct pkgdir *pkgdir, int *npatches);
 
+const char *pndir_localidxpath(struct pkgdir *pkgdir);
+
 #endif /* POLDEK_PKGDIR_H*/

@@ -99,9 +99,10 @@ static void setup_diff_langs(struct pkgdir *pkgdir)
 
 struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2) 
 {
-    struct pkg *pkg;
     tn_array *depdirs = NULL, *plus_pkgs, *minus_pkgs;
     struct pkgdir *diff;
+    struct pkg *pkg;
+    const char *idxpath = NULL;
     int i;
 
     sort_for_diff(pkgdir);
@@ -118,7 +119,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
         pkg = n_array_nth(pkgdir2->pkgs, i);
         if ((plus_pkg = search_for_diff(pkgdir, pkg)) == NULL) {
             n_array_push(plus_pkgs, pkg);
-            msg(2, "+ %s %p\n", pkg_snprintf_s(pkg), plus_pkg);
+            msg(2, "++ %s %p\n", pkg_snprintf_s(pkg), plus_pkg);
         }
     }
 
@@ -130,7 +131,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
 
         if ((minus_pkg = search_for_diff(pkgdir2, pkg)) == NULL) {
             n_array_push(minus_pkgs, pkg);
-            msg(2, "- %s\n", pkg_snprintf_s(pkg));
+            msg(2, "-- %s\n", pkg_snprintf_s(pkg));
         }
     }
     
@@ -171,7 +172,12 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     diff->pkgs = plus_pkgs;
     diff->pkgroups = pkgroup_idx_link(pkgdir2->pkgroups);
     diff->flags = PKGDIR_DIFF;
-    diff->ts_orig = pkgdir->ts;
+    diff->orig_ts = pkgdir->ts;
+
+    idxpath = pkgdir_localidxpath(pkgdir);
+    diff->orig_idxpath = idxpath ? n_strdup(idxpath) : NULL;
+    diff->ts = time(NULL);
+    n_assert(diff->orig_idxpath);
 
     if (diff->pkgs)
         setup_diff_langs(diff);
@@ -192,11 +198,10 @@ struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *patch)
     
     n_assert(patch->flags & PKGDIR_DIFF);
     n_assert(patch->ts > pkgdir->ts);
-    n_assert(patch->ts_orig >= pkgdir->ts);
+    n_assert(patch->orig_ts >= pkgdir->ts);
 
     pkgdir->ts = patch->ts;
-    pkgdir->flags |= PKGDIR_PATCHED;
-    
+
     if (patch->removed_pkgs)
         for (i=0; i < n_array_size(patch->removed_pkgs); i++) {
             pkg = n_array_nth(patch->removed_pkgs, i);
@@ -235,7 +240,7 @@ struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *patch)
         
         n_array_sort(pkgdir->depdirs);
     }
-    
+    pkgdir->flags |= PKGDIR_PATCHED;
     return pkgdir;
 }
 

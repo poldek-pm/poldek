@@ -24,7 +24,8 @@ AM_CONFIG_HEADER([config.h])
 
 ALL_LINGUAS="pl de"
 
-AC_DEFINE([ENABLE_VFILE_TRURLIO],1,[defined if trurlio is used for vfile operations])
+dnl cond. building NFY 
+dnl AC_DEFINE([ENABLE_VFILE_TRURLIO],1,[defined if trurlio is used for vfile operations])
 
 AC_DISABLE_STATIC
 

@@ -597,7 +597,7 @@ int source_update(struct source *src, unsigned flags)
         
 		pkgdir = pkgdir_srcopen(src, 0);
 		if (pkgdir != NULL) {
-			rc = pkgdir_update(pkgdir, 0);
+			rc = pkgdir_update(pkgdir);
 			pkgdir_free(pkgdir);
 		}
 	}
@@ -723,15 +723,15 @@ int sources_update(tn_array *sources, unsigned flags)
 
 int source_clean(struct source *src, unsigned flags)
 {
-    char                        *p, idxpath[PATH_MAX];
-    int                         urltype;
+    char  *p, idxpath[PATH_MAX];
+    int   urltype;
 
 
     n_assert(src->type);
     if ((urltype = vf_url_type(src->path)) == VFURL_UNKNOWN)
         return 1;
 
-    if (pkgdir_idxpath(idxpath, sizeof(idxpath), src->path,
+    if (pkgdir__make_idxpath(idxpath, sizeof(idxpath), src->path,
                        src->type, "none") == NULL)
         return 0;
 
@@ -740,7 +740,7 @@ int source_clean(struct source *src, unsigned flags)
         char path[PATH_MAX];
         vf_localdirpath(path, sizeof(path), n_dirname(idxpath));
         //printf("%s, %s, %s\n", src->path, idxpath, path);
-        pkgdir_cache_clean(path, "*");
+        pkgdir__cache_clean(path, "*");
         
     } else if ((p = strrchr(idxpath, '/'))) {
         char amask[1024], *mask;
@@ -753,8 +753,7 @@ int source_clean(struct source *src, unsigned flags)
             n_snprintf(amask, sizeof(amask), "%s.*", p + 1);
             mask = amask;
         }
-        
-        pkgdir_cache_clean(idxpath, mask);
+        pkgdir__cache_clean(idxpath, mask);
     }
     
     return 1;
@@ -833,8 +832,8 @@ int do_source_make_idx(struct source *src,
     }
     
     if (is_dir(idxpath))
-        idxpath = pkgdir_idxpath(path, sizeof(path), idxpath, type, 
-                                 src->compress);
+        idxpath = pkgdir__make_idxpath(path, sizeof(path), idxpath, type,
+                                       src->compress);
     n_assert(idxpath);
     if (source_is_type(src, "dir") && !is_dir(src->path)) {
         char *tmp, *dn;
@@ -870,7 +869,7 @@ int do_source_make_idx(struct source *src,
     rc = 0;
     if (pkgdir_load(pkgdir, NULL, ldflags)) {
         //int n = n_array_size(pkgdir->pkgs);
-        rc = pkgdir_save(pkgdir, type, idxpath, cr_flags);
+        rc = pkgdir_save_as(pkgdir, type, idxpath, cr_flags);
     }
     
     if (pkgdir)

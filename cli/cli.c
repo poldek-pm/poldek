@@ -677,15 +677,15 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct install_info *iinf)
             pkg_dent_remove_pkg(ent, pkg);
         
         n++;
-        printf("- %s\n", pkg->nvr);
+        DBGF_F("- %s\n", pkg->nvr);
     }
-        
+
     for (i=0; i < n_array_size(iinf->installed_pkgs); i++) {
         struct pkg *pkg = n_array_nth(iinf->installed_pkgs, i);
         n_array_push(cctx->pkgs_installed, pkg_link(pkg));
         if (ent)
             pkg_dent_add_pkg(cctx, ent, pkg);
-        
+        DBGF_F("+ %s\n", pkg->nvr);
         n++;
     }
     

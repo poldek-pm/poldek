@@ -3,17 +3,20 @@
 
 #include <trurl/nbuf.h>
 
-void pkgdir_setup_langs(struct pkgdir *pkgdir);
-void pkgdir_setup_depdirs(struct pkgdir *pkgdir);
-int  pkgdir_uniq(struct pkgdir *pkgdir);
-char *pkgdir_setup_pkgprefix(const char *path);
-int pkgdir_rmf(const char *dirpath, const char *mask);
+void pkgdir__setup_langs(struct pkgdir *pkgdir);
+void pkgdir__setup_depdirs(struct pkgdir *pkgdir);
+char *pkgdir__setup_pkgprefix(const char *path);
+
+int  pkgdir__uniq(struct pkgdir *pkgdir);
+int pkgdir__rmf(const char *dirpath, const char *mask);
 //int pkgdir_make_idxpath(char *dpath, int size, const char *type,
 //                        const char *path, const char *fn, const char *ext);
-char *pkgdir_idxpath(char *dpath, int dsize,
+char *pkgdir__make_idxpath(char *dpath, int dsize,
                      const char *path, const char *type, const char *compress);
 
-int pkgdir_cache_clean(const char *path, const char *mask);
+int pkgdir__cache_clean(const char *path, const char *mask);
+
+const char *pkgdir_localidxpath(struct pkgdir *pkgdir);
 
 #include "pkg_store.h"
 
@@ -41,6 +44,8 @@ typedef int (*pkgdir_fn_update_a)(const struct source *src,
 typedef int (*pkgdir_fn_unlink)(const char *path, int allfiles);
 typedef void (*pkgdir_fn_free)(struct pkgdir *pkgdir);
 
+typedef const char *(*pkgdir_fn_localidxpath)(struct pkgdir *pkgdir);
+
 struct pkgdir_module {
     unsigned                    cap_flags;
     char                        *name;
@@ -56,6 +61,7 @@ struct pkgdir_module {
     pkgdir_fn_update_a     update_a;
     pkgdir_fn_unlink       unlink;
     pkgdir_fn_free         free;
+    pkgdir_fn_localidxpath localidxpath;
 	
     int (*posthook_diff) (struct pkgdir*, struct pkgdir*, struct pkgdir*);
 };

@@ -7,6 +7,8 @@ prepdist:
 	./getlib.sh trurlib copy
 	./getlib.sh tndb copy
 
+poldekdist: prepdist dist
+
 mclean: 
 	@if [ -f Makefile ]; then         \
 		$(MAKE) maintainer-clean; \

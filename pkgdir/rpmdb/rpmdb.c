@@ -57,6 +57,7 @@ struct pkgdir_module pkgdir_module_rpmdb = {
     NULL,
     NULL, 
     do_free,
+    NULL,
     NULL
 };
 

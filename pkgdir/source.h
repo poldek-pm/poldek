@@ -79,6 +79,7 @@ int sources_update(tn_array *sources, unsigned flags);
 
 #define PKGSOURCE_CLEAN  (1 << 0)
 #define PKGSOURCE_CLEANA (1 << 1)
+int source_clean(struct source *src, unsigned flags);
 
 int sources_clean(tn_array *sources, unsigned flags);
 

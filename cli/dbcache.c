@@ -208,9 +208,9 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     n_assert(*path != '\0');
     n_assert(strlen(path) > 10);
     DBGF("%s %s\n", cctx->ctx->ts->cachedir, path);
-    return pkgdir_save(pkgdir, RPMDBCACHE_PDIRTYPE, path,
-                       PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
-                       PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NODESC);
+    return pkgdir_save_as(pkgdir, RPMDBCACHE_PDIRTYPE, path,
+                          PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
+                          PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NODESC);
     
     return 1;
 }
