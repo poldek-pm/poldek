@@ -663,7 +663,7 @@ static void show_pkg(struct pkg *pkg, unsigned flags)
 static void show_description(struct pkg *pkg, unsigned flags) 
 {
     struct pkguinf  *pkgu;
-    char            timbuf[30];
+    char            timbuf[30], fnbuf[PATH_MAX], *fn;
     char            unit = 'K';
     const char      *group;
     double          pkgsize;
@@ -752,6 +752,11 @@ static void show_description(struct pkg *pkg, unsigned flags)
     if (pkg->pkgdir && pkg->pkgdir->path) {
         printf_c(PRCOLOR_CYAN, "%-16s", "Path:");
         printf("%s\n", pkg->pkgdir->path);
+    }
+
+    if ((fn = pkg_filename(pkg, fnbuf, sizeof(fnbuf)))) {
+        printf_c(PRCOLOR_CYAN, "%-16s", "File:");
+        printf("%s\n", fn);
     }
         
     if (pkg->epoch) {
