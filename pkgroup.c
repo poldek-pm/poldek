@@ -448,12 +448,14 @@ struct pkgroup_idx *pkgroup_idx_restore(tn_buf_it *it, unsigned flags)
 }
 
 
-int pkgroup_idx_update(struct pkgroup_idx *idx, Header h) 
+int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr) 
 {
     char               **langs, **groups;
     int                i, ngroups, nlangs = 0;
     struct pkgroup     *gr = NULL;
+    Header             h;
 
+    h = rpmhdr;
     if ((langs = rpmhdr_langs(h)) == NULL)
         return 0;
 
@@ -496,6 +498,9 @@ int pkgroup_idx_update(struct pkgroup_idx *idx, Header h)
     free(groups);
     free(langs);
 
+    if (gr)
+        printf("gr_add %d %s\n", gr->id, gr->name);
+    
     if (gr)
         return gr->id;
     return 0;
@@ -568,6 +573,18 @@ static int pkgroupid(struct pkgroup_idx *idx, const char *name)
     return -1;
 }
 
+static void dumpidx(struct pkgroup_idx *idx, const char *prefix)
+{
+    struct pkgroup *gr;
+    int i;
+        
+    for (i=0; i < n_array_size(idx->arr); i++) {
+        gr = n_array_nth(idx->arr, i);
+        printf("%s: %d %s\n", prefix, gr->id, gr->name);
+    }
+}
+
+
 
 int pkgroup_idx_remap_groupid(struct pkgroup_idx *idx_to,
                               struct pkgroup_idx *idx_from,
@@ -578,22 +595,30 @@ int pkgroup_idx_remap_groupid(struct pkgroup_idx *idx_to,
     
         
     tmpgr.id = groupid;
+
     
-    if ((gr = n_array_bsearch(idx_from->arr, &tmpgr)) == NULL)
+    DBGF("%d\n", groupid);
+    //dumpidx(idx_from, "FROM");
+    //dumpidx(idx_to,   "TO  ");
+    
+    if ((gr = n_array_bsearch(idx_from->arr, &tmpgr)) == NULL) {
+        logn(LOGERR, "%d: gid not found", groupid);
         n_assert(0);
+    }
     
+
     if ((new_id = pkgroupid(idx_to, gr->name)) < 0) {
         if (!merge) {
             logn(LOGERR, "%s: group not found", gr->name);
             n_assert(0);
+            
         } else {
             new_id = n_array_size(idx_to->arr) + 1;
-            gr->id = new_id;
+            gr = pkgroup_new(new_id, gr->name);
             n_array_push(idx_to->arr, gr);
             n_array_sort(idx_to->arr);
         }
     }
-    
     
     return new_id;
 }
