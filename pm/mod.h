@@ -12,6 +12,14 @@ struct poldek_ts;
 struct pkgdb_it;
 struct pm_dbrec;
 
+struct pm_confent {
+    void *ent;
+    void (*entfree)(void *);
+};
+
+struct pm_confent *pm_confent_new(void *data, void (*entfree)(void *));
+void pm_confent_free(struct pm_confent *ent);
+
 struct pm_module {
     unsigned                    cap_flags;
     char                        *name;
@@ -25,7 +33,8 @@ struct pm_module {
     int (*dbdepdirs)(void *modh, const char *rootdir, const char *dbpath, 
                      tn_array *depdirs);
     
-    void *(*dbopen)(void *modh, const char *rootdir,
+    void *(*dbopen
+           )(void *modh, const char *rootdir,
                     const char *path, mode_t mode);
     void (*dbclose)(void *dbh);
     

@@ -128,6 +128,23 @@ int pkgdirmodule_init(void)
     return i;
 }
 
+void setup_mod_cap_flags(struct pkgdir_module *mod)
+{
+    if (mod->update_a)
+        mod->cap_flags |= PKGDIR_CAP_UPDATEABLE;
+    else
+        mod->cap_flags &= ~(PKGDIR_CAP_UPDATEABLE);
+
+    if (mod->update)
+        mod->cap_flags |= PKGDIR_CAP_UPDATEABLE_INC;
+    else
+        mod->cap_flags &= ~(PKGDIR_CAP_UPDATEABLE_INC);
+
+    if (mod->create)
+        mod->cap_flags |= PKGDIR_CAP_SAVEABLE;
+    else
+        mod->cap_flags &= ~(PKGDIR_CAP_SAVEABLE);
+}
 
 int pkgdir_mod_register(const struct pkgdir_module *mod) 
 {
@@ -141,7 +158,7 @@ int pkgdir_mod_register(const struct pkgdir_module *mod)
         logn(LOGERR, "%s: module is already registered", mod->name);
         return 0;
     }
-
+    setup_mod_cap_flags((struct pkgdir_module *)mod);
     n_hash_insert(modules_h, mod->name, mod);
 
     if (mod->aliases) {

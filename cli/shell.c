@@ -34,6 +34,7 @@
 
 #include <sigint/sigint.h>
 #include "i18n.h"
+#include "misc.h"
 #include "cli.h"
 #include "poclidek.h"
 
