@@ -570,7 +570,7 @@ tn_array *pndir_load_nodep_fl(const struct pkg *pkg, void *ptr,
         tn_stream *st = tndb_tn_stream(pd->db);
         //printf("nodep_fl %p\n", pd->vf->vf_tnstream);
         n_stream_seek(st, pd->off_nodep_files, SEEK_SET);
-        fl = pkgfl_restore_f(st, foreign_depdirs, 0);
+        fl = pkgfl_restore_st(st, foreign_depdirs, 0);
     }
     
     return fl;
@@ -612,8 +612,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             continue;
         }
 
-        if ((pkg = pkg_restore(st, kpkg, pkgdir->foreign_depdirs,
-                               ldflags, &pkgo, pkgdir->path))) {
+        if ((pkg = pkg_restore_st(st, kpkg, pkgdir->foreign_depdirs,
+                                  ldflags, &pkgo, pkgdir->path))) {
             pkg->pkgdir = pkgdir;
 
             pkgd = pkg_data_malloc();
@@ -650,11 +650,19 @@ static tn_array *parse_removed(char *str)
     while ((p = next_tokn(&q, ' ', NULL)) != NULL) {
         const char   *name = NULL, *ver = NULL, *rel = NULL;
         int32_t      epoch = 0;
+        struct pkg  *pkg;
 
-        if (*p && parse_nevr(p, &name, &epoch, &ver, &rel)) {
-            struct pkg *pkg = pkg_new(name, epoch, ver, rel, NULL, NULL);
-            n_array_push(pkgs, pkg);
+        if (*p == '\0')
+            continue;
+        
+        if ((pkg = pndir_parse_pkgkey(p, strlen(p))) == NULL) {
+            if (parse_nevr(p, &name, &epoch, &ver, &rel)) {
+                pkg = pkg_new(name, epoch, ver, rel, NULL, NULL);
+            }
         }
+        
+        if (pkg)
+            n_array_push(pkgs, pkg);
     }
     
     if (n_array_size(pkgs) == 0) {

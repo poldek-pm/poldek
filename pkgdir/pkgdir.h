@@ -172,34 +172,7 @@ char *pkgdir_idxpath(char *dpath, int dsize,
 
 int pkgdir_cache_clean(const char *path, const char *mask);
 
-struct pkg;
-
-extern const char *pkgstore_DEFAULT_ARCH;
-extern const char *pkgstore_DEFAULT_OS;
-
-#define PKGSTORE_NODESC            (1 << 0)
-
-
-#define PKGDIR_CREAT_PKG_NOEVR     (1 << 10)
-#define PKGDIR_CREAT_PKG_NOARCH    (1 << 11)
-#define PKGDIR_CREAT_PKG_NOOS      (1 << 12)
-#define PKGDIR_CREAT_PKG_Fv017     (1 << 13)
-
-int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
-              unsigned flags);
-
-int pkg_store_st(const struct pkg *pkg, tn_stream *st, tn_array *depdirs,
-                 unsigned flags);
-
-struct pkg_offs {
-    off_t  nodep_files_offs;  /* no dep files offset in index */
-    off_t  pkguinf_offs;
-};
-
-
-struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg, 
-                        tn_array *depdirs, unsigned ldflags,
-                        struct pkg_offs *pkgo, const char *fn);
+#include "pkg_store.h"
 
 
 /*  module methods */

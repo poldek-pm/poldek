@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2004 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
@@ -37,10 +37,105 @@
 #include "pkgu.h"
 #include "pkgfl.h"
 #include "capreq.h"
-#include "pkgroup.h"
 
-const char *pkgstore_DEFAULT_ARCH = "noarch";
-const char *pkgstore_DEFAULT_OS = "linux";
+#include "pkg_store.h"
+
+static struct pkg_store_tag pkg_store_tag_table[] = {
+    { PKG_STORETAG_NAME,  PKG_STORETAG_SIZENIL, "name" },
+    { PKG_STORETAG_EVR,   PKG_STORETAG_SIZENIL, "evr"  },
+    { PKG_STORETAG_ARCH,  PKG_STORETAG_SIZENIL, "arch" },
+    { PKG_STORETAG_OS,    PKG_STORETAG_SIZENIL, "os"   },
+    { PKG_STORETAG_FN,    PKG_STORETAG_SIZENIL, "filename" },
+    /* groupid, btime, etc */
+    { PKG_STORETAG_BINF,  PKG_STORETAG_SIZE8,  "pkg's int32 fields" }, 
+    { PKG_STORETAG_CAPS,  PKG_STORETAG_SIZE16, "caps"  },
+    { PKG_STORETAG_REQS,  PKG_STORETAG_SIZE16, "reqs"  },
+    { PKG_STORETAG_CNFLS, PKG_STORETAG_SIZE16, "cnfls" },
+    { PKG_STORETAG_FL,    PKG_STORETAG_SIZE32, "file list" },
+    { PKG_STORETAG_DEPFL, PKG_STORETAG_SIZE32, "depdirs file list" },
+    { PKG_STORETAG_UINF,  PKG_STORETAG_SIZE32, "user-level-info" },
+    { '6', PKG_STORETAG_SIZE16, "fake16" }, 
+    { '2', PKG_STORETAG_SIZE32, "fake32" },
+    { 0, 0, 0 }, 
+};
+
+static int pkg_store_tag_table_size = sizeof(pkg_store_tag_table) / sizeof(pkg_store_tag_table[0]);
+
+static int tag_lookup_tab[256] = {0};
+
+static void init_tag_lookup_tab(void)
+{
+    register int i = 0;
+
+    tag_lookup_tab[0] = 1;
+    while (pkg_store_tag_table[i].tag > 0) {
+        n_assert(pkg_store_tag_table[i].tag < 256);
+        tag_lookup_tab[pkg_store_tag_table[i].tag] = i;
+        i++;
+    }
+}
+
+static
+const struct pkg_store_tag *pkg_store_lookup_tag(int tag)
+{
+    register int i;
+
+    if (tag_lookup_tab[0] == 0)
+        init_tag_lookup_tab();
+    
+    i = tag_lookup_tab[tag];
+    if (i == 0)
+        return NULL;
+    n_assert(i < pkg_store_tag_table_size);
+    return &pkg_store_tag_table[i];
+}
+
+int pkg_store_skiptag(int tag, int tag_binsize, tn_stream *st)
+{
+    printf("skiptag %c %c\n", tag, tag_binsize ? tag_binsize:'-');
+    switch (tag_binsize) {
+        case PKG_STORETAG_SIZENIL:
+            return 1;
+            
+        case PKG_STORETAG_SIZE8:
+            n_buf_restore_skip(st, TN_BUF_STORE_8B);
+            break;
+
+        case PKG_STORETAG_SIZE16:
+            n_buf_restore_skip(st, TN_BUF_STORE_16B);
+            break;
+
+        case PKG_STORETAG_SIZE32:
+            n_buf_restore_skip(st, TN_BUF_STORE_32B);
+            break;
+
+        default:
+            return 0;
+            break;
+    }
+    return 1;
+    return n_stream_seek(st, 1, SEEK_CUR) == 0; /* skip ending '\n' */
+}
+
+
+static int pkg_store_bintag(int tag, tn_buf *nbuf)
+{
+    const struct pkg_store_tag *tg;
+    char s[4] = {0};
+    
+    
+    s[0] = tag;
+    s[1] = ':';
+
+    tg = pkg_store_lookup_tag(tag);
+    n_assert(tg);
+    n_assert(tg->binsize);
+    
+    s[2] = tg->binsize;
+    s[3] = '\n';
+    return n_buf_write(nbuf, s, 4) == 4;
+}
+
 
 static
 int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf) 
@@ -62,7 +157,10 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
     }
 
     if (n_array_size(arr)) {
-        n_buf_addstr(nbuf, "P:\n");
+        pkg_store_bintag(PKG_STORETAG_CAPS, nbuf);
+        capreq_arr_store(arr, nbuf);
+        
+        pkg_store_bintag('6', nbuf);
         capreq_arr_store(arr, nbuf);
     }
     
@@ -70,20 +168,6 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
     return 1;
 }
 
-static 
-void store_pkg_fields_v0_17(tn_buf *nbuf, uint32_t size, uint32_t fsize,
-                            uint32_t btime, uint32_t groupid) 
-{
-    uint8_t n = 4;
-
-    n_buf_add_int8(nbuf, n);
-    n_buf_add_int32(nbuf, size);
-    
-    n_buf_add_int32(nbuf, fsize);
-    n_buf_add_int32(nbuf, btime);
-    n_buf_add_int32(nbuf, groupid);
-    n_buf_printf(nbuf, "\n");
-}
 
 #define PKGFIELD_TAG_SIZE   'S'
 #define PKGFIELD_TAG_FSIZE  's'
@@ -94,8 +178,9 @@ void store_pkg_fields_v0_17(tn_buf *nbuf, uint32_t size, uint32_t fsize,
 static
 void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg) 
 {
-    uint8_t n = 0;
-
+    uint8_t n = 0, size8t;
+    int size = 0;
+    
     if (pkg->size) 
         n++;
 
@@ -114,8 +199,12 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg)
     if (pkg->recno) 
         n++;
 
-    n_buf_add_int8(nbuf, n);
-
+    size = (sizeof(int32_t) + 1) * n;
+    n_assert(size < UINT8_MAX);
+    size8t = size;
+    n_buf_write_uint8(nbuf, size8t);
+    
+    n_buf_write_uint8(nbuf, n);
     if (pkg->size) {
         n_buf_add_int8(nbuf, PKGFIELD_TAG_SIZE);
         n_buf_add_int32(nbuf, pkg->size);
@@ -151,8 +240,9 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg)
 
 int pkg_restore_fields(tn_stream *st, struct pkg *pkg) 
 {
-    uint8_t n = 0, tag;
+    uint8_t n = 0, nsize, tag;
 
+    n_stream_read_uint8(st, &nsize);
     n_stream_read_uint8(st, &n);
         
     while (n) {
@@ -210,19 +300,22 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs)
         return;
     }
     
-    pkgfl_array_store_order(fl);
+    //pkgfl_array_store_order(fl);
         
     if (depdirs == NULL) {
-        n_buf_printf(nbuf, "l:\n");
+        pkg_store_bintag(PKG_STORETAG_FL, nbuf);
         pkgfl_store_buf(fl, nbuf, depdirs, PKGFL_ALL);
         
     } else {
-        n_buf_printf(nbuf, "L:\n");
+        pkg_store_bintag(PKG_STORETAG_DEPFL, nbuf);
         pkgfl_store_buf(fl, nbuf, depdirs, PKGFL_DEPDIRS);
-    
-        n_buf_printf(nbuf, "l:\n");
+
+        pkg_store_bintag(PKG_STORETAG_FL, nbuf);
         pkgfl_store_buf(fl, nbuf, depdirs, PKGFL_NOTDEPDIRS);
     }
+
+    pkg_store_bintag('2', nbuf);
+    pkgfl_store_buf(fl, nbuf, depdirs, PKGFL_ALL);
     
     pkg_info_free_fl(pkg, fl);
     pkgflmodule_allocator_pop_mark(flmark);
@@ -234,7 +327,7 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
 {
 
     //printf("ST %s\n", pkg_snprintf_s(pkg));
-    if ((flags & PKGDIR_CREAT_PKG_NOEVR) == 0) {
+    if ((flags & PKGSTORE_NOEVR) == 0) {
         n_buf_printf(nbuf, "N: %s\n", pkg->name);
         if (pkg->epoch)
             n_buf_printf(nbuf, "V: %d:%s-%s\n", pkg->epoch, pkg->ver, pkg->rel);
@@ -242,37 +335,30 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
             n_buf_printf(nbuf, "V: %s-%s\n", pkg->ver, pkg->rel);
     }
     
-    if ((flags & PKGDIR_CREAT_PKG_NOARCH) == 0 && pkg->arch)
+    if ((flags & PKGSTORE_NOARCH) == 0 && pkg->arch)
         n_buf_printf(nbuf, "A: %s\n", pkg->arch);
     
-    if ((flags & PKGDIR_CREAT_PKG_NOOS) == 0 && pkg->os)
+    if ((flags & PKGSTORE_NOOS) == 0 && pkg->os)
         n_buf_printf(nbuf, "O: %s\n", pkg->os);
 
     if (pkg->fn)
         n_buf_printf(nbuf, "n: %s\n", pkg->fn);
     
-    if (flags & PKGDIR_CREAT_PKG_Fv017) {
-        n_buf_printf(nbuf, "F:\n");
-        store_pkg_fields_v0_17(nbuf, pkg->size, pkg->fsize, pkg->btime,
-                               pkg->groupid);
-        
-    } else {
-        n_buf_printf(nbuf, "f:\n");
-        pkg_store_fields(nbuf, pkg);
-    }
+    pkg_store_bintag(PKG_STORETAG_BINF, nbuf);
+    pkg_store_fields(nbuf, pkg);
     
     
     if (pkg->caps && n_array_size(pkg->caps))
         pkg_store_caps(pkg, nbuf);
     
     if (pkg->reqs && n_array_size(pkg->reqs)) {
-        n_buf_puts(nbuf, "R:\n");
+        pkg_store_bintag(PKG_STORETAG_REQS, nbuf); 
         capreq_arr_store(pkg->reqs, nbuf);
     }
     
     
     if (pkg->cnfls && n_array_size(pkg->cnfls)) {
-        n_buf_puts(nbuf, "C:\n");
+        pkg_store_bintag(PKG_STORETAG_CNFLS, nbuf);
         capreq_arr_store(pkg->cnfls, nbuf);
     }
     
@@ -285,8 +371,8 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
         
         //mem_info(-10, "before uinf");
         if ((pkgu = pkg_info(pkg))) {
-            n_buf_printf(nbuf, "U:\n");
-            pkguinf_store_rpmhdr(pkgu, nbuf);
+            pkg_store_bintag(PKG_STORETAG_UINF, nbuf);
+            pkguinf_store(pkgu, nbuf, "C");
             n_buf_printf(nbuf, "\n");
             pkguinf_free(pkgu);
             //mem_info(-10, "after uinf");

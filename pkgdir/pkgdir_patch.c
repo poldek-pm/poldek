@@ -199,7 +199,7 @@ struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *patch)
     pkgdir->flags |= PKGDIR_PATCHED;
     
     if (patch->removed_pkgs)
-	for (i=0; i < n_array_size(patch->removed_pkgs); i++) {
+        for (i=0; i < n_array_size(patch->removed_pkgs); i++) {
             pkg = n_array_nth(patch->removed_pkgs, i);
             msg(2, "- %s\n", pkg_snprintf_s(pkg));
             n_array_remove(pkgdir->pkgs, pkg);

@@ -49,6 +49,7 @@
 #include "pkgfl.h"
 #include "capreq.h"
 #include "pkgmisc.h"
+#include "pkgroup.h"
 
 #define PKGT_HAS_NAME     (1 << 0)
 #define PKGT_HAS_EVR      (1 << 1)
@@ -63,6 +64,7 @@
 #define PKGT_HAS_BTIME    (1 << 11)
 #define PKGT_HAS_GROUPID  (1 << 12)
 #define PKGT_HAS_FN       (1 << 13)
+#define PKGT_F_v017       (1 << 15)
 
 struct pkgtags_s {
     unsigned   flags;
@@ -85,8 +87,6 @@ struct pkgtags_s {
     off_t      pkguinf_offs;
 };
 
-extern int pkg_restore_fields(tn_stream *st, struct pkg *pkg);
-
 static
 int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 const char *pathname, off_t offs);
@@ -94,6 +94,11 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
 static
 struct pkg *pkg_ldtags(struct pkg *pkg,
                        struct pkgtags_s *pkgt, struct pkg_offs *pkgo);
+
+static 
+int restore_pkg_fields_v0_17(tn_stream *st, uint32_t *size,
+                             uint32_t *fsize, uint32_t *btime,
+                             uint32_t *groupid);
 
 
 inline static char *eatws(char *str) 
@@ -126,18 +131,19 @@ inline static char *next_tokn(char **str, char delim, int *toklen)
     return token;
 }
 
-struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg, 
-                           tn_array *depdirs, unsigned ldflags,
-                           struct pkg_offs *pkgo, const char *fn)
+struct pkg *pdir_pkg_restore(tn_stream *st, struct pkg *pkg, 
+                             tn_array *depdirs, unsigned ldflags,
+                             struct pkg_offs *pkgo, const char *fn)
 {
-    struct pkgtags_s     pkgt;
-    struct pkg           tmpkg;
-    off_t                offs;
-    char                 linebuf[4096];
-    int                  nerr = 0, nread, with_pkg = 0;
-    int                  tag, tag_binsize = PKG_STORETAG_SIZENIL;
-    const  char          *errmg_double_tag = "%s:%ld: double '%c' tag";
-    const  char          *errmg_ldtag = "%s:%ld: load '%c' tag error";
+    struct pkgtags_s   pkgt;
+    struct pkg         tmpkg;
+    off_t              offs;
+    char               linebuf[4096];
+    int                nerr = 0, nread, with_pkg = 0;
+
+    const  char        *errmg_double_tag = "%s:%ld: double '%c' tag";
+    const  char        *errmg_ldtag = "%s:%ld: load '%c' tag error";
+
 
 #if 0
     printf("FULL %d\n", (ldflags & PKGDIR_LD_FULLFLIST));
@@ -162,17 +168,19 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
         
         offs = n_stream_tell(st);
         line = linebuf;
-        
         //printf("line[%ld] = (%s)\n", offs, line);
         if (*line == '\n') {        /* empty line -> end of record */
             //printf("\n\nEOR\n");
             pkg = pkg_ldtags(pkg, &pkgt, pkgo);
-            pkg->size = tmpkg.size;
-            pkg->fsize = tmpkg.fsize;
-            pkg->btime = tmpkg.btime;
-            pkg->itime = tmpkg.itime;
-            pkg->groupid = tmpkg.groupid;
-            pkg->recno = tmpkg.recno;
+            if ((pkgt.flags & PKGT_F_v017) == 0) {
+                pkg->size = tmpkg.size;
+                pkg->fsize = tmpkg.fsize;
+                pkg->btime = tmpkg.btime;
+                pkg->itime = tmpkg.itime;
+                pkg->groupid = tmpkg.groupid;
+                pkg->recno = tmpkg.recno;
+            }
+            
 			//if (pkg)
             //    printf("ld %s\n", pkg_snprintf_s(pkg));
             break;
@@ -196,49 +204,37 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
         }
             
         *val++ = '\0';
-        n_assert(*line && *(line + 1) == '\0');
-        tag = *line;
-
-        if (*val != ' ') {      /* no space after ':' => binary tag */
-            tag_binsize = *val;
-            val++;
-        }
-        
         val = eatws(val);
-        
-        switch (tag) {
-            case PKG_STORETAG_NAME:
-            case PKG_STORETAG_EVR:
-            case PKG_STORETAG_ARCH:
-            case PKG_STORETAG_OS:
-            case PKG_STORETAG_FN:
-                if (tag_binsize != PKG_STORETAG_SIZENIL) {
-                    logn(LOGERR, errmg_ldtag, fn, offs, tag);
-                    nerr++;
-                    goto l_end;
-                }
-                
-                if (!add2pkgtags(&pkgt, tag, val, fn, offs)) {
+        n_assert(*line && *(line + 1) == '\0');
+
+        switch (*line) {
+            case 'N':
+            case 'V':
+            case 'A':
+            case 'O':
+            case 'S':
+            case 'T':
+            case 'n':
+                if (!add2pkgtags(&pkgt, *line, val, fn, offs)) {
                     nerr++;
                     goto l_end;
                 }
                 break;
 
-            case PKG_STORETAG_BINF:
+            case 'F':
                 if (pkgt.flags & PKGT_HAS_SIZE) {
                     logn(LOGERR, _("%s:%ld: syntax error"), fn, offs);
                     nerr++;
                     goto l_end;
                 }
-                
-                memset(&tmpkg, 0, sizeof(tmpkg)); /* make it nicer in the future */
-                pkg_restore_fields(st, &tmpkg);
+                restore_pkg_fields_v0_17(st, &pkgt.size, &pkgt.fsize,
+                                         &pkgt.btime, &pkgt.groupid);
                 pkgt.flags |= PKGT_HAS_SIZE | PKGT_HAS_FSIZE | PKGT_HAS_BTIME |
                     PKGT_HAS_GROUPID;
+                pkgt.flags |= PKGT_F_v017;
                 break;
-                
 
-            case PKG_STORETAG_CAPS:
+            case 'P':
                 if (pkgt.flags & PKGT_HAS_CAP) {
                     logn(LOGERR, errmg_double_tag, fn, offs, *line);
                     nerr++;
@@ -249,7 +245,7 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
                 pkgt.flags |= PKGT_HAS_CAP;
                 break;
                     
-            case PKG_STORETAG_REQS:
+            case 'R':
                 if (pkgt.flags & PKGT_HAS_REQ) {
                     logn(LOGERR, errmg_double_tag, fn, offs, *line);
                     nerr++;
@@ -265,7 +261,7 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
                 pkgt.flags |= PKGT_HAS_REQ;
                 break;
                     
-            case PKG_STORETAG_CNFLS:
+            case 'C':
                 if (pkgt.flags & PKGT_HAS_CNFL) {
                     logn(LOGERR, _(errmg_double_tag), fn, offs, *line);
                     nerr++;
@@ -288,7 +284,7 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
                     pkgt.flags |= PKGT_HAS_CNFL;
                 break;
 
-            case PKG_STORETAG_DEPFL:
+            case 'L':
                 pkgt.pkgfl = pkgfl_restore_st(st, NULL, 0);
                 if (pkgt.pkgfl == NULL) {
                     logn(LOGERR, errmg_ldtag, fn, offs, *line);
@@ -301,7 +297,7 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
                 pkgt.flags |= PKGT_HAS_FILES;
                 break;
                     
-            case PKG_STORETAG_FL:
+            case 'l':
                 pkgt.nodep_files_offs = n_stream_tell(st);
                 //printf("flag_fullflist %d, %p\n", flag_fullflist, depdirs);
                 if ((ldflags & PKGDIR_LD_FULLFLIST) == 0 && depdirs == NULL) {
@@ -329,7 +325,7 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
                 }
                 break;
 
-            case PKG_STORETAG_UINF:
+            case 'U':
                 pkgt.pkguinf_offs = n_stream_tell(st);
                 if ((ldflags & PKGDIR_LD_DESC) == 0) {
                     pkguinf_skip_rpmhdr(st);
@@ -348,14 +344,7 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
 
             default:
                 if (verbose > 1) 
-                    logn(LOGWARN, "%s:%ld: skipped unknown tag '%c'",
-                         fn, offs, tag);
-                if (!pkg_store_skiptag(tag, tag_binsize, st)) {
-                    logn(LOGERR, "%s:%ld: %c: unknown tag binsize (%c)",
-                         fn, offs, tag, isascii(tag_binsize) ? tag_binsize : '-');
-                    nerr++;
-                    goto l_end;
-                }
+                    logn(LOGWARN, "%s:%ld: unknown tag '%c'", fn, offs, *line);
                 break;
         }
     }
@@ -382,7 +371,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
     const char *errmg_double_tag = "%s:%d: double '%c' tag";
     
     switch (tag) {
-        case PKG_STORETAG_NAME:
+        case 'N':
             if (pkgt->flags & PKGT_HAS_NAME) {
                 logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
@@ -391,8 +380,8 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 pkgt->flags |= PKGT_HAS_NAME;
             }
             break;
-
-        case PKG_STORETAG_EVR:
+            
+        case 'V':
             if (pkgt->flags & PKGT_HAS_EVR) {
                 logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
@@ -403,7 +392,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             }
             break;
             
-        case PKG_STORETAG_ARCH:
+        case 'A':
             if (pkgt->flags & PKGT_HAS_ARCH) {
                 logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
@@ -414,7 +403,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             }
             break;
 
-        case PKG_STORETAG_OS:
+        case 'O':
             if (pkgt->flags & PKGT_HAS_OS) {
                 logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
@@ -425,7 +414,37 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             }
             break;
             
-        case PKG_STORETAG_FN:
+        case 'S':
+            if (pkgt->flags & PKGT_HAS_SIZE) {
+                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
+                err++;
+            } else {
+                pkgt->size = atoi(value);
+                pkgt->flags |= PKGT_HAS_SIZE;
+            }
+            break;
+
+        case 's':
+            if (pkgt->flags & PKGT_HAS_FSIZE) {
+                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
+                err++;
+            } else {
+                pkgt->size = atoi(value);
+                pkgt->flags |= PKGT_HAS_FSIZE;
+            }
+            break;
+            
+        case 'T':
+            if (pkgt->flags & PKGT_HAS_BTIME) {
+                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
+                err++;
+            } else {
+                pkgt->btime = atoi(value);
+                pkgt->flags |= PKGT_HAS_BTIME;
+            }
+            break;
+
+        case 'n':
             if (pkgt->flags & PKGT_HAS_FN) {
                 logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
@@ -442,6 +461,36 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
     
     return err == 0;
 }
+
+#if 0        
+static void pkgtags_clean(struct pkgtags_s *pkgt) 
+{
+    if (pkgt->flags & PKGT_HAS_REQ)
+        if (pkgt->reqs)
+            n_array_free(pkgt->reqs);
+
+    if (pkgt->flags & PKGT_HAS_CAP)
+        if (pkgt->caps)
+            n_array_free(pkgt->caps);
+
+    if (pkgt->flags & PKGT_HAS_CNFL)
+        if (pkgt->cnfls)
+            n_array_free(pkgt->cnfls);
+
+    if (pkgt->flags & PKGT_HAS_FILES)
+        if (pkgt->pkgfl) 
+            n_array_free(pkgt->pkgfl);
+    
+    if (pkgt->pkguinf) 
+        pkguinf_free(pkgt->pkguinf);
+        pkgt->pkguinf = 0;
+    
+
+    memset(pkgt, 0, sizeof(*pkgt));
+    pkgt->caps = pkgt->reqs = pkgt->cnfls = pkgt->pkgfl = NULL;
+    pkgt->pkguinf = NULL;
+}
+#endif    
 
 static
 struct pkg *pkg_ldtags(struct pkg *pkg,
@@ -552,5 +601,23 @@ struct pkg *pkg_ldtags(struct pkg *pkg,
     }
 
     return pkg;
+}
+
+
+static 
+int restore_pkg_fields_v0_17(tn_stream *st, uint32_t *size, uint32_t *fsize,
+                             uint32_t *btime, uint32_t *groupid) 
+{
+    uint8_t n, dummy;
+
+    
+    n_stream_read_uint8(st, &n);
+    
+    n_stream_read_uint32(st, size);
+    n_stream_read_uint32(st, fsize);
+    n_stream_read_uint32(st, btime);
+    n_stream_read_uint32(st, groupid);
+    n_stream_read_uint8(st, &dummy);               /* eat '\n' */
+    return n == 4;
 }
 

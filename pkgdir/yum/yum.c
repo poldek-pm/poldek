@@ -194,7 +194,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     pkgdir->pkgs = pkgs_array_new(1024);
     pkgdir->pkgroups = pkgroups;
     
- l_end:
+// l_end:
     if (nerr)
         idx_close(&idx);
     
@@ -211,7 +211,7 @@ void do_free(struct pkgdir *pkgdir)
         pkgdir->mod_data = NULL;
     }
 }
-
+#if 0
 struct nbuf_header {
     tn_buf *nbuf;
     Header h;
@@ -225,13 +225,12 @@ void nbuf_header_free(struct nbuf_header *hdr)
     if (hdr->nbuf)
         n_buf_free(hdr->nbuf);
 }
-
+#endif
 
 static
 Header do_loadrpmhdr(const char *path, int vfmode, const char *pdir_name)
 {
     struct vfile       *vf = NULL;
-    struct nbuf_header hdr;
     tn_buf             *nbuf;
     tn_buf             buf[4096];
     int                n;

@@ -149,7 +149,7 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
     //char              nevr[1024];
     //int               len;
 
-    if ((pkg = pkg_ldrpmhdr(header, "db", 0, PKG_LDNEVR))) {
+    if ((pkg = pkg_ldrpmhdr(header, NULL, 0, PKG_LDNEVR))) {
         char **hdr_langs;
         
         ms = ptr;

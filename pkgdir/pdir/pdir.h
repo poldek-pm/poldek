@@ -85,4 +85,15 @@ extern const char *pdir_tag_endvarhdr;
 int pdir_create(struct pkgdir *pkgdir, const char *pathname,
                 unsigned flags);
 
+struct pkg *pdir_pkg_restore(tn_stream *st, struct pkg *pkg, 
+                             tn_array *depdirs, unsigned ldflags,
+                             struct pkg_offs *pkgo, const char *fn);
+
+int pdir_pkg_store(const struct pkg *pkg, tn_stream *st, tn_array *depdirs,
+                   unsigned flags);
+
+
+extern const char *pdir_pkgstore_DEFAULT_ARCH;
+extern const char *pdir_pkgstore_DEFAULT_OS;
+
 #endif /* POLDEK_PKGDIR_H*/

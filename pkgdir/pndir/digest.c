@@ -172,7 +172,7 @@ int pndir_mkdigest_path(char *path, int size, const char *pathname,
         n -= 3;
     
     n += n_snprintf(p, size - (p - path), "%s", ext);
-    printf("pndir_mkdigest_path %s -> %s\n", pathname, path);
+    DBGF("%s -> %s\n", pathname, path);
     return n;
 }
 

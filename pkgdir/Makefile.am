@@ -12,7 +12,7 @@ libpkgdir_la_SOURCES  = \
 			pkgdir_patch.c    \
 			pkgdir_clean.c    \
 			mod.c             \
-			pkg_store.c pkg_restore.c  
+			pkg_store.c pkg_restore.c pkg_store.h 
 
 pkgdir_modules = dir/libpkgdir_dir.la      \
 		 hdrl/libpkgdir_hdrl.la    \

@@ -118,7 +118,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
 
             if (prev_pkgdir) {
                 struct pkg *tmp;
-                pkg = pkg_ldrpmhdr(h, path, st.st_size, PKG_LDNEVR);
+                pkg = pkg_ldrpmhdr(h, n_basenam(path), st.st_size, PKG_LDNEVR);
                 
                 if (pkg && (tmp = n_array_bsearch(prev_pkgdir->pkgs, pkg)) &&
                     pkg_deepstrcmp_name_evr(pkg, tmp) == 0) {
@@ -147,7 +147,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
             }
             
             if (pkg == NULL) {
-                pkg = pkg_ldrpmhdr(h, path, st.st_size, PKG_LDWHOLE);
+                pkg = pkg_ldrpmhdr(h, n_basenam(path), st.st_size, PKG_LDWHOLE);
                 
                 if (ldflags & PKGDIR_LD_DESC) {
                     pkg->pkg_pkguinf = pkguinf_ldhdr(h);
@@ -162,7 +162,8 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
                         }
                     }
                 }
-                pkg->groupid = pkgroup_idx_update(pkgroups, h);
+                pkg->groupid = 0;
+                //pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
             }
 
             if (pkg) {

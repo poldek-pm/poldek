@@ -21,6 +21,9 @@
 #include <string.h>
 #include <time.h>
 #include <fnmatch.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
@@ -245,12 +248,12 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     if (pkgdir->pkgs == NULL)
         goto l_close;
 
-    flags |= PKGDIR_CREAT_PKG_Fv017;
+    //flags |= PKGDIR_CREAT_PKG_Fv017;
     //n_array_sort(pkgdir->pkgs);
     n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_deepstrcmp_name_evr);
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
-        pkg_store_st(pkg, vf->vf_tnstream, pkgdir->depdirs, flags);
+        pdir_pkg_store(pkg, vf->vf_tnstream, pkgdir->depdirs, flags);
 #if 0                           /* debug stuff */
         if (i % 200 == 0) {
             printf("%d. ", i);

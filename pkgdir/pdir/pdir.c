@@ -746,8 +746,7 @@ tn_array *pdir_load_nodep_fl(const struct pkg *pkg, void *ptr,
     pkg = pkg;
     if (pd->vf && pd->nodep_files_offs > 0) {
         n_stream_seek(pd->vf->vf_tnstream, pd->nodep_files_offs, SEEK_SET);
-        fl = pkgfl_restore_f(pd->vf->vf_tnstream,
-                             foreign_depdirs, 0);
+        fl = pkgfl_restore_st(pd->vf->vf_tnstream, foreign_depdirs, 0);
     }
     
     return fl;
@@ -772,9 +771,9 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 
     idx = pkgdir->mod_data;
     
-    while ((pkg = pkg_restore(idx->vf->vf_tnstream, NULL,
-                              pkgdir->foreign_depdirs,
-                              ldflags, &pkgo, pkgdir->path))) {
+    while ((pkg = pdir_pkg_restore(idx->vf->vf_tnstream, NULL,
+                                   pkgdir->foreign_depdirs,
+                                   ldflags, &pkgo, pkgdir->path))) {
         pkg->pkgdir = pkgdir;
 
         pkgd = n_malloc(sizeof(*pkgd));
@@ -884,7 +883,7 @@ static int is_uptodate(const char *path, const struct pdir_digest *pdg_local,
     pdir_digest_destroy(&remote_pdg);
     return rc;
 }
-
+ 
 #if 0
 DUPA
 static

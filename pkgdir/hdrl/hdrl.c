@@ -112,7 +112,7 @@ int load_header_list(const char *path, tn_array *pkgs,
             }
 
             n_array_push(pkgs, pkg);
-            pkg->groupid = pkgroup_idx_update(pkgroups, h);
+            pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
             n++;
         }
         	
