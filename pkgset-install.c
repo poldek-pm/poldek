@@ -930,7 +930,7 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
 
     DBGF("PROCESSING [%d] %s as %s\n", indent, pkg_snprintf_s(pkg),
          process_as == PROCESS_AS_NEW ? "NEW" : "ORPHAN");
-    msg_i(1, indent, "Checking%s%s dependencies...\n",
+    msg_i(3, indent, "Checking%s%s dependencies...\n",
           process_as == PROCESS_AS_ORPHAN ? " orphaned ":" ",
           pkg_snprintf_s(pkg));
 
@@ -1735,7 +1735,7 @@ void mapfn_mark_newer_pkg(unsigned recno, void *h, void *upgptr)
     pkg = n_array_nth(upg->avpkgs, i);
     if (cmprc > 0) {
         if (pkg_is_hold(pkg)) {
-            msgn(0, _("%s: skip held package"), pkg_snprintf_s(pkg));
+            msgn(1, _("%s: skip held package"), pkg_snprintf_s(pkg));
             
         } else {
             n_hash_insert(upg->db_pkgs, tmpkg.name, pkg);
