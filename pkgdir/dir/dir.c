@@ -96,7 +96,7 @@ struct pkg *search_in_mtime_index(tn_hash *mtime_index, const char *fn,
 struct pkg *search_in_prev(struct pkgdir *prev_pkgdir, Header h, const char *fn,
                            struct stat *st)
 {
-    struct pkg *tmp, *pkg;
+    struct pkg *tmp = NULL, *pkg;
     
     pkg = pm_rpm_ldhdr(NULL, h, fn, st->st_size, PKG_LDNEVR);
     if (pkg && (tmp = n_array_bsearch(prev_pkgdir->pkgs, pkg))) {
