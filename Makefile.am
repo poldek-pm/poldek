@@ -53,8 +53,8 @@ libpoldek_la_SOURCES =  \
 	  poldek_ts.c poldek_ts.h	  
 
 pkgincludedir = $(includedir)/poldek
-pkginclude_HEADERS = poldek.h conf.h pkg.h pkgset.h \
-		     pkgdir/pkgdir.h pkgdir/source.h
+pkginclude_HEADERS = poldek.h poldek_ts.h pkg.h \
+				     pkgdir/pkgdir.h pkgdir/source.h
 
 
 libpoldek_la_LIBADD = \
@@ -86,10 +86,10 @@ noinst_PROGRAMS     = test_match
 test_match_SOURCES  = test_match.c
 test_match_LDADD    = libpoldek.la 
 
-vfscripts           = vfjuggle vfcompr vfsmb
+pkglib_SCRIPTS      = zlib-in-rpm.sh vfjuggle vfcompr vfsmb
 
 EXTRA_DIST = \
-	     $(vfscripts) \
+		 $(pkglib_SCRIPTS) \
 	     Makefile.extra \
 	     poldek.spec poldek-suse.spec \
 	     package-set.sample vfjugglerc.sample \
@@ -121,8 +121,8 @@ dist-hook:
 	-rm -rf $(distdir)/.deps
 
 install-exec-local:
-	$(install_sh) -m 0755 -d $(DESTDIR)$(libexecdir)/$(PACKAGE)
-	$(install_sh) -m 0755 $(vfscripts) $(DESTDIR)$(libexecdir)/$(PACKAGE)
+#	$(install_sh) -m 0755 -d $(DESTDIR)$(libexecdir)/$(PACKAGE)
+#	$(install_sh) -m 0755 $(vfscripts) $(DESTDIR)$(libexecdir)/$(PACKAGE)
 
 # libtool hack
 install-exec-hook:

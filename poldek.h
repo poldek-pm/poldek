@@ -4,7 +4,6 @@
 
 #include "pkg.h"
 #include "poldek_ts.h"
-#include "pkgdir/pkgdir.h"
 
 /* constans  */
 extern const char poldek_BUG_MAILADDR[];

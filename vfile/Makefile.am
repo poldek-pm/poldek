@@ -39,7 +39,7 @@ test_vopen3_SOURCES  = test_vopen3.c
 test_vopen3_LDADD    = libvfile.la $(sigint_la) -lutil
 
 EXTRA_DIST     = $(VFCURL_SRCS) \
-		 testcookie.c test_progress.c test_p_open.c
+		 testcookie.c test_progress.c
 
 
 
