@@ -16,9 +16,9 @@ backup:
 	mkdir -p ../$$ARCHDIR/$$ARCHNAME/$$NAME;                    \
 	cp -a . ../$$ARCHDIR/$$ARCHNAME/$$NAME || exit 1;           \
 	cd ../$$ARCHDIR;                                            \
-	tar cpzf $$ARCHNAME.tgz $$ARCHNAME && rm -rf $$ARCHNAME;    \
-	md5sum $$ARCHNAME.tgz > $$ARCHNAME.md5;                     \
-	ARCHIVE=$(PROJ_DIR)/../$$ARCHDIR/$$ARCHNAME.tgz;            \
+	tar --bzip2 -cpf $$ARCHNAME.tar.bz2 $$ARCHNAME && rm -rf $$ARCHNAME;    \
+	md5sum $$ARCHNAME.tar.bz2 > $$ARCHNAME.md5;                 \
+	ARCHIVE=$(PROJ_DIR)/../$$ARCHDIR/$$ARCHNAME.tar.bz2;        \
 	ARCHIVE_MD5=$(PROJ_DIR)/../$$ARCHDIR/$$ARCHNAME.md5;        \
 	if [ $(cparch)x = "1x" ]; then                              \
 	        mkdir $(backupdir)/copy || true;                    \
