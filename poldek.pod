@@ -13,10 +13,10 @@ poldek [--source=SOURCE ...] [OPTION...] [PACKAGE...]
 =head1 DESCRIPTION
 
 The poldek is designed to automate the verify, install and upgrade 
-of rpm packages. It can be used in two ways: as cmdline or as 
-interactive tool. It was inspired by L<apt_get(8)> tool from Debian's 
+of rpm packages. It can be used in two ways: as cmdline tool or as 
+interactive tool. It was inspired by L<apt_get(8)> from Debian's 
 APT, the interactive mode was inspired by shell mode of Perl CPAN module
-(perl -MCPAN -e shell). 
+($ perl -MCPAN -e shell). 
 
 In general poldek gets packages information from special package index
 file (called I<packages.dir>) and performs one of the following actions:
@@ -42,8 +42,7 @@ file (called I<packages.dir>) and performs one of the following actions:
 Packages and indexes can be retrieved from remote servers by poldek
 itself (by compiled in cURL client or by simple FTP/HTTP client from rpmlib) 
 or by external downloaders (not configured by default, see L</CONFIG FILE> for
-details). Currently four types of URLs are supported: FTP, HTTP, 
-HTTPS and RSYNC.
+details). 
 
 =head2 Interactive Mode
 
@@ -89,7 +88,7 @@ B<-P, --prefix> B<PREFIX>
 
 could be used to point packages one, e.g.:
 
-$ poldek -s /tmp/packages.dir --prefix=/cdrom/RPMS/ -s ...
+$ poldek -s /tmp/packages.dir --prefix=/cdrom/RPMS/ -s ... --prefix=...
 
 Another parameter is B<--cachedir=DIR>, which points to
 directory where fetched packages and indexes are 
@@ -172,11 +171,11 @@ Run poldek in interactive mode. Type "help" after running for available commands
 =item B<--split=[SIZE] [--split-conf=FILE] [--split-out=PREFIX]>
 
 Split package set into parts, each SIZE MB size. Priorities 
-are taken from FILE given by --split-conf (see sample poldek-split.conf 
+are taken from FILE given by --split-conf (see sample pkgsplit.conf 
 from distribution). By default packages has 0 priority.
 
 Each part is written as NAME-EVR list to PREFIX.XX 
-file, the default PREFIX is "package.chunk"
+file, the default PREFIX is "packages.chunk"
 
 
 =back 
@@ -186,6 +185,7 @@ file, the default PREFIX is "package.chunk"
 =over
 
 =item B<-N, --nofollow> 
+
 Don't automatically install packages required by selected ones.
 
 =item B<-F, --fresh> 
@@ -297,9 +297,9 @@ available should be used:
 
 =over 
 
-=item B<%p[n]> - package file name
+=item B<%p[n]> - package file name, %pn means that may be repeated many times 
 
-=item B<%P[n]> - package full path
+=item B<%P[n]> - package full path, %Pn -"-
 
 =item B<%d> - cache directory
 
@@ -311,7 +311,7 @@ available should be used:
 
 Currently four protocols are available: FTP, HTTP, HTTPS and RSYNC.  Special
 B<ftp_http> "protocol" could be used for describe downloader for both
-HTTP and FTP.
+HTTP and FTP. 
 
 Examples:
 
@@ -325,17 +325,22 @@ rsync_get      = "/usr/bin/rsync -v %P %d"
 
 See also sample configs included in distribution.
 
+
+Additionally poldek supports CDROM URLs which could be used when package set 
+is stored on removable media (several CDs, ZIPs, etc); as  CDROM "downloader"
+vfjuggle should be configured, see poldekrc.sample-cdrom for details.
+
 =head1 EXAMPLES
 
 =head2 Package index creation
 
-$ poldek -s /cdrom/PLD/RPMS/ --mkidx=/tmp/dummy.txt
+$ poldek -s /cdrom/PLD/RPMS/ --mkidx=/tmp/packages.dir
 
 $ poldek -s /ftp/pub/PLD/RPMS/ --mkidxz
 
 Using mkpackagedir script:
 
-$ mkpackagedir /ftp/pub/PLD/RPMS/ 
+$ mkpackagedir /ftp/pub/PLD/i686/RPMS/  /ftp/pub/PLD/sparc/RPMS/ 
 
 =head2 Verification
 
@@ -357,7 +362,7 @@ $ poldek -s ftp://ftp.tatry.pl/PLD/RPMS/packages.dir --upgrade-dist
 
 Only fetch packages marked for upgrade:
 
-$ poldek -s ftp://ftp.rankiem.net.pl/PLD/RPMS/packages.dir 
+$ poldek -s ftp://ftp.rankiem.net.pl/PLD/RPMS/
   --upgrade-dist --fetch=/tmp/PLD-up/
 
 Dump packages filenames marked for upgrade:

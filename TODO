@@ -2,7 +2,6 @@
 
 * mis 2001/05/18
 - unistalled packages should be ordered using uninst prerequirements 
-- listing of packages contents
 - detection of fatal rpmlib errors during install-dist
 
 * mis  2000/09/20
