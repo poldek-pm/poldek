@@ -60,6 +60,8 @@ struct pkgdir {
     struct pkgdir       *prev_pkgdir;
     
 
+    void                *_memalloc_ptr;
+    void                *(*memalloc)(struct pkgdir *, size_t);
     const struct pkgdir_module  *mod;
     void                        *mod_data;
 };

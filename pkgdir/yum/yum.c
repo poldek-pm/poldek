@@ -334,7 +334,6 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 static
 int yum_update(const char *path, int vfmode)
 {
-    struct idx      *idx;
     struct vfile    *vf;
     int                  rc = 1;
     

@@ -41,7 +41,7 @@
 #include "rpm/rpm_pkg_ld.h"
 #include "rpm/rpmdb_it.h"
 #include "rpm/rpmhdr.h"
-#include "pkgdb.h"
+#include "pkgdb/pkgdb.h"
 
 struct pkg_data {
 };

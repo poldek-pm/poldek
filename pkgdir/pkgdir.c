@@ -86,7 +86,7 @@ void pkgdir_setup_langs(struct pkgdir *pkgdir)
     }
 #endif
     
-    printf("pkgdir_setup_langs %s, %s\n", pkgdir->idxpath, pkgdir->lc_lang);
+    DBGF("pkgdir_setup_langs %s, %s\n", pkgdir->idxpath, pkgdir->lc_lang);
     if (pkgdir->lc_lang == NULL)
         return;
 
@@ -362,7 +362,8 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     if (name && n_str_ne(name, "-"))
         pkgdir->flags |= PKGDIR_NAMED;
 
-    printf("pkgdir_open_ext[%s] %s, %s, %p\n", type, path, pkg_prefix, pkgdir);
+    DBGF("pkgdir_open_ext[%s] %s, %s%s\n", type, path,
+         pkg_prefix ? "prefix = ":"", pkg_prefix ? pkg_prefix : "", pkgdir);
     pkgdir_idxpath(idxpath, sizeof(idxpath), path, type, compress);
     
     if (pkg_prefix) 
@@ -507,7 +508,9 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     
     pkgdir->foreign_depdirs = foreign_depdirs;
 
-    msgn(1, _("Loading %s..."), pkgdir_idstr(pkgdir));
+    if ((pkgdir->flags & PKGDIR_DIFF) == 0)
+        msgn(1, _("Loading %s..."), pkgdir_idstr(pkgdir));
+    
     rc = 0;
     if (pkgdir->mod->load(pkgdir, ldflags) >= 0) {
         int i;

@@ -351,7 +351,6 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
         capreq_arr_store(pkg->reqs, nbuf);
     }
     
-    
     if (pkg->cnfls && n_array_size(pkg->cnfls)) {
         pkg_store_bintag(PKG_STORETAG_CNFLS, nbuf);
         capreq_arr_store(pkg->cnfls, nbuf);

@@ -807,9 +807,7 @@ int source_make_idx(struct source *src,
 
     if (source_is_type(src, "dir")) {
         struct pkgdir *pdir;
-        printf("LOAD ORIG\n");
         ldflags |= PKGDIR_LD_DESC;
-        
         pdir = pkgdir_open_ext(src->path,
                                src->pkg_prefix, type,
                                "orig", NULL, 0, src->lc_lang);
