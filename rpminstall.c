@@ -63,7 +63,7 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
         FD_ZERO(&fdset);
         FD_SET(st->fd, &fdset);
         if ((rc = select(st->fd + 1, &fdset, NULL, NULL, &to)) < 0) {
-            if (errno == EAGAIN)
+            if (errno == EAGAIN || errno == EINTR)
                 continue;
             
             break;
