@@ -256,7 +256,7 @@ static
 void init_pcre(void) 
 {
     if (pcre_established == 0) {
-        pcre_malloc = malloc;
+        pcre_malloc = n_malloc;
         pcre_free = free;
         pcre_chartable = pcre_maketables();
 #if 0        

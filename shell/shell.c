@@ -39,11 +39,10 @@
 #include "pkg.h"
 #include "pkgset.h"
 #include "pkgdb.h"
-//#include "install.h"
 #include "misc.h"
-//#include "rpm.h"
 #include "log.h"
 #include "shell.h"
+#include "conf.h"
 
 int shOnTTY = 0;
 
@@ -332,22 +331,22 @@ static char *help_filter(int key, const char *text, void *input)
             n += n_snprintf(&buf[n], sizeof(buf) - n, "  %s\n",
                           sh_cmdarg->cmd->extra_help);
 
-		alias.cmd=sh_cmdarg->cmd;
+		alias.cmd = sh_cmdarg->cmd;
 
         if (n_array_bsearch_ex(aliases, &alias,
-					(tn_fn_cmp)command_alias_cmd_cmp)) {
+                               (tn_fn_cmp)command_alias_cmd_cmp)) {
            int i = 0;
 		   struct command_alias *alias;
 
-            n += n_snprintf(&buf[n], sizeof(buf) - n, "%s", _("  Defined aliases:\n"));
+            n += n_snprintf(&buf[n], sizeof(buf) - n, "%s",
+                            _("  Defined aliases:\n"));
 			
-            while (i<n_array_size(aliases)) {
-				alias=n_array_nth(aliases, i);
-				if (alias->cmd==sh_cmdarg->cmd) {
+            while (i < n_array_size(aliases)) {
+				alias = n_array_nth(aliases, i);
+				if (alias->cmd == sh_cmdarg->cmd)
 	                n += n_snprintf(&buf[n], sizeof(buf) - n,
-							"    %-16s  \"%s\"\n",alias->name,
-							alias->cmdline);
-				}
+                                    "    %-16s  \"%s\"\n",
+                                    alias->name, alias->cmdline);
 				i++;
             }
         }
@@ -462,7 +461,7 @@ int execute_line(char *line)
 
     p = line;
     while (*p && !isspace(*p))
-	p++;
+        p++;
     
     if (*p)
         *p = '\0';
@@ -470,34 +469,36 @@ int execute_line(char *line)
         p = NULL;
     
 	tmpcmd.name = line;
-
 	tmpalias.name = tmpcmd.name;
-	if (alias = n_array_bsearch(aliases, &tmpalias)) {
+    
+	if ((alias = n_array_bsearch(aliases, &tmpalias))) {
 		char *l;
-		int len = strlen(alias->cmdline) + 1;
+		int len;
+
+        len = strlen(alias->cmdline) + 1;
 		cmd = alias->cmd;
 
 		if (p == NULL) {    /* no args */
 			l = alloca(len);
 			memcpy(l, alias->cmdline, len);
+            
 		} else {
 			p++;
 			len += strlen(p) + len + 1;
 			l = alloca(len);
 			snprintf(l, len, "%s %s", alias->cmdline, p);
-
 			p = NULL;
 		}
 		//printf("alias exp %s -> %s\n", line, l);
 		line = l;
-	}
-	else if (cmd = n_array_bsearch(commands, &tmpcmd)) { ; }
-	else
-	{
-		logn(LOGERR, _("%s: no such command"), line);
-		return 0;
-	}
-
+        
+	} else if ((cmd = n_array_bsearch(commands, &tmpcmd))) {
+        ;                       /* do nothing */
+        
+    } else {
+        logn(LOGERR, _("%s: no such command"), line);
+        return 0;
+    }
 
     if (p)
         *p = ' ';
@@ -1106,53 +1107,53 @@ static void shell_end(int sig)
     }
 }
 
-int add_alias(char *aliasname, char *cmdline, char *errstring)
+static void command_alias_free(struct command_alias *alias) 
 {
-	int i;
-	char cmdname[32];
-	char *p=cmdline;
-	struct command *cmd;
-	struct command tmpcmd;
-	struct command_alias *tmpalias, tmpalias2;
-	struct command_alias *alias=malloc(sizeof(struct command_alias));
+    n_cfree(&alias->name);
+    n_cfree(&alias->cmdline);
+    alias->cmd = NULL;
+    free(alias);
+}
 
-	while(isalnum(*p))
+static
+int add_alias(char *aliasname, char *cmdline)
+{
+	struct command *cmd, tmpcmd;
+	struct command_alias *alias, tmpalias;
+	char   *cmdname, *p;
+    int i, len;
+
+    
+
+    p = cmdline;
+	while (isalnum(*p))
 		p++;
 
-	strncpy(cmdname, cmdline, (int)p-(int)cmdline+1);
-	cmdname[(int)p-(int)cmdline]='\0';
-
-	tmpcmd.name=cmdname;
-
-	if(!(cmd=n_array_bsearch(commands, &tmpcmd))) {
-		sprintf(errstring, _("unknown command %s"), cmdname);
-		return 1;
+    len = p - cmdline + 1;
+    cmdname = alloca(len + 1);
+	n_strncpy(cmdname, cmdline, len);
+    
+	tmpcmd.name = cmdname;
+    
+	if ((cmd = n_array_bsearch(commands, &tmpcmd)) == NULL) {
+        logn(LOGWARN, _("%s: %s: no such command"), aliasname, cmdname);
+		return 0;
 	}
 
-	alias->name=malloc(strlen(aliasname)+1);
-	alias->cmdline=malloc(strlen(cmdline)+1);
+    alias = n_malloc(sizeof(*alias));
+	alias->name = n_strdup(aliasname);
+	alias->cmdline = n_strdup(cmdline);
+	alias->cmd = cmd;
 
-	strcpy(alias->name, aliasname);
-	strcpy(alias->cmdline, cmdline);
-	alias->cmd=cmd;
+	tmpalias.name = aliasname;
 
-	tmpalias2.name=aliasname;
-	tmpcmd.name=aliasname;
-
-	if((i=n_array_bsearch_idx(aliases, &tmpalias2)) >= 0)
-	{
-		tmpalias=n_array_nth(aliases, i);
+	if ((i = n_array_bsearch_idx(aliases, &tmpalias)) >= 0) {
 		n_array_set_nth(aliases, i, alias);
 
-		i=n_array_bsearch_idx(all_commands, aliasname);
+		i = n_array_bsearch_idx(all_commands, aliasname);
 		n_array_set_nth(all_commands, i, alias->name);
 
-		free(tmpalias->name);
-		free(tmpalias->cmdline);
-		free(tmpalias);
-	}
-	else
-	{
+	} else {
 		n_array_push(aliases, alias);
 		n_array_push(all_commands, alias->name);
 	}
@@ -1160,82 +1161,41 @@ int add_alias(char *aliasname, char *cmdline, char *errstring)
 	n_array_sort(aliases);
 	n_array_sort(all_commands);
 
-	return 0;
+	return 1;
 }
 
-
-void parse_aliases(char *path)
+static void load_aliases(const char *path) 
 {
-	FILE *stream;
-	int nline = 1;
-	char buf[1024];
-	char name[32];
-	char cmdline[512];
-	char *errstring;
-	
+    tn_hash *aliases_htcnf, *ht;
+    tn_array *keys;
+    int i;
+    
+    if (access(path, R_OK) != 0)
+        return;
+    
+    aliases_htcnf = poldek_ldconf(path, POLDEK_LDCONF_NOVRFY);
+    ht = poldek_conf_get_section_ht(aliases_htcnf, "global");
+    keys = n_hash_keys(ht);
+    for (i=0; i < n_array_size(keys); i++) {
+        char *name, *cmdline;
 
-	if ((stream = fopen(path, "r")) == NULL) {
-		return;
-	}
-
-	while (fgets(buf, sizeof(buf) - 1, stream))
-	{
-		char *p = buf;
-		char *start;
-		char errstring[96];
-
-		while (isspace(*p))
-			p++;
-
-		if (*p == '#' || *p == '\0') {
-			nline++;
-			continue;
-		}
-
-		start=p;
-
-		while(isalnum(*p) || *p=='-')
-			p++;
-
-		strncpy(name, start, (int)p-(int)start);
-		name[(int)p-(int)start]='\0';
-
-		while(isspace(*p))
-			p++;
-
-		if(*p!='=')
-			logn(LOGWARN, _("%s:%d incorrect definition of alias"), path, nline);
-
-		p++;
-		
-		while(isspace(*p))
-			p++;
-
-		start=p;
-		p+=strlen(p);
-
-		while(isspace(*p))
-			p--;
-
-		strncpy(cmdline, start, (int)p-(int)start);
-		cmdline[(int)p-(int)start-1]='\0';
-
-		if(add_alias(name, cmdline, errstring))
-			logn(LOGWARN, "%s:%d %s", path, nline, errstring);
-
-		nline++;
-	}
+        name = n_array_nth(keys, i);
+        if ((cmdline = poldek_conf_get(ht, name, NULL)))
+            add_alias(name, cmdline);
+    }
 }
+
 
 
 static void init_commands(void) 
 {
     int n = 0;
-	int i;
-	char *homedir;
+	char   *homedir;
+    
     
     commands = n_array_new(16, NULL, (tn_fn_cmp)command_cmp);
-    aliases  = n_array_new(16, NULL, (tn_fn_cmp)command_alias_cmp);
+    aliases  = n_array_new(16, (tn_fn_free)command_alias_free,
+                           (tn_fn_cmp)command_alias_cmp);
     all_commands = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
 
 	
@@ -1259,14 +1219,12 @@ static void init_commands(void)
 
 	n_array_sort(commands);
 
-	parse_aliases("/etc/poldek.alias");
-
+    load_aliases("/etc/poldek.alias");
 	if ((homedir = getenv("HOME")) != NULL) {
 		char path[PATH_MAX];
 		snprintf(path, sizeof(path), "%s/.poldek.alias", homedir);	
-		parse_aliases(path);
+		load_aliases(path);
 	}
-
 }
 
 
