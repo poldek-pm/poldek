@@ -120,7 +120,7 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     char            rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
     const char      *lc_lang;
     struct pkgdir   *dir = NULL;
-    struct pmctx    *pmctx;
+    struct pm_ctx   *pmctx;
 
     pmctx = poldek_get_pmctx(cctx->ctx);
     

@@ -45,8 +45,8 @@ int poldek_is_interactive_on(const struct poldek_ctx *ctx);
 tn_array *poldek_get_sources(struct poldek_ctx *ctx);
 tn_array *poldek_get_pkgdirs(struct poldek_ctx *ctx);
 
-struct pmctx;
-struct pmctx *poldek_get_pmctx(struct poldek_ctx *ctx);
+struct pm_ctx;
+struct pm_ctx *poldek_get_pmctx(struct poldek_ctx *ctx);
 
 
 enum poldek_search_tag {

@@ -1072,7 +1072,7 @@ int poldek_is_interactive_on(const struct poldek_ctx *ctx)
                             POLDEK_OP_EQPKG_ASKUSER, 0);
 }
 
-struct pmctx *poldek_get_pmctx(struct poldek_ctx *ctx)
+struct pm_ctx *poldek_get_pmctx(struct poldek_ctx *ctx)
 {
     return ctx->pmctx;
 }
