@@ -394,9 +394,10 @@ int pkgfl_ldhdr(tn_alloc *na, tn_tuple **fl, Header h, int which, const char *pk
             
             t = n_tuple_new(na, n, NULL);
             for (i=0; i<c2; i++) {
-                if (fentdirs[i] != NULL)
-                    n_tuple_set_nth(t, j++, fentdirs[i]);
-                    
+                if (fentdirs[i]  == NULL)
+                    continue;
+                
+                n_tuple_set_nth(t, j++, fentdirs[i]);
                 qsort(&fentdirs[i]->files, fentdirs[i]->items,
                       sizeof(struct flfile*), 
                       (int (*)(const void *, const void *))flfile_cmp_qsort);
