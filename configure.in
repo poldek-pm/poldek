@@ -396,6 +396,7 @@ AC_CONFIG_FILES([
 		pkgdir/pdir/Makefile
 		pkgdir/pndir/Makefile
 		pkgdir/rpmdb/Makefile
+                pkgdir/yum/Makefile
 		sigint/Makefile
 		vfile/Makefile
 		vfile/vfff/Makefile
