@@ -18,7 +18,6 @@ struct dbpkg {
 
 
 struct dbpkg *dbpkg_new(uint32_t recno, Header h, unsigned ldflags);
-struct dbpkg *dbpkg_new_part(uint32_t recno, Header h, unsigned ldflags);
 void dbpkg_free(struct dbpkg *dbpkg);
 void dbpkg_clean(struct dbpkg *dbpkg);
 
