@@ -572,7 +572,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     } else if (db_dep->flags & PROCESS_AS_ORPHAN) {
         int i;
 
-        for (i=0; i<n_array_size(db_dep->pkgs); i++) {
+        for (i=0; db_dep->pkgs && i < n_array_size(db_dep->pkgs); i++) {
             struct pkg *opkg = n_array_nth(db_dep->pkgs, i);
             struct pkg *p;
             int not_found = 1;
@@ -915,7 +915,7 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
 
     DBGF("END PROCESSING [%d] %s as %s\n", indent, pkg_snprintf_s(pkg),
          process_as == PROCESS_AS_NEW ? "NEW" : "ORPHAN");
-    
+
     if (process_as == PROCESS_AS_NEW)
         n_array_pop(upg->pkg_stack);
     return 1;
