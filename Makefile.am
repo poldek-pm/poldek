@@ -3,7 +3,8 @@
 SUBDIRS   = vfile
 
 CFLAGS    = @CFLAGS@
-INCLUDES  = -I$(top_srcdir)/trurlib
+INCLUDES  = @TRURL_INCLUDE@
+LDFLAGS   = @LDFLAGS@
 POD2MAN   = @POD2MAN@
 
 noinst_LIBRARIES = libpoldek.a
@@ -43,12 +44,15 @@ else
 ICSRCS =
 endif
 
-bin_PROGRAMS        = poldek
+bin_PROGRAMS        = poldek rpmvercmp
 poldek_SOURCES      = main.c $(ICSRCS)
-poldek_LDADD        = -Ltrurlib -L. -lpoldek -Lvfile -lvfile
+poldek_LDADD        = vfile/libvfile.a libpoldek.a @TRURL_LDFLAG@
 poldek_DEPENDENCIES = vfile/libvfile.a libpoldek.a
-INCLUDES            = -Itrurlib
 
+rpmvercmp_SOURCES   = rpmvercmp.c
+rpmvercmp_LDADD     = 
+rpmvercmp_LIBS      = -lrpm  
+rpmvercmp_LDFLAGS   = 
 
 EXTRA_DIST = $(iclientSRCS) \
 	     poldek.1 poldek.pod \
