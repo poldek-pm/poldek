@@ -183,6 +183,7 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_NOCONF                2002 
 #define OPT_LOG                   'L'
 #define OPT_V016                  2004
+#define OPT_BANNER                2005
 
 /* The options we understand. */
 static struct argp_option options[] = {
@@ -257,7 +258,8 @@ static struct argp_option options[] = {
      N_("Upgrade all packages needs upgrade"), 70 },
 
 {"install", 'i', 0, 0, N_("Install given packages"), 70 },    
-{"upgrade", 'U', 0, 0, N_("Upgrade given packages"), 70 },
+{"upgrade", 'u', 0, 0, N_("Upgrade given packages"), 70 },
+{0, 'U', 0, OPTION_ALIAS, 0, 70 },
 
 
 {0,0,0,0, N_("Installation switches:"), 71},
@@ -286,7 +288,7 @@ N_("Don't take held packages from $HOME/.poldek_hold."), 71 },
 {"nofollow", OPT_INST_NOFOLLOW, 0, 0, 
      N_("Don't automatically install packages required by installed ones"), 71 },    
     
-{"fetch", OPT_INST_FETCH, "DIR", 0,
+{"fetch", OPT_INST_FETCH, "DIR", OPTION_ARG_OPTIONAL,
      N_("Do not install, only fetch packages"), 71 }, 
     
 {"nodeps", OPT_INST_NODEPS, 0, 0,
@@ -335,6 +337,7 @@ N_("Don't take held packages from $HOME/.poldek_hold."), 71 },
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 500 }, 
 
 
+{"version", OPT_BANNER, 0, 0, N_("Display program version and exit"), 500 },    
 {"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), 500 },
 {"v016", OPT_V016, 0, 0, N_("Read indexes created by versions < 0.17"), 500 },
 {0,  'v', 0, 0, N_("Be verbose."), 500 },
@@ -620,7 +623,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
             
         case OPT_INST_FETCH:
-            argsp->inst.fetchdir = trimslash(arg);
+            if (arg)
+                argsp->inst.fetchdir = trimslash(arg);
             argsp->inst.flags |= INSTS_JUSTFETCH;
             break;
 

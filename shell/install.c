@@ -51,15 +51,14 @@ static struct argp_option options[] = {
     
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), 1 },
 
-{"fetch", OPT_INST_FETCH, "DIR", OPTION_HIDDEN,
-N_("Do not install, only fetch packages"), 1},
+{"fetch", 'd', "DIR", OPTION_ARG_OPTIONAL,
+N_("Do not install, only download packages"), 1},
 
 {"nodeps", OPT_INST_NODEPS, 0, 0,
  N_("Install packages with broken dependencies"), 1 },
 
-
 {0,  'v', 0, 0, N_("Be verbose."), 1 },
-{NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
+{NULL, 'h', 0, OPTION_HIDDEN, "", 1 }, /* alias for -? */
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -126,7 +125,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_FORCE:
             cmdarg->sh_s->inst->instflags |= PKGINST_FORCE;
             break;
-
+            
             
         case 't':
             if (cmdarg->sh_s->inst->flags & INSTS_TEST)
@@ -151,6 +150,17 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             cmdarg->sh_s->pkgset->flags |= PSMODE_INSTALL;
             cmdarg->sh_s->pkgset->flags &= ~PSMODE_UPGRADE;
             break;
+
+        case 'd':
+            cmdarg->sh_s->inst->flags |= INSTS_JUSTFETCH;
+            if (cmdarg->sh_s->inst->fetchdir) {
+                free((char*)cmdarg->sh_s->inst->fetchdir);
+                cmdarg->sh_s->inst->fetchdir = NULL;
+            }
+            
+            if (arg)
+                cmdarg->sh_s->inst->fetchdir = strdup(arg);
+            break;
             
         default:
             return ARGP_ERR_UNKNOWN;
@@ -165,7 +175,17 @@ static int install(struct cmdarg *cmdarg)
     tn_array *shpkgs = NULL;
     tn_array *uninst_pkgs = NULL;
     int i, rc = 1, is_test;
+    struct inst_s *inst;
 
+    inst = cmdarg->sh_s->inst;
+    n_assert(inst);
+
+    
+    if ((inst->flags & INSTS_JUSTFETCH) && inst->fetchdir)
+        if (!is_rwxdir(inst->fetchdir)) {
+            logn(LOGERR, _("%s: no such directory"), inst->fetchdir);
+            return 0;
+        }
     
     sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->avpkgs, &shpkgs, 1);
     
@@ -176,19 +196,18 @@ static int install(struct cmdarg *cmdarg)
 
     pkgset_mark(cmdarg->sh_s->pkgset, PS_MARK_OFF_ALL);
     
-    for (i=0; i<n_array_size(shpkgs); i++) {
+    for (i=0; i < n_array_size(shpkgs); i++) {
         struct shpkg *shpkg = n_array_nth(shpkgs, i);
         pkg_hand_mark(shpkg->pkg);
     }
 
-    is_test = (cmdarg->sh_s->inst->flags & INSTS_TEST) |
-        (cmdarg->sh_s->inst->instflags & PKGINST_TEST);
+    is_test = (inst->flags & INSTS_TEST) || (inst->instflags & PKGINST_TEST);
     
     uninst_pkgs = pkgs_array_new(16);
     rc = install_pkgs(cmdarg->sh_s->pkgset, cmdarg->sh_s->inst, uninst_pkgs);
     
     if (rc == 0) {
-        msgn(1, _("There were errors during install"));
+        msgn(1, _("There were errors"));
         
     } else if (!is_test && cmdarg->sh_s->instpkgs) { /* update installed set */
         int instpkgs_changed = 0;

@@ -1561,8 +1561,11 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg)
         rc = pkgset_dump_marked_fqpns(ps, upg->inst->dumpfile);
         
     } else if (upg->inst->flags & INSTS_JUSTFETCH) {
-        n_assert(upg->inst->fetchdir);
-        rc = packages_fetch(upg->install_pkgs, upg->inst->fetchdir, 1);
+        const char *destdir = upg->inst->fetchdir;
+        if (destdir == NULL)
+            destdir = upg->inst->cachedir;
+
+        rc = packages_fetch(upg->install_pkgs, destdir, upg->inst->fetchdir ? 1 : 0);
         
     } else if ((upg->inst->flags & INSTS_NOHOLD) || (rc=check_holds(ps, upg))) {
         rc = packages_rpminstall(pkgs, ps, upg->inst);
