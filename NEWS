@@ -2,11 +2,11 @@
 * added support for package.dir's "patches" (new option --update-whole
   updates whole index while --update looking for patches first)
 
-* improved dependecy processing:
-  - packages are divided into groups before install and each group 
-    is installed separately; this ensures that broken dependencies in 
-    one of group doesn't affect the rest. 
+* packages are divided into groups before install and each group 
+  is installed separately; this ensures that broken dependencies in 
+  one of group doesn't affect the rest. 
 
+* improved dependecy processing:
   - package may be marked for install as a consequence of conflict
 
   - dependency loops detected during installl time are noticed in human 
@@ -15,8 +15,8 @@
   - improved "greedy" selection - if foo-VER is upgraded, then eventual 
     "greedy" marks will mark foo-{devel,static,etc} in version VER too.
 
-* added internal simple ftp client; it is used for FTP downloads
-  by default
+* added simple ftp client; it is used for FTP downloads by
+  default
 
 * shell: 
   - db package list is cached what speeds up program start
@@ -27,13 +27,15 @@
 * added log file suppport (--log option)
 
 * sources may be configured as name and URL pair; and be later 
-  selected using its name (new --sn|-S option)  
-
-* packages.dir's integrity is verified before each loading;
-  it preventing program SIGSEVs on load indexes
+  selected using that name (new --sn|-n option). 
+  With --sl|-l program lists all configured sources.
+  
+* packages.dir's integrity is verified before each loading
+  what prevents program SIGSEVs on load broken indexes
 
 * changed default cache directory to $HOME/.poldek-cache
-* few (nice) improvements and bugfixes 
+
+* few (nice) improvements and (not so nice) bug fixes 
 
 
 0.16 (stable release):

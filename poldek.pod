@@ -79,9 +79,6 @@ Examples:
 
 =back
 
-If you want to build package index, then only one and only directory
-path as SOURCE is accepted.
-
 If package index and packages are stored in diffrent
 locations then option:
 
@@ -140,7 +137,6 @@ Build package index, by default it's stored in SOURCE/packages.dir[.gz].
 The other two files are created: packages.dir.mdd with computed packages.dir's 
 digest and packages.dir.toc[.gz] with packages NAME-EVR per line.
 
-
 Additionally previous SOURCE/packages.dir[.gz] is different from 
 currently created one then index "patch" is created 
 under SOURCE/packages.i/ directory. Every patch consist of two 
@@ -151,7 +147,7 @@ Outdated patches are automatically removed.
 
 With B<--nodiff> patches are not created.
 
-I<NOTE>: SOURCE must be directory.
+I<NOTE>: In this mode only one and only directory path as SOURCE is accepted.
 
 =item B<--update>; B<--update-whole>   
 
@@ -339,7 +335,7 @@ line represents a comment or a parameter.
 
 =over
 
-=item * B<source> = [NAME;]SOURCE
+=item * B<source> = [NAME] SOURCE
 
 Optional NAME may be specified later from cmdline by
 B<-n, --sn> B<SOURCE-NAME> option; for example if you 
@@ -358,10 +354,11 @@ $ poldek --sn pld-stable
 
 $ poldek --sn pld-\*
 
-If you want to configure prefixed source, then it should be specified 
-by suffixed source/prefix pair to distinguish it from other sources.   
+If you want to configure "prefixed" source, then it should 
+be specified by suffixed paramteters pair to distinguish it from 
+other sources.   
 
-=item * B<sourceXX> = [NAME;]SOURCE
+=item * B<sourceXX> = SOURCE
 =item * B<prefixXX> - see B<-P> description
 
 

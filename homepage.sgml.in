@@ -13,10 +13,9 @@
     <p>
 
     The poldek is a RPM packages management helper tool; its
-    basic features are similar to any modern package updater like <em>apt-get</em>.
-
-    Program takes information about packages from custom package index file
-    (called <em>package.dir.gz</em> by default), and allows to package 
+    basic features are similar to any modern package updater like <em>apt-get</em> --
+    program takes information about packages from custom package index file
+    (called <em>packages.dir.gz</em> by default), and allows to package 
     install, upgrade and removal. 
     Package dependencies are automatically handled, so if you try to install 
     a package that needs others to be installed, it will download all
@@ -87,10 +86,10 @@
     <item> Support for "patches" of package index 
     <p>
     To save users time and bandwidth program supports "incremental indexes"
-    which is very useful with repositories which frequently changed (PLD package 
-    repository is changed few times a week). This feature consist in 
+    which is very useful with repositories which frequently changes (PLD package 
+    repository changes few times a week). This feature consist in 
     creation "patches" of index which gives the users possibilty to update 
-    his local index by download "patch" with information on changes only.
+    his local index by download "patch" with information of changes only.
 
     <item> Program is prepared to be run by ordinary user, installation 
     of packages in that case can be done with <em>sudo</em>. 
@@ -144,7 +143,7 @@
     <item> <url url="poldek.html" name="man page">
     <item> PLD admin manual 
   <url url="http://team.pld.org.pl/~klakier/doc/pld-admin-manual/en/index.html#id129972" 
-   name="subsection"> about poldek (partially obsolete)
+   name="subsection"> about poldek (partially obsoleted)
     </itemize>
     </sect> 
 
@@ -162,7 +161,7 @@
       <url url="http://team.pld.org.pl/~mis/poldek/" 
            name="http://team.pld.org.pl/~mis/poldek/"> 
     </item>
-    
+
     <item> Source tarballs and rpm source packages. 
       <itemize>
       <item> 
