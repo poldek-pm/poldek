@@ -139,7 +139,7 @@ char *arg_generator(const char *text, int state, int genpackages)
     static int           i, len;
     char                 *name = NULL;
     tn_array             *ents;
-
+    
     ents = sh_ctx.cctx->currdir->pkg_dent_ents;
     if (!genpackages) {
         ents = sh_ctx.cctx->rootdir->pkg_dent_ents;
@@ -151,7 +151,7 @@ char *arg_generator(const char *text, int state, int genpackages)
         //free(path);
     }
     
-    
+    //printf("text %s\n", text); 
     if (state == 0) {
         len = strlen(text);
         if (len == 0)

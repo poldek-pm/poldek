@@ -124,6 +124,7 @@ int pkg_dent_cmp(struct pkg_dent *e1, struct pkg_dent *e2)
 
 int pkg_dent_strncmp(struct pkg_dent *ent, const char *name)
 {
+    DBGF("cmp(%s, %s) %d\n", ent->name, name, strlen(name));
     return strncmp(ent->name, name, strlen(name));
 }
 
@@ -205,7 +206,7 @@ int pkg_dent_add_pkgs(struct poclidek_ctx *cctx,
         ent = pkg_dent_new_pkg(cctx, pkg);
         n_array_push(dent->pkg_dent_ents, ent);
     }
-    
+    n_array_sort(dent->pkg_dent_ents);
     return 1;
 }
 
@@ -285,6 +286,14 @@ void poclidek_dent_init(struct poclidek_ctx *cctx)
 }
 #endif
 
+static void dent_sort(const char *foo, void *dent)
+{
+    struct pkg_dent *ent = dent;
+    foo = foo;
+    n_assert(pkg_dent_isdir(ent));
+    n_array_sort(ent->pkg_dent_ents);
+}
+
 void poclidek_dent_init(struct poclidek_ctx *cctx)
 {
     struct pkg_dent *root, *allav, *curr_ent = NULL;
@@ -303,9 +312,14 @@ void poclidek_dent_init(struct poclidek_ctx *cctx)
         return;
     
     pkg_dent_add_pkgs(cctx, allav, pkgs);
+#if 0                           /* debug, dump */
+    for (i=0; i < n_array_size(allav->pkg_dent_ents); i++) {
+        struct pkg_dent *dent = n_array_nth(allav->pkg_dent_ents, i);
+        printf("%d. %s\n", i, dent->name);
+    }
+#endif    
 
     dent_ht = n_hash_new(32, NULL);
-
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
         
@@ -336,6 +350,7 @@ void poclidek_dent_init(struct poclidek_ctx *cctx)
         n_array_push(curr_ent->pkg_dent_ents, pkg_dent_new_pkg(cctx, pkg));
     }
     n_array_free(pkgs);
+    n_hash_map(dent_ht, dent_sort);
     n_hash_free(dent_ht);
 }
 
