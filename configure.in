@@ -200,11 +200,8 @@ else
 fi
 
 dnl Checks for libraries.
-# rpm 4.0.4 contains zlib
-if test ${is_rpm_4_0_4}. != yes. ; then
-	AC_CHECK_LIB(bz2, BZ2_bzCompress)
-	AC_CHECK_LIB(z, gzopen)
-fi
+AC_CHECK_LIB(bz2, BZ2_bzCompress)
+AC_CHECK_LIB(z, gzopen)
 
 DBLIB=""
 AC_CHECK_LIB(db-4.0, db_create,[DBLIB=-ldb-4.0],[
@@ -225,9 +222,6 @@ AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="$LIBS -lrpm $DBLIB"],
 AC_CHECK_FUNCS(rpmMachineScore,, AC_MSG_ERROR("rpmlib not found"))
 AC_CHECK_FUNCS(rpmlog, [AC_DEFINE(HAVE_RPMLOG)])
 AC_CHECK_FUNCS(rpmCheckSig, [AC_DEFINE(HAVE_RPMCHECKSIG)])
-
-
-AC_CHECK_FUNCS(gzopen)
 
 dnl trullib 0.43.4 has n_hash_size
 dnl test if linked with system copy only
