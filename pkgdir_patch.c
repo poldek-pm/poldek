@@ -36,6 +36,31 @@
 #include "pkg.h"
 #include "pkgroup.h"
 
+#if 0
+static void dump_arr(tn_array *pkgs)
+{
+    int i;
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        printf("%s, ", pkg_snprintf_s(pkg));
+    }
+    printf("\n");
+
+}
+#endif
+
+static __inline__
+void sort_for_diff(struct pkgdir *pkgdir) 
+{
+    n_array_sort_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_deepstrcmp_name_evr);
+}
+
+static __inline__
+struct pkg *search_for_diff(struct pkgdir *pkgdir, struct pkg *pkg) 
+{
+    return n_array_bsearch_ex(pkgdir->pkgs, pkg, (tn_fn_cmp)pkg_deepstrcmp_name_evr);
+}
+
 
 struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2) 
 {
@@ -44,21 +69,21 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     struct pkgdir *diff;
     int i;
 
-    n_array_sort(pkgdir->pkgs);
-    n_array_sort(pkgdir2->pkgs);
+    sort_for_diff(pkgdir);
+    sort_for_diff(pkgdir2);
+    
     n_assert(pkgdir->flags & PKGDIR_UNIQED);
     n_assert(pkgdir2->flags & PKGDIR_UNIQED);
     
     plus_pkgs = pkgs_array_new(256);
+
     for (i=0; i < n_array_size(pkgdir2->pkgs); i++) {
         struct pkg *plus_pkg;
         
         pkg = n_array_nth(pkgdir2->pkgs, i);
-        if ((plus_pkg = n_array_bsearch(pkgdir->pkgs, pkg)) == NULL ||
-            pkg_deepcmp_name_evr_rev(plus_pkg, pkg) != 0) {
-            
+        if ((plus_pkg = search_for_diff(pkgdir, pkg)) == NULL) {
             n_array_push(plus_pkgs, pkg);
-            msg(2, "+ %s\n", pkg_snprintf_s(pkg));
+            msg(2, "+ %s %p\n", pkg_snprintf_s(pkg), plus_pkg);
         }
     }
 
@@ -68,9 +93,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
         
         pkg = n_array_nth(pkgdir->pkgs, i);
 
-        if ((minus_pkg = n_array_bsearch(pkgdir2->pkgs, pkg)) == NULL ||
-            pkg_deepcmp_name_evr_rev(minus_pkg, pkg) != 0) {
-            
+        if ((minus_pkg = search_for_diff(pkgdir2, pkg)) == NULL) {
             n_array_push(minus_pkgs, pkg);
             msg(2, "- %s\n", pkg_snprintf_s(pkg));
         }
@@ -91,6 +114,9 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
         n_array_free(minus_pkgs);
         minus_pkgs = NULL;
     }
+
+    n_array_sort(pkgdir->pkgs);
+    n_array_sort(pkgdir2->pkgs);
 
     if (minus_pkgs == NULL && plus_pkgs == NULL) { /* equal */
         n_array_free(depdirs);
@@ -144,7 +170,7 @@ struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *patch)
                                                      pkgdir->pkgroups,
                                                      pkg->groupid);
         }
-    
+        
         pkgroup_idx_free(pkgdir->pkgroups);
         pkgdir->pkgroups = pkgroup_idx_link(patch->pkgroups);
     }

@@ -171,8 +171,7 @@ int pkg_cmp_pri(struct pkg *p1, struct pkg *p2);
 int pkg_cmp_btime(struct pkg *p1, struct pkg *p2);
 int pkg_cmp_btime_rev(struct pkg *p1, struct pkg *p2);
 
-int pkg_strcmp_ver(const struct pkg *p1, const struct pkg *p2);
-int pkg_strcmp_evr(const struct pkg *p1, const struct pkg *p2);
+int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2);
 
 /* strncmp(p1->name, p2->name, strlen(p2->name))*/
 int pkg_strncmp_name(const struct pkg *p1, const struct pkg *p2);

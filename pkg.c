@@ -326,29 +326,26 @@ int pkg_strncmp_name(const struct pkg *p1, const struct pkg *p2)
     return strncmp(p1->name, p2->name, strlen(p2->name));
 }
 
+static __inline__
+int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2);
 
-int pkg_strcmp_ver(const struct pkg *p1, const struct pkg *p2) 
+int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc = 0;
+
+    if ((rc = pkg_cmp_name(p1, p2)))
+        return rc;
 
     if ((rc = p1->epoch - p2->epoch))
         return rc;
 
-    return strcmp(p1->ver, p2->ver);
-}
-
-
-int pkg_strcmp_evr(const struct pkg *p1, const struct pkg *p2) 
-{
-    register int rc = 0;
-
-    if ((rc = p1->epoch - p2->epoch))
+    if ((rc = strcmp(p1->ver, p2->ver)))
+        return rc;
+    
+    if ((rc = strcmp(p1->rel, p2->rel)))
         return rc;
 
-    if ((rc = strcmp(p1->ver, p2->ver) == 0))
-        rc = strcmp(p1->rel, p2->rel);
-
-    return rc;
+    return pkg_deepcmp_(p1, p2);
 }
 
 
@@ -406,21 +403,21 @@ int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2)
 int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc;
-    
+
     if ((rc = pkg_cmp_name(p1, p2)))
         return rc;
     
     return -pkg_cmp_evr(p1, p2);
+
+    //printf("cmp %s %s -> %d\n", pkg_snprintf_s(p1), pkg_snprintf_s0(p2), rc);
+    //return rc;
 }
 
-
-int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2) 
+static __inline__
+int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc;
     
-    if ((rc = pkg_cmp_name_evr_rev(p1, p2)))
-        return rc;
-
     if ((rc = p1->btime - p2->btime))
         return rc;
 
@@ -441,14 +438,22 @@ int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
     
     if (p1->os && p2->os == NULL)
         return 1;
-
+    
     if (p1->os == NULL && p2->os)
         return -1;
 
-    if ((rc = strcmp(p1->os, p2->os)))
-        return rc;
+    return strcmp(p1->os, p2->os);
+}
+
     
-    return 0;
+int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc;
+    
+    if ((rc = pkg_cmp_name_evr_rev(p1, p2)))
+        return rc;
+
+    return pkg_deepcmp_(p1, p2);
 }
 
 int pkg_deepcmp_name_evr_rev_verify(const struct pkg *p1, const struct pkg *p2)
