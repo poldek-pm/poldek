@@ -225,11 +225,11 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
 
 #endif /* HAVE_FORKPTY */
 
-int pm_rpm_packages_install(void *pm_rpm,
+int pm_rpm_packages_install(struct pkgdb *db,
                             tn_array *pkgs, tn_array *pkgs_toremove,
                             struct poldek_ts *ts) 
 {
-    struct pm_rpm *pm = pm_rpm;
+    struct pm_rpm *pm = db->_ctx->modh;
     char **argv;
     char *cmd;
     int i, n, nopts = 0, ec, nsignerr = 0;
@@ -340,7 +340,7 @@ int pm_rpm_packages_install(void *pm_rpm,
             }
 
             if ((vrfyflags = pkg_get_verify_signflags(pkg))) {
-                if (!pm_rpm_verify_signature(pm_rpm, path, vrfyflags)) {
+                if (!pm_rpm_verify_signature(pm, path, vrfyflags)) {
                     logn(LOGERR, _("%s: signature verification failed"),
                          pkg_snprintf_s(pkg));
                     nsignerr++;
@@ -410,9 +410,10 @@ int pm_rpm_packages_install(void *pm_rpm,
     return 0;
 }
 
-int pm_rpm_packages_uninstall(void *pm_rpm, tn_array *pkgs, struct poldek_ts *ts)
+int pm_rpm_packages_uninstall(struct pkgdb *db, 
+                              tn_array *pkgs, struct poldek_ts *ts)
 {
-    struct pm_rpm *pm = pm_rpm;
+    struct pm_rpm *pm = db->_ctx->modh;
     char **argv;
     char *cmd;
     int i, n, nopts = 0;

@@ -368,8 +368,8 @@ int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
 }
 
 
-int pm_rpm_dbinstall(struct pkgdb *db, const char *path,
-                     const struct poldek_ts *ts)
+int pm_rpm_install_package(struct pkgdb *db, const char *path,
+                           const struct poldek_ts *ts)
 {
     unsigned instflags = 0, filterflags = 0, transflags = 0;
 

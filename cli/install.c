@@ -60,7 +60,8 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_PROMOTEEPOCH           (OPT_GID + 30)
 #define OPT_PMONLY_NODEPS         (OPT_GID + 31)
 #define OPT_PMONLY_FORCE          (OPT_GID + 32)
-#define OPT_PM                    (OPT_GID + 33) 
+#define OPT_PM                    (OPT_GID + 33)
+#define OPT_INST_NOFETCH          (OPT_GID + 34)
 
 static struct argp_option options[] = {
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
@@ -110,7 +111,10 @@ N_("Be unconcerned (applied to PM only)"), OPT_GID },
     
 {"pmopt", OPT_PM, "OPTION", 0, 
  N_("pass option OPTION to PM binary"), OPT_GID },
-{"rpm", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },    
+{"rpm", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
+
+{"nofetch", OPT_INST_NOFETCH, 0, OPTION_HIDDEN,
+     N_("Do not download packages"), OPT_GID },    
 
 {0,  'v', 0, 0, N_("Be verbose."), OPT_GID },
 {NULL, 'h', 0, OPTION_HIDDEN, "", OPT_GID }, /* alias for -? */
@@ -377,6 +381,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             ts->setop(ts, POLDEK_OP_JUSTPRINT_N, 1);
             break;
 
+        case OPT_INST_NOFETCH:
+            ts->setop(ts, POLDEK_OP_NOFETCH, 1);
+            break;
  
         case OPT_INST_FETCH:
             if (arg) {

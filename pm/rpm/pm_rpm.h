@@ -29,10 +29,11 @@ time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbfull_path);
 int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath, 
                      tn_array *depdirs);
 
-int pm_rpm_packages_install(void *pm_rpm,
+int pm_rpm_packages_install(struct pkgdb *db,
                             tn_array *pkgs, tn_array *pkgs_toremove,
                             struct poldek_ts *ts);
-int pm_rpm_packages_uninstall(void *pm_rpm, tn_array *pkgs, struct poldek_ts *ts);
+int pm_rpm_packages_uninstall(struct pkgdb *db,
+                              tn_array *pkgs, struct poldek_ts *ts);
 
 #ifdef HAVE_RPM_4_1
 # include <rpm/rpmcli.h>
@@ -50,14 +51,15 @@ int pm_rpm_packages_uninstall(void *pm_rpm, tn_array *pkgs, struct poldek_ts *ts
 int pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags);
 
 
-rpmdb pm_rpm_opendb(void *pm_rpm,
-                    const char *dbpath, const char *rootdir, mode_t mode);
+rpmdb pm_rpm_opendb(void *pm_rpm, void *dbh, 
+                    const char *dbpath, const char *rootdir, mode_t mode,
+                    tn_hash *kw);
 void pm_rpm_closedb(rpmdb db);
 
 
 int pm_rpm_db_it_init(struct pkgdb_it *it, int tag, const char *arg);
-int pm_rpm_dbinstall(struct pkgdb *db, const char *path,
-                     const struct poldek_ts *ts);
+int pm_rpm_install_package(struct pkgdb *db, const char *path,
+                           const struct poldek_ts *ts);
 
 int pm_rpm_vercmp(const char *one, const char *two);
 

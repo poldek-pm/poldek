@@ -121,7 +121,6 @@ int packages_fetch(struct pm_ctx *pmctx,
     tn_hash   *urls_h, *pkgs_h = NULL;
     tn_hash   *pkgdir_labels_h = NULL;
 
-    return 1;
     n_assert(destdir);
     urls_h = n_hash_new(21, (tn_fn_free)n_array_free);
     pkgs_h = n_hash_new(21, (tn_fn_free)n_array_free);

@@ -43,41 +43,57 @@
 #include "pm_pset.h"
 #include "pkgset.h"
 
-
+struct pm_psetdb 
+{
+    struct source *src;
+    struct pkgset *ps;
+};
 
 void pm_pset_destroy(void *pm_pset) 
 {
     struct pm_pset *pm = pm_pset;
     n_cfree(&pm->installer_path);
-    pkgset_free(pm->ps);
-    n_hash_free(pm->psh);
     free(pm);
 }
 
-#if 0
-static struct pkgset *newps(
-    if ((ps = pkgset_new(NULL)) == NULL)
-        return NULL;
-        
-    if (!pkgset_add_pkgdir(ps, pkgdir)) {
-        logn(LOGERR, _("no packages loaded"));
-        pkgset_free(ps);
-        return NULL;
-    }
-
-    pkgset_setup(ps, PSET_VRFY_MERCY);
-#endif
-
-void *pm_pset_init(struct source *src) 
+void *pm_pset_init(void *null) 
 {
     struct pm_pset *pm_pset;
     char path[PATH_MAX];
+
+    null = null;
+    
+    pm_pset = n_malloc(sizeof(*pm_pset));
+    
+    if (poldek_lookup_external_command(path, sizeof(path), "pset-install.sh"))
+        pm_pset->installer_path = n_strdup(path);
+    else
+        pm_pset->installer_path = NULL;
+    return pm_pset;
+}
+
+void *pm_pset_opendb(void *pm_pset, void *dbh,
+                     const char *rootdir, const char *dbpath,
+                     mode_t mode, tn_hash *kw)
+{
+    struct source *src;
     struct pkgdir *dir;
     struct pkgset *ps;
+    struct pm_psetdb *db = dbh;
+    
+    rootdir = rootdir; dbpath = dbpath; mode = mode; pm_pset = pm_pset;
+    
+    if (db)
+        return db;
+
+    src = n_hash_get(kw, "source");
+    if (!src) {
+        logn(LOGERR, _("Could not open 'pset' database, missing source..."));
+        return NULL;
+    }
 
     if (source_is_remote(src) && 0)
         return NULL;
-    
 
     if ((dir = pkgdir_srcopen(src, 0)) == NULL) {
         if (!source_is_type(src, "dir") && is_dir(src->path)) {
@@ -106,30 +122,34 @@ void *pm_pset_init(struct source *src)
     }
 
     pkgset_setup(ps, PSET_VRFY_MERCY);
-    pm_pset = n_malloc(sizeof(*pm_pset));
-    pm_pset->ps = ps;
-    if (poldek_lookup_external_command(path, sizeof(path), "pset-install.sh"))
-        pm_pset->installer_path = n_strdup(path);
-    else
-        pm_pset->installer_path = NULL;
-    return pm_pset;
+    db = n_malloc(sizeof(*db));
+    db->src = src;
+    db->ps = ps;
+    return db;
 }
 
-void *pm_pset_opendb(void *pm_pset, const char *rootdir, const char *dbpath,
-                     mode_t mode)
+void pm_pset_closedb(void *dbh) 
 {
-    rootdir = rootdir;
-    dbpath = dbpath;
-    mode = mode;
-    return pm_pset;
-}
-
-void pm_pset_closedb(void *pm_pset) 
-{
-    pm_pset = pm_pset;
+    dbh = dbh;
     return;
 }
 
+void pm_pset_freedb(void *dbh) 
+{
+    struct pm_psetdb *db = dbh;
+    if (db) {
+        if (db->ps)
+            pkgset_free(db->ps);
+        free(db);
+    }
+    
+}
+
+void pm_pset_commitdb(void *dbh) 
+{
+    struct pm_psetdb *db = dbh;
+    logn(LOGNOTICE, "commit NIY");
+}
 
 
 /* remeber! don't touch any member */
@@ -137,17 +157,15 @@ struct psetdb_it {
     int                  tag;
     int                  i;
     struct pm_dbrec      dbrec;
-    struct pm_pset       *pm_pset;
     tn_array             *pkgs;
 };
 
 
 static
-int psetdb_it_init(struct pm_pset *pm_pset, struct psetdb_it *it,
+int psetdb_it_init(struct pm_psetdb *db, struct psetdb_it *it,
                    int tag, const char *arg)
 {
     int pstag = 0;
-    struct pm_pset *pm = pm_pset;
     
     switch (tag) {
         case PMTAG_RECNO:
@@ -184,8 +202,7 @@ int psetdb_it_init(struct pm_pset *pm_pset, struct psetdb_it *it,
     
     it->i = 0;
     it->tag = tag;
-    it->pm_pset = pm;
-    it->pkgs = pkgset_search(pm->ps, pstag, arg);
+    it->pkgs = pkgset_search(db->ps, pstag, arg);
     return it->pkgs ? n_array_size(it->pkgs) : 0;
 }
 
@@ -332,49 +349,51 @@ tn_array *pm_pset_ldhdr_capreqs(tn_array *arr, void *hdr, int crtype)
 }
 
 
-
-int pm_pset_packages_install(void *pm_pset,
+int pm_pset_packages_install(struct pkgdb *pdb,
                              tn_array *pkgs, tn_array *pkgs_toremove,
                              struct poldek_ts *ts) 
 {
+    struct pm_psetdb *db = pdb->dbh;
     struct pkgdir *pkgdir;
-    struct pm_pset *pm = pm_pset;
     char path[PATH_MAX];
     int i;
 
-    n_assert(pm->ps);
-    n_assert(pm->ps->pkgdirs);
-    n_assert(n_array_size(pm->ps->pkgdirs) == 1);
-    pkgdir = n_array_nth(pm->ps->pkgdirs, 0);
+    n_assert(n_array_size(db->ps->pkgdirs) == 1);
+    pkgdir = n_array_nth(db->ps->pkgdirs, 0);
 
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
 
         if (pkg_localpath(pkg, path, sizeof(path), ts->cachedir)) {
-            pkgset_add_package(pm->ps, pkg);
+            pkgset_add_package(db->ps, pkg);
+            pkgdir_add_package(pkgdir, pkg);
             msgn(0, "%%install %s %s", path, pkgdir->path);
         }
     }
 
-    pm_pset_packages_uninstall(pm, pkgs_toremove, ts);
+    pm_pset_packages_uninstall(pdb, pkgs_toremove, ts);
     return 1;
 }
 
 
-int pm_pset_packages_uninstall(void *pm_pset, tn_array *pkgs,
-                               struct poldek_ts *ts)
+int pm_pset_packages_uninstall(struct pkgdb *pdb,
+                               tn_array *pkgs, struct poldek_ts *ts)
 {
-    struct pm_pset *pm = pm_pset;
+    struct pm_psetdb *db = pdb->dbh;
+    struct pkgdir *pkgdir;
     char path[PATH_MAX];
     int i;
-    
+
+    n_assert(n_array_size(db->ps->pkgdirs) == 1);
+    pkgdir = n_array_nth(db->ps->pkgdirs, 0);
     ts = ts;
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
-
+        
         if (pkg_path(pkg, path, sizeof(path))) {
-            pkgset_remove_package(pm->ps, pkg);
+            pkgset_remove_package(db->ps, pkg);
+            pkgdir_remove_package(pkgdir, pkg);
             msgn(0, "%%uninstall %s", path);
         }
     }

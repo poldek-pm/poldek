@@ -455,6 +455,18 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
     return rc;
 }
 
+static struct pkgdb *ts_dbopen(struct poldek_ts *ts, mode_t mode) 
+{
+    if (strcmp(pm_get_name(ts->pmctx), "pset") == 0)
+        ts->db = pkgdb_open(ts->pmctx, ts->rootdir, NULL, mode,
+                            "source",
+                            ts->_destsrc ? ts->_destsrc :
+                            ts->ctx->ts->_destsrc, NULL);
+    else
+        ts->db = pkgdb_open(ts->pmctx, ts->rootdir, NULL, mode, NULL);
+    return ts->db;
+}
+
 void install_info_init(struct install_info *iinf) 
 {
     iinf->installed_pkgs = pkgs_array_new(16);
@@ -665,17 +677,19 @@ int ts_run_install_dist(struct poldek_ts *ts)
         logn(LOGERR, _("Nothing to do"));
         return 0;
     }
-
     
     if (ts->getop(ts, POLDEK_OP_RPMTEST))
-        ts->db = pkgdb_new_open(ts->pmctx, ts->rootdir, NULL, O_RDONLY);
-    else 
-        ts->db = pkgdb_new_creat(ts->pmctx, ts->rootdir, NULL);
+        ts->db = ts_dbopen(ts, O_RDONLY);
+    else
+        ts->db = ts_dbopen(ts, O_RDWR | O_CREAT | O_EXCL);
     
     if (ts->db == NULL) 
         return 0;
 
     rc = do_poldek_ts_install_dist(ts);
+    
+    if (!ts->getop(ts, POLDEK_OP_RPMTEST))
+        pkgdb_tx_commit(ts->db);
     pkgdb_free(ts->db);
     ts->db = NULL;
     return rc;
@@ -691,8 +705,7 @@ int ts_run_upgrade_dist(struct poldek_ts *ts)
     
     //if (!ts_mark_arg_packages(ts, 0))
     //    return 0;
-
-    ts->db = pkgdb_new_open(ts->pmctx, ts->rootdir, NULL, O_RDONLY);
+    ts->db = ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)
         return 0;
     
@@ -726,7 +739,7 @@ int ts_run_install(struct poldek_ts *ts, struct install_info *iinf)
     }
     
 
-    ts->db = pkgdb_new_open(ts->pmctx, ts->rootdir, NULL, O_RDONLY);
+    ts->db = ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)
         return 0;
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
@@ -744,7 +757,7 @@ int ts_run_uninstall(struct poldek_ts *ts, struct install_info *iinf)
 
     n_assert(ts->type == POLDEK_TSt_UNINSTALL);
 
-    ts->db = pkgdb_new_open(ts->pmctx, ts->rootdir, NULL, O_RDONLY);
+    ts->db = ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)
         return 0;
     

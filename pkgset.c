@@ -299,7 +299,6 @@ int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt)
         n_array_push(ps->pkgs, pkg_link(pkg));
     }
     
-    
     if (pkg->caps)
         for (j=0; j < n_array_size(pkg->caps); j++) {
             struct capreq *cap = n_array_nth(pkg->caps, j);
@@ -332,10 +331,11 @@ int pkgset_add_package(struct pkgset *ps, struct pkg *pkg)
 
 int pkgset_remove_package(struct pkgset *ps, struct pkg *pkg) 
 {
-    int i, j;
+    int i, j, nth;
     
-    if ((pkg = n_array_bsearch(ps->pkgs, pkg)) == NULL)
+    if ((nth = n_array_bsearch_idx(ps->pkgs, pkg)) == -1)
         return 0;
+    pkg = n_array_nth(ps->pkgs, nth);
 
     if (pkg->caps)
         for (j=0; j < n_array_size(pkg->caps); j++) {
@@ -366,7 +366,8 @@ int pkgset_remove_package(struct pkgset *ps, struct pkg *pkg)
                 file_index_remove(&ps->file_idx, flent->dirname,
                                   flent->files[j]->basename, pkg);
         }
-    
+
+    n_array_remove_nth(ps->pkgs, nth);
     return 1;
 }
 

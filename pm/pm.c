@@ -38,14 +38,14 @@ const char *pm_get_name(struct pm_ctx *ctx)
 }
 
 
-int pm_pminstall(struct pm_ctx *ctx, tn_array *pkgs, tn_array *pkgs_toremove,
+int pm_pminstall(struct pkgdb *db, tn_array *pkgs, tn_array *pkgs_toremove,
                  struct poldek_ts *ts)
 {
     int i, rc;
     char path[PATH_MAX];
 
 
-    rc = ctx->mod->pm_install(ctx->modh, pkgs, pkgs_toremove, ts);
+    rc = db->_ctx->mod->pm_install(db, pkgs, pkgs_toremove, ts);
     
     if (!rc || ts->getop(ts, POLDEK_OP_RPMTEST) ||
         ts->getop(ts, POLDEK_OP_KEEP_DOWNLOADS))
@@ -68,9 +68,9 @@ int pm_pminstall(struct pm_ctx *ctx, tn_array *pkgs, tn_array *pkgs_toremove,
     return rc;
 }
 
-int pm_pmuninstall(struct pm_ctx *ctx, tn_array *pkgs, struct poldek_ts *ts)
+int pm_pmuninstall(struct pkgdb *db, tn_array *pkgs, struct poldek_ts *ts)
 {
-    return ctx->mod->pm_uninstall(ctx->modh, pkgs, ts);
+    return db->_ctx->mod->pm_uninstall(db, pkgs, ts);
 }
 
 int pm_verify_signature(struct pm_ctx *ctx, const char *path, unsigned flags)

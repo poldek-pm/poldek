@@ -28,37 +28,38 @@ const char *pm_get_name(struct pm_ctx *ctx);
 char *pm_dbpath(struct pm_ctx *ctx, char *path, size_t size);
 time_t pm_dbmtime(struct pm_ctx *ctx, const char *path);
 
+int pm_pminstall(struct pkgdb *db, tn_array *pkgs, tn_array *pkgs_toremove,
+                 struct poldek_ts *ts);
 
-int pm_pminstall(struct pm_ctx *ctx, tn_array *pkgs,
-                 tn_array *pkgs_toremove, struct poldek_ts *ts);
-
-int pm_pmuninstall(struct pm_ctx *ctx, tn_array *pkgs, struct poldek_ts *ts);
+int pm_pmuninstall(struct pkgdb *db, tn_array *pkgs, struct poldek_ts *ts);
 
 int pm_verify_signature(struct pm_ctx *ctx, const char *path, unsigned flags);
 
 
 struct pkgdb {
-    void    *dbh;
-    char    *path;
-    char    *rootdir;
-    mode_t  mode;
+    void     *dbh;
+    char     *path;
+    char     *rootdir;
+    mode_t   mode;
+    tn_hash  *kw;
+    int16_t  _opened;
+    uint16_t _txcnt;
     struct pm_ctx *_ctx;
 };
 
-struct pkgdb *pkgdb_new(struct pm_ctx *ctx, const char *rootdir,
-                        const char *path);
+struct pkgdb *pkgdb_open(struct pm_ctx *ctx, const char *rootdir,
+                         const char *path, mode_t mode,
+                         const char *key, ...);
+#define pkgdb_creat(ctx, rootdir, path, key, args) \
+    pkgdb_open(ctx, rootdir, path, O_RDWR | O_CREAT | O_EXCL, key, ##args)
 
-struct pkgdb *pkgdb_new_open(struct pm_ctx *ctx, const char *rootdir,
-                             const char *path, mode_t mode);
+int pkgdb_reopen(struct pkgdb *db, mode_t mode);
 
+void pkgdb_close(struct pkgdb *db);
 void pkgdb_free(struct pkgdb *db);
 
-int pkgdb_open(struct pkgdb *db, mode_t mode);
-#define pkgdb_creat(db) pkgdb_open(db, O_RDWR | O_CREAT | O_EXCL)
-#define pkgdb_new_creat(ctx, rootdir, path) \
-                pkgdb_new_open(ctx, rootdir, path, O_RDWR | O_CREAT | O_EXCL)
-void pkgdb_close(struct pkgdb *db);
-
+int pkgdb_tx_begin(struct pkgdb *db);
+int pkgdb_tx_commit(struct pkgdb *db);
 
 struct poldek_ts;
 int pkgdb_install(struct pkgdb *db, const char *path,

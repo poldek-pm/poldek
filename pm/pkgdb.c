@@ -25,22 +25,9 @@
 #include "mod.h"
 #include "log.h"
 
-struct pkgdb *pkgdb_new_open(struct pm_ctx *ctx, const char *rootdir,
-                             const char *path, mode_t mode)
-{
-    struct pkgdb *db;
-
-    db = pkgdb_new(ctx, rootdir, path);
-    if (pkgdb_open(db, mode))
-        return db;
-
-    pkgdb_free(db);
-    return NULL;
-}
-
-
-struct pkgdb *pkgdb_new(struct pm_ctx *ctx, const char *rootdir,
-                        const char *path)
+static
+struct pkgdb *pkgdb_malloc(struct pm_ctx *ctx, const char *rootdir,
+                           const char *path, const char *key, va_list ap)
 {
     struct pkgdb *db;
     
@@ -51,34 +38,58 @@ struct pkgdb *pkgdb_new(struct pm_ctx *ctx, const char *rootdir,
     if (rootdir)
         db->rootdir = n_strdup(rootdir);
 
+    db->kw = n_hash_new(16, NULL);
+    while (key) {
+        void *val = va_arg(ap, void*);
+        n_hash_insert(db->kw, key, val); /* pm module should free val */
+        key = va_arg(ap, const char*);
+    }
     db->_ctx = ctx;
     return db;
 }
 
-int pkgdb_open(struct pkgdb *db, mode_t mode)
+
+struct pkgdb *pkgdb_open(struct pm_ctx *ctx, const char *rootdir,
+                         const char *path, mode_t mode,
+                         const char *key, ...)
 {
-    if (db->dbh != NULL)
+    struct pkgdb *db;
+    va_list ap;
+
+    va_start(ap, key);
+    db = pkgdb_malloc(ctx, rootdir, path, key, ap);
+    va_end(ap);
+    
+    if (pkgdb_reopen(db, mode))
+        return db;
+    pkgdb_free(db);
+    return NULL;
+}
+
+int pkgdb_reopen(struct pkgdb *db, mode_t mode)
+{
+    if (db->_opened)
         return 1;
 
     if (mode == 0)
         mode = O_RDONLY;
 
     n_assert(db->_ctx->mod->dbopen);
-    db->dbh = db->_ctx->mod->dbopen(db->_ctx->modh, db->rootdir,
-                                    db->path, mode);
+    db->dbh = db->_ctx->mod->dbopen(db->_ctx->modh, db->dbh, db->rootdir,
+                                    db->path, mode, db->kw);
     if (db->dbh == NULL)
         return 0;
-
+    db->_opened = 1;
     db->mode = mode;
     return 1;
 }
 
 void pkgdb_close(struct pkgdb *db) 
 {
-    if (db->dbh) {
+    if (db->_opened) {
         n_assert(db->_ctx->mod->dbclose);
         db->_ctx->mod->dbclose(db->dbh);
-        db->dbh = NULL;
+        db->_opened = 0;
     }
 }
 
@@ -95,10 +106,31 @@ void pkgdb_free(struct pkgdb *db)
         free(db->rootdir);
         db->rootdir = NULL;
     }
-    
+
+    if (db->dbh && db->_ctx->mod->dbfree)
+        db->_ctx->mod->dbfree(db->dbh);
+
+    n_hash_free(db->kw);
     free(db);
 }
 
+int pkgdb_tx_begin(struct pkgdb *db)
+{
+    db->_txcnt++;
+    if (db->_ctx->mod->dbtxbegin)
+        db->_ctx->mod->dbtxbegin(db->dbh);
+    return db->_txcnt;
+}
+
+int pkgdb_tx_commit(struct pkgdb *db)
+{
+    if (db->_txcnt > 0)
+        db->_txcnt--;
+    
+    if (db->_txcnt == 0 && db->_ctx->mod->dbtxcommit)
+        db->_ctx->mod->dbtxcommit(db->dbh);
+    return db->_txcnt;
+}
 
 int pkgdb_install(struct pkgdb *db, const char *path,
                   const struct poldek_ts *ts) 

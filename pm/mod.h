@@ -33,10 +33,14 @@ struct pm_module {
     int (*dbdepdirs)(void *modh, const char *rootdir, const char *dbpath, 
                      tn_array *depdirs);
     
-    void *(*dbopen
-           )(void *modh, const char *rootdir,
-                    const char *path, mode_t mode);
+    void *(*dbopen)(void *modh, void *dbh, const char *rootdir,
+                    const char *path, mode_t mode, tn_hash *kw);
     void (*dbclose)(void *dbh);
+
+    void (*dbtxbegin)(void *dbh);
+    void (*dbtxcommit)(void *dbh);
+
+    void (*dbfree)(void *dbh);
     
     int (*db_it_init)(struct pkgdb_it *it, int tag, const char *arg);
 
@@ -45,10 +49,10 @@ struct pm_module {
     
     int (*pkg_vercmp)(const char *one, const char *two);
 
-    int (*pm_install)(void *modh, tn_array *pkgs, tn_array *pkgs_toremove,
+    int (*pm_install)(struct pkgdb *db, tn_array *pkgs, tn_array *pkgs_toremove,
                       struct poldek_ts *ts);
     
-    int (*pm_uninstall)(void *modh, tn_array *pkgs, struct poldek_ts *ts);
+    int (*pm_uninstall)(struct pkgdb *db, tn_array *pkgs, struct poldek_ts *ts);
     int (*pkg_verify_sign)(void *modh, const char *path, unsigned flags);
     
 

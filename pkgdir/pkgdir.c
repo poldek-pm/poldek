@@ -465,7 +465,8 @@ void pkgdir_free(struct pkgdir *pkgdir)
         int i;
         for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
-            pkg->pkgdir = NULL;
+            if (pkg->pkgdir == pkgdir)
+                pkg->pkgdir = NULL;
         }
         
         n_array_free(pkgdir->pkgs);
@@ -810,4 +811,24 @@ int pkgdir_save(struct pkgdir *pkgdir, const char *type,
     return nerr == 0;
 }
 
+
+int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg)
+{
+    if (n_array_bsearch(pkgdir->pkgs, pkg))
+        return 0;
+    n_array_push(pkgdir->pkgs, pkg_link(pkg));
+    return 1;
+}
+
+int pkgdir_remove_package(struct pkgdir *pkgdir, struct pkg *pkg)
+{
+    if (n_array_bsearch(pkgdir->pkgs, pkg))
+        return 0;
+    n_array_push(pkgdir->pkgs, pkg_link(pkg));
+    return 1;
+}
+
+        
+    
+    
 

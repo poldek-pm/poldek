@@ -12,8 +12,11 @@ struct pm_module pm_module_pset = {
     NULL,
     NULL,
     
-    (void *(*)(void *, const char *, const char *, mode_t))pm_pset_opendb,
-    (void (*)(void *))pm_pset_closedb,
+    pm_pset_opendb,
+    pm_pset_closedb,
+    NULL,
+    pm_pset_commitdb,
+    pm_pset_freedb,
 
     pm_pset_db_it_init,
     

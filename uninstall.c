@@ -177,10 +177,9 @@ void update_install_info(struct install_info *iinf, tn_array *pkgs,
     int i, is_installed = 0;
     
     if (vrfy) {
-        pkgdb_open(db, O_RDONLY);
+        pkgdb_reopen(db, O_RDONLY);
         is_installed = 1;
     }
-
 
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
@@ -284,7 +283,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
         if (doit) {
             int vrfy = 0;
             
-            if (!pm_pmuninstall(ts->pmctx, pkgs, ts)) {
+            if (!pm_pmuninstall(ts->db, pkgs, ts)) {
                 nerr++;
                 vrfy = 1;
             }

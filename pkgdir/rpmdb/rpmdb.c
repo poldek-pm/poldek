@@ -73,8 +73,8 @@ static Header ldhdr(const struct pkg *pkg, void *foo)
     if (pkg->pkgdir == NULL)
         return NULL;
     
-    db = pkgdb_new_open(pkg->pkgdir->mod_data, "/", pkg->pkgdir->idxpath,
-                        O_RDONLY);
+    db = pkgdb_open(pkg->pkgdir->mod_data, "/", pkg->pkgdir->idxpath,
+                    O_RDONLY, NULL);
     if (db == NULL)
         return NULL;
     
@@ -190,7 +190,7 @@ int load_db_packages(struct pm_ctx *pmctx,
              *(rootdir + 1) == '\0' ? "" : rootdir, path != NULL ? path : "");
 
     
-    if ((db = pkgdb_new_open(pmctx, rootdir, path, O_RDONLY)) == NULL)
+    if ((db = pkgdb_open(pmctx, rootdir, path, O_RDONLY, NULL)) == NULL)
         return 0;
 
     msg(3, _("Loading db packages%s%s%s..."), *dbfull_path ? " [":"",

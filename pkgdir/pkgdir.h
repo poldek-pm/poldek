@@ -160,4 +160,8 @@ struct pkgdir_type_uinf {
 
 tn_array *pkgdir_typelist(void);
 
+struct pkg;
+int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg);
+int pkgdir_remove_package(struct pkgdir *pkgdir, struct pkg *pkg);
+
 #endif /* POLDEK_PKGDIR_H*/

@@ -126,12 +126,16 @@ void pm_rpm_define(void *ctx, const char *name, const char *val)
 }
 
 #define RPM_DBPATH "/var/lib/rpm"
-rpmdb pm_rpm_opendb(void *pm_rpm, const char *rootdir, const char *dbpath,
-                    mode_t mode)
+rpmdb pm_rpm_opendb(void *pm_rpm, void *dbh,
+                    const char *rootdir, const char *dbpath,
+                    mode_t mode, tn_hash *kw)
 {
     rpmdb db = NULL;
 
     pm_rpm = pm_rpm;
+    dbh = dbh; kw = kw;
+    
+    
     if (dbpath)
         addMacro(NULL, "_dbpath", NULL, dbpath, RMIL_DEFAULT);
     

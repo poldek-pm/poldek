@@ -66,6 +66,8 @@ enum poldek_ts_opt {
     POLDEK_OP_CONFIRM_UNINST,  /* confirm_removal = yes  */
     POLDEK_OP_EQPKG_ASKUSER,   /* choose_equivalents_manually = yes */
     POLDEK_OP_IS_INTERACTIVE_ON,  /* any of above */
+
+    POLDEK_OP_NOFETCH,        /* usable for debugging */
     POLDEK_OP___MAXOP,
 };
 
@@ -84,6 +86,7 @@ struct poldek_ts {
     struct poldek_ctx  *ctx;
     struct pkgdb       *db;
     struct pm_ctx      *pmctx;
+    struct source      *_destsrc; /* for pset */
     tn_array  *pkgs;
     
     struct arg_packages  *aps;

@@ -941,12 +941,14 @@ static int setup_pm(struct poldek_ctx *ctx)
         } else {
             dest = n_array_nth(ctx->sources, n_array_size(ctx->sources) - 1);
             n_assert(dest);
+            
             if (source_is_remote(dest) && 0) {
                 logn(LOGERR, "%s: destination source could not be remote",
                      source_idstr(dest));
                 
             } else {
-                ctx->pmctx = pm_new(pm, dest);
+                ctx->pmctx = pm_new(pm, NULL);
+                ctx->ts->_destsrc = dest;
                 n_array_pop(ctx->sources); /* remove dest */
             }
         }

@@ -12,12 +12,15 @@ struct pm_module pm_module_rpm = {
     pm_rpm_dbmtime,
     pm_rpm_dbdepdirs,
     
-    (void *(*)(void *, const char *, const char *, mode_t))pm_rpm_opendb,
+(void *(*)(void *, void *, const char *, const char *, mode_t, tn_hash *))pm_rpm_opendb,
     (void (*)(void *))pm_rpm_closedb,
+    NULL,                       /* txbegin */
+    NULL,                       /* txcommit */
+    NULL,                       /* dbfree */
 
     pm_rpm_db_it_init,
     
-    pm_rpm_dbinstall,
+    pm_rpm_install_package,
     pm_rpm_vercmp,
 
     pm_rpm_packages_install, 

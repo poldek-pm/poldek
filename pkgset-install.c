@@ -1949,7 +1949,7 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
 
     
     if (vrfy)
-        pkgdb_open(upg->ts->db, O_RDONLY);
+        pkgdb_reopen(upg->ts->db, O_RDONLY);
     
     
     for (i=0; i<n_array_size(upg->install_pkgs); i++) {
@@ -2106,11 +2106,12 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
             if (!ts->ask_fn(1, _("Proceed? [Y/n]")))
                 return 1;
         }
+        
+        if (!ts->getop(ts, POLDEK_OP_NOFETCH))
+            if (!packages_fetch(ts->pmctx, pkgs, ts->cachedir, 0))
+                return 0;
 
-        if (!packages_fetch(ts->pmctx, pkgs, ts->cachedir, 0))
-            return 0;
-
-        rc = pm_pminstall(ts->pmctx, pkgs, upg->uninst_set->dbpkgs, ts);
+        rc = pm_pminstall(ts->db, pkgs, upg->uninst_set->dbpkgs, ts);
         if (!is_test && iinf)
             update_install_info(iinf, upg, rc <= 0);
     }
@@ -2523,7 +2524,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
             }
             
             n++;
-            pkgdb_open(upg.ts->db, 0);
+            pkgdb_reopen(upg.ts->db, 0);
         }
         
         mark_package(pkg, &upg);
