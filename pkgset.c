@@ -459,6 +459,13 @@ int pkgset_setup(struct pkgset *ps, const char *pri_fpath)
     if (ps->flags & PSVERIFY_FILECNFLS) {
         msgn(1, _("\nVerifying files conflicts..."));
         file_index_find_conflicts(&ps->file_idx, strict);
+
+    /* detect conflicts between pkgdirs */
+    } else if (n_array_size(ps->pkgdirs) > 1) { 
+        int v = verbose;
+        verbose = -1;
+        file_index_find_conflicts(&ps->file_idx, strict);
+        verbose = v;
     }
 
     pkgset_verify_deps(ps, strict);
