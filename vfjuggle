@@ -89,6 +89,9 @@ usage() {
 if [ -f ~/.vfjugglerc ]; then
 	. ~/.vfjugglerc
 fi
+if [ -f ~/$CONFIG_DIR/vfjugglerc ]; then
+	. ~/$CONFIG_DIR/vfjugglerc
+fi
 
 PATH="/bin:/usr/bin:/sbin:/usr/sbin"
 
