@@ -369,6 +369,9 @@ struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags)
 {
     struct pkgdir *pkgdir;
 
+    if (src->flags & PKGSOURCE_NODESC)
+        flags |= PKGDIR_OPEN_NODESC;
+
     pkgdir = pkgdir_open_ext(src->path, src->pkg_prefix,
                              src->type, src->name,
                              src->compress,
@@ -831,7 +834,8 @@ struct pkgdir *load_orig_pkgdir(struct pkgdir *pkgdir, const char *path,
                    vf_url_slim_s(orig_path, 0));
 
         orig = pkgdir_open_ext(orig_path, pkgdir->path, type,
-                               orig_name, NULL, 0, pkgdir->lc_lang);
+                               orig_name, NULL, PKGDIR_OPEN_ALLDESC,
+                               pkgdir->lc_lang);
     }
         
     if (orig && pkgdir_load(orig, NULL, 0) <= 0) {

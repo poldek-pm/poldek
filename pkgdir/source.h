@@ -15,7 +15,8 @@
 #define PKGSOURCE_DSCR       (1 << 7)
 #define PKGSOURCE_NAMED      (1 << 10)
 #define PKGSOURCE_COMPRESS   (1 << 11)
-#define PKGSOURCE_AUTOUPA    (1 << 12) /* do --upa if --up returns
+#define PKGSOURCE_NODESC     (1 << 12)
+#define PKGSOURCE_AUTOUPA    (1 << 13) /* do --upa if --up returns
                                           "desynchronized" index */
 
 struct source {

@@ -871,7 +871,8 @@ int do_source_make_idx(struct source *src,
 
         pdir = pkgdir_open_ext(idxpath,
                                src->pkg_prefix, type,
-                               orig_name, NULL, 0, src->lc_lang);
+                               orig_name, NULL, PKGDIR_OPEN_ALLDESC,
+                               src->lc_lang);
         if (pdir && !pkgdir_load(pdir, NULL, ldflags)) {
             pkgdir_free(pdir);
             pdir = NULL;

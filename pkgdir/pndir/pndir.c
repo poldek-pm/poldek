@@ -460,15 +460,21 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     {
         pkgdir__setup_langs(pkgdir);
         if (pkgdir->langs) {
-            int i, loadC = 0, loadi18n = 0;
-            for (i=0; i < n_array_size(pkgdir->langs); i++) {
-                const char *lang = n_array_nth(pkgdir->langs, i);
-                DBGF("lang %s\n", lang);
-                if (strcmp(lang, "C") == 0)
-                    loadC = 1;
-                else
-                    loadi18n = 1;
+            int loadC = 0, loadi18n = 0;
+            if (flags & PKGDIR_OPEN_ALLDESC)
+                loadC = loadi18n = 1;
+            else {
+                int i;
+                for (i=0; i < n_array_size(pkgdir->langs); i++) {
+                    const char *lang = n_array_nth(pkgdir->langs, i);
+                    DBGF("lang %s\n", lang);
+                    if (strcmp(lang, "C") == 0)
+                        loadC = 1;
+                    else
+                        loadi18n = 1;
+                }
             }
+            
             n_assert(loadC);
             
             if (loadC)

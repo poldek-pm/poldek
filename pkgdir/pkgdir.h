@@ -86,6 +86,10 @@ void pkgdir_free(struct pkgdir *pkgdir);
 #define PKGDIR_OPEN_REFRESH   (1 << 0) /* don't look into cache   */
 #define PKGDIR_OPEN_DIFF      (1 << 1) /* diff is expected        */
 #define PKGDIR_OPEN_NODESC    (1 << 2) /* don't open descriptions */
+#define PKGDIR_OPEN_ALLDESC   (1 << 3) /* open all i18n descriptions
+                                          reasonable for types with
+                                          separated i18ns (pndir)
+                                        */
 
 struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags);
 
