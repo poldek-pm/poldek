@@ -440,13 +440,18 @@ int pkg_strcmp_name_evr(const struct pkg *p1, const struct pkg *p2)
 
     n_assert(p1->ver && p2->ver && p1->rel && p2->rel);
     
-    if ((rc = p2->epoch - p1->epoch))
+    if ((rc = p1->epoch - p2->epoch))
         return rc;
     
-    if ((rc = strcmp(p2->ver, p1->ver)) == 0)
-        rc = strcmp(p2->rel, p1->rel);
+    if ((rc = strcmp(p1->ver, p2->ver)) == 0)
+        rc = strcmp(p1->rel, p2->rel);
 
     return rc;
+}
+
+int pkg_strcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2) 
+{
+    return -pkg_strcmp_name_evr(p1, p2);
 }
 
 static int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2) 
@@ -1419,7 +1424,7 @@ tn_array *pkgs_array_new_ex(int size,
     tn_array *arr;
 
     if (cmpfn == NULL)
-        cmpfn = pkg_strcmp_name_evr;
+        cmpfn = pkg_strcmp_name_evr_rev;
     
     arr = n_array_new(size, (tn_fn_free)pkg_free, (tn_fn_cmp)cmpfn);
     n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
