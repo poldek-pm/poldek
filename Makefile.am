@@ -34,11 +34,13 @@ libpoldek_a_SOURCES = \
 	  usrset.c usrset.h		\
 	  install.c install.h	    	\
 	  conf.c conf.h	    		\
-	  h2n.h
+	  h2n.h 			\
+	  dbpkg.c dbpkg.h		\
+	  rpmdb_it.c rpmdb_it.h
 
 iclientSRCS = shell.c
 
-if ENABLE_INTERACTIVE_CLIENT
+if ENABLE_INTERACTIVE_MODE
 ICSRCS = $(iclientSRCS)
 else
 ICSRCS =

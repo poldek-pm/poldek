@@ -38,7 +38,7 @@
 # error "undefined VERSION"
 #endif
 
-#ifdef ENABLE_INTERACTIVE_CLIENT
+#ifdef ENABLE_INTERACTIVE_MODE
 extern int shell_main(struct pkgset *ps, struct inst_s *inst);
 #endif
 
@@ -59,7 +59,7 @@ static char args_doc[] = "[PACKAGE..] [--rpm-RPM_LONG_OPTION...]";
 #define MODE_UPGRADE      6
 #define MODE_UPDATEIDX    7
 
-#ifdef ENABLE_INTERACTIVE_CLIENT
+#ifdef ENABLE_INTERACTIVE_MODE
 # define MODE_SHELL       8
 #endif
 
@@ -99,6 +99,9 @@ struct args {
     
 } args;
 
+tn_hash *htcnf = NULL;          /* config file values */
+
+
 
 #define OPT_MKTXTINDEX   1001
 #define OPT_MKTXTINDEXZ  1002
@@ -111,7 +114,7 @@ struct args {
 #define OPT_SOURCEUP    1019
 #define OPT_SOURCECACHE 1020
 
-#ifdef ENABLE_INTERACTIVE_CLIENT
+#ifdef ENABLE_INTERACTIVE_MODE
 # define OPT_SHELLMODE   1021
 #endif
 
@@ -213,7 +216,7 @@ static struct argp_option options[] = {
 {"conf", 'c', "FILE", 0, "Read configuration from FILE", 80 }, 
 {"noconf", 'z', 0, 0, "Do not read configuration", 80 }, 
 
-#ifdef ENABLE_INTERACTIVE_CLIENT    
+#ifdef ENABLE_INTERACTIVE_MODE
 {"shell", OPT_SHELLMODE, 0, 0, "Shell mode", 80 },
 #endif
     
@@ -328,7 +331,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->mjrmode = MODE_VERIFY;
             break;
             
-#ifdef ENABLE_INTERACTIVE_CLIENT
+#ifdef ENABLE_INTERACTIVE_MODE
         case OPT_SHELLMODE:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_SHELL;
@@ -367,14 +370,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_INSTALLDIST;
             argsp->install_root = trimslash(arg);
-            argsp->psflags |= PSMODE_INSTALL;
+            argsp->psflags |= PSMODE_INSTALL | PSMODE_INSTALL_DIST;
             break;
             
         case OPT_INST_UPGRDIST:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UPGRADEDIST;
             argsp->install_root = arg ? trimslash(arg) : "/";
-            argsp->psflags |= PSMODE_UPGRADE;
+            argsp->psflags |= PSMODE_UPGRADE | PSMODE_UPGRADE_DIST;
             break;
 
         case 'i':
@@ -507,14 +510,14 @@ void poldek_destroy(void)
 {
     pkgflmodule_destroy();
     pkgsetmodule_destroy();
+    if (htcnf)
+        n_hash_free(htcnf);
 }
 
 static
 void parse_options(int argc, char **argv) 
 {
     struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0};
-    struct conf_s *cnf = NULL;
-
     
     verbose = 0;
 
@@ -538,12 +541,13 @@ void parse_options(int argc, char **argv)
     }
     
     if (args.conf_path != NULL)
-        cnf = ldconf(args.conf_path);
+        htcnf = ldconf(args.conf_path);
     else if (args.noconf == 0)
-        cnf = ldconf_deafult();
+        htcnf = ldconf_deafult();
 
-    if (args.source_path == NULL && cnf != NULL)
-        args.source_path = cnf->source;
+    if (args.source_path == NULL && htcnf != NULL)
+        args.source_path = conf_get(htcnf, "source", NULL);
+    
     
     if (args.source_path == NULL) {
         log(LOGERR, "No source specified\n");
@@ -562,40 +566,53 @@ void parse_options(int argc, char **argv)
         n_array_size(args.pkgdef_defs) +
         n_array_size(args.pkgdef_files);
 
-    if (cnf) {
-        if (cnf->cachedir)
-            args.cachedir = cnf->cachedir;
+    if (htcnf) {
+        char *v;
+        int is_multi;
+        
+        args.cachedir = conf_get(htcnf, "cachedir", NULL);
 
-        if (cnf->ftp_http_get) 
-            vfile_register_ext_handler(VFURL_FTP | VFURL_HTTP,
-                                       cnf->ftp_http_get);
+        
+        if ((v = conf_get(htcnf, "ftp_http_get", NULL)))
+            vfile_register_ext_handler(VFURL_FTP | VFURL_HTTP, v);
 
-        if (cnf->ftp_get) 
-            vfile_register_ext_handler(VFURL_FTP, cnf->ftp_get);
+        if ((v = conf_get(htcnf, "ftp_get", NULL))) 
+            vfile_register_ext_handler(VFURL_FTP, v);
+        
+        if ((v = conf_get(htcnf, "http_get", NULL))) 
+            vfile_register_ext_handler(VFURL_HTTP, v);
 
-        if (cnf->http_get) 
-            vfile_register_ext_handler(VFURL_HTTP, cnf->http_get);
 
-        if (cnf->https_get) 
-            vfile_register_ext_handler(VFURL_HTTPS, cnf->https_get);
+        if ((v = conf_get(htcnf, "https_get", NULL))) 
+            vfile_register_ext_handler(VFURL_HTTPS, v);
 
-        if (cnf->rsync_get) 
-            vfile_register_ext_handler(VFURL_RSYNC, cnf->rsync_get);
+        if ((v = conf_get(htcnf, "rsync_get", NULL))) 
+            vfile_register_ext_handler(VFURL_RSYNC, v);
 
-        if (cnf->rpmacros) {
+        if ((v = conf_get(htcnf, "rpmdef", &is_multi))) {
+            tn_array *macros = NULL;
+
+            if (is_multi)
+                macros = conf_get_multi(htcnf, "rpmdef");
+         
             if (args.rpmacros == NULL) {
-                args.rpmacros = cnf->rpmacros;
+                if (macros)
+                    args.rpmacros = macros;
+                else {
+                    args.rpmacros = n_array_new(4, free, (tn_fn_cmp)strcmp);
+                    n_array_push(args.rpmacros, v);
+                }
             } else {
-                char *m;
-                
-                n_array_push(args.rpmacros, NULL);
-                while ((m = n_array_shift(args.rpmacros)))
-                    n_array_push(cnf->rpmacros, strdup(m));
-
-                n_array_free(args.rpmacros);
-                args.rpmacros = cnf->rpmacros;
+                if (macros) {
+                    while (n_array_size(macros))
+                        n_array_push(args.rpmacros,
+                                     strdup(n_array_shift(macros)));
+                } else {
+                    n_array_push(args.rpmacros, v);
+                }
             }
         }
+        
     }
 
     vfile_verbose = verbose;
@@ -760,7 +777,7 @@ int check_args(void)
             exit(EXIT_FAILURE);
             break;
 
-#ifdef ENABLE_INTERACTIVE_CLIENT            
+#ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
 #endif            
         case MODE_UPDATEIDX:
@@ -832,7 +849,7 @@ int main(int argc, char **argv)
 
     mem_info_verbose = -1;
     
-#ifdef ENABLE_INTERACTIVE_CLIENT    
+#ifdef ENABLE_INTERACTIVE_MODE
     if (strcmp(n_basenam(argv[0]), "poldeksh") == 0) {
         args.mjrmode = MODE_SHELL;
         logprefix = NULL;
@@ -881,9 +898,9 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
 
     switch (args.mjrmode) {
-#ifdef ENABLE_INTERACTIVE_CLIENT        
+#ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
-            log_sopenlog(stdout, 0, NULL);
+            log_sopenlog(stdout, 0, "err");
             if (shell_main(ps, &inst))
                 exit(EXIT_SUCCESS);
             else
