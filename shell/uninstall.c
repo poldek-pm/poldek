@@ -189,10 +189,16 @@ int shpkg_cmp_rm_uninstalled(struct shpkg *p1, struct shpkg *p2)
 {
     p2 = p2;
     
-    if (p1->flags & SHPKG_UNINSTALL)
+    if (p1->flags & SHPKG_UNINSTALL) 
         return 0;
     
     return -1;
+}
+
+static
+void shpkg_clean_uninstall_flag(struct shpkg *shpkg)
+{
+    shpkg->flags &= ~SHPKG_UNINSTALL;
 }
 
 
@@ -212,7 +218,8 @@ static int uninstall(struct cmdarg *cmdarg)
         err++;
         goto l_end;
     }
-
+    
+    
     if (shpkgs == cmdarg->sh_s->instpkgs) {
         log(LOGERR, "uninstall: better do \"rm -rf /\"\n");
         return 0;
@@ -220,9 +227,10 @@ static int uninstall(struct cmdarg *cmdarg)
     
     if (err) 
         goto l_end;
+
     
     pkgnevrs = n_array_new(n_array_size(shpkgs), NULL, (tn_fn_cmp)strcmp);
-    
+
     for (i=0; i<n_array_size(shpkgs); i++) {
         struct shpkg *shpkg = n_array_nth(shpkgs, i);
         
@@ -230,11 +238,14 @@ static int uninstall(struct cmdarg *cmdarg)
         n_array_push(pkgnevrs, shpkg->nevr);
     }
     
-    if (uninstall_pkgs(pkgnevrs, cmdarg->sh_s->inst))
+    if (uninstall_pkgs(pkgnevrs, cmdarg->sh_s->inst)) {
         n_array_remove_ex(cmdarg->sh_s->instpkgs, NULL,
                           (tn_fn_cmp)shpkg_cmp_rm_uninstalled);
-    else
-        err = 1;
+     } else {
+         n_array_map(shpkgs, (tn_fn_map1)shpkg_clean_uninstall_flag);
+         err = 1;
+     }
+    
     
  l_end:
     if (pkgnevrs != NULL)
