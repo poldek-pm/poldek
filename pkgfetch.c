@@ -46,6 +46,7 @@ int package_verify_sign(const char *path, unsigned flags)
         return 0;
     }
     
+    
     if (flags & PKGVERIFY_PGPG)
         rpmflags |= CHECKSIG_PGP | CHECKSIG_GPG;
     
@@ -113,13 +114,16 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
     tn_hash   *urls_h = NULL;
 
 
+    
     urls_h = n_hash_new(21, (tn_fn_free)n_array_free);
     urls_arr = n_array_new(n_array_size(pkgs), NULL, (tn_fn_cmp)strcmp);
     
     n_hash_ctl(urls_h, TN_HASH_NOCPKEY);
     
+    
     // group by URL
     ncdroms = 0;
+    nerr = 0;
     for (i=0; i<n_array_size(pkgs); i++) {
         struct pkg  *pkg = n_array_nth(pkgs, i);
         char        *pkgpath = pkg->pkgdir->path;
@@ -132,13 +136,16 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
         if (urltype == VFURL_CDROM)
             ncdroms++;
 
+        pkg_basename = pkg_filename_s(pkg);
+
         if (urltype == VFURL_PATH) {
-            if (!package_verify_sign(pkgpath, PKGVERIFY_MD))
+            snprintf(path, sizeof(path), "%s/%s", pkgpath, pkg_basename);
+            if (!package_verify_sign(path, PKGVERIFY_MD))
                 nerr++;
             continue;
         }
-
-        pkg_basename = pkg_filename_s(pkg);
+        
+        
         if (nosubdirs) {
             snprintf(path, sizeof(path), "%s/%s", destdir, pkg_basename);
             
@@ -189,7 +196,6 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
     else if (ncdroms == 1) 
         putenv("POLDEK_VFJUGGLE_CPMODE=link");
 
-    nerr = 0;
     for (i=0; i<n_array_size(urls_arr); i++) {
         char path[PATH_MAX];
         const char *real_destdir;
