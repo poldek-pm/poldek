@@ -14,16 +14,15 @@ mode=$2
 
 [ -n "$name" ] || exit 1
 
+if [ -n "$mode" -a $mode = "link" ]; then 
+    if [ -d ../$name ]; then
+		ln ../$name -sf 
+    fi
+fi
+
 if [ -d $name ]; then 
     [ -f $name/configure ] || (cd $name && ./autogen.sh)
     exit;
-fi
-
-if [ -n "$mode" -a $mode = "link" ]; then 
-    if [ -d ../$name ]; then
-	ln ../$name -s 
-    fi
-    exit
 fi
 
 if [ -d ../$name ]; then 
