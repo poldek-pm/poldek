@@ -730,7 +730,6 @@ int pkgdir_save(struct pkgdir *pkgdir, const char *type,
         }
     }
     
-
     if ((flags & PKGDIR_CREAT_NOUNIQ) == 0 &&
         (pkgdir->flags & (PKGDIR_DIFF | PKGDIR_UNIQED)) == 0) {
         n_assert(0);

@@ -448,11 +448,36 @@ int pkg_strcmp_name_evr(const struct pkg *p1, const struct pkg *p2)
     return rc;
 }
 
+static int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc;
+    
+    if (p1->arch && p2->arch) {
+        int s1, s2;
+        s1 = pkg_archscore(p1);
+        s2 = pkg_archscore(p2);
+        if (!s1) s1 = INT_MAX - 1;
+        if (!s2) s2 = INT_MAX - 1;
+        return s1 - s2;
+    }
+    if (p1->arch && p2->arch == NULL)
+        return 10;
+    
+    if (p1->arch == NULL && p2->arch)
+        return -10;
+
+    rc = strcmp(p1->arch ? p1->arch : "" , p2->arch ? p2->arch : "");
+    return rc;
+}
+
 
 static __inline__
 int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc;
+    
+    if ((rc = pkg_cmp_arch(p1, p2)))
+        return rc;
     
     if ((rc = p1->btime - p2->btime))
         return rc;
@@ -463,15 +488,6 @@ int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2)
     if ((rc = p1->fsize - p2->fsize))
         return rc;
 
-    if (p1->arch && p2->arch == NULL)
-        return 10;
-    
-    if (p1->arch == NULL && p2->arch)
-        return -10;
-
-    if ((rc = strcmp(p1->arch ? p1->arch : "" , p2->arch ? p2->arch : "")))
-        return rc;
-    
     if (p1->os && p2->os == NULL)
         return 11;
     
@@ -509,23 +525,28 @@ int pkg_deepcmp_name_evr_rev_verify(const struct pkg *p1, const struct pkg *p2)
     if ((rc = pkg_deepcmp_name_evr_rev(p1, p2)) == 0) {
         logn(LOGERR | LOGDIE, "packages %s and %s are equal to me, give up",
              pkg_snprintf_s(p1), pkg_snprintf_s0(p2));
-        
     }
     
     return rc;
 }
 
-
 int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc;
     
-    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && verbose > 1)
-        logn(LOGWARN, _("duplicated %s"), pkg_snprintf_s(p1));
+    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && verbose > 1) {
+        if (verbose > 2) {
+            logn(LOGNOTICE, "uniq %s: keep %s (score %d), removed %s (score %d)",
+                 pkg_snprintf_s(p1), p1->arch, pkg_archscore(p1),
+                 p2->arch, pkg_archscore(p2));
+        } else {
+            logn(LOGWARN, _("%s%s%s: removed duplicate package"),
+                 pkg_snprintf_s(p2), p2->arch ? ".": "", p2->arch ? p2->arch: "");
+        }
+    }
     
     return rc;
 }
-
 
 int pkg_cmp_name_uniq(const struct pkg *p1, const struct pkg *p2) 
 {

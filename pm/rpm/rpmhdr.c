@@ -62,10 +62,6 @@ int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
     }
     rpmtsFree(ts);
 #endif
-    
-    if (rc != 0)
-        logn(LOGERR, _("%s: read header failed"), path);
-    
     return rc == 0;
 }
 

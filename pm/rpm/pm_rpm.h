@@ -109,4 +109,8 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
 tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, int crtype);
 int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val);
 
+
+int pm_rpm_arch_score(const char *arch);
+int pm_rpm_vercmp(const char *one, const char *two);
+
 #endif

@@ -109,7 +109,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     sort_for_diff(pkgdir2);
     
     n_assert(pkgdir->flags & PKGDIR_UNIQED);
-    n_assert(pkgdir2->flags & PKGDIR_UNIQED);
+    //n_assert(pkgdir2->flags & PKGDIR_UNIQED);
     
     plus_pkgs = pkgs_array_new(256);
 

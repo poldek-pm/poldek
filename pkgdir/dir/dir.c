@@ -206,6 +206,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
             
         if (pkg == NULL) {      /* not found */
             n_assert(h);
+            msgn(3, "%s: loading header...", n_basenam(path));
             pkg = pm_rpm_ldhdr(na, h, n_basenam(path), st.st_size,
                                PKG_LDWHOLE);
                 

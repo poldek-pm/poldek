@@ -794,7 +794,7 @@ int source_make_idx(struct source *src,
     struct pkgdir   *pkgdir;
     char            path[PATH_MAX];
     int             rc = 0;
-    unsigned        ldflags = 0;
+    unsigned        ldflags = PKGDIR_LD_NOUNIQ;
     
     n_assert(type);
     if (idxpath == NULL && strstr(src->path, "://")) {
@@ -823,7 +823,7 @@ int source_make_idx(struct source *src,
         pdir = pkgdir_open_ext(src->path,
                                src->pkg_prefix, type,
                                "orig", NULL, 0, src->lc_lang);
-        if (pdir && !pkgdir_load(pdir, NULL, 0)) {
+        if (pdir && !pkgdir_load(pdir, NULL, ldflags)) {
             pkgdir_free(pdir);
             pdir = NULL;
         }
@@ -834,6 +834,7 @@ int source_make_idx(struct source *src,
     rc = 0;
     if (pkgdir_load(pkgdir, NULL, ldflags)) {
         //int n = n_array_size(pkgdir->pkgs);
+        cr_flags |= PKGDIR_CREAT_NOUNIQ;
         rc = pkgdir_save(pkgdir, type, idxpath, cr_flags);
     }
     

@@ -274,7 +274,7 @@ void rpmlog(int prii, const char *fmt, ...)
 #endif /* HAVE_RPMLOG */
     
         
-int rpmvercmp(const char *one, const char *two);
+extern int rpmvercmp(const char *one, const char *two);
 int pm_rpm_vercmp(const char *one, const char *two)
 {
     return rpmvercmp(one, two);

@@ -131,8 +131,8 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     int              i, nerr = 0;
     struct pdir      *idx;
     
-    if ((pkgdir->flags & (PKGDIR_DIFF | PKGDIR_UNIQED)) == 0) {
-        n_assert(0);
+    if ((pkgdir->flags & PKGDIR_DIFF) && (pkgdir->flags & PKGDIR_UNIQED) == 0) {
+        n_assert((flags & PKGDIR_CREAT_NOUNIQ) == 0);
         pkgdir_uniq(pkgdir);
     }
 

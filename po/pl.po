@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-08-10 13:20+0200\n"
+"POT-Creation-Date: 2004-08-13 11:42+0200\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: mis@pld.org.pl\n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -37,7 +37,7 @@ msgstr "Usuniêto %d zduplikowanych pakietów z listy dostêpnych"
 msgid "%s: no such package"
 msgstr "%s: nie ma takiego pakietu"
 
-#: arg_packages.c:405 cli/dent.c:510
+#: arg_packages.c:405 cli/dent.c:511
 #, c-format
 msgid "%s: ambiguous name"
 msgstr "niejednoznaczna nazwa %s"
@@ -119,7 +119,7 @@ msgstr ""
 msgid "%s: parse error"
 msgstr "%s: b³±d interpretacji URLa"
 
-#: cli/dbcache.c:156 pkgdir/pkgdir.c:554
+#: cli/dbcache.c:159 pkgdir/pkgdir.c:554
 #, c-format
 msgid "%d package loaded"
 msgid_plural "%d packages loaded"
@@ -127,11 +127,11 @@ msgstr[0] "Przeczytano %d pakiet"
 msgstr[1] "Przeczytano %d pakiety"
 msgstr[2] "Przeczytano %d pakietów"
 
-#: cli/dbcache.c:167
+#: cli/dbcache.c:170
 msgid "Load installed packages failed"
 msgstr "B³±d odczytu zainstalowanych pakietów"
 
-#: cli/dent.c:504
+#: cli/dent.c:505
 #, fuzzy, c-format
 msgid "%s: no such package or directory"
 msgstr "%s: nie ma takiego katalogu"
@@ -318,7 +318,7 @@ msgstr ""
 "Nie instaluj, a tylko wypisz nazwy pakietów przeznaczonych do instalacji do "
 "pliku FILE"
 
-#: cli/install.c:98 cli/main.c:89
+#: cli/install.c:98 cli/main.c:90
 msgid "Be verbose."
 msgstr "B±d¼ gadatliwy"
 
@@ -434,7 +434,7 @@ msgstr "Poka¿ grupy pakietów"
 msgid "Print package summaries"
 msgstr "Poka¿ krótkie opisy pakietów"
 
-#: cli/ls.c:69 cli/main.c:43
+#: cli/ls.c:69 cli/main.c:44
 msgid "[PACKAGE...]"
 msgstr "[PAKIET...]"
 
@@ -466,65 +466,65 @@ msgstr "zainstalowany"
 msgid "available"
 msgstr "dostêpny"
 
-#: cli/main.c:64
+#: cli/main.c:65
 msgid "Other:"
 msgstr "Pozosta³e:"
 
-#: cli/main.c:67
+#: cli/main.c:68
 #, fuzzy
 msgid "Store downloaded files & co. under DIR"
 msgstr "Umieszczaj ¶ci±gniête pliki w katalogu DIR"
 
-#: cli/main.c:68
+#: cli/main.c:69
 #, fuzzy
 msgid "Run in cmd mode"
 msgstr "Uruchom w trybie interaktywnym"
 
-#: cli/main.c:69
+#: cli/main.c:70
 msgid ""
 "Confirm packages installation and let user choose among equivalent packages"
 msgstr ""
 "Potwierdzaj installacje oraz pozwól u¿ytkownikowi wybieraæ po¶ród "
 "równowa¿nych pakietów"
 
-#: cli/main.c:71
+#: cli/main.c:72
 msgid "Don't ask about anything"
 msgstr "O nic nie pytaj"
 
-#: cli/main.c:73
+#: cli/main.c:74
 #, fuzzy
 msgid "Run in interactive mode (default)"
 msgstr "Uruchom w trybie interaktywnym"
 
-#: cli/main.c:76
+#: cli/main.c:77
 msgid "Run poldek shell COMMAND and exit"
 msgstr "Uruchom komendê COMMAND i wyjd¼"
 
-#: cli/main.c:79
+#: cli/main.c:80
 msgid "Don't load installed packages at startup"
 msgstr "Nie ³aduj bazy zainstalowanych pakietów przy starcie"
 
-#: cli/main.c:82
+#: cli/main.c:83
 msgid "Read configuration from FILE"
 msgstr "Czytaj konfiguracjê z pliku FILE"
 
-#: cli/main.c:83
+#: cli/main.c:84
 msgid "Do not read configuration"
 msgstr "Nie czytaj ¿adnej konfiguracji"
 
-#: cli/main.c:85
+#: cli/main.c:86
 msgid "Display program version information and exit"
 msgstr "Wypisz informacjê o wersji programu i wyjd¼"
 
-#: cli/main.c:87
+#: cli/main.c:88
 msgid "Log program messages to FILE"
 msgstr "Rejestruj wszystkie komunikaty w pliku FILE"
 
-#: cli/main.c:90
+#: cli/main.c:91
 msgid "Do not produce any output."
 msgstr "Nie wypisuj ¿anych komunikatów"
 
-#: cli/main.c:357
+#: cli/main.c:358
 msgid "so what?"
 msgstr "no i?"
 
@@ -921,34 +921,34 @@ msgstr "%s: b³±d odczytu informacji o pakiecie"
 msgid "invalid value ('%s') of option '%s'"
 msgstr "niedozwolona warto¶æ ('%s') dla opcji '%s'"
 
-#: install-dist.c:125 poldek_ts.c:617
+#: install-dist.c:126
 #, c-format
 msgid " %d of %d (%.2f of %.2f MB) packages done"
 msgstr "%d z %d (%.2f z %.2f MB) pakietów"
 
-#: install-dist.c:131 poldek_ts.c:623
+#: install-dist.c:132
 #, c-format
 msgid "; %.2f MB to download"
 msgstr "; %.2f MB do pobrania"
 
-#: install-dist.c:137 poldek_ts.c:629
+#: install-dist.c:138
 msgid "there were errors during install"
 msgstr "wyst±pi³y b³êdy podczas instalacji"
 
-#: lib_init.c:345
+#: lib_init.c:346
 #, c-format
 msgid "%s: no such source"
 msgstr "%s: nie ma takiego ¼ród³a"
 
-#: lib_init.c:676
+#: lib_init.c:677
 msgid "I'm set*id'ed, give up"
 msgstr "Mam ustawiony bit suid/sgid, wymiêkam"
 
-#: lib_init.c:681
+#: lib_init.c:682
 msgid "Running me as root is not a good habit"
 msgstr ""
 
-#: lib_pkgset.c:62 pm/pset/pset.c:63 pm/pset/pset.c:91
+#: lib_pkgset.c:62 pm/pset/pset.c:63 pm/pset/pset.c:94
 msgid "no packages loaded"
 msgstr "nie za³adowano ¿adnych pakietów"
 
@@ -1544,7 +1544,7 @@ msgstr "%d niespe³nionych zale¿no¶ci, %d pakiet(ów)"
 msgid "%s: provides rpmlib cap \"%s\""
 msgstr "%s zawiera rpmlib()ow± w³asno¶æ \"%s\""
 
-#: pkgset.c:301
+#: pkgset.c:280
 #, c-format
 msgid "Removed %d duplicate package from available set"
 msgid_plural "Removed %d duplicate packages from available set"
@@ -1552,7 +1552,7 @@ msgstr[0] "Usuniêto %d zdublowany pakiet z listy dostêpnych"
 msgstr[1] "Usuniêto %d zdublowane pakiety z listy dostêpnych"
 msgstr[2] "Usuniêto %d zdublowanych pakietów z listy dostêpnych"
 
-#: pkgset.c:310
+#: pkgset.c:289
 msgid ""
 "\n"
 "Verifying files conflicts..."
@@ -1560,7 +1560,7 @@ msgstr ""
 "\n"
 "Sprawdzanie konfliktów plikowych..."
 
-#: pkgset.c:335
+#: pkgset.c:314
 msgid ""
 "\n"
 "Verifying (pre)requirements..."
@@ -1568,7 +1568,7 @@ msgstr ""
 "\n"
 "Sprawdzanie \"pre\" wymagañ..."
 
-#: pkgset.c:345
+#: pkgset.c:324
 #, c-format
 msgid "%d prerequirement loop detected"
 msgid_plural "%d prerequirement loops detected"
@@ -1576,7 +1576,7 @@ msgstr[0] "Wykryto %d zapêtlenie zale¿no¶ci"
 msgstr[1] "Wykryto %d zapêtlenia zale¿no¶ci"
 msgstr[2] "Wykryto %d zapêtleñ zale¿no¶ci"
 
-#: pkgset.c:350
+#: pkgset.c:329
 msgid "No loops -- OK"
 msgstr "Brak zapêtleñ -- To dobrze"
 
@@ -1746,7 +1746,7 @@ msgstr "niezdefiniowana zmienna $TERM"
 msgid "%s: unknown terminal"
 msgstr "%s: nieznana nazwa terminala"
 
-#: poldek_ts.c:515
+#: poldek_ts.c:516
 msgid ""
 "\n"
 "Processing dependencies..."
@@ -1754,21 +1754,21 @@ msgstr ""
 "\n"
 "Przetwarzanie zale¿no¶ci..."
 
-#: poldek_ts.c:888
+#: poldek_ts.c:783
 #, fuzzy, c-format
 msgid "%s: req %s %s"
 msgstr "%s zaznaczy³ %s"
 
-#: poldek_ts.c:890
+#: poldek_ts.c:785
 msgid "version mismatch"
 msgstr ""
 
-#: poldek_ts.c:890
+#: poldek_ts.c:785
 #, fuzzy
 msgid "not found"
 msgstr "mark: nie znaleziono %s"
 
-#: poldek_ts.c:896
+#: poldek_ts.c:791
 #, fuzzy, c-format
 msgid "%d unsatisfied dependencies"
 msgstr "%s: niespe³nione zale¿no¶ci:"

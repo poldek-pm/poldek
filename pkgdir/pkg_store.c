@@ -239,7 +239,6 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg)
         n_buf_add_int32(nbuf, pkg->recno);
     }
 
-    n_assert(pkg->fmtime);
     if (pkg->fmtime) {
         n_buf_add_int8(nbuf, PKGFIELD_TAG_FMTIME);
         n_buf_add_int32(nbuf, pkg->fmtime);
@@ -295,7 +294,6 @@ int pkg_restore_fields(tn_stream *st, struct pkg *pkg)
         n--;
     }
 
-    n_assert(pkg->fmtime);
     return n_stream_read_uint8(st, &n); /* '\n' */
 }
 

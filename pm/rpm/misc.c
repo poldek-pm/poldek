@@ -101,3 +101,13 @@ int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val)
     
     return rpmMachineScore(rpmtag, val);
 }
+
+
+int pm_rpm_arch_score(const char *arch)
+{
+    if (arch == NULL)
+        return 0;
+    
+    return rpmMachineScore(RPM_MACHTABLE_INSTARCH, arch);
+}
+
