@@ -121,7 +121,9 @@ struct command command_search = {
     NULL, NULL,
     (struct command_alias*)&cmd_aliases, 
     N_("With --perlre pattern must be supplied as:\n"
-       "   <delimiter>perl-regexp<delimiter>[imsx], see perlre(1) for help\n")
+       "     <delimiter>perl-regexp<delimiter>[imsx], see perlre(1) for more details.\n"
+       "  For example to find the packages containing foo.bar do:\n"
+       "     rsearch /foo\\.bar/\n")
 };
 
 static
