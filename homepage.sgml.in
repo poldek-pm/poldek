@@ -85,7 +85,7 @@
     To save users time and bandwidth program supports "incremental indexes"
     which is very useful with repositories which frequently change. This feature 
     consist in creation "patches" of index which gives the users possibility to update 
-    his local index by download "patch" with information of changes only.
+    local index by download "patch" with information of changes only.
 
     <item> Program is prepared to be run by ordinary user, installation 
     of packages in that case can be done with <em>sudo</em>. 
