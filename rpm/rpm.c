@@ -626,7 +626,7 @@ tn_array *rpm_get_provides_dbpkgs(rpmdb db, const struct capreq *cap,
 
     rpmdb_it_init(db, &it, RPMITER_CAP, capreq_name(cap));
     while ((dbrec = rpmdb_it_get(&it))) {
-        if (dbpkg_array_has(unistdbpkgs, dbrec->recno))
+        if (unistdbpkgs && dbpkg_array_has(unistdbpkgs, dbrec->recno))
             continue;
 
         if (dbpkgs == NULL)
