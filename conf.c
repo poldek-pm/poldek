@@ -31,6 +31,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "conf.h"
+#include "misc.h"
 
 #define TYPE_STR      (1 << 0)
 #define TYPE_BOOL     (1 << 1)
@@ -339,7 +340,7 @@ tn_hash *ldconf(const char *path)
         }
 
         if (tag->flags & TYPE_W_ENV)
-            val = expand_env_vars(expanded_val, sizeof(expanded_val), val);
+            val = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), val);
             
         if (opt->val == NULL) {
             opt->val = n_strdup(val);
