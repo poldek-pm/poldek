@@ -641,44 +641,51 @@ const char *vf_url_hidepasswd_s(const char *url)
 const char *vf_url_slim(char *buf, int size, const char *url, int maxl)
 {
     int len;
+    char *p = NULL, *bn;
+    int  bn_len;
 
     *buf = '\0';
     url = vf_url_hidepasswd(buf, size, url);
     
-    if ((len = strlen(url)) > maxl + 8) { /* +8 => +sizeof("/[...]/    */
-        char *p = NULL, *bn;
-        int  bn_len;
+    if ((len = strlen(url)) < maxl + 8) /* +8 => +sizeof("/[...]/    */
+        return url;
 
-        //printf("URL %s\n", url);
-        if (*buf == '\0') {
-            strncpy(buf, url, size)[size - 1] = '\0';
-            url = buf;
-        }
+    if (len > size - 1)
+        return url;
+    
+    //printf("URL %s\n", url);
+    if (*buf == '\0') {         /* vf_url_hidepasswd doesn't fill it */
+        strncpy(buf, url, size)[size - 1] = '\0';
+        url = buf;
+    }
 
-        bn = n_basenam(buf);
-        bn_len = strlen(bn);
-        maxl -= bn_len;
-        maxl -= sizeof("/[...]/");
+    bn = n_basenam(buf);
+    bn_len = strlen(bn);
+    maxl -= bn_len;
+    maxl -= sizeof("/[...]/");
+
+    //printf("bn = %s, %d, %d\n", bn, strlen(bn), maxl);
+    if ((p = strchr(buf, '/')) == NULL || p - buf >= maxl) {
+        url = bn;
         
-        //printf("bn = %s, %d, %d\n", bn, strlen(bn), maxl);
-        if (bn - buf > 2) {
-
-            p = bn - 1;
-            n_assert(*p == '/');
-            *p = '\0';
+    } else {
+        p = bn - 1;
+        n_assert(*p == '/');
+        *p = '\0';
             
-            while (p && p > buf && p - buf > maxl) {
-                //printf("p = %s, %s\n", p, buf);
-                if ((p = strrchr(buf, '/'))) {
-                    //printf("p  = %s, %s\n", p, buf);
-                    *p = '\0';
-                }
+        while (p && p > buf && p - buf > maxl) {
+            //printf("p = %s, %s\n", p, buf);
+            if ((p = strrchr(buf, '/'))) {
+                //printf("p  = %s, %s\n", p, buf);
+                *p = '\0';
             }
-            //printf("buf = %s, bn = %s, %d, %d\n", buf, bn, (p - buf + 2), strlen(buf));
-            len = n_snprintf(p, sizeof(buf) - (p - buf), "/[...]/");
-            memmove(p + len, bn, bn_len + 1);
-            //printf("buf[%d] = %s\n", len, buf);
         }
+        n_assert(p);
+        //printf("buf = %s, bn = %s, %d, %d\n", buf, bn,
+        //(p - buf + 2), strlen(buf));
+        len = n_snprintf(p, size - (p - buf), "/[...]/");
+        memmove(p + len, bn, bn_len + 1);
+        //printf("buf[%d] = %s\n", len, buf);
     }
     
     return url;
