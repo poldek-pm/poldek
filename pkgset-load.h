@@ -3,6 +3,7 @@
 #define POLDEK_PKGSET_LOAD
 
 /* ldmethod  */
+#define PKGSET_LD_NIL      0    /* guess                   */
 #define PKGSET_LD_DIR      1    /* scan directory          */
 #define PKGSET_LD_IDX      2    /* read Packages file      */
 

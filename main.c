@@ -65,8 +65,6 @@ static char args_doc[] = "[PACKAGE...]";
 
 #define INDEXTYPE_TXT     1
 #define INDEXTYPE_TXTZ    2
-#define INDEXTYPE_RPMH    3
-
 
 struct args {
     int       mjrmode;
@@ -302,20 +300,20 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case 's':
-            src = source_new(trimslash(arg), argsp->curr_pkg_prefix);
+            src = source_new(arg, argsp->curr_pkg_prefix);
             n_array_push(argsp->sources, src);
             argsp->curr_pkg_prefix = NULL;
             break;
             
         case OPT_SOURCEDIR:
-            src = source_new(trimslash(arg), argsp->curr_pkg_prefix);
+            src = source_new(arg, argsp->curr_pkg_prefix);
             src->ldmethod = PKGSET_LD_DIR;
             n_array_push(argsp->sources, src);
             argsp->curr_pkg_prefix = NULL;
             break;
 
         case OPT_SOURCETXT:
-            src = source_new(trimslash(arg), argsp->curr_pkg_prefix);
+            src = source_new(arg, argsp->curr_pkg_prefix);
             src->ldmethod = PKGSET_LD_IDX;
             n_array_push(argsp->sources, src);
             argsp->curr_pkg_prefix = NULL;
@@ -721,7 +719,6 @@ static int update_idx(void)
 }
 
     
-/* ps may be NULL for rpm index */
 static int mkidx(struct pkgset *ps) 
 {
     int rc;
@@ -730,6 +727,7 @@ static int mkidx(struct pkgset *ps)
     struct source *src;
     
 
+    n_assert(ps);
     if (n_array_size(args.sources) > 1) {
         log(LOGERR, "You shouldn't specify multiple sources for this option\n");
         return 0;
@@ -742,6 +740,8 @@ static int mkidx(struct pkgset *ps)
             "specified\n");
         return 0;
     }
+
+    trimslash(src->source_path);
 
     if (args.idx_path != NULL) {
         idx_path = args.idx_path;
@@ -811,7 +811,7 @@ int prepare_given_packages(void)
 
 int check_args(void) 
 {
-    int rc = 1;
+    int i, rc = 1;
     
     switch (args.mjrmode) {
         case 0: 
@@ -828,10 +828,17 @@ int check_args(void)
         case MODE_VERIFY:
             if (args.has_pkgdef)
                 rc = prepare_given_packages();
+            break;
             
         case MODE_MKIDX:
             if (verbose != -1)
                 verbose = 1;
+            
+            n_assert(args.sources);
+            for (i=0; i<n_array_size(args.sources); i++) {
+                struct source *src = n_array_nth(args.sources, i);
+                src->ldmethod = PKGSET_LD_DIR;
+            }
             break;
 
             
@@ -920,12 +927,6 @@ int main(int argc, char **argv)
     inst.rpmacros  = args.rpmacros;
 
     rpm_initlib(inst.rpmacros);
-
-    if (args.mjrmode == MODE_MKIDX && args.idx_type == INDEXTYPE_RPMH) {
-        if (mkidx(NULL))
-            exit(EXIT_SUCCESS);
-        exit(EXIT_FAILURE);
-    }
 
     if (args.mjrmode == MODE_UPDATEIDX) {
         if (verbose < 1 && verbose != -1)

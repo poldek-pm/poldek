@@ -137,16 +137,48 @@ static char *setup_pkgprefix(const char *path)
     return rpath;
 }
 
+static struct vfile *open_idx(const char *path, int vfmode,  
+                              char *idx_path, int idx_path_size) 
+{
+    struct vfile *vf = NULL;
+    
+    if (path[strlen(path) - 1] != '/') {
+        vf = vfile_open(path, VFT_STDIO, vfmode);
+        if (idx_path) 
+            strncpy(idx_path, path, idx_path_size);
+        
+    } else {
+        
+        if (idx_path == NULL) {
+            idx_path = alloca(PATH_MAX);
+            idx_path_size = PATH_MAX;
+        }
+            
+        snprintf(idx_path, idx_path_size, "%s%s", path, "Packages.gz");
+
+        if ((vf = vfile_open(idx_path, VFT_STDIO, vfmode)) == NULL) {
+            snprintf(idx_path, idx_path_size, "%s%s", path, "Packages");
+            vf = vfile_open(idx_path, VFT_STDIO, vfmode);
+        }
+    }
+    
+    return vf;
+}
+
+
+
 int update_pkgdir_idx(const char *path) 
 {
-    struct vfile      *vf;
+    struct vfile *vf;
+    char idxpath[PATH_MAX];
     int rc;
 
-    if ((vf = vfile_open(path, VFT_STDIO,
-                         VFM_RO | VFM_CACHE | VFM_MDUP)) == NULL)
+    vf = open_idx(path, VFM_RO | VFM_CACHE | VFM_MDUP, idxpath,
+                  sizeof(idxpath));
+    if (vf == NULL)
         return 0;
     
-    rc = check_digest(vf, path);
+    rc = check_digest(vf, idxpath);
     vfile_close(vf);
     return rc;
 }
@@ -160,14 +192,15 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     int               line_size;
     int               nerr = 0, n, nline, nread;
     tn_array          *depdirs = NULL;
+    char              idxpath[PATH_MAX];
     
 
-    if ((vf = vfile_open(path, VFT_STDIO, VFM_RO | VFM_CACHE)) == NULL)
+    vf = open_idx(path, VFM_RO | VFM_CACHE, idxpath, sizeof(idxpath));
+    if (vf == NULL)
         return NULL;
     
     n = 0;
     nline = 0;
-    
     line_size = 4096;
     line = linebuf = malloc(line_size);
 
@@ -175,40 +208,44 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
         char *p;
 
         nline++;
-        if (*line != '#' && *line != '%')
-            break;
-        
-        if (*line == '#') {
-            if (nline == 1) {
-                char *p;
-                int lnerr = 0;
+        if (nline == 0) {
+            char *p;
+            int lnerr = 0;
                 
-                if ((p = strstr(line, "poldeksindex")) == NULL) {
-                    lnerr++;
+            if (*line != '#')
+                lnerr++;
+            
+            else if ((p = strstr(line, "poldeksindex")) == NULL) 
+                lnerr++;
                     
-                } else {
-                    p += strlen("poldeksindex");
-                    p = eatws(p);
-                    if (*p != 'v')
-                        lnerr++;
-                    else 
-                        p++;
-                }
-
-                if (lnerr) {
+            else {
+                p += strlen("poldeksindex");
+                p = eatws(p);
+                if (*p != 'v')
+                    lnerr++;
+                else 
+                    p++;
+                
+                if (lnerr != 0) {
                     log(LOGERR, "%s: not a poldek index file\n", path);
                     nerr++;
                     goto l_end;
                 }
-                
+
                 if (strncmp(p, filefmt_version, strlen(filefmt_version)) != 0) {
-                    log(LOGERR, "%s: not a poldek index file\n", path);
+                    log(LOGERR, "%s: usupported version %s (need to be %s)\n",
+                        path, p, filefmt_version);
                     nerr++;
                     goto l_end;
                 }
             }
-            
-        } else if (*line == '%') {
+            continue;
+        }
+        
+	if (*line != '#' && *line != '%')
+            break;
+        
+        if (*line == '%') {
             while (nread && line[nread - 1] == '\n')
                 line[--nread] = '\0';
             line++;
@@ -235,6 +272,7 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     
     free(linebuf);
 
+
     if (depdirs == NULL) {
         log(LOGERR, "%s: missing %s tag\n",
             vf->vf_tmpath ? vf->vf_tmpath : path, depdirs_tag);
@@ -249,9 +287,9 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     if (pkg_prefix) 
         pkgdir->path = strdup(pkg_prefix);
     else 
-        pkgdir->path = setup_pkgprefix(path);
+        pkgdir->path = setup_pkgprefix(idxpath);
     
-    pkgdir->idxpath = strdup(path);
+    pkgdir->idxpath = strdup(idxpath);
     pkgdir->vf = vf;
     pkgdir->depdirs = depdirs;
     n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
@@ -1120,11 +1158,12 @@ struct pkgdir *pkgdir_load_dir(const char *path)
         pkgdir = malloc(sizeof(*pkgdir));
     
         pkgdir->path = strdup(path);
+        pkgdir->idxpath = NULL;
         pkgdir->depdirs = NULL;
         pkgdir->pkgs = pkgs;
         pkgdir->flags = PKGDIR_LDFROM_DIR;
         pkgdir->vf = NULL;
-
+        
         if (n_array_size(pkgs)) 
             pkgdir_setup_depdirs(pkgdir);
     }

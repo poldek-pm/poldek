@@ -34,7 +34,7 @@ struct source *source_new(const char *path, const char *pkg_prefix)
     src->source_path = strdup(path);
     if (pkg_prefix)
         src->pkg_prefix = strdup(pkg_prefix);
-    src->ldmethod = 0;
+    src->ldmethod = PKGSET_LD_NIL;
     
     return src;
 }
@@ -63,14 +63,19 @@ int source_update(struct source *src)
 static int select_ldmethod(const char *path) 
 {
     struct stat st;
-    int ldmethod = 0;
+    int ldmethod = PKGSET_LD_NIL;
+
     
-    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
-        ldmethod = PKGSET_LD_DIR;
-    else 
-        ldmethod = PKGSET_LD_IDX;
-    
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
+        if (path[strlen(path) - 1] == '/')
+            ldmethod = PKGSET_LD_IDX;
+        else 
+            ldmethod = PKGSET_LD_DIR;
         
+    } else {
+        ldmethod = PKGSET_LD_IDX;
+    }
+
     return ldmethod;
 }
 
@@ -85,10 +90,10 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     for (i=0; i<n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
 
-        if (src->ldmethod == 0)
+        if (src->ldmethod == PKGSET_LD_NIL)
             src->ldmethod = select_ldmethod(src->source_path);
         
-        if (src->ldmethod == 0) {
+        if (src->ldmethod == PKGSET_LD_NIL) {
             log(LOGERR, "%s: cannot determine load method\n", src->source_path);
             continue;
         }
