@@ -23,6 +23,7 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <argp.h>
+#include <fnmatch.h>
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -68,7 +69,7 @@ static error_t parse_ls_opt(int key, char *arg, struct argp_state *state);
 static struct argp_option options_ls[] = {
  { "long", 'l', 0, 0, "Use a long listing format", 1},
  { "upgradeable", 'u', 0, 0, "Show upgradeable packages only", 1},
- { "upgradeablev", 'U', 0, 0, "Like above but omit packages with diffrent release only", 1},
+ { "upgradeablev", 'U', 0, 0, "Like above but omit packages with diffrent releases only", 1},
  { "installed", 'I', 0, 0, "List installed packages", 1},
  { 0, 0, 0, 0, 0, 0 },
 };
@@ -465,68 +466,55 @@ void initialize_readline(void)
 
 
 static 
-void resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgsp)
+void resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgsp, int strict)
 {
     tn_array *pkgs = NULL;
-    int i, n = 0;
-
+    int i, j;
+    int *matches;
+    
+    
     *pkgsp = NULL;
 
-    pkgs = n_array_new(16, NULL, (tn_fn_cmp)shpkg_cmp);
-    
     for (i=0; i<n_array_size(pkgnames); i++) {
-        int asterisk = 0, len;
-        char *p, *name;
-
-        name = n_array_nth(pkgnames, i);
+        char *name = n_array_nth(pkgnames, i);
         
         if (*name == '*' && *(name + 1) == '\0') {
-            n_array_free(pkgs);
             *pkgsp = avshpkgs;
             return;
         }
-        
-            
-        if ((p = strchr(name, '*')) && *(p+1) == '\0') {
-            *p = '\0';
-            n = n_array_bsearch_idx_ex(avshpkgs, name,
-                                       (tn_fn_cmp)shpkg_ncmp_str);
-            asterisk = 1;
-            len = strlen(name);
-                
-        } else {
-            n = n_array_bsearch_idx_ex(avshpkgs, name,
-                                       (tn_fn_cmp)shpkg_cmp_str);
-        }
-        
-        if (n == -1) {
-            printf("%s: no such package\n", name);
-            continue;
-        }
+    }
 
-        n_array_push(pkgs, n_array_nth(avshpkgs, n++));
+    matches = alloca(n_array_size(pkgnames));
+    memset(matches, 0, n_array_size(pkgnames) * sizeof(*matches));
+    
+    pkgs = n_array_new(16, NULL, (tn_fn_cmp)shpkg_cmp);
+
+    for (i=0; i<n_array_size(avshpkgs); i++) {
+        struct shell_pkg *shpkg = n_array_nth(avshpkgs, i);
         
-        while (n < n_array_size(avshpkgs)) {
-            struct shell_pkg *shpkg = n_array_nth(avshpkgs, n++);
-                
-            if (asterisk) {
-                if (strncmp(shpkg->nevr, name, len) == 0)
-                    n_array_push(pkgs, shpkg);
-                    
-            } else if (strcmp(shpkg->nevr, name) == 0)
+        for (j=0; j<n_array_size(pkgnames); j++) {
+            if (fnmatch(n_array_nth(pkgnames, j), shpkg->nevr, 0) == 0) {
                 n_array_push(pkgs, shpkg);
+                matches[j]++;
+                break;
+            }
+        }
+    }
+
+    
+    for (j=0; j<n_array_size(pkgnames); j++) {
+        if (matches[j] == 0) {
+            printf("%s: no such package\n", (char*)n_array_nth(pkgnames, j));
+            if (strict && n_array_size(pkgs))
+                n_array_clean(pkgs);
         }
     }
     
-
-    if (n_array_size(pkgs) == 0) {
-        n_array_free(pkgs);
-        pkgs = NULL;
-    } else {
+    if (n_array_size(pkgs) > 0) {
         n_array_sort(pkgs);
         n_array_uniq(pkgs);
     }
-    
+
     *pkgsp = pkgs;
 }
 
@@ -647,16 +635,18 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
         av_shpkgs = shell_s.avpkgs;
     
     if (n_array_size(cmdst.pkgnames)) 
-        resolve_packages(cmdst.pkgnames, av_shpkgs, &shpkgs);
+        resolve_packages(cmdst.pkgnames, av_shpkgs, &shpkgs, 0);
     else 
         shpkgs = av_shpkgs;
+
+    n_array_free(cmdst.pkgnames);
     
     if (shpkgs == NULL) 
-        shpkgs = av_shpkgs;
+        return 0;
 
     if (n_array_size(shpkgs) == 0) {
         n_array_free(shpkgs);
-        shpkgs = av_shpkgs;
+        return 0;
     }
 
     get_term_width();
@@ -845,12 +835,13 @@ static int cmd_install(int argc, const char **argv, struct argp *argp)
     
     argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, &cmdst);
 
-    resolve_packages(cmdst.pkgnames, shell_s.avpkgs, &shpkgs);
-    n_array_free(cmdst.pkgnames);
+    resolve_packages(cmdst.pkgnames, shell_s.avpkgs, &shpkgs, 1);
     
-    if (shpkgs == NULL)
-        return 0;
-
+    if (shpkgs == NULL) {
+        err++;
+        goto l_end;
+    }
+        
     if (n_array_size(shpkgs) == 0) {
         printf("install: specify what packages you want to install\n");
         err++;
@@ -879,6 +870,9 @@ static int cmd_install(int argc, const char **argv, struct argp *argp)
     
  l_end:
 
+    if (cmdst.pkgnames)
+        n_array_free(cmdst.pkgnames);
+    
     if (shpkgs != shell_s.avpkgs)
         n_array_free(shpkgs);
     n_array_map(shell_s.avpkgs, (tn_fn_map1)shpkg_clean_flags);
@@ -956,7 +950,7 @@ static int cmd_uninstall(int argc, const char **argv, struct argp *argp)
     shell_s.inst->instflags = 0;
     cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, &cmdst);
-    resolve_packages(cmdst.pkgnames, shell_s.instpkgs, &shpkgs);
+    resolve_packages(cmdst.pkgnames, shell_s.instpkgs, &shpkgs, 1);
     n_array_free(cmdst.pkgnames);
     
     if (shpkgs == NULL)
@@ -1050,7 +1044,7 @@ static int cmd_get(int argc, const char **argv, struct argp *argp)
     av_shpkgs = shell_s.avpkgs;
     
     if (n_array_size(cmdst.pkgnames)) 
-        resolve_packages(cmdst.pkgnames, av_shpkgs, &shpkgs);
+        resolve_packages(cmdst.pkgnames, av_shpkgs, &shpkgs, 1);
     else 
         return 0;
 
@@ -1125,7 +1119,7 @@ static int cmd_desc(int argc, const char **argv, struct argp *argp)
     cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     
     argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, &cmdst);
-    resolve_packages(cmdst.pkgnames, shell_s.avpkgs, &shpkgs);
+    resolve_packages(cmdst.pkgnames, shell_s.avpkgs, &shpkgs, 0);
     n_array_free(cmdst.pkgnames);
     
     if (shpkgs == NULL)
@@ -1265,6 +1259,8 @@ void db_map_fn(unsigned int recno, void *header, void *shpkgs)
     shpkg->_ucnt = 0;
     shpkg->free_pkg = 1;
     n_array_push(shpkgs, shpkg);
+    if (n_array_size(shpkg) % 100 == 0)
+        msg(0, "_.");
 }
 
 static tn_array *load_installed_packages(tn_array **shpkgsp) 
@@ -1279,7 +1275,8 @@ static tn_array *load_installed_packages(tn_array **shpkgsp)
     pkgdb_free(db);
     
     n_array_sort(shpkgs);
-    msg(0, "_done. %d packages loaded\n", n_array_size(shpkgs));
+    msg(0, "_done.\n");
+    msg(0, "%d packages loaded\n", n_array_size(shpkgs));
     
     return shpkgs;
 }
