@@ -28,6 +28,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <time.h>
 
 #include <zlib.h>
 #include <rpm/rpmlib.h>
@@ -200,26 +201,6 @@ const struct vf_module *select_vf_module(int urltype)
     return mod;
 }
 
-static
-int mod_fetch(const struct vf_module *mod, const char *destpath,
-              const char *url)
-{
-
-    while (1) {
-        vfile_err_no = 0;
-        if (mod->fetch(destpath, url))
-            break;
-        else {
-            if (vfile_err_no == ENOENT || vfile_err_no == EINTR)
-                return 0;
-            //printf("errno = %s\n", strerror(vfile_err_no));
-        }
-        
-    }
-    return 1;
-}
-
-
 int vfile_fetcha(const char *destdir, tn_array *urls, int urltype) 
 {
     const struct vf_module *mod = NULL;
@@ -242,7 +223,7 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype)
             snprintf(destpath, sizeof(destpath), "%s/%s", destdir,
                      n_basenam(url));
             vfile_msg_fn(_("Retrieving %s...\n"), url);
-            if (!mod_fetch(mod, destpath, url)) {
+            if (!mod->fetch(destpath, url, VFMOD_INFINITE_RETR)) {
                 rc = 0;
                 break;
             }
@@ -274,7 +255,7 @@ int vfile_fetch(const char *destdir, const char *path, int urltype)
         snprintf(destpath, sizeof(destpath), "%s/%s", destdir,
                  n_basenam(path));
         vfile_msg_fn(_("Retrieving %s...\n"), path);
-        rc = mod_fetch(mod, destpath, path);
+        rc = mod->fetch(destpath, path, VFMOD_INFINITE_RETR);
     }
     
     
@@ -643,4 +624,14 @@ int vfile_localpath(char *path, size_t size, const char *url)
     
     n = snprintf(path, size, "%s/", vfile_conf.cachedir);
     return vfile_url_as_path(&path[n], size - n, url);
+}
+
+
+void vfile_cssleep(int cs) 
+{
+    struct timespec ts;
+    
+    ts.tv_sec = 0;
+    ts.tv_nsec = cs * 10000000;
+    nanosleep(&ts, NULL);
 }

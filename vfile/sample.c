@@ -3,7 +3,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <errno.h>
+#include <signal.h>
 #include "i18n.h"
 #include "vfile.h"
 
@@ -48,13 +49,22 @@ void fetch(const char *url)
 
 int main(int argc, char *argv[])
 {
-    int verbose = 1;
-    vfile_configure("/tmp", -1);
-    vfile_verbose = &verbose;
-
-    fetch("ftp://localhost/bigg");
+    void *fn;
+    int verbose = 10;
     
-    //dump_file("ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/tocfile.lst");
+    vfile_verbose = &verbose;
+    vfile_configure("/tmp", -1);
+    
+    
+    
+    
+    while (1) {
+        printf("verbose = %d\n", *vfile_verbose);
+        fetch("ftp://localhost/bigg");
+        unlink("/tmp/bigg");
+    }
+    
+//dump_file("ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/tocfile.lst");
     //fetch_ext("http://sunsite.icm.edu.pl/index.html");
     //dump_file("/tmp/index.html");
     return 0;

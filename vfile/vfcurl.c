@@ -39,7 +39,7 @@
 
 static int vfile_curl_init(void);
 static void vfile_curl_destroy(void);
-static int vfile_curl_fetch(const char *dest, const char *url);
+static int vfile_curl_fetch(const char *dest, const char *url, unsigned flags);
 
 struct vf_module vf_mod_curl = {
     "curl",
@@ -77,13 +77,7 @@ struct progress_bar {
 
 
 static CURL *curlh = NULL;
-static volatile sig_atomic_t interruppted = 0;
-
-static void sigint_handler(int sig) 
-{
-    interruppted = 1;
-    signal(sig, sigint_handler);
-}
+static volatile sig_atomic_t interrupted = 0;
 
 
 static int vfile_curl_init(void) 
@@ -164,6 +158,34 @@ void vfile_curl_destroy(void)
 }
 
 
+static void sigint_handler(int sig) 
+{
+    interrupted = 1;
+    signal(sig, sigint_handler);
+}
+
+static void *establish_sigint(void)
+{
+    void *sigint_fn;
+
+    interrupted = 0;
+    sigint_fn = signal(SIGINT, SIG_IGN);
+
+    if (sigint_fn == NULL)      /* disable transfer interrupt */
+        signal(SIGINT, SIG_DFL);
+    else 
+        signal(SIGINT, sigint_handler);
+    
+    return sigint_fn;
+}
+
+static void restore_sigint(void *sigint_fn)
+{
+    signal(SIGINT, sigint_fn);
+}
+
+
+
 static int do_vfile_curl_fetch(const char *dest, const char *url)
 {
     struct progress_bar bar = {0, 0, 0, PROGRESSBAR_WIDTH, 0, 0, 0, 0, 0};
@@ -172,8 +194,6 @@ static int do_vfile_curl_fetch(const char *dest, const char *url)
     int   curl_rc;
     char  err[CURL_ERROR_SIZE * 2];
     char  *errmsg = "curl_easy_setopt failed";
-    void  *sigint_fn;
-
     
 
     bar.is_tty = isatty(fileno(stdout));
@@ -215,12 +235,7 @@ static int do_vfile_curl_fetch(const char *dest, const char *url)
     bar.resume_from = st.st_size;
 
     
-    interruppted = 0;
-    sigint_fn = signal(SIGINT, sigint_handler);
-    
     curl_rc = curl_easy_perform(curlh);
-    
-    signal(SIGINT, sigint_fn);
     
     fclose(stream);
     
@@ -240,33 +255,67 @@ static int do_vfile_curl_fetch(const char *dest, const char *url)
         }
         
         vfile_err_fn("curl: %s [%d]\n", err, curl_rc);
-        unlink(dest);
     }
     
     return curl_rc;
 }
 
 
-static int vfile_curl_fetch(const char *dest, const char *url)
+static
+int vfile_curl_fetch(const char *dest, const char *url, unsigned flags)
 {
-    int curl_rc, vf_errno = 0;
-
-    curl_rc = do_vfile_curl_fetch(dest, url);
-
-    if (curl_rc == CURLE_FTP_BAD_DOWNLOAD_RESUME ||
-        curl_rc == CURLE_FTP_COULDNT_USE_REST ||
-        curl_rc == CURLE_HTTP_RANGE_ERROR) {
-
-        curl_rc = do_vfile_curl_fetch(dest, url);
-    }
-
-    if (curl_rc != CURLE_OK)
-        vf_errno = EIO;
+    int curl_rc = CURLE_OK,
+        vf_errno = 0;
+    int end = 1, ntry = 0;
+    void  *sigint_fn;
     
-    if (curl_rc == CURLE_HTTP_NOT_FOUND ||
-        curl_rc == CURLE_FTP_COULDNT_RETR_FILE)
-        vf_errno = ENOENT;
+    if (flags & VFMOD_INFINITE_RETR)
+        end = 1000;
+    
+    sigint_fn = establish_sigint();
+    while (end-- > 0) {
+        vf_errno = 0;
+        curl_rc = do_vfile_curl_fetch(dest, url);
 
+        if (curl_rc == CURLE_FTP_BAD_DOWNLOAD_RESUME ||
+            curl_rc == CURLE_FTP_COULDNT_USE_REST ||
+            curl_rc == CURLE_HTTP_RANGE_ERROR) {
+
+            if (vfile_valid_path(dest))
+                unlink(dest);
+            
+            curl_rc = do_vfile_curl_fetch(dest, url);
+        }
+
+        if (interrupted)
+            break;
+        
+        if (curl_rc != CURLE_OK)
+            vf_errno = EIO;
+
+        switch (curl_rc) {
+            case CURLE_COULDNT_RESOLVE_HOST:
+                goto l_endloop;
+                break;
+                
+            case CURLE_HTTP_RANGE_ERROR:
+            case CURLE_FTP_COULDNT_RETR_FILE:
+                vf_errno = ENOENT;
+                goto l_endloop;
+                break;
+
+            default:
+                ;
+        }
+        
+        vfile_cssleep(90);
+        if (flags & VFMOD_INFINITE_RETR) 
+            vfile_msg_fn(_("Retrying...(#%d)\n"), ntry++);
+    }
+    
+    restore_sigint(sigint_fn);
+ l_endloop:
+    
     if (vf_errno)
         vfile_set_errno(vf_mod_curl.vfmod_name, vf_errno);
     
@@ -434,7 +483,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         bar->state = PBAR_ST_TERMINATED;
     }
 
-    if (interruppted)
+    if (interrupted)
         return -1;  /* cURL aborts on non-zero result from callback fn */
     return 0;
 }

@@ -144,17 +144,18 @@ void vfile_progress(long total, long amount, void *data);
 
 void vfile_set_errno(const char *ctxname, int vf_errno);
 
-
+#define VFMOD_INFINITE_RETR (1 << 0)
 struct vf_module {
     char       vfmod_name[32];
     unsigned   vf_protocols;
     int  (*init)(void);
     void (*destroy)(void);
-    int  (*fetch)(const char *dest, const char *url);
+    int  (*fetch)(const char *dest, const char *url, unsigned flags);
 
     int        _pri;            /* used by vfile only */
 };
 
+void vfile_cssleep(int cs);
 #endif /* VFILE_INTERNAL */
 
 #endif /* POLDEK_VFILE_H */
