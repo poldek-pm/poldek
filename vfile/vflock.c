@@ -54,8 +54,9 @@ int vf_lockfile(const char *lockfile)
     
     if (fcntl(fd, F_SETLK, &fl) == -1) {
         if (errno != EAGAIN || errno != EACCES)
-            vf_logerr("fcntl %s: %m", lockfile);
-
+            if (*vfile_verbose > 1)
+                vf_logerr("fcntl %s: %m\n", lockfile);
+        
         close(fd);
         fd = 0;
         
@@ -105,7 +106,10 @@ int vf_lock_obtain(const char *path)
         }
         i++;
         if ((fd = vf_lockfile(path)) == 0) {
-            vf_loginfo(_("Waiting for %s...\n"), path);
+            char *buf;
+            n_strdupap(path, &buf);
+            buf = n_dirname(buf);
+            vf_loginfo(_("Waiting for lock %s...\n"), buf);
             sleep((int)((1 * i)/2));
         
         } else if (fd < 0) {
