@@ -205,7 +205,8 @@ int packages_order(tn_array *pkgs, tn_array **ordered_pkgs)
     vs.stack = n_array_new(128, NULL, NULL);
     
     n_array_map(pkgs, (tn_fn_map1)mapfn_clean_pkg_color);
-
+    n_array_isort_ex(pkgs, (tn_fn_cmp)pkg_cmp_pri);
+    
     for (i=0; i<n_array_size(pkgs); i++) {
         pkg = n_array_nth(pkgs, i);
         //printf("V %d %s\n", i, pkg_snprintf_s(pkg));
@@ -220,7 +221,7 @@ int packages_order(tn_array *pkgs, tn_array **ordered_pkgs)
     n_assert(*ordered_pkgs == NULL);
     n_array_free(vs.stack);
     *ordered_pkgs = vs.ordered_pkgs;
-
+    n_array_isort(pkgs);
     return vs.nerrors;
 }
 

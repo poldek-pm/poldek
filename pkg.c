@@ -379,6 +379,18 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 }
 
 
+int pkg_cmp_pri(struct pkg *p1, struct pkg *p2)
+{
+    register int cmprc = 0;
+
+    if ((cmprc = p1->pri - p2->pri))
+        return cmprc;
+    
+    return pkg_cmp_name_evr_rev(p1, p2);
+}
+
+
+
 int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr) 
 {
     return strcmp(pkg->name, capreq_name(cr)) == 0 &&

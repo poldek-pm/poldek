@@ -23,8 +23,10 @@
 #include "log.h"
 #include "conf.h"
 
-#define TYPE_STR   1
-#define TYPE_BOOL  2 
+#define TYPE_STR      (1 << 0)
+#define TYPE_BOOL     (1 << 1)
+#define TYPE_LIST     (1 << 2)
+#define TYPE_ISMULTI  (1 << 3)
 
 struct tag {
     char *name;
@@ -52,6 +54,7 @@ static struct tag valid_tags[] = {
     { "follow",       0, TYPE_BOOL },
     { "greedy",       0, TYPE_BOOL }, 
     { "use_sudo",     0, TYPE_BOOL },
+    { "hold",         1, TYPE_STR | TYPE_LIST },
     {  NULL,          0, 0 }, 
 };
 
@@ -86,7 +89,15 @@ void copt_free(struct copt *opt)
     free(opt);
 }
 
-
+#if 0
+static char *getvlist(char *vstr, const char *path, int nline) 
+{
+    const char **v, **p;
+    
+    p = v = n_str_tokl(vstr, " \t");
+    return p;
+}
+#endif
 
 static char *getv(char *vstr, const char *path, int nline) 
 {
@@ -133,7 +144,7 @@ static char *getv(char *vstr, const char *path, int nline)
     return p;
 }
 
-static int is_muli_tag(const char *key) 
+static int is_multi_tag(const char *key) 
 {
     int i = 0;
     
@@ -225,7 +236,7 @@ tn_hash *ldconf(const char *path)
             continue;
         }
 
-        if ((is_mutliple = is_muli_tag(name)) < 0) {
+        if ((is_mutliple = is_multi_tag(name)) < 0) {
             log(LOGWARN, "%s:%d unknown option '%s'\n", path, nline, name);
             continue;
         }
@@ -266,13 +277,21 @@ tn_hash *ldconf_deafult(void)
     char *homedir;
     char path[PATH_MAX];
     
+    if (access(path, R_OK) == 0)
+        return ldconf(path);
+
     if ((homedir = getenv("HOME")) == NULL)
         return NULL;
 
     snprintf(path, sizeof(path), "%s/.poldekrc", homedir);
-    if (access(path, R_OK) != 0)
+    if (access(path, R_OK) != 0) {
+        char *path = "/etc/poldek.conf";
+        
+        if (access(path, R_OK) == 0)
+            return ldconf(path);
         return NULL;
-
+    }
+    
     return ldconf(path);
 }
 

@@ -271,6 +271,9 @@ static struct argp_option options[] = {
      "be FIRST_FREE_SPACE MB smaller", 90 },
     
 {"split-conf", OPT_SPLITCONF, "FILE", 0, "Take package priorities from FILE", 90 },
+    
+{"priconf", OPT_SPLITCONF, "FILE", 0, "Take package priorities from FILE", 70 },
+    
 {"split-out", OPT_SPLITOUTPATH, "PREFIX", 0, "Write chunks to PREFIX.XX, "
      "default PREFIX is packages.chunk", 90 },    
 
@@ -877,7 +880,7 @@ static struct pkgset *load_pkgset(int ldflags)
     mem_info(1, "MEM after load");
 
     if (ps) {
-        pkgset_setup(ps);
+        pkgset_setup(ps, args.split_conf.conf);
         if ((args.inst.flags & INSTS_NOHOLD) == 0) {
             if (n_array_size(args.inst.hold_pkgnames) == 0) 
                 read_holds(NULL, args.inst.hold_pkgnames);
@@ -962,6 +965,7 @@ static int mkidx(struct pkgset *ps)
 
     return rc;
 }
+
 
 int prepare_given_packages(void) 
 {

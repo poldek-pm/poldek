@@ -95,7 +95,7 @@ void inst_s_init(struct inst_s *inst);
 struct pkgset *pkgset_new(unsigned psoptflags);
 void pkgset_free(struct pkgset *ps);
 
-int pkgset_setup(struct pkgset *ps);
+int pkgset_setup(struct pkgset *ps, const char *pri_fpath);
 
 /* returns sorted list of packages, free it by n_array_free() */
 tn_array *pkgset_getpkgs(const struct pkgset *ps);

@@ -40,20 +40,6 @@ struct pridef {
     char        mask[0];
 };
 
-
-static
-int pkg_cmp_pri(struct pkg *pkg1, struct pkg *pkg2)
-{
-    int cmprc = 0;
-
-    if ((cmprc = pkg1->pri - pkg2->pri))
-        return cmprc;
-    
-    return pkg_cmp_name_evr_rev(pkg1, pkg2);
-}
-
-
-
 static 
 int read_pridef(char *buf, int buflen, struct pridef **pridef,
                 const char *fpath, int nline)
@@ -287,6 +273,40 @@ int make_chunks(tn_array *pkgs, unsigned split_size, unsigned first_free_space,
         vfile_close(vf);
     }
     	
+    return 1;
+}
+
+
+int packages_set_priorities(tn_array *pkgs, const char *splitconf_path)
+{
+    tn_array *defs = NULL;
+    int i, j;
+
+
+    if ((defs = read_split_conf(splitconf_path)) == NULL)
+        return 0;
+    
+    n_array_sort(pkgs);
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        int pri = 0;
+
+        for (j=0; j<n_array_size(defs); j++) {
+            struct pridef *pd = n_array_nth(defs, j);
+            
+            if (fnmatch(pd->mask, pkg->name, 0) == 0) {
+                pri = pd->pri;
+                //msg(0, "matched %d %s %s\n", pri, pd->mask,
+                //    pkg_snprintf_s(pkg));
+                break;
+            }
+        }
+        
+        if (pri != 0)
+            set_pri(pkg, pri, 1, verbose > 4);
+    }
+    
+    n_array_free(defs);
     return 1;
 }
 

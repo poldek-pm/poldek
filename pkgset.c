@@ -384,8 +384,19 @@ static int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2)
     return rc;
 }
 
+static void set_priorities(tn_array *pkgs, const char *pri_fpath) 
+{
+    if (pri_fpath == NULL) {
+        pri_fpath = "/etc/poldek-pkgsplit.conf";
+        if (access(pri_fpath, R_OK) != 0) 
+            pri_fpath = "/etc/poldek-pri.conf";
+    }
 
-int pkgset_setup(struct pkgset *ps) 
+    if (access(pri_fpath, R_OK) == 0) 
+        packages_set_priorities(pkgs, pri_fpath);
+}
+
+int pkgset_setup(struct pkgset *ps, const char *pri_fpath) 
 {
     int n;
     int strict;
@@ -418,7 +429,8 @@ int pkgset_setup(struct pkgset *ps)
     if (ps->flags & PSVERIFY_CNFLS)
         msg(1, "\nVerifying packages conflicts...\n");
     pkgset_verify_conflicts(ps, strict);
-    
+
+    set_priorities(ps->pkgs, pri_fpath);
     pkgset_order(ps);
     mem_info(1, "MEM after order");
 
