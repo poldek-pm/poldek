@@ -29,7 +29,7 @@
 #include "cli.h"
 #include "op.h"
 
-#define OPT_GID  1910
+#define OPT_GID  1900
 
 #define OPT_SPLITSIZE    (OPT_GID + 2) /* legacy */
 #define OPT_SPLITCONF    (OPT_GID + 3)

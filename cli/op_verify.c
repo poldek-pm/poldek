@@ -32,7 +32,7 @@
 #include "op.h"
 
 
-#define OPT_GID  1220
+#define OPT_GID  2000
 
 #define OPT_DEPS       'V'
 #define OPT_CNFLS      (OPT_GID + 1)

@@ -29,7 +29,7 @@
 #include "cli.h"
 #include "op.h"
 
-#define OPT_GID  1210
+#define OPT_GID  1700
 
 #define OPT_MKIDX       (OPT_GID + 1)
 #define OPT_MAKEIDX     (OPT_GID + 2)
@@ -133,7 +133,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         rt->_opdata_free = arg_s_free;
         rt->run = oprun;
     }
-
+    DBGF("key %d\n", key);
+    
     switch (key) {
         case OPT_TYPE:
             arg_s->idx_type = n_strdup(arg);
@@ -141,6 +142,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
         case OPT_MKIDXZ:
         case OPT_MKIDX:
+        case OPT_MAKEIDX:
             if (arg)
                 arg_s->src_mkidx = source_new_pathspec(NULL, arg, NULL);
             arg_s->cnflags |= DO_MAKEIDX;

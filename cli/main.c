@@ -299,6 +299,7 @@ void hide_child_options(const struct argp *parent, const struct argp *child)
         const struct argp_option *opt = &parent->options[i++];
         if (opt->name == NULL && opt->key == 0 && opt->doc == NULL)
             break;
+        DBGF("%d) %d %s\n", i + 1, opt->key, opt->name);
 
         key = opt->key;
         j = 0;
@@ -306,9 +307,13 @@ void hide_child_options(const struct argp *parent, const struct argp *child)
             struct argp_option *opt = (struct argp_option *)&child->options[j++];
             if (opt->name == NULL && opt->key == 0 && opt->doc == NULL)
                 break;
-            
-            if (key && key == opt->key)
+
+            DBGF("  %d. %d %s\n", j + 1, opt->key, opt->name);
+            if (key && key == opt->key) {
+                DBGF("Hide %d %s\n", opt->key, opt->name);
                 opt->flags |= OPTION_HIDDEN;
+            }
+            
         }
     }
 }

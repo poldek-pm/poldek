@@ -28,7 +28,7 @@
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int uninstall(struct cmdctx *cmdctx);
 
-#define OPT_GID             2500
+#define OPT_GID             1600
 #define OPT_UNINSTALL       'e'
 #define OPT_INST_NODEPS     (OPT_GID + 2)
 #define OPT_INST_FORCE      (OPT_GID + 3)
