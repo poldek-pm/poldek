@@ -31,6 +31,9 @@ dnl Process features.
 AC_CHECK_LIB(tinfo, tigetstr,,
 	AC_CHECK_LIB(ncurses, tigetstr, , AC_MSG_ERROR("tinfo nor ncurses not found")))
 
+AC_CHECK_HEADERS(ncurses/curses.h, CPPFLAGS="-I/usr/include/ncurses $CPPFLAGS", 
+		 AC_CHECK_HEADERS(curses.h,, AC_MSG_ERROR("curses.h not found"), ), )
+
 AC_ARG_ENABLE(imode,
 [  --disable-imode               turn off interactive mode],
 INTERACTIVE_MODE=$enableval, INTERACTIVE_MODE=yes)
@@ -41,7 +44,8 @@ else
 	AC_CHECK_LIB(readline, readline,, AC_MSG_ERROR("readline not found"))
 	AC_CHECK_LIB(pcre, pcre_compile,, AC_MSG_ERROR("pcre not found"))
 	AC_CHECK_HEADERS(pcre.h,, 
-		AC_CHECK_HEADERS(pcre/pcre.h, CPPFLAGS="-I/usr/include/pcre", ), )
+		AC_CHECK_HEADERS(pcre/pcre.h, 
+			         CPPFLAGS="-I/usr/include/pcre $CPPFLAGS", ), )
 
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, true)
 	AC_DEFINE(ENABLE_INTERACTIVE_MODE)

@@ -18,8 +18,8 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 
-#include <ncurses/curses.h>
-#include <ncurses/term.h>
+#include <curses.h>
+#include <term.h>
 #include <trurl/nassert.h>
 
 #include "i18n.h"
