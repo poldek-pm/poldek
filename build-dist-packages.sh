@@ -6,8 +6,8 @@ PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 #rm -f *.tar.gz
 #make dist
 
-ver=$(perl -ne 'print $1 if /^VERSION=([\d\.]+)$/' configure.in)
-poldek=poldek-${ver}.tar.gz
+ver=$(perl -ne "print \$1 if /^PACKAGE_VERSION='([\d\.]+)'$/" configure)
+poldek=poldek-${ver}.tar.bz2
 
 if [ -z "$1" ]; then 
 	echo "usage $(basename $0): [pld rh]"
@@ -45,7 +45,7 @@ for distro in $@; do
     
     echo "su - mis -c \"$rpm -ta $rpmopt /tmp/$poldek\"" >> $ddir/$buildscript
 
-    cp poldek-${ver}.tar.gz $ddir/tmp || exit 1
+    cp ${poldek} $ddir/tmp || exit 1
     /usr/sbin/chroot $ddir sh $buildscript || exit 1
     destdir=/tmp/poldek-$ver-rpms/${distro}
     mkdir -p $destdir || true
