@@ -1,9 +1,18 @@
 #! /bin/sh
 
-SRCDIR=/home/ftp/RPMSt
-SRCURL=ftp://localhost/RPMSt/
+inhome=
+if [ -n "$inhome" ]; then
+    SRCDIR=/home/ftp/RPMSt
+    SRCURL=ftp://localhost/RPMSt/
 
-DISTDIR=/mnt/PLD
+    DISTDIR=/mnt/PLD
+else
+    SRCDIR=/home/httpd/html/RPMSt
+    SRCURL=http://localhost/RPMSt/
+
+    DISTDIR=/mnt/i686/PLD/RPMS/
+fi
+
 TMPDIR=/tmp
 
 
