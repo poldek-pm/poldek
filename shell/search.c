@@ -34,7 +34,7 @@ struct pattern {
     char             *regexp;
     unsigned         flags;
     pcre             *pcre;
-    pcre             *pcre_extra;
+    pcre_extra       *pcre_extra;
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
