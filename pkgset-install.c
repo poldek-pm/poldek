@@ -879,7 +879,7 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
         } else if (pkgdb_match_req(upg->inst->db, req, upg->strict,
                                    upg->uninst_set->dbpkgs)) {
 
-            DBGF("%s: satisfied by db\n", capreq_snprintf_s(req));
+            DBGF("%s: satisfied by dbX\n", capreq_snprintf_s(req));
             //dbpkg_set_dump(upg->uninst_set);
             db_deps_add(upg->db_deps, req, pkg, tomark,
                         PROCESS_AS_NEW | DBDEP_DBSATISFIED);
@@ -975,7 +975,7 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
         } else if (pkgdb_match_req(upg->inst->db, req, upg->strict,
                                    upg->uninst_set->dbpkgs)) {
 
-            DBGF("%s: satisfied by db\n", capreq_snprintf_s(req));
+            DBGF("%s: satisfied by dbY\n", capreq_snprintf_s(req));
             msg_i(3, indent, "%s: satisfied by db\n", capreq_snprintf_s(req));
             //dbpkg_set_dump(upg->uninst_set);
             db_deps_add(upg->db_deps, req, pkg, tomark,
@@ -1027,7 +1027,7 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                 }
                 
                 if (p != NULL) {
-                    if (pkg_is_marked_i(p) || by_obsoletes) 
+                    if (pkg_is_marked_i(p) || (by_obsoletes && !pkg_is_marked(p)))
                         mark_package(p, upg);
                         
                     if (pkg_is_marked(p)) {
