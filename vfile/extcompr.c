@@ -43,9 +43,13 @@ struct uncompr {
     char      *ext;
 };
 
+#ifndef PKGLIBDIR
+# error "PKGLIBDIR must be defined"
+#endif
+
 struct uncompr uncompr_tab[] = {
-    {  COMPRESST_BZIP2, PKGLIBDIR "vfcompr", "bz2" },
-    {  COMPRESST_GZIP,  PKGLIBDIR "vfcompr", "gz"   },
+    {  COMPRESST_BZIP2, PKGLIBDIR "/vfcompr", "bz2" },
+    {  COMPRESST_GZIP,  PKGLIBDIR "/vfcompr", "gz"   },
     {  0, NULL, NULL }
 };
 
