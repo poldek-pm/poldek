@@ -40,7 +40,7 @@ tn_array *read_holds(const char *fpath, tn_array *hold_pkgnames)
         if ((homedir = getenv("HOME")) == NULL)
             return NULL;
         
-        snprintf(path, sizeof(path), "%s/.poldek_holds", homedir);
+        snprintf(path, sizeof(path), "%s/.poldek_hold", homedir);
         if (access(path, R_OK) != 0)
             return hold_pkgnames;
 
