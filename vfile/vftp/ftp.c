@@ -284,10 +284,11 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
         
         FD_ZERO(&fdset);
         FD_SET(sockfd, &fdset);
+        errno = 0;
         if ((rc = select(sockfd + 1, &fdset, NULL, NULL, &to)) < 0) {
             if (interrupted) {
                 is_err = 1;
-                vftp_errno = EINTR;
+                errno = EINTR;
                 break;
             }
 
@@ -298,7 +299,7 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
             break;
             
         } else if (rc == 0) {
-            vftp_errno = ETIMEDOUT;
+            errno = ETIMEDOUT;
             is_err = 1;
             break;
             
@@ -315,8 +316,9 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
                 continue;
             
             else if (n <= 0) {
-                vftp_errno = errno;
                 is_err = 1;
+                if (n == 0 || errno == 0)
+                    errno = ECONNRESET;
                 break;
                 
             } else if (n >= 1) {
@@ -345,10 +347,14 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
     }
     
     if (is_err) {
-        errno = vftp_errno;      /* for %m */
+        if (errno)
+            vftp_errno = errno;
+        else
+            vftp_errno = EIO;
+        
         switch (vftp_errno) {
             case EMSGSIZE:
-                vftp_set_err(EIO, _("response line too long"));
+                vftp_set_err(vftp_errno, _("response line too long"));
                 break;
                 
             case ETIMEDOUT:
@@ -557,7 +563,8 @@ static int ftp_open(const char *host, int port)
     snprintf(portstr, sizeof(portstr), "%d", port);
     if ((sockfd = to_connect(host, portstr)) < 0)
         return 0;
-
+    
+    errno = 0;
     if (!do_ftp_resp(sockfd, &code, NULL, 0) || code != 220) {
         close(sockfd);
         sockfd = -1;
