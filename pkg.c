@@ -709,8 +709,8 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req)
 
 
     n_assert(strcmp(pkg->name, capreq_name(req)) == 0);
-    
-    if (capreq_has_epoch(req)) {
+
+    if (capreq_has_epoch(req) || pkg->epoch) {
         cmprc = pkg->epoch - capreq_epoch(req);
         if (cmprc != 0)
             return rel_match(cmprc, req);
