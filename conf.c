@@ -258,6 +258,12 @@ tn_hash *ldconf(const char *path)
             log(LOGERR, "%s:%d: missing '='\n", path, nline);
             continue;
         }
+
+        if (*p != '\0') {
+            char *q = strchr(p, '\0') - 1;
+            while (isspace(*q))
+                *q-- = '\0';
+        }
         
         if ((is_list = is_tag(name, TYPE_LIST)) < 0) {
             log(LOGWARN, "%s:%d unknown option '%s'\n", path, nline, name);
