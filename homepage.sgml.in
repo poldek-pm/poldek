@@ -6,20 +6,14 @@
     <title> the poldek </title>
     <author> <tt/mis@pld.org.pl/ </author>
     <date> $Date$ </date>
-    <abstract>
-    This document is a the poldek project homepage
-    </abstract>
 
-    <!-- Table of contents -->
     <toc>
 
-
-    <sect> What is this.
+    <sect> Intro
     <p>
 
-    The poldek is a RPM packages management helper tool; it's
-    basic features are similar to any package updater like <em>apt-get</em> 
-    or <em>urpmi</em>.
+    The poldek is a RPM packages management helper tool; its
+    basic features are similar to any modern package updater like <em>apt-get</em>.
 
     Program takes information about packages from custom package index file
     (called <em>package.dir.gz</em> by default), and allows to package 
@@ -28,14 +22,9 @@
     a package that needs others to be installed, it will download all
     needed packages and install them. 
 
-    Of course system upgrade is supported too - poldek checks what 
-    packages are outdated, verifying any eventual new dependencies 
-    and installing everything. 
-     
     Program supports various sources of packages: filesystem, removable media 
     (like CDROM), FTP, HTTP(S), RSYNC.
  
-    
     The main poldek's advantages are:
     <itemize>
 
@@ -50,7 +39,6 @@
     <p> 
     Before packages installation they are divided into small groups,
     usually 2 - 10 items (depends on their reciprocal dependencies).
-
     Each group is installed separately in the manner that ensures 
     that broken packages dependencies in one of group doesn't affect 
     the rest i.e. it is allowed to upgrade as many as possible packages. 
@@ -65,7 +53,7 @@
     <em>interactive</em> mode, which puts the user into a readline 
     interface with command line autocompletion and history. 
     In this mode user is able to browse, search, download, install/upgrade and 
-    uninstall packages. Mode is similar in concept to shell mode of Perl's CPAN module. 
+    uninstall packages. This is similar in concept to shell mode of Perl's CPAN module. 
 
     <item> Installation system from scratch needs 8-12 MB memory only
     <p>	
@@ -84,7 +72,7 @@
     <p>
 
     Program divide packages in the way that minimize needs of  
-    drives changes; for example if distribution fits on 3 CDs, then 
+    disk changes; for example if distribution fits on 3 CDs, then 
     only 2 changes of CD disk are necessary during installation system 
     from scratch.
     This feature is used for making PLD CD ISO images, see 
@@ -111,7 +99,6 @@
     <p>
     <sect1> Prepare package repository to be usable to poldek
     <p>
-    This is simple:
     <tscreen><verb>
     $ poldek -s DIR --mkidxz
     </verb></tscreen>
@@ -123,30 +110,157 @@
     <item> <em>packages.dir.toc.gz </em> with list of packages 
     </itemize>
 
-    Additionally if previous DIR/packages.dir.gz is presented and 
-    it is differ from currently created then index "diff" is 
-    created under DIR/packages.i/
+    Additionally if previous <em>DIR/packages.dir.gz</em> is different from 
+    currently created one then index "patch" is created under <em>DIR/packages.i/</em>
   
     Example:
     <tscreen><verb>
-    $ poldek -s /home/ftp/pub/PLD/i686/PLD/RPMS --mkidxz
+ $ poldek -s /home/ftp/pub/PLD/RPMS --mkidxz
+ Loading /home/ftp/pub/PLD/RPMS/...200..400..600..800..1000..1200..1400..1600
+ ..1800..2000..2200..2400..2600..2800..3000..3063
+ 3063 packages read
+ Loading previous /home/ftp/pub/PLD/RPMS/packages.dir.gz...
+ Verifying /home/ftp/pub/PLD/RPMS/packages.dir.gz... OK
+ Writing /home/ftp/pub/PLD/RPMS/packages.i/packages.dir.diff.2002.02.24-18.57.31.gz... 
+ Writing digest /mnt/PLD/packages.i/packages.dir.diff.2002.02.24-18.57.31.mdd...
+ Writing /home/ftp/pub/PLD/RPMS/packages.dir.gz...
+ Writing digest /home/ftp/pub/PLD/RPMS/packages.dir.mdd...
     </verb></tscreen>
-    
-    <sect1> Use package repository
+      
+
+    <sect1> Use the program 
     <p>
     <tscreen><verb>
-    $ poldek -s /home/ftp/pub/PLD/i686/PLD/RPMS
-    $ poldek -s ftp://ftp.host.org/pub/PLD/i686/PLD/RPMS/
-    </verb></tscreen> 
+    $ poldek -s SOURCE [OPTION...] [PACKAGE...]
+    </verb></tscreen>
+     
+    Sample session:
 
-    To add URL to poldek sources list do: 
+    program executed in interactive mode (what is the default)...
     <tscreen><verb>
-    $ echo "source = ftp://ftp.host.org/pub/PLD/i686/PLD/RPMS/" >> $HOME/.poldekrc
-    </verb></tscreen> 
+$ poldek -s ftp://smok.znienacka.net/pub/PLD/RPMS/
+Retrieving ftp://smok.znienacka.net/pub/PLD/RPMS/packages.dir.mdd...
+Retrieving ftp://smok.znienacka.net/pub/PLD/RPMS/packages.dir.gz...
+.................................................. 100.0% [1.4M]                
+Verifying ftp://smok.znienacka.net/pub/PLD/RPMS/packages.dir.gz... OK
+Loading ftp://smok.znienacka.net/pub/PLD/RPMS/packages.dir.gz...
+3063 packages read
+Loading db packages [/var/lib/rpm].......done
+750 packages loaded
 
+Welcome to the poldek shell mode. Type "help" for help with commands.
+poldek&gt; help
 
+poldek @VERSION@ (beta)
+ls        [OPTION...] [PACKAGE...]             List packages
+install   [OPTION...] PACKAGE...               Install packages
+uninstall [OPTION...] PACKAGE...               Uninstall packages
+get       [OPTION...] PACKAGE...               Download packages
+search    [OPTION...] PATTERN [PACKAGE...]     Search packages
+desc      [OPTION...] PACKAGE...               Display packages info
+reload                                         Reload installed packages
+help                                           Display this help
+quit                                           Quit poldek
+
+For now "search" and "desc" commands doesn't work with installed packages.
+
+Type COMMAND -? for details.
+poldek&gt;
+</verb></tscreen>
+
+...in which user is able to view packages information...
+
+<tscreen><verb>
+poldek&gt; desc gimp-1.2.2-3 
+Summary:        The GNU Image Manipulation Program
+Group:          X11/Applications/Graphics
+Vendor:         PLD
+License:        GPL
+Arch/OS:        i686/linux
+URL:            http://www.gimp.org/
+Built:          2001/10/28 23:16 at kenny
+Size:           19.5 MB (20498783 B)
+Package size:   6.8 MB (7136376 B)
+Path:           ftp://smok.znienacka.net/pub/PLD/RPMS/
+Epoch:          1
+Description:
+The GIMP is an image manipulation program suitable for photo
+retouching, image composition and image authoring. Many people find it
+extremely useful in creating logos and other graphics for web pages.
+The GIMP has many of the tools and filters you would expect to find in
+similar commercial offerings, and some interesting extras as well.
+
+poldek&gt
+</verb></tscreen>
+
+...see if there any packages need upgrade...
+
+<tscreen><verb>
+poldek&gt; ls -lU g*
+available                  installed     build date               size
+gd-2.0.1-2                 1.8.4-6       2001/10/06 09:08        232.0k
+gd-devel-2.0.1-2           1.8.4-6       2001/10/06 09:08         62.0k
+gdk-pixbuf-0.13.0-1        0.11.0-2      2001/11/05 19:10        285.0k
+ghostscript-7.03-1         7.00-3        2001/10/29 09:18          7.5m
+gmc-4.5.55-3               4.5.54-5      2001/10/22 00:12          1.4m
+gnapster-1.5.0-1           1.4.2-1       2001/06/25 10:35        456.0k
+gnome-games-1.4.0.3-1      1.4.0.1-2     2001/09/21 09:27         10.1m
+gnome-libs-1.4.1.2-4       1.2.13-2      2001/10/21 04:02          3.0m
+gnome-print-0.32-1         0.29-1        2001/11/10 03:57        704.0k
+gnome-print-devel-0.32-1   0.29-1        2001/11/10 03:57         85.0k
+gnome-vfs-1.0.2-1          1.0-2         2001/09/18 21:36          1.3m
+gnupg-i-1.0.6-2            1.0.3-3       2001/10/30 23:59          6.0k
+gpm-1.19.5-1               1.19.3-6      2001/09/25 20:43        273.0k
+gpm-devel-1.19.5-1         1.19.3-6      2001/09/25 20:43          7.0k
+gpm-static-1.19.5-1        1.19.3-6      2001/09/25 20:43         22.0k
+gvim-gtk-6.0-1             6.0ai-1       2001/10/10 18:55          1.1m
+
+16 packages, 27 MB
+poldek&gt
+</verb></tscreen>
+
+...install packages...
+
+<tscreen><verb>
+poldek&gt upgrade gimp-1.2.2-3
+Processing dependencies...
+gimp-1.2.1-7 obsoleted by gimp-1.2.2-3
+  greedy upgrade gimp-aa-1.2.1-7 to 1.2.2-3 (unresolved gimp = 1.2.1)
+    gimp-aa-1.2.1-7 obsoleted by gimp-aa-1.2.2-3
+  greedy upgrade gimp-devel-1.2.1-7 to 1.2.2-3 (unresolved gimp = 1.2.1)
+    gimp-devel-1.2.1-7 obsoleted by gimp-devel-1.2.2-3
+      greedy upgrade gimp-static-1.2.1-7 to 1.2.2-3 (unresolved gimp-devel = 1.2.1)
+        gimp-static-1.2.1-7 obsoleted by gimp-static-1.2.2-3
+There are 4 packages to install (3 marked by dependencies), 4 to uninstall:
+I gimp-1.2.2-3
+D gimp-aa-1.2.2-3
+D gimp-devel-1.2.2-3
+D gimp-static-1.2.2-3
+R gimp-aa-1.2.1-7
+R gimp-devel-1.2.1-7
+R gimp-1.2.1-7
+R gimp-static-1.2.1-7
+Retrieving ftp://smok.znienacka.net/pub/PLD/RPMS/gimp-static-1.2.2-3.i686.rpm...
+.................................................. 100.0% [122.3K]              
+Retrieving ftp://smok.znienacka.net/pub/PLD/RPMS/gimp-devel-1.2.2-3.i686.rpm...
+.................................................. 100.0% [233.5K]              
+Retrieving ftp://smok.znienacka.net/pub/PLD/RPMS/gimp-aa-1.2.2-3.i686.rpm...
+.................................................. 100.0% [17.1K]               
+Retrieving ftp://smok.znienacka.net/pub/PLD/RPMS/gimp-1.2.2-3.i686.rpm...
+.................................................. 100.0% [6.8M]                
+Executing sudo /bin/rpm --upgrade -vh --root / --noorder...
+Preparing...                ########################################### [100%]
+   1:gimp                   ########################################### [ 25%]
+   2:gimp-aa                ########################################### [ 50%]
+   3:gimp-devel             ########################################### [ 75%]
+   4:gimp-static            ########################################### [100%]
+poldek&gt
+</verb></tscreen>
+
+...and more.
 
      
+
     <sect> Documentation 
     <p>
     <itemize>
@@ -159,8 +273,11 @@
 
     <sect> Availability
     <p>
-    The program is free software (GPL version 2).
-    See the file <url url="http://team.pld.org.pl/~mis/poldek/NEWS" name="NEWS"> 
+    The program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License, version 2 as
+    published by the Free Software Foundation.
+
+    See <url url="http://team.pld.org.pl/~mis/poldek/NEWS" name="NEWS"> 
     for a list of major changes in the current release.
 	
     <itemize> 
@@ -170,7 +287,6 @@
     </item>
     
     <item> Source tarballs and rpm source packages. 
-
       <itemize>
       <item> 
 <url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz" 
@@ -197,7 +313,7 @@
       Getting the module (password: "cvs"): 
       <tscreen><verb>
       cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot login
-      cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get -r @VERSION_CVSTAG@ installer/poldek
+      cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get -r v@VERSION_CVSTAG@ installer/poldek
       </verb></tscreen>            
       Particular files may be accessed via 
 	<url url="http://cvs.pld.org.pl/installer/poldek/" name="CVSWeb">
