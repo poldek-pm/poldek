@@ -1,6 +1,9 @@
 #ifndef POLDEK_PKGDIR_INTERNAL_H
 #define POLDEK_PKGDIR_INTERNAL_H
 
+int pkgdirmodule_init(void);
+extern const char *poldek_conf_PKGDIR_DEFAULT_TYPE;
+
 #include <trurl/nbuf.h>
 
 void pkgdir__setup_langs(struct pkgdir *pkgdir);

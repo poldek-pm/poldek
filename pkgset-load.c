@@ -22,13 +22,12 @@
 #include <vfile/vfile.h>
 
 #include "pkgset.h"
-#include "pkgdir/source.h"
 #include "pkgdir/pkgdir.h"
+#include "pkgdir/pkgdir_intern.h"
 #include "log.h"
 #include "misc.h"
 #include "i18n.h"
 #include "depdirs.h"
-
 
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 {

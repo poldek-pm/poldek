@@ -9,10 +9,6 @@
 
 #include "source.h"
 
-int pkgdirmodule_init(void);
-
-extern const char *poldek_conf_PKGDIR_DEFAULT_TYPE;
-
 #define PKGDIR_NAMED              (1 << 0)
 #define PKGDIR_LOADED             (1 << 1)  /* for idx */
 #define PKGDIR_VERIFIED           (1 << 2)  /* to avoid double verification

@@ -29,8 +29,8 @@
 #include "vfile/vfile.h"
 #include "sigint/sigint.h"
 
-#include "pkgdir/source.h"
 #include "pkgdir/pkgdir.h"
+#include "pkgdir/pkgdir_intern.h"
 #include "pkgset.h"
 #include "conf.h"
 #include "log.h"
