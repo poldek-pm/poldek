@@ -29,7 +29,7 @@
 #include "capreq.h"
 #include "pkg.h"
 #include "h2n.h"
-#include "pkgdir.h"
+#include "pkgdir/pkgdir.h"
 #include "pkgroup.h"
 
 static void *(*pkg_alloc_fn)(size_t) = n_malloc;
@@ -44,11 +44,11 @@ void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*))
 #endif
 
 /* always store fields in order: path, name, version, release, arch */
-struct pkg *pkg_new(const char *name, int32_t epoch,
-                    const char *version, const char *release,
-                    const char *arch, const char *os,
-                    uint32_t size, uint32_t fsize,
-                    uint32_t btime)
+struct pkg *pkg_new_ext(const char *name, int32_t epoch,
+                        const char *version, const char *release,
+                        const char *arch, const char *os,
+                        uint32_t size, uint32_t fsize,
+                        uint32_t btime)
 {
     struct pkg *pkg;
     int name_len = 0, version_len = 0, release_len = 0, arch_len = 0, os_len = 0;
@@ -130,10 +130,13 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     pkg->reqpkgs = NULL;
     pkg->revreqpkgs = NULL;
     pkg->cnflpkgs = NULL;
-    pkg->other_files_offs = 0;
+
     pkg->pkgdir = NULL;
-    pkg->vf = NULL;
-    pkg->pkg_pkguinf_offs = 0;
+    pkg->pkgdir_data = NULL;
+    pkg->pkgdir_data_free = NULL;
+    pkg->load_pkguinf = NULL;
+    pkg->load_nodep_fl = NULL;
+    
     pkg->pri = 0;
     pkg->groupid = 0;
     pkg->_refcnt = 0;
@@ -197,9 +200,9 @@ void pkg_free(struct pkg *pkg)
         pkg_clr_ldpkguinf(pkg);
     }
 
-    if (pkg->vf) {
-        vfile_close(pkg->vf);
-        pkg->vf = NULL;
+    if (pkg->pkgdir_data && pkg->pkgdir_data_free) {
+        pkg->pkgdir_data_free(pkg->pkgdir_data);
+        pkg->pkgdir_data = NULL;
     }
     
     pkg->free(pkg);
@@ -254,8 +257,8 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
     if (!headerGetEntry(h, RPMTAG_BUILDTIME, &type, (void *)&btime, NULL)) 
         btime = NULL;
 
-    pkg = pkg_new(name, epoch ? *epoch : 0, version, release, arch, os, 
-                  size ? *size : 0, fsize, btime ? *btime : 0);
+    pkg = pkg_new_ext(name, epoch ? *epoch : 0, version, release, arch, os, 
+                      size ? *size : 0, fsize, btime ? *btime : 0);
 
     if (pkg == NULL)
         return NULL;
@@ -445,7 +448,6 @@ int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2)
     return pkg_cmp_evr(p1, p2);
 }
 
-
 int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc;
@@ -485,6 +487,24 @@ int pkg_cmp_name_srcpri(const struct pkg *p1, const struct pkg *p2)
     return rc;
 }
 
+
+int pkg_strcmp_name_evr(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc;
+    
+    if ((rc = pkg_cmp_name(p1, p2)))
+        return rc;
+
+    n_assert(p1->ver && p2->ver && p1->rel && p2->rel);
+    
+    if ((rc = p1->epoch - p2->epoch))
+        return rc;
+    
+    if ((rc = strcmp(p1->ver, p2->ver)) == 0)
+        rc = strcmp(p1->rel, p2->rel);
+    
+    return rc;
+}
 
 
 static __inline__
@@ -1005,13 +1025,10 @@ struct pkguinf *pkg_info(const struct pkg *pkg)
 
     if (pkg_has_ldpkguinf(pkg)) 
         pkgu = pkguinf_link(pkg->pkg_pkguinf);
-    
-    else if (pkg->vf && pkg->pkg_pkguinf_offs > 0)
-        pkgu = pkguinf_restore(pkg->vf->vf_stream, pkg->pkg_pkguinf_offs);
-    
-    if (pkgu)
-        pkgu = pkguinf_touser(pkgu);
 
+    else if (pkg->load_pkguinf && pkg->pkgdir_data)
+        pkgu = pkg->load_pkguinf(pkg, pkg->pkgdir_data);
+    
     return pkgu;
 }
 
@@ -1019,13 +1036,12 @@ tn_array *pkg_other_fl(const struct pkg *pkg)
 {
     tn_array *fl = NULL;
     
-    if (pkg->vf && pkg->other_files_offs) {
-        fseek(pkg->vf->vf_stream, pkg->other_files_offs, SEEK_SET);
-        fl = pkgfl_restore_f(pkg->vf->vf_stream,
-                             pkg->pkgdir ? pkg->pkgdir->foreign_depdirs : NULL,
-                             0);
-    }
-
+    if (pkg->load_nodep_fl && pkg->pkgdir_data)
+        fl = pkg->load_nodep_fl(pkg, 
+                                pkg->pkgdir_data, 
+                                pkg->pkgdir ?
+                                pkg->pkgdir->foreign_depdirs : NULL);
+    
     return fl;
 }
 
@@ -1033,21 +1049,15 @@ tn_array *pkg_other_fl(const struct pkg *pkg)
 tn_array *pkg_info_get_fl(const struct pkg *pkg) 
 {
     tn_array *fl = NULL;
-    
-    
-    if (pkg->vf && pkg->other_files_offs) {
-        fseek(pkg->vf->vf_stream, pkg->other_files_offs, SEEK_SET);
-        fl = pkgfl_restore_f(pkg->vf->vf_stream,
-                             pkg->pkgdir ? pkg->pkgdir->foreign_depdirs : NULL,
-                             0);
-    }
 
+    fl = pkg_other_fl(pkg);
+    
     if (fl == NULL) {
         fl = pkg->fl;
         
     } else if (pkg->fl) {
         int i;
-        for (i=0; i<n_array_size(pkg->fl); i++)
+        for (i=0; i < n_array_size(pkg->fl); i++)
             n_array_push(fl, n_array_nth(pkg->fl, i));
     }
     
@@ -1059,7 +1069,7 @@ tn_array *pkg_info_get_fl(const struct pkg *pkg)
 
 void pkg_info_free_fl(const struct pkg *pkg, tn_array *fl) 
 {
-    if (pkg->vf && pkg->other_files_offs)
+    if (pkg->load_nodep_fl && pkg->pkgdir_data)
         n_array_free(fl);
 }
 

@@ -1,5 +1,8 @@
 # $Id$
 
+* mis 2002/11/07
+- reinstall && reinstall-dist to refresh/swith package instalation.  
+
 * mis 2002/05/13
 - use Obsoletes tag on greedy selection (optional)  [ done v0.18 ]
 - "block" option ("hold" like) which blocks package installation (RFC)

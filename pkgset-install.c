@@ -1853,9 +1853,9 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
 
         if (is_installed == 0)
             n_array_push(iinf->uninstalled_pkgs,
-                         pkg_new(pkg->name, pkg->epoch, pkg->ver, pkg->rel,
-                                 pkg->arch, pkg->os, pkg->size, pkg->fsize,
-                                 pkg->btime));
+                         pkg_new_ext(pkg->name, pkg->epoch, pkg->ver, pkg->rel,
+                                     pkg->arch, pkg->os, pkg->size, pkg->fsize,
+                                     pkg->btime));
     }
 
     if (vrfy) 

@@ -47,8 +47,9 @@ int test_match(int argc, char *argv[])
             while (relases[j]) {
                 struct capreq *cap;
                 
-                pkg = pkg_new("poldek", epoch, versions[i], relases[j], NULL, NULL, 0, 0, 0);
-                cap = capreq_new("poldek", epoch, versions[i++], relases[j++], REL_EQ, 0);
+                pkg = pkg_new("poldek", epoch, versions[i], relases[j], NULL, NULL);
+                cap = capreq_new("poldek", epoch, versions[i++], relases[j++],
+                                 REL_EQ, 0);
                 k = 0;
                 while (rels[k] > 0) {
                     int rc1, rc2;
@@ -63,7 +64,8 @@ int test_match(int argc, char *argv[])
                            pkg->epoch, capreq_snprintf_s(req),
                            rc1 ? "YES" : "NO");
 
-                    printf("C %s match %s -> %s\n\n", capreq_snprintf_s(cap), capreq_snprintf_s0(req),
+                    printf("C %s match %s -> %s\n\n", capreq_snprintf_s(cap),
+                           capreq_snprintf_s0(req),
                            rc2 ? "YES" : "NO");
                     n_assert(rc1 == rc2);
                 }
@@ -79,7 +81,7 @@ int test_match_(int epoch, char *ver, char *rel, char *evr, int relation)
     struct capreq *req;
     int rc1;
     
-    pkg = pkg_new("poldek", epoch, ver, rel,  NULL, NULL, 0, 0, 0);
+    pkg = pkg_new("poldek", epoch, ver, rel,  NULL, NULL);
 
     req = capreq_new_evr("poldek", n_strdup(evr), relation, 0);
 
@@ -87,7 +89,6 @@ int test_match_(int epoch, char *ver, char *rel, char *evr, int relation)
     printf("P %s[%d] match %s ? %s\n", pkg_snprintf_s(pkg),
            pkg->epoch, capreq_snprintf_s(req),
            rc1 ? "YES" : "NO");
-    
     return 1;
 }
 

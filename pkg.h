@@ -10,7 +10,6 @@
 #include "capreq.h"
 #include "pkgfl.h"
 #include "pkgu.h"
-#include "pkgdir.h"
 
 
 //#define PKG_HAS_CAPS        (1 << 1)
@@ -95,6 +94,8 @@
 
 #define pkg_is_installed(pkg)  ((pkg)->flags & PKG_DBPKG)
 
+struct pkgdir;
+
 struct pkg {
     uint32_t     flags;
     uint32_t     size;        /* installed size    */
@@ -112,20 +113,20 @@ struct pkg {
     tn_array     *cnfls;      /* conflicts (with obsoletes)  */
     
     tn_array     *fl;         /* files list, see pkgfl.h  */
-    off_t        other_files_offs;  /* no dep files offset in index */
+    
+    
     
     tn_array     *reqpkgs;    /* require packages  */
     tn_array     *revreqpkgs; /* packages which requires me */
     tn_array     *cnflpkgs;   /* conflict packages */
 
-    struct pkgdir *pkgdir;    /* refrence to its own pkgdir */
-    struct vfile  *vf;        /* refrence to origin index  */
-    
-    union {
-        off_t           pkg_pkguinf_offs;
-        struct pkguinf *pkg_pkguinf; 
-    } package_uinf;
+    struct pkgdir    *pkgdir;    /* refrence to its own pkgdir */
+    void             *pkgdir_data;
+    void             (*pkgdir_data_free)(void*);
+    struct pkguinf   *(*load_pkguinf)(const struct pkg *pkg, void*);
+    tn_array         *(*load_nodep_fl)(const struct pkg *pkg, void*, tn_array*);
 
+    struct pkguinf *pkg_pkguinf; 
 
     int pri;                    /* used for split */
     int groupid;                /* package group id (see pkgroups.c) */
@@ -137,14 +138,14 @@ struct pkg {
     char         _buf[0];     /* private, store all string members */
 };
 
-#define	pkg_pkguinf_offs  package_uinf.pkg_pkguinf_offs
-#define	pkg_pkguinf       package_uinf.pkg_pkguinf
+struct pkg *pkg_new_ext(const char *name, int32_t epoch,
+                        const char *version, const char *release,
+                        const char *arch, const char *os,
+                        uint32_t size, uint32_t fsize,
+                        uint32_t btime);
 
-struct pkg *pkg_new(const char *name, int32_t epoch,
-                    const char *version, const char *release,
-                    const char *arch, const char *os,
-                    uint32_t size, uint32_t fsize,
-                    uint32_t btime);
+#define pkg_new(n, e, v, r, a, o) pkg_new_ext(n, e, v, r, a, o, 0, 0, 0)
+
 
 #define PKG_LDNEVR       0
 #define PKG_LDCAPS       (1 << 0)
@@ -187,6 +188,8 @@ int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2);
 
 /* strncmp(p1->name, p2->name, strlen(p2->name))*/
 int pkg_strncmp_name(const struct pkg *p1, const struct pkg *p2);
+
+int pkg_strcmp_name_evr(const struct pkg *p1, const struct pkg *p2);
 
 /* with warn message */
 int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2);
@@ -239,6 +242,9 @@ int pkg_snprintf(char *str, size_t size, const struct pkg *pkg);
 char *pkg_snprintf_s(const struct pkg *pkg);
 char *pkg_snprintf_s0(const struct pkg *pkg);
 char *pkg_snprintf_s1(const struct pkg *pkg);
+
+int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg);
+char *pkg_evr_snprintf_s(const struct pkg *pkg);
 
 /* load and returns not loaded file list (l: tag in package index) */
 tn_array *pkg_other_fl(const struct pkg *pkg);

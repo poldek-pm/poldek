@@ -7,6 +7,7 @@ mclean:
 		$(MAKE) maintainer-clean; \
 	fi
 	-rm -rf intl trurlib poldek-cvs????????*
+	-find . -name .#\*[0-9]  | xargs -r rm
 
 
 backup:
@@ -35,7 +36,7 @@ backup:
 arch : mclean backup 
 
 POTFILES_in:
-	-rm -r poldek-cvs*
+	-rm -f poldek-cvs*
 	-find . -type f -name \*.c | egrep -v '(Cellar/|intl/|trurlib/)'  | sed 's|^\./||' | sort > po/POTFILES.in
 
 misarch: mclean

@@ -33,9 +33,9 @@
 #include <readline/history.h>
 #include <trurl/trurl.h>
 
-#include "sigint/sigint.h"
+#include <sigint/sigint.h>
 #include "i18n.h"
-#include "pkgdir.h"
+#include "pkgdir/pkgdir.h"
 #include "pkg.h"
 #include "pkgset.h"
 #include "pkgdb.h"
@@ -826,104 +826,108 @@ char *mkdbcache_path(char *path, size_t size, const char *cachedir,
             *p = '.';
         p++;
     }
-    
-    snprintf(path, size, "%s/%s.dbcache.%s.gz", cachedir,
-             default_pkgidx_name, tmp);
-    
+
+    snprintf(path, size, "%s/packages.dbcache.%s.gz", cachedir, tmp);
     return path;
 }
 
 
+static char *mkrpmdb_path(char *path, size_t size, const char *root,
+                          const char *dbpath)
+{
+    *path = '\0';
+    n_snprintf(path, size, "%s%s",
+               *(root + 1) == '\0' ? "" : root,
+               dbpath != NULL ? dbpath : "");
+    return *path ? path : NULL;
+}
+
+#define RPMDBCACHE_PDIRTYPE "pndir"
+
 static struct pkgdir *load_installed_pkgdir(int reload) 
 {
-    char dbfull_path[PATH_MAX], dbcache_path[PATH_MAX];
-    const char *rootdir, *dbpath;
+    char rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX];
     struct pkgdir *dir = NULL;
-    time_t mtime_rpmdb = 0, mtime_dbcache = 0;
+    int ldflags = 0;
+
     
-    rootdir = shell_s.inst->rootdir;
-    dbpath = rpm_get_dbpath();
-    
-    snprintf(dbfull_path, sizeof(dbfull_path), "%s%s",
-             *(rootdir + 1) == '\0' ? "" : rootdir,
-             dbpath != NULL ? dbpath : "");
-    
-    if (*dbfull_path == '\0')
+    if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path), shell_s.inst->rootdir,
+                     rpm_get_dbpath()) == NULL)
         return NULL;
 
     
-    mkdbcache_path(dbcache_path, sizeof(dbcache_path),
-                   shell_s.inst->cachedir, dbfull_path);
-
+    if (mkdbcache_path(dbcache_path, sizeof(dbcache_path),
+                       shell_s.inst->cachedir, rpmdb_path) == NULL)
+        return NULL;
+    
+    
     if (!reload) {              /* use cache */
+        time_t mtime_rpmdb, mtime_dbcache;
         mtime_dbcache = mtime(dbcache_path);
-        mtime_rpmdb = rpm_dbmtime(dbfull_path);
-        
-        if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache) {
-            dir = pkgdir_new("db", dbcache_path, NULL, PKGDIR_NEW_VERIFY);
-            if (dir != NULL) {
-                msgn(1, _("Loading cache %s..."), dbcache_path);
-                if (pkgdir_load(dir, NULL, PKGDIR_LD_NOUNIQ)) {
-                    int n = n_array_size(dir->pkgs);
-                    msgn(1, ngettext("%d package read",
-                                     "%d packages read", n), n);
-                    
-                } else {
-                    pkgdir_free(dir);
-                    dir = NULL;
-                }
-            }
+        mtime_rpmdb = rpm_dbmtime(rpmdb_path);
+        if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache)
+            dir = pkgdir_open(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE, "rpmdb");
+    }
+    
+    if (dir == NULL)
+        dir = pkgdir_open(rpmdb_path, NULL, "rpmdb", "rpmdb");
+    
+    
+    if (dir != NULL) {
+        if (pkgdir_load(dir, NULL, PKGDIR_LD_NOUNIQ | ldflags)) {
+            int n = n_array_size(dir->pkgs);
+            msgn(2, ngettext("%d package loaded",
+                             "%d packages loaded", n), n);
+            
+        } else {
+            pkgdir_free(dir);
+            dir = NULL;
         }
     }
     
     
-    if (dir == NULL) {
-        mtime_rpmdb += 1;       /* will be saved on exit */
-        dir = pkgdir_load_db(shell_s.inst->rootdir, dbpath);
-    }
-    
-
-    if (dir == NULL) {
+    if (dir == NULL)
         logn(LOGERR, _("Load installed packages failed"));
-        
-    } else {
-        dir->idxpath = n_strdup(dbcache_path);
-        dir->ts = mtime_rpmdb;
-    }
     
     return dir;
 }
 
+
 static void save_installed_pkgdir(struct pkgdir *pkgdir) 
 {
-    time_t mtime_rpmdb, mtime_dbcache;
-    const char *dbpath, *rootdir;
-    char dbfull_path[PATH_MAX], dbcache_path[PATH_MAX];
-    
-    rootdir = shell_s.inst->rootdir;
-    dbpath = rpm_get_dbpath();
-    
-    snprintf(dbfull_path, sizeof(dbfull_path), "%s%s",
-             *(rootdir + 1) == '\0' ? "" : rootdir,
-             dbpath != NULL ? dbpath : "");
-    
-    if (*dbfull_path == '\0')
+    time_t       mtime_rpmdb, mtime_dbcache;
+    char         rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX];
+    const char   *path;
+
+
+    if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path), shell_s.inst->rootdir,
+                     rpm_get_dbpath()) == NULL)
         return;
-    mtime_rpmdb = rpm_dbmtime(dbfull_path);
-    
+
+    mtime_rpmdb = rpm_dbmtime(rpmdb_path);
     if (mtime_rpmdb > pkgdir->ts) /* changed outside poldek */
         return;
 
+    
+    //printf("%s, %s\n", pkgdir->type, pkgdir->idxpath);
+    if (pkgdir_is_type(pkgdir, RPMDBCACHE_PDIRTYPE))
+        path = pkgdir->idxpath;
+    else 
+        path = mkdbcache_path(dbcache_path, sizeof(dbcache_path),
+                              shell_s.inst->cachedir, pkgdir->idxpath);
+
+    if (path == NULL)
+        return;
+    
     if (mtime_rpmdb == pkgdir->ts) { /* not touched, check if cache exists  */
-        mkdbcache_path(dbcache_path, sizeof(dbcache_path),
-                       shell_s.inst->cachedir, dbfull_path);
         mtime_dbcache = mtime(dbcache_path);
         if (mtime_dbcache && mtime_dbcache >= pkgdir->ts)
             return;
     }
-    
-    pkgdir_create_idx(pkgdir, NULL, PKGDIR_CREAT_asCACHE |
-                      PKGDIR_CREAT_wMD5 | PKGDIR_CREAT_woTOC);
+    //printf("path = %s, %d, %d, %d\n", path, mtime_rpmdb, pkgdir->ts, mtime_dbcache);
+    pkgdir_create_idx(pkgdir, RPMDBCACHE_PDIRTYPE, path,
+                      PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NODESC |
+                      PKGDIR_CREAT_asCACHE);
 }
 
 

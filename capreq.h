@@ -115,8 +115,11 @@ int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2);
 tn_array *capreq_arr_new(int size);
 int capreq_arr_find(tn_array *capreqs, const char *name);
 
-int capreq_arr_store(tn_array *arr, FILE *stream, const char *prefix);
-tn_array *capreq_arr_restore(FILE *stream, int skip_bastards);
+tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf);
+int capreq_arr_store_f(tn_array *arr, const char *prefix, tn_stream *st);
+
+tn_array *capreq_arr_restore(tn_buf *nbuf);
+tn_array *capreq_arr_restore_f(tn_stream *st);
 
 #define CRTYPE_CAP  1
 #define CRTYPE_REQ  2

@@ -7,7 +7,7 @@
 
 
 #include "pkg.h"
-#include "pkgdir.h"
+#include "pkgdir/pkgdir.h"
 #include "pkgdb.h"
 #include "usrset.h"
 

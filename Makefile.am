@@ -9,36 +9,35 @@ else
 TRURL_DIR=
 endif
 
-SUBDIRS   = po $(TRURL_DIR) sigint vfile shell conf doc
+if WITH_INCLUDED_TNDB
+TNDB_DIR=tndb
+else
+TNDB_DIR=
+endif
+
+SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile shell conf pkgdir
 DIST_SUBDIRS = $(SUBDIRS)
 
-INCLUDES  = @TRURL_INCLUDE@
+INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@
+AM_CFLAGS = @AM_CFLAGS@
+
 POD2MAN   = @POD2MAN@
 POD2HTML  = pod2html
 
-TRURLIB_VERSION=@TRURLIB_VERSION@
-
 noinst_LIBRARIES = libpoldek.a
-libpoldek_a_SOURCES = \
-	  log.c log.h			\
+libpoldek_a_SOURCES =  \
+	  log.c log.h	   \
 	  poldek_term.c poldek_term.h	\
-	  minfo.c			\
+	  minfo.c			    \
 	  misc.c misc.h			\
-	  rpmadds.c rpmadds.h		\
-	  depdirs.c depdirs.h   	\
+	  rpmadds.c rpmadds.h	\
+	  depdirs.c depdirs.h   \
 	  pkg.c pkg.h			\
-	  pkgu.c pkgu.h         	\
+	  pkgu.c pkgu.h        	\
 	  pkgfl.c pkgfl.h		\
 	  fileindex.c fileindex.h	\
 	  capreqidx.c capreqidx.h	\
-	  capreq.c capreq.h		\
-	  source.c source.h             \
-	  pkgdir.c pkgdir.h		\
-	  pkgdir_tags.c			\
-	  pkgdir_load_dir.c             \
-	  pkgdir_save.c			\
-	  pkgdir_patch.c		\
-	  pkgdir_digest.c		\
+	  capreq.c capreq.h 		\
 	  pkgset-load.c pkgset-load.h	\
 	  pkgset.c pkgset.h		\
 	  pkgset-req.c pkgset-req.h	\
@@ -66,9 +65,18 @@ libpoldek_a_SOURCES = \
 
 SHELL_MOD = shell/libshell.a
 
+pkgdir_modules = pkgdir/dir/libpkgdir_dir.a      \
+		 pkgdir/hdrl/libpkgdir_hdrl.a    \
+	         pkgdir/rpmdb/libpkgdir_rpmdb.a  \
+		 pkgdir/pdir/libpkgdir_pdir.a 	 \
+		 pkgdir/pndir/libpkgdir_pndir.a
+
 poldek_DEPENDENCIES_ = libpoldek.a            \
+		       pkgdir/libpkgdir.a     \
+		       $(pkgdir_modules)      \
+		       pkgdir/libpkgdir.a     \
 		       sigint/libsigint.a     \
-	               vfile/libvfile.a       \
+               vfile/libvfile.a       \
 		       vfile/vftp/libvftp.a   \
 		       vfile/vhttp/libvhttp.a
 
@@ -85,9 +93,7 @@ LDADD_              = @INTLLIBS@
 bin_PROGRAMS        = poldek rpmvercmp
 dist_bin_SCRIPTS    = mkpackagedir vfjuggle vfuncompr
 poldek_SOURCES      = main.c
-poldek_LDADD        = libpoldek.a sigint/libsigint.a vfile/libvfile.a \
-		      vfile/vftp/libvftp.a vfile/vhttp/libvhttp.a \
-	              $(SHELL_MOD_) $(LDADD_)
+poldek_LDADD        = $(poldek_DEPENDENCIES) $(SHELL_MOD_) $(LDADD_)
 
 rpmvercmp_SOURCES   = rpmvercmp.c
 rpmvercmp_LDADD     = $(LDADD_)

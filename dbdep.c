@@ -34,7 +34,7 @@
 #include "misc.h"
 #include "dbdep.h"
 
-static db_dep_free_pkgs(struct db_dep *db_dep) 
+static void db_dep_free_pkgs(struct db_dep *db_dep) 
 {
     if (db_dep->pkgs) {
         n_array_free(db_dep->pkgs);

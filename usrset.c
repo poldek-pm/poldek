@@ -184,8 +184,7 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
         if (release == NULL)
             release = "";
                 
-        pdef->pkg = pkg_new(name, epoch, version, release, NULL, NULL, 
-                            0, 0, 0);
+        pdef->pkg = pkg_new(name, epoch, version, release, NULL, NULL);
     }
 
     if (virtname) 

@@ -1,11 +1,11 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl $Id$
 
-AC_INIT(poldek, 0.18.1)
+AC_INIT(poldek,0.19.0)
 AC_CONFIG_SRCDIR([capreq.c])
 
-VERSION=0.18.1
-VERSION_STATUS="stable"
+VERSION_STATUS="devel"
+VERSION=0.19.0
 VERSION_CVSTAG="v$(echo $VERSION | sed 's/\./_/g')"
 AH_TEMPLATE([ENABLE_TRACE],[])
 AH_TEMPLATE([HAVE_RPM_4_0_4],[])
@@ -22,9 +22,9 @@ AM_CONFIG_HEADER([config.h])
 
 ALL_LINGUAS="pl de"
 
-
-AM_CFLAGS="-g -Wall -W"
 AC_DEFINE([ENABLE_VFILE_RPMIO],1,[defined if rpmio is used for vfile operations])
+AC_DEFINE([ENABLE_VFILE_TRURLIO],1,[defined if trurlio is used for vfile operations])
+
 
 dnl Checks for programs.
 AC_PROG_CC()
@@ -34,6 +34,9 @@ AC_PROG_RANLIB
 AC_CHECK_PROG(POD2MAN, pod2man, pod2man)
 AM_GNU_GETTEXT([external])
 AM_GNU_GETTEXT_VERSION(0.11.5)
+
+AM_CFLAGS="-Wall -W"
+AC_SUBST(AM_CFLAGS)
 
 dnl Process features.
 AC_CHECK_LIB(tinfo, tigetstr,,[
@@ -219,6 +222,33 @@ AC_SUBST(TRURL_LDFLAG)
 AC_SUBST(TRURLIB_VERSION)
 AM_CONDITIONAL(WITH_INCLUDED_TRURLIB, test -n "$TRURL_DIR")
 
+
+dnl use local ../trurlib copy if it exists
+TNDB_DIR=
+if test -f "${srcdir}/tndb/tndb.c"; then
+	TNDB_DIR="tndb"
+fi
+
+ENABLE_SYS_TNDB="no"
+if test "${ENABLE_SYS_TNDB}." != "no."; then
+	TNDB_DIR=
+fi
+
+if test -n "TNDB_DIR"; then
+	AC_MSG_CHECKING(for local tndb copy in $TNDB_DIR)
+	AC_MSG_RESULT([yes])
+	TNDB_INCLUDE="-I\$(top_srcdir)/$TNDB_DIR/"
+	TNDB_LDFLAG="-L\$(top_builddir)/$TNDB_DIR/"
+	LDFLAGS="$LDFLAGS -L\$(top_builddir)/$TNDB_DIR"
+else
+	AC_CHECK_HEADER(tndb/tndb.h,,AC_MSG_ERROR("tndb.h is missing"))
+fi
+AC_SUBST(TNDB_INCLUDE)
+AC_SUBST(TNDB_LDFLAG)
+AC_SUBST(TNDB_VERSION)
+AM_CONDITIONAL(WITH_INCLUDED_TNDB, test -n "$TNDB_DIR")
+
+
 dnl Checks for libraries.
 AC_CHECK_LIB(bz2, BZ2_bzCompress)
 AC_CHECK_LIB(z, gzopen)
@@ -290,11 +320,8 @@ if test ${is_rpm4_0_4}. = yes. -a ${ENABLE_STATIC}. = yes. ; then
 	LIBS="$LIBS -lbz2 -lrpmio"
 fi
 
-AC_CHECK_FUNCS(getline,, [AC_MSG_ERROR(["getline\(\) is needed by $PACKAGE"])],
-	       $CONF_IN_LDFLAGS)
-
-AC_CHECK_FUNCS(fopencookie,, [AC_MSG_WARN(["disabled gzipped files support"])],
-	       $CONF_IN_LDFLAGS)
+AC_CHECK_FUNCS(getline,,, $CONF_IN_LDFLAGS)
+AC_CHECK_FUNCS(fopencookie,,, $CONF_IN_LDFLAGS)
 
 AC_CHECK_FUNCS(openpty,,
 	       AC_CHECK_LIB(util, openpty, 
@@ -313,33 +340,43 @@ AC_CHECK_FUNCS(EVP_DigestInit,,
 
 
 dnl trullib 0.43.5 has n_hash_size; test if linked with system copy only
-NARRAY="<trurl/narray.h>"
+TN_TEST_INCLUDE="<trurl/nstream.h>"
 if test -z "$TRURL_DIR"; then
-	AC_CHECK_LIB(trurl, n_hash_size,,
-		[AC_MSG_ERROR(["trurlib >= 0.43.5 not found"])], [$CONF_IN_LDFLAGS])
+	AC_CHECK_LIB(trurl, n_stream_open,,
+		[AC_MSG_ERROR(["trurlib >= 0.44.0 not found"])], [-Ltrurlib])
 else
 	LIBS="$LIBS -ltrurl"
 	AC_CONFIG_SUBDIRS(trurlib)
-	NARRAY="\"$srcdir/$TRURL_DIR/include/trurl/narray.h\""
+	TN_TEST_INCLUDE="\"$srcdir/$TRURL_DIR/include/trurl/nstream.h\""
 fi
 
 
-AC_MSG_CHECKING([for trullib >= 0.43.9])
+AC_MSG_CHECKING([for trullib >= 0.44.0])
 AC_EGREP_CPP(yes,
-       [#include $NARRAY
-        #ifdef n_array_has_free_fn
+       [#include $TN_TEST_INCLUDE
+        #ifdef TN_STREAM_STDIO
           yes
         #endif
        ], is_valid_trurlib_ver=yes, is_valid_trurlib_ver=no)
 
 if test ${is_valid_trurlib_ver}. = no. ; then
 	AC_MSG_RESULT(no)		
-   	AC_MSG_ERROR(["trurlib >= 0.43.9 not found"])
+   	AC_MSG_ERROR(["trurlib >= 0.44.0 not found"])
 else
 	AC_MSG_RESULT(yes)	
 fi
 
-AC_CONFIG_FILES([  po/Makefile.in
+LIBS="$LIBS -ltndb"	
+AC_CONFIG_SUBDIRS(tndb)
+
+AC_CONFIG_FILES([  
+		po/Makefile.in
+		pkgdir/Makefile
+		pkgdir/dir/Makefile
+		pkgdir/hdrl/Makefile
+		pkgdir/pdir/Makefile
+		pkgdir/pndir/Makefile
+		pkgdir/rpmdb/Makefile
 		shell/Makefile
 		sigint/Makefile
 		vfile/Makefile

@@ -163,6 +163,7 @@ static void print_uninstall_summary(tn_array *pkgs, int ndep)
     
 }
 
+
 static
 void update_install_info(struct install_info *iinf, tn_array *pkgs,
                          struct pkgdb *db, int vrfy)

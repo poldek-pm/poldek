@@ -1,6 +1,6 @@
 
 const char *pdir_default_pkgdir_name = "packages.dir";
-const char *default_pkgidx_name = "packages.dir";
+const char *pdir_default_idx_name = "packages.dir";
 const char *pdir_difftoc_suffix = ".diff.toc.gz";
 
 const char *pdir_packages_incdir = "packages.i";

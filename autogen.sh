@@ -41,4 +41,11 @@ if [ -x ./trurlib/autogen.sh ]; then
 	runcmd ./autogen.sh $CONFOPTS
 	cd ..
 fi
+
+if [ -x ./tndb/autogen.sh ]; then
+	cd tndb
+	runcmd ./autogen.sh $CONFOPTS
+	cd ..
+fi
+
 runcmd ./configure $CONFOPTS

@@ -625,6 +625,76 @@ int snprintf_size(char *buf, int bufsize, unsigned long nbytes)
     return n_snprintf(buf, bufsize, "%.1f%c", nb, unit);
 }
         
+const char *lc_messages_lang(void) 
+{
+    const char *lang = NULL;
+
+    if ((lang = getenv("LANGUAGE")) == NULL &&
+        (lang = getenv("LC_ALL")) == NULL &&
+        (lang = getenv("LC_MESSAGES")) == NULL &&
+        (lang = getenv("LANG")) == NULL)
+        lang = "C";
+    
+    else if (strcmp(lang, "POSIX") == 0)
+        lang = "C";
+
+    if (lang == NULL || *lang == '\0')
+        lang = "C";
+
+    return lang;
+}
+
+
+tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
+{
+    tn_array    *r_langs;
+    const char  **langs, **p;
 
     
+    if (lc_lang == NULL || n_array_size(avlangs) == 0)
+        return NULL;
     
+    r_langs = n_array_clone(avlangs);
+    n_array_sort(avlangs);
+        
+    langs = n_str_tokl(lc_lang, ":");
+    p = langs;
+    
+    while (*p) {
+        char   *l, *q, *sep = "@._";
+        int    len;
+
+        if (n_array_bsearch(avlangs, *p)) {
+            n_array_push(r_langs, n_strdup(*p));
+            p++;
+            continue;
+        }
+        
+        len = strlen(*p) + 1;
+        l = alloca(len + 1);
+        memcpy(l, *p, len);
+
+        while (*sep) {
+            if ((q = strchr(l, *sep))) {
+                *q = '\0';
+                
+                if (n_array_bsearch(avlangs, l)) {
+                    n_array_push(r_langs, n_strdup(l));
+                    continue;
+                }
+            }
+            sep++;
+        }
+
+        p++;
+    }
+
+    n_str_tokl_free(langs);
+    
+    if (n_array_size(r_langs) == 0) {
+        n_array_free(r_langs);
+        r_langs = NULL;
+    }
+    
+    return r_langs;
+}

@@ -282,10 +282,12 @@ int pkgfl_ent_deep_cmp(const void *a,  const void *b)
     if ((cmprc = aa->items - bb->items))
         return cmprc;
 
-    for (i = 0; i <aa->items; i++)
+    for (i = 0; i < aa->items; i++)
         if ((cmprc = flfile_cmp(aa->files[i], bb->files[i])))
             return cmprc;
-    
+
+    logn(LOGERR | LOGDIE, "pkgfl_ent_deep_cmp: %p:%s eq %p:%s", aa, aa->dirname,
+         bb, bb->dirname);
     n_assert(0);                /* directories must be different */
     return cmprc;
 }
@@ -400,17 +402,18 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
         n_buf_add_int8(nbuf, dnl);
         n_buf_add(nbuf, flent->dirname, dnl);
         n_buf_add_int32(nbuf, flent->items);
-
+#if 0
         if (strstr(flent->dirname, "SourceForgeXX"))
             printf("\nDIR %s\n", flent->dirname);
-        
+#endif        
         for (j=0; j<flent->items; j++) {
             struct flfile *file = flent->files[j];
             uint8_t bnl = strlen(file->basename);
-            
+
+#if 0            
             if (strstr(flent->dirname, "SourceForgeXX")) 
                 printf("STORE%d %s\n", which, file->basename);
-
+#endif
             n_buf_add_int8(nbuf, bnl);
             n_buf_add(nbuf, file->basename, bnl);
             n_buf_add_int16(nbuf, file->mode);
@@ -421,8 +424,10 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
                 bnl = strlen(linkto);
                 n_buf_add_int8(nbuf, bnl);
                 n_buf_add(nbuf, linkto, bnl);
+#if 0          				
                 if (strstr(flent->dirname, "SourceForgeXX")) 
                     printf("STORE%d linkto %s\n", which, linkto);
+#endif				
             }
         }
     }
@@ -430,24 +435,34 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
     return ndirs;
 }
 
-int pkgfl_store_f(tn_array *fl, FILE *stream, tn_array *depdirs, int which) 
+int pkgfl_store_f(tn_array *fl, tn_stream *st, tn_array *depdirs, int which) 
 {
     tn_buf *nbuf;
-    uint32_t size;
     int rc;
     
     nbuf = n_buf_new(4096);
     
     pkgfl_store(fl, nbuf, depdirs, which);
-    size = hton32(n_buf_size(nbuf));
-    fwrite(&size, sizeof(size), 1, stream);
-    
-    rc = fwrite(n_buf_ptr(nbuf), n_buf_size(nbuf), 1, stream) == 1 &&
-        fwrite("\n", 1, 1, stream) == 1;
-
+    rc = n_buf_store(nbuf, st, TN_BUF_STORE_32B);
     n_buf_free(nbuf);
+	n_stream_printf(st, "\n");
     return rc;
 }
+
+int pkgfl_store_buf(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which) 
+{
+    tn_buf *buf;
+    int rc;
+    
+    buf = n_buf_new(4096);
+    
+    pkgfl_store(fl, buf, depdirs, which);
+    rc = n_buf_store_buf(buf, nbuf, TN_BUF_STORE_32B);
+    n_buf_free(buf);
+	n_buf_puts(nbuf, "\n");
+    return rc;
+}
+
 
 tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *dirs, int include)
 {
@@ -524,45 +539,28 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *dirs, int include)
 }
 
 
-tn_array *pkgfl_restore_f(FILE *stream, tn_array *dirs, int include) 
+tn_array *pkgfl_restore_f(tn_stream *st, tn_array *dirs, int include) 
 {
-    tn_array *fl;
-    tn_buf *nbuf;
+    tn_array *fl = NULL;
+    tn_buf *nbuf = NULL;
     tn_buf_it nbufi;
-    uint32_t size;
-    char *buf;
     
-    if (fread(&size, sizeof(size), 1, stream) != 1)
-        return NULL;
+    n_buf_restore(st, &nbuf, TN_BUF_STORE_32B);
+    if (nbuf) {
+        n_buf_it_init(&nbufi, nbuf);
+        fl = pkgfl_restore(&nbufi, dirs, include);
+        n_buf_free(nbuf);
+    }
     
-    size = ntoh32(size);
-    
-    buf = alloca(size);
-    
-    if (fread(buf, size, 1, stream) != 1)
-        return NULL;
-    
-    nbuf = n_buf_new(0);
-    n_buf_init(nbuf, buf, size);
-    n_buf_it_init(&nbufi, nbuf);
-    fl = pkgfl_restore(&nbufi, dirs, include);
-    n_buf_free(nbuf);
-    
-    fseek(stream, 1, SEEK_CUR); /* skip final '\n' */
-
+    n_stream_seek(st, 1, SEEK_CUR); /* skip final '\n' */
     return fl;
 }
 
 
-int pkgfl_skip_f(FILE *stream) 
+int pkgfl_skip_f(tn_stream *st) 
 {
-    uint32_t size;
-    
-    if (fread(&size, sizeof(size), 1, stream) != 1)
-        return 0;
-    
-    size = ntoh32(size);
-    fseek(stream, size + 1, SEEK_CUR);
+    n_buf_restore_skip(st, TN_BUF_STORE_32B);
+    n_stream_seek(st, 1, SEEK_CUR);
     return 1;
 }
 

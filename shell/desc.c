@@ -29,6 +29,7 @@
 #include "sigint/sigint.h"
 
 #include "shell.h"
+#include "sigint/sigint.h"
 
 #define IDENT     16
 #define SUBIDENT  4

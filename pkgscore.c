@@ -30,6 +30,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
+#include "pkgdir/pkgdir.h"
 #include "pkgset.h"
 
 static

@@ -15,9 +15,10 @@
 
 #include "sigint/sigint.h"
 #include "i18n.h"
+#include "misc.h"
+
 #include "shell.h"
 #include "pager.h"
-
 
 static int ls(struct cmdarg *cmdarg);
 static

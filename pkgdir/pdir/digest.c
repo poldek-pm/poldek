@@ -14,13 +14,6 @@
 # include "config.h"
 #endif
 
-#ifdef HAVE_GETLINE
-# define _GNU_SOURCE 1
-#else
-# error "getline() is needed, sorry"
-#endif
-
-
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -34,43 +27,43 @@
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 #include <trurl/nbuf.h>
-
+#include <trurl/nmalloc.h>
+#include <trurl/n_snprintf.h>
 #include <vfile/vfile.h>
 
 #define PKGDIR_INTERNAL
 
 #include "i18n.h"
 #include "log.h"
-#include "pkgdir.h"
-#include "pkg.h"
-#include "pkgroup.h"
-
-const char *pdigest_ext = ".mdd";
-const char *pdigest_ext_v016 = ".md";
-
-static int pdigest_read(struct pdigest *pdg, struct vfile *vfmd);
+#include "pdir.h"
 
 
-struct pdigest *pdigest_new(const char *path, int vfmode, int v016compat) 
+const char *pdir_digest_ext = ".mdd";
+const char *pdir_digest_ext_v016 = ".md";
+
+static int pdir_digest_read(struct pdir_digest *pdg, struct vfile *vfmd);
+
+
+struct pdir_digest *pdir_digest_new(const char *path, int vfmode, int v016compat) 
 {
-    struct pdigest    *pdg;
-    struct vfile      *vf = NULL; 
-    char              mdpath[PATH_MAX];
-    unsigned          mode = 0;
+    struct pdir_digest  *pdg;
+    struct vfile        *vf = NULL; 
+    char                mdpath[PATH_MAX];
+    unsigned            mode = 0;
     
     if (path != NULL) {
         int n;
-        const char *ext = pdigest_ext;
+        const char *ext = pdir_digest_ext;
 
         if (v016compat == 0) {
-            mode |= PDIGEST_MODE_DEFAULT;
+            mode |= PDIR_DIGEST_MODE_DEFAULT;
             
         } else {
-            mode |= PDIGEST_MODE_v016;
-            ext = pdigest_ext_v016;
+            mode |= PDIR_DIGEST_MODE_v016;
+            ext = pdir_digest_ext_v016;
         }
         
-        n = mkdigest_path(mdpath, sizeof(mdpath), path, ext);
+        n = pdir_mkdigest_path(mdpath, sizeof(mdpath), path, ext);
         vfmode |= VFM_NOEMPTY;
         if ((vf = vfile_open(mdpath, VFT_IO, vfmode)) == NULL) 
             return NULL;
@@ -84,8 +77,8 @@ struct pdigest *pdigest_new(const char *path, int vfmode, int v016compat)
     pdg->md = NULL;
 
     if (vf) 
-        if (!pdigest_read(pdg, NULL)) {
-            pdigest_free(pdg);
+        if (!pdir_digest_read(pdg, NULL)) {
+            pdir_digest_free(pdg);
             pdg = NULL;
         }
     
@@ -93,7 +86,7 @@ struct pdigest *pdigest_new(const char *path, int vfmode, int v016compat)
 }
 
 
-int pdigest_fill(struct pdigest *pdg, char *mdbuf, int size) 
+int pdir_digest_fill(struct pdir_digest *pdg, char *mdbuf, int size) 
 {
     int req_size;
 
@@ -101,30 +94,30 @@ int pdigest_fill(struct pdigest *pdg, char *mdbuf, int size)
     n_assert(*pdg->mdd == '\0');
     n_assert(*pdg->mdh == '\0');
     
-    req_size = PDIGEST_SIZEx2;
-    if (pdg->mode & PDIGEST_MODE_v016)
-        req_size = PDIGEST_SIZE;
+    req_size = PDIR_DIGEST_SIZEx2;
+    if (pdg->mode & PDIR_DIGEST_MODE_v016)
+        req_size = PDIR_DIGEST_SIZE;
     
     if (size < req_size)
         return 0;
 
-    if (pdg->mode & PDIGEST_MODE_v016) {
-        pdg->md = n_malloc(PDIGEST_SIZE + 1);
-        memcpy(pdg->md, mdbuf, PDIGEST_SIZE);
-        pdg->md[PDIGEST_SIZE] = '\0';
+    if (pdg->mode & PDIR_DIGEST_MODE_v016) {
+        pdg->md = n_malloc(PDIR_DIGEST_SIZE + 1);
+        memcpy(pdg->md, mdbuf, PDIR_DIGEST_SIZE);
+        pdg->md[PDIR_DIGEST_SIZE] = '\0';
         
     } else {
-        char *p = &mdbuf[PDIGEST_SIZE];
-        memcpy(pdg->mdd, mdbuf, PDIGEST_SIZE);
-        pdg->mdd[PDIGEST_SIZE] = '\0';
-        memcpy(pdg->mdh, p, PDIGEST_SIZE);
-        pdg->mdh[PDIGEST_SIZE] = '\0';
+        char *p = &mdbuf[PDIR_DIGEST_SIZE];
+        memcpy(pdg->mdd, mdbuf, PDIR_DIGEST_SIZE);
+        pdg->mdd[PDIR_DIGEST_SIZE] = '\0';
+        memcpy(pdg->mdh, p, PDIR_DIGEST_SIZE);
+        pdg->mdh[PDIR_DIGEST_SIZE] = '\0';
     }
     
     return 1;
 }
 
-void pdigest_init(struct pdigest *pdg) 
+void pdir_digest_init(struct pdir_digest *pdg) 
 {
     memset(pdg, 0, sizeof(*pdg));
     pdg->vf = NULL;
@@ -133,7 +126,7 @@ void pdigest_init(struct pdigest *pdg)
 }
 
     
-void pdigest_destroy(struct pdigest *pdg) 
+void pdir_digest_destroy(struct pdir_digest *pdg) 
 {
     if (pdg->md) {
         free(pdg->md);
@@ -148,17 +141,17 @@ void pdigest_destroy(struct pdigest *pdg)
 
 
 
-void pdigest_free(struct pdigest *pdg) 
+void pdir_digest_free(struct pdir_digest *pdg) 
 {
-    pdigest_destroy(pdg);
+    pdir_digest_destroy(pdg);
     memset(pdg, 0, sizeof(*pdg));
     free(pdg);
 }
 
 
-int pdigest_readfd(struct pdigest *pdg, int fd, const char *path) 
+int pdir_digest_readfd(struct pdir_digest *pdg, int fd, const char *path) 
 {
-    char buf[PDIGEST_SIZEx2];
+    char buf[PDIR_DIGEST_SIZEx2];
     int md_size, req_size;
     
     if (lseek(fd, 0L, SEEK_SET) != 0) {
@@ -168,21 +161,21 @@ int pdigest_readfd(struct pdigest *pdg, int fd, const char *path)
     
     md_size = read(fd, buf, sizeof(buf));
 
-    req_size = PDIGEST_SIZEx2;
-    if (pdg->mode & PDIGEST_MODE_v016)
-        req_size = PDIGEST_SIZE;
+    req_size = PDIR_DIGEST_SIZEx2;
+    if (pdg->mode & PDIR_DIGEST_MODE_v016)
+        req_size = PDIR_DIGEST_SIZE;
     
     if (md_size < req_size) {
         logn(LOGERR, _("%s: broken digest file (%d)"), path, md_size);
         return 0;
     }
     
-    return pdigest_fill(pdg, buf, md_size);
+    return pdir_digest_fill(pdg, buf, md_size);
 }
 
 
 static
-int pdigest_read(struct pdigest *pdg, struct vfile *vfmd) 
+int pdir_digest_read(struct pdir_digest *pdg, struct vfile *vfmd) 
 {
     if (vfmd == NULL)
         vfmd = pdg->vf;
@@ -190,16 +183,16 @@ int pdigest_read(struct pdigest *pdg, struct vfile *vfmd)
     if (vfmd == NULL)
         return 0;
     
-    return pdigest_readfd(pdg, vfmd->vf_fd, vfmd->vf_path);
+    return pdir_digest_readfd(pdg, vfmd->vf_fd, vfmd->vf_path);
 }
 
 
 static
-int hdr_digest(FILE *stream, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
+int hdr_digest(tn_stream *st, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
 {
-    int             line_size = 0, nread, len, endvhdr_found = 0;
+    int             nread, len, endvhdr_found = 0;
     unsigned char   buf[256];
-    char            *linebuf = NULL;
+    char            line[4096];
     EVP_MD_CTX      ctx;
     int             n;
 
@@ -210,12 +203,12 @@ int hdr_digest(FILE *stream, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
     len = strlen(pdir_tag_endvarhdr);
     n = 0;
 
-    while ((nread = getline(&linebuf, &line_size, stream)) > 0) {
-        char *p = linebuf;
+    while ((nread = n_stream_gets(st, line, sizeof(line))) > 0) {
+        char *p = line;
 
-        EVP_DigestUpdate(&ctx, linebuf, nread);
+        EVP_DigestUpdate(&ctx, line, nread);
         if (_ctx)
-            EVP_DigestUpdate(_ctx, linebuf, nread);
+            EVP_DigestUpdate(_ctx, line, nread);
         n++;
         
         if (*p == '#')
@@ -232,9 +225,6 @@ int hdr_digest(FILE *stream, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
         if (n > 100)            /* no more than 100 line long hdr */
             break;
     }
-
-    if (linebuf)
-        free(linebuf);
 
     EVP_DigestFinal(&ctx, buf, &n);
     
@@ -256,7 +246,7 @@ int hdr_digest(FILE *stream, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
 }
 
 static
-int digest(FILE *stream, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
+int digest(tn_stream *st, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
 {
     unsigned char buf[16*1024];
     EVP_MD_CTX ctx;
@@ -267,7 +257,7 @@ int digest(FILE *stream, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
 
     EVP_DigestInit(&ctx, EVP_sha1());
 
-    while ((n = fread(buf, 1, sizeof(buf), stream)) > 0) {
+    while ((n = n_stream_read(st, buf, sizeof(buf))) > 0) {
         EVP_DigestUpdate(&ctx, buf, n);
         if (_ctx)
             EVP_DigestUpdate(_ctx, buf, n);
@@ -291,7 +281,7 @@ int digest(FILE *stream, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
 #define CALC_MD  (1 << 1)       /* <= 0.16.x */
 #define CALC_DEFAULT CALC_MD | CALC_MDD
 static 
-int pdigest_calc(struct pdigest *pdg, FILE *stream, unsigned flags) 
+int pdir_digest_calc(struct pdir_digest *pdg, tn_stream *st, unsigned flags) 
 {
     unsigned char   mdh[64], mdd[64], md[64], mdhex[64];
     int             mdh_size = sizeof(mdh), mdd_size = sizeof(mdd),
@@ -313,20 +303,20 @@ int pdigest_calc(struct pdigest *pdg, FILE *stream, unsigned flags)
     }
     
     if ((flags & CALC_MDD) == 0) { /* no separate header && body digests */
-        if (!digest(stream, mdd, &mdd_size, ctxp)) {
+        if (!digest(st, mdd, &mdd_size, ctxp)) {
             if (ctxp)
                 EVP_DigestFinal(&ctx, md, &md_size);
             return 0;
         }
         
     } else {
-        if (!hdr_digest(stream, mdh, &mdh_size, ctxp)) {
+        if (!hdr_digest(st, mdh, &mdh_size, ctxp)) {
             if (ctxp)
                 EVP_DigestFinal(&ctx, md, &md_size);
             return 0;
         }
         
-        if (!digest(stream, mdd, &mdd_size, ctxp)) {
+        if (!digest(st, mdd, &mdd_size, ctxp)) {
             if (ctxp)
                 EVP_DigestFinal(&ctx, md, &md_size);
             return 0;
@@ -335,18 +325,18 @@ int pdigest_calc(struct pdigest *pdg, FILE *stream, unsigned flags)
     
     if (flags & CALC_MDD) { /* separate header && body digests */
         n = bin2hex(pdg->mdh, sizeof(pdg->mdh), mdh, mdh_size);
-        if (n != PDIGEST_SIZE)
+        if (n != PDIR_DIGEST_SIZE)
             is_err = 1;
     
         n = bin2hex(pdg->mdd, sizeof(pdg->mdd), mdd, mdd_size);
-        if (n != PDIGEST_SIZE)
+        if (n != PDIR_DIGEST_SIZE)
             is_err = 1;
     }
     
     if (ctxp) {
         EVP_DigestFinal(&ctx, md, &md_size);
         n = bin2hex(mdhex, sizeof(mdhex), md, md_size);
-        if (n != PDIGEST_SIZE)
+        if (n != PDIR_DIGEST_SIZE)
             is_err = 1;
         else
             pdg->md = n_strdup(mdhex);
@@ -356,7 +346,8 @@ int pdigest_calc(struct pdigest *pdg, FILE *stream, unsigned flags)
 }
 
 
-int mkdigest_path(char *path, int size, const char *pathname, const char *ext)
+int pdir_mkdigest_path(char *path, int size, const char *pathname,
+                       const char *ext)
 {
     char *p; 
     int n;
@@ -380,14 +371,14 @@ int mkdigest_path(char *path, int size, const char *pathname, const char *ext)
 }
 
 
-int pdigest_save(struct pdigest *pdg, const char *pathname) 
+int pdir_digest_save(struct pdir_digest *pdg, const char *pathname) 
 {
     char            path[PATH_MAX];
     struct vfile    *vf;
     int             n;
     
 
-    n = mkdigest_path(path, sizeof(path), pathname, pdigest_ext);
+    n = pdir_mkdigest_path(path, sizeof(path), pathname, pdir_digest_ext);
     if (n <= 4) {
         logn(LOGERR, "%s: path too short", path);
         return 0;
@@ -411,39 +402,39 @@ int pdigest_save(struct pdigest *pdg, const char *pathname)
 }
 
 
-int pdigest_verify(struct pdigest *pdg, struct vfile *vf)
+int pdir_digest_verify(struct pdir_digest *pdg, struct vfile *vf)
 {
-    struct pdigest        pdg2;
+    struct pdir_digest    pdg2;
     off_t                 offs;
     int                   rc = 0;
     unsigned              calcflags = 0;
 
     
     msg(0, _("Verifying %s..."), vf_url_slim_s(vf->vf_path, 0));
-    offs = ftell(vf->vf_stream);
-    if (fseek(vf->vf_stream, 0L, SEEK_SET) != 0) {
+    offs = n_stream_tell(vf->vf_tnstream);
+    if (n_stream_seek(vf->vf_tnstream, 0L, SEEK_SET) != 0) {
         logn(LOGERR, "%s: fseek(0): %ld -> 0: %m", vf->vf_path, offs);
         return 0;
     }
 
-    pdigest_init(&pdg2);
-    if (pdg->mode & PDIGEST_MODE_v016)
+    pdir_digest_init(&pdg2);
+    if (pdg->mode & PDIR_DIGEST_MODE_v016)
         calcflags |= CALC_MD;
     else
         calcflags |= CALC_DEFAULT;
     
-    if (!pdigest_calc(&pdg2, vf->vf_stream, calcflags)) {
+    if (!pdir_digest_calc(&pdg2, vf->vf_tnstream, calcflags)) {
         rc = 0;
         goto l_end;
     }
     
-    if (fseek(vf->vf_stream, offs, SEEK_SET) != 0) {
+    if (n_stream_seek(vf->vf_tnstream, offs, SEEK_SET) != 0) {
         logn(LOGERR, "%s: fseek(%ld): %m", vf->vf_path, offs);
         rc = 0;
         goto l_end;
     }
 
-    if (pdg->mode & PDIGEST_MODE_v016) {
+    if (pdg->mode & PDIR_DIGEST_MODE_v016) {
         n_assert(pdg->md);
         n_assert(pdg2.md);
         rc = (strcmp(pdg->md, pdg2.md) == 0);
@@ -455,47 +446,54 @@ int pdigest_verify(struct pdigest *pdg, struct vfile *vf)
     msg(0, "_ %s\n", rc ? "OK" : _("BROKEN"));
     
  l_end:
-    pdigest_destroy(&pdg2);
+    pdir_digest_destroy(&pdg2);
     return rc;
 }
 
 
-int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
-                          int with_md)
+int pdir_digest_create(struct pkgdir *pkgdir, const char *pathname,
+                       int with_md)
 {
     char            path[PATH_MAX];
     struct vfile    *vf;
     int             rc = 1;
     unsigned        calcflags = CALC_MDD;
-
+    struct pdir     *idx, iddx; 
     
-    if ((vf = vfile_open(pathname, VFT_STDIO, VFM_RO)) == NULL)
+    if ((vf = vfile_open(pathname, VFT_TRURLIO, VFM_RO)) == NULL)
         return 0;
 
-    if (pkgdir->pdg == NULL)
-        pkgdir->pdg = pdigest_new(NULL, 0, 0);
+	idx = pkgdir->mod_data;
+    printf("idx = %p\n", idx);
+	if (idx == NULL) {
+		idx = &iddx;
+		pdir_init(idx);
+	}
+
+    if (idx->pdg == NULL)
+        idx->pdg = pdir_digest_new(NULL, 0, 0);
     else 
-        pdigest_destroy(pkgdir->pdg);
+        pdir_digest_destroy(idx->pdg);
         
-    mkdigest_path(path, sizeof(path), pathname, pdigest_ext);
+    pdir_mkdigest_path(path, sizeof(path), pathname, pdir_digest_ext);
     msgn_tty(1, _("Writing digest %s..."), vf_url_slim_s(path, 0));
     msgn_f(1, _("Writing digest %s..."), path);
 
     if (with_md && (pkgdir->flags & PKGDIR_DIFF) == 0)
         calcflags |= CALC_MD;
     
-    if ((rc = pdigest_calc(pkgdir->pdg, vf->vf_stream, calcflags))) {
-        pdigest_save(pkgdir->pdg, pathname);
+    if ((rc = pdir_digest_calc(idx->pdg, vf->vf_tnstream, calcflags))) {
+        pdir_digest_save(idx->pdg, pathname);
         
         
         if (pkgdir->flags & PKGDIR_PATCHED) {
-            n_assert(pkgdir->mdd_orig);
-            if (strcmp(pkgdir->mdd_orig, pkgdir->pdg->mdd) == 0) {
-                i_pkgdir_creat_md5(pathname);
+            n_assert(idx->mdd_orig);
+            if (strcmp(idx->mdd_orig, idx->pdg->mdd) == 0) {
+                pdir_creat_md5(pathname);
                 
             } else {
                 rc = 0;
-                msgn(2, "md %s, orig md %s", pkgdir->pdg->mdd, pkgdir->mdd_orig);
+                msgn(0, "md %s, orig md %s", idx->pdg->mdd, idx->mdd_orig);
                 logn(LOGWARN, _("%s: desynchronized index, try --upa"),
                      pkgdir_pr_path(pkgdir));
             }
@@ -503,11 +501,14 @@ int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
     }
     
     vfile_close(vf);
+	if (idx == &iddx)
+		pdir_destroy(idx);
+
     return rc; 
 }
 
 
-int i_pkgdir_creat_md5(const char *pathname) 
+int pdir_creat_md5(const char *pathname) 
 {
     FILE            *stream;
     unsigned char   md[128];
@@ -539,7 +540,7 @@ int i_pkgdir_creat_md5(const char *pathname)
 }
 
 
-int i_pkgdir_verify_md5(const char *title, const char *pathname) 
+int pdir_verify_md5(const char *title, const char *pathname) 
 {
     FILE            *stream;
     unsigned char   md1[DIGEST_SIZE_MD5 + 1], md2[DIGEST_SIZE_MD5 + 1];

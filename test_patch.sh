@@ -1,6 +1,6 @@
 #! /bin/sh
 
-inhome=
+inhome=1
 if [ -n "$inhome" ]; then
     SRCDIR=/home/ftp/RPMSt
     SRCURL=ftp://localhost/RPMSt/
@@ -11,7 +11,7 @@ else
     SRCDIR=/home/httpd/html/RPMSt
     SRCURL=http://localhost/RPMSt/
 
-    DISTDIR=/mnt/nest-test/i686/
+    DISTDIR=/mnt/i686/
 fi
 
 TMPDIR=/tmp

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@pld.org.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -35,7 +35,7 @@
 
 #include "i18n.h"
 #include "log.h"
-#include "source.h"
+#include "pkgdir/source.h"
 #include "pkgset.h"
 #include "usrset.h"
 #include "misc.h"
@@ -138,12 +138,13 @@ struct args {
     int       clean_whole;
     
     char      *curr_src_path;
-    int       curr_src_type;
+    char      *curr_src_type;
     tn_array  *sources;         /* --source args */
     tn_array  *sources_named;   /* --sn args */
-    
-    int       idx_type;
-    char      *idx_path;
+
+    struct source *src_mkidx;
+    //int       idx_type;
+    //char      *idx_path;
     
     int       has_pkgdef;
     tn_array  *pkgdef_files;    /* foo.rpm      */
@@ -160,7 +161,6 @@ struct args {
     char        *log_path;
     
     unsigned    pkgdir_creat_flags; 
-    int         pkgdir_nodiff;
     
     int         shell_skip_installed;
     char        *shcmd;
@@ -177,10 +177,11 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_VERIFY_ALL        904
 
 #define OPT_MKIDX        1001
-#define OPT_MKIDXZ       1002
-#define OPT_NODESC	     1004 /* don't put descriptions in package index */
-#define OPT_NODIFF	     1005 /* don't create diff */
-#define OPT_EMPTYOK	     1006 /* don't create diff */
+#define OPT_MKIDXZ       1002   /* obsoleted */
+#define OPT_NODESC	 1004 /* don't put descriptions in package index */
+#define OPT_NODIFF	 1005 /* don't create diff */
+#define OPT_NOCOMPR	 1006 /* create uncompressed index */
+#define OPT_EMPTYOK	 1007 /* don't create diff */
 
 #define OPT_SOURCETXT   1015
 #define OPT_SOURCEDIR   1016
@@ -304,15 +305,18 @@ static struct argp_option options[] = {
 {"mkidx", OPT_MKIDX, "FILE", OPTION_ARG_OPTIONAL,
  N_("Create package index, SOURCE/packages.dir by default"), 60},
 
-{"mkidxz", OPT_MKIDXZ, "FILE", OPTION_ARG_OPTIONAL,
+{"mkidxz", OPT_MKIDXZ, "FILE", OPTION_ARG_OPTIONAL | OPTION_HIDDEN,
  N_("Likewise, but gzipped file is created"), 60},
 
 {"nodesc", OPT_NODESC, 0, 0,
- N_("Don't put packages user-level information (like Summary or Description)"
-     " in created index."), 60 },
+ N_("Don't put package user-level information (like Summary or Description)"
+     " into created index."), 60 },
 
 {"nodiff", OPT_NODIFF, 0, 0,
  N_("Don't create \"patch\""), 60 },
+
+{"nocompress", OPT_NOCOMPR, 0, OPTION_HIDDEN,
+ N_("Create uncompressed index"), 60 },
 
 {0,0,0,0, N_("Packages spec:"), 65},
 {"pset", OPT_PKGSET, "FILE", 0, N_("Take package set definition from FILE"), 65 },
@@ -498,8 +502,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct args *argsp = state->input;
     struct source *src = NULL;
-    int source_type = PKGSRCT_NIL;
-
+    char *source_type = NULL;
+    int source_type_isset = 0;
+        
     if (key && arg)
         chkarg(key, arg);
     
@@ -543,29 +548,36 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'n':
             src = source_malloc();
             src->name = n_strdup(arg);
-            src->flags |= PKGSOURCE_ISNAMED;
+            src->flags |= PKGSOURCE_NAMED;
             sources_add(argsp->sources, src);
             break;
             
         case OPT_SOURCETXT:     /* no break */
-            source_type = PKGSRCT_IDX;
+            source_type = NULL; /* guess */
+            source_type_isset = 1;
             
         case OPT_SOURCEDIR:     /* no break */
-            if (source_type == PKGSRCT_NIL)
-                source_type = PKGSRCT_DIR;
-
+            if (source_type_isset == 0)
+                source_type = n_strdup("dir");
+            
         case OPT_SOURCEHDL:     /* no break */
-            if (source_type == PKGSRCT_NIL)
-                source_type = PKGSRCT_HDL;
+            if (source_type_isset == 0)
+                source_type = n_strdup("hdrl");
 
-        case 's':
-            // (argsp->curr_src_path) { /* no prefix for curr_src_path */
-            argsp->curr_src_path = prepare_path(arg);
+        case 's': {
+			char *p;
+            argsp->curr_src_path = arg;
             argsp->curr_src_type = source_type;
             
-            src = source_new(argsp->curr_src_path, NULL);
-            src->type = source_type;
+            src = source_new(source_type, arg, NULL);
+			
+			p = prepare_path(src->path);
+			if (p != src->path) {
+				free(src->path);
+				src->path = p;
+			}
             sources_add(argsp->sources, src);
+		}
             break;
 
         case 'P':
@@ -573,7 +585,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 logn(LOGERR, _("prefix option should be preceded by source one"));
                 exit(EXIT_FAILURE);
                 
-            } else if (argsp->curr_src_type == PKGSRCT_DIR) {
+            } else if (strcmp(argsp->curr_src_type, "dir") == 0) {
                 logn(LOGERR, _("prefix for directory source makes no sense"));
                 exit(EXIT_FAILURE);
                 
@@ -581,17 +593,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 struct source *src;
             
                 src = n_array_pop(argsp->sources);
-                if (src->flags & PKGSOURCE_ISNAMED) {
-                    logn(LOGERR, _("dupa"));
-                    exit(EXIT_FAILURE);
-                }
+                if (src->flags & PKGSOURCE_NAMED)
+                    logn(LOGERR | LOGDIE, _("poldek's panic"));
                 
                 if (!source_set_pkg_prefix(src, trimslash(arg)))
                     exit(EXIT_FAILURE);
                 
                 n_array_push(argsp->sources, src);
                 argsp->curr_src_path = NULL;
-                argsp->curr_src_type = PKGSRCT_NIL;
+                argsp->curr_src_type = NULL;
             }
             
             break;
@@ -673,32 +683,30 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->mjrmode = MODE_SHELL;
             argsp->shcmd = arg;
             break;
-#endif            
-        
+#endif
+
+        case OPT_MKIDXZ:
         case OPT_MKIDX:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_MKIDX;
             argsp->psflags |= PSMODE_MKIDX;
-            argsp->idx_path = prepare_path(arg);
-            argsp->idx_type = INDEXTYPE_TXT;
-            break;
-
-        case OPT_MKIDXZ:
-            check_mjrmode(argsp);
-            argsp->mjrmode = MODE_MKIDX;
-            argsp->psflags |= PSMODE_MKIDX;
-            argsp->idx_path = prepare_path(arg);
-            argsp->idx_type = INDEXTYPE_TXTZ;
+            //argsp->idx_path = prepare_path(arg);
+            if (arg)
+                argsp->src_mkidx = source_new(NULL, arg, NULL);
             break;
             
         case OPT_NODESC:
-	    argsp->pkgdir_creat_flags |= PKGDIR_CREAT_NODESC;
-	    break;
+            argsp->pkgdir_creat_flags |= PKGDIR_CREAT_NODESC;
+            break;
 
         case OPT_NODIFF:
-	    argsp->pkgdir_nodiff = 1;
-	    break;
-
+            argsp->pkgdir_creat_flags |= PKGDIR_CREAT_NOPATCH;
+            break;
+            
+        case OPT_NOCOMPR:
+            argsp->pkgdir_creat_flags |= PKGDIR_CREAT_NOCOMPR;
+            break;
+            
         case OPT_UNINSTALL:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UNINSTALL;
@@ -782,12 +790,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
         case OPT_INST_DOWNGRADE:
             argsp->inst.flags |= INSTS_DOWNGRADE;
-                                /* no break */
+            /* no break */
 
         case OPT_INST_REINSTALL:
             if ((argsp->inst.flags & INSTS_DOWNGRADE) == 0)
                 argsp->inst.flags |= INSTS_REINSTALL;
-                                /* no break */
+            /* no break */
         case 'U':
         case 'u':
             check_mjrmode(argsp);
@@ -890,7 +898,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 exit(EXIT_FAILURE);
             }
         }
-        break;
+            break;
             
         case OPT_SPLITCONF:
             argsp->split_conf.conf = arg;
@@ -919,7 +927,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                     strncmp(optname, "root", 4) == 0)
                  {
                      logn(LOGERR, _("'%s' option should be set by --%s"),
-                         optname, optname);
+                          optname, optname);
                      exit(EXIT_FAILURE);
                  }
                 
@@ -1073,7 +1081,7 @@ int prepare_sources(tn_array *sources, tn_hash *htcnf)
     
     for (i=0; i < n_array_size(sources); i++) {
         src = n_array_nth(sources, i);
-        if (src->flags & PKGSOURCE_ISNAMED) /* supplied by -n */
+        if (src->flags & PKGSOURCE_NAMED) /* supplied by -n */
             n_array_push(srcs_named, source_link(src));
         else
             n_array_push(srcs_path, source_link(src));
@@ -1117,7 +1125,7 @@ int get_conf_sources(tn_array *sources, tn_array *srcs_named, tn_hash *htcnf)
 
     if ((v = conf_get(htcnf, "source", &is_multi))) {
         if (is_multi == 0) {
-            src = source_new(v, NULL);
+            src = source_new(NULL, v, NULL);
             if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
             
@@ -1125,7 +1133,7 @@ int get_conf_sources(tn_array *sources, tn_array *srcs_named, tn_hash *htcnf)
             tn_array *paths = NULL;
             if ((paths = conf_get_multi(htcnf, "source"))) {
                 while (n_array_size(paths)) {
-                    src = source_new(n_array_shift(paths), NULL);
+                    src = source_new(NULL, n_array_shift(paths), NULL);
                     if (!addsource(sources, src, getall, srcs_named, matches))
                         source_free(src);
                 }
@@ -1140,7 +1148,7 @@ int get_conf_sources(tn_array *sources, tn_array *srcs_named, tn_hash *htcnf)
         snprintf(opt, sizeof(opt), "source%d", i);
         if ((src_val = conf_get(htcnf, opt, NULL))) {
             snprintf(opt, sizeof(opt), "prefix%d", i);
-            src = source_new(src_val, conf_get(htcnf, opt, NULL));
+            src = source_new(NULL, src_val, conf_get(htcnf, opt, NULL));
             
             if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
@@ -1202,8 +1210,8 @@ void parse_options(int argc, char **argv)
 
     args.sources = n_array_new(4, (tn_fn_free)source_free, (tn_fn_cmp)source_cmp);
     args.curr_src_path = NULL;
-    args.curr_src_type = PKGSRCT_NIL;
-    args.idx_path = NULL;
+    args.curr_src_type = NULL;
+    args.src_mkidx = NULL;
     args.pkgdef_files = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_defs  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_sets  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
@@ -1216,7 +1224,7 @@ void parse_options(int argc, char **argv)
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
-    pkgdir_v016compat = (args.switches & OPT_SW_V016);
+    //pkgdir_v016compat = (args.switches & OPT_SW_V016);
 
     
     if ((args.switches & OPT_SW_NOCONF) && args.conf_path) {
@@ -1224,12 +1232,6 @@ void parse_options(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    //if (args.curr_src_path) { 
-    //   struct source *src = source_new(args.curr_src_path, NULL);
-    //    src->type = args.curr_src_type;
-    //    sources_add(args.sources, src);
-    //}
-    
     if (args.conf_path != NULL)
         htcnf = ldconf(args.conf_path);
     else if (args.noconf == 0)
@@ -1466,7 +1468,8 @@ static struct pkgset *load_pkgset(int ldflags)
             args.inst.ign_patterns = NULL;
         }
     }
-        
+    
+    //exit(0);    
     pkgset_setup(ps, args.split_conf.conf);
     
     return ps;
@@ -1495,87 +1498,39 @@ static int update_idx(void)
 }
 
 
-static int make_idx(struct pkgset *ps) 
+static int make_idx(void) 
 {
     struct source   *src;
-    struct pkgdir   *pkgdir;
-    char            path[PATH_MAX], *idx_path = NULL;
-    int             nerr = 0;
-    time_t          ts;
-    unsigned        cr_flags = args.pkgdir_creat_flags;
-    
-    n_assert(ps);
-    if (n_array_size(args.sources) > 1) {
-        logn(LOGERR, _("multiple sources are not allowed for mkidx option"));
+    const char      *type = NULL, *path = NULL;
+    int i, nerr = 0;
+
+    if (n_array_size(args.sources) > 1 && args.src_mkidx) {
+        logn(LOGERR, _("multiple sources not allowed if index path is specified"));
         return 0;
     }
 
-    src = n_array_nth(args.sources, 0);
-    
-    if (strstr(src->path, "://")) {
-        logn(LOGERR, _("mkidx requested for remote source without destination "
-            "specified"));
-        return 0;
-    }
-
-    trimslash(src->path);
-
-    if (args.idx_path != NULL) {
-        idx_path = args.idx_path;
-        
-    } else {
-        switch (args.idx_type) {
-            case INDEXTYPE_TXTZ:
-                snprintf(path, sizeof(path), "%s/%s.gz", src->path, 
-                         default_pkgidx_name);
-                break;
-                
-            case INDEXTYPE_TXT:
-                snprintf(path, sizeof(path), "%s/%s", src->path, 
-                         default_pkgidx_name);
-                break;
-                
-            default:
-                n_assert(0);
-                exit(EXIT_FAILURE);
-        }
-        
-        idx_path = path;
+    if (args.src_mkidx) {
+        type = args.src_mkidx->type;
+        path = args.src_mkidx->path;
     }
     
-    n_assert(idx_path != NULL);
-
-    ts = time(0);
-    pkgdir = n_array_nth(ps->pkgdirs, 0);
-    pkgdir->ts = ts;
-
-
-    if (args.pkgdir_nodiff == 0 && access(idx_path, R_OK) == 0) {
-        struct pkgdir *orig, *diff;
-        
-        msgn(1, _("Loading previous %s..."), vf_url_slim_s(idx_path, 0));
-        orig = pkgdir_new("", idx_path, NULL, PKGDIR_NEW_VERIFY);
-        
-        
-        if (orig != NULL && pkgdir_load(orig, NULL, 0)) {
-            if (orig->ts > pkgdir->ts) {
-                logn(LOGWARN, _("clock skew detected; create index with fake "
-                                "timestamp"));
-            }
-            
-            if (orig->ts >= pkgdir->ts) 
-                pkgdir->ts = orig->ts + 1;
-            
-            if ((diff = pkgdir_diff(orig, pkgdir))) {
-                diff->ts = pkgdir->ts;
-                if (!pkgdir_create_idx(diff, idx_path, cr_flags))
-                    nerr++;
-            }
-        }
+    if (type == NULL)
+        type = PKGDIR_DEFAULT_TYPE;
+    
+    for (i=0; i < n_array_size(args.sources); i++) {
+        src = n_array_nth(args.sources, i);
+        if (src->type == NULL)
+            source_set_type(src, "dir");
+        msgn(0, "Preparing %s...", src->path);
+        if (!source_make_idx(src, type, path, args.pkgdir_creat_flags))
+            nerr++;
     }
 
-    if (nerr == 0 && !pkgdir_create_idx(pkgdir, idx_path, cr_flags))
-        nerr++;
+    if (args.src_mkidx) {
+        source_free(args.src_mkidx);
+        args.src_mkidx = NULL;
+    }
+    
     return nerr == 0;
 }
 
@@ -1633,7 +1588,7 @@ static int check_install_flags(void)
 static
 int verify_args(void) 
 {
-    int i, rc = 1;
+    int rc = 1;
 
 #ifdef ENABLE_INTERACTIVE_MODE
     if (args.mjrmode == MODE_NULL && args.mnrmode == MODE_NULL) 
@@ -1669,16 +1624,17 @@ int verify_args(void)
 
             n_assert(args.sources);
 
+#if 0            
             if (n_array_size(args.sources) > 1) {
                 logn(LOGERR, _("multiple sources are not allowed "
                                "for mkidx option"));
                 exit(EXIT_FAILURE);
             }
-            
-            for (i=0; i<n_array_size(args.sources); i++) {
-                struct source *src = n_array_nth(args.sources, i);
-                src->type = PKGSRCT_DIR;
-            }
+#endif            
+            //for (i=0; i < n_array_size(args.sources); i++) {
+            //    struct source *src = n_array_nth(args.sources, i);
+            //    source_set_type(src, "dir");
+            //}
             break;
 
             
@@ -1874,12 +1830,11 @@ int main(int argc, char **argv)
         verbose += 2;
 
     ldflags = 0;
-    if (args.mjrmode == MODE_MKIDX)
-        ldflags = PKGDIR_LD_RAW;
+    if (args.mjrmode == MODE_MKIDX) {
+        rc = make_idx();
+        goto l_end;
+    }
     
-    else if (args.mjrmode == MODE_VERIFY) 
-        ldflags = PKGDIR_LD_VERIFY;
-
     if ((ps = load_pkgset(ldflags)) == NULL)
         exit(EXIT_FAILURE);
 
@@ -1911,7 +1866,6 @@ int main(int argc, char **argv)
             break;
             
         case MODE_MKIDX:
-            rc = make_idx(ps);
             break;
             
         case MODE_INSTALLDIST:
@@ -1957,6 +1911,5 @@ int main(int argc, char **argv)
     mem_info(1, "MEM at the end");
     poldek_destroy();
     mem_info(1, "MEM at the *real* end");
-
     return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 }

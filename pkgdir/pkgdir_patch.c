@@ -58,7 +58,48 @@ void sort_for_diff(struct pkgdir *pkgdir)
 static __inline__
 struct pkg *search_for_diff(struct pkgdir *pkgdir, struct pkg *pkg) 
 {
-    return n_array_bsearch_ex(pkgdir->pkgs, pkg, (tn_fn_cmp)pkg_deepstrcmp_name_evr);
+    return n_array_bsearch_ex(pkgdir->pkgs, pkg,
+                              (tn_fn_cmp)pkg_deepstrcmp_name_evr);
+}
+
+
+static void setup_diff_langs(struct pkgdir *pkgdir) 
+{
+    tn_hash *langs = NULL;
+    int i;
+    
+    for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
+        struct pkg      *pkg;
+        tn_array        *pkg_langs;
+        struct pkguinf  *pkgu;
+
+
+        pkg = n_array_nth(pkgdir->pkgs, i);
+        
+        if ((pkgu = pkg_info(pkg)) == NULL)
+            continue;
+        
+        if ((pkg_langs = pkguinf_langs(pkg->pkg_pkguinf))) {
+            int i;
+                            
+            if (langs == NULL)
+                langs = n_hash_new(51, free);
+
+            for (i=0; i<n_array_size(pkg_langs); i++) {
+                char *l = n_array_nth(pkg_langs, i);
+                if (!n_hash_exists(langs, l))
+                    n_hash_insert(langs, l, NULL);
+            }
+        }
+        
+        pkguinf_free(pkgu);
+    }
+
+    
+    if (langs) {
+        pkgdir->avlangs = n_hash_keys_cp(langs);
+        n_hash_free(langs);
+    }
 }
 
 
@@ -119,12 +160,13 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     n_array_sort(pkgdir2->pkgs);
 
     if (minus_pkgs == NULL && plus_pkgs == NULL) { /* equal */
-        if (depdirs)
-            n_array_free(depdirs);
+        n_array_free(depdirs);
         return NULL;
     }
 
     diff = pkgdir_malloc();
+    diff->type = n_strdup(pkgdir->type);
+	diff->mod = pkgdir->mod;
     diff->pkgs = plus_pkgs;
     diff->removed_pkgs = minus_pkgs;
     diff->name = n_strdup("DIFF");
@@ -136,9 +178,13 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     diff->pkgroups = pkgroup_idx_link(pkgdir2->pkgroups);
     diff->flags = PKGDIR_DIFF;
     diff->ts_orig = pkgdir->ts;
-    diff->mdd_orig = n_strdup(pkgdir->pdg->mdd);
-    diff->vf = NULL;
-    
+
+    if (diff->pkgs)
+        setup_diff_langs(diff);
+	
+	if (diff->mod->posthook_diff)
+		diff->mod->posthook_diff(pkgdir, pkgdir2, diff);
+
     return diff;
 }
 

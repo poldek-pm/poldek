@@ -29,7 +29,7 @@
 #include "log.h"
 #include "pkgu.h"
 #include "h2n.h"
-
+#include "pkgroup.h"
 
 const char *pkgroups_tag = "GROUPS:";
 
@@ -73,7 +73,7 @@ int tr_cmp(struct tr *tr1, struct tr *tr2)
 
 
 static
-int tr_store(struct tr *tr, FILE *stream) 
+int tr_store(struct tr *tr, tn_stream *st) 
 {
     int      len, n;
     uint8_t  nlen;
@@ -83,26 +83,26 @@ int tr_store(struct tr *tr, FILE *stream)
     n_assert(len < UINT8_MAX);
     
     nlen = len;
-    fwrite(&nlen, sizeof(nlen), 1, stream);
+    n_stream_write(st, &nlen, sizeof(nlen));
     n = n_snprintf(buf, sizeof(buf), "%s:%s", tr->lang, tr->name);
     DBGF("%s\n", buf);
     n_assert(n == len);
     
-    return fwrite(buf, len, 1, stream) == 1;
+    return n_stream_write(st, buf, len) == len;
 }
 
 static
-struct tr *tr_restore(FILE *stream) 
+struct tr *tr_restore(tn_stream *st) 
 {
     int      len;
     uint8_t  nlen;
     char     buf[255], *p;
 
-    if (fread(&nlen, sizeof(nlen), 1, stream) != 1)
+    if (n_stream_read(st, &nlen, sizeof(nlen)) != sizeof(nlen))
         return NULL;
 
     len = nlen;
-    if (fread(buf, len, 1, stream) != 1)
+    if (n_stream_read(st, buf, len) != len)
         return NULL;
 
     buf[len] = '\0';
@@ -186,9 +186,9 @@ int pkgroup_add(struct pkgroup *gr, const char *lang, const char *name)
 }
 
 static
-void map_fn_store_tr(void *tr, void *stream) 
+void map_fn_store_tr(void *tr, void *st) 
 {
-    tr_store(tr, stream);
+    tr_store(tr, st);
 }
 
 static
@@ -200,69 +200,66 @@ void map_fn_trs_keys(const char *lang, void *tr, void *array)
 
 
 static
-int pkgroup_store(struct pkgroup *gr, FILE *stream)  
+int pkgroup_store(struct pkgroup *gr, tn_stream *st)  
 {
-    uint32_t nid, nntrs;
     uint8_t  nlen;
     tn_array *arr;
     int      len;
     
     
-    nid = hton32(gr->id);
-    if (fwrite(&nid, sizeof(nid), 1, stream) != 1)
+    if (!n_stream_write_uint32(st, gr->id))
         return 0;
 
     len = strlen(gr->name) + 1;
     n_assert(len < UINT8_MAX);
     
     nlen = len;
-    if (fwrite(&nlen, sizeof(nlen), 1, stream) != 1)
+
+    if (!n_stream_write_uint8(st, nlen))
         return 0;
+
     DBGF("%d %s\n", gr->id, gr->name);
-    if (fwrite(gr->name, len, 1, stream) != 1)
+    if (n_stream_write(st, gr->name, len) != len)
         return 0;
-    
-    nntrs = hton32(gr->ntrs);
-    if (fwrite(&nntrs, sizeof(nntrs), 1, stream) != 1)
+
+    if (!n_stream_write_uint32(st, gr->ntrs))
         return 0;
 
     arr = n_array_new(8, NULL, (tn_fn_cmp)tr_cmp);
     n_hash_map_arg(gr->trs, map_fn_trs_keys, arr);
     n_array_sort(arr);
-    n_array_map_arg(arr, map_fn_store_tr, stream);
+    n_array_map_arg(arr, map_fn_store_tr, st);
     n_array_free(arr);
     return 1;
 }
 
 static
-struct pkgroup *pkgroup_restore(FILE *stream)  
+struct pkgroup *pkgroup_restore(tn_stream *st)  
 {
-    int             ntrs, nerr = 0, i;
-    uint8_t         nlen;
-    uint32_t        nid, nntrs;
+    int             nerr = 0, i;
+    uint32_t        nid, ntrs;
+	uint8_t         nlen;
     struct pkgroup  *gr;
     char            name[255];
-    
-    if (fread(&nid, sizeof(nid), 1, stream) != 1)
+
+    if (!n_stream_read_uint32(st, &nid))
         return 0;
 
-    if (fread(&nlen, sizeof(nlen), 1, stream) != 1 || nlen > sizeof(name))
+    if (!n_stream_read_uint8(st, &nlen))
         return 0;
     
-    if (fread(name, nlen, 1, stream) != 1)
-        return 0;
-    
-    if (fread(&nntrs, sizeof(nntrs), 1, stream) != 1)
+    if (n_stream_read(st, name, nlen) != nlen)
         return 0;
 
-    gr = pkgroup_new(ntoh32(nid), name);
-    //printf("gr %d %s %d\n", ntoh32(nid), name, ntoh32(nntrs));
-    ntrs = ntoh32(nntrs);
+    if (!n_stream_read_uint32(st, &ntrs))
+        return 0;
     
-    for (i=0; i < ntrs; i++) {
+    gr = pkgroup_new(nid, name);
+    
+    for (i=0; i < (int)ntrs; i++) {
         struct tr *tr;
 
-        if ((tr = tr_restore(stream)) == NULL)
+        if ((tr = tr_restore(st)) == NULL)
             nerr++;
         else
             pkgroup_add_tr(gr, tr);
@@ -326,43 +323,38 @@ void map_fn_store_gr(void *gr, void *stream)
 }
 
 
-int pkgroup_idx_store(struct pkgroup_idx *idx, FILE *stream) 
+int pkgroup_idx_store(struct pkgroup_idx *idx, tn_stream *st) 
 {
-    uint32_t nsize;
-
-    fprintf(stream, "%%%s\n", pkgroups_tag);
+    n_stream_printf(st, "%%%s\n", pkgroups_tag);
     n_array_sort(idx->arr);
-    nsize = hton32(n_array_size(idx->arr));
-    if (fwrite(&nsize, sizeof(nsize), 1, stream) != 1)
+    if (!n_stream_write_uint32(st, n_array_size(idx->arr)))
         return 0;
     
-    n_array_map_arg(idx->arr, map_fn_store_gr, stream);
-    return fprintf(stream, "\n") == 1;
+    n_array_map_arg(idx->arr, map_fn_store_gr, st);
+    return n_stream_printf(st, "\n") == 1;
 }
 
 
-struct pkgroup_idx *pkgroup_idx_restore(FILE *stream, unsigned flags)
+struct pkgroup_idx *pkgroup_idx_restore(tn_stream *st, unsigned flags)
 {
-    struct pkgroup_idx *idx;
     uint32_t nsize;
+    struct pkgroup_idx *idx;
     int i;
 
     
     flags = flags;
-    if (fread(&nsize, sizeof(nsize), 1, stream) != 1)
+    if (!n_stream_read_uint32(st, &nsize))
         return NULL;
 
-    nsize = ntoh32(nsize);
-    
     idx = pkgroup_idx_new();
     
     for (i=0; i < (int)nsize; i++) 
-        n_array_push(idx->arr, pkgroup_restore(stream));
+        n_array_push(idx->arr, pkgroup_restore(st));
 
 //    if (flags & PKGROUP_MKNAMIDX)
 //        ;
     n_array_sort(idx->arr);
-    getc(stream); /* eat '\n' */
+    n_stream_seek(st, 1, SEEK_CUR); /* eat '\n' */
     return idx;
 }
 
@@ -470,12 +462,7 @@ const char *pkgroup(struct pkgroup_idx *idx, int groupid)
     if (gr->trs == NULL)
         return gr->name;
     
-    if ((lang = getenv("LANGUAGE")) == NULL &&
-        (lang = getenv("LC_ALL")) == NULL &&
-        (lang = getenv("LC_MESSAGES")) == NULL &&
-	(lang = getenv("LANG")) == NULL)
-        return gr->name;
-
+    lang = lc_messages_lang();
     return find_tr(lang, gr);
 }
 

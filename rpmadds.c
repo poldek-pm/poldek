@@ -26,6 +26,7 @@
 #ifdef HAVE_RPM_4_1
 # include <rpm/rpmts.h>
 #endif
+
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 
