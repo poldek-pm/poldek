@@ -17,7 +17,7 @@
   source options). Verification works well with rpm >= 4.0.4 or patched 
   PLD's rpm 4.0.2 package (release 62). 
 
-* simple HTTP client (with partly HTTP/1.1 support) which it is used for 
+* simple HTTP client (with partly HTTP/1.1 support), it is used for 
   HTTP downloads; cURL backend is not compiled by default. 
 
 * added IPv6 support to internal FTP client
@@ -52,7 +52,7 @@
 * misc fixes to compile and work with glibc2.1 (with 
   help of Andreas Piesk <a.piesk@gmx.net>) 
 
-* installation of multiple instances of package is allowed ($ poldek -i)
+* installation of multiple instances of package is allowed (by poldek -i)
 
 * German translation (Andreas Piesk <a.piesk@gmx.net>)
 
