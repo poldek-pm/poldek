@@ -10,18 +10,19 @@
   $Id$
 */
 
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
 
-#include "misc.h"
-#include "log.h"
 #include "vfile.h"
+#include "p_open.h"
 
 /* 
    %p[n] - package basename
@@ -65,6 +66,36 @@ int vfile_configured_handlers(void)
     return nffetchers;
 }
 
+static 
+char *next_token(char **str, char delim, int *toklen) 
+{
+    char *p, *token;
+
+    if (*str == NULL)
+        return NULL;
+    
+    
+    if ((p = strchr(*str, delim)) == NULL) {
+        token = *str;
+        if (toklen)
+            *toklen = strlen(*str);
+        *str = NULL;
+        
+    } else {
+        *p = '\0';
+        
+        if (toklen)
+            *toklen = p - *str;
+        p++;
+        while(isspace(*p))
+            p++;
+        token = *str;
+        *str = p;
+    }
+    
+    return token;
+}
+
 
 static
 struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
@@ -84,12 +115,12 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
         return NULL;
     
     if (*path != '/') {
-        log(LOGERR, "%s: cmd must be precedenced by '/'\n", path);
+        vfile_err_fn("%s: cmd must be precedenced by '/'\n", path);
         return NULL;
     }
 
     if (access(path, X_OK) != 0) {
-        log(LOGWARN, "%s: %m\n", path);
+        vfile_err_fn("%s: %m\n", path);
         return NULL;
     }
     
@@ -110,7 +141,7 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
             n_array_push(args, arg);
             
         } else if (strlen(token) > 3) {
-            log(LOGERR, "%s: invalid format specified\n", fmt);
+            vfile_err_fn("%s: invalid format specified\n", fmt);
             goto l_err_end;
             
         } else {
@@ -127,7 +158,7 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
                         arg->flags = FETCHFMT_MULTI;
                         is_multi = 1;
                     } else if (c != '\0') {
-                        log(LOGERR, "%s: invalid format specified\n", fmt);
+                        vfile_err_fn("%s: invalid format specified\n", fmt);
                         goto l_err_end;
                         
                     }
@@ -141,7 +172,7 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
                         arg->flags = FETCHFMT_MULTI;
                         is_multi = 1;
                     } else if (c != '\0') {
-                        log(LOGERR, "%s: invalid format specified\n", fmt);
+                        vfile_err_fn("%s: invalid format specified\n", fmt);
                         goto l_err_end;
                     } 
                         
@@ -151,7 +182,7 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
                     arg->type = FETCHFMT_DIR;
                     has_d_arg++;
                     if (c != '\0') {
-                        log(LOGERR, "%s: invalid format specified\n", fmt);
+                        vfile_err_fn("%s: invalid format specified\n", fmt);
                         goto l_err_end;
                     }
                     break;
@@ -165,15 +196,15 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
                     if (c == 'n') {
                         arg->flags = FETCHFMT_MULTI;
                     } else if (c != '\0') {
-                        log(LOGERR, "%s: %c invalid format specified\n",
-                            fmt, c);
+                        vfile_err_fn("%s: %c invalid format specified\n",
+                                     fmt, c);
                         goto l_err_end;
                     }
                     
                     break;
 
                 default:
-                    log(LOGERR, "%s: invalid format specified\n", fmt);
+                    vfile_err_fn("%s: invalid format specified\n", fmt);
                     goto l_err_end;
             }
             n_array_push(args, arg);
@@ -198,15 +229,44 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
     return NULL;
 }
 
+static 
+int process_output(struct p_open_st *st, const char *prefix) 
+{
+    int c, endl = 1, cnt = 0;
+    
+    if (prefix == NULL)
+        prefix = st->cmd;
+
+    setvbuf(st->stream, NULL, _IONBF, 0);
+    while ((c = fgetc(st->stream)) != EOF) {
+        if (vfile_verbose == 0)
+            continue;
+        
+        if (endl) {
+            vfile_msg_fn("%s: ", prefix);
+            endl = 0;
+        }
+
+        vfile_msg_fn("%c", c);
+        if (c == '\n' && cnt > 0)
+            endl = 1;
+        
+        cnt++;
+    }
+    
+    return 1;
+}
+
+
 static
 int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 const char *url /* or */, tn_array *urls)
 {
     char *bn = NULL;
     char **argv;
-    struct runst rst;
-    int i, n;
-
+    struct p_open_st pst;
+    int i, n, ec;
+    
     if (url)
         n_assert(urls == NULL);
     
@@ -264,26 +324,50 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 break;
 
             default:
+                vfile_err_fn("vfile_fetch*: internal error");
                 n_assert(0);
-                abort();
+                return 0;
         }
     }
     argv[n++] = NULL;
 
-    if (verbose) {
-        int i;
+    if (vfile_verbose) {
+        int i, len = 0;
+        char *s, *p;
+
+
+        for (i=0; i < n-1; i++)
+            len += strlen(argv[i]) + 1;
+        len++;
         
-        msg(1, "exec ");
-        for (i=0; i < n-1; i++) 
-            msg(1, "_%s ", argv[i]);
-        msg(1, "_\n");
+        p = s = alloca(len);
+        *s = '\0';
+        
+        for (i=0; i < n-1; i++) {
+            p = n_strncpy(p, argv[i], len);
+            len -= strlen(argv[i]);
+            p = n_strncpy(p, " ", len);
+            len--;
+        }
+        vfile_msg_fn("execute %s", s);
     }
     
-    if (p_open(&rst, fftch->path, argv) == NULL) 
+    p_st_init(&pst);
+    
+    if (p_open(&pst, fftch->path, argv) == NULL) {
+        vfile_msg_fn("p_open: %s\n", pst.errmsg);
         return 0;
+    }
+    
+    process_output(&pst,
+                   ((struct fetcharg*) n_array_nth(fftch->args, 0))->arg);
+        
+    if ((ec = p_close(&pst)) != 0)
+        vfile_err_fn("%s", pst.errmsg);
 
-    p_process_cmd(&rst, ((struct fetcharg*) n_array_nth(fftch->args, 0))->arg);
-    return p_close(&rst) == 0;
+    p_st_destroy(&pst);
+    
+    return ec == 0;
 }
 
 
@@ -327,7 +411,7 @@ int vfile_fetch(const char *destdir, const char *url, int urltype)
         urltype = vfile_url_type(url);
     
     if ((ftch = find_fetcher(urltype, 0)) == NULL) {
-        log(LOGERR, "URL like %s not supported\n", url);
+        vfile_err_fn("URL like %s not supported\n", url);
         return 0;
     }
 
@@ -356,7 +440,7 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype)
         rc = nerrs == 0;
         
     } else {
-        log(LOGERR, "URL %s not supported\n", n_array_nth(urls, 0));
+        vfile_err_fn("URL %s not supported\n", n_array_nth(urls, 0));
         rc = 0;
     }
 
@@ -365,14 +449,18 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype)
 
 
 static 
-char *url_to_path(char *buf, size_t size, const char *url, int with_bn) 
+char *url_to_path(char *buf, size_t size, const char *url, int isdir) 
 {
     char *sl, *p = buf;
-    size_t len = strlen(url);
-    
-    memcpy(buf, url, len > size - 1 ? size-1 : len);
+    size_t len = strlen(url) + 1;
+
+    memcpy(buf, url, len > size - 1 ? size - 1 : len);
     buf[size - 1] = '\0';
-    sl = strrchr(buf, '/');
+
+    if (isdir)
+        sl = strchr(buf, '\0');
+    else
+        sl = strrchr(buf, '/');
     
     while (*p && p != sl) {
         if (!isalnum(*p))
@@ -380,22 +468,19 @@ char *url_to_path(char *buf, size_t size, const char *url, int with_bn)
         p++;
     }
     
-    if (!with_bn)
-        *sl = '\0';
-
     return buf;
 }
 
 
 char *vfile_url_as_dirpath(char *buf, size_t size, const char *url) 
 {
-    return url_to_path(buf, size, url, 0);
+    return url_to_path(buf, size, url, 1);
 }
 
 
 char *vfile_url_as_path(char *buf, size_t size, const char *url) 
 {
-    return url_to_path(buf, size, url, 1);
+    return url_to_path(buf, size, url, 0);
 }
 
 
@@ -404,7 +489,7 @@ int vfile_url_type(const char *url)
     if (*url == '/')
         return VFURL_PATH;
 
-    if (strncmp(url, "ftp://", 6) == 0)
+    if (strncmp(url, "ftp://", 6) == 0) 
         return VFURL_FTP;
     
     if (strncmp(url, "http://", 7) == 0)
