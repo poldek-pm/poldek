@@ -52,7 +52,10 @@ install -d $RPM_BUILD_ROOT%{_sysconfdir}
 
 %{__make} install DESTDIR=$RPM_BUILD_ROOT
 %{?_with_static:rm -f $RPM_BUILD_ROOT/%{_bindir}/rpmvercmp}
+
+egrep -v '^(#)source' poldekrc.sample >> poldekrc.sample-pld
 sed "s/i686/%{_target_cpu}/g" < poldekrc.sample-pld > $RPM_BUILD_ROOT/etc/%{name}.conf
+
 gzip -9nf README* *sample* NEWS TODO
 
 %clean
@@ -71,6 +74,9 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.9  2002/03/09 22:00:57  mis
+- updates && slimed down poldekrc.sample-pld
+
 Revision 1.8  2002/02/25 23:59:30  mis
 - merged with SPECS's spec
 

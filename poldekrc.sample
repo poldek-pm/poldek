@@ -2,23 +2,57 @@
 # Sample poldek configuration
 
 source = [pld] ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
+#source = [pld-test] ftp://ftp.pld.org.pl/dists/ra/test/i686/
 #source = [mysrc] ftp://ftp.znienacka.com.pl/RPMS/
 #source = http://www.znienacka.com.pl/RPMS/
 #source = rsync://rsync.znienacka.com.pl/PLD/packages.dir
-#source = [pld686] rsync://ftp.pld.org.pl/PLD-1.0/i686/PLD/
+#source = [pld-rsync-686] rsync://ftp.pld.org.pl/PLD-1.0/i686/PLD/
 
 
 # If package index and packages stored under diffrent locations, 
 # then source and packages prefix must be numbered
 #source1 = /tmp/packages.dir.gz
 #prefix1 = /cdrom/RPMS
- 
+
+#source2 = [pld-http-ftp] http://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
+#prefix2 = ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
 
 # NOTE: directory *must* exists; default is ~/.poldek-cache
 #cachedir = /var/tmp/poldek-cache
 
+# permits using root privs for installation only; default "no"
+#use_sudo  = yes
 
-# Downloaders configuration 
+# Installation options
+
+# install packages in small groups instead of doing all-or-nothing 
+# installation; default "yes"
+#particle_install = no
+
+# automatically install packages required by installed ones; default "yes"
+#follow = no
+
+# greedy upgrades; defalut "no"
+#greedy = yes
+
+# "mercy" dependency checking; defalut "no"
+#mercy = yes
+
+# don't remove downloaded packages after successful installation; defalut "no"
+#keep_downloads = yes
+
+# confirm each installation; defalut "no"
+#confirm_installs = yes
+
+# let the user select package among equivalents 
+#choose_equivalents_manually = yes
+
+
+# prevent kernel* and dev from being upgraded if they are already installed.
+#hold   = kernel* dev
+
+
+# External downloaders configuration 
 # Available semi-macros (as ws-separate tokens only):
 #   %p[n] - package basename 
 #   %d - cache dir
@@ -32,29 +66,6 @@ source = [pld] ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
 #rsync_get     = /usr/bin/rsync -v %P %d
 #cdrom_get     = /usr/bin/vfjuggle %d %Pn
 
-# permits using root privs for installation only 
-use_sudo  = yes
-
-# Installation options
-
-# install packages in small groups instead of doing all-or-nothing installs
-# (default "yes")
-#particle_install = no
-
-# automatically install packages required by installed ones (default "yes") 
-#follow = no
-
-# greedy upgrades (defalut "no")
-greedy = yes
-
-# "mercy" dependency checking (defalut "no")
-mercy = yes
-
-# prevent kernel* and dev from being upgraded if they are already installed.
-#hold   = kernel* dev
-
-# don't remove downloaded packages after successful installation (defalut "no")
-#keep_downloads = yes
 
 # Some rpm macros
 #rpmdef        = _install_langs pl:pl_PL:lt:lt_LT
@@ -62,5 +73,3 @@ mercy = yes
 # don't install any documentation
 #rpmdef        = _netsharedpath /usr/share/info:/usr/share/man
 #rpmdef	       = _excludedocs 1
-
-

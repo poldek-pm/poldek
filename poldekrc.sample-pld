@@ -1,46 +1,11 @@
 # $Id$
-# Sample configuration for PLD  
-# 
+# Sample sources configuration for PLD   
+#
+# sources only, do:
+# $ egrep -v "^(#)source" poldekrc.sample >> poldekrc.sample-pld
+#
 
 source = [pld] ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
 #source = [pld-test] ftp://ftp.pld.org.pl/dists/ra/test/i686/
 #source = /home/zenek/rpm/RPMS/
 
-# NOTE: directory *must* exists; default $HOME/.poldek-cache
-#cachedir = /var/tmp/poldek
-
-# Downloaders configuration
-# Available semi-macros (as ws-separate tokens only):
-#   %p[n] - package basename
-#   %d - cache dir
-#   %D - cache dir/package basename
-#   %P[n] - package full path(URL)
-
-#ftp_http_get   = /usr/bin/wget -N --dot-style=binary -P %d %Pn
-#rsync_get      = /usr/bin/rsync %P %d
-
-
-# permits using root privs for installation only 
-#use_sudo  = yes
-
-# automatically install packages required by installed ones (default "yes") 
-#follow = no
-
-# greedy upgrades (defalut "no")
-#greedy = yes
-
-# mercy dependency checking (defalut "no")
-#mercy = yes
-
-# prevent kernel* and dev from being upgraded if they are already installed.
-#hold   = kernel* dev
-
-# don't remove downloaded packages after successful installation (defalut "no")
-#keep_downloads = yes
-
-# Some rpm macros
-#rpmdef        = _install_langs pl:pl_PL:lt:lt_LT
-
-# don't install any documentation
-#rpmdef        = _netsharedpath /usr/share/info:/usr/share/man
-#rpmdef	       = _excludedocs 1
