@@ -141,7 +141,7 @@ const char *setup_cachedir(void)
     struct passwd *pw;
     char *dir, *default_dn = ".poldek-cache";
 
-    if ((dir = getenv("TMPDIR")) && valid_dir("$TMPDIR", dir))
+    if ((dir = getenv("TMPDIR")) && vfile_valid_path(dir))
         return strdup(dir);
     
     if ((pw = getpwuid(getuid())) == NULL)
@@ -150,7 +150,7 @@ const char *setup_cachedir(void)
     if (!is_rwxdir(pw->pw_dir))
         return strdup(tmpdir());
     
-    if (valid_dir("HOME", pw->pw_dir) && mk_dir(pw->pw_dir, default_dn)) {
+    if (vfile_valid_path(pw->pw_dir) && mk_dir(pw->pw_dir, default_dn)) {
         char path[PATH_MAX];
         snprintf(path, sizeof(path), "%s/%s", pw->pw_dir, default_dn);
         return strdup(path);
