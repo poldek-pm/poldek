@@ -1,3 +1,16 @@
+0.14:
+
+* support for multiple sources
+* Packages SHA1 digest is computed and checked (Packages.md is created) 
+* capabilities/requirement are stored in binary form (v0.4 of Packages format)
+* default name (Packages[.gz]) is used if only dir is given 
+  as source (i.e. it's last character is '/') 
+* shell: both installed and available packages list is maintained propely 
+  during installs/unistalls without reloading rpm database 
+* shell: added "search" command
+* removed unused support for rpmidx (aka tocfile)
+* cleanup && bugfixes 
+
 0.13:
 
 * support for rpm 4.0.2 pre/post requirements

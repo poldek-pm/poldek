@@ -1,8 +1,8 @@
 # $Id$
 # Sample poldek configuration
 
-source = ftp://ftp.znienacka.com.pl/RPMS/Packages.gz
-source = http://www.znienacka.com.pl/RPMS/Packages.gz
+source = ftp://ftp.znienacka.com.pl/RPMS/
+source = http://www.znienacka.com.pl/RPMS/
 source = rsync://rsync.znienacka.com.pl/PLD/Packages.gz
 source = rsync://ftp.pld.org.pl/PLD-1.0/i686/PLD/Packages
 

@@ -63,7 +63,7 @@ Examples:
 
 =item $ poldek -s ftp://ftp.ala.ma.kota/RPMS/Packages.gz
 
-=item $ poldek -s rsync://rsync.ala-ma-kota.com/RPMS/Packages.gz
+=item $ poldek -s rsync://rsync.ala-ma-kota.com/RPMS/
 
 =back
 
@@ -77,7 +77,7 @@ B<-P, --prefix> B<PREFIX>
 
 could be used to point packages one, e.g.:
 
-$ poldek -s /tmp/Packages.gz --prefix=/cdrom/RPMS/
+$ poldek -s /tmp/Packages.gz --prefix=/cdrom/RPMS/ -s ...
 
 Another parameter is B<--cachedir=DIR>, which points to
 directory where fetched packages and indexes are 
@@ -225,7 +225,13 @@ line represents a comment or a parameter.
 
 =item * B<source> - see B<-s> option description
 
-=item * B<prefix> - see B<-p> option description
+=item * B<sourceXX> - see B<-s> option description
+
+=item * B<prefixXX> - see B<-p> option description
+	
+	Prefixed source should be specified in config by 
+	suffixed source/prefix pair to distinguish this source 
+	from other specified sources.  
 
 =item * B<cachedir> - see B<--cachedir> option description
 
@@ -237,7 +243,7 @@ line represents a comment or a parameter.
 =head1
 
 Downloaders are configured by B<PROTOCOL_get="SPEC"> parameter.  The
-SPEC is a command formated string, where at least 2 semi-macros of 4
+SPEC is a command formatted string, where at least 2 semi-macros of 4
 available should be used:
 
 =over 
@@ -317,12 +323,14 @@ $ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/Packages
 $ poldek -s ftp://ftp.znienacka.com/PLD/RPMS/Packages.gz 
 -U apache -n "ala-ma-kota 1.2" smail-12-389.i386.rpm
 
-$ poldek -s ftp://ftp.dudy.net/RPMS/Packages.gz -ti -n xteddy
+$ poldek -s ftp://ftp.dudy.net/RPMS/Packages.gz -ti xteddy
 
 =head1 ENVIROMENT
 
 $HOME is used to read config file.
-$TMPDIR (if set) is used as temporary directory 
+
+$TMPDIR (if set) is used as temporary directory if no cachedir 
+specified.
 
 =head1 BUGS
 
@@ -345,6 +353,13 @@ so Red Hat Installer use this tag).
 =head2 Upgrade and more than one instance of the package
 
 rpm doesn't handle this case, so poldek does not handle it also.
+
+=head2 Requirements processing 
+
+As far as I test poldek, it completely resolves package dependenecies
+(not file conflicts) during installs and upgrades. Please let me know 
+if you'll notice that rpm shows unsatisfied dependenecies while poldek 
+not. 
 
 =head2 Documentation
 

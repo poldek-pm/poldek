@@ -3,8 +3,8 @@
 # 
 
 source = rsync://ftp.pld.org.pl/pld/PLD-1.0/i686/RPMS/Packages
-source = rsync://ftp.pld.org.pl/pld/test/i686/Packages
-source = /home/zenek/rpm/RPMS/Packages
+source = rsync://ftp.pld.org.pl/pld/test/i686/
+source = /home/zenek/rpm/RPMS/Packages.gz
 
 # NOTE: directory *must* exists 
 cachedir = /var/tmp/poldek
