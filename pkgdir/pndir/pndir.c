@@ -72,7 +72,8 @@ int posthook_diff(struct pkgdir *pd1, struct pkgdir* pd2, struct pkgdir *diff);
 struct pkgdir_module pkgdir_module_pndir = {
     PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE, 
     "pndir",
-    NULL, 
+    NULL,
+    "native poldek's index format; the default",
     "packages.ndir.gz",
     do_open,
     do_load,

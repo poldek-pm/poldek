@@ -144,6 +144,15 @@ int pkgdir_isremote(struct pkgdir *pkgdir);
 int pkgdir_clean_cache(const char *type, const char *path, unsigned flags);
 
 
+struct pkgdir_type_uinf {
+    char name[32];
+    char aliases[64];
+    char description[62];
+    char mode[8];
+};
+
+tn_array *pkgdir_typelist(void);
+
 #ifdef PKGDIR_INTERNAL
 #include <trurl/nbuf.h>
 
@@ -203,6 +212,7 @@ struct pkgdir_module {
     unsigned                    cap_flags;
     char                        *name;
     char                        **aliases;
+    char                        *description;
     char                        *idx_filename;
 
     pkgdir_fn_open         open;

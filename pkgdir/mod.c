@@ -25,6 +25,8 @@
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 #include <trurl/nhash.h>
+#include <trurl/n_snprintf.h>
+#include <trurl/nmalloc.h>
 
 #define PKGDIR_INTERNAL
 
@@ -41,18 +43,80 @@ extern struct pkgdir_module pkgdir_module_dir;
 extern struct pkgdir_module pkgdir_module_hdrl;
 extern struct pkgdir_module pkgdir_module_rpmdb;
 
+static struct pkgdir_module *mod_tab[] = {
+    &pkgdir_module_pndir,
+    &pkgdir_module_pdir,
+    &pkgdir_module_rpmdb,
+    &pkgdir_module_dir,
+    &pkgdir_module_hdrl,
+    NULL
+};
+
+static int pkgdir_type_uinf_cmp(struct pkgdir_type_uinf *inf1,
+                                struct pkgdir_type_uinf *inf2)
+{
+    return strcmp(inf1->name, inf2->name);
+}
+
+
+tn_array *pkgdir_typelist(void)
+{
+    tn_array *list;
+    struct pkgdir_type_uinf *inf;
+    int i = 0;
+
+    list = n_array_new(16, free, (tn_fn_cmp)pkgdir_type_uinf_cmp);
+    while (mod_tab[i]) {
+        int n;
+        
+        struct pkgdir_module *mod = mod_tab[i++];
+        inf = n_malloc(sizeof(*inf));
+        
+        snprintf(inf->name, sizeof(inf->name), "%s", mod->name);
+
+        n = 0;
+
+        if (mod->load) {
+            inf->mode[n++] = 'r';
+            inf->mode[n] = '\0';
+        }
+        
+        if (mod->create) {
+            inf->mode[n++] = 'w';
+            inf->mode[n] = '\0';
+        }
+
+        if (mod->update_a || mod->update) {
+            inf->mode[n++] = 'u';
+            inf->mode[n] = '\0';
+        }
+        n_assert(n < (int)sizeof(inf->mode));
+        
+        inf->aliases[0] = '\0';
+        if (mod->aliases) {
+            int ii = 0, n = 0;
+            while (mod->aliases[ii] != NULL) {
+                n += n_snprintf(&inf->aliases[n], sizeof(inf->aliases) - n, "%s%s",
+                                mod->aliases[ii],
+                                mod->aliases[ii + 1] ? ", ": "");
+                ii++;
+            }
+        }
+        
+        snprintf(inf->description, sizeof(inf->description), "%s",
+                 mod->description);
+            
+        n_array_push(list, inf);
+    }
+    n_array_sort(list);
+    return list;
+}
+
+
+
 int pkgdirmodule_init(void) 
 {
     int i;
-    
-    struct pkgdir_module *mod_tab[] = {
-        &pkgdir_module_pndir,
-        &pkgdir_module_pdir,
-        &pkgdir_module_rpmdb,
-        &pkgdir_module_dir,
-        &pkgdir_module_hdrl,
-        NULL
-    };
 
     i = 0;
     while (mod_tab[i]) {

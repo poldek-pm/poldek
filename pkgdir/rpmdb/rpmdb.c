@@ -54,7 +54,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 struct pkgdir_module pkgdir_module_rpmdb = {
     0,
     "rpmdb",
-    NULL, 
+    NULL,
+    "RPM package database",
     "",
     NULL,
     do_load,

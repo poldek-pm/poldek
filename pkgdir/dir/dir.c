@@ -51,7 +51,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 struct pkgdir_module pkgdir_module_dir = {
     PKGDIR_CAP_NOPREFIX, 
     "dir",
-    NULL, 
+    NULL,
+    "dynamic index build by scanning directory for packages",
     "",
     NULL,
     do_load,

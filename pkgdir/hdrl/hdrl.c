@@ -53,7 +53,8 @@ static char *aliases[] = { "apt", "wuch", NULL };
 struct pkgdir_module pkgdir_module_hdrl = {
     PKGDIR_CAP_UPDATEABLE | PKGDIR_CAP_UPDATEABLE_INC, 
     "hdrl",
-    (char **)aliases, 
+    (char **)aliases,
+    "file with raw package headers; used by apt-rpm",
     "hdlist",
     NULL,
     do_load,
