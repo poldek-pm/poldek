@@ -65,6 +65,13 @@ struct pkgdir {
                                              index (to one is patched to) */ 
 };
 
+#define pkgdir_pr_path(pkgdir) \
+   (pkgdir->path ? vf_url_hidepasswd_s(pkgdir->path) : NULL)
+
+#define pkgdir_pr_idxpath(pkgdir) \
+   (pkgdir->idxpath ? vf_url_hidepasswd_s(pkgdir->idxpath) : NULL)
+
+
 struct pkgdir *pkgdir_malloc(void);
 void pkgdir_free(struct pkgdir *pkgdir);
 

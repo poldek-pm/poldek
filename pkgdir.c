@@ -610,7 +610,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
                     logn(LOGERR, "md last %s", mdd);
                     logn(LOGERR, "md curr %s", current_mdd);
                 }
-                logn(LOGERR, _("%s: no patches available"), pkgdir->idxpath);
+                logn(LOGERR, _("%s: no patches available"), pkgdir_pr_idxpath(pkgdir));
                 nerr++;
                 break;
             }
@@ -635,7 +635,6 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
         pkgdir_patch(pkgdir, diff);
         pkgdir_free(diff);
         (*npatches)++;
-        
     }
     
     vfile_close(vf);
@@ -646,7 +645,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
         nerr++;
 
     if (nerr == 0)
-        if (pkgdir_uniq(pkgdir) > 0) /* duplicates ? -> error */
+        if (pkgdir_uniq(pkgdir) > 0) /* duplicates? -> error */
             nerr++;
     
     if (nerr == 0) {
@@ -654,7 +653,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
         
     } else {
         logn(LOGWARN, _("%s: desynchronized index, try --update-whole"),
-             pkgdir->idxpath);
+             pkgdir_pr_idxpath(pkgdir));
         
     }
     
