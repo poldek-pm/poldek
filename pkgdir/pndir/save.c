@@ -74,8 +74,9 @@ char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
         return NULL;
     
     bn = n_basenam(pathname);
-    if ((ext = strrchr(bn, '.')) == NULL || strcmp(ext, ".dir") == 0) {
-        snprintf(dest, size, "%s%s", pathname, suffix);
+    if ((ext = strrchr(bn, '.')) == NULL || strcmp(ext + 1,
+                                                   pndir_extension) == 0) {
+        n_snprintf(dest, size, "%s%s", pathname, suffix);
         
     } else {
         int len = ext - pathname + 1;

@@ -74,6 +74,7 @@ int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
 
 extern const char *pndir_packages_incdir;
 extern const char *pndir_difftoc_suffix;
+extern const char *pndir_extension;
 extern const char *pndir_desc_suffix;
 
 extern const char *pndir_poldeksindex;

@@ -102,6 +102,18 @@ inline static char *eatws(char *str)
     return str;
 }
 
+inline static char *to_printable(char *s, int n) 
+{
+    int i;
+    
+    for (i=0; i < n ; i++)
+        if (!isprint(s[i]))
+            s[i] = '.';
+    
+    return s;
+}
+
+
 
 inline static char *next_tokn(char **str, char delim, int *toklen) 
 {
@@ -133,7 +145,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
     struct pkg           tmpkg;
     off_t                offs;
     char                 linebuf[4096];
-    int                  nerr = 0, nread, with_pkg = 0;
+    int                  nerr = 0, nread, pkg_loaded = 0;
     int                  tag, tag_binsize = PKG_STORETAG_SIZENIL;
     const  char          *errmg_double_tag = "%s:%ld: double '%c' tag";
     const  char          *errmg_ldtag = "%s:%ld: load '%c' tag error";
@@ -150,9 +162,6 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
     
 #endif    
 
-    if (pkg)
-        with_pkg = 1;
-    
     memset(&pkgt, 0, sizeof(pkgt));
     memset(&tmpkg, 0, sizeof(tmpkg));
     
@@ -173,6 +182,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
             pkg->groupid = tmpkg.groupid;
             pkg->recno = tmpkg.recno;
             pkg->fmtime = tmpkg.fmtime;
+            pkg_loaded = 1;
 			//if (pkg)
             //    printf("ld %s\n", pkg_snprintf_s(pkg));
             break;
@@ -190,7 +200,8 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
         
         p = val = line + 1;
         if (*line == '\0' || *p != ':') {
-            logn(LOGERR, _("%s:%ld:%s ':' expected"), fn, offs, line);
+            logn(LOGERR, "%s:%ld[%s]: ':' expected", fn, offs,
+                 to_printable(linebuf, nread));
             nerr++;
             goto l_end;
         }
@@ -372,8 +383,8 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
     
  l_end:
 
-    if (pkg && nerr > 0) {
-        if (with_pkg == 0)
+    if (pkg && (nerr > 0 || !pkg_loaded)) {
+        if (pkg_loaded)
             pkg_free(pkg);
         pkg = NULL;
     }

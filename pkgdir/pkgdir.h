@@ -83,11 +83,9 @@ void pkgdir_free(struct pkgdir *pkgdir);
    1) pkgdir_open() opens index and reads its header
    2) pkgdir_load() loads index content
 */
-#define PKGDIR_OPEN_REFRESH   (1 << 0) /* don't look into cache */
-#define PKGDIR_OPEN_DIFF      (1 << 1) /* diff is expected      */
-#if 0                           /* unused */
-#define PKGDIR_OPEN_ALLANGS   (1 << 2)
-#endif
+#define PKGDIR_OPEN_REFRESH   (1 << 0) /* don't look into cache   */
+#define PKGDIR_OPEN_DIFF      (1 << 1) /* diff is expected        */
+#define PKGDIR_OPEN_NODESC    (1 << 2) /* don't open descriptions */
 
 struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags);
 

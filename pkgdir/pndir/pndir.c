@@ -364,6 +364,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
 
     if (!tndb_verify(idx.db)) {
         logn(LOGERR, "%s: broken file", vf_url_slim_s(idx._vf->vf_path, 0));
+        nerr++;
         goto l_end;
     }
 
@@ -375,17 +376,22 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     vlen = sizeof(val);
     if (!tndb_it_get(&it, key, &klen, val, &vlen)) {
         logn(LOGERR, _("%s: not a poldek index file"), path);
+        nerr++;
         goto l_end;
     }
     
-    if (strcmp(key, pndir_tag_hdr) != 0)
+    if (strcmp(key, pndir_tag_hdr) != 0) {
         logn(LOGERR, _("%s: not a poldek index file, %s"), path, val);
-
+        nerr++;
+        goto l_end;
+    }
+    
     
     while (strcmp(key, pndir_tag_endhdr) != 0) {
         vlen = sizeof(val);
         if (!tndb_it_get(&it, key, &klen, val, &vlen)) {
             logn(LOGERR, _("%s: not a poldek index file"), path);
+            nerr++;
             goto l_end;
         }
         
@@ -449,29 +455,34 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     if (ts_orig)
         pkgdir->flags |= PKGDIR_DIFF;
     
-    
-    if ((idx.crflags & PKGDIR_CREAT_NODESC) == 0) {
+    if ((idx.crflags & PKGDIR_CREAT_NODESC) == 0 &&
+        (flags & PKGDIR_OPEN_NODESC) == 0)
+    {
         pkgdir__setup_langs(pkgdir);
         if (pkgdir->langs) {
             int i, loadC = 0, loadi18n = 0;
             for (i=0; i < n_array_size(pkgdir->langs); i++) {
                 const char *lang = n_array_nth(pkgdir->langs, i);
+                DBGF_F("lang %s\n", lang);
                 if (strcmp(lang, "C") == 0)
                     loadC = 1;
                 else
                     loadi18n = 1;
             }
-
+            n_assert(loadC);
+            
             if (loadC)
                 if (!open_dscr(&idx, pkgdir->orig_ts, "C"))
                     nerr++;
 
-            if (nerr == 0 && loadi18n)
+            if (nerr == 0 && loadi18n) {
+                n_assert(loadC);
                 if (!open_dscr(&idx, pkgdir->orig_ts, "i18n"))
                     nerr++;
+            }
         }
         
-#if 0                           /* obsoleted */
+#if 0                           /* separate LANG files; obsoleted */
         if (pkgdir->langs) {
             for (i=0; i < n_array_size(pkgdir->langs); i++) {
                 const char *lang = n_array_nth(pkgdir->langs, i);
@@ -587,56 +598,71 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     struct pkg_data    *pkgd;
     struct tndb_it     it;
     tn_stream          *st;
-    int                rc, klen;
-    char               key[TNDB_KEY_MAX + 1];
+    int                rc, klen, nerr = 0;
+    char               key[TNDB_KEY_MAX + 1], path[PATH_MAX];
+    size_t             vlen;
 
 
     idx = pkgdir->mod_data;
     if (!tndb_it_start(idx->db, &it))
         return 0;
 
+    vf_url_slim(path, sizeof(path), pkgdir->idxpath, 0);
+    
     st = tndb_it_stream(&it);
-    while ((rc = tndb_it_get_begin(&it, key, &klen, NULL)) > 0) {
+    while ((rc = tndb_it_get_begin(&it, key, &klen, &vlen)) > 0) {
         struct pkg kpkg;
         
         n_assert(klen > 0);
             
-        if (*key == '%' && strncmp(key, "%__h_", 5) == 0) { 
-            //printf("skip %s\n", key);
-            tndb_it_get_end(&it);
-            continue;
-        }
-
+        if (*key == '%' && strncmp(key, "%__h_", 5) == 0)
+            goto l_continue_loop;
+        
         if (pndir_parse_pkgkey(key, klen, &kpkg) == NULL) {
             logn(LOGERR, "%s: parse error", key);
-            tndb_it_get_end(&it);
-            continue;
+            nerr++;
+            goto l_continue_loop;
         }
 
-        if ((pkg = pkg_restore_st(st, pkgdir->na, &kpkg, pkgdir->foreign_depdirs,
-                                  ldflags, &pkgo, pkgdir->path))) {
-            pkg->pkgdir = pkgdir;
+        pkg = pkg_restore_st(st, pkgdir->na, &kpkg, pkgdir->foreign_depdirs,
+                             ldflags, &pkgo, path);
 
-            pkgd = pkg_data_malloc(pkgdir->na);
-            pkgd->off_nodep_files = pkgo.nodep_files_offs;
-            //pkgd->off_pkguinf = pkgo.pkguinf_offs;
-            pkgd->db = tndb_ref(idx->db);
-            
-            if (idx->db_dscr_h)
-                pkgd->db_dscr_h = n_ref(idx->db_dscr_h);
-            
-            if (pkgdir->langs)
-                pkgd->langs = n_ref(pkgdir->langs);
-            
-            pkg->pkgdir_data = pkgd;
-            pkg->pkgdir_data_free = pkg_data_free;
-            pkg->load_pkguinf = pndir_m_load_pkguinf;
-            pkg->load_nodep_fl = pndir_load_nodep_fl;
-            n_array_push(pkgdir->pkgs, pkg);
+        DBGF("%s -> %p\n", pkg_snprintf_s(&kpkg), pkg);
+        if (pkg == NULL) {
+            nerr++;
+            goto l_continue_loop;
         }
-        tndb_it_get_end(&it);
+        
+        pkg->pkgdir = pkgdir;
+
+        pkgd = pkg_data_malloc(pkgdir->na);
+        pkgd->off_nodep_files = pkgo.nodep_files_offs;
+        //pkgd->off_pkguinf = pkgo.pkguinf_offs;
+        pkgd->db = tndb_ref(idx->db);
+            
+        if (idx->db_dscr_h)
+            pkgd->db_dscr_h = n_ref(idx->db_dscr_h);
+        
+        if (pkgdir->langs)
+            pkgd->langs = n_ref(pkgdir->langs);
+        
+        pkg->pkgdir_data = pkgd;
+        pkg->pkgdir_data_free = pkg_data_free;
+        pkg->load_pkguinf = pndir_m_load_pkguinf;
+        pkg->load_nodep_fl = pndir_load_nodep_fl;
+        n_array_push(pkgdir->pkgs, pkg);
+
+    l_continue_loop:
+        if (!tndb_it_get_end(&it) || nerr > 0) {
+            logn(LOGERR, "%s: broken file", path);
+            nerr++;
+            break;
+        }
     }
-
+    
+    if (nerr)
+        n_array_clean(pkgdir->pkgs);
+        
     return n_array_size(pkgdir->pkgs);
 }
 
