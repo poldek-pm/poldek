@@ -54,7 +54,6 @@ static struct argp_option options[] = {
  { "installed", 'I', 0, 0, N_("List installed packages"), 1},
  { NULL, 't', 0, 0, N_("Sort by build time"), 1},
  { NULL, 'T', 0, 0, N_("Sort by build day"), 1},
- { NULL, 'h', 0, OPTION_HIDDEN, "", 1 }, 
  { "reverse", 'r', 0, 0, N_("Reverse order while sorting"), 1},
  { NULL, 'n', 0, 0, N_("Print only package names"), 1},
  { NULL, 'G', 0, 0, N_("Print package groups"), 1},

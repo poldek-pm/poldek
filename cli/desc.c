@@ -85,7 +85,6 @@ static struct argp_option options[] = {
     { "files", 'f', 0, 0,
       N_("Show package files (doubled gives long listing format)"), 1},
     { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},
-    {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
     { 0, 0, 0, 0, 0, 0 },
 };
 

@@ -15,6 +15,7 @@ struct cmd_pipe;
 
 #define CMDCTX_ISHELP        (1 << 0)
 #define CMDCTX_NOCTRLMSGS    (1 << 1)
+#define CMDCTX_ERR           (1 << 2)
     
 struct cmdctx {
     int                  rtflags;   /* CMDCTX_* */

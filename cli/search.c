@@ -96,7 +96,6 @@ static struct argp_option options[] = {
       N_("Search all described fields, the defaults are: -sd"), 1
     },
     { "perlre",    OPT_PATTERN_PCRE, 0, 0, N_("Threat PATTERN as Perl regular expression"), 1},
-    {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
     { 0, 0, 0, 0, 0, 0 },
 };
 

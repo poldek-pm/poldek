@@ -32,9 +32,7 @@ static int get(struct cmdctx *cmdctx);
 #define OPT_GET_DIR          (1 << 1) /* cmd_state->flags */
 
 static struct argp_option options[] = {
- { 0, 'v', 0, 0, N_("Be verbose"), 1},
  { "dir", 'd', "DIR", 0, N_("Download to directory DIR instead to current one"), 1},
- {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
  { 0, 0, 0, 0, 0, 0 },
 };
 

@@ -72,61 +72,45 @@ static struct poclidek_cmd *commands_tab[] = {
     NULL
 };
 
-struct sh_cmdctx {
-    unsigned        cmdflags;
-    int             err;
-    struct cmdctx   *cmdctx;
-    struct poclidek_cmd  *cmd;
-    error_t (*parse_opt_fn)(int, char*, struct argp_state*);
-};
-
 
 /* default parse_opt */
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
-    struct sh_cmdctx *sh_cmdctx = state->input;
-    unsigned flags = sh_cmdctx->cmdflags;
-    int rc;
-
-
-    state->input = sh_cmdctx->cmdctx;
-    
-    if (sh_cmdctx->parse_opt_fn)
-        rc = sh_cmdctx->parse_opt_fn(key, arg, state);
-    else
-        rc = ARGP_ERR_UNKNOWN;
-    state->input = sh_cmdctx;
-    
-    if (rc == EINVAL) 
-        sh_cmdctx->err = 1;
-
-    if (rc != ARGP_ERR_UNKNOWN)
-        return rc;
-    
-    rc = 0;
+    struct cmdctx *cmdctx = state->input;
+    int rc = 0;
 
     switch (key) {
+        case ARGP_KEY_INIT:
+            state->child_inputs[0] = cmdctx;
+            state->child_inputs[1] = NULL;
+            break;
+        
         case 'v': {
-            if ((flags & COMMAND_HASVERBOSE) == 0) {
+            if ((cmdctx->cmd->flags & COMMAND_HASVERBOSE) == 0) {
                 argp_usage (state);
-                sh_cmdctx->err = 1;
+                cmdctx->rtflags |= CMDCTX_ERR;
                 
             } else {
                 poldek_VERBOSE++;
             }
         }
         break;
+
+        case 'q': 
+            cmdctx->rtflags |= CMDCTX_NOCTRLMSGS;
+            poldek_VERBOSE = -1;
+            break;
         
             
         case ARGP_KEY_ARG:
             DBGF("cli.arg %s\n", arg);
-            if (flags & COMMAND_NOARGS) {
+            if (cmdctx->cmd->flags & COMMAND_NOARGS) {
                 argp_usage (state);
-                sh_cmdctx->err = 1; 
+                cmdctx->rtflags |= CMDCTX_ERR;
                 return EINVAL;
             }
             //printf("push\n");
-            poldek_ts_add_pkgmask(sh_cmdctx->cmdctx->ts, arg);
+            poldek_ts_add_pkgmask(cmdctx->ts, arg);
             break;
             
         case 'h':
@@ -136,23 +120,19 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case ARGP_KEY_NO_ARGS:
-            if (sh_cmdctx->cmdctx->rtflags & CMDCTX_ISHELP)
+            if (cmdctx->rtflags & CMDCTX_ISHELP)
                 break;
-            
-            //printf("ARGP_KEY_NO_ARGS --\n");
-            if ((flags & COMMAND_NOARGS) == 0 &&
-                (flags & COMMAND_EMPTYARGS) == 0) {
-                //printf("ARGP_KEY_NO_ARGS\n");
+
+            if ((cmdctx->cmd->flags & (COMMAND_NOARGS|COMMAND_EMPTYARGS)) == 0) {
                 argp_usage (state);
-                sh_cmdctx->err = 1; 
+                cmdctx->rtflags |= CMDCTX_ERR;
                 return EINVAL;
             }
             break;
             
             
         case ARGP_KEY_ERROR:
-            //printf("ARGP_KEY_ERROR\n");
-            sh_cmdctx->err = 1;
+            cmdctx->rtflags |= CMDCTX_ERR;
             return EINVAL;
             break;
             
@@ -194,7 +174,7 @@ static tn_array *find_command_aliases(struct poclidek_cmd *cmd,
 
 static char *help_filter(int key, const char *text, void *input) 
 {
-    struct sh_cmdctx *sh_cmdctx = input;
+    struct cmdctx *cmdctx = input;
     char *p, buf[4096];
     tn_array *aliases;
     int n = 0;
@@ -202,11 +182,11 @@ static char *help_filter(int key, const char *text, void *input)
     if (key != ARGP_KEY_HELP_EXTRA)
         return (char*)text;
         
-    if (sh_cmdctx->cmd->extra_help) 
+    if (cmdctx->cmd->extra_help) 
         n += n_snprintf(&buf[n], sizeof(buf) - n, "  %s\n",
-                        sh_cmdctx->cmd->extra_help);
+                        cmdctx->cmd->extra_help);
 
-    aliases = find_command_aliases(sh_cmdctx->cmd, sh_cmdctx->cmdctx->cctx);
+    aliases = find_command_aliases(cmdctx->cmd, cmdctx->cctx);
     if (aliases) {
         int i = 0;
             
@@ -229,16 +209,30 @@ static char *help_filter(int key, const char *text, void *input)
     return (char*)text;
 }
 
+static struct argp_option common_options[] = {
+    {0,  'v', 0, 0, N_("Be verbose."), 6000, },
+    {0,  'q', 0, 0, N_("Be quiet"), 6000, },
+    {0,  'h', 0, OPTION_HIDDEN, N_("Help"), 6000, },
+    { 0, 0, 0, 0, 0, 0 },
+};
+
+
 static
 int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv) 
 {
-    struct sh_cmdctx     sh_cmdctx;
     int                  rc = 1;
     unsigned             parse_flags;
-    struct poclidek_cmd  *cmd;
-    struct argp          argp = { cmdctx->cmd->argp_opts, parse_opt,
-                                  cmdctx->cmd->arg,
-                                  cmdctx->cmd->doc, 0, 0, 0};
+    struct poclidek_cmd  *cmd = cmdctx->cmd;
+    struct argp          cmd_argp = { cmd->argp_opts, cmd->parse_opt_fn,
+                                      cmd->arg,
+                                      cmd->doc, 0, 0, 0};
+    
+    struct argp_child cmd_argp_child[2] = { { &cmd_argp, 0, NULL, 0 },
+                                            { NULL, 0, NULL, 0 },   };
+    
+    struct argp argp = { common_options, parse_opt, 0, 0,
+                         cmd_argp_child, 0, 0 };
+
     
     if (argv == NULL)
         return 0;
@@ -269,17 +263,11 @@ int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
         goto l_end;
     }
 
-    sh_cmdctx.cmdflags = cmd->flags; 
-    sh_cmdctx.err = 0;
-    sh_cmdctx.cmdctx = cmdctx;
-    sh_cmdctx.cmd = cmd;
-    sh_cmdctx.parse_opt_fn = cmd->parse_opt_fn;
-
     argp.help_filter = help_filter;
     parse_flags = argp_parse_flags;
-    argp_parse(&argp, argc, (char**)argv, parse_flags, 0, (void*)&sh_cmdctx);
+    argp_parse(&argp, argc, (char**)argv, parse_flags, 0, cmdctx);
 
-    if (sh_cmdctx.err) {
+    if (cmdctx->rtflags & CMDCTX_ERR) {
         rc = 0;
         goto l_end;
     }

@@ -129,8 +129,6 @@ N_("Be unconcerned (applied to PM only)"), OPT_GID },
 {"nofetch", OPT_INST_NOFETCH, 0, OPTION_HIDDEN,
      N_("Do not download packages"), OPT_GID },    
 
-{0,  'v', 0, 0, N_("Be verbose."), OPT_GID },
-{NULL, 'h', 0, OPTION_HIDDEN, "", OPT_GID }, /* alias for -? */
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -142,6 +140,8 @@ static struct argp_option cmdl_options[] = {
          OPT_GID - 100},
     {"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade"), OPT_GID - 100 },     
     {"upgrade", 'u', 0, 0, N_("Upgrade given packages"), OPT_GID - 100 },
+    { NULL, 'U', 0, OPTION_ALIAS, 0, OPT_GID - 100 }, 
+        
     {NULL, 'h', 0, OPTION_HIDDEN, "", OPT_GID - 100 }, /* for compat with -Uvh */
     
     {0,0,0,0, N_("Distribution installation/upgrade:"), OPT_GID - 90 },
@@ -264,6 +264,10 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             else if (key == OPT_INST_REINSTALL)
                 poldek_ts_setf(ts, POLDEK_TS_REINSTALL);
             break;
+
+        case 'h':          /* common rpm's users brain hardcode -Uvh  */
+            break;
+            
 
         case OPT_INST_INSTDIST:
             poldek_ts_set_type(ts, POLDEK_TS_INSTALL, "install-dist");
