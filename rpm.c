@@ -79,7 +79,7 @@ int rpm_initlib(tn_array *macros)
                 def++;
                 while(isspace(*def))
                     def++;
-                msg(2, "addMacro %s %s\n", macro, def);
+                msg(4, "addMacro %s %s\n", macro, def);
                 addMacro(NULL, macro, NULL, def, RMIL_DEFAULT);
                 *sav = ' ';
             }

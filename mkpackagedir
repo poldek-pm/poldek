@@ -2,10 +2,10 @@
 # $Id$
 
 PATH="/bin:/usr/bin:/usr/sbin:/sbin"
-
+NAME=packages.dir
 usage()
 {
-    echo "usage: mkrpmdir DIR..."
+    echo "usage: mkpackagesdir DIR..."
 }
 
 if [ "$#" = 0 ]; then
@@ -25,10 +25,10 @@ while  [ $# -gt 0 ]; do
 	exit 1
     fi
 
-    if [ ! -f "$1/Packages" ]; then 
+    if [ ! -f "$1/$NAME" ]; then 
 	exit 1
     fi
 	
-    gzip -nfc "$1/Packages" > "$1/Packages.gz"
+    gzip -nfc "$1/$NAME" > "$1/$NAME.gz"
     shift
 done    

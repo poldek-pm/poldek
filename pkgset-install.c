@@ -1238,7 +1238,7 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
             n_array_push(uninstalled_pkgs, pkg_new(pkg->name, pkg->epoch,
                                                    pkg->ver, pkg->rel,
                                                    pkg->arch, pkg->size,
-                                                   pkg->btime));
+                                                   pkg->fsize, pkg->btime));
             
         }
     }

@@ -20,7 +20,11 @@ struct p_open_st {
 void p_st_init(struct p_open_st *pst);
 void p_st_destroy(struct p_open_st *pst);
 
-FILE *p_open(struct p_open_st *pst, const char *cmd, char *const argv[]);
+#define P_OPEN_KEEPSTDIN (1 << 0)
+
+FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
+             char *const argv[]);
+
 int p_close(struct p_open_st *pst);
 
 FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[]);

@@ -34,6 +34,7 @@ libpoldek_a_SOURCES = \
 	  conf.c conf.h	    		\
 	  h2n.h 			\
 	  dbpkg.c dbpkg.h		\
+	  split.c split.h		\
 	  rpmdb_it.c rpmdb_it.h
 
 SHELL_MOD = shell/shell.a
@@ -43,7 +44,7 @@ SHELL_MOD_ = $(SHELL_MOD)
 endif
 
 bin_PROGRAMS        = poldek rpmvercmp
-bin_SCRIPTS         = mkrpmdir
+bin_SCRIPTS         = mkpackagedir vfjuggle
 poldek_SOURCES      = main.c
 poldek_LDADD        = vfile/libvfile.a libpoldek.a $(SHELL_MOD_) \
 	              @TRURL_LDFLAG@ -lutil
@@ -54,6 +55,9 @@ rpmvercmp_SOURCES   = rpmvercmp.c
 rpmvercmp_LDADD     = 
 rpmvercmp_LIBS      = -lrpm
 rpmvercmp_LDFLAGS   = 
+
+mkpackagedir_SOURCES = mkpackagedir
+vfjuggle_SOURCES     = vfjuggle
 
 EXTRA_DIST = poldek.1 poldek.pod \
 	     Makefile.extra *sample* \
@@ -70,7 +74,9 @@ MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 poldek.1: poldek.pod
 	$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@
 
-mkrpmdir:
+mkpackagedir:
+
+vfjuggle: 
 
 dist-hook:
 	rm -rf $(distdir)/.deps

@@ -249,7 +249,7 @@ int process_output(struct p_open_st *st, const char *prefix)
             endl = 0;
         }
 
-        vfile_msg_fn("%c", c);
+        vfile_msg_fn("_%c", c);
         if (c == '\n' && cnt > 0)
             endl = 1;
         
@@ -264,11 +264,12 @@ static
 int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 const char *url /* or */, tn_array *urls)
 {
-    char *bn = NULL;
-    char **argv;
-    struct p_open_st pst;
-    int i, n, ec;
-   
+    char              *bn = NULL, **argv;
+    struct p_open_st  pst;
+    int               i, n, ec;
+    unsigned          p_open_flags = 0;
+
+    
     mkdir(destdir, 0755);
 
     if (url)
@@ -357,9 +358,12 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     }
     
     p_st_init(&pst);
+
+    if (fftch->urltypes & VFURL_CDROM)
+        p_open_flags |= P_OPEN_KEEPSTDIN;
     
-    if (p_open(&pst, fftch->path, argv) == NULL) {
-        vfile_msg_fn("p_open: %s\n", pst.errmsg);
+    if (p_open(&pst, p_open_flags, fftch->path, argv) == NULL) {
+        vfile_err_fn("p_open: %s\n", pst.errmsg);
         return 0;
     }
     
@@ -517,6 +521,9 @@ int vfile_url_type(const char *url)
 
     if (strncmp(url, "rsync://", 8) == 0)
         return VFURL_RSYNC;
+
+    if (strncmp(url, "cdrom://", 8) == 0)
+        return VFURL_CDROM;
 
     return VFURL_PATH;
 }

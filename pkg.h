@@ -66,8 +66,9 @@
 
 struct pkg {
     uint32_t     flags;
-    uint32_t     size;        /* installed size */
-    uint32_t     btime;       /* build time */
+    uint32_t     size;        /* installed size    */
+    uint32_t     fsize;       /* package file size */
+    uint32_t     btime;       /* build time        */
     int32_t      epoch;
     char         *name;
     char         *ver;
@@ -85,13 +86,16 @@ struct pkg {
     tn_array     *revreqpkgs; /* packages which requires me */
     tn_array     *cnflpkgs;   /* conflict packages */
 
-    struct pkgdir *pkgdir;
+    struct pkgdir *pkgdir;    /* refrence to its own pkgdir */
     
     union {
         off_t           pkg_pkguinf_offs;
         struct pkguinf *pkg_pkguinf; 
     } package_uinf;
 
+
+    int pri;                    /* used for split */
+    /* private, don't touch */
     uint16_t     _refcnt;
     void         (*free)(void*); /* self free()  */
 
@@ -104,7 +108,8 @@ struct pkg {
 
 struct pkg *pkg_new(const char *name, int32_t epoch,
                     const char *version, const char *release,
-                    const char *arch, uint32_t size, uint32_t btime);
+                    const char *arch, uint32_t size, uint32_t fsize,
+                    uint32_t btime);
 
 #define PKG_LDNEVR    0
 #define PKG_LDCAPS    (1 << 0)
@@ -115,7 +120,9 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
 #define PKG_LDCAPREQS PKG_LDCAPS | PKG_LDREQS | PKG_LDCNFLS
 #define PKG_LDWHOLE   PKG_LDCAPREQS | PKG_LDFL
 
-struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned ldflags);
+struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
+                      unsigned ldflags);
+
 struct pkg *pkg_ldrpm(const char *path, unsigned ldflags);
 
 void pkg_free(struct pkg *pkg);

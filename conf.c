@@ -42,6 +42,7 @@ static struct tag valid_tags[] = {
     { "http_get",     0, TYPE_STR },
     { "https_get",    0, TYPE_STR },
     { "rsync_get",    0, TYPE_STR },
+    { "cdrom_get",    0, TYPE_STR },
     { "ssh_get",      0, TYPE_STR },
     { "ignore_req",   1, TYPE_STR },
     { "ignore_pkg",   1, TYPE_STR },

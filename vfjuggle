@@ -1,0 +1,135 @@
+#! /bin/sh
+# $Id$
+# Enviroment: 
+# VF_MNTPOINT - the default is /cdrom
+# VF_MNTDEV   - the default is empty
+# VF_EJECT    - e.g. VF_EJECT="ziptool -e /dev/zip", 
+#                    VF_EJECT="cdeject -d $VF_MNTDEV"
+
+cdid() 
+{
+    URI=`echo $1 | awk '{ gsub(/^cdrom:\/\//,""); print $1; }'`
+    CDID=`echo $URI | awk '{ match($0, /^[a-zA-z0-9\-]+/); print substr($0, RSTART, RLENGTH);}'`
+    URI=`echo $URI | awk '{ gsub(/^[a-zA-z0-9\-]+/,""); gsub(/^\//,""); print $0;}'`
+    BN=`basename $URI`
+    
+    echo "$1 -> uri $URI, id $CDID"
+    if [ -z "$URI" -o -z "$CDID" ]; then
+	echo "$1: URL syntax error"
+	exit 1
+    fi
+}
+
+mount_()
+{
+    typeset id=$1
+
+    if [ -f "$VF_MNTPOINT/$id" ]; then
+	return 0
+    fi
+
+    $VF_MOUNT $VF_MNTDEV $VF_MNTPOINT 2>/dev/null 
+    if [ -f "$VF_MNTPOINT/$id" ]; then
+	return 0
+    fi
+	    
+    while true; do
+	echo "Umounting $id $VF_MNTPOINT/$id $VF_MNTPOINT..."
+	$VF_UMOUNT $VF_MNTPOINT
+	
+	if [ -n "$VF_EJECT" ]; then
+	    "$VF_EJECT"
+	fi    
+
+	echo "Insert the $id disk into CDROM drive, and press ENTER"
+	read
+
+	echo "Mounting $VF_MNTDEV $VF_MNTPOINT..."
+	$VF_MOUNT $VF_MNTDEV $VF_MNTPOINT
+	typeset rc=$?
+
+	if [ -f "$VF_MNTPOINT/$id" ]; then
+	    return 0
+
+	elif [ $rc -eq 0 ]; then
+	    echo "Not a $id disk"
+	fi    
+    done
+}
+
+usage()
+{
+    echo "usage: `basename $0` DESTDIR [cdrom://DISK_ID_FILE/PATH...]"
+}
+
+
+#
+# main 
+# 
+
+if [ -f ~/.vfjugglerc ]; then
+  . ~/.vfjugglerc
+fi
+
+PATH="/bin:/usr/bin:/usr/sbin:/sbin"
+
+VF_MNTPOINT=${VF_MNTPOINT:-"/cdrom"}
+if [ ! -d "$VF_MNTPOINT" ]; then
+    echo "$VF_MNTPOINT: no such directory"
+    exit 1
+fi
+
+if [ -n "$VF_MNTDEV" ]; then #   by default run mount $VF_MNTPOINT only 
+    if [ ! -b "$VF_MNTDEV" ]; then
+	echo "$VF_MNTDEV: no such device"
+	exit 1
+    fi
+fi
+
+VF_MOUNT=${VF_MOUNT:-"mount"}
+VF_UMOUNT=${VF_UMOUNT:-"umount"}
+
+if [ "$#" = 0 ]; then
+    usage
+    exit 0
+fi
+
+
+DESTDIR=$1; shift;
+if [ ! -d "$DESTDIR" ]; then 
+    echo "$DESTDIR: no such directory"
+    exit 1
+fi
+
+
+while  [ $# -gt 0 ]; do
+    URL=$1; shift;
+
+    cdid $URL
+
+    if [ ! -f "$VF_MNTPOINT/$CDID" ]; then 
+	mount_ $CDID
+    fi
+
+    if [ ! -f "$VF_MNTPOINT/$URI" ]; then
+	echo "$VF_MNTPOINT/$URI: no such file"
+	exit 1
+    fi
+    
+    if [ "$BN" = "packages.dir" -o "$BN" = "packages.dir.gz" -o \
+	 "$BN" = "Packages" -o "$BN" = "Packages.gz" ]; then
+
+	 echo "cp $VF_MNTPOINT/$URI $DESTDIR/"
+	 cp $VF_MNTPOINT/$URI $DESTDIR/
+    else 	 
+	echo ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$FILE"
+	ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$FILE"
+    fi
+	
+    if [ $? -ne 0 ]; then
+	exit 1
+    fi
+done
+
+exit 0
+    

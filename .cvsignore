@@ -20,3 +20,4 @@ stamp-h.in
 poldek*
 rpmvercmp
 ccmalloc-log
+depcomp

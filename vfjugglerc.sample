@@ -1,0 +1,6 @@
+VF_MNTPOINT=/cdrom
+#VF_MNTDEV=/dev/cdrom
+VF_EJECT="cdeject" 
+
+VF_MOUNT="sudo mount"
+VF_UMOUNT="sudo umount"

@@ -153,7 +153,7 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
     
  l_end:
     pkg_set_color(pkg, PKG_COLOR_BLACK);
-    n_array_push(vs->ordered_pkgs, pkg);
+    n_array_push(vs->ordered_pkgs, pkg_link(pkg));
     if (last_stack_i != -1) 
         for (i=last_stack_i; i < n_array_size(vs->stack); i++)
             n_array_pop(vs->stack);
@@ -161,33 +161,55 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
 }
 
 
-int pkgset_order(struct pkgset *ps) 
+/* RET: number of detected loops  */
+int packages_order(tn_array *pkgs, tn_array **ordered_pkgs) 
 {
     struct pkg *pkg;
     struct visit_order_s vs;
     int i;
-
-    if (ps_verify_mode(ps))
-        msg(1, "\nVerifying (pre)requirements...\n");
-    vs.ordered_pkgs = n_array_new(n_array_size(ps->pkgs), NULL, NULL);
     
+    vs.ordered_pkgs = n_array_new(n_array_size(pkgs),
+                                  (tn_fn_free)pkg_free, NULL);
     vs.nerrors = 0;
     vs.stack = n_array_new(128, NULL, NULL);
     
-    n_array_map(ps->pkgs, (tn_fn_map1)mapfn_clean_pkg_color);
+    n_array_map(pkgs, (tn_fn_map1)mapfn_clean_pkg_color);
 
-    for (i=0; i<n_array_size(ps->pkgs); i++) {
-        pkg = n_array_nth(ps->pkgs, i);
+    for (i=0; i<n_array_size(pkgs); i++) {
+        pkg = n_array_nth(pkgs, i);
+        //printf("V %d %s\n", i, pkg_snprintf_s(pkg));
         if (pkg_is_color(pkg, PKG_COLOR_WHITE)) {
 	    visit_order(&vs, pkg, 1);
             n_array_clean(vs.stack);
         }
     }
+
+    n_assert(n_array_size(vs.ordered_pkgs) == n_array_size(pkgs));
+
+    n_assert(*ordered_pkgs == NULL);
+    n_array_free(vs.stack);
+    *ordered_pkgs = vs.ordered_pkgs;
+
+    return vs.nerrors;
+}
+
+int pkgset_order(struct pkgset *ps) 
+{
+    int nloops;
+                   
+    if (ps_verify_mode(ps))
+        msg(1, "\nVerifying (pre)requirements...\n");
+
+    if (ps->ordered_pkgs != NULL)
+        n_array_free(ps->ordered_pkgs);
+    ps->ordered_pkgs = NULL;
     
-    if (vs.nerrors) {
-        ps->nerrors += vs.nerrors;
-        msg(1, "%d prerequirement loop%s detected\n", vs.nerrors,
-            vs.nerrors > 1 ? "s":"");
+    nloops = packages_order(ps->pkgs, &ps->ordered_pkgs);
+    
+    if (nloops) {
+        ps->nerrors += nloops;
+        msg(1, "%d prerequirement loop%s detected\n", nloops,
+            nloops > 1 ? "s":"");
         
     } else if (ps_verify_mode(ps)) {
         msg(1, "No loops -- OK\n");
@@ -195,21 +217,16 @@ int pkgset_order(struct pkgset *ps)
         	
     
     if (verbose > 2 && ps_verify_mode(ps)) {
+        int i;
+            
         msg(2, "Installation order:\n");
-        for (i=0; i<n_array_size(vs.ordered_pkgs); i++) {
-            pkg = n_array_nth(vs.ordered_pkgs, i);
+        for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
+            struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
             msg(2, "%d. %s\n", i, pkg->name);
         }
         msg(2, "\n");
     }
-
-    n_assert(n_array_size(vs.ordered_pkgs) == n_array_size(ps->pkgs));
-
-    if (ps->ordered_pkgs != NULL)
-        n_array_free(ps->ordered_pkgs);
     
-    n_array_free(vs.stack);
-    ps->ordered_pkgs = vs.ordered_pkgs;
     return 1;
 }
 

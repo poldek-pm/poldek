@@ -18,3 +18,7 @@ stamp-h
 stamp-h.in
 sample
 .deps
+poldek*
+rpmvercmp
+ccmalloc-log
+depcomp

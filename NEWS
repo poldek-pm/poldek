@@ -1,3 +1,25 @@
+0.15:
+
+* added support for removable media (vfjuggle script is added)
+* package's integer fields are stored in binary form (0.4.1 index format)
+* added package file size to index (for spliting)
+* added "nofollow" option to cmdline and "follow" one to config	
+* renamed "freshen" to "fresh" and changed its semanticts, now
+  rpm's "--freshen" <=> "--nofollow --fresh"
+
+* changed default index name to "packages.dir"
+* added mkpackagedir script
+* added spliting (--split* options)
+* package-set file syntax: changed "maybe" mark to '~' ('!' still work, 
+  but obsoleted)
+* improved shell: 
+   - added aliases for commands ("ll", "llu", "freshen", "what-requires", etc)
+   - better completition context switching
+   - extended "desc" and "search" commands -- almost all
+     package fields could be specified
+   - colorized output
+* bugfixes 
+
 0.14:
 
 * support for multiple sources

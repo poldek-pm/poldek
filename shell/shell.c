@@ -698,7 +698,7 @@ void db_map_fn(unsigned int recno, void *header, void *shpkgs)
     int               len;
 
     recno = recno;
-    pkg = pkg_ldhdr(header, NULL, PKG_LDNEVR);
+    pkg = pkg_ldhdr(header, "db", 0, PKG_LDNEVR);
     pkg_snprintf(nevr, sizeof(nevr), pkg);
     
     len = strlen(nevr);

@@ -28,6 +28,7 @@ ftp_get       = "/usr/bin/snarf %P %D"
 http_get      = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
 https_get     = "/usr/bin/curl %P -o %D"
 rsync_get     = "/usr/bin/rsync -v %P %d"
+cdrom_get     = "/usr/bin/vfjuggle %d %Pn"
 
 # permits using root privs for installation only 
 use_sudo  = yes

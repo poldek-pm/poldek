@@ -51,7 +51,8 @@ void p_st_destroy(struct p_open_st *pst)
 }
 
 
-FILE *p_open(struct p_open_st *pst, const char *cmd, char *const argv[])
+FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
+             char *const argv[])
 {
     int    pp[2];
     pid_t  pid;
@@ -70,10 +71,12 @@ FILE *p_open(struct p_open_st *pst, const char *cmd, char *const argv[])
     }
     
     if ((pid = fork()) == 0) {
-        int fd = open("/dev/null", O_RDWR);
-	
-        dup2(fd, 0);
-        close(fd);
+        
+        if ((flags & P_OPEN_KEEPSTDIN) == 0) {
+            int fd = open("/dev/null", O_RDWR);
+            dup2(fd, 0);
+            close(fd);
+        }
         
         close(pp[0]);
 

@@ -19,7 +19,7 @@ APT, the interactive mode was inspired by shell mode of Perl CPAN module
 (perl -MCPAN -e shell). 
 
 In general poldek gets packages information from special package index
-file (called I<Packages>) and performs one of the following actions:
+file (called I<packages.dir>) and performs one of the following actions:
 
 =over
 
@@ -34,6 +34,8 @@ file (called I<Packages>) and performs one of the following actions:
 =item * Upgrade whole system
 
 =item * Install or upgrade custom packages 
+
+=item * Split package set into fixed size package sets 
 
 =back
 
@@ -69,9 +71,9 @@ Examples:
 
 =item $ poldek -s /dir/with/RPMS/ [OPTION...]
 
-=item $ poldek -s /dir/with/RPMS/Packages.gz [OPTION...]
+=item $ poldek -s /dir/with/RPMS/packages.dir [OPTION...]
 
-=item $ poldek -s ftp://ftp.ala.ma.kota/RPMS/Packages.gz
+=item $ poldek -s ftp://ftp.ala.ma.kota/RPMS/packages.dir
 
 =item $ poldek -s rsync://rsync.ala-ma-kota.com/RPMS/
 
@@ -133,15 +135,15 @@ One of the following basic modes must be selected:
 
 =item B<--mkidx[z][=FILE]>  
 
-Build package index, by default it's stored in SOURCE/Packages[.gz].
-The other two files are created: Packages.md with coputed Packages digest and 
-Packages-toc with packages NAME-EVR per line.  
+Build package index, by default it's stored in SOURCE/packages.dir[.gz].
+The other two files are created: packages.dir.md with coputed packages.dir 
+digest and packages.dir-toc with packages NAME-EVR per line.  
 I<NOTE>: SOURCE must be directory.
 
 =item B<--update>    
 
 Resynchronize the package index from its source.
-It is necessary only for remote Packages and it 
+It is necessary only for remote packages.dir and it 
 should be the first operation before program usage. 
 
 =item B<-V|--verify>
@@ -166,6 +168,15 @@ Install or upgrade given packages.
 =item B<--shell>
 
 Run poldek in interactive mode. Type "help" after running for available commands. 
+
+=item B<--split=[SIZE] [--split-conf=FILE] [--split-out=PREFIX]>
+
+Split package set into parts, each SIZE MB size. Priorities 
+are taken from FILE given by --split-conf (see sample poldek-split.conf 
+in distribution). By default packages has 0 priority.
+
+Each part is written as NAME-EVR list to PREFIX.XX 
+file, the default PREFIX is "package.chunk"
 
 
 =back 
@@ -326,7 +337,7 @@ $ poldek -s /ftp/pub/PLD/RPMS/ --mkidxz
 
 $ poldek -s rsync://ala.ma.kota/PLD/RPMS/ -V
 
-$ poldek -s /dir/with/RPMS/Packages -V apache
+$ poldek -s /dir/with/RPMS/packages.dir -V apache
 
 =head2 Installation from scratch
 
@@ -338,11 +349,11 @@ Above command installs a "myset" package subset under
 
 =head2 Upgrade whole system:
 
-$ poldek -s ftp://ftp.tatry.pl/PLD/RPMS/Packages --upgrade-dist
+$ poldek -s ftp://ftp.tatry.pl/PLD/RPMS/packages.dir --upgrade-dist
 
 Only fetch packages marked for upgrade:
 
-$ poldek -s ftp://ftp.rankiem.net.pl/PLD/RPMS/Packages 
+$ poldek -s ftp://ftp.rankiem.net.pl/PLD/RPMS/packages.dir 
   --upgrade-dist --fetch=/tmp/PLD-up/
 
 Dump packages filenames marked for upgrade:
@@ -352,7 +363,7 @@ $ poldek -s ftp://ftp.pld.org.pl/PLD/RPMS/
 
 Test only:
 
-$ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/Packages 
+$ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/packages.dir 
   --upgrade-dist --test
 
 
@@ -361,7 +372,7 @@ $ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/Packages
 $ poldek -s ftp://ftp.znienacka.com/PLD/RPMS/
 -U apache -n "ala-ma-kota 1.2" smail-12-389.i386.rpm
 
-$ poldek -s ftp://ftp.dudy.net/RPMS/Packages -ti xteddy
+$ poldek -s ftp://ftp.dudy.net/RPMS/ -ti xteddy
 
 =head1 ENVIROMENT
 

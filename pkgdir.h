@@ -6,6 +6,9 @@
 
 #include <vfile/vfile.h>
 
+extern const char *default_pkgidx_name;
+
+
 struct pkgdir {
     char               *path;            /* path | URL        */
     char               *idxpath;         /* path | URL        */

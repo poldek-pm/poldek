@@ -44,7 +44,8 @@ void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*))
 /* always store fields in order: path, name, version, release, arch */
 struct pkg *pkg_new(const char *name, int32_t epoch,
                     const char *version, const char *release,
-                    const char *arch, uint32_t size, uint32_t btime)
+                    const char *arch, uint32_t size, uint32_t fsize,
+                    uint32_t btime)
 {
     struct pkg *pkg;
     int name_len = 0, version_len = 0, release_len = 0, arch_len = 0;
@@ -78,6 +79,7 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     pkg->flags = PKG_COLOR_WHITE;
     pkg->epoch = epoch;
     pkg->size = size;
+    pkg->fsize = fsize;
     pkg->btime = btime;
     pkg->_buf_size = len;
     buf = pkg->_buf;
@@ -113,7 +115,7 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     pkg->other_files_offs = 0;
     pkg->pkgdir = NULL;
     pkg->pkg_pkguinf_offs = 0;
-
+    pkg->pri = 0;
     pkg->_refcnt = 0;
     
     return pkg;
@@ -152,7 +154,6 @@ void pkg_free(struct pkg *pkg)
             pkguinf_free(pkg->pkg_pkguinf);
         pkg_clr_ldpkguinf(pkg);
     }
-    
 
     pkg->free(pkg);
 }
@@ -165,7 +166,8 @@ struct pkg *pkg_link(struct pkg *pkg)
 }
 
 
-struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned ldflags)
+struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
+                      unsigned ldflags)
 {
     struct pkg *pkg;
     uint32_t   *epoch, *size, *btime;
@@ -193,7 +195,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned ldflags)
         btime = NULL;
     
     pkg = pkg_new(name, epoch ? *epoch : 0, version, release, arch,
-                  size ? *size : 0, btime ? *btime : 0);
+                  size ? *size : 0, fsize, btime ? *btime : 0);
 
     if (pkg == NULL)
         return NULL;
@@ -273,7 +275,7 @@ struct pkg *pkg_ldrpm(const char *path, unsigned ldflags)
             if (headerIsEntry(h, RPMTAG_SOURCEPACKAGE))
                 log(LOGERR, "%s: reject source package\n", path);
             else
-                pkg = pkg_ldhdr(h, path, ldflags);
+                pkg = pkg_ldhdr(h, path, 0, ldflags);
             
             headerFree(h);
         }
@@ -729,77 +731,6 @@ int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg)
                                              (tn_fn_cmp)capreq_cmp2name));
 }
 
-#if 0
-void pkg_store(const struct pkg *pkg, tn_buf *nbuf) 
-{
-    uint32_t nflags, nsize; 
-    int32_t nepoch, nbuf_size;
-
-    nflags = hton32(pkg->flags);
-    nepoch = hton32(pkg->epoch);
-    nsize = hton32(pkg->size);
-    nbuf_size = hton32(pkg->_buf_size);
-    
-    n_buf_add(nbuf, &nflags, sizeof(nflags));
-    n_buf_add(nbuf, &nsize, sizeof(nsize));
-    n_buf_add(nbuf, &nepoch, sizeof(nepoch));
-    n_buf_add(nbuf, &nbuf_size, sizeof(nbuf_size));
-    n_buf_add(nbuf, pkg->_buf, pkg->_buf_size);
-    
-    capreqs_store(pkg->caps, nbuf);
-    capreqs_store(pkg->reqs, nbuf);
-    capreqs_store(pkg->cnfls, nbuf);
-}
-    
-
-struct pkg *pkg_restore(tn_buf_it *nbufi) 
-{
-    uint32_t flags, size; 
-    int32_t epoch, buf_size;
-    struct pkg *pkg;
-    char *p;
-    
-
-    p = n_buf_it_get(nbufi, sizeof(flags));
-
-    if (p == NULL)
-        return NULL;
-    
-    flags = ntoh32(*(uint32_t*)p);
-
-    p = n_buf_it_get(nbufi, sizeof(size));
-    if (p == NULL)
-        return NULL;
-    size = ntoh32(*(int32_t*)p);
-    
-    p = n_buf_it_get(nbufi, sizeof(epoch));
-    if (p == NULL)
-        return NULL;
-    epoch = ntoh32(*(int32_t*)p);
-
-    p = n_buf_it_get(nbufi, sizeof(buf_size));
-    if (p == NULL)
-        return NULL;
-    
-    buf_size = ntoh32(*(int32_t*)p);
-
-    p = n_buf_it_get(nbufi, buf_size);
-    if (p == NULL)
-        return NULL;
-
-    pkg = pkg_alloc_fn(sizeof(*pkg) + buf_size);
-    pkg->flags = flags;
-    pkg->size = size;
-    pkg->epoch = epoch;
-    pkg->_buf_size = buf_size;
-    memcpy(pkg->_buf, p, buf_size);
-    
-    pkg->caps = capreqs_restore(nbufi);
-    pkg->reqs = capreqs_restore(nbufi);
-    pkg->cnfls = capreqs_restore(nbufi);
-    return pkg;
-}
-#endif /* 0 */
 
 struct pkguinf *pkg_info(const struct pkg *pkg) 
 {

@@ -80,6 +80,7 @@ void vfile_close(struct vfile *vf);
 #define VFURL_HTTP    (1 << 3)
 #define VFURL_HTTPS   (1 << 4)
 #define VFURL_RSYNC   (1 << 5)
+#define VFURL_CDROM   (1 << 6)
 
 int vfile_url_type(const char *url);
 char *vfile_url_as_dirpath(char *buf, size_t size, const char *url);

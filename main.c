@@ -33,6 +33,7 @@
 #include "rpm.h"
 #include "install.h"
 #include "conf.h"
+#include "split.h"
 
 #ifndef VERSION
 # error "undefined VERSION"
@@ -58,13 +59,21 @@ static char args_doc[] = "[PACKAGE...]";
 #define MODE_UPGRADEDIST  5
 #define MODE_UPGRADE      6
 #define MODE_UPDATEIDX    7
+#define MODE_SPLIT        8
 
 #ifdef ENABLE_INTERACTIVE_MODE
-# define MODE_SHELL       8
+# define MODE_SHELL       20
 #endif
 
 #define INDEXTYPE_TXT     1
 #define INDEXTYPE_TXTZ    2
+
+struct split_conf {
+    int   size;
+    char  *conf;
+    char  *prefix;
+};
+
 
 struct args {
     int       mjrmode;
@@ -98,7 +107,9 @@ struct args {
     const char  *cachedir;
     
     int         nodesc;		/* don't put descriptions in Packages */
-    int         shell_skip_installed;  
+    int         shell_skip_installed;
+
+    struct      split_conf split_conf;
 } args;
 
 tn_hash *htcnf = NULL;          /* config file values */
@@ -136,6 +147,10 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_INST_NOFOLLOW         'N'
 #define OPT_INST_FRESHEN          'F'
 
+#define OPT_SPLITSIZE             1100
+#define OPT_SPLITCONF             1101
+#define OPT_SPLITOUTPATH          1102
+
 /* The options we understand. */
 static struct argp_option options[] = {
 
@@ -164,7 +179,7 @@ static struct argp_option options[] = {
 
 {0,0,0,0, "Indexes creation:", 60},
 {"mkidx", OPT_MKIDX, "FILE", OPTION_ARG_OPTIONAL,
- "Create package index, SOURCE/Packages by default", 60},
+ "Create package index, SOURCE/packages.dir by default", 60},
 
 {"mkidxz", OPT_MKIDXZ, "FILE", OPTION_ARG_OPTIONAL,
  "Like above, but gzipped file is created", 60},
@@ -231,6 +246,12 @@ static struct argp_option options[] = {
 {"fast", OPT_SHELL_SKIPINSTALLED, 0, 0, "Don't load installed packages in shell mode", 80 },
 #endif
 
+{0,0,0,0, "Splitting:", 90},
+{"split", OPT_SPLITSIZE, "SIZE", 0, "Split packages to SIZE MB size chunks", 90 },
+{"split-conf", OPT_SPLITCONF, "FILE", 0, "Take package priorities from FILE", 90 },
+{"split-out", OPT_SPLITOUTPATH, "PREFIX", 0, "Write chunks to PREFIX.XX, "
+     "default PREFIX is packages.chunk", 90 },    
+
 {0,0,0,0, "Other:", 500},    
 {"conf", 'c', "FILE", 0, "Read configuration from FILE", 500 }, 
 {"noconf", 'z', 0, 0, "Do not read configuration", 500 }, 
@@ -249,7 +270,7 @@ void check_mjrmode(struct args *argsp)
 {
     if (argsp->mjrmode) {
         log(LOGERR,
-     "only one mode of mkidx, update, verify, install*, upgrade* or shell\n"
+     "only one mode of mkidx, update, verify, install*, upgrade*, split, or shell\n"
      "may be specified\n");
         exit(EXIT_FAILURE);
     }
@@ -489,6 +510,20 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'z':
             argsp->noconf = 1;
             break;
+
+        case OPT_SPLITSIZE:
+            check_mjrmode(argsp);
+            argsp->mjrmode = MODE_SPLIT;
+            argsp->split_conf.size = atoi(arg);
+            break;
+
+        case OPT_SPLITCONF:
+            argsp->split_conf.conf = arg;
+            break;
+
+        case OPT_SPLITOUTPATH:
+            argsp->split_conf.prefix = arg;
+            break;
             
         case ARGP_KEY_ARG:
             if (strncmp(arg, "--rpm-", 6) != 0) 
@@ -590,8 +625,10 @@ void parse_options(int argc, char **argv)
     args.pkgdef_files = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_defs  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_sets  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
-    
-    
+    args.split_conf.size = 0;
+    args.split_conf.conf = NULL;
+    args.split_conf.prefix = NULL;
+
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
     if (args.noconf && args.conf_path) {
@@ -692,8 +729,7 @@ void parse_options(int argc, char **argv)
             vfile_cnflags |= VFILE_USEXT_FTP;
             vfile_register_ext_handler(VFURL_FTP, v);
         }
-        
-        
+
         if ((v = conf_get(htcnf, "http_get", NULL))) {
             vfile_cnflags |= VFILE_USEXT_HTTP;
             vfile_register_ext_handler(VFURL_HTTP, v);
@@ -706,6 +742,9 @@ void parse_options(int argc, char **argv)
         
         if ((v = conf_get(htcnf, "rsync_get", NULL))) 
             vfile_register_ext_handler(VFURL_RSYNC, v);
+
+        if ((v = conf_get(htcnf, "cdrom_get", NULL)))
+            vfile_register_ext_handler(VFURL_CDROM, v);
 
         if ((v = conf_get(htcnf, "rpmdef", &is_multi))) {
             tn_array *macros = NULL;
@@ -735,11 +774,10 @@ void parse_options(int argc, char **argv)
 
     vfile_verbose = &verbose;
     vfile_configure(args.cachedir ? args.cachedir : tmpdir(), vfile_cnflags);
+    
     vfile_msg_fn = log_msg;
     vfile_err_fn = log_msg;
 }
-
-
 
 
 static struct pkgset *load_pkgset(int ldflags) 
@@ -806,13 +844,13 @@ static int mkidx(struct pkgset *ps)
     } else {
         switch (args.idx_type) {
             case INDEXTYPE_TXTZ:
-                snprintf(path, sizeof(path), "%s/%s", src->source_path, 
-                         "Packages.gz");
+                snprintf(path, sizeof(path), "%s/%s.gz", src->source_path, 
+                         default_pkgidx_name);
                 break;
                 
             case INDEXTYPE_TXT:
                 snprintf(path, sizeof(path), "%s/%s", src->source_path, 
-                         "Packages");
+                         default_pkgidx_name);
                 break;
                 
             default:
@@ -915,7 +953,23 @@ int check_args(void)
             }
             
             break;
+
+        case MODE_SPLIT:
+            if (args.split_conf.size == 0) {
+                log(LOGERR, "missing split size\n");
+                exit(EXIT_FAILURE);
+            }
             
+            if (args.split_conf.size < 50) {
+                log(LOGERR, "split size too small\n");
+                exit(EXIT_FAILURE);
+            }
+
+            args.split_conf.size *= 1024 * 1000;
+            if (args.split_conf.prefix == NULL) 
+                args.split_conf.prefix = "packages.chunk";
+            
+            break;
         default:
             n_assert(0);
             exit(EXIT_FAILURE);
@@ -1009,7 +1063,6 @@ int main(int argc, char **argv)
     if ((ps = load_pkgset(ldflags)) == NULL)
         exit(EXIT_FAILURE);
 
-    
     switch (args.mjrmode) {
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
@@ -1049,6 +1102,11 @@ int main(int argc, char **argv)
             
         case MODE_UPGRADEDIST:
             rc = upgrade_dist(ps, &inst);
+            break;
+
+        case MODE_SPLIT:
+            rc = packages_split(ps->pkgs, args.split_conf.size,
+                                args.split_conf.conf, args.split_conf.prefix);
             break;
             
         default:
