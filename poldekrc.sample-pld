@@ -2,10 +2,10 @@
 # Sample configuration for PLD  
 # 
 
-source = ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/
+source = ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
 #source = rsync://ftp.pld.org.pl/pld/test/i686/
 #source = /home/zenek/rpm/RPMS/
-#source = ftp://ftp.pld.org.pl/test/i686/
+#source = ftp://ftp.pld.org.pl/dists/ra/test/i686/
 
 # NOTE: directory *must* exists 
 #cachedir = /var/tmp/poldek
