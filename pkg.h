@@ -131,6 +131,9 @@ struct pkg {
     int32_t      recno;        /* db's ID of the header */
     int32_t      itime;        /* date of installation  */
 
+    int32_t      _ldflags;
+    int32_t      _rt_dbflags;
+
     /* private, don't touch */
     int16_t      _refcnt;
     void         (*free)(void*); /* self free()  */

@@ -306,6 +306,17 @@ int pkg_eq_name_prefix(const struct pkg *pkg1, const struct pkg *pkg2)
 static __inline__
 int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2);
 
+int pkg_deepstrcmp_name_evr_debug(const struct pkg *p1, const struct pkg *p2) 
+{
+    int rc = pkg_deepstrcmp_name_evr(p1, p2);
+    
+    if (rc && strcmp(p1->name, p2->name) == 0) {
+        printf("cmp %d %s %s\n", rc, pkg_snprintf_s(p1), pkg_snprintf_s0(p2));
+    }
+    return rc;
+}
+
+
 int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc = 0;
@@ -321,7 +332,7 @@ int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2)
     
     if ((rc = strcmp(p1->rel, p2->rel)))
         return rc;
-
+    
     return pkg_deepcmp_(p1, p2);
 }
 
@@ -450,28 +461,28 @@ int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2)
         return rc;
 
     if (p1->arch && p2->arch == NULL)
-        return 1;
+        return 10;
     
     if (p1->arch == NULL && p2->arch)
-        return -1;
+        return -10;
 
     if ((rc = strcmp(p1->arch ? p1->arch : "" , p2->arch ? p2->arch : "")))
         return rc;
     
     if (p1->os && p2->os == NULL)
-        return 1;
+        return 11;
     
     if (p1->os == NULL && p2->os)
-        return -1;
+        return -11;
     
     if ((rc = strcmp(p1->os ? p1->os : "" , p2->os ? p2->os : "")))
         return rc;
 
     if (p1->fn && p2->fn == NULL)
-        return 1;
+        return 12;
     
     if (p1->fn == NULL && p2->fn)
-        return -1;
+        return -12;
 
     rc = strcmp(p1->fn ? p1->fn : "" , p2->fn ? p2->fn : "");
     return rc;

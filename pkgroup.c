@@ -499,7 +499,7 @@ int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr)
     free(langs);
 
     if (gr)
-        printf("gr_add %d %s\n", gr->id, gr->name);
+        DBGF("gr_add %d %s\n", gr->id, gr->name);
     
     if (gr)
         return gr->id;

@@ -24,12 +24,7 @@
 
 #include <netinet/in.h>
 
-#include <trurl/narray.h>
-#include <trurl/nassert.h>
-#include <trurl/nmalloc.h>
-#include <trurl/n_snprintf.h>
-#include <trurl/nstream.h>
-#include <trurl/n2h.h>
+#include <trurl/trurl.h>
 
 #include "i18n.h"
 #include "capreq.h"
@@ -40,6 +35,23 @@
 
 static void *(*capreq_alloc_fn)(size_t) = n_malloc;
 static void (*capreq_free_fn)(void*) = n_free;
+
+static const char *get_rpm_capreq(const char *name) 
+{
+    static tn_hash *rpm_capreq_ht = NULL;
+    const char *s;
+    
+    if (rpm_capreq_ht == NULL)
+        rpm_capreq_ht = n_hash_new(21, free);
+
+    if ((s = n_hash_get(rpm_capreq_ht, name)) == NULL) {
+        n_hash_insert(rpm_capreq_ht, name, name);
+        s = n_hash_get(rpm_capreq_ht, name);
+    }
+    
+    return s;   
+}
+
 
 void set_capreq_allocfn(void *(*cr_allocfn)(size_t), void (*cr_freefn)(void*),
                          void **prev_alloc, void **prev_free)

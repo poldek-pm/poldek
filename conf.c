@@ -85,7 +85,7 @@ static struct tag global_tags[] = {
 
     { "follow",            TYPE_BOOL , { 0 } },
     { "greedy",            TYPE_BOOL , { 0 } },
-    { "aggressive_greedy", TYPE_BOOL , { 0 } },
+    { "aggressive greedy", TYPE_BOOL , { 0 } },
     { "use sudo",          TYPE_BOOL , { 0 } },
     { "mercy",          TYPE_BOOL , { 0 } },
     { "default fetcher", TYPE_STR | TYPE_MULTI , { 0 } },
