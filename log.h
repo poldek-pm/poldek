@@ -23,6 +23,8 @@
 #define	LOGNOTICE       (1 << 8)	/* informational */
 #define	LOGDEBUG	(1 << 9)	/* debug-level messages */
 
+#define LOGDIE          (1 << 10)
+
 #define LOGOPT_N        (1 << 11)       /* add "\n" */
 
 extern int verbose;

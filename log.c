@@ -143,6 +143,9 @@ void vlog(int pri, int indent, const char *fmt, va_list args)
             fflush(l_fstream);
         }
     }
+    
+    if (flags & LOGDIE)
+        exit(1);
 }
 
 
