@@ -29,9 +29,32 @@
 struct source *source_new(const char *path, const char *pkg_prefix)
 {
     struct source *src;
+    struct stat st;
+    int len;
 
+    
     src = malloc(sizeof(*src));
-    src->source_path = strdup(path);
+    src->source_path = NULL;
+    
+    
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
+        len = strlen(path);
+        
+        if (path[len - 1] == '/') {
+            src->source_path = malloc(len + 1);
+            memcpy(src->source_path, path, len + 1);
+            
+        } else {
+            src->source_path = malloc(len + 2 /* for '/' */);
+            memcpy(src->source_path, path, len);
+            src->source_path[len] = '/';
+            src->source_path[len + 1] = '\0';
+        }
+    }
+
+    if (src->source_path == NULL) 
+        src->source_path = strdup(path);
+    
     src->pkg_prefix = NULL;
     if (pkg_prefix)
         src->pkg_prefix = strdup(pkg_prefix);
@@ -60,45 +83,18 @@ int source_update(struct source *src)
     return update_pkgdir_idx(src->source_path);
 }
 
-
-static int select_ldmethod(const char *path) 
-{
-    struct stat st;
-    int ldmethod = PKGSET_LD_NIL;
-
-    
-    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
-        if (path[strlen(path) - 1] == '/')
-            ldmethod = PKGSET_LD_IDX;
-        else 
-            ldmethod = PKGSET_LD_DIR;
-        
-    } else {
-        ldmethod = PKGSET_LD_IDX;
-    }
-
-    return ldmethod;
-}
-
-
-
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 {
     int i, j, iserr = 0;
     struct pkgdir *pkgdir = NULL;
 
 
-    for (i=0; i<n_array_size(sources); i++) {
+    for (i=0; i < n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
 
         if (src->ldmethod == PKGSET_LD_NIL) 
-            src->ldmethod = select_ldmethod(src->source_path);
+            src->ldmethod = PKGSET_LD_IDX;
         
-        if (src->ldmethod == PKGSET_LD_NIL) {
-            log(LOGERR, "%s: cannot determine load method\n", src->source_path);
-            continue;
-        }
-    
         switch (src->ldmethod) {
             case PKGSET_LD_IDX:
                 pkgdir = pkgdir_new(src->source_path, src->pkg_prefix);
@@ -122,7 +118,8 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         }
 
         if (pkgdir == NULL) {
-            log(LOGERR, "%s: load failed, skiped\n", src->source_path);
+            if (n_array_size(sources) > 1)
+                log(LOGERR, "%s: load failed, skiped\n", src->source_path);
             continue;
         }
         

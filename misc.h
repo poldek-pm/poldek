@@ -43,6 +43,7 @@ void mem_info(int level, const char *msg);
 
 void process_cmd_output(struct p_open_st *st, const char *prefix);
 int exec_rpm(const char *cmd, char *const argv[]);
-
+int lockfile(const char *lockfile);
+pid_t readlockfile(const char *lockfile);
 
 #endif /* POLDEK_MISC_H */

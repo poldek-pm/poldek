@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -276,6 +277,58 @@ int exec_rpm(const char *cmd, char *const argv[])
     return rc;
 }
 
+
+int lockfile(const char *lockfile) 
+{
+    struct flock fl;
+    int    fd;
+    
+    
+    if ((fd = open(lockfile, O_RDWR | O_CREAT, 0644)) < 0) {
+        log(LOGERR, "open %s: %m\n", lockfile);
+        return -1;
+    }
+
+    fl.l_type = F_WRLCK;
+    fl.l_whence = SEEK_SET;
+    fl.l_start = 0;
+    fl.l_len = 0;
+    
+    if (fcntl(fd, F_SETLK, &fl) == -1) {
+        if (errno == EAGAIN || errno == EACCES)
+            fd = 0;
+        else
+            log(LOGERR, "fcntl %s: %m\n", lockfile);
+        
+    } else {
+        char buf[64];
+        
+        ftruncate(fd, 0);
+        sprintf(buf, "%d", getpid());
+        write(fd, buf, strlen(buf));
+    }
+    
+    return fd;
+}
+
+pid_t readlockfile(const char *lockfile) 
+{
+    char buf[256];
+    int fd, nread;
+    pid_t pid;
+    
+    fd = open(lockfile, O_RDONLY, 0444);
+    if(fd < 0) 
+        return -1;
+    
+    nread = read(fd, buf, sizeof(buf));
+    close(fd);
+
+    if (sscanf(buf, "%d", &pid) == 1)
+        return pid;
+    
+    return -1;
+}
 
 
 

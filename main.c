@@ -155,7 +155,7 @@ tn_hash *htcnf = NULL;          /* config file values */
 static struct argp_option options[] = {
 
 {0,0,0,0, "Source options:", 1 },    
-{"source", 's', "SOURCE", 0, "Get packages info from SOURCE (guess type)", 1 },
+{"source", 's', "SOURCE", 0, "Get packages info from SOURCE", 1 },
     
 {"sidx", OPT_SOURCETXT, "FILE", 0,
  "Get packages info from package index file FILE", 1 },
@@ -773,7 +773,8 @@ void parse_options(int argc, char **argv)
     
 
     vfile_verbose = &verbose;
-    vfile_configure(args.cachedir ? args.cachedir : tmpdir(), vfile_cnflags);
+    n_assert(args.cachedir); 
+    vfile_configure(args.cachedir, vfile_cnflags);
     
     vfile_msg_fn = log_msg;
     vfile_err_fn = log_msg;
@@ -784,8 +785,9 @@ static struct pkgset *load_pkgset(int ldflags)
 {
     struct pkgset *ps;
     
-    ps = pkgset_new(args.psflags);
-
+    if ((ps = pkgset_new(args.psflags)) == NULL)
+        return NULL;
+    
     if (!pkgset_load(ps, ldflags, args.sources)) {
         log(LOGERR, "No packages loaded\n");
         pkgset_free(ps);
@@ -978,6 +980,34 @@ int check_args(void)
 }
 
 
+int mklock(void) 
+{
+    char path[PATH_MAX];
+    int rc;
+    
+    n_assert(args.cachedir);
+
+    snprintf(path, sizeof(path), "%s/poldek..lck", args.cachedir);
+
+    rc = lockfile(path);
+    
+    if (rc == 0) {
+        char buf[64];
+        pid_t pid = readlockfile(path);
+        
+        if (pid > 0) 
+            snprintf(buf, sizeof(buf), " (%d)", pid);
+        else
+            *buf = '\0';
+            
+        log(LOGERR, "There seems another poldek%s use %s\n",
+            buf, args.cachedir);
+    }
+
+    return rc > 0; 
+}
+
+
 int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                 struct inst_s *inst, int mjrmode) 
 {
@@ -1022,6 +1052,9 @@ int main(int argc, char **argv)
     log_sopenlog(stdout, 0, logprefix);
     parse_options(argc, argv);
 
+    if (!mklock())
+        exit(EXIT_FAILURE);
+    
     if (!check_args())
         exit(EXIT_FAILURE);
 
