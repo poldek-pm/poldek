@@ -203,9 +203,9 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 const char *url /* or */, tn_array *urls)
 {
     char *bn = NULL;
-    char *argv[n_array_size(fftch->args) + 1];
+    char **argv;
     struct runst rst;
-    int i, n = 0;
+    int i, n;
 
     if (url)
         n_assert(urls == NULL);
@@ -215,7 +215,17 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
 
     if (url)
         bn = n_basenam(url);
+
+    n = n_array_size(fftch->args) + 1;
     
+    if (urls) 
+        n += n_array_size(urls);
+    else
+        n += 1;
+    
+    argv = alloca(sizeof(*argv) * n);
+
+    n = 0;
     for (i=0; i<n_array_size(fftch->args); i++) {
         struct fetcharg *arg = n_array_nth(fftch->args, i);
         switch (arg->type) {
@@ -264,7 +274,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
         int i;
         
         msg(1, "exec ");
-        for (i=0; i<n-1; i++) 
+        for (i=0; i < n-1; i++) 
             msg(1, "_%s ", argv[i]);
         msg(1, "_\n");
     }
