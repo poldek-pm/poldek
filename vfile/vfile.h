@@ -40,19 +40,28 @@ void vfile_configure(const char *cachedir, int flags);
 
 #define VFM_RO     (1 << 0)      /* RO, this is the default   */
 #define VFM_RW     (1 << 1)      
-#define VFM_NORM   (1 << 2)      /* for remote files, remove tmp at close? */
+#define VFM_NORM   (1 << 2)      /* (NoReMove) for remote files, remove tmp at close? */
 #define VFM_CACHE  (1 << 3)      /* for remote files, use cached file
-                                    if it exists */
+                                   if it exists */
+
+#define VFM_MD     (1 << 4)      /* for remote files, use "*.md" file for checking
+                                    of new file 
+                                  */
+
+#define VFM_MDUP   (1 << 5)      /* for remote files, use "*.md" file for checking
+                                    of new file 
+                                  */
 struct vfile {
-    int vf_type;                /* VFT_* */
-    int vf_mode;                /* VFM_* */ 
+    int    vf_type;                /* VFT_* */
+    int    vf_mode;                /* VFM_* */
     union {
         int    vfile_fd;
         FILE   *vfile_stream;
         gzFile *vfile_gzstream;
         void   *vfile_fdt;        /* RPM's FD_t */
     } vfile_fdescriptor;
-    char *vf_tmpath;
+    char   *vf_tmpath;
+    char   *vf_mdtmpath;
 };
 
 #define	vf_fd        vfile_fdescriptor.vfile_fd
