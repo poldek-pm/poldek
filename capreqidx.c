@@ -33,8 +33,10 @@ static void free_ptrs(void *p)
 }
 
 
-int capreq_idx_init(struct capreq_idx *idx, int nelem)  
+int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)  
 {
+    idx->flags = type;
+    
     idx->ht = n_hash_new(nelem, free_ptrs);
     if (idx->ht == NULL)
        return 0;
@@ -62,16 +64,22 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
     struct capreq_idx_ent *ent;
             
     if ((p = n_hash_get(idx->ht, capname)) == NULL) {
-        ent = n_malloc(sizeof(*ent) + sizeof(void*));
+        register int size = 1;
+        
+        if ((idx->flags & CAPREQ_IDX_CAP) == 0)
+            size = 4;
+        
+        ent = n_malloc(sizeof(*ent) + (size * sizeof(void*)));
+        ent->_size = size;
+
         ent->items = 1;
-        ent->_size = 1;
         ent->pkgs[0] = pkg;
         p = obstack_alloc(&idx->obs, sizeof(ent));
         *p = ent;
         n_hash_insert(idx->ht, capname, p);
         
     } else {
-        int i;
+        register int i;
         ent = *p;
 
 #ifndef HAVE_RPM_4_0            /* rpm 4.x packages has NAME = E:V-R cap */
@@ -86,8 +94,16 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
 #else
         i = i;
         isprov = isprov;        /* avoid gcc's warn */
-#endif        
-        
+#endif
+
+        if (idx->flags & CAPREQ_IDX_CAP) { /* check for duplicates */
+            //printf("%s: %d: %s\n", capname, ent->items, pkg_snprintf_s(pkg));
+            for (i=0; i < ent->items; i++) { 
+                if (pkg == ent->pkgs[i])
+                    return 1;
+            }
+        }
+
         if (ent->items == ent->_size) {
             struct capreq_idx_ent *new_ent;
             int new_size;

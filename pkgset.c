@@ -333,10 +333,10 @@ int pkgset_index(struct pkgset *ps)
     n_array_map(ps->pkgs, (tn_fn_map1)sort_pkg_caps);
 
     /* build indexes */
-    capreq_idx_init(&ps->cap_idx, 10003);
-    capreq_idx_init(&ps->req_idx, 10003);
-    capreq_idx_init(&ps->obs_idx, 103);
-    file_index_init(&ps->file_idx, 100003);
+    capreq_idx_init(&ps->cap_idx, CAPREQ_IDX_CAP,  8 * n_array_size(ps->pkgs) + 103);
+    capreq_idx_init(&ps->req_idx, CAPREQ_IDX_REQ,  18 * n_array_size(ps->pkgs) + 103);
+    capreq_idx_init(&ps->obs_idx, CAPREQ_IDX_REQ,  n_array_size(ps->pkgs)/100 + 103);
+    file_index_init(&ps->file_idx, 30 * n_array_size(ps->pkgs) + 103);
     ps->flags |= _PKGSET_INDEXES_INIT;
 
     for (i=0; i<n_array_size(ps->pkgs); i++) {

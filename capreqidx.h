@@ -8,7 +8,11 @@
 
 #include "pkg.h"
 
+#define CAPREQ_IDX_CAP (1 << 0)
+#define CAPREQ_IDX_REQ (1 << 1)
+
 struct capreq_idx {
+    unsigned flags;       
     tn_hash  *ht;         /* name => *pkgs[] */
     struct   obstack obs;
 };
@@ -19,7 +23,7 @@ struct capreq_idx_ent {
     struct pkg *pkgs[0];       /* pkgs list */
 };
 
-int capreq_idx_init(struct capreq_idx *idx, int nelem);
+int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem);
 void capreq_idx_destroy(struct capreq_idx *idx);
 
 int capreq_idx_add(struct capreq_idx *idx, const char *capname,
