@@ -1416,7 +1416,7 @@ int verify_args(void)
             
         case MODE_INSTALLDIST:
             if (getuid() != 0) {
-                logn(LOGERR, _("root priviliges are required in install-dist mode"));
+                logn(LOGERR, _("root privileges are required in install-dist mode"));
                 exit(EXIT_FAILURE);
             }
                                 /* no break */
