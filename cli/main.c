@@ -241,7 +241,7 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv)
     struct argp argp = { common_options, parse_opt,
                          args_doc, poldek_BANNER, 0, 0, 0};
     struct argp_child *child;
-    int n, i, index;
+    int n, i, index, exit_program = 0, ec = EXIT_SUCCESS;
 
 
     memset(&args, 0, sizeof(args));
@@ -311,11 +311,21 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv)
         if (rt->run) {
             int rc;
             rc = rt->run(rt);
+
+            
+            if (rc & OPGROUP_RC_ERROR)
+                ec = EXIT_FAILURE;
+            
+            if (rc & OPGROUP_RC_IFINI)
+                exit(ec);
             
             if (rc & OPGROUP_RC_FINI)
-                exit(EXIT_SUCCESS);
+                exit_program = 1;
         }
     }
+    
+    if (exit_program)
+        exit(ec);
 }
 
 

@@ -77,23 +77,11 @@ static char *histfile;
 #define CMPLT_CTX_AVPKGS_UPGR  1
 #define CMPLT_CTX_INSTPKGS     2
 
-struct sh_dir {
-    char      name[256];
-    tn_array  *pkgs;
-};
-
 struct sh_ctx {
     struct poclidek_ctx  *cctx;
-    tn_array             *dirs;
-    struct sh_dir        *current_dir;
 };
 
-static struct sh_ctx sh_ctx = { NULL, NULL, NULL };
-
-static int sh_dir_cmp(struct sh_dir *dir1, struct sh_dir *dir2)
-{
-    return strcmp(dir1->name, dir2->name);
-};
+static struct sh_ctx sh_ctx = { NULL };
 
 static
 char *command_generator(const char *text, int state)
@@ -130,7 +118,7 @@ char *pkgname_generator(const char *text, int state)
     char                 *name = NULL;
     tn_array             *pkgs;
 
-    pkgs = sh_ctx.current_dir->pkgs;
+    pkgs = sh_ctx.cctx->current_dir->pkgs;
     
     if (state == 0) {
         len = strlen(text);
@@ -307,24 +295,6 @@ static void init_shell(struct poclidek_ctx *cctx)
     struct sh_dir *dir;
         
     sh_ctx.cctx = cctx;
-    sh_ctx.dirs = n_array_new(16, free, (tn_fn_cmp)sh_dir_cmp);
-
-    for (i=0; i < n_array_size(cctx->ctx->pkgdirs); i++) {
-        struct pkgdir *pkgdir = n_array_nth(cctx->ctx->pkgdirs, i);
-
-        dir = n_malloc(sizeof(*dir));
-        snprintf(dir->name, sizeof(dir->name), "%s", pkgdir->name);
-        dir->pkgs = pkgdir->pkgs;
-
-        n_array_push(sh_ctx.dirs, dir);
-    }
-
-    dir = n_malloc(sizeof(*dir));
-    snprintf(dir->name, sizeof(dir->name), "all-avail");
-    dir->pkgs = poldek_get_avpkgs_bynvr(cctx->ctx);
-    n_array_push(sh_ctx.dirs, dir);
-    n_array_sort(sh_ctx.dirs);
-    sh_ctx.current_dir = dir;
 }
 
 int poclidek_shell(struct poclidek_ctx *cctx)
@@ -364,7 +334,8 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         char prompt[255];
         
         sigint_reset();
-        snprintf(prompt, sizeof(prompt), "poldek:/%s> ", sh_ctx.current_dir->name);
+        snprintf(prompt, sizeof(prompt), "poldek:/%s> ",
+                 sh_ctx.cctx->current_dir->name);
         if ((line = readline(prompt)) == NULL)
             break;
 
@@ -372,19 +343,6 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         s = strip(line);
         if (*s) {
             add_history(s);
-            
-            if (strncmp(s, "cd ", 3) == 0) {
-                struct sh_dir *dir, tmpdir;
-                s += 3;
-
-                snprintf(tmpdir.name, sizeof(tmpdir.name), "%s", s);
-                if ((dir = n_array_bsearch(sh_ctx.dirs, &tmpdir)))
-                    sh_ctx.current_dir = dir;
-                else
-                    logn(LOGERR, "%s: no such directroy", s);
-                continue;
-            }
-            
             //print_mem_info("BEFORE");
             poclidek_exec_line(cctx, NULL, s);
             //print_mem_info("AFTER ");

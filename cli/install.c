@@ -45,8 +45,8 @@ static int install(struct cmdarg *cmdarg);
 #define OPT_INST_JUSTDB           (OPT_GID + 17)
 #define OPT_INST_TEST             't'
 #define OPT_INST_RPMDEF           (OPT_GID + 19)
-#define OPT_INST_MKSCRIPT         (OPT_GID + 20)
-#define OPT_INST_POLDEK_MKSCRIPT  (OPT_GID + 21)
+#define OPT_INST_DUMP             (OPT_GID + 20)
+#define OPT_INST_DUMPN            (OPT_GID + 21)
 #define OPT_INST_NOFOLLOW         'N'
 #define OPT_INST_FRESHEN          'F'
 #define OPT_INST_HOLD             (OPT_GID + 24)
@@ -76,6 +76,13 @@ static struct argp_option options[] = {
 
 {"nodeps", OPT_INST_NODEPS, 0, 0,
  N_("Install packages with broken dependencies"), OPT_GID },
+
+{"dump", OPT_INST_DUMP, "FILE", OPTION_ARG_OPTIONAL,
+N_("Just dump install marked package filenames to FILE (default stdout)"), OPT_GID },
+
+{"dumpn", OPT_INST_DUMPN, "FILE", OPTION_ARG_OPTIONAL,
+N_("Just dump install marked package names to FILE (default stdout)"), OPT_GID },
+    
 
 {0,  'v', 0, 0, N_("Be verbose."), OPT_GID },
 {NULL, 'h', 0, OPTION_HIDDEN, "", OPT_GID }, /* alias for -? */
@@ -257,6 +264,19 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_DOWNGRADE:
             poldek_ts_setf(ts, POLDEK_TS_DOWNGRADE);
             break;
+
+        case OPT_INST_DUMP:
+            if (arg)
+                poldek_ts_configure(ts, POLDEK_CONF_DUMPFILE, arg);
+            poldek_ts_setf(ts, POLDEK_TS_JUSTPRINT);
+            break;
+
+        case OPT_INST_DUMPN:
+            if (arg)
+                poldek_ts_configure(ts, POLDEK_CONF_DUMPFILE, arg);
+            poldek_ts_setf(ts, POLDEK_TS_JUSTPRINT_N);
+            break;
+
 
         case OPT_INST_FETCH:
             if (arg) {

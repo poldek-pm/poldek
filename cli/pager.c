@@ -113,12 +113,12 @@ FILE *pager_cmd(struct pager *pg, const char *cmd)
 
     if ((pid = fork()) == 0) {
         close(pp[1]);
-	dup2(pp[0], 0);
-	close(pp[0]);
+        dup2(pp[0], 0);
+        close(pp[0]);
 
         execl(cmd, n_basenam(cmd), NULL);
         logn(LOGERR, "execl %s: %m", cmd);
-	exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
         
     } else if (pid < 0) {
         logn(LOGERR, "fork %s: %m", cmd);

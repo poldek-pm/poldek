@@ -29,17 +29,16 @@ runcmd ./getlib.sh tndb    $getlib_mode
 make -f Makefile.extra POTFILES_in
 
 runcmd libtoolize --force --automake
-runcmd aclocal
+runcmd aclocal -I m4
 runcmd autoheader
 runcmd autoconf
-if [ ! -f ABOUT-NLS ]; then
-    if which -- autopoint >/dev/null 2>&1 ; then
-        runcmd autopoint --force
-    else
-        runcmd gettextize -f
-    fi
+
+if which -- autopoint >/dev/null 2>&1 ; then
+    runcmd autopoint --force
+else
+    runcmd gettextize -f
 fi
-runcmd automake --add-missing 
+runcmd automake --add-missing -a -c -f --foreign
 
 # w/o
 if [ ! -f depcomp ]; then 

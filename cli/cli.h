@@ -19,6 +19,11 @@
 
 extern int shOnTTY;
 
+struct poclidek_dir {
+    char      name[256];
+    tn_array  *pkgs;
+};
+
 struct poclidek_ctx {
     int                 pkg_ctx;
     struct poldek_ctx   *ctx;
@@ -30,6 +35,9 @@ struct poclidek_ctx {
     struct pkgdir  *dbpkgdir;   /* db packages        */
 
     unsigned            flags;
+
+    tn_array             *dirs;
+    struct poclidek_dir  *current_dir;
 };
 
 #define poclidek_set_pkgctx(cctx, pkgctx) (cctx->pkg_ctx = pkgctx)

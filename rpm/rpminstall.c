@@ -129,7 +129,7 @@ int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
         p_open_flags |= P_OPEN_OUTPTYS;
     
     if (p_open(&pst, p_open_flags, cmd, argv) == NULL) {
-	if (pst.errmsg) {
+        if (pst.errmsg) {
             logn(LOGERR, "%s", pst.errmsg);
             p_st_destroy(&pst);
         }

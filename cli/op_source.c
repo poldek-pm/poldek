@@ -309,7 +309,9 @@ static void print_source_type_list(void)
 static int oprun(struct poclidek_opgroup_rt *rt)
 {
     struct arg_s *arg_s;
+    int rc = 0;
 
+    
     arg_s = rt->_opdata;
     n_assert(arg_s);
 
@@ -330,12 +332,16 @@ static int oprun(struct poclidek_opgroup_rt *rt)
         sources_update(rt->ctx->sources, flags);
     }
 
-    if (arg_s->cnflags & POLDEKCLI_SRC_SRCTYPE_LS)
+    if (arg_s->cnflags & POLDEKCLI_SRC_SRCTYPE_LS) {
+        rc |= OPGROUP_RC_FINI;
         print_source_type_list();
+    }
 
-    if (arg_s->cnflags & POLDEKCLI_SRC_SRCLS)
+    if (arg_s->cnflags & POLDEKCLI_SRC_SRCLS) {
+        rc |= OPGROUP_RC_FINI;
         print_source_list(rt->ctx->sources);
+    }
     
-    return 0;
+    return rc;
 }
 
