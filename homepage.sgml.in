@@ -202,11 +202,15 @@ For example:
 	      name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.static.i386.rpm">  
 	</itemize>
 	
-	<item> RedHat Linux 7.2 package (linked with rpm 4.0.4)
+	<item> RedHat Linux packages (rpm 4.0.4)
 	<itemize>
-	<item>
-	<url url="download/rh7.2/poldek-@VERSION@-1.i386.rpm" 
-	     name="http://team.pld.org.pl/~mis/poldek/download/rh7.2/poldek-@VERSION@-1.i386.rpm">  
+	<item> 7.2 
+	<url url="download/rh/7.2/poldek-@VERSION@-1.i386.rpm" 
+	     name="http://team.pld.org.pl/~mis/poldek/download/rh/7.2/poldek-@VERSION@-1.i386.rpm">  
+	
+	<item> 7.3
+	<url url="download/rh/7.3/poldek-@VERSION@-1.i386.rpm" 
+	     name="http://team.pld.org.pl/~mis/poldek/download/rh/7.3/poldek-@VERSION@-1.i386.rpm">  
 	
 	</itemize>
         </itemize>	

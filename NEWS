@@ -1,4 +1,4 @@
-0.17.7 (bugfix release; 2002/06/1?)
+0.17.7 (bugfix release; 2002/06/14)
 
 * improved package conflicts resolving
 
@@ -11,6 +11,8 @@
 * another "desynchronized index" bug is fixed
 
 * fixed Epoch matching 
+
+* vhttp: program doesn't die on doubled HTTP headers 
 
 
 0.17.6 (minor bugfix release; 2002/06/03)

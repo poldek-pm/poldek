@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
-"POT-Creation-Date: 2002-06-12 10:57+0200\n"
+"POT-Creation-Date: 2002-06-14 17:37+0200\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: mis@pld.org.pl\n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -30,7 +30,7 @@ msgstr "Który z nich wybierasz? [%c]"
 msgid "%s: invalid rpmlib capreq"
 msgstr "%s: nieprawid³owa rpmlib()owa zale¿no¶æ"
 
-#: capreqidx.c:81
+#: capreqidx.c:89
 #, c-format
 msgid "%s: redundant capability \"%s\""
 msgstr "%s: nadmiarowa w³asno¶æ \"%s\""
@@ -958,99 +958,99 @@ msgstr "%s: wielokrotnie zainstalowany, poddajê siê"
 msgid "%s: refusing to upgrade held package"
 msgstr "%s: odmawiam aktualizacji wstrzymanego (hold) pakietu"
 
-#: pkgset-install.c:463
+#: pkgset-install.c:446
 msgid "cap"
 msgstr "w³."
 
-#: pkgset-install.c:468
+#: pkgset-install.c:451
 msgid "orphaned "
 msgstr "'osierocony' "
 
-#: pkgset-install.c:471
+#: pkgset-install.c:454
 msgid "cnfl"
 msgstr "konfl."
 
-#: pkgset-install.c:473
+#: pkgset-install.c:456
 #, c-format
 msgid "%s%s marks %s (%s %s)"
 msgstr "%s%s zaznaczy³ %s (%s %s)"
 
-#: pkgset-install.c:517
+#: pkgset-install.c:500
 #, c-format
 msgid "%s: skip follow %s cause it's dependency errors"
 msgstr "%s: pominiêty %s z powodu niespe³nionych zale¿no¶ci"
 
-#: pkgset-install.c:526
+#: pkgset-install.c:509
 #, c-format
 msgid "%s: dependency loop - package already marked for removal"
 msgstr "%s: zapêtlenie zale¿no¶ci -- pakiet jest ju¿ zaznaczony do usuniêcia"
 
-#: pkgset-install.c:547
+#: pkgset-install.c:530
 #, c-format
 msgid "greedy upgrade %s to %s-%s (unresolved %s)"
 msgstr "zach³anna aktualizacja %s do %s-%s (niespe³nione %s)"
 
-#: pkgset-install.c:665
+#: pkgset-install.c:648
 #, c-format
 msgid "%s is required by"
 msgstr "%s jest wymagany przez"
 
-#: pkgset-install.c:708
+#: pkgset-install.c:691
 #, c-format
 msgid "%s (cap %s) is required by %s"
 msgstr "%s (w³. %s) jest wymagany przez %s"
 
-#: pkgset-install.c:746
+#: pkgset-install.c:729
 #, c-format
 msgid "%s obsoleted by %s"
 msgstr "%s zostanie zast±piony przez %s"
 
-#: pkgset-install.c:978
+#: pkgset-install.c:961
 #, c-format
 msgid "%s (cap %s) is required by %s%s"
 msgstr "%s (w³. %s) jest wymagany przez %s%s"
 
-#: pkgset-install.c:993 pkgset-req.c:157
+#: pkgset-install.c:976 pkgset-req.c:157
 #, c-format
 msgid "%s: req %s not found"
 msgstr "%s: nie znaleziono wymaganego %s"
 
-#: pkgset-install.c:1020
+#: pkgset-install.c:1003
 #, c-format
 msgid "%s is required by %s"
 msgstr "%s jest wymagany przez %s"
 
-#: pkgset-install.c:1170
+#: pkgset-install.c:1195
 #, c-format
 msgid "%s: /%s/%s%s: conflicts with %s's one"
 msgstr "%s: /%s/%s%s: jest w konflicie z tym samym plikem z %s"
 
-#: pkgset-install.c:1289
+#: pkgset-install.c:1314
 #, c-format
 msgid "%s (cnfl %s) conflicts with installed %s"
 msgstr "%s (cnfl %s) jest w konflicie z zainstalowanm %s"
 
-#: pkgset-install.c:1320
+#: pkgset-install.c:1345
 #, c-format
 msgid "%s (cap %s) conflicts with installed %s (%s)"
 msgstr "%s (w³. %s) jest w konflicie z zainstalowanm %s (%s)"
 
-#: pkgset-install.c:1347
+#: pkgset-install.c:1372
 #, c-format
 msgid "%s conflicts with %s"
 msgstr "%s jest w konflicie z %s"
 
-#: pkgset-install.c:1502
+#: pkgset-install.c:1527
 #, c-format
 msgid "%s: package is for a different architecture (%s)"
 msgstr "%s: pakiet zbudowano dla innej architektury (%s)"
 
-#: pkgset-install.c:1508
+#: pkgset-install.c:1533
 #, c-format
 msgid "%s: package is for a different operating system (%s)"
 msgstr "%s: pakiet zbudowano dla innego systemu operacyjnego (%s)"
 
-#: pkgset-install.c:1561 pkgset-install.c:1568 uninstall.c:139 uninstall.c:146
+#: pkgset-install.c:1593 pkgset-install.c:1600 uninstall.c:139 uninstall.c:146
 #, c-format
 msgid "_ (%d marked by dependencies)"
 msgid_plural "_ (%d marked by dependencies)"
@@ -1058,7 +1058,7 @@ msgstr[0] "_ (%d zaznaczony po¶rednio)"
 msgstr[1] "_ (%d zaznaczone po¶rednio)"
 msgstr[2] "_ (%d zaznaczonych po¶rednio)"
 
-#: pkgset-install.c:1564
+#: pkgset-install.c:1596
 #, c-format
 msgid "There are %d package to install"
 msgid_plural "There are %d packages to install"
@@ -1066,21 +1066,21 @@ msgstr[0] "Zaznaczono %d pakiet do instalacji"
 msgstr[1] "Zaznaczono %d pakiety do instalacji"
 msgstr[2] "Zaznaczono %d pakietów do instalacji"
 
-#: pkgset-install.c:1573
+#: pkgset-install.c:1605
 #, c-format
 msgid "_, %d to uninstall"
 msgstr "_, %d do usuniêcia"
 
-#: pkgset-install.c:1624
+#: pkgset-install.c:1646
 #, c-format
 msgid "%s: refusing to uninstall held package"
 msgstr "%s: odmawiam usuniêcia wstrzymanego (hold) pakietu"
 
-#: pkgset-install.c:1677
+#: pkgset-install.c:1699
 msgid "Processing dependencies..."
 msgstr "Przetwarzanie zale¿no¶ci..."
 
-#: pkgset-install.c:1710
+#: pkgset-install.c:1732
 #, c-format
 msgid "%d unresolved dependency"
 msgid_plural "%d unresolved dependencies"
@@ -1088,33 +1088,33 @@ msgstr[0] "%d niespe³niona zale¿no¶æ"
 msgstr[1] "%d niespe³nione zale¿no¶ci"
 msgstr[2] "%d niespe³nionych zale¿no¶ci"
 
-#: pkgset-install.c:1764
+#: pkgset-install.c:1786
 msgid "Proceed? [Y/n]"
 msgstr "Kontynuowaæ? [Y/n]"
 
-#: pkgset-install.c:1838
+#: pkgset-install.c:1860
 msgid "db package header corrupted (!?)"
 msgstr "uszkodzony nag³ówek pakietu z bazy (!?)"
 
-#: pkgset-install.c:1867
+#: pkgset-install.c:1889
 #, c-format
 msgid "%s: multiple instances installed, skipped"
 msgstr "%s: wielokrotnie zainstalowany, zosta³ pominiêty"
 
-#: pkgset-install.c:1877
+#: pkgset-install.c:1899
 #, c-format
 msgid "%s: skip held package"
 msgstr "%s: pomijam wstrzymany (hold) pakiet"
 
-#: pkgset-install.c:1904
+#: pkgset-install.c:1926
 msgid "Looking up packages for upgrade..."
 msgstr "Szukam pakietów do aktualizacji..."
 
-#: pkgset-install.c:1909
+#: pkgset-install.c:1931
 msgid "There are database errors (?), give up"
 msgstr "Wyst±pi³y b³êdy rpmowej bazy (?), wymiêkam"
 
-#: pkgset-install.c:1917
+#: pkgset-install.c:1939
 msgid "Nothing to do"
 msgstr "Nie ma roboty"
 
@@ -1256,7 +1256,7 @@ msgid "Executing %s "
 msgstr "Uruchamianie %s "
 
 #: rpminstall.c:182 rpminstall.c:191 shell/pager.c:96 vfile/p_open.c:129
-#: vfile/p_open.c:286 vfile/vhttp/http.c:688
+#: vfile/p_open.c:286 vfile/vhttp/http.c:689
 #, c-format
 msgid "%s: no such file"
 msgstr "%s: nie ma takiego pliku"
@@ -1712,18 +1712,18 @@ msgstr "%s:%d: b³±d sk³adniowy w okolicach %s"
 msgid "%s: give up at %d"
 msgstr "%s: wymiêk³em przy linii %d"
 
-#: split.c:339
+#: split.c:342
 msgid "split failed: packages size is greater than chunk size"
 msgstr ""
 "podzia³ siê nie powiód³ -- rozmiar pakietów jest wiêkszy ni¿ zadany rozmiar "
 "czê¶ci"
 
-#: split.c:371
+#: split.c:374
 #, c-format
 msgid "Writing %s (%4d packages, % 10d bytes, pri min, max = %d, %d)"
 msgstr "Zapisywanie %s (%4d pakiety, % 10d bajtów, pri min, max = %d, %d)"
 
-#: split.c:451
+#: split.c:454
 msgid "package index version >= 1.0 is required for spliting"
 msgstr "opcja --split wymaga wersji co najmniej wersji 1.0 indeksu"
 
@@ -1822,7 +1822,7 @@ msgid "response parse error: %s"
 msgstr "b³±d interpretacji odpowiedzi: %s"
 
 #: vfile/vftp/ftp.c:251 vfile/vftp/ftp.c:262 vfile/vhttp/http.c:425
-#: vfile/vhttp/http.c:660
+#: vfile/vhttp/http.c:661
 #, c-format
 msgid "%s: response parse error"
 msgstr "%s: b³±d interpretacji odpowiedzi"
@@ -1839,12 +1839,12 @@ msgstr "po³±czenie zosta³o przerwane"
 msgid "unexpected EOF"
 msgstr "niespodziewany EOF"
 
-#: vfile/vftp/ftp.c:523 vfile/vhttp/http.c:793
+#: vfile/vftp/ftp.c:523 vfile/vhttp/http.c:794
 #, c-format
 msgid "unable to connect to %s:%s: %s"
 msgstr "niemo¿no¶æ po³±czenia z %s:%s: %s"
 
-#: vfile/vftp/ftp.c:552 vfile/vhttp/http.c:822
+#: vfile/vftp/ftp.c:552 vfile/vhttp/http.c:823
 #, c-format
 msgid "unable to connect to %s:%s: %m"
 msgstr "niemo¿no¶æ po³±czenia z %s:%s: %m"
@@ -1878,32 +1878,32 @@ msgstr "%s: nie ma takiego pliku (odpowied¼ serwera: %s)"
 msgid "%s: URL parse error"
 msgstr "%s: b³±d interpretacji URLa"
 
-#: vfile/vhttp/http.c:692
+#: vfile/vhttp/http.c:693
 #, c-format
 msgid "%s: permission denied"
 msgstr "%s: brak dostêpu"
 
-#: vfile/vhttp/http.c:696
+#: vfile/vhttp/http.c:697
 #, c-format
 msgid "%s: invalid range requested"
 msgstr "%s: podano nieprawid³owy zakres"
 
-#: vfile/vhttp/http.c:1129
+#: vfile/vhttp/http.c:1130
 #, c-format
 msgid "%s: Content-Length parse error (%s)"
 msgstr "%s: b³±d interpretacji nag³ówka 'Content-Length' (%s)"
 
-#: vfile/vhttp/http.c:1139
+#: vfile/vhttp/http.c:1140
 #, c-format
 msgid "%s: Content-Range parse error (%s)"
 msgstr "%s: b³±d interpretacji nag³ówka Content-Range (%s)"
 
-#: vfile/vhttp/http.c:1150
+#: vfile/vhttp/http.c:1151
 #, c-format
 msgid "%s: already downloaded\n"
 msgstr "%s: aktualnie pobrany\n"
 
-#: vfile/vhttp/http.c:1156
+#: vfile/vhttp/http.c:1157
 #, c-format
 msgid "%s: invalid Content-Range reached"
 msgstr "%s: nieprawid³owy Content-Range"
