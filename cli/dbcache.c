@@ -190,7 +190,7 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     if (path == NULL)
         return 0;
     
-    if (mtime_rpmdb == pkgdir->ts && 0) { /* not touched, check if cache exists  */
+    if (mtime_rpmdb == pkgdir->ts) { /* not touched, check if cache exists  */
         mtime_dbcache = mtime(path);
         if (mtime_dbcache && mtime_dbcache >= pkgdir->ts)
             return 0;

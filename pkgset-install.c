@@ -89,6 +89,8 @@ struct upgrade_s {
     void           *pkgflmod_mark;
 };
 
+int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf);
+
 static
 int process_pkg_conflicts(int indent, struct pkg *pkg,
                           struct pkgset *ps, struct upgrade_s *upg);
@@ -2223,7 +2225,6 @@ int unmark_name_dups(tn_array *pkgs)
     
     return n;
 }
-
 
 int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
 {

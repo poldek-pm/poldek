@@ -69,14 +69,12 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
         packages_score(ps->pkgs, ctx->ts->ign_patterns, PKG_IGNORED);
 
     ctx->pkgdirs = n_ref(ps->pkgdirs);
-    //exit(0);    
     pkgset_setup(ps, ctx->ps_setup_flags);
     
     if (ctx->ts->prifile) 
         packages_set_priorities(ps->pkgs, ctx->ts->prifile);
 
     ctx->ps = ps;
-    //ctx->pkgs = n_ref(ps->pkgs);
     return 1;
 }
 

@@ -554,7 +554,7 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     }
         
     if (poldek_conf_get_bool(htcnf, "mercy", 0))
-        ctx->ps_flags |= PSVERIFY_MERCY;
+        ctx->ts->flags |= POLDEK_TS_VRFYMERCY;
 
     if ((ctx->ps_setup_flags & PSET_DO_UNIQ_PKGNAME) == 0)
         if (poldek_conf_get_bool(htcnf, "unique_package_names", 0))
@@ -585,19 +585,17 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     if ((v = poldek_conf_get(htcnf, "cachedir", NULL)))
         ctx->ts->cachedir = v;
     
-    if (poldek_conf_get_bool(htcnf, "vfile_ftp_sysuser_as_anon_passwd", 0) ||
-        poldek_conf_get_bool(htcnf, "ftp_sysuser_as_anon_passwd", 0))
+    if (poldek_conf_get_bool(htcnf, "vfile_ftp_sysuser_as_anon_passwd", 0))
         vfile_configure(VFILE_CONF_SYSUSER_AS_ANONPASSWD, 1);
-
 
     if ((v = poldek_conf_get(htcnf, "default_index_type", NULL)))
         pkgdir_DEFAULT_TYPE = n_strdup(v);
     
     if (poldek_conf_get_bool(htcnf, "vfile_external_compress", 0))
         vfile_configure(VFILE_CONF_EXTCOMPR, 1);
-    else
+    else if (poldek_conf_get_bool(htcnf, "auto_zlib_in_rpm", 1))
         zlib_in_rpm(ctx);
-    vfile_configure(VFILE_CONF_EXTCOMPR, 1);
+
     return 1;
 }
 
