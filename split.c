@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2001 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -32,14 +36,55 @@
 struct chunk {
     int       no;
     unsigned  size;
+    unsigned  maxsize;
     int       items;
-    FILE      *stream;
+    tn_array  *pkgs;
 };
 
 struct pridef {
     int         pri;
     char        mask[0];
 };
+
+static struct chunk *chunk_new(int no, int maxsize)
+{
+    struct chunk *chunk;
+
+    chunk = n_malloc(sizeof(*chunk));
+    chunk->no = no;
+    chunk->size = chunk->items = 0;
+    chunk->maxsize = maxsize;
+    chunk->pkgs = n_array_new(512, (tn_fn_free)pkg_free, NULL);
+    return chunk;
+}
+
+static void chunk_free(struct chunk *chunk)
+{
+    n_array_free(chunk->pkgs);
+    chunk->pkgs = NULL;
+    free(chunk);
+}
+
+
+static void chunk_dump(struct chunk *chunk, FILE *stream) 
+{
+    int i;
+
+    if (verbose > 1) {
+        n_array_sort_ex(chunk->pkgs, (tn_fn_cmp)pkg_cmp_pri);
+        for (i=0; i < n_array_size(chunk->pkgs); i++) {
+            struct pkg *pkg = n_array_nth(chunk->pkgs, i);
+            msgn(2, "[#%d] [%d] %s", chunk->no, pkg->pri, pkg_snprintf_s(pkg));
+        }
+    }
+
+    n_array_sort_ex(chunk->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    for (i=0; i < n_array_size(chunk->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(chunk->pkgs, i);
+        fprintf(stream, "%s\n", pkg_filename_s(pkg));
+    }
+}
+
 
 static 
 int read_pridef(char *buf, int buflen, struct pridef **pridef,
@@ -134,29 +179,38 @@ tn_array *read_split_conf(const char *fpath)
 }
 
 static
-void set_pri(struct pkg *pkg, int pri, int deep, int verb) 
+void set_pri(int deep, struct pkg *pkg, int pri) 
 {
     int i;
+
     
+#if 0    
     if (pkg->pri != 0 &&
         !(pkg->pri > 0 && pri < 0) &&
         !(pkg->pri > 0 && pri > pkg->pri))
         return;
-        
+#endif        
 
     pkg->pri = pri;
     
-    if (verb)
-        msg_i(2, deep, "pri %d %s\n", pri, pkg_snprintf_s(pkg));
+    msg_i(3, deep, "pri %d %s\n", pri, pkg_snprintf_s(pkg));
     deep += 2;
     
     if (pri > 0 && pkg->revreqpkgs) {
         for (i=0; i<n_array_size(pkg->revreqpkgs); i++) {
             struct pkg *revpkg = n_array_nth(pkg->revreqpkgs, i);
-            set_pri(revpkg, pri, deep, verb);
+            set_pri(deep, revpkg, pri);
+        }
+        
+    } else if (pri < 0 && pkg->reqpkgs) {
+        for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
+            struct reqpkg *reqpkg = n_array_nth(pkg->reqpkgs, i);
+            if (reqpkg->pkg->pri > pri)
+                set_pri(deep, reqpkg->pkg, pri);
         }
     }
 }
+
 
 static void mapfn_clean_pkg_color(struct pkg *pkg) 
 {
@@ -165,116 +219,158 @@ static void mapfn_clean_pkg_color(struct pkg *pkg)
 
 
 static
-void set_chunk(struct pkg *pkg, int chunk_no, int deep, int verb) 
+int try_package(int deep, unsigned *chunk_size, unsigned maxsize,
+                struct pkg *pkg, tn_array *stack) 
 {
-    int i;
-    
-    if (pkg_is_color(pkg, PKG_COLOR_WHITE)) {
-        if (verb && pkg->pri != chunk_no)
-            msgn_i(1, deep, _("move %s to chunk #%d"), pkg_snprintf_s(pkg), chunk_no);
-        deep += 2;
+    int i, rc = 1;
 
-        pkg->pri = chunk_no;
-        pkg_set_color(pkg, PKG_COLOR_BLACK); /* visited */
-        
-        if (pkg->reqpkgs) {
-            for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
-                struct reqpkg *reqpkg = n_array_nth(pkg->reqpkgs, i);
-                if (reqpkg->pkg->pri > chunk_no) /* earlier chunk */
-                    set_chunk(reqpkg->pkg, chunk_no, deep, verb);
-            }
+    if (!pkg_is_color(pkg, PKG_COLOR_WHITE))
+        return 1;
+    
+    n_assert(stack != NULL);
+
+    pkg_set_color(pkg, PKG_COLOR_BLACK); /* visited */
+
+    n_array_push(stack, pkg_link(pkg));
+    *chunk_size += pkg->fsize;
+    
+    DBGF("trying %s: %d (%d) > %d\n", pkg_snprintf_s(pkg), *chunk_size,
+         pkg->fsize, maxsize);
+    
+    if (*chunk_size > maxsize)
+        return 0;
+    
+    if (pkg->reqpkgs == NULL)
+        return 1;
+    
+    for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
+        struct reqpkg *reqpkg = n_array_nth(pkg->reqpkgs, i);
+        if (!try_package(deep + 2, chunk_size, maxsize, reqpkg->pkg, stack)) {
+            rc = 0;
+            break;
         }
     }
+    
+    return rc;
 }
 
 
-static void mapfn_chunk_size(struct pkg *pkg, void *arg) 
+static
+int chunk_add(struct chunk *chunk, struct pkg *pkg) 
 {
-    struct chunk *chunk = arg;
-    if (pkg->pri == chunk->no) {
-        chunk->size += pkg->fsize;
-        chunk->items++;
+    int i, rc = 0;
+    int chunk_size = 0;
+    tn_array *stack = NULL;
+
+    
+    if (!pkg_is_color(pkg, PKG_COLOR_WHITE))
+        return 1;
+
+    DBGF("to #%d %s\n", chunk->no, pkg_snprintf_s(pkg));
+    
+    
+    stack = n_array_new(16, (tn_fn_free)pkg_free, NULL);
+    
+    if (chunk->size + pkg->fsize > chunk->maxsize)
+        return 0;
+
+    chunk_size = chunk->size;
+    
+    if (try_package(0, &chunk_size, chunk->maxsize, pkg, stack)) {
+        chunk->items += n_array_size(stack);
+        chunk->size = chunk_size;
+
+        while (n_array_size(stack) > 0)
+            n_array_push(chunk->pkgs, n_array_pop(stack));
+        
+        rc = 1;
+        
+    } else {
+        for (i=0; i<n_array_size(stack); i++) {
+            struct pkg *pkg = n_array_nth(stack, i);
+            pkg_set_color(pkg, PKG_COLOR_WHITE);
+            msgn(3, "%s: rollback", pkg_snprintf_s(pkg));
+        }
+        rc = 0;
     }
-    	
-}
 
-static void mapfn_chunk_dump(struct pkg *pkg, void *arg) 
-{
-    struct chunk *chunk = arg;
-    if (pkg->pri == chunk->no)
-        fprintf(chunk->stream, "%s\n", pkg_filename_s(pkg));
+    n_array_free(stack);
+    return rc;
 }
 
 
+static
 int make_chunks(tn_array *pkgs, unsigned split_size, unsigned first_free_space,
                 const char *outprefix)
 {
-    int i;
-    int chunk_no = 0, chunk_size = 0;
-    unsigned size;
-    
-    size = split_size - first_free_space;
-    
-    for (i=0; i<n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
+    int             i, chunk_no = 0, rc = 1;
+    tn_array        *chunks;
+    struct chunk    *chunk;
 
-        if (chunk_size + pkg->fsize > size) {
-            chunk_no++;
-            chunk_size = 0;
-            size = split_size;
-        }
-        
-        chunk_size += pkg->fsize;
-        pkg->pri = chunk_no;    /* pkg->pri used as chunk_no */
-    }
-    chunk_no++;
-    
+    chunks = n_array_new(16, (tn_fn_free)chunk_free, NULL);
+    chunk = chunk_new(0, split_size - first_free_space);
+    n_array_push(chunks, chunk);
+
     n_array_map(pkgs, (tn_fn_map1)mapfn_clean_pkg_color);
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
-        set_chunk(pkg, pkg->pri, 0, 1);
-    }
 
-    n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
-    for (i=0; i < chunk_no; i++) {
-        struct chunk chunk;
-
-        chunk.no = i;
-        chunk.size = chunk.items = 0;
-        n_array_map_arg(pkgs, (tn_fn_map2)mapfn_chunk_size, &chunk);
-        if (chunk.size > split_size) {
-            logn(LOGERR, _("split failed, try to rearrange package priorities"));
-            return 0;
+        if (!pkg_is_color(pkg, PKG_COLOR_WHITE))
+            continue;
+        
+        if (!chunk_add(chunk, pkg)) {
+            if (n_array_size(chunk->pkgs) == 0) {
+                logn(LOGERR, _("split failed: packages size is "
+                               "greater than chunk size"));
+                rc = 0;
+                goto l_end;
+            }
+            
+            chunk_no++;
+            chunk = chunk_new(chunk_no, split_size);
+            n_array_push(chunks, chunk);
+            i = 0;
         }
     }
-
-    for (i=0; i < chunk_no; i++) {
-        struct chunk   chunk;
+    
+    for (i=0; i < n_array_size(chunks); i++) {
         struct vfile   *vf;
         char           path[PATH_MAX];
+        struct chunk   *chunk;
+        struct pkg     *pkg;
+        int            pri_max, pri_min;
         
-        chunk.no = i;
-        chunk.size = chunk.items = 0;
-        n_array_map_arg(pkgs, (tn_fn_map2)mapfn_chunk_size, &chunk);
+        
+        chunk = n_array_nth(chunks, i);
+        n_array_sort_ex(chunk->pkgs, (tn_fn_cmp)pkg_cmp_pri);
 
+        pkg = n_array_nth(chunk->pkgs, 0);
+        pri_min = pkg->pri;
+
+        pkg = n_array_nth(chunk->pkgs, n_array_size(chunk->pkgs) - 1);
+        pri_max = pkg->pri;
         
-        snprintf(path, sizeof(path), "%s.%d", outprefix, i);
-        msgn(0, _("Writing %s (%4d packages, % 10d bytes)"), path, chunk.items,
-            chunk.size);
+        snprintf(path, sizeof(path), "%s.%d", outprefix, chunk->no);
+        
+        msgn(0, _("Writing %s (%4d packages, % 10d bytes, "
+                  "pri min, max = %d, %d)"),
+             path, chunk->items, chunk->size, pri_min, pri_max);
+        
         
         if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
             return 0;
 
 #if 0        
         fprintf(vf->vf_stream, "# chunk #%d: %d packages, %d bytes\n",
-                i, chunk.items, chunk.size);
+                i, chunk->items, chunk->size);
 #endif
-        chunk.stream = vf->vf_stream;
-        n_array_map_arg(pkgs, (tn_fn_map2)mapfn_chunk_dump, &chunk);
+        chunk_dump(chunk, vf->vf_stream);
         vfile_close(vf);
     }
-    	
-    return 1;
+
+ l_end:
+    
+    return rc;
 }
 
 
@@ -304,7 +400,7 @@ int packages_set_priorities(tn_array *pkgs, const char *splitconf_path)
         }
         
         if (pri != 0)
-            set_pri(pkg, pri, 1, verbose > 4);
+            set_pri(0, pkg, pri);
     }
     
     n_array_free(defs);
@@ -342,7 +438,7 @@ int packages_split(tn_array *pkgs, unsigned split_size, unsigned first_free_spac
         }
 
         if (defs) 
-            for (j=0; j<n_array_size(defs); j++) {
+            for (j=0; j < n_array_size(defs); j++) {
                 struct pridef *pd = n_array_nth(defs, j);
                 
                 if (fnmatch(pd->mask, pkg->name, 0) == 0) {
@@ -355,7 +451,7 @@ int packages_split(tn_array *pkgs, unsigned split_size, unsigned first_free_spac
             }
 
         if (pri != 0)
-            set_pri(pkg, pri, 1, verbose);
+            set_pri(0, pkg, pri);
         n_array_push(packages, pkg_link(pkg));
     }
     
@@ -374,6 +470,12 @@ int packages_split(tn_array *pkgs, unsigned split_size, unsigned first_free_spac
 
     ordered_pkgs = NULL;
     packages_order(packages, &ordered_pkgs);
+
+    msg(2, "\nPackages ordered:\n");
+    for (i=0; i<n_array_size(ordered_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ordered_pkgs, i);
+        msg(2, "%d. [%d] %s\n", i, pkg->pri,  pkg_snprintf_s(pkg));
+    }
 
     rc = make_chunks(ordered_pkgs, split_size, first_free_space, outprefix);
 
