@@ -59,7 +59,7 @@ struct pndir_paths {
 };
 
 static
-int difftoc_vaccum(const struct pndir_paths *paths, const char *srcnam);
+int difftoc_vaccum(const struct pndir_paths *paths);
 
 
 char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
@@ -321,7 +321,7 @@ struct pkg *pndir_parse_pkgkey(char *key, int klen, struct pkg *pkg)
 
 
 static
-int difftoc_vaccum(const struct pndir_paths *paths, const char *srcnam)
+int difftoc_vaccum(const struct pndir_paths *paths)
 {
     tn_array     *lines; 
     char         line[2048], *dn, *bn;
@@ -339,7 +339,7 @@ int difftoc_vaccum(const struct pndir_paths *paths, const char *srcnam)
     memcpy(tmp, paths->path_diff_toc, sizeof(tmp));
     n_basedirnam(tmp, &dn, &bn);
 
-    vf = vfile_open_sl(paths->path_diff_toc, VFT_TRURLIO, VFM_RO, srcnam);
+    vf = vfile_open(paths->path_diff_toc, VFT_TRURLIO, VFM_RO);
     if (vf == NULL)
         return 0;
     
@@ -360,7 +360,7 @@ int difftoc_vaccum(const struct pndir_paths *paths, const char *srcnam)
     }
     vfile_close(vf);
 
-    vf = vfile_open_sl(paths->path_diff_toc, VFT_TRURLIO, VFM_RW, srcnam);
+    vf = vfile_open(paths->path_diff_toc, VFT_TRURLIO, VFM_RW);
     if (vf == NULL) {
         rename(difftoc_path_bak, paths->path_diff_toc);
         n_array_free(lines);
@@ -430,14 +430,13 @@ int difftoc_vaccum(const struct pndir_paths *paths, const char *srcnam)
 }
 
 static
-int difftoc_update(const struct pkgdir *pkgdir, const struct pndir_paths *paths,
-                   const char *srcnam)
+int difftoc_update(const struct pkgdir *pkgdir, const struct pndir_paths *paths)
 {
     struct vfile   *vf;
     struct pndir   *idx;
 
 
-    vf = vfile_open_sl(paths->path_diff_toc, VFT_TRURLIO, VFM_APPEND, srcnam);
+    vf = vfile_open(paths->path_diff_toc, VFT_TRURLIO, VFM_APPEND);
     if (vf == NULL)
         return 0;
 
@@ -449,7 +448,7 @@ int difftoc_update(const struct pkgdir *pkgdir, const struct pndir_paths *paths,
     vfile_close(vf);
     
     if (pkgdir->pkgs && n_array_size(pkgdir->pkgs))
-        return difftoc_vaccum(paths, pkgdir_idstr(pkgdir));
+        return difftoc_vaccum(paths);
 
     return 1;
 }
@@ -687,8 +686,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         save_descr = 1;
     
     MEMINF("start");
-    if (pkgdir->src && pkgdir->src->mkidx_exclpath)
-        exclpath = pkgdir->src->mkidx_exclpath;
+    if (pkgdir->src && pkgdir->src->exclude_path)
+        exclpath = pkgdir->src->exclude_path;
 
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg         *pkg;
@@ -771,7 +770,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     
     
     if (pkgdir->flags & PKGDIR_DIFF)
-        difftoc_update(pkgdir, &paths, pkgdir_idstr(pkgdir));
+        difftoc_update(pkgdir, &paths);
 	
  l_end:
     if (nbuf)
