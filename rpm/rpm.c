@@ -63,16 +63,14 @@ int header_cap_match_req(Header h, const struct capreq *req, int strict);
 
 int rpm_initlib(tn_array *macros) 
 {
-    //if (depdirs == NULL) 
-    //tn_array *depdirs = n_array_new(16, free, (tn_fn_cmp)strcmp);
-    //rpmdb_depdirs(depdirs);
-    
-    if (initialized == 0)
+    if (initialized == 0) {
         if (rpmReadConfigFiles(NULL, NULL) != 0) {
             logn(LOGERR, "failed to read rpmlib configs");
             return 0;
         }
-
+        initialized = 1;
+    }
+    
     if (macros) {
         int i;
         
