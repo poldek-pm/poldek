@@ -7,7 +7,7 @@ source = ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/
 #source = /home/zenek/rpm/RPMS/
 
 # NOTE: directory *must* exists 
-cachedir = /var/tmp/poldek
+#cachedir = /var/tmp/poldek
 
 # Downloaders configuration
 # Available semi-macros (as ws-separate tokens only):
@@ -18,3 +18,26 @@ cachedir = /var/tmp/poldek
 
 #ftp_http_get   = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
 #rsync_get      = "/usr/bin/rsync %P %d"
+
+
+# permits using root privs for installation only 
+#use_sudo  = yes
+
+# automatically install packages required by installed ones (default "yes") 
+#follow = yes
+
+# greedy upgrades (defalut "no")
+#greedy = yes
+
+# prevent kernel* and dev from being upgraded if they are already installed.
+#hold   = kernel* dev
+
+# Some rpm macros
+#rpmdef        = "_install_langs pl:pl_PL:lt:lt_LT"
+
+# don't install any documentation
+#rpmdef        = "_netsharedpath /usr/share/info:/usr/share/man"
+#rpmdef	      = "_excludedocs 1"
+
+
+

@@ -223,7 +223,8 @@ with requirement "foo = 1.0" than poldek upgrade foo-devel to version
 =item B<--hold=PACKAGE[,PACKAGE]...>
 
 Prevent packages listed from being upgraded if they are already installed.
-If option is not given packages to hold is taken from $HOME/.poldek_hold.
+If option is not given packages to hold is taken from B<hold> configuration 
+option and $HOME/.poldek_hold.
 
 =item B<--nodeps>; B<-t, --test>; B<--justdb>; B<--force>; B<--root>;
 
@@ -314,6 +315,8 @@ line represents a comment or a parameter.
 
 =item * B<greedy = yes|no> - see --greedy option description
 	(default: no)
+
+=item * B<hold = PACKAGE[ PACKAGE...]> - see --hold option description
 
 =back
 

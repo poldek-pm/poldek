@@ -10,7 +10,7 @@ Source:		%{name}-%{version}.tar.gz
 Requires:	/bin/rpm
 BuildRequires:  db3-devel >= 3.1.14-2
 BuildRequires:	rpm-devel >= 3.0.6-2
-BuildRequires:  trurlib-devel >= 0.43.2
+BuildRequires:  trurlib-devel >= 0.43.3
 BuildRequires:  curl-devel >= 7.8
 BuildRequires:  openssl-devel
 BuildRequires:  pcre-devel
@@ -52,6 +52,9 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.6  2001/09/12 16:07:38  mis
+- released as 0.15.6
+
 Revision 1.5  2001/06/15 15:02:47  mis
 - added "follow" option
 - added "freshen" to cmdline
