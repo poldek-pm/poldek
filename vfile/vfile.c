@@ -41,8 +41,11 @@
 
 static int verbose = 0; 
 int *vfile_verbose = &verbose;
-int (*vfile_msg_fn)(const char *fmt, ...) = printf;
-int (*vfile_err_fn)(const char *fmt, ...) = printf;
+
+static int vfmsg(const char *fmt, ...);
+
+int (*vfile_msg_fn)(const char *fmt, ...) = vfmsg;
+int (*vfile_err_fn)(const char *fmt, ...) = vfmsg;
 
 #define VFILE_CNFCURL (1 << 15)
 
@@ -480,4 +483,15 @@ void vfile_close(struct vfile *vf)
     }
     
     free(vf);
+}
+
+static int vfmsg(const char *fmt, ...)
+{
+    va_list args;
+    
+    va_start(args, fmt);
+    vfprintf(stdout, fmt, args);
+    fflush(stdout);
+    va_end(args);
+    return 1;
 }
