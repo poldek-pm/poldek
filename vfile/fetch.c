@@ -565,7 +565,7 @@ int vfile_valid_path(const char *path)
             default:
                 ndots = 0;
                 
-                if (!isalnum(*p) && strchr("-+/._", *p) == NULL) {
+                if (!isalnum(*p) && strchr("-+/._@", *p) == NULL) {
                     vfile_err_fn("%s: %c non alphanumeric characters not allowed\n", path, *p);
                     return 0;
                 }
