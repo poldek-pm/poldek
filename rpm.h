@@ -14,6 +14,9 @@ int rpm_initlib(tn_array *macros);
 rpmdb rpm_opendb(const char *dbpath, const char *rootdir, mode_t mode);
 void rpm_closedb(rpmdb db);
 
+tn_array *rpm_get_file_conflict_hdrs(rpmdb db, const char *path,
+                                     tn_array *exclrnos);
+
 /* is req matched by db packages? */
 int rpm_dbmatch_req(rpmdb db, const struct capreq *req, int strict,
                     tn_array *exclrnos);

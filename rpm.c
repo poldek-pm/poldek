@@ -105,6 +105,68 @@ void rpm_closedb(rpmdb db)
 }
 
 
+tn_array *rpm_get_file_conflict_hdrs(rpmdb db, const char *path,
+                                     tn_array *exclrnos) 
+{
+    tn_array *cnflpkghdrs = n_array_new(4, (tn_fn_free)headerFree, NULL);
+    
+#ifdef HAVE_RPM_4_0
+    rpmdbMatchIterator mi;
+    Header h;
+
+    mi = rpmdbInitIterator(db, RPMTAG_BASENAMES, path, 0);
+    while((h = rpmdbNextIterator(mi)) != NULL) {
+	unsigned int recno = rpmdbGetIteratorOffset(mi);
+ 	if (exclrnos && n_array_bsearch(exclrnos, (void*)recno))
+	    continue;
+        
+        n_array_push(cnflpkghdrs, headerLink(h));
+	break;	
+    }
+    rpmdbFreeIterator(mi);
+    
+#else /* HAVE_RPM_4_0 */
+
+    dbiIndexSet matches;
+    int rc;
+
+    matches.count = 0;
+    matches.recs = NULL;
+    rc = rpmdbFindByFile(db, path, &matches);
+
+    if (rc != 0) {
+        if (rc < 0)
+            log(LOGERR, "error reading from database\n");
+        
+    } else {
+        int i;
+        for (i = 0; i < matches.count; i++) {
+            Header h;
+            
+            if (exclrnos &&
+                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
+                continue;
+            
+            if ((h = rpmdbGetRecord(db, matches.recs[i].recOffset))) {
+                n_array_push(cnflpkghdrs, headerLink(h));
+                headerFree(h);
+            }
+
+            break;
+        }
+    }
+#endif	/* !HAVE_RPM_4_0 */
+
+    if (n_array_size(cnflpkghdrs) == 0) {
+        n_array_free(cnflpkghdrs);
+        cnflpkghdrs = NULL;
+    }
+    
+    return cnflpkghdrs;
+}
+
+
+
 static
 int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *exclrnos)
 {
