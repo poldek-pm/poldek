@@ -1,12 +1,15 @@
-/* 
-  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
- 
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License version 2 as
-  published by the Free Software Foundation (see file COPYING for
-  details).
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
 
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
+
 /*
   $Id$
 */
@@ -1611,19 +1614,22 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
     if (nerr)
         return 0;
     
-    if ((inst->flags & (INSTS_JUSTPRINT | INSTS_JUSTFETCH)) == 0)
+    if ((inst->flags & (INSTS_JUSTPRINTS | INSTS_JUSTFETCH)) == 0)
         if (!valid_arch_os(upg->install_pkgs)) 
             return 0;
 
+
+    if (inst->flags & INSTS_JUSTPRINTS) {
+        rc = pkgset_dump_marked_pkgs(ps, inst->dumpfile,
+                                     inst->flags & INSTS_JUSTPRINT_N);
+        return rc;
+    }
+
     /* poldek's test only  */
-    if ((inst->flags & INSTS_TEST) && 
-        (inst->instflags & PKGINST_TEST) == 0)
+    if ((inst->flags & INSTS_TEST) && (inst->instflags & PKGINST_TEST) == 0)
         return rc;
     
-    if (inst->flags & INSTS_JUSTPRINT) {
-        rc = pkgset_dump_marked_fqpns(ps, inst->dumpfile);
-        
-    } else if (inst->flags & INSTS_JUSTFETCH) {
+    if (inst->flags & INSTS_JUSTFETCH) {
         const char *destdir = inst->fetchdir;
         if (destdir == NULL)
             destdir = inst->cachedir;
@@ -1859,6 +1865,9 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
     /* tests make sense on whole set only  */
     if ((inst->flags & INSTS_TEST) || (inst->instflags & PKGINST_TEST))
         inst->flags &= ~INSTS_PARTICLE;
+
+    if (inst->flags & INSTS_JUSTPRINTS)
+        inst->flags &= ~INSTS_PARTICLE;
     
     for (i = 0; i < n_array_size(ps->ordered_pkgs); i++) {
         struct pkg    *pkg = n_array_nth(ps->ordered_pkgs, i);
@@ -1895,7 +1904,10 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
         
         if (inst->flags & INSTS_PARTICLE) {
             if (n > 1) {
-                printf_c(PRCOLOR_YELLOW, "Installing set #%d\n", n);
+                if (verbose > 0) {
+                    printf_c(PRCOLOR_YELLOW, "Installing set #%d\n", n);
+                    fflush(stdout);
+                }
                 msgn_f(0, "** Installing set #%d\n", n);
             }
             

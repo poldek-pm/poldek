@@ -47,6 +47,7 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_JUSTFETCH    (1 << 0)
 #define INSTS_JUSTPRINT    (1 << 1)
 #define INSTS_JUSTPRINT_N  (1 << 2) /* names, not filenames */
+#define INSTS_JUSTPRINTS   (INSTS_JUSTPRINT | INSTS_JUSTPRINT_N)
 #define INSTS_TEST         (1 << 3) /* poldek's test mode, not rpm's one */
 
 #define INSTS_MKDBDIR         (1 << 5)  /* --mkdir */
@@ -56,10 +57,10 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_NOHOLD          (1 << 9)  /* --nohold  */
 #define INSTS_GREEDY          (1 << 10) /* --greedy */
 #define INSTS_KEEP_DOWNLOADS  (1 << 11) /* keep_downloads = yes */
-#define INSTS_PARTICLE        (1 << 12)
+#define INSTS_PARTICLE        (1 << 12) /* particle_install = yes */
 #define INSTS_CHECKSIG        (1 << 13) /* not implemented yet */
-#define INSTS_CONFIRM_INST    (1 << 14)
-#define INSTS_EQPKG_ASKUSER   (1 << 15) /* not implemented yet */
+#define INSTS_CONFIRM_INST    (1 << 14) /* confirm_installs = yes  */
+#define INSTS_EQPKG_ASKUSER   (1 << 15) /* choose_equivalents_manually = yes */
 
 struct inst_s {
     struct pkgdb   *db;
@@ -144,7 +145,7 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
 void pkgset_mark_holds(struct pkgset *ps, tn_array *hold_pkgnames);
 tn_array *read_holds(const char *fpath, tn_array *hold_pkgnames);
 
-int pkgset_dump_marked_fqpns(struct pkgset *ps, const char *dumpfile);
+int pkgset_dump_marked_pkgs(struct pkgset *ps, const char *dumpfile, int bn);
 
 
 int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs);

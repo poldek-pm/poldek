@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -66,7 +70,7 @@ static int chk_params(struct inst_s *inst)
         if (verbose < 1)
             verbose += 1;
         
-    } else if ((inst->flags & (INSTS_JUSTFETCH | INSTS_JUSTPRINT))) {
+    } else if ((inst->flags & (INSTS_JUSTFETCH | INSTS_JUSTPRINTS))) {
         
     } else {
         if (!is_rwxdir(inst->rootdir)) {

@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -1017,7 +1021,7 @@ tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname)
     return pkgs;
 }
 
-int pkgset_dump_marked_fqpns(struct pkgset *ps, const char *dumpfile)
+int pkgset_dump_marked_pkgs(struct pkgset *ps, const char *dumpfile, int bn)
 {
     int i;
     FILE *stream = stdout;
@@ -1032,9 +1036,15 @@ int pkgset_dump_marked_fqpns(struct pkgset *ps, const char *dumpfile)
     
     for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
-        if (pkg_is_marked(pkg))
-            fprintf(stream, "%s\n", pkg_filename_s(pkg));
+        if (pkg_is_marked(pkg)) {
+            if (bn)
+                fprintf(stream, "%s\n", pkg->name);
+            else
+                fprintf(stream, "%s\n", pkg_filename_s(pkg));
+        }
     }
     
+    if (stream != stdout)
+        fclose(stream);
     return 1;
 }
