@@ -19,6 +19,8 @@ for distro in pld rh; do
 	rpm="/usr/lib/rpm/rpmb"
     fi
 
+    rpm="$rpm --define 'distro ${distro}'"
+
     if [ "${distro}" = "pld" ]; then
 	echo "su - mis -c \"$rpm $target_def -tb /tmp/$poldek --with static\"" >> $ddir/$buildscript
     fi
