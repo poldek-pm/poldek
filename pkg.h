@@ -86,7 +86,6 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 
 #define pkg_is_installed(pkg)  ((pkg)->flags & PKG_DBPKG)
 
-
 struct pkg {
     uint32_t     flags;
     uint32_t     size;        /* install size      */
@@ -165,21 +164,27 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
 
 
 void pkg_free(struct pkg *pkg);
-
+#ifdef SWIG
+struct pkg *pkg_link(struct pkg *pkg);
+#else 
 static inline struct pkg *pkg_link(struct pkg *pkg)
 {
     pkg->_refcnt++;
     return pkg;
 }
+#endif
 
 /* add self name-evr to caps */
 int pkg_add_selfcap(struct pkg *pkg);
 
+#ifdef SWIG
+int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
+#else
 static inline int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2) 
 {
     return strcmp(p1->name, p2->name);
 }
-
+#endif
 
 
 int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2);
@@ -268,7 +273,6 @@ void pkg_info_free_fl(const struct pkg *pkg, tn_array *fl);
 
 const char *pkg_group(const struct pkg *pkg);
 
-void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*));
 
 tn_array *pkgs_array_new(int size);
 
