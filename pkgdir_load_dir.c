@@ -240,6 +240,7 @@ struct pkgdir *pkgdir_load_dir_or_hdl(const char *name, const char *path, int t)
     struct pkgroup_idx   *pkgroups;
     int                  n = 0;
     unsigned             pkgdir_flags = 0;
+    char                 *pkgdir_path = NULL;
     
 
     pkgs = pkgs_array_new(1024);
@@ -249,11 +250,13 @@ struct pkgdir *pkgdir_load_dir_or_hdl(const char *name, const char *path, int t)
         case LOAD_DIR:
             n = load_dir(path, pkgs, pkgroups);
             pkgdir_flags = PKGDIR_LDFROM_DIR;
+            pkgdir_path = strdup(path);
             break;
 
         case LOAD_HDL:
             n = load_header_list(path, pkgs, pkgroups);
             pkgdir_flags = PKGDIR_LDFROM_HDL;
+            pkgdir_path = pkgdir_setup_pkgprefix(path);
             break;
 
         default:
@@ -269,7 +272,7 @@ struct pkgdir *pkgdir_load_dir_or_hdl(const char *name, const char *path, int t)
     
     pkgdir = pkgdir_malloc();
     pkgdir->name = strdup(name);
-    pkgdir->path = strdup(path);
+    pkgdir->path = pkgdir_path;
     pkgdir->pkgs = pkgs;
     pkgdir->pkgroups = pkgroups;
     
