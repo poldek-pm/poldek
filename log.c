@@ -145,8 +145,8 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
         }
     }
     
-    if (flags & LOGDIE)
-        exit(1);
+    if (pri & LOGDIE)
+        abort();
 }
 
 
