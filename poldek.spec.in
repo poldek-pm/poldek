@@ -9,11 +9,11 @@
 Summary:	A full-featured frontend to RPM
 Name:		poldek
 Version:	@VERSION@
-Release:	1%{?_with_static:.static}
-License:	GPLv2
-Group:		Applications/System
-Source0:	http://team.pld.org.pl/~mis/poldek/download/%{name}-%{version}.tar.bz2
-URL:		http://team.pld.org.pl/~mis/poldek/
+Release:        %{?snap:%{snap}.}1%{?_with_static:.static}
+License:        GPLv2
+Group:          Applications/System
+Source0:        http://team.pld.org.pl/~mis/poldek/download/%{name}-%{version}%{?snap:-%{snap}}.tar.bz2
+URL:            http://team.pld.org.pl/~mis/poldek/
 Requires:	/bin/rpm
 BuildRequires:	bzip2-devel
 #BuildRequires:	db3-devel >= 3.1.14-2
@@ -59,7 +59,7 @@ Requires:	%{name}-devel = %{version}-%{release}
 poldek static libraries
 
 %prep 
-%setup -q
+%setup -q -n %{name}-%{version}%{?snap:-%{snap}}
 
 %build
 %configure %{?_with_static:--enable-static}
@@ -118,6 +118,9 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.23  2004/10/09 14:48:29  mis
+- make snap-rpm-package
+
 Revision 1.22  2004/09/26 19:37:42  mis
 - a big cleanup: renamed non-unique symbols, prepared symbols list to export (*.sym), fixed headers, spec
 
