@@ -465,7 +465,7 @@ int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
 {
     char            path[PATH_MAX];
     struct vfile    *vf;
-    int             rc;
+    int             rc = 1;
     unsigned        calcflags = CALC_MDD;
 
     
@@ -501,7 +501,7 @@ int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
     }
     
     vfile_close(vf);
-    return 1; 
+    return rc; 
 }
 
 
