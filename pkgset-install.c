@@ -387,7 +387,7 @@ int uninstpkgs_provides(struct upgrade_s *upg, struct capreq *req)
     char *dirname, *basename, path[PATH_MAX];
 
     if (n_hash_exists(upg->capcache, capreq_name(req))) {
-        msg(4, "capcache hit %s\n", capreq_name(req));
+        msg(4, "uninstpkgs_provides: capcache hit %s\n", capreq_name(req));
         return 1;
     }
 
@@ -405,6 +405,8 @@ int uninstpkgs_provides(struct upgrade_s *upg, struct capreq *req)
     for (i=0; i<n_array_size(upg->uninst_dbpkgs); i++) {
         struct dbpkg *dbpkg = n_array_nth(upg->uninst_dbpkgs, i);
         if (pkg_match_req(dbpkg->pkg, req, 0)) {
+            msg(4, "uninstpkgs_provides: %s matches %s\n",
+                pkg_snprintf_s(dbpkg->pkg), capreq_snprintf_s(req));
             n_hash_insert(upg->capcache, capreq_name(req), NULL);
             return 1;
             
@@ -468,8 +470,10 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
             if (pkg->reqs == NULL)
                 continue;
             
-            msg_i(2, nloop, "Checking %s dependencies\n", pkg_snprintf_s(pkg));
-
+            msg_i(2, nloop, "\nChecking%s%s dependencies\n",
+                  how == PROCESS_ORPHANS ? " orphaned ":" ",
+                  pkg_snprintf_s(pkg));
+            
             for (j=0; j<n_array_size(pkg->reqs); j++) {
                 struct capreq *req;
                 struct pkg **suspkgs, pkgsbuf[1024], *tomark = NULL;
@@ -487,9 +491,10 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                     msg_i(4, nloop, " in cache %s\n", reqname);
                     continue;
                 }
-                
+
+                /* don't check foreign dependencies */
                 if (how == PROCESS_ORPHANS && !uninstpkgs_provides(upg, req)) {
-                    msg(5, " skip %s from %s\n", reqname, pkg_snprintf_s(pkg));
+                    msg_i(4, nloop, " skip %s from %s\n", reqname, pkg_snprintf_s(pkg));
                     continue;
                 }
                 
@@ -612,6 +617,8 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
         nmarkarr %= 2;
         n_array_clean(markarr[nmarkarr]);
         nloop++;
+        how = PROCESS_DEPS;     /* after first loop there are only dep-marked
+                                   packages  */
     }
     
     
@@ -625,10 +632,21 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
 
 /* add to upg->uninst_dbpkgs packages obsoleted by pkg */
 static
-int add_obsoleted_pkgs(const struct pkg *pkg, struct upgrade_s *upg) 
+int add_obsoleted_pkgs(struct upgrade_s *upg) 
 {
-    return rpm_get_obsoletedby_pkg(upg->inst->db->dbh, upg->uninst_dbpkgs, pkg,
-                                   PKG_LDWHOLE);
+    int i, n = 0;
+    
+    for (i=0; i<n_array_size(upg->install_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
+        if (pkg_is_color(pkg, PKG_COLOR_GRAY)) {
+            n += rpm_get_obsoletedby_pkg(upg->inst->db->dbh,
+                                         upg->uninst_dbpkgs, pkg,
+                                         PKG_LDWHOLE);
+            
+            pkg_set_color(pkg, PKG_COLOR_BLACK);
+        }
+    }
+    return n;
 }
 
 /* add to upg->orphan_dbpkgs packages which are required by uninst_dbpkgs */
@@ -711,15 +729,8 @@ void process_dependecies(struct pkgset *ps, struct upgrade_s *upg)
         process_deps(ps, upg->install_pkgs, upg, PROCESS_DEPS);
         if (upg->nfatal_err)
             break;
-        
-        for (i=0; i<n_array_size(upg->install_pkgs); i++) {
-            struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
-            if (pkg_is_color(pkg, PKG_COLOR_GRAY)) {
-                add_obsoleted_pkgs(pkg, upg);
-                pkg_set_color(pkg, PKG_COLOR_BLACK);
-            }
-        }
-        
+
+        add_obsoleted_pkgs(upg);
         norphans_added = add_orphans(upg);
         if (norphans_added == 0)
             break;
@@ -733,6 +744,7 @@ void process_dependecies(struct pkgset *ps, struct upgrade_s *upg)
         
         process_deps(ps, opkgs, upg, PROCESS_ORPHANS);
         n_array_clean(opkgs);
+        add_obsoleted_pkgs(upg);
     }
     
     n_array_free(opkgs);
