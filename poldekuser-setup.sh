@@ -6,6 +6,7 @@ PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 USER=${POLDEKUSER:-"poldek"}
 SYSCONFDIR="/etc"
 SUDOERS="$SYSCONFDIR/sudoers"
+HOME="/root"                    # sudo doesn't reset HOME
 
 help() {
     echo "Script configures poldek to run as ordinary user when executed by root:"
@@ -21,7 +22,7 @@ help() {
 copyfile() {
     file=$1
     dir=$2
-
+    
     if [ ! -r $HOME/$file ]; then
         return 1
     fi
