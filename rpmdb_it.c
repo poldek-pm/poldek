@@ -151,7 +151,8 @@ const struct dbrec *rpmdb_it_get(struct rpmdb_it *it)
     it->dbrec.recno = rpmdbGetIteratorOffset(it->mi);
 #else
     if (it->i == it->matches.count) {
-        headerFree(it->dbrec.h);
+        if (it->dbrec.h != NULL) 
+            headerFree(it->dbrec.h);
         it->dbrec.h = NULL;
         it->i++;
         return NULL;
