@@ -1,7 +1,7 @@
 # $Revision$, $Date$
-Summary:	The poldek - rpm packages management helper tool
+Summary:	RPM packages management helper tool
 Name:		poldek
-Version:	0.11
+Version:	@VERSION@
 Release:	1
 License:	GPL
 Group:		Utilities/System
@@ -18,7 +18,7 @@ BuildRoot:	/tmp/%{name}-%{version}-root-%(id -u -n)
 
 %description
 The poldek is a cmdline tool which can be used to verify, install and
-upgrade given package sets. 
+upgrade given package sets.
 
 %package	semistatic
 Summary:	poldek linked almost statically (except glibc)
@@ -59,11 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
-Revision 1.2  2000/10/29 02:47:11  mis
-- packages user-level data added to Packages (NFY)
-- starting develeop interactive tool
-- fixed a lot of bugs and added many code improvements
-- rpmlib(...) capabilities support
+Revision 1.1  2000/11/03 18:49:16  mis
+- spec.in is used
 
 Revision 1.1  2000/09/22 18:19:45  mis
 - set him free ;-)
