@@ -32,7 +32,7 @@
 
 int poldek_VERBOSE = 0;
 static char       l_prefix[64];
-static FILE      *l_stream = NULL, *l_fstream = NULL;
+static FILE       *l_stream, *l_fstream = NULL;
 
 
 static void vlog_tty(int pri, const char *fmt, va_list args);
@@ -123,6 +123,7 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
     
     
     if (flags & LOGTTY) {
+        if (l_stream == NULL) l_stream = stdout;
         fprintf(l_stream, "%s", buf);
         if (*fmt)
             vlog_tty(pri, fmt, args);
