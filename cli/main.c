@@ -15,9 +15,7 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <trurl/narray.h>
-#include <trurl/nassert.h>
-#include <trurl/nmalloc.h>
+#include <trurl/trurl.h>
 
 #include <vfile/vfile.h>
 #include <sigint/sigint.h>
