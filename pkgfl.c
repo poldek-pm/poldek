@@ -195,6 +195,9 @@ int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,
 int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict)
 {
     register int cmprc;
+
+    if (f1->mode == 0 || f2->mode == 0) /* missing FILEMODES || FILESIZES */
+        return 0;
     
     if ((cmprc = (f1->mode - f2->mode)) == 0 &&
         !S_ISDIR(f1->mode) && !S_ISDIR(f1->mode)) 
@@ -589,7 +592,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
     struct    flfile *flfile;
     struct    pkgfl_ent **fentdirs = NULL;
     int       *fentdirs_items;
-    int       i, j, ndirs = 0, nerr = 0;
+    int       i, j, ndirs = 0, nerr = 0, missing_file_hdrs_err = 0;
     const char *errmsg_notag = _("%s: no %s tag");
 
     n_assert(which == PKGFL_ALL); /* others not implemented */
@@ -619,15 +622,17 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
     }
     
     if (!headerGetEntry(h, RPMTAG_FILEMODES, (void*)&t4, (void*)&modes, &c4)) {
-        logn(LOGERR, errmsg_notag, pkgname, "FILEMODES");
-        nerr++;
-        goto l_endfunc;
+        if (verbose > 1)
+            logn(LOGWARN, errmsg_notag, pkgname, "FILEMODES");
+        missing_file_hdrs_err = 1;
+        modes = NULL;
     }
     
     if (!headerGetEntry(h, RPMTAG_FILESIZES, (void*)&t4, (void*)&sizes, &c4)) {
-        logn(LOGERR, errmsg_notag, pkgname, "FILESIZES");
-        nerr++;
-        goto l_endfunc;
+        if (verbose > 1)
+            logn(LOGWARN, errmsg_notag, pkgname, "FILESIZES");
+        missing_file_hdrs_err = 2;
+        sizes = NULL;
     }
     
     if (!headerGetEntry(h, RPMTAG_FILELINKTOS, (void*)&t4, (void*)&symlinks,
@@ -683,7 +688,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
         register int j = diridxs[i];
         int len;
 
-        if (!valid_fname(names[i], modes[i], pkgname))
+        if (!valid_fname(names[i], modes ? modes[i] : 0, pkgname))
             nerr++;
         
         msg(5, "  %d: %s %s/%s \n", i, skipdirs[j] ? "add " : "skip",
@@ -723,9 +728,9 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
 
     if (c4 && symlinks)
         rpm_headerEntryFree(symlinks, t4);
-
+    
     if (nerr) {
-        logn(LOGERR, _("%s: skipped"), pkgname);
+        logn(LOGERR, _("%s: skipped file list"), pkgname);
         
     } else if (ndirs) {
         for (i=0; i<c2; i++) 
@@ -735,7 +740,14 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
                       (int (*)(const void *, const void *))flfile_cmp_qsort);
             }
     }
-    
+#if 0
+    if (missing_file_hdrs_err) {
+        char *missing = _("FILEMODES tag");
+        if (missing_file_hdrs_err > 1)
+            missing = _("FILEMODES and FILESIZES tags");
+        logn(LOGERR, _("%s: missing %s in some packages"), pkgname, missing);
+    }
+#endif    
     return nerr ? -1 : 1;
 }
 

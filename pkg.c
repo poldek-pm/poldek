@@ -878,7 +878,7 @@ tn_array *pkg_other_fl(const struct pkg *pkg)
 }
 
 
-tn_array *pkg_info_files(const struct pkg *pkg) 
+tn_array *pkg_info_get_fl(const struct pkg *pkg) 
 {
     tn_array *fl = NULL;
     
@@ -902,6 +902,12 @@ tn_array *pkg_info_files(const struct pkg *pkg)
         n_array_sort(fl);
     
     return fl;
+}
+
+void pkg_info_free_fl(const struct pkg *pkg, tn_array *fl) 
+{
+    if (pkg->pkgdir && pkg->other_files_offs)
+        n_array_free(fl);
 }
 
 

@@ -6,6 +6,7 @@
 #define PKGSET_LD_NIL      0    /* guess                   */
 #define PKGSET_LD_DIR      1    /* scan directory          */
 #define PKGSET_LD_IDX      2    /* read index file         */
+#define PKGSET_LD_HDL      3    /* read hdlist file        */
 
 #define PKGSOURCE_NOAUTO     (1 << 0)
 #define PKGSOURCE_NOAUTOUP   (1 << 1)

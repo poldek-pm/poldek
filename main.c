@@ -146,11 +146,12 @@ tn_hash *htcnf = NULL;          /* config file values */
 
 #define OPT_SOURCETXT   1015
 #define OPT_SOURCEDIR   1016
-#define OPT_SOURCEHDR   1017
+#define OPT_SOURCEHDL   1017
 #define OPT_PKGPREFIX   1018
 #define OPT_UPDATEIDX   1019
 #define OPT_UPDATEIDX_WHOLE   1020
 #define OPT_SOURCECACHE 1021
+#define OPT_CACHECLEAN  1022
 
 #ifdef ENABLE_INTERACTIVE_MODE
 # define OPT_SHELLMODE             1031
@@ -211,6 +212,9 @@ static struct argp_option options[] = {
 {"sdir", OPT_SOURCEDIR, "DIR", OPTION_HIDDEN, /* obsoleted */
  N_("Get packages info from directory DIR"), 1 },
 
+{"shdl", OPT_SOURCEHDL, "FILE", 0, /* RH's hdlist,  PLD's tocfile */
+ N_("Get packages info from package header list file (hdlist)"), 1 },    
+
 {"prefix", 'P', "PREFIX", 0,
  N_("Get packages from PREFIX instead of SOURCE"), 1 },
 
@@ -222,11 +226,8 @@ static struct argp_option options[] = {
 {"update-whole", OPT_UPDATEIDX_WHOLE, 0, 0, 
  N_("Update whole sources (for remote indexes) and verify it"), 1 },
 
-{"upa", OPT_UPDATEIDX_WHOLE, 0, OPTION_ALIAS, 0, 1}, 
+{"upa", OPT_UPDATEIDX_WHOLE, 0, OPTION_ALIAS, 0, 1},
 
-{"cachedir", OPT_SOURCECACHE, "DIR", 0, 
- N_("Store downloaded files under DIR"), 1 },
-  
 {0,0,0,0, N_("Verify options:"), 50 },        
 {"verify",  OPT_VERIFY_DEPS, 0, 0, N_("Verify package dependencies"), 50 },
 {"verify-conflicts",  OPT_VERIFY_CNFLS, 0, 0, N_("Verify package conflicts"), 50 },
@@ -343,7 +344,13 @@ N_("Don't take held packages from $HOME/.poldek_hold."), 71 },
 {"split-out", OPT_SPLITOUTPATH, "PREFIX", 0,
      N_("Write chunks to PREFIX.XX, default PREFIX is packages.chunk"), 90 },    
 
-{0,0,0,0, N_("Other:"), 500},    
+{0,0,0,0, N_("Other:"), 500},
+{"cachedir", OPT_SOURCECACHE, "DIR", 0, 
+ N_("Store downloaded files under DIR"), 1 },
+
+{"clean-cache", OPT_CACHECLEAN, "DIR", OPTION_HIDDEN, /* NIY */
+ N_("Remove index files stored in cache directory"), 1 },    
+
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
                           "let user choose among equivalent packages"), 500 },
 {"noask", OPT_NOASK, 0, 0, N_("not --ask"), 500 }, 
@@ -453,7 +460,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_SOURCEDIR:     /* no break */
             if (ldmethod == PKGSET_LD_NIL)
                 ldmethod = PKGSET_LD_DIR;
-            
+
+        case OPT_SOURCEHDL:     /* no break */
+            if (ldmethod == PKGSET_LD_NIL)
+                ldmethod = PKGSET_LD_HDL;
             
         case 's':
             if (argsp->curr_src_path) { /* no prefix for curr_src_path */
@@ -1223,6 +1233,12 @@ static int update_idx(void)
         
         if (src->flags & PKGSOURCE_NOAUTOUP)
             continue;
+
+        if (src->ldmethod == PKGSET_LD_HDL) {
+            logn(LOGWARN, _("%s: this type of source is not updateable"),
+                 src->source_path);
+            return 0;
+        }
 
         pkgdir = pkgdir_new(src->source_name, src->source_path,
                             src->pkg_prefix, PKGDIR_NEW_VERIFY);

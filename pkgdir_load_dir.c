@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -61,7 +65,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
     
     if ((dir = opendir(dirpath)) == NULL) {
 	logn(LOGERR, "opendir %s: %m", dirpath);
-	return 0;
+	return -1;
     }
     
     if (dirpath[strlen(dirpath) - 1] == '/')
@@ -107,10 +111,9 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
                     pkg->pkg_pkguinf = pkguinf_ldhdr(h);
                     pkg_set_ldpkguinf(pkg);
                     n_array_push(pkgs, pkg);
+                    pkg->groupid = pkgroup_idx_update(pkgroups, h);
                     n++;
                 }
-                
-                pkg->groupid = pkgroup_idx_update(pkgroups, h);
                 headerFree(h);
             }
             Fclose(fdt);
@@ -124,6 +127,41 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
     if (n && n > 200)
         msg(1, "_%d\n", n);
     closedir(dir);
+    return n;
+}
+
+
+static
+int load_header_list(const char *path, tn_array *pkgs,
+                     struct pkgroup_idx *pkgroups)
+{
+    struct vfile         *vf;
+    struct pkg           *pkg;
+    Header               h;
+    int                  n = 0;
+
+
+    if ((vf = vfile_open(path, VFT_RPMIO, VFM_RO | VFM_CACHE)) == NULL)
+        return -1;
+    
+    while ((h = headerRead(vf->vf_fdt, HEADER_MAGIC_YES))) {
+        if (headerIsEntry(h, RPMTAG_SOURCEPACKAGE)) { /* omit src.rpms */
+            headerFree(h);
+            continue;
+        }
+        
+        if ((pkg = pkg_ldhdr(h, path, 0, PKG_LDWHOLE))) {
+            pkg->pkg_pkguinf = pkguinf_ldhdr(h);
+            pkg_set_ldpkguinf(pkg);
+            n_array_push(pkgs, pkg);
+            pkg->groupid = pkgroup_idx_update(pkgroups, h);
+            n++;
+        }
+        	
+        headerFree(h);
+    }
+    
+    vfile_close(vf);
     return n;
 }
 
@@ -191,36 +229,79 @@ static void pkgdir_setup_depdirs(struct pkgdir *pkgdir)
     }
 }
 
+#define LOAD_DIR 1         /* scan directory */
+#define LOAD_HDL 2         /* load package header file (named hdlist in RH) */
 
-struct pkgdir *pkgdir_load_dir(const char *name, const char *path) 
+static
+struct pkgdir *pkgdir_load_dir_or_hdl(const char *name, const char *path, int t)
 {
     struct pkgdir        *pkgdir = NULL;
     tn_array             *pkgs;
     struct pkgroup_idx   *pkgroups;
+    int                  n = 0;
+    unsigned             pkgdir_flags = 0;
     
 
     pkgs = pkgs_array_new(1024);
     pkgroups = pkgroup_idx_new();
+
+    switch (t) {
+        case LOAD_DIR:
+            n = load_dir(path, pkgs, pkgroups);
+            pkgdir_flags = PKGDIR_LDFROM_DIR;
+            break;
+
+        case LOAD_HDL:
+            n = load_header_list(path, pkgs, pkgroups);
+            pkgdir_flags = PKGDIR_LDFROM_HDL;
+            break;
+
+        default:
+            n_assert(0);
+            break;
+    }
+
+    if (n < 0) {
+        n_array_free(pkgs);
+        pkgroup_idx_free(pkgroups);
+        return NULL;
+    }
     
-    if (load_dir(path, pkgs, pkgroups) >= 0) {
-        pkgdir = pkgdir_malloc();
-        pkgdir->name = strdup(name);
-        pkgdir->path = strdup(path);
-        pkgdir->pkgs = pkgs;
-        pkgdir->pkgroups = pkgroups;
-        pkgdir->flags = PKGDIR_LDFROM_DIR;
-        
-        if (n_array_size(pkgs)) {
-            int i;
+    pkgdir = pkgdir_malloc();
+    pkgdir->name = strdup(name);
+    pkgdir->path = strdup(path);
+    pkgdir->pkgs = pkgs;
+    pkgdir->pkgroups = pkgroups;
+    
+    if (n_array_size(pkgs)) {
+        int i;
             
-            for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
-                struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
-                pkg->pkgdir = pkgdir;
-            }
-            
-            pkgdir_setup_depdirs(pkgdir);
-            pkgdir_uniq(pkgdir);
+        for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
+            struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+            pkg->pkgdir = pkgdir;
         }
+            
+        pkgdir_setup_depdirs(pkgdir);
+        pkgdir_uniq(pkgdir);
+    }
+    
+    return pkgdir;
+}
+
+struct pkgdir *pkgdir_load_dir(const char *name, const char *path)
+{
+    return pkgdir_load_dir_or_hdl(name, path, LOAD_DIR);
+}
+
+
+struct pkgdir *pkgdir_load_hdl(const char *name, const char *path,
+                               const char *prefix)
+{
+    struct pkgdir *pkgdir;
+    
+    if ((pkgdir = pkgdir_load_dir_or_hdl(name, path, LOAD_HDL)) && prefix) {
+        free(pkgdir->path);
+        pkgdir->path = strdup(prefix);
     }
     
     return pkgdir;
@@ -317,3 +398,4 @@ struct pkgdir *pkgdir_load_db(const char *rootdir, const char *path)
 
     return pkgdir;
 }
+

@@ -10,7 +10,8 @@
 
 #define PKGDIR_LDFROM_IDX         (1 << 0)
 #define PKGDIR_LDFROM_DIR         (1 << 1)
-#define PKGDIR_LDFROM_DB          (1 << 2)
+#define PKGDIR_LDFROM_HDL         (1 << 2)
+#define PKGDIR_LDFROM_DB          (1 << 3)
 
 #define PKGDIR_LOADED             (1 << 4)  /* for idx */
 #define PKGDIR_VERIFIED           (1 << 5)  /* to avoid double verification
@@ -96,6 +97,8 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 
 struct pkgdir *pkgdir_load_db(const char *rootdir, const char *path);
 struct pkgdir *pkgdir_load_dir(const char *name, const char *path);
+struct pkgdir *pkgdir_load_hdl(const char *name, const char *path,
+                               const char *prefix);
 
 #define PKGDIR_CREAT_NODESC   (1 << 0) /* don't save packages user level info */
 #define PKGDIR_CREAT_wMD5     (1 << 1) /* create pathname.*md5 too            */

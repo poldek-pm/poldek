@@ -107,7 +107,7 @@ struct pkg {
     tn_array     *cnfls;      /* conflicts (with obsoletes)  */
     
     tn_array     *fl;         /* files list, see pkgfl.h  */
-    off_t        other_files_offs;  /* no dep files offset in Packges */
+    off_t        other_files_offs;  /* no dep files offset in index */
     
     tn_array     *reqpkgs;    /* require packages  */
     tn_array     *revreqpkgs; /* packages which requires me */
@@ -225,7 +225,10 @@ char *pkg_snprintf_s1(const struct pkg *pkg);
 tn_array *pkg_other_fl(const struct pkg *pkg);
 
 struct pkguinf *pkg_info(const struct pkg *pkg);
-tn_array *pkg_info_files(const struct pkg *pkg);
+
+tn_array *pkg_info_get_fl(const struct pkg *pkg);
+void pkg_info_free_fl(const struct pkg *pkg, tn_array *fl);
+
 const char *pkg_group(const struct pkg *pkg);
 
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*));

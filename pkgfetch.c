@@ -178,13 +178,20 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
             
             snprintf(path, sizeof(path), "%s/%s", pkgpath, pkg_basename);
             
-            rpmlib_verbose = -2; /* be quiet */
-            if (!package_verify_sign(path, PKGVERIFY_MD)) {
-                logn(LOGERR, _("%s: MD5 signature verification failed"),
-                     n_basenam(path));
+            if (access(path, R_OK) != 0) {
+                logn(LOGERR, _("%s: %m"), path);
                 nerr++;
+                
+            } else {
+                rpmlib_verbose = -2; /* be quiet */
+                if (!package_verify_sign(path, PKGVERIFY_MD)) {
+                    logn(LOGERR, _("%s: MD5 signature verification failed"),
+                         n_basenam(path));
+                    nerr++;
+                }
+                rpmlib_verbose = v;
             }
-            rpmlib_verbose = v;
+            	
             continue;
         }
         

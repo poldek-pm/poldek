@@ -147,7 +147,6 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     }
 
     src->source_name = strdup(name);
-    DBGF("source_new %s -> %s\n", name, src->source_path);
     return src;
 }
 
@@ -197,6 +196,12 @@ int source_snprintf_flags(char *str, int size, struct source *src)
 
 int source_update(struct source *src)
 {
+    if (src->ldmethod == PKGSET_LD_HDL) {
+        logn(LOGWARN, _("%s: this type of source is not update-able"),
+             src->source_path);
+        return 0;
+    }
+    
     return update_whole_pkgdir(src->source_path);
 }
 
@@ -230,6 +235,12 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
             case PKGSET_LD_DIR:
                 msg(1, _("Loading %s..."), src->source_path);
                 pkgdir = pkgdir_load_dir(src->source_name, src->source_path);
+                break;
+
+            case PKGSET_LD_HDL:
+                msgn(1, _("Loading %s..."), src->source_path);
+                pkgdir = pkgdir_load_hdl(src->source_name, src->source_path,
+                                         src->pkg_prefix);
                 break;
 
             default:

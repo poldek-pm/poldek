@@ -585,7 +585,7 @@ static void show_files(struct pkg *pkg, int longfmt)
     int term_width;
     void *flmark;
     
-    if ((fl = pkg_info_files(pkg)) == NULL || n_array_size(fl) == 0)
+    if ((fl = pkg_info_get_fl(pkg)) == NULL || n_array_size(fl) == 0)
         return;
 
     flmark = pkgflmodule_allocator_push_mark();
@@ -595,8 +595,8 @@ static void show_files(struct pkg *pkg, int longfmt)
         list_files_long(fl);
     else
         list_files(fl, term_width);
-    
-    n_array_free(fl);
+
+    pkg_info_free_fl(pkg, fl);
     pkgflmodule_allocator_pop_mark(flmark);
 }
 
