@@ -337,7 +337,7 @@ static void print_source_list(tn_array *sources)
 {
     int i;
 
-    n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_pri_name);
+    n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_name);
     for (i=0; i < n_array_size(sources); i++)
         source_printf(n_array_nth(sources, i));
     n_array_sort(sources);
