@@ -109,6 +109,7 @@ static inline int one_is_marked(struct pkg *pkgs[], int npkgs)
     return 0;
 }
 
+/* RET: 0 - not installable,  1 - installable,  -1 - something wrong */
 static
 int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked) 
 {
@@ -122,6 +123,8 @@ int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked)
         die();
 
     n_assert(npkgs >= 0);
+
+    install = 1;
     
     if (npkgs == 0) {
         if (is_hand_marked && freshen)
@@ -144,15 +147,22 @@ int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked)
             char *eqs = cmprc == 0 ? "equal" : "newer";
             char *skiped =  "skipped";
             char *giveup =  "give up";
-            
+
             install = 0;
             
-            if (!is_hand_marked) {
+            if (cmprc == 0 && inst->flags & INSTS_REINSTALL) {
+                install = 1;
+                
+            } else if (cmprc < 0 && inst->flags & INSTS_DOWNGRADE) {
+                install = 1;
+            
+            } else if (!is_hand_marked) {
                 logn(LOGERR, msg, pkg_snprintf_s(pkg), eqs, giveup);
                 install = -1;
                 
             } else if (is_hand_marked && !freshen) { /* msg without "freshen" */
                 msgn(0, msg, pkg_snprintf_s(pkg), eqs, skiped);
+                
             }
         }
     }

@@ -1,3 +1,17 @@
+0.17.4 (bugfix/minor enhancements release; 2002/05/06)
+
+* new (major) modes:
+   --downgrade downgrade given packages
+   --reinstall major mode reinstalls given packages
+   -e,--erase removes packages with its reverse dependent ones
+
+* shell: fixed C-c handling (connecting phase can be interrupted)
+* improved splitting: 
+  - packages are auto-rearranged on chunk's boundaries 
+  - masks with priority < 0 are always applied at first
+* killed SIGSEV on long URL's basenames
+* source prefix is handled properly with --mkidx*
+
 0.17.3
 
 * supported "hdlist" files (simple raw RPM package headers list) as 

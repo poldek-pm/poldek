@@ -43,30 +43,32 @@ int pkgset_order(struct pkgset *ps);
 
 #define INSTS_INSTALL         (1 << 0) /* rpm -i */
 #define INSTS_UPGRADE         (1 << 1) /* rpm -U */
-#define INSTS_NODEPS          (1 << 3)  
-#define INSTS_FORCE           (1 << 4)
-#define INSTS_TEST            (1 << 5) /* poldek's test mode, not rpm's one */
-#define INSTS_RPMTEST         (1 << 6) /* rpm --test */
-
-#define INSTS_JUSTDB          (1 << 7)
-#define INSTS_JUSTFETCH       (1 << 8)
-#define INSTS_JUSTPRINT       (1 << 9)
-#define INSTS_JUSTPRINT_N     (1 << 10) /* names, not filenames */
+#define INSTS_DOWNGRADE       (1 << 3) /* rpm -U --oldpackage */
+#define INSTS_REINSTALL       (1 << 4) /* rpm -U --replacefiles --replacepkgs */
+#define INSTS_NODEPS          (1 << 5) /* rpm --nodeps */ 
+#define INSTS_FORCE           (1 << 6) /* rpm --force  */
+#define INSTS_TEST            (1 << 7) /* poldek test mode, not rpm one */
+#define INSTS_RPMTEST         (1 << 8) /* rpm --test */
+#define INSTS_JUSTDB          (1 << 9) /* rpm --justdb */
+#define INSTS_JUSTFETCH       (1 << 10)
+#define INSTS_JUSTPRINT       (1 << 11)
+#define INSTS_JUSTPRINT_N     (1 << 12) /* names, not filenames */
 
 #define INSTS_JUSTPRINTS      (INSTS_JUSTPRINT | INSTS_JUSTPRINT_N)
 
-#define INSTS_MKDBDIR         (1 << 11)  /* --mkdir */
-#define INSTS_FOLLOW          (1 << 12)  /* !--nofollow */
-#define INSTS_FRESHEN         (1 << 13)  /* --freshen */
-#define INSTS_USESUDO         (1 << 14)  /* use_sudo = yes  */
-#define INSTS_NOHOLD          (1 << 15)  /* --nohold  */
-#define INSTS_GREEDY          (1 << 16) /* --greedy */
-#define INSTS_KEEP_DOWNLOADS  (1 << 17) /* keep_downloads = yes */
-#define INSTS_PARTICLE        (1 << 18) /* particle_install = yes */
-#define INSTS_CHECKSIG        (1 << 19) /* not implemented yet */
-#define INSTS_CONFIRM_INST    (1 << 20) /* confirm_installation = yes  */
-#define INSTS_CONFIRM_UNINST  (1 << 21) /* confirm_removal = yes  */
-#define INSTS_EQPKG_ASKUSER   (1 << 22) /* choose_equivalents_manually = yes */
+
+#define INSTS_MKDBDIR         (1 << 15)  /* --mkdir */
+#define INSTS_FOLLOW          (1 << 16)  /* !--nofollow */
+#define INSTS_FRESHEN         (1 << 17)  /* --freshen */
+#define INSTS_USESUDO         (1 << 18)  /* use_sudo = yes  */
+#define INSTS_NOHOLD          (1 << 19)  /* --nohold  */
+#define INSTS_GREEDY          (1 << 20) /* --greedy */
+#define INSTS_KEEP_DOWNLOADS  (1 << 21) /* keep_downloads = yes */
+#define INSTS_PARTICLE        (1 << 22) /* particle_install = yes */
+#define INSTS_CHECKSIG        (1 << 23) /* not implemented yet */
+#define INSTS_CONFIRM_INST    (1 << 24) /* confirm_installation = yes  */
+#define INSTS_CONFIRM_UNINST  (1 << 25) /* confirm_removal = yes  */
+#define INSTS_EQPKG_ASKUSER   (1 << 26) /* choose_equivalents_manually = yes */
 
 #define INSTS_INTERACTIVE_ON  (INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER)
 

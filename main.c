@@ -210,6 +210,8 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_INST_HOLD             1053
 #define OPT_INST_NOHOLD           1054
 #define OPT_INST_GREEDY           'G'
+#define OPT_INST_REINSTALL        1055
+#define OPT_INST_DOWNGRADE        1056
 
 #define OPT_UNINSTALL             'e'
 
@@ -319,7 +321,10 @@ static struct argp_option options[] = {
 {"upgrade-dist", OPT_INST_UPGRDIST, "DIR", OPTION_ARG_OPTIONAL,
      N_("Upgrade all packages needs upgrade"), 70 },
 
-{"install", 'i', 0, 0, N_("Install given packages"), 70 },    
+    
+{"install", 'i', 0, 0, N_("Install given packages"), 70 },
+{"reinstall", OPT_INST_REINSTALL, 0, 0, N_("Reinstall given packages"), 70 },
+{"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade given packages"), 70 },
 {"upgrade", 'u', 0, 0, N_("Upgrade given packages"), 70 },
     {0, 'U', 0, OPTION_ALIAS, 0, 70 },
 {"erase", OPT_UNINSTALL, 0, 0, N_("Uninstall given packages"), 70 },
@@ -417,9 +422,10 @@ N_("Don't take held packages from $HOME/.poldek_hold."), 71 },
 void check_mjrmode(struct args *argsp) 
 {
     if (argsp->mjrmode) {
-        logn(LOGERR, _("only one major mode may be specified "
-        "(available modes are: mkidx, update, verify*, install*, "
-                       "upgrade*, split, sl and shell)"));
+        logn(LOGERR, _("only one major mode may be specified; "
+                       "available modes are: mkidx*,\n"
+                       "update*, verify*, install*, reinstall, "
+                       "upgrade*, split, sl and shell."));
         exit(EXIT_FAILURE);
     }
 }
@@ -700,6 +706,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->inst.flags |= INSTS_INSTALL;
             break;
 
+            
+        case OPT_INST_DOWNGRADE:
+            argsp->inst.flags |= INSTS_DOWNGRADE;
+                                /* no break */
+            
+        case OPT_INST_REINSTALL:
+            if ((argsp->inst.flags & INSTS_DOWNGRADE) == 0)
+                argsp->inst.flags |= INSTS_REINSTALL;
+                                /* no break */
         case 'U':
         case 'u':
             check_mjrmode(argsp);

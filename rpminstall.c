@@ -245,6 +245,17 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
         die();
     }
 
+    if (inst->flags & INSTS_REINSTALL) {
+        n_assert(inst->flags & INSTS_UPGRADE);
+        argv[n++] = "--replacefiles";
+        argv[n++] = "--replacepkgs";
+    }
+
+    if (inst->flags & INSTS_DOWNGRADE) {
+        n_assert(inst->flags & INSTS_UPGRADE);
+        argv[n++] = "--oldpackage";
+    }
+
     if (nv > 0) {
         argv[n++] = "-vh";
         nv--;
