@@ -367,13 +367,25 @@ if test -n "TNDB_DIR"; then
 	TNDB_INCLUDE="-I\$(top_srcdir)/$TNDB_DIR/"
 	TNDB_LDFLAG="-L\$(top_builddir)/$TNDB_DIR/"
 	CPPFLAGS="$CPPFLAGS $TNDB_INCLUDE"
-	AC_CONFIG_SUBDIRS(tndb)
+    AC_CONFIG_SUBDIRS(tndb)
 else
 	AC_CHECK_HEADER(tndb/tndb.h,,AC_MSG_ERROR("tndb.h is missing"))
 fi
 
 AC_SUBST(TNDB_INCLUDE)
 AC_SUBST(TNDB_LDFLAG)
+
+dnl python stuff
+
+
+AC_ARG_WITH(python,
+[  --with-python	build python interface (unusable)],
+ENABLE_PYTHON=$enableval, ENABLE_PYTHON=no)
+if test "${ENABLE_PYTHON}." = "yes."; then
+    AM_PATH_PYTHON
+    AC_CONFIG_SUBDIRS(python)
+fi
+
 
 AC_CONFIG_FILES([  
 		po/Makefile.in
@@ -387,6 +399,7 @@ AC_CONFIG_FILES([
 		sigint/Makefile
 		vfile/Makefile
 		vfile/vfff/Makefile
+        python/Makefile
 		conf/Makefile
 		doc/Makefile
 		doc/homepage/Makefile

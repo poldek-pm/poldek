@@ -7,7 +7,8 @@ TRURL_DIR = @TRURL_DIR@
 TNDB_DIR = @TNDB_DIR@
 
 CLI=cli
-SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir rpm . $(CLI)
+SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir \
+            rpm . $(CLI) python
 DIST_SUBDIRS = $(SUBDIRS)
 
 INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@

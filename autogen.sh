@@ -14,7 +14,7 @@ runcmd () {
     $@
 }
 
-CONFOPTS="--enable-maintainer-mode --enable-compile-warnings $@"
+CONFOPTS="--enable-maintainer-mode --enable-compile-warnings --with-python $@"
 
 getlib_mode="link"
 if [ -n "$1" -a "$1" = "makedist" ]; then
