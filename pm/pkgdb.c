@@ -595,7 +595,7 @@ int pkgdb_get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
             continue;
 
         n += get_obsoletedby_cap(db, PMTAG_NAME, dbpkgs, cnfl, ldflags);
-#ifdef HAVE_RPM_4_1        
+#ifdef HAVE_RPM_4_1             /* TODO -- code this in pm's module */
         n += get_obsoletedby_cap(db, PMTAG_CAP, dbpkgs, cnfl, ldflags);
 #endif 
     }

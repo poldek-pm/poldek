@@ -1,10 +1,8 @@
 #ifndef POLDEK_PM_H
 #define POLDEK_PM_H
 
-
-#include <sys/types.h>
+#include <sys/types.h>          /* for O_* */
 #include <fcntl.h>
-
 
 #include <trurl/trurl.h>
 #include "poldek.h"
@@ -96,7 +94,6 @@ enum capreq_type {
     PMCAP_CNFL = 3,
     PMCAP_OBSL = 4
 };
-
 
 /* pkgdb_it */
 enum pkgdb_it_tag {

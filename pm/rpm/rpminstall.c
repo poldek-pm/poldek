@@ -284,12 +284,8 @@ int pm_rpm_packages_install(struct pkgdb *db,
     if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE | POLDEK_TS_REINSTALL |
                          POLDEK_TS_DOWNGRADE))
         argv[n++] = "--upgrade";
-        
-    else if (ts->type == POLDEK_TSt_INSTALL)
-        argv[n++] = "--install";
-             
     else
-        die();
+        argv[n++] = "--install";
     
     if (poldek_ts_issetf(ts, POLDEK_TS_REINSTALL)) {
         argv[n++] = "--replacefiles";

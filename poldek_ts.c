@@ -74,9 +74,9 @@ struct ts_run {
 #define TS_RUN_NEEDAVSET (1 << 0)
 #define TS_RUN_NOPRERUN  (1 << 3)
 struct ts_run ts_run_tbl[] = {
-    { POLDEK_TSt_VERIFY, (ts_run_fn)ts_run_verify, TS_RUN_NOPRERUN | TS_RUN_NEEDAVSET },
-    { POLDEK_TSt_INSTALL, (ts_run_fn)ts_run_install, TS_RUN_NEEDAVSET },
-    { POLDEK_TSt_UNINSTALL, (ts_run_fn)ts_run_uninstall, 0 },
+    { POLDEK_TS_VERIFY, (ts_run_fn)ts_run_verify, TS_RUN_NOPRERUN | TS_RUN_NEEDAVSET },
+    { POLDEK_TS_INSTALL, (ts_run_fn)ts_run_install, TS_RUN_NEEDAVSET },
+    { POLDEK_TS_UNINSTALL, (ts_run_fn)ts_run_uninstall, 0 },
     { 0, 0, 0 },
 };
 
@@ -279,17 +279,28 @@ void poldek_ts_destroy(struct poldek_ts *ts)
 }
 
 
-#undef poldek_ts_setf
-#undef poldek_ts_clrf
-#undef poldek_ts_issetf
-
 void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag)
 {
+    switch (flag) {
+        case POLDEK_TS_INSTALL:
+        case POLDEK_TS_UNINSTALL:
+        case POLDEK_TS_VERIFY:
+            ts->type = flag;
+            break;
+    }
+
     ts->_flags |= flag;
 }
 
 void poldek_ts_clrf(struct poldek_ts *ts, uint32_t flag)
 {
+    switch (flag) {
+        case POLDEK_TS_INSTALL:
+        case POLDEK_TS_UNINSTALL:
+        case POLDEK_TS_VERIFY:
+            ts->type = 0;
+            break;
+    }
     ts->_flags &= ~flag;
 }
 
@@ -601,10 +612,22 @@ static void cp_arr_ifnull(tn_array **dst, tn_array *src)
     }
 }
 
-int poldek_ts_set_type(struct poldek_ts *ts, int type, const char *typenam)
+int poldek_ts_set_type(struct poldek_ts *ts, uint32_t type, const char *typenam)
 {
     if (ts->type)
         return 0;
+    
+    switch (type) {
+        case POLDEK_TS_INSTALL:
+        case POLDEK_TS_UNINSTALL:
+        case POLDEK_TS_VERIFY:
+            ts->type = type;
+            break;
+
+        default:
+            n_die("%d: unknown ts type", type);
+            n_assert(0);
+    }
     
     ts->type = type;
     if (typenam)
@@ -731,7 +754,7 @@ int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     int rc;
     
     DBGF("%d %s\n", ts->type, ts->typenam);
-    n_assert(ts->type = POLDEK_TSt_INSTALL);
+    n_assert(ts->type = POLDEK_TS_INSTALL);
 
     if (poldek_ts_issetf_all(ts, POLDEK_TS_UPGRADEDIST))
         return ts_run_upgrade_dist(ts);
@@ -768,7 +791,7 @@ int ts_run_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
 {
     int rc;
 
-    n_assert(ts->type == POLDEK_TSt_UNINSTALL);
+    n_assert(ts->type == POLDEK_TS_UNINSTALL);
 
     ts->db = poldek_ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)

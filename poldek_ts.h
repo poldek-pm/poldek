@@ -4,20 +4,24 @@
 
 #include <trurl/narray.h>
 
-enum poldek_ts_type {
-    POLDEK_TSt_INSTALL    = 1, 
-    POLDEK_TSt_UNINSTALL  = 2,
-    POLDEK_TSt_VERIFY     = 4,
-};
-
 enum poldek_ts_flag {
-    POLDEK_TS_DIST         = (1 << 0), 
-    POLDEK_TS_UPGRADE      = (1 << 1), 
-    POLDEK_TS_DOWNGRADE    = (1 << 2),
-    POLDEK_TS_REINSTALL    = (1 << 3),
+    POLDEK_TS_INSTALL      = (1 << 0), 
+    POLDEK_TS_UNINSTALL    = (1 << 1), 
+    POLDEK_TS_VERIFY       = (1 << 2),
+    
+    POLDEK_TS_DIST         = (1 << 5), 
+    POLDEK_TS_UPGRADE      = (1 << 6), 
+    POLDEK_TS_DOWNGRADE    = (1 << 7),
+    POLDEK_TS_REINSTALL    = (1 << 8),
 
     POLDEK_TS_UPGRADEDIST  = POLDEK_TS_UPGRADE | POLDEK_TS_DIST,
     POLDEK_TS_INSTALLDIST  = POLDEK_TS_DIST,
+};
+
+enum poldek_ts_type {
+    POLDEK_TS_TYPE_INSTALL      = POLDEK_TS_INSTALL,
+    POLDEK_TS_TYPE_UNINSTALL    = POLDEK_TS_UNINSTALL,
+    POLDEK_TS_TYPE_VERIFY       = POLDEK_TS_VERIFY,
 };
 
 enum poldek_ts_opt {
@@ -125,7 +129,8 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx);
 void poldek_ts_destroy(struct poldek_ts *ts);
 
 int poldek_ts_type(struct poldek_ts *ts);
-int poldek_ts_set_type(struct poldek_ts *ts, int type, const char *typenam);
+int poldek_ts_set_type(struct poldek_ts *ts, enum poldek_ts_type type,
+                       const char *typenam);
 
 void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag);
 void poldek_ts_clrf(struct poldek_ts *ts, uint32_t flag);

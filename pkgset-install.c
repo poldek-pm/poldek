@@ -2451,7 +2451,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     struct pkgset *ps = ts->ctx->ps;
 
     
-    n_assert(ts->type == POLDEK_TSt_INSTALL);
+    n_assert(ts->type == POLDEK_TS_INSTALL);
 
     prepare_icaps(ts);
     if (unmark_name_dups(ts->pms, ps->pkgs) == 0) {
