@@ -1,4 +1,4 @@
-%module poldek
+%module poldekmod
 
 %{
 #include "local_stdint.h"
@@ -8,6 +8,7 @@
 #include "poldek.h"
 #include "poldek_ts.h"
 #include "pkgdir/source.h"
+#include "pkgdir/pkgdir.h"
 %}
 %include exception.i
 %include "local_stdint.h"
@@ -16,20 +17,35 @@
 %include "poldek.h"
 %include "poldek_ts.h"
 %include "pkgdir/source.h"
+%include "pkgdir/pkgdir.h"
 
 extern int poldek_VERBOSE;
+
+%exception nth { 
+    $function 
+    if (!result) {
+        PyErr_SetString(PyExc_IndexError, "Index out of bounds"); 
+        return NULL;
+    }
+}
+     
 
 %extend tn_array {
     tn_array(int size) { return n_array_new_ex(size, NULL, NULL, NULL); };
     tn_array(void *arr) { return arr; };
     int __len__() { return n_array_size(self); }
-    void *__getitem__(int i) {
+    void *nth(int i) {
         if (i < n_array_size(self))
             return n_array_nth(self, i);
-        else 
-            PyErr_SetString(PyExc_IndexError, "Index out of bounds");
         return NULL;
     }
+
+/* this doesn't raise exception, hgw why
+    void *__getitem__(int i) {
+        return tn_array_nth(self, i);
+    }
+*/
+        
 }
 
 
@@ -44,6 +60,12 @@ extern int poldek_VERBOSE;
     ~source() { source_free(self); }
 }
 
+%extend pkgdir {
+    pkgdir(struct source *src, unsigned flags) {
+        return pkgdir_srcopen(src, flags);
+    }
+    ~pkgdir() { pkgdir_free(self); }
+}
 
 %extend pkg {
     pkg(void *ptr) { return ptr; } /* conv constructor */

@@ -4,5 +4,5 @@ local_stdint.h
 Makefile 
 Makefile.in 
 *.la 
-poldek.py* 
+*[a-z]mod.py* 
 wrap_*

@@ -5,25 +5,25 @@ py_incdir  = $(py_prefix)/include/python$(py_ver)
 #py_sitedir = $(py_libdir)/site-packages
 #$py_dyndir      %{py_libdir}/lib-dynload
 
-EXTRA_DIST = poldek.i
-CLEANFILES = wrap_* poldek.py
+EXTRA_DIST = poldekmod.i local_stdint.h
+CLEANFILES = wrap_* poldekmod.py local_stdint.h
 
 INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir) -I$(py_incdir) -I.
 
 #pythondir = $(prefix)$(libdir)/python
-python_PYTHON = poldek.py
+python_PYTHON = poldekmod.py poldek.py
 
-lib_LTLIBRARIES = _poldek.la
+lib_LTLIBRARIES = _poldekmod.la
 
-_poldek_la_SOURCES = wrap_poldek.c local_stdint.h
-_poldek_la_LDFLAGS = -avoid-version -module
-_poldek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la @TRURL_LDFLAG@ 
+_poldekmod_la_SOURCES = wrap_poldekmod.c
+_poldekmod_la_LDFLAGS = -avoid-version -module
+_poldekmod_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la @TRURL_LDFLAG@ 
 
 AM_CFLAGS=
 CFLAGS=
 CPPFLAGS += -DSWIG
 
-poldek.i: local_stdint.h
+poldekmod.i: local_stdint.h
 
 install-exec-hook:
 	$(mkinstalldirs) "$(DESTDIR)$(py_sitedir)"
@@ -33,7 +33,10 @@ install-exec-hook:
 local_stdint.h: 
 	$(CPP) local_stdint.c > local_stdint.h
 
-wrap_%.c: %.i $(top_srcdir)/%.h
+#wrap_poldekmod.c: poldekmod.i
+#	$(SWIG) $(SWIG_PYTHON_OPT) $(INCLUDES) -o $@ $<
+
+wrap_%.c: %.i
 	$(SWIG) $(SWIG_PYTHON_OPT) $(INCLUDES) -o $@ $<
 
 
