@@ -208,7 +208,7 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
         char *p;
 
         nline++;
-        if (nline == 0) {
+        if (nline == 1) {
             char *p;
             int lnerr = 0;
                 
