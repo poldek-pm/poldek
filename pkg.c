@@ -475,6 +475,7 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
 {
     register int cmprc = 0, evr = 0;
 
+    DBGMSG_F("cap %s req %s\n", capreq_snprintf_s(cap), capreq_snprintf_s0(req));
     
     if ((strcmp(capreq_name(cap), capreq_name(req))) != 0)
         return 0;
@@ -508,7 +509,7 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
             return rel_match(cmprc, req);
         evr = 1;
     }
-    //printf ("EVR = %d %d %d\n", evr, cmprc, rel_match(cmprc, req));
+    
     return evr ? rel_match(cmprc, req) : 1;
 }
 
@@ -564,9 +565,6 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
         struct capreq *cap;
         int i;
 
-        if (strict == 0)    /* matched by name */
-            return 1;
-        
         cap = n_array_nth(pkg->caps, n);
         if (cap_match_req(cap, req, strict)) {
             DBGMSG("chk%d (%s-%s-%s) -> match (%d)\n", n, capreq_name(cap),
