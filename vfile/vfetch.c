@@ -212,7 +212,7 @@ int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
     const struct vf_module *mod = NULL;
     const char *destdir = NULL;
     struct vflock *vflock = NULL;
-    int rc;
+    int rc = 0;
 
     if (dest_dir)
         destdir = dest_dir;
