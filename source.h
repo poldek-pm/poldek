@@ -13,8 +13,9 @@
 #define PKGSOURCE_NOAUTOUP   (1 << 1)
 #define PKGSOURCE_VRFY_GPG   (1 << 2)
 #define PKGSOURCE_VRFY_PGP   (1 << 3)
-#define PKGSOURCE_TYPE       (1 << 4)
-#define PKGSOURCE_PRI        (1 << 5)
+#define PKGSOURCE_VRFY_SIGN  (1 << 4)
+#define PKGSOURCE_TYPE       (1 << 5)
+#define PKGSOURCE_PRI        (1 << 6)
 
 #define PKGSOURCE_ISNAMED    (1 << 10)
 

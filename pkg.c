@@ -327,25 +327,15 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
 struct pkg *pkg_ldrpm(const char *path, unsigned ldflags)
 {
     struct pkg *pkg = NULL;
-    FD_t fdt;
     Header h;
     
-    if ((fdt = Fopen(path, "r")) == NULL) 
-        logn(LOGERR, "open %s: %s", path, rpmErrorString());
+    if (rpm_headerReadFile(path, &h)) {
+        if (rpm_headerIsSource(h))
+            logn(LOGERR, _("%s: reject source package"), path);
+        else
+            pkg = pkg_ldhdr(h, path, 0, ldflags);
         
-    else {
-        if (rpmReadPackageHeader(fdt, &h, NULL, NULL, NULL) != 0) {
-            logn(LOGERR, _("%s: read header failed"), path);
-            
-        } else {
-            if (headerIsEntry(h, RPMTAG_SOURCEPACKAGE))
-                logn(LOGERR, _("%s: reject source package"), path);
-            else
-                pkg = pkg_ldhdr(h, path, 0, ldflags);
-            
-            headerFree(h);
-        }
-        Fclose(fdt);
+        headerFree(h);
     }
 
     return pkg;

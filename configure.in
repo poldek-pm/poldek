@@ -1,7 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl $Id$
 
-AC_INIT(capreq.c)
+AC_INIT
+AC_CONFIG_SRCDIR([capreq.c])
 
 VERSION=0.17.9
 VERSION_STATUS="beta"
@@ -11,22 +12,22 @@ PACKAGE=poldek
 AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
 AC_DEFINE_UNQUOTED(VERSION_STATUS, "$VERSION_STATUS")
 AC_SUBST(VERSION_CVSTAG)
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS([config.h])
 
 ALL_LINGUAS="pl de"
-AM_GNU_GETTEXT
 
 
-CFLAGS="$CFLAGS -g -Wall -W"
-LDFLAGS="$LDFLAGS"
+AM_CFLAGS="-g -Wall -W"
 AC_DEFINE(ENABLE_VFILE_RPMIO)
 
 dnl Checks for programs.
-AC_PROG_CC
+AC_PROG_CC()
 AC_C_INLINE
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 AC_CHECK_PROG(POD2MAN, pod2man, pod2man)
+AM_GNU_GETTEXT
+AM_GNU_GETTEXT_VERSION(0.10.38)
 
 dnl Process features.
 AC_CHECK_LIB(tinfo, tigetstr,,[
@@ -51,7 +52,7 @@ else
 			         [CPPFLAGS="-I/usr/include/pcre $CPPFLAGS"], )], )
 
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, true)
-	AC_DEFINE(ENABLE_INTERACTIVE_MODE)
+	AC_DEFINE([ENABLE_INTERACTIVE_MODE])
 
 	AC_CHECK_FUNCS(rl_completion_matches, have_rl_4_2=yes, have_rl_4_2=no,
 		     $CONF_IN_LDFLAGS)
@@ -159,21 +160,21 @@ AC_EGREP_CPP(yes,
 
 if test ${is_rpm4}. = yes. ; then
 	AC_MSG_RESULT(yes)
-	AC_DEFINE(HAVE_RPM_4_0)
+	AC_DEFINE([HAVE_RPM_4_0])
 	AC_EGREP_CPP(RPMSENSE_SCRIPT_PRE,
 		[ #include <rpm/rpmlib.h>
 		], is_rpm_extdeps=yes, is_rpm_extdeps=no)
 	if test ${is_rpm_extdeps}. = yes. ; then
-		AC_DEFINE(HAVE_RPM_EXTDEPS)
+		AC_DEFINE([HAVE_RPM_EXTDEPS])
 	fi
 
-	AC_MSG_CHECKING([for rpm 4.0.4])
+	AC_MSG_CHECKING([for rpm >= 4.0.4])
 	AC_EGREP_CPP(RPMSENSE_KEYRING,
 		[ #include <rpm/rpmcli.h>
 		], is_rpm4_0_4=yes, is_rpm4_0_4=no)
 
 	if test ${is_rpm4_0_4}. = yes. ; then
-		AC_DEFINE(HAVE_RPM_4_0_4)
+		AC_DEFINE([HAVE_RPM_4_0_4])
 		CFLAGS="$CFLAGS -D_REENTRANT"
 		AC_MSG_RESULT(yes)
 	else 
@@ -202,17 +203,16 @@ if test -n "$TRURL_DIR"; then
 	TRURL_INCLUDE="-I\$(top_srcdir)/$TRURL_DIR"
 	TRURL_LDFLAG="-L\$(top_srcdir)/$TRURL_DIR"
 	TRURL_LDFLAG="$TRURL_LDFLAG -L\$(top_srcdir)/$TRURL_DIR/.libs"
-	AC_SUBST(TRURL_DIR)
-	AC_SUBST(TRURL_INCLUDE)
-	AC_SUBST(TRURL_LDFLAG)
 	LDFLAGS="$LDFLAGS -L\$(top_srcdir)/$TRURL_DIR -L\$(top_srcdir)/$TRURL_DIR/.libs"
 	TRURLIB_VERSION=$(egrep 'T_AUTOMAKE\(trurlib, ' $TRURL_DIR/configure.in | cut -d ' ' -f 2 | sed 's|)||')
-	AC_SUBST(TRURLIB_VERSION)
 else
 	AC_CHECK_HEADER(trurl/trurl.h,,AC_MSG_ERROR("trurl.h is missing"))
 	TRURLIB_VERSION=0.43.4
-	AC_SUBST(TRURLIB_VERSION)
 fi
+AC_SUBST(TRURL_INCLUDE)
+AC_SUBST(TRURL_LDFLAG)
+AC_SUBST(TRURL_DIR)
+AC_SUBST(TRURLIB_VERSION)
 
 dnl Checks for libraries.
 AC_CHECK_LIB(bz2, BZ2_bzCompress)
@@ -262,13 +262,16 @@ fi
 AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="$LIBS -lrpm $DBLIB"],
 	AC_CHECK_LIB(rpm, rpmReadPackageHeader,
 		[LIBS="$LIBS -lrpm -lrpmdb $DBLIB"],
-		AC_MSG_ERROR(["rpmlib not found"]),
+		AC_CHECK_LIB(rpm, rpmReadPackageFile,
+			[LIBS="$LIBS -lrpm -lrpmdb $DBLIB"
+			 AC_DEFINE([HAVE_RPM_4_1])],
+			AC_MSG_ERROR(["rpmlib not found"]),
+			[$DBLIB -lrpmdb]),
 		[$DBLIB -lrpmdb]),
 	    [$DBLIB])
 
 AC_CHECK_FUNCS(rpmMachineScore,,[ AC_MSG_ERROR(["rpmlib not found"])])
-AC_CHECK_FUNCS(rpmlog, [AC_DEFINE(HAVE_RPMLOG)])
-AC_CHECK_FUNCS(rpmCheckSig, [AC_DEFINE(HAVE_RPMCHECKSIG)])
+AC_CHECK_FUNCS(rpmlog rpmCheckSig rpmVerifySignature)
 
 AC_CHECK_HEADERS(db_185.h,,[ 
 	AC_MSG_WARN(["disabled synchronization with db file-dependencies"]) ])
@@ -310,10 +313,11 @@ if test -z "$TRURL_DIR"; then
 		[AC_MSG_ERROR(["trurlib >= 0.43.5 not found"])], [$CONF_IN_LDFLAGS])
 else
 	LIBS="$LIBS -ltrurl"
+	AC_CONFIG_SUBDIRS(trurlib)
 fi
 
-
-AC_OUTPUT([
+AC_CONFIG_FILES([  po/Makefile.in
+		intl/Makefile
 		shell/Makefile
 		vfile/Makefile
 		vfile/vftp/Makefile
@@ -322,14 +326,5 @@ AC_OUTPUT([
 		poldek.spec
 		poldek-suse.spec
 		homepage.sgml
-		intl/Makefile 
-		po/Makefile.in
 	])
-
-dnl local trurlib is used; dirty hack -- I didn't found 
-dnl a way to build ./trurlib BEFORE poldek
-if test -n "$TRURL_DIR"; then
-	sed 's/^all:/all: all-trurlib/' Makefile > Makefile-$$ && \
-        mv -f Makefile-$$ Makefile
-fi
-
+AC_OUTPUT

@@ -1,11 +1,12 @@
 # $Id$
 
 AUTOMAKE_OPTIONS = 
-SUBDIRS   = vfile shell po intl conf
+SUBDIRS   = @TRURL_DIR@ vfile shell po intl conf
+DIST_SUBDIRS = trurlib vfile shell po intl conf
 
-CFLAGS    = @CFLAGS@
+AM_CFLAGS    = @CFLAGS@
 INCLUDES  = @TRURL_INCLUDE@
-LDFLAGS   = @LDFLAGS@
+AM_LDFLAGS   = @LDFLAGS@
 POD2MAN   = @POD2MAN@
 POD2HTML  = pod2html
 
@@ -38,7 +39,7 @@ libpoldek_a_SOURCES = \
 	  pkgset-order.c    		\
 	  pkgset-install.c		\
 	  dbdep.c dbdep.h		\
-	  rpm.c rpm.h 		        \
+	  rpm.c rpm.h rpmdb_depdirs.c rpm_signature.c  \
 	  rpmhdr.c rpmhdr.h		\
 	  pkgdb.c pkgdb.h		\
 	  usrset.c usrset.h		\
@@ -139,20 +140,8 @@ vfjuggle:
 
 dist-hook: 
 	-rm -rf $(distdir)/.deps
-	$(MAKE) -C $(distdir)/trurlib distclean
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* conf/*~
-
-all-trurlib:
-	@echo "Building local trurlib...";                                \
-	if [ ! -f ./trurlib/configure ]; then                             \
-	     ./trurlib/autogen.sh;                                        \
-	fi;                                                               \
-	if [ -f ./trurlib/configure -a ! -f ./trurlib/Makefile ]; then    \
-		cd ./trurlib && ./configure && cd ..;	                  \
-	fi;                                                               \
-	$(MAKE) -C trurlib
-
 
 include Makefile.extra

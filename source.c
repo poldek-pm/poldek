@@ -59,10 +59,11 @@ static struct subopt type_subopts[] = {
 };
 
 static struct src_option source_options[] = {
-    { "noauto",   0, PKGSOURCE_NOAUTO,     NULL}, 
-    { "noautoup", 0, PKGSOURCE_NOAUTOUP,   NULL}, 
-    { "gpg",      0, PKGSOURCE_VRFY_GPG,   NULL},
-    { "pgp",      0, PKGSOURCE_VRFY_PGP,   NULL},
+    { "noauto",   0, PKGSOURCE_NOAUTO,      NULL}, 
+    { "noautoup", 0, PKGSOURCE_NOAUTOUP,    NULL}, 
+    { "gpg",      0, PKGSOURCE_VRFY_GPG,    NULL},
+    { "pgp",      0, PKGSOURCE_VRFY_PGP,    NULL},
+    { "sign",     0, PKGSOURCE_VRFY_SIGN,   NULL},
     { "type",     0, PKGSOURCE_TYPE | PKGSRC_OPTION_SUBOPT, type_subopts },
     { "pri",      0, PKGSOURCE_PRI | PKGSRC_OPTION_SUBOPT, NULL},
     {  NULL,      0, 0, NULL }, 

@@ -15,10 +15,16 @@
 #endif
 
 #include <rpm/rpmlib.h>
+#ifdef HAVE_RPM_4_1
+# include <rpm/rpmdb.h>
+#endif
+
+#define ENABLE_TRACE 0
 #include "i18n.h"
 #include "rpmdb_it.h"
 #include "rpmadds.h"
 #include "misc.h"
+#include "log.h"
 
 #ifdef HAVE_RPM_4_0
 
@@ -56,6 +62,9 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
             die();
     }
     
+
+    DBGF("%p, %p (%d)\n", it, db, db->nrefs);
+    it->db = db;
     it->mi = rpmdbInitIterator(db, rpmtag, arg, 0);
     return rpmdbGetIteratorCount(it->mi);
 }
@@ -121,10 +130,13 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
 
 void rpmdb_it_destroy(struct rpmdb_it *it) 
 {
+    
+
 #ifdef HAVE_RPM_4_0
     rpmdbFreeIterator(it->mi);
     it->mi = NULL;
     it->dbrec.h = NULL;
+    DBGF("%p, %p (%d)\n", it, it->db, it->db->nrefs);
 #else
     if (it->dbrec.h != NULL) {
         headerFree(it->dbrec.h);
@@ -144,7 +156,8 @@ const struct dbrec *rpmdb_it_get(struct rpmdb_it *it)
 {
 #ifdef HAVE_RPM_4_0
     it->dbrec.h = rpmdbNextIterator(it->mi);
-
+    DBGF("%p, %p (%d)\n", it, it->db, it->db->nrefs);
+    
     if (it->dbrec.h == NULL)
         return NULL;
 

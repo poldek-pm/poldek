@@ -6,9 +6,9 @@
 # include "config.h"
 #endif
 
-
 #include <stdint.h>
 #include <rpm/rpmlib.h>
+
 
 #ifdef HAVE_RPM_4_0_4           /* missing prototypes in public headers */
 int headerGetRawEntry(Header h, int_32 tag,
@@ -22,6 +22,9 @@ char ** headerGetLangs(Header h);
 int rpmvercmp(const char * one, const char * two);
 
 
+#define rpm_headerIsSource(h)  headerIsEntry((h), RPMTAG_SOURCEPACKAGE)
+int rpm_headerReadFD(FD_t fdt, Header *hdr, const char *path);
+int rpm_headerReadFile(const char *path, Header *hdr);
 
 void rpm_headerEntryFree(void *e, int type);
 

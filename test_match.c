@@ -23,7 +23,7 @@
 #include "i18n.h"
 #include "pkg.h"
 #include "misc.h"
-
+#include "rpm.h"
 
 int test_match(int argc, char *argv[])
 {
@@ -131,7 +131,14 @@ int test_expand_env(int argc, char *argv[])
 
 int main(int argc, char *argv[]) 
 {
-    test_expand_env(argc, argv);
-    test_match2();
+    rpmdb db;
+    //test_expand_env(argc, argv);
+    //test_match2();
+    log_init(NULL, stdout, "aa");
+    rpm_initlib(NULL);
+    db = rpm_opendb("/var/lib/rpm", "/", O_RDONLY);
+    sleep(20);
+    rpm_closedb(db);
+    sleep(30);
     return 0;
 }

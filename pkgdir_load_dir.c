@@ -90,14 +90,8 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
         
         if (S_ISREG(st.st_mode)) {
             Header h;
-            FD_t fdt;
             
-            if ((fdt = Fopen(path, "r")) == NULL) {
-                logn(LOGERR, "open %s: %s", path, rpmErrorString());
-                continue;
-            }
-            
-            if (rpmReadPackageHeader(fdt, &h, NULL, NULL, NULL) != 0) {
+            if (rpm_headerReadFile(path, &h) != 0) {
                 logn(LOGWARN, "%s: read header failed, skipped", path);
                 
             } else {
@@ -116,7 +110,6 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
                 }
                 headerFree(h);
             }
-            Fclose(fdt);
             
             if (n && n % 200 == 0) 
                 msg(1, "_%d..", n);
@@ -320,13 +313,14 @@ void db_map_fn(unsigned int recno, void *header, void *pkgs)
     int               len;
 
     recno = recno;
-    pkg = pkg_ldhdr(header, "db", 0, PKG_LDNEVR);
-    pkg_snprintf(nevr, sizeof(nevr), pkg);
+    if ((pkg = pkg_ldhdr(header, "db", 0, PKG_LDNEVR))) {
+        pkg_snprintf(nevr, sizeof(nevr), pkg);
     
-    len = strlen(nevr);
-    n_array_push(pkgs, pkg);
-    if (n_array_size(pkgs) % 100 == 0)
-        msg(1, "_.");
+        len = strlen(nevr);
+        n_array_push(pkgs, pkg);
+        if (n_array_size(pkgs) % 100 == 0)
+            msg(1, "_.");
+    }
 }
 
 static tn_array *load_db_packages(const char *rootdir, const char *path) 

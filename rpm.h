@@ -34,7 +34,7 @@ int rpm_dbmap(rpmdb db,
               void *arg);
 
 
-int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs);
+int rpmdb_get_depdirs(const char *rootdir, tn_array *depdirs);
 
 tn_array *rpm_get_conflicted_dbpkgs(rpmdb db, const struct capreq *cap,
                                     tn_array *unistdbpkgs, unsigned ldflags);
@@ -81,6 +81,19 @@ int rpm_get_obsoletedby_pkg(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
 
 int rpm_install(rpmdb db, const char *rootdir, const char *path,
                 unsigned filterflags, unsigned transflags, unsigned instflags);
+
+#ifdef HAVE_RPM_4_1
+# include <rpm/rpmcli.h>
+# define VRFYSIG_DGST     VERIFY_DIGEST
+# define VRFYSIG_SIGN     VERIFY_SIGNATURE
+# define VRFYSIG_SIGNGPG  VERIFY_SIGNATURE
+# define VRFYSIG_SIGNPGP  VERIFY_SIGNATURE
+#else
+# define VRFYSIG_DGST     CHECKSIG_MD5
+# define VRFYSIG_SIGN     CHECKSIG_GPG
+# define VRFYSIG_SIGNGPG  CHECKSIG_GPG
+# define VRFYSIG_SIGNPGP  CHECKSIG_PGP
+#endif
 
 int rpm_verify_signature(const char *path, unsigned flags);
 

@@ -25,7 +25,7 @@ poldekrc.sample: sample.src $(CONF)
 
 
 
-clean: 
+clean distclean: 
 	-rm -f *~ poldekrc.sample*
 
 # satisfy automake

@@ -6,6 +6,7 @@
 #undef ENABLE_STATIC
 #undef HAVE_RPM_4_0
 #undef HAVE_RPM_4_0_4
+#undef HAVE_RPM_4_1
 #undef HAVE_RPM_EXTDEPS
 #undef HAVE_READLINE_4_2
 #undef HAVE_TM_GMTOFF

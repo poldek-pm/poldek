@@ -4,9 +4,9 @@
 if [ ! -f capreq.h ]; then
     cd `dirname $0`;
     if [ ! -f capreq.h ]; then
-	echo "`pwd`: not a poldek directory"
-	exit 1
-    fi 	
+        echo "`pwd`: not a poldek directory"
+        exit 1
+    fi 
 fi
 
 runcmd () {
@@ -21,16 +21,24 @@ runcmd aclocal
 runcmd autoheader
 runcmd autoconf
 if [ ! -f ABOUT-NLS ]; then
-    runcmd gettextize -f
+    if which -- autopoint >/dev/null 2>&1 ; then
+        runcmd autopoint --force
+    else
+        runcmd gettextize -f
+    fi
 fi
 runcmd automake --add-missing 
 
 # w/o
 if [ ! -f depcomp ]; then 
-	runcmd automake --add-missing Makefile
-	(cd vfile && ln -sf ../depcomp .)
-        (cd shell && ln -sf ../depcomp .)
+    runcmd automake --add-missing Makefile
+    (cd vfile && ln -sf ../depcomp .)
+    (cd shell && ln -sf ../depcomp .)
 fi
 
-
+if [ -x ./trurlib/autogen.sh ]; then
+	cd trurlib
+	runcmd ./autogen.sh $CONFOPTS
+	cd ..
+fi
 runcmd ./configure $CONFOPTS

@@ -39,7 +39,7 @@
 #include "misc.h"
 #include "rpm.h"
 
-#ifdef HAVE_RPMCHECKSIG     /* don't really know in RPM versions with rpmCheckSig() */
+#ifdef HAVE_RPM_4_0    
 
 int package_verify_sign(const char *path, unsigned flags) 
 {
@@ -52,13 +52,13 @@ int package_verify_sign(const char *path, unsigned flags)
     
     
     if (flags & PKGVERIFY_GPG)
-        rpmflags |= CHECKSIG_GPG;
+        rpmflags |= VRFYSIG_SIGNGPG;
 
     if (flags & PKGVERIFY_PGP)
-        rpmflags |= CHECKSIG_PGP;
+        rpmflags |= VRFYSIG_SIGNPGP;
     
     if (flags & PKGVERIFY_MD)
-        rpmflags |= CHECKSIG_MD5;
+        rpmflags |= VRFYSIG_DGST;
 
     return rpm_verify_signature(path, rpmflags);
 }
