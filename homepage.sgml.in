@@ -203,7 +203,7 @@ For example:
 	<item> RedHat Linux 7.2 package (linked with rpm 4.0.4)
 	<itemize>
 	<item>
-	<url url="download/poldek-@VERSION@-1.i386.rpm" 
+	<url url="download/rh7.2/poldek-@VERSION@-1.i386.rpm" 
 	     name="http://team.pld.org.pl/~mis/poldek/download/rh7.2/poldek-@VERSION@-1.i386.rpm">  
 	
 	</itemize>
@@ -219,7 +219,7 @@ For example:
 
     <item> Anonymous CVS
     <p>
-      Getting the module (password: "cvs"): 
+      Getting the module (no password is needed): 
       <tscreen><verb>
       cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot login
       cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get -r @VERSION_CVSTAG@ installer/poldek
