@@ -826,13 +826,17 @@ int get_pkgs_requires_hfiles(rpmdb db, Header h, tn_array *exclrnos,
     return 1;
 }
 
- 
+/* add to pkgs packages which requires package given in Header */ 
 int rpm_get_pkgs_requires_pkgh(rpmdb db, Header h, tn_array *exclrnos,
                                tn_array *pkgs)
 {
     tn_array *caps;
+    char *pkgname = NULL;
     int i;
 
+    headerGetEntry(h, RPMTAG_NAME, NULL, (void *)&pkgname, NULL);
+    n_assert(pkgname);
+    rpm_get_pkgs_requires_capn(db, pkgname, exclrnos, pkgs);
 
     caps = capreq_arr_new();
     get_pkg_caps(caps, h);
@@ -875,7 +879,7 @@ int rpm_get_pkgs_requires_obsl_pkg(rpmdb db, struct capreq *obsl,
 
     dbiIndexSet matches;
     int rc;
-
+    
     matches.count = 0;
     matches.recs = NULL;
     rc = rpmdbFindPackage(db, capreq_name(obsl), &matches);
