@@ -295,8 +295,16 @@ char *next_token(char **str, char delim, int *toklen)
 int is_rwxdir(const char *path)
 {
     struct stat st;
-    return stat(path, &st) == 0 &&
-        S_ISDIR(st.st_mode) && (st.st_mode & S_IRWXU);
+    
+    errno = 0;
+    if (stat(path, &st) == 0) {
+        if (!S_ISDIR(st.st_mode) && errno == 0)
+            errno = ENOENT;
+        else if ((st.st_mode & S_IRWXU) != S_IRWXU)
+            errno = EACCES;
+    }
+    
+    return errno == 0;
 }
 
 int is_dir(const char *path)
@@ -576,3 +584,24 @@ const char *expand_env_vars(char *dest, int size, const char *str)
     n_str_tokl_free(tl_save);
     return dest;
 }
+
+const char *abs_path(char *buf, int size, const char *path) 
+{
+    
+    if (*path == '/')
+        return path;
+
+    if (getcwd(buf, size) && strcmp(path, ".") != 0) {
+        int n = strlen(buf);
+        n = snprintf(&buf[n], size - n, "/%s", path);
+        if (n < (int)strlen(path) + 1)
+            return path;
+    }
+
+    return buf;
+}
+
+        
+
+    
+    

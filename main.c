@@ -1269,6 +1269,14 @@ void parse_options(int argc, char **argv)
     
     vfile_configure(args.inst.cachedir, vfile_cnflags);
     
+    if (args.inst.rootdir) {
+        char path[PATH_MAX];
+        const char *ppath;
+        
+        if ((ppath = abs_path(path, sizeof(path), args.inst.rootdir)))
+            args.inst.rootdir = n_strdup(ppath);
+    }
+    
     vfile_msg_fn = log_msg;
     vfile_msgtty_fn = log_tty;
     vfile_err_fn = log_err;
