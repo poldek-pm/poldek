@@ -59,7 +59,7 @@ struct pndir_paths {
 };
 
 static
-int difftoc_vaccum(const struct pndir_paths *paths);
+int difftoc_vaccum(const struct pndir_paths *paths, const char *srcnam);
 
 
 char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,
@@ -321,7 +321,7 @@ struct pkg *pndir_parse_pkgkey(char *key, int klen, struct pkg *pkg)
 
 
 static
-int difftoc_vaccum(const struct pndir_paths *paths)
+int difftoc_vaccum(const struct pndir_paths *paths, const char *srcnam)
 {
     tn_array     *lines; 
     char         line[2048], *dn, *bn;
@@ -339,8 +339,8 @@ int difftoc_vaccum(const struct pndir_paths *paths)
     memcpy(tmp, paths->path_diff_toc, sizeof(tmp));
     n_basedirnam(tmp, &dn, &bn);
 
-    
-    if ((vf = vfile_open(paths->path_diff_toc, VFT_TRURLIO, VFM_RO)) == NULL)
+    vf = vfile_open_sl(paths->path_diff_toc, VFT_TRURLIO, VFM_RO, srcnam);
+    if (vf == NULL)
         return 0;
     
     lines = n_array_new(128, NULL, NULL);
@@ -360,7 +360,8 @@ int difftoc_vaccum(const struct pndir_paths *paths)
     }
     vfile_close(vf);
 
-    if ((vf = vfile_open(paths->path_diff_toc, VFT_TRURLIO, VFM_RW)) == NULL) {
+    vf = vfile_open_sl(paths->path_diff_toc, VFT_TRURLIO, VFM_RW, srcnam);
+    if (vf == NULL) {
         rename(difftoc_path_bak, paths->path_diff_toc);
         n_array_free(lines);
         return 0;
@@ -429,13 +430,15 @@ int difftoc_vaccum(const struct pndir_paths *paths)
 }
 
 static
-int difftoc_update(const struct pkgdir *pkgdir, const struct pndir_paths *paths)
+int difftoc_update(const struct pkgdir *pkgdir, const struct pndir_paths *paths,
+                   const char *srcnam)
 {
     struct vfile   *vf;
     struct pndir   *idx;
 
-    
-    if ((vf = vfile_open(paths->path_diff_toc, VFT_TRURLIO, VFM_APPEND)) == NULL)
+
+    vf = vfile_open_sl(paths->path_diff_toc, VFT_TRURLIO, VFM_APPEND, srcnam);
+    if (vf == NULL)
         return 0;
 
     idx = pkgdir->mod_data;
@@ -446,7 +449,7 @@ int difftoc_update(const struct pkgdir *pkgdir, const struct pndir_paths *paths)
     vfile_close(vf);
     
     if (pkgdir->pkgs && n_array_size(pkgdir->pkgs))
-        return difftoc_vaccum(paths);
+        return difftoc_vaccum(paths, pkgdir_idstr(pkgdir));
 
     return 1;
 }
@@ -762,13 +765,13 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         
         if (!pndir_digest_calc(&dg, keys))
             nerr++;
-        else if (!pndir_digest_save(&dg, paths.path))
+        else if (!pndir_digest_save(&dg, paths.path, pkgdir_idstr(pkgdir)))
             nerr++;
     }
     
     
     if (pkgdir->flags & PKGDIR_DIFF)
-        difftoc_update(pkgdir, &paths);
+        difftoc_update(pkgdir, &paths, pkgdir_idstr(pkgdir));
 	
  l_end:
     if (nbuf)

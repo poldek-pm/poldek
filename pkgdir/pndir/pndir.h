@@ -33,12 +33,14 @@ struct pndir {
     char                 idxpath[PATH_MAX];
     struct pndir_digest  *dg;
     char                 *md_orig;
+    char                 *srcnam; /* label for  */
 };
 
 void pndir_init(struct pndir *idx);
 void pndir_destroy(struct pndir *idx);
 
-int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags);
+int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags,
+               const char *srcnam);
 void pndir_close(struct pndir *idx);
 
 
@@ -53,7 +55,8 @@ extern const char *pndir_digest_ext;
 int pndir_mkdigest_path(char *path, int size, const char *pathname,
                         const char *ext);
 
-struct pndir_digest *pndir_digest_new(const char *path, int vfmode);
+struct pndir_digest *pndir_digest_new(const char *path, int vfmode,
+                                      const char *srcnam);
 void pndir_digest_free(struct pndir_digest *pdg);
 
 void pndir_digest_init(struct pndir_digest *pdg);
@@ -66,7 +69,8 @@ int pndir_digest_readfd(struct pndir_digest *pdg, int fd, const char *path);
 
 int pndir_digest_calc(struct pndir_digest *pdg, tn_array *keys);
 int pndir_digest_calc_pkgs(struct pndir_digest *pdg, tn_array *pkgs);
-int pndir_digest_save(struct pndir_digest *pdg, const char *pathname);
+int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
+                      const char *srcnam);
 
 extern const char *pndir_packages_incdir;
 extern const char *pndir_difftoc_suffix;

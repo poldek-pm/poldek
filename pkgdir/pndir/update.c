@@ -247,7 +247,8 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
     snprintf(path, sizeof(path), "%s/%s/%s%s", dn,
              pndir_packages_incdir, bn, pndir_difftoc_suffix);
     
-    if ((vf = vfile_open(path, VFT_TRURLIO, VFM_RO)) == NULL) 
+    vf = vfile_open_sl(path, VFT_TRURLIO, VFM_RO, pkgdir_idstr(pkgdir));
+    if (vf == NULL)
         return 0;
 
     if (npatches)

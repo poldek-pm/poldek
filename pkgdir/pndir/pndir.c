@@ -151,7 +151,8 @@ void pndir_init(struct pndir *idx)
 }
 
 
-static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf)
+static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf,
+                              const char *srcnam)
 {
     struct vfile *vf_;
     struct tndb  *db;
@@ -160,7 +161,7 @@ static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf)
     if (vf)
         *vf = NULL;
     
-    if ((vf_ = vfile_open(path, VFT_IO, vfmode)) == NULL)
+    if ((vf_ = vfile_open_sl(path, VFT_IO, vfmode, srcnam)) == NULL)
         return NULL;
 
     if ((fd = dup(vf_->vf_fd)) == -1) {
@@ -185,7 +186,7 @@ static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf)
 
 
 static
-int open_dscr(struct pndir *idx, time_t ts, const char *lang) 
+int open_dscr(struct pndir *idx, time_t ts, const char *lang)
 {
     char        buf[128], tmpath[PATH_MAX], tss[32];
     const char  *suffix;
@@ -236,7 +237,7 @@ int open_dscr(struct pndir *idx, time_t ts, const char *lang)
         struct tndb *db;
         
         msgn(3, _("Opening %s..."), vf_url_slim_s(tmpath, 0));
-        if ((db = do_dbopen(tmpath, idx->_vf->vf_mode, NULL))) {
+        if ((db = do_dbopen(tmpath, idx->_vf->vf_mode, NULL, idx->srcnam))) {
             if (tndb_verify(db))
                 n_hash_insert(idx->db_dscr_h, lang, db);
             else {
@@ -251,15 +252,19 @@ int open_dscr(struct pndir *idx, time_t ts, const char *lang)
 
 
 
-int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags)
+int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags,
+               const char *srcnam)
 {
 	pndir_init(idx);
 
     if ((flags & PKGDIR_OPEN_DIFF) == 0)
-        if ((idx->dg = pndir_digest_new(path, vfmode)) == NULL)
+        if ((idx->dg = pndir_digest_new(path, vfmode, idx->srcnam)) == NULL)
             return 0;
     
-    idx->db = do_dbopen(path, vfmode, &idx->_vf);
+    if (srcnam)
+        idx->srcnam = n_strdup(srcnam);
+    
+    idx->db = do_dbopen(path, vfmode, &idx->_vf, idx->srcnam);
     if (idx->db == NULL)
         goto l_err;
         
@@ -283,11 +288,8 @@ void pndir_close(struct pndir *idx)
     if (idx->dg)
         pndir_digest_free(idx->dg);
 
-	if (idx->md_orig) {
-		free(idx->md_orig);
-		idx->md_orig = NULL;
-	}
-
+    n_cfree(&idx->md_orig);
+    n_cfree(&idx->srcnam);
     idx->_vf = NULL;
     idx->db = NULL;
     idx->dg = NULL;
@@ -341,7 +343,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         vfmode |= VFM_CACHE;
 
     DBGF("do_open %s\n", pkgdir->idxpath);
-    if (!pndir_open(&idx, pkgdir->idxpath, vfmode, flags))
+    if (!pndir_open(&idx, pkgdir->idxpath, vfmode, flags, pkgdir_idstr(pkgdir)))
         return 0;
     
     nerr = 0;

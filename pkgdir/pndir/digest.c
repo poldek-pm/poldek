@@ -43,7 +43,8 @@ const char *pndir_digest_ext = ".md";
 static int pndir_digest_read(struct pndir_digest *pdg, struct vfile *vfmd);
 
 
-struct pndir_digest *pndir_digest_new(const char *path, int vfmode) 
+struct pndir_digest *pndir_digest_new(const char *path, int vfmode,
+                                      const char *srcnam) 
 {
     struct pndir_digest  *pdg;
     struct vfile        *vf = NULL; 
@@ -55,7 +56,7 @@ struct pndir_digest *pndir_digest_new(const char *path, int vfmode)
 
         n = pndir_mkdigest_path(mdpath, sizeof(mdpath), path, ext);
         vfmode |= VFM_NOEMPTY;
-        if ((vf = vfile_open(mdpath, VFT_IO, vfmode)) == NULL) 
+        if ((vf = vfile_open_sl(mdpath, VFT_IO, vfmode, srcnam)) == NULL) 
             return NULL;
     }
     
@@ -177,7 +178,8 @@ int pndir_mkdigest_path(char *path, int size, const char *pathname,
 }
 
 
-int pndir_digest_save(struct pndir_digest *pdg, const char *pathname) 
+int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
+                      const char *srcnam) 
 {
     char            path[PATH_MAX];
     struct vfile    *vf;
@@ -190,7 +192,7 @@ int pndir_digest_save(struct pndir_digest *pdg, const char *pathname)
         return 0;
     }
     
-    if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
+    if ((vf = vfile_open_sl(path, VFT_STDIO, VFM_RW, srcnam)) == NULL)
         return 0;
     
     fprintf(vf->vf_stream, "%s", pdg->md);
