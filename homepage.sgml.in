@@ -53,9 +53,8 @@
     <sect> Availability
     <p>
     The program is free software (GPL).
-    It is not yet well tested so consider it "beta" software.
     See the file <url url="http://team.pld.org.pl/~mis/poldek/NEWS" name="NEWS"> for a list 
-    of major changes in the current release.	 
+    of major changes in the current release.
 	
     <itemize> 
 
@@ -89,7 +88,7 @@
       Getting the module (password: "cvs"): 
       <tscreen><verb>
       cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot login
-      cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get installer/poldek
+      cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get -r @VERSION_CVSTAG@ installer/poldek
       </verb></tscreen>            
       Particular files may be accessed via 
 	<url url="http://cvs.pld.org.pl/installer/poldek/" name="CVSWeb">
