@@ -11,25 +11,26 @@ mclean:
 
 
 backup:
-	@cd $(PROJ_DIR); \
-	ARCHDIR=`basename  $(PROJ_DIR)`-ARCH; \
-	ARCHNAME=`basename  $(PROJ_DIR)`-`date +%Y.%m.%d-%H.%M`; \
-	cd ..; \
-	mkdir $$ARCHDIR || true; \
-	cd $$ARCHDIR && mkdir $$ARCHNAME || exit 1; \
-	cd .. ;\
-	cp -a $(PROJ_DIR) $$ARCHDIR/$$ARCHNAME ;\
-	cd $$ARCHDIR ;\
-	tar cpzf $$ARCHNAME.tgz $$ARCHNAME ||  rm -rf $$ARCHNAME;   \
+	cd $(PROJ_DIR);                                            \
+	NAME=`basename  $(PROJ_DIR)`;                               \
+	ARCHDIR=$$NAME-ARCH;                                        \
+	ARCHNAME=$$NAME-`date +%Y.%m.%d-%H.%M`;                     \
+	mkdir ../$$ARCHDIR || true;                                 \
+	mkdir ../$$ARCHDIR/$$ARCHNAME || exit 1;                    \
+	cp -a . ../$$ARCHDIR/$$ARCHNAME || exit 1;        \
+	cd ../$$ARCHDIR;                                            \
+	tar cpzf $$ARCHNAME.tgz $$ARCHNAME && rm -rf $$ARCHNAME;    \
 	md5sum $$ARCHNAME.tgz > $$ARCHNAME.md5;                     \
+	ARCHIVE=$(PROJ_DIR)/../$$ARCHDIR/$$ARCHNAME.tgz;            \
+	ARCHIVE_MD5=$(PROJ_DIR)/../$$ARCHDIR/$$ARCHNAME.md5;        \
 	if [ $(cparch)x = "1x" ]; then                              \
 	        mkdir $(backupdir)/copy || true;                    \
-		cp -v $$HOME/$$ARCHDIR/$$ARCHNAME.tgz $(backupdir); \
-		cp -v $$HOME/$$ARCHDIR/$$ARCHNAME.tgz $(backupdir)/copy; \
-		cd $(backupdir) || exit 1;                         \
-		md5sum --check $$HOME/$$ARCHDIR/$$ARCHNAME.md5;    \
-		cd copy || exit 1;                                 \
-		md5sum --check $$HOME/$$ARCHDIR/$$ARCHNAME.md5;    \
+		cp -v $$ARCHIVE $$ARCHIVE_MD5 $(backupdir);         \
+		cp -v $$ARCHIVE $$ARCHIVE_MD5 $(backupdir)/copy;    \
+		cd $(backupdir) || exit 1;                          \
+		md5sum --check $$ARCHIVE_MD5;                       \
+		cd copy || exit 1;                                  \
+		md5sum --check $$ARCHIVE_MD5;                       \
 	fi
 
 arch : mclean backup 
