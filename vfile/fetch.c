@@ -392,7 +392,10 @@ int vfile_register_ext_handler(unsigned urltypes, const char *fmt)
     s = alloca(len);
     memcpy(s, fmt, len);
     
-    if ((ftch = ffetcher_new(urltypes, s))) {
+    if ((ftch = ffetcher_new(urltypes, s)) == NULL) {
+        vfile_err_fn("External downloader '%s' not registered\n", fmt);
+        
+    } else {
         ffetchers[nffetchers++] = ftch;
         return nffetchers;
     }

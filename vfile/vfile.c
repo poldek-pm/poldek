@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
@@ -319,7 +319,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
                 if ((gzstream = gzopen(path, mode)) == NULL) {
                     rc = 0;
                     if (errno) 
-                        vfile_err_fn("gzopen %s: %m\n", path);
+                        vfile_err_fn("%s: %m\n", path);
                     else if (Z_MEM_ERROR) 
                         vfile_err_fn("gzopen %s: insufficient memory\n", path);
                     else 
@@ -339,7 +339,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
                 if ((vf->vf_stream = fopen(path, mode)) != NULL) 
                     rc = 1;
                 else 
-                    vfile_err_fn("fopen %s: %m\n", path);
+                    vfile_err_fn("%s: %m\n", path);
 #ifdef HAVE_FOPENCOOKIE                
             }
 #endif            
@@ -360,7 +360,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
 
             } else {
                 if (errno) 
-                    vfile_err_fn("gzopen %s: %m\n", path);
+                    vfile_err_fn("%s: %m\n", path);
                 else if (Z_MEM_ERROR) 
                     vfile_err_fn("gzopen %s: insufficient memory\n", path);
                 else 
@@ -473,7 +473,8 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
     vf.vf_mdtmpath = NULL;
     vf.vf_type = vftype;
     vf.vf_mode = vfmode;
-
+    vf.vf_flags = 0;
+    
     urltype = vfile_url_type(path);
     opened = 0;
     mdopened = 1;
@@ -523,12 +524,13 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
                         vf.vf_mdtmpath = strdup(buf);
                     }
                     opened = 1;
+                    vf.vf_flags |= VF_FRMCACHE;
                 }
             }
         }
         
         
-        if (opened == 0) {
+        if (opened == 0) {      /* fetch */
             char *p = NULL, *tmpath = NULL;
 
             if ((p = strrchr(path, '/')) == NULL) {
@@ -571,6 +573,7 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
                 if (openvf(&vf, tmpath, VFM_RO)) {
                     vf.vf_tmpath = strdup(tmpath);
                     opened = 1;
+                    vf.vf_flags |= VF_FETCHED;
                     
                     if (VFM_MD) {
                         snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,

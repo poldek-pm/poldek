@@ -56,16 +56,35 @@ int vfile_curl_init(void)
     };
 #endif
 
-    if (curl_easy_setopt(curlh, CURLOPT_MUTE, *vfile_verbose > 1 ? 1:0) != 0) {
+    if (curl_easy_setopt(curlh, CURLOPT_MUTE, *vfile_verbose > 1 ? 0:1) != 0) {
         vfile_err_fn("curl_easy_setopt failed");
         return 0;
     };
 
-    if (curl_easy_setopt(curlh, CURLOPT_VERBOSE, *vfile_verbose > 2 ? 1:0) != 0) {
-        vfile_err_fn("curl_easy_setopt failed");
-        return 0;
-    };
-
+    if (*vfile_verbose > 2) {
+        if (curl_easy_setopt(curlh, CURLOPT_VERBOSE, 1) != 0) {
+            vfile_err_fn("curl_easy_setopt failed");
+            return 0;
+        };
+        
+        if (curl_easy_setopt(curlh, CURLOPT_NOPROGRESS, 1) != 0) {
+            vfile_err_fn("curl_easy_setopt failed");
+            return 0;
+        };
+        
+    } else {
+        if (curl_easy_setopt(curlh, CURLOPT_VERBOSE, 0) != 0) {
+            vfile_err_fn("curl_easy_setopt failed");
+            return 0;
+        };
+        
+        if (curl_easy_setopt(curlh, CURLOPT_NOPROGRESS, 0) != 0) {
+            vfile_err_fn("curl_easy_setopt failed");
+            return 0;
+        };
+    }
+    
+        
     if (curl_easy_setopt(curlh, CURLOPT_PROGRESSFUNCTION, progress) != 0) {
         vfile_err_fn("curl_easy_setopt failed");
         return 0;
@@ -89,7 +108,7 @@ int vfile_curl_fetch(const char *dest, const char *url)
         vfile_err_fn("curl_easy_setopt failed");
         return 0;
     }
-    
+
     if (curl_easy_setopt(curlh, CURLOPT_PROGRESSDATA, &bar) != 0) {
         vfile_err_fn("curl_easy_setopt failed");
         return 0;
@@ -137,7 +156,7 @@ int vfile_curl_fetch(const char *dest, const char *url)
                 *(p - 1) = '\0';
         }
             
-        vfile_err_fn("%s: curl failed: %s\n", url, err);
+        vfile_err_fn("curl: %s\n", url, err);
         unlink(dest);
         rc = 0;
     }
@@ -185,7 +204,6 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
     int num;
     int i;
     
-        
     bar = (struct progress_bar *)clientp;
     total = dltotal + ultotal;
 
@@ -212,13 +230,13 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         line[i] = '\0';
         snprintf(format, sizeof(format), "%%-%ds %%5.1f%%%%", barwidth );
         snprintf(outline, sizeof(outline), format, line, percent );
-        vfile_msg_fn("_\r%s", outline);
+        vfile_msg_fn("\r%s", outline);
         
     }
     bar->prev = bar->point;
     
     if (total == bar->point && bar->anybfetched == 1)
-        vfile_msg_fn("_\n");
+        vfile_msg_fn("\n");
 
     return 0;
 }

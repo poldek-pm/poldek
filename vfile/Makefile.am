@@ -14,9 +14,12 @@ libvfile_a_SOURCES = vfile.c fetch.c p_open.c $(CURL_SRCS_)
 pkgincludedir = $(includedir)/vfile
 pkginclude_HEADERS = vfile.h p_open.h
 
-noinst_PROGRAMS = sample
+noinst_PROGRAMS = sample ttest
 sample_SOURCES  = sample.c
 sample_LDADD    = libvfile.a @TRURL_LDFLAG@ -lutil
+
+ttest_SOURCES  = ttest.c
+ttest_LDADD    = libvfile.a @TRURL_LDFLAG@ -lutil
 EXTRA_DIST      = $(CURL_SRCS) 
 
 dist-hook:

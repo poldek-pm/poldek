@@ -8,10 +8,7 @@
 
 void fetch(const char *url)
 {
-    if (vfile_fetch("/tmp", url, -1))
-        puts("OK\n");
-    else
-        puts("FAIL\n");
+    vfile_fetch("/tmp", url, VFURL_UNKNOWN);
 }
 
 int main(int argc, char *argv[])
@@ -21,8 +18,8 @@ int main(int argc, char *argv[])
     vfile_configure("/tmp", 0);
     vfile_verbose = &verbose;
 
-    fetch("ftp://localhost/PLD/i686/PLD/RPMS/nfs-utils-0.3.1-1.i686.rpm");
-    fetch("ftp://localhost/PLD/i686/PLD/RPMS/portmap-5beta-6.i686.rpm");
-    fetch("ftp://localhost/PLD/i686/PLD/RPMS/nfs-utils-0.3.1-1.i686.rpm");
+    fetch("ftp://bb/PLD/i686/PLD/RPMS/glibc-2.2.3-3.i686.rpm");
+    fetch("ftp://bb/PLD/i686/PLD/RPMS/portmap-5beta-6.i686.rpm");
+    fetch("ftp://bb/PLD/i686/PLD/RPMS/nfs-utils-0.3.1-1.i686.rpm");
     return 0;
 }

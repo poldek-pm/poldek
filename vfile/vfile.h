@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000 Pawel Gajda (mis@k2.net.pl)
+  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -42,18 +42,22 @@ void vfile_configure(const char *cachedir, int flags);
 #define VFM_RW     (1 << 1)      
 #define VFM_NORM   (1 << 2)      /* (NoReMove) for remote files, remove tmp at close? */
 #define VFM_CACHE  (1 << 3)      /* for remote files, use cached file
-                                   if it exists */
+                                    if it exists */
 
-#define VFM_MD     (1 << 4)      /* for remote files, use "*.md" file for checking
-                                    of new file 
+#define VFM_MD     (1 << 4)      /* open FILE.md too */
+
+#define VFM_MDUP   (1 << 5)      /* for remote files, use FILE.md file for checking
+                                    if new file exists
                                   */
 
-#define VFM_MDUP   (1 << 5)      /* for remote files, use "*.md" file for checking
-                                    of new file 
-                                  */
+
+#define VF_FETCHED  (1 << 8)    /* */
+#define VF_FRMCACHE (1 << 9)    /* */
+
 struct vfile {
-    int    vf_type;                /* VFT_* */
-    int    vf_mode;                /* VFM_* */
+    int       vf_type;                /* VFT_* */
+    unsigned  vf_mode;                /* VFM_* */
+    unsigned  vf_flags;               /* VF_*  */ 
     union {
         int    vfile_fd;
         FILE   *vfile_stream;
