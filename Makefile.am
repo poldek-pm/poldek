@@ -107,7 +107,7 @@ poldek.html: poldek.pod
 	$(POD2HTML) $< > $@
 
 homepage.html:	homepage.sgml
-	sgml2html -s 0 $< && mv $@ $@- && ./mkhtmltoc.pl $@- > $@
+	sgml2html -s 0 $< && mv $@ $@- && ./mkhtmltoc.pl $@- > $@ && rm -f $@-
 
 %.html:	%.sgml
 	sgml2html -s 0 $<
