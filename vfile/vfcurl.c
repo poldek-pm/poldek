@@ -60,48 +60,57 @@ int vfile_curl_init(void)
     if (curl_easy_setopt(curlh, CURLOPT_MAXCONNECTS, 16) != 0) {
         vfile_err_fn(errmsg);
         return 0;
-    };
+    }
 #endif
 
     if (curl_easy_setopt(curlh, CURLOPT_MUTE, *vfile_verbose > 1 ? 0:1) != 0) {
         vfile_err_fn(errmsg);
         return 0;
-    };
+    }
 
     if (*vfile_verbose > 2) {
         if (curl_easy_setopt(curlh, CURLOPT_VERBOSE, 1) != 0) {
             vfile_err_fn(errmsg);
             return 0;
-        };
+        }
         
         if (curl_easy_setopt(curlh, CURLOPT_NOPROGRESS, 1) != 0) {
             vfile_err_fn(errmsg);
             return 0;
-        };
+        }
         
     } else {
         if (curl_easy_setopt(curlh, CURLOPT_VERBOSE, 0) != 0) {
             vfile_err_fn(errmsg);
             return 0;
-        };
+        }
         
         if (curl_easy_setopt(curlh, CURLOPT_NOPROGRESS, 0) != 0) {
             vfile_err_fn(errmsg);
             return 0;
-        };
+        }
     }
     
-        
     if (curl_easy_setopt(curlh, CURLOPT_PROGRESSFUNCTION, progress) != 0) {
         vfile_err_fn(errmsg);
         return 0;
-    };
+    }
 
     if (curl_easy_setopt(curlh, CURLOPT_USERPWD,
                          "anonymous:poldek@znienacka.net") != 0) {
         vfile_err_fn(errmsg);
         return 0;
-    };
+    }
+
+    if (curl_easy_setopt(curlh, CURLOPT_TIMEOUT, 120) != 0) { /* read to */
+        vfile_err_fn(errmsg);
+        return 0;
+    }
+
+    if (curl_easy_setopt(curlh, CURLOPT_CONNECTTIMEOUT, 120) != 0) {
+        vfile_err_fn(errmsg);
+        return 0;
+    }
 
     return 1;
 }
@@ -185,7 +194,7 @@ int vfile_curl_fetch(const char *dest, const char *url)
 
 
 
-/* progress() taken from curl: */
+/* progress() taken from curl, modified by me */
 
 /* 
  * Copyright (C) 2000, Daniel Stenberg, <daniel@haxx.se>, et al.
@@ -217,14 +226,14 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
     size_t total;
     
     
-    bar = (struct progress_bar *)clientp;
+    bar = (struct progress_bar*)clientp;
     total = dltotal + ultotal;
 
     
 
     bar->point = dlnow + ulnow; /* we've come this far */
     
-    if (total < bar->point) {    /* cURL w/o (?) */
+    if (total < bar->point) {    /* cURL w/o  */
         vfile_err_fn("cURL bug detected: current size %d, total size %d\n", bar->point, total);
         bar->point = total;
     }
