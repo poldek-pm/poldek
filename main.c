@@ -995,7 +995,7 @@ void parse_options(int argc, char **argv)
         }
     }
     
-    if (args.mjrmode == 0 && args.mnrmode == 0) {
+    if (args.mjrmode == MODE_NULL && args.mnrmode == MODE_NULL) {
 #ifdef ENABLE_INTERACTIVE_MODE
         args.mjrmode = MODE_SHELL;
 #else         
@@ -1388,7 +1388,7 @@ int verify_args(void)
 
     switch (args.mjrmode) {
         case MODE_NULL:
-            if (args.mnrmode == 0) {
+            if (args.mnrmode == MODE_NULL) {
                 logn(LOGERR, _("so what?"));
                 exit(EXIT_FAILURE);
             }
@@ -1600,8 +1600,8 @@ int main(int argc, char **argv)
     if (args.mnrmode & MODE_MNR_UPDATEIDX) {
         int v = verbose;
 
-        if (verbose >= 0) 
-            verbose++;
+        if (verbose == 0) 
+            verbose = 1;
         
         if (!update_idx())
             exit(EXIT_FAILURE);
@@ -1627,7 +1627,7 @@ int main(int argc, char **argv)
     
     switch (args.mjrmode) {
         case MODE_NULL:
-            if (args.mnrmode != 0)
+            if (args.mnrmode != MODE_NULL)
                 break;
 #ifndef ENABLE_INTERACTIVE_MODE
             n_assert(0);
