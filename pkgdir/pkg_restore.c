@@ -348,8 +348,8 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
 
             default:
                 if (verbose > 1) 
-                    logn(LOGWARN, "%s:%ld: skipped unknown tag '%c'",
-                         fn, offs, tag);
+                    logn(LOGWARN, "%s:%ld: skipped unknown tag '%c'", fn, offs, tag);
+                
                 if (!pkg_store_skiptag(tag, tag_binsize, st)) {
                     logn(LOGERR, "%s:%ld: %c: unknown tag binsize (%c)",
                          fn, offs, tag, isascii(tag_binsize) ? tag_binsize : '-');
@@ -478,26 +478,21 @@ struct pkg *pkg_ldtags(struct pkg *pkg,
         pkg = pkg_new_ext(pkgt->name, epoch, ver, rel, arch, os, 
                           (pkgt->flags & PKGT_HAS_FN) ? pkgt->fn : NULL,
                           pkgt->size, pkgt->fsize, pkgt->btime);
-
-        if (pkg == NULL) {
-            logn(LOGERR, _("error reading %s's data"), pkgt->name);
-            return NULL;
-        }
-        
     } else {
-        pkg->size = pkgt->size;
-        pkg->fsize = pkgt->fsize;
-        pkg->btime = pkgt->btime;
-        
+        /* os && arch should be included in given pkg */
         n_assert(os == NULL);
         n_assert(arch == NULL);
-#if 0  /* os && arch should be included in given pkg */
-        if (os && pkg->os == NULL)
-            pkg->os = n_strdup(os);
-
-        if (arch && pkg->arch == NULL)
-            pkg->arch = n_strdup(arch);
-#endif        
+        
+        pkg = pkg_new_ext(pkg->name, pkg->epoch, pkg->ver, pkg->rel, pkg->arch,
+                          pkg->os, 
+                          (pkgt->flags & PKGT_HAS_FN) ? pkgt->fn : NULL,
+                          pkgt->size, pkgt->fsize, pkgt->btime);
+        
+    }
+    
+    if (pkg == NULL) {
+        logn(LOGERR, _("error reading %s's data"), pkgt->name);
+        return NULL;
     }
     
     pkg->groupid = pkgt->groupid;
