@@ -1,7 +1,6 @@
 0.15.8:
 * curl: disabled timeouts, cURL's timeout it's a time to transfer file 
 * curl: amount and total sizes are displayed in progress bar
-* curl: increace timeouts values to 5 min 
 * fix: enabled --hold 
 * fix: SIGSEV killed when pkg description requested while pkg index
        doesn't contain package descriptions at all
