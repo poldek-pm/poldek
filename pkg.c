@@ -57,7 +57,6 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     n_assert(name);
     n_assert(version);
     n_assert(release);
-    n_assert(arch);
     
     if (version == NULL || release == NULL)
         return NULL;
