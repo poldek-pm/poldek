@@ -123,7 +123,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
                 if (pkg && (tmp = n_array_bsearch(prev_pkgdir->pkgs, pkg)) &&
                     pkg_deepstrcmp_name_evr(pkg, tmp) == 0) {
 
-                    if (prev_pkgdir->pkgroups) {
+                    if (tmp->groupid > 0 && prev_pkgdir->pkgroups) {
                         int gid;
                         gid = pkgroup_idx_remap_groupid(pkgroups,
                                                         prev_pkgdir->pkgroups,
@@ -141,7 +141,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
                         msgn(1, "%s: not found, new?", pkg_snprintf_s(pkg));
                         pkg_free(pkg);
                     }
-                    
+
                     pkg = NULL;
                 }
             }
@@ -162,8 +162,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
                         }
                     }
                 }
-                pkg->groupid = 0;
-                //pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
+                pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
             }
 
             if (pkg) {
