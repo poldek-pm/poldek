@@ -51,7 +51,8 @@ int                 *vfile_verbose = &verbose;
 static const char   default_anon_passwd[] = "poldek@znienacka.net";
 
 struct vfile_configuration vfile_conf = {
-    "/tmp", VFILE_CONF_STUBBORN_RETR, NULL, NULL, &verbose, 
+    "/tmp", VFILE_CONF_STUBBORN_RETR, 1000 /* nretries */,
+    NULL, NULL, &verbose, 
     (char*)default_anon_passwd,
     NULL, NULL
 };
@@ -101,8 +102,7 @@ int vfile_configure(int param, ...)
                 vfile_conf.verbose = vfile_verbose = &verbose;
             
             break;
-            
-                
+
         case VFILE_CONF_CACHEDIR:
             vs = va_arg(ap, char*);
             if (vs) {
@@ -157,7 +157,14 @@ int vfile_configure(int param, ...)
             
             break;    
         }
+            
 
+        case VFILE_CONF_STUBBORN_NRETRIES:
+            v = va_arg(ap, int);
+            if (v > 0)
+                vfile_conf.nretries = v;
+            break;
+            
         case VFILE_CONF_SIGINT_REACHED:
             vfile_conf.sigint_reached = va_arg(ap, int (*)(int));
             break;

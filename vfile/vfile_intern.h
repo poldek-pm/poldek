@@ -49,6 +49,7 @@ extern int *vfile_verbose;
 struct vfile_configuration {
     char       *cachedir;
     unsigned   flags;
+    int        nretries;       /* how many retries in stubborn mode */
     tn_hash    *default_clients_ht;
     tn_hash    *proxies_ht;
     int        *verbose;

@@ -138,7 +138,7 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
         req->bar = &bar;
     
     if (vfile_conf.flags & VFILE_CONF_STUBBORN_RETR)
-        end = 1000;
+        end = vfile_conf.nretries;
     
     while (end-- > 0) {
         if (vfile_sigint_reached(0)) {

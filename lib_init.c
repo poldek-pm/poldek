@@ -624,6 +624,7 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path, int up)
 {
     tn_hash           *htcnf = NULL;
     const char        *vs;
+    int               v;
     tn_array          *list;
     
         
@@ -681,6 +682,9 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path, int up)
 
     if (poldek_conf_get_bool(htcnf, "vfile_external_compress", 0))
         vfile_configure(VFILE_CONF_EXTCOMPR, 1);
+
+    if ((v = poldek_conf_get_int(htcnf, "vfile_retries", 1000)) > 0)
+        vfile_configure(VFILE_CONF_STUBBORN_NRETRIES, v);
     
     else if (poldek_conf_get_bool(htcnf, "auto_zlib_in_rpm", 0))
         zlib_in_rpm(ctx);

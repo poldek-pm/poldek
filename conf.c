@@ -42,8 +42,9 @@
 
 #define TYPE_STR        (1 << 0)
 #define TYPE_BOOL       (1 << 1)
-#define TYPE_LIST       (1 << 2)
-#define TYPE_PATHLIST   (1 << 3)
+#define TYPE_INT        (1 << 2)
+#define TYPE_LIST       (1 << 3)
+#define TYPE_PATHLIST   (1 << 4)
 
 #define TYPE_MULTI      (1 << 5)
 #define TYPE_MULTI_EXCL (1 << 6)
@@ -110,6 +111,7 @@ static struct tag global_tags[] = {
     { "vfile ftp sysuser as anon passwd", TYPE_BOOL , { 0 } },
     { "ftp sysuser as anon passwd", TYPE_BOOL | TYPE_F_ALIAS, { 0 } },
     { "vfile external compress", TYPE_BOOL , { 0 } },
+    { "vfile retries", TYPE_INT, { 0 } },
     { "auto zlib in rpm", TYPE_BOOL , { 0 } },
     { "promoteepoch", TYPE_BOOL, { 0 } },
     { "default index type", TYPE_STR, { 0 } },
@@ -1217,9 +1219,11 @@ int poldek_conf_get_int(const tn_hash *htconf, const char *name, int default_v)
     if ((vs = poldek_conf_get(htconf, name, NULL)) == NULL)
         return default_v;
 
-    if (sscanf(vs, "%d", &v) != 1)
-        return default_v;
-
+    if (sscanf(vs, "%d", &v) != 1) {
+        logn(LOGERR, _("invalid value ('%s') of option '%s'"), vs, name);
+        v = default_v;
+    }
+    
     return v;
 }
 
