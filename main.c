@@ -71,6 +71,7 @@ static char args_doc[] = N_("[PACKAGE...]");
 #define MODE_UPGRADEDIST  5
 #define MODE_UPGRADE      6
 #define MODE_SPLIT        7
+#define MODE_SRCLIST      8
 
 #ifdef ENABLE_INTERACTIVE_MODE
 # define MODE_SHELL       20
@@ -175,9 +176,12 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_SPLITOUTPATH          1102
 
 
+#define OPT_NEVR                  1110
+#define OPT_PKGSET                1111
+
 #define OPT_CONF                  'c'
 #define OPT_NOCONF                2002 
-#define OPT_LOG                   'l'
+#define OPT_LOG                   'L'
 #define OPT_V016                  2004
 
 /* The options we understand. */
@@ -186,23 +190,25 @@ static struct argp_option options[] = {
 {0,0,0,0, N_("Source options:"), 1 },    
 {"source", 's', "SOURCE", 0, N_("Get packages info from SOURCE"), 1 },
 
-{"sn", 'S', "SOURCE-NAME", 0, N_("Get packages info from source named SOURCE-NAME"), 1 },    
-{"sidx", OPT_SOURCETXT, "FILE", 0,
+{"sn", 'n', "SOURCE-NAME", 0, N_("Get packages info from source named SOURCE-NAME"), 1 },
+{"sl", 'l', 0, 0, N_("List configured sources"), 1 },        
+    
+{"sidx", OPT_SOURCETXT, "FILE", OPTION_HIDDEN,
  N_("Get packages info from package index file FILE"), 1 },
 
-{"sdir", OPT_SOURCEDIR, "DIR", 0,
+{"sdir", OPT_SOURCEDIR, "DIR", OPTION_HIDDEN, /* obsoleted */
  N_("Get packages info from directory DIR"), 1 },
 
 {"prefix", 'P', "PREFIX", 0,
  N_("Get packages from PREFIX instead of SOURCE"), 1 },
 
 {"update", OPT_UPDATEIDX, 0, 0, 
- N_("Update sources (for remote indexes) and verify its integrity"), 1 },
+ N_("Update sources (for remote indexes) and verify it"), 1 },
 
 {"up", OPT_UPDATEIDX, 0, OPTION_ALIAS, 0, 1 }, 
 
 {"update-whole", OPT_UPDATEIDX_WHOLE, 0, 0, 
- N_("Update whole sources (for remote indexes) and verify its checksum"), 1 },
+ N_("Update whole sources (for remote indexes) and verify it"), 1 },
 
 {"upa", OPT_UPDATEIDX_WHOLE, 0, OPTION_ALIAS, 0, 1}, 
 
@@ -232,14 +238,16 @@ static struct argp_option options[] = {
      " in created index."), 60 },
 
 {"nodiff", OPT_NODIFF, 0, 0,
- N_("Don't create \"diff\" with existig index"), 60 },
+ N_("Don't create \"patch\""), 60 },
 
 
 {0,0,0,0, N_("Packages spec:"), 65},
-{"pkgset", 'p',  "FILE", 0, N_("Take package set definition from FILE"), 65 },
-{"pkgnevr",'n',  "\"NAME [[E:][V[-R]]]\"", 0,
+{"pset", OPT_PKGSET, "FILE", 0, N_("Take package set definition from FILE"), 65 },
+{"pkgset", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, 65 }, /* backward compat */
+    
+{"nevr", OPT_NEVR, "\"NAME [[E:][V[-R]]]\"", 0,
      N_("Specifies package by NAME and EVR"), 65 },
-
+{"pkgnevr", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0,  65 }, /* backward compat */
 
 {0,0,0,0, N_("Installation:"), 70},
 {"install-dist", OPT_INST_INSTDIST, "DIR", 0,
@@ -340,10 +348,12 @@ void check_mjrmode(struct args *argsp)
     if (argsp->mjrmode) {
         logn(LOGERR, _("only one major mode may be specified "
         "(available modes are: mkidx, update, verify*, install*, "
-                       "upgrade*, split and shell)"));
+                       "upgrade*, split, sl and shell)"));
         exit(EXIT_FAILURE);
     }
 }
+
+static void print_source_list(tn_array *sources);
 
 /* buggy glibc argp... */
 static inline void chkarg(int key, char *arg) 
@@ -392,16 +402,22 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             verbose++;
             break;
 
-        case 'n': 
+        case OPT_NEVR:
             n_array_push(argsp->pkgdef_defs, arg);
             break;
 
-        case 'p':
+        case OPT_PKGSET:
             n_array_push(argsp->pkgdef_sets, arg);
             break;
 
-        case 'S':
+        case 'n':
             argsp->source_name = arg;
+            break;
+
+        case 'l':
+            if (argsp->mjrmode != MODE_SRCLIST)
+                check_mjrmode(argsp);
+            argsp->mjrmode = MODE_SRCLIST;
             break;
             
         case OPT_SOURCETXT:     /* no break */
@@ -809,6 +825,8 @@ void parse_options(int argc, char **argv)
         htcnf = ldconf_deafult();
 
     nsources = n_array_size(args.sources);
+    if (args.mjrmode == MODE_SRCLIST)
+        args.source_name = NULL;
     
     if (n_array_size(args.sources) == 0) {
         struct source *src;
@@ -868,7 +886,11 @@ void parse_options(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-
+    if (args.mjrmode == MODE_SRCLIST) {
+        print_source_list(args.sources);
+        exit(EXIT_SUCCESS);
+    }
+    
     if (args.mjrmode == 0 && args.mnrmode == 0) {
 #ifdef ENABLE_INTERACTIVE_MODE
         args.mjrmode = MODE_SHELL;
@@ -980,6 +1002,22 @@ void parse_options(int argc, char **argv)
     
     vfile_msg_fn = log_msg;
     vfile_err_fn = log_err;
+}
+
+
+static void print_source_list(tn_array *sources) 
+{
+    int i;
+
+    for (i=0; i<n_array_size(sources); i++) {
+        struct source *src = n_array_nth(sources, i);
+        printf("%-12s %s%s%s%s\n",
+               strcmp(src->source_name, "anon") == 0 ? "-" : src->source_name, 
+               src->source_path,
+               src->pkg_prefix ? " (prefix " : "",
+               src->pkg_prefix ? src->pkg_prefix : "",
+               src->pkg_prefix ? ")":"");
+    }
 }
 
 

@@ -43,7 +43,7 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
 
     if (*p == '\0') {           /* path only */
         path = pathspec;
-        name = "gall";
+        name = "anon";
         
     } else {
         path = p + 1;
@@ -61,7 +61,7 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
         if ((q = strrchr(name, ']')))
             *q = '\0';
         if (*name == '\0')
-            name = "gall";
+            name = "anon";
     }
     
     
