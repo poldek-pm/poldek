@@ -207,12 +207,16 @@ static struct argp_option options[] = {
 {"pkgnevr",'n',  "\"NAME [[E:][V[-R]]]\"", 0,
      "Take package by NAME /and EVR", 70 },
 
-{"install-dist", OPT_INST_INSTDIST, "DIR", 0,
-     "Install package set under DIR as root directory", 70 },
+{"dist-install", OPT_INST_INSTDIST, "DIR", 0,
+   "Install package set under DIR as root directory", 70 },
+{"install-dist", OPT_INST_INSTDIST, "DIR", OPTION_ALIAS|OPTION_HIDDEN,
+    "Install package set under DIR as root directory", 70 },
 
-{"upgrade-dist", OPT_INST_UPGRDIST, "DIR", OPTION_ARG_OPTIONAL,
-     "Upgrade all packages needs upgrade", 70 },
-
+{"dist-upgrade", OPT_INST_UPGRDIST, "DIR", OPTION_ARG_OPTIONAL,
+   "Upgrade all packages needs upgrade", 70 },
+{"upgrade-dist", OPT_INST_UPGRDIST, "DIR", OPTION_ARG_OPTIONAL|OPTION_ALIAS|OPTION_HIDDEN,
+   "Upgrade all packages needs upgrade", 70 },
+  
 {"install", 'i', 0, 0, "Install given package set", 70 },    
 {"upgrade", 'U', 0, 0, "Upgrade given package set", 70 },
 {"root", 'r', "DIR", 0, "Set top directory to DIR", 70 },
