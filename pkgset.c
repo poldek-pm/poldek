@@ -802,7 +802,6 @@ tn_array *pkgset_getpkgs(const struct pkgset *ps)
 }
 
 
-static
 int pkg_match_pkgdef(const struct pkg *pkg, const struct pkgdef *pdef) 
 {
     int rc = 1;

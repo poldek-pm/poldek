@@ -9,6 +9,7 @@
 #include <argp.h>
 
 #include <vfile/p_open.h>
+#include <trurl/narray.h>
 
 const char *ngettext_n_packages_fmt(int n);
 void translate_argp_options(struct argp_option *arr);
@@ -48,5 +49,9 @@ void mem_info(int level, const char *msg);
 void process_cmd_output(struct p_open_st *st, const char *prefix);
 int lockfile(const char *lockfile);
 pid_t readlockfile(const char *lockfile);
+
+void display_pkg_list(int verbose_l, const char *prefix,
+                      tn_array *pkgs, unsigned flags);
+
 
 #endif /* POLDEK_MISC_H */

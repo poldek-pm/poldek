@@ -76,13 +76,32 @@ static char args_doc[] = N_("[PACKAGE...]");
 #define MODE_UPGRADE      6
 #define MODE_SPLIT        7
 #define MODE_SRCLIST      8
-
+#define MODE_UNINSTALL    9
 #ifdef ENABLE_INTERACTIVE_MODE
-# define MODE_SHELL       20
+# define MODE_SHELL       10
 #endif
+
 
 #define MODE_MNR_UPDATEIDX  (1 << 0)
 #define MODE_MNR_CLEANIDX   (1 << 1)
+
+
+#define MODEFLAG_NEEDS_PKGSET (1 << 0)
+
+int mjrmode_flags[] = {
+    0,                          /* 0 */
+    MODEFLAG_NEEDS_PKGSET,      /* 1 */
+    0,                          /* 2 */
+    MODEFLAG_NEEDS_PKGSET,      /* 3 */
+    MODEFLAG_NEEDS_PKGSET,      /* 4 */
+    MODEFLAG_NEEDS_PKGSET,      /* 5 */
+    MODEFLAG_NEEDS_PKGSET,      /* 6 */
+    MODEFLAG_NEEDS_PKGSET,      /* 7 */
+    0,                          /* 8 */
+    0,                          /* 9 */
+    MODEFLAG_NEEDS_PKGSET,      /* 10 */
+};
+
 
 #define INDEXTYPE_TXT     1
 #define INDEXTYPE_TXTZ    2
@@ -180,6 +199,8 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_INST_HOLD             1053
 #define OPT_INST_NOHOLD           1054
 #define OPT_INST_GREEDY           'G'
+
+#define OPT_UNINSTALL             'e'
 
 #define OPT_SPLITSIZE             1100
 #define OPT_SPLITCONF             1101
@@ -289,8 +310,8 @@ static struct argp_option options[] = {
 
 {"install", 'i', 0, 0, N_("Install given packages"), 70 },    
 {"upgrade", 'u', 0, 0, N_("Upgrade given packages"), 70 },
-{0, 'U', 0, OPTION_ALIAS, 0, 70 },
-
+    {0, 'U', 0, OPTION_ALIAS, 0, 70 },
+{"erase", OPT_UNINSTALL, 0, 0, N_("Uninstall given packages"), 70 },
 
 {0,0,0,0, N_("Installation switches:"), 71},
 {"checksig", 'K', 0, OPTION_HIDDEN, /* not implemented yet */
@@ -611,6 +632,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_NODIFF:
 	    argsp->pkgdir_nodiff = 1;
 	    break;
+
+        case OPT_UNINSTALL:
+            check_mjrmode(argsp);
+            argsp->mjrmode = MODE_UNINSTALL;
+            break;
             
         case OPT_INST_INSTDIST:
             check_mjrmode(argsp);
@@ -1101,8 +1127,14 @@ void parse_options(int argc, char **argv)
     if (conf_get_bool(htcnf, "keep_downloads", 0))
         args.inst.flags |= INSTS_KEEP_DOWNLOADS;
     
+    if (conf_get_bool(htcnf, "confirm_installation", 0))
+        args.inst.flags |= INSTS_CONFIRM_INST;
+    /* backward compat */
     if (conf_get_bool(htcnf, "confirm_installs", 0))
         args.inst.flags |= INSTS_CONFIRM_INST;
+
+    if (conf_get_bool(htcnf, "confirm_removal", 1))
+        args.inst.flags |= INSTS_CONFIRM_UNINST;
 
     if (conf_get_bool(htcnf, "choose_equivalents_manually", 0))
         args.inst.flags |= INSTS_EQPKG_ASKUSER;
@@ -1223,7 +1255,9 @@ void load_db_depdirs(const char *rootdir, int mjrmode, struct pkgset *ps)
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
 #endif
+            
         case MODE_INSTALL:
+        case MODE_UNINSTALL:
         case MODE_UPGRADE:
         case MODE_UPGRADEDIST:
             if (rpm_get_dbdepdirs(rootdir, ps->depdirs) >= 0)
@@ -1240,8 +1274,6 @@ static struct pkgset *load_pkgset(int ldflags)
     if ((ps = pkgset_new(args.psflags)) == NULL)
         return NULL;
 
-    
-    
     if (!pkgset_load(ps, ldflags, args.sources)) {
         logn(LOGERR, _("no packages loaded"));
         pkgset_free(ps);
@@ -1557,7 +1589,7 @@ int verify_args(void)
                                 /* no break */
         case MODE_INSTALL:
         case MODE_UPGRADE:
-            
+        case MODE_UNINSTALL:
             if (prepare_given_packages() > 0) {
                 rc = check_install_flags();
                 
@@ -1656,6 +1688,23 @@ int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     return rc;
 }
 
+static
+int uninstall(struct usrpkgset *ups, struct inst_s *inst) 
+{
+    int rc;
+
+    verbose = 1;
+    if (n_array_size(ups->pkgdefs) == 0) {
+        logn(LOGERR, _("no packages specified"));
+        exit(EXIT_FAILURE);
+    }
+    
+    rc = uninstall_usrset(ups, inst, NULL);
+    usrpkgset_free(ups);
+    return rc;
+}
+
+
 void self_init(void) 
 {
     uid_t uid;
@@ -1723,7 +1772,6 @@ int main(int argc, char **argv)
         if (args.mjrmode == MODE_NULL)
             exit(rc ? EXIT_SUCCESS : EXIT_FAILURE);
     }
-    	
     
     if (args.mnrmode & MODE_MNR_UPDATEIDX) {
         int v = verbose;
@@ -1741,6 +1789,13 @@ int main(int argc, char **argv)
         poldek_reinit();
     }
 
+    if (args.mjrmode == MODE_UNINSTALL) {
+        if ((rc = usrpkgset_size(args.ups))) {
+            rc = uninstall(args.ups, &args.inst);
+        }
+        exit(rc ? EXIT_SUCCESS:EXIT_FAILURE);
+    }
+    
     if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0 && verbose != -1)
         verbose += 2;
 
@@ -1795,6 +1850,7 @@ int main(int argc, char **argv)
                     rc = install_dist(ps, &args.inst);
             }
             break;
+
 
         case MODE_INSTALL:
         case MODE_UPGRADE:

@@ -77,3 +77,20 @@ int dbpkg_array_has(tn_array *dbpkgs, unsigned recno)
 }
 
 
+static void to_pkgs_map_fn(struct dbpkg *dbpkg, tn_array *pkgs)
+{
+    n_array_push(pkgs, pkg_link(dbpkg->pkg));
+}
+
+
+tn_array *dbpkgs_to_pkgs(tn_array *dbpkgs)
+{
+    tn_array *pkgs;
+
+    pkgs = pkgs_array_new(n_array_size(dbpkgs));
+    n_array_map_arg(dbpkgs, (tn_fn_map2)to_pkgs_map_fn, pkgs);
+    n_array_sort(pkgs);
+    return pkgs;
+}
+
+    

@@ -67,6 +67,8 @@ static struct tag valid_tags[] = {
     { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "keep_downloads", TYPE_BOOL , { 0 } },
     { "confirm_installs", TYPE_BOOL , { 0 } },
+    { "confirm_installation", TYPE_BOOL , { 0 } },
+    { "confirm_removal", TYPE_BOOL , { 0 } },
     { "choose_equivalents_manually", TYPE_BOOL , { 0 } },
     { "particle_install", TYPE_BOOL, { 0 } },
     { "ftp_sysuser_as_anon_passwd", TYPE_BOOL , { 0 } },

@@ -38,7 +38,6 @@
 
 #include <openssl/evp.h>
 #include <trurl/nassert.h>
-
 #include <vfile/p_open.h>
 #include <vfile/vfile.h>
 
@@ -46,6 +45,7 @@
 #include "log.h"
 #include "misc.h"
 #include "pkg.h"
+#include "poldek_term.h"
 
 //static
 //int valid_dir(const char *envname, const char *dir);
@@ -423,5 +423,53 @@ const char *ngettext_n_packages_fmt(int n)
 #else
     return "%d package(s)";
 #endif
+}
+
+
+void display_pkg_list(int verbose_l, const char *prefix,
+                      tn_array *pkgs, unsigned flags)
+{
+    int   i, ncol = 2, npkgs = 0;
+    int   term_width;
+    char  *p, *colon = ", ";
+    int   hdr_printed = 0;
+
+    term_width = term_get_width() - 5;
+    ncol = strlen(prefix) + 1;
+    
+    npkgs =  n_array_size(pkgs);
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        
+        if (flags && (pkg->flags & flags) == 0)
+            npkgs--;
+    }
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+
+        if (flags && (pkg->flags & flags) == 0)
+            continue;
+
+        if (hdr_printed == 0) {
+            msg(verbose_l, "%s ", prefix);
+            hdr_printed = 1;
+        }
+            	
+        p = pkg_snprintf_s(pkg);
+        if (ncol + (int)strlen(p) >= term_width) {
+            ncol = 3;
+            msg(verbose_l, "_\n%s ", prefix);
+        }
+        
+        if (--npkgs == 0)
+            colon = "";
+            
+        msg(verbose_l, "_%s%s", p, colon);
+        ncol += strlen(p) + strlen(colon);
+    }
+
+    if (hdr_printed)
+        msg(verbose_l, "_\n");
 }
 

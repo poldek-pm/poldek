@@ -11,7 +11,7 @@
 #
 
 # install packages in small groups instead of doing all-or-nothing 
-# installs; default "yes"
+# installations; default "yes"
 #particle_install = no
 
 # automatically install packages required by installed ones; default "yes"
@@ -27,7 +27,10 @@
 #keep_downloads = yes
 
 # confirm each installation; defalut "no"
-#confirm_installs = yes
+#confirm_installation = yes
+
+# confirm each removal; defalut "yes"
+#confirm_removal = no
 
 # let the user select package among equivalents 
 #choose_equivalents_manually = yes

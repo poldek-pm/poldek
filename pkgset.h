@@ -64,8 +64,9 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_KEEP_DOWNLOADS  (1 << 17) /* keep_downloads = yes */
 #define INSTS_PARTICLE        (1 << 18) /* particle_install = yes */
 #define INSTS_CHECKSIG        (1 << 19) /* not implemented yet */
-#define INSTS_CONFIRM_INST    (1 << 20) /* confirm_installs = yes  */
-#define INSTS_EQPKG_ASKUSER   (1 << 21) /* choose_equivalents_manually = yes */
+#define INSTS_CONFIRM_INST    (1 << 20) /* confirm_installation = yes  */
+#define INSTS_CONFIRM_UNINST  (1 << 21) /* confirm_removal = yes  */
+#define INSTS_EQPKG_ASKUSER   (1 << 22) /* choose_equivalents_manually = yes */
 
 #define INSTS_INTERACTIVE_ON  (INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER)
 
@@ -120,12 +121,21 @@ tn_array *pkgset_getpkgs(const struct pkgset *ps);
 
 tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname);
 
+struct install_info {
+    tn_array *installed_pkgs;
+    tn_array *uninstalled_pkgs;
+};
 
 #define MARK_USET    0          /* mark only given set */
 #define MARK_DEPS    1          /* follow dependencies */
 int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                        struct inst_s *inst, int markflag);
 
+int pkg_match_pkgdef(const struct pkg *pkg, const struct pkgdef *pdef);
+
+/* uninstall.c */
+int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
+                     struct install_info *iinf);
 
 #define PS_MARK_OFF_ALL      (1 << 0)
 #define PS_MARK_OFF_DEPS     (1 << 1)
@@ -141,14 +151,8 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst);
 /* pkgset-install.c */
 int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst);
 
-struct install_info {
-    tn_array *installed_pkgs;
-    tn_array *uninstalled_pkgs;
-};
-
 int pkgset_install(struct pkgset *ps, struct inst_s *inst,
                    struct install_info *iinf);
-
 
 void pkgset_mark_holds(struct pkgset *ps, tn_array *hold_pkgnames);
 tn_array *read_holds(const char *fpath, tn_array *hold_pkgnames);

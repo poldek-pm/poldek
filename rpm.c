@@ -705,7 +705,7 @@ int rpm_get_pkgs_requires_capn(rpmdb db, tn_array *dbpkgs, const char *capname,
     while ((dbrec = rpmdb_it_get(&it)) != NULL) {
         struct dbpkg *dbpkg;
         
-        if (dbpkg_array_has(unistdbpkgs, dbrec->recno))
+        if (unistdbpkgs && dbpkg_array_has(unistdbpkgs, dbrec->recno))
 	    continue;
         
         if (dbpkg_array_has(dbpkgs, dbrec->recno))

@@ -34,4 +34,6 @@ tn_array *dbpkg_array_new(int size);
 int dbpkg_array_has(tn_array *dbpkgs, unsigned recno);
 int dbpkg_array_has_pkg(tn_array *dbpkgs, const struct pkg *pkg);
 
+tn_array *dbpkgs_to_pkgs(tn_array *dbpkgs);
+
 #endif    

@@ -462,10 +462,13 @@ prefix1 = /mnt/cdrom/RPMS/
 
        See B<--cachedir> option description
 
-=item * B<confirm_installs = yes|no>
+=item * B<confirm_installation = yes|no>
 
         If "yes" program confirm all performed package installations (default: no)
 
+=item * B<confirm_removal = yes|no>
+
+        If "yes" program confirm all performed package removals (default: yes)
 
 =item * B<choose_equivalents_manually = yes|no> 
 
