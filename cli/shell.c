@@ -283,8 +283,10 @@ int cmd_quit(struct cmdctx *cmdctx)
 
 static void sigint_cb(void)
 {
-    if (!shInCmd)
+    if (!shInCmd) {
+        DBGF_F("sh DONE");
         shDone = 1;
+    }
 }
 
 static void shell_end(int sig) 
@@ -375,11 +377,13 @@ int poclidek_shell(struct poclidek_ctx *cctx)
             //print_mem_info("BEFORE");
             shInCmd = 1;
             poclidek_execline(cctx, NULL, s);
+            sigint_reset();
+            shDone = 0;
             shInCmd = 0;
             //print_mem_info("AFTER ");
         }
         free(line);
-
+        
         signal(SIGTERM, shell_end);
         signal(SIGQUIT, shell_end);
     }
