@@ -219,12 +219,12 @@ static struct argp_option options[] = {
  N_("Get packages from PREFIX instead of SOURCE"), 1 },
 
 {"update", OPT_UPDATEIDX, 0, 0, 
- N_("Update sources (for remote indexes) and verify it"), 1 },
+ N_("Update index of source and verify it"), 1 },
 
 {"up", OPT_UPDATEIDX, 0, OPTION_ALIAS, 0, 1 }, 
 
 {"update-whole", OPT_UPDATEIDX_WHOLE, 0, 0, 
- N_("Update whole sources (for remote indexes) and verify it"), 1 },
+ N_("Update whole index of source"), 1 },
 
 {"upa", OPT_UPDATEIDX_WHOLE, 0, OPTION_ALIAS, 0, 1},
 
@@ -1041,7 +1041,7 @@ void parse_options(int argc, char **argv)
         }
         
         if (nsources == 0) {
-            logn(LOGERR, _("no source, nothing to do"));
+            logn(LOGERR, _("nothing to do (no source selected?)"));
             exit(EXIT_FAILURE);
         }
     }
