@@ -1,7 +1,7 @@
 
 
-# NOTE: directory *must* exists; default is ~/.poldek-cache
-#cachedir = /var/tmp/poldek-cache
+# NOTE: baseneame of directory *must* exists; default is $HOME/.poldek-cache
+#cachedir = $HOME/.poldek-cache
 
 # permits using root privs for installation only; default "no"
 #use_sudo  = yes
@@ -26,6 +26,9 @@
 # don't remove downloaded packages after successful installation; defalut "no"
 #keep_downloads = yes
 
+
+
+
 # confirm each installation; defalut "no"
 #confirm_installation = yes
 
@@ -34,7 +37,6 @@
 
 # let the user select package among equivalents 
 #choose_equivalents_manually = yes
-
 
 # prevent kernel* and dev from being upgraded if they are already installed.
 #hold   = kernel* dev

@@ -135,6 +135,9 @@ int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type)
     return *md_size;
 }
 
+    
+
+
 const char *setup_cachedir(void) 
 {
     struct passwd *pw;
@@ -498,3 +501,78 @@ void display_pkg_list(int verbose_l, const char *prefix,
         msg(verbose_l, "_\n");
 }
 
+static char *get_env(char *dest, int size, const char *name) 
+{
+    struct passwd *pw;
+    char *val;
+    
+    if ((val = getenv(name)) != NULL)
+        return val;
+
+    if (strcmp(name, "HOME") == 0 && (pw = getpwuid(getuid()))) {
+        snprintf(dest, size, pw->pw_dir);
+        val = dest;
+    }
+
+    return val;
+}
+
+
+const char *expand_env_vars(char *dest, int size, const char *str) 
+{
+    const char **tl, **tl_save;
+    int n = 0;
+
+    
+    tl = tl_save = n_str_tokl(str, "$");
+    if (*str != '$' && tl[1] == NULL) {
+        n_str_tokl_free(tl);
+        return str;
+    }
+    
+    if (*str != '$') {
+        n = n_snprintf(dest, size, *tl);
+        tl++;
+    }
+    
+    while (*tl) {
+        const char *vv, *v, *var;
+        char val[256], buf[PATH_MAX];
+        int  v_len;
+        
+        
+        v = *tl;
+	DBGF("token: %s\n", *tl);
+        tl++;
+        
+        if (*v == '{')
+            v++;
+
+        vv = v;
+        v_len = 0;
+        while (isalnum(*vv)) {
+            vv++;
+            v_len++;
+        }
+        
+        if (*vv == '}')
+            vv++;
+        
+        if (v_len + 1 > (int)sizeof(val))
+            return str;
+        
+        n_snprintf(val, v_len + 1, v);
+        DBGF("env %s\n", val);
+        
+        if ((var = get_env(buf, sizeof(buf), val)) == NULL) {
+            n += n_snprintf(&dest[n], size - n, "%s", v);
+            
+        } else {
+            n += n_snprintf(&dest[n], size - n, "%s", var);
+            n += n_snprintf(&dest[n], size - n, "%s", vv);
+        }
+    }
+    
+    n_str_tokl_free(tl_save);
+    return dest;
+}

@@ -33,6 +33,7 @@ int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type);
 const char *setup_cachedir(void);
 const char *tmpdir(void);
 
+const char *expand_env_vars(char *dest, int size, const char *str);
 
 void die(void);
 
@@ -54,6 +55,7 @@ int mklock(const char *dir);
 
 void display_pkg_list(int verbose_l, const char *prefix,
                       tn_array *pkgs, unsigned flags);
+
 
 
 #endif /* POLDEK_MISC_H */

@@ -38,17 +38,19 @@
 #define TYPE_MULTI    (1 << 3)
 #define TYPE_ENUM     (1 << 4)
 
+#define TYPE_W_ENV    (1 << 10)
+
 struct tag {
-    char *name;
-    int  flags;
-    char *enums[8];
+    char      *name;
+    unsigned  flags;
+    char      *enums[8];
 };
 
 static struct tag valid_tags[] = {
-    { "source",        TYPE_STR | TYPE_MULTI, { 0 } },
-    { "source?*",      TYPE_STR , { 0 } },
-    { "prefix?*",      TYPE_STR , { 0 } },
-    { "cachedir",      TYPE_STR , { 0 } },
+    { "source",        TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 } },
+    { "source?*",      TYPE_STR | TYPE_W_ENV, { 0 } },
+    { "prefix?*",      TYPE_STR | TYPE_W_ENV, { 0 } },
+    { "cachedir",      TYPE_STR | TYPE_W_ENV, { 0 } },
     { "ftp_http_get",  TYPE_STR , { 0 } },
     { "ftp_get",       TYPE_STR , { 0 } },
     { "http_get",      TYPE_STR , { 0 } },
@@ -58,7 +60,7 @@ static struct tag valid_tags[] = {
     { "ssh_get",       TYPE_STR , { 0 } },
     { "ignore_req",    TYPE_STR | TYPE_MULTI , { 0 } },
     { "ignore_pkg",    TYPE_STR | TYPE_MULTI , { 0 } },
-    { "rpmdef",        TYPE_STR | TYPE_MULTI , { 0 } },
+    { "rpmdef",        TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 } },
     { "rpm_install_opt",  TYPE_STR , { 0 } },
     { "rpm_uninstall_opt",  TYPE_STR , { 0 } },
     { "follow",         TYPE_BOOL , { 0 } },
@@ -233,7 +235,7 @@ tn_hash *ldconf(const char *path)
     
     while (fgets(buf, sizeof(buf) - 1, stream)) {
         char *p = buf;
-        char *name, *val;
+        char *name, *val, expanded_val[PATH_MAX];
         struct copt *opt;
         const struct tag *tag;
 
@@ -335,7 +337,10 @@ tn_hash *ldconf(const char *path)
             opt = copt_new(name);
             n_hash_insert(ht, opt->name, opt);
         }
-        
+
+        if (tag->flags & TYPE_W_ENV)
+            val = expand_env_vars(expanded_val, sizeof(expanded_val), val);
+            
         if (opt->val == NULL) {
             opt->val = n_strdup(val);
             
