@@ -426,7 +426,7 @@ tn_hash *poldek_ldconf(const char *path)
 
         if (*p == '[') {
             const struct section *sect;
-            void *arr_sect;
+            tn_array *arr_sect;
                 
             p++;
             name = p;
@@ -446,6 +446,8 @@ tn_hash *poldek_ldconf(const char *path)
             arr_sect = n_hash_get(ht, name);
 
             if (arr_sect) {
+                int len;
+                
                 if (sect->is_multi == 0) {
                     ht_sect = n_array_nth(arr_sect, 0);
                     
@@ -454,10 +456,14 @@ tn_hash *poldek_ldconf(const char *path)
                     n_hash_ctl(ht_sect, TN_HASH_NOCPKEY);
                     n_array_push(arr_sect, ht_sect);
                 }
+
+                len = strlen(name) + 1;
+                section = alloca(len);
+                memcpy(section, name, len);
                 
             } else {
                 section = n_strdup(name);
-                //printf("section %s\n", section);
+	         //printf("section %s\n", section);
             
                 ht_sect = n_hash_new(11, (tn_fn_free)copt_free);
                 n_hash_ctl(ht_sect, TN_HASH_NOCPKEY);
