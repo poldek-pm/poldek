@@ -163,7 +163,7 @@ AC_CHECK_FUNCS(gettimeofday mkdir strdup uname mkdtemp)
 AC_CHECK_FUNCS(strerror strstr strtol strtoul strsignal)
 AC_CHECK_FUNCS(mallopt)
 AC_CHECK_FUNCS(ngettext setlocale)
-AC_CHECK_FUNCS(setenv)
+AC_CHECK_FUNCS(setenv clearenv)
 
 dnl Checks for header files.
 AC_HEADER_DIRENT
