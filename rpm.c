@@ -1076,6 +1076,7 @@ void rpmlog(int prii, const char *fmt, ...)
 
         
         n = vsnprintf(m, sizeof(m), fmt, args);
+
         if (n > 0 && m[n - 1] == '\n')
             m[n - 1] = '\0';
         
@@ -1087,6 +1088,9 @@ void rpmlog(int prii, const char *fmt, ...)
                 q = p + 1;
             p = q;
         }
+
+        if (strstr(m, "md5 OK") || strstr(m, "gpg OK") || strstr(m, "pgp OK"))
+            logpri |= LOGFILE;
         
         log(logpri | LOGWARN, "%s\n", p);
     }
