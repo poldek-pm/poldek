@@ -23,7 +23,13 @@ struct flfile *flfile_new(uint32_t size, uint16_t mode,
                           const char *basename, int blen, 
                           const char *slinkto, int slen);
 
-int flfile_cmp(const struct flfile *f1, const struct flfile *f2, int strict);
+/*
+  both functions returns false if given files are conflicted
+  WARN: basenames aren't compared! 
+ */
+int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict);
+int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,
+                 const char *slinkto, int strict);
 
 
 struct pkgfl_ent {
@@ -42,10 +48,17 @@ int pkgfl_ent_cmp(const void *a, const void *b);
 #define PKGFL_NOTDEPDIRS  2
 
 int pkgfl_asftag(tn_array *fl, char **ftag, int which);
+int pkgfl_store(tn_array *fl, tn_buf *nbuf, int which);
+int pkgfl_store_f(tn_array *fl, FILE *stream, int which);
+
+tn_array *pkgfl_restore(tn_buf_it *nbufi);
+tn_array *pkgfl_restore_f(FILE *stream);
+
+int pkgfl_skip_f(FILE *stream);
 
 #define pkgfl_array_new(size) n_array_new(size, NULL, pkgfl_ent_cmp)
 
-int pkgfl_ldhdr(tn_array *fl, Header h, const char *errprefix);
+int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname);
 
 #endif /* POLDEK_PKGFL_H */
 

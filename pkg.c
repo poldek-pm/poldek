@@ -132,6 +132,8 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
     pkg->reqpkgs = NULL;  
     pkg->revreqpkgs = NULL;
     pkg->cnflpkgs = NULL;
+    pkg->other_files_offs = 0;
+    pkg->pkg_stream = NULL;
     return pkg;
 }
 
@@ -241,7 +243,7 @@ struct pkg *pkg_ldhdr_udata(Header h, const char *fname, unsigned ldflags,
     if (ldflags & PKG_LDFL) {
         pkg->fl = n_array_new(32, NULL, pkgfl_ent_cmp);
     
-        if (pkgfl_ldhdr(pkg->fl, h, pkg_snprintf_s(pkg)) == -1) {
+        if (pkgfl_ldhdr(pkg->fl, h, PKGFL_ALL, pkg_snprintf_s(pkg)) == -1) {
             pkg_free(pkg);
             pkg = NULL;
         

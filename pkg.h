@@ -80,10 +80,13 @@ struct pkg {
     tn_array     *cnfls;      /* conflicts (with obsoletes)  */
     
     tn_array     *fl;         /* files list, see pkgfl.h  */
+    off_t        other_files_offs;  /* no dep files offset */
     
     tn_array     *reqpkgs;    /* require packages  */
     tn_array     *revreqpkgs; /* packages which requires */
     tn_array     *cnflpkgs;   /* conflict packages */
+
+    FILE         *pkg_stream; /*  */
 
     union {
         off_t           pkg_pkguinf_offs;
