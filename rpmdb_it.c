@@ -168,7 +168,7 @@ const struct dbrec *rpmdb_it_get(struct rpmdb_it *it)
     it->i++;
     
     if (it->dbrec.h == NULL)
-        rpm_die();
+        die();
 #endif /* HAVE_RPM_4_0 */
 
     return &it->dbrec;
