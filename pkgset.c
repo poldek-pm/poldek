@@ -30,7 +30,7 @@
 #include "usrset.h"
 #include "rpmadds.h"
 #include "pkgset-req.h"
-
+#include "split.h"
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
