@@ -647,13 +647,19 @@ void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgs
     matches = alloca(n_array_size(pkgnames) * sizeof(*matches));
     memset(matches, 0, n_array_size(pkgnames) * sizeof(*matches));
     
+    
     pkgs = n_array_new(16, NULL, (tn_fn_cmp)shpkg_cmp);
 
     for (i=0; i<n_array_size(avshpkgs); i++) {
         struct shpkg *shpkg = n_array_nth(avshpkgs, i);
         
-        for (j=0; j<n_array_size(pkgnames); j++) {
-            if (fnmatch(n_array_nth(pkgnames, j), shpkg->nevr, 0) == 0) {
+        for (j=0; j < n_array_size(pkgnames); j++) {
+            char *mask = n_array_nth(pkgnames, j);
+            
+            
+            if (fnmatch(mask, shpkg->nevr, 0) == 0 ||
+                strcmp(mask, shpkg->pkg->name) == 0) {
+                
                 n_array_push(pkgs, shpkg);
                 matches[j]++;
             }
