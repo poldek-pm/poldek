@@ -51,6 +51,7 @@
 #include "rpmdb_it.h"
 #include "dbdep.h"
 #include "poldek_term.h"
+#include "sigint.h"
 
 #define INST_INSTALL  1
 #define INST_UPGRADE  2
@@ -828,7 +829,8 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                    pkg_snprintf_s(pkg));
             pkg_rm_mark(dbpkg->pkg);
             db_deps_remove_pkg(upg->db_deps, dbpkg->pkg);
-            db_deps_remove_pkg_caps(upg->db_deps, pkg);
+            db_deps_remove_pkg_caps(upg->db_deps, pkg,
+                                    (ps->flags & PSDBDIRS_LOADED) == 0);
             
             dbpkg->flags |= DBPKG_TOUCHED;
             
@@ -2089,16 +2091,19 @@ int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst)
     msgn(1, _("Looking up packages for upgrade..."));
     pkgdb_map(inst->db, mapfn_mark_newer_pkg, &upg);
     n_hash_free(upg.db_pkgs);
-               
+
     if (upg.ndberrs) {
         logn(LOGERR, _("There are database errors (?), give up"));
         destroy_upgrade_s(&upg);
         return 0;
     }
+    
     nmarked = upg.nmarked;
     destroy_upgrade_s(&upg);
-    
-    if (nmarked == 0)
+
+    if (sigint_reached()) 
+        return 0;
+    else if (nmarked == 0)
         msgn(1, _("Nothing to do"));
     else
         return pkgset_install(ps, inst, NULL);
@@ -2225,6 +2230,9 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
 
         if (!pkg_is_marked(pkg))
             continue;
+
+        if (sigint_reached())
+            goto l_end;
         
         install = is_installable(pkg, inst, 1);
         
@@ -2251,6 +2259,9 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
 
         if (!pkg_is_marked_i(pkg)) 
             continue;
+
+        if (sigint_reached())
+            goto l_end;
         
         if (inst->flags & INSTS_PARTICLE) {
             if (n > 1) {

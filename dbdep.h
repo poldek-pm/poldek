@@ -25,7 +25,7 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
                  struct pkg *spkg, unsigned flags);
 
 void db_deps_remove_pkg(tn_hash *db_deph, struct pkg *pkg);
-void db_deps_remove_pkg_caps(tn_hash *db_deph, struct pkg *pkg);
+void db_deps_remove_pkg_caps(tn_hash *db_deph, struct pkg *pkg, int load_full_fl);
 
 struct db_dep *db_deps_provides(tn_hash *db_deph, struct capreq *cap,
                                 unsigned flags);
