@@ -29,7 +29,7 @@
 
 #include "vfile.h"
 
-#define PROGRESSBAR_WIDTH 75
+#define PROGRESSBAR_WIDTH 59
 
 static int progress (void *clientp, size_t dltotal, size_t dlnow,
                      size_t ultotal, size_t ulnow);
@@ -102,12 +102,12 @@ int vfile_curl_init(void)
         return 0;
     }
 
-    if (curl_easy_setopt(curlh, CURLOPT_TIMEOUT, 120) != 0) { /* read to */
+    if (curl_easy_setopt(curlh, CURLOPT_TIMEOUT, 300) != 0) { /* read to */
         vfile_err_fn(errmsg);
         return 0;
     }
 
-    if (curl_easy_setopt(curlh, CURLOPT_CONNECTTIMEOUT, 120) != 0) {
+    if (curl_easy_setopt(curlh, CURLOPT_CONNECTTIMEOUT, 300) != 0) {
         vfile_err_fn(errmsg);
         return 0;
     }
@@ -227,18 +227,19 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
     float  frac, percent;
     int    barwidth, n;
     size_t total;
-    
+    double total_size, amount_size;
     
     bar = (struct progress_bar*)clientp;
     total = dltotal + ultotal;
-
+    total_size = total;
     
-
-    bar->point = dlnow + ulnow; /* we've come this far */
+    
+    amount_size = bar->point = dlnow + ulnow; /* we've come this far */
     
     if (total && total < bar->point) {    /* cURL w/o  */
         vfile_err_fn("cURL bug detected: current size %d, total size %d\n", bar->point, total);
         bar->point = total;
+        amount_size = total;
     }
 
 #define HASH_SIZE 4096
@@ -277,12 +278,37 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
             vfile_msg_fn("%s", line);
             
         } else {
+            char total_unit = 'K', amount_unit = 'B';
+            char unit_line[19];
+            int nn;
+            
+            total_size = (double)total/1024;
+            if (total_size > 1000) {
+                total_size /= 1024;
+                total_unit = 'M';
+            }
+            if (amount_size > 1000) {
+                amount_size = amount_size/1024;
+                amount_unit = 'K';
+                if (amount_size > 1000) {
+                    amount_size /= 1024;
+                    amount_unit = 'M';
+                }
+            }
+
+            
+            nn = snprintf(unit_line, sizeof(unit_line), "[%.1f%c of %.1f%c]", amount_size,
+                          amount_unit, total_size, total_unit);
+            memset(&unit_line[nn], ' ', sizeof(unit_line) - nn - 1);
+            unit_line[sizeof(unit_line) - 1] = '\0';
+            
             memset(line, '.', n);
             line[n] = '\0';
+
             
-            snprintf(format, sizeof(format), "%%-%ds %%5.1f%%%%", barwidth );
-            snprintf(outline, sizeof(outline), format, line, percent );
             
+            snprintf(format, sizeof(format), "%%-%ds %%5.1f%%%% %%s", barwidth );
+            snprintf(outline, sizeof(outline), format, line, percent, unit_line);
             vfile_msg_fn("\r%s", outline);
         }
         bar->prev_n = n;
