@@ -14,12 +14,12 @@ struct pm_ctx *pm_new(const char *name, void *modarg)
     if ((mod = pm_module_find(name)) == NULL)
         return NULL;
 
-    if ((modh = ctx->mod->init(modarg)) == NULL)
+    if ((modh = mod->init(modarg)) == NULL)
         return NULL;
     
     ctx = n_malloc(sizeof(*ctx));
     ctx->mod = mod;
-    ctx->modh = ctx->mod->init(modarg);
+    ctx->modh = modh;
     return ctx;
 }
 
