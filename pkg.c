@@ -216,6 +216,7 @@ struct pkg *pkg_new_ext(tn_alloc *na,
     } else {
         pkg = na->na_calloc(na, sizeof(*pkg) + len);
         pkg->na = n_ref(na);
+        DBGF("+%p %p %d\n", na, &na->_refcnt, na->_refcnt);
     }
     
     pkg->flags |= PKG_COLOR_WHITE;
@@ -335,11 +336,15 @@ struct pkg *pkg_clone(tn_alloc *na, struct pkg *pkg, unsigned flags)
 
 void pkg_free(struct pkg *pkg) 
 {
-    DBGF("%s (pdir %s, na %d), %d\n", pkg_snprintf_s(pkg),
-         pkg->pkgdir ? pkgdir_idstr(pkg->pkgdir) : "<none>",
-         pkg->na ? pkg->na->_refcnt : -1,
-         pkg->_refcnt);
-    
+#if ENABLE_TRACE    
+    if (strcmp(pkg->name, "XX") == 0) {
+        DBGF("%p %s (pdir %s, na->refcnt=%d), refcnt=%d (%p)\n",
+               pkg, pkg_snprintf_s(pkg),
+               pkg->pkgdir ? pkgdir_idstr(pkg->pkgdir) : "<none>",
+               pkg->na ? pkg->na->_refcnt : -1,
+               pkg->_refcnt, &pkg->_refcnt);
+    }
+#endif    
     if (pkg->_refcnt > 0) {
         pkg->_refcnt--;
         return;
@@ -396,6 +401,7 @@ void pkg_free(struct pkg *pkg)
     if (pkg->na) {
         tn_alloc *na = pkg->na;
         memset(pkg, 0, sizeof(*pkg));
+        DBGF("-%p %p %d\n", na, &na->_refcnt, na->_refcnt);
         n_alloc_free(na);
         return;
     }
@@ -1273,6 +1279,15 @@ void *pkg_na_malloc(struct pkg *pkg, size_t size)
 
 struct pkg *pkg_link(struct pkg *pkg)
 {
+#if ENABLE_TRACE    
+    if (strcmp(pkg->name, "XX") == 0) {
+        DBGF("%p %s (pdir %s, na->refcnt=%d), refcnt=%d (%p)\n",
+             pkg, pkg_snprintf_s(pkg),
+             pkg->pkgdir ? pkgdir_idstr(pkg->pkgdir) : "<none>",
+             pkg->na ? pkg->na->_refcnt : -1,
+             pkg->_refcnt, &pkg->_refcnt);
+    }
+#endif    
     pkg->_refcnt++;
     return pkg;
 }
