@@ -2,13 +2,14 @@
 #include "i18n.h"
 #include "log.h"
 
-int mem_info_verbose = 0;
+int mem_info_verbose = -1;
 
 void print_mem_info(const char *prefix) 
 {
     struct mallinfo mi = mallinfo();
-    msgn(0, "%s: %db via malloc (%d unused), %db via mmap",
-        prefix, mi.arena, mi.fordblks,  mi.hblkhd);
+    
+    printf("MEMINFO %s: %db via malloc (%d unused, USED %d), %db via mmap\n\n",
+           prefix, mi.arena, mi.fordblks, mi.arena - mi.fordblks, mi.hblkhd);
 }
 
 void mem_info(int vlevel, const char *prefix) 
