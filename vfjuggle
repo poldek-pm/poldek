@@ -42,7 +42,11 @@ mount_()
 	fi    
 
 	echo "Insert the $id disk into drive you're using, and press ENTER"
-	read
+	read k
+	if [ $? -ne 0 ]; then
+	    echo "read error; this should not happen, give up."
+	    exit 1
+        fi
 
 	echo "Mounting $VF_MNTDEV $VF_MNTPOINT..."
 	$VF_MOUNT $VF_MNTDEV $VF_MNTPOINT
