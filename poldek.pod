@@ -134,7 +134,8 @@ One of the following basic modes must be selected:
 =item B<--mkidx[z][=FILE]>  
 
 Build package index, by default it's stored in SOURCE/Packages[.gz].
-The second file Packages-toc with packages NAME-EVR per line is created.
+The other two files are created: Packages.md with coputed Packages digest and 
+Packages-toc with packages NAME-EVR per line.  
 I<NOTE>: SOURCE must be directory.
 
 =item B<--update>    
@@ -173,15 +174,37 @@ Run poldek in interactive mode. Type "help" after running for available commands
 
 =over
 
-=item B<--dump[=FILE]> just dump packages file names to FILE or stdout instead 
-of install them.
+=item B<-N, --nofollow> 
 
-=item B<--fetch=DIR> like B<--dump> but packages are downloaded.
+Don't automatically install packages required by selected ones.
 
-=item B<--rpmdef="NAME VALUE"> like rpm's --define option.
+=item B<-F, --freshen> 
 
-=item B<--nodeps>; B<-t, --test>; B<--justdb>; B<--force> have the 
-same meanings like RPM ones. See next section.
+Upgrade packages, but only if an earlier version currently installed.
+
+=item B<--dump[=FILE]> 
+
+Just dump packages file names to FILE or stdout instead of install them.
+
+
+=item B<--dumpn[=FILE]> 
+
+Just dump packages names to FILE or stdout instead of install them.
+
+
+=item B<--fetch=DIR> 
+
+Like B<--dump> but packages are downloaded to DIR
+
+
+=item B<--rpmdef="NAME VALUE"> 
+
+Like rpm's --define option.
+
+
+=item B<--nodeps>; B<-t, --test>; B<--justdb>; B<--force>; B<--root>;
+
+Have the same meanings like RPM ones. See next section.
 
 
 =head1 COOPERATING WITH RPM
@@ -190,6 +213,8 @@ Currently all installations except B<install-dist> are made
 by RPM binary, which is executed in background. Options passed to rpm:
 
 =over
+
+=item * --root 
 
 =item * --force 
 
@@ -248,6 +273,9 @@ line represents a comment or a parameter.
 =item * B<use_sudo = yes|no> - for r/w operations poldek will 
                               run rpm using sudo. 
 
+=item * B<follow = yes|no> - automatically install|don't install 
+   packages required by selected ones (default: yes)
+
 =back
 
 =head1
@@ -296,13 +324,13 @@ $ poldek -s /ftp/pub/PLD/RPMS/ --mkidxz
 
 =head2 Verification
 
-$ poldek -s rsync://ala.ma.kota/PLD/RPMS/Packages.gz -V
+$ poldek -s rsync://ala.ma.kota/PLD/RPMS/ -V
 
-$ poldek -s /dir/with/RPMS/Packages.gz -V apache
+$ poldek -s /dir/with/RPMS/Packages -V apache
 
 =head2 Installation from scratch
 
-$ poldek -s ftp://ftp.trurl.net/PLD/RPMS/Packages.gz 
+$ poldek -s ftp://ftp.trurl.net/PLD/RPMS/ 
   --install-dist=/mnt/dest -p ftp://home.net/my-pkgsets/myset
 
 Above command installs a "myset" package subset under 
@@ -319,7 +347,7 @@ $ poldek -s ftp://ftp.rankiem.net.pl/PLD/RPMS/Packages
 
 Dump packages filenames marked for upgrade:
 
-$ poldek -s ftp://ftp.pld.org.pl/PLD/RPMS/Packages 
+$ poldek -s ftp://ftp.pld.org.pl/PLD/RPMS/ 
  --upgrade-dist --dump=/tmp/PLD-up-`date +%Y.%m.%d`
 
 Test only:
@@ -330,10 +358,10 @@ $ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/Packages
 
 =head2 Install/upgrade custom packages:
 
-$ poldek -s ftp://ftp.znienacka.com/PLD/RPMS/Packages.gz 
+$ poldek -s ftp://ftp.znienacka.com/PLD/RPMS/
 -U apache -n "ala-ma-kota 1.2" smail-12-389.i386.rpm
 
-$ poldek -s ftp://ftp.dudy.net/RPMS/Packages.gz -ti xteddy
+$ poldek -s ftp://ftp.dudy.net/RPMS/Packages -ti xteddy
 
 =head1 ENVIROMENT
 
