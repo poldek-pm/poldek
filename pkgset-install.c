@@ -360,15 +360,15 @@ void message_depmark(int indent, const struct pkg *marker,
                      const struct pkg *pkg, 
                      const struct capreq *marker_req, int process_as)
 {
-    const char *reqstr = "cap";
+    const char *reqstr = _("cap");
     const char *marker_prefix = "";
 
     
     if (process_as == PROCESS_AS_ORPHAN)
-        marker_prefix = "orphaned ";
+        marker_prefix = _("orphaned ");
 
     if (capreq_is_cnfl(marker_req))
-        reqstr = "cnfl";
+        reqstr = _("cnfl");
             
     msgn_i(1, indent, _("%s%s marks %s (%s %s)"), marker_prefix, 
           pkg_snprintf_s(marker), pkg_snprintf_s0(pkg),
@@ -1618,7 +1618,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         int is_test = inst->instflags & PKGINST_TEST;
 
         if (!is_test && (inst->flags & INSTS_CONFIRM_INST) && inst->ask_fn) {
-            if (!inst->ask_fn(1, "Proceed? [Y/n]"))
+            if (!inst->ask_fn(1, _("Proceed? [Y/n]")))
                 return 1;
         }
         
