@@ -2,16 +2,15 @@
 #ifndef POLDEK_FILEINDEX_H
 #define POLDEK_FILEINDEX_H
 
-#include <obstack.h>
 #include <trurl/nhash.h>
+#include <trurl/nmalloc.h>
 
 #include "pkgfl.h"
 
 struct file_index {
-    tn_hash  *dirs;             /* dirname => tn_array *files */
-    struct   obstack obs;
+    tn_hash   *dirs;             /* dirname => tn_array *files */
+    tn_alloc  *na;
 };
-    
 
 int  file_index_init(struct file_index *fi, int nelem);
 void file_index_destroy(struct file_index *fi);

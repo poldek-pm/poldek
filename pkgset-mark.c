@@ -18,7 +18,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
-#include <obstack.h>
 #include <fnmatch.h>
 
 #include <trurl/nassert.h>

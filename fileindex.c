@@ -29,9 +29,6 @@
 #include "capreq.h"
 #include "fileindex.h"
 
-#define obstack_chunk_alloc n_malloc
-#define obstack_chunk_free  n_free
-
 struct file_ent {
     struct flfile *flfile;
     struct pkg *pkg;
@@ -69,11 +66,9 @@ int file_index_init(struct file_index *fi, int nelem)
     fi->dirs = n_hash_new_na(NULL, nelem, (tn_fn_free)n_array_free);
     if (fi->dirs == NULL)
        return 0;
-    
+
     n_hash_ctl(fi->dirs, TN_HASH_NOCPKEY);
-    obstack_init(&fi->obs);
-    obstack_chunk_size(&fi->obs) = 1024*128;
-    obstack_alignment_mask(&fi->obs) = 0;
+    fi->na = n_alloc_new(128, TN_ALLOC_OBSTACK);
     return 1;
 }
 
@@ -82,8 +77,7 @@ void file_index_destroy(struct file_index *fi)
 {
     n_hash_free(fi->dirs);
     fi->dirs = NULL;
-    
-    obstack_free(&fi->obs, NULL); /* freeing whole obstack */
+    n_alloc_free(fi->na);
     memset(fi, 0, sizeof(*fi));
 }
 
@@ -126,7 +120,7 @@ int file_index_add_basename(struct file_index *fi, void *fidx_dir,
     tn_array *files = fidx_dir; 
     struct file_ent *fent;
 
-    fent = obstack_alloc(&fi->obs, sizeof(*fent));
+    fent = fi->na->na_malloc(fi->na, sizeof(*fent));
     fent->flfile = flfile;
     fent->pkg = pkg;
     n_array_push(files, fent);

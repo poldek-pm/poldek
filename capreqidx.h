@@ -3,9 +3,8 @@
 #define POLDEK_PROVREQIDX_H
 
 #include <stdint.h>
-#include <obstack.h>
 #include <trurl/nhash.h>
-
+#include <trurl/nmalloc.h>
 #include "pkg.h"
 
 #define CAPREQ_IDX_CAP (1 << 0)
@@ -14,7 +13,7 @@
 struct capreq_idx {
     unsigned flags;       
     tn_hash  *ht;         /* name => *pkgs[] */
-    struct   obstack obs;
+    tn_alloc *na;
 };
 
 struct capreq_idx_ent {

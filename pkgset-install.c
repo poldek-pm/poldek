@@ -22,7 +22,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
-#include <obstack.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -657,7 +656,7 @@ int process_pkg_orphans(struct pkg *pkg, struct pkgset *ps,
     
     db = upg->ts->db;
     DBGF("%s\n", pkg_snprintf_s(pkg));
-    mem_info(1, "process_pkg_orphans:");
+    MEMINF("process_pkg_orphans:");
 
     if (!installset_provides_capn(pkg, pkg->name, ps, upg)) 
         n += pkgdb_get_pkgs_requires_capn(db, upg->orphan_dbpkgs, pkg->name,
@@ -2358,7 +2357,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
     n_assert(ts->type == POLDEK_TSt_INSTALL);
     unmark_name_dups(ts->pms, ps->pkgs);
     
-    mem_info(1, "ENTER pkgset_install:");
+    MEMINF("START");
     init_upgrade_s(&upg, ts);
 
     is_particle = ts->getop(ts, POLDEK_OP_PARTICLE);
@@ -2447,7 +2446,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
  l_end:
     
     destroy_upgrade_s(&upg);
-    mem_info(1, "RETURN pkgset_install:");
+    MEMINF("END");
     if (is_particle)
         ts->setop(ts, POLDEK_OP_PARTICLE, 1);
     

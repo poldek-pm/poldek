@@ -58,12 +58,10 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
         ps->flags |= PSET_DBDIRS_LOADED;
     
         
-    if (!pkgset_load(ps, 0, ctx->sources)) {
+    if (!pkgset_load(ps, 0, ctx->sources))
         logn(LOGWARN, _("no packages loaded"));
-        //pkgset_free(ps);
-        //ps = NULL;
-    }
-    mem_info(1, "MEM after load");
+    
+    MEMINF("after load");
 
     if (ps == NULL)
         return 0;

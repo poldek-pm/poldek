@@ -3,7 +3,6 @@
 #define  POLDEK_PKGSET_H
 
 #include <stdint.h>
-#include <obstack.h>
 #include <trurl/narray.h>
 
 #include "fileindex.h"

@@ -24,33 +24,25 @@
 #include "capreqidx.h"
 #include "log.h"
 
-#define obstack_chunk_alloc malloc
-#define obstack_chunk_free  free
-
 static void free_ptrs(void *p) 
 {
     free(*(void**)p);
 }
 
-
 int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)  
 {
     idx->flags = type;
 
-    mem_info(-1, "capreq_idx_init 0");
+    MEMINF("START");
     
     idx->ht = n_hash_new(nelem, free_ptrs);
 
-    mem_info(-1, "capreq_idx_init 1");
     if (idx->ht == NULL)
        return 0;
     
     n_hash_ctl(idx->ht, TN_HASH_NOCPKEY);
-    
-    obstack_init(&idx->obs);
-    obstack_chunk_size(&idx->obs) = 4096;
-    obstack_alignment_mask(&idx->obs) = 0;
-    mem_info(-1, "capreq_idx_init 2 [end]");
+    idx->na = n_alloc_new(4, TN_ALLOC_OBSTACK);
+    MEMINF("END");
     return 1;
 }
 
@@ -58,7 +50,8 @@ int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)
 void capreq_idx_destroy(struct capreq_idx *idx) 
 {
     n_hash_free(idx->ht);
-    obstack_free(&idx->obs, NULL); /* freeing whole obstack */
+    n_alloc_free(idx->na);
+    memset(idx, 0, sizeof(*idx));
 }
 
 
@@ -79,7 +72,7 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
 
         ent->items = 1;
         ent->pkgs[0] = pkg;
-        p = obstack_alloc(&idx->obs, sizeof(ent));
+        p = idx->na->na_malloc(idx->na, sizeof(ent));
         *p = ent;
         n_hash_insert(idx->ht, capname, p);
 #if ENABLE_TRACE        

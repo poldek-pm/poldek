@@ -14,7 +14,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
-#include <obstack.h>
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
