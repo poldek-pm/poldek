@@ -153,11 +153,11 @@ int response_complete(struct ftp_resp *resp)
     buf += resp->last_i;
     //printf("last_i = %d + %d\n", resp->last_i, n_buf_size(resp->buf));
     while (*buf) {
-	c = *buf++;
+        c = *buf++;
         //printf("c(%c) = %s\n", c, &c);
         resp->last_i++;
         
-	switch (resp->state) {
+        switch (resp->state) {
             case ST_RESP_BAD:
                 return -1;
                 break;
@@ -166,7 +166,7 @@ int response_complete(struct ftp_resp *resp)
                 return 1;
                 break;
                 
-	    case ST_RESP_EMPTY:
+            case ST_RESP_EMPTY:
                 if (isdigit(c)) {
                     resp->code_len++;
                     resp->state = ST_RESP_CODE;
@@ -216,7 +216,7 @@ int response_complete(struct ftp_resp *resp)
                 }
                 break;
 
-	    case ST_RESP_MARKLINE:
+            case ST_RESP_MARKLINE:
                 if (c == '\n')
                     resp->state = ST_RESP_NEWL;
                 
@@ -241,7 +241,7 @@ int response_complete(struct ftp_resp *resp)
             
         case ST_RESP_BAD:
             vfff_set_err(EIO, _("%s: response parse error"),
-                             (char*)n_buf_ptr(resp->buf));
+                         (char*)n_buf_ptr(resp->buf));
             return -1;
             
         default:

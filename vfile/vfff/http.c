@@ -44,8 +44,7 @@
 
 #include <sigint/sigint.h>
 
-#include "http.h"
-#include "ftp.h"
+#include "vfff.h"
 #include "i18n.h"
 #include "sigint/sigint.h"
 
@@ -325,11 +324,11 @@ int response_complete(struct http_resp *resp)
 //    printf("last_i = %d + %d\n", resp->last_i, n_buf_size(resp->buf));
 //    printf("buf %s\n", buf);
     while (*buf) {
-	c = *buf++;
+        c = *buf++;
         //printf("c(%c) = %s\n", c, &c);
         resp->last_i++;
         
-	switch (resp->state) {
+        switch (resp->state) {
             case ST_RESP_BAD:
                 goto l_end;
                 break;
@@ -338,7 +337,7 @@ int response_complete(struct http_resp *resp)
                 goto l_end;
                 break;
                 
-	    case ST_RESP_EMPTY:
+            case ST_RESP_EMPTY:
                 resp->state = ST_RESP_PROTO;
                 break;
 
@@ -396,7 +395,7 @@ int response_complete(struct http_resp *resp)
                 break;
                 
                 
-	    case ST_RESP_LINE:
+            case ST_RESP_LINE:
 //                printf("st = ST_RESP_LINE\n");
                 if (c == '\n')
                     resp->state = ST_RESP_NEWL;
@@ -417,7 +416,7 @@ int response_complete(struct http_resp *resp)
             
         case ST_RESP_BAD:
             vfff_set_err(EIO, _("%s: response parse error"),
-                          (char*)n_buf_ptr(resp->buf));
+                         (char*)n_buf_ptr(resp->buf));
             return -1;
             
         default:
