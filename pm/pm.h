@@ -120,6 +120,10 @@ void pkgdb_it_destroy(struct pkgdb_it *it);
 const struct pm_dbrec *pkgdb_it_get(struct pkgdb_it *it);
 int pkgdb_it_get_count(struct pkgdb_it *it);
 
+int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
+                          const struct capreq *cap,
+                          tn_array *blacklist, unsigned ldflags);
+
 
 int pkgdb_get_pkgs_requires_capn(struct pkgdb *db,
                                  tn_array *dbpkgs, const char *capname,

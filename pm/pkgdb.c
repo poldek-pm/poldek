@@ -17,6 +17,7 @@
 
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
+#include <trurl/narray.h>
 
 #include "i18n.h"
 #include "capreq.h"
@@ -263,6 +264,7 @@ static int dbpkg_array_has(tn_array *pkgs, int recno)
 {
     struct pkg tmp;
     tmp.recno = recno;
+    n_assert(n_array_ctl_get_cmpfn(pkgs) == (tn_fn_cmp)pkg_cmp_recno);
     return n_array_bsearch(pkgs, &tmp) != NULL;
 }
 
@@ -638,3 +640,52 @@ struct pkgdir *pkgdb_to_pkgdir(struct pm_ctx *ctx, const char *rootdir,
     return pkgdir;
 }
 
+
+int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
+                          const struct capreq *cap,
+                          tn_array *blacklist, unsigned ldflags)
+{
+    struct pkgdb_it it;
+    const struct pm_dbrec *dbrec;
+    int n = 0;
+    
+    pkgdb_it_init(db, &it, PMTAG_REQ, capreq_name(cap));
+    while ((dbrec = pkgdb_it_get(&it)) != NULL) {
+        struct pkg *pkg;
+        
+        if (blacklist && dbpkg_array_has(blacklist, dbrec->recno))
+            continue;
+#if ENABLE_TRACE        
+        pkg = load_pkg(NULL, db, dbrec, ldflags);
+        DBGF("%s <- %s ????\n", capreq_name(cap), pkg_snprintf_s(pkg));
+#endif        
+        if (dbpkg_array_has(dbpkgs, dbrec->recno))
+            continue;
+#if ENABLE_TRACE        
+        DBGF("%s <- %s ??\n", capreq_name(cap), pkg_snprintf_s(pkg));
+#endif        
+        if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
+            if (pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
+                pkg_free(pkg);
+                
+            } else {
+                n_array_push(dbpkgs, pkg);
+#if ENABLE_TRACE
+                {
+                    int i;
+                    DBGF("%s <- %s\n", capreq_name(cap), pkg_snprintf_s(pkg));
+                    if (pkg->caps)
+                        for (i=0; i<n_array_size(pkg->caps); i++) 
+                            DBGF("- %s\n",
+                                 capreq_snprintf_s0(n_array_nth(pkg->caps, i)));
+                
+                    
+                }
+#endif                
+            }
+            n++;
+        }
+    }
+    pkgdb_it_destroy(&it);
+    return n;
+}
