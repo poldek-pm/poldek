@@ -75,7 +75,7 @@ void do_vlog(int pri, int indent, const char *fmt, va_list args)
     } else {
         if (pri & LOGDEBUG) 
             fputs("* ", l_stream);
-        else 
+        else if (pri & (LOGERR | LOGWARN)) 
             fputs(l_prefix, l_stream);
     }
 
@@ -109,7 +109,7 @@ void log_msg(const char *fmt, ...)
     va_list args;
     if (verbose > -1) {
         va_start(args, fmt);
-        vlog(LOGDEBUG, 0, fmt, args);
+        vlog(LOGINFO, 0, fmt, args);
         va_end(args);
     }
     
@@ -121,7 +121,7 @@ void log_msg_i(int indent, const char *fmt, ...)
     va_list args;
     
     va_start(args, fmt);
-    vlog(LOGDEBUG, indent, fmt, args);
+    vlog(LOGINFO, indent, fmt, args);
     va_end(args);
 }
 
