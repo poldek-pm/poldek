@@ -387,7 +387,6 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         struct pkg_dent *currdir = sh_ctx.cctx->currdir;
         char prompt[255];
         
-        
         sigint_reset();
         snprintf(prompt, sizeof(prompt), "poldek:%s%s> ",
                  currdir == NULL ? "/" : *currdir->name == '/' ? "" : "/",
@@ -398,6 +397,7 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         s = line;
         s = strstrip(line);
         if (*s) {
+            int _verbose = poldek_verbose();
             add_history(s);
             //print_mem_info("BEFORE");
             shInCmd = 1;
@@ -406,6 +406,7 @@ int poclidek_shell(struct poclidek_ctx *cctx)
             sigint_reset();
             shDone = 0;
             shInCmd = 0;
+            poldek_set_verbose(_verbose);
             //print_mem_info("AFTER ");
         }
         free(line);
