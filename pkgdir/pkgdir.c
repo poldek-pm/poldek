@@ -541,8 +541,11 @@ void pkgdir_free(struct pkgdir *pkgdir)
     if (pkgdir->mod && pkgdir->mod->free)
         pkgdir->mod->free(pkgdir);
 
-    if (pkgdir->na)
+    if (pkgdir->na) {
+        DBGF("%p %p %d\n", pkgdir->na, &pkgdir->na->_refcnt, pkgdir->na->_refcnt);
         n_alloc_free(pkgdir->na);
+    }
+    
 
     if (pkgdir->prev_pkgdir)
         pkgdir_free(pkgdir->prev_pkgdir);

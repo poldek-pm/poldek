@@ -78,6 +78,7 @@ int pkgmod_register_arch(const char *arch)
 
         memcpy(an_arch->arch, arch, len + 1);
         n_array_push(architecture_a, an_arch);
+        
         /* +1 in fact; 0 means no arch */
         an_arch->index = n_array_size(architecture_a);
         n_assert(an_arch->index < UINT16_MAX);
@@ -340,15 +341,16 @@ struct pkg *pkg_clone(tn_alloc *na, struct pkg *pkg, unsigned flags)
 
 void pkg_free(struct pkg *pkg) 
 {
-#if ENABLE_TRACE    
-    if (strcmp(pkg->name, "XX") == 0) {
-        DBGF("%p %s (pdir %s, na->refcnt=%d), refcnt=%d (%p)\n",
+    
+#if ENABLE_TRACE   
+    if (strcmp(pkg->name, "poldek") == 0) {
+        DBGF_F("%p %s (pdir %s, na->refcnt=%d), refcnt=%d (%p)\n",
                pkg, pkg_snprintf_s(pkg),
                pkg->pkgdir ? pkgdir_idstr(pkg->pkgdir) : "<none>",
                pkg->na ? pkg->na->_refcnt : -1,
                pkg->_refcnt, &pkg->_refcnt);
     }
-#endif    
+#endif
     if (pkg->_refcnt > 0) {
         pkg->_refcnt--;
         return;
