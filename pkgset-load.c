@@ -23,7 +23,7 @@
 #include <trurl/nstr.h>
 
 #include <vfile/vfile.h>
-
+#define ENABLE_TRACE 1
 #include "i18n.h"
 #include "pkgset.h"
 #include "pkgset-load.h"
@@ -47,12 +47,14 @@ static struct src_option source_options[] = {
 
 struct source *source_new(const char *pathspec, const char *pkg_prefix)
 {
-    struct source *src;
-    struct stat st;
-    const char *path, *p;
-    char *name, *q;
-    int len;
-
+    struct source   *src;
+    struct stat     st;
+    const char      *path, *p;
+    char            *name, *q;
+    int             len;
+    char            clpath[PATH_MAX], clprefix[PATH_MAX];
+    int             n;
+    
     
     p = pathspec;
     
@@ -81,36 +83,44 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
         if (*name == '\0')
             name = "anon";
     }
+
     
+
+    if ((n = vf_cleanpath(clpath, sizeof(clpath), path)) == 0 ||
+        n == sizeof(clpath))
+        return NULL;
+    
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
+        clpath[n++] = '/';
+    
+    else {
+        int l = strlen(path);
+        if (path[l - 1] == '/')
+            clpath[n++] = '/';
+    }
+    clpath[n] = '\0';
+
+    if (pkg_prefix) {
+        int l = strlen(pkg_prefix);
+        
+        if ((n = vf_cleanpath(clprefix, sizeof(clprefix), pkg_prefix)) == 0 ||
+            n == sizeof(clprefix))
+            return NULL;
+        
+        if (pkg_prefix[l - 1] == '/')
+            clprefix[n++] = '/';
+
+        clprefix[n] = '\0';
+    }
     
     src = malloc(sizeof(*src));
     src->flags = 0;
-    src->source_path = NULL;
-    
-    
-    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
-        len = strlen(path);
-        
-        if (path[len - 1] == '/') {
-            src->source_path = malloc(len + 1);
-            memcpy(src->source_path, path, len + 1);
-            
-        } else {
-            src->source_path = malloc(len + 2 /* for '/' */);
-            memcpy(src->source_path, path, len);
-            src->source_path[len] = '/';
-            src->source_path[len + 1] = '\0';
-        }
-    }
-
-    if (src->source_path == NULL) 
-        src->source_path = strdup(path);
-    
-    src->pkg_prefix = NULL;
+    src->source_path = strdup(clpath);
     if (pkg_prefix)
-        src->pkg_prefix = strdup(pkg_prefix);
+        src->pkg_prefix = strdup(clprefix);
+    
     src->ldmethod = PKGSET_LD_NIL;
-
+    
     
     
     if ((q = strchr(name, ','))) {
