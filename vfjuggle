@@ -3,7 +3,7 @@
 # Enviroment:
 # VF_MNTDEV	- the default is empty
 #			VF_MNTDEV=/dev/hdd
-# VF_MNTPOINT	- the default is /cdrom
+# VF_MNTPOINT	- the default is /mnt/cdrom
 #			VF_MNTPOINT=/mnt/cdrom
 # VF_MOUNT	- the default is mount
 #			VF_MOUNT="eject -t [$VF_MNTDEV]; hdparm -E 4 $VF_MNTDEV; mount"
@@ -95,7 +95,7 @@ fi
 
 PATH="/bin:/usr/bin:/sbin:/usr/sbin"
 
-VF_MNTPOINT=${VF_MNTPOINT:-"/cdrom"}
+VF_MNTPOINT=${VF_MNTPOINT:-"/mnt/cdrom"}
 if [ ! -d "$VF_MNTPOINT" ]; then
 	echo "$VF_MNTPOINT: no such directory"
 	exit 1
