@@ -21,6 +21,7 @@ int term_init(void);
 int term_get_width(void);
 int term_get_height(void);
 
+int vprintf_c(int color, const char *fmt, va_list args);
 int printf_c(int color, const char *fmt, ...);
 int snprintf_c(int color, char *str, size_t size, const char *fmt, ...);
 int vsnprintf_c(int color, char *str, size_t size, const char *fmt,

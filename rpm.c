@@ -496,7 +496,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
                 break;
                 
             default:
-                logn(LOGERR, _("%s: rpmtransAddPackage() failed"), path);
+                logn(LOGERR, "%s: rpmtransAddPackage() failed", path);
                 goto l_err;
                 break;
         }
@@ -506,7 +506,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
             int numConflicts = 0;
             
             if (rpmdepCheck(rpmts, &conflicts, &numConflicts) != 0) {
-                logn(LOGERR, _("%s: rpmdepCheck() failed"), path);
+                logn(LOGERR, "%s: rpmdepCheck() failed", path);
                 goto l_err;
             }
             
