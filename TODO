@@ -1,5 +1,7 @@
 # $Id$
 
+* mis  2000/11/28
+- libcurl's backed for vfile
 
 * mis  2000/09/20
 - interactive mode (see README.package-sets)

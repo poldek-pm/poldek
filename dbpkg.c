@@ -4,6 +4,7 @@
 #include "pkg.h"
 #include "dbpkg.h"
 #include "rpmadds.h"
+#include "log.h"
 
 struct dbpkg *dbpkg_new(uint32_t recno, Header h) 
 {
@@ -81,5 +82,36 @@ int dbpkg_array_has(tn_array *dbpkgs, unsigned recno)
     return n_array_bsearch(dbpkgs, &tmpkg) != NULL;
 }
 
+
+
+int dbpkg_pkg_cmp_evr(const struct dbpkg *dbpkg, const struct pkg *pkg)
+{
+    int rc;
+    
+    if (dbpkg->pkg != NULL) {
+        rc = pkg_cmp_evr(dbpkg->pkg, pkg);
+        
+    } else {
+        struct pkg  tmpkg;
+        uint32_t    *epoch;
+        
+        headerNVR(dbpkg->h, (void*)&tmpkg.name, (void*)&tmpkg.ver,
+                  (void*)&tmpkg.rel);
+        
+        if (tmpkg.name == NULL || tmpkg.ver == NULL || tmpkg.rel == NULL) {
+            log(LOGERR, "headerNVR failed\n");
+            return 0;
+        }
+        
+        if (headerGetEntry(dbpkg->h, RPMTAG_EPOCH, &rc, (void *)&epoch, NULL))
+            tmpkg.epoch = *epoch;
+        else
+            tmpkg.epoch = 0;
+        
+        rc = pkg_cmp_evr(&tmpkg, pkg);
+    }
+    
+    return rc;
+}
 
     

@@ -22,6 +22,8 @@ void dbpkg_clean(struct dbpkg *dbpkg);
 
 int dbpkg_cmp(const struct dbpkg *p1, const struct dbpkg *p2);
 
+int dbpkg_pkg_cmp_evr(const struct dbpkg *dbpkg, const struct pkg *pkg);
+
 char *dbpkg_snprintf(char *buf, size_t size, const struct dbpkg *dbpkg);
 char *dbpkg_snprintf_s(const struct dbpkg *dbpkg);
 

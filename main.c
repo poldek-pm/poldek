@@ -767,6 +767,36 @@ int prepare_given_packages(void)
 }
 
 
+tn_array *prepare_install_cmd(void) 
+{
+    tn_array *install_cmd;
+    char *cmd;
+
+    install_cmd = n_array_new(2, free, NULL);
+
+    if ((cmd = conf_get(htcnf, "install_cmd", NULL)) == NULL)
+        n_array_push(install_cmd, strdup("/bin/rpm"));
+    
+    else {
+        const char **args;
+        char *p;
+        int n;
+        
+        p = alloca(strlen(cmd) + 1);
+        strcpy(p, cmd);
+        
+        args = n_str_tokl(p, " \t");
+        n = 0;
+        while (args[n])
+            n_array_push(install_cmd, strdup(args[n++]));
+        
+        n_str_tokl_free(args);
+    }
+    
+    return install_cmd;
+}
+
+
 int check_args(void) 
 {
     int rc = 1;
@@ -872,8 +902,8 @@ int main(int argc, char **argv)
     inst.flags     = args.inst_sflags;
     inst.rpmopts   = args.rpmopts;
     inst.rpmacros  = args.rpmacros;
-    
 
+    inst.install_cmd = prepare_install_cmd();
     select_ldmethod();
     
     if (args.mjrmode == MODE_MKIDX && args.idx_type == INDEXTYPE_RPMH) {
@@ -900,7 +930,7 @@ int main(int argc, char **argv)
     switch (args.mjrmode) {
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
-            log_sopenlog(stdout, 0, "err");
+            log_sopenlog(stdout, 0, "ERR");
             if (shell_main(ps, &inst))
                 exit(EXIT_SUCCESS);
             else

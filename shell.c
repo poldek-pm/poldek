@@ -28,12 +28,14 @@ static int cmd_ls();
 static int cmd_stat();
 static int cmd_help();
 static int cmd_quit();
-static int cmd_fetch();
+
 static int cmd_install();
 static
 error_t parse_install_opt(int key, char *arg, struct argp_state *state);
 static
 error_t parse_ls_opt(int key, char *arg, struct argp_state *state);
+static
+error_t parse_stat_opt(int key, char *arg, struct argp_state *state);
 
 
 
@@ -92,11 +94,13 @@ struct command commands_tab[] = {
     
 {3,
      "install", "[FILE...]",
-     options_install, parse_install_opt,  cmd_install,
+     options_install, parse_install_opt, cmd_install,
      "install package(s)"
 },
     
-{4, "stat", "[FILE...]", NULL, NULL, cmd_stat, "display package(s) status"},
+{4, "stat", "[FILE...]", NULL, parse_stat_opt, cmd_stat,
+     "display package(s) status"},
+    
 {5, "quit", NULL, NULL, NULL, cmd_quit, "quit poldek"},
 {6, "help", "[COMMAND]", NULL, NULL, cmd_help, "display help"},
 {0, NULL, NULL, NULL, NULL, NULL, NULL}
@@ -294,7 +298,6 @@ static
 void resolve_packages(tn_array *pkgnames, tn_array **pkgsp)
 {
     tn_array *pkgs = NULL;
-    char *arg;
     int i, n = 0;
 
     *pkgsp = NULL;
@@ -349,85 +352,6 @@ void resolve_packages(tn_array *pkgnames, tn_array **pkgsp)
 }
 
 
-
-static 
-void prepare_argv(char **argv, tn_array **optsp, tn_array **pkgsp)
-{
-    tn_array *pkgs = NULL, *opts = NULL;
-    char *arg;
-    int i, n = 0;
-
-    *optsp = NULL;
-    *pkgsp = NULL;
-
-    opts = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
-    pkgs = n_array_new(16, NULL, (tn_fn_cmp)shpkg_cmp);
-    
-    if (argv == NULL) 
-        return;
-
-    n = 0;
-    while (argv[n]) {
-        if (*argv[n] != '-')
-            break;
-
-        n_array_push(opts, argv[n++]);
-    }
-
-    *optsp = opts;
-    if (argv[n] == NULL)
-        return;
-    
-    while ((arg = argv[n++])) {
-        int asterisk = 0, len;
-        char *p;
-        
-        if ((p = strchr(arg, '*')) && *(p+1) == '\0') {
-            *p = '\0';
-            i = n_array_bsearch_idx_ex(shell_s.avpkgs, arg,
-                                       (tn_fn_cmp)shpkg_ncmp_str);
-            asterisk = 1;
-            len = strlen(arg);
-                
-        } else {
-            i = n_array_bsearch_idx_ex(shell_s.avpkgs, arg,
-                                       (tn_fn_cmp)shpkg_cmp_str);
-        }
-            
-        if (i == -1) {
-            printf("%s: no such package\n", arg);
-            continue;
-        }
-            
-        n_array_push(pkgs, n_array_nth(shell_s.avpkgs, i++));
-        while (i < n_array_size(shell_s.avpkgs)) {
-            struct shell_pkg *shpkg = n_array_nth(shell_s.avpkgs, i++);
-                
-            if (asterisk) {
-                if (strncmp(shpkg->nevr, arg, len) == 0)
-                    n_array_push(pkgs, shpkg);
-                    
-            } else {
-                if (strcmp(shpkg->nevr, arg) == 0)
-                    n_array_push(pkgs, shpkg);
-            }
-        }
-    }
-    
-
-    if (n_array_size(pkgs) == 0) {
-        n_array_free(pkgs);
-        n_array_free(opts);
-        pkgs = NULL;
-    } else {
-        n_array_sort(pkgs);
-        n_array_uniq(pkgs);
-    }
-
-    
-    *pkgsp = pkgs;
-}
-
 struct cmd_state {
     unsigned flags;
     tn_array *pkgnames;
@@ -465,7 +389,7 @@ error_t parse_ls_opt(int key, char *arg, struct argp_state *state)
 }
 
 
-static int cmd_ls(int argc, const char **argv, struct argp *argp)
+static int cmd_ls(int argc, char **argv, struct argp *argp)
 {
     struct cmd_state cmdst = { 0, NULL};
     tn_array *shpkgs = NULL;
@@ -603,7 +527,7 @@ error_t parse_install_opt(int key, char *arg, struct argp_state *state)
 }
 
 
-static int cmd_install(int argc, const char **argv, struct argp *argp)
+static int cmd_install(int argc, char **argv, struct argp *argp)
 {
     struct cmd_state cmdst = { 0, NULL};
     tn_array *shpkgs = NULL;
@@ -650,21 +574,125 @@ static int cmd_install(int argc, const char **argv, struct argp *argp)
 
 
 
+/*----------------------------------------------------------------------*/
+/* status                                                               */
+/*----------------------------------------------------------------------*/
+static
+error_t parse_stat_opt(int key, char *arg, struct argp_state *state)
+{
+    struct cmd_state *cmdst = state->input;
+    
+    switch (key) {
+        case ARGP_KEY_ARG:
+            n_array_push(cmdst->pkgnames, strdup(arg));
+
+        case ARGP_KEY_END:
+            //argp_usage (state);
+            break;
+
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+    
+    return 0;
+}
+
+
+static int cmd_stat(int argc, char **argv, struct argp *argp)
+{
+    struct cmd_state cmdst = { 0, NULL};
+    tn_array *shpkgs = NULL;
+    int i, j, err = 0;
+    
+    shell_s.inst->instflags = 0;
+    
+    cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
+    
+    argp_parse(argp, argc, argv, argp_parse_flags, 0, &cmdst);
+    resolve_packages(cmdst.pkgnames, &shpkgs);
+    n_array_free(cmdst.pkgnames);
+    
+    if (shpkgs == NULL)
+        return 0;
+
+    if (n_array_size(shpkgs) == 0) {
+        printf("stat: specify what packages you want to install\n");
+        err++;
+        goto l_end;
+    }
+    
+    if (err) 
+        goto l_end;
+
+    pkgset_unmark(shell_s.pkgset, PS_MARK_UNMARK_ALL);
+
+    shell_s.inst->db = pkgdb_open(shell_s.inst->rootdir, NULL, O_RDONLY);
+    if (shell_s.inst->db == NULL) {
+        log(LOGERR, "could not open database\n");
+        goto l_end;
+    }
+    
+    for (i=0; i<n_array_size(shpkgs); i++) {
+        struct shell_pkg *shpkg = n_array_nth(shpkgs, i);
+        tn_array *dbpkgs;
+        
+
+        msg(0, "%-32s", pkg_snprintf_s(shpkg->pkg));
+
+        dbpkgs = rpm_get_packages(shell_s.inst->db->dbh, shpkg->pkg);
+        if (dbpkgs == NULL) {
+            msg(0, "_ not installed\n", pkg_snprintf_s(shpkg->pkg));
+            continue;
+        }
+        
+        msg(0, "_");
+
+        for (j=0; j<n_array_size(dbpkgs); j++) {
+            struct dbpkg *dbpkg = n_array_nth(dbpkgs, j);
+            int cmprc, c;
+            char *p = ", ";
+            
+            cmprc = dbpkg_pkg_cmp_evr(dbpkg, shpkg->pkg);
+            
+            if (cmprc == 0)
+                c = '=';
+            else if (cmprc < 0)
+                c = '>';
+            else
+                c = '<';
+
+            if (j == n_array_size(dbpkgs) - 1)
+                p = "";
+            
+            msg(0, "_%c%s%s", c, dbpkg_snprintf_s(dbpkg), p);
+        }
+        msg(0, "_\n");
+        n_array_free(dbpkgs);
+    }
+    
+ l_end:
+
+    if (shell_s.inst->db) {
+        pkgdb_free(shell_s.inst->db);
+        shell_s.inst->db = NULL;
+    }
+    
+    if (shpkgs != shell_s.avpkgs)
+        n_array_free(shpkgs);
+    n_array_map(shell_s.avpkgs, (tn_fn_map1)shpkg_clean_flags);
+    return err == 0;
+}
+
+
+#if 0
 static int cmd_fetch(char **argv)
 {
     printf("stat");
     return (0);
 }
+#endif
 
 
-
-
-static
-int cmd_stat(char **argv)
-{
-    printf("stat");
-    return (0);
-}
 
 static
 int cmd_help(char **argv)
@@ -707,11 +735,9 @@ int valid_argument(char *caller, char *arg)
 static 
 void shell_end(int sig) 
 {
-    printf("dupa\n");
-    if (shell_s.histfile) {
-        printf("write history %s\n", shell_s.histfile);
+    if (shell_s.histfile)
         write_history(shell_s.histfile);
-    }
+    shell_s.done = 1;
 }
 
 

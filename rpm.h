@@ -23,6 +23,9 @@ int rpm_dbmap(rpmdb db,
 tn_array *rpm_get_conflicted_dbpkgs(rpmdb db, const struct capreq *cap,
                                     tn_array *unistdbpkgs);
 
+tn_array *rpm_get_provides_dbpkgs(rpmdb db, const struct capreq *cap,
+                                  tn_array *unistdbpkgs);
+
 /* returns installed packages which conflicts with given path */
 tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path,
                                          tn_array *unistdbpkgs);
@@ -39,6 +42,9 @@ int rpm_dbmatch_req(rpmdb db, const struct capreq *req, int strict,
  */
 int rpm_is_pkg_installed(rpmdb db, const struct pkg *pkg, int *cmprc,
                          struct dbpkg *dbpkg);
+
+
+tn_array *rpm_get_packages(rpmdb db, const struct pkg *pkg);
 
 
 /*

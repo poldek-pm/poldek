@@ -178,7 +178,7 @@ struct pkguinf *pkguinf_ldhdr(Header h)
             break;
         headerAddI18NString(hdr, RPMTAG_GROUP, groups[i], langs[i]);
         headerAddI18NString(hdr, RPMTAG_SUMMARY, summs[i], langs[i]);
-        headerAddI18NString(hdr, RPMTAG_SUMMARY, descrs[i], langs[i]);
+        headerAddI18NString(hdr, RPMTAG_DESCRIPTION, descrs[i], langs[i]);
     }
     nlangs = n;
     

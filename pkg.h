@@ -66,8 +66,8 @@
 
 struct pkg {
     uint32_t     flags;
-    uint32_t     size;
-    uint32_t     btime;
+    uint32_t     size;        /* installed size */
+    uint32_t     btime;       /* build time */
     int32_t      epoch;
     char         *name;
     char         *ver;
@@ -80,7 +80,7 @@ struct pkg {
     tn_array     *cnfls;      /* conflicts (with obsoletes)  */
     
     tn_array     *fl;         /* files list, see pkgfl.h  */
-    off_t        other_files_offs;  /* no dep files offset */
+    off_t        other_files_offs;  /* no dep files offset nin pkg_stream */
     
     tn_array     *reqpkgs;    /* require packages  */
     tn_array     *revreqpkgs; /* packages which requires */
@@ -150,7 +150,7 @@ int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr);
 
 /* look up into package caps only */
 int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
-                        int strict);
+                       int strict);
 
 int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req);
 

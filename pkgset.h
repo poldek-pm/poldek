@@ -23,6 +23,7 @@ struct inst_s {
     const char     *fetchdir;   /* dir to fetch files     */
     const char     *cachedir;   /* place for downloaded packages */
     const char     *dumpfile;   /* file to dump fqpns     */
+    tn_array       *install_cmd;
     tn_array       *rpmopts;
     tn_array       *rpmacros;
     

@@ -176,11 +176,20 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
         if (!pkgset_fetch_pkgs(ps, local_prefix, upg->install_pkgs))
             return 0;
     }
+
+    if (upg->inst->instflags & PKGINST_TEST)
+        cmd = "/bin/rpm";
+    else 
+        cmd = n_array_nth(upg->inst->install_cmd, 0);
     
-    cmd = "/bin/rpm";
     cmdbn = "rpm";
     argv[n++] = cmdbn;
     
+    if ((upg->inst->instflags & PKGINST_TEST) == 0) {
+        for (i=1; i<n_array_size(upg->inst->install_cmd); i++)
+            argv[n++] = n_array_nth(upg->inst->install_cmd, i);
+    }
+        
     if (ps->flags & PSMODE_INSTALL)
         argv[n++] = "--install";
     else if (ps->flags & PSMODE_UPGRADE)
@@ -571,6 +580,57 @@ void process_dependecies(struct pkgset *ps, struct upgrade_s *upg)
   conflicts
 */
 static
+int is_file_conflict_new(const struct pkg *pkg,
+                         const char *dirname, const struct flfile *flfile,
+                         struct dbpkg *dbpkg, int strict) 
+{
+    struct rpmhdr_fl hdrfl;
+    int i, is_cnfl = 0;
+    
+    if (!rpmhdr_fl_ld(&hdrfl, dbpkg->h, NULL)) 
+        return -1;
+
+    for (i=0; i<hdrfl.nbnames; i++) {
+        char *dn;
+
+        if (strcmp(hdrfl.bnames[i], flfile->basename) != 0)
+            continue;
+
+        dn = hdrfl.dnames[hdrfl.diridxs[i]];
+        if (*(dn+1) != '\0') {    /* skip leading '/' */
+            char *p;
+            
+            dn++;
+            if ((p = strrchr(dn, '/')))
+                *p = '\0';
+        }
+        
+        if (strcmp(dn, dirname) != 0)
+            continue;
+        
+        is_cnfl = flfile_cnfl2(flfile, hdrfl.sizes[i], hdrfl.modes[i],
+                              hdrfl.symlinks ? hdrfl.symlinks[i] : NULL,
+                              strict);
+        
+        if (is_cnfl) {
+            log(LOGERR, "%s: /%s/%s%s: conflicts with %s's one\n",
+                pkg_snprintf_s(pkg),
+                dirname, flfile->basename,
+                S_ISDIR(flfile->mode) ? "/" : "", dbpkg_snprintf_s(dbpkg));
+            
+        } else if (verbose > 1) {
+            msg(2, "/%s/%s%s: shared between %s and %s\n",
+                dirname, flfile->basename,
+                S_ISDIR(flfile->mode) ? "/" : "",
+                pkg_snprintf_s(pkg), dbpkg_snprintf_s(dbpkg));
+        }
+    }
+    
+    rpmhdr_fl_free(&hdrfl);
+    return is_cnfl;
+}
+
+static
 int is_file_conflict(const struct pkg *pkg,
                      const char *dirname, const struct flfile *flfile,
                      struct dbpkg *dbpkg, int strict) 
@@ -620,7 +680,7 @@ int is_file_conflict(const struct pkg *pkg,
     rpmhdr_fl_free(&hdrfl);
     return is_cnfl;
 }
-
+    
 
 static 
 int find_file_conflicts(struct pkgfl_ent *flent, struct pkg *pkg,
@@ -635,12 +695,12 @@ int find_file_conflicts(struct pkgfl_ent *flent, struct pkg *pkg,
         
         snprintf(path, sizeof(path), "/%s/%s", flent->dirname,
                  flent->files[i]->basename);
-            
-        cnfldbpkgs = rpm_get_file_conflicted_dbpkgs(db->dbh,path,
+        
+        cnfldbpkgs = rpm_get_file_conflicted_dbpkgs(db->dbh, flent->files[i]->basename, 
                                                     uninst_dbpkgs);
         if (cnfldbpkgs == NULL)
             continue;
-        
+
         for (j=0; j<n_array_size(cnfldbpkgs); j++)
             ncnfl += is_file_conflict(pkg, flent->dirname, flent->files[i],
                                       n_array_nth(cnfldbpkgs, j), strict);
@@ -651,19 +711,18 @@ int find_file_conflicts(struct pkgfl_ent *flent, struct pkg *pkg,
 }
 
     
-        
-
 static
 int find_db_files_conflicts(struct pkg *pkg, struct pkgdb *db,
                             tn_array *uninst_dbpkgs, int strict)
 {
     tn_array *fl;
     int i, ncnfl = 0;
-
+    int n = 0;
     if (pkg->fl)
         for (i=0; i < n_array_size(pkg->fl); i++) {
             ncnfl += find_file_conflicts(n_array_nth(pkg->fl, i), pkg, db,
                                          uninst_dbpkgs, strict);
+            //msg(1, "%d\n", n++);
         }
 
     if (ncnfl)                  /* skip the rest conflicts test */
@@ -679,9 +738,63 @@ int find_db_files_conflicts(struct pkg *pkg, struct pkgdb *db,
     for (i=0; i < n_array_size(fl); i++) {
         ncnfl += find_file_conflicts(n_array_nth(fl, i), pkg, db,
                                      uninst_dbpkgs, strict);
+        //msg(1, "%d\n", n++);
     }
     
     n_array_free(fl);
+    return ncnfl;
+}
+
+
+int find_db_conflicts(const struct pkg *pkg, const struct capreq *cnfl,
+                      tn_array *dbpkgs, int strict) 
+{
+    int i, ncnfl = 0;
+    
+    for (i=0; i<n_array_size(dbpkgs); i++) {
+        struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
+        dbpkg->pkg = pkg_ldhdr(dbpkg->h, "db",
+                               PKG_LDNEVR | PKG_LDCAPS);
+
+        msg(6, "%s (%s) <-> %s ?\n", pkg_snprintf_s(pkg),
+            capreq_snprintf_s(cnfl), pkg_snprintf_s0(dbpkg->pkg));
+        
+        if (pkg_match_req(dbpkg->pkg, cnfl, strict)) {
+            log(LOGERR, "%s (%s) conflicts with installed %s\n",
+                pkg_snprintf_s(pkg),
+                capreq_snprintf_s(cnfl), 
+                pkg_snprintf_s0(dbpkg->pkg));
+                
+            ncnfl++;
+        }
+    }
+    
+    return ncnfl;
+}
+
+int find_db_conflicts2(const struct pkg *pkg, const struct capreq *cap,
+                       tn_array *dbpkgs, int strict) 
+{
+    int i, j, ncnfl = 0;
+    
+    for (i=0; i<n_array_size(dbpkgs); i++) {
+        struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
+        dbpkg->pkg = pkg_ldhdr(dbpkg->h, "db",
+                               PKG_LDNEVR | PKG_LDCNFLS);
+
+        msg(6, "%s (%s) <-> %s ?\n", pkg_snprintf_s(pkg),
+            capreq_snprintf_s(cap), pkg_snprintf_s0(dbpkg->pkg));
+        
+        for (j=0; j<n_array_size(dbpkg->pkg->cnfls); j++) {
+            struct capreq *cnfl = n_array_nth(dbpkg->pkg->cnfls, j);
+            if (cap_match_req(cap, cnfl, 0))
+                log(LOGERR, "%s (%s) conflicts with installed %s (%s)\n",
+                    pkg_snprintf_s(pkg), capreq_snprintf_s(cap), 
+                    pkg_snprintf_s0(dbpkg->pkg),capreq_snprintf_s0(cnfl));
+            ncnfl++;
+        }
+    }
+    
     return ncnfl;
 }
 
@@ -695,7 +808,9 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
     
     for (i=0; i<n_array_size(upg->install_pkgs); i++) {
         struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
-
+        
+        msg(2, " checking %s\n", pkg_snprintf_s(pkg));
+        
         if (pkg->cnflpkgs != NULL)
             for (j = 0; j < n_array_size(pkg->cnflpkgs); j++) {
                 struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
@@ -708,6 +823,21 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
                 }
             }
 
+        for (j = 0; j < n_array_size(pkg->caps); j++) {
+            struct capreq *cap = n_array_nth(pkg->caps, j);
+            tn_array *dbpkgs;
+
+            msg_i(1, 3, "cap %s\n", capreq_snprintf_s(cap));
+            dbpkgs = rpm_get_conflicted_dbpkgs(dbh, cap,
+                                               upg->uninst_dbpkgs);
+            if (dbpkgs == NULL)
+                continue;
+            
+            
+            ncnfl += find_db_conflicts2(pkg, cap, dbpkgs, 0);
+            n_array_free(dbpkgs);
+        }
+        
         if (pkg->cnfls != NULL)
             for (j = 0; j < n_array_size(pkg->cnfls); j++) {
                 struct capreq *cnfl = n_array_nth(pkg->cnfls, j);
@@ -715,17 +845,18 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
                 
                 if (cnfl_is_obsl(cnfl))
                     continue;
-                
-                dbpkgs = rpm_get_conflicted_dbpkgs(dbh, cnfl,
-                                                   upg->uninst_dbpkgs);
-                if (dbpkgs == NULL)
-                    continue;
 
-                //ncnfl++;
-                nisetcnfl++;
+                msg_i(1, 3, "cnfl %s\n", capreq_snprintf_s(cnfl));
+                
+                dbpkgs = rpm_get_provides_dbpkgs(dbh, cnfl,
+                                                 upg->uninst_dbpkgs);
+                if (dbpkgs != NULL) {
+                    ncnfl += find_db_conflicts(pkg, cnfl, dbpkgs, 1);
+                    n_array_free(dbpkgs);
+                }
             }
         
-    
+        msg_i(1, 3, "files...\n");
         ncnfl += find_db_files_conflicts(pkg, upg->inst->db,
                                          upg->uninst_dbpkgs, upg->strict);
     }
@@ -954,8 +1085,9 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst)
             
         } else if (npkgs == 1) {
             if (cmprc <= 0 && ((inst->instflags & PKGINST_FORCE) == 0)) {
-                msg(0, "%s: %s version installed, skiped\n",
-                    pkg_snprintf_s(pkg), cmprc == 0 ? "equal" : "newer");
+                msg(0, "%s: %s version installed, skiped %s\n",
+                    pkg_snprintf_s(pkg), cmprc == 0 ? "equal" : "newer",
+                    dbpkg_snprintf_s(&dbpkg));
             } else {
                 install = 1;
             }

@@ -28,10 +28,14 @@ http_get      = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
 https_get     = "/usr/bin/curl %P -o %D"
 rsync_get     = "/usr/bin/rsync -v %P %d"
 
-
 # Some rpm macros
 rpmdef        = "_install_langs pl:lt"
 
 # don't install any documentation
 rpmdef        = "_netsharedpath /usr/share/info:/usr/share/man"
-rpmdef	      = "_excludedocs 1"	
+rpmdef	      = "_excludedocs 1"
+
+# we needs root privs for installation only 
+install_cmd   = "/usr/bin/sudo /bin/rpm --ignoresize"
+
+
