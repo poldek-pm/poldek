@@ -400,7 +400,7 @@ N_("Don't take held packages from $HOME/.poldek_hold."), 71 },
 
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
                           "let user choose among equivalent packages"), 500 },
-{"noask", OPT_NOASK, 0, 0, N_("not --ask"), 500 }, 
+{"noask", OPT_NOASK, 0, 0, N_("Don't ask about anything"), 500 }, 
 
 {"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), 500 }, 
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 500 }, 
@@ -772,7 +772,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_NOASK:
             argsp->switches |= OPT_SW_NOASK;
-            argsp->inst.flags &= ~(INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER);
+            argsp->inst.flags &= ~(INSTS_CONFIRM_INST | INSTS_CONFIRM_UNINST |
+                                   INSTS_EQPKG_ASKUSER);
             break;
             
         case OPT_CONF:
@@ -1150,8 +1151,9 @@ void parse_options(int argc, char **argv)
     if (conf_get_bool(htcnf, "choose_equivalents_manually", 0))
         args.inst.flags |= INSTS_EQPKG_ASKUSER;
 
-    if (args.switches & OPT_SW_NOASK) 
-        args.inst.flags &= ~(INSTS_EQPKG_ASKUSER | INSTS_CONFIRM_INST);
+    if (args.switches & OPT_SW_NOASK)
+        args.inst.flags &= ~(INSTS_CONFIRM_INST | INSTS_CONFIRM_UNINST |
+                             INSTS_EQPKG_ASKUSER);
     
     else if ((args.inst.flags & INSTS_CONFIRM_INST) && verbose < 1)
         verbose = 1;
