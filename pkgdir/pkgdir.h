@@ -170,6 +170,8 @@ int pkgdir_rmf(const char *dirpath, const char *mask);
 char *pkgdir_idxpath(char *dpath, int dsize,
                      const char *path, const char *type, const char *compress);
 
+int pkgdir_cache_clean(const char *path, const char *mask);
+
 struct pkg;
 
 extern const char *pkgstore_DEFAULT_ARCH;

@@ -219,6 +219,20 @@ struct source *source_set_pkg_prefix(struct source *src, const char *prefix)
     return src;
 }
 
+static
+char *source_set(char **member, const char *value)
+{
+    if (*member) {
+        free(*member);
+        *member = NULL;
+    }
+
+    if (value)
+        *member = n_strdup(value);
+
+    return *member;
+}
+
 
 struct source *source_set_type(struct source *src, const char *type)
 {
@@ -232,19 +246,6 @@ struct source *source_set_default_type(struct source *src)
     if ((src->flags & PKGSOURCE_TYPE) == 0) /* not set by config*/
         source_set(&src->type, pkgdir_DEFAULT_TYPE);
     return src;
-}
-
-char *source_set(char **member, char *value)
-{
-    if (*member) {
-        free(*member);
-        *member = NULL;
-    }
-
-    if (value)
-        *member = n_strdup(value);
-
-    return *member;
 }
 
 
@@ -808,7 +809,7 @@ int source_make_idx(struct source *src,
 
     rc = 0;
     if (pkgdir_load(pkgdir, NULL, ldflags)) {
-        int n = n_array_size(pkgdir->pkgs);
+        //int n = n_array_size(pkgdir->pkgs);
         rc = pkgdir_save(pkgdir, type, idxpath, cr_flags);
     }
     

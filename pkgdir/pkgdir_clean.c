@@ -62,7 +62,7 @@ int pkgdir_rmf(const char *dirpath, const char *mask)
 
     msgn(3, "rm -f %s/%s", dirpath, mask ? mask : "*");
     
-    if (n_str_eq(mask, "*"))
+    if (mask && n_str_eq(mask, "*"))
         mask = NULL;
     
     if (stat(dirpath, &st) != 0)
@@ -113,6 +113,7 @@ int pkgdir_rmf(const char *dirpath, const char *mask)
     closedir(dir);
     return 1;
 }
+
 
 int pkgdir_cache_clean(const char *path, const char *mask)
 {
