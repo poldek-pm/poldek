@@ -262,8 +262,7 @@ int source_cmp_name(struct source *s1, struct source *s2)
 int source_update(struct source *src)
 {
     if (src->type == PKGSRCT_HDL) {
-        logn(LOGWARN, _("%s: this type of source is not updateable"),
-             (src->flags & PKGSOURCE_ISNAMED) ? src->name: src->path);
+        logn(LOGWARN, _("%s: this type of source is not updateable"), source_idstr(src));
         return 0;
     }
     
@@ -333,13 +332,13 @@ void source_printf(const struct source *src)
     source_snprintf_flags(optstr, sizeof(optstr), src);
     
     printf("%-12s %s%s%s%s\n",
-           src->name, src->path,
+           src->name, vf_url_hidepasswd_s(src->path),
            *optstr ? "  (" : "", optstr, *optstr ? ")" : "");
 
     if (src->pkg_prefix) {
         //printf_c(PRCOLOR_GREEN, "%-14s prefix: ", "");
         //printf("%s\n", src->pkg_prefix);
-        printf("%-14s prefix => %s\n", "", src->pkg_prefix);
+        printf("%-14s prefix => %s\n", "", vf_url_hidepasswd_s(src->pkg_prefix));
     }
 }
 
@@ -374,12 +373,12 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
                     break;
                 
             case PKGSRCT_DIR:
-                msg(1, _("Loading %s..."), src->path);
+                msg(1, _("Loading %s..."), vf_url_slim_s(src->path, 0));
                 pkgdir = pkgdir_load_dir(src->name, src->path);
                 break;
 
             case PKGSRCT_HDL:
-                msgn(1, _("Loading %s..."), src->path);
+                msgn(1, _("Loading %s..."), vf_url_slim_s(src->path, 0));
                 pkgdir = pkgdir_load_hdl(src->name, src->path, src->pkg_prefix);
                 break;
 
@@ -390,7 +389,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 
         if (pkgdir == NULL) {
             if (n_array_size(sources) > 1)
-                logn(LOGWARN, _("%s: load failed, skipped"), src->path);
+                logn(LOGWARN, _("%s: load failed, skipped"), vf_url_slim_s(src->path, 0));
             continue;
         }
 
@@ -422,7 +421,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         pkgdir = n_array_nth(ps->pkgdirs, i);
 
         if (pkgdir->flags & PKGDIR_LDFROM_IDX) {
-            msgn(1, _("Loading %s..."), pkgdir->idxpath);
+            msgn(1, _("Loading %s..."), vf_url_slim_s(pkgdir->idxpath, 0));
             if (!pkgdir_load(pkgdir, ps->depdirs, ldflags)) {
                 logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
                 iserr = 1;

@@ -623,7 +623,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
         }
         
         if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
-            msgn(1, _("Loading %s..."), pkgdir->idxpath);
+            msgn(1, _("Loading %s..."), vf_url_slim_s(pkgdir->idxpath, 0));
             if (!pkgdir_load(pkgdir, NULL, PKGDIR_LD_RAW)) {
                 logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
                 nerr++;

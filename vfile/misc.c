@@ -56,7 +56,7 @@ int vf_valid_path(const char *path)
     
 
     if (*path != '/') {
-        vfile_err_fn("%s: path must must begin with a /\n", _purl(path));
+        vfile_err_fn("%s: path must must begin with a /\n", CL_URL(path));
         return 0;
     }
     

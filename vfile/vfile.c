@@ -245,7 +245,7 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype)
             url = n_array_nth(urls, i);
             snprintf(destpath, sizeof(destpath), "%s/%s", destdir,
                      n_basenam(url));
-            vfile_msg_fn(_("Retrieving %s...\n"), _purl(url));
+            vfile_msg_fn(_("Retrieving %s...\n"), PR_URL(url));
             if (!mod->fetch(destpath, url, vfile_conf.mod_fetch_flags)) {
                 rc = 0;
                 break;
@@ -277,7 +277,7 @@ int vfile_fetch(const char *destdir, const char *path, int urltype)
 
         snprintf(destpath, sizeof(destpath), "%s/%s", destdir,
                  n_basenam(path));
-        vfile_msg_fn(_("Retrieving %s...\n"), _purl(path));
+        vfile_msg_fn(_("Retrieving %s...\n"), PR_URL(path));
         rc = mod->fetch(destpath, path, vfile_conf.mod_fetch_flags);
     }
     
@@ -306,7 +306,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
             
             
             if ((vf->vf_fd = open(path, flags)) == -1) 
-                vfile_err_fn("open %s: %m\n", _purl(path));
+                vfile_err_fn("open %s: %m\n", CL_URL(path));
             else
                 rc = 1;
         }
@@ -330,11 +330,11 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
                 if ((gzstream = gzopen(path, mode)) == NULL) {
                     rc = 0;
                     if (errno) 
-                        vfile_err_fn("%s: %m\n", _purl(path));
+                        vfile_err_fn("%s: %m\n", CL_URL(path));
                     else if (Z_MEM_ERROR) 
-                        vfile_err_fn("gzopen %s: insufficient memory\n", _purl(path));
+                        vfile_err_fn("gzopen %s: insufficient memory\n", CL_URL(path));
                     else 
-                        vfile_err_fn("gzopen %s: unknown error\n", _purl(path));
+                        vfile_err_fn("gzopen %s: unknown error\n", CL_URL(path));
                     break;
                 }
 
@@ -343,14 +343,14 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
                     rc = 1;
                     fseek(vf->vf_stream, 0, SEEK_SET); /* glibc BUG (?) */
                 } else
-                    vfile_err_fn("fopencookie %s: hgw error\n", _purl(path));
+                    vfile_err_fn("fopencookie %s: hgw error\n", CL_URL(path));
 
             } else {
 #endif                
                 if ((vf->vf_stream = fopen(path, mode)) != NULL) 
                     rc = 1;
                 else 
-                    vfile_err_fn("%s: %m\n", _purl(path));
+                    vfile_err_fn("%s: %m\n", CL_URL(path));
 #ifdef HAVE_FOPENCOOKIE                
             }
 #endif            
@@ -371,11 +371,11 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
 
             } else {
                 if (errno) 
-                    vfile_err_fn("%s: %m\n", _purl(path));
+                    vfile_err_fn("%s: %m\n", CL_URL(path));
                 else if (Z_MEM_ERROR) 
-                    vfile_err_fn("gzopen %s: insufficient memory\n", _purl(path));
+                    vfile_err_fn("gzopen %s: insufficient memory\n", CL_URL(path));
                 else 
-                    vfile_err_fn("gzopen %s: unknown error\n", _purl(path));
+                    vfile_err_fn("gzopen %s: unknown error\n", CL_URL(path));
             }
         }
         break;
@@ -383,13 +383,13 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
 #ifdef ENABLE_VFILE_RPMIO
         case VFT_RPMIO:
             if (vfmode & VFM_RW) {
-                vfile_err_fn("%s: cannot open rw rpm\n", _purl(path));
+                vfile_err_fn("%s: cannot open rw rpm\n", CL_URL(path));
                 return 0;
             }
 
             vf->vf_fdt = Fopen(path, "r.fdio");
             if (vf->vf_fdt == NULL || Ferror(vf->vf_fdt)) {
-                vfile_err_fn("open %s: %s\n", _purl(path), Fstrerror(vf->vf_fdt));
+                vfile_err_fn("open %s: %s\n", CL_URL(path), Fstrerror(vf->vf_fdt));
                 if (vf->vf_fdt) {
                     Fclose(vf->vf_fdt);
                     vf->vf_fdt = NULL;
@@ -403,7 +403,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
             
         default:
             vfile_err_fn("vfile_open %s: type %d not supported\n",
-                         _purl(path), vf->vf_type);
+                         CL_URL(path), vf->vf_type);
             n_assert(0);
             rc = 0;
     }
@@ -499,7 +499,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
     }
     
     if (vfmode & VFM_RW) {
-        vfile_err_fn("%s: cannot open remote file for writing\n", _purl(path));
+        vfile_err_fn("%s: cannot open remote file for writing\n", CL_URL(path));
         return 0;
     }
     

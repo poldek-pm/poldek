@@ -128,6 +128,10 @@ int vf_url_as_path(char *buf, size_t size, const char *url);
 const char *vf_url_hidepasswd(char *buf, int size, const char *url);
 const char *vf_url_hidepasswd_s(const char *url);
 
+/* applies vf_url_hidepasswd() + slim down url string to maxl */
+const char *vf_url_slim(char *buf, int size, const char *url, int maxl);
+const char *vf_url_slim_s(const char *url, int maxl);
+
 int vf_valid_path(const char *path);
 int vf_mkdir(const char *path);
 int vf_unlink(const char *path);
@@ -183,7 +187,8 @@ struct vf_module {
 
 
 /* short alias for */
-#define _purl(url) vf_url_hidepasswd_s(url)
+#define CL_URL(url) vf_url_hidepasswd_s(url)
+#define PR_URL(url) vf_url_slim_s(url, 60)
 
 #endif /* VFILE_INTERNAL */
 

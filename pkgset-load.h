@@ -38,7 +38,7 @@ int source_update(struct source *src);
 void source_printf(const struct source *src);
 
 #define source_idstr(src) \
-        (((src)->flags & PKGSOURCE_ISNAMED) ? (src)->name : (src)->path)
+        (((src)->flags & PKGSOURCE_ISNAMED) ? (src)->name : vf_url_slim_s((src)->path, 0))
 
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 

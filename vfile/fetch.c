@@ -124,12 +124,12 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
         return NULL;
     
     if (*path != '/') {
-        vfile_err_fn("%s: cmd must be precedenced by '/'\n", _purl(path));
+        vfile_err_fn("%s: cmd must be precedenced by '/'\n", CL_URL(path));
         return NULL;
     }
 
     if (access(path, X_OK) != 0) {
-        vfile_err_fn("%s: %m\n", _purl(path));
+        vfile_err_fn("%s: %m\n", CL_URL(path));
         return NULL;
     }
     
@@ -383,7 +383,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
         *s = '\0';
         
         for (i=0; i < n-1; i++) {
-            p = n_strncpy(p, _purl(argv[i]), len);
+            p = n_strncpy(p, CL_URL(argv[i]), len);
             len -= strlen(argv[i]);
             p = n_strncpy(p, " ", len);
             len--;
@@ -471,12 +471,12 @@ int vfile_fetch_ext(const char *destdir, const char *url, int urltype)
         urltype = vf_url_type(url);
     
     if (nffetchers == 0) {
-        vfile_err_fn("vfile_fetch: %s: no handlers configured\n", _purl(url));
+        vfile_err_fn("vfile_fetch: %s: no handlers configured\n", CL_URL(url));
         return 0;
     }
     
     if ((ftch = find_fetcher(urltype, 0)) == NULL) {
-        vfile_err_fn("vfile_fetch: %s: no handler for this URL\n", _purl(url));
+        vfile_err_fn("vfile_fetch: %s: no handler for this URL\n", CL_URL(url));
         return 0;
     }
 
@@ -506,7 +506,7 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype)
         rc = nerrs == 0;
         
     } else {
-        vfile_err_fn("URL %s not supported\n", _purl(n_array_nth(urls, 0)));
+        vfile_err_fn("URL %s not supported\n", CL_URL(n_array_nth(urls, 0)));
         rc = 0;
     }
 
@@ -604,29 +604,29 @@ int vf_url_type(const char *url)
 
 const char *vf_url_hidepasswd(char *buf, int size, const char *url)  
 {
-    char *p, *q, *u;
-    int  i;
+    char *p, *u, *q = NULL;
+    int i;
 
+    
+    *buf = '\0';
     
     if (*url == '/' || (u = strstr(url, "://")) == NULL)
         return url;
-
+    
     u += 3;
     
-    if ((p = strrchr(u, '@')) == NULL)
-        return url;
-    
-    if ((q = strchr(u, ':')) == NULL || q > p)
-        return url;
-    
-    i = q - url;
-    strncpy(buf, url, size)[size - 1] = '\0';
-    n_assert(buf[i] == ':');
-    p = &buf[i + 1];
-    while (*p && *p != '@')
-        *p++ = 'x';
-    
-    return buf;
+    if ((p = strrchr(u, '@')) != NULL && (q = strchr(u, ':')) != NULL && q < p) {
+        i = q - url;
+        strncpy(buf, url, size)[size - 1] = '\0';
+        n_assert(buf[i] == ':');
+        p = &buf[i + 1];
+        while (*p && *p != '@')
+            *p++ = 'x';
+        
+        url = buf;
+    }
+
+    return url;
 }
 
 
@@ -634,4 +634,57 @@ const char *vf_url_hidepasswd_s(const char *url)
 {
     static char buf[PATH_MAX];
     return vf_url_hidepasswd(buf, sizeof(buf), url);
+}
+
+
+const char *vf_url_slim(char *buf, int size, const char *url, int maxl)
+{
+    int len;
+
+    *buf = '\0';
+    url = vf_url_hidepasswd(buf, size, url);
+    
+    if ((len = strlen(url)) > maxl + 8) { /* +8 => +sizeof("/[...]/    */
+        char *p = NULL, *bn;
+        int  bn_len;
+
+        //printf("URL %s\n", url);
+        if (*buf == '\0') {
+            strncpy(buf, url, size)[size - 1] = '\0';
+            url = buf;
+        }
+
+        bn = n_basenam(buf);
+        bn_len = strlen(bn);
+        maxl -= bn_len;
+        maxl -= sizeof("/[...]/");
+        
+        //printf("bn = %s, %d, %d\n", bn, strlen(bn), maxl);
+        if (bn - buf > 2) {
+
+            p = bn - 1;
+            n_assert(*p == '/');
+            *p = '\0';
+            
+            while (p && p > buf && p - buf > maxl) {
+                //printf("p = %s, %s\n", p, buf);
+                if ((p = strrchr(buf, '/'))) {
+                    //printf("p  = %s, %s\n", p, buf);
+                    *p = '\0';
+                }
+            }
+            //printf("buf = %s, bn = %s, %d, %d\n", buf, bn, (p - buf + 2), strlen(buf));
+            len = n_snprintf(p, sizeof(buf) - (p - buf), "/[...]/");
+            memmove(p + len, bn, bn_len + 1);
+            //printf("buf[%d] = %s\n", len, buf);
+        }
+    }
+    
+    return url;
+}
+
+const char *vf_url_slim_s(const char *url, int maxl) 
+{
+    static char buf[PATH_MAX];
+    return vf_url_slim(buf, sizeof(buf), url, maxl > 50 ? maxl : 60);
 }

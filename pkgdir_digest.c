@@ -419,7 +419,7 @@ int pdigest_verify(struct pdigest *pdg, struct vfile *vf)
     unsigned              calcflags = 0;
 
     
-    msg(0, _("Verifying %s..."), vf->vf_path);
+    msg(0, _("Verifying %s..."), vf_url_slim_s(vf->vf_path, 0));
     offs = ftell(vf->vf_stream);
     if (fseek(vf->vf_stream, 0L, SEEK_SET) != 0) {
         logn(LOGERR, "%s: fseek(0): %ld -> 0: %m", vf->vf_path, offs);
@@ -495,7 +495,7 @@ int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
             } else {
                 rc = 0;
                 logn(LOGERR, "%s, %s", pkgdir->pdg->mdd, pkgdir->mdd_orig);
-                logn(LOGERR, _("%s: desynchronized index"), pkgdir->path);
+                logn(LOGERR, _("%s: desynchronized index"), vf_url_slim_s(pkgdir->path, 0));
             }
         }
     }
@@ -561,7 +561,7 @@ int i_pkgdir_verify_md5(const char *title, const char *pathname)
     if (title == NULL || *title == '\0')
         title = pathname;
     
-    msgn(3, _("Verifying integrity of %s..."), title);
+    msgn(3, _("Verifying integrity of %s..."), vf_url_slim_s(title, 0));
     md1_size = sizeof(md1);
     mhexdigest(stream, md1, &md1_size, DIGEST_MD5);
     fclose(stream);

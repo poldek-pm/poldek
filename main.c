@@ -1401,7 +1401,7 @@ static int mkidx(struct pkgset *ps)
     if (args.pkgdir_nodiff == 0 && access(idx_path, R_OK) == 0) {
         struct pkgdir *orig, *diff;
         
-        msgn(1, _("Loading previous %s..."), idx_path);
+        msgn(1, _("Loading previous %s..."), vf_url_slim_s(idx_path, 0));
         orig = pkgdir_new("", idx_path, NULL, PKGDIR_NEW_VERIFY);
         
         
