@@ -212,10 +212,9 @@ char *capreq_snprintf(char *str, size_t size, const struct capreq *cr)
     return str;
 }
 
-uint8_t capreq_sizeof(const struct capreq *cr) 
+uint8_t capreq_bufsize(const struct capreq *cr) 
 {
-    size_t size = sizeof(*cr);
-    int max_ofs = 0;
+    register int max_ofs = 0;
 
     if (cr->cr_ep_ofs > max_ofs)
         max_ofs = cr->cr_ep_ofs;
@@ -230,10 +229,20 @@ uint8_t capreq_sizeof(const struct capreq *cr)
         max_ofs = 1;
 
     
-    size += max_ofs + strlen(&cr->_buf[max_ofs]) + 1;
+    max_ofs += strlen(&cr->_buf[max_ofs]) + 1;
     //printf("sizeof %s = %d (5 + %d + (%s) + %d)\n", capreq_snprintf_s(cr),
     //       size, max_ofs, &cr->_buf[max_ofs], strlen(&cr->_buf[max_ofs]));
     
+    n_assert (max_ofs < UINT8_MAX);
+    return max_ofs;
+}
+
+
+uint8_t capreq_sizeof(const struct capreq *cr) 
+{
+    size_t size;
+
+    size = sizeof(*cr) + capreq_bufsize(cr);
     n_assert (size < UINT8_MAX);
     return size;
 }
@@ -671,22 +680,34 @@ tn_array *capreq_pkg(tn_array *arr, int32_t epoch,
     return arr;
 }
 
-
 void capreq_store(struct capreq *cr, tn_buf *nbuf) 
 {
     int32_t epoch, nepoch;
-    uint8_t size;
+    uint8_t size, bufsize;
+    uint8_t cr_buf[5];
 
-    size = capreq_sizeof(cr) - 1; /* without '\0'; */
+
+    cr_buf[0] = cr->cr_relflags;
+    cr_buf[1] = cr->cr_flags;
+    cr_buf[2] = cr->cr_ep_ofs;
+    cr_buf[3] = cr->cr_ver_ofs;
+    cr_buf[4] = cr->cr_rel_ofs;
+
+    
+    bufsize = capreq_bufsize(cr) - 1; /* without '\0' */
+    size = sizeof(cr_buf) + bufsize;
+    
     n_buf_add_int8(nbuf, size);
     
+    n_buf_add(nbuf, cr_buf, sizeof(cr_buf));
+
     if (cr->cr_ep_ofs) {
         epoch = capreq_epoch(cr);
         nepoch = hton32(epoch);
         memcpy(&cr->_buf[cr->cr_ep_ofs], &nepoch, sizeof(nepoch));
     }
 
-    n_buf_add(nbuf, cr, size);
+    n_buf_add(nbuf, cr->_buf, bufsize);
     
     if (cr->cr_ep_ofs) 
         memcpy(&cr->_buf[cr->cr_ep_ofs], &epoch, sizeof(epoch)); /* restore epoch */
@@ -696,19 +717,29 @@ void capreq_store(struct capreq *cr, tn_buf *nbuf)
 struct capreq *capreq_restore(tn_buf_it *nbufi) 
 {
     struct capreq *cr;
-    uint8_t size;
-    char *p;
+    uint8_t size, *cr_bufp;
+    uint8_t cr_buf[5];          /* placeholder,  for sizeof */
+    
     
     n_buf_it_get_int8(nbufi, &size);
-    p = n_buf_it_get(nbufi, size);
-    if (p == NULL)
-        return NULL;
-    
-    if ((cr = capreq_alloc_fn(size + 1)) == NULL)
+    cr_bufp = n_buf_it_get(nbufi, sizeof(cr_buf));
+    if (cr_buf == NULL)
         return NULL;
 
-    ((char*)cr)[size] = '\0'; 
-    memcpy(cr, p, size);
+    size -= sizeof(cr_buf);
+    
+    if ((cr = capreq_alloc_fn(sizeof(*cr) + size + 1)) == NULL)
+        return NULL;
+
+    cr->cr_relflags = cr_bufp[0];
+    cr->cr_flags    = cr_bufp[1];
+    cr->cr_ep_ofs   = cr_bufp[2];
+    cr->cr_ver_ofs  = cr_bufp[3];
+    cr->cr_rel_ofs  = cr_bufp[4];
+
+    cr->_buf[size] = '\0';
+    cr_bufp = n_buf_it_get(nbufi, size);
+    memcpy(cr->_buf, cr_bufp, size);
     
     if (cr->cr_ep_ofs) {
         int32_t epoch = ntoh32(capreq_epoch(cr));
