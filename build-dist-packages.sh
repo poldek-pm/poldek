@@ -1,32 +1,49 @@
 #! /bin/sh
 # $Id$ 
 
-#make dist || exit 1
 PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+#rm -f *.tar.gz
+#make dist
+
 ver=$(perl -ne 'print $1 if /^VERSION=([\d\.]+)$/' configure.in)
 poldek=poldek-${ver}.tar.gz
 
-for distro in pld rh; do 
+if [ -z "$1" ]; then 
+	echo "usage $(basename $0): [pld rh]"
+	exit 1
+fi	
+
+for distro in $@; do 
     echo "Distro: $distro"
     ddir=/var/${distro}-sys
     buildscript=/tmp/build-${poldek}.sh 
 
     rpm="rpm"
-    target_def="--target=i386"
     #target_def="--define '_target i386'"
 
-    if [ "${distro}" = "rh" ]; then # broken popt aliases; haven't time to invastigate"
-	rpm="/usr/lib/rpm/rpmb"
-    fi
+    case "$distro" in
+	rh)
+	    distro_def="rh"
+	    ;;
+	rh7.2)
+	    distro_def="rh"
+	    rpm="/usr/lib/rpm/rpmb"
+	    ;;    
+	*)
+            distro_def="$distro"
+    esac
+    
 
-    rpm="$rpm --define 'distro ${distro}'"
+    rpmopt="--define 'distro $distro_def' --target i386"
+    
     rm -f $ddir/$buildscript
     if [ "$distro" = "pld" ]; then
 	echo "+ static"    
-	echo "su - mis -c \"$rpm $target_def -tb /tmp/$poldek --with static\"" >> $ddir/$buildscript
+	echo "su - mis -c \"$rpm -tb --with static $rpmopt /tmp/$poldek\"" >> $ddir/$buildscript
     fi
     
-    echo "su - mis -c \"$rpm $target_def -tb /tmp/$poldek\"" >> $ddir/$buildscript
+    echo "su - mis -c \"$rpm -ta $rpmopt /tmp/$poldek\"" >> $ddir/$buildscript
 
     cp poldek-${ver}.tar.gz $ddir/tmp || exit 1
     /usr/sbin/chroot $ddir sh $buildscript || exit 1
@@ -39,5 +56,8 @@ for distro in pld rh; do
     fi
     
     cp -v $rpmd/poldek-$ver*.rpm $destdir
+    #cp -v $rpmd/home/mis/rpm/SRPMS/poldek-$ver*.rpm $destdir
+    chmod 644 $destdir/*.rpm
+
 done
 
