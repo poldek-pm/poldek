@@ -127,8 +127,7 @@ void vfile_configure(const char *cachedir, int flags)
 #if __GLIBC_PREREQ(2,2)
 int gzfseek(void *stream, _IO_off64_t *offset, int whence)
 {
-    z_off_t off = *offset;
-    int rc;
+    z_off_t rc, off = *offset;
     
     rc = gzseek(stream, off, whence);
     if (rc >= 0)
@@ -143,12 +142,14 @@ int gzfseek(void *stream, _IO_off64_t *offset, int whence)
 
 int gzfseek(void *stream, _IO_off_t offset, int whence) 
 {
-    int rc;
+    z_off_t rc;
     
     rc = gzseek(stream, offset, whence);
-    if (rc >= 0)
+#if ! __GLIBC_PREREQ(2,1)       /* AFAIK glibc2.1.x cookie streams required
+                                   offset to be returned */
+    if (rc >= 0) 
         rc = 0;
-
+#endif
     return rc;
 }
 #endif /* __GLIBC_PREREQ(2,2) */
