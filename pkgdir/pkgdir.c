@@ -887,12 +887,13 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
     }
 
     orig = NULL;
-    if (pkgdir->prev_pkgdir) {  /* already loaded, so use it */
+    if (pkgdir->prev_pkgdir) {  /* already loaded in source.c */
         orig = pkgdir->prev_pkgdir;
         
-    } else if (! (pkgdir_isremote(pkgdir) || (flags & PKGDIR_CREAT_NOPATCH) ||
-                  (mod->cap_flags & PKGDIR_CAP_UPDATEABLE_INC) == 0         ||
-                  (idxpath && access(idxpath, R_OK) != 0)) )
+    } else if ((!pkgdir_isremote(pkgdir)) && 
+               (flags & PKGDIR_CREAT_NOPATCH) == 0 && /* nopach requested    */
+               (mod->cap_flags & PKGDIR_CAP_UPDATEABLE_INC) && /* non diffaware */
+               (idxpath && access(idxpath, R_OK) == 0)) /* exists? */
         orig = load_orig_pkgdir(pkgdir, path, idxpath, type);
     
 
