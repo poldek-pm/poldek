@@ -82,6 +82,7 @@ static char args_doc[] = N_("[PACKAGE...]");
 #endif
 
 #define MODE_MNR_UPDATEIDX  (1 << 0)
+#define MODE_MNR_CLEANIDX   (1 << 1)
 
 #define INDEXTYPE_TXT     1
 #define INDEXTYPE_TXTZ    2
@@ -99,6 +100,7 @@ struct args {
 
     unsigned  switches;
     int       update_op;
+    int       clean_whole;
     
     char      *curr_src_path;
     int       curr_src_type;
@@ -149,9 +151,12 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_SOURCEHDL   1017
 #define OPT_PKGPREFIX   1018
 #define OPT_UPDATEIDX   1019
+
 #define OPT_UPDATEIDX_WHOLE   1020
+
 #define OPT_SOURCECACHE 1021
-#define OPT_CACHECLEAN  1022
+#define OPT_CLEANIDX    1022
+#define OPT_CLEANIDX_WHOLE 1023
 
 #ifdef ENABLE_INTERACTIVE_MODE
 # define OPT_SHELLMODE             1031
@@ -200,11 +205,10 @@ tn_hash *htcnf = NULL;          /* config file values */
 /* The options we understand. */
 static struct argp_option options[] = {
 
-{0,0,0,0, N_("Source options:"), 1 },    
+{0,0,0,0, N_("Specifying source:"), 1 },    
 {"source", 's', "SOURCE", 0, N_("Get packages info from SOURCE"), 1 },
 
 {"sn", 'n', "SOURCE-NAME", 0, N_("Get packages info from source named SOURCE-NAME"), 1 },
-{"sl", 'l', 0, 0, N_("List configured sources"), 1 },        
     
 {"sidx", OPT_SOURCETXT, "FILE", OPTION_HIDDEN,
  N_("Get packages info from package index file FILE"), 1 },
@@ -218,15 +222,28 @@ static struct argp_option options[] = {
 {"prefix", 'P', "PREFIX", 0,
  N_("Get packages from PREFIX instead of SOURCE"), 1 },
 
-{"update", OPT_UPDATEIDX, 0, 0, 
- N_("Update index of source and verify it"), 1 },
 
-{"up", OPT_UPDATEIDX, 0, OPTION_ALIAS, 0, 1 }, 
+{0,0,0,0, N_("Source options:"), 11 },        
+{"sl", 'l', 0, 0, N_("List configured sources"), 11 },            
+
+{"update", OPT_UPDATEIDX, 0, 0, 
+ N_("Update index of source and verify it"), 11 },
+
+{"up", OPT_UPDATEIDX, 0, OPTION_ALIAS, 0, 11 }, 
 
 {"update-whole", OPT_UPDATEIDX_WHOLE, 0, 0, 
- N_("Update whole index of source"), 1 },
+ N_("Update whole index of source"), 11 },
 
-{"upa", OPT_UPDATEIDX_WHOLE, 0, OPTION_ALIAS, 0, 1},
+{"upa", OPT_UPDATEIDX_WHOLE, 0, OPTION_ALIAS, 0, 11 },
+
+{"clean", OPT_CLEANIDX, 0, 0, 
+ N_("Remove source index files from cache directory"), 11 },
+
+{"clean-whole", OPT_CLEANIDX_WHOLE, 0, 0, 
+ N_("Remove all source files from cache directory"), 11 },     
+
+{"cleana", OPT_CLEANIDX_WHOLE, 0, OPTION_ALIAS, 0, 11 },
+
 
 {0,0,0,0, N_("Verify options:"), 50 },        
 {"verify",  OPT_VERIFY_DEPS, 0, 0, N_("Verify package dependencies"), 50 },
@@ -252,7 +269,6 @@ static struct argp_option options[] = {
 
 {"nodiff", OPT_NODIFF, 0, 0,
  N_("Don't create \"patch\""), 60 },
-
 
 {0,0,0,0, N_("Packages spec:"), 65},
 {"pset", OPT_PKGSET, "FILE", 0, N_("Take package set definition from FILE"), 65 },
@@ -347,9 +363,6 @@ N_("Don't take held packages from $HOME/.poldek_hold."), 71 },
 {0,0,0,0, N_("Other:"), 500},
 {"cachedir", OPT_SOURCECACHE, "DIR", 0, 
  N_("Store downloaded files under DIR"), 500 },
-
-{"clean-cache", OPT_CACHECLEAN, "DIR", OPTION_HIDDEN, /* NIY */
- N_("Remove index files stored in cache directory"), 500 },    
 
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
                           "let user choose among equivalent packages"), 500 },
@@ -502,6 +515,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_UPDATEIDX_WHOLE:
             argsp->mnrmode |= MODE_MNR_UPDATEIDX;
             argsp->update_op = OPT_UPDATEIDX_WHOLE;
+            break;
+
+        case OPT_CLEANIDX:
+            argsp->mnrmode |= MODE_MNR_CLEANIDX;
+            break;
+
+        case OPT_CLEANIDX_WHOLE:
+            argsp->mnrmode |= MODE_MNR_CLEANIDX;
+            argsp->clean_whole = 1;
             break;
 
         case OPT_SOURCECACHE:
@@ -1032,7 +1054,7 @@ void parse_options(int argc, char **argv)
         for (i=0; i < n_array_size(args.sources); i++) {
             struct source *src = n_array_nth(args.sources, i);
             
-            if (args.mnrmode == MODE_MNR_UPDATEIDX) {
+            if (args.mnrmode & MODE_MNR_UPDATEIDX) {
                 if ((src->flags & PKGSOURCE_NOAUTOUP) == 0)
                     nsources++;
                 
@@ -1239,6 +1261,22 @@ static struct pkgset *load_pkgset(int ldflags)
 
     return ps;
 }
+
+
+static int clean_idx(void)
+{
+    int i, nerr = 0;
+    
+    for (i=0; i < n_array_size(args.sources); i++) {
+        struct source *src = n_array_nth(args.sources, i);
+
+        if (!unlink_pkgdir_files(src->path, args.clean_whole > 0))
+            nerr = 1;
+    }
+
+    return nerr == 0;
+}
+
 
 static int update_whole_idx(void)
 {
@@ -1661,6 +1699,13 @@ int main(int argc, char **argv)
     poldek_init();
     rpm_initlib(args.inst.rpmacros);
 
+    if (args.mnrmode & MODE_MNR_CLEANIDX) {
+        rc = clean_idx();
+        if (args.mjrmode == MODE_NULL)
+            exit(rc ? EXIT_SUCCESS : EXIT_FAILURE);
+    }
+    	
+    
     if (args.mnrmode & MODE_MNR_UPDATEIDX) {
         int v = verbose;
 

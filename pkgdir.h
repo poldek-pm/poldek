@@ -117,7 +117,7 @@ int update_whole_pkgdir(const char *path);
 
 int pkgdir_isremote(struct pkgdir *pkgdir);
 
-
+int unlink_pkgdir_files(const char *path, int allfiles);
 
 extern const char *default_pkgidx_name;
 

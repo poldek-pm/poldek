@@ -200,29 +200,40 @@ int do_open_idx(struct idx_s *idx, char *path, int path_len, int vfmode)
 
 
 static
+int mk_idx_url(char *durl, int size, const char *url, int *added_bn)
+{
+    int n;
+    
+    *added_bn = 0;
+    if (url[strlen(url) - 1] != '/')
+        n = n_snprintf(durl, size, "%s", url);
+        
+    else {
+        n = n_snprintf(durl, size, "%s%s.gz", url,
+                       default_pkgidx_name);
+        *added_bn = 1;
+    }
+    
+
+    return n;
+}
+	
+
+static
 int open_idx(struct idx_s *idx, const char *path, int vfmode)
 {
     char tmpath[PATH_MAX];
-    int rc;
+    int added_bn = 0, n;
     
     idx->vf = NULL;
     idx->pdg = NULL;
     idx->idxpath[0] = '\0';
-    
-    if (path[strlen(path) - 1] != '/') {
-        snprintf(tmpath, sizeof(tmpath), "%s", path);
-        rc = do_open_idx(idx, tmpath, 0, vfmode);
-        
-    } else {
-        int n;
-        
-        n = n_snprintf(tmpath, sizeof(tmpath), "%s%s.gz", path,
-                     default_pkgidx_name);
-        
-        rc = do_open_idx(idx, tmpath, n, vfmode);
-    }
 
-    return rc;
+    n = mk_idx_url(tmpath, sizeof(tmpath), path, &added_bn);
+    if (added_bn)
+        n = 0;
+    
+    return do_open_idx(idx, tmpath, n, vfmode);
 }
 
 
@@ -240,6 +251,128 @@ void close_idx(struct idx_s *idx)
     idx->pdg = NULL;
     idx->idxpath[0] = '\0';
 }
+
+
+static int do_unlink(const char *path, int msg_fullpath) 
+{
+    struct stat st;
+    
+    if (stat(path, &st) == 0 && S_ISREG(st.st_mode)) {
+        msgn(1, _("Removing %s"), msg_fullpath ? path : n_basenam(path));
+        return vf_localunlink(path);
+    }
+    
+    return 0;
+}
+
+static
+int rm_dir_files(const char *dirpath) 
+{
+    struct dirent  *ent;
+    DIR            *dir;
+    char           *sepchr = "/";
+    int            msg_displayed = 0;
+    
+    if ((dir = opendir(dirpath)) == NULL) {
+        if (verbose > 2)
+            logn(LOGWARN, "opendir %s: %m", dirpath);
+	return 1;
+    }
+    
+    if (dirpath[strlen(dirpath) - 1] == '/')
+        sepchr = "";
+    
+    while( (ent = readdir(dir)) ) {
+        char path[PATH_MAX];
+        
+        if (*ent->d_name == '.') {
+            if (ent->d_name[1] == '\0')
+                continue;
+            
+            if (ent->d_name[1] == '.' && ent->d_name[2] == '\0')
+                continue;
+
+        }
+
+        if (strncmp(ent->d_name, "ftp_", 4) == 0)
+            continue;
+
+        if (strncmp(ent->d_name, "http_", 5) == 0)
+            continue;
+
+        snprintf(path, sizeof(path), "%s%s%s", dirpath, sepchr, ent->d_name);
+
+        if (msg_displayed == 0) {
+            msgn(1, _("Cleaning up %s..."), dirpath);
+            msg_displayed = 1;
+        }
+        
+        do_unlink(path, 0);
+    }
+    
+    closedir(dir);
+    return 1;
+}
+
+	
+
+int unlink_pkgdir_files(const char *path, int allfiles)
+{
+    int type, size, n;
+    char tmpath[PATH_MAX], url[PATH_MAX], *p;
+
+    if ((type = vf_url_type(path)) == VFURL_UNKNOWN)
+        return 0;
+    
+    if (type & VFURL_LOCAL)
+        return 1;
+
+    mk_idx_url(url, sizeof(url), path, &n);
+    size = sizeof(tmpath);
+    
+    if (allfiles) {
+        if ((p = strrchr(url, '/'))) {
+            *p = '\0';
+
+            if (vf_localdirpath(tmpath, size, url) < size)
+                rm_dir_files(tmpath);
+            
+            snprintf(p, sizeof(url) - (p - url), "/%s", pdir_packages_incdir);
+            if (vf_localdirpath(tmpath, size, url) < size)
+                rm_dir_files(tmpath);
+        }
+
+        
+    } else {
+        if (mkdigest_path(tmpath, size, url, pdigest_ext) < size) {
+            char tmpmd[PATH_MAX];
+            
+            if (vf_localpath(tmpmd, sizeof(tmpmd), tmpath) < (int)sizeof(tmpmd))
+                do_unlink(tmpmd, 1);
+        }
+        
+        if (vf_localpath(tmpath, size, url) < size)
+            do_unlink(tmpath, 1);
+        
+        if ((p = strrchr(tmpath, '.')))
+            if (strcmp(p, ".gz") == 0 || strcmp(p, ".bz2") == 0) {
+                *p = '\0';
+                do_unlink(tmpath, 1);
+            }
+    
+        if ((p = strrchr(url, '/'))) {
+            *p = '\0';
+            
+            snprintf(p, sizeof(url) - (p - url), "/%s", pdir_packages_incdir);
+            if (vf_localdirpath(tmpath, size, url) < size)
+                rm_dir_files(tmpath);
+        }
+    }
+    
+    return 1;
+}
+    
+
 
 
 #if 0
