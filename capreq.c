@@ -746,6 +746,12 @@ void capreq_store(struct capreq *cr, tn_buf *nbuf)
     int32_t epoch, nepoch;
     uint8_t size, bufsize;
     uint8_t cr_buf[5];
+	uint8_t cr_flags = 0;
+	
+	if (capreq_is_satisfied(cr)) {
+		cr_flags = cr->cr_flags;
+		capreq_clr_satisfied(cr);
+	}
 
 
     cr_buf[0] = cr->cr_relflags;
@@ -772,6 +778,9 @@ void capreq_store(struct capreq *cr, tn_buf *nbuf)
     
     if (cr->cr_ep_ofs) 
         memcpy(&cr->_buf[cr->cr_ep_ofs], &epoch, sizeof(epoch)); /* restore epoch */
+
+	if (cr_flags)
+		cr->cr_flags = cr_flags;
         
 }
 

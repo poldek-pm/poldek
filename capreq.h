@@ -71,6 +71,7 @@ extern inline int32_t capreq_epoch_(const struct capreq *cr);
 
 #define capreq_is_rpmlib(cr)     ((cr)->cr_flags & CAPREQ_RPMLIB)
 #define capreq_set_satisfied(cr)  ((cr)->cr_flags |= CAPREQ_RPMLIB_SATISFIED)
+#define capreq_clr_satisfied(cr)  ((cr)->cr_flags &= (~CAPREQ_RPMLIB_SATISFIED))
 #define capreq_is_satisfied(cr)  ((cr)->cr_flags & CAPREQ_RPMLIB_SATISFIED)
 
 #define capreq_revrel(cr) ((cr)->cr_relflags = (cr)->cr_relflags ? \
