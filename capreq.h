@@ -91,9 +91,14 @@ struct capreq *capreq_restore(tn_buf_it *nbufi);
 
 int capreq_strcmp_evr(struct capreq *pr1, struct capreq *pr2);
 int capreq_strcmp_name_evr(struct capreq *pr1, struct capreq *pr2);
+
+int capreq_cmp_name(struct capreq *cr1, struct capreq *cr2);
 int capreq_cmp2name(struct capreq *pr1, const char *name);
+int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2);
 
 tn_array *capreq_arr_new(int size);
+int capreq_arr_find(tn_array *capreqs, const char *name);
+
 int capreq_arr_store(tn_array *arr, FILE *stream, const char *prefix);
 tn_array *capreq_arr_restore(FILE *stream, int skip_bastards);
 

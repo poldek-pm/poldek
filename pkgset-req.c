@@ -287,7 +287,8 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
             }
         }
         
-        if ((cap = n_array_bsearch(ps->rpmcaps, req))) {
+        if ((cap = n_array_bsearch_ex(ps->rpmcaps, req,
+                                      (tn_fn_cmp)capreq_cmp_name))) {
             if (cap_match_req(cap, req, 1)) {
                 matched = 1;
                 msg(4, " req %-35s --> RPMLIB_CAP\n", capreq_snprintf_s(req));

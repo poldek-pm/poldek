@@ -530,7 +530,7 @@ int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr)
 
 int pkg_add_selfcap(struct pkg *pkg) 
 {
-    int has = 0;
+    int i, has = 0;
     
     if (pkg->flags & PKG_HAS_SELFCAP)
         return 1;
@@ -538,14 +538,15 @@ int pkg_add_selfcap(struct pkg *pkg)
     if (pkg->caps == NULL) {
         pkg->caps = capreq_arr_new(0);
         
-    } else {
-        int i;
+    } else if ((i = capreq_arr_find(pkg->caps, pkg->name)) != -1) {
         
-        for (i=0; i<n_array_size(pkg->caps); i++) {
+        for (i = i; i<n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
             
-            if (strcmp(capreq_name(cap), pkg->name) == 0 &&
-                capreq_epoch(cap) == pkg->epoch &&
+            if (strcmp(capreq_name(cap), pkg->name) != 0)
+                break;
+
+            if (capreq_epoch(cap) == pkg->epoch &&
                 strcmp(capreq_ver(cap), pkg->ver) == 0 &&
                 strcmp(capreq_rel(cap), pkg->rel) == 0) {
                 
@@ -685,7 +686,7 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
     if (pkg->caps == NULL || n_array_size(pkg->caps) == 0)
         return 0;     /* not match */
     
-    if ((n = n_array_bsearch_idx(pkg->caps, req)) == -1) {
+    if ((n = capreq_arr_find(pkg->caps, capreq_name(req))) == -1) {
         return 0;
             
     } else {
@@ -760,9 +761,11 @@ int pkg_has_path(const struct pkg *pkg,
 
 int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
 {
+#if 0    
     /* package should not provide itself with different version */
-    if (strcmp(pkg->name, capreq_name(req)) == 0)
-        return pkg_evr_match_req(pkg, req);
+#endif    
+    if (strcmp(pkg->name, capreq_name(req)) == 0 && pkg_evr_match_req(pkg, req))
+        return 1;
     
     return pkg_caps_match_req(pkg, req, strict);
 }
@@ -787,8 +790,7 @@ int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
     if (pkg->cnfls == NULL || n_array_size(pkg->cnfls) == 0)
         return 0;     /* not match */
     
-    if ((n = n_array_bsearch_idx_ex(pkg->cnfls, pkg->name,
-                                    (tn_fn_cmp)capreq_cmp2name)) == -1) {
+    if ((n = capreq_arr_find(pkg->cnfls, pkg->name)) == -1) {
         return 0;
             
     } else {

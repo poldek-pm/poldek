@@ -72,47 +72,52 @@ int capreq_cmp2name(struct capreq *cr1, const char *name)
 }
 
 __inline__
-int capreq_strcmp_evr(struct capreq *cr1, struct capreq *cr2) 
+int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2) 
 {
-    int rc;
-
-    if ((rc = capreq_epoch(cr1) - capreq_epoch(cr2)))
-        return rc;
-        
-    if ((rc = strcmp(capreq_ver(cr1), capreq_ver(cr2))))
-        return rc;
-
-    if ((rc = strcmp(capreq_rel(cr1), capreq_rel(cr2))))
-        return rc;
-
-    return cr1->cr_flags - cr2->cr_flags;
-}
-
-__inline__
-int capreq_strcmp_name_evr(struct capreq *cr1, struct capreq *cr2) 
-{
-    int rc;
-
+    register int rc;
+    
     if ((rc = strcmp(capreq_name(cr1), capreq_name(cr2))))
         return rc;
-    return capreq_strcmp_evr(cr1, cr2);
-    
-    if ((rc = capreq_epoch(cr1) - capreq_epoch(cr2)))
-        return rc;
-        
-    if ((rc = strcmp(capreq_ver(cr1), capreq_ver(cr2))))
-        return rc;
 
-    if ((rc = strcmp(capreq_rel(cr1), capreq_rel(cr2))))
-        return rc;
-
-    if ((rc = cr1->cr_relflags - cr2->cr_relflags))
+    if ((rc = (capreq_epoch(cr1) - capreq_epoch(cr2))))
         return rc;
     
-    rc = cr1->cr_flags - cr2->cr_flags;
+    rc = rpmvercmp(capreq_rel(cr1), capreq_ver(cr2));
+
+    if (rc == 0)
+        rc = rpmvercmp(capreq_rel(cr1), capreq_rel(cr2));
+
     return rc;
 }
 
+__inline__
+int capreq_strcmp_evr(struct capreq *cr1, struct capreq *cr2) 
+{
+    register int rc;
+
+    if ((rc = capreq_epoch(cr1) - capreq_epoch(cr2)))
+        return rc;
+        
+    if ((rc = strcmp(capreq_ver(cr1), capreq_ver(cr2))))
+        return rc;
+
+    if ((rc = strcmp(capreq_rel(cr1), capreq_rel(cr2))))
+        return rc;
+
+    return cr1->cr_relflags - cr2->cr_relflags;
+}
+#if 0
+__inline__
+int capreq_strcmp_name_evr(struct capreq *cr1, struct capreq *cr2) 
+{
+    register int rc;
+
+    if ((rc = strcmp(capreq_name(cr1), capreq_name(cr2))))
+        return rc;
+
+    return capreq_strcmp_evr(cr1, cr2);
+}
+#endif    
 
 int capreq_fprintf(FILE *stream, const struct capreq *cr) 
 {
@@ -418,11 +423,17 @@ int32_t capreq_epoch_(const struct capreq *cr)
 tn_array *capreq_arr_new(int size) 
 {
     tn_array *arr;
-    arr = n_array_new(size > 0 ? size : 2, capreq_free_fn, (tn_fn_cmp)capreq_cmp_name);
+    arr = n_array_new(size > 0 ? size : 2, capreq_free_fn, (tn_fn_cmp)capreq_cmp_name_evr);
     n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
     return arr;
 }
-    
+
+__inline__
+int capreq_arr_find(tn_array *capreqs, const char *name)
+{
+    return n_array_bsearch_idx_ex(capreqs, name,
+                                  (tn_fn_cmp)capreq_cmp2name);
+}
 
 tn_array *capreqs_get(tn_array *arr, const Header h, int crtype) 
 {
