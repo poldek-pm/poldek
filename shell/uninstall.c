@@ -147,7 +147,7 @@ static int uninstall(struct cmdarg *cmdarg)
             
             pkg_snprintf(shpkg->nevr, 1024, pkg);
             n_array_remove(cmdarg->sh_s->instpkgs, shpkg);
-            printf("- %s\n", shpkg->nevr);
+            DBGF("- %s\n", shpkg->nevr);
         }
         n_array_sort(cmdarg->sh_s->instpkgs);
         cmdarg->sh_s->ts_instpkgs = time(0);
