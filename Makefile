@@ -15,9 +15,15 @@ DEFINES  = -DVFILE_RPMIO_SUPPORT -DRPMLIB_VERDEP_CAP
 INCLUDES = -Itrurlib
 CPPFLAGS = $(INCLUDES) $(DEFINES)
 override CFLAGS += -g -Wall -W $(CPPFLAGS)
-LIBS     = -Wl,-Bstatic -ltrurl -Wl,-Bdynamic -lrpm -lpopt -lz -lbz2 -ldb3
-LDFLAGS  = -Ltrurlib
+LIBS     = -lrpm -lpopt -lz -lbz2 -ldb
 
+ifeq ($(MAKECMDGOALS),poldek)
+LIBS     += -Wl,-Bstatic -ltrurl -Wl,-Bdynamic 
+else
+LIBS     += -ltrurl
+endif
+
+LDFLAGS  = -Ltrurlib
 CC 	 = gcc
 SHELL 	 = /bin/sh
 RANLIB   = ranlib
