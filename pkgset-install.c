@@ -172,6 +172,37 @@ int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked)
     return install;
 }
 
+
+static
+struct pkg *select_supersede_pkg(const struct pkg *pkg, struct pkgset *ps) 
+{
+    const struct capreq_idx_ent *ent;
+    struct pkg *bypkg = NULL;
+
+
+    if ((ent = capreq_idx_lookup(&ps->obs_idx, pkg->name))) {
+        int i;
+        
+        for (i=0; i < ent->items; i++) {
+            if (strcmp(pkg->name, ent->pkgs[i]->name) == 0)
+                continue;
+            DBGF("found %s <- %s, %d, %d\n", pkg_snprintf_s(pkg), pkg_snprintf_s0(ent->pkgs[i]),
+                 pkg_caps_obsoletes_pkg_caps(ent->pkgs[i], pkg), 
+                 pkg_caps_obsoletes_pkg_caps(pkg, ent->pkgs[i]));
+                   
+            if (pkg_caps_obsoletes_pkg_caps(ent->pkgs[i], pkg) &&
+                !pkg_caps_obsoletes_pkg_caps(pkg, ent->pkgs[i])) {
+                
+                bypkg = ent->pkgs[i];
+                break;
+            }
+        }
+    }
+    
+    return bypkg;
+}
+
+
 static
 struct pkg *select_pkg(const char *name, tn_array *pkgs,
                        struct upgrade_s *upg)
@@ -675,22 +706,27 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
                 continue;
                 
             if ((p = select_pkg(opkg->name, ps->pkgs, upg))) {
-                if (pkg_is_marked_i(p)) {
+                //if (strcmp(p->name, "kdegames") == 0) {
+                //    printf("DUPA\n");
+                //}
+                
+                if (pkg_is_marked_i(p))
                     mark_package(p, upg);
+
+                if (pkg_is_marked(p)) {
                     process_pkg_deps(-2, p, ps, upg, PROCESS_AS_NEW);
                     not_found = 0;
                         
                 } else if (upg->inst->flags & INSTS_GREEDY) {
-                    if (!pkg_is_marked(p) && do_greedymark(indent, p, opkg, req,
-                                                           ps, upg))
+                    if (do_greedymark(indent, p, opkg, req, ps, upg))
                         not_found = 0;
                 }
             }
             
             if (not_found) {
                 logn(LOGERR, _("%s (cap %s) is required by %s"),
-                    pkg_snprintf_s(pkg), capreq_snprintf_s(req),
-                    pkg_snprintf_s0(opkg));
+                     pkg_snprintf_s(pkg), capreq_snprintf_s(req),
+                     pkg_snprintf_s0(opkg));
                 
                 
                 pkg_set_badreqs(pkg);
@@ -721,19 +757,20 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                                 PKG_LDWHOLE_FLDEPDIRS);
     if (n == 0)
         return;
-
+    DBGMSG_F("%s, n = %d\n", pkg_snprintf_s(pkg), n);
     n = 0;
     for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
         struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
         if ((dbpkg->flags & DBPKG_TOUCHED) == 0) {
-            msgn_i(1, indent, _("%s obsoleted by %s"), dbpkg_snprintf_s(dbpkg),
-                  pkg_snprintf_s(pkg));
             
+            msgn_i(1, indent, _("%s obsoleted by %s"), dbpkg_snprintf_s(dbpkg),
+                   pkg_snprintf_s(pkg));
             pkg_rm_mark(dbpkg->pkg);
             db_deps_remove_pkg(upg->db_deps, dbpkg->pkg);
             db_deps_remove_pkg_caps(upg->db_deps, pkg);
+            
             dbpkg->flags |= DBPKG_TOUCHED;
-
+            
             if (dbpkg->pkg->caps) {
                 int j;
                 for (j=0; j < n_array_size(dbpkg->pkg->caps); j++) {
@@ -882,8 +919,7 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
             continue;
 
         /* obsoleted by greedy mark */
-        if (process_as == PROCESS_AS_ORPHAN &&
-            marked_for_removal(pkg, upg)) {
+        if (process_as == PROCESS_AS_ORPHAN && marked_for_removal(pkg, upg)) {
             DBGF("%s: obsoleted, return\n", pkg_snprintf_s(pkg));
             db_deps_remove_pkg(upg->db_deps, pkg);
             return 1;
@@ -980,12 +1016,18 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                 
                 
             } else if (process_as == PROCESS_AS_ORPHAN) {
-                int not_found = 1;
+                int not_found = 1, by_obsoletes = 0;
                 struct pkg *p;
                 
                 
-                if ((p = select_pkg(pkg->name, ps->pkgs, upg))) {
-                    if (pkg_is_marked_i(p)) 
+                p = select_pkg(pkg->name, ps->pkgs, upg);
+                if (p == NULL && (upg->inst->flags & INSTS_OBSOLETES)) {
+                    p = select_supersede_pkg(pkg, ps);
+                    by_obsoletes = 1;
+                }
+                
+                if (p != NULL) {
+                    if (pkg_is_marked_i(p) || by_obsoletes) 
                         mark_package(p, upg);
                         
                     if (pkg_is_marked(p)) {
@@ -998,10 +1040,10 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                             not_found = 0;
                     }
                 }
-                
+
                 if (not_found) {
                     logn(LOGERR, _("%s is required by %s"),
-                        capreq_snprintf_s(req), pkg_snprintf_s(pkg));
+                         capreq_snprintf_s(req), pkg_snprintf_s(pkg));
                     pkg_set_badreqs(pkg);
                     upg->nerr_dep++;
                 }
@@ -1099,6 +1141,7 @@ int find_replacement(struct pkgset *ps, struct pkg *pkg, struct pkg **rpkg)
     	
     return (*rpkg != NULL);
 }
+
 
 static
 int resolve_conflict(int indent,

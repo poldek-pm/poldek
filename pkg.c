@@ -721,7 +721,10 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req)
 
     n_assert(strcmp(pkg->name, capreq_name(req)) == 0);
 
-    if (capreq_has_epoch(req) || pkg->epoch) {
+    if (!capreq_versioned(req))
+        return 1;
+    
+    if ((capreq_has_epoch(req) || pkg->epoch)) {
         cmprc = pkg->epoch - capreq_epoch(req);
         if (cmprc != 0)
             return rel_match(cmprc, req);
@@ -862,7 +865,7 @@ int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
     if (pkg->cnfls == NULL || n_array_size(pkg->cnfls) == 0)
         return 0;     /* not match */
     
-    if ((n = capreq_arr_find(pkg->cnfls, pkg->name)) == -1) {
+    if ((n = capreq_arr_find(pkg->cnfls, opkg->name)) == -1) {
         return 0;
             
     } else {

@@ -62,14 +62,15 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_FRESHEN         (1 << 17)  /* --freshen */
 #define INSTS_USESUDO         (1 << 18)  /* use_sudo = yes  */
 #define INSTS_NOHOLD          (1 << 19)  /* --nohold  */
-#define INSTS_NOIGNORE        (1 << 20)  /* --nohold  */
+#define INSTS_NOIGNORE        (1 << 20)  /* --noignore  */
 #define INSTS_GREEDY          (1 << 21)  /* --greedy */
-#define INSTS_KEEP_DOWNLOADS  (1 << 22) /* keep_downloads = yes */
-#define INSTS_PARTICLE        (1 << 23) /* particle_install = yes */
-#define INSTS_CHECKSIG        (1 << 24) /* not implemented yet */
-#define INSTS_CONFIRM_INST    (1 << 25) /* confirm_installation = yes  */
-#define INSTS_CONFIRM_UNINST  (1 << 26) /* confirm_removal = yes  */
-#define INSTS_EQPKG_ASKUSER   (1 << 27) /* choose_equivalents_manually = yes */
+#define INSTS_OBSOLETES       (1 << 22)  /* --noobsoletes */
+#define INSTS_KEEP_DOWNLOADS  (1 << 25) /* keep_downloads = yes */
+#define INSTS_PARTICLE        (1 << 26) /* particle_install = yes */
+#define INSTS_CHECKSIG        (1 << 27) /* not implemented yet */
+#define INSTS_CONFIRM_INST    (1 << 28) /* confirm_installation = yes  */
+#define INSTS_CONFIRM_UNINST  (1 << 29) /* confirm_removal = yes  */
+#define INSTS_EQPKG_ASKUSER   (1 << 30) /* choose_equivalents_manually = yes */
 
 #define INSTS_INTERACTIVE_ON  (INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER)
 
