@@ -197,6 +197,8 @@ static int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx, int setup)
 static int pkgset_index(struct pkgset *ps) 
 {
     int i;
+    if (ps->flags & _PKGSET_INDEXES_INIT)
+        return 1;
     
     msg(2, "Indexing...\n");
     add_self_cap(ps);
@@ -355,6 +357,9 @@ int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt)
 
 int pkgset_add_package(struct pkgset *ps, struct pkg *pkg)
 {
+    if ((ps->flags & _PKGSET_INDEXES_INIT) == 0)
+        pkgset_index(ps);
+    
     return do_pkgset_add_package(ps, pkg, 1);
 }
 
@@ -412,7 +417,7 @@ int pkgset_order(struct pkgset *ps, int verb)
         n_array_free(ps->ordered_pkgs);
     ps->ordered_pkgs = NULL;
     
-    nloops = packages_order(ps->pkgs, &ps->ordered_pkgs);
+    nloops = packages_order(ps->pkgs, &ps->ordered_pkgs, PKGORDER_INSTALL);
     
     if (nloops) {
         ps->nerrors += nloops;

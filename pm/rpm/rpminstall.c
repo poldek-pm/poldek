@@ -486,13 +486,17 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
     	argv[n++] = "--root";
         argv[n++] = (char*)ts->rootdir;
     }
-
+    
+    argv[n++] = "--noorder";
+    
     if (ts->rpmopts) 
         for (i=0; i<n_array_size(ts->rpmopts); i++)
             argv[n++] = n_array_nth(ts->rpmopts, i);
     
     nopts = n;
-    for (i=0; i < n_array_size(pkgs); i++) {
+    
+    /* rpm -e removes packages in reverse order  */
+    for (i = n_array_size(pkgs) - 1; i >= 0; i--) {
         char nevr[256];
         int len;
         
@@ -509,7 +513,7 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
         char buf[1024], *p;
         p = buf;
         
-        for (i=0; i<nopts; i++) 
+        for (i=0; i < nopts; i++) 
             p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
         *p = '\0';
         msgn(1, _("Running%s..."), buf);

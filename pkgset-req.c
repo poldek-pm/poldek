@@ -224,17 +224,8 @@ static int add_reqpkg(struct pkg *pkg, struct capreq *req, struct pkg *dpkg)
     tmp_rpkg.pkg = dpkg;
     rpkg = n_array_bsearch(pkg->reqpkgs, &tmp_rpkg);
 
-    if (rpkg != NULL) {
-        if (capreq_is_prereq(req)) 
-            rpkg->flags |= REQPKG_PREREQ;
-        else if (capreq_is_prereq_un(req)) 
-            rpkg->flags |= REQPKG_PREREQ_UN;
-        
-    } else {
-        rpkg = reqpkg_new(dpkg, req,
-                          capreq_is_prereq(req) ? REQPKG_PREREQ :
-                          capreq_is_prereq_un(req) ? REQPKG_PREREQ_UN : 0,
-                          0);
+    if (rpkg == NULL) {
+        rpkg = reqpkg_new(dpkg, req, 0, 0);
         
         n_array_push(pkg->reqpkgs, rpkg);
         n_array_sort(pkg->reqpkgs);
@@ -242,6 +233,15 @@ static int add_reqpkg(struct pkg *pkg, struct capreq *req, struct pkg *dpkg)
             dpkg->revreqpkgs = n_array_new(2, NULL, NULL);
         n_array_push(dpkg->revreqpkgs, pkg);
     }
+    
+    n_assert(rpkg);
+    
+    if (capreq_is_prereq(req)) 
+        rpkg->flags |= REQPKG_PREREQ;
+    
+    if (capreq_is_prereq_un(req)) 
+        rpkg->flags |= REQPKG_PREREQ_UN;
+    
     return 1;
 }
 

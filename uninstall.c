@@ -46,7 +46,7 @@
 #define DBPKG_DEPS_PROCESSED      (1 << 16) /* is its deps processed? */
 #define DBPKG_TOUCHED             (1 << 17)
 
-#define uninst_LDFLAGS (PKG_LDNEVR | PKG_LDCAPS | PKG_LDFL_DEPDIRS)
+#define uninst_LDFLAGS (PKG_LDNEVR | PKG_LDCAPS | PKG_LDREQS | PKG_LDFL_DEPDIRS)
 
 
 
@@ -379,15 +379,17 @@ static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
         }
         
         dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cr, NULL, uninst_LDFLAGS);
-        DBGF("mask %s (%s) -> %d package(s)\n", mask, capreq_snprintf_s(cr), 
-             dbpkgs ? n_array_size(dbpkgs) : 0);
+        DBGF_F("mask %s (%s) -> %d package(s)\n", mask, capreq_snprintf_s(cr), 
+               dbpkgs ? n_array_size(dbpkgs) : 0);
         
         if (dbpkgs) {
             int j;
-
+            
             for (j=0; j < n_array_size(dbpkgs); j++) {
                 struct pkg *dbpkg = n_array_nth(dbpkgs, j);
                 int matched = 0;
+
+                DBGF_F("  - %s (%p)\n", pkg_snprintf_s(dbpkg), dbpkg->reqs);
                 
                 if (cr_evr && pkg_match_req(dbpkg, cr_evr, 1)) {
                     nmatches++;
@@ -418,12 +420,39 @@ static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
     return nerr == 0;
 }
 
+static tn_array *reorder_packages(tn_array *pkgs)
+{
+    struct pkgset *ps;
+    tn_array *ordered_pkgs = NULL;
+    
+    int i;
+
+    ps = pkgset_new(0);
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        pkgset_add_package(ps, pkg);
+    }
+
+    pkgset_setup(ps, 0);
+    packages_order(ps->pkgs, &ordered_pkgs, PKGORDER_UNINSTALL);
+
+    ordered_pkgs = n_array_reverse(ordered_pkgs);
+    for (i=0; i < n_array_size(ordered_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ordered_pkgs, i);
+        DBGF("%d. %s\n", i, pkg_snprintf_s(pkg));
+    }
+    pkgset_free(ps);
+    
+    return ordered_pkgs;
+}
+
+    
     
 
 int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
 {
     int               nerr = 0, run_uninstall = 0;
-    tn_array          *pkgs = NULL;
+    tn_array          *pkgs = NULL, *ordered_pkgs = NULL;
     struct uninstall_ctx *uctx;
 
     MEMINF("START");
@@ -443,6 +472,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
     if (nerr || pkgs == NULL)
         goto l_end;
     
+    ordered_pkgs = reorder_packages(pkgs);
     print_uninstall_summary(pkgs, ts->pms, uctx->ndep);
 
     if (uctx->nerr_dep) {
@@ -478,7 +508,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
     if (run_uninstall) {
         int vrfy = 0;
             
-        if (!pm_pmuninstall(ts->db, pkgs, ts)) {
+        if (!pm_pmuninstall(ts->db, ordered_pkgs, ts)) {
             nerr++;
             vrfy = 1;
         }
@@ -488,6 +518,9 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
     }
 
  l_end:
+    if (ordered_pkgs)
+        n_array_free(ordered_pkgs);
+    
     uninstall_ctx_free(uctx);
     return nerr == 0;
 }

@@ -452,8 +452,8 @@ int packages_split(const tn_array *pkgs, unsigned split_size,
     }
 
     ordered_pkgs = NULL;
-    packages_order(packages, &ordered_pkgs);
-
+    packages_order(packages, &ordered_pkgs, PKGORDER_INSTALL);
+    
     msg(2, "\nPackages ordered:\n");
     for (i=0; i < n_array_size(ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ordered_pkgs, i);

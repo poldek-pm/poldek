@@ -40,13 +40,12 @@ struct visit_install_order_s {
     tn_array *ordered_pkgs;
     tn_array *stack;
     int nerrors;
-    int prereq_only;
 };
 
 
 static
 int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
-                        int deep) 
+                        unsigned reqpkg_flag, int deep) 
 {
     int i, last_stack_i = -1;
 
@@ -69,14 +68,14 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
             struct reqpkg *rp;	
             
             rp = n_array_nth(pkg->reqpkgs, i);
-            msg(4, "_%s%s, ", (rp->flags & REQPKG_PREREQ) ? "*" : "",
+            msg(4, "_%s%s, ", (rp->flags & reqpkg_flag) ? "*" : "",
                 rp->pkg->name);
             
             if (rp->flags & REQPKG_MULTI) {
                 int n = 0;
                 while (rp->adds[n]) {
                     msg(4, "_%s%s, ",
-                        (rp->adds[n]->flags & REQPKG_PREREQ) ? "*" : "",
+                        (rp->adds[n]->flags & reqpkg_flag) ? "*" : "",
                         rp->adds[n]->pkg->name);
                     n++;
                 }
@@ -86,7 +85,7 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
         msg_i(4, deep, "_ {");
     }
     
-    for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
+    for (i=0; i < n_array_size(pkg->reqpkgs); i++) {
         struct reqpkg *rpkg, *rp;
         int n;
 
@@ -95,13 +94,13 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
         
         while (rp != NULL) {
             if (pkg_is_color(rp->pkg, PKG_COLOR_WHITE)) {
-                if (rp->flags & REQPKG_PREREQ) 
+                if (rp->flags & reqpkg_flag) 
                     pkg_set_prereqed(rp->pkg);
                 else
                     pkg_clr_prereqed(rp->pkg);
                 
-                if (!vs->prereq_only || (rp->flags & REQPKG_PREREQ))
-                    visit_install_order(vs, rp->pkg, deep);
+                if (reqpkg_flag == 0 || (rp->flags & reqpkg_flag))
+                    visit_install_order(vs, rp->pkg, reqpkg_flag, deep);
             
             } else if (pkg_is_color(rp->pkg, PKG_COLOR_BLACK)) {
                 msg(4, "_\n");
@@ -110,7 +109,7 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
             } else if (pkg_is_color(rp->pkg, PKG_COLOR_GRAY)) { /* cycle  */
                 int is_loop = 0;
                 
-                if (rp->flags & REQPKG_PREREQ) {
+                if (rp->flags & reqpkg_flag) {
                     int j, n = 0, nprereqs = 0;
                     
                     for (j=n_array_size(vs->stack)-1; j >= 0; j--) {
@@ -192,7 +191,8 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
     return 0;
 }
 
-static int do_order(tn_array *pkgs, tn_array **ordered_pkgs, int prereq_only) 
+static int do_order(tn_array *pkgs, tn_array **ordered_pkgs,
+                    unsigned reqpkg_flag)
 {
     struct pkg *pkg;
     struct visit_install_order_s vs;
@@ -202,14 +202,13 @@ static int do_order(tn_array *pkgs, tn_array **ordered_pkgs, int prereq_only)
 //                                  (tn_fn_free)pkg_free, NULL);
     vs.nerrors = 0;
     vs.stack = n_array_new(128, NULL, NULL);
-    vs.prereq_only = prereq_only;
     
     n_array_map(pkgs, (tn_fn_map1)mapfn_clean_pkg_color);
 
     for (i=0; i<n_array_size(pkgs); i++) {
         pkg = n_array_nth(pkgs, i);
         if (pkg_is_color(pkg, PKG_COLOR_WHITE)) {
-            visit_install_order(&vs, pkg, 1);
+            visit_install_order(&vs, pkg, reqpkg_flag, reqpkg_flag ? 1 : 0);
             n_array_clean(vs.stack);
         }
     }
@@ -224,11 +223,12 @@ static int do_order(tn_array *pkgs, tn_array **ordered_pkgs, int prereq_only)
 
 
 /* RET: number of detected loops  */
-int packages_order(tn_array *pkgs, tn_array **ordered_pkgs) 
+int packages_order(tn_array *pkgs, tn_array **ordered_pkgs, int ordertype)
 {
     tn_array *ordered = NULL;
     int nloops, verbose;
-
+    unsigned reqpkg_flag = 0;
+    
     /* assuming that pkgs are presorted by pkg_cmp_pri_name_evr_rev */
     n_assert(n_array_ctl_get_cmpfn(pkgs) == (tn_fn_cmp)pkg_cmp_name_evr_rev);
     n_array_isort_ex(pkgs, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
@@ -236,9 +236,21 @@ int packages_order(tn_array *pkgs, tn_array **ordered_pkgs)
     verbose = poldek_set_verbose(-10);
     do_order(pkgs, &ordered, 0);
     poldek_set_verbose(verbose);
+    
+    switch (ordertype) {
+        case PKGORDER_INSTALL:
+            reqpkg_flag = REQPKG_PREREQ;
+            break;
+            
+        case PKGORDER_UNINSTALL:
+            reqpkg_flag = REQPKG_PREREQ_UN;
+            break;
 
+        default:
+            n_assert(0);
+    }
     *ordered_pkgs = NULL;
-    nloops = do_order(ordered, ordered_pkgs, 1);
+    nloops = do_order(ordered, ordered_pkgs, reqpkg_flag);
     
     n_array_free(ordered);
     n_array_isort(pkgs);

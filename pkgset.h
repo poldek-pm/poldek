@@ -34,7 +34,10 @@ struct pkgset {
     struct file_index  file_idx;   /* 'file'  => *pkg[]  */
 };
 
-int packages_order(tn_array *pkgs, tn_array **ordered_pkgs);
+#define PKGORDER_INSTALL     1
+#define PKGORDER_UNINSTALL   2
+int packages_order(tn_array *pkgs, tn_array **ordered_pkgs, int ordertype);
+//int packages_order(tn_array *pkgs, tn_array **ordered_pkgs);
 int pkgset_order(struct pkgset *ps, int verbose);
 
 /* if set then:
