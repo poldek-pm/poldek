@@ -70,6 +70,7 @@ static char args_doc[] = "[PACKAGE...]";
 
 struct split_conf {
     int   size;
+    int   first_free_space;
     char  *conf;
     char  *prefix;
 };
@@ -98,9 +99,12 @@ struct args {
     char      *dumpfile;
     char      *install_root;
     
-    struct usrpkgset *ups;
-    tn_array  *rpmopts;
-    tn_array  *rpmacros;
+    struct usrpkgset  *ups;
+    
+    tn_array    *hold_pkgnames;
+
+    tn_array    *rpmopts;
+    tn_array    *rpmacros;
 
     char        *conf_path;
     int         noconf;
@@ -146,10 +150,15 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_INST_POLDEK_MKSCRIPT  1052
 #define OPT_INST_NOFOLLOW         'N'
 #define OPT_INST_FRESHEN          'F'
+#define OPT_INST_HOLD           1053
 
 #define OPT_SPLITSIZE             1100
 #define OPT_SPLITCONF             1101
 #define OPT_SPLITOUTPATH          1102
+
+
+#define OPT_CONF                  'c'
+#define OPT_NOCONF                2002 
 
 /* The options we understand. */
 static struct argp_option options[] = {
@@ -202,6 +211,8 @@ static struct argp_option options[] = {
 {"install", 'i', 0, 0, "Install given package set", 70 },    
 {"upgrade", 'U', 0, 0, "Upgrade given package set", 70 },
 {"root", 'r', "DIR", 0, "Set top directory to DIR", 70 },
+{"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
+ "Prevent packages listed from being upgraded if they are already installed.", 70 },    
     
 {"dump", OPT_INST_MKSCRIPT, "FILE", OPTION_ARG_OPTIONAL,
      "Just dump install marked package filenames to FILE (default stdout)", 70 },
@@ -243,18 +254,21 @@ static struct argp_option options[] = {
 #ifdef ENABLE_INTERACTIVE_MODE
 {0,0,0,0, "Shell mode:", 80},
 {"shell", OPT_SHELLMODE, 0, 0, "Run in shell mode", 80 },
-{"fast", OPT_SHELL_SKIPINSTALLED, 0, 0, "Don't load installed packages in shell mode", 80 },
+{"fast", OPT_SHELL_SKIPINSTALLED, 0, 0, "Don't load installed packages at startup", 80 },
 #endif
 
 {0,0,0,0, "Splitting:", 90},
-{"split", OPT_SPLITSIZE, "SIZE", 0, "Split packages to SIZE MB size chunks", 90 },
+{"split", OPT_SPLITSIZE, "SIZE[:FIRST_FREE_SPACE]", 0,
+     "Split packages to SIZE MB size chunks, the first chunk will "
+     "be FIRST_FREE_SPACE MB smaller", 90 },
+    
 {"split-conf", OPT_SPLITCONF, "FILE", 0, "Take package priorities from FILE", 90 },
 {"split-out", OPT_SPLITOUTPATH, "PREFIX", 0, "Write chunks to PREFIX.XX, "
      "default PREFIX is packages.chunk", 90 },    
 
 {0,0,0,0, "Other:", 500},    
-{"conf", 'c', "FILE", 0, "Read configuration from FILE", 500 }, 
-{"noconf", 'z', 0, 0, "Do not read configuration", 500 }, 
+{"conf", OPT_CONF, "FILE", 0, "Read configuration from FILE", 500 }, 
+{"noconf", OPT_NOCONF, 0, 0, "Do not read configuration", 500 }, 
 
 
     
@@ -435,6 +449,25 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->psflags |= PSMODE_UPGRADE | PSMODE_UPGRADE_DIST;
             break;
 
+        case OPT_INST_HOLD:
+            if (argsp->hold_pkgnames == NULL)
+                argsp->hold_pkgnames = n_array_new(4, free, (tn_fn_cmp)strcmp);
+            
+            if (strchr(arg, ',') == NULL) {
+                n_array_push(argsp->hold_pkgnames, strdup(arg));
+                
+            } else {
+                const char **pkgs, **p;
+            
+                p = pkgs = n_str_tokl(arg, ",");
+                while (*p) {
+                    n_array_push(argsp->hold_pkgnames, strdup(*p));
+                    p++;
+                }
+                n_str_tokl_free(pkgs);
+            }
+            break;
+
         case 'i':
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_INSTALL;
@@ -503,20 +536,34 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->inst_sflags |= INSTS_MKDBDIR;
             break;
 
-        case 'c':
+        case OPT_CONF:
             argsp->conf_path = arg;
             break;
             
-        case 'z':
+        case OPT_NOCONF:
             argsp->noconf = 1;
             break;
 
-        case OPT_SPLITSIZE:
+        case OPT_SPLITSIZE: {
+            char *p, rc;
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_SPLIT;
-            argsp->split_conf.size = atoi(arg);
-            break;
 
+            if ((p = strrchr(arg, ':'))) {
+                rc = sscanf(arg, "%d:%d", &argsp->split_conf.size,
+                            &argsp->split_conf.first_free_space);
+                rc = (rc == 2);
+            } else {
+                rc = sscanf(arg, "%d", &argsp->split_conf.size);
+                rc = (rc == 1);
+            }
+            if (!rc) {
+                log(LOGERR, "split: bad option argument\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+        break;
+            
         case OPT_SPLITCONF:
             argsp->split_conf.conf = arg;
             break;
@@ -614,6 +661,7 @@ void parse_options(int argc, char **argv)
     verbose = 0;
     
     memset(&args, 0, sizeof(args));
+
     args.sources = n_array_new(4, (tn_fn_free)source_free, (tn_fn_cmp)source_cmp);
     args.curr_src_path = NULL;
     args.curr_src_ldmethod = PKGSET_LD_NIL;
@@ -626,6 +674,7 @@ void parse_options(int argc, char **argv)
     args.pkgdef_defs  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_sets  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.split_conf.size = 0;
+    args.split_conf.first_free_space = 0;
     args.split_conf.conf = NULL;
     args.split_conf.prefix = NULL;
 
@@ -771,7 +820,6 @@ void parse_options(int argc, char **argv)
         }
     }
     
-
     vfile_verbose = &verbose;
     n_assert(args.cachedir); 
     vfile_configure(args.cachedir, vfile_cnflags);
@@ -795,8 +843,11 @@ static struct pkgset *load_pkgset(int ldflags)
     }
     mem_info(1, "MEM after load");
 
-    if (ps) 
+    if (ps) {
         pkgset_setup(ps);
+        if (args.hold_pkgnames)
+            pkgset_mark_holds(ps, args.hold_pkgnames);
+    }
 
     return ps;
 }
@@ -963,8 +1014,14 @@ int check_args(void)
                 log(LOGERR, "split size too small\n");
                 exit(EXIT_FAILURE);
             }
+            
+            if (args.split_conf.size < args.split_conf.first_free_space) {
+                log(LOGERR, "first free space bigger than chunk size\n");
+                exit(EXIT_FAILURE);
+            }
 
             args.split_conf.size *= 1024 * 1000;
+            args.split_conf.first_free_space *= 1024 * 1000;
             if (args.split_conf.prefix == NULL) 
                 args.split_conf.prefix = "packages.chunk";
             
@@ -1135,7 +1192,10 @@ int main(int argc, char **argv)
             break;
 
         case MODE_SPLIT:
-            rc = packages_split(ps->pkgs, args.split_conf.size,
+            printf("s %d, f %d\n", args.split_conf.size, args.split_conf.first_free_space);
+            rc = packages_split(ps->pkgs,
+                                args.split_conf.size,
+                                args.split_conf.first_free_space, 
                                 args.split_conf.conf, args.split_conf.prefix);
             break;
             

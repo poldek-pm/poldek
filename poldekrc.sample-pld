@@ -1,10 +1,10 @@
 # $Id$
-# Sample configuration for PLD, packages are taken via rsync  
+# Sample configuration for PLD  
 # 
 
-source = rsync://ftp.pld.org.pl/pld/PLD-1.0/i686/RPMS/Packages
-source = rsync://ftp.pld.org.pl/pld/test/i686/
-source = /home/zenek/rpm/RPMS/Packages.gz
+source = ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/
+#source = rsync://ftp.pld.org.pl/pld/test/i686/
+#source = /home/zenek/rpm/RPMS/
 
 # NOTE: directory *must* exists 
 cachedir = /var/tmp/poldek
@@ -17,4 +17,4 @@ cachedir = /var/tmp/poldek
 #   %P[n] - package full path(URL)
 
 #ftp_http_get   = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
-rsync_get      = "/usr/bin/rsync %P %d"
+#rsync_get      = "/usr/bin/rsync %P %d"

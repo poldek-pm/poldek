@@ -27,6 +27,8 @@
 
 #define PKG_OBSOLETED       (1 << 11)
 
+#define PKG_HOLD            (1 << 12) /* non upgradable */
+
 /* DAG node colours */
 #define PKG_COLOR_WHITE    (1 << 13)
 #define PKG_COLOR_GRAY     (1 << 14)
@@ -58,6 +60,9 @@
 
 #define pkg_mark_obsoleted(pkg) ((pkg)->flags |= PKG_OBSOLETED)
 #define pkg_is_obsoleted(pkg) ((pkg)->flags & PKG_OBSOLETED)
+
+#define pkg_mark_hold(pkg) ((pkg)->flags |= PKG_HOLD)
+#define pkg_is_hold(pkg) ((pkg)->flags & PKG_HOLD)
 
 #define pkg_has_ldpkguinf(pkg) ((pkg)->flags & PKG_HAS_PKGUINF)
 #define pkg_set_ldpkguinf(pkg) ((pkg)->flags |= PKG_HAS_PKGUINF)

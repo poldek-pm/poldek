@@ -3,13 +3,13 @@
 
 source = ftp://ftp.znienacka.com.pl/RPMS/
 source = http://www.znienacka.com.pl/RPMS/
-source = rsync://rsync.znienacka.com.pl/PLD/Packages.gz
-source = rsync://ftp.pld.org.pl/PLD-1.0/i686/PLD/Packages
+source = rsync://rsync.znienacka.com.pl/PLD/packages.dir
+source = rsync://ftp.pld.org.pl/PLD-1.0/i686/PLD/
 
 
 # If package index and packages stored under diffrent locations, 
 # then source and packages prefix must be numbered 
-source1 = /tmp/Packages
+source1 = /tmp/packages.dir
 prefix1 = /cdrom/RPMS
  
 
@@ -44,4 +44,4 @@ rpmdef        = "_install_langs pl:pl_PL:lt:lt_LT"
 rpmdef        = "_netsharedpath /usr/share/info:/usr/share/man"
 rpmdef	      = "_excludedocs 1"
 
-
+no_upgrade    = dev,kernel

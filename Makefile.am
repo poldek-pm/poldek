@@ -36,7 +36,8 @@ libpoldek_a_SOURCES = \
 	  dbpkg.c dbpkg.h		\
 	  split.c split.h		\
 	  pkgroup.c pkgroup.h		\
-	  rpmdb_it.c rpmdb_it.h
+	  rpmdb_it.c rpmdb_it.h         \
+	  hold.c
 
 SHELL_MOD = shell/libshell.a
 

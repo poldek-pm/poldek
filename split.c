@@ -30,7 +30,7 @@
 
 struct chunk {
     int       no;
-    int       size;
+    unsigned  size;
     int       items;
     FILE      *stream;
 };
@@ -219,18 +219,22 @@ static void mapfn_chunk_dump(struct pkg *pkg, void *arg)
 }
 
 
-int make_chunks(tn_array *pkgs, int split_size, const char *outprefix)
+int make_chunks(tn_array *pkgs, unsigned split_size, unsigned first_free_space,
+                const char *outprefix)
 {
     int i;
-    int chunk_no = 0, chunk_size = 1;
-
+    int chunk_no = 0, chunk_size = 0;
+    unsigned size;
+    
+    size = split_size - first_free_space;
     
     for (i=0; i<n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
 
-        if (chunk_size + pkg->fsize > (unsigned)split_size) {
+        if (chunk_size + pkg->fsize > size) {
             chunk_no++;
             chunk_size = 0;
+            size = split_size;
         }
         
         chunk_size += pkg->fsize;
@@ -268,7 +272,7 @@ int make_chunks(tn_array *pkgs, int split_size, const char *outprefix)
 
         
         snprintf(path, sizeof(path), "%s.%d", outprefix, i);
-        msg(0, "Writing %s (%4d packages, %d bytes)\n", path, chunk.items,
+        msg(0, "Writing %s (%4d packages, % 10d bytes)\n", path, chunk.items,
             chunk.size);
         
         if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
@@ -287,7 +291,7 @@ int make_chunks(tn_array *pkgs, int split_size, const char *outprefix)
 }
 
 
-int packages_split(tn_array *pkgs, unsigned split_size,
+int packages_split(tn_array *pkgs, unsigned split_size, unsigned first_free_space, 
                    const char *splitconf_path, const char *outprefix)
 {
     tn_array *defs = NULL, *packages = NULL, *ordered_pkgs = NULL;
@@ -350,7 +354,7 @@ int packages_split(tn_array *pkgs, unsigned split_size,
     ordered_pkgs = NULL;
     packages_order(packages, &ordered_pkgs);
 
-    rc = make_chunks(ordered_pkgs, split_size, outprefix);
+    rc = make_chunks(ordered_pkgs, split_size, first_free_space, outprefix);
 
     
  l_end:

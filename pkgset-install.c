@@ -530,7 +530,15 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                             ndepadds = 0;
                             goto l_end;
                         }
-                    
+
+                        if (pkg_is_hold(tomark)) {
+                            log(LOGERR, "%s: refusing to install held package\n",
+                                pkg_snprintf_s(tomark));
+                            upg->nfatal_err++; 
+                            ndepadds = 0;
+                            goto l_end;
+                        }
+
                         pkg_dep_mark(tomark);
                         n_array_push(markarr[nmarkarr], tomark);
                         nmarked++;
@@ -1078,7 +1086,7 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
 
 /* save in upg->install_pkgs if newer version finded */
 static 
-void mapfn_chk_newer_pkg(unsigned recno, void *h, void *upgptr) 
+void mapfn_check_newer_pkg(unsigned recno, void *h, void *upgptr) 
 {
     struct upgrade_s *upg = upgptr;
     uint32_t *epoch;
@@ -1115,9 +1123,16 @@ void mapfn_chk_newer_pkg(unsigned recno, void *h, void *upgptr)
         }
         
         if (cmprc > 0) {
-            pkg_hand_mark(pkg);
-            n_array_push(upg->install_pkgs, pkg);
-            n_array_push(upg->uninst_dbpkgs, dbpkg_new(recno, h, PKG_LDWHOLE));
+            if (pkg_is_hold(pkg)) {
+                
+                msg(0, "%s: skip held package\n", pkg_snprintf_s(pkg));
+                
+            } else {
+                pkg_hand_mark(pkg);
+                n_array_push(upg->install_pkgs, pkg);
+                n_array_push(upg->uninst_dbpkgs, dbpkg_new(recno, h, PKG_LDWHOLE));
+                upg->ninstall++;
+            }
         }
     }
 }
@@ -1162,13 +1177,12 @@ int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst)
 
     init_upgrade_s(&upg, ps, inst);
     
-    
-    msg(1, "_Looking up packages for upgrade...\n");
+    msg(1, "Looking up packages for upgrade...\n");
     
     //set_capreq_allocfn(malloc, free, &capreq_alloc_fn, &capreq_free_fn);
 
     /* find packages to upgrade */
-    pkgdb_map(inst->db, mapfn_chk_newer_pkg, &upg);
+    pkgdb_map(inst->db, mapfn_check_newer_pkg, &upg);
     n_array_sort(upg.uninst_dbpkgs);
 
     // set_capreq_allocfn(capreq_alloc_fn, capreq_free_fn, NULL, NULL);

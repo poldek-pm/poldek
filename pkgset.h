@@ -113,6 +113,9 @@ int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst);
 int pkgset_install(struct pkgset *ps, struct inst_s *inst,
                    tn_array *unistalled_pkgs);
 
+void pkgset_mark_holds(struct pkgset *ps, tn_array *hold_pkgnames);
+
+
 #include "pkgset-load.h"
 
 
