@@ -4,14 +4,14 @@ INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
 lib_LIBRARIES      = libvhttp.a 
-libvhttp_a_SOURCES  = vhttp.c http.c
+libvhttp_a_SOURCES  = vhttp.c http.c base64.c
 
 pkgincludedir = $(includedir)/vhttp
 pkginclude_HEADERS = vhttp.h http.h 
 
-noinst_PROGRAMS    = test_vhttp
-test_vhttp_SOURCES  = test_vhttp.c
-test_vhttp_LDADD    = libvhttp.a @TRURL_LDFLAG@ $(top_srcdir)/sigint/libsigint.a
+#noinst_PROGRAMS    = test_vhttp
+#test_vhttp_SOURCES  = test_vhttp.c
+#test_vhttp_LDADD    = libvhttp.a @TRURL_LDFLAG@ $(top_srcdir)/sigint/libsigint.a
 
 dist-hook:
 	rm -rf $(distdir)/.deps

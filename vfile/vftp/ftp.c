@@ -594,8 +594,9 @@ int ftp_login(struct ftpcn *cn, const char *login, const char *passwd)
     if (login && passwd) {
         cn->login = n_strdup(login);
         cn->passwd = n_strdup(passwd);
+        
     } else {
-	login = "anonymous";
+        login = "anonymous";
         passwd = "ftp@";
     }
     

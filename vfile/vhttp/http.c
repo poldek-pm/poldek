@@ -136,7 +136,7 @@ struct http_resp {
 const char *vhttp_errmsg(void) 
 {
     if (*errmsg == '\0')
-        return NULL;
+        return "unknown error";
     return errmsg;
 }
 
@@ -176,6 +176,14 @@ static char *make_req_line(char *buf, int size, char *fmt, ...)
     return buf;
 }
 
+static
+int mk_auth(char *auth, int size, const char *login, const char *passwd)
+{
+    char buf[512];
+
+    n_snprintf(buf, sizeof(buf), "%s:%s", login, passwd);
+    return vhttp_misc_base64(auth, size, buf);
+}
 
 static
 int httpcn_req(struct httpcn *cn, const char *req_line, char *fmt, ...) 
@@ -191,22 +199,37 @@ int httpcn_req(struct httpcn *cn, const char *req_line, char *fmt, ...)
     n += n_snprintf(&req[n], sizeof(req) - n, "%s", req_line);
     if (*vhttp_verbose > 1)
         vhttp_msg_fn("< %s", req);
+
+
+    if (cn->login && cn->passwd && cn->auth_basic_str == NULL) {
+        char auth[512];
+
+        mk_auth(auth, sizeof(auth), cn->login, cn->passwd);
+        cn->auth_basic_str = n_strdup(auth);
+    }
+
+    if (cn->auth_basic_str)
+        n += n_snprintf(&req[n], sizeof(req) - n,
+                        "Authorization: Basic %s\r\n", cn->auth_basic_str);
     
+    if (cn->proxy_login && cn->proxy_passwd &&
+        cn->proxy_auth_basic_str == NULL) {
+        char auth[512];
+
+        mk_auth(auth, sizeof(auth), cn->proxy_login, cn->proxy_passwd);
+        cn->proxy_auth_basic_str = n_strdup(auth);
+    }
+
+    if (cn->proxy_auth_basic_str)
+        n += n_snprintf(&req[n], sizeof(req) - n,
+                        "Proxy-Authorization: Basic %s\r\n",
+                        cn->proxy_auth_basic_str);
+
     nn = n_snprintf(&req[n], sizeof(req) - n, "Host: %s\r\n", cn->host);
     if (*vhttp_verbose > 1)
         vhttp_msg_fn("<   %s", &req[n]);
     n += nn;
 
-#if 0                           /* NFY */
-    if (cn->login && cn->passwd) {
-        
-        nn = n_snprintf(&req[n], sizeof(req) - n,
-                        "Authorization: Basic %s:", cn->login);
-        if (*vhttp_verbose > 1)
-            vhttp_msg_fn("<   %sxxx", &req[n]);
-        n += nn;
-#endif
-        
     nn = n_snprintf(&req[n], sizeof(req) - n, "User-Agent: %s\r\n", HTTP_UA);
     if (*vhttp_verbose > 1)
         vhttp_msg_fn("<   %s", &req[n]);
@@ -295,7 +318,8 @@ static
 int http_resp_conn_status(struct http_resp *resp)
 {
     char *s;
-    if ((s = n_hash_get(resp->hdr, "connection")) == NULL)
+    if ((s = n_hash_get(resp->hdr, "connection")) == NULL &&
+        (s = n_hash_get(resp->hdr, "proxy-connection")) == NULL)
         return -1;
 
     if (strcasecmp(s, "keep-alive") == 0)
@@ -847,7 +871,8 @@ struct httpcn *httpcn_malloc(void)
 
 
 struct httpcn *httpcn_new(const char *host, int port,
-                          const char *login, const char *pwd)
+                          const char *login, const char *passwd,
+                          const char *proxy_login, const char *proxy_passwd)
 {
     struct httpcn *cn = NULL;
     int sockfd;
@@ -861,9 +886,16 @@ struct httpcn *httpcn_new(const char *host, int port,
         cn->state = HTTPCN_ALIVE;
         cn->host = n_strdup(host);
         cn->port = port;
-        if (login && pwd) {
+        cn->login = cn->passwd = cn->proxy_login = cn->proxy_passwd = NULL;
+        cn->auth_basic_str = cn->proxy_auth_basic_str = NULL;
+        if (login && passwd) {
             cn->login = n_strdup(login);
-            cn->passwd = n_strdup(pwd);
+            cn->passwd = n_strdup(passwd);
+        } 
+
+        if (proxy_login && proxy_passwd) {
+            cn->proxy_login = n_strdup(proxy_login);
+            cn->proxy_passwd = n_strdup(proxy_passwd);
         }
     }
 
@@ -886,37 +918,50 @@ static void httpcn_close(struct httpcn *cn)
 void httpcn_free(struct httpcn *cn) 
 {
     httpcn_close(cn);
+
+    n_cfree(&cn->host);
+    
+    n_cfree(&cn->login);
+    n_cfree(&cn->passwd);
+
+    n_cfree(&cn->proxy_login);
+    n_cfree(&cn->proxy_passwd);
+
+    n_cfree(&cn->auth_basic_str);
+    n_cfree(&cn->proxy_auth_basic_str);
+    
     if (cn->resp)
         http_resp_free(cn->resp);
     memset(cn, 0, sizeof(*cn));
 }
 
-#if 0                           /* unused */
-static long httpcn_size(struct httpcn *cn, const char *path) 
-{ 
-    long  size = -1;
-    char req_line[PATH_MAX];
-    
-    
-    if ((cn->flags & HTTP_SUPPORTS_SIZE) == 0)
-        return -1;
 
+time_t httpcn_mtime(struct httpcn *cn, const char *path) 
+{ 
+    time_t ts;
+    //struct tm tm;
+    char req_line[PATH_MAX];
+    const char *s;
+    
+    
+    
     make_req_line(req_line, sizeof(req_line), "HEAD %s", path);
     if (!httpcn_req(cn, req_line, NULL))
-        return -1;
+        return 0;
     
     if (!httpcn_get_resp(cn))
-        return -1;
+        return 0;
     
     if (!status_code_ok(cn->resp->code, cn->resp->msg, path))
-        return -1;
+        return 0;
     
-    if (!http_resp_get_hdr_long(cn->resp, "content-length", &size))
-        size = -1;
+    if ((s = http_resp_get_hdr(cn->resp, "last-modified")) == NULL)
+        return 0;
+        
+    //if (sscanf(s, "%s, %d %s %d %d:%d:%d %s", tm.tm_
     
-    return size;
+    return 0;                   /* NFY */
 }
-#endif
 
 int httpcn_is_alive(struct httpcn *cn) 
 {
@@ -1090,14 +1135,6 @@ int httpcn_retr(struct httpcn *cn,
             break;
     }
 
-    /* poor HTTP client doesn't supports Trasfer-Encodings */
-    if ((trenc = http_resp_get_hdr(cn->resp, "transfer-encoding"))) {
-        if (*vhttp_verbose > 1)
-            vhttp_msg_fn("Closing connection cause to unimplemented HTTP "
-                         "transfer encodins\n");
-        close_cn = 1;
-    }
-    
 
     if (HTTP_STATUS_IS_REDIR(cn->resp->code)) {
         const char *redirto = http_resp_get_hdr(cn->resp, "location");
@@ -1107,6 +1144,16 @@ int httpcn_retr(struct httpcn *cn,
                                    check redirect_to */
             goto l_end;
         }
+    }
+
+    /* poor HTTP client doesn't supports Trasfer-Encodings */
+    if ((trenc = http_resp_get_hdr(cn->resp, "transfer-encoding"))) {
+        if (*vhttp_verbose > 1)
+            vhttp_msg_fn("Trasfer-Encoding is an unimplemented tag, give up\n");
+        vhttp_set_err(ENOENT, "%s: unimplemented HTTP "
+                      "transfer encoding", trenc);
+        close_cn = 1;
+        goto l_err_end;
     }
 
     if (!status_code_ok(cn->resp->code, cn->resp->msg, path) &&

@@ -27,7 +27,7 @@
 
 
 #include <trurl/nassert.h>
-#include <sigint/sigint.h>
+
 
 #define VFILE_INTERNAL
 #include "i18n.h"
@@ -37,7 +37,7 @@
 
 static int vfile_vhttp_init(void);
 static void vfile_vhttp_destroy(void);
-int vfile_vhttp_fetch(const char *dest, const char *url, unsigned flags);
+static int vfile_vhttp_fetch(struct vf_request *req);
 
 struct vf_module vf_mod_vhttp = {
     "vhttp",
@@ -62,85 +62,16 @@ static void vfile_vhttp_destroy(void)
 }
 
 
-static int do_fetch(const char *dest, const char *url, unsigned flags)
+static int vfile_vhttp_fetch(struct vf_request *req)
 {
-    struct stat             st;
-    FILE                    *stream;
-    int                     rc = 0, vf_errno = 0;
-    int                     end = 1, ntry = 0;
+    int rc = 1;
     
-    if ((stream = fopen(dest, "a+")) == NULL) {
-        vfile_err_fn("%s: fopen %s: %m\n", vf_mod_vhttp.vfmod_name, dest);
-        return 0;
-    }
-    
-    if (fstat(fileno(stream), &st) != 0) {
-        vfile_err_fn("%s: fstat %s: %m\n", vf_mod_vhttp.vfmod_name, dest);
-        fclose(stream);
-        return 0;
+    if (!vhttp_retr(req)) {
+        req->req_errno = vhttp_errno;
+        if ((req->flags & VF_REQ_INT_REDIRECTED) == 0)
+            vfile_err_fn("%s: %s\n", vf_mod_vhttp.vfmod_name, vhttp_errmsg());
+        rc = 0;
     }
 
-    if (flags & VFMOD_INFINITE_RETR)
-        end = 1000;
-
-    while (end-- > 0) {
-        struct vf_progress_bar  bar;
-
-        if (ntry++ && (flags & VFMOD_INFINITE_RETR)) {
-            vfile_msg_fn(_("Retrying...(#%d)\n"), ntry);
-            sleep(1);
-        }
-        
-        if (sigint_reached()) {
-            vf_errno = EINTR;
-            break;
-        }
-
-        vfile_progress_init(&bar);
-        
-        if ((rc = vhttp_retr(stream, st.st_size, url, &bar)))
-            break;
-        
-        vf_errno = vhttp_errno;
-        vfile_err_fn("%s: %s\n", vf_mod_vhttp.vfmod_name, vhttp_errmsg());
-        
-        switch (vhttp_errno) {
-            case ENOENT:
-            case EINTR:
-            case ENOSPC:
-                goto l_endloop;
-                break;
-
-            default:
-                errno = vhttp_errno;
-                //printf("errno(%d) %m\n", end);
-        }
-
-        fflush(stream);
-        
-        if (fstat(fileno(stream), &st) != 0) {
-            vfile_err_fn("%s: fstat %s: %m\n", vf_mod_vhttp.vfmod_name, dest);
-            break;
-        }
-    }
-
- l_endloop:
-    
-    fclose(stream);
-
-    errno = vf_errno;
     return rc;
-}
-
-
-int vfile_vhttp_fetch(const char *dest, const char *url, unsigned flags)
-{
-    if (!do_fetch(dest, url, flags)) {
-        vfile_set_errno(vf_mod_vhttp.vfmod_name, errno);
-        if (vf_valid_path(dest))
-            unlink(dest);
-        return 0;
-    }
-
-    return 1;
 }

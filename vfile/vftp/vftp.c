@@ -74,67 +74,43 @@ void vftp_vacuum(void)
     n_list_remove_ex(vftp_cnl, NULL, toremove_cn_fakecmp);
 }
 
-
-int vftp_retr(FILE *stream, long offset, const char *url,
-              void *progress_data) 
+int vftp_retr(struct vf_request *req)
 {
     tn_list_iterator   it;
     struct ftpcn       *cn;
-    char               buf[PATH_MAX];
-    char               *p, *q, *host, *path;
-    const char         *login = "anonymous", *passwd = NULL;
-    int                port = 0, rc;
-    char               *err_msg = _("%s: URL parse error");
+    const char         *passwd;
+    char               *login, *host;
+    int                port;
 
     
-    vftp_set_err(0, "");
-    
-    if ((rc = strncmp(url, "ftp://", sizeof("ftp://") - 1)) != 0) {
-        vftp_set_err(EINVAL, err_msg, url);
-        return 0;
+    login = req->login;
+    host = req->host;
+    port = req->port;
+
+    if (login == NULL)
+        login = "anonymous";
+        
+    if (req->proxy_host) {
+        int len;
+        char *s;
+        
+        len = strlen(login) + 1 + strlen(req->host) + 1;
+        s = alloca(len);
+        snprintf(s, len, "%s@%s", login, req->host);
+        
+        login = s;
+        host = req->proxy_host;
+        port = req->proxy_port;
     }
-    
-    snprintf(buf, sizeof(buf), "%s", url + sizeof("ftp://") - 1);
-    host = buf;
-    
-    if ((q = strchr(buf, '/')) == NULL) {
-        vftp_set_err(EINVAL, err_msg, url);
-        return 0;
-    }
-    
-    *q = '\0';
-    path = q;
-
-    /* extract loginname from hostpart */
-    if ((p = strrchr(host, '@')) != NULL) {
-        *p = '\0';
-        login = host;
-        host = p + 1;
-
-        if ((p = strchr(login, ':')) == NULL) {
-            vftp_set_err(EINVAL, err_msg, url);
-            return 0;
-        }
-        *p = '\0';
-        passwd = p + 1;
-    }
-
-    if (passwd == NULL)
-        if ((passwd = vftp_anonpasswd) == NULL)
-            passwd  = "mis@mis";
-    
     
     if (port <= 0)
         port = IPPORT_FTP;
     
-    if ((p = strrchr(host, ':'))) {
-        if (sscanf(p + 1, "%d", &port) != 1) {
-            vftp_set_err(EINVAL, err_msg, url);
-            return 0;
-        }
-        *p = '\0';
-    }
-    
+    vftp_set_err(0, "");
+
+    passwd = req->passwd;
+    if (passwd == NULL && (passwd = vftp_anonpasswd) == NULL)
+        passwd  = "vftp@mis";
     
     vftp_vacuum();
     n_list_iterator_start(vftp_cnl, &it);
@@ -144,8 +120,7 @@ int vftp_retr(FILE *stream, long offset, const char *url,
             ftpcn_is_alive(cn)) {
             
             if (*vftp_verbose > 1)
-                vftp_msg_fn("Reusing connection %s@%s:%d\n", cn->login,
-                            cn->host, cn->port);
+                vftp_msg_fn("Reusing connection %s@%s:%d\n", login, host, port);
             break;
         }
     }
@@ -155,13 +130,11 @@ int vftp_retr(FILE *stream, long offset, const char *url,
         if (cn)
             n_list_push(vftp_cnl, cn);
     }
-    
-    *q = '/';
-    
+
     if (cn == NULL)
         return 0;
     
-    return ftpcn_retr(cn, fileno(stream), offset, path, progress_data);
+    return ftpcn_retr(cn, fileno(req->stream), req->stream_offset, req->uri, req->bar);
 }
 
 static void vftp_msg(const char *fmt, ...)

@@ -13,8 +13,8 @@ INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
 lib_LIBRARIES      = libvfile.a 
-libvfile_a_SOURCES = vfile.c vfprogress.c fetch.c misc.c \
-		     p_open.c uncompr.c \
+libvfile_a_SOURCES = vfile.c vfprogress.c fetch.c misc.c base64.c \
+		     p_open.c uncompr.c vfreq.c vfreq.h \
 		     $(VFCURL_SRCS_) vfvftp.c vfvhttp.c 
 
 pkgincludedir = $(includedir)/vfile

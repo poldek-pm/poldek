@@ -73,67 +73,31 @@ void vhttp_vacuum(void)
     n_list_remove_ex(vhttp_cnl, NULL, toremove_cn_fakecmp);
 }
 
-
-static
-int do_vhttp_retr(FILE *stream, long offset, const char *url,
-                  void *progress_data, int recursion_level) 
+int do_vhttp_retr(struct vf_request *req, int recursion_level) 
 {
     tn_list_iterator   it;
-    struct httpcn       *cn;
-    char               buf[PATH_MAX], redirect_to[PATH_MAX];
-    char               *p, *q, *host, *path;
-    const char         *login = NULL, *passwd = NULL;
-    int                port = 0, rc;
-    char               *err_msg = _("%s: URL parse error");
-
+    struct httpcn      *cn;
+    char               redirect_to[PATH_MAX], *host;
+    int                port, rc;
     
+
     vhttp_set_err(0, "");
 
     if (recursion_level > 10) {
-        vhttp_set_err(EINVAL, "redir to %s: too many redirects", url);
+        vhttp_set_err(EINVAL, "too many (%d) redirects", recursion_level);
         return 0;
     }
-    
-    if ((rc = strncmp(url, "http://", sizeof("http://") - 1)) != 0) {
-        vhttp_set_err(EINVAL, err_msg, url);
-        return 0;
+
+    port = req->port;
+    host = req->host;
+
+    if (req->proxy_host) {
+        host = req->proxy_host;
+        port = req->proxy_port;
     }
     
-    snprintf(buf, sizeof(buf), "%s", url + sizeof("http://") - 1);
-    host = buf;
-    
-    if ((q = strchr(buf, '/')) == NULL) {
-        vhttp_set_err(EINVAL, err_msg, url);
-        return 0;
-    }
-    
-    *q = '\0';
-    path = q;
-
-    /* extract loginname from hostpart */
-    if ((p = strrchr(host, '@')) != NULL) {
-        *p = '\0';
-        login = host;
-        host = p + 1;
-
-        if ((p = strchr(login, ':')) == NULL) {
-            vhttp_set_err(EINVAL, err_msg, url);
-            return 0;
-        }
-        *p = '\0';
-        passwd = p + 1;
-    }
-
     if (port <= 0)
-        port = IPPORT_HTTP;
-    
-    if ((p = strrchr(host, ':'))) {
-        if (sscanf(p + 1, "%d", &port) != 1) {
-            vhttp_set_err(EINVAL, err_msg, url);
-            return 0;
-        }
-        *p = '\0';
-    }
+        req->port = IPPORT_HTTP;
     
     
     vhttp_vacuum();
@@ -142,8 +106,8 @@ int do_vhttp_retr(FILE *stream, long offset, const char *url,
         if (strcmp(cn->host, host) == 0 && cn->port == port &&
             httpcn_is_alive(cn)) {
 
-            if (cn->login && login && strcmp(cn->login, login) != 0 && 
-                cn->passwd && passwd && strcmp(cn->passwd, passwd) != 0)
+            if (cn->login && req->login && strcmp(cn->login, req->login) != 0 && 
+                cn->passwd && req->passwd && strcmp(cn->passwd, req->passwd) != 0)
                 continue;
             
             if (*vhttp_verbose > 1)
@@ -156,47 +120,50 @@ int do_vhttp_retr(FILE *stream, long offset, const char *url,
     }
     
     if (cn == NULL) {
-        cn = httpcn_new(host, port, login, passwd);
+        cn = httpcn_new(host, port, req->login, req->passwd,
+                        req->proxy_login, req->proxy_passwd);
         if (cn)
             n_list_push(vhttp_cnl, cn);
     }
     
-    *q = '/';
-    
     if (cn == NULL)
         return 0;
     
-    rc = httpcn_retr(cn, fileno(stream), offset, path, progress_data,
+    rc = httpcn_retr(cn, fileno(req->stream), req->stream_offset,
+                     req->proxy_host ? req->url : req->uri,
+                     req->bar,
                      redirect_to, sizeof(redirect_to));
-
+    
 
     if (rc == 0 && *redirect_to) {
-        char topath[PATH_MAX], *topathp = topath;
+        char topath[PATH_MAX], *topathp = redirect_to;
+        int  foreign_proto = 0;
 
-        *q = '\0';
-        if (*redirect_to == '/') 
-            snprintf(topath, sizeof(topath), "http://%s%s", host, redirect_to);
-        
-        else if (strncmp(redirect_to, "http://", 7) == 0)
-            topathp = redirect_to;
+        if (*redirect_to == '/') {
+            snprintf(topath, sizeof(topath), "http://%s%s", req->host, redirect_to);
+            topathp = topath;
+            
+        } else if (strncmp(redirect_to, "http://", 7) != 0) 
+            foreign_proto = 1;
 
-        else {
+        if (topathp && vf_request_redirto(req, topathp)) {
+            rc = 0;
+            if (foreign_proto == 0)
+                rc = do_vhttp_retr(req, ++recursion_level);
+
+        } else {
             vhttp_set_err(EINVAL, "%s: invalid redirect URI", redirect_to);
-            topathp = NULL;
+            rc = 0;
         }
         
-        if (topathp) 
-            rc = do_vhttp_retr(stream, offset, topathp, progress_data,
-                               ++recursion_level);
     }
     
     return rc;
 }
 
-
-int vhttp_retr(FILE *stream, long offset, const char *url, void *progress_data)
+int vhttp_retr(struct vf_request *req)
 {
-    return do_vhttp_retr(stream, offset, url, progress_data, 0);
+    return do_vhttp_retr(req, 0);
 }
 
 

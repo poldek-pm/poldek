@@ -9,9 +9,9 @@ libvftp_a_SOURCES  = vftp.c ftp.c
 pkgincludedir = $(includedir)/vftp
 pkginclude_HEADERS = vftp.h ftp.h 
 
-noinst_PROGRAMS    = test_vftp
-test_vftp_SOURCES  = test_vftp.c
-test_vftp_LDADD    = libvftp.a @TRURL_LDFLAG@ $(top_srcdir)/sigint/libsigint.a
+#noinst_PROGRAMS    = test_vftp
+#test_vftp_SOURCES  = test_vftp.c
+#test_vftp_LDADD    = libvftp.a @TRURL_LDFLAG@ $(top_srcdir)/sigint/libsigint.a 
 
 dist-hook:
 	rm -rf $(distdir)/.deps

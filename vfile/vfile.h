@@ -34,21 +34,20 @@ extern void (*vfile_msg_fn)(const char *fmt, ...);
 extern void (*vfile_msgtty_fn)(const char *fmt, ...);
 extern void (*vfile_err_fn)(const char *fmt, ...);
 
-//#define VFILE_USEXT_FTP    (1 << 0)
-//#define VFILE_USEXT_HTTP   (1 << 1)
-//#define VFILE_USEXT_HTTPS  (1 << 2)
-
-//#define VFILE_REALUSERHOST_AS_ANONPASSWD (1 << 5)
-
 void vfile_init(void);
 
 #define VFILE_CONF_CACHEDIR                     0
 #define VFILE_CONF_DEFAULT_CLIENT               1
-#define VFILE_CONF_REALUSERHOST_AS_ANONPASSWD   2
+#define VFILE_CONF_SYSUSER_AS_ANONPASSWD        2
+#define VFILE_CONF_VERBOSE                      3
+#define VFILE_CONF_PROXY                        4
 
 int vfile_configure(int param, ...);
-/* if any of args is not NULL or -1 then set up it */
-//void vfile_configure(const char *cachedir, int flags);
+
+struct vfile_url {
+    char *url;
+    char label[128];
+};
 
 
 #define VFT_IO       1             /* open(2)                   */
@@ -117,6 +116,7 @@ struct vfile *vfile_incref(struct vfile *vf);
 
 int vfile_unlink(struct vfile *vf);
 
+
 #define VFURL_UNKNOWN (1 << 0)
 #define VFURL_PATH    (1 << 1)
 #define VFURL_FTP     (1 << 2)
@@ -131,13 +131,15 @@ int vfile_unlink(struct vfile *vf);
 
 #define vfile_is_remote(vf) ((vf)->vf_urltype & VFURL_REMOTE)
 
-/* external downloaders */
+/* external fetchers */
 int vfile_register_ext_handler(const char *name, tn_array *protocols,
                                const char *cmd);
-int vfile_configured_handlers(void);
+int vfile_is_configured_ext_handler(const char *url);
+
 
 int vfile_fetch_ext(const char *destdir, const char *url);
 int vfile_fetcha_ext(const char *destdir, tn_array *urls);
+
 
 int vfile_fetch(const char *destdir, const char *url);
 int vfile_fetcha(const char *destdir, tn_array *urls);
@@ -170,53 +172,48 @@ int vf_localdirpath(char *path, size_t size, const char *url);
 /* unlink local copy */
 int vf_localunlink(const char *path);
 
-
 int vf_userathost(char *buf, int size);
-
 int vf_cleanpath(char *buf, int size, const char *path);
 
 
 #ifdef VFILE_INTERNAL
 
 #include <trurl/n_snprintf.h>
+#include <trurl/nhash.h>
 
-#define VF_PROGRESS_VIRGIN    0
-#define VF_PROGRESS_DISABLED  1
-#define VF_PROGRESS_RUNNING   2
+struct vfile_configuration {
+    char      *cachedir;
+    unsigned  flags;
+    unsigned  mod_fetch_flags;   /* passed to mod->fetch() */
 
-struct vf_progress_bar {
-    int     width;
-    int     state;
-    int     is_tty;
-    int     prev_n;
-    int     prev_perc;
+    tn_hash   *default_clients_ht;
+    tn_hash   *proxies_ht;
+    int       *verbose;
 };
 
-void vfile_progress_init(struct vf_progress_bar *bar);
-void vfile_progress(long total, long amount, void *data);
+extern struct vfile_configuration vfile_conf;
 
 void vfile_set_errno(const char *ctxname, int vf_errno);
 
-#define VFMOD_INFINITE_RETR       (1 << 0) /* retry download */
-#define VFMOD_USER_AS_ANONPASSWD  (1 << 1) /* send login@host as FTP password  */
+#include "vfreq.h"
 
 struct vf_module {
     char       vfmod_name[32];
     unsigned   vf_protocols;
-    int  (*init)(void);
-    void (*destroy)(void);
-    int  (*fetch)(const char *dest, const char *url, unsigned flags);
-
+    
+    int        (*init)(void);
+    void       (*destroy)(void);
+    int        (*fetch)(struct vf_request *req);
     int        _pri;            /* used by vfile only */
 };
 
 
+#define VFMOD_INFINITE_RETR       (1 << 0) /* retry download */
+#define VFMOD_USER_AS_ANONPASSWD  (1 << 1) /* send login@host as FTP password  */
+
 /* short alias for */
 #define CL_URL(url) vf_url_hidepasswd_s(url)
 #define PR_URL(url) vf_url_slim_s(url, 60)
-
-
-
 
 int vf_uncompr_able(const char *path);
 int vf_uncompr_do(const char *path, const char *destpath);

@@ -11,6 +11,9 @@
 
 const char *vhttp_errmsg(void);
 void vhttp_set_err(int err_no, const char *fmt, ...);
+
+int vhttp_misc_base64(char *b64, int size, const char *bin);
+
 extern void (*http_progress_fn)(long total, long amount, void *data);
 
 struct http_resp;
@@ -24,12 +27,19 @@ struct httpcn {
 
     char      *login;
     char      *passwd;
+    char      *auth_basic_str;
+    
+    char      *proxy_login;
+    char      *proxy_passwd;
+    char      *proxy_auth_basic_str;
     
     struct http_resp *resp; /* last response  */
 };
 
 struct httpcn *httpcn_new(const char *host, int port,
-                        const char *login, const char *pwd);
+                          const char *login, const char *passwd,
+                          const char *proxy_login, const char *proxy_passwd);
+
 void httpcn_free(struct httpcn *cn);
 
 int httpcn_is_alive(struct httpcn *cn);

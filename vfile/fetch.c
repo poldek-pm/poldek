@@ -75,9 +75,16 @@ extern tn_hash *vfile_default_clients_ht;
 static tn_hash *ffetchers = NULL;
 static tn_hash *ffetchers_proto_idx = NULL;
 
-int vfile_configured_handlers(void)
+static
+struct ffetcher *find_fetcher(const char *proto, int multi);
+
+
+int vfile_is_configured_ext_handler(const char *url)
 {
-    return ffetchers ? n_hash_size(ffetchers) : 0;
+    char proto[64];
+
+    vf_url_proto(proto, sizeof(proto), url);
+    return find_fetcher(proto, 0) != NULL;
 }
 
 static 
@@ -494,20 +501,33 @@ int vfile_register_ext_handler(const char *name, tn_array *protocols,
 static
 struct ffetcher *find_fetcher(const char *proto, int multi) 
 {
-    struct ffetcher  *ftch;
+    struct ffetcher  *ftch = NULL;
     tn_array         *arr;
     int              i;
     const char       *clname;
     
-    n_assert(vfile_default_clients_ht);
+    n_assert(vfile_conf.default_clients_ht);
 
-    if ((clname = n_hash_get(vfile_default_clients_ht, proto))) {
-        ftch = n_hash_get(ffetchers, clname);
+    
+
+    if ((clname = n_hash_get(vfile_conf.default_clients_ht, proto))) {
+        
+        if (ffetchers)
+            ftch = n_hash_get(ffetchers, clname);
+
+        if (ftch == NULL) {
+            vfile_err_fn("vfile: %s: no such ext. fetcher found\n", clname);
+            return NULL;
+        }
+        
         if (multi && !ftch->is_multi)
             return NULL;
         else 
             return ftch;
     }
+
+    if (ffetchers == NULL)
+        return NULL;
     
     if ((arr = n_hash_get(ffetchers_proto_idx, proto)) == NULL) 
         return NULL;
@@ -527,16 +547,13 @@ int vfile_fetch_ext(const char *destdir, const char *url)
 {
     struct ffetcher *ftch;
     char proto[64];
-    
-    if (vfile_configured_handlers() == 0) {
-        vfile_err_fn("vfile_fetch: %s: no URL handler found\n", CL_URL(url));
-        return 0;
-    }
 
+    
     vf_url_proto(proto, sizeof(proto), url);
     
     if ((ftch = find_fetcher(proto, 0)) == NULL) {
-        vfile_err_fn("vfile_fetch: %s: no URL handler found\n", CL_URL(url));
+        vfile_err_fn("vfile: %s://...: no ext. fetcher for this type "
+                     "of url found\n", proto);
         return 0;
     }
 
@@ -565,7 +582,8 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls)
         rc = nerrs == 0;
         
     } else {
-        vfile_err_fn("URL %s not supported\n", CL_URL(n_array_nth(urls, 0)));
+        vfile_err_fn("vfile: %s://...: no ext. fetcher for this type"
+                     " of url found\n", proto);
         rc = 0;
     }
 

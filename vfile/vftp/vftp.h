@@ -2,6 +2,8 @@
 #ifndef POLDEK_VFTP_H
 #define POLDEK_VFTP_H
 
+#include "../vfreq.h"
+
 extern int *vftp_verbose;
 extern int vftp_errno;
 extern const char *vftp_anonpasswd;
@@ -16,7 +18,7 @@ int vftp_init(int *verbose,
 void vftp_destroy(void);
 void vftp_vacuum(void);
 
-int vftp_retr(FILE *stream, long offset, const char *url, void *progess_data);
+int vftp_retr(struct vf_request *req);
 
 const char *vftp_errmsg(void);
 

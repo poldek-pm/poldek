@@ -38,7 +38,7 @@
 
 static int vfile_vftp_init(void);
 static void vfile_vftp_destroy(void);
-int vfile_vftp_fetch(const char *dest, const char *url, unsigned flags);
+static int vfile_vftp_fetch(struct vf_request *req);
 
 struct vf_module vf_mod_vftp = {
     "vftp",
@@ -78,89 +78,20 @@ static void set_vftp_anonpasswd(void)
     }
 }
 
-    
-static int do_fetch(const char *dest, const char *url, unsigned flags)
+static int vfile_vftp_fetch(struct vf_request *req)
 {
-    struct stat             st;
-    FILE                    *stream;
-    int                     rc = 0, vf_errno = 0;
-    int                     end = 1, ntry = 0;
+    int rc = 1;
     
-    if ((stream = fopen(dest, "a+")) == NULL) {
-        vfile_err_fn("%s: fopen %s: %m\n", vf_mod_vftp.vfmod_name, dest);
-        return 0;
-    }
-    
-    if (fstat(fileno(stream), &st) != 0) {
-        vfile_err_fn("%s: fstat %s: %m\n", vf_mod_vftp.vfmod_name, dest);
-        fclose(stream);
-        return 0;
-    }
-
-    if (flags & VFMOD_USER_AS_ANONPASSWD)
+    if (req->flags & VF_REQ_SYSUSER_AS_ANONPASSWD)
         set_vftp_anonpasswd();
 
-    if (flags & VFMOD_INFINITE_RETR)
-        end = 1000;
-    
-    while (end-- > 0) {
-        struct vf_progress_bar  bar;
+    req->req_errno = 0;
 
-        if (sigint_reached()) {
-            vf_errno = EINTR;
-            break;
-        }
-        
-        if (ntry++ && (flags & VFMOD_INFINITE_RETR)) {
-            vfile_msg_fn(_("Retrying...(#%d)\n"), ntry);
-            sleep(1);
-        }
-        
-        vfile_progress_init(&bar);
-        
-        if ((rc = vftp_retr(stream, st.st_size, url, &bar)))
-            break;
-        
-        vf_errno = vftp_errno;
+    if (!vftp_retr(req)) {
         vfile_err_fn("%s: %s\n", vf_mod_vftp.vfmod_name, vftp_errmsg());
-        
-        switch (vftp_errno) {
-            case ENOENT:
-            case EINTR:
-            case ENOSPC:
-                goto l_endloop;
-                break;
-
-            default:
-                errno = vftp_errno;
-                //printf("errno(%d) %m\n", end);
-        }
-        
-        fflush(stream);
-        
-        if (fstat(fileno(stream), &st) != 0) {
-            vfile_err_fn("%s: fstat %s: %m\n", vf_mod_vftp.vfmod_name, dest);
-            break;
-        }
-        
+        req->req_errno = vftp_errno;
+        rc = 0;
     }
 
- l_endloop:
-    
-    fclose(stream);
-    errno = vf_errno;
     return rc;
-}
-
-
-int vfile_vftp_fetch(const char *dest, const char *url, unsigned flags)
-{
-    if (!do_fetch(dest, url, flags)) {
-        vfile_set_errno(vf_mod_vftp.vfmod_name, errno);
-        if (vf_valid_path(dest))
-            unlink(dest);
-        return 0;
-    }
-
-    return 1;
 }
