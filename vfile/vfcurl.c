@@ -190,9 +190,9 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
             line[i] = '.';
         }
         line[i] = '\0';
-        sprintf( format, "%%-%ds %%5.1f%%%%", barwidth );
-        sprintf( outline, format, line, percent );
-        vfile_msg_fn("\r%s", outline );
+        snprintf(format, sizeof(format), "%%-%ds %%5.1f%%%%", barwidth );
+        snprintf(outline, sizeof(outline), format, line, percent );
+        vfile_msg_fn("\r%s", outline);
         
     }
     bar->prev = bar->point;
