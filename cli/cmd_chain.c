@@ -34,6 +34,10 @@
 #include "cmd_pipe.h"
 
 static
+tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
+                          const char *line);
+
+static
 struct cmd_chain_ent *cmd_chain_ent_new(unsigned flags,
                                         struct poclidek_cmd *cmd, tn_array *a_argv)
 {
@@ -209,13 +213,9 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
                          tn_array *a_argv)
 {
     struct poclidek_cmd *cmd;
-    tn_array            *tl;
-    int                 rc = 0;
     const char          *acmd;
 
-    
     n_assert(a_argv_contains_break(a_argv) == 0);
-
 
     acmd = n_array_nth(a_argv, 0);
     if (is_external(acmd)) {
@@ -235,46 +235,101 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
         n_array_push(cmd_chain, ent);
     
     } else {
+        const char *cmdline;
+
         n_assert(cmd->cmdline);
+        cmdline = cmd->cmdline;
+        
+        if (n_array_size(a_argv) > 1) { /* any arguments? -> pass them */
+            char *line;
+            int i, n, len;
 
-        if ((tl = n_str_etokl(cmd->cmdline)) == NULL) {
-            rc = 0;
-            
-        } else {
-            int i;
-
-            free(n_array_shift(a_argv));
-            while (n_array_size(tl))
-                n_array_unshift(a_argv, n_array_pop(tl));
-            n_array_free(tl);
-            
-            if (!a_argv_contains_break(a_argv)) {
-                if (prepare_a_argv(cctx, cmd_chain, a_argv) == NULL)
-                    return NULL;
-                
-            } else {
-                tn_array *arr = a_argv_split(a_argv, ";|");
-                
-                for (i=0; i < n_array_size(arr); i++) {
-                    struct a_argv_ent *ent = n_array_nth(arr, i);
-                    if (ent->a_argv) {
-                        if (prepare_a_argv(cctx, cmd_chain, a_argv) == NULL)
-                            return NULL;
-                        
-                    } else {
-                        struct cmd_chain_ent *ent;
-                        ent = cmd_chain_ent_new(CMD_CHAIN_ENT_CMD, cmd, a_argv);
-                        n_array_push(cmd_chain, ent);
-                    }
-                }
-                
-                n_array_free(arr);
-            }
+            len = strlen(cmd->cmdline) + 1;
+            /* from 1 -- skip alias */
+            for (i=1; i < n_array_size(a_argv); i++)
+                len += strlen((char*)n_array_nth(a_argv, i)) + 1; /* plus space */
+            len++;
+        
+            line = alloca(len);
+            n = n_snprintf(line, len, "%s", cmd->cmdline);
+        
+            for (i=1; i < n_array_size(a_argv); i++)
+                n += n_snprintf(&line[n], len - n, " %s",
+                                (char*)n_array_nth(a_argv, i));
+            cmdline = line;
         }
+        
+        if (prepare_cmdline(cctx, cmd_chain, cmdline) == NULL)
+            return NULL;
     }
     
     return cmd_chain;
 }
+
+static
+tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
+                          const char *line)
+{
+    tn_array  *arr, *tl;
+    int       i, is_err = 0;
+    
+    if ((tl = n_str_etokl(line)) == NULL) {
+        logn(LOGERR, _("%s: parse error"), line);
+        return NULL;
+    }
+    
+#if ENABLE_TRACE
+    printf("line = (%s)\n", line);
+    for (i=0; i<n_array_size(tl); i++)
+        printf("tl[%d] = %s\n", i, (char*)n_array_nth(tl, i));
+#endif
+    
+    arr = a_argv_split(tl, ";|");
+    for (i=0; i < n_array_size(arr); i++) {
+        struct a_argv_ent *ent = n_array_nth(arr, i);
+        struct cmd_chain_ent *cent = NULL;
+
+        switch (ent->brk) {
+            case ';':
+                cent = cmd_chain_ent_new(CMD_CHAIN_ENT_SEMICOLON, NULL, NULL);
+                n_array_push(cmd_chain, cent);
+                break;
+
+            case '|':
+                cent = cmd_chain_ent_new(CMD_CHAIN_ENT_PIPE, NULL, NULL);
+                n_array_push(cmd_chain, cent);
+                break;
+                
+            case 0:
+                if (ent->a_argv) {
+#if ENABLE_TRACE
+                    int j;
+                    for (j=0; j < n_array_size(ent->a_argv); j++)
+                        printf("tl[%d][%d] = %s\n", i, j,
+                               (char*)n_array_nth(ent->a_argv, j));
+#endif                    
+                    if (prepare_a_argv(cctx, cmd_chain, ent->a_argv) == NULL) {
+                        is_err = 1;
+                        goto l_end;
+                    }
+                    
+                    break;
+                }
+                                /* no break */
+
+            default:
+                n_assert(0);
+                break;
+        }
+        
+    }
+
+l_end:
+    n_array_free(arr);
+    n_array_free(tl);
+    return is_err ? NULL : cmd_chain;
+}
+
 
 static
 tn_array *divide_into_pipelines(tn_array *cmd_chain) 
@@ -344,73 +399,19 @@ tn_array *divide_into_pipelines(tn_array *cmd_chain)
     return cmd_chain2;
 }
 
-
 tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line)
 {
-    tn_array  *cmd_chain, *arr, *tl;
-    int       i, is_err = 0;
+    tn_array  *cmd_chain;
+    int       is_err = 0;
 
-    
-    if ((tl = n_str_etokl(line)) == NULL) {
-        logn(LOGERR, _("%s: parse error"), line);
-        return NULL;
-    }
-    
-#if ENABLE_TRACE
-    printf("line = (%s)\n", line);
-    for (i=0; i<n_array_size(tl); i++)
-        printf("tl[%d] = %s\n", i, (char*)n_array_nth(tl, i));
-#endif
-    
     cmd_chain = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
-    arr = a_argv_split(tl, ";|");
-                
-    for (i=0; i < n_array_size(arr); i++) {
-        struct a_argv_ent *ent = n_array_nth(arr, i);
-        struct cmd_chain_ent *cent = NULL;
+    if (prepare_cmdline(cctx, cmd_chain, line) == NULL)
+        is_err = 1;
 
-        switch (ent->brk) {
-            case ';':
-                cent = cmd_chain_ent_new(CMD_CHAIN_ENT_SEMICOLON, NULL, NULL);
-                n_array_push(cmd_chain, cent);
-                break;
-
-            case '|':
-                cent = cmd_chain_ent_new(CMD_CHAIN_ENT_PIPE, NULL, NULL);
-                n_array_push(cmd_chain, cent);
-                break;
-                
-            case 0:
-                if (ent->a_argv) {
-#if ENABLE_TRACE
-                    int j;
-                    for (j=0; j < n_array_size(ent->a_argv); j++)
-                        printf("tl[%d][%d] = %s\n", i, j,
-                               (char*)n_array_nth(ent->a_argv, j));
-#endif                    
-                    if (prepare_a_argv(cctx, cmd_chain, ent->a_argv) == NULL) {
-                        is_err = 1;
-                        goto l_end;
-                    }
-                    
-                    break;
-                }
-                                /* no break */
-
-            default:
-                n_assert(0);
-                break;
-        }
-        
-    }
-
-l_end:
-    n_array_free(arr);
-    n_array_free(tl);
-    
     if (is_err) {
         n_array_free(cmd_chain);
         cmd_chain = NULL;
+        
     } else {
         tn_array *chain = divide_into_pipelines(cmd_chain);
         n_array_free(cmd_chain);
