@@ -167,6 +167,9 @@ int vfile_curl_fetch(const char *dest, const char *url)
 
     rc = curl_easy_perform(curlh);
 
+    if (bar.state < 3)
+         vfile_msg_fn("\n");
+
     if (rc == CURLE_OK) {
         rc = 1;
         
@@ -233,14 +236,15 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
 
     bar->point = dlnow + ulnow; /* we've come this far */
     
-    if (total < bar->point) {    /* cURL w/o  */
+    if (total && total < bar->point) {    /* cURL w/o  */
         vfile_err_fn("cURL bug detected: current size %d, total size %d\n", bar->point, total);
         bar->point = total;
     }
-    
+
+#define HASH_SIZE 4096
     if (total == 0) {
-        int prevblock = bar->prev / 1024;
-        int thisblock = bar->point / 1024;
+        int prevblock = bar->prev / HASH_SIZE;
+        int thisblock = bar->point / HASH_SIZE;
         while ( thisblock > prevblock ) {
             vfile_msg_fn(".");
             prevblock++;
