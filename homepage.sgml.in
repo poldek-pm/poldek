@@ -188,8 +188,8 @@ For example:
 	     name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm">  
 	
 	<item> Statically linked
-	    <url url="download/poldek-@VERSION@-1.static.src.rpm" 
-	      name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.static.src.rpm">  
+	    <url url="download/poldek-@VERSION@-1.static.i386.rpm" 
+	      name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.static.i386.rpm">  
 	</itemize>
 <!-- 
      <p>
