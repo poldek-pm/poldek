@@ -1,32 +1,64 @@
 %module poldek
 
 %{
+#include "local_stdint.h"
 #include "poldek.h"
 #include "trurl/narray.h"
 #include "pkg.h"
 #include "poldek.h"
+#include "poldek_ts.h"
 #include "pkgdir/source.h"
-#define   NULL 0
 %}
-
+%include exception.i
+%include "local_stdint.h"
 %include "trurl/narray.h"
 %include "pkg.h"
 %include "poldek.h"
+%include "poldek_ts.h"
 %include "pkgdir/source.h"
 
 extern int verbose;
+
 
 %extend tn_array {
     tn_array(int size) { return n_array_new_ex(size, NULL, NULL, NULL); };
     tn_array(void *arr) { return arr; };
     int __len__() { return n_array_size(self); }
-    void *__getitem__(int i) { return n_array_nth(self, i); }
+    void *__getitem__(int i) {
+        if (i < n_array_size(self))
+            return n_array_nth(self, i);
+        PyErr_SetString(PyExc_IndexError, "Index out of bounds");
+        return NULL;
+    }
 }
+
+
+%extend source {
+    source(const char *name, const char *type,
+           const char *path, const char *pkg_prefix) {
+        return source_new(name, type, path, pkg_prefix);
+    }
+    
+    source(const char *name) {
+        return source_new(name, NULL, NULL, NULL); }
+    ~source() { source_free(self); }
+}
+
 
 %extend pkg {
     pkg(void *ptr) { return ptr; } /* conv constructor */
     ~pkg() { pkg_free(self); }
 }
+
+
+%extend poldek_ts {
+    poldek_ts(struct poldek_ctx *ctx) {
+        return poldek_ts_new(ctx);
+    }
+    
+    ~poldek_ts() { poldek_ts_free(self); }
+}
+
 
 %extend poldek_ctx {
     poldek_ctx() {
@@ -35,12 +67,15 @@ extern int verbose;
          return ctx;
     }
     
-    ~poldek_ctx() { poldek_destroy(self); }
+    ~poldek_ctx() { poldek_destroy(self); free(self); }
     int load_config(const char *path = NULL) { poldek_load_config(self, path); }
     int configure(int param, void *val) { poldek_configure(self, param, val); }
     int configure(int param, unsigned val) { poldek_configure(self, param, val); }
     int configure(int param, char *val) { poldek_configure(self, param, val); }
+    struct poldek_ts *ts_new() { return poldek_ts_new(self); }
 }
+
+
 
     
             

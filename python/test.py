@@ -6,8 +6,6 @@ from types import *
 os.environ['PYTHONPATH'] = '.libs'
 import poldek
 
-NULL = 'NULL'
-
 def _make_methods(aclass, prefix):
     regexp = re.compile('^%s' % prefix)
     regexp_up = re.compile('^%s' % string.upper(prefix))
@@ -26,38 +24,37 @@ def _make_methods(aclass, prefix):
                 setattr(aclass, name, elem)
                 #print "%s %s" % (k, type(elem)):
                 
-            
 _make_methods(poldek.poldek_ctx, 'poldek_')
+_make_methods(poldek.poldek_ts, 'poldek_ts_')
 _make_methods(poldek.pkg, 'pkg_')
+_make_methods(poldek.source, 'source_')
 _make_methods(poldek.tn_array, 'n_array_')
 
 ctx = poldek.poldek_ctx()
 poldek.cvar.verbose = 1
 
-path = 'ftp://ftp.pld-linux.org/dists/ra/updates/security/i686/';
-src = poldek.source_new('pdir', path, NULL)
-
-#rv = poldek.source_update(src, poldek.PKGSOURCE_UPA)
-#print "rv = %d" % rv
-
+src = poldek.source('ac')
 ctx.configure(ctx.CONF_SOURCE, src)
-print "len0 = %d" % len(ctx.sources)
-
 ctx.load_config()
-print "len1 = %d" % len(ctx.sources)
-print ctx.setup_sources()
-#ctx.configure(ctx.CONF_SOURCE, src)
-print "len2 = %d" % len(ctx.sources)
-
-ctx.load_sources()
+ctx.setup()
 
 arr = ctx.get_avpkgs()
-print "len = %d" % len(arr)
-
-for i in range(len(arr)):
-    p = poldek.pkg(arr[i])
-    print p.snprintf_s()
+print "Loaded %d packages" % len(arr)
+n = 0
+#for ptr in arr:
+#    print ptr
+#print "LoadedXX %d packages %d" % (len(arr), n)
     
+#    print ptr
+#for p in l:
+#    print p.snprintf_s()
+
+ts = ctx.ts_new()
+ts.add_pkgmask("SysVinit")
+ts.setf(ts.INSTALL | ts.UPGRADE)
+ts.do_install(None)
+
+
 
 
 
