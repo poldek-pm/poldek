@@ -1320,14 +1320,26 @@ static int update_idx(void)
                  source_idstr(src));
             continue;
         }
+
+        if (i > 0)
+            msgn(0, "\n");
         
         pkgdir = pkgdir_new(src->name, src->path,
                             src->pkg_prefix, PKGDIR_NEW_VERIFY);
 
         if (pkgdir == NULL) {
-            if (n_array_size(args.sources) > 1)
-                logn(LOGWARN, _("%s: load failed, skipped"), source_idstr(src));
-            nerr++;
+            if (!source_is_remote(src)) {
+                nerr++;
+                continue;
+            }
+            
+            logn(LOGNOTICE, _("%s: load of local index failed, "
+                              "updating whole index..."), source_idstr(src));
+            
+            unlink_pkgdir_files(src->path, 0);
+            if (!source_update(src))
+                nerr++;
+
             continue;
         }
 
