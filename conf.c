@@ -36,15 +36,21 @@
 #include "conf.h"
 #include "misc.h"
 
-#define TYPE_STR      (1 << 0)
-#define TYPE_BOOL     (1 << 1)
-#define TYPE_LIST     (1 << 2)
-#define TYPE_MULTI    (1 << 3)
-#define TYPE_ENUM     (1 << 4)
+#define TYPE_STR        (1 << 0)
+#define TYPE_BOOL       (1 << 1)
+#define TYPE_LIST       (1 << 2)
+#define TYPE_MULTI      (1 << 3)
+#define TYPE_MULTI_EXCL (1 << 4)
+#define TYPE_ENUM       (1 << 5)
 
 #define TYPE_F_ENV      (1 << 10)
 #define TYPE_F_REQUIRED (1 << 11)
 #define TYPE_F_ALIAS    (1 << 12)
+#define TYPE_F_UNIQUE   (1 << 13)
+
+
+static const char *global_tag = "global";
+static const char *include_tag = "%include";
 
 struct tag {
     char      *name;
@@ -53,7 +59,7 @@ struct tag {
 };
 
 static struct tag unknown_tag = {
-    NULL, TYPE_STR | TYPE_MULTI | TYPE_F_ENV, { 0 },
+    NULL, TYPE_STR | TYPE_F_ENV | TYPE_MULTI_EXCL, { 0 },
 };
 
 static struct tag global_tags[] = {
@@ -62,36 +68,36 @@ static struct tag global_tags[] = {
     { "prefix?*",      TYPE_STR | TYPE_F_ENV, { 0 } },
     { "cachedir",      TYPE_STR | TYPE_F_ENV, { 0 } },
     
-    { "ftp_http_get",  TYPE_STR , { 0 } }, /* obsolete */
-    { "ftp_get",       TYPE_STR , { 0 } }, /* obsolete */
-    { "http_get",      TYPE_STR , { 0 } }, /* obsolete */
-    { "https_get",     TYPE_STR , { 0 } }, /* obsolete */
-    { "rsync_get",     TYPE_STR , { 0 } }, /* obsolete */
-    { "cdrom_get",     TYPE_STR , { 0 } }, /* obsolete */
+    { "ftp http_get",  TYPE_STR , { 0 } }, /* obsolete */
+    { "ftp get",       TYPE_STR , { 0 } }, /* obsolete */
+    { "http get",      TYPE_STR , { 0 } }, /* obsolete */
+    { "https get",     TYPE_STR , { 0 } }, /* obsolete */
+    { "rsync get",     TYPE_STR , { 0 } }, /* obsolete */
+    { "cdrom get",     TYPE_STR , { 0 } }, /* obsolete */
 
-    { "ignore_req",    TYPE_STR | TYPE_MULTI , { 0 } },
-    { "ignore_pkg",    TYPE_STR | TYPE_MULTI , { 0 } },
+    { "ignore req",    TYPE_STR | TYPE_MULTI , { 0 } },
+    { "ignore pkg",    TYPE_STR | TYPE_MULTI , { 0 } },
 
     { "rpmdef",        TYPE_STR | TYPE_MULTI | TYPE_F_ENV, { 0 } },
-    { "rpm_install_opt",  TYPE_STR , { 0 } },
-    { "rpm_uninstall_opt",  TYPE_STR , { 0 } },
+    { "rpm install opt",  TYPE_STR , { 0 } },
+    { "rpm uninstall opt",  TYPE_STR , { 0 } },
 
     { "follow",         TYPE_BOOL , { 0 } },
     { "greedy",         TYPE_BOOL , { 0 } }, 
-    { "use_sudo",       TYPE_BOOL , { 0 } },
+    { "use sudo",       TYPE_BOOL , { 0 } },
     { "mercy",          TYPE_BOOL , { 0 } },
-    { "default_fetcher", TYPE_STR | TYPE_MULTI , { 0 } },
+    { "default fetcher", TYPE_STR | TYPE_MULTI , { 0 } },
     { "proxy",          TYPE_STR | TYPE_MULTI, { 0 } },
     { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "ignore",         TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
-    { "keep_downloads", TYPE_BOOL , { 0 } },
-    { "confirm_installs", TYPE_BOOL , { 0 } }, /* backward compat */
-    { "confirm_installation", TYPE_BOOL , { 0 } },
-    { "confirm_removal", TYPE_BOOL , { 0 } },
-    { "choose_equivalents_manually", TYPE_BOOL , { 0 } },
-    { "particle_install", TYPE_BOOL, { 0 } },
-    { "unique_package_names", TYPE_BOOL, { 0 } },
-    { "ftp_sysuser_as_anon_passwd", TYPE_BOOL , { 0 } },
+    { "keep downloads", TYPE_BOOL , { 0 } },
+    { "confirm installation", TYPE_BOOL , { 0 } },
+    { "confirm installs", TYPE_BOOL | TYPE_F_ALIAS , { 0 } }, /* backward compat */
+    { "confirm removal", TYPE_BOOL , { 0 } },
+    { "choose equivalents manually", TYPE_BOOL , { 0 } },
+    { "particle install", TYPE_BOOL, { 0 } },
+    { "unique package names", TYPE_BOOL, { 0 } },
+    { "ftp sysuser as anon passwd", TYPE_BOOL , { 0 } },
     {  NULL,           0, { 0 } }, 
 };
 
@@ -101,6 +107,14 @@ static struct tag fetcher_tags[] = {
     { "cmd",        TYPE_STR | TYPE_F_ENV | TYPE_F_REQUIRED, { 0 } },
     {  NULL,           0, { 0 } }, 
 };
+
+static struct tag alias_tags[] = {
+    { "name",       TYPE_STR | TYPE_F_REQUIRED,  { 0 } },
+    { "cmd",        TYPE_STR | TYPE_F_REQUIRED, { 0 } },
+    { "ctx",        TYPE_ENUM, { "none", "installed", "available", NULL } },
+    {  NULL,        0, { 0 } }, 
+};
+
 
 static struct tag proxy_tags[] = {
     { "name",       TYPE_STR,  { 0 } },
@@ -113,21 +127,20 @@ static struct tag proxy_tags[] = {
 static struct tag source_tags[] = {
     { "name",        TYPE_STR, { 0 } },
     { "url",         TYPE_STR | TYPE_F_ENV | TYPE_F_REQUIRED, { 0 } },
-    { "path",         TYPE_STR | TYPE_F_ENV | TYPE_F_ALIAS, { 0 } }, /* alias for url */
+    { "path",        TYPE_STR | TYPE_F_ENV | TYPE_F_ALIAS, { 0 } }, /* alias for url */
     { "prefix",      TYPE_STR | TYPE_F_ENV, { 0 } },
     { "pri",         TYPE_STR , { 0 } },
     { "dscr",        TYPE_STR | TYPE_F_ENV, { 0 } },
     { "type",        TYPE_STR , { 0 } },
     { "noauto",      TYPE_BOOL, { 0 } },
     { "noautoup",    TYPE_BOOL, { 0 } },
-    { "unique_package_names", TYPE_BOOL, { 0 } },
-    { "douniq",       TYPE_BOOL, { 0 } },
+    { "douniq",      TYPE_BOOL, { 0 } },
+    { "unique package names", TYPE_BOOL | TYPE_F_ALIAS, { 0 } },
     { "signed",      TYPE_BOOL, { 0 } },
-    { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
-    { "ignore",         TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
+    { "hold",        TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
+    { "ignore",      TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     {  NULL,         0, { 0 } }, 
 };
-
 
 struct section {
     char        *name;
@@ -140,6 +153,7 @@ struct section sections[] = {
     { "source",  source_tags,  1 },
     { "fetcher", fetcher_tags, 1 },
     { "proxy",   proxy_tags,   1 },
+    { "alias",   alias_tags,   1 },
     {  NULL,  NULL, 0 },
 };
 
@@ -484,12 +498,12 @@ static int poldek_conf_postsetup(tn_hash *ht)
     tn_hash *ht_global = NULL;
     int i, j, nerr = 0;
 
-    ht_global = poldek_conf_get_section_ht(ht, "global");
+    ht_global = poldek_conf_get_section_ht(ht, global_tag);
     expand_section_vars(ht_global, NULL);
 
     i = 0;
     while (sections[i].name) {
-        if (strcmp(sections[i].name, "global")  != 0) {
+        if (strcmp(sections[i].name, global_tag)  != 0) {
             tn_array *list = poldek_conf_get_section_arr(ht, sections[i].name);
             if (list)
                 for (j=0; j < n_array_size(list); j++) {
@@ -515,6 +529,15 @@ static int add_param(tn_hash *ht_sect, const char *section,
     const struct tag *tag;
     struct copt *opt;
 
+    if (*name != '_') {          /* user defined macro */
+        char *p = name + 1;
+        while (*p) {                /* backward compat */
+            if (*p == '_')
+                *p = ' ';
+            p++;
+        }
+    }
+    
     
     if ((tag = find_tag(section, name)) == NULL) {
         if (*name == '_')
@@ -532,7 +555,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
     }
     
         
-    msgn(3, "%s::%s = %s", section, name, value);
+    msgn_i(0, 2, "%s::%s = %s", section, name, value);
     
     
     if (tag->flags & TYPE_LIST) 
@@ -577,7 +600,12 @@ static int add_param(tn_hash *ht_sect, const char *section,
     if (opt->val == NULL) {
         opt->val = n_strdup(val);
         //printf("ADD %p %s -> %s\n", ht_sect, name, val);
-            
+
+    } else if (tag->flags & TYPE_MULTI_EXCL) {
+        logn(LOGWARN, _("%s:%d: %s::%s redefined"), path, nline, section, name);
+        free(opt->val);
+        opt->val = n_strdup(val);
+        
     } else if ((tag->flags & TYPE_MULTI) == 0) {
         logn(LOGWARN, _("%s:%d multiple '%s' not allowed"), path, nline, name);
         return 0;
@@ -598,12 +626,14 @@ static int add_param(tn_hash *ht_sect, const char *section,
 
 
 struct afile {
-    struct vfile *vf;
-    char path[0];
+    struct vfile  *vf;
+    char          *sectnam_inc;
+    char          path[0];
 };
 
 static 
-struct afile *afile_new(struct vfile *vf, const char *path)
+struct afile *afile_new(struct vfile *vf, const char *path,
+                        const char *sectnam_inc)
 {
     struct afile *af;
     int len;
@@ -612,35 +642,46 @@ struct afile *afile_new(struct vfile *vf, const char *path)
     af = n_malloc(sizeof(*af) + len);
     
     af->vf = vf;
+    af->sectnam_inc = NULL;
+    if (sectnam_inc)
+        af->sectnam_inc = n_strdup(sectnam_inc);
+        
     memcpy(af->path, path, len);
     return af;
 }
- 
-void afile_free(struct afile *af)
+
+static
+void afile_close(struct afile *af)
 {
     vfile_close(af->vf);
     af->vf = NULL;
+    
+    if (af->sectnam_inc)
+        n_cfree(&af->sectnam_inc);
+    
     *af->path = '\0';
     free(af);
 }
 
-static struct afile *open_afile(tn_array *af_stack, const char *path) 
-{
-    char incpath[PATH_MAX];
-    struct afile *af = NULL;
-    struct vfile *vf;
-    int is_local;
-    
-    if (n_array_size(af_stack))
-        af = n_array_nth(af_stack, n_array_size(af_stack) - 1);
 
+static
+struct afile *afile_open(const char *path, const char *parent_path, 
+                         const char *sectnam_inc, int update)
+{
+    char          incpath[PATH_MAX];
+    const char    *ppath;
+    struct afile  *af = NULL;
+    struct vfile  *vf;
+    int           is_local, vfmode;
+
+    ppath = parent_path;
     is_local = (vf_url_type(path) == VFURL_PATH);
     
-    if (af && is_local && *path != '/' && strrchr(af->path, '/') != NULL) {
+    if (ppath && is_local && *path != '/' && strrchr(ppath, '/') != NULL) {
         char *s;
         int n;
         
-        n = n_snprintf(incpath, sizeof(incpath), "%s", af->path);
+        n = n_snprintf(incpath, sizeof(incpath), "%s", ppath);
         s = strrchr(incpath, '/');
         n_assert(s);
         
@@ -648,98 +689,141 @@ static struct afile *open_afile(tn_array *af_stack, const char *path)
         path = incpath;
     }
 
-    if (af)                     /* included file */
-        msgn_i(0, 2 * (n_array_size(af_stack) - 1), "** %%include %s", path);
+    if (ppath)  /* included file */
+        msgn(0, "-- %s --", path);
+
+    vfmode = VFM_RO | VFM_CACHE | VFM_UNCOMPR | VFM_NOEMPTY;
+    if (update)
+        vfmode |= VFM_NODEL | VFM_CACHE_NODEL;
     
-    if ((vf = vfile_open(path, VFT_TRURLIO, VFM_RO)) == NULL) 
+    if ((vf = vfile_open(path, VFT_TRURLIO, vfmode)) == NULL) 
         return NULL;
 
-    af = afile_new(vf, path);
-    n_array_push(af_stack, af);
+    af = afile_new(vf, path, sectnam_inc);
     return af;
 }
 
-
-static struct afile *close_afile(tn_array *af_stack) 
+static char *include_path(char *line, char **sectnam)
 {
-    struct afile *af;
+    char expanded_val[PATH_MAX], *p;
     
-    if (n_array_size(af_stack)) {
-        af = n_array_pop(af_stack);
-        afile_free(af);
+    *sectnam = NULL;
+    p = line + strlen(include_tag);
+    if (*p == '_') {
+        p++;
+        *sectnam = p;
+        while (!isspace(*p))
+            p++;
+        *p = '\0';
+        p++;
+    }
+    
+    p = eat_wws(p);
+    p = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), p);
+    return p;
+}
+
+static
+tn_hash *open_section_ht(tn_hash *htconf, const struct section *sect, 
+                         const char *sectnam)
+{
+    tn_array *arr_sect;
+    tn_hash  *ht_sect = NULL;
+    
+    arr_sect = n_hash_get(htconf, sectnam);
+    msgn(0, " [%s]", sectnam);
+
+    if (arr_sect) {
+        if (sect && sect->is_multi == 0) {
+            ht_sect = n_array_nth(arr_sect, 0);
+                    
+        } else {
+            ht_sect = n_hash_new(11, (tn_fn_free)copt_free);
+            n_hash_ctl(ht_sect, TN_HASH_NOCPKEY);
+            n_array_push(arr_sect, ht_sect);
+        }
+
+    } else {
+        ht_sect = n_hash_new(11, (tn_fn_free)copt_free);
+        n_hash_ctl(ht_sect, TN_HASH_NOCPKEY);
+        
+        arr_sect = n_array_new(4, (tn_fn_free)n_hash_free, NULL);
+        n_array_push(arr_sect, ht_sect);
+        n_hash_insert(htconf, n_strdup(sectnam), arr_sect);
     }
 
-    af = NULL;
-    if (n_array_size(af_stack))
-        af = n_array_nth(af_stack, n_array_size(af_stack) - 1);
-
-    return af;
+    return ht_sect;
 }
 
-    
-
-tn_hash *poldek_ldconf(const char *path, unsigned flags) 
+static
+tn_hash *do_ldconf(tn_hash *af_htconf,
+                   const char *path, const char *parent_path,
+                   const char *sectnam_inc, unsigned flags)
 {
-    struct   afile *af;
-    tn_array *af_stack;
-    int      nline = 0, is_err = 0;
-    tn_hash  *ht, *ht_sect;
-    tn_array *arr_sect;
-    char     buf[1024], *section, *include = "%include";
-    int      validate = 1;
-
+    struct    afile *af;
+    int       nline = 0, is_err = 0;
+    tn_hash   *ht, *ht_sect;
+    tn_array  *arr_sect;
+    char      buf[1024], *sectnam;
+    int       validate = 1, update = 0;
+    
+    
     if (flags & POLDEK_LDCONF_NOVRFY)
         validate = 0;
 
-    af_stack = n_array_new(4, (tn_fn_free)afile_free, NULL);
-    if ((af = open_afile(af_stack, path)) == NULL) {
-        is_err = 1;
-        goto l_end;
+    if (flags & POLDEK_LDCONF_UPDATE)
+        update = 1;
+
+    if (n_hash_exists(af_htconf, path)) {
+        logn(LOGERR, "%s: included twice", path);
+        return NULL;
     }
+
+    sectnam = (char*)global_tag;
 
     ht = n_hash_new(23, (tn_fn_free)n_array_free);
     arr_sect = n_array_new(4, (tn_fn_free)n_hash_free, NULL);
     
     ht_sect = n_hash_new(11, (tn_fn_free)copt_free);
     n_array_push(arr_sect, ht_sect);
-    section = "global";
+    
+    n_hash_insert(ht, sectnam, arr_sect);
 
-    n_hash_insert(ht, section, arr_sect);
+    af = afile_open(path, parent_path, sectnam_inc, update);
+    if (af == NULL) {
+        is_err = 1;
+        goto l_end;
+    }
 
- l_loop:
+    n_hash_insert(af_htconf, af->path, NULL);
     
     while (n_stream_gets(af->vf->vf_tnstream, buf, sizeof(buf) - 1)) {
-        char *p = buf;
-        char *name, expanded_val[PATH_MAX];
-
+        char *name, *p;
+        
         p = buf;
         while (isspace(*p))
             p++;
-
+        
         if (*p == '#' || *p == '\0') {
             nline++;
             continue;
         }
 
         
-        if (strncmp(p, include, strlen(include)) == 0) {
-            struct afile *tmp;
+        if (strncmp(p, include_tag, strlen(include_tag)) == 0) {
+            tn_hash *inc_ht;
+            char   *inc_sectnam = NULL;
             
-            p += strlen(include);
-            p = eat_wws(p);
-            p = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), p);
-            
-            if (*p == '\0') {
-                logn(LOGERR, _("%s:%d: wrong %%include param"), af->path, nline);
+            p = include_path(p, &inc_sectnam);
+            if (p == NULL || *p == '\0') {
+                logn(LOGERR, _("%s:%d: wrong %%include"), af->path, nline);
                 is_err = 1;
                 goto l_end;
             }
-
             
-            if ((tmp = open_afile(af_stack, p))) {
-                af = tmp;
-                
-            } else {
+            DBGF("open %s %s, i %s\n", p, sectnam, inc_sectnam);
+            inc_ht = do_ldconf(af_htconf, p, af->path, inc_sectnam, update);
+            if (inc_ht == NULL) {
                 is_err = 1;
                 goto l_end;
             }
@@ -747,26 +831,29 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
         }
         
         while (1) {
+            char *q;
             nline++;
-            p = strrchr(buf, '\0'); /* eat trailing ws */
-            n_assert(p);
-            p--;
-            while (isspace(*p))
-                *p-- = '\0';
+            q = strrchr(buf, '\0'); /* eat trailing ws */
+            n_assert(q);
+            q--;
+            while (isspace(*q))
+                *q-- = '\0';
             
-            if (*p != '\\')
+            if (*q != '\\')
                 break;
             
-            *p = '\0';
-            n_stream_gets(af->vf->vf_tnstream, p, sizeof(buf) - (p - buf) - 1);
+            *q = '\0';
+            n_stream_gets(af->vf->vf_tnstream, q, sizeof(buf) - (q - buf) - 1);
         }
-        
-        name = p = buf;
+
+
+        if (*p == '%')
+            continue;
 
         if (*p == '[') {
-            const struct section *sect;
-            tn_array *arr_sect;
-                
+            const struct section *sect = NULL;
+            int  len;
+            
             p++;
             name = p;
             
@@ -781,60 +868,37 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
                 goto l_end;
             }
             
-            arr_sect = n_hash_get(ht, name);
-
-            if (arr_sect) {
-                int len;
-                
-                if (sect->is_multi == 0) {
-                    ht_sect = n_array_nth(arr_sect, 0);
-                    
-                } else {
-                    ht_sect = n_hash_new(11, (tn_fn_free)copt_free);
-                    n_hash_ctl(ht_sect, TN_HASH_NOCPKEY);
-                    n_array_push(arr_sect, ht_sect);
-                }
-
-                len = strlen(name) + 1;
-                section = alloca(len);
-                memcpy(section, name, len);
-                
-            } else {
-                section = n_strdup(name);
-                //printf("section %s\n", section);
+            len = strlen(name) + 1;
+            sectnam = alloca(len);
+            memcpy(sectnam, name, len);
             
-                ht_sect = n_hash_new(11, (tn_fn_free)copt_free);
-                n_hash_ctl(ht_sect, TN_HASH_NOCPKEY);
-                
-                arr_sect = n_array_new(4, (tn_fn_free)n_hash_free, NULL);
-                n_array_push(arr_sect, ht_sect);
-                n_hash_insert(ht, section, arr_sect);
-            }
-            
+            if (af->sectnam_inc == NULL || strcmp(af->sectnam_inc, sectnam) == 0)
+                ht_sect = open_section_ht(ht, sect, sectnam);
+            else
+                ht_sect = NULL;
             continue;
         }
+
+        name = p;
         
-        while (isalnum(*p) || *p == '_' || *p == '-')
+        while (isalnum(*p) || *p == '_' || *p == '-' || isspace(*p))
             p++;
         
-        if (*p != '=' && !isspace(*p)) {
-            logn(LOGERR, _("%s:%d: '%s': invalid value name"), af->path, nline,
-                 name);
-            continue;
-        }
-        
-        while (isspace(*p))
-            *p++ = '\0';
-        
-        if (*p == '=') {
-            *p++ = '\0';
-            while (isspace(*p))
-                p++;
-
-        } else {
+        if (p == name || *p != '=') {
             logn(LOGERR, _("%s:%d: missing '='"), af->path, nline);
-            continue;
+            printf("%s\n", buf);
+            is_err++;
+            goto l_end;
+            
+        } else {
+            char *q = p - 1;
+            while (isspace(*q))
+                *q-- = '\0';
         }
+
+        *p++ = '\0';
+        while (isspace(*p))
+            p++;
 
         if (*p != '\0') {
             char *q = strchr(p, '\0') - 1;
@@ -842,20 +906,27 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
                 *q-- = '\0';
         }
         
-        add_param(ht_sect, section, name, p, validate, af->path, nline);
+        if (ht_sect)
+            add_param(ht_sect, sectnam, name, p, validate, af->path, nline);
+        else
+            msgn(1, "%s: skipped %s::%s", af->path, sectnam, name);
     }
-
-    if ((af = close_afile(af_stack)))
-        goto l_loop;
-
     
-    if (ht)
+
+    msgn(0, "-- %s EOF --", af->path);
+    
+
+    if (ht) {
         if (!poldek_conf_postsetup(ht))
             is_err = 1;
-
+        else 
+            n_hash_replace(af_htconf, af->path, ht);
+    }
+    
+    
  l_end:
-    if (af_stack)
-        n_array_free(af_stack);
+    if (af)
+        afile_close(af);
 
     if (is_err) {
         logn(LOGERR, _("%s: load configuration failed"), path);
@@ -864,6 +935,72 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
     }
     
     return ht;
+}
+
+static void merge_htconf(tn_hash *htconf, tn_hash *ht) 
+{
+    tn_array *keys;
+    int i;
+
+    keys = n_hash_keys(ht);
+
+    for (i=0; i < n_array_size(keys); i++) {
+        char *key = n_array_nth(keys, i);
+        tn_array *arr_sect;
+
+        if (strcmp(key, global_tag) == 0)
+            continue;
+
+        if ((arr_sect = n_hash_get(ht, key))) {
+            if (!n_hash_exists(htconf, key)) {
+                n_hash_insert(htconf, key, n_ref(arr_sect));
+                
+            } else {
+                tn_array *htconf_arr;
+
+                htconf_arr = n_hash_get(htconf, key);
+                while (n_array_size(arr_sect) > 0) 
+                    n_array_push(htconf_arr, n_array_pop(arr_sect));
+            }
+        }
+    }
+    
+    n_array_free(keys);
+}
+
+
+tn_hash *poldek_ldconf(const char *path, unsigned flags) 
+{
+    tn_hash   *af_htconf, *htconf = NULL;
+
+    af_htconf = n_hash_new(23, (tn_fn_free)n_hash_free);
+
+    if (do_ldconf(af_htconf, path, NULL, NULL, flags) != NULL) {
+        tn_array *paths;
+        int i;
+
+        htconf = n_hash_get(af_htconf, path);
+        paths = n_hash_keys(af_htconf);
+
+        for (i=0; i < n_array_size(paths); i++) {
+            char *apath = n_array_nth(paths, i);
+            tn_hash  *ht;
+
+            if (strcmp(path, apath) == 0) /* skip main config */
+                continue;
+
+            if ((ht = n_hash_get(af_htconf, apath)))
+                merge_htconf(htconf, ht);
+        }
+
+        n_array_free(paths);
+    }
+    
+    if (htconf)
+        htconf = n_ref(htconf);
+    
+    n_hash_free(af_htconf);
+    return htconf;
 }
 
 
@@ -952,7 +1089,7 @@ int poldek_conf_get_bool(const tn_hash *htconf, const char *name, int default_v)
         strcasecmp(v, "off") == 0 || strcasecmp(v, "disabled") == 0)
         return 0;
     
-    logn(LOGERR, _("invalid value ('%s') for option '%s'"), v, name);
+    logn(LOGERR, _("invalid value ('%s') of option '%s'"), v, name);
 
     return default_v;
 }

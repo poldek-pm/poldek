@@ -5,8 +5,9 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
-#define POLDEK_LDCONF_NOVRFY (1 << 0)
-
+#define POLDEK_LDCONF_FOREIGN  (1 << 0) /*  */
+#define POLDEK_LDCONF_NOVRFY   POLDEK_LDCONF_FOREIGN /* legacy */
+#define POLDEK_LDCONF_UPDATE   (1 << 1) 
 
 tn_hash *poldek_ldconf(const char *path, unsigned flags);
 tn_hash *poldek_ldconf_default(void);
