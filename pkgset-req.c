@@ -508,6 +508,10 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
     for (i = 0; i < npkgs; i++) {
         struct pkg *spkg = suspkgs[i];
         struct cnflpkg *cnflpkg;
+
+        /* bastard conflicts are direct */
+        if (capreq_is_bastard(cnfl) && pkg_cmp_name(pkg, spkg) != 0)
+            continue;
     
         if (capreq_has_ver(cnfl))  /* check version */
             if (!pkg_match_req(spkg, cnfl, strict)) 
@@ -537,7 +541,6 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
 
             if (cnfl_is_obsl(cnfl))
                 cnflpkg->flags |= CNFLPKG_OB;
-            
             n_array_push(pkg->cnflpkgs, cnflpkg);
             n_array_sort(pkg->cnflpkgs);
         }
