@@ -326,6 +326,7 @@ tn_array *poclidek_cmdarg_dents(struct cmdarg *cmdarg, const char *path,
                                 int exact)
 {
     tn_array *ents = NULL;
+
     
     if (poldek_ts_get_arg_count(cmdarg->ts))
         ents = poclidek_resolve_dents(path, cmdarg->cctx, cmdarg->ts, exact);

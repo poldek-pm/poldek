@@ -24,7 +24,9 @@ void pkgdb_closedb(struct pkgdb *db);
 int pkgdb_reopendb(struct pkgdb *db);
 void pkgdb_free(struct pkgdb *db);
 
-int pkgdb_install(struct pkgdb *db, const char *path, unsigned tsflags);
+struct poldek_ts;
+int pkgdb_install(struct pkgdb *db, const char *path,
+                  const struct poldek_ts *ts);
 
 int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, int strict,
                     tn_array *excloffs);

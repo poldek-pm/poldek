@@ -132,7 +132,7 @@ int mark_to_uninstall(struct dbpkg_set *set, struct pkgdb *db,
         pkg_hand_mark(dbpkg->pkg);
     }
     
-    if (ts->flags & POLDEK_TS_FOLLOW)
+    if (ts->flags & POLDEK_OP_FOLLOW)
         for (i=0; i < n_array_size(set->dbpkgs); i++) {
             struct dbpkg *dbpkg = n_array_nth(set->dbpkgs, i);
             if ((dbpkg->flags & DBPKG_UNIST_NOTFOLLOW) == 0) 
@@ -276,15 +276,15 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
 
     if (nerr)
         doit = 0;
-    
-    if ((ts->flags & POLDEK_TS_TEST) && (ts->flags & POLDEK_TS_RPMTEST) == 0)
+
+    if (ts->getop(ts, POLDEK_OP_TEST) && !ts->getop(ts, POLDEK_OP_RPMTEST))
         doit = 0;
     
     if (pkgs && doit) {
-        int is_test = ts->flags & POLDEK_TS_RPMTEST;
+        int is_test = ts->getop(ts, POLDEK_OP_RPMTEST);
         
         print_uninstall_summary(pkgs, ndep_marked);
-        if (!is_test && (ts->flags & POLDEK_TS_CONFIRM_UNINST) && ts->ask_fn)
+        if (!is_test && ts->getop(ts, POLDEK_OP_CONFIRM_UNINST) && ts->ask_fn)
             doit = ts->ask_fn(0, _("Proceed? [y/N]"));
         
         if (doit) {
@@ -321,11 +321,11 @@ int do_uninstall(tn_array *pkgs, struct poldek_ts *ts)
     
     n = 0;
     
-    if (ts->flags & POLDEK_TS_RPMTEST) {
+    if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
         cmd = "/bin/rpm";
         argv[n++] = "rpm";
         
-    } else if (ts->flags & POLDEK_TS_USESUDO) {
+    } else if (ts->getop(ts, POLDEK_OP_USESUDO)) {
         cmd = "/usr/bin/sudo";
         argv[n++] = "sudo";
         argv[n++] = "/bin/rpm";
@@ -340,18 +340,18 @@ int do_uninstall(tn_array *pkgs, struct poldek_ts *ts)
     for (i=1; i<verbose; i++)
         argv[n++] = "-v";
 
-    if (ts->flags & POLDEK_TS_RPMTEST)
+    if (ts->getop(ts, POLDEK_OP_RPMTEST))
         argv[n++] = "--test";
     
-    if (ts->flags & POLDEK_TS_FORCE)
+    if (ts->getop(ts, POLDEK_OP_FORCE))
         argv[n++] = "--force";
     
-    if (ts->flags & POLDEK_TS_NODEPS)
+    if (ts->getop(ts, POLDEK_OP_NODEPS))
         argv[n++] = "--nodeps";
 
     if (ts->rootdir) {
     	argv[n++] = "--root";
-	argv[n++] = (char*)ts->rootdir;
+        argv[n++] = (char*)ts->rootdir;
     }
 
     if (ts->rpmopts) 

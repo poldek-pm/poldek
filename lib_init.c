@@ -64,6 +64,29 @@ static int get_conf_sources(tn_array *sources, tn_array *srcs_named,
                             tn_hash *htcnf, tn_array *htcnf_sources);
 
 
+static struct {
+    const char *name;
+    int op;
+    int defaultv;
+} default_op_map[] = {
+    { "use_sudo",             POLDEK_OP_USESUDO, 0 },
+    { "confirm_installation", POLDEK_OP_CONFIRM_INST, 0 },
+    { "confirm_removal",      POLDEK_OP_CONFIRM_UNINST, 1 },
+    { "keep_downloads",       POLDEK_OP_KEEP_DOWNLOADS, 0 },
+    { "choose_equivalents_manually", POLDEK_OP_EQPKG_ASKUSER, 0 },
+    { "particle_install",     POLDEK_OP_PARTICLE, 1 },
+    { "follow",               POLDEK_OP_FOLLOW, 1 },
+    { "mercy",                POLDEK_OP_VRFYMERCY, 1 },
+    { "greedy",               POLDEK_OP_GREEDY, 1 },
+    { "allow_duplicates",     POLDEK_OP_ALLOWDUPS, 1 },
+    { "unique_package_names", POLDEK_OP_PS_UNIQN, 0 },
+    { NULL, POLDEK_OP_HOLD, 1 },
+    { NULL, POLDEK_OP_IGNORE, 1 }, 
+    { NULL, 0, 0 }
+};
+
+
+
 static inline void check_if_setup_done(struct poldek_ctx *ctx) 
 {
     if ((ctx->_iflags & SETUP_DONE) == SETUP_DONE)
@@ -501,12 +524,14 @@ static void zlib_in_rpm(struct poldek_ctx *ctx)
 
 int poldek_load_config(struct poldek_ctx *ctx, const char *path)
 {
-    tn_hash   *htcnf = NULL;
-    int       rc = 1;
-    char      *v;
-    tn_array  *list;
-
-    if (ctx->_iflags & SETUP_DONE)
+    struct poldek_ts  *ts;
+    tn_hash           *htcnf = NULL;
+    int               i;
+    char              *v;
+    tn_array          *list;
+    
+        
+    if (poldek_is_setup_done(ctx))
         logn(LOGERR | LOGDIE, "load_config() called after setup()");
     
     if (path != NULL)
@@ -519,57 +544,31 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
 
     ctx->htconf = poldek_cnf;
     htcnf = poldek_conf_get_section_ht(poldek_cnf, "global");
+
+    ts = ctx->ts;
+    i = 0;
+    while (default_op_map[i].name) {
+        int v0 = ts->getop(ts, default_op_map[i].op);
+        if (v0 == default_op_map[i].defaultv) { /* not modified by cmdl opts */
+            int v = poldek_conf_get_bool(htcnf,
+                                         default_op_map[i].name,
+                                         default_op_map[i].defaultv);
+            ts->setop(ts, default_op_map[i].op, v);
+        }
+        i++;
+    }
     
-    if (poldek_conf_get_bool(htcnf, "use_sudo", 0))
-        ctx->ts->flags |= POLDEK_TS_USESUDO;
-
-    if (poldek_conf_get_bool(htcnf, "keep_downloads", 0))
-        ctx->ts->flags |= POLDEK_TS_KEEP_DOWNLOADS;
-    
-    if (poldek_conf_get_bool(htcnf, "confirm_installation", 0))
-        ctx->ts->flags |= POLDEK_TS_CONFIRM_INST;
-    
-    /* backward compat */
-    if (poldek_conf_get_bool(htcnf, "confirm_installs", 0))
-        ctx->ts->flags |= POLDEK_TS_CONFIRM_INST;
-
-    if (poldek_conf_get_bool(htcnf, "confirm_removal", 1))
-        ctx->ts->flags |= POLDEK_TS_CONFIRM_UNINST;
-
-    if (poldek_conf_get_bool(htcnf, "choose_equivalents_manually", 0))
-        ctx->ts->flags |= POLDEK_TS_EQPKG_ASKUSER;
-
-    else if ((ctx->ts->flags & POLDEK_TS_CONFIRM_INST) && verbose < 1)
+    if (ts->getop(ts, POLDEK_OP_CONFIRM_INST) && verbose < 1)
         verbose = 1;
-
-    if (poldek_conf_get_bool(htcnf, "particle_install", 1))
-        ctx->ts->flags |= POLDEK_TS_PARTICLE;
-
-    if (ctx->ts->flags & POLDEK_TS_FOLLOW) { /* no --nofollow specified */
-        if (!poldek_conf_get_bool(htcnf, "follow", 1))
-            ctx->ts->flags &= ~POLDEK_TS_FOLLOW;
+    
+    if (ts->getop(ts, POLDEK_OP_GREEDY)) {
+        int v = poldek_conf_get_bool(htcnf, "aggressive_greedy", 1);
+        ts->setop(ts, POLDEK_OP_AGGREEDY, v);
+        ts->setop(ts, POLDEK_OP_FOLLOW, 1);
     }
-
-    if (ctx->ts->flags & POLDEK_TS_GREEDY) 
-        ctx->ts->flags |= POLDEK_TS_FOLLOW;
-        
-    else if (poldek_conf_get_bool(htcnf, "greedy", 0))
-        ctx->ts->flags |= POLDEK_TS_GREEDY | POLDEK_TS_FOLLOW;
+    
     
 
-    if ((ctx->ts->flags & (POLDEK_TS_GREEDY | POLDEK_TS_FOLLOW)) == POLDEK_TS_GREEDY) {
-        logn(LOGWARN, _("greedy and follow options are inclusive"));
-        ctx->ts->flags |= POLDEK_TS_FOLLOW;
-        rc = 0;
-    }
-        
-    if (poldek_conf_get_bool(htcnf, "mercy", 0))
-        ctx->ts->flags |= POLDEK_TS_VRFYMERCY;
-
-    if ((ctx->ps_setup_flags & PSET_DO_UNIQ_PKGNAME) == 0)
-        if (poldek_conf_get_bool(htcnf, "unique_package_names", 0))
-            ctx->ps_setup_flags |= PSET_DO_UNIQ_PKGNAME;
-    
     register_vf_handlers_compat(htcnf);
     register_vf_handlers(poldek_conf_get_section_arr(poldek_cnf, "fetcher"));
 
@@ -603,6 +602,7 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     
     if (poldek_conf_get_bool(htcnf, "vfile_external_compress", 0))
         vfile_configure(VFILE_CONF_EXTCOMPR, 1);
+    
     else if (poldek_conf_get_bool(htcnf, "auto_zlib_in_rpm", 1))
         zlib_in_rpm(ctx);
 
@@ -783,13 +783,21 @@ static void poldek_vf_vlog_cb(int pri, const char *fmt, va_list ap)
 
 int poldek_init(struct poldek_ctx *ctx, unsigned flags)
 {
-
+    struct poldek_ts *ts;
+    int i;
     flags = flags;
 
     memset(ctx, 0, sizeof(*ctx));
     ctx->sources = n_array_new(4, (tn_fn_free)source_free, (tn_fn_cmp)source_cmp);
     ctx->ps = NULL;
     ctx->ts = poldek_ts_new(NULL);
+    ts = ctx->ts;
+    
+    i = 0;
+    while (default_op_map[i].op) {
+        ts->setop(ts, default_op_map[i].op, default_op_map[i].defaultv);
+        i++;
+    }
     
     ctx->dbpkgdir = NULL;
     ctx->ts_instpkgs = 0;
@@ -858,6 +866,11 @@ int poldek_setup(struct poldek_ctx *ctx)
     poldek_setup_cachedir(ctx);
     poldek_setup_sources(ctx);
     return 1;
+}
+
+int poldek_is_setup_done(struct poldek_ctx *ctx) 
+{
+    return (ctx->_iflags & SETUP_DONE) == SETUP_DONE;
 }
 
 

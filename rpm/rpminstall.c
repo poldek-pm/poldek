@@ -241,11 +241,11 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
     if (!packages_fetch(pkgs, ts->cachedir, 0))
         return 0;
     
-    if (ts->flags & POLDEK_TS_RPMTEST) {
+    if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
         cmd = "/bin/rpm";
         argv[n++] = "rpm";
         
-    } else if (ts->flags & POLDEK_TS_USESUDO) {
+    } else if (ts->getop(ts, POLDEK_OP_USESUDO)) {
         cmd = "/usr/bin/sudo";
         argv[n++] = "sudo";
         argv[n++] = "/bin/rpm";
@@ -255,26 +255,25 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
         argv[n++] = "rpm";
     }
     
-    if (ts->flags & (POLDEK_TS_UPGRADE | POLDEK_TS_REINSTALL | POLDEK_TS_DOWNGRADE))
+    if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE | POLDEK_TS_REINSTALL |
+                         POLDEK_TS_DOWNGRADE))
         argv[n++] = "--upgrade";
         
-    else if (ts->flags & POLDEK_TS_INSTALL)
+    else if (poldek_ts_issetf(ts,POLDEK_TS_INSTALL))
         argv[n++] = "--install";
-        
+             
     else
         die();
-
-    if (ts->flags & POLDEK_TS_REINSTALL) {
-        n_assert(ts->flags & POLDEK_TS_INSTALL);
+    
+    if (poldek_ts_issetf(ts, POLDEK_TS_REINSTALL)) {
         argv[n++] = "--replacefiles";
         argv[n++] = "--replacepkgs";
     }
-
-    if (ts->flags & POLDEK_TS_DOWNGRADE) {
-        n_assert(ts->flags & POLDEK_TS_INSTALL);
+        
+    if (poldek_ts_issetf(ts, POLDEK_TS_DOWNGRADE)) {
         argv[n++] = "--oldpackage";
     }
-
+        
     if (nv > 0) {
         argv[n++] = "-vh";
         nv--;
@@ -286,21 +285,21 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
     while (nv-- > 0) 
         argv[n++] = "-v";
     
-    if (ts->flags & POLDEK_TS_RPMTEST)
+    if (ts->getop(ts, POLDEK_OP_RPMTEST))
         argv[n++] = "--test";
     
-    if (ts->flags & POLDEK_TS_JUSTDB)
+    if (ts->getop(ts, POLDEK_OP_JUSTDB))
         argv[n++] = "--justdb";
         
-    if (ts->flags & POLDEK_TS_FORCE)
+    if (ts->getop(ts, POLDEK_OP_FORCE))
         argv[n++] = "--force";
     
-    if (ts->flags & POLDEK_TS_NODEPS)
+    if (ts->getop(ts, POLDEK_OP_NODEPS))
         argv[n++] = "--nodeps";
 	
     if (ts->rootdir) {
     	argv[n++] = "--root";
-	argv[n++] = (char*)ts->rootdir;
+        argv[n++] = (char*)ts->rootdir;
     }
 
     argv[n++] = "--noorder";    /* packages always ordered by me */
@@ -314,7 +313,7 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
     if (ts->rpmopts) 
         for (i=0; i < n_array_size(ts->rpmopts); i++)
             argv[n++] = n_array_nth(ts->rpmopts, i);
-
+    
     
     nsignerr = 0;
     nopts = n;
@@ -350,7 +349,7 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
     }
 
     if (nsignerr) {
-        if ((ts->flags & (POLDEK_TS_INTERACTIVE_ON)) && ts->ask_fn) {
+        if (poldek_ts_is_interactive_on(ts) && ts->ask_fn) {
             if (!ts->ask_fn(0,
                               _("There were signature verification errors. "
                                 "Proceed? [y/N]")))
@@ -377,8 +376,8 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
     
     ec = rpmr_exec(cmd, argv, 1, 1);
     
-    if (ec == 0 && (ts->flags & POLDEK_TS_RPMTEST) == 0 &&
-        (ts->flags & POLDEK_TS_KEEP_DOWNLOADS) == 0) {
+    if (ec == 0 && !ts->getop(ts, POLDEK_OP_RPMTEST) &&
+        !ts->getop(ts, POLDEK_OP_KEEP_DOWNLOADS)) {
         
         n = nopts;
         for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {

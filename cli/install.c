@@ -213,21 +213,21 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_INST_HOLD:
-            poldek_ts_clrf(ts, POLDEK_TS_NOHOLD);
+            ts->setop(ts, POLDEK_OP_HOLD, 1);
             poldek_configure(ts->ctx, POLDEK_CONF_HOLD, arg);
             break;
             
         case OPT_INST_NOHOLD:
-            poldek_ts_setf(ts, POLDEK_TS_NOHOLD);
+            ts->setop(ts, POLDEK_OP_HOLD, 0);
             break;
             
         case OPT_INST_IGNORE:
-            poldek_ts_clrf(ts->ctx->ts, POLDEK_TS_NOIGNORE);
+            ts->setop(ts->ctx->ts, POLDEK_OP_IGNORE, 1);
             poldek_configure(ts->ctx, POLDEK_CONF_IGNORE, arg);
             break;
 
         case OPT_INST_NOIGNORE:
-            poldek_ts_setf(ts->ctx->ts, POLDEK_TS_NOIGNORE);
+            ts->setop(ts->ctx->ts, POLDEK_OP_IGNORE, 0);
             break;
     
 
@@ -257,35 +257,36 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_INST_NODEPS:
-            poldek_ts_setf(ts, POLDEK_TS_NODEPS);
+            ts->setop(ts, POLDEK_OP_NODEPS, 1);
             break;
             
         case OPT_INST_FORCE:
-            poldek_ts_setf(ts, POLDEK_TS_FORCE);
+            ts->setop(ts, POLDEK_OP_FORCE, 1);
             break;
             
             
         case 't':
-            if (poldek_ts_issetf(ts, POLDEK_TS_TEST))
-                poldek_ts_setf(ts, POLDEK_TS_RPMTEST);
+            if (ts->getop(ts, POLDEK_OP_TEST))
+                ts->setop(ts, POLDEK_OP_RPMTEST, 1);
             else
-                poldek_ts_setf(ts, POLDEK_TS_TEST);
+                ts->setop(ts, POLDEK_OP_TEST, 1);
             break;
             
         case 'F':
-            poldek_ts_setf(ts, POLDEK_TS_FRESHEN);
+            ts->setop(ts, POLDEK_OP_FRESHEN, 1);
             break;
 
         case 'N':
-            poldek_ts_clrf(ts, POLDEK_TS_FOLLOW);
+            ts->setop(ts, POLDEK_OP_FOLLOW, 0);
             break;
 
         case 'G':
-            poldek_ts_setf(ts, POLDEK_TS_GREEDY);
+            ts->setop(ts, POLDEK_OP_GREEDY, 1);
             break;
 
         case 'I':
             poldek_ts_clrf(ts, POLDEK_TS_UPGRADE);
+            poldek_ts_setf(ts, POLDEK_TS_INSTALL);
             break;
 
         case OPT_INST_REINSTALL:
@@ -299,13 +300,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_DUMP:
             if (arg)
                 poldek_ts_configure(ts, POLDEK_CONF_DUMPFILE, arg);
-            poldek_ts_setf(ts, POLDEK_TS_JUSTPRINT);
+            ts->setop(ts, POLDEK_OP_JUSTPRINT, 1);
             break;
 
         case OPT_INST_DUMPN:
             if (arg)
                 poldek_ts_configure(ts, POLDEK_CONF_DUMPFILE, arg);
-            poldek_ts_setf(ts, POLDEK_TS_JUSTPRINT_N);
+            ts->setop(ts, POLDEK_OP_JUSTPRINT_N, 1);
             break;
 
  
@@ -319,7 +320,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 poldek_ts_configure(ts, POLDEK_CONF_FETCHDIR, arg);
             }
 
-            poldek_ts_setf(ts, POLDEK_TS_JUSTFETCH);
+            ts->setop(ts, POLDEK_OP_JUSTFETCH, 1);
             break;
             
         default:
@@ -340,10 +341,10 @@ static int install(struct cmdarg *cmdarg)
     cctx = cmdarg->cctx;
     ts = cmdarg->ts;
     
-    poldek_ts_setf(ts, POLDEK_TS_INSTALL | POLDEK_TS_UPGRADE);
-    is_test = poldek_ts_issetf(ts, POLDEK_TS_TEST | POLDEK_TS_RPMTEST);
+    poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
+    is_test = ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0);
 
-    rc = poldek_ts_do_install(ts, is_test ? NULL : &iinf);
+    rc = poldek_ts_run(ts, is_test ? NULL : &iinf);
     
     if (rc == 0) 
         msgn(1, _("There were errors"));
@@ -389,6 +390,6 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
     if (!poldek_load_sources(rt->ctx))
         return 0;
     
-    rc = poldek_ts_do_install(rt->ts, NULL);
+    rc = poldek_ts_run(rt->ts, NULL);
     return rc ? 0 : OPGROUP_RC_ERROR;
 }

@@ -143,22 +143,22 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_INST_NODEPS:
-            poldek_ts_setf(ts, POLDEK_TS_NODEPS);
+            ts->setop(ts, POLDEK_OP_NODEPS, 1);
             break;
             
         case OPT_INST_FORCE:
-            poldek_ts_setf(ts, POLDEK_TS_FORCE);
+            ts->setop(ts, POLDEK_OP_FORCE, 1);
             break;
 
         case 't':
-            if (poldek_ts_issetf(ts, POLDEK_TS_TEST))
-                poldek_ts_setf(ts, POLDEK_TS_RPMTEST);
+            if (ts->getop(ts, POLDEK_OP_TEST))
+                ts->setop(ts, POLDEK_OP_RPMTEST, 1);
             else
-                poldek_ts_setf(ts, POLDEK_TS_TEST);
+                ts->setop(ts, POLDEK_OP_TEST, 1);
             break;
 
         case 'N':
-            poldek_ts_clrf(ts, POLDEK_TS_FOLLOW);
+            ts->setop(ts, POLDEK_OP_FOLLOW, 0);
             break;
         
         default:
@@ -207,15 +207,16 @@ static int uninstall(struct cmdarg *cmdarg)
             poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
     }
     
-        
-    if (poldek_ts_issetf(ts, POLDEK_TS_TEST | POLDEK_TS_RPMTEST))
+
+    if (ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0))
         iinfp = NULL;
     else
         iinfp = &iinf;
-    
-    if (!poldek_ts_do_uninstall(ts, iinfp))
-        err++;
 
+    poldek_ts_setf(ts, POLDEK_TS_UNINSTALL);
+    if (!poldek_ts_run(ts, iinfp))
+        err++;
+    
     if (iinfp) {
         poclidek_apply_iinf(cmdarg->cctx, iinfp);
         install_info_destroy(iinfp);
@@ -237,6 +238,6 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
     if (!poldek_ts_issetf(rt->ts, POLDEK_TS_UNINSTALL))
         return 0;
 
-    rc = poldek_ts_do_uninstall(rt->ts, NULL);
+    rc = poldek_ts_run(rt->ts, NULL);
     return rc ? 0 : OPGROUP_RC_ERROR;
 }

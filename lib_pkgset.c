@@ -62,10 +62,10 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
         return 0;
     
     
-    if ((ctx->ts->flags & POLDEK_TS_NOHOLD) == 0)
+    if (ctx->ts->getop(ctx->ts, POLDEK_OP_HOLD))
         packages_score(ps->pkgs, ctx->ts->hold_patterns, PKG_HELD);
 
-    if ((ctx->ts->flags & POLDEK_TS_NOIGNORE) == 0)
+    if (ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE))
         packages_score(ps->pkgs, ctx->ts->ign_patterns, PKG_IGNORED);
 
     ctx->pkgdirs = n_ref(ps->pkgdirs);

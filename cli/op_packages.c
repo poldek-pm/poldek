@@ -113,9 +113,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 }
                 
                 if (strcmp(optname, "ignorearch") == 0)
-                    poldek_ts_setf(rt->ts, POLDEK_TS_IGNOREARCH);
+                    rt->ts->setop(rt->ts, POLDEK_OP_IGNOREARCH, 1);
                 else if (strcmp(optname, "ignoreos") == 0)
-                    poldek_ts_setf(rt->ts, POLDEK_TS_IGNOREOS);
+                    rt->ts->setop(rt->ts, POLDEK_OP_IGNOREOS, 1);
                 else
                     poldek_ts_configure(rt->ts, POLDEK_CONF_RPMOPTS, arg);
             }

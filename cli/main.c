@@ -289,11 +289,13 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv)
     if (!poldek_setup_sources(args.ctx))
         exit(EXIT_FAILURE);
 
-    if (args.cnflags & POLDEKCLI_CMN_NOASK) 
-        poldek_ts_setf(args.ctx->ts, POLDEK_TS_INTERACTIVE_ON);
+    if ((args.cnflags & POLDEKCLI_CMN_NOASK) == 0) {
+        args.ctx->ts->setop(args.ctx->ts, POLDEK_OP_CONFIRM_INST, 1);
+        args.ctx->ts->setop(args.ctx->ts, POLDEK_OP_CONFIRM_UNINST, 1);
+        args.ctx->ts->setop(args.ctx->ts, POLDEK_OP_EQPKG_ASKUSER, 1);
+    }
     
-    else if (poldek_ts_issetf(args.ctx->ts, POLDEK_TS_CONFIRM_INST) &&
-             verbose < 1)
+    if (poldek_ts_is_interactive_on(args.ctx->ts) && verbose < 1)
         verbose = 1;
             
 #if 0

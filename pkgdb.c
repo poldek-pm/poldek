@@ -89,22 +89,24 @@ int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, int strict,
 }
 
 
-int pkgdb_install(struct pkgdb *db, const char *path, unsigned tsflags) 
+int pkgdb_install(struct pkgdb *db, const char *path,
+                  const struct poldek_ts *ts) 
 {
     unsigned instflags = 0, filterflags = 0, transflags = 0;
 
     n_assert(db->dbh);
 
-    if (tsflags & POLDEK_TS_NODEPS) 
+    
+    if (ts->getop(ts, POLDEK_OP_NODEPS))
         instflags |= INSTALL_NODEPS;
     
-    if (tsflags & POLDEK_TS_JUSTDB) 
+    if (ts->getop(ts, POLDEK_OP_JUSTDB))
         transflags |= RPMTRANS_FLAG_JUSTDB;
     
-    if (tsflags & POLDEK_TS_TEST) 
+    if (ts->getop(ts, POLDEK_OP_TEST))
         transflags |= RPMTRANS_FLAG_TEST;
     
-    if (tsflags & POLDEK_TS_FORCE) 
+    if (ts->getop(ts, POLDEK_OP_FORCE))
         filterflags |= RPMPROB_FILTER_REPLACEPKG |
             RPMPROB_FILTER_REPLACEOLDFILES |
             RPMPROB_FILTER_REPLACENEWFILES |
