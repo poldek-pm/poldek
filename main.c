@@ -192,7 +192,7 @@ static struct argp_option options[] = {
      "Just dump install marked package filenames to FILE (default stdout)", 70 },
 
 {"dumpn", OPT_INST_POLDEK_MKSCRIPT, "FILE", OPTION_ARG_OPTIONAL,
-     "Just dump install marked package ames to FILE (default stdout)", 70 },
+     "Just dump install marked package names to FILE (default stdout)", 70 },
 
 {"freshen", OPT_INST_FRESHEN, 0, 0, 
      "Upgrade packages, but only if an earlier version currently exists", 70 },
