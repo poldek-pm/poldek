@@ -202,6 +202,33 @@ struct pkg *select_supersede_pkg(const struct pkg *pkg, struct pkgset *ps)
     return bypkg;
 }
 
+static
+int other_version_marked(struct pkg *pkg, tn_array *pkgs)
+{
+    struct pkg *tmp;
+    int i;
+    
+    n_array_sort(pkgs);
+    i = n_array_bsearch_idx_ex(pkgs, pkg, (tn_fn_cmp)pkg_cmp_name); 
+    if (i < 0)
+        return 0;
+
+    DBGF("%s %d\n", pkg_snprintf_s0(pkg), i);
+    for (; i < n_array_size(pkgs); i++) {
+        struct pkg *p = n_array_nth(pkgs, i);
+
+        if (strcmp(p->name, pkg->name) != 0)
+            break;
+        
+        if (p != pkg && pkg_is_marked(p)) {
+            DBGF("%s -> yes, %s\n", pkg_snprintf_s0(pkg), pkg_snprintf_s1(p));
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 
 static
 struct pkg *select_pkg(const char *name, tn_array *pkgs,
@@ -385,7 +412,11 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
                     best_i = select_best_pkg(pkg, matches, nmatches, ps, upg);
                 *best_pkg = matches[best_i];
 
-                if (nmatches > 1 && candidates) {
+                if (other_version_marked(*best_pkg, ps->pkgs)) {
+                    found = 0;
+                    *best_pkg = NULL;
+                    
+                } else if (nmatches > 1 && candidates) {
                     struct pkg **pkgs;
                     int i;
                     
@@ -400,6 +431,7 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
         }
     }
     
+
     return found;
 }
 
@@ -520,7 +552,6 @@ int marked_for_removal(struct pkg *pkg, struct upgrade_s *upg)
     
     return pkg_is_rm_marked(pkg);
 }
-
 
 static
 int dep_mark_package(struct pkg *pkg,
@@ -664,7 +695,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     
     if (db_dep->spkg && !marked_for_removal_by_req(db_dep->spkg, req, upg)) {
         struct pkg *marker;
-
+        
         n_assert(n_array_size(db_dep->pkgs));
         marker = n_array_nth(db_dep->pkgs, 0);
         message_depmark(indent, marker, db_dep->spkg, req, PROCESS_AS_ORPHAN);
