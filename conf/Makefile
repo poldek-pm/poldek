@@ -32,3 +32,5 @@ clean:
 distdir:
 
 install:
+
+maintainer-clean:
