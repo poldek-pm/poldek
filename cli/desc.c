@@ -216,7 +216,7 @@ static void show_caps(struct cmdctx *cmdctx, struct pkg *pkg)
 
 static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
 {
-    int ncol = IDENT, nrpmreqs = 0, nreqs = 0, nprereqs = 0;
+    int ncol = IDENT, nrpmreqs = 0, nreqs = 0, nprereqs = 0, nprereqs_un = 0;
     int term_width;
     int i;
 
@@ -227,15 +227,28 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
 
     for (i=0; i<n_array_size(pkg->reqs); i++) {
         struct capreq *cr = n_array_nth(pkg->reqs, i);
-
+        int is_prereq = 0;
+        
         if (pkg_eq_capreq(pkg, cr))
             continue;
         
-        if (capreq_is_rpmlib(cr))
+        if (capreq_is_rpmlib(cr)) {
             nrpmreqs++;
-        else if (capreq_is_prereq(cr))
+            continue;
+        }
+        
+        if (capreq_is_prereq_un(cr)) {
+            nprereqs_un++;
+            is_prereq = 1;
+        }
+        
+        
+        if (capreq_is_prereq(cr)) {
+            is_prereq = 1;
             nprereqs++;
-        else 
+        }
+        
+        if (is_prereq == 0)
             nreqs++;
     }
 
@@ -289,6 +302,9 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
 
             if (capreq_is_prereq(cr))
                 continue;
+
+            if (capreq_is_prereq_un(cr))
+                continue;
             
             if (++n == nreqs)
                 colon = "";
@@ -302,6 +318,35 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
         }
         cmdctx_printf(cmdctx, "\n");
     }
+
+    if (nprereqs_un) {
+        char *p, *colon = ", ";
+        int n = 0;
+
+        ncol = IDENT;
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Requires(un):");
+        for (i=0; i<n_array_size(pkg->reqs); i++) {
+            struct capreq *cr = n_array_nth(pkg->reqs, i);
+                
+            if (pkg_eq_capreq(pkg, cr))
+                continue;
+
+            if (!capreq_is_prereq_un(cr))
+                continue;
+            
+            if (++n == nprereqs_un)
+                colon = "";
+                
+            p = capreq_snprintf_s(cr);
+            if (ncol + (int)strlen(p) >= term_width) {
+                ncol = SUBIDENT;
+                nlident(ncol);
+            }
+            ncol += cmdctx_printf(cmdctx, "%s%s", p, colon);
+        }
+        cmdctx_printf(cmdctx, "\n");
+    }
+
                 
 
     if (nrpmreqs) {
