@@ -52,7 +52,7 @@ libpoldek_la_SOURCES =  \
 	  lib_pkgset.c          \
 	  poldek_ts.c poldek_ts.h \
 	  poldek_intern.h \
-	  plg_ver_cmp.h 
+	  pkg_ver_cmp.h 
 
 pkgincludedir = $(includedir)/poldek
 nobase_pkginclude_HEADERS = poldek.h poldek_ts.h pkg.h \
