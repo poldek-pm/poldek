@@ -175,12 +175,12 @@ Run poldek in interactive mode. Type "help" after running for available commands
 =over
 
 =item B<-N, --nofollow> 
-
 Don't automatically install packages required by selected ones.
 
-=item B<-F, --freshen> 
+=item B<-F, --fresh> 
 
 Upgrade packages, but only if an earlier version currently installed.
+I<Note> that equivalent of "rpm --freshen" is "poldek --fresh --nofollow"
 
 =item B<--dump[=FILE]> 
 

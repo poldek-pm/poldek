@@ -39,7 +39,7 @@ static struct argp_option options[] = {
 {"mercy", 'm', 0, OPTION_HIDDEN, "Be tolerant for bugs which RPM tolerates", 1},
 {"force", OPT_INST_FORCE, 0, 0, "Be unconcerned", 1 },
 {"test", 't', 0, 0, "Don't install, but tell if it would work or not", 1 },
-{"freshen", 'F', 0, 0, "Upgrade packages, but only if an earlier version "
+{"fresh", 'F', 0, 0, "Upgrade packages, but only if an earlier version "
      "currently exists", 1 },
 
 {"nofollow", 'N', 0, 0, "Don't automatically install packages required by "
@@ -64,11 +64,15 @@ struct command command_install;
 static
 struct command_alias cmd_aliases[] = {
     {
-        "freshen", "install -F",  &command_install,
+        "freshen", "install -FN",  &command_install,
     },
 
     {
-        "just-install", "install -N", &command_install,
+        "upgrade", "install -F",  &command_install,
+    },
+
+    {
+        "just-install", "install -IN", &command_install,
     },
     
     {

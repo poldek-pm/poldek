@@ -367,9 +367,9 @@ int is_installable(struct pkgdb *db, struct pkg *pkg, tn_array *uninst_dbpkgs,
         rc = 0;
         
     } else if (cmprc <= 0 && (inst->instflags & PKGINST_FORCE) == 0) {
-        if ((inst->flags & INSTS_FRESHEN) == 0)
-            msg(0, "%s: %s version installed, skiped\n",
-                pkg_snprintf_s(pkg), cmprc == 0 ? "equal" : "newer");
+//        if ((inst->flags & INSTS_FRESHEN) == 0)
+        log(LOGERR, "%s: %s version installed\n",
+            pkg_snprintf_s(pkg), cmprc == 0 ? "equal" : "newer");
         rc = 0;
         
     } else {
@@ -497,12 +497,10 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                                 n_hash_insert(upg->depcache, reqname, (void*)1);
                             continue;
                             
-                        } else if ((upg->inst->flags & INSTS_FRESHEN) == 0) {
-                            if (upg->inst->flags & INSTS_FOLLOW) {
-                                /* save candidate */
-                                tomark = matches[0];
-                            }
-                        }
+                       } else if (upg->inst->flags & INSTS_FOLLOW) {
+                           /* save candidate */
+                           tomark = matches[0];
+                       }
                     }
                 } 
             
@@ -705,6 +703,8 @@ void process_dependecies(struct pkgset *ps, struct upgrade_s *upg)
         int i, norphans_added = 0;
         
         process_deps(ps, upg->install_pkgs, upg, PROCESS_DEPS);
+        if (upg->nfatal_err)
+            break;
         
         for (i=0; i<n_array_size(upg->install_pkgs); i++) {
             struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
