@@ -890,6 +890,7 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     
     len = n_len + 1 + v_len + 1 +
         r_len + 1 + a_len + 1/* '.' */ + 3/* "rpm" */ + 1;
+
     if (len >= size)
         return NULL;
 
@@ -928,7 +929,10 @@ char *pkg_path(const struct pkg *pkg, char *buf, size_t size)
     if (pkg->pkgdir->path) 
         n = snprintf(buf, size, "%s/", pkg->pkgdir->path);
 
-    return pkg_filename(pkg, buf + n, size - n);
+    if (pkg_filename(pkg, buf + n, size - n) == NULL)
+        buf = NULL;
+    
+    return buf;
 }
 
 
