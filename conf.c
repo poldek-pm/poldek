@@ -28,7 +28,9 @@
 #include <trurl/n_snprintf.h>
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
+#include <trurl/nstream.h>
 
+#include <vfile/vfile.h>
 #include "i18n.h"
 #include "log.h"
 #include "conf.h"
@@ -319,7 +321,7 @@ const char *expand_vars(char *dest, int size, const char *str,
 
         vv = v;
         v_len = 0;
-        while (isalnum(*vv)) {
+        while (isalnum(*vv) || *vv == '_' || *vv == '-') {
             vv++;
             v_len++;
         }
@@ -331,7 +333,7 @@ const char *expand_vars(char *dest, int size, const char *str,
             return str;
         
         n_snprintf(val, v_len + 1, v);
-        DBGF("var %s\n", val);
+        DBGF("var (%s)\n", val);
         
         if ((var = poldek_conf_get(ht, val, NULL)) == NULL) {
             n += n_snprintf(&dest[n], size - n, "%%%s", p);
@@ -446,10 +448,184 @@ static void poldek_conf_expand_vars(tn_hash *ht)
     }
 }
 
+
+static int add_param(tn_hash *ht_sect, const char *section,
+                     char *name, char *value,
+                     int validate, 
+                     const char *path, int nline)
+{
+    char *val, expanded_val[PATH_MAX];
+    const struct tag *tag;
+    struct copt *opt;
+
+    
+    if ((tag = find_tag(section, name)) == NULL) {
+        if (*name == '_')
+            validate = 0;
+        
+        if (!validate) {
+            unknown_tag.name = name;
+            tag = &unknown_tag;
+                
+        } else {
+            logn(LOGWARN, _("%s:%d unknown option '%s::%s'"), path, nline,
+                 section, name);
+            return 0;
+        }
+    }
+    
+        
+    msgn(3, "%s::%s = %s", section, name, value);
+    
+    
+    if (tag->flags & TYPE_LIST) 
+        return getvlist(ht_sect, name, value, path, nline);
+        
+    val = getv(value, path, nline);
+    //printf("Aname = %s, v = %s\n", name, val);
+    
+    if (val == NULL) {
+        logn(LOGERR, _("%s:%d: invalid value of '%s::%s'"), path, nline,
+             section, name);
+        return 0;
+    }
+
+    if ((tag->flags & TYPE_ENUM)) {
+        int n = 0, valid = 0;
+        while (tag->enums[n]) {
+            if (strcmp(tag->enums[n++], val) == 0) {
+                valid = 1;
+                break;
+            }
+        }
+
+        if (!valid) {
+            logn(LOGWARN, _("%s:%d invalid value '%s' of '%s::%s'"),
+                 path, nline, val, section, name);
+            return 0;
+        }
+    }
+    
+    if (n_hash_exists(ht_sect, name)) {
+        opt = n_hash_get(ht_sect, name);
+            
+    } else {
+        opt = copt_new(name);
+        n_hash_insert(ht_sect, opt->name, opt);
+    }
+
+    if (tag->flags & TYPE_W_ENV)
+        val = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), val);
+    
+    if (opt->val == NULL) {
+        opt->val = n_strdup(val);
+        //printf("ADD %p %s -> %s\n", ht_sect, name, val);
+            
+    } else if ((tag->flags & TYPE_MULTI) == 0) {
+        logn(LOGWARN, _("%s:%d multiple '%s' not allowed"), path, nline, name);
+        return 0;
+            
+    } else if (opt->vals != NULL) {
+        n_array_push(opt->vals, n_strdup(val));
+            
+    } else if (opt->vals == NULL) {
+        opt->vals = n_array_new(2, free, (tn_fn_cmp)strcmp);
+        /* put ALL opts to opt->vals */
+        n_array_push(opt->vals, n_strdup(opt->val)); 
+        n_array_push(opt->vals, n_strdup(val));
+        opt->flags |= COPT_MULTIPLE;
+    }
+
+    return 1;
+}
+
+
+struct afile {
+    struct vfile *vf;
+    char path[0];
+};
+
+static 
+struct afile *afile_new(struct vfile *vf, const char *path)
+{
+    struct afile *af;
+    int len;
+    
+    len  = strlen(path) + 1;
+    af = n_malloc(sizeof(*af) + len);
+    
+    af->vf = vf;
+    memcpy(af->path, path, len);
+    return af;
+}
+ 
+void afile_free(struct afile *af)
+{
+    vfile_close(af->vf);
+    af->vf = NULL;
+    *af->path = '\0';
+    free(af);
+}
+
+static struct afile *open_afile(tn_array *af_stack, const char *path) 
+{
+    char incpath[PATH_MAX];
+    struct afile *af = NULL;
+    struct vfile *vf;
+    int is_local;
+    
+    if (n_array_size(af_stack))
+        af = n_array_nth(af_stack, n_array_size(af_stack) - 1);
+
+    is_local = (vf_url_type(path) == VFURL_PATH);
+    
+    if (af && is_local && *path != '/' && strrchr(af->path, '/') != NULL) {
+        char *s;
+        int n;
+        
+        n = n_snprintf(incpath, sizeof(incpath), "%s", af->path);
+        s = strrchr(incpath, '/');
+        n_assert(s);
+        
+        n_snprintf(s + 1, sizeof(incpath) - n, "%s", path);
+        path = incpath;
+    }
+
+    if (af)                     /* included file */
+        msgn_i(0, 2 * (n_array_size(af_stack) - 1), "** %%include %s", path);
+    
+    if ((vf = vfile_open(path, VFT_TRURLIO, VFM_RO)) == NULL) 
+        return NULL;
+
+    af = afile_new(vf, path);
+    n_array_push(af_stack, af);
+    return af;
+}
+
+
+static struct afile *close_afile(tn_array *af_stack) 
+{
+    struct afile *af;
+    
+    if (n_array_size(af_stack)) {
+        af = n_array_pop(af_stack);
+        afile_free(af);
+    }
+
+    af = NULL;
+    if (n_array_size(af_stack))
+        af = n_array_nth(af_stack, n_array_size(af_stack) - 1);
+
+    return af;
+}
+
+    
+
 tn_hash *poldek_ldconf(const char *path, unsigned flags) 
 {
-    FILE     *stream, *main_stream;
-    int      nline = 0;
+    struct   afile *af;
+    tn_array *af_stack;
+    int      nline = 0, is_err = 0;
     tn_hash  *ht, *ht_sect;
     tn_array *arr_sect;
     char     buf[1024], *section, *include = "%include";
@@ -457,12 +633,12 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
 
     if (flags & POLDEK_LDCONF_NOVRFY)
         validate = 0;
-    
-    if ((stream = fopen(path, "r")) == NULL) {
-        logn(LOGERR, "fopen %s: %m", path);
-        return NULL;
+
+    af_stack = n_array_new(4, (tn_fn_free)afile_free, NULL);
+    if ((af = open_afile(af_stack, path)) == NULL) {
+        is_err = 1;
+        goto l_end;
     }
-    main_stream = NULL;
 
     ht = n_hash_new(23, (tn_fn_free)n_array_free);
     arr_sect = n_array_new(4, (tn_fn_free)n_hash_free, NULL);
@@ -475,13 +651,10 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
 
  l_loop:
     
-    while (fgets(buf, sizeof(buf) - 1, stream)) {
+    while (n_stream_gets(af->vf->vf_tnstream, buf, sizeof(buf) - 1)) {
         char *p = buf;
-        char *name, *val, expanded_val[PATH_MAX];
-        struct copt *opt;
-        const struct tag *tag;
+        char *name, expanded_val[PATH_MAX];
 
-        
         p = buf;
         while (isspace(*p))
             p++;
@@ -493,23 +666,29 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
 
         
         if (strncmp(p, include, strlen(include)) == 0) {
-            FILE *st;
+            struct afile *tmp;
             
             p += strlen(include);
             p = eat_wws(p);
             p = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), p);
             
-            if ((st = fopen(p, "r")) == NULL) {
-                logn(LOGERR, "fopen %s: %m", p);
-                return NULL;
+            if (*p == '\0') {
+                logn(LOGERR, _("%s:%d: wrong %%include param"), af->path, nline);
+                is_err = 1;
+                goto l_end;
             }
+
             
-            main_stream = stream;
-            stream = st;
+            if ((tmp = open_afile(af_stack, p))) {
+                af = tmp;
+                
+            } else {
+                is_err = 1;
+                goto l_end;
+            }
             continue;
         }
         
-
         while (1) {
             nline++;
             p = strrchr(buf, '\0'); /* eat trailing ws */
@@ -522,7 +701,7 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
                 break;
             
             *p = '\0';
-            fgets(p, sizeof(buf) - (p - buf) - 1, stream);
+            n_stream_gets(af->vf->vf_tnstream, p, sizeof(buf) - (p - buf) - 1);
         }
         
         name = p = buf;
@@ -538,14 +717,13 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
                 p++;
             *p = '\0';
 
-            
             if (validate && (sect = find_section(name)) == NULL) {
                 logn(LOGERR, _("%s:%d: '%s': invalid section name"),
-                     path, nline, name);
-                
-                return NULL;
+                     af->path, nline, name);
+                is_err++;
+                goto l_end;
             }
-
+            
             arr_sect = n_hash_get(ht, name);
 
             if (arr_sect) {
@@ -566,7 +744,7 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
                 
             } else {
                 section = n_strdup(name);
-	         //printf("section %s\n", section);
+                //printf("section %s\n", section);
             
                 ht_sect = n_hash_new(11, (tn_fn_free)copt_free);
                 n_hash_ctl(ht_sect, TN_HASH_NOCPKEY);
@@ -583,7 +761,7 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
             p++;
         
         if (*p != '=' && !isspace(*p)) {
-            logn(LOGERR, _("%s:%d: '%s': invalid value name"), path, nline,
+            logn(LOGERR, _("%s:%d: '%s': invalid value name"), af->path, nline,
                  name);
             continue;
         }
@@ -597,7 +775,7 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
                 p++;
 
         } else {
-            logn(LOGERR, _("%s:%d: missing '='"), path, nline);
+            logn(LOGERR, _("%s:%d: missing '='"), af->path, nline);
             continue;
         }
 
@@ -606,92 +784,26 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
             while (isspace(*q))
                 *q-- = '\0';
         }
-
-        if ((tag = find_tag(section, name)) == NULL) {
-            if (!validate) {
-                unknown_tag.name = name;
-                tag = &unknown_tag;
-                
-            } else {
-                logn(LOGWARN, _("%s:%d unknown option '%s:%s'"), path, nline,
-                     section, name);
-                
-                continue;
-            }
-        }
         
-        //printf("name = %s, v = %s\n", name, p);
-        
-
-        if (tag->flags & TYPE_LIST) {
-            getvlist(ht_sect, name, p, path, nline);
-            continue;
-        }
-        
-        val = getv(p, path, nline);
-        //printf("Aname = %s, v = %s\n", name, val);
-        if (val == NULL) {
-            logn(LOGERR, _("%s:%d: no value for '%s'"), path, nline, name);
-            continue;
-        }
-
-        if ((tag->flags & TYPE_ENUM)) {
-            int n = 0, valid = 0;
-            while (tag->enums[n]) {
-                if (strcmp(tag->enums[n++], val) == 0) {
-                    valid = 1;
-                    break;
-                }
-            }
-
-            if (!valid) {
-                logn(LOGWARN, _("%s:%d invalid value '%s' of option '%s'"),
-                    path, nline, val, name);
-                continue;
-            }
-            
-        }
-        
-        if (n_hash_exists(ht_sect, name)) {
-            opt = n_hash_get(ht_sect, name);
-            
-        } else {
-            opt = copt_new(name);
-            n_hash_insert(ht_sect, opt->name, opt);
-        }
-
-        if (tag->flags & TYPE_W_ENV)
-            val = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), val);
-
-        if (opt->val == NULL) {
-            opt->val = n_strdup(val);
-            //printf("ADD %p %s -> %s\n", ht_sect, name, val);
-            
-        } else if ((tag->flags & TYPE_MULTI) == 0) {
-            logn(LOGWARN, _("%s:%d multiple '%s' not allowed"), path, nline, name);
-            exit(0);
-            
-        } else if (opt->vals != NULL) {
-            n_array_push(opt->vals, n_strdup(val));
-            
-        } else if (opt->vals == NULL) {
-            opt->vals = n_array_new(2, free, (tn_fn_cmp)strcmp);
-            /* put ALL opts to opt->vals */
-            n_array_push(opt->vals, n_strdup(opt->val)); 
-            n_array_push(opt->vals, n_strdup(val));
-            opt->flags |= COPT_MULTIPLE;
-        }
+        add_param(ht_sect, section, name, p, validate, af->path, nline);
     }
 
-    if (main_stream) {
-        fclose(stream);
-        stream = main_stream;
-        main_stream = NULL;
+    if ((af = close_afile(af_stack)))
         goto l_loop;
-    }
 
+    
     if (ht)
         poldek_conf_expand_vars(ht);
+
+ l_end:
+    if (af_stack)
+        n_array_free(af_stack);
+
+    if (is_err) {
+        logn(LOGERR, _("%s: load configuration failed"), path);
+        n_hash_free(ht);
+        ht = NULL;
+    }
     
     return ht;
 }
