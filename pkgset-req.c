@@ -258,12 +258,14 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
             *npkgs = 0;
             *suspkgs = NULL;
         }
-        
-        if ((cap = n_array_bsearch(ps->rpmcaps, req)))
-            if (cap_match_req(cap, req, 1)) {
-                matched = 1;
-                msg(4, " req %-35s --> RPMLIB_CAP\n", capreq_snprintf_s(req));
-            }
+
+        if (!(ps->flags & (PSMODE_VERIFY | PSMODE_MKIDX))) {
+            if ((cap = n_array_bsearch(ps->rpmcaps, req)))
+                if (cap_match_req(cap, req, 1)) {
+                    matched = 1;
+                    msg(4, " req %-35s --> RPMLIB_CAP\n", capreq_snprintf_s(req));
+                }
+        }
     }
     
     return matched;
