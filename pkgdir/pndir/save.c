@@ -555,7 +555,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 
     db_dscr_h = n_hash_new(21, (tn_fn_free)db_dscr_free);
     keys = n_array_new(n_array_size(pkgdir->pkgs), free, (tn_fn_cmp)strcmp);
-    nbuf = n_buf_new(1024 * 8);
+    nbuf = n_buf_new(1024 * 256);
 
     pkg_st_flags = flags;
     pkg_st_flags |= PKGSTORE_NOEVR | PKGSTORE_NOARCH |
@@ -581,9 +581,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         if (pkg_store(pkg, nbuf, pkgdir->depdirs, pkg_st_flags))
             tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
 
-        if (i % 100 == 0)
+        if (i % 1000 == 0)
             mem_info(-1, "pndir_save");
-        continue;
         
         if (save_descr && (pkgu = pkg_info(pkg))) {
             tn_array *langs = pkguinf_langs(pkgu);
@@ -688,6 +687,9 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         difftoc_update(pkgdir, &paths);
 	
  l_end:
+    if (nbuf)
+        n_buf_free(nbuf);
+    
     if (keys) 
         n_array_free(keys);
 
