@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2001 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@pld.org.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -342,7 +346,6 @@ static int search_pkg_files(struct pkg *pkg, struct pattern *pt)
     void      *flmark;
     int       match = 0;
 
-    
 
     if (pkg->fl && fl_match(pkg->fl, pt))
         return 1;
@@ -408,16 +411,19 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
             
         } else {
             if (flags & OPT_SEARCH_SUMM) {
-                match = pattern_match(pt, pkgu->summary, strlen(pkgu->summary));
-                if (!match) 
+                if (pkgu->summary != NULL)
+                    match = pattern_match(pt, pkgu->summary, strlen(pkgu->summary));
+                
+                if (!match && pkgu->license != NULL) 
                     match = pattern_match(pt, pkgu->license, strlen(pkgu->license));
                 
-                if (!match && pkgu->url)
+                if (!match && pkgu->url != NULL)
                     match = pattern_match(pt, pkgu->url, strlen(pkgu->url));
             }
             
-            if (!match && ((flags & OPT_SEARCH_DESC) && pkgu->description)) 
-                match = pattern_match(pt, pkgu->description, strlen(pkgu->description));
+            if (!match && ((flags & OPT_SEARCH_DESC) && pkgu->description))
+                match = pattern_match(pt, pkgu->description,
+                                      strlen(pkgu->description));
             
             pkguinf_free(pkgu);
         }
