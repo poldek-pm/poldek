@@ -35,7 +35,7 @@
 # define IPPORT_HTTP 80
 #endif
 
-#define TIMEOUT     60         /* 5 min. */
+#define TIMEOUT     40
 
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
