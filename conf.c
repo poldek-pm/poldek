@@ -21,6 +21,7 @@
 #include <trurl/nhash.h>
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
+#include <trurl/nassert.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -123,6 +124,7 @@ int getvlist(tn_hash *ht, char *name, char *vstr, const char *path, int nline)
     
     while (*p) {
         if (opt->val == NULL) {
+            //printf("Lname = %s, v = %s\n", name, *p);
             opt->val = strdup(*p);
         } else {
             if (n_array_size(opt->vals) == 0) {
@@ -130,6 +132,7 @@ int getvlist(tn_hash *ht, char *name, char *vstr, const char *path, int nline)
                 n_array_push(opt->vals, strdup(opt->val)); 
             }
             n_array_push(opt->vals, strdup(*p));
+            //printf("Lname = %s, v = %s\n", name, *p);
         }
         p++;
     }
@@ -139,7 +142,6 @@ int getvlist(tn_hash *ht, char *name, char *vstr, const char *path, int nline)
 
 static char *getv(char *vstr, const char *path, int nline) 
 {
-    int quoted = 0;
     char *p, *q;
     
     p = vstr;
@@ -147,36 +149,22 @@ static char *getv(char *vstr, const char *path, int nline)
         p++;
     
     if (*p == '"') {
-        quoted = 1;
         p++;
-    }
-    
-    if (!quoted) {
-        q = p;
-        while (!isspace(*q) && *q)
-            q++;
-        *q = '\0';
         
-    } else {
-        q = p;
-        while (*q != '"' && *q)
-            q++;
+        q = strchr(p, '\0');
+        q--;
+        while (isspace(*q))
+            q--;
         
-        if (*q == '\0') {
+        if (*q != '"') {
             logn(LOGERR, _("%s:%d: missing '\"'"), path, nline);
             p = NULL;
         }
         
         *q = '\0';
-        q++;
-        while (*q) {
-            if (!isspace(*q)) {
-                logn(LOGERR, _("%s:%d: syntax error"), path, nline);
-                p = NULL;
-                break;
-            }
-            q++;
-        }
+        if (p == q)
+            p = NULL;
+        
     }
     
     return p;
@@ -238,13 +226,20 @@ tn_hash *ldconf(const char *path)
         char *name, *val;
         struct copt *opt;
         const struct tag *tag;
-        
+
         
         nline++;
+        
+        p = strrchr(buf, '\0'); /* eat trailing ws */
+        n_assert(p);
+        while (isspace(*p))
+            *p-- = '\0';
+
+        p = buf;
         while (isspace(*p))
             p++;
 
-        if (*p == '#' || *p == '\n' || *p == '\0')
+        if (*p == '#' || *p == '\0')
             continue;
         
         name = p;
@@ -264,6 +259,7 @@ tn_hash *ldconf(const char *path)
             *p++ = '\0';
             while (isspace(*p))
                 p++;
+
         } else {
             logn(LOGERR, _("%s:%d: missing '='"), path, nline);
             continue;
@@ -280,12 +276,16 @@ tn_hash *ldconf(const char *path)
             continue;
         }
 
+        //printf("name = %s, v = %s\n", name, p);
+        
+
         if (tag->flags & TYPE_LIST) {
             getvlist(ht, name, p, path, nline);
             continue;
         }
         
         val = getv(p, path, nline);
+        //printf("Aname = %s, v = %s\n", name, val);
         if (val == NULL) {
             logn(LOGERR, _("%s:%d: no value for '%s'"), path, nline, name);
             continue;

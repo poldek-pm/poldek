@@ -1,16 +1,16 @@
 # $Id$
 # Sample poldek configuration
 
-source = pld;ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
-#source = mysrc;ftp://ftp.znienacka.com.pl/RPMS/
+source = [pld] ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
+#source = [mysrc] ftp://ftp.znienacka.com.pl/RPMS/
 #source = http://www.znienacka.com.pl/RPMS/
 #source = rsync://rsync.znienacka.com.pl/PLD/packages.dir
-#source = pld686;rsync://ftp.pld.org.pl/PLD-1.0/i686/PLD/
+#source = [pld686] rsync://ftp.pld.org.pl/PLD-1.0/i686/PLD/
 
 
 # If package index and packages stored under diffrent locations, 
-# then source and packages prefix must be numbered 
-#source1 = /tmp/packages.dir
+# then source and packages prefix must be numbered
+#source1 = /tmp/packages.dir.gz
 #prefix1 = /cdrom/RPMS
  
 
@@ -26,11 +26,11 @@ source = pld;ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
 #   %P[n] - package full path(URL)
 # 
 
-#ftp_get       = "/usr/bin/snarf %P %D"
-#http_get      = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
-#https_get     = "/usr/bin/curl %P -o %D"
-#rsync_get     = "/usr/bin/rsync -v %P %d"
-#cdrom_get     = "/usr/bin/vfjuggle %d %Pn"
+#ftp_get       = /usr/bin/snarf %P %D
+#http_get      = /usr/bin/wget -N --dot-style=binary -P %d %Pn
+#https_get     = /usr/bin/curl %P -o %D
+#rsync_get     = /usr/bin/rsync -v %P %d
+#cdrom_get     = /usr/bin/vfjuggle %d %Pn
 
 # permits using root privs for installation only 
 use_sudo  = yes
@@ -57,10 +57,10 @@ mercy = yes
 #keep_downloads = yes
 
 # Some rpm macros
-#rpmdef        = "_install_langs pl:pl_PL:lt:lt_LT"
+#rpmdef        = _install_langs pl:pl_PL:lt:lt_LT
 
 # don't install any documentation
-#rpmdef        = "_netsharedpath /usr/share/info:/usr/share/man"
-#rpmdef	      = "_excludedocs 1"
+#rpmdef        = _netsharedpath /usr/share/info:/usr/share/man
+#rpmdef	       = _excludedocs 1
 
 

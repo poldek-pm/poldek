@@ -2,10 +2,9 @@
 # Sample configuration for PLD  
 # 
 
-source = pld;ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
-#source = pld-test;ftp://ftp.pld.org.pl/dists/ra/test/i686/
-#source = zenek;/home/zenek/rpm/RPMS/
-
+source = [pld] ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
+#source = [pld-test] ftp://ftp.pld.org.pl/dists/ra/test/i686/
+#source = /home/zenek/rpm/RPMS/
 
 # NOTE: directory *must* exists; default $HOME/.poldek-cache
 #cachedir = /var/tmp/poldek
@@ -17,8 +16,8 @@ source = pld;ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
 #   %D - cache dir/package basename
 #   %P[n] - package full path(URL)
 
-#ftp_http_get   = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
-#rsync_get      = "/usr/bin/rsync %P %d"
+#ftp_http_get   = /usr/bin/wget -N --dot-style=binary -P %d %Pn
+#rsync_get      = /usr/bin/rsync %P %d
 
 
 # permits using root privs for installation only 
@@ -40,8 +39,8 @@ source = pld;ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
 #keep_downloads = yes
 
 # Some rpm macros
-#rpmdef        = "_install_langs pl:pl_PL:lt:lt_LT"
+#rpmdef        = _install_langs pl:pl_PL:lt:lt_LT
 
 # don't install any documentation
-#rpmdef        = "_netsharedpath /usr/share/info:/usr/share/man"
-#rpmdef	      = "_excludedocs 1"
+#rpmdef        = _netsharedpath /usr/share/info:/usr/share/man
+#rpmdef	       = _excludedocs 1
