@@ -26,6 +26,11 @@ AC_DEFINE_UNQUOTED([PACKAGE_VERSION_FUNCNAME],
 AC_DEFINE_UNQUOTED([PACKAGE_SERIES_FUNCNAME],
                    ${PACKAGE}_version_series_${PACKAGE_VERSION_SERIES},  
                     [ series function name ])
+
+if test "X${VERSION_STATUS}" = "Xdevel"; then  
+    AC_DEFINE([DEVEL], 1, [ am I development release?  ])
+fi
+
 AC_SUBST(VERSION_CVSTAG)
 #AC_CONFIG_HEADERS([config.h])
 AM_CONFIG_HEADER([config.h])

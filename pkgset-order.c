@@ -228,8 +228,10 @@ int packages_order(tn_array *pkgs, tn_array **ordered_pkgs)
 {
     tn_array *ordered = NULL;
     int nloops, verbose;
-    
-    n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_pri);
+
+    /* assuming that pkgs are presorted by pkg_cmp_pri_name_evr_rev */
+    n_assert(n_array_ctl_get_cmpfn(pkgs) == pkg_cmp_name_evr_rev);
+    n_array_isort_ex(pkgs, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
     
     verbose = poldek_set_verbose(-10);
     do_order(pkgs, &ordered, 0);
@@ -239,7 +241,7 @@ int packages_order(tn_array *pkgs, tn_array **ordered_pkgs)
     nloops = do_order(ordered, ordered_pkgs, 1);
     
     n_array_free(ordered);
-    n_array_sort(pkgs);
+    n_array_isort(pkgs);
     
     return nloops;
 }

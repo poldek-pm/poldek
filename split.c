@@ -74,7 +74,7 @@ static void chunk_dump(struct chunk *chunk, FILE *stream)
     int i;
 
     if (poldek_VERBOSE > 1) {
-        n_array_sort_ex(chunk->pkgs, (tn_fn_cmp)pkg_cmp_pri);
+        n_array_sort_ex(chunk->pkgs, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
         for (i=0; i < n_array_size(chunk->pkgs); i++) {
             struct pkg *pkg = n_array_nth(chunk->pkgs, i);
             msgn(2, "[#%d] [%d] %s", chunk->no, pkg->pri, pkg_snprintf_s(pkg));
@@ -364,7 +364,7 @@ int make_chunks(tn_array *pkgs, unsigned split_size, unsigned first_free_space,
         
         
         chunk = n_array_nth(chunks, i);
-        n_array_sort_ex(chunk->pkgs, (tn_fn_cmp)pkg_cmp_pri);
+        n_array_sort_ex(chunk->pkgs, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
 
         pkg = n_array_nth(chunk->pkgs, 0);
         pri_min = pkg->pri;
@@ -442,7 +442,7 @@ int packages_split(const tn_array *pkgs, unsigned split_size,
 
     
     packages = n_array_dup(pkgs, (tn_fn_dup)pkg_link);
-    n_array_ctl_set_cmpfn(packages, (tn_fn_cmp)pkg_cmp_pri);
+    n_array_ctl_set_cmpfn(packages, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
     n_array_sort(packages);
 
     msg(2, "\nPackages ordered by priority:\n");

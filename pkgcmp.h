@@ -33,7 +33,7 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_evr_arch_rev_srcpri(const struct pkg *p1, const struct pkg *p2);
 
 /* compares pri, then name_evr_rev() */
-int pkg_cmp_pri(struct pkg *p1, struct pkg *p2);
+int pkg_cmp_pri_name_evr_rev(struct pkg *p1, struct pkg *p2);
 
 /* compares recno only */
 int pkg_cmp_recno(const struct pkg *p1, const struct pkg *p2);
