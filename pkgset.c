@@ -531,9 +531,12 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
     
     switch (tag) {
         case PS_SEARCH_RECNO:
+            if (value) {
+                logn(LOGERR, "SEARCH_RECNO is not implemented");
+                return NULL;
+            }
+            
             n_assert(value == NULL); /* not implemented */
-            //recno = *((int32_t*)value);
-            //n_array_push(pkgs, pkg_link(n_array_nth(ps->pkgs, recno)));
             n_array_free(pkgs);
             pkgs = n_array_dup(ps->pkgs, (tn_fn_dup)pkg_link);
             n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);

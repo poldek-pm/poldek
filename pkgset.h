@@ -32,7 +32,6 @@ struct pkgset {
     struct capreq_idx  obs_idx;    /*  -"-               */
     struct capreq_idx  cnfl_idx;    /*  -"-               */
     struct file_index  file_idx;   /* 'file'  => *pkg[]  */
-    int                _recno;
 };
 
 int packages_order(tn_array *pkgs, tn_array **ordered_pkgs);
