@@ -30,10 +30,12 @@ AC_CHECK_PROG(POD2MAN, pod2man, pod2man)
 
 dnl Process features.
 AC_CHECK_LIB(tinfo, tigetstr,,[
-	AC_CHECK_LIB(ncurses, tigetstr, ,[ AC_MSG_ERROR(["tinfo nor ncurses not found"])])])
+	AC_CHECK_LIB(ncurses, tigetstr, ,[ 
+		AC_MSG_ERROR(["tinfo nor ncurses not found"]) ]) ])
 
-AC_CHECK_HEADERS(ncurses/curses.h,[ CPPFLAGS="-I/usr/include/ncurses $CPPFLAGS"],[ 
-		 AC_CHECK_HEADERS(curses.h,, [AC_MSG_ERROR(["curses.h not found"])], )], )
+AC_CHECK_HEADERS(ncurses/curses.h,
+	[ CPPFLAGS="-I/usr/include/ncurses $CPPFLAGS" ],
+	[ AC_CHECK_HEADERS(curses.h,, [AC_MSG_ERROR(["curses.h not found"])],) ])
 
 AC_ARG_ENABLE(imode,
 [  --disable-imode               turn off interactive mode],
@@ -248,7 +250,8 @@ fi
 AC_CHECK_LIB(popt, poptReadConfigFile)
 
 if test ${is_rpm4_0_4}. = yes. ; then	
-	AC_CHECK_LIB(beecrypt, dhaes_pContextInitEncrypt, have_beecrypt=yes, have_beecrypt=no)
+	AC_CHECK_LIB(beecrypt, dhaes_pContextInitEncrypt, 
+	have_beecrypt=yes, have_beecrypt=no)
 fi
 
 if test ${is_rpm4}. = yes. ; then
@@ -257,7 +260,8 @@ fi
 
 
 AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="$LIBS -lrpm $DBLIB"],
-	AC_CHECK_LIB(rpm, rpmReadPackageHeader,[LIBS="$LIBS -lrpm -lrpmdb $DBLIB"],
+	AC_CHECK_LIB(rpm, rpmReadPackageHeader,
+		[LIBS="$LIBS -lrpm -lrpmdb $DBLIB"],
 		AC_MSG_ERROR(["rpmlib not found"]),
 		[$DBLIB -lrpmdb]),
 	    [$DBLIB])
@@ -266,8 +270,10 @@ AC_CHECK_FUNCS(rpmMachineScore,,[ AC_MSG_ERROR(["rpmlib not found"])])
 AC_CHECK_FUNCS(rpmlog, [AC_DEFINE(HAVE_RPMLOG)])
 AC_CHECK_FUNCS(rpmCheckSig, [AC_DEFINE(HAVE_RPMCHECKSIG)])
 
-AC_CHECK_HEADERS(db_185.h,,[ AC_MSG_WARN(["disabled synchronization with db file-dependencies"])])
+AC_CHECK_HEADERS(db_185.h,,[ 
+	AC_MSG_WARN(["disabled synchronization with db file-dependencies"]) ])
 AC_CHECK_FUNCS(__db185_open)
+
 dnl 4.0.4 has cross dependenecies(?)
 if test ${is_rpm4_0_4}. = yes. -a ${ENABLE_STATIC}. = yes. ; then
 	if ${have_beecrypt}. = yes. ; then
@@ -283,7 +289,8 @@ AC_CHECK_FUNCS(fopencookie,, [AC_MSG_WARN(["disabled gzipped files support"])],
 	       $CONF_IN_LDFLAGS)
 
 AC_CHECK_FUNCS(openpty,,
-	       AC_CHECK_LIB(util, openpty, [AC_DEFINE(HAVE_OPENPTY)] [LIBS="$LIBS -lutil"]))
+	       AC_CHECK_LIB(util, openpty, 
+	[AC_DEFINE(HAVE_OPENPTY)] [LIBS="$LIBS -lutil"]))
 
 AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
 	[AC_MSG_WARN("[poldek will not work fine with rpmlib\(...\) capabilities"])],
