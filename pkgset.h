@@ -124,6 +124,7 @@ tn_array *pkgset_getpkgs(const struct pkgset *ps);
 
 
 tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname);
+struct pkg *pkgset_lookup_pkgn(struct pkgset *ps, const char *name);
 
 struct install_info {
     tn_array *installed_pkgs;

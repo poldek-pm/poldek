@@ -172,26 +172,9 @@ int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked)
     return install;
 }
 
-#if 0
-static struct pkg *find_pkg_old(tn_array *pkgs, const char *name) 
-{
-    struct pkg tmpkg;
-    int i;
-    
-    tmpkg.name = (char*)name;
-
-    n_array_sort(pkgs);
-    i = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
-    if (i < 0)
-        return NULL;
-
-    return n_array_nth(pkgs, i);
-}
-#endif
-
 static
-struct pkg *find_pkg(const char *name, tn_array *pkgs,
-                     struct upgrade_s *upg)
+struct pkg *select_pkg(const char *name, tn_array *pkgs,
+                       struct upgrade_s *upg)
 {
     struct pkg tmpkg, *curr_pkg, *pkg, *selected_pkg;
     char prefix1[128], prefix2[128], *p;
@@ -223,7 +206,7 @@ struct pkg *find_pkg(const char *name, tn_array *pkgs,
     if (strcmp(prefix1, prefix2) != 0)
         return pkg;
     
-    for (; i<n_array_size(pkgs); i++) {
+    for (; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
         if (strcmp(p->name, name) != 0)
             break;
@@ -691,7 +674,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
             if (pkg_cmp_name_evr(opkg, pkg) == 0) /* packages orphanes itself */
                 continue;
                 
-            if ((p = find_pkg(opkg->name, ps->pkgs, upg))) {
+            if ((p = select_pkg(opkg->name, ps->pkgs, upg))) {
                 if (pkg_is_marked_i(p)) {
                     mark_package(p, upg);
                     process_pkg_deps(-2, p, ps, upg, PROCESS_AS_NEW);
@@ -1001,7 +984,7 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                 struct pkg *p;
                 
                 
-                if ((p = find_pkg(pkg->name, ps->pkgs, upg))) {
+                if ((p = select_pkg(pkg->name, ps->pkgs, upg))) {
                     if (pkg_is_marked_i(p)) 
                         mark_package(p, upg);
                         
@@ -1081,15 +1064,51 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
     return 1;
 }
 
+
 static
-int mark_by_conflict(int indent,
+int find_replacement(struct pkgset *ps, struct pkg *pkg, struct pkg **rpkg)
+{
+    const struct capreq_idx_ent *ent;
+    struct pkg *bypkg = NULL;
+
+
+    *rpkg = NULL;
+    
+    if ((bypkg = pkgset_lookup_pkgn(ps, pkg->name)) &&
+        pkg_cmp_name_evr(bypkg, pkg) > 0) {
+        
+        *rpkg = bypkg;
+        
+    } else if ((ent = capreq_idx_lookup(&ps->obs_idx, pkg->name))) {
+        int i;
+        
+        for (i=0; i < ent->items; i++) {
+            if (pkg_caps_obsoletes_pkg_caps(ent->pkgs[i], pkg) &&
+                pkg_cmp_name_evr(ent->pkgs[i], pkg) > 0) {
+                
+                *rpkg = ent->pkgs[i];
+                break;
+            }
+        }
+    }
+
+    if (*rpkg && pkg_is_marked(*rpkg)) {
+        *rpkg = NULL;
+        return 1;
+    }
+    	
+    return (*rpkg != NULL);
+}
+
+static
+int resolve_conflict(int indent,
                      struct pkg *pkg, const struct capreq *cnfl,
                      struct dbpkg *dbpkg, struct pkgset *ps,
                      struct upgrade_s *upg) 
 {
     struct pkg *tomark = NULL;
     struct capreq *req = (struct capreq*)cnfl;
-    int found = 0;
+    int found = 0, by_replacement = 0;
 
     if (!capreq_versioned(req))
         return 0;
@@ -1107,6 +1126,12 @@ int mark_by_conflict(int indent,
     
     found = find_req(pkg, req, &tomark, NULL, ps, upg);
     capreq_revrel(req);
+    
+    if (!found) {
+        found = find_replacement(ps, dbpkg->pkg, &tomark);
+        by_replacement = 1;
+    }
+    	
     if (!found)
         return 0;
         
@@ -1115,7 +1140,7 @@ int mark_by_conflict(int indent,
 
     found = 0;
     
-    if (pkg_obsoletes_pkg(tomark, dbpkg->pkg)) {
+    if (by_replacement || pkg_obsoletes_pkg(tomark, dbpkg->pkg)) {
         if (pkg_is_marked_i(tomark)) {
             //    msg_i(1, indent, "%s 'MARX' => %s (cnfl %s)\n",
             //      pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark),
@@ -1285,7 +1310,7 @@ int find_db_conflicts_cnfl_w_db(int indent,
             capreq_snprintf_s(cnfl), pkg_snprintf_s0(dbpkg->pkg));
         
         if (pkg_match_req(dbpkg->pkg, cnfl, 1)) {
-            if (!mark_by_conflict(indent, pkg, cnfl, dbpkg, ps, upg)) {
+            if (!resolve_conflict(indent, pkg, cnfl, dbpkg, ps, upg)) {
                 logn(LOGERR, _("%s (cnfl %s) conflicts with installed %s"),
                     pkg_snprintf_s(pkg), capreq_snprintf_s(cnfl),
                     pkg_snprintf_s0(dbpkg->pkg));
@@ -1316,7 +1341,7 @@ int find_db_conflicts_dbcnfl_w_cap(int indent,
         for (j = 0; j < n_array_size(dbpkg->pkg->cnfls); j++) {
             struct capreq *cnfl = n_array_nth(dbpkg->pkg->cnfls, j);
             if (cap_match_req(cap, cnfl, 1)) {
-                if (!mark_by_conflict(indent, pkg, cnfl, dbpkg, ps, upg)) {
+                if (!resolve_conflict(indent, pkg, cnfl, dbpkg, ps, upg)) {
                     logn(LOGERR, _("%s (cap %s) conflicts with installed %s (%s)"),
                         pkg_snprintf_s(pkg), capreq_snprintf_s(cap), 
                         pkg_snprintf_s0(dbpkg->pkg), capreq_snprintf_s0(cnfl));

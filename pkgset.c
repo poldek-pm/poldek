@@ -1031,6 +1031,22 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 }
 
 
+struct pkg *pkgset_lookup_pkgn(struct pkgset *ps, const char *name) 
+{
+    struct pkg tmpkg;
+    int i;
+    
+    tmpkg.name = (char*)name;
+
+    n_array_sort(ps->pkgs);
+    i = n_array_bsearch_idx_ex(ps->pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
+    if (i < 0)
+        return NULL;
+
+    return n_array_nth(ps->pkgs, i);
+}
+
+
 tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname)
 {
     const struct capreq_idx_ent *ent;
