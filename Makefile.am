@@ -16,11 +16,13 @@ AM_CFLAGS = @AM_CFLAGS@
 
 POD2MAN   = @POD2MAN@
 
-POLDEK_VERINFO   = 0:0:0
-lib_LTLIBRARIES = libpoldek.la
-libpoldek_la_LDFLAGS = -version-info $(POLDEK_VERINFO)
-#					   -export-symbols libpoldek.sym
-libpoldek_la_SOURCES =  \
+libVERINFO         = 0:0:0
+lib_LTLIBRARIES    = libpoldek.la
+noinst_LTLIBRARIES = libpoldek_allsyms.la
+
+libpoldek_la_LDFLAGS = -version-info $(libVERINFO) \
+					   -export-symbols libpoldek.sym
+libpoldek_la_SOURCES = \
 	  log.c log.h	   \
 	  poldek_term.c poldek_term.h	\
 	  minfo.c			    \
@@ -57,13 +59,13 @@ libpoldek_la_SOURCES =  \
 	  poldek_intern.h \
 	  pkg_ver_cmp.h 
 
+libpoldek_allsyms_la_SOURCES = $(libpoldek_la_SOURCES)
 pkgincludedir = $(includedir)/poldek
 
+# one line to easy get then by external script 
+libHEADERS = poldek.h poldek_ts.h pkg.h capreq.h pkgu.h pkgmisc.h arg_packages.h poldek_util.h poldek_term.h log.h pm/pm.h pkgdir/pkgdir.h pkgdir/source.h sigint/sigint.h conf.h pkgfl.h
 
-nobase_pkginclude_HEADERS = poldek.h poldek_ts.h pkg.h capreq.h pkgu.h \
-							pkgmisc.h arg_packages.h poldek_util.h \
-							poldek_term.h \
-							pm/pm.h pkgdir/pkgdir.h pkgdir/source.h 
+nobase_pkginclude_HEADERS = $(libHEADERS)
 
 
 libpoldek_la_LIBADD = \
@@ -72,24 +74,9 @@ libpoldek_la_LIBADD = \
 			pm/libpm.la    \
 			vfile/libvfile.la
 
-SHELL_MOD = shell/libshell.la
-
-
-poldek_DEPENDENCIES_ = libpoldek.la vfile/libvfile.la    
-
-if ENABLE_INTERACTIVE_MODE
-SHELL_MOD_ = $(SHELL_MOD)
-#poldek_DEPENDENCIES = $(poldek_DEPENDENCIES_) $(SHELL_MOD)
-else
-SHELL_MOD_ =
-#poldek_DEPENDENCIES = $(poldek_DEPENDENCIES_) $(SHELL_MOD_)
-endif
+libpoldek_allsyms_la_LIBADD = $(libpoldek_la_LIBADD)
 
 LDADD_              = @INTLLIBS@
-
-bin_PROGRAMS        =
-#poldek_SOURCES      = main.c
-#poldek_LDADD        = $(poldek_DEPENDENCIES) $(SHELL_MOD_) $(LDADD_)
 
 noinst_PROGRAMS     = test_match
 test_match_SOURCES  = test_match.c
@@ -98,6 +85,7 @@ test_match_LDADD    = libpoldek.la
 pkglib_SCRIPTS      = zlib-in-rpm.sh vfjuggle vfcompr vfsmb
 
 EXTRA_DIST = \
+		 libpoldek.sym \
 		 $(pkglib_SCRIPTS) \
 	     Makefile.extra \
 		 libpoldek.sym \
@@ -134,14 +122,31 @@ dist-hook:
 #	$(install_sh) -m 0755 -d $(DESTDIR)$(libexecdir)/$(PACKAGE)
 #	$(install_sh) -m 0755 $(vfscripts) $(DESTDIR)$(libexecdir)/$(PACKAGE)
 
-# libtool hack 
+# cleanning up *.la files; who is stupid me or libtool? 
 install-exec-hook:
 	for p in poldek vfile tndb trurl; do                        \
 		laf="$(DESTDIR)$(libdir)/lib$$p.la";                    \
-		test -f $$laf && perl -pi -e 's|\s\-L[/\w]+||g;' $$laf; \
+		test -f $$laf && perl -pi -e 's|\s\-L[/\w\-\.]+||g;' $$laf; \
 	done
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* conf/*~
+
+libpoldek.sym: 
+	./gensym.sh poldek
+
+poldek.pc: 
+        @ ( echo 'prefix=$(prefix)'; \
+            echo 'exec_prefix=$${exec_prefix}'; \
+            echo 'libdir=$${exec_prefix}/lib'; \
+            echo 'includedir=$${includedir}'; \
+            echo ''; \
+            echo 'Name: poldek'; \
+            echo 'Description: poldek libraries'; \
+            echo 'Version: '$(VERSION); \
+            echo 'Requires: '; \
+            echo 'Libs: -L$${libdir} -lpoldek -lvfile -ltrurl -ltndb'; \
+            echo 'Cflags: -I$${includedir}' ) > poldek.pc
+
 
 include Makefile.extra

@@ -527,7 +527,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     pkgdir->foreign_depdirs = foreign_depdirs;
 
     if ((pkgdir->flags & PKGDIR_DIFF) == 0) {
-        if (verbose < 2)
+        if (poldek_VERBOSE < 2)
             msgn(1, _("Loading [%s]%s..."), pkgdir->type, pkgdir_idstr(pkgdir));
         else
             msgn(2, _("Loading [%s]%s..."), pkgdir->type,

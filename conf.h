@@ -1,11 +1,12 @@
 /* $Id$ */
-#ifndef POLDEK_LDCONF_H
-#define POLDEK_LDCONF_H
+/* ini-like config parsing module */
+#ifndef POLDEK_CONF_H
+#define POLDEK_CONF_H
 
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
-#define POLDEK_LDCONF_FOREIGN  (1 << 0) /*  */
+#define POLDEK_LDCONF_FOREIGN  (1 << 0) /* not a poldek file */
 #define POLDEK_LDCONF_NOVRFY   POLDEK_LDCONF_FOREIGN /* legacy */
 #define POLDEK_LDCONF_UPDATE   (1 << 1) 
 

@@ -2,12 +2,12 @@
 # Copyright (C) YEAR Free Software Foundation, Inc.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
-#: cli/op_makeidx.c:97
+#: cli/op_makeidx.c:96
 msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-09-23 22:37+0200\n"
+"POT-Creation-Date: 2004-09-26 20:18+0200\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: mis@pld.org.pl\n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -17,42 +17,44 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2\n"
 
-#: arg_packages.c:90
+#: arg_packages.c:90 poldek-0.19.0/arg_packages.c:90
 #, c-format
 msgid "%s:%d: syntax error"
 msgstr "%s:%d: b³±d sk³adniowy"
 
-#: arg_packages.c:92
+#: arg_packages.c:92 poldek-0.19.0/arg_packages.c:92
 #, fuzzy
 msgid "syntax error in package specification"
 msgstr "b³±d sk³adniowy w definicji pakietu"
 
-#: arg_packages.c:311
+#: arg_packages.c:311 poldek-0.19.0/arg_packages.c:311
 #, c-format
 msgid "Removed %d duplicates from given packages"
 msgstr "Usuniêto %d zduplikowanych pakietów z listy dostêpnych"
 
-#: arg_packages.c:404 arg_packages.c:433 uninstall.c:282
+#: arg_packages.c:404 arg_packages.c:433 poldek-0.19.0/arg_packages.c:404
+#: poldek-0.19.0/arg_packages.c:433 poldek-0.19.0/uninstall.c:282
+#: uninstall.c:282
 #, c-format
 msgid "%s: no such package"
 msgstr "%s: nie ma takiego pakietu"
 
-#: arg_packages.c:410 cli/dent.c:559
+#: arg_packages.c:410 cli/dent.c:559 poldek-0.19.0/arg_packages.c:410
 #, c-format
 msgid "%s: ambiguous name"
 msgstr "niejednoznaczna nazwa %s"
 
-#: ask.c:84
+#: ask.c:84 poldek-0.19.0/ask.c:84
 #, c-format
 msgid "There are more than one package which provide \"%s\":"
 msgstr "Wiêcej ni¿ jeden pakiet udostêpnia w³a¶ciwo¶æ \"%s\":"
 
-#: ask.c:96
+#: ask.c:96 poldek-0.19.0/ask.c:96
 #, c-format
 msgid "Which one do you want to install? [%c]"
 msgstr "Który z nich wybierasz? [%c]"
 
-#: capreq.c:288
+#: capreq.c:287 poldek-0.19.0/capreq.c:287
 #, c-format
 msgid "%s: invalid rpmlib capreq"
 msgstr "%s: nieprawid³owa rpmlib()owa zale¿no¶æ"
@@ -72,44 +74,44 @@ msgstr "%s: nie ma takiej komendy"
 msgid "%s (%s) overwrites %s"
 msgstr ""
 
-#: cli/cd.c:30
+#: cli/cd.c:29
 msgid "[PATH]"
 msgstr ""
 
-#: cli/cd.c:30
+#: cli/cd.c:29
 msgid "Change current package directory"
 msgstr ""
 
-#: cli/cd.c:37
+#: cli/cd.c:36
 msgid "Print name of current directory"
 msgstr ""
 
-#: cli/cli.c:351
+#: cli/cli.c:358
 #, c-format
 msgid "ambiguous command %s"
 msgstr "niejednoznaczna komenda %s"
 
-#: cli/cmd.c:184
+#: cli/cmd_chain.c:184
 #, c-format
 msgid "%s: no such command"
 msgstr "%s: nie ma takiej komendy"
 
-#: cli/cmd.c:201
+#: cli/cmd_chain.c:201
 #, fuzzy, c-format
 msgid "%s: ambiguous command"
 msgstr "niejednoznaczna komenda %s"
 
-#: cli/cmd.c:300
+#: cli/cmd_chain.c:300
 #, fuzzy, c-format
 msgid "%s: not a right pipe-able command"
 msgstr "%s: nie ma takiej komendy"
 
-#: cli/cmd.c:312
+#: cli/cmd_chain.c:312
 #, c-format
 msgid "%s: not a left pipe-able command"
 msgstr ""
 
-#: cli/cmd.c:355
+#: cli/cmd_chain.c:355
 #, fuzzy, c-format
 msgid "%s: parse error"
 msgstr "%s: b³±d interpretacji URLa"
@@ -118,7 +120,7 @@ msgstr "%s: b³±d interpretacji URLa"
 msgid "Load installed packages failed"
 msgstr "B³±d odczytu zainstalowanych pakietów"
 
-#: cli/dbcache.c:163 pkgdir/pkgdir.c:573
+#: cli/dbcache.c:163 pkgdir/pkgdir.c:560
 #, c-format
 msgid "%d package loaded"
 msgid_plural "%d packages loaded"
@@ -131,108 +133,108 @@ msgstr[2] "Przeczytano %d pakietów"
 msgid "%s: no such package or directory"
 msgstr "%s: nie ma takiego katalogu"
 
-#: cli/desc.c:64
+#: cli/desc.c:63
 msgid "Show all described below fields"
 msgstr "Poka¿ wszystkie pozycje wymienione wy¿ej"
 
-#: cli/desc.c:67
+#: cli/desc.c:66
 msgid "Show capabilities, requirements, conflicts and obsolences"
 msgstr "Poka¿ w³asno¶ci, wymagania, konflikty i zast±pienia(iii... obsoletes)"
 
-#: cli/desc.c:70
+#: cli/desc.c:69
 msgid "Show package's capablities"
 msgstr "Poka¿ w³asno¶ci (capablities) pakietu"
 
-#: cli/desc.c:73
+#: cli/desc.c:72
 msgid "Show requirements"
 msgstr "Poka¿ wymagania (requirements)"
 
-#: cli/desc.c:76
+#: cli/desc.c:75
 msgid "Show required packages"
 msgstr "Poka¿ wymagane pakiety"
 
-#: cli/desc.c:79
+#: cli/desc.c:78
 msgid "Show packages which requires given package"
 msgstr "Poka¿ pakiety, które wymagaj± podanego pakietu"
 
-#: cli/desc.c:82
+#: cli/desc.c:81
 msgid "Show conflicts and obsolences"
 msgstr "Poka¿ konflikty i zast±pienia(sic!)"
 
-#: cli/desc.c:84
+#: cli/desc.c:83
 msgid "Show description (the default)"
 msgstr "Poka¿ opis pakietu (akcja domy¶lna)"
 
-#: cli/desc.c:87
+#: cli/desc.c:86
 msgid "Show package files (doubled gives long listing format)"
 msgstr ""
 "Poka¿ pliki pakietu (opcja dana dwukrotnie wy¶wietli listê w pe³nym formacie)"
 
-#: cli/desc.c:96 cli/get.c:43 cli/install.c:171 cli/uninstall.c:60
+#: cli/desc.c:95 cli/get.c:44 cli/install.c:170 cli/uninstall.c:57
 msgid "PACKAGE..."
 msgstr "PAKIET..."
 
-#: cli/desc.c:96
+#: cli/desc.c:95
 msgid "Display packages info"
 msgstr "Wy¶wietlaj informacje o pakietach"
 
-#: cli/desc.c:517
+#: cli/desc.c:516
 msgid "mode"
 msgstr "mode"
 
-#: cli/desc.c:517 cli/ls.c:362 cli/ls.c:376 cli/ls.c:379
+#: cli/desc.c:516 cli/ls.c:362 cli/ls.c:376 cli/ls.c:379
 msgid "size"
 msgstr "rozmiar"
 
-#: cli/desc.c:517
+#: cli/desc.c:516
 msgid "name"
 msgstr "nazwa"
 
-#: cli/desc.c:665
+#: cli/desc.c:664
 #, c-format
 msgid "%s: description unavailable (index without packages info loaded?)\n"
 msgstr "%s: opis niedostêpny (prawdopodobnie u¿ywany indeks nie zawiera ich)\n"
 
-#: cli/external.c:32
+#: cli/external.c:31
 msgid "COMMAND"
 msgstr ""
 
-#: cli/external.c:32
+#: cli/external.c:31
 msgid "Execute external command"
 msgstr ""
 
-#: cli/external.c:84
+#: cli/external.c:83
 #, fuzzy, c-format
 msgid "%s: external command not found"
 msgstr "%s: nie znaleziono wymaganego %s"
 
-#: cli/get.c:34
+#: cli/get.c:35
 msgid "Be verbose"
 msgstr "B±d¼ gadatliwy"
 
-#: cli/get.c:35
+#: cli/get.c:36
 msgid "Download to directory DIR instead to current one"
 msgstr "Zapisuj pobierane pliki w katalogu DIR, zamiast w bie¿±cym"
 
-#: cli/get.c:43
+#: cli/get.c:44
 msgid "Download packages"
 msgstr "¦ci±gaj pakiety"
 
-#: cli/get.c:59 cli/install.c:396 misc.c:445
+#: cli/get.c:60 cli/install.c:399 misc.c:431 poldek-0.19.0/misc.c:431
 #, c-format
 msgid "%s: no such directory"
 msgstr "%s: nie ma takiego katalogu"
 
-#: cli/help.c:30
+#: cli/help.c:29
 msgid "Display this help"
 msgstr "Poka¿ w³a¶nie wy¶wietlan± pomoc"
 
-#: cli/help.c:58
+#: cli/help.c:57
 #, c-format
 msgid "[OPTION...] %s"
 msgstr "[OPCJA...] %s"
 
-#: cli/help.c:63
+#: cli/help.c:62
 #, c-format
 msgid ""
 "\n"
@@ -241,175 +243,175 @@ msgstr ""
 "\n"
 "Wpisz KOMENDA -? by otrzymaæ pomoc na temat danej komendy.\n"
 
-#: cli/install.c:67
+#: cli/install.c:66
 msgid "Install, not upgrade packages"
 msgstr "Instaluj, nie aktualizuj"
 
-#: cli/install.c:68
+#: cli/install.c:67
 msgid "Reinstall"
 msgstr "Reinstaluj"
 
-#: cli/install.c:69 cli/install.c:131
+#: cli/install.c:68 cli/install.c:130
 msgid "Downgrade"
 msgstr "Downgrade"
 
-#: cli/install.c:70 cli/uninstall.c:40
+#: cli/install.c:69 cli/uninstall.c:37
 msgid "Be unconcerned"
 msgstr "B±d¼ niefrasobliwy"
 
-#: cli/install.c:71
+#: cli/install.c:70
 msgid "Don't install, but tell if it would work or not"
 msgstr "Nie instaluj, tylko sprawd¼ czy instalacja przebiegnie pomy¶lnie"
 
-#: cli/install.c:73
+#: cli/install.c:72
 msgid "Upgrade packages, but only if an earlier version currently exists"
 msgstr ""
 "Aktualizuj pakiety tylko w przypadku gdy wcze¶niejsza ich wersja jest "
 "zainstalowana"
 
-#: cli/install.c:75
+#: cli/install.c:74
 #, fuzzy
 msgid "Don't install packages required by selected ones"
 msgstr "Nie instaluj automatycznie pakietów wymaganych przez wybrane pakiety"
 
-#: cli/install.c:77
+#: cli/install.c:76
 msgid ""
 "Automatically upgrade packages which dependencies are broken by unistalled "
 "ones"
 msgstr ""
 "Aktualizuj pakiety których zale¿no¶ci s± naruszane przez te w³a¶nie usuwane"
 
-#: cli/install.c:80
+#: cli/install.c:79
 msgid "Do not install, only download packages"
 msgstr "Nie instaluj, a jedynie ¶ci±gnij pakiety"
 
-#: cli/install.c:82
+#: cli/install.c:81
 msgid "Set top directory to DIR"
 msgstr "U¿yj DIR jako /"
 
-#: cli/install.c:85
+#: cli/install.c:84
 msgid "Install packages with broken dependencies"
 msgstr "Instaluj pakiety z niespe³nionymi zale¿no¶ciami"
 
-#: cli/install.c:87
+#: cli/install.c:86
 msgid ""
 "Treat requirements with EVR as satisfied by capabilities without it (old RPM "
 "behaviour)"
 msgstr ""
 
-#: cli/install.c:91
+#: cli/install.c:90
 msgid ""
 "Promote non-existent requirement's epoch to package's one (rpm < 4.2.1 "
 "behaviour)"
 msgstr ""
 
-#: cli/install.c:96
+#: cli/install.c:95
 msgid "Just dump install marked package filenames to FILE (default stdout)"
 msgstr ""
 "Nie instaluj, a tylko wypisz pliki pakietów przeznaczonych do instalacji do "
 "pliku FILE"
 
-#: cli/install.c:99
+#: cli/install.c:98
 msgid "Just dump install marked package names to FILE (default stdout)"
 msgstr ""
 "Nie instaluj, a tylko wypisz nazwy pakietów przeznaczonych do instalacji do "
 "pliku FILE"
 
-#: cli/install.c:101
+#: cli/install.c:100
 msgid "Modify only the database"
 msgstr "Modyfikuj jedynie bazê  zainstalowanych pakietów"
 
-#: cli/install.c:104
+#: cli/install.c:103
 #, fuzzy
 msgid "Install packages with broken dependencies (applied to PM only)"
 msgstr "Instaluj pakiety z niespe³nionymi zale¿no¶ciami"
 
-#: cli/install.c:109
+#: cli/install.c:108
 msgid "Be unconcerned (applied to PM only)"
 msgstr ""
 
-#: cli/install.c:114
+#: cli/install.c:113
 msgid "pass option OPTION to PM binary"
 msgstr ""
 
-#: cli/install.c:118
+#: cli/install.c:117
 #, fuzzy
 msgid "Do not download packages"
 msgstr "¦ci±gaj pakiety"
 
-#: cli/install.c:120 cli/main.c:94
+#: cli/install.c:119 cli/main.c:107
 msgid "Be verbose."
 msgstr "B±d¼ gadatliwy"
 
-#: cli/install.c:127
+#: cli/install.c:126
 #, fuzzy
 msgid "Package installation:"
 msgstr "Opcje instalacji:"
 
-#: cli/install.c:128
+#: cli/install.c:127
 msgid "Install given packages"
 msgstr "Instaluj podane pakiety"
 
-#: cli/install.c:129
+#: cli/install.c:128
 msgid "Reinstall given packages"
 msgstr "Przeinstaluj podane pakiety"
 
-#: cli/install.c:132
+#: cli/install.c:131
 msgid "Upgrade given packages"
 msgstr "Aktualizuj podane pakiety"
 
-#: cli/install.c:135
+#: cli/install.c:134
 msgid "Distribution installation/upgrade:"
 msgstr ""
 
-#: cli/install.c:137
+#: cli/install.c:136
 msgid "Install package set under DIR as root directory"
 msgstr "Instaluj u¿ywaj±c katalogu DIR jako /"
 
-#: cli/install.c:140
+#: cli/install.c:139
 msgid "Upgrade all packages needs upgrade"
 msgstr "Aktualizuj wszystkie pakiety mog±ce zostaæ zaktualizowane"
 
-#: cli/install.c:143
+#: cli/install.c:142
 #, fuzzy
 msgid "Reinstall all packages under DIR as root directory"
 msgstr "Instaluj u¿ywaj±c katalogu DIR jako /"
 
-#: cli/install.c:145
+#: cli/install.c:144
 msgid "Installation switches:"
 msgstr "Podopcje instalacji:"
 
-#: cli/install.c:147
+#: cli/install.c:146
 msgid ""
 "Prevent packages listed from being upgraded if they are already installed."
 msgstr "Nie aktualizuj wymienionych pakietów je¿eli takie s± zainstalowane"
 
-#: cli/install.c:150
+#: cli/install.c:149
 #, fuzzy
 msgid "Do not hold any packages"
 msgstr "¦ci±gaj pakiety"
 
-#: cli/install.c:153
+#: cli/install.c:152
 msgid "Make packages listed invisible."
 msgstr "Zniknij wymienione pakiety z listy dostêpnych."
 
-#: cli/install.c:156
+#: cli/install.c:155
 msgid "Make invisibled packages visible."
 msgstr "Uczyñ znikniête pakiety widocznymi."
 
-#: cli/install.c:159
+#: cli/install.c:158
 msgid "Do sort | uniq on available package list"
 msgstr ""
 
-#: cli/install.c:171
+#: cli/install.c:170
 msgid "Install packages"
 msgstr "Instaluj pakiety"
 
-#: cli/install.c:447
+#: cli/install.c:451
 msgid "There were errors"
 msgstr "Wyst±pi³y b³êdy podczas instalacji"
 
-#: cli/install.c:470
+#: cli/install.c:474
 msgid "no packages specified"
 msgstr "nie podano pakietów"
 
@@ -453,7 +455,7 @@ msgstr "Poka¿ grupy pakietów"
 msgid "Print package summaries"
 msgstr "Poka¿ krótkie opisy pakietów"
 
-#: cli/ls.c:69 cli/main.c:44
+#: cli/ls.c:69 cli/main.c:52
 msgid "[PACKAGE...]"
 msgstr "[PAKIET...]"
 
@@ -485,95 +487,99 @@ msgstr "zainstalowany"
 msgid "available"
 msgstr "dostêpny"
 
-#: cli/main.c:67
+#: cli/main.c:77
 msgid "Other:"
 msgstr "Pozosta³e:"
 
-#: cli/main.c:70
+#: cli/main.c:80
 #, fuzzy
 msgid "Store downloaded files & co. under DIR"
 msgstr "Umieszczaj ¶ci±gniête pliki w katalogu DIR"
 
-#: cli/main.c:71
+#: cli/main.c:81
 #, fuzzy
 msgid "Run in cmd mode"
 msgstr "Uruchom w trybie interaktywnym"
 
-#: cli/main.c:72
+#: cli/main.c:82
 msgid ""
 "Confirm packages installation and let user choose among equivalent packages"
 msgstr ""
 "Potwierdzaj installacje oraz pozwól u¿ytkownikowi wybieraæ po¶ród "
 "równowa¿nych pakietów"
 
-#: cli/main.c:74
+#: cli/main.c:84
 msgid "Don't ask about anything"
 msgstr "O nic nie pytaj"
 
-#: cli/main.c:76
+#: cli/main.c:86
 #, fuzzy
 msgid "Run in interactive mode (default)"
 msgstr "Uruchom w trybie interaktywnym"
 
-#: cli/main.c:79
+#: cli/main.c:89
 msgid "Run poldek shell COMMAND and exit"
 msgstr "Uruchom komendê COMMAND i wyjd¼"
 
-#: cli/main.c:82
+#: cli/main.c:92
 msgid "Don't load installed packages at startup"
 msgstr "Nie ³aduj bazy zainstalowanych pakietów przy starcie"
 
-#: cli/main.c:86 cli/main.c:87
+#: cli/main.c:96 cli/main.c:97
 msgid "Read configuration from FILE"
 msgstr "Czytaj konfiguracjê z pliku FILE"
 
-#: cli/main.c:88
+#: cli/main.c:98
 msgid "Do not read configuration"
 msgstr "Nie czytaj ¿adnej konfiguracji"
 
-#: cli/main.c:89
+#: cli/main.c:99
 msgid "Update remote configuration files (if any)"
 msgstr ""
 
-#: cli/main.c:90
+#: cli/main.c:102
+msgid "Do not remove downloaded packages just after their installation"
+msgstr ""
+
+#: cli/main.c:103
 msgid "Display program version information and exit"
 msgstr "Wypisz informacjê o wersji programu i wyjd¼"
 
-#: cli/main.c:92
+#: cli/main.c:105
 msgid "Log program messages to FILE"
 msgstr "Rejestruj wszystkie komunikaty w pliku FILE"
 
-#: cli/main.c:95
+#: cli/main.c:108
 msgid "Do not produce any output."
 msgstr "Nie wypisuj ¿anych komunikatów"
 
-#: cli/main.c:180
+#: cli/main.c:193
 msgid "-c is depreciated, use --conf instead"
 msgstr ""
 
-#: cli/main.c:370
+#: cli/main.c:387
 msgid "so what?"
 msgstr "no i?"
 
-#: cli/op_makeidx.c:46
+#: cli/op_makeidx.c:45
 #, fuzzy
 msgid "Repository index creation:"
 msgstr "Tworzenie indeksu:"
 
-#: cli/op_makeidx.c:49
+#: cli/op_makeidx.c:48
 #, fuzzy
 msgid "Create package index (SOURCE-PATH/packages.dir by default)"
 msgstr "Utwórz pakietowy indeks; domy¶lnie: SOURCE/packages.dir"
 
-#: cli/op_makeidx.c:54
+#: cli/op_makeidx.c:53
 msgid "Sets the index type (use --stl to list available values)"
 msgstr ""
 
-#: cli/op_makeidx.c:58
+#: cli/op_makeidx.c:57
 msgid "Likewise, but gzipped file is created"
 msgstr "jw. z tym, ¿e indeks jest kopresowany gzipem"
 
-#: cli/op_makeidx.c:61
+#: cli/op_makeidx.c:60
 #, fuzzy
 msgid ""
 "Don't put package user-level information (like Summary or Description) into "
@@ -581,32 +587,32 @@ msgid ""
 msgstr ""
 "Buduj indeks bez informacji o pakietach przydatnych jedynie u¿ytkownikowi"
 
-#: cli/op_makeidx.c:65
+#: cli/op_makeidx.c:64
 msgid "Don't create index delta files"
 msgstr ""
 
-#: cli/op_makeidx.c:68
+#: cli/op_makeidx.c:67
 msgid "Sets compression type (none, bz2, gz)"
 msgstr ""
 
-#: cli/op_makeidx.c:189
+#: cli/op_makeidx.c:188
 #, fuzzy
 msgid "multiple sources not allowed if index path is specified"
 msgstr "opcja mkidx nie dzia³a z wieloma ¼ród³ami pakietów"
 
-#: cli/op_packages.c:37
+#: cli/op_packages.c:36
 msgid "Package related options:"
 msgstr ""
 
-#: cli/op_packages.c:38
+#: cli/op_packages.c:37
 msgid "Take package set definition from FILE"
 msgstr "We¼ definicjê zestaw pakietów z pliku FILE"
 
-#: cli/op_packages.c:47
+#: cli/op_packages.c:46
 msgid "Look into package capabilities & files to resolve packages"
 msgstr ""
 
-#: cli/op_packages.c:116
+#: cli/op_packages.c:115
 #, c-format
 msgid "'%s' option should be set by --%s"
 msgstr ""
@@ -781,55 +787,55 @@ msgstr ""
 msgid "Verify dependencies, conflicts and file conflicts"
 msgstr "Sprawd¼ zale¿no¶ci i konflikty (w tym plikowe)"
 
-#: cli/search.c:87
+#: cli/search.c:86
 msgid "Search capabilities"
 msgstr "Przeszukuj w³asno¶ci (capablities)"
 
-#: cli/search.c:88
+#: cli/search.c:87
 msgid "Search requirements"
 msgstr "Przeszukuj wymagania (requirements)"
 
-#: cli/search.c:89
+#: cli/search.c:88
 msgid "Search conflicts"
 msgstr "Przeszukuj konflikty"
 
-#: cli/search.c:90
+#: cli/search.c:89
 msgid "Search obsolences"
 msgstr "Przeszukuj przedawnienia (sic!, obsolences)"
 
-#: cli/search.c:91
+#: cli/search.c:90
 msgid "Search summaries, urls and license"
 msgstr "Przeszukuj licencje, URLe oraz krótkie opisy pakietów"
 
-#: cli/search.c:92
+#: cli/search.c:91
 msgid "Search descriptions"
 msgstr "Przeszukuj opisy"
 
-#: cli/search.c:93
+#: cli/search.c:92
 msgid "Search groups"
 msgstr "Przeszukuj grupy"
 
-#: cli/search.c:94
+#: cli/search.c:93
 msgid "Search file list"
 msgstr "Przeszukuj listy plików"
 
-#: cli/search.c:97
+#: cli/search.c:96
 msgid "Search all described fields, the defaults are: -sd"
 msgstr "Przeszukuj wszystkie pola pakietów, domy¶lnie s± to -sd"
 
-#: cli/search.c:99
+#: cli/search.c:98
 msgid "Threat PATTERN as Perl regular expression"
 msgstr "Traktuj WZORZEC jako perlowe wyra¿enie regularne"
 
-#: cli/search.c:107
+#: cli/search.c:106
 msgid "PATTERN [PACKAGE...]"
 msgstr "WZORZEC [PAKIET...]"
 
-#: cli/search.c:107
+#: cli/search.c:106
 msgid "Search packages"
 msgstr "Przeszukiwanie pakietów"
 
-#: cli/search.c:111
+#: cli/search.c:110
 #, fuzzy
 msgid ""
 "With --perlre pattern must be supplied as:\n"
@@ -841,52 +847,52 @@ msgstr ""
 "Z opcj± --perlre wzorzec nale¿y podaæ w formie:\n"
 "   <delimiter>perl-regexp<delimiter>[imsx], zob. perlre(1)\n"
 
-#: cli/search.c:229
+#: cli/search.c:228
 #, c-format
 msgid "search: unknown regexp option -- %c"
 msgstr "search: nieznana opcja wzorca -- %c"
 
-#: cli/search.c:301
+#: cli/search.c:300
 #, c-format
 msgid "search: pattern: %s:%d: %s"
 msgstr "search: wzorzec: %s:%d: %s"
 
-#: cli/search.c:309
+#: cli/search.c:308
 #, c-format
 msgid "search: pattern: %s: %s"
 msgstr "search: wzorzec: %s: %s"
 
-#: cli/search.c:484
+#: cli/search.c:483
 #, c-format
 msgid "%s: load package info failed"
 msgstr "%s: b³±d odczytu informacji o pakiecie"
 
-#: cli/search.c:526
+#: cli/search.c:525
 msgid "search: no pattern given"
 msgstr "search: nie podano wzorca"
 
-#: cli/search.c:559
+#: cli/search.c:558
 msgid "Searching packages..."
 msgstr "Przeszukiwanie pakietów..."
 
-#: cli/search.c:579
+#: cli/search.c:578
 msgid "_interrupted."
 msgstr "_przerwano"
 
-#: cli/search.c:585
+#: cli/search.c:584
 msgid "_done."
 msgstr "_zrobione."
 
-#: cli/shell.c:45
+#: cli/shell.c:49
 #, fuzzy
 msgid "Exit poldek"
 msgstr "Zamknij poldeka"
 
-#: cli/shell.c:314
+#: cli/shell.c:335
 msgid "not a tty"
 msgstr "to nie je terminal"
 
-#: cli/shell.c:337
+#: cli/shell.c:357
 #, c-format
 msgid ""
 "\n"
@@ -897,188 +903,188 @@ msgstr ""
 "Witaj w poldekowym trybie interaktywnym. Wpisz \"help\" aby otrzymaæ pomoc.\n"
 "\n"
 
-#: cli/uninstall.c:41
+#: cli/uninstall.c:38
 msgid "Don't uninstall, but tell if it would work or not"
 msgstr "Nie deinstaluj, tylko sprawd¼ czy operacja przebiegnie pomy¶lnie"
 
-#: cli/uninstall.c:43
+#: cli/uninstall.c:40
 #, fuzzy
 msgid "Don't remove packages orphaned by selected ones"
 msgstr "Nie usuwaj pakietów wymaganych przez wybrane pakiety"
 
-#: cli/uninstall.c:45
+#: cli/uninstall.c:42
 msgid "Ignore broken dependencies"
 msgstr "Ignoruj niespe³nione zale¿no¶ci"
 
-#: cli/uninstall.c:50
+#: cli/uninstall.c:47
 #, fuzzy
 msgid "Package deinstallation:"
 msgstr "Opcje instalacji:"
 
-#: cli/uninstall.c:51
+#: cli/uninstall.c:48
 msgid "Uninstall given packages"
 msgstr "Usuñ podane pakiety"
 
-#: cli/uninstall.c:60
+#: cli/uninstall.c:57
 msgid "Uninstall packages"
 msgstr "Deinstaluj pakiety"
 
-#: conf.c:283
+#: conf.c:283 poldek-0.19.0/conf.c:283
 #, c-format
 msgid "%s:%d: missing '\"'"
 msgstr "%s:%d: brakuj±cy '\"'"
 
-#: conf.c:567
+#: conf.c:567 poldek-0.19.0/conf.c:567
 #, fuzzy, c-format
 msgid "%s:%d unknown option '%s::%s'"
 msgstr "%s:%d nieznana opcja '%s'"
 
-#: conf.c:588
+#: conf.c:588 poldek-0.19.0/conf.c:588
 #, fuzzy, c-format
 msgid "%s:%d: invalid value of '%s::%s'"
 msgstr "%s:%d niedozwolona warto¶æ '%s' zmiennej '%s'"
 
-#: conf.c:603
+#: conf.c:603 poldek-0.19.0/conf.c:603
 #, fuzzy, c-format
 msgid "%s:%d invalid value '%s' of '%s::%s'"
 msgstr "%s:%d niedozwolona warto¶æ '%s' zmiennej '%s'"
 
-#: conf.c:643
+#: conf.c:643 poldek-0.19.0/conf.c:643
 #, fuzzy, c-format
 msgid "%s:%d: %s::%s redefined"
 msgstr "%s:%ld:%s oczekiwany ':'"
 
-#: conf.c:648
+#: conf.c:648 poldek-0.19.0/conf.c:648
 #, c-format
 msgid "%s:%d multiple '%s' not allowed"
 msgstr "%s:%d wielokrotnie '%s' not allowed"
 
-#: conf.c:873
+#: conf.c:873 poldek-0.19.0/conf.c:873
 #, fuzzy, c-format
 msgid "%s:%d: wrong %%include"
 msgstr "%s:%d: '%s': nieprawid³owy parametr"
 
-#: conf.c:919
+#: conf.c:919 poldek-0.19.0/conf.c:919
 #, fuzzy, c-format
 msgid "%s:%d: '%s': invalid section name"
 msgstr "%s:%d %s: nieprawid³owa nazwa pakietu"
 
-#: conf.c:941
+#: conf.c:941 poldek-0.19.0/conf.c:941
 #, c-format
 msgid "%s:%d: missing '='"
 msgstr "%s:%d: brak '='"
 
-#: conf.c:987
+#: conf.c:987 poldek-0.19.0/conf.c:987
 #, fuzzy, c-format
 msgid "%s: load configuration failed"
 msgstr "%s: b³±d odczytu informacji o pakiecie"
 
-#: conf.c:1097
+#: conf.c:1096 poldek-0.19.0/conf.c:1096
 #, c-format
 msgid ""
 "There are two configuration files available, using legacy %s (consider "
 "removing it)."
 msgstr ""
 
-#: conf.c:1203
+#: conf.c:1202 poldek-0.19.0/conf.c:1202
 #, fuzzy, c-format
 msgid "invalid value ('%s') of option '%s'"
 msgstr "niedozwolona warto¶æ ('%s') dla opcji '%s'"
 
-#: install-dist.c:123
+#: install-dist.c:123 poldek-0.19.0/install-dist.c:123
 #, c-format
 msgid " %d of %d (%.2f of %.2f MB) packages done"
 msgstr "%d z %d (%.2f z %.2f MB) pakietów"
 
-#: install-dist.c:129
+#: install-dist.c:129 poldek-0.19.0/install-dist.c:129
 #, c-format
 msgid "; %.2f MB to download"
 msgstr "; %.2f MB do pobrania"
 
-#: install-dist.c:135
+#: install-dist.c:135 poldek-0.19.0/install-dist.c:135
 msgid "there were errors during install"
 msgstr "wyst±pi³y b³êdy podczas instalacji"
 
-#: lib_init.c:362
+#: lib_init.c:362 poldek-0.19.0/lib_init.c:362
 #, c-format
 msgid "%s: no such source"
 msgstr "%s: nie ma takiego ¼ród³a"
 
-#: lib_init.c:706
+#: lib_init.c:706 poldek-0.19.0/lib_init.c:706
 msgid "I'm set*id'ed, give up"
 msgstr "Mam ustawiony bit suid/sgid, wymiêkam"
 
-#: lib_init.c:711
+#: lib_init.c:711 poldek-0.19.0/lib_init.c:711
 msgid "Running me as root is not a good habit"
 msgstr ""
 
-#: lib_pkgset.c:62 pm/pset/pset.c:146
+#: lib_pkgset.c:62 pm/pset/pset.c:146 poldek-0.19.0/lib_pkgset.c:62
 msgid "no packages loaded"
 msgstr "nie za³adowano ¿adnych pakietów"
 
-#: log.c:138 log.c:254
+#: log.c:148 log.c:265 poldek-0.19.0/log.c:148 poldek-0.19.0/log.c:265
 msgid "error: "
 msgstr "b³±d: "
 
-#: log.c:140 log.c:257
+#: log.c:150 log.c:269 poldek-0.19.0/log.c:150 poldek-0.19.0/log.c:269
 msgid "warn: "
 msgstr "uwaga: "
 
-#: log.c:260
+#: log.c:273 poldek-0.19.0/log.c:273
 msgid "notice: "
 msgstr "uwaga: "
 
-#: misc.c:154
+#: misc.c:141 poldek-0.19.0/misc.c:141
 #, c-format
 msgid "%s: invalid cachedir path, fallback to default"
 msgstr ""
 
-#: misc.c:199
+#: misc.c:186 poldek-0.19.0/misc.c:186
 #, c-format
 msgid "$TMPDIR (%s) contains non alnum characters, using /tmp"
 msgstr "$TMPDIR (%s) zawiera nie alfanumeryczne znaki, przyjêto /tmp"
 
-#: misc.c:207
+#: misc.c:194 poldek-0.19.0/misc.c:194
 #, c-format
 msgid "$TMPDIR (%s): %m, using /tmp"
 msgstr "$TMPDIR (%s): %m, przyjêto /tmp"
 
-#: misc.c:211
+#: misc.c:198 poldek-0.19.0/misc.c:198
 #, c-format
 msgid "$TMPDIR (%s): not a directory, using /tmp"
 msgstr "$TMPDIR (%s): nie ma takiego katalogu, przyjêto /tmp"
 
-#: misc.c:236
+#: misc.c:223 poldek-0.19.0/misc.c:223
 #, c-format
 msgid "%s (%s) contains non alphanumeric characters"
 msgstr "%s (%s) zawiera znaki nie alfanumeryczne"
 
-#: misc.c:247
+#: misc.c:234 poldek-0.19.0/misc.c:234
 #, c-format
 msgid "%s (%s): %m, using /tmp"
 msgstr "%s (%s): %m, biorê /tmp"
 
-#: misc.c:250
+#: misc.c:237 poldek-0.19.0/misc.c:237
 #, c-format
 msgid "%s (%s): not a directory"
 msgstr "%s (%s): nie ma takiego katalogu"
 
-#: misc.c:253
+#: misc.c:240 poldek-0.19.0/misc.c:240
 #, c-format
 msgid "%s (%s): permission denied"
 msgstr "%s (%s): brak dostêpu"
 
-#: misc.c:450
+#: misc.c:436 poldek-0.19.0/misc.c:436
 #, c-format
 msgid "%s: mkdir: permission denied"
 msgstr "%s: mkdir: brak dostêpu"
 
-#: misc.c:513
+#: misc.c:499 poldek-0.19.0/misc.c:499
 #, c-format
 msgid "There seems another poldek%s uses %s"
 msgstr "Oj, jaki¶ inny poldek%s u¿ywa %s"
 
-#: misc.c:523
+#: misc.c:509 poldek-0.19.0/misc.c:509
 #, c-format
 msgid "%d package"
 msgid_plural "%d packages"
@@ -1086,12 +1092,12 @@ msgstr[0] "%d pakiet"
 msgstr[1] "%d pakiety"
 msgstr[2] "%d pakietów"
 
-#: pkg.c:536
+#: pkg.c:536 poldek-0.19.0/pkg.c:536
 #, c-format
 msgid "duplicated name %s"
 msgstr "zdublowana nazwa %s"
 
-#: pkg.c:559 pkg.c:577
+#: pkg.c:559 pkg.c:577 poldek-0.19.0/pkg.c:559 poldek-0.19.0/pkg.c:577
 #, fuzzy, c-format
 msgid "%s%s%s: removed duplicate package"
 msgstr "usuniêto %d zdublowany pakiet"
@@ -1119,7 +1125,7 @@ msgstr "USZKODZONY"
 msgid "Writing digest %s..."
 msgstr "Zapisywanie sumy kontrolnej %s..."
 
-#: pkgdir/pdir/digest.c:496 pkgdir/pkgdir.c:284 pkgdir/pndir/update.c:330
+#: pkgdir/pdir/digest.c:496 pkgdir/pkgdir.c:281 pkgdir/pndir/update.c:330
 #, c-format
 msgid "%s: desynchronized index, try --upa"
 msgstr "%s: rozsynchronizowany indeks, spróbuj opcji --upa"
@@ -1129,61 +1135,62 @@ msgstr "%s: rozsynchronizowany indeks, spróbuj opcji --upa"
 msgid "Verifying integrity of %s..."
 msgstr "Sprawdzanie integralno¶ci %s..."
 
-#: pkgdir/pdir/pdir.c:225
+#: pkgdir/pdir/pdir.c:236
 msgid "broken index; try remade it"
 msgstr "uszkodzony index: spróbuj go przebudowaæ"
 
-#: pkgdir/pdir/pdir.c:229
+#: pkgdir/pdir/pdir.c:240
 msgid "assuming index is not fully downloaded, retrying..."
 msgstr ""
 "zak³adam, ¿e indeks nie jest ¶ci±gniêty w ca³o¶ci, ponawiam pobieranie..."
 
-#: pkgdir/pdir/pdir.c:298 pkgdir/pndir/update.c:217
+#: pkgdir/pdir/pdir.c:309 pkgdir/pndir/update.c:217
 #, c-format
 msgid "%s: broken patch list"
 msgstr "%s: uszkodzona lista ³atek"
 
-#: pkgdir/pdir/pdir.c:412 pkgdir/pndir/update.c:289
+#: pkgdir/pdir/pdir.c:423 pkgdir/pndir/update.c:289
 #, c-format
 msgid "%s: no patches available"
 msgstr "%s: nie odnaleziono ³at"
 
-#: pkgdir/pdir/pdir.c:428 pkgdir/pndir/update.c:306 pkgset-load.c:92
+#: pkgdir/pdir/pdir.c:439 pkgdir/pndir/update.c:306 pkgset-load.c:92
+#: poldek-0.19.0/pkgset-load.c:92
 #, c-format
 msgid "%s: load failed"
 msgstr "%s: odczyt siê nie powiód³"
 
-#: pkgdir/pdir/pdir.c:433 pkgdir/pndir/update.c:311
+#: pkgdir/pdir/pdir.c:444 pkgdir/pndir/update.c:311
 #, fuzzy, c-format
 msgid "Applying %s..."
 msgstr "Nak³adanie ³aty %s..."
 
-#: pkgdir/pdir/pdir.c:476 pkgdir/pndir/pndir.c:312
+#: pkgdir/pdir/pdir.c:488 pkgdir/pndir/pndir.c:322
 #, c-format
 msgid "%s: invalid version string %s"
 msgstr "%s: nieprawid³owy zapis wersji %s"
 
-#: pkgdir/pdir/pdir.c:481 pkgdir/pndir/pndir.c:317
+#: pkgdir/pdir/pdir.c:493 pkgdir/pndir/pndir.c:327
 #, c-format
 msgid "%s: unsupported version %s (%d.x is required)"
 msgstr "%s: nieobs³iwana wersja %s (wymagana jest wersja %d.x)"
 
-#: pkgdir/pdir/pdir.c:485 pkgdir/pndir/pndir.c:321
+#: pkgdir/pdir/pdir.c:497 pkgdir/pndir/pndir.c:331
 #, c-format
 msgid "%s: unsupported version %s (upgrade the poldek)"
 msgstr "%s: wersja %s nie jest nieobs³ugiwana (poldek wywmaga aktualizacji)"
 
-#: pkgdir/pdir/pdir.c:558 pkgdir/pndir/pndir.c:334
+#: pkgdir/pdir/pdir.c:570 pkgdir/pndir/pndir.c:344
 #, c-format
 msgid "%s: broken index (empty %s tag)"
 msgstr "%s: uszkodzony indeks (pusty %s)"
 
-#: pkgdir/pdir/pdir.c:612 pkgdir/pndir/pndir.c:363 pkgdir/pndir/pndir.c:374
+#: pkgdir/pdir/pdir.c:624 pkgdir/pndir/pndir.c:373 pkgdir/pndir/pndir.c:384
 #, c-format
 msgid "%s: not a poldek index file"
 msgstr "%s: nie jest to poldekowy indeks"
 
-#: pkgdir/pdir/pdir.c:677
+#: pkgdir/pdir/pdir.c:689
 #, c-format
 msgid "%s: missing '%s' tag"
 msgstr "%s: brak '%s'"
@@ -1209,23 +1216,23 @@ msgstr "%s: interpertacja siê nie powiod³a"
 msgid "error reading %s's data"
 msgstr "b³±d odczytu danych z %s"
 
-#: pkgdir/pdir/save.c:230 pkgdir/pdir/save.c:231 pkgdir/pndir/save.c:656
-#: pkgdir/pndir/save.c:657
+#: pkgdir/pdir/save.c:231 pkgdir/pdir/save.c:232 pkgdir/pndir/save.c:655
+#: pkgdir/pndir/save.c:656
 #, c-format
 msgid "Writing %s..."
 msgstr "Zapisywanie %s..."
 
-#: pkgdir/pdir/save.c:422
+#: pkgdir/pdir/save.c:416
 #, c-format
 msgid "%s: format error"
 msgstr "%s: b³êdny format"
 
-#: pkgdir/pdir/save.c:446 pkgdir/pndir/save.c:402
-#, c-format
-msgid "Removing outdated %s"
+#: pkgdir/pdir/save.c:440
+#, fuzzy, c-format
+msgid "Removing outdated diff %s"
 msgstr "Usuwanie przedawnionego %s"
 
-#: pkgdir/pkgdir.c:236 pkgdir/pkgdir_clean.c:147
+#: pkgdir/pkgdir.c:236 pkgdir/pkgdir_clean.c:148
 #, fuzzy, c-format
 msgid "%s: unknown index type"
 msgstr "%s: nieznana opcja"
@@ -1235,19 +1242,19 @@ msgstr "%s: nieznana opcja"
 msgid "%s: this type of source is not updateable"
 msgstr "%s: tego typu ¼ród³a nie mo¿na aktualizowaæ"
 
-#: pkgdir/pkgdir.c:280
+#: pkgdir/pkgdir.c:277
 #, fuzzy, c-format
 msgid "%s: update failed, trying to update whole index..."
 msgstr ""
 "%s: za³adowanie lokalnego indeksu nie powiod³o siê, pobieranie go w "
 "ca³o¶ci..."
 
-#: pkgdir/pkgdir.c:544 pkgdir/pkgdir.c:546
+#: pkgdir/pkgdir.c:531 pkgdir/pkgdir.c:533
 #, fuzzy, c-format
 msgid "Loading [%s]%s..."
 msgstr "Wczytywanie %s..."
 
-#: pkgdir/pkgdir.c:601
+#: pkgdir/pkgdir.c:587
 #, c-format
 msgid "removed %d duplicate package"
 msgid_plural "removed %d duplicate packages"
@@ -1255,12 +1262,12 @@ msgstr[0] "usuniêto %d zdublowany pakiet"
 msgstr[1] "usuniêto %d zdublowane pakiety"
 msgstr[2] "usuniêto %d zdublowanych pakietów"
 
-#: pkgdir/pkgdir.c:717
+#: pkgdir/pkgdir.c:710
 #, fuzzy, c-format
 msgid "%s: this type of source could not be created"
 msgstr "%s: tego typu ¼ród³a nie mo¿na aktualizowaæ"
 
-#: pkgdir/pkgdir.c:807
+#: pkgdir/pkgdir.c:823
 #, c-format
 msgid "clock skew detected; create index with fake timestamp %lu %lu"
 msgstr ""
@@ -1270,22 +1277,22 @@ msgstr ""
 msgid "Removing %s"
 msgstr "Usuwanie %s"
 
-#: pkgdir/pkgdir_clean.c:97
+#: pkgdir/pkgdir_clean.c:98
 #, c-format
 msgid "Cleaning up %s..."
 msgstr "Czyszczenie %s..."
 
-#: pkgdir/pndir/pndir.c:239
+#: pkgdir/pndir/pndir.c:249
 #, fuzzy, c-format
 msgid "Opening %s..."
 msgstr "Czyszczenie %s..."
 
-#: pkgdir/pndir/pndir.c:368
+#: pkgdir/pndir/pndir.c:378
 #, fuzzy, c-format
 msgid "%s: not a poldek index file, %s"
 msgstr "%s: nie jest to poldekowy indeks"
 
-#: pkgdir/pndir/pndir.c:391
+#: pkgdir/pndir/pndir.c:401
 #, fuzzy, c-format
 msgid "%s:%s: unknown index opt"
 msgstr "%s: nieznana opcja"
@@ -1300,31 +1307,36 @@ msgstr "%s: interpertacja siê nie powiod³a"
 msgid "vaccum: %s: format error"
 msgstr "%s: b³êdny format"
 
-#: pkgdir/pndir/save.c:616
+#: pkgdir/pndir/save.c:402
+#, c-format
+msgid "Removing outdated %s"
+msgstr "Usuwanie przedawnionego %s"
+
+#: pkgdir/pndir/save.c:614
 #, fuzzy, c-format
 msgid " Omiting '%s' descriptions (%d - %.1lf%% only)..."
 msgstr "Zapisywanie sumy kontrolnej %s..."
 
-#: pkgdir/pndir/save.c:747
+#: pkgdir/pndir/save.c:746
 #, c-format
 msgid " Skipping '%s' descriptions (%d - %.1lf%% only)..."
 msgstr ""
 
-#: pkgdir/pndir/save.c:754
+#: pkgdir/pndir/save.c:753
 #, fuzzy, c-format
 msgid " Writing %d '%s' descriptions %s..."
 msgstr "Zapisywanie sumy kontrolnej %s..."
 
-#: pkgdir/rpmdb/rpmdb.c:200
+#: pkgdir/rpmdb/rpmdb.c:201
 #, c-format
 msgid "Loading db packages%s%s%s..."
 msgstr "£adowanie pakietów z bazy%s%s%s..."
 
-#: pkgdir/rpmdb/rpmdb.c:210
+#: pkgdir/rpmdb/rpmdb.c:211
 msgid "_done"
 msgstr "_zrobione"
 
-#: pkgdir/source.c:107 pkgdir/source.c:488
+#: pkgdir/source.c:107 pkgdir/source.c:487
 #, c-format
 msgid "%s: %s unknown option"
 msgstr "%s: %s nieznana opcja"
@@ -1334,174 +1346,184 @@ msgstr "%s: %s nieznana opcja"
 msgid "%s%sinvalid value ('%s') for option '%s'"
 msgstr "%s%sniedozwolona warto¶æ ('%s') dla opcji '%s'"
 
-#: pkgdir/source.c:513
+#: pkgdir/source.c:512
 #, c-format
 msgid "removed duplicated source %s%s%s"
 msgstr "usuniêto zdublowane '¼ród³o' %s%s%s"
 
-#: pkgdir/source.c:580
+#: pkgdir/source.c:576
 #, fuzzy, c-format
 msgid "%s: this type (%s) of source is not updateable"
 msgstr "%s: tego typu ¼ród³a nie mo¿na aktualizowaæ"
 
-#: pkgdir/source.c:587
+#: pkgdir/source.c:583
 #, fuzzy, c-format
 msgid "%s: this type (%s) of source is not updateable; use --upa to refresh it"
 msgstr ""
 "%s: tego typu ¼ród³a nie mo¿na aktualizowaæ przyrostowo; u¿yj --upa by "
 "pobraæ go raz jeszcze"
 
-#: pkgdir/source.c:824
-msgid "mkidx requested for remote source without destination specified"
-msgstr ""
+#: pkgdir/source.c:910
+#, fuzzy, c-format
+msgid "%s: unable to write remote index"
+msgstr "%s: tego typu ¼ród³a nie mo¿na aktualizowaæ"
 
-#: pkgdir/yum/yum.c:155 pkgdir/yum/yum.c:165 pkgdir/yum/yum.c:176
+#: pkgdir/source.c:915
+#, fuzzy, c-format
+msgid "%s: refusing to overwrite index"
+msgstr "%s: odmawiam aktualizacji wstrzymanego (hold) pakietu"
+
+#: pkgdir/yum/yum.c:156 pkgdir/yum/yum.c:166 pkgdir/yum/yum.c:177
 #, fuzzy, c-format
 msgid "%s:%d syntax error"
 msgstr "%s:%d: b³±d sk³adniowy"
 
-#: pkgfetch.c:97
+#: pkgfetch.c:97 poldek-0.19.0/pkgfetch.c:97
 #, c-format
 msgid "Need to get %s of archives"
 msgstr ""
 
-#: pkgfetch.c:99
+#: pkgfetch.c:99 poldek-0.19.0/pkgfetch.c:99
 msgid "_."
 msgstr ""
 
-#: pkgfetch.c:102
+#: pkgfetch.c:102 poldek-0.19.0/pkgfetch.c:102
 #, c-format
 msgid "_, %s of them need to be downloaded.\n"
 msgstr ""
 
-#: pkgfetch.c:108
+#: pkgfetch.c:108 poldek-0.19.0/pkgfetch.c:108
 #, c-format
 msgid "After unpacking about %s will be used."
 msgstr ""
 
-#: pkgfetch.c:160 pkgfetch.c:257
+#: pkgfetch.c:160 pkgfetch.c:257 poldek-0.19.0/pkgfetch.c:160
+#: poldek-0.19.0/pkgfetch.c:257
 #, c-format
 msgid "%s: MD5 signature verification failed"
 msgstr "%s: suma kontrolna MD5 siê nie zgadza"
 
-#: pkgmark.c:143 pkgset-mark.c:84
+#: pkgmark.c:143 pkgset-mark.c:84 poldek-0.19.0/pkgmark.c:143
 #, fuzzy, c-format
 msgid "%s marks %s (cap %s)"
 msgstr "%s%s zaznaczy³ %s (%s %s)"
 
-#: pkgmark.c:211 pkgset-mark.c:154
+#: pkgmark.c:211 pkgset-mark.c:154 poldek-0.19.0/pkgmark.c:211
 #, c-format
 msgid "conflict between %s and %s"
 msgstr "konflikt pomiêdzy %s i %s"
 
-#: pkgset-install.c:152
+#: pkgset-install.c:152 poldek-0.19.0/pkgset-install.c:152
 #, c-format
 msgid "%s: multiple instances installed, give up"
 msgstr "%s: wielokrotnie zainstalowany, poddajê siê"
 
-#: pkgset-install.c:157
+#: pkgset-install.c:157 poldek-0.19.0/pkgset-install.c:157
 #, c-format
 msgid "%s: refusing to upgrade held package"
 msgstr "%s: odmawiam aktualizacji wstrzymanego (hold) pakietu"
 
-#: pkgset-install.c:552
+#: pkgset-install.c:552 poldek-0.19.0/pkgset-install.c:552
 msgid "cap"
 msgstr "w³."
 
-#: pkgset-install.c:557
+#: pkgset-install.c:557 poldek-0.19.0/pkgset-install.c:557
 msgid "orphaned "
 msgstr "'osierocony' "
 
-#: pkgset-install.c:560
+#: pkgset-install.c:560 poldek-0.19.0/pkgset-install.c:560
 msgid "cnfl"
 msgstr "konfl."
 
-#: pkgset-install.c:562
+#: pkgset-install.c:562 poldek-0.19.0/pkgset-install.c:562
 #, c-format
 msgid "%s%s marks %s (%s %s)"
 msgstr "%s%s zaznaczy³ %s (%s %s)"
 
-#: pkgset-install.c:605
+#: pkgset-install.c:605 poldek-0.19.0/pkgset-install.c:605
 #, c-format
 msgid "%s: skip follow %s cause it's dependency errors"
 msgstr "%s: pominiêty %s z powodu niespe³nionych zale¿no¶ci"
 
-#: pkgset-install.c:614
+#: pkgset-install.c:614 poldek-0.19.0/pkgset-install.c:614
 #, c-format
 msgid "%s: dependency loop - package already marked for removal"
 msgstr "%s: zapêtlenie zale¿no¶ci -- pakiet jest ju¿ zaznaczony do usuniêcia"
 
-#: pkgset-install.c:635
+#: pkgset-install.c:635 poldek-0.19.0/pkgset-install.c:635
 #, c-format
 msgid "greedy upgrade %s to %s-%s (unresolved %s)"
 msgstr "zach³anna aktualizacja %s do %s-%s (niespe³nione %s)"
 
-#: pkgset-install.c:765
+#: pkgset-install.c:765 poldek-0.19.0/pkgset-install.c:765
 #, c-format
 msgid "%s is required by"
 msgstr "%s jest wymagany przez"
 
-#: pkgset-install.c:826
+#: pkgset-install.c:826 poldek-0.19.0/pkgset-install.c:826
 #, c-format
 msgid "%s (cap %s) is required by %s"
 msgstr "%s (w³. %s) jest wymagany przez %s"
 
-#: pkgset-install.c:876
+#: pkgset-install.c:876 poldek-0.19.0/pkgset-install.c:876
 #, c-format
 msgid "%s obsoleted by %s"
 msgstr "%s zostanie zast±piony przez %s"
 
-#: pkgset-install.c:1065
+#: pkgset-install.c:1065 poldek-0.19.0/pkgset-install.c:1065
 #, c-format
 msgid "%s: rpmcap %s not found, upgrade rpm."
 msgstr "%s: brak w³. RPM-a %s, zaktualizuj rpm-a."
 
-#: pkgset-install.c:1153
+#: pkgset-install.c:1153 poldek-0.19.0/pkgset-install.c:1153
 #, c-format
 msgid "%s (cap %s) is required by %s%s"
 msgstr "%s (w³. %s) jest wymagany przez %s%s"
 
-#: pkgset-install.c:1168
+#: pkgset-install.c:1168 poldek-0.19.0/pkgset-install.c:1168
 #, c-format
 msgid "%s: req %s not found"
 msgstr "%s: nie znaleziono wymaganego %s"
 
-#: pkgset-install.c:1216
+#: pkgset-install.c:1216 poldek-0.19.0/pkgset-install.c:1216
 #, c-format
 msgid "%s is required by %s"
 msgstr "%s jest wymagany przez %s"
 
-#: pkgset-install.c:1431
+#: pkgset-install.c:1431 poldek-0.19.0/pkgset-install.c:1431
 #, c-format
 msgid "%s: /%s/%s%s: conflicts with %s's one"
 msgstr "%s: /%s/%s%s: jest w konflicie z tym samym plikem z %s"
 
-#: pkgset-install.c:1576
+#: pkgset-install.c:1576 poldek-0.19.0/pkgset-install.c:1576
 #, c-format
 msgid "%s (cnfl %s) conflicts with installed %s"
 msgstr "%s (cnfl %s) jest w konflicie z zainstalowanm %s"
 
-#: pkgset-install.c:1610
+#: pkgset-install.c:1610 poldek-0.19.0/pkgset-install.c:1610
 #, c-format
 msgid "%s (cap %s) conflicts with installed %s (%s)"
 msgstr "%s (w³. %s) jest w konflicie z zainstalowanm %s (%s)"
 
-#: pkgset-install.c:1640
+#: pkgset-install.c:1640 poldek-0.19.0/pkgset-install.c:1640
 #, c-format
 msgid "%s conflicts with %s"
 msgstr "%s jest w konflicie z %s"
 
-#: pkgset-install.c:1796
+#: pkgset-install.c:1796 poldek-0.19.0/pkgset-install.c:1796
 #, c-format
 msgid "%s: package is for a different architecture (%s)"
 msgstr "%s: pakiet zbudowano dla innej architektury (%s)"
 
-#: pkgset-install.c:1803
+#: pkgset-install.c:1803 poldek-0.19.0/pkgset-install.c:1803
 #, c-format
 msgid "%s: package is for a different operating system (%s)"
 msgstr "%s: pakiet zbudowano dla innego systemu operacyjnego (%s)"
 
-#: pkgset-install.c:1862 pkgset-install.c:1869 uninstall.c:156 uninstall.c:163
+#: pkgset-install.c:1862 pkgset-install.c:1869
+#: poldek-0.19.0/pkgset-install.c:1862 poldek-0.19.0/pkgset-install.c:1869
+#: poldek-0.19.0/uninstall.c:156 poldek-0.19.0/uninstall.c:163 uninstall.c:156
+#: uninstall.c:163
 #, c-format
 msgid "_ (%d marked by dependencies)"
 msgid_plural "_ (%d marked by dependencies)"
@@ -1509,7 +1531,7 @@ msgstr[0] "_ (%d zaznaczony po¶rednio)"
 msgstr[1] "_ (%d zaznaczone po¶rednio)"
 msgstr[2] "_ (%d zaznaczonych po¶rednio)"
 
-#: pkgset-install.c:1865
+#: pkgset-install.c:1865 poldek-0.19.0/pkgset-install.c:1865
 #, c-format
 msgid "There are %d package to install"
 msgid_plural "There are %d packages to install"
@@ -1517,21 +1539,21 @@ msgstr[0] "Zaznaczono %d pakiet do instalacji"
 msgstr[1] "Zaznaczono %d pakiety do instalacji"
 msgstr[2] "Zaznaczono %d pakietów do instalacji"
 
-#: pkgset-install.c:1874
+#: pkgset-install.c:1874 poldek-0.19.0/pkgset-install.c:1874
 #, c-format
 msgid "_, %d to uninstall"
 msgstr "_, %d do usuniêcia"
 
-#: pkgset-install.c:1926
+#: pkgset-install.c:1926 poldek-0.19.0/pkgset-install.c:1926
 #, c-format
 msgid "%s: refusing to uninstall held package"
 msgstr "%s: odmawiam usuniêcia wstrzymanego (hold) pakietu"
 
-#: pkgset-install.c:2014
+#: pkgset-install.c:2014 poldek-0.19.0/pkgset-install.c:2014
 msgid "Processing dependencies..."
 msgstr "Przetwarzanie zale¿no¶ci..."
 
-#: pkgset-install.c:2050
+#: pkgset-install.c:2050 poldek-0.19.0/pkgset-install.c:2050
 #, c-format
 msgid "%d unresolved dependency"
 msgid_plural "%d unresolved dependencies"
@@ -1539,54 +1561,57 @@ msgstr[0] "%d niespe³niona zale¿no¶æ"
 msgstr[1] "%d niespe³nione zale¿no¶ci"
 msgstr[2] "%d niespe³nionych zale¿no¶ci"
 
-#: pkgset-install.c:2106
+#: pkgset-install.c:2106 poldek-0.19.0/pkgset-install.c:2106
 msgid "Proceed? [Y/n]"
 msgstr "Kontynuowaæ? [Y/n]"
 
-#: pkgset-install.c:2208
+#: pkgset-install.c:2208 poldek-0.19.0/pkgset-install.c:2208
 #, c-format
 msgid "%s: multiple instances installed, skipped"
 msgstr "%s: wielokrotnie zainstalowany, zosta³ pominiêty"
 
-#: pkgset-install.c:2219
+#: pkgset-install.c:2219 poldek-0.19.0/pkgset-install.c:2219
 #, c-format
 msgid "%s: skip held package"
 msgstr "%s: pomijam wstrzymany (hold) pakiet"
 
-#: pkgset-install.c:2239
+#: pkgset-install.c:2239 poldek-0.19.0/pkgset-install.c:2239
 msgid "Looking up packages for upgrade..."
 msgstr "Szukam pakietów do aktualizacji..."
 
-#: pkgset-install.c:2244
+#: pkgset-install.c:2244 poldek-0.19.0/pkgset-install.c:2244
 msgid "There are database errors (?), give up"
 msgstr "Wyst±pi³y b³êdy rpmowej bazy (?), wymiêkam"
 
 #: pkgset-install.c:2255 pkgset-install.c:2458 pkgset-install.c:2497
-#: poldek_ts.c:682 poldek_ts.c:744
+#: poldek-0.19.0/pkgset-install.c:2255 poldek-0.19.0/pkgset-install.c:2458
+#: poldek-0.19.0/pkgset-install.c:2497 poldek-0.19.0/poldek_ts.c:705
+#: poldek-0.19.0/poldek_ts.c:767 poldek_ts.c:705 poldek_ts.c:767
 msgid "Nothing to do"
 msgstr "Nie ma roboty"
 
-#: pkgset-install.c:2401
+#: pkgset-install.c:2401 poldek-0.19.0/pkgset-install.c:2401
 #, c-format
 msgid "%s: marked as %s's provider"
 msgstr ""
 
-#: pkgset-install.c:2409
+#: pkgset-install.c:2409 poldek-0.19.0/pkgset-install.c:2409
 #, fuzzy, c-format
 msgid "%s: %s version of %s is installed (%s), skipped"
 msgstr "%s: wielokrotnie zainstalowany, zosta³ pominiêty"
 
-#: pkgset-load.c:55 pm/pset/pset.c:128 pm/pset/pset.c:590
+#: pkgset-load.c:55 pm/pset/pset.c:128 pm/pset/pset.c:591
+#: poldek-0.19.0/pkgset-load.c:55
 #, fuzzy, c-format
 msgid "trying to scan directory %s..."
 msgstr "Zapisywanie sumy kontrolnej %s..."
 
-#: pkgset-load.c:63
+#: pkgset-load.c:63 poldek-0.19.0/pkgset-load.c:63
 #, c-format
 msgid "%s: load failed, skipped"
 msgstr "%s: ³adunek siê nie powiód³, pominiêto to"
 
-#: pkgset-load.c:116
+#: pkgset-load.c:116 poldek-0.19.0/pkgset-load.c:116
 #, c-format
 msgid "%d package read"
 msgid_plural "%d packages read"
@@ -1604,11 +1629,11 @@ msgstr "mark: %s: niespe³nione zale¿no¶ci"
 msgid "mark %s"
 msgstr "zazn. %s"
 
-#: pkgset-order.c:144
+#: pkgset-order.c:144 poldek-0.19.0/pkgset-order.c:144
 msgid "PreReq loop: "
 msgstr "Zapêtlenie zale¿no¶ci: "
 
-#: pkgset-req.c:146
+#: pkgset-req.c:146 poldek-0.19.0/pkgset-req.c:146
 msgid ""
 "\n"
 "Verifying dependencies..."
@@ -1616,21 +1641,21 @@ msgstr ""
 "\n"
 "Sprawdzanie zale¿no¶ci..."
 
-#: pkgset-req.c:197
+#: pkgset-req.c:197 poldek-0.19.0/pkgset-req.c:197
 msgid "No unsatisfied dependencies detected -- OK"
 msgstr "Brak niespe³nionych zale¿no¶ci -- To dobrze"
 
-#: pkgset-req.c:200
+#: pkgset-req.c:200 poldek-0.19.0/pkgset-req.c:200
 #, c-format
 msgid "%d unsatisfied dependencies, %d packages cannot be installed"
 msgstr "%d niespe³nionych zale¿no¶ci, %d pakiet(ów)"
 
-#: pkgset-req.c:304
+#: pkgset-req.c:304 poldek-0.19.0/pkgset-req.c:304
 #, c-format
 msgid "%s: provides rpmlib cap \"%s\""
 msgstr "%s zawiera rpmlib()ow± w³asno¶æ \"%s\""
 
-#: pkgset.c:281
+#: pkgset.c:281 poldek-0.19.0/pkgset.c:281
 #, c-format
 msgid "Removed %d duplicate package from available set"
 msgid_plural "Removed %d duplicate packages from available set"
@@ -1638,7 +1663,7 @@ msgstr[0] "Usuniêto %d zdublowany pakiet z listy dostêpnych"
 msgstr[1] "Usuniêto %d zdublowane pakiety z listy dostêpnych"
 msgstr[2] "Usuniêto %d zdublowanych pakietów z listy dostêpnych"
 
-#: pkgset.c:290
+#: pkgset.c:290 poldek-0.19.0/pkgset.c:290
 msgid ""
 "\n"
 "Verifying files conflicts..."
@@ -1646,7 +1671,7 @@ msgstr ""
 "\n"
 "Sprawdzanie konfliktów plikowych..."
 
-#: pkgset.c:399
+#: pkgset.c:399 poldek-0.19.0/pkgset.c:399
 msgid ""
 "\n"
 "Verifying (pre)requirements..."
@@ -1654,7 +1679,7 @@ msgstr ""
 "\n"
 "Sprawdzanie \"pre\" wymagañ..."
 
-#: pkgset.c:409
+#: pkgset.c:409 poldek-0.19.0/pkgset.c:409
 #, c-format
 msgid "%d prerequirement loop detected"
 msgid_plural "%d prerequirement loops detected"
@@ -1662,15 +1687,15 @@ msgstr[0] "Wykryto %d zapêtlenie zale¿no¶ci"
 msgstr[1] "Wykryto %d zapêtlenia zale¿no¶ci"
 msgstr[2] "Wykryto %d zapêtleñ zale¿no¶ci"
 
-#: pkgset.c:414
+#: pkgset.c:414 poldek-0.19.0/pkgset.c:414
 msgid "No loops -- OK"
 msgstr "Brak zapêtleñ -- To dobrze"
 
-#: pm/pset/pset.c:119 pm/pset/pset.c:578
+#: pm/pset/pset.c:119 pm/pset/pset.c:579
 msgid "Could not open 'pset' database: missing source parameter"
 msgstr ""
 
-#: pm/pset/pset.c:583
+#: pm/pset/pset.c:584
 #, fuzzy, c-format
 msgid "%s: source could not be remote one"
 msgstr "%s: tego typu ¼ród³a nie mo¿na aktualizowaæ"
@@ -1803,27 +1828,27 @@ msgstr "%s usieczon za spraw± sygna³u %d"
 msgid "%s died under inscrutable circumstances"
 msgstr "%s zgin±³ w podejrzanych okoliczno¶ciach"
 
-#: pm/rpm/rpminstall.c:256 pm/rpm/rpminstall.c:271 pm/rpm/rpminstall.c:448
-#: pm/rpm/rpminstall.c:464
+#: pm/rpm/rpminstall.c:256 pm/rpm/rpminstall.c:271 pm/rpm/rpminstall.c:444
+#: pm/rpm/rpminstall.c:460
 #, fuzzy, c-format
 msgid "%s: command not found"
 msgstr "%s: nie znaleziono wymaganego %s"
 
-#: pm/rpm/rpminstall.c:369
+#: pm/rpm/rpminstall.c:365
 #, fuzzy, c-format
 msgid "%s: signature verification failed"
 msgstr "%s: suma kontrolna MD5 siê nie zgadza"
 
-#: pm/rpm/rpminstall.c:386
+#: pm/rpm/rpminstall.c:382
 msgid "There were signature verification errors. Proceed? [y/N]"
 msgstr "Wyst±pi³y b³êdy weryfikacji podpisu. Kontynuowaæ? [y/N]"
 
-#: pm/rpm/rpminstall.c:405 pm/rpm/signature.c:365
+#: pm/rpm/rpminstall.c:401 pm/rpm/signature.c:365
 #, c-format
 msgid "Executing%s..."
 msgstr "Uruchamianie%s..."
 
-#: pm/rpm/rpminstall.c:520
+#: pm/rpm/rpminstall.c:516
 #, c-format
 msgid "Running%s..."
 msgstr "Uruchamianie%s..."
@@ -1833,16 +1858,16 @@ msgstr "Uruchamianie%s..."
 msgid "%s: %s signature not found"
 msgstr "%s: %s nie znaleziono podpisu"
 
-#: poldek_term.c:191
+#: poldek-0.19.0/poldek_term.c:192 poldek_term.c:192
 msgid "$TERM undefined"
 msgstr "niezdefiniowana zmienna $TERM"
 
-#: poldek_term.c:196
+#: poldek-0.19.0/poldek_term.c:197 poldek_term.c:197
 #, c-format
 msgid "%s: unknown terminal"
 msgstr "%s: nieznana nazwa terminala"
 
-#: poldek_ts.c:563
+#: poldek-0.19.0/poldek_ts.c:574 poldek_ts.c:574
 msgid ""
 "\n"
 "Processing dependencies..."
@@ -1850,47 +1875,47 @@ msgstr ""
 "\n"
 "Przetwarzanie zale¿no¶ci..."
 
-#: poldek_ts.c:843
+#: poldek-0.19.0/poldek_ts.c:866 poldek_ts.c:866
 #, fuzzy, c-format
 msgid "%s: req %s %s"
 msgstr "%s zaznaczy³ %s"
 
-#: poldek_ts.c:845
+#: poldek-0.19.0/poldek_ts.c:868 poldek_ts.c:868
 msgid "version mismatch"
 msgstr ""
 
-#: poldek_ts.c:845
+#: poldek-0.19.0/poldek_ts.c:868 poldek_ts.c:868
 #, fuzzy
 msgid "not found"
 msgstr "mark: nie znaleziono %s"
 
-#: poldek_ts.c:851
+#: poldek-0.19.0/poldek_ts.c:874 poldek_ts.c:874
 #, fuzzy, c-format
 msgid "%d unsatisfied dependencies"
 msgstr "%s: niespe³nione zale¿no¶ci:"
 
-#: split.c:134
+#: poldek-0.19.0/split.c:134 split.c:134
 #, c-format
 msgid "%s:%d: syntax error near %s"
 msgstr "%s:%d: b³±d sk³adniowy w okolicach %s"
 
-#: split.c:171
+#: poldek-0.19.0/split.c:171 split.c:171
 #, c-format
 msgid "%s: give up at %d"
 msgstr "%s: wymiêk³em przy linii %d"
 
-#: split.c:345
+#: poldek-0.19.0/split.c:345 split.c:345
 msgid "split failed: packages size is greater than chunk size"
 msgstr ""
 "podzia³ siê nie powiód³ -- rozmiar pakietów jest wiêkszy ni¿ zadany rozmiar "
 "czê¶ci"
 
-#: split.c:377
+#: poldek-0.19.0/split.c:377 split.c:377
 #, c-format
 msgid "Writing %s (%4d packages, % 10d bytes, pri min, max = %d, %d)"
 msgstr "Zapisywanie %s (%4d pakiety, % 10d bajtów, pri min, max = %d, %d)"
 
-#: uninstall.c:159
+#: poldek-0.19.0/uninstall.c:159 uninstall.c:159
 #, c-format
 msgid "There are %d package to remove"
 msgid_plural "There are %d packages to remove"
@@ -1898,12 +1923,12 @@ msgstr[0] "Zaznaczono %d pakiet do usuniêcia"
 msgstr[1] "Zaznaczono %d pakiety do usuniêcia"
 msgstr[2] "Zaznaczono %d pakietów do usuniêcia"
 
-#: uninstall.c:220
+#: poldek-0.19.0/uninstall.c:220 uninstall.c:220
 #, c-format
 msgid "'%s': only exact selection is supported"
 msgstr "'%s': pakietów nie mo¿na tu podawaæ w postaci maski"
 
-#: uninstall.c:307
+#: poldek-0.19.0/uninstall.c:307 uninstall.c:307
 msgid "Proceed? [y/N]"
 msgstr "Kontynuowaæ? [y/N]"
 
@@ -1931,7 +1956,7 @@ msgstr "Uruchamianie %s\n"
 msgid "%s (%d) died under inscrutable circumstances"
 msgstr "%s (%d) zgin±³ w podejrzanych okoliczno¶ciach"
 
-#: vfile/vfcurl.c:283 vfile/vfetch.c:153
+#: vfile/vfcurl.c:283 vfile/vfetch.c:150
 #, c-format
 msgid "Retrying...(#%d)\n"
 msgstr "Ponowna próba...(#%d)\n"
@@ -1940,17 +1965,17 @@ msgstr "Ponowna próba...(#%d)\n"
 msgid "Done\n"
 msgstr "Zrobione\n"
 
-#: vfile/vfetch.c:290
+#: vfile/vfetch.c:287
 #, fuzzy, c-format
 msgid "Retrieving %s:%s...\n"
 msgstr "Pobieranie %s...\n"
 
-#: vfile/vfetch.c:292
+#: vfile/vfetch.c:289
 #, c-format
 msgid "Retrieving %s...\n"
 msgstr "Pobieranie %s...\n"
 
-#: vfile/vfetch.c:339
+#: vfile/vfetch.c:336
 #, fuzzy, c-format
 msgid "Retrieving status of %s...\n"
 msgstr "Pobieranie %s...\n"
@@ -2053,12 +2078,12 @@ msgstr "niemo¿no¶æ po³±czenia z %s:%s: %s"
 msgid "unable to connect to %s:%s: %m"
 msgstr "niemo¿no¶æ po³±czenia z %s:%s: %m"
 
-#: vfile/vflock.c:110
+#: vfile/vflock.c:108
 #, fuzzy, c-format
 msgid "Waiting for %s...\n"
 msgstr "Zapisywanie %s..."
 
-#: vfile/vflock.c:138
+#: vfile/vflock.c:136
 #, c-format
 msgid "Unable to obtain lock %s...\n"
 msgstr ""
@@ -2068,7 +2093,7 @@ msgstr ""
 msgid "done"
 msgstr " zrobione"
 
-#: vfile/vfreq.c:169
+#: vfile/vfreq.c:166
 #, fuzzy, c-format
 msgid "%s: URL parse error\n"
 msgstr "%s: b³±d interpretacji URLa"

@@ -15,4 +15,7 @@ void *sigint_pop(void);
 
 int sigint_reached(void);
 
+/* sigint_reached(); sigint_reset() if reset */
+int sigint_reached_reset(int reset);
+
 #endif

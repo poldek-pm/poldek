@@ -55,9 +55,9 @@ const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
 
 static const char *poldek_logprefix = "poldek";
 
+static
 void (*poldek_assert_hook)(const char *expr, const char *file, int line) = NULL;
-void (*poldek_malloc_fault_hook)(void) = NULL;
-
+static void (*poldek_malloc_fault_hook)(void) = NULL;
 
 static void register_vf_handlers_compat(const tn_hash *htcnf);
 static void register_vf_handlers(const tn_array *fetchers);
@@ -603,8 +603,8 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
         i++;
     }
     
-    if (ts->getop(ts, POLDEK_OP_CONFIRM_INST) && verbose < 1)
-        verbose = 1;
+    if (ts->getop(ts, POLDEK_OP_CONFIRM_INST) && poldek_VERBOSE < 1)
+        poldek_VERBOSE = 1;
     
     if (ts->getop(ts, POLDEK_OP_GREEDY)) {
         int v = poldek_conf_get_bool(htcnf, "aggressive greedy", 1);
@@ -796,13 +796,13 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
         case POLDEK_CONF_LOGFILE:
             vv = va_arg(ap, void*);
             if (vv)
-                log_init(vv, stdout, poldek_logprefix);
+                poldek_log_init(vv, stdout, poldek_logprefix);
             break;
 
         case POLDEK_CONF_LOGTTY:
             vv = va_arg(ap, void*);
             if (vv)
-                log_init(vv, stdout, poldek_logprefix);
+                poldek_log_init(vv, stdout, poldek_logprefix);
             break;
 
 
@@ -864,10 +864,8 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
         i++;
     }
     
-    mem_info_verbose = -1;
-    verbose = 0;
-    
-    log_init(NULL, stdout, poldek_logprefix);
+    poldek_set_verbose(0);
+    poldek_log_init(NULL, stdout, poldek_logprefix);
     self_init();
 
     bindtextdomain(PACKAGE, NULL);
@@ -876,9 +874,9 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     poldek_term_init();
     init_internal();
     pkgdirmodule_init();
-    vfile_verbose = &verbose;
 
-    
+    vfile_configure(VFILE_CONF_SIGINT_REACHED, sigint_reached_reset);
+    vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
     vfile_configure(VFILE_CONF_LOGCB, poldek_vf_vlog_cb);
     cachedir = setup_cachedir(NULL);
     vfile_configure(VFILE_CONF_CACHEDIR, cachedir);
@@ -1025,6 +1023,7 @@ int poldek_setup(struct poldek_ctx *ctx)
     if (rc && !setup_pm(ctx))
         rc = 0;
 
+    vfile_setup();
     ctx->_iflags |= SETUP_DONE;
     return rc;
 }

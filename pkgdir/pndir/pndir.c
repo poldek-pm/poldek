@@ -397,7 +397,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
                     idx.crflags |= PKGDIR_CREAT_NOFL;
                 else if (strcmp(opt, "nouniq") == 0)
                     idx.crflags |= PKGDIR_CREAT_NOUNIQ;
-                else if (verbose > 2) 
+                else if (poldek_VERBOSE > 2) 
                     logn(LOGWARN, _("%s:%s: unknown index opt"), path, opt);
             }
             n_array_free(opts);

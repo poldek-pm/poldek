@@ -271,14 +271,14 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     }
     
     if (!headerGetEntry(h, RPMTAG_FILEMODES, (void*)&t4, (void*)&modes, &c4)) {
-        if (verbose > 1)
+        if (poldek_VERBOSE > 1)
             logn(LOGWARN, errmsg_notag, pkgname, "FILEMODES");
         missing_file_hdrs_err = 1;
         modes = NULL;
     }
     
     if (!headerGetEntry(h, RPMTAG_FILESIZES, (void*)&t4, (void*)&sizes, &c4)) {
-        if (verbose > 1)
+        if (poldek_VERBOSE > 1)
             logn(LOGWARN, errmsg_notag, pkgname, "FILESIZES");
         missing_file_hdrs_err = 2;
         sizes = NULL;
@@ -446,7 +446,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
     
     
     if (!headerGetEntry(h, RPMTAG_OS, &type, (void *)&os, NULL)) {
-        if (verbose > 1)
+        if (poldek_VERBOSE > 1)
             logn(LOGWARN, _("%s: missing OS tag"), fname);
         os = NULL;
             

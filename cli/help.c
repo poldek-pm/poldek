@@ -20,7 +20,6 @@
 #include <trurl/trurl.h>
 
 #include "i18n.h"
-#include "misc.h"
 #include "cli.h"
 
 static int cmd_help(struct cmdctx *cmdctx);

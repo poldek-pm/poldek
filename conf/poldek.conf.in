@@ -1,13 +1,12 @@
 # $Id$
 
 _confdir = @SYSCONFDIR@/poldek
+_distro  = pld
 
-%include %{_confdir}/pld-source.conf
-#%include %{_confdir}/rh-source.conf
-#%include http://zn/RPMS/rh-source.conf.bz2
-#%include http://foo.com/foo-sources.conf
+%include %{_confdir}/%{_distro}-source.conf
+
+# external downloaders
 #%include fetch.conf
-
 
 [global]
 

@@ -20,9 +20,8 @@
 
 #include "i18n.h"
 #include "log.h"
+#include "poldek_util.h"
 #include "pkg.h"
-#include "pkgset.h"
-#include "misc.h"
 #include "cli.h"
 #include "op.h"
 

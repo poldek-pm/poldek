@@ -44,6 +44,7 @@ AC_PROG_CC()
 AC_C_INLINE
 AC_PROG_INSTALL
 AC_PROG_RANLIB
+AC_PROG_LN_S
 AC_CHECK_PROG(POD2MAN, pod2man, pod2man)
 AM_GNU_GETTEXT([external])
 AM_GNU_GETTEXT_VERSION(0.11.5)
@@ -84,16 +85,17 @@ else
 	fi
 fi
 
-AC_ARG_WITH(curl,
-[  --with-curl	compile with libcurl],
-ENABLE_VFILE_CURL=$enableval, ENABLE_VFILE_CURL=no)
-if test "${ENABLE_VFILE_CURL}." != "yes."; then
-	AM_CONDITIONAL(ENABLE_VFILE_CURL, false)
-else
-	AC_CHECK_LIB(curl, curl_easy_init,,AC_MSG_ERROR(["libcurl not found"]))
-	AM_CONDITIONAL(ENABLE_VFILE_CURL, true)
-	AC_DEFINE([ENABLE_VFILE_CURL],1,[defined if curl support is requested])
-fi
+dnl curl module is obsoleted 
+# AC_ARG_WITH(curl,
+# [  --with-curl	compile with libcurl],
+# ENABLE_VFILE_CURL=$enableval, ENABLE_VFILE_CURL=no)
+# if test "${ENABLE_VFILE_CURL}." != "yes."; then
+#	AM_CONDITIONAL(ENABLE_VFILE_CURL, false)
+# else
+#	AC_CHECK_LIB(curl, curl_easy_init,,AC_MSG_ERROR(["libcurl not found"]))
+#	AM_CONDITIONAL(ENABLE_VFILE_CURL, true)
+#	AC_DEFINE([ENABLE_VFILE_CURL],1,[defined if curl support is requested])
+# fi
 
 
 AC_ARG_WITH(sys-trurlib,
@@ -113,9 +115,9 @@ if test "${ENABLE_STATIC}." = "yes."; then
 		LIBS="$LIBS -lncurses"
 	fi
 
-	if test "${ENABLE_VFILE_CURL}." = "yes."; then
-		LIBS="$LIBS $(curl-config --libs)"
-	fi
+#	if test "${ENABLE_VFILE_CURL}." = "yes."; then
+#		LIBS="$LIBS $(curl-config --libs)"
+#	fi
 fi
 
 AC_SUBST(poldek_LDFLAGS)

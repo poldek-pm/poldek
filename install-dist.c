@@ -97,7 +97,7 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
         if (is_remote == -1)
             is_remote = vf_url_type(pkgpath) & VFURL_REMOTE;
         
-        if (verbose > 1) {
+        if (poldek_VERBOSE > 1) {
             char *p = pkg_is_hand_marked(ts->pms, pkg) ? "" : "dep";
             if (pkg_has_badreqs(pkg)) 
                 msg(2, "not%sInstall %s\n", p, pkg->name);

@@ -356,7 +356,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                 break;
 
             default:
-                if (verbose > 1) 
+                if (poldek_VERBOSE > 1) 
                     logn(LOGWARN, "%s:%ld: skipped unknown tag '%c'", fn, offs, tag);
                 
                 if (!pkg_store_skiptag(tag, tag_binsize, st)) {

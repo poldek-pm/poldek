@@ -94,7 +94,7 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
             
             buf[n] = '\0';
             msg_tty(verbose_level, "_%s", buf);
-            if (!log_enabled_filelog())
+            if (!poldek_log_enabled_filelog())
                 continue;
                 
             for (i=0; i < n; i++) {
@@ -152,8 +152,8 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
     
     
     n = 0;
-    if (verbose == 0) {
-        verbose = 1;
+    if (poldek_VERBOSE == 0) {
+        poldek_VERBOSE = 1;
         n = 1;
     }
 
@@ -164,7 +164,7 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
     p_st_destroy(&pst);
     
     if (n)
-        verbose--;
+        poldek_VERBOSE--;
     
     return ec;
 }
@@ -247,7 +247,7 @@ int pm_rpm_packages_install(struct pkgdb *db,
     char **argv;
     char *cmd;
     int i, n, nopts = 0, ec, nsignerr = 0;
-    int nv = verbose;
+    int nv = poldek_VERBOSE;
 
     pkgs_toremove = pkgs_toremove;
 
@@ -391,7 +391,7 @@ int pm_rpm_packages_install(struct pkgdb *db,
     n_assert(n > nopts); 
     argv[n++] = NULL;
 
-    if (verbose > 0) {
+    if (poldek_VERBOSE) {
         char buf[1024], *p;
         p = buf;
         
@@ -471,7 +471,7 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
     
     argv[n++] = "--erase";
 
-    for (i=1; i<verbose; i++)
+    for (i=1; i < poldek_VERBOSE; i++)
         argv[n++] = "-v";
 
     if (ts->getop(ts, POLDEK_OP_RPMTEST))
@@ -506,7 +506,7 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
     n_assert(n > nopts); 
     argv[n++] = NULL;
     
-    if (verbose > 0) {
+    if (poldek_VERBOSE > 0) {
         char buf[1024], *p;
         p = buf;
         

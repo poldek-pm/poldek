@@ -155,7 +155,7 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
         pkg->load_pkguinf = load_pkguinf;
         pkg->load_nodep_fl = load_nodep_fl;
         
-        if (verbose > 3)
+        if (poldek_VERBOSE > 3)
             msgn(4, "rpmdb: ld %s", pkg_snprintf_s(pkg));
         
         if (strcmp(pkg->name, "quake2") != 0) /* broken rpmdb... */

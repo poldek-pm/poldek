@@ -255,7 +255,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
 {
     int n;
     int strict;
-    int v = verbose;
+    int v = poldek_VERBOSE;
 
     MEMINF("before setup");
     ps->flags |= flags;
@@ -285,15 +285,15 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     MEMINF("before index");
     pkgset_index(ps);
     
-    v = verbose;    
+    v = poldek_VERBOSE;
     if (flags & PSET_VERIFY_FILECNFLS) 
         msgn(1, _("\nVerifying files conflicts..."));
     else
-        verbose = -1;
+        poldek_VERBOSE = -1;
 
     ps->_vrfy_file_conflicts = n_array_new(16, free, NULL);
     file_index_find_conflicts(&ps->file_idx, ps->_vrfy_file_conflicts, strict);
-    verbose = v;
+    poldek_VERBOSE = v;
 
     pkgset_verify_deps(ps, strict);
     MEMINF("after verify deps");
@@ -415,7 +415,7 @@ int pkgset_order(struct pkgset *ps, int verb)
     }
         	
     
-    if (verb && verbose > 2) {
+    if (verb && poldek_VERBOSE > 2) {
         int i;
             
         msg(2, "Installation order:\n");
@@ -475,7 +475,7 @@ tn_array *find_capreq(struct pkgset *ps, tn_array *pkgs,
                       enum pkgset_search_tag tag,
                       const char *name)
 {
-    const struct capreq_idx_ent *ent;
+    const struct capreq_idx_ent *ent = NULL;
     
     switch (tag) {
         case PS_SEARCH_CAP:

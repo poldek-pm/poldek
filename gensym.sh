@@ -1,8 +1,12 @@
 #!/bin/sh
 
-LIB=.libs/libpoldek.so
-INCLUDES="poldek.h poldek_ts.h pkg.h capreq.h pkgdir/pkgdir.h pkgdir/source.h sigint/sigint.h"
+libNAME=libpoldek
+if [ -n "$1" ]; then libNAME="lib$1"; fi
 
+LIB=.libs/${libNAME}_allsyms.a
+if [ ! -f $LIB ]; then echo "$LIB: no such file"; exit 1; fi
+
+INCLUDES=$(grep ^libHEADERS Makefile.am | perl -ne 's|^libHEADERS\s*=\s*||; print')
 
 HH="/tmp/hh";
 > /tmp/hh
@@ -11,17 +15,25 @@ for i in $INCLUDES; do
 done
 
 
-symlist=$(nm --defined-only .libs/libpoldek.so | pcregrep '^\w+\s+[tT]' | awk '{print $3}')
+symlist=$(nm --defined-only $LIB | pcregrep '^\w+\s+[tT]' | awk '{print $3}' | sort -u)
 
-
-
-
-out=$(basename $LIB .so)
-out="$out.sym"
+#out=$(basename $LIB .so)
+#out="$out.sym"
+out="${libNAME}.sym"
 > $out
 for s in $symlist; do
-    echo $s    
     if pcregrep -s "\b$s\(" $HH; then
+       echo "+ $s"
        echo $s >> $out
     fi
-done    
+done  
+  
+# libpoldek hack - add constans
+if [ "$libNAME" = "libpoldek" ]; then
+    nm --defined-only $LIB | pcregrep '^\w+\s+[RB]' | awk '{print $3}' | grep -v poldek_conf_| grep poldek_ | sort -u >> $out
+fi
+
+
+if [ "$libNAME" = "libpoclidek" ]; then
+    nm --defined-only $LIB | pcregrep '^\w+\s+[D]' | awk '{print $3}' | grep poclidek_ | sort -u >> $out
+fi

@@ -671,8 +671,8 @@ static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf)
         ts->rootdir = n_strdup("/");
     
     if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
-        if (verbose < 1)
-            verbose += 1;
+        if (poldek_VERBOSE < 1)
+            poldek_VERBOSE++;
         
     } else if (ts->getop_v(ts, POLDEK_OP_JUSTFETCH, POLDEK_OP_JUSTPRINT, 0)) {
         if (!poldek_util_is_rwxdir(ts->rootdir)) {

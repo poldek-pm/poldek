@@ -14,8 +14,8 @@
 #include <time.h>
 
 #include "sigint/sigint.h"
+#include "poldek_util.h"
 #include "i18n.h"
-#include "misc.h"
 #include "pkgu.h"
 #include "cli.h"
 #include "log.h"

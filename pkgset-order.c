@@ -62,7 +62,7 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
     n_array_push(vs->stack, pkg);
     last_stack_i = n_array_size(vs->stack) - 1;
     
-    if (verbose > 2) {
+    if (poldek_VERBOSE > 2) {
         msg(4, "_\n");
         msg_i(4, deep, "_ visit %s -> (", pkg->name);
         for (i=0; i < n_array_size(pkg->reqpkgs); i++) {
@@ -134,7 +134,7 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
                 if (is_loop) {
                     vs->nerrors++;
                     
-                    if (verbose > 2) {
+                    if (poldek_VERBOSE > 2) {
                         msg(4, "\n");
                         msg_i(4, deep, "   cycle   %s -> %s", pkg->name,
                               rp->pkg->name);
@@ -166,7 +166,7 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
         }
     }
     
-    if (verbose > 3) {
+    if (poldek_VERBOSE > 3) {
         msg(4, "\n");
         msg_i(4, deep, "_ } ");
         msg(4, "_%s",  pkg->name);
@@ -227,15 +227,14 @@ static int do_order(tn_array *pkgs, tn_array **ordered_pkgs, int prereq_only)
 int packages_order(tn_array *pkgs, tn_array **ordered_pkgs) 
 {
     tn_array *ordered = NULL;
-    int nloops, verbose_;
+    int nloops, verbose;
     
     n_array_isort_ex(pkgs, (tn_fn_cmp)pkg_cmp_pri);
     
-    verbose_ = verbose;
-    verbose = -10;
+    verbose = poldek_set_verbose(-10);
     do_order(pkgs, &ordered, 0);
-    
-    verbose = verbose_;
+    poldek_set_verbose(verbose);
+
     *ordered_pkgs = NULL;
     nloops = do_order(ordered, ordered_pkgs, 1);
     

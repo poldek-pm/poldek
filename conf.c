@@ -1078,7 +1078,6 @@ tn_hash *poldek_conf_loadefault(unsigned flags)
 
     if ((homedir = getenv("HOME")) != NULL) {
         char path[PATH_MAX];
-        
         snprintf(path, sizeof(path), "%s/.poldekrc", homedir);
         if (access(path, R_OK) == 0)
             return poldek_conf_load(path, flags);

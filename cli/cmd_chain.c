@@ -30,9 +30,8 @@
 #define ENABLE_TRACE 0
 #include "log.h"
 #include "cli.h"
-#include "cmd.h"
+#include "cmd_chain.h"
 #include "cmd_pipe.h"
-#include "poclidek.h"
 
 static
 struct cmd_chain_ent *cmd_chain_ent_new(unsigned flags,

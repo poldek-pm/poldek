@@ -19,7 +19,6 @@
 #include "vfile/vopen3.h"
 #include "vfile/vfile.h"
 #include "sigint/sigint.h"
-#include "misc.h"
 #include "i18n.h"
 #include "cli.h"
 #include "cmd_pipe.h"

@@ -71,7 +71,7 @@ int pkgdir__rmf(const char *dirpath, const char *mask)
         return do_unlink(dirpath);
     
     if ((dir = opendir(dirpath)) == NULL) {
-        if (verbose > 2)
+        if (poldek_VERBOSE > 2)
             logn(LOGWARN, "opendir %s: %m", dirpath);
         return 1;
     }

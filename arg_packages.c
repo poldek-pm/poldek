@@ -327,7 +327,7 @@ int resolve_bycap(struct arg_packages *aps, struct pkgset *ps, const char *mask)
         return 0;
     }
     
-    if (verbose > 1) {
+    if (poldek_VERBOSE > 1) {
         int i;
         
         msgn(2, "%s: %d package(s) found:", mask, n_array_size(pkgs));

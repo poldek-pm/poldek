@@ -414,7 +414,7 @@ int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
             if (memcmp(mdd, current_mdd, PDIR_DIGEST_SIZE) == 0)
                 first_patch_found = 1;
             else {
-                if (verbose > 2) {
+                if (poldek_VERBOSE > 2) {
                     logn(LOGERR, "ts = %ld, %ld", pkgdir->ts, ts);
                     logn(LOGERR, "md dir  %s", idx->pdg->mdd);
                     logn(LOGERR, "md last %s", mdd);
@@ -468,10 +468,11 @@ int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 
         snprintf(path, sizeof(path), "%s/%s", dn, pdir_packages_incdir);
         if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath)) {
-            verbose--; /* verbosity need to be reorganized... */
+            int v = poldek_set_verbose(-1);
             pkgdir__rmf(tmpath, NULL);
-            verbose++;
+            poldek_set_verbose(v);
         }
+        
         msg(1, "_\n");
     } 
     

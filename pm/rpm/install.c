@@ -302,8 +302,8 @@ int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
             logn(LOGERR, _("%s: failed dependencies:"), path);
                 
 
-            printdepProblems(log_stream(), conflicts, numConflicts);
-            if ((fstream = log_file_stream()))
+            printdepProblems(poldek_log_stream(), conflicts, numConflicts);
+            if ((fstream = poldek_log_file_stream()))
                 printdepProblems(fstream, conflicts, numConflicts);
             freeConflicts(conflicts, numConflicts);
             goto l_err;
@@ -327,8 +327,8 @@ int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
             probs = rpmtsProblems(ts);
 #endif
             logn(LOGERR, _("%s: installation failed:"), path);
-            printProblems(log_stream(), probs);
-            if ((fstream = log_file_stream()))
+            printProblems(poldek_log_stream(), probs);
+            if ((fstream = poldek_log_file_stream()))
                 printProblems(fstream, probs);
             goto l_err;
             

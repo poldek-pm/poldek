@@ -276,7 +276,7 @@ void rpmlog(int prii, const char *fmt, ...)
     vprintf(fmt, args);
 #endif
     
-    if (verbose_level > verbose || verbose_level > pm_rpm_verbose)
+    if (verbose_level > poldek_VERBOSE || verbose_level > pm_rpm_verbose)
         return;
     
     if ((logpri & (LOGERR | LOGWARN)) == 0)

@@ -1,5 +1,5 @@
 /* $Id$ */
-/* Package file list module */
+/* package file list module */
 #ifndef POLDEK_PKGFL_H
 #define POLDEK_PKGFL_H
 

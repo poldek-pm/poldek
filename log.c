@@ -30,9 +30,7 @@
 #define POLDEK_LOG_H_INTERNAL
 #include "log.h"
 
-int verbose;
-int verbose_file;
-
+int poldek_VERBOSE = 0;
 static char       l_prefix[64];
 static FILE      *l_stream = NULL, *l_fstream = NULL;
 
@@ -41,8 +39,16 @@ static void vlog_tty(int pri, const char *fmt, va_list args);
 
 int poldek_verbose(void)
 {
-    return verbose;
+    return poldek_VERBOSE;
 }
+
+int poldek_set_verbose(int v)
+{
+    int vv = poldek_VERBOSE;
+    poldek_VERBOSE = v;
+    return vv;
+}
+
 
 void poldek_log(int pri, const char *fmt, ...)
 {
@@ -154,37 +160,37 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
 }
 
 
-void log_msg(const char *fmt, ...) 
+void poldek_log_msg(const char *fmt, ...) 
 {
     va_list args;
-    if (verbose > -1) {
+    if (poldek_VERBOSE > -1) {
         va_start(args, fmt);
         poldek_vlog(LOGINFO, 0, fmt, args);
         va_end(args);
     }
 }
 
-void log_err(const char *fmt, ...) 
+void poldek_log_err(const char *fmt, ...) 
 {
     va_list args;
-    if (verbose > -1) {
+    if (poldek_VERBOSE > -1) {
         va_start(args, fmt);
         poldek_vlog(LOGERR, 0, fmt, args);
         va_end(args);
     }
 }
 
-void log_tty(const char *fmt, ...)
+void poldek_log_tty(const char *fmt, ...)
 {
     va_list args;
-    if (verbose > -1) {
+    if (poldek_VERBOSE > -1) {
         va_start(args, fmt);
         vlog_tty(LOGINFO, fmt, args);
         va_end(args);
     }
 }
 
-void log_msg_i(int indent, const char *fmt, ...) 
+void poldek_log_msg_i(int indent, const char *fmt, ...) 
 {
     va_list args;
     
@@ -194,7 +200,7 @@ void log_msg_i(int indent, const char *fmt, ...)
 }
 
 
-int log_init(const char *pathname, FILE *tty, const char *prefix)
+int poldek_log_init(const char *pathname, FILE *tty, const char *prefix)
 {
     int is_not_stdstream = l_stream != stdout && l_stream != stderr;
 
@@ -218,7 +224,7 @@ int log_init(const char *pathname, FILE *tty, const char *prefix)
 }
 
 
-void log_closelog(void)
+void poldek_log_closelog(void)
 {
     if (l_stream != NULL && l_stream != stdout && l_stream != stderr) 
 	fclose(l_stream);
@@ -232,18 +238,18 @@ void log_closelog(void)
 }
 
 
-FILE *log_stream(void) 
+FILE *poldek_log_stream(void) 
 {
     return l_stream ? l_stream : stdout;
 }
 
 
-FILE *log_file_stream(void) 
+FILE *poldek_log_file_stream(void) 
 {
     return l_fstream;
 }
 
-int log_enabled_filelog(void)
+int poldek_log_enabled_filelog(void)
 {
     return l_fstream != NULL;
 }
@@ -296,3 +302,4 @@ static char *text_wrap(char *dest, int size, const char *text, int tolen)
 
 }
 #endif
+        

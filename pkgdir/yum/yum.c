@@ -138,8 +138,8 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         return 0;
     
     vf = idx.vf;
+    nline = 0;
     nerr = 0;
-
     while ((nread = n_stream_gets(vf->vf_tnstream, linebuf, sizeof(linebuf))) > 0) {
         char              *p, *q, *nvr, *fn, *ep, nevr[512];
         const char        *name, *ver, *rel;

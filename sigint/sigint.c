@@ -13,21 +13,16 @@
 /*
   $Id$
 */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include <signal.h>
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
  
-#include "../log.h"
 #include "sigint.h"
 
 static volatile sig_atomic_t interrupted = 0;
 static tn_array *cb_stack = NULL;
 static void (*orig_sighandler)(int) = NULL;
-void (*sigint_reached_cb)(void) = NULL;
+static void (*sigint_reached_cb)(void) = NULL;
 static int cnt = 0;
 static volatile sig_atomic_t enabled = 1;
 
@@ -108,6 +103,14 @@ int sigint_reached(void)
         cnt++;
     }
 
+    return v;
+}
+
+int sigint_reached_reset(int reset)
+{
+    int v = sigint_reached();
+    if (reset)
+        sigint_reset();
     return v;
 }
 

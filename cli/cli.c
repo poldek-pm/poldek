@@ -32,13 +32,10 @@
 #include <sigint/sigint.h>
 #include "pkgdir/pkgdir.h"
 #include "i18n.h"
-#include "misc.h"
 #include "log.h"
 #include "cli.h"
-#include "cmd.h"
+#include "cmd_chain.h"
 #include "cmd_pipe.h"
-#include "poclidek.h"
-
 
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
 
@@ -111,7 +108,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
                 sh_cmdctx->err = 1;
                 
             } else {
-                verbose++;
+                poldek_VERBOSE++;
             }
         }
         break;
@@ -188,24 +185,23 @@ static
 int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv) 
 {
     struct sh_cmdctx     sh_cmdctx;
-    int                  rc = 1, verbose_;
+    int                  rc = 1;
     unsigned             parse_flags;
     struct poclidek_cmd  *cmd;
     struct argp          argp = { cmdctx->cmd->argp_opts, parse_opt,
                                   cmdctx->cmd->arg,
                                   cmdctx->cmd->doc, 0, 0, 0};
-
-    verbose_ = verbose;
+    
     if (argv == NULL)
         return 0;
 
     cmd = cmdctx->cmd;
     if (argv_is_help(argc, (const char**)argv)) {
         cmdctx->rtflags |= CMDCTX_ISHELP;
-        printf("is_help!\n");
+        DBGF("is_help!\n");
     }
-
-    if (verbose < 0)
+    
+    if (poldek_verbose() < 0)
         cmdctx->rtflags |= CMDCTX_NOCTRLMSGS;
     
     cmdctx->_data = NULL;
@@ -251,7 +247,6 @@ int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
     if (cmd->destroy_cmd_arg_d && cmdctx->_data)
         cmd->destroy_cmd_arg_d(cmdctx->_data);
 
-    verbose = verbose_;
     return rc;
 }
 
@@ -371,8 +366,8 @@ int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
 
 static void init_commands(struct poclidek_ctx *cctx) 
 {
-    int n = 0;
-	char   *homedir;
+    int n = 0, owndir = 0;;
+	char   *homedir, *sysconfdir = "/etc", path[PATH_MAX];
     
     cctx->commands = n_array_new(16, NULL, (tn_fn_cmp)command_cmp);
     n_array_ctl(cctx->commands, TN_ARRAY_AUTOSORTED);
@@ -382,11 +377,25 @@ static void init_commands(struct poclidek_ctx *cctx)
     }
 	n_array_sort(cctx->commands);
 
-    poclidek_load_aliases(cctx, "/etc/poldek/alias");
-	if ((homedir = getenv("HOME")) != NULL) {
+#ifdef SYSCONFDIR
+    if (access(SYSCONFDIR, R_OK) == 0) {
+        sysconfdir = SYSCONFDIR;
+        owndir = 1;
+    }
+    
+#endif
+    if (owndir) {
+        n_snprintf(path, sizeof(path), "%s/aliases.conf", sysconfdir);
+        poclidek_load_aliases(cctx, path);
+    }
+
+    if ((homedir = getenv("HOME")) != NULL) {
 		char path[PATH_MAX];
-		snprintf(path, sizeof(path), "%s/.poldek.alias", homedir);	
-		poclidek_load_aliases(cctx, path);
+		snprintf(path, sizeof(path), "%s/.poldek-aliases.conf", homedir);	
+		if (!poclidek_load_aliases(cctx, path)) {
+            snprintf(path, sizeof(path), "%s/.poldek.alias", homedir);
+            poclidek_load_aliases(cctx, path);
+        }
 	}
     n_array_sort(cctx->commands);
 }
@@ -396,16 +405,16 @@ static void *dent_alloc(struct poclidek_ctx *cctx, size_t size)
     return cctx->_dent_na->na_malloc(cctx->_dent_na, size);
 }
 
-
+static
 int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
 {
     n_assert (cctx->ctx == NULL);
-    cctx->flags = 0;
+    cctx->_flags = 0;
     cctx->ctx = ctx;
     cctx->pkgs_available = NULL;
     cctx->pkgs_installed = NULL;
     cctx->_dent_na = n_alloc_new(32, TN_ALLOC_OBSTACK);
-    cctx->dent_alloc = dent_alloc;
+    cctx->_dent_alloc = dent_alloc;
     init_commands(cctx);
     return 1;
 }
@@ -419,7 +428,7 @@ struct poclidek_ctx *poclidek_new(struct poldek_ctx *ctx)
     return NULL;
 }
 
-
+static
 void poclidek_destroy(struct poclidek_ctx *cctx) 
 {
     if (cctx->pkgs_available)
@@ -445,18 +454,18 @@ void poclidek_destroy(struct poclidek_ctx *cctx)
 void poclidek_free(struct poclidek_ctx *cctx) 
 {
     poclidek_destroy(cctx);
-    n_free(cctx);
+    free(cctx);
 }
 
 
-int poclidek_load_packages(struct poclidek_ctx *cctx) 
+int poclidek_load_packages(struct poclidek_ctx *cctx, int skip_installed) 
 {
     struct poldek_ctx *ctx;
 
-    if (cctx->flags & POLDEKCLI_PACKAGES_LOADED)
+    if (cctx->_flags & POLDEKCLI_PACKAGES_LOADED)
         return 1;
 
-    cctx->flags |= POLDEKCLI_PACKAGES_LOADED;
+    cctx->_flags |= POLDEKCLI_PACKAGES_LOADED;
 
     ctx = cctx->ctx;
     
@@ -470,9 +479,8 @@ int poclidek_load_packages(struct poclidek_ctx *cctx)
     }
     
     poclidek_dent_init(cctx);
-    if (cctx->flags & POLDEKCLI_SKIPINSTALLED)
+    if (skip_installed || (cctx->_flags & POLDEKCLI_SKIPINSTALLED))
         return 1;
-    
     
     return poclidek_load_installed(cctx, 0); 
 }

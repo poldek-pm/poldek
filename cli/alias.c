@@ -81,7 +81,7 @@ int add_alias(struct poclidek_ctx *cctx,
             logn(LOGWARN, _("%s: alias could not shadow a command"), aliasname);
             
         } else {
-            if (verbose > 1)
+            if (poldek_verbose() > 1)
                 logn(LOGWARN, _("%s (%s) overwrites %s"), aliasname, cmdline,
                      cmd->cmdline);
             free(cmd->name);
@@ -97,18 +97,18 @@ int add_alias(struct poclidek_ctx *cctx,
 }
 
 
-void poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path) 
+int poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path) 
 {
     tn_hash *aliases_htcnf, *ht;
     tn_array *keys;
     int i;
     
     if (access(path, R_OK) != 0)
-        return;
+        return 0;
     
     aliases_htcnf = poldek_conf_load(path, POLDEK_LDCONF_NOVRFY);
     if (aliases_htcnf == NULL)
-        return;
+        return 0;
     
     ht = poldek_conf_get_section_ht(aliases_htcnf, "global");
     keys = n_hash_keys(ht);
@@ -123,6 +123,7 @@ void poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path)
     
     n_array_free(keys);
     n_hash_free(aliases_htcnf);
+    return 1;
 }
 
 

@@ -280,7 +280,7 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
             if (memcmp(md, current_md, TNIDX_DIGEST_SIZE) == 0)
                 first_patch_found = 1;
             else {
-                if (verbose > 2) {
+                if (poldek_VERBOSE > 2) {
                     logn(LOGERR, "ts = %ld, %ld", pkgdir->ts, ts);
                     logn(LOGERR, "md dir  %s", idx->dg->md);
                     logn(LOGERR, "md last %s", md);
@@ -337,9 +337,9 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
     if (nerr == 0) {
         snprintf(path, sizeof(path), "%s/%s", dn, pndir_packages_incdir);
         if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath)) {
-            verbose--; /* verbosity need to be reorganized... */
+            int v = poldek_set_verbose(-1);
             pkgdir__rmf(tmpath, NULL);
-            verbose++;
+            poldek_set_verbose(v);
         }
         msg(1, "_\n");
     }

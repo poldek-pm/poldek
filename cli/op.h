@@ -1,9 +1,10 @@
-#ifndef POLDEKCLI_OPTIONS_H
-#define POLDEKCLI_OPTIONS_H
+#ifndef POLDEKCLI_OPGROUP_H
+#define POLDEKCLI_OPGROUP_H
 
 #include <argp.h>               /* for struct argp* */
 
-#include "poldek_ts.h"
+struct poldek_ctx;
+struct poldek_ts;
 
 #define POCLIDEK_MNR_MODE (1 << 0)
 #define POCLIDEK_MJR_MODE (1 << 0)
@@ -41,6 +42,5 @@ extern struct poclidek_opgroup poclidek_opgroup_verify;
 
 struct poclidek_opgroup_rt *poclidek_opgroup_rt_new(struct poldek_ts *ts);
 void poclidek_opgroup_rt_free(struct poclidek_opgroup_rt *rt);
-
 
 #endif

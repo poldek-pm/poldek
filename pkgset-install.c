@@ -739,7 +739,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     }
 
     if (db_dep->spkg && installset_provides(NULL, req, ps, upg)) {
-        if (verbose > 1)
+        if (poldek_VERBOSE > 1)
             logn(LOGWARN, "cap %s satisfied by install set, shouldn't happen",
                  capreq_snprintf_s(req));
         DBGF("cap %s satisfied by install set\n", capreq_snprintf_s(req));
@@ -2190,7 +2190,7 @@ void mapfn_mark_newer_pkg(const char *n, uint32_t e,
     
     pkg = n_array_nth(upg->avpkgs, i);
     cmprc = pkg_cmp_evr(pkg, &tmpkg);
-    if (verbose) {
+    if (poldek_VERBOSE) {
         if (cmprc == 0) 
             msg(3, "%-32s up to date\n", pkg_snprintf_s(&tmpkg));
         
@@ -2520,7 +2520,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
         
         if (ts->getop(ts, POLDEK_OP_PARTICLE)) {
             if (n > 1) {
-                if (verbose > 0) {
+                if (poldek_VERBOSE > 0) {
                     poldek_term_printf_c(PRCOLOR_YELLOW,
                                          "Installing set #%d\n", n);
                     fflush(stdout);

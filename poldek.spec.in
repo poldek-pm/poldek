@@ -2,8 +2,8 @@
 # 
 # spec is based on PLD's poldek.spec available at <http://cvs.pld.org.pl/SPECS/>
 #
-# To make config for particular distro as /etc/poldek.conf do:
-# rpm -bb ... --define 'distro {pld,rh,mdk}'
+# To build with configuration for particular distro define %{distro}:
+# $ rpmbuild -bb ... --define 'distro {pld,fedora,rh}'
 #  
 
 Summary:	A full-featured frontend to RPM
@@ -43,7 +43,7 @@ similar to the shell mode of Perl's CPAN.
 %{?_with_static:This version is statically linked}
 
 %package devel
-Summary:	libpoldek headers and documentation
+Summary:	poldek headers and documentation
 Group:		Development/Libraries
 Requires:	%{name} = %{version}-%{release}
 
@@ -51,7 +51,7 @@ Requires:	%{name} = %{version}-%{release}
 poldek's libraries headers and documentation
 
 %package static
-Summary:	libpoldek static library
+Summary:	poldek static libraries
 Group:		Development/Libraries
 Requires:	%{name}-devel = %{version}-%{release}
 
@@ -72,11 +72,14 @@ install -d $RPM_BUILD_ROOT%{_sysconfdir}
 %{__make} install DESTDIR=$RPM_BUILD_ROOT
 %{?_with_static:rm -f $RPM_BUILD_ROOT/%{_bindir}/rpmvercmp}
 
-#DISTRO=%{?distro:%{distro}}%{!?distro:pld}
-#sed "s/i686/%{_target_cpu}/g" < conf/poldekrc.sample-${DISTRO} > $RPM_BUILD_ROOT/etc/%{name}.conf
+DISTRO=%{?distro:%{distro}}%{!?distro:pld}
+
+perl -pi -e "s|^_distro\s*=\s*\w+\s*|_distro = $DISTRO\n|" $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/%{name}.conf
+
+# set PLD architecture
+perl -pi -e 's|_pld_arch\s*=\s*i686|_pld_arch = %{_target_cpu}|' $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/pld-*.conf
 
 gzip -9nf README* conf/*sample* NEWS TODO 
-
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -88,7 +91,6 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(644,root,root,755)
 %dir %{_sysconfdir}/%{name}
 %attr(644,root,root) %config(noreplace) %verify(not md5 size mtime) %{_sysconfdir}/%{name}/*.conf
-%attr(644,root,root) %{_sysconfdir}/%{name}/%{name}.alias
 %attr(755,root,root) %{_bindir}/*
 %attr(755,root,root) %{_libdir}/lib*.so.*.*
 %dir %{_libdir}/%{name}
@@ -116,6 +118,9 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.22  2004/09/26 19:37:42  mis
+- a big cleanup: renamed non-unique symbols, prepared symbols list to export (*.sym), fixed headers, spec
+
 Revision 1.21  2004/09/23 20:28:08  mis
 - updated to 0.2x series (devel and static subpackage, etc)
 

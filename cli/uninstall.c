@@ -21,10 +21,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
-#include "pkgset.h"
-#include "misc.h"
 #include "cli.h"
-#include "misc.h"
 #include "op.h"
 
 

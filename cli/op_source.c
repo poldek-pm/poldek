@@ -24,9 +24,9 @@
 #include "i18n.h"
 #include "log.h"
 
+#include "poldek_intern.h"      /* to get ctx->sources, TOFIX */
 #include "pkgdir/source.h"
 #include "pkgdir/pkgdir.h"
-#include "poldek_intern.h"
 #include "cli.h"
 #include "op.h"
 

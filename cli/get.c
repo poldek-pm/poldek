@@ -14,14 +14,15 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <trurl/trurl.h>
 
 #include "i18n.h"
 #include "log.h"
-#include "cli.h"
 #include "pkgmisc.h"
-#include "misc.h"
+#include "poldek_util.h"
+#include "cli.h"
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int get(struct cmdctx *cmdctx);

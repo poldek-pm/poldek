@@ -31,7 +31,7 @@
 #include <trurl/nstr.h>
 
 #include "i18n.h"
-
+#include "log.h"
 #include "vfile.h"
 #include "vfile_intern.h"
 
@@ -155,7 +155,7 @@ int vf_lock_mkdir(const char *path)
     if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
         return vf_lockdir(path);
 
-    printf("** vf_lock_mkdir %s\n", path);
+    DBGF("** vf_lock_mkdir %s\n", path);
     if (strcmp(path, "/home/mis/.poldek-cache") == 0)
         n_assert(0);
     

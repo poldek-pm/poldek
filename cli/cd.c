@@ -17,7 +17,6 @@
 
 #include "sigint/sigint.h"
 #include "i18n.h"
-#include "misc.h"
 #include "cli.h"
 
 static int cd(struct cmdctx *cmdctx);

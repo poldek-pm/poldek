@@ -24,7 +24,6 @@
 #include "i18n.h"
 #include "log.h"
 
-#include "pkgset.h"
 #include "cli.h"
 #include "op.h"
 

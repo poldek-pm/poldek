@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@pld.org.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -29,9 +29,9 @@
 #include "pkgdir/pkgdir.h"
 #include "i18n.h"
 #include "log.h"
-#include "misc.h"
 #include "cli.h"
 #include "arg_packages.h"
+#include "poldek_util.h"
 
 static inline
 struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
@@ -48,7 +48,7 @@ struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
         n_assert(flags & PKG_DENT_DIR);
     }
     
-    ent = cctx->dent_alloc(cctx, sizeof(*ent) + len);
+    ent = cctx->_dent_alloc(cctx, sizeof(*ent) + len);
     ent->_refcnt = 0;
     ent->flags = flags;
     ent->parent = NULL;
@@ -421,7 +421,7 @@ int poclidek_chdirent(struct poclidek_ctx *cctx, const struct pkg_dent *dent)
 struct pkg_dent *poclidek_dent_find(struct poclidek_ctx *cctx, const char *path)
 {
     if (cctx->rootdir == NULL) {
-        poclidek_load_packages(cctx);
+        poclidek_load_packages(cctx, 0);
         if (cctx->rootdir == NULL)
             return NULL;
     }
@@ -600,7 +600,7 @@ tn_array *poclidek_resolve_packages(const char *path, struct poclidek_ctx *cctx,
 char *poclidek_pwd(struct poclidek_ctx *cctx, char *path, int size)
 {
     if (cctx->rootdir == NULL) {
-        poclidek_load_packages(cctx);
+        poclidek_load_packages(cctx, 0);
         if (cctx->rootdir == NULL)
             return NULL;
     }

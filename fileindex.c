@@ -335,11 +335,11 @@ void process_dup(const char *path,
         int rc, added1 = 0, added2 = 0;
         
         rc = register_file_conflict(ent1->pkg, ent2->pkg, &added1, &added2);
-        if (rc && verbose > 1)
+        if (rc && poldek_VERBOSE > 1)
             print_cnfl_pair(pathprinted, path, 2, "cnfl", ent1, ent2,
                             added1, added2);
         
-    } else if (verbose > 2) {
+    } else if (poldek_VERBOSE > 2) {
         char *l = "shr";
         
         if (S_ISDIR(ent1->flfile->mode))

@@ -27,6 +27,7 @@
 #include <argp.h>
 #include <fnmatch.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -34,8 +35,11 @@
 
 #include <sigint/sigint.h>
 #include "i18n.h"
-#include "misc.h"
-#include "cli.h"
+#include "log.h"
+#include "pkg.h"
+#include "poldek_term.h"
+#include "cmd.h"
+#define POCLIDEK_ITSELF
 #include "poclidek.h"
 
 
@@ -291,17 +295,34 @@ static void shell_end(int sig)
     }
 }
 
-static void sigint_reached_fn(void)
-{
-    //logn(LOGNOTICE, "interrupt signal reached");
-}
-
 static int init_shell(struct poclidek_ctx *cctx) 
 {
     poldek_term_init();
     sh_ctx.completion_ctx = COMPLETITION_CTX_NONE;
     sh_ctx.cctx = cctx;
     return poclidek_add_command(cctx, &command_quit);
+}
+
+static char *strstrip(char *str) 
+{
+    if (str) {
+        char *p = str;
+
+        while(isspace(*p))
+            p++;
+
+        str = p;
+        
+        p = strchr(str, '\0');
+        n_assert(p);
+        p--;
+        while (p != str && isspace(*p)) {
+            *p = '\0';
+            p--;
+        }
+    }
+    
+    return str;
 }
 
 
@@ -329,7 +350,6 @@ int poclidek_shell(struct poclidek_ctx *cctx)
     }
 
     sigint_init();
-    sigint_reached_cb = sigint_reached_fn;
     sigint_push(sigint_cb);
     signal(SIGTERM, shell_end);
     signal(SIGQUIT, shell_end);
@@ -349,7 +369,7 @@ int poclidek_shell(struct poclidek_ctx *cctx)
             break;
 
         s = line;
-        s = strip(line);
+        s = strstrip(line);
         if (*s) {
             add_history(s);
             //print_mem_info("BEFORE");

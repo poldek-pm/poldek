@@ -73,7 +73,7 @@ static void chunk_dump(struct chunk *chunk, FILE *stream)
 {
     int i;
 
-    if (verbose > 1) {
+    if (poldek_VERBOSE > 1) {
         n_array_sort_ex(chunk->pkgs, (tn_fn_cmp)pkg_cmp_pri);
         for (i=0; i < n_array_size(chunk->pkgs); i++) {
             struct pkg *pkg = n_array_nth(chunk->pkgs, i);

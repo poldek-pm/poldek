@@ -263,7 +263,6 @@ char *trimslash(char *path)
     return path;
 }
 
-
 char *strip(char *str) 
 {
     if (str) {

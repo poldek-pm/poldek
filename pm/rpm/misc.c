@@ -82,7 +82,7 @@ const char *pm_rpm_get_arch(void *pm_rpm)
 
 int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val)
 {
-    int rpmtag;
+    int rpmtag = 0;
     
     pm_rpm = pm_rpm;
     switch (tag) {

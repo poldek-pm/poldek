@@ -532,7 +532,7 @@ int pkg_cmp_uniq_name(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
     
-    if ((rc = pkg_cmp_name(p1, p2)) == 0 && verbose > 1)
+    if ((rc = pkg_cmp_name(p1, p2)) == 0 && poldek_VERBOSE > 1)
         logn(LOGWARN, _("duplicated name %s"), pkg_snprintf_s(p1));
     
     return rc;
@@ -550,8 +550,8 @@ int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2)
              p2->arch, pkg_archscore(p2));
 #endif    
     
-    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && verbose > 1) {
-        if (verbose > 2) {
+    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && poldek_VERBOSE > 1) {
+        if (poldek_VERBOSE > 2) {
             logn(LOGNOTICE, "uniq %s: keep %s (score %d), removed %s (score %d)",
                  pkg_snprintf_s(p1), p1->arch, pkg_archscore(p1),
                  p2->arch, pkg_archscore(p2));
@@ -573,7 +573,7 @@ int pkg_cmp_uniq_name_evr_arch(const struct pkg *p1, const struct pkg *p2)
 
         a1 = p1->arch; if (a1 == NULL) a1 = "";
         a2 = p2->arch; if (a2 == NULL) a2 = "";
-        if ((rc = strcmp(a1, a2)) == 0 && verbose > 1) {
+        if ((rc = strcmp(a1, a2)) == 0 && poldek_VERBOSE > 1) {
             logn(LOGWARN, _("%s%s%s: removed duplicate package"),
                  pkg_snprintf_s(p2), p2->arch ? ".": "",
                  p2->arch ? p2->arch: "");
@@ -713,7 +713,7 @@ static void promote_epoch_warn(int verbose_level,
                                const char *title0, const char *p0,
                                const char *p1)
 {
-    if (verbose > verbose_level)
+    if (poldek_VERBOSE > verbose_level)
         logn(LOGWARN, "%s '%s' needs an epoch (assuming same "
              "epoch as %s)\n", title0, p0, p1);
 }

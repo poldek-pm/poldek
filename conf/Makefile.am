@@ -1,13 +1,13 @@
 # $Id$
 
-CONFIGS   = fetch.conf poldek.alias \
+CONFIGS   = fetch.conf aliases.conf \
 			pld-source.conf rh-source.conf fedora-source.conf
 
 EXTRA_DIST = $(CONFIGS) poldek.conf.in \
-             mdk-source.conf  poldek.conf  sample-cdrom-source.conf \
-             poldek.alias poldek-pri-sample.conf 
+             mdk-source.conf sample-cdrom-source.conf \
+             poldek-pri-sample.conf 
 
-install-data-local:
+install-data-local: poldek.conf
 	     $(mkdir_p) $(DESTDIR)$(sysconfdir)/$(PACKAGE)
 	     $(INSTALL_DATA) poldek.conf $(CONFIGS) $(DESTDIR)$(sysconfdir)/$(PACKAGE)
 

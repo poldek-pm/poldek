@@ -1,4 +1,16 @@
 /*
+  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@pld.org.pl>
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
+/*
   $Id$
 */
 
@@ -23,15 +35,11 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkgdir/source.h"
-#include "pkgset.h"
-#include "misc.h"
 #include "conf.h"
 #include "split.h"
 #include "poldek.h"
 #include "cli.h"
 #include "op.h"
-#include "poclidek.h"
-#include "poldek_intern.h"
 
 #ifndef VERSION
 # error "undefined VERSION"
@@ -193,7 +201,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case 'q':
-            verbose = -1;
+            poldek_set_verbose(-1);
             break;
 
         case 'C':
@@ -201,7 +209,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case 'v': 
-            verbose++;
+            poldek_VERBOSE++;
             break;
 
         case OPT_NOCONF:
@@ -232,7 +240,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             logn(LOGWARN, "-f is obsoleted, use --skip-installed instead");
                                 /* no break */
         case OPT_SKIPINSTALLED:
-            argsp->cctx->flags |= POLDEKCLI_SKIPINSTALLED;
+            argsp->cctx->_flags |= POLDEKCLI_SKIPINSTALLED;
             break;
 
         case OPT_KEEPDOWNLOADS:
@@ -349,7 +357,7 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
     
     argp_prepare_child_options(&argp);
     
-    verbose = 0;
+    poldek_set_verbose(0);
     
     args.ctx = cctx->ctx;
     args.cctx = cctx;
@@ -367,8 +375,8 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
     if (!poldek_setup(args.ctx))
         exit(EXIT_FAILURE);
 
-    if (poldek_is_interactive_on(args.ctx) && verbose == 0)
-        verbose = 1;
+    if (poldek_is_interactive_on(args.ctx) && poldek_VERBOSE == 0)
+        poldek_VERBOSE = 1;
             
 #if 0
 
@@ -426,38 +434,35 @@ int do_run(void)
 int main(int argc, char **argv)
 {
     struct poldek_ctx    *ctx;
-    struct poclidek_ctx  cctx;
+    struct poclidek_ctx  *cctx;
     int  ec = 0, rrc, mode = MODE_POLDEK;
     
     setlocale(LC_MESSAGES, "");
     setlocale(LC_CTYPE, "");
     
-    mem_info_verbose = -1;
     if (strcmp(n_basenam(argv[0]), "apoldek-get") == 0)
         mode = MODE_APT;
     
     DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
     ctx = poldek_new(0);
 
-    memset(&cctx, 0, sizeof(cctx));
-    poclidek_init(&cctx, ctx);
-    
-    parse_options(&cctx, argc, argv, mode);
+    cctx = poclidek_new(ctx);
+    parse_options(cctx, argc, argv, mode);
     
     rrc = do_run();
     if (rrc & OPGROUP_RC_FINI)
         exit((rrc & OPGROUP_RC_ERROR) ? EXIT_FAILURE : EXIT_SUCCESS);
 
     if (args.eat_args == 0) {
-        if (!poclidek_load_packages(&cctx)) {
+        if (!poclidek_load_packages(cctx, 0)) {
             logn(LOGERR, "packages load failed");
             ec = 1;
             
         } else {
             if (args.shcmd) 
-                ec = poclidek_execline(&cctx, args.ts, args.shcmd);
+                ec = poclidek_execline(cctx, args.ts, args.shcmd);
             else
-                ec = poclidek_shell(&cctx);
+                ec = poclidek_shell(cctx);
 
             ec = !ec;
         }
@@ -475,12 +480,12 @@ int main(int argc, char **argv)
         printf("\n");
 #endif        
         if (args.argc > 0)
-            rc = poclidek_exec(&cctx, args.ts, args.argc,
+            rc = poclidek_exec(cctx, args.ts, args.argc,
                                (const char **)args.argv);
         if (!rc)
             ec = 1;
     }
-    poclidek_destroy(&cctx);
+    poclidek_free(cctx);
     poldek_free(ctx);
     return ec;
 }

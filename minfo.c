@@ -2,7 +2,7 @@
 #include "i18n.h"
 #include "log.h"
 
-int mem_info_verbose = -1;
+static int mem_info_verbose = 1;
 
 static char *nbytes2str(char *buf, int bufsize, unsigned long nbytes) 
 {
@@ -42,7 +42,7 @@ void print_mem_info(const char *fmt, va_list args)
             nbytes2str(bmmap, 32, mi.hblkhd));
 }
 
-void mem_info(int vlevel, const char *fmt, ...)
+void poldek_meminf(int vlevel, const char *fmt, ...)
 {
     va_list args;
     if (mem_info_verbose >= vlevel) {

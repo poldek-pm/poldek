@@ -177,7 +177,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
             }
             
             nerrors++;
-            if (verbose > 3)
+            if (poldek_VERBOSE > 3)
                 msg(4, " req %-35s --> NOT FOUND\n", capreq_snprintf_s(req));
 
             pkgset_add_unreq(ps, pkg, req, 0);

@@ -25,11 +25,10 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
+#include "pkgfl.h"
 #include "pkgu.h"
-#include "pkgset.h"
 #include "capreq.h"
-#include "misc.h"
-#include "pkgset-req.h"
+#include "pkgset-req.h"         /* for struct reqpkg, TOFIX */
 #include "sigint/sigint.h"
 
 #include "cli.h"
@@ -661,7 +660,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
     const char      *group, *s;
     double          pkgsize;
     
-    if ((pkgu = pkg_info(pkg)) == NULL && verbose > 1) {
+    if ((pkgu = pkg_info(pkg)) == NULL && poldek_verbose() > 1) {
         log(LOGWARN, _("%s: description unavailable (index without packages "
                        "info loaded?)\n"), pkg_snprintf_s(pkg));
     }

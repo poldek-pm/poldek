@@ -32,11 +32,11 @@
 
 #include "pkgdir/pkgdir.h"
 #include "i18n.h"
-#include "misc.h"
 #include "log.h"
 #include "cli.h"
 #include "pm/pm.h"
-#include "poldek_intern.h"
+#include "poldek_intern.h"      /* for ctx->pmctx, TOFIX */
+#include "poldek_util.h"
 
 static
 struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload);
@@ -133,7 +133,7 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
                        cctx->ctx->ts->cachedir, rpmdb_path) == NULL)
         return NULL;
 
-    lc_lang = lc_messages_lang();
+    lc_lang = poldek_util_lc_lang("LC_MESSAGES");
     if (lc_lang == NULL) 
         lc_lang = "C";
     
@@ -183,9 +183,8 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
         return 0;
 
     mtime_rpmdb = pm_dbmtime(cctx->ctx->pmctx, rpmdb_path);
-    if (mtime_rpmdb > pkgdir->ts) /* changed outside poldek */
+    if (mtime_rpmdb > cctx->ts_dbpkgdir) /* changed outside poldek */
         return 0;
-
     
     if (pkgdir_is_type(pkgdir, RPMDBCACHE_PDIRTYPE))
         path = pkgdir->idxpath;
