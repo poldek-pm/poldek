@@ -21,3 +21,4 @@ poldek*
 rpmvercmp
 ccmalloc-log
 depcomp
+test_match

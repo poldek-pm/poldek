@@ -461,7 +461,7 @@ __inline__
 int cap_match_req(const struct capreq *cap, const struct capreq *req,
                   int strict)
 {
-    register int cmprc;
+    register int cmprc, evr = 0;
 
     
     if ((strcmp(capreq_name(cap), capreq_name(req))) != 0)
@@ -472,12 +472,9 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
             return strict == 0;
 
         cmprc = capreq_epoch(cap) - capreq_epoch(req);
-        if (rel_not_match(cmprc, req))
-            return 0;
-
-        /* if epochs are not equal versions and releases doesn't matter */
-        if (cmprc != 0) 
-            return 1;
+        if (cmprc != 0)
+            return rel_match(cmprc, req);
+        evr = 1;
     }
 
     if (capreq_has_ver(req)) {
@@ -485,61 +482,55 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
             return strict == 0;
         
         cmprc = rpmvercmp(capreq_ver(cap), capreq_ver(req));
-        if (rel_not_match(cmprc, req))
-            return 0;
-
-        /* if versions are not equal releases doesn't matter */
-        if (cmprc != 0) 
-            return 1;
+        if (cmprc != 0)
+            return rel_match(cmprc, req);
+        evr = 1;
     }
 
     if (capreq_has_rel(req)) {
         if (!capreq_has_rel(cap))
             return strict == 0;
         
-        if (rel_not_match(rpmvercmp(capreq_rel(cap), capreq_rel(req)), req))
-            return 0;
-        
+        cmprc = rpmvercmp(capreq_rel(cap), capreq_rel(req));
+        if (cmprc != 0)
+            return rel_match(cmprc, req);
+        evr = 1;
     }
-
-    return 1;
+    //printf ("EVR = %d %d %d\n", evr, cmprc, rel_match(cmprc, req));
+    return evr ? rel_match(cmprc, req) : 1;
 }
 
 
 int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req)
 {
-    register int cmprc;
+    register int cmprc, evr = 0;
 
 
     n_assert(strcmp(pkg->name, capreq_name(req)) == 0);
     
     if (capreq_has_epoch(req)) {
         cmprc = pkg->epoch - capreq_epoch(req);
-        if (rel_not_match(cmprc, req))
-            return 0;
-        
-        /* if epochs are not equal versions and releases doesn't matter */
-        if (cmprc != 0) 
-            return 1;
+        if (cmprc != 0)
+            return rel_match(cmprc, req);
+        evr = 1;
     }
     
     if (capreq_has_ver(req)) {
         cmprc = rpmvercmp(pkg->ver, capreq_ver(req));
-        if (rel_not_match(cmprc, req))
-            return 0;
-
-        /* if versions are not equal releases doesn't matter */
-        if (cmprc != 0) 
-            return 1;
+        if (cmprc != 0)
+            return rel_match(cmprc, req);
+        evr = 1;
     }
         
     if (capreq_has_rel(req)) {
         n_assert(capreq_has_ver(req));
-        if (rel_not_match(rpmvercmp(pkg->rel, capreq_rel(req)), req))
-            return 0;
+        cmprc = rpmvercmp(pkg->rel, capreq_rel(req));
+        if (cmprc != 0)
+            return rel_match(cmprc, req);
+        evr = 1;
     }
     
-    return 1;
+    return evr ? rel_match(cmprc, req) : 1;
 }
 
 /* look up into package caps only */

@@ -892,7 +892,7 @@ int find_db_conflicts2(const struct pkg *pkg, const struct capreq *cap,
         
         for (j=0; j<n_array_size(dbpkg->pkg->cnfls); j++) {
             struct capreq *cnfl = n_array_nth(dbpkg->pkg->cnfls, j);
-            if (cap_match_req(cap, cnfl, 0))
+            if (cap_match_req(cap, cnfl, 1))
                 log(LOGERR, "%s (%s) conflicts with installed %s (%s)\n",
                     pkg_snprintf_s(pkg), capreq_snprintf_s(cap), 
                     pkg_snprintf_s0(dbpkg->pkg),capreq_snprintf_s0(cnfl));
@@ -1063,7 +1063,7 @@ static int check_holds(struct pkgset *ps, struct upgrade_s *upg)
 static
 int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
 {
-    int ncnfl = 0, ndbcnfl = 0, rc;
+    int ncnfl = 0, ndbcnfl = 0, rc, nerr = 0;
     
     msg(1, "Processing dependencies...\n");
 
@@ -1076,30 +1076,26 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
     msg(1, "Verifying conflicts...\n");
     ncnfl = find_conflicts(upg, &ndbcnfl);
     
-    if (ndbcnfl) {
-        log(LOGERR, "There are conflicts in install set, give up\n");
-        return 0;
+    if (ncnfl) {
+        log(LOGERR, "There %d are conflicts\n", ncnfl);
+        
+        if (upg->inst->instflags & (PKGINST_FORCE | PKGINST_TEST)) 
+            ncnfl = ndbcnfl = 0;
+        else
+            nerr++;
     }
-
-    /* insert check conflicts against db there ... */
-    if (upg->inst->instflags & PKGINST_FORCE) {
-        ncnfl = 0;
-        ndbcnfl = 0;
-    }
-
-    if (ndbcnfl && (upg->inst->instflags & PKGINST_TEST) == 0) {
-        log(LOGERR, "Stop\n"); 
-        return 0;
-    }
-
+    
     if (upg->ndep_err) {
         log(LOGERR, "There are %d unresolved dependencies.\n", upg->ndep_err);
-        if ((upg->inst->instflags & (PKGINST_TEST | PKGINST_NODEPS)) == 0)
-            return 0;
-        
-        if (upg->inst->instflags & PKGINST_NODEPS)
+        if (upg->inst->instflags & (PKGINST_NODEPS | PKGINST_TEST))
             upg->ndep_err = 0;
+        else 
+            nerr++;
     }
+    
+    if (nerr)
+        return 0;
+    
 
     if ((upg->inst->flags & (INSTS_JUSTPRINT | INSTS_JUSTFETCH)) == 0)
         if (!valid_arch_os(upg->install_pkgs)) 
