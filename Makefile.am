@@ -65,7 +65,7 @@ man_MANS = poldek.1
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* *.1
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
 
 poldek.1: poldek.pod
 	$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@
