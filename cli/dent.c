@@ -187,6 +187,8 @@ int pkg_dent_addpkgs(struct pkg_dent *dent, tn_array *pkgs)
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
+        if (pkg_is_scored(pkg, PKG_IGNORED))
+            continue;
         ent = pkg_dent_new_pkg(pkg);
         n_array_push(dent->pkg_dent_ents, ent);
     }
