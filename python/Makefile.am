@@ -1,5 +1,5 @@
 
-SWIG = swig -python
+SWIG = swig -python -shadow
 py_ver     = $(shell python -c "import sys; print sys.version[:3]")
 py_prefix  = $(shell python -c "import sys; print sys.prefix")
 py_incdir  = $(py_prefix)/include/python$(py_ver)
@@ -18,7 +18,10 @@ lib_LTLIBRARIES = _poldek.la
 
 _poldek_la_SOURCES = wrap_poldek.c
 _poldek_la_LDFLAGS = -avoid-version -module
-_poldek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
+_poldek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la @TRURL_LDFLAG@ 
+
+AM_CFLAGS=
+CFLAGS=
 
 install-exec-hook:
 	$(mkinstalldirs) "$(DESTDIR)$(py_sitedir)"
