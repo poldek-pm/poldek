@@ -518,9 +518,9 @@ int pkg_deepcmp_name_evr_rev_verify(const struct pkg *p1, const struct pkg *p2)
     register int rc;
 
     if ((rc = pkg_deepcmp_name_evr_rev(p1, p2)) == 0) {
-        logn(LOGERR, "packages %s and %s are equal to me, give up",
+        logn(LOGERR | LOGDIE, "packages %s and %s are equal to me, give up",
              pkg_snprintf_s(p1), pkg_snprintf_s0(p2));
-        n_assert(0);
+        
     }
     
     return rc;
@@ -1116,6 +1116,33 @@ int pkg_printf(const struct pkg *pkg, const char *str)
 }
 
 
+int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg)
+{
+    char epoch[32];
+
+    *epoch = '\0';
+    if (pkg->epoch)
+        snprintf(epoch, sizeof(epoch), "%d:", pkg->epoch);
+    
+    return n_snprintf(str, size, "%s-%s%s-%s", pkg->name, epoch, pkg->ver,
+                      pkg->rel);
+}
+
+char *pkg_evr_snprintf_s(const struct pkg *pkg)
+{
+    static char str[256];
+    pkg_evr_snprintf(str, sizeof(str), pkg);
+    return str;
+}
+
+char *pkg_evr_snprintf_s0(const struct pkg *pkg)
+{
+    static char str[256];
+    pkg_evr_snprintf(str, sizeof(str), pkg);
+    return str;
+}
+
+
 int pkg_snprintf(char *str, size_t size, const struct pkg *pkg)
 {
     int n;
@@ -1123,7 +1150,6 @@ int pkg_snprintf(char *str, size_t size, const struct pkg *pkg)
     n = n_snprintf(str, size, "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
     return n;
 }
-
 
 char *pkg_snprintf_s(const struct pkg *pkg)
 {
