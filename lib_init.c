@@ -144,10 +144,15 @@ int prepare_sources(tn_array *sources)
     
     for (i=0; i < n_array_size(sources); i++) {
         src = n_array_nth(sources, i);
-        if (src->flags & PKGSOURCE_NAMED) /* supplied by -n */
+        if ((src->flags & PKGSOURCE_NAMED) && src->path == NULL) /* supplied by -n */
             n_array_push(srcs_named, source_link(src));
-        else
+        else if (src->path) 
             n_array_push(srcs_path, source_link(src));
+        else {
+            logn(LOGERR, "%s: source without name nor path",
+                 src->name ? src->name : "null");
+            rc = 0;
+        }
     }
 
     if (poldek_cnf && (n_array_size(srcs_named) > 0 ||
@@ -699,7 +704,6 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
     unsigned uv;
     void     *vv;
     
-
     va_start(ap, param);
     
     switch (param) {
@@ -717,7 +721,7 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
             }
             break;
 
-
+            
         case POLDEK_CONF_SOURCE:
             vv = va_arg(ap, void*);
             if (vv) {
