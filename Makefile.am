@@ -43,9 +43,11 @@ SHELL_SRCS_ = $(SHELL_SRCS)
 endif
 
 bin_PROGRAMS        = poldek rpmvercmp
+bin_SCRIPTS         = mkrpmdir
 poldek_SOURCES      = main.c $(SHELL_SRCS_)
 poldek_LDADD        = vfile/libvfile.a libpoldek.a @TRURL_LDFLAG@ -lutil
 poldek_DEPENDENCIES = vfile/libvfile.a libpoldek.a
+
 
 rpmvercmp_SOURCES   = rpmvercmp.c
 rpmvercmp_LDADD     = 
@@ -68,6 +70,7 @@ MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 poldek.1: poldek.pod
 	$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@
 
+mkrpmdir:
 
 dist-hook:
 	rm -rf $(distdir)/.deps
