@@ -484,7 +484,7 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
     n_array_free(cmdst.pkgnames);
     
 
-    if (n_array_size(shpkgs) == 0) {
+    if (shpkgs == NULL || n_array_size(shpkgs) == 0) {
         n_array_free(shpkgs);
         shpkgs = shell_s.avpkgs;
     }
@@ -707,6 +707,7 @@ int valid_argument(char *caller, char *arg)
 static 
 void shell_end(int sig) 
 {
+    printf("dupa\n");
     if (shell_s.histfile) {
         printf("write history %s\n", shell_s.histfile);
         write_history(shell_s.histfile);
@@ -757,6 +758,7 @@ int shell_main(struct pkgset *ps, struct inst_s *inst)
         sprintf(histfile, "%s/.poldek_history", home);
         printf("reading history file %s\n", histfile);
         read_history(histfile);
+        shell_s.histfile = histfile;
     }
     
     
@@ -767,6 +769,8 @@ int shell_main(struct pkgset *ps, struct inst_s *inst)
     n_array_sort(shell_s.commands);
 
     signal(SIGINT, shell_end);
+    signal(SIGTERM, shell_end);
+    signal(SIGQUIT, shell_end);
 
     
     shell_s.done = 0;
