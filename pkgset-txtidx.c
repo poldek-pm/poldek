@@ -706,7 +706,7 @@ int parse_capreq_tag(char *str, tn_array *capreqs, int addbastards)
 
 
 static
-int fprintf_pkg(const struct pkg *pkg, FILE *stream)
+int fprintf_pkg(const struct pkg *pkg, FILE *stream, int nodesc)
 {
     int len;
 
@@ -789,7 +789,7 @@ int fprintf_pkg(const struct pkg *pkg, FILE *stream)
         pkgfl_store_f(pkg->fl, stream, PKGFL_NOTDEPDIRS);
     }
 
-    if (pkg_has_ldpkguinf(pkg)) {
+    if (!nodesc && pkg_has_ldpkguinf(pkg)) {
         fprintf(stream, "U:\n");
         pkguinf_store(pkg->pkg_pkguinf, stream);
         fprintf(stream, "\n");
@@ -867,7 +867,7 @@ static char *mktoc_pathname(char *dest, size_t size, const char *pathname)
     return dest;
 }
 
-int pkgset_create_txtidx(struct pkgset *ps, const char *pathname)
+int pkgset_create_txtidx(struct pkgset *ps, const char *pathname, int nodesc)
 {
     struct vfile *vf, *vf_toc;
     char tocpath[PATH_MAX];
@@ -904,7 +904,7 @@ int pkgset_create_txtidx(struct pkgset *ps, const char *pathname)
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         
-        fprintf_pkg(pkg, vf->vf_stream);
+        fprintf_pkg(pkg, vf->vf_stream, nodesc);
         fprintf(vf_toc->vf_stream, "%s\n", pkg_snprintf_s(pkg));
     }
     

@@ -34,6 +34,8 @@ static char *setup_pkgprefix(const char *path)
     n_basedirnam(buf, &dn, &bn);
     if (dn)
         rpath = strdup(dn);
+    else
+        rpath = strdup(".");
 
     return rpath;
 }

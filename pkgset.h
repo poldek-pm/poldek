@@ -64,7 +64,7 @@ int pkgset_load(struct pkgset *ps, int ldmethod, void *path,
 
 int pkgset_setup(struct pkgset *ps);
 
-int pkgset_create_txtidx(struct pkgset *ps, const char *pathname);
+int pkgset_create_txtidx(struct pkgset *ps, const char *pathname, int nodesc);
 int pkgset_create_rpmidx(const char *dirpath, const char *pathname);
 
 /* returns sorted list of packages, free it by n_array_free() */

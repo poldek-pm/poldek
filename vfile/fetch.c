@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
@@ -266,7 +268,9 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     char **argv;
     struct p_open_st pst;
     int i, n, ec;
-    
+   
+    mkdir(destdir, 0755);
+
     if (url)
         n_assert(urls == NULL);
     

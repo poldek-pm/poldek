@@ -97,6 +97,7 @@ struct args {
     int       noconf;
     char      *cachedir;
     
+    int       nodesc;		/* don't put descriptions in Packges */
 } args;
 
 tn_hash *htcnf = NULL;          /* config file values */
@@ -106,6 +107,7 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_MKTXTINDEX   1001
 #define OPT_MKTXTINDEXZ  1002
 #define OPT_MKRPMINDEX   1003
+#define OPT_NODESC	 1004
 
 #define OPT_SOURCETXT   1015
 #define OPT_SOURCEDIR   1016
@@ -169,6 +171,9 @@ static struct argp_option options[] = {
 
 {"mkrpmidx", OPT_MKRPMINDEX, "FILE", OPTION_ARG_OPTIONAL | OPTION_HIDDEN,
  "Create header index, SOURCE/Packages-hdrs by default", 60},
+    
+{"nodesc", OPT_NODESC, 0, 0,
+ "Don't put Description and Summary field in resulting index.", 60 },
     
 
 {0,0,0,0, "Installation:", 70},
@@ -365,6 +370,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->idx_path = trimslash(arg);
             break;
 
+        case OPT_NODESC:
+	    argsp->nodesc++;
+	    break;
             
         case OPT_INST_INSTDIST:
             check_mjrmode(argsp);
@@ -533,6 +541,7 @@ void parse_options(int argc, char **argv)
     args.idx_path = NULL;
     args.fetchdir = NULL;
     args.install_root = NULL;
+    args.cachedir = "/tmp";
     
     args.pkgdef_files = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_defs  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
@@ -578,8 +587,9 @@ void parse_options(int argc, char **argv)
         char *v;
         int is_multi;
         
-        args.cachedir = conf_get(htcnf, "cachedir", NULL);
-
+        
+	if ((v = conf_get(htcnf, "cachedir", NULL)))
+	    args.cachedir = v;
         
         if ((v = conf_get(htcnf, "ftp_http_get", NULL)))
             vfile_register_ext_handler(VFURL_FTP | VFURL_HTTP, v);
@@ -737,7 +747,7 @@ static int mkidx(struct pkgset *ps)
     if (args.idx_type == INDEXTYPE_RPMH)
         rc = pkgset_create_rpmidx(args.source_path, idx_path);
     else
-        rc = pkgset_create_txtidx(ps, idx_path);
+        rc = pkgset_create_txtidx(ps, idx_path, args.nodesc);
 
     return rc;
 }

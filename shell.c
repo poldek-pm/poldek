@@ -24,6 +24,7 @@
 #include "log.h"
 
 
+#ifdef ENABLE_INTERACTIVE_MODE
 extern int shell_uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst);
 
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
@@ -1355,3 +1356,4 @@ int shell_main(struct pkgset *ps, struct inst_s *inst)
     return 1;
 }
 
+#endif /* ENABLE_INTERACTIVE_MODE */

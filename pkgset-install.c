@@ -255,6 +255,11 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
     
     if (upg->inst->instflags & PKGINST_NODEPS)
         argv[n++] = "--nodeps";
+	
+    if (upg->inst->rootdir) {
+    	argv[n++] = "--root";
+	argv[n++] = upg->inst->rootdir;
+    }
 
     argv[n++] = "--noorder";    /* packages always ordered */
     argv[n++] = "--ignoresize";    /* packages always ordered */
