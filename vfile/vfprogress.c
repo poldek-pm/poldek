@@ -169,11 +169,14 @@ void vf_progress(long total, long amount, void *data)
         nbytes2str(transfer_str, sizeof(transfer_str), bar->transfer_rate);
         
         if (total == amount) {
-            if (bar->time_base == bar->time_last) /* fetched in less than 1s */
+            if (bar->time_base == bar->time_last) { /* fetched in less than 1s */
                 bar->transfer_rate = total;
+                nbytes2str(transfer_str, sizeof(transfer_str),
+                           bar->transfer_rate);
+            }
 
             nn = n_snprintf(unit_line, sizeof(unit_line), "[%s (%s/s)]",
-                            total_str, total_str);
+                            total_str, transfer_str);
         } else {
             int n = 0;
             char eta_str[64];
