@@ -45,35 +45,38 @@
 #include "pkgdir.h"
 #include "pkg.h"
 #include "h2n.h"
+#include "pkgroup.h"
 
-#define FILEFMT_MAJOR "0.4"
-#define FILEFMT_MINOR "1"
+#define FILEFMT_MAJOR 1
+#define FILEFMT_MINOR 0
 
 const char *default_pkgidx_name = "packages.dir";
-static char *filefmt_version = FILEFMT_MAJOR "." FILEFMT_MINOR;
 static const char depdirs_tag[] = "DEPDIRS: ";
+static const char endhdr_tag[] = "ENDH";
 
-
-
-#define PKGT_HAS_NAME  (1 << 0)
-#define PKGT_HAS_EVR   (1 << 1)
-#define PKGT_HAS_CAP   (1 << 3)
-#define PKGT_HAS_REQ   (1 << 4)
-#define PKGT_HAS_CNFL  (1 << 5)
-#define PKGT_HAS_FILES (1 << 6)
-#define PKGT_HAS_ARCH  (1 << 7)
-#define PKGT_HAS_SIZE  (1 << 8)
-#define PKGT_HAS_FSIZE  (1 << 9)
-#define PKGT_HAS_BTIME (1 << 10)
+#define PKGT_HAS_NAME     (1 << 0)
+#define PKGT_HAS_EVR      (1 << 1)
+#define PKGT_HAS_CAP      (1 << 3)
+#define PKGT_HAS_REQ      (1 << 4)
+#define PKGT_HAS_CNFL     (1 << 5)
+#define PKGT_HAS_FILES    (1 << 6)
+#define PKGT_HAS_ARCH     (1 << 7)
+#define PKGT_HAS_OS       (1 << 8)
+#define PKGT_HAS_SIZE     (1 << 9)
+#define PKGT_HAS_FSIZE    (1 << 10)
+#define PKGT_HAS_BTIME    (1 << 11)
+#define PKGT_HAS_GROUPID  (1 << 12)
 
 struct pkgtags_s {
     unsigned   flags;
     char       name[64];
     char       evr[64];
     char       arch[64];
+    char       os[64];
     uint32_t   size;
     uint32_t   fsize;
     uint32_t   btime;
+    uint32_t   groupid;
     tn_array   *caps;
     tn_array   *reqs;
     tn_array   *cnfls;
@@ -95,7 +98,7 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt);
 
 static 
 int restore_pkg_fields(FILE *stream, uint32_t *size, uint32_t *fsize,
-                       uint32_t *btime);
+                       uint32_t *btime, uint32_t *groupid);
 
 static int check_digest(struct vfile *vf, const char *path);
 
@@ -194,21 +197,52 @@ int update_pkgdir_idx(const char *path)
     return rc;
 }
 
+static int valid_version(const char *ver, const char *path) 
+{
+    int major, minor;
+    
+    if (sscanf(ver, "%u.%u", &major, &minor) != 2) {
+        log(LOGERR, "%s: invalid version %s", path, ver);
+        return 0;
+    }
+    
+    if (major != FILEFMT_MAJOR) 
+        log(LOGERR, "%s: unsupported version %s (%d.x is required)\n",
+            path, ver, FILEFMT_MAJOR);
+    
+    else if (minor > FILEFMT_MINOR) 
+        log(LOGERR, "%s: unsupported version %s (upgrade the poldek)\n",
+            path, ver);
+
+    return major == FILEFMT_MAJOR && minor <= FILEFMT_MINOR;
+}
+
+    
 
 struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
 {
-    struct pkgdir     *pkgdir = NULL;
-    struct vfile      *vf;
-    char              *line, *linebuf;
-    int               line_size, nline;
-    int               nerr = 0, nread;
-    tn_array          *depdirs = NULL;
-    char              idxpath[PATH_MAX];
-    
+    struct pkgdir        *pkgdir = NULL;
+    struct vfile         *vf;
+    char                 *line, *linebuf;
+    int                  line_size, nline;
+    int                  nerr = 0, nread;
+    tn_array             *depdirs = NULL;
+    char                 idxpath[PATH_MAX];
+    struct pkgroup_idx   *pkgroups = NULL;
 
-    vf = open_idx(path, VFM_RO | VFM_CACHE, idxpath, sizeof(idxpath));
+    
+    vf = open_idx(path, VFM_RO | VFM_CACHE | VFM_MD, idxpath, sizeof(idxpath));
+
+    if (vf && vf->vf_flags & VF_FETCHED) {
+        if (!check_digest(vf, idxpath)) {
+            vfile_close(vf);
+            vf = NULL;
+        }
+    }
+    
     if (vf == NULL)
         return NULL;
+        
     
     line_size = 4096;
     line = linebuf = malloc(line_size);
@@ -231,34 +265,16 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
             else {
                 p += strlen("poldeksindex");
                 p = eatws(p);
-                if (*p != 'v')
-                    lnerr++;
-                else 
-                    p++;
                 
-                if (lnerr == 0 && strncmp(p, filefmt_version,
-                                          strlen(filefmt_version)) != 0) {
-                    char *dot;
-                    int valid_ver = 0;
+                if (*p != 'v') {
+                    lnerr++;
+                } else {
+                    char *q;
 
-                    if (strncmp(p, FILEFMT_MAJOR, strlen(FILEFMT_MAJOR)) == 0) {
-                        valid_ver = 1;
-                        
-                    } else if ((dot = strrchr(p, '.')) == NULL) {
-                        *dot = '\0';
-                        if (strncmp(p, FILEFMT_MAJOR,
-                                    strlen(FILEFMT_MAJOR)) == 0)
-                            valid_ver = 1;
-                        *dot = '.';
-                    }
-                    
-                    if (!valid_ver) {
-                        char *q;
-                        if ((q = strchr(p, '\n')))
-                            *q = '\0';
-                        
-                        log(LOGERR, "%s: unsupported version %s "
-                            "(%s.x is required)\n", path, p, FILEFMT_MAJOR);
+                    p++;
+                    if ((q = strchr(p, '\n')))
+                        *q = '\0';
+                    if (!valid_version(p, path)) {
                         nerr++;
                         goto l_end;
                     }
@@ -295,10 +311,13 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
                 
                 if (n_array_size(depdirs)) 
                     n_array_sort(depdirs);
-            }
-            break;              /* finish at %DEPDIRS */
+                
+            } else if (strncmp(line, pkgroups_tag, strlen(pkgroups_tag)) == 0) {
+                pkgroups = pkgroup_idx_restore(vf->vf_stream, 0);
+                
+            } else if (strncmp(line, endhdr_tag, strlen(endhdr_tag)) == 0) 
+                break;              /* finish at %ENDH */
         }
-        
     }
     
     free(linebuf);
@@ -328,7 +347,8 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     pkgdir->foreign_depdirs = NULL;
     pkgdir->flags = PKGDIR_LDFROM_IDX;
     pkgdir->pkgs = pkgs_array_new(1024);
-
+    pkgdir->pkgroups = pkgroups;
+    
  l_end:
 
     if (nerr) {
@@ -367,6 +387,11 @@ void pkgdir_free(struct pkgdir *pkgdir)
     if (pkgdir->pkgs) {
         n_array_free(pkgdir->pkgs);
         pkgdir->pkgs = NULL;
+    }
+
+    if (pkgdir->pkgroups) {
+        pkgroup_idx_free(pkgdir->pkgroups);
+        pkgdir->pkgroups = NULL;
     }
 
     if (pkgdir->vf) {
@@ -463,7 +488,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         
         p = val = line + 1;
         if (*line == '\0' || *p != ':') {
-            log(LOGERR, "%s:%d(%s): ':' expected\n", pkgdir->path, offs, line);
+            log(LOGERR, "%s:%d: ':' expected\n", pkgdir->path, offs);
             nerr++;
             goto l_end;
         }
@@ -476,6 +501,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
             case 'N':
             case 'V':
             case 'A':
+            case 'O':
                 if (!add2pkgtags(&pkgt, *line, val, pkgdir->path, offs)) {
                     nerr++;
                     goto l_end;
@@ -498,8 +524,9 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                     goto l_end;
                 }
                 restore_pkg_fields(vf->vf_stream, &pkgt.size, &pkgt.fsize,
-                                   &pkgt.btime);
-                pkgt.flags |= PKGT_HAS_SIZE | PKGT_HAS_FSIZE | PKGT_HAS_BTIME;
+                                   &pkgt.btime, &pkgt.groupid);
+                pkgt.flags |= PKGT_HAS_SIZE | PKGT_HAS_FSIZE | PKGT_HAS_BTIME |
+                    PKGT_HAS_GROUPID;
                 break;
                 
 
@@ -674,6 +701,17 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 pkgt->flags |= PKGT_HAS_ARCH;
             }
             break;
+
+        case 'O':
+            if (pkgt->flags & PKGT_HAS_OS) {
+                log(LOGERR, "%s:%d: double os tag\n", pathname, offs);
+                err++;
+            } else {
+                memcpy(pkgt->os, value, sizeof(pkgt->os) - 1);
+                pkgt->os[ sizeof(pkgt->os) - 1 ] = '\0';
+                pkgt->flags |= PKGT_HAS_OS;
+            }
+            break;
             
         case 'S':
             if (pkgt->flags & PKGT_HAS_SIZE) {
@@ -747,12 +785,17 @@ static
 struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt) 
 {
     struct pkg *pkg;
-    char *version, *release;
+    char *version, *release, *arch = NULL, *os = NULL;
     int32_t epoch;
     
-    if (!(pkgt->flags & (PKGT_HAS_NAME | PKGT_HAS_EVR | PKGT_HAS_ARCH)))
+    if (!(pkgt->flags & (PKGT_HAS_NAME | PKGT_HAS_EVR)))
         return NULL;
     
+    if (pkgt->flags & PKGT_HAS_OS) 
+        os = pkgt->os;
+    
+    if (pkgt->flags & PKGT_HAS_ARCH) 
+        arch = pkgt->arch;
     
     if (*pkgt->name == '\0' || *pkgt->evr == '\0' || *pkgt->arch == '\0') 
         return NULL;
@@ -765,8 +808,9 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
         return NULL;
     }
 
-    pkg = pkg_new(pkgt->name, epoch, version, release, pkgt->arch,
+    pkg = pkg_new(pkgt->name, epoch, version, release, arch, os, 
                   pkgt->size, pkgt->fsize, pkgt->btime);
+    pkg->groupid = pkgt->groupid;
     
     if (pkg == NULL) {
         log(LOGERR, "Error reading %s's data", pkgt->name);
@@ -842,35 +886,45 @@ int fprintf_pkg_caps(const struct pkg *pkg, FILE *stream)
 
 static 
 void store_pkg_fields(FILE *stream, uint32_t size, uint32_t fsize,
-                      uint32_t btime) 
+                      uint32_t btime, uint32_t groupid) 
 {
-    uint32_t nsize, nfsize, nbtime;
+    uint32_t nsize, nfsize, nbtime, ngroupid;
+    uint8_t n = 4;
 
     nsize = hton32(size);
     nfsize = hton32(fsize);
     nbtime = hton32(btime);
+    ngroupid = hton32(groupid);
     
+    fwrite(&n, sizeof(n), 1, stream);
     fwrite(&nsize, sizeof(nsize), 1, stream);
     fwrite(&nfsize, sizeof(nfsize), 1, stream);
     fwrite(&nbtime, sizeof(nbtime), 1, stream);
+    fwrite(&ngroupid, sizeof(ngroupid), 1, stream);
+    
     fprintf(stream, "\n");
 }
 
 static 
 int restore_pkg_fields(FILE *stream, uint32_t *size, uint32_t *fsize,
-                       uint32_t *btime) 
+                       uint32_t *btime, uint32_t *groupid) 
 {
-    uint32_t nsize = 0, nfsize = 0, nbtime = 0, nread = 0;
+    uint32_t nsize = 0, nfsize = 0, nbtime = 0, nread = 0, ngroupid = 0;
+    uint8_t n;
+    
 
+    nread += fread(&n, sizeof(n), 1, stream);
     nread += fread(&nsize, sizeof(nsize), 1, stream);
     nread += fread(&nfsize, sizeof(nfsize), 1, stream);
     nread += fread(&nbtime, sizeof(nbtime), 1, stream);
+    nread += fread(&ngroupid, sizeof(ngroupid), 1, stream);
 
-    *size = ntoh32(nsize);
-    *fsize = ntoh32(nfsize);
-    *btime = ntoh32(nbtime);
+    *size    = ntoh32(nsize);
+    *fsize   = ntoh32(nfsize);
+    *btime   = ntoh32(nbtime);
+    *groupid = ntoh32(ngroupid);
     getc(stream);               /* eat '\n' */
-    return nread == 3;
+    return nread == 5;
 }
 
 static
@@ -882,9 +936,14 @@ int fprintf_pkg(const struct pkg *pkg, FILE *stream, tn_array *depdirs, int node
     else 
         fprintf(stream, "V: %s-%s\n", pkg->ver, pkg->rel);
 
-    fprintf(stream, "A: %s\n", pkg->arch);
+    if (pkg->arch)
+        fprintf(stream, "A: %s\n", pkg->arch);
+    
+    if (pkg->os)
+        fprintf(stream, "O: %s\n", pkg->os);
+    
     fprintf(stream, "F:\n");
-    store_pkg_fields(stream, pkg->size, pkg->fsize, pkg->btime);
+    store_pkg_fields(stream, pkg->size, pkg->fsize, pkg->btime, pkg->groupid);
 
     if (pkg->caps && n_array_size(pkg->caps))
         fprintf_pkg_caps(pkg, stream);
@@ -925,11 +984,11 @@ void put_fheader(FILE *stream, const struct pkgdir *pkgdir)
              "%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
     
     fprintf(stream,
-            "# poldeksindex v%s\n"
+            "# poldeksindex v%d.%d\n"
             "# This file was generated by poldek on %s.\n"
             "# PLEASE DO *NOT* EDIT or poldek will hate you.\n"
             "# Contains %d packages\n",
-            filefmt_version,
+            FILEFMT_MAJOR, FILEFMT_MINOR,
             datestr, n_array_size(pkgdir->pkgs));
 }
 
@@ -945,11 +1004,11 @@ void put_tocfheader(FILE *stream, const struct pkgdir *pkgdir)
              "%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
     
     fprintf(stream,
-            "# poldekstocf v%s\n"
+            "# poldekstocf v%d.%d\n"
             "# This file was generated by poldek on %s.\n"
             "# PLEASE DO *NOT* EDIT ME or poldek will hate you.\n"
             "# Contains %d packages\n",
-            filefmt_version,
+            FILEFMT_MAJOR, FILEFMT_MINOR, 
             datestr, n_array_size(pkgdir->pkgs));
 }
 
@@ -985,7 +1044,7 @@ static int check_digest(struct vfile *vf, const char *path)
     off_t           offs;
     
 
-    msg(1, "Verifying file %s...", path);
+    msg(1, "Verifying %s...", path);
     
     offs = ftell(vf->vf_stream);
     if (fseek(vf->vf_stream, 0L, SEEK_SET) != 0) {
@@ -1083,6 +1142,11 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc)
                     i + 1 == n_array_size(pkgdir->depdirs) ? '\n':':');
         }
     }
+
+    if (pkgdir->pkgroups) 
+        pkgroup_idx_store(pkgdir->pkgroups, vf->vf_stream);
+
+    fprintf(vf->vf_stream, "%%%s\n", endhdr_tag);
     
     n_array_sort(pkgdir->pkgs);
     
@@ -1101,7 +1165,7 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc)
 }
 
 
-int load_dir(const char *dirpath, tn_array *pkgs)
+int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
 {
     struct dirent  *ent;
     struct stat    st;
@@ -1156,6 +1220,8 @@ int load_dir(const char *dirpath, tn_array *pkgs)
                     n_array_push(pkgs, pkg);
                     n++;
                 }
+                
+                pkg->groupid = pkgroup_idx_update(pkgroups, h);
                 headerFree(h);
             }
             Fclose(fdt);
@@ -1166,7 +1232,7 @@ int load_dir(const char *dirpath, tn_array *pkgs)
         }
     }
 
-    if (n)
+    if (n && n > 100)
         msg_l(2, "_%d\n", n);
     closedir(dir);
     return n;
@@ -1235,12 +1301,15 @@ static void pkgdir_setup_depdirs(struct pkgdir *pkgdir)
 
 struct pkgdir *pkgdir_load_dir(const char *path) 
 {
-    struct pkgdir *pkgdir = NULL;
-    tn_array      *pkgs;
+    struct pkgdir        *pkgdir = NULL;
+    tn_array             *pkgs;
+    struct pkgroup_idx   *pkgroups;
+    
 
     pkgs = pkgs_array_new(1024);
+    pkgroups = pkgroup_idx_new();
     
-    if (load_dir(path, pkgs) >= 0) {
+    if (load_dir(path, pkgs, pkgroups) >= 0) {
         pkgdir = malloc(sizeof(*pkgdir));
     
         pkgdir->path = strdup(path);
@@ -1248,6 +1317,7 @@ struct pkgdir *pkgdir_load_dir(const char *path)
         pkgdir->depdirs = NULL;
         pkgdir->foreign_depdirs = NULL;
         pkgdir->pkgs = pkgs;
+        pkgdir->pkgroups = pkgroups;
         pkgdir->flags = PKGDIR_LDFROM_DIR;
         pkgdir->vf = NULL;
         

@@ -57,12 +57,15 @@ void log_set_vprintf(int (*vprintffn)(const char *, va_list));
 
 void log_set_vlogfn(void (*vlogfn)(int, int, const char*, va_list));
 
-#ifdef ENABLE_TRACE
-# define DBGMSG_F(fmt, args...) fprintf(stderr, "%s: " fmt, __FUNCTION__ , ## args)
-# define DBGMSG(fmt, args...)   fprintf(stderr, fmt, ## args)
+#if ENABLE_TRACE
+# define DBGF(fmt, args...)  fprintf(stderr, "%-18s: " fmt, __FUNCTION__ , ## args)
+# define DBG(fmt, args...)   fprintf(stderr, fmt, ## args)
 #else 
-# define DBGMSG_F(fmt, args...)  ((void) 0)
-# define DBGMSG(fmt, args...)    ((void) 0)
+# define DBGF(fmt, args...)  ((void) 0)
+# define DBG(fmt, args...)    ((void) 0)
 #endif
+
+#define DBGMSG_F DBGF
+#define DBGMSG   DBG
 
 #endif /* POLDEK_LOG_H */

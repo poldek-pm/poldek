@@ -101,7 +101,7 @@ int read_pridef(char *buf, int buflen, struct pridef **pridef,
         *pridef = malloc(sizeof(**pridef) + n);
         memcpy((*pridef)->mask, mask, n);
         (*pridef)->pri = pri;
-        //printf("mask = %s, pri = %d\n", mask, pri);
+        DBGF("mask = %s, pri = %d\n", mask, pri);
     }
     
     return 1;

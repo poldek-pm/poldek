@@ -100,14 +100,22 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         }
     
         switch (src->ldmethod) {
+            case PKGSET_LD_IDX:
+                pkgdir = pkgdir_new(src->source_path, src->pkg_prefix);
+                if (pkgdir != NULL) 
+                    break;
+                
+                if (is_dir(src->source_path)) 
+                    src->ldmethod = PKGSET_LD_DIR;
+                else
+                    break;
+                
             case PKGSET_LD_DIR:
                 msg(1, "Loading %s...\n", src->source_path);
                 pkgdir = pkgdir_load_dir(src->source_path);
                 break;
                 
-            case PKGSET_LD_IDX:
-                pkgdir = pkgdir_new(src->source_path, src->pkg_prefix);
-                break;
+            
 
             default:
                 n_assert(0);

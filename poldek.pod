@@ -79,17 +79,17 @@ Examples:
 
 =back
 
-If you want to build Packages, then only one and only directory
+If you want to build packages.dir, then only one and only directory
 path as SOURCE is accepted.
 
-If Packages and packages are stored in diffrent
+If packages.dir and packages are stored in diffrent
 locations then option:
 
 B<-P, --prefix> B<PREFIX>
 
 could be used to point packages one, e.g.:
 
-$ poldek -s /tmp/Packages.gz --prefix=/cdrom/RPMS/ -s ...
+$ poldek -s /tmp/packages.dir --prefix=/cdrom/RPMS/ -s ...
 
 Another parameter is B<--cachedir=DIR>, which points to
 directory where fetched packages and indexes are 
@@ -137,14 +137,14 @@ One of the following basic modes must be selected:
 
 Build package index, by default it's stored in SOURCE/packages.dir[.gz].
 The other two files are created: packages.dir.md with coputed packages.dir 
-digest and packages.dir-toc with packages NAME-EVR per line.  
+digest and packages.dir.toc[.gz] with packages NAME-EVR per line.
 I<NOTE>: SOURCE must be directory.
 
-=item B<--update>    
+=item B<--update>   
 
-Resynchronize the package index from its source.
-It is necessary only for remote packages.dir and it 
-should be the first operation before program usage. 
+Resynchronize the package index from its source and verify it. 
+For local sources it only verifies packages.dir using its digest
+from packages.dir.md. 
 
 =item B<-V|--verify>
 
@@ -173,7 +173,7 @@ Run poldek in interactive mode. Type "help" after running for available commands
 
 Split package set into parts, each SIZE MB size. Priorities 
 are taken from FILE given by --split-conf (see sample poldek-split.conf 
-in distribution). By default packages has 0 priority.
+from distribution). By default packages has 0 priority.
 
 Each part is written as NAME-EVR list to PREFIX.XX 
 file, the default PREFIX is "package.chunk"
@@ -327,11 +327,15 @@ See also sample configs included in distribution.
 
 =head1 EXAMPLES
 
-=head2 Packages creation
+=head2 Package index creation
 
 $ poldek -s /cdrom/PLD/RPMS/ --mkidx=/tmp/dummy.txt
 
 $ poldek -s /ftp/pub/PLD/RPMS/ --mkidxz
+
+Using mkpackagedir script:
+
+$ mkpackagedir /ftp/pub/PLD/RPMS/ 
 
 =head2 Verification
 
@@ -373,6 +377,11 @@ $ poldek -s ftp://ftp.znienacka.com/PLD/RPMS/
 -U apache -n "ala-ma-kota 1.2" smail-12-389.i386.rpm
 
 $ poldek -s ftp://ftp.dudy.net/RPMS/ -ti xteddy
+
+=head2 Splitting the set into 100 MB chunks:
+
+$ poldek --split=100 --split-conf=zip-split.conf \
+   --split-out=/tmp/zipchunk
 
 =head1 ENVIROMENT
 
@@ -416,7 +425,7 @@ This manual should be finished and translated into English.
 
 =head1 CAUTION
 
-The program is in B<alpha> stage and surely contains the bugs. 
+The program is in B<beta> stage and surely contains the bugs. 
 Backup your RPM database and be watchfull. Remember, that
 there is I<NO WARRANTY OF ANY KIND> and enjoy.
 

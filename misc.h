@@ -22,11 +22,10 @@ const char *tmpdir(void);
 
 void die(void);
 
-char *architecture(void);
-
 char *trimslash(char *path);
 char *next_token(char **str, char delim, int *toklen);
 int is_rwxdir(const char *path);
+int is_dir(const char *path);
 
 inline static int validstr(const char *str) 
 {

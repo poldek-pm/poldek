@@ -967,6 +967,29 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
     return ncnfl;
 }
 
+static int valid_arch_os(tn_array *pkgs) 
+{
+    int i, nerr = 0;
+    
+    for (i=0; i<n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+
+        if (pkg->arch && !rpmMachineScore(RPM_MACHTABLE_INSTARCH, pkg->arch)) {
+            log(LOGERR, "%s: package is for a different architecture (%s)\n",
+                pkg_snprintf_s(pkg), pkg->arch);
+            nerr++;
+        }
+        
+        if (pkg->os && !rpmMachineScore(RPM_MACHTABLE_INSTOS, pkg->os)) {
+            log(LOGERR, "%s: package is for a different operating system (%s)\n",
+                pkg_snprintf_s(pkg), pkg->os);
+            nerr++;
+        }
+    }
+    
+    return nerr == 0;
+}
+
     
 /* process packages to install:
    - check dependencies
@@ -1026,14 +1049,18 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
         if (upg->inst->instflags & PKGINST_NODEPS)
             upg->ndep_err = 0;
     }
-    
-    
+
+    if ((upg->inst->flags & (INSTS_JUSTPRINT | INSTS_JUSTFETCH)) == 0)
+        if (!valid_arch_os(upg->install_pkgs)) 
+            return 0;
+        
     if (upg->inst->ask_fn) {
         if (!upg->inst->ask_fn("Proceed?"))
             return 1;
     }
     
     pkgdb_closedb(upg->inst->db);
+    
     if (upg->inst->flags & INSTS_JUSTPRINT) {
         rc = dump_pkgs_fqpns(ps, upg);
         
@@ -1127,7 +1154,6 @@ static void destroy_upgrade_s(struct upgrade_s *upg)
     pkgflmodule_allocator_pop_mark(upg->pkgflmod_mark);
     memset(upg, 0, sizeof(*upg));
 }
-
 
 int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst) 
 {
@@ -1237,8 +1263,9 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
             struct pkg *pkg = dbpkg->pkg;
             n_array_push(uninstalled_pkgs, pkg_new(pkg->name, pkg->epoch,
                                                    pkg->ver, pkg->rel,
-                                                   pkg->arch, pkg->size,
-                                                   pkg->fsize, pkg->btime));
+                                                   pkg->arch, pkg->os,
+                                                   pkg->size, pkg->fsize,
+                                                   pkg->btime));
             
         }
     }

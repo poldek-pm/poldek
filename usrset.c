@@ -148,7 +148,7 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
             evrstr = s[1];
         }
         
-        //     printf("name = %s, evrstr = %s\n", name, evrstr);
+        DBGF("name = %s, evrstr = %s\n", name, evrstr);
 
         if (name && !validstr(name)) {
             if (nline) 
@@ -176,7 +176,7 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
             if (release == NULL)
                 release = "";
                 
-            pdef->pkg = pkg_new(name, epoch, version, release, architecture(),
+            pdef->pkg = pkg_new(name, epoch, version, release, NULL, NULL, 
                                 0, 0, 0);
         }
 

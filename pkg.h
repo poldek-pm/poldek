@@ -74,7 +74,8 @@ struct pkg {
     char         *ver;
     char         *rel;
     char         *arch;
-
+    char         *os;
+    
     tn_array     *caps;       /* capabilities     */
     tn_array     *reqs;       /* requirements     */
     tn_array     *cnfls;      /* conflicts (with obsoletes)  */
@@ -95,6 +96,7 @@ struct pkg {
 
 
     int pri;                    /* used for split */
+    int groupid;                /* package group id (see pkgroups.c) */
     /* private, don't touch */
     uint16_t     _refcnt;
     void         (*free)(void*); /* self free()  */
@@ -108,7 +110,8 @@ struct pkg {
 
 struct pkg *pkg_new(const char *name, int32_t epoch,
                     const char *version, const char *release,
-                    const char *arch, uint32_t size, uint32_t fsize,
+                    const char *arch, const char *os,
+                    uint32_t size, uint32_t fsize,
                     uint32_t btime);
 
 #define PKG_LDNEVR    0
@@ -182,6 +185,7 @@ tn_array *pkg_other_fl(const struct pkg *pkg);
 
 struct pkguinf *pkg_info(const struct pkg *pkg);
 tn_array *pkg_info_files(const struct pkg *pkg);
+const char *pkg_group(const struct pkg *pkg);
 
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*));
 

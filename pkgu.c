@@ -10,9 +10,10 @@
   $Id$
 */
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
+#include <string.h>
 
 #include <trurl/trurl.h>
 #include <rpm/rpmlib.h>
@@ -21,7 +22,6 @@
 #include "log.h"
 #include "pkgu.h"
 #include "h2n.h"
-
 
 static Header make_pkguinf_hdr(Header h, int *langs_cnt);
 static void *pkguinf_tag(struct pkguinf *pkgu, int32_t tag);
@@ -58,6 +58,12 @@ void pkguinf_free(struct pkguinf *pkgu)
         
         if (pkgu->description)
             free(pkgu->description);
+
+        if (pkgu->vendor)
+            free(pkgu->vendor);
+        
+        if (pkgu->buildhost)
+            free(pkgu->buildhost);
     }
     
     if (pkgu->_hdr)
@@ -79,7 +85,8 @@ struct pkguinf *pkguinf_touser(struct pkguinf *pkgu)
     pkgu->url = pkguinf_tag(pkgu, RPMTAG_URL);
     pkgu->summary = pkguinf_tag(pkgu, RPMTAG_SUMMARY);
     pkgu->description = pkguinf_tag(pkgu, RPMTAG_DESCRIPTION);
-
+    pkgu->vendor = pkguinf_tag(pkgu, RPMTAG_VENDOR);
+    pkgu->buildhost = pkguinf_tag(pkgu, RPMTAG_BUILDHOST);
     
     return pkgu;
 }
@@ -134,7 +141,8 @@ int pkguinf_store(struct pkguinf *pkgu, FILE *stream)
     
     int rc;
 
-    /* headerUnload(pkgu->_hdr) gives diffrent a bit raw header(!), so copy tags by hand */
+    /* headerUnload(pkgu->_hdr) gives diffrent a bit raw header(!),
+       so copy tags by hand */
 
     hdr = make_pkguinf_hdr(pkgu->_hdr, NULL);
     rawhdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
@@ -204,6 +212,8 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
         pkgu->url = NULL;
         pkgu->summary = NULL;
         pkgu->description = NULL;
+        pkgu->vendor = NULL;
+        pkgu->buildhost = NULL;
         pkgu->_refcnt = 0;
         
 #if 0    
@@ -235,8 +245,8 @@ int pkguinf_skip(FILE *stream)
 static Header make_pkguinf_hdr(Header h, int *langs_cnt) 
 {
     struct rpmhdr_ent  hdrent;
-    char               **langs, **summs, **groups, **descrs;
-    int                nsumms, ngroups, ndescrs;
+    char               **langs, **summs, **descrs;
+    int                nsumms, ndescrs;
     int                i, n, nlangs = 0;
     Header             hdr;
     unsigned           hdr_size;
@@ -245,28 +255,22 @@ static Header make_pkguinf_hdr(Header h, int *langs_cnt)
     langs = headerGetLangs(h);
     
     headerGetRawEntry(h, RPMTAG_SUMMARY, 0, (void*)&summs, &nsumms);
-    headerGetRawEntry(h, RPMTAG_GROUP, 0, (void*)&groups, &ngroups);
     headerGetRawEntry(h, RPMTAG_DESCRIPTION, 0, (void*)&descrs, &ndescrs);
 
-    n = ngroups;
-    if (n > nsumms)
-        n = nsumms;
+    n = nsumms;
     if (n > ndescrs)
         n = ndescrs;
 
     hdr = headerNew();
-    i = 0;
     for (i=0; i<n; i++) {
         if (langs[i] == NULL)
             break;
-        headerAddI18NString(hdr, RPMTAG_GROUP, groups[i], langs[i]);
         headerAddI18NString(hdr, RPMTAG_SUMMARY, summs[i], langs[i]);
         headerAddI18NString(hdr, RPMTAG_DESCRIPTION, descrs[i], langs[i]);
     }
     nlangs = n;
     
     free(langs);
-    free(groups);
     free(summs);
     free(descrs);
 
@@ -274,7 +278,7 @@ static Header make_pkguinf_hdr(Header h, int *langs_cnt)
     rpmhdr_ent_cp(&hdrent, h, RPMTAG_COPYRIGHT, hdr);
     rpmhdr_ent_cp(&hdrent, h, RPMTAG_URL, hdr);
     rpmhdr_ent_cp(&hdrent, h, RPMTAG_DISTRIBUTION, hdr);
-    
+    rpmhdr_ent_cp(&hdrent, h, RPMTAG_BUILDHOST, hdr);
     
     hdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
     
@@ -308,7 +312,8 @@ struct pkguinf *pkguinf_ldhdr(Header h)
     pkgu->url = NULL;
     pkgu->summary = NULL;
     pkgu->description = NULL;
-    	
+    pkgu->vendor = NULL;
+    pkgu->buildhost = NULL;
     return pkgu;
 }
 

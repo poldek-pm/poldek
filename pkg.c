@@ -29,6 +29,7 @@
 #include "pkg.h"
 #include "h2n.h"
 #include "pkgdir.h"
+#include "pkgroup.h"
 
 static void *(*pkg_alloc_fn)(size_t) = malloc;
 static void (*pkg_free_fn)(void*) = free;
@@ -44,11 +45,12 @@ void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*))
 /* always store fields in order: path, name, version, release, arch */
 struct pkg *pkg_new(const char *name, int32_t epoch,
                     const char *version, const char *release,
-                    const char *arch, uint32_t size, uint32_t fsize,
+                    const char *arch, const char *os,
+                    uint32_t size, uint32_t fsize,
                     uint32_t btime)
 {
     struct pkg *pkg;
-    int name_len = 0, version_len = 0, release_len = 0, arch_len = 0;
+    int name_len = 0, version_len = 0, release_len = 0, arch_len = 0, os_len = 0;
     char *buf;
     int len;
 
@@ -72,6 +74,11 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     if (arch) {
         arch_len = strlen(arch);
         len += arch_len + 1;
+    }
+
+    if (os) {
+        os_len = strlen(os);
+        len += os_len + 1;
     }
     
     pkg = pkg_alloc_fn(sizeof(*pkg) + len);
@@ -99,11 +106,19 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     buf += release_len;
     *buf++ = '\0';
 
-    n_assert(arch_len);
-    pkg->arch = buf;
-    memcpy(buf, arch, arch_len);
-    buf += arch_len;
-    *buf++ = '\0';
+    if (arch) {
+        pkg->arch = buf;
+        memcpy(buf, arch, arch_len);
+        buf += arch_len;
+        *buf++ = '\0';
+    }
+    
+    if (os) {
+        pkg->os = buf;
+        memcpy(buf, os, os_len);
+        buf += os_len;
+        *buf++ = '\0';
+    }
     
     pkg->reqs = NULL;
     pkg->caps = NULL;
@@ -116,6 +131,7 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     pkg->pkgdir = NULL;
     pkg->pkg_pkguinf_offs = 0;
     pkg->pri = 0;
+    pkg->groupid = 0;
     pkg->_refcnt = 0;
     
     return pkg;
@@ -171,7 +187,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
 {
     struct pkg *pkg;
     uint32_t   *epoch, *size, *btime;
-    char       *name, *version, *release, *arch;
+    char       *name, *version, *release, *arch, *os;
     int        type;
     
     headerNVR(h, (void*)&name, (void*)&version, (void*)&release);
@@ -188,13 +204,24 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
         return NULL;
     }
 
+    if (type != RPM_STRING_TYPE)
+        arch = NULL;
+    
+    if (!headerGetEntry(h, RPMTAG_OS, &type, (void *)&os, NULL)) {
+        log(LOGERR, "%s: read os tag failed\n", fname);
+        return NULL;
+    }
+
+    if (type != RPM_STRING_TYPE)
+        os = NULL;
+
     if (!headerGetEntry(h, RPMTAG_SIZE, &type, (void *)&size, NULL)) 
         size = NULL;
 
     if (!headerGetEntry(h, RPMTAG_BUILDTIME, &type, (void *)&btime, NULL)) 
         btime = NULL;
-    
-    pkg = pkg_new(name, epoch ? *epoch : 0, version, release, arch,
+
+    pkg = pkg_new(name, epoch ? *epoch : 0, version, release, arch, os, 
                   size ? *size : 0, fsize, btime ? *btime : 0);
 
     if (pkg == NULL)
@@ -606,7 +633,7 @@ int pkg_has_path(const struct pkg *pkg,
 
 int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
 {
-    /* package should not provide itself with diffrent version */
+    /* package should not provide itself with different version */
     if (strcmp(pkg->name, capreq_name(req)) == 0)
         return pkg_evr_match_req(pkg, req);
     
@@ -788,6 +815,14 @@ tn_array *pkg_info_files(const struct pkg *pkg)
         n_array_sort(fl);
     
     return fl;
+}
+
+
+const char *pkg_group(const struct pkg *pkg) 
+{
+    if (pkg->pkgdir && pkg->pkgdir->pkgroups)
+        return pkgroup(pkg->pkgdir->pkgroups, pkg->groupid);
+    return NULL;
 }
 
 char *pkg_filename(const struct pkg *pkg, char *buf, size_t size) 

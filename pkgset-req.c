@@ -377,7 +377,7 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
             i = 0;
             isneq = 0;
             while (rpkg->adds[i] != NULL) {
-                if (i+1 >= nmatched) {   /* diffrent length */
+                if (i+1 >= nmatched) {   /* different length */
                     isneq = 1;
                     break;
                 }

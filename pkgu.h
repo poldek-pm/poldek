@@ -17,6 +17,8 @@ struct pkguinf {
     char              *url;
     char              *summary;
     char              *description;
+    char              *vendor;
+    char              *buildhost;
     
     Header            _hdr;
     int               _refcnt;

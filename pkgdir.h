@@ -10,15 +10,16 @@ extern const char *default_pkgidx_name;
 
 
 struct pkgdir {
-    char               *path;            /* path | URL        */
-    char               *idxpath;         /* path | URL        */
-    tn_array           *pkgs;            /* struct *pkg[]     */
+    char                *path;            /* path | URL        */
+    char                *idxpath;         /* path | URL        */
+    tn_array            *pkgs;            /* struct *pkg[]     */
     
-    tn_array           *depdirs;         /* char *[]          */
-    tn_array           *foreign_depdirs; /* depdirs not presented in depdirs,
+    tn_array            *depdirs;         /* char *[]          */
+    tn_array            *foreign_depdirs; /* depdirs not presented in depdirs,
                                             but presented in other pkgdirs */
-    struct vfile       *vf;              /* Packages handle   */
-    unsigned           flags;
+    struct pkgroup_idx  *pkgroups;
+    struct vfile        *vf;              /* Packages handle   */
+    unsigned            flags;
 };
 
 struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix);

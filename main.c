@@ -43,10 +43,10 @@
 extern int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed);
 #endif
 
-static const char *argp_program_version = "poldek " VERSION " (ALPHA)";
+static const char *argp_program_version = PACKAGE " " VERSION " (BETA)";
 const char *argp_program_bug_address = "<mis@pld.org.pl>";
 /* Program documentation. */
-static char doc[] = "poldek " VERSION " (ALPHA)\n"
+static char doc[] = PACKAGE " " VERSION " (BETA)\n"
 "This program may be freely redistributed under the terms of the GNU GPL\n";
 /* A description of the arguments we accept. */
 static char args_doc[] = "[PACKAGE...]";

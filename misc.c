@@ -142,19 +142,6 @@ const char *tmpdir(void)
 }
 
 
-
-char *architecture(void) 
-{
-    static struct utsname utsn = {
-        {'\0'}, {'\0'}, {'\0'}, {'\0'}, {'\0'}, {'\0'}
-    };
-
-    if (*utsn.machine == '\0')  
-        uname(&utsn);
-    return utsn.machine;
-}
-
-
 char *trimslash(char *path) 
 {
     if (path) {
@@ -199,13 +186,19 @@ char *next_token(char **str, char delim, int *toklen)
     return token;
 }
 
-
 int is_rwxdir(const char *path)
 {
     struct stat st;
     return stat(path, &st) == 0 &&
         S_ISDIR(st.st_mode) && (st.st_mode & S_IRWXU);
 }
+
+int is_dir(const char *path)
+{
+    struct stat st;
+    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
 
 void die(void) 
 {
