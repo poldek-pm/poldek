@@ -26,6 +26,8 @@
 #include <trurl/nstr.h>
 #include <trurl/nbuf.h>
 #include <trurl/nstream.h>
+#include <trurl/n_snprintf.h>
+#include <trurl/nmalloc.h>
 
 #include <vfile/vfile.h>
 
@@ -35,6 +37,7 @@
 #include "log.h"
 #include "pkgdir.h"
 #include "pkg.h"
+#include "pkgu.h"
 #include "pkgmisc.h"
 #include "pkgroup.h"
 #include "pndir.h"

@@ -18,6 +18,9 @@
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
+#include <trurl/nstr.h>
+#include <trurl/nmalloc.h>
+
 #include <vfile/vfile.h>
 
 #include "i18n.h"

@@ -30,3 +30,6 @@ m4
 ABOUT-NLS
 config.rpath
 autom4te.cache
+*.lo
+.libs
+*.la

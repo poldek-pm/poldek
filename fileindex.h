@@ -5,6 +5,8 @@
 #include <obstack.h>
 #include <trurl/nhash.h>
 
+#include "pkgfl.h"
+
 struct file_index {
     tn_hash  *dirs;             /* dirname => tn_array *files */
     struct   obstack obs;

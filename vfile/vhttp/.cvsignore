@@ -28,3 +28,6 @@ homepage.sgml
 intl
 test_vftp
 test_vhttp
+*.lo
+.libs
+*.la

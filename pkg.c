@@ -25,9 +25,12 @@
 #include "log.h"
 #include "misc.h"
 #include "capreq.h"
+#include "pkgfl.h"
+#include "pkgu.h"
 #include "pkg.h"
 #include "pkgdir/pkgdir.h"
 #include "pkgroup.h"
+#include "pkg_ver_cmp.h"
 
 static void *(*pkg_alloc_fn)(size_t) = n_malloc;
 static void (*pkg_free_fn)(void*) = n_free;
@@ -267,7 +270,7 @@ int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2)
     if ((rc = p1->epoch - p2->epoch))
         return rc;
 
-    return rpmvercmp(p1->ver, p2->ver);
+    return pkg_version_compare(p1->ver, p2->ver);
 }
 
 
@@ -291,10 +294,10 @@ int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2)
     if ((rc = p1->epoch - p2->epoch))
         return rc;
     
-    rc = rpmvercmp(p1->ver, p2->ver);
+    rc = pkg_version_compare(p1->ver, p2->ver);
 
     if (rc == 0)
-        rc = rpmvercmp(p1->rel, p2->rel);
+        rc = pkg_version_compare(p1->rel, p2->rel);
     
     return rc;
 }
@@ -595,7 +598,7 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
         if (!capreq_has_ver(cap))
             return strict == 0;
         
-        cmprc = rpmvercmp(capreq_ver(cap), capreq_ver(req));
+        cmprc = pkg_version_compare(capreq_ver(cap), capreq_ver(req));
         if (cmprc != 0)
             return rel_match(cmprc, req);
         evr = 1;
@@ -605,7 +608,7 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
         if (!capreq_has_rel(cap))
             return strict == 0;
         
-        cmprc = rpmvercmp(capreq_rel(cap), capreq_rel(req));
+        cmprc = pkg_version_compare(capreq_rel(cap), capreq_rel(req));
         if (cmprc != 0)
             return rel_match(cmprc, req);
         evr = 1;
@@ -638,7 +641,7 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req)
     
     
     if (capreq_has_ver(req)) {
-        cmprc = rpmvercmp(pkg->ver, capreq_ver(req));
+        cmprc = pkg_version_compare(pkg->ver, capreq_ver(req));
         if (cmprc != 0)
             return rel_match(cmprc, req);
         evr = 1;
@@ -646,7 +649,7 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req)
         
     if (capreq_has_rel(req)) {
         n_assert(capreq_has_ver(req));
-        cmprc = rpmvercmp(pkg->rel, capreq_rel(req));
+        cmprc = pkg_version_compare(pkg->rel, capreq_rel(req));
         if (cmprc != 0)
             return rel_match(cmprc, req);
         evr = 1;

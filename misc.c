@@ -37,7 +37,12 @@
 #include <argp.h>
 
 #include <openssl/evp.h>
+
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
+#include <trurl/nstr.h>
+#include <trurl/n_snprintf.h>
+
 #include <vfile/p_open.h>
 #include <vfile/vfile.h>
 

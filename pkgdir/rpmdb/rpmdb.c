@@ -35,6 +35,8 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
+#include "pkgu.h"
+#include "pkgfl.h"
 #include "pkgdir.h"
 #include "rpm/rpm_pkg_ld.h"
 #include "rpm/rpmdb_it.h"

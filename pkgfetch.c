@@ -29,6 +29,8 @@
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
+#include <trurl/nstr.h>
+#include <trurl/n_snprintf.h>
 
 #include <vfile/vfile.h>
 

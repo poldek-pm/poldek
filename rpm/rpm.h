@@ -110,4 +110,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
 
 int rpm_verify_signature(const char *path, unsigned flags);
 
+
+tn_array *rpm_rpmlib_caps(void);
+
 #endif

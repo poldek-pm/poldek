@@ -4,7 +4,7 @@
 PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 
 if [ "$#" != "2" ]; then
-    echo "usage: `basename $0` SMBURL-FILE DESTFILE"
+    echo "usage: `basename $0` smb://server/service/FILE DESTFILE"
     exit 1
 fi
 

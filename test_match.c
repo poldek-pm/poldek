@@ -24,7 +24,8 @@
 #include "log.h"
 #include "pkg.h"
 #include "misc.h"
-//#include "rpm.h"
+#include "capreq.h"
+#include "rpm/rpm.h"
 
 int test_match(int argc, char *argv[])
 {

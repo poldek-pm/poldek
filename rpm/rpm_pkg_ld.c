@@ -25,6 +25,8 @@
 #include "log.h"
 #include "capreq.h"
 #include "pkg.h"
+#include "pkgu.h"
+#include "pkgfl.h"
 #include "depdirs.h"
 
 #include "rpmhdr.h"

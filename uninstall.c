@@ -24,6 +24,9 @@
 
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
+#include <trurl/n_snprintf.h>
+#include <trurl/nmalloc.h>
+#include <trurl/nstr.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -32,8 +35,6 @@
 #include "misc.h"
 #include "pkg.h"
 #include "dbpkgset.h"
-
-//#include "rpm.h"
 
 #define uninst_LDFLAGS (PKG_LDNEVR | PKG_LDCAPS | PKG_LDFL_DEPDIRS)
 

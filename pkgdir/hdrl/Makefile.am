@@ -1,8 +1,9 @@
 # $Id$
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
-lib_LIBRARIES      = libpkgdir_hdrl.a
-libpkgdir_hdrl_a_SOURCES = hdrl.c
+
+noinst_LTLIBRARIES = libpkgdir_hdrl.la
+libpkgdir_hdrl_la_SOURCES = hdrl.c
 
 dist-hook:
 	rm -rf $(distdir)/.deps

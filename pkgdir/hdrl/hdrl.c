@@ -37,9 +37,9 @@
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
-//#include "rpmadds.h"
 #include "pkgdir.h"
 #include "pkg.h"
+#include "pkgu.h"
 #include "pkgroup.h"
 #include "rpm/rpm_pkg_ld.h"
 

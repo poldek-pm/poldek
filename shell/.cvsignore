@@ -21,3 +21,6 @@ poldek*
 rpmvercmp
 ccmalloc-log
 depcomp
+*.lo
+.libs
+*.la

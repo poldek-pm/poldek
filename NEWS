@@ -1,3 +1,10 @@
+0.19.0 (major enhancements release; not released yet)
+
+* new package index format ('pndir') with descriptions
+  of packages moved to separate file. 
+* dependency removed   
+
+
 0.18.1 (major bugfix release; 2002/11/27)
 
 * ability of creation empty indexes

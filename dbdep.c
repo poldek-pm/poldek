@@ -21,11 +21,16 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 #include <trurl/nlist.h>
+#include <trurl/n_snprintf.h>
+#include <trurl/nmalloc.h>
 
 #define ENABLE_TRACE 0
 #include "i18n.h"
@@ -33,6 +38,7 @@
 #include "pkg.h"
 #include "misc.h"
 #include "dbdep.h"
+#include "pkgfl.h"
 
 static void db_dep_free_pkgs(struct db_dep *db_dep) 
 {

@@ -3,8 +3,8 @@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
 AM_CFLAGS = @AM_CFLAGS@
 
-lib_LIBRARIES      = libpkgdir_pdir.a
-libpkgdir_pdir_a_SOURCES = pdir.c pdir.h digest.c save.c tags.c
+noinst_LTLIBRARIES = libpkgdir_pdir.la
+libpkgdir_pdir_la_SOURCES = pdir.c pdir.h digest.c save.c tags.c
 
 noinst_PROGRAMS    = 
 

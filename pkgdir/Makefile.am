@@ -1,18 +1,27 @@
 # $Id$
 
 SUBDIRS = dir pdir hdrl rpmdb pndir
-INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
+INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-lib_LIBRARIES        = libpkgdir.a
+noinst_LTLIBRARIES = libpkgdir.la
 
-libpkgdir_a_SOURCES  = \
+libpkgdir_la_SOURCES  = \
 			source.c source.h \
 			pkgdir.c pkgdir.h \
 			pkgdir_patch.c    \
 			pkgdir_clean.c    \
 			mod.c             \
 			pkg_store.c pkg_restore.c  
+
+pkgdir_modules = dir/libpkgdir_dir.la      \
+		 hdrl/libpkgdir_hdrl.la    \
+	         rpmdb/libpkgdir_rpmdb.la  \
+		 pdir/libpkgdir_pdir.la 	  \
+		 pndir/libpkgdir_pndir.la
+
+
+libpkgdir_la_LIBADD  = $(pkgdir_modules)
 
 dist-hook:
 	rm -rf $(distdir)/.deps

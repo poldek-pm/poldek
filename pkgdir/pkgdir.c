@@ -33,6 +33,8 @@
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 #include <trurl/nbuf.h>
+#include <trurl/nmalloc.h>
+#include <trurl/n_snprintf.h>
 
 #include <vfile/vfile.h>
 
@@ -44,6 +46,7 @@
 #include "misc.h"
 #include "pkgdir.h"
 #include "pkg.h"
+#include "capreq.h"
 #include "pkgroup.h"
 
 static
@@ -225,8 +228,8 @@ int pkgdir_update_a(const struct source *src)
 	char                        idxpath[PATH_MAX];
     const char                  *path = NULL;
     int                         rc;
-
     
+
     n_assert(src->path);
     
 	if ((mod = find_module(src->type)) == NULL)
@@ -238,15 +241,20 @@ int pkgdir_update_a(const struct source *src)
 	}
 
     if (mod->idx_filename) {
+        struct source *tmp;
         pkgdir_make_idx_url(idxpath, sizeof(idxpath), src->path, mod->idx_filename);
         path = src->path;
-        (char*)src->path = idxpath;
+        tmp = (struct source*)src;
+        tmp->path = idxpath;
     }
 
     rc = mod->update_a(src);
 
-    if (mod->idx_filename)
-        (const char*)src->path = path;
+    if (mod->idx_filename) {
+        struct source *tmp;
+        tmp = (struct source*)src;
+        tmp->path = (char*)path;
+    }
     
     return rc;
 }

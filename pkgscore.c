@@ -23,6 +23,10 @@
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
+#include <trurl/nmalloc.h>
+#include <trurl/nstr.h>
+#include <trurl/n_snprintf.h>
+
 #include <vfile/vfile.h>
 
 #define  ENABLE_TRACE 0

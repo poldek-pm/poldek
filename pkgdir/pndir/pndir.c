@@ -31,6 +31,7 @@
 #include <fcntl.h>
 
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 #include <trurl/nstr.h>
 #include <trurl/nbuf.h>
 
@@ -44,6 +45,8 @@
 #include "pkgdir.h"
 #include "pndir.h"
 #include "pkg.h"
+#include "pkgu.h"
+#include "pkgfl.h"
 #include "pkgroup.h"
 #include "pkgmisc.h"
 

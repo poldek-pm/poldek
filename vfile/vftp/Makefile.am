@@ -3,11 +3,12 @@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-lib_LIBRARIES      = libvftp.a 
-libvftp_a_SOURCES  = vftp.c ftp.c
+LIBS = 
+noinst_LTLIBRARIES  = libvftp.la 
+libvftp_la_SOURCES  = vftp.c ftp.c vftp.h ftp.h 
 
-pkgincludedir = $(includedir)/vftp
-pkginclude_HEADERS = vftp.h ftp.h 
+#pkgincludedir = $(includedir)/vftp
+#pkginclude_HEADERS = vftp.h ftp.h 
 
 #noinst_PROGRAMS    = test_vftp
 #test_vftp_SOURCES  = test_vftp.c

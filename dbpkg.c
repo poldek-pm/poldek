@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 
 #include "i18n.h"
 #include "pkg.h"

@@ -3,21 +3,14 @@
 #define  POLDEK_PKG_H
 
 #include <stdint.h>
-
 #include <trurl/narray.h>
 
-#include "capreq.h"
-#include "pkgfl.h"
-#include "pkgu.h"
+struct capreq;                  /* defined in capreq.h */
+struct pkguinf;                 /* defined in pkgu.h   */
+struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 
-
-#define PKG_NEVR_ALLOCATED    (1 << 1)
-//#define PKG_HAS_REQS        (1 << 2)
-//#define PKG_HAS_CNFLS       (1 << 3)
-//#define PKG_HAS_FL          (1 << 4)
 
 #define PKG_HAS_PKGUINF     (1 << 5)
-
 #define PKG_HAS_SELFCAP     (1 << 6)
 
 #define PKG_DIRMARK         (1 << 8)  /* marked directly, i.e. by the user*/
@@ -32,7 +25,6 @@
 
 #define PKG_ORDER_PREREQ    (1 << 14) /* see pkgset-order.c */
 
-
 #define PKG_DBPKG           (1 << 15) /* loaded from database, i.e. installed */
 
 /* DAG node colours */
@@ -42,8 +34,6 @@
 #define PKG_ALL_COLORS     PKG_COLOR_WHITE | PKG_COLOR_GRAY | PKG_COLOR_BLACK
 
 #define PKG_INTERNALMARK    (1 << 23)
-
-
 
 /* colours */
 #define pkg_set_color(pkg, color) \
@@ -75,15 +65,15 @@
 #define pkg_set_badreqs(pkg) ((pkg)->flags |= PKG_BADREQS)
 #define pkg_clr_badreqs(pkg) ((pkg)->flags &= (~PKG_BADREQS))
                              
-#define pkg_upgrade(pkg)      ((pkg)->flags & PKG_UPGRADE)
-#define pkg_mark_upgrade(pkg) ((pkg)->flags |= PKG_UPGRADE)
+//#define pkg_upgrade(pkg)      ((pkg)->flags & PKG_UPGRADE)
+//#define pkg_mark_upgrade(pkg) ((pkg)->flags |= PKG_UPGRADE)
 
 #define pkg_rm_mark(pkg)      ((pkg)->flags |= PKG_RM_MARK)
 #define pkg_is_rm_marked(pkg) ((pkg)->flags & PKG_RM_MARK)
 #define pkg_rm_unmark(pkg)    ((pkg)->flags &= ~(PKG_RM_MARK))
 
-#define pkg_mark_hold(pkg) ((pkg)->flags |= PKG_HELD)
-#define pkg_is_hold(pkg) ((pkg)->flags & PKG_HELD)
+//#define pkg_mark_hold(pkg) ((pkg)->flags |= PKG_HELD)
+//#define pkg_is_hold(pkg) ((pkg)->flags & PKG_HELD)
 
 #define pkg_score(pkg, v) ((pkg)->flags |= v)
 #define pkg_is_scored(pkg, v) ((pkg)->flags & v)
@@ -94,7 +84,7 @@
 
 #define pkg_is_installed(pkg)  ((pkg)->flags & PKG_DBPKG)
 
-struct pkgdir;
+
 
 struct pkg {
     uint32_t     flags;
@@ -174,8 +164,6 @@ struct pkg *pkg_link(struct pkg *pkg);
 
 /* add self name-evr to caps */
 int pkg_add_selfcap(struct pkg *pkg);
-
-//int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
 
 static inline int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2) 
 {
@@ -272,7 +260,5 @@ const char *pkg_group(const struct pkg *pkg);
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*));
 
 tn_array *pkgs_array_new(int size);
-
-
 
 #endif /* POLDEK_PKG_H */

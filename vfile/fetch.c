@@ -121,7 +121,7 @@ static unsigned protocols_to_urltypes(const tn_array *protocols)
 {
     char proto[64];
     int i;
-    unsigned urltypes, type;
+    unsigned urltypes = 0, type;
 
     for (i=0; i<n_array_size(protocols); i++) {
         char *p = n_array_nth(protocols, i);

@@ -25,10 +25,12 @@ ALL_LINGUAS="pl de"
 AC_DEFINE([ENABLE_VFILE_RPMIO],1,[defined if rpmio is used for vfile operations])
 AC_DEFINE([ENABLE_VFILE_TRURLIO],1,[defined if trurlio is used for vfile operations])
 
+AC_DISABLE_STATIC
 
 dnl Checks for programs.
+AM_PROG_LIBTOOL
 AC_PROG_CC()
-AC_PROG_CXX()
+#AC_PROG_CXX()
 AC_C_INLINE
 AC_PROG_INSTALL
 AC_PROG_RANLIB
@@ -195,62 +197,6 @@ else
 	AC_MSG_RESULT(no)
 fi
 
-
-dnl use local ../trurlib copy if it exists
-CONF_IN_LDFLAGS=
-
-TRURL_DIR=
-if test -f "${srcdir}/trurlib/n_array_new.c"; then
-	TRURL_DIR="trurlib"
-fi
-
-if test "${ENABLE_SYS_TRURL}." != "no."; then
-	TRURL_DIR=
-fi
-
-if test -n "$TRURL_DIR"; then
-	AC_MSG_CHECKING(for local trurlib copy in $TRURL_DIR)
-	AC_MSG_RESULT([yes])
-	TRURL_INCLUDE="-I\$(top_srcdir)/$TRURL_DIR/include"
-	TRURL_LDFLAG="-L\$(top_builddir)/$TRURL_DIR/"
-	LDFLAGS="$LDFLAGS -L\$(top_builddir)/$TRURL_DIR"
-	TRURLIB_VERSION=$(egrep 'T_AUTOMAKE\(trurlib, ' $srcdir/$TRURL_DIR/configure.in | cut -d ' ' -f 2 | sed 's|)||')
-else
-	AC_CHECK_HEADER(trurl/trurl.h,,AC_MSG_ERROR("trurl.h is missing"))
-	TRURLIB_VERSION=0.43.4
-fi
-AC_SUBST(TRURL_INCLUDE)
-AC_SUBST(TRURL_LDFLAG)
-AC_SUBST(TRURLIB_VERSION)
-AM_CONDITIONAL(WITH_INCLUDED_TRURLIB, test -n "$TRURL_DIR")
-
-
-dnl use local ../trurlib copy if it exists
-TNDB_DIR=
-if test -f "${srcdir}/tndb/tndb.c"; then
-	TNDB_DIR="tndb"
-fi
-
-ENABLE_SYS_TNDB="no"
-if test "${ENABLE_SYS_TNDB}." != "no."; then
-	TNDB_DIR=
-fi
-
-if test -n "TNDB_DIR"; then
-	AC_MSG_CHECKING(for local tndb copy in $TNDB_DIR)
-	AC_MSG_RESULT([yes])
-	TNDB_INCLUDE="-I\$(top_srcdir)/$TNDB_DIR/"
-	TNDB_LDFLAG="-L\$(top_builddir)/$TNDB_DIR/"
-	LDFLAGS="$LDFLAGS -L\$(top_builddir)/$TNDB_DIR"
-else
-	AC_CHECK_HEADER(tndb/tndb.h,,AC_MSG_ERROR("tndb.h is missing"))
-fi
-AC_SUBST(TNDB_INCLUDE)
-AC_SUBST(TNDB_LDFLAG)
-AC_SUBST(TNDB_VERSION)
-AM_CONDITIONAL(WITH_INCLUDED_TNDB, test -n "$TNDB_DIR")
-
-
 dnl Checks for libraries.
 AC_CHECK_LIB(bz2, BZ2_bzCompress)
 AC_CHECK_LIB(z, gzopen)
@@ -340,18 +286,42 @@ AC_CHECK_FUNCS(EVP_DigestInit,,
 	)], 
 	[$CONF_IN_LDFLAGS])
 
+dnl use local ../trurlib copy if it exists
+CONF_IN_LDFLAGS=
 
-dnl trullib 0.43.5 has n_hash_size; test if linked with system copy only
+if test "${ENABLE_SYS_TRURL}." == "no."; then
+	if test -f "${srcdir}/trurlib/n_array_new.c"; then
+		TRURL_DIR="trurlib"
+	fi
+fi
+
+AC_SUBST(TRURL_DIR)
+
+if test -n "$TRURL_DIR"; then
+	AC_MSG_CHECKING(for local trurlib copy in $TRURL_DIR)
+	AC_MSG_RESULT([yes])
+	TRURL_INCLUDE="-I\$(top_srcdir)/$TRURL_DIR/include"
+	TRURL_LDFLAG="-L\$(top_srcdir)/$TRURL_DIR/"
+	LDFLAGS="$LDFLAGS $TRURL_LDFLAG"
+	CPPFLAGS="$CPPFLAGS $TRURL_INCLUDE"
+	LIBS="$LIBS -ltrurl"
+else
+	AC_CHECK_HEADER(trurl/trurl.h,,AC_MSG_ERROR("trurl.h is missing"))
+	AC_CHECK_LIB(trurl, n_cfree)
+fi
+
+AC_SUBST(TRURL_INCLUDE)
+AC_SUBST(TRURL_LDFLAG)
+
+dnl verify trurlib's version
 TN_TEST_INCLUDE="<trurl/nstream.h>"
 if test -z "$TRURL_DIR"; then
 	AC_CHECK_LIB(trurl, n_stream_open,,
 		[AC_MSG_ERROR(["trurlib >= 0.44.0 not found"])], [-Ltrurlib])
 else
-	LIBS="$LIBS -ltrurl"
 	AC_CONFIG_SUBDIRS(trurlib)
 	TN_TEST_INCLUDE="\"$srcdir/$TRURL_DIR/include/trurl/nstream.h\""
 fi
-
 
 AC_MSG_CHECKING([for trullib >= 0.44.0])
 AC_EGREP_CPP(yes,
@@ -368,8 +338,30 @@ else
 	AC_MSG_RESULT(yes)	
 fi
 
-LIBS="$LIBS -ltndb"	
-AC_CONFIG_SUBDIRS(tndb)
+dnl use local tndb copy if it exists
+ENABLE_SYS_TNDB="no"
+TNDB_DIR=
+if test "${ENABLE_SYS_TNDB}." == "no."; then
+	if test -f "${srcdir}/tndb/tndb.c"; then
+		TNDB_DIR="tndb"
+	fi
+fi
+
+AC_SUBST(TNDB_DIR)
+
+if test -n "TNDB_DIR"; then
+	AC_MSG_CHECKING(for local tndb copy in $TNDB_DIR)
+	AC_MSG_RESULT([yes])
+	TNDB_INCLUDE="-I\$(top_srcdir)/$TNDB_DIR/"
+	TNDB_LDFLAG="-L\$(top_builddir)/$TNDB_DIR/"
+	CPPFLAGS="$CPPFLAGS $TNDB_INCLUDE"
+	AC_CONFIG_SUBDIRS(tndb)
+else
+	AC_CHECK_HEADER(tndb/tndb.h,,AC_MSG_ERROR("tndb.h is missing"))
+fi
+
+AC_SUBST(TNDB_INCLUDE)
+AC_SUBST(TNDB_LDFLAG)
 
 AC_CONFIG_FILES([  
 		po/Makefile.in
@@ -387,11 +379,12 @@ AC_CONFIG_FILES([
 		vfile/vhttp/Makefile
 		conf/Makefile
 		doc/Makefile
+		doc/homepage/Makefile
+		doc/homepage/index.sgml
 		doc/pl/Makefile
 		Makefile
 		poldek.spec
 		poldek-suse.spec
-		homepage.sgml
 		conf/poldekrc.sample:conf/sample.src:poldekrc
 		conf/poldekrc.sample-cdrom:conf/sample-cdrom.src:poldekrc
 		conf/poldekrc.sample-mdk:conf/mdk.src:poldekrc

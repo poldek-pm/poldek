@@ -2,14 +2,11 @@
 
 INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
 AM_CFLAGS = @AM_CFLAGS@
+LDFLAGS = @LDFLAGS@ @TNDB_LDFLAG@
+LIBS = -ltrurl -ltndb
 
-lib_LIBRARIES      = libpkgdir_pndir.a
-libpkgdir_pndir_a_SOURCES = pndir.c pndir.h digest.c update.c save.c tags.c
-
-#pkgincludedir = $(includedir)/vftp
-#pkginclude_HEADERS = vftp.h ftp.h 
-
-noinst_PROGRAMS    = 
+noinst_LTLIBRARIES = libpkgdir_pndir.la
+libpkgdir_pndir_la_SOURCES = pndir.c pndir.h digest.c update.c save.c tags.c
 
 dist-hook:
 	rm -rf $(distdir)/.deps

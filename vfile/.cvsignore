@@ -23,3 +23,6 @@ rpmvercmp
 ccmalloc-log
 depcomp
 ttest
+*.lo
+.libs
+*.la

@@ -3,13 +3,8 @@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-lib_LIBRARIES      = libsigint.a
-libsigint_a_SOURCES  = sigint.h sigint.c
-
-#pkgincludedir = $(includedir)/vftp
-#pkginclude_HEADERS = vftp.h ftp.h 
-
-noinst_PROGRAMS    = 
+noinst_LTLIBRARIES   = libsigint.la
+libsigint_la_SOURCES = sigint.h sigint.c
 
 dist-hook:
 	rm -rf $(distdir)/.deps

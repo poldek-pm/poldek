@@ -34,6 +34,7 @@
 #include <trurl/nstr.h>
 #include <trurl/nbuf.h>
 #include <trurl/nstream.h>
+#include <trurl/nmalloc.h>
 
 #include <vfile/vfile.h>
 
@@ -45,6 +46,8 @@
 #include "pkgdir.h"
 #include "pdir.h"
 #include "pkg.h"
+#include "pkgu.h"
+#include "pkgfl.h"
 #include "pkgmisc.h"
 #include "pkgroup.h"
 

@@ -27,13 +27,17 @@
 #include <rpm/rpmio.h>
 #include <rpm/rpmurl.h>
 #include <rpm/rpmmacro.h>
-#include <trurl/nassert.h>
-#include <trurl/narray.h>
-#include <trurl/nstr.h>
 
 #ifdef HAVE_RPM_4_1
 # include <rpm/rpmdb.h>
 #endif
+
+#include <trurl/nassert.h>
+#include <trurl/narray.h>
+#include <trurl/nstr.h>
+#include <trurl/nmalloc.h>
+#include <trurl/n_snprintf.h>
+
 
 #include <vfile/vfile.h>
 

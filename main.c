@@ -30,6 +30,8 @@
 
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
+
 #include <vfile/vfile.h>
 #include <sigint/sigint.h>
 

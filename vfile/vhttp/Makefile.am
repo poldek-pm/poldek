@@ -3,11 +3,12 @@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-lib_LIBRARIES      = libvhttp.a 
-libvhttp_a_SOURCES  = vhttp.c http.c base64.c
+LIBS = 
+noinst_LTLIBRARIES  = libvhttp.la 
+libvhttp_la_SOURCES  = vhttp.c http.c base64.c vhttp.h http.h 
 
-pkgincludedir = $(includedir)/vhttp
-pkginclude_HEADERS = vhttp.h http.h 
+#pkgincludedir = $(includedir)/vhttp
+#pkginclude_HEADERS = vhttp.h http.h 
 
 #noinst_PROGRAMS    = test_vhttp
 #test_vhttp_SOURCES  = test_vhttp.c

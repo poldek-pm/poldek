@@ -18,9 +18,12 @@
 #include <trurl/nassert.h>
 #include <trurl/nhash.h>
 #include <trurl/narray.h>
+#include <trurl/nmalloc.h>
+#include <trurl/nstr.h>
 
 #include "i18n.h"
 #include "pkg.h"
+#include "capreq.h"
 #include "dbpkg.h"
 #include "dbpkgset.h"
 #include "log.h"

@@ -3,15 +3,15 @@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-lib_LIBRARIES    = libshell.a 
-libshell_a_SOURCES  = shell.c shell.h \
-		   ls.c            \
-		   install.c       \
-		   uninstall.c     \
-		   get.c           \
-		   desc.c          \
-		   search.c        \
-		   pager.c pager.h
+noinst_LTLIBRARIES  = libshell.la 
+libshell_la_SOURCES  = shell.c shell.h \
+		       ls.c            \
+		       install.c       \
+		       uninstall.c     \
+		       get.c           \
+		       desc.c          \
+		       search.c        \
+		       pager.c pager.h
 
 dist-hook:
 	rm -rf $(distdir)/.deps

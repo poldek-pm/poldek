@@ -15,13 +15,13 @@ backup:
 	NAME=`basename  $(PROJ_DIR)`;                               \
 	ARCHDIR=$$NAME-ARCH;                                        \
 	ARCHNAME=$$NAME-`date +%Y.%m.%d-%H.%M`;                     \
-	mkdir -p ../$$ARCHDIR/$$ARCHNAME/$$NAME;                    \
-	cp -a . ../$$ARCHDIR/$$ARCHNAME/$$NAME || exit 1;           \
-	cd ../$$ARCHDIR;                                            \
+	mkdir -p ~/$$ARCHDIR/$$ARCHNAME/$$NAME;                    \
+	cp -a . ~/$$ARCHDIR/$$ARCHNAME/$$NAME || exit 1;           \
+	cd ~/$$ARCHDIR;                                            \
 	tar --bzip2 -cpf $$ARCHNAME.tar.bz2 $$ARCHNAME && rm -rf $$ARCHNAME;    \
 	md5sum $$ARCHNAME.tar.bz2 > $$ARCHNAME.md5;                 \
-	ARCHIVE=$(PROJ_DIR)/../$$ARCHDIR/$$ARCHNAME.tar.bz2;        \
-	ARCHIVE_MD5=$(PROJ_DIR)/../$$ARCHDIR/$$ARCHNAME.md5;        \
+	ARCHIVE=$$HOME/$$ARCHDIR/$$ARCHNAME.tar.bz2;        \
+	ARCHIVE_MD5=$$HOME/$$ARCHDIR/$$ARCHNAME.md5;        \
 	if [ $(cparch)x = "1x" ]; then                              \
 	        mkdir $(backupdir)/copy || true;                    \
 		cp -v $$ARCHIVE $$ARCHIVE_MD5 $(backupdir);         \

@@ -41,6 +41,7 @@
 #include "rpm/rpm_pkg_ld.h"
 #include "pkgdir.h"
 #include "pkg.h"
+#include "pkgu.h"
 #include "pkgroup.h"
 //#include "pkgdb.h"
 

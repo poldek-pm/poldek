@@ -18,10 +18,12 @@
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
+#include <trurl/n_snprintf.h>
 
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
+#include "pkgu.h"
 #include "pkgset.h"
 #include "pkgset.h"
 #include "misc.h"

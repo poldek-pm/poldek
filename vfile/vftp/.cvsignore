@@ -27,3 +27,6 @@ test_match
 homepage.sgml
 intl
 test_vftp
+*.lo
+.libs
+*.la

@@ -3,7 +3,6 @@
 #define  POLDEK_LIB_H
 
 #include "conf.h"
-
 #include "pkg.h"
 #include "pkgset.h"
 #include "pkgdir/pkgdir.h"
@@ -19,7 +18,6 @@ struct poldek_ctx {
     struct pkgdir  *dbpkgdir;   /* db packages        */
     tn_hash        *cnf;
     unsigned       _iflags;
-
 };
 
 int pdek_resolve_packages(tn_array *patterns, tn_array *avpkgs,

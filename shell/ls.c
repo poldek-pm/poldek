@@ -16,7 +16,7 @@
 #include "sigint/sigint.h"
 #include "i18n.h"
 #include "misc.h"
-
+#include "pkgu.h"
 #include "shell.h"
 #include "pager.h"
 

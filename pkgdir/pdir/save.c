@@ -26,6 +26,7 @@
 #include <trurl/nstr.h>
 #include <trurl/nbuf.h>
 #include <trurl/nstream.h>
+#include <trurl/n_snprintf.h>
 
 #include <vfile/vfile.h>
 

@@ -16,6 +16,9 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <trurl/trurl.h>
 
@@ -23,6 +26,7 @@
 #include "log.h"
 #include "pkgfl.h"
 #include "pkg.h"
+#include "capreq.h"
 #include "fileindex.h"
 
 #define obstack_chunk_alloc n_malloc

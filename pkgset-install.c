@@ -33,6 +33,10 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 #include <trurl/nlist.h>
+#include <trurl/nmalloc.h>
+#include <trurl/nstr.h>
+#include <trurl/n_snprintf.h>
+
 
 #include <vfile/vfile.h>
 #include <vfile/p_open.h>
@@ -138,7 +142,7 @@ int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked)
         install = -1;
         
     } else {
-        if (pkg_is_hold(pkg)) {
+        if (pkg_is_scored(pkg, PKG_HELD)) {
             logn(LOGERR, _("%s: refusing to upgrade held package"),
                 pkg_snprintf_s(pkg));
             install = 0;
@@ -2078,7 +2082,7 @@ void mapfn_mark_newer_pkg(unsigned recno, void *h, void *upgptr)
 
     pkg = n_array_nth(upg->avpkgs, i);
     if (cmprc > 0) {
-        if (pkg_is_hold(pkg)) {
+        if (pkg_is_scored(pkg, PKG_HELD)) {
             msgn(1, _("%s: skip held package"), pkg_snprintf_s(pkg));
             
         } else {

@@ -3,8 +3,8 @@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
 AM_CFLAGS = @AM_CFLAGS@
 
-lib_LIBRARIES      = libpkgdir_dir.a
-libpkgdir_dir_a_SOURCES = dir.c
+noinst_LTLIBRARIES  = libpkgdir_dir.la
+libpkgdir_dir_la_SOURCES = dir.c
 
 dist-hook:
 	rm -rf $(distdir)/.deps

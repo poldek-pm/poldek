@@ -25,6 +25,7 @@ fi
 runcmd ./getlib.sh trurlib $getlib_mode
 runcmd ./getlib.sh tndb    $getlib_mode
 
+runcmd libtoolize --force --automake
 runcmd aclocal
 runcmd autoheader
 runcmd autoconf

@@ -18,7 +18,8 @@ install-sh
 stamp-h
 stamp-h.in
 .deps
-poldek*
+poldek-*
+poldek
 rpmvercmp
 ccmalloc-log
 depcomp
@@ -30,3 +31,8 @@ m4
 ABOUT-NLS
 config.rpath
 autom4te.cache
+*.lo
+.libs
+*.la
+*.spec
+libtool

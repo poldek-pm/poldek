@@ -23,8 +23,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <trurl/nassert.h>
+
 #include "i18n.h"
 #include "log.h"
 #include "poldek_term.h"

@@ -26,3 +26,6 @@ test_match
 *.html
 homepage.sgml
 intl
+*.lo
+.libs
+*.la

@@ -17,6 +17,7 @@
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
+#include <trurl/nmalloc.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -69,7 +70,7 @@ struct command command_install = {
     COMMAND_HASVERBOSE | COMMAND_MODIFIESDB, 
     "install", N_("PACKAGE..."), N_("Install packages"), 
     options, parse_opt,
-    NULL, install, NULL, NULL, NULL, NULL
+    NULL, install, NULL, NULL, NULL
 };
 
 

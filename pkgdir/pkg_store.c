@@ -34,6 +34,9 @@
 #include "log.h"
 #include "pkgdir.h"
 #include "pkg.h"
+#include "pkgu.h"
+#include "pkgfl.h"
+#include "capreq.h"
 #include "pkgroup.h"
 
 

@@ -16,6 +16,8 @@
 #include <fcntl.h>              /* for O_* */
 
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
+
 #include "i18n.h"
 #include "pkgdb.h"
 #include "rpm/rpm.h"

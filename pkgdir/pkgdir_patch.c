@@ -25,6 +25,7 @@
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 #include <trurl/nbuf.h>
+#include <trurl/nmalloc.h>
 
 #include <vfile/vfile.h>
 
@@ -34,6 +35,7 @@
 #include "log.h"
 #include "pkgdir.h"
 #include "pkg.h"
+#include "pkgu.h"
 #include "pkgroup.h"
 
 #if 0

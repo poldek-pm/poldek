@@ -29,6 +29,7 @@
 
 #include <vfile/vfile.h>
 
+#include "rpm/rpm.h"
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"

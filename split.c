@@ -23,6 +23,8 @@
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
+#include <trurl/nmalloc.h>
+
 #include <vfile/vfile.h>
 
 #include "i18n.h"
@@ -145,7 +147,7 @@ int read_pridef(char *buf, int buflen, struct pridef **pridef,
 }
 
 static 
-tn_array *read_split_conf(const char *fpath)
+tn_array *load_pri_conf(const char *fpath)
 {
     char              buf[1024];
     struct vfile      *vf;
@@ -392,13 +394,13 @@ int make_chunks(tn_array *pkgs, unsigned split_size, unsigned first_free_space,
 }
 
 
-int packages_set_priorities(tn_array *pkgs, const char *splitconf_path)
+int packages_set_priorities(tn_array *pkgs, const char *priconf_path)
 {
     tn_array *defs = NULL;
     int i, j;
 
 
-    if ((defs = read_split_conf(splitconf_path)) == NULL)
+    if ((defs = load_pri_conf(priconf_path)) == NULL)
         return 0;
     
     n_array_sort(pkgs);

@@ -36,6 +36,7 @@
 #include "log.h"
 #include "misc.h"
 #include "pkgmisc.h"
+#include "pkg_ver_cmp.h"
 
 static void *(*capreq_alloc_fn)(size_t) = n_malloc;
 static void (*capreq_free_fn)(void*) = n_free;
@@ -85,7 +86,7 @@ int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2)
     if ((rc = (capreq_ver(cr1) - capreq_ver(cr2))))
         return rc;
     
-    if ((rc = rpmvercmp(capreq_rel(cr1), capreq_rel(cr2))))
+    if ((rc = pkg_version_compare(capreq_rel(cr1), capreq_rel(cr2))))
         return rc;
     
     return cr1->cr_relflags - cr2->cr_relflags;

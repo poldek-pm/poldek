@@ -23,6 +23,7 @@
 #include <pcre.h>
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
+#include <trurl/nmalloc.h>
 #include <sigint/sigint.h>
 
 #include "i18n.h"
@@ -32,6 +33,7 @@
 #include "pkgset.h"
 #include "misc.h"
 #include "search.h"
+#include "pkgu.h"
 #include "shell.h"
 
 static const unsigned char   *pcre_chartable = NULL;

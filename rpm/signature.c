@@ -30,9 +30,6 @@
 #include <rpm/rpmio.h>
 #include <rpm/rpmurl.h>
 #include <rpm/rpmmacro.h>
-#include <trurl/nassert.h>
-#include <trurl/narray.h>
-#include <trurl/nstr.h>
 
 #ifdef HAVE_RPM_4_1
 # include <rpm/rpmts.h>
@@ -40,6 +37,12 @@
 # include <rpm/rpmdb.h>
 # include <rpm/rpmcli.h>
 #endif
+
+#include <trurl/nassert.h>
+#include <trurl/narray.h>
+#include <trurl/nstr.h>
+#include <trurl/n_snprintf.h>
+
 
 #include "i18n.h"
 #include "depdirs.h"

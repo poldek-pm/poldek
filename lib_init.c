@@ -23,7 +23,8 @@
 
 #include <trurl/nmalloc.h>
 #include <trurl/nassert.h>
-
+#include <trurl/n_snprintf.h>
+#include <trurl/nstr.h>
 
 #include "vfile/vfile.h"
 #include "sigint/sigint.h"
