@@ -109,7 +109,7 @@ struct command command_search = {
        "     <delimiter>perl-regexp<delimiter>[imsx]\n"
        "  For example to find the packages containing foo.bar do:\n"
        "     search --perlre /foo\\.bar/\n"
-       "  See perlre(1) for more details.\n")
+       "  See perlre(1) for more details.\n"), NULL
 };
 
 static
@@ -166,7 +166,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
             //printf("arg = %s\n", arg);
             
-            if (n_array_size(cmdarg->pkgnames) == 0 && cmdarg->d == NULL) {
+            if (poldek_ts_get_arg_count(cmdarg->ts) == 0 && cmdarg->d == NULL) {
                 struct pattern   *pt;
                 char             *regexp = NULL;
                 unsigned         flags = 0;
@@ -540,23 +540,22 @@ static int search(struct cmdarg *cmdarg)
         cmdarg->flags |= OPT_SEARCH_DEFAULT;
     
     init_pcre();
-    if (!pattern_compile(pt, n_array_size(cmdarg->pkgnames))) {
+    if (!pattern_compile(pt, poldek_ts_get_arg_count(cmdarg->ts))) {
         err++;
         goto l_end;
     }
     
-    sh_resolve_packages(cmdarg->pkgnames, cctx->avpkgs, &pkgs, 0);
+    if (poldek_ts_get_arg_count(cmdarg->ts) == 0) {
+        pkgs = poldekcli_get_current_pkgs(cctx);
+        
+    } else {
+        pkgs = poldekcli_resolve_packages(cctx, cmdarg->ts, 0);
+    }
     
     if (pkgs == NULL)
         return 0;
-
-    if (n_array_size(pkgs) == 0) {
-        n_array_free(pkgs);
-        pkgs = cctx->avpkgs;
-    }
-
     
-    matched_pkgs = n_array_new(16, NULL, NULL);
+    matched_pkgs = n_array_new(32, NULL, NULL);
 
     if (n_array_size(pkgs) > 5 && (cmdarg->flags & OPT_SEARCH_HDD)) {
         display_bar = 1;
@@ -583,8 +582,6 @@ static int search(struct cmdarg *cmdarg)
             msgn(0, _("_interrupted."));
             goto l_end;
         }
-        
-        
     }
     
     if (display_bar) 
@@ -612,15 +609,14 @@ static int search(struct cmdarg *cmdarg)
         
  l_end:
 
-    if (pkgs && pkgs != cctx->avpkgs)
+    if (pkgs)
         n_array_free(pkgs);
     
     if (matched_pkgs)
         n_array_free(matched_pkgs);
     
-    if (cmdarg->d) {
+    if (cmdarg->d)
         cmdarg->d = NULL;
-    }
 
     pattern_free(pt);
     return 1;

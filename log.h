@@ -137,5 +137,6 @@ void log_tty(const char *fmt, ...)
 #define DBGF_F(fmt, args...) fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
 
 #define dbgf(fmt, args...)  fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
+#define dbgf_(fmt, args...) ((void) 0)
 
 #endif /* POLDEK_LOG_H */

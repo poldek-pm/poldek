@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2003 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
@@ -26,28 +26,20 @@
 #include "cli.h"
 #include "conf.h"
 
-static
-int alias_cmp(struct command_alias *a1, struct command_alias *a2)
-{
-    return strcmp(a1->name, a2->name);
-}
 
 static
-int alias_cmd_cmp(struct command_alias *p1, struct command_alias *p2)
+struct command *command_new_alias(const char *name, const char *cmdline) 
 {
-	if (p1->cmd == p2->cmd)
-		return 0;
-	else 
-		return -1;
+    struct command *alias;
+
+    alias = n_malloc(sizeof(*alias));
+    memset(alias, 0, sizeof(*alias));
+    alias->flags = COMMAND_IS_ALIAS;
+    alias->name = n_strdup(name);
+    alias->cmdline = n_strdup(cmdline);
+    return alias;
 }
 
-static void alias_free(struct command_alias *alias) 
-{
-    n_cfree(&alias->name);
-    n_cfree(&alias->cmdline);
-    alias->cmd = NULL;
-    free(alias);
-}
 
 static
 int add_alias(struct poldekcli_ctx *cctx,
@@ -55,61 +47,38 @@ int add_alias(struct poldekcli_ctx *cctx,
 {
 	struct command          *cmd;
     struct command          tmpcmd;
-	struct command_alias    *alias, tmpalias;
-	char                    *cmdname;
-    const char              *p;
-    int                     i, len;
 
     
-
-    p = cmdline;
-	while (isalnum(*p))
-		p++;
-
-    len = p - cmdline + 1;
-    cmdname = alloca(len + 1);
-	n_strncpy(cmdname, cmdline, len);
-    
-	tmpcmd.name = (char*)cmdname;
-    
+	tmpcmd.name = (char*)aliasname;
 	if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd)) == NULL) {
-        logn(LOGWARN, _("%s: %s: no such command"), aliasname, cmdname);
-		return 0;
+        n_array_push(cctx->commands, command_new_alias(aliasname, cmdline));
+        
+    } else {
+        if ((cmd->flags & COMMAND_IS_ALIAS) == 0) {
+            logn(LOGWARN, _("%s: alias could not shadow a command"), aliasname);
+            
+        } else {
+            if (verbose > 1)
+                logn(LOGWARN, _("%s (%s) overwrites %s"), aliasname, cmdline,
+                     cmd->cmdline);
+            free(cmd->name);
+            cmd->name = n_strdup(aliasname);
+
+            free(cmd->cmdline);
+            cmd->cmdline = n_strdup(cmdline);
+        }
 	}
-
-    alias = n_malloc(sizeof(*alias));
-	alias->name = n_strdup(aliasname);
-	alias->cmdline = n_strdup(cmdline);
-	alias->cmd = cmd;
-
-	tmpalias.name = aliasname;
-
-	if ((i = n_array_bsearch_idx(cctx->aliases, &tmpalias)) >= 0) {
-		n_array_set_nth(cctx->aliases, i, alias);
-		i = n_array_bsearch_idx(cctx->all_commands, aliasname);
-		n_array_set_nth(cctx->all_commands, i, alias->name);
-
-	} else {
-		n_array_push(cctx->aliases, alias);
-        n_array_push(cctx->all_commands, alias->name);
-	}
-
-	n_array_sort(cctx->aliases);
-	n_array_sort(cctx->all_commands);
-
+    
+	n_array_sort(cctx->commands);
 	return 1;
 }
+
 
 void poldekcli_load_aliases(struct poldekcli_ctx *cctx, const char *path) 
 {
     tn_hash *aliases_htcnf, *ht;
     tn_array *keys;
     int i;
-
-    if (cctx->aliases == NULL)
-        cctx->aliases  = n_array_new(16, (tn_fn_free)alias_free,
-                                     (tn_fn_cmp)alias_cmp);
-
     
     if (access(path, R_OK) != 0)
         return;

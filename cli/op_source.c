@@ -69,7 +69,7 @@ static struct argp_option source_options[] = {
      OPT_SRC_GID },
 
 {"st", OPT_SRCTYPE, "SOURCE-TYPE", 0,
-     N_("Sets the source type (use --stl to list available values)"),
+     N_("Set the source type (use --stl to list available values)"),
      OPT_SRC_GID },
 
 {"prefix", 'P', "PREFIX", 0,
@@ -163,7 +163,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     //if (key && arg)
     //    poldek_cli_internal_chkargparg(key, arg);
-    
     switch (key) {
         case 'l':
             arg_s->cnflags |= POLDEKCLI_SRC_SRCLS;
@@ -272,6 +271,41 @@ static void print_source_list(tn_array *sources)
     n_array_sort(sources);
 }
 
+
+static void print_source_type_list(void) 
+{
+    int i;
+    tn_array *list;
+
+    list = pkgdir_typelist();
+    if (list) {
+        for (i=0; i < n_array_size(list); i++) {
+            char s[64]; int n;
+            struct pkgdir_type_uinf *inf = n_array_nth(list, i);
+            
+            n = snprintf_c(PRCOLOR_GREEN, s, sizeof(s), "%s", inf->name);
+            snprintf_c(PRCOLOR_CYAN, &s[n], sizeof(s) - n, "(%s)", inf->mode);
+            printf("%-37s", s);
+            
+            printf(" - %s\n", inf->description);
+            if (*inf->aliases) {
+                printf("%-12s   (aliases: ", "");
+                printf_c(PRCOLOR_GREEN, "%s", inf->aliases);
+                printf(")\n");
+            }
+        }
+        n_array_free(list);
+    }
+    printf("Legend: ");
+    printf_c(PRCOLOR_CYAN, "r");
+    printf(" - readable, ");
+    printf_c(PRCOLOR_CYAN, "w");
+    printf(" - writeable, ");
+    printf_c(PRCOLOR_CYAN, "u");
+    printf(" - updateable\n");
+}
+
+
 static int oprun(struct poclidek_opgroup_rt *rt)
 {
     struct arg_s *arg_s;
@@ -297,7 +331,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
     }
 
     if (arg_s->cnflags & POLDEKCLI_SRC_SRCTYPE_LS)
-        printf("op: srctype ls\n");
+        print_source_type_list();
 
     if (arg_s->cnflags & POLDEKCLI_SRC_SRCLS)
         print_source_list(rt->ctx->sources);

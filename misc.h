@@ -39,6 +39,7 @@ const char *expand_env_vars(char *dest, int size, const char *str);
 void die(void);
 
 char *trimslash(char *path);
+char *strip(char *str);
 char *next_token(char **str, char delim, int *toklen);
 int is_rwxdir(const char *path);
 int is_dir(const char *path);

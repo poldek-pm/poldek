@@ -36,19 +36,23 @@ static int install(struct cmdarg *cmdarg);
 #define OPT_INST_FORCE      (OPT_GID + 2)
 #define OPT_INST_REINSTALL  (OPT_GID + 3)
 #define OPT_INST_DOWNGRADE  (OPT_GID + 4)
-#define OPT_INST_FETCH      (OPT_GID + 6)
+#define OPT_INST_INSTDIST   (OPT_GID + 5)
+#define OPT_INST_UPGRDIST   (OPT_GID + 6)
+#define OPT_INST_REINSTDIST (OPT_GID + 7)
 
-#define OPT_INST_JUSTDB           (OPT_GID + 7)
+#define OPT_INST_FETCH      (OPT_GID + 16)
+
+#define OPT_INST_JUSTDB           (OPT_GID + 17)
 #define OPT_INST_TEST             't'
-#define OPT_INST_RPMDEF           (OPT_GID + 9)
-#define OPT_INST_MKSCRIPT         (OPT_GID + 10)
-#define OPT_INST_POLDEK_MKSCRIPT  (OPT_GID + 11)
+#define OPT_INST_RPMDEF           (OPT_GID + 19)
+#define OPT_INST_MKSCRIPT         (OPT_GID + 20)
+#define OPT_INST_POLDEK_MKSCRIPT  (OPT_GID + 21)
 #define OPT_INST_NOFOLLOW         'N'
 #define OPT_INST_FRESHEN          'F'
-#define OPT_INST_HOLD             (OPT_GID + 14)
-#define OPT_INST_NOHOLD           (OPT_GID + 15)
-#define OPT_INST_IGNORE           (OPT_GID + 16)
-#define OPT_INST_NOIGNORE         (OPT_GID + 17)
+#define OPT_INST_HOLD             (OPT_GID + 24)
+#define OPT_INST_NOHOLD           (OPT_GID + 25)
+#define OPT_INST_IGNORE           (OPT_GID + 26)
+#define OPT_INST_NOIGNORE         (OPT_GID + 27)
 #define OPT_INST_GREEDY           'G'
 #define OPT_INST_UNIQNAMES        'Q'
 
@@ -63,7 +67,7 @@ static struct argp_option options[] = {
      OPT_GID },
 {"fresh", 'F', 0, 0, N_("Upgrade packages, but only if an earlier version "
                         "currently exists"), OPT_GID },
-{"nofollow", 'N', 0, 0, N_("Don't automatically install packages required by "
+{"nofollow", 'N', 0, 0, N_("Don't install packages required by "
                            "selected ones"), OPT_GID },
 {"greedy", 'G', 0, 0, N_("Automatically upgrade packages which dependencies "
                          "are broken by unistalled ones"), OPT_GID }, 
@@ -87,6 +91,18 @@ static struct argp_option cmdl_options[] = {
     {"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade"), OPT_GID - 100 },     
     {"upgrade", 'u', 0, 0, N_("Upgrade given packages"), OPT_GID - 100 },
     {NULL, 'h', 0, OPTION_HIDDEN, "", OPT_GID - 100 }, /* for compat with -Uvh */
+    
+    {0,0,0,0, N_("Distribution installation/upgrade:"), OPT_GID - 90 },
+    {"install-dist", OPT_INST_INSTDIST, "DIR", 0,
+    N_("Install package set under DIR as root directory"), OPT_GID - 90 },
+
+    {"upgrade-dist", OPT_INST_UPGRDIST, "DIR", OPTION_ARG_OPTIONAL,
+     N_("Upgrade all packages needs upgrade"), OPT_GID - 90 },
+
+    {"reinstall-dist", OPT_INST_REINSTDIST, "DIR", OPTION_ARG_OPTIONAL,
+     N_("Reinstall all packages under DIR as root directory"), OPT_GID - 90 },
+
+    {0,0,0,0, N_("Installation switches:"), OPT_GID },
     { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -95,7 +111,7 @@ struct command command_install = {
     COMMAND_HASVERBOSE | COMMAND_MODIFIESDB, 
     "install", N_("PACKAGE..."), N_("Install packages"), 
     options, parse_opt,
-    NULL, install, NULL, NULL, NULL
+    NULL, install, NULL, NULL, NULL, NULL
 };
 
 static struct argp cmd_argp = {
@@ -194,6 +210,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     ts = cmdarg->ts;
     
     switch (key) {
+        case ARGP_KEY_INIT:
+            break;
+            
         case 'm':
             //cmdarg->cctx->pkgset->flags |= PSVERIFY_MERCY;
             break;
@@ -262,48 +281,24 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 static int install(struct cmdarg *cmdarg)
 {
-    tn_array              *pkgs = NULL;
     struct install_info   iinf;
-    int                   i, rc = 1;
+    int                   i, rc = 1, is_test;
     struct poldekcli_ctx  *cctx;
     struct poldek_ts      *ts;
     
     cctx = cmdarg->cctx;
     ts = cmdarg->ts;
     
-    sh_resolve_packages(cmdarg->pkgnames, cctx->avpkgs, &pkgs, 1);
-    
-    if (pkgs == NULL || n_array_size(pkgs) == 0) {
-        rc = 0;
-        goto l_end;
-    }
+    poldek_ts_setf(ts, POLDEK_TS_INSTALL);
+    is_test = poldek_ts_issetf(ts, POLDEK_TS_TEST | POLDEK_TS_RPMTEST);
 
-    packages_unmark_all(cmdarg->cctx->avpkgs);
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-        pkg_hand_mark(pkg);
-    }
-
-    if (poldek_ts_issetf(ts, POLDEK_TS_TEST | POLDEK_TS_RPMTEST)) {
-        iinf.installed_pkgs = NULL;
-        iinf.uninstalled_pkgs = NULL;
-        
-    } else {
-        iinf.installed_pkgs = pkgs_array_new(16);
-        iinf.uninstalled_pkgs = pkgs_array_new(16);
-    }
-    
-    //rc = install_pkgs(cmdarg->cctx->pkgset, cmdarg->cctx->inst,
-    //                  iinf.installed_pkgs ? &iinf : NULL);
-    logn(LOGERR, "NFY");
+    rc = poldek_ts_do_install(ts, is_test ? NULL : &iinf);
     
     if (rc == 0) 
         msgn(1, _("There were errors"));
 
-
     /* update installed set */
-    if (iinf.installed_pkgs && cmdarg->cctx->instpkgs) {
-        
+    if (!is_test && cmdarg->cctx->instpkgs) {
         for (i=0; i < n_array_size(iinf.uninstalled_pkgs); i++) {
             struct pkg *pkg = n_array_nth(iinf.uninstalled_pkgs, i);
             n_array_remove(cmdarg->cctx->instpkgs, pkg);
@@ -324,17 +319,8 @@ static int install(struct cmdarg *cmdarg)
             n_array_size(iinf.uninstalled_pkgs))
             cmdarg->cctx->ts_instpkgs = time(0);
     }
-    
-    if (iinf.installed_pkgs) {
-        n_array_free(iinf.installed_pkgs);
-        n_array_free(iinf.uninstalled_pkgs);
-    }
-    
-    
- l_end:
-
-    if (pkgs != cmdarg->cctx->avpkgs)
-        n_array_free(pkgs);
+    if (!is_test)
+        install_info_destroy(&iinf);
     
     return rc;
 }
@@ -343,19 +329,15 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
 {
     int rc;
 
-    printf("cmdl_run install\n");
     if (!poldek_ts_issetf(rt->ts, POLDEK_TS_INSTALL))
         return 0;
 
-    dbgf("%p->%p, %p->%p\n", rt->ts, rt->ts->hold_patterns,
+    dbgf_("%p->%p, %p->%p\n", rt->ts, rt->ts->hold_patterns,
          rt->ts->ctx->ts, rt->ts->ctx->ts->hold_patterns);
-
+    
     if (!poldek_load_sources(rt->ctx, 1))
         return 0;
-
-    
     
     rc = poldek_ts_do_install(rt->ts, NULL);
-    printf("cmdl_run install1 = %d\n", rc);
     return rc ? 0 : OPGROUP_RC_ERROR;
 }

@@ -75,6 +75,23 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
         packages_set_priorities(ps->pkgs, ctx->ts->prifile);
 
     ctx->ps = ps;
-    ctx->pkgs = n_ref(ps->pkgs);
+    //ctx->pkgs = n_ref(ps->pkgs);
     return 1;
+}
+
+
+tn_array *poldek_get_avpkgs(struct poldek_ctx *ctx)
+{
+    if (!poldek_load_sources(ctx, 1))
+        return NULL;
+
+    return n_ref(ctx->ps->pkgs);
+}
+
+tn_array *poldek_get_avpkgs_bynvr(struct poldek_ctx *ctx) 
+{
+    if (!poldek_load_sources(ctx, 1))
+        return NULL;
+
+    return n_ref(ctx->ps->pkgs_bynvr);
 }

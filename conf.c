@@ -78,6 +78,8 @@ static struct tag global_tags[] = {
     { "ignore req",    TYPE_STR | TYPE_MULTI , { 0 } },
     { "ignore pkg",    TYPE_STR | TYPE_MULTI , { 0 } },
 
+    { "rpm",           TYPE_STR | TYPE_F_ENV, { 0 } },
+    { "sudo",          TYPE_STR | TYPE_F_ENV, { 0 } },
     { "rpmdef",        TYPE_STR | TYPE_MULTI | TYPE_F_ENV, { 0 } },
     { "rpm install opt",  TYPE_STR , { 0 } },
     { "rpm uninstall opt",  TYPE_STR , { 0 } },

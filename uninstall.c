@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fnmatch.h>
 #include <sys/types.h>
 #include <sys/stat.h> 
 #include <unistd.h>
@@ -31,7 +32,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkgset.h"
-#include "usrset.h"
+#include "arg_packages.h"
 #include "misc.h"
 #include "pkg.h"
 #include "dbpkgset.h"
@@ -200,35 +201,41 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
     int               i, nerr = 0, ndep_marked = 0, doit = 1;
     struct dbpkg_set  *unpoldek_tset;
     tn_array          *pkgs = NULL;
+    const tn_array    *pkgmasks;
     void              *pkgflmod_mark = NULL;
     
 
     unpoldek_tset = dbpkg_set_new();
     pkgflmod_mark = pkgflmodule_allocator_push_mark();
+    pkgmasks = poldek_ts_get_arg_pkgmasks(ts);
     
-    for (i=0; i < n_array_size(ts->ups->pkgdefs); i++) {
-        struct pkgdef *pdef;
-        tn_array *dbpkgs;
-        int nmatches = 0;
+    for (i=0; i < n_array_size(pkgmasks); i++) {
+        char           *mask;
+        tn_array       *dbpkgs;
+        struct capreq  *cr;
+        int            nmatches = 0;
 
         
-        pdef = n_array_nth(ts->ups->pkgdefs, i);
+        mask = n_array_nth(pkgmasks, i);
+#if 0 //DUPA        
         if ((pdef->tflags & PKGDEF_REGNAME) == 0) {
             logn(LOGERR, _("'%s': only exact selection is supported"),
                  pdef->virtname);
             nerr++;
             continue;
         }
-        
-                
-        dbpkgs = rpm_get_packages(ts->db->dbh, pdef->pkg, uninst_LDFLAGS);
+#endif
+        cr = NULL;
+        capreq_new_name_a(mask, cr);
+        dbpkgs = rpm_get_provides_dbpkgs(ts->db->dbh, cr, NULL, uninst_LDFLAGS);
         if (dbpkgs) {
             int n, j;
 
             for (j=0; j < n_array_size(dbpkgs); j++) {
                 struct dbpkg *dbpkg = n_array_nth(dbpkgs, j);
 
-                if (pkgdef_match_pkg(pdef, dbpkg->pkg)) {
+                if (strcmp(mask, dbpkg->pkg->name) == 0 ||
+                    fnmatch(mask, dbpkg->pkg->nvr, 0) == 0) {
                     dbpkg->flags |= DBPKG_UNIST_MATCHED;
                     nmatches++;
                 }
@@ -253,7 +260,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
         
         
         if (nmatches == 0) {
-            logn(LOGERR, _("%s: no such package"), pdef->pkg->name);
+            logn(LOGERR, _("%s: no such package"), mask);
             nerr++;
         }
     }

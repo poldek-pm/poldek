@@ -190,7 +190,6 @@ struct source *source_new_htcnf(const tn_hash *htcnf, int no)
     char *vs;
     
     
-    
     vs = poldek_conf_get(htcnf, "name", NULL);
     if (vs == NULL) {
         n_snprintf(name, sizeof(name), "src%.2d", no);
@@ -794,7 +793,6 @@ int poldek_setup(struct poldek_ctx *ctx)
 
     return 1;
 }
-
 
 
 extern int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs);

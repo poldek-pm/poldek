@@ -277,6 +277,29 @@ char *trimslash(char *path)
 }
 
 
+char *strip(char *str) 
+{
+    if (str) {
+        char *p = str;
+
+        while(isspace(*p))
+            p++;
+
+        str = p;
+        
+        p = strchr(str, '\0');
+        n_assert(p);
+        p--;
+        while (p != str && isspace(*p)) {
+            *p = '\0';
+            p--;
+        }
+    }
+    
+    return str;
+}
+
+
 char *next_token(char **str, char delim, int *toklen) 
 {
     char *p, *token;

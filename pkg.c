@@ -245,13 +245,14 @@ void pkg_free(struct pkg *pkg)
     pkg->free(pkg);
 }
 
-
+#if 0
 struct pkg *pkg_link(struct pkg *pkg) 
 {
     pkg->_refcnt++;
     //printf("link %s (%d)\n", pkg_snprintf_s(pkg), pkg->_refcnt);
     return pkg;
 }
+#endif
 
 int pkg_strncmp_name(const struct pkg *p1, const struct pkg *p2)
 {

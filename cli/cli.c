@@ -40,6 +40,7 @@
 #include "log.h"
 #include "cli.h"
 #include "conf.h"
+#include "arg_packages.h"
 
 int shOnTTY = 0;
 
@@ -119,7 +120,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
                 return EINVAL;
             }
             //printf("push\n");
-            n_array_push(sh_cmdarg->cmdarg->pkgnames, arg);
+            poldek_ts_add_pkgmask(sh_cmdarg->cmdarg->ts, arg);
             break;
             
         case 'h':
@@ -201,7 +202,8 @@ static char *help_filter(int key, const char *text, void *input)
 }
 
 static
-int docmd(struct poldekcli_ctx *cctx, struct command *cmd,
+int docmd(struct poldekcli_ctx *cctx, struct poldek_ts *ts, 
+          struct command *cmd,
           int argc, const char **argv)
 {
     struct cmdarg        cmdarg;
@@ -218,11 +220,13 @@ int docmd(struct poldekcli_ctx *cctx, struct command *cmd,
         return 0;
 
     cmdarg.is_help = argv_is_help(argc, argv);
-    cmdarg.pkgnames = n_array_new(64, NULL, (tn_fn_cmp)strcmp);
     cmdarg.pkgs = NULL;
     cmdarg.flags = 0;
     cmdarg.cctx = cctx;
-    //cmdarg.sh_s->inst->flags = cmdarg.sh_s->inst_flags_orig;
+    cmdarg.ts = ts;
+    if (cmdarg.ts == NULL)
+        cmdarg.ts = poldek_ts_new(cctx->ctx);
+    
     cmdarg.d = NULL;
     
     if (cmd->init_cmd_arg_d)
@@ -270,15 +274,16 @@ int docmd(struct poldekcli_ctx *cctx, struct command *cmd,
  l_end:
     shInCmd = 0;
     
-    if (cmdarg.pkgnames)
-        n_array_free(cmdarg.pkgnames);
-
     if (cmdarg.pkgs)
         n_array_free(cmdarg.pkgs);
     
     
     if (cmd->destroy_cmd_arg_d && cmdarg.d)
         cmd->destroy_cmd_arg_d(cmdarg.d);
+
+    if (ts == NULL)  /* free our own ts */
+        poldek_ts_free(cmdarg.ts);
+    
 #if 0                           /* DUPA */
     if ((cmd->flags & COMMAND_MODIFIESDB) && cmdarg.sh_s->ts_instpkgs > 0) {
         cmdarg.sh_s->dbpkgdir->ts = cmdarg.sh_s->ts_instpkgs;
@@ -349,7 +354,7 @@ int execute_line(struct poldekcli_ctx *cctx, char *line)
         while (args[argc])
             argc++;
         
-        rc = docmd(cctx, cmd, argc, args);
+        rc = docmd(cctx, NULL, cmd, argc, args);
         n_str_tokl_free(args);
     }
     
@@ -376,80 +381,37 @@ char *stripwhite(char *string)
 }
 
 
-
-void sh_resolve_packages(tn_array *pkgnames, tn_array *avpkgs, tn_array **pkgsp,
-                         int strict)
+tn_array *poldekcli_get_current_pkgs(struct poldekcli_ctx *cctx)
 {
-    tn_array *pkgs = NULL;
-    int i, j;
-    int *matches, *matches_bycmp;
+    tn_array *pkgs;
     
-    
-    *pkgsp = NULL;
-
-    for (i=0; i<n_array_size(pkgnames); i++) {
-        char *name = n_array_nth(pkgnames, i);
+    if (cctx->pkg_ctx == POLDEKCLI_PKGCTX_AVAIL) {
+        poldekcli_load_packages(cctx, 1);
+        pkgs = cctx->avpkgs;
         
-        if (*name == '*' && *(name + 1) == '\0') {
-            *pkgsp = avpkgs;
-            return;
-        }
+    } else {
+        pkgs = cctx->instpkgs;
     }
 
-    matches = alloca(n_array_size(pkgnames) * sizeof(*matches));
-    memset(matches, 0, n_array_size(pkgnames) * sizeof(*matches));
-
-    matches_bycmp = alloca(n_array_size(pkgnames) * sizeof(*matches_bycmp));
-    memset(matches_bycmp, 0, n_array_size(pkgnames) * sizeof(*matches_bycmp));
+    if (pkgs)
+        pkgs = n_ref(pkgs);
     
-    
-    pkgs = n_array_new(16, NULL, (tn_fn_cmp)pkg_nvr_strcmp);
-
-    for (i=0; i<n_array_size(avpkgs); i++) {
-        struct pkg *pkg = n_array_nth(avpkgs, i);
-        
-        for (j=0; j < n_array_size(pkgnames); j++) {
-            char *mask = n_array_nth(pkgnames, j);
-
-            if (strcmp(mask, pkg->name) == 0) {
-                n_array_push(pkgs, pkg);
-                matches_bycmp[j]++;
-                matches[j]++;
-                
-            } else if (fnmatch(mask, pkg->nvr, 0) == 0) {
-                n_array_push(pkgs, pkg);
-                matches[j]++;
-            }
-        }
-    }
-
-    
-    for (j=0; j < n_array_size(pkgnames); j++) {
-        const char *mask = n_array_nth(pkgnames, j);
-        
-        if (matches[j] == 0) {
-            logn(LOGERR, _("%s: no such package"), mask);
-            if (strict && n_array_size(pkgs))
-                n_array_clean(pkgs);
-        }
-
-        if (matches_bycmp[j] > 1) {
-            int pri = strict ? LOGERR : LOGWARN;
-            logn(pri, _("%s: ambiguous name"), mask);
-            if (strict && n_array_size(pkgs))
-                n_array_clean(pkgs);
-        }
-    }
-    
-    if (n_array_size(pkgs) > 0) {
-        n_array_sort(pkgs);
-        n_array_uniq(pkgs);
-    }
-
-    *pkgsp = pkgs;
+    return pkgs;
 }
 
 
+tn_array *poldekcli_resolve_packages(struct poldekcli_ctx *cctx,
+                                     struct poldek_ts *ts,
+                                     int exact)
+{
+    tn_array *avpkgs;
+    
+    if ((avpkgs = poldekcli_get_current_pkgs(cctx)) == NULL)
+        return NULL;
+    
+    return arg_packages_resolve(ts->aps, avpkgs,
+                                exact ? ARG_PACKAGES_RESOLV_EXACT : 0);
+}
 
 
 /* argp workaround */
@@ -555,14 +517,19 @@ int command_cmp(struct command *c1, struct command *c2)
     return strcmp(c1->name, c2->name);
 }
 
+static
+int command_ncmp(struct command *c1, struct command *c2) 
+{
+    return strncmp(c1->name, c2->name, strlen(c2->name));
+}
+
 
 static void init_commands(struct poldekcli_ctx *cctx) 
 {
-    int n = 0;
+    int i, n = 0;
 	char   *homedir;
     
     cctx->commands = n_array_new(16, NULL, (tn_fn_cmp)command_cmp);
-    cctx->all_commands = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
 	
     while (commands_tab[n] != NULL) {
         struct command *cmd = commands_tab[n++];
@@ -571,17 +538,15 @@ static void init_commands(struct poldekcli_ctx *cctx)
 
         cmd->arg = _(cmd->arg);
         cmd->doc = _(cmd->doc);
-
-        n_array_push(cctx->commands, cmd);
-        if (n_array_bsearch(cctx->all_commands, cmd->name)) {
+        
+        
+        if (n_array_bsearch(cctx->commands, cmd)) {
             logn(LOGERR, _("ambiguous command %s"), cmd->name);
             exit(EXIT_FAILURE);
         }
-        n_array_push(cctx->all_commands, cmd->name);
-        n_array_sort(cctx->all_commands);
-        
+        n_array_push(cctx->commands, cmd);
+        n_array_sort(cctx->commands);
     }
-
 	n_array_sort(cctx->commands);
 
     poldekcli_load_aliases(cctx, "/etc/poldek.alias");
@@ -590,23 +555,27 @@ static void init_commands(struct poldekcli_ctx *cctx)
 		snprintf(path, sizeof(path), "%s/.poldek.alias", homedir);	
 		poldekcli_load_aliases(cctx, path);
 	}
+    n_array_sort(cctx->commands);
+
+
+    cctx->all_commands = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
+    for (i=0; i < n_array_size(cctx->commands); i++) {
+        struct command *cmd = n_array_nth(cctx->commands, i);
+        n_array_push(cctx->all_commands, cmd->name);
+    }
+    n_array_sort(cctx->all_commands);
 }
 
 int poldekcli_init(struct poldekcli_ctx *cctx, struct poldek_ctx *ctx,
                    int skip_installed) 
 {
-    int i;
-
     n_assert (cctx->ctx == NULL);
     cctx->flags = 0;
     cctx->ctx = ctx;
     cctx->avpkgs = NULL;
     cctx->instpkgs = NULL;
+    poldekcli_set_pkgctx(cctx, POLDEKCLI_PKGCTX_AVAIL);
 
-
-    cctx->arg_packages = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
-    cctx->arg_package_sets = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
-    
     init_commands(cctx);
     return 1;
 }
@@ -640,21 +609,7 @@ int poldekcli_load_packages(struct poldekcli_ctx *cctx, int skip_installed)
     if (!poldek_load_sources(ctx, 1))
         return 0;
 
-    if (ctx->pkgs) {
-        int i;
-
-        cctx->avpkgs = n_array_new(n_array_size(ctx->pkgs),
-                                   (tn_fn_free)pkg_free,
-                                   (tn_fn_cmp)pkg_nvr_strcmp);
-    
-        for (i=0; i < n_array_size(ctx->pkgs); i++) {
-            struct pkg *pkg = n_array_nth(ctx->pkgs, i);
-            n_array_push(cctx->avpkgs, pkg_link(pkg));
-        }
-
-        n_array_ctl(cctx->avpkgs, TN_ARRAY_AUTOSORTED);
-        n_array_sort(cctx->avpkgs);
-    }
+    cctx->avpkgs = poldek_get_avpkgs_bynvr(ctx);
     
     
     cctx->instpkgs = NULL;
@@ -680,7 +635,7 @@ int poldekcli_exec_line(struct poldekcli_ctx *cctx, const char *cmd)
     s = stripwhite(p);
     if (*s) 
         rc = execute_line(cctx, s);
-
+    
     return rc;
 }
 
@@ -708,27 +663,103 @@ int find_alias()
 		}
 		//printf("alias exp %s -> %s\n", line, l);
 		line = l;
+    }
+}
 
 #endif
 
-        
-int poldekcli_exec(struct poldekcli_ctx *cctx, int argc, char **argv)
+static
+struct command *find_command(struct poldekcli_ctx *cctx, const char *name)
 {
     struct command *cmd, tmpcmd;
-    int   rc = 0;
+    int  i, j, n;
 
-    printf("poldekcli_exec %d %d\n", n_array_size(cctx->commands), argc);
     n_array_sort(cctx->commands);
-	tmpcmd.name = argv[0];
-    if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd))) {
-        ;                       /* do nothing */
-        
-    } else {
-        logn(LOGERR, _("%s: no such command"), tmpcmd.name);
-        return 0;
-    }
+	tmpcmd.name = (char*)name;
+    if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd)))
+        return cmd;
 
-    return docmd(cctx, cmd, argc, argv);
+    i = j = n_array_bsearch_idx_ex(cctx->commands, &tmpcmd,
+                                   (tn_fn_cmp)command_ncmp);
+
+    if (i < 0) {
+        logn(LOGERR, _("%s: no such command"), name);
+        return cmd;
+    }
+    
+
+    n = 1;
+    j++;
+    while (j < n_array_size(cctx->commands) &&
+           command_ncmp(n_array_nth(cctx->commands, j), &tmpcmd) == 0) {
+        n++;
+        j++;
+    }
+    
+    if (n == 1)
+        cmd = n_array_nth(cctx->commands, i);
+    
+    else
+        logn(LOGERR, _("%s: ambiguous command"), name);
+        
+    return cmd;
+}
+
+
+int poldekcli_exec(struct poldekcli_ctx *cctx, struct poldek_ts *ts, 
+                   int argc, const char **argv)
+{
+    struct command   *cmd;
+    const char       **tl;
+    tn_array         *tls = NULL;
+    int              rc = 0;
+
+    if ((cmd = find_command(cctx, argv[0])) == NULL)
+        return 0;
+    
+    tl = NULL;
+    while (1) {
+        int   aargc, n, i;
+        char  **aargv;
+        
+        if ((cmd->flags & COMMAND_IS_ALIAS) == 0)
+            break;
+
+        n_assert(cmd->cmdline);
+
+        tl = n_str_tokl_n(cmd->cmdline, " \t", &n);
+        if (tl) {
+            if (tls == NULL)
+                tls = n_array_new(4, (tn_fn_free)n_str_tokl_free, NULL);
+            n_array_push(tls, tl);
+        }
+        
+        aargv = alloca((argc + n + 1) * sizeof(**aargv));
+        aargc = 0;
+        
+        while (*tl) {
+            aargv[aargc++] = (char*)*tl;
+            tl++;
+        }
+        
+        for (i=1; i < argc; i++)
+            aargv[aargc++] = (char*)argv[i];
+        
+        aargv[aargc] = NULL;
+        argv = (const char**)aargv;
+        argc = aargc;
+
+        if ((cmd = find_command(cctx, argv[0])) == NULL)
+            break;
+    }
+    
+    if (cmd)
+        rc = docmd(cctx, ts, cmd, argc, argv);
+
+    if (tls)
+        n_array_free(tls);
+    
+    return rc;
 }
  
  

@@ -35,7 +35,6 @@
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"
-#include "usrset.h"
 #include "pkgset-req.h"
 #include "split.h"
 #include "poldek_term.h"
@@ -365,6 +364,25 @@ int pkgset_index(struct pkgset *ps)
     return 0;
 }
 
+static void make_by_nvr(struct pkgset *ps) 
+{
+    if (ps->pkgs) {
+        int i;
+
+        ps->pkgs_bynvr = n_array_new(n_array_size(ps->pkgs),
+                                     (tn_fn_free)pkg_free,
+                                     (tn_fn_cmp)pkg_nvr_strcmp);
+    
+        for (i=0; i < n_array_size(ps->pkgs); i++) {
+            struct pkg *pkg = n_array_nth(ps->pkgs, i);
+            n_array_push(ps->pkgs_bynvr, pkg_link(pkg));
+        }
+
+        n_array_ctl(ps->pkgs_bynvr, TN_ARRAY_AUTOSORTED);
+        n_array_sort(ps->pkgs_bynvr);
+    }
+}
+
 
 int pkgset_setup(struct pkgset *ps, unsigned flags) 
 {
@@ -419,6 +437,8 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     mem_info(1, "MEM after order");
 
     set_capreq_allocfn(n_malloc, n_free, NULL, NULL);
+    make_by_nvr(ps);
+    
     return ps->nerrors == 0;
 }
 

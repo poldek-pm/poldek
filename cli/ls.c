@@ -63,7 +63,7 @@ struct command command_ls = {
     COMMAND_EMPTYARGS, 
     "ls", N_("[PACKAGE...]"), N_("List packages"), 
     options, parse_opt, NULL, ls,
-    NULL, NULL, NULL
+    NULL, NULL, NULL, NULL
 };
 
 
@@ -179,26 +179,25 @@ static int ls(struct cmdarg *cmdarg)
 
     
     ls_all = 0;
-    
-    if (cmdarg->flags & OPT_LS_INSTALLED && cmdarg->cctx->instpkgs) 
-        av_pkgs = cmdarg->cctx->instpkgs;
-    else
-        av_pkgs = cmdarg->cctx->avpkgs;
-    
-    if (n_array_size(cmdarg->pkgnames)) 
-        sh_resolve_packages(cmdarg->pkgnames, av_pkgs, &ls_pkgs, 0);
+
+    poldekcli_set_pkgctx(cmdarg->cctx, POLDEKCLI_PKGCTX_AVAIL);
+    if (cmdarg->flags & OPT_LS_INSTALLED && cmdarg->cctx->instpkgs)
+        poldekcli_set_pkgctx(cmdarg->cctx, POLDEKCLI_PKGCTX_INSTD);
+
+    if (poldek_ts_get_arg_count(cmdarg->ts))
+        ls_pkgs = poldekcli_resolve_packages(cmdarg->cctx, cmdarg->ts, 0);
     else {
         ls_all = 1;
-        ls_pkgs = av_pkgs;
+        ls_pkgs = poldekcli_get_current_pkgs(cmdarg->cctx);
+    }
+
+    if (ls_pkgs == NULL) {
+        rc = 0;
+        goto l_end;
     }
     
-    n_array_free(cmdarg->pkgnames);
-    cmdarg->pkgnames = NULL;
-
-
     if ((cmpf = select_cmpf(cmdarg->flags)))
         n_array_sort_ex(ls_pkgs, cmpf);
-
 
     if (cmdarg->flags & OPT_LS_UPGRADEABLE && cmdarg->cctx->instpkgs) {
         int        finded, compare_ver = 0, i;
@@ -240,18 +239,19 @@ static int ls(struct cmdarg *cmdarg)
                 break;
         }
         
-        if (ls_pkgs != av_pkgs)
+        if (ls_pkgs)
             n_array_free(ls_pkgs);
         ls_pkgs = pkgs_tmp;
     }
     
-
     if (n_array_size(ls_pkgs))
         rc = do_ls(ls_pkgs, cmdarg, evrs);
-    
-    if (ls_pkgs && ls_pkgs != av_pkgs)
-        n_array_free(ls_pkgs);
 
+ l_end:
+
+    if (ls_pkgs)
+        n_array_free(ls_pkgs);
+    
     if (evrs)
         n_array_free(evrs);
     

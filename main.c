@@ -1001,19 +1001,19 @@ int prepare_given_packages(void)
     int i, rc = 1;
     
     if (args.ups == NULL)
-        args.ups = usrpkgset_new();
+        args.ups = arg_packages_new();
 
     for (i=0; i < n_array_size(args.pkgdef_sets); i++) {
         char *path = n_array_nth(args.pkgdef_sets, i);
         
-        if (!usrpkgset_add_list(args.ups, path))
+        if (!arg_packages_add_list(args.ups, path))
             rc = 0;
     }
 
     for (i=0; i < n_array_size(args.pkgdef_defs); i++) {
         char *str = n_array_nth(args.pkgdef_defs, i);
 
-        if (!usrpkgset_add_str(args.ups, str, strlen(str)))
+        if (!arg_packages_add_str(args.ups, str, strlen(str)))
             rc = 0;
     }
 
@@ -1021,13 +1021,13 @@ int prepare_given_packages(void)
         char *path = n_array_nth(args.pkgdef_files, i);
 
         if (is_package_file(path)) 
-            rc = usrpkgset_add_pkgfile(args.ups, path);
+            rc = arg_packages_add_pkgfile(args.ups, path);
         else
-            rc = usrpkgset_add_str(args.ups, path, strlen(path));
+            rc = arg_packages_add_str(args.ups, path, strlen(path));
     }
     
-    usrpkgset_setup(args.ups);
-    return usrpkgset_size(args.ups);
+    arg_packages_setup(args.ups);
+    return arg_packages_size(args.ups);
 }
 
 static
@@ -1134,7 +1134,7 @@ int verify_args(void)
     return rc;
 }
 
-int mark_usrset(struct usrpkgset *ups, int mjrmode) 
+int mark_usrset(struct arg_packages *ups, int mjrmode) 
 {
     int rc;
     int with_deps = 0;
@@ -1156,7 +1156,7 @@ int mark_usrset(struct usrpkgset *ups, int mjrmode)
 
 
 static
-int uninstall(struct usrpkgset *ups) 
+int uninstall(struct arg_packages *ups) 
 {
     int rc;
 
@@ -1253,7 +1253,7 @@ int main(int argc, char **argv)
     }
 
     if (args.mjrmode == MODE_UNINSTALL) {
-        if ((rc = usrpkgset_size(args.ups)))
+        if ((rc = arg_packages_size(args.ups)))
             rc = uninstall(args.ups);
         goto l_end;
     }
@@ -1290,7 +1290,7 @@ int main(int argc, char **argv)
 #endif            
         case MODE_VERIFY:
             if (args.has_pkgdef)
-                if ((rc = usrpkgset_size(args.ups)))
+                if ((rc = arg_packages_size(args.ups)))
                     rc = mark_usrset(args.ups, args.mjrmode);
                     
             break;
@@ -1302,7 +1302,7 @@ int main(int argc, char **argv)
             if (args.has_pkgdef == 0)
                 rc = 0;
             
-            else if ((rc = usrpkgset_size(args.ups))) {
+            else if ((rc = arg_packages_size(args.ups))) {
                 rc = mark_usrset(args.ups, args.mjrmode);
                 if (rc || (poldek_configure_f_isset(ctx, INSTS_FORCE)))
                     rc = poldek_install_dist(ctx);
@@ -1312,7 +1312,7 @@ int main(int argc, char **argv)
 
         case MODE_INSTALL:
         case MODE_UPGRADE:
-            if ((rc = usrpkgset_size(args.ups))) {
+            if ((rc = arg_packages_size(args.ups))) {
                 if ((rc = mark_usrset(args.ups, args.mjrmode))) 
                     rc = poldek_install(ctx, NULL);
             }

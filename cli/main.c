@@ -27,7 +27,6 @@
 #include "log.h"
 #include "pkgdir/source.h"
 #include "pkgset.h"
-#include "usrset.h"
 #include "misc.h"
 #include "conf.h"
 #include "split.h"
@@ -57,7 +56,8 @@ static char args_doc[] = N_("[PACKAGE...]");
 
 /* The options we understand. */
 static struct argp_option common_options[] = {
-{0,0,0,0, N_("Other:"), 10500 },    
+{0,0,0,0, N_("Other:"), 10500 },
+{"cmd", 'C', 0, 0, N_("Run in cmd mode"), 10500 },
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
                           "let user choose among equivalent packages"), 10500 },
 {"noask", OPT_NOASK, 0, 0, N_("Don't ask about anything"), 10500 }, 
@@ -92,18 +92,6 @@ struct mjrmode_conf {
     unsigned    flags;
 };
 
-struct mjrmode_conf mjrmodes[] = {
-    { MODE_NULL,         NULL, 0 }, 
-    { MODE_VERIFY,       "verify", MODE_F_LDSOURCES }, 
-    { MODE_MKIDX,        "mkidx",  MODE_F_LDSOURCES }, 
-    { MODE_INSTALLDIST,  "install-dist", MODE_F_LDSOURCES },
-    { MODE_INSTALL,      "install", MODE_F_LDSOURCES }, 
-    { MODE_UNINSTALL,    "uninstall", 0 }, 
-    { MODE_SPLIT,        "split", MODE_F_LDSOURCES },
-    { MODE_SRCLIST,      "sources", 0 }, 
-    { -1, NULL,  0 }
-};
-
 
 static struct poclidek_opgroup *poclidek_opgroup_tab[] = {
     &poclidek_opgroup_source,
@@ -111,31 +99,22 @@ static struct poclidek_opgroup *poclidek_opgroup_tab[] = {
     &poclidek_opgroup_install,
     &poclidek_opgroup_uninstall,
     &poclidek_opgroup_makeidx,
+    &poclidek_opgroup_split, 
     NULL
 };
 
 
 struct args {
+    int                  eat_args;      
     struct poldek_ctx    *ctx;
     struct poldekcli_ctx *cctx;
-    struct poldek_ts     *ts;  
+    struct poldek_ts     *ts;
+    
     int       mjrmode;
     unsigned  mnrmode;
 
-    const char   *cmd;
-
     unsigned  cnflags;
 
-    struct source *src_mkidx;
-
-    int       has_pkgdef;
-    tn_array  *pkgdef_files;    /* foo.rpm      */
-    tn_array  *pkgdef_defs;     /* --nevr "foo 1.2" or "foo" or "foo*" */
-    tn_array  *pkgdef_sets;     /* -p ftp://ftp.zenek.net/PLD/tiny */
-
-    
-    struct usrpkgset  *ups;
-    
     char        *path_conf;
     char        *path_log;
     
@@ -152,32 +131,13 @@ struct args {
 } args;
 
 
-void set_mjrmode(struct args *argsp, int mjrmode) 
-{
-    int i = 0;
-
-    if (argsp->mjrmode != mjrmode) {
-        logn(LOGERR, _("only one major mode may be specified"));
-        exit(EXIT_FAILURE);
-    }
-
-    while (mjrmodes[i].no >= 0) {
-        if (mjrmode == mjrmodes[i].no) {
-            argsp->mjrmode = mjrmode;
-            argsp->cmd = mjrmodes[i].cmd;
-        }
-    }
-    n_assert(0);
-}
-
-
 
 /* Parse a single option. */
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct args *argsp = state->input;
-        
+    
 //    if (key && arg)
 //        chkarg(key, arg);
 
@@ -197,6 +157,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'q':
             verbose = -1;
             break;
+
+        case 'C':
+            argsp->eat_args = 1;
+            break;
             
         case 'v': 
             verbose++;
@@ -206,22 +170,32 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             printf("%s\n", poldek_BANNER);
             exit(EXIT_SUCCESS);
             break;
-#if 0
+
         case ARGP_KEY_ARG:
-            printf("arg[%d] = %s\n", argsp->argc, arg);
-            argsp->argv[argsp->argc++] = arg;
-            argsp->argv[argsp->argc] = NULL;
-            break;
-#endif
+            if (argsp->eat_args) {
+                argsp->argv[argsp->argc++] = arg;
+
+                while (state->next < state->argc) {
+                    char *arg = state->argv[state->next++];
+                    argsp->argv[argsp->argc++] = arg;
+                }
+                argsp->argv[argsp->argc] = NULL;
+                n_assert(state->next = state->argc);
+                break;
+            }
+            /* no args->eat_args => no break */
+            
         default:
             return ARGP_ERR_UNKNOWN;
+            break;
     }
     
     return 0;
 }
 
+static
 // TODO: !O(n^2)
-void hide_child_options(struct argp *parent, struct argp *child) 
+void hide_child_options(const struct argp *parent, const struct argp *child) 
 {
     int i = 0;
     
@@ -244,7 +218,8 @@ void hide_child_options(struct argp *parent, struct argp *child)
     }
 }
 
-void argp_prepare_child_options(struct argp *argp) 
+static
+void argp_prepare_child_options(const struct argp *argp) 
 {
     int i;
     const struct argp *child;
@@ -266,7 +241,7 @@ void parse_options(struct poldekcli_ctx *cctx, int argc, char **argv)
     struct argp argp = { common_options, parse_opt,
                          args_doc, poldek_BANNER, 0, 0, 0};
     struct argp_child *child;
-    int n, i;
+    int n, i, index;
 
 
     memset(&args, 0, sizeof(args));
@@ -292,15 +267,15 @@ void parse_options(struct poldekcli_ctx *cctx, int argc, char **argv)
     child[i].argp = NULL;
     argp.children = child;
     
-
     argp_prepare_child_options(&argp);
     
     verbose = 0;
     
     args.ctx = cctx->ctx;
     args.cctx = cctx;
-    
-    argp_parse(&argp, argc, argv, 0, 0, &args);
+
+    index = 0;
+    argp_parse(&argp, argc, argv, ARGP_IN_ORDER, &index, &args);
 
     if ((args.cnflags & POLDEKCLI_CMN_NOCONF) == 0) 
         if (!poldek_load_config(args.ctx, args.path_conf))
@@ -331,7 +306,7 @@ void parse_options(struct poldekcli_ctx *cctx, int argc, char **argv)
     for (i=0; i < n_array_size(args.opgroup_rts); i++) {
         int rc;
         struct poclidek_opgroup_rt *rt = n_array_nth(args.opgroup_rts, i);
-
+        
         rc = 0;
         if (rt->run) {
             int rc;
@@ -346,36 +321,32 @@ void parse_options(struct poldekcli_ctx *cctx, int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-    int                   i, rc = 1, load_dbdepdirs = 0;
-    struct poldek_ctx     *ctx, poldek_ctx;
+    int                   i, rc = 1;
+    struct poldek_ctx     ctx;
     struct poldekcli_ctx  cctx;
-    char                  *cmd;
     
     mem_info_verbose = -1;
 
-    ctx = &poldek_ctx;
-    poldek_init(ctx, 0);
+    poldek_init(&ctx, 0);
 
     memset(&cctx, 0, sizeof(cctx));
-    poldekcli_init(&cctx, ctx, 1);
-
+    poldekcli_init(&cctx, &ctx, 1);
+    
     parse_options(&cctx, argc, argv);
 
-    //exit(0);
-    //if (!poldek_load_config(ctx, NULL))
-    //    exit(EXIT_FAILURE);
+    if (args.eat_args) {
+        dbgf_("exec[%d] ", args.argc);
+        i = 0;
 
-    //if (!poldek_setup(ctx))
-    //    exit(EXIT_FAILURE);
-
-    //
-    //if (!poldekcli_load_packages(&cctx, 1))
-    //    exit(EXIT_FAILURE);
-
-    //printf("exec %d\n", args.argc);
-    //if (args.argc > 0) 
-    //    rc = poldekcli_exec(&cctx, args.argc, args.argv);
-
+        //while (args.argv[i])
+        //    printf(" %s", args.argv[i++]);
+        //printf("\n");
+        
+        if (args.argc > 0) 
+            rc = poldekcli_exec(&cctx, args.ts, args.argc,
+                                (const char **)args.argv);
+    }
+    
     poldekcli_destroy(&cctx);
     return rc;
 }

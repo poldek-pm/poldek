@@ -163,7 +163,12 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
 
 
 void pkg_free(struct pkg *pkg);
-struct pkg *pkg_link(struct pkg *pkg);
+
+static inline struct pkg *pkg_link(struct pkg *pkg)
+{
+    pkg->_refcnt++;
+    return pkg;
+}
 
 /* add self name-evr to caps */
 int pkg_add_selfcap(struct pkg *pkg);

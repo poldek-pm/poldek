@@ -33,7 +33,7 @@
 #define OPT_NEVR            (OPT_GID + 2)
 
 static struct argp_option options[] = {
-{0,0,0,0, N_("Package selection:"), OPT_GID},
+{0,0,0,0, N_("Package related options:"), OPT_GID},
 {"pset", OPT_PKGSET, "FILE", 0, N_("Take package set definition from FILE"), OPT_GID },
 {"pkgset", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID }, /* backward compat */
 
@@ -72,7 +72,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     switch (key) {
         case OPT_NEVR:
-            poldek_ts_add_pkgdef(rt->ts, arg);
+            poldek_ts_add_pkgmask(rt->ts, arg);
             break;
 
         case OPT_PKGSET:

@@ -32,6 +32,7 @@ extern struct poclidek_opgroup poclidek_opgroup_install;
 extern struct poclidek_opgroup poclidek_opgroup_packages;
 extern struct poclidek_opgroup poclidek_opgroup_uninstall;
 extern struct poclidek_opgroup poclidek_opgroup_makeidx;
+extern struct poclidek_opgroup poclidek_opgroup_split;
 
 struct poclidek_opgroup_rt *poclidek_opgroup_rt_new(struct poldek_ts *ts);
 void poclidek_opgroup_rt_free(struct poclidek_opgroup_rt *rt);

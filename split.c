@@ -33,6 +33,7 @@
 #include "log.h"
 #include "pkg.h"
 #include "misc.h"
+#include "poldek.h"
 
 struct chunk {
     int       no;
@@ -87,7 +88,7 @@ static void chunk_dump(struct chunk *chunk, FILE *stream)
     }
 }
 
- 
+static 
 int pridef_cmp_pri(struct pridef *pridef1, struct pridef *pridef2)
 {
     return pridef1->pri - pridef2->pri;
@@ -399,9 +400,13 @@ int packages_set_priorities(tn_array *pkgs, const char *priconf_path)
     tn_array *defs = NULL;
     int i, j;
 
-
     if ((defs = load_pri_conf(priconf_path)) == NULL)
         return 0;
+
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        pkg->pri = 0;
+    }
     
     n_array_sort(pkgs);
     for (i=0; i < n_array_size(pkgs); i++) {
@@ -427,14 +432,14 @@ int packages_set_priorities(tn_array *pkgs, const char *priconf_path)
     return 1;
 }
 
-
-int packages_split(tn_array *pkgs, unsigned split_size,
+static
+int packages_split(const tn_array *pkgs, unsigned split_size,
                    unsigned first_free_space, const char *outprefix)
 {
     tn_array *packages = NULL, *ordered_pkgs = NULL;
     int i, rc = 1;
 
-    n_array_sort(pkgs);
+    
     packages = n_array_new(n_array_size(pkgs), (tn_fn_free)pkg_free,
                            (tn_fn_cmp)pkg_cmp_pri);
     
@@ -443,7 +448,7 @@ int packages_split(tn_array *pkgs, unsigned split_size,
         struct pkg *pkg = n_array_nth(pkgs, i);
         n_array_push(packages, pkg_link(pkg));
     }
-    
+    n_array_sort(packages);
     n_array_isort(packages);
 
     msg(2, "\nPackages ordered by priority:\n");
@@ -462,7 +467,6 @@ int packages_split(tn_array *pkgs, unsigned split_size,
     }
 
     rc = make_chunks(ordered_pkgs, split_size, first_free_space, outprefix);
-
     
     if (ordered_pkgs) 
         n_array_free(ordered_pkgs);
@@ -471,4 +475,12 @@ int packages_split(tn_array *pkgs, unsigned split_size,
         n_array_free(packages);
     
     return rc;
+}
+
+int poldek_split(const struct poldek_ctx *ctx, unsigned size,
+                 unsigned first_free_space, const char *outprefix)
+{
+    if (outprefix == NULL)
+        outprefix = "packages.chunk";
+    return packages_split(ctx->ps->pkgs, size, first_free_space, outprefix);
 }

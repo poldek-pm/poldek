@@ -9,7 +9,6 @@
 #include "pkg.h"
 #include "pkgdir/pkgdir.h"
 #include "pkgdb.h"
-#include "usrset.h"
 
 #include "fileindex.h"
 #include "capreqidx.h"
@@ -25,6 +24,8 @@ struct pkgset {
     
     tn_array           *pkgs;           /*  pkg* []    */
     tn_array           *ordered_pkgs;   /*  pkg* []    */
+    tn_array           *pkgs_bynvr;     /*  pkg* []    */
+    
     tn_array           *pkgdirs;        /*  pkgdir* [] */
  
     tn_array           *depdirs;        /*  char* []   */
@@ -69,8 +70,8 @@ tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname);
 struct pkg *pkgset_lookup_pkgn(struct pkgset *ps, const char *name);
 
 /* pkgset-mark.c */
-int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
-                       int withdeps, int nodeps);
+int pkgset_mark_packages(struct pkgset *ps, const tn_array *pkgs, 
+                         int withdeps, int nodeps);
 
 void packages_mark(tn_array *pkgs, unsigned flags_on, unsigned flags_off);
 #define packages_unmark_all(pkgs) packages_mark(pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK)

@@ -13,7 +13,7 @@
 #include "poldek.h"
 #include "poldek_term.h"
 #include "pkgset.h"
-#include "usrset.h"
+#include "arg_packages.h"
 #include "misc.h"
 #include "log.h"
 #include "i18n.h"
@@ -59,11 +59,8 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         ts->ctx = ctx;
     }
 
-    ts->ups = usrpkgset_new();
+    ts->aps = arg_packages_new();
 
-    ts->arg_package_defs = n_array_new(16, free, (tn_fn_cmp)strcmp);
-    ts->arg_package_lists = n_array_new(16, free, (tn_fn_cmp)strcmp);
-    
     ts->db = NULL;
 
     if (ctx) {
@@ -91,7 +88,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         ts->hold_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
         ts->ign_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
     }
-    dbgf("%p->%p, %p\n", ts, ts->hold_patterns, ctx);
+    dbgf_("%p->%p, %p\n", ts, ts->hold_patterns, ctx);
     ts->askpkg_fn = poldek_term_ask_pkg;
     ts->ask_fn = poldek_term_ask_yn;
     
@@ -299,79 +296,58 @@ void install_info_destroy(struct install_info *iinf)
 
 int poldek_ts_add_pkg(struct poldek_ts *ts, struct pkg *pkg)
 {
-    return usrpkgset_add_pkg(ts->ups, pkg);
+    return arg_packages_add_pkg(ts->aps, pkg);
 }
 
-int poldek_ts_add_pkgdef(struct poldek_ts *ts, const char *def)
+int poldek_ts_add_pkgmask(struct poldek_ts *ts, const char *mask)
 {
-    n_array_push(ts->arg_package_defs, n_strdup(def));
-    return 1;
+    return arg_packages_add_pkgmask(ts->aps, mask);
 }
 
 int poldek_ts_add_pkglist(struct poldek_ts *ts, const char *path)
 {
-    n_array_push(ts->arg_package_lists, n_strdup(path));
-    return 1;
-}
-
-
-static
-int is_package_file(const char *path)
-{
-    struct stat st;
-    
-    if (strstr(path, ".rpm") == 0)
-        return 0;
-
-    return (stat(path, &st) == 0 && S_ISREG(st.st_mode));
+    return arg_packages_add_pkglist(ts->aps, path);
 }
 
 int poldek_ts_add_pkgfile(struct poldek_ts *ts, const char *path)
 {
-    int rc;
-    printf("poldek_ts_add_pkgfile %p: %s\n", ts, path);
-    if (is_package_file(path)) 
-        rc = usrpkgset_add_pkgfile(ts->ups, path);
-    else
-        rc = usrpkgset_add_str(ts->ups, path, strlen(path));
-
-    return rc;
+    return arg_packages_add_pkgfile(ts->aps, path);
 }
 
-static int ts_prepare_arg_packages(struct poldek_ts *ts) 
+
+
+void poldek_ts_clean_arg_pkgmasks(struct poldek_ts *ts)
 {
-    int i, rc = 1;
-
-    printf("ts_prepare_arg_packages %p %d\n", ts->ups,
-           usrpkgset_size(ts->ups));
-    
-    for (i=0; i < n_array_size(ts->arg_package_lists); i++) {
-        char *path = n_array_nth(ts->arg_package_lists, i);
-        
-        if (!usrpkgset_add_list(ts->ups, path))
-            rc = 0;
-    }
-
-    for (i=0; i < n_array_size(ts->arg_package_defs); i++) {
-        char *str = n_array_nth(ts->arg_package_defs, i);
-
-        if (!usrpkgset_add_str(ts->ups, str, strlen(str)))
-            rc = 0;
-    }
-
-    usrpkgset_setup(ts->ups);
-    return rc;
+    arg_packages_clean(ts->aps);
 }
+
+const tn_array* poldek_ts_get_arg_pkgmasks(struct poldek_ts *ts) 
+{
+    return arg_packages_get_pkgmasks(ts->aps);
+}
+
+int poldek_ts_get_arg_count(struct poldek_ts *ts) 
+{
+    return arg_packages_size(ts->aps);
+}
+
 
 static
 int ts_mark_arg_packages(struct poldek_ts *ts, int withdeps) 
 {
     int rc = 1;
-
-    if (usrpkgset_size(ts->ups) > 0) {
-        rc = pkgset_mark_usrset(ts->ctx->ps, ts->ups, withdeps,
-                                ts->flags & (POLDEK_TS_NODEPS |
-                                             POLDEK_TS_FORCE));
+    
+    arg_packages_setup(ts->aps);
+    if (arg_packages_size(ts->aps) > 0) {
+        tn_array *pkgs = arg_packages_resolve(ts->aps, ts->ctx->ps->pkgs, 0);
+        if (pkgs == NULL)
+            rc = 0;
+        else {
+            rc = pkgset_mark_packages(ts->ctx->ps, pkgs, withdeps,
+                                      ts->flags & (POLDEK_TS_NODEPS |
+                                                   POLDEK_TS_FORCE));
+            n_array_free(pkgs);
+        }
     }
     
     return rc;
@@ -538,8 +514,8 @@ static int ts_prerun(struct poldek_ts *ts, struct install_info *iinf)
 
     cp_arr_ifnull(&ts->rpmacros, ts->ctx->ts->rpmacros);
     cp_arr_ifnull(&ts->rpmopts, ts->ctx->ts->rpmopts);
-    dbgf("%p->%p, %p->%p\n", ts, ts->hold_patterns, ts->ctx->ts,
-         ts->ctx->ts->hold_patterns);
+    dbgf_("%p->%p, %p->%p\n", ts, ts->hold_patterns, ts->ctx->ts,
+          ts->ctx->ts->hold_patterns);
     cp_arr_ifnull(&ts->hold_patterns, ts->ctx->ts->hold_patterns);
     cp_arr_ifnull(&ts->ign_patterns, ts->ctx->ts->ign_patterns);
     
@@ -565,10 +541,13 @@ static int ts_prerun(struct poldek_ts *ts, struct install_info *iinf)
     if (!rc)
         return rc;
     
-    rc = ts_prepare_arg_packages(ts);
-
+    rc = arg_packages_setup(ts->aps);
+    
     if (rc && iinf)
         install_info_init(iinf);
+
+    if (poldek_ts_issetf(ts, POLDEK_TS_INSTALL))
+        poldek_load_sources(ts->ctx, 1);
     
     return rc;
 }
@@ -633,13 +612,13 @@ int poldek_ts_do_uninstall(struct poldek_ts *ts, struct install_info *iinf)
 {
     int rc;
 
-    n_assert(ts->flags & POLDEK_TS_UNINSTALL);
+    //n_assert(ts->flags & POLDEK_TS_UNINSTALL);
 
-    printf("poldek_ts_do_uninstall0 %d\n", usrpkgset_size(ts->ups));
+    printf("poldek_ts_do_uninstall0 %d\n", arg_packages_size(ts->aps));
     if (!ts_prerun(ts, iinf))
         return 0;
 
-    printf("poldek_ts_do_uninstall %d\n", usrpkgset_size(ts->ups));
+    printf("poldek_ts_do_uninstall %d\n", arg_packages_size(ts->aps));
     
     ts->db = pkgdb_open(ts->rootdir, NULL, O_RDONLY);
     if (ts->db == NULL)
@@ -659,13 +638,13 @@ int poldek_ts_do(struct poldek_ts *ts, struct install_info *iinf)
     if (iinf)
         install_info_init(iinf);
     
-    if (usrpkgset_size(ts->ups) > 0) {
-        usrpkgset_setup(ts->ups);
+    if (arg_packages_size(ts->aps) > 0) {
+        arg_packages_setup(ts->aps);
         //if (ts->flags & POLDEK_TS_UNINSTALL)
-            //return uninstall_usrset(ts->ups, ts, iinf);
+            //return uninstall_usrset(ts->aps, ts, iinf);
     }
 
-    if (usrpkgset_size(ts->ups) == 0)
+    if (arg_packages_size(ts->aps) == 0)
         return 0;
 
     return 0;

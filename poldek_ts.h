@@ -44,17 +44,17 @@
                                    POLDEK_TS_EQPKG_ASKUSER | \
                                    POLDEK_TS_CONFIRM_UNINST)
 struct poldek_ctx;
-struct usrpkgset;
+struct arg_packages;
 
 struct poldek_ts {
+    int                type;
     struct poldek_ctx  *ctx;
     struct pkgdb       *db;
     uint32_t           flags;      /* POLDEK_TS_* */
 
-    tn_array  *arg_package_defs;   /* foo#[VERSION[-RELEASE]] || foo.rpm   */
-    tn_array  *arg_package_lists;  /* --pset FILE */
-
-    struct usrpkgset   *ups;
+    tn_array  *pkgs;
+    
+    struct arg_packages  *aps;
     
     char               *rootdir;       /* top level dir          */
     char               *fetchdir;      /* dir to fetch files to  */
@@ -88,10 +88,13 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap);
 int poldek_ts_configure(struct poldek_ts *ts, int param, ...);
 
 int poldek_ts_add_pkg(struct poldek_ts *ts, struct pkg *pkg);
-int poldek_ts_add_pkgdef(struct poldek_ts *ts, const char *def);
+int poldek_ts_add_pkgmask(struct poldek_ts *ts, const char *def);
 int poldek_ts_add_pkgfile(struct poldek_ts *ts, const char *pathname);
 int poldek_ts_add_pkglist(struct poldek_ts *ts, const char *path);
 
+void poldek_ts_clean_arg_pkgmasks(struct poldek_ts *ts);
+const tn_array* poldek_ts_get_arg_pkgmasks(struct poldek_ts *ts);
+int poldek_ts_get_arg_count(struct poldek_ts *ts);
 
 struct install_info {
     tn_array *installed_pkgs;

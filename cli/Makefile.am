@@ -9,6 +9,7 @@ libpoldekcli_la_SOURCES  = cli.c cli.h  \
 			op_source.c     \
 			op_packages.c   \
 			op_makeidx.c    \
+			op_split.c      \
 			alias.c         \
 		        ls.c            \
 		        install.c       \

@@ -95,7 +95,7 @@ struct command command_desc = {
     options, parse_opt,
     NULL, desc,
     NULL, NULL, 
-    NULL
+    NULL, NULL
 };
 
 static
@@ -781,13 +781,8 @@ static int desc(struct cmdarg *cmdarg)
     int                    i, err = 0;
 
     cctx = cmdarg->cctx;
-    
-    sh_resolve_packages(cmdarg->pkgnames, cctx->instpkgs, &pkgs, 0);
-    //sh_resolve_packages(cmdarg->pkgnames, cctx->avpkgs, &pkgs, 0);
-    if (pkgs == NULL)
-        return 0;
-
-    if (n_array_size(pkgs) == 0) {
+    pkgs = poldekcli_resolve_packages(cctx, cmdarg->ts, 0);
+    if (pkgs == NULL) {
         err++;
         goto l_end;
     }
@@ -824,7 +819,7 @@ static int desc(struct cmdarg *cmdarg)
     
  l_end:
     
-    if (pkgs != cctx->avpkgs)
+    if (pkgs)
         n_array_free(pkgs);
 
     return err == 0;

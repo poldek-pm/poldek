@@ -26,7 +26,6 @@
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"
-#include "usrset.h"
 #include "pkgset-req.h"
 
 

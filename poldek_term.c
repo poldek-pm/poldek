@@ -225,8 +225,9 @@ int term_init(void)
 static void update_term_width(void) 
 {
     struct winsize ws;
-
+    
     if (winch_reached) {
+        char tmp[256];
         if (ioctl(1, TIOCGWINSZ, &ws) == 0) {
             term_width = ws.ws_col;
             term_height = ws.ws_row;
@@ -236,6 +237,8 @@ static void update_term_width(void)
             term_height = TERM_DEFAULT_HEIGHT;
         }
 
+        snprintf(tmp, sizeof(tmp), "rmargin=%d", term_width - 1);
+        setenv("ARGP_HELP_FMT", tmp, 1);
         winch_reached = 0;
     }
 }

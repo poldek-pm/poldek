@@ -469,7 +469,7 @@ int installset_provides_capn(const struct pkg *pkg, const char *capn,
 {
     struct capreq *cap;
     
-    cap = capreq_new_name_a(capn);
+    capreq_new_name_a(capn, cap);
     return installset_provides(pkg, cap, ps, upg);
 }
 
@@ -933,7 +933,7 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
         if (capreq_is_rpmlib(true_req)) 
             continue;
 
-        req = capreq_new_name_a(capreq_name(true_req));
+        capreq_new_name_a(capreq_name(true_req), req);
         //req = capreq_new(capreq_name(true_req), 0, 0, 0, 0, 0);
         
         if (do_find_req(pkg, req, &tomark, NULL, ps, upg, FINDREQ_NOBESTSEL)) {
@@ -2096,13 +2096,6 @@ void mapfn_mark_newer_pkg(unsigned recno, void *h, void *upgptr)
         }
     }
     
-}
-
-static void mapfn_unmark_pkg(const char *key, void *pkgptr) 
-{
-    struct pkg *pkg = pkgptr;
-    key = key;
-    pkg_unmark(pkg);
 }
 
 
