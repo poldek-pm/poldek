@@ -1,7 +1,10 @@
 # $Id$
 
-%include pld-source.conf
-#%include rh-source.conf
+_confdir = @SYSCONFDIR@/poldek
+
+%include %{_confdir}/pld-source.conf
+#%include %{_confdir}/rh-source.conf
+#%include http://zn/RPMS/rh-source.conf.bz2
 #%include http://foo.com/foo-sources.conf
 #%include fetch.conf
 

@@ -1,5 +1,5 @@
 # System wide aliases
-
+[aliases]
 # ls 
 ll = ls -l
 llu = ls -lu
