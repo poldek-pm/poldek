@@ -668,7 +668,7 @@ static void show_description(struct pkg *pkg, unsigned flags)
     char            unit = 'K';
     const char      *group;
     double          pkgsize;
-
+    
     
     if ((pkgu = pkg_info(pkg)) == NULL) {
         log(LOGERR, _("%s: description unavailable (index without packages "
@@ -703,11 +703,13 @@ static void show_description(struct pkg *pkg, unsigned flags)
         printf("%s\n", pkgu->license);
     }
 
+    
     if (pkg->arch) {
         char *p = "Arch:";
+        
         if (pkg->os) 
             p = "Arch/OS:";
-
+        
         printf_c(PRCOLOR_CYAN, "%-16s", p);
         printf("%s", pkg->arch);
             
@@ -715,7 +717,7 @@ static void show_description(struct pkg *pkg, unsigned flags)
             printf("/%s", pkg->os);
         printf("\n");
     }
-        
+
         
     if (pkgu->url) {
         printf_c(PRCOLOR_CYAN, "%-16s", "URL:");
@@ -780,8 +782,10 @@ static int desc(struct cmdarg *cmdarg)
     int i, err = 0;
 
 
-    sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->instpkgs, &shpkgs, 0);
-    //sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->avpkgs, &shpkgs, 0);
+    // testing 
+    //sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->instpkgs, &shpkgs, 0);
+    
+    sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->avpkgs, &shpkgs, 0);
     if (shpkgs == NULL)
         return 0;
 
