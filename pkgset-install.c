@@ -1553,15 +1553,14 @@ static void print_install_summary(struct upgrade_s *upg)
 {
     int i, n, size_download = 0, size_install = 0;
     char sizebuf[64];
-    
+
     for (i=0; i < n_array_size(upg->install_pkgs); i++) {
         struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
-
         size_download += pkg->fsize;
         size_install += pkg->size;
     }
+    snprintf_size(sizebuf, sizeof(sizebuf), size_download);
     
-
     n = n_array_size(upg->install_pkgs);
 #ifndef ENABLE_NLS    
     msg(1, "There are %d package%s to install", n, n > 1 ? "s":"");
@@ -1700,9 +1699,15 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         
         any_err++;
         if (upg->nerr_dep) {
-            n = n_snprintf(&errmsg[n], sizeof(errmsg) - n,
-                         "%d unresolved dependencies", upg->nerr_dep);
-            
+#ifndef ENABLE_NLS
+            n += n_snprintf(&errmsg[n], sizeof(errmsg) - n,
+                           "%d unresolved dependencies", upg->nerr_dep);
+#else
+            n += n_snprintf(&errmsg[n], sizeof(errmsg) - n,
+                           ngettext("%d unresolved dependency",
+                                    "%d unresolved dependencies", upg->nerr_dep),
+                           upg->nerr_dep);
+#endif    
             
             if (inst->flags & (INSTS_NODEPS | INSTS_RPMTEST))
                 upg->nerr_dep = 0;
@@ -1711,8 +1716,8 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         }
         
         if (upg->nerr_cnfl) {
-            n = n_snprintf(&errmsg[n], sizeof(errmsg) - n,
-                         "%s%d conflicts", n ? ", ":"", upg->nerr_cnfl);
+            n += n_snprintf(&errmsg[n], sizeof(errmsg) - n,
+                            "%s%d conflicts", n ? ", ":"", upg->nerr_cnfl);
             if (inst->flags & (INSTS_FORCE | INSTS_RPMTEST)) 
                 upg->nerr_cnfl = 0;
             else
