@@ -290,6 +290,7 @@ void poclidek_dent_init(struct poclidek_ctx *cctx)
     struct pkg_dent *root, *allav, *curr_ent = NULL;
     struct pkgdir *curr_pkgdir = NULL;
     tn_array *pkgs;
+    tn_hash  *dent_ht;
     int i;
 
     root = pkg_dent_new_dir(cctx, "/");
@@ -302,29 +303,40 @@ void poclidek_dent_init(struct poclidek_ctx *cctx)
         return;
     
     pkg_dent_add_pkgs(cctx, allav, pkgs);
-    
+
+    dent_ht = n_hash_new(32, NULL);
+
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
         
         if (pkg->pkgdir != curr_pkgdir) {
-            char name[256], *p;
-
+            struct pkg_dent *dent;
+            const char *id;
+            
             n_assert(pkg->pkgdir);
             curr_pkgdir = pkg->pkgdir;
-            
-            n_snprintf(name, sizeof(name), pkgdir_idstr(pkg->pkgdir));
-            p = name;
-            while (*p) {
-                if (!isprint(*p)) *p = '.';
-                p++;
+
+            id = pkgdir_idstr(pkg->pkgdir);
+            if ((dent = n_hash_get(dent_ht, id)) == NULL) {
+                char name[256], *p;
+                n_snprintf(name, sizeof(name), "%s", id);
+                p = name;
+                while (*p) {
+                    if (!isprint(*p)) *p = '.';
+                    p++;
+                }
+                dent = pkg_dent_adddir(cctx, root, name);
+                n_hash_insert(dent_ht, id, dent);
             }
+            
             if (curr_ent)
                 n_array_sort(curr_ent->pkg_dent_ents);
-            curr_ent = pkg_dent_adddir(cctx, root, name);
+            curr_ent = dent;
         }
         n_array_push(curr_ent->pkg_dent_ents, pkg_dent_new_pkg(cctx, pkg));
     }
     n_array_free(pkgs);
+    n_hash_free(dent_ht);
 }
 
 
