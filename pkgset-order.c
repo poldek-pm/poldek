@@ -81,7 +81,8 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
                 }
             }
         }
-        msg_i(4, deep, "_)\n%s {");
+        msg(4, "_)\n");
+        msg_i(4, deep, " {");
     }
     
     for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
@@ -132,9 +133,9 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
         }
     }
     
-
-    msg_i(4, deep, "\n%s } ");
     if (verbose > 3) {
+        msg(4, "\n");
+        msg_i(4, deep, " } ");
         msg(4, "_%s",  pkg->name);
         for (i=n_array_size(vs->stack)-2; i >= 0; i--) {
             struct pkg *p = n_array_nth(vs->stack, i);
