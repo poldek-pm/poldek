@@ -395,8 +395,11 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
 
         if (vfmode & VFM_CACHE) {
             vfile_url_as_path(&buf[len], sizeof(buf) - len, path);
-            if (access(buf, R_OK) == 0 && openvf(&vf, buf, vfmode)) 
+            if (access(buf, R_OK) == 0 && openvf(&vf, buf, vfmode)) {
+                vf.vf_tmpath = strdup(buf);
                 opened = 1;
+            }
+            
         }
         
         if (opened == 0) {
