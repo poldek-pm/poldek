@@ -163,6 +163,8 @@ int pkgset_dump_marked_pkgs(struct pkgset *ps, const char *dumpfile, int bn);
 int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs);
 int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst);
 
+int packages_uninstall(tn_array *pkgs, struct inst_s *inst, struct install_info *iinf);
+
 /* returns /bin/rpm exit code */
 int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level);
 

@@ -31,7 +31,8 @@ void usrpkgset_free(struct usrpkgset *ups);
 int usrpkgset_add_str(struct usrpkgset *ups, char *def, int deflen);
 int usrpkgset_add_file(struct usrpkgset *ups, const char *pathname);
 int usrpkgset_add_list(struct usrpkgset *ups, const char *path);
-
+int usrpkgset_add_list(struct usrpkgset *ups, const char *path);
+int usrpkgset_add_pkg(struct usrpkgset *ups, struct pkg *pkg);
 int usrpkgset_setup(struct usrpkgset *ups);
 
 #endif

@@ -199,6 +199,20 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
 
 
 static 
+int pkgdef_new_pkg(struct pkgdef **pdefp, struct pkg *pkg)
+{
+    struct pkgdef *pdef;
+    
+
+    pdef = malloc(sizeof(*pdef));
+    pdef->tflags = PKGDEF_REGNAME;
+    pdef->pkg = pkg_link(pkg);
+    *pdefp = pdef;
+
+    return pdef ? 1 : 0;
+}
+
+static 
 int pkgdef_new_pkgfile(struct pkgdef **pdefp, const char *path)
 {
     struct pkg *pkg;
@@ -304,6 +318,18 @@ int usrpkgset_add_file(struct usrpkgset *ups, const char *path)
     struct pkgdef *pdef = NULL;
     
     if ((pkgdef_new_pkgfile(&pdef, path)) > 0) {
+        n_array_push(ups->pkgdefs, pdef);
+        return 1;
+    }
+    
+    return 0;
+}
+
+int usrpkgset_add_pkg(struct usrpkgset *ups, struct pkg *pkg) 
+{
+    struct pkgdef *pdef = NULL;
+    
+    if ((pkgdef_new_pkg(&pdef, pkg)) > 0) {
         n_array_push(ups->pkgdefs, pdef);
         return 1;
     }

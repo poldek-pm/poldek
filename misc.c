@@ -415,6 +415,31 @@ int mk_dir(const char *path, const char *dn)
     return 1;
 }
 
+int mklock(const char *dir) 
+{
+    char path[PATH_MAX];
+    int rc;
+    
+    snprintf(path, sizeof(path), "%s/poldek..lck", dir);
+
+    rc = lockfile(path);
+    
+    if (rc == 0) {
+        char buf[64];
+        pid_t pid = readlockfile(path);
+        
+        if (pid > 0) 
+            snprintf(buf, sizeof(buf), " (%d)", pid);
+        else
+            *buf = '\0';
+            
+        logn(LOGERR, _("There seems another poldek%s uses %s"), buf, dir);
+    }
+
+    return rc > 0; 
+}
+
+
 const char *ngettext_n_packages_fmt(int n) 
 {
 #if ENABLE_NLS    

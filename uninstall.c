@@ -42,7 +42,7 @@ static int do_uninstall(tn_array *pkgs, struct inst_s *inst);
 
 static
 int visit_pkg(int indent, struct pkg *pkg, struct pkg *prev_pkg,
-                  struct pkgdb *db, struct dbpkg_set *uninst_set) 
+              struct pkgdb *db, struct dbpkg_set *uninst_set) 
 {
     unsigned ldflags = uninst_LDFLAGS;
     int i, k, n = 0;
@@ -110,7 +110,7 @@ int visit_pkg(int indent, struct pkg *pkg, struct pkg *prev_pkg,
 }
 
 static 
-int mark_to_uninstall(struct dbpkg_set *set, struct pkgdb *db)
+int mark_to_uninstall(struct dbpkg_set *set, struct pkgdb *db, struct inst_s *inst)
 {
     int i, n = 0;
 
@@ -119,11 +119,11 @@ int mark_to_uninstall(struct dbpkg_set *set, struct pkgdb *db)
         pkg_hand_mark(dbpkg->pkg);
     }
     
-    msgn(1, _("Processing dependencies..."));
-    for (i=0; i < n_array_size(set->dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(set->dbpkgs, i);
-        n += visit_pkg(-2, dbpkg->pkg, NULL, db, set);
-    }
+    if (inst->flags & INSTS_FOLLOW)
+        for (i=0; i < n_array_size(set->dbpkgs); i++) {
+            struct dbpkg *dbpkg = n_array_nth(set->dbpkgs, i);
+            n += visit_pkg(-2, dbpkg->pkg, NULL, db, set);
+        }
     
     return n;
 }
@@ -150,6 +150,32 @@ static void print_uninstall_summary(tn_array *pkgs, int ndep)
     display_pkg_list(0, "R", pkgs, PKG_DIRMARK);
     display_pkg_list(0, "D", pkgs, PKG_INDIRMARK);
     
+}
+
+static void update_install_info(struct install_info *iinf, tn_array *pkgs)
+{
+    int i;
+        
+    for (i=0; i<n_array_size(pkgs); i++)
+        n_array_push(iinf->uninstalled_pkgs,
+                     pkg_link(n_array_nth(pkgs, i)));
+
+}
+
+
+int packages_uninstall(tn_array *pkgs, struct inst_s *inst,
+                       struct install_info *iinf)
+{
+    struct usrpkgset *ups;
+    int rc, i;
+    
+    ups = usrpkgset_new();
+    for (i=0; i<n_array_size(pkgs); i++)
+        usrpkgset_add_pkg(ups, n_array_nth(pkgs, i));
+
+    rc = uninstall_usrset(ups, inst, iinf);
+    usrpkgset_free(ups);
+    return rc;
 }
 
 
@@ -211,7 +237,7 @@ int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
 
     n_array_uniq(uninst_set->dbpkgs);
     if (nerr == 0 && n_array_size(uninst_set->dbpkgs)) {
-        ndep_marked = mark_to_uninstall(uninst_set, db);
+        ndep_marked = mark_to_uninstall(uninst_set, db, inst);
         pkgs = dbpkgs_to_pkgs(uninst_set->dbpkgs);
     }
 
@@ -230,10 +256,14 @@ int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
         
         print_uninstall_summary(pkgs, ndep_marked);
         if (!is_test && (inst->flags & INSTS_CONFIRM_UNINST) && inst->ask_fn)
-            doit = inst->ask_fn(1, _("Proceed? [Y/n]"));
+            doit = inst->ask_fn(0, _("Proceed? [y/N]"));
         
-        if (doit)
-            nerr += do_uninstall(pkgs, inst);
+        if (doit) {
+            if (!do_uninstall(pkgs, inst))
+                nerr++;
+            else if (iinf)
+                update_install_info(iinf, pkgs);
+        }
     }
 
     if (pkgs)
@@ -241,7 +271,6 @@ int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
     
     return nerr == 0;
 }
-
 
 
 static

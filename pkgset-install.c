@@ -1411,51 +1411,6 @@ static int valid_arch_os(tn_array *pkgs)
 }
 
 
-static void show_pkg_list(const char *prefix, tn_array *pkgs, unsigned flags)
-{
-    int   i, ncol = 2, npkgs = 0;
-    int   term_width;
-    char  *p, *colon = ", ";
-    int   hdr_printed = 0;
-
-    term_width = term_get_width() - 5;
-    ncol = strlen(prefix) + 1;
-    
-    npkgs =  n_array_size(pkgs);
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-        
-        if (flags && (pkg->flags & flags) == 0)
-            npkgs--;
-    }
-        
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-
-        if (flags && (pkg->flags & flags) == 0)
-            continue;
-
-        if (hdr_printed == 0) {
-            msg(1, "%s ", prefix);
-            hdr_printed = 1;
-        }
-            	
-        p = pkg_snprintf_s(pkg);
-        if (ncol + (int)strlen(p) >= term_width) {
-            ncol = 3;
-            msg(1, "_\n%s ", prefix);
-        }
-        
-        if (--npkgs == 0)
-            colon = "";
-            
-        msg(1, "_%s%s", p, colon);
-        ncol += strlen(p) + strlen(colon);
-    }
-    if (hdr_printed)
-        msg(1, "_\n");
-}
-
 static void show_dbpkg_list(const char *prefix, tn_array *dbpkgs)
 {
     int   i, ncol = 2, npkgs = 0;
@@ -1514,8 +1469,8 @@ static void print_install_summary(struct upgrade_s *upg)
 
     if (n_array_size(upg->install_pkgs) > 2) {
         n_array_sort(upg->install_pkgs);
-        show_pkg_list("I", upg->install_pkgs, PKG_DIRMARK);
-        show_pkg_list("D", upg->install_pkgs, PKG_INDIRMARK);
+        display_pkg_list(1, "I", upg->install_pkgs, PKG_DIRMARK);
+        display_pkg_list(1, "D", upg->install_pkgs, PKG_INDIRMARK);
         show_dbpkg_list("R", upg->uninst_set->dbpkgs);
         return;
     }

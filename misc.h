@@ -50,6 +50,8 @@ void process_cmd_output(struct p_open_st *st, const char *prefix);
 int lockfile(const char *lockfile);
 pid_t readlockfile(const char *lockfile);
 
+int mklock(const char *dir);
+
 void display_pkg_list(int verbose_l, const char *prefix,
                       tn_array *pkgs, unsigned flags);
 

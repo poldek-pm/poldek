@@ -85,14 +85,25 @@ static char args_doc[] = N_("[PACKAGE...]");
 #define MODE_MNR_UPDATEIDX  (1 << 0)
 #define MODE_MNR_CLEANIDX   (1 << 1)
 
+#if 0                           /* NFY */
+#define MODEFLAG_LD_PKGSET     (1 << 0)
+#define MODEFLAG_LOCK_CACHEDIR (1 << 1)
+#define MODEFLAG_LD_DBDEPS     (1 << 2)
 
-#define MODEFLAG_NEEDS_PKGSET (1 << 0)
+struct mjrmode_conf {
+    int modeid;
+    const char *name;           /* --MODE */
+    const char *short;          /* -M     */
+    unsigned flags;
+};
 
-int mjrmode_flags[] = {
-    0,                          /* 0 */
-    MODEFLAG_NEEDS_PKGSET,      /* 1 */
-    0,                          /* 2 */
-    MODEFLAG_NEEDS_PKGSET,      /* 3 */
+static
+struct mjrmode_conf mjrmodes[] = {
+    MODE_NULL,         0,                          /* 0 */
+    MODE_VERIFY,       MODEFLAG_LD_PKGSET | MODEFLAG_LOCK_CACHEDIR,        /* 1 */
+    MODE_MKIDX,        MODEFLAG_LD_PKGSET          /* 2 */
+    MODE_INSTALLDIST,  MODEFLAG_NEEDS_PKGSET,      /* 3 */
+    
     MODEFLAG_NEEDS_PKGSET,      /* 4 */
     MODEFLAG_NEEDS_PKGSET,      /* 5 */
     MODEFLAG_NEEDS_PKGSET,      /* 6 */
@@ -101,7 +112,7 @@ int mjrmode_flags[] = {
     0,                          /* 9 */
     MODEFLAG_NEEDS_PKGSET,      /* 10 */
 };
-
+#endif
 
 #define INDEXTYPE_TXT     1
 #define INDEXTYPE_TXTZ    2
@@ -123,8 +134,8 @@ struct args {
     
     char      *curr_src_path;
     int       curr_src_type;
-    tn_array  *sources;
-    tn_array  *source_names;
+    tn_array  *sources;         /* --source args */
+    tn_array  *source_names;    /* --sn args */
     
     int       idx_type;
     char      *idx_path;
@@ -1487,7 +1498,6 @@ int is_package_file(const char *path)
     return (stat(path, &st) == 0 && S_ISREG(st.st_mode));
 }
 
-
 int prepare_given_packages(void) 
 {
     int i, rc = 1;
@@ -1637,35 +1647,6 @@ int verify_args(void)
     return rc;
 }
 
-
-int mklock(void) 
-{
-    char path[PATH_MAX];
-    int rc;
-    
-    n_assert(args.inst.cachedir);
-
-    snprintf(path, sizeof(path), "%s/poldek..lck", args.inst.cachedir);
-
-    rc = lockfile(path);
-    
-    if (rc == 0) {
-        char buf[64];
-        pid_t pid = readlockfile(path);
-        
-        if (pid > 0) 
-            snprintf(buf, sizeof(buf), " (%d)", pid);
-        else
-            *buf = '\0';
-            
-        logn(LOGERR, _("There seems another poldek%s uses %s"),
-            buf, args.inst.cachedir);
-    }
-
-    return rc > 0; 
-}
-
-
 int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                 struct inst_s *inst, int mjrmode) 
 {
@@ -1758,7 +1739,7 @@ int main(int argc, char **argv)
         msg_f(0, "_)\n");
     }
     
-    if (!mklock())
+    if (!mklock(args.inst.cachedir))
         exit(EXIT_FAILURE);
     
     if (!verify_args())
