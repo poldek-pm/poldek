@@ -20,4 +20,4 @@ rsearch = search --perlre
 exit = quit
 
 # for fun
-ls = uninstall kernel 
+#ls = uninstall kernel 
