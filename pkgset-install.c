@@ -2282,7 +2282,7 @@ int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs)
     int i, n, nmarked = 0;
     
     if (n_array_size(pkgs) < 2)
-        return 0;
+        return n_array_size(pkgs);
     
     n_array_sort(pkgs);
 
