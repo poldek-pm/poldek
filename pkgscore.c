@@ -35,7 +35,7 @@
 #include "log.h"
 #include "pkg.h"
 #include "pkgdir/pkgdir.h"
-#include "pkgset.h"
+#include "pkgmisc.h"
 
 static
 tn_array *read_patterns(const char *fpath, tn_array *patterns, unsigned type)
@@ -119,7 +119,8 @@ void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg)
     int n = 0;
     
     if (pkg->pkgdir)
-        n += n_snprintf(psc->pkgbuf, sizeof(psc->pkgbuf), "%s:", pkg->pkgdir->name);
+        n += n_snprintf(psc->pkgbuf, sizeof(psc->pkgbuf),
+                        "%s:", pkg->pkgdir->name);
 
     psc->pkgname_off = n;
     
@@ -134,7 +135,8 @@ int pkgscore_match(struct pkgscore_s *psc, const char *mask)
     if (fnmatch(mask, psc->pkg->name, 0) == 0)
         return 1;
 
-    if (psc->pkgname_off && fnmatch(mask, &psc->pkgbuf[psc->pkgname_off], 0) == 0)
+    if (psc->pkgname_off &&
+        fnmatch(mask, &psc->pkgbuf[psc->pkgname_off], 0) == 0)
         return 1;
     
     return fnmatch(mask, psc->pkgbuf, 0) == 0;

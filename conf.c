@@ -29,8 +29,9 @@
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
 #include <trurl/nstream.h>
-
 #include <vfile/vfile.h>
+
+#define ENABLE_TRACE 0
 #include "i18n.h"
 #include "log.h"
 #include "conf.h"
@@ -934,10 +935,14 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     
 
     if (ht) {
-        if (!poldek_conf_postsetup(ht))
+        if (!poldek_conf_postsetup(ht)) {
+            DBGF("ERR %s\n", af->path);
             is_err = 1;
-        else 
+        } else {
             n_hash_replace(af_htconf, af->path, ht);
+            DBGF("Loaded %s %p\n", af->path, n_hash_get(af_htconf, af->path));
+        }
+        
     }
     
     
@@ -950,7 +955,6 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
         n_hash_free(ht);
         ht = NULL;
     }
-    
     return ht;
 }
 
@@ -995,9 +999,11 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
     if (do_ldconf(af_htconf, path, NULL, NULL, flags) != NULL) {
         tn_array *paths;
         int i;
-
+        
         htconf = n_hash_get(af_htconf, path);
         paths = n_hash_keys(af_htconf);
+
+        DBGF("htconf %s %p\n", path, htconf);
 
         for (i=0; i < n_array_size(paths); i++) {
             char *apath = n_array_nth(paths, i);
@@ -1012,7 +1018,8 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
 
         n_array_free(paths);
     }
-    
+
+    DBGF("ret htconf %s %p\n", path, htconf);
     if (htconf)
         htconf = n_ref(htconf);
     

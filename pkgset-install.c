@@ -48,6 +48,7 @@
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
+#include "pkgmisc.h"
 #include "misc.h"
 #include "pkgset-req.h"
 #include "dbpkg.h"
@@ -56,6 +57,8 @@
 #include "poldek_term.h"
 #include "poldek.h"
 #include "rpm/rpmhdr.h"
+#include "rpm/rpm.h"
+#include "pkgdb/pkgdb.h"
 
 #define PROCESS_AS_NEW       (1 << 0)
 #define PROCESS_AS_ORPHAN    (1 << 1)
@@ -420,7 +423,7 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
 
         found = 0;
         matches = alloca(sizeof(*matches) * nsuspkgs);
-        strict = ps->flags & PSVERIFY_MERCY ? 0 : 1;
+        strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
         if (psreq_match_pkgs(pkg, req, strict, suspkgs,
                              nsuspkgs, matches, &nmatches)) {
             found = 1;
@@ -858,7 +861,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
             pkg_rm_mark(dbpkg->pkg);
             db_deps_remove_pkg(upg->db_deps, dbpkg->pkg);
             db_deps_remove_pkg_caps(upg->db_deps, pkg,
-                                    (ps->flags & PSDBDIRS_LOADED) == 0);
+                                    (ps->flags & PSET_DBDIRS_LOADED) == 0);
             
             dbpkg->flags |= DBPKG_TOUCHED;
             
@@ -1636,7 +1639,7 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
         struct capreq *cap = n_array_nth(pkg->caps, i);
         tn_array *dbpkgs;
         
-        if ((ps->flags & PSVERIFY_MERCY) && capreq_is_bastard(cap))
+        if ((ps->flags & PSET_VRFY_MERCY) && capreq_is_bastard(cap))
             continue;
         
         msg_i(3, indent, "cap %s\n", capreq_snprintf_s(cap));
@@ -2121,7 +2124,7 @@ static void init_upgrade_s(struct upgrade_s *upg, struct poldek_ts *ts)
     upg->uninst_set = dbpkg_set_new();
     upg->orphan_dbpkgs = dbpkg_array_new(128);
 
-    upg->strict = ts->ctx->ps->flags & PSVERIFY_MERCY ? 0 : 1;
+    upg->strict = ts->ctx->ps->flags & PSET_VRFY_MERCY ? 0 : 1;
     upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
     upg->ts = ts; 
@@ -2351,7 +2354,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
     struct pkgset *ps = ts->ctx->ps;
 
     
-    n_assert(poldek_ts_issetf(ts, POLDEK_TS_INSTALL));
+    n_assert(ts->type == POLDEK_TSt_INSTALL);
 
     packages_mark(ps->pkgs, 0, PKG_INTERNALMARK | PKG_INDIRMARK);
     

@@ -49,8 +49,8 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags);
 void poldek_destroy(struct poldek_ctx *ctx);
 
 int poldek_load_sources(struct poldek_ctx *ctx);
-tn_array *poldek_get_avpkgs(struct poldek_ctx *ctx);
-tn_array *poldek_get_avpkgs_bynvr(struct poldek_ctx *ctx);
+tn_array *poldek_get_avail_packages(struct poldek_ctx *ctx);
+tn_array *poldek_get_avail_packages_bynvr(struct poldek_ctx *ctx);
 
 
 #define POLDEK_CONF_OPT             0

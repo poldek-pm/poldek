@@ -397,10 +397,11 @@ AC_CONFIG_FILES([
 		pkgdir/pndir/Makefile
 		pkgdir/rpmdb/Makefile
                 pkgdir/yum/Makefile
+                pkgdb/Makefile
 		sigint/Makefile
 		vfile/Makefile
 		vfile/vfff/Makefile
-        python/Makefile
+                python/Makefile
 		conf/Makefile
 		doc/Makefile
 		doc/homepage/Makefile

@@ -16,10 +16,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fnmatch.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
+#include <trurl/nhash.h>
 #include <trurl/nstr.h>
 #include <trurl/nmalloc.h>
 #include <trurl/n_snprintf.h>
@@ -30,14 +34,17 @@
 #include "arg_packages.h"
 #include "misc.h"
 #include "pkgmisc.h"
-#include "rpm/rpm_pkg_ld.h"
+#include "pkgset.h"
 
 #define ARG_PACKAGES_SETUPDONE (1 << 0)
 
 struct arg_packages {
     unsigned  flags;
+    struct pkgset *ps;
+    tn_array  *packages;
     tn_array  *package_masks;   /* [@]foo(#|-)[VERSION[-RELEASE]] || foo.rpm   */
     tn_array  *package_lists;   /* --pset FILE */
+    tn_hash   *package_caps;
 };
 
 static 
@@ -131,15 +138,17 @@ char *prepare_pkgmask(const char *maskstr, const char *fpath, int nline)
 }
 
 
-
-struct arg_packages *arg_packages_new(void) 
+struct arg_packages *arg_packages_new(struct pkgset *ps) 
 {
     struct arg_packages *aps;
 
     aps = n_malloc(sizeof(*aps));
     aps->flags = 0;
-    aps->package_masks = n_array_new(16, free, (tn_fn_cmp)strcmp);
-    aps->package_lists = n_array_new(16, free, (tn_fn_cmp)strcmp);
+    aps->ps = ps;
+    aps->packages = pkgs_array_new(64);
+    aps->package_masks = n_array_new(64, free, (tn_fn_cmp)strcmp);
+    aps->package_lists = n_array_new(64, free, (tn_fn_cmp)strcmp);
+    aps->package_caps = n_hash_new(21, (tn_fn_free)n_array_free);
     return aps;
 }
 
@@ -147,6 +156,7 @@ void arg_packages_free(struct arg_packages *aps)
 {
     n_array_free(aps->package_masks);
     n_array_free(aps->package_lists);
+    n_hash_free(aps->package_caps);
     free(aps);
 }
 
@@ -154,13 +164,15 @@ void arg_packages_clean(struct arg_packages *aps)
 {
     n_array_clean(aps->package_masks);
     n_array_clean(aps->package_lists);
+    n_hash_clean(aps->package_caps);
     aps->flags = 0;
 }
 
 
 int arg_packages_size(struct arg_packages *aps) 
 {
-    return n_array_size(aps->package_masks);
+    return n_array_size(aps->package_masks) + n_array_size(aps->packages) +
+        n_hash_size(aps->package_caps);
 }
 
 tn_array *arg_packages_get_pkgmasks(struct arg_packages *aps) 
@@ -185,7 +197,7 @@ int arg_packages_add_pkgmask(struct arg_packages *aps, const char *mask)
 int arg_packages_add_pkgmasks(struct arg_packages *aps, const tn_array *masks) 
 {
     int i;
-    for (i=0; i<n_array_size(masks); i++)
+    for (i=0; i < n_array_size(masks); i++)
         n_array_push(aps->package_masks, n_strdup(n_array_nth(masks, i)));
     return 1;
 }
@@ -217,7 +229,7 @@ int arg_packages_add_pkgfile(struct arg_packages *aps, const char *path)
         if ((pkg = pkg_ldrpm(path, PKG_LDNEVR)) == NULL)
             return 0;
 
-        arg_packages_add_pkgmask(aps, pkg_snprintf_s(pkg));
+        arg_packages_add_pkg(aps, pkg);
         pkg_free(pkg);
     }
     
@@ -225,9 +237,10 @@ int arg_packages_add_pkgfile(struct arg_packages *aps, const char *path)
 }
 
 
-int arg_packages_add_pkg(struct arg_packages *aps, const struct pkg *pkg)
+int arg_packages_add_pkg(struct arg_packages *aps, struct pkg *pkg)
 {
-    return arg_packages_add_pkgmask(aps, pkg_snprintf_s(pkg));
+    n_array_push(aps->packages, pkg_link(pkg));
+    return 1;
 }
 
 
@@ -257,7 +270,7 @@ int arg_packages_load_list(struct arg_packages *aps, const char *fpath)
 
 int arg_packages_setup(struct arg_packages *aps)
 {
-    int i, rc = 1, n;
+    int i, rc = 1, n, nremoved;
 
     if (aps->flags & ARG_PACKAGES_SETUPDONE)
         return 1;
@@ -273,41 +286,60 @@ int arg_packages_setup(struct arg_packages *aps)
     n_array_sort(aps->package_masks);
     n_array_uniq(aps->package_masks);
 
-    if (n != n_array_size(aps->package_masks)) {
-        msgn(1, _("Removed %d duplicates from given packages"),
-             n - n_array_size(aps->package_masks));
-        
-    }
+    nremoved = n - n_array_size(aps->package_masks);
+    n = n_array_size(aps->packages); 
+    n_array_sort(aps->packages);
+    n_array_uniq(aps->packages);
+
+    nremoved += n - n_array_size(aps->packages);
+    
+
+    if (nremoved > 0)
+        msgn(1, _("Removed %d duplicates from given packages"), nremoved); 
 
     aps->flags |= ARG_PACKAGES_SETUPDONE;
-    return n;
+    
+    return rc;
 }
 
-
-tn_array *arg_packages_resolve(struct arg_packages *aps,
-                               tn_array *avpkgs, unsigned flags)
+static int resolve_bycap(struct arg_packages *aps, const char *mask)
 {
-    tn_array *pkgs = NULL;
-    int i, j, nmasks;
-    int *matches, *matches_bycmp;
-
-    nmasks = n_array_size(aps->package_masks);
+    tn_array *pkgs;
     
-    for (i=0; i < nmasks; i++) {
-        char  *mask = n_array_nth(aps->package_masks, i);
-        
-        if (*mask == '*' && *(mask + 1) == '\0')
-            return n_ref(avpkgs);
+    pkgs = pkgset_lookup_cap(aps->ps, mask);
+    if (pkgs == NULL || n_array_size(pkgs) == 0) {
+        if (pkgs)
+            n_array_free(pkgs);
+        return 0;
     }
+    
+    if (verbose > 1) {
+        int i;
+        
+        msgn(2, "%s: %d package(s) found:", mask, n_array_size(pkgs));
+        for (i=0; i<n_array_size(pkgs); i++)
+            msgn(2, " - %s", pkg_snprintf_s(n_array_nth(pkgs, i)));
+        
+    }
+    
+    n_hash_insert(aps->package_caps, mask, pkgs);
+    return n_array_size(pkgs);
+}
+
+static
+int resolve_masks(tn_array *pkgs,
+                  struct arg_packages *aps, tn_array *avpkgs, unsigned flags)
+{
+    int i, j, nmasks, rc = 1;
+    int *matches, *matches_bycmp;
+    
+    nmasks = n_array_size(aps->package_masks);
 
     matches = alloca(nmasks * sizeof(*matches));
     memset(matches, 0, nmasks * sizeof(*matches));
 
     matches_bycmp = alloca(nmasks * sizeof(*matches_bycmp));
     memset(matches_bycmp, 0, nmasks * sizeof(*matches_bycmp));
-    
-
-    pkgs = pkgs_array_new(nmasks * 6);
     
     for (i=0; i < n_array_size(avpkgs); i++) {
         struct pkg *pkg = n_array_nth(avpkgs, i);
@@ -337,45 +369,100 @@ tn_array *arg_packages_resolve(struct arg_packages *aps,
                 n_array_push(pkgs, pkg_link(pkg));
                 matches[j]++;
                 
-            } else if (pkg->caps) {
-                int ii;
-                for (ii=0; ii < n_array_size(pkg->caps); ii++) {
-                    // DUPA TODO
-                }
             }
-            
         }
     }
     
     
     for (j=0; j < n_array_size(aps->package_masks); j++) {
         const char *mask = n_array_nth(aps->package_masks, j);
+
+        if (matches[j] == 0 && aps->ps) {
+            if (resolve_bycap(aps, mask)) {
+                matches[j]++;
+                continue;
+            }
+        }
         
         if (matches[j] == 0 && (flags & ARG_PACKAGES_RESOLV_MISSINGOK) == 0) {
-            logn(LOGERR, _("%s: no such package"), mask);
-            n_array_clean(pkgs);
+            logn(LOGERR, _("%s: no such packageMM"), mask);
+            rc = 0;
         }
 
         if ((flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS) == 0 && matches_bycmp[j] > 1) {
             int pri = (flags & ARG_PACKAGES_RESOLV_EXACT) ? LOGERR : LOGWARN;
             logn(pri, _("%s: ambiguous name"), mask);
             if (flags & ARG_PACKAGES_RESOLV_EXACT)
-                n_array_clean(pkgs);
+                rc = 0;
         }
     }
 
+    return rc;
+}
+
+
+static
+int resolve_pkgs(tn_array *pkgs,
+                     struct arg_packages *aps, tn_array *avpkgs, unsigned flags)
+{
+    int i, rc = 1;
+
+    for (i=0; i < n_array_size(aps->packages); i++) {
+        struct pkg *pkg, *spkg = n_array_nth(aps->packages, i);
+
+        if ((pkg = n_array_bsearch(avpkgs, spkg)))
+            n_array_push(pkgs, pkg_link(pkg));
+        
+        else if ((flags & ARG_PACKAGES_RESOLV_MISSINGOK) == 0) {
+            logn(LOGERR, _("%s: no such packageXX"), pkg_snprintf_s(spkg));
+            rc = 0;
+        }
+    }
     
-    n_array_sort(pkgs);
-    n_array_uniq(pkgs);
+    return rc;
+}
+
+
+
+tn_array *arg_packages_resolve(struct arg_packages *aps,
+                               tn_array *avpkgs, unsigned flags)
+{
+    tn_array *pkgs = NULL;
+    int i, nmasks, rc = 1;
     
-    if (flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS)
-        n_array_uniq_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_uniq);
+
+    nmasks = n_array_size(aps->package_masks);
+    for (i=0; i < nmasks; i++) {
+        char  *mask = n_array_nth(aps->package_masks, i);
+        
+        if (*mask == '*' && *(mask + 1) == '\0')
+            return n_ref(avpkgs);
+    }
+
+    pkgs = pkgs_array_new((nmasks * 3) + n_array_size(aps->packages));
+    
+    if (resolve_pkgs(pkgs, aps, avpkgs, flags))
+        rc = resolve_masks(pkgs, aps, avpkgs, flags);
+    else
+        rc = 0;
+
+    if (!rc) {
+        n_array_clean(pkgs);
+        
+    } else {
+        n_array_sort(pkgs);
+        n_array_uniq(pkgs);
+        
+        if (flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS)
+            n_array_uniq_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_uniq);
+    }
     
     if (n_array_size(pkgs) == 0) {
         n_array_free(pkgs);
         pkgs = NULL;
     }
-
+    printf("arg_packages_resolve %d\n", n_array_size(pkgs));
+    
     return pkgs;
 }
 

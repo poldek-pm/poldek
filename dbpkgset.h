@@ -3,9 +3,10 @@
 #define POLDEK_DBPKGSET_H
 
 #include <stdint.h>
-#include <rpm/rpmlib.h>
+//#include <rpm/rpmlib.h>
 #include <trurl/narray.h>
 
+struct dbpkg;
 
 struct dbpkg_set {
     tn_array     *dbpkgs;                /* array of dbpkg* */

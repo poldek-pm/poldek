@@ -78,7 +78,7 @@ static struct {
     { "mercy",                POLDEK_OP_VRFYMERCY, 1 },
     { "greedy",               POLDEK_OP_GREEDY, 1    },
     { "allow_duplicates",     POLDEK_OP_ALLOWDUPS, 1 },
-    { "unique_package_names", POLDEK_OP_PS_UNIQN, 0  },
+    { "unique_package_names", POLDEK_OP_UNIQN, 0  },
     { NULL, POLDEK_OP_HOLD,   1  },
     { NULL, POLDEK_OP_IGNORE, 1  }, 
     { NULL, 0, 0 }
@@ -558,9 +558,7 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
 
 int poldek_load_config(struct poldek_ctx *ctx, const char *path)
 {
-    struct poldek_ts  *ts;
     tn_hash           *htcnf = NULL;
-    int               i;
     char              *v;
     tn_array          *list;
     
@@ -847,6 +845,8 @@ int poldek_setup_cachedir(struct poldek_ctx *ctx)
         return 1;
 
     path = setup_cachedir(ctx->ts->cachedir);
+    DBGF("%s -> %s\n", ctx->ts->cachedir, path);
+    n_assert(path);
     free(ctx->ts->cachedir);
     ctx->ts->cachedir = path;
     vfile_configure(VFILE_CONF_CACHEDIR, path);
@@ -887,6 +887,12 @@ int poldek__is_setup_done(struct poldek_ctx *ctx)
 
 
 extern int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs);
+
+
+int poldek_is_sources_loaded(struct poldek_ctx *ctx) 
+{
+    return ctx->_iflags & SOURCES_LOADED;
+}
 
 
 int poldek_load_sources(struct poldek_ctx *ctx)

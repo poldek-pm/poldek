@@ -37,6 +37,8 @@
 #include "pkg.h"
 #include "dbpkgset.h"
 #include "poldek_ts.h"
+#include "rpm/rpm.h"
+#include "pkgdb/pkgdb.h"
 
 #define uninst_LDFLAGS (PKG_LDNEVR | PKG_LDCAPS | PKG_LDFL_DEPDIRS)
 

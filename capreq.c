@@ -630,7 +630,8 @@ tn_array *capreq_arr_restore(tn_buf *nbuf)
 
     DBGF("%d, arr_size = %d\n", n_buf_size(nbuf), arr_size);
     
-    cr_buf = alloca(arr_size * sizeof(void*));
+    //cr_buf = alloca(arr_size * sizeof(void*));
+    cr_buf = n_malloc(arr_size * sizeof(void*));
     n = 0;
     for (i=0; i < arr_size; i++) {
         if ((cr = capreq_restore(&nbufi))) {
@@ -640,9 +641,13 @@ tn_array *capreq_arr_restore(tn_buf *nbuf)
         }
     }
     
-    arr = capreq_arr_new_ex(n, n_memdup(cr_buf, n * sizeof(void*)));
+    if (n == 0) {
+        free(cr_buf);
+        return NULL;
+    }
     
-    return arr;
+    //arr = capreq_arr_new_ex(n, n_memdup(cr_buf, n * sizeof(void*)));
+    return capreq_arr_new_ex(n, cr_buf);
 }
 
 static int capreq_arr_restore_fn(tn_buf *nbuf, tn_array **arr) 

@@ -778,10 +778,6 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req, int stric
     return rc;
 }
 
-
-
-
-
 /* look up into package caps only */
 int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
                        int strict)

@@ -189,6 +189,11 @@ static inline int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2)
 }
 #endif
 
+static inline const char *pkg_id(const struct pkg *p) 
+{
+    return p->nvr;
+}
+
 
 int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2);

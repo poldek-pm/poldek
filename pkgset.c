@@ -43,6 +43,8 @@
 # include "config.h"
 #endif
 
+#define _PKGSET_INDEXES_INIT      (1 << 20) /* internal flag  */
+
 /* prototypes from ask.c */
 int ask_yn(int default_a, const char *fmt, ...);
 int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt);
@@ -131,7 +133,7 @@ void pkgsetmodule_destroy(void)
     obstacks_free();
 }
 
-struct pkgset *pkgset_new(unsigned optflags)
+struct pkgset *pkgset_new(void)
 {
     struct pkgset *ps;
     
@@ -146,7 +148,7 @@ struct pkgset *pkgset_new(unsigned optflags)
     
     
     ps->pkgdirs = n_array_new(4, (tn_fn_free)pkgdir_free, NULL);
-    ps->flags = optflags;
+    ps->flags = 0;
     ps->rpmcaps = rpm_rpmlib_caps();
     return ps;
 }
@@ -233,22 +235,21 @@ int pkgset_has_errors(struct pkgset *ps)
     return rc;
 }
 
+
 static void sort_pkg_caps(struct pkg *pkg) 
 {
     if (pkg->caps)
         n_array_sort(pkg->caps);
 }
 
-static
-void add_self_cap(struct pkgset *ps) 
+static void add_self_cap(struct pkgset *ps) 
 {
     n_assert(ps->pkgs);
     n_array_map(ps->pkgs, (tn_fn_map1)pkg_add_selfcap);
 }
 
 
-static
-int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx)
+static int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx)
 {
     int i, j;
 
@@ -270,72 +271,28 @@ int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx)
     return 1;
 }
 
-static 
-int pkgset_index(struct pkgset *ps) 
+
+static int pkgset_index(struct pkgset *ps) 
 {
     int i, j;
     
     msg(2, "Indexing...\n");
     add_self_cap(ps);
     n_array_map(ps->pkgs, (tn_fn_map1)sort_pkg_caps);
-
+    
     /* build indexes */
-    capreq_idx_init(&ps->cap_idx, CAPREQ_IDX_CAP,  8 * n_array_size(ps->pkgs) + 103);
-    capreq_idx_init(&ps->req_idx, CAPREQ_IDX_REQ,  18 * n_array_size(ps->pkgs) + 103);
-    capreq_idx_init(&ps->obs_idx, CAPREQ_IDX_REQ,  n_array_size(ps->pkgs)/100 + 103);
-    file_index_init(&ps->file_idx, 30 * n_array_size(ps->pkgs) + 103);
+    capreq_idx_init(&ps->cap_idx, CAPREQ_IDX_CAP, 4 * n_array_size(ps->pkgs));
+    capreq_idx_init(&ps->req_idx, CAPREQ_IDX_REQ, 4 * n_array_size(ps->pkgs));
+    capreq_idx_init(&ps->obs_idx, CAPREQ_IDX_REQ, n_array_size(ps->pkgs)/5 + 4);
+    file_index_init(&ps->file_idx, 512);
     ps->flags |= _PKGSET_INDEXES_INIT;
 
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         
-#if 0                           /* testing stuff */
-        if (strcmp(pkg->name, "SVGATextMode") == 0) {
-            struct capreq *req = capreq_new_evr("ghostscript-fonts-std",
-                                                n_strdup("6.0-7"), REL_LT, CAPREQ_CNFL);
-            if (pkg->cnfls == NULL) 
-                pkg->cnfls = capreq_arr_new(2);
-
-            n_array_push(pkg->cnfls, req);
-        }
-
-        
-
-        if (strcmp(pkg->name, "libltdl-devel") == 0) {
-            struct capreq *req = capreq_new("postfix", 0, 0, 0, 0, CAPREQ_OBCNFL);
-            if (pkg->cnfls == NULL) 
-                pkg->cnfls = capreq_arr_new(2);
-            n_array_push(pkg->cnfls, req);
-        }
-
-        if (strcmp(pkg->name, "exim") == 0) {
-            struct capreq *req = capreq_new("wget", 0, 0, 0, 0, CAPREQ_REQ);
-           if (pkg->reqs == NULL) 
-                pkg->reqs = capreq_arr_new(2);
-
-            n_array_push(pkg->reqs, req);
-        }
-        
-        if (strcmp(pkg->name, "libxml") == 0) {
-            struct capreq *req = capreq_new("postfix", 0, 0, 0, 0, CAPREQ_OBCNFL);
-            if (pkg->cnfls == NULL) 
-                pkg->cnfls = capreq_arr_new(2);
-
-            n_array_push(pkg->cnfls, req);
-        }
-
-
-        if (strcmp(pkg->name, "wget") == 0) {
-            struct capreq *req = capreq_new("exim", 0, 0, 0, 0, CAPREQ_OBCNFL);
-            if (pkg->cnfls == NULL)
-                pkg->cnfls = capreq_arr_new(2);
-
-            n_array_push(pkg->cnfls, req);
-        }
-#endif
-
         if (i % 200 == 0) 
             msg(3, " %d..\n", i);
+        
         if (pkg->caps)
             for (j=0; j<n_array_size(pkg->caps); j++) {
                 struct capreq *cap = n_array_nth(pkg->caps, j);
@@ -357,6 +314,12 @@ int pkgset_index(struct pkgset *ps)
         
         pkgfl2fidx(pkg, &ps->file_idx);
     }
+
+#if 0    
+    capreq_idx_stats("cap", &ps->cap_idx);
+    capreq_idx_stats("req", &ps->req_idx);
+    capreq_idx_stats("obs", &ps->obs_idx);
+#endif    
     
     file_index_setup(&ps->file_idx);
     msg(3, " ..%d done\n", i);
@@ -364,23 +327,26 @@ int pkgset_index(struct pkgset *ps)
     return 0;
 }
 
-static void make_by_nvr(struct pkgset *ps) 
+tn_array *pkgset_get_packages_bynvr(const struct pkgset *ps) 
 {
-    if (ps->pkgs) {
-        int i;
-
-        ps->pkgs_bynvr = n_array_new(n_array_size(ps->pkgs),
-                                     (tn_fn_free)pkg_free,
-                                     (tn_fn_cmp)pkg_nvr_strcmp);
+    tn_array *pkgs;
+    register int i;
     
-        for (i=0; i < n_array_size(ps->pkgs); i++) {
-            struct pkg *pkg = n_array_nth(ps->pkgs, i);
-            n_array_push(ps->pkgs_bynvr, pkg_link(pkg));
-        }
+    if (ps->pkgs == NULL)
+        return NULL;
 
-        n_array_ctl(ps->pkgs_bynvr, TN_ARRAY_AUTOSORTED);
-        n_array_sort(ps->pkgs_bynvr);
+    
+    pkgs = n_array_new(n_array_size(ps->pkgs),
+                       (tn_fn_free)pkg_free, (tn_fn_cmp)pkg_nvr_strcmp);
+    
+    for (i=0; i < n_array_size(ps->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ps->pkgs, i);
+        n_array_push(pkgs, pkg_link(pkg));
     }
+
+    n_array_ctl(pkgs, TN_ARRAY_AUTOSORTED);
+    n_array_sort(pkgs);
+    return pkgs;
 }
 
 
@@ -390,13 +356,14 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     int strict;
     int v = verbose;
 
-    
-    strict = ps->flags & PSVERIFY_MERCY ? 0 : 1;
+
+    ps->flags |= flags;
+    strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
 
     n = n_array_size(ps->pkgs);
     n_array_sort(ps->pkgs);
     
-    if (flags & PSET_DO_UNIQ_PKGNAME) {
+    if (flags & PSET_UNIQ_PKGNAME) {
         //n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_srcpri);
         // <=  0.18.3 behaviour
         n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev_srcpri);
@@ -416,6 +383,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     }
         
     pkgset_index(ps);
+    
     mem_info(1, "MEM after index");
 
     
@@ -427,7 +395,8 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     
     file_index_find_conflicts(&ps->file_idx, strict);
     verbose = v;
-    
+
+    flags |= PSET_VERIFY_DEPS;
     pkgset_verify_deps(ps, strict, flags & PSET_VERIFY_DEPS);
     mem_info(1, "MEM after verify deps");
 
@@ -435,28 +404,50 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
         msgn(1, _("\nVerifying packages conflicts..."));
     pkgset_verify_conflicts(ps, strict, flags & PSET_VERIFY_CNFLS);
 
-    pkgset_order(ps, flags & PSET_VERIFY_ORDER);
-    mem_info(1, "MEM after order");
-
-    set_capreq_allocfn(n_malloc, n_free, NULL, NULL);
-    make_by_nvr(ps);
     
+    mem_info(1, "MEM after order");
+    pkgset_order(ps, flags & PSET_VERIFY_ORDER);
+    
+    
+    set_capreq_allocfn(n_malloc, n_free, NULL, NULL);
     return ps->nerrors == 0;
 }
 
 
-tn_array *pkgset_getpkgs(const struct pkgset *ps) 
+int pkgset_order(struct pkgset *ps, int verb) 
 {
-    int i;
-    tn_array *pkgs;
+    int nloops;
+                   
+    if (verb)
+        msgn(1, _("\nVerifying (pre)requirements..."));
+
+    if (ps->ordered_pkgs != NULL)
+        n_array_free(ps->ordered_pkgs);
+    ps->ordered_pkgs = NULL;
     
-    pkgs = n_array_new(n_array_size(ps->pkgs), NULL, (tn_fn_cmp)pkg_cmp_name);
-
-    for (i=0; i<n_array_size(ps->pkgs); i++) 
-        n_array_push(pkgs, n_array_nth(ps->pkgs, i));
-
-    n_array_sort(pkgs);
-    return pkgs;
+    nloops = packages_order(ps->pkgs, &ps->ordered_pkgs);
+    
+    if (nloops) {
+        ps->nerrors += nloops;
+		msgn(1, ngettext("%d prerequirement loop detected",
+						 "%d prerequirement loops detected",
+						 nloops), nloops);
+		
+    } else if (verb) {
+        msgn(1, _("No loops -- OK"));
+    }
+        	
+    
+    if (verb && verbose > 2) {
+        int i;
+            
+        msg(2, "Installation order:\n");
+        for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
+            struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
+            msg(2, "%d. %s\n", i, pkg->name);
+        }
+        msg(2, "\n");
+    }
+    
+    return 1;
 }
-
-

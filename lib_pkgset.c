@@ -30,6 +30,7 @@
 
 #include "pkgdir/source.h"
 #include "pkgset.h"
+#include "pkgmisc.h"
 #include "conf.h"
 #include "log.h"
 #include "misc.h"
@@ -40,17 +41,23 @@
 int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
 {
     struct pkgset *ps;
+    struct poldek_ts *ts;
+    unsigned ps_flags = 0;
 
-    n_assert(ctx->ps == NULL);
     
-    if ((ps = pkgset_new(ctx->ps_flags)) == NULL)
-        return 0;
+    n_assert(ctx->ps == NULL);
 
+    ts = ctx->ts;
+    
+    
+    if ((ps = pkgset_new()) == NULL)
+        return 0;
+        
     if (load_dbdepdirs) {
         if (rpmdb_get_depdirs(ctx->ts->rootdir, ps->depdirs) >= 0)
-            ps->flags |= PSDBDIRS_LOADED;
+            ps->flags |= PSET_DBDIRS_LOADED;
     }
-
+        
     if (!pkgset_load(ps, 0, ctx->sources)) {
         logn(LOGWARN, _("no packages loaded"));
         //pkgset_free(ps);
@@ -61,15 +68,27 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
     if (ps == NULL)
         return 0;
     
-    
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_HOLD))
         packages_score(ps->pkgs, ctx->ts->hold_patterns, PKG_HELD);
 
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE))
         packages_score(ps->pkgs, ctx->ts->ign_patterns, PKG_IGNORED);
-
+    
     ctx->pkgdirs = n_ref(ps->pkgdirs);
-    pkgset_setup(ps, ctx->ps_setup_flags);
+
+    if (ts->getop(ts, POLDEK_OP_UNIQN))
+        ps_flags |= PSET_UNIQ_PKGNAME;
+
+    if (ts->getop(ts, POLDEK_OP_VRFY_DEPS))
+        ps_flags |= PSET_VERIFY_DEPS;
+
+    if (ts->getop(ts, POLDEK_OP_VRFY_CNFLS))
+        ps_flags |= PSET_VERIFY_CNFLS;
+
+    if (ts->getop(ts, POLDEK_OP_VRFY_FILECNFLS))
+        ps_flags |= PSET_VERIFY_FILECNFLS;
+        
+    pkgset_setup(ps, ps_flags);
     
     if (ctx->ts->prifile) 
         packages_set_priorities(ps->pkgs, ctx->ts->prifile);
@@ -79,7 +98,7 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
 }
 
 
-tn_array *poldek_get_avpkgs(struct poldek_ctx *ctx)
+tn_array *poldek_get_avail_packages(struct poldek_ctx *ctx)
 {
     if (!poldek_load_sources(ctx))
         return NULL;
@@ -87,10 +106,10 @@ tn_array *poldek_get_avpkgs(struct poldek_ctx *ctx)
     return n_ref(ctx->ps->pkgs);
 }
 
-tn_array *poldek_get_avpkgs_bynvr(struct poldek_ctx *ctx) 
+tn_array *poldek_get_avail_packages_bynvr(struct poldek_ctx *ctx) 
 {
     if (!poldek_load_sources(ctx))
         return NULL;
 
-    return n_ref(ctx->ps->pkgs_bynvr);
+    return pkgset_get_packages_bynvr(ctx->ps);
 }

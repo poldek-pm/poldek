@@ -24,18 +24,12 @@ struct reqpkg {
     struct reqpkg *adds[0];     /* NULL terminated  */
 };
 
-struct reqpkg *reqpkg_new(struct pkg *pkg, uint8_t flags, int nadds);
-int reqpkg_cmp(struct reqpkg *p1, struct reqpkg *p2);
-
 /* depency package struct */
 #define  CNFLPKG_OB  (1 << 0)
 struct cnflpkg {
     struct pkg *pkg;
     int8_t     flags;
 };
-
-struct cnflpkg *cnflpkg_new(struct pkg *pkg, uint8_t flags);
-int cnflpkg_cmp(struct cnflpkg *p1, struct cnflpkg *p2);
 
 /*
   Find requirement looking into capabilities and file list.
@@ -50,10 +44,16 @@ int psreq_match_pkgs(const struct pkg *pkg, struct capreq *req, int strict,
                      struct pkg *suspkgs[], int npkgs,
                      struct pkg **matches, int *nmatched);
 
-
-
 int pkgset_verify_deps(struct pkgset *ps, int strict, int verb);
 int pkgset_verify_conflicts(struct pkgset *ps, int strict, int verb);
 
 tn_array *pspkg_obsoletedby(struct pkgset *ps, struct pkg *pkg, int bymarked);
+
+struct pkg_unreq {
+    struct pkg    *pkg;
+    uint8_t       mismatch;
+    char          req[0];
+};
+
+
 #endif /* POLDEK_PSREQ_H */

@@ -44,6 +44,7 @@ char *next_token(char **str, char delim, int *toklen);
 int is_rwxdir(const char *path);
 int is_dir(const char *path);
 int mk_dir(const char *path, const char *dn);
+int mk_dir_parents(const char *path, const char *dn);
 
 const char *abs_path(char *buf, int size, const char *path);
 

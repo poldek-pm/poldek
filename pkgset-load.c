@@ -110,6 +110,5 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         msgn(1, ngettext("%d package read",
                          "%d packages read", n), n);
     }
-    
     return n_array_size(ps->pkgs);
 }

@@ -5,24 +5,36 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
+enum poldek_ts_type {
+    POLDEK_TSt_INSTALL    = 1, 
+    POLDEK_TSt_UNINSTALL  = 2,
+    POLDEK_TSt_VERIFY     = 4,
+};
 
-#define POLDEK_TS_INSTALL     (1 << 0) /* rpm -i */
-#define POLDEK_TS_UNINSTALL   (1 << 1) /* rpm -e */
+enum poldek_ts_flag {
+    POLDEK_TS_DIST         = (1 << 0), 
+    POLDEK_TS_UPGRADE      = (1 << 1), 
+    POLDEK_TS_DOWNGRADE    = (1 << 2),
+    POLDEK_TS_REINSTALL    = (1 << 3),
 
-#define POLDEK_TS_UPGRADE     (1 << 2) /* rpm -U */
-#define POLDEK_TS_DOWNGRADE   (1 << 3) /* rpm -U --oldpackage */
-#define POLDEK_TS_REINSTALL   (1 << 4) /* rpm -U --replacefiles --replacepkgs */
-#define POLDEK_TS_DIST        (1 << 5) /* */
-#define POLDEK_TS_INSTALLDIST (1 << 6)
+    POLDEK_TS_UPGRADEDIST  = POLDEK_TS_UPGRADE | POLDEK_TS_DIST,
+    POLDEK_TS_INSTALLDIST  = POLDEK_TS_DIST,
+};
 
-enum poldek_tsopt {
+enum poldek_ts_opt {
     POLDEK_OP_NULL = 0,
-    POLDEK_OP_PS_UNIQN,     /* --uniqn */
+
+    POLDEK_OP_UNIQN = 5,          /* --uniqn */
+    POLDEK_OP_VRFY_DEPS,      /* -V */
+    POLDEK_OP_VRFY_CNFLS,     /* --verify */
+    POLDEK_OP_VRFY_FILECNFLS, /* --verify */
+    
     POLDEK_OP_VRFYMERCY,   /* --mercy */
     POLDEK_OP_PROMOTEPOCH, /* --promoteepoch */
+    
     POLDEK_OP_FOLLOW,      /* !--nofollow */
     POLDEK_OP_FRESHEN,     /* --freshen */
-    POLDEK_OP_GREEDY = 10,   /* --greedy */
+    POLDEK_OP_GREEDY,   /* --greedy */
     POLDEK_OP_OBSOLETES = POLDEK_OP_GREEDY,  /* the same */
     POLDEK_OP_AGGREEDY,
     POLDEK_OP_ALLOWDUPS, 
@@ -57,16 +69,17 @@ enum poldek_tsopt {
 struct poldek_ctx;
 struct arg_packages;
 #ifdef SWIG
-struct poldek_ts { int foo; };
+struct poldek_ts { int type; };
 #else
 struct poldek_ts {
-    int                foo;
+    int                type;
+    char               *typenam;
     struct poldek_ctx  *ctx;
     struct pkgdb       *db;
     tn_array  *pkgs;
     
     struct arg_packages  *aps;
-
+    tn_array             *aps_pkgs;
     char               *rpm_bin;       /* /usr/bin/rpm   */ 
     char               *sudo_bin;      /* /usr/bin/sudo  */
     char               *rootdir;       /* top level dir          */
@@ -97,12 +110,14 @@ void poldek_ts_free(struct poldek_ts *ts);
 int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx);
 void poldek_ts_destroy(struct poldek_ts *ts);
 
+int poldek_ts_type(struct poldek_ts *ts);
+int poldek_ts_set_type(struct poldek_ts *ts, int type, const char *typenam);
+
 void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag);
 void poldek_ts_clrf(struct poldek_ts *ts, uint32_t flag);
 uint32_t poldek_ts_issetf(struct poldek_ts *ts, uint32_t flag);
-#define poldek_ts_setfXX(ts, flag) (ts->flags |= (flag))
-#define poldek_ts_clrfXX(ts, flag) (ts->flags &= ~(flag))
-#define poldek_ts_issetfXX(ts, flag) (ts->flags & (flag))
+int poldek_ts_issetf_all(struct poldek_ts *ts, uint32_t flag);
+
 
 int poldek_ts_is_interactive_on(const struct poldek_ts *ts);
 

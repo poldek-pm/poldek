@@ -462,6 +462,36 @@ int mk_dir(const char *path, const char *dn)
     return 1;
 }
 
+
+int mk_dir_parents(const char *path, const char *dn) 
+{
+    const char **tl, **tl_save;
+    char dpath[PATH_MAX];
+    int n = 0, nerr = 0;
+
+    
+    tl = tl_save = n_str_tokl(dn, "/");
+    n = n_snprintf(dpath, sizeof(dpath), "%s", path);
+    while (*tl) {
+        const char *d = *tl;
+        tl++;
+        if (*d == '\0')
+            continue;
+        
+        n += n_snprintf(&dpath[n], sizeof(dpath) - n, "/%s", d);
+        if (!is_dir(dpath)) {
+            if (mkdir(dpath, 0755) != 0) {
+                logn(LOGERR, "%s: mkdir: %m", dpath);
+                nerr++;
+                break;
+            }
+        }
+    }
+    n_str_tokl_free(tl_save);
+    return nerr == 0;
+}
+
+
 int mklock(const char *dir) 
 {
     char path[PATH_MAX];

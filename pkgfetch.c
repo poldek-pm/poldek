@@ -39,7 +39,8 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
-#include "pkgset.h"
+#include "pkgmisc.h"
+#include "pkgdir/pkgdir.h"
 #include "misc.h"
 #include "rpm/rpm.h"
 
@@ -154,7 +155,8 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
     tn_hash   *urls_h = NULL;
     tn_hash   *pkgdir_labels_h = NULL;
 
-    
+
+    n_assert(destdir);
     urls_h = n_hash_new(21, (tn_fn_free)n_array_free);
     pkgdir_labels_h = n_hash_new(21, NULL);
     n_hash_ctl(urls_h, TN_HASH_NOCPKEY);

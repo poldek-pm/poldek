@@ -7,6 +7,7 @@
 
 #include <trurl/narray.h>
 #include <trurl/nstream.h>
+#include <trurl/nbuf.h>
 
 int pkgflmodule_init(void);
 void pkgflmodule_destroy(void);

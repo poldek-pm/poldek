@@ -94,9 +94,9 @@ void *file_index_add_dirname(struct file_index *fi, const char *dirname)
     static const char *last_dirname = NULL;
     
     tn_array *files;
-
+    DBGF("%s\n", dirname);
     if (last_files != NULL && strcmp(dirname, last_dirname) == 0) {
-        DBGMSG("HIT dirname = %s %s\n", dirname, last_dirname);
+        DBGF("HIT dirname = %s %s\n", dirname, last_dirname);
         files = last_files;
         
     } else {
@@ -105,7 +105,12 @@ void *file_index_add_dirname(struct file_index *fi, const char *dirname)
             files = n_array_new(4, NULL, fent_cmp);
             n_hash_insert(fi->dirs, dirname, files);
         }
-        
+#if ENABLE_TRACE        
+        if ((n_hash_size(fi->dirs) % 10) == 0) {
+            printf("dupa: ");
+            n_hash_stats(fi->dirs);
+        }
+#endif        
         last_files = files;
         last_dirname = dirname;
     }
