@@ -31,15 +31,15 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
 {
     struct source *src;
     struct stat st;
-    const char *path, *p;
+    const char *path, *p, *sep = ",;:";
     char *name, *q;
     int len;
 
     p = pathspec;
-    while (*p && !isspace(*p) && *p != ',' && *p != ';')
+    while (*p && !isspace(*p) && strchr(sep, *p) == NULL)
         p++;
 
-    if (*p == ',' || *p == ';' || isspace(*p)) {
+    if (*p && (isspace(*p) || strchr(sep, *p))) {
         path = p + 1;
         while (isspace(*path))
             path++;
