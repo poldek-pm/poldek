@@ -4,6 +4,9 @@
 
 #include "i18n.h"
 
+extern int rpmvercmp(const char * one, const char * two);
+
+
 int main(int argc, char *argv[])
 {
     int cmprc, is_test = 0;

@@ -201,18 +201,28 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
     rpmTransactionSet ts = NULL;
     rpmProblemSet probs = NULL;
 #endif
-    struct vfile *vf;
+    struct vfile *vf = NULL;
     int rc;
     Header h = NULL;
-
+    FD_t fdt = NULL;
     
     if (rootdir == NULL)
         rootdir = "/";
 
-    if ((vf = vfile_open(path, VFT_RPMIO, VFM_RO | VFM_STBRN)) == NULL)
+    if ((vf = vfile_open(path, VFT_IO, VFM_RO | VFM_STBRN)) == NULL)
         return 0;
     
-    if (!rpmhdr_loadfdt(vf->vf_fdt, &h, path)) {
+    fdt = fdDup(vf->vf_fd);
+    if (fdt == NULL || Ferror(fdt)) {
+        const char *err = "unknown error";
+        if (fdt)
+            err = Fstrerror(fdt);
+        
+        logn(LOGERR, "rpmio's fdDup failed: %s", err);
+        goto l_err;
+    }
+
+    if (!rpmhdr_loadfdt(fdt, &h, path)) {
         goto l_err;
         
     } else if (rpmhdr_issource(h)) {
@@ -229,7 +239,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
                                 (instflags & INSTALL_UPGRADE) != 0, NULL);
 #else
     ts = rpmtransCreateSet(db, rootdir);
-    rc = rpmtransAddPackage(ts, h, vf->vf_fdt, path, 
+    rc = rpmtransAddPackage(ts, h, fdt, path, 
                             (instflags & INSTALL_UPGRADE) != 0, NULL);
 #endif
     
@@ -336,7 +346,11 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
     return 1;
     
  l_err:
-    vfile_close(vf);
+    if (fdt) 
+        Fclose(fdt);
+    
+    if (vf)
+        vfile_close(vf);
 
     if (probs)
         freeProblems(probs);

@@ -274,7 +274,7 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
             real_destdir = path;
         }
         
-        if (!vfile_fetcha(real_destdir, urls))
+        if (!vf_fetcha(urls, real_destdir))
             nerr++;
         
         else {

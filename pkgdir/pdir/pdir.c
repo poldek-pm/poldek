@@ -836,7 +836,7 @@ static int is_uptodate(const char *path, const struct pdir_digest *pdg_local,
     unlink(mdtmpath);
     mdtmpath[n] = '\0';
 
-    if (!vfile_fetch(mdtmpath, mdpath)) {
+    if (!vf_fetch(mdpath, mdtmpath)) {
         rc = -1;
         goto l_end;
     }

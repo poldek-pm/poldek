@@ -44,7 +44,7 @@ const char poldek_BUG_MAILADDR[] = "<mis@pld.org.pl>";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
 const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
 "Copyright (C) 2000-2003 Pawel A. Gajda <mis@pld.org.pl>\n"
-"This program may be freely redistributed under the terms of the GNU GPL v2\n";
+"This program may be freely redistributed under the terms of the GNU GPL v2.\n";
 
 
 void (*poldek_assert_hook)(const char *expr, const char *file, int line) = NULL;
@@ -836,6 +836,28 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
     return rc;
 }
 
+static void poldek_vf_vlog_cb(int pri, const char *fmt, va_list ap)
+{
+    int logpri = 0;
+    
+    if (pri & VFILE_LOG_INFO)
+        logpri |= LOGINFO;
+    
+    else if (pri & VFILE_LOG_ERR)
+        logpri |= LOGERR;
+
+    if (pri & VFILE_LOG_TTY)
+        logpri |= LOGTTY;
+    
+    else {
+        //snprintf(logfmt, "vf: %s", fmt);
+        //fmt = logfmt;
+    }
+    
+    vlog(logpri, 0, fmt, ap);
+}
+
+
 int poldek_init(struct poldek_ctx *ctx, unsigned flags)
 {
 
@@ -874,19 +896,20 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     //vfile_msg_fn = log_msg;
     //vfile_msgtty_fn = log_tty;
     //vfile_err_fn = log_err;
-    
-    vfile_configure(VFILE_CONF_CACHEDIR, "/tmp");
+    vfile_configure(VFILE_CONF_LOGCB, poldek_vf_vlog_cb);
+    vfile_configure(VFILE_CONF_CACHEDIR, setup_cachedir(NULL));
 
     return 1;
 }
 
 int poldek_setup(struct poldek_ctx *ctx)
 {
-    char *path;
+    char *path = NULL;
     
     path = setup_cachedir(ctx->inst->cachedir);
     free(ctx->inst->cachedir);
     ctx->inst->cachedir = path;
+    vfile_configure(VFILE_CONF_CACHEDIR, path);
 
     if (!prepare_sources(ctx->sources))
         return 0;
