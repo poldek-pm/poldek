@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     printf("DO EXEC\n");
     vopen3_exec(&st, 0);
     //sleep (300);
-    printf("DO RUN %d %p\n", st.fd_in, st.stream_in);
+    printf("DO RUN %d\n", st.fd_in);
     if (write(st.fd_in, "dupa\n", 5) < 0) {
         fprintf(stderr, "write %d: %m\n", st.fd_in);
     }

@@ -40,11 +40,13 @@
 
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
-
+#define ENABLE_TRACE 0
 #include "i18n.h"
-#include "vopen3.h"
+#include "log.h"                /* for DBGF */
 
-#define P_OPEN_EXITED   (1 << 16) 
+#define VFILE_INTERNAL
+#include "vopen3.h"
+#include "vfile.h"
 
 void vopen3_init(struct vopen3_st *st, const char *cmd, char *const argv[]) 
 {
@@ -80,7 +82,14 @@ void vopen3_init_fn(struct vopen3_st *st, int (*pfunc)(void*), void *pfunc_arg)
     st->errmsg = NULL;
 }
 
+void vopen3_set_grabfn(struct vopen3_st *st, int (*func)(const char *, void*),
+                       void *arg)
+{
+    st->grabfunc = func;
+    st->grabfunc_arg = arg;
+}
 
+#if 0
 static void my_fclose(FILE **stream)
 {
     if (*stream) {
@@ -88,14 +97,15 @@ static void my_fclose(FILE **stream)
         *stream = NULL;
     }
 }
-
+#endif
 
 void vopen3_destroy(struct vopen3_st *st) 
 {
+#if 0    
     my_fclose(&st->stream_in);
     my_fclose(&st->stream_out);
     my_fclose(&st->stream_err);
-    
+#endif    
     if (st->cmd) {
         free(st->cmd);
         st->cmd = NULL;
@@ -125,7 +135,7 @@ static void p_dupnull(int fdno, unsigned p_open_flags)
             if ((p_open_flags & VOPEN3_SHARE_STDIN) == 0) {
                 int fd;
                 if ((fd = open("/dev/null", O_RDONLY)) < 0) {
-                    fprintf(stderr, "open /dev/null: %m\n");
+                    vf_logerr("open /dev/null: %m\n");
                     return;
                 }
                 dup2(fd, STDIN_FILENO);
@@ -149,7 +159,7 @@ static void st_seterr(struct vopen3_st *st, const char *fmt, ...)
     va_end(args);
 }
 
-
+#if 0
 static int check_cmd(struct vopen3_st *st, const char *cmd) 
 {
     if (access(cmd, R_OK | X_OK) != 0) {
@@ -158,6 +168,8 @@ static int check_cmd(struct vopen3_st *st, const char *cmd)
     }
     return 1;
 }
+#endif
+
 
 struct p_pipe {
     int in_fd; 
@@ -175,7 +187,7 @@ static int p_pipe_creat(struct vopen3_st *st, struct p_pipe *pi)
 
     pi->out_fd = pp[0];
     pi->in_fd  = pp[1];
-    printf("PIPE [->%d, %d->]\n", pi->in_fd, pi->out_fd);
+    DBGF("PIPE [->%d, %d->]\n", pi->in_fd, pi->out_fd);
     return 1;
 }
 
@@ -195,7 +207,7 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
     pid_t  pid;
     int    is_chain = 0;
     
-
+    
     if (vst->next)
         is_chain = 1;
     
@@ -204,8 +216,8 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
     
     while (st) {
         struct p_pipe out_pipe, in_pipe;
-        
-        n_assert(st->stream_out == NULL);
+
+        st->flags |= flags;     /* set the flags of every st in chain */
         
         if (!p_pipe_creat(st, &out_pipe))
             break;
@@ -227,12 +239,16 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
         } else if (pid == 0) {  /* child */
             int i;
             
-            printf("[%d] exec %s [->%d, %d->]\n", getpid(), 
-                   st->cmd, out_pipe.in_fd, in_pipe.out_fd);
+            DBGF("[%d] exec %s [->%d, %d->]\n", getpid(), 
+                 st->cmd, out_pipe.in_fd, in_pipe.out_fd);
 
             if (st->next != NULL) { /* not last one */
                 dup2(out_pipe.in_fd, STDOUT_FILENO);
                 dup2(out_pipe.in_fd, STDERR_FILENO);
+                
+            } else {
+                if (flags & VOPEN3_PIPESTDOUT)
+                    dup2(out_pipe.in_fd, STDOUT_FILENO);
             }
             
             p_pipe_close(&out_pipe);
@@ -245,7 +261,7 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
 
             if (st->cmd) {
                 if (execv(st->cmd, st->argv) < 0) {
-                    printf("execv %s: %m\n", st->cmd);
+                    vf_logerr("execv %s: %m\n", st->cmd);
                 }
                 exit(EXIT_FAILURE);
                 
@@ -265,11 +281,11 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
 
 
             if (st_prev == NULL) {
-                fprintf(stdout, "%s: fd_in %d\n", st->cmd, in_pipe.in_fd);
+                DBGF("%s: fd_in %d\n", st->cmd, in_pipe.in_fd);
                 st->fd_in = in_pipe.in_fd;
             }
-            printf("[%d] Pexec %s [->%d, %d->]\n", st->pid, 
-                   st->cmd, st->fd_in, st->fd_out);
+            DBGF("[%d] Pexec %s [->%d, %d->]\n", st->pid, 
+                 st->cmd, st->fd_in, st->fd_out);
         }
         
         st_prev = st;
@@ -280,7 +296,7 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
     //if (st->fd_in > 0)
     //    st->stream_in = fdopen(st->fd_in, "w");
     while (st) {
-        printf("EX %d %d, %d\n", st->pid, st->fd_in, st->fd_out);
+        DBGF("EX %d %d, %d\n", st->pid, st->fd_in, st->fd_out);
         //if (st->next == NULL && st->fd_out > 0)
         //    st->stream_out = fdopen(st->fd_out, "r");
         st = st->next;
@@ -304,10 +320,10 @@ int do_waitpid(struct vopen3_st *st, int woptions)
         free(st->errmsg);
     
     st->errmsg = NULL;
-    printf("do_waitpid %d\n", st->pid);
+    DBGF("do_waitpid %d\n", st->pid);
     
-    if ((pid = waitpid(st->pid, &status, woptions)) < 0) {
-        printf("waitpid %s: %m\n", st->cmd);
+    if ((pid = waitpid(st->pid, &status, woptions)) < 0 && errno != EINTR) {
+        vf_logerr("waitpid %s: %m\n", st->cmd);
         return 0;
     }
     
@@ -367,7 +383,7 @@ static int p_waitpid(struct vopen3_st *st, int woptions)
         tmp = tmp->next;
         n++;
     }
-    printf("p_waitpid (%d, %d)\n", n, nfinished);
+    DBGF("p_waitpid (%d, %d)\n", n, nfinished);
     
     while (n > nfinished) {
         tmp = st;
@@ -376,33 +392,37 @@ static int p_waitpid(struct vopen3_st *st, int woptions)
             if (tmp->pid != 0) {
                 do_waitpid(tmp, _woptions);
                 if (tmp->pid == 0) {
-                    printf("finished %s\n", tmp->cmd);
+                    DBGF("finished %s\n", tmp->cmd);
                     nfinished++;
                 }
             }
             tmp = tmp->next;
+
             if (n == nfinished)
                 goto l_end;
+
+            /* only one remains runnig */
+            if (n > 1 && (_woptions & WNOHANG) && n - nfinished == 1) 
+                _woptions = woptions;
         }
         
         if (woptions & WNOHANG)
             goto l_end;
-        
-        sleep(1);
+
+        usleep(1000);
     }
 
  l_end:
-    printf("END p_waitpid (%d, %d)\n", n, nfinished);
+    DBGF("END p_waitpid (%d, %d)\n", n, nfinished);
     return n == nfinished;
 }
-
-        
 
 int vopen3_wait(struct vopen3_st *st) 
 {
     return p_waitpid(st, WNOHANG);
 }
 
+/* it's busy wait... TODO! */
 int vopen3_close(struct vopen3_st *st) 
 {
     p_waitpid(st, 0);
@@ -427,13 +447,16 @@ int vopen3_chain(struct vopen3_st *st1, struct vopen3_st *st2)
 void vopen3_process(struct vopen3_st *st, int verbose_level) 
 {
     struct vopen3_st *head_st = st;
-    int endl = 1, yes = 1;
+    int yes = 1;
 
     
     while (st->next) /* get the last proccess from chain */
         st = st->next;
+
+    if ((st->flags & VOPEN3_PIPESTDOUT) == 0)
+        return;
     
-    printf("last[%d] = %s, %d\n", st->pid, st->cmd, st->fd_out);
+    DBGF("last[%d] = %s, %d\n", st->pid, st->cmd, st->fd_out);
 
 
     ioctl(st->fd_out, FIONBIO, &yes);
@@ -448,7 +471,7 @@ void vopen3_process(struct vopen3_st *st, int verbose_level)
         if ((rc = select(st->fd_out + 1, &fdset, NULL, NULL, &to)) < 0) {
             if (errno == EAGAIN || errno == EINTR)
                 continue;
-            printf("BREAK0 (%d) %d: %m\n", rc, st->fd_out);
+            DBGF("BREAK0 (%d) %d: %m\n", rc, st->fd_out);
             break;
             
         } else if (rc == 0) {
@@ -461,34 +484,39 @@ void vopen3_process(struct vopen3_st *st, int verbose_level)
             int   n, i;
 
             if ((n = read(st->fd_out, buf, sizeof(buf) - 1)) <= 0) {
-                printf("BREAK %d %d: %m\n", st->fd_out, n);
+                DBGF("BREAK %d %d: %m\n", st->fd_out, n);
                 break;
             }
             
             
             buf[n] = '\0';
 
-            if (st->nread == 0)
+            if (st->nread == 0 && st->grabfunc == NULL)
                 printf("out: [ ");
 
             st->nread += n;
 
-            for (i=0; i < n; i++) {
-                int c = buf[i];
+            if (st->grabfunc) {
+                st->grabfunc(buf, st->grabfunc_arg);
                 
-                if (c == '\r')
-                    continue;
-                
-                if (c == '\n') {
-                    printf(" ]\n");
-                    printf("out: [ ");
-                    continue;
+            } else {
+                for (i=0; i < n; i++) {
+                    int c = buf[i];
+                    
+                    if (c == '\r')
+                        continue;
+                    
+                    if (c == '\n') {
+                        printf(" ]\n");
+                        printf("out: [ ");
+                        continue;
+                    }
+                    printf("%c", c);
                 }
-                printf("%c", c);
             }
         }
     }
-    printf("END %d\n", vopen3_st_isrunning(head_st));
+    DBGF("END %d\n", vopen3_st_isrunning(head_st));
     return;
 }
 

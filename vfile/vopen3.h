@@ -20,13 +20,8 @@
 #define VOPEN3_STDOUTERR    (1 << 6) /* merge stdout && stderr */
 
 struct vopen3_st {
-    FILE    *stream_in;
     int     fd_in;
-
-    FILE    *stream_out;
     int     fd_out;
-
-    FILE    *stream_err;
     int     fd_err;
 
     int     flags;
@@ -36,18 +31,25 @@ struct vopen3_st {
     char    *cmd;
     char    **argv;
     
-    int     (*pfunc)(void*);
+    int     (*pfunc)(void*);    /* process function */
     void    *pfunc_arg;
+
+    int     (*grabfunc)(const char *, void*); /* grab output fn */
+    void    *grabfunc_arg;
 
     int     ec;                 /* exit code */
     char    *errmsg;
     int     nread;
     struct  vopen3_st *next;
 };
-
 void vopen3_init(struct vopen3_st *st, const char *cmd, char *const argv[]);
 void vopen3_init_fn(struct vopen3_st *st, int (*pfunc)(void*), void *pfunc_arg);
+void vopen3_set_grabfn(struct vopen3_st *st, int (*func)(const char *, void*),
+                       void *arg);
 void vopen3_destroy(struct vopen3_st *st);
+
+int vopen3_st_infd(struct vopen3_st *st);
+int vopen3_st_outfd(struct vopen3_st *st);
 
 
 int vopen3_exec(struct vopen3_st *st, unsigned flags);
