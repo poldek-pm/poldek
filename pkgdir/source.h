@@ -34,8 +34,11 @@ struct source {
 };
 
 struct source *source_malloc(void);
-struct source *source_new(const char *type, const char *pathspec,
-                          const char *pkg_prefix);
+
+struct source *source_new(const char *name, const char *type,
+                          const char *path, const char *pkg_prefix);
+struct source *source_new_pathspec(const char *type, const char *pathspec,
+                                   const char *pkg_prefix);
 
 void source_free(struct source *src);
 struct source *source_link(struct source *src);

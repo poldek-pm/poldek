@@ -321,16 +321,72 @@ void setup_langs(struct source *src)
 }
 
 
-struct source *source_new(const char *type, const char *pathspec,
-                          const char *pkg_prefix)
+struct source *source_new(const char *name, const char *type,
+                          const char *path, const char *pkg_prefix)
 {
     struct source   *src;
     struct stat     st;
-    const char      *path, *p;
-    char            *name, *q, *spec_type;
-    int             len;
     char            clpath[PATH_MAX], clprefix[PATH_MAX];
     int             n;
+
+    n_assert(name || path);
+    
+    if (path) {
+        if ((n = vf_cleanpath(clpath, sizeof(clpath), path)) == 0 ||
+            n == sizeof(clpath))
+            return NULL;
+    
+        if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
+            if (clpath[n - 1] != '/')
+                clpath[n++] = '/';
+    
+        } else {
+            int l = strlen(path);
+            if (clpath[n - 1] != '/' && path[l - 1] == '/')
+                clpath[n++] = '/';
+        }
+        clpath[n] = '\0';
+        
+    }
+
+    if (pkg_prefix) {
+        n_assert(path);
+        if ((n = vf_cleanpath(clprefix, sizeof(clprefix), pkg_prefix)) == 0 ||
+            n == sizeof(clprefix))
+            return NULL;
+    }
+    
+    src = source_malloc();
+    if (name)
+        src->flags |= PKGSOURCE_NAMED;
+    else
+        name = "-";
+    
+    src->name = n_strdup(name);
+    if (type) {
+        src->type = n_strdup(type);
+        src->flags |= PKGSOURCE_TYPE;
+        
+    } else {
+        src->type = n_strdup(pkgdir_DEFAULT_TYPE);
+    }
+    
+    if (path)
+        src->path = n_strdup(clpath);
+    
+    if (pkg_prefix)
+        src->pkg_prefix = n_strdup(clprefix);
+    
+    return src;
+}
+
+struct source *source_new_pathspec(const char *type, const char *pathspec,
+                                   const char *pkg_prefix)
+{
+    struct source   *src;
+    const char      *path, *p;
+    char            *name, *q, *spec_type, *opts = NULL;
+    int             len;
     unsigned        flags = 0;
 
     
@@ -361,49 +417,24 @@ struct source *source_new(const char *type, const char *pathspec,
         if ((q = strrchr(name, ']')))
             *q = '\0';
         
+        if ((q = strchr(name, ','))) {
+            *q = '\0';
+            opts = ++q;
+        }
+
         if (*name == '\0')
-            name = "-";
-        else
-            flags = PKGSOURCE_NAMED;
+            name = NULL;
     }
 
-
-    if ((n = vf_cleanpath(clpath, sizeof(clpath), path)) == 0 ||
-        n == sizeof(clpath))
-        return NULL;
+    src = source_new(name, type ? type : spec_type, path, pkg_prefix);
+    src->flags |= flags;
+    if (spec_type != NULL)
+        free(spec_type);
     
-    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
-        if (clpath[n - 1] != '/')
-            clpath[n++] = '/';
-    
-    } else {
-        int l = strlen(path);
-        if (clpath[n - 1] != '/' && path[l - 1] == '/')
-            clpath[n++] = '/';
-    }
-    clpath[n] = '\0';
-
-    if (pkg_prefix) {
-        if ((n = vf_cleanpath(clprefix, sizeof(clprefix), pkg_prefix)) == 0 ||
-            n == sizeof(clprefix))
-            return NULL;
-    }
-    
-    src = source_malloc();
-    src->path = n_strdup(clpath);
-    if (pkg_prefix)
-        src->pkg_prefix = n_strdup(clprefix);
-    else
-        src->pkg_prefix = NULL;
-
-    
-    if ((q = strchr(name, ','))) {
+    if (opts) {
         const char **tl, **t;
-        
-        *q++ = '\0';
-        src->name = name;       /* temporary */
-        
-        tl = t = n_str_tokl(q, ",");
+
+        tl = t = n_str_tokl(opts, ",");
         n_assert(tl);
 
         while (*t) {
@@ -435,23 +466,6 @@ struct source *source_new(const char *type, const char *pathspec,
         }
         n_str_tokl_free(tl);
     }
-
-    
-    if (type != NULL)
-        src->type = n_strdup(type);
-
-    else if (spec_type != NULL && src->type == NULL) 
-        src->type = n_strdup(spec_type);
-
-    if (spec_type != NULL)
-        free(spec_type);
-
-    src->name = n_strdup(name);
-    src->flags |= flags;
-    if (src->type)
-        src->flags |= PKGSOURCE_TYPE;
-    else
-        src->type = n_strdup(pkgdir_DEFAULT_TYPE);
 
     setup_langs(src);
     return src;

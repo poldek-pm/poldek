@@ -39,8 +39,10 @@
 #include "poldek_term.h"
 
 /* _iflags */
-#define POLDEKCTX_SETUP_DONE      (1 << 0)
-#define POLDEKCTX_SOURCES_LOADED  (1 << 1)
+#define SOURCES_SETUPDONE   (1 << 1)
+#define CACHEDIR_SETUPDONE  (1 << 2)
+#define SOURCES_LOADED      (1 << 3)
+#define SETUP_DONE    (SOURCES_SETUPDONE | CACHEDIR_SETUPDONE)
 
 const char poldek_BUG_MAILADDR[] = "<mis@pld.org.pl>";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
@@ -62,12 +64,12 @@ static int get_conf_sources(tn_array *sources, tn_array *srcs_named,
                             tn_hash *htcnf, tn_array *htcnf_sources);
 
 
-static inline void ctx_vrfy_is_setup_done(struct poldek_ctx *ctx) 
+static inline void check_if_setup_done(struct poldek_ctx *ctx) 
 {
-    if (ctx->_iflags & POLDEKCTX_SETUP_DONE)
+    if ((ctx->_iflags & SETUP_DONE) == SETUP_DONE)
         return;
 
-    logn(LOGERR | LOGDIE, "poldek_setup() wasn't called...");
+    logn(LOGERR | LOGDIE, "poldek_setup() call is a must...");
 }
 
 
@@ -233,7 +235,7 @@ struct source *source_new_htcnf(const tn_hash *htcnf, int no)
     
     vs = poldek_conf_get(htcnf, "prefix", NULL);
     
-    return source_new(NULL, spec, vs);
+    return source_new_pathspec(NULL, spec, vs);
 }
     
 static 
@@ -255,7 +257,7 @@ int get_conf_sources(tn_array *sources, tn_array *srcs_named,
 
     if ((list = poldek_conf_get_multi(htcnf, "source"))) {
         for (i=0; i < n_array_size(list); i++) {
-            src = source_new(NULL, n_array_nth(list, i), NULL);
+            src = source_new_pathspec(NULL, n_array_nth(list, i), NULL);
             if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
         }
@@ -269,7 +271,8 @@ int get_conf_sources(tn_array *sources, tn_array *srcs_named,
         snprintf(opt, sizeof(opt), "source%d", i);
         if ((src_val = poldek_conf_get(htcnf, opt, NULL))) {
             snprintf(opt, sizeof(opt), "prefix%d", i);
-            src = source_new(NULL, src_val, poldek_conf_get(htcnf, opt, NULL));
+            src = source_new_pathspec(NULL, src_val,
+                                      poldek_conf_get(htcnf, opt, NULL));
             
             if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
@@ -503,7 +506,9 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     char      *v;
     tn_array  *list;
 
-
+    if (ctx->_iflags & SETUP_DONE)
+        logn(LOGERR | LOGDIE, "load_config() called after setup()");
+    
     if (path != NULL)
         poldek_cnf = poldek_ldconf(path, 0);
     else 
@@ -818,16 +823,23 @@ int poldek_setup_cachedir(struct poldek_ctx *ctx)
 {
     char *path = NULL;
     
+    if (ctx->_iflags & CACHEDIR_SETUPDONE)
+        return 1;
+
     path = setup_cachedir(ctx->ts->cachedir);
     free(ctx->ts->cachedir);
     ctx->ts->cachedir = path;
     vfile_configure(VFILE_CONF_CACHEDIR, path);
+    ctx->_iflags |= CACHEDIR_SETUPDONE;
     return 1;
 }
 
 int poldek_setup_sources(struct poldek_ctx *ctx)
 {
     int i;
+
+    if (ctx->_iflags & SOURCES_SETUPDONE)
+        return 1;
         
     if (!prepare_sources(ctx->sources))
         return 0;
@@ -836,7 +848,15 @@ int poldek_setup_sources(struct poldek_ctx *ctx)
         struct source *src = n_array_nth(ctx->sources, i);
         source_set_default_type(src);
     }
+    
+    ctx->_iflags |= SOURCES_SETUPDONE;
+    return 1;
+}
 
+int poldek_setup(struct poldek_ctx *ctx) 
+{
+    poldek_setup_cachedir(ctx);
+    poldek_setup_sources(ctx);
     return 1;
 }
 
@@ -847,13 +867,15 @@ extern int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepd
 int poldek_load_sources(struct poldek_ctx *ctx)
 {
     int rc;
+
+    check_if_setup_done(ctx);
     
-    if (ctx->_iflags & POLDEKCTX_SOURCES_LOADED)
+    if (ctx->_iflags & SOURCES_LOADED)
         return 1;
     
     destroy_modules();
     init_modules();
     rc = poldek_load_sources__internal(ctx, 1);
-    ctx->_iflags |= POLDEKCTX_SOURCES_LOADED;
+    ctx->_iflags |= SOURCES_LOADED;
     return rc;
 }

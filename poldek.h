@@ -70,10 +70,11 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...);
 
 int poldek_load_config(struct poldek_ctx *ctx, const char *path);
 
+/* call each setup_*() OR setup() */
 int poldek_setup_cachedir(struct poldek_ctx *ctx);
 int poldek_setup_sources(struct poldek_ctx *ctx);
 
-int poldek_load_sources(struct poldek_ctx *ctx);
+int poldek_setup(struct poldek_ctx *ctx);
 
 
 int poldek_split(const struct poldek_ctx *ctx, unsigned size,
