@@ -233,12 +233,13 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
         n == sizeof(clpath))
         return NULL;
     
-    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
-        clpath[n++] = '/';
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
+        if (clpath[n - 1] != '/')
+            clpath[n++] = '/';
     
-    else {
+    } else {
         int l = strlen(path);
-        if (path[l - 1] == '/')
+        if (clpath[n - 1] != '/' && path[l - 1] == '/')
             clpath[n++] = '/';
     }
     clpath[n] = '\0';

@@ -159,7 +159,8 @@ int vf_cleanpath(char *buf, int size, const char *path)
 
     p = path;
     startsl = (*path == '/');
-    
+    *buf = '\0';
+        
     if (vf_url_type(path) != VFURL_PATH) {
         if ((p = strstr(path, "://")) != NULL)
             p += 2;             /* not 3 -> '/%s' below */
@@ -193,8 +194,12 @@ int vf_cleanpath(char *buf, int size, const char *path)
         tl++;
         i++;
     }
-    //printf("%s ==> %s\n", path, buf);
-    n_str_tokl_free(tl_save);
     
+    if (n == 0 && i == 1)       /* /[/...] */
+        n += n_snprintf(&buf[n], size - n, "/");
+    
+    //printf("%d, %s ==> %s\n", i, path, buf);
+    n_str_tokl_free(tl_save);
+        
     return n;
 }
