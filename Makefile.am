@@ -33,15 +33,27 @@ libpoldek_a_SOURCES = \
 	  usrset.c usrset.h		\
 	  install.c install.h	    	\
 	  conf.c conf.h	    		\
-	  shell.c			\
 	  h2n.h
 
-bin_PROGRAMS   = poldek
-poldek_SOURCES = main.c
-poldek_LDADD   = -Ltrurlib -L. -lpoldek -Lvfile -lvfile
-INCLUDES       = -Itrurlib
+iclientSRCS = shell.c
 
-EXTRA_DIST = poldek.1 poldek.pod Makefile.extra *sample* VERSION poldek.spec
+if ENABLE_INTERACTIVE_CLIENT
+ICSRCS = $(iclientSRCS)
+else
+ICSRCS =
+endif
+
+bin_PROGRAMS        = poldek
+poldek_SOURCES      = main.c $(ICSRCS)
+poldek_LDADD        = -Ltrurlib -L. -lpoldek -Lvfile -lvfile
+poldek_DEPENDENCIES = vfile/libvfile.a libpoldek.a
+INCLUDES            = -Itrurlib
+
+
+EXTRA_DIST = $(iclientSRCS) \
+	     poldek.1 poldek.pod \
+	     Makefile.extra *sample* \
+	     VERSION poldek.spec
 
 man_MANS = poldek.1
 
