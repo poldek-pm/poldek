@@ -43,6 +43,7 @@ static int desc(struct cmdarg *cmdarg);
 #define OPT_DESC_CNFLS        (1 << 4)
 #define OPT_DESC_DESCR        (1 << 5)
 #define OPT_DESC_FL           (1 << 6)
+#define OPT_DESC_FL_LONGFMT   (1 << 10)
 #define OPT_DESC_ALL          (OPT_DESC_CAPS | OPT_DESC_REQS |          \
                                OPT_DESC_REQPKGS | OPT_DESC_REVREQPKGS | \
                                OPT_DESC_CNFLS |                         \
@@ -75,7 +76,8 @@ static struct argp_option options[] = {
     
     { "descr", 'd', 0, 0, N_("Show description (the default)"), 1},
     
-    { "files", 'f', 0, 0, N_("Show package files"), 1},
+    { "files", 'f', 0, 0,
+      N_("Show package files (doubled gives long listing format)"), 1},
     { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},
     {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
     { 0, 0, 0, 0, 0, 0 },
@@ -130,7 +132,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 'f':
         case 'l':
-            cmdarg->flags |= OPT_DESC_FL;
+            if (cmdarg->flags & OPT_DESC_FL)
+                cmdarg->flags |= OPT_DESC_FL_LONGFMT;
+            else
+                cmdarg->flags |= OPT_DESC_FL;
             break;
             
         case 'd':
@@ -472,21 +477,55 @@ static void show_cnfls(struct pkg *pkg)
 }
 
 
-static void show_files(struct pkg *pkg) 
+static void list_files_long(tn_array *fl)
 {
-    tn_array *fl;
-    int i, j, ncol = 0;
-    int term_width;
-    void *flmark;
-    
-    if ((fl = pkg_info_files(pkg)) == NULL || n_array_size(fl) == 0)
-        return;
+    int i, j;
 
-    flmark = pkgflmodule_allocator_push_mark();
-    term_width = term_get_width() - RMARGIN;
-    
-    printf_c(PRCOLOR_CYAN, "Files:\n");
-    
+    printf_c(PRCOLOR_YELLOW, "%6s%10s\t%s\n", _("mode"), _("size"), _("name"));
+    for (i=0; i < n_array_size(fl); i++) {
+        struct pkgfl_ent    *flent;
+        char                tmpbuf[PATH_MAX];
+        
+        
+        flent = n_array_nth(fl, i);
+        
+        for (j=0; j < flent->items; j++) {
+            struct flfile *f = flent->files[j];
+            char buf[1024], *slash = "";
+            int n;
+            
+                
+            if (S_ISDIR(f->mode)) {
+                struct pkgfl_ent tmpent;
+
+                if (*flent->dirname != '/')
+                    slash = "/";
+                snprintf(tmpbuf, sizeof(tmpbuf), "%s/%s", flent->dirname,
+                         f->basename);
+                tmpent.dirname = tmpbuf;
+                //if (n_array_bsearch(fl, &tmpent))
+                //    continue;
+            }
+            
+            n = snprintf(buf, sizeof(buf), "%s%s%s%s%s",
+                         *flent->dirname == '/' ? "":"/",
+                         flent->dirname,
+                         *flent->dirname == '/' ? "":"/",
+                         f->basename, slash);
+            
+            if (S_ISLNK(f->mode)) 
+                n += snprintf(&buf[n], sizeof(buf) - n, " -> %s",
+                              f->basename + strlen(f->basename) + 1);
+            printf("%6o%10d\t%s\n", f->mode, f->size, buf);
+        }
+    }
+}
+
+
+static void list_files(tn_array *fl, int term_width) 
+{
+    int i, j, ncol = 0;
+
     for (i=0; i<n_array_size(fl); i++) {
         struct pkgfl_ent    *flent;
         char                tmpbuf[PATH_MAX];
@@ -537,6 +576,25 @@ static void show_files(struct pkg *pkg)
         if (dn_printed)
             printf("\n");
     }
+}
+
+
+static void show_files(struct pkg *pkg, int longfmt) 
+{
+    tn_array *fl;
+    int term_width;
+    void *flmark;
+    
+    if ((fl = pkg_info_files(pkg)) == NULL || n_array_size(fl) == 0)
+        return;
+
+    flmark = pkgflmodule_allocator_push_mark();
+    term_width = term_get_width() - RMARGIN;
+    
+    if (longfmt)
+        list_files_long(fl);
+    else
+        list_files(fl, term_width);
     
     n_array_free(fl);
     pkgflmodule_allocator_pop_mark(flmark);
@@ -711,9 +769,12 @@ static int desc(struct cmdarg *cmdarg)
         else 
             show_pkg(shpkg->pkg, cmdarg->flags);
 
-        if (cmdarg->flags & OPT_DESC_FL)
-            show_files(shpkg->pkg);
-
+        if (cmdarg->flags & OPT_DESC_FL) {
+            if (n_array_size(shpkgs) > 1)
+                printf_c(PRCOLOR_CYAN, "Content:\n");
+            show_files(shpkg->pkg, cmdarg->flags & OPT_DESC_FL_LONGFMT);
+        }
+        
         if (shSIGINT) 
             goto l_end;
     }
