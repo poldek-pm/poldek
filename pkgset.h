@@ -2,14 +2,45 @@
 #ifndef  POLDEK_PKGSET_H
 #define  POLDEK_PKGSET_H
 
+#include <obstack.h>
+#include <trurl/narray.h>
+
+
 #include "pkg.h"
+#include "pkgdir.h"
 #include "pkgdb.h"
 #include "usrset.h"
+
+#include "fileindex.h"
+#include "capreqidx.h"
+
 
 int pkgsetmodule_init(void);
 void pkgsetmodule_destroy(void);
 
-struct pkgset;
+
+#define _PKGSET_INDEXES_INIT      (1 << 16) /* internal flag  */
+
+struct pkgset {
+    tn_array           *pkgs;           /*  pkg* []    */
+    tn_array           *ordered_pkgs;   /*  pkg* []    */
+    unsigned           flags;         
+
+    tn_array           *pkgdirs;        /*  pkgdir* [] */
+ 
+    tn_array           *depdirs;        /*  char* []   */
+    int                nerrors;
+    
+    tn_array           *rpmcaps;        /*  capreq* [] */
+    
+    struct capreq_idx  cap_idx;    /* 'name'  => *pkg[]  */
+    struct capreq_idx  req_idx;    /*  -"-               */
+    struct capreq_idx  obs_idx;    /*  -"-               */     
+    struct file_index  file_idx;   /* 'file'  => *pkg[]  */
+};
+
+int pkgset_order(struct pkgset *ps);
+
 
 #define INSTS_JUSTFETCH    (1 << 0)
 #define INSTS_JUSTPRINT    (1 << 1)
@@ -36,6 +67,7 @@ struct inst_s {
 
 void inst_s_init(struct inst_s *inst);
 
+
 /* if set then:
  * - requirements matched even if requirement has version
  *   while capability hasn't (RPM style)
@@ -54,33 +86,7 @@ void inst_s_init(struct inst_s *inst);
 struct pkgset *pkgset_new(unsigned psoptflags);
 void pkgset_free(struct pkgset *ps);
 
-/* ldmethod  */
-#define PKGSET_LD_DIR      1    /* scan directory          */
-#define PKGSET_LD_HDRFILE  2    /* read rpmhdr (toc)file   */
-#define PKGSET_LD_TXTFILE  3    /* read Packages file      */
-
-
-#define PKGSET_IDX_LDFULLFLIST  (1 << 0) /* load non dep files too */
-#define PKGSET_IDX_LDSKIPBASTS  (1 << 1) /* skip dependencies added by poldek */
-#define PKGSET_IDX_LDDESC       (1 << 2) /* load user level info */
-
-/* for mkidx */
-#define PKGSET_IDX_LDRAW        (PKGSET_IDX_LDFULLFLIST | \
-                                 PKGSET_IDX_LDSKIPBASTS | \
-                                 PKGSET_IDX_LDDESC)
-
-
-/* for verification */
-#define PKGSET_IDX_LDVERIFY     (PKGSET_IDX_LDFULLFLIST | \
-                                 PKGSET_IDX_LDSKIPBASTS)
-
-int pkgset_load(struct pkgset *ps, int ldmethod, int ldflags,
-                void *path, const char *prefix);
-
 int pkgset_setup(struct pkgset *ps);
-
-int pkgset_create_txtidx(struct pkgset *ps, const char *pathname, int nodesc);
-int pkgset_create_rpmidx(const char *dirpath, const char *pathname);
 
 /* returns sorted list of packages, free it by n_array_free() */
 tn_array *pkgset_getpkgs(const struct pkgset *ps);
@@ -97,15 +103,15 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 #define PS_MARK_UNMARK_DEPS (1 << 1)
 void pkgset_unmark(struct pkgset *ps, unsigned markflags);
 
-int pkgset_isremote(struct pkgset *ps);
-int pkgset_fetch_pkgs(struct pkgset *ps, const char *destdir, tn_array *pkgs);
+int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs);
 
 int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst);
 int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst);
 int pkgset_install(struct pkgset *ps, struct inst_s *inst);
 
 
-int pkgset_update_txtidx(const char *pathname);
+
+#include "pkgset-load.h"
 
 
 #endif /* POLDEK_PKGSET_H */

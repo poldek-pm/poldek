@@ -14,7 +14,6 @@
 #include <trurl/nhash.h>
 
 #include "pkg.h"
-#include "pkgset-def.h"
 
 #define REQPKG_PREREQ     (1 << 0)
 #define REQPKG_PREREQ_UN  (1 << 1)

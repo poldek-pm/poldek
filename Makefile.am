@@ -20,14 +20,12 @@ libpoldek_a_SOURCES = \
 	  fileindex.c fileindex.h	\
 	  capreqidx.c capreqidx.h	\
 	  capreq.c capreq.h		\
+	  pkgdir.c pkgdir.h		\
+	  pkgset-load.c pkgset-load.h	\
 	  pkgset.c pkgset.h		\
-	  pkgset-def.h			\
 	  pkgset-req.c pkgset-req.h	\
 	  pkgset-order.c    		\
-	  pkgset-load.c pkgset-load.h	\
 	  pkgset-install.c		\
-	  pkgset-rpmidx.c		\
-	  pkgset-txtidx.c		\
 	  rpm.c rpm.h 		        \
 	  rpmhdr.c rpmhdr.h		\
 	  pkgdb.c pkgdb.h		\
@@ -60,6 +58,12 @@ EXTRA_DIST = $(SHELL_SRCS) \
 	     poldek.spec
 
 man_MANS = poldek.1
+
+
+MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
+			config.h.in configure Makefile.in config.h \
+			config.sub config.guess aclocal.m4 \
+			libtool ltconfig ltmain.sh stamp-h* *.1
 
 poldek.1: poldek.pod
 	$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@

@@ -148,7 +148,7 @@ tn_array *capreq_idx_find_depdirs(struct capreq_idx *reqidx)
 {
     tn_array *dirs, *depdirs = NULL;
     char *dir;
-    int i, dirlen;
+     int i, dirlen;
     
     
     dirs = n_array_new(16, NULL, (tn_fn_cmp)strcmp);

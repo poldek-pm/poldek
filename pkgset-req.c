@@ -23,7 +23,6 @@
 
 #include "log.h"
 #include "pkg.h"
-#include "pkgset-def.h"
 #include "pkgset.h"
 #include "misc.h"
 #include "usrset.h"

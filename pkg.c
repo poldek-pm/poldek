@@ -28,6 +28,7 @@
 #include "capreq.h"
 #include "pkg.h"
 #include "h2n.h"
+#include "pkgdir.h"
 
 static void *(*pkg_alloc_fn)(size_t) = malloc;
 static void (*pkg_free_fn)(void*) = free;
@@ -127,7 +128,7 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     pkg->revreqpkgs = NULL;
     pkg->cnflpkgs = NULL;
     pkg->other_files_offs = 0;
-    pkg->pkg_stream = NULL;
+    pkg->pkgdir = NULL;
     pkg->pkg_pkguinf_offs = 0;
 
     pkg->_refcnt = 0;
@@ -863,8 +864,8 @@ struct pkguinf *pkg_info(const struct pkg *pkg)
     if (pkg_has_ldpkguinf(pkg)) 
         pkgu = pkguinf_link(pkg->pkg_pkguinf);
     
-    else if (pkg->pkg_stream)
-        pkgu = pkguinf_restore(pkg->pkg_stream, pkg->pkg_pkguinf_offs);
+    else if (pkg->pkgdir)
+        pkgu = pkguinf_restore(pkg->pkgdir->vf->vf_stream, pkg->pkg_pkguinf_offs);
     
     if (pkgu)
         pkgu = pkguinf_touser(pkgu);
@@ -920,6 +921,24 @@ char *pkg_filename_s(const struct pkg *pkg)
     return pkg_filename(pkg, buf, sizeof(buf));
 }
 
+char *pkg_path(const struct pkg *pkg, char *buf, size_t size) 
+{
+    int n = 0;
+    
+    if (pkg->pkgdir->path) 
+        n = snprintf(buf, size, "%s/", pkg->pkgdir->path);
+
+    return pkg_filename(pkg, buf + n, size - n);
+}
+
+
+char *pkg_path_s(const struct pkg *pkg) 
+{
+    static char buf[PATH_MAX];
+    return pkg_path(pkg, buf, sizeof(buf));
+}
+
+
 int pkg_printf(const struct pkg *pkg, const char *str) 
 {
     return printf("%s-%s-%s%s", pkg->name, pkg->ver, pkg->rel,
@@ -953,4 +972,15 @@ char *pkg_snprintf_s1(const struct pkg *pkg)
     static char str[256];
     snprintf(str, sizeof(str), "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
     return str;
+}
+
+
+tn_array *pkgs_array_new(int size)
+{
+    tn_array *arr;
+    
+    arr = n_array_new(size, (tn_fn_free)pkg_free,
+                      (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
+    return arr;
 }

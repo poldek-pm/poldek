@@ -25,7 +25,6 @@
 
 #include "log.h"
 #include "pkg.h"
-#include "pkgset-def.h"
 #include "pkgset.h"
 #include "misc.h"
 #include "usrset.h"
@@ -132,23 +131,13 @@ void inst_s_init(struct inst_s *inst)
     inst->dumpfile = NULL;
     inst->rpmopts = NULL;
     inst->rpmacros = NULL;
-
+    
     inst->selpkg_fn = NULL;
     inst->ask_fn = NULL;
     inst->inf_fn = NULL;
 }
 
 
-__inline__
-static tn_array *pkgs_array_new(int size) 
-{
-    tn_array *arr;
-    
-    arr = n_array_new(size, (tn_fn_free)pkg_free,
-                      (tn_fn_cmp)pkg_cmp_name_evr_rev);
-    n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
-    return arr;
-}
 
 
 static tn_array *get_rpmlibcaps(void) 
@@ -202,10 +191,12 @@ struct pkgset *pkgset_new(unsigned optflags)
     memset(ps, 0, sizeof(*ps));
     ps->pkgs = pkgs_array_new(1024);
     ps->ordered_pkgs = NULL;
-    ps->depdirs = NULL;
-    ps->path = NULL;
+    
+    /* just merge pkgdirs->depdirs */
+    ps->depdirs = n_array_new(32, NULL, (tn_fn_cmp)strcmp);
+    
+    ps->pkgdirs = n_array_new(4, (tn_fn_free)pkgdir_free, NULL);
     ps->flags = optflags;
-    ps->vf = NULL;
     ps->rpmcaps = get_rpmlibcaps();
     return ps;
 }
@@ -213,17 +204,12 @@ struct pkgset *pkgset_new(unsigned optflags)
 
 void pkgset_free(struct pkgset *ps) 
 {
-    if (ps->flags & PKGSET_INDEXES_INIT) {
+    if (ps->flags & _PKGSET_INDEXES_INIT) {
         capreq_idx_destroy(&ps->cap_idx);
         capreq_idx_destroy(&ps->req_idx);
         capreq_idx_destroy(&ps->obs_idx);
         file_index_destroy(&ps->file_idx);
-        ps->flags &= (unsigned)~PKGSET_INDEXES_INIT;
-    }
-
-    if (ps->path) {
-        free(ps->path);
-        ps->path = NULL;
+        ps->flags &= (unsigned)~_PKGSET_INDEXES_INIT;
     }
 
     if (ps->depdirs) {
@@ -231,9 +217,9 @@ void pkgset_free(struct pkgset *ps)
         ps->depdirs = NULL;
     }
 
-    if (ps->vf) {
-        vfile_close(ps->vf);
-        ps->vf = NULL;
+    if (ps->pkgdirs) {
+        n_array_free(ps->pkgdirs);
+        ps->pkgdirs = NULL;
     }
 
     if (ps->ordered_pkgs) {
@@ -260,13 +246,13 @@ static void mapfn_free_pkgfl(struct pkg *pkg)
 
 void pkgset_free_indexes(struct pkgset *ps) 
 {
-    if (ps->flags & PKGSET_INDEXES_INIT) {
+    if (ps->flags & _PKGSET_INDEXES_INIT) {
         capreq_idx_destroy(&ps->cap_idx);
         capreq_idx_destroy(&ps->req_idx);
         capreq_idx_destroy(&ps->obs_idx);
         file_index_destroy(&ps->file_idx);
         
-        ps->flags &=  (unsigned)~PKGSET_INDEXES_INIT;
+        ps->flags &= (unsigned)~_PKGSET_INDEXES_INIT;
     }
 
     n_array_map(ps->pkgs, (tn_fn_map1)mapfn_free_pkgfl);
@@ -340,7 +326,7 @@ int pkgset_index(struct pkgset *ps)
     capreq_idx_init(&ps->req_idx, 10003);
     capreq_idx_init(&ps->obs_idx, 103);
     file_index_init(&ps->file_idx, 100003);
-    ps->flags |=PKGSET_INDEXES_INIT;
+    ps->flags |= _PKGSET_INDEXES_INIT;
 
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
@@ -400,12 +386,16 @@ int pkgset_setup(struct pkgset *ps)
 
     n = n_array_size(ps->pkgs);
     n_array_sort(ps->pkgs);
-    n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
 
-    if (n != n_array_size(ps->pkgs)) 
-        log(LOGWARN, "Removed %d duplicate package(s)\n",
-            n - n_array_size(ps->pkgs));
+    if ((ps->flags & PSMODE_MKIDX) == 0) {
+        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
+        
+        if (n != n_array_size(ps->pkgs)) 
+            log(LOGWARN, "Removed %d duplicate package(s)\n",
+                n - n_array_size(ps->pkgs));
+    }
     
+        
     pkgset_index(ps);
     mem_info(1, "MEM after index");
 
@@ -573,26 +563,20 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
         
         if (pkg_is_marked(pkg)) {
-            char path[PATH_MAX];
-
-            if (ps->path) 
-                snprintf(path, sizeof(path), "%s/%s", ps->path, 
-                         pkg_filename_s(pkg));
-            else
-                snprintf(path, sizeof(path), "%s", pkg_filename_s(pkg));
+            char *pkgpath = pkg_path_s(pkg);
                 
             if (verbose > 1) {
                 char *p = pkg_is_hand_marked(pkg) ? "" : "dep";
                 if (pkg_has_badreqs(pkg)) 
                     msg(2, "not%sInstall %s\n", p, pkg->name);
                 else
-                    msg(2, "%sInstall %s\n", p, path);
+                    msg(2, "%sInstall %s\n", p, pkgpath);
             }
 
             if (inst->instflags & PKGINST_TEST)
                 continue;
             
-            if (!pkgdb_install(inst->db, path,
+            if (!pkgdb_install(inst->db, pkgpath,
                                inst->instflags | PKGINST_NODEPS)) 
                 nerr++;
         }
@@ -902,7 +886,3 @@ tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname)
     return pkgs;
 }
 
-int pkgset_isremote(struct pkgset *ps)
-{
-    return vfile_url_type(ps->path) != VFURL_PATH;
-}

@@ -34,7 +34,6 @@
 #include <trurl/trurl.h>
 
 #include "pkg.h"
-#include "pkgset-def.h"
 #include "pkgset.h"
 #include "pkgdb.h"
 #include "install.h"
@@ -53,9 +52,6 @@ extern int shell_uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst);
 
 
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
-static const char *argp_program_bug_address = NULL;
-
-
 
 static int cmd_help(int argc, const char **argv, struct argp*);
 static int cmd_quit(int argc, const char **argv, struct argp*);
@@ -375,7 +371,8 @@ static void switch_pkg_completion(int ctx)
             break;
             
         case COMPL_CTX_INST_PKGS:
-            compl_shpkgs = shell_s.instpkgs;
+            if (shell_s.instpkgs)
+                compl_shpkgs = shell_s.instpkgs;
             break;
             
         default:
@@ -580,15 +577,24 @@ error_t parse_ls_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'u':
-            cmdst->flags |= OPT_LS_UPGRADEABLE;
+            if (shell_s.instpkgs == NULL)
+                printf("installed packages not loaded\n");
+            else 
+                cmdst->flags |= OPT_LS_UPGRADEABLE;
             break;
 
         case 'U':
-            cmdst->flags |= OPT_LS_UPGRADEABLE_VER | OPT_LS_UPGRADEABLE;
+            if (shell_s.instpkgs == NULL)
+                printf("installed packages not loaded\n");
+            else 
+                cmdst->flags |= OPT_LS_UPGRADEABLE_VER | OPT_LS_UPGRADEABLE;
             break;
 
         case 'I':
-            cmdst->flags |= OPT_LS_INSTALLED;
+            if (shell_s.instpkgs == NULL)
+                printf("installed packages not loaded\n");
+            else 
+                cmdst->flags |= OPT_LS_INSTALLED;
             break;
 
         case ARGP_KEY_ARG:
@@ -634,7 +640,7 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
         return 1;
     }
     
-    if (cmdst.flags & OPT_LS_INSTALLED)
+    if (cmdst.flags & OPT_LS_INSTALLED && shell_s.instpkgs) 
         av_shpkgs = shell_s.instpkgs;
     else
         av_shpkgs = shell_s.avpkgs;
@@ -699,7 +705,7 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
         int cmprc = 0;
         
         
-        if (cmdst.flags & OPT_LS_UPGRADEABLE) {
+        if (cmdst.flags & OPT_LS_UPGRADEABLE && shell_s.instpkgs) {
             int finded;
             
             if (cmdst.flags & OPT_LS_INSTALLED) {
@@ -881,7 +887,7 @@ static int cmd_install(int argc, const char **argv, struct argp *argp)
         pkg_hand_mark(shpkg->pkg);
     }
 
-    if (install_pkgs(shell_s.pkgset, shell_s.inst)) {
+    if (install_pkgs(shell_s.pkgset, shell_s.inst) && shell_s.instpkgs) {
         for (i=0; i<n_array_size(shpkgs); i++)
             n_array_push(shell_s.instpkgs, shpkg_link(n_array_nth(shpkgs, i)));
         n_array_sort(shell_s.instpkgs);
@@ -968,6 +974,12 @@ static int cmd_uninstall(int argc, const char **argv, struct argp *argp)
     tn_array *shpkgs = NULL;
     int i, err = 0;
     tn_array *pkgnevrs;
+
+    if (shell_s.instpkgs == NULL) {
+        printf("uninstall: installed packages not loaded\n");
+        return 0;
+    }
+    
     
     shell_s.inst->flags = shell_s.inst_flags_orig;
     shell_s.inst->instflags = 0;
@@ -1096,7 +1108,7 @@ static int cmd_get(int argc, const char **argv, struct argp *argp)
         destdirp = destdir;
     }
     
-    if (!pkgset_fetch_pkgs(shell_s.pkgset, destdirp, pkgs))
+    if (!pkgset_fetch_pkgs(destdirp, pkgs))
         err++;
     
  l_end:
@@ -1183,6 +1195,9 @@ static int cmd_desc(int argc, const char **argv, struct argp *argp)
 
             if (*timbuf)
                 printf("Built:\t\t%s\n", timbuf);
+
+            if (shpkg->pkg->pkgdir && shpkg->pkg->pkgdir->path)
+                printf("Path:\t\t%s\n", shpkg->pkg->pkgdir->path);
             
             if (pkgu->description) 
                 printf("Description:\n%s\n", pkgu->description);
@@ -1341,12 +1356,13 @@ static void get_term_width(void)
     
 }
 
-
-int shell_main(struct pkgset *ps, struct inst_s *inst)
+int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
 {
     char *line, *s, *histfile = NULL, *home;
     int n, i;
 
+
+    argp_program_bug_address = NULL;
     
     if (!isatty(1)) {
         log(LOGERR, "not a tty\n");
@@ -1392,10 +1408,15 @@ int shell_main(struct pkgset *ps, struct inst_s *inst)
     shell_s.pkgset = ps;
     shell_s.inst = inst;
     shell_s.inst_flags_orig = inst->flags;
-    
-    shell_s.instpkgs = n_array_new(1024, (tn_fn_free)shpkg_free,
+
+
+    shell_s.instpkgs = NULL;
+    if (skip_installed == 0) {
+        shell_s.instpkgs = n_array_new(1024, (tn_fn_free)shpkg_free,
                                    (tn_fn_cmp)shpkg_cmp);
-    load_installed_packages(&shell_s.instpkgs);
+        load_installed_packages(&shell_s.instpkgs);
+    }
+    
     
     initialize_readline();
     switch_pkg_completion(COMPL_CTX_AV_PKGS);

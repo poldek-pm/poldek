@@ -49,12 +49,10 @@ int pkgfl_ent_cmp(const void *a, const void *b);
 #define PKGFL_DEPDIRS     1
 #define PKGFL_NOTDEPDIRS  2
 
-int pkgfl_store(tn_array *fl, tn_buf *nbuf, int which);
-int pkgfl_store_f(tn_array *fl, FILE *stream, int which);
+int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which);
+int pkgfl_store_f(tn_array *fl, FILE *stream, tn_array *depdirs, int which);
 
-tn_array *pkgfl_restore(tn_buf_it *nbufi);
-tn_array *pkgfl_restore_f(FILE *stream);
-
+tn_array *pkgfl_restore_f(FILE *stream, tn_array *only_dirs);
 int pkgfl_skip_f(FILE *stream);
 
 tn_array *pkgfl_array_new(int size);

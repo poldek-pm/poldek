@@ -30,7 +30,6 @@
 
 #include "log.h"
 #include "pkg.h"
-#include "pkgset-def.h"
 #include "pkgset.h"
 #include "misc.h"
 #include "rpmadds.h"
@@ -106,42 +105,39 @@ static int dump_pkgs_fqpns(struct pkgset *ps, struct upgrade_s *upg)
 }
 
 
-int pkgset_fetch_pkgs(struct pkgset *ps, const char *destdir, tn_array *pkgs) 
+int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs)
 {
-    int rc, i, urltype;
-    tn_array *urls = NULL;
+    int       i, nerr, urltype;
+    tn_array  *urls = NULL;
+    tn_array  *urls_arr = NULL;
+    tn_hash   *urls_h = NULL;
+
+
+    urls_h = n_hash_new(21, (tn_fn_free)n_array_free);
+    urls_arr = n_array_new(n_array_size(pkgs), NULL, (tn_fn_cmp)strcmp);
     
-    if (ps->path == NULL) {
-        log(LOGERR, "Oj! Packages URL not set!?\n");
-        return 0;
-    }
-
-    if ((urltype = vfile_url_type(ps->path)) == VFURL_PATH) {
-        log(LOGERR, "Think! Packages path is not remote URL\n");
-        return 0;
-    }
-
-    if (n_array_size(pkgs) == 1) {
-        char path[PATH_MAX];
-        
-        snprintf(path, sizeof(path), "%s/%s", ps->path,
-                 pkg_filename_s(n_array_nth(pkgs, 0)));
-        
-        return vfile_fetch(destdir, path, urltype);
-    } 
-
-    urls = n_array_new(n_array_size(pkgs), NULL, NULL);
+    n_hash_ctl(urls_h, TN_HASH_NOCPKEY);
     
     for (i=0; i<n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-        char path[PATH_MAX], *s;
-        int len;
+        struct pkg  *pkg = n_array_nth(pkgs, i);
+        char        *pkgpath = pkg->pkgdir->path;
+        char        path[PATH_MAX], *s;
+        int         len;
 
+        if ((urltype = vfile_url_type(pkgpath)) == VFURL_PATH)
+            continue;
+
+        if ((urls = n_hash_get(urls_h, pkgpath)) == NULL) {
+            urls = n_array_new(n_array_size(pkgs), NULL, NULL);
+            n_hash_insert(urls_h, pkgpath, urls);
+            n_array_push(urls_arr, pkgpath);
+        }
+        
         if (pkg->dn) 
-            len = snprintf(path, sizeof(path), "%s/%s/%s", ps->path, pkg->dn,
+            len = snprintf(path, sizeof(path), "%s/%s/%s", pkgpath, pkg->dn,
                            pkg_filename_s(pkg));
         else
-            len = snprintf(path, sizeof(path), "%s/%s", ps->path,
+            len = snprintf(path, sizeof(path), "%s/%s", pkgpath,
                            pkg_filename_s(pkg));
         
         s = alloca(len + 1);
@@ -149,15 +145,30 @@ int pkgset_fetch_pkgs(struct pkgset *ps, const char *destdir, tn_array *pkgs)
         s[len] = '\0';
         n_array_push(urls, s);
     }
+
+    nerr = 0;
+    for (i=0; i<n_array_size(urls_arr); i++) {
+        char buf[1024], path[PATH_MAX];
+        char *pkgpath = n_array_nth(urls_arr, i);
+        int len;
+        
+        urls = n_hash_get(urls_h, pkgpath);
+
+        vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
+        len = snprintf(path, sizeof(path), "%s/%s", destdir, buf);
+        
+        if (!vfile_fetcha(path, urls, urltype))
+            nerr++;
+    }
     
-    rc = vfile_fetcha(destdir, urls, urltype);
-    if (urls)
-        n_array_free(urls);
-    return rc;
+    n_array_free(urls_arr);
+    n_hash_free(urls_h);
+    return nerr == 0;
 }
 
-#define EXEC_RPM 1
 
+
+#define EXEC_RPM 1
 #ifndef EXEC_RPM    
 static void process_rpm_output(struct p_open_st *st) 
 {
@@ -194,29 +205,17 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
 #endif
     char **argv;
     char *cmd;
-    char *local_prefix;
     int i, n, nopts = 0, ec;
     int nv = verbose;
-
     
     n = 128 + n_array_size(upg->install_pkgs);
     argv = alloca((n + 1) * sizeof(*argv));
     argv[n] = NULL;
     n = 0;
-    local_prefix = NULL;
-    
-    if (pkgset_isremote(ps)) {
-        int len;
-        char buf[1024];
 
-        vfile_url_as_dirpath(buf, sizeof(buf), ps->path);
-        len = strlen(upg->inst->cachedir) + 1 + strlen(buf) + 1;
-        local_prefix = alloca(len);
-        snprintf(local_prefix, len, "%s/%s", upg->inst->cachedir, buf);
-        msg(1, "Downloading...\n");
-        if (!pkgset_fetch_pkgs(ps, local_prefix, upg->install_pkgs))
-            return 0;
-    }
+    
+    if (!pkgset_fetch_pkgs(upg->inst->cachedir, upg->install_pkgs))
+        return 0;
     
     if (upg->inst->instflags & PKGINST_TEST) {
         cmd = "/bin/rpm";
@@ -268,8 +267,6 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
     }
 
     argv[n++] = "--noorder";    /* packages always ordered */
-    argv[n++] = "--ignoresize";    /* packages always ordered */
-    
 
     if (upg->inst->rpmacros) 
         for (i=0; i<n_array_size(upg->inst->rpmacros); i++) {
@@ -286,22 +283,23 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
         if (pkg_is_marked(pkg)) {
             char path[PATH_MAX], *s, *name;
+            char *pkgpath = pkg->pkgdir->path;
             int len;
-
+            
+            
             name = pkg_filename_s(pkg);
-            if (local_prefix)
-                len = snprintf(path, sizeof(path), "%s/%s", local_prefix,
-                               name);
-            else if (pkg->dn) 
-                len = snprintf(path, sizeof(path), "%s/%s/%s", ps->path,
-                               pkg->dn, name);
-            else if (ps->path) 
-                len = snprintf(path, sizeof(path), "%s/%s", ps->path, name);
             
-            else
-                len = snprintf(path, sizeof(path), "%s", name);
+            if (vfile_url_type(pkgpath) == VFURL_PATH) {
+                len = snprintf(path, sizeof(path), "%s/%s", pkgpath, name);
+            
+            } else {
+                char buf[1024];
+                
+                vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
+                len = snprintf(path, sizeof(path), "%s/%s/%s",
+                               upg->inst->cachedir, buf, name);
+            }
 
-            
             s = alloca(len + 1);
             memcpy(s, path, len);
             s[len] = '\0';
@@ -1043,7 +1041,7 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
         rc = dump_pkgs_fqpns(ps, upg);
         
     } else if (upg->inst->flags & INSTS_JUSTFETCH) {
-        rc = pkgset_fetch_pkgs(ps, upg->inst->fetchdir, upg->install_pkgs);
+        rc = pkgset_fetch_pkgs(upg->inst->fetchdir, upg->install_pkgs);
         
     } else {
         rc = runrpm(ps, upg);

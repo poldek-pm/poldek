@@ -2,14 +2,12 @@
 # Sample configuration for PLD, packages are taken from TASK via rsync  
 # 
 
-source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/Packages
-
-# large tocfile can be used also (not recommended)
-#source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/tocfile 
+source = rsync://ftp.pld.org.pl/pld/PLD-1.0/i686/RPMS/Packages
+source = rsync://ftp.pld.org.pl/pld/test/i686/Packages
+source = /home/zenek/rpm/RPMS/Packages
 
 # NOTE: directory *must* exists 
 cachedir = /var/tmp/poldek
-
 
 # Downloaders configuration
 # Available semi-macros (as ws-separate tokens only):
@@ -18,5 +16,5 @@ cachedir = /var/tmp/poldek
 #   %D - cache dir/package basename
 #   %P[n] - package full path(URL)
 
-ftp_http_get   = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
+#ftp_http_get   = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
 rsync_get      = "/usr/bin/rsync %P %d"

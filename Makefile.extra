@@ -6,8 +6,6 @@ mclean:
 	@if [ -f Makefile ]; then         \
 		$(MAKE) maintainer-clean; \
 	fi
-	rm -f mkinstalldirs install-sh missing poldek-*.tar.gz
-	rm -f config.h.in configure Makefile.in *.1
 
 
 backup:
@@ -36,5 +34,5 @@ backup:
 arch : mclean backup 
 
 misarch: mclean
-	$(MAKE) -C . backup cparch=1 backupdir=/z/
+	$(MAKE) -C . backup cparch=1 backupdir=/z
 

@@ -10,6 +10,7 @@
 #include "capreq.h"
 #include "pkgfl.h"
 #include "pkgu.h"
+#include "pkgdir.h"
 
 #define PKG_HAS_DN          (1 << 0)
 #define PKG_HAS_CAPS        (1 << 1)
@@ -86,8 +87,8 @@ struct pkg {
     tn_array     *revreqpkgs; /* packages which requires */
     tn_array     *cnflpkgs;   /* conflict packages */
 
-    FILE         *pkg_stream; /*  */
-
+    struct pkgdir *pkgdir;
+    
     union {
         off_t           pkg_pkguinf_offs;
         struct pkguinf *pkg_pkguinf; 
@@ -163,6 +164,9 @@ int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg);
 char *pkg_filename(const struct pkg *pkg, char *buf, size_t size);
 char *pkg_filename_s(const struct pkg *pkg);
 
+char *pkg_path(const struct pkg *pkg, char *buf, size_t size);
+char *pkg_path_s(const struct pkg *pkg);
+
 int pkg_printf(const struct pkg *pkg, const char *str);
 char *pkg_snprintf(char *str, size_t size, const struct pkg *pkg);
 char *pkg_snprintf_s(const struct pkg *pkg);
@@ -173,5 +177,7 @@ struct pkguinf *pkg_info(const struct pkg *pkg);
 
 
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*));
+
+tn_array *pkgs_array_new(int size);
 
 #endif /* POLDEK_PKG_H */

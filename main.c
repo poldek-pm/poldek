@@ -39,16 +39,16 @@
 #endif
 
 #ifdef ENABLE_INTERACTIVE_MODE
-extern int shell_main(struct pkgset *ps, struct inst_s *inst);
+extern int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed);
 #endif
 
 static const char *argp_program_version = "poldek " VERSION " (ALPHA)";
-static const char *argp_program_bug_address = "<mis@pld.org.pl>";
+const char *argp_program_bug_address = "<mis@pld.org.pl>";
 /* Program documentation. */
 static char doc[] = "poldek " VERSION " (ALPHA)\n"
 "This program may be freely redistributed under the terms of the GNU GPL\n";
 /* A description of the arguments we accept. */
-static char args_doc[] = "[PACKAGE..] [--rpm-RPM_LONG_OPTION...]";
+static char args_doc[] = "[PACKAGE...]";
 
 
 #define MODE_VERIFY       1
@@ -65,13 +65,14 @@ static char args_doc[] = "[PACKAGE..] [--rpm-RPM_LONG_OPTION...]";
 
 #define INDEXTYPE_TXT     1
 #define INDEXTYPE_TXTZ    2
-#define INDEXTYPE_RPMH    3 
+#define INDEXTYPE_RPMH    3
+
 
 struct args {
     int       mjrmode;
-    char      *source_path;
-    char      *pkg_prefix;
-    int       ldmethod;
+
+    char      *curr_pkg_prefix;
+    tn_array  *sources;
     
     int       idx_type;
     char      *idx_path;
@@ -98,15 +99,15 @@ struct args {
     const char  *cachedir;
     
     int         nodesc;		/* don't put descriptions in Packges */
+    int         shell_skip_installed;  
 } args;
 
 tn_hash *htcnf = NULL;          /* config file values */
 
 
 
-#define OPT_MKTXTINDEX   1001
-#define OPT_MKTXTINDEXZ  1002
-#define OPT_MKRPMINDEX   1003
+#define OPT_MKIDX        1001
+#define OPT_MKIDXZ       1002
 #define OPT_NODESC	 1004
 
 #define OPT_SOURCETXT   1015
@@ -117,7 +118,8 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_SOURCECACHE 1020
 
 #ifdef ENABLE_INTERACTIVE_MODE
-# define OPT_SHELLMODE   1021
+# define OPT_SHELLMODE             1031
+# define OPT_SHELL_SKIPINSTALLED   'f'
 #endif
 
 #define OPT_INST_INSTDIST  1041
@@ -145,9 +147,6 @@ static struct argp_option options[] = {
 {"sdir", OPT_SOURCEDIR, "DIR", 0,
  "Get packages info from directory DIR", 1 },
 
-{"shdr", OPT_SOURCEHDR, "FILE", OPTION_HIDDEN,
- "Get packages info from header index FILE", 1 },
-
 {"prefix", 'P', "PREFIX", 0,
  "Get packages from PREFIX instead of SOURCE", 1 },
 
@@ -163,15 +162,12 @@ static struct argp_option options[] = {
 
 
 {0,0,0,0, "Indexes creation:", 60},
-{"mkidx", OPT_MKTXTINDEX, "FILE", OPTION_ARG_OPTIONAL,
+{"mkidx", OPT_MKIDX, "FILE", OPTION_ARG_OPTIONAL,
  "Create package index, SOURCE/Packages by default", 60},
 
-{"mkidxz", OPT_MKTXTINDEXZ, "FILE", OPTION_ARG_OPTIONAL,
+{"mkidxz", OPT_MKIDXZ, "FILE", OPTION_ARG_OPTIONAL,
  "Like above, but gzipped file is created", 60},
 
-{"mkrpmidx", OPT_MKRPMINDEX, "FILE", OPTION_ARG_OPTIONAL | OPTION_HIDDEN,
- "Create header index, SOURCE/Packages-hdrs by default", 60},
-    
 {"nodesc", OPT_NODESC, 0, 0,
  "Don't put packages user-level information (like Summary or Description) in created index.", 60 },
     
@@ -212,23 +208,29 @@ static struct argp_option options[] = {
 {"test", 't', 0, 0,
  "Don't install, but tell if it would work or not", 70 },
     
-{"mkdir", OPT_INST_MKDBDIR, 0, OPTION_HIDDEN,
+{"mkdir", OPT_INST_MKDBDIR, 0, 0, 
      "make %{_dbpath} if not exists", 70 },
 
 {"killdb", OPT_INST_KILLDB, 0, OPTION_HIDDEN,           /* not implemented */
      "kills existing database (for install-dist)", 70 },    
-    
-{"conf", 'c', "FILE", 0, "Read configuration from FILE", 80 }, 
-{"noconf", 'z', 0, 0, "Do not read configuration", 80 }, 
+
 
 #ifdef ENABLE_INTERACTIVE_MODE
-{"shell", OPT_SHELLMODE, 0, 0, "Shell mode", 80 },
+{0,0,0,0, "Shell mode:", 80},
+{"shell", OPT_SHELLMODE, 0, 0, "Run in shell mode", 80 },
+{"fast", OPT_SHELL_SKIPINSTALLED, 0, 0, "Don't load installed packages in shell mode", 80 },
 #endif
+
+{0,0,0,0, "Other:", 500},    
+{"conf", 'c', "FILE", 0, "Read configuration from FILE", 500 }, 
+{"noconf", 'z', 0, 0, "Do not read configuration", 500 }, 
+
+
     
 {0,  'v', "v...", OPTION_ARG_OPTIONAL,
- "Be more (and more) verbose.", 80 },
+ "Be more (and more) verbose.", 500 },
 {0,  'q', 0, 0,
- "Do not produce any output.", 80 },
+ "Do not produce any output.", 500 },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -266,7 +268,8 @@ static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct args *argsp = state->input;
-
+    struct source *src = NULL;
+    
     if (arg)
         chkarg(key, arg);
     
@@ -299,26 +302,32 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case 's':
-            argsp->source_path = trimslash(arg);
+            src = source_new(trimslash(arg), argsp->curr_pkg_prefix);
+            n_array_push(argsp->sources, src);
+            argsp->curr_pkg_prefix = NULL;
             break;
             
         case OPT_SOURCEDIR:
-            argsp->source_path = trimslash(arg);;
-            argsp->ldmethod = PKGSET_LD_DIR;
-            break;
-
-        case OPT_SOURCEHDR:
-            argsp->source_path = trimslash(arg);
-            argsp->ldmethod = PKGSET_LD_HDRFILE;
+            src = source_new(trimslash(arg), argsp->curr_pkg_prefix);
+            src->ldmethod = PKGSET_LD_DIR;
+            n_array_push(argsp->sources, src);
+            argsp->curr_pkg_prefix = NULL;
             break;
 
         case OPT_SOURCETXT:
-            argsp->source_path = trimslash(arg);
-            argsp->ldmethod = PKGSET_LD_TXTFILE;
+            src = source_new(trimslash(arg), argsp->curr_pkg_prefix);
+            src->ldmethod = PKGSET_LD_IDX;
+            n_array_push(argsp->sources, src);
+            argsp->curr_pkg_prefix = NULL;
             break;
 
-        case 'P': 
-            argsp->pkg_prefix = trimslash(arg);
+        case 'P':
+            if (argsp->curr_pkg_prefix) {
+                log(LOGERR, "prefix should be followed by -s\n");
+                exit(EXIT_FAILURE);
+            }
+            
+            argsp->curr_pkg_prefix = trimslash(arg);
             break;
 
         case OPT_SOURCEUP:
@@ -343,12 +352,16 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->psflags |= PSMODE_UPGRADE;
             verbose = 1;
             break;
+
+        case OPT_SHELL_SKIPINSTALLED:
+            argsp->shell_skip_installed = 1;
+            break;
 #endif            
         case 'm':
             argsp->psflags |= PSVERIFY_MERCY;
             break;
 
-        case OPT_MKTXTINDEX:
+        case OPT_MKIDX:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_MKIDX;
             argsp->psflags |= PSMODE_MKIDX;
@@ -356,7 +369,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->idx_type = INDEXTYPE_TXT;
             break;
 
-        case OPT_MKTXTINDEXZ:
+        case OPT_MKIDXZ:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_MKIDX;
             argsp->psflags |= PSMODE_MKIDX;
@@ -364,13 +377,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->idx_type = INDEXTYPE_TXTZ;
             break;
             
-        case OPT_MKRPMINDEX:
-            check_mjrmode(argsp);
-            argsp->mjrmode = MODE_MKIDX;
-            argsp->idx_type = INDEXTYPE_RPMH;
-            argsp->idx_path = trimslash(arg);
-            break;
-
         case OPT_NODESC:
 	    argsp->nodesc = 1;
 	    break;
@@ -540,8 +546,8 @@ void parse_options(int argc, char **argv)
     verbose = 0;
     
     memset(&args, 0, sizeof(args));
-    args.source_path = NULL;
-    args.pkg_prefix = NULL;
+    args.sources = n_array_new(4, (tn_fn_free)source_free, (tn_fn_cmp)source_cmp);
+    args.curr_pkg_prefix = NULL;
     args.idx_path = NULL;
     args.fetchdir = NULL;
     args.install_root = NULL;
@@ -564,16 +570,45 @@ void parse_options(int argc, char **argv)
     else if (args.noconf == 0)
         htcnf = ldconf_deafult();
 
-    if (args.source_path == NULL && htcnf != NULL)
-        args.source_path = conf_get(htcnf, "source", NULL);
+    if (n_array_size(args.sources) == 0 && htcnf != NULL) {
+        char *v;
+        int i, is_multi = 0;
+        
+        
+        if ((v = conf_get(htcnf, "source", &is_multi))) {
+            if (is_multi == 0) {
+                n_array_push(args.sources, source_new(v, NULL));
+            } else {
+                tn_array *paths = NULL;
+                if ((paths = conf_get_multi(htcnf, "source"))) {
+                    while (n_array_size(paths)) 
+                        n_array_push(args.sources,
+                                     source_new(n_array_shift(paths), NULL));
+                }
+            }
+        }
 
-    if ((p = conf_get(htcnf, "use_sudo", NULL)) != NULL && strcmp(p, "yes") == 0)
-        args.inst_sflags |= INSTS_USESUDO;
-    
-    if (args.source_path == NULL) {
+        /* source\d+, prefix\d+ pairs  */
+        for (i=0; i<100; i++) {
+            char opt[64], *src;
+            
+            snprintf(opt, sizeof(opt), "source%d", i);
+            if ((src = conf_get(htcnf, opt, NULL))) {
+                snprintf(opt, sizeof(opt), "prefix%d", i);
+                n_array_push(args.sources,
+                             source_new(src, conf_get(htcnf, opt, NULL)));
+            }
+        }
+    }
+
+    if (n_array_size(args.sources) == 0) {
         log(LOGERR, "No source specified\n");
         exit(EXIT_FAILURE);
     }
+    
+
+    if ((p = conf_get(htcnf, "use_sudo", NULL)) != NULL && strcmp(p, "yes") == 0)
+        args.inst_sflags |= INSTS_USESUDO;
 
     if (args.mjrmode == 0) {
         log(LOGERR, "so what?\n");
@@ -648,35 +683,15 @@ void parse_options(int argc, char **argv)
 }
 
 
-int select_ldmethod(void) 
-{
-    struct stat st;
-
-    if (args.ldmethod)
-        return args.ldmethod;
-    
-    if (stat(args.source_path, &st) == 0 && S_ISDIR(st.st_mode))
-        args.ldmethod = PKGSET_LD_DIR;
-    else if (strstr(args.source_path, "tocfile") ||
-             strstr(args.source_path, "Packages-hdrs")) 
-        args.ldmethod = PKGSET_LD_HDRFILE;
-    else 
-        args.ldmethod = PKGSET_LD_TXTFILE;
-    return args.ldmethod;
-}
 
 
 static struct pkgset *load_pkgset(int ldflags) 
 {
     struct pkgset *ps;
     
-    if (args.ldmethod == 0) {
-        log(LOGERR, "Cannot determine source type\n");
-        exit(EXIT_FAILURE);
-    }
-
     ps = pkgset_new(args.psflags);
-    if (!pkgset_load(ps, args.ldmethod, ldflags, args.source_path, args.pkg_prefix)) {
+
+    if (!pkgset_load(ps, ldflags, args.sources)) {
         log(LOGERR, "No packages loaded\n");
         pkgset_free(ps);
         ps = NULL;
@@ -694,12 +709,13 @@ static struct pkgset *load_pkgset(int ldflags)
 
 static int update_idx(void)
 {
-    if (strstr(args.source_path, "://") == NULL) {
-        log(LOGERR, "? update local index gives no effect\n");
-        return 0;
-    }
+    int i, nerr = 0;
     
-    return pkgset_update_txtidx(args.source_path);
+    for (i=0; i<n_array_size(args.sources); i++)
+        if (!source_update(n_array_nth(args.sources, i)))
+            nerr++;
+    
+    return nerr == 0;
 }
 
     
@@ -709,58 +725,49 @@ static int mkidx(struct pkgset *ps)
     int rc;
     char *idx_path = NULL;
     char path[PATH_MAX];
+    struct source *src;
     
-    if (args.idx_path != NULL) {
-        idx_path = args.idx_path;
-        
-    } else if (args.ldmethod != PKGSET_LD_DIR) {
-        log(LOGERR, "You must specify index path for non-directory source\n");
+
+    if (n_array_size(args.sources) > 1) {
+        log(LOGERR, "You shouldn't specify multiple sources for this option\n");
         return 0;
-        
-    } else if (strstr(args.source_path, "://")) {
+    }
+
+    src = n_array_nth(args.sources, 0);
+    
+    if (strstr(src->source_path, "://")) {
         log(LOGERR, "mkidx requested for URL source without destination "
             "specified\n");
         return 0;
+    }
+
+    if (args.idx_path != NULL) {
+        idx_path = args.idx_path;
         
     } else {
         switch (args.idx_type) {
             case INDEXTYPE_TXTZ:
-                snprintf(path, sizeof(path), "%s/%s", args.source_path, 
+                snprintf(path, sizeof(path), "%s/%s", src->source_path, 
                          "Packages.gz");
                 break;
-                    
+                
             case INDEXTYPE_TXT:
-                snprintf(path, sizeof(path), "%s/%s", args.source_path, 
+                snprintf(path, sizeof(path), "%s/%s", src->source_path, 
                          "Packages");
                 break;
-                    
-            case INDEXTYPE_RPMH:
-                if (args.ldmethod != PKGSET_LD_DIR) {
-                    log(LOGERR, "--mkrpmidx option requires that source "
-                        "is directory\n");
-                    return 0;
-                }
-
-                snprintf(path, sizeof(path), "%s/%s", args.source_path, 
-                         "Packages-hdrs");
-                break;
-                    
+                
             default:
                 n_assert(0);
                 exit(EXIT_FAILURE);
         }
-
+        
         idx_path = path;
     }
-    
     
     n_assert(idx_path != NULL);
     msg(1, "Writing package index to %s...\n", idx_path);
     
-    if (args.idx_type == INDEXTYPE_RPMH)
-        rc = pkgset_create_rpmidx(args.source_path, idx_path);
-    else
-        rc = pkgset_create_txtidx(ps, idx_path, args.nodesc);
+    rc = pkgdir_create_idx(n_array_nth(ps->pkgdirs, 0), idx_path, args.nodesc);
 
     return rc;
 }
@@ -909,7 +916,6 @@ int main(int argc, char **argv)
     inst.rpmopts   = args.rpmopts;
     inst.rpmacros  = args.rpmacros;
 
-    select_ldmethod();
     rpm_initlib(inst.rpmacros);
 
     if (args.mjrmode == MODE_MKIDX && args.idx_type == INDEXTYPE_RPMH) {
@@ -933,10 +939,10 @@ int main(int argc, char **argv)
     ldflags = 0;
 
     if (args.mjrmode == MODE_MKIDX)
-        ldflags = PKGSET_IDX_LDRAW;
+        ldflags = PKGDIR_LD_RAW;
     
     else if (args.mjrmode == MODE_VERIFY) 
-        ldflags = PKGSET_IDX_LDVERIFY;
+        ldflags = PKGDIR_LD_VERIFY;
 
     if ((ps = load_pkgset(ldflags)) == NULL)
         exit(EXIT_FAILURE);
@@ -947,7 +953,7 @@ int main(int argc, char **argv)
         case MODE_SHELL:
             verbose = 1;
             log_sopenlog(stdout, 0, "ERR");
-            rc = shell_main(ps, &inst);
+            rc = shell_main(ps, &inst, args.shell_skip_installed);
             break;
 #endif            
         case MODE_VERIFY:

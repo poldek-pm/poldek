@@ -257,7 +257,7 @@ struct pkgfl_ent *pkgfl_ent_new(char *dirname, int dirname_len, int nfiles)
 /*
   stores file list as binary data
  */
-int pkgfl_store(tn_array *fl, tn_buf *nbuf, int which)
+int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
 {
     int8_t *matches;
     int i, j;
@@ -277,7 +277,7 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, int which)
             int dnl, is_depdir = 0;
             
             dnl = strlen(flent->dirname);
-            is_depdir = in_depdirs_l(flent->dirname, dnl);
+            is_depdir = (n_array_bsearch(depdirs, flent->dirname) != NULL);
         
             if (which == PKGFL_DEPDIRS && is_depdir) {
                 matches[i] = 1;
@@ -326,15 +326,14 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, int which)
     return ndirs;
 }
 
-int pkgfl_store_f(tn_array *fl, FILE *stream, int which) 
+int pkgfl_store_f(tn_array *fl, FILE *stream, tn_array *depdirs, int which) 
 {
     tn_buf *nbuf;
     uint32_t size;
     
     nbuf = n_buf_new(4096);
     
-    if (pkgfl_store(fl, nbuf, which) > 0)
-        ;
+    pkgfl_store(fl, nbuf, depdirs, which);
     size = hton32(n_buf_size(nbuf));
     fwrite(&size, sizeof(size), 1, stream);
     
@@ -344,7 +343,7 @@ int pkgfl_store_f(tn_array *fl, FILE *stream, int which)
     return 1;
 }
 
-tn_array *pkgfl_restore(tn_buf_it *nbufi)
+tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *only_dirs)
 {
     tn_array *fl = NULL;
     int32_t ndirs = 0;
@@ -357,25 +356,37 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi)
     fl = pkgfl_array_new(ndirs);
     
     while (ndirs--) {
-        char *dn = NULL;
-        int8_t dnl = 0;
-        int32_t nfiles = 0;
-        struct pkgfl_ent *flent;
-
+        struct pkgfl_ent  *flent;
+        char              *dn = NULL;
+        int8_t            dnl = 0;
+        int32_t           nfiles = 0;
+        int               skipdir;
+        
         
         n_buf_it_get_int8(nbufi, &dnl);
         dn = n_buf_it_get(nbufi, dnl);
+
+        skipdir = 0;
+        if (only_dirs && n_array_bsearch(only_dirs, dn) == NULL)
+            skipdir = 1;
+
+#if 0        
+        if (only_dirs && skipdir == 0)
+            DBGMSG_F("NOT skipdir %s\n", dn);
+#endif        
+        
         dnl--;
         n_buf_it_get_int32(nbufi, &nfiles);
-        
-        flent = pkgfl_ent_new(dn, dnl, nfiles);
+
+        if (skipdir == 0)
+            flent = pkgfl_ent_new(dn, dnl, nfiles);
         
         for (j=0; j < nfiles; j++) {
-            struct flfile *file = NULL;
-            char *bn = NULL, *linkto = NULL;
-            uint8_t bnl = 0, slen = 0;
-            uint16_t mode = 0;
-            uint32_t size = 0;
+            struct flfile      *file = NULL;
+            char               *bn = NULL, *linkto = NULL;
+            uint8_t            bnl = 0, slen = 0;
+            uint16_t           mode = 0;
+            uint32_t           size = 0;
             
 
             n_buf_it_get_int8(nbufi, &bnl);
@@ -389,17 +400,22 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi)
                 linkto = n_buf_it_get(nbufi, slen);
             }
             
-            file = flfile_new(size, mode, bn, bnl, linkto, slen);
-            flent->files[flent->items++] = file;
+            if (skipdir == 0) {
+                file = flfile_new(size, mode, bn, bnl, linkto, slen);
+                flent->files[flent->items++] = file;
+            }
+            
         }
-        n_array_push(fl, flent);
+        
+        if (skipdir == 0)
+            n_array_push(fl, flent);
     }
     
     return fl;
 }
 
 
-tn_array *pkgfl_restore_f(FILE *stream) 
+tn_array *pkgfl_restore_f(FILE *stream, tn_array *only_dirs) 
 {
     tn_array *fl;
     tn_buf *nbuf;
@@ -420,7 +436,7 @@ tn_array *pkgfl_restore_f(FILE *stream)
     nbuf = n_buf_new(0);
     n_buf_init(nbuf, buf, size);
     n_buf_it_init(&nbufi, nbuf);
-    fl = pkgfl_restore(&nbufi);
+    fl = pkgfl_restore(&nbufi, only_dirs);
     n_buf_free(nbuf);
     
     fseek(stream, 1, SEEK_CUR); /* skip final '\n' */

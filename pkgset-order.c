@@ -23,7 +23,6 @@
 
 #include "log.h"
 #include "pkg.h"
-#include "pkgset-def.h"
 #include "pkgset.h"
 #include "misc.h"
 #include "usrset.h"
@@ -187,7 +186,9 @@ int pkgset_order(struct pkgset *ps)
     
     if (vs.nerrors) {
         ps->nerrors += vs.nerrors;
-        msg(1, "%d prerequirement loops detected\n", vs.nerrors);
+        msg(1, "%d prerequirement loop%s detected\n", vs.nerrors,
+            vs.nerrors > 1 ? "s":"");
+        
     } else if (ps_verify_mode(ps)) {
         msg(1, "No loops -- OK\n");
     }

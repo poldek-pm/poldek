@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
@@ -21,13 +21,14 @@
 #endif
 
 #include <ctype.h>
+#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <fnmatch.h>
 
-#include <zlib.h>
-#include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 #include <trurl/nbuf.h>
@@ -36,16 +37,15 @@
 
 #include "log.h"
 #include "depdirs.h"
-#include "rpmadds.h"
 #include "misc.h"
-#include "capreq.h"
+#include "rpmadds.h"
+#include "pkgdir.h"
 #include "pkg.h"
-#include "pkgu.h"
-#include "pkgset-def.h"
-#include "pkgset.h"
-#include "pkgset-load.h"
+
 
 static char *filefmt_version = "0.3.1";
+static const char depdirs_tag[] = "DEPDIRS: ";
+
 
 #define PKGT_HAS_NAME  (1 << 0)
 #define PKGT_HAS_EVR   (1 << 1)
@@ -57,7 +57,6 @@ static char *filefmt_version = "0.3.1";
 #define PKGT_HAS_ARCH  (1 << 7)
 #define PKGT_HAS_SIZE  (1 << 8)
 #define PKGT_HAS_BTIME (1 << 9)
-
 
 struct pkgtags_s {
     unsigned   flags;
@@ -77,11 +76,11 @@ struct pkgtags_s {
     off_t      pkguinf_offs;
 };
 
-static const char depdirs_tag[] = "DEPDIRS: ";
-
 static
 int parse_capreq_tag(char *str, tn_array *capreqs, int addbastards);
-static struct capreq *parse_capreq_token(char *token, int addbastard);
+
+static
+struct capreq *parse_capreq_token(char *token, int addbastard);
 
 static
 int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
@@ -91,6 +90,8 @@ void pkgtags_clean(struct pkgtags_s *pkgt);
 
 static
 struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt);
+
+
 
 
 inline static char *eatws(char *str) 
@@ -123,34 +124,232 @@ inline static char *next_tokn(char **str, char delim, int *toklen)
     return token;
 }
 
-
-int pkgset_load_txtidx(struct pkgset *ps, int ldflags, const char *pathname)
+static char *setup_pkgprefix(const char *path) 
 {
-    struct pkgtags_s pkgtags;
-    char *line_bufs[2], *line;
-    int   line_bufs_size[2], *line_size, last_value_len = 0;
-    char  last_tag = '\0';
-    char *last_value = NULL, *last_value_endp = NULL;
-    int   nerr = 0, n, nline, nread;
-    struct vfile *vf;
-    int flag_addbastards = 1, flag_fullflist = 0, flag_lddesc = 0;
+    char *dn = NULL, *bn, *buf, *rpath = NULL;
+    int len;
 
-    if (ldflags & PKGSET_IDX_LDSKIPBASTS) 
-        flag_addbastards = 0;
-
-    if (ldflags & PKGSET_IDX_LDFULLFLIST)
-        flag_fullflist = 1;
-
-    if (ldflags & PKGSET_IDX_LDDESC)
-        flag_lddesc = 1;
-
+    len = strlen(path);
+    buf = alloca(len + 1);
+    memcpy(buf, path, len);
+    buf[len] = '\0';
     
-    if ((vf = vfile_open(pathname, VFT_STDIO, VFM_RO | VFM_CACHE)) == NULL) 
-        return 0;
+    n_basedirnam(buf, &dn, &bn);
+    if (dn)
+        rpath = strdup(dn);
+    else
+        rpath = strdup(".");
+
+    return rpath;
+}
+
+
+struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
+{
+    struct pkgdir     *pkgdir = NULL;
+    struct vfile      *vf;
+    char              *line, *linebuf;
+    int               line_size;
+    int               nerr = 0, n, nline, nread;
+    tn_array          *depdirs = NULL;
+    struct stat       st;
+    
+
+    if ((vf = vfile_open(path, VFT_STDIO, VFM_RO | VFM_CACHE)) == NULL) 
+        return NULL;
+
+    if (fstat(fileno(vf->vf_stream), &st) != 0 || !S_ISREG(st.st_mode) ||
+        st.st_size < 200) {
+        
+        log(LOGERR, "%s: not a poldek index file\n", vf->vf_tmpath);
+        nerr++;
+        goto l_end;
+    }
+
     
     n = 0;
     nline = 0;
     
+    line_size = 4096;
+    line = linebuf = malloc(line_size);
+
+    while ((nread = getline(&line, &line_size, vf->vf_stream)) > 0) {
+        char *p;
+
+        
+        nline++;
+
+        if (*line != '#' && *line != '%')
+            break;
+        
+        
+        if (*line == '#') {
+            if (nline == 1) {
+                char *p;
+                int lnerr = 0;
+                
+                if ((p = strstr(line, "poldeksindex")) == NULL) {
+                    lnerr++;
+                    
+                } else {
+                    p += strlen("poldeksindex");
+                    p = eatws(p);
+                    if (*p != 'v')
+                        lnerr++;
+                    else 
+                        p++;
+                }
+
+                if (lnerr) {
+                    log(LOGERR, "%s: not a poldek index file\n", path);
+                    nerr++;
+                    goto l_end;
+                }
+                
+                if (strncmp(p, filefmt_version, strlen(filefmt_version)) != 0) {
+                    log(LOGERR, "%s: not a poldek index file\n", path);
+                    nerr++;
+                    goto l_end;
+                }
+            }
+            
+        } else if (*line == '%') {
+            while (nread && line[nread - 1] == '\n')
+                line[--nread] = '\0';
+            line++;
+            
+            if (strncmp(line, depdirs_tag, strlen(depdirs_tag)) == 0) {
+                char *dir;
+                n_assert(depdirs == NULL);
+
+                depdirs = n_array_new(16, free, (tn_fn_cmp)strcmp);
+                p = line + strlen(depdirs_tag);
+                p = eatws(p);
+                
+                while ((dir = next_tokn(&p, ':', NULL)) != NULL) 
+                    n_array_push(depdirs, strdup(dir));
+                n_array_push(depdirs, strdup(p));
+                
+                if (n_array_size(depdirs)) 
+                    n_array_sort(depdirs);
+            }
+            break;              /* finish at %DEPDIRS */
+        }
+        
+    }
+    
+    free(linebuf);
+
+    if (depdirs == NULL) {
+        log(LOGERR, "%s: missing %s tag\n", vf->vf_tmpath, depdirs_tag);
+        nerr++;
+        goto l_end;
+    }
+    
+    
+    pkgdir = malloc(sizeof(*pkgdir));
+
+    
+    if (pkg_prefix) 
+        pkgdir->path = strdup(pkg_prefix);
+    else 
+        pkgdir->path = setup_pkgprefix(path);
+    
+    pkgdir->vf = vf;
+    //pkgdir->stream = vf->vf_stream;
+    pkgdir->depdirs = depdirs;
+    n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
+    pkgdir->flags = PKGDIR_LDFROM_IDX;
+    pkgdir->pkgs = pkgs_array_new(1024);
+
+ l_end:
+
+    if (nerr) {
+        vfile_close(vf);
+        if (depdirs)
+            n_array_free(depdirs);
+    }
+    
+    return pkgdir;
+}
+
+
+void pkgdir_free(struct pkgdir *pkgdir) 
+{
+    if (pkgdir->path) {
+        free(pkgdir->path);
+        pkgdir->path = NULL;
+    }
+
+    if (pkgdir->depdirs) {
+        n_array_free(pkgdir->depdirs);
+        pkgdir->depdirs = NULL;
+    }
+
+    if (pkgdir->pkgs) {
+        n_array_free(pkgdir->pkgs);
+        pkgdir->pkgs = NULL;
+    }
+
+    if (pkgdir->vf) {
+        vfile_close(pkgdir->vf);
+        pkgdir->vf = NULL;
+        //pkgdir->stream = NULL;
+    }
+
+    pkgdir->flags = 0;
+
+    free(pkgdir);
+}
+
+
+int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
+{
+    struct pkgtags_s   pkgtags;
+    char               *line_bufs[2], *line;
+    int                line_bufs_size[2], *line_size, last_value_len = 0;
+    char               last_tag = '\0';
+    char               *last_value = NULL, *last_value_endp = NULL;
+    int                nerr = 0, n, nline, nread, i;
+    struct             vfile *vf;
+    int                flag_addbastards = 1, flag_fullflist = 0;
+    int                flag_lddesc = 0;
+    tn_array           *only_dirs;
+    
+
+    if (ldflags & PKGDIR_LD_SKIPBASTS) 
+        flag_addbastards = 0;
+
+    if (ldflags & PKGDIR_LD_FULLFLIST)
+        flag_fullflist = 1;
+
+    if (ldflags & PKGDIR_LD_DESC)
+        flag_lddesc = 1;
+
+    only_dirs = NULL;
+    if (flag_fullflist == 0) {
+        only_dirs = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
+        for (i=0; i<n_array_size(depdirs); i++) {
+            char *dn = n_array_nth(depdirs, i);
+            if (n_array_bsearch(pkgdir->depdirs, dn) == NULL) {
+                DBGMSG_F("ONLYDIR for %s: %s\n", pkgdir->path, dn);
+                if (*dn == '/' && *(dn + 1) != '\0') 
+                    dn++;
+                n_array_push(only_dirs, dn);
+            }
+        }
+        
+    
+        if (n_array_size(only_dirs) == 0) {
+            n_array_free(only_dirs);
+            only_dirs = NULL;
+        }
+    }
+    
+
+    vf = pkgdir->vf;
+    n = 0;
+    nline = 0;
     last_value_endp = NULL;
 
     memset(&pkgtags, 0, sizeof(pkgtags));
@@ -173,65 +372,12 @@ int pkgset_load_txtidx(struct pkgset *ps, int ldflags, const char *pathname)
             n = 0;
 
         nline++;
-        if (*line == '#') {
-            
-            if (nline == 1) {
-                char *p;
-                int lnerr = 0;
-                
-                if ((p = strstr(line, "poldeksindex")) == NULL) {
-                    lnerr++;
-                    
-                } else {
-                    p += strlen("poldeksindex");
-                    p = eatws(p);
-                    if (*p != 'v')
-                        lnerr++;
-                    else 
-                        p++;
-                }
-
-                if (lnerr) {
-                    log(LOGERR, "%s: not a poldek index file\n", pathname);
-                    nerr++;
-                    goto l_end;
-                }
-                
-                
-                if (strncmp(p, filefmt_version, strlen(filefmt_version)) != 0){
-                    log(LOGERR, "%s: not a poldek index file\n", pathname);
-                    nerr++;
-                    goto l_end;
-                }
-            }
-            
-        } else if (*line == '%') {
-            while (nread && line[nread - 1] == '\n')
-                line[--nread] = '\0';
-            line++;
-            
-            if (strncmp(line, depdirs_tag, strlen(depdirs_tag)) == 0) {
-                char *dir;
-                n_assert(ps->depdirs == NULL);
-
-                ps->depdirs = n_array_new(16, free, (tn_fn_cmp)strcmp);
-                p = line + strlen(depdirs_tag);
-                p = eatws(p);
-                while ((dir = next_tokn(&p, ':', NULL))) 
-                    n_array_push(ps->depdirs, strdup(dir));
-                n_array_push(ps->depdirs, strdup(p));
-                
-                if (n_array_size(ps->depdirs)) {
-                    n_array_sort(ps->depdirs);
-                    init_depdirs(ps->depdirs);
-                }
-            }
-            
-        } else if (*line == '\n') {        /* empty line -> end of record */
+        
+        if (*line == '\n') {        /* empty line -> end of record */
             struct pkg *pkg;
             if (last_value_endp) {
                 if (!add2pkgtags(&pkgtags, last_tag, last_value,
-                                 pathname, nline, flag_addbastards)) {
+                                 pkgdir->path, nline, flag_addbastards)) {
                     nerr++;
                     goto l_end;
                 }
@@ -243,8 +389,8 @@ int pkgset_load_txtidx(struct pkgset *ps, int ldflags, const char *pathname)
             DBGMSG("\n\nEOR\n");
             pkg = pkg_new_from_tags(&pkgtags);
             if (pkg) {
-                pkg->pkg_stream = vf->vf_stream;
-                n_array_push(ps->pkgs, pkg);
+                pkg->pkgdir = pkgdir;
+                n_array_push(pkgdir->pkgs, pkg);
                 pkg = NULL;
             }
             
@@ -253,7 +399,7 @@ int pkgset_load_txtidx(struct pkgset *ps, int ldflags, const char *pathname)
         } else if (*line == ' ') {      /* continuation */
             int nleft;
             
-            log(LOGERR, "%s:%d: syntax error\n", pathname, nline);
+            log(LOGERR, "%s:%d: syntax error\n", pkgdir->path, nline);
             exit(EXIT_FAILURE);
             n_assert(last_value_endp);
             n_assert(last_value);
@@ -275,46 +421,44 @@ int pkgset_load_txtidx(struct pkgset *ps, int ldflags, const char *pathname)
             q = line + 1;
 
             if (*line == '\0' || *q != ':') {
-                log(LOGERR, "%s:%d: ':' expected\n", pathname, nline);
+                log(LOGERR, "%s:%d: ':' expected\n", pkgdir->path, nline);
                 nerr++;
                 goto l_end;
             }
 
             if (last_value_endp) {
                 DBGMSG("INSERT %c = %s\n", last_tag, last_value);
-                add2pkgtags(&pkgtags, last_tag, last_value, pathname,
+                add2pkgtags(&pkgtags, last_tag, last_value, pkgdir->path,
                             nline, flag_addbastards);
             }
 
             if (*line == 'L') { /* files */
-                pkgtags.pkgfl = pkgfl_restore_f(vf->vf_stream);
+                pkgtags.pkgfl = pkgfl_restore_f(vf->vf_stream, NULL);
                 if (pkgtags.pkgfl)
                     pkgtags.flags |= PKGT_HAS_FILES;
                 last_value_endp = NULL;
                 continue;
                 
             } else if (*line == 'l') {
+                pkgtags.other_files_offs = ftell(vf->vf_stream);
                 
-                if (flag_fullflist == 0) {
-                    pkgtags.other_files_offs = ftell(vf->vf_stream);
+                if (flag_fullflist == 0 && only_dirs == NULL) {
                     pkgfl_skip_f(vf->vf_stream);
                     
                 } else {
                     tn_array *fl;
-                    int i;
 
-                    fl = pkgfl_restore_f(vf->vf_stream);
+                    fl = pkgfl_restore_f(vf->vf_stream, only_dirs);
 
                     if (pkgtags.pkgfl == NULL) {
                         pkgtags.pkgfl = fl;
                         
                     } else {
-                        for (i=0; i<n_array_size(fl); i++) 
-                            n_array_push(pkgtags.pkgfl, n_array_nth(fl, i));
-                        
+                        while (n_array_size(fl)) 
+                            n_array_push(pkgtags.pkgfl, n_array_shift(fl));
+                            
                         n_array_free(fl);
                     }
-                    
                 }
                 
                 last_value_endp = NULL;
@@ -355,32 +499,12 @@ int pkgset_load_txtidx(struct pkgset *ps, int ldflags, const char *pathname)
     free(line_bufs[0]);
     free(line_bufs[1]);
 
-    if (nerr == 0 && n_array_size(ps->pkgs) == 0) {
-        msg(2, "%s: empty(?)\n", pathname);
+    if (nerr == 0 && n_array_size(pkgdir->pkgs) == 0) {
+        msg(2, "%s: empty(?)\n", pkgdir->path);
         nerr = 1;
     }
 
-    if (nerr) {
-        vfile_close(vf);
-        ps->vf = NULL;
-        
-    } else {
-        ps->vf = vf;
-    }
-    
-    return nerr ? 0 : n_array_size(ps->pkgs);
-}
-
-
-int pkgset_update_txtidx(const char *pathname)
-{
-    struct vfile *vf;
-    
-    if ((vf = vfile_open(pathname, VFT_STDIO, VFM_RO | VFM_NORM)) == NULL) 
-        return 0;
-    
-    vfile_close(vf);
-    return 1;
+    return nerr ? 0 : n_array_size(pkgdir->pkgs);
 }
 
 
@@ -760,7 +884,7 @@ int parse_capreq_tag(char *str, tn_array *capreqs, int addbastards)
 
 
 static
-int fprintf_pkg(const struct pkg *pkg, FILE *stream, int nodesc)
+int fprintf_pkg(const struct pkg *pkg, FILE *stream, tn_array *depdirs, int nodesc)
 {
     int len;
 
@@ -835,15 +959,15 @@ int fprintf_pkg(const struct pkg *pkg, FILE *stream, int nodesc)
         fprintf(stream, "\n");
     }
 
-    if (pkg->fl) {
+    if (pkg->fl && n_array_size(pkg->fl)) {
         fprintf(stream, "L:\n");
-        pkgfl_store_f(pkg->fl, stream, PKGFL_DEPDIRS);
+        pkgfl_store_f(pkg->fl, stream, depdirs, PKGFL_DEPDIRS);
     
         fprintf(stream, "l:\n");
-        pkgfl_store_f(pkg->fl, stream, PKGFL_NOTDEPDIRS);
+        pkgfl_store_f(pkg->fl, stream, depdirs, PKGFL_NOTDEPDIRS);
     }
 
-    if (!nodesc && pkg_has_ldpkguinf(pkg)) {
+    if (nodesc == 0 && pkg_has_ldpkguinf(pkg)) {
         fprintf(stream, "U:\n");
         pkguinf_store(pkg->pkg_pkguinf, stream);
         fprintf(stream, "\n");
@@ -853,8 +977,9 @@ int fprintf_pkg(const struct pkg *pkg, FILE *stream, int nodesc)
     return 1;
 }
 
+
 static 
-void put_fheader(FILE *stream, const struct pkgset *ps) 
+void put_fheader(FILE *stream, const struct pkgdir *pkgdir) 
 {
     time_t t;
     char datestr[128];
@@ -869,12 +994,12 @@ void put_fheader(FILE *stream, const struct pkgset *ps)
             "# PLEASE DO *NOT* EDIT or poldek will hate you.\n"
             "# Contains %d packages\n",
             filefmt_version,
-            datestr, n_array_size(ps->pkgs));
+            datestr, n_array_size(pkgdir->pkgs));
 }
 
 
 static 
-void put_tocfheader(FILE *stream, const struct pkgset *ps) 
+void put_tocfheader(FILE *stream, const struct pkgdir *pkgdir) 
 {
     time_t t;
     char datestr[128];
@@ -889,7 +1014,7 @@ void put_tocfheader(FILE *stream, const struct pkgset *ps)
             "# PLEASE DO *NOT* EDIT ME or poldek will hate you.\n"
             "# Contains %d packages\n",
             filefmt_version,
-            datestr, n_array_size(ps->pkgs));
+            datestr, n_array_size(pkgdir->pkgs));
 }
 
 
@@ -917,7 +1042,8 @@ static char *mktoc_pathname(char *dest, size_t size, const char *pathname)
     return dest;
 }
 
-int pkgset_create_txtidx(struct pkgset *ps, const char *pathname, int nodesc)
+
+int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc)
 {
     struct vfile *vf, *vf_toc;
     char tocpath[PATH_MAX];
@@ -936,25 +1062,25 @@ int pkgset_create_txtidx(struct pkgset *ps, const char *pathname, int nodesc)
         return 0;
     }
     
-    put_fheader(vf->vf_stream, ps);
-    put_tocfheader(vf_toc->vf_stream, ps);
+    put_fheader(vf->vf_stream, pkgdir);
+    put_tocfheader(vf_toc->vf_stream, pkgdir);
     
-    if (ps->depdirs && n_array_size(ps->depdirs)) {
+    if (pkgdir->depdirs && n_array_size(pkgdir->depdirs)) {
         fprintf(vf->vf_stream, "%%%s", depdirs_tag);
-        for (i=0; i<n_array_size(ps->depdirs); i++) {
-            fprintf(vf->vf_stream, "%s%c", (char*)n_array_nth(ps->depdirs, i),
-                    i + 1 == n_array_size(ps->depdirs) ? '\n':':');
-        }
         
-        init_depdirs(ps->depdirs);
+        for (i=0; i<n_array_size(pkgdir->depdirs); i++) {
+            fprintf(vf->vf_stream, "%s%c",
+                    (char*)n_array_nth(pkgdir->depdirs, i),
+                    i + 1 == n_array_size(pkgdir->depdirs) ? '\n':':');
+        }
     }
     
-    n_array_sort(ps->pkgs);
+    n_array_sort(pkgdir->pkgs);
     
-    for (i=0; i<n_array_size(ps->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->pkgs, i);
+    for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
         
-        fprintf_pkg(pkg, vf->vf_stream, nodesc);
+        fprintf_pkg(pkg, vf->vf_stream, pkgdir->depdirs, nodesc);
         fprintf(vf_toc->vf_stream, "%s\n", pkg_snprintf_s(pkg));
     }
     
@@ -962,4 +1088,154 @@ int pkgset_create_txtidx(struct pkgset *ps, const char *pathname, int nodesc)
     vfile_close(vf);
     vfile_close(vf_toc);
     return 1;
+}
+
+
+int load_dir(const char *dirpath, tn_array *pkgs)
+{
+    struct dirent  *ent;
+    struct stat    st;
+    DIR            *dir;
+    int            n;
+
+    
+    if ((dir = opendir(dirpath)) == NULL) {
+	log(LOGERR, "opendir %s: %m\n", dirpath);
+	return 0;
+    }
+
+    n = 0;
+    while( (ent = readdir(dir)) ) {
+        char path[PATH_MAX];
+        
+        if (fnmatch("*.rpm", ent->d_name, 0) != 0) 
+            continue;
+
+        if (fnmatch("*.src.rpm", ent->d_name, 0) == 0) 
+            continue;
+
+        snprintf(path, sizeof(path), "%s/%s", dirpath, ent->d_name);
+        
+        if (stat(path, &st) != 0) {
+            log(LOGERR, "stat %s: %m", path);
+            continue;
+        }
+        
+        if (S_ISREG(st.st_mode)) {
+            Header h;
+            FD_t fdt;
+            
+            if ((fdt = Fopen(path, "r")) == NULL) {
+                log(LOGERR, "open %s: %s\n", path, rpmErrorString());
+                continue;
+            }
+            
+            if (rpmReadPackageHeader(fdt, &h, NULL, NULL, NULL) != 0) {
+                log(LOGERR, "%s: read header failed, skiped\n", path);
+                
+            } else {
+                struct pkg *pkg;
+                 
+
+                if (headerIsEntry(h, RPMTAG_SOURCEPACKAGE)) /* omit src.rpms */
+                    continue;
+
+                if ((pkg = pkg_ldhdr(h, path, PKG_LDWHOLE))) {
+                    pkg->pkg_pkguinf = pkguinf_ldhdr(h);
+                    pkg_set_ldpkguinf(pkg);
+                    n_array_push(pkgs, pkg);
+                    n++;
+                }
+                headerFree(h);
+            }
+            Fclose(fdt);
+            
+            if (n && n % 100 == 0) 
+                msg_l(2, "_%d..", n);
+            	
+        }
+    }
+
+    msg_l(2, "_%d\n", n);
+    closedir(dir);
+    return n;
+}
+
+
+static void is_depdir_req(const struct capreq *req, tn_array *depdirs) 
+{
+    if (capreq_is_file(req)) {
+        char *p;
+        const char *reqname;
+
+        reqname = capreq_name(req);
+        p = strrchr(reqname, '/');
+        
+        if (p != reqname) {
+            char *dirname;
+            int len;
+
+            len = p - reqname;
+            dirname = alloca(len + 1);
+            memcpy(dirname, reqname, len);
+            dirname[len] = '\0';
+            p = dirname;
+        }
+        
+        if (n_array_bsearch(depdirs, p) == NULL) {
+            n_array_push(depdirs, strdup(p));
+            n_array_sort(depdirs);
+        }
+    }
+}
+
+
+static void pkgdir_setup_depdirs(struct pkgdir *pkgdir) 
+{
+    int i;
+
+    n_assert(pkgdir->depdirs == NULL);
+    pkgdir->depdirs = n_array_new(16, free, (tn_fn_cmp)strcmp);
+    n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
+    
+    
+    for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+
+        if (pkg->reqs) 
+            n_array_map_arg(pkg->reqs, (tn_fn_map2) is_depdir_req,
+                            pkgdir->depdirs);
+    }
+}
+
+
+struct pkgdir *pkgdir_load_dir(const char *path) 
+{
+    struct pkgdir *pkgdir;
+    tn_array      *pkgs;
+
+    pkgs = pkgs_array_new(1024);
+    
+    if (load_dir(path, pkgs) == 0) {
+        n_array_free(pkgs);
+        pkgdir = NULL;
+        
+    } else {
+        pkgdir = malloc(sizeof(*pkgdir));
+    
+        pkgdir->path = strdup(path);
+        pkgdir->depdirs = NULL;
+        pkgdir->pkgs = pkgs;
+        pkgdir->flags = PKGDIR_LDFROM_DIR;
+        pkgdir->vf = NULL;
+
+        pkgdir_setup_depdirs(pkgdir);
+    }
+    
+    return pkgdir;
+}
+
+int pkgdir_isremote(struct pkgdir *pkgdir)
+{
+    return vfile_url_type(pkgdir->path) != VFURL_PATH;
 }

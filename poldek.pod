@@ -8,7 +8,7 @@ poldek - rpm packages management helper tool
 
 =head1 SYNOPSIS
 
-poldek [--source=SOURCE] [OPTION...] [PACKAGE...]
+poldek [--source=SOURCE ...] [OPTION...] [PACKAGE...]
 
 =head1 DESCRIPTION
 
@@ -51,8 +51,7 @@ in config file:
 
 B<--source,--sidx,--sdir,-s> B<SOURCE>
 
-where SOURCE can be a local path or URL. Only one SOURCE is supported
-(to be fixed later) 
+where SOURCE can be a local path or URL. 
 
 Examples:
 
@@ -68,7 +67,7 @@ Examples:
 
 =back
 
-If you want to build Packages, then only directory
+If you want to build Packages, then only one and only directory
 path as SOURCE is accepted.
 
 If Packages and packages are stored in diffrent

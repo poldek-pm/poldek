@@ -1,20 +1,21 @@
 # $Id$
 # Sample poldek configuration
 
-# Only one source may be presented
-#source = ftp://ftp.znienacka.com.pl/RPMS/Packages.gz
-#source = http://www.znienacka.com.pl/RPMS/Packages.gz
-#source = https://www.znienacka.com.pl/RPMS/Packages.gz
-#source = rsync://rsync.znienacka.com.pl/PLD/Packages.gz
-source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/Packages.gz
-#source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/tocfile
+source = ftp://ftp.znienacka.com.pl/RPMS/Packages.gz
+source = http://www.znienacka.com.pl/RPMS/Packages.gz
+source = rsync://rsync.znienacka.com.pl/PLD/Packages.gz
+source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/Packages
 
 
+# If package index and packages stored under diffrent locations, 
+# then source and packages prefix must be numbered 
+source1 = /tmp/Packages
+prefix1 = /cdrom/RPMS
+ 
+
+# NOTE: directory *must* exists 
 cachedir = /var/tmp/poldek-cache/
 
-# If package index and packages stored under diffrent locations:
-#source = /var/tmp/Packages-for-cdrom-without-package-index
-#prefix = /cdrom/RPMS/
 
 # Downloaders configuration
 # Available semi-macros (as ws-separate tokens only):

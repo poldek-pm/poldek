@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fnmatch.h>
 
 #include <trurl/nhash.h>
 
@@ -32,9 +33,10 @@ struct tag {
 };
 
 static struct tag valid_tags[] = {
-    { "source",       0, TYPE_STR },
+    { "source",       1, TYPE_STR },
+    { "source?*",     0, TYPE_STR },
+    { "prefix?*",     0, TYPE_STR },
     { "cachedir",     0, TYPE_STR },
-    { "prefix",       0, TYPE_STR }, 
     { "ftp_http_get", 0, TYPE_STR },
     { "ftp_get",      0, TYPE_STR },
     { "http_get",     0, TYPE_STR },
@@ -130,19 +132,37 @@ static char *getv(char *vstr, const char *path, int nline)
     return p;
 }
 
+static int is_muli_tag(const char *key) 
+{
+    int i = 0;
+    
+    while (valid_tags[i].name) {
+        if (strcmp(valid_tags[i].name, key) == 0)
+            return valid_tags[i].is_mutliple;
+        
+            
+        if (fnmatch(valid_tags[i++].name, key, 0) == 0) {
+            return valid_tags[i].is_mutliple;
+            break;
+        }
+    }
+    return -1;
+}
+
+
 static void validate_tag(const char *key, void *unused) 
 {
     int i = 0, found = 0;
     
     unused = unused;
-    while (valid_tags[i].name)
-        if (strcmp(key, valid_tags[i++].name) == 0) {
+    while (valid_tags[i].name) {
+        if (fnmatch(valid_tags[i++].name, key, 0) == 0) {
             found = 1;
             break;
         }
-
+    }
     if (!found) {
-        log(LOGWARN, "%s: unknown option\n", key);
+        log(LOGWARN, "%s: unknown option\n");
         sleep(1);
     }
 }
@@ -168,6 +188,8 @@ tn_hash *ldconf(const char *path)
         char *p = buf;
         char *name, *val;
         struct copt *opt;
+        int is_mutliple;
+        
         
         nline++;
         while (isspace(*p))
@@ -182,7 +204,7 @@ tn_hash *ldconf(const char *path)
             p++;
         
         if (!isspace(*p)) {
-            log(LOGERR, "%s:%d: invalid parameter %c %s\n", path, nline, *p, name);
+            log(LOGERR, "%s:%d: invalid parameter %c '%s'\n", path, nline, *p, name);
             continue;
         }
         *p++ = '\0';
@@ -198,11 +220,15 @@ tn_hash *ldconf(const char *path)
         p++;
         val = getv(p, path, nline);
         if (val == NULL) {
-            log(LOGERR, "%s:%d: no value for %s\n", path, nline, name);
+            log(LOGERR, "%s:%d: no value for '%s'\n", path, nline, name);
             continue;
         }
 
-        //printf("%s -> %s\n", name, val);
+        if ((is_mutliple = is_muli_tag(name)) < 0) {
+            log(LOGWARN, "%s:%d unknown option '%s'\n", path, nline, name);
+            continue;
+        }
+        
         if (n_hash_exists(ht, name)) {
             opt = n_hash_get(ht, name);
         } else {
@@ -210,11 +236,20 @@ tn_hash *ldconf(const char *path)
             n_hash_insert(ht, opt->name, opt);
         }
         
-        if (opt->val == NULL)
+        if (opt->val == NULL) {
             opt->val = strdup(val);
-        else {
+            
+        } else if (!is_mutliple) {
+            log(LOGWARN, "%s:%d multiple '%s' not allowed\n", path, nline, name);
+            exit(0);
+            
+        } else if (opt->vals != NULL) {
+            n_array_push(opt->vals, strdup(val));
+            
+        } else if (opt->vals == NULL) {
             opt->vals = n_array_new(2, free, (tn_fn_cmp)strcmp);
-            n_array_push(opt->vals, strdup(opt->val));
+            /* put ALL opts to opt->vals */
+            n_array_push(opt->vals, strdup(opt->val)); 
             n_array_push(opt->vals, strdup(val));
             opt->flags |= COPT_MULTIPLE;
         }
