@@ -59,8 +59,8 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
                  struct pkg *spkg, unsigned flags) 
 {
     char           *key;
-    int            found;
-    tn_list        *l;
+    int            found = 0;
+    tn_list        *l = NULL;
 
     
     DBGF("%s from %s stby %s [%s]\n", capreq_snprintf_s(req),
@@ -77,7 +77,14 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
         
         n_list_iterator_start(l, &it);
         while ((dep = n_list_iterator_get(&it))) {
-            if (capreq_strcmp_evr(dep->req, req) == 0) {
+            if (dep->req == NULL) {
+                dep->req = req;
+                dep->spkg = spkg;
+                dep->pkgs = n_array_new(4, NULL, (tn_fn_cmp)pkg_cmp_name_evr);
+                n_array_push(dep->pkgs, pkg);
+                dep->flags = flags;
+                
+            } else if (capreq_strcmp_evr(dep->req, req) == 0) {
                 n_array_push(dep->pkgs, pkg);
                 dep->flags |= flags;
                 break;
@@ -97,12 +104,34 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
         n_array_push(new_dep->pkgs, pkg);
         new_dep->flags = flags;
 
-        if (l)         /* new entry */
-            n_list_push(l, new_dep);
-        
-        else {
+        if (l == NULL) {         /* new entry */
             l = n_list_new(0, (tn_fn_free)db_dep_free, NULL);
             n_hash_insert(db_deph, key, l);
+        }
+        
+        n_list_push(l, new_dep);
+    }
+}
+
+
+void db_deps_remove_cap(tn_hash *db_deph, struct capreq *cap)
+{
+    tn_list           *l;
+    tn_list_iterator  it;
+    struct db_dep     *dep;
+
+        
+    if ((l = n_hash_get(db_deph, capreq_name(cap))) == NULL)
+        return;
+    
+    n_list_iterator_start(l, &it);
+    while ((dep = n_list_iterator_get(&it))) {
+        if (dep->req && cap_match_req(cap, dep->req, 1)) {
+            DBGF("rmcap %s (%s)\n", capreq_snprintf_s(cap),
+                 capreq_snprintf_s0(dep->req));
+            dep->req = NULL;
+            n_array_free(dep->pkgs);
+            dep->pkgs = NULL;
         }
     }
 }
@@ -111,43 +140,16 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
 void db_deps_remove_pkg(tn_hash *db_deph, struct pkg *pkg)
 {
     int i;
-    return;
+
     DBGF("%s\n", pkg_snprintf_s(pkg));
     
     if (pkg->reqs == NULL)
         return;
         
-    for (i=0; i < n_array_size(pkg->reqs); i++) {
-        struct db_dep     *dep;
-        struct capreq     *req;
-        char              *key;
-        tn_list_iterator  it;
-        tn_list           *l;
-
-        req = n_array_nth(pkg->reqs, i);
-        key = capreq_name(req);
-
-        if ((dep = n_hash_get(db_deph, key)) == NULL)
-            continue;
-
-        n_list_iterator_start(l, &it);
-        while ((dep = n_list_iterator_get(&it))) {
-            DBGF("rm %s (%s: ", pkg_snprintf_s(pkg), capreq_snprintf_s(req));
-            n_array_remove(dep->pkgs, pkg);
-#if ENABLE_TRACE
-            {
-                int j;
-                for (j=0; j<n_array_size(dep->pkgs); j++) 
-                    DBG("%s, ", pkg_snprintf_s(n_array_nth(dep->pkgs, j)));
-                DBG("\n");
-            }
-#endif
-            if (n_array_size(dep->pkgs) == 0)
-                dep->req = NULL; /* mark for removal */
-        }
-    }
-    
+    for (i=0; i < n_array_size(pkg->reqs); i++)
+        db_deps_remove_cap(db_deph, n_array_nth(pkg->reqs, i));
 }
+
 
 
 void db_deps_remove_pkg_caps(tn_hash *db_deph, struct pkg *pkg)
@@ -190,11 +192,9 @@ static
 struct db_dep *provides_cap(tn_hash *db_deph, struct capreq *cap,
                             unsigned depflags, unsigned flags) 
 {
-    struct db_dep     *dep;
-    tn_list           *l;
+    struct db_dep     *dep = NULL;
+    tn_list           *l = NULL;
     
-
-    DBGF("%s\n", capreq_snprintf_s(cap));
 
     if ((l = n_hash_get(db_deph, capreq_name(cap)))) {
         tn_list_iterator  it;
@@ -206,22 +206,28 @@ struct db_dep *provides_cap(tn_hash *db_deph, struct capreq *cap,
             if (dep->req == NULL) /* removed */
                 continue;
 
-            if (flags & DBDEP_PROVIDES_PROVIDES) 
+            if (flags & DBDEP_PROVIDES_PROVIDES) {
                 matched = cap_match_req(dep->req, cap, 1);
-            else if (flags & DBDEP_PROVIDES_CONTAINS) 
+                DBGF("cap_match_req %s %s = %d\n", capreq_snprintf_s(dep->req),
+                     capreq_snprintf_s0(cap), matched);
+                
+            } else if (flags & DBDEP_PROVIDES_CONTAINS) {
                 matched = cap_match_req(cap, dep->req, 1);
-            else
+                DBGF("cap_match_req %s %s = %d\n", capreq_snprintf_s(cap),
+                     capreq_snprintf_s(dep->req), matched);
+            } else
                 n_assert(0);
             
             if (matched) {
                 if (depflags && (dep->flags & depflags) == 0)
                     continue;
-                return dep;
+                break;
             }
         }
     }
-    
-    return NULL;
+
+    DBGF("%s %d (%d)\n", capreq_snprintf_s(cap), dep ? 1:0, l ? n_list_size(l):0);
+    return dep;
 }
 
 
