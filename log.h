@@ -151,7 +151,7 @@ void mem_info(int vlevel, const char *fmt, ...);
 
 #define DBGF_NULL(fmt, args...) ((void) 0)
 #define DBGF_F(fmt, args...) fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
-# define MEMINF_F(fmt, args...) mem_info(-5, "%-18s: " fmt, __FUNCTION__ , ## args)
+#define MEMINF_F(fmt, args...) mem_info(-5, "%-18s: " fmt, __FUNCTION__ , ## args)
 
 #define dbgf(fmt, args...)  fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
 #define dbgf_(fmt, args...) ((void) 0)

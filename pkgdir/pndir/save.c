@@ -649,8 +649,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 
     n_assert(pathname);
     mk_paths(&paths, pathname, pkgdir);
-
-    printf("flags %d\n", flags);
+    
+    DBGF("flags %d\n", flags);
     msgn_tty(1, _("Writing %s..."), vf_url_slim_s(paths.path, 0));
     msgn_f(1, _("Writing %s..."), vf_url_slim_s(paths.path, 0));
 
@@ -683,7 +683,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     if (pkgdir->avlangs_h && (flags & PKGDIR_CREAT_NODESC) == 0)
         save_descr = 1;
     
-    mem_info(-1, "pndir_save start");
+    MEMINF("start");
     if (pkgdir->src && pkgdir->src->mkidx_exclpath)
         exclpath = pkgdir->src->mkidx_exclpath;
 
@@ -704,7 +704,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
             tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
         
         if (i % 1000 == 0)
-            mem_info(-1, "pndir_save");
+            MEMINF("%d packages", i);
 
         if (save_descr && (pkgu = pkg_info(pkg))) {
             int v;
@@ -780,7 +780,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     if (db_dscr_h)
         n_hash_free(db_dscr_h);
 
-    mem_info(-1, "pndir_save END");
+    MEMINF("END");
     return nerr == 0;
 }
 
