@@ -10,6 +10,10 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+/*!
+  Package class
+ */
+
 /*
   $Id$
 */
@@ -1123,23 +1127,22 @@ char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
                     const char *cachedir)
 {
     int n = 0;
-    char name[1024];
+    char namebuf[1024], *fn;
     char *pkgpath;
 
     n_assert(pkg->pkgdir);
     pkgpath = pkg->pkgdir->path;
-    
+
+    fn = pkg_filename(pkg, namebuf, sizeof(namebuf));
     if (vf_url_type(pkgpath) == VFURL_PATH) {
-        n = n_snprintf(path, size, "%s/%s", pkgpath,
-                       pkg_filename(pkg, name, sizeof(name)));
+        n = n_snprintf(path, size, "%s/%s", pkgpath, fn);
         
     } else {
         char buf[1024];
         
         vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
         n = n_snprintf(path, size, "%s%s%s/%s", cachedir ? cachedir : "",
-                       cachedir ? "/" : "",
-                       buf, pkg_filename(pkg, name, sizeof(name)));
+                       cachedir ? "/" : "", n_basenam(fn));
     }
 
     if (size - n > 2)

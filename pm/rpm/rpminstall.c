@@ -341,13 +341,13 @@ int pm_rpm_packages_install(struct pkgdb *db,
     for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
         if (pkg_is_marked(ts->pms, pkg)) {
-            char path[PATH_MAX], *s, *name;
+            char path[PATH_MAX], *s, name[1024];
             char *pkgpath = pkg->pkgdir->path;
             unsigned vrfyflags;
             int len;
             
             
-            name = pkg_filename_s(pkg);
+            pkg_filename(pkg, name, sizeof(name));
             if (vf_url_type(pkgpath) == VFURL_PATH) {
                 len = n_snprintf(path, sizeof(path), "%s/%s", pkgpath, name);
             
@@ -356,7 +356,7 @@ int pm_rpm_packages_install(struct pkgdb *db,
                 
                 vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
                 len = n_snprintf(path, sizeof(path), "%s/%s/%s", ts->cachedir,
-                                 buf, name);
+                                 buf, n_basenam(name));
             }
 
             if ((vrfyflags = pkg_get_verify_signflags(pkg))) {
