@@ -744,13 +744,14 @@ void pkg_data_free(tn_alloc *na, void *ptr)
 }
 
 static 
-struct pkguinf *pdir_load_pkguinf(tn_alloc *na,
-                                  const struct pkg *pkg, void *ptr)
+struct pkguinf *pdir_load_pkguinf(tn_alloc *na, const struct pkg *pkg,
+                                  void *ptr, tn_array *langs)
 {
     struct pkg_data *pd = ptr;
     struct pkguinf *pkgu = NULL;
 
-    pkg = pkg;
+    langs = langs;              /* ignored, no support */
+    pkg = pkg;                  /* unused */
     if (pd->vf && pd->pkguinf_offs > 0)
         pkgu = pkguinf_restore_rpmhdr_st(na,
                                          pd->vf->vf_tnstream,

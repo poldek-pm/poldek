@@ -129,15 +129,16 @@ void remap_groupid(struct pkg *pkg, struct pkgroup_idx *pkgroups,
 
 
 static
-int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
-             tn_hash *avlangs, unsigned ldflags, struct pkgdir *prev_pkgdir,
+int load_dir(struct pkgdir *pkgdir,
+             const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
+             unsigned ldflags, struct pkgdir *prev_pkgdir,
              tn_alloc *na)
 {
     tn_hash        *mtime_index = NULL;  
     struct dirent  *ent;
     struct stat    st;
     DIR            *dir;
-    int            n;
+    int            n, nnew = 0;
     char           *sepchr = "/";
     
     if ((dir = opendir(dirpath)) == NULL) {
@@ -206,8 +207,9 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
             }
         }
             
-            
+        
         if (pkg == NULL) {      /* not found */
+            nnew++;
             n_assert(h);
             msgn(3, "%s: loading header...", n_basenam(path));
             pkg = pm_rpm_ldhdr(na, h, n_basenam(path), st.st_size,
@@ -219,11 +221,9 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
                 if ((pkg_langs = pkguinf_langs(pkg->pkg_pkguinf))) {
                     int i;
                         
-                    for (i=0; i < n_array_size(pkg_langs); i++) {
-                        char *l = n_array_nth(pkg_langs, i);
-                        if (!n_hash_exists(avlangs, l))
-                            n_hash_insert(avlangs, l, NULL);
-                    }
+                    for (i=0; i < n_array_size(pkg_langs); i++)
+                        pkgdir__update_avlangs(pkgdir,
+                                               n_array_nth(pkg_langs, i), 1);
                 }
             }
             pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
@@ -242,6 +242,18 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
             msg(1, "_%d..", n);
     }
 
+    /* if there are ones from prev_pkgdir then assume that
+       they provide all avlangs */
+    
+    if (prev_pkgdir && n_array_size(pkgs) - nnew > 0) { 
+        tn_array *langs = n_hash_keys(prev_pkgdir->avlangs_h);
+        int i, nprev;
+
+        nprev = n_array_size(pkgs) - nnew;
+        for (i=0; i < n_array_size(langs); i++)
+            pkgdir__update_avlangs(pkgdir, n_array_nth(langs, i), nprev);
+        n_array_free(langs);
+    }
 
     if (n && n > 200)
         msg(1, "_%d\n", n);
@@ -259,8 +271,9 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
     
-    n = load_dir(pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups,
-                 pkgdir->avlangs_h, ldflags, pkgdir->prev_pkgdir, pkgdir->na);
+    n = load_dir(pkgdir,
+                 pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups,
+                 ldflags, pkgdir->prev_pkgdir, pkgdir->na);
     
     return n;
 }

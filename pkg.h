@@ -82,8 +82,9 @@ struct pkg {
     struct pkgdir    *pkgdir;    /* reference to its own pkgdir */
     void             *pkgdir_data;
     void             (*pkgdir_data_free)(tn_alloc *na, void*);
+    
     struct pkguinf   *(*load_pkguinf)(tn_alloc *na, const struct pkg *pkg,
-                                      void *pkgdir_data);
+                                      void *pkgdir_data, tn_array *langs);
     tn_tuple         *(*load_nodep_fl)(tn_alloc *na, const struct pkg *pkg,
                                        void *pkgdir_data, tn_array*);
 
@@ -211,7 +212,7 @@ char *pkg_evr_snprintf_s(const struct pkg *pkg);
 
 /* must be free()d by pkguinf_free(); see pkgu.h */
 struct pkguinf *pkg_info(const struct pkg *pkg);
-
+struct pkguinf *pkg_info_ex(const struct pkg *pkg, tn_array *langs);
 
 struct pkgflist {
     tn_tuple *fl;

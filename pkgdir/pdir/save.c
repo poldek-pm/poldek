@@ -185,6 +185,7 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     const char       *orig_pathname;
     int              i, nerr = 0;
     struct pdir      *idx;
+    unsigned         st_flags = 0; 
     
     if ((pkgdir->flags & PKGDIR_DIFF) && (pkgdir->flags & PKGDIR_UNIQED) == 0) {
         n_assert((flags & PKGDIR_CREAT_NOUNIQ) == 0);
@@ -300,12 +301,14 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     if (pkgdir->pkgs == NULL)
         goto l_close;
 
+    if (flags & PKGDIR_CREAT_NODESC)
+        st_flags |= PKGSTORE_NODESC;
     //flags |= PKGDIR_CREAT_PKG_Fv017;
     //n_array_sort(pkgdir->pkgs);
     n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)pdir_pkg_cmp);
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
-        pdir_pkg_store(pkg, vf->vf_tnstream, pkgdir->depdirs, flags);
+        pdir_pkg_store(pkg, vf->vf_tnstream, pkgdir->depdirs, st_flags);
 #if 0                           /* debug stuff */
         if (i % 200 == 0) {
             printf("%d. ", i);

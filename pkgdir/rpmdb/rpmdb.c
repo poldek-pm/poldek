@@ -101,11 +101,13 @@ static Header ldhdr(const struct pkg *pkg, void *foo)
     
 
 static 
-struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg, void *ptr)
+struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
+                             void *ptr, tn_array *langs)
 {
     struct pkguinf      *pkgu = NULL;
     Header               h;
 
+    langs = langs;               /* ignored, no support */
     if ((h = ldhdr(pkg, ptr))) {
         pkgu = pkguinf_ldrpmhdr(na, h);
         pm_rpmhdr_free(h);

@@ -61,6 +61,7 @@ struct pkg_data {
 
 static tn_array *parse_removed(char *str);
 static tn_array *parse_depdirs(char *str);
+static int parse_avlangs(char *str, struct pkgdir *pkgdir);
 
 static int do_open(struct pkgdir *pkgdir, unsigned flags);
 static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
@@ -201,6 +202,9 @@ int open_dscr(struct pndir *idx, time_t ts, const char *lang)
     char        buf[128], tmpath[PATH_MAX], tss[32];
     const char  *suffix;
     char        *idxpath;
+    const char  *dbid, *langid;
+
+    pndir_db_dscr_idstr(lang, &dbid, &langid);
     
     idxpath = idx->idxpath;
     *tss = '\0';
@@ -224,7 +228,7 @@ int open_dscr(struct pndir *idx, time_t ts, const char *lang)
     }
     
     suffix = pndir_desc_suffix;
-    if (strcmp(lang, "C") == 0) {
+    if (*langid == '\0') {
         if (*tss) {
             snprintf(buf, sizeof(buf), "%s.%s", pndir_desc_suffix, tss);
             suffix = buf;
@@ -232,7 +236,7 @@ int open_dscr(struct pndir *idx, time_t ts, const char *lang)
         
         
     } else {
-        snprintf(buf, sizeof(buf), "%s.%s%s%s", pndir_desc_suffix, lang,
+        snprintf(buf, sizeof(buf), "%s.%s%s%s", pndir_desc_suffix, langid,
                  *tss ? "." : "", *tss ? tss : "");
         suffix = buf;
     }
@@ -241,15 +245,15 @@ int open_dscr(struct pndir *idx, time_t ts, const char *lang)
     pndir_mkidx_pathname(tmpath, sizeof(tmpath), idxpath, suffix);
     
     if (idx->db_dscr_h == NULL)
-        idx->db_dscr_h = n_hash_new(21, (tn_fn_free)tndb_close);
+        idx->db_dscr_h = pndir_db_dscr_h_new();
 
-    if (!n_hash_exists(idx->db_dscr_h, lang)) {
+    if (!pndir_db_dscr_h_get(idx->db_dscr_h, lang)) {
         struct tndb *db;
         
         msgn(3, _("Opening %s..."), vf_url_slim_s(tmpath, 0));
         if ((db = do_dbopen(tmpath, idx->_vf->vf_mode, NULL, idx->srcnam))) {
             if (tndb_verify(db))
-                n_hash_insert(idx->db_dscr_h, lang, db);
+                pndir_db_dscr_h_insert(idx->db_dscr_h, lang, db);
             else {
                 tndb_close(db);
                 logn(LOGERR, "%s: broken file", vf_url_slim_s(tmpath, 0));
@@ -257,7 +261,7 @@ int open_dscr(struct pndir *idx, time_t ts, const char *lang)
         }
     }
 
-    return n_hash_exists(idx->db_dscr_h, lang);
+    return pndir_db_dscr_h_get(idx->db_dscr_h, lang) != NULL;
 }
 
 
@@ -347,7 +351,6 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     char                 *path = pkgdir->path;
     char                 key[TNDB_KEY_MAX + 1], val[4096];
     int                  nerr = 0, klen, vlen;
-    tn_array             *avlangs = NULL;
     
     if ((flags & PKGDIR_OPEN_REFRESH) == 0) 
         vfmode |= VFM_CACHE;
@@ -421,8 +424,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             pkgdir->removed_pkgs = parse_removed(val);
 
         } else if (strcmp(key, pndir_tag_langs) == 0) {
-            n_assert(avlangs == NULL);
-            avlangs = parse_depdirs(val);
+            parse_avlangs(val, pkgdir);
 
         } else if (strcmp(key, pndir_tag_pkgroups) == 0) {
             tn_buf *nbuf;
@@ -447,14 +449,28 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         pkgdir->flags |= PKGDIR_DIFF;
     
     
-    if (avlangs && (idx.crflags & PKGDIR_CREAT_NODESC) == 0) {
-        int i;
-
-        for (i=0; i < n_array_size(avlangs); i++)
-            n_hash_insert(pkgdir->avlangs_h,
-                          (const char*)n_array_nth(avlangs, i), NULL);
-            
+    if ((idx.crflags & PKGDIR_CREAT_NODESC) == 0) {
         pkgdir__setup_langs(pkgdir);
+        if (pkgdir->langs) {
+            int i, loadC = 0, loadi18n = 0;
+            for (i=0; i < n_array_size(pkgdir->langs); i++) {
+                const char *lang = n_array_nth(pkgdir->langs, i);
+                if (strcmp(lang, "C") == 0)
+                    loadC = 1;
+                else
+                    loadi18n = 1;
+            }
+
+            if (loadC)
+                if (!open_dscr(&idx, pkgdir->orig_ts, "C"))
+                    nerr++;
+
+            if (nerr == 0 && loadi18n)
+                if (!open_dscr(&idx, pkgdir->orig_ts, "i18n"))
+                    nerr++;
+        }
+        
+#if 0                           /* obsoleted */
         if (pkgdir->langs) {
             for (i=0; i < n_array_size(pkgdir->langs); i++) {
                 const char *lang = n_array_nth(pkgdir->langs, i);
@@ -464,6 +480,8 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
                 }
             }
         }
+        
+#endif        
     }
     
 
@@ -530,58 +548,15 @@ void pkg_data_free(tn_alloc *na, void *ptr)
 
 
 static 
-struct pkguinf *pndir_load_pkguinf(tn_alloc *na, const struct pkg *pkg, void *ptr)
+struct pkguinf *pndir_m_load_pkguinf(tn_alloc *na, const struct pkg *pkg,
+                                     void *ptr, tn_array *langs)
 {
     struct pkg_data  *pd = ptr;
-    struct pkguinf   *pkgu = NULL;
-    struct tndb      *db_C;
-    char             key[TNDB_KEY_MAX], val[4096];
-    int              klen, vlen;
-    
+
     if (pd->db_dscr_h == NULL)
         return NULL;
 
-    if ((db_C = n_hash_get(pd->db_dscr_h, "C")) == NULL) 
-        return NULL;
-
-    klen = pndir_make_pkgkey(key, sizeof(key), pkg);
-
-    if (klen > 0 && (vlen = tndb_get(db_C, key, klen, val, sizeof(val))) > 0) {
-        tn_buf     *nbuf;
-        tn_buf_it  it;
-        
-        nbuf = n_buf_new(0);
-        n_buf_init(nbuf, val, vlen);
-        n_buf_it_init(&it, nbuf);
-        pkgu = pkguinf_restore(na, &it, "C");
-
-        if (pd->langs) {
-            int i;
-                
-            for (i = n_array_size(pd->langs) - 1; i >= 0; i--) {
-                struct tndb  *db;
-                const char   *lang;
-
-                lang = n_array_nth(pd->langs, i);
-                if (strcmp(lang, "C") == 0)
-                    continue;
-                
-                db = n_hash_get(pd->db_dscr_h, lang);
-                vlen = tndb_get(db, key, klen, val, sizeof(val));
-                //printf("ld %s: %s (%d)\n", pkg_snprintf_s(pkg), lang, vlen);
-                if (vlen > 0) {
-                    n_buf_clean(nbuf);
-                    n_buf_init(nbuf, val, vlen);
-                    n_buf_it_init(&it, nbuf);
-                    pkguinf_restore_i18n(pkgu, &it, lang);
-                }
-            }
-        }
-        
-        n_buf_free(nbuf);
-    }
-
-    return pkgu;
+    return pndir_load_pkguinf(na, pd->db_dscr_h, pkg, langs ? langs : pd->langs);
 }
 
 static 
@@ -654,7 +629,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             
             pkg->pkgdir_data = pkgd;
             pkg->pkgdir_data_free = pkg_data_free;
-            pkg->load_pkguinf = pndir_load_pkguinf;
+            pkg->load_pkguinf = pndir_m_load_pkguinf;
             pkg->load_nodep_fl = pndir_load_nodep_fl;
             n_array_push(pkgdir->pkgs, pkg);
         }
@@ -718,6 +693,42 @@ static tn_array *parse_depdirs(char *str)
 
     return arr;
 }
+
+static inline int up_avlangs(char *s, struct pkgdir *pkgdir)
+{
+    char *p;
+    int count;
+        
+    p = strchr(s, '|');
+    if (!p) {                /* snap legacy... */
+        pkgdir__update_avlangs(pkgdir, s, 10000);
+        return 1;
+    } 
+            
+    *p = '\0';
+    p++;
+        
+    if (sscanf(p, "%d", &count) != 1)
+        n_die("%s|%s: bad langs format!", s, p);
+    pkgdir__update_avlangs(pkgdir, s, count);
+    return 1;
+}
+
+
+static int parse_avlangs(char *str, struct pkgdir *pkgdir) 
+{
+    char *p, *token;
+
+    p = str;
+    p = eatws(p);
+
+    while ((token = next_tokn(&p, ':', NULL)) != NULL) {
+        up_avlangs(token, pkgdir);
+    }
+    up_avlangs(p, pkgdir);
+    return 1;
+}
+
 
 int pndir_tsstr(char *tss, int size, time_t ts) 
 {

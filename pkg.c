@@ -845,6 +845,19 @@ int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg)
                                              (tn_fn_cmp)capreq_cmp2name));
 }
 
+struct pkguinf *pkg_info_ex(const struct pkg *pkg, tn_array *langs) 
+{
+    struct pkguinf *pkgu = NULL;
+
+    if (pkg->load_pkguinf)
+        pkgu = pkg->load_pkguinf(NULL, pkg, pkg->pkgdir_data, langs);
+    
+    else if (pkg_has_ldpkguinf(pkg)) 
+        pkgu = pkguinf_link(pkg->pkg_pkguinf);
+    
+    return pkgu;
+}
+
 struct pkguinf *pkg_info(const struct pkg *pkg) 
 {
     struct pkguinf *pkgu = NULL;
@@ -852,10 +865,11 @@ struct pkguinf *pkg_info(const struct pkg *pkg)
         pkgu = pkguinf_link(pkg->pkg_pkguinf);
 
     else if (pkg->load_pkguinf)
-        pkgu = pkg->load_pkguinf(NULL, pkg, pkg->pkgdir_data);
+        pkgu = pkg->load_pkguinf(NULL, pkg, pkg->pkgdir_data, NULL);
     
     return pkgu;
 }
+
 
 static
 tn_tuple *do_pkg_other_fl(tn_alloc *na, const struct pkg *pkg) 

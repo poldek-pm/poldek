@@ -854,7 +854,7 @@ int do_source_make_idx(struct source *src,
 
         n_snprintf(orig_name, sizeof(orig_name), "previous %s",
                    vf_url_slim_s(idxpath, 0));
-        ldflags |= PKGDIR_LD_DESC;
+
         pdir = pkgdir_open_ext(idxpath,
                                src->pkg_prefix, type,
                                orig_name, NULL, 0, src->lc_lang);
@@ -866,6 +866,9 @@ int do_source_make_idx(struct source *src,
         pkgdir->prev_pkgdir = pdir;
     }
 
+    if (source_is_type(src, "dir"))
+        ldflags |= PKGDIR_LD_DESC;
+    
     rc = 0;
     if (pkgdir_load(pkgdir, NULL, ldflags)) {
         //int n = n_array_size(pkgdir->pkgs);

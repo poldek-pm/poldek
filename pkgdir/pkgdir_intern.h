@@ -6,6 +6,14 @@ extern const char *poldek_conf_PKGDIR_DEFAULT_TYPE;
 
 #include <trurl/nbuf.h>
 
+struct pkgdir_avlang {
+    uint32_t count;
+    char     lang[0];
+};
+
+tn_hash *pkgdir__avlangs_new(void);
+void pkgdir__update_avlangs(struct pkgdir *pkgdir, const char *lang, int count);
+
 void pkgdir__setup_langs(struct pkgdir *pkgdir);
 void pkgdir__setup_depdirs(struct pkgdir *pkgdir);
 char *pkgdir__setup_pkgprefix(const char *path);

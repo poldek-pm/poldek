@@ -64,36 +64,34 @@ struct pkg *search_for_diff(struct pkgdir *pkgdir, struct pkg *pkg)
 }
 
 
-static void setup_diff_langs(struct pkgdir *pkgdir) 
+static void setup_diff_langs(struct pkgdir *diff, struct pkgdir *orig) 
 {
+    tn_array *orig_avlangs;
     int i;
     
-    for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
+    orig_avlangs = n_hash_keys(orig->avlangs_h);
+    
+    for (i=0; i < n_array_size(diff->pkgs); i++) {
         struct pkg      *pkg;
         tn_array        *pkg_langs;
         struct pkguinf  *pkgu;
 
 
-        pkg = n_array_nth(pkgdir->pkgs, i);
+        pkg = n_array_nth(diff->pkgs, i);
         
-        if ((pkgu = pkg_info(pkg)) == NULL)
+        if ((pkgu = pkg_info_ex(pkg, orig_avlangs)) == NULL)
             continue;
         
         if ((pkg_langs = pkguinf_langs(pkgu))) {
-            int i;
-                            
-            if (pkgdir->avlangs_h == NULL)
-                pkgdir->avlangs_h = n_hash_new(41, free);
-
-            for (i=0; i < n_array_size(pkg_langs); i++) {
-                char *l = n_array_nth(pkg_langs, i);
-                if (!n_hash_exists(pkgdir->avlangs_h, l))
-                    n_hash_insert(pkgdir->avlangs_h, l, NULL);
-            }
+            int j;
+            for (j=0; j < n_array_size(pkg_langs); j++)
+                pkgdir__update_avlangs(diff, n_array_nth(pkg_langs, j), 1);
         }
         
         pkguinf_free(pkgu);
     }
+
+    n_array_free(orig_avlangs);
 }
 
 
@@ -173,14 +171,16 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     diff->pkgroups = pkgroup_idx_link(pkgdir2->pkgroups);
     diff->flags = PKGDIR_DIFF;
     diff->orig_ts = pkgdir->ts;
-
+    diff->avlangs_h = pkgdir__avlangs_new();
+    
     idxpath = pkgdir_localidxpath(pkgdir);
     diff->orig_idxpath = idxpath ? n_strdup(idxpath) : NULL;
     diff->ts = time(NULL);
     n_assert(diff->orig_idxpath);
 
     if (diff->pkgs)
-        setup_diff_langs(diff);
+        setup_diff_langs(diff, pkgdir2);
+    pkgdir__setup_langs(pkgdir);
 	
 	if (diff->mod->posthook_diff)
 		diff->mod->posthook_diff(pkgdir, pkgdir2, diff);
@@ -221,12 +221,25 @@ struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *patch)
         pkgdir->pkgroups = pkgroup_idx_link(patch->pkgroups);
     }
     
-    if (patch->pkgs)
+    if (patch->pkgs) {
+        tn_array *langs;
+        
         for (i=0; i < n_array_size(patch->pkgs); i++) {
             pkg = n_array_nth(patch->pkgs, i);
             msg(2, "+ %s\n", pkg_snprintf_s(pkg));
             n_array_push(pkgdir->pkgs, pkg_link(pkg));
         }
+
+        
+        /* assume that diff packages have all languages, not true but it
+           just for estimation */
+        langs = n_hash_keys(patch->avlangs_h);
+        for (i=0; i < n_array_size(langs); i++) /*  */
+            pkgdir__update_avlangs(pkgdir, n_array_nth(langs, i),
+                                   n_array_size(patch->pkgs));
+        n_array_free(langs);
+    }
+    
 
     if (pkgdir->depdirs) {
         n_array_free(pkgdir->depdirs);

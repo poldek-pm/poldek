@@ -165,7 +165,7 @@ static int parse_toc_line(char *line, time_t *tsp, char **mdp)
 {
     char *p, *md;
     time_t ts;
-
+    
     p = line;
 
     *tsp = 0;
@@ -186,7 +186,7 @@ static int parse_toc_line(char *line, time_t *tsp, char **mdp)
         
     if (sscanf(p, "%lu", &ts) != 1) /* read ts */
         return 0;
-    
+
     if ((p = strchr(p, ' ')) == NULL)
         return 0;
 
@@ -198,15 +198,18 @@ static int parse_toc_line(char *line, time_t *tsp, char **mdp)
         return 0;
     
     *p = '\0';
-        
+
     if (p - md != TNIDX_DIGEST_SIZE)
         return 0;
 
-    return 0;
+    *tsp = ts;
+    *mdp = md;
+    
+    return 1;
 }
 
 
-int pndir_m_update(struct pkgdir *pkgdir, int *npatches) 
+int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc) 
 {
     char                idxpath[PATH_MAX], tmpath[PATH_MAX], path[PATH_MAX];
     struct vfile        *vf;
@@ -223,6 +226,7 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
     
     switch (is_uptodate(pkgdir->idxpath, idx->dg, &dg_remote, idx->srcnam)) {
         case 1:
+            *uprc = PKGDIR_UPRC_UPTODATE;
             rc = 1;
             //if ((pkgdir->flags & PKGDIR_VERIFIED) == 0)
             //    rc = pndir_digest_verify(idx->dg, idx->vf);
@@ -230,6 +234,7 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
             break;
             
         case -1:
+            *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
             return 0;
             
         case 0:
@@ -239,6 +244,7 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
             n_assert(0);
     }
 
+    *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
     /* open diff toc */
     snprintf(idxpath, sizeof(idxpath), "%s", pkgdir->idxpath);
     eat_zlib_ext(idxpath);
@@ -251,9 +257,6 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
     if (vf == NULL)
         return 0;
 
-    if (npatches)
-        *npatches = 0;
-    
     n_assert(strlen(idx->dg->md) == TNIDX_DIGEST_SIZE);
     memcpy(current_md, idx->dg->md, TNIDX_DIGEST_SIZE + 1);
 
@@ -273,22 +276,22 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
         if (md == NULL) /* i.e comment */
             continue;
 
-        if (ts <= pkgdir->ts)
+        if (ts <= pkgdir->ts)   /* skip diffs created before me */
             continue;
         
         if (!first_patch_found) {
             if (memcmp(md, current_md, TNIDX_DIGEST_SIZE) == 0)
                 first_patch_found = 1;
             else {
-                if (poldek_VERBOSE > 2) {
-                    logn(LOGERR, "ts = %ld, %ld", pkgdir->ts, ts);
-                    logn(LOGERR, "md dir  %s", idx->dg->md);
-                    logn(LOGERR, "md last %s", md);
-                    logn(LOGERR, "md curr %s", current_md);
-                }
+                msgn(2, "Check diff (ts = %ld, %ld) %s (searching %s)\n",
+                     pkgdir->ts, ts, md, current_md);
+                DBGF_F("ts = %ld, %ld", pkgdir->ts, ts);
+                DBGF_F("md dir  %s", idx->dg->md);
+                DBGF_F("md last %s", md);
+                DBGF_F("md curr %s", current_md);
                 logn(LOGERR, _("%s: no patches available"), pkgdir_pr_idxpath(pkgdir));
-                nerr++;
-                break;
+                //nerr++;
+                continue;
             }
         }
         
@@ -317,18 +320,28 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
     }
     
     vfile_close(vf);
-    //nerr++;
-    /* outdated and no patches || package duplicates */
-    if (nerr || npatch == 0 || pkgdir__uniq(pkgdir) > 0) {
+    if (npatch == 0) {        /* outdated and no patches */
+        *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
         nerr++;
-        
-    } else {
-        struct pndir_digest dg;
+    }
 
+    if (nerr == 0)
+        if (pkgdir__uniq(pkgdir) > 0) { /* duplicates? -> error */
+            *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
+            nerr++;
+        }
+
+    
+    if (nerr == 0) {
+        struct pndir_digest dg;
+        
+        *uprc = PKGDIR_UPRC_UPDATED;
         pndir_digest_calc_pkgs(&dg, pkgdir->pkgs);
+        DBGF_F("XX%s\n%s\n", dg_remote.md, dg.md);
         if (memcmp(dg.md, dg_remote.md, sizeof(dg.md)) != 0) {
             logn(LOGWARN, _("%s: desynchronized index, try --upa"),
                  pkgdir_pr_idxpath(pkgdir));
+            *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
             nerr++;
         }
     }
@@ -344,8 +357,5 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
         msg(1, "_\n");
     }
     
-    if (npatches)
-        *npatches = npatch;
-
     return nerr == 0;
 }

@@ -47,8 +47,16 @@
 #include "capreq.h"
 #include "pkgroup.h"
 
+tn_hash *pkgdir__avlangs_new(void)
+{
+    tn_hash  *avlh = n_hash_new(16, free);
+    n_hash_ctl(avlh, TN_HASH_NOCPKEY);
+    return avlh;
+}
+
+
 static
-tn_hash *pkgdir_strip_langs(struct pkgdir *pkgdir)
+tn_hash *pkgdir__strip_langs(struct pkgdir *pkgdir)
 {
     int      i;
     tn_hash  *avlh = NULL;
@@ -56,34 +64,38 @@ tn_hash *pkgdir_strip_langs(struct pkgdir *pkgdir)
     if (pkgdir->lc_lang == NULL || pkgdir->langs == NULL)
         return NULL;
 
-    avlh = n_hash_dup(pkgdir->avlangs_h, (tn_fn_dup)n_strdup);
-    n_hash_clean(avlh);
+    avlh = n_hash_new(16, NULL); /* no free - will fed with avlangs_h items */
 
     for (i=0;  i < n_array_size(pkgdir->langs); i++) {
         const char *lang = n_array_nth(pkgdir->langs, i);
-        n_hash_insert(avlh, lang, NULL);
+        struct pkgdir_avlang *avl = n_hash_get(pkgdir->avlangs_h, lang);
+        n_assert(avl);
+        n_hash_insert(avlh, avl->lang, avl);
     }
-    
     return avlh;
 }
 
+void pkgdir__update_avlangs(struct pkgdir *pkgdir, const char *lang, int count)
+{
+    struct pkgdir_avlang *avl;
+    int len = strlen(lang) + 1;
+
+    if ((avl = n_hash_get(pkgdir->avlangs_h, lang))) {
+        avl->count += count;
+        
+    } else {
+        avl = n_malloc(sizeof(*avl) + len);
+        avl->count = count;
+        memcpy(avl->lang, lang, len);
+        n_hash_insert(pkgdir->avlangs_h, avl->lang, avl);
+    }
+}
+    
 void pkgdir__setup_langs(struct pkgdir *pkgdir)
 {
     tn_array *avlangs;
 
-#if 0
-    if (pkgdir->avlangs) {
-        iny i;
-        
-        pkgdir->avlangs_h = n_hash_new(21, NULL);
-        for (i=0; i < n_array_size(pkgdir->avlangs); i++) {
-            n_hash_insert(pkgdir->avlangs_h,
-                          n_array_nth(pkgdir->avlangs, i), NULL);
-        }
-    }
-#endif
-    
-    DBGF("pkgdir_setup_langs %s, %s\n", pkgdir->idxpath, pkgdir->lc_lang);
+    DBGF("pkgdir__setup_langs %s, %s\n", pkgdir->idxpath, pkgdir->lc_lang);
     if (pkgdir->lc_lang == NULL)
         return;
 
@@ -92,22 +104,26 @@ void pkgdir__setup_langs(struct pkgdir *pkgdir)
 
     avlangs = n_hash_keys(pkgdir->avlangs_h);
     n_array_sort(avlangs);
+
     n_assert(pkgdir->langs == NULL);
     pkgdir->langs = lc_lang_select(avlangs, pkgdir->lc_lang);
-    n_array_free(avlangs);
-#if 0
+    
+
+#if ENABLE_TRACE
     {
         int i;
-        for (i=0;  i<n_array_size(pkgdir->avlangs); i++) {
-            printf("lav %s\n", n_array_nth(pkgdir->avlangs, i));
+        for (i=0;  i<n_array_size(avlangs); i++) {
+            printf("av_lang %s\n", n_array_nth(avlangs, i));
         }
-    
-        for (i=0;  i<n_array_size(pkgdir->langs); i++) {
-            printf("l %s\n", n_array_nth(pkgdir->langs, i));
-        }
+        
+        if (pkgdir->langs)
+            for (i=0;  i<n_array_size(pkgdir->langs); i++) {
+                printf("lang %s\n", n_array_nth(pkgdir->langs, i));
+            }
     }
-#endif    
-    
+#endif
+
+    n_array_free(avlangs);
 }
 
 
@@ -418,8 +434,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     if (lc_lang)
         pkgdir->lc_lang = n_strdup(lc_lang);
 
-    pkgdir->avlangs_h = n_hash_new(41, free);
-    //pkgdir->langs = n_array_new(2, free, NULL);
+    pkgdir->avlangs_h = pkgdir__avlangs_new();
     rc = 1;
 
     saved_flags = pkgdir->flags;
@@ -603,7 +618,7 @@ int deepcmp_nevr_rev_verify(const struct pkg *p1, const struct pkg *p2)
             ncalls_deepcmp_nevr_rev_verify > 10 * n_array_size(p1->pkgdir->pkgs)) {
             logn(LOGNOTICE, "devel: %d: too many compares",
                  ncalls_deepcmp_nevr_rev_verify);
-            ncalls_deepcmp_nevr_rev_verify = -1;
+            ncalls_deepcmp_nevr_rev_verify = -1; /* stop it */
         }
     }
 #endif    
@@ -813,7 +828,7 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
     avlangs_h = avlangs_h_tmp = NULL;
     if (flags & PKGDIR_CREAT_MINi18n) {
         n_assert(flags & PKGDIR_CREAT_NOPATCH);
-        if ((avlangs_h = pkgdir_strip_langs(pkgdir))) {
+        if ((avlangs_h = pkgdir__strip_langs(pkgdir))) {
             avlangs_h_tmp = pkgdir->avlangs_h;
             pkgdir->avlangs_h = avlangs_h;
         }

@@ -273,7 +273,8 @@ struct pkg *do_loadpkg(tn_alloc *na, Header h, int ldflags, const char *pkgfn)
 }
 
 static 
-struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg, void *ptr)
+struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
+                             void *ptr, tn_array *langs)
 {
     unsigned        vfmode = VFM_RO | VFM_CACHE | VFM_NOEMPTY;
     struct pkguinf  *pkgu = NULL;
@@ -281,7 +282,7 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg, void *ptr)
     char            path[PATH_MAX], *hdrpath;
     Header          h;
     
-
+    langs = langs;               /* ignored, no support */
     if (!pkg->pkgdir)
         return NULL;
 
