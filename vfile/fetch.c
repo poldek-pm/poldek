@@ -266,7 +266,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
 {
     char              *bn = NULL, **argv;
     struct p_open_st  pst;
-    int               i, n, ec;
+    int               i, n, ec, verbose;
     unsigned          p_open_flags = 0;
 
 
@@ -360,9 +360,15 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     
     p_st_init(&pst);
 
-    if (fftch->urltypes & VFURL_CDROM)
+
+    verbose = *vfile_verbose;
+    if (fftch->urltypes & VFURL_CDROM) {
         p_open_flags |= P_OPEN_KEEPSTDIN;
-    
+        if (*vfile_verbose < 1) 
+            *vfile_verbose = 1;
+        
+    }
+
     if (p_open(&pst, p_open_flags, fftch->path, argv) == NULL) {
         vfile_err_fn("p_open: %s\n", pst.errmsg);
         return 0;
@@ -373,8 +379,9 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
         
     if ((ec = p_close(&pst)) != 0)
         vfile_err_fn("%s", pst.errmsg);
-
+    
     p_st_destroy(&pst);
+    *vfile_verbose = verbose;
     
     return ec == 0;
 }
