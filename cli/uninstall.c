@@ -175,7 +175,7 @@ static int uninstall(struct cmdctx *cmdctx)
     struct poclidek_ctx  *cctx;
     struct poldek_ts     *ts;
     tn_array             *pkgs = NULL;
-    struct install_info  iinf, *iinfp;
+    struct poldek_iinf  iinf, *iinfp;
     int                  i, err = 0;
     
     
@@ -212,7 +212,7 @@ static int uninstall(struct cmdctx *cmdctx)
     
     if (iinfp) {
         poclidek_apply_iinf(cmdctx->cctx, iinfp);
-        install_info_destroy(iinfp);
+        poldek_iinf_destroy(iinfp);
     }
     
     

@@ -430,7 +430,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 static int install(struct cmdctx *cmdctx)
 {
-    struct install_info   iinf;
+    struct poldek_iinf   iinf;
     struct poclidek_ctx  *cctx;
     struct poldek_ts      *ts;
     int rc = 1, is_test;
@@ -451,7 +451,7 @@ static int install(struct cmdctx *cmdctx)
         poclidek_apply_iinf(cmdctx->cctx, &iinf);
     
     if (!is_test)
-        install_info_destroy(&iinf);
+        poldek_iinf_destroy(&iinf);
     
     return rc;
 }

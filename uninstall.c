@@ -171,8 +171,8 @@ void print_uninstall_summary(tn_array *pkgs, struct pkgmark_set *pms, int ndep)
 
 
 static
-void update_install_info(struct install_info *iinf, tn_array *pkgs,
-                         struct pkgdb *db, int vrfy)
+void update_poldek_iinf(struct poldek_iinf *iinf, tn_array *pkgs,
+                        struct pkgdb *db, int vrfy)
 {
     int i, is_installed = 0;
     
@@ -196,7 +196,7 @@ void update_install_info(struct install_info *iinf, tn_array *pkgs,
 }
 
 
-int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
+int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
 {
     int               i, nerr = 0, ndep_marked = 0, doit = 1;
     struct dbpkg_set  *unpoldek_tset;
@@ -315,7 +315,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
             }
             
             if (iinf)
-                update_install_info(iinf, pkgs, ts->db, vrfy);
+                update_poldek_iinf(iinf, pkgs, ts->db, vrfy);
         }
     }
 

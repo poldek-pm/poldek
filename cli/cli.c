@@ -657,7 +657,7 @@ int poclidek_rcmd_execline(struct poclidek_rcmd *rcmd, const char *cmdline)
 
 
 
-void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct install_info *iinf)
+void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf)
 {
     int i, n = 0;
     struct pkg_dent *ent = NULL;

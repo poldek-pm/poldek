@@ -115,8 +115,8 @@ int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
 
 void poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path);
 
-struct install_info;
-void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct install_info *iinf);
+struct poldek_iinf;
+void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf);
 
 
 int poclidek_save_installedcache(struct poclidek_ctx *cctx,

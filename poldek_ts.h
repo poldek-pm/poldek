@@ -2,9 +2,7 @@
 #ifndef  POLDEK_LIB_TX_H
 #define  POLDEK_LIB_TX_H
 
-#include <trurl/nmalloc.h>
 #include <trurl/narray.h>
-#include <trurl/nhash.h>
 
 enum poldek_ts_type {
     POLDEK_TSt_INSTALL    = 1, 
@@ -71,12 +69,14 @@ enum poldek_ts_opt {
     POLDEK_OP___MAXOP,
 };
 
-
-struct pkgmark_set;
 struct poldek_ctx;
+struct pkgdb;
+struct pm_ctx;
+struct source;
+struct arg_packages;
+struct pkgmark_set;
 struct pkg;
 
-struct arg_packages;
 #ifdef SWIG
 struct poldek_ts { int type; };
 #else
@@ -151,20 +151,20 @@ void poldek_ts_clean_arg_pkgmasks(struct poldek_ts *ts);
 const tn_array* poldek_ts_get_arg_pkgmasks(struct poldek_ts *ts);
 int poldek_ts_get_arg_count(struct poldek_ts *ts);
 
-struct install_info {
+struct poldek_iinf {            /* install info struct */
     tn_array *installed_pkgs;
     tn_array *uninstalled_pkgs;
 };
 
-void install_info_init(struct install_info *iinf);
-void install_info_destroy(struct install_info *iinf);
+void poldek_iinf_init(struct poldek_iinf *iinf);
+void poldek_iinf_destroy(struct poldek_iinf *iinf);
 
-int poldek_ts_run(struct poldek_ts *ts, struct install_info *iinf);
+int poldek_ts_run(struct poldek_ts *ts, struct poldek_iinf *iinf);
 
 struct pkgdir;
 struct pkgdir *poldek_ts_load_dest_pkgdir(struct poldek_ts *ts);
 //int poldek_ts_do_install_dist(struct poldek_ts *ts);
-//int poldek_ts_do_install(struct poldek_ts *ts, struct install_info *iinf);
-//int poldek_ts_do_uninstall(struct poldek_ts *ts, struct install_info *iinf);
+//int poldek_ts_do_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
+//int poldek_ts_do_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf);
 
 #endif

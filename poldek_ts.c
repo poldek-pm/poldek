@@ -55,13 +55,13 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts);
 extern
 int do_poldek_ts_upgrade_dist(struct poldek_ts *ts);
 extern
-int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf);
+int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
 extern
-int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf);
+int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf);
 
 
-static int ts_run_install(struct poldek_ts *ts, struct install_info *iinf);
-static int ts_run_uninstall(struct poldek_ts *ts, struct install_info *iinf);
+static int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
+static int ts_run_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf);
 static int ts_run_verify(struct poldek_ts *ts, void *);
 
 typedef int (*ts_run_fn)(struct poldek_ts *, void *);
@@ -475,13 +475,13 @@ struct pkgdb *poldek_ts_dbopen(struct poldek_ts *ts, mode_t mode)
                       ts->pm_pdirsrc ? ts->pm_pdirsrc : NULL, NULL);
 }
 
-void install_info_init(struct install_info *iinf) 
+void poldek_iinf_init(struct poldek_iinf *iinf) 
 {
     iinf->installed_pkgs = pkgs_array_new(16);
     iinf->uninstalled_pkgs = pkgs_array_new(16);
 }
 
-void install_info_destroy(struct install_info *iinf) 
+void poldek_iinf_destroy(struct poldek_iinf *iinf) 
 {
     if (iinf->installed_pkgs) {
         n_array_free(iinf->installed_pkgs);
@@ -618,7 +618,7 @@ int poldek_ts_type(struct poldek_ts *ts)
 }
 
 
-static int ts_prerun(struct poldek_ts *ts, struct install_info *iinf) 
+static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf) 
 {
     int rc = 1;
 
@@ -666,7 +666,7 @@ static int ts_prerun(struct poldek_ts *ts, struct install_info *iinf)
     if (rc) {
         rc = arg_packages_setup(ts->aps);
         if (rc && iinf)
-            install_info_init(iinf);
+            poldek_iinf_init(iinf);
     }
 
     return rc;
@@ -726,7 +726,7 @@ int ts_run_upgrade_dist(struct poldek_ts *ts)
 
 
 static        
-int ts_run_install(struct poldek_ts *ts, struct install_info *iinf) 
+int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf) 
 {
     int rc;
     
@@ -764,7 +764,7 @@ int ts_run_install(struct poldek_ts *ts, struct install_info *iinf)
 
 
 static
-int ts_run_uninstall(struct poldek_ts *ts, struct install_info *iinf) 
+int ts_run_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf) 
 {
     int rc;
 
@@ -854,7 +854,7 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
 
 
 
-int poldek_ts_run(struct poldek_ts *ts, struct install_info *iinf)
+int poldek_ts_run(struct poldek_ts *ts, struct poldek_iinf *iinf)
 {
     struct ts_run *ts_run = NULL;
     int i = 0;

@@ -95,7 +95,7 @@ struct upgrade_s {
     void           *pkgflmod_mark;
 };
 
-int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf);
+int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
 
 static
 int process_pkg_conflicts(int indent, struct pkg *pkg,
@@ -1942,7 +1942,7 @@ static void mapfn_clean_pkg_flags(struct pkg *pkg)
 
 
 static
-void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
+void update_poldek_iinf(struct poldek_iinf *iinf, struct upgrade_s *upg,
                          int vrfy)
 {
     int i, is_installed = 1;
@@ -2002,7 +2002,7 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
  */
 static
 int do_install(struct pkgset *ps, struct upgrade_s *upg,
-               struct install_info *iinf)
+               struct poldek_iinf *iinf)
 {
     int rc, nerr = 0, any_err = 0;
     tn_array *pkgs;
@@ -2114,7 +2114,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         rc = pm_pminstall(ts->db, pkgs, upg->uninst_set->dbpkgs, ts);
         
         if (!is_test && iinf)
-            update_install_info(iinf, upg, rc <= 0);
+            update_poldek_iinf(iinf, upg, rc <= 0);
 
         if (!poldek_ts_keep_downloads(ts) && !ts->getop(ts, POLDEK_OP_NOFETCH))
             packages_fetch_remove(pkgs, ts->cachedir);
@@ -2444,7 +2444,7 @@ int prepare_icaps(struct poldek_ts *ts)
 
 
 
-int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
+int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
 {
     int i, nmarked = 0, nerr = 0, n, is_particle;
     struct upgrade_s upg;
