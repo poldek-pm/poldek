@@ -126,7 +126,7 @@ void vfile_configure(const char *cachedir, int flags)
 #endif /* __GLIBC_PREREQ */
 
 #if __GLIBC_PREREQ(2,2)
-int gzfseek(void *stream, _IO_off64_t *offset, int whence)
+static int gzfseek(void *stream, _IO_off64_t *offset, int whence)
 {
     z_off_t rc, off = *offset;
     
@@ -141,7 +141,7 @@ int gzfseek(void *stream, _IO_off64_t *offset, int whence)
 
 #else  /* glibc < 2.2 */
 
-int gzfseek(void *stream, _IO_off_t offset, int whence) 
+static int gzfseek(void *stream, _IO_off_t offset, int whence) 
 {
     z_off_t rc;
     
@@ -156,7 +156,7 @@ int gzfseek(void *stream, _IO_off_t offset, int whence)
 #endif /* __GLIBC_PREREQ(2,2) */
 
 #if ZLIB_TRACE
-int gzread_wrap(void *stream, char *buf, size_t size)
+static int gzread_wrap(void *stream, char *buf, size_t size)
 {
     int rc;
     rc = gzread(stream, buf, size);
@@ -165,7 +165,7 @@ int gzread_wrap(void *stream, char *buf, size_t size)
 }
 #endif
 
-cookie_io_functions_t gzio_cookie = {
+static cookie_io_functions_t gzio_cookie = {
 #if ZLIB_TRACE    
     (cookie_read_function_t*)gzread_wrap,
 #else
@@ -381,7 +381,27 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
             }
         }
         break;
-
+        
+#ifdef ENABLE_VFILE_TRURLIO
+        case VFT_TRURLIO: {
+            char *mode = "";
+            
+            if (vfmode & VFM_RW)
+                mode = "w";
+            else if (vfmode & VFM_APPEND)
+				mode = "a+";
+			else 
+                mode = "r";
+			
+				vf->vf_tnstream = n_stream_open(path, mode, TN_STREAM_UNKNOWN);
+            if (vf->vf_tnstream != NULL)
+                rc = 1;
+            else 
+                vfile_err_fn("%s: %m\n", CL_URL(path));
+        }
+        break;
+#endif
+        
 #ifdef ENABLE_VFILE_RPMIO
         case VFT_RPMIO:
             if (vfmode & VFM_RW) {
@@ -632,7 +652,14 @@ void vfile_close(struct vfile *vf)
             vf->vf_gzstream = NULL;
             break;
             
-#ifdef ENABLE_VFILE_RPMIO            
+#ifdef ENABLE_VFILE_TRURLIO
+        case VFT_TRURLIO:
+            n_stream_close(vf->vf_tnstream);
+            vf->vf_tnstream = NULL;
+            break;
+#endif            
+            
+#ifdef ENABLE_VFILE_RPMIO
         case VFT_RPMIO:
             if (vf->vf_fdt) {
                 Fclose(vf->vf_fdt);

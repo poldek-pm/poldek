@@ -44,6 +44,8 @@
 #include <trurl/nstr.h>
 #include <trurl/nmalloc.h>
 
+#include <sigint/sigint.h>
+
 #include "http.h"
 #include "i18n.h"
 #include "sigint/sigint.h"

@@ -49,7 +49,6 @@ void fetch(const char *url)
 
 int main(int argc, char *argv[])
 {
-    void *fn;
     int verbose = 10;
     
     vfile_verbose = &verbose;

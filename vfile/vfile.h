@@ -15,10 +15,18 @@
 #ifndef POLDEK_VFILE_H
 #define POLDEK_VFILE_H
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdio.h>
 
 #include <zlib.h>
 #include <trurl/narray.h>
+
+#ifdef ENABLE_VFILE_TRURLIO
+# include <trurl/nstream.h>
+#endif
 
 extern int *vfile_verbose;
 extern const char *vfile_anonftp_passwd;
@@ -36,10 +44,11 @@ extern void (*vfile_err_fn)(const char *fmt, ...);
 void vfile_configure(const char *cachedir, int flags);
 
 
-#define VFT_IO     1             /* open(2)                   */
-#define VFT_STDIO  2             /* fopen(3)                  */
-#define VFT_GZIO   3             /* zlib: gzopen()            */ 
-#define VFT_RPMIO  4             /* rpmlib: Fopen()           */
+#define VFT_IO       1             /* open(2)                   */
+#define VFT_STDIO    2             /* fopen(3)                  */
+#define VFT_GZIO     3             /* zlib: gzopen()            */ 
+#define VFT_RPMIO    4             /* rpmlib: Fopen()           */
+#define VFT_TRURLIO  5             /* trurlib's tn_stream       */
 
 #define VFM_RO         (1 << 0)  /* RO, this is the default   */
 #define VFM_RW         (1 << 1)
@@ -71,10 +80,13 @@ struct vfile {
     unsigned  vf_mode;                /* VFM_*   */
     unsigned  vf_flags;               /* VF_*    */ 
     union {
-        int    vfile_fd;
-        FILE   *vfile_stream;
-        gzFile *vfile_gzstream;
-        void   *vfile_fdt;        /* RPM's FD_t */
+        int        vfile_fd;
+        FILE       *vfile_stream;
+        gzFile     *vfile_gzstream;
+        void       *vfile_fdt;        /* RPM's FD_t */
+#ifdef ENABLE_VFILE_TRURLIO        
+        tn_stream  *vfile_tnstream;
+#endif        
     } vfile_fdescriptor;
 
     char          *vf_path;
@@ -86,6 +98,9 @@ struct vfile {
 #define	vf_stream    vfile_fdescriptor.vfile_stream
 #define	vf_gzstream  vfile_fdescriptor.vfile_gzstream
 #define	vf_fdt       vfile_fdescriptor.vfile_fdt
+#ifdef ENABLE_VFILE_TRURLIO
+# define	vf_tnstream  vfile_fdescriptor.vfile_tnstream
+#endif
 
 #define vfile_localpath(vf)  ((vf)->vf_tmpath ? (vf)->vf_tmpath : (vf)->vf_path)
 
