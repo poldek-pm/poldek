@@ -49,6 +49,7 @@ void vfile_configure(const char *cachedir, int flags);
 #define VFM_MDUP   (1 << 5)      /* for remote files, use FILE.md file for checking
                                     if new file exists
                                   */
+#define VFM_STBRN  (1 << 6)      /* infinite retrying to open file  */
 
 
 #define VF_FETCHED  (1 << 8)    /* */

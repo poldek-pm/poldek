@@ -472,7 +472,7 @@ char *mkmdpath(char *mdpath, int size, const char *path)
 }
 
 
-struct vfile *vfile_open(const char *path, int vftype, int vfmode)
+struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
 {
     struct vfile vf, *rvf = NULL;
     int opened, mdopened, urltype;
@@ -535,6 +535,9 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
                     }
                     opened = 1;
                     vf.vf_flags |= VF_FRMCACHE;
+                    
+                } else {
+                    unlink(buf);
                 }
             }
         }
@@ -616,6 +619,27 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
     
     return rvf;
 }
+
+struct vfile *vfile_open(const char *path, int vftype, int vfmode) 
+{
+    struct vfile *vf = NULL;
+    int n = 0;
+
+    
+    while (1) {
+        if ((vf = do_vfile_open(path, vftype, vfmode)))
+            break;
+        
+        if ((vfmode & VFM_STBRN) == 0)
+            break;
+
+        vfile_msg_fn("Retrying %s (#%d)...\n", path, ++n);
+        sleep(1);
+    }
+    
+    return vf;
+}
+
 
 
 void vfile_close(struct vfile *vf) 
