@@ -285,12 +285,15 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
             else {
                 msgn(2, "Check diff (ts = %ld, %ld) %s (searching %s)\n",
                      pkgdir->ts, ts, md, current_md);
-                DBGF_F("ts = %ld, %ld", pkgdir->ts, ts);
-                DBGF_F("md dir  %s", idx->dg->md);
-                DBGF_F("md last %s", md);
-                DBGF_F("md curr %s", current_md);
-                logn(LOGERR, _("%s: no patches available"), pkgdir_pr_idxpath(pkgdir));
-                //nerr++;
+
+                if (poldek_verbose() > 2) {
+                    DBGF_F("ts = %ld, %ld", pkgdir->ts, ts);
+                    DBGF_F("md dir  %s", idx->dg->md);
+                    DBGF_F("md last %s", md);
+                    DBGF_F("md curr %s", current_md);
+                    logn(LOGERR, _("%s: no patches available(fake)"),
+                         pkgdir_pr_idxpath(pkgdir));
+                }
                 continue;
             }
         }
