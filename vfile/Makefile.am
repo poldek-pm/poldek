@@ -7,6 +7,7 @@ if ENABLE_VFILE_CURL
 VFCURL_SRCS_ = $(VFCURL_SRCS)
 endif
 
+LDADD_              = @INTLLIBS@
 
 INCLUDES = @TRURL_INCLUDE@
 lib_LIBRARIES      = libvfile.a 

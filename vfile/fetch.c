@@ -21,6 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/stat.h>
 
 #include <trurl/nassert.h>
