@@ -103,7 +103,7 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
                 if (endl) {
                     endl = 0;
                     msg_f(0, "_\n");
-                    msg_f(0, "rpm: ");
+                    msg_f(0, "rpm: %c", c);
                     continue;
                 }
                 msg_f(0, "_%c", c);
