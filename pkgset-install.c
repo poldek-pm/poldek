@@ -390,16 +390,32 @@ int is_installable(struct pkgdb *db, struct pkg *pkg, tn_array *uninst_dbpkgs,
 
 int uninstpkgs_provides(struct upgrade_s *upg, struct capreq *req) 
 {
-    int i;
+    int i, is_file = 0;
+    char *dirname, *basename, path[PATH_MAX];
 
     if (n_hash_exists(upg->capcache, capreq_name(req))) {
-        msg(4, "capcahe hit %s\n", capreq_name(req));
+        msg(4, "capcache hit %s\n", capreq_name(req));
         return 1;
+    }
+
+    if (capreq_is_file(req)) {
+        is_file = 1;
+        strncpy(path, capreq_name(req), sizeof(path));
+        path[PATH_MAX - 1] = '\0';
+        n_basedirnam(path, &dirname, &basename);
+        n_assert(dirname);
+        n_assert(*dirname);
+        if (*dirname == '/' && *(dirname + 1) != '\0')
+            dirname++;
     }
     
     for (i=0; i<n_array_size(upg->uninst_dbpkgs); i++) {
         struct dbpkg *dbpkg = n_array_nth(upg->uninst_dbpkgs, i);
         if (pkg_match_req(dbpkg->pkg, req, 0)) {
+            n_hash_insert(upg->capcache, capreq_name(req), NULL);
+            return 1;
+            
+        } else if (is_file && pkg_has_path(dbpkg->pkg, dirname, basename)) {
             n_hash_insert(upg->capcache, capreq_name(req), NULL);
             return 1;
         }
@@ -462,7 +478,7 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
 
                 
                 if (how == PROCESS_ORPHANS && !uninstpkgs_provides(upg, req)) {
-                    msg(5, "skiped %s\n", reqname);
+                    msg(5, "skip %s from %s\n", reqname, pkg_snprintf_s(pkg));
                     continue;
                 }
                 
@@ -636,7 +652,6 @@ int add_orphans(struct upgrade_s *upg)
         
         n++;
         dbpkg->flags |= DBPKG_ORPHANS_PROCESSED;
-        
         rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, pkg->name,
                                    upg->uninst_dbpkgs, ldflags);
         
@@ -668,6 +683,7 @@ int add_orphans(struct upgrade_s *upg)
 
                     path_left_size = sizeof(path) - (endp - path);
                     n_strncpy(endp, file->basename, path_left_size);
+                    
                     rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, path,
                                                upg->uninst_dbpkgs, ldflags);
                     if (S_ISLNK(file->mode)) {
@@ -973,10 +989,15 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
     process_dependecies(ps, upg);
     if (upg->nfatal_err)
         return 0;
-    
-    msg(1, "There are %d package(s) to install, %d marked by dependencies:\n",
-        upg->ninstall, upg->ndep);
-    
+
+    if (upg->ndep == 0)
+        msg(1, "There are %d package%s to install:\n", upg->ninstall,
+            upg->ninstall > 1 ? "s":"");
+    else 
+        msg(1, "There are %d package%s to install, "
+            "%d marked by dependencies:\n", upg->ninstall,
+            upg->ninstall > 1 ? "s":"", upg->ndep);
+        
     for (i=0; i<n_array_size(upg->install_pkgs); i++) {
         struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
         msg(1, "_%c %s\n", pkg_is_dep_marked(pkg) ? 'D' : 'I', 
