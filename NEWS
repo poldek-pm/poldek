@@ -1,3 +1,21 @@
+0.17.5 (minor bugfix release; 2002/05/)
+
+* improved package auto-selection among equivalents: package which marks
+  less packages to install is preferred
+
+* vftp: fixed logging in when server doesn't ask for password 
+  (Przemyslaw Frasunek <venglin@freebsd.lublin.pl>)
+
+* bugfix: root directory (--rootdir) is always passed to rpm as absolute path  
+
+* shell: desc: file mode is displayed in human readable form
+
+* fixed vfjuggle: packages.dir.md* are copied to hdd too
+
+* few SIGSEVs killed on "search" command when APT's pkglist file 
+  is used as package index (thanks to Gustavo Niemeyer <niemeyer@conectiva.com>)
+
+
 0.17.4 (bugfix/minor enhancements release; 2002/05/06)
 
 * new (major) modes:

@@ -1,9 +1,12 @@
 # $Id$
 
+* mis 2002/05/13
+- use Obsoletes tag on greedy selection (optional)
+- "block" option ("hold" like) which blocks package installation (RFC)
+- add transfer speed calculation to vfprogress (vfile/vfprogress.c)
+
 * mis 2002/04/07
 - vhttp: support for HTTP auth
-- don't load full file list from db if "depdirs"
-  is loaded from local db.
 
 * mis 2002/03/14
 - more compact install_summary()
@@ -14,7 +17,6 @@
 * mis 2001/05/18
 - unistalled packages should be ordered using uninst prerequirements 
 - detection of fatal rpmlib errors during install-dist
-
 
 * mis  2000/09/20
 - patch wget, rsync and snarf to support syntax like:

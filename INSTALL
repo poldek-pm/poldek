@@ -1,17 +1,12 @@
-For build requirements see poldek.spec. 
+Build requirements: $ grep ^BuildReq poldek.spec
 
-Required trurlib may be downloaded from PLD ftp site:
-<ftp://ftp.pld.org.pl/PLD-1.0/SRPMS/SRPMS/trurlib-*.src.rpm>
-<ftp://ftp.pld.org.pl/PLD-1.0/$ARCH/PLD/RPMS/trurlib-*.rpm>
+Build
 
-or from CVS repository
-cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get -r CURRENT \ 
-	installer/trurlib
+$ ./configure && make 
 
-To build it do:
-$ cd installer/trurlib && ./configure && make && make install
+or better 
 
-After trurlib installation try in poldek/
+$ rpm -tb poldek-<VERSION>.tar.gz --define 'distro <distro>' 
+Possible distro values: pld, rh or mdk.
 
-$ ./configure && make
 
