@@ -82,12 +82,13 @@ int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2)
     if ((rc = (capreq_epoch(cr1) - capreq_epoch(cr2))))
         return rc;
     
-    rc = rpmvercmp(capreq_rel(cr1), capreq_ver(cr2));
-
-    if (rc == 0)
-        rc = rpmvercmp(capreq_rel(cr1), capreq_rel(cr2));
-
-    return rc;
+    if ((rc = (capreq_ver(cr1) - capreq_ver(cr2))))
+        return rc;
+    
+    if ((rc = rpmvercmp(capreq_rel(cr1), capreq_rel(cr2))))
+        return rc;
+    
+    return cr1->cr_relflags - cr2->cr_relflags;
 }
 
 __inline__
@@ -104,9 +105,10 @@ int capreq_strcmp_evr(struct capreq *cr1, struct capreq *cr2)
     if ((rc = strcmp(capreq_rel(cr1), capreq_rel(cr2))))
         return rc;
 
-    return cr1->cr_relflags - cr2->cr_relflags;
+    return (cr1->cr_relflags + cr1->cr_flags) -
+        (cr2->cr_relflags + cr2->cr_flags);
 }
-#if 0
+
 __inline__
 int capreq_strcmp_name_evr(struct capreq *cr1, struct capreq *cr2) 
 {
@@ -117,7 +119,6 @@ int capreq_strcmp_name_evr(struct capreq *cr1, struct capreq *cr2)
 
     return capreq_strcmp_evr(cr1, cr2);
 }
-#endif    
 
 int capreq_fprintf(FILE *stream, const struct capreq *cr) 
 {
@@ -423,7 +424,8 @@ int32_t capreq_epoch_(const struct capreq *cr)
 tn_array *capreq_arr_new(int size) 
 {
     tn_array *arr;
-    arr = n_array_new(size > 0 ? size : 2, capreq_free_fn, (tn_fn_cmp)capreq_cmp_name_evr);
+    arr = n_array_new(size > 0 ? size : 2, capreq_free_fn,
+                      (tn_fn_cmp)capreq_cmp_name_evr);
     n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
     return arr;
 }
@@ -821,6 +823,7 @@ int capreq_arr_store(tn_array *arr, FILE *stream, const char *prefix)
     if ((arr_size = n_array_size(arr)) == 0)
         return 1;
     n_assert(n_array_size(arr) < INT16_MAX);
+    n_array_isort_ex(arr, (tn_fn_cmp)capreq_strcmp_name_evr);
     
     nbuf = n_buf_new(64 * arr_size);
     n_buf_add_int16(nbuf, arr_size);
@@ -845,6 +848,7 @@ int capreq_arr_store(tn_array *arr, FILE *stream, const char *prefix)
     fwrite(&size16, sizeof(size16), 1, stream);
     rc = fwrite(n_buf_ptr(nbuf), n_buf_size(nbuf), 1, stream);
     n_buf_free(nbuf);
+    n_array_isort(arr);
     return rc;
 }
 
