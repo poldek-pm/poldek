@@ -30,10 +30,11 @@ libpolclidek_la_SOURCES  =  \
 libpolclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
 pkginclude_HEADERS = poclidek.h
 
-bin_PROGRAMS      = poldek test_cli
+bin_PROGRAMS      = poldek
 poldek_SOURCES    = shell.c main.c
 poldek_LDADD      = libpolclidek.la   
 
+noinst_PROGRAMS   = test_cli
 test_cli_SOURCES  = test_cli.c
 test_cli_LDADD    = libpolclidek.la
 

@@ -30,7 +30,7 @@ int test_01(void)
     struct poclidek_ctx  *cctx;
 
     ctx = poldek_new(0);
-    poldek_load_config(ctx, "test_cli.rc");
+    poldek_load_config(ctx, "test_cli.rc", 0);
     poldek_setup(ctx);
 
     cctx = poclidek_new(ctx);
@@ -50,7 +50,7 @@ int test_02(void)
     struct poclidek_rcmd  *cmd;
     
     ctx = poldek_new(0);
-    poldek_load_config(ctx, "test_cli.rc");
+    poldek_load_config(ctx, "test_cli.rc", 0);
     poldek_setup(ctx);
 
     cctx = poclidek_new(ctx);
