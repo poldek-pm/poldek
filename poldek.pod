@@ -410,9 +410,19 @@ B<OPTIONS> describes source options; possible values are:
 
 =item * B<noautoup> - don't update this source by default
 
-=item * B<gpg> - verifiy package GPG signatures
+=item * B<gpg> - verify package GPG signatures
 
-=item * B<pgp> - verifiy package PGP signatures
+=item * B<pgp> - verify package PGP signatures
+
+=item * B<pri=NUMERICAL_VALUE> 
+
+Source priority may be set by this option. If the same packages 
+(identical name and EVR) are available in more than one source then 
+packages from highest prioritized source are taken. 
+
+If source priorities aren't set sources are prioritized in order
+they are appear in config file.
+
 
 =item * B<type=SOURCE_TYPE>
 
@@ -428,7 +438,7 @@ Source type may be set by this option. Possible values are:
 =item * B<hdrl> - file with raw package headers in RPM format;
  available in many RPM-based distributions (named hdlist in RH), however 
  this format isn't optimal for poldek (is not updateable for example). 
- See F<poldekrc.sample-redhat-hdlist> included in poldek distribution.
+ See F<poldekrc.sample-rh> included in poldek distribution.
 
 =back 	
 
@@ -436,7 +446,8 @@ Source type may be set by this option. Possible values are:
 
 Examples:
 
-source = pld,gpg,noautoup       ftp://zn/PLD/ra/RPMS
+# packages from 'pld' are preffered
+source = pld,gpg,noautoup,pri=-10   ftp://zn/PLD/ra/RPMS 
 
 source = pld-test,noauto        /mnt/PLD-test/RPMS
 
