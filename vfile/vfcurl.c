@@ -81,12 +81,19 @@ int vfile_curl_fetch(const char *dest, const char *url)
     struct stat st;
     FILE *stream;
     int rc = 1;
+    char err[CURL_ERROR_SIZE * 2];
 
+    *err = '\0';
 
+    if (curl_easy_setopt(curlh, CURLOPT_ERRORBUFFER, err) != 0) {
+        vfile_err_fn("curl_easy_setopt failed");
+        return 0;
+    }
+    
     if (curl_easy_setopt(curlh, CURLOPT_PROGRESSDATA, &bar) != 0) {
         vfile_err_fn("curl_easy_setopt failed");
         return 0;
-    };
+    }
     
     if (curl_easy_setopt(curlh, CURLOPT_URL, url) != 0) {
         vfile_err_fn("curl_easy_setopt failed");
@@ -118,7 +125,7 @@ int vfile_curl_fetch(const char *dest, const char *url)
         rc = 1;
         
     } else {
-        vfile_err_fn("%s: curl fetch failed %d\n", url, rc);
+        vfile_err_fn("%s: curl failed: %s\n", url, err);
         rc = 0;
     }
 
