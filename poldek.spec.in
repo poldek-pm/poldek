@@ -13,7 +13,7 @@ Version:	@VERSION@
 Release:	%{?snap:0.%{snap}.}1%{?_with_static:.static}
 License:	GPLv2
 Group:	    Applications/System
-Source0:	http://team.pld.org.pl/~mis/poldek/download/%{name}-%{version}%{?snap:-%{snap}}.tar.bz2
+Source0:	http://team.pld.org.pl/~mis/poldek/download/%{name}-%{version}%{?snap:-cvs%{snap}}.tar.bz2
 URL:	    http://team.pld.org.pl/~mis/poldek/
 Requires:	rpm
 %{?_with_poldekuser:Requires: sudo}
@@ -59,7 +59,7 @@ Requires:	%{name}-devel = %{version}-%{release}
 poldek static libraries
 
 %prep 
-%setup -q -n %{name}-%{version}%{?snap:-%{snap}}
+%setup -q -n %{name}-%{version}%{?snap:-cvs%{snap}}
 
 %build
 %configure %{?_with_static:--enable-static}
@@ -135,6 +135,9 @@ fi
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.29  2004/10/18 19:58:51  mis
+- removed 'cvs' from snapshot package release
+
 Revision 1.28  2004/10/17 20:41:12  mis
 - fixes
 

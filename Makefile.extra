@@ -72,7 +72,7 @@ snap: tarball-bz2
 
 snap-rpm-package: snap
 		dts=`date +%Y%m%d.%H` && echo $$dts && ls -l $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2 &&\
-	        rpmbuild -tb --with poldekuser --define "snap cvs$$dts" $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2
+	        rpmbuild -tb --with poldekuser --define "snap $$dts" $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2
 
 ann_from = mis@pld.org.pl
 ann_to   = poldek@pld-linux.org
