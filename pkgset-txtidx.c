@@ -45,7 +45,7 @@
 #include "pkgset.h"
 #include "pkgset-load.h"
 
-static char *filefmt_version = "0.3";
+static char *filefmt_version = "0.3.1";
 
 #define PKGT_HAS_NAME  (1 << 0)
 #define PKGT_HAS_EVR   (1 << 1)
@@ -67,12 +67,13 @@ struct pkgtags_s {
     uint32_t   size;
     uint32_t   btime;
     char       path[PATH_MAX];
-    off_t      pkguinf_offs;
     tn_array   *caps;
     tn_array   *reqs;
     tn_array   *cnfls;
     tn_array   *pkgfl;
     off_t      other_files_offs;
+    struct pkguinf *pkguinf;
+    off_t      pkguinf_offs;
 };
 
 static const char url_tag[] = "URL: ";
@@ -123,7 +124,7 @@ inline static char *next_tokn(char **str, char delim, int *toklen)
 }
 
 
-int pkgset_load_txtidx(struct pkgset *ps, const char *pathname)
+int pkgset_load_txtidx(struct pkgset *ps, int ldflags, const char *pathname)
 {
     struct pkgtags_s pkgtags;
     char *line_bufs[2], *line;
@@ -132,12 +133,17 @@ int pkgset_load_txtidx(struct pkgset *ps, const char *pathname)
     char *last_value = NULL, *last_value_endp = NULL;
     int   nerr = 0, n, nline, nread;
     struct vfile *vf;
-    int addbastards = 1, fullflist = 0;
+    int flag_addbastards = 1, flag_fullflist = 0, flag_lddesc = 0;
 
-    if (ps->flags & PKGSET_READFULLTXTINDEX) {
-        addbastards = 0;
-        fullflist = 1;
-    }
+    if (ldflags & PKGSET_IDX_LDSKIPBASTS) 
+        flag_addbastards = 0;
+
+    if (ldflags & PKGSET_IDX_LDFULLFLIST)
+        flag_fullflist = 1;
+
+    if (ldflags & PKGSET_IDX_LDDESC)
+        flag_lddesc = 1;
+
     
     if ((vf = vfile_open(pathname, VFT_STDIO, VFM_RO | VFM_CACHE)) == NULL) 
         return 0;
@@ -146,7 +152,10 @@ int pkgset_load_txtidx(struct pkgset *ps, const char *pathname)
     nline = 0;
     
     last_value_endp = NULL;
+
+    memset(&pkgtags, 0, sizeof(pkgtags));
     pkgtags.flags = 0;
+    
 
     line_bufs_size[0] = line_bufs_size[1] = 4*4096;
     line_bufs[0] = malloc(line_bufs_size[0]);
@@ -222,7 +231,7 @@ int pkgset_load_txtidx(struct pkgset *ps, const char *pathname)
             struct pkg *pkg;
             if (last_value_endp) {
                 if (!add2pkgtags(&pkgtags, last_tag, last_value,
-                                 pathname, nline, addbastards)) {
+                                 pathname, nline, flag_addbastards)) {
                     nerr++;
                     goto l_end;
                 }
@@ -273,7 +282,7 @@ int pkgset_load_txtidx(struct pkgset *ps, const char *pathname)
             if (last_value_endp) {
                 DBGMSG("INSERT %c = %s\n", last_tag, last_value);
                 add2pkgtags(&pkgtags, last_tag, last_value, pathname,
-                            nline, addbastards);
+                            nline, flag_addbastards);
             }
 
             if (*line == 'L') { /* files */
@@ -284,14 +293,42 @@ int pkgset_load_txtidx(struct pkgset *ps, const char *pathname)
                 continue;
                 
             } else if (*line == 'l') {
-                pkgtags.other_files_offs = ftell(vf->vf_stream);
-                pkgfl_skip_f(vf->vf_stream);
+                
+                if (flag_fullflist == 0) {
+                    pkgtags.other_files_offs = ftell(vf->vf_stream);
+                    pkgfl_skip_f(vf->vf_stream);
+                    
+                } else {
+                    tn_array *fl;
+                    int i;
+
+                    fl = pkgfl_restore_f(vf->vf_stream);
+
+                    if (pkgtags.pkgfl == NULL) {
+                        pkgtags.pkgfl = fl;
+                        
+                    } else {
+                        for (i=0; i<n_array_size(fl); i++) 
+                            n_array_push(pkgtags.pkgfl, n_array_nth(fl, i));
+                        
+                        n_array_free(fl);
+                    }
+                    
+                }
+                
                 last_value_endp = NULL;
                 continue;
                 
             } else if (*line == 'U') { /* pkguinf binary data */
-                pkgtags.pkguinf_offs = ftell(vf->vf_stream);
-                pkguinf_skip(vf->vf_stream);
+
+                if (flag_lddesc) {
+                    pkgtags.pkguinf = pkguinf_restore(vf->vf_stream, 0);
+                    pkgtags.pkguinf_offs = 0;
+                } else {
+                    pkgtags.pkguinf_offs = ftell(vf->vf_stream);
+                    pkguinf_skip(vf->vf_stream);
+                }
+                	
                 last_value_endp = NULL;
                 continue;
             } 
@@ -509,6 +546,11 @@ static void pkgtags_clean(struct pkgtags_s *pkgt)
     pkgt->other_files_offs = 0;
     pkgt->flags = 0;
     pkgt->pkguinf_offs = 0;
+
+    if (pkgt->pkguinf) {
+        pkguinf_free(pkgt->pkguinf);
+        pkgt->pkguinf = 0;
+    }
 }
     
 
@@ -579,7 +621,15 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
     }
 
     pkg->other_files_offs = pkgt->other_files_offs;
-    pkg->pkg_pkguinf_offs = pkgt->pkguinf_offs;
+    if (pkgt->pkguinf_offs) {
+        pkg->pkg_pkguinf_offs = pkgt->pkguinf_offs;
+        
+    } else {
+        pkg->pkg_pkguinf = pkgt->pkguinf;
+        pkg_set_ldpkguinf(pkg);
+        pkgt->pkguinf = NULL;
+    }
+    	
     return pkg;
 }
 
@@ -610,7 +660,7 @@ struct capreq *parse_capreq_token(char *token, int addbastard)
         *s++ = '\0';
     
     name = token;
-    if (*name == '!') {          /* Prereq */
+    if (*name == '!') {          /* bastard */
         if (!addbastard) 
             return NULL;
         
@@ -618,8 +668,13 @@ struct capreq *parse_capreq_token(char *token, int addbastard)
         name++;
     }
     
-    if (*name == '*') {          /* Prereq */
+    if (*name == '*') {          /* prereq */
         flags |= CAPREQ_PREREQ;
+        name++;
+    }
+
+    if (*name == '^') {          /* uninstall prereq */
+        flags |= CAPREQ_PREREQ_UN;
         name++;
     }
 
@@ -671,7 +726,7 @@ struct capreq *parse_capreq_token(char *token, int addbastard)
         
     } else {
  l_inv_rel:
-        printf("syntax error: invalid relation\n");
+        log(LOGERR, "syntax error: invalid relation\n");
         return NULL;
     }
 
@@ -784,7 +839,7 @@ int fprintf_pkg(const struct pkg *pkg, FILE *stream, int nodesc)
     if (pkg->fl) {
         fprintf(stream, "L:\n");
         pkgfl_store_f(pkg->fl, stream, PKGFL_DEPDIRS);
-        
+    
         fprintf(stream, "l:\n");
         pkgfl_store_f(pkg->fl, stream, PKGFL_NOTDEPDIRS);
     }

@@ -42,8 +42,8 @@ static char *setup_pkgprefix(const char *path)
 
     
 
-int pkgset_load(struct pkgset *ps, int ldmethod, void *path,
-                const char *prefix) 
+int pkgset_load(struct pkgset *ps, int ldmethod, int ldflags,
+                void *path, const char *prefix) 
 {
     int n = 0;
     
@@ -72,7 +72,7 @@ int pkgset_load(struct pkgset *ps, int ldmethod, void *path,
             break;
 
         case PKGSET_LD_TXTFILE:
-            n = pkgset_load_txtidx(ps, path);
+            n = pkgset_load_txtidx(ps, ldflags, path);
             if (n)
                 ps->path = setup_pkgprefix(path);
             break;

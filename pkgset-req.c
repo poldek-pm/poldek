@@ -194,9 +194,14 @@ static int add_reqpkg(struct pkg *pkg, struct capreq *req, struct pkg *dpkg)
     if (rpkg != NULL) {
         if (capreq_is_prereq(req)) 
             rpkg->flags |= REQPKG_PREREQ;
+        else if (capreq_is_prereq_un(req)) 
+            rpkg->flags |= REQPKG_PREREQ_UN;
         
     } else {
-        rpkg = reqpkg_new(dpkg, capreq_is_prereq(req) ? REQPKG_PREREQ : 0, 0);
+        rpkg = reqpkg_new(dpkg, capreq_is_prereq(req) ? REQPKG_PREREQ :
+                                capreq_is_prereq_un(req) ? REQPKG_PREREQ_UN : 0,
+                          0);
+        
         n_array_push(pkg->reqpkgs, rpkg);
         n_array_sort(pkg->reqpkgs);
         if (dpkg->revreqpkgs == NULL)
@@ -266,7 +271,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
             
             for (i=0; i<*npkgs; i++) {
                 if (strcmp((*suspkgs)[i]->name, "rpm") != 0) {
-                    log(LOGERR, "%s: provides %s\n",
+                    log(LOGERR, "%s: provides an rpmlib cap \"%s\"\n",
                         pkg_snprintf_s((*suspkgs)[i]), reqname);
                     matched = 0;
                 }
@@ -360,6 +365,8 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
 
         flags = 0;
         flags |= capreq_is_prereq(req) ? REQPKG_PREREQ : 0;
+        flags |= capreq_is_prereq_un(req) ? REQPKG_PREREQ_UN : 0;
+        
         tmp_rpkg.pkg = matches[0];
         rpkg = n_array_bsearch(pkg->reqpkgs, &tmp_rpkg);
 

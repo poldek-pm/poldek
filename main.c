@@ -215,7 +215,7 @@ static struct argp_option options[] = {
 {"mkdir", OPT_INST_MKDBDIR, 0, OPTION_HIDDEN,
      "make %{_dbpath} if not exists", 70 },
 
-{"killdb", OPT_INST_KILLDB, 0, OPTION_HIDDEN,
+{"killdb", OPT_INST_KILLDB, 0, OPTION_HIDDEN,           /* not implemented */
      "kills existing database (for install-dist)", 70 },    
     
 {"conf", 'c', "FILE", 0, "Read configuration from FILE", 80 }, 
@@ -371,7 +371,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_NODESC:
-	    argsp->nodesc++;
+	    argsp->nodesc = 1;
 	    break;
             
         case OPT_INST_INSTDIST:
@@ -532,7 +532,10 @@ static
 void parse_options(int argc, char **argv) 
 {
     struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0};
+    int vfile_cnflags = 0;
     char *p;
+
+
     verbose = 0;
     
     memset(&args, 0, sizeof(args));
@@ -587,23 +590,30 @@ void parse_options(int argc, char **argv)
         char *v;
         int is_multi;
         
-        
 	if ((v = conf_get(htcnf, "cachedir", NULL)))
 	    args.cachedir = v;
         
-        if ((v = conf_get(htcnf, "ftp_http_get", NULL)))
+        if ((v = conf_get(htcnf, "ftp_http_get", NULL))) {
+            vfile_cnflags |= VFILE_USEXT_FTP | VFILE_USEXT_HTTP;
             vfile_register_ext_handler(VFURL_FTP | VFURL_HTTP, v);
-
-        if ((v = conf_get(htcnf, "ftp_get", NULL))) 
-            vfile_register_ext_handler(VFURL_FTP, v);
+        }
         
-        if ((v = conf_get(htcnf, "http_get", NULL))) 
+        if ((v = conf_get(htcnf, "ftp_get", NULL))) {
+            vfile_cnflags |= VFILE_USEXT_FTP;
+            vfile_register_ext_handler(VFURL_FTP, v);
+        }
+        
+        
+        if ((v = conf_get(htcnf, "http_get", NULL))) {
+            vfile_cnflags |= VFILE_USEXT_HTTP;
             vfile_register_ext_handler(VFURL_HTTP, v);
-
-
-        if ((v = conf_get(htcnf, "https_get", NULL))) 
+        }
+        
+        if ((v = conf_get(htcnf, "https_get", NULL))) {
+            vfile_cnflags |= VFILE_USEXT_HTTPS;
             vfile_register_ext_handler(VFURL_HTTPS, v);
-
+        }
+        
         if ((v = conf_get(htcnf, "rsync_get", NULL))) 
             vfile_register_ext_handler(VFURL_RSYNC, v);
 
@@ -630,12 +640,10 @@ void parse_options(int argc, char **argv)
                 }
             }
         }
-        
     }
 
-    *vfile_verbose = verbose;
-    vfile_configure(args.cachedir ? args.cachedir : "/tmp",
-                    VFILE_USEXT_FTP | VFILE_USEXT_HTTP);
+    vfile_verbose = &verbose;
+    vfile_configure(args.cachedir ? args.cachedir : "/tmp", vfile_cnflags);
 }
 
 
@@ -657,23 +665,28 @@ int select_ldmethod(void)
 }
 
 
-static struct pkgset *load_pkgset(void) 
+static struct pkgset *load_pkgset(int ldflags) 
 {
     struct pkgset *ps;
-
+    
     if (args.ldmethod == 0) {
-        log(LOGERR, "Cannot detrmine source type\n");
+        log(LOGERR, "Cannot determine source type\n");
         exit(EXIT_FAILURE);
     }
-    
+
     ps = pkgset_new(args.psflags);
-    if (!pkgset_load(ps, args.ldmethod, args.source_path, args.pkg_prefix)) {
+    if (!pkgset_load(ps, args.ldmethod, ldflags, args.source_path, args.pkg_prefix)) {
         log(LOGERR, "No packages loaded\n");
         pkgset_free(ps);
         ps = NULL;
     }
     mem_info(1, "MEM after load");
-    
+
+    if (!pkgset_setup(ps)) {
+        pkgset_free(ps);
+        ps = NULL;
+    }
+
     return ps;
 }
 
@@ -688,8 +701,6 @@ static int update_idx(void)
 }
 
     
-
-
 /* ps may be NULL for rpm index */
 static int mkidx(struct pkgset *ps) 
 {
@@ -862,10 +873,12 @@ int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 
 int main(int argc, char **argv)
 {
-    int rc = 1;
     struct pkgset *ps;
     struct inst_s inst;
     char *logprefix = "poldek";
+    int rc = 1;
+    int ldflags;
+    
 
     mem_info_verbose = -1;
     
@@ -884,6 +897,7 @@ int main(int argc, char **argv)
 
     poldek_init();
     inst_s_init(&inst);
+    
     inst.rootdir   = args.install_root;
     inst.instflags = args.instflags;
     inst.fetchdir  = args.fetchdir;
@@ -911,12 +925,18 @@ int main(int argc, char **argv)
     if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0 && verbose < 2)
         verbose += 2;
 
-    if ((ps = load_pkgset()) == NULL)
-        exit(EXIT_FAILURE);
+    ldflags = 0;
+
+    if (args.mjrmode == MODE_MKIDX)
+        ldflags = PKGSET_IDX_LDRAW;
     
-    if (!(rc = pkgset_setup(ps)))
+    else if (args.mjrmode == MODE_VERIFY) 
+        ldflags = PKGSET_IDX_LDVERIFY;
+    printf("ldflags = %d\n", ldflags);
+    if ((ps = load_pkgset(ldflags)) == NULL)
         exit(EXIT_FAILURE);
 
+    
     switch (args.mjrmode) {
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:

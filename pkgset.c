@@ -158,7 +158,7 @@ static tn_array *get_rpmlibcaps(void)
     tn_array *caps;
     
 #if HAVE_RPMGETRPMLIBPROVIDES
-    n = rpmGetRpmlibProvides(&names, &flags, &versions);
+    n = rpmGetRpmlibProvides((const char ***)&names, &flags, (const char ***)&versions);
 #else
     return capreq_arr_new();
 #endif    
@@ -206,11 +206,6 @@ struct pkgset *pkgset_new(unsigned optflags)
     ps->path = NULL;
     ps->flags = optflags;
 
-    if ((ps->flags & PSMODE_VERIFY) ||
-        (ps->flags & PSMODE_MKIDX)) {
-        ps->flags |= PKGSET_READFULLTXTINDEX;
-    }
-    
     ps->rpmcaps = get_rpmlibcaps();
     return ps;
 }
@@ -408,7 +403,7 @@ int pkgset_setup(struct pkgset *ps)
     if (ps->depdirs == NULL) 
         ps->depdirs = capreq_idx_find_depdirs(&ps->req_idx);
     
-    if ((ps->flags & PKGSET_READFULLTXTINDEX)) {
+    if ((ps->flags & PSMODE_VERIFY)) {
         msg(1, "$Verifying files conflicts...\n");
         file_index_find_conflicts(&ps->file_idx, strict);
     }
@@ -517,7 +512,6 @@ int mark_dependencies(struct pkgset *ps, unsigned instflags)
     
     return (cnfl_nerr + req_nerr) == 0;
 }
-
 
 
 static int setup_tmpdir(const char *rootdir) 

@@ -11,13 +11,12 @@ mclean:
 
 
 backup:
-	cd $(PROJ_DIR);                                            \
+	cd $(PROJ_DIR);                                             \
 	NAME=`basename  $(PROJ_DIR)`;                               \
 	ARCHDIR=$$NAME-ARCH;                                        \
 	ARCHNAME=$$NAME-`date +%Y.%m.%d-%H.%M`;                     \
-	mkdir ../$$ARCHDIR || true;                                 \
-	mkdir ../$$ARCHDIR/$$ARCHNAME || exit 1;                    \
-	cp -a . ../$$ARCHDIR/$$ARCHNAME || exit 1;        \
+	mkdir -p ../$$ARCHDIR/$$ARCHNAME/$$NAME;                    \
+	cp -a . ../$$ARCHDIR/$$ARCHNAME/$$NAME || exit 1;           \
 	cd ../$$ARCHDIR;                                            \
 	tar cpzf $$ARCHNAME.tgz $$ARCHNAME && rm -rf $$ARCHNAME;    \
 	md5sum $$ARCHNAME.tgz > $$ARCHNAME.md5;                     \

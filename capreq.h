@@ -15,15 +15,16 @@
 /* types */
 #define CAPREQ_PROV     (1 << 3)
 #define CAPREQ_REQ      (1 << 4)
-#define CAPREQ_CNFL     (1 << 5) 
+#define CAPREQ_CNFL     (1 << 5)
 
 /* sub types */
-#define CAPREQ_PREREQ   (1 << 6)
-#define CAPREQ_OBCNFL   CAPREQ_PREREQ  /* alias, for obsolences */
+#define CAPREQ_PREREQ      (1 << 6)
+#define CAPREQ_PREREQ_UN   (1 << 7)
+#define CAPREQ_OBCNFL      CAPREQ_PREREQ  /* alias, for obsolences */
 
+#define CAPREQ_RPMLIB      (1 << 8)   /* rpmlib(...) */
+#define CAPREQ_PLDEKBAST   (1 << 9)   /* is added by poldek? */
 
-#define CAPREQ_PLDEKBAST (1 << 7)   /* is added by poldek? */
-#define CAPREQ_RPMLIB    (1 << 8)   /* rpmlib(...) */
 
 struct capreq {
     uint16_t cr_flags;
@@ -46,7 +47,8 @@ struct capreq {
 #define capreq_has_rel(cr)      (cr)->cr_rel_ofs
 
 #define capreq_is_prereq(cr)    ((cr)->cr_flags & CAPREQ_PREREQ)
-#define cnfl_is_obsl(cr)         capreq_is_prereq((cr))
+#define capreq_is_prereq_un(cr) ((cr)->cr_flags & CAPREQ_PREREQ_UN)
+#define cnfl_is_obsl(cr)        capreq_is_prereq((cr))
 #define capreq_is_file(cr)      ((cr)->_buf[1] == '/')
 #define capreq_isnot_file(cr)   ((cr)->_buf[1] != '/')
 

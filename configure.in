@@ -32,6 +32,17 @@ if test "${INTERACTIVE_MODE}." = "yes."; then
 fi
 
 
+AC_ARG_ENABLE(curl,
+[  --without-curl               compile without libcurl],
+ENABLE_VFILE_CURL=$enableval, ENABLE_VFILE_CURL=yes)
+
+if test "${ENABLE_VFILE_CURL}." = "yes."; then
+	AC_CHECK_LIB(curl, curl_easy_init,,AC_MSG_ERROR("libcurl not found"))
+	AM_CONDITIONAL(ENABLE_VFILE_CURL, true)
+	AC_DEFINE(ENABLE_VFILE_CURL)
+fi
+
+
 AC_ARG_ENABLE(static,
 [  --enable-static      build static binary],
 ENABLE_STATIC=$enableval, ENABLE_STATIC=no)
@@ -97,6 +108,12 @@ AC_EGREP_CPP(yes,
 if test ${is_rpm4}. = yes. ; then
 	AC_MSG_RESULT(yes)
 	AC_DEFINE(HAVE_RPM_4_0)
+	AC_EGREP_CPP(RPMSENSE_SCRIPT_PRE, 
+		[ #include <rpm/rpmlib.h>
+		], is_rpm_extdeps=yes, is_rpm_extdeps=no)
+	if test ${is_rpm_extdeps}. = yes. ; then 
+		AC_DEFINE(HAVE_RPM_EXTDEPS)
+	fi
 else 
 	AC_MSG_RESULT(no)
 fi

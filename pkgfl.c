@@ -113,13 +113,21 @@ struct flfile *flfile_new(uint32_t size, uint16_t mode,
                           const char *slinkto, int slen)
 {
     struct flfile *file;
-
+    char *p;
+    
     file = pkgfl_alloc(sizeof(*file) + blen + 1 + slen + 1);
     file->mode = mode;
     file->size = size;
-    strcpy(file->basename, basename);
-    if (slinkto) 
-        strcpy(file->basename + blen + 1, slinkto);
+
+    memcpy(file->basename, basename, blen);
+    p = file->basename + blen;
+    *p++ = '\0';
+    *p = '\0';
+    
+    if (slinkto && *slinkto) {
+        memcpy(p, slinkto, slen);
+        *(p + slen) = '\0';
+    }
     return file;
 }
 
@@ -289,7 +297,7 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, int which)
         
         for (j=0; j<flent->items; j++) {
             struct flfile *file = flent->files[j];
-            uint8_t bnl = strlen(file->basename) + 1;
+            uint8_t bnl = strlen(file->basename);
 
             n_buf_add_int8(nbuf, bnl);
             n_buf_add(nbuf, file->basename, bnl);
@@ -298,7 +306,7 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, int which)
 
             if (S_ISLNK(file->mode)) {
                 char *linkto = file->basename + bnl + 1;
-                bnl = strlen(linkto) + 1;
+                bnl = strlen(linkto);
                 n_buf_add_int8(nbuf, bnl);
                 n_buf_add(nbuf, linkto, bnl);
             }
@@ -315,11 +323,15 @@ int pkgfl_store_f(tn_array *fl, FILE *stream, int which)
     
     nbuf = n_buf_new(4096);
     
-    pkgfl_store(fl, nbuf, which);
+    if (pkgfl_store(fl, nbuf, which) > 0)
+        ;
     size = hton32(n_buf_size(nbuf));
     fwrite(&size, sizeof(size), 1, stream);
+    
     return fwrite(n_buf_ptr(nbuf), n_buf_size(nbuf), 1, stream) == 1 &&
         fwrite("\n", 1, 1, stream) == 1;
+
+    return 1;
 }
 
 tn_array *pkgfl_restore(tn_buf_it *nbufi)
@@ -358,14 +370,13 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi)
 
             n_buf_it_get_int8(nbufi, &bnl);
             bn = n_buf_it_get(nbufi, bnl);
-            bnl--;
+            
             n_buf_it_get_int16(nbufi, &mode);
             n_buf_it_get_int32(nbufi, &size);
-            
+
             if (S_ISLNK(mode)) {
                 n_buf_it_get_int8(nbufi, &slen);
                 linkto = n_buf_it_get(nbufi, slen);
-                slen--;
             }
             
             file = flfile_new(size, mode, bn, bnl, linkto, slen);
@@ -424,19 +435,18 @@ int pkgfl_skip_f(FILE *stream)
 __inline__ 
 static int valid_fname(const char *fname, mode_t mode, const char *pkgname) 
 {
-    char *denychars = "\r\n\t |;";
-    char *prdenychars = "\\r\\n\\t |;";
 
+#if 0  /*  */
+    char *denychars = "\r\n\t |;";
     if (strpbrk(fname, denychars)) {
         log(LOGINFO, "%s: bad habbit: %s \"%s\" with whitespaces\n",
-            pkgname, S_ISDIR(mode) ? "dirname" : "filename", fname,
-            prdenychars);
+            pkgname, S_ISDIR(mode) ? "dirname" : "filename", fname);
     }
+#endif     
 
     if (strlen(fname) > 255) {
         log(LOGERR, "%s: %s \"%s\" longer than 255 bytes\n",
-            pkgname, S_ISDIR(mode) ? "dirname" : "filename", fname,
-            prdenychars);
+            pkgname, S_ISDIR(mode) ? "dirname" : "filename", fname);
         return 0;
     }
     
@@ -572,7 +582,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
             
         }
         
-        flent->files[flent->items++]= flfile;
+        flent->files[flent->items++] = flfile;
         n_assert(flent->items <= fentdirs_items[j]);
     }
     

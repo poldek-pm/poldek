@@ -26,8 +26,8 @@ struct inst_s {
     const char     *fetchdir;   /* dir to fetch files     */
     const char     *cachedir;   /* place for downloaded packages */
     const char     *dumpfile;   /* file to dump fqpns     */
-    tn_array       *rpmopts;
-    tn_array       *rpmacros;
+    tn_array       *rpmopts;    /* rpm cmdline opts (char *opts[]) */
+    tn_array       *rpmacros;   /* rpm macros to pass to cmdline (char *opts[]) */
     
     int  (*selpkg_fn)(const char *, const tn_array *);
     int  (*ask_fn)(const char *, ...);
@@ -59,8 +59,23 @@ void pkgset_free(struct pkgset *ps);
 #define PKGSET_LD_HDRFILE  2    /* read rpmhdr (toc)file   */
 #define PKGSET_LD_TXTFILE  3    /* read Packages file      */
 
-int pkgset_load(struct pkgset *ps, int ldmethod, void *path,
-                const char *prefix);
+
+#define PKGSET_IDX_LDFULLFLIST  (1 << 0) /* load non dep files too */
+#define PKGSET_IDX_LDSKIPBASTS  (1 << 1) /* skip dependencies added by poldek */
+#define PKGSET_IDX_LDDESC       (1 << 2) /* load user level info */
+
+/* for mkidx */
+#define PKGSET_IDX_LDRAW        (PKGSET_IDX_LDFULLFLIST | \
+                                 PKGSET_IDX_LDSKIPBASTS | \
+                                 PKGSET_IDX_LDDESC)
+
+
+/* for verification */
+#define PKGSET_IDX_LDVERIFY     (PKGSET_IDX_LDFULLFLIST | \
+                                 PKGSET_IDX_LDSKIPBASTS)
+
+int pkgset_load(struct pkgset *ps, int ldmethod, int ldflags,
+                void *path, const char *prefix);
 
 int pkgset_setup(struct pkgset *ps);
 

@@ -161,6 +161,7 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
     return 0;
 }
 
+
 int pkgset_order(struct pkgset *ps) 
 {
     struct pkg *pkg;

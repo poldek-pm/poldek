@@ -10,6 +10,11 @@
   $Id$
 */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -76,7 +81,7 @@ int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2)
         return rc;
 
     rc = cr1->cr_flags - cr2->cr_flags;
-
+    
     return rc;
 }
 
@@ -98,9 +103,10 @@ int capreq_fprintf(FILE *stream, const struct capreq *cr)
 
     *p = '\0';
 
-    fprintf(stream, "%s%s%s", 
+    fprintf(stream, "%s%s%s%s", 
             capreq_is_bastard(cr) ? "!" : "",
             capreq_is_prereq(cr) ? "*" : "",
+            capreq_is_prereq_un(cr) ? "^" : "",
             capreq_name(cr));
     
     if (p == relstr) {
@@ -154,6 +160,11 @@ char *capreq_snprintf(char *str, size_t size, const struct capreq *cr)
     
     if (capreq_is_prereq(cr)) {
         *s++ = '*';
+        size--;
+    }
+
+    if (capreq_is_prereq_un(cr)) {
+        *s++ = '^';
         size--;
     }
     
@@ -534,7 +545,7 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
         }
         
         if (c3) {               /* translate flags to poldek one */
-            register int flag = flags[i];
+            register uint32_t flag = flags[i];
 
             if (flag & RPMSENSE_LESS) 
                 cr->cr_flags |= REL_LT;
@@ -544,13 +555,29 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
             
             if (flag & RPMSENSE_EQUAL) 
                 cr->cr_flags |= REL_EQ;
-            
+
+                
+#ifndef HAVE_RPM_EXTDEPS
             if (flag & RPMSENSE_PREREQ) {
-//                printf("prtype = %d\n", prtype);
+                n_assert(crtype == CRTYPE_REQ);
+                cr->cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
+            }
+#else
+            if (isLegacyPreReq(flag)) { /* prepared by rpm < 4.0.2  */
+                n_assert(crtype == CRTYPE_REQ);
+                cr->cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
+                
+            } else if (isInstallPreReq(flag)) {
                 n_assert(crtype == CRTYPE_REQ);
                 cr->cr_flags |= CAPREQ_PREREQ;
+                
+            } else if (isErasePreReq(flag)) {
+                n_assert(crtype == CRTYPE_REQ);
+                cr->cr_flags |= CAPREQ_PREREQ_UN;
             }
+#endif /* HAVE_RPM_EXTDEPS */
         }
+        
 
         if (crtype == CRTYPE_OBSL) 
             cr->cr_flags |= CAPREQ_OBCNFL;

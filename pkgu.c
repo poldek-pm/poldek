@@ -21,6 +21,10 @@
 #include "pkgu.h"
 #include "h2n.h"
 
+static void *sav = NULL;
+static int savsize = 0;
+
+
 void pkguinf_free(struct pkguinf *pkgu) 
 {
     if (pkgu->flags & PKGUINF_MEMB_MALLOCED) {
@@ -75,13 +79,42 @@ int32_t pkguinf_int32_tag(struct pkguinf *pkgu, int32_t tag)
 
 int pkguinf_store(struct pkguinf *pkgu, FILE *stream) 
 {
-    uint16_t nsize = hton16(pkgu->rawhdr_size);
-    uint16_t nlangs = hton16(pkgu->nlangs);
-    n_assert(pkgu->rawhdr_size);
+    uint16_t nsize, nlangs;
+    void *rawhdr;
+    int rawhdr_size;
+    int rc, unloaded = 0;
+    
+    
+    if (pkgu->rawhdr) {
+        rawhdr = pkgu->rawhdr;
+        rawhdr_size = pkgu->rawhdr_size;
+    } else {
+        rawhdr_size = headerSizeof(pkgu->hdr, HEADER_MAGIC_NO);
+        
+        printf("hdr %p %d %d\n", pkgu->hdr, rawhdr_size, savsize);
+        printf("cmp %p %p %d %d  = %d\n", pkgu->hdr, sav, rawhdr_size, savsize, rc);
+        rc = memcmp(pkgu->hdr, sav, savsize);
+        printf("cmp %p %p %d %d  = %d\n", pkgu->hdr, sav, rawhdr_size, savsize, rc);
+        exit(0);
+        
+            
+        rawhdr = headerUnload(pkgu->hdr);
+        
+        unloaded = 1;
+    }
+
+    nsize = hton16(rawhdr_size);
+    nlangs = hton16(pkgu->nlangs);
     
     fwrite(&nlangs, sizeof(nlangs), 1, stream);
     fwrite(&nsize, sizeof(nsize), 1, stream);
-    return fwrite(pkgu->rawhdr, pkgu->rawhdr_size, 1, stream);
+    
+    rc = fwrite(rawhdr, rawhdr_size, 1, stream);
+
+    if (unloaded)
+        free(rawhdr);
+    
+    return rc;
 }
 
 
@@ -118,6 +151,13 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
     if ((hdr = headerLoad(rawhdr)) != NULL) {
         pkgu = malloc(sizeof(*pkgu));
         pkgu->hdr = hdr;
+        printf("rhdr %p\n", pkgu->hdr);
+        {
+            sav = headerCopy(hdr);
+            savsize = headerSizeof(hdr, HEADER_MAGIC_NO);
+        }
+        
+                
         pkgu->flags = 0;
         pkgu->nlangs = nlangs;
         pkgu->rawhdr = NULL;

@@ -4,6 +4,6 @@
 
 int pkgset_load_dir(struct pkgset *ps, const char *dirpath);
 int pkgset_load_rpmidx(struct pkgset *ps, const char *fpath);
-int pkgset_load_txtidx(struct pkgset *ps, const char *dirpath);
+int pkgset_load_txtidx(struct pkgset *ps, int flags, const char *dirpath);
 
 #endif

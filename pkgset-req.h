@@ -16,8 +16,9 @@
 #include "pkg.h"
 #include "pkgset-def.h"
 
-#define REQPKG_PREREQ  (1 << 0)
-#define REQPKG_MULTI   (1 << 1) /* has adds */
+#define REQPKG_PREREQ     (1 << 0)
+#define REQPKG_PREREQ_UN  (1 << 1)
+#define REQPKG_MULTI      (1 << 7) /* has adds */
 
 struct reqpkg {
     struct pkg    *pkg;
