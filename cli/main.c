@@ -445,7 +445,7 @@ int main(int argc, char **argv)
 
     bn = n_basenam(argv[0]);
 
-    if (strcmp(bn, "apoldek-get") == 0 || strcmp(bn, "ipoldek") == 0)
+    if (strcmp(bn, "apoldek") == 0 || strcmp(bn, "ipoldek") == 0)
         mode = RUNMODE_APT;
     
     DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
