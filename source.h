@@ -22,6 +22,7 @@ struct source {
     unsigned  type;            /* PKGSRCT_* too */
     unsigned  flags;
     int       pri;
+    int       no;
     unsigned  subopt_flags;     /* PKGSRCT_*  */
     
     char      *name;            /* source name */
@@ -59,5 +60,8 @@ int sources_update(tn_array *sources, unsigned flags);
 #define PKGSOURCE_CLEANA (1 << 1)
 
 int sources_clean(tn_array *sources, unsigned flags);
+
+int sources_add(tn_array *sources, struct source *src);
+void sources_score(tn_array *sources);
 
 #endif

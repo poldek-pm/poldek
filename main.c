@@ -551,7 +551,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (argsp->curr_src_path) { /* no prefix for curr_src_path */
                 src = source_new(argsp->curr_src_path, NULL);
                 src->type = argsp->curr_src_type;
-                n_array_push(argsp->sources, src);
+                sources_add(argsp->sources, src);
             }
             
             argsp->curr_src_path = prepare_path(arg);
@@ -571,7 +571,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
             src = source_new(argsp->curr_src_path, trimslash(arg));
             src->type = argsp->curr_src_type;
-            n_array_push(argsp->sources, src);
+            sources_add(argsp->sources, src);
             argsp->curr_src_path = NULL;
             argsp->curr_src_type = PKGSRCT_NIL;
             break;
@@ -1000,7 +1000,7 @@ int addsource(tn_array *sources, struct source *src,
     int rc = 0;
     
     if (n_array_size(src_names) == 0) {
-        n_array_push(sources, src);
+        sources_add(sources, src);
         rc = 1;
                 
     } else {
@@ -1012,7 +1012,7 @@ int addsource(tn_array *sources, struct source *src,
             if (fnmatch(sn, src->name, 0) == 0) {
                 /* given by name -> clear flags */
                 src->flags &= ~(PKGSOURCE_NOAUTO | PKGSOURCE_NOAUTOUP);
-                n_array_push(sources, src);
+                sources_add(sources, src);
                 matches[i]++;
                 rc = 1;
                 break;
@@ -1144,7 +1144,7 @@ void parse_options(int argc, char **argv)
     if (args.curr_src_path) { 
         struct source *src = source_new(args.curr_src_path, NULL);
         src->type = args.curr_src_type;
-        n_array_push(args.sources, src);
+        sources_add(args.sources, src);
     }
     
 #if 0
@@ -1178,7 +1178,8 @@ void parse_options(int argc, char **argv)
         logn(LOGERR, _("no source specified"));
         exit(EXIT_FAILURE);
     }
-    
+
+    sources_score(args.sources);
     if (args.mjrmode == MODE_SRCLIST) {
         print_source_list(args.sources);
         exit(EXIT_SUCCESS);

@@ -508,3 +508,29 @@ int sources_clean(tn_array *sources, unsigned flags)
     return nerr == 0;
 }
 
+
+int sources_add(tn_array *sources, struct source *src) 
+{
+    src->no = n_array_size(sources);
+    n_array_push(sources, src);
+    return n_array_size(sources);
+}
+
+
+void sources_score(tn_array *sources) 
+{
+    int i;
+    int pri_min = INT_MAX;
+    
+    for (i=0; i < n_array_size(sources); i++) {
+        struct source *src = n_array_nth(sources, i);
+        if (src->pri < pri_min)
+            pri_min = src->pri;
+    }
+
+    for (i=0; i < n_array_size(sources); i++) {
+        struct source *src = n_array_nth(sources, i);
+        if (src->pri == 0)
+            src->pri = src->no + pri_min + 1;
+    }
+}
