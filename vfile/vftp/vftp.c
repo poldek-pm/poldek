@@ -20,6 +20,9 @@
 #include <unistd.h>
 #include <netinet/in.h>
 
+#include <utmp.h>
+#include <pwd.h>
+
 #ifndef IPPORT_FTP
 # define IPPORT_FTP 21
 #endif
@@ -70,6 +73,7 @@ void vftp_vacuum(void)
     n_list_remove_ex(vftp_cnl, NULL, toremove_cn_fakecmp);
 }
 
+
 int vftp_retr(FILE *stream, long offset, const char *url,
               void *progress_data) 
 {
@@ -77,9 +81,11 @@ int vftp_retr(FILE *stream, long offset, const char *url,
     struct ftpcn       *cn;
     char               buf[PATH_MAX];
     char               *p, *q, *host, *path;
+    char               *login = "anonymous", *passwd = "poldek@znienacka.net";
     int                port = 0, rc;
     char               *err_msg = _("%s: URL parse error");
 
+    
     vftp_set_err(0, "");
     
     if ((rc = strncmp(url, "ftp://", sizeof("ftp://") - 1)) != 0) {
@@ -98,6 +104,20 @@ int vftp_retr(FILE *stream, long offset, const char *url,
     *q = '\0';
     path = q;
 
+    /* extract loginname from hostpart */
+    if ((p = strrchr(host, '@')) != NULL) {
+        *p = '\0';
+        login = host;
+        host = p + 1;
+
+        if ((p = strchr(login, ':')) == NULL) {
+            vftp_set_err(EINVAL, err_msg, url);
+            return 0;
+        }
+        *p = '\0';
+        passwd = p + 1;
+    }
+
     if (port <= 0)
         port = IPPORT_FTP;
     
@@ -113,17 +133,19 @@ int vftp_retr(FILE *stream, long offset, const char *url,
     vftp_vacuum();
     n_list_iterator_start(vftp_cnl, &it);
     while ((cn = n_list_iterator_get(&it))) {
-        if (strcmp(cn->host, host) == 0 && cn->port == port &&
+        if (strcmp(cn->login, login) == 0 && strcmp(cn->passwd, passwd) == 0 &&
+            strcmp(cn->host, host) == 0 && cn->port == port &&
             ftpcn_is_alive(cn)) {
             
             if (*vftp_verbose > 1)
-                vftp_msg_fn("Reusing connection %s:%d\n", cn->host, cn->port);
+                vftp_msg_fn("Reusing connection %s@%s:%d\n", cn->login,
+                            cn->host, cn->port);
             break;
         }
     }
     
     if (cn == NULL) {
-        cn = ftpcn_new(host, port, "anonymous", "poldek@znienacka.net");
+        cn = ftpcn_new(host, port, login, passwd);
         if (cn)
             n_list_push(vftp_cnl, cn);
     }
