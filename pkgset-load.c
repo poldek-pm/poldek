@@ -80,8 +80,8 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
                 logn(LOGWARN, _("%s: load failed, skipped"), vf_url_slim_s(src->path, 0));
             continue;
         }
-        
-        if (src->flags & PKGSOURCE_VRFY_GPG)
+
+        if (src->flags & (PKGSOURCE_VRFY_GPG | PKGSOURCE_VRFY_SIGN))
             pkgdir->flags |= PKGDIR_VRFY_GPG;
 
         if (src->flags & PKGSOURCE_VRFY_PGP)

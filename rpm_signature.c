@@ -96,7 +96,7 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
     }
 
     if (readLead(fdt, &lead) != 0) {
-        logn(LOGERR, "%s: read package lead failed", path);
+        logn(LOGERR, "%s: read package lead failed", n_basenam(path));
         Fclose(fdt);
         return 0;
     }
@@ -264,7 +264,9 @@ int rpm_verify_signature(const char *path, unsigned flags)
         rc = rpmVerifySignatures(&qva, ts, fdt, n_basenam(path));
         rpmtsFree(ts);
         
-        DBGF("rpmVerifySignatures %s %s\n", n_basenam(path), rc == 0 ? "OK" : "BAD");
+        DBGF("rpmVerifySignatures[md%d, sign%d] %s %s\n",
+             flags & VRFYSIG_DGST ? 1:0, flags & VRFYSIG_SIGN ? 1:0, 
+             n_basenam(path), rc == 0 ? "OK" : "BAD");
     }
     
     if (fdt)
