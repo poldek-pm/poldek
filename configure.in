@@ -4,7 +4,7 @@ dnl $Id$
 AC_INIT(capreq.c)
 
 VERSION=0.17.5
-VERSION_STATUS="devel"
+VERSION_STATUS="beta"
 VERSION_CVSTAG="v$(echo $VERSION | sed 's/\./_/g')"
 PACKAGE=poldek
 
