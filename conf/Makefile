@@ -26,7 +26,7 @@ poldekrc.sample: sample.src $(CONF)
 
 
 clean: 
-	-rm -f *~ poldekrc.sample-*
+	-rm -f *~ poldekrc.sample*
 
 # satisfy automake
 distdir:
