@@ -625,7 +625,8 @@ static int http_resp_parse(struct http_resp *resp)
         }
         
         //printf("add %s -> %s\n", nam, val);
-        n_hash_insert(resp->hdr, nam, n_strdup(val));
+        if (!n_hash_exists(resp->hdr, nam))
+            n_hash_insert(resp->hdr, nam, n_strdup(val));
         tl++;
     }
     
@@ -1160,7 +1161,7 @@ int httpcn_retr(struct httpcn *cn,
     
     if (*vhttp_verbose > 1) {
         long a = from ? total - from : total;
-        vhttp_msg_fn(_("Total file size %ld, %ld to download\n"), total, a);
+        vhttp_msg_fn("Total file size %ld, %ld to download\n", total, a);
     }
 
     
