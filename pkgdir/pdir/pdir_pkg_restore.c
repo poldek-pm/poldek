@@ -350,7 +350,7 @@ struct pkg *pdir_pkg_restore(tn_alloc *na, tn_stream *st, struct pkg *pkg,
                 break;
 
             default:
-                if (poldek_VERBOSE > 2) 
+                if (poldek_VERBOSE > 4) 
                     logn(LOGWARN, "%s:%ld: unknown tag '%c'", fn, offs, *line);
                 break;
         }
