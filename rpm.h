@@ -15,28 +15,26 @@ rpmdb rpm_opendb(const char *dbpath, const char *rootdir, mode_t mode);
 void rpm_closedb(rpmdb db);
 
 /* is req matched by db packages? */
-int rpm_dbmatch_req_excl(rpmdb db, const struct capreq *req, int strict,
-                         tn_array *exclrnos);
+int rpm_dbmatch_req(rpmdb db, const struct capreq *req, int strict,
+                    tn_array *exclrnos);
 
 /*
   Add to pkgs packages which requires cap/header, omit
-  packages included in exclrnos && hasrnos
+  packages wich recnos included in exclrnos
  */
-int rpm_get_pkgs_requires_capn(rpmdb db, const char *capname,
-                               tn_array *exclrnos, tn_array *hasrnos,
-                               tn_array *pkgs);
+int rpm_get_pkgs_requires_cap(rpmdb db, const char *capname,
+                              tn_array *exclrnos, tn_array *pkgs);
 
 int rpm_get_pkgs_requires_pkgh(rpmdb db, Header h, tn_array *exclrnos,
-                               tn_array *hasrnos, tn_array *pkgs);
+                               tn_array *pkgs);
 
 
 /*
   Add to pkgs packages which requires packages obsoleted by obsl,
-  omit packages included in exclrnos && hasrnos
+  omit packages which recnos included in exclrnos
  */
 int rpm_get_pkgs_requires_obsl_pkg(rpmdb db, struct capreq *obsl,
-                                   tn_array *exclrnos, tn_array *hasrnos,
-                                   tn_array *pkgs);
+                                   tn_array *exclrnos, tn_array *pkgs);
 
 
 
@@ -49,5 +47,12 @@ int rpm_dbiterate(rpmdb db, tn_array *offs,
 
 int rpm_install(rpmdb db, const char *rootdir, const char *path,
                 unsigned filterflags, unsigned transflags, unsigned instflags);
+
+/*
+  Returns number of packages installed (-1 on error),
+  in cmprc compare result of versions
+ */
+int rpm_is_pkg_installed(rpmdb db, const struct pkg *pkg, int *cmprc);
+
 
 #endif
