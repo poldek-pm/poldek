@@ -146,7 +146,6 @@ const char *source_guess_type(const char *path)
 }
 
 
-
 struct source *source_malloc(void)
 {
     struct source *src;
@@ -223,18 +222,17 @@ struct source *source_set_pkg_prefix(struct source *src, const char *prefix)
 
 struct source *source_set_type(struct source *src, const char *type)
 {
-    
-    if (src->type != NULL) {
-        free(src->type);
-        src->type = NULL;
-    }
-    
-    if (type != NULL)
-        src->type = n_strdup(type);
-    
+    source_set(&src->type, type);
     return src;
 }
 
+
+struct source *source_set_default_type(struct source *src)
+{
+    if ((src->flags & PKGSOURCE_TYPE) == 0) /* not set by config*/
+        source_set(&src->type, pkgdir_DEFAULT_TYPE);
+    return src;
+}
 
 char *source_set(char **member, char *value)
 {
@@ -455,7 +453,6 @@ struct source *source_new(const char *type, const char *pathspec,
         src->type = n_strdup(pkgdir_DEFAULT_TYPE);
 
     setup_langs(src);
-    //source_set_idxpath(src);
     return src;
 }
 

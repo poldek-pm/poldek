@@ -41,6 +41,7 @@ void source_free(struct source *src);
 struct source *source_link(struct source *src);
 struct source *source_set_pkg_prefix(struct source *src, const char *prefix);
 struct source *source_set_type(struct source *src, const char *type);
+struct source *source_set_default_type(struct source *src);
 
 int source_cmp(const struct source *s1, const struct source *s2);
 int source_cmp_uniq(const struct source *s1, const struct source *s2);

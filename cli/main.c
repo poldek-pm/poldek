@@ -280,11 +280,13 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv)
     index = 0;
     argp_parse(&argp, argc, argv, ARGP_IN_ORDER, &index, &args);
 
+    poldek_setup_cachedir(args.ctx);
+
     if ((args.cnflags & POLDEKCLI_CMN_NOCONF) == 0) 
         if (!poldek_load_config(args.ctx, args.path_conf))
             exit(EXIT_FAILURE);
 
-    if (!poldek_setup(args.ctx))
+    if (!poldek_setup_sources(args.ctx))
         exit(EXIT_FAILURE);
 
     if (args.cnflags & POLDEKCLI_CMN_NOASK) 

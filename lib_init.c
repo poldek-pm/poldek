@@ -811,20 +811,29 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     return 1;
 }
 
-int poldek_setup(struct poldek_ctx *ctx)
+
+int poldek_setup_cachedir(struct poldek_ctx *ctx)
 {
     char *path = NULL;
-        
+    
     path = setup_cachedir(ctx->ts->cachedir);
     free(ctx->ts->cachedir);
     ctx->ts->cachedir = path;
     vfile_configure(VFILE_CONF_CACHEDIR, path);
+    return 1;
+}
 
+int poldek_setup_sources(struct poldek_ctx *ctx)
+{
+    int i;
+        
     if (!prepare_sources(ctx->sources))
         return 0;
 
-    //if (!mklock(ctx->ts->cachedir))
-    //    return 0;
+    for (i=0; i < n_array_size(ctx->sources); i++) {
+        struct source *src = n_array_nth(ctx->sources, i);
+        source_set_default_type(src);
+    }
 
     return 1;
 }
