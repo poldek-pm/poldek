@@ -142,7 +142,7 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg, int d
 
                     } else {
                         int i;
-                        log(LOGERR, _("Prereq loop: "));
+                        log(LOGERR, _("PreReq loop: "));
                         log(LOGERR, "_%s", rp->pkg->name);
                         for (i=n_array_size(vs->stack)-1; i >= 0; i--) {
                             struct pkg *p = n_array_nth(vs->stack, i);

@@ -1132,7 +1132,7 @@ msgstr[1] "Przeczytano %d pakiety"
 msgstr[2] "Przeczytano %d pakietów"
 
 #: pkgset-order.c:145
-msgid "Prereq loop: "
+msgid "PreReq loop: "
 msgstr "Zapêtlenie zale¿no¶ci: "
 
 #: pkgset-order.c:234
