@@ -3,8 +3,8 @@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-noinst_LTLIBRARIES  = libpolclidek.la 
-libpolclidek_la_SOURCES  =  \
+lib_LTLIBRARIES = libpoclidek.la
+libpoclidek_la_SOURCES  =  \
 			cli.c cli.h     \
 			op.c op.h       \
 			cmd_pipe.c cmd_pipe.h \
@@ -27,16 +27,16 @@ libpolclidek_la_SOURCES  =  \
 			external.c      \
 		        get.c      
 
-libpolclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
+libpoclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
 pkginclude_HEADERS = poclidek.h
 
 bin_PROGRAMS      = poldek
 poldek_SOURCES    = shell.c main.c
-poldek_LDADD      = libpolclidek.la   
+poldek_LDADD      = libpoclidek.la   
 
 noinst_PROGRAMS   = test_cli
 test_cli_SOURCES  = test_cli.c
-test_cli_LDADD    = libpolclidek.la
+test_cli_LDADD    = libpoclidek.la
 
 dist-hook:
 	rm -rf $(distdir)/.deps

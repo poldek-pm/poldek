@@ -4,6 +4,7 @@
 
 #include <trurl/narray.h>
 #include <trurl/nbuf.h>
+#include "poldek.h"
 
 struct poclidek_ctx;
 struct poldek_ts;

@@ -349,16 +349,16 @@ static void print_source_type_list(void)
     list = pkgdir_typelist();
     if (list) {
         for (i=0; i < n_array_size(list); i++) {
-            char s[64]; int n;
+            char ns[32], ms[32];
             struct pkgdir_type_uinf *inf = n_array_nth(list, i);
             
-            n = snprintf_c(PRCOLOR_GREEN, s, sizeof(s), "%s", inf->name);
-            snprintf_c(PRCOLOR_CYAN, &s[n], sizeof(s) - n, "(%s)", inf->mode);
-            printf("%-37s", s);
+            snprintf_c(PRCOLOR_GREEN, ns, sizeof(ns), "%s", inf->name);
+            snprintf_c(PRCOLOR_CYAN, ms, sizeof(ms), "%s", inf->mode);
             
-            printf(" - %s\n", inf->description);
+            printf("%-20s%s", ns, ms);
+            printf("  %s\n", inf->description);
             if (*inf->aliases) {
-                printf("%-12s   (aliases: ", "");
+                printf("%-10s   (aliases: ", "");
                 printf_c(PRCOLOR_GREEN, "%s", inf->aliases);
                 printf(")\n");
             }

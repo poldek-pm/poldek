@@ -234,14 +234,15 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'i':
-            poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "install");
+            poldek_ts_set_type(ts, POLDEK_TS_INSTALL, "install");
+            poldek_ts_setf(ts, POLDEK_TS_INSTALL);
             break;
             
         case OPT_INST_DOWNGRADE:
         case OPT_INST_REINSTALL:
         case 'U':
         case 'u':
-            poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "install");
+            poldek_ts_set_type(ts, POLDEK_TS_INSTALL, "install");
             poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
             
             if (key == OPT_INST_DOWNGRADE)
@@ -252,14 +253,14 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_INST_INSTDIST:
-            poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "install-dist");
+            poldek_ts_set_type(ts, POLDEK_TS_INSTALL, "install-dist");
             poldek_ts_setf(ts, POLDEK_TS_DIST);
             if (arg)
                 poldek_ts_configure(ts, POLDEK_CONF_ROOTDIR, arg);
             break;
 
         case OPT_INST_REINSTDIST:
-            poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "reinstall-dist");
+            poldek_ts_set_type(ts, POLDEK_TS_INSTALL, "reinstall-dist");
             poldek_ts_setf(ts, POLDEK_TS_DIST);
             poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
             poldek_ts_setf(ts, POLDEK_TS_REINSTALL);
@@ -268,7 +269,7 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_INST_UPGRDIST:
-            poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "upgrade-dist");
+            poldek_ts_set_type(ts, POLDEK_TS_INSTALL, "upgrade-dist");
             poldek_ts_setf(ts, POLDEK_TS_DIST);
             poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
             if (arg)
@@ -356,7 +357,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case 'I':
+            poldek_ts_setf(ts, POLDEK_TS_INSTALL);
             poldek_ts_clrf(ts, POLDEK_TS_UPGRADE);
+            
             break;
 
         case OPT_INST_REINSTALL:
@@ -438,8 +441,9 @@ static int install(struct cmdctx *cmdctx)
     cctx = cmdctx->cctx;
     ts = cmdctx->ts;
     
-    poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "install-cmd");
-    poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
+    poldek_ts_set_type(ts, POLDEK_TS_INSTALL, "install-cmd");
+    if (!poldek_ts_issetf(ts, POLDEK_TS_INSTALL))
+        poldek_ts_setf(ts, POLDEK_TS_UPGRADE); /* the default */
     is_test = ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0);
 
     rc = poldek_ts_run(ts, is_test ? NULL : &iinf);
@@ -463,7 +467,7 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
     dbgf_("%p->%p, %p->%p\n", rt->ts, rt->ts->hold_patterns,
           rt->ts->ctx->ts, rt->ts->ctx->ts->hold_patterns);
     
-    if (poldek_ts_type(rt->ts) != POLDEK_TSt_INSTALL)
+    if (poldek_ts_type(rt->ts) != POLDEK_TS_INSTALL)
         return OPGROUP_RC_NIL;
 
     if (!poldek_ts_issetf_all(rt->ts, POLDEK_TS_UPGRADEDIST)) {

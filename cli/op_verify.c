@@ -139,7 +139,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
     if (arg_s->verify == 0)
         return rc;
 
-    poldek_ts_set_type(rt->ts, POLDEK_TSt_VERIFY, "verify");
+    poldek_ts_set_type(rt->ts, POLDEK_TS_VERIFY, "verify");
     rc = poldek_ts_run(rt->ts, NULL) ? OPGROUP_RC_FINI : OPGROUP_RC_ERROR;
     return rc;
 }

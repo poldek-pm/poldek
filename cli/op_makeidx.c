@@ -1,4 +1,3 @@
-
 /* 
   Copyright (C) 2000 - 2003 Pawel A. Gajda (mis@k2.net.pl)
  
