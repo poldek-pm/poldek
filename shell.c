@@ -496,7 +496,6 @@ void resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgsp, 
             if (fnmatch(n_array_nth(pkgnames, j), shpkg->nevr, 0) == 0) {
                 n_array_push(pkgs, shpkg);
                 matches[j]++;
-                break;
             }
         }
     }
