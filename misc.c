@@ -671,7 +671,7 @@ int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
 
     nb = nbytes;
     unit[0] = 'B';
-    unit[1] = '\0';
+    unit[1] = unit[2] = '\0';
     
     if (nb > 1024) {
         nb /= 1024.0;

@@ -2137,6 +2137,7 @@ static void init_upgrade_s(struct upgrade_s *upg, struct poldek_ts *ts)
     upg->ts = ts; 
     upg->pkg_stack = n_array_new(32, NULL, NULL);
     upg->dbpms = pkgmark_set_new();
+    upg->unmetpms = pkgmark_set_new();
 }
 
 
@@ -2149,6 +2150,7 @@ static void destroy_upgrade_s(struct upgrade_s *upg)
     n_array_free(upg->orphan_dbpkgs);
     upg->ts = NULL;
     pkgmark_set_free(upg->dbpms);
+    pkgmark_set_free(upg->unmetpms);
     memset(upg, 0, sizeof(*upg));
 }
 
@@ -2162,8 +2164,13 @@ static void reset_upgrade_s(struct upgrade_s *upg)
     dbpkg_set_free(upg->uninst_set);
     upg->uninst_set = dbpkg_set_new();
     n_array_clean(upg->orphan_dbpkgs);
+
     pkgmark_set_free(upg->dbpms);
     upg->dbpms = pkgmark_set_new();
+
+    pkgmark_set_free(upg->unmetpms);
+    upg->unmetpms = pkgmark_set_new();
+    
     upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
 }
