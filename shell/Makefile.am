@@ -1,6 +1,6 @@
 # $Id$
 
-INCLUDES = @TRURL_INCLUDE@
+INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 lib_LIBRARIES    = libshell.a 
 libshell_a_SOURCES  = shell.c shell.h \
 		   ls.c            \

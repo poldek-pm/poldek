@@ -1,6 +1,6 @@
 # $Id$
 
-INCLUDES = @TRURL_INCLUDE@
+INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 lib_LIBRARIES      = libvftp.a 
 libvftp_a_SOURCES  = vftp.c ftp.c
 

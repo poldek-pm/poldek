@@ -1,12 +1,18 @@
 # $Id$
 
 AUTOMAKE_OPTIONS = 
-SUBDIRS   = @TRURL_DIR@ vfile shell po conf
-DIST_SUBDIRS = trurlib vfile shell po conf
+ACLOCAL_AMFLAGS = -I m4
 
-AM_CFLAGS    = @CFLAGS@
+if WITH_INCLUDED_TRURLIB
+TRURL_DIR=trurlib
+else
+TRURL_DIR=
+endif
+
+SUBDIRS   = po $(TRURL_DIR) vfile shell conf
+DIST_SUBDIRS = po trurlib vfile shell conf 
+
 INCLUDES  = @TRURL_INCLUDE@
-AM_LDFLAGS   = @LDFLAGS@
 POD2MAN   = @POD2MAN@
 POD2HTML  = pod2html
 
@@ -76,7 +82,7 @@ endif
 LDADD_              = @INTLLIBS@
 
 bin_PROGRAMS        = poldek rpmvercmp
-bin_SCRIPTS         = mkpackagedir vfjuggle vfuncompr
+dist_bin_SCRIPTS    = mkpackagedir vfjuggle vfuncompr
 poldek_SOURCES      = main.c
 poldek_LDADD        = libpoldek.a vfile/libvfile.a \
 		      vfile/vftp/libvftp.a vfile/vhttp/libvhttp.a \
@@ -93,9 +99,15 @@ test_match_LDADD    = $(poldek_LDADD)
 
 
 EXTRA_DIST = poldek.1 poldek.pod \
-	     Makefile.extra poldekrc *.sample logo.png \
-	     poldek.spec* poldek-suse.spec* $(bin_SCRIPTS) conf/ \
-	     trurlib/ 
+	     Makefile.extra poldekrc logo.png \
+	     poldek.spec poldek-suse.spec \
+	     package-set.sample  pkgsplit.conf.sample  vfjugglerc.sample \
+	     m4/codeset.m4 m4/gettext.m4 m4/glibc21.m4 m4/iconv.m4 \
+	     m4/intdiv0.m4 m4/inttypes_h.m4 m4/inttypes.m4 m4/inttypes-pri.m4 \
+	     m4/isc-posix.m4 m4/lcmessage.m4 m4/lib-ld.m4 m4/lib-link.m4 \
+	     m4/lib-prefix.m4 m4/progtest.m4 m4/stdint_h.m4 m4/uintmax_t.m4 \
+	     m4/ulonglong.m4
+	     
 
 man_MANS = poldek.1
 
@@ -104,7 +116,7 @@ MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess config.status config.log aclocal.m4 \
 			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 *.html \
-			ABOUT-NLS po/*~ po/*.pot conf/*~
+			ABOUT-NLS po/*~ po/*.pot conf/*~ m4/*~
 
 poldek.1: poldek.pod
 	$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@

@@ -1,6 +1,6 @@
 # $Id$
 
-INCLUDES = @TRURL_INCLUDE@
+INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 lib_LIBRARIES      = libvhttp.a 
 libvhttp_a_SOURCES  = vhttp.c http.c
 
