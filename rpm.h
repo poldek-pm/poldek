@@ -54,9 +54,9 @@ int rpm_get_pkgs_requires_capn(rpmdb db, tn_array *dbpkgs, const char *capname,
 
 
 /*
-  adds to dbpkgs packages obsoleted by cap
+  adds to dbpkgs packages obsoleted by pkg
 */
-int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, struct capreq *cap,
+int rpm_get_obsoletedby_pkg(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
                             unsigned ldflags);
 
 

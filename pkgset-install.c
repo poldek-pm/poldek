@@ -416,12 +416,28 @@ int uninstpkgs_provides(struct upgrade_s *upg, struct capreq *req)
     return 0;
 }
 
-    
 
 static void mapfn_clean_pkg_color(struct pkg *pkg) 
 {
     pkg_set_color(pkg, PKG_COLOR_WHITE);
 }
+
+
+static struct pkg *find_pkg(tn_array *pkgs, const char *name) 
+{
+    struct pkg tmpkg;
+    int i;
+    
+    tmpkg.name = (char*)name;
+
+    n_array_sort(pkgs);
+    i = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
+    if (i < 0)
+        return NULL;
+
+    return n_array_nth(pkgs, i);
+}
+
 
 #define PROCESS_DEPS       0 
 #define PROCESS_ORPHANS    1
@@ -440,6 +456,8 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
     
     nloop = 0;
     
+    n_assert(how == PROCESS_DEPS || how == PROCESS_ORPHANS);
+
     while (nmarked > 0) {
         nmarked = 0;
         for (i=0; i<n_array_size(tmparr); i++) {
@@ -451,7 +469,7 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
             if (pkg->reqs == NULL)
                 continue;
             
-            msg_i(2, nloop, "%s\n", pkg_snprintf_s(pkg));
+            msg_i(2, nloop, "Checking %s dependencies\n", pkg_snprintf_s(pkg));
 
             for (j=0; j<n_array_size(pkg->reqs); j++) {
                 struct capreq *req;
@@ -465,13 +483,13 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                 reqnover = capreq_has_ver(req) == 0;
             
                 if (reqnover && n_hash_exists(upg->depcache, reqname)) {
-                    msg_i(4, nloop, "in cache %s\n", reqname);
+                    msg_i(4, nloop, " in cache %s\n", reqname);
                     continue;
                 }
 
                 
                 if (how == PROCESS_ORPHANS && !uninstpkgs_provides(upg, req)) {
-                    msg(5, "skip %s from %s\n", reqname, pkg_snprintf_s(pkg));
+                    msg(5, " skip %s from %s\n", reqname, pkg_snprintf_s(pkg));
                     continue;
                 }
                 
@@ -511,59 +529,79 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                         n_hash_insert(upg->depcache, reqname, (void*)1);
                 
                 } else if (tomark) {
-                    if (how == PROCESS_DEPS) {
-                        if (verbose > 1) {
-                            msg_i(2, nloop, " %s marks %s (cap %s)\n",
-                                  pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark),
-                                  capreq_snprintf_s(req));
-                        } else if (verbose) {
-                            msg(1, "%s marks %s (cap %s)\n",
-                                pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark), 
-                                capreq_snprintf_s(req));
-                        }
+                    char *prefix = "";
                     
-                        if (!is_installable(upg->inst->db, tomark,
-                                            upg->uninst_dbpkgs, 
-                                            upg->inst)) {
-                            upg->nfatal_err++; 
-                            ndepadds = 0;
-                            goto l_end;
-                        }
-#if 0
-                        if (pkg_is_hold(tomark)) {
-                            log(LOGERR, "%s: refusing to install held package\n",
-                                pkg_snprintf_s(tomark));
-                            upg->nfatal_err++; 
-                            ndepadds = 0;
-                            goto l_end;
-                        }
-#endif
-                        pkg_dep_mark(tomark);
-                        n_array_push(markarr[nmarkarr], tomark);
-                        nmarked++;
-                        upg->ndep++;
-                        upg->ninstall++;
-                        ndepadds++;
+                    if (how == PROCESS_ORPHANS)
+                        prefix = "orphaned ";
+                    
+                    if (verbose > 1) {
+                        msg_i(2, nloop, "%s%s marks %s (cap %s)\n", prefix, 
+                              pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark),
+                              capreq_snprintf_s(req));
+                    } else if (verbose) {
+                        msg(1, " %s%s marks %s (cap %s)\n", prefix, 
+                            pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark), 
+                            capreq_snprintf_s(req));
                     }
+                    
+                    if (!is_installable(upg->inst->db, tomark,
+                                        upg->uninst_dbpkgs, 
+                                            upg->inst)) {
+                        upg->nfatal_err++; 
+                        ndepadds = 0;
+                        goto l_end;
+                    }
+                    
+                    pkg_dep_mark(tomark);
+                    n_array_push(markarr[nmarkarr], tomark);
+                    nmarked++;
+                    upg->ndep++;
+                    upg->ninstall++;
+                    ndepadds++;
                     
                     if (reqnover)
                         n_hash_insert(upg->depcache, reqname, (void*)1);
                     
                 } else {
-                    if (how == PROCESS_DEPS) 
+                    if (how == PROCESS_DEPS) {
                         log(LOGERR, "%s: req %s not found\n",
                             pkg_snprintf_s(pkg), capreq_snprintf_s(req));
-                    else if (how == PROCESS_ORPHANS)
-                        log(LOGERR, "%s is required by %s\n", 
-                            capreq_snprintf_s(req), pkg_snprintf_s(pkg));
-                    else
-                        n_assert(0);
-                    pkg_set_badreqs(pkg);
-                    upg->ndep_err++;
+                        pkg_set_badreqs(pkg);
+                        upg->ndep_err++;
+
+                        
+                    } else if (how == PROCESS_ORPHANS) {
+                        int not_found = 1;
+                        
+                        if ((upg->inst->flags & INSTS_GREEDY)) {
+                            struct pkg *p;
+                            
+                            if ((p = find_pkg(ps->pkgs, pkg->name))) {
+                                if (!pkg_is_marked(p)) {
+                                    msg_i(1, nloop, " greedy upgrade %s\n", pkg_snprintf_s(p));
+                                    pkg_dep_mark(p);
+                                    n_array_push(markarr[nmarkarr], p);
+                                    nmarked++;
+                                    upg->ndep++;
+                                    upg->ninstall++;
+                                    ndepadds++;
+                                }
+                                not_found = 0;
+                            }
+                        }
+                        
+                        if (not_found) {
+                            log(LOGERR, "%s is required by %s\n", 
+                                capreq_snprintf_s(req), pkg_snprintf_s(pkg));
+                            pkg_set_badreqs(pkg);
+                            upg->ndep_err++;
+                        }
+                    }
                 }
             }
         }
-
+        
+                
         for (i=0; i<n_array_size(markarr[nmarkarr]); i++) 
             n_array_push(upg->install_pkgs, n_array_nth(markarr[nmarkarr], i));
         
@@ -574,6 +612,7 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
         n_array_clean(markarr[nmarkarr]);
         nloop++;
     }
+    
     
  l_end:
     
@@ -587,49 +626,8 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
 static
 int add_obsoleted_pkgs(const struct pkg *pkg, struct upgrade_s *upg) 
 {
-    struct capreq *self_cap;
-    int i, k, n = 0;
-    int j, idx;
-    
-    idx = k = n_array_size(upg->uninst_dbpkgs);
-    self_cap = capreq_new(pkg->name, 0, NULL, NULL, 0, 0);
-    rpm_get_obsoletedby_cap(upg->inst->db->dbh, upg->uninst_dbpkgs, self_cap,
-                            PKG_LDWHOLE);
-    capreq_free(self_cap);
-    n = n_array_size(upg->uninst_dbpkgs) - k;
-
-    if (n) {
-        for (j=idx; j<n_array_size(upg->uninst_dbpkgs); j++)
-            msg(1, "%s obsoleted by %s\n",
-                dbpkg_snprintf_s(n_array_nth(upg->uninst_dbpkgs, j)),
-                pkg_snprintf_s(pkg));
-    }
-    
-    if (pkg->cnfls == NULL)
-        return n;
-    
-    k = n_array_size(upg->uninst_dbpkgs);
-    
-    for (i=0; i < n_array_size(pkg->cnfls); i++) {
-        struct capreq *cnfl = n_array_nth(pkg->cnfls, i);
-        
-        
-        if (!cnfl_is_obsl(cnfl))
-            continue;
-
-        idx = n_array_size(upg->uninst_dbpkgs);
-        if (rpm_get_obsoletedby_cap(upg->inst->db->dbh, upg->uninst_dbpkgs,
-                                    cnfl, PKG_LDWHOLE)) {
-            
-            for (j=idx; j<n_array_size(upg->uninst_dbpkgs); j++)
-                msg(1, "%s obsoleted by %s\n",
-                    dbpkg_snprintf_s(n_array_nth(upg->uninst_dbpkgs, j)),
-                    pkg_snprintf_s(pkg));
-        }
-    }
-
-    n += n_array_size(upg->uninst_dbpkgs) - k;
-    return n;
+    return rpm_get_obsoletedby_pkg(upg->inst->db->dbh, upg->uninst_dbpkgs, pkg,
+                                   PKG_LDWHOLE);
 }
 
 /* add to upg->orphan_dbpkgs packages which are required by uninst_dbpkgs */
@@ -1007,7 +1005,7 @@ static void print_install_summary(struct upgrade_s *upg)
 
     
     if (upg->ndep) 
-        msg(1, ", %d marked by dependencies", upg->ndep);
+        msg(1, " (%d marked by dependencies)", upg->ndep);
 
     if (n_array_size(upg->uninst_dbpkgs))
         msg(1, ", %d to uninstall", n_array_size(upg->uninst_dbpkgs));
@@ -1034,7 +1032,7 @@ static int check_holds(struct pkgset *ps, struct upgrade_s *upg)
 
     if ((ps->flags & (PSMODE_UPGRADE | PSMODE_UPGRADE_DIST)) == 0)
         return 1;
-    
+
     if (upg->inst->hold_pkgnames == NULL)
         return 1;
 
@@ -1120,7 +1118,7 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
         n_assert(upg->inst->fetchdir);
         rc = pkgset_fetch_pkgs(upg->inst->fetchdir, upg->install_pkgs, 1);
         
-    } else if ((rc = check_holds(ps, upg))) {
+    } else if ((upg->inst->flags & INSTS_NOHOLD) || (rc=check_holds(ps, upg))) {
         rc = runrpm(ps, upg);
     }
     

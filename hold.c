@@ -21,18 +21,31 @@
 #include <trurl/narray.h>
 #include <vfile/vfile.h>
 
-#define  ENABLE_TRACE 0
+#define  ENABLE_TRACE 1
 
 #include "pkgset.h"
 #include "log.h"
 #include "pkg.h"
 
 
-static 
+
 tn_array *read_holds(const char *fpath, tn_array *hold_pkgnames)
 {
-    char              buf[1024];
+    char              buf[1024], path[PATH_MAX];
     struct vfile      *vf;
+
+    if (fpath == NULL) {
+        char *homedir;
+
+        if ((homedir = getenv("HOME")) == NULL)
+            return NULL;
+        
+        snprintf(path, sizeof(path), "%s/.poldek_holds", homedir);
+        if (access(path, R_OK) != 0)
+            return hold_pkgnames;
+
+        fpath = path;
+    }
     
     if ((vf = vfile_open(fpath, VFT_STDIO, VFM_RO)) == NULL) 
         return NULL;
@@ -41,17 +54,24 @@ tn_array *read_holds(const char *fpath, tn_array *hold_pkgnames)
         char *p;
         int  len;
 
-        len = strlen(buf);
+        
         p = buf;
         while (isspace(*p))
             p++;
 
+        if (*p == '#')
+            continue;
+
+        len = strlen(buf);
         len--;
         while (isspace(buf[len]))
             buf[len--] = '\0';
 
-        if (*p) 
+        if (*p) {
+            DBGMSG_F("read %s\n", p);
             n_array_push(hold_pkgnames, strdup(p));
+        }
+        
     }
     
     vfile_close(vf);
@@ -83,7 +103,7 @@ void mark_holds(tn_array *pkgs, tn_array *hold_pkgnames)
 void pkgset_mark_holds(struct pkgset *ps, tn_array *hold_pkgnames) 
 {
     int i;
-    
+
     for (i=0; i<n_array_size(ps->pkgdirs); i++) {
         struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
         

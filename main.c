@@ -91,26 +91,16 @@ struct args {
     tn_array  *pkgdef_defs;     /* -n "A 1.2" */
     tn_array  *pkgdef_sets;     /* -p ftp://ftp.zenek.net/PLD/tiny */
     
-    unsigned  psflags;
-    unsigned  instflags;
-    unsigned  inst_sflags;
-    int       verify;
-    char      *fetchdir;
-    char      *dumpfile;
-    char      *install_root;
+    unsigned   psflags;
+    struct inst_s inst;
     
+    int               verify;
     struct usrpkgset  *ups;
     
-    tn_array    *hold_pkgnames;
-
-    tn_array    *rpmopts;
-    tn_array    *rpmacros;
-
     char        *conf_path;
+    int         nofollow;
     int         noconf;
-    const char  *cachedir;
-    
-    int         nodesc;		/* don't put descriptions in Packages */
+    int         nodesc;		/* don't put descriptions in package index */
     int         shell_skip_installed;
 
     struct      split_conf split_conf;
@@ -143,14 +133,15 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_INST_JUSTDB           1045
 #define OPT_INST_TEST             1046
 #define OPT_INST_MKDBDIR          1047
-#define OPT_INST_KILLDB           1048
 #define OPT_INST_RPMDEF           1049
 #define OPT_INST_FETCH            1050
 #define OPT_INST_MKSCRIPT         1051
 #define OPT_INST_POLDEK_MKSCRIPT  1052
 #define OPT_INST_NOFOLLOW         'N'
 #define OPT_INST_FRESHEN          'F'
-#define OPT_INST_HOLD           1053
+#define OPT_INST_HOLD             1053
+#define OPT_INST_NOHOLD           1054
+#define OPT_INST_GREEDY           1055
 
 #define OPT_SPLITSIZE             1100
 #define OPT_SPLITCONF             1101
@@ -212,7 +203,14 @@ static struct argp_option options[] = {
 {"upgrade", 'U', 0, 0, "Upgrade given package set", 70 },
 {"root", 'r', "DIR", 0, "Set top directory to DIR", 70 },
 {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
- "Prevent packages listed from being upgraded if they are already installed.", 70 },    
+"Prevent packages listed from being upgraded if they are already installed.", 70 },
+
+{"nohold", OPT_INST_NOHOLD, 0, 0,
+ "Don't take held packages from $HOME/.poldek_hold.", 70 },
+
+{"greedy", OPT_INST_GREEDY, 0, 0,
+ "Automatically upgrade packages which dependencies are broken"
+ "by unistalling selected ones.", 70 },
     
 {"dump", OPT_INST_MKSCRIPT, "FILE", OPTION_ARG_OPTIONAL,
      "Just dump install marked package filenames to FILE (default stdout)", 70 },
@@ -246,10 +244,6 @@ static struct argp_option options[] = {
     
 {"mkdir", OPT_INST_MKDBDIR, 0, 0, 
      "make %{_dbpath} if not exists", 70 },
-
-{"killdb", OPT_INST_KILLDB, 0, OPTION_HIDDEN,           /* not implemented */
-     "kills existing database (for install-dist)", 70 },    
-
 
 #ifdef ENABLE_INTERACTIVE_MODE
 {0,0,0,0, "Shell mode:", 80},
@@ -329,12 +323,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 verbose = 1;
             else  {
                 char *p = arg;
-                while (*p == 'v')
+                while (*p == 'v') {
+                    verbose++;
                     p++;
+                }
+
                 if (*p != '\0')
                     argp_usage (state);
-                else 
-                    verbose = p - arg + 1;
             }
         }
         break;
@@ -390,7 +385,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_SOURCECACHE:
-            argsp->cachedir = trimslash(arg);
+            argsp->inst.cachedir = trimslash(arg);
             break;
             
         case 'V':
@@ -438,36 +433,40 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_INSTDIST:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_INSTALLDIST;
-            argsp->install_root = trimslash(arg);
+            argsp->inst.rootdir = trimslash(arg);
             argsp->psflags |= PSMODE_INSTALL | PSMODE_INSTALL_DIST;
             break;
             
         case OPT_INST_UPGRDIST:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UPGRADEDIST;
-            argsp->install_root = arg ? trimslash(arg) : "/";
+            argsp->inst.rootdir = arg ? trimslash(arg) : "/";
             argsp->psflags |= PSMODE_UPGRADE | PSMODE_UPGRADE_DIST;
             break;
 
         case OPT_INST_HOLD:
-            if (argsp->hold_pkgnames == NULL)
-                argsp->hold_pkgnames = n_array_new(4, free, (tn_fn_cmp)strcmp);
-            
             if (strchr(arg, ',') == NULL) {
-                n_array_push(argsp->hold_pkgnames, strdup(arg));
+                n_array_push(argsp->inst.hold_pkgnames, strdup(arg));
                 
             } else {
                 const char **pkgs, **p;
             
                 p = pkgs = n_str_tokl(arg, ",");
                 while (*p) {
-                    n_array_push(argsp->hold_pkgnames, strdup(*p));
+                    n_array_push(argsp->inst.hold_pkgnames, strdup(*p));
                     p++;
                 }
                 n_str_tokl_free(pkgs);
             }
+            
+        case OPT_INST_NOHOLD:
+            argsp->inst.flags |= INSTS_NOHOLD;
             break;
 
+        case OPT_INST_GREEDY:
+            argsp->inst.flags |= INSTS_GREEDY;
+            break;
+            
         case 'i':
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_INSTALL;
@@ -481,59 +480,58 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'r':
-            argsp->install_root = trimslash(arg);
+            argsp->inst.rootdir = trimslash(arg);
             break;
             
         case OPT_INST_RPMDEF:
-            if (argsp->rpmacros == NULL)
-                argsp->rpmacros = n_array_new(2, NULL, NULL);
-            
-            n_array_push(argsp->rpmacros, arg);
+            n_assert(argsp->inst.rpmacros);
+            n_array_push(argsp->inst.rpmacros, arg);
             break;
             
             
         case OPT_INST_FETCH:
-            argsp->fetchdir = trimslash(arg);
-            argsp->inst_sflags |= INSTS_JUSTFETCH;
+            argsp->inst.fetchdir = trimslash(arg);
+            argsp->inst.flags |= INSTS_JUSTFETCH;
             break;
 
         case OPT_INST_MKSCRIPT:
-            argsp->inst_sflags |= INSTS_JUSTPRINT;
-            argsp->dumpfile = trimslash(arg);
+            argsp->inst.flags |= INSTS_JUSTPRINT;
+            argsp->inst.dumpfile = trimslash(arg);
             break;
 
         case OPT_INST_POLDEK_MKSCRIPT:
-            argsp->inst_sflags |= INSTS_JUSTPRINT_N;
-            argsp->dumpfile = trimslash(arg);
+            argsp->inst.flags |= INSTS_JUSTPRINT_N;
+            argsp->inst.dumpfile = trimslash(arg);
             break;
 
         case OPT_INST_FRESHEN:
-            argsp->inst_sflags |= INSTS_FRESHEN;
-            argsp->dumpfile = trimslash(arg);
+            argsp->inst.flags |= INSTS_FRESHEN;
+            argsp->inst.dumpfile = trimslash(arg);
             break;
 
         case OPT_INST_NOFOLLOW:
-            argsp->inst_sflags &= ~(INSTS_FOLLOW);
+            argsp->inst.flags &= ~(INSTS_FOLLOW);
+            argsp->nofollow = 0;
             break;
             
         case OPT_INST_NODEPS:
-            argsp->instflags  |= PKGINST_NODEPS;
+            argsp->inst.instflags  |= PKGINST_NODEPS;
             break;
 
         case OPT_INST_FORCE:
-            argsp->instflags |= PKGINST_FORCE;
+            argsp->inst.instflags |= PKGINST_FORCE;
             break;
             
         case OPT_INST_JUSTDB:
-            argsp->instflags |= PKGINST_JUSTDB;
+            argsp->inst.instflags |= PKGINST_JUSTDB;
             break;
 
         case 't':
-            argsp->instflags |= PKGINST_TEST;
+            argsp->inst.instflags |= PKGINST_TEST;
             break;
 
         case OPT_INST_MKDBDIR:
-            argsp->inst_sflags |= INSTS_MKDBDIR;
+            argsp->inst.flags |= INSTS_MKDBDIR;
             break;
 
         case OPT_CONF:
@@ -595,10 +593,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                      exit(EXIT_FAILURE);
                  }
                 
-                if (argsp->rpmopts == NULL)
-                    argsp->rpmopts = n_array_new(4, NULL, (tn_fn_cmp)strcmp);
-
-                n_array_push(argsp->rpmopts, arg);
+                n_assert(argsp->inst.rpmopts != NULL);
+                n_array_push(argsp->inst.rpmopts, arg);
                 
             } else {
                 argp_usage (state);
@@ -666,10 +662,6 @@ void parse_options(int argc, char **argv)
     args.curr_src_path = NULL;
     args.curr_src_ldmethod = PKGSET_LD_NIL;
     args.idx_path = NULL;
-    args.fetchdir = NULL;
-    args.install_root = NULL;
-    args.cachedir = tmpdir();
-    args.inst_sflags = INSTS_FOLLOW;
     args.pkgdef_files = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_defs  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_sets  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
@@ -677,6 +669,7 @@ void parse_options(int argc, char **argv)
     args.split_conf.first_free_space = 0;
     args.split_conf.conf = NULL;
     args.split_conf.prefix = NULL;
+    inst_s_init(&args.inst);
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
@@ -748,26 +741,30 @@ void parse_options(int argc, char **argv)
     
     if ((p = conf_get(htcnf, "use_sudo", NULL)) != NULL &&
         strcmp(p, "yes") == 0)
-        args.inst_sflags |= INSTS_USESUDO;
-
+        args.inst.flags |= INSTS_USESUDO;
     
-
     if (htcnf) {
         char *v;
         int is_multi;
 
         if ((v = conf_get(htcnf, "use_sudo", NULL)) != NULL &&
             strcmp(v, "yes") == 0)
-            args.inst_sflags |= INSTS_USESUDO;
+            args.inst.flags |= INSTS_USESUDO;
 
-        if (args.inst_sflags & INSTS_FOLLOW) { /* no --nofollow specified */
+        if (args.inst.flags & INSTS_FOLLOW) { /* no --nofollow specified */
             if ((v = conf_get(htcnf, "follow", NULL)) != NULL &&
                 strcmp(v, "no") == 0)
-                args.inst_sflags &= ~(INSTS_FOLLOW);
+                args.inst.flags &= ~(INSTS_FOLLOW);
+        }
+
+        if ((args.inst.flags & INSTS_GREEDY) == 0) { /* no --greedy specified */
+            if ((v = conf_get(htcnf, "greedy", NULL)) != NULL &&
+                strcmp(v, "yes") == 0)
+                args.inst.flags |= INSTS_FOLLOW | INSTS_GREEDY;
         }
         
 	if ((v = conf_get(htcnf, "cachedir", NULL)))
-	    args.cachedir = v;
+	    args.inst.cachedir = v;
         
         if ((v = conf_get(htcnf, "ftp_http_get", NULL))) {
             vfile_cnflags |= VFILE_USEXT_FTP | VFILE_USEXT_HTTP;
@@ -798,34 +795,22 @@ void parse_options(int argc, char **argv)
         if ((v = conf_get(htcnf, "rpmdef", &is_multi))) {
             tn_array *macros = NULL;
 
-            if (is_multi)
+            if (is_multi) {
                 macros = conf_get_multi(htcnf, "rpmdef");
-         
-            if (args.rpmacros == NULL) {
-                if (macros)
-                    args.rpmacros = macros;
-                else {
-                    args.rpmacros = n_array_new(4, free, (tn_fn_cmp)strcmp);
-                    n_array_push(args.rpmacros, v);
-                }
+                while (n_array_size(macros))
+                    n_array_push(args.inst.rpmacros,
+                                 strdup(n_array_shift(macros)));
             } else {
-                if (macros) {
-                    while (n_array_size(macros))
-                        n_array_push(args.rpmacros,
-                                     strdup(n_array_shift(macros)));
-                } else {
-                    n_array_push(args.rpmacros, v);
-                }
+                n_array_push(args.inst.rpmacros, v);
             }
         }
     }
     
     vfile_verbose = &verbose;
-    n_assert(args.cachedir); 
-    vfile_configure(args.cachedir, vfile_cnflags);
+    n_assert(args.inst.cachedir); 
+    vfile_configure(args.inst.cachedir, vfile_cnflags);
     
     vfile_msg_fn = log_msg;
-
     vfile_err_fn = log_msg;
 }
 
@@ -846,9 +831,20 @@ static struct pkgset *load_pkgset(int ldflags)
 
     if (ps) {
         pkgset_setup(ps);
-        if (args.hold_pkgnames)
-            pkgset_mark_holds(ps, args.hold_pkgnames);
+        if ((args.inst.flags & INSTS_NOHOLD) == 0) {
+            if (n_array_size(args.inst.hold_pkgnames) == 0) 
+                read_holds(NULL, args.inst.hold_pkgnames);
+
+            if (n_array_size(args.inst.hold_pkgnames) > 0) {
+                pkgset_mark_holds(ps, args.inst.hold_pkgnames);
+                
+            } else {
+                n_array_free(args.inst.hold_pkgnames);
+                args.inst.hold_pkgnames = NULL;
+            }
+        }
     }
+    
 
     return ps;
 }
@@ -954,7 +950,14 @@ int prepare_given_packages(void)
     return usrpkgset_size(args.ups);
 }
 
+static int check_install_flags(void) 
+{
+    if ((args.inst.flags & INSTS_GREEDY))
+        args.inst.flags |= INSTS_FOLLOW;
+    return 1;
+}
 
+static
 int check_args(void) 
 {
     int i, rc = 1;
@@ -995,6 +998,7 @@ int check_args(void)
                 log(LOGERR, "no packages to install\n");
                 rc = 0;
             }
+            rc = check_install_flags();
             break;
             
         case MODE_UPGRADEDIST:
@@ -1002,7 +1006,7 @@ int check_args(void)
                 log(LOGERR, "-p is not valid in this mode\n");
                 exit(EXIT_FAILURE);
             }
-            
+            rc = check_install_flags();
             break;
 
         case MODE_SPLIT:
@@ -1040,9 +1044,9 @@ int mklock(void)
     char path[PATH_MAX];
     int rc;
     
-    n_assert(args.cachedir);
+    n_assert(args.inst.cachedir);
 
-    snprintf(path, sizeof(path), "%s/poldek..lck", args.cachedir);
+    snprintf(path, sizeof(path), "%s/poldek..lck", args.inst.cachedir);
 
     rc = lockfile(path);
     
@@ -1056,7 +1060,7 @@ int mklock(void)
             *buf = '\0';
             
         log(LOGERR, "There seems another poldek%s use %s\n",
-            buf, args.cachedir);
+            buf, args.inst.cachedir);
     }
 
     return rc > 0; 
@@ -1088,13 +1092,11 @@ int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 
 int main(int argc, char **argv)
 {
-    struct pkgset *ps;
-    struct inst_s inst;
-    char *logprefix = "poldek";
-    int rc = 1;
-    int ldflags;
+    struct pkgset   *ps;
+    char            *logprefix = "poldek";
+    int             rc = 1, ldflags;
     
-
+    
     mem_info_verbose = -1;
     
 #ifdef ENABLE_INTERACTIVE_MODE
@@ -1103,10 +1105,10 @@ int main(int argc, char **argv)
         logprefix = NULL;
     }
 #endif
-    
+
     log_sopenlog(stdout, 0, logprefix);
     parse_options(argc, argv);
-
+    
     if (!mklock())
         exit(EXIT_FAILURE);
     
@@ -1114,20 +1116,8 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
 
     poldek_init();
-    inst_s_init(&inst);
+    rpm_initlib(args.inst.rpmacros);
     
-    inst.rootdir   = args.install_root;
-    inst.instflags = args.instflags;
-    inst.fetchdir  = args.fetchdir;
-    inst.cachedir  = args.cachedir;
-    inst.dumpfile  = args.dumpfile;
-    inst.flags     = args.inst_sflags;
-    inst.rpmopts   = args.rpmopts;
-    inst.rpmacros  = args.rpmacros;
-    inst.hold_pkgnames = args.hold_pkgnames;
-    
-    rpm_initlib(inst.rpmacros);
-
     if (args.mjrmode == MODE_UPDATEIDX) {
         if (verbose < 1 && verbose != -1)
             verbose = 1;
@@ -1156,13 +1146,13 @@ int main(int argc, char **argv)
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
             verbose = 1;
-            rc = shell_main(ps, &inst, args.shell_skip_installed);
+            rc = shell_main(ps, &args.inst, args.shell_skip_installed);
             break;
 #endif            
         case MODE_VERIFY:
             if (args.has_pkgdef)
                 if ((rc = usrpkgset_size(args.ups)))
-                    rc = mark_usrset(ps, args.ups, &inst, args.mjrmode);
+                    rc = mark_usrset(ps, args.ups, &args.inst, args.mjrmode);
                     
             break;
             
@@ -1175,22 +1165,22 @@ int main(int argc, char **argv)
                 rc = 0;
             
             else if ((rc = usrpkgset_size(args.ups))) {
-                rc = mark_usrset(ps, args.ups, &inst, args.mjrmode);
+                rc = mark_usrset(ps, args.ups, &args.inst, args.mjrmode);
                 if (rc) 
-                    rc = install_dist(ps, &inst);
+                    rc = install_dist(ps, &args.inst);
             }
             break;
 
         case MODE_INSTALL:
         case MODE_UPGRADE:
             if ((rc = usrpkgset_size(args.ups))) {
-                if ((rc = mark_usrset(ps, args.ups, &inst, args.mjrmode))) 
-                    rc = install_pkgs(ps, &inst, NULL);
+                if ((rc = mark_usrset(ps, args.ups, &args.inst, args.mjrmode))) 
+                    rc = install_pkgs(ps, &args.inst, NULL);
             }
             break;
             
         case MODE_UPGRADEDIST:
-            rc = upgrade_dist(ps, &inst);
+            rc = upgrade_dist(ps, &args.inst);
             break;
 
         case MODE_SPLIT:

@@ -123,18 +123,22 @@ void pkgsetmodule_destroy(void)
 
 void inst_s_init(struct inst_s *inst)
 {
+    inst->flags = INSTS_FOLLOW;
     inst->db = NULL;
+    
     inst->instflags = 0;
     inst->rootdir = NULL;
     inst->fetchdir = NULL;
-    inst->cachedir = NULL;
+    inst->cachedir = tmpdir();
     inst->dumpfile = NULL;
     inst->rpmopts = NULL;
     inst->rpmacros = NULL;
-    inst->hold_pkgnames = NULL;
     inst->selpkg_fn = NULL;
     inst->ask_fn = NULL;
     inst->inf_fn = NULL;
+    inst->rpmacros = n_array_new(2, NULL, NULL);
+    inst->rpmopts = n_array_new(4, NULL, (tn_fn_cmp)strcmp);
+    inst->hold_pkgnames = n_array_new(4, free, (tn_fn_cmp)strcmp);
 }
 
 

@@ -36,6 +36,9 @@ use_sudo  = yes
 # automatically install packages required by installed ones (default "yes") 
 #follow = yes
 
+# greedy upgrades (defalut "no")
+#greedy = yes
+
 
 # Some rpm macros
 rpmdef        = "_install_langs pl:pl_PL:lt:lt_LT"
@@ -44,4 +47,3 @@ rpmdef        = "_install_langs pl:pl_PL:lt:lt_LT"
 rpmdef        = "_netsharedpath /usr/share/info:/usr/share/man"
 rpmdef	      = "_excludedocs 1"
 
-no_upgrade    = dev,kernel

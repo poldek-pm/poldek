@@ -50,6 +50,7 @@ static struct tag valid_tags[] = {
     { "rpm_install_opt", 0, TYPE_STR },
     { "rpm_uninstall_opt", 0, TYPE_STR },
     { "follow",       0, TYPE_BOOL },
+    { "greedy",       0, TYPE_BOOL }, 
     { "use_sudo",     0, TYPE_BOOL },
     {  NULL,          0, 0 }, 
 };
@@ -176,7 +177,7 @@ tn_hash *ldconf(const char *path)
     char buf[1024];
     
     if ((stream = fopen(path, "r")) == NULL) {
-        log(LOGERR, "fopen %s: %m", path);
+        log(LOGERR, "fopen %s: %m\n", path);
         return NULL;
     }
 

@@ -184,15 +184,6 @@ file, the default PREFIX is "packages.chunk"
 
 =over
 
-=item B<-N, --nofollow> 
-
-Don't automatically install packages required by selected ones.
-
-=item B<-F, --fresh> 
-
-Upgrade packages, but only if an earlier version currently installed.
-I<Note> that equivalent of "rpm --freshen" is "poldek --fresh --nofollow"
-
 =item B<--dump[=FILE]> 
 
 Just dump packages file names to FILE or stdout instead of install them.
@@ -208,14 +199,40 @@ Just dump packages names to FILE or stdout instead of install them.
 Like B<--dump> but packages are downloaded to DIR
 
 
-=item B<--rpmdef="NAME VALUE"> 
+=item B<-F, --fresh> 
 
-Like rpm's --define option.
+Upgrade packages, but only if an earlier version currently installed.
+I<Note> that equivalent of "rpm --freshen" is "poldek --fresh --nofollow"
 
+=item B<--greedy> 
+
+Automatically upgrade packages which dependencies are broken
+by unistalled ones, for example if package foo is upgraded 
+from version 1.0 to 1.2 and package foo-devel is already installed 
+with requirement "foo = 1.0" than poldek upgrade foo-devel to version 
+1.2 too.
+
+=item B<--hold=PACKAGE[,PACKAGE]...>
+
+Prevent packages listed from being upgraded if they are already installed.
+If option is not given packages to hold is taken from $HOME/.poldek_hold.
 
 =item B<--nodeps>; B<-t, --test>; B<--justdb>; B<--force>; B<--root>;
 
 Have the same meanings like RPM ones. See next section.
+
+
+=item B<-N, --nofollow> 
+Don't automatically install packages required by selected ones.
+
+
+=item B<-N, --nohold> 
+Don't take held packages from $HOME/.poldek_hold.
+
+
+=item B<--rpmdef="NAME VALUE"> 
+
+Like rpm's --define option.
 
 
 =head1 COOPERATING WITH RPM
@@ -256,7 +273,7 @@ $ poldek ... -- --rpm-noscripts --rpm-notriggers
 
 Program tries to read configuration from F<$HOME/.poldekrc>
 by default, B<-c,--conf> option could points to other location.
-With B<-z, --noconf> poldek don't read any config. 
+With B<--noconf> poldek don't read any config. 
 
 Config file consists of parameters of the form
 
@@ -286,6 +303,9 @@ line represents a comment or a parameter.
 
 =item * B<follow = yes|no> - automatically install|don't install 
    packages required by selected ones (default: yes)
+
+=item * B<greedy = yes|no> - see --greedy option description
+	(default: no)
 
 =back
 

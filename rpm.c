@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
@@ -561,8 +561,8 @@ int rpm_get_pkgs_requires_capn(rpmdb db, tn_array *dbpkgs, const char *capname,
     return n;
 }
 
-int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, struct capreq *cap,
-                            unsigned ldflags)
+int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
+                            struct capreq *cap, unsigned ldflags)
 {
     struct rpmdb_it it;
     const struct dbrec *dbrec;
@@ -574,14 +574,46 @@ int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, struct capreq *cap,
 	    continue;
         
         if (header_evr_match_req(dbrec->h, cap)) {
-            n_array_push(dbpkgs, dbpkg_new(dbrec->recno, dbrec->h, ldflags));
+            struct dbpkg *dbpkg = dbpkg_new(dbrec->recno, dbrec->h, ldflags);
+            n_array_push(dbpkgs, dbpkg);
             n_array_sort(dbpkgs);
+            msg(1, " %s obsoleted by %s (cap %s)\n", dbpkg_snprintf_s(dbpkg), 
+                pkg_snprintf_s(pkg), capreq_snprintf_s(cap));
             n++;
         }
     }
     rpmdb_it_destroy(&it);
     return n;
 }
+
+
+int rpm_get_obsoletedby_pkg(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
+                            unsigned ldflags)
+{
+    struct capreq *self_cap;
+    int i, n = 0;
+    
+
+    self_cap = capreq_new(pkg->name, 0, NULL, NULL, 0, 0);
+    n = rpm_get_obsoletedby_cap(db, dbpkgs, pkg, self_cap, ldflags);
+    capreq_free(self_cap);
+    
+    if (pkg->cnfls == NULL)
+        return n;
+    
+    for (i=0; i < n_array_size(pkg->cnfls); i++) {
+        struct capreq *cnfl = n_array_nth(pkg->cnfls, i);
+
+        if (!cnfl_is_obsl(cnfl))
+            continue;
+
+        n += rpm_get_obsoletedby_cap(db, dbpkgs, pkg, cnfl, ldflags);
+    }
+    
+    return n;
+}
+
+
 
 static 
 int hdr_pkg_cmp_evr(Header h, const struct pkg *pkg)

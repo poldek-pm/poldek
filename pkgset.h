@@ -50,6 +50,8 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_FOLLOW       (1 << 4)
 #define INSTS_FRESHEN      (1 << 5)
 #define INSTS_USESUDO      (1 << 6)
+#define INSTS_NOHOLD       (1 << 7)
+#define INSTS_GREEDY       (1 << 8)
 
 struct inst_s {
     struct pkgdb   *db;
@@ -115,7 +117,7 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
                    tn_array *unistalled_pkgs);
 
 void pkgset_mark_holds(struct pkgset *ps, tn_array *hold_pkgnames);
-
+tn_array *read_holds(const char *fpath, tn_array *hold_pkgnames);
 
 #include "pkgset-load.h"
 
