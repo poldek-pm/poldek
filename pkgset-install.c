@@ -245,7 +245,7 @@ int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked)
     return install;
 }
 
-
+#if 0
 static struct pkg *find_pkg_old(tn_array *pkgs, const char *name) 
 {
     struct pkg tmpkg;
@@ -260,12 +260,14 @@ static struct pkg *find_pkg_old(tn_array *pkgs, const char *name)
 
     return n_array_nth(pkgs, i);
 }
+#endif
 
 static
 struct pkg *find_pkg(const char *name, tn_array *pkgs,
                      struct upgrade_s *upg)
 {
-    struct pkg tmpkg, *curr_pkg, *pkg;
+    struct pkg tmpkg, *curr_pkg, *pkg, *selected_pkg;
+    char prefix1[128], prefix2[128], *p;
     int i;
     
     tmpkg.name = (char*)name;
@@ -274,24 +276,53 @@ struct pkg *find_pkg(const char *name, tn_array *pkgs,
     i = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
     if (i < 0)
         return NULL;
-    
-    pkg = n_array_nth(pkgs, i);
-    
-    curr_pkg = n_array_nth(upg->pkg_stack, n_array_size(upg->pkg_stack) - 1);
-    printf("current %s\n", pkg_snprintf_s(curr_pkg));
 
-    if (strncmp(curr_pkg->name, pkg->name, strlen(curr_pkg->name)) != 0 &&
-        strncmp(curr_pkg->name, pkg->name, strlen(pkg->name)) != 0)
+    selected_pkg = NULL;
+    pkg = n_array_nth(pkgs, i);
+    curr_pkg = n_array_nth(upg->pkg_stack, n_array_size(upg->pkg_stack) - 1);
+    
+
+    snprintf(prefix1, sizeof(prefix1), "%s", name);
+    if ((p = strchr(prefix1, '-')))
+        *p = '\0';
+
+    snprintf(prefix2, sizeof(prefix2), "%s", curr_pkg->name);
+    if ((p = strchr(prefix2, '-')))
+        *p = '\0';
+
+    DBGF("current pkg %s, name = %s, p1, p2 = %s, %s\n", pkg_snprintf_s(curr_pkg), name,
+           prefix1, prefix2);
+    
+    if (strcmp(prefix1, prefix2) != 0)
         return pkg;
     
     for (; i<n_array_size(pkgs); i++) {
-        pkg = n_array_nth(pkgs, i);
-        if (strcmp(pkg->name, name) != 0)
+        struct pkg *p = n_array_nth(pkgs, i);
+        if (strcmp(p->name, name) != 0)
             break;
-        printf("find_pkg %s -> %s\n", name, pkg_snprintf_s(pkg));
-        // TODO
+        
+        if (pkg_cmp_evr(p, curr_pkg) == 0) {
+            if (selected_pkg && pkg_cmp_evr(selected_pkg, curr_pkg) != 0)
+                selected_pkg = NULL;
+            
+            if (selected_pkg == NULL)
+                selected_pkg = p;
+            DBGF("%s [yes]\n", pkg_snprintf_s(selected_pkg));
+            break;
+            
+        } else if (selected_pkg == NULL && pkg_cmp_ver(p, curr_pkg) == 0) {
+            selected_pkg = p;
+            DBGF("%s [maybe]\n", pkg_snprintf_s(selected_pkg));
+            
+        } else {
+            DBGF("%s [no]\n", pkg_snprintf_s(p));
+        }
     }
-    return pkg;
+
+    if (selected_pkg == NULL)
+        selected_pkg = pkg;
+    
+    return selected_pkg;
 }
 
 
