@@ -148,7 +148,7 @@ int pkgdir_mod_register(const struct pkgdir_module *mod)
         
         while (mod->aliases[i] != NULL) {
             if (n_hash_exists(modules_h, mod->aliases[i])) {
-                logn(LOGERR, "%s: module alias is already defined, skipped",
+                logn(LOGWARN, "%s: module alias is already defined, skipped",
                      mod->aliases[i]);
                 i++;
                 continue;

@@ -73,6 +73,7 @@ extern const char *pndir_poldeksindex_toc;
 
 extern const char *pndir_tag_hdr;
 extern const char *pndir_tag_depdirs;
+extern const char *pndir_tag_pkgroups;
 extern const char *pndir_tag_langs;
 extern const char *pndir_tag_ts;
 extern const char *pndir_tag_ts_orig;

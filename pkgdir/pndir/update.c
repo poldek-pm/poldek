@@ -289,7 +289,8 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
         
         msg(1, "_\n");
         snprintf(path, sizeof(path), "%s/%s/%s", dn, pndir_packages_incdir, line);
-        diff = pkgdir_open_ext(path, NULL, pkgdir->type, "diff", PKGDIR_OPEN_DIFF, pkgdir->lc_lang);
+        diff = pkgdir_open_ext(path, NULL, pkgdir->type, "diff", NULL,
+                               PKGDIR_OPEN_DIFF, pkgdir->lc_lang);
         if (diff == NULL) {
             nerr++;
             break;

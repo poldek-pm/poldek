@@ -247,6 +247,9 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     
     if ((flags & PKGDIR_CREAT_PKG_NOOS) == 0 && pkg->os)
         n_buf_printf(nbuf, "O: %s\n", pkg->os);
+
+    if (pkg->fn)
+        n_buf_printf(nbuf, "n: %s\n", pkg->fn);
     
     if (flags & PKGDIR_CREAT_PKG_Fv017) {
         n_buf_printf(nbuf, "F:\n");

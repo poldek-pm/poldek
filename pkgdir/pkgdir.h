@@ -10,8 +10,7 @@
 
 int pkgdirmodule_init(void);
 
-
-#define PKGDIR_DEFAULT_TYPE       "pndir"
+extern const char *pkgdir_default_type;
 
 #define PKGDIR_NAMED              (1 << 0)
 #define PKGDIR_LOADED             (1 << 1)  /* for idx */
@@ -35,8 +34,11 @@ struct pkgdir {
     char                 *name;            /* name  */
     char                 *path;            /* path | URL        */
     char                 *idxpath;         /* path | URL        */
+    char                 *compress;        /* compresion */
     tn_array             *pkgs;            /* struct *pkg[]     */
 
+    int                  _idx_version;     /* internal, handled by particular
+                                              modules */
     int                  pri;              /* pri of pkgdir source */
     
     tn_array             *depdirs;         /* char *[]          */
@@ -54,6 +56,8 @@ struct pkgdir {
 //    tn_array            *avlangs;         /* available languages */
     tn_hash             *avlangs_h; 
     tn_array            *langs;           /* used languages      */
+
+    struct pkgdir       *prev_pkgdir;
     
 
     const struct pkgdir_module  *mod;
@@ -87,6 +91,7 @@ struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags);
 
 struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
                                const char *type, const char *name,
+                               const char *compress,
                                unsigned flags, const char *lc_lang);
 
 struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
@@ -111,7 +116,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 #define PKGDIR_CREAT_MINi18n    (1 << 2) /* */
 #define PKGDIR_CREAT_NOUNIQ     (1 << 4)
 #define PKGDIR_CREAT_NOPATCH    (1 << 5) /* don't create diff */
-#define PKGDIR_CREAT_NOCOMPR    (1 << 6) /* create uncompressed index (NIY) */
+#define PKGDIR_CREAT_NOCOMPR    (1 << 6) /* create uncompressed index (NFY) */
 
 int pkgdir_save(struct pkgdir *pkgdir, const char *type,
                 const char *path, unsigned flags);
@@ -132,9 +137,8 @@ int pkgdir_update_a(const struct source *src);
 #define pkgdir_is_type(p, t) (strcmp((p)->type, t) == 0)
 
 int pkgdir_type_info(const char *type);
-const char *pkgdir_type_idxfn(const char *type);
-int pkgdir_type_make_idxpath(const char *type, char *path, size_t size,
-                             const char *url);
+const char *pkgdir_type_default_idxfn(const char *type);
+const char *pkgdir_type_default_compr(const char *type);
 
 int pkgdir_isremote(struct pkgdir *pkgdir);
 
@@ -161,8 +165,9 @@ void pkgdir_setup_depdirs(struct pkgdir *pkgdir);
 int  pkgdir_uniq(struct pkgdir *pkgdir);
 char *pkgdir_setup_pkgprefix(const char *path);
 int pkgdir_rmf(const char *dirpath, const char *mask);
-int pkgdir_make_idx_url(char *durl, int size,
-                        const char *url, const char *filename);
+int pkgdir_make_idxpath(char *dpath, int size, const char *type,
+                        const char *path, const char *fn, const char *ext);
+char *pkgdir_idxpath(const char *path, const char *type, const char *compress);
 
 struct pkg;
 
@@ -213,7 +218,8 @@ struct pkgdir_module {
     char                        *name;
     char                        **aliases;
     char                        *description;
-    char                        *idx_filename;
+    char                        *default_fn;
+    char                        *default_compr;
 
     pkgdir_fn_open         open;
     pkgdir_fn_load         load;

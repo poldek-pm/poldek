@@ -60,7 +60,10 @@ int pkgdir_rmf(const char *dirpath, const char *mask)
     int            msg_displayed = 0;
 
 
-    log(LOGNOTICE, "RMF %s, %s\n", dirpath, mask);
+    msgn(3, "rm -f %s/%s", dirpath, mask ? mask : "*");
+    
+    if (n_str_eq(mask, "*"))
+        mask = NULL;
     
     if (stat(dirpath, &st) != 0)
         return 0;
@@ -111,25 +114,30 @@ int pkgdir_rmf(const char *dirpath, const char *mask)
     return 1;
 }
 
-static int unlink_vf_dir(const char *path, const char *mask)
+int pkgdir_cache_clean(const char *path, const char *mask)
 {
-    char tmpath[PATH_MAX];
+    char tmpath[PATH_MAX], path_i[PATH_MAX];
 
-    log(LOGNOTICE, "RM %s, %s\n", path, mask);
     if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath))
+        pkgdir_rmf(tmpath, mask);
+
+    /* DUPA */
+    n_snprintf(path_i, sizeof(path_i), "%s/%s", path, "packages.i");
+    if (vf_localdirpath(tmpath, sizeof(tmpath), path_i) < (int)sizeof(tmpath))
         pkgdir_rmf(tmpath, mask);
     
     return 1;
 }
 
-
-int pkgdir_clean_cache(const char *type, const char *path, unsigned flags)
+#if 0
+int pkgdir_clean_cache_XXX(const char *type, const char *path, unsigned flags)
 {
     const struct pkgdir_module  *mod;
     char                        url[PATH_MAX], *p;
     int                         urltype;
 
-    
+
+    n_assert(type);
     if ((urltype = vf_url_type(path)) == VFURL_UNKNOWN)
         return 1;
     
@@ -141,7 +149,6 @@ int pkgdir_clean_cache(const char *type, const char *path, unsigned flags)
         return 0;
     }
 
-    pkgdir_make_idx_url(url, sizeof(url), path, mod->idx_filename);
     if ((p = strrchr(url, '/'))) {
         char mask[1024], *q;
         
@@ -161,3 +168,4 @@ int pkgdir_clean_cache(const char *type, const char *path, unsigned flags)
     return 1;
 }
 
+#endif

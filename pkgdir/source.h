@@ -14,6 +14,7 @@
 #define PKGSOURCE_PRI        (1 << 6)
 #define PKGSOURCE_DSCR       (1 << 7)
 #define PKGSOURCE_NAMED      (1 << 10)
+#define PKGSOURCE_COMPRESS   (1 << 11)
 
 struct source {
     unsigned  flags;
@@ -21,8 +22,10 @@ struct source {
     char      *type;
     char      *name;            /* source name */
     char      *path;            /* path to idx */
+    char      *idxpath;         /* real, full path to idx */
     char      *pkg_prefix;      /* packages prefix path */
-
+    
+    char      *compress;        /* none, gz, bz2, etc */
     int       pri;
     int       no;
     char      *dscr;

@@ -30,7 +30,8 @@
 
 #define ENABLE_TRACE 0
 
-#include "pkgdir/pkgdir.h"
+#define PKGDIR_INTERNAL
+#include "pkgdir.h"
 #include "source.h"
 #include "misc.h"
 #include "log.h"
@@ -38,6 +39,8 @@
 #include "i18n.h"
 
 #define SOURCE_DEFAULT_PRI 0
+
+const char *pkgdir_default_type = "pndir";
 
 struct subopt {
     char      *name;
@@ -68,6 +71,8 @@ static struct src_option source_options[] = {
     { "dscr",     0, PKGSOURCE_DSCR |
                      PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
     { "pri",      0, PKGSOURCE_PRI | PKGSRC_OPTION_SUBOPT, NULL},
+    { "compress", 0, PKGSOURCE_COMPRESS |
+                     PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
     {  NULL,      0, 0, NULL }, 
 };
 #if 0    
@@ -112,6 +117,10 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
     } else if (opt->flag & PKGSOURCE_DSCR) {
         src->dscr = n_strdup(str);
         v = 1;
+
+    } else if (opt->flag & PKGSOURCE_COMPRESS) {
+        src->compress = n_strdup(str);
+        v = 1;
         
     } else if (opt->flag & PKGSOURCE_PRI) {
         if (sscanf(str, "%d", &v) == 1) {
@@ -150,7 +159,8 @@ struct source *source_malloc(void)
     src->pri = 0;
     src->no = 0;
     //src->flags |= PKGSOURCE_PRI;
-    src->name = src->path = src->pkg_prefix = src->dscr = src->type = NULL;
+    src->name = src->path = src->idxpath = src->pkg_prefix = NULL;
+    src->dscr = src->type = NULL;
     src->lc_lang = NULL;
     src->_refcnt = 0;
 
@@ -174,6 +184,9 @@ void source_free(struct source *src)
     
     if (src->path)    
         free(src->path);
+
+    if (src->idxpath)    
+        free(src->idxpath);
     
     if (src->pkg_prefix)
         free(src->pkg_prefix);
@@ -214,13 +227,40 @@ struct source *source_set_pkg_prefix(struct source *src, const char *prefix)
 struct source *source_set_type(struct source *src, const char *type)
 {
     
-    if (src->type != NULL)
+    if (src->type != NULL) {
         free(src->type);
+        src->type = NULL;
+    }
     
     if (type != NULL)
         src->type = n_strdup(type);
     
     return src;
+}
+
+
+char *source_set(char **member, char *value)
+{
+    if (*member) {
+        free(*member);
+        *member = NULL;
+    }
+
+    if (value)
+        *member = n_strdup(value);
+
+    return *member;
+}
+
+    
+
+const char *source_set_idxpath(struct source *src)
+{
+    if (src->idxpath != NULL)
+        free(src->idxpath);
+
+    src->idxpath = pkgdir_idxpath(src->path, src->type, src->compress);
+    return src->idxpath;
 }
 
 
@@ -279,19 +319,20 @@ void setup_langs(struct source *src)
         if (n_hash_exists(langs, *p))
             continue;
         n += n_snprintf(&lc_lang[n], sizeof(lc_lang) - n, "%s:", *p);
+        n_hash_insert(langs, *p, *p);
         p++;
     }
-
     if (!n_hash_exists(langs, "C"))
         n += n_snprintf(&lc_lang[n], sizeof(lc_lang) - n, "C:");
     
     if (n)
         lc_lang[n - 1] = '\0';  /* eat last ':' */
 
+    
     src->lc_lang = n_strdupl(lc_lang, n - 1);
-    //printf("source_setupl %s: %s -> %s\n", src->path, lang, lc_lang);
-    n_str_tokl_free(langs_tokl);
+    //printf("source_setup_lc %s: %s -> %s\n", src->path, lang, lc_lang);
     n_hash_free(langs);
+    n_str_tokl_free(langs_tokl);
 }
 
 
@@ -424,15 +465,14 @@ struct source *source_new(const char *type, const char *pathspec,
     src->flags |= flags;
     if (src->type)
         src->flags |= PKGSOURCE_TYPE;
-
+    else
+        src->type = n_strdup(pkgdir_default_type);
 
     setup_langs(src);
-    
+    source_set_idxpath(src);
     return src;
 }
 
-//if (src->type == NULL)
-//        src->type = n_strdup(PKGDIR_DEFAULT_TYPE);
 
 int source_cmp(const struct source *s1, const struct source *s2)
 {
@@ -489,7 +529,8 @@ int source_cmp_pri_name(const struct source *s1, const struct source *s2)
 static int source_update_a(struct source *src) 
 {
     if (src->type == NULL)
-        source_set_type(src, PKGDIR_DEFAULT_TYPE);
+        source_set_type(src, pkgdir_default_type);
+    source_set_idxpath(src);
     
     return pkgdir_update_a(src);
 }
@@ -502,8 +543,9 @@ int source_update(struct source *src, unsigned flags)
 
 
     if (src->type == NULL)
-        source_set_type(src, PKGDIR_DEFAULT_TYPE);
-
+        source_set_type(src, pkgdir_default_type);
+    source_set_idxpath(src);
+    
 	pcaps = pkgdir_type_info(src->type);
 	
     if ((pcaps & (PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE)) == 0) {
@@ -564,7 +606,7 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
             }
 
         } else if ((opt->flag & PKGSOURCE_TYPE)) {
-            if (src->type && !source_is_type(src, PKGDIR_DEFAULT_TYPE)) {
+            if (src->type && !source_is_type(src, pkgdir_default_type)) {
                 n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s",
                                 opt->name);
                 n += n_snprintf(&str[n], size - n, "=%s,", src->type);
@@ -647,15 +689,55 @@ int sources_update(tn_array *sources, unsigned flags)
     return nerr == 0;
 }
 
+
+int source_clean(struct source *src, unsigned flags)
+{
+    char                        *p, *idxpath;
+    int                         urltype;
+
+
+    n_assert(src->type);
+    if ((urltype = vf_url_type(src->path)) == VFURL_UNKNOWN)
+        return 1;
+
+    idxpath = pkgdir_idxpath(src->path, src->type, "none");
+    if (idxpath == NULL)
+        return 0;
+
+    
+    if (urltype & VFURL_LOCAL) {
+        char path[PATH_MAX];
+        vf_localdirpath(path, sizeof(path), n_dirname(idxpath));
+        //printf("%s, %s, %s\n", src->path, idxpath, path);
+        pkgdir_cache_clean(path, "*");
+        
+    } else if ((p = strrchr(idxpath, '/'))) {
+        char amask[1024], *mask;
+        
+        *p = '\0';
+
+        if (flags & PKGSOURCE_CLEANA)
+            mask = "*";
+        else {
+            n_snprintf(amask, sizeof(amask), "%s.*", p + 1);
+            mask = amask;
+        }
+        
+        pkgdir_cache_clean(idxpath, mask);
+    }
+    
+    free(idxpath);
+    return 1;
+}
+
+
 int sources_clean(tn_array *sources, unsigned flags) 
 {
     int i,  nerr = 0;
     
     for (i=0; i < n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
-        
-        if (!pkgdir_clean_cache(src->type, src->path,
-                                flags & PKGSOURCE_CLEANA))
+        if (!source_clean(src, flags))
             nerr++;
     }
 
@@ -698,8 +780,6 @@ void sources_score(tn_array *sources)
 }
 
 
-
-
 int source_make_idx(struct source *src,
                     const char *type, const char *idxpath,
                     unsigned cr_flags) 
@@ -716,22 +796,42 @@ int source_make_idx(struct source *src,
         return 0;
     }
 
-    if (idxpath == NULL || is_dir(idxpath)) {
-        pkgdir_type_make_idxpath(type, path, sizeof(path),
-                                 idxpath ? idxpath : src->path);
-        idxpath = path;
+    if (idxpath == NULL)
+        idxpath = src->path;
+    
+    if (is_dir(idxpath)) {
+        const char *fn = pkgdir_type_default_idxfn(type);
+        if (fn) {
+            pkgdir_make_idxpath(path, sizeof(path), type, idxpath,
+                                fn, src->compress);
+            idxpath = path;
+        }
     }
     
+    printf("mkidx[%s, %s] %s\n", src->type, type, src->path);
     pkgdir = pkgdir_srcopen(src, 0);
+    if (pkgdir == NULL)
+        return 0;
 
-    if (source_is_type(src, "dir"))
+    if (source_is_type(src, "dir")) {
+        struct pkgdir *pdir;
+        printf("LOAD ORIG\n");
         ldflags |= PKGDIR_LD_DESC;
+        
+        pdir = pkgdir_open_ext(src->path,
+                               src->pkg_prefix, type,
+                               "orig", NULL, 0, src->lc_lang);
+        if (pdir && !pkgdir_load(pdir, NULL, 0)) {
+            pkgdir_free(pdir);
+            pdir = NULL;
+        }
+
+        pkgdir->prev_pkgdir = pdir;
+    }
 
     rc = 0;
-    if (pkgdir && pkgdir_load(pkgdir, NULL, ldflags)) {
+    if (pkgdir_load(pkgdir, NULL, ldflags)) {
         int n = n_array_size(pkgdir->pkgs);
-        msgn(1, ngettext("%d package loaded",
-                         "%d packages loaded", n), n);
         rc = pkgdir_save(pkgdir, type, idxpath, cr_flags);
     }
     
@@ -740,3 +840,4 @@ int source_make_idx(struct source *src,
     
     return rc;
 }
+

@@ -184,9 +184,15 @@ static void put_pndir_header(struct tndb *db, struct pkgdir *pkgdir)
         n_buf_free(nbuf);
     }
 
-    // DUPA
-    //if (pkgdir->pkgroups) 
-    //    pkgroup_idx_store(pkgdir->pkgroups, vf->vf_tnstream);
+    if (pkgdir->pkgroups) {
+        tn_buf *nbuf = n_buf_new(8192);
+        pkgroup_idx_store(pkgdir->pkgroups, nbuf);
+        tndb_put(db, pndir_tag_pkgroups, strlen(pndir_tag_pkgroups),
+                 n_buf_ptr(nbuf), n_buf_size(nbuf));
+        
+        n_buf_free(nbuf);
+    }
+    
 
     tndb_put(db, pndir_tag_endhdr, strlen(pndir_tag_endhdr), "\n", 1);
 

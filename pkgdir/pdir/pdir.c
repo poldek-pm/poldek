@@ -80,7 +80,10 @@ struct pkgdir_module pkgdir_module_pdir = {
     "pdir",
     (char **)aliases,
     "native poldek's index format prior to 0.20 version",
-    "packages.dir.gz",
+    
+    "packages.dir",
+    "gz",
+    
     do_open,
     do_load,
     pdir_create,
@@ -158,6 +161,7 @@ int pdir_open(struct pdir *idx, const char *path, int vfmode,
               const char *pdir_name)
 {
 	pdir_init(idx);
+    printf("pdir_open %s\n", path);
     if ((idx->pdg = pdir_digest_new(path, vfmode, pdir_v016compat, pdir_name))) {
         idx->vf = vfile_open_sl(path, VFT_TRURLIO, vfmode, pdir_name);
         if (idx->vf) 
@@ -202,9 +206,10 @@ int update_whole_idx(const char *path, const char *pdir_name)
     int rc, try = 2;
     unsigned vf_flags = VFM_RO | VFM_NORM | VFM_NOEMPTY;
 
+
     while (try > 0) {
         struct pdir idx;
-        
+        printf("update_whole_idx %s\n", path);
         if (!pdir_open(&idx, path, vf_flags, pdir_name))
             return 0;
         try--;
@@ -242,8 +247,9 @@ static int do_update_a(const struct source *src)
     struct pdir    idx;
     int            rc = 0;
 
-    if (!pdir_open(&idx, src->path, vf_mode, src->name))
-        return update_whole_idx(src->path, src->name);
+    printf("do_update_a %s\n", src->idxpath);
+    if (!pdir_open(&idx, src->idxpath, vf_mode, src->name))
+        return update_whole_idx(src->idxpath, src->name);
 
     if (idx.vf->vf_flags & VF_FETCHED) {
         rc = pdir_digest_verify(idx.pdg, idx.vf);
@@ -262,7 +268,7 @@ static int do_update_a(const struct source *src)
             
         case -1:
         case 0:
-            rc = update_whole_idx(src->path, src->name);
+            rc = update_whole_idx(src->idxpath, src->name);
             break;
                 
         default:
@@ -481,7 +487,10 @@ static int valid_version(const char *ver, const char *path)
         logn(LOGERR, _("%s: unsupported version %s (upgrade the poldek)"),
             path, ver);
 
-    return major == FILEFMT_MAJOR && minor <= FILEFMT_MINOR;
+    if (major == FILEFMT_MAJOR && minor <= FILEFMT_MINOR) {
+        return (major * 10) + minor;
+    }
+    return 0;
 }
 
 static char *is_tag(char *s, const char *tag)
@@ -576,14 +585,17 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
                     lnerr++;
                 } else {
                     char *q;
+                    int version;
 
                     p++;
                     if ((q = strchr(p, '\n')))
                         *q = '\0';
-                    if (!valid_version(p, path)) {
+                    
+                    if (!(version = valid_version(p, path))) {
                         nerr++;
                         goto l_end;
                     }
+                    pkgdir->_idx_version = version;
                 }
             }
 
@@ -603,9 +615,9 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
                 linep[--nread] = '\0';
             linep++;
 
-            if (strncmp(linep, pkgroups_tag, strlen(pkgroups_tag)) == 0) {
+            if (strncmp(linep, pdir_tag_pkgroups, strlen(pdir_tag_pkgroups)) == 0) {
                 dbgf_("LOAD %s\n", pkgdir->idxpath);
-                pkgroups = pkgroup_idx_restore(vf->vf_tnstream, 0);
+                pkgroups = pkgroup_idx_restore_st(vf->vf_tnstream, 0);
 
             } else if ((p = is_tag(linep, pdir_tag_removed))) {
                 if (*p == '\0') {
@@ -689,7 +701,6 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
 static
 void do_free(struct pkgdir *pkgdir) 
 {
-    
     if (pkgdir->mod_data) {
         struct pdir *idx = pkgdir->mod_data;
         pdir_close(idx);

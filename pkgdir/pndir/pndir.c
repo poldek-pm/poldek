@@ -74,7 +74,8 @@ struct pkgdir_module pkgdir_module_pndir = {
     "pndir",
     NULL,
     "native poldek's index format; the default",
-    "packages.ndir.gz",
+    "packages.ndir",
+    "gz",
     do_open,
     do_load,
     pndir_m_create,
@@ -337,7 +338,8 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     
     if ((flags & PKGDIR_OPEN_REFRESH) == 0) 
         vfmode |= VFM_CACHE;
-    
+
+    printf("do_open %s\n", pkgdir->idxpath);
     if (!pndir_open(&idx, pkgdir->idxpath, vfmode, flags))
         return 0;
     
@@ -391,6 +393,16 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         } else if (strcmp(key, pndir_tag_langs) == 0) {
             n_assert(avlangs == NULL);
             avlangs = parse_depdirs(val);
+
+        } else if (strcmp(key, pndir_tag_pkgroups) == 0) {
+            tn_buf *nbuf;
+            tn_buf_it it;
+
+            nbuf = n_buf_new(0);
+            n_buf_init(nbuf, val, vlen);
+            n_buf_it_init(&it, nbuf);
+            pkgdir->pkgroups = pkgroup_idx_restore(&it, 0);
+            n_buf_free(nbuf);
             
         } else if (strcmp(key, pndir_tag_depdirs) == 0) {
             n_assert(pkgdir->depdirs == NULL);

@@ -10,6 +10,7 @@ const char *pdir_poldeksindex_toc = "poldekstocf";
 
 const char *pdir_tag_depdirs = "DEPDIRS: ";
 const char *pdir_tag_ts = "TS: ";
+const char *pdir_tag_pkgroups = "GROUPS:";
 const char *pdir_tag_ts_orig = "TS_ORIG: ";
 const char *pdir_tag_removed = "REMOVED: ";
 const char *pdir_tag_endhdr = "ENDH";

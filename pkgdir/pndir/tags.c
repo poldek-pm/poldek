@@ -12,4 +12,5 @@ const char *pndir_tag_langs = "%__h_langs";
 const char *pndir_tag_ts = "%__h_ts";
 const char *pndir_tag_ts_orig = "%__h_ts_orig";
 const char *pndir_tag_removed = "%__h_removed";
+const char *pndir_tag_pkgroups = "%__h_groups";
 const char *pndir_tag_endhdr = "%__h_end";

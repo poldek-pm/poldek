@@ -53,7 +53,8 @@ struct pkgdir_module pkgdir_module_dir = {
     "dir",
     NULL,
     "dynamic index build by scanning directory for packages",
-    "",
+    NULL,
+    NULL,
     NULL,
     do_load,
     NULL,
@@ -68,7 +69,7 @@ struct pkgdir_module pkgdir_module_dir = {
 
 static
 int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
-             tn_hash *avlangs, unsigned ldflags)
+             tn_hash *avlangs, unsigned ldflags, struct pkgdir *prev_pkgdir)
 {
     struct dirent  *ent;
     struct stat    st;
@@ -83,7 +84,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
     
     if (dirpath[strlen(dirpath) - 1] == '/')
         sepchr = "";
-    
+
     n = 0;
     while ((ent = readdir(dir))) {
         char path[PATH_MAX];
@@ -102,43 +103,75 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
         }
         
         if (S_ISREG(st.st_mode)) {
+            struct pkg *pkg = NULL;
+            tn_array *pkg_langs;
             Header h;
+
             
             if (!rpmhdr_loadfile(path, &h)) {
                 logn(LOGWARN, "%s: read header failed, skipped", path);
-                
-            } else {
-                struct pkg *pkg;
-                tn_array *pkg_langs;
-
-                //if (rpmhdr_issource(h)) /* omit src.rpms */
-                //    continue;
-
-                if ((pkg = pkg_ldrpmhdr(h, path, st.st_size, PKG_LDWHOLE))) {
-                    if (ldflags & PKGDIR_LD_DESC) {
-                        pkg->pkg_pkguinf = pkguinf_ldhdr(h);
-                        pkg_set_ldpkguinf(pkg);
-                        if ((pkg_langs = pkguinf_langs(pkg->pkg_pkguinf))) {
-                            int i;
-
-                            for (i=0; i < n_array_size(pkg_langs); i++) {
-                                char *l = n_array_nth(pkg_langs, i);
-                                if (!n_hash_exists(avlangs, l))
-                                    n_hash_insert(avlangs, l, NULL);
-                            }
-                        }
-                    }
-                    
-                    n_array_push(pkgs, pkg);
-                    pkg->groupid = pkgroup_idx_update(pkgroups, h);
-                    n++;
-                }
-                headerFree(h);
+                continue;
             }
             
+            //if (rpmhdr_issource(h)) /* omit src.rpms */
+            //    continue;
+
+            if (prev_pkgdir) {
+                struct pkg *tmp;
+                pkg = pkg_ldrpmhdr(h, path, st.st_size, PKG_LDNEVR);
+                
+                if (pkg && (tmp = n_array_bsearch(prev_pkgdir->pkgs, pkg)) &&
+                    pkg_deepstrcmp_name_evr(pkg, tmp) == 0) {
+
+                    if (prev_pkgdir->pkgroups) {
+                        int gid;
+                        gid = pkgroup_idx_remap_groupid(pkgroups,
+                                                        prev_pkgdir->pkgroups,
+                                                        tmp->groupid, 1);
+                        tmp->groupid = gid;
+                    }
+                    
+                    
+                    pkg = pkg_link(tmp);
+                    msgn(3, "%s: seems untouched, loaded from previous index",
+                         pkg_snprintf_s(tmp));
+                    
+                } else {
+                    if (pkg) {
+                        msgn(1, "%s: not found, new?", pkg_snprintf_s(pkg));
+                        pkg_free(pkg);
+                    }
+                    
+                    pkg = NULL;
+                }
+            }
+            
+            if (pkg == NULL) {
+                pkg = pkg_ldrpmhdr(h, path, st.st_size, PKG_LDWHOLE);
+                
+                if (ldflags & PKGDIR_LD_DESC) {
+                    pkg->pkg_pkguinf = pkguinf_ldhdr(h);
+                    pkg_set_ldpkguinf(pkg);
+                    if ((pkg_langs = pkguinf_langs(pkg->pkg_pkguinf))) {
+                        int i;
+                        
+                        for (i=0; i < n_array_size(pkg_langs); i++) {
+                            char *l = n_array_nth(pkg_langs, i);
+                            if (!n_hash_exists(avlangs, l))
+                                n_hash_insert(avlangs, l, NULL);
+                        }
+                    }
+                }
+                pkg->groupid = pkgroup_idx_update(pkgroups, h);
+            }
+
+            if (pkg) {
+                n_array_push(pkgs, pkg);
+                n++;
+            }
+        
             if (n && n % 200 == 0) 
                 msg(1, "_%d..", n);
-            	
         }
     }
 
@@ -160,8 +193,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         pkgdir->pkgroups = pkgroup_idx_new();
     
     n = load_dir(pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups,
-                 pkgdir->avlangs_h, ldflags);
-
+                 pkgdir->avlangs_h, ldflags, pkgdir->prev_pkgdir);
+    
     return n;
 }
 

@@ -63,6 +63,7 @@
 #define PKGT_HAS_FSIZE    (1 << 10)
 #define PKGT_HAS_BTIME    (1 << 11)
 #define PKGT_HAS_GROUPID  (1 << 12)
+#define PKGT_HAS_FN       (1 << 13)
 #define PKGT_F_v017       (1 << 15)
 
 struct pkgtags_s {
@@ -71,6 +72,7 @@ struct pkgtags_s {
     char       evr[64];
     char       arch[64];
     char       os[64];
+    char       fn[PATH_MAX];
     uint32_t   size;
     uint32_t   fsize;
     uint32_t   btime;
@@ -214,6 +216,7 @@ struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg,
             case 'O':
             case 'S':
             case 'T':
+            case 'n':
                 if (!add2pkgtags(&pkgt, *line, val, fn, offs)) {
                     nerr++;
                     goto l_end;
@@ -356,9 +359,9 @@ struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg,
                 break;
 
             default:
-                logn(LOGERR, "%s:%ld: unknown tag '%c'", fn, offs, *line);
-                nerr++;
-                goto l_end;
+                if (verbose > 1) 
+                    logn(LOGWARN, "%s:%ld: unknown tag '%c'", fn, offs, *line);
+                break;
         }
     }
     
@@ -456,6 +459,16 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 pkgt->flags |= PKGT_HAS_BTIME;
             }
             break;
+
+        case 'n':
+            if (pkgt->flags & PKGT_HAS_FN) {
+                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
+                err++;
+            } else {
+                memcpy(pkgt->fn, value, sizeof(pkgt->fn)-1);
+                pkgt->flags |= PKGT_HAS_FN;
+            }
+            break;
             
         default:
             logn(LOGERR, "%s:%ld: unknown tag '%c'", pathname, offs, tag);
@@ -528,6 +541,7 @@ struct pkg *pkg_ldtags(struct pkg *pkg,
 
     if (pkg == NULL) {
         pkg = pkg_new_ext(pkgt->name, epoch, ver, rel, arch, os, 
+                          (pkgt->flags & PKGT_HAS_FN) ? pkgt->fn : NULL,
                           pkgt->size, pkgt->fsize, pkgt->btime);
 
         if (pkg == NULL) {

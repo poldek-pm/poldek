@@ -47,8 +47,6 @@ static
 int difftoc_update(const char *diffpath, const char *suffix,
                    const char *line, int line_len);
 
-#define FILEFMT_MAJOR 1
-#define FILEFMT_MINOR 0
 
 static
 char *mkidx_pathname(char *dest, size_t size, const char *pathname,
@@ -228,8 +226,18 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
         }
     }
 
-    if (pkgdir->pkgroups) 
-        pkgroup_idx_store(pkgdir->pkgroups, vf->vf_tnstream);
+    if (pkgdir->pkgroups) {
+        tn_buf *nbuf = n_buf_new(8192);
+        
+        n_stream_printf(vf->vf_tnstream, "%%%s\n", pdir_tag_pkgroups);
+        pkgroup_idx_store(pkgdir->pkgroups, nbuf);
+        n_stream_write(vf->vf_tnstream, n_buf_ptr(nbuf), n_buf_size(nbuf));
+        n_stream_printf(vf->vf_tnstream, "\n");
+        n_buf_free(nbuf);
+        //pkgroup_idx_store_st(pkgdir->pkgroups, vf->vf_tnstream);
+    }
+        
+    
 
     n_stream_printf(vf->vf_tnstream, "%%%s\n", pdir_tag_endhdr);
 

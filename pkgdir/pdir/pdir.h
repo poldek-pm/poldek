@@ -77,6 +77,7 @@ extern const char *pdir_tag_depdirs;
 extern const char *pdir_tag_ts;
 extern const char *pdir_tag_ts_orig;
 extern const char *pdir_tag_removed;
+extern const char *pdir_tag_pkgroups;
 extern const char *pdir_tag_endhdr;
 extern const char *pdir_tag_endvarhdr;
 

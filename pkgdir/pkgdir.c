@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -133,31 +133,48 @@ char *pkgdir_setup_pkgprefix(const char *path)
     return rpath;
 }
 
-#if 0
-static char *eat_zlib_ext(char *path) 
-{
-    char *p;
-    
-    if ((p = strrchr(n_basenam(path), '.')) != NULL) 
-        if (strcmp(p, ".gz") == 0)
-            *p = '\0';
-
-    return path;
-}
-#endif
-
-int pkgdir_make_idx_url(char *durl, int size,
-                        const char *url, const char *filename)
+int pkgdir_make_idxpath(char *dpath, int size, const char *type,
+                        const char *path, const char *fn, const char *ext)
 {
     int n;
-    
-    if (url[strlen(url) - 1] != '/')
-        n = n_snprintf(durl, size, "%s", url);
-        
-    else
-        n = n_snprintf(durl, size, "%s%s", url, filename);
 
+
+    if (path[strlen(path) - 1] != '/')
+        n = n_snprintf(dpath, size, "%s", path);
+        
+    else {
+        if (fn == NULL) {
+            n_assert(type);
+            if ((fn = pkgdir_type_default_idxfn(type)) == NULL)
+                return 0;
+        }
+        
+        if (ext == NULL)
+            ext = pkgdir_type_default_compr(type);
+        else if (strcmp(ext, "none") == 0)
+            ext = NULL;
+            
+        n = n_snprintf(dpath, size, "%s%s%s%s", path, fn,
+                       ext ? "." : "", ext ? ext : "");
+    }
+    //printf("pkgdir_make_idxpath %s -> %d, %s\n", path, n, dpath);
     return n;
+}
+
+char *pkgdir_idxpath(const char *path, const char *type, const char *compress)
+{
+    char tmp[PATH_MAX];
+    const char *fn;
+    int n;
+    
+    if ((fn = pkgdir_type_default_idxfn(type)) == NULL)
+        return n_strdup(path);
+    
+    n = pkgdir_make_idxpath(tmp, sizeof(tmp), type, path, fn, compress);
+    if (n > 0)
+        return n_strdupl(tmp, n);
+    
+    return n_strdup(path);
 }
 
 
@@ -225,38 +242,18 @@ const struct pkgdir_module *find_module(const char *type)
 int pkgdir_update_a(const struct source *src)
 {
 	const struct pkgdir_module  *mod;
-	char                        idxpath[PATH_MAX];
-    const char                  *path = NULL;
-    int                         rc;
-    
 
     n_assert(src->path);
     
 	if ((mod = find_module(src->type)) == NULL)
 		return 0;
 
-	if (mod->update == NULL) {
+	if (mod->update_a == NULL) {
 		logn(LOGERR, _("%s: this type of source is not updateable"), src->type);
 		return 0;
 	}
 
-    if (mod->idx_filename) {
-        struct source *tmp;
-        pkgdir_make_idx_url(idxpath, sizeof(idxpath), src->path, mod->idx_filename);
-        path = src->path;
-        tmp = (struct source*)src;
-        tmp->path = idxpath;
-    }
-
-    rc = mod->update_a(src);
-
-    if (mod->idx_filename) {
-        struct source *tmp;
-        tmp = (struct source*)src;
-        tmp->path = (char*)path;
-    }
-    
-    return rc;
+    return mod->update_a(src);
 }
 
 
@@ -289,35 +286,36 @@ int pkgdir_type_info(const char *type)
 }
 
 
-const char *pkgdir_type_idxfn(const char *type) 
+const char *pkgdir_type_default_idxfn(const char *type) 
 {
     const struct pkgdir_module  *mod;
     
     if ((mod = find_module(type)) == NULL)
         return NULL;
 
-    return mod->idx_filename;
+    return mod->default_fn;
 }
 
-
-int pkgdir_type_make_idxpath(const char *type, char *path, size_t size,
-                             const char *url) 
+const char *pkgdir_type_default_compr(const char *type) 
 {
     const struct pkgdir_module  *mod;
     
     if ((mod = find_module(type)) == NULL)
-        return 0;
-    
-    return pkgdir_make_idx_url(path, size, url, mod->idx_filename);
+        return NULL;
+
+    return mod->default_compr;
 }
+
 
 
 struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags)
 {
     struct pkgdir *pkgdir;
 
-    pkgdir = pkgdir_open_ext(src->path, src->pkg_prefix, src->type,
-                             src->name, flags, src->lc_lang);
+    pkgdir = pkgdir_open_ext(src->path, src->pkg_prefix,
+                             src->type, src->name,
+                             src->compress,
+                             flags, src->lc_lang);
     if (pkgdir == NULL)
         return NULL;
     
@@ -334,17 +332,17 @@ struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags)
 struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
                            const char *type, const char *name)
 {
-    return pkgdir_open_ext(path, pkg_prefix, type, name, 0, NULL);
+    return pkgdir_open_ext(path, pkg_prefix, type, name, NULL, 0, NULL);
 }
 
 
 struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
                                const char *type, const char *name,
+                               const char *compress, 
                                unsigned flags, const char *lc_lang)
 
 {
-    char                        *idx_filename;
-    char                        idx_path[PATH_MAX];
+    char                        *idxpath;
     struct pkgdir               *pkgdir;
     const struct pkgdir_module  *mod;
     int                         rc;
@@ -354,28 +352,27 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     if ((mod = find_module(type)) == NULL)
         return NULL;
     
-    idx_filename = mod->idx_filename;
-
     pkgdir = pkgdir_malloc();
     pkgdir->name = n_strdup(name);
 
-    if (name && strcmp(name, "-") != 0)
+    if (name && n_str_ne(name, "-"))
         pkgdir->flags |= PKGDIR_NAMED;
 
+    printf("pkgdir_open_ext[%s] %s, %s, %p\n", type, path, pkg_prefix, pkgdir);
+    idxpath = pkgdir_idxpath(path, type, compress);
     
-    pkgdir_make_idx_url(idx_path, sizeof(idx_path), path, idx_filename);
-
     if (pkg_prefix) 
         pkgdir->path = n_strdup(pkg_prefix);
 
     else if ((mod->cap_flags & PKGDIR_CAP_NOPREFIX) == 0)
-        pkgdir->path = pkgdir_setup_pkgprefix(idx_path);
+        pkgdir->path = pkgdir_setup_pkgprefix(idxpath);
 
     else
-        pkgdir->path = n_strdup(idx_path);
+        pkgdir->path = n_strdup(idxpath);
 
     
-    pkgdir->idxpath = n_strdup(idx_path);
+    pkgdir->idxpath = idxpath;
+    pkgdir->compress = compress ? n_strdup(compress) : NULL;
     pkgdir->pkgs = pkgs_array_new(2048);
     pkgdir->mod = mod;
     pkgdir->type = mod->name;   /* just reference */
@@ -399,7 +396,6 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
         n_array_free(pkgdir->langs);
         pkgdir->langs = NULL;
     }
-    
             
     if (pkgdir->depdirs) {
         n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
@@ -470,6 +466,11 @@ void pkgdir_free(struct pkgdir *pkgdir)
     }
 
     pkgdir->flags = 0;
+
+    if (pkgdir->mod && pkgdir->mod->free)
+        pkgdir->mod->free(pkgdir);
+    
+    memset(pkgdir, 0, sizeof(*pkgdir));
     free(pkgdir);
 }
 
@@ -526,7 +527,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         pkgdir_setup_langs(pkgdir);
     }
     
-    msgn(2, ngettext("%d package loaded",
+    msgn(3, ngettext("%d package loaded",
                      "%d packages loaded", n_array_size(pkgdir->pkgs)),
          n_array_size(pkgdir->pkgs));
     
@@ -661,6 +662,13 @@ int do_create(struct pkgdir *pkgdir, const char *type,
         pkgdir->mod = mod;
         pkgdir->mod_data = NULL;
     }
+
+    
+    if (pkgdir->mod->create == NULL) {
+        logn(LOGERR, _("%s: this type of source could not be created"), type);
+        return 0;
+    }
+    
     
     rc = pkgdir->mod->create(pkgdir, path, flags);
     
@@ -713,15 +721,33 @@ int pkgdir_save(struct pkgdir *pkgdir, const char *type,
             nerr++;
         goto l_end;
     }
+
+    if (pkgdir->prev_pkgdir) {
+        orig = pkgdir->prev_pkgdir;
+        
+    } else {
+        msgn(1, _("Loading previous %s..."), vf_url_slim_s(path, 0));
+        if ((orig = pkgdir_open(path, NULL, type, ""))) {
+            if (pkgdir_load(orig, NULL, 0) <= 0) {
+                pkgdir_free(orig);
+                orig = NULL;
+            }
+        }
+    }
+
+
+    if (nerr == 0) {
+        unlink(path);
+        if (!do_create(pkgdir, type, path, flags))
+            nerr++;
+    }
     
-    msgn(1, _("Loading previous %s..."), vf_url_slim_s(path, 0));
-    orig = pkgdir_open(path, NULL, type, "");
-    if (orig != NULL && pkgdir_load(orig, NULL, 0) > 0) {
+    if (nerr == 0 && orig) {
         if (orig->ts > pkgdir->ts) {
             logn(LOGWARN, _("clock skew detected; create index with fake "
                             "timestamp %lu %lu"), orig->ts, pkgdir->ts);
         }
-            
+
         if (orig->ts >= pkgdir->ts) 
             pkgdir->ts = orig->ts + 1;
         
@@ -730,11 +756,13 @@ int pkgdir_save(struct pkgdir *pkgdir, const char *type,
             if (!do_create(diff, type, path, flags))
                 nerr++;
         }
+
+        if (orig != pkgdir->prev_pkgdir) {
+            pkgdir_free(orig);
+            orig = NULL;
+        }
     }
-
-    if (nerr == 0 && !do_create(pkgdir, type, path, flags))
-        nerr++;
-
+    
     
  l_end:
     if (avlh_tmp) {
