@@ -25,6 +25,7 @@
 #include <curses.h>
 #include <term.h>
 #include <trurl/nassert.h>
+#include <trurl/n_snprintf.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -149,7 +150,7 @@ int snprintf_c(int color, char *str, size_t size, const char *fmt, ...)
     int n;
     
     va_start(args, fmt);
-    n = n_vsnprintf_c(color, str, size, fmt, args);
+    n = vsnprintf_c(color, str, size, fmt, args);
     va_end(args);
     return n;
 }

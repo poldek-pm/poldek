@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -20,6 +24,7 @@
 #include <time.h>
 
 #include <trurl/nstr.h>
+#include <trurl/n_snprintf.h>
 #include "i18n.h"
 #include "poldek_term.h"
 #include "log.h"
@@ -243,10 +248,10 @@ void vlog_tty(int pri, const char *fmt, va_list args)
     int n = 0;
     
     if (pri & LOGERR)
-        n = n_snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("error: "));
+        n = snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("error: "));
     
     else if (pri & LOGWARN)
-        n = n_snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("warn: "));
+        n = snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("warn: "));
 
     if (n > 0)
         fprintf(l_stream, "%s", buf);
