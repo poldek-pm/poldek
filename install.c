@@ -87,7 +87,7 @@ int install_dist(struct pkgset *ps, struct inst_s *inst)
 {
     int rc;
 
-    rpm_initlib(inst->rpmacros);
+    
     if (!chk_params(inst))
         return 0;
     
@@ -111,7 +111,6 @@ int upgrade_dist(struct pkgset *ps, struct inst_s *inst)
 {
     int rc;
     
-    rpm_initlib(inst->rpmacros);
     if (!chk_params(inst))
         return 0;
     
@@ -131,7 +130,6 @@ int install_pkgs(struct pkgset *ps, struct inst_s *inst)
 {
     int rc;
 
-    rpm_initlib(inst->rpmacros);
     if (inst->rootdir == NULL)
         inst->rootdir = "/";
     

@@ -48,6 +48,11 @@ int header_cap_match_req(Header h, const struct capreq *req, int strict);
 
 int rpm_initlib(tn_array *macros) 
 {
+    static initialized = 0;
+
+    if (initialized)
+        return 0;
+    
     if (rpmReadConfigFiles(NULL, NULL) != 0) {
         log(LOGERR, "rpmlib init failed\n");
         return 0;
@@ -114,19 +119,18 @@ static void rpm_die(void)
 }
 
 
-
 tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path,
-                                         tn_array *unistdbpkgs)
+                                         tn_array *unistdbpkgs, unsigned ldflags)
 {
     tn_array *cnfldbpkgs = dbpkg_array_new(4);
-    const struct dbpkg *dbpkg;
+    const struct dbrec *dbrec;
     struct rpmdb_it it;
 
     rpmdb_it_init(db, &it, RPMITER_FILE, path);
-    while((dbpkg = rpmdb_it_get(&it)) != NULL) {
-        if (n_array_bsearch(unistdbpkgs, dbpkg))
+    while((dbrec = rpmdb_it_get(&it)) != NULL) {
+        if (dbpkg_array_has(unistdbpkgs, dbrec->recno))
 	    continue;
-        n_array_push(cnfldbpkgs, dbpkg_new(dbpkg->recno, dbpkg->h));
+        n_array_push(cnfldbpkgs, dbpkg_new(dbrec->recno, dbrec->h, ldflags));
 	break;	
     }
     rpmdb_it_destroy(&it);
@@ -145,15 +149,15 @@ int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *unistdbpkgs)
 {
     int rc = 0;
 
-    const struct dbpkg *dbpkg;
+    const struct dbrec *dbrec;
     struct rpmdb_it it;
 
     rpmdb_it_init(db, &it, RPMITER_NAME, capreq_name(req));
-    while ((dbpkg = rpmdb_it_get(&it)) != NULL) {
-        if (n_array_bsearch(unistdbpkgs, dbpkg))
+    while ((dbrec = rpmdb_it_get(&it)) != NULL) {
+        if (dbpkg_array_has(unistdbpkgs, dbrec->recno))
 	    continue;
 
-        if (header_evr_match_req(dbpkg->h, req)) {
+        if (header_evr_match_req(dbrec->h, req)) {
 	    rc = 1;
 	    break;
 	}
@@ -167,12 +171,12 @@ static
 int lookup_file(rpmdb db, const struct capreq *req, tn_array *unistdbpkgs)
 {
     struct rpmdb_it it;
-    const struct dbpkg *dbpkg;
+    const struct dbrec *dbrec;
     int finded = 0;
     
     rpmdb_it_init(db, &it, RPMITER_FILE, capreq_name(req));
-    while((dbpkg = rpmdb_it_get(&it)) != NULL) {
-        if (n_array_bsearch(unistdbpkgs, dbpkg))
+    while ((dbrec = rpmdb_it_get(&it)) != NULL) {
+        if (dbpkg_array_has(unistdbpkgs, dbrec->recno))
 	    continue;
    	finded = 1;
 	break;	
@@ -187,15 +191,15 @@ int lookup_cap(rpmdb db, const struct capreq *req, int strict,
                tn_array *unistdbpkgs)
 {
     struct rpmdb_it it;
-    const struct dbpkg *dbpkg;
+    const struct dbrec *dbrec;
     int rc = 0;
     
     rpmdb_it_init(db, &it, RPMITER_CAP, capreq_name(req));
-    while ((dbpkg = rpmdb_it_get(&it)) != NULL) {
-        if (unistdbpkgs && n_array_bsearch(unistdbpkgs, dbpkg))
+    while ((dbrec = rpmdb_it_get(&it)) != NULL) {
+        if (unistdbpkgs && dbpkg_array_has(unistdbpkgs, dbrec->recno))
             continue;
         
-        if (header_cap_match_req(dbpkg->h, req, strict)) {
+        if (header_cap_match_req(dbrec->h, req, strict)) {
             rc = 1;
             break;
         }
@@ -239,9 +243,6 @@ int header_cap_match_req(Header h, const struct capreq *req, int strict)
 
     
     rc = 0;
-    /* do not alloc on capreq obstack */
-    set_capreq_allocfn(malloc, free, &saved_allocfn, &saved_freefn);
-
     pkg.caps = capreq_arr_new();
     get_pkg_caps(pkg.caps, h);
     
@@ -251,7 +252,6 @@ int header_cap_match_req(Header h, const struct capreq *req, int strict)
     }
 
     n_array_free(pkg.caps);
-    set_capreq_allocfn(saved_allocfn, saved_freefn, NULL, NULL);
 
     return rc;
 }
@@ -532,133 +532,47 @@ int rpm_dbmap(rpmdb db,
 }
 
 
-static
-int get_pkgs_requires_capn(rpmdb db, const char *capname,
-                           tn_array *dbpkgs, tn_array *unistdbpkgs) 
+int rpm_get_pkgs_requires_capn(rpmdb db, tn_array *dbpkgs, const char *capname,
+                               tn_array *unistdbpkgs, unsigned ldflags)
 {
     struct rpmdb_it it;
-    const struct dbpkg *dbpkg;
+    const struct dbrec *dbrec;
     int n = 0;
     
     rpmdb_it_init(db, &it, RPMITER_REQ, capname);
-    while ((dbpkg = rpmdb_it_get(&it)) != NULL) {
+    while ((dbrec = rpmdb_it_get(&it)) != NULL) {
+        struct dbpkg *dbpkg;
         
-        if (n_array_bsearch(unistdbpkgs, dbpkg))
+        if (dbpkg_array_has(unistdbpkgs, dbrec->recno))
 	    continue;
         
-        if (n_array_bsearch(dbpkgs, dbpkg))
+        if (dbpkg_array_has(dbpkgs, dbrec->recno))
 	    continue;
 
-        msg(1, "%s <- %s\n", capname, dbpkg_snprintf_s(dbpkg));
-        n_array_push(dbpkgs, dbpkg_new(dbpkg->recno, dbpkg->h));
+        dbpkg = dbpkg_new(dbrec->recno, dbrec->h, ldflags);
+        //msg(1, "%s <- %s\n", capname, pkg_snprintf_s(dbpkg->pkg));
+        //mem_info(1, "get_pkgs_requires_capn\n");
+        n_array_push(dbpkgs, dbpkg);
         n++;
     }
     rpmdb_it_destroy(&it);
     return n;
 }
 
-
-static 
-int get_pkgs_requires_pkgfiles(rpmdb db, tn_array *dbpkgs,
-                               struct dbpkg *dbpkg, tn_array *excldbpkgs) 
-{
-    int t1, t2, t3, c1, c2, c3;
-    char **names = NULL, **dirs = NULL;
-    int32_t   *diridxs;
-    char      path[PATH_MAX], *prevdir;
-    int       *dirlens;
-    int       i;
-    Header    h;
-
-    h = dbpkg->h;
-    n_assert(h);
-    
-    if (!headerGetEntry(h, RPMTAG_BASENAMES, (void*)&t1, (void*)&names, &c1))
-        return 0;
-
-    n_assert(t1 == RPM_STRING_ARRAY_TYPE);
-    if (!headerGetEntry(h, RPMTAG_DIRNAMES, (void*)&t2, (void*)&dirs, &c2))
-        goto l_endfunc;
-    
-    n_assert(t2 == RPM_STRING_ARRAY_TYPE);
-    if (!headerGetEntry(h, RPMTAG_DIRINDEXES, (void*)&t3,(void*)&diridxs, &c3))
-        goto l_endfunc;
-    n_assert(t3 == RPM_INT32_TYPE);
-
-    n_assert(c1 == c3);
-
-    dirlens = alloca(sizeof(*dirlens) * c2);
-    for (i=0; i < c2; i++) 
-        dirlens[i] = strlen(dirs[i]);
-    
-    prevdir = NULL;
-    for (i=0; i < c1; i++) {
-        register int diri = diridxs[i];
-        if (prevdir == dirs[diri]) {
-            n_strncpy(&path[dirlens[diri]], names[i], PATH_MAX-dirlens[diri]);
-        } else {
-            char *endp;
-            
-            endp = n_strncpy(path, dirs[diri], sizeof(path));
-            n_strncpy(endp, names[i], sizeof(path) - (endp - path));
-            prevdir = dirs[diri];
-        }
-
-        get_pkgs_requires_capn(db, path, dbpkgs, excldbpkgs);
-    }
-    
- l_endfunc:
-    
-    if (c1 && names)
-        rpm_headerEntryFree(names, t1);
-
-    if (c2 && dirs)
-        rpm_headerEntryFree(dirs, t2);
-
-    return 1;
-}
-
-
-int rpm_get_pkg_pkgreqs(rpmdb db, tn_array *dbpkgs, struct dbpkg *dbpkg,
-                        tn_array *unistdbpkgs)
-{
-    tn_array *caps;
-    char *pkgname = NULL;
-    int i;
-
-    n_assert(dbpkg->h);
-    
-    headerGetEntry(dbpkg->h, RPMTAG_NAME, NULL, (void *)&pkgname, NULL);
-    n_assert(pkgname);
-    get_pkgs_requires_capn(db, pkgname, dbpkgs, unistdbpkgs);
-
-    caps = capreq_arr_new();
-    get_pkg_caps(caps, dbpkg->h);
-    
-    for (i=0; i<n_array_size(caps); i++) {
-        struct capreq *cap = n_array_nth(caps, i);
-        get_pkgs_requires_capn(db, capreq_name(cap), dbpkgs, unistdbpkgs);
-    }
-    
-    n_array_free(caps);
-    get_pkgs_requires_pkgfiles(db, dbpkgs, dbpkg, unistdbpkgs);
-    return 0;
-}
-
-
-int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, struct capreq *cap)
+int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, struct capreq *cap,
+                            unsigned ldflags)
 {
     struct rpmdb_it it;
-    const struct dbpkg *dbpkg;
+    const struct dbrec *dbrec;
     int n = 0;
     
     rpmdb_it_init(db, &it, RPMITER_NAME, capreq_name(cap));
-    while ((dbpkg = rpmdb_it_get(&it)) != NULL) {
-        if (n_array_bsearch(dbpkgs, dbpkg))
+    while ((dbrec = rpmdb_it_get(&it)) != NULL) {
+        if (dbpkg_array_has(dbpkgs, dbrec->recno))
 	    continue;
-
-        if (header_evr_match_req(dbpkg->h, cap)) {
-            n_array_push(dbpkgs, dbpkg_new(dbpkg->recno, dbpkg->h));
+        
+        if (header_evr_match_req(dbrec->h, cap)) {
+            n_array_push(dbpkgs, dbpkg_new(dbrec->recno, dbrec->h, ldflags));
             n_array_sort(dbpkgs);
             n++;
         }
@@ -667,25 +581,52 @@ int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, struct capreq *cap)
     return n;
 }
 
+static 
+int hdr_pkg_cmp_evr(Header h, const struct pkg *pkg)
+{
+    int rc;
+    struct pkg  tmpkg;
+    uint32_t    *epoch;
+        
+    headerNVR(h, (void*)&tmpkg.name, (void*)&tmpkg.ver,
+              (void*)&tmpkg.rel);
+    
+    if (tmpkg.name == NULL || tmpkg.ver == NULL || tmpkg.rel == NULL) {
+        log(LOGERR, "headerNVR failed\n");
+        return 0;
+    }
+        
+    if (headerGetEntry(h, RPMTAG_EPOCH, &rc, (void *)&epoch, NULL))
+        tmpkg.epoch = *epoch;
+    else
+        tmpkg.epoch = 0;
+    
+    rc = pkg_cmp_evr(&tmpkg, pkg);
+    
+    return rc;
+}
+
+
+
 
 int rpm_is_pkg_installed(rpmdb db, const struct pkg *pkg, int *cmprc,
-                         struct dbpkg *dbpkgp)
+                         struct dbrec *dbrecp)
 {
     int count = 0;
     struct rpmdb_it it;
-    const struct dbpkg *dbpkg;
+    const struct dbrec *dbrec;
     
     rpmdb_it_init(db, &it, RPMITER_NAME, pkg->name);
     count = rpmdb_it_get_count(&it);
-    if (count > 0 && (cmprc || dbpkg)) {
-        dbpkg = rpmdb_it_get(&it);
+    if (count > 0 && (cmprc || dbrecp)) {
+        dbrec = rpmdb_it_get(&it);
 
         if (cmprc)
-            *cmprc = -dbpkg_pkg_cmp_evr(dbpkg, pkg);
+            *cmprc = -hdr_pkg_cmp_evr(dbrec->h, pkg);
         
-        if (dbpkgp) {
-            dbpkgp->recno = dbpkg->recno;
-            dbpkgp->h = headerLink(dbpkg->h);
+        if (dbrecp) {
+            dbrecp->recno = dbrec->recno;
+            dbrecp->h = headerLink(dbrec->h);
         }
     }
 
@@ -694,9 +635,9 @@ int rpm_is_pkg_installed(rpmdb db, const struct pkg *pkg, int *cmprc,
 }
 
 
-tn_array *rpm_get_packages(rpmdb db, const struct pkg *pkg)
+tn_array *rpm_get_packages(rpmdb db, const struct pkg *pkg, unsigned ldflags)
 {
-    const struct dbpkg *dbpkg;
+    const struct dbrec *dbrec;
     tn_array *dbpkgs = NULL;
     int count = 0;
     struct rpmdb_it it;
@@ -708,8 +649,8 @@ tn_array *rpm_get_packages(rpmdb db, const struct pkg *pkg)
 
     dbpkgs = dbpkg_array_new(2);
 
-    while ((dbpkg = rpmdb_it_get(&it))) 
-        n_array_push(dbpkgs, dbpkg_new(dbpkg->recno, dbpkg->h));
+    while ((dbrec = rpmdb_it_get(&it))) 
+        n_array_push(dbpkgs, dbpkg_new(dbrec->recno, dbrec->h, ldflags));
     
     rpmdb_it_destroy(&it);
     return dbpkgs;
@@ -717,22 +658,22 @@ tn_array *rpm_get_packages(rpmdb db, const struct pkg *pkg)
 
 
 tn_array *rpm_get_conflicted_dbpkgs(rpmdb db, const struct capreq *cap,
-                                    tn_array *unistdbpkgs)
+                                    tn_array *unistdbpkgs, unsigned ldflags)
 {
     tn_array *dbpkgs = NULL;
     struct rpmdb_it it;
-    const struct dbpkg *dbpkg;
+    const struct dbrec *dbrec;
     
 
     rpmdb_it_init(db, &it, RPMITER_CNFL, capreq_name(cap));
-    while ((dbpkg = rpmdb_it_get(&it))) {
-        if (dbpkg_array_has(unistdbpkgs, dbpkg->recno))
+    while ((dbrec = rpmdb_it_get(&it))) {
+        if (dbpkg_array_has(unistdbpkgs, dbrec->recno))
             continue;
 
         if (dbpkgs == NULL)
             dbpkgs = dbpkg_array_new(4);
         
-        n_array_push(dbpkgs, dbpkg_new(dbpkg->recno, dbpkg->h));
+        n_array_push(dbpkgs, dbpkg_new(dbrec->recno, dbrec->h, ldflags));
     }
 
     return dbpkgs;
@@ -740,22 +681,22 @@ tn_array *rpm_get_conflicted_dbpkgs(rpmdb db, const struct capreq *cap,
 
 
 tn_array *rpm_get_provides_dbpkgs(rpmdb db, const struct capreq *cap,
-                                  tn_array *unistdbpkgs)
+                                  tn_array *unistdbpkgs, unsigned ldflags)
 {
     tn_array *dbpkgs = NULL;
     struct rpmdb_it it;
-    const struct dbpkg *dbpkg;
+    const struct dbrec *dbrec;
     
 
     rpmdb_it_init(db, &it, RPMITER_CAP, capreq_name(cap));
-    while ((dbpkg = rpmdb_it_get(&it))) {
-        if (dbpkg_array_has(unistdbpkgs, dbpkg->recno))
+    while ((dbrec = rpmdb_it_get(&it))) {
+        if (dbpkg_array_has(unistdbpkgs, dbrec->recno))
             continue;
 
         if (dbpkgs == NULL)
             dbpkgs = dbpkg_array_new(4);
             
-        n_array_push(dbpkgs, dbpkg_new(dbpkg->recno, dbpkg->h));
+        n_array_push(dbpkgs, dbpkg_new(dbrec->recno, dbrec->h, ldflags));
     }
 
     return dbpkgs;

@@ -7,7 +7,15 @@
 #endif
 
 #include <rpm/rpmlib.h>
-#include "dbpkg.h"
+
+struct dbrec {
+    unsigned  recno;
+    Header    h;
+};
+
+void dbrec_clean(struct dbrec *dbrec); /* free members */
+char *dbrec_snprintf(char *buf, size_t size, const struct dbrec *dbrec);
+char *dbrec_snprintf_s(const struct dbrec *dbrec);
 
 /*#define RPMITER_PACKAGES  0 - not implemented yet*/
 #define RPMITER_NAME      1
@@ -27,7 +35,7 @@ struct rpmdb_it {
     int                  i;
 #endif
     
-    struct dbpkg         dbpkg;
+    struct dbrec         dbrec;
     rpmdb                db; 
 };
 
@@ -37,7 +45,7 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag,
 
 void rpmdb_it_destroy(struct rpmdb_it *it);
 
-const struct dbpkg *rpmdb_it_get(struct rpmdb_it *it);
+const struct dbrec *rpmdb_it_get(struct rpmdb_it *it);
 
 int rpmdb_it_get_count(struct rpmdb_it *it);
 

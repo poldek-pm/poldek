@@ -339,7 +339,7 @@ struct capreq *capreq_new_evr(const char *name, char *evr, int32_t flags)
 tn_array *capreq_arr_new(void) 
 {
     tn_array *arr;
-    arr = n_array_new(2, NULL, (tn_fn_cmp)capreq_cmp_name);
+    arr = n_array_new(2, capreq_free_fn, (tn_fn_cmp)capreq_cmp_name);
     n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
     return arr;
 }

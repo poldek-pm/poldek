@@ -500,16 +500,22 @@ static void n_assert_hook(const char *expr, const char *file, int line)
      
 void poldek_init(void) 
 {
+#ifdef HAVE_MALLOPT
+# include <malloc.h>
+    //mallopt(M_MMAP_THRESHOLD, 1);
+    //mallopt(M_MMAP_MAX, 0);
+#endif /* HAVE_MALLOPT */
+    
     n_assert_sethook(n_assert_hook);
     pkgflmodule_init();
     pkgsetmodule_init();
-    
 }
 
 void poldek_destroy(void) 
 {
-    pkgflmodule_destroy();
     pkgsetmodule_destroy();
+    pkgflmodule_destroy();
+    
     if (htcnf)
         n_hash_free(htcnf);
 }
@@ -902,10 +908,11 @@ int main(int argc, char **argv)
     inst.flags     = args.inst_sflags;
     inst.rpmopts   = args.rpmopts;
     inst.rpmacros  = args.rpmacros;
-
+    
     inst.install_cmd = prepare_install_cmd();
     select_ldmethod();
-    
+    rpm_initlib(inst.rpmacros);
+
     if (args.mjrmode == MODE_MKIDX && args.idx_type == INDEXTYPE_RPMH) {
         if (mkidx(NULL))
             exit(EXIT_SUCCESS);
@@ -931,10 +938,7 @@ int main(int argc, char **argv)
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
             log_sopenlog(stdout, 0, "ERR");
-            if (shell_main(ps, &inst))
-                exit(EXIT_SUCCESS);
-            else
-                exit(EXIT_FAILURE);
+            rc = shell_main(ps, &inst);
             break;
 #endif            
         case MODE_VERIFY:

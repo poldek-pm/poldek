@@ -85,20 +85,20 @@ struct command {
 #define CMD_HELP     6
 
 struct command commands_tab[] = {
-{1, "ls", "[FILE...]", options_ls, parse_ls_opt, cmd_ls,
+{1, "ls", "[PACKAGE...]", options_ls, parse_ls_opt, cmd_ls,
  "list directory contents"},
 
-{2, "info", "[FILE...]", NULL, NULL, cmd_ls, "display package(s) info"},
+{2, "info", "[PACKAGE...]", NULL, NULL, cmd_ls, "display package(s) info"},
     
 /*{"fetch", "[FILE...]", cmd_fetch, "fetch package(s)"},*/
     
 {3,
-     "install", "[FILE...]",
+     "install", "[PACKAGE...]",
      options_install, parse_install_opt, cmd_install,
      "install package(s)"
 },
     
-{4, "stat", "[FILE...]", NULL, parse_stat_opt, cmd_stat,
+{4, "stat", "[PACKAGE...]", NULL, parse_stat_opt, cmd_stat,
      "display package(s) status"},
     
 {5, "quit", NULL, NULL, NULL, cmd_quit, "quit poldek"},
@@ -559,7 +559,6 @@ static int cmd_install(int argc, char **argv, struct argp *argp)
     for (i=0; i<n_array_size(shpkgs); i++) {
         struct shell_pkg *shpkg = n_array_nth(shpkgs, i);
         pkg_hand_mark(shpkg->pkg);
-        printf("%s\n", shpkg->nevr);
     }
 
     install_pkgs(shell_s.pkgset, shell_s.inst);
@@ -639,7 +638,7 @@ static int cmd_stat(int argc, char **argv, struct argp *argp)
 
         msg(0, "%-32s", pkg_snprintf_s(shpkg->pkg));
 
-        dbpkgs = rpm_get_packages(shell_s.inst->db->dbh, shpkg->pkg);
+        dbpkgs = rpm_get_packages(shell_s.inst->db->dbh, shpkg->pkg, PKG_LDNEVR);
         if (dbpkgs == NULL) {
             msg(0, "_ not installed\n", pkg_snprintf_s(shpkg->pkg));
             continue;
@@ -652,7 +651,7 @@ static int cmd_stat(int argc, char **argv, struct argp *argp)
             int cmprc, c;
             char *p = ", ";
             
-            cmprc = dbpkg_pkg_cmp_evr(dbpkg, shpkg->pkg);
+            cmprc = pkg_cmp_evr(dbpkg->pkg, shpkg->pkg);
             
             if (cmprc == 0)
                 c = '=';
@@ -664,7 +663,7 @@ static int cmd_stat(int argc, char **argv, struct argp *argp)
             if (j == n_array_size(dbpkgs) - 1)
                 p = "";
             
-            msg(0, "_%c%s%s", c, dbpkg_snprintf_s(dbpkg), p);
+            msg(0, "_%c%s%s", c, pkg_snprintf_s(dbpkg->pkg), p);
         }
         msg(0, "_\n");
         n_array_free(dbpkgs);
@@ -752,7 +751,6 @@ int shell_main(struct pkgset *ps, struct inst_s *inst)
         return 0;
     }
     
-    rpm_initlib(inst->rpmacros);
     if (inst->rootdir == NULL)
         inst->rootdir = "/";
     
@@ -782,7 +780,6 @@ int shell_main(struct pkgset *ps, struct inst_s *inst)
     if ((home = getenv("HOME"))) {
         histfile = alloca(strlen(home) + strlen("/.poldek_history") + 2);
         sprintf(histfile, "%s/.poldek_history", home);
-        printf("reading history file %s\n", histfile);
         read_history(histfile);
         shell_s.histfile = histfile;
     }

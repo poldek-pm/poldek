@@ -15,7 +15,6 @@
 #endif
 
 #include <rpm/rpmlib.h>
-#include "dbpkg.h"
 #include "rpmdb_it.h"
 
 #ifdef HAVE_RPM_4_0
@@ -64,8 +63,8 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
     it->matches.recs = NULL;
     it->i = 0;
     it->db = db;
-    it->dbpkg.h = NULL;
-    it->dbpkg.recno = 0;
+    it->dbrec.h = NULL;
+    it->dbrec.recno = 0;
     
     switch (tag) {
         case RPMITER_NAME:
@@ -118,11 +117,11 @@ void rpmdb_it_destroy(struct rpmdb_it *it)
 #ifdef HAVE_RPM_4_0
     rpmdbFreeIterator(it->mi);
     it->mi = NULL;
-    it->dbpkg.h = NULL;
+    it->dbrec.h = NULL;
 #else
-    if (it->dbpkg.h != NULL) {
-        headerFree(it->dbpkg.h);
-        it->dbpkg.h = NULL;
+    if (it->dbrec.h != NULL) {
+        headerFree(it->dbrec.h);
+        it->dbrec.h = NULL;
     }
     
     it->db = NULL;
@@ -134,19 +133,19 @@ void rpmdb_it_destroy(struct rpmdb_it *it)
 
 
 
-const struct dbpkg *rpmdb_it_get(struct rpmdb_it *it)
+const struct dbrec *rpmdb_it_get(struct rpmdb_it *it)
 {
 #ifdef HAVE_RPM_4_0
-    it->dbpkg.h = rpmdbNextIterator(it->mi);
+    it->dbrec.h = rpmdbNextIterator(it->mi);
 
-    if (it->dbpkg.h == NULL)
+    if (it->dbrec.h == NULL)
         return NULL;
 
-    it->dbpkg.recno = rpmdbGetIteratorOffset(it->mi);
+    it->dbrec.recno = rpmdbGetIteratorOffset(it->mi);
 #else
     if (it->i == it->matches.count) {
-        headerFree(it->dbpkg.h);
-        it->dbpkg.h = NULL;
+        headerFree(it->dbrec.h);
+        it->dbrec.h = NULL;
         it->i++;
         return NULL;
     }
@@ -154,20 +153,18 @@ const struct dbpkg *rpmdb_it_get(struct rpmdb_it *it)
     if (it->i > it->matches.count)
         die();
 
-    if (it->dbpkg.h != NULL)
-        headerFree(it->dbpkg.h);
+    if (it->dbrec.h != NULL)
+        headerFree(it->dbrec.h);
     
-    it->dbpkg.recno = it->matches.recs[it->i].recOffset;
-    it->dbpkg.h = rpmdbGetRecord(it->db, it->dbpkg.recno);
+    it->dbrec.recno = it->matches.recs[it->i].recOffset;
+    it->dbrec.h = rpmdbGetRecord(it->db, it->dbrec.recno);
     it->i++;
     
-    if (it->dbpkg.h == NULL)
+    if (it->dbrec.h == NULL)
         rpm_die();
 #endif /* HAVE_RPM_4_0 */
 
-    it->dbpkg.pkg = NULL;
-    it->dbpkg.flags = 0;
-    return &it->dbpkg;
+    return &it->dbrec;
 }
 
 
@@ -178,4 +175,28 @@ int rpmdb_it_get_count(struct rpmdb_it *it)
 #else
     return it->matches.count;
 #endif /* HAVE_RPM_4_0 */
+}
+
+
+void dbrec_clean(struct dbrec *dbrec) 
+{
+    if (dbrec->h)
+        headerFree(dbrec->h);
+}
+
+
+char *dbrec_snprintf(char *buf, size_t size, const struct dbrec *dbrec)
+{
+    if (dbrec->h)
+        rpmhdr_snprintf(buf, size, dbrec->h);
+    else 
+        snprintf(buf, size, "(null dbrec->h)");
+    return buf;
+}
+
+
+char *dbrec_snprintf_s(const struct dbrec *dbrec)
+{
+    static char buf[256];
+    return dbrec_snprintf(buf, sizeof(buf), dbrec);
 }

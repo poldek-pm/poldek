@@ -35,8 +35,9 @@ static void (*pkg_free_fn)(void*) = free;
 
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*))
 {
-    pkg_alloc_fn = pkg_allocfn;
-    pkg_free_fn = pkg_freefn;
+    //pkg_alloc_fn = pkg_allocfn;
+    //pkg_free_fn = pkg_freefn;
+    
 }
 
 /* always store fields in order: path, name, version, release, arch */
@@ -82,7 +83,7 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
     }
     
     pkg = pkg_alloc_fn(sizeof(*pkg) + len);
-    
+    pkg->free = pkg_free_fn;
     pkg->flags = PKG_COLOR_WHITE;
     pkg->epoch = epoch;
     pkg->size = size;
@@ -173,7 +174,7 @@ void pkg_free(struct pkg *pkg)
     if (pkg_has_ldpkguinf(pkg))
         pkguinf_free(pkg->pkg_pkguinf);
 
-    pkg_free_fn(pkg);
+    pkg->free(pkg);
 }
 
 
@@ -375,11 +376,31 @@ int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr)
 
 int pkg_add_selfcap(struct pkg *pkg) 
 {
+    int has = 0;
+    
     if (pkg->flags & PKG_HAS_SELFCAP)
         return 1;
     
-    if (pkg->caps == NULL)
+    if (pkg->caps == NULL) {
         pkg->caps = capreq_arr_new();
+        
+    } else {
+        int i;
+        
+        for (i=0; i<n_array_size(pkg->caps); i++) {
+            struct capreq *cap = n_array_nth(pkg->caps, i);
+            if (strcmp(capreq_name(cap), pkg->name) == 0 &&
+                capreq_epoch(cap) == pkg->epoch &&
+                strcmp(capreq_ver(cap), pkg->ver) == 0 &&
+                strcmp(capreq_rel(cap), pkg->rel) == 0)
+                has = 1;
+        }
+    }
+
+    pkg->flags |= PKG_HAS_SELFCAP;
+
+    if (has == 1)
+        return 1;
     
     capreq_pkg(pkg->caps, pkg->epoch, pkg->name, strlen(pkg->name),
                pkg->ver, strlen(pkg->ver), pkg->rel, strlen(pkg->rel));
@@ -392,8 +413,6 @@ int pkg_add_selfcap(struct pkg *pkg)
         pkg->caps = NULL;
         n_assert(0);
     }
-    
-    pkg->flags |= PKG_HAS_SELFCAP;
     
     return pkg->caps != NULL;
 }

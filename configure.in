@@ -68,6 +68,7 @@ AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(gettimeofday mkdir strdup uname)
 AC_CHECK_FUNCS(strerror strstr strtol strtoul strsignal)
+AC_CHECK_FUNCS(mallopt)
 
 dnl Checks for header files.
 AC_HEADER_DIRENT

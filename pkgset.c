@@ -221,6 +221,7 @@ void pkgset_free(struct pkgset *ps)
     if (ps->flags & PKGSET_INDEXES_INIT) {
         capreq_idx_destroy(&ps->cap_idx);
         capreq_idx_destroy(&ps->req_idx);
+        capreq_idx_destroy(&ps->obs_idx);
         file_index_destroy(&ps->file_idx);
         ps->flags &= (unsigned)~PKGSET_INDEXES_INIT;
     }
@@ -233,6 +234,16 @@ void pkgset_free(struct pkgset *ps)
     if (ps->depdirs) {
         n_array_free(ps->depdirs);
         ps->depdirs = NULL;
+    }
+
+    if (ps->vf) {
+        vfile_close(ps->vf);
+        ps->vf = NULL;
+    }
+
+    if (ps->ordered_pkgs) {
+        n_array_free(ps->ordered_pkgs);
+        ps->ordered_pkgs = NULL;
     }
 
     if (ps->rpmcaps) {
@@ -404,10 +415,12 @@ int pkgset_setup(struct pkgset *ps)
 
     pkgset_verify_deps(ps, strict);
     mem_info(1, "MEM after verify deps");
-//    pkgset_free_indexes(ps);
-//    mem_info(1, "MEM after free indexes");
     pkgset_order(ps);
     mem_info(1, "MEM after order");
+
+
+    set_pkg_allocfn(malloc, free);
+    set_capreq_allocfn(malloc, free, NULL, NULL);
     return ps->nerrors;
 }
 

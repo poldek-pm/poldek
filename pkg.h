@@ -93,7 +93,8 @@ struct pkg {
         struct pkguinf *pkg_pkguinf;
     } package_uinf;
 
-    int          _refcnt;
+    uint16_t     _refcnt;
+    void         (*free)(void*);
 
     void         *udata;      /* for some additional, user level data */
     int32_t      _buf_size;
