@@ -185,7 +185,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
             
             if (vfmode & VFM_RW) {
                 flags |= O_RDWR;
-                if (vfmode & VFM_APPEND)
+                if ((vfmode & VFM_APPEND) == VFM_APPEND)
                     flags |= O_APPEND;
                 
             } else {
@@ -201,17 +201,18 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
         break;
         
         case VFT_STDIO: {
-            char *mode;
+            char *mode = NULL;
 
-            if (vfmode & VFM_APPEND)
+            if ((vfmode & VFM_APPEND) == VFM_APPEND)
                 mode = "a+";
             
             else if (vfmode & VFM_RW)
                 mode = "w";
             
-            else
+            else if (vfmode & VFM_RO)
                 mode = "r";
 
+            n_assert(mode);
             if ((vf->vf_stream = fopen(path, mode)) != NULL) 
                 rc = 1;
             else 
@@ -245,15 +246,16 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
         
 #ifdef ENABLE_VFILE_TRURLIO
         case VFT_TRURLIO: {
-            char *mode = "";
+            char *mode = NULL;
             
             if (vfmode & VFM_RW)
                 mode = "w";
-            else if (vfmode & VFM_APPEND)
+            else if ((vfmode & VFM_APPEND) == VFM_APPEND)
 				mode = "a+";
-			else 
+			else if (vfmode & VFM_RO)
                 mode = "r";
-			
+
+            n_assert(mode);
             vf->vf_tnstream = n_stream_open(path, mode, TN_STREAM_UNKNOWN);
             if (vf->vf_tnstream != NULL)
                 rc = 1;
