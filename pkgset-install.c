@@ -1785,7 +1785,7 @@ static int check_holds(struct pkgset *ps, struct upgrade_s *upg)
         for (j=0; j < n_array_size(upg->inst->hold_patterns); j++) {
             const char *mask = n_array_nth(upg->inst->hold_patterns, j);
             
-            if (pkgscore_match(&psc, mask) == 0) {
+            if (pkgscore_match(&psc, mask)) {
                 logn(LOGERR, _("%s: refusing to uninstall held package"),
                      pkg_snprintf_s(dbpkg->pkg));
                 rc = 0;
