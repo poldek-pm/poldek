@@ -23,4 +23,7 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
                                  struct pkgdir *pkgdir);
 int poclidek_load_installed(struct poclidek_ctx *cctx, int reload);
 
+
+int poclidek_argv_is_help(int argc, const char **argv);
+
 #endif 

@@ -310,7 +310,7 @@ void hide_child_options(const struct argp *parent, const struct argp *child)
 
             DBGF("  %d. %d %s\n", j + 1, opt->key, opt->name);
             if (key && key == opt->key) {
-                DBGF("Hide %d %s\n", opt->key, opt->name);
+                DBGF("Hide %d %s (%s)\n", opt->key, opt->name, opt->doc);
                 opt->flags |= OPTION_HIDDEN;
             }
             
@@ -319,7 +319,7 @@ void hide_child_options(const struct argp *parent, const struct argp *child)
 }
 
 static
-void argp_prepare_child_options(const struct argp *argp) 
+void argp_prepare_child_options(const struct argp *argp, int hide_child_opts) 
 {
     int i;
     const struct argp *child;
@@ -329,10 +329,12 @@ void argp_prepare_child_options(const struct argp *argp)
 
     i = 0;
     while ((child = argp->children[i++].argp)) {
-        hide_child_options(argp, child);
-        argp_prepare_child_options(child);
+        if (hide_child_opts)
+            hide_child_options(argp, child);
+        argp_prepare_child_options(child, hide_child_opts);
     }
 }
+
 
 
     
@@ -342,7 +344,7 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 {
     struct argp argp = { common_options, parse_opt,
                          args_doc, poldek_BANNER, 0, 0, 0};
-    int n, i, index;
+    int n, i, index, hide_child_opts = 0;
     struct argp_child *child;
 
     memset(&args, 0, sizeof(args));
@@ -368,8 +370,9 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     }
     child[i].argp = NULL;
     argp.children = child;
-    
-    argp_prepare_child_options(&argp);
+    if (poclidek_argv_is_help(argc, (const char **)argv))
+        hide_child_opts = 1;
+    argp_prepare_child_options(&argp, hide_child_opts);
     
     poldek_set_verbose(0);
     

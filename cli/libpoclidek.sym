@@ -12,6 +12,7 @@ pkg_dent_link
 pkg_dent_remove_pkg
 pkg_dent_strncmp
 poclidek_add_command
+poclidek_argv_is_help
 poclidek_chdir
 poclidek_cmd_ncmp
 poclidek_dent_dirpath

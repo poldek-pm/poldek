@@ -42,7 +42,6 @@
 
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
 
-static int argv_is_help(int argc, const char **argv);
 static int command_cmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
 
 extern struct poclidek_cmd command_ls;
@@ -244,7 +243,7 @@ int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
         return 0;
 
     cmd = cmdctx->cmd;
-    if (argv_is_help(argc, (const char**)argv)) {
+    if (poclidek_argv_is_help(argc, (const char**)argv)) {
         cmdctx->rtflags |= CMDCTX_ISHELP;
         DBGF("is_help!\n");
     }
@@ -293,7 +292,7 @@ int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
 }
 
 /* argp workaround */
-static int argv_is_help(int argc, const char **argv)
+int poclidek_argv_is_help(int argc, const char **argv)
 {
     int i, is_help = 0;
 
