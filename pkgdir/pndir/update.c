@@ -82,7 +82,7 @@ int is_uptodate(const char *path, const struct pndir_digest *dg_local,
     unlink(mdtmpath);
     mdtmpath[n] = '\0';
 
-    if (!vf_fetch(mdtmpath, mdpath)) {
+    if (!vf_fetch(mdpath, mdtmpath)) {
         rc = -1;
         goto l_end;
     }
