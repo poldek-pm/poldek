@@ -7,7 +7,7 @@
 #			VF_MNTPOINT=/mnt/cdrom
 # VF_MOUNT	- the default is mount
 #			VF_MOUNT="eject -t [$VF_MNTDEV]; hdparm -E 4 $VF_MNTDEV; mount"
-# VF_UMOUNT	= the default is umount
+# VF_UMOUNT	- the default is umount
 # VF_EJECT	- the default is empty
 #			VF_EJECT="eject [$VF_MNTDEV]"
 #			VF_EJECT="ziptool -e /dev/zip",
