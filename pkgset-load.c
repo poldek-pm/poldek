@@ -332,13 +332,13 @@ void source_printf(const struct source *src)
     source_snprintf_flags(optstr, sizeof(optstr), src);
     
     printf("%-12s %s%s%s%s\n",
-           src->name, vf_url_hidepasswd_s(src->path),
+           src->name, vf_url_slim_s(src->path, 0),
            *optstr ? "  (" : "", optstr, *optstr ? ")" : "");
 
     if (src->pkg_prefix) {
         //printf_c(PRCOLOR_GREEN, "%-14s prefix: ", "");
         //printf("%s\n", src->pkg_prefix);
-        printf("%-14s prefix => %s\n", "", vf_url_hidepasswd_s(src->pkg_prefix));
+        printf("%-14s prefix => %s\n", "", vf_url_slim_s(src->pkg_prefix, 0));
     }
 }
 
