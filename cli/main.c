@@ -345,7 +345,8 @@ int main(int argc, char **argv)
     parse_options(&cctx, argc, argv);
 
     if (args.eat_args == 0) {
-        poldek_load_sources(cctx.ctx);
+        poclidek_load_packages(&cctx, 1);
+        //poldek_load_sources(cctx.ctx);
         poclidek_shell(&cctx);
         
     } else {

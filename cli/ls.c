@@ -172,10 +172,10 @@ static tn_fn_cmp select_cmpf(unsigned flags)
 
 static int ls(struct cmdarg *cmdarg) 
 {
-    tn_array             *ls_pkgs = NULL, *av_pkgs;
+    tn_array             *ls_pkgs = NULL;
     tn_array             *evrs = NULL;
     int                  rc = 1, ls_all;
-    tn_fn_cmp            cmpf;
+    tn_fn_cmp            cmpf = NULL;
 
     
     ls_all = 0;
@@ -186,6 +186,7 @@ static int ls(struct cmdarg *cmdarg)
 
     if (poldek_ts_get_arg_count(cmdarg->ts))
         ls_pkgs = poclidek_resolve_packages(cmdarg->cctx, cmdarg->ts, 0);
+
     else {
         ls_all = 1;
         ls_pkgs = poclidek_get_current_pkgs(cmdarg->cctx);
@@ -249,14 +250,16 @@ static int ls(struct cmdarg *cmdarg)
 
  l_end:
 
-    if (ls_pkgs)
-        n_array_free(ls_pkgs);
-    
+    if (!ls_all) {
+        if (ls_pkgs)
+            n_array_free(ls_pkgs);
+        
+    } else if (cmpf) {
+        n_array_sort(ls_pkgs);
+    }
+
     if (evrs)
         n_array_free(evrs);
-    
-    if (ls_all && cmpf)
-        n_array_sort(av_pkgs);
     
     return rc;
 }
