@@ -20,7 +20,6 @@ t1()
         ln -sf $i $SRCDIR/$bn
  	
 	./poldek -s $SRCDIR --mkidxz
-	cp -a /tmp/ftp___localhost_RPMSt/pac* /tmp
 
 	echo "UP"
 	./poldek -s $SRCURL --up
@@ -43,8 +42,6 @@ t2()
 
     echo "ADD $toadd, REMOVE $torm";
 
-
-    rm -f $SRCDIR/${torm}*.rpm
 
     nremoved=0
     for i in $SRCDIR/${torm}*.rpm; do
@@ -78,16 +75,14 @@ t2()
 	return 
     fi
     echo "Added $nadded and $nremoved removed"	
-    ./poldek -v -s $SRCDIR --mkidxz
+    ./poldek -s $SRCDIR --mkidxz
     if [ $? -ne 0 ]; then
 	   echo "MKIDX ERRROR"
 	   exit 1;
     fi 
-    cp -a /tmp/ftp___localhost_RPMSt/pac* /tmp
 
-    
-    if [ ${up_skip} != "0" ]; then
-	echo "UP"
+    if [ ${up_skip} = "0" ]; then
+	echo -e "\n**** UP ****\n"
 	./poldek -v -s $SRCURL --up
 	if [ $? -ne 0 ]; then
 	   echo "ERRROR"
@@ -95,8 +90,6 @@ t2()
 	fi
     fi	
 }
-
-
 
 ./poldek -s $SRCDIR --mkidxz || exit 1
 ./poldek -s $SRCURL --upa || exit 1

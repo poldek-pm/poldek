@@ -467,10 +467,12 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
             if (memcmp(mdd, current_mdd, PDIGEST_SIZE) == 0)
                 first_patch_found = 1;
             else {
-                logn(LOGERR, "%ld, %ld", pkgdir->ts, ts);
-                logn(LOGERR, "dir  %s", pkgdir->pdg->mdd);
-                logn(LOGERR, "last %s", mdd);
-                logn(LOGERR, "curr %s", current_mdd);
+                if (verbose > 2) {
+                    logn(LOGERR, "ts = %ld, %ld", pkgdir->ts, ts);
+                    logn(LOGERR, "md dir  %s", pkgdir->pdg->mdd);
+                    logn(LOGERR, "md last %s", mdd);
+                    logn(LOGERR, "md curr %s", current_mdd);
+                }
                 logn(LOGERR, _("%s: no patches available"), pkgdir->idxpath);
                 nerr++;
                 break;
@@ -482,7 +484,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
             nerr++;
             break;
         }
-
+        
         if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
             msgn(1, _("Loading %s..."), pkgdir->idxpath);
             if (!pkgdir_load(pkgdir, NULL, PKGDIR_LD_RAW)) {
@@ -510,13 +512,13 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
         if (pkgdir_uniq(pkgdir) > 0) /* duplicates ? -> error */
             nerr++;
     
-    if (nerr) {
-        logn(LOGWARN, _("%s: desynchronized index, try --update-whole"),
-            pkgdir->idxpath);
-        nerr++;
+    if (nerr == 0) {
+        pkgdir->mdd_orig = strdup(pdg_current.mdd); /* for verification during write */
         
     } else {
-        pkgdir->mdd_orig = strdup(pdg_current.mdd); /* for verification during write */
+        logn(LOGWARN, _("%s: desynchronized index, try --update-whole"),
+             pkgdir->idxpath);
+        
     }
     
     return nerr == 0;

@@ -35,13 +35,13 @@
 static void *(*pkg_alloc_fn)(size_t) = malloc;
 static void (*pkg_free_fn)(void*) = free;
 
-
+#if 0                           /* disabled cause gives not reasonable profit */
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*))
 {
-//    pkg_alloc_fn = pkg_allocfn;
-//    pkg_free_fn = pkg_freefn;
+    pkg_alloc_fn = pkg_allocfn;
+    pkg_free_fn = pkg_freefn;
 }
-
+#endif
 
 /* always store fields in order: path, name, version, release, arch */
 struct pkg *pkg_new(const char *name, int32_t epoch,

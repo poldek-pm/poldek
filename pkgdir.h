@@ -15,10 +15,9 @@
 #define PKGDIR_LOADED             (1 << 4)  /* for idx */
 #define PKGDIR_VERIFIED           (1 << 5)  /* to avoid double verification
                                                during --update */
-
-#define PKGDIR_DIFF               (1 << 8)  /* is patch */
-#define PKGDIR_PATCHED            (1 << 9)  /* patched  */
-#define PKGDIR_UNIQED             (1 << 10) /* passed through pkgdir_uniq() */
+#define PKGDIR_DIFF               (1 << 6)  /* is patch */
+#define PKGDIR_PATCHED            (1 << 7)  /* patched  */
+#define PKGDIR_UNIQED             (1 << 8) /* passed through pkgdir_uniq() */
 
 
 /* packages.dir digest */

@@ -1403,8 +1403,8 @@ static void show_dbpkg_list(const char *prefix, tn_array *dbpkgs)
     int   i, ncol = 2, npkgs = 0;
     int   term_width;
     char  *p, *colon = ", ";
-    int   hdr_printed = 0;
 
+    
     term_width = term_get_width() - 5;
     ncol = strlen(prefix) + 1;
     

@@ -414,4 +414,12 @@ int mk_dir(const char *path, const char *dn)
     return 1;
 }
 
-
+const char *ngettext_n_packages_fmt(int n) 
+{
+#if ENABLE_NLS    
+    return ngettext("%d package",
+                    "%d packages", n);
+#else
+    return "%d package(s)";
+#endif
+}

@@ -109,7 +109,7 @@ int pkgsetmodule_init(void)
     idx_obs.ucnt = 0;
     pkg_obs.ucnt = 0;
     obstacks_init();
-    set_pkg_allocfn(pkg_alloc, fake_free);
+    // disabled: set_pkg_allocfn(pkg_alloc, fake_free);
     set_capreq_allocfn(idx_alloc, fake_free, NULL, NULL);
     return 1;
 }
@@ -117,7 +117,7 @@ int pkgsetmodule_init(void)
 
 void pkgsetmodule_destroy(void) 
 {
-    set_pkg_allocfn(pkg_alloc, fake_free);
+    //disabled: set_pkg_allocfn(pkg_alloc, fake_free);
     set_capreq_allocfn(idx_alloc, fake_free, NULL, NULL);
     obstacks_free();
 }
@@ -466,7 +466,7 @@ int pkgset_setup(struct pkgset *ps, const char *pri_fpath)
     pkgset_order(ps);
     mem_info(1, "MEM after order");
 
-    set_pkg_allocfn(malloc, free);
+    //set_pkg_allocfn(malloc, free);
     set_capreq_allocfn(malloc, free, NULL, NULL);
     return ps->nerrors == 0;
 }

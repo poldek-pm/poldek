@@ -10,7 +10,7 @@
 
 #include <vfile/p_open.h>
 
-
+const char *ngettext_n_packages_fmt(int n);
 void translate_argp_options(struct argp_option *arr);
 
 int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size);

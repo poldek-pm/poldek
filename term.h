@@ -17,13 +17,22 @@
 
 #include <stddef.h>           /* for size_t     */
 
+#ifndef __GNUC__                                                            
+#  define __attribute__(x) /*nothing*/                                      
+#endif   
+
 int term_init(void);
 int term_get_width(void);
 int term_get_height(void);
 
 int vprintf_c(int color, const char *fmt, va_list args);
-int printf_c(int color, const char *fmt, ...);
-int snprintf_c(int color, char *str, size_t size, const char *fmt, ...);
+
+int printf_c(int color, const char *fmt, ...)
+   __attribute__((format(printf,2,3)));
+   
+int snprintf_c(int color, char *str, size_t size, const char *fmt, ...)
+   __attribute__((format(printf,4,5)));
+
 int vsnprintf_c(int color, char *str, size_t size, const char *fmt,
                 va_list args);
 

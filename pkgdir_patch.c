@@ -156,11 +156,9 @@ struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *patch)
             n_array_push(pkgdir->pkgs, pkg_link(pkg));
         }
 
-    /* merge depdirs */
     if (pkgdir->depdirs) {
         n_array_free(pkgdir->depdirs);
         pkgdir->depdirs = NULL;
-        //n_assert(patch->depdirs);
     }
     
     if (patch->depdirs) {
