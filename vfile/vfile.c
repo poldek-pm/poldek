@@ -333,7 +333,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
     int opened, urltype;
     char buf[PATH_MAX];
     char *tmpdir;
-    const char *rpath;
+    const char *rpath, *opath;
     int len;
 
     
@@ -351,19 +351,19 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
     opened = 0;
 
     if (urltype == VFURL_PATH) {
-        rpath = path;
-        
+        opath = rpath = path; 
         if (vfmode & VFM_UNCOMPR) {
             if (vfmode & VFM_RW) {
                 if (vf_decompressable(path, buf, sizeof(buf)))
-                    rpath = buf;
+                    opath = buf;
             } else {
-                if ((rpath = vfdecompr(path, buf, sizeof(buf))) == NULL)
+                printf("decopr %s\n", path);
+                if ((opath = vfdecompr(path, buf, sizeof(buf))) == NULL)
                     return 0;
             }
         }
         
-        if (openvf(&vf, rpath, vfmode)) 
+        if (openvf(&vf, opath, vfmode)) 
             opened = 1;
         goto l_end;
     }
@@ -379,14 +379,14 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
     if ((vfmode & VFM_CACHE) && file_ok(buf, vfmode)) {
         char tmpath[PATH_MAX];
         
-        rpath = buf;
+        opath = rpath = buf;
         
         if ((vfmode & VFM_UNCOMPR)) {
-            if ((rpath = vfdecompr(buf, tmpath, sizeof(tmpath))) == NULL)
+            if ((opath = vfdecompr(buf, tmpath, sizeof(tmpath))) == NULL)
                 return 0;
         }
     
-        if (openvf(&vf, rpath, vfmode)) {
+        if (openvf(&vf, opath, vfmode)) {
             vf.vf_tmpath = n_strdup(rpath);
             opened = 1;
             vf.vf_flags |= VF_FRMCACHE;
@@ -419,14 +419,14 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
             snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
                      n_basenam(path));
 
-            rpath = tmpath;
+            opath = rpath = tmpath;
             
             if ((vfmode & VFM_UNCOMPR)) {
-                if ((rpath = vfdecompr(tmpath, upath, sizeof(upath))) == NULL)
+                if ((opath = vfdecompr(tmpath, upath, sizeof(upath))) == NULL)
                     return 0;
             }
             
-            if (openvf(&vf, rpath, VFM_RO)) {
+            if (openvf(&vf, opath, VFM_RO)) {
                 vf.vf_tmpath = n_strdup(rpath);
                 opened = 1;
                 vf.vf_flags |= VF_FETCHED;
@@ -518,13 +518,15 @@ void vfile_close(struct vfile *vf)
     }
 
     if (vf->vf_path && (vf->vf_mode & VFM_UNCOMPR) && (vf->vf_mode & VFM_RW)) {
+        n_assert(vf_url_type(vf->vf_path) & VFURL_LOCAL);
         if (vf_decompressable(vf->vf_path, NULL, 0)) {
             char src[PATH_MAX], *p;
             snprintf(src, sizeof(src), vf->vf_path);
             p = strrchr(src, '.');
             n_assert(p);
             *p = '\0';
-            vf_extcompress(src, "gz");
+            p++;
+            vf_extcompress(src, p);
         }
         
     }
