@@ -90,17 +90,17 @@ struct idx {
     tn_array *ents;
 };
 
+
 static int yum_entry_cmp(struct yum_entry *en1, struct yum_entry *en2) 
 {
     return strcmp(en1->nvr, en2->nvr);
 }
 
-
 static
 int idx_open(struct idx *idx, const char *path, int vfmode,
              const char *pdir_name)
 {
-    idx->vf = vfile_open_sl(path, VFT_TRURLIO, vfmode, pdir_name);
+    idx->vf = vfile_open_ul(path, VFT_TRURLIO, vfmode, pdir_name);
     if (idx->vf)
         idx->ents = n_array_new(1024, free, (tn_fn_cmp)yum_entry_cmp);
     
@@ -133,7 +133,8 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     char                 *path = pkgdir->path;
     
     flags = flags;              /* unused */
-    
+
+    DBGF("idxpath %s\n", pkgdir->idxpath);
     if (!idx_open(&idx, pkgdir->idxpath, vfmode, pkgdir->name))
         return 0;
     
@@ -185,16 +186,15 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         memcpy(en->nvr, nevr, n);
         memcpy(&en->nvr[n], fn, fn_len + 1);
         en->fn = &en->nvr[n];
-        DBGF_F("yum  en.nevr = %s, en.fn = %s, %s\n", en->nvr, en->fn, fn);
+        DBGF("en.nevr = %s, en.fn = %s, %s\n", en->nvr, en->fn, fn);
         n_array_push(idx.ents, en);
     }
     n_array_sort(idx.ents);
     pkgdir->mod_data = n_malloc(sizeof(idx));
     memcpy(pkgdir->mod_data, &idx, sizeof(idx));
-    //pkgdir->flags |= pkgdir_flags;
     pkgdir->pkgroups = pkgroups;
-    
-// l_end:
+
+    DBGF("%d entries\n", n_array_size(idx.ents));
     if (nerr)
         idx_close(&idx);
     
@@ -236,7 +236,7 @@ Header do_loadrpmhdr(const char *path, int vfmode, const char *pdir_name)
     int                n;
     Header             h, ch = NULL;
     
-    if ((vf = vfile_open_sl(path, VFT_GZIO, vfmode, pdir_name)) == NULL)
+    if ((vf = vfile_open_ul(path, VFT_GZIO, vfmode, pdir_name)) == NULL)
         return NULL;
 
     nbuf = n_buf_new(1024 * 64);
@@ -262,7 +262,7 @@ static
 struct pkg *do_loadpkg(tn_alloc *na, Header h, int ldflags, const char *pkgfn) 
 {
     struct pkg *pkg;
-    if ((pkg = pm_rpm_ldhdr(NULL, h, pkgfn, 0, PKG_LDWHOLE))) {
+    if ((pkg = pm_rpm_ldhdr(na, h, pkgfn, 0, PKG_LDWHOLE))) {
         if (ldflags & PKGDIR_LD_DESC) {
             pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
             pkg_set_ldpkguinf(pkg);
@@ -278,14 +278,16 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg, void *ptr)
     unsigned        vfmode = VFM_RO | VFM_CACHE | VFM_NOEMPTY;
     struct pkguinf  *pkgu = NULL;
     char            *nvr = ptr;
-    char            path[PATH_MAX];
+    char            path[PATH_MAX], *hdrpath;
     Header          h;
     
 
     if (!pkg->pkgdir)
         return NULL;
-    
-    n_snprintf(path, sizeof(path), "%s/%s.hdr", pkg->pkgdir->path, nvr);
+
+    n_strdupap(pkg->pkgdir->idxpath, &hdrpath);
+    hdrpath = n_dirname(hdrpath);
+    n_snprintf(path, sizeof(path), "%s/%s.hdr", hdrpath, nvr);
     
     pkg = pkg;
     if ((h = do_loadrpmhdr(path, vfmode, n_basenam(path)))) {
@@ -309,16 +311,21 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     struct idx         *idx;
     struct pkg         *pkg;
     unsigned           vfmode = VFM_RO | VFM_CACHE | VFM_NOEMPTY;
+    char               *hdrpath;
     int i;
 
+
+    n_strdupap(pkgdir->idxpath, &hdrpath);
+    hdrpath = n_dirname(hdrpath);
+    
     idx = pkgdir->mod_data;
     for (i=0; i < n_array_size(idx->ents); i++) {
         struct yum_entry *en = n_array_nth(idx->ents, i);
         char path[PATH_MAX];
         Header h;
-
-        n_snprintf(path, sizeof(path), "%s/%s.hdr", pkgdir->path, en->nvr);
-
+        
+        n_snprintf(path, sizeof(path), "%s/%s.hdr", hdrpath, en->nvr);
+        DBGF("loading %s\n", en->nvr);
         if ((h = do_loadrpmhdr(path, vfmode, pkgdir->name))) {
             pkg = do_loadpkg(pkgdir->na, h, ldflags, en->fn);
             headerFree(h);
@@ -331,8 +338,10 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
                 pkg->pkgdir_data_free = pkg_data_free;
                 pkg->load_pkguinf = load_pkguinf;
                 n_array_push(pkgdir->pkgs, pkg);
-                if (n_array_size(pkgdir->pkgs) > 100)
+#if 0                           /* debug */
+                if (n_array_size(pkgdir->pkgs) > 10)
                     break;
+#endif                
             }
         }
     }
@@ -341,12 +350,12 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 }
 
 static
-int yum_update(const char *path, int vfmode)
+int yum_update(const char *path, int vfmode, const char *sl)
 {
     struct vfile    *vf;
     int                  rc = 1;
     
-    if ((vf = vfile_open(path, VFT_IO, vfmode)) == NULL)
+    if ((vf = vfile_open_ul(path, VFT_IO, vfmode, sl)) == NULL)
         return 0;
 
     vfile_close(vf);
@@ -361,7 +370,7 @@ int do_update_a(const struct source *src, const char *idxpath)
 
     src = src;                  /* unused */
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
-    return yum_update(idxpath, vfmode);
+    return yum_update(idxpath, vfmode, src->name);
 }
 
 static 
@@ -372,5 +381,5 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
     npatches = npatches;
     
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL | VFM_CACHE_NODEL;
-    return yum_update(pkgdir->idxpath, vfmode);
+    return yum_update(pkgdir->idxpath, vfmode, pkgdir->name);
 }

@@ -58,7 +58,7 @@ struct pkgdir_module pkgdir_module_rpmdb = {
     NULL, 
     do_free,
     NULL,
-    NULL
+    NULL,
 };
 
 static Header ldhdr(const struct pkg *pkg, void *foo) 

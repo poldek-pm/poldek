@@ -173,7 +173,7 @@ int pdir_open(struct pdir *idx, const char *path, int vfmode,
 {
 	pdir_init(idx);
     if ((idx->pdg = pdir_digest_new(path, vfmode, pdir_v016compat, pdir_name))) {
-        idx->vf = vfile_open_sl(path, VFT_TRURLIO, vfmode, pdir_name);
+        idx->vf = vfile_open_ul(path, VFT_TRURLIO, vfmode, pdir_name);
         if (idx->vf) 
             snprintf(idx->idxpath, sizeof(idx->idxpath), "%s", path);
         else {
@@ -347,7 +347,7 @@ int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     snprintf(path, sizeof(path), "%s/%s/%s%s", dn,
              pdir_packages_incdir, bn, pdir_difftoc_suffix);
     
-    if ((vf = vfile_open_sl(path, VFT_TRURLIO, VFM_RO, pkgdir->name)) == NULL) 
+    if ((vf = vfile_open_ul(path, VFT_TRURLIO, VFM_RO, pkgdir->name)) == NULL)
         return 0;
 
     
@@ -874,7 +874,7 @@ static int is_uptodate(const char *path, const struct pdir_digest *pdg_local,
     unlink(mdtmpath);
     mdtmpath[n] = '\0';
 
-    if (!vf_fetch_sl(mdpath, mdtmpath, pdir_name)) {
+    if (!vf_fetch(mdpath, mdtmpath, 0, pdir_name)) {
         rc = -1;
         goto l_end;
     }

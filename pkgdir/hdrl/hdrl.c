@@ -61,7 +61,7 @@ struct pkgdir_module pkgdir_module_hdrl = {
     NULL,
     NULL,
     NULL,
-    NULL
+    NULL,
 };
 
 
@@ -78,7 +78,7 @@ int load_header_list(const char *slabel, const char *path, tn_array *pkgs,
     unsigned             vfmode = VFM_RO | VFM_CACHE | VFM_UNCOMPR | VFM_NOEMPTY;
 
 
-    if ((vf = vfile_open_sl(path, VFT_IO, vfmode, slabel)) == NULL)
+    if ((vf = vfile_open_ul(path, VFT_IO, vfmode, slabel)) == NULL)
         return -1;
 
     fdt = fdDup(vf->vf_fd);
@@ -145,7 +145,7 @@ int hdrl_update(const char *path, int vfmode, const char *sl)
     FD_t                 fdt = NULL;
     int                  rc = 1;
     
-    if ((vf = vfile_open_sl(path, VFT_IO, vfmode, sl)) == NULL)
+    if ((vf = vfile_open_ul(path, VFT_IO, vfmode, sl)) == NULL)
         return 0;
 
     fdt = fdDup(vf->vf_fd);
@@ -172,7 +172,7 @@ int do_update_a(const struct source *src, const char *idxpath)
     int vfmode;
 
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
-    return hdrl_update(idxpath, vfmode, source_idstr(src));
+    return hdrl_update(idxpath, vfmode, src->name);
 }
 
 static 
@@ -183,10 +183,10 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
     npatches = npatches;
     
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL | VFM_CACHE_NODEL;
-    return hdrl_update(pkgdir->idxpath, vfmode, pkgdir_idstr(pkgdir));
+    return hdrl_update(pkgdir->idxpath, vfmode, pkgdir->name);
 }
 
-#if 0                           /* creating NFY */
+#if 0                           /* NFY */
 /* extra RPM tags, taken from apt-rpm */
 #define CRPMTAG_FILENAME          1000000
 #define CRPMTAG_FILESIZE          1000001

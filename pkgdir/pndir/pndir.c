@@ -171,7 +171,7 @@ static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf,
     if (vf)
         *vf = NULL;
     
-    if ((vf_ = vfile_open_sl(path, VFT_IO, vfmode, srcnam)) == NULL)
+    if ((vf_ = vfile_open_ul(path, VFT_IO, vfmode, srcnam)) == NULL)
         return NULL;
 
     if ((fd = dup(vf_->vf_fd)) == -1) {

@@ -82,7 +82,7 @@ int is_uptodate(const char *path, const struct pndir_digest *dg_local,
     unlink(mdtmpath);
     mdtmpath[n] = '\0';
 
-    if (!vf_fetch_sl(mdpath, mdtmpath, pdir_name)) {
+    if (!vf_fetch(mdpath, mdtmpath, 0, pdir_name)) {
         rc = -1;
         goto l_end;
     }
@@ -247,7 +247,7 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
     snprintf(path, sizeof(path), "%s/%s/%s%s", dn,
              pndir_packages_incdir, bn, pndir_difftoc_suffix);
     
-    vf = vfile_open_sl(path, VFT_TRURLIO, VFM_RO, pkgdir->name);
+    vf = vfile_open_ul(path, VFT_TRURLIO, VFM_RO, pkgdir->name);
     if (vf == NULL)
         return 0;
 

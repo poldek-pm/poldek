@@ -45,7 +45,7 @@
 
 static int do_unlink(const char *path) 
 {
-    msgn(2, _("Removing %s"), vf_url_slim_s(path, 69));
+    msgn(2, _("Removing %s"), path);
     return vf_localunlink(path);
 }
 

@@ -737,7 +737,7 @@ int source_clean(struct source *src, unsigned flags)
         return 1;
 
     if (pkgdir__make_idxpath(idxpath, sizeof(idxpath), src->path,
-                       src->type, "none") == NULL)
+                             src->type, "none") == NULL)
         return 0;
 
     
@@ -843,12 +843,12 @@ int do_source_make_idx(struct source *src,
             source_set(&src->path, dn);
     }
     
-    DBGF_F("mkidx[%s, %s] %s %d\n", src->type, type, src->path, cr_flags);
+    DBGF("mkidx[%s => %s] %s %d\n", src->type, type, src->path, cr_flags);
     pkgdir = pkgdir_srcopen(src, 0);
     if (pkgdir == NULL)
         return 0;
 
-    if (source_is_type(src, "dir")) {
+    if (source_is_type(src, "dir") && access(idxpath, R_OK) == 0) {
         struct pkgdir *pdir;
         char orig_name[64];
 
@@ -883,6 +883,7 @@ int source_make_idx(struct source *src, const char *stype,
                     unsigned flags)
 {
     struct source *ssrc;
+    int typcaps;
     int rc = 0;
                          /* type not set */
     if (stype == NULL && (src->flags & PKGSOURCE_TYPE) == 0 && is_dir(src->path))
@@ -910,9 +911,16 @@ int source_make_idx(struct source *src, const char *stype,
     source_set(&ssrc->type, stype);
     ssrc->flags &= ~(PKGSOURCE_NAMED);
 
-    
     rc = 1;
-    if (idxpath == NULL) {
+    if ((typcaps = pkgdir_type_info(dtype)) < 0)
+        rc = 0;
+    
+    else if ((typcaps & PKGDIR_CAP_SAVEABLE) == 0) {
+        logn(LOGERR, _("%s: repository could not be created (missing "
+                       "feature)"), dtype);
+        rc = 0;
+
+    } else if (idxpath == NULL) {
         if (source_is_remote(src)) { 
             logn(LOGERR, _("%s: unable to write remote index"),
                  source_idstr(src));

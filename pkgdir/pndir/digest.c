@@ -56,7 +56,7 @@ struct pndir_digest *pndir_digest_new(const char *path, int vfmode,
 
         n = pndir_mkdigest_path(mdpath, sizeof(mdpath), path, ext);
         vfmode |= VFM_NOEMPTY;
-        if ((vf = vfile_open_sl(mdpath, VFT_IO, vfmode, srcnam)) == NULL) 
+        if ((vf = vfile_open_ul(mdpath, VFT_IO, vfmode, srcnam)) == NULL) 
             return NULL;
     }
     
@@ -192,7 +192,7 @@ int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
         return 0;
     }
     
-    if ((vf = vfile_open_sl(path, VFT_STDIO, VFM_RW, srcnam)) == NULL)
+    if ((vf = vfile_open_ul(path, VFT_STDIO, VFM_RW, srcnam)) == NULL)
         return 0;
     
     fprintf(vf->vf_stream, "%s", pdg->md);

@@ -163,13 +163,21 @@ int make_idxpath(char *dpath, int size, const char *type,
     return n;
 }
 
-char *pkgdir__make_idxpath(char *dpath, int dsize, const char *path,
-                          const char *type, const char *compress)
+static
+char *do_pkgdir__make_idxpath(char *dpath, int dsize, const char *path,
+                              const char *type, const char *compress,
+                              const char **fnptr)
 {
     const char *fn;
     int n;
+
+    if (fnptr)
+        *fnptr = NULL;
     
     if ((fn = pkgdir_type_default_idxfn(type)) != NULL) {
+        if (fnptr)
+            *fnptr = fn;
+        
         n = make_idxpath(dpath, dsize, type, path, fn, compress);
         if (n > 0)
             return dpath;
@@ -177,6 +185,12 @@ char *pkgdir__make_idxpath(char *dpath, int dsize, const char *path,
     
     n_snprintf(dpath, dsize, "%s", path);
     return dpath;
+}
+
+char *pkgdir__make_idxpath(char *dpath, int dsize, const char *path,
+                           const char *type, const char *compress)
+{
+    return do_pkgdir__make_idxpath(dpath, dsize, path, type, compress, NULL);
 }
 
 
@@ -356,6 +370,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 
 {
     char                        idxpath[PATH_MAX];
+    const char                  *fn;
     struct pkgdir               *pkgdir;
     const struct pkgdir_module  *mod;
     int                         rc;
@@ -375,8 +390,15 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 
     DBGF("pkgdir_open_ext[%s] %s, %s%s\n", type, path,
          pkg_prefix ? "prefix = ":"", pkg_prefix ? pkg_prefix : "", pkgdir);
-    pkgdir__make_idxpath(idxpath, sizeof(idxpath), path, type, compress);
-    
+
+    fn = NULL;
+    do_pkgdir__make_idxpath(idxpath, sizeof(idxpath), path, type,
+                            compress, &fn);
+
+    /* fn with subdir -> make prefix without it */
+    if (fn && strchr(fn, '/') && pkg_prefix == NULL)
+        pkg_prefix = path;
+
     if (pkg_prefix) 
         pkgdir->path = n_strdup(pkg_prefix);
 
@@ -385,7 +407,6 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 
     else
         pkgdir->path = n_strdup(idxpath);
-
     
     pkgdir->idxpath = n_strdup(idxpath);
     pkgdir->compress = compress ? n_strdup(compress) : NULL;
@@ -707,7 +728,8 @@ int do_create(struct pkgdir *pkgdir, const char *type,
     }
 
     if (pkgdir->mod->create == NULL) {
-        logn(LOGERR, _("%s: this type of source could not be created"), type);
+        logn(LOGERR, _("%s: repository could not be created (missing "
+                       "feature)"), type);
         return 0;
     }
 
@@ -803,11 +825,15 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
 
         orig_path = path ? path : idxpath ? idxpath : pkgdir->path;
         n_assert(orig_path);
-        n_snprintf(orig_name, sizeof(orig_name), "previous %s", 
-                   vf_url_slim_s(orig_path, 0));
+        
+        if (access(orig_path, R_OK) == 0) {
+            n_snprintf(orig_name, sizeof(orig_name), "previous %s", 
+                       vf_url_slim_s(orig_path, 0));
 
-        orig = pkgdir_open_ext(orig_path, pkgdir->path, type,
-                               orig_name, NULL, 0, pkgdir->lc_lang);
+            orig = pkgdir_open_ext(orig_path, pkgdir->path, type,
+                                   orig_name, NULL, 0, pkgdir->lc_lang);
+        }
+        
         if (orig && pkgdir_load(orig, NULL, 0) <= 0) {
             pkgdir_free(orig);
             orig = NULL;

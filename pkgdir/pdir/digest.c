@@ -66,7 +66,7 @@ struct pdir_digest *pdir_digest_new(const char *path, int vfmode,
         
         n = pdir_mkdigest_path(mdpath, sizeof(mdpath), path, ext);
         vfmode |= VFM_NOEMPTY;
-        if ((vf = vfile_open_sl(mdpath, VFT_IO, vfmode, pdir_name)) == NULL)
+        if ((vf = vfile_open_ul(mdpath, VFT_IO, vfmode, pdir_name)) == NULL)
             return NULL;
     }
     

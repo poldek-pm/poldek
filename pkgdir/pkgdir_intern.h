@@ -45,6 +45,8 @@ typedef int (*pkgdir_fn_unlink)(const char *path, int allfiles);
 typedef void (*pkgdir_fn_free)(struct pkgdir *pkgdir);
 
 typedef const char *(*pkgdir_fn_localidxpath)(struct pkgdir *pkgdir);
+typedef int (*pkgdir_fn_setpaths)(struct pkgdir *pkgdir,
+                                  const char *path, const char *pkg_prefix);
 
 struct pkgdir_module {
     unsigned                    cap_flags;
@@ -54,15 +56,15 @@ struct pkgdir_module {
     char                        *default_fn;
     char                        *default_compr;
 
-    pkgdir_fn_open         open;
-    pkgdir_fn_load         load;
-    pkgdir_fn_create       create;
-    pkgdir_fn_update       update;
-    pkgdir_fn_update_a     update_a;
-    pkgdir_fn_unlink       unlink;
-    pkgdir_fn_free         free;
-    pkgdir_fn_localidxpath localidxpath;
-	
+    pkgdir_fn_open          open;
+    pkgdir_fn_load          load;
+    pkgdir_fn_create        create;
+    pkgdir_fn_update        update;
+    pkgdir_fn_update_a      update_a;
+    pkgdir_fn_unlink        unlink;
+    pkgdir_fn_free          free;
+    
+    pkgdir_fn_localidxpath  localidxpath;
     int (*posthook_diff) (struct pkgdir*, struct pkgdir*, struct pkgdir*);
 };
 
