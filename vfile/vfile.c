@@ -110,7 +110,21 @@ void vfile_configure(const char *cachedir, int flags)
 #define ZLIB_TRACE 0
 
 #ifdef HAVE_FOPENCOOKIE
-#if __GNUC_PREREQ (2,2)
+
+#ifndef __GLIBC_MINOR__
+# error "glibc2 or later is required"
+#endif
+
+#ifndef __GLIBC_PREREQ
+# if defined __GLIBC__ && defined __GLIBC_MINOR__
+#  define __GLIBC_PREREQ(maj, min) \
+       ((__GLIBC__ << 16) + __GLIBC_MINOR__ >= ((maj) << 16) + (min))
+# else
+#  define __GLIBC_PREREQ(maj, min) 0
+# endif
+#endif /* __GLIBC_PREREQ */
+
+#if __GLIBC_PREREQ(2,2)
 int gzfseek(void *stream, _IO_off64_t *offset, int whence)
 {
     z_off_t off = *offset;
@@ -124,7 +138,9 @@ int gzfseek(void *stream, _IO_off64_t *offset, int whence)
 #endif    
     return rc;
 }
-#else
+
+#else  /* glibc < 2.2 */
+
 int gzfseek(void *stream, _IO_off_t offset, int whence) 
 {
     int rc;
@@ -135,7 +151,7 @@ int gzfseek(void *stream, _IO_off_t offset, int whence)
 
     return rc;
 }
-#endif /* __GNUC_PREREQ */
+#endif /* __GLIBC_PREREQ(2,2) */
 
 #if ZLIB_TRACE
 int gzread_wrap(void *stream, char *buf, size_t size)
