@@ -715,7 +715,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
         return 1;
     }
     
-    
+    DBGF("spkg %s\n", db_dep->spkg ? pkg_snprintf_s(db_dep->spkg) : "NO");
     req = db_dep->req;
 
     // still satisfied by db? 
@@ -724,8 +724,14 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
         DBG("  [1] -> satisfied by db\n");
         return 1;
     }
-    	
-    
+
+    if (db_dep->spkg && installset_provides(db_dep->spkg, req, ps, upg)) {
+        if (verbose > 1)
+            logn(LOGWARN, "cap %s satisfied by install set, shouldn't happen",
+                 capreq_snprintf_s(req));
+        DBGF("cap %s satisfied by install set\n", capreq_snprintf_s(req));
+        return 1;
+    }
     
     if (db_dep->spkg && !marked_for_removal_by_req(db_dep->spkg, req, upg) &&
         !other_version_marked(db_dep->spkg, ps->pkgs, req)) {
@@ -742,6 +748,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     if (db_dep->flags & PROCESS_AS_NEW) {
         int i, n;
         char errmsg[4096];
+
         n = n_snprintf(errmsg, sizeof(errmsg), _("%s is required by"), 
                      capreq_snprintf_s(req));
         
