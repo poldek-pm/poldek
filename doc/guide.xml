@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+<!ENTITY poldek "<application>poldek</application>">
+<!ENTITY rpm "<application>rpm</application>">
+]>
+<article lang="en">
+<articleinfo>
+<title>&poldek; Guide </title>
+
+<authorgroup>
+<author>
+<firstname></firstname>
+<surname></surname>
+</author>
+</authorgroup>
+
+<date>$Date$</date>
+<releaseinfo>$Revision$</releaseinfo>
+
+<keywordset>
+<keyword>package management</keyword>
+<keyword>RPM</keyword>
+<keyword>APT</keyword>
+<keyword>apt-get</keyword>
+<keyword>poldek</keyword>
+<keyword>PLD</keyword>
+</keywordset>
+
+</articleinfo>
+
+<sect1 id="overview">
+<title>Overview</title>
+<para>
+The &poldek; is the packages management utility. Its basic features are similar 
+to every modern package updater like <emphasis>apt-get</emphasis> -- program takes 
+information about packages from package repositories (aka <emphasis>sources</emphasis>) 
+and allows package installation, upgrading and removal. </para>
+
+<para>
+Package dependencies are automatically handled, so if you need to install a package 
+which requires other packages to be installed, poldek downloads and  installs all 
+the required packages by itself. 
+</para>
+</sect1>
+</article>
