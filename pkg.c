@@ -312,11 +312,35 @@ struct pkg *pkg_ldrpm(const char *path, unsigned ldflags)
     return pkg;
 }
 
-
 int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2) 
 {
     return strcmp(p1->name, p2->name);
 }
+
+int pkg_strcmp_ver(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc = 0;
+
+    if ((rc = p1->epoch - p2->epoch))
+        return rc;
+
+    return strcmp(p1->ver, p2->ver);
+}
+
+
+int pkg_strcmp_evr(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc = 0;
+
+    if ((rc = p1->epoch - p2->epoch))
+        return rc;
+
+    if ((rc = strcmp(p1->ver, p2->ver) == 0))
+        rc = strcmp(p1->rel, p2->rel);
+
+    return rc;
+}
+
 
 int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2) 
 {

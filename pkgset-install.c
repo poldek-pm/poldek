@@ -238,31 +238,47 @@ struct pkg *find_pkg(const char *name, tn_array *pkgs,
 }
 
 
-static int select_best_pkg(struct pkg **candidates,  int npkgs) 
+static
+int select_best_pkg(const struct pkg *marker,
+                    struct pkg **candidates, int npkgs)
 {
-    int *ncnfls, i, i_min, cnfl_min;
+    int *ncnfls, i, j, i_min, cnfl_min;
+    int i_ver_eq = -1, i_evr_eq = -1;
 
     ncnfls = alloca(npkgs * sizeof(*ncnfls));
     for (i=0; i < npkgs; i++)
         ncnfls[i] = 0;
         
-    for (i=0; i<npkgs; i++) {
+    for (i=0; i < npkgs; i++) {
         struct pkg *pkg = candidates[i];
-        
-        if (pkg->cnflpkgs == NULL)
-            return 0;
-        
-        for (i = 0; i < n_array_size(pkg->cnflpkgs); i++) {
-            struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, i);
-            if (pkg_is_marked(cpkg->pkg))
-                ncnfls[i]++;
-        }
+
+        DBGF("%d. %s %s\n", i, 
+             pkg_snprintf_s(marker), pkg_snprintf_s0(pkg));
+
+        if (i_evr_eq == -1 && pkg_cmp_evr(marker, pkg) == 0)
+            i_evr_eq = i;
+
+        if (i_ver_eq == -1 && pkg_cmp_ver(marker, pkg) == 0)
+            i_ver_eq = i;
+
+        if (pkg->cnflpkgs != NULL)
+            for (j = 0; j < n_array_size(pkg->cnflpkgs); j++) {
+                struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
+                if (pkg_is_marked(cpkg->pkg))
+                    ncnfls[i]++;
+            }
     }
+
+    if (i_evr_eq > -1 && ncnfls[i_evr_eq] == 0)
+        return i_evr_eq;
+
+    if (i_ver_eq > -1 && ncnfls[i_ver_eq] == 0)
+        return i_ver_eq;
     
     cnfl_min = INT_MAX;
     i_min = -1;
-    for (i=0; i<npkgs; i++) {
-        //DBGF("%d. %s %d\n", i, pkg_snprintf_s(candidates[i]), ncnfls[i]);
+    for (i=0; i < npkgs; i++) {
+        DBGF("%d. %s %d\n", i, pkg_snprintf_s(candidates[i]), ncnfls[i]);
         if (cnfl_min > ncnfls[i]) {
             cnfl_min = ncnfls[i];
             i_min = i;
@@ -302,7 +318,7 @@ int find_req(const struct pkg *pkg, struct capreq *req, struct pkgset *ps,
             
             /* already not marked for upgrade */
             if (nmatches > 0 && !one_is_marked(matches, nmatches)) {
-                *mpkg = matches[select_best_pkg(matches, nmatches)];
+                *mpkg = matches[select_best_pkg(pkg, matches, nmatches)];
 
                 if (nmatches > 1 && candidates) {
                     struct pkg **pkgs;
