@@ -34,7 +34,7 @@ inline static int deftype(const char *str)
         if (isspace(*str) || *str == '&') 
             return 0;
         
-        if (*str == '*' || *str == '?')
+        if (strchr("?*[", *str))
             return PKGDEF_PATTERN;
         str++;
     }
