@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
-"POT-Creation-Date: 2002-03-19 22:38+0100\n"
+"POT-Creation-Date: 2002-03-25 17:43+0100\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: \n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -220,11 +220,11 @@ msgstr "U¿yj DIR jako /"
 #: main.c:277
 msgid ""
 "Prevent packages listed from being upgraded if they are already installed."
-msgstr ""
+msgstr "Nie aktualizuj wymienionych pakietów je¿eli takie s± zainstalowane"
 
 #: main.c:280
 msgid "Don't take held packages from $HOME/.poldek_hold."
-msgstr ""
+msgstr "Nie czytaj $HOME/.poldek_hold."
 
 #: main.c:283 shell/install.c:49
 msgid ""
@@ -243,6 +243,8 @@ msgstr ""
 #: main.c:293 shell/install.c:43
 msgid "Upgrade packages, but only if an earlier version currently exists"
 msgstr ""
+"Aktualizuj pakiety tylko w przypadku gdy wcze¶nijesza ich wersja jest "
+"zainstalowana"
 
 #: main.c:296
 msgid "Don't automatically install packages required by installed ones"
@@ -270,11 +272,11 @@ msgstr ""
 
 #: main.c:314 shell/install.c:42
 msgid "Don't install, but tell if it would work or not"
-msgstr ""
+msgstr "Nie instaluj, tylko sprawd¼ czy instalacja przebiegnie pomy¶lnie"
 
 #: main.c:317
 msgid "make %{_dbpath} if not exists"
-msgstr ""
+msgstr "utwórz katalog %{_dbpath} je¿eli tan nie instnieje"
 
 #: main.c:320
 msgid "Interactive mode:"
@@ -442,40 +444,44 @@ msgstr ""
 msgid "--v016 has no effect in this mode"
 msgstr ""
 
-#: main.c:1424
+#: main.c:1419
+msgid "root privileges are required in install-dist mode"
+msgstr ""
+
+#: main.c:1430
 msgid "no packages to install"
 msgstr "nie podano pakietów do instalacji"
 
-#: main.c:1432
+#: main.c:1438
 msgid "this option upgrades whole system, not given packages"
 msgstr "opcja ta aktualizuje ca³o¶æ, nie podane pakiety"
 
-#: main.c:1440
+#: main.c:1446
 msgid "missing split size"
 msgstr ""
 
-#: main.c:1445
+#: main.c:1451
 msgid "split size too small"
 msgstr "rozmiar zbyt ma³y"
 
-#: main.c:1450
+#: main.c:1456
 msgid "first free space bigger than chunk size"
 msgstr ""
 
-#: main.c:1488
+#: main.c:1494
 #, c-format
 msgid "There seems another poldek%s uses %s"
 msgstr "Oj, jaki¶ inny poldek%s u¿ywa %s"
 
-#: main.c:1509
+#: main.c:1515
 msgid "no packages specified"
 msgstr "nie podano pakietów"
 
-#: main.c:1524
+#: main.c:1530
 msgid "I'm set*id'ed, give up"
 msgstr "Mam ustawiony bit suid/sgid, wymiêkam"
 
-#: main.c:1529
+#: main.c:1535
 msgid "Running me as root is not a good habbit"
 msgstr ""
 
@@ -494,37 +500,37 @@ msgstr "$TMPDIR (%s): %m, przyjêto /tmp"
 msgid "$TMPDIR (%s): not a directory, using /tmp"
 msgstr "$TMPDIR (%s): nie ma takiego katalogu, przyjêto /tmp"
 
-#: misc.c:221
+#: misc.c:222
 #, c-format
 msgid "%s (%s) contains non alphanumeric characters"
 msgstr "%s (%s) zawiera znaki nie alfanumeryczne"
 
-#: misc.c:232
+#: misc.c:233
 #, c-format
 msgid "%s (%s): %m, using /tmp"
 msgstr ""
 
-#: misc.c:235
+#: misc.c:236
 #, c-format
 msgid "%s (%s): not a directory"
 msgstr "%s (%s): nie ma takiego katalogu"
 
-#: misc.c:238
+#: misc.c:239
 #, c-format
 msgid "%s (%s): permission denied"
 msgstr "%s (%s): brak dostêpu"
 
-#: misc.c:398 shell/install.c:186
+#: misc.c:399 shell/install.c:186
 #, c-format
 msgid "%s: no such directory"
 msgstr "%s: nie ma takiego katalogu"
 
-#: misc.c:403
+#: misc.c:404
 #, c-format
 msgid "%s: mkdir: permission denied"
 msgstr "%s: mkdir: brak dostêpu"
 
-#: misc.c:421
+#: misc.c:422
 #, c-format
 msgid "%d package"
 msgid_plural "%d packages"
@@ -557,7 +563,7 @@ msgstr "%s: odczyt nag³ówka siê nie powiód³"
 msgid "%s: reject source package"
 msgstr "%s: pakietów ¼ród³owych nie prowadzimy"
 
-#: pkg.c:439
+#: pkg.c:463
 #, c-format
 msgid "duplicated %s"
 msgstr "zdublowany %s"
@@ -763,99 +769,99 @@ msgstr "%s: wielokrotnie zainstalowany, poddajê siê"
 msgid "%s: refusing to upgrade held package"
 msgstr "%s: odmawiam aktualizacji wstrzymanego (hold) pakietu"
 
-#: pkgset-install.c:363
+#: pkgset-install.c:379
 msgid "cap"
 msgstr "w³."
 
-#: pkgset-install.c:368
+#: pkgset-install.c:384
 msgid "orphaned "
 msgstr "'osierocony' "
 
-#: pkgset-install.c:371
+#: pkgset-install.c:387
 msgid "cnfl"
 msgstr "konfl."
 
-#: pkgset-install.c:373
+#: pkgset-install.c:389
 #, c-format
 msgid "%s%s marks %s (%s %s)"
 msgstr "%s%s zaznaczy³ %s (%s %s)"
 
-#: pkgset-install.c:417
+#: pkgset-install.c:433
 #, c-format
 msgid "%s: skip follow %s cause it's dependency errors"
 msgstr "%s: pominiêty %s z powodu niespe³nionych zale¿no¶ci"
 
-#: pkgset-install.c:426
+#: pkgset-install.c:442
 #, c-format
 msgid "%s: dependency loop - package already marked for removal"
 msgstr "%s: zapêtlenie zale¿no¶ci -- pakiet jest ju¿ zaznaczony do usuniêcia"
 
-#: pkgset-install.c:447
+#: pkgset-install.c:463
 #, c-format
 msgid "greedy upgrade %s to %s-%s (unresolved %s)"
 msgstr "zach³anna aktualizacja %s do %s-%s (niespe³nione %s)"
 
-#: pkgset-install.c:555
+#: pkgset-install.c:571
 #, c-format
 msgid "%s is required by"
 msgstr "%s jest wymagany przez"
 
-#: pkgset-install.c:598
+#: pkgset-install.c:614
 #, c-format
 msgid "%s (cap %s) is required by %s"
 msgstr "%s (w³. %s) jest wymagany przez %s"
 
-#: pkgset-install.c:632
+#: pkgset-install.c:648
 #, c-format
 msgid "%s obsoleted by %s"
 msgstr "%s zostanie zast±piony przez %s"
 
-#: pkgset-install.c:816
+#: pkgset-install.c:832
 #, c-format
 msgid "%s (cap %s) is required by %s%s"
 msgstr "%s (w³. %s) jest wymagany przez %s%s"
 
-#: pkgset-install.c:831 pkgset-req.c:157
+#: pkgset-install.c:847 pkgset-req.c:157
 #, c-format
 msgid "%s: req %s not found"
 msgstr "%s: nie znaleziono wymaganego %s"
 
-#: pkgset-install.c:859
+#: pkgset-install.c:875
 #, c-format
 msgid "%s is required by %s"
 msgstr "%s jest wymagany przez %s"
 
-#: pkgset-install.c:1010
+#: pkgset-install.c:1026
 #, c-format
 msgid "%s: /%s/%s%s: conflicts with %s's one"
 msgstr "%s: /%s/%s%s: jest w konflicie z tym samym plikem z %s"
 
-#: pkgset-install.c:1125
+#: pkgset-install.c:1141
 #, c-format
 msgid "%s (cnfl %s) conflicts with installed %s"
 msgstr "%s (cnfl %s) jest w konflicie z zainstalowanm %s"
 
-#: pkgset-install.c:1156
+#: pkgset-install.c:1172
 #, c-format
 msgid "%s (cap %s) conflicts with installed %s (%s)"
 msgstr "%s (w³. %s) jest w konflicie z zainstalowanm %s (%s)"
 
-#: pkgset-install.c:1183
+#: pkgset-install.c:1199
 #, c-format
 msgid "%s conflicts with %s"
 msgstr "%s jest w konflicie z %s"
 
-#: pkgset-install.c:1335
+#: pkgset-install.c:1351
 #, c-format
 msgid "%s: package is for a different architecture (%s)"
 msgstr "%s: pakiet zbudowano dla innej architektury (%s)"
 
-#: pkgset-install.c:1341
+#: pkgset-install.c:1357
 #, c-format
 msgid "%s: package is for a different operating system (%s)"
 msgstr "%s: pakiet zbudowano dla innego systemu operacyjnego (%s)"
 
-#: pkgset-install.c:1437 pkgset-install.c:1444
+#: pkgset-install.c:1453 pkgset-install.c:1460
 #, c-format
 msgid "_ (%d marked by dependencies)"
 msgid_plural "_ (%d marked by dependencies)"
@@ -863,7 +869,7 @@ msgstr[0] "_ (%d zaznaczony po¶rednio)"
 msgstr[1] "_ (%d zaznaczone po¶rednio)"
 msgstr[2] "_ (%d zaznaczonych po¶rednio)"
 
-#: pkgset-install.c:1440
+#: pkgset-install.c:1456
 #, c-format
 msgid "There are %d package to install"
 msgid_plural "There are %d packages to install"
@@ -871,47 +877,47 @@ msgstr[0] "Zaznaczono %d pakiet do instalacji"
 msgstr[1] "Zaznaczono %d pakiety do instalacji"
 msgstr[2] "Zaznaczono %d pakietów do instalacji"
 
-#: pkgset-install.c:1449
+#: pkgset-install.c:1465
 #, c-format
 msgid "_, %d to uninstall"
 msgstr "_, %d do usuniêcia"
 
-#: pkgset-install.c:1490
+#: pkgset-install.c:1506
 #, c-format
 msgid "%s: refusing to uninstall held package"
 msgstr "%s: odmawiam usuniêcia wstrzymanego (hold) pakietu"
 
-#: pkgset-install.c:1543
+#: pkgset-install.c:1559
 msgid "Processing dependencies..."
 msgstr "Przetwarzanie zale¿no¶ci..."
 
-#: pkgset-install.c:1621
+#: pkgset-install.c:1637
 msgid "Proceed? [Y/n]"
 msgstr "Kontynuowaæ? [Y/n]"
 
-#: pkgset-install.c:1695
+#: pkgset-install.c:1711
 msgid "db package header corrupted (!?)"
 msgstr "uszkodzony nag³ówek pakietu z bazy (!?)"
 
-#: pkgset-install.c:1724
+#: pkgset-install.c:1740
 #, c-format
 msgid "%s: multiple instances installed, skipped"
 msgstr "%s: wielokrotnie zainstalowany, zosta³ pominiêty"
 
-#: pkgset-install.c:1734
+#: pkgset-install.c:1750
 #, c-format
 msgid "%s: skip held package"
 msgstr "%s: pomijam wstrzymany (hold) pakiet"
 
-#: pkgset-install.c:1761
+#: pkgset-install.c:1777
 msgid "Looking up packages for upgrade..."
 msgstr "Szukam pakietów do aktualizacji..."
 
-#: pkgset-install.c:1766
+#: pkgset-install.c:1782
 msgid "There are database errors (?), give up"
 msgstr "Wyst±pi³y b³êdy rpmowej bazy (?), wymiêkam"
 
-#: pkgset-install.c:1774
+#: pkgset-install.c:1790
 msgid "Nothing to do"
 msgstr "Nie ma roboty"
 
@@ -976,7 +982,7 @@ msgstr "%d niespe³nionych zale¿no¶ci, %d pakiet(ów)"
 msgid "%s: provides rpmlib cap \"%s\""
 msgstr "%s zawiera rpmlib()ow± w³asno¶æ \"%s\""
 
-#: pkgset.c:449
+#: pkgset.c:450
 #, c-format
 msgid "Removed %d duplicate package from available set"
 msgid_plural "Removed %d duplicate packages from available set"
@@ -984,7 +990,7 @@ msgstr[0] "Usuniêto %d zdublowany pakiet z listy dostêpnych"
 msgstr[1] "Usuniêto %d zdublowane pakiety z listy dostêpnych"
 msgstr[2] "Usuniêto %d zdublowanych pakietów z listy dostêpnych"
 
-#: pkgset.c:459
+#: pkgset.c:460
 msgid ""
 "\n"
 "Verifying files conflicts..."
@@ -992,7 +998,7 @@ msgstr ""
 "\n"
 "Sprawdzanie konfliktów plikowych..."
 
-#: pkgset.c:467
+#: pkgset.c:475
 msgid ""
 "\n"
 "Verifying packages conflicts..."
@@ -1000,71 +1006,81 @@ msgstr ""
 "\n"
 "Sprawdzanie konfliktów..."
 
-#: pkgset.c:492
+#: pkgset.c:500
 #, c-format
 msgid "%s marks %s"
 msgstr "%s zaznaczy³ %s"
 
-#: pkgset.c:550
+#: pkgset.c:558
 #, c-format
 msgid "%s: broken dependencies"
 msgstr "%s: niespe³nione zale¿no¶ci"
 
-#: pkgset.c:560
+#: pkgset.c:568
 #, c-format
 msgid "conflict between %s and %s"
 msgstr "konflikt pomiêdzy %s i %s"
 
-#: pkgset.c:661
+#: pkgset.c:697
+#, c-format
+msgid " %d of %d (%.2f of %.2f MB) packages done"
+msgstr ""
+
+#: pkgset.c:703
+#, c-format
+msgid "; %.2f MB to download"
+msgstr ""
+
+#: pkgset.c:710
 msgid "there were errors during install"
 msgstr "wyst±pi³y b³êdy podczas instalacji"
 
-#: pkgset.c:698
+#: pkgset.c:747
 #, c-format
 msgid "mark: %s: broken dependencies"
 msgstr "mark: %s: niespe³nione zale¿no¶ci"
 
-#: pkgset.c:702
+#: pkgset.c:751
 #, c-format
 msgid "mark %s"
 msgstr "zazn. %s"
 
-#: pkgset.c:762
+#: pkgset.c:811
 #, c-format
 msgid "mark: %s not found"
 msgstr "mark: nie znaleziono %s"
 
-#: pkgset.c:789
+#: pkgset.c:838
 #, c-format
 msgid "mark: %s: versions not match"
 msgstr "mark: %s: nie mo¿na dopasowaæ wersji"
 
-#: pkgset.c:827
+#: pkgset.c:876
 #, c-format
 msgid "mark: %s: no such package found"
 msgstr "mark: %s: nie znaleziono takiego pakietu"
 
-#: pkgset.c:863
+#: pkgset.c:912
 #, c-format
 msgid "virtual %s: default package expected"
 msgstr "virtual %s: spodziewany domy¶lny pakiet"
 
-#: pkgset.c:871
+#: pkgset.c:920
 #, c-format
 msgid "virtual %s not found"
 msgstr "nie znaleziono metapakietu %s"
 
-#: pkgset.c:886
+#: pkgset.c:935
 #, c-format
 msgid "%s: missing default package, using %s"
 msgstr "%s: brak domy¶lnego pakietu, przyjêto %s"
 
-#: pkgset.c:902
+#: pkgset.c:951
 #, c-format
 msgid "%s: default package %s not found, using %s"
 msgstr "%s: brak domy¶lnego pakietu, przyjêto %s"
 
-#: pkgset.c:932
+#: pkgset.c:981
 msgid ""
 "\n"
 "Processing dependencies..."
@@ -1072,11 +1088,11 @@ msgstr ""
 "\n"
 "Przetwarzanie zale¿no¶ci..."
 
-#: pkgset.c:938
+#: pkgset.c:987
 msgid "Buggy package set."
 msgstr "Zestaw pakietów zawiera b³êdy"
 
-#: pkgset.c:941
+#: pkgset.c:990
 msgid "Package set OK"
 msgstr "Zestaw pakietów jest OK"
 
@@ -1550,21 +1566,26 @@ msgstr "program zakoñczy³ siê z niezerowym wynikiem"
 msgid "%s (%d) died under inscrutable circumstances"
 msgstr "$s (%d) zgin±³ w podejrzanych okoliczno¶ciach"
 
-#: vfile/vfcurl.c:433
+#: vfile/vfcurl.c:313 vfile/vfvftp.c:92
+#, c-format
+msgid "Retrying...(#%d)\n"
+msgstr "Ponowna próba...(#%d)\n"
+
+#: vfile/vfcurl.c:482
 msgid "Done\n"
 msgstr "Zrobione\n"
 
-#: vfile/vfile.c:244 vfile/vfile.c:276
+#: vfile/vfile.c:225 vfile/vfile.c:257
 #, c-format
 msgid "Retrieving %s...\n"
 msgstr "Pobieranie %s...\n"
 
-#: vfile/vfile.c:535
+#: vfile/vfile.c:516
 #, c-format
 msgid "Give up (#%d)...\n"
 msgstr "Wymiêkam (#%d)...\n"
 
-#: vfile/vfile.c:539
+#: vfile/vfile.c:520
 #, c-format
 msgid "Retrying %s (#%d)...\n"
 msgstr "Ponowne pobieranie %s (#%d)...\n"
@@ -1574,78 +1595,73 @@ msgstr "Ponowne pobieranie %s (#%d)...\n"
 msgid "done\n"
 msgstr "zrobione\n"
 
-#: vfile/vftp/ftp.c:107
+#: vfile/vftp/ftp.c:119
 #, c-format
 msgid "write to socket %s: %m"
 msgstr ""
 
-#: vfile/vftp/ftp.c:182
+#: vfile/vftp/ftp.c:194
 #, c-format
-msgid "%s: response parse error at %s"
-msgstr "%s: b³±d interpretacji odpowiedzi w okolicach %s"
+msgid "response parse error: %s"
+msgstr "b³±d interpretacji odpowiedzi: %s"
 
-#: vfile/vftp/ftp.c:223 vfile/vftp/ftp.c:234
+#: vfile/vftp/ftp.c:234 vfile/vftp/ftp.c:245
 #, c-format
 msgid "%s: response parse error"
 msgstr "%s: b³±d interpretacji odpowiedzi"
 
-#: vfile/vftp/ftp.c:327
+#: vfile/vftp/ftp.c:335
 msgid "response line too long"
 msgstr "zybt d³uga linia w odpowiedzi"
 
-#: vfile/vftp/ftp.c:331
-#, c-format
-msgid "unexpected EOF: %m"
-msgstr "niespodziewany EOF: %m"
+#: vfile/vftp/ftp.c:345
+msgid "connection cancelled"
+msgstr "po³±czenie zosta³o przerwane"
 
-#: vfile/vftp/ftp.c:336
-msgid "timeout reached while waiting for server response"
-msgstr "up³yn±³ limit czasu oczekiwania"
-
-#: vfile/vftp/ftp.c:344
+#: vfile/vftp/ftp.c:350
 msgid "unexpected EOF"
 msgstr "niespodziewany EOF"
 
-#: vfile/vftp/ftp.c:472
+#: vfile/vftp/ftp.c:500
 #, c-format
 msgid "unable to connect to %s:%s: %s"
 msgstr "niemo¿no¶æ po³±czenia z %s:%s: %s"
 
-#: vfile/vftp/ftp.c:494
+#: vfile/vftp/ftp.c:529
 #, c-format
 msgid "unable to connect to %s:%s: %m"
 msgstr "niemo¿no¶æ po³±czenia z %s:%s: %m"
 
-#: vfile/vftp/ftp.c:556
+#: vfile/vftp/ftp.c:592
 #, c-format
 msgid "login failed: %s"
 msgstr "b³±d logowania: %s"
 
-#: vfile/vftp/ftp.c:557
+#: vfile/vftp/ftp.c:593
 msgid "unknown error"
 msgstr "b³±d nieokre¶lony"
 
-#: vfile/vftp/ftp.c:584
+#: vfile/vftp/ftp.c:623
 #, c-format
 msgid "Connecting to %s:%d...\n"
 msgstr "£±czenie z %s:%d...\n"
 
-#: vfile/vftp/ftp.c:644
+#: vfile/vftp/ftp.c:681
 #, c-format
 msgid "%s: PASV response parse error"
 msgstr "%s: b³±d interpretacji odpowiedzi PASV"
 
-#: vfile/vftp/ftp.c:653
+#: vfile/vftp/ftp.c:690
 #, c-format
-msgid "%s: address to long"
+msgid "%s: address too long"
 msgstr "%s: zbyt d³ugi adres"
 
-#: vfile/vftp/ftp.c:857
+#: vfile/vftp/ftp.c:892
 #, c-format
-msgid "%s: no such file (serv says: %s)"
+msgid "%s: no such file (serv said: %s)"
 msgstr "%s: nie ma takiego pliku (odpowied¼ serwera: %s)"
 
-#: vfile/vftp/vftp.c:96
+#: vfile/vftp/vftp.c:81
 #, c-format
 msgid "%s: URL parse error"
 msgstr "%s: b³±d interpretacji URLa"
