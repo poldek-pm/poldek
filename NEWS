@@ -1,18 +1,33 @@
 0.17.3 (not released yet)
 
-* added simple HTTP client which it is used for HTTP downloads by default;
+* new "type=[pidx|dir|hdrl]" source option lets define source 
+  type in configuration file. Needed to distinguish "hdlist" 
+  from "native" sources. 
+
+* support for "hdlist" sources in which information about packages 
+  is taken from file with raw RPM package headers. This format
+  is widely supported by RPM based distributions, so they are usable 
+  to poldek without direct poldek's support now. 
+  See poldekrc.sample-redhat-hdlist for an example RH 7.2 configuration,
+  on RedHat box just do: 
+
+  $ poldek --conf=poldekrc.sample-redhat-hdlist  
+
+* added simple HTTP client which it is used for HTTP downloads;
   cURL backend is not compiled by default.
 
 * support for GPG/PGP signatures verification (new "gpg" and "pgp" 
-  source options)
-
+  source options). Verification works with rpm >= 4.0.4 or patched 
+  PLD's rpm 4.0.2 (release 62 of the package). 
+   
 * vftp: URLs with user and password (ftp://user:passwd@host:port/path/ syntax) 
   are supported (Andreas Piesk <a.piesk@gmx.net>)
 
 * vftp: new "ftp_sysuser_as_anon_passwd" option causes sending 
   login@hostname as anonymous FTP password 
 
-* new "noautoup" source option
+* new "noautoup" source option tells poldek to do not update 
+  source by default. 
 
 * shell: added long listig format of file list ($ desc -ll)
 
@@ -20,6 +35,15 @@
 
 * fixed support for rpm 3.x (with help of Roger Luethi <rl@hellgate.ch>)
 
+* fixed and improved handling of bool configuration options, 
+  added on/off and enable/disable to the list of valid choices
+  (Andreas Piesk <a.piesk@gmx.net>)
+
+* fixed detection of file based conflicts between available packages. 
+
+* various bugs fixed:
+   - double '/' in paths handling
+   - SIGSEV   
 
 0.17.2
 * "ported" to RedHat 7.2 (with rpm 4.0.4)

@@ -14,13 +14,23 @@ poldek [--source=SOURCE ...]
 
 =head1 DESCRIPTION
 
-The poldek is designed to automate the verify, install and upgrade 
-of rpm packages. It can be used in two modes: batch and interactive. 
-It was inspired by L<apt-get(8)> from Debian's APT and by interactive mode 
-of Perl CPAN module ($ perl -MCPAN -e shell). 
+The poldek is the RPM package management tool. Its
+basic features are similar to every modern package updater like 
+I<apt-get> -- program takes information about packages from 
+package index file (I<packages.dir.gz> by default) and allows 
+to package install, upgrade and removal. 
 
-In general poldek gets packages information from special package index
-file (I<packages.dir.gz> by default) and performs one of the following actions:
+Program supports two modes: a batch mode (in use similar
+to I<apt-get> one) and I<interactive> one. The interactive 
+mode puts the user into a readline interface with command line 
+auto-completion and history, similar to shell mode of Perl's CPAN module.
+
+Remote files are retrieved from remote servers by poldek
+itself (internal FTP/HTTP client) or by external downloaders 
+(not configured by default, see L</CONFIG FILE>). 
+
+
+The poldek basic modes are:
 
 =over
 
@@ -40,9 +50,6 @@ file (I<packages.dir.gz> by default) and performs one of the following actions:
 
 =back
 
-Remote files can be retrieved from remote servers by poldek
-itself or by external downloaders (not configured by default, 
-see L</CONFIG FILE>). 
 
 =head2 Interactive Mode
 
@@ -67,14 +74,13 @@ B<--sdir> B<DIR>
 B<--shdrl> B<SOURCE>
 
 where SOURCE is a local path or URL. With B<--source> native package
-index file is used; with B<--sdir> desired directory is scanned 
-instead of reading index file, should be used for local directories only. 
-The last one B<--shdrl> can be used for taking package information from 
-file with raw package RPM headers (aka hdlist). 
+index file (packages.dir.gz) is used; with B<--sdir> desired directory 
+is scanned instead of reading index file, should be used for local 
+directories only. The last one B<--shdrl> can be used for taking package 
+information from file with raw package RPM headers (aka hdlist). 
 
 Type of the source can be set by B<type> source option also, 
 see L</CONFIG FILE>. 
-
 
 Examples:
 
@@ -84,7 +90,7 @@ Examples:
 
 =item $ poldek -s /dir/with/RPMS/packages.dir [OPTION...]
 
-=item $ poldek -s ftp://ftp.ala.ma.kota/RPMS
+=item $ poldek -s ftp://ftp.ala.ma.kota/RPMS/
 
 =item $ poldek --sdir=/ala/RPMS
 
@@ -112,6 +118,7 @@ $ poldek --sn pld ...
 To list all configured sources use B<-l, --sl> option: e.g:
 
 $ poldek -l
+
 =over
 
 =item nest         ftp://ftp.pld.org.pl/dists/nest/PLD/i686/PLD/RPMS/  (noauto)
@@ -414,8 +421,8 @@ Source type may be set by this option. Possible values are:
  
 =item * B<hdrl> - file with raw package headers in RPM format;
  available in many RPM-based distributions (named hdlist in RH), however 
- this format isn't optimal for poldek. See poldekrc.sample-redhat-hdlist 
- included in poldek distribution.
+ this format isn't optimal for poldek (is not updateable for example). 
+ See F<poldekrc.sample-redhat-hdlist> included in poldek distribution.
 
 =back 	
 
@@ -453,18 +460,23 @@ prefix1 = /mnt/cdrom/RPMS/
 
        See B<--cachedir> option description
 
-=item * B<use_sudo = yes|no> 
+=item * B<confirm_installs = yes|no>
 
-      For r/w operations run rpm using sudo. 
-      The default is "no", but it is recommended to change it to "yes" 
-      and use the poldek as ordinary user.
+        If "yes" program confirm all performed package installations (default: no)
 
+
+=item * B<choose_equivalents_manually = yes|no> 
+
+        If "yes" program let the user choose among equivalent packages (default: no)
 
 =item * B<follow = yes|no> 
 
        Automatically install|don't install packages required by 
        selected ones (default: yes)
 
+=item * B<ftp_sysuser_as_anon_passwd = yes|no> 
+       
+       If yes, login@hostname is send as anonymous FTP password (default: no)
 
 =item * B<greedy = yes|no> 
        
@@ -488,20 +500,18 @@ prefix1 = /mnt/cdrom/RPMS/
         downloaded packages from cache directory.
 
 
-=item * B<confirm_installs = yes|no>
-
-        If "yes" program confirm all performed package installations (default: no)
-
-
-=item * B<choose_equivalents_manually = yes|no> 
-
-        If "yes" program let the user choose among equivalent packages (default: no)
-        
-
 =item * B<particle_install = yes|no>
 
         If "no" installations of multiple packages are performed as one 
         transaction (default: yes)
+
+
+=item * B<use_sudo = yes|no> 
+
+      For r/w operations run rpm using sudo. 
+      The default is "no", but it is recommended to change it to "yes" 
+      and use the poldek as ordinary user.
+
 
 =back
 
@@ -613,6 +623,8 @@ $HOME is used to read config file.
 $TMPDIR (if set) is used as temporary directory if no cachedir 
 specified.
 
+$PAGER (if set) is used in interactive mode
+
 =head1 FILES
 
 /etc/poldek.conf 
@@ -638,10 +650,10 @@ In PLD I<http://www.pld.org.pl>, which is primary development
 platform for poldek, Obsoletes tag is used in two different meanings:
 the first means B<A> I<obsoletes> B<B>, the second means B<A> I<is
 equivalent of> B<B>. Obviously it makes impossible to distinguish them
-and use during upgrades (in Red Hat Linux the first mean is used only,
+and use during system upgrades (in Red Hat Linux the first mean is used only,
 so Red Hat Installer use this tag).
 
-=head2 Upgrade and more than one instance of the package
+=head2 Upgrade more than one instance of the package
 
 rpm doesn't handle this case, so poldek does not handle it also.
 
@@ -672,10 +684,14 @@ Pawel A. Gajda <mis@pld.org.pl>
 
 =head1 CONTACT
 
-Please send comments, bug reports, etc to the author.
+=head2 Homepage: I<http://team.pld.org.pl/~mis/poldek/>
+
+=head2 Mailing list I<poldek@pld-linux.org>
+
+Please send comments, bug reports, etc to the author or mailing list
 
 =head1 SEE ALSO
 
-L<apt(1)> <apt-get(8)>, L<curl(1)>, L<rpm(1)>, L<rsync(1)>, L<snarf(1)>, L<wget(1)>
+L<apt(1)> L<apt-get(8)>, L<curl(1)>, L<rpm(1)>, L<rsync(1)>, L<snarf(1)>, L<wget(1)>
 
-=cut
+ 

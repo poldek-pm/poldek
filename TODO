@@ -1,5 +1,8 @@
 # $Id$
 
+* mis 2002/04/07
+- vhttp: support for HTTP redirects and auth
+
 * mis 2002/03/14
 - more compact install_summary()
 - modify rpmlib API to allow to read rpmdb indexes 
@@ -12,17 +15,12 @@
 
 
 * mis  2000/09/20
-
 - patch wget, rsync and snarf to support syntax like:
   $ downloader --destdir=DIR --prefix=URLPREFIX [BASENAME...]
   
   Currently, except wget, no one support that, which forces poldek to 
   execute downloader for every file. Wget doesn't support --prefix
   like option, which makes cmdline longer than can be.   
-
-- patch wget and snarf to use non-standard, but widely supported 
-  MDTM ftp command for timestamping. Currently only wget supports 
-  timestamping but fetches file list for every file. 
 
 Long term:
 - Use external db for file list storage (custom binary format? modified cdb?). 

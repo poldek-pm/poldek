@@ -12,7 +12,7 @@
     <sect> Description
     <p>
 
-    The poldek is a RPM packages management helper tool; its
+    The poldek is the RPM packages management helper tool; its
     basic features are similar to every modern package updater like <em>apt-get</em> --
     program takes information about packages from package index file
     (<em>packages.dir.gz</em> by default) and allows to package 
@@ -45,11 +45,13 @@
    
     <item> Interactive mode 
     <p>
-    The poldek can works in two modes: a batch mode (in use similar to <em>apt-get</em> one)
-    and <em>interactive</em> mode. The interactive mode puts the user into a readline 
-    interface with command line auto-completion and history. 
-    In this mode user is able to browse, search, download, install/upgrade and 
-    deinstall packages. In its concept this is similar to shell mode of Perl's CPAN module
+    
+    The poldek can works in two modes: a batch mode (in use similar
+    to <em>apt-get</em> one) and <em>interactive</em> one. The interactive 
+    mode puts the user into a readline interface with command line auto-completion 
+    and history. In this mode user is able to browse, search, download,
+    install/upgrade and deinstall packages. In its concept this is similar 
+    to shell mode of Perl's CPAN module
     (see sample <url name="interactive mode session" 
               url="screenshoots.html#shell-session">).
 
