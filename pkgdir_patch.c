@@ -109,7 +109,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     diff->pkgroups = pkgroup_idx_link(pkgdir2->pkgroups);
     diff->flags = PKGDIR_DIFF;
     diff->ts_orig = pkgdir->ts;
-    diff->mdd_orig = strdup(pkgdir->pdg.mdd);
+    diff->mdd_orig = strdup(pkgdir->pdg->mdd);
     diff->vf = NULL;
     
     return diff;

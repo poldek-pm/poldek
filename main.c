@@ -90,8 +90,9 @@ struct split_conf {
 struct args {
     int       mjrmode;
     unsigned  mnrmode;
-
+    
     int       update_op;
+    int       v016compat;
     
     char      *curr_src_path;
     int       curr_src_ldmethod;
@@ -172,6 +173,8 @@ tn_hash *htcnf = NULL;          /* config file values */
 
 #define OPT_CONF                  'c'
 #define OPT_NOCONF                2002 
+#define OPT_LOG                   'l'
+#define OPT_V016                  2004
 
 /* The options we understand. */
 static struct argp_option options[] = {
@@ -315,7 +318,8 @@ N_("Don't take held packages from $HOME/.poldek_hold."), 71 },
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 500 }, 
 
 
-{"log", 'l', "FILE", 0, N_("Log program messages to FILE"), 500 },    
+{"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), 500 },
+{"v016", OPT_V016, 0, 0, N_("Read indexes created by versions < 0.17"), 500 },
 {0,  'v', 0, 0, N_("Be verbose."), 500 },
 {0,  'q', 0, 0, N_("Do not produce any output."), 500 },
 { 0, 0, 0, 0, 0, 0 },
@@ -362,7 +366,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         chkarg(key, arg);
     
     switch (key) {
-        case 'l':
+        case OPT_V016:
+            argsp->v016compat = 1;
+            argsp->update_op = OPT_UPDATEIDX_WHOLE;
+            break;
+
+        case OPT_LOG:
             argsp->log_path = arg;
             break;
             
@@ -759,6 +768,8 @@ void parse_options(int argc, char **argv)
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
+    pkgdir_v016compat = args.v016compat;
+
     if (args.noconf && args.conf_path) {
         logn(LOGERR, _("--noconf and --conf are exclusive, aren't they?"));
         exit(EXIT_FAILURE);
@@ -1131,13 +1142,13 @@ static int check_install_flags(void)
 }
 
 static
-int check_args(void) 
+int verify_args(void) 
 {
     int i, rc = 1;
 
 #ifdef ENABLE_INTERACTIVE_MODE
     if (args.mjrmode == MODE_NULL && args.mnrmode == MODE_NULL) 
-        args.mjrmode = MODE_SHELL;
+        args.mjrmode = MODE_SHELL; /* default is shell */
 #endif    
 
     switch (args.mjrmode) {
@@ -1161,6 +1172,11 @@ int check_args(void)
         case MODE_MKIDX:
             if (verbose >= 0)
                 verbose += 1;
+
+            if (args.v016compat) {
+                logn(LOGWARN, _("--v016 has no effect in this mode"));
+                args.v016compat = 0;
+            }
             
             n_assert(args.sources);
             for (i=0; i<n_array_size(args.sources); i++) {
@@ -1185,13 +1201,13 @@ int check_args(void)
             
         case MODE_UPGRADEDIST:
             if (args.has_pkgdef) {
-                logn(LOGERR, _("this option upgrades whole dist, not given packages"));
+                logn(LOGERR, _("this option upgrades whole system, not given packages"));
                 exit(EXIT_FAILURE);
             }
             rc = check_install_flags();
             break;
 
-        case MODE_SPLIT:
+        case MODE_SPLIT: 
             if (args.split_conf.size == 0) {
                 logn(LOGERR, _("missing split size"));
                 exit(EXIT_FAILURE);
@@ -1326,9 +1342,10 @@ int main(int argc, char **argv)
     if (!mklock())
         exit(EXIT_FAILURE);
     
-    if (!check_args())
+    if (!verify_args())
         exit(EXIT_FAILURE);
 
+    pkgdir_v016compat = args.v016compat;
     poldek_init();
     rpm_initlib(args.inst.rpmacros);
     
@@ -1337,8 +1354,6 @@ int main(int argc, char **argv)
 
         if (verbose >= 0) 
             verbose++;
-        //if (verbose < 1 && verbose != -1)
-        //verbose = 1;
         
         if (!update_idx())
             exit(EXIT_FAILURE);

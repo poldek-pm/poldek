@@ -12,7 +12,9 @@
 #define PKGDIR_LDFROM_DIR         (1 << 1)
 #define PKGDIR_LDFROM_DB          (1 << 2)
 
-#define PKGDIR_LOADED             (1 << 4) /* for idx */
+#define PKGDIR_LOADED             (1 << 4)  /* for idx */
+#define PKGDIR_VERIFIED           (1 << 5)  /* to avoid double verification
+                                               during --update */
 
 #define PKGDIR_DIFF               (1 << 8)  /* is patch */
 #define PKGDIR_PATCHED            (1 << 9)  /* patched  */
@@ -23,22 +25,24 @@
 
 #define PDIGEST_SIZE DIGEST_SIZE_SHA1
 
-#define PDIGEST_MODE_DEFAULT      (0 << 1)
-#define PDIGEST_MODE_v016         (0 << 2)
-#define PDIGEST_MODE_v016_COMPAT  (0 << 3)
+#define PDIGEST_MODE_DEFAULT      (1 << 1)
+#define PDIGEST_MODE_v016         (1 << 2)
 
 struct pdigest {
-    unsigned  mode;
-    char      mdh[PDIGEST_SIZE + 1]; /* header */
-    char      mdd[PDIGEST_SIZE + 1]; /* data */
-    char      *md;                   /* digest of whole data, v016 compat */
+    struct vfile  *vf;
+    unsigned      mode;
+    char          mdh[PDIGEST_SIZE + 1]; /* header */
+    char          mdd[PDIGEST_SIZE + 1]; /* data */
+    char          *md;                   /* digest of whole data, v016 compat */
 };
+
+extern int pkgdir_v016compat;
 
 struct pkgdir {
     char                 *name;
     char                 *path;            /* path | URL        */
     char                 *idxpath;         /* path | URL        */
-    struct pdigest       pdg;
+    struct pdigest       *pdg;
     tn_array             *pkgs;            /* struct *pkg[]     */
     
     tn_array             *depdirs;         /* char *[]          */
@@ -46,7 +50,6 @@ struct pkgdir {
                                             but presented in other pkgdirs */
     struct pkgroup_idx  *pkgroups;
     struct vfile        *vf;              /* packages.dir.gz  handle */
-    struct vfile        *vfmd;            /* packages.dir.mdd handle */
     unsigned            flags;
     time_t              ts;               /* timestamp */
 
@@ -118,30 +121,32 @@ extern const char *default_pkgidx_name;
 #define FILEFMT_MINOR 0
 
 extern const char *pdigest_ext;
-
-#define PDIGEST_SIZEx2 (2 * PDIGEST_SIZE)
-
-int pdigest_init(struct pdigest *pdg, char *mdbuf, int size);
-
-int pdigest_read(struct pdigest *pdg, int fd, const char *path);
-int pdigest_readvf(struct pdigest *pdg, struct vfile *vfmd);
-
-int pdigest_verify(struct pdigest *pdg, struct vfile *vf);
-
-
-int pkgdir_uniq(struct pkgdir *pkgdir);
-
-int i_pkgdir_creat_md5(const char *pathname);
-int i_pkgdir_verify_md5(const char *title, const char *pathname);
-
-
-int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
-                          int with_md);
-struct vfile *i_pkgdir_open_digest(const char *path, int vfmode);
-//int i_pkgdir_is_uptodate(const char *path, struct pdigest *pdg);
+extern const char *pdigest_ext_v016;
 
 int mkdigest_path(char *path, int size, const char *pathname, const char *ext);
 
+#define PDIGEST_SIZEx2 (2 * PDIGEST_SIZE)
+
+struct pdigest *pdigest_new(const char *path, int vfmode, int v016compat);
+void pdigest_free(struct pdigest *pdg);
+
+void pdigest_init(struct pdigest *pdg);
+void pdigest_destroy(struct pdigest *pdg);
+
+int pdigest_fill(struct pdigest *pdg, char *mdbuf, int size);
+
+int pdigest_readfd(struct pdigest *pdg, int fd, const char *path);
+
+int pdigest_verify(struct pdigest *pdg, struct vfile *vf);
+
+int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
+                          int with_md);
+
+int pkgdir_uniq(struct pkgdir *pkgdir);
+
+
+int i_pkgdir_creat_md5(const char *pathname);
+int i_pkgdir_verify_md5(const char *title, const char *pathname);
 
 
 extern const char *pdir_default_pkgdir_name;
