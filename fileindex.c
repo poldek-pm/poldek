@@ -348,7 +348,7 @@ static void print_cnfl_pair(int *pathprinted, const char *path,
 
    
 static
-void process_dups(const char *path, tn_array *fents, void *strict)
+void process_dups(const char *path, tn_array *fents, void *strictp)
 {
     int pathprinted = 0;
     int i, j;
@@ -359,7 +359,7 @@ void process_dups(const char *path, tn_array *fents, void *strict)
         for (j=i+1; j<n_array_size(fents); j++) {
             struct file_ent *ent2 = n_array_nth(fents, j);
 
-            if (flfile_cnfl(ent1->flfile, ent2->flfile, (int)strict) != 0) {
+            if (flfile_cnfl(ent1->flfile, ent2->flfile, *(int*)strictp) != 0) {
                 int rc;
                 int added1, added2;
                 
@@ -391,7 +391,7 @@ int file_index_find_conflicts(const struct file_index *fi, int strict)
     n_hash_map_arg(fi->dirs, find_dups, ht);
     
     n_hash_map_arg(ht, (void (*)(const char*,void*, void*))process_dups,
-                   (void*)strict);
+                   &strict);
     n_hash_free(ht);
     
     return 1;
