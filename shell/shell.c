@@ -310,16 +310,16 @@ static char *help_filter(int key, const char *text, void *input)
 
         
         if (sh_cmdarg->cmd->extra_help) 
-            n += snprintf(&buf[n], sizeof(buf) - n, "  %s\n",
+            n += n_snprintf(&buf[n], sizeof(buf) - n, "  %s\n",
                           sh_cmdarg->cmd->extra_help);
             
         if (sh_cmdarg->cmd->aliases) {
             struct command_alias *aliases = sh_cmdarg->cmd->aliases;
             int i = 0;
             
-            n += snprintf(&buf[n], sizeof(buf) - n, "%s", _("  Defined aliases:\n"));
+            n += n_snprintf(&buf[n], sizeof(buf) - n, "%s", _("  Defined aliases:\n"));
             while (aliases[i].name) {
-                n += snprintf(&buf[n], sizeof(buf) - n, "    %-16s  \"%s\"\n",
+                n += n_snprintf(&buf[n], sizeof(buf) - n, "    %-16s  \"%s\"\n",
                               aliases[i].name, aliases[i].cmdline);
                 i++;
             }
@@ -757,7 +757,7 @@ char *mkdbcache_path(char *path, size_t size, const char *cachedir,
     if (*dbfull_path == '/')
         dbfull_path++;
 
-    len = snprintf(tmp, sizeof(tmp), "%s", dbfull_path);
+    len = n_snprintf(tmp, sizeof(tmp), "%s", dbfull_path);
     if (tmp[len - 1] == '/') {
         tmp[len - 1] = '\0';
         len--;

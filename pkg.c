@@ -964,7 +964,7 @@ char *pkg_path(const struct pkg *pkg, char *buf, size_t size)
     int n = 0;
     
     if (pkg->pkgdir->path) 
-        n = snprintf(buf, size, "%s/", pkg->pkgdir->path);
+        n = n_snprintf(buf, size, "%s/", pkg->pkgdir->path);
 
     if (pkg_filename(pkg, buf + n, size - n) == NULL)
         buf = NULL;
@@ -990,7 +990,7 @@ int pkg_snprintf(char *str, size_t size, const struct pkg *pkg)
 {
     int n;
     
-    n = snprintf(str, size, "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
+    n = n_snprintf(str, size, "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
     return n;
 }
 

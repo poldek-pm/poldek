@@ -12,7 +12,9 @@
 
 * shell: added long listig format of file list
 
-* misc fixes to compile on SuSE (with rpm 3.x)
+* misc fixes to compile on SuSE
+
+* support for rpm 3.x is back (with help of Roger Luethi <rl@hellgate.ch>)
 
 
 0.17.2

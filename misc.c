@@ -70,7 +70,7 @@ int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size)
     n_assert(hex_size > 2 * bin_size); /* with end '\0' */
     
     for (i=0; i < bin_size; i++) {
-        n = snprintf(hex + nn, hex_size - nn, "%02x", bin[i]);
+        n = n_snprintf(hex + nn, hex_size - nn, "%02x", bin[i]);
         nn += n;
         if (nn >= hex_size)
             break;
@@ -89,7 +89,7 @@ int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size, int digest_t
         int i, n = 0, nn = 0;
         
         for (i=0; i < md_size; i++) {
-            n = snprintf(mdhex + nn, *mdhex_size - nn, "%02x", md[i]);
+            n = n_snprintf(mdhex + nn, *mdhex_size - nn, "%02x", md[i]);
             nn += n;
         }
         *mdhex_size = nn;

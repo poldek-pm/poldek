@@ -361,7 +361,7 @@ int mkdigest_path(char *path, int size, const char *pathname, const char *ext)
     char *p; 
     int n;
     
-    n = snprintf(path, size, "%s", pathname);
+    n = n_snprintf(path, size, "%s", pathname);
     if ((p = strrchr(n_basenam(path), '.')) == NULL)
         p = &path[n];
 
@@ -375,7 +375,7 @@ int mkdigest_path(char *path, int size, const char *pathname, const char *ext)
     else
         n -= 3;
     
-    n += snprintf(p, size - (p - path), "%s", ext);
+    n += n_snprintf(p, size - (p - path), "%s", ext);
     return n;
 }
 

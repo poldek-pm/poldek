@@ -507,14 +507,14 @@ static void list_files_long(tn_array *fl)
                 //    continue;
             }
             
-            n = snprintf(buf, sizeof(buf), "%s%s%s%s%s",
+            n = n_snprintf(buf, sizeof(buf), "%s%s%s%s%s",
                          *flent->dirname == '/' ? "":"/",
                          flent->dirname,
                          *flent->dirname == '/' ? "":"/",
                          f->basename, slash);
             
             if (S_ISLNK(f->mode)) 
-                n += snprintf(&buf[n], sizeof(buf) - n, " -> %s",
+                n += n_snprintf(&buf[n], sizeof(buf) - n, " -> %s",
                               f->basename + strlen(f->basename) + 1);
             printf("%6o%10d\t%s\n", f->mode, f->size, buf);
         }
@@ -559,10 +559,10 @@ static void list_files(tn_array *fl, int term_width)
             }
             
 
-            n = snprintf(buf, sizeof(buf), "%s%s", f->basename, slash);
+            n = n_snprintf(buf, sizeof(buf), "%s%s", f->basename, slash);
             
             if (S_ISLNK(f->mode)) 
-                n += snprintf(&buf[n], sizeof(buf) - n, " -> %s",
+                n += n_snprintf(&buf[n], sizeof(buf) - n, " -> %s",
                               f->basename + strlen(f->basename) + 1);
             
             if (ncol + n >= term_width) {

@@ -297,13 +297,13 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
             name = pkg_filename_s(pkg);
             
             if (vf_url_type(pkgpath) == VFURL_PATH) {
-                len = snprintf(path, sizeof(path), "%s/%s", pkgpath, name);
+                len = n_snprintf(path, sizeof(path), "%s/%s", pkgpath, name);
             
             } else {
                 char buf[1024];
                 
                 vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
-                len = snprintf(path, sizeof(path), "%s/%s/%s", inst->cachedir,
+                len = n_snprintf(path, sizeof(path), "%s/%s/%s", inst->cachedir,
                                buf, name);
             }
 
@@ -337,7 +337,7 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
         p = buf;
         
         for (i=0; i<nopts; i++) 
-            p += snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
+            p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
         *p = '\0';
         msgn(1, _("Executing%s..."), buf);
     }

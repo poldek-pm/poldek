@@ -1004,13 +1004,13 @@ int rpm_verify_signature(const char *path, unsigned flags)
             int n = 0;
             
             if (flags & CHECKSIG_MD5)
-                n += snprintf(&signam[n], sizeof(signam) - n, "md5/");
+                n += n_snprintf(&signam[n], sizeof(signam) - n, "md5/");
             
             if (flags & CHECKSIG_GPG)
-                n += snprintf(&signam[n], sizeof(signam) - n, "gpg/");
+                n += n_snprintf(&signam[n], sizeof(signam) - n, "gpg/");
             
             if (flags & CHECKSIG_PGP)
-                n += snprintf(&signam[n], sizeof(signam) - n, "pgp/");
+                n += n_snprintf(&signam[n], sizeof(signam) - n, "pgp/");
             
             n_assert(n > 0);
             signam[n - 1] = '\0';   /* eat last '/' */
@@ -1075,7 +1075,7 @@ void rpmlog(int prii, const char *fmt, ...)
         int n;
 
         
-        n = vsnprintf(m, sizeof(m), fmt, args);
+        n = n_vsnprintf(m, sizeof(m), fmt, args);
 
         if (n > 0 && m[n - 1] == '\n')
             m[n - 1] = '\0';

@@ -84,7 +84,7 @@ int tr_store(struct tr *tr, FILE *stream)
     
     nlen = len;
     fwrite(&nlen, sizeof(nlen), 1, stream);
-    n = snprintf(buf, sizeof(buf), "%s:%s", tr->lang, tr->name);
+    n = n_snprintf(buf, sizeof(buf), "%s:%s", tr->lang, tr->name);
     DBGF("%s\n", buf);
     n_assert(n == len);
     

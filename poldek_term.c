@@ -125,18 +125,18 @@ int vsnprintf_c(int color, char *str, size_t size, const char *fmt,
     int n = 0, isbold = 0;
 
     if (color & PRAT_BOLD) {
-        n += snprintf(&str[n], size - n, "%s", at_bold);
+        n += n_snprintf(&str[n], size - n, "%s", at_bold);
         color &= ~PRAT_BOLD;
         isbold = 1;
     }
 
     if (*pr_colors[color].seq)
-        n += snprintf(&str[n], size - n, "%s", pr_colors[color].seq);
+        n += n_snprintf(&str[n], size - n, "%s", pr_colors[color].seq);
 
-    n += vsnprintf(&str[n], size - n, fmt, args);
+    n += n_vsnprintf(&str[n], size - n, fmt, args);
     
     if (*pr_colors[color].seq) 
-        n += snprintf(&str[n], size - n, "%s%s", color_default,
+        n += n_snprintf(&str[n], size - n, "%s%s", color_default,
                       isbold ? at_no_attr:"");
     
     return n;
@@ -149,7 +149,7 @@ int snprintf_c(int color, char *str, size_t size, const char *fmt, ...)
     int n;
     
     va_start(args, fmt);
-    n = vsnprintf_c(color, str, size, fmt, args);
+    n = n_vsnprintf_c(color, str, size, fmt, args);
     va_end(args);
     return n;
 }
@@ -205,7 +205,7 @@ int term_init(void)
 
     s = tigetstr("bold");
     if (s != NULL && s != (char*)-1) 
-        n = snprintf(at_bold, sizeof(at_bold), "%s", s);
+        n = n_snprintf(at_bold, sizeof(at_bold), "%s", s);
 
     /*s = tigetstr("dim");
       if (s != NULL && s != (char*)-1)

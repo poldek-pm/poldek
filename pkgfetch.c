@@ -105,7 +105,7 @@ int package_verify_sign(const char *path, unsigned flags)
         p = buf;
         
         for (i=0; i < nopts; i++) 
-            p += snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
+            p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
         *p = '\0';
         msgn(1, _("Executing%s..."), buf);
     }
@@ -219,7 +219,7 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
             n_array_push(urls_arr, pkgpath);
         }
         
-        len = snprintf(path, sizeof(path), "%s/%s", pkgpath, pkg_basename);
+        len = n_snprintf(path, sizeof(path), "%s/%s", pkgpath, pkg_basename);
         
         s = alloca(len + 1);
         memcpy(s, path, len);

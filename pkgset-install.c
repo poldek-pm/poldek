@@ -569,7 +569,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     if (db_dep->flags & PROCESS_AS_NEW) {
         int i, n;
         char errmsg[4096];
-        n = snprintf(errmsg, sizeof(errmsg), _("%s is required by"), 
+        n = n_snprintf(errmsg, sizeof(errmsg), _("%s is required by"), 
                      capreq_snprintf_s(req));
         
         for (i=0; i < n_array_size(db_dep->pkgs); i++) {
@@ -1588,7 +1588,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         
         any_err++;
         if (upg->nerr_dep) {
-            n = snprintf(&errmsg[n], sizeof(errmsg) - n,
+            n = n_snprintf(&errmsg[n], sizeof(errmsg) - n,
                          "%d unresolved dependencies", upg->nerr_dep);
             
             
@@ -1599,7 +1599,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         }
         
         if (upg->nerr_cnfl) {
-            n = snprintf(&errmsg[n], sizeof(errmsg) - n,
+            n = n_snprintf(&errmsg[n], sizeof(errmsg) - n,
                          "%s%d conflicts", n ? ", ":"", upg->nerr_cnfl);
             if (inst->flags & (INSTS_FORCE | INSTS_RPMTEST)) 
                 upg->nerr_cnfl = 0;
@@ -1811,7 +1811,7 @@ static void mark_namegroup(tn_array *pkgs, struct pkg *pkg, struct upgrade_s *up
 
     n_array_sort(pkgs);
     
-    len = snprintf(prefix, sizeof(prefix), "%s", pkg->name);
+    len = n_snprintf(prefix, sizeof(prefix), "%s", pkg->name);
     if ((p = strchr(prefix, '-')))
         *p = '\0';
     

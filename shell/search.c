@@ -318,7 +318,7 @@ static int fl_match(tn_array *fl, struct pattern *pt)
             struct flfile *f = flent->files[j];
             int n;
             
-            n = snprintf(path, sizeof(path), "%s/%s", flent->dirname, f->basename);
+            n = n_snprintf(path, sizeof(path), "%s/%s", flent->dirname, f->basename);
             if ((match = pattern_match(pt, path, n)))
                 goto l_end;
 

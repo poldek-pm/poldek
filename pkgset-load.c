@@ -23,7 +23,6 @@
 #include <trurl/nstr.h>
 
 #include <vfile/vfile.h>
-#define ENABLE_TRACE 1
 #include "i18n.h"
 #include "pkgset.h"
 #include "pkgset-load.h"
@@ -184,7 +183,7 @@ int source_snprintf_flags(char *str, int size, struct source *src)
     i = n = 0;
     while (source_options[i].name != NULL) {
         if (src->flags & source_options[i].flag)
-            n += snprintf(&str[n], size - n, "%s,", source_options[i].name);
+            n += n_snprintf(&str[n], size - n, "%s,", source_options[i].name);
         i++;
     }
     

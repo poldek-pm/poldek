@@ -216,7 +216,7 @@ int open_idx(struct idx_s *idx, const char *path, int vfmode)
     } else {
         int n;
         
-        n = snprintf(tmpath, sizeof(tmpath), "%s%s.gz", path,
+        n = n_snprintf(tmpath, sizeof(tmpath), "%s%s.gz", path,
                      default_pkgidx_name);
         
         rc = do_open_idx(idx, tmpath, n, vfmode);

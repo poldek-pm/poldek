@@ -243,10 +243,10 @@ void vlog_tty(int pri, const char *fmt, va_list args)
     int n = 0;
     
     if (pri & LOGERR)
-        n = snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("error: "));
+        n = n_snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("error: "));
     
     else if (pri & LOGWARN)
-        n = snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("warn: "));
+        n = n_snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("warn: "));
 
     if (n > 0)
         fprintf(l_stream, "%s", buf);

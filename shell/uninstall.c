@@ -135,7 +135,7 @@ int uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
         p = buf;
         
         for (i=0; i<nopts; i++) 
-            p += snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
+            p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
         *p = '\0';
         msgn(1, _("Running%s..."), buf);
         
