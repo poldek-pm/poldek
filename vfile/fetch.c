@@ -349,7 +349,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
             p = n_strncpy(p, " ", len);
             len--;
         }
-        vfile_msg_fn("execute %s", s);
+        vfile_msg_fn("execute %s\n", s);
     }
     
     p_st_init(&pst);
@@ -371,14 +371,20 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
 }
 
 
-int vfile_register_ext_handler(unsigned urltypes, char *fmt) 
+int vfile_register_ext_handler(unsigned urltypes, const char *fmt) 
 {
     struct ffetcher *ftch;
+    char *s;
+    int len;
     
     if (nffetchers == MAX_FETCHERS)
         return 0;
-
-    if ((ftch = ffetcher_new(urltypes, fmt))) {
+    
+    len = strlen(fmt) + 1;
+    s = alloca(len);
+    memcpy(s, fmt, len);
+    
+    if ((ftch = ffetcher_new(urltypes, s))) {
         ffetchers[nffetchers++] = ftch;
         return nffetchers;
     }
@@ -407,11 +413,16 @@ int vfile_fetch(const char *destdir, const char *url, int urltype)
 {
     struct ffetcher *ftch;
     
-    if (urltype < 0) 
+    if (urltype < 0 || urltype == VFURL_UNKNOWN) 
         urltype = vfile_url_type(url);
     
+    if (nffetchers == 0) {
+        vfile_err_fn("vfile_fetch: %s: no handlers configured\n", url);
+        return 0;
+    }
+    
     if ((ftch = find_fetcher(urltype, 0)) == NULL) {
-        vfile_err_fn("URL like %s not supported\n", url);
+        vfile_err_fn("vfile_fetch: %s: no handler for this URL\n", url);
         return 0;
     }
 

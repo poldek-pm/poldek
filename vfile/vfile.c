@@ -159,6 +159,9 @@ int fetch_file(const char *destdir, const char *path, int urltype)
             internal = 0;
     }
 
+    if (vfile_configured_handlers() == 0)
+        internal = 1;
+
     n_assert(destdir);
     if (internal) {
         rc = fetch_file_internal(destdir, path);
@@ -346,14 +349,20 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
         }
         
         if (opened == 0) {
-            char *p = NULL;
+            char *p = NULL, *tmpath = NULL;
 
-            if ((p = strrchr(path, '/')) != NULL)
-                *p = '\0';
-            vfile_url_as_dirpath(&buf[len], sizeof(buf) - len, path);
-            if (p)
-                *p = '/';
+            if ((p = strrchr(path, '/')) == NULL) {
+                tmpath = (char*)path;
+                
+            } else {
+                int len = p - path + 1;
+                
+                tmpath = alloca(len + 1);
+                memcpy(tmpath, path, len);
+                tmpath[len] = '\0'; 
+            } 
             
+            vfile_url_as_dirpath(&buf[len], sizeof(buf) - len, tmpath);
             tmpdir = buf;
             
             if (!isdir(tmpdir))
