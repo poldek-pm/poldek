@@ -79,7 +79,11 @@ static struct sh_ctx sh_ctx = { COMPLETITION_CTX_NONE, NULL };
 static int cmd_reload(struct cmdctx *cmdctx) 
 {
     unsigned ldflags = POCLIDEK_LOAD_INSTALLED|POCLIDEK_LOAD_RELOAD;
-    return poclidek_load_packages(cmdctx->cctx, ldflags);
+    int rc;
+    
+    rc = poclidek_load_packages(cmdctx->cctx, ldflags);
+    cmdctx->cctx->ts_dbpkgdir = time(0); /* touch */
+    return rc;
 }
 
 
