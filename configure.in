@@ -4,7 +4,7 @@ dnl $Id$
 AC_INIT(capreq.c)
 
 VERSION=0.17
-VERSION_STATUS="devel"
+VERSION_STATUS="beta"
 VERSION_CVSTAG="v$(echo $VERSION | sed 's/\./_/g')"
 PACKAGE=poldek
 
@@ -219,8 +219,8 @@ AC_CHECK_FUNCS(getline,, AC_MSG_ERROR("getline\(\) is needed by $PACKAGE"),
 AC_CHECK_FUNCS(fopencookie,, AC_MSG_WARN("disabled gzipped files support"),
 	       $CONF_IN_LDFLAGS)
 
-AC_CHECK_FUNCS(forkpty,, 
-	AC_CHECK_LIB(util, forkpty, [AC_DEFINE(HAVE_FORKPTY)] [LIBS="$LIBS -lutil"]))
+AC_CHECK_FUNCS(openpty,, 
+	AC_CHECK_LIB(util, openpty, [AC_DEFINE(HAVE_OPENPTY)] [LIBS="$LIBS -lutil"]))
 
 AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
 AC_MSG_WARN("poldek will not work fine with rpmlib\(...\) capabilities"),

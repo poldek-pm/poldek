@@ -36,6 +36,7 @@ libpoldek_a_SOURCES = \
 	  pkgset-req.c pkgset-req.h	\
 	  pkgset-order.c    		\
 	  pkgset-install.c		\
+	  dbdep.c dbdep.h		\
 	  rpm.c rpm.h 		        \
 	  rpmhdr.c rpmhdr.h		\
 	  pkgdb.c pkgdb.h		\
