@@ -264,7 +264,7 @@ static int ls(struct cmdctx *cmdctx)
     tn_array             *ls_ents = NULL;
     tn_array             *evrs = NULL;
     int                  rc = 1;
-    char                 *path = NULL, pwd[PATH_MAX];
+    char                 *path = NULL, pwdpath[PATH_MAX], *pwd;
     unsigned             ldflags = 0;
 
     if (cmdctx->_flags & OPT_LS_INSTALLED)
@@ -273,7 +273,7 @@ static int ls(struct cmdctx *cmdctx)
         ldflags = POCLIDEK_LOAD_ALL;
     
     poclidek_load_packages(cmdctx->cctx, ldflags);
-    poclidek_pwd(cmdctx->cctx, pwd, sizeof(pwd));
+    pwd = poclidek_pwd(cmdctx->cctx, pwdpath, sizeof(pwdpath));
     
     if (cmdctx->_flags & OPT_LS_INSTALLED)
         path = POCLIDEK_INSTALLEDDIR;
@@ -287,7 +287,7 @@ static int ls(struct cmdctx *cmdctx)
     if (cmdctx->_flags & OPT_LS_UPGRADEABLE) {
         tn_array *tmp;
 
-        if (strcmp(pwd, POCLIDEK_INSTALLEDDIR) == 0)
+        if (pwd && strcmp(pwd, POCLIDEK_INSTALLEDDIR) == 0)
             cmdctx->_flags |= OPT_LS_INSTALLED;
 
         evrs = n_array_new(n_array_size(ls_ents), free, NULL);

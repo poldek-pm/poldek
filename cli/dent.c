@@ -687,9 +687,9 @@ tn_array *poclidek_resolve_packages(const char *path, struct poclidek_ctx *cctx,
 
 char *poclidek_pwd(struct poclidek_ctx *cctx, char *path, int size)
 {
-    if (cctx->homedir == NULL)
-        cctx->currdir = cctx->homedir = poclidek_dent_ldfind(cctx,
-                                                             POCLIDEK_HOMEDIR);
+    //if (cctx->homedir == NULL)
+    //    cctx->homedir = poclidek_dent_ldfind(cctx,
+    //                                         POCLIDEK_HOMEDIR);
     
     if (cctx->currdir == NULL)
         return NULL;

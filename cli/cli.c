@@ -558,7 +558,7 @@ int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags)
             if (!poclidek_load_installed(cctx, reload))
                 nerr++;
             else {
-                if (n_str_eq(cctx->currdir->name, "/"))
+                if (cctx->currdir == cctx->rootdir)
                     poclidek_chdir(cctx, POCLIDEK_INSTALLEDDIR);
             }
         }
