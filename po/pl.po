@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
-"POT-Creation-Date: 2002-04-06 16:03+0200\n"
+"POT-Creation-Date: 2002-04-11 22:28+0200\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: \n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -44,37 +44,37 @@ msgstr "%s:%d: brakuj±cy '\"'"
 msgid "%s: unknown option"
 msgstr "%s: nieznana opcja"
 
-#: conf.c:258
+#: conf.c:268
 #, c-format
 msgid "%s:%d: '%s': invalid parameter"
 msgstr "%s:%d: '%s': nieprawid³owy parametr"
 
-#: conf.c:271
+#: conf.c:281
 #, c-format
 msgid "%s:%d: missing '='"
 msgstr "%s:%d: brak '='"
 
-#: conf.c:282
+#: conf.c:292
 #, c-format
 msgid "%s:%d unknown option '%s'"
 msgstr "%s:%d nieznana opcja '%s'"
 
-#: conf.c:297
+#: conf.c:307
 #, c-format
 msgid "%s:%d: no value for '%s'"
 msgstr "%s:%d opcja '%s' nie ma przypisanej warto¶ci "
 
-#: conf.c:311
+#: conf.c:321
 #, c-format
 msgid "%s:%d invalid value '%s' of option '%s'"
 msgstr "%s:%d niedozwolona warto¶æ '%s' zmiennej '%s'"
 
-#: conf.c:330
+#: conf.c:340
 #, c-format
 msgid "%s:%d multiple '%s' not allowed"
 msgstr "%s:%d wielokrotnie '%s' not allowed"
 
-#: conf.c:406
+#: conf.c:416
 #, c-format
 msgid "invalid value ('%s') for option '%s'"
 msgstr "niedozwolona warto¶æ ('%s') dla opcji '%s'"
@@ -92,222 +92,237 @@ msgstr "uwaga: "
 msgid "[PACKAGE...]"
 msgstr "[PAKIET...]"
 
-#: main.c:202
-msgid "Source options:"
-msgstr "Opcje dot. \"¼róde³\" pakietów:"
+#: main.c:208
+msgid "Specifying source:"
+msgstr ""
 
-#: main.c:203
+#: main.c:209
 msgid "Get packages info from SOURCE"
 msgstr "We¼ info o pakietach z SOURCE"
 
-#: main.c:205
+#: main.c:211
 msgid "Get packages info from source named SOURCE-NAME"
 msgstr "Pobierz informacje o pakietach ze ¼ród³a o nazwie SOURCE-NAME"
 
-#: main.c:206
-msgid "List configured sources"
-msgstr "Poka¿ skonfigurowane ¼ród³a"
-
-#: main.c:209
+#: main.c:214
 msgid "Get packages info from package index file FILE"
 msgstr "We¼ informacje o pakietach z indeksu FILE"
 
-#. obsoleted
-#: main.c:212
-msgid "Get packages info from directory DIR"
+#: main.c:217
+#, fuzzy
+msgid "Get packages info from directory DIR by scanning it"
 msgstr "We¼ informacje o pakietach z katalogu DIR"
 
-#: main.c:215
+#. RH's hdlist,  PLD's tocfile
+#: main.c:220
+#, fuzzy
+msgid "Get packages info from package header list file (aka hdlist)"
+msgstr "We¼ informacje o pakietach z indeksu FILE"
+
+#: main.c:223
 msgid "Get packages from PREFIX instead of SOURCE"
 msgstr "Pobieraj pakiety ze ¼ród³a PREFIX zamiast z SOURCE"
 
-#: main.c:218
-msgid "Update sources (for remote indexes) and verify it"
-msgstr "Aktualizuj ¼ród³a pakietów i sprawd¼ ich integralno¶æ"
+#: main.c:226
+msgid "Source options:"
+msgstr "Opcje dot. \"¼róde³\" pakietów:"
 
-#: main.c:223
-msgid "Update whole sources (for remote indexes) and verify it"
-msgstr "Aktualizuj ca³e indeksy i sprawd¼ ich integralno¶æ"
-
-#: main.c:228
-msgid "Store downloaded files under DIR"
-msgstr "Umieszczaj ¶ci±gniête pliki w katalogu DIR"
+#: main.c:227
+msgid "List configured sources"
+msgstr "Poka¿ skonfigurowane ¼ród³a"
 
 #: main.c:230
+#, fuzzy
+msgid "Update index of source and verify it"
+msgstr "Aktualizuj ca³e indeksy i sprawd¼ ich integralno¶æ"
+
+#: main.c:235
+msgid "Update whole index of source"
+msgstr ""
+
+#: main.c:240
+msgid "Remove source index files from cache directory"
+msgstr ""
+
+#: main.c:243
+msgid "Remove all source files from cache directory"
+msgstr ""
+
+#: main.c:248
 msgid "Verify options:"
 msgstr "Opcje weryfikacji zestawu pakietów:"
 
-#: main.c:231
+#: main.c:249
 msgid "Verify package dependencies"
 msgstr "Sprawd¼ zale¿no¶ci"
 
-#: main.c:232
+#: main.c:250
 msgid "Verify package conflicts"
 msgstr "Sprawd¼ konflikty"
 
-#: main.c:234
+#: main.c:252
 msgid "Verify package file conflicts"
 msgstr "Sprawd¼ miêdzypakietowe konflikt plikowe"
 
-#: main.c:236
+#: main.c:254
 msgid "Verify dependencies, conflicts and file conflicts"
 msgstr "Sprawd¼ zale¿no¶ci i konflikty (w tym plikowe)"
 
-#: main.c:238 shell/install.c:40
+#: main.c:256 shell/install.c:40
 msgid "Be tolerant for bugs which RPM tolerates"
 msgstr "Ignoruj b³êdy które ignoruje RPM"
 
-#: main.c:241
+#: main.c:259
 msgid "Index creation:"
 msgstr "Tworzenie indeksu:"
 
-#: main.c:243
+#: main.c:261
 msgid "Create package index, SOURCE/packages.dir by default"
 msgstr "Utwórz pakietowy indeks; domy¶lnie: SOURCE/packages.dir"
 
-#: main.c:246
+#: main.c:264
 msgid "Likewise, but gzipped file is created"
 msgstr "jw. z tym, ¿e indeks jest kopresowany gzipem"
 
-#: main.c:249
+#: main.c:267
 msgid ""
 "Don't put packages user-level information (like Summary or Description) in "
 "created index."
 msgstr ""
 "Buduj indeks bez informacji o pakietach przydatnych jedynie u¿ytkownikowi"
 
-#: main.c:253
+#: main.c:271
 msgid "Don't create \"patch\""
 msgstr "Nie twórz \"³atki\""
 
-#: main.c:256
+#: main.c:273
 msgid "Packages spec:"
 msgstr "Specyfikowanie pakietów:"
 
-#: main.c:257
+#: main.c:274
 msgid "Take package set definition from FILE"
 msgstr "We¼ definicjê zestaw pakietów z pliku FILE"
 
-#: main.c:261
+#: main.c:278
 msgid "Specifies package by NAME and EVR"
 msgstr ""
 
 #. backward compat
-#: main.c:264
+#: main.c:281
 msgid "Installation:"
 msgstr "Opcje instalacji:"
 
-#: main.c:266
+#: main.c:283
 msgid "Install package set under DIR as root directory"
 msgstr "Instaluj u¿ywaj±c katalogu DIR jako /"
 
-#: main.c:269
+#: main.c:286
 msgid "Upgrade all packages needs upgrade"
 msgstr "Aktualizuj wszystkie pakiety mog±ce zostaæ zaktualizowane"
 
-#: main.c:271
+#: main.c:288
 msgid "Install given packages"
 msgstr "Instaluj podane pakiety"
 
-#: main.c:272
+#: main.c:289
 msgid "Upgrade given packages"
 msgstr "Aktualizuj podane pakiety"
 
-#: main.c:276
+#: main.c:293
 msgid "Installation switches:"
 msgstr "Podopcje instalacji:"
 
 #. not implemented yet
-#: main.c:278
+#: main.c:295
 msgid "Verify packages signatures before install"
 msgstr "Weryfikuj podpisy pakietów przed instalacj±"
 
-#: main.c:279
+#: main.c:296
 msgid "Set top directory to DIR"
 msgstr "U¿yj DIR jako /"
 
-#: main.c:281
+#: main.c:298
 msgid ""
 "Prevent packages listed from being upgraded if they are already installed."
 msgstr "Nie aktualizuj wymienionych pakietów je¿eli takie s± zainstalowane"
 
-#: main.c:284
+#: main.c:301
 msgid "Don't take held packages from $HOME/.poldek_hold."
 msgstr "Nie czytaj $HOME/.poldek_hold."
 
-#: main.c:287 shell/install.c:49
+#: main.c:304 shell/install.c:49
 msgid ""
 "Automatically upgrade packages which dependencies are broken by unistalled "
 "ones"
 msgstr ""
 
-#: main.c:291
+#: main.c:308
 msgid "Just dump install marked package filenames to FILE (default stdout)"
 msgstr ""
 
-#: main.c:294
+#: main.c:311
 msgid "Just dump install marked package names to FILE (default stdout)"
 msgstr ""
 
-#: main.c:297 shell/install.c:43
+#: main.c:314 shell/install.c:43
 msgid "Upgrade packages, but only if an earlier version currently exists"
 msgstr ""
 "Aktualizuj pakiety tylko w przypadku gdy wcze¶nijesza ich wersja jest "
 "zainstalowana"
 
-#: main.c:300
+#: main.c:317
 msgid "Don't automatically install packages required by installed ones"
 msgstr "Nie instaluj automatycznie pakietów wymaganych przez instalowane"
 
-#: main.c:303
+#: main.c:320
 msgid "Do not install, only fetch packages"
 msgstr "Nie instaluj, a jedynie ¶ci±gnij pakiety"
 
-#: main.c:306 shell/install.c:58
+#: main.c:323 shell/install.c:58
 msgid "Install packages with broken dependencies"
 msgstr "Instaluj pakiety z niespe³nionymi zale¿no¶ciami"
 
-#: main.c:309 shell/install.c:41 shell/uninstall.c:37
+#: main.c:326 shell/install.c:41 shell/uninstall.c:37
 msgid "Be unconcerned"
 msgstr "B±d¼ niefrasobliwy"
 
-#: main.c:312
+#: main.c:329
 msgid "Modify only the database"
 msgstr ""
 
-#: main.c:315
+#: main.c:332
 msgid "Set up rpm macro (only simple definitions)"
 msgstr ""
 
-#: main.c:318 shell/install.c:42
+#: main.c:335 shell/install.c:42
 msgid "Don't install, but tell if it would work or not"
 msgstr "Nie instaluj, tylko sprawd¼ czy instalacja przebiegnie pomy¶lnie"
 
-#: main.c:321
+#: main.c:338
 msgid "make %{_dbpath} if not exists"
 msgstr "utwórz katalog %{_dbpath} je¿eli tan nie instnieje"
 
-#: main.c:324
+#: main.c:341
 msgid "Interactive mode:"
 msgstr "Tryb interaktywny:"
 
-#: main.c:325
+#: main.c:342
 msgid "Run in interactive mode"
 msgstr "Uruchom w trybie interaktywnym"
 
-#: main.c:327
+#: main.c:344
 msgid "Don't load installed packages at startup"
 msgstr "Nie ³aduj bazy zainstalowanych pakietów przy starcie"
 
-#: main.c:329
+#: main.c:346
 msgid "Run poldek shell COMMAND and exit"
 msgstr "Uruchom komendê COMMAND i wyjd¼"
 
-#: main.c:332
+#: main.c:349
 msgid "Splitting:"
 msgstr "Dzielenie zbioru pakietów:"
 
-#: main.c:334
+#: main.c:351
 msgid ""
 "Split packages to SIZE MB size chunks, the first chunk will be "
 "FIRST_FREE_SPACE MB smaller"
@@ -315,56 +330,60 @@ msgstr ""
 "Podziel pakiety na SIZE megabajtowe czê¶ci, pierwsza z nich bêdzie mniejsza "
 "o FIRST_FREE_SPACE MB"
 
-#: main.c:338 main.c:341
+#: main.c:355 main.c:358
 msgid "Take package priorities from FILE"
 msgstr "Pobierz priorytety pakietów z pliku FILE"
 
-#: main.c:344
+#: main.c:361
 msgid "Write chunks to PREFIX.XX, default PREFIX is packages.chunk"
 msgstr ""
 
-#: main.c:346
+#: main.c:363
 msgid "Other:"
 msgstr "Pozosta³e:"
 
-#: main.c:347
+#: main.c:365
+msgid "Store downloaded files under DIR"
+msgstr "Umieszczaj ¶ci±gniête pliki w katalogu DIR"
+
+#: main.c:367
 msgid ""
 "Confirm packages installation and let user choose among equivalent packages"
 msgstr ""
 
-#: main.c:349
+#: main.c:369
 msgid "not --ask"
 msgstr ""
 
-#: main.c:351
+#: main.c:371
 msgid "Read configuration from FILE"
 msgstr "Czytaj konfiguracjê z pliku FILE"
 
-#: main.c:352
+#: main.c:372
 msgid "Do not read configuration"
 msgstr "Nie czytaj ¿adnej konfiguracji"
 
-#: main.c:354
+#: main.c:374
 msgid "Display program version information and exit"
 msgstr "Wypisz informacjê o wersji programu i wyjd¼"
 
-#: main.c:355
+#: main.c:375
 msgid "Log program messages to FILE"
 msgstr "Rejestruj wszystkie komunikaty w pliku FILE"
 
-#: main.c:356
+#: main.c:376
 msgid "Read indexes created by versions < 0.17"
 msgstr "Czytaj indeks utworzony przez program w wersji < 0.17"
 
-#: main.c:357 shell/install.c:60
+#: main.c:377 shell/install.c:60
 msgid "Be verbose."
 msgstr "B±d¼ gadatliwy"
 
-#: main.c:358
+#: main.c:378
 msgid "Do not produce any output."
 msgstr "Nie wypisuj ¿anych komunikatów"
 
-#: main.c:366
+#: main.c:386
 msgid ""
 "only one major mode may be specified (available modes are: mkidx, update, "
 "verify*, install*, upgrade*, split, sl and shell)"
@@ -372,126 +391,135 @@ msgstr ""
 "tylko jeden g³ównych trybów pracy mo¿e zostaæ wybrany (dostêpne tryby: "
 "mkidx, update, verify*, install*, upgrade*, split, sl albo shell)"
 
-#: main.c:388
+#: main.c:408
 #, c-format
 msgid "option requires an argument -- %s"
 msgstr "opcja wymaga argumentu -- %s"
 
-#: main.c:471
+#: main.c:494
 #, fuzzy
 msgid "prefix option should be preceded by source one"
 msgstr "opcja 'prefix' musi byæ poprzedzona przez 'source'"
 
-#: main.c:476
+#: main.c:499
 msgid "prefix for directory source makes no sense"
 msgstr "podanie opcji 'prefix' dla katalou nie ma sensu"
 
-#: main.c:729
+#: main.c:761
 msgid "split: bad option argument"
 msgstr "split: z³y argument"
 
-#: main.c:761
+#: main.c:793
 #, c-format
 msgid "'%s' option should be set by --%s"
 msgstr ""
 
-#: main.c:901
+#: main.c:964
 #, c-format
 msgid "%s: no such source"
 msgstr "%s: nie ma takiego ¼ród³a"
 
-#: main.c:944
+#: main.c:1007
 msgid "--noconf and --conf are exclusive, aren't they?"
 msgstr "opcje --noconf i --conf wykluczaj± siê, czy¿ nie?"
 
-#: main.c:955
+#: main.c:1018
 msgid "--source and --sn are exclusive"
 msgstr "opcje --source i --sn wykluczaj± siê"
 
-#: main.c:980 main.c:998
+#: main.c:1043
 msgid "no source specified"
 msgstr "nie podano ¼róde³ pakietów"
 
-#: main.c:1007 main.c:1401
+#: main.c:1066
+msgid "nothing to do (no source selected?)"
+msgstr ""
+
+#: main.c:1075 main.c:1494
 msgid "so what?"
 msgstr "no i?"
 
-#: main.c:1052
+#: main.c:1120
 msgid "--greedy and --nofollow are exclusive"
 msgstr "opcje --greedy i --nofollow wykluczaj± siê"
 
-#: main.c:1059
+#: main.c:1127
 msgid "ignore config's follow - greedy implies it to \"yes\""
 msgstr "zignorowane \"follow\" - opcja \"greedy\" ustawia j± na \"yes\""
 
-#: main.c:1168
+#: main.c:1239
 msgid "no packages loaded"
 msgstr "nie za³adowano ¿adnych pakietów"
 
-#: main.c:1232 pkgset-load.c:241
+#: main.c:1314 pkgset-load.c:265
+#, c-format
+msgid "%s: this type of source is not updateable"
+msgstr ""
+
+#: main.c:1324 pkgset-load.c:393
 #, c-format
 msgid "%s: load failed, skipped"
 msgstr "%s: ³adunek siê nie powiód³, pominiêto to"
 
-#: main.c:1264 main.c:1428
+#: main.c:1357 main.c:1521
 msgid "multiple sources are not allowed for mkidx option"
 msgstr "opcja mkidx nie dzia³a z wieloma ¼ród³ami pakietów"
 
-#: main.c:1271
+#: main.c:1364
 msgid "mkidx requested for remote source without destination specified"
 msgstr ""
 
-#: main.c:1311
+#: main.c:1404
 #, c-format
 msgid "Loading previous %s..."
 msgstr "Wczytywanie poprzedniego %s..."
 
-#: main.c:1317
+#: main.c:1410
 msgid "clock skew detected; create index with fake timestamp"
 msgstr ""
 
-#: main.c:1421
+#: main.c:1514
 msgid "--v016 has no effect in this mode"
 msgstr ""
 
-#: main.c:1442
+#: main.c:1535
 msgid "root privileges are required in install-dist mode"
 msgstr ""
 
-#: main.c:1453
+#: main.c:1546
 msgid "no packages to install"
 msgstr "nie podano pakietów do instalacji"
 
-#: main.c:1461
+#: main.c:1554
 msgid "this option upgrades whole system, not given packages"
 msgstr "opcja ta aktualizuje ca³o¶æ, nie podane pakiety"
 
-#: main.c:1469
+#: main.c:1562
 msgid "missing split size"
 msgstr ""
 
-#: main.c:1474
+#: main.c:1567
 msgid "split size too small"
 msgstr "rozmiar zbyt ma³y"
 
-#: main.c:1479
+#: main.c:1572
 msgid "first free space bigger than chunk size"
 msgstr ""
 
-#: main.c:1517
+#: main.c:1610
 #, c-format
 msgid "There seems another poldek%s uses %s"
 msgstr "Oj, jaki¶ inny poldek%s u¿ywa %s"
 
-#: main.c:1538
+#: main.c:1631
 msgid "no packages specified"
 msgstr "nie podano pakietów"
 
-#: main.c:1553
+#: main.c:1646
 msgid "I'm set*id'ed, give up"
 msgstr "Mam ustawiony bit suid/sgid, wymiêkam"
 
-#: main.c:1558
+#: main.c:1651
 msgid "Running me as root is not a good habit"
 msgstr ""
 
@@ -548,127 +576,137 @@ msgstr[0] "%d pakiet"
 msgstr[1] "%d pakiety"
 msgstr[2] "%d pakietów"
 
-#: pkg.c:195
+#: pkg.c:198
 #, c-format
 msgid "%s: read name/version/release failed"
 msgstr ""
 
-#: pkg.c:203
+#: pkg.c:206
 #, c-format
 msgid "%s: read architecture tag failed"
 msgstr ""
 
-#: pkg.c:211
-#, c-format
-msgid "%s: read os tag failed"
-msgstr ""
+#: pkg.c:215
+#, fuzzy, c-format
+msgid "%s: missing OS tag"
+msgstr "%s: brak '%s'"
 
-#: pkg.c:299
+#: pkg.c:302
 #, c-format
 msgid "%s: read header failed"
 msgstr "%s: odczyt nag³ówka siê nie powiód³"
 
-#: pkg.c:303
+#: pkg.c:306
 #, c-format
 msgid "%s: reject source package"
 msgstr "%s: pakietów ¼ród³owych nie prowadzimy"
 
-#: pkg.c:463
+#: pkg.c:473
 #, c-format
 msgid "duplicated %s"
 msgstr "zdublowany %s"
 
-#: pkgdir.c:313
+#: pkgdir.c:261
+#, fuzzy, c-format
+msgid "Removing %s"
+msgstr "Usuwanie przedawnionego %s"
+
+#: pkgdir.c:306
+#, fuzzy, c-format
+msgid "Cleaning up %s..."
+msgstr "Wczytywanie %s..."
+
+#: pkgdir.c:446
 msgid "broken index; try remade it"
 msgstr "uszkodzony index: spróbuj go przebudowaæ"
 
-#: pkgdir.c:317
+#: pkgdir.c:450
 msgid "assuming index is not fully downloaded, retrying..."
 msgstr ""
 "zak³adam, ¿e indeks nie jest ¶ci±gniêty w ca³o¶ci, ponawiam pobieranie..."
 
-#: pkgdir.c:375
+#: pkgdir.c:508
 #, c-format
 msgid "%s: broken patch list"
 msgstr "%s: uszkodzona lista ³atek"
 
-#: pkgdir.c:480
+#: pkgdir.c:613
 #, c-format
 msgid "%s: no patches available"
 msgstr "%s: nie odnaleziono ³at"
 
-#: pkgdir.c:493 pkgset-load.c:231 pkgset-load.c:273
+#: pkgdir.c:626 pkgset-load.c:377 pkgset-load.c:382 pkgset-load.c:425
 #, c-format
 msgid "Loading %s..."
 msgstr "Wczytywanie %s..."
 
-#: pkgdir.c:495 pkgset-load.c:275
+#: pkgdir.c:628 pkgset-load.c:427
 #, c-format
 msgid "%s: load failed"
 msgstr "%s: odczyt siê nie powiód³"
 
-#: pkgdir.c:500
+#: pkgdir.c:633
 #, c-format
 msgid "Applying patch %s..."
 msgstr "Nak³adanie ³aty %s..."
 
-#: pkgdir.c:523
+#: pkgdir.c:656
 #, c-format
 msgid "%s: desynchronized index, try --update-whole"
 msgstr "%s: rozsynchronizowany indeks, spróbuj opcji --update-whole"
 
-#: pkgdir.c:537
+#: pkgdir.c:670
 #, c-format
 msgid "%s: invalid version string %s"
 msgstr "%s: nieprawid³owy zapis wersji %s"
 
-#: pkgdir.c:542
+#: pkgdir.c:675
 #, c-format
 msgid "%s: unsupported version %s (%d.x is required)"
 msgstr "%s: nieobs³iwana wersja %s (wymagana jest wersja %d.x)"
 
-#: pkgdir.c:546
+#: pkgdir.c:679
 #, c-format
 msgid "%s: unsupported version %s (upgrade the poldek)"
 msgstr "%s: wersja %s nie jest nieobs³ugiwana (poldek wywmaga aktualizacji)"
 
-#: pkgdir.c:577
+#: pkgdir.c:710
 #, c-format
 msgid "%s: broken index (empty %s tag)"
 msgstr "%s: uszkodzony indeks (pusty %s)"
 
-#: pkgdir.c:661
+#: pkgdir.c:794
 #, c-format
 msgid "%s: not a poldek index file"
 msgstr "%s: nie jest to poldekowy indeks"
 
-#: pkgdir.c:724
+#: pkgdir.c:857
 #, c-format
 msgid "%s: missing '%s' tag"
 msgstr "%s: brak '%s'"
 
 #. continuation
-#: pkgdir.c:905 pkgdir.c:947
+#: pkgdir.c:1038 pkgdir.c:1080
 #, c-format
 msgid "%s:%ld: syntax error"
 msgstr "%s:%ld: b³±d sk³adniowy"
 
-#: pkgdir.c:916
+#: pkgdir.c:1049
 #, c-format
 msgid "%s:%ld:%s ':' expected"
 msgstr "%s:%ld:%s oczekiwany ':'"
 
-#: pkgdir.c:1235
+#: pkgdir.c:1368
 #, c-format
 msgid "%s: failed to parse evr string"
 msgstr "%s: interpertacja siê nie powiod³a"
 
-#: pkgdir.c:1244
+#: pkgdir.c:1377
 #, c-format
 msgid "error reading %s's data"
 msgstr ""
 
-#: pkgdir.c:1361
+#: pkgdir.c:1494
 #, c-format
 msgid "removed %d duplicate package"
 msgid_plural "removed %d duplicate packages"
@@ -709,16 +747,16 @@ msgstr "%s: rozsynchronizowany indeks"
 msgid "Verifying integrity of %s..."
 msgstr "Sprawdzanie integralno¶ci %s..."
 
-#: pkgdir_load_dir.c:269
+#: pkgdir_load_dir.c:354
 #, fuzzy, c-format
 msgid "Loading db packages%s%s%s..."
 msgstr "£adowanie pakietów z bazy %s%s%s"
 
-#: pkgdir_load_dir.c:276
+#: pkgdir_load_dir.c:361
 msgid "_done"
 msgstr "_zrobione"
 
-#: pkgdir_load_dir.c:278
+#: pkgdir_load_dir.c:363
 #, c-format
 msgid "%d package loaded"
 msgid_plural "%d packages loaded"
@@ -746,33 +784,51 @@ msgstr "Usuwanie przedawnionego %s"
 msgid "Executing%s..."
 msgstr "Uruchamianie%s..."
 
-#: pkgfetch.c:183 pkgfetch.c:268
+#: pkgfetch.c:182
+#, fuzzy, c-format
+msgid "%s: %m"
+msgstr "%s zaznaczy³ %s"
+
+#: pkgfetch.c:188 pkgfetch.c:275
 #, fuzzy, c-format
 msgid "%s: MD5 signature verification failed"
 msgstr "%s: instalacja siê nie powiod³a:"
 
-#: pkgfl.c:572
+#: pkgfl.c:576
 #, c-format
 msgid "%s: %s \"%s\" longer than 255 bytes"
 msgstr "%s: %s \"%s\" jest d³u¿szy ni¿ 255 bajtów"
 
-#: pkgfl.c:573
+#: pkgfl.c:577
 msgid "dirname"
 msgstr "nazwa katalogu"
 
-#: pkgfl.c:573
+#: pkgfl.c:577
 msgid "filename"
 msgstr "nazwa pliku"
 
-#: pkgfl.c:593
+#: pkgfl.c:597
 #, c-format
 msgid "%s: no %s tag"
 msgstr "%s: brak tagu %s"
 
-#: pkgfl.c:728
-#, c-format
-msgid "%s: skipped"
+#: pkgfl.c:734
+#, fuzzy, c-format
+msgid "%s: skipped file list"
 msgstr "%s: zosta³ pominiêty"
+
+#: pkgfl.c:746
+msgid "FILEMODES tag"
+msgstr ""
+
+#: pkgfl.c:748
+msgid "FILEMODES and FILESIZES tags"
+msgstr ""
+
+#: pkgfl.c:749
+#, fuzzy, c-format
+msgid "%s: missing %s in some packages"
+msgstr "%s: brak '%s'"
 
 #: pkgset-install.c:132
 #, c-format
@@ -936,12 +992,17 @@ msgstr "Wyst±pi³y b³êdy rpmowej bazy (?), wymiêkam"
 msgid "Nothing to do"
 msgstr "Nie ma roboty"
 
-#: pkgset-load.c:143
+#: pkgset-load.c:92 pkgset-load.c:220
 #, c-format
 msgid "%s: %s unknown option"
 msgstr "%s: %s nieznana opcja"
 
-#: pkgset-load.c:292 shell/shell.c:825
+#: pkgset-load.c:106
+#, fuzzy, c-format
+msgid "%s%sinvalid value ('%s') for option '%s'"
+msgstr "niedozwolona warto¶æ ('%s') dla opcji '%s'"
+
+#: pkgset-load.c:444 shell/shell.c:825
 #, c-format
 msgid "%d package read"
 msgid_plural "%d packages read"
@@ -1188,7 +1249,7 @@ msgid "Executing %s "
 msgstr "Uruchamianie %s "
 
 #: rpminstall.c:164 rpminstall.c:173 shell/pager.c:95 vfile/p_open.c:128
-#: vfile/p_open.c:281 vfile/vhttp/http.c:681
+#: vfile/p_open.c:281 vfile/vhttp/http.c:687
 #, c-format
 msgid "%s: no such file"
 msgstr "%s: nie ma takiego pliku"
@@ -1211,7 +1272,7 @@ msgstr "%s usieczon za spraw± sygna³u %d"
 #: rpminstall.c:197
 #, c-format
 msgid "%s died under inscrutable circumstances"
-msgstr "$s zgin±³ w podejrzanych okoliczno¶ciach"
+msgstr "%s zgin±³ w podejrzanych okoliczno¶ciach"
 
 #: rpminstall.c:323
 msgid "There were signature verification errors. Proceed? [y/N]"
@@ -1298,7 +1359,7 @@ msgstr "get: podaj pakiety do pobrania"
 #: shell/get.c:100
 #, c-format
 msgid "get: %s: %s is not remote URL"
-msgstr "get: %s: $s nie jest pobieralny"
+msgstr "get: %s: %s nie jest pobieralny"
 
 #: shell/install.c:46
 msgid "Don't automatically install packages required by selected ones"
@@ -1655,7 +1716,7 @@ msgstr "program zakoñczy³ siê z niezerowym wynikiem"
 #: vfile/p_open.c:208
 #, c-format
 msgid "%s (%d) died under inscrutable circumstances"
-msgstr "$s (%d) zgin±³ w podejrzanych okoliczno¶ciach"
+msgstr "%s (%d) zgin±³ w podejrzanych okoliczno¶ciach"
 
 #: vfile/vfcurl.c:312 vfile/vfvftp.c:110 vfile/vfvhttp.c:91
 #, c-format
@@ -1666,7 +1727,7 @@ msgstr "Ponowna próba...(#%d)\n"
 msgid "Done\n"
 msgstr "Zrobione\n"
 
-#: vfile/vfile.c:230 vfile/vfile.c:262
+#: vfile/vfile.c:232 vfile/vfile.c:264
 #, c-format
 msgid "Retrieving %s...\n"
 msgstr "Pobieranie %s...\n"
@@ -1676,7 +1737,7 @@ msgstr "Pobieranie %s...\n"
 msgid "done\n"
 msgstr "zrobione\n"
 
-#: vfile/vftp/ftp.c:119 vfile/vhttp/http.c:226
+#: vfile/vftp/ftp.c:119 vfile/vhttp/http.c:227
 #, c-format
 msgid "write to socket %s: %m"
 msgstr ""
@@ -1686,102 +1747,105 @@ msgstr ""
 msgid "response parse error: %s"
 msgstr "b³±d interpretacji odpowiedzi: %s"
 
-#: vfile/vftp/ftp.c:250 vfile/vftp/ftp.c:261 vfile/vhttp/http.c:418
-#: vfile/vhttp/http.c:653
+#: vfile/vftp/ftp.c:250 vfile/vftp/ftp.c:261 vfile/vhttp/http.c:424
+#: vfile/vhttp/http.c:659
 #, c-format
 msgid "%s: response parse error"
 msgstr "%s: b³±d interpretacji odpowiedzi"
 
-#: vfile/vftp/ftp.c:357 vfile/vhttp/http.c:517
+#: vfile/vftp/ftp.c:357 vfile/vhttp/http.c:523
 msgid "response line too long"
 msgstr "zybt d³uga linia w odpowiedzi"
 
-#: vfile/vftp/ftp.c:367 vfile/vhttp/http.c:527
+#: vfile/vftp/ftp.c:367 vfile/vhttp/http.c:533
 msgid "connection canceled"
 msgstr "po³±czenie zosta³o przerwane"
 
-#: vfile/vftp/ftp.c:372 vfile/vhttp/http.c:532
+#: vfile/vftp/ftp.c:372 vfile/vhttp/http.c:538
 msgid "unexpected EOF"
 msgstr "niespodziewany EOF"
 
-#: vfile/vftp/ftp.c:522 vfile/vhttp/http.c:782
+#: vfile/vftp/ftp.c:522 vfile/vhttp/http.c:792
 #, c-format
 msgid "unable to connect to %s:%s: %s"
 msgstr "niemo¿no¶æ po³±czenia z %s:%s: %s"
 
-#: vfile/vftp/ftp.c:551 vfile/vhttp/http.c:811
+#: vfile/vftp/ftp.c:551 vfile/vhttp/http.c:821
 #, c-format
 msgid "unable to connect to %s:%s: %m"
 msgstr "niemo¿no¶æ po³±czenia z %s:%s: %m"
 
-#: vfile/vftp/ftp.c:615
+#: vfile/vftp/ftp.c:622
 #, c-format
 msgid "login failed: %s"
 msgstr "b³±d logowania: %s"
 
-#: vfile/vftp/ftp.c:616
+#: vfile/vftp/ftp.c:623
 msgid "unknown error"
 msgstr "b³±d nieokre¶lony"
 
-#: vfile/vftp/ftp.c:701
+#: vfile/vftp/ftp.c:718 vfile/vftp/ftp.c:751
 #, c-format
 msgid "%s: PASV response parse error"
 msgstr "%s: b³±d interpretacji odpowiedzi PASV"
 
-#: vfile/vftp/ftp.c:710
+#: vfile/vftp/ftp.c:727
 #, c-format
 msgid "%s: address too long"
 msgstr "%s: zbyt d³ugi adres"
 
-#: vfile/vftp/ftp.c:912
+#: vfile/vftp/ftp.c:966
 #, c-format
 msgid "%s: no such file (serv said: %s)"
 msgstr "%s: nie ma takiego pliku (odpowied¼ serwera: %s)"
 
-#: vfile/vftp/vftp.c:87 vfile/vhttp/vhttp.c:86
+#: vfile/vftp/vftp.c:87 vfile/vhttp/vhttp.c:87
 #, c-format
 msgid "%s: URL parse error"
 msgstr "%s: b³±d interpretacji URLa"
 
-#: vfile/vhttp/http.c:685
+#: vfile/vhttp/http.c:691
 #, fuzzy, c-format
 msgid "%s: permission denied"
 msgstr "%s (%s): brak dostêpu"
 
-#: vfile/vhttp/http.c:689
+#: vfile/vhttp/http.c:695
 #, fuzzy, c-format
 msgid "%s: invalid range requested"
 msgstr "%s: nieprawid³owa nazwa pakietu"
 
-#: vfile/vhttp/http.c:695
+#: vfile/vhttp/http.c:705
 #, fuzzy, c-format
 msgid "%s: %m (%s)"
 msgstr "%s zaznaczy³ %s"
 
-#: vfile/vhttp/http.c:1074
+#: vfile/vhttp/http.c:1127
 #, fuzzy, c-format
 msgid "%s: Content-Length parse error (%s)"
 msgstr "%s: b³±d interpretacji odpowiedzi"
 
-#: vfile/vhttp/http.c:1084
+#: vfile/vhttp/http.c:1137
 #, fuzzy, c-format
 msgid "%s: Content-Range parse error (%s)"
 msgstr "%s: b³±d interpretacji odpowiedzi"
 
-#: vfile/vhttp/http.c:1095
+#: vfile/vhttp/http.c:1148
 #, c-format
 msgid "%s: already downloaded\n"
 msgstr ""
 
-#: vfile/vhttp/http.c:1101
+#: vfile/vhttp/http.c:1154
 #, fuzzy, c-format
 msgid "%s: invalid Content-Range reached"
 msgstr "%s: nieprawid³owa nazwa pakietu"
 
-#: vfile/vhttp/http.c:1108
+#: vfile/vhttp/http.c:1161
 #, c-format
 msgid "Total file size %ld, %ld to download\n"
 msgstr ""
+
+#~ msgid "Update sources (for remote indexes) and verify it"
+#~ msgstr "Aktualizuj ¼ród³a pakietów i sprawd¼ ich integralno¶æ"
 
 #~ msgid "Give up (#%d)...\n"
 #~ msgstr "Wymiêkam (#%d)...\n"

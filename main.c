@@ -214,7 +214,7 @@ static struct argp_option options[] = {
  N_("Get packages info from package index file FILE"), 1 },
 
 {"sdir", OPT_SOURCEDIR, "DIR", 0, 
- N_("Get packages info from directory DIR by scannig it"), 1 },
+ N_("Get packages info from directory DIR by scanning it"), 1 },
 
 {"shdrl", OPT_SOURCEHDL, "FILE", 0, /* RH's hdlist,  PLD's tocfile */
  N_("Get packages info from package header list file (aka hdlist)"), 1 },    
