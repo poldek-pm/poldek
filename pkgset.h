@@ -132,8 +132,6 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 void packages_mark(tn_array *pkgs, unsigned flags_on, unsigned flags_off);
 #define packages_unmark_all(pkgs) packages_mark(pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK)
 
-
-
 struct install_info {
     tn_array *installed_pkgs;
     tn_array *uninstalled_pkgs;

@@ -375,8 +375,7 @@ AC_CONFIG_FILES([
 		shell/Makefile
 		sigint/Makefile
 		vfile/Makefile
-		vfile/vftp/Makefile
-		vfile/vhttp/Makefile
+		vfile/vfff/Makefile
 		conf/Makefile
 		doc/Makefile
 		doc/homepage/Makefile

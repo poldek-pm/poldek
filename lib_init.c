@@ -40,9 +40,9 @@
 
 #define POLDEKCTX_SETUP_DONE  (1 << 0)
 
-const char poldek_bug_mailaddr[] = "<mis@pld.org.pl>";
-const char poldek_version_banner[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
-const char poldek_banner[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
+const char poldek_BUG_MAILADDR[] = "<mis@pld.org.pl>";
+const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
+const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
 "Copyright (C) 2000-2003 Pawel A. Gajda <mis@pld.org.pl>\n"
 "This program may be freely redistributed under the terms of the GNU GPL v2\n";
 
@@ -576,7 +576,7 @@ static void n_assert_hook(const char *expr, const char *file, int line)
     printf("Something wrong, something not quite right.\n"
            "Assertion '%s' failed, %s:%d\n"
            "Please report this bug to %s.\n\n",
-           expr, file, line, poldek_bug_mailaddr);
+           expr, file, line, poldek_BUG_MAILADDR);
     abort();
 }
 
@@ -707,10 +707,10 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
     switch (param) {
         case POLDEK_CONF_FLAGS:
             uv = va_arg(ap, unsigned);
-            if (uv) {
+            if (uv == 0) 
                 ctx->inst->flags = ctx->inst_flags_orig;
+            else
                 ctx->inst->flags |= uv;
-            }
             break;
 
         case POLDEK_CONF_PSFLAGS:
@@ -869,10 +869,11 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     rpm_initlib(NULL);
 
     vfile_verbose = &verbose;
-    vfile_init();
-    vfile_msg_fn = log_msg;
-    vfile_msgtty_fn = log_tty;
-    vfile_err_fn = log_err;
+
+    //DUPA
+    //vfile_msg_fn = log_msg;
+    //vfile_msgtty_fn = log_tty;
+    //vfile_err_fn = log_err;
     
     vfile_configure(VFILE_CONF_CACHEDIR, "/tmp");
 

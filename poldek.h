@@ -2,14 +2,21 @@
 #ifndef  POLDEK_LIB_H
 #define  POLDEK_LIB_H
 
-#include "conf.h"
+//#include "conf.h"
 #include "pkg.h"
-#include "pkgset.h"
-#include "pkgdir/pkgdir.h"
 
-extern const char poldek_bug_mailaddr[];
-extern const char poldek_version_banner[];
-extern const char poldek_banner[];
+
+// pkgdir.h structures
+struct source;
+struct pkgdir;
+
+// pkgset.h structures
+struct pkgset;
+struct inst_s;
+
+extern const char poldek_BUG_MAILADDR[];
+extern const char poldek_VERSION_BANNER[];
+extern const char poldek_BANNER[];
 
 struct poldek_ctx {
     tn_array       *sources;    /* struct source *[]  */
@@ -53,6 +60,7 @@ void poldek_destroy(struct poldek_ctx *ctx);
 
 int poldek_configure(struct poldek_ctx *ctx, int param, ...);
 
+#define poldek_configure_f_reset(ctx) poldek_configure(ctx, POLDEK_CONF_FLAGS, 0)
 #define poldek_configure_f(ctx, val) \
         poldek_configure(ctx, POLDEK_CONF_FLAGS, val)
 #define poldek_configure_f_isset(ctx, fflags) ((ctx)->inst->flags & (fflags))

@@ -57,16 +57,9 @@ int shell_exec(struct pkgset *ps, struct inst_s *inst, int skip_installed,
                const char *cmd);
 #endif
 
-static const char program_bug_address[] = "<mis@pld.org.pl>";
+static const char *argp_program_version = poldek_VERSION_BANNER;
+const char *argp_program_bug_address = poldek_BANNER;
 
-static const char *argp_program_version = PACKAGE " " VERSION " (" VERSION_STATUS ")";
-const char *argp_program_bug_address = program_bug_address;
-
-/* Program documentation. */
-//char poldek_banner[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
-//"Copyright (C) 2000-2002 Pawel A. Gajda <mis@pld.org.pl>\n"
-//"This program may be freely redistributed under the terms of the GNU GPL v2\n";
-/* A description of the arguments we accept. */
 static char args_doc[] = N_("[PACKAGE...]");
 
 #define MODE_NULL         0
@@ -499,7 +492,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_BANNER:
-            printf("%s\n", poldek_banner);
+            printf("%s\n", poldek_BANNER);
             exit(EXIT_SUCCESS);
             break;
 
@@ -887,7 +880,7 @@ DUPA
 static
 void parse_options(int argc, char **argv) 
 {
-    struct argp argp = { options, parse_opt, args_doc, poldek_banner, 0, 0, 0};
+    struct argp argp = { options, parse_opt, args_doc, poldek_BANNER, 0, 0, 0};
 
     verbose = 0;
     

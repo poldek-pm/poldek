@@ -6,7 +6,7 @@ ACLOCAL_AMFLAGS = -I m4
 TRURL_DIR = @TRURL_DIR@
 TNDB_DIR = @TNDB_DIR@
 
-SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile shell conf pkgdir rpm
+SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile shell conf pkgdir rpm .
 DIST_SUBDIRS = $(SUBDIRS)
 
 INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@

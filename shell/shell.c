@@ -43,6 +43,7 @@
 #include "log.h"
 #include "shell.h"
 #include "conf.h"
+#include "poldek.h"
 
 int shOnTTY = 0;
 
@@ -781,7 +782,7 @@ int cmd_help(struct cmdarg *cmdarg)
     
     cmdarg = cmdarg;
     
-    printf("%s\n", poldek_banner);
+    printf("%s\n", poldek_BANNER);
     while (commands_tab[i]) {
         struct command *cmd = commands_tab[i++];
         char buf[256], *p;

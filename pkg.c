@@ -989,7 +989,6 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     unsigned len = 0;
     int n_len, v_len, r_len, a_len;
     char *s;
-    const char *arch;
     
     n_len = pkg->ver  - pkg->name - 1;
     v_len = pkg->rel  - pkg->ver - 1;
@@ -1022,8 +1021,8 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     n_assert(*s == '\0');	
     *s++ = '.';
 
-    if (arch) {
-        memcpy(s, arch, a_len);
+    if (pkg->arch) {
+        memcpy(s, pkg->arch, a_len);
         s += a_len;
         n_assert(*s == '\0');
         *s++ = '.';
