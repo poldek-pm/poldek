@@ -87,9 +87,14 @@ locations then option:
 
 B<-P, --prefix> B<PREFIX>
 
-could be used to point packages location, e.g.:
+could be used to point packages location, e.g:
 
 $ poldek -s /tmp/packages.dir.gz --prefix=/cdrom/RPMS/ -s ... --prefix=...
+
+If source is configured with the name (see L</CONFIG FILE>) then it 
+could be specified by B<-S, --sn> B<SOURCE-NAME>, e.g:
+
+$ poldek --sn pld-dist ...
 
 =head1 SPECIFING PACKAGES
 
@@ -334,15 +339,32 @@ line represents a comment or a parameter.
 
 =over
 
-=item * B<source> - see B<-s> option description
+=item * B<source> = [NAME;]SOURCE
 
-=item * B<sourceXX> - see B<-s> option description
+Optional NAME may be specified later from cmdline by
+B<-S, --sn> B<SOURCE-NAME> option; for example if you 
+have 3 sources configured as follows:
 
-=item * B<prefixXX> - see B<-p> option description
-	
-	Prefixed source should be specified in config by 
-	suffixed source/prefix pair to distinguish this source 
-	from other specified sources.  
+$ grep source ~/.poldekrc
+source    = pld-devel;/mnt/PLD-stable/RPMS
+source    = pld-stable;ftp://zn/PLD/i686/PLD/RPMS
+source    = misRPMS;ftp://zn/rpm/RPMS/
+
+then to load only ftp://zn/PLD/i686/PLD/RPMS use:
+
+$ poldek --sn pld-stable 
+
+..and to load all two pld-* use:
+
+$ poldek --sn pld-\*
+
+
+If you want to configure prefixed source, then it should be specified 
+by suffixed source/prefix pair to distinguish it from other sources.   
+
+=item * B<sourceXX> = [NAME;]SOURCE
+=item * B<prefixXX> - see B<-P> description
+
 
 =item * B<cachedir> - see B<--cachedir> option description
 
@@ -360,8 +382,9 @@ line represents a comment or a parameter.
 =item * B<mercy = yes|no> - see --mercy option description
 
 =item * B<keep_downloads = yes|no> - by default poldek removes downloaded
-        packages files after successfull installation, if option is set to 
-        "yes" then program will never remove downloaded packages from cache dir.
+        packages files after successfull installation; if option is set to 
+        "yes" then program will never remove downloaded packages from cache 
+        directory.
 
 =back
 
@@ -468,7 +491,6 @@ $ poldek --split=100 --split-conf=zip-split.conf \
 =head2 Execute shell command:
 
 $ poldek --shcmd='ls -lt' | less
-
 
 
 =head1 ENVIROMENT

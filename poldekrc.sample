@@ -1,11 +1,11 @@
 # $Id$
 # Sample poldek configuration
 
-source = ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
-#source = ftp://ftp.znienacka.com.pl/RPMS/
+source = pld;ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
+#source = mysrc;ftp://ftp.znienacka.com.pl/RPMS/
 #source = http://www.znienacka.com.pl/RPMS/
 #source = rsync://rsync.znienacka.com.pl/PLD/packages.dir
-#source = rsync://ftp.pld.org.pl/PLD-1.0/i686/PLD/
+#source = pld686;rsync://ftp.pld.org.pl/PLD-1.0/i686/PLD/
 
 
 # If package index and packages stored under diffrent locations, 
@@ -14,7 +14,7 @@ source = ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
 #prefix1 = /cdrom/RPMS
  
 
-# NOTE: directory *must* exists 
+# NOTE: directory *must* exists; default is ~/.poldek-cache
 #cachedir = /var/tmp/poldek-cache
 
 

@@ -26,7 +26,10 @@
 
 * added log file suppport (--log option)
 
-* added checks of packages.dir's data integrity before it is loading,
+* sources may be configured as name and URL pair; and be later 
+  selected using its name (new --sn|-S option)  
+
+* packages.dir's integrity is verified before each loading;
   it preventing program SIGSEVs on load indexes
 
 * changed default cache directory to $HOME/.poldek-cache
