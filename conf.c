@@ -393,19 +393,19 @@ int conf_get_bool(tn_hash *htconf, const char *name, int default_v)
     if ((v = conf_get(htconf, name, NULL)) == NULL)
         return default_v;
 
-    if ( strcasecmp(v, "yes") == 0 || strcasecmp(v, "y") == 0 ||
-         strcasecmp(v, "true") == 0 || strcasecmp(v, "t") == 0 ||
-         strcasecmp(v, "on") == 0 || strcasecmp(v, "enabled") == 0)
-      return( 0 );
+    if (strcasecmp(v, "yes") == 0 || strcasecmp(v, "y") == 0 ||
+        strcasecmp(v, "true") == 0 || strcasecmp(v, "t") == 0 ||
+        strcasecmp(v, "on") == 0 || strcasecmp(v, "enabled") == 0)
+        return 0;
 
-    if ( strcasecmp(v, "no") == 0 || strcasecmp(v, "n") == 0 ||
-         strcasecmp(v, "false") == 0 || strcasecmp(v, "f") == 0 ||
-         strcasecmp(v, "off") == 0 || strcasecmp(v, "disabled") == 0)
-      return( 1 );
-
+    if (strcasecmp(v, "no") == 0 || strcasecmp(v, "n") == 0 ||
+        strcasecmp(v, "false") == 0 || strcasecmp(v, "f") == 0 ||
+        strcasecmp(v, "off") == 0 || strcasecmp(v, "disabled") == 0)
+        return 1;
+    
     logn(LOGERR, _("invalid value ('%s') for option '%s'"), v, name);
 
-    return( 1 );
+    return default_v;
 }
 
 
