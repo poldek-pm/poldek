@@ -468,17 +468,16 @@ static inline void chkarg(int key, char *arg)
 
 static char *prepare_path(char *pathname) 
 {
-    char path[PATH_MAX];
-    const char *ppath;
-
-    
-    pathname = trimslash(pathname);
-
     if (pathname == NULL)
         return pathname;
+
+    if (vf_url_type(pathname) & VFURL_LOCAL) {
+        char path[PATH_MAX];
+        const char *ppath;
         
-    if ((ppath = abs_path(path, sizeof(path), pathname)))
-        return n_strdup(ppath);
+        if ((ppath = abs_path(path, sizeof(path), pathname)))
+            return n_strdup(ppath);
+    }
     
     return pathname;
 }
