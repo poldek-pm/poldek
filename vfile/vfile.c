@@ -179,7 +179,8 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
 { 
     int rc = 0;
 
-    if (vfmode & VFM_RW)
+    n_assert(vfmode & (VFM_RO | VFM_RW));
+    if ((vfmode & VFM_RW) && (vfmode & VFM_APPEND) != VFM_APPEND)
         vf_unlink(path);
 
     switch (vf->vf_type) {
@@ -208,14 +209,11 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
 
             if ((vfmode & VFM_APPEND) == VFM_APPEND)
                 mode = "a+";
-            
             else if (vfmode & VFM_RW)
                 mode = "w";
-            
-            else if (vfmode & VFM_RO)
+            else
                 mode = "r";
 
-            n_assert(mode);
             if ((vf->vf_stream = fopen(path, mode)) != NULL) 
                 rc = 1;
             else 
@@ -224,14 +222,15 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
         break;
         
         case VFT_GZIO: {
-            char mode[2];
-            
-            if (vfmode & VFM_RW)
-                *mode = 'w';
-            else
-                *mode = 'r';
-            *(mode+1) = '\0';
+            char *mode = NULL;
 
+            if ((vfmode & VFM_APPEND) == VFM_APPEND)
+				mode = "a+";
+            else if (vfmode & VFM_RW)
+                mode = "w";
+			else
+                mode = "r";
+            
             if ((vf->vf_gzstream = gzopen(path, mode)) != NULL) {
                 rc = 1;
 
@@ -251,14 +250,13 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
         case VFT_TRURLIO: {
             char *mode = NULL;
             
-            if (vfmode & VFM_RW)
-                mode = "w";
-            else if ((vfmode & VFM_APPEND) == VFM_APPEND)
+            if ((vfmode & VFM_APPEND) == VFM_APPEND)
 				mode = "a+";
-			else if (vfmode & VFM_RO)
+            else if (vfmode & VFM_RW)
+                mode = "w";
+			else
                 mode = "r";
 
-            n_assert(mode);
             vf->vf_tnstream = n_stream_open(path, mode, TN_STREAM_UNKNOWN);
             if (vf->vf_tnstream != NULL)
                 rc = 1;
