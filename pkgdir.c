@@ -369,11 +369,12 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
     char            *linebuf = NULL;
     int             line_size = 0, nread, nerr = 0, rc;
     const char      *errmsg_broken_difftoc = _("%s: broken patch list");
-    char            current_mdd[PDIGEST_SIZE];
+    char            current_mdd[PDIGEST_SIZE + 1];
     struct pdigest  pdg_current;
+    int             first_patch_found;
+
 
     n_assert(pkgdir_v016compat == 0);
-    
     switch (is_uptodate(pkgdir->idxpath, pkgdir->pdg, &pdg_current)) {
         case 1:
             rc = 1;
@@ -397,14 +398,17 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
     eat_zlib_ext(idxpath);
     snprintf(tmp, sizeof(tmp), "%s", idxpath);
     n_basedirnam(tmp, &dn, &bn);
-    snprintf(path, sizeof(path), "%s/%s/%s.diff.toc.gz", dn,
-             pdir_packages_incdir, bn);
+    snprintf(path, sizeof(path), "%s/%s/%s%s", dn,
+             pdir_packages_incdir, bn, pdir_difftoc_suffix);
     
     if ((vf = vfile_open(path, VFT_STDIO, VFM_RO)) == NULL) 
         return update_whole_idx(pkgdir->idxpath);
 
     *npatches = 0;
-    memcpy(current_mdd, pkgdir->pdg->mdd, PDIGEST_SIZE);
+    n_assert(strlen(pkgdir->pdg->mdd) == PDIGEST_SIZE);
+    memcpy(current_mdd, pkgdir->pdg->mdd, PDIGEST_SIZE + 1);
+    first_patch_found = 0;
+    
     while ((nread = getline(&linebuf, &line_size, vf->vf_stream)) > 0) {
         struct pkgdir *diff;
         char *p, *mdd;
@@ -434,7 +438,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
 
         if (ts <= pkgdir->ts)
             continue;
-
+        
         
         if ((p = strchr(p, ' ')) == NULL) {
             logn(LOGERR, errmsg_broken_difftoc, path);
@@ -459,16 +463,20 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
             break;
         }
         
-        if (memcmp(mdd, current_mdd, PDIGEST_SIZE) == 0) {
-            memcpy(current_mdd, mdd, PDIGEST_SIZE);
-            
-        } else {
-            logn(LOGERR, _("%s, %s"), pkgdir->pdg->mdd, mdd);
-            logn(LOGERR, _("%s: no patches available"), pkgdir->idxpath);
-            nerr++;
-            break;
+        if (!first_patch_found) {
+            if (memcmp(mdd, current_mdd, PDIGEST_SIZE) == 0)
+                first_patch_found = 1;
+            else {
+                logn(LOGERR, "%ld, %ld", pkgdir->ts, ts);
+                logn(LOGERR, "dir  %s", pkgdir->pdg->mdd);
+                logn(LOGERR, "last %s", mdd);
+                logn(LOGERR, "curr %s", current_mdd);
+                logn(LOGERR, _("%s: no patches available"), pkgdir->idxpath);
+                nerr++;
+                break;
+            }
         }
-
+        
         snprintf(path, sizeof(path), "%s/%s/%s", dn, pdir_packages_incdir, linebuf);
         if ((diff = pkgdir_new("diff", path, NULL, 0)) == NULL) {
             nerr++;
@@ -483,7 +491,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
                 break;
             }
         }
-        msgn(1, _("Applying patch %s..."), diff->idxpath);
+        msgn(1, _("Applying patch %s..."), n_basenam(diff->idxpath));
         pkgdir_load(diff, NULL, PKGDIR_LD_RAW);
         pkgdir_patch(pkgdir, diff);
         pkgdir_free(diff);
@@ -508,7 +516,6 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
         nerr++;
         
     } else {
-        //printf("current_md = %s\n", current_md);
         pkgdir->mdd_orig = strdup(pdg_current.mdd); /* for verification during write */
     }
     

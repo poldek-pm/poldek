@@ -97,7 +97,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
         return NULL;
     }
 
-    diff = malloc(sizeof(*pkgdir));
+    diff = pkgdir_malloc();
     diff->pkgs = plus_pkgs;
     diff->removed_pkgs = minus_pkgs;
     diff->name = strdup("DIFF");

@@ -38,12 +38,19 @@
 #include "h2n.h"
 
 static
+int vaccum_difflist(const char *idxpath, const char *difftoc_path);
+
+
+static
 char *mkidx_pathname(char *dest, size_t size, const char *pathname,
                      const char *suffix) 
 {
     char *ext, *bn = NULL;
-        
-    if (strlen(pathname) + strlen(suffix) + 1 > size)
+    int suffix_len;
+
+    suffix_len = strlen(suffix);
+    
+    if (strlen(pathname) + suffix_len + 1 > size)
         return NULL;
     
     bn = n_basenam(pathname);
@@ -52,10 +59,12 @@ char *mkidx_pathname(char *dest, size_t size, const char *pathname,
         
     } else {
         int len = ext - pathname + 1;
-        n_assert(len + strlen(suffix) + strlen(ext) + 1 < size);
+        n_assert(len + suffix_len + strlen(ext) + 1 < size);
         n_strncpy(dest, pathname, len);
         strcat(dest, suffix);
-        strcat(dest, ext);
+        
+        if (strstr(suffix, ext) == NULL)
+            strcat(dest, ext);
         dest[size - 1] = '\0';
     }
 
@@ -189,10 +198,13 @@ void put_fheader(FILE *stream, const char *name, struct pkgdir *pkgdir)
 int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
                       unsigned flags)
 {
-    struct vfile *vf = NULL, *vf_toc = NULL;
-    char tocpath[PATH_MAX], path[PATH_MAX], tmp[PATH_MAX];
-    char suffix[64] = "", tocsuffix[64] = ".toc", difftoc_suffix[PATH_MAX] = "";
-    int i, with_toc = 1;
+    struct vfile     *vf = NULL, *vf_toc = NULL;
+    char             tocpath[PATH_MAX], path[PATH_MAX], tmp[PATH_MAX], 
+                     difftoc_path[PATH_MAX];
+    char             suffix[64] = "", tocsuffix[64] = ".toc",
+                     difftoc_suffix[PATH_MAX] = "";
+    const char       *orig_pathname;
+    int              i, with_toc = 1;
 
     
     if ((flags & PKGDIR_CREAT_asCACHE) == 0 && 
@@ -211,7 +223,8 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
         pathname = pkgdir->idxpath;
 
     n_assert(pathname);
-
+    orig_pathname = pathname;
+    
     if ((pkgdir->flags & (PKGDIR_DIFF | PKGDIR_PATCHED)))
         flags |= PKGDIR_CREAT_woTOC;
     else
@@ -225,7 +238,7 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
         snprintf(suffix, sizeof(suffix), ".diff.%s", tstr);
         snprintf(tocsuffix, sizeof(tocsuffix), ".diff.%s.toc", tstr);
         
-        snprintf(difftoc_suffix, sizeof(difftoc_suffix), "%s", ".diff.toc");
+        snprintf(difftoc_suffix, sizeof(difftoc_suffix), "%s", pdir_difftoc_suffix);
 
         memcpy(tmp, pathname, sizeof(tmp));
         n_basedirnam(tmp, &dn, &bn);
@@ -287,7 +300,6 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
             }
             fprintf(vf->vf_stream, "\n");
         }
-        
     }
 
     if (pkgdir->depdirs && n_array_size(pkgdir->depdirs)) {
@@ -325,14 +337,11 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
 
     /* update *.diff list   */
     if (pkgdir->flags & PKGDIR_DIFF) {
-        char difftoc_path[PATH_MAX];
-        
         if (mkidx_pathname(difftoc_path, sizeof(difftoc_path),
                            pathname, difftoc_suffix) == NULL) {
             logn(LOGERR, "cannot prepare idxpath");
             return 0;
         }
-        
         
         if ((vf = vfile_open(difftoc_path, VFT_STDIO, VFM_APPEND)) == NULL)
             return 0;
@@ -345,5 +354,110 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
     if (i && (flags & PKGDIR_CREAT_wMD5))
         i = i_pkgdir_creat_md5(path);
     
+    if (pkgdir->flags & PKGDIR_DIFF)
+        vaccum_difflist(orig_pathname, difftoc_path);
     return i;
 }
+
+
+static
+int vaccum_difflist(const char *idxpath, const char *difftoc_path) 
+{
+    tn_array     *lines; 
+    char         linebuf[2048], *dn, *bn;
+    char         tmp[PATH_MAX], difftoc_path_bak[PATH_MAX];
+    struct stat  st_idx, st;
+    struct vfile *vf;
+    int          lineno, i;
+    off_t        diffs_size;
+    
+    if (stat(idxpath, &st_idx) != 0) {
+        logn(LOGERR, "vaccum diff: stat %s: %m", idxpath);
+        return 0;
+    }
+
+    memcpy(tmp, difftoc_path, sizeof(tmp));
+    n_basedirnam(tmp, &dn, &bn);
+
+    
+    if ((vf = vfile_open(difftoc_path, VFT_STDIO, VFM_RO)) == NULL)
+        return 0;
+    
+    lines = n_array_new(128, NULL, NULL);
+    while (fgets(linebuf, sizeof(linebuf), vf->vf_stream)) {
+        char *l;
+        int len;
+
+        len = strlen(linebuf);
+        l = alloca(len + 1);
+        memcpy(l, linebuf, len + 1);
+        n_array_push(lines, l);
+        DBGF("l = [%s]\n", l);
+    }
+    
+    if (n_array_size(lines)) {
+        snprintf(difftoc_path_bak, sizeof(difftoc_path_bak), "%s-", difftoc_path);
+        rename(difftoc_path, difftoc_path_bak);
+    }
+    vfile_close(vf);
+
+    if ((vf = vfile_open(difftoc_path, VFT_STDIO, VFM_RW)) == NULL) {
+        rename(difftoc_path_bak, difftoc_path);
+        n_array_free(lines);
+        return 0;
+    }
+
+    
+    lineno = 0;
+    diffs_size = 0;
+    for (i = n_array_size(lines) - 1; i >= 0; i--) {
+        char *p, *l, path[PATH_MAX];
+
+        l = n_array_nth(lines, i);
+        if ((p = strchr(l, ' ')) == NULL) {
+            logn(LOGERR, _("%s: format error"), difftoc_path);
+            *l = '\0';
+            continue;
+        }
+        
+        *p = '\0';
+        snprintf(path, sizeof(path), "%s/%s", dn, l);
+        *p = ' ';
+        
+        if (stat(path, &st) != 0) {
+            if (errno != ENOENT)
+                logn(LOGERR, "vaccum diff: stat %s: %m", l);
+            *l = '\0';
+            continue;
+        }
+        DBGF("path = %s %ld, %ld, %ld\n", path, st.st_size, diffs_size,
+             st_idx.st_size);
+        
+
+        if (lineno) {
+            if (vfile_valid_path(path)) {
+                msgn(1, _("Removing outdated %s"), n_basenam(path));
+                unlink(path);
+            }
+            
+        } else {
+            if (diffs_size + st.st_size > (st_idx.st_size * 0.9))
+                lineno = i;
+            else
+                diffs_size += st.st_size;
+        }
+    }
+
+    for (i = lineno; i < n_array_size(lines); i++) {
+        char *l;
+        
+        l = n_array_nth(lines, i);
+        if (*l)
+            fprintf(vf->vf_stream, "%s", l);
+    }
+
+    vfile_close(vf);
+    n_array_free(lines);
+    return 1;
+}
+

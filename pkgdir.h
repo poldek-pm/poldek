@@ -151,6 +151,7 @@ int i_pkgdir_verify_md5(const char *title, const char *pathname);
 
 extern const char *pdir_default_pkgdir_name;
 extern const char *pdir_packages_incdir;
+extern const char *pdir_difftoc_suffix;
 
 extern const char *pdir_poldeksindex;
 extern const char *pdir_poldeksindex_toc;

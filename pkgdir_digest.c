@@ -54,7 +54,7 @@ static int pdigest_read(struct pdigest *pdg, struct vfile *vfmd);
 struct pdigest *pdigest_new(const char *path, int vfmode, int v016compat) 
 {
     struct pdigest    *pdg;
-    struct vfile      *vf; 
+    struct vfile      *vf = NULL; 
     char              mdpath[PATH_MAX];
     unsigned          mode = 0;
     
@@ -466,23 +466,26 @@ int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
     char            path[PATH_MAX];
     struct vfile    *vf;
     int             rc;
-    struct pdigest  pdg;
     unsigned        calcflags = CALC_MDD;
-
 
     
     if ((vf = vfile_open(pathname, VFT_STDIO, VFM_RO)) == NULL)
         return 0;
 
-    pdigest_init(&pdg);
+    if (pkgdir->pdg == NULL)
+        pkgdir->pdg = pdigest_new(NULL, 0, 0);
+    else 
+        pdigest_destroy(pkgdir->pdg);
+        
     mkdigest_path(path, sizeof(path), pathname, pdigest_ext);
     msgn(1, _("Writing digest %s..."), path);
 
     if (with_md && (pkgdir->flags & PKGDIR_DIFF) == 0)
         calcflags |= CALC_MD;
     
-    if ((rc = pdigest_calc(&pdg, vf->vf_stream, calcflags))) {
-        pdigest_save(&pdg, pathname);
+    if ((rc = pdigest_calc(pkgdir->pdg, vf->vf_stream, calcflags))) {
+        pdigest_save(pkgdir->pdg, pathname);
+        
         
         if (pkgdir->flags & PKGDIR_PATCHED) {
             n_assert(pkgdir->mdd_orig);
@@ -497,7 +500,6 @@ int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
         }
     }
     
-    pdigest_destroy(&pdg);
     vfile_close(vf);
     return 1; 
 }

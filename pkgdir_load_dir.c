@@ -113,13 +113,13 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
             }
             Fclose(fdt);
             
-            if (n && n % 100 == 0) 
+            if (n && n % 200 == 0) 
                 msg(1, "_%d..", n);
             	
         }
     }
 
-    if (n && n > 100)
+    if (n && n > 200)
         msg(1, "_%d\n", n);
     closedir(dir);
     return n;
