@@ -18,7 +18,6 @@
 int pkgsetmodule_init(void);
 void pkgsetmodule_destroy(void);
 
-
 #define _PKGSET_INDEXES_INIT      (1 << 20) /* internal flag  */
 
 struct pkgset {
@@ -99,6 +98,8 @@ void inst_s_init(struct inst_s *inst);
 #define PSVERIFY_DEPS         (1 << 1)
 #define PSVERIFY_CNFLS        (1 << 2)
 #define PSVERIFY_FILECNFLS    (1 << 3)
+
+#define PSDBDIRS_LOADED       (1 << 4)
 
 #define PSMODE_VERIFY        (1 << 11)
 #define PSMODE_MKIDX         (1 << 12)
