@@ -22,9 +22,10 @@
 
 #include "i18n.h"
 #include "pkg.h"
+#include "misc.h"
 
 
-int main(int argc, char *argv[])
+int test_match(int argc, char *argv[])
 {
     struct pkg *pkg;
     struct capreq *req;
@@ -63,5 +64,25 @@ int main(int argc, char *argv[])
             }
         }
     }
+    return 0;
+}
+
+
+int test_expand_env(int argc, char *argv[])
+{
+    int i;
+
+    for (i=1; i<argc; i++) {
+        char buf[PATH_MAX]; 
+        printf("%s -> %s\n", argv[i], expand_env_vars(buf, sizeof(buf), argv[i]));
+    }
+        
+    return 0;
+}
+
+
+int main(int argc, char *argv[]) 
+{
+    test_expand_env(argc, argv);
     return 0;
 }
