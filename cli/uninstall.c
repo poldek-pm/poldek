@@ -180,8 +180,13 @@ static int uninstall(struct cmdctx *cmdctx)
     ts = cmdctx->ts;
 
     if (poclidek_dent_ldfind(cctx, POCLIDEK_INSTALLEDDIR) == NULL) {
-        log(LOGERR, "uninstall: installed packages not loaded, "
-            "type \"reload\" to load them\n");
+        if (cctx->_flags & POLDEKCLI_UNDERIMODE)
+            logn(LOGERR, _("%s: installed packages are not loaded, "
+                           "type \"reload\" to load them"), cmdctx->cmd->name);
+        else
+            logn(LOGERR, _("%s: installed packages are not loaded"),
+                 cmdctx->cmd->name);
+        
         return 0;
     }
     

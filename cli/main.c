@@ -244,6 +244,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                                 /* no break */
         case OPT_SKIPINSTALLED:
             argsp->cnflags |= OPT_CMN_SKIPINSTALLED;
+            argsp->cctx->flags |= POCLIDEK_SKIP_INSTALLED;
             break;
 
         case OPT_KEEPDOWNLOADS:
@@ -456,7 +457,7 @@ int main(int argc, char **argv)
     rrc = do_run();
     if (rrc & OPGROUP_RC_FINI)
         exit((rrc & OPGROUP_RC_ERROR) ? EXIT_FAILURE : EXIT_SUCCESS);
-
+    
     if (args.mode == RUNMODE_POLDEK) {
         unsigned ldflags = POCLIDEK_LOAD_AVAILABLE;
         if ((args.cnflags & OPT_CMN_SKIPINSTALLED) == 0)

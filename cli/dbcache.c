@@ -48,7 +48,6 @@ int poclidek_load_installed(struct poclidek_ctx *cctx, int reload)
     struct pkgdir *pkgdir;
     DBGF("%d\n", reload);
 
-/* TODO: reload */
     if ((pkgdir = load_installed_pkgdir(cctx, reload)) == NULL)
         return 0;
 

@@ -86,13 +86,21 @@ int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
 #define POCLIDEK_AVAILDIR         "/all-avail"
 #define POCLIDEK_HOMEDIR          POCLIDEK_AVAILDIR  
 
-
+/* _flags, internal do not touch*/
+#define POLDEKCLI_UNDERIMODE       (1 << 4)
 #define POLDEKCLI_CONFIG_LOADED    (1 << 5)
 #define POLDEKCLI_LOADED_AVAILABLE (1 << 6)
 #define POLDEKCLI_LOADED_INSTALLED (1 << 7)
 
+/* flags */
+#define POCLIDEK_SKIP_INSTALLED    (1 << 0) /* if set, POCLIDEK_LOAD_RELOAD must
+                                               be passed to poclidek_load_packages()
+                                               to load installed packages
+                                            */
+
 struct pkg_dent;                /* package dirent struct */
 struct poclidek_ctx {
+    unsigned            flags;
     struct poldek_ctx   *ctx;
     tn_array            *commands;
     tn_array            *pkgs_available;   /* array of available pkgs  */

@@ -542,7 +542,10 @@ int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags)
         }
     }
 
-    
+    if ((cctx->flags & POCLIDEK_SKIP_INSTALLED) && /* --skip-installed  */
+        (flags & POCLIDEK_LOAD_RELOAD) == 0) {     /* ...and not reload  */
+        return nerr == 0;
+    }
     
     if (flags & POCLIDEK_LOAD_INSTALLED) {
         int reload = (flags & POCLIDEK_LOAD_RELOAD);
