@@ -12,6 +12,8 @@ int pkgflmodule_init(void);
 void pkgflmodule_destroy(void);
 void pkgflmodule_free_unneeded(void);
 
+void *pkgflmodule_allocator_push_mark(void);
+void pkgflmodule_allocator_pop_mark(void *ptr);
 
 struct flfile {
     uint32_t  size;
@@ -24,7 +26,7 @@ struct flfile *flfile_new(uint32_t size, uint16_t mode,
                           const char *slinkto, int slen);
 
 /*
-  both functions returns false if given files are conflicted
+  both functions returns true(non-zero) if given files are conflicted
   WARN: basenames aren't compared! 
  */
 int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict);
@@ -47,7 +49,6 @@ int pkgfl_ent_cmp(const void *a, const void *b);
 #define PKGFL_DEPDIRS     1
 #define PKGFL_NOTDEPDIRS  2
 
-int pkgfl_asftag(tn_array *fl, char **ftag, int which);
 int pkgfl_store(tn_array *fl, tn_buf *nbuf, int which);
 int pkgfl_store_f(tn_array *fl, FILE *stream, int which);
 

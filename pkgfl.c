@@ -31,12 +31,13 @@
 #define obstack_chunk_free  free
 
 struct fl_allocator_s {
-    tn_hash *dirns;
-    struct obstack ob;
+    tn_hash           *dirns;
+    tn_array          *cur_dirns;
+    void              *cur_mark;
+    struct obstack    ob;
 };
 
 static struct fl_allocator_s *flalloct = NULL;
-
 
 int pkgflmodule_init(void) 
 {
@@ -51,17 +52,17 @@ int pkgflmodule_init(void)
     n_hash_ctl(flalloct->dirns, TN_HASH_NOCPKEY);
     obstack_init(&flalloct->ob);
     obstack_chunk_size(&flalloct->ob) = 1024*128;
+    flalloct->cur_dirns = NULL;
+    flalloct->cur_mark = NULL;
     return 1;
 }
 
 
 void pkgflmodule_free_unneeded(void) 
 {
-    if (flalloct) {
-        if (flalloct->dirns) {
-            n_hash_free(flalloct->dirns);
-            flalloct->dirns = NULL;
-        }
+    if (flalloct && flalloct->dirns) {
+        n_hash_free(flalloct->dirns);
+        flalloct->dirns = NULL;
     }
 }
 
@@ -76,11 +77,36 @@ void pkgflmodule_destroy(void)
     }
 }
 
+#if 1
+void *pkgflmodule_allocator_push_mark(void) 
+{
+    flalloct->cur_mark = obstack_alloc(&flalloct->ob, 1);
+    flalloct->cur_dirns = n_array_new(2, NULL, NULL);
+    return flalloct->cur_mark;
+}
+
+void pkgflmodule_allocator_pop_mark(void *ptr) 
+{
+    int i;
+    
+    for (i=0; i<n_array_size(flalloct->cur_dirns); i++) 
+        n_hash_remove(flalloct->dirns, n_array_nth(flalloct->cur_dirns, i));
+    n_array_free(flalloct->cur_dirns);
+    obstack_free(&flalloct->ob, ptr);
+}
+#endif
 __inline__
 static void *pkgfl_alloc(size_t size) 
 {
     return obstack_alloc(&flalloct->ob, size);
 }
+
+__inline__
+static char *pkgfl_strdup(const char *str, size_t size)
+{
+    return obstack_copy0(&flalloct->ob, str, size);
+}
+
 
 struct flfile *flfile_new(uint32_t size, uint16_t mode, 
                           const char *basename, int blen, 
@@ -161,14 +187,6 @@ int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict)
     return cmprc;
 }
 
-
-__inline__
-static char *pkgfl_strdup(const char *str, size_t size)
-{
-    return obstack_copy0(&flalloct->ob, str, size);
-}
-
-
 int pkgfl_ent_cmp(const void *a,  const void *b) 
 {
     const struct pkgfl_ent *aa = a;
@@ -207,6 +225,8 @@ struct pkgfl_ent *pkgfl_ent_new(char *dirname, int dirname_len, int nfiles)
     if ((dirnamep = n_hash_get(flalloct->dirns, dirname)) == NULL) {
         dirnamep = pkgfl_strdup(dirname, dirname_len);
         n_hash_insert(flalloct->dirns, dirnamep, dirnamep);
+        if (flalloct->cur_dirns)
+            n_array_push(flalloct->cur_dirns, dirnamep);
     }
     
     flent->dirname = dirnamep;
