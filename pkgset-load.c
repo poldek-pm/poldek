@@ -105,7 +105,10 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
         while (*t) {
             if (strcmp(*t, "noauto") == 0)
                 src->flags |= PKGSOURCE_NOAUTO;
-                
+
+            else if (strcmp(*t, "noautoup") == 0)
+                src->flags |= PKGSOURCE_NOAUTOUP;
+            
             else if (strcmp(*t, "gpg") == 0)
                 src->flags |= PKGSOURCE_VERSIGN;
                 
@@ -156,6 +159,14 @@ int source_snprintf_flags(char *str, int size, struct source *src)
     if (src->flags & PKGSOURCE_NOAUTO)
         n = snprintf(str, size - n, "noauto");
 
+    if (src->flags & PKGSOURCE_NOAUTOUP) {
+        if (n && size - n > 2) {
+            str[n++] = ',';
+            str[n] = '\0';
+        }
+        n += snprintf(&str[n], size - n, "noautoup");
+    }
+    
     if (src->flags & PKGSOURCE_VERSIGN) {
         if (n && size - n > 2) {
             str[n++] = ',';

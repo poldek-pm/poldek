@@ -818,7 +818,7 @@ int addsource(tn_array *sources, struct source *src,
 {
     int rc = 0;
     
-    if (n_array_size(src_names == 0)) {
+    if (n_array_size(src_names) == 0) {
         n_array_push(sources, src);
         rc = 1;
                 
@@ -829,8 +829,8 @@ int addsource(tn_array *sources, struct source *src,
             char *sn = n_array_nth(src_names, i);
             
             if (fnmatch(sn, src->source_name, 0) == 0) {
-                src->flags &= ~PKGSOURCE_NOAUTO;
-                
+                /* given by name -> clear flags */
+                src->flags &= ~(PKGSOURCE_NOAUTO | PKGSOURCE_NOAUTOUP);
                 n_array_push(sources, src);
                 matches[i]++;
                 rc = 1;
@@ -983,7 +983,7 @@ void parse_options(int argc, char **argv)
     } else {
         int i, nsources = 0;
         
-        for (i=0; i<n_array_size(args.sources); i++) {
+        for (i=0; i < n_array_size(args.sources); i++) {
             struct source *src = n_array_nth(args.sources, i);
             if ((src->flags & PKGSOURCE_NOAUTO) == 0)
                 nsources++;
@@ -1186,10 +1186,16 @@ static int update_whole_idx(void)
 {
     int i, nerr = 0;
     
-    for (i=0; i<n_array_size(args.sources); i++)
-        if (!source_update(n_array_nth(args.sources, i)))
+    for (i=0; i < n_array_size(args.sources); i++) {
+        struct source *src = n_array_nth(args.sources, i);
+        
+        if (src->flags & PKGSOURCE_NOAUTOUP)
+            continue;
+        
+        if (!source_update(src))
             nerr++;
-    
+    }
+
     return nerr == 0;
 }
 
@@ -1204,7 +1210,11 @@ static int update_idx(void)
     for (i=0; i < n_array_size(args.sources); i++) {
         struct source *src = n_array_nth(args.sources, i);
         struct pkgdir *pkgdir;
+
         
+        if (src->flags & PKGSOURCE_NOAUTOUP)
+            continue;
+
         pkgdir = pkgdir_new(src->source_name, src->source_path,
                             src->pkg_prefix, PKGDIR_NEW_VERIFY);
         

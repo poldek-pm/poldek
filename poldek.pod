@@ -357,10 +357,21 @@ $ poldek --sn pld-stable
 $ poldek --sn pld-\*
 
 
-B<OPTIONS> describes source options, for now only 
-'noauto' (don't load this source by default) is accepted, e.g.
+B<OPTIONS> describes source options; possible values are:
 
-source = pld-test,noauto     /mnt/PLD-test/RPMS
+=over
+
+=item * B<noauto> - don't load this source by default
+
+=item * B<noautoup> - don't update this source by default
+
+=back
+
+Examples:
+
+source = pld-test,noauto       /mnt/PLD-test/RPMS
+
+source = rare,noautoup         ftp://host/rare-RPMS
 
 
 =item * B<sourceXX> = SOURCE
