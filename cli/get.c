@@ -42,7 +42,7 @@ static struct argp_option options[] = {
 };
 
 
-struct command command_get = {
+struct poclidek_cmd command_get = {
     0, 
     "get", N_("PACKAGE..."), N_("Download packages"), 
     options, parse_opt,
@@ -56,7 +56,7 @@ static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct cmdarg *cmdarg = state->input;
-    struct poldekcli_ctx *cctx = cmdarg->cctx;
+    struct poclidek_ctx *cctx = cmdarg->cctx;
     
     switch (key) {
         case 'd':
@@ -80,7 +80,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 static int get(struct cmdarg *cmdarg)
 {
-    struct poldekcli_ctx  *cctx;
+    struct poclidek_ctx  *cctx;
     tn_array *pkgs = NULL, *av_pkgs, *get_pkgs;
     char destdir[PATH_MAX], *destdirp;
     int i, err = 0;

@@ -175,7 +175,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
     n_assert(arg_s);
     
     if (arg_s->cnflags & DO_SPLIT) {
-        if (poldek_load_sources(rt->ctx, 1)) 
+        if (poldek_load_sources(rt->ctx)) 
             rc = do_split(rt->ctx, arg_s);
         else
             rc = 0;

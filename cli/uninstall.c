@@ -54,7 +54,7 @@ static struct argp_option cmdl_options[] = {
 };
 
 
-struct command command_uninstall = {
+struct poclidek_cmd command_uninstall = {
     COMMAND_HASVERBOSE | COMMAND_MODIFIESDB, 
     "uninstall", N_("PACKAGE..."), N_("Uninstall packages"), 
     options, parse_opt,
@@ -171,7 +171,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 static int uninstall(struct cmdarg *cmdarg) 
 {
-    struct poldekcli_ctx  *cctx;
+    struct poclidek_ctx  *cctx;
     struct poldek_ts      *ts;
     tn_array              *pkgs = NULL;
     struct install_info   iinf, *iinfp;
@@ -186,8 +186,8 @@ static int uninstall(struct cmdarg *cmdarg)
         //    "type \"reload\" to load them\n");
         //return 0;
 
-        poldekcli_set_pkgctx(cctx, POLDEKCLI_PKGCTX_INSTD);
-        pkgs = poldekcli_resolve_packages(cctx, cmdarg->ts, 1);
+        poclidek_set_pkgctx(cctx, POLDEKCLI_PKGCTX_INSTD);
+        pkgs = poclidek_resolve_packages(cctx, cmdarg->ts, 1);
         if (pkgs == NULL) {
             err++;
             goto l_end;
@@ -214,19 +214,12 @@ static int uninstall(struct cmdarg *cmdarg)
     
     if (!poldek_ts_do_uninstall(ts, iinfp))
         err++;
-    
-    if (iinfp && cmdarg->cctx->instpkgs) {
-        for (i=0; i < n_array_size(iinf.uninstalled_pkgs); i++) {
-            struct pkg *pkg = n_array_nth(iinf.uninstalled_pkgs, i);
-            n_array_remove(cmdarg->cctx->instpkgs, pkg);
-            DBGF("- %s\n", pkg->nevr);
-        }
-        n_array_sort(cmdarg->cctx->instpkgs);
-        //cmdarg->cctx->ts_instpkgs = time(0);
-    }
 
-    if (iinfp)
+    if (iinfp) {
+        poclidek_apply_iinf(cmdarg->cctx, iinfp);
         install_info_destroy(iinfp);
+    }
+    
     
  l_end:
     if (pkgs) 

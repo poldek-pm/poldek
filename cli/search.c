@@ -99,7 +99,7 @@ static struct argp_option options[] = {
 };
 
 
-struct command command_search = {
+struct poclidek_cmd command_search = {
     0, 
     "search", N_("PATTERN [PACKAGE...]"), N_("Search packages"), 
     options, parse_opt,
@@ -517,7 +517,7 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
 
 static int search(struct cmdarg *cmdarg)
 {
-    struct poldekcli_ctx   *cctx = NULL;
+    struct poclidek_ctx   *cctx = NULL;
     tn_array               *pkgs = NULL;
     tn_array               *matched_pkgs = NULL;
     int                    i, err = 0, display_bar = 0, bar_v;
@@ -546,10 +546,10 @@ static int search(struct cmdarg *cmdarg)
     }
     
     if (poldek_ts_get_arg_count(cmdarg->ts) == 0) {
-        pkgs = poldekcli_get_current_pkgs(cctx);
+        pkgs = poclidek_get_current_pkgs(cctx);
         
     } else {
-        pkgs = poldekcli_resolve_packages(cctx, cmdarg->ts, 0);
+        pkgs = poclidek_resolve_packages(cctx, cmdarg->ts, 0);
     }
     
     if (pkgs == NULL)

@@ -59,7 +59,7 @@ static struct argp_option options[] = {
  { 0, 0, 0, 0, 0, 0 },
 };
 
-struct command command_ls = {
+struct poclidek_cmd command_ls = {
     COMMAND_EMPTYARGS, 
     "ls", N_("[PACKAGE...]"), N_("List packages"), 
     options, parse_opt, NULL, ls,
@@ -180,15 +180,15 @@ static int ls(struct cmdarg *cmdarg)
     
     ls_all = 0;
 
-    poldekcli_set_pkgctx(cmdarg->cctx, POLDEKCLI_PKGCTX_AVAIL);
+    poclidek_set_pkgctx(cmdarg->cctx, POLDEKCLI_PKGCTX_AVAIL);
     if (cmdarg->flags & OPT_LS_INSTALLED && cmdarg->cctx->instpkgs)
-        poldekcli_set_pkgctx(cmdarg->cctx, POLDEKCLI_PKGCTX_INSTD);
+        poclidek_set_pkgctx(cmdarg->cctx, POLDEKCLI_PKGCTX_INSTD);
 
     if (poldek_ts_get_arg_count(cmdarg->ts))
-        ls_pkgs = poldekcli_resolve_packages(cmdarg->cctx, cmdarg->ts, 0);
+        ls_pkgs = poclidek_resolve_packages(cmdarg->cctx, cmdarg->ts, 0);
     else {
         ls_all = 1;
-        ls_pkgs = poldekcli_get_current_pkgs(cmdarg->cctx);
+        ls_pkgs = poclidek_get_current_pkgs(cmdarg->cctx);
     }
 
     if (ls_pkgs == NULL) {

@@ -89,7 +89,7 @@ static struct argp_option options[] = {
 };
 
 
-struct command command_desc = {
+struct poclidek_cmd command_desc = {
     0, 
     "desc", N_("PACKAGE..."), N_("Display packages info"), 
     options, parse_opt,
@@ -776,12 +776,12 @@ static void show_description(struct pkg *pkg, unsigned flags)
 
 static int desc(struct cmdarg *cmdarg)
 {
-    struct poldekcli_ctx   *cctx;
+    struct poclidek_ctx   *cctx;
     tn_array               *pkgs = NULL;
     int                    i, err = 0;
 
     cctx = cmdarg->cctx;
-    pkgs = poldekcli_resolve_packages(cctx, cmdarg->ts, 0);
+    pkgs = poclidek_resolve_packages(cctx, cmdarg->ts, 0);
     if (pkgs == NULL) {
         err++;
         goto l_end;

@@ -28,9 +28,9 @@
 
 
 static
-struct command *command_new_alias(const char *name, const char *cmdline) 
+struct poclidek_cmd *command_new_alias(const char *name, const char *cmdline) 
 {
-    struct command *alias;
+    struct poclidek_cmd *alias;
 
     alias = n_malloc(sizeof(*alias));
     memset(alias, 0, sizeof(*alias));
@@ -42,11 +42,11 @@ struct command *command_new_alias(const char *name, const char *cmdline)
 
 
 static
-int add_alias(struct poldekcli_ctx *cctx,
+int add_alias(struct poclidek_ctx *cctx,
               const char *aliasname, const char *cmdline)
 {
-	struct command          *cmd;
-    struct command          tmpcmd;
+	struct poclidek_cmd          *cmd;
+    struct poclidek_cmd          tmpcmd;
 
     
 	tmpcmd.name = (char*)aliasname;
@@ -74,7 +74,7 @@ int add_alias(struct poldekcli_ctx *cctx,
 }
 
 
-void poldekcli_load_aliases(struct poldekcli_ctx *cctx, const char *path) 
+void poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path) 
 {
     tn_hash *aliases_htcnf, *ht;
     tn_array *keys;

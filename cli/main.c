@@ -107,7 +107,7 @@ static struct poclidek_opgroup *poclidek_opgroup_tab[] = {
 struct args {
     int                  eat_args;      
     struct poldek_ctx    *ctx;
-    struct poldekcli_ctx *cctx;
+    struct poclidek_ctx *cctx;
     struct poldek_ts     *ts;
     
     int       mjrmode;
@@ -236,7 +236,7 @@ void argp_prepare_child_options(const struct argp *argp)
 
     
 static
-void parse_options(struct poldekcli_ctx *cctx, int argc, char **argv) 
+void parse_options(struct poclidek_ctx *cctx, int argc, char **argv) 
 {
     struct argp argp = { common_options, parse_opt,
                          args_doc, poldek_BANNER, 0, 0, 0};
@@ -323,18 +323,22 @@ int main(int argc, char **argv)
 {
     int                   i, rc = 1;
     struct poldek_ctx     ctx;
-    struct poldekcli_ctx  cctx;
+    struct poclidek_ctx  cctx;
     
     mem_info_verbose = -1;
 
     poldek_init(&ctx, 0);
 
     memset(&cctx, 0, sizeof(cctx));
-    poldekcli_init(&cctx, &ctx, 1);
+    poclidek_init(&cctx, &ctx, 1);
     
     parse_options(&cctx, argc, argv);
 
-    if (args.eat_args) {
+    if (args.eat_args == 0) {
+        poldek_load_sources(cctx.ctx);
+        poclidek_shell(&cctx);
+        
+    } else {
         dbgf_("exec[%d] ", args.argc);
         i = 0;
 
@@ -343,10 +347,10 @@ int main(int argc, char **argv)
         //printf("\n");
         
         if (args.argc > 0) 
-            rc = poldekcli_exec(&cctx, args.ts, args.argc,
+            rc = poclidek_exec(&cctx, args.ts, args.argc,
                                 (const char **)args.argv);
     }
     
-    poldekcli_destroy(&cctx);
+    poclidek_destroy(&cctx);
     return rc;
 }

@@ -107,7 +107,7 @@ static struct argp_option cmdl_options[] = {
 };
 
 
-struct command command_install = {
+struct poclidek_cmd command_install = {
     COMMAND_HASVERBOSE | COMMAND_MODIFIESDB, 
     "install", N_("PACKAGE..."), N_("Install packages"), 
     options, parse_opt,
@@ -283,7 +283,7 @@ static int install(struct cmdarg *cmdarg)
 {
     struct install_info   iinf;
     int                   i, rc = 1, is_test;
-    struct poldekcli_ctx  *cctx;
+    struct poclidek_ctx  *cctx;
     struct poldek_ts      *ts;
     
     cctx = cmdarg->cctx;
@@ -335,7 +335,7 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
     dbgf_("%p->%p, %p->%p\n", rt->ts, rt->ts->hold_patterns,
          rt->ts->ctx->ts, rt->ts->ctx->ts->hold_patterns);
     
-    if (!poldek_load_sources(rt->ctx, 1))
+    if (!poldek_load_sources(rt->ctx))
         return 0;
     
     rc = poldek_ts_do_install(rt->ts, NULL);

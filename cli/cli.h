@@ -17,15 +17,13 @@
 #define POLDEKCLI_PKGCTX_AVAIL    1
 #define POLDEKCLI_PKGCTX_INSTD    2
 
-struct poldekcli_ctx {
+extern int shOnTTY;
+
+struct poclidek_ctx {
     int                 pkg_ctx;
     struct poldek_ctx   *ctx;
     tn_array            *commands;
-    tn_array            *aliases;
-    tn_array            *all_commands;
     tn_array            *avpkgs;     /* array of available pkgs  */
-    tn_array            *avail_plist;
-    tn_array            *instd_plist;
     tn_array            *instpkgs;   /* array of installed pkgs  */
     
     time_t         ts_instpkgs; /* instpkgs timestamp */
@@ -34,20 +32,23 @@ struct poldekcli_ctx {
     unsigned            flags;
 };
 
-#define poldekcli_set_pkgctx(cctx, pkgctx) (cctx->pkg_ctx = pkgctx)
-tn_array *poldekcli_get_current_pkgs(struct poldekcli_ctx *cctx);
+#define poclidek_set_pkgctx(cctx, pkgctx) (cctx->pkg_ctx = pkgctx)
+tn_array *poclidek_get_current_pkgs(struct poclidek_ctx *cctx);
 
-int poldekcli_init(struct poldekcli_ctx *cctx, struct poldek_ctx *ctx,
+int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx,
                    int skip_installed);
 
-int poldekcli_load_packages(struct poldekcli_ctx *cctx, int skip_installed);
+int poclidek_load_packages(struct poclidek_ctx *cctx, int skip_installed);
 
-void poldekcli_destroy(struct poldekcli_ctx *cctx);
+void poclidek_destroy(struct poclidek_ctx *cctx);
 
-int poldekcli_exec(struct poldekcli_ctx *cctx, struct poldek_ts *ts, 
+int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, 
                    int argc, const char **argv);
 
-tn_array *poldekcli_resolve_packages(struct poldekcli_ctx *cctx,
+int poclidek_exec_line(struct poclidek_ctx *cctx, struct poldek_ts *ts,
+                       const char *cmdline);
+
+tn_array *poclidek_resolve_packages(struct poclidek_ctx *cctx,
                                      struct poldek_ts *ts,
                                      int exact);
 
@@ -63,16 +64,15 @@ int pkg_cmp_lookup(struct pkg *pkg, tn_array *pkgs,
 #define COMMAND_ARGS_PKGS_AVUPGR  2
 #define COMMAND_ARGS_PKGS_INST    3
 
-struct cmdarg {
-    struct poldekcli_ctx *cctx;     /* common shell_s struct */
-    struct poldek_ts     *ts;
-    tn_array             *pkgs;     /* resolved arguments */
-    
-    unsigned         flags;     /* cmd private flags */
-    int              is_help;   /*  */
-    void             *d;        /* cmd private data */
-};
 
+struct cmdarg {
+    struct poclidek_ctx *cctx;     /* common shell_s struct */
+    struct poldek_ts     *ts;
+    
+    unsigned            flags;     /* cmd private flags */
+    int                 is_help;   /*  */
+    void                *d;        /* cmd private data */
+};
 
 
 #define COMMAND_NOARGS       (1 << 0) /* cmd don't accept arguments */
@@ -83,8 +83,10 @@ struct cmdarg {
 
 #define COMMAND_MODIFIESDB   (1 << 8)
 #define COMMAND_IS_ALIAS     (1 << 9)
+#define COMMAND_IS_BREAK     (1 << 10)
+#define COMMAND_IS_PIPE      (1 << 11)
 
-struct command {
+struct poclidek_cmd {
     unsigned            flags;
     char                *name;
     char                *arg;
@@ -104,20 +106,19 @@ struct command {
     char                 *cmdline;   /* alias content */
 };
 
-struct command_alias {
-    unsigned            flags;
-    char                *name;      /* alias name    */
-    char                *cmdline;   /* alias content */
-    struct command      *cmd;
+
+struct poclidek_cmd_result {
+    tn_array    *pkgs;
+    tn_array    *lines;
+    void  (*display)(void*);
 };
 
 
+int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
+
 int sh_printf_c(FILE *stream, int color, const char *fmt, ...);
 
-extern int shOnTTY;
-extern volatile sig_atomic_t shSIGINT;
-
-/* alias.c */
-void poldekcli_load_aliases(struct poldekcli_ctx *cctx, const char *path);
-
+void poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path);
+struct install_info;
+void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct install_info *iinf);
 #endif 
