@@ -136,7 +136,7 @@ int pkgdir_clean_cache(const char *type, const char *path, unsigned flags)
     if (urltype & VFURL_LOCAL)
         return 1;
     
-    if ((mod = pkgdir_find_mod(type)) == NULL) {
+    if ((mod = pkgdir_mod_find(type)) == NULL) {
         logn(LOGERR, _("%s: unknown index type"), type);
         return 0;
     }

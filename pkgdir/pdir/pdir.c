@@ -195,7 +195,7 @@ int update_whole_idx(const char *path)
 {
     struct vfile *vf;
     int rc, try = 2;
-    unsigned vf_flags = VFM_RO | VFM_NORM;
+    unsigned vf_flags = VFM_RO | VFM_NORM | VFM_NOEMPTY;
 
     while (try > 0) {
         struct pdir idx;
@@ -499,7 +499,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     tn_array             *removed_pkgs = NULL;
     const char           *errmsg_brokenidx = _("%s: broken index (empty %s tag)");
     struct pdir          idx;
-    unsigned             vfmode = VFM_RO | VFM_CACHE;
+    unsigned             vfmode = VFM_RO | VFM_CACHE | VFM_NOEMPTY;
     unsigned             pkgdir_flags = 0;
     char                 *path = pkgdir->path;
 
@@ -830,7 +830,7 @@ static int is_uptodate(const char *path, const struct pdir_digest *pdg_local,
     unlink(mdtmpath);
     mdtmpath[n] = '\0';
 
-    if (!vfile_fetch(mdtmpath, mdpath, VFURL_UNKNOWN)) {
+    if (!vfile_fetch(mdtmpath, mdpath)) {
         rc = -1;
         goto l_end;
     }

@@ -83,7 +83,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
         sepchr = "";
     
     n = 0;
-    while( (ent = readdir(dir)) ) {
+    while ((ent = readdir(dir))) {
         char path[PATH_MAX];
         
         if (fnmatch("*.rpm", ent->d_name, 0) != 0) 
@@ -159,6 +159,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     
     n = load_dir(pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups,
                  pkgdir->avlangs_h, ldflags);
+
     return n;
 }
 

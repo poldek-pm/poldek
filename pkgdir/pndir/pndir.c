@@ -324,7 +324,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     struct pndir         idx;
     time_t               ts = 0, ts_orig = 0;
     const char           *errmsg_brokenidx = _("%s: broken index (empty %s tag)");
-    unsigned             vfmode = VFM_RO;
+    unsigned             vfmode = VFM_RO | VFM_NOEMPTY;
     unsigned             pkgdir_flags = 0;
     char                 *path = pkgdir->path;
     char                 key[TNDB_KEY_MAX + 1], val[4096];

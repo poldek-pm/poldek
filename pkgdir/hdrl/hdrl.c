@@ -74,7 +74,7 @@ int load_header_list(const char *path, tn_array *pkgs,
     struct pkg           *pkg;
     Header               h;
     int                  n = 0;
-    unsigned             vfmode = VFM_RO | VFM_CACHE | VFM_UNCOMPR;
+    unsigned             vfmode = VFM_RO | VFM_CACHE | VFM_UNCOMPR | VFM_NOEMPTY;
 
     if ((vf = vfile_open(path, VFT_RPMIO, vfmode)) == NULL)
         return -1;

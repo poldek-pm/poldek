@@ -216,7 +216,7 @@ int hdr_digest(tn_stream *st, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
 
         if (*p == '%')
             p++;
-        
+
         if (strncmp(p, pdir_tag_endvarhdr, len) == 0) {
             endvhdr_found = 1;
             break;

@@ -8,6 +8,9 @@
 
 #include "source.h"
 
+int pkgdirmodule_init(void);
+
+
 #define PKGDIR_DEFAULT_TYPE       "pndir"
 
 #define PKGDIR_LOADED             (1 << 1)  /* for idx */
@@ -211,7 +214,10 @@ struct pkgdir_module {
     int (*posthook_diff) (struct pkgdir*, struct pkgdir*, struct pkgdir*);
 };
 
-const struct pkgdir_module *pkgdir_find_mod(const char *name);
+int pkgdir_mod_register(const struct pkgdir_module *mod);
+const struct pkgdir_module *pkgdir_mod_find(const char *name);
+
+
 
 #endif /* PKGDIR_INTERNAL */
 

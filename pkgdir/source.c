@@ -295,7 +295,6 @@ void setup_langs(struct source *src)
 }
 
 
-    
 struct source *source_new(const char *type, const char *pathspec,
                           const char *pkg_prefix)
 {
@@ -489,6 +488,9 @@ int source_cmp_pri_name(const struct source *s1, const struct source *s2)
 
 static int source_update_a(struct source *src) 
 {
+    if (src->type == NULL)
+        source_set_type(src, PKGDIR_DEFAULT_TYPE);
+    
     return pkgdir_update_a(src);
 }
 
@@ -498,6 +500,9 @@ int source_update(struct source *src, unsigned flags)
     struct pkgdir  *pkgdir;
     int            pcaps, rc = 0;
 
+
+    if (src->type == NULL)
+        source_set_type(src, PKGDIR_DEFAULT_TYPE);
 
 	pcaps = pkgdir_type_info(src->type);
 	
@@ -715,7 +720,8 @@ int source_make_idx(struct source *src,
         pkgdir_type_make_idxpath(type, path, sizeof(path),
                                  idxpath ? idxpath : src->path);
         idxpath = path;
-    } 
+    }
+    
     pkgdir = pkgdir_srcopen(src, 0);
 
     if (source_is_type(src, "dir"))
@@ -726,7 +732,7 @@ int source_make_idx(struct source *src,
         int n = n_array_size(pkgdir->pkgs);
         msgn(1, ngettext("%d package loaded",
                          "%d packages loaded", n), n);
-        rc = pkgdir_create_idx(pkgdir, type, idxpath, cr_flags);
+        rc = pkgdir_save(pkgdir, type, idxpath, cr_flags);
     }
     
     if (pkgdir)

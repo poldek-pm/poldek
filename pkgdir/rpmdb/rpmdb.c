@@ -70,7 +70,8 @@ static Header ldhdr(const struct pkg *pkg, struct pkg_data *pd)
     struct rpmdb_it     it;
     const struct dbrec  *dbrec;
     Header              h;
-    
+
+    pd = pd;
     n_assert(pkg->recno > 0);
     
     if (pkg->pkgdir == NULL)

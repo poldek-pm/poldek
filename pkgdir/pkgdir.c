@@ -56,8 +56,7 @@ tn_hash *pkgdir_strip_langs(struct pkgdir *pkgdir)
         return NULL;
 
     avlh = n_hash_dup(pkgdir->avlangs_h, (tn_fn_dup)n_strdup);
-    
-    n_hash_clean(pkgdir->avlangs_h);
+    n_hash_clean(avlh);
 
     for (i=0;  i < n_array_size(pkgdir->langs); i++) {
         const char *lang = n_array_nth(pkgdir->langs, i);
@@ -86,6 +85,9 @@ void pkgdir_setup_langs(struct pkgdir *pkgdir)
     
     //printf("pkgdir_setup_langs %s, %s\n", pkgdir->idxpath, pkgdir->lc_lang);
     if (pkgdir->lc_lang == NULL)
+        return;
+
+    if (pkgdir->langs != NULL || pkgdir->avlangs_h == NULL)
         return;
 
     avlangs = n_hash_keys(pkgdir->avlangs_h);
@@ -208,7 +210,7 @@ const struct pkgdir_module *find_module(const char *type)
 {
     const struct pkgdir_module  *mod;
     
-    if ((mod = pkgdir_find_mod(type)) == NULL) {
+    if ((mod = pkgdir_mod_find(type)) == NULL) {
         logn(LOGERR, _("%s: unknown index type"), type);
         return NULL;
     }
@@ -220,7 +222,13 @@ const struct pkgdir_module *find_module(const char *type)
 int pkgdir_update_a(const struct source *src)
 {
 	const struct pkgdir_module  *mod;
-	
+	char                        idxpath[PATH_MAX];
+    const char                  *path = NULL;
+    int                         rc;
+
+    
+    n_assert(src->path);
+    
 	if ((mod = find_module(src->type)) == NULL)
 		return 0;
 
@@ -229,14 +237,25 @@ int pkgdir_update_a(const struct source *src)
 		return 0;
 	}
 
-	return mod->update_a(src);
+    if (mod->idx_filename) {
+        pkgdir_make_idx_url(idxpath, sizeof(idxpath), src->path, mod->idx_filename);
+        path = src->path;
+        (char*)src->path = idxpath;
+    }
+
+    rc = mod->update_a(src);
+
+    if (mod->idx_filename)
+        (const char*)src->path = path;
+    
+    return rc;
 }
 
 
 int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
 {
 	int is_updated = 0, rc = 0;
-
+    
     if (npatches)
         *npatches = 0;
     
@@ -331,7 +350,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 
     pkgdir = pkgdir_malloc();
     pkgdir->name = n_strdup(name);
-
+    
     pkgdir_make_idx_url(idx_path, sizeof(idx_path), path, idx_filename);
 
     if (pkg_prefix) 
@@ -446,7 +465,7 @@ void pkgdir_free(struct pkgdir *pkgdir)
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 {
     tn_array *foreign_depdirs = NULL;
-    int n;
+    int rc;
 
     
     if ((ldflags & PKGDIR_LD_FULLFLIST) == 0 && depdirs && pkgdir->depdirs) {
@@ -472,18 +491,19 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     pkgdir->foreign_depdirs = foreign_depdirs;
     
     msgn(1, _("Loading %s..."), vf_url_slim_s(pkgdir->idxpath, 0));
-    
-    n = pkgdir->mod->load(pkgdir, ldflags);
 
-    if (n_array_size(pkgdir->pkgs)) {
+    rc = 0;
+    if (pkgdir->mod->load(pkgdir, ldflags) >= 0) {
         int i;
-        
-        n_array_sort(pkgdir->pkgs);
+
+        rc = 1;
         pkgdir->flags |= PKGDIR_LOADED;
+
+        n_array_sort(pkgdir->pkgs);
         
         if ((ldflags & PKGDIR_LD_NOUNIQ) == 0)
             pkgdir_uniq(pkgdir);
-        
+
         for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
             pkg->pkgdir = pkgdir;
@@ -491,6 +511,8 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         
         if (pkgdir->depdirs == NULL)
             pkgdir_setup_depdirs(pkgdir);
+
+        pkgdir_setup_langs(pkgdir);
     }
     
     msgn(2, ngettext("%d package loaded",
@@ -500,7 +522,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     if (pkgdir->ts == 0)
 		pkgdir->ts = time(0);
     
-    return n;
+    return rc;
 }
 
 
