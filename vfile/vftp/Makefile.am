@@ -11,9 +11,6 @@ noinst_PROGRAMS    = test_vftp
 test_vftp_SOURCES  = test_vftp.c
 test_vftp_LDADD    = libvftp.a @TRURL_LDFLAG@
 
-OMIT_DEPENDENCIES = narray.h tfn_types.h nassert nbuf.h nhash.h nlist.h nstr.h \
-		    nassert.h trurl.h
-
 dist-hook:
 	rm -rf $(distdir)/.deps
 

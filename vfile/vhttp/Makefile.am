@@ -11,9 +11,6 @@ noinst_PROGRAMS    = test_vhttp
 test_vhttp_SOURCES  = test_vhttp.c
 test_vhttp_LDADD    = libvhttp.a @TRURL_LDFLAG@
 
-OMIT_DEPENDENCIES = narray.h tfn_types.h nassert nbuf.h nhash.h nlist.h nstr.h \
-		    nassert.h trurl.h
-
 dist-hook:
 	rm -rf $(distdir)/.deps
 
