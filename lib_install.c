@@ -127,12 +127,57 @@ int poldek_upgrade_dist(struct poldek_ctx *ctx)
     return rc;
 }
 
+#if 0
+static
+void update_installed_pkgs(struct poldek_ctx *ctx, struct install_info *iinf)
+{
+    int i;
+    
+    if (ctx->inst_pkgs == NULL)
+        return;
+    
+    for (i=0; i < n_array_size(iinf->uninstalled_pkgs); i++) {
+        struct pkg   *pkg = n_array_nth(iinf->uninstalled_pkgs, i);
+        n_array_remove(ctx->inst_pkgs, pkg);
+        printf("- %s\n", shpkg->nevr);
+    }
+    n_array_sort(ctx->inst_pkgs);
+        
+        
+    for (i=0; i < n_array_size(iinf.installed_pkgs); i++) {
+        struct pkg     *pkg = n_array_nth(iinf.installed_pkgs, i);
+        struct shpkg   *shpkg;
+        char           nevr[1024];
+        int            len;
+        
+            
+        len = pkg_snprintf(nevr, sizeof(nevr), pkg);
+        //printf("+ %s\n", nevr);
+        shpkg = n_malloc(sizeof(*shpkg) + len + 1);
+            memcpy(shpkg->nevr, nevr, len + 1);
+            shpkg->pkg = pkg_link(pkg);
+
+            n_array_push(cmdarg->sh_s->instpkgs, shpkg);
+        }
+        n_array_sort(cmdarg->sh_s->instpkgs);
+        
+        
+        //printf("s = %d\n", n_array_size(cmdarg->sh_s->instpkgs));
+        if (n_array_size(iinf.installed_pkgs) + n_array_size(iinf.uninstalled_pkgs))
+            cmdarg->sh_s->ts_instpkgs = time(0);
+    }
+    
+    if (iinf.installed_pkgs) {
+        n_array_free(iinf.installed_pkgs);
+        n_array_free(iinf.uninstalled_pkgs);
+    }
+#endif
+
 
 int poldek_install(struct poldek_ctx *ctx, struct install_info *iinf) 
 {
     int rc;
     
-
     n_assert(ctx->inst->flags & (INSTS_INSTALL | INSTS_UPGRADE));
     
     if (!chk_params(ctx->inst))
@@ -147,3 +192,5 @@ int poldek_install(struct poldek_ctx *ctx, struct install_info *iinf)
     ctx->inst->db = NULL;
     return rc;
 }
+
+    

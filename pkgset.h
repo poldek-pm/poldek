@@ -139,6 +139,8 @@ struct install_info {
     tn_array *uninstalled_pkgs;
 };
 
+void install_info_init(struct install_info *iinf);
+void install_info_destroy(struct install_info *iinf);
 
 /* uninstall.c */
 int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,

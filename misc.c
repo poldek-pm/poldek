@@ -566,7 +566,7 @@ const char *expand_env_vars(char *dest, int size, const char *str)
         int  v_len;
         
         
-        p = v = *tl;
+        p = vv = v = *tl;
         DBGF("token: %s\n", *tl);
         tl++;
 

@@ -40,7 +40,12 @@
 
 #define POLDEKCTX_SETUP_DONE  (1 << 0)
 
-char poldek_bug_mailaddr[] = "<mis@pld.org.pl>";
+const char poldek_bug_mailaddr[] = "<mis@pld.org.pl>";
+const char poldek_version_banner[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
+const char poldek_banner[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
+"Copyright (C) 2000-2003 Pawel A. Gajda <mis@pld.org.pl>\n"
+"This program may be freely redistributed under the terms of the GNU GPL v2\n";
+
 
 void (*poldek_assert_hook)(const char *expr, const char *file, int line) = NULL;
 void (*poldek_malloc_fault_hook)(void) = NULL;
@@ -445,7 +450,7 @@ int set_default_vf_fetcher(int tag, const char *confvalue)
     tl = tl_save = n_str_tokl(val, ", \t");
     while (*tl) {
         vfile_configure(tag, *tl, name);
-        printf("conf %d (%s) -> (%s)\n", tag, *tl, name);
+        //printf("conf %d (%s) -> (%s)\n", tag, *tl, name);
         tl++;
     }
     
@@ -843,7 +848,7 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     inst_s_init(ctx->inst);
     
     ctx->inst_flags_orig = 0;
-    ctx->avpkgs = ctx->instpkgs = NULL;
+    //ctx->avpkgs = ctx->instpkgs = NULL;
     ctx->dbpkgdir = NULL;
     ctx->ts_instpkgs = 0;
 

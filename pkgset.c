@@ -385,13 +385,6 @@ int pkgset_index(struct pkgset *ps)
     return 0;
 }
 
-#if 0
-static void mapfn_clean_pkg_color(struct pkg *pkg) 
-{
-    pkg_set_color(pkg, PKG_COLOR_WHITE);
-}
-#endif
-
 
 int pkgset_setup(struct pkgset *ps, unsigned flags) 
 {
@@ -616,4 +609,23 @@ int packages_dump(tn_array *pkgs, const char *path, unsigned flags)
         fclose(stream);
     
     return 1;
+}
+
+void install_info_init(struct install_info *iinf) 
+{
+    iinf->installed_pkgs = pkgs_array_new(16);
+    iinf->uninstalled_pkgs = pkgs_array_new(16);
+}
+
+void install_info_destroy(struct install_info *iinf) 
+{
+    if (iinf->installed_pkgs) {
+        n_array_free(iinf->installed_pkgs);
+        iinf->installed_pkgs = NULL;
+    }
+    
+    if (iinf->uninstalled_pkgs) {
+        n_array_free(iinf->uninstalled_pkgs);
+        iinf->uninstalled_pkgs = NULL;
+    }
 }

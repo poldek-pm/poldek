@@ -7,14 +7,22 @@
 #include "pkgset.h"
 #include "pkgdir/pkgdir.h"
 
+extern const char poldek_bug_mailaddr[];
+extern const char poldek_version_banner[];
+extern const char poldek_banner[];
+
 struct poldek_ctx {
-    tn_array       *sources;
+    tn_array       *sources;    /* struct source *[]  */
+    tn_array       *pkgdirs;    /* struct pkgdir *[]  */
+    
     struct pkgset  *ps;
     struct inst_s  *inst;
     unsigned       inst_flags_orig;
-    tn_array       *avpkgs;     /* array of available shpkgs  */
-    tn_array       *instpkgs;   /* array of installed shpkgs  */
-    time_t         ts_instpkgs; /* instpkgs timestamp */
+    
+    tn_array       *pkgs;       /* array of available packages  */
+    tn_array       *inst_pkgs;  /* array of installed packages  */
+    time_t         ts_instpkgs; /* inst_pkgs timestamp */
+    
     struct pkgdir  *dbpkgdir;   /* db packages        */
     tn_hash        *cnf;
     unsigned       _iflags;

@@ -3,6 +3,7 @@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
+LIBS = 
 noinst_LTLIBRARIES   = libsigint.la
 libsigint_la_SOURCES = sigint.h sigint.c
 

@@ -331,7 +331,7 @@ const char *expand_vars(char *dest, int size, const char *str,
             return str;
         
         n_snprintf(val, v_len + 1, v);
-        printf("var %s\n", val);
+        DBGF("var %s\n", val);
         
         if ((var = poldek_conf_get(ht, val, NULL)) == NULL) {
             n += n_snprintf(&dest[n], size - n, "%%%s", p);

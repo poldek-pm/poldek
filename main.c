@@ -63,9 +63,9 @@ static const char *argp_program_version = PACKAGE " " VERSION " (" VERSION_STATU
 const char *argp_program_bug_address = program_bug_address;
 
 /* Program documentation. */
-char poldek_banner[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
-"Copyright (C) 2000-2002 Pawel A. Gajda <mis@pld.org.pl>\n"
-"This program may be freely redistributed under the terms of the GNU GPL v2\n";
+//char poldek_banner[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
+//"Copyright (C) 2000-2002 Pawel A. Gajda <mis@pld.org.pl>\n"
+//"This program may be freely redistributed under the terms of the GNU GPL v2\n";
 /* A description of the arguments we accept. */
 static char args_doc[] = N_("[PACKAGE...]");
 

@@ -1660,7 +1660,7 @@ static int valid_arch_os(tn_array *pkgs)
 {
     int i, nerr = 0;
     
-    for (i=0; i<n_array_size(pkgs); i++) {
+    for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
 
         if (pkg->arch && !rpmMachineScore(RPM_MACHTABLE_INSTARCH, pkg->arch)) {
@@ -1670,8 +1670,8 @@ static int valid_arch_os(tn_array *pkgs)
         }
         
         if (pkg->os && !rpmMachineScore(RPM_MACHTABLE_INSTOS, pkg->os)) {
-            logn(LOGERR, _("%s: package is for a different operating system (%s)"),
-                pkg_snprintf_s(pkg), pkg->os);
+            logn(LOGERR, _("%s: package is for a different operating "
+                           "system (%s)"), pkg_snprintf_s(pkg), pkg->os);
             nerr++;
         }
     }
@@ -1856,7 +1856,8 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
         if (is_installed == 0)
             n_array_push(iinf->uninstalled_pkgs,
                          pkg_new_ext(pkg->name, pkg->epoch, pkg->ver, pkg->rel,
-                                     pkg->arch, pkg->os, pkg->size, pkg->fsize,
+                                     pkg->arch, pkg->os,
+                                     pkg->size, pkg->fsize,
                                      pkg->btime));
     }
 
