@@ -1252,7 +1252,6 @@ int main(int argc, char **argv)
             break;
 
         case MODE_SPLIT:
-            printf("s %d, f %d\n", args.split_conf.size, args.split_conf.first_free_space);
             rc = packages_split(ps->pkgs,
                                 args.split_conf.size,
                                 args.split_conf.first_free_space, 
