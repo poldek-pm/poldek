@@ -36,7 +36,6 @@
 #include <vfile/vfile.h>
 
 #include "log.h"
-#include "depdirs.h"
 #include "misc.h"
 #include "rpmadds.h"
 #include "pkgdir.h"
@@ -1156,7 +1155,8 @@ int load_dir(const char *dirpath, tn_array *pkgs)
         }
     }
 
-    msg_l(2, "_%d\n", n);
+    if (n)
+        msg_l(2, "_%d\n", n);
     closedir(dir);
     return n;
 }
@@ -1211,16 +1211,12 @@ static void pkgdir_setup_depdirs(struct pkgdir *pkgdir)
 
 struct pkgdir *pkgdir_load_dir(const char *path) 
 {
-    struct pkgdir *pkgdir;
+    struct pkgdir *pkgdir = NULL;
     tn_array      *pkgs;
 
     pkgs = pkgs_array_new(1024);
     
-    if (load_dir(path, pkgs) == 0) {
-        n_array_free(pkgs);
-        pkgdir = NULL;
-        
-    } else {
+    if (load_dir(path, pkgs) >= 0) {
         pkgdir = malloc(sizeof(*pkgdir));
     
         pkgdir->path = strdup(path);
@@ -1229,7 +1225,8 @@ struct pkgdir *pkgdir_load_dir(const char *path)
         pkgdir->flags = PKGDIR_LDFROM_DIR;
         pkgdir->vf = NULL;
 
-        pkgdir_setup_depdirs(pkgdir);
+        if (n_array_size(pkgs)) 
+            pkgdir_setup_depdirs(pkgdir);
     }
     
     return pkgdir;
