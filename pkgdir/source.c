@@ -413,6 +413,9 @@ struct source *source_new_pathspec(const char *type, const char *pathspec,
     unsigned        flags = 0;
 
     
+    if (*pathspec == '\0')
+        return NULL;
+    
     if ((spec_type = parse_cmdl_pathspec(pathspec, &path)))
         pathspec = path;
     
@@ -450,6 +453,9 @@ struct source *source_new_pathspec(const char *type, const char *pathspec,
     }
 
     src = source_new(name, type ? type : spec_type, path, pkg_prefix);
+    if (src == NULL)
+        return NULL;
+    
     src->flags |= flags;
     if (spec_type != NULL)
         free(spec_type);
