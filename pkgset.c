@@ -272,14 +272,11 @@ int pkgset_has_errors(struct pkgset *ps)
     return rc;
 }
 
-
-#ifndef __GNUC__
 static void sort_pkg_caps(struct pkg *pkg) 
 {
     if (pkg->caps)
         n_array_sort(pkg->caps);
 }
-#endif
 
 static
 void add_self_cap(struct pkgset *ps) 
@@ -317,13 +314,6 @@ int pkgset_index(struct pkgset *ps)
 {
     int i, j;
     
-#ifdef __GNUC__
-    void sort_pkg_caps(struct pkg *pkg) { /* try gcc nested functions */
-        if (pkg->caps)
-            n_array_sort(pkg->caps);
-    };
-#endif    
-
     msg(1, "Indexing...\n");
     add_self_cap(ps);
     n_array_map(ps->pkgs, (tn_fn_map1)sort_pkg_caps);
