@@ -12,7 +12,7 @@ removelibs:
 	./getlib.sh trurlib link
 	./getlib.sh tndb link
 
-tarball: copylibs dist-bz2 removelibs
+tarball: copylibs dist-bzip2 removelibs
 
 rpm-package: tarball
 	rpmbuild -tb $(distdir).tar.bz2
