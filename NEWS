@@ -5,24 +5,24 @@
 
 * added IPv6 support to internal FTP client
 
-* support for "hdlist" sources in which information about packages 
-  is taken from file with raw RPM package headers. These files
-  are used by APT-RPM as well as they are widely supported by RPM based 
-  distributions. However this format isn't optimal, now poldek is useable 
-  with almost every RPM based distro without poldek's native indexes support.
+* supported "hdlist" files as sources. These files contain raw RPM package
+  headers. They are used by APT-RPM as they are widely supported 
+  by RPM based distributions. However this format isn't optimal, now 
+  poldek is useable with almost every RPM based distro without poldek's 
+  native indexes support.
 	
-  See poldekrc.sample-hdlist for an example RedHat and Mandrake configuration.
+  See poldekrc.sample-* for examples of RedHat and Mandrake configuration.
 
 * new "type=[pidx|dir|hdrl]" source option lets define source type in
   configuration file. Needed to distinguish "hdlist" ('hdrl' type) from
-  "native" sources. Cmdline options: --source for 'pidx', --sdir for
+  "native" index format. Cmdline options: --source for 'pidx', --sdir for
   'dir' and  --shdrl for 'hdrl'.
 
 * simple HTTP client (with partly HTTP/1.1 support) which it is used for 
   HTTP downloads; cURL backend is not compiled by default. 
 
 * support for GPG/PGP signatures verification (new "gpg" and "pgp" 
-  source options). Verification works with rpm >= 4.0.4 or patched 
+  source options). Verification works well with rpm >= 4.0.4 or patched 
   PLD's rpm 4.0.2 (release 62 of the package). 
    
 * URLs with user and password (ftp://user:passwd@host:port/path/ syntax) 

@@ -154,7 +154,7 @@ $ poldek ...  'apache*'
 
 $ poldek ... --nevr "apache 1.3.12" 
 
-=item * as package set taken from file B<--pset=FILE>,
+=item * as package set defined in FILE B<--pset=FILE>,
 (see README.package-sets):
 
 $ poldek ... --pset ~/.package-sets/tiny-system
