@@ -3,7 +3,7 @@
 PROJ_DIR=$(shell pwd)
 
 copylibs:
-	-rm -f tndb trurlib
+	-rm -rf tndb trurlib
 	./getlib.sh trurlib copy
 	./getlib.sh tndb copy
 
