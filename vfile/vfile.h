@@ -62,7 +62,7 @@ void vfile_postconfigure_init(void);
 
 #define VFM_RO          (1 << 0)  /* O_RDONLY, this is the default   */
 #define VFM_RW          (1 << 1)  /* O_RDWR */
-#define VFM_APPEND      (1 << 3)  /* O_RDWR | O_APPEND */
+#define VFM_APPEND      (VFM_RW | (1 << 3))  /* O_RDWR | O_APPEND */
 #define VFM_NODEL       (1 << 4)  /* do not delete cached copy at close */
 #define VFM_NORM        VFM_NODEL /* legacy */
 #define VFM_CACHE       (1 << 5) /* use cached file if it exists, implies NODEL*/
