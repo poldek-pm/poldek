@@ -10,7 +10,14 @@
   $Id$
 */
 
-#define _GNU_SOURCE 1           /* for strsignal */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#ifdef HAVE_STRSIGNAL
+# define _GNU_SOURCE 1  /* for strsignal */
+#endif
+
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
@@ -31,6 +38,54 @@
 
 #include "log.h"
 #include "misc.h"
+
+
+const char *tmpdir(void) 
+{
+    struct stat st;
+    static char *tmpdir = NULL;
+    char *dir;
+
+    if (tmpdir != NULL)
+        return tmpdir;
+    
+    if ((dir = getenv("TMPDIR")) == NULL)
+        tmpdir = "/tmp";
+    
+    else if (*dir != '/' || strlen(dir) < 4)
+        dir = "/tmp";
+    
+    else {
+        char *p;
+            
+        p = dir + 1;
+        while (*p) {
+            if (!isalnum(*p) && *p != '/' && *p != '-') {
+                tmpdir = "/tmp";
+                log(LOGERR, "$TMPDIR (%s) contains non alnum characters, using /tmp\n", dir);
+                break;
+            }
+            p++;
+        }
+
+        if (tmpdir == NULL) {
+            if (stat(dir, &st) != 0) {
+                log(LOGERR, "$TMPDIR (%s): %m, using /tmp\n", dir);
+                tmpdir = "/tmp";
+                
+            } else if (!S_ISDIR(st.st_mode)) {
+                log(LOGERR, "$TMPDIR (%s): not a directory, using /tmp\n", dir);
+                tmpdir = "/tmp";
+            }
+        }
+    }
+
+    if (tmpdir == NULL)
+        tmpdir = dir;
+
+    return tmpdir;
+}
+
 
 
 char *architecture(void) 

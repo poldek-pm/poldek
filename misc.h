@@ -9,6 +9,14 @@
 
 #include <vfile/p_open.h>
 
+
+/*
+  Returns $TMPDIR or "/tmp" if $TMPDIR isn't set.
+  Returned dir always begin with '/'
+*/
+const char *tmpdir(void);
+
+
 void die(void);
 
 char *architecture(void);
