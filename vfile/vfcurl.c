@@ -383,8 +383,8 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
             vfile_msg_fn("_%s", line);
             
         } else {
-            char unit_line[19], amount_str[16], total_str[16];
-            int nn;
+            char unit_line[23], amount_str[16], total_str[16];
+            int nn, unit_n;
             
 
             nbytes2str(total_str, sizeof(total_str), total);
@@ -395,8 +395,10 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
             else 
                 nn = snprintf(unit_line, sizeof(unit_line), "[%s of %s]",
                               amount_str, total_str);
-            
-            memset(&unit_line[nn], ' ', sizeof(unit_line) - nn - 1);
+
+            unit_n = sizeof(unit_line) - nn - 1;
+            if (unit_n > 0)
+                memset(&unit_line[nn], ' ', unit_n);
             unit_line[sizeof(unit_line) - 1] = '\0';
             
             memset(line, '.', n);
