@@ -506,7 +506,7 @@ static void uninstall_alarm(void)
 };
 
 
-static int to_connect(const char *host, const char *service)
+static int to_connect(const char *host, const char *service, struct addrinfo *addr)
 {
     struct addrinfo hints, *res, *resp;
     int sockfd, n;
@@ -550,18 +550,25 @@ static int to_connect(const char *host, const char *service)
     if (sockfd == -1)
         vftp_set_err(errno, _("unable to connect to %s:%s: %m"), host, service);
     
+    else if (addr) {
+        *addr = *resp;
+        addr->ai_addr = malloc(sizeof(*addr->ai_addr));
+        *addr->ai_addr = *resp->ai_addr;
+    }
+
     freeaddrinfo(res);
     return sockfd;
 }
 
 
-static int ftp_open(const char *host, int port)
+static int ftp_open(const char *host, int port, struct addrinfo *addr)
 {
     int sockfd, code;
     char portstr[64] = "ftp";
-
+    
+    
     snprintf(portstr, sizeof(portstr), "%d", port);
-    if ((sockfd = to_connect(host, portstr)) < 0)
+    if ((sockfd = to_connect(host, portstr, addr)) < 0)
         return 0;
     
     errno = 0;
@@ -638,16 +645,22 @@ struct ftpcn *ftpcn_new(const char *host, int port,
 {
     struct ftpcn *cn = NULL;
     int sockfd;
-
+    struct addrinfo addr;
+    
     if (port <= 0)
         port = IPPORT_FTP;
 
-    if ((sockfd = ftp_open(host, port)) > 0) {
+    memset(&addr, 0, sizeof(addr));
+    addr.ai_addr = NULL;
+    
+    if ((sockfd = ftp_open(host, port, &addr)) > 0) {
         cn = ftpcn_malloc();
         cn->sockfd = sockfd;
         cn->state = FTPCN_ALIVE;
         cn->host = strdup(host);
         cn->port = port;
+        cn->addr = addr;
+        
         if (!ftp_login(cn, login, pwd)) {
             ftpcn_free(cn);
             cn = NULL;
@@ -680,6 +693,10 @@ void ftpcn_free(struct ftpcn *cn)
     ftpcn_close(cn);
     if (cn->last_respmsg)
         free(cn->last_respmsg);
+
+    if (cn->addr.ai_addr)
+        free(cn->addr.ai_addr);
+    
     memset(cn, 0, sizeof(*cn));
 }
 
@@ -715,31 +732,68 @@ static int parse_pasv(const char *resp, char *addr, int addr_size, int *port)
     return is_err == 0;
 }
 
+static int parse_epasv(const char *resp, int *port)
+{
+    const char *p;
+    int is_err = 0;
+    
+    p = resp;
+    if ((p = strchr(p, '(')) == NULL)
+        is_err = 1;
+        
+    else {
+        p++;
+        if (sscanf(p, "|||%d|", port) != 1)
+            is_err = 1;
+    }
+
+    if (is_err)
+        vftp_set_err(EIO, _("%s: PASV response parse error"), resp);
+    
+    return is_err == 0;
+}
 
 static int ftpcn_pasv(struct ftpcn *cn) 
 {
-    char addr[256], *p;
-    int port;
+    char addrbuf[256], *addr, *p, *cmd = "PASV";
+    int port, v6 = 0, req_code = 227, isok = 0;
     
-    
-    if (!ftpcn_cmd(cn, "PASV"))
+    if (cn->addr.ai_family == AF_INET6) {
+        cmd = "EPSV";
+        v6 = 1;
+        req_code = 229;
+    }
+    	
+    if (!ftpcn_cmd(cn, cmd))
         return 0;
     
-    if (!ftpcn_resp(cn) || cn->last_respcode != 227)
+    if (!ftpcn_resp(cn) || cn->last_respcode != req_code) {
+        vftp_set_err(EIO, cn->last_respmsg);
         return 0;
-    
+    }
+
     if ((p = strchr(cn->last_respmsg, ' ')) == NULL)
         return 0;
 
     port = 0;
-    *addr = '\0';
-    if (parse_pasv(p, addr, sizeof(addr), &port)) {
-        char service[64];
-        snprintf(service, sizeof(service), "%d", port);
-        return to_connect(addr, service);
+    addrbuf[0] = '\0';
+    
+    if (v6 == 0) {
+        isok = parse_pasv(p, addrbuf, sizeof(addrbuf), &port);
+        addr = addrbuf;
+        
+    } else {
+        isok = parse_epasv(p, &port);
+        addr = cn->host;
     }
     
-    return 0;
+    if (isok) {
+        char service[64];
+        snprintf(service, sizeof(service), "%d", port);
+        isok = to_connect(addr, service, NULL);
+    }
+    
+    return isok;
 }
 
 
