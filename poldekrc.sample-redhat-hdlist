@@ -1,0 +1,68 @@
+# $Id$
+# Sample poldek configuration for RedHat
+
+	
+source1 = rh0,type=hdrl ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/base/hdlist
+prefix1 = ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/RPMS/
+
+source2 = rh1,type=hdrl ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/base/hdlist2
+prefix2 = ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/RPMS/
+
+
+
+source = ra,noauto,noautoup,type=pidx ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
+
+
+# permits using root privs for installation only; default "no"
+#use_sudo  = yes
+
+# Installation options
+
+# install packages in small groups instead of doing all-or-nothing 
+# installation; default "yes"
+#particle_install = no
+
+# automatically install packages required by installed ones; default "yes"
+#follow = no
+
+# greedy upgrades; defalut "no"
+#greedy = yes
+
+# "mercy" dependency checking; defalut "no"
+#mercy = yes
+
+# don't remove downloaded packages after successful installation; defalut "no"
+#keep_downloads = yes
+
+# confirm each installation; defalut "no"
+#confirm_installs = yes
+
+# let the user select package among equivalents 
+#choose_equivalents_manually = yes
+
+
+# prevent kernel* and dev from being upgraded if they are already installed.
+#hold   = kernel* dev
+
+
+# External downloaders configuration 
+# Available semi-macros (as ws-separate tokens only):
+#   %p[n] - package basename 
+#   %d - cache dir
+#   %D - cache dir/package basename
+#   %P[n] - package full path(URL)
+# 
+
+#ftp_get       = /usr/bin/snarf %P %D
+#http_get      = /usr/bin/wget -N --dot-style=binary -P %d %Pn
+#https_get     = /usr/bin/curl %P -o %D
+#rsync_get     = /usr/bin/rsync -v %P %d
+#cdrom_get     = /usr/bin/vfjuggle %d %Pn
+
+
+# Some rpm macros
+#rpmdef        = _install_langs pl:pl_PL:lt:lt_LT
+
+# don't install any documentation
+#rpmdef        = _netsharedpath /usr/share/info:/usr/share/man
+#rpmdef	       = _excludedocs 1
