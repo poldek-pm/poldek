@@ -233,9 +233,8 @@ int get_conf_sources(tn_array *sources, tn_array *srcs_named,
 {
     struct source   *src;
     int             i, nerr, getall = 0;
-    int             *matches = NULL, is_multi = 0;
-    char            *v;
-    
+    int             *matches = NULL;
+    tn_array        *list;
 
     if (n_array_size(srcs_named) == 0 && n_array_size(sources) == 0)
         getall = 1;
@@ -245,22 +244,13 @@ int get_conf_sources(tn_array *sources, tn_array *srcs_named,
         memset(matches, 0, n_array_size(srcs_named) * sizeof(int));
     }
 
-    if ((v = poldek_conf_get(htcnf, "source", &is_multi))) {
-        if (is_multi == 0) {
-            src = source_new(NULL, v, NULL);
+    if ((list = poldek_conf_get_multi(htcnf, "source"))) {
+        for (i=0; i < n_array_size(list); i++) {
+            src = source_new(NULL, n_array_nth(list, i), NULL);
             if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
-            
-        } else {
-            tn_array *paths = NULL;
-            if ((paths = poldek_conf_get_multi(htcnf, "source"))) {
-                while (n_array_size(paths)) {
-                    src = source_new(NULL, n_array_shift(paths), NULL);
-                    if (!addsource(sources, src, getall, srcs_named, matches))
-                        source_free(src);
-                }
-            }
         }
+        n_array_free(list);
     }
     
     /* source\d+, prefix\d+ pairs  */
@@ -311,20 +301,14 @@ static
 void get_conf_opt_list(const tn_hash *htcnf, const char *name,
                        tn_array *tolist)
 {
-    int is_multi = 0;
-    char *v;
+    tn_array *list;
+    int i;
     
-    if ((v = poldek_conf_get(htcnf, name, &is_multi))) {
-        tn_array *list = NULL;
+    if ((list = poldek_conf_get_multi(htcnf, name))) {
+        for (i=0; i < n_array_size(list); i++)
+            n_array_push(tolist, n_strdup(n_array_nth(list, i)));
         
-        if (is_multi) {
-            list = poldek_conf_get_multi(htcnf, name);
-            while (n_array_size(list)) 
-                n_array_push(tolist, n_array_shift(list));
-            
-        } else {
-            n_array_push(tolist, v);
-        }
+        n_array_free(list);
     }
     
     n_array_sort(tolist);
@@ -441,20 +425,34 @@ static void register_vf_handlers(const tn_array *fetchers)
     n_array_free(protocols);
 }
 
-void set_default_vf_fetcher(const char *confvalue) 
+int set_default_vf_fetcher(int tag, const char *confvalue) 
 {
-    const char **tl;
-    const char *proto, *name;
+    const char **tl, **tl_save, *name;
+    char  *p, *val;
+    int   len;
+
+    len = strlen(confvalue) + 1;
+    val = alloca(len);
+    memcpy(val, confvalue, len);
+
+    if ((p = strchr(val, ':')) == NULL || *(p + 1) == '/')
+        return 0;
+
+    *p = '\0';
+    p++;
+    while (isspace(*p))
+        p++;
+    name = p;
     
-    tl = n_str_tokl(confvalue, ": \t");
-    if (*tl && tl[1]) {
-        proto = tl[0];
-        name = tl[1];
-        vfile_configure(VFILE_CONF_DEFAULT_CLIENT, proto, name);
-        //printf("default_fetcher %s -> %s\n", proto, name);
+    tl = tl_save = n_str_tokl(val, ", \t");
+    while (*tl) {
+        vfile_configure(tag, *tl, name);
+        printf("conf %d (%s) -> (%s)\n", tag, *tl, name);
+        tl++;
     }
     
-    n_str_tokl_free(tl);
+    n_str_tokl_free(tl_save);
+    return 1;
 }
 
 
@@ -462,9 +460,10 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
 {
     tn_hash   *htcnf = NULL;
     struct    inst_s *inst;
-    int       rc = 1, is_multi;
+    int       rc = 1;
     char      *v;
-
+    tn_array  *list;
+    
     inst = ctx->inst;
     
     if (path != NULL)
@@ -532,18 +531,20 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     register_vf_handlers_compat(htcnf);
     register_vf_handlers(poldek_conf_get_section_arr(poldek_cnf, "fetcher"));
 
-    if ((v = poldek_conf_get(htcnf, "default_fetcher", &is_multi))) {
-        if (is_multi) {
-            int i;
-            tn_array *list = poldek_conf_get_multi(htcnf, "default_fetcher");
-            for (i=0; i < n_array_size(list); i++)
-                set_default_vf_fetcher(n_array_nth(list, i));
-            
-        } else {
-            set_default_vf_fetcher(v);
-        }
+    if ((list = poldek_conf_get_multi(htcnf, "default_fetcher"))) {
+        int i;
+        for (i=0; i < n_array_size(list); i++)
+            set_default_vf_fetcher(VFILE_CONF_DEFAULT_CLIENT,
+                                   n_array_nth(list, i));
+        n_array_free(list);
     }
-    
+
+    if ((list = poldek_conf_get_multi(htcnf, "proxy"))) {
+        int i;
+        for (i=0; i < n_array_size(list); i++)
+            set_default_vf_fetcher(VFILE_CONF_PROXY, n_array_nth(list, i));
+        n_array_free(list);
+    }
     
     get_conf_opt_list(htcnf, "rpmdef", inst->rpmacros);
     get_conf_opt_list(htcnf, "hold", inst->hold_patterns);
@@ -553,7 +554,7 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
         inst->cachedir = v;
     
     if ((poldek_conf_get_bool(htcnf, "ftp_sysuser_as_anon_passwd", 0)))
-        vfile_configure(VFILE_CONF_REALUSERHOST_AS_ANONPASSWD, 1);
+        vfile_configure(VFILE_CONF_SYSUSER_AS_ANONPASSWD, 1);
     
     return 1;
 }
@@ -864,8 +865,9 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     pkgdirmodule_init();
     rpm_initlib(NULL);
 
-    vfile_init();
+    
     vfile_verbose = &verbose;
+    vfile_init();
     vfile_msg_fn = log_msg;
     vfile_msgtty_fn = log_tty;
     vfile_err_fn = log_err;
