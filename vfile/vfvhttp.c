@@ -67,8 +67,7 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
     FILE                    *stream;
     int                     rc = 0, vf_errno = 0;
     int                     end = 1, ntry = 0;
-    
-    
+    void                    *sigint_fn = NULL;
     
     if ((stream = fopen(dest, "a+")) == NULL) {
         vfile_err_fn("%s: fopen %s: %m\n", vf_mod_vhttp.vfmod_name, dest);
@@ -84,12 +83,21 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
     if (flags & VFMOD_INFINITE_RETR)
         end = 1000;
 
+    sigint_fn = sigint_establish();
+        
     while (end-- > 0) {
         struct vf_progress_bar  bar;
 
-        if (ntry++ && (flags & VFMOD_INFINITE_RETR))
+        if (ntry++ && (flags & VFMOD_INFINITE_RETR)) {
             vfile_msg_fn(_("Retrying...(#%d)\n"), ntry);
+            sleep(1);
+        }
         
+        if (sigint_reached()) {
+            vf_errno = EINTR;
+            break;
+        }
+
         vfile_progress_init(&bar);
         
         if ((rc = vhttp_retr(stream, st.st_size, url, &bar)))
@@ -116,14 +124,12 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
             vfile_err_fn("%s: fstat %s: %m\n", vf_mod_vhttp.vfmod_name, dest);
             break;
         }
-        
-        sleep(1);
     }
 
  l_endloop:
     
     fclose(stream);
-    
+    sigint_restore(sigint_fn);
     errno = vf_errno;
     return rc;
 }

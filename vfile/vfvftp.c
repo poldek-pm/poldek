@@ -84,8 +84,7 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
     FILE                    *stream;
     int                     rc = 0, vf_errno = 0;
     int                     end = 1, ntry = 0;
-    
-    
+    void                    *sigint_fn = NULL;
     
     if ((stream = fopen(dest, "a+")) == NULL) {
         vfile_err_fn("%s: fopen %s: %m\n", vf_mod_vftp.vfmod_name, dest);
@@ -103,12 +102,21 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
 
     if (flags & VFMOD_INFINITE_RETR)
         end = 1000;
-
+    
+    sigint_fn = sigint_establish();
+    
     while (end-- > 0) {
         struct vf_progress_bar  bar;
 
-        if (ntry++ && (flags & VFMOD_INFINITE_RETR))
+        if (sigint_reached()) {
+            vf_errno = EINTR;
+            break;
+        }
+        
+        if (ntry++ && (flags & VFMOD_INFINITE_RETR)) {
             vfile_msg_fn(_("Retrying...(#%d)\n"), ntry);
+            sleep(1);
+        }
         
         vfile_progress_init(&bar);
         
@@ -118,7 +126,7 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
         vf_errno = errno;
         vfile_err_fn("%s: %s\n", vf_mod_vftp.vfmod_name, vftp_errmsg());
         
-        switch (vftp_errno) {
+        switch (vf_errno) {
             case ENOENT:
             case EINTR:
             case ENOSPC:
@@ -129,7 +137,7 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
                 errno = vftp_errno;
                 //printf("errno(%d) %m\n", end);
         }
-
+        
         fflush(stream);
         
         if (fstat(fileno(stream), &st) != 0) {
@@ -137,13 +145,12 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
             break;
         }
         
-        sleep(1);
     }
 
  l_endloop:
     
     fclose(stream);
-    
+    sigint_restore(sigint_fn);
     errno = vf_errno;
     return rc;
 }
