@@ -33,10 +33,11 @@ static int progress (void *clientp, size_t dltotal, size_t dlnow,
 
 
 struct progress_bar {
-  size_t total;
-  size_t prev;
-  size_t point;
-  int width;
+    size_t  total;
+    size_t  prev;
+    size_t  point;
+    int     width;
+    int     anybfetched;
 };
 
 
@@ -55,8 +56,12 @@ int vfile_curl_init(void)
     };
 #endif
 
-    
-    if (curl_easy_setopt(curlh, CURLOPT_MUTE, 1) != 0) {
+    if (curl_easy_setopt(curlh, CURLOPT_MUTE, *vfile_verbose > 1 ? 1:0) != 0) {
+        vfile_err_fn("curl_easy_setopt failed");
+        return 0;
+    };
+
+    if (curl_easy_setopt(curlh, CURLOPT_VERBOSE, *vfile_verbose > 2 ? 1:0) != 0) {
         vfile_err_fn("curl_easy_setopt failed");
         return 0;
     };
@@ -72,7 +77,7 @@ int vfile_curl_init(void)
 
 int vfile_curl_fetch(const char *dest, const char *url)
 {
-    struct progress_bar bar = {0, 0, 0, 75};
+    struct progress_bar bar = {0, 0, 0, 75, 0};
     struct stat st;
     FILE *stream;
     int rc = 1;
@@ -83,17 +88,11 @@ int vfile_curl_fetch(const char *dest, const char *url)
         return 0;
     };
     
-    
     if (curl_easy_setopt(curlh, CURLOPT_URL, url) != 0) {
         vfile_err_fn("curl_easy_setopt failed");
         return 0;
     };
-    
-    if(stat(dest, &st) == 0) 
-        curl_easy_setopt(curlh, CURLOPT_RESUME_FROM, st.st_size);
-    else 
-        curl_easy_setopt(curlh, CURLOPT_RESUME_FROM, 0);
-    
+
     if ((stream = fopen(dest, "a+")) == NULL) {
         vfile_err_fn("fopen %s: %m\n", dest);
         return 0;
@@ -105,13 +104,17 @@ int vfile_curl_fetch(const char *dest, const char *url)
         return 0;
     };
 
+    if (fstat(fileno(stream), &st) != 0) {
+        vfile_err_fn("fstat %s: %m\n", dest);
+        fclose(stream);
+        return 0;
+    }
+    	
+    curl_easy_setopt(curlh, CURLOPT_RESUME_FROM, st.st_size);
 
     rc = curl_easy_perform(curlh);
 
-    if (rc == CURLE_ALREADY_COMPLETE) 
-        vfile_msg_fn("curl: %s already complete\n", n_basenam(dest));
-    
-    if (rc == CURLE_OK || rc == CURLE_ALREADY_COMPLETE) {
+    if (rc == CURLE_OK) {
         rc = 1;
         
     } else {
@@ -173,6 +176,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         int thisblock = bar->point / 1024;
         while ( thisblock > prevblock ) {
             vfile_msg_fn(".");
+            bar->anybfetched = 1;
             prevblock++;
         }
         
@@ -193,7 +197,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
     }
     bar->prev = bar->point;
     
-    if (total == bar->point)
+    if (total == bar->point && bar->anybfetched == 1)
         vfile_msg_fn("\n");
 
     return 0;
