@@ -187,7 +187,7 @@ static int install(struct cmdarg *cmdarg)
     rc = install_pkgs(cmdarg->sh_s->pkgset, cmdarg->sh_s->inst, uninst_pkgs);
     
     if (rc == 0) {
-        log(LOGWARN, "There were errors during install\n");
+        msg(1, "There were errors during install\n");
         
     } else if (!is_test && cmdarg->sh_s->instpkgs) { /* update installed set */
         for (i=0; i<n_array_size(cmdarg->sh_s->avpkgs); i++) {
