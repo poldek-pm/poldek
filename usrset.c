@@ -30,6 +30,7 @@
 
 inline static int deftype(const char *str) 
 {
+    n_assert(str);
     while (*str) {
         if (isspace(*str) || *str == '&') 
             return 0;
@@ -83,10 +84,15 @@ static
 int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
                    const char *fpath, int nline)
 {
-    struct pkgdef *pdef = NULL;
-    char *q, *p, *s[1024];
-    int i, n, tflags = 0, deftyp;
+    struct pkgdef      *pdef = NULL;
+    char               *p, *s[1024];
+    int                n, tflags = 0, deftyp = 0;
+    const char         **tl, **tl_save;
+    const char         *evrstr = NULL, *name = NULL, *virtname = NULL;
+    char               *version = NULL, *release = NULL;
+    int32_t            epoch = 0;
     
+
     n = buflen;
     *pdefp = NULL;
     
@@ -111,16 +117,14 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
                 
             case  '@': 
                 tflags |= PKGDEF_VIRTUAL;
-
+                break;
+                
             default:
                 tflags |= PKGDEF_REGNAME;
         }
         p++;
     }
     
-    
-            
-                
     if (!isalnum(*p)) {
         if (nline > 0)
             logn(LOGERR, _("%s:%d: syntax error"), fpath, nline);
@@ -128,86 +132,68 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
             logn(LOGERR, _("syntax error in package definition"));
         return -1;
     }
-    
 
-    s[0] = p;
-    i = 1;
-    if ((q = strchr(p, ' '))) {
-        *q++ = '\0';
-        while(isspace(*q))
-            q++;
-        s[i++] = q;
-        p = q;
+    tl = tl_save = n_str_tokl(p, "#\t ");
+    
+    if (tflags & PKGDEF_VIRTUAL) {
+        virtname = tl[0];
+        if (virtname) 
+            name = tl[1];
         
-        while ((q = strchr(p, ' '))) {
-            *q++ = '\0';
-            while(isspace(*q))
-                q++;
-            s[i++] = p;
-            p = q;
-        }
+        if (name) 
+            evrstr = tl[2];
+        
+    } else {
+        virtname = NULL;
+        name = tl[0];
+        evrstr = tl[1];
     }
-    
-    s[i] = NULL;
-    
-    if (s[0]) {
-        char *evrstr = NULL, *name = NULL, *virtname = NULL;
-        char *version = NULL, *release = NULL;
         
-        int32_t epoch = 0;
-            
-        if (tflags & PKGDEF_VIRTUAL) {
-            virtname = s[0];
-            name = s[1];
-            if (name) 
-                evrstr = s[2];
-                
-        } else {
-            virtname = NULL;
-            name = s[0];
-            evrstr = s[1];
-        }
-        
-        DBGF("name = %s, evrstr = %s\n", name, evrstr);
-
+    DBGF("virtname = %s, name = %s, evrstr = %s, %d\n",
+         virtname, name, evrstr, tflags);
+    
+    if (name) {
         deftyp = deftype(name);
         if (name && deftyp == 0) {
             if (nline) 
                 logn(LOGERR, _("%s:%d %s: invalid package name"),
-                    fpath, nline, name);
+                 fpath, nline, name);
             else 
                 logn(LOGERR, _("%s: invalid package name"), name);
+            
+            n_str_tokl_free(tl_save);
             return -1;
         }
-
-        
-        pdef = malloc(sizeof(*pdef) +
-                      (virtname ? strlen(virtname) + 1 : 0));
-        pdef->tflags = tflags | deftyp;
-
-        if (name == NULL) {
-            pdef->pkg = NULL;
-            
-        } else {
-            if (evrstr) 
-                parse_evr(evrstr, &epoch, &version, &release);
-
-            if (version == NULL)
-                version = "";
-
-            if (release == NULL)
-                release = "";
-                
-            pdef->pkg = pkg_new(name, epoch, version, release, NULL, NULL, 
-                                0, 0, 0);
-        }
-
-        if (virtname) 
-            strcpy(pdef->virtname, virtname);
-        
-        *pdefp = pdef;
     }
-    
+
+        
+    pdef = malloc(sizeof(*pdef) +
+                  (virtname ? strlen(virtname) + 1 : 0));
+    pdef->tflags = tflags | deftyp;
+
+    if (name == NULL) {
+        pdef->pkg = NULL;
+            
+    } else {
+        if (evrstr) 
+            parse_evr((char*)evrstr, &epoch, &version, &release);
+        
+        if (version == NULL)
+            version = "";
+        
+        if (release == NULL)
+            release = "";
+                
+        pdef->pkg = pkg_new(name, epoch, version, release, NULL, NULL, 
+                            0, 0, 0);
+    }
+
+    if (virtname) 
+        strcpy(pdef->virtname, virtname);
+        
+    *pdefp = pdef;
+
+    n_str_tokl_free(tl_save);
     return pdef ? 1 : 0;
 }
 
@@ -221,8 +207,7 @@ int pkgdef_new_pkgfile(struct pkgdef **pdefp, const char *path)
 
     if ((pkg = pkg_ldrpm(path, PKG_LDNEVR)) == NULL)
         return -1;
-    
-    
+
     pdef = malloc(sizeof(*pdef));
     pdef->tflags = PKGDEF_PKGFILE;
     pdef->pkg = pkg;

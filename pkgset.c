@@ -156,7 +156,7 @@ void inst_s_init(struct inst_s *inst)
 static tn_array *get_rpmlibcaps(void) 
 {
     char **names = NULL, **versions = NULL, *evr;
-    int *flags = NULL, n, i;
+    int *flags = NULL, n = 0, i;
     tn_array *caps;
     
 #if HAVE_RPMGETRPMLIBPROVIDES
@@ -338,8 +338,8 @@ int pkgset_index(struct pkgset *ps)
 
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
-
-#if 0                           /* testing sruff */
+        
+#if 0                           /* testing stuff */
         if (strcmp(pkg->name, "SVGATextMode") == 0) {
             struct capreq *req = capreq_new_evr("ghostscript-fonts-std",
                                                 strdup("6.0-7"), REL_LT, CAPREQ_CNFL);
@@ -930,7 +930,6 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     
     for (i=0; i<n_array_size(ups->pkgdefs); i++) {
         struct pkgdef *pdef = n_array_nth(ups->pkgdefs, i);
-
         if (pdef->tflags & (PKGDEF_REGNAME | PKGDEF_PKGFILE)) { 
             if (!pkgset_mark_pkgdef_exact(ps, pdef, nodeps))
                 nerr++;
@@ -940,17 +939,18 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 
         } else if (pdef->tflags & PKGDEF_VIRTUAL) { /* VIRTUAL implies OPTIONAL */
             tn_array *avpkgs;
-                
+
+#if 0            
             if (pdef->pkg == NULL) {
-                logn(LOGERR, _("virtual %s: default package expected"),
+                logn(LOGERR, _("virtual '%s': default package expected"),
                     pdef->virtname);
                 nerr++;
                     
             }
-
+#endif 
             avpkgs = pkgset_lookup_cap(ps, pdef->virtname);
             if (avpkgs == NULL || n_array_size(avpkgs) == 0) {
-                logn(LOGERR, _("virtual %s not found"), pdef->virtname);
+                logn(LOGERR, _("virtual '%s' not found"), pdef->virtname);
                 nerr++;
                     
             } else {
@@ -965,7 +965,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 #endif                
                     
                 if (pdef->pkg == NULL) {
-                    logn(LOGWARN, _("%s: missing default package, using %s"),
+                    logn(LOGNOTICE, _("%s: missing default package, using %s"),
                         pdef->virtname, pkg->name);
                         
                 } else {

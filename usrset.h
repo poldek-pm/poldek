@@ -19,8 +19,6 @@ struct pkgdef {
     char virtname[0];
 };
 
-#define pkgdef_is_virtual(pdef) (pdef->type == PKGSPEC_VIRTUAL)
-
 struct usrpkgset {
     tn_array *pkgdefs;         /* *pkgdef[] */
     char *path;
@@ -35,4 +33,5 @@ int usrpkgset_add_file(struct usrpkgset *ups, const char *pathname);
 int usrpkgset_add_list(struct usrpkgset *ups, const char *path);
 
 int usrpkgset_setup(struct usrpkgset *ups);
+
 #endif
