@@ -8,10 +8,12 @@
 
 cdid() 
 {
-    URI=`echo $1 | awk '{ gsub(/^cdrom:\/\//,""); print $1; }'`
-    CDID=`echo $URI | awk '{ match($0, /^[a-zA-z0-9\-]+/); print substr($0, RSTART, RLENGTH);}'`
-    URI=`echo $URI | awk '{ gsub(/^[a-zA-z0-9\-]+/,""); gsub(/^\//,""); print $0;}'`
+    URI=`echo $1 | sed 's@^cdrom://@@'`
+    CDID=`echo $URI | sed 's@/.*@@'`
+    URI=`echo $URI | sed 's@[^/]*/@@'`
     BN=`basename $URI`
+
+    echo "URI=$URI CDID=$CDID BN=$BN"
     
     #echo "$1 -> uri $URI, id $CDID"
     if [ -z "$URI" -o -z "$CDID" ]; then
