@@ -76,17 +76,17 @@ static const char *select_pager_cmd(void)
 }
 
 
-FILE *pager(struct pager *pg)
+FILE *pager_cmd(struct pager *pg, const char *cmd)
 {
     int    pp[2];
     pid_t  pid;
-    const char *cmd;
-
+    
     pg->stream = NULL;
     pg->pid = 0;
     pg->ec = 0;
     
-    if ((cmd = select_pager_cmd()) == NULL)
+
+    if (cmd == NULL && (cmd = select_pager_cmd()) == NULL)
         return NULL;
 
     if (!isatty(1))
@@ -141,6 +141,13 @@ FILE *pager(struct pager *pg)
     
     return pg->stream;
 }
+
+
+FILE *pager(struct pager *pg)
+{
+    return pager_cmd(pg, NULL);
+}
+
 
 static
 int pager_waitpid(struct pager *pg, int woptions) 
