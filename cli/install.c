@@ -233,17 +233,18 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             state->child_inputs[1] = NULL;
             break;
 
+        case 'i':
+            poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "install");
+            break;
+            
         case OPT_INST_DOWNGRADE:
         case OPT_INST_REINSTALL:
         case 'U':
         case 'u':
-        case 'i':
             poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "install");
+            poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
             
-            if (key == 'u' || key == 'U')
-                poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
-            
-            else if (key == OPT_INST_DOWNGRADE)
+            if (key == OPT_INST_DOWNGRADE)
                 poldek_ts_setf(ts, POLDEK_TS_DOWNGRADE);
             
             else if (key == OPT_INST_REINSTALL)
