@@ -53,8 +53,10 @@ extern void (*vftp_msg_fn)(const char *fmt, ...);
 void   (*ftp_progress_fn)(long total, long amount, void *data) = NULL;
 int    *ftp_verbose = &verbose;
 
-#define FTP_SUPPORTS_SIZE  (1 << 0)
+static volatile sig_atomic_t interrupted = 0;
 
+
+#define FTP_SUPPORTS_SIZE  (1 << 0)
 
 #define ST_RESP_TIMEOUT    -2
 #define ST_RESP_BAD        -1
@@ -256,7 +258,13 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
         FD_ZERO(&fdset);
         FD_SET(sockfd, &fdset);
         if ((rc = select(sockfd + 1, &fdset, NULL, NULL, &to)) < 0) {
-            if (errno == EAGAIN)
+            if (interrupted) {
+                is_err = 1;
+                errno = EINTR;
+                break;
+            }
+
+            if (errno == EAGAIN || errno == EINTR)
                 continue;
             
             is_err = 1;
@@ -410,6 +418,14 @@ int ftpcn_resp_ext(struct ftpcn *cn, int readln)
 #define ftpcn_resp(cn)           ftpcn_resp_ext(cn, 0)
 #define ftpcn_resp_readln(cn)    ftpcn_resp_ext(cn, 1)
 
+
+static void sigint_handler(int sig) 
+{
+    interrupted = 1;
+    signal(sig, sigint_handler);
+}
+
+
 static void sigalarmfunc(int unused)
 {
     unused = unused;
@@ -433,7 +449,6 @@ void uninstall_alarm(void)
 {
     alarm(0);
 };
-
 
 static int to_connect(const char *host, const char *service)
 {
@@ -728,9 +743,21 @@ int rcvfile(int out_fd,  off_t out_fdoff, int in_fd, long total_size,
 
 	tv.tv_sec = 300;
 	tv.tv_usec = 0;
+        
+        rc = select(in_fd + 1, &fdset, NULL, NULL, &tv);
+        if (interrupted) {
+            is_err = 1;
+            errno = EINTR;
+            break;
+        }
 
-        if ((rc = select(in_fd + 1, &fdset, NULL, NULL, &tv)) < 0) {
-            if (errno == EAGAIN)
+        if (rc == 0) {
+            errno = EIO;
+            is_err = 1;
+            break;
+            
+        } else if (rc < 0) {
+            if (errno == EAGAIN || errno == EINTR)
                 continue;
             
             is_err = 1;
@@ -760,44 +787,50 @@ int rcvfile(int out_fd,  off_t out_fdoff, int in_fd, long total_size,
                 break;
             } 
         }
+        
     }
     
     if (is_err)
-        if (errno == 0)
+        if (errno == 0 && errno != EINTR)
             errno = EIO;
     return is_err == 0;
 }
 
-
+#if 0
 static void progress(long total, long amount, void *data)
 {
     printf("P %ld of total %ld\n", amount, total);
 }
-
+#endif
 
 int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff, 
                const char *path, void *progess_data)
 {
-    int   sockfd;
+    int   sockfd = -1;
     long  total_size;
     int   l_errno = EIO;
+    void  *sigint_fn;
+
+    
+    interrupted = 0;
+    sigint_fn = signal(SIGINT, sigint_handler);
     
     if ((lseek(out_fd, out_fdoff, SEEK_SET)) != 0) {
         snprintf(errmsg, sizeof(errmsg), "%s: lseek %ld: %m", path, out_fdoff);
-        return 0;
+        goto l_err;
     }
 
     if ((total_size = ftpcn_size(cn, path)) < 0)
-        return 0;
+        goto l_err;
     
     if ((sockfd = ftpcn_pasv(cn)) <= 0)
-        return 0;
+        goto l_err;
 
     if (out_fdoff < 0)
         out_fdoff = 0;
     
     if (!ftpcn_cmd(cn, "REST %ld", out_fdoff))
-        return 0;
+        goto l_err;
     
     if (!ftpcn_resp(cn))
         goto l_err;
@@ -829,7 +862,8 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
     
     
     if (!rcvfile(out_fd, out_fdoff, sockfd, total_size, progess_data)) {
-        snprintf(errmsg, sizeof(errmsg), "download %s: %m", path);
+        if (errno)
+            snprintf(errmsg, sizeof(errmsg), "download %s: %m", path);
         goto l_err;
     }
 	
@@ -839,11 +873,14 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
     if (!ftpcn_resp(cn) || cn->last_respcode != 226)
         goto l_err;
     
+    signal(SIGINT, sigint_fn);
     return 1;
     
  l_err:
+    signal(SIGINT, sigint_fn);
     errno = l_errno;
-    close(sockfd);
+    if (sockfd > 0)
+        close(sockfd);
     return 0;
 }
 
