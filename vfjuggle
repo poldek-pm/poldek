@@ -94,18 +94,22 @@ if [ "$#" = 0 ]; then
     exit 0
 fi
 
-
 DESTDIR=$1; shift;
 if [ ! -d "$DESTDIR" ]; then 
     echo "$DESTDIR: no such directory"
     exit 1
 fi
 
-
+#echo "POLDEK_VFJUGGLE_CPMODE = $POLDEK_VFJUGGLE_CPMODE"
 while  [ $# -gt 0 ]; do
     URL=$1; shift;
 
     cdid $URL
+
+    if [ -r $DESTDIR/$BN ]; then
+	continue
+    fi
+
 
     if [ ! -f "$VF_MNTPOINT/$CDID" ]; then 
 	mount_ $CDID
@@ -115,21 +119,27 @@ while  [ $# -gt 0 ]; do
 	echo "$VF_MNTPOINT/$URI: no such file"
 	exit 1
     fi
-    
+
     if [ "$BN" = "packages.dir" -o "$BN" = "packages.dir.gz" -o \
 	 "$BN" = "Packages" -o "$BN" = "Packages.gz" ]; then
+	  POLDEK_VFJUGGLE_CPMODE="copy"
+    fi
 
-	 #echo "cp $VF_MNTPOINT/$URI $DESTDIR/"
-         cp $VF_MNTPOINT/$URI $DESTDIR/
+    if [ -z "$POLDEK_VFJUGGLE_CPMODE" ]; then
+	POLDEK_VFJUGGLE_CPMODE="link"
+    fi
+
+    if [ "$POLDEK_VFJUGGLE_CPMODE" == "copy" ]; then
+#	 echo "cp $VF_MNTPOINT/$URI $DESTDIR/"
+         cp -L --remove-destination $VF_MNTPOINT/$URI $DESTDIR/
     else 	 
-	 #echo ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$FILE"
-	 ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$FILE"
+#	 echo ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$BN"
+	 ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$BN"
     fi
 	
     if [ $? -ne 0 ]; then
 	exit 1
     fi
 done
-
 exit 0
     

@@ -15,7 +15,7 @@ source = ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
  
 
 # NOTE: directory *must* exists 
-#cachedir = /var/tmp/poldek-cache/
+#cachedir = /var/tmp/poldek-cache
 
 
 # Downloaders configuration 

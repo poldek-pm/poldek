@@ -103,7 +103,7 @@ static int dump_pkgs_fqpns(struct pkgset *ps, struct upgrade_s *upg)
 
 int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs, int nosubdirs)
 {
-    int       i, nerr, urltype;
+    int       i, nerr, urltype, ncdroms;
     tn_array  *urls = NULL;
     tn_array  *urls_arr = NULL;
     tn_hash   *urls_h = NULL;
@@ -114,6 +114,8 @@ int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs, int nosubdirs)
     
     n_hash_ctl(urls_h, TN_HASH_NOCPKEY);
     
+    // group by URL
+    ncdroms = 0;
     for (i=0; i<n_array_size(pkgs); i++) {
         struct pkg  *pkg = n_array_nth(pkgs, i);
         char        *pkgpath = pkg->pkgdir->path;
@@ -122,6 +124,9 @@ int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs, int nosubdirs)
 
         if ((urltype = vfile_url_type(pkgpath)) == VFURL_PATH)
             continue;
+        
+        if (urltype == VFURL_CDROM)
+            ncdroms++;
 
         if ((urls = n_hash_get(urls_h, pkgpath)) == NULL) {
             urls = n_array_new(n_array_size(pkgs), NULL, NULL);
@@ -138,22 +143,34 @@ int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs, int nosubdirs)
         n_array_push(urls, s);
     }
 
+    /* files must be copied if they are taken from more than
+       one removable media;
+       
+       Not so nice, but it works
+    */
+    if (ncdroms > 1) 
+        putenv("POLDEK_VFJUGGLE_CPMODE=copy");
+    
+    else if (ncdroms == 1) 
+        putenv("POLDEK_VFJUGGLE_CPMODE=link");
+
     nerr = 0;
     for (i=0; i<n_array_size(urls_arr); i++) {
         char path[PATH_MAX];
+        const char *real_destdir;
         char *pkgpath = n_array_nth(urls_arr, i);
 
         urls = n_hash_get(urls_h, pkgpath);
-
+        real_destdir = destdir;
         if (nosubdirs == 0) {
             char buf[1024];
             
             vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
             snprintf(path, sizeof(path), "%s/%s", destdir, buf);
-            destdir = path;
+            real_destdir = path;
         }
         
-        if (!vfile_fetcha(destdir, urls, VFURL_UNKNOWN))
+        if (!vfile_fetcha(real_destdir, urls, VFURL_UNKNOWN))
             nerr++;
     }
     
@@ -208,7 +225,6 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
     argv[n] = NULL;
     n = 0;
 
-    
     if (!pkgset_fetch_pkgs(upg->inst->cachedir, upg->install_pkgs, 0))
         return 0;
     
