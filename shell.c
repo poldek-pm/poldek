@@ -608,7 +608,7 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
     char                 hdr[128], fmt_hdr[256], fmt_pkg[256];
     int                  i, size, err = 0, npkgs = 0, is_help = 0;
     int                  compare_ver = 0;
-
+    int                  term_width_div2;
     
     if (argv == NULL)
         return 0;
@@ -650,17 +650,25 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
     }
 
     get_term_width();
+    term_width_div2 = term_width/2;
 
     if (cmdst.flags & OPT_LS_LONG) {
         if ((cmdst.flags & OPT_LS_UPGRADEABLE) == 0) {
-            snprintf(hdr, sizeof(hdr), "%-42s%-12s%16s\n", "package",
-                     "build date", "size (kB)");
+            snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds%%%ds\n",
+                     term_width_div2 + term_width_div2/10, (term_width/7), 15);
+
+            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%%ds%%%ds\n",
+                     term_width_div2 + term_width_div2/10, (term_width/7), (term_width/8));
+       
+            snprintf(hdr, sizeof(hdr), fmt_hdr, "package", "build date", "size");
+
+            
         } else {
             snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds%%-%ds%%%ds\n",
                      (term_width/2) - 1, (term_width/6) - 1,
                      (term_width/6) - 1, (term_width/5) - 1);
 
-            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%-%ds%%-%ds%%%dd\n",
+            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%-%ds%%-%ds%%%ds\n",
                      (term_width/2) - 1, (term_width/6) - 1,
                      (term_width/6) - 1, (term_width/6) - 1);
 
@@ -668,10 +676,10 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
             
             if (cmdst.flags & OPT_LS_INSTALLED) 
                 snprintf(hdr, sizeof(hdr), fmt_hdr, "installed",
-                         "available", "build date", "size (kB)");
+                         "available", "build date", "size");
             else
                 snprintf(hdr, sizeof(hdr), fmt_hdr, "available",
-                         "installed", "build date", "size (kB)");
+                         "installed", "build date", "size");
         }
     }
     
@@ -707,6 +715,16 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
         
         if (cmdst.flags & OPT_LS_LONG) {
             char timbuf[30];
+            char sizbuf[30];
+            char unit = 'K';
+            double pkgsize = pkg->size/1024;
+
+            if (pkgsize > 1000) {
+                pkgsize /= 1024;
+                unit = 'M';
+            }
+
+            snprintf(sizbuf, sizeof(sizbuf), "%.1lf%c", pkgsize, unit);
             
             if (pkg->btime) 
                 strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
@@ -715,10 +733,9 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
                 *timbuf = '\0';
             
             if (cmdst.flags & OPT_LS_UPGRADEABLE) 
-                printf(fmt_pkg, shpkg->nevr, evr, timbuf, pkg->size/1024);
+                printf(fmt_pkg, shpkg->nevr, evr, timbuf, sizbuf);
             else
-                printf("%-42s%12s%8d\n", shpkg->nevr, timbuf,
-                       pkg->size/1024);
+                printf(fmt_pkg, shpkg->nevr, timbuf, sizbuf);
             
             size += pkg->size/1024;
             
