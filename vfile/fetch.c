@@ -259,8 +259,8 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
         ftch->is_multi = is_multi;
         ftch->urltypes = protocols_to_urltypes(protocols);
         memcpy(ftch->path, path, path_len);
-        memcpy(&ftch->path[path_len + 1], name, name_len);
-        ftch->name = &ftch->path[path_len + 1];
+        memcpy(&ftch->path[path_len], name, name_len);
+        ftch->name = &ftch->path[path_len];
         
     } else
         goto l_err_end;
