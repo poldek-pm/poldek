@@ -1,3 +1,6 @@
+0.17.1
+* ftp: fixed multiline responses handling
+
 0.17 (beta release):
 * added support for package.dir's "patches" (new option --update-whole
   updates whole index; --update looking for patches first)
