@@ -174,6 +174,10 @@ int fetch_file_internal(const char *destdir, const char *path)
     int rc = -1;
 
     snprintf(tmpath, sizeof(tmpath), "%s/%s", destdir, n_basenam(path));
+
+    if (!vfile_valid_path(tmpath))
+        return 0;
+    
     vfile_msg_fn("Retrieving %s...\n", path);
 
     if (vfile_conf.flags & VFILE_CNFCURL) {
@@ -257,9 +261,10 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype)
 int vfile_fetch(const char *destdir, const char *path, int urltype) 
 {
     int rc;
-    
-    mkdir(destdir, 0755);
-    
+
+    if (!vfile_mkdir(destdir))
+        return 0;
+
     n_assert(urltype > 0);
     if (urltype == VFURL_UNKNOWN) 
         urltype = vfile_url_type(path);
@@ -275,15 +280,6 @@ int vfile_fetch(const char *destdir, const char *path, int urltype)
     
     return rc;
 }
-
-static int isdir(const char *path)
-{
-    struct stat st;
-    return stat(path, &st) == 0 &&
-        S_ISDIR(st.st_mode) && (st.st_mode & S_IRWXU);
-}
-
-
 
 /* RET: bool */
 static int openvf(struct vfile *vf, const char *path, int vfmode) 
@@ -425,15 +421,29 @@ static int is_uptodate(const char *mdpath, int urltype)
     len = snprintf(l_mdpath, sizeof(l_mdpath), "%s/", vfile_conf.cachedir);
     vfile_url_as_path(&l_mdpath[len], sizeof(l_mdpath) - len, mdpath);
     if ((l_md_size = read_md(l_mdpath, l_md, sizeof(l_md))) < 31) 
-        return 0;   /* no Packages.md in cache */
+        return 0;   /* no *.md in cache */
     
-    
-    len = snprintf(tmpdir, sizeof(tmpdir), "%s/pdek%d", vfile_conf.cachedir, getpid());
-    vfile_url_as_dirpath(&tmpdir[len], sizeof(tmpdir) - len, mdpath);
-    
-    if (!isdir(tmpdir))
-        mkdir(tmpdir, 0755);
+    len = snprintf(tmpdir, sizeof(tmpdir), "%s/tmpmd", vfile_conf.cachedir);
 
+    if (sizeof(tmpdir) - len < 128)
+        return 0;
+    
+    if (!vfile_mkdir(tmpdir))
+        return 0;
+    
+    snprintf(&tmpdir[len], sizeof(tmpdir) - len, "/%s", n_basenam(mdpath));
+    
+    if (!vfile_valid_path(tmpdir))
+        return -1;
+    
+    if (access(tmpdir, R_OK) == 0) /* unlink old *.md */
+        if (unlink(tmpdir) != 0) {
+            vfile_err_fn("%s: unlink: %m\n");
+            return -1;
+        }
+
+    tmpdir[len] = '\0';         /* back to dir */
+    
     if (vfile_fetch(tmpdir, mdpath, urltype)) {
         char tmpath[PATH_MAX];
 
@@ -546,21 +556,32 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
             
             vfile_url_as_dirpath(&buf[len], sizeof(buf) - len, tmpath);
             tmpdir = buf;
-            
-            if (!isdir(tmpdir))
-                mkdir(tmpdir, 0755);
+
+            if (!vfile_mkdir(tmpdir))
+                return 0;
 
             if (vfmode & VFM_MD) {
                 char tmpath[PATH_MAX];
+                int  nerr = 0;
                 
                 snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
                          n_basenam(mdpath));
-                unlink(tmpath);
+                
+                if (!vfile_valid_path(tmpath))
+                    nerr++;
+                else 
+                    unlink(tmpath);
 
                 snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
                          n_basenam(path));
-                unlink(tmpath);
-                mdopened = vfile_fetch(tmpdir, mdpath, urltype);
+                
+                if (!vfile_valid_path(tmpath))
+                    nerr++;
+                else 
+                    unlink(tmpath);
+                
+                if (nerr == 0) 
+                    mdopened = vfile_fetch(tmpdir, mdpath, urltype);
             }
             
             
@@ -630,15 +651,18 @@ void vfile_close(struct vfile *vf)
     }
     
     if (vf->vf_tmpath) {        /* set for remote files only  */
-        if ((vf->vf_mode & (VFM_NORM | VFM_CACHE)) == 0)
+        if ((vf->vf_mode & (VFM_NORM | VFM_CACHE)) == 0 &&
+            vfile_valid_path(vf->vf_tmpath))
             unlink(vf->vf_tmpath);
         free(vf->vf_tmpath);
         vf->vf_tmpath = NULL;
     }
 
     if (vf->vf_mdtmpath) {
-        if ((vf->vf_mode & (VFM_NORM | VFM_CACHE)) == 0)
+        if ((vf->vf_mode & (VFM_NORM | VFM_CACHE)) == 0 &&
+            vfile_valid_path(vf->vf_mdtmpath))
             unlink(vf->vf_mdtmpath);
+        
         free(vf->vf_mdtmpath);
         vf->vf_mdtmpath = NULL;
     }

@@ -89,6 +89,8 @@ void vfile_close(struct vfile *vf);
 int vfile_url_type(const char *url);
 char *vfile_url_as_dirpath(char *buf, size_t size, const char *url);
 char *vfile_url_as_path(char *buf, size_t size, const char *url);
+int vfile_valid_path(const char *path);
+int vfile_mkdir(const char *path);
 
 /* external downloaders */
 int vfile_register_ext_handler(unsigned urltypes, const char *fmt);

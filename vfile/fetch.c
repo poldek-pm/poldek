@@ -249,7 +249,7 @@ int process_output(struct p_open_st *st, const char *prefix)
             endl = 0;
         }
 
-        vfile_msg_fn("_%c", c);
+        vfile_msg_fn("%c", c);
         if (c == '\n' && cnt > 0)
             endl = 1;
         
@@ -269,8 +269,9 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     int               i, n, ec;
     unsigned          p_open_flags = 0;
 
-    
-    mkdir(destdir, 0755);
+
+    if (!vfile_mkdir(destdir))
+        return 0;
 
     if (url)
         n_assert(urls == NULL);
@@ -530,3 +531,72 @@ int vfile_url_type(const char *url)
 
     return VFURL_PATH;
 }
+
+
+int vfile_valid_path(const char *path) 
+{
+    const char *p;
+    int  ndots;
+    
+
+    if (*path != '/') {
+        vfile_err_fn("%s: path must must begin with a /\n", path);
+        return 0;
+    }
+    
+    p = path;
+    p++;
+    ndots = 0;
+    
+    while (*p) {
+        switch (*p) {
+            case '/':
+                if (ndots == 2) {
+                    vfile_err_fn("%s: relative paths not allowed\n", path);
+                    return 0;
+                }
+                ndots = 0;
+                break;
+
+            case '.':
+                ndots++;
+                break;
+
+            default:
+                ndots = 0;
+                
+                if (!isalnum(*p) && strchr("-+/._", *p) == NULL) {
+                    vfile_err_fn("%s: %c non alphanumeric characters not allowed\n", path, *p);
+                    return 0;
+                }
+                
+                if (isspace(*p)) {
+                    vfile_err_fn("%s: whitespaces not allowed\n", path);
+                    return 0;
+                }
+        }
+        p++;
+    }
+    
+    return 1;
+}
+
+
+int vfile_mkdir(const char *path) 
+{
+    struct stat st;
+    
+    if (!vfile_valid_path(path))
+        return 0;
+
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode) && (st.st_mode & S_IRWXU))
+        return 1;
+    
+    if (mkdir(path, 0750) != 0) {
+        vfile_err_fn("%s: mkdir %m\n");
+        return 0;
+    }
+    
+    return 1;
+}
+
