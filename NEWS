@@ -1,6 +1,11 @@
 0.17 (beta release):
-* added support for package.dir's "patches" (new option --update-whole)
+* added support for package.dir's "patches" (new option --update-whole
+  updates whole index while --update looking for patches first)
+
 * improved dependecy processing:
+  - packages are divided into groups before install and each group 
+    is installed separately; this ensures that broken dependencies in 
+    one of group doesn't affect the rest. 
 
   - package may be marked for install as a consequence of conflict
 
@@ -10,18 +15,23 @@
   - improved "greedy" selection - if foo-VER is upgraded, then eventual 
     "greedy" marks will mark foo-{devel,static,etc} in version VER too.
 
-  - packages are splitted into groups before install and each group 
-    is installed separately; this ensures that broken dependencies in 
-    one of group doesn't affect the rest.
 * added internal simple ftp client; it is used for FTP downloads
   by default
+
+* shell: 
+  - db package list is cached what speeds up program start
+  - ls: long listings are passed to $PAGER program (default is "less")
+  - ls: new switches: -n (list package name only), -G (list group)
+        and -O (show package summaries)
+
+* added log file suppport (--log option)
+
 * added checks of packages.dir's data integrity before it is loading,
   it preventing program SIGSEVs on load indexes
-* added log file suppport (--log option)
+
 * changed default cache directory to $HOME/.poldek-cache
-* shell: db packages are cached what speeds up program start in shell mode
-* few (nice) improvements 
-* few major bugs fixed 
+* few (nice) improvements and bugfixes 
+
 
 0.16 (stable release):
 * fixed removable media support in non-install-dist modes

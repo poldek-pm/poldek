@@ -40,9 +40,9 @@ file (I<packages.dir.gz> by default) and performs one of the following actions:
 
 =back
 
-Packages and indexes can be retrieved from remote servers by poldek
-itself (by compiled in cURL client or by simple FTP/HTTP client from rpmlib) 
-or by external downloaders (not configured by default, see L</CONFIG FILE> for
+Remote files can be retrieved from remote servers by poldek
+itself (by internal FTP client or compiled in cURL) or by external 
+downloaders (not configured by default, see L</CONFIG FILE> for
 details). 
 
 =head2 Interactive Mode
@@ -73,21 +73,21 @@ Examples:
 
 =item $ poldek -s /dir/with/RPMS/packages.dir [OPTION...]
 
-=item $ poldek -s ftp://ftp.ala.ma.kota/RPMS/packages.dir
+=item $ poldek -s ftp://ftp.ala.ma.kota/RPMS
 
 =item $ poldek -s rsync://rsync.ala-ma-kota.com/RPMS/
 
 =back
 
-If you want to build packages.dir, then only one and only directory
+If you want to build package index, then only one and only directory
 path as SOURCE is accepted.
 
-If packages.dir and packages are stored in diffrent
+If package index and packages are stored in diffrent
 locations then option:
 
 B<-P, --prefix> B<PREFIX>
 
-could be used to point packages one, e.g.:
+could be used to point packages location, e.g.:
 
 $ poldek -s /tmp/packages.dir.gz --prefix=/cdrom/RPMS/ -s ... --prefix=...
 
@@ -129,33 +129,41 @@ One of the following basic modes must be selected:
 
 =over 4
 
-=item B<--mkidx[z][=FILE]>  
+=item B<--mkidx[z][=FILE]>  B<[--nodiff]>
 
 Build package index, by default it's stored in SOURCE/packages.dir[.gz].
 The other two files are created: packages.dir.mdd with computed packages.dir's 
 digest and packages.dir.toc[.gz] with packages NAME-EVR per line.
-I<NOTE>: SOURCE must be directory.
 
-If there is existing SOURCE/packages.dir[.gz] and it is diffrent from
-current SOURCE/ content then program will create a "patch" file 
-as SOURCE/packages.i/packages.dir.diff.YYYY.MM.DD-HH.MM.SS.gz
+
+Additionally previous SOURCE/packages.dir[.gz] is different from 
+currently created one then index "patch" is created 
+under SOURCE/packages.i/ directory. Every patch consist of two 
+data file: packages.dir.diff.YYYY.MM.DD-HH.mm.SS.gz and 
+digest file packages.dir.diff.YYYY.MM.DD-HH.mm.SS.mdd. 
+
+Outdated patches are automatically removed. 
+
+With B<--nodiff> patches are not created.
+
+I<NOTE>: SOURCE must be directory.
 
 =item B<--update>; B<--update-whole>   
 
 Resynchronize the package index from its source and verify it. 
 
 With B<--update> program looking up "patches" for existing local
-packages.dir, if it fails, then whole packages.dir is downloaded.
+package index, if it fails, then whole index is downloaded.
 
-With B<--update-whole> program updates whole packages.dir
+With B<--update-whole> program updates whole package index
 
-For local sources it only verifies packages.dir using its digest
-from packages.dir.md. 
+For local sources option only verifies existing index 
+integrity using its digest from packages.dir.mdd. 
 
 =item B<-V|--verify>
 
 This option checks dependenecies and conflicts of package set.
-Without packages specified it checks all packages.
+Without packages specified it checks all available packages.
 
 =item B<--install-dist[=DIR]>
 
@@ -173,7 +181,7 @@ Install or upgrade given packages.
 
 =item B<--shcmd=COMMAND>
 
-Run interactive mode command and exit.
+Run interactive mode command COMMAND and exit.
 
 =item B<--shell>
 
@@ -186,11 +194,10 @@ Split package set into parts, each SIZE MB size. The first part will
 be FIRST_FREE_SPACE MB smaller. 
 
 Package priorities are taken from FILE given by --split-conf (see sample 
-pkgsplit.conf from distribution). By default packages has 0 priority.
+pkgsplit.conf from program distribution). By default packages has 0 priority.
 
 Each part is written as NAME-EVR.ARCH.rpm list to PREFIX.XX 
 file, the default PREFIX is "packages.chunk"
-
 
 =back 
 
@@ -206,7 +213,6 @@ Just dump packages file names to FILE or stdout instead of install them.
 =item B<--dumpn[=FILE]> 
 
 Just dump packages names to FILE or stdout instead of install them.
-
 
 =item B<--fetch=DIR> 
 
@@ -404,13 +410,13 @@ vfjuggle should be configured, see poldekrc.sample-cdrom for details.
 
 =head2 Package index creation
 
-$ poldek -s /cdrom/PLD/RPMS/ --mkidx=/tmp/packages.dir
+$ poldek -s /cdrom/PLD/RPMS --mkidx=/tmp/packages.dir.gz
 
-$ poldek -s /ftp/pub/PLD/RPMS/ --mkidxz
+$ poldek -s /ftp/pub/PLD/RPMS --mkidxz
 
 Using mkpackagedir script:
 
-$ mkpackagedir /ftp/pub/PLD/i686/RPMS/  /ftp/pub/PLD/sparc/RPMS/ 
+$ mkpackagedir /ftp/pub/PLD/i686/RPMS /ftp/pub/PLD/sparc/RPMS
 
 =head2 Verification
 
@@ -442,7 +448,7 @@ $ poldek -s ftp://ftp.pld.org.pl/PLD/RPMS/
 
 Test only:
 
-$ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/packages.dir 
+$ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/
   --upgrade-dist --test
 
 
@@ -475,9 +481,12 @@ specified.
 =head1 FILES
 
 /etc/poldek.conf 
-$HOME/.poldek-cache
+
 $HOME/.poldekrc
+
 $HOME/.poldek_hold
+
+$HOME/.poldek-cache/
 
 =head1 BUGS
 
@@ -494,7 +503,7 @@ In PLD I<http://www.pld.org.pl>, which is primary developement
 platform for poldek, Obsoletes tag is used in two diffrent meanings:
 the first means B<A> I<obsoletes> B<B>, the second means B<A> I<is
 equivalent of> B<B>. Obviously it makes impossible to distinguish them
-and use during upgrades (in Red Hat Linux only the first mean is used,
+and use during upgrades (in Red Hat Linux the first mean is used only,
 so Red Hat Installer use this tag).
 
 =head2 Upgrade and more than one instance of the package
