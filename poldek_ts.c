@@ -97,6 +97,7 @@ void poldek_ts_free(struct poldek_ts *ts)
 {
     poldek_ts_destroy(ts);
     free(ts);
+    MEMINF("");
 }
 
 
@@ -235,7 +236,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
     dbgf_("%p->%p, %p\n", ts, ts->hold_patterns, ctx);
     ts->askpkg_fn = poldek_term_ask_pkg;
     ts->ask_fn = poldek_term_ask_yn;
-    ts->pms = pkgmark_set_new();
+    ts->pms = pkgmark_set_new(1024);
     return 1;
 }
 
@@ -279,8 +280,11 @@ void poldek_ts_destroy(struct poldek_ts *ts)
     ts->hold_patterns = ts->ign_patterns = NULL;
     if (ts->pm_pdirsrc)
         source_free(ts->pm_pdirsrc);
+
+    if (ts->pms)
+        pkgmark_set_free(ts->pms);
+    
     n_alloc_free(ts->_na);
-    pkgmark_set_free(ts->pms);
 }
 
 
@@ -899,29 +903,18 @@ int ts_run_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
     if (ts->db == NULL)
         return 0;
     pkgdb_tx_commit(ts->db);
+    
     rc = do_poldek_ts_uninstall(ts, iinf);
-    if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
+    
+    if (rc && !ts->getop(ts, POLDEK_OP_TEST))
         pkgdb_tx_commit(ts->db);
+    
+    MEMINF("before dbfree");
     pkgdb_free(ts->db);
     ts->db = NULL;
+    MEMINF("END");
     return rc;
 }
-
-#if 0
-int
-for (i=0; i<n_array_size(ps->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->pkgs, i);
-        if (pkg->cnflpkgs == NULL)
-            continue;
-            msg(2, "%s -> ", pkg_snprintf_s(pkg)); 
-            for (j=0; j<n_array_size(pkg->cnflpkgs); j++) {
-                struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
-                msg(2, "_%s%s, ", cpkg->flags & CNFLPKG_OB ? "*":"", 
-                    pkg_snprintf_s(cpkg->pkg));
-            }
-            msg(2, "_\n");
-        }
-#endif    
 
 static
 int ts_run_verify(struct poldek_ts *ts, void *foo) 

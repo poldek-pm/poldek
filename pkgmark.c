@@ -43,16 +43,22 @@ struct pkg_mark {
     struct pkg *pkg;
     uint32_t flags;
 };
-    
 
-struct pkgmark_set *pkgmark_set_new(void) 
+static void pkg_mark_free(struct pkg_mark *m)
+{
+    pkg_free(m->pkg);
+}
+
+
+struct pkgmark_set *pkgmark_set_new(int size) 
 {
     struct pkgmark_set *pmark;
     tn_alloc *na;
     
     na = n_alloc_new(8, TN_ALLOC_OBSTACK);
     pmark = na->na_malloc(na, sizeof(*na));
-    pmark->ht = n_hash_new_na(na, 1024, NULL);
+    pmark->ht = n_hash_new_na(na, size > 256 ? size : 256,
+                              (tn_fn_free)pkg_mark_free);
     pmark->na = na;
     return pmark;
 }
@@ -101,7 +107,7 @@ int pkgmark_set(struct pkgmark_set *pmark, struct pkg *pkg,
             return 1;
 
         pkg_mark = pmark->na->na_malloc(pmark->na, sizeof(*pkg_mark));
-        pkg_mark->pkg = pkg;
+        pkg_mark->pkg = pkg_link(pkg);
         pkg_mark->flags = 0;
         n_hash_insert(pmark->ht, pkg->nvr, pkg_mark);
     }

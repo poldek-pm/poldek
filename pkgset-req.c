@@ -151,7 +151,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
     
     n_assert(ps->_vrfy_unreqs == NULL);
     ps->_vrfy_unreqs = n_hash_new(127, (tn_fn_free)n_array_free);
-    pms = pkgmark_set_new();
+    pms = pkgmark_set_new(n_array_size(ps->pkgs) / 10);
 
     msgn(4, _("\nVerifying dependencies..."));
     

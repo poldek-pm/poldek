@@ -45,7 +45,7 @@ int poldek_util_parse_nevr(char *nevrstr, const char **name,
 
 /*  === pkgmark_set ===  */
 struct pkgmark_set;
-struct pkgmark_set *pkgmark_set_new(void);
+struct pkgmark_set *pkgmark_set_new(int size);
 void pkgmark_set_free(struct pkgmark_set *pms);
 int pkgmark_set(struct pkgmark_set *pms, struct pkg *pkg, int set,
                 uint32_t flag);

@@ -238,7 +238,7 @@ int other_version_marked(struct pkgmark_set *pms, struct pkg *pkg,
             break;
         
         if (p != pkg && pkg_is_marked(pms, p)) {
-            if (req == NULL || pkg_statisfies_req(p, req, 0)) {
+            if (req == NULL || pkg_satisfies_req(p, req, 0)) {
                 DBGF("%s -> yes, %s\n", pkg_snprintf_s0(pkg),
                      pkg_snprintf_s1(p));
                 return 1;
@@ -2144,8 +2144,8 @@ static void init_upgrade_s(struct upgrade_s *upg, struct poldek_ts *ts)
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
     upg->ts = ts; 
     upg->pkg_stack = n_array_new(32, NULL, NULL);
-    upg->dbpms = pkgmark_set_new();
-    upg->unmetpms = pkgmark_set_new();
+    upg->dbpms = pkgmark_set_new(0);
+    upg->unmetpms = pkgmark_set_new(0);
 }
 
 
@@ -2174,10 +2174,10 @@ static void reset_upgrade_s(struct upgrade_s *upg)
     n_array_clean(upg->orphan_dbpkgs);
 
     pkgmark_set_free(upg->dbpms);
-    upg->dbpms = pkgmark_set_new();
+    upg->dbpms = pkgmark_set_new(0);
 
     pkgmark_set_free(upg->unmetpms);
-    upg->unmetpms = pkgmark_set_new();
+    upg->unmetpms = pkgmark_set_new(0);
     
     upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
