@@ -92,7 +92,7 @@ test_match_LDADD    = $(poldek_LDADD)
 
 
 EXTRA_DIST = poldek.1 poldek.pod \
-	     Makefile.extra poldekrc *.sample \
+	     Makefile.extra poldekrc *.sample logo.png \
 	     poldek.spec* poldek-suse.spec* $(bin_SCRIPTS) conf/ \
 	     trurlib/ 
 
