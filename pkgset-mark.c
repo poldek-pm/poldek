@@ -36,7 +36,6 @@
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"
-#include "usrset.h"
 #include "pkgset-req.h"
 
 
@@ -173,184 +172,18 @@ inline static int mark_package(struct pkg *pkg, int withdeps)
     return pkg_is_marked(pkg);
 }
 
-static
-int pkgset_mark_pkgdef_exact(struct pkgset *ps, const struct pkgdef *pdef,
-                             int withdeps) 
+
+int pkgset_mark_packages(struct pkgset *ps, const tn_array *pkgs,
+                         int withdeps, int nodeps)
 {
-    int i, marked = 0, matched = 0;
-    struct pkg *pkg, tmpkg, *findedpkg;
+    int i, nerr = 0;
     
-    
-    n_assert(pdef->pkg != NULL);
-    
-    tmpkg.name = pdef->pkg->name;
-    n_array_sort(ps->pkgs);
-
-    i = n_array_bsearch_idx_ex(ps->pkgs, pdef->pkg, (tn_fn_cmp)pkg_cmp_name); 
-    if (i < 0) {
-        logn(LOGERR, _("mark: %s not found"), pdef->pkg->name);
-        return 0;
-    }
-    
-    findedpkg = pkg = n_array_nth(ps->pkgs, i);
-    
-    if (pkgdef_match_pkg(pdef, pkg)) {
-        marked = mark_package(pkg, withdeps);
-        matched = 1;
-        
-    } else {
-        i++;
-        while (i < n_array_size(ps->pkgs)) {
-            pkg = n_array_nth(ps->pkgs, i++);
-            
-            if (strcmp(pkg->name, pdef->pkg->name) != 0) 
-                break;
-
-            if (pkgdef_match_pkg(pdef, pkg)) {
-                marked = mark_package(pkg, withdeps);
-                matched = 1;
-                break;
-            }
-        }
-    }
-
-    if (!marked && !matched) 
-        logn(LOGERR, _("mark: %s: versions not match"), pdef->pkg->name);
-    
-    return marked;
-}
-
-
-static
-int pkgset_mark_pkgdefs_patterns(struct pkgset *ps, tn_array *pkgdefs,
-                                 int withdeps) 
-{
-    int i, j, nerr = 0;
-    int *matches;
-
-
-    matches = alloca(n_array_size(pkgdefs) * sizeof(*matches));
-    memset(matches, 0, n_array_size(pkgdefs) * sizeof(*matches));
-    
-    
-    for (i=0; i<n_array_size(ps->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->pkgs, i);
-        
-        for (j=0; j<n_array_size(pkgdefs); j++) {
-            struct pkgdef *pdef = n_array_nth(pkgdefs, j);
-            if (pdef->tflags != PKGDEF_PATTERN)
-                continue;
-
-            n_assert(pdef->pkg != NULL);
-            if (fnmatch(pdef->pkg->name, pkg->name, 0) == 0)
-                matches[j] += mark_package(pkg, withdeps);
-        }
-    }
-
-    for (j=0; j<n_array_size(pkgdefs); j++) {
-        struct pkgdef *pdef = n_array_nth(pkgdefs, j);
-        if (pdef->tflags != PKGDEF_PATTERN)
-            continue;
-        
-        if (matches[j] == 0) {
-            logn(LOGERR, _("mark: %s: no such package found"), pdef->pkg->name);
-            nerr++;
-        }
-    }
-    
-    return nerr;
-}
-
-
-int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
-                       int withdeps, int nodeps)
-{
-    int i, nerr = 0, npatterns = 0;
-
     packages_mark(ps->pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
 
-    for (i=0; i < n_array_size(ups->pkgdefs); i++) {
-        struct pkgdef *pdef = n_array_nth(ups->pkgdefs, i);
-        if (pdef->tflags & (PKGDEF_REGNAME | PKGDEF_PKGFILE)) { 
-            if (!pkgset_mark_pkgdef_exact(ps, pdef, withdeps))
-                nerr++;
-            
-        } else if (pdef->tflags & PKGDEF_PATTERN) {
-            npatterns++;
-
-        } else if (pdef->tflags & PKGDEF_VIRTUAL) { /* VIRTUAL implies OPTIONAL */
-            tn_array *avpkgs;
-
-#if 0            
-            if (pdef->pkg == NULL) {
-                logn(LOGERR, _("virtual '%s': default package expected"),
-                    pdef->virtname);
-                nerr++;
-                    
-            }
-#endif 
-            avpkgs = pkgset_lookup_cap(ps, pdef->virtname);
-            if (avpkgs == NULL || n_array_size(avpkgs) == 0) {
-                logn(LOGERR, _("virtual '%s' not found"), pdef->virtname);
-                nerr++;
-                    
-            } else {
-                struct pkg *pkg;
-                int n = 0;
-                
-                pkg = n_array_nth(avpkgs, 0);
-                n = n;
-#if 0                           /* NFY */
-                n = inst->askpkg_fn(pdef->virtname, avpkgs);
-                pkg = n_array_nth(avpkgs, n);
-#endif                
-                    
-                if (pdef->pkg == NULL) {
-                    logn(LOGNOTICE, _("%s: missing default package, using %s"),
-                        pdef->virtname, pkg->name);
-                        
-                } else {
-                    int i, found = 0;
-                        
-                    for (i=0; i<n_array_size(avpkgs); i++) {
-                        pkg = n_array_nth(avpkgs, i);
-                        if (strcmp(pkg->name, pdef->pkg->name) == 0) {
-                            found = 1;
-                            break;
-                        }
-                    }
-                    
-                    if (found == 0) {
-                        pkg = n_array_nth(avpkgs, 0);
-                        logn(LOGWARN, _("%s: default package %s not found, "
-                                        "using %s"), pdef->virtname,
-                             pdef->pkg->name, pkg->name);
-                    }
-                } 
-                            
-                if (!mark_package(pkg, withdeps))
-                    nerr++;
-            }
-                
-            if (avpkgs)
-                n_array_free(avpkgs);
-            
-        } else if (pdef->tflags & PKGDEF_OPTIONAL) {
-#if 0                        /* NFY */
-            if ((inst->flags & INSTS_CONFIRM_INST) && inst->ask_fn &&
-                inst->ask_fn(0, "Install %s? [y/N]", pdef->pkg->name));
-#endif                
-            if (!pkgset_mark_pkgdef_exact(ps, pdef, withdeps))
-                nerr++;
-            
-        } else {
-            n_assert(0);
-        }
-    }
-
-    if (npatterns)
-        nerr += pkgset_mark_pkgdefs_patterns(ps, ups->pkgdefs, withdeps);
+    for (i=0; i < n_array_size(pkgs); i++)
+        mark_package(n_array_nth(pkgs, i), withdeps);
     
+
     if (withdeps) {
         msgn(1, _("\nProcessing dependencies..."));
         if (!mark_dependencies(ps, withdeps))
