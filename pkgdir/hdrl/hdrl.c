@@ -68,11 +68,9 @@ struct pkgdir_module pkgdir_module_hdrl = {
 };
 
 
-
 static
-int load_header_list(const char *path, tn_array *pkgs,
-                     struct pkgroup_idx *pkgroups,
-                     unsigned ldflags)
+int load_header_list(const char *slabel, const char *path, tn_array *pkgs,
+                     struct pkgroup_idx *pkgroups, unsigned ldflags)
 {
     struct vfile         *vf;
     struct pkg           *pkg;
@@ -82,7 +80,7 @@ int load_header_list(const char *path, tn_array *pkgs,
     unsigned             vfmode = VFM_RO | VFM_CACHE | VFM_UNCOMPR | VFM_NOEMPTY;
 
 
-    if ((vf = vfile_open(path, VFT_IO, vfmode)) == NULL)
+    if ((vf = vfile_open_sl(path, VFT_IO, vfmode, slabel)) == NULL)
         return -1;
 
     fdt = fdDup(vf->vf_fd);
@@ -129,23 +127,27 @@ int load_header_list(const char *path, tn_array *pkgs,
     return n;
 }
 
+
 static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     int n;
-    n = load_header_list(pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups, ldflags);
+    if (pkgdir->pkgroups == NULL)
+        pkgdir->pkgroups = pkgroup_idx_new();
+    n = load_header_list(pkgdir_idstr(pkgdir), pkgdir->idxpath, pkgdir->pkgs,
+                         pkgdir->pkgroups, ldflags);
     return n;
 }
 
 
 static
-int hdrl_update(const char *path, int vfmode)
+int hdrl_update(const char *path, int vfmode, const char *sl)
 {
     struct vfile         *vf;
     FD_t                 fdt = NULL;
     int                  rc = 1;
     
-    if ((vf = vfile_open(path, VFT_IO, vfmode)) == NULL)
+    if ((vf = vfile_open_sl(path, VFT_IO, vfmode, sl)) == NULL)
         return 0;
 
     fdt = fdDup(vf->vf_fd);
@@ -171,9 +173,8 @@ int do_update_a(const struct source *src, const char *idxpath)
 {
     int vfmode;
 
-    src = src;                  /* unused */
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
-    return hdrl_update(idxpath, vfmode);
+    return hdrl_update(idxpath, vfmode, source_idstr(src));
 }
 
 static 
@@ -184,7 +185,7 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
     npatches = npatches;
     
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL | VFM_CACHE_NODEL;
-    return hdrl_update(pkgdir->idxpath, vfmode);
+    return hdrl_update(pkgdir->idxpath, vfmode, pkgdir_idstr(pkgdir));
 }
 
 #if 0                           /* creating NFY */
@@ -203,9 +204,6 @@ static void *pkg_to_rpmhdr(struct pkg *pkg)
     h = headerNew();
     
     headerAddEntry(h, CRPMTAG_MD5, RPM_STRING_TYPE, md5, 1);
-    
-
-    
 }
 
 
