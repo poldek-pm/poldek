@@ -652,14 +652,13 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
             /* less than 20% of descriptions in language => don't save */
             if ((dbh->npackages * 100) / n_array_size(pkgdir->pkgs) < 20) {
                 tndb_unlink(dbh->db);
-                dbh->db = NULL;
                 
             } else {
                 const char *p = vf_url_slim_s(tndb_path(dbh->db), 0);
                 msgn(2, _(" Writing descriptions %s..."), p);
-                tndb_close(dbh->db);
-                dbh->db = NULL;
             }
+            tndb_close(dbh->db);
+            dbh->db = NULL;
         }
     }
     

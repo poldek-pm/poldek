@@ -633,6 +633,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             pkg->load_nodep_fl = pndir_load_nodep_fl;
             n_array_push(pkgdir->pkgs, pkg);
         }
+        pkg_free(kpkg);
         tndb_it_get_end(&it);
     }
 
