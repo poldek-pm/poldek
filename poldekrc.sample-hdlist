@@ -1,16 +1,16 @@
 # $Id$
 # Sample poldek configuration for RedHat
 
-	
-source1 = rh0,type=hdrl ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/base/hdlist
+source1 = rh,,noauto,noautoup,type=hdrl \
+  ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/base/hdlist
 prefix1 = ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/RPMS/
 
-source2 = rh1,type=hdrl ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/base/hdlist2
-prefix2 = ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/RPMS/
+source20 = md,noauto,noautoup,type=hdrl ftp://ftp.ps.pl/mirrors/mandrake/8.2/i586/Mandrake/base/pkglist.cooker.bz2
+prefix20 = ftp://ftp.ps.pl/mirrors/mandrake/8.2/i586/Mandrake/RPMS/
 
 
-
-source = ra,noauto,noautoup,type=pidx ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
+# PLD supports native poldek's indexes
+#source = pld,noauto,noautoup,type=pidx ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
 
 
 # permits using root privs for installation only; default "no"
