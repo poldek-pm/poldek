@@ -31,6 +31,7 @@
 #define OPT_GID             1800
 #define OPT_PKGSET          (OPT_GID + 1)
 #define OPT_NEVR            (OPT_GID + 2)
+#define OPT_CAPLOOKUP       (OPT_GID + 3)
 
 static struct argp_option options[] = {
 {0,0,0,0, N_("Package related options:"), OPT_GID},
@@ -42,6 +43,8 @@ static struct argp_option options[] = {
      "Specifies package by NAME and EVR", OPT_GID },
     
 {"pkgnevr", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0,  OPT_GID }, /* backward compat */
+{"caplookup", OPT_CAPLOOKUP, 0, 0,
+N_("Look into package capabilities & files to resolve packages"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -79,6 +82,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             poldek_ts_add_pkglist(rt->ts, arg);
             break;
 
+        case OPT_CAPLOOKUP:
+            rt->ts->setop(rt->ts, POLDEK_OP_CAPLOOKUP, 1);
+            break;
         
         case ARGP_KEY_ARG:
             if (strncmp(arg, "--rpm-", 6) != 0 && strncmp(arg, "rpm--", 5) != 0)

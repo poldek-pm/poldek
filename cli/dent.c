@@ -538,8 +538,15 @@ tn_array *poclidek_resolve_packages(const char *path, struct poclidek_ctx *cctx,
     if ((pkgs = poclidek_get_dent_packages(cctx, path)) == NULL)
         return NULL;
 
-    return arg_packages_resolve(ts->aps, pkgs,
-                                exact ? ARG_PACKAGES_RESOLV_EXACT : 0);
+    if (arg_packages_resolve(ts->aps, pkgs, NULL,
+                             exact ? ARG_PACKAGES_RESOLV_EXACT : 0)) {
+        pkgs = arg_packages_get_resolved(ts->aps);
+        if (n_array_size(pkgs))
+            return pkgs;
+        n_array_free(pkgs);
+    }
+    
+    return NULL;
 }
 
 char *poclidek_pwd(struct poclidek_ctx *cctx, char *path, int size)

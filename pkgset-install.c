@@ -49,6 +49,7 @@
 #include "pkgmisc.h"
 #include "misc.h"
 #include "pkgset-req.h"
+#include "arg_packages.h"
 #include "dbpkgset.h"
 #include "dbdep.h"
 #include "poldek_term.h"
@@ -2312,7 +2313,7 @@ static
 int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs) 
 {
     struct pkg *pkg, *pkg2;
-    int i, n;
+    int i, n, nmarked = 0;
     
     if (n_array_size(pkgs) < 2)
         return 0;
@@ -2326,9 +2327,9 @@ int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs)
         
         if (!pkg_is_marked(pms, pkg))
             continue;
-
+        
+        nmarked++;
         DBGF("%s\n", pkg_snprintf_s(pkg));
-
         
         pkg2 = n_array_nth(pkgs, i);
         while (pkg_cmp_name(pkg, pkg2) == 0) {
@@ -2343,8 +2344,105 @@ int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs)
         }
     }
     
-    return n;
+    return nmarked;
 }
+
+static
+int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs) 
+{
+    int i, found = 0;
+    tn_array *dbpkgs;
+    struct capreq *cap;
+
+    capreq_new_name_a(capname, cap);
+    dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cap, NULL, 0);
+    if (dbpkgs == NULL) {
+        struct pkg *pkg;
+        if (ts->getop(ts, POLDEK_OP_FRESHEN))
+            return 0;
+
+        n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+        pkg = n_array_nth(pkgs, 0);
+        pkg_hand_mark(ts->pms, pkg);
+        return 1;
+    }
+    
+    n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    for (i=0; i < n_array_size(dbpkgs); i++) {
+        struct pkg *dbpkg = n_array_nth(dbpkgs, i);
+        int n = n_array_bsearch_idx_ex(pkgs, dbpkg,
+                                       (tn_fn_cmp)pkg_cmp_name);
+
+        DBGF("%s: %s\n", capname, pkg_snprintf_s0(dbpkg));
+        
+        if (n < 0)
+            continue;
+    
+        for (; n < n_array_size(pkgs); n++) {
+            struct pkg *pkg = n_array_nth(pkgs, n);
+            int cmprc, mark = 0;
+
+            DBGF("%s: %s cmp %s\n", capname, pkg_snprintf_s(pkg),
+                 pkg_snprintf_s0(dbpkg));
+            if (pkg_cmp_name(pkg, dbpkg) != 0)
+                break;
+            
+            cmprc = pkg_cmp_name_evr(pkg, dbpkg);
+            if (cmprc > 0)
+                mark = 1;
+                
+            else if (cmprc == 0 && poldek_ts_issetf(ts, POLDEK_TS_REINSTALL))
+                mark = 1;
+                
+            else if (cmprc < 0 && poldek_ts_issetf(ts, POLDEK_TS_DOWNGRADE))
+                mark = 1;
+
+            if (mark) {
+                found = 1;
+                msgn(1, _("%s: marked as %s's provider"), pkg_snprintf_s(pkg),
+                     capname);
+                
+                pkg_hand_mark(ts->pms, pkg);
+                goto l_end;
+                
+            } else if (cmprc <= 0) {
+                char *eqs = cmprc == 0 ? "equal" : "newer";
+                msgn(1, _("%s: %s version of %s is installed (%s), skipped"),
+                     capname, eqs, pkg_snprintf_s0(dbpkg),
+                     pkg_snprintf_s(pkg));
+                
+            } else {
+                n_assert(0);
+                
+            }
+        }
+    }
+l_end:
+    if (dbpkgs)
+        n_array_free(dbpkgs);
+    
+    return found;
+}
+
+static
+int prepare_icaps(struct poldek_ts *ts) 
+{
+    tn_array *keys;
+    tn_hash *icaps;
+    int i;
+
+    icaps = arg_packages_get_resolved_caps(ts->aps);
+    keys = n_hash_keys_cp(icaps);
+    for (i=0; i < n_array_size(keys); i++) {
+        const char *cap = n_array_nth(keys, i);
+        tn_array *pkgs = n_hash_get(icaps, cap);
+        prepare_icap(ts, cap, pkgs);
+    }
+    n_array_free(keys);
+    n_hash_free(icaps);
+    return 1;
+}
+
 
 
 int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
@@ -2355,7 +2453,12 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
 
     
     n_assert(ts->type == POLDEK_TSt_INSTALL);
-    unmark_name_dups(ts->pms, ps->pkgs);
+
+    prepare_icaps(ts);
+    if (unmark_name_dups(ts->pms, ps->pkgs) == 0) {
+        msgn(1, _("Nothing to do"));
+        return 1;
+    }
     
     MEMINF("START");
     init_upgrade_s(&upg, ts);
@@ -2391,8 +2494,10 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
         }
     }
     
-    if (nmarked == 0) 
+    if (nmarked == 0) {
+        msgn(1, _("Nothing to do"));
         goto l_end;
+    }
 
     if (nmarked == 1)
         ts->setop(ts, POLDEK_OP_PARTICLE, 0);

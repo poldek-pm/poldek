@@ -10,7 +10,7 @@ struct arg_packages;
 struct pkgset;
 struct pm_ctx;
 
-struct arg_packages *arg_packages_new(struct pkgset *ps, struct pm_ctx *ctx);
+struct arg_packages *arg_packages_new(struct pm_ctx *ctx);
 void arg_packages_free(struct arg_packages *aps);
 
 void arg_packages_clean(struct arg_packages *aps);
@@ -26,13 +26,18 @@ int arg_packages_add_pkga(struct arg_packages *aps, tn_array *pkgs);
 
 int arg_packages_setup(struct arg_packages *aps);
 
-#define ARG_PACKAGES_RESOLV_EXACT          (1 << 0)
-#define ARG_PACKAGES_RESOLV_MISSINGOK      (1 << 1) 
-#define ARG_PACKAGES_RESOLV_UNAMBIGUOUS    (1 << 2)
-#define ARG_PACKAGES_RESOLV_CAPS           (1 << 3)
+#define ARG_PACKAGES_RESOLV_EXACT       (1 << 0)/* no fnmatch() */
+#define ARG_PACKAGES_RESOLV_MISSINGOK   (1 << 1)/* be quiet if nothing matches*/
+#define ARG_PACKAGES_RESOLV_UNAMBIGUOUS (1 << 2)/* don't match duplicates */
+#define ARG_PACKAGES_RESOLV_CAPS        (1 << 3)/* search in package caps too */
 
-tn_array *arg_packages_resolve(struct arg_packages *aps,
-                               tn_array *avpkgs, unsigned flags);
+int arg_packages_resolve(struct arg_packages *aps,
+                         tn_array *avpkgs,
+                         struct pkgset *ps,
+                         unsigned flags);
+
+tn_hash *arg_packages_get_resolved_caps(struct arg_packages *aps);
+tn_array *arg_packages_get_resolved(struct arg_packages *aps);
 
 
 #endif

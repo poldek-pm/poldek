@@ -160,7 +160,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
     ts->getop_v = poldek_ts_getop_v;
     
     if (ctx == NULL) {
-        ts->aps = arg_packages_new(NULL, NULL);
+        ts->aps = arg_packages_new(NULL);
         
     } else {
         ts->ctx = ctx;
@@ -168,7 +168,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         if (!poldek__is_setup_done(ctx))
             ts->_iflags |= TS_CONFIG_LATER;
         
-        ts->aps = arg_packages_new(ctx->ps, ctx->pmctx);
+        ts->aps = arg_packages_new(ctx->pmctx);
         ts->pmctx = ctx->pmctx;
     }
     ts->_na = n_alloc_new(4, TN_ALLOC_OBSTACK);
@@ -503,24 +503,28 @@ int poldek_ts_get_arg_count(struct poldek_ts *ts)
 static
 int ts_mark_arg_packages(struct poldek_ts *ts, int withdeps) 
 {
-    int rc = 1;
+    int rc = 0;
     
     arg_packages_setup(ts->aps);
-    if (arg_packages_size(ts->aps) > 0) {
-        tn_array *pkgs = arg_packages_resolve(ts->aps, ts->ctx->ps->pkgs, 0);
-        if (pkgs == NULL)
-            rc = 0;
+    if (arg_packages_size(ts->aps) == 0) {
+        logn(LOGERR, _("Nothing to do"));
+        return 0;
+    }
         
-        else {
-            if (withdeps)
-                msgn(1, _("\nProcessing dependencies..."));
-            
+    if (arg_packages_resolve(ts->aps, ts->ctx->ps->pkgs, ts->ctx->ps, 0)) {
+        tn_array *pkgs;
+        
+        rc = 1;
+        if (withdeps)
+            msgn(1, _("\nProcessing dependencies..."));
+
+        pkgs = arg_packages_get_resolved(ts->aps);
+        if (n_array_size(pkgs)) {
             rc = packages_mark(ts->pms, pkgs, ts->ctx->ps->pkgs, withdeps);
             if (!rc && ts->getop_v(ts, POLDEK_OP_NODEPS, POLDEK_OP_FORCE, 0))
                 rc = 1;
-            
-            n_array_free(pkgs);
         }
+        n_array_free(pkgs);
     }
     
     return rc;
@@ -741,7 +745,7 @@ for (i=0; i<n_array_size(ps->pkgs); i++) {
 static
 int ts_run_verify(struct poldek_ts *ts, void *foo) 
 {
-    tn_array *pkgs = NULL, *keys;
+    tn_array *pkgs = NULL;
     int i, j, nerr, rc = 1;
     
     //n_assert(poldek_ts_issetf(ts, POLDEK_TS_VERIFY));

@@ -260,7 +260,7 @@ tn_array *pkgdb_get_conflicted_dbpkgs(struct pkgdb *db,
 
 
 tn_array *pkgdb_get_provides_dbpkgs(struct pkgdb *db, const struct capreq *cap,
-                                  tn_array *unistdbpkgs, unsigned ldflags)
+                                    tn_array *unistdbpkgs, unsigned ldflags)
 {
     tn_array *dbpkgs = NULL;
     struct pkgdb_it it;
