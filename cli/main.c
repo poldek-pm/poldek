@@ -449,21 +449,38 @@ static int do_su(int argc, char **argv)
 {
     const char *oprunas = "--runas";
     char *user = NULL;
-    int rc, i, is_runas = 0, oprunas_len = strlen(oprunas), verbose = 0;
+    int rc, i, n, is_runas = 0, oprunas_len, verbose = 0, noautosu = 0;
+    char *nosu_opts[] = { "--mkidx", "--makeidx", NULL };
+    int  nosu_opts_len[] = { 0, 0, 0 };
 
+    n = 0;
+    while (nosu_opts[n]) {
+        nosu_opts_len[n] = strlen(nosu_opts[n]);
+        n++;
+    }
+    
+    
+    oprunas_len = strlen(oprunas);
     for (i=1; i < argc; i++) {
+        n = 0;
+        while (noautosu == 0 && nosu_opts[n]) {
+            if (strncmp(argv[i], nosu_opts[n], nosu_opts_len[n]) == 0)
+                noautosu = 1;
+            n++;
+        }
+        
         if (strncmp(argv[i], "-v", 2) == 0) {
             char *p = argv[i] + 1;
             while (*p) {
                 if (*p == 'v')
                     verbose++;
-                else if (*p) {
+                else if (*p) {  /* non-'v' => is is not -v[v...] option */
                     verbose = 0;
                     break;
                 }
                 p++;
             }
-        }
+        } 
             
         if (!is_runas && strncmp(argv[i], oprunas, oprunas_len) == 0) {
             char *p = argv[i] + oprunas_len;
@@ -492,7 +509,7 @@ static int do_su(int argc, char **argv)
             return 0;
         }
             
-    } else if (getuid() == 0) {  /* check default config settings */
+    } else if (noautosu == 0 && getuid() == 0) {  /* check config's runas */
         tn_hash *cnf;
         
         cnf = poldek_conf_loadefault(POLDEK_LDCONF_NOINCLUDE |
@@ -506,6 +523,7 @@ static int do_su(int argc, char **argv)
                 user = n_strdup(u);
                 is_runas = 1;
             }
+            n_hash_free(cnf);
         }
     }
     
