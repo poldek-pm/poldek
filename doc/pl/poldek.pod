@@ -694,6 +694,9 @@ License, wersja 2.
 
 Pawel A. Gajda <mis@pld.org.pl>
 
+
+Autorem tego t³umaczenia jest GoTaR <gotar@pld.org.pl>
+
 =head1 KONTAKT
 
 =head2 Strona domowa: I<http://team.pld.org.pl/~mis/poldek/>
