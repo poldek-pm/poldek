@@ -190,6 +190,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         en->fn = &en->nvr[n];
         DBGF("en.nevr = %s, en.fn = %s, %s\n", en->nvr, en->fn, fn);
         n_array_push(idx.ents, en);
+	//for testing if (n_array_size(idx.ents) > 60) break;
     }
     n_array_sort(idx.ents);
     pkgdir->mod_data = n_malloc(sizeof(idx));
@@ -322,6 +323,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     hdrpath = n_dirname(hdrpath);
     
     idx = pkgdir->mod_data;
+    DBGF("nents = %d\n", n_array_size(idx->ents));
     for (i=0; i < n_array_size(idx->ents); i++) {
         struct yum_entry *en = n_array_nth(idx->ents, i);
         char path[PATH_MAX];
