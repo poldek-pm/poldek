@@ -2,11 +2,11 @@
 # $Id$
 
 PATH="/bin:/usr/bin:/usr/sbin:/sbin"
-NAME=packages.dir
+NAME=packages.dir.gz
 
 usage()
 {
-    echo "usage: `basename $0` DIR..."
+    echo "usage: `basename $0` [--nodiff] DIR..."
 }
 
 if [ "$#" = 0 ]; then
@@ -14,13 +14,20 @@ if [ "$#" = 0 ]; then
     exit 1
 fi
 
+nodiff=""
 while  [ $# -gt 0 ]; do
+    if [ "$1" == "--nodiff" ]; then
+	nodiff="--nodiff"
+	shift
+	continue
+    fi
+	
     if [ ! -d "$1" ]; then
 	echo "$1: no such directory"
 	exit 1
     fi 
     
-    poldek --noconf -s "$1" --mkidx 
+    poldek --noconf -s "$1" --mkidxz 
 
     if [ $? -ne 0 ]; then 
 	exit 1
@@ -30,6 +37,5 @@ while  [ $# -gt 0 ]; do
 	exit 1
     fi
 	
-    gzip -nfc "$1/$NAME" > "$1/$NAME.gz"
     shift
 done    
