@@ -5,7 +5,9 @@
 #define SHPKG_INSTALL   (1 << 0)
 #define SHPKG_UNINSTALL (1 << 1)
 
+
 #include <argp.h>
+#include <time.h>
 
 #include "pkg.h"
 #include "log.h"
@@ -38,8 +40,10 @@ struct shell_s {
     struct pkgset  *pkgset;
     struct inst_s  *inst;
     unsigned       inst_flags_orig;
-    tn_array       *avpkgs;     /* array of shpkgs  */
-    tn_array       *instpkgs;   /* array of shpkgs  */
+    tn_array       *avpkgs;     /* array of available shpkgs  */
+    tn_array       *instpkgs;   /* array of installed shpkgs  */
+    time_t         ts_instpkgs; /* instpkgs timestamp */
+    struct pkgdir  *dbpkgdir;   /* db packages        */
 };
 
 
@@ -64,6 +68,8 @@ struct cmdarg {
 #define COMMAND_NOHELP       (1 << 2) /* cmd hasn't help */
 #define COMMAND_EMPTYARGS    (1 << 3) /* cmd accepts empty arg list */
 #define COMMAND_HASVERBOSE   (1 << 4) /* cmd has verbose command */
+
+#define COMMAND_MODIFIESDB   (1 << 8)
 
 struct command_alias {
     char                *name;      /* alias name    */

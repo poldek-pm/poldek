@@ -18,6 +18,7 @@
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
@@ -37,14 +38,14 @@ static struct argp_option options[] = {
 {"test", 't', 0, 0, "Don't uninstall, but tell if it would work or not", 1 },
 {"nodeps", OPT_UNINST_NODEPS, 0, 0,
  "Ignore broken dependencies", 1 },
-{0,  'v', "v...", OPTION_ARG_OPTIONAL, "Be more (and more) verbose.", 1 },
+{0,  'v', 0, 0, "Be more (and more) verbose.", 1 },
 {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
 { 0, 0, 0, 0, 0, 0 },
 };
 
 
 struct command command_uninstall = {
-    COMMAND_HASVERBOSE, 
+    COMMAND_HASVERBOSE | COMMAND_MODIFIESDB, 
 
     "uninstall", "PACKAGE...", "Uninstall packages", 
     
@@ -63,9 +64,9 @@ int uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
     int i, n, nopts = 0, ec;
 
     for (i=0; i<n_array_size(pkgnevrs); i++) 
-        msg(1, "R %s\n", n_array_nth(pkgnevrs, i));
+        msg(1, "R %s\n", (char*)n_array_nth(pkgnevrs, i));
     
-    msg(1, "Uninstalling %d package%s\n", n_array_size(pkgnevrs),
+    msgn(1, _("Uninstalling %d package%s"), n_array_size(pkgnevrs),
         n_array_size(pkgnevrs) > 1 ? "s" : "");
     
     n = 128 + n_array_size(pkgnevrs);
@@ -139,7 +140,7 @@ int uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
         for (i=0; i<nopts; i++) 
             p += snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
         *p = '\0';
-        msg(1, "Running%s...\n", buf);
+        msgn(1, _("Running%s..."), buf);
         
     }
 
@@ -213,7 +214,7 @@ static int uninstall(struct cmdarg *cmdarg)
     
     
     if (shpkgs == cmdarg->sh_s->instpkgs) {
-        log(LOGERR, "uninstall: better do \"rm -rf /\"\n");
+        logn(LOGERR, _("uninstall: better do \"rm -rf /\""));
         return 0;
     }
     
@@ -237,8 +238,11 @@ static int uninstall(struct cmdarg *cmdarg)
         n_array_map(shpkgs, (tn_fn_map1)shpkg_clean_uninstall_flag);
         
     } else {
-         n_array_remove_ex(cmdarg->sh_s->instpkgs, NULL,
-                           (tn_fn_cmp)shpkg_cmp_rm_uninstalled);
+        int n = n_array_size(cmdarg->sh_s->instpkgs);
+        n_array_remove_ex(cmdarg->sh_s->instpkgs, NULL,
+                          (tn_fn_cmp)shpkg_cmp_rm_uninstalled);
+        if (n != n_array_size(cmdarg->sh_s->instpkgs))
+            cmdarg->sh_s->ts_instpkgs = time(0);
     }
     
     

@@ -13,6 +13,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "i18n.h"
 #include "shell.h"
 
 
@@ -33,15 +34,16 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state);
 #define OPT_LS_ERR             (1 << 16);
 
 static struct argp_option options[] = {
- { "long", 'l', 0, 0, "Use a long listing format", 1},
- { "upgradeable", 'u', 0, 0, "Show upgradeable packages only", 1},
- { "upgradeablev", 'U', 0, 0, "Like above but omit packages with diffrent releases only", 1},
- { "installed", 'I', 0, 0, "List installed packages", 1},
- { NULL, 't', 0, 0, "Sort by build time", 1},
- { NULL, 'T', 0, 0, "Sort by build day", 1},
+ { "long", 'l', 0, 0, N_("Use a long listing format"), 1},
+ { "upgradeable", 'u', 0, 0, N_("Show upgradeable packages only"), 1},
+ { "upgradeablev", 'U', 0, 0,
+   N_("Like above but omit packages with diffrent releases only"), 1},
+ { "installed", 'I', 0, 0, N_("List installed packages"), 1},
+ { NULL, 't', 0, 0, N_("Sort by build time"), 1},
+ { NULL, 'T', 0, 0, N_("Sort by build day"), 1},
  { NULL, 'h', 0, OPTION_HIDDEN, "", 1 }, 
- { "reverse", 'r', 0, 0, "Reverse order while sorting", 1},
- { NULL, 'n', 0, 0, "Print only package's names", 1},
+ { "reverse", 'r', 0, 0, N_("Reverse order while sorting"), 1},
+ { NULL, 'n', 0, 0, N_("Print only package's names"), 1},
 // { NULL, 'i', 0, OPTION_ALIAS, 0, 1 }, 
  { 0, 0, 0, 0, 0, 0 },
 };
@@ -75,7 +77,7 @@ struct command_alias cmd_aliases[] = {
 
 struct command command_ls = {
     COMMAND_EMPTYARGS, 
-    "ls", "[PACKAGE...]", "List packages", 
+    "ls", N_("[PACKAGE...]"), N_("List packages"), 
     options, parse_opt, NULL, ls,
     NULL, NULL,
     (struct command_alias*)&cmd_aliases, NULL
@@ -114,16 +116,16 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             cmdarg->flags |= OPT_LS_UPGRADEABLE;
             
             if (cmdarg->sh_s->instpkgs == NULL) {
-                log(LOGERR, "ls: installed packages not loaded, "
-                    "type \"reload\" to load them\n");
+                log(LOGERR, _("ls: installed packages not loaded, "
+                              "type \"reload\" to load them\n"));
                 return EINVAL;
             }
             break;
-
+            
         case 'I':
             if (cmdarg->sh_s->instpkgs == NULL) {
-                log(LOGERR, "ls: installed packages not loaded, "
-                    "type \"reload\" to load them\n");
+                log(LOGERR, _("ls: installed packages not loaded, "
+                              "type \"reload\" to load them\n"));
                 return EINVAL;
             }
             

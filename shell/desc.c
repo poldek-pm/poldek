@@ -19,6 +19,7 @@
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
@@ -52,28 +53,29 @@ static int desc(struct cmdarg *cmdarg);
 
 static struct argp_option options[] = {
     { "all",  'a', 0, 0,
-      "Show all described below fields", 1},
+      N_("Show all described below fields"), 1},
     
     { "capreqs",  'C', 0, 0,
-      "Show package capablities, requirements, conflicts and obsolences", 1},
+      N_("Show package capablities, requirements, conflicts and obsolences"),
+      1},
 
-    { "provides",  'p', 0, 0, "Show package's capablities", 1},
+    { "provides",  'p', 0, 0, N_("Show package's capablities"), 1},
 
     { "requires",  'r', 0, 0,
-      "Show package's requirements", 1},
+      N_("Show package's requirements"), 1},
     
     { "reqpkgs",  'R', 0, 0,
-      "Show required packages", 1},
+      N_("Show required packages"), 1},
 
     { "reqbypkgs",  'B', 0, 0,
-      "Show packages which requires given package", 1},
+      N_("Show packages which requires given package"), 1},
 
     { "conflicts",  'c', 0, 0,
-      "Show package's conflicts and obsolences", 1},
+      N_("Show package's conflicts and obsolences"), 1},
     
-    { "descr", 'd', 0, 0, "Show package description (the default)", 1},
+    { "descr", 'd', 0, 0, N_("Show package description (the default)"), 1},
     
-    { "files", 'f', 0, 0, "Show package files", 1},
+    { "files", 'f', 0, 0, N_("Show package files"), 1},
     { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},
     {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
     { 0, 0, 0, 0, 0, 0 },
@@ -82,7 +84,7 @@ static struct argp_option options[] = {
 
 struct command command_desc = {
     0, 
-    "desc", "PACKAGE...", "Display packages info", 
+    "desc", N_("PACKAGE..."), N_("Display packages info"), 
     options, parse_opt,
     NULL, desc,
     NULL, NULL, 
@@ -570,8 +572,8 @@ static void show_description(struct pkg *pkg, unsigned flags)
 
     
     if ((pkgu = pkg_info(pkg)) == NULL) {
-        log(LOGERR, "%s: description unavailable (index without packages "
-            "info loaded?)\n", pkg_snprintf_s(pkg));
+        log(LOGERR, _("%s: description unavailable (index without packages "
+                      "info loaded?)\n"), pkg_snprintf_s(pkg));
         return;
     }
         

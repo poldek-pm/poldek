@@ -18,6 +18,7 @@
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
@@ -88,7 +89,7 @@ static int get(struct cmdarg *cmdarg)
         return 0;
 
     if (n_array_size(shpkgs) == 0)
-        log(LOGERR, "get: specify what packages you want to download\n");
+        logn(LOGERR, _("get: specify what packages you want to download"));
 
     /* build array if struct pkg */
     pkgs = n_array_new(n_array_size(shpkgs), NULL, NULL);
@@ -96,7 +97,7 @@ static int get(struct cmdarg *cmdarg)
         struct shpkg *shpkg = n_array_nth(shpkgs, i);
         n_assert(shpkg->pkg->pkgdir);
         if (!pkgdir_isremote(shpkg->pkg->pkgdir)) {
-            log(LOGERR, "get: %s: %s is not remote URL\n",
+            logn(LOGERR, _("get: %s: %s is not remote URL"),
                 pkg_snprintf_s(shpkg->pkg), shpkg->pkg->pkgdir->path);
             continue;
         }
@@ -111,7 +112,7 @@ static int get(struct cmdarg *cmdarg)
         
     } else {
         if (getcwd(destdir, sizeof(destdir)) == NULL) {
-            log(LOGERR, "getcwd: %m\n");
+            logn(LOGERR, "getcwd: %m");
             err = 1;
             goto l_end;
         }

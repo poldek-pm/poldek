@@ -18,6 +18,7 @@
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
@@ -36,28 +37,28 @@ static int install(struct cmdarg *cmdarg);
 #define OPT_INST_INSTALL  1
 
 static struct argp_option options[] = {
-{"mercy", 'm', 0, 0, "Be tolerant for bugs which RPM tolerates", 1},
-{"force", OPT_INST_FORCE, 0, 0, "Be unconcerned", 1 },
-{"test", 't', 0, 0, "Don't install, but tell if it would work or not", 1 },
-{"fresh", 'F', 0, 0, "Upgrade packages, but only if an earlier version "
-     "currently exists", 1 },
+{"mercy", 'm', 0, 0, N_("Be tolerant for bugs which RPM tolerates"), 1},
+{"force", OPT_INST_FORCE, 0, 0, N_("Be unconcerned"), 1 },
+{"test", 't', 0, 0, N_("Don't install, but tell if it would work or not"), 1 },
+{"fresh", 'F', 0, 0, N_("Upgrade packages, but only if an earlier version "
+     "currently exists"), 1 },
 
-{"nofollow", 'N', 0, 0, "Don't automatically install packages required by "
-     "selected ones", 1 },
+{"nofollow", 'N', 0, 0, N_("Don't automatically install packages required by "
+     "selected ones"), 1 },
 
-{"greedy", 'G', 0, 0, "Automatically upgrade packages which dependencies "
-     "are broken by unistalled ones", 1 }, 
+{"greedy", 'G', 0, 0, N_("Automatically upgrade packages which dependencies "
+     "are broken by unistalled ones"), 1 }, 
     
-{0, 'I', 0, 0, "Install, not upgrade packages", 1 },
+{0, 'I', 0, 0, N_("Install, not upgrade packages"), 1 },
 
 {"fetch", OPT_INST_FETCH, "DIR", OPTION_HIDDEN,
- "Do not install, only fetch packages", 1},
+N_("Do not install, only fetch packages"), 1},
 
 {"nodeps", OPT_INST_NODEPS, 0, 0,
- "Install packages with broken dependencies", 1 },
+ N_("Install packages with broken dependencies"), 1 },
 
 
-{0,  'v', "v...", OPTION_ARG_OPTIONAL, "Be more (and more) verbose.", 1 },
+{0,  'v', 0, 0, N_("Be verbose."), 1 },
 {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
 { 0, 0, 0, 0, 0, 0 },
 };
@@ -90,8 +91,8 @@ struct command_alias cmd_aliases[] = {
 
 
 struct command command_install = {
-    COMMAND_HASVERBOSE, 
-    "install", "PACKAGE...", "Install packages", 
+    COMMAND_HASVERBOSE | COMMAND_MODIFIESDB, 
+    "install", N_("PACKAGE..."), N_("Install packages"), 
     options, parse_opt,
     NULL, install, NULL, NULL,
     (struct command_alias*)&cmd_aliases,
@@ -187,18 +188,25 @@ static int install(struct cmdarg *cmdarg)
     rc = install_pkgs(cmdarg->sh_s->pkgset, cmdarg->sh_s->inst, uninst_pkgs);
     
     if (rc == 0) {
-        msg(1, "There were errors during install\n");
+        msgn(1, _("There were errors during install"));
         
     } else if (!is_test && cmdarg->sh_s->instpkgs) { /* update installed set */
-        for (i=0; i<n_array_size(cmdarg->sh_s->avpkgs); i++) {
+        int instpkgs_changed = 0;
+        
+        for (i=0; i < n_array_size(cmdarg->sh_s->avpkgs); i++) {
             struct shpkg *shpkg = n_array_nth(cmdarg->sh_s->avpkgs, i);
-            if (pkg_is_marked(shpkg->pkg))
+            if (pkg_is_marked(shpkg->pkg)) {
                 n_array_push(cmdarg->sh_s->instpkgs, shpkg_link(shpkg));
+                instpkgs_changed = 1;
+            }
         }
             
         n_array_sort(cmdarg->sh_s->instpkgs);
+
+        if (n_array_size(uninst_pkgs))
+            instpkgs_changed = 1;
             
-        for (i=0; i<n_array_size(uninst_pkgs); i++) {
+        for (i=0; i < n_array_size(uninst_pkgs); i++) {
             struct pkg   *pkg = n_array_nth(uninst_pkgs, i);
             struct shpkg *shpkg = alloca(sizeof(*shpkg) + 1024);
             
@@ -206,7 +214,9 @@ static int install(struct cmdarg *cmdarg)
             n_array_remove(cmdarg->sh_s->instpkgs, shpkg);
         }
         n_array_sort(cmdarg->sh_s->instpkgs);
-        
+
+        if (instpkgs_changed)
+            cmdarg->sh_s->ts_instpkgs = time(0);
     }
     n_array_free(uninst_pkgs);
     

@@ -19,6 +19,7 @@
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
@@ -55,21 +56,21 @@ static int search(struct cmdarg *cmdarg);
 
 #define OPT_SEARCH_DEFAULT (OPT_SEARCH_SUMM | OPT_SEARCH_DESC)
 
-/* options which requires Packages processing */
+/* options which requires packages.dir processing */
 #define OPT_SEARCH_HDD     (OPT_SEARCH_SUMM | OPT_SEARCH_DESC | OPT_SEARCH_FL)  
 
 static struct argp_option options[] = {
-    { "provides",  'p', 0, 0, "Search package capablities", 1},
-    { "requires",  'r', 0, 0, "Search package requirements", 1},
-    { "conflicts", 'c', 0, 0, "Search package conflicts", 1},
-    { "obsoletes", 'o', 0, 0, "Search package obsolences", 1},
-    { "summary",   's', 0, 0, "Search summaries, urls and license", 1},
-    { "description",   'd', 0, 0, "Search packages descriptions", 1},
-    { "group",     'g', 0, 0, "Search packages groups", 1 }, 
-    { "files",     'f', 0,  0, "Search package file list", 1},
+    { "provides",  'p', 0, 0, N_("Search capablities"), 1},
+    { "requires",  'r', 0, 0, N_("Search requirements"), 1},
+    { "conflicts", 'c', 0, 0, N_("Search conflicts"), 1},
+    { "obsoletes", 'o', 0, 0, N_("Search obsolences"), 1},
+    { "summary",   's', 0, 0, N_("Search summaries, urls and license"), 1},
+    { "description",   'd', 0, 0, N_("Search descriptions"), 1},
+    { "group",     'g', 0, 0, N_("Search groups"), 1 }, 
+    { "files",     'f', 0,  0, N_("Search file list"), 1},
     { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},
     { "all",       'a', 0, 0,
-      "Search all described fields, the defaults are: -sd", 1
+      N_("Search all described fields, the defaults are: -sd"), 1
     },
     {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
     { 0, 0, 0, 0, 0, 0 },
@@ -201,7 +202,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                             break;
                             
                         default:
-                            log(LOGERR, "search: unknown regexp option -- %c\n", *p);
+                            logn(LOGERR, _("search: unknown regexp option -- %c"), *p);
                             argp_usage(state);
                             return EINVAL;
                     }
@@ -256,7 +257,7 @@ int pattern_compile(struct pattern *pt, int ntimes)
                             &pcre_err_off, pcre_chartable);
     
     if (pt->pcre == NULL) {
-        log(LOGERR, "search: pattern: %s:%d: %s\n", pt->regexp,
+        logn(LOGERR, _("search: pattern: %s:%d: %s"), pt->regexp,
             pcre_err_off, pcre_err);
         return 0;
     }
@@ -264,7 +265,7 @@ int pattern_compile(struct pattern *pt, int ntimes)
     if (ntimes > 10) {
         pt->pcre_extra = pcre_study(pt->pcre, PCRE_CASELESS, &pcre_err);
         if (pt->pcre_extra == NULL) {
-            log(LOGERR, "search: pattern: %s: %s\n", pt->regexp, pcre_err);
+            logn(LOGERR, _("search: pattern: %s: %s"), pt->regexp, pcre_err);
             return 0;
         }
     }
@@ -403,7 +404,7 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
         struct pkguinf *pkgu;
         
         if ((pkgu = pkg_info(pkg)) == NULL) {
-            log(LOGERR, "%s: load package info failed\n", pkg_snprintf_s(pkg));
+            logn(LOGERR, _("%s: load package info failed"), pkg_snprintf_s(pkg));
             
         } else {
             if (flags & OPT_SEARCH_SUMM) {
@@ -444,7 +445,7 @@ static int search(struct cmdarg *cmdarg)
     
     
     if ((pt = cmdarg->d) == NULL) {
-        log(LOGERR, "search: no pattern given\n");
+        logn(LOGERR, _("search: no pattern given"));
         err++;
         goto l_end;
     }
@@ -474,7 +475,7 @@ static int search(struct cmdarg *cmdarg)
 
     if (n_array_size(shpkgs) > 5 && (cmdarg->flags & OPT_SEARCH_HDD)) {
         display_bar = 1;
-        msg(0, "Searching packages...");
+        msg(0, _("Searching packages..."));
     }
     bar_v = 0;
     
@@ -495,7 +496,7 @@ static int search(struct cmdarg *cmdarg)
     }
     
     if (display_bar) 
-        msg(0, "_done.\n");
+        msgn(0, _("_done."));
 
     term_height = term_get_height();
     if (n_array_size(matched_pkgs) == 0) 

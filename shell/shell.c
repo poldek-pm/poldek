@@ -28,12 +28,15 @@
 #include <argp.h>
 #include <fnmatch.h>
 #include <locale.h>
+#include <time.h>
 
 #include <pcre.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <trurl/trurl.h>
 
+#include "i18n.h"
+#include "pkgdir.h"
 #include "pkg.h"
 #include "pkgset.h"
 #include "pkgdb.h"
@@ -44,7 +47,7 @@
 #include "shell.h"
 #include "term.h"
 
-static int gmt_off = 0;
+static int gmt_off = 0;         /* TZ offset */
 
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
 
@@ -107,14 +110,15 @@ struct sh_cmdarg {
 
 static tn_array       *commands;
 static tn_array       *aliases;
-static tn_array       *all_commands; /* for command_generator() */
+static tn_array       *all_commands; /* commands + aliases,
+                                        for command_generator() */
 static char           *histfile;
-static int            done = 0;
 
-static struct shell_s shell_s = {NULL, NULL, 0, NULL, NULL};
+static volatile sig_atomic_t done = 0;
+static volatile sig_atomic_t ccnt = 0;
+
+static struct shell_s shell_s = {NULL, NULL, 0, NULL, NULL, 0, NULL};
 static tn_array *compl_shpkgs = NULL;
-
-
 
 static
 int command_cmp(struct command *c1, struct command *c2) 
@@ -242,20 +246,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
                 sh_cmdarg->err = 1;
                 
             } else {
-                if (arg == NULL)
-                    verbose = 1;
-                else  {
-                    char *p = arg;
-                    while (*p == 'v')
-                    p++;
-                    
-                    if (*p != '\0') {
-                        argp_usage (state);
-                        sh_cmdarg->err = 1; 
-                    } else {
-                        verbose = p - arg + 1;
-                    }
-                }
+                verbose++;
             }
         }
         break;
@@ -323,7 +314,7 @@ static char *help_filter(int key, const char *text, void *input)
             struct command_alias *aliases = sh_cmdarg->cmd->aliases;
             int i = 0;
             
-            n += snprintf(&buf[n], sizeof(buf) - n, "  Defined aliases:\n");
+            n += snprintf(&buf[n], sizeof(buf) - n, "%s", _("  Defined aliases:\n"));
             while (aliases[i].name) {
                 n += snprintf(&buf[n], sizeof(buf) - n, "    %-16s  \"%s\"\n",
                               aliases[i].name, aliases[i].cmdline);
@@ -358,6 +349,7 @@ int docmd(struct command *cmd, int argc, const char **argv)
     if (argv == NULL)
         return 0;
 
+    ccnt++;
     cmdarg.is_help = argv_is_help(argc, argv);
     cmdarg.pkgnames = n_array_new(64, NULL, (tn_fn_cmp)strcmp);
     cmdarg.shpkgs = NULL;
@@ -411,7 +403,7 @@ int docmd(struct command *cmd, int argc, const char **argv)
     rc = cmd->do_cmd_fn(&cmdarg);
 
  l_end:
-    
+    ccnt--;
     if (cmdarg.pkgnames)
         n_array_free(cmdarg.pkgnames);
 
@@ -421,7 +413,11 @@ int docmd(struct command *cmd, int argc, const char **argv)
     
     if (cmd->destroy_cmd_arg_d && cmdarg.d)
         cmd->destroy_cmd_arg_d(cmdarg.d);
-    
+
+    if ((cmd->flags & COMMAND_MODIFIESDB) && cmdarg.sh_s->ts_instpkgs > 0) {
+        cmdarg.sh_s->dbpkgdir->ts = cmdarg.sh_s->ts_instpkgs;
+        cmdarg.sh_s->ts_instpkgs = 0;
+    }
     verbose = verbose_;
     return rc;
 }
@@ -453,7 +449,7 @@ int execute_line(char *line)
         
         tmpalias.name = tmpcmd.name;
         if ((alias = n_array_bsearch(aliases, &tmpalias)) == NULL) {
-            log(LOGERR, "%s: no such command\n", line);
+            logn(LOGERR, _("%s: no such command"), line);
             return 0;
             
         } else {
@@ -666,7 +662,7 @@ void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgs
     
     for (j=0; j<n_array_size(pkgnames); j++) {
         if (matches[j] == 0) {
-            log(LOGERR, "%s: no such package\n", (char*)n_array_nth(pkgnames, j));
+            logn(LOGERR, _("%s: no such package"), (char*)n_array_nth(pkgnames, j));
             if (strict && n_array_size(pkgs))
                 n_array_clean(pkgs);
         }
@@ -706,6 +702,7 @@ int cmd_help(struct cmdarg *cmdarg)
     int i = 0;
     
     cmdarg = cmdarg;
+    printf("%s %s (%s)\n", PACKAGE, VERSION, VERSION_STATUS);
     while (commands_tab[i]) {
         struct command *cmd = commands_tab[i++];
         char buf[256], *p;
@@ -718,10 +715,10 @@ int cmd_help(struct cmdarg *cmdarg)
         }
         printf("%-9s %-36s %s\n", cmd->name, p, cmd->doc);
     }
-    printf("\nFor now \"search\" and \"desc\" commands doesn't work with "
-           "installed packages\n");
+    printf(_("\nFor now \"search\" and \"desc\" commands doesn't work with "
+             "installed packages.\n"));
     
-    printf("\nType COMMAND -? for details\n");
+    printf(_("\nType COMMAND -? for details.\n"));
     return 0;
 }
 
@@ -733,46 +730,179 @@ int cmd_quit(struct cmdarg *cmdarg)
     return 1;
 }
 
+static time_t mtime(const char *pathname) 
+{
+    struct stat st;
+    
+    if (stat(pathname, &st) != 0)
+        return 0;
 
-void db_map_fn(unsigned int recno, void *header, void *shpkgs) 
+    return st.st_mtime;
+}
+
+char *mkdbcache_path(char *path, size_t size, const char *cachedir,
+                     const char *dbfull_path)
+{
+    int len;
+    char tmp[PATH_MAX], *p;
+    
+    n_assert(cachedir);
+    if (*dbfull_path == '/')
+        dbfull_path++;
+
+    len = snprintf(tmp, sizeof(tmp), "%s", dbfull_path);
+    if (tmp[len - 1] == '/') {
+        tmp[len - 1] = '\0';
+        len--;
+    }
+    n_assert(len);
+    p = tmp;
+
+    while (*p) {
+        if (*p == '/')
+            *p = '.';
+        p++;
+    }
+    
+    snprintf(path, size, "%s/%s.dbcache.%s.gz", cachedir,
+             default_pkgidx_name, tmp);
+    
+    return path;
+}
+
+
+static struct pkgdir *load_installed_pkgdir(int reload) 
+{
+    char dbfull_path[PATH_MAX], dbcache_path[PATH_MAX];
+    const char *rootdir, *dbpath;
+    struct pkgdir *dir = NULL;
+    time_t mtime_rpmdb = 0, mtime_dbcache = 0;
+    
+    rootdir = shell_s.inst->rootdir;
+    dbpath = rpm_get_dbpath();
+    
+    snprintf(dbfull_path, sizeof(dbfull_path), "%s%s",
+             *(rootdir + 1) == '\0' ? "" : rootdir,
+             dbpath != NULL ? dbpath : "");
+    
+    if (*dbfull_path == '\0')
+        return NULL;
+
+    
+    mkdbcache_path(dbcache_path, sizeof(dbcache_path),
+                   shell_s.inst->cachedir, dbfull_path);
+
+    if (!reload) {              /* use cache */
+        mtime_dbcache = mtime(dbcache_path);
+        mtime_rpmdb = rpm_dbmtime(dbfull_path);
+        
+        if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache) {
+            dir = pkgdir_new("db", dbcache_path, NULL, PKGDIR_NEW_VERIFY);
+            msgn(1, _("Loading cache %s..."), dbcache_path);
+            if (pkgdir_load(dir, NULL, PKGDIR_LD_NOUNIQ)) {
+                int n = n_array_size(dir->pkgs);
+                msgn(1, ngettext("%d package read",
+                                 "%d packages read", n), n);
+                
+            } else {
+                pkgdir_free(dir);
+                dir = NULL;
+            }
+        }
+    }
+    
+    
+    if (dir == NULL) 
+        dir = pkgdir_load_db(shell_s.inst->rootdir, dbpath);
+
+    if (dir == NULL) {
+        logn(LOGERR, _("Load installed packages failed"));
+        
+    } else {
+        dir->idxpath = strdup(dbcache_path);
+        dir->ts = mtime_rpmdb;
+    }
+    
+    return dir;
+}
+
+static void save_installed_pkgdir(struct pkgdir *pkgdir) 
+{
+    time_t mtime_rpmdb, mtime_dbcache;
+    const char *dbpath, *rootdir;
+    char dbfull_path[PATH_MAX], dbcache_path[PATH_MAX];
+    
+    rootdir = shell_s.inst->rootdir;
+    dbpath = rpm_get_dbpath();
+    
+    snprintf(dbfull_path, sizeof(dbfull_path), "%s%s",
+             *(rootdir + 1) == '\0' ? "" : rootdir,
+             dbpath != NULL ? dbpath : "");
+    
+    if (*dbfull_path == '\0')
+        return;
+    mtime_rpmdb = rpm_dbmtime(dbfull_path);
+    
+    if (mtime_rpmdb > pkgdir->ts) /* changed outside poldek */
+        return;
+
+    if (mtime_rpmdb == pkgdir->ts) { /* not touched, check if cache exists  */
+        mkdbcache_path(dbcache_path, sizeof(dbcache_path),
+                       shell_s.inst->cachedir, dbfull_path);
+        mtime_dbcache = mtime(dbcache_path);
+        if (mtime_dbcache && mtime_dbcache >= pkgdir->ts)
+            return;
+    }
+    
+    pkgdir_create_idx(pkgdir, NULL, PKGDIR_CREAT_asCACHE |
+                      PKGDIR_CREAT_wMD5 | PKGDIR_CREAT_woTOC);
+}
+
+
+static void map_fn(void *pkg, void *shpkgs) 
 {
     struct shpkg      *shpkg;
-    struct pkg        *pkg;
     char              nevr[1024];
     int               len;
 
-    recno = recno;
-    pkg = pkg_ldhdr(header, "db", 0, PKG_LDNEVR);
-    pkg_snprintf(nevr, sizeof(nevr), pkg);
-    
-    len = strlen(nevr);
+
+    len = pkg_snprintf(nevr, sizeof(nevr), pkg);
     shpkg = malloc(sizeof(*shpkg) + len + 1);
     memcpy(shpkg->nevr, nevr, len + 1);
-    shpkg->pkg = pkg;
+    shpkg->pkg = pkg_link(pkg);
     shpkg->flags = 0;
     shpkg->_ucnt = 0;
     n_array_push(shpkgs, shpkg);
-    if (n_array_size(shpkgs) % 100 == 0)
-        msg(1, "_.");
 }
 
-static tn_array *load_installed_packages(tn_array **shpkgsp) 
+static tn_array *pkgs_to_shpkgs(tn_array **shpkgsp, tn_array *pkgs) 
 {
-    struct pkgdb *db;
     tn_array *shpkgs = *shpkgsp;
 
     n_array_clean(*shpkgsp);
-    msg(1, "Loading installed packages");
-    db = pkgdb_open(shell_s.inst->rootdir, NULL, O_RDONLY);
-    rpm_dbmap(db->dbh, db_map_fn, shpkgs);
-    pkgdb_free(db);
-    
+    n_array_map_arg(pkgs, map_fn, shpkgs);
     n_array_sort(shpkgs);
-    msg(1, "_done.\n");
-    msg(1, "%d packages loaded\n", n_array_size(shpkgs));
-    
     return shpkgs;
 }
+
+
+static int load_installed_packages(struct shell_s *sh_s, int reload) 
+{
+    struct pkgdir *pkgdir;
+    
+    if ((pkgdir = load_installed_pkgdir(reload)) == NULL)
+        return 0;
+    
+    if (sh_s->dbpkgdir)
+        pkgdir_free(sh_s->dbpkgdir);
+    
+    sh_s->dbpkgdir = pkgdir;
+    sh_s->ts_instpkgs = pkgdir->ts;
+    pkgs_to_shpkgs(&sh_s->instpkgs, pkgdir->pkgs);
+
+    return 1;
+}
+
 
 
 static 
@@ -783,14 +913,20 @@ int cmd_reload(struct cmdarg *cmdarg,
     cmdarg = cmdarg;
     
     if (argv_is_help(argc, argv)) {
-        printf("Just type \"reload\"\n");
+        printf(_("Just type \"reload\"\n"));
         return 1;
     }
 
-    if (shell_s.instpkgs == NULL)
+    if (shell_s.instpkgs) {
+        load_installed_packages(&shell_s, 1);
+        
+    } else {
         shell_s.instpkgs = n_array_new(1024, (tn_fn_free)shpkg_free,
                                        (tn_fn_cmp)shpkg_cmp);
-    load_installed_packages(&shell_s.instpkgs);
+        
+        load_installed_packages(&shell_s, 0);
+    }
+
     return 1;
 }
 
@@ -798,11 +934,11 @@ int cmd_reload(struct cmdarg *cmdarg,
 
 static void shell_end(int sig) 
 {
-    sig = sig;
-    
-    if (histfile)
-        write_history(histfile);
     done = 1;
+    printf("sig %d\n", ccnt);
+    ccnt--;
+    if (sig > 0) 
+        signal(sig, shell_end);
 }
 
 
@@ -816,10 +952,11 @@ static void init_commands(void)
     
     while (commands_tab[n] != NULL) {
         struct command *cmd = commands_tab[n++];
-
+        if (cmd->argp_opts)
+            translate_argp_options(cmd->argp_opts);
         n_array_push(commands, cmd);
         if (n_array_bsearch(all_commands, cmd->name)) {
-            log(LOGERR, "Ambigous command %s\n", cmd->name);
+            logn(LOGERR, _("Ambigous command %s"), cmd->name);
             exit(EXIT_FAILURE);
         }
         n_array_push(all_commands, cmd->name);
@@ -830,7 +967,7 @@ static void init_commands(void)
 
             while (cmd->aliases[i].name) {
                 if (n_array_bsearch(aliases, &cmd->aliases[i])) {
-                    log(LOGERR, "Ambigous alias %s\n", cmd->aliases[i].name);
+                    logn(LOGERR, _("Ambigous alias %s"), cmd->aliases[i].name);
                     exit(EXIT_FAILURE);
                 }
                 
@@ -838,7 +975,7 @@ static void init_commands(void)
                 n_array_sort(aliases);
                 
                 if (n_array_bsearch(all_commands, cmd->aliases[i].name)) {
-                    log(LOGERR, "Ambigous alias %s\n", cmd->aliases[i].name);
+                    logn(LOGERR, _("Ambigous alias %s"), cmd->aliases[i].name);
                     exit(EXIT_FAILURE);
                 }
                 n_array_push(all_commands, cmd->aliases[i].name);
@@ -891,11 +1028,11 @@ int init_shell_data(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         struct pkg    *pkg = n_array_nth(ps->pkgs, i);
         struct shpkg  *shpkg;
         char          buf[1024];
-
-
-        pkg_snprintf(buf, sizeof(buf), pkg);
-        shpkg = malloc(sizeof(*shpkg) + strlen(buf) + 1);
-        memcpy(shpkg->nevr, buf, strlen(buf) + 1);
+        int           len;
+        
+        len = pkg_snprintf(buf, sizeof(buf), pkg);
+        shpkg = malloc(sizeof(*shpkg) + len + 1);
+        memcpy(shpkg->nevr, buf, len + 1);
         shpkg->pkg = pkg_link(pkg);
         shpkg->flags = 0;
         shpkg->_ucnt = 0;
@@ -911,7 +1048,7 @@ int init_shell_data(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         shell_s.instpkgs = n_array_new(1024, (tn_fn_free)shpkg_free,
                                        (tn_fn_cmp)shpkg_cmp);
         n_array_ctl(shell_s.instpkgs, TN_ARRAY_AUTOSORTED);
-        load_installed_packages(&shell_s.instpkgs);
+        load_installed_packages(&shell_s, 0);
     }
 
     switch_pkg_completion(COMPL_CTX_AV_PKGS);
@@ -937,15 +1074,13 @@ int shell_exec(struct pkgset *ps, struct inst_s *inst, int skip_installed,
     return 0;
 }
 
-
-
 int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
 {
     char *line, *s, *home;
     
     
     if (!isatty(fileno(stdout))) {
-        log(LOGERR, "not a tty\n");
+        logn(LOGERR, _("not a tty"));
         return 0;
     }
 
@@ -955,20 +1090,21 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
     histfile = NULL;
 
     if ((home = getenv("HOME"))) {
-        histfile = alloca(strlen(home) + strlen("/.poldek_history") + 2);
-        sprintf(histfile, "%s/.poldek_history", home);
+        int len = strlen(home) + strlen("/.poldek_history") + 2;
+        histfile = alloca(len);
+        snprintf(histfile, len, "%s/.poldek_history", home);
         read_history(histfile);
     }
     
     signal(SIGINT,  shell_end);
     signal(SIGTERM, shell_end);
     signal(SIGQUIT, shell_end);
+    
+    printf(_("\nWelcome to the poldek shell mode. "
+             "Type \"help\" for help with commands.\n\n"));
+
     done = 0;
-    
-    printf("\nWelcome to the poldek shell mode. "
-           "Type \"help\" for help with commands\n\n");
-    
-    while (done == 0) {
+    while (!done && ccnt >= 0) {
         if ((line = readline("poldek> ")) == NULL)
             break;
         
@@ -981,8 +1117,14 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         }
         free(line);
     }
+
+    if (histfile) 
+        write_history(histfile);
+
+    if (shell_s.dbpkgdir) {
+        printf("\n");
+        save_installed_pkgdir(shell_s.dbpkgdir);
+    }
     
-    shell_end(0);
-    histfile = NULL;
     return 1;
 }
