@@ -591,7 +591,10 @@ const char *abs_path(char *buf, int size, const char *path)
     if (*path == '/')
         return path;
 
-    if (getcwd(buf, size) && strcmp(path, ".") != 0) {
+    if (getcwd(buf, size) == NULL)
+        return path;
+    
+    if (strcmp(path, ".") != 0) {
         int n = strlen(buf);
         n = snprintf(&buf[n], size - n, "/%s", path);
         if (n < (int)strlen(path) + 1)

@@ -466,6 +466,24 @@ static inline void chkarg(int key, char *arg)
     }
 }
 
+static char *prepare_path(char *pathname) 
+{
+    char path[PATH_MAX];
+    const char *ppath;
+
+    
+    pathname = trimslash(pathname);
+
+    if (pathname == NULL)
+        return pathname;
+        
+    if ((ppath = abs_path(path, sizeof(path), pathname)))
+        return n_strdup(ppath);
+    
+    return pathname;
+}
+
+
 /* Parse a single option. */
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -536,7 +554,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 n_array_push(argsp->sources, src);
             }
             
-            argsp->curr_src_path = arg;
+            argsp->curr_src_path = prepare_path(arg);
             argsp->curr_src_type = source_type;
             break;
 
@@ -641,7 +659,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_MKIDX;
             argsp->psflags |= PSMODE_MKIDX;
-            argsp->idx_path = trimslash(arg);
+            argsp->idx_path = prepare_path(arg);
             argsp->idx_type = INDEXTYPE_TXT;
             break;
 
@@ -649,7 +667,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_MKIDX;
             argsp->psflags |= PSMODE_MKIDX;
-            argsp->idx_path = trimslash(arg);
+            argsp->idx_path = prepare_path(arg);
             argsp->idx_type = INDEXTYPE_TXTZ;
             break;
             
@@ -669,7 +687,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_INSTDIST:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_INSTALLDIST;
-            argsp->inst.rootdir = trimslash(arg);
+            argsp->inst.rootdir = prepare_path(arg);
             argsp->psflags |= PSMODE_INSTALL | PSMODE_INSTALL_DIST;
             argsp->inst.flags |= INSTS_INSTALL;
             break;
@@ -678,7 +696,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UPGRADEDIST;
             if (arg) 
-                argsp->inst.rootdir = trimslash(arg);
+                argsp->inst.rootdir = prepare_path(arg);
             else if (argsp->inst.rootdir == NULL)
                 argsp->inst.rootdir = "/";
             
@@ -824,7 +842,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case OPT_CONF:
-            argsp->conf_path = arg;
+            argsp->conf_path = prepare_path(arg);
             break;
             
         case OPT_NOCONF:
