@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "i18n.h"
 #include "vfile.h"
 
 void fetch(const char *url)

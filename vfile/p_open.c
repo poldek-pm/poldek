@@ -22,6 +22,7 @@
 
 
 
+#include "i18n.h"
 #include "p_open.h"
 
 void p_st_init(struct p_open_st *pst) 

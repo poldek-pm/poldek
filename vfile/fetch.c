@@ -23,6 +23,7 @@
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
 
+#include "i18n.h"
 #include "vfile.h"
 #include "p_open.h"
 
@@ -299,12 +300,14 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 argv[n++] = arg->arg;
                 break;
                 
-            case FETCHFMT_DIRBN: 
-                argv[n] = alloca(strlen(destdir) + strlen(bn) + 2);
-                sprintf(argv[n], "%s/%s", destdir, bn ? bn : "ERROR");
+            case FETCHFMT_DIRBN: {
+                int len = strlen(destdir) + strlen(bn) + 2;
+                argv[n] = alloca(len);
+                snprintf(argv[n], len, "%s/%s", destdir, bn ? bn : "ERROR");
                 n++;
                 break;
-
+            }
+            	
             case FETCHFMT_DIR:
                 argv[n++] = (char*)destdir;
                 break;
@@ -355,7 +358,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
             p = n_strncpy(p, " ", len);
             len--;
         }
-        vfile_msg_fn("Running %s\n", s);
+        vfile_msg_fn(_("Running %s\n"), s);
     }
     
     p_st_init(&pst);
@@ -454,7 +457,7 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype)
 {
     struct ffetcher *ftch;
     int rc = 1;
-
+    
     n_assert(urltype > 0);
     if (urltype == VFURL_UNKNOWN) 
         urltype = vfile_url_type(n_array_nth(urls, 0));
@@ -486,7 +489,9 @@ int url_to_path(char *buf, size_t size, const char *url, int isdir)
     char *sl, *p = buf;
     size_t len = strlen(url) + 1;
 
-    memcpy(buf, url, len > size - 1 ? size - 1 : len); /* with '\0' */
+    n_assert(len <= size);
+    
+    memcpy(buf, url, len > size - 1 ? size - 1 : len); /* with '\"0' */
     buf[size - 1] = '\0';
 
     if (isdir)
@@ -573,7 +578,8 @@ int vfile_valid_path(const char *path)
                 ndots = 0;
                 
                 if (!isalnum(*p) && strchr("-+/._@", *p) == NULL) {
-                    vfile_err_fn("%s: %c non alphanumeric characters not allowed\n", path, *p);
+                    vfile_err_fn("%s: %c non alphanumeric characters not allowed\n",
+                                 path, *p);
                     return 0;
                 }
                 

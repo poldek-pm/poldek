@@ -1,10 +1,9 @@
 /* 
-  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
 
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
+  it under the terms of the GNU General Public License version 2 as published
+  by the Free Software Foundation;
  
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
@@ -45,17 +44,14 @@ void vfile_configure(const char *cachedir, int flags);
 #define VFM_NORM       (1 << 4)  /* (NoReMove) for remote files,
                                     remove tmp at close? */
 
-#define VFM_CACHE      (1 << 5)  /* for remote files, use cached file
-                                    if it exists */
+#define VFM_CACHE      (1 << 5)  /* for remote files, use cached
+                                                 file if it exists */
 
 #define VFM_CACHE_ONLY (1 << 6)  /* for remote files, use cached file
                                     if it not exists return NULL */
 
 #define VFM_NORMCACHE  (1 << 7)  /* for remote files, use cached file
                                     if it exists */
-#define VFM_MD         (1 << 8)  /* open FILE.md too */
-#define VFM_MDUP       (1 << 9)  /* for remote files, use FILE.md file
-                                     for checking if newer file exists */
 
 #define VFM_STBRN      (1 << 10)  /* infinite retrying to open file  */
 
@@ -76,8 +72,9 @@ struct vfile {
         gzFile *vfile_gzstream;
         void   *vfile_fdt;        /* RPM's FD_t */
     } vfile_fdescriptor;
-    char   *vf_tmpath;
-    char   *vf_mdtmpath;
+
+    char          *vf_path;
+    char          *vf_tmpath;
 };
 
 #define	vf_fd        vfile_fdescriptor.vfile_fd
@@ -85,15 +82,11 @@ struct vfile {
 #define	vf_gzstream  vfile_fdescriptor.vfile_gzstream
 #define	vf_fdt       vfile_fdescriptor.vfile_fdt
 
-#define vf_localpath(vfile)  (vfile)->vf_tmpath
+#define vf_localpath(vf)  ((vf)->vf_tmpath ? (vf)->vf_tmpath : (vf)->vf_path)
 
 struct vfile *vfile_open(const char *path, int vftype, int vfmode);
 void vfile_close(struct vfile *vf);
 int vfile_unlink(struct vfile *vf);
-
-
-int vfile_is_uptodate(const char *path, char *md, int *md_size);
-
 
 #define VFURL_UNKNOWN (1 << 0)
 #define VFURL_PATH    (1 << 1)
@@ -103,6 +96,7 @@ int vfile_is_uptodate(const char *path, char *md, int *md_size);
 #define VFURL_RSYNC   (1 << 5)
 #define VFURL_CDROM   (1 << 6)
 
+#define VFURL_LOCAL    (VFURL_CDROM | VFURL_PATH)
 #define VFURL_REMOTE   (VFURL_FTP | VFURL_HTTP | VFURL_HTTPS | VFURL_RSYNC)
 
 
@@ -113,6 +107,11 @@ int vfile_url_as_dirpath(char *buf, size_t size, const char *url);
 int vfile_url_as_path(char *buf, size_t size, const char *url);
 int vfile_valid_path(const char *path);
 int vfile_mkdir(const char *path);
+
+/* mkdir under cachedir */
+int vfile_mksubdir(char *path, int size, const char *dirpath);
+
+int vfile_localpath(char *path, size_t size, const char *url);
 
 /* external downloaders */
 int vfile_register_ext_handler(unsigned urltypes, const char *fmt);

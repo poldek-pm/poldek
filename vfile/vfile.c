@@ -36,6 +36,7 @@
 #include <trurl/narray.h>
 
 
+#include "i18n.h"
 #include "vfile.h"
 
 #ifdef ENABLE_VFILE_CURL
@@ -61,6 +62,7 @@ struct vfile_conf_s {
 };
 
 static struct vfile_conf_s vfile_conf = { "/tmp", 0};
+
 
 #ifdef HAVE_FOPENCOOKIE
 
@@ -134,7 +136,7 @@ static void *fetch_cb(const unsigned long amount, const unsigned long total)
     
     
     if (amount && amount == total) /* last notification */
-        vfile_msg_fn(".done (%ld kB)\n", total/1024);
+        vfile_msg_fn(_(".done (%ld kB)\n"), total/1024);
 
     else if (amount == 0) {
         vfile_msg_fn("%6ld kB .", tvv*4032);
@@ -184,7 +186,7 @@ int fetch_file_internal(const char *destdir, const char *path)
     if (!vfile_valid_path(tmpath))
         return 0;
     
-    vfile_msg_fn("Retrieving %s...\n", path);
+    vfile_msg_fn(_("Retrieving %s...\n"), path);
 
     if (vfile_conf.flags & VFILE_CNFCURL) {
 #ifdef ENABLE_VFILE_CURL
@@ -197,7 +199,7 @@ int fetch_file_internal(const char *destdir, const char *path)
         int rpmrc;
         urlSetCallback(fetch_cb_wrapper, NULL, 65536);
         if ((rpmrc = urlGetFile(path, tmpath)) < 0) {
-            vfile_err_fn("rpmio: %s transfer failed: %s\n", path,
+            vfile_err_fn(_("rpmio: %s transfer failed: %s\n"), path,
                          ftpStrerror(rpmrc));
         }
         rc = (rpmrc == 0);
@@ -413,247 +415,89 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
 }
 
 
-static int read_md(const char *path, char *md, int mdsize) 
-{
-    int fd, nread;
-
-    if ((fd = open(path, O_RDONLY)) < 0) 
-        return 0;
-    	
-    nread = read(fd, md, mdsize);
-    close(fd);
-    
-    return nread;
-}
-
-/* -1 on err */
-static int is_uptodate(const char *mdpath, int urltype, char *_md, int *_md_size) 
-{
-    char tmpdir[PATH_MAX], l_mdpath[PATH_MAX];
-    int len, is_uptod = -1;
-    char l_md[128], md[128];
-    int l_md_size, md_size;
-    
-    len = snprintf(l_mdpath, sizeof(l_mdpath), "%s/", vfile_conf.cachedir);
-    len += vfile_url_as_path(&l_mdpath[len], sizeof(l_mdpath) - len, mdpath);
-    if ((l_md_size = read_md(l_mdpath, l_md, sizeof(l_md))) < 31) 
-        return 0;   /* no *.md in cache */
-    
-    len = snprintf(tmpdir, sizeof(tmpdir), "%s/tmpmd", vfile_conf.cachedir);
-
-    if (sizeof(tmpdir) - len < 128)
-        return 0;
-    
-    if (!vfile_mkdir(tmpdir))
-        return 0;
-    
-    snprintf(&tmpdir[len], sizeof(tmpdir) - len, "/%s", n_basenam(mdpath));
-    
-    if (!vfile_valid_path(tmpdir))
-        return -1;
-    
-    if (access(tmpdir, R_OK) == 0) /* unlink old *.md */
-        if (unlink(tmpdir) != 0) {
-            vfile_err_fn("%s: %m\n", tmpdir);
-            return -1;
-        }
-
-    tmpdir[len] = '\0';         /* back to dir */
-    
-    if (vfile_fetch(tmpdir, mdpath, urltype)) {
-        char tmpath[PATH_MAX];
-
-        is_uptod = 0;
-        
-        snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir, n_basenam(mdpath));
-        md_size = read_md(tmpath, md, sizeof(md));
-        
-        if (md_size < 31 || md_size != l_md_size)
-            is_uptod = -1;
-        
-        else {
-            if (_md && _md_size && md_size <= *_md_size) {
-                memcpy(_md, md, md_size);
-                *_md_size = md_size;
-            }
-        
-            if (memcmp(l_md, md, md_size) == 0) 
-                is_uptod = 1;
-        }
-    }
-    
-    return is_uptod;
-}
-
-char *mkmdpath(char *mdpath, int size, const char *path) 
-{
-    char *p;
-
-    snprintf(mdpath, size, "%s", path);
-    if ((p = strrchr(n_basenam(mdpath), '.')) == NULL || strcmp(p, ".gz") != 0)
-        p = strrchr(mdpath, '\0');
-    
-    snprintf(p, sizeof(mdpath) - (p - mdpath), ".md");
-    return mdpath;
-}
-
-
-int vfile_is_uptodate(const char *path, char *md, int *md_size) 
-{
-    char mdpath[PATH_MAX] = {'\0'};
-    int urltype, is_uptod;
-
-    urltype = vfile_url_type(path);
-    
-    if (urltype == VFURL_PATH)
-        return 1;
-
-    mkmdpath(mdpath, sizeof(mdpath), path);
-    is_uptod = is_uptodate(mdpath, urltype, md, md_size);
-    return is_uptod;
-}
-
-
 struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
 {
     struct vfile vf, *rvf = NULL;
-    int opened, mdopened, urltype;
-    char mdpath[PATH_MAX] = {'\0'};
+    int opened, urltype;
+    char buf[PATH_MAX];
+    char *tmpdir;
+    int len;
+
     
     vf.vf_fdt = NULL;
+    vf.vf_path = NULL;
     vf.vf_tmpath = NULL;
-    vf.vf_mdtmpath = NULL;
     vf.vf_type = vftype;
     vf.vf_mode = vfmode;
     vf.vf_flags = 0;
     
     urltype = vfile_url_type(path);
     opened = 0;
-    mdopened = 1;
 
-    if (vfmode & VFM_MDUP)
-        vfmode |= VFM_MD;
-    
-    if (vfmode & VFM_MD) {
-        mdopened = 0;
-        mkmdpath(mdpath, sizeof(mdpath), path);
+    if (urltype == VFURL_PATH) {
+        if (openvf(&vf, path, vfmode)) 
+            opened = 1;
+        goto l_end;
     }
     
-    if (urltype == VFURL_PATH) {
-        if (openvf(&vf, path, vfmode)) {
-            if (vfmode & VFM_MD)
-                vf.vf_mdtmpath = strdup(mdpath);
-            opened = 1;
-        }
+    if (vfmode & VFM_RW) {
+        vfile_err_fn("%s: cannot open remote file for writing\n", path);
+        return 0;
+    }
+
+    len = snprintf(buf, sizeof(buf), "%s/", vfile_conf.cachedir);
+
+    
+    vfile_url_as_path(&buf[len], sizeof(buf) - len, path);
+    if ((vfmode & VFM_CACHE) && access(buf, R_OK) == 0 && openvf(&vf, buf, vfmode)) {
+        vf.vf_tmpath = strdup(buf);
+        opened = 1;
+        vf.vf_flags |= VF_FRMCACHE;
         
     } else {
-        char buf[PATH_MAX];
-        char *tmpdir;
-        int len;
+        unlink(buf);
+    }
+    
+    if (opened == 0) {      /* fetch */
+        char *p = NULL, *tmpath = NULL;
+        
+        if ((p = strrchr(path, '/')) == NULL) {
+            tmpath = (char*)path;
+                
+        } else {
+            int len = p - path;
             
-        if (vfmode & VFM_RW) {
-            vfile_err_fn("%s: cannot open remote file for writing\n", path);
+            tmpath = alloca(len + 1);
+            memcpy(tmpath, path, len);
+            tmpath[len] = '\0';
+        } 
+            
+        vfile_url_as_dirpath(&buf[len], sizeof(buf) - len, tmpath);
+        tmpdir = buf;
+
+        if (!vfile_mkdir(tmpdir))
             return 0;
-        }
 
-        len = snprintf(buf, sizeof(buf), "%s/", vfile_conf.cachedir);
+        if (vfile_fetch(tmpdir, path, urltype)) {
+            char tmpath[PATH_MAX];
 
-        if (vfmode & VFM_CACHE) {
-            int is_uptod = 1;
-            
-            if (vfmode & VFM_MDUP) {
-                if ((is_uptod = is_uptodate(mdpath, urltype, NULL, NULL)) < 0)
-                    return 0;
-            }
-            
-            if (is_uptod > 0) {
-                vfile_url_as_path(&buf[len], sizeof(buf) - len, path);
-                if (access(buf, R_OK) == 0 && openvf(&vf, buf, vfmode)) {
-                    vf.vf_tmpath = strdup(buf);
-
-                    if (vfmode & VFM_MD) {
-                        vfile_url_as_path(&buf[len], sizeof(buf) - len, mdpath);
-                        vf.vf_mdtmpath = strdup(buf);
-                    }
-                    opened = 1;
-                    vf.vf_flags |= VF_FRMCACHE;
-                    
-                } else {
-                    unlink(buf);
-                }
-            }
-        }
-        
-        
-        if (opened == 0) {      /* fetch */
-            char *p = NULL, *tmpath = NULL;
-
-            if ((p = strrchr(path, '/')) == NULL) {
-                tmpath = (char*)path;
+            snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
+                     n_basenam(path));
                 
+            if (openvf(&vf, tmpath, VFM_RO)) {
+                vf.vf_tmpath = strdup(tmpath);
+                opened = 1;
+                vf.vf_flags |= VF_FETCHED;
+                    
             } else {
-                int len = p - path;
-                
-                tmpath = alloca(len + 1);
-                memcpy(tmpath, path, len);
-                tmpath[len] = '\0';
-            } 
-            
-            vfile_url_as_dirpath(&buf[len], sizeof(buf) - len, tmpath);
-            tmpdir = buf;
-
-            if (!vfile_mkdir(tmpdir))
-                return 0;
-
-            if (vfmode & VFM_MD) {
-                char tmpath[PATH_MAX];
-                int  nerr = 0;
-                
-                snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
-                         n_basenam(mdpath));
-                
-                if (!vfile_valid_path(tmpath))
-                    nerr++;
-                else if ((vfmode & VFM_NORMCACHE) == 0)
-                    unlink(tmpath);
-
-                snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
-                         n_basenam(path));
-                
-                if (!vfile_valid_path(tmpath))
-                    nerr++;
-                else if ((vfmode & VFM_NORMCACHE) == 0)
-                    unlink(tmpath);
-                
-                if (nerr == 0) 
-                    mdopened = vfile_fetch(tmpdir, mdpath, urltype);
-            }
-            
-            
-            if (mdopened && vfile_fetch(tmpdir, path, urltype)) {
-                char tmpath[PATH_MAX];
-
-                snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
-                         n_basenam(path));
-                
-                if (openvf(&vf, tmpath, VFM_RO)) {
-                    vf.vf_tmpath = strdup(tmpath);
-                    opened = 1;
-                    vf.vf_flags |= VF_FETCHED;
-                    
-                    if (VFM_MD) {
-                        snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
-                                 n_basenam(mdpath));
-                        vf.vf_mdtmpath = strdup(tmpath);
-                    }
-
-                } else {
-                    //unlink(tmpath); wget && co sometimes badly returns non zero 
-                }
+                //unlink(tmpath); wget && co sometimes badly returns non zero 
             }
         }
     }
     
+
+
+l_end:    
     if (opened) {
         rvf = malloc(sizeof(*rvf));
         memcpy(rvf, &vf, sizeof(*rvf));
@@ -663,6 +507,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
     return rvf;
 }
 
+
 struct vfile *vfile_open(const char *path, int vftype, int vfmode) 
 {
     struct vfile *vf = NULL;
@@ -670,24 +515,25 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
 
     
     while (1) {
-        if ((vf = do_vfile_open(path, vftype, vfmode)))
+        if ((vf = do_vfile_open(path, vftype, vfmode))) {
+            vf->vf_path = strdup(path);
             break;
+        }
         
         if ((vfmode & VFM_STBRN) == 0)
             break;
 
-        if (n > 1000) {
-            vfile_msg_fn("Give up (#%d)...\n", ++n);
+        if (n > 100) {
+            vfile_msg_fn(_("Give up (#%d)...\n"), ++n);
             break;
         }
         
-        vfile_msg_fn("Retrying %s (#%d)...\n", path, ++n);
+        vfile_msg_fn(_("Retrying %s (#%d)...\n"), path, ++n);
         sleep(1);
     }
     
     return vf;
 }
-
 
 
 void vfile_close(struct vfile *vf) 
@@ -721,6 +567,11 @@ void vfile_close(struct vfile *vf)
                 vf->vf_type);
             n_assert(0);
     }
+
+    if (vf->vf_path) {
+        free(vf->vf_path);
+        vf->vf_path = NULL;
+    }
     
     if (vf->vf_tmpath) {        /* set for remote files only  */
         if ((vf->vf_mode & (VFM_NORM | VFM_CACHE)) == 0 &&
@@ -730,17 +581,9 @@ void vfile_close(struct vfile *vf)
         vf->vf_tmpath = NULL;
     }
 
-    if (vf->vf_mdtmpath) {
-        if ((vf->vf_mode & (VFM_NORM | VFM_CACHE)) == 0 &&
-            vfile_valid_path(vf->vf_mdtmpath))
-            unlink(vf->vf_mdtmpath);
-        
-        free(vf->vf_mdtmpath);
-        vf->vf_mdtmpath = NULL;
-    }
-
     free(vf);
 }
+
 
 int vfile_unlink(struct vfile *vf) 
 {
@@ -753,13 +596,6 @@ int vfile_unlink(struct vfile *vf)
             vf->vf_tmpath = NULL;
         }
 
-    if (vf->vf_mdtmpath)
-        if (vfile_valid_path(vf->vf_mdtmpath)) {
-            rc = (unlink(vf->vf_mdtmpath) == 0);
-            free(vf->vf_mdtmpath);
-            vf->vf_mdtmpath = NULL;
-        }
-    
     return rc;
 }
 
@@ -780,4 +616,24 @@ void vfile_set_errno(const char *ctxname, int vf_errno)
 {
     vfile_err_no = vf_errno;
     vfile_err_ctx = ctxname;
+}
+
+
+int vfile_mksubdir(char *path, int size, const char *dirpath) 
+{
+    int n;
+
+    n = snprintf(path, size, "%s/%s", vfile_conf.cachedir, dirpath);
+    if (vfile_mkdir(path))
+        return n;
+    return 0;
+}
+
+
+int vfile_localpath(char *path, size_t size, const char *url) 
+{
+    int n;
+    
+    n = snprintf(path, size, "%s/", vfile_conf.cachedir);
+    return vfile_url_as_path(&path[n], size - n, url);
 }

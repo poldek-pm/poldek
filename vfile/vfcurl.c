@@ -28,6 +28,7 @@
 #include <trurl/nassert.h>
 
 #define VFILE_INTERNAL
+#include "i18n.h"
 #include "vfile.h"
 
 static const char *modname = "curl";
@@ -176,7 +177,7 @@ int do_vfile_curl_fetch(const char *dest, const char *url)
         return -1;
     }
     
-    //printf("resume from %d\n", st.st_size);
+            //printf("resume from %ld\n", st.st_size);
     curl_easy_setopt(curlh, CURLOPT_RESUME_FROM, st.st_size);
     bar.resume_from = st.st_size;
     
@@ -184,7 +185,7 @@ int do_vfile_curl_fetch(const char *dest, const char *url)
     fclose(stream);
     
     if (bar.state == PBAR_ST_RUNNING || bar.state == PBAR_ST_FINISHED)
-         vfile_msg_fn("_\n");
+        vfile_msg_fn("_\n");
 
     if (curl_rc != CURLE_OK) {
         char *p;
@@ -293,8 +294,6 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
     if (bar->state == PBAR_ST_DISABLED)
         return 0;
     
-    
-    
 
     if (bar->state == PBAR_ST_VIRGIN) {
         bar->total_downloaded = dltotal;
@@ -389,7 +388,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         if (bar->is_tty)
             vfile_msg_fn("_\n");
         else
-            vfile_msg_fn("_Done\n");
+            vfile_msg_fn(_("_Done\n"));
         bar->state = PBAR_ST_TERMINATED;
     }
 
