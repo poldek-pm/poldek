@@ -847,7 +847,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     for (i=0; i<n_array_size(ups->pkgdefs); i++) {
         struct pkgdef *pdef = n_array_nth(ups->pkgdefs, i);
 
-        if (pdef->tflags & PKGDEF_REGNAME) { 
+        if (pdef->tflags & (PKGDEF_REGNAME | PKGDEF_PKGFILE)) { 
             if (!pkgset_mark_pkgdef_exact(ps, pdef, nodeps))
                 nerr++;
             
@@ -917,6 +917,9 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 #endif                
             if (!pkgset_mark_pkgdef_exact(ps, pdef, nodeps))
                 nerr++;
+            
+        } else {
+            n_assert(0);
         }
     }
 
