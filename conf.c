@@ -69,7 +69,8 @@ static struct tag global_tags[] = {
     { "greedy",         TYPE_BOOL , { 0 } }, 
     { "use_sudo",       TYPE_BOOL , { 0 } },
     { "mercy",          TYPE_BOOL , { 0 } },
-    { "default_fetcher", TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
+    { "default_fetcher", TYPE_STR | TYPE_MULTI , { 0 } },
+    { "proxy",   TYPE_STR | TYPE_MULTI, { 0 } },
     { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "ignore",         TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "downloader",     TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 } }, 
@@ -89,6 +90,13 @@ static struct tag fetcher_tags[] = {
     { "proto",      TYPE_STR, { 0 } },
     { "cmd",        TYPE_STR | TYPE_W_ENV, { 0 } },
 };
+
+static struct tag proxy_tags[] = {
+    { "name",       TYPE_STR,  { 0 } },
+    { "proto",      TYPE_STR, { 0 } },
+    { "url",        TYPE_STR | TYPE_W_ENV, { 0 } },
+};
+
 
 static struct tag source_tags[] = {
     { "name",        TYPE_STR, { 0 } },
@@ -117,6 +125,7 @@ struct section sections[] = {
     { "global",  global_tags,  0 },
     { "source",  source_tags,  1 },
     { "fetcher", fetcher_tags, 1 },
+    { "proxy",   proxy_tags,   1 },
     {  NULL,  NULL, 0 },
 };
 
@@ -283,12 +292,12 @@ const char *expand_vars(char *dest, int size, const char *str,
     }
     
     while (*tl) {
-        const char *vv, *v, *var;
+        const char *p,  *vv, *v, *var;
         char val[256];
         int  v_len;
         
         
-        v = *tl;
+        p = v = *tl;
         DBGF("token: %s\n", *tl);
         tl++;
         
@@ -313,10 +322,10 @@ const char *expand_vars(char *dest, int size, const char *str,
             return str;
         
         n_snprintf(val, v_len + 1, v);
-        DBGF("var %s\n", val);
+        printf("var %s\n", val);
         
         if ((var = poldek_conf_get(ht, val, NULL)) == NULL) {
-            n += n_snprintf(&dest[n], size - n, "%s", v);
+            n += n_snprintf(&dest[n], size - n, "%%%s", p);
             
         } else {
             n += n_snprintf(&dest[n], size - n, "%s", var);
@@ -346,6 +355,88 @@ static char *eat_wws(char *s)
 }
 
 
+static const char *do_expand_value(const char *val, tn_hash *ht, tn_hash *ht_global)
+{
+    const char *new_val;
+    char expand_val[PATH_MAX], expand_val2[PATH_MAX];
+
+
+    if (strchr(val, '%') == NULL)
+        return val;
+    
+    new_val = expand_vars(expand_val, sizeof(expand_val), val, ht);
+    if (ht_global && strchr(new_val, '%')) {
+        new_val = expand_vars(expand_val2, sizeof(expand_val2),
+                              new_val, ht_global);
+    }
+    
+    if (val != new_val)
+        val = n_strdup(new_val);
+    return val;
+}
+
+
+static int expand_section_vars(tn_hash *ht, tn_hash *ht_global) /*  */
+{
+    const char *val;
+    tn_array *keys, *vals;
+    int i, j, rc = 1;
+    
+    keys = n_hash_keys(ht);
+    for (i=0; i<n_array_size(keys); i++) {
+        const char *key = n_array_nth(keys, i);
+        struct copt *opt;
+        
+        if ((opt = n_hash_get(ht, key)) == NULL)
+            continue;
+
+        val = do_expand_value(opt->val, ht, ht_global);
+        if (val != opt->val) {
+            free(opt->val);
+            opt->val = (char*)val;
+        }
+        
+        if (opt->vals == NULL)
+            continue;
+        
+        vals = n_array_clone(opt->vals);
+        for (j=0; j < n_array_size(opt->vals); j++) {
+            const char *v = n_array_nth(opt->vals, j);
+            val = do_expand_value(v, ht, ht_global);
+            if (val == v)
+                val = n_strdup(v);
+            
+            n_array_push(vals, (char*)val);
+        }
+        n_array_free(opt->vals);
+        opt->vals = vals;
+    }
+    
+    n_array_free(keys);
+    return rc;
+}
+
+static void poldek_conf_expand_vars(tn_hash *ht) 
+{
+    
+    tn_hash *ht_global = NULL;
+    int i, j;
+
+    ht_global = poldek_conf_get_section_ht(ht, "global");
+    expand_section_vars(ht_global, NULL);
+
+    i = 0;
+    while (sections[i].name) {
+        if (strcmp(sections[i].name, "global")  != 0) {
+            tn_array *list = poldek_conf_get_section_arr(ht, sections[i].name);
+            if (list)
+                for (j=0; j < n_array_size(list); j++)
+                    expand_section_vars(n_array_nth(list, j), ht_global);
+        }
+        i++;
+    }
+}
+
 tn_hash *poldek_ldconf(const char *path) 
 {
     FILE     *stream, *main_stream;
@@ -374,7 +465,7 @@ tn_hash *poldek_ldconf(const char *path)
     
     while (fgets(buf, sizeof(buf) - 1, stream)) {
         char *p = buf;
-        char *name, *val, expanded_val[PATH_MAX], expanded_val2[PATH_MAX];
+        char *name, *val, expanded_val[PATH_MAX];
         struct copt *opt;
         const struct tag *tag;
 
@@ -552,10 +643,6 @@ tn_hash *poldek_ldconf(const char *path)
         if (tag->flags & TYPE_W_ENV)
             val = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), val);
 
-        
-        val = (char*)expand_vars(expanded_val2, sizeof(expanded_val2),
-                                 val, ht_sect);
-        
         if (opt->val == NULL) {
             opt->val = n_strdup(val);
             //printf("ADD %p %s -> %s\n", ht_sect, name, val);
@@ -582,6 +669,9 @@ tn_hash *poldek_ldconf(const char *path)
         main_stream = NULL;
         goto l_loop;
     }
+
+    if (ht)
+        poldek_conf_expand_vars(ht);
     
     return ht;
 }
@@ -681,11 +771,20 @@ int poldek_conf_get_bool(const tn_hash *htconf, const char *name, int default_v)
 tn_array *poldek_conf_get_multi(const tn_hash *htconf, const char *name)
 {
     struct copt *opt;
+    tn_array    *list = NULL;
 
-    if (htconf && (opt = n_hash_get(htconf, name)))
-        return opt->vals;
+    if ((opt = n_hash_get(htconf, name)) == NULL)
+        return NULL;
+
+    if (opt->vals)
+        list = n_ref(opt->vals);
     
-    return NULL;
+    else {
+        list = n_array_new(2, NULL, (tn_fn_cmp)strcmp);
+        n_array_push(list, opt->val);
+    }
+    
+    return list;
 }
 
 
