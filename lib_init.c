@@ -566,7 +566,6 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
     DBGF("ts %p, tsctx %p\n", ts, ctx->ts);
     while (default_op_map[i].name) {
         int op = default_op_map[i].op;
-        int v0 = ts->getop(ts, op);
         
         if (!poldek_ts_op_touched(ts, op)) { /* not modified by cmdl opts */
             int v = poldek_conf_get_bool(htcnf,

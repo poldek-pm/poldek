@@ -194,7 +194,7 @@ struct pkg *pkg_new_ext(tn_alloc *na,
     release_len = strlen(release);
     len += release_len + 1;
 
-    if (fn && arch) {
+    if (fn && arch) {           /* compare filename with "standard" name */
         //fn = n_basenam(fn);
         n_snprintf(pkg_fn, sizeof(pkg_fn), "%s-%s-%s.%s.rpm", name,
                    version, release, arch);
@@ -207,7 +207,6 @@ struct pkg *pkg_new_ext(tn_alloc *na,
         }
     }
     
-
     len += len + 1;             /* for nvr */
 
     len += 1;
