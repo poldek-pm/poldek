@@ -58,7 +58,7 @@ const char *argp_program_bug_address = program_bug_address;
 
 /* Program documentation. */
 char poldek_banner[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
-"Copyright (C) 2000-2002 - <mis@pld.org.pl>\n"
+"Copyright (C) 2000-2002 <mis@pld.org.pl>\n"
 "This program may be freely redistributed under the terms of the GNU GPL v2\n";
 /* A description of the arguments we accept. */
 static char args_doc[] = N_("[PACKAGE...]");
@@ -223,13 +223,14 @@ static struct argp_option options[] = {
 {"nodesc", OPT_NODESC, 0, 0,
  N_("Don't put packages user-level information (like Summary or Description)"
      " in created index."), 60 },
-    
+
+{0,0,0,0, N_("Packages spec:"), 65},
+{"pkgset", 'p',  "FILE", 0, N_("Take package set definition from FILE"), 65 },
+{"pkgnevr",'n',  "\"NAME [[E:][V[-R]]]\"", 0,
+     N_("Specifies package by NAME and EVR"), 65 },
+
 
 {0,0,0,0, N_("Installation:"), 70},
-{"pkgset", 'p',  "FILE", 0, N_("Take package set definition from FILE"), 70 },
-{"pkgnevr",'n',  "\"NAME [[E:][V[-R]]]\"", 0,
-     N_("Specifies package by NAME and EVR"), 70 },
-
 {"install-dist", OPT_INST_INSTDIST, "DIR", 0,
      N_("Install package set under DIR as root directory"), 70 },
 
@@ -238,49 +239,52 @@ static struct argp_option options[] = {
 
 {"install", 'i', 0, 0, N_("Install given packages"), 70 },    
 {"upgrade", 'U', 0, 0, N_("Upgrade given packages"), 70 },
-{"root", 'r', "DIR", 0, N_("Set top directory to DIR"), 70 },
+
+
+{0,0,0,0, N_("Installation switches:"), 71},    
+{"root", 'r', "DIR", 0, N_("Set top directory to DIR"), 71 },
 {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
-N_("Prevent packages listed from being upgraded if they are already installed."), 70 },
+N_("Prevent packages listed from being upgraded if they are already installed."), 71 },
 
 {"nohold", OPT_INST_NOHOLD, 0, 0,
-N_("Don't take held packages from $HOME/.poldek_hold."), 70 },
+N_("Don't take held packages from $HOME/.poldek_hold."), 71 },
 
 {"greedy", OPT_INST_GREEDY, 0, 0,
  N_("Automatically upgrade packages which dependencies are broken "
-    "by unistalled ones"), 70 }, 
+    "by unistalled ones"), 71 }, 
     
 {"dump", OPT_INST_MKSCRIPT, "FILE", OPTION_ARG_OPTIONAL,
-     N_("Just dump install marked package filenames to FILE (default stdout)"), 70 },
+     N_("Just dump install marked package filenames to FILE (default stdout)"), 71 },
 
 {"dumpn", OPT_INST_POLDEK_MKSCRIPT, "FILE", OPTION_ARG_OPTIONAL,
-     N_("Just dump install marked package names to FILE (default stdout)"), 70 },
+     N_("Just dump install marked package names to FILE (default stdout)"), 71 },
 
 {"fresh", OPT_INST_FRESHEN, 0, 0, 
-     N_("Upgrade packages, but only if an earlier version currently exists"), 70 },
+     N_("Upgrade packages, but only if an earlier version currently exists"), 71 },
 
 {"nofollow", OPT_INST_NOFOLLOW, 0, 0, 
-     N_("Don't automatically install packages required by installed ones"), 70 },    
+     N_("Don't automatically install packages required by installed ones"), 71 },    
     
 {"fetch", OPT_INST_FETCH, "DIR", 0,
-     N_("Do not install, only fetch packages"), 70}, 
+     N_("Do not install, only fetch packages"), 71 }, 
     
 {"nodeps", OPT_INST_NODEPS, 0, 0,
-     N_("Install packages with broken dependencies"), 70 },
+     N_("Install packages with broken dependencies"), 71 },
     
 {"force", OPT_INST_FORCE, 0, 0,
-     N_("Be unconcerned"), 70 },
+     N_("Be unconcerned"), 71 },
     
 {"justdb", OPT_INST_JUSTDB, 0, 0,
-     N_("Modify only the database"), 70 },
+     N_("Modify only the database"), 71 },
     
 {"rpmdef", OPT_INST_RPMDEF, "RPMMACRO", 0,
-     N_("Set up rpm macro (only simple definitions)"), 70 },
+     N_("Set up rpm macro (only simple definitions)"), 71 },
     
 {"test", 't', 0, 0,
- N_("Don't install, but tell if it would work or not"), 70 },
+ N_("Don't install, but tell if it would work or not"), 71 },
     
 {"mkdir", OPT_INST_MKDBDIR, 0, 0, 
-     N_("make %{_dbpath} if not exists"), 70 },
+     N_("make %{_dbpath} if not exists"), 71 },
 
 #ifdef ENABLE_INTERACTIVE_MODE
 {0,0,0,0, N_("Interactive mode:"), 80},
@@ -300,7 +304,7 @@ N_("Don't take held packages from $HOME/.poldek_hold."), 70 },
      N_("Take package priorities from FILE"), 90 },
     
 {"priconf", OPT_SPLITCONF, "FILE", 0,
-     N_("Take package priorities from FILE"), 70 },
+     N_("Take package priorities from FILE"), 71 },
     
 {"split-out", OPT_SPLITOUTPATH, "PREFIX", 0,
      N_("Write chunks to PREFIX.XX, default PREFIX is packages.chunk"), 90 },    
@@ -310,12 +314,9 @@ N_("Don't take held packages from $HOME/.poldek_hold."), 70 },
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 500 }, 
 
 
-{"log", 'l', "FILE", OPTION_ARG_OPTIONAL, N_("Log program messages"
-" to FILE ($TMPDIR/poldek.log if not given)"), 500 },    
-{0,  'v', 0, 0,
-     N_("Be verbose."), 500 },
-{0,  'q', 0, 0,
-     N_("Do not produce any output."), 500 },
+{"log", 'l', "FILE", 0, N_("Log program messages to FILE"), 500 },    
+{0,  'v', 0, 0, N_("Be verbose."), 500 },
+{0,  'q', 0, 0, N_("Do not produce any output."), 500 },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -361,14 +362,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     
     switch (key) {
         case 'l':
-            if (arg) {
-                argsp->log_path = arg;
-                
-            } else {
-                char path[PATH_MAX];
-                snprintf(path, sizeof(path), "%s/poldek.log", tmpdir());
-                argsp->log_path = strdup(path);
-            }
+            argsp->log_path = arg;
             break;
             
         case 'q':
@@ -1316,9 +1310,17 @@ int main(int argc, char **argv)
     log_init(NULL, stdout, logprefix);
     parse_options(argc, argv);
 
-    if (args.log_path) 
+    if (args.log_path) {
+        int i;
+        
         log_init(args.log_path, stdout, logprefix);
-
+        
+        msg_f(0, "\n");
+        msg_f(0, "Start (%s", argv[0]);
+        for (i=1; i < argc; i++)
+            msg_f(0, "_ %s", argv[i]);
+        msg_f(0, "_)\n");
+    }
     
     if (!mklock())
         exit(EXIT_FAILURE);

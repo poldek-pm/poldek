@@ -202,12 +202,10 @@ AC_CHECK_LIB(rpm, rpmReadPackageInfo,,AC_MSG_ERROR("rpmlib not found"),
 AC_CHECK_FUNCS(rpmMachineScore,, AC_MSG_ERROR("rpmlib not found"),
 	    -lpopt -ldb -lz -lbz2)
 
-dnl trullib 0.43.1 has n_buf_it_get() and n_buf_ptr()
+dnl trullib 0.43.4 has n_hash_size
 dnl test if linked with system copy only
 if test -z "$TRURL_DIR"; then
-	AC_CHECK_LIB(trurl, n_buf_it_get,,AC_MSG_ERROR("trurlib >= 0.43.1 not found"),
-		     $CONF_IN_LDFLAGS)
-	AC_CHECK_FUNCS(n_buf_ptr,,AC_MSG_ERROR("trurlib >= 0.43.1 not found"),
+	AC_CHECK_LIB(trurl, n_hash_size,,AC_MSG_ERROR("trurlib >= 0.43.4 not found"),
 		     $CONF_IN_LDFLAGS)
 fi
 
@@ -216,6 +214,9 @@ AC_CHECK_FUNCS(getline,, AC_MSG_ERROR("getline\(\) is needed by $PACKAGE"),
 
 AC_CHECK_FUNCS(fopencookie,, AC_MSG_WARN("disabled gzipped files support"),
 	       $CONF_IN_LDFLAGS)
+
+AC_CHECK_FUNCS(forkpty,, 
+	AC_CHECK_LIB(util, forkpty, [AC_DEFINE(HAVE_FORKPTY)] [LIBS="$LIBS -lutil"]))
 
 AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
 AC_MSG_WARN("poldek will not work fine with rpmlib\(...\) capabilities"),
@@ -229,6 +230,7 @@ AC_CHECK_FUNCS(EVP_DigestInit,,
 AC_OUTPUT([
 		shell/Makefile
 	        vfile/Makefile
+		vfile/vftp/Makefile
 		Makefile
 		poldek.spec
 		homepage.sgml

@@ -25,6 +25,7 @@
 //#endif
 
 
+#include <ctype.h>
 #include <limits.h>
 #include <stdint.h>
 #include <errno.h>
@@ -50,6 +51,11 @@
 
 #define EXEC_RPM 1
 
+#ifndef HAVE_FORKPTY
+# undef EXEC_RPM
+#endif
+
+#ifdef EXEC_RPM
 int exec_rpm(const char *cmd, char *const argv[])
 {
     int rc, st, n;
@@ -101,34 +107,34 @@ int exec_rpm(const char *cmd, char *const argv[])
     
     return rc;
 }
+#endif /* EXEC_RPM */
 
 #ifndef EXEC_RPM
 static void process_rpm_output(struct p_open_st *st) 
 {
-    int c;
+    int endl = 1;
+    char c;
     
-    //while ((c = fgetc(st->stream)) != EOF) {
-    //  printf("%c", c);
-        //msg(1, "_%c", c);
-    //}
-    /*while ((c = fgetc(st->stream)) != EOF)*/
-    while (read(st->fd, &c, 1) == 1)
-        msg(1, "_%c", c);
-}
+    while (read(st->fd, &c, 1) == 1) {
+        msg_tty(1, "_%c", c);
 
-static void reaper (int sig)
-{
-    pid_t pid;
-
-    sig = sig;
-    while ((pid = waitpid (-1, NULL, WNOHANG)) > 0) {
-	msgn(0, _("SIGCHLD from %d"), pid);
+        if (c == '\r')
+            continue;
+        
+        if (c == '\n')
+            endl = 1;
+        
+        if (endl) {
+            endl = 0;
+            msg_f(0, "_\n");
+            msg_f(0, "rpm: ");
+            continue;
+        }
+        msg_f(0, "_%c", c);
     }
     
-    signal (SIGCHLD, reaper);
 }
-
-#endif /* EXEC_RPM */
+#endif /* !EXEC_RPM */
 
 
 int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst) 
@@ -257,13 +263,11 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
     }
     
 
-#if EXEC_RPM    
+#ifdef EXEC_RPM    
     ec = exec_rpm(cmd, argv);
-    
-#else  /* p_open() doesn't works propely with rpm, I don't now why */
-    signal(SIGCHLD, reaper);
+#else  
     p_st_init(&pst);
-    if (p_open(&pst, cmd, argv) == NULL) 
+    if (pty_open(&pst, cmd, argv) == NULL) 
         return 0;
     
     n = 0;
@@ -301,7 +305,6 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
             n++;
         }
     }
-        
 
     return ec == 0;
 }

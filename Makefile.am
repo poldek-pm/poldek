@@ -66,9 +66,9 @@ LDADD_              = @INTLLIBS@
 bin_PROGRAMS        = poldek rpmvercmp
 bin_SCRIPTS         = mkpackagedir vfjuggle
 poldek_SOURCES      = main.c
-poldek_LDADD        = vfile/libvfile.a libpoldek.a $(SHELL_MOD_) \
-	              @TRURL_LDFLAG@ $(LDADD_)
-poldek_DEPENDENCIES = vfile/libvfile.a libpoldek.a $(SHELL_MOD_)
+poldek_LDADD        = libpoldek.a vfile/libvfile.a vfile/vftp/libvftp.a \
+	              $(SHELL_MOD_) @TRURL_LDFLAG@ $(LDADD_)
+poldek_DEPENDENCIES = libpoldek.a vfile/libvfile.a $(SHELL_MOD_)
 
 
 rpmvercmp_SOURCES   = rpmvercmp.c
@@ -78,7 +78,7 @@ rpmvercmp_LDFLAGS   =
 
 noinst_PROGRAMS     = test_match
 test_match_SOURCES  = test_match.c
-test_match_LDADD    = vfile/libvfile.a $(poldek_LDADD) 
+test_match_LDADD    = $(poldek_LDADD) 
 
 
 EXTRA_DIST = poldek.1 poldek.pod \

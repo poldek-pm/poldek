@@ -22,7 +22,6 @@ int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size);
 #define DIGEST_SIZE_MD5  32
 #define DIGEST_SIZE_SHA1 40
 
-
 int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size, int digest_type);
 int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type); 
 
@@ -30,6 +29,7 @@ int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type);
   Returns $TMPDIR or "/tmp" if $TMPDIR isn't set.
   Returned dir always begin with '/'
 */
+const char *setup_cachedir(void);
 const char *tmpdir(void);
 
 

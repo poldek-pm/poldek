@@ -182,13 +182,16 @@ static int do_open_idx(struct idx_s *idx, const char *path, int vfmode)
         }
     }
     
-    if (idx->vfmd != NULL)
-        if (!pdigest_read(&idx->pdg, idx->vfmd->vf_fd, idx->idxpath)) {
-            vfile_close(idx->vfmd);
-            vfile_close(idx->vf);
-            idx->vf = NULL;
-            idx->vfmd = NULL;
-        }
+    if (idx->vfmd == NULL)
+        return -1;
+
+    
+    if (!pdigest_read(&idx->pdg, idx->vfmd->vf_fd, idx->idxpath)) {
+        vfile_close(idx->vfmd);
+        vfile_close(idx->vf);
+        idx->vf = NULL;
+        idx->vfmd = NULL;
+    }
     
     return idx->vfmd != NULL;
 }
@@ -214,9 +217,14 @@ int open_idx(struct idx_s *idx, const char *path, int vfmode)
         n = snprintf(tmpath, sizeof(tmpath), "%s%s.gz", path,
                      default_pkgidx_name);
         
-        if ((rc = do_open_idx(idx, tmpath, vfmode)) == 0) {
+        if ((rc = do_open_idx(idx, tmpath, vfmode)) < 0) {
+            rc = 0;
+            
+        } else if (rc == 0) {
             tmpath[n - 3] = '\0'; /* trim *.gz */
-            rc = do_open_idx(idx, path, vfmode);
+            rc = do_open_idx(idx, tmpath, vfmode);
+            if (rc < 0)
+                rc = 0;
         }
     }
 
@@ -1358,7 +1366,7 @@ static int is_uptodate(const char *path, const struct pdigest *pdg_local,
     if (!(n = vfile_mksubdir(mdtmpath, sizeof(mdtmpath), "tmpmd")))
         goto l_err_end;
     
-    mkdigest_path(mdpath, sizeof(mdpath), path, ".mdd");
+    mkdigest_path(mdpath, sizeof(mdpath), path, pdigest_ext);
     
     snprintf(&mdtmpath[n], sizeof(mdtmpath) - n, "/%s", n_basenam(mdpath));
     unlink(mdtmpath);

@@ -1,9 +1,27 @@
+0.17:
+* added support for package.dir's "patches" 
+* improved dependecy processing:
+  - package may be marked for install as a consequence of conflict
+  - dependency loops are noticed in human readable form
+  - improved "greedy" selection - if foo-VER is upgraded, then eventual 
+    "greedy" marks will mark foo-{devel,static,etc} in version VER too.
+  - packages are splitted into groups before install and each group 
+    is installed separately; this ensures that broken dependencies in 
+    one of group doesn't affect the rest.
+  
+* added checks of packages.dir's data integrity before it is loading,
+  it prevent poldek SIGSEVs  
+* added log file suppport (--log opt)
+* changed default cache directory to $HOME/.poldek
+* shell: db packages are cached what speeds up program start in shell mode
+* few major bugs fixed 
+
 0.16:
- * fixed removable media support in non-install-dist modes
- * shell: uninstall: fix: don't remove pkg from install list if removal fails
+* fixed removable media support in non-install-dist modes
+* shell: uninstall: fix: don't remove pkg from install list if removal fails
 
 0.15.9:
- * shell:
+* shell:
    - desc: added package file size display
    - search: added Group search
    - install: unhidden --mercy

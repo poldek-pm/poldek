@@ -68,7 +68,7 @@ void log_msg_i(int indent, const char *fmt, ...)
 #define msgn(verbose_level, fmt, args...)        \
   do {                                           \
     if ((verbose_level) <= verbose)              \
-      log(LOGINFO|LOGOPT_N, fmt, ## args);    \
+      log(LOGINFO|LOGOPT_N, fmt, ## args);       \
   } while(0)
 
 #define msg_i(verbose_level, indent, fmt, args...)   \
@@ -87,13 +87,13 @@ void log_msg_i(int indent, const char *fmt, ...)
 // to file only
 #define msg_f(verbose_level, fmt, args...)           \
   do {                                               \
-    if ((verbose_level) >= verbose && verbose > 0)   \
+    if ((verbose_level) <= verbose)                  \
       log(LOGFILE|LOGINFO, fmt, ## args);            \
   } while(0)
 
 #define msgn_f(verbose_level, fmt, args...)           \
   do {                                                \
-    if ((verbose_level) >= verbose && verbose > 0)    \
+    if ((verbose_level) <= verbose)                   \
       log(LOGFILE|LOGINFO|LOGOPT_N, fmt, ## args);    \
   } while(0)
 

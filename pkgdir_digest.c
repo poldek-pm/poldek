@@ -45,12 +45,13 @@
 #include "pkg.h"
 #include "pkgroup.h"
 
-static const char *digest_ext = ".mdd";
+const char *pdigest_ext = ".mdd";
 
 int pdigest_init(struct pdigest *pdg, char *mdbuf, int size) 
 {
     char *p;
 
+    //pdg->mode = mode;
     pdg->md = NULL;
     
     if (mdbuf == NULL) {
@@ -268,7 +269,7 @@ int pdigest_save(struct pdigest *pdg, const char *pathname)
     int             n;
     
 
-    n = mkdigest_path(path, sizeof(path), pathname, digest_ext);
+    n = mkdigest_path(path, sizeof(path), pathname, pdigest_ext);
     if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
         return 0;
     
@@ -326,7 +327,7 @@ int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname, int with_
     if ((vf = vfile_open(pathname, VFT_STDIO, VFM_RO)) == NULL)
         return 0;
     
-    mkdigest_path(path, sizeof(path), pathname, digest_ext);
+    mkdigest_path(path, sizeof(path), pathname, pdigest_ext);
     msgn(1, _("Writing digest %s..."), path);
 
     if (with_md == 0 || (pkgdir->flags & PKGDIR_DIFF))
@@ -423,7 +424,7 @@ struct vfile *i_pkgdir_open_digest(const char *path, int vfmode)
 {
     char mdpath[PATH_MAX];
     
-    mkdigest_path(mdpath, sizeof(mdpath), path, digest_ext);
+    mkdigest_path(mdpath, sizeof(mdpath), path, pdigest_ext);
     return vfile_open(mdpath, VFT_IO, vfmode);
 }
 

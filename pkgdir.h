@@ -19,11 +19,19 @@
 #define PKGDIR_UNIQED             (1 << 10) /* passed through pkgdir_uniq() */
 
 
+/* packages.dir digest */
+
 #define PDIGEST_SIZE DIGEST_SIZE_SHA1
+
+#define PDIGEST_MODE_DEFAULT      (0 << 1)
+#define PDIGEST_MODE_v016         (0 << 2)
+#define PDIGEST_MODE_v016_COMPAT  (0 << 3)
+
 struct pdigest {
-    char mdh[PDIGEST_SIZE + 1]; /* header */
-    char mdd[PDIGEST_SIZE + 1]; /* data */
-    char *md;                         /* whole idx, for backward compat */
+    unsigned  mode;
+    char      mdh[PDIGEST_SIZE + 1]; /* header */
+    char      mdd[PDIGEST_SIZE + 1]; /* data */
+    char      *md;                   /* digest of whole data, v016 compat */
 };
 
 struct pkgdir {
@@ -109,18 +117,7 @@ extern const char *default_pkgidx_name;
 #define FILEFMT_MAJOR 1
 #define FILEFMT_MINOR 0
 
-extern const char *pdir_default_pkgdir_name;
-extern const char *pdir_packages_incdir;
-
-extern const char *pdir_poldeksindex;
-extern const char *pdir_poldeksindex_toc;
-
-extern const char *pdir_tag_depdirs;
-extern const char *pdir_tag_ts;
-extern const char *pdir_tag_ts_orig;
-extern const char *pdir_tag_removed;
-extern const char *pdir_tag_endhdr;
-extern const char *pdir_tag_endvarhdr;
+extern const char *pdigest_ext;
 
 #define PDIGEST_SIZEx2 (2 * PDIGEST_SIZE)
 
@@ -137,13 +134,28 @@ int pkgdir_uniq(struct pkgdir *pkgdir);
 int i_pkgdir_creat_md5(const char *pathname);
 int i_pkgdir_verify_md5(const char *title, const char *pathname);
 
+
 int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
                           int with_md);
-
 struct vfile *i_pkgdir_open_digest(const char *path, int vfmode);
-int i_pkgdir_is_uptodate(const char *path, struct pdigest *pdg);
+//int i_pkgdir_is_uptodate(const char *path, struct pdigest *pdg);
 
 int mkdigest_path(char *path, int size, const char *pathname, const char *ext);
+
+
+
+extern const char *pdir_default_pkgdir_name;
+extern const char *pdir_packages_incdir;
+
+extern const char *pdir_poldeksindex;
+extern const char *pdir_poldeksindex_toc;
+
+extern const char *pdir_tag_depdirs;
+extern const char *pdir_tag_ts;
+extern const char *pdir_tag_ts_orig;
+extern const char *pdir_tag_removed;
+extern const char *pdir_tag_endhdr;
+extern const char *pdir_tag_endvarhdr;
 
 
 #endif /* PKGDIR_INTERNAL */

@@ -246,7 +246,7 @@ int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked)
                 install = -1;
                 
             } else if (is_hand_marked && !freshen) { /* msg without "freshen" */
-                msg(0, msg, pkg_snprintf_s(pkg), eqs, skiped);
+                msgn(0, msg, pkg_snprintf_s(pkg), eqs, skiped);
             }
         }
     }

@@ -1,15 +1,16 @@
 #! /bin/sh
 
+PATH="/bin/:/usr/bin:/sbin:/usr/sbin"
 if [ ! -f capreq.h ]; then
     cd `dirname $0`;
     if [ ! -f capreq.h ]; then
-	echo "`pwd`: not a poldek directory"
+	echo "$0: `pwd`: not a poldek directory"
 	exit 1
     fi 	
 fi
 
 if [ -d trurlib ]; then
-    echo "./trurlib/ presented"
+    echo "$0: ./trurlib/ presented"
     exit 1
 fi	
 
@@ -17,12 +18,12 @@ if [ -d ../trurlib ]; then
      TRURLIB_VERSION=$(egrep 'T_AUTOMAKE\(trurlib, ' ../trurlib/configure.in | cut -d ' ' -f 2 | sed 's|)||')
      
      if [ -z "$TRURLIB_VERSION" ]; then
-	echo "error extracting TRURLIB_VERSION";
+	echo "$0: error extracting TRURLIB_VERSION";
 	exit 1
      fi	
 
      if [ ! -f ../trurlib/trurlib-${TRURLIB_VERSION}.tar.gz ]; then
-	(cd ../trurlib && ./autogen.sh && ./make dist)
+	(cd ../trurlib && ./autogen.sh && make dist)
      fi
      
      if [ ! -f  ../trurlib/trurlib-${TRURLIB_VERSION}.tar.gz ]; then

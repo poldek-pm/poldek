@@ -14,7 +14,6 @@
 # include "config.h"
 #endif
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -46,6 +45,9 @@
 #include "log.h"
 #include "shell.h"
 #include "term.h"
+
+
+static volatile sig_atomic_t shDone = 0;
 
 static int gmt_off = 0;         /* TZ offset */
 
@@ -114,8 +116,7 @@ static tn_array       *all_commands; /* commands + aliases,
                                         for command_generator() */
 static char           *histfile;
 
-static volatile sig_atomic_t done = 0;
-static volatile sig_atomic_t ccnt = 0;
+
 
 static struct shell_s shell_s = {NULL, NULL, 0, NULL, NULL, 0, NULL};
 static tn_array *compl_shpkgs = NULL;
@@ -349,7 +350,6 @@ int docmd(struct command *cmd, int argc, const char **argv)
     if (argv == NULL)
         return 0;
 
-    ccnt++;
     cmdarg.is_help = argv_is_help(argc, argv);
     cmdarg.pkgnames = n_array_new(64, NULL, (tn_fn_cmp)strcmp);
     cmdarg.shpkgs = NULL;
@@ -403,7 +403,6 @@ int docmd(struct command *cmd, int argc, const char **argv)
     rc = cmd->do_cmd_fn(&cmdarg);
 
  l_end:
-    ccnt--;
     if (cmdarg.pkgnames)
         n_array_free(cmdarg.pkgnames);
 
@@ -726,7 +725,7 @@ static
 int cmd_quit(struct cmdarg *cmdarg)
 {
     cmdarg = cmdarg;
-    done = 1;
+    shDone = 1;
     return 1;
 }
 
@@ -934,12 +933,12 @@ int cmd_reload(struct cmdarg *cmdarg,
 
 static void shell_end(int sig) 
 {
-    done = 1;
-    printf("sig %d\n", ccnt);
-    ccnt--;
-    if (sig > 0) 
-        signal(sig, shell_end);
+    if (sig > 0) {
+        signal(sig, SIG_DFL);
+        shDone = 1;
+    }
 }
+
 
 
 static void init_commands(void) 
@@ -1056,6 +1055,7 @@ int init_shell_data(struct pkgset *ps, struct inst_s *inst, int skip_installed)
     return 1;
 }
 
+
 int shell_exec(struct pkgset *ps, struct inst_s *inst, int skip_installed,
                const char *cmd) 
 {
@@ -1103,8 +1103,8 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
     printf(_("\nWelcome to the poldek shell mode. "
              "Type \"help\" for help with commands.\n\n"));
 
-    done = 0;
-    while (!done && ccnt >= 0) {
+    shDone = 0;
+    while (!shDone) {
         if ((line = readline("poldek> ")) == NULL)
             break;
         

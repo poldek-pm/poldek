@@ -9,17 +9,18 @@ poldek - rpm packages management helper tool
 =head1 SYNOPSIS
 
 poldek [--source=SOURCE ...] [OPTION...] [PACKAGE...]
-poldek [--source=SOURCE ...] --shell
+
+poldek [--source=SOURCE ...] 
 
 =head1 DESCRIPTION
 
 The poldek is designed to automate the verify, install and upgrade 
 of rpm packages. It can be used in two modes: batch and interactive mode. 
-It was inspired by L<apt_get(8)> from Debian's APT, the interactive mode 
+It was inspired by L<apt-get(8)> from Debian's APT, the interactive mode 
 was inspired by shell mode of Perl CPAN module ($ perl -MCPAN -e shell). 
 
 In general poldek gets packages information from special package index
-file (I<packages.dir> by default) and performs one of the following actions:
+file (I<packages.dir.gz> by default) and performs one of the following actions:
 
 =over
 
@@ -88,11 +89,7 @@ B<-P, --prefix> B<PREFIX>
 
 could be used to point packages one, e.g.:
 
-$ poldek -s /tmp/packages.dir --prefix=/cdrom/RPMS/ -s ... --prefix=...
-
-Another parameter is B<--cachedir=DIR>, which points to
-directory where fetched packages and indexes are 
-store (default is /tmp).
+$ poldek -s /tmp/packages.dir.gz --prefix=/cdrom/RPMS/ -s ... --prefix=...
 
 =head1 SPECIFING PACKAGES
 
@@ -104,17 +101,17 @@ Packages could be specified in three ways:
 
 $ poldek ...  ala-ma-kota-2.1-2.i386.rpm
 
-=item * as packages names with its name, or if EVR must be set, with:
+=item * as package name mask, or if EVR must be set, with:
 
 B<-n, --pkgnevr="NAME [[E:][V[-R]]]">
 
 for example:
 
-$ poldek ...  gzip ziptool 
+$ poldek ...  apache
+
+$ poldek ...  'apache*'
 
 $ poldek ... -n "apache 1.3.12" 
-
-$ poldek ... -n "Bezdany 1:908.9-26"
 
 =item * as package sets taken from pkgset files B<-p, --pkgset=FILE>,
 (see README.package-sets):
@@ -135,13 +132,23 @@ One of the following basic modes must be selected:
 =item B<--mkidx[z][=FILE]>  
 
 Build package index, by default it's stored in SOURCE/packages.dir[.gz].
-The other two files are created: packages.dir.md with computed packages.dir 
+The other two files are created: packages.dir.mdd with computed packages.dir's 
 digest and packages.dir.toc[.gz] with packages NAME-EVR per line.
 I<NOTE>: SOURCE must be directory.
 
-=item B<--update>   
+If there is existing SOURCE/packages.dir[.gz] and it is diffrent from
+current SOURCE/ content then program will create a "patch" file 
+as SOURCE/packages.i/packages.dir.diff.YYYY.MM.DD-HH.MM.SS.gz
+
+=item B<--update>; B<--update-whole>   
 
 Resynchronize the package index from its source and verify it. 
+
+With B<--update> program looking up "patches" for existing local
+packages.dir, if it fails, then whole packages.dir is downloaded.
+
+With B<--update-whole> program updates whole packages.dir
+
 For local sources it only verifies packages.dir using its digest
 from packages.dir.md. 
 
@@ -164,7 +171,6 @@ on the system from the specified source (see L</SOURCE>).
 
 Install or upgrade given packages.
 
-
 =item B<--shcmd=COMMAND>
 
 Run interactive mode command and exit.
@@ -172,6 +178,7 @@ Run interactive mode command and exit.
 =item B<--shell>
 
 Run poldek in interactive mode. Type "help" after running for available commands. 
+This is the default poldek's mode. 
 
 =item B<--split=SIZE[:FIRST_FREE_SPACE]  [--split-conf=FILE] [--split-out=PREFIX]>
 
@@ -255,6 +262,20 @@ Do not install packages, but tell if it would work or not. Given once
 causes poldek's checks only, to perform full tests using rpm option
 must be given twice.
 
+=head1 OTHER OPTIONS
+
+=over
+
+=item B<--cachedir=DIR>
+
+DIR points to directory where downloaded files will be stored;
+the default is $HOME/.poldek; if set $TMPDIR is used.
+
+=item B<--log=FILE>
+
+Log all poldek's messages to FILE
+
+=back
 
 =head1 COOPERATING WITH RPM
 
@@ -425,7 +446,7 @@ $ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/packages.dir
   --upgrade-dist --test
 
 
-=head2 Install/upgrade custom packages:
+=head2 Install/upgrade particular packages:
 
 $ poldek -s ftp://ftp.znienacka.com/PLD/RPMS/
 -U apache -n "ala-ma-kota 1.2" smail-12-389.i386.rpm
@@ -436,6 +457,13 @@ $ poldek -s ftp://ftp.dudy.net/RPMS/ -ti xteddy
 
 $ poldek --split=100 --split-conf=zip-split.conf \
    --split-out=/tmp/zipchunk
+
+
+=head2 Execute shell command:
+
+$ poldek --shcmd='ls -lt' | less
+
+
 
 =head1 ENVIROMENT
 
@@ -490,7 +518,8 @@ watchfull. Remember, that there is I<NO WARRANTY OF ANY KIND> and enjoy.
 
 =head1 LICENSE
 
-This program is distributed under the terms of GNU General Public License.
+This program is distributed under the terms of GNU General Public 
+License, version 2.
 
 =head1 AUTHOR
 
