@@ -258,6 +258,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case ARGP_KEY_ARG:
+            DBGF("main.arg %s\n", arg);
             if (argsp->eat_args) {
                 argsp->argv[argsp->argc++] = arg;
 

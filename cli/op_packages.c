@@ -86,6 +86,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
         
         case ARGP_KEY_ARG:
+            DBGF("op_packages.arg %s\n", arg);
+            
             if (strncmp(arg, "--rpm-", 6) != 0 && strncmp(arg, "rpm--", 5) != 0)
                 poldek_ts_add_pkgfile(rt->ts, arg);
             

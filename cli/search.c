@@ -165,6 +165,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case ARGP_KEY_ARG:
             if (arg == NULL)
                 break;
+            DBGF("search.arg (%s)\n", arg);
             
             if (poldek_ts_get_arg_count(cmdctx->ts) == 0 && cmdctx->_data == NULL) {
                 struct pattern   *pt;

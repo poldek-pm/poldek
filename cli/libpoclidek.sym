@@ -16,7 +16,7 @@ poclidek_chdir
 poclidek_cmd_ncmp
 poclidek_dent_dirpath
 poclidek_dent_find
-poclidek_dent_init
+poclidek_dent_root
 poclidek_exec
 poclidek_execline
 poclidek_free

@@ -119,6 +119,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         
             
         case ARGP_KEY_ARG:
+            DBGF("cli.arg %s\n", arg);
             if (flags & COMMAND_NOARGS) {
                 argp_usage (state);
                 sh_cmdctx->err = 1; 
@@ -540,7 +541,7 @@ static char **a_argv_to_argv(tn_array *a_argv, char **argv)
     int i;
     for (i=0; i < n_array_size(a_argv); i++) {
         argv[i] = n_array_nth(a_argv, i);
-        //printf("  %d. %s\n", j, argv[j]);
+        DBGF("  %d. (%s)\n", i, argv[i]);
     }
     argv[i] = NULL;
     return argv;
@@ -559,6 +560,7 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     
     DBGF("ent %s, %d, %p\n", ent->cmd->name, n_array_size(ent->a_argv),
          ent->next_piped);
+
     
     
     memset(&cmdctx, 0, sizeof(cmdctx));

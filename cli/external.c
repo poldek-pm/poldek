@@ -40,6 +40,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     struct cmdctx *cmdctx = state->input;
 
     if (key == ARGP_KEY_ARG) {
+        DBGF("external.arg %s\n", arg);
         if (cmdctx->_data == NULL)
             cmdctx->_data = n_array_new(4, free, NULL);
         n_array_push(cmdctx->_data, n_strdup(arg));

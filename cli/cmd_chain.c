@@ -243,18 +243,19 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
         if (n_array_size(a_argv) > 1) { /* any arguments? -> pass them */
             char *line;
             int i, n, len;
-
+            
             len = strlen(cmd->cmdline) + 1;
             /* from 1 -- skip alias */
             for (i=1; i < n_array_size(a_argv); i++)
-                len += strlen((char*)n_array_nth(a_argv, i)) + 1; /* plus space */
+                       /* + quotes + space */
+                len += strlen((char*)n_array_nth(a_argv, i)) + 2 + 1; 
             len++;
         
             line = alloca(len);
             n = n_snprintf(line, len, "%s", cmd->cmdline);
         
             for (i=1; i < n_array_size(a_argv); i++)
-                n += n_snprintf(&line[n], len - n, " %s",
+                n += n_snprintf(&line[n], len - n, " '%s'",
                                 (char*)n_array_nth(a_argv, i));
             cmdline = line;
         }
@@ -272,8 +273,8 @@ tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
 {
     tn_array  *arr, *tl;
     int       i, is_err = 0;
-    
-    if ((tl = n_str_etokl(line)) == NULL) {
+
+    if ((tl = n_str_etokl_ext(line, "\t ", ";|", "\"'", '\\')) == NULL) {
         logn(LOGERR, _("%s: parse error"), line);
         return NULL;
     }

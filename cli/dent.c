@@ -459,6 +459,19 @@ struct pkg_dent *poclidek_dent_find(struct poclidek_ctx *cctx, const char *path)
     return get_dir_dent(cctx, cctx->currdir, path);
 }
 
+
+struct pkg_dent *poclidek_dent_root(struct poclidek_ctx *cctx)
+{
+    if (cctx->rootdir == NULL) {
+        poclidek_load_packages(cctx, 0);
+        if (cctx->rootdir == NULL)
+            return NULL;
+    }
+    
+    return cctx->rootdir;
+}
+
+
 tn_array *poclidek_get_dent_ents(struct poclidek_ctx *cctx, const char *path)
 {
     struct pkg_dent *ent;

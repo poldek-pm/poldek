@@ -60,6 +60,7 @@ char *poclidek_dent_dirpath(char *path, int size, const struct pkg_dent *dent);
 tn_array *poclidek_get_dent_ents(struct poclidek_ctx *cctx, const char *dir);
 tn_array *poclidek_get_dent_packages(struct poclidek_ctx *cctx, const char *dir);
 
+struct pkg_dent *poclidek_dent_root(struct poclidek_ctx *cctx);
 struct pkg_dent *poclidek_dent_find(struct poclidek_ctx *cctx, const char *path);
 
 tn_array *poclidek_resolve_dents(const char *path, struct poclidek_ctx *cctx,

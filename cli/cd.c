@@ -44,7 +44,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct cmdctx *cmdctx = state->input;
 
-    
+    DBGF("cd.arg %s\n", arg);
     if (key == ARGP_KEY_ARG) {
         if (cmdctx->_data == NULL)
             cmdctx->_data = n_strdup(arg);

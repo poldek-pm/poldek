@@ -375,6 +375,7 @@ int poclidek_shell(struct poclidek_ctx *cctx)
             add_history(s);
             //print_mem_info("BEFORE");
             shInCmd = 1;
+            DBGF("(%s)\n", s);
             poclidek_execline(cctx, NULL, s);
             sigint_reset();
             shDone = 0;
