@@ -339,10 +339,13 @@ tn_array *poclidek_get_dents(struct poclidek_ctx *cctx, const char *path)
 {
     tn_array *ents = NULL;
     void *currdir = cctx->currdir;
-
+    
     if (path && (n_str_eq(path, ".") || n_str_eq(path, "")))
         path = NULL;
 
+    if (path == NULL)
+        poclidek_load_packages(cctx, 1);
+    
     if (path == NULL || (path && poclidek_chdir(cctx, path)))
         ents = cctx->currdir->pkg_dent_ents;
         
