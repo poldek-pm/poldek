@@ -11,6 +11,7 @@ stamp-h.in
 config.h
 config.h.in
 stamp-h
+stamp-h1
 missing
 mkinstalldirs
 install-sh
