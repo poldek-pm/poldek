@@ -39,6 +39,8 @@
 #include "capreq.h"
 #include "pkgroup.h"
 
+const char *pkgstore_DEFAULT_ARCH = "noarch";
+const char *pkgstore_DEFAULT_OS = "linux";
 
 static
 int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf) 
@@ -246,11 +248,10 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     if ((flags & PKGDIR_CREAT_PKG_NOOS) == 0 && pkg->os)
         n_buf_printf(nbuf, "O: %s\n", pkg->os);
     
-    
-    
     if (flags & PKGDIR_CREAT_PKG_Fv017) {
         n_buf_printf(nbuf, "F:\n");
-        store_pkg_fields_v0_17(nbuf, pkg->size, pkg->fsize, pkg->btime, pkg->groupid);
+        store_pkg_fields_v0_17(nbuf, pkg->size, pkg->fsize, pkg->btime,
+                               pkg->groupid);
         
     } else {
         n_buf_printf(nbuf, "f:\n");

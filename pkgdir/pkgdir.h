@@ -152,11 +152,10 @@ int pkgdir_rmf(const char *dirpath, const char *mask);
 int pkgdir_make_idx_url(char *durl, int size,
                         const char *url, const char *filename);
 
-/* pkg's stuff */
 struct pkg;
 
-#define PKGSTORE_DEFAULT_ARCH  "noarch"
-#define PKGSTORE_DEFAULT_OS    "linux"
+extern const char *pkgstore_DEFAULT_ARCH;
+extern const char *pkgstore_DEFAULT_OS;
 
 #define PKGSTORE_NODESC            (1 << 0)
 

@@ -536,12 +536,15 @@ struct pkg *pkg_ldtags(struct pkg *pkg,
         pkg->fsize = pkgt->fsize;
         pkg->btime = pkgt->btime;
         
-        
+        n_assert(os == NULL);
+        n_assert(arch == NULL);
+#if 0  /* os && arch should be included in given pkg */
         if (os && pkg->os == NULL)
             pkg->os = n_strdup(os);
 
         if (arch && pkg->arch == NULL)
             pkg->arch = n_strdup(arch);
+#endif        
     }
     
     pkg->groupid = pkgt->groupid;

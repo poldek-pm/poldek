@@ -207,10 +207,10 @@ int pndir_make_pkgkey(char *key, size_t size, const struct pkg *pkg)
 
     nn = n;
 
-    if (pkg->arch && strcmp(pkg->arch, PKGSTORE_DEFAULT_ARCH) != 0)
+    if (pkg->arch && strcmp(pkg->arch, pkgstore_DEFAULT_ARCH) != 0)
         n += n_snprintf(&key[n], size - n, "%s", pkg->arch);
 
-    if (pkg->os && strcmp(pkg->os, PKGSTORE_DEFAULT_OS) != 0)
+    if (pkg->os && strcmp(pkg->os, pkgstore_DEFAULT_OS) != 0)
         n += n_snprintf(&key[n], size - n, ":%s", pkg->os);
 
 
@@ -225,8 +225,8 @@ int pndir_make_pkgkey(char *key, size_t size, const struct pkg *pkg)
 
 struct pkg *pndir_parse_pkgkey(char *key, int klen)
 {
-    char        *name, *arch = NULL, *os = NULL;
-    const char  *ver, *rel;
+    char        *name;
+    const char  *ver, *rel, *arch = NULL, *os = NULL;
     char        *evr, *buf, *p;
     int32_t     epoch;
     
@@ -270,10 +270,10 @@ struct pkg *pndir_parse_pkgkey(char *key, int klen)
     }
 
     if (os == NULL)
-        os = PKGSTORE_DEFAULT_OS;
-
+        os = pkgstore_DEFAULT_OS;
+    
     if (arch == NULL)
-        arch = PKGSTORE_DEFAULT_ARCH;
+        arch = pkgstore_DEFAULT_ARCH;
     
     return pkg_new(name, epoch, ver, rel, arch, os); 
 }
