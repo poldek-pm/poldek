@@ -32,8 +32,6 @@
 
 extern void *pkg_alloc(size_t size);
 
-#define ps_verify_mode(ps) ((ps)->flags & PSMODE_VERIFY)
-
 static
 int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict, 
                   struct pkg *suspkgs[], int npkgs);
@@ -42,7 +40,6 @@ static
 int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
                    struct pkg *suspkgs[], int npkgs);
 
-static 
 int pkgset_verify_conflicts(struct pkgset *ps, int strict);
 
 
@@ -99,14 +96,14 @@ void mark_badreqs(struct pkgset *ps)
 {
     int i, deep = 1;
 
-    if (ps_verify_mode(ps))
+    if (ps->flags & PSVERIFY_DEPS)
         msg(2, "Packages with unsatisfied dependencies:\n");
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         if (pkg_has_badreqs(pkg)) {
             ps->nerrors++;
             pkg_clr_badreqs(pkg);
-            visit_badreqs(pkg, deep, ps_verify_mode(ps));
+            visit_badreqs(pkg, deep, ps->flags & PSVERIFY_DEPS);
         }
     }
 }
@@ -118,7 +115,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
     int i, j, nerrors = 0;
 
 
-    if (ps_verify_mode(ps))
+    if (ps->flags & PSVERIFY_DEPS)
         msg(1, "\nVerifying dependencies...\n");
     
     for (i=0; i<n_array_size(ps->pkgs); i++) {
@@ -155,7 +152,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
             nerrors++;
             if (verbose > 3)
                 msg(4, " req %-35s --> NOT FOUND\n", capreq_snprintf_s(req));
-            else if (ps_verify_mode(ps))
+            else if (ps->flags & PSVERIFY_DEPS)
                 log(LOGERR, "%s: req %s not found\n", pkg_snprintf_s(pkg),
                     capreq_snprintf_s(req));
             pkg_set_badreqs(pkg);
@@ -163,7 +160,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
             
         l_err_match:
             nerrors++;
-            if (verbose < 3 && ps_verify_mode(ps))
+            if (verbose < 3 && (ps->flags & PSVERIFY_DEPS))
                 log(LOGERR, "%s: req %s not matched\n", pkg_snprintf_s(pkg),
                     capreq_snprintf_s(req));
             
@@ -172,13 +169,10 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
     }
 
     mark_badreqs(ps);
-    if (nerrors && ps_verify_mode(ps)) 
+    if (nerrors && (ps->flags & PSVERIFY_DEPS)) 
         msg(1,"%d unsatisfied dependencies, %d packages cannot be installed\n",
             nerrors, ps->nerrors);
 
-    if (ps_verify_mode(ps))
-        msg(1, "\nVerifying packages conflicts...\n");
-    pkgset_verify_conflicts(ps, strict);
     return nerrors == 0;
 }
 
@@ -296,6 +290,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         *npkgs = 0;
     }
     
+    
     return matched;
 }
 
@@ -310,6 +305,7 @@ int psreq_match_pkgs(struct pkg *pkg, struct capreq *req, int strict,
     
     n = 0;
     nmatch = 0;
+    
     for (i = 0; i < npkgs; i++) {
         struct pkg *spkg = suspkgs[i];
         
@@ -320,14 +316,14 @@ int psreq_match_pkgs(struct pkg *pkg, struct capreq *req, int strict,
         msg(4, "_%s, ", pkg_snprintf_s(spkg));
         nmatch++;
         
-        if (spkg != pkg) /* do not add itself */
+        if (spkg != pkg) { /* do not add itself */
             matches[n++] = spkg;
-#if 0 /* too many packages requires itself  */
-        else {
-            log(LOGERR, "\n");
-            log(LOGERR, "%s: requires itself\n", pkg_snprintf_s(pkg));
+            
+        } else {
+            n = 0;
+            break;
+            //log(LOGERR, "%s: requires itself\n", pkg_snprintf_s(pkg));
         }
-#endif        
     }
 
     if (n > 1) 
@@ -432,11 +428,9 @@ int cnflpkg_cmp(struct cnflpkg *p1, struct cnflpkg *p2)
 }
 
 
-static 
-int pkgset_verify_conflicts(struct pkgset *ps, int mmode) 
+int pkgset_verify_conflicts(struct pkgset *ps, int strict) 
 {
     int i, j;
-    
     
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg;
@@ -456,7 +450,7 @@ int pkgset_verify_conflicts(struct pkgset *ps, int mmode)
             cnflname = capreq_name(cnfl);
             
             if ((ent = capreq_idx_lookup(&ps->cap_idx, cnflname))) {
-                if (setup_cnfl_pkgs(pkg, cnfl, mmode,
+                if (setup_cnfl_pkgs(pkg, cnfl, strict,
                                    (struct pkg **)ent->pkgs, ent->items)) {
                     continue;
                 }
@@ -467,7 +461,7 @@ int pkgset_verify_conflicts(struct pkgset *ps, int mmode)
         }
     }
 
-    if (verbose > 1 && ps_verify_mode(ps)) {
+    if (verbose > 1 && (ps->flags & PSVERIFY_CNFLS)) {
         int j;
         for (i=0; i<n_array_size(ps->pkgs); i++) {
             struct pkg *pkg = n_array_nth(ps->pkgs, i);

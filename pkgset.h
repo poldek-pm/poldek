@@ -78,15 +78,19 @@ void inst_s_init(struct inst_s *inst);
  *   while capability hasn't (RPM style)
  * - files with diffrent mode only not assumed as conflicts
  */
-#define PSVERIFY_MERCY       (1 << 0)
+#define PSVERIFY_MERCY        (1 << 0)
 
-#define PSMODE_VERIFY        (1 << 1)
-#define PSMODE_MKIDX         (1 << 2)
-#define PSMODE_INSTALL       (1 << 3)
-#define PSMODE_INSTALL_DIST  (1 << 4)
+#define PSVERIFY_DEPS         (1 << 1)
+#define PSVERIFY_CNFLS        (1 << 2)
+#define PSVERIFY_FILECNFLS    (1 << 3)
 
-#define PSMODE_UPGRADE       (1 << 5)
-#define PSMODE_UPGRADE_DIST  (1 << 6)
+#define PSMODE_VERIFY        (1 << 11)
+#define PSMODE_MKIDX         (1 << 12)
+#define PSMODE_INSTALL       (1 << 13)
+#define PSMODE_INSTALL_DIST  (1 << 14)
+
+#define PSMODE_UPGRADE       (1 << 15)
+#define PSMODE_UPGRADE_DIST  (1 << 16)
 
 struct pkgset *pkgset_new(unsigned psoptflags);
 void pkgset_free(struct pkgset *ps);

@@ -407,7 +407,7 @@ int pkgset_setup(struct pkgset *ps)
     pkgset_index(ps);
     mem_info(1, "MEM after index");
 
-    if ((ps->flags & PSMODE_VERIFY)) {
+    if (ps->flags & PSVERIFY_FILECNFLS) {
         msg(1, "\nVerifying files conflicts...\n");
         file_index_find_conflicts(&ps->file_idx, strict);
     }
@@ -415,6 +415,10 @@ int pkgset_setup(struct pkgset *ps)
     pkgset_verify_deps(ps, strict);
     mem_info(1, "MEM after verify deps");
 
+    if (ps->flags & PSVERIFY_CNFLS)
+        msg(1, "\nVerifying packages conflicts...\n");
+    pkgset_verify_conflicts(ps, strict);
+    
     pkgset_order(ps);
     mem_info(1, "MEM after order");
 
@@ -427,7 +431,7 @@ int pkgset_setup(struct pkgset *ps)
 /*
  * Instalation
  */ 
-static void visit_mark_reqs(struct pkg *pkg, int deep) 
+static void visit_mark_reqs(struct pkg *parent_pkg, struct pkg *pkg, int deep) 
 {
     int i;
     
@@ -435,7 +439,9 @@ static void visit_mark_reqs(struct pkg *pkg, int deep)
         return;
     
     if (pkg_isnot_marked(pkg)) {
-        msg_i(1, deep, "mark %s\n", pkg_snprintf_s(pkg));
+        n_assert(parent_pkg != NULL);
+        msg_i(1, deep, "%s marks %s\n", pkg_snprintf_s(parent_pkg),
+              pkg_snprintf_s0(pkg));
         pkg_dep_mark(pkg);
     }
     
@@ -466,7 +472,7 @@ static void visit_mark_reqs(struct pkg *pkg, int deep)
                 }
 
                 if (markit)
-                    visit_mark_reqs(rpkg->pkg, deep);
+                    visit_mark_reqs(pkg, rpkg->pkg, deep);
             }
         }
     }
@@ -481,10 +487,8 @@ int mark_dependencies(struct pkgset *ps, unsigned instflags)
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
     
-        if (pkg_is_hand_marked(pkg)) {
-            msg(1, "%s\n", pkg_snprintf_s(pkg));
-            visit_mark_reqs(pkg, 1);
-        }
+        if (pkg_is_hand_marked(pkg)) 
+            visit_mark_reqs(NULL, pkg, 0);
     }
 
     for (i=0; i<n_array_size(ps->pkgs); i++) {
@@ -492,9 +496,11 @@ int mark_dependencies(struct pkgset *ps, unsigned instflags)
 
         if (pkg_isnot_marked(pkg))
             continue;
-
-        if (pkg_has_badreqs(pkg))
+        
+        if (pkg_has_badreqs(pkg)) {
+            log(LOGERR, "%s: broken dependencies\n", pkg_snprintf_s(pkg));
             req_nerr++;
+        }
         
         if (pkg->cnflpkgs == NULL)
             continue;
@@ -502,7 +508,7 @@ int mark_dependencies(struct pkgset *ps, unsigned instflags)
         for (j=0; j<n_array_size(pkg->cnflpkgs); j++) {
             struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
             if (pkg_is_marked(cpkg->pkg)) {
-                log(LOGERR, "Conflict %s <-> %s\n",pkg->name, cpkg->pkg->name);
+                log(LOGERR, "Conflict %s <-> %s\n", pkg->name, cpkg->pkg->name);
                 cnfl_nerr++;
             }
         }
@@ -638,8 +644,7 @@ void pkgset_unmark(struct pkgset *ps, unsigned flags)
 }
 
 
-__inline__
-static int mark_package(struct pkg *pkg, int nodeps) 
+inline static int mark_package(struct pkg *pkg, int nodeps)
 {
     if (pkg_has_badreqs(pkg) && nodeps == 0) {
         log(LOGERR, "mark: %s: broken dependencies\n", pkg_snprintf_s(pkg));
@@ -666,48 +671,6 @@ tn_array *pkgset_getpkgs(const struct pkgset *ps)
     return pkgs;
 }
 
-#if 0
-int pkgset_mark_pkg(struct pkgset *ps, const char *name, const char *ver) 
-{
-    int i, marked = 0;
-    struct pkg *pkg, tmpkg;
-
-    tmpkg.name = (char*)name;
-    n_array_sort(ps->pkgs);
-
-    i = n_array_bsearch_idx_ex(ps->pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
-    if (i < 0) {
-        log(LOGERR, "mark %s: not found\n", name);
-        return 0;
-    }
-    
-    pkg = n_array_nth(ps->pkgs, i);
-    if (ver == NULL) {     /* no version -> take the lastest */
-        marked = mark_package(ps, pkg);
-
-    } else {
-        if (strcmp(ver, pkg->ver) == 0) {
-            marked = mark_package(ps, pkg);
-            
-        } else {
-            i++;
-            while (i < n_array_size(ps->pkgs)) {
-                pkg = n_array_nth(ps->pkgs, i++);
-                
-                if (strcmp(pkg->name, name) != 0) 
-                    break;
-                
-                if (strcmp(ver, pkg->ver) == 0) {
-                    marked = mark_package(ps, pkg);
-                    break;
-                }
-            }
-        }
-    }
-
-    return marked;
-}
-#endif
 
 static
 int pkg_match_pkgdef(const struct pkg *pkg, const struct pkgdef *pdef) 
@@ -757,6 +720,7 @@ int pkgset_mark_pkgdef(struct pkgset *ps, const struct pkgdef *pdef,
     if (pkg_match_pkgdef(pkg, pdef)) {
         marked = mark_package(pkg, nodeps);
         matched = 1;
+        
     } else {
         i++;
         while (i < n_array_size(ps->pkgs)) {
@@ -839,7 +803,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                             break;
                         }
                     }
-
+                    
                     if (found == 0) {
                         pkg = n_array_nth(avpkgs, 0);
                         log(LOGWARN, "%s's default %s not found, "
@@ -869,7 +833,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
         msg(1, "\nProcessing dependencies...\n");
         if (!mark_dependencies(ps, nodeps))
             nerr++;
-    
+        
         if (nerr) {
             n_array_map(ps->pkgs, (tn_fn_map1)mapfn_unmark);
             log(LOGERR, "Buggy package set.\n");

@@ -94,7 +94,6 @@ struct args {
     unsigned   psflags;
     struct inst_s inst;
     
-    int               verify;
     struct usrpkgset  *ups;
     
     char        *conf_path;
@@ -108,6 +107,10 @@ struct args {
 tn_hash *htcnf = NULL;          /* config file values */
 
 
+#define OPT_VERIFY_DEPS       'V'
+#define OPT_VERIFY_CNFLS      902
+#define OPT_VERIFY_FILECNFLS  903
+#define OPT_VERIFY_ALL        904
 
 #define OPT_MKIDX        1001
 #define OPT_MKIDXZ       1002
@@ -172,7 +175,10 @@ static struct argp_option options[] = {
  "Store fetched packages and indexes under DIR (default is /tmp or if set, $TMPDIR)", 1 },    
   
 {0,0,0,0, "Verify options:", 50 },        
-{"verify",  'V', 0, 0, "Verify package set", 50 },
+{"verify",  OPT_VERIFY_DEPS, 0, 0, "Verify package dependencies", 50 },
+{"verify-conflicts",  OPT_VERIFY_CNFLS, 0, 0, "Verify package conflicts", 50 },
+{"verify-fileconflicts",  OPT_VERIFY_FILECNFLS, 0, 0, "Verify package file conflicts", 50 },
+{"verify-all",  OPT_VERIFY_ALL, 0, 0, "Verify dependencies, conflicts and file conflicts", 50 },
 {"mercy",   'm', 0, 0, "Be tolerant for bugs which RPM tolerates", 50 },
 
 
@@ -277,7 +283,7 @@ void check_mjrmode(struct args *argsp)
 {
     if (argsp->mjrmode) {
         log(LOGERR,
-     "only one mode of mkidx, update, verify, install*, upgrade*, split, or shell\n"
+     "only one mode of mkidx, update, verify*, install*, upgrade*, split, or shell\n"
      "may be specified\n");
         exit(EXIT_FAILURE);
     }
@@ -386,10 +392,39 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_SOURCECACHE:
             argsp->inst.cachedir = trimslash(arg);
             break;
+
+        case 'm':
+            argsp->psflags |= PSVERIFY_MERCY;
+            break;
+
             
-        case 'V':
-            argsp->verify = 1;
-            check_mjrmode(argsp);
+        case OPT_VERIFY_DEPS:
+            argsp->psflags |= PSVERIFY_DEPS;
+            if (argsp->mjrmode != MODE_VERIFY)
+                check_mjrmode(argsp);
+            argsp->mjrmode = MODE_VERIFY;
+            break;
+
+        case OPT_VERIFY_CNFLS:
+            argsp->psflags |= PSVERIFY_CNFLS;
+            if (argsp->mjrmode != MODE_VERIFY)
+                check_mjrmode(argsp);
+            argsp->mjrmode = MODE_VERIFY;
+            break;
+
+        case OPT_VERIFY_FILECNFLS:
+            argsp->psflags |= PSVERIFY_FILECNFLS;
+            if (argsp->mjrmode != MODE_VERIFY)
+                check_mjrmode(argsp);
+            argsp->mjrmode = MODE_VERIFY;
+            break;
+
+        case OPT_VERIFY_ALL:
+            argsp->psflags |= PSVERIFY_DEPS | PSVERIFY_CNFLS |
+                PSVERIFY_FILECNFLS;
+            
+            if (argsp->mjrmode != MODE_VERIFY)
+                check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
             break;
             
@@ -405,10 +440,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->shell_skip_installed = 1;
             break;
 #endif            
-        case 'm':
-            argsp->psflags |= PSVERIFY_MERCY;
-            break;
-
+        
         case OPT_MKIDX:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_MKIDX;
@@ -727,7 +759,7 @@ void parse_options(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
     
-    if (args.verify && args.has_pkgdef == 0)
+    if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0)
         args.psflags |= PSMODE_VERIFY;
 
     args.has_pkgdef = n_array_size(args.pkgdef_sets) +
@@ -1072,7 +1104,7 @@ int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     int markflag = MARK_USET;
     
     if (mjrmode == MODE_VERIFY && verbose < 2 && verbose != -1) 
-        verbose = 2;
+        verbose = 1;
 
     if (mjrmode == MODE_VERIFY || mjrmode == MODE_INSTALLDIST)
         markflag = MARK_DEPS;
