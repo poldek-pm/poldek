@@ -561,7 +561,7 @@ int i_pkgdir_verify_md5(const char *title, const char *pathname)
     if (title == NULL || *title == '\0')
         title = pathname;
     
-    msgn(2, _("Verifying integrity of %s..."), title);
+    msgn(3, _("Verifying integrity of %s..."), title);
     md1_size = sizeof(md1);
     mhexdigest(stream, md1, &md1_size, DIGEST_MD5);
     fclose(stream);
