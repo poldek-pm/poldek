@@ -128,6 +128,11 @@ void vlog(int pri, int indent, const char *fmt, va_list args)
 
                 fprintf(l_fstream, "%s", timbuf);
             }
+            if (pri & LOGERR)
+                fprintf(l_fstream, "%s", _("error: "));
+            else if (pri & LOGWARN)
+                fprintf(l_fstream, "%s", _("warn: "));
+            
             fprintf(l_fstream, "%s", buf);
             vfprintf(l_fstream, fmt, args);
             fflush(l_fstream);
