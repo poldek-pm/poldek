@@ -50,7 +50,7 @@ struct pattern {
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int search(struct cmdarg *cmdarg);
 
-#define OPT_PATTERN_PCRE   (1 << 20)
+#define OPT_PATTERN_PCRE   (1 << 10)
 
 #define OPT_SEARCH_CAP     (1 << 0)
 #define OPT_SEARCH_REQ     (1 << 1)
@@ -71,7 +71,6 @@ static int search(struct cmdarg *cmdarg);
 #define OPT_SEARCH_HDD     (OPT_SEARCH_SUMM | OPT_SEARCH_DESC | OPT_SEARCH_FL)  
 
 static struct argp_option options[] = {
-    { "perlre",    OPT_PATTERN_PCRE, 0, 0, N_("Thread PATTERN as Perl regular expression"), 1},
     { "provides",  'p', 0, 0, N_("Search capabilities"), 1},
     { "requires",  'r', 0, 0, N_("Search requirements"), 1},
     { "conflicts", 'c', 0, 0, N_("Search conflicts"), 1},
@@ -84,6 +83,7 @@ static struct argp_option options[] = {
     { "all",       'a', 0, 0,
       N_("Search all described fields, the defaults are: -sd"), 1
     },
+    { "perlre",    OPT_PATTERN_PCRE, 0, 0, N_("Threat PATTERN as Perl regular expression"), 1},
     {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
     { 0, 0, 0, 0, 0, 0 },
 };
