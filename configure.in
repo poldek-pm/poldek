@@ -8,9 +8,15 @@ VERSION=0.17.9.1
 VERSION_STATUS="devel"
 VERSION_CVSTAG="v$(echo $VERSION | sed 's/\./_/g')"
 PACKAGE=poldek
+AH_TEMPLATE([ENABLE_TRACE],[])
+AH_TEMPLATE([HAVE_RPM_4_0_4],[])
+AH_TEMPLATE([HAVE_RPM_4_1],[])
+AH_TEMPLATE([HAVE_RPM_EXTDEPS],[])
+AH_TEMPLATE([HAVE_TM_GMTOFF],[])
+AH_TEMPLATE([HAVE_TM___GMTOFF],[])
 
 AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
-AC_DEFINE_UNQUOTED(VERSION_STATUS, "$VERSION_STATUS")
+AC_DEFINE_UNQUOTED([VERSION_STATUS], "$VERSION_STATUS",[stable or devel version])
 AC_SUBST(VERSION_CVSTAG)
 #AC_CONFIG_HEADERS([config.h])
 AM_CONFIG_HEADER([config.h])
@@ -19,7 +25,7 @@ ALL_LINGUAS="pl de"
 
 
 AM_CFLAGS="-g -Wall -W"
-AC_DEFINE(ENABLE_VFILE_RPMIO)
+AC_DEFINE([ENABLE_VFILE_RPMIO],1,[defined if rpmio is used for vfile operations])
 
 dnl Checks for programs.
 AC_PROG_CC()
@@ -27,8 +33,8 @@ AC_C_INLINE
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 AC_CHECK_PROG(POD2MAN, pod2man, pod2man)
-AM_GNU_GETTEXT
-AM_GNU_GETTEXT_VERSION(0.10.38)
+AM_GNU_GETTEXT([external])
+AM_GNU_GETTEXT_VERSION(0.11.5)
 
 dnl Process features.
 AC_CHECK_LIB(tinfo, tigetstr,,[
@@ -53,12 +59,12 @@ else
 			         [CPPFLAGS="-I/usr/include/pcre $CPPFLAGS"], )], )
 
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, true)
-	AC_DEFINE([ENABLE_INTERACTIVE_MODE])
+	AC_DEFINE([ENABLE_INTERACTIVE_MODE],1,[defined if interactive mode is requested])
 
 	AC_CHECK_FUNCS(rl_completion_matches, have_rl_4_2=yes, have_rl_4_2=no,
 		     $CONF_IN_LDFLAGS)
 	if test "${have_rl_4_2}." = "yes."; then
-		AC_DEFINE(HAVE_READLINE_4_2)
+		AC_DEFINE([HAVE_READLINE_4_2],1,[defined if readline 4.2 is avialiable])
 	fi
 fi
 
@@ -70,7 +76,7 @@ if test "${ENABLE_VFILE_CURL}." != "yes."; then
 else
 	AC_CHECK_LIB(curl, curl_easy_init,,AC_MSG_ERROR(["libcurl not found"]))
 	AM_CONDITIONAL(ENABLE_VFILE_CURL, true)
-	AC_DEFINE(ENABLE_VFILE_CURL)
+	AC_DEFINE([ENABLE_VFILE_CURL],1,[defined if curl support is requested])
 fi
 
 
@@ -84,7 +90,7 @@ AC_ARG_ENABLE(static,
 ENABLE_STATIC=$enableval, ENABLE_STATIC=no)
 
 if test "${ENABLE_STATIC}." = "yes."; then
-	AC_DEFINE(ENABLE_STATIC)
+	AC_DEFINE([ENABLE_STATIC],1, [defined if static linking is requested])
 	poldek_LDFLAGS="-static"
 
 	if test "${INTERACTIVE_MODE}." = "yes."; then
@@ -104,7 +110,7 @@ AC_ARG_ENABLE(trace,
 ENABLE_TRACE=$enableval, ENABLE_TRACE=no)
 
 if test "${ENABLE_TRACE}." = "yes."; then
-	AC_DEFINE(ENABLE_TRACE)
+	AC_DEFINE([ENABLE_TRACE],1,[])
 fi
 
 
@@ -119,8 +125,8 @@ AC_HEADER_TIME
 
 
 AC_CHECK_MEMBER(struct tm.tm_gmtoff,
-	[AC_DEFINE(HAVE_TM_GMTOFF)],
-	[AC_CHECK_MEMBER(struct tm.__tm_gmtoff,[ AC_DEFINE(HAVE_TM___GMTOFF)]
+	[AC_DEFINE([HAVE_TM_GMTOFF],1,[])],
+	[AC_CHECK_MEMBER(struct tm.__tm_gmtoff,[ AC_DEFINE([HAVE_TM___GMTOFF],1,[])]
 	,,[#include <time.h>])],
 [#include <time.h>])
 
@@ -161,7 +167,7 @@ AC_EGREP_CPP(yes,
 
 if test ${is_rpm4}. = yes. ; then
 	AC_MSG_RESULT(yes)
-	AC_DEFINE([HAVE_RPM_4_0])
+	AC_DEFINE([HAVE_RPM_4_0],1,[defined if rpm 4.x is installed])
 	AC_EGREP_CPP(RPMSENSE_SCRIPT_PRE,
 		[ #include <rpm/rpmlib.h>
 		], is_rpm_extdeps=yes, is_rpm_extdeps=no)
@@ -175,7 +181,7 @@ if test ${is_rpm4}. = yes. ; then
 		], is_rpm4_0_4=yes, is_rpm4_0_4=no)
 
 	if test ${is_rpm4_0_4}. = yes. ; then
-		AC_DEFINE([HAVE_RPM_4_0_4])
+		AC_DEFINE([HAVE_RPM_4_0_4],1,[])
 		CFLAGS="$CFLAGS -D_REENTRANT"
 		AC_MSG_RESULT(yes)
 	else 
@@ -265,7 +271,7 @@ AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="$LIBS -lrpm $DBLIB"],
 		[LIBS="$LIBS -lrpm -lrpmdb $DBLIB"],
 		AC_CHECK_LIB(rpm, rpmReadPackageFile,
 			[LIBS="$LIBS -lrpm -lrpmdb $DBLIB"
-			 AC_DEFINE([HAVE_RPM_4_1])],
+			 AC_DEFINE([HAVE_RPM_4_1],1,[])],
 			AC_MSG_ERROR(["rpmlib not found"]),
 			[$DBLIB -lrpmdb]),
 		[$DBLIB -lrpmdb]),
@@ -294,7 +300,7 @@ AC_CHECK_FUNCS(fopencookie,, [AC_MSG_WARN(["disabled gzipped files support"])],
 
 AC_CHECK_FUNCS(openpty,,
 	       AC_CHECK_LIB(util, openpty, 
-	[AC_DEFINE(HAVE_OPENPTY)] [LIBS="$LIBS -lutil"]))
+	[AC_DEFINE([HAVE_OPENPTY],1,[defined if openpty() is avialable])] [LIBS="$LIBS -lutil"]))
 
 AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
 	[AC_MSG_WARN("[poldek will not work fine with rpmlib\(...\) capabilities"])],
@@ -336,7 +342,6 @@ else
 fi
 
 AC_CONFIG_FILES([  po/Makefile.in
-		intl/Makefile
 		shell/Makefile
 		vfile/Makefile
 		vfile/vftp/Makefile

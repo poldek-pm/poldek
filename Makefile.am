@@ -1,8 +1,8 @@
 # $Id$
 
 AUTOMAKE_OPTIONS = 
-SUBDIRS   = @TRURL_DIR@ vfile shell po intl conf
-DIST_SUBDIRS = trurlib vfile shell po intl conf
+SUBDIRS   = @TRURL_DIR@ vfile shell po conf
+DIST_SUBDIRS = trurlib vfile shell po conf
 
 AM_CFLAGS    = @CFLAGS@
 INCLUDES  = @TRURL_INCLUDE@
