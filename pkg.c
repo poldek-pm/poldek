@@ -767,7 +767,7 @@ struct pkguinf *pkg_info(const struct pkg *pkg)
     if (pkg_has_ldpkguinf(pkg)) 
         pkgu = pkguinf_link(pkg->pkg_pkguinf);
     
-    else if (pkg->pkgdir)
+    else if (pkg->pkgdir && pkg->pkg_pkguinf_offs > 0)
         pkgu = pkguinf_restore(pkg->pkgdir->vf->vf_stream, pkg->pkg_pkguinf_offs);
     
     if (pkgu)

@@ -560,96 +560,102 @@ static void show_pkg(struct pkg *pkg, unsigned flags)
 
 static void show_description(struct pkg *pkg, unsigned flags) 
 {
-    struct pkguinf *pkgu;
+    struct pkguinf  *pkgu;
+    char            timbuf[30];
+    char            *unit = "kB";
+    const char      *group;
+    double          pkgsize;
 
-    if ((pkgu = pkg_info(pkg))) {
-        char timbuf[30];
-        char *unit = "kB";
-        const char *group;
-        double pkgsize;
+    
+    if ((pkgu = pkg_info(pkg)) == NULL) {
+        log(LOGERR, "%s: description unavailable (index without packages "
+            "info loaded?)\n", pkg_snprintf_s(pkg));
+        return;
+    }
+        
 
-        if (pkg->btime) 
-            strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
-                     localtime((time_t*)&pkg->btime));
-        else
-            *timbuf = '\0';
+    if (pkg->btime) 
+        strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
+                 localtime((time_t*)&pkg->btime));
+    else
+        *timbuf = '\0';
 
-        if (pkgu->summary) {
-            printf_c(PRCOLOR_CYAN, "%-16s", "Summary:");
-            printf("%s\n", pkgu->summary);
-        }
+    if (pkgu->summary) {
+        printf_c(PRCOLOR_CYAN, "%-16s", "Summary:");
+        printf("%s\n", pkgu->summary);
+    }
 
-	if ((group = pkg_group(pkg))) {
-            printf_c(PRCOLOR_CYAN, "%-16s", "Group:");
-            printf("%s\n", group);
-        }
+    if ((group = pkg_group(pkg))) {
+        printf_c(PRCOLOR_CYAN, "%-16s", "Group:");
+        printf("%s\n", group);
+    }
 
-        if (pkgu->vendor) {
-            printf_c(PRCOLOR_CYAN, "%-16s", "Vendor:");
-            printf("%s\n", pkgu->vendor);
-        }
+    if (pkgu->vendor) {
+        printf_c(PRCOLOR_CYAN, "%-16s", "Vendor:");
+        printf("%s\n", pkgu->vendor);
+    }
 
-        if (pkgu->license) {
-            printf_c(PRCOLOR_CYAN, "%-16s", "License:");
-            printf("%s\n", pkgu->license);
-        }
+    if (pkgu->license) {
+        printf_c(PRCOLOR_CYAN, "%-16s", "License:");
+        printf("%s\n", pkgu->license);
+    }
 
-        if (pkg->arch) {
-            char *p = "Arch:";
-            if (pkg->os) 
-                p = "Arch/OS:";
+    if (pkg->arch) {
+        char *p = "Arch:";
+        if (pkg->os) 
+            p = "Arch/OS:";
 
-            printf_c(PRCOLOR_CYAN, "%-16s", p);
-            printf("%s", pkg->arch);
+        printf_c(PRCOLOR_CYAN, "%-16s", p);
+        printf("%s", pkg->arch);
             
-            if (pkg->os) 
-                printf("/%s", pkg->os);
-            printf("\n");
-        }
+        if (pkg->os) 
+            printf("/%s", pkg->os);
+        printf("\n");
+    }
         
         
-        if (pkgu->url) {
-            printf_c(PRCOLOR_CYAN, "%-16s", "URL:");
-            printf("%s\n", pkgu->url);
-        }
+    if (pkgu->url) {
+        printf_c(PRCOLOR_CYAN, "%-16s", "URL:");
+        printf("%s\n", pkgu->url);
+    }
         	
         
-        if (*timbuf) {
-            printf_c(PRCOLOR_CYAN, "%-16s", "Built:");
-            printf("%s", timbuf);
-            if (pkgu->buildhost) 
-                printf(" at %s", pkgu->buildhost);
-            printf("\n");
-        }
-
-        pkgsize = pkg->size/1024;
-        if (pkgsize > 1000) {
-            pkgsize /= 1024;
-            unit = "MB";
-        }
-
-        printf_c(PRCOLOR_CYAN, "%-16s", "Size:");
-        printf("%.1f %s (%d B)\n", pkgsize, unit, pkg->size);
-
-        if (pkg->pkgdir && pkg->pkgdir->path) {
-            printf_c(PRCOLOR_CYAN, "%-16s", "Path:");
-            printf("%s\n", pkg->pkgdir->path);
-        }
-        
-        if (pkg->epoch) {
-            printf_c(PRCOLOR_CYAN, "%-16s", "Epoch:");
-            printf("%d\n", pkg->epoch);
-        }
-
-        show_pkg(pkg, flags);
-        
-        if (pkgu->description) {
-            printf_c(PRCOLOR_CYAN, "Description:\n");
-            printf("%s\n", pkgu->description);
-        }
-            
-        pkguinf_free(pkgu);
+    if (*timbuf) {
+        printf_c(PRCOLOR_CYAN, "%-16s", "Built:");
+        printf("%s", timbuf);
+        if (pkgu->buildhost) 
+            printf(" at %s", pkgu->buildhost);
+        printf("\n");
     }
+
+    pkgsize = pkg->size/1024;
+    if (pkgsize > 1000) {
+        pkgsize /= 1024;
+        unit = "MB";
+    }
+
+    printf_c(PRCOLOR_CYAN, "%-16s", "Size:");
+    printf("%.1f %s (%d B)\n", pkgsize, unit, pkg->size);
+
+    if (pkg->pkgdir && pkg->pkgdir->path) {
+        printf_c(PRCOLOR_CYAN, "%-16s", "Path:");
+        printf("%s\n", pkg->pkgdir->path);
+    }
+        
+    if (pkg->epoch) {
+        printf_c(PRCOLOR_CYAN, "%-16s", "Epoch:");
+        printf("%d\n", pkg->epoch);
+    }
+
+    show_pkg(pkg, flags);
+        
+    if (pkgu->description) {
+        printf_c(PRCOLOR_CYAN, "Description:\n");
+        printf("%s\n", pkgu->description);
+    }
+            
+    pkguinf_free(pkgu);
+
 }
 
 

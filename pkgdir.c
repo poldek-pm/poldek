@@ -853,7 +853,8 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
     if (pkgt->pkguinf_offs) {
         n_assert(pkg_has_ldpkguinf(pkg) == 0);
         pkg->pkg_pkguinf_offs = pkgt->pkguinf_offs;
-    } else {
+        
+    } else if (pkgt->pkguinf != NULL) {
         pkg->pkg_pkguinf = pkgt->pkguinf;
         pkg_set_ldpkguinf(pkg);
         pkgt->pkguinf = NULL;
