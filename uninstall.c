@@ -122,7 +122,8 @@ int mark_to_uninstall(struct dbpkg_set *set, struct pkgdb *db, struct inst_s *in
     if (inst->flags & INSTS_FOLLOW)
         for (i=0; i < n_array_size(set->dbpkgs); i++) {
             struct dbpkg *dbpkg = n_array_nth(set->dbpkgs, i);
-            n += visit_pkg(-2, dbpkg->pkg, NULL, db, set);
+            if ((dbpkg->flags & DBPKG_UNIST_NOTFOLLOW) == 0) 
+                n += visit_pkg(-2, dbpkg->pkg, NULL, db, set);
         }
     
     return n;
@@ -214,20 +215,35 @@ int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
         
                 
         dbpkgs = rpm_get_packages(db->dbh, pdef->pkg, uninst_LDFLAGS);
+        if (dbpkgs) {
+            int n;
+
+            for (i=0; i < n_array_size(dbpkgs); i++) {
+                struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
+
+                if (pkg_match_pkgdef(dbpkg->pkg, pdef)) {
+                    dbpkg->flags |= DBPKG_UNIST_MATCHED;
+                    nmatches++;
+                }
+            }
             
-        while (dbpkgs && n_array_size(dbpkgs) > 0) {
-            struct dbpkg *dbpkg = n_array_pop(dbpkgs);
+            n = n_array_size(dbpkgs);
+            while (n_array_size(dbpkgs) > 0) {
+                struct dbpkg *dbpkg = n_array_pop(dbpkgs);
+                    
+                if (nmatches != n)
+                    dbpkg->flags |= DBPKG_UNIST_NOTFOLLOW;
+
+                if (dbpkg->flags & DBPKG_UNIST_MATCHED)
+                    dbpkg_set_add(uninst_set, dbpkg);
+                else
+                    dbpkg_free(dbpkg);
+            }
             
-            if (pkg_match_pkgdef(dbpkg->pkg, pdef)) {
-                dbpkg_set_add(uninst_set, dbpkg);
-                nmatches++;
-                
-            } else
-                dbpkg_free(dbpkg);
+
+            n_array_free(dbpkgs);
         }
         
-        if (dbpkgs)
-            n_array_free(dbpkgs);
         
         if (nmatches == 0) {
             logn(LOGERR, _("%s: no such package"), pdef->pkg->name);

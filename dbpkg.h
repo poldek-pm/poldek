@@ -8,7 +8,9 @@
 
 #define DBPKG_ORPHANS_PROCESSED  (1 << 15) /* is its orphan processed ?*/
 #define DBPKG_DEPS_PROCESSED     (1 << 16) /* is its deps processed? */
-#define DBPKG_TOUCHED            (1 << 17) 
+#define DBPKG_TOUCHED            (1 << 17)
+#define DBPKG_UNIST_NOTFOLLOW    (1 << 18) /* see uninstall.c */
+#define DBPKG_UNIST_MATCHED      (1 << 19) /* see uninstall.c */
 
 struct dbpkg {
     uint32_t    flags;
