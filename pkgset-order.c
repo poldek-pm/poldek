@@ -169,7 +169,7 @@ int pkgset_order(struct pkgset *ps)
     int i;
 
     if (ps_verify_mode(ps))
-        msg(1, "$Verifying (pre)requirements...\n");
+        msg(1, "\nVerifying (pre)requirements...\n");
     vs.ordered_pkgs = n_array_new(n_array_size(ps->pkgs), NULL, NULL);
     
     vs.nerrors = 0;

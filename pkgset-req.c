@@ -120,7 +120,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
 
 
     if (ps_verify_mode(ps))
-        msg(1, "$Verifying dependencies...\n");
+        msg(1, "\nVerifying dependencies...\n");
     
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg;
@@ -178,7 +178,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
             nerrors, ps->nerrors);
 
     if (ps_verify_mode(ps))
-        msg(1, "$Verifying packages conflicts...\n");
+        msg(1, "\nVerifying packages conflicts...\n");
     pkgset_verify_conflicts(ps, strict);
     return nerrors == 0;
 }
