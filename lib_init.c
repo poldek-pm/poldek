@@ -57,7 +57,12 @@ static const char *poldek_logprefix = "poldek";
 
 static
 void (*poldek_assert_hook)(const char *expr, const char *file, int line) = NULL;
-static void (*poldek_malloc_fault_hook)(void) = NULL;
+
+static
+void (*poldek_malloc_fault_hook)(void) = NULL;
+
+static
+void (*poldek_die_hook)(const char *msg) = NULL;
 
 static void register_vf_handlers_compat(const tn_hash *htcnf);
 static void register_vf_handlers(const tn_array *fetchers);
@@ -698,6 +703,13 @@ static void n_assert_hook(const char *expr, const char *file, int line)
     abort();
 }
 
+static void n_die_hook(const char *msg) 
+{
+    printf("Something wrong, something not quite right.\ndie: %s\n", msg);
+    abort();
+}
+
+
 static
 void self_init(void) 
 {
@@ -737,7 +749,11 @@ void init_internal(void)
     if (poldek_assert_hook == NULL)
         poldek_assert_hook = n_assert_hook;
 
-    n_assert_sethook(poldek_assert_hook);
+    if (poldek_die_hook == NULL)
+        poldek_die_hook = n_die_hook;
+
+    n_assert_set_hook(poldek_assert_hook);
+    n_die_set_hook(poldek_die_hook);
     n_malloc_set_failhook(poldek_malloc_fault_hook);
 }
 
