@@ -48,9 +48,9 @@ struct upgrade_s {
     int            ndberrs;
     int            ndep;
     int            ninstall;
-    int            dep_nerr;
-    int            cnfl_nerr;
-    
+    int            ndep_err;
+    int            ncnfl_err;
+    int            nfatal_err;
     struct inst_s  *inst;
 };
 
@@ -182,7 +182,7 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
         argv[n++] = "--upgrade";
     else {
         n_assert(0);
-        abort();
+        die();
     }
 
     if (nv) {
@@ -276,6 +276,34 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
         verbose--;
 
     return ec == 0;
+}
+
+static
+int is_installable(struct pkgdb *db, struct pkg *pkg, unsigned instflags) 
+{
+    int rc, cmprc = 0;
+    
+    rc = rpm_is_pkg_installed(db->dbh, pkg, &cmprc);
+
+    if (rc < 0)
+        die();
+    
+    
+    if (rc == 0)
+        return 1;
+
+    if (rc > 1) {
+        log(LOGERR, "%s: multiple instances installed, give up\n", pkg->name);
+        return 0;
+    }
+    
+    if (cmprc <= 0 && ((instflags & PKGINST_FORCE) == 0)) {
+        printf("%s: %s version installed, skiped\n",
+               pkg_snprintf_s(pkg), cmprc == 0 ? "equal" : "newer");
+        return 0;
+    }
+    
+    return 1;
 }
 
 
@@ -373,13 +401,18 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                               pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark),
                               capreq_snprintf_s(req));
                     } else if (verbose) {
-                        msg(1, "%s %X marks %s %X (cap %s)\n",
-                            pkg_snprintf_s(pkg), pkg,  pkg_snprintf_s0(tomark), tomark, 
+                        msg(1, "%s marks %s (cap %s)\n",
+                            pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark), 
                             capreq_snprintf_s(req));
                     }
                     
-                    	
-                	
+                    if (!is_installable(upg->inst->db, tomark,
+                                        upg->inst->instflags)) {
+                        upg->nfatal_err++; 
+                        ndepadds = 0;
+                        goto l_end;
+                    }
+                    
                     pkg_dep_mark(tomark);
                     n_array_push(markarr[nmarkarr], tomark);
                     nmarked++;
@@ -400,7 +433,7 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                     else
                         n_assert(0);
                     pkg_set_badreqs(pkg);
-                    upg->dep_nerr++;
+                    upg->ndep_err++;
                 }
             }
         }
@@ -414,8 +447,10 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
         nmarkarr %= 2;
         n_array_clean(markarr[nmarkarr]);
         nloop++;
-    }
-
+        }
+    
+ l_end:
+    
     n_array_free(markarr[0]);
     n_array_free(markarr[1]);
     return ndepadds;
@@ -533,8 +568,9 @@ int is_conflict(const struct pkg *pkg,
 
 
 static 
-int verify_file_conflict(struct pkgfl_ent *flent, struct pkg *pkg, struct pkgdb *db,
-                         tn_array *uninstall_rnos, int strict) 
+int verify_file_conflict(struct pkgfl_ent *flent, struct pkg *pkg,
+                         struct pkgdb *db, tn_array *uninstall_rnos,
+                         int strict) 
 {
     int i, j, nerrs = 0;
     
@@ -606,7 +642,7 @@ int verify_db_files_conflicts(struct pkg *pkg, struct pkgdb *db,
 static
 int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
 {
-    int i, j, strict, cnfl_nerr = 0, rc;
+    int i, j, strict, ncnfl_err = 0, rc, ndbcnfl_err = 0;
     
     strict = ps->flags & PSVERIFY_MERCY ? 0 : 1;
 
@@ -621,6 +657,9 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
         add_obsoletes(ps, upg);
     }
 
+    if (upg->nfatal_err)
+        return 0;
+    
     msg(1, "$There are %d package(s) to install, %d marked by dependencies:\n",
         upg->ninstall, upg->ndep);
     
@@ -632,7 +671,7 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
     }
     
     msg(1, "Verifying conflicts...\n");
-    cnfl_nerr = 0;
+    ncnfl_err = 0;
     for (i=0; i<n_array_size(upg->install_pkgs); i++) {
         struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
         if (pkg->cnflpkgs) {
@@ -643,41 +682,43 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
                 if (pkg_is_marked(cpkg->pkg)) {
                     log(LOGERR, "%s conflicts with %s\n",
                         pkg_snprintf_s(pkg), pkg_snprintf_s0(cpkg->pkg));
-                    cnfl_nerr++;
+                    ncnfl_err++;
                 }
             }
         }
         
-        cnfl_nerr += verify_db_files_conflicts(pkg, upg->inst->db,
-                                               upg->uninstall_rnos, strict);
+        ndbcnfl_err += verify_db_files_conflicts(pkg, upg->inst->db,
+                                                 upg->uninstall_rnos, strict);
     }
 
-    if (cnfl_nerr) {
+    if (ncnfl_err) {
         log(LOGERR, "There are conflicts between install set packages, "
             "give up\n");
         return 0;
     }
 
     /* insert check conflicts against db there ... */
-    if (upg->inst->instflags & PKGINST_FORCE)
-        cnfl_nerr = 0;
+    if (upg->inst->instflags & PKGINST_FORCE) {
+        ncnfl_err = 0;
+        ndbcnfl_err = 0;
+    }
 
-    if (cnfl_nerr && (upg->inst->instflags & PKGINST_TEST) == 0) {
+    if (ndbcnfl_err && (upg->inst->instflags & PKGINST_TEST) == 0) {
         log(LOGERR, "Stop\n"); 
         return 0;
     }
 
     if (upg->inst->instflags & PKGINST_NODEPS)
-        upg->dep_nerr = 0;
+        upg->ndep_err = 0;
     
-    if (upg->dep_nerr) {
-        log(LOGERR, "There are %d unresolved dependencies.\n", upg->dep_nerr);
+    if (upg->ndep_err) {
+        log(LOGERR, "There are %d unresolved dependencies.\n", upg->ndep_err);
         if ((upg->inst->instflags & PKGINST_TEST) == 0)
             return 0;
     }
 
     if (upg->inst->ask_fn) {
-        if (!upg->inst->ask_fn("*Think* Proceed?"))
+        if (!upg->inst->ask_fn("Proceed?"))
             return 1;
     }
     
@@ -831,7 +872,7 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst)
     struct upgrade_s upg;
 
     init_upgrade_s(&upg, ps, inst);
-
+    
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         int install = 0;
