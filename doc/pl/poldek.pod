@@ -202,7 +202,7 @@ indeksu za pomoc± jego skrótu z packages.dir.mdd.
 
 =item B<-V|--verify>
 
-Opcja ta weryfikuje zale¿no¶ci zbiory pakietów.
+Opcja ta weryfikuje zale¿no¶ci zbioru pakietów.
 Je¶li nie okre¶lono pakietów sprawdza wszystkie dostêpne.
 
 =item B<--install-dist[=KATALOG]>
@@ -299,7 +299,7 @@ Nie instaluj automatycznie pakietów wymaganych przez wybrane.
 
 =item B<--nohold>
 
-Nie bierz listy wstrzymiwanych pakietów z $HOME/.poldek_hold ani parametru
+Nie bierz listy wstrzymywanych pakietów z $HOME/.poldek_hold ani parametru
 konfiguracyjnego hold.
 
 =item B<--rpmdef="NAZWA WARTO¦Æ">
@@ -327,7 +327,7 @@ katalog cache.
 
 =item B<--log=PLIK>
 
-Loguj wszysztkie komunikaty poldka do PLIKU.
+Loguj wszystkie komunikaty poldka do PLIKU.
 
 =back
 
@@ -682,8 +682,8 @@ Ten manual powinien byæ ukoñczony i przet³umaczony na jêzyk angielski.
 =head1 UWAGA
 
 Program ten z pewno¶ci± zawiera b³êdy. Zrób kopiê bezpieczeñstwa swojej
-bazy danych RPM-a i b±d¼ uwazny. Pamiêtaj, ¿e I<NIE MA ¯ADNEJ GWARANCJI>
-i udajej zabawy.
+bazy danych RPM-a i b±d¼ uwa¿ny. Pamiêtaj, ¿e I<NIE MA ¯ADNEJ GWARANCJI>
+i udanej zabawy.
 
 =head1 LICENCJA
 
