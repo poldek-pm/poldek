@@ -11,7 +11,7 @@ pkginclude_HEADERS = vfile.h p_open.h
 
 noinst_PROGRAMS = sample
 sample_SOURCES  = sample.c
-sample_LDADD    = libvfile.a
+sample_LDADD    = -L../trurlib libvfile.a
 
 dist-hook:
 	rm -rf $(distdir)/.deps
