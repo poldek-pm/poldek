@@ -295,8 +295,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     else
         poldek_VERBOSE = -1;
 
-    ps->_vrfy_file_conflicts = n_array_new(16, free, NULL);
-    file_index_find_conflicts(&ps->file_idx, ps->_vrfy_file_conflicts, strict);
+    file_index_find_conflicts(&ps->file_idx, strict);
     poldek_VERBOSE = v;
 
     pkgset_verify_deps(ps, strict);

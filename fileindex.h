@@ -7,8 +7,16 @@
 
 #include "pkgfl.h"
 
+struct pkg_file_cnfl {
+    uint8_t       shared;
+    struct pkg    *pkg0;
+    struct pkg    *pkg1;
+    char          msg[0];
+};
+
 struct file_index {
     tn_hash   *dirs;             /* dirname => tn_array *files */
+    tn_hash   *cnflh;
     tn_alloc  *na;
 };
 
@@ -34,8 +42,7 @@ int file_index_lookup(struct file_index *fi,
                       const char *apath, int apath_len, 
                       struct pkg *pkgs[], int size);
 
-int file_index_find_conflicts(const struct file_index *fi, tn_array *errs,
-                              int strict);
+int file_index_find_conflicts(const struct file_index *fi, int strict);
 
 #endif /* POLDEK_FILEINDEX_H */
     
