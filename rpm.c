@@ -111,14 +111,6 @@ void rpm_closedb(rpmdb db)
     db = NULL;
 }
 
-
-static void rpm_die(void) 
-{
-    log(LOGERR, "database error\n");
-    die();
-}
-
-
 tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path,
                                          tn_array *unistdbpkgs, unsigned ldflags)
 {
@@ -237,11 +229,9 @@ int header_evr_match_req(Header h, const struct capreq *req)
 static
 int header_cap_match_req(Header h, const struct capreq *req, int strict)
 {
-    void        *saved_allocfn, *saved_freefn;
     struct pkg  pkg;
     int         rc;
 
-    
     rc = 0;
     pkg.caps = capreq_arr_new();
     get_pkg_caps(pkg.caps, h);
@@ -331,7 +321,7 @@ static void progress(const unsigned long amount, const unsigned long total)
 }
 
 
-static void *install_cb(const Header arg __attribute__((unused)),
+static void *install_cb(const void *h __attribute__((unused)),
                         const rpmCallbackType op, 
                         const unsigned long amount, 
                         const unsigned long total,
@@ -515,7 +505,7 @@ int rpm_dbmap(rpmdb db,
         return 0;
 
     if (recno < 0)
-        rpm_die();
+        die();
     
     while (recno > 0) {
         if ((h = rpmdbGetRecord(db, recno))) {
@@ -526,7 +516,7 @@ int rpm_dbmap(rpmdb db,
         
         recno = rpmdbNextRecNum(db, recno);
     }
-#endif	/* !HAVE_RPM_4_0 */
+#endif /* HAVE_RPM_4_0 */
     
     return n;
 }
