@@ -49,12 +49,13 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_JUSTPRINT_N  (1 << 2) /* names, not filenames */
 #define INSTS_TEST         (1 << 3) /* poldek's test mode, not rpm's one */
 
-#define INSTS_MKDBDIR      (1 << 5)
-#define INSTS_FOLLOW       (1 << 6)
-#define INSTS_FRESHEN      (1 << 7)
-#define INSTS_USESUDO      (1 << 8)
-#define INSTS_NOHOLD       (1 << 9)
-#define INSTS_GREEDY       (1 << 10)
+#define INSTS_MKDBDIR        (1 << 5)
+#define INSTS_FOLLOW         (1 << 6)
+#define INSTS_FRESHEN        (1 << 7)
+#define INSTS_USESUDO        (1 << 8)
+#define INSTS_NOHOLD         (1 << 9)
+#define INSTS_GREEDY         (1 << 10)
+#define INSTS_KEEP_DOWNLOADS (1 << 11)
 
 struct inst_s {
     struct pkgdb   *db;

@@ -52,11 +52,12 @@ static struct tag valid_tags[] = {
     { "rpmdef",        TYPE_STR | TYPE_MULTI },
     { "rpm_install_opt",  TYPE_STR },
     { "rpm_uninstall_opt",  TYPE_STR },
-    { "follow",        TYPE_BOOL },
-    { "greedy",        TYPE_BOOL }, 
-    { "use_sudo",      TYPE_BOOL },
-    { "mercy",         TYPE_BOOL },
-    { "hold",          TYPE_STR | TYPE_LIST | TYPE_MULTI },
+    { "follow",         TYPE_BOOL },
+    { "greedy",         TYPE_BOOL }, 
+    { "use_sudo",       TYPE_BOOL },
+    { "mercy",          TYPE_BOOL },
+    { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI },
+    { "keep_downloads", TYPE_BOOL }, 
     {  NULL,           0 }, 
 };
 

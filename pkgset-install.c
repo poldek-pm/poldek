@@ -340,7 +340,28 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
     
     if (n)
         verbose--;
-#endif    
+#endif
+
+    if (ec == 0 && (upg->inst->instflags & PKGINST_TEST) == 0 &&
+        (upg->inst->flags & INSTS_KEEP_DOWNLOADS) == 0) {
+        
+        n = nopts;
+        for (i=0; i < n_array_size(ps->ordered_pkgs); i++) {
+            struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
+            int url_type;
+            
+            if (!pkg_is_marked(pkg))
+                continue;
+            
+            url_type = vfile_url_type(pkg->pkgdir->path);
+            if ((url_type & (VFURL_PATH | VFURL_UNKNOWN | VFURL_CDROM)) == 0) {
+                DBG("unlink %s\n", argv[n]); 
+                unlink(argv[n]);
+            }
+            n++;
+        }
+    }
+
 
     return ec == 0;
 }
