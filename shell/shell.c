@@ -325,7 +325,7 @@ static char *help_filter(int key, const char *text, void *input)
             
             n += snprintf(&buf[n], sizeof(buf) - n, "  Defined aliases:\n");
             while (aliases[i].name) {
-                n += snprintf(&buf[n], sizeof(buf) - n, "    %-12s  \"%s\"\n",
+                n += snprintf(&buf[n], sizeof(buf) - n, "    %-16s  \"%s\"\n",
                               aliases[i].name, aliases[i].cmdline);
                 i++;
             }
@@ -828,7 +828,6 @@ static void update_term_width(void)
             term_width  = DEFAULT_TERM_WIDTH;
             term_height = DEFAULT_TERM_HEIGHT;
         }
-        
 
         winch_reached = 0;
     }

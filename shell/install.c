@@ -43,8 +43,11 @@ static struct argp_option options[] = {
      "currently exists", 1 },
 
 {"nofollow", 'N', 0, 0, "Don't automatically install packages required by "
-     "selected ones", 1 }, 
+     "selected ones", 1 },
 
+{"greedy", 'G', 0, 0, "Automatically upgrade packages which dependencies "
+     "are broken by unistalled ones", 1 }, 
+    
 {0, 'I', 0, 0, "Install, not upgrade packages", 1 },
 
 {"fetch", OPT_INST_FETCH, "DIR", OPTION_HIDDEN,
@@ -69,6 +72,10 @@ struct command_alias cmd_aliases[] = {
 
     {
         "upgrade", "install -F",  &command_install,
+    },
+
+    {
+        "greedy-upgrade", "install -FG",  &command_install,
     },
 
     {
@@ -128,6 +135,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 'N':
             cmdarg->sh_s->inst->flags &= ~INSTS_FOLLOW;
+            break;
+
+        case 'G':
+            cmdarg->sh_s->inst->flags |= INSTS_GREEDY;
             break;
 
         case 'I':
