@@ -336,9 +336,7 @@ so Red Hat Installer use this tag).
 
 =head2 Upgrade and more than one instance of the package
 
-AFAIK rpm 3.x doesn't handle this case (4.x introduces special 
-tag RPMTAG_MULTILIB for these cases, I suppose), so poldek
-does not handle it also.  
+rpm 3.x doesn't handle this case, so poldek does not handle it also.
 
 =head2 Documentation
 
