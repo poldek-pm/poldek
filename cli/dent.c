@@ -32,10 +32,6 @@
 #include "cli.h"
 #include "arg_packages.h"
 
-struct pkg_dent *pkg_dent_adddir(struct poclidek_ctx *cctx,
-                                 struct pkg_dent *dent, const char *name);
-int pkg_dent_addpkgs(struct poclidek_ctx *cctx,
-                     struct pkg_dent *dent, tn_array *pkgs);
 
 struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
                               struct pkg *pkg, int flags)
