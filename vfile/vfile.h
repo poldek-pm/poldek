@@ -199,6 +199,10 @@ int vf_localunlink(const char *path);
 int vf_userathost(char *buf, int size);
 int vf_cleanpath(char *buf, int size, const char *path);
 
+int vf_find_external_command(char *cmdpath, int size, const char *cmd,
+                             const char *PATH);
+
+
 
 #ifdef VFILE_INTERNAL
 
@@ -255,7 +259,6 @@ int vf_extdecompress(const char *path, const char *destpath);
 int vf_extcompress(const char *path, const char *ext);
 
 void vf_sigint_cb(void);
-
 #endif /* VFILE_INTERNAL */
 
 #endif /* POLDEK_VFILE_H */

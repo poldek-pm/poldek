@@ -155,8 +155,13 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
         return NULL;
     
     if (*path != '/') {
-        vf_logerr("%s: cmd must be precedenced by '/'\n", cmd);
-        return NULL;
+        char *p = alloca(PATH_MAX); 
+        if (vf_find_external_command(p, PATH_MAX, path, NULL))
+            path = p;
+        else {
+            vf_logerr("%s: cmd must be precedenced by '/'\n", cmd);
+            return NULL;
+        }
     }
 
     args = n_array_new(8, free, NULL);
@@ -817,4 +822,30 @@ const char *vf_url_slim_s(const char *url, int maxl)
 {
     static char buf[PATH_MAX];
     return vf_url_slim(buf, sizeof(buf), url, maxl > 50 ? maxl : 60);
+}
+
+
+int vf_find_external_command(char *cmdpath, int size, const char *cmd,
+                             const char *PATH)
+{
+    const char **tl, **tl_save;
+    char buf[PATH_MAX];
+    int  found = 0;
+
+    if (PATH == NULL) {
+        if ((PATH = getenv("PATH")) == NULL)
+            PATH = "/bin:/usr/bin:/usr/local/bin";
+    }
+    n_snprintf(buf, sizeof(buf), "%s", PATH);
+    tl = tl_save = n_str_tokl(buf, ":");
+    while (*tl) {
+        snprintf(cmdpath, size, "%s/%s", *tl, cmd);
+        if (access(cmdpath, R_OK | X_OK) == 0) {
+            found = 1;
+            break;
+        }
+        tl++;
+    }
+    n_str_tokl_free(tl_save);
+    return found;
 }
