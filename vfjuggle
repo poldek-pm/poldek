@@ -13,8 +13,7 @@
 #			VF_EJECT="ziptool -e /dev/zip",
 #			VF_EJECT="cdeject -d $VF_MNTDEV"
 
-cdid()
-{
+cdid() {
 	URI=${1#cdrom://}
 	CDID=`echo $URI | sed 's@/.*@@'`
 	URI=`echo $URI | sed 's@[^/]*/@@'`
@@ -27,16 +26,17 @@ cdid()
 	fi
 }
 
-mount_()
-{
-	typeset id=$1
+mount_() {
+#	why don't use CDID itself?
+#	typeset id=$1
 
-	if [ -f "$VF_MNTPOINT/$id" ]; then
-		return 0
-	fi
+#	redundant: we check this before calling mount_
+#	if [ -f "$VF_MNTPOINT/$id" ]; then
+#		return 0
+#	fi
 
 	eval $VF_MOUNT $VF_MNTDEV $VF_MNTPOINT 2>/dev/null
-	if [ -f "$VF_MNTPOINT/$id" ]; then
+	if [ -f "$VF_MNTPOINT/$CDID" ]; then
 		return 0
 	fi
 
@@ -48,7 +48,7 @@ mount_()
 			"$VF_EJECT"
 		fi
 
-		echo "Insert the $id disk into drive you're using, and press ENTER"
+		echo "Insert the $CDID disk into drive you're using, and press ENTER"
 		read
 		if [ $? -ne 0 ]; then
 			echo "read error; this should not happen, give up."
@@ -59,10 +59,10 @@ mount_()
 		eval $VF_MOUNT $VF_MNTDEV $VF_MNTPOINT
 		typeset rc=$?
 
-		if [ -f "$VF_MNTPOINT/$id" ]; then
+		if [ -f "$VF_MNTPOINT/$CDID" ]; then
 			return 0
 		elif [ $rc -eq 0 ]; then
-			echo "Not a $id disk"
+			echo "Not a $CDID disk"
 		fi
 	done
 }
@@ -72,14 +72,12 @@ must_be_copied() {
 		Packages*|packages.dir|packages.dir.*)
 			return 0
 			;;
-
 		*)
 			return 1
 	esac
 }
 
-usage()
-{
+usage() {
 	echo "usage: `basename $0` DESTDIR [cdrom://DISK_ID_FILE/PATH...]"
 }
 
@@ -132,7 +130,8 @@ while [ $# -gt 0 ]; do
 	fi
 
 	if [ ! -f "$VF_MNTPOINT/$CDID" ]; then
-		mount_ $CDID
+#		mount_ $CDID
+		mount_
 	fi
 
 	if [ ! -f "$VF_MNTPOINT/$URI" ]; then
@@ -165,5 +164,5 @@ while [ $# -gt 0 ]; do
 done
 exit 0
 
-# This must be last line !
+# This must be the last line!
 # vi:ts=8
