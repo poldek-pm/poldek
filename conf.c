@@ -105,6 +105,7 @@ static struct tag global_tags[] = {
     { "vfile external compress", TYPE_BOOL , { 0 } },
     { "promoteepoch", TYPE_BOOL, { 0 } },
     { "default index type", TYPE_STR, { 0 } },
+    { "exclude path", TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     {  NULL,           0, { 0 } }, 
 };
 
@@ -145,6 +146,7 @@ static struct tag source_tags[] = {
     { "signed",      TYPE_BOOL, { 0 } },
     { "hold",        TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "ignore",      TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
+    { "exclude path", TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     {  NULL,         0, { 0 } }, 
 };
 
@@ -186,12 +188,14 @@ struct copt *copt_new(const char *name)
     return opt;
 }
 
+#if 0                           /* unused */
 static
 struct copt *copt_link(struct copt *opt)
 {
     opt->_refcnt++;
     return opt;
 }
+#endif
 
 static                                                      
 void copt_free(struct copt *opt)
@@ -235,15 +239,16 @@ int getvlist(tn_hash *ht, char *name, char *vstr, const char *path, int nline)
     
     while (*p) {
         if (opt->val == NULL) {
-            //printf("Lname = %s, v = %s\n", name, *p);
+            DBGF("%s[list] += %s\n", name, *p);
             opt->val = n_strdup(*p);
+            
         } else {
             if (n_array_size(opt->vals) == 0) {
                 opt->flags |= COPT_MULTIPLE;
                 n_array_push(opt->vals, n_strdup(opt->val)); 
             }
             n_array_push(opt->vals, n_strdup(*p));
-            //printf("Lname = %s, v = %s\n", name, *p);
+            DBGF("%s[list] += %s\n", name, *p);
         }
         p++;
     }
@@ -1141,8 +1146,8 @@ tn_array *poldek_conf_get_multi(const tn_hash *htconf, const char *name)
 
     if ((opt = n_hash_get(htconf, name)) == NULL)
         return NULL;
-
-    if (opt->vals)
+    
+    if (opt->vals && n_array_size(opt->vals))
         list = n_ref(opt->vals);
     
     else {
