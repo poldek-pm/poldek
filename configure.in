@@ -28,6 +28,8 @@ AC_PROG_RANLIB
 AC_CHECK_PROG(POD2MAN, pod2man, pod2man)
 
 dnl Process features.
+AC_CHECK_LIB(tinfo, tigetstr,,
+	AC_CHECK_LIB(ncurses, tigetstr, , AC_MSG_ERROR("tinfo nor ncurses not found")))
 
 AC_ARG_ENABLE(imode,
 [  --disable-imode               turn off interactive mode],
@@ -36,8 +38,11 @@ INTERACTIVE_MODE=$enableval, INTERACTIVE_MODE=yes)
 if test "${INTERACTIVE_MODE}." != "yes."; then
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, false)
 else
-	AC_CHECK_LIB(readline, readline,,AC_MSG_ERROR("readline not found"))
-	AC_CHECK_LIB(pcre, pcre_compile,,AC_MSG_ERROR("pcre not found"))
+	AC_CHECK_LIB(readline, readline,, AC_MSG_ERROR("readline not found"))
+	AC_CHECK_LIB(pcre, pcre_compile,, AC_MSG_ERROR("pcre not found"))
+	AC_CHECK_HEADERS(pcre.h,, 
+		AC_CHECK_HEADERS(pcre/pcre.h, CPPFLAGS="-I/usr/include/pcre", ), )
+
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, true)
 	AC_DEFINE(ENABLE_INTERACTIVE_MODE)
 
@@ -47,10 +52,6 @@ else
 		AC_DEFINE(HAVE_READLINE_4_2)
 	fi
 fi
-
-
-AC_CHECK_LIB(tinfo, tigetstr,,
-	AC_CHECK_LIB(ncurses, tigetstr, , AC_MSG_ERROR("tinfo nor ncurses not found")))
 
 AC_ARG_WITH(curl,
 [  --without-curl	compile without libcurl],
@@ -135,6 +136,9 @@ AC_CHECK_HEADERS(sys/file.h sys/time.h syslog.h unistd.h)
 AC_CHECK_HEADER(stdint.h,,AC_MSG_ERROR("C9X compiler is needed by $PACKAGE"))
 AC_CHECK_HEADER(obstack.h,,AC_MSG_ERROR("obstacks are needed by $PACKAGE"))
 AC_CHECK_HEADER(argp.h,,AC_MSG_ERROR("missing required argp.h"))
+
+dnl RH rpm needs this
+CPPFLAGS="-I/usr/include/rpm $CPPFLAGS"
 AC_CHECK_HEADER(rpm/rpmlib.h,,AC_MSG_ERROR("missing required rpmlib.h"))
 
 AC_MSG_CHECKING(for rpm 4.x)
@@ -157,7 +161,7 @@ if test ${is_rpm4}. = yes. ; then
 	fi
 
 	AC_MSG_CHECKING(for rpm 4.0.4)
-	AC_EGREP_CPP(CHECKSIG_PGP,
+	AC_EGREP_CPP(RPMSENSE_KEYRING,
 		[ #include <rpm/rpmcli.h>
 		], is_rpm4_0_4=yes, is_rpm4_0_4=no)
 
@@ -216,7 +220,8 @@ if test ${is_rpm4_0_4}. = no. ; then
 	#    AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"])
 	#  )
 	#)
-
+	CPPFLAGS="-I/usr/include/db3 $CPPFLAGS"
+	
 	AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"],,[$LIBS])
 	# assume that librpm complied with --enable-db1
 	if test "${ENABLE_STATIC}." = "yes."; then 
@@ -230,12 +235,15 @@ else
 	if test "${ENABLE_STATIC}." = "yes."; then 
 		DBLIB="$DBLIB"
 	fi
+
+	CPPFLAGS="-I/usr/include/db4 $CPPFLAGS"
 fi
+
 
 AC_CHECK_LIB(popt, poptReadConfigFile)
 
 if test ${is_rpm4_0_4}. = yes. ; then	
-	LIBS="-lbeecrypt $LIBS"
+	AC_CHECK_LIB(beecrypt, dhaes_pContextInitEncrypt, have_beecrypt=yes, have_beecrypt=no)
 fi
 
 if test ${is_rpm4}. = yes. ; then
@@ -253,23 +261,15 @@ AC_CHECK_FUNCS(rpmMachineScore,, AC_MSG_ERROR("rpmlib not found"))
 AC_CHECK_FUNCS(rpmlog, [AC_DEFINE(HAVE_RPMLOG)])
 AC_CHECK_FUNCS(rpmCheckSig, [AC_DEFINE(HAVE_RPMCHECKSIG)])
 
-AC_CHECK_HEADERS(db_185.h)
+AC_CHECK_HEADERS(db_185.h,, AC_MSG_WARN("disabled synchronization with db file-dependencies"))
 AC_CHECK_FUNCS(__db185_open)
-
 dnl 4.0.4 has cross dependenecies(?)
-if test ${is_rpm4_0_4}. = yes. -a ${ENABLE_STATIC}. = yes. ; then	
-	LIBS="$LIBS -lbeecrypt -lbz2 -lrpmio"
+if test ${is_rpm4_0_4}. = yes. -a ${ENABLE_STATIC}. = yes. ; then
+	if ${have_beecrypt}. = yes. ; then
+		LIBS="$LIBS -lbz2 -lrpmio"
+	fi
+	LIBS="$LIBS -lbz2 -lrpmio"
 fi
-
-dnl trullib 0.43.5 has n_hash_size
-dnl test if linked with system copy only
-if test -z "$TRURL_DIR"; then
-	AC_CHECK_LIB(trurl, n_hash_size,,AC_MSG_ERROR("trurlib >= 0.43.5 not found"),
-		     $CONF_IN_LDFLAGS)
-else
-	LIBS="$LIBS -ltrurl"
-fi
-
 
 AC_CHECK_FUNCS(getline,, AC_MSG_ERROR("getline\(\) is needed by $PACKAGE"),
 	       $CONF_IN_LDFLAGS)
@@ -288,6 +288,16 @@ $CONF_IN_LDFLAGS)
 AC_CHECK_FUNCS(EVP_DigestInit,,
 	AC_CHECK_LIB(crypto, EVP_DigestInit,,
 	AC_MSG_ERROR("libcryto is needed by $PACKAGE")), $CONF_IN_LDFLAGS)
+
+
+dnl trullib 0.43.5 has n_hash_size; test if linked with system copy only
+if test -z "$TRURL_DIR"; then
+	AC_CHECK_LIB(trurl, n_hash_size,,
+		AC_MSG_ERROR("trurlib >= 0.43.5 not found"), $CONF_IN_LDFLAGS)
+else
+	LIBS="$LIBS -ltrurl"
+fi
+
 
 AC_OUTPUT([
 		shell/Makefile
