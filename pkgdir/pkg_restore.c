@@ -140,12 +140,18 @@ struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg,
 
     const  char        *errmg_double_tag = "%s:%ld: double '%c' tag";
     const  char        *errmg_ldtag = "%s:%ld: load '%c' tag error";
-    
+
+
 #if 0
-    if (depdirs) 
+    printf("FULL %d\n", (ldflags & PKGDIR_LD_FULLFLIST));
+    if (depdirs) {
+        int i;
+        printf("depdirs %p %d\n", depdirs, n_array_size(depdirs));
         for (i=0; i<n_array_size(depdirs); i++) {
             printf("DEP %s\n", n_array_nth(depdirs, i));
         }
+    }
+    
 #endif    
 
     if (pkg)
@@ -300,7 +306,7 @@ struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg,
             case 'l':
                 pkgt.nodep_files_offs = n_stream_tell(st);
                 //printf("flag_fullflist %d, %p\n", flag_fullflist, depdirs);
-                if ((ldflags && PKGDIR_LD_FULLFLIST) == 0 && depdirs == NULL) {
+                if ((ldflags & PKGDIR_LD_FULLFLIST) == 0 && depdirs == NULL) {
                     pkgfl_skip_f(st);
                         
                 } else {
