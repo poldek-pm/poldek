@@ -46,7 +46,6 @@
 #include "pdir.h"
 #include "pkg.h"
 #include "pkgmisc.h"
-#include "h2n.h"
 #include "pkgroup.h"
 
 int pdir_v016compat = 0;      /* public */

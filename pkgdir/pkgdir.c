@@ -44,25 +44,65 @@
 #include "misc.h"
 #include "pkgdir.h"
 #include "pkg.h"
-#include "h2n.h"
 #include "pkgroup.h"
+
+static
+tn_hash *pkgdir_strip_langs(struct pkgdir *pkgdir)
+{
+    int      i;
+    tn_hash  *avlh = NULL;
+    
+    if (pkgdir->lc_lang == NULL || pkgdir->langs == NULL)
+        return NULL;
+
+    avlh = n_hash_dup(pkgdir->avlangs_h, (tn_fn_dup)n_strdup);
+    
+    n_hash_clean(pkgdir->avlangs_h);
+
+    for (i=0;  i < n_array_size(pkgdir->langs); i++) {
+        const char *lang = n_array_nth(pkgdir->langs, i);
+        n_hash_insert(avlh, lang, NULL);
+    }
+    
+    return avlh;
+}
 
 
 void pkgdir_setup_langs(struct pkgdir *pkgdir)
 {
+    tn_array *avlangs;
+
+#if 0    
+    if (pkgdir->avlangs) {
+        iny i;
+        
+        pkgdir->avlangs_h = n_hash_new(21, NULL);
+        for (i=0; i < n_array_size(pkgdir->avlangs); i++) {
+            n_hash_insert(pkgdir->avlangs_h,
+                          n_array_nth(pkgdir->avlangs, i), NULL);
+        }
+    }
+#endif
+    
+    //printf("pkgdir_setup_langs %s, %s\n", pkgdir->idxpath, pkgdir->lc_lang);
     if (pkgdir->lc_lang == NULL)
         return;
 
-    n_array_sort(pkgdir->avlangs);
-    pkgdir->langs = lc_lang_select(pkgdir->avlangs, pkgdir->lc_lang);
-
-#if 0    
-    for (i=0;  i<n_array_size(pkgdir->avlangs); i++) {
-        printf("lav %s\n", n_array_nth(pkgdir->avlangs, i));
-    }
+    avlangs = n_hash_keys(pkgdir->avlangs_h);
+    n_array_sort(avlangs);
+    n_assert(pkgdir->langs == NULL);
+    pkgdir->langs = lc_lang_select(avlangs, pkgdir->lc_lang);
+    n_array_free(avlangs);
+#if 0
+    {
+        int i;
+        for (i=0;  i<n_array_size(pkgdir->avlangs); i++) {
+            printf("lav %s\n", n_array_nth(pkgdir->avlangs, i));
+        }
     
-    for (i=0;  i<n_array_size(pkgdir->langs); i++) {
-        printf("l %s\n", n_array_nth(pkgdir->langs, i));
+        for (i=0;  i<n_array_size(pkgdir->langs); i++) {
+            printf("l %s\n", n_array_nth(pkgdir->langs, i));
+        }
     }
 #endif    
     
@@ -153,7 +193,9 @@ struct pkgdir *pkgdir_malloc(void)
     pkgdir->removed_pkgs = NULL;
     pkgdir->ts_orig = 0;
 
-    pkgdir->avlangs = pkgdir->langs = NULL;
+    //pkgdir->avlangs = NULL;
+    pkgdir->langs = NULL;
+    pkgdir->avlangs_h = NULL;
     pkgdir->lc_lang = NULL;
     pkgdir->mod = pkgdir->mod_data = NULL;
 
@@ -309,6 +351,9 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 
     if (lc_lang)
         pkgdir->lc_lang = n_strdup(lc_lang);
+
+    pkgdir->avlangs_h = n_hash_new(41, free);
+    //pkgdir->langs = n_array_new(2, free, NULL);
     
     rc = 1;
     if (mod->open) {
@@ -317,6 +362,12 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
             return NULL;
         }
     }
+    
+    if (pkgdir->langs && n_array_size(pkgdir->langs) == 0) {
+        n_array_free(pkgdir->langs);
+        pkgdir->langs = NULL;
+    }
+    
             
     if (pkgdir->depdirs) {
         n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
@@ -371,12 +422,11 @@ void pkgdir_free(struct pkgdir *pkgdir)
         pkgroup_idx_free(pkgdir->pkgroups);
         pkgdir->pkgroups = NULL;
     }
-
-    if (pkgdir->avlangs) {
-        n_array_free(pkgdir->avlangs);
-        pkgdir->avlangs = NULL;
+    
+    if (pkgdir->avlangs_h) {
+        n_hash_free(pkgdir->avlangs_h);
+        pkgdir->avlangs_h = NULL;
     }
-
 
     if (pkgdir->langs) {
         n_array_free(pkgdir->langs);
@@ -590,13 +640,13 @@ int do_create(struct pkgdir *pkgdir, const char *type,
 }
 
 
-int pkgdir_create_idx(struct pkgdir *pkgdir, const char *type,
-                      const char *path, unsigned flags)
+int pkgdir_save(struct pkgdir *pkgdir, const char *type,
+                const char *path, unsigned flags)
 {
     struct pkgdir               *orig, *diff;
 	const struct pkgdir_module  *mod;
     int                         nerr = 0;
-
+    tn_hash                     *avlh, *avlh_tmp;
 	
     if (type != NULL && strcmp(type, pkgdir->type) != 0) 
 		mod = find_module(type);
@@ -605,6 +655,16 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *type,
 	
 	if (mod == NULL)
 		return 0;
+
+    avlh = avlh_tmp = NULL;
+    if (flags & PKGDIR_CREAT_MINi18n) {
+        n_assert(flags & PKGDIR_CREAT_NOPATCH);
+        if ((avlh = pkgdir_strip_langs(pkgdir))) {
+            avlh_tmp = pkgdir->avlangs_h;
+            pkgdir->avlangs_h = avlh;
+        }
+    }
+    
 
     if ((flags & PKGDIR_CREAT_NOUNIQ) == 0 &&
         (pkgdir->flags & (PKGDIR_DIFF | PKGDIR_UNIQED)) == 0) {
@@ -616,7 +676,9 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *type,
         (mod->cap_flags & PKGDIR_CAP_UPDATEABLE_INC) == 0 ||
         access(path, R_OK) != 0) {
         
-        return do_create(pkgdir, type, path, flags);
+        if (!do_create(pkgdir, type, path, flags))
+            nerr++;
+        goto l_end;
     }
     
     msgn(1, _("Loading previous %s..."), vf_url_slim_s(path, 0));
@@ -640,6 +702,13 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *type,
     if (nerr == 0 && !do_create(pkgdir, type, path, flags))
         nerr++;
 
+    
+ l_end:
+    if (avlh_tmp) {
+        pkgdir->avlangs_h = avlh_tmp;
+        n_hash_free(avlh);
+    }
+    
     return nerr == 0;
 }
 

@@ -166,11 +166,14 @@ static void put_pndir_header(struct tndb *db, struct pkgdir *pkgdir)
         n_buf_free(nbuf);
     }
 
-    if (pkgdir->avlangs && n_array_size(pkgdir->avlangs)) {
-        tn_buf *nbuf = n_buf_new(n_array_size(pkgdir->avlangs) * 3);
+    if (pkgdir->avlangs_h && n_hash_size(pkgdir->avlangs_h)) {
+        tn_buf *nbuf = n_buf_new(n_hash_size(pkgdir->avlangs_h) * 3);
+        tn_array *avlangs;
+
+        avlangs = n_hash_keys(pkgdir->avlangs_h);
         
-        for (i=0; i<n_array_size(pkgdir->avlangs); i++) 
-            n_buf_printf(nbuf, "%s:", (char*)n_array_nth(pkgdir->avlangs, i));
+        for (i=0; i < n_array_size(avlangs); i++) 
+            n_buf_printf(nbuf, "%s:", (char*)n_array_nth(avlangs, i));
         
         tndb_put(db, pndir_tag_langs, strlen(pndir_tag_langs),
                  n_buf_ptr(nbuf), n_buf_size(nbuf) - 1); /* -1 - eat last ':' */
@@ -542,15 +545,19 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         if (pkg_store(pkg, nbuf, pkgdir->depdirs, pkg_st_flags))
             tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
         
-        if ((flags & PKGDIR_CREAT_NODESC) == 0 && (pkgu = pkg_info(pkg))) {
+        if (pkgdir->avlangs_h && (flags & PKGDIR_CREAT_NODESC) == 0 &&
+            (pkgu = pkg_info(pkg))) {
+            
             tn_array *langs = pkguinf_langs(pkgu);
             int j;
-            
+
             for (j=0; j < n_array_size(langs); j++) {
                 struct tndb *dbh;
                 char *lang;
                 
                 lang = n_array_nth(langs, j);
+                if (!n_hash_exists(pkgdir->avlangs_h, lang))
+                    continue;
 
                 if ((dbh = n_hash_get(db_dscr_h, lang)) == NULL) {
                     char path[PATH_MAX];

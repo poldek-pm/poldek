@@ -3,6 +3,7 @@
 #define  POLDEK_PKGDIR_H
 
 #include <trurl/narray.h>
+#include <trurl/nhash.h>
 #include <vfile/vfile.h>
 
 #include "source.h"
@@ -46,7 +47,8 @@ struct pkgdir {
 
 
     char                *lc_lang;         /* configured languages ($LC_LANG format) */
-    tn_array            *avlangs;         /* available languages */
+//    tn_array            *avlangs;         /* available languages */
+    tn_hash             *avlangs_h; 
     tn_array            *langs;           /* used languages      */
     
 
@@ -100,14 +102,15 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 
 #define PKGDIR_CREAT_NODESC     (1 << 0) /* don't save packages user level info */
 #define PKGDIR_CREAT_NOFL       (1 << 1) /* don't save packages file list       */
-
+#define PKGDIR_CREAT_MINi18n    (1 << 2) /* */
 #define PKGDIR_CREAT_NOUNIQ     (1 << 4)
 #define PKGDIR_CREAT_NOPATCH    (1 << 5) /* don't create diff */
 #define PKGDIR_CREAT_NOCOMPR    (1 << 6) /* create uncompressed index (NIY) */
-                                            
-int pkgdir_create_idx(struct pkgdir *pkgdir, const char *type,
-                      const char *path, unsigned flags);
 
+int pkgdir_save(struct pkgdir *pkgdir, const char *type,
+                const char *path, unsigned flags);
+
+#define pkgdir_create_idx(p, t, path, f) pkgdir_save(p, t, path, f)
 
 struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2);
 struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *pkgdir2);

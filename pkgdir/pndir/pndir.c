@@ -44,7 +44,6 @@
 #include "pkgdir.h"
 #include "pndir.h"
 #include "pkg.h"
-#include "h2n.h"
 #include "pkgroup.h"
 #include "pkgmisc.h"
 
@@ -134,6 +133,7 @@ inline static char *next_tokn(char **str, char delim, int *toklen)
     
     return token;
 }
+
 
 void pndir_init(struct pndir *idx) 
 {
@@ -329,7 +329,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     char                 *path = pkgdir->path;
     char                 key[TNDB_KEY_MAX + 1], val[4096];
     int                  nerr = 0, klen, vlen;
-
+    tn_array             *avlangs = NULL;
     
     if ((flags & PKGDIR_OPEN_REFRESH) == 0) 
         vfmode |= VFM_CACHE;
@@ -385,8 +385,8 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             pkgdir->removed_pkgs = parse_removed(val);
 
         } else if (strcmp(key, pndir_tag_langs) == 0) {
-            n_assert(pkgdir->avlangs == NULL);
-            pkgdir->avlangs = parse_depdirs(val);
+            n_assert(avlangs == NULL);
+            avlangs = parse_depdirs(val);
             
         } else if (strcmp(key, pndir_tag_depdirs) == 0) {
             n_assert(pkgdir->depdirs == NULL);
@@ -404,16 +404,21 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         pkgdir->flags |= PKGDIR_DIFF;
     
     
-    if (pkgdir->avlangs) {
+    if (avlangs) {
         int i;
-        
-        pkgdir->langs = n_array_new(2, NULL, (tn_fn_cmp)strcmp);
+
+        for (i=0; i < n_array_size(avlangs); i++)
+            n_hash_insert(pkgdir->avlangs_h,
+                          (const char*)n_array_nth(avlangs, i), NULL);
+            
         pkgdir_setup_langs(pkgdir);
-        for (i=0; i < n_array_size(pkgdir->langs); i++) {
-            const char *lang = n_array_nth(pkgdir->langs, i);
-            if (!open_dscr(&idx, pkgdir->ts_orig, lang)) {
-                nerr++;
-                break;
+        if (pkgdir->langs) {
+            for (i=0; i < n_array_size(pkgdir->langs); i++) {
+                const char *lang = n_array_nth(pkgdir->langs, i);
+                if (!open_dscr(&idx, pkgdir->ts_orig, lang)) {
+                    nerr++;
+                    break;
+                }
             }
         }
     }
@@ -604,7 +609,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
                 pkgd->db_dscr_h = n_ref(idx->db_dscr_h);
             
             if (pkgdir->langs)
-                pkgd->langs = n_array_dup(pkgdir->langs, (tn_fn_dup)n_strdup);
+                pkgd->langs = n_ref(pkgdir->langs);
             
             pkg->pkgdir_data = pkgd;
             pkg->pkgdir_data_free = pkg_data_free;

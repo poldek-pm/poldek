@@ -37,7 +37,6 @@
 #include "pkg.h"
 #include "pkgroup.h"
 #include "pdir.h"
-#include "h2n.h"
 
 static
 int difftoc_vacuum(const char *idxpath, const char *diffpath,

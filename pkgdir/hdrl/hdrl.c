@@ -40,7 +40,6 @@
 //#include "rpmadds.h"
 #include "pkgdir.h"
 #include "pkg.h"
-#include "h2n.h"
 #include "pkgroup.h"
 #include "rpm/rpm_pkg_ld.h"
 

@@ -65,7 +65,6 @@ struct pkg *search_for_diff(struct pkgdir *pkgdir, struct pkg *pkg)
 
 static void setup_diff_langs(struct pkgdir *pkgdir) 
 {
-    tn_hash *langs = NULL;
     int i;
     
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
@@ -82,23 +81,17 @@ static void setup_diff_langs(struct pkgdir *pkgdir)
         if ((pkg_langs = pkguinf_langs(pkg->pkg_pkguinf))) {
             int i;
                             
-            if (langs == NULL)
-                langs = n_hash_new(51, free);
+            if (pkgdir->avlangs_h == NULL)
+                pkgdir->avlangs_h = n_hash_new(41, free);
 
-            for (i=0; i<n_array_size(pkg_langs); i++) {
+            for (i=0; i < n_array_size(pkg_langs); i++) {
                 char *l = n_array_nth(pkg_langs, i);
-                if (!n_hash_exists(langs, l))
-                    n_hash_insert(langs, l, NULL);
+                if (!n_hash_exists(pkgdir->avlangs_h, l))
+                    n_hash_insert(pkgdir->avlangs_h, l, NULL);
             }
         }
         
         pkguinf_free(pkgu);
-    }
-
-    
-    if (langs) {
-        pkgdir->avlangs = n_hash_keys_cp(langs);
-        n_hash_free(langs);
     }
 }
 

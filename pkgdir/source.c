@@ -262,7 +262,8 @@ void setup_langs(struct source *src)
         lang = src->dscr;
     else 
         lang = lc_messages_lang();
-            
+    
+    
     if (lang == NULL || *lang == '\0' || strcasecmp(lang, "none") == 0)
         return;
 
@@ -288,7 +289,7 @@ void setup_langs(struct source *src)
         lc_lang[n - 1] = '\0';  /* eat last ':' */
 
     src->lc_lang = n_strdupl(lc_lang, n - 1);
-    
+    //printf("source_setupl %s: %s -> %s\n", src->path, lang, lc_lang);
     n_str_tokl_free(langs_tokl);
     n_hash_free(langs);
 }

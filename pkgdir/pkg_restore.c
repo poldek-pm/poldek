@@ -46,7 +46,6 @@
 #include "pkgdir.h"
 #include "pkg.h"
 #include "pkgmisc.h"
-#include "h2n.h"
 #include "pkgroup.h"
 
 #define PKGT_HAS_NAME     (1 << 0)

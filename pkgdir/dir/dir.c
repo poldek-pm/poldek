@@ -41,7 +41,6 @@
 #include "rpm/rpm_pkg_ld.h"
 #include "pkgdir.h"
 #include "pkg.h"
-#include "h2n.h"
 #include "pkgroup.h"
 //#include "pkgdb.h"
 
@@ -67,14 +66,13 @@ struct pkgdir_module pkgdir_module_dir = {
 
 static
 int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
-             tn_array **avlangs, unsigned ldflags)
+             tn_hash *avlangs, unsigned ldflags)
 {
     struct dirent  *ent;
     struct stat    st;
     DIR            *dir;
     int            n;
     char           *sepchr = "/";
-    tn_hash        *langs = NULL;
     
     if ((dir = opendir(dirpath)) == NULL) {
         logn(LOGERR, "opendir %s: %m", dirpath);
@@ -120,14 +118,11 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
                         pkg_set_ldpkguinf(pkg);
                         if ((pkg_langs = pkguinf_langs(pkg->pkg_pkguinf))) {
                             int i;
-                            
-                            if (langs == NULL)
-                                langs = n_hash_new(51, free);
 
-                            for (i=0; i<n_array_size(pkg_langs); i++) {
+                            for (i=0; i < n_array_size(pkg_langs); i++) {
                                 char *l = n_array_nth(pkg_langs, i);
-                                if (!n_hash_exists(langs, l))
-                                    n_hash_insert(langs, l, NULL);
+                                if (!n_hash_exists(avlangs, l))
+                                    n_hash_insert(avlangs, l, NULL);
                             }
                         }
                     }
@@ -148,12 +143,6 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
     if (n && n > 200)
         msg(1, "_%d\n", n);
     closedir(dir);
-
-    if (langs) {
-        *avlangs = n_hash_keys_cp(langs);
-        n_hash_free(langs);
-    }
-    
     return n;
 }
 
@@ -161,7 +150,6 @@ static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     int n;
-    tn_array *avlangs = NULL;
     
     if (pkgdir->pkgs == NULL)
         pkgdir->pkgs = pkgs_array_new(1024);
@@ -169,9 +157,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
     
-    n = load_dir(pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups, &avlangs, ldflags);
-    pkgdir->avlangs = avlangs;
-    
+    n = load_dir(pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups,
+                 pkgdir->avlangs_h, ldflags);
     return n;
 }
 

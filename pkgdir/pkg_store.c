@@ -35,7 +35,6 @@
 #include "pkgdir.h"
 #include "pkg.h"
 #include "pkgroup.h"
-#include "h2n.h"
 
 
 static
