@@ -235,7 +235,7 @@ Have the same meanings like RPM ones. See next section.
 Don't automatically install packages required by selected ones.
 
 
-=item B<-N, --nohold> 
+=item B<--nohold> 
 Don't take held packages from $HOME/.poldek_hold.
 
 
