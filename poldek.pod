@@ -210,7 +210,7 @@ Like B<--dump> but packages are downloaded to DIR
 =item B<-F, --fresh> 
 
 Upgrade packages, but only if an earlier version currently installed.
-I<Note> that equivalent of "rpm --freshen" is "poldek --fresh --nofollow"
+I<Note> that equivalent of "rpm --freshen" is "poldek -U/-I --fresh --nofollow"
 
 =item B<--greedy> 
 

@@ -1,3 +1,15 @@
+0.15.7:
+* donwloaded packages are removed after successful installation by default
+  (keep_downloads=yes in config can change to previous behavior)
+* changed semantics of --test: -t causes poldek's checks only, 
+  -tt turns on tests performed by rpm too.
+* "mercy" dependecy checking mode may be enabled in config
+* added workarounds and traps for (propably) curl's bugs
+* "update" option can be used with other commands simultaneously
+* shell mode is now the default
+* shell: added greedy option to install cmd
+
+
 0.15.6:
 * package priorities could be used during installation too
   ("/etc/poldek-pkgsplit.conf" or "/etc/poldek-pri.conf" is used by default)
