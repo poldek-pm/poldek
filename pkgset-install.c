@@ -41,7 +41,7 @@
 
 #include <sigint/sigint.h>
 
-#define ENABLE_TRACE 0
+#define ENABLE_TRACE 1
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
@@ -62,8 +62,8 @@
 #define DBPKG_DEPS_PROCESSED      (1 << 16) /* is its deps processed? */
 #define DBPKG_TOUCHED             (1 << 17)
 
-#define PROCESS_AS_NEW       (1 << 0)
-#define PROCESS_AS_ORPHAN    (1 << 1)
+#define PROCESS_AS_NEW        (1 << 0)
+#define PROCESS_AS_ORPHAN     (1 << 1)
 
 struct upgrade_s {
     tn_array       *avpkgs;
