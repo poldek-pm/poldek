@@ -74,7 +74,7 @@ static int chk_params(struct inst_s *inst)
         
     } else {
         if (!is_rwxdir(inst->rootdir)) {
-            logn(LOGERR, "write %s: %m", inst->rootdir);
+            logn(LOGERR, "%s: %m", inst->rootdir);
             return 0;
         }
 
