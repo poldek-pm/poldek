@@ -153,7 +153,7 @@ int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs)
         vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
         len = snprintf(path, sizeof(path), "%s/%s", destdir, buf);
         
-        if (!vfile_fetcha(path, urls, urltype))
+        if (!vfile_fetcha(path, urls, VFURL_UNKNOWN))
             nerr++;
     }
     

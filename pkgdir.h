@@ -43,6 +43,7 @@ struct pkgdir *pkgdir_load_dir(const char *path);
 int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc);
 
 
+int update_pkgdir_idx(const char *path);
 
 
 #endif /* POLDEK_PKGDIR_H*/

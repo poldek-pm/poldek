@@ -79,7 +79,7 @@ static int select_ldmethod(const char *path)
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 {
     int i, j;
-    struct pkgdir *pkgdir;
+    struct pkgdir *pkgdir = NULL;
 
 
     for (i=0; i<n_array_size(sources); i++) {

@@ -356,7 +356,7 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *only_dirs)
     fl = pkgfl_array_new(ndirs);
     
     while (ndirs--) {
-        struct pkgfl_ent  *flent;
+        struct pkgfl_ent  *flent = NULL;
         char              *dn = NULL;
         int8_t            dnl = 0;
         int32_t           nfiles = 0;
