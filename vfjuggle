@@ -27,14 +27,6 @@ cdid() {
 }
 
 mount_() {
-#	why don't use CDID itself?
-#	typeset id=$1
-
-#	redundant: we check this before calling mount_
-#	if [ -f "$VF_MNTPOINT/$id" ]; then
-#		return 0
-#	fi
-
 	eval $VF_MOUNT $VF_MNTDEV $VF_MNTPOINT 2>/dev/null
 	if [ -f "$VF_MNTPOINT/$CDID" ]; then
 		return 0
@@ -133,7 +125,6 @@ while [ $# -gt 0 ]; do
 	fi
 
 	if [ ! -f "$VF_MNTPOINT/$CDID" ]; then
-#		mount_ $CDID
 		mount_
 	fi
 
@@ -145,13 +136,6 @@ while [ $# -gt 0 ]; do
 	if must_be_copied $BN; then
 		POLDEK_VFJUGGLE_CPMODE="copy"
 	fi
-
-#	we only check if "$POLDEK..." == "copy", "link" != "copy"
-#	and "" != "copy" too, so this condition is not needed I think
-
-#	if [ -z "$POLDEK_VFJUGGLE_CPMODE" ]; then
-#		POLDEK_VFJUGGLE_CPMODE="link"
-#	fi
 
 	if [ "$POLDEK_VFJUGGLE_CPMODE" == "copy" ]; then
 #		echo "cp -L --remove-destination $VF_MNTPOINT/$URI $DESTDIR/"
