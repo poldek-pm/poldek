@@ -128,7 +128,8 @@ install-exec-hook:
 	for p in poldek vfile tndb trurl; do                        \
 		laf="$(DESTDIR)$(libdir)/lib$$p.la";                    \
 		test -f $$laf && perl -pi -e 's|\s\-L[/\w\-\.]+||g;' $$laf; \
-	done
+	done; \
+	$(LN_S) $(PACKAGE) $(DESTDIR)$(bindir)/a$(PACKAGE) 
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* conf/*~
