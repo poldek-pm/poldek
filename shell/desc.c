@@ -476,12 +476,40 @@ static void show_cnfls(struct pkg *pkg)
     }
 }
 
+static void mode_t_to_str(char *str, int size, mode_t mode)
+{
+    snprintf(str, size, "%c%c%c%c%c%c%c%c%c%c",
+             S_ISDIR(mode) ? 'd' : (S_ISSOCK(mode) ? 's'  :
+                                    (S_ISCHR(mode) ? 'c'  :
+                                     (S_ISBLK(mode) ? 'b' :
+                                      (S_ISBLK(mode) ? 'b' :
+                                       (S_ISFIFO(mode) ? 'f' : '-'))))), 
+             
+             (mode & S_IRUSR) != 0 ? 'r': '-',
+             (mode & S_IWUSR) != 0 ? 'w' : '-',
+             (mode & S_ISUID) != 0 ? 's' : (mode & S_IXUSR) != 0 ? 'x': '-',
+             (mode & S_IRGRP) != 0 ? 'r' : '-',
+             (mode & S_IWGRP) != 0 ? 'w' : '-',
+             (mode & S_ISGID) != 0 ? 's' : (mode & S_IXGRP) != 0 ? 'x': '-',
+             (mode & S_IROTH) != 0 ? 'r' : '-',
+             (mode & S_IWOTH) != 0 ? 'w' : '-',
+             (mode & S_ISVTX) != 0 ? 't' : (mode & S_IXOTH) != 0 ? 'x': '-');
+}
 
-static void list_files_long(tn_array *fl)
+
+
+    
+static void list_files_long(tn_array *fl, int mode_octal)
 {
     int i, j;
+    const char *fmt = "%-10s%10s\t%s\n";
 
-    printf_c(PRCOLOR_YELLOW, "%6s%10s\t%s\n", _("mode"), _("size"), _("name"));
+
+    if (mode_octal) 
+        fmt = "%-6s%10s\t%s\n";
+        
+    printf_c(PRCOLOR_YELLOW, fmt, _("mode"), _("size"), _("name"));
+    
     for (i=0; i < n_array_size(fl); i++) {
         struct pkgfl_ent    *flent;
         char                tmpbuf[PATH_MAX];
@@ -516,7 +544,15 @@ static void list_files_long(tn_array *fl)
             if (S_ISLNK(f->mode)) 
                 n += n_snprintf(&buf[n], sizeof(buf) - n, " -> %s",
                               f->basename + strlen(f->basename) + 1);
-            printf("%6o%10d\t%s\n", f->mode, f->size, buf);
+            
+            if (mode_octal) {
+                printf("%6o%10d\t%s\n", f->mode, f->size, buf);
+                
+            } else {
+                char s[12];
+                mode_t_to_str(s, sizeof(s), f->mode);
+                printf("%10s%10d\t%s\n", s, f->size, buf);
+            }
         }
     }
 }
@@ -592,7 +628,7 @@ static void show_files(struct pkg *pkg, int longfmt)
     term_width = term_get_width() - RMARGIN;
     
     if (longfmt)
-        list_files_long(fl);
+        list_files_long(fl, 0);
     else
         list_files(fl, term_width);
 
