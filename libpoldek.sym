@@ -177,6 +177,8 @@ pm_new
 pm_pminstall
 pm_pmuninstall
 pm_verify_signature
+poldeklib_init
+poldeklib_destroy
 poldek_conf_get
 poldek_conf_get_bool
 poldek_conf_get_int

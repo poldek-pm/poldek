@@ -41,6 +41,8 @@
 #include "poldek_term.h"
 #include "pm/pm.h"
 
+static int poldeklib_init_called = 0;
+
 /* _iflags */
 #define SOURCES_SETUPDONE   (1 << 1)
 #define CACHEDIR_SETUPDONE  (1 << 2)
@@ -669,6 +671,7 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path, int up)
             poldek_configure(ctx, POLDEK_CONF_CACHEDIR, vs);
             poldek_setup_cachedir(ctx);
         }
+
     
     if (poldek_conf_get_bool(htcnf, "vfile_ftp_sysuser_as_anon_passwd", 0))
         vfile_configure(VFILE_CONF_SYSUSER_AS_ANONPASSWD, 1);
@@ -861,34 +864,19 @@ static void poldek_vf_vlog_cb(int pri, const char *fmt, va_list ap)
     vlog(logpri, 0, fmt, ap);
 }
 
-static
-int poldek_init(struct poldek_ctx *ctx, unsigned flags)
+void poldeklib_destroy(void)
 {
-    struct poldek_ts *ts;
-    int i;
-    
-    flags = flags;
+}
 
-    memset(ctx, 0, sizeof(*ctx));
-    ctx->sources = n_array_new(4, (tn_fn_free)source_free,
-                               (tn_fn_cmp)source_cmp);
-    ctx->ps = NULL;
-    ctx->_cnf = n_hash_new(16, free);
-    n_hash_insert(ctx->_cnf, "pm", n_strdup("rpm")); /* default pm */
+int poldeklib_init(void)
+{
+    char *path;
     
-    pm_module_init();
-    ctx->pmctx = NULL;
+    if (poldeklib_init_called)
+        return 1;
+    poldeklib_init_called = 1;
     
-    ctx->ts = poldek_ts_new(NULL, 0);
-    ts = ctx->ts;
-    
-    i = 0;
-    while (default_op_map[i].op) {
-        poldek_ts_xsetop(ts, default_op_map[i].op,
-                         default_op_map[i].defaultv, 0);
-        i++;
-    }
-    
+    pmmodule_init();
     poldek_set_verbose(0);
     poldek_log_init(NULL, stdout, poldek_logprefix);
     self_init();
@@ -899,14 +887,18 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     poldek_term_init();
     init_internal();
     pkgdirmodule_init();
-
+    
     vfile_configure(VFILE_CONF_SIGINT_REACHED, sigint_reached_reset);
     vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
     vfile_configure(VFILE_CONF_LOGCB, poldek_vf_vlog_cb);
 
     /* Kind of egg and chicken problem with cachedir;
        on start set it to $TMPDIR. */
-    do_poldek_setup_cachedir(ctx);
+
+    path = setup_cachedir(NULL);
+    n_assert(path);
+    vfile_configure(VFILE_CONF_CACHEDIR, path);
+    free(path);
 
 #ifdef PKGLIBDIR
     {
@@ -930,9 +922,48 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     return 1;
 }
 
+
+static
+int poldek_init(struct poldek_ctx *ctx, unsigned flags)
+{
+    struct poldek_ts *ts;
+    int i;
+    
+    flags = flags;
+
+    memset(ctx, 0, sizeof(*ctx));
+    ctx->sources = n_array_new(4, (tn_fn_free)source_free,
+                               (tn_fn_cmp)source_cmp);
+    ctx->ps = NULL;
+    ctx->_cnf = n_hash_new(16, free);
+    n_hash_insert(ctx->_cnf, "pm", n_strdup("rpm")); /* default pm */
+    
+    ctx->pmctx = NULL;
+    
+    ctx->ts = poldek_ts_new(NULL, 0);
+    ts = ctx->ts;
+    
+    i = 0;
+    while (default_op_map[i].op) {
+        poldek_ts_xsetop(ts, default_op_map[i].op,
+                         default_op_map[i].defaultv, 0);
+        i++;
+    }
+
+    if (getuid() != 0)
+        poldek_ts_setop(ts, POLDEK_OP_USESUDO, 1);
+    
+    return 1;
+}
+
 struct poldek_ctx *poldek_new(unsigned flags)
 {
     struct poldek_ctx *ctx;
+
+    if (!poldeklib_init_called) {
+        logn(LOGERR | LOGDIE, "poldeklib_init() call is a must...");
+        return 0;
+    }
     
     ctx = n_malloc(sizeof(*ctx));
     if (poldek_init(ctx, flags))

@@ -7,7 +7,7 @@
 #include <trurl/trurl.h>
 #include "poldek.h"
 
-int pm_module_init(void);
+int pmmodule_init(void);
 
 struct pm_module;
 struct pkgdb;

@@ -47,7 +47,7 @@ static struct pm_module *mod_tab[] = {
     NULL
 };
 
-int pm_module_init(void) 
+int pmmodule_init(void) 
 {
     int i;
 
