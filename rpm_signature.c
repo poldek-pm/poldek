@@ -215,7 +215,7 @@ int rpm_verify_signature(const char *path, unsigned flags)
     return rpmCheckSig(flags, argv) == 0;
 }
 
-#else
+#else  /* rpm 4.1 */
 
 int rpm_verify_signature(const char *path, unsigned flags) 
 {
@@ -227,8 +227,7 @@ int rpm_verify_signature(const char *path, unsigned flags)
     int                       rc;
 
     
-    n_assert(flags & (VRFYSIG_DGST |
-                      VRFYSIG_SIGNGPG | VRFYSIG_SIGNPGP));
+    n_assert(flags & (VRFYSIG_DGST | VRFYSIG_SIGN));
     
     if (!rpm_signatures(path, &presented_signs, NULL))
         return 0;
