@@ -16,5 +16,7 @@ int main(int argc, char *argv[])
     cmprc = rpmvercmp(argv[1], argv[2]);
     printf("%s %s %s\n", argv[1], cmprc == 0 ?  "==" : cmprc > 0 ? ">" : "<",
            argv[2]);
+    if (cmprc < 0)
+        cmprc = 2;
     exit(cmprc);
 }
