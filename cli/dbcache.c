@@ -48,6 +48,9 @@ int poclidek_load_installed(struct poclidek_ctx *cctx, int reload)
     struct pkgdir *pkgdir;
     DBGF("%d\n", reload);
 
+    if (cctx->dbpkgdir && !reload)
+        return 0;
+
     if ((pkgdir = load_installed_pkgdir(cctx, reload)) == NULL)
         return 0;
 
@@ -65,6 +68,13 @@ int poclidek_load_installed(struct poclidek_ctx *cctx, int reload)
     n_array_ctl(cctx->pkgs_installed, TN_ARRAY_AUTOSORTED);
     cctx->dbpkgdir = pkgdir;
     cctx->ts_dbpkgdir = pkgdir->ts;
+    
+    if (cctx->dbpkgdir_added == NULL)
+        cctx->dbpkgdir_added = pkgs_array_new(32);
+
+    else if (n_array_size(cctx->dbpkgdir_added))
+        n_array_clean(cctx->dbpkgdir_added);
+    
     return 1;
 }
 
@@ -118,9 +128,6 @@ char *mkrpmdb_path(char *path, size_t size, const char *root, const char *dbpath
                dbpath != NULL ? dbpath : "");
     return *path ? path : NULL;
 }
-
-
-
 
 
 static
@@ -189,6 +196,7 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     time_t       mtime_rpmdb, mtime_dbcache;
     char         rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
     const char   *path;
+    int          i;
 
     if (!pm_dbpath(cctx->ctx->pmctx, dbpath, sizeof(dbpath)))
         return 1;
@@ -222,6 +230,20 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     n_assert(strlen(path) > 10);
     DBGF("%s %s, %d %d\n", cctx->ctx->ts->cachedir, path,
          mtime_rpmdb, cctx->ts_dbpkgdir);
+
+    /* assure new packages haven't recno and clean it if yes;
+       playing with recno is messy and should be fixed. 
+     */
+    for (i=0; i<n_array_size(cctx->dbpkgdir_added); i++) {
+        struct pkg *pkg = n_array_nth(cctx->dbpkgdir_added, i);
+        if (pkg->recno) {
+            logn(LOGERR, "%s: recno is set, should not happen",
+                 pkg_snprintf_s(pkg));
+            pkg->recno = 0;
+        }
+    }
+    n_array_clean(cctx->dbpkgdir_added);
+    
     return pkgdir_save_as(pkgdir, RPMDBCACHE_PDIRTYPE, path,
                           PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
                           PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NOFL);

@@ -736,6 +736,7 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf)
     for (i=0; i < n_array_size(iinf->installed_pkgs); i++) {
         struct pkg *pkg = n_array_nth(iinf->installed_pkgs, i);
         n_array_push(cctx->pkgs_installed, pkg_link(pkg));
+        n_array_push(cctx->dbpkgdir_added, pkg_link(pkg));
         if (ent)
             pkg_dent_add_pkg(cctx, ent, pkg);
         DBGF("+ %s\n", pkg->nvr);

@@ -661,8 +661,8 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
     double          pkgsize;
     
     if ((pkgu = pkg_info(pkg)) == NULL && poldek_verbose() > 1) {
-        log(LOGWARN, _("%s: description unavailable (index without packages "
-                       "info loaded?)\n"), pkg_snprintf_s(pkg));
+        log(LOGWARN, _("%s: full description unavailable (index without "
+                       "packages info loaded?)\n"), pkg_snprintf_s(pkg));
     }
     
     if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_SUMMARY))) {
