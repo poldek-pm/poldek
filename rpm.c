@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -893,10 +897,130 @@ tn_array *rpm_get_provides_dbpkgs(rpmdb db, const struct capreq *cap,
     return dbpkgs;
 }
 
+/* rpmlib's rpmCheckSig reports success when GPG signature is missing,
+   so it is useless for real sig verification */
+#ifndef HAVE_RPM_4_0
+static int rpm_signatures(const char *path, unsigned *signature_flags)
+{
+    *signature_flags = CHECKSIG_MD5;
+    path = path;
+    return 1;
+}
+#else
+static int rpm_signatures(const char *path, unsigned *signature_flags) 
+{
+    unsigned        flags;
+    FD_t            fdt;
+    struct rpmlead  lead;
+    Header          sign = NULL;
+    int32_t         tag, type, cnt;
+    const void      *ptr;
+    HeaderIterator  it;
+
+    *signature_flags = 0;
+    
+    fdt = Fopen(path, "r.fdio");
+    if (fdt == NULL || Ferror(fdt)) {
+//        logn("open %s: %s", path, Fstrerror(fdt));
+        if (fdt)
+            Fclose(fdt);
+        return 0;
+    }
+
+    if (readLead(fdt, &lead)) {
+        logn(LOGERR, "%s: read package lead failed", path);
+        Fclose(fdt);
+        return 0;
+    }
+    
+    if (rpmReadSignature(fdt, &sign, lead.signature_type) != 0) {
+        logn(LOGERR, "%s: read package signature failed", path);
+        Fclose(fdt);
+        return 0;
+    }
+
+    Fclose(fdt);
+    
+    if (sign == NULL) {
+        logn(LOGERR, "%s: no signatures available", path);
+        Fclose(fdt);
+        return 0;
+    }
+
+    flags = 0;
+    it = headerInitIterator(sign);
+    
+    while (headerNextIterator(it, &tag, &type, &ptr, &cnt)) {
+        switch (tag) {
+	    case RPMSIGTAG_PGP5:	/* XXX legacy */
+	    case RPMSIGTAG_PGP:
+		flags |= CHECKSIG_PGP;
+		break;
+                
+	    case RPMSIGTAG_GPG:
+		flags |= CHECKSIG_GPG;
+                break;
+                
+	    case RPMSIGTAG_LEMD5_2:
+	    case RPMSIGTAG_LEMD5_1:
+	    case RPMSIGTAG_MD5:
+		flags |= CHECKSIG_MD5;
+		break;
+                
+	    default:
+		continue;
+		break;
+        }
+        ptr = headerFreeData(ptr, type);
+    }
+
+    headerFreeIterator(it);
+    rpmFreeSignature(sign);
+    *signature_flags = flags;
+    return 1;
+}
+
+#endif HAVE_RPM_4_0
+
 #ifdef HAVE_RPMCHECKSIG
 int rpm_verify_signature(const char *path, unsigned flags) 
 {
     const char *argv[2];
+    unsigned presented_signs;
+
+    n_assert(flags & (CHECKSIG_MD5 | CHECKSIG_GPG | CHECKSIG_PGP));
+
+    if ((flags & (CHECKSIG_GPG | CHECKSIG_PGP))) {
+        presented_signs = 0;
+        
+        if (!rpm_signatures(path, &presented_signs)) {
+            logn(LOGERR, "dupa\n");
+            return 0;
+        }
+        	
+        
+        if ((presented_signs & flags) == 0) {
+            char signam[255];
+            int n = 0;
+            
+            if (flags & CHECKSIG_MD5)
+                n += snprintf(&signam[n], sizeof(signam) - n, "md5/");
+            
+            if (flags & CHECKSIG_GPG)
+                n += snprintf(&signam[n], sizeof(signam) - n, "gpg/");
+            
+            if (flags & CHECKSIG_PGP)
+                n += snprintf(&signam[n], sizeof(signam) - n, "pgp/");
+            
+            n_assert(n > 0);
+            signam[n - 1] = '\0';   /* eat last '/' */
+            logn(LOGWARN, _("%s: %s signature not found"), n_basenam(path),
+                 signam);
+            return 0;
+        }
+    }
+    	
+    
 
     argv[0] = path;
     argv[1] = NULL;
@@ -924,7 +1048,7 @@ void rpmlog(int prii, const char *fmt, ...)
     if (pri <= RPMLOG_ERR)
         logpri = LOGERR;
     
-    else if (pri == RPMLOG_WARNING)
+    else if (pri == RPMLOG_WARNING || pri == RPMLOG_NOTICE)
         logpri = LOGWARN;
     
     else {
@@ -932,15 +1056,18 @@ void rpmlog(int prii, const char *fmt, ...)
         verbose_level = 2;
     }
 
-    if (verbose_level > verbose)
-        return;
-
-    if (verbose_level > rpmlib_verbose)
-        return;
-    
     va_start(args, fmt);
+
+#if 0    
+    printf("%d, v = %d, verbose = %d, rpmlib_verbose = %d\n", pri, verbose_level,
+           verbose, rpmlib_verbose);
+    vprintf(fmt, args);
+#endif
     
-    if (logpri != LOGERR)
+    if (verbose_level > verbose || verbose_level > rpmlib_verbose)
+        return;
+    
+    if ((logpri & (LOGERR | LOGWARN)) == 0)
         vlog(logpri, 0, fmt, args);
         
     else {                  /* basename(path) */
@@ -949,7 +1076,6 @@ void rpmlog(int prii, const char *fmt, ...)
 
         
         n = vsnprintf(m, sizeof(m), fmt, args);
-
         if (n > 0 && m[n - 1] == '\n')
             m[n - 1] = '\0';
         
@@ -962,7 +1088,7 @@ void rpmlog(int prii, const char *fmt, ...)
             p = q;
         }
         
-        log(logpri, "%s\n", p);
+        log(logpri | LOGWARN, "%s\n", p);
     }
         
     va_end(args);

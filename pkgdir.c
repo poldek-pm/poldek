@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -301,7 +305,7 @@ int update_whole_idx(const char *path)
         rc = pdigest_verify(idx.pdg, vf);
         if (rc) {
             if (vf->vf_flags & VF_FETCHED)
-                i_pkgdir_creat_md5(vf_localpath(vf));
+                i_pkgdir_creat_md5(vfile_localpath(vf));
             try = 0;
             
         } else if (!vfile_is_remote(vf)) {
@@ -589,14 +593,14 @@ struct pkgdir *pkgdir_new(const char *name, const char *path,
     if (vf->vf_flags & VF_FETCHED) {
         if (pdigest_verify(idx.pdg, vf)) {
             pkgdir_flags |= PKGDIR_VERIFIED;
-            i_pkgdir_creat_md5(vf_localpath(vf));
+            i_pkgdir_creat_md5(vfile_localpath(vf));
             
         } else
             nerr++;
         
         
     } else if (flags & PKGDIR_NEW_VERIFY) {
-        const char *local_idxpath = vf_localpath(vf);
+        const char *local_idxpath = vfile_localpath(vf);
         
         if (local_idxpath == NULL ||
             !i_pkgdir_verify_md5(idx.idxpath, local_idxpath)) {
@@ -1379,10 +1383,10 @@ static int is_uptodate(const char *path, const struct pdigest *pdg_local,
     if (pkgdir_v016compat)
         remote_pdg.mode = PDIGEST_MODE_v016;
     
-    if (vfile_url_type(path) & VFURL_LOCAL)
+    if (vf_url_type(path) & VFURL_LOCAL)
         return 1;
     
-    if (!(n = vfile_mksubdir(mdtmpath, sizeof(mdtmpath), "tmpmd"))) {
+    if (!(n = vf_mksubdir(mdtmpath, sizeof(mdtmpath), "tmpmd"))) {
         rc = -1;
         goto l_end;
     }
@@ -1432,7 +1436,7 @@ static int is_uptodate(const char *path, const struct pdigest *pdg_local,
 
 int pkgdir_isremote(struct pkgdir *pkgdir)
 {
-    return vfile_url_type(pkgdir->path) & VFURL_REMOTE;
+    return vf_url_type(pkgdir->path) & VFURL_REMOTE;
 }
 
 

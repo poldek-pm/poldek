@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2001 - 2002 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -42,18 +46,21 @@ int package_verify_sign(const char *path, unsigned flags)
     unsigned rpmflags = 0;
 
     if (access(path, R_OK) != 0) {
-        logn(LOGERR, "verify signature %s: %m", path);
+        logn(LOGERR, "%s: verify signature failed: %m", path);
         return 0;
     }
     
     
-    if (flags & PKGVERIFY_PGPG)
-        rpmflags |= CHECKSIG_PGP | CHECKSIG_GPG;
+    if (flags & PKGVERIFY_GPG)
+        rpmflags |= CHECKSIG_GPG;
+
+    if (flags & PKGVERIFY_PGP)
+        rpmflags |= CHECKSIG_PGP;
     
     if (flags & PKGVERIFY_MD)
         rpmflags |= CHECKSIG_MD5;
 
-    return rpm_verify_signature(path, flags);
+    return rpm_verify_signature(path, rpmflags);
 }
 
 #else  /* HAVE_RPMCHECKSIG */
@@ -77,10 +84,12 @@ int package_verify_sign(const char *path, unsigned flags)
 
     nopts = n;
     
-    if ((flags & PKGVERIFY_PGPG) == 0) {
-        argv[n++] = "--nopgp";
+    if ((flags & PKGVERIFY_GPG) == 0)
         argv[n++] = "--nogpg";
-    }
+
+    if ((flags & PKGVERIFY_PGP) == 0)
+        argv[n++] = "--nopgp";
+    
     
     if ((flags & PKGVERIFY_MD) == 0) {
         argv[n++] = "--nomd5";
@@ -106,6 +115,34 @@ int package_verify_sign(const char *path, unsigned flags)
 
 #endif /* HAVE_RPMCHECKSIG */
 
+int package_verify_pgpg_sign(const struct pkg *pkg, const char *localpath) 
+{
+    int rc = 1;
+
+    if (pkg->pkgdir->flags & PKGDIR_VERSIGN) {
+        int rv = rpmlib_verbose, v = verbose;
+        unsigned verify_flags = 0;
+        
+        verbose = rpmlib_verbose = 1;
+
+        if (pkg->pkgdir->flags & PKGDIR_VER_GPG)
+            verify_flags |= PKGVERIFY_GPG;
+
+        if (pkg->pkgdir->flags & PKGDIR_VER_PGP)
+            verify_flags |= PKGVERIFY_PGP;
+        
+        if (!package_verify_sign(localpath, verify_flags)) {
+            logn(LOGERR, "%s: signature verification failed", pkg_snprintf_s(pkg));
+            rc = 0;
+        }
+
+        rpmlib_verbose = rv;
+        verbose = v;
+    }
+    
+    return rc;
+}
+
 int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
 {
     int       i, nerr, urltype, ncdroms;
@@ -116,22 +153,20 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
 
     
     urls_h = n_hash_new(21, (tn_fn_free)n_array_free);
-    urls_arr = n_array_new(n_array_size(pkgs), NULL, (tn_fn_cmp)strcmp);
-    
     n_hash_ctl(urls_h, TN_HASH_NOCPKEY);
-    
+    urls_arr = n_array_new(n_array_size(pkgs), NULL, (tn_fn_cmp)strcmp);
     
     // group by URL
     ncdroms = 0;
     nerr = 0;
-    for (i=0; i<n_array_size(pkgs); i++) {
+    for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg  *pkg = n_array_nth(pkgs, i);
         char        *pkgpath = pkg->pkgdir->path;
         char        path[PATH_MAX], *s;
         const char  *pkg_basename;
         int         len;
         
-        urltype = vfile_url_type(pkgpath);
+        urltype = vf_url_type(pkgpath);
         
         if (urltype == VFURL_CDROM)
             ncdroms++;
@@ -139,9 +174,17 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
         pkg_basename = pkg_filename_s(pkg);
 
         if (urltype == VFURL_PATH) {
+            int v = rpmlib_verbose;
+            
             snprintf(path, sizeof(path), "%s/%s", pkgpath, pkg_basename);
-            if (!package_verify_sign(path, PKGVERIFY_MD))
+            
+            rpmlib_verbose = -2; /* be quiet */
+            if (!package_verify_sign(path, PKGVERIFY_MD)) {
+                logn(LOGERR, _("%s: MD5 signature verification failed"),
+                     n_basenam(path));
                 nerr++;
+            }
+            rpmlib_verbose = v;
             continue;
         }
         
@@ -152,23 +195,22 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
         } else {
             char buf[PATH_MAX];
             
-            vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
+            vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
             snprintf(path, sizeof(path), "%s/%s/%s", destdir, buf,
                      pkg_basename);
         }
 
         if (access(path, R_OK) == 0) {
-            int v = rpmlib_verbose;
+            int pkg_ok, v = rpmlib_verbose;
             
             rpmlib_verbose = -2; /* be quiet */
-            if (package_verify_sign(path, PKGVERIFY_MD)) {
-                rpmlib_verbose = v;
-                continue;           /* already downloaded */
-                
-            } else if (vfile_valid_path(path)) 
-                unlink(path);
-            
+            pkg_ok = package_verify_sign(path, PKGVERIFY_MD);
             rpmlib_verbose = v;
+            
+            if (pkg_ok)         /* already downloaded,  */
+                continue;
+            else 
+                vf_unlink(path);
         }
         
         if ((urls = n_hash_get(urls_h, pkgpath)) == NULL) {
@@ -196,6 +238,7 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
     else if (ncdroms == 1) 
         putenv("POLDEK_VFJUGGLE_CPMODE=link");
 
+    
     for (i=0; i<n_array_size(urls_arr); i++) {
         char path[PATH_MAX];
         const char *real_destdir;
@@ -206,7 +249,7 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
         if (nosubdirs == 0) {
             char buf[1024];
             
-            vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
+            vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
             snprintf(path, sizeof(path), "%s/%s", destdir, buf);
             real_destdir = path;
         }
@@ -221,8 +264,11 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
                 char localpath[PATH_MAX];
                 snprintf(localpath, sizeof(localpath), "%s/%s", real_destdir,
                          n_basenam(n_array_nth(urls, j)));
-                if (!package_verify_sign(localpath, PKGVERIFY_MD))
+                if (!package_verify_sign(localpath, PKGVERIFY_MD)) {
+                    logn(LOGERR, _("%s: MD5 signature verification failed"),
+                         n_basenam(localpath));
                     nerr++;
+                }
             }
         }
     }

@@ -9,7 +9,8 @@
 
 #define PKGSOURCE_NOAUTO     (1 << 0)
 #define PKGSOURCE_NOAUTOUP   (1 << 1)
-#define PKGSOURCE_VERSIGN    (1 << 2)
+#define PKGSOURCE_VER_GPG    (1 << 2)
+#define PKGSOURCE_VER_PGP    (1 << 3)
 
 struct source {
     unsigned  flags;

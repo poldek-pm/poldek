@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -25,6 +29,20 @@
 #include "pkgset-load.h"
 #include "misc.h"
 #include "log.h"
+
+struct src_option {
+    char      *name;
+    unsigned  flag;
+};
+
+
+static struct src_option source_options[] = {
+    { "noauto",   PKGSOURCE_NOAUTO     }, 
+    { "noautoup", PKGSOURCE_NOAUTOUP   }, 
+    { "gpg",      PKGSOURCE_VER_GPG    },
+    { "pgp",      PKGSOURCE_VER_PGP    },
+    {  NULL,      0 }, 
+};
 
 
 struct source *source_new(const char *pathspec, const char *pkg_prefix)
@@ -97,24 +115,22 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     
     if ((q = strchr(name, ','))) {
         const char **tl, **t;
-
+        
         *q++ = '\0';
         tl = t = n_str_tokl(q, ",");
         n_assert(tl);
-        
-        while (*t) {
-            if (strcmp(*t, "noauto") == 0)
-                src->flags |= PKGSOURCE_NOAUTO;
 
-            else if (strcmp(*t, "noautoup") == 0)
-                src->flags |= PKGSOURCE_NOAUTOUP;
-            
-            else if (strcmp(*t, "gpg") == 0)
-                src->flags |= PKGSOURCE_VERSIGN;
-                
-            else
+        while (*t) {
+            int n = 0;
+            while (source_options[n].name != NULL) {
+                if (strcmp(*t, source_options[n].name) == 0) {
+                    src->flags |= source_options[n].flag;
+                    break;
+                }
+                n++;
+            }
+            if (source_options[n].name == NULL)
                 logn(LOGWARN, _("%s: %s unknown option"), name, *t);
-            
             t++;
         }
         n_str_tokl_free(tl);
@@ -149,30 +165,17 @@ int source_cmp_name(struct source *s1, struct source *s2)
 
 int source_snprintf_flags(char *str, int size, struct source *src) 
 {
-    int n;
-
+    int n, i;
+    
     n_assert(size > 0);
     
     *str = '\0';
-    n = 0;
-    
-    if (src->flags & PKGSOURCE_NOAUTO)
-        n = snprintf(str, size - n, "noauto");
 
-    if (src->flags & PKGSOURCE_NOAUTOUP) {
-        if (n && size - n > 2) {
-            str[n++] = ',';
-            str[n] = '\0';
-        }
-        n += snprintf(&str[n], size - n, "noautoup");
-    }
-    
-    if (src->flags & PKGSOURCE_VERSIGN) {
-        if (n && size - n > 2) {
-            str[n++] = ',';
-            str[n] = '\0';
-        }
-        n += snprintf(&str[n], size - n, "gpg");
+    i = n = 0;
+    while (source_options[i].name != NULL) {
+        if (src->flags & source_options[i].flag)
+            n += snprintf(&str[n], size - n, source_options[i].name);
+        i++;
     }
     
     return n;
@@ -225,6 +228,12 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
                 logn(LOGWARN, _("%s: load failed, skipped"), src->source_path);
             continue;
         }
+
+        if (src->flags & PKGSOURCE_VER_GPG)
+            pkgdir->flags |= PKGDIR_VER_GPG;
+
+        if (src->flags & PKGSOURCE_VER_PGP)
+            pkgdir->flags |= PKGDIR_VER_PGP;
         
         n_array_push(ps->pkgdirs, pkgdir);
     }

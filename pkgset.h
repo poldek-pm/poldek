@@ -62,6 +62,8 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_CONFIRM_INST    (1 << 14) /* confirm_installs = yes  */
 #define INSTS_EQPKG_ASKUSER   (1 << 15) /* choose_equivalents_manually = yes */
 
+#define INSTS_INTERACTIVE_ON  (INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER)
+
 struct inst_s {
     struct pkgdb   *db;
     unsigned       flags;          /* INSTS_* */
@@ -156,11 +158,13 @@ int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
 
 
 #define PKGVERIFY_MD   (1 << 0)
-#define PKGVERIFY_PGPG (1 << 1)
-#define PKGVERIFY_ALL  PKGVERIFY_MD | PKGVERIFY_PGPG
+#define PKGVERIFY_GPG  (1 << 1)
+#define PKGVERIFY_PGP  (1 << 2)
 
 int package_verify_sign(const char *path, unsigned flags);
 
+/* looks if pkg->pkgdir has set VERSIGN flag */
+int package_verify_pgpg_sign(const struct pkg *pkg, const char *localpath);
 
 #include "pkgset-load.h"
 

@@ -19,6 +19,10 @@
 #define PKGDIR_PATCHED            (1 << 7)  /* patched  */
 #define PKGDIR_UNIQED             (1 << 8) /* passed through pkgdir_uniq() */
 
+#define PKGDIR_VER_GPG            (1 << 10) /* verify package GPG signatures */
+#define PKGDIR_VER_PGP            (1 << 11) /* verify package PGP signatures */
+
+#define PKGDIR_VERSIGN            (PKGDIR_VER_GPG | PKGDIR_VER_PGP)
 
 /* packages.dir digest */
 
@@ -49,7 +53,7 @@ struct pkgdir {
                                             but presented in other pkgdirs */
     struct pkgroup_idx  *pkgroups;
     struct vfile        *vf;              /* packages.dir.gz  handle */
-    unsigned            flags;
+    unsigned            flags;            /* PKGDIR_* */
     time_t              ts;               /* timestamp */
 
     tn_array            *removed_pkgs;    /* for diffs, removed packages */

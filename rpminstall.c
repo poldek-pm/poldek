@@ -209,7 +209,7 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
 {
     char **argv;
     char *cmd;
-    int i, n, nopts = 0, ec;
+    int i, n, nopts = 0, ec, nsignerr = 0;
     int nv = verbose;
     
     n = 128 + n_array_size(pkgs);
@@ -283,7 +283,8 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
     if (inst->rpmopts) 
         for (i=0; i<n_array_size(inst->rpmopts); i++)
             argv[n++] = n_array_nth(inst->rpmopts, i);
-    
+
+    nsignerr = 0;
     nopts = n;
     for (i=0; i < n_array_size(ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
@@ -295,24 +296,38 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
             
             name = pkg_filename_s(pkg);
             
-            if (vfile_url_type(pkgpath) == VFURL_PATH) {
+            if (vf_url_type(pkgpath) == VFURL_PATH) {
                 len = snprintf(path, sizeof(path), "%s/%s", pkgpath, name);
             
             } else {
                 char buf[1024];
                 
-                vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
+                vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
                 len = snprintf(path, sizeof(path), "%s/%s/%s", inst->cachedir,
                                buf, name);
             }
 
+            if (!package_verify_pgpg_sign(pkg, path))
+                nsignerr++;
+            
             s = alloca(len + 1);
             memcpy(s, path, len);
             s[len] = '\0';
             argv[n++] = s;
         }
     }
-    
+
+    if (nsignerr) {
+        if ((inst->flags & (INSTS_INTERACTIVE_ON)) && inst->ask_fn) {
+            if (!inst->ask_fn(0,
+                              _("There were signature verification errors. "
+                                "Proceed? [y/N]")))
+                goto l_err_end;
+            
+        } else {
+            goto l_err_end;
+        }
+    }
         
     n_assert(n > nopts); 
     argv[n++] = NULL;
@@ -341,7 +356,7 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
             if (!pkg_is_marked(pkg))
                 continue;
             
-            url_type = vfile_url_type(pkg->pkgdir->path);
+            url_type = vf_url_type(pkg->pkgdir->path);
             if ((url_type & (VFURL_PATH | VFURL_UNKNOWN | VFURL_CDROM)) == 0) {
                 DBG("unlink %s\n", argv[n]); 
                 unlink(argv[n]);
@@ -351,5 +366,9 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
     }
 
     return ec == 0;
+    
+ l_err_end:
+    
+    return 0;
 }
 
