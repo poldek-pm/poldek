@@ -156,7 +156,7 @@ int vfile_curl_fetch(const char *dest, const char *url)
                 *(p - 1) = '\0';
         }
             
-        vfile_err_fn("curl: %s\n", url, err);
+        vfile_err_fn("curl: %s\n", err);
         unlink(dest);
         rc = 0;
     }
