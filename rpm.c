@@ -464,6 +464,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
     rpmts ts = NULL;
     rpmps probs = NULL;
 #else
+    rpmTransactionSet ts = NULL;
     rpmProblemSet probs = NULL;
 #endif
     struct vfile *vf;
@@ -504,7 +505,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
 	rpmtsOpenDB(ts, O_RDWR);
 #else
         ts = rpmtransCreateSet(db, rootdir);
-        rc = rpmtransAddPackage(rpmts, h, vf->vf_fdt, path, 
+        rc = rpmtransAddPackage(ts, h, vf->vf_fdt, path, 
                                 (instflags & INSTALL_UPGRADE) != 0, NULL);
 #endif
         
