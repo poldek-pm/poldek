@@ -274,7 +274,7 @@ I<Note> that equivalent of "rpm --freshen" is "poldek -u/-i --fresh --nofollow"
 Automatically upgrade packages which dependencies are broken
 by unistalled ones, for example if package foo is upgraded
 from version 1.0 to 1.2 and package foo-devel is already installed
-with requirement "foo = 1.0" than poldek upgrade foo-devel to version
+with requirement "foo = 1.0" then poldek upgrade foo-devel to version
 1.2 too.
 
 =item B<--hold=PACKAGE[,PACKAGE]...>
@@ -326,7 +326,7 @@ then $HOME/.poldek-cache is created and used as cache directory.
 
 =item B<--log=FILE>
 
-Log all poldek messages to FILE
+Log all poldek messages to FILE.
 
 =back
 
@@ -571,7 +571,7 @@ See also sample configs included in distribution.
 
 
 Additionally poldek supports CDROM URLs which could be used when package set
-is stored on removable media (several CDs, ZIPs, etc); as  CDROM "downloader"
+is stored on removable media (several CDs, ZIPs, etc); as CDROM "downloader"
 vfjuggle should be configured, see poldekrc.sample-cdrom for details.
 
 =head1 EXAMPLES
