@@ -22,6 +22,7 @@
 #include <sys/stat.h> 
 #include <unistd.h>
 #include <time.h>
+#include <fnmatch.h>
 
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
@@ -97,10 +98,11 @@ struct args {
     char      *curr_src_path;
     int       curr_src_ldmethod;
     tn_array  *sources;
+    char      *source_name;
     
     int       idx_type;
     char      *idx_path;
-
+    
     int       has_pkgdef;
     tn_array  *pkgdef_files;    /* foo.rpm      */
     tn_array  *pkgdef_defs;     /* -n "foo 1.2" or "foo" or "foo*" */
@@ -183,7 +185,8 @@ static struct argp_option options[] = {
 
 {0,0,0,0, N_("Source options:"), 1 },    
 {"source", 's', "SOURCE", 0, N_("Get packages info from SOURCE"), 1 },
-    
+
+{"sn", 'S', "SOURCE-NAME", 0, N_("Get packages info from source named SOURCE-NAME"), 1 },    
 {"sidx", OPT_SOURCETXT, "FILE", 0,
  N_("Get packages info from package index file FILE"), 1 },
 
@@ -395,6 +398,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 'p':
             n_array_push(argsp->pkgdef_sets, arg);
+            break;
+
+        case 'S':
+            argsp->source_name = arg;
             break;
             
         case OPT_SOURCETXT:     /* no break */
@@ -797,30 +804,47 @@ void parse_options(int argc, char **argv)
         htcnf = ldconf_deafult();
     
     if (n_array_size(args.sources) == 0) {
+        struct source *src;
+        const char *sn;
         int i;
+
+        sn = args.source_name;
         
         if ((v = conf_get(htcnf, "source", &is_multi))) {
             if (is_multi == 0) {
-                n_array_push(args.sources, source_new(v, NULL));
+                src = source_new(v, NULL);
+                if ((sn == NULL) || (sn && fnmatch(sn, src->source_name, 0) == 0))
+                    n_array_push(args.sources, src);
+                else
+                    source_free(src);
+                    
             } else {
                 tn_array *paths = NULL;
                 if ((paths = conf_get_multi(htcnf, "source"))) {
-                    while (n_array_size(paths)) 
-                        n_array_push(args.sources,
-                                     source_new(n_array_shift(paths), NULL));
+                    while (n_array_size(paths)) {
+                        src = source_new(n_array_shift(paths), NULL);
+                        if ((sn == NULL) || (sn && fnmatch(sn, src->source_name, 0) == 0))
+                            n_array_push(args.sources, src);
+                        else
+                            source_free(src);
+                    }
                 }
             }
         }
-
+        
         /* source\d+, prefix\d+ pairs  */
         for (i=0; i<100; i++) {
-            char opt[64], *src;
+            char opt[64], *src_val;
             
             snprintf(opt, sizeof(opt), "source%d", i);
-            if ((src = conf_get(htcnf, opt, NULL))) {
+            if ((src_val = conf_get(htcnf, opt, NULL))) {
                 snprintf(opt, sizeof(opt), "prefix%d", i);
-                n_array_push(args.sources,
-                             source_new(src, conf_get(htcnf, opt, NULL)));
+
+                src = source_new(src_val, conf_get(htcnf, opt, NULL));
+                if ((sn == NULL) || (sn && fnmatch(sn, src->source_name, 0) == 0))
+                    n_array_push(args.sources, src);
+                else
+                    source_free(src);
             }
         }
     }

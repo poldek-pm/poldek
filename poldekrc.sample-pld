@@ -2,9 +2,9 @@
 # Sample configuration for PLD  
 # 
 
-source = ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
-#source = ftp://ftp.pld.org.pl/dists/ra/test/i686/
-#source = /home/zenek/rpm/RPMS/
+source = [PLD];ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
+#source = [PLDtest];ftp://ftp.pld.org.pl/dists/ra/test/i686/
+#source = [zenek];/home/zenek/rpm/RPMS/
 
 
 # NOTE: directory *must* exists; default $HOME/.poldek-cache

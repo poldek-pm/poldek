@@ -36,11 +36,11 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     int len;
 
     p = pathspec;
-    while (*p && !isspace(*p))
+    while (*p && !isspace(*p) && *p != ',' && *p != ';')
         p++;
 
-    if (isspace(*p)) {
-        path = p;
+    if (*p == ',' || *p == ';' || isspace(*p)) {
+        path = p + 1;
         while (isspace(*path))
             path++;
         
@@ -55,11 +55,11 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
         if ((q = strrchr(name, ']')))
             *q = '\0';
         if (*name == '\0')
-            name = "unnamed";
+            name = "gall";
         
     } else {
         path = pathspec;
-        name = "unnamed";
+        name = "gall";
     }
     
     
@@ -109,6 +109,12 @@ int source_cmp(struct source *s1, struct source *s2)
 {
     return strcmp(s1->source_path, s2->source_path);
 }
+
+int source_cmp_name(struct source *s1, struct source *s2)
+{
+    return strcmp(s1->source_name, s2->source_name);
+}
+
 
 int source_update(struct source *src)
 {
