@@ -215,13 +215,17 @@ static int make_idx(struct arg_s *arg_s)
         MEMINF("before mkidx");
 
         if (types == NULL) {     /* no types  */
+            msgn(1, "Making index of %s (type=%s)...", source_idstr(src),
+                 src->type);
             if (!source_make_idx(src, NULL, NULL, path, arg_s->crflags))
                 nerr++;
             
         } else
             for (j = 0; j < n_array_size(types); j++) {
                 const char *dtype = n_array_nth(types, j);
-                msgn(0, "Making '%s' index of %s (type=%s)...", dtype,
+                if (j > 0)
+                    msg(1, "\n");
+                msgn(1, "Making '%s' index of %s (type=%s)...", dtype,
                      source_idstr(src), src->type);
                 MEMINF("before");
                 if (!source_make_idx(src, NULL, dtype, path, arg_s->crflags))

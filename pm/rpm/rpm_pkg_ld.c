@@ -245,7 +245,8 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     int       *fentdirs_items;
     int       i, j, ndirs = 0, nerr = 0, missing_file_hdrs_err = 0;
     const char *errmsg_notag = _("%s: no %s tag");
-    
+
+    n_assert(na);
     if (!headerGetEntry(h, RPMTAG_BASENAMES, (void*)&t1, (void*)&names, &c1))
         return 0;
 
@@ -516,7 +517,8 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
         else
             flldflags = PKGFL_DEPDIRS;
         
-        if (pm_rpm_ldhdr_fl(na, &pkg->fl, h, flldflags, pkg_snprintf_s(pkg)) == -1) {
+        if (pm_rpm_ldhdr_fl(na, &pkg->fl, h, flldflags,
+                            pkg_snprintf_s(pkg)) == -1) {
             pkg_free(pkg);
             pkg = NULL;
         

@@ -856,7 +856,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
     if (sigint_reached())
         return;
     
-    DBGMSG_F("%s\n", pkg_snprintf_s(pkg));
+    DBGF("%s\n", pkg_snprintf_s(pkg));
 
     if ((upg->ts->getop(upg->ts, POLDEK_OP_OBSOLETES)))
         n = pkgdb_get_obsoletedby_pkg(db, upg->uninst_set->dbpkgs, pkg,
@@ -866,7 +866,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                                            PKG_LDWHOLE_FLDEPDIRS);
     if (n == 0)
         return;
-    DBGMSG_F("%s, n = %d\n", pkg_snprintf_s(pkg), n);
+    DBGF("%s, n = %d\n", pkg_snprintf_s(pkg), n);
     n = 0;
     for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
         struct pkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);

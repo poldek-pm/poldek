@@ -77,11 +77,11 @@ static struct argp_option source_options[] = {
      OPT_SRC_GID },
 
 {"st", OPT_SRCTYPE, "SOURCE-TYPE", 0,
-     N_("Set the source type (use --stl to list available values)"),
-     OPT_SRC_GID },
+       N_("Set the source type (use --stl to list available values)"),
+       OPT_SRC_GID },
 
 {"prefix", 'P', "PREFIX", 0,
-     N_("Get packages from PREFIX instead of SOURCE"), OPT_SRC_GID },
+        N_("Get packages from PREFIX instead of SOURCE"), OPT_SRC_GID },
 
 {0,0,0,0, N_("Source related actions:"), OPT_SRC_GID + 1 },
 {"stl", OPT_SRCTYPE_LS, 0, 0, N_("List available source types"),

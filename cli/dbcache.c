@@ -176,15 +176,15 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     const char   *path;
 
     if (!pm_dbpath(cctx->ctx->pmctx, dbpath, sizeof(dbpath)))
-        return 0;
+        return 1;
 
     if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
                      cctx->ctx->ts->rootdir, dbpath) == NULL)
-        return 0;
+        return 1;
 
     mtime_rpmdb = pm_dbmtime(cctx->ctx->pmctx, rpmdb_path);
-    if (mtime_rpmdb > cctx->ts_dbpkgdir) /* changed outside poldek */
-        return 0;
+    if (mtime_rpmdb > cctx->ts_dbpkgdir) /* db changed outside poldek */
+        return 1;
     
     if (pkgdir_is_type(pkgdir, RPMDBCACHE_PDIRTYPE))
         path = pkgdir->idxpath;
@@ -195,22 +195,22 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     if (path == NULL)
         return 0;
     
-    if (mtime_rpmdb == pkgdir->ts) { /* not touched, check if cache exists  */
+    if (mtime_rpmdb <= cctx->ts_dbpkgdir) { /* not touched, check cache */
         mtime_dbcache = mtime(path);
-        if (mtime_dbcache && mtime_dbcache >= pkgdir->ts)
-            return 0;
+        if (mtime_dbcache && mtime_dbcache >= cctx->ts_dbpkgdir)
+            return 1;
     }
-
     
-    //printf("path = %s, %s, %d, %d, %d\n", path, pkgdir->idxpath,
-    ///      mtime_rpmdb, pkgdir->ts, mtime_dbcache);
+    DBGF("path = %s, %s, %d, %d, %d\n", path, pkgdir->idxpath,
+         mtime_rpmdb, pkgdir->ts, mtime_dbcache);
     n_assert(*path != '\0');
     n_assert(strlen(path) > 10);
-    DBGF("%s %s\n", cctx->ctx->ts->cachedir, path);
+    DBGF("%s %s, %d %d\n", cctx->ctx->ts->cachedir, path,
+         mtime_rpmdb, cctx->ts_dbpkgdir);
+    msg(0, "\n");
     return pkgdir_save_as(pkgdir, RPMDBCACHE_PDIRTYPE, path,
                           PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
                           PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NODESC);
     
-    return 1;
 }
 

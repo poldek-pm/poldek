@@ -179,7 +179,7 @@ void pm_pset_freedb(void *dbh)
         int i;
         for (i=0; i < n_array_size(db->paths_added); i++) {
             char *path = n_array_nth(db->paths_added, i);
-            DBGF_F("unlink %s\n", path);
+            DBGF("unlink %s\n", path);
             unlink(path);
         }
         rmdir(db->tsdir);
@@ -484,7 +484,7 @@ int pm_pset_packages_install(struct pkgdb *pdb,
             
             if (!do_pkgtslink(db, ts->cachedir, pkg, path))
                 return 0;
-            msgn(2, "%%install %s %s", path, pkgdir->path);
+            msgn(3, "%%install %s %s", path, pkgdir->path);
         }
     }
 
@@ -516,7 +516,7 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb,
             if (ts->getop(ts, POLDEK_OP_JUSTDB))
                 continue;
             n_array_push(db->paths_removed, n_strdup(path));
-            msgn(2, "%%uninstall %s", path);
+            msgn(3, "%%uninstall %s", path);
         }
     }
     return 1;
@@ -535,7 +535,8 @@ int pm_pset_commitdb(void *dbh)
     msgn(0, "Installing to %s", pkgdir->path);
     for (i=0; i < n_array_size(db->paths_removed); i++) {
         const char *path = n_array_nth(db->paths_removed, i);
-        DBGF_F("rm %s\n", path);
+        msgn_f(0, "%%rm %s\n", path);
+        msgn_tty(2, "rm %s\n", path);
         unlink(path);
         nchanges++;
     }
@@ -544,7 +545,8 @@ int pm_pset_commitdb(void *dbh)
         const char *path = n_array_nth(db->paths_added, i);
         n_snprintf(dstpath, sizeof(dstpath), "%s/%s", pkgdir->path,
                    n_basenam(path));
-        DBGF_F("cp %s %s\n", path, dstpath);
+        msgn_f(0, "%%cp %s %s\n", path, dstpath);
+        msgn_tty(2, "cp %s %s\n", n_basenam(path), dstpath);
         if (!do_cp(path, dstpath)) {
             rc = 0;
             break;

@@ -95,7 +95,7 @@ const struct pkg *dbpkg_set_provides(struct dbpkg_set *dbpkg_set,
     }
     
     if ((pkg = n_hash_get(dbpkg_set->capcache, capname))) {
-        DBGMSG_F("cache hit %s\n", capreq_snprintf_s(cap));
+        DBGF("cache hit %s\n", capreq_snprintf_s(cap));
         return pkg;
     }
     
@@ -125,7 +125,7 @@ const struct pkg *dbpkg_set_provides(struct dbpkg_set *dbpkg_set,
     }
 
     if (pkg != NULL) {
-        DBGMSG_F("addto cache %s\n", capreq_name(cap));
+        DBGF("addto cache %s\n", capreq_name(cap));
         if (capnvr == NULL) {
             n_hash_insert(dbpkg_set->capcache, capname, pkg);
             

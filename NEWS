@@ -1,13 +1,131 @@
 0.19.0 (major enhancements release; not released yet, not usable yet)
 
-New branch of poldek is 
+I) Source repositories
+* repositories code has been totally rewritten in the modular, 
+  plugin-like way, so is is quite easy to add support for new 
+  format. 
 
-* new package index format ('pndir') with package descriptions
-  moved to separate file. Based on tndb (cdb like) DBM library
+  Currently supported formats:
+
+  name   caps description
+  -----------------------
+  pndir  rwu  Native poldek's index format (NEW)
+  pdir   rwu  Native poldek's index format prior to 0.20 version
+  dir    r--  Dynamic index built by scanning directory for packages
+  hdrl   r-u  File with raw RPM package headers; used by apt-rpm
+  rpmdb  r--  RPM package database (NEW)
+  yum    r-u  Yum index format (NEW)
+  ('rwu' stands for if index is able to read, write and update)
+
+* new 'pndir' is the default format now. It is based on tndb (cdb 
+  like) DBM library. To save bandwidth package descriptions 
+  (Description, Summary, etc) are stored in separate file(s) (one
+  .dscr file per available language). 
+
+* 'hdrl' aka 'apt' format are updateable now. 
+
+* repository indexes could be created in many formats at once
+  (using --mkidx-type=TYPE[,TYPE]), ex:
+
+  $ poldek -s /foo/bar --mkdix --mkidx-type=pdir,pndir
+
+* indexes may be created from any index format, i.e conversion to
+  to another format is supported, ex:
+  $ poldek --st apt -s /foo/bar --mkdix=/ala/ma --mkidx-type=pdir
+
+* (re)creation of native poldek's indexes (pdir, pndir) is much faster now 
+  -- package headers are not loaded at all if package's file modification 
+  time is the same as saved one in existing index.
 
 
+II) Installation related
 
-                       ==== 0.19.x ====
+* poldek can perform 'to repository' installation, i.e packages
+  are copied from source to destination repository with full
+  dependency checking, ex:
+
+  $ poldek -n ...  --install-dest /var/foo/rpms-repo --upgrade-dist -v
+  $ poldek -n ...  --install-dest-dn name --upgrade-dist -v
+
+
+III) Interactive mode
+
+* mode's commands are available without mode itself, i.e
+  one can execute interactive commands from commandline:
+  
+  $ poldek -C ls 
+  $ apoldek-get install libfoo-0.1-1
+
+* aliases are defined in to external configuration file 
+  (Mariusz Mazur <mmazur a kernel pl>)
+
+* commands may be piped, ex:
+  poldek> rsearch /poldek/ | ls -l
+  package                                build date        size
+  poldek-0.18.6-19                       2004/09/15 21:22  421.0 KB
+  poldex-0.17.4-1                        2004/08/17 22:12   47.0 KB
+  2 packages, 468.0 KB
+
+* external commands are supported too:
+  poldek> rsearch /pol/ | grep ^pol
+  polcnv-2.2-3
+  poldek-0.18.6-19
+  poldex-0.17.4-1
+  policy-1.6-2
+
+
+IV) Configuration file 
+
+* multi word variables are written with spaces or underscore separator, i.e:
+  both forms "this is = foo" and "this_is = foo" are valid. 
+
+* default location of configuration file has been changed to 
+  "${_sysconfdir}/poldek/poldek.conf", old /etc location is still supported. 
+
+* configuration file format has been changed to ini-like one. Sources and 
+  external dowloaders should be configured in its own sections "source" and 
+  "fetcher", see sample configs. Old configuration format is still supported.
+
+* environment variables in config files are expanded (ex: cachedir = $HOME/.cache)
+
+* macro like expansion has been added to make configuration easier to read,
+  ex: 
+
+ _pld_arch   = i686
+ _pld_prefix = ftp://ftp.pld.org.pl/dists/ra
+ _ra_idxtype = pdir
+
+ # PLD 1.0 (Ra)
+ [source]
+ type  = %{_ra_idxtype}
+ name  = ra 
+ path  = %{_pld_prefix}/PLD/%{_pld_arch}/PLD/RPMS/
+
+* %include macro has been added, included file may be remote too, ex:
+
+   _pld_prefix = ftp://ftp.pld.org.pl/dists/ra
+  %include %{_pld_prefix}/source.conf
+
+  Included remote files once dowloaded are stored in cache, 
+  to resync them with it's remote copy use --upconf option. 
+
+* support for APT sources configuration has been added; by default
+  /etc/apt/sources.list is loaded if user configuration ($HOME/.poldekrc) 
+  doesn't exist. To load it with personal config too, put 
+  "load apt sources list = yes" to config.
+
+V) General 
+
+* removed and changed options and switches; all obsoleted opts are still 
+  supported *except* "-f" (not important IMO). Changes:
+  -f, --fast               => --skip-installed
+  --mkidxz                 => --mkidx           (compression is on by default)
+  --sidx, --sdir, --shdrl  =>                   (use --st=TYPE -s instead)
+  --unique-pkg-names       => --uniq
+  --shcmd                  =>                   (use -C or run apoldek-get)
+
+
+                            ==== 0.18.x ====
 
 0.18.7 (major bugfix release; 2004/09/24)
 * another stupid SIGSEGV killed (happened occasionally while dependency 

@@ -242,7 +242,7 @@ int packages_fetch(struct pm_ctx *pmctx,
         }
 
         pkgdir_name = n_hash_get(pkgdir_labels_h, pkgpath);
-        if (!vf_fetcha_sl(urls, real_destdir, pkgdir_name))
+        if (!vf_fetcha(urls, real_destdir, 0, pkgdir_name))
             nerr++;
         
         else {

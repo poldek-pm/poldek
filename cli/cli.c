@@ -164,9 +164,8 @@ static tn_array *find_command_aliases(struct poclidek_cmd *cmd,
                                       struct poclidek_ctx  *cctx) 
 {
     char nam[PATH_MAX];
-    tn_array *aliases;
+    tn_array *aliases = NULL;
     int i, n;
-    
     
     if (cmd->flags & COMMAND_IS_ALIAS)
         return NULL;

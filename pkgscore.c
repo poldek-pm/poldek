@@ -93,7 +93,7 @@ tn_array *read_patterns(const char *fpath, tn_array *patterns, unsigned type)
             buf[len--] = '\0';
 
         if (*p) {
-            DBGMSG_F("read %s\n", p);
+            DBGF("read %s\n", p);
             n_array_push(patterns, n_strdup(p));
         }
         
@@ -172,13 +172,13 @@ void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag)
                 switch (scoreflag) {
                     case PKG_HELD:
                         msgn(3, "held %s", pkg_snprintf_s(pkg));
-                        DBGMSG_F("HELD %s\n", pkg_snprintf_s(pkg));
+                        DBGF("HELD %s\n", pkg_snprintf_s(pkg));
                         pkg_score(pkg, PKG_HELD);
                         break;
 
                     case PKG_IGNORED:
                         msgn(3, "ignored %s", pkg_snprintf_s(pkg));
-                        DBGMSG_F("IGNORED %s\n", pkg_snprintf_s(pkg));
+                        DBGF("IGNORED %s\n", pkg_snprintf_s(pkg));
                         pkg_score(pkg, PKG_IGNORED);
                         break;
                         
