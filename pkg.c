@@ -333,7 +333,7 @@ int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2)
     
     if ((rc = p1->epoch - p2->epoch))
         return rc;
-
+    
     rc = rpmvercmp(p1->ver, p2->ver);
 
     if (rc == 0)
@@ -382,11 +382,12 @@ int pkg_add_selfcap(struct pkg *pkg)
         pkg->caps = capreq_arr_new();
     
     capreq_pkg(pkg->caps, pkg->epoch, pkg->name, strlen(pkg->name),
-                pkg->ver, strlen(pkg->ver), pkg->rel, strlen(pkg->rel));
+               pkg->ver, strlen(pkg->ver), pkg->rel, strlen(pkg->rel));
     
-    if (n_array_size(pkg->caps)) 
+    if (n_array_size(pkg->caps)) {
         n_array_sort(pkg->caps);
-    else {
+        n_array_uniq(pkg->caps);
+    } else {
         n_array_free(pkg->caps);
         pkg->caps = NULL;
         n_assert(0);
