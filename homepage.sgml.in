@@ -14,12 +14,12 @@
 
     The poldek is the RPM packages management helper tool; its
     basic features are similar to every modern package updater like <em>apt-get</em> --
-    program takes information about packages from package index file
-    (<em>packages.dir.gz</em> by default) and allows to package 
-    install, upgrade and removal. 
+    the program takes information about packages from package index file
+    (<em>packages.dir.gz</em> by default) and allows packaging 
+    installation, upgrading and removal. 
     Package dependencies are automatically handled, so if you need to install 
-    a package which needs others to be installed, then poldek downloads all
-    required packages by itself and install them. 
+    a package which requires other packages to be installed, poldek downloads and
+    installs all the required packages by itself. 
 
     Main poldek's advantages are:
     <itemize>
@@ -27,30 +27,30 @@
     <item> Relatively fast dependency processing
     <p>
     Package dependencies, conflicts and setting in order are handled by poldek
-    itself without use of rpmlib, so program is significantly faster and uses
+    itself without using rpmlib, so the program is significantly faster and uses
     less memory than rpmlib-based tools.
 
-
+    
     <item> "Smart" installation of a big package sets 
     <p> 
-    Before installation packages are divided into small groups,
-    usually from 2 to 10 items (depends on their reciprocal dependencies).
-    Each group is installed separately, what ensures that unsucessful installation
-    of one of group doesn't influence other groups. 
+    Before their installation packages are divided into small groups,
+    usually from 2 to 10 items (depending on their reciprocal dependencies).
+    Each group is installed separately, which ensures that unsucessful installation
+    of one of the groups doesn't influence other groups. 
 
-<!-- It means that # i.e. it is allowed to install as many as possible packages. -->
+<!-- It means that # i.e. it is allowed to install as manye packages as possible. -->
 
     Another benefit of this separate installation is that it requires
-    less memory and disk space than usual one.
+    less memory and disk space than the usual one.
    
     <item> Interactive mode 
     <p>
     
-    The poldek can works in two modes: a batch mode (in use similar
+    The poldek can work in two modes: a batch mode (in use similar
     to <em>apt-get</em> one) and <em>interactive</em> one. The interactive 
     mode puts the user into a readline interface with command line auto-completion 
-    and history. In this mode user is able to browse, search, download,
-    install/upgrade and deinstall packages. In its concept this is similar 
+    and history. In this mode the user is able to browse, search, download,
+    install/upgrade and deinstall packages. In its concept it   is similar 
     to shell mode of Perl's CPAN module
     (see sample <url name="interactive mode session" 
               url="screenshoots.html#shell-session">).
