@@ -113,7 +113,7 @@ static struct argp_option cmdl_options[] = {
          N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
 
     {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
-N_("Prevent packages listed from being upgraded if they are already installed."),
+    N_("Prevent packages listed from being upgraded if they are already installed."),
      OPT_GID },
 {"nohold", OPT_INST_NOHOLD, 0, 0,
 N_("Do not hold any packages"), OPT_GID },
@@ -213,7 +213,7 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_INST_HOLD:
-            ts->setop(ts, POLDEK_OP_HOLD, 1);
+            poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_HOLD, 1);
             poldek_configure(ts->ctx, POLDEK_CONF_HOLD, arg);
             break;
             
@@ -222,12 +222,12 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case OPT_INST_IGNORE:
-            ts->setop(ts->ctx->ts, POLDEK_OP_IGNORE, 1);
+            poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_IGNORE, 1);
             poldek_configure(ts->ctx, POLDEK_CONF_IGNORE, arg);
             break;
 
         case OPT_INST_NOIGNORE:
-            ts->setop(ts->ctx->ts, POLDEK_OP_IGNORE, 0);
+            ts->setop(ts, POLDEK_OP_IGNORE, 0);
             break;
     
 
@@ -341,7 +341,7 @@ static int install(struct cmdarg *cmdarg)
     cctx = cmdarg->cctx;
     ts = cmdarg->ts;
     
-    poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
+    poldek_ts_setf(ts, POLDEK_TS_INSTALL | POLDEK_TS_UPGRADE);
     is_test = ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0);
 
     rc = poldek_ts_run(ts, is_test ? NULL : &iinf);
@@ -371,6 +371,7 @@ static int install(struct cmdarg *cmdarg)
             n_array_size(iinf.uninstalled_pkgs))
             cmdarg->cctx->ts_instpkgs = time(0);
     }
+
     if (!is_test)
         install_info_destroy(&iinf);
     
@@ -383,13 +384,13 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
 
     dbgf_("%p->%p, %p->%p\n", rt->ts, rt->ts->hold_patterns,
           rt->ts->ctx->ts, rt->ts->ctx->ts->hold_patterns);
-
+    
     if (!poldek_ts_issetf(rt->ts, POLDEK_TS_INSTALL))
         return 0;
 
     if (!poldek_load_sources(rt->ctx))
         return 0;
-    
+
     rc = poldek_ts_run(rt->ts, NULL);
-    return rc ? 0 : OPGROUP_RC_ERROR;
+    return rc ? OPGROUP_RC_FINI : OPGROUP_RC_ERROR | OPGROUP_RC_FINI;
 }

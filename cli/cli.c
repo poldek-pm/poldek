@@ -548,7 +548,8 @@ void poclidek_destroy(struct poclidek_ctx *cctx)
     if (cctx->instpkgs)
         n_array_free(cctx->instpkgs);
 
-    pkg_dent_free(cctx->rootdir);
+    if (cctx->rootdir)
+        pkg_dent_free(cctx->rootdir);
 
     if (cctx->dbpkgdir) {
         poclidek_save_installedcache(cctx, cctx->dbpkgdir);

@@ -136,7 +136,7 @@ static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct args *argsp = state->input;
-    
+    struct poldek_ctx *ctx = argsp->ctx;
 //    if (key && arg)
 //        chkarg(key, arg);
 
@@ -150,9 +150,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_LOG:
-            poldek_configure(argsp->ctx, POLDEK_CONF_LOGFILE, arg);
+            poldek_configure(ctx, POLDEK_CONF_LOGFILE, arg);
             break;
-
+            
         case OPT_CONF:
             args.path_conf = n_strdup(arg);
             break;
@@ -168,6 +168,23 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'v': 
             verbose++;
             break;
+
+        case OPT_NOCONF:
+            argsp->cnflags |= POLDEKCLI_CMN_NOCONF;
+
+        case OPT_ASK:
+            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_INST, 1);
+            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_UNINST, 1);
+            break;
+
+        case OPT_NOASK:
+            argsp->cnflags |= POLDEKCLI_CMN_NOASK;
+            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_INST, 0);
+            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_UNINST, 0);
+            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_EQPKG_ASKUSER, 0);
+            break;
+    
+            
 
         case OPT_BANNER:
             printf("%s\n", poldek_BANNER);
@@ -237,9 +254,11 @@ void argp_prepare_child_options(const struct argp *argp)
     }
 }
 
+#define MODE_POLDEK   0
+#define MODE_APT      1
     
 static
-void parse_options(struct poclidek_ctx *cctx, int argc, char **argv) 
+void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode) 
 {
     struct argp argp = { common_options, parse_opt,
                          args_doc, poldek_BANNER, 0, 0, 0};
@@ -252,6 +271,8 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv)
     args.argv = n_malloc(sizeof(*argv) * argc);
     args.argv[0] = NULL;
 
+    if (mode == MODE_APT)
+        args.eat_args = 1;
     args.ts = poldek_ts_new(cctx->ctx);
     n = 0;
     while (poclidek_opgroup_tab[n])
@@ -281,7 +302,7 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv)
     argp_parse(&argp, argc, argv, ARGP_IN_ORDER, &index, &args);
 
     poldek_setup_cachedir(args.ctx);
-
+    
     if ((args.cnflags & POLDEKCLI_CMN_NOCONF) == 0) 
         if (!poldek_load_config(args.ctx, args.path_conf))
             exit(EXIT_FAILURE);
@@ -289,12 +310,6 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv)
     if (!poldek_setup_sources(args.ctx))
         exit(EXIT_FAILURE);
 
-    if ((args.cnflags & POLDEKCLI_CMN_NOASK) == 0) {
-        args.ctx->ts->setop(args.ctx->ts, POLDEK_OP_CONFIRM_INST, 1);
-        args.ctx->ts->setop(args.ctx->ts, POLDEK_OP_CONFIRM_UNINST, 1);
-        args.ctx->ts->setop(args.ctx->ts, POLDEK_OP_EQPKG_ASKUSER, 1);
-    }
-    
     if (poldek_ts_is_interactive_on(args.ctx->ts) && verbose < 1)
         verbose = 1;
             
@@ -352,23 +367,27 @@ int do_run(void)
 
 int main(int argc, char **argv)
 {
-    int                   i, rc = 1, rrc;
+    int                   i, rc = 1, rrc, mode = MODE_POLDEK;
     struct poldek_ctx     ctx;
     struct poclidek_ctx  cctx;
     
+    
     mem_info_verbose = -1;
-
+    if (strcmp(n_basenam(argv[0]), "apoldek-get") == 0)
+        mode = MODE_APT;
+    printf("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
     poldek_init(&ctx, 0);
 
     memset(&cctx, 0, sizeof(cctx));
     poclidek_init(&cctx, &ctx);
     
-    parse_options(&cctx, argc, argv);
+    parse_options(&cctx, argc, argv, mode);
     
     rrc = do_run();
     if (rrc & OPGROUP_RC_FINI)
         exit((rc & OPGROUP_RC_ERROR) ? EXIT_FAILURE : EXIT_SUCCESS);
-    
+
+    printf("run?\n");
     if (args.eat_args == 0) {
         poclidek_load_packages(&cctx, 1);
         poclidek_shell(&cctx);
@@ -377,9 +396,9 @@ int main(int argc, char **argv)
         dbgf_("exec[%d] ", args.argc);
         i = 0;
 
-        //while (args.argv[i])
-        //    printf(" %s", args.argv[i++]);
-        //printf("\n");
+        while (args.argv[i])
+            printf(" %s", args.argv[i++]);
+        printf("\n");
         
         if (args.argc > 0) 
             rc = poclidek_exec(&cctx, args.ts, args.argc,
