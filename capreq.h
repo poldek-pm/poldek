@@ -62,7 +62,7 @@ extern inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_has_epoch(cr)    (cr)->cr_ep_ofs   
 #define capreq_has_ver(cr)      (cr)->cr_ver_ofs
 #define capreq_has_rel(cr)      (cr)->cr_rel_ofs
-#define capreq_versioned(cr)    (cr)->cr_relflags
+#define capreq_versioned(cr)    ((cr)->cr_relflags & (REL_ALL))
 
 
 #define capreq_is_cnfl(cr)      ((cr)->cr_flags & CAPREQ_CNFL)
