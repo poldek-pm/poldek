@@ -59,5 +59,6 @@ void display_pkg_list(int verbose_l, const char *prefix,
                       tn_array *pkgs, unsigned flags);
 
 
+int snprintf_size(char *buf, int bufsize, unsigned long nbytes);
 
 #endif /* POLDEK_MISC_H */

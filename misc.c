@@ -601,6 +601,26 @@ const char *abs_path(char *buf, int size, const char *path)
     return buf;
 }
 
+
+int snprintf_size(char *buf, int bufsize, unsigned long nbytes) 
+{
+    char unit = 'B';
+    double nb;
+
+    nb = nbytes;
+    
+    if (nb > 1024) {
+        nb /= 1024;
+        unit = 'K';
+    }
+    
+    if (nb > 1024) {
+        nb /= 1024;
+        unit = 'M';
+    }
+
+    return n_snprintf(buf, bufsize, "%.1f%c", nb, unit);
+}
         
 
     

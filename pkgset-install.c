@@ -1548,9 +1548,19 @@ static void show_dbpkg_list(const char *prefix, tn_array *dbpkgs)
 }
 
 
+
 static void print_install_summary(struct upgrade_s *upg) 
 {
-    int i, n;
+    int i, n, size_download = 0, size_install = 0;
+    char sizebuf[64];
+    
+    for (i=0; i < n_array_size(upg->install_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
+
+        size_download += pkg->fsize;
+        size_install += pkg->size;
+    }
+    
 
     n = n_array_size(upg->install_pkgs);
 #ifndef ENABLE_NLS    
