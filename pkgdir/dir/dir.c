@@ -90,8 +90,8 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
         if (fnmatch("*.rpm", ent->d_name, 0) != 0) 
             continue;
 
-        if (fnmatch("*.src.rpm", ent->d_name, 0) == 0) 
-            continue;
+        //if (fnmatch("*.src.rpm", ent->d_name, 0) == 0) 
+        //    continue;
 
         snprintf(path, sizeof(path), "%s%s%s", dirpath, sepchr, ent->d_name);
         
@@ -110,8 +110,8 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
                 struct pkg *pkg;
                 tn_array *pkg_langs;
 
-                if (rpmhdr_issource(h)) /* omit src.rpms */
-                    continue;
+                //if (rpmhdr_issource(h)) /* omit src.rpms */
+                //    continue;
 
                 if ((pkg = pkg_ldrpmhdr(h, path, st.st_size, PKG_LDWHOLE))) {
                     if (ldflags & PKGDIR_LD_DESC) {

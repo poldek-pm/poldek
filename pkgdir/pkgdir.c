@@ -328,7 +328,6 @@ struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags)
         pkgdir->flags |= PKGDIR_VRFY_PGP;
     
     pkgdir->pri = src->pri;
-
     return pkgdir;
 }
 
@@ -348,7 +347,8 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     char                        idx_path[PATH_MAX];
     struct pkgdir               *pkgdir;
     const struct pkgdir_module  *mod;
-    int                         rc;  
+    int                         rc;
+    unsigned                    saved_flags;
 
     n_assert(type);
     if ((mod = find_module(type)) == NULL)
@@ -358,6 +358,10 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 
     pkgdir = pkgdir_malloc();
     pkgdir->name = n_strdup(name);
+
+    if (name && strcmp(name, "-") != 0)
+        pkgdir->flags |= PKGDIR_NAMED;
+
     
     pkgdir_make_idx_url(idx_path, sizeof(idx_path), path, idx_filename);
 
@@ -381,15 +385,16 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 
     pkgdir->avlangs_h = n_hash_new(41, free);
     //pkgdir->langs = n_array_new(2, free, NULL);
-    
     rc = 1;
+
+    saved_flags = pkgdir->flags;
     if (mod->open) {
         if (!mod->open(pkgdir, flags)) {
             pkgdir_free(pkgdir);
             return NULL;
         }
     }
-    
+    n_assert((pkgdir->flags & saved_flags) == saved_flags);
     if (pkgdir->langs && n_array_size(pkgdir->langs) == 0) {
         n_array_free(pkgdir->langs);
         pkgdir->langs = NULL;
@@ -402,7 +407,6 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     }
 
     pkgdir->flags |= flags;
-    
     return pkgdir;
 }
 
@@ -497,9 +501,8 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     }
     
     pkgdir->foreign_depdirs = foreign_depdirs;
-    
-    msgn(1, _("Loading %s..."), vf_url_slim_s(pkgdir->idxpath, 0));
 
+    msgn(1, _("Loading %s..."), pkgdir_idstr(pkgdir));
     rc = 0;
     if (pkgdir->mod->load(pkgdir, ldflags) >= 0) {
         int i;

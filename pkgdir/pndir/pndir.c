@@ -399,7 +399,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     
     
     
-    pkgdir->flags = pkgdir_flags;
+    pkgdir->flags |= pkgdir_flags;
     pkgdir->pkgs = pkgs_array_new(1024);
     pkgdir->ts = ts;
     pkgdir->ts_orig = ts_orig;

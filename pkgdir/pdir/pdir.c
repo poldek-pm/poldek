@@ -657,7 +657,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     pkgdir->mod_data = n_malloc(sizeof(idx));
     memcpy(pkgdir->mod_data, &idx, sizeof(idx));
     pkgdir->depdirs = depdirs;
-    pkgdir->flags = pkgdir_flags;
+    pkgdir->flags |= pkgdir_flags;
     pkgdir->pkgs = pkgs_array_new(1024);
     pkgdir->pkgroups = pkgroups;
     pkgdir->ts = ts;

@@ -2,6 +2,8 @@
 #ifndef POLDEK_SOURCE_H
 #define POLDEK_SOURCE_H
 
+#include <trurl/narray.h>
+
 /* source options */
 #define PKGSOURCE_NOAUTO     (1 << 0)
 #define PKGSOURCE_NOAUTOUP   (1 << 1)

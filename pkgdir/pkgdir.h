@@ -13,6 +13,7 @@ int pkgdirmodule_init(void);
 
 #define PKGDIR_DEFAULT_TYPE       "pndir"
 
+#define PKGDIR_NAMED              (1 << 0)
 #define PKGDIR_LOADED             (1 << 1)  /* for idx */
 #define PKGDIR_VERIFIED           (1 << 2)  /* to avoid double verification
                                                during --update */
@@ -65,9 +66,13 @@ struct pkgdir {
 #define pkgdir_pr_idxpath(pkgdir) \
    (pkgdir->idxpath ? vf_url_hidepasswd_s(pkgdir->idxpath) : NULL)
 
+#define pkgdir_idstr(p) \
+ (((p)->flags & PKGDIR_NAMED) ? (p)->name : vf_url_slim_s((p)->idxpath, 0))
 
 struct pkgdir *pkgdir_malloc(void);
 void pkgdir_free(struct pkgdir *pkgdir);
+
+
 
 /*
   if pkgdir source is poldeksindex then loading is 2-phase:
