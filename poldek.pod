@@ -158,7 +158,7 @@ package index, if it fails, then whole index is downloaded.
 
 With B<--update-whole> program updates whole package index
 
-For local sources option only verifies existing index 
+For local sources program verifies existing index 
 integrity using its digest from packages.dir.mdd. 
 
 =item B<-V|--verify>
@@ -338,17 +338,17 @@ line represents a comment or a parameter.
 
 =item * B<source> = [NAME] SOURCE
 
-e.g.
-
-source = pld-stable ftp://zn/PLD/i686/PLD/RPMS
 
 Optional NAME may be specified later from cmdline by
 B<-n, --sn> B<SOURCE-NAME> option; for example if you 
-have 3 sources configured as follows:
+have sources configured as follows:
 
 source = pld-devel     /mnt/PLD-stable/RPMS
+
 source = pld-stable    ftp://zn/PLD/i686/PLD/RPMS
+
 source = misRPMS       ftp://zn/rpm/RPMS/
+
 
 then to use only ftp://zn/PLD/i686/PLD/RPMS do:
 
@@ -359,14 +359,18 @@ $ poldek --sn pld-stable
 $ poldek --sn pld-\*
 
 
-If you want to configure source with prefix (see B<-P> option description), 
-then it should be specified by suffixed paramteters pair to distinguish 
-that source from other ones:   
 
 =item * B<sourceXX> = SOURCE
 
-=item * B<prefixXX> - see B<-P> description
+=item * B<prefixXX> = SOURCE
 
+If you want to configure source with prefix (see B<-P> option description), 
+then it should be specified by suffixed paramteters pair to distinguish 
+that source from other ones, for example:
+
+source = ~/tmp/my-cd-indexes/
+
+prefix = /mnt/cdrom/RPMS/
 
 =item * B<cachedir> - see B<--cachedir> option description
 
@@ -389,6 +393,14 @@ that source from other ones:
         "yes" then program will never remove downloaded packages from cache 
         directory.
 
+=item * B<confirm_installs = yes|no> - if "yes" program confirm all
+        performed package installations (default: no)
+
+=item * B<choose_equivalents_manually = yes|no> - if "yes" program let the user
+        choose among equivalent packages (default: no)
+        
+=item * B<particle_install = yes|no> - if "no" installations of multiple packages 
+        are performed as one transaction (default: yes)
 =back
 
 =head1

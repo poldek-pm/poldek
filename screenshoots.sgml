@@ -3,9 +3,9 @@
 
 <linuxdoc>
   <article> 
-    <title> the poldek screenshoots </title>
+    <title> the poldek screenshots </title>
 
-    <sect>Sample poldek's interactive mode session<label id="shell-session">
+    <sect>Sample interactive mode session<label id="shell-session">
     <p>
 
     Start in the interactive mode...
@@ -134,9 +134,9 @@ poldek&gt
 
 
 <sect>Verification report<label id="verify-report">
-
+<p>
 <tscreen><verb>
-$ poldek -s ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/packages.dir.gz -V
+$ poldek -s ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/ -V
 Loading ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/packages.dir.gz...
 3610 packages read
 Indexing...

@@ -4,12 +4,12 @@
 <linuxdoc>
   <article> 
     <title> the poldek </title>
-    <author> <tt/mis@pld.org.pl/ </author>
+    <author> <tt/mis at pld.org.pl/ </author>
     <date> $Date$ </date>
 
     <toc>
 
-    <sect> Intro
+    <sect> Description
     <p>
 
     The poldek is a RPM packages management helper tool; its
@@ -134,6 +134,12 @@
     <tscreen><verb>
     $ poldek -s SOURCE [OPTION...] [PACKAGE...]
     </verb></tscreen>
+
+For example:
+    <tscreen><verb>
+    $ poldek -s /home/ftp/pub/PLD/RPMS -uv foo
+    $ poldek -s /home/ftp/pub/PLD/RPMS -V
+    </verb></tscreen>
      
     See also <url name="sample interactive mode session" url="screenshoots.html">.
 
@@ -153,7 +159,7 @@
     it under the terms of the GNU General Public License, version 2 as
     published by the Free Software Foundation.
 
-    See <url url="http://team.pld.org.pl/~mis/poldek/NEWS" name="NEWS"> 
+    See <url url="NEWS" name="NEWS"> 
     for a list of major changes in the current release.
 	
     <itemize> 
@@ -178,9 +184,9 @@
      name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm">  
      <p>
      Non static rpm packages, for several architectures can be downloaded from
-     <url url="http://www.pld.org.pl/" name="PLD"> ftp site 
+     <url url="http://www.pld.org.pl/" name="PLD"> ftp site
      <url url="ftp://ftp.pld.org.pl/" name="ftp://ftp.pld.org.pl/"> (directory
-      PLD-1.0/<em>ARCH</em>/PLD/RPMS/)
+	/dists/ra/PLD/<em>ARCH</em>/PLD/RPMS/)
          
      </item>
 
@@ -189,7 +195,7 @@
       Getting the module (password: "cvs"): 
       <tscreen><verb>
       cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot login
-      cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get -r vv@VERSION_CVSTAG@ installer/poldek
+      cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get -r @VERSION_CVSTAG@ installer/poldek
       </verb></tscreen>            
       Particular files may be accessed via 
 	<url url="http://cvs.pld.org.pl/installer/poldek/" name="CVSWeb">
@@ -207,8 +213,8 @@
 	<p>
 	Pawel A. Gajda (mis at pld.org.pl)
 	<p>
-	Thanks to: Artur Frysiak (widget at pld.org.pl), 
-        Rafal Kleger-Rudomin (klakier at pld.org.pl),
+	Thanks to Artur Frysiak (widget at pld.org.pl), 
+        Rafal Kleger-Rudomin (klakier at pld.org.pl) and
 	Michal Moskal (malekith at pld.org.pl) for ideas, testing, 
         bug reports and patches. 
     </sect>	
