@@ -193,8 +193,10 @@ struct pkguinf *pkguinf_restore_rpmhdr_st(tn_stream *st, off_t offset)
         return NULL;
     }
     
-    if ((hdr = headerLoad(rawhdr)) != NULL)
+    if ((hdr = headerLoad(rawhdr)) != NULL) {
         pkgu = pkguinf_ldhdr(hdr);
+        //headerFree(hdr); rpm's memleak
+    }
 
     return pkgu;
 }
