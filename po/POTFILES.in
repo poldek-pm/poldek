@@ -7,7 +7,6 @@ dbpkg.c
 dbpkgset.c
 depdirs.c
 fileindex.c
-hold.c
 install.c
 log.c
 main.c
@@ -45,6 +44,7 @@ shell/pager.c
 shell/search.c
 shell/shell.c
 shell/uninstall.c
+source.c
 split.c
 test_match.c
 uninstall.c
