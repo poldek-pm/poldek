@@ -596,8 +596,10 @@ int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags)
     unsigned apsflags = 0;
     
     arg_packages_setup(ts->aps);
-    if (arg_packages_size(ts->aps) == 0)
+    if (arg_packages_size(ts->aps) == 0) {
+        logn(LOGERR, _("Nothing to do"));
         return 0;
+    }
 
     if (ts->getop(ts, POLDEK_OP_CAPLOOKUP))
         apsflags |= ARG_PACKAGES_RESOLV_CAPS;
@@ -818,10 +820,8 @@ int ts_run_install_dist(struct poldek_ts *ts)
     int rc, ndeperr = 0;
     tn_array *pkgs = NULL;
 
-    if (!ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_CAPSINLINE)) {
-        logn(LOGERR, _("Nothing to do"));
+    if (!ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_CAPSINLINE))
         return 0;
-    }
 
     rc = 1;
     pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
@@ -912,7 +912,6 @@ int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
 
     DBGF("%p follow = %d\n", ts, ts->getop(ts, POLDEK_OP_FOLLOW));
     if (!ts_mark_arg_packages(ts, 0)) {
-        logn(LOGERR, _("Nothing to do"));
         DBGF("ts_mark_arg_packages failed\n");
         return 0;
     }
