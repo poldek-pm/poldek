@@ -37,7 +37,6 @@ fi
 AC_ARG_WITH(curl,
 [  --without-curl                compile without libcurl],
 ENABLE_VFILE_CURL=$enableval, ENABLE_VFILE_CURL=yes)
-echo "ENABLE_VFILE_CURL $ENABLE_VFILE_CURL, ";
 if test "${ENABLE_VFILE_CURL}." != "yes."; then
 	AM_CONDITIONAL(ENABLE_VFILE_CURL, false)
 else 
