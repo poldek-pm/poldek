@@ -55,14 +55,14 @@ misarch: mclean
 #perl -pi -e "s/VERSION_STATUS=\"devel\"/VERSION_STATUS=\"devel $$dts\"/g" \
 #$(distdir)/configure* 
 
-snap: dist
+snap: tarball
 	@dts=`date +%Y%m%d` && rm -rf $(PACKAGE)-cvs$$dts* && \
 	tar xpzf $(distdir).tar.gz && \
 	echo "$$dts" > $(distdir)/0_THIS_IS_SNAPSHOT && \
-	mv -f $(distdir) $(PACKAGE)-cvs$$dts && \
-	tar cpjf $(PACKAGE)-cvs$$dts.tar.bz2 $(PACKAGE)-cvs$$dts && \
-	rm -rf $(PACKAGE)-cvs$$dts && \
-	echo "$(PACKAGE)-cvs$$dts.tar.bz2"
+	mv -f $(distdir) $(PACKAGE)-$(VERSION)-cvs$$dts && \
+	tar cpjf $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2 $(PACKAGE)-$(VERSION)-cvs$$dts && \
+	rm -rf $(PACKAGE)-$(VERSION)-cvs$$dts && \
+	echo "$(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2"
 
 ann_from = mis@pld.org.pl
 ann_to   = poldek@pld-linux.org
