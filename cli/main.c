@@ -78,7 +78,8 @@ static struct argp_option common_options[] = {
 
 {"skip-installed", OPT_SKIPINSTALLED, 0, 0,
      N_("Don't load installed packages at startup"), 10500 },
-{"fast", 'f', 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, 10500 },    
+{"fast", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, 10500 },
+{ 0, 'f', 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, 10500 },
 
 {"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), 10500 }, 
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 10500 }, 
