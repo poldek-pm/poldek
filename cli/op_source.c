@@ -306,7 +306,7 @@ static void print_source_type_list(void)
 static int oprun(struct poclidek_opgroup_rt *rt)
 {
     struct arg_s *arg_s;
-    int ec = OPGROUP_RC_NIL, rc = 0;
+    int rc = 0;
 
     
     arg_s = rt->_opdata;

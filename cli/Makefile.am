@@ -3,31 +3,32 @@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-noinst_LTLIBRARIES  = libpoldekcli.la 
-libpoldekcli_la_SOURCES  = cli.c cli.h  \
+noinst_LTLIBRARIES  = libpolclidek.la 
+libpolclidek_la_SOURCES  =  \
+			cli.c cli.h     \
 			op.c op.h       \
+			cmd_pipe.c cmd_pipe.h \
+			cmd.c cmd.h     \
+			dent.c dent.h   \
+			alias.c         \
+			dbcache.c       \
 			op_source.c     \
 			op_packages.c   \
 			op_makeidx.c    \
 			op_split.c      \
-			alias.c         \
-		        ls.c            \
-		        install.c       \
-		        uninstall.c     \
-		        desc.c          \
-		        search.c        \
-		        pager.c pager.h \
-			shell.c	        \
-			dent.c          \
+	        ls.c            \
+	        install.c       \
+	        uninstall.c     \
+	        desc.c          \
+	        search.c        \
 			cd.c            \
-			dbcache.c       \
-			external.c      \
-			cmd.c cmd.h
+			help.c			\
+			external.c
 
-libpoldekcli_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
-bin_PROGRAMS      = ziuk
-ziuk_SOURCES      = main.c
-ziuk_LDADD        = libpoldekcli.la   
+libpolclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
+bin_PROGRAMS      = poldek
+poldek_SOURCES    = shell.c main.c
+poldek_LDADD      = libpolclidek.la   
 
 
 dist-hook:

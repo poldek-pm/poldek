@@ -36,7 +36,7 @@
 #endif
 
 static const char *argp_program_version = poldek_VERSION_BANNER;
-const char *argp_program_bug_address = poldek_BANNER;
+const char *argp_program_bug_address = poldek_BUG_MAILADDR;
 static char args_doc[] = N_("[PACKAGE...]");
 
 #define OPT_ROOTDIR   'r'

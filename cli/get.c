@@ -28,7 +28,7 @@
 
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
-static int get(struct cmdarg *cmdarg);
+static int get(struct cmdctx *cmdctx);
 
 
 #define OPT_GET_VERBOSE      (1 << 0) /* cmd_state->flags */
@@ -46,8 +46,7 @@ struct poclidek_cmd command_get = {
     0, 
     "get", N_("PACKAGE..."), N_("Download packages"), 
     options, parse_opt,
-    NULL, get,
-    NULL, NULL, NULL
+    NULL, get, NULL, NULL, NULL, 0
 };
 
 
@@ -55,8 +54,8 @@ struct poclidek_cmd command_get = {
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
-    struct cmdarg *cmdarg = state->input;
-    struct poclidek_ctx *cctx = cmdarg->cctx;
+    struct cmdctx *cmdctx = state->input;
+    struct poclidek_ctx *cctx = cmdctx->cctx;
     
     switch (key) {
         case 'd':
@@ -78,23 +77,26 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 
-static int get(struct cmdarg *cmdarg)
+static int get(struct cmdctx *cmdctx)
 {
     struct poclidek_ctx  *cctx;
-    tn_array *pkgs = NULL, *av_pkgs, *get_pkgs;
+    tn_array *pkgs = NULL, *get_pkgs;
     char destdir[PATH_MAX], *destdirp;
     int i, err = 0;
 
     
-    cctx = cmdarg->cctx;
-    if (n_array_size(cmdarg->pkgnames) == 0)
-        return 0;
-    
-    av_pkgs = cmdarg->cctx->avpkgs;
-    sh_resolve_packages(cmdarg->pkgnames, av_pkgs, &pkgs, 1);
+    cctx = cmdctx->cctx;
 
-    if (pkgs == NULL) 
-        return 0;
+    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, cmdctx->ts, 1);
+    if (pkgs == NULL) {
+        err++;
+        goto l_end;
+    }
+    
+    poldek_ts_clean_arg_pkgmasks(ts);
+    for (i=0; i < n_array_size(pkgs); i++) {
+        poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
+    }
 
     if (n_array_size(pkgs) == 0)
         logn(LOGERR, _("get: specify what packages you want to download"));
@@ -115,8 +117,8 @@ static int get(struct cmdarg *cmdarg)
     if (n_array_size(get_pkgs) == 0)
         goto l_end;
     
-    if (cmdarg->cctx->inst->fetchdir != NULL) {
-        destdirp = (char*)cmdarg->cctx->inst->fetchdir;
+    if (cmdctx->cctx->inst->fetchdir != NULL) {
+        destdirp = (char*)cmdctx->cctx->inst->fetchdir;
         
     } else {
         if (getcwd(destdir, sizeof(destdir)) == NULL) {

@@ -38,7 +38,7 @@
 
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
-static int desc(struct cmdarg *cmdarg);
+static int desc(struct cmdctx *cmdctx);
 
 #define OPT_DESC_CAPS         (1 << 0)
 #define OPT_DESC_REQS         (1 << 1)
@@ -89,61 +89,60 @@ static struct argp_option options[] = {
 
 
 struct poclidek_cmd command_desc = {
-    0, 
+    COMMAND_PIPE_DEFAULTS, 
     "desc", N_("PACKAGE..."), N_("Display packages info"), 
     options, parse_opt,
     NULL, desc,
-    NULL, NULL, 
-    NULL, NULL
+    NULL, NULL, NULL, NULL, 0
 };
 
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
-    struct cmdarg *cmdarg = state->input;
+    struct cmdctx *cmdctx = state->input;
 
     arg = arg;
     
     switch (key) {
         case 'a':
-            cmdarg->flags |= OPT_DESC_ALL;
+            cmdctx->_flags |= OPT_DESC_ALL;
             break;
             
         case 'C':
-            cmdarg->flags |= OPT_DESC_CAPS | OPT_DESC_REQS | OPT_DESC_CNFLS;
+            cmdctx->_flags |= OPT_DESC_CAPS | OPT_DESC_REQS | OPT_DESC_CNFLS;
             break;
             
 
         case 'c':
-            cmdarg->flags |= OPT_DESC_CNFLS;
+            cmdctx->_flags |= OPT_DESC_CNFLS;
             break;
 
         case 'p':
-            cmdarg->flags |= OPT_DESC_CAPS;
+            cmdctx->_flags |= OPT_DESC_CAPS;
             break;
 
         case 'r':
-            cmdarg->flags |= OPT_DESC_REQS;
+            cmdctx->_flags |= OPT_DESC_REQS;
             break;
             
         case 'R':
-            cmdarg->flags |= OPT_DESC_REQPKGS;
+            cmdctx->_flags |= OPT_DESC_REQPKGS;
             break;
 
         case 'B':
-            cmdarg->flags |= OPT_DESC_REVREQPKGS;
+            cmdctx->_flags |= OPT_DESC_REVREQPKGS;
             break;
 
         case 'f':
         case 'l':
-            if (cmdarg->flags & OPT_DESC_FL)
-                cmdarg->flags |= OPT_DESC_FL_LONGFMT;
+            if (cmdctx->_flags & OPT_DESC_FL)
+                cmdctx->_flags |= OPT_DESC_FL_LONGFMT;
             else
-                cmdarg->flags |= OPT_DESC_FL;
+                cmdctx->_flags |= OPT_DESC_FL;
             break;
             
         case 'd':
-            cmdarg->flags |= OPT_DESC_DESCR;
+            cmdctx->_flags |= OPT_DESC_DESCR;
             break;
             
         default:
@@ -163,7 +162,7 @@ static int nlident(int width)
 }
 
 
-static void show_caps(struct pkg *pkg)
+static void show_caps(struct cmdctx *cmdctx, struct pkg *pkg)
 {
     int i, ncol = IDENT;
     int term_width;
@@ -192,7 +191,7 @@ static void show_caps(struct pkg *pkg)
                 continue;
             
             if (hdr_printed == 0) {
-                printf_c(PRCOLOR_CYAN, "%-16s", "Provides:");
+                cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Provides:");
                 hdr_printed = 1;
             }
             	
@@ -205,16 +204,16 @@ static void show_caps(struct pkg *pkg)
             if (--ncaps == 0)
                 colon = "";
             
-            ncol += printf("%s%s", p, colon);
+            ncol += cmdctx_printf(cmdctx, "%s%s", p, colon);
         }
         
         if (hdr_printed)
-            printf("\n");
+            cmdctx_printf(cmdctx, "\n");
     }
 }
 
 
-static void show_reqs(struct pkg *pkg)
+static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
 {
     int ncol = IDENT, nrpmreqs = 0, nreqs = 0, nprereqs = 0;
     int term_width;
@@ -245,7 +244,7 @@ static void show_reqs(struct pkg *pkg)
         int n = 0;
 
         ncol = IDENT;
-        printf_c(PRCOLOR_CYAN, "%-16s", "PreReqs:");
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "PreReqs:");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
                 
@@ -266,9 +265,9 @@ static void show_reqs(struct pkg *pkg)
                 ncol = SUBIDENT;
                 nlident(ncol);
             }
-            ncol += printf("%s%s", p, colon);
+            ncol += cmdctx_printf(cmdctx, "%s%s", p, colon);
         }
-        printf("\n");
+        cmdctx_printf(cmdctx, "\n");
     }
 
         
@@ -277,7 +276,7 @@ static void show_reqs(struct pkg *pkg)
         int n = 0;
 
         ncol = IDENT;
-        printf_c(PRCOLOR_CYAN, "%-16s", "Requires:");
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Requires:");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
                 
@@ -298,9 +297,9 @@ static void show_reqs(struct pkg *pkg)
                 ncol = SUBIDENT;
                 nlident(ncol);
             }
-            ncol += printf("%s%s", p, colon);
+            ncol += cmdctx_printf(cmdctx, "%s%s", p, colon);
         }
-        printf("\n");
+        cmdctx_printf(cmdctx, "\n");
     }
                 
 
@@ -309,7 +308,7 @@ static void show_reqs(struct pkg *pkg)
         int n = 0;
 
         ncol = IDENT;
-        printf_c(PRCOLOR_CYAN, "%-16s", "RPMReqs:");
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "RPMReqs:");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
 
@@ -324,14 +323,14 @@ static void show_reqs(struct pkg *pkg)
                 ncol = SUBIDENT;
                 nlident(ncol);
             }
-            ncol += printf("%s%s", p, colon);
+            ncol += cmdctx_printf(cmdctx, "%s%s", p, colon);
         }
-        printf("\n");
+        cmdctx_printf(cmdctx, "\n");
     }
 
 }
 
-static void show_reqpkgs(struct pkg *pkg)
+static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg)
 {
     int i, term_width;
     
@@ -341,7 +340,7 @@ static void show_reqpkgs(struct pkg *pkg)
     if (pkg->reqpkgs && n_array_size(pkg->reqpkgs)) {
         int ncol = IDENT;
         
-        printf_c(PRCOLOR_CYAN, "%-16s", "Reqpkgs:");
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Reqpkgs:");
 
         for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
             struct reqpkg *rp;	
@@ -355,12 +354,12 @@ static void show_reqpkgs(struct pkg *pkg)
                 ncol = SUBIDENT;
                 nlident(ncol);
             }
-            ncol += printf("%s", p);
+            ncol += cmdctx_printf(cmdctx, "%s", p);
             
             if (rp->flags & REQPKG_MULTI) {
                 int n = 0;
 
-                ncol += printf(" | ");
+                ncol += cmdctx_printf(cmdctx, " | ");
                 
                 while (rp->adds[n]) {
                     char *p = rp->adds[n++]->pkg->name;
@@ -368,21 +367,21 @@ static void show_reqpkgs(struct pkg *pkg)
                         ncol = SUBIDENT;
                         nlident(ncol);
                     }
-                    ncol += printf("%s", p);
+                    ncol += cmdctx_printf(cmdctx, "%s", p);
                     if (rp->adds[n] != NULL) {
-                        ncol += printf(" | ");
+                        ncol += cmdctx_printf(cmdctx, " | ");
                     }
                 }
             }
             if (i + 1 < n_array_size(pkg->reqpkgs))
-                ncol += printf(" ");
+                ncol += cmdctx_printf(cmdctx, " ");
         }
-        printf("\n");
+        cmdctx_printf(cmdctx, "\n");
     }
 }
 
 static
-void show_revreqpkgs(struct pkg *pkg)
+void show_revreqpkgs(struct cmdctx *cmdctx, struct pkg *pkg)
 {
     int i, term_width;
     
@@ -392,7 +391,7 @@ void show_revreqpkgs(struct pkg *pkg)
     if (pkg->revreqpkgs && n_array_size(pkg->revreqpkgs)) {
         int ncol = IDENT;
         
-        printf_c(PRCOLOR_CYAN, "%-16s", "RequiredBy:");
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "RequiredBy:");
 
         for (i=0; i<n_array_size(pkg->revreqpkgs); i++) {
             struct pkg *tmpkg;	
@@ -409,14 +408,14 @@ void show_revreqpkgs(struct pkg *pkg)
             if (i + 1 == n_array_size(pkg->revreqpkgs))
                 colon = "";
                     
-            ncol += printf("%s%s", p, colon);
+            ncol += cmdctx_printf(cmdctx, "%s%s", p, colon);
         }
-        printf("\n");
+        cmdctx_printf(cmdctx, "\n");
     }
 }
 
 
-static void show_cnfls(struct pkg *pkg)
+static void show_cnfls(struct cmdctx *cmdctx, struct pkg *pkg)
 {
     int i, ncol = 0;
     int term_width;
@@ -434,29 +433,29 @@ static void show_cnfls(struct pkg *pkg)
         if (nobsls != n_array_size(pkg->cnfls)) {
             int n = 0;
             
-            ncol = printf_c(PRCOLOR_CYAN, "%-16s", "Conflicts:");
+            ncol = cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Conflicts:");
             for (i=0; i<n_array_size(pkg->cnfls); i++) {
                 struct capreq *cr = n_array_nth(pkg->cnfls, i);
                 
                 if (cnfl_is_obsl(cr))
                     continue;
                 n++;
-                ncol += printf(capreq_snprintf_s(cr));
+                ncol += cmdctx_printf(cmdctx, capreq_snprintf_s(cr));
                 if (n < n_array_size(pkg->cnfls) - nobsls)
-                    ncol += printf(", ");
+                    ncol += cmdctx_printf(cmdctx, ", ");
 
                 if (ncol >= term_width) {
                     ncol = SUBIDENT;
                     nlident(ncol);
                 }
             }
-            printf("\n");
+            cmdctx_printf(cmdctx, "\n");
         }
         
         if (nobsls) {
             int n = 0;
             
-            ncol = printf_c(PRCOLOR_CYAN, "%-16s", "Obsoletes:");
+            ncol = cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Obsoletes:");
             for (i=0; i<n_array_size(pkg->cnfls); i++) {
                 struct capreq *cr = n_array_nth(pkg->cnfls, i);
                 char s[255], slen;
@@ -466,16 +465,16 @@ static void show_cnfls(struct pkg *pkg)
                 n++;
 
                 slen = capreq_snprintf(s, sizeof(s), cr);
-                //printf("[%d] %d; %d, %d, %s\n", term_width,
+                //cmdctx_printf(cmdctx, "[%d] %d; %d, %d, %s\n", term_width,
                 //       ncol, n, strlen(name), name);
                 //continue;
                 if (ncol + slen + 2 >= term_width) {
                     ncol = SUBIDENT;
                     nlident(ncol);
                 }
-                ncol += printf("%s%s", s, n < nobsls ? ", " : "");
+                ncol += cmdctx_printf(cmdctx, "%s%s", s, n < nobsls ? ", " : "");
             }
-            printf("\n");
+            cmdctx_printf(cmdctx, "\n");
         }
     }
 }
@@ -503,16 +502,16 @@ static void mode_t_to_str(char *str, int size, mode_t mode)
 
 
     
-static void list_files_long(tn_array *fl, int mode_octal)
+static void list_files_long(struct cmdctx *cmdctx, tn_array *fl, int mode_octal)
 {
     int i, j;
-    const char *fmt = "%-10s%10s\t%s\n";
+    const char *fmt = "!%-10s%10s\t%s\n";
 
 
     if (mode_octal) 
-        fmt = "%-6s%10s\t%s\n";
+        fmt = "!%-6s%10s\t%s\n";
         
-    printf_c(PRCOLOR_YELLOW, fmt, _("mode"), _("size"), _("name"));
+    cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, fmt, _("mode"), _("size"), _("name"));
     
     for (i=0; i < n_array_size(fl); i++) {
         struct pkgfl_ent    *flent;
@@ -532,8 +531,8 @@ static void list_files_long(tn_array *fl, int mode_octal)
 
                 if (*flent->dirname != '/')
                     slash = "/";
-                snprintf(tmpbuf, sizeof(tmpbuf), "%s/%s", flent->dirname,
-                         f->basename);
+                snprintf(tmpbuf, sizeof(tmpbuf),
+                                "%s/%s", flent->dirname, f->basename);
                 tmpent.dirname = tmpbuf;
                 //if (n_array_bsearch(fl, &tmpent))
                 //    continue;
@@ -550,19 +549,19 @@ static void list_files_long(tn_array *fl, int mode_octal)
                               f->basename + strlen(f->basename) + 1);
             
             if (mode_octal) {
-                printf("%6o%10d\t%s\n", f->mode, f->size, buf);
+                cmdctx_printf(cmdctx, "%6o%10d\t%s\n", f->mode, f->size, buf);
                 
             } else {
                 char s[12];
                 mode_t_to_str(s, sizeof(s), f->mode);
-                printf("%10s%10d\t%s\n", s, f->size, buf);
+                cmdctx_printf(cmdctx, "%10s%10d\t%s\n", s, f->size, buf);
             }
         }
     }
 }
 
 
-static void list_files(tn_array *fl, int term_width) 
+static void list_files(struct cmdctx *cmdctx, tn_array *fl, int term_width) 
 {
     int i, j, ncol = 0;
 
@@ -584,15 +583,15 @@ static void list_files(tn_array *fl, int term_width)
                 struct pkgfl_ent tmpent;
 
                 slash = "/";
-                snprintf(tmpbuf, sizeof(tmpbuf), "%s/%s", flent->dirname,
-                         f->basename);
+                snprintf(tmpbuf, sizeof(tmpbuf),
+                                "%s/%s", flent->dirname, f->basename);
                 tmpent.dirname = tmpbuf;
                 if (n_array_bsearch(fl, &tmpent))
                     continue;
             }
             
             if (!dn_printed) {
-                ncol = printf_c(PRCOLOR_BLUE | PRAT_BOLD, "%s%s:  ",
+                ncol = cmdctx_printf_c(cmdctx, PRCOLOR_BLUE | PRAT_BOLD, "%s%s:  ",
                                 *flent->dirname == '/' ? "":"/",
                                 flent->dirname);
                 dn_printed = 1;
@@ -610,16 +609,16 @@ static void list_files(tn_array *fl, int term_width)
                 nlident(ncol);
             }
             
-            ncol += printf("%s%s", buf, j + 1 < flent->items ? ", " : "");
+            ncol += cmdctx_printf(cmdctx, "%s%s", buf, j + 1 < flent->items ? ", " : "");
         }
         
         if (dn_printed)
-            printf("\n");
+            cmdctx_printf(cmdctx, "\n");
     }
 }
 
 
-static void show_files(struct pkg *pkg, int longfmt) 
+static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt) 
 {
     tn_array *fl;
     int term_width;
@@ -632,42 +631,41 @@ static void show_files(struct pkg *pkg, int longfmt)
     term_width = term_get_width() - RMARGIN;
     
     if (longfmt)
-        list_files_long(fl, 0);
+        list_files_long(cmdctx, fl, 0);
     else
-        list_files(fl, term_width);
+        list_files(cmdctx, fl, term_width);
 
     pkg_info_free_fl(pkg, fl);
     pkgflmodule_allocator_pop_mark(flmark);
 }
 
-static void show_pkg(struct pkg *pkg, unsigned flags)
+static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags)
 {
     if (flags & OPT_DESC_CAPS)
-        show_caps(pkg);
+        show_caps(cmdctx, pkg);
 
     if (flags & OPT_DESC_REQS)
-        show_reqs(pkg);
+        show_reqs(cmdctx, pkg);
             
     if (flags & OPT_DESC_REQPKGS) 
-        show_reqpkgs(pkg);
+        show_reqpkgs(cmdctx, pkg);
 
     if (flags & OPT_DESC_REVREQPKGS) 
-        show_revreqpkgs(pkg);
+        show_revreqpkgs(cmdctx, pkg);
             
     if (flags & OPT_DESC_CNFLS)
-        show_cnfls(pkg);
+        show_cnfls(cmdctx, pkg);
 }
 
 
 
-static void show_description(struct pkg *pkg, unsigned flags) 
+static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags) 
 {
     struct pkguinf  *pkgu;
     char            timbuf[30], fnbuf[PATH_MAX], *fn;
     char            unit = 'K';
     const char      *group;
     double          pkgsize;
-    
     
     if ((pkgu = pkg_info(pkg)) == NULL) {
         log(LOGERR, _("%s: description unavailable (index without packages "
@@ -682,23 +680,23 @@ static void show_description(struct pkg *pkg, unsigned flags)
         *timbuf = '\0';
 
     if (pkgu->summary) {
-        printf_c(PRCOLOR_CYAN, "%-16s", "Summary:");
-        printf("%s\n", pkgu->summary);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Summary:");
+        cmdctx_printf(cmdctx, "%s\n", pkgu->summary);
     }
 
     if ((group = pkg_group(pkg))) {
-        printf_c(PRCOLOR_CYAN, "%-16s", "Group:");
-        printf("%s\n", group);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Group:");
+        cmdctx_printf(cmdctx, "%s\n", group);
     }
 
     if (pkgu->vendor) {
-        printf_c(PRCOLOR_CYAN, "%-16s", "Vendor:");
-        printf("%s\n", pkgu->vendor);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Vendor:");
+        cmdctx_printf(cmdctx, "%s\n", pkgu->vendor);
     }
 
     if (pkgu->license) {
-        printf_c(PRCOLOR_CYAN, "%-16s", "License:");
-        printf("%s\n", pkgu->license);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "License:");
+        cmdctx_printf(cmdctx, "%s\n", pkgu->license);
     }
 
     if (pkg->arch) {
@@ -707,26 +705,26 @@ static void show_description(struct pkg *pkg, unsigned flags)
         if (pkg->os) 
             p = "Arch/OS:";
         
-        printf_c(PRCOLOR_CYAN, "%-16s", p);
-        printf("%s", pkg->arch);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", p);
+        cmdctx_printf(cmdctx, "%s", pkg->arch);
             
         if (pkg->os) 
-            printf("/%s", pkg->os);
-        printf("\n");
+            cmdctx_printf(cmdctx, "/%s", pkg->os);
+        cmdctx_printf(cmdctx, "\n");
     }
         
     if (pkgu->url) {
-        printf_c(PRCOLOR_CYAN, "%-16s", "URL:");
-        printf("%s\n", pkgu->url);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "URL:");
+        cmdctx_printf(cmdctx, "%s\n", pkgu->url);
     }
         	
         
     if (*timbuf) {
-        printf_c(PRCOLOR_CYAN, "%-16s", "Built:");
-        printf("%s", timbuf);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Built:");
+        cmdctx_printf(cmdctx, "%s", timbuf);
         if (pkgu->buildhost) 
-            printf(" at %s", pkgu->buildhost);
-        printf("\n");
+            cmdctx_printf(cmdctx, " at %s", pkgu->buildhost);
+        cmdctx_printf(cmdctx, "\n");
     }
 
     pkgsize = pkg->size/1024;
@@ -735,8 +733,8 @@ static void show_description(struct pkg *pkg, unsigned flags)
         unit = 'M';
     }
 
-    printf_c(PRCOLOR_CYAN, "%-16s", "Size:");
-    printf("%.1f %cB (%d B)\n", pkgsize, unit, pkg->size);
+    cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Size:");
+    cmdctx_printf(cmdctx, "%.1f %cB (%d B)\n", pkgsize, unit, pkg->size);
 
     unit = 'K';
     if (pkg->fsize > 0) {
@@ -745,30 +743,30 @@ static void show_description(struct pkg *pkg, unsigned flags)
             pkgsize /= 1024;
             unit = 'M';
         }
-        printf_c(PRCOLOR_CYAN, "%-16s", "Package size:");
-        printf("%.1f %cB (%d B)\n", pkgsize, unit, pkg->fsize);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Package size:");
+        cmdctx_printf(cmdctx, "%.1f %cB (%d B)\n", pkgsize, unit, pkg->fsize);
     }
     
     if (pkg->pkgdir && pkg->pkgdir->path) {
-        printf_c(PRCOLOR_CYAN, "%-16s", "Path:");
-        printf("%s\n", pkg->pkgdir->path);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Path:");
+        cmdctx_printf(cmdctx, "%s\n", pkg->pkgdir->path);
     }
 
     if ((fn = pkg_filename(pkg, fnbuf, sizeof(fnbuf)))) {
-        printf_c(PRCOLOR_CYAN, "%-16s", "File:");
-        printf("%s\n", fn);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "File:");
+        cmdctx_printf(cmdctx, "%s\n", fn);
     }
         
     if (pkg->epoch) {
-        printf_c(PRCOLOR_CYAN, "%-16s", "Epoch:");
-        printf("%d\n", pkg->epoch);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Epoch:");
+        cmdctx_printf(cmdctx, "%d\n", pkg->epoch);
     }
 
-    show_pkg(pkg, flags);
+    show_pkg(cmdctx, pkg, flags);
         
     if (pkgu->description) {
-        printf_c(PRCOLOR_CYAN, "Description:\n");
-        printf("%s\n", pkgu->description);
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "Description:\n");
+        cmdctx_printf(cmdctx, "%s\n", pkgu->description);
     }
             
     pkguinf_free(pkgu);
@@ -777,43 +775,41 @@ static void show_description(struct pkg *pkg, unsigned flags)
 
 
 
-static int desc(struct cmdarg *cmdarg)
+static int desc(struct cmdctx *cmdctx)
 {
-    struct poclidek_ctx   *cctx;
+    struct poclidek_ctx    *cctx;
     tn_array               *pkgs = NULL;
     int                    i, err = 0;
 
-    cctx = cmdarg->cctx;
-    pkgs = poclidek_resolve_packages(cctx, cmdarg->ts, 0);
+    cctx = cmdctx->cctx;
+    pkgs = poclidek_resolve_packages(NULL, cctx, cmdctx->ts, 0);
     if (pkgs == NULL) {
         err++;
         goto l_end;
     }
 
-    if (cmdarg->flags == 0) 
-        cmdarg->flags = OPT_DESC_DESCR;
+    if (cmdctx->_flags == 0) 
+        cmdctx->_flags = OPT_DESC_DESCR;
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg;
 
         pkg = n_array_nth(pkgs, i);
 
-        if (n_array_size(pkgs) > 1) {
-            printf("\n");
-            printf_c(PRCOLOR_YELLOW, "%-16s", "Package:");
-            printf("%s\n", pkg_snprintf_s(pkg));
-        }
+        cmdctx_printf(cmdctx, "\n");
+        cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, "%-16s", "Package:");
+        cmdctx_printf(cmdctx, "%s\n", pkg_snprintf_s(pkg));
         
-        if (cmdarg->flags & OPT_DESC_DESCR) 
-            show_description(pkg, cmdarg->flags);
+        if (cmdctx->_flags & OPT_DESC_DESCR) 
+            show_description(cmdctx, pkg, cmdctx->_flags);
         
         else 
-            show_pkg(pkg, cmdarg->flags);
+            show_pkg(cmdctx, pkg, cmdctx->_flags);
 
-        if (cmdarg->flags & OPT_DESC_FL) {
+        if (cmdctx->_flags & OPT_DESC_FL) {
             if (n_array_size(pkgs) > 1)
-                printf_c(PRCOLOR_CYAN, "Content:\n");
-            show_files(pkg, cmdarg->flags & OPT_DESC_FL_LONGFMT);
+                cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "Content:\n");
+            show_files(cmdctx, pkg, cmdctx->_flags & OPT_DESC_FL_LONGFMT);
         }
         
         if (sigint_reached()) 

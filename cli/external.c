@@ -19,31 +19,28 @@
 #include "sigint/sigint.h"
 #include "i18n.h"
 #include "cli.h"
+#include "cmd_pipe.h"
 
-static int external(struct cmdarg *cmdarg);
+static int external(struct cmdctx *cmdctx);
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
-
-
-static struct argp_option options[] = {};
-
 struct poclidek_cmd command_external = {
-    COMMAND_PIPEABLE_LEFT | COMMAND_PIPEABLE_RIGTH, 
-    "!", N_("[COMMAND]"), N_("Execute external command"), 
-    options, parse_opt, NULL, external,
-    NULL, NULL, NULL, NULL
+    COMMAND_PIPEABLE | COMMAND_HIDDEN, 
+    "!", N_("COMMAND"), N_("Execute external command"), 
+    NULL, parse_opt, NULL, external,
+    NULL, NULL, NULL, NULL, 0
 };
 
 
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
-    struct cmdarg *cmdarg = state->input;
+    struct cmdctx *cmdctx = state->input;
 
     if (key == ARGP_KEY_ARG) {
-        if (cmdarg->d == NULL)
-            cmdarg->d = n_array_new(4, free, NULL);
-        n_array_push(cmdarg->d, n_strdup(arg));
+        if (cmdctx->_data == NULL)
+            cmdctx->_data = n_array_new(4, free, NULL);
+        n_array_push(cmdctx->_data, n_strdup(arg));
     }
 
     return 0;
@@ -52,29 +49,62 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 static
 int lookup_external_command(char *cmdpath, int size, const char *cmd);
 
-static int external(struct cmdarg *cmdarg) 
+static int grabfunc(const char *buf, void *cmdctx)
 {
-    struct vopen3_st st;
+    return cmdctx_printf(cmdctx, "%s", buf);
+}
+
+static int feed_process(void *cmdctx_)
+{
+    struct cmdctx *cmdctx = cmdctx_;
+    
+    n_assert(cmdctx->pipe_left);
+    cmd_pipe_writeout_fd(cmdctx->pipe_left, STDOUT_FILENO);
+    return 0;
+}
+    
+
+static int external(struct cmdctx *cmdctx) 
+{
+    struct vopen3_st st_process, st_feed, *st;
+    int stflags = 0;
     char cmd[PATH_MAX], **argv;
     int i, rc;
     
-    n_assert(cmdarg->d);
+    n_assert(cmdctx->_data);
 
-    argv = alloca((n_array_size(cmdarg->d) + 1) * sizeof(*argv));
-    for (i=0; i < n_array_size(cmdarg->d); i++) {
-        argv[i] = n_array_nth(cmdarg->d, i);
+    argv = alloca((n_array_size(cmdctx->_data) + 1) * sizeof(*argv));
+    for (i=0; i < n_array_size(cmdctx->_data); i++) {
+        argv[i] = n_array_nth(cmdctx->_data, i);
+        DBGF("argv[%d] = %s\n", i, argv[i]);
     }
     argv[i] = NULL;
 
     if (!lookup_external_command(cmd, sizeof(cmd), argv[0])) {
-        logn(LOGERR, _("%s: command not found"), cmd);
-        rc = 0;
-    } else {
-        vopen3_init(&st, cmd, argv);
-        vopen3_exec(&st, 0);
-        rc = vopen3_close(&st) == 0;
+        logn(LOGERR, _("%s: external command not found"), argv[0]);
+        return 0;
     }
     
+    
+    vopen3_init(&st_process, cmd, argv);
+    if (cmdctx->pipe_right) {
+        stflags = VOPEN3_PIPESTDOUT;
+        vopen3_set_grabfn(&st_process, grabfunc, cmdctx);
+    }
+
+    st = &st_process;
+    if (cmdctx->pipe_left) {
+        vopen3_init_fn(&st_feed, feed_process, cmdctx);
+        vopen3_chain(&st_feed, &st_process);
+        st = &st_feed;
+    }
+                     
+    vopen3_exec(st, stflags);
+    DBGF("process..\n");
+    vopen3_process(st, 0);
+    DBGF("close..\n");
+    rc = vopen3_close(st) == 0;
+    DBGF("END\n");
     return rc;
 }
 

@@ -44,32 +44,6 @@ static volatile sig_atomic_t shInCmd  = 0;
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
 
 static int argv_is_help(int argc, const char **argv);
-
-static int cmd_quit(struct cmdarg *cmdarg);
-struct poclidek_cmd command_quit = {
-    COMMAND_NOARGS | COMMAND_NOHELP | COMMAND_NOOPTS,
-    "quit", NULL, N_("Quit poldek"), NULL, NULL, NULL, cmd_quit,
-    NULL, NULL, NULL, NULL
-};
-
-static int cmd_help(struct cmdarg *cmdarg);
-struct poclidek_cmd command_help = {
-    COMMAND_NOARGS | COMMAND_NOHELP | COMMAND_NOOPTS,
-    "help", NULL, N_("Display this help"), NULL, NULL, NULL, cmd_help,
-    NULL, NULL, NULL, NULL
-};
-#if 0
-static 
-int cmd_reload(struct cmdarg *cmdarg,
-               int argc, const char **argv, struct argp *argp);
-
-struct poclidek_cmd command_reload = {
-    COMMAND_NOARGS | COMMAND_NOOPTS, "reload", NULL,
-    N_("Reload installed packages"),
-    NULL, NULL, cmd_reload, NULL, NULL, NULL, NULL, NULL
-};
-#endif
-
 static char *histfile;
 
 
@@ -266,38 +240,9 @@ static int argv_is_help(int argc, const char **argv)
 }
 
 static
-int cmd_help(struct cmdarg *cmdarg)
+int cmd_quit(struct cmdctx *cmdctx)
 {
-    int i = 0;
-    
-    cmdarg = cmdarg;
-    
-    printf("%s\n", poldek_BANNER);
-#if 0
-    while (commands_tab[i]) {
-        poclidek_cmd *cmd = commands_tab[i++];
-        char buf[256], *p;
-        
-        
-        p = cmd->arg ? cmd->arg : "";
-        if (cmd->argp_opts) {
-            snprintf(buf, sizeof(buf), _("[OPTION...] %s"), cmd->arg);
-            p = buf;
-        }
-        printf("%-9s %-36s %s\n", cmd->name, p, cmd->doc);
-    }
-    printf(_("\nFor now \"search\" and \"desc\" commands don't work with "
-             "installed packages.\n"));
-    
-    printf(_("\nType COMMAND -? for details.\n"));
-#endif    
-    return 0;
-}
-
-static
-int cmd_quit(struct cmdarg *cmdarg)
-{
-    cmdarg = cmdarg;
+    cmdctx = cmdctx;
     shDone = 1;
     return 1;
 }

@@ -29,7 +29,7 @@
 
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
-static int uninstall(struct cmdarg *cmdarg);
+static int uninstall(struct cmdctx *cmdctx);
 
 #define OPT_GID             2500
 #define OPT_UNINSTALL       'e'
@@ -55,10 +55,11 @@ static struct argp_option cmdl_options[] = {
 
 
 struct poclidek_cmd command_uninstall = {
-    COMMAND_HASVERBOSE | COMMAND_MODIFIESDB, 
+    COMMAND_HASVERBOSE | COMMAND_MODIFIESDB |
+    COMMAND_PIPEABLE_LEFT | COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES, 
     "uninstall", N_("PACKAGE..."), N_("Uninstall packages"), 
     options, parse_opt,
-    NULL, uninstall, NULL, NULL, NULL, NULL
+    NULL, uninstall, NULL, NULL, NULL, NULL, 0
 };
 
 static struct argp cmd_argp = {
@@ -95,7 +96,7 @@ struct poclidek_opgroup poclidek_opgroup_uninstall = {
 
 
 struct cmdl_arg_s {
-    struct cmdarg cmdarg;
+    struct cmdctx cmdctx;
 };
 
 static
@@ -103,18 +104,18 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct poclidek_opgroup_rt  *rt;
     struct poldek_ts            *ts;
-    struct cmdarg               cmdarg;
+    struct cmdctx               cmdctx;
 
 
     rt = state->input;
     ts = rt->ts;
     arg = arg;
     
-    cmdarg.ts = rt->ts;
+    cmdctx.ts = rt->ts;
     
     switch (key) {
         case ARGP_KEY_INIT:
-            state->child_inputs[0] = &cmdarg;
+            state->child_inputs[0] = &cmdctx;
             state->child_inputs[1] = NULL;
             break;
 
@@ -133,13 +134,13 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
-    struct cmdarg     *cmdarg = state->input;
-    struct poldek_ts  *ts = cmdarg->ts;
+    struct cmdctx     *cmdctx = state->input;
+    struct poldek_ts  *ts = cmdctx->ts;
     
     arg = arg;
     switch (key) {
         case 'm':
-            //cmdarg->cctx->pkgset->flags |= PSVERIFY_MERCY;
+            //cmdctx->cctx->pkgset->flags |= PSVERIFY_MERCY;
             break;
 
         case OPT_INST_NODEPS:
@@ -169,44 +170,35 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 
-static int uninstall(struct cmdarg *cmdarg) 
+static int uninstall(struct cmdctx *cmdctx) 
 {
     struct poclidek_ctx  *cctx;
-    struct poldek_ts      *ts;
-    tn_array              *pkgs = NULL;
-    struct install_info   iinf, *iinfp;
-    int                   i, err = 0;
+    struct poldek_ts     *ts;
+    tn_array             *pkgs = NULL;
+    struct install_info  iinf, *iinfp;
+    int                  i, err = 0;
     
     
-    cctx = cmdarg->cctx;
-    ts = cmdarg->ts;
+    cctx = cmdctx->cctx;
+    ts = cmdctx->ts;
 
-    
-    if (cctx->instpkgs != NULL) {
-        //log(LOGERR, "uninstall: installed packages not loaded, "
-        //    "type \"reload\" to load them\n");
-        //return 0;
-
-        poclidek_set_pkgctx(cctx, POLDEKCLI_PKGCTX_INSTD);
-        pkgs = poclidek_resolve_packages(cctx, cmdarg->ts, 1);
-        if (pkgs == NULL) {
-            err++;
-            goto l_end;
-        }
-        
-        if (pkgs == cctx->instpkgs) {
-            logn(LOGERR, _("uninstall: better do \"rm -rf /\""));
-            return 0;
-        }
-    
-        if (err) 
-            goto l_end;
-        
-        poldek_ts_clean_arg_pkgmasks(ts);
-        for (i=0; i < n_array_size(pkgs); i++)
-            poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
+    if (poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR) == NULL) {
+        log(LOGERR, "uninstall: installed packages not loaded, "
+            "type \"reload\" to load them\n");
+        return 0;
     }
     
+
+    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, cmdctx->ts, 1);
+    if (pkgs == NULL) {
+        err++;
+        goto l_end;
+    }
+    
+    poldek_ts_clean_arg_pkgmasks(ts);
+    for (i=0; i < n_array_size(pkgs); i++) {
+        poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
+    }
 
     if (ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0))
         iinfp = NULL;
@@ -218,7 +210,7 @@ static int uninstall(struct cmdarg *cmdarg)
         err++;
     
     if (iinfp) {
-        poclidek_apply_iinf(cmdarg->cctx, iinfp);
+        poclidek_apply_iinf(cmdctx->cctx, iinfp);
         install_info_destroy(iinfp);
     }
     

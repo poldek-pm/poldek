@@ -47,8 +47,8 @@ int poclidek_load_installed(struct poclidek_ctx *cctx, int reload)
     if ((pkgdir = load_installed_pkgdir(cctx, reload)) == NULL)
         return 0;
 
-    if ((dent = poclidek_dent_find(cctx, "/installed")) == NULL)
-        dent = pkg_dent_adddir(cctx->rootdir, "installed");
+    if ((dent = poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR)) == NULL)
+        dent = pkg_dent_adddir(cctx->rootdir, POCLIDEK_INSTALLEDDIR);
         
     pkg_dent_addpkgs(dent, pkgdir->pkgs);
     cctx->dbpkgdir = pkgdir;

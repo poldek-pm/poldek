@@ -33,13 +33,14 @@
 #include "arg_packages.h"
 
 
-struct pkg_dent *pkg_dent_new(const char *name, struct pkg *pkg,
-                              int flags)
+struct pkg_dent *pkg_dent_new(const char *name, struct pkg *pkg, int flags)
 {
     struct pkg_dent *ent;
     int len = 0;
 
     if (name) {
+        while (*name == '/')
+            name++;
         len += strlen(name) + 1;
         n_assert(flags & PKG_DENT_DIR);
     }
@@ -243,7 +244,7 @@ void poclidek_dent_init(struct poclidek_ctx *cctx)
     int i;
 
     root = pkg_dent_new_dir("/");
-    allav = pkg_dent_adddir(root, "all-avail");
+    allav = pkg_dent_adddir(root, POCLIDEK_AVAILDIR);
     //cctx->dirs = n_array_new(8, free, (tn_fn_cmp)dir_cmp);
 
     for (i=0; i < n_array_size(cctx->ctx->pkgdirs); i++) {
@@ -335,8 +336,6 @@ struct pkg_dent *poclidek_dent_find(struct poclidek_ctx *cctx, const char *path)
     return dent;
 }
 
-    
-
 tn_array *poclidek_get_dents(struct poclidek_ctx *cctx, const char *path)
 {
     tn_array *ents = NULL;
@@ -376,8 +375,8 @@ tn_array *poclidek_get_dent_packages(struct poclidek_ctx *cctx, const char *dir)
 
 
 static
-tn_array *do_resolve(struct arg_packages *aps,
-                     tn_array *ents, unsigned flags);
+tn_array *do_resolve(struct arg_packages *aps, tn_array *ents,
+                     unsigned flags);
 
 
 tn_array *poclidek_resolve_dents(const char *path,
@@ -390,6 +389,9 @@ tn_array *poclidek_resolve_dents(const char *path,
     if ((ents = poclidek_get_dents(cctx, path)) == NULL)
         return NULL;
 
+    if (poldek_ts_get_arg_count(ts) == 0)
+        return n_ref(ents);
+    
     return do_resolve(ts->aps, ents,
                       exact ? ARG_PACKAGES_RESOLV_EXACT : 0);
 }
@@ -456,11 +458,11 @@ tn_array *do_resolve(struct arg_packages *aps,
             n_array_clean(ments);
         }
         
-        if ((flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS) == 0 && matches_bycmp[j] > 1) {
-            int pri = (flags & ARG_PACKAGES_RESOLV_EXACT) ? LOGERR : LOGWARN;
-            logn(pri, _("%s: ambiguous name"), mask);
-            if (flags & ARG_PACKAGES_RESOLV_EXACT)
+        if ((flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS) == 0) {
+            if (matches_bycmp[j] > 1 && flags & ARG_PACKAGES_RESOLV_EXACT) {
+                logn(LOGERR, _("%s: ambiguous name"), mask);
                 n_array_clean(ments);
+            }
         }
     }
 
@@ -480,4 +482,19 @@ tn_array *do_resolve(struct arg_packages *aps,
 }
 
 
+tn_array *poclidek_resolve_packages(const char *path, struct poclidek_ctx *cctx,
+                                    struct poldek_ts *ts, int exact)
+{
+    tn_array *pkgs;
 
+    if ((pkgs = poclidek_get_dent_packages(cctx, path)) == NULL)
+        return NULL;
+
+    return arg_packages_resolve(ts->aps, pkgs,
+                                exact ? ARG_PACKAGES_RESOLV_EXACT : 0);
+}
+
+char *poclidek_pwd(struct poclidek_ctx *cctx, char *path, int size)
+{
+    return poclidek_dent_dirpath(path, size, cctx->currdir);
+}

@@ -29,7 +29,7 @@
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state);
-static int install(struct cmdarg *cmdarg);
+static int install(struct cmdctx *cmdctx);
 
 #define OPT_GID             1500
 #define OPT_INST_NODEPS     (OPT_GID + 1)
@@ -129,10 +129,11 @@ N_("Make invisibled packages visible."), OPT_GID },
 
 
 struct poclidek_cmd command_install = {
-    COMMAND_HASVERBOSE | COMMAND_MODIFIESDB, 
+    COMMAND_HASVERBOSE | COMMAND_MODIFIESDB |
+    COMMAND_PIPEABLE_LEFT | COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES, 
     "install", N_("PACKAGE..."), N_("Install packages"), 
     options, parse_opt,
-    NULL, install, NULL, NULL, NULL, NULL
+    NULL, install, NULL, NULL, NULL, NULL, 0
 };
 
 static struct argp cmd_argp = {
@@ -164,7 +165,7 @@ struct poclidek_opgroup poclidek_opgroup_install = {
 };
 
 struct cmdl_arg_s {
-    struct cmdarg cmdarg;
+    struct cmdctx cmdctx;
 };
 
 static
@@ -185,13 +186,13 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
     } else {
         arg_s = n_malloc(sizeof(*arg_s));
         memset(arg_s, 0, sizeof(*arg_s));
-        arg_s->cmdarg.ts = rt->ts;
+        arg_s->cmdctx.ts = rt->ts;
         rt->_opdata = arg_s;
     }
     
     switch (key) {
         case ARGP_KEY_INIT:
-            state->child_inputs[0] = &arg_s->cmdarg;
+            state->child_inputs[0] = &arg_s->cmdctx;
             state->child_inputs[1] = NULL;
             break;
 
@@ -242,18 +243,18 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
-    struct cmdarg         *cmdarg = state->input;
+    struct cmdctx         *cmdctx = state->input;
     struct poldek_ts      *ts;
 
 
-    ts = cmdarg->ts;
+    ts = cmdctx->ts;
     
     switch (key) {
         case ARGP_KEY_INIT:
             break;
             
         case 'm':
-            //cmdarg->cctx->pkgset->flags |= PSVERIFY_MERCY;
+            //cmdctx->cctx->pkgset->flags |= PSVERIFY_MERCY;
             break;
 
         case OPT_INST_NODEPS:
@@ -331,15 +332,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 
-static int install(struct cmdarg *cmdarg)
+static int install(struct cmdctx *cmdctx)
 {
     struct install_info   iinf;
-    int                   i, rc = 1, is_test;
     struct poclidek_ctx  *cctx;
     struct poldek_ts      *ts;
+    int rc = 1, is_test;
     
-    cctx = cmdarg->cctx;
-    ts = cmdarg->ts;
+    cctx = cmdctx->cctx;
+    ts = cmdctx->ts;
     
     poldek_ts_setf(ts, POLDEK_TS_INSTALL | POLDEK_TS_UPGRADE);
     is_test = ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0);
@@ -348,30 +349,10 @@ static int install(struct cmdarg *cmdarg)
     
     if (rc == 0) 
         msgn(1, _("There were errors"));
-
-    /* update installed set */
-    if (!is_test && cmdarg->cctx->instpkgs) {
-        for (i=0; i < n_array_size(iinf.uninstalled_pkgs); i++) {
-            struct pkg *pkg = n_array_nth(iinf.uninstalled_pkgs, i);
-            n_array_remove(cmdarg->cctx->instpkgs, pkg);
-            printf("- %s\n", pkg->nvr);
-        }
-        n_array_sort(cmdarg->cctx->instpkgs);
-        
-        
-        for (i=0; i < n_array_size(iinf.installed_pkgs); i++) {
-            struct pkg *pkg = n_array_nth(iinf.installed_pkgs, i);
-            n_array_push(cmdarg->cctx->instpkgs, pkg_link(pkg));
-        }
-        n_array_sort(cmdarg->cctx->instpkgs);
-        
-        
-        //printf("s = %d\n", n_array_size(cmdarg->cctx->instpkgs));
-        if (n_array_size(iinf.installed_pkgs) +
-            n_array_size(iinf.uninstalled_pkgs))
-            cmdarg->cctx->ts_instpkgs = time(0);
-    }
-
+    
+    if (!is_test && cmdctx->cctx->pkgs_installed)
+        poclidek_apply_iinf(cmdctx->cctx, &iinf);
+    
     if (!is_test)
         install_info_destroy(&iinf);
     
