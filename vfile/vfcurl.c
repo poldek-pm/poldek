@@ -125,7 +125,20 @@ int vfile_curl_fetch(const char *dest, const char *url)
         rc = 1;
         
     } else {
+        char *p;
+        
+        
+        if (*err == '\0') {
+            snprintf(err, sizeof(err), "%s", "unknown error");
+            
+        } else if ((p = strchr(err, '\n'))) { /* curl w/o */
+            *p = '\0';
+            if (p != err && *(p - 1) == '\r')
+                *(p - 1) = '\0';
+        }
+            
         vfile_err_fn("%s: curl failed: %s\n", url, err);
+        unlink(dest);
         rc = 0;
     }
 
