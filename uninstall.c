@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 200-2004 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000-2004 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -379,7 +379,7 @@ static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
         }
         
         dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cr, NULL, uninst_LDFLAGS);
-        DBGF_F("mask %s (%s) -> %d package(s)\n", mask, capreq_snprintf_s(cr), 
+        DBGF("mask %s (%s) -> %d package(s)\n", mask, capreq_snprintf_s(cr), 
                dbpkgs ? n_array_size(dbpkgs) : 0);
         
         if (dbpkgs) {
@@ -389,7 +389,7 @@ static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
                 struct pkg *dbpkg = n_array_nth(dbpkgs, j);
                 int matched = 0;
 
-                DBGF_F("  - %s (%p)\n", pkg_snprintf_s(dbpkg), dbpkg->reqs);
+                DBGF("  - %s (%p)\n", pkg_snprintf_s(dbpkg), dbpkg->reqs);
                 
                 if (cr_evr && pkg_match_req(dbpkg, cr_evr, 1)) {
                     nmatches++;
