@@ -97,6 +97,10 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
         
         while (rp != NULL) {
             if (pkg_is_color(rp->pkg, PKG_COLOR_WHITE)) {
+                if (rp->flags & REQPKG_PREREQ) 
+                    pkg_set_prereqed(rp->pkg);
+                else
+                    pkg_clr_prereqed(rp->pkg);
                 visit_order(vs, rp->pkg, deep);
             
             } else if (pkg_is_color(rp->pkg, PKG_COLOR_BLACK)) {
@@ -104,13 +108,36 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
                 msg_i(4, deep, "_   visited %s", rp->pkg->name);
                 
             } else if (pkg_is_color(rp->pkg, PKG_COLOR_GRAY)) { /* cycle  */
+                int is_loop = 0;
+                
                 if (rp->flags & REQPKG_PREREQ) {
+                    int j, n = 0, nprereqs = 0;
+                    
+                    for (j=n_array_size(vs->stack)-1; j >= 0; j--) {
+                        struct pkg *p = n_array_nth(vs->stack, j);
+
+                        if (p == rp->pkg)
+                            break;
+
+                        n++;
+
+                        if (!pkg_is_prereqed(p))
+                            break;
+
+                        nprereqs++;
+                    }
+                    
+                    if (n > 0 && n == nprereqs)
+                        is_loop = 1;
+                }
+                
+                if (is_loop) {
                     vs->nerrors++;
                     
                     if (verbose > 2) {
                         msg(4, "\n");
                         msg_i(4, deep, "   cycle   %s -> %s", pkg->name,
-                            rp->pkg->name);
+                              rp->pkg->name);
 
                     } else {
                         int i;
@@ -126,7 +153,7 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
                 } else {
                     msg(4, "\n");
                     msg_i(4, deep, "   fakecycle   %s -> %s", pkg->name,
-                        rp->pkg->name);
+                          rp->pkg->name);
                 }
                 
             } else 
@@ -153,10 +180,14 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
     
  l_end:
     pkg_set_color(pkg, PKG_COLOR_BLACK);
+    pkg_clr_prereqed(pkg);
     n_array_push(vs->ordered_pkgs, pkg_link(pkg));
     if (last_stack_i != -1) 
-        for (i=last_stack_i; i < n_array_size(vs->stack); i++)
-            n_array_pop(vs->stack);
+        for (i=last_stack_i; i < n_array_size(vs->stack); i++) {
+            pkg = n_array_pop(vs->stack);
+            pkg_clr_prereqed(pkg);
+        }
+    
     return 0;
 }
 

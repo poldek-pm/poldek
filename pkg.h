@@ -29,10 +29,12 @@
 
 #define PKG_HOLD            (1 << 12) /* non upgradable */
 
+#define PKG_ORDER_PREREQ    (1 << 13) /* see pkgset-order.c */
+
 /* DAG node colours */
-#define PKG_COLOR_WHITE    (1 << 13)
-#define PKG_COLOR_GRAY     (1 << 14)
-#define PKG_COLOR_BLACK    (1 << 15)
+#define PKG_COLOR_WHITE    (1 << 20)
+#define PKG_COLOR_GRAY     (1 << 21)
+#define PKG_COLOR_BLACK    (1 << 22)
 #define PKG_ALL_COLORS     PKG_COLOR_WHITE | PKG_COLOR_GRAY | PKG_COLOR_BLACK
 
 /* colours */
@@ -41,7 +43,12 @@
 
 #define pkg_is_color(pkg, color) \
    ((pkg)->flags & color)
-          
+
+
+#define pkg_set_prereqed(pkg) ((pkg)->flags |= PKG_ORDER_PREREQ)
+#define pkg_clr_prereqed(pkg)  ((pkg)->flags &= ~PKG_ORDER_PREREQ) 
+#define pkg_is_prereqed(pkg)  ((pkg)->flags & PKG_ORDER_PREREQ)
+
 
 #define pkg_hand_mark(pkg)  ((pkg)->flags |= PKG_DIRMARK)
 #define pkg_dep_mark(pkg)   ((pkg)->flags |= PKG_INDIRMARK)
