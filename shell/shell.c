@@ -753,7 +753,7 @@ void db_map_fn(unsigned int recno, void *header, void *shpkgs)
     shpkg->flags = 0;
     shpkg->_ucnt = 0;
     n_array_push(shpkgs, shpkg);
-    if (n_array_size(shpkg) % 100 == 0)
+    if (n_array_size(shpkgs) % 100 == 0)
         msg(1, ".");
 }
 
@@ -763,7 +763,7 @@ static tn_array *load_installed_packages(tn_array **shpkgsp)
     tn_array *shpkgs = *shpkgsp;
 
     n_array_clean(*shpkgsp);
-    msg(1, "Loading installed packages...");
+    msg(1, "Loading installed packages");
     db = pkgdb_open(shell_s.inst->rootdir, NULL, O_RDONLY);
     rpm_dbmap(db->dbh, db_map_fn, shpkgs);
     pkgdb_free(db);
