@@ -47,6 +47,12 @@ _distro  = pld
 # Ignore *-smp-* packages 
 #ignore   = *-smp-*
 
+# Conflicts with already installed packages are treated as resolved 
+# if at least one of multiple-installed package satisfies conflict. 
+# RPM doesn't support such cases, so --pm-nodeps is needed (use with 
+# care); option is set to "on" by default. 
+#allow duplicates = no
+
 ##############################################################
 # RPM specific options
 # macros
@@ -69,4 +75,11 @@ _distro  = pld
 
 # "mercy" dependency checking; defalut "no"
 #mercy = yes
+
+# Taking into accout package Obsoletes; defalut "yes"
+#obsoletes = yes
+
+# Taking into accout package Conlicts; defalut "yes"
+#conflicts = yes
+
 
