@@ -1,14 +1,16 @@
 0.17.6 (minor bugfix release; 2002/05/2?)
 
+* new "--ignore" option makes packages invisible to the poldek 
+
 * with --upa "hdrl" sources can be refreshed 
 
-* fixed package removal: if other the same packages are still installed, then 
-  their dependencies aren't marked  
+* fixed package removal: don't follow dependencies if one of multiple 
+  packages is 
 
-* fixed package auto-selection among equivalents
+* improved package auto-selection among equivalents
 
-* shell: search: pattern is treated as shell wildcard one (matched by fnmatch(3)) 
-  by default, to switch to Perl regular expression matching use --perlre 
+* shell: search: pattern is treated as shell wildcard (matched by fnmatch(3)) 
+  by default; to Perl regular expression matching use --perlre 
   ("rsearch" alias is created). 
    
 * fixed bug of equivalent package selection (<Enter> was select first, not
