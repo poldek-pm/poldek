@@ -1020,9 +1020,10 @@ int rcvfile(int out_fd, off_t out_fdoff, int in_fd, long total_size,
     }
     
     if (is_err) {
-        if (errno == 0)
-            errno = EIO;
         vhttp_errno = errno;
+        if (vhttp_errno == 0)
+            vhttp_errno = errno = EIO;
+
         vhttp_set_err(errno, "%m");
     }
 
@@ -1182,6 +1183,7 @@ int httpcn_retr(struct httpcn *cn,
     
     if (vhttp_errno == 0)
         vhttp_errno = EIO;
+
     goto l_end;
 
 }

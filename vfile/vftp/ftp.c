@@ -911,9 +911,9 @@ int rcvfile(int out_fd,  off_t out_fdoff, int in_fd, long total_size,
     }
     
     if (is_err) {
-        if (errno == 0)
-            errno = EIO;
         vftp_errno = errno;
+        if (vftp_errno == 0)
+            vftp_errno = errno = EIO;
         vftp_set_err(errno, "%m");
     }
 
