@@ -643,8 +643,8 @@ static int update_idx(void)
 static int mkidx(struct pkgset *ps) 
 {
     int rc;
-    char *tmpath = NULL;
     char *idx_path = NULL;
+    char path[PATH_MAX];
     
     if (args.idx_path != NULL) {
         idx_path = args.idx_path;
@@ -659,23 +659,15 @@ static int mkidx(struct pkgset *ps)
         return 0;
         
     } else {
-        int len = strlen(args.source_path);
-        tmpath = alloca(len + 64);
-        strcpy(tmpath, args.source_path);
-            
-        tmpath[len] = '\0';
-        if (tmpath[len-1] != '/') {
-            tmpath[len++] = '/';
-            tmpath[len] = '\0';
-        }
-        
         switch (args.idx_type) {
             case INDEXTYPE_TXTZ:
-                strcpy(&tmpath[len], "Packages.gz");
+                snprintf(path, sizeof(path), "%s/%s", args.source_path, 
+                         "Packages.gz");
                 break;
                     
             case INDEXTYPE_TXT:
-                strcpy(&tmpath[len], "Packages");
+                snprintf(path, sizeof(path), "%s/%s", args.source_path, 
+                         "Packages");
                 break;
                     
             case INDEXTYPE_RPMH:
@@ -684,16 +676,17 @@ static int mkidx(struct pkgset *ps)
                         "is directory\n");
                     return 0;
                 }
-                    
-                strcpy(&tmpath[len], "Packages-hdrs");
+
+                snprintf(path, sizeof(path), "%s/%s", args.source_path, 
+                         "Packages-hdrs");
                 break;
                     
             default:
                 n_assert(0);
                 exit(EXIT_FAILURE);
         }
-        idx_path = tmpath;
-            
+
+        idx_path = path;
     }
     
     

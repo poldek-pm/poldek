@@ -99,25 +99,11 @@ int pkgset_load_dir(struct pkgset *ps, const char *dirpath)
 
 int pkgset_create_rpmidx(const char *dirpath, const char *pathname)
 {
-    int dirpath_len, path_rest_size;
-    char *path;
     struct dirent *ent;
     struct stat st;
     DIR *dir;
     FD_t fdto;
     int err, n;
-    
-        
-    path_rest_size = 1024;
-    dirpath_len = strlen(dirpath);
-    path = alloca(dirpath_len + path_rest_size + 1);
-    strcpy(path, dirpath);
-
-    if (path[dirpath_len - 1] != '/') { /* add trailing / */
-        path[dirpath_len++] = '/';
-        path[dirpath_len] = '\0';
-        path_rest_size--;
-    }
     
     if ((dir = opendir(dirpath)) == NULL) {
 	log(LOGERR, "opendir %s: %m\n", dirpath);
@@ -133,14 +119,15 @@ int pkgset_create_rpmidx(const char *dirpath, const char *pathname)
     n = 0;
     err = 0;
     while( (ent = readdir(dir)) && !err) {
+        char path[PATH_MAX];
+        
         if (fnmatch("*.rpm", ent->d_name, 0) != 0) 
             continue;
 
         if (fnmatch("*.src.rpm", ent->d_name, 0) == 0) 
             continue;
-        
-        path[dirpath_len] = '\0';
-        strncat(&path[dirpath_len], ent->d_name, path_rest_size);
+
+        snprintf(path, sizeof(path), "%s/%s", dirpath, ent->d_name);
         
         if (stat(path, &st) != 0) {
             log(LOGERR, "stat %s: %m", path);

@@ -90,8 +90,8 @@ static int dump_pkgs_fqpns(struct pkgset *ps, struct upgrade_s *upg)
 
 static int fetch_pkgs(struct pkgset *ps, struct upgrade_s *upg) 
 {
-    int i, urltype;
-    tn_array *urls;
+    int rc, i, urltype;
+    tn_array *urls = NULL;
     
     
     if (ps->path == NULL) {
@@ -109,6 +109,7 @@ static int fetch_pkgs(struct pkgset *ps, struct upgrade_s *upg)
         
         snprintf(path, sizeof(path), "%s/%s", ps->path,
                  pkg_filename_s(n_array_nth(upg->install_pkgs, 0)));
+        
         return vfile_fetch(upg->inst->fetchdir, path, urltype);
     } 
 
@@ -130,7 +131,10 @@ static int fetch_pkgs(struct pkgset *ps, struct upgrade_s *upg)
         }
     }
     
-    return vfile_fetcha(upg->inst->fetchdir, urls, urltype);
+    rc = vfile_fetcha(upg->inst->fetchdir, urls, urltype);
+    if (urls)
+        n_array_free(urls);
+    return rc;
 }
 
 

@@ -24,9 +24,13 @@
 static char *setup_pkgprefix(const char *path) 
 {
     char *dn = NULL, *bn, *buf, *rpath = NULL;
+    int len;
 
-    buf = alloca(strlen(path) + 1);
-    strcpy(buf, path);
+    len = strlen(path);
+    buf = alloca(len + 1);
+    memcpy(buf, path, len);
+    buf[len] = '\0';
+    
     n_basedirnam(buf, &dn, &bn);
     if (dn)
         rpath = strdup(dn);
