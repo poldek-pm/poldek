@@ -156,9 +156,9 @@ if test ${is_rpm4}. = yes. ; then
 	AC_MSG_CHECKING(for rpm 4.0.4)
 	AC_EGREP_CPP(CHECKSIG_PGP,
 		[ #include <rpm/rpmcli.h>
-		], is_rpm_4_0_4=yes, is_rpm_4_0_4=no)
+		], is_rpm4_0_4=yes, is_rpm4_0_4=no)
 
-	if test ${is_rpm_4_0_4}. = yes. ; then
+	if test ${is_rpm4_0_4}. = yes. ; then
 		AC_DEFINE(HAVE_RPM_4_0_4)
 		CFLAGS="$CFLAGS -D_REENTRANT"
 		AC_MSG_RESULT(yes)
@@ -204,9 +204,8 @@ dnl Checks for libraries.
 AC_CHECK_LIB(bz2, BZ2_bzCompress)
 AC_CHECK_LIB(z, gzopen)
 
-
 DBLIB=""
-if test ${is_rpm_4_0_4}. = no. ; then
+if test ${is_rpm4_0_4}. = no. ; then
 	dnl tocheck: -ldb-3.1 causes link with static lib from /usr/lib
 	dnl instead shared one from /lib
 	#AC_CHECK_LIB(db-3.1, db_create, [DBLIB="-ldb-3.1"],
@@ -224,13 +223,22 @@ else
 	AC_CHECK_LIB(db-4.0, db_create, [DBLIB="-ldb-4.0"], 
 		     [AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"],,[$LIBS])], 
 		     [$LIBS])
+
+	if test "${ENABLE_STATIC}." = "yes."; then 
+		DBLIB="$DBLIB"
+	fi
 fi
 
 AC_CHECK_LIB(popt, poptReadConfigFile)
 
+if test ${is_rpm4_0_4}. = yes. ; then	
+	LIBS="-lbeecrypt $LIBS"
+fi
+
 if test ${is_rpm4}. = yes. ; then
 	AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR("rpmio not found"))
 fi
+
 
 AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="$LIBS -lrpm $DBLIB"],
 	AC_CHECK_LIB(rpm, rpmReadPackageHeader,[LIBS="$LIBS -lrpm -lrpmdb $DBLIB"],
@@ -244,6 +252,11 @@ AC_CHECK_FUNCS(rpmCheckSig, [AC_DEFINE(HAVE_RPMCHECKSIG)])
 
 AC_CHECK_HEADERS(db_185.h)
 AC_CHECK_FUNCS(__db185_open)
+
+dnl 4.0.4 has cross dependenecies(?)
+if test ${is_rpm4_0_4}. = yes. -a ${ENABLE_STATIC}. = yes. ; then	
+	LIBS="$LIBS -lbeecrypt -lbz2 -lrpmio"
+fi
 
 dnl trullib 0.43.5 has n_hash_size
 dnl test if linked with system copy only
