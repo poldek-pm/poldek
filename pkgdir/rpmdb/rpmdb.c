@@ -42,6 +42,7 @@
 #include "rpm/rpmdb_it.h"
 #include "rpm/rpmhdr.h"
 #include "pkgdb/pkgdb.h"
+#include "pkgroup.h"
 
 struct pkg_data {
 };
@@ -139,6 +140,7 @@ tn_array *load_nodep_fl(const struct pkg *pkg, void *ptr,
 struct map_struct {
     tn_array  *pkgs;
     tn_hash   *langs;
+    struct pkgroup_idx *pkgroups;
 };
 
 static
@@ -146,18 +148,20 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
 {
     struct pkg        *pkg;
     struct map_struct *ms;
-    //char              nevr[1024];
-    //int               len;
 
-    if ((pkg = pkg_ldrpmhdr(header, NULL, 0, PKG_LDNEVR))) {
+    if ((pkg = pkg_ldrpmhdr(header, NULL, 0, PKG_LDCAPREQS))) {
         char **hdr_langs;
         
         ms = ptr;
-        //pkg_snprintf(nevr, sizeof(nevr), pkg);
-        //len = strlen(nevr);
         pkg->recno = recno;
         pkg->load_pkguinf = load_pkguinf;
         pkg->load_nodep_fl = load_nodep_fl;
+        
+        if (verbose > 3)
+            msgn(4, "rpmdb: ld %s", pkg_snprintf_s(pkg));
+        
+        if (strcmp(pkg->name, "quake2") != 0) /* broken rpmdb... */
+            pkg->groupid = pkgroup_idx_update_rpmhdr(ms->pkgroups, header);
         n_array_push(ms->pkgs, pkg);
 
         hdr_langs = rpmhdr_langs(header);
@@ -173,13 +177,14 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
         }
         
         if (n_array_size(ms->pkgs) % 100 == 0)
-            msg(1, "_.");
+            msg(3, "_.");
     }
 }
 
 static
 int load_db_packages(tn_array *pkgs, const char *rootdir, const char *path,
-                     tn_hash *avlangs, unsigned ldflags) 
+                     tn_hash *avlangs, struct pkgroup_idx *pkgroups,
+                     unsigned ldflags) 
 {
     char dbfull_path[PATH_MAX];
     struct pkgdb       *db;
@@ -194,17 +199,18 @@ int load_db_packages(tn_array *pkgs, const char *rootdir, const char *path,
     if ((db = pkgdb_open(rootdir, path, O_RDONLY)) == NULL)
         return 0;
 
-    msg(1, _("Loading db packages%s%s%s..."), *dbfull_path ? " [":"",
+    msg(3, _("Loading db packages%s%s%s..."), *dbfull_path ? " [":"",
         dbfull_path, *dbfull_path ? "]":"");
 
     ms.pkgs = pkgs;
     ms.langs = avlangs;
+    ms.pkgroups = pkgroups;
     
     rpm_dbmap(db->dbh, db_map_fn, &ms);
     pkgdb_free(db);
 
     
-    msgn(1, _("_done"));
+    msgn(3, _("_done"));
 
     return n_array_size(pkgs);
 }
@@ -221,18 +227,22 @@ static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     int i;
+
+    if (pkgdir->pkgroups == NULL)
+        pkgdir->pkgroups = pkgroup_idx_new();
     
     if (!load_db_packages(pkgdir->pkgs, "/", pkgdir->idxpath,
-                          pkgdir->avlangs_h, ldflags))
+                          pkgdir->avlangs_h, pkgdir->pkgroups, ldflags))
         return 0;
 
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
         pkg->pkgdir = pkgdir;
     }
-    
-    
+
     pkgdir->ts = rpm_dbmtime(pkgdir->idxpath);
+    
+    
     return n_array_size(pkgdir->pkgs);
 }
 
