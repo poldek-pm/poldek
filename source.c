@@ -319,7 +319,7 @@ int source_cmp_uniq(const struct source *s1, const struct source *s2)
     register int rc;
     
     if ((rc = source_cmp(s1, s2)) == 0) 
-        logn(LOGWARN, _("remove duplicated source %s%s%s"),
+        logn(LOGWARN, _("removed duplicated source %s%s%s"),
              (s2->flags & PKGSOURCE_ISNAMED) ? s2->name : "",
              (s2->flags & PKGSOURCE_ISNAMED) ? " -- " : "",
              s2->path);
