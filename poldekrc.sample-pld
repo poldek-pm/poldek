@@ -1,5 +1,5 @@
 # $Id$
-# Sample configuration for PLD, packages are taken from TASK via rsync  
+# Sample configuration for PLD, packages are taken via rsync  
 # 
 
 source = rsync://ftp.pld.org.pl/pld/PLD-1.0/i686/RPMS/Packages
