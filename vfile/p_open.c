@@ -35,6 +35,7 @@
 
 #if HAVE_FORKPTY
 # include <pty.h>
+# include <termios.h>
 #endif
 
 #include "i18n.h"
@@ -42,8 +43,8 @@
 
 void p_st_init(struct p_open_st *pst) 
 {
+    memset(pst, 0,  sizeof(*pst));
     pst->stream = NULL;
-    pst->pid = 0;
     pst->cmd = NULL;
     pst->errmsg = NULL;
 }
@@ -74,20 +75,19 @@ FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     pid_t  pid;
     char   errmsg[1024];
     
-    if (access(cmd, X_OK) != 0) {
-        snprintf(errmsg, sizeof(errmsg), "%s: no such file", cmd);
+    if (access(cmd, R_OK | X_OK) != 0) {
+        snprintf(errmsg, sizeof(errmsg), _("%s: no such file"), cmd);
         pst->errmsg = strdup(errmsg);
         return NULL;
     }
     
     if (pipe(pp) != 0) {
-        snprintf(errmsg, sizeof(errmsg), "%s: no such file", cmd);
+        snprintf(errmsg, sizeof(errmsg), "pipe: %m");
         pst->errmsg = strdup(errmsg);
         return NULL;
     }
     
     if ((pid = fork()) == 0) {
-        
         if ((flags & P_OPEN_KEEPSTDIN) == 0) {
             int fd = open("/dev/null", O_RDWR);
             dup2(fd, 0);
@@ -104,7 +104,7 @@ FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 	exit(EXIT_FAILURE);
         
     } else if (pid < 0) {
-        snprintf(errmsg, sizeof(errmsg), "%s: no such file", cmd);
+        snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
         pst->errmsg = strdup(errmsg);
         return NULL;
         
@@ -135,26 +135,22 @@ int p_close(struct p_open_st *pst)
     
     
     if (WIFEXITED(st)) {
-        if (WEXITSTATUS(st) != 0) {
-            snprintf(errmsg, sizeof(errmsg), "%s exited with %d\n", pst->cmd,
-                     WEXITSTATUS(st));
-            pst->errmsg = strdup(errmsg);
-        }
         rc = WEXITSTATUS(st);
         
     } else if (WIFSIGNALED(st)) {
 #ifdef HAVE_STRSIGNALS
-        snprintf(errmsg, sizeof(errmsg), "%s terminated by signal %s\n",
+        snprintf(errmsg, sizeof(errmsg), _("%s terminated by signal %s"),
                  pst->cmd, strsignal(WTERMSIG(st)));
 #else
-        snprintf(errmsg, sizeof(errmsg), "%s terminated by signal %d\n",
+        snprintf(errmsg, sizeof(errmsg), _("%s terminated by signal %d"),
                  pst->cmd, WTERMSIG(st));
 #endif        
         pst->errmsg = strdup(errmsg);
         
     } else {
         snprintf(errmsg, sizeof(errmsg),
-                 "have no idea what happen with %s(%d)\n", pst->cmd, pst->pid);
+                 _("%s (%d) died under inscrutable circumstances"),
+                 pst->cmd, pst->pid);
         pst->errmsg = strdup(errmsg);
     }
     
@@ -173,23 +169,41 @@ FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[])
 
 FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[])
 {
-    int fd;
-    pid_t pid;
-    char errmsg[1024];
+    struct termios  termios;
+    struct winsize  winsize;
+    int             fd;
+    pid_t           pid;
+    char            errmsg[1024];
+
+    if (!isatty(1))
+        return p_open(pst, 0, cmd, argv);
     
-    if (access(cmd, X_OK) != 0) {
-        snprintf(errmsg, sizeof(errmsg), "%s: no such file", cmd);
+    if (tcgetattr(1, &termios) != 0) {
+        snprintf(errmsg, sizeof(errmsg), "tcgetattr(1): %m");
         pst->errmsg = strdup(errmsg);
         return NULL;
     }
     
-    if ((pid = forkpty(&fd, NULL, NULL, NULL)) == 0) {
+    if (ioctl(1, TIOCGWINSZ, &winsize) != 0) {
+        snprintf(errmsg, sizeof(errmsg), "ioctl(1, TIOCGWINSZ): %m");
+        pst->errmsg = strdup(errmsg);
+        return NULL;
+    }
+    
+    
+    if (access(cmd, R_OK | X_OK) != 0) {
+        snprintf(errmsg, sizeof(errmsg), _("%s: no such file"), cmd);
+        pst->errmsg = strdup(errmsg);
+        return NULL;
+    }
+    
+    if ((pid = forkpty(&fd, NULL, &termios, &winsize)) == 0) {
         close(0);
         execv(cmd, argv);
 	exit(EXIT_FAILURE);
         
     } else if (pid < 0) {
-        snprintf(errmsg, sizeof(errmsg), "%s: no such file", cmd);
+        snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
         pst->errmsg = strdup(errmsg);
         return NULL;
         

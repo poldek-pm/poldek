@@ -10,11 +10,11 @@
 /* custom popen */
 
 struct p_open_st {
-    FILE *stream;
-    int   fd;
-    pid_t pid;
-    char *cmd;
-    char *errmsg;
+    FILE    *stream;
+    int     fd;
+    pid_t   pid;
+    char    *cmd;
+    char    *errmsg;
 };
 
 void p_st_init(struct p_open_st *pst);

@@ -208,7 +208,9 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype)
             char destpath[PATH_MAX], *url;
 
             url = n_array_nth(urls, i);
-            snprintf(destpath, sizeof(destpath), "%s/%s", destdir, url);
+            snprintf(destpath, sizeof(destpath), "%s/%s", destdir,
+                     n_basenam(url));
+            vfile_msg_fn(_("Retrieving %s...\n"), url);
             if (!mod->fetch(destpath, url)) {
                 rc = 0;
                 break;
@@ -234,11 +236,13 @@ int vfile_fetch(const char *destdir, const char *path, int urltype)
 
     if ((mod = select_vf_module(urltype)) == NULL)
         rc = vfile_fetch_ext(destdir, path, urltype);
+    
     else {
         char destpath[PATH_MAX];
 
         snprintf(destpath, sizeof(destpath), "%s/%s", destdir,
                  n_basenam(path));
+        vfile_msg_fn(_("Retrieving %s...\n"), path);
         rc = mod->fetch(destpath, path);
     }
     
@@ -473,12 +477,17 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
 
     
     while (1) {
+        vfile_err_no = 0;
+        
         if ((vf = do_vfile_open(path, vftype, vfmode))) {
             vf->vf_path = strdup(path);
             break;
         }
-        
+
         if ((vfmode & VFM_STBRN) == 0)
+            break;
+
+        if (vfile_err_no == ENOENT)
             break;
 
         if (n > 100) {
