@@ -30,8 +30,6 @@
 #include "misc.h"
 #include "rpm/rpmhdr.h"
 
-const char *pkgroups_tag = "GROUPS:";
-
 struct pkgroup_idx {
     tn_hash *ht;                /* name => struct pkgroup */
     tn_array *arr;
@@ -72,7 +70,7 @@ int tr_cmp(struct tr *tr1, struct tr *tr2)
 
 
 static
-int tr_store(struct tr *tr, tn_stream *st) 
+int tr_store(struct tr *tr, tn_buf *nbuf) 
 {
     int      len, n;
     uint8_t  nlen;
@@ -82,16 +80,16 @@ int tr_store(struct tr *tr, tn_stream *st)
     n_assert(len < UINT8_MAX);
     
     nlen = len;
-    n_stream_write(st, &nlen, sizeof(nlen));
+    n_buf_write(nbuf, &nlen, sizeof(nlen));
     n = n_snprintf(buf, sizeof(buf), "%s:%s", tr->lang, tr->name);
     DBGF("%s\n", buf);
     n_assert(n == len);
     
-    return n_stream_write(st, buf, len) == len;
+    return n_buf_write(nbuf, buf, len) == len;
 }
 
 static
-struct tr *tr_restore(tn_stream *st) 
+struct tr *tr_restore_st(tn_stream *st) 
 {
     int      len;
     uint8_t  nlen;
@@ -113,6 +111,33 @@ struct tr *tr_restore(tn_stream *st)
 
     return tr_new(buf, p);
 }
+
+
+static
+struct tr *tr_restore(tn_buf_it *it) 
+{
+    int      len;
+    uint8_t  nlen;
+    char     buf[255], *p;
+
+    if (!n_buf_it_read_uint8(it, &nlen))
+        return NULL;
+
+    len = nlen;
+    
+    if (n_buf_it_read(it, buf, len) != len)
+        return NULL;
+
+    buf[len] = '\0';
+
+    if ((p = strchr(buf, ':')) == NULL)
+        return NULL;
+
+    *p++ = '\0';
+
+    return tr_new(buf, p);
+}
+
 
 static
 struct pkgroup *pkgroup_new(int id, const char *name) 
@@ -184,11 +209,6 @@ int pkgroup_add(struct pkgroup *gr, const char *lang, const char *name)
     return 0;
 }
 
-static
-void map_fn_store_tr(void *tr, void *st) 
-{
-    tr_store(tr, st);
-}
 
 static
 void map_fn_trs_keys(const char *lang, void *tr, void *array) 
@@ -199,14 +219,14 @@ void map_fn_trs_keys(const char *lang, void *tr, void *array)
 
 
 static
-int pkgroup_store(struct pkgroup *gr, tn_stream *st)  
+int pkgroup_store(struct pkgroup *gr, tn_buf *nbuf)  
 {
     uint8_t  nlen;
     tn_array *arr;
-    int      len;
+    int      len, i;
     
     
-    if (!n_stream_write_uint32(st, gr->id))
+    if (!n_buf_write_uint32(nbuf, gr->id))
         return 0;
 
     len = strlen(gr->name) + 1;
@@ -214,26 +234,29 @@ int pkgroup_store(struct pkgroup *gr, tn_stream *st)
     
     nlen = len;
 
-    if (!n_stream_write_uint8(st, nlen))
+    if (!n_buf_write_uint8(nbuf, nlen))
         return 0;
 
     DBGF("%d %s\n", gr->id, gr->name);
-    if (n_stream_write(st, gr->name, len) != len)
+    if (n_buf_write(nbuf, gr->name, len) != len)
         return 0;
 
-    if (!n_stream_write_uint32(st, gr->ntrs))
+    if (!n_buf_write_uint32(nbuf, gr->ntrs))
         return 0;
 
     arr = n_array_new(8, NULL, (tn_fn_cmp)tr_cmp);
     n_hash_map_arg(gr->trs, map_fn_trs_keys, arr);
     n_array_sort(arr);
-    n_array_map_arg(arr, map_fn_store_tr, st);
+    for (i=0; i < n_array_size(arr); i++)
+        tr_store(n_array_nth(arr, i), nbuf);
+    
     n_array_free(arr);
     return 1;
 }
 
+
 static
-struct pkgroup *pkgroup_restore(tn_stream *st)  
+struct pkgroup *pkgroup_restore_st(tn_stream *st)  
 {
     int             nerr = 0, i;
     uint32_t        nid, ntrs;
@@ -252,7 +275,7 @@ struct pkgroup *pkgroup_restore(tn_stream *st)
         return 0;
 
     name[nlen] = '\0';
-    //dbgf("gid %d, name[%d] = %s\n", nid, nlen, name); 
+    DBGF("gid %d, name[%d] = %s\n", nid, nlen, name); 
     
     if (!n_stream_read_uint32(st, &ntrs))
         return 0;
@@ -262,7 +285,53 @@ struct pkgroup *pkgroup_restore(tn_stream *st)
     for (i=0; i < (int)ntrs; i++) {
         struct tr *tr;
 
-        if ((tr = tr_restore(st)) == NULL)
+        if ((tr = tr_restore_st(st)) == NULL)
+            nerr++;
+        else
+            pkgroup_add_tr(gr, tr);
+        //printf("gr tr %s %s\n", tr->lang, tr->name);
+    }
+    
+    if (nerr > 0) {
+        pkgroup_free(gr);
+        gr = NULL;
+    }
+    
+    return gr;
+}
+
+
+static
+struct pkgroup *pkgroup_restore(tn_buf_it *it)  
+{
+    int             nerr = 0, i;
+    uint32_t        nid, ntrs;
+	uint8_t         nlen;
+    struct pkgroup  *gr;
+    char            name[256], *p;
+
+    if (!n_buf_it_read_uint32(it, &nid)) 
+        return 0;
+
+    if (!n_buf_it_read_uint8(it, &nlen))
+        return 0;
+
+    if ((p = n_buf_it_get(it, nlen)) == NULL)
+        return 0;
+
+    memcpy(name, p, nlen);
+    name[nlen] = '\0';
+    DBGF("gid %d, name[%d] = %s\n", nid, nlen, name); 
+    
+    if (!n_buf_it_read_uint32(it, &ntrs))
+        return 0;
+    
+    gr = pkgroup_new(nid, name);
+    
+    for (i=0; i < (int)ntrs; i++) {
+        struct tr *tr;
+
+        if ((tr = tr_restore(it)) == NULL)
             nerr++;
         else
             pkgroup_add_tr(gr, tr);
@@ -319,32 +388,27 @@ struct pkgroup_idx *pkgroup_idx_link(struct pkgroup_idx *idx)
 }
 
 
-static
-void map_fn_store_gr(void *gr, void *stream) 
+int pkgroup_idx_store(struct pkgroup_idx *idx, tn_buf *nbuf) 
 {
-    pkgroup_store(gr, stream);
-}
-
-
-int pkgroup_idx_store(struct pkgroup_idx *idx, tn_stream *st) 
-{
-    n_stream_printf(st, "%%%s\n", pkgroups_tag);
-    n_array_sort(idx->arr);
-    if (!n_stream_write_uint32(st, n_array_size(idx->arr)))
-        return 0;
+    int i;
     
-    n_array_map_arg(idx->arr, map_fn_store_gr, st);
-    return n_stream_printf(st, "\n") == 1;
+    n_array_sort(idx->arr);
+    if (!n_buf_write_int32(nbuf, n_array_size(idx->arr)))
+        return 0;
+
+    for (i=0; i < n_array_size(idx->arr); i++)
+        pkgroup_store(n_array_nth(idx->arr, i), nbuf);
+    
+    return 1;
 }
 
 
-struct pkgroup_idx *pkgroup_idx_restore(tn_stream *st, unsigned flags)
+struct pkgroup_idx *pkgroup_idx_restore_st(tn_stream *st, unsigned flags)
 {
     uint32_t nsize;
     struct pkgroup_idx *idx;
     int i;
 
-    
     flags = flags;
     if (!n_stream_read_uint32(st, &nsize))
         return NULL;
@@ -352,12 +416,34 @@ struct pkgroup_idx *pkgroup_idx_restore(tn_stream *st, unsigned flags)
     idx = pkgroup_idx_new();
     
     for (i=0; i < (int)nsize; i++) 
-        n_array_push(idx->arr, pkgroup_restore(st));
+        n_array_push(idx->arr, pkgroup_restore_st(st));
 
 //    if (flags & PKGROUP_MKNAMIDX)
 //        ;
     n_array_sort(idx->arr);
     n_stream_seek(st, 1, SEEK_CUR); /* eat '\n' */
+    return idx;
+}
+
+struct pkgroup_idx *pkgroup_idx_restore(tn_buf_it *it, unsigned flags)
+{
+    uint32_t nsize;
+    struct pkgroup_idx *idx;
+    int i;
+
+    flags = flags;
+    if (!n_buf_it_read_uint32(it, &nsize))
+        return NULL;
+
+    idx = pkgroup_idx_new();
+    
+    for (i=0; i < (int)nsize; i++) 
+        n_array_push(idx->arr, pkgroup_restore(it));
+
+//    if (flags & PKGROUP_MKNAMIDX)
+//        ;
+    n_array_sort(idx->arr);
+//    n_stream_seek(st, 1, SEEK_CUR); /* eat '\n' */
     return idx;
 }
 
@@ -485,24 +571,29 @@ static int pkgroupid(struct pkgroup_idx *idx, const char *name)
 
 int pkgroup_idx_remap_groupid(struct pkgroup_idx *idx_to,
                               struct pkgroup_idx *idx_from,
-                              int groupid) 
+                              int groupid, int merge) 
 {
     struct pkgroup *gr, tmpgr;
     int new_id;
     
         
     tmpgr.id = groupid;
+    
     if ((gr = n_array_bsearch(idx_from->arr, &tmpgr)) == NULL)
         n_assert(0);
     
     if ((new_id = pkgroupid(idx_to, gr->name)) < 0) {
-        logn(LOGERR, "%s: group not found", gr->name);
-        n_assert(0);
-        new_id = n_array_size(idx_to->arr) + 1;
-        gr->id = new_id;
-        n_array_push(idx_to->arr, gr);
-        n_array_sort(idx_to->arr);
+        if (!merge) {
+            logn(LOGERR, "%s: group not found", gr->name);
+            n_assert(0);
+        } else {
+            new_id = n_array_size(idx_to->arr) + 1;
+            gr->id = new_id;
+            n_array_push(idx_to->arr, gr);
+            n_array_sort(idx_to->arr);
+        }
     }
+    
     
     return new_id;
 }
