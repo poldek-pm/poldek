@@ -286,8 +286,11 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
                 n = read(sockfd, &c, 1);
             else 
                 n = read(sockfd, buf, sizeof(buf));
+
+            if (n < 0 && (errno == EAGAIN || errno == EINTR))
+                continue;
             
-            if (n <= 0) {
+            else if (n <= 0) {
                 is_err = 1;
                 break;
                 
