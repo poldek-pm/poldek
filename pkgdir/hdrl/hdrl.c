@@ -48,14 +48,15 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 static int do_update_a(const struct source *src);
 static int do_update(struct pkgdir *pkgdir, int *npatches);
 
-static char *aliases[] = { "apt", "wuch", NULL };
+static char *aliases[] = { "apt", NULL };
 
 struct pkgdir_module pkgdir_module_hdrl = {
     PKGDIR_CAP_UPDATEABLE | PKGDIR_CAP_UPDATEABLE_INC, 
     "hdrl",
     (char **)aliases,
     "file with raw package headers; used by apt-rpm",
-    "hdlist",
+    "pkglist",
+    "bz2",
     NULL,
     do_load,
     NULL,
@@ -184,3 +185,53 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL | VFM_CACHE_NODEL;
     return hdrl_update(pkgdir->idxpath, vfmode);
 }
+
+#if 0                           /* creating NFY */
+/* extra RPM tags, taken from apt-rpm */
+#define CRPMTAG_FILENAME          1000000
+#define CRPMTAG_FILESIZE          1000001
+
+extern int hdrl_tags[];
+extern int hdrl_tags_size;
+
+
+static void *pkg_to_rpmhdr(struct pkg *pkg)
+{
+    Header h;
+
+    h = headerNew();
+    
+    headerAddEntry(h, CRPMTAG_MD5, RPM_STRING_TYPE, md5, 1);
+    
+
+    
+}
+
+
+static
+int do_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
+{
+    struct tndb      *db = NULL;
+    int              i, nerr = 0;
+    struct pndir     *idx;
+    tn_array         *keys = NULL;
+    tn_buf           *nbuf = NULL;
+    unsigned         pkg_st_flags = flags;
+    tn_hash          *db_dscr_h = NULL;
+    struct pndir_paths paths;
+    
+    idx = pkgdir->mod_data;
+
+    if (pkgdir->ts == 0) 
+        pkgdir->ts = time(0);
+
+    if (pathname == NULL && idx && idx->_vf) 
+        pathname = vfile_localpath(idx->_vf);
+
+    if (pathname == NULL && pkgdir->idxpath)
+        pathname = pkgdir->idxpath;
+
+    
+    
+    
+#endif
