@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <obstack.h>
+#include <fnmatch.h>
+
 
 #include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
@@ -346,39 +348,65 @@ struct pkgfl_ent *pkgfl_ent_new(char *dirname, int dirname_len, int nfiles)
     return flent;
 }
 
+static int strncmp_path(const char *p1, const char *p2)
+{
+    int rc;
+    rc = strncmp(p1, p2, strlen(p1));
+    printf("cmp %s %s = %d\n", p1, p2, rc);
+    return rc;
+}
 
 /*
   stores file list as binary data
  */
 static
-int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
+int pkgfl_store_buf(tn_array *fl, tn_buf *nbuf, tn_array *exclpath, 
+                    tn_array *depdirs, int which)
 {
-    int8_t *matches;
+    int8_t *matches, *skipped, *lengths;
     int i, j;
     int ndirs = 0;
     
 
     matches = alloca(n_array_size(fl) * sizeof(*matches));
     memset(matches, 0, n_array_size(fl) * sizeof(*matches));
+    skipped = alloca(n_array_size(fl) * sizeof(*matches));
+    memset(skipped, 0, n_array_size(fl) * sizeof(*skipped));
 
-    if (which == PKGFL_ALL) {
+    lengths = alloca(n_array_size(fl) * sizeof(*lengths));
+    memset(lengths, 0, n_array_size(fl) * sizeof(*lengths));
+
+    if (which == PKGFL_ALL && exclpath == NULL) {
         memset(matches, 1, n_array_size(fl) * sizeof(*matches));
         ndirs = n_array_size(fl);
         
     } else {
         for (i=0; i<n_array_size(fl); i++) {
             struct pkgfl_ent *flent = n_array_nth(fl, i);
-            int dnl, is_depdir = 0;
+            int is_depdir = 0, dnl;
 
             dnl = strlen(flent->dirname);
-            is_depdir = (n_array_bsearch(depdirs, flent->dirname) != NULL);
+            n_assert(dnl > 0 && dnl < 256);
+            lengths[i] = dnl;
 
-        
+            if (depdirs)
+                is_depdir = (n_array_bsearch(depdirs, flent->dirname) != NULL);
+
+            n_assert(which != PKGFL_ALL);
+            
+            
             if (which == PKGFL_DEPDIRS && is_depdir) {
                 matches[i] = 1;
                 ndirs++;
                 
             } else if (which == PKGFL_NOTDEPDIRS && !is_depdir) {
+                if (n_array_bsearch_ex(exclpath, flent->dirname,
+                                       (tn_fn_cmp)strncmp_path)) {
+                    DBGF_F("%s skipped\n", flent->dirname);
+                    skipped[i] = 1;
+                    continue;
+                }
+                
                 matches[i] = 1;
                 ndirs++;
             }
@@ -432,6 +460,7 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
     return ndirs;
 }
 
+#if 0                           /* unused */
 int pkgfl_store_st(tn_array *fl, tn_stream *st, tn_array *depdirs, int which) 
 {
     tn_buf *nbuf;
@@ -439,14 +468,16 @@ int pkgfl_store_st(tn_array *fl, tn_stream *st, tn_array *depdirs, int which)
     
     nbuf = n_buf_new(4096);
     
-    pkgfl_store(fl, nbuf, depdirs, which);
-    rc = n_buf_store(nbuf, st, TN_BUF_STORE_32B);
+    pkgfl_store_buf(fl, nbuf, NULL, depdirs, which);
+    rc = n_buf_store_buf(nbuf, st, TN_BUF_STORE_32B);
     n_buf_free(nbuf);
 	n_stream_printf(st, "\n");
     return rc;
 }
+#endif
 
-int pkgfl_store_buf(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which) 
+int pkgfl_store(tn_array *fl, tn_buf *nbuf,
+                tn_array *exclpath, tn_array *depdirs, int which) 
 {
     int sizeoffs, offs;
     int32_t bsize;
@@ -455,7 +486,7 @@ int pkgfl_store_buf(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
     n_buf_seek(nbuf, sizeof(bsize), SEEK_CUR); /* place for buf size */
 
     offs = n_buf_tell(nbuf);
-    pkgfl_store(fl, nbuf, depdirs, which);
+    pkgfl_store_buf(fl, nbuf, exclpath, depdirs, which);
     bsize = n_buf_tell(nbuf) - offs;
 
     n_assert(bsize > 0);
