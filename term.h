@@ -17,7 +17,8 @@
 
 #include <stddef.h>           /* for size_t     */
 
-#ifndef __GNUC__                                                            
+#ifndef __GNUC__
+#  undef __attribute__
 #  define __attribute__(x) /*nothing*/                                      
 #endif   
 

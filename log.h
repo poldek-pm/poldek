@@ -6,7 +6,8 @@
 # include "config.h"
 #endif
 
-#ifndef __GNUC__                                                            
+#ifndef __GNUC__
+#  undef __attribute__
 #  define __attribute__(x) /*nothing*/                                      
 #endif   
 
