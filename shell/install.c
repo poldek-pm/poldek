@@ -218,13 +218,13 @@ static int install(struct cmdarg *cmdarg)
 
     is_test = (inst->flags & (INSTS_TEST | INSTS_RPMTEST));
     
-    if (!is_test) {
-        iinf.installed_pkgs = pkgs_array_new(16);
-        iinf.uninstalled_pkgs = pkgs_array_new(16);
-        
-    } else {
+    if (is_test) {
         iinf.installed_pkgs = NULL;
         iinf.uninstalled_pkgs = NULL;
+        
+    } else {
+        iinf.installed_pkgs = pkgs_array_new(16);
+        iinf.uninstalled_pkgs = pkgs_array_new(16);
     }
     
     rc = install_pkgs(cmdarg->sh_s->pkgset, cmdarg->sh_s->inst,
@@ -235,7 +235,19 @@ static int install(struct cmdarg *cmdarg)
 
 
     /* update installed set */
-    if (iinf.installed_pkgs && cmdarg->sh_s->instpkgs) { 
+    if (iinf.installed_pkgs && cmdarg->sh_s->instpkgs) {
+        
+        for (i=0; i < n_array_size(iinf.uninstalled_pkgs); i++) {
+            struct pkg   *pkg = n_array_nth(iinf.uninstalled_pkgs, i);
+            struct shpkg *shpkg = alloca(sizeof(*shpkg) + 1024);
+            
+            pkg_snprintf(shpkg->nevr, 1024, pkg);
+            n_array_remove(cmdarg->sh_s->instpkgs, shpkg);
+            printf("- %s\n", shpkg->nevr);
+        }
+        n_array_sort(cmdarg->sh_s->instpkgs);
+        
+        
         for (i=0; i < n_array_size(iinf.installed_pkgs); i++) {
             struct pkg     *pkg = n_array_nth(iinf.installed_pkgs, i);
             struct shpkg   *shpkg;
@@ -244,26 +256,16 @@ static int install(struct cmdarg *cmdarg)
 
             
             len = pkg_snprintf(nevr, sizeof(nevr), pkg);
-            //printf("+ %s\n", nevr);
+            printf("+ %s\n", nevr);
             shpkg = n_malloc(sizeof(*shpkg) + len + 1);
             memcpy(shpkg->nevr, nevr, len + 1);
             shpkg->pkg = pkg_link(pkg);
 
             n_array_push(cmdarg->sh_s->instpkgs, shpkg);
         }
-            
         n_array_sort(cmdarg->sh_s->instpkgs);
-
-        for (i=0; i < n_array_size(iinf.uninstalled_pkgs); i++) {
-            struct pkg   *pkg = n_array_nth(iinf.uninstalled_pkgs, i);
-            struct shpkg *shpkg = alloca(sizeof(*shpkg) + 1024);
-            
-            pkg_snprintf(shpkg->nevr, 1024, pkg);
-            n_array_remove(cmdarg->sh_s->instpkgs, shpkg);
-            //printf("- %s\n", shpkg->nevr);
-        }
         
-        n_array_sort(cmdarg->sh_s->instpkgs);
+        
         //printf("s = %d\n", n_array_size(cmdarg->sh_s->instpkgs));
         if (n_array_size(iinf.installed_pkgs) + n_array_size(iinf.uninstalled_pkgs))
             cmdarg->sh_s->ts_instpkgs = time(0);

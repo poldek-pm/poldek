@@ -1739,21 +1739,25 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
                          int vrfy)
 {
     int i, is_installed = 1;
+
     
-
-    if (vrfy) {
+    if (vrfy)
         pkgdb_reopendb(upg->inst->db);
-        is_installed = 1;
-    }
-
+    
     
     for (i=0; i<n_array_size(upg->install_pkgs); i++) {
         struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
-
         
-        if (vrfy)
+        
+        if (vrfy) {
+            int cmprc = 0;
+            
             is_installed = rpm_is_pkg_installed(upg->inst->db->dbh, pkg,
-                                                NULL, NULL);
+                                                &cmprc, NULL);
+            if (is_installed && cmprc != 0) 
+                is_installed = 0;
+        }
+        
 
         if (is_installed)
             n_array_push(iinf->installed_pkgs, pkg_link(pkg));
@@ -1767,10 +1771,15 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
         struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
         struct pkg *pkg = dbpkg->pkg;
 
-        
-        if (vrfy)
+
+        if (vrfy) {
+            int cmprc = 0;
+            
             is_installed = rpm_is_pkg_installed(upg->inst->db->dbh, pkg,
-                                                NULL, NULL);
+                                                &cmprc, NULL);
+            if (is_installed && cmprc != 0) 
+                is_installed = 0;
+        }
 
         if (is_installed == 0)
             n_array_push(iinf->uninstalled_pkgs,
