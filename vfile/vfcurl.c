@@ -37,7 +37,7 @@ struct progress_bar {
     size_t  prev;
     size_t  point;
     int     width;
-    int     anybfetched;
+    int     state;
 };
 
 
@@ -117,7 +117,7 @@ int vfile_curl_fetch(const char *dest, const char *url)
     if (curl_easy_setopt(curlh, CURLOPT_URL, url) != 0) {
         vfile_err_fn("curl_easy_setopt failed");
         return 0;
-    };
+    }
 
     if ((stream = fopen(dest, "a+")) == NULL) {
         vfile_err_fn("fopen %s: %m\n", dest);
@@ -202,7 +202,6 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
     int barwidth;
     size_t total;
     int num;
-    int i;
     
     bar = (struct progress_bar *)clientp;
     total = dltotal + ultotal;
@@ -214,30 +213,29 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         int thisblock = bar->point / 1024;
         while ( thisblock > prevblock ) {
             vfile_msg_fn(".");
-            bar->anybfetched = 1;
             prevblock++;
         }
         
-    } else {
-        bar->anybfetched = 1;
+    } else if (bar->state < 2) {
+        bar->state = 1;         
         frac = (float) bar->point / (float) total;
         percent = frac * 100.0f;
         barwidth = bar->width - 7;
         num = (int) (((float)barwidth) * frac);
-        i = 0;
-        for ( i = 0; i < num; i++ ) {
-            line[i] = '.';
-        }
-        line[i] = '\0';
+        memset(line, '.', num);
+        line[num] = '\0';
         snprintf(format, sizeof(format), "%%-%ds %%5.1f%%%%", barwidth );
         snprintf(outline, sizeof(outline), format, line, percent );
         vfile_msg_fn("\r%s", outline);
-        
+        if (total == bar->point)
+            bar->state = 2;
     }
     bar->prev = bar->point;
     
-    if (total == bar->point && bar->anybfetched == 1)
+    if (total == bar->point && bar->state == 2) {
         vfile_msg_fn("\n");
+        bar->state = 3;
+    }
 
     return 0;
 }
