@@ -15,9 +15,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <trurl/nassert.h>
-#include <trurl/narray.h>
-#include <trurl/nmalloc.h>
+#include <trurl/trurl.h>
 #include "sigint/sigint.h"
 
 #include "i18n.h"
@@ -60,6 +58,9 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_INST_ROOTDIR          'r' 
 #define OPT_MERCY                  (OPT_GID + 29)
 #define OPT_PROMOTEEPOCH           (OPT_GID + 30)
+#define OPT_PMONLY_NODEPS         (OPT_GID + 31)
+#define OPT_PMONLY_FORCE          (OPT_GID + 32)
+#define OPT_PM                    (OPT_GID + 33) 
 
 static struct argp_option options[] = {
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
@@ -94,6 +95,22 @@ N_("Just dump install marked package filenames to FILE (default stdout)"), OPT_G
 
 {"dumpn", OPT_INST_DUMPN, "FILE", OPTION_ARG_OPTIONAL,
 N_("Just dump install marked package names to FILE (default stdout)"), OPT_GID },
+
+
+{"pm-nodeps", OPT_PMONLY_NODEPS, 0, 0, 
+N_("Install packages with broken dependencies (applied to PM only)"), OPT_GID },
+
+{"rpm-nodeps", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
+    
+
+{"pm-force", OPT_PMONLY_FORCE, 0, 0,
+N_("Be unconcerned (applied to PM only)"), OPT_GID },
+
+{"rpm-force", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
+    
+{"pmopt", OPT_PM, "OPTION", 0, 
+ N_("pass option OPTION to PM binary"), OPT_GID },
+{"rpm", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },    
 
 {0,  'v', 0, 0, N_("Be verbose."), OPT_GID },
 {NULL, 'h', 0, OPTION_HIDDEN, "", OPT_GID }, /* alias for -? */
@@ -303,8 +320,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_PROMOTEEPOCH:
             ts->setop(ts, POLDEK_OP_PROMOTEPOCH, 1);
+            break;
             
-
         case OPT_INST_NODEPS:
             ts->setop(ts, POLDEK_OP_NODEPS, 1);
             break;
@@ -312,7 +329,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_FORCE:
             ts->setop(ts, POLDEK_OP_FORCE, 1);
             break;
-            
             
         case 't':
             if (ts->getop(ts, POLDEK_OP_TEST))
@@ -374,6 +390,22 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
             ts->setop(ts, POLDEK_OP_JUSTFETCH, 1);
             break;
+
+        case OPT_PMONLY_FORCE:
+            poldek_ts_configure(ts, POLDEK_CONF_RPMOPTS, "--force");
+            break;
+            
+        case OPT_PMONLY_NODEPS:
+            poldek_ts_configure(ts, POLDEK_CONF_RPMOPTS, "--nodeps");
+            break;
+
+        case OPT_PM: {
+            char opt[256];
+            n_snprintf(opt, sizeof(opt), "--%s", arg);
+            poldek_ts_configure(ts, POLDEK_CONF_RPMOPTS, opt);
+        }
+            break;
+            
             
         default:
             return ARGP_ERR_UNKNOWN;
