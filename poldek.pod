@@ -56,7 +56,7 @@ line, type 'help' and the rest should be self-explanatory.
 
 [to be continued...]
 
-=head1 SPECIFING SOURCE
+=head1 SPECIFYING SOURCE
 
 The source is specified by B<--source> option or B<source> parameter 
 in config file:
@@ -79,7 +79,7 @@ Examples:
 
 =back
 
-If package index and packages are stored in diffrent
+If package index and packages are stored in different
 locations then option:
 
 B<-P, --prefix> B<PREFIX>
@@ -93,7 +93,7 @@ could be specified by B<-n, --sn> B<SOURCE-NAME>, e.g:
 
 $ poldek --sn pld-dist ...
 
-=head1 SPECIFING PACKAGES
+=head1 SPECIFYING PACKAGES
 
 Packages could be specified in three ways:
 
@@ -151,7 +151,7 @@ I<NOTE>: In this mode only one and only directory path as SOURCE is accepted.
 
 =item B<--up, --update>; B<--upa, --update-whole>   
 
-Resynchronize the package index from its source and verify it. 
+Re-synchronize the package index from its source and verify it. 
 
 With B<--update> program looking up "patches" for existing local
 package index, if it fails, then whole index is downloaded.
@@ -163,7 +163,7 @@ integrity using its digest from packages.dir.mdd.
 
 =item B<-V|--verify>
 
-This option verifies dependenecies of package set.
+This option verifies dependencies of package set.
 Without packages specified it checks all available packages.
 
 =item B<--install-dist[=DIR]>
@@ -237,7 +237,7 @@ with requirement "foo = 1.0" than poldek upgrade foo-devel to version
 Prevent packages listed from being upgraded if they are already installed.
 If option is not given then packages to hold are taken from B<hold> configuration 
 option and additionally from $HOME/.poldek_hold. Held package won't be upgraded 
-with exeption if it will be pointed directly by the user.
+with exception if it will be pointed directly by the user.
 
 =item B<-m, --mercy>
 
@@ -255,7 +255,7 @@ Don't automatically install packages required by selected ones.
 
 =item B<--nohold> 
 
-Don't take held packages from $HOME/.poldek_hold nor config's hold paramater.
+Don't take held packages from $HOME/.poldek_hold nor config's hold parameter.
 
 =item B<--rpmdef="NAME VALUE"> 
 
@@ -357,7 +357,7 @@ $ poldek --sn pld-stable
 $ poldek --sn pld-\*
 
 
-B<OPTIONS> describe source options, for now only 
+B<OPTIONS> describes source options, for now only 
 'noauto' (don't load this source by default) is accepted, e.g.
 
 source = pld-test,noauto     /mnt/PLD-test/RPMS
@@ -368,7 +368,7 @@ source = pld-test,noauto     /mnt/PLD-test/RPMS
 =item * B<prefixXX> = SOURCE
 
 If you want to configure source with prefix (see B<-P> option description), 
-then it should be specified by suffixed paramteters pair to distinguish 
+then it should be specified as suffixed source/prefix pair to distinguish 
 that source from other ones, for example:
 
 source1 = ~/tmp/my-cd-indexes/
@@ -410,7 +410,7 @@ prefix1 = /mnt/cdrom/RPMS/
 
 =item * B<keep_downloads = yes|no> 
 
-        Program removes downloaded packages files after successfull installation
+        Program removes downloaded packages files after successful installation
         by default. If option is set to "yes" then program will never remove 
         downloaded packages from cache directory.
 
@@ -446,7 +446,7 @@ available should be used:
 
 =item B<%d> - cache directory
 
-=item B<%D> - cache directory/package basename
+=item B<%D> - cache directory/package base name
 
 =back
 
@@ -554,14 +554,14 @@ $HOME/.poldek-cache/
 
 =head2 File conflicts
 
-Conflicts are detected by comparision files sizes and modes only,
+Conflicts are detected by comparison files sizes and modes only,
 which means that not all conflicts may be detected because files MD5
 sums are not compared (including they will increase memory consumption
 too much).
 
 =head2 Upgrade and "Obsoletes" RPM tag
 
-In PLD I<http://www.pld.org.pl>, which is primary developement
+In PLD I<http://www.pld.org.pl>, which is primary development
 platform for poldek, Obsoletes tag is used in two different meanings:
 the first means B<A> I<obsoletes> B<B>, the second means B<A> I<is
 equivalent of> B<B>. Obviously it makes impossible to distinguish them
@@ -572,11 +572,11 @@ so Red Hat Installer use this tag).
 
 rpm doesn't handle this case, so poldek does not handle it also.
 
-=head2 Requirements processing 
+=head2 Dependencies processing 
 
-As far as I test poldek, it completely resolves package dependenecies
+As far as I test poldek, it completely resolves package dependencies
 (not file conflicts) during installs and upgrades. Please let me know 
-if you'll notice that rpm shows unsatisfied dependenecies while poldek 
+if you'll notice that rpm shows unsatisfied dependencies while poldek 
 not. 
 
 =head2 Documentation
@@ -586,7 +586,7 @@ This manual should be finished and translated into English.
 =head1 CAUTION
 
 The program surely contains the bugs. Backup your RPM database and be 
-watchfull. Remember, that there is I<NO WARRANTY OF ANY KIND> and enjoy.
+watchful. Remember, that there is I<NO WARRANTY OF ANY KIND> and enjoy.
 
 =head1 LICENSE
 

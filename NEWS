@@ -6,7 +6,7 @@
   is installed separately; this ensures that broken dependencies in 
   one of group doesn't affect the rest. 
 
-* improved dependecy processing:
+* improved dependency processing:
   - package may be marked for install as a consequence of conflict
 
   - dependency loops detected during install time are noticed in human 
@@ -23,7 +23,7 @@
   - ls: new switches: -n (list package names only), -G (list group)
         and -O (show package summaries)
 
-* added log file suppport (--log option)
+* added log file support (--log option)
 
 * sources may be configured as name and URL pair and later 
   selected by that name (new --sn|-n option). 
@@ -64,7 +64,7 @@
 * fix: enabled --hold 
 * fix: SIGSEV killed when pkg description requested while pkg index
        doesn't contain package descriptions at all
-* shell: fixed installed package list managment
+* shell: fixed installed package list management
 * curl: fixed progress bar if total file size is unknown 
   (Michal Moskal <malekith@pld.org.pl>)
 * "mercy" mode bugfix
@@ -74,8 +74,8 @@
   (keep_downloads=yes in config can change to previous behavior)
 * changed semantics of --test: -t causes poldek's checks only, 
   -tt turns on tests performed by rpm too.
-* "mercy" dependecy checking mode may be enabled in config
-* added workarounds and traps for (propably) curl's bugs
+* "mercy" dependency checking mode may be enabled in config
+* added workarounds and traps for (probably) curl's bugs
 * "update" option can be used with other commands simultaneously
 * shell mode is now the default
 * shell: added greedy option to install cmd
@@ -96,7 +96,7 @@
 * another bugfix of dependency processing
 * shell: new ls options: -t, -T, -r
 * added --shcmd option which allows to execute poldek's shell command
-  whithout entering shell mode 
+  without entering shell mode 
 * detect if stdout is connected to a terminal and display progress 
   bars accordingly.
 * install-dist: retry to fetch packages if connection is down
@@ -132,7 +132,7 @@
 * added support for removable media (vfjuggle script is added)
 * added package file size to index (for spliting)
 * added "nofollow" option to cmdline and "follow" one to config	
-* renamed "freshen" to "fresh" and changed its semanticts, now
+* renamed "freshen" to "fresh" and changed its semantics, now
   rpm's "--freshen" <=> "--nofollow --fresh"
 
 * changed default index name to "packages.dir"
@@ -156,7 +156,7 @@
 * capabilities/requirement are stored in binary form (v0.4 of Packages format)
 * default name (Packages[.gz]) is used if only dir is given 
   as source (i.e. it's last character is '/') 
-* shell: both installed and available packages list is maintained propely 
+* shell: both installed and available packages list is maintained properly 
   during installs/unistalls without reloading rpm database 
 * shell: added "search" command
 * removed unused support for rpmidx (aka tocfile)

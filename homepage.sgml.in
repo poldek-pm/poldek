@@ -27,7 +27,7 @@
     <item> Relatively fast dependencies processing
     <p>
     Package dependencies, conflicts and ordering are handled by poldek
-    itself, without rpmlib usage, so program is significatly faster and uses
+    itself, without rpmlib usage, so program is significantly faster and uses
     less memory than rpmlib-based tools.
 
 
@@ -47,7 +47,7 @@
     <p>
     Except a batch mode (similar to <em>apt-get</em> one) poldek has   
     <em>interactive</em> mode, which puts the user into a readline 
-    interface with command line autocompletion and history. 
+    interface with command line auto-completion and history. 
     In this mode user is able to browse, search, download, install/upgrade and 
     uninstall packages. This is similar in concept to shell mode of Perl's CPAN module
     (see sample <url name="interactive mode session" 
@@ -84,7 +84,7 @@
     <p>
     To save users time and bandwidth program supports "incremental indexes"
     which is very useful with repositories which frequently change. This feature 
-    consist in creation "patches" of index which gives the users possibilty to update 
+    consist in creation "patches" of index which gives the users possibility to update 
     his local index by download "patch" with information of changes only.
 
     <item> Program is prepared to be run by ordinary user, installation 
