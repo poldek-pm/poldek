@@ -148,7 +148,8 @@ void pkg_free(struct pkg *pkg)
         n_array_free(pkg->fl);
 
     if (pkg_has_ldpkguinf(pkg)) {
-        pkguinf_free(pkg->pkg_pkguinf);
+        if (pkg->pkg_pkguinf)
+            pkguinf_free(pkg->pkg_pkguinf);
         pkg_clr_ldpkguinf(pkg);
     }
     

@@ -1,0 +1,34 @@
+#!/bin/sh
+# $Id$
+
+PATH="/bin:/usr/bin:/usr/sbin:/sbin"
+
+usage()
+{
+    echo "usage: mkrpmdir DIR..."
+}
+
+if [ "$#" = 0 ]; then
+    usage
+    exit 1
+fi
+
+while  [ $# -gt 0 ]; do
+    if [ ! -d "$1" ]; then
+	echo "$1: no such directory"
+	exit 1
+    fi 
+    
+    poldek --noconf -s "$1" --mkidx 
+
+    if [ $? -ne 0 ]; then 
+	exit 1
+    fi
+
+    if [ ! -f "$1/Packages" ]; then 
+	exit 1
+    fi
+	
+    gzip -nfc "$1/Packages" > "$1/Packages.gz"
+    shift
+done    

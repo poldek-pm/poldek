@@ -28,6 +28,10 @@
 #include <string.h>
 #include <time.h>
 #include <fnmatch.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
@@ -88,8 +92,7 @@ void pkgtags_clean(struct pkgtags_s *pkgt);
 static
 struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt);
 
-
-
+static int check_digest(struct vfile *vf, const char *path);
 
 inline static char *eatws(char *str) 
 {
@@ -140,6 +143,20 @@ static char *setup_pkgprefix(const char *path)
     return rpath;
 }
 
+int update_pkgdir_idx(const char *path) 
+{
+    struct vfile      *vf;
+    int rc;
+
+    if ((vf = vfile_open(path, VFT_STDIO,
+                         VFM_RO | VFM_CACHE | VFM_MDUP)) == NULL)
+        return 0;
+    
+    rc = check_digest(vf, path);
+    vfile_close(vf);
+    return rc;
+}
+
 
 struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
 {
@@ -149,20 +166,10 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     int               line_size;
     int               nerr = 0, n, nline, nread;
     tn_array          *depdirs = NULL;
-    struct stat       st;
     
 
-    if ((vf = vfile_open(path, VFT_STDIO, VFM_RO | VFM_CACHE)) == NULL) 
+    if ((vf = vfile_open(path, VFT_STDIO, VFM_RO | VFM_CACHE)) == NULL)
         return NULL;
-
-    if (fstat(fileno(vf->vf_stream), &st) != 0 || !S_ISREG(st.st_mode) ||
-        st.st_size < 200) {
-        
-        log(LOGERR, "%s: not a poldek index file\n", vf->vf_tmpath);
-        nerr++;
-        goto l_end;
-    }
-
     
     n = 0;
     nline = 0;
@@ -175,10 +182,8 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
 
         
         nline++;
-
         if (*line != '#' && *line != '%')
             break;
-        
         
         if (*line == '#') {
             if (nline == 1) {
@@ -238,7 +243,8 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     free(linebuf);
 
     if (depdirs == NULL) {
-        log(LOGERR, "%s: missing %s tag\n", vf->vf_tmpath, depdirs_tag);
+        log(LOGERR, "%s: missing %s tag\n",
+            vf->vf_tmpath ? vf->vf_tmpath : path, depdirs_tag);
         nerr++;
         goto l_end;
     }
@@ -253,7 +259,6 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
         pkgdir->path = setup_pkgprefix(path);
     
     pkgdir->vf = vf;
-    //pkgdir->stream = vf->vf_stream;
     pkgdir->depdirs = depdirs;
     n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
     pkgdir->flags = PKGDIR_LDFROM_IDX;
@@ -367,7 +372,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         line = line_bufs[n];
         if (++n == 2)
             n = 0;
-
+        
         nline++;
         
         if (*line == '\n') {        /* empty line -> end of record */
@@ -418,7 +423,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
             q = line + 1;
 
             if (*line == '\0' || *q != ':') {
-                log(LOGERR, "%s:%d: ':' expected\n", pkgdir->path, nline);
+                log(LOGERR, "%s:%d(%s): ':' expected\n", pkgdir->path, nline, line);
                 nerr++;
                 goto l_end;
             }
@@ -1013,7 +1018,6 @@ static char *mktoc_pathname(char *dest, size_t size, const char *pathname)
     bn = n_basenam(pathname);
     if ((ext = strrchr(bn, '.')) == NULL) {
         snprintf(dest, size, "%s%s", pathname, suffix);
-        
     } else {
         int len = ext - pathname + 1;
         n_assert(len + strlen(suffix) + strlen(ext) + 1 < size);
@@ -1022,9 +1026,82 @@ static char *mktoc_pathname(char *dest, size_t size, const char *pathname)
         strcat(dest, ext);
         dest[size - 1] = '\0';
     }
+
     return dest;
 }
 
+static int check_digest(struct vfile *vf, const char *path) 
+{
+    char            md1[128], md2[128];
+    int             rc, fd, md2_size, md1_size = sizeof(md1);
+    off_t           offs;
+    
+
+    msg(1, "Checking %s mdsum...", path);
+    
+    offs = ftell(vf->vf_stream);
+    if (fseek(vf->vf_stream, 0L, SEEK_SET) != 0) {
+        log(LOGERR, "fseek(0): %d %m\n", offs);
+        return 0;
+    }
+
+    mhexdigest(vf->vf_stream, md1, &md1_size);
+
+    if (fseek(vf->vf_stream, offs, SEEK_SET) != 0) {
+        log(LOGERR, "check_digest: fseek(%ld): %m\n", offs);
+        return 0;
+    }
+    
+    
+    if (md1_size <= 0) 
+        return 0;
+
+    n_assert(vf->vf_mdtmpath);
+    
+    if ((fd = open(vf->vf_mdtmpath, O_RDONLY)) < 0) {
+        log(LOGERR, "open %s: %m\n", vf->vf_mdtmpath);
+        return 0;
+    }
+    	
+    md2_size = read(fd, md2, sizeof(md2));
+    close(fd);
+    
+    rc = md1_size == md2_size && strcmp(md1, md2) == 0;
+    msg(1, "_ %s\n", rc ? "OK":"BAD");
+    return rc;
+}
+
+
+static int creat_digest_file(const char *pathname) 
+{
+    struct vfile    *vf;
+    unsigned char   md[128];
+    char            path[PATH_MAX], *ext;
+    int             md_size = sizeof(md);
+    
+    if ((vf = vfile_open(pathname, VFT_STDIO, VFM_RO)) == NULL)
+        return 0;
+
+    if ((ext = strrchr(n_basenam(pathname), '.')) == NULL)
+        snprintf(path, sizeof(path), "%s%s", pathname, ".md");
+    else {
+        int len = ext - pathname + 1;
+        n_strncpy(path, pathname, len);
+        strcat(path, ".md");
+    }
+    	
+    mhexdigest(vf->vf_stream, md, &md_size);
+    vfile_close(vf);
+
+    if (md_size) {
+        if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
+            return 0;
+        fprintf(vf->vf_stream, "%s", md);
+        vfile_close(vf);
+    }
+
+    return md_size;
+}
 
 int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc)
 {
@@ -1071,7 +1148,8 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc)
 
     vfile_close(vf);
     vfile_close(vf_toc);
-    return 1;
+    
+    return creat_digest_file(pathname);
 }
 
 

@@ -33,11 +33,66 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <openssl/evp.h>
 #include <trurl/nassert.h>
 #include <vfile/p_open.h>
 
 #include "log.h"
 #include "misc.h"
+
+
+int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size)
+{
+    unsigned char md[128];
+    int  md_size = sizeof(md);
+
+    
+    if (mdigest(stream, md, &md_size)) {
+        int i, n = 0, nn = 0;
+        
+        for (i=0; i<md_size; i++) {
+            n = snprintf(mdhex + nn, *mdhex_size - nn, "%02x", md[i]);
+            nn += n;
+        }
+        *mdhex_size = nn;
+        
+    } else {
+        *mdhex = '\0';
+        *mdhex_size = 0;
+    }
+
+    return *mdhex_size;
+}
+
+
+int mdigest(FILE *stream, unsigned char *md, int *md_size)
+{
+    unsigned char buf[8*1024];
+    EVP_MD_CTX ctx;
+    int n, nn = 0;
+
+
+    n_assert(md_size && *md_size);
+    
+    EVP_DigestInit(&ctx, EVP_sha1());
+
+    while ((n = fread(buf, 1, sizeof(buf), stream)) > 0) {
+        EVP_DigestUpdate(&ctx, buf, n);
+        nn += n; 
+    }
+    
+    EVP_DigestFinal(&ctx, buf, &n);
+
+    if (n > *md_size) {
+        *md = '\0';
+        *md_size = 0;
+    } else {
+        memcpy(md, buf, n);
+        *md_size = n;
+    }
+    
+    return *md_size;
+}
 
 
 const char *tmpdir(void) 

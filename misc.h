@@ -9,6 +9,9 @@
 
 #include <vfile/p_open.h>
 
+int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size);
+int mdigest(FILE *stream, unsigned char *md, int *md_size);
+
 
 /*
   Returns $TMPDIR or "/tmp" if $TMPDIR isn't set.

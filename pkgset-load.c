@@ -11,6 +11,9 @@
 */
 
 #include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
@@ -51,19 +54,9 @@ int source_cmp(struct source *s1, struct source *s2)
     return strcmp(s1->source_path, s2->source_path);
 }
 
-
 int source_update(struct source *src)
 {
-    struct vfile *vf;
-
-    if (vfile_url_type(src->source_path) == VFURL_PATH)
-        return 1;
-    
-    if ((vf = vfile_open(src->source_path, VFT_STDIO, VFM_RO | VFM_NORM)) == NULL) 
-        return 0;
-    
-    vfile_close(vf);
-    return 1;
+    return update_pkgdir_idx(src->source_path);
 }
 
 
@@ -99,9 +92,6 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
             log(LOGERR, "%s: cannot determine load method\n", src->source_path);
             continue;
         }
-
-        
-        
     
         switch (src->ldmethod) {
             case PKGSET_LD_DIR:

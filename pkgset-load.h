@@ -16,7 +16,6 @@ struct source *source_new(const char *path, const char *pkg_prefix);
 void source_free(struct source *src);
 int source_cmp(struct source *s1, struct source *s2);
 int source_update(struct source *src);
-
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 
 #endif
