@@ -137,7 +137,7 @@ while [ $# -gt 0 ]; do
 		POLDEK_VFJUGGLE_CPMODE="copy"
 	fi
 
-	if [ "$POLDEK_VFJUGGLE_CPMODE" == "copy" ]; then
+	if [ "$POLDEK_VFJUGGLE_CPMODE" = "copy" ]; then
 #		echo "cp -L --remove-destination $VF_MNTPOINT/$URI $DESTDIR/"
 		cp -L --remove-destination $VF_MNTPOINT/$URI $DESTDIR/
 	else
