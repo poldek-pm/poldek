@@ -172,9 +172,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'n':
-            arg_s->src = source_malloc();
-            arg_s->src->name = n_strdup(arg);
-            arg_s->src->flags |= PKGSOURCE_NAMED;
+            arg_s->src = source_new(arg, NULL, NULL, NULL);
             poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->src);
             //arg_s->src = NULL;
             break;
@@ -205,7 +203,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (arg_s->curr_src_type == NULL)
                 arg_s->curr_src_type = source_type;
             
-            arg_s->src = source_new(arg_s->curr_src_type, arg, NULL);
+            arg_s->src = source_new_pathspec(arg_s->curr_src_type, arg, NULL);
 			poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->src);
             break;
             

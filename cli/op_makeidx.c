@@ -126,7 +126,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_MKIDXZ:
         case OPT_MKIDX:
             if (arg)
-                arg_s->src_mkidx = source_new(arg_s->idx_type, arg, NULL);
+                arg_s->src_mkidx = source_new_pathspec(arg_s->idx_type,
+                                                       arg, NULL);
             arg_s->cnflags |= DO_MAKEIDX;
             break;
             
