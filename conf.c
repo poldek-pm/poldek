@@ -101,6 +101,8 @@ static struct tag global_tags[] = {
     { "unique package names", TYPE_BOOL, { 0 } },
     { "ftp sysuser as anon passwd", TYPE_BOOL , { 0 } },
     { "vfile external compress", TYPE_BOOL , { 0 } },
+    { "promoteepoch", TYPE_BOOL, { 0 } },
+    { "default index type", TYPE_STR, { 0 } },
     {  NULL,           0, { 0 } }, 
 };
 

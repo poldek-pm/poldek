@@ -97,7 +97,7 @@ int test_match_(int epoch, char *ver, char *rel, char *evr, int relation)
 int test_match2(void) 
 {
     printf("\n");
-    test_match_(0, "1.2", "1", "0:1.1", REL_GT);
+    test_match_(0, "1.2", "1", ":1.1", REL_GT);
     test_match_(3, "1.2", "1", "0:1.1", REL_GT);
     test_match_(0, "1.2", "1", "3:1.1", REL_GT);
     printf("\n");
@@ -139,7 +139,8 @@ int main(int argc, char *argv[])
 {
     rpmdb db;
     //test_expand_env(argc, argv);
-    //test_match2();
+    test_match2();
+    exit(0);
     log_init(NULL, stdout, "aa");
     rpm_initlib(NULL);
     db = rpm_opendb("/var/lib/rpm", "/", O_RDONLY);

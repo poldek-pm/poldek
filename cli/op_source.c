@@ -47,7 +47,6 @@
 #define OPT_SRCCLEAN    (OPT_SRC_GID + 8)
 #define OPT_SRCCLEAN_A  (OPT_SRC_GID + 9)
 
-
 #define OPT_SRCTYPE_LS  (OPT_SRC_GID + 10)
 
 /* The options we understand. */

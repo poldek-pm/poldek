@@ -55,13 +55,12 @@ static int install(struct cmdarg *cmdarg);
 #define OPT_INST_NOIGNORE         (OPT_GID + 27)
 #define OPT_INST_GREEDY           'G'
 #define OPT_INST_UNIQNAMES        'Q'
-
+#define OPT_INST_PROMOTEEPOCH     (OPT_GID + 28)
 
 static struct argp_option options[] = {
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
 {"reinstall", OPT_INST_REINSTALL, 0, 0, N_("Reinstall"), OPT_GID }, 
 {"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade"), OPT_GID },
-{"mercy", 'm', 0, 0, N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
 {"force", OPT_INST_FORCE, 0, 0, N_("Be unconcerned"), OPT_GID },
 {"test", 't', 0, 0, N_("Don't install, but tell if it would work or not"),
      OPT_GID },
@@ -110,6 +109,9 @@ static struct argp_option cmdl_options[] = {
      N_("Reinstall all packages under DIR as root directory"), OPT_GID - 90 },
 
     {0,0,0,0, N_("Installation switches:"), OPT_GID },
+    {"mercy", 'm', 0, 0, N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
+    {"promoteepoch", OPT_INST_PROMOTEEPOCH, 0, 0,
+         N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
     { 0, 0, 0, 0, 0, 0 },
 };
 

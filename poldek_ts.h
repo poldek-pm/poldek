@@ -51,7 +51,7 @@ struct poldek_ts {
     struct poldek_ctx  *ctx;
     struct pkgdb       *db;
     uint32_t           flags;      /* POLDEK_TS_* */
-
+    uint32_t           vrfyflags; 
     tn_array  *pkgs;
     
     struct arg_packages  *aps;

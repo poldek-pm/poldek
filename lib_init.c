@@ -54,7 +54,6 @@ void (*poldek_assert_hook)(const char *expr, const char *file, int line) = NULL;
 void (*poldek_malloc_fault_hook)(void) = NULL;
 
 
-//static FILE        *log_stream = stdout, *log_fstream = NULL;
 static tn_hash     *poldek_cnf = NULL;          /* config file values */
 
 static void register_vf_handlers_compat(const tn_hash *htcnf);
@@ -806,10 +805,6 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
 
     vfile_verbose = &verbose;
 
-    //DUPA
-    //vfile_msg_fn = log_msg;
-    //vfile_msgtty_fn = log_tty;
-    //vfile_err_fn = log_err;
     vfile_configure(VFILE_CONF_LOGCB, poldek_vf_vlog_cb);
     vfile_configure(VFILE_CONF_CACHEDIR, setup_cachedir(NULL));
 
