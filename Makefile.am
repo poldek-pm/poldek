@@ -103,7 +103,7 @@ website-whole-up: website dist
 
 website-up: website 
 	scp -p homepage.html team.pld.org.pl:public_html/poldek/index.html
-	scp -p poldek.html team.pld.org.pl:public_html/poldek/poldek.html
+	scp -p poldek.html NEWS team.pld.org.pl:public_html/poldek/
 
 mkpackagedir:
 

@@ -29,8 +29,10 @@
     <sect> Availability
     <p>
     The program is free software (GPL).
-    It is not yet well tested so consider it "beta" software. 
-
+    It is not yet well tested so consider it "beta" software.
+    See the file <url url="http://team.pld.org.pl/~mis/poldek/NEWS" name="NEWS"> for a list 
+    of major changes in the current release.	 
+	
     <itemize> 
 
     <item> Homepage 
@@ -40,7 +42,8 @@
     </item>
     
 
-    <item> Source tarballs and rpm source packages
+    <item> Source tarballs and rpm source packages. 
+
       <itemize>
       <item> <url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz" 
                   name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz"> 
