@@ -27,7 +27,9 @@ copyfile() {
     fi
 
     if [ -r $dir/$file ]; then
-        echo "$dir/$file exists, $HOME/$file not copied"
+        if [ -z "${UNDERRPM}" ]; then
+            echo "$dir/$file exists, $HOME/$file not copied"
+        fi
         return 1
     else
         echo "Copying $HOME/$file to $dir/..."

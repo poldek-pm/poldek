@@ -5,6 +5,7 @@
 # To build with configuration for particular distro define %{distro}:
 # $ rpmbuild -bb ... --define 'distro {pld,fedora,rh}'
 #  
+%define _with_poldekuser 1
 
 Summary:	A full-featured frontend to RPM
 Name:		poldek
@@ -88,9 +89,12 @@ gzip -9nf README* conf/*sample* NEWS TODO
 rm -rf $RPM_BUILD_ROOT
 
 %pre
-%{?_with_poldekuser: if [ -z "$(id -u poldek 2>/dev/null)" ]; then POLDEKUSER="poldek" POLDEKHOME="%{_var}/cache/poldek" UNDERRPM="1" sh %{_libdir}/%{name}/userpoldekadd.sh --yes; fi;}
+%{?_with_poldekuser: PATH="/bin:/sbin:/usr/bin:/usr/sbin"; if [ -z "$(id -u poldek 2>/dev/null)" ]; then groupadd -r -f poldek || exit 1; useradd -r -d %{_var}/cache/poldek -g poldek -s /bin/sh -c "poldek user" poldek || exit 1; fi;}
 
-%post -p /sbin/ldconfig
+%post 
+%{?_with_poldekuser: sh %{_libdir}/%{name}/poldekuser-setup.sh --yes; fi;
+
+/sbin/ldconfig
 
 %postun 
 if [ "$1" = "0" ]; then
@@ -131,6 +135,9 @@ fi
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.27  2004/10/17 20:10:44  mis
+- reamed userpoldekadd.sh; fixed spec
+
 Revision 1.26  2004/10/17 19:55:44  mis
 - fixes
 

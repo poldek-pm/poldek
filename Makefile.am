@@ -83,7 +83,7 @@ noinst_PROGRAMS     = test_match
 test_match_SOURCES  = test_match.c
 test_match_LDADD    = libpoldek.la 
 
-pkglib_SCRIPTS      = zlib-in-rpm.sh vfjuggle vfcompr vfsmb userpoldekadd.sh
+pkglib_SCRIPTS      = zlib-in-rpm.sh vfjuggle vfcompr vfsmb poldekuser-setup.sh
 
 EXTRA_DIST = \
 		 libpoldek.sym \
