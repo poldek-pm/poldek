@@ -191,7 +191,6 @@ int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,
     
 }
 
-
 int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict)
 {
     register int cmprc;
@@ -223,12 +222,65 @@ int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict)
     return cmprc;
 }
 
+static
+int flfile_cmp(const struct flfile *f1, const struct flfile *f2)
+{
+    register int cmprc;
+
+    //printf("cmp %s %s\n", f1->basename, f2->basename);
+    if ((cmprc = strcmp(f1->basename, f2->basename)))
+        return cmprc;
+    
+    if ((cmprc = (f1->size - f2->size)) == 0)
+        cmprc = f1->mode - f2->mode;
+    
+    
+    if (cmprc == 0 && S_ISLNK(f1->mode)) {
+        register char *l1, *l2;
+        
+        l1 = strchr(f1->basename, '\0') + 1;
+        l2 = strchr(f2->basename, '\0') + 1;
+        cmprc = strcmp(l1, l2);
+    }
+    
+    return cmprc;
+}
+
+static
+int flfile_cmp_qsort(const struct flfile **f1, const struct flfile **f2)
+{
+    return flfile_cmp(*f1, *f2);
+}
+
 int pkgfl_ent_cmp(const void *a,  const void *b) 
 {
     const struct pkgfl_ent *aa = a;
     const struct pkgfl_ent *bb = b;
     return strcmp(aa->dirname, bb->dirname);
 }
+
+static
+int pkgfl_ent_deep_cmp(const void *a,  const void *b) 
+{
+    register int i, cmprc;
+    
+    const struct pkgfl_ent *aa = a;
+    const struct pkgfl_ent *bb = b;
+    
+    if ((cmprc = strcmp(aa->dirname, bb->dirname)))
+        return cmprc;
+
+    if ((cmprc = aa->items - bb->items))
+        return cmprc;
+
+    for (i = 0; i <aa->items; i++)
+        if ((cmprc = flfile_cmp(aa->files[i], bb->files[i])))
+            return cmprc;
+    
+    n_assert(0);                /* directories must be different */
+    return cmprc;
+}
+
 
 tn_array *pkgfl_array_new(int size)
 {
@@ -239,6 +291,12 @@ tn_array *pkgfl_array_new(int size)
     
     return arr;
 }
+
+tn_array *pkgfl_array_store_order(tn_array *fl)
+{
+    return n_array_isort_ex(fl, pkgfl_ent_deep_cmp);
+}
+
 
 
 /* trim slashes from dirname, update dirnamelen  */
@@ -277,6 +335,7 @@ struct pkgfl_ent *pkgfl_ent_new(char *dirname, int dirname_len, int nfiles)
     
     flent->dirname = dirnamep;
     flent->items = 0;
+    //fprintf(stderr, "flent_new %s %d\n", dirnamep, nfiles);
     return flent;
 }
 
@@ -327,14 +386,20 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
             continue;
         
         dnl = strlen(flent->dirname) + 1;
-
+        
         n_buf_add_int8(nbuf, dnl);
         n_buf_add(nbuf, flent->dirname, dnl);
         n_buf_add_int32(nbuf, flent->items);
+
+        if (strstr(flent->dirname, "SourceForgeXX"))
+            printf("\nDIR %s\n", flent->dirname);
         
         for (j=0; j<flent->items; j++) {
             struct flfile *file = flent->files[j];
             uint8_t bnl = strlen(file->basename);
+            
+            if (strstr(flent->dirname, "SourceForgeXX")) 
+                printf("STORE%d %s\n", which, file->basename);
 
             n_buf_add_int8(nbuf, bnl);
             n_buf_add(nbuf, file->basename, bnl);
@@ -346,6 +411,8 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
                 bnl = strlen(linkto);
                 n_buf_add_int8(nbuf, bnl);
                 n_buf_add(nbuf, linkto, bnl);
+                if (strstr(flent->dirname, "SourceForgeXX")) 
+                    printf("STORE%d linkto %s\n", which, linkto);
             }
         }
     }
@@ -492,7 +559,7 @@ __inline__
 static int valid_fname(const char *fname, mode_t mode, const char *pkgname) 
 {
 
-#if 0  /*  */
+#if 0  /* too many bad habbits :-> */
     char *denychars = "\r\n\t |;";
     if (strpbrk(fname, denychars)) {
         log(LOGINFO, "%s: bad habit: %s \"%s\" with whitespaces\n",
@@ -508,6 +575,7 @@ static int valid_fname(const char *fname, mode_t mode, const char *pkgname)
     
     return 1;
 }
+
 
 /* -1 on error  */
 int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
@@ -658,8 +726,11 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
         
     } else if (ndirs) {
         for (i=0; i<c2; i++) 
-            if (fentdirs[i] != NULL)
+            if (fentdirs[i] != NULL) {
                 n_array_push(fl, fentdirs[i]);
+                qsort(&fentdirs[i]->files, fentdirs[i]->items, sizeof(struct flfile*), 
+                      (int (*)(const void *, const void *))flfile_cmp_qsort);
+            }
     }
     
     return nerr ? -1 : 1;

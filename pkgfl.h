@@ -49,6 +49,7 @@ int pkgfl_ent_cmp(const void *a, const void *b);
 #define PKGFL_DEPDIRS     1
 #define PKGFL_NOTDEPDIRS  2
 
+tn_array *pkgfl_array_store_order(tn_array *fl);
 int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which);
 int pkgfl_store_f(tn_array *fl, FILE *stream, tn_array *depdirs, int which);
 
