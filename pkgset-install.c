@@ -848,6 +848,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
     tn_array *orphans;
     struct pkgdb *db = upg->ts->db;
     int n, i;
+    unsigned getflags = PKGDB_GETF_OBSOLETEDBY_NEVR;
     
     
     if (!poldek_ts_issetf(upg->ts, POLDEK_TS_UPGRADE))
@@ -858,15 +859,19 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
     
     DBGF("%s\n", pkg_snprintf_s(pkg));
 
-    if ((upg->ts->getop(upg->ts, POLDEK_OP_OBSOLETES)))
-        n = pkgdb_get_obsoletedby_pkg(db, upg->uninst_set->dbpkgs, pkg,
-                                      PKG_LDWHOLE_FLDEPDIRS);
-    else
-        n = pkgdb_get_obsoletedby_pkg_nevr(db, upg->uninst_set->dbpkgs, pkg,
-                                           PKG_LDWHOLE_FLDEPDIRS);
+    if (upg->ts->getop(upg->ts, POLDEK_OP_OBSOLETES))
+        getflags |= PKGDB_GETF_OBSOLETEDBY_OBSL;
+
+    if (poldek_ts_issetf(upg->ts, POLDEK_TS_DOWNGRADE))
+        getflags |= PKGDB_GETF_OBSOLETEDBY_REV;
+
+    n = pkgdb_get_obsoletedby_pkg(db, upg->uninst_set->dbpkgs, pkg, getflags,
+                                  PKG_LDWHOLE_FLDEPDIRS);
+    
+    DBGF_F("%s, n = %d\n", pkg_snprintf_s(pkg), n);
     if (n == 0)
         return;
-    DBGF("%s, n = %d\n", pkg_snprintf_s(pkg), n);
+    
     n = 0;
     for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
         struct pkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
@@ -1950,10 +1955,8 @@ void update_poldek_iinf(struct poldek_iinf *iinf, struct upgrade_s *upg,
     if (vrfy)
         pkgdb_reopen(upg->ts->db, O_RDONLY);
     
-    
     for (i=0; i<n_array_size(upg->install_pkgs); i++) {
         struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
-        
         
         if (vrfy) {
             int cmprc = 0;
@@ -1963,11 +1966,9 @@ void update_poldek_iinf(struct poldek_iinf *iinf, struct upgrade_s *upg,
                 is_installed = 0;
         }
         
-
         if (is_installed)
             n_array_push(iinf->installed_pkgs, pkg_link(pkg));
     }
-
     
     if (vrfy == 0)
         is_installed = 0;

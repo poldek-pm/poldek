@@ -387,9 +387,12 @@ int header_evr_match_req(struct pm_ctx *ctx, void *hdr,
 
     if (!ctx->mod->hdr_nevr(hdr, &pkg.name, &pkg.epoch, &pkg.ver, &pkg.rel))
         return -1;
+
+    DBGF("%s match %s?\n", pkg_evr_snprintf_s(&pkg), 
+         capreq_snprintf_s0(req));
     
     if (pkg_evr_match_req(&pkg, req, 0)) {
-        DBGF("%s match %s!\n", pkg_snprintf_epoch_s(&pkg), pkg.epoch,
+        DBGF("%s match %s!\n", pkg_evr_snprintf_s(&pkg), 
              capreq_snprintf_s0(req));
         return 1;
     }
@@ -565,26 +568,37 @@ int pkgdb_get_obsoletedby_cap(struct pkgdb *db, tn_array *dbpkgs, struct capreq 
     return get_obsoletedby_cap(db, PMTAG_NAME, dbpkgs, cap, ldflags);
 }
 
-int pkgdb_get_obsoletedby_pkg_nevr(struct pkgdb *db, tn_array *dbpkgs,
-                                   const struct pkg *pkg, unsigned ldflags)
+static
+int get_obsoletedby_pkg_nevr(struct pkgdb *db, tn_array *dbpkgs,
+                             const struct pkg *pkg, unsigned ldflags, int rev)
 {
     struct capreq *self_cap;
-    int n;
+    int n, relflags = REL_EQ | REL_LT;
+
+    if (rev)
+        relflags = REL_EQ | REL_GT;
     
     self_cap = capreq_new(NULL, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
-                          REL_EQ | REL_LT, 0);
+                          relflags, 0);
     n = pkgdb_get_obsoletedby_cap(db, dbpkgs, self_cap, ldflags);
     capreq_free(self_cap);
     return n;
 }
 
-
 int pkgdb_get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
-                              const struct pkg *pkg, unsigned ldflags)
+                              const struct pkg *pkg, unsigned flags,
+                              unsigned ldflags)
 {
     int i, n;
+
+    n_assert(flags & PKGDB_GETF_OBSOLETEDBY_NEVR);
     
-    n = pkgdb_get_obsoletedby_pkg_nevr(db, dbpkgs, pkg, ldflags);
+    n = get_obsoletedby_pkg_nevr(db, dbpkgs, pkg, ldflags,
+                                 flags & PKGDB_GETF_OBSOLETEDBY_REV);
+
+    if ((flags & PKGDB_GETF_OBSOLETEDBY_OBSL) == 0)
+        return n;
+    
     if (pkg->cnfls == NULL)
         return n;
     
@@ -593,7 +607,7 @@ int pkgdb_get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
 
         if (!capreq_is_obsl(cnfl))
             continue;
-
+/* FIXME: is reverse match should be performed there too? */
         n += get_obsoletedby_cap(db, PMTAG_NAME, dbpkgs, cnfl, ldflags);
 #ifdef HAVE_RPM_4_1             /* TODO -- code this in pm's module */
         n += get_obsoletedby_cap(db, PMTAG_CAP, dbpkgs, cnfl, ldflags);

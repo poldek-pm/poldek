@@ -125,14 +125,16 @@ int pkgdb_get_pkgs_requires_capn(struct pkgdb *db,
                                  tn_array *dbpkgs, const char *capname,
                                  tn_array *unistdbpkgs, unsigned ldflags);
 
+#define PKGDB_GETF_OBSOLETEDBY_NEVR (1 << 0)  /* by NEVR only  */
+#define PKGDB_GETF_OBSOLETEDBY_OBSL (1 << 1)  /* by Obsoletes  */
+#define PKGDB_GETF_OBSOLETEDBY_REV  (1 << 10) /* reverse match */
+
 /*
   adds to dbpkgs packages obsoleted by pkg
 */
 int pkgdb_get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
-                              const struct pkg *pkg, unsigned ldflags);
-
-int pkgdb_get_obsoletedby_pkg_nevr(struct pkgdb *db, tn_array *dbpkgs,
-                                   const struct pkg *pkg, unsigned ldflags);
+                              const struct pkg *pkg, unsigned getflags,
+                              unsigned ldflags);
 
 tn_array *pkgdb_get_conflicted_dbpkgs(struct pkgdb *db,
                                       const struct capreq *cap,
