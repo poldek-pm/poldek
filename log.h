@@ -38,6 +38,13 @@ void msg(int verbose_level, const char *fmt, ...);
       log_msg_i(indent, fmt, ## args);               \
   } while(0)
 
+#define msg_l(verbose_level, fmt, args...)           \
+  do {                                               \
+    if ((verbose_level) >= verbose && verbose > 0)   \
+      log_msg(fmt, ## args);                         \
+  } while(0)
+
+
 void vlog(int pri, int indent, const char *fmt, va_list args);
 void log(int pri, const char *fmt, ...);
 
