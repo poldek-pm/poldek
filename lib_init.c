@@ -246,8 +246,14 @@ struct source *source_new_htcnf(struct poldek_ctx *ctx,
     
     if ((v = poldek_conf_get_bool(htcnf, "noauto", 0)))
         n += n_snprintf(&spec[n], sizeof(spec) - n, ",noauto");
+    
+    else if ((v = poldek_conf_get_bool(htcnf, "auto", 1)) == 0)
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",noauto");
 
     if ((v = poldek_conf_get_bool(htcnf, "noautoup", 0)))
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",noautoup");
+    
+    else if ((v = poldek_conf_get_bool(htcnf, "autoup", 1)) == 0)
         n += n_snprintf(&spec[n], sizeof(spec) - n, ",noautoup");
 
     if ((v = poldek_conf_get_bool(htcnf, "signed", 0)))

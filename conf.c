@@ -155,6 +155,8 @@ static struct tag source_tags[] = {
     { "original type", TYPE_STR , { 0 } },
     { "noauto",      TYPE_BOOL, { 0 } },
     { "noautoup",    TYPE_BOOL, { 0 } },
+    { "auto",        TYPE_BOOL, { 0 } },
+    { "autoup",      TYPE_BOOL, { 0 } },
     { "douniq",      TYPE_BOOL, { 0 } },
     { "unique package names", TYPE_BOOL | TYPE_F_ALIAS, { 0 } },
     { "signed",      TYPE_BOOL, { 0 } },
