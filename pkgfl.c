@@ -203,6 +203,16 @@ int pkgfl_ent_cmp(const void *a,  const void *b)
     return strcmp(aa->dirname, bb->dirname);
 }
 
+tn_array *pkgfl_array_new(int size)
+{
+    tn_array *arr;
+    
+    if ((arr = n_array_new(size, NULL, pkgfl_ent_cmp)) != NULL)
+        n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
+    
+    return arr;
+}
+
 
 /* trim slashes from dirname, update dirnamelen  */
 static

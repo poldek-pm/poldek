@@ -35,7 +35,7 @@ int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,
 
 
 struct pkgfl_ent {
-    char   *dirname;
+    char   *dirname;            /* dirname without leading '/' if strlen(dirname) > 1 */
     int    items;
     struct flfile *files[0];
 };
@@ -57,7 +57,7 @@ tn_array *pkgfl_restore_f(FILE *stream);
 
 int pkgfl_skip_f(FILE *stream);
 
-#define pkgfl_array_new(size) n_array_new(size, NULL, pkgfl_ent_cmp)
+tn_array *pkgfl_array_new(int size);
 
 int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname);
 
