@@ -321,7 +321,7 @@ struct vf_request *vf_request_redirto(struct vf_request *req, const char *url)
     }
     
     xx_replace(req->uri, tmpreq->uri);
-    
+    req->port = tmpreq->port;
     xx_replace(req->proxy_proto, tmpreq->proxy_proto);
     xx_replace(req->proxy_host, tmpreq->proxy_host);
     xx_replace(req->proxy_login, tmpreq->proxy_login);
