@@ -440,7 +440,9 @@ static int verify_section(const struct section *sect, tn_hash *ht)
 }
 
 
-static const char *do_expand_value(const char *val, tn_hash *ht, tn_hash *ht_global)
+static
+const char *do_expand_value(char *expanded_val, size_t size, const char *val,
+                            tn_hash *ht, tn_hash *ht_global)
 {
     const char *new_val;
     char expand_val[PATH_MAX], expand_val2[PATH_MAX];
@@ -455,8 +457,11 @@ static const char *do_expand_value(const char *val, tn_hash *ht, tn_hash *ht_glo
                               new_val, ht_global);
     }
     
-    if (val != new_val)
-        val = n_strdup(new_val);
+    if (val != new_val) {
+        n_snprintf(expanded_val, size, "%s", new_val);
+        val = expanded_val;
+    }
+
     return val;
 }
 
@@ -464,6 +469,7 @@ static const char *do_expand_value(const char *val, tn_hash *ht, tn_hash *ht_glo
 static int expand_section_vars(tn_hash *ht, tn_hash *ht_global) /*  */
 {
     const char *val;
+    char expanded_val[PATH_MAX];
     tn_array *keys, *vals;
     int i, j, rc = 1;
 
@@ -475,10 +481,11 @@ static int expand_section_vars(tn_hash *ht, tn_hash *ht_global) /*  */
         if ((opt = n_hash_get(ht, key)) == NULL)
             continue;
 
-        val = do_expand_value(opt->val, ht, ht_global);
+        val = do_expand_value(expanded_val, sizeof(expanded_val), opt->val,
+                              ht, ht_global);
         if (val != opt->val) {
             free(opt->val);
-            opt->val = (char*)val;
+            opt->val = n_strdup(val);
         }
         
         if (opt->vals == NULL)
@@ -487,11 +494,9 @@ static int expand_section_vars(tn_hash *ht, tn_hash *ht_global) /*  */
         vals = n_array_clone(opt->vals);
         for (j=0; j < n_array_size(opt->vals); j++) {
             const char *v = n_array_nth(opt->vals, j);
-            val = do_expand_value(v, ht, ht_global);
-            if (val == v)
-                val = n_strdup(v);
-            
-            n_array_push(vals, (char*)val);
+            val = do_expand_value(expanded_val, sizeof(expanded_val), v,
+                                  ht, ht_global);
+            n_array_push(vals, n_strdup(val));
         }
         n_array_free(opt->vals);
         opt->vals = vals;
@@ -540,6 +545,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
     struct copt *opt;
     int tagindex;
 
+    tag = NULL;
     if (*name != '_') {          /* user defined macro */
         char *p = name + 1;
         while (*p) {                /* backward compat */
@@ -548,7 +554,6 @@ static int add_param(tn_hash *ht_sect, const char *section,
             p++;
         }
     }
-    
     
     if ((tagindex = find_tag(section, name, &sect)) == -1) {
         if (*name == '_')
@@ -564,8 +569,9 @@ static int add_param(tn_hash *ht_sect, const char *section,
             return 0;
         }
     }
-
-    tag = &sect->tags[tagindex];
+    
+    if (!tag)
+        tag = &sect->tags[tagindex];
         
     msgn_i(3, 2, "%s::%s = %s", section, name, value);
     
@@ -724,10 +730,15 @@ struct afile *afile_open(const char *path, const char *parent_path,
     if (ppath)  /* included file */
         msgn(3, "-- %s --", path);
 
-    vfmode = VFM_RO | VFM_CACHE | VFM_UNCOMPR | VFM_NOEMPTY;
-    if (update)
-        vfmode |= VFM_NODEL | VFM_CACHE_NODEL;
     
+    vfmode = VFM_RO | VFM_UNCOMPR | VFM_NOEMPTY;
+    if (!update)
+        vfmode |= VFM_CACHE;
+    else 
+        vfmode |= VFM_NODEL | VFM_CACHE_NODEL;
+
+    if (update) DBGF("UPDATING %s...\n", path);
+
     if ((vf = vfile_open(path, VFT_TRURLIO, vfmode)) == NULL) 
         return NULL;
 
@@ -735,9 +746,11 @@ struct afile *afile_open(const char *path, const char *parent_path,
     return af;
 }
 
-static char *include_path(char *line, char **sectnam)
+static
+char *include_path(char *path, size_t size,
+                   char *line, char **sectnam, tn_hash *ht, tn_hash *ht_global)
 {
-    char expanded_val[PATH_MAX], *p;
+    char expenv_val[PATH_MAX], expval[PATH_MAX], *p;
     
     *sectnam = NULL;
     p = line + strlen(include_tag);
@@ -751,8 +764,15 @@ static char *include_path(char *line, char **sectnam)
     }
     
     p = eat_wws(p);
-    p = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), p);
-    return p;
+
+    if (strchr(p, '%'))
+        p = (char*)do_expand_value(expval, sizeof(expval), p, ht, ht_global);
+    
+    if (strchr(p, '$'))
+        p = (char*)expand_env_vars(expenv_val, sizeof(expenv_val), p);
+
+    n_snprintf(path, size, "%s", p);
+    return path;
 }
 
 static
@@ -800,7 +820,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     int       validate = 1, update = 0;
     
     
-    if (flags & POLDEK_LDCONF_NOVRFY)
+    if (flags & POLDEK_LDCONF_FOREIGN)
         validate = 0;
 
     if (flags & POLDEK_LDCONF_UPDATE)
@@ -844,9 +864,11 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
         
         if (strncmp(p, include_tag, strlen(include_tag)) == 0) {
             tn_hash *inc_ht;
-            char   *inc_sectnam = NULL;
+            char   *inc_sectnam = NULL, ipath[PATH_MAX];
             
-            p = include_path(p, &inc_sectnam);
+            
+            p = include_path(ipath, sizeof(ipath), p, &inc_sectnam,
+                             ht_sect, ht);
             if (p == NULL || *p == '\0') {
                 logn(LOGERR, _("%s:%d: wrong %%include"), af->path, nline);
                 is_err = 1;
@@ -854,7 +876,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
             }
             
             DBGF("open %s %s, i %s\n", p, sectnam, inc_sectnam);
-            inc_ht = do_ldconf(af_htconf, p, af->path, inc_sectnam, update);
+            inc_ht = do_ldconf(af_htconf, p, af->path, inc_sectnam, flags);
             if (inc_ht == NULL) {
                 is_err = 1;
                 goto l_end;
@@ -960,14 +982,15 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     
     
  l_end:
-    if (af)
-        afile_close(af);
-
     if (is_err) {
-        logn(LOGERR, _("%s: load configuration failed"), path);
+        if (af)
+            logn(LOGERR, _("%s: load configuration failed"), path);
         n_hash_free(ht);
         ht = NULL;
     }
+    if (af)
+        afile_close(af);
+
     return ht;
 }
 
@@ -1041,34 +1064,44 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
 }
 
 
-tn_hash *poldek_conf_loadefault(void)
+tn_hash *poldek_conf_loadefault(unsigned flags)
 {
     char *homedir;
     char *sysconfdir = "/etc";
-    char etcpath[PATH_MAX];
+    char confpath[PATH_MAX], newconfpath[PATH_MAX];
+    int  confpath_exists = 0, newconfpath_exists = 0;
     
 #ifdef SYSCONFDIR
     if (access(SYSCONFDIR, R_OK) == 0)
         sysconfdir = SYSCONFDIR;
-#endif                                         \
+#endif
 
     if ((homedir = getenv("HOME")) != NULL) {
         char path[PATH_MAX];
         
         snprintf(path, sizeof(path), "%s/.poldekrc", homedir);
         if (access(path, R_OK) == 0)
-            return poldek_conf_load(path, 0);
+            return poldek_conf_load(path, flags);
     }
+    DBGF("%s\n", sysconfdir);
+    
+    n_snprintf(confpath, sizeof(confpath), "%s/poldek.conf", sysconfdir);
+    confpath_exists = (access(confpath, R_OK) == 0);
 
-    n_snprintf(etcpath, sizeof(etcpath), "%s/poldek.conf", sysconfdir);
-    if (access(etcpath, R_OK) == 0)
-        return poldek_conf_load(etcpath, 0);
+    n_snprintf(newconfpath, sizeof(newconfpath), "%s/poldek/poldek.conf",
+               sysconfdir);
 
-    n_snprintf(etcpath, sizeof(etcpath), "%s/poldek/poldek.conf", sysconfdir);
-    if (access(etcpath, R_OK) == 0)
-        return poldek_conf_load(etcpath, 0);
+    newconfpath_exists = (access(newconfpath, R_OK) == 0);
 
-    return NULL;
+    if (confpath_exists && newconfpath_exists) {
+        logn(LOGNOTICE, _("There are two configuration files available, using legacy "
+                          "%s (consider removing it)."), confpath);
+        return poldek_conf_load(confpath, 0);
+
+    } else if (confpath_exists)
+        return poldek_conf_load(confpath, flags);
+    
+    return poldek_conf_load(newconfpath, flags);
 }
 
 tn_array *poldek_conf_get_section_arr(const tn_hash *htconf, const char *name)
