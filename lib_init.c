@@ -797,15 +797,17 @@ int poldek_setup(struct poldek_ctx *ctx)
 
 extern int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs);
 
-int poldek_load_sources(struct poldek_ctx *ctx, int load_dbdepdirs)
+
+int poldek_load_sources(struct poldek_ctx *ctx)
 {
     int rc;
+    
     if (ctx->_iflags & POLDEKCTX_SOURCES_LOADED)
         return 1;
     
     destroy_modules();
     init_modules();
-    rc = poldek_load_sources__internal(ctx, load_dbdepdirs);
+    rc = poldek_load_sources__internal(ctx, 1);
     ctx->_iflags |= POLDEKCTX_SOURCES_LOADED;
     return rc;
 }

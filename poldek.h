@@ -45,7 +45,7 @@ struct poldek_ctx {
 int poldek_init(struct poldek_ctx *ctx, unsigned flags);
 void poldek_destroy(struct poldek_ctx *ctx);
 
-int poldek_load_sources(struct poldek_ctx *ctx, int load_dbdepdirs);
+int poldek_load_sources(struct poldek_ctx *ctx);
 tn_array *poldek_get_avpkgs(struct poldek_ctx *ctx);
 tn_array *poldek_get_avpkgs_bynvr(struct poldek_ctx *ctx);
 
@@ -72,7 +72,7 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path);
 
 int poldek_setup(struct poldek_ctx *ctx);
 
-int poldek_load_sources(struct poldek_ctx *ctx, int load_dbdepdirs);
+int poldek_load_sources(struct poldek_ctx *ctx);
 
 tn_array *poldek_av_packages(void);
 

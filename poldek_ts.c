@@ -547,7 +547,7 @@ static int ts_prerun(struct poldek_ts *ts, struct install_info *iinf)
         install_info_init(iinf);
 
     if (poldek_ts_issetf(ts, POLDEK_TS_INSTALL))
-        poldek_load_sources(ts->ctx, 1);
+        poldek_load_sources(ts->ctx);
     
     return rc;
 }

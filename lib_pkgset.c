@@ -50,7 +50,7 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
         if (rpmdb_get_depdirs(ctx->ts->rootdir, ps->depdirs) >= 0)
             ps->flags |= PSDBDIRS_LOADED;
     }
-    
+
     if (!pkgset_load(ps, 0, ctx->sources)) {
         logn(LOGWARN, _("no packages loaded"));
         //pkgset_free(ps);
@@ -67,7 +67,8 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
 
     if ((ctx->ts->flags & POLDEK_TS_NOIGNORE) == 0)
         packages_score(ps->pkgs, ctx->ts->ign_patterns, PKG_IGNORED);
-    
+
+    ctx->pkgdirs = n_ref(ps->pkgdirs);
     //exit(0);    
     pkgset_setup(ps, ctx->ps_setup_flags);
     
@@ -82,7 +83,7 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
 
 tn_array *poldek_get_avpkgs(struct poldek_ctx *ctx)
 {
-    if (!poldek_load_sources(ctx, 1))
+    if (!poldek_load_sources(ctx))
         return NULL;
 
     return n_ref(ctx->ps->pkgs);
@@ -90,7 +91,7 @@ tn_array *poldek_get_avpkgs(struct poldek_ctx *ctx)
 
 tn_array *poldek_get_avpkgs_bynvr(struct poldek_ctx *ctx) 
 {
-    if (!poldek_load_sources(ctx, 1))
+    if (!poldek_load_sources(ctx))
         return NULL;
 
     return n_ref(ctx->ps->pkgs_bynvr);
