@@ -9,16 +9,15 @@
 Summary:	A full-featured frontend to RPM
 Name:		poldek
 Version:	@VERSION@
-Release:        %{?snap:0.%{snap}.}1%{?_with_static:.static}
-License:        GPLv2
-Group:          Applications/System
-Source0:        http://team.pld.org.pl/~mis/poldek/download/%{name}-%{version}%{?snap:-%{snap}}.tar.bz2
-URL:            http://team.pld.org.pl/~mis/poldek/
-Requires:	/bin/rpm
+Release:	%{?snap:0.%{snap}.}1%{?_with_static:.static}
+License:	GPLv2
+Group:	    Applications/System
+Source0:	http://team.pld.org.pl/~mis/poldek/download/%{name}-%{version}%{?snap:-%{snap}}.tar.bz2
+URL:	    http://team.pld.org.pl/~mis/poldek/
+Requires:	rpm
+%{?_with_poldekuser: Requires: sudo}
 BuildRequires:	bzip2-devel
-#BuildRequires:	db3-devel >= 3.1.14-2
 BuildRequires:	rpm-devel >= 4.0
-#BuildRequires:	popt-static
 BuildRequires:	openssl-devel
 BuildRequires:	readline-devel
 BuildRequires:	zlib-devel
@@ -74,7 +73,10 @@ install -d $RPM_BUILD_ROOT%{_sysconfdir}
 
 DISTRO=%{?distro:%{distro}}%{!?distro:pld}
 
-perl -pi -e "s|^_distro\s*=\s*\w+\s*|_distro = $DISTRO\n|" $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/%{name}.conf
+CONFIG="$RPM_BUILD_ROOT%{_sysconfdir}/%{name}/%{name}.conf"
+# set 'distro' macro
+perl -pi -e "s|^_distro\s*=\s*\w+\s*|_distro = $DISTRO\n|" $CONFIG
+%{?_with_poldekuser: perl -pi -e "s|^\#?\s*runas\s*=\s*\w+\s*|runas = poldek\n|" $CONFIG}
 
 # set PLD architecture
 perl -pi -e 's|_pld_arch\s*=\s*i686|_pld_arch = %{_target_cpu}|' $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/pld-*.conf
@@ -84,8 +86,17 @@ gzip -9nf README* conf/*sample* NEWS TODO
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%post   -p /sbin/ldconfig
-%postun -p /sbin/ldconfig
+%pre
+%{?_with_poldekuser: if [ -z "$(id -u poldek 2>/dev/null)" ]; then POLDEKUSER="poldek" POLDEKHOME="%{_var}/cache/poldek" UNDERRPM="1" sh %{_libdir}%{name}/userpoldekadd.sh --yes; fi;}
+
+%post -p /sbin/ldconfig
+
+%postun 
+if [ "$1" = "0" ]; then
+   %{?_with_poldekuser: /usr/sbin/userdel -r poldek}
+   %{?_with_poldekuser: /usr/sbin/groupdel poldek}
+fi
+/sbin/ldconfig
 
 %files
 %defattr(644,root,root,755)
@@ -96,6 +107,7 @@ rm -rf $RPM_BUILD_ROOT
 %dir %{_libdir}/%{name}
 %attr(755,root,root) %{_libdir}/%{name}/*
 %{_mandir}/man1/%{name}*
+%dir %attr(755,poldek,poldek) %{_var}/cache/%{name}
 %doc *.gz conf/*.gz
 
 %files devel
@@ -118,6 +130,9 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.25  2004/10/17 19:02:24  mis
+- --with poldekuser param to spec
+
 Revision 1.24  2004/10/09 15:36:52  mis
 - finished snap-rpm-package
 
