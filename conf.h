@@ -5,12 +5,16 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
-tn_hash *ldconf(const char *path);
-tn_hash *ldconf_deafult(void);
+tn_hash *poldek_ldconf(const char *path);
+tn_hash *poldek_ldconf_default(void);
 
-char *conf_get(tn_hash *htconf, const char *name, int *is_multi);
-int conf_get_bool(tn_hash *htconf, const char *name, int default_v);
-tn_array *conf_get_multi(tn_hash *htconf, const char *name);
+tn_array *poldek_conf_get_section_arr(const tn_hash *htconf, const char *name);
+tn_hash *poldek_conf_get_section_ht(const tn_hash *htconf, const char *name);
+
+char *poldek_conf_get(const tn_hash *htconf, const char *name, int *is_multi);
+int poldek_conf_get_bool(const tn_hash *htconf, const char *name, int default_v);
+int poldek_conf_get_int(const tn_hash *htconf, const char *name, int default_v);
+tn_array *poldek_conf_get_multi(const tn_hash *htconf, const char *name);
 
 #endif
 

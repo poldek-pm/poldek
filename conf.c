@@ -25,6 +25,7 @@
 #include <trurl/nhash.h>
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
+#include <trurl/n_snprintf.h>
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
 
@@ -47,7 +48,7 @@ struct tag {
     char      *enums[8];
 };
 
-static struct tag valid_tags[] = {
+static struct tag global_tags[] = {
     { "source",        TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 } },
     { "source?*",      TYPE_STR | TYPE_W_ENV, { 0 } },
     { "prefix?*",      TYPE_STR | TYPE_W_ENV, { 0 } },
@@ -68,6 +69,7 @@ static struct tag valid_tags[] = {
     { "greedy",         TYPE_BOOL , { 0 } }, 
     { "use_sudo",       TYPE_BOOL , { 0 } },
     { "mercy",          TYPE_BOOL , { 0 } },
+    { "default_fetcher", TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "ignore",         TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "downloader",     TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 } }, 
@@ -80,6 +82,42 @@ static struct tag valid_tags[] = {
     { "unique_package_names", TYPE_BOOL, { 0 } },
     { "ftp_sysuser_as_anon_passwd", TYPE_BOOL , { 0 } },
     {  NULL,           0, { 0 } }, 
+};
+
+static struct tag fetcher_tags[] = {
+    { "name",       TYPE_STR,  { 0 } },
+    { "proto",      TYPE_STR, { 0 } },
+    { "cmd",        TYPE_STR | TYPE_W_ENV, { 0 } },
+};
+
+static struct tag source_tags[] = {
+    { "name",        TYPE_STR, { 0 } },
+    { "url",         TYPE_STR | TYPE_W_ENV, { 0 } },
+    { "prefix",      TYPE_STR | TYPE_W_ENV, { 0 } },
+    { "pri",         TYPE_STR , { 0 } },
+    { "type",        TYPE_STR , { 0 } },
+    { "noauto",      TYPE_BOOL, { 0 } },
+    { "noautoup",    TYPE_BOOL, { 0 } },
+    { "unique_package_names", TYPE_BOOL, { 0 } },
+    { "douniq",       TYPE_BOOL, { 0 } },
+    { "signed",      TYPE_BOOL, { 0 } },
+    { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
+    { "ignore",         TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
+    {  NULL,         0, { 0 } }, 
+};
+
+
+struct section {
+    char        *name;
+    struct tag  *tags;
+    int         is_multi;
+};
+
+struct section sections[] = {
+    { "global",  global_tags,  0 },
+    { "source",  source_tags,  1 },
+    { "fetcher", fetcher_tags, 1 },
+    {  NULL,  NULL, 0 },
 };
 
 #define COPT_MULTIPLE (1 << 0)
@@ -102,8 +140,9 @@ struct copt *copt_new(const char *name)
     opt->val = NULL;
     opt->vals= NULL;
     return opt;
-}  
-                                                      
+}
+
+static                                                      
 void copt_free(struct copt *opt)
 {
     if (opt->flags & COPT_MULTIPLE)
@@ -186,60 +225,156 @@ static char *getv(char *vstr, const char *path, int nline)
     return p;
 }
 
-static const struct tag *find_tag(const char *key) 
+static
+const struct section *find_section(const char *name) 
 {
     int i = 0;
+
+    while (sections[i].name) {
+        if (strcmp(sections[i].name, name) == 0) 
+            return &sections[i];
+        i++;
+    }
+
+    return NULL;
+}
+
+
+static
+const struct tag *find_tag(const char *sectname, const char *key) 
+{
+    int i = 0;
+    struct tag     *tags = NULL;
+    const struct section *sect;
+
+    if ((sect = find_section(sectname)) == NULL)
+        return NULL;
     
-    while (valid_tags[i].name) {
-        if (strcmp(valid_tags[i].name, key) == 0)
-            return &valid_tags[i];
+    tags = sect->tags;
+    i = 0;
+    while (tags[i].name) {
+        if (strcmp(tags[i].name, key) == 0)
+            return &tags[i];
         
-        if (fnmatch(valid_tags[i].name, key, 0) == 0) 
-            return &valid_tags[i];
+        if (fnmatch(tags[i].name, key, 0) == 0) 
+            return &tags[i];
         i++;
     }
     return NULL;
 }
 
-
-static void validate_tag(const char *key, void *unused) 
+static
+const char *expand_vars(char *dest, int size, const char *str,
+                        const tn_hash *ht)
 {
-    int i = 0, found = 0;
+    const char **tl, **tl_save;
+    int n = 0;
+
     
-    unused = unused;
-    while (valid_tags[i].name) {
-        if (fnmatch(valid_tags[i++].name, key, 0) == 0) {
-            found = 1;
-            break;
+    tl = tl_save = n_str_tokl(str, "%");
+    if (*str != '%' && tl[1] == NULL) {
+        n_str_tokl_free(tl);
+        return str;
+    }
+    
+    if (*str != '%') {
+        n = n_snprintf(dest, size, *tl);
+        tl++;
+    }
+    
+    while (*tl) {
+        const char *vv, *v, *var;
+        char val[256];
+        int  v_len;
+        
+        
+        v = *tl;
+        DBGF("token: %s\n", *tl);
+        tl++;
+        
+        if (*v != '{') {
+            n += n_snprintf(&dest[n], size - n, "%%%s", v);
+            continue;
+        }
+        
+        v++;
+
+        vv = v;
+        v_len = 0;
+        while (isalnum(*vv)) {
+            vv++;
+            v_len++;
+        }
+        
+        if (*vv == '}')
+            vv++;
+        
+        if (v_len + 1 > (int)sizeof(val))
+            return str;
+        
+        n_snprintf(val, v_len + 1, v);
+        DBGF("var %s\n", val);
+        
+        if ((var = poldek_conf_get(ht, val, NULL)) == NULL) {
+            n += n_snprintf(&dest[n], size - n, "%s", v);
+            
+        } else {
+            n += n_snprintf(&dest[n], size - n, "%s", var);
+            n += n_snprintf(&dest[n], size - n, "%s", vv);
         }
     }
     
-    if (!found) {
-        logn(LOGWARN, _("%s: unknown option"), key);
-        sleep(1);
-    }
+    n_str_tokl_free(tl_save);
+    return dest;
 }
 
 
-tn_hash *ldconf(const char *path) 
+static char *eat_wws(char *s) 
 {
-    FILE *stream;
-    int nline = 0;
-    tn_hash *ht;
-    char buf[1024];
+    char *p;
+    
+    while (isspace(*s))
+        s++;
+    
+    p = strrchr(s, '\0'); /* eat trailing ws */
+    n_assert(p);
+    p--;
+    while (isspace(*p))
+        *p-- = '\0';
+
+    return s;
+}
+
+
+tn_hash *poldek_ldconf(const char *path) 
+{
+    FILE     *stream, *main_stream;
+    int      nline = 0;
+    tn_hash  *ht, *ht_sect;
+    tn_array *arr_sect;
+    char     buf[1024], *section, *include = "%include";
+    
     
     if ((stream = fopen(path, "r")) == NULL) {
         logn(LOGERR, "fopen %s: %m", path);
         return NULL;
     }
+    main_stream = NULL;
 
-    ht = n_hash_new(23, (tn_fn_free)copt_free);
-    n_hash_ctl(ht, TN_HASH_NOCPKEY);
+    ht = n_hash_new(23, (tn_fn_free)n_array_free);
+    arr_sect = n_array_new(4, (tn_fn_free)n_hash_free, NULL);
+    
+    ht_sect = n_hash_new(11, (tn_fn_free)copt_free);
+    n_array_push(arr_sect, ht_sect);
+    section = "global";
 
+    n_hash_insert(ht, section, arr_sect);
+
+ l_loop:
     
     while (fgets(buf, sizeof(buf) - 1, stream)) {
         char *p = buf;
-        char *name, *val, expanded_val[PATH_MAX];
+        char *name, *val, expanded_val[PATH_MAX], expanded_val2[PATH_MAX];
         struct copt *opt;
         const struct tag *tag;
 
@@ -252,6 +387,25 @@ tn_hash *ldconf(const char *path)
             nline++;
             continue;
         }
+
+        
+        if (strncmp(p, include, strlen(include)) == 0) {
+            FILE *st;
+            
+            p += strlen(include);
+            p = eat_wws(p);
+            p = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), p);
+            
+            if ((st = fopen(p, "r")) == NULL) {
+                logn(LOGERR, "fopen %s: %m", p);
+                return NULL;
+            }
+            
+            main_stream = stream;
+            stream = st;
+            continue;
+        }
+        
 
         while (1) {
             nline++;
@@ -270,6 +424,52 @@ tn_hash *ldconf(const char *path)
         
         name = p = buf;
 
+        if (*p == '[') {
+            const struct section *sect;
+            void *arr_sect;
+                
+            p++;
+            name = p;
+            
+            while (isalnum(*p) || *p == '-')
+                p++;
+            *p = '\0';
+
+            
+            if ((sect = find_section(name)) == NULL) {
+                logn(LOGERR, _("%s:%d: '%s': invalid section name"),
+                     path, nline, name);
+                
+                return NULL;
+            }
+
+            arr_sect = n_hash_get(ht, name);
+
+            if (arr_sect) {
+                if (sect->is_multi == 0) {
+                    ht_sect = n_array_nth(arr_sect, 0);
+                    
+                } else {
+                    ht_sect = n_hash_new(11, (tn_fn_free)copt_free);
+                    n_hash_ctl(ht_sect, TN_HASH_NOCPKEY);
+                    n_array_push(arr_sect, ht_sect);
+                }
+                
+            } else {
+                section = n_strdup(name);
+                //printf("section %s\n", section);
+            
+                ht_sect = n_hash_new(11, (tn_fn_free)copt_free);
+                n_hash_ctl(ht_sect, TN_HASH_NOCPKEY);
+                
+                arr_sect = n_array_new(4, (tn_fn_free)n_hash_free, NULL);
+                n_array_push(arr_sect, ht_sect);
+                n_hash_insert(ht, section, arr_sect);
+            }
+            
+            continue;
+        }
+        
         while (isalnum(*p) || *p == '_')
             p++;
         
@@ -297,8 +497,9 @@ tn_hash *ldconf(const char *path)
                 *q-- = '\0';
         }
 
-        if ((tag = find_tag(name)) == NULL) {
-            logn(LOGWARN, _("%s:%d unknown option '%s'"), path, nline, name);
+        if ((tag = find_tag(section, name)) == NULL) {
+            logn(LOGWARN, _("%s:%d unknown option '%s:%s'"), path, nline,
+                 section, name);
             continue;
         }
 
@@ -306,7 +507,7 @@ tn_hash *ldconf(const char *path)
         
 
         if (tag->flags & TYPE_LIST) {
-            getvlist(ht, name, p, path, nline);
+            getvlist(ht_sect, name, p, path, nline);
             continue;
         }
         
@@ -334,19 +535,24 @@ tn_hash *ldconf(const char *path)
             
         }
         
-        if (n_hash_exists(ht, name)) {
-            opt = n_hash_get(ht, name);
+        if (n_hash_exists(ht_sect, name)) {
+            opt = n_hash_get(ht_sect, name);
             
         } else {
             opt = copt_new(name);
-            n_hash_insert(ht, opt->name, opt);
+            n_hash_insert(ht_sect, opt->name, opt);
         }
 
         if (tag->flags & TYPE_W_ENV)
             val = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), val);
-            
+
+        
+        val = (char*)expand_vars(expanded_val2, sizeof(expanded_val2),
+                                 val, ht_sect);
+        
         if (opt->val == NULL) {
             opt->val = n_strdup(val);
+            //printf("ADD %p %s -> %s\n", ht_sect, name, val);
             
         } else if ((tag->flags & TYPE_MULTI) == 0) {
             logn(LOGWARN, _("%s:%d multiple '%s' not allowed"), path, nline, name);
@@ -364,14 +570,18 @@ tn_hash *ldconf(const char *path)
         }
     }
 
-    n_hash_map(ht, validate_tag);
-
+    if (main_stream) {
+        fclose(stream);
+        stream = main_stream;
+        main_stream = NULL;
+        goto l_loop;
+    }
     
     return ht;
 }
 
 
-tn_hash *ldconf_deafult(void)
+tn_hash *poldek_ldconf_default(void)
 {
     char *homedir;
     char *etcpath = "/etc/poldek.conf";
@@ -381,17 +591,33 @@ tn_hash *ldconf_deafult(void)
         
         snprintf(path, sizeof(path), "%s/.poldekrc", homedir);
         if (access(path, R_OK) == 0)
-            return ldconf(path);
+            return poldek_ldconf(path);
     }
     
     if (access(etcpath, R_OK) == 0)
-        return ldconf(etcpath);
+        return poldek_ldconf(etcpath);
 
     return NULL;
 }
 
+tn_array *poldek_conf_get_section_arr(const tn_hash *htconf, const char *name)
+{
+    return n_hash_get(htconf, name);
+}
 
-char *conf_get(tn_hash *htconf, const char *name, int *is_multi)
+tn_hash *poldek_conf_get_section_ht(const tn_hash *htconf, const char *name)
+{
+    tn_array *arr_sect;
+    
+    if ((arr_sect = n_hash_get(htconf, name)))
+        return n_array_nth(arr_sect, 0);
+    
+    return NULL;
+}
+
+
+
+char *poldek_conf_get(const tn_hash *htconf, const char *name, int *is_multi)
 {
     struct copt *opt;
     char *v = NULL;
@@ -408,11 +634,26 @@ char *conf_get(tn_hash *htconf, const char *name, int *is_multi)
     return v;
 }
 
-int conf_get_bool(tn_hash *htconf, const char *name, int default_v)
+int poldek_conf_get_int(const tn_hash *htconf, const char *name, int default_v)
+{
+    char *vs;
+    int  v;
+    
+    if ((vs = poldek_conf_get(htconf, name, NULL)) == NULL)
+        return default_v;
+
+    if (sscanf(vs, "%d", &v) != 1)
+        return default_v;
+
+    return v;
+}
+
+
+int poldek_conf_get_bool(const tn_hash *htconf, const char *name, int default_v)
 {
     char *v;
     
-    if ((v = conf_get(htconf, name, NULL)) == NULL)
+    if ((v = poldek_conf_get(htconf, name, NULL)) == NULL)
         return default_v;
 
     if (strcasecmp(v, "yes") == 0 || strcasecmp(v, "y") == 0 ||
@@ -431,7 +672,7 @@ int conf_get_bool(tn_hash *htconf, const char *name, int default_v)
 }
 
 
-tn_array *conf_get_multi(tn_hash *htconf, const char *name)
+tn_array *poldek_conf_get_multi(const tn_hash *htconf, const char *name)
 {
     struct copt *opt;
 
