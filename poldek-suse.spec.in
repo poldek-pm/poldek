@@ -42,9 +42,9 @@ install -d $RPM_BUILD_ROOT%{_sysconfdir}
 
 %{__make} install DESTDIR=$RPM_BUILD_ROOT
 
-sed "s/i686/%{_target_cpu}/g" < poldekrc.sample > $RPM_BUILD_ROOT/etc/%{name}.conf
+sed "s/i686/%{_target_cpu}/g" < conf/poldekrc.sample-pld > $RPM_BUILD_ROOT/etc/%{name}.conf
 
-gzip -9nf README* *sample* NEWS TODO
+gzip -9nf README* *sample* conf/poldekrc* NEWS TODO
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -54,7 +54,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(644,root,root) %config(noreplace) %verify(not md5 size mtime) %{_sysconfdir}/%{name}.conf
 %attr(755,root,root) %{_bindir}/*
 %{_mandir}/man1/%{name}*
-%doc *.gz
+%doc *.gz conf/*.gz
 
 %changelog
 * Wed Apr 3 2002 Roger Luethi <rl@hellgate.ch>

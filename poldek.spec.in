@@ -60,7 +60,7 @@ install -d $RPM_BUILD_ROOT%{_sysconfdir}
 
 DISTRO=%{?distro:%{distro}}%{!?distro:pld}
 sed "s/i686/%{_target_cpu}/g" < conf/poldekrc.sample-${DISTRO} > $RPM_BUILD_ROOT/etc/%{name}.conf
-gzip -9nf README* *sample* conf/*sample.* NEWS TODO 
+gzip -9nf README* *sample* conf/poldekrc* NEWS TODO 
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -78,6 +78,9 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.18  2002/04/21 16:15:14  mis
+- fixed %%doc list
+
 Revision 1.17  2002/04/21 15:38:03  mis
 - fixed %%{distro} handling
 
