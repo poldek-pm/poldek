@@ -82,7 +82,7 @@ struct command_alias cmd_aliases[] = {
 
 
 struct command command_install = {
-    0, 
+    COMMAND_HASVERBOSE, 
     "install", "PACKAGE...", "Install packages", 
     options, parse_opt,
     NULL, install, NULL, NULL,

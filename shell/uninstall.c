@@ -33,7 +33,6 @@ static int uninstall(struct cmdarg *cmdarg);
 #define OPT_UNINST_FORCE   3
 
 static struct argp_option options[] = {
-{"mercy", 'm', 0, OPTION_HIDDEN, "Be tolerant for bugs which RPM tolerates", 1},
 {"force", OPT_UNINST_FORCE, 0, 0, "Be unconcerned", 1 },
 {"test", 't', 0, 0, "Don't uninstall, but tell if it would work or not", 1 },
 {"nodeps", OPT_UNINST_NODEPS, 0, 0,
@@ -44,7 +43,7 @@ static struct argp_option options[] = {
 
 
 struct command command_uninstall = {
-    0, 
+    COMMAND_HASVERBOSE, 
 
     "uninstall", "PACKAGE...", "Uninstall packages", 
     
@@ -63,7 +62,7 @@ int uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
     int i, n, nopts = 0, ec;
 
     for (i=0; i<n_array_size(pkgnevrs); i++) 
-        msg(1, "U %s\n", n_array_nth(pkgnevrs, i));
+        msg(1, "R %s\n", n_array_nth(pkgnevrs, i));
     
     msg(1, "Uninstalling %d package%s\n", n_array_size(pkgnevrs),
         n_array_size(pkgnevrs) > 1 ? "s" : "");

@@ -304,13 +304,14 @@ int docmd(struct command *cmd, int argc, const char **argv)
 {
     struct cmdarg        cmdarg;
     struct sh_cmdarg     sh_cmdarg;
-    int                  rc;
+    int                  rc = 1, verbose_;
     unsigned             parse_flags;
     struct argp          argp = { cmd->argp_opts,
                                   parse_opt,
                                   cmd->arg, cmd->doc, 0, 0, 0};
 
     
+    verbose_ = verbose;
     if (argv == NULL)
         return 0;
 
@@ -354,14 +355,14 @@ int docmd(struct command *cmd, int argc, const char **argv)
     argp.help_filter = help_filter;
     argp_parse(&argp, argc, (char**)argv, parse_flags, 0, (void*)&sh_cmdarg);
 
-    if (sh_cmdarg.err)
-        return 0;
-
+    if (sh_cmdarg.err) {
+        rc = 0;
+        goto l_end;
+    }
+    
     if (cmdarg.is_help) {
-        n_array_free(cmdarg.pkgnames);
-        if (cmd->destroy_cmd_arg_d)
-            cmd->destroy_cmd_arg_d(cmdarg.d);
-        return 1;
+        rc = 1;
+        goto l_end;
     }
     
     rc = cmd->do_cmd_fn(&cmdarg);
@@ -378,6 +379,7 @@ int docmd(struct command *cmd, int argc, const char **argv)
     if (cmd->destroy_cmd_arg_d && cmdarg.d)
         cmd->destroy_cmd_arg_d(cmdarg.d);
     
+    verbose = verbose_;
     return rc;
 }
 
