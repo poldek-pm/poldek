@@ -43,6 +43,8 @@
 #include "conf.h"
 #include "split.h"
 #include "poldek_term.h"
+#include "sigint.h"
+
 
 #ifndef VERSION
 # error "undefined VERSION"
@@ -991,6 +993,7 @@ void poldek_init(void)
     n_malloc_set_failhook(n_malloc_fault);
     pkgflmodule_init();
     pkgsetmodule_init();
+    sigint_establish();
 }
 
 void poldek_destroy(void) 
@@ -1000,6 +1003,7 @@ void poldek_destroy(void)
     
     if (htcnf)
         n_hash_free(htcnf);
+    sigint_restore();
 }
 
 void poldek_reinit(void)

@@ -656,7 +656,10 @@ int rpm_dbmap(rpmdb db,
 #ifdef HAVE_RPM_4_1             /* omit pubkeys */
         if (headerIsEntry(h, RPMTAG_PUBKEYS))
             continue;
-#endif        
+#endif
+        if (sigint_reached())
+            return 0;
+        
         mapfn(recno, h, arg);
 	n++;
     }
