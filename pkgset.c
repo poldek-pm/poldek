@@ -689,9 +689,13 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
             if (inst->instflags & PKGINST_TEST)
                 continue;
             
-            if (!pkgdb_install(inst->db, pkgpath,
-                               inst->instflags | PKGINST_NODEPS)) 
+            if (pkgdb_install(inst->db, pkgpath,
+                              inst->instflags | PKGINST_NODEPS))
+		logn(LOGWARN|LOGFILE, "INST-OK %s", pkg->name);
+	    else {
+		logn(LOGERR|LOGFILE, "INST-ERR %s", pkg->name);
                 nerr++;
+	    }
 
             
             ninstalled++;
