@@ -111,6 +111,15 @@ void log_tty(const char *fmt, ...)
   } while(0)
 
 
+// to tty only
+#define msgn_tty(verbose_level, fmt, args...)         \
+  do {                                                \
+    if ((verbose_level) <= verbose)                   \
+      log(LOGTTY|LOGINFO|LOGOPT_N, fmt, ## args);     \
+  } while(0)
+
+
+
 #if ENABLE_TRACE
 # define DBGF(fmt, args...)  fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
 # define DBG(fmt, args...)   fprintf(stdout, fmt, ## args)
