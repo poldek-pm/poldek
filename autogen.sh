@@ -14,9 +14,15 @@ runcmd () {
     $@
 }
 
+CONFOPTS="--enable-maintainer-mode --enable-compile-warnings $@"
+runcmd ./getrurl.sh
+
 runcmd aclocal
 runcmd autoheader
 runcmd autoconf
+if [ ! -f ABOUT-NLS ]; then
+    runcmd gettextize -f
+fi
 runcmd automake --add-missing 
 
 # w/o
@@ -26,5 +32,5 @@ if [ ! -f depcomp ]; then
         (cd shell && ln -sf ../depcomp .)
 fi
 
-CONFOPTS="--enable-maintainer-mode --enable-compile-warnings $@"
+
 runcmd ./configure $CONFOPTS

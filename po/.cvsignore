@@ -1,0 +1,7 @@
+*.gmo
+*.mo
+*.pot
+Makefile
+Makefile.in*
+POTFILES
+ChangeLog
