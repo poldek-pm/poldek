@@ -29,7 +29,6 @@ Remote files are retrieved from remote servers by poldek
 itself (internal FTP/HTTP client) or by external downloaders
 (not configured by default, see L</CONFIG FILE>).
 
-
 The poldek basic modes are:
 
 =over
@@ -49,7 +48,6 @@ The poldek basic modes are:
 =item * Split package set into fixed size package sets
 
 =back
-
 
 =head2 Interactive Mode
 
@@ -114,7 +112,6 @@ could be specified by B<-n, --sn> B<SOURCE-NAME>, e.g:
 
 $ poldek --sn pld ...
 
-
 To list all configured sources use B<-l, --sl> option: e.g:
 
 $ poldek -l
@@ -130,7 +127,6 @@ $ poldek -l
 =item pld-test     ftp://ftp.pld.org.pl/dists/ra/test/i686/  (noauto)
 
 =back
-
 
 =head1 SPECIFYING PACKAGES
 
@@ -272,7 +268,7 @@ I<Note> that equivalent of "rpm --freshen" is "poldek -u/-i --fresh --nofollow"
 =item B<-G, --greedy>
 
 Automatically upgrade packages which dependencies are broken
-by unistalled ones, for example if package foo is upgraded
+by uninstalled ones, for example if package foo is upgraded
 from version 1.0 to 1.2 and package foo-devel is already installed
 with requirement "foo = 1.0" then poldek upgrade foo-devel to version
 1.2 too.
@@ -357,12 +353,10 @@ by RPM binary, which is executed in background. Options passed to rpm:
 
 =head2
 
-
 Other rpm options may be passed as arguments like B<--rpm-RPM_LONG_OPTION>,
 e.g:
 
 $ poldek ... -- --rpm-noscripts --rpm-notriggers
-
 
 =head1 CONFIG FILE
 
@@ -397,10 +391,9 @@ then to use only ftp://zn/PLD/i686/PLD/RPMS do:
 
 $ poldek --sn pld-stable
 
-..and to use all pld-* do:
+...and to use all pld-* do:
 
 $ poldek --sn pld-\*
-
 
 B<OPTIONS> describes source options; possible values are:
 
@@ -422,7 +415,6 @@ packages from highest prioritized source are taken.
 
 If source priorities aren't set sources are prioritized in order
 they are appear in config file.
-
 
 =item * B<type=SOURCE_TYPE>
 
@@ -455,7 +447,6 @@ source = rare,noautoup          ftp://host/rare-RPMS
 
 source = build-area,type=dir    /home/zenek/rpm/RPMS
 
-
 source99 = rh,noauto,type=hdrl  ftp://redhat/os/i386/RedHat/base/hdlist
 
 prefix99 = ftp://redhat/os/i386/RedHat/RPMS
@@ -472,10 +463,9 @@ source1 = ~/tmp/my-cd-indexes/
 
 prefix1 = /mnt/cdrom/RPMS/
 
-
 =item * B<cachedir>
 
-       See B<--cachedir> option description
+        See B<--cachedir> option description
 
 =item * B<confirm_installation = yes|no>
 
@@ -491,27 +481,24 @@ prefix1 = /mnt/cdrom/RPMS/
 
 =item * B<follow = yes|no>
 
-       Automatically install|don't install packages required by
-       selected ones (default: yes)
+        Automatically install|don't install packages required by
+        selected ones (default: yes)
 
 =item * B<ftp_sysuser_as_anon_passwd = yes|no>
 
-       If yes, login@hostname is send as anonymous FTP password (default: no)
+        If "yes", login@hostname is send as anonymous FTP password (default: no)
 
 =item * B<greedy = yes|no>
 
         See --greedy option description	(default: no)
 
-
 =item * B<hold = PACKAGE[ PACKAGE...]>
 
         See --hold option description
 
-
 =item * B<mercy = yes|no>
 
         See --mercy option description
-
 
 =item * B<keep_downloads = yes|no>
 
@@ -519,19 +506,16 @@ prefix1 = /mnt/cdrom/RPMS/
         by default. If option is set to "yes" then program will never remove
         downloaded packages from cache directory.
 
-
 =item * B<particle_install = yes|no>
 
         If "no" installations of multiple packages are performed as one
         transaction (default: yes)
 
-
 =item * B<use_sudo = yes|no>
 
-      For r/w operations run rpm using sudo.
-      The default is "no", but it is recommended to change it to "yes"
-      and use the poldek as ordinary user.
-
+        For r/w operations run rpm using sudo.
+        The default is "no", but it is recommended to change it to "yes"
+        and use the poldek as ordinary user.
 
 =back
 
@@ -568,7 +552,6 @@ ftp_get        = "/usr/bin/snarf %P %D"
 rsync_get      = "/usr/bin/rsync -v %P %d"
 
 See also sample configs included in distribution.
-
 
 Additionally poldek supports CDROM URLs which could be used when package set
 is stored on removable media (several CDs, ZIPs, etc); as CDROM "downloader"
@@ -634,7 +617,6 @@ $ poldek --split=100 --split-conf=zip-split.conf \
 =head2 Execute shell command:
 
 $ poldek --shcmd='ls -lt' | less
-
 
 =head1 ENVIROMENT
 
@@ -713,5 +695,3 @@ Please send comments, bug reports, etc to the author or mailing list
 =head1 SEE ALSO
 
 L<apt(1)> L<apt-get(8)>, L<curl(1)>, L<rpm(1)>, L<rsync(1)>, L<snarf(1)>, L<wget(1)>
-
-
