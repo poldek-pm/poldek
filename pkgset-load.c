@@ -28,20 +28,87 @@
 #include "pkgset-load.h"
 #include "misc.h"
 #include "log.h"
+#include "poldek_term.h"
+
+struct subopt {
+    char      *name;
+    unsigned  flag;              /* MUST BE non-zero */
+    int       isdefault;         /* is default value */
+};
 
 struct src_option {
     char      *name;
+    int       len;
     unsigned  flag;
+    struct subopt *subopts;
 };
 
+#define PKGSRC_OPTION_SUBOPT (1 << 15)
+
+static struct subopt type_subopts[] = {
+    { "pidx",    PKGSRCT_IDX, 1 }, 
+    { "dir",     PKGSRCT_DIR, 0 }, 
+    { "hdrl",    PKGSRCT_HDL, 0 },
+    { NULL, 0, 0 },
+};
 
 static struct src_option source_options[] = {
-    { "noauto",   PKGSOURCE_NOAUTO     }, 
-    { "noautoup", PKGSOURCE_NOAUTOUP   }, 
-    { "gpg",      PKGSOURCE_VER_GPG    },
-    { "pgp",      PKGSOURCE_VER_PGP    },
-    {  NULL,      0 }, 
+    { "noauto",   0, PKGSOURCE_NOAUTO,     NULL}, 
+    { "noautoup", 0, PKGSOURCE_NOAUTOUP,   NULL}, 
+    { "gpg",      0, PKGSOURCE_VER_GPG,    NULL},
+    { "pgp",      0, PKGSOURCE_VER_PGP,    NULL},
+    { "type",     0, PKGSOURCE_TYPE | PKGSRC_OPTION_SUBOPT, type_subopts }, 
+    {  NULL,      0, 0, NULL }, 
 };
+
+    
+static unsigned find_subopt(const char *optstr, struct subopt *subopts)
+{
+    int i;
+    unsigned flag = 0;
+    
+    i = 0;
+    while (subopts[i].name) {
+        if (strcmp(subopts[i].name, optstr) == 0) {
+            flag = subopts[i].flag;
+            break;
+        }
+        i++;
+    }
+
+    return flag;
+}
+
+static
+unsigned get_subopt(struct source *src, struct src_option *opt,
+                    const char *str, const char *options_str)
+{
+    unsigned v = 0;
+    
+    n_assert(strncmp(str, opt->name, opt->len) == 0);
+    
+    str += opt->len;
+    if (*str != '=') {
+        logn(LOGWARN, _("%s: %s unknown option"), options_str, str);
+        return 0;
+    }
+    
+    str++;
+    
+    if (opt->flag & PKGSOURCE_TYPE) {
+        if ((v = find_subopt(str, opt->subopts))) {
+            src->type = v;
+            src->subopt_flags |= v;
+        }
+    }
+
+    if (v == 0)
+        logn(LOGWARN, _("%s%sinvalid value ('%s') for option '%s'"),
+             src->name ? src->name : "", src->name ? ": " : "", 
+             str, opt->name);
+
+    return v;
+}
 
 
 struct source *source_new(const char *pathspec, const char *pkg_prefix)
@@ -62,7 +129,7 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
 
     if (*p == '\0') {           /* path only */
         path = pathspec;
-        name = "anon";
+        name = "-";
         
     } else {
         path = p + 1;
@@ -80,10 +147,9 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
         if ((q = strrchr(name, ']')))
             *q = '\0';
         if (*name == '\0')
-            name = "anon";
+            name = "-";
     }
 
-    
 
     if ((n = vf_cleanpath(clpath, sizeof(clpath), path)) == 0 ||
         n == sizeof(clpath))
@@ -100,45 +166,53 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     clpath[n] = '\0';
 
     if (pkg_prefix) {
-        int l = strlen(pkg_prefix);
-        
         if ((n = vf_cleanpath(clprefix, sizeof(clprefix), pkg_prefix)) == 0 ||
             n == sizeof(clprefix))
             return NULL;
-        
-        if (pkg_prefix[l - 1] == '/')
-            clprefix[n++] = '/';
-
-        clprefix[n] = '\0';
     }
     
     src = malloc(sizeof(*src));
-    src->flags = 0;
-    src->source_path = strdup(clpath);
+    src->flags = src->subopt_flags = 0;
+    src->path = strdup(clpath);
     if (pkg_prefix)
         src->pkg_prefix = strdup(clprefix);
     else
         src->pkg_prefix = NULL;
-    src->ldmethod = PKGSET_LD_NIL;
-    
+    src->type = PKGSRCT_NIL;
     
     
     if ((q = strchr(name, ','))) {
         const char **tl, **t;
         
         *q++ = '\0';
+        src->name = name;       /* temporary */
+        
         tl = t = n_str_tokl(q, ",");
         n_assert(tl);
 
         while (*t) {
             int n = 0;
             while (source_options[n].name != NULL) {
-                if (strcmp(*t, source_options[n].name) == 0) {
-                    src->flags |= source_options[n].flag;
+                struct src_option *opt = &source_options[n];
+                
+                if (opt->len == 0)
+                    opt->len = strlen(opt->name);
+                
+                if (opt->flag & PKGSRC_OPTION_SUBOPT) {
+                    if (strncmp(*t, opt->name, opt->len) == 0) {
+                        if (get_subopt(src, opt, *t, name))
+                            src->flags |= opt->flag;
+                        break;
+                    }
+                    
+                } else if (strcmp(*t, opt->name) == 0) {
+                    src->flags |= opt->flag;
                     break;
                 }
+                
                 n++;
             }
+            
             if (source_options[n].name == NULL)
                 logn(LOGWARN, _("%s: %s unknown option"), name, *t);
             t++;
@@ -146,33 +220,52 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
         n_str_tokl_free(tl);
     }
 
-    src->source_name = strdup(name);
+    src->name = strdup(name);
     return src;
 }
 
 void source_free(struct source *src)
 {
-    free(src->source_path);
+    free(src->path);
     if (src->pkg_prefix)
         free(src->pkg_prefix);
-    if (src->source_name)
-        free(src->source_name);
+    if (src->name)
+        free(src->name);
     free(src);
 }
 
 
 int source_cmp(struct source *s1, struct source *s2)
 {
-    return strcmp(s1->source_path, s2->source_path);
+    return strcmp(s1->path, s2->path);
 }
 
 int source_cmp_name(struct source *s1, struct source *s2)
 {
-    return strcmp(s1->source_name, s2->source_name);
+    if (strcmp(s1->name, "-") == 0)
+        return 1;
+
+    if (strcmp(s2->name, "-") == 0)
+        return -1;
+    
+    return strcmp(s1->name, s2->name);
 }
 
 
-int source_snprintf_flags(char *str, int size, struct source *src) 
+int source_update(struct source *src)
+{
+    if (src->type == PKGSRCT_HDL) {
+        logn(LOGWARN, _("%s: this type of source is not updateable"),
+             src->path);
+        return 0;
+    }
+    
+    return update_whole_pkgdir(src->path);
+}
+
+
+static
+int source_snprintf_flags(char *str, int size, const struct source *src)
 {
     int n, i;
     
@@ -182,10 +275,42 @@ int source_snprintf_flags(char *str, int size, struct source *src)
 
     i = n = 0;
     while (source_options[i].name != NULL) {
-        if (src->flags & source_options[i].flag)
-            n += n_snprintf(&str[n], size - n, "%s,", source_options[i].name);
-        i++;
+        struct src_option *opt = &source_options[i++];
+        
+        if (opt->len == 0)
+            opt->len = strlen(opt->name);
+
+        if ((src->flags & opt->flag) == 0)
+            continue;
+
+        if ((opt->flag & PKGSRC_OPTION_SUBOPT) == 0) {
+            n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s", opt->name);
+            n += n_snprintf(&str[n], size - n, ",");
+            // n += n_snprintf(&str[n], size - n, "%s,", opt->name);
+            
+        } else {
+            int j = 0;
+
+            while (opt->subopts[j].name != NULL) {
+                struct subopt *subopt = &opt->subopts[j++];
+                
+                if (subopt->isdefault)
+                    continue;
+                    
+                if (src->subopt_flags & subopt->flag) {
+                    n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s",
+                                    opt->name);
+                    
+                    n += n_snprintf(&str[n], size - n, "=%s,", subopt->name);
+                    
+                    //n += n_snprintf(&str[n], size - n, "%s=%s,", opt->name,
+                    //                subopt->name);
+                    break;
+                }
+            }
+        }
     }
+    
     
     if (n > 0)
         str[n - 1] = '\0';      /* eat last comma */
@@ -194,16 +319,25 @@ int source_snprintf_flags(char *str, int size, struct source *src)
 }
 
 
-int source_update(struct source *src)
+void source_printf(const struct source *src) 
 {
-    if (src->ldmethod == PKGSET_LD_HDL) {
-        logn(LOGWARN, _("%s: this type of source is not updateable"),
-             src->source_path);
-        return 0;
-    }
+    char optstr[256];
     
-    return update_whole_pkgdir(src->source_path);
+    source_snprintf_flags(optstr, sizeof(optstr), src);
+    
+    printf("%-12s %s%s%s%s\n",
+           src->name, src->path,
+           *optstr ? "  (" : "", optstr, *optstr ? ")" : "");
+
+    if (src->pkg_prefix) {
+        //printf_c(PRCOLOR_GREEN, "%-14s prefix: ", "");
+        //printf("%s\n", src->pkg_prefix);
+        printf("%-14s prefix => %s\n", "", src->pkg_prefix);
+    }
 }
+
+
+
 
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 {
@@ -217,39 +351,39 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         if (src->flags & PKGSOURCE_NOAUTO)
             continue;
 
-        if (src->ldmethod == PKGSET_LD_NIL) 
-            src->ldmethod = PKGSET_LD_IDX;
+        if (src->type == PKGSRCT_NIL) 
+            src->type = PKGSRCT_IDX;
         
-        switch (src->ldmethod) {
-            case PKGSET_LD_IDX:
-                pkgdir = pkgdir_new(src->source_name, src->source_path,
+        switch (src->type) {
+            case PKGSRCT_IDX:
+                pkgdir = pkgdir_new(src->name, src->path,
                                     src->pkg_prefix, PKGDIR_NEW_VERIFY);
                 if (pkgdir != NULL) 
                     break;
                 
-                if (is_dir(src->source_path)) 
-                    src->ldmethod = PKGSET_LD_DIR; /* no break */
+                if (is_dir(src->path)) 
+                    src->type = PKGSRCT_DIR; /* no break */
                 else
                     break;
                 
-            case PKGSET_LD_DIR:
-                msg(1, _("Loading %s..."), src->source_path);
-                pkgdir = pkgdir_load_dir(src->source_name, src->source_path);
+            case PKGSRCT_DIR:
+                msg(1, _("Loading %s..."), src->path);
+                pkgdir = pkgdir_load_dir(src->name, src->path);
                 break;
 
-            case PKGSET_LD_HDL:
-                msgn(1, _("Loading %s..."), src->source_path);
-                pkgdir = pkgdir_load_hdl(src->source_name, src->source_path,
-                                         src->pkg_prefix);
+            case PKGSRCT_HDL:
+                msgn(1, _("Loading %s..."), src->path);
+                pkgdir = pkgdir_load_hdl(src->name, src->path, src->pkg_prefix);
                 break;
 
             default:
                 n_assert(0);
+                break;
         }
 
         if (pkgdir == NULL) {
             if (n_array_size(sources) > 1)
-                logn(LOGWARN, _("%s: load failed, skipped"), src->source_path);
+                logn(LOGWARN, _("%s: load failed, skipped"), src->path);
             continue;
         }
 

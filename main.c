@@ -101,7 +101,7 @@ struct args {
     int       update_op;
     
     char      *curr_src_path;
-    int       curr_src_ldmethod;
+    int       curr_src_type;
     tn_array  *sources;
     tn_array  *source_names;
     
@@ -209,10 +209,10 @@ static struct argp_option options[] = {
 {"sidx", OPT_SOURCETXT, "FILE", OPTION_HIDDEN,
  N_("Get packages info from package index file FILE"), 1 },
 
-{"sdir", OPT_SOURCEDIR, "DIR", OPTION_HIDDEN, /* obsoleted */
- N_("Get packages info from directory DIR"), 1 },
+{"sdir", OPT_SOURCEDIR, "DIR", 
+ N_("Get packages info from directory DIR by scannig it"), 1 },
 
-{"shdl", OPT_SOURCEHDL, "FILE", 0, /* RH's hdlist,  PLD's tocfile */
+{"shdrl", OPT_SOURCEHDL, "FILE", 0, /* RH's hdlist,  PLD's tocfile */
  N_("Get packages info from package header list file (aka hdlist)"), 1 },    
 
 {"prefix", 'P', "PREFIX", 0,
@@ -408,7 +408,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct args *argsp = state->input;
     struct source *src = NULL;
-    int ldmethod = PKGSET_LD_NIL;
+    int source_type = PKGSRCT_NIL;
 
     if (key && arg)
         chkarg(key, arg);
@@ -455,25 +455,25 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case OPT_SOURCETXT:     /* no break */
-            ldmethod = PKGSET_LD_IDX;
+            source_type = PKGSRCT_IDX;
             
         case OPT_SOURCEDIR:     /* no break */
-            if (ldmethod == PKGSET_LD_NIL)
-                ldmethod = PKGSET_LD_DIR;
+            if (source_type == PKGSRCT_NIL)
+                source_type = PKGSRCT_DIR;
 
         case OPT_SOURCEHDL:     /* no break */
-            if (ldmethod == PKGSET_LD_NIL)
-                ldmethod = PKGSET_LD_HDL;
+            if (source_type == PKGSRCT_NIL)
+                source_type = PKGSRCT_HDL;
             
         case 's':
             if (argsp->curr_src_path) { /* no prefix for curr_src_path */
                 src = source_new(argsp->curr_src_path, NULL);
-                src->ldmethod = argsp->curr_src_ldmethod;
+                src->type = argsp->curr_src_type;
                 n_array_push(argsp->sources, src);
             }
             
             argsp->curr_src_path = arg;
-            argsp->curr_src_ldmethod = ldmethod;
+            argsp->curr_src_type = source_type;
             break;
 
         case 'P':
@@ -482,16 +482,16 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 exit(EXIT_FAILURE);
             }
             
-            if (argsp->curr_src_ldmethod == PKGSET_LD_DIR) {
+            if (argsp->curr_src_type == PKGSRCT_DIR) {
                 logn(LOGERR, _("prefix for directory source makes no sense"));
                 exit(EXIT_FAILURE);
             }
             
             src = source_new(argsp->curr_src_path, trimslash(arg));
-            src->ldmethod = argsp->curr_src_ldmethod;
+            src->type = argsp->curr_src_type;
             n_array_push(argsp->sources, src);
             argsp->curr_src_path = NULL;
-            argsp->curr_src_ldmethod = PKGSET_LD_NIL;
+            argsp->curr_src_type = PKGSRCT_NIL;
             break;
 
             
@@ -843,7 +843,7 @@ int addsource(tn_array *sources, struct source *src,
         for (i=0; i<n_array_size(src_names); i++) {
             char *sn = n_array_nth(src_names, i);
             
-            if (fnmatch(sn, src->source_name, 0) == 0) {
+            if (fnmatch(sn, src->name, 0) == 0) {
                 /* given by name -> clear flags */
                 src->flags &= ~(PKGSOURCE_NOAUTO | PKGSOURCE_NOAUTOUP);
                 n_array_push(sources, src);
@@ -933,7 +933,7 @@ void parse_options(int argc, char **argv)
     args.sources = n_array_new(4, (tn_fn_free)source_free, (tn_fn_cmp)source_cmp);
     args.source_names = n_array_new(4, NULL, (tn_fn_cmp)strcmp);
     args.curr_src_path = NULL;
-    args.curr_src_ldmethod = PKGSET_LD_NIL;
+    args.curr_src_type = PKGSRCT_NIL;
     args.idx_path = NULL;
     args.pkgdef_files = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_defs  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
@@ -957,7 +957,7 @@ void parse_options(int argc, char **argv)
 
     if (args.curr_src_path) { 
         struct source *src = source_new(args.curr_src_path, NULL);
-        src->ldmethod = args.curr_src_ldmethod;
+        src->type = args.curr_src_type;
         n_array_push(args.sources, src);
     }
 
@@ -1146,19 +1146,10 @@ static void print_source_list(tn_array *sources)
 {
     int i;
 
-    for (i=0; i<n_array_size(sources); i++) {
-        char           optstr[256];
-        struct source  *src = n_array_nth(sources, i);
-
-        source_snprintf_flags(optstr, sizeof(optstr), src);
-        printf("%-12s %s%s%s%s%s%s%s\n",
-               strcmp(src->source_name, "anon") == 0 ? "-" : src->source_name,
-               src->source_path,
-               src->pkg_prefix ? " [prefix " : "",
-               src->pkg_prefix ? src->pkg_prefix : "",
-               src->pkg_prefix ? "]":"", 
-               *optstr ? " (" : "", optstr, *optstr ? ")" : "");
-    }
+    n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_name);
+    for (i=0; i<n_array_size(sources); i++)
+        source_printf(n_array_nth(sources, i));
+    n_array_sort(sources);
 }
 
 
@@ -1234,18 +1225,18 @@ static int update_idx(void)
         if (src->flags & PKGSOURCE_NOAUTOUP)
             continue;
 
-        if (src->ldmethod == PKGSET_LD_HDL) {
+        if (src->type == PKGSRCT_HDL) {
             logn(LOGWARN, _("%s: this type of source is not updateable"),
-                 src->source_path);
+                 src->path);
             return 0;
         }
 
-        pkgdir = pkgdir_new(src->source_name, src->source_path,
+        pkgdir = pkgdir_new(src->name, src->path,
                             src->pkg_prefix, PKGDIR_NEW_VERIFY);
         
         if (pkgdir == NULL) {
             if (n_array_size(args.sources) > 1)
-                logn(LOGWARN, _("%s: load failed, skipped"), src->source_path);
+                logn(LOGWARN, _("%s: load failed, skipped"), src->path);
             nerr++;
             continue;
         }
@@ -1283,13 +1274,13 @@ static int mkidx(struct pkgset *ps)
 
     src = n_array_nth(args.sources, 0);
     
-    if (strstr(src->source_path, "://")) {
+    if (strstr(src->path, "://")) {
         logn(LOGERR, _("mkidx requested for remote source without destination "
             "specified"));
         return 0;
     }
 
-    trimslash(src->source_path);
+    trimslash(src->path);
 
     if (args.idx_path != NULL) {
         idx_path = args.idx_path;
@@ -1297,12 +1288,12 @@ static int mkidx(struct pkgset *ps)
     } else {
         switch (args.idx_type) {
             case INDEXTYPE_TXTZ:
-                snprintf(path, sizeof(path), "%s/%s.gz", src->source_path, 
+                snprintf(path, sizeof(path), "%s/%s.gz", src->path, 
                          default_pkgidx_name);
                 break;
                 
             case INDEXTYPE_TXT:
-                snprintf(path, sizeof(path), "%s/%s", src->source_path, 
+                snprintf(path, sizeof(path), "%s/%s", src->path, 
                          default_pkgidx_name);
                 break;
                 
@@ -1448,7 +1439,7 @@ int verify_args(void)
             
             for (i=0; i<n_array_size(args.sources); i++) {
                 struct source *src = n_array_nth(args.sources, i);
-                src->ldmethod = PKGSET_LD_DIR;
+                src->type = PKGSRCT_DIR;
             }
             break;
 

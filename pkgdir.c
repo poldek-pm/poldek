@@ -137,7 +137,7 @@ inline static char *next_tokn(char **str, char delim, int *toklen)
     return token;
 }
 
-static char *setup_pkgprefix(const char *path) 
+char *pkgdir_setup_pkgprefix(const char *path) 
 {
     char *dn = NULL, *bn, *buf, *rpath = NULL;
     int len;
@@ -734,7 +734,7 @@ struct pkgdir *pkgdir_new(const char *name, const char *path,
     if (pkg_prefix) 
         pkgdir->path = strdup(pkg_prefix);
     else 
-        pkgdir->path = setup_pkgprefix(idx.idxpath);
+        pkgdir->path = pkgdir_setup_pkgprefix(idx.idxpath);
     
     pkgdir->idxpath = strdup(idx.idxpath);
     pkgdir->vf = idx.vf;

@@ -42,7 +42,7 @@ file (I<packages.dir.gz> by default) and performs one of the following actions:
 
 Remote files can be retrieved from remote servers by poldek
 itself or by external downloaders (not configured by default, 
-see L</CONFIG FILE> for details). 
+see L</CONFIG FILE>). 
 
 =head2 Interactive Mode
 
@@ -55,14 +55,26 @@ line, type 'help' and the rest should be self-explanatory.
 
 [to be continued...]
 
-=head1 SPECIFYING SOURCE
+=head1 PACKAGE SOURCES
 
-The source is specified by B<--source> option or B<source> parameter 
-in config file:
+Package sources may be specified in config file by B<source> parameter 
+(see L</CONFIG FILE>), or from cmdline by following options: 
 
 B<-s, --source> B<SOURCE>
 
-where SOURCE can be a local path or URL. 
+B<--sdir> B<DIR>
+
+B<--shdrl> B<SOURCE>
+
+where SOURCE is a local path or URL. With B<--source> native package
+index file is used; with B<--sdir> desired directory is scanned 
+instead of reading index file, should be used for local directories only. 
+The last one B<--shdrl> can be used for taking package information from 
+file with raw package RPM headers (aka hdlist). 
+
+Type of the source can be set by B<type> source option also, 
+see L</CONFIG FILE>. 
+
 
 Examples:
 
@@ -74,7 +86,11 @@ Examples:
 
 =item $ poldek -s ftp://ftp.ala.ma.kota/RPMS
 
+=item $ poldek --sdir=/ala/RPMS
+
 =item $ poldek -s rsync://rsync.ala-ma-kota.com/RPMS/
+
+=item $ poldek --shdrl=http://ziut/base/hdlist
 
 =back
 
@@ -90,7 +106,24 @@ $ poldek -s /tmp/packages.dir.gz --prefix=/cdrom/RPMS/ -s ... --prefix=...
 If source is configured with the name (see L</CONFIG FILE>) then it 
 could be specified by B<-n, --sn> B<SOURCE-NAME>, e.g:
 
-$ poldek --sn pld-dist ...
+$ poldek --sn pld ...
+
+
+To list all configured sources use B<-l, --sl> option: e.g:
+
+$ poldek -l
+=over
+
+=item nest         ftp://ftp.pld.org.pl/dists/nest/PLD/i686/PLD/RPMS/  (noauto)
+
+=item nest-test    ftp://ftp.pld.org.pl/dists/nest/test/i686/  (noauto)
+
+=item pld          ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
+
+=item pld-test     ftp://ftp.pld.org.pl/dists/ra/test/i686/  (noauto)
+
+=back
+
 
 =head1 SPECIFYING PACKAGES
 
@@ -368,16 +401,40 @@ B<OPTIONS> describes source options; possible values are:
 
 =item * B<pgp> - verifiy package PGP signatures
 
+=item * B<type=SOURCE_TYPE>
+
+Source type may be set by this option. Possible values are:
+
+=over 2
+
+=item * B<pidx> - native poldek's index file (the default)
+
+=item * B<pdir> - for local directories, with it poldek
+                  scans entire directory instead of reading index file.
+ 
+=item * B<hdrl> - file with raw package headers in RPM format;
+ available in many RPM-based distributions (named hdlist in RH), however 
+ this format isn't optimal for poldek. See poldekrc.sample-redhat-hdlist 
+ included in poldek distribution.
+
+=back 	
+
 =back
 
 Examples:
 
 source = pld,gpg,noautoup       ftp://zn/PLD/ra/RPMS
 
-source = pld-test,noauto       /mnt/PLD-test/RPMS
+source = pld-test,noauto        /mnt/PLD-test/RPMS
 
-source = rare,noautoup         ftp://host/rare-RPMS
+source = rare,noautoup          ftp://host/rare-RPMS
 
+source = build-area,type=dir    /home/zenek/rpm/RPMS 
+
+
+source99 = rh,noauto,type=hdrl  ftp://redhat/os/i386/RedHat/base/hdlist
+
+prefix99 = ftp://redhat/os/i386/RedHat/RPMS
 
 =item * B<sourceXX> = SOURCE
 

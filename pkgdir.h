@@ -170,6 +170,8 @@ extern const char *pdir_tag_endhdr;
 extern const char *pdir_tag_endvarhdr;
 
 
+char *pkgdir_setup_pkgprefix(const char *path);
+
 #endif /* PKGDIR_INTERNAL */
 
 #endif /* POLDEK_PKGDIR_H*/
