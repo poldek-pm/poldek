@@ -112,6 +112,8 @@ static void arg_s_free(void *a)
     free(arg_s);
 }
 
+extern int poclidek_op_source_nodesc;
+
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
@@ -150,6 +152,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
         case OPT_NODESC:
             arg_s->crflags |= PKGDIR_CREAT_NODESC;
+            /* hack, no way to pass option between argps (?)*/
+            poclidek_op_source_nodesc = 1;
             break;
 
         case OPT_NODIFF:
@@ -268,7 +272,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
     
     arg_s = rt->_opdata;
     n_assert(arg_s);
-    
+
     if (arg_s->cnflags & DO_MAKEIDX) {
         rc = make_idx(arg_s); 
         rc = rc ? OPGROUP_RC_FINI : OPGROUP_RC_ERROR;

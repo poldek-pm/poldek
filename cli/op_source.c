@@ -117,6 +117,9 @@ static struct argp_option source_options[] = {
 #define POLDEKCLI_SRC_CLEAN        (1 << 5)
 #define POLDEKCLI_SRC_CLEANA       (1 << 6)
 
+
+int poclidek_op_source_nodesc = 0;
+
 struct arg_s {
     unsigned            cnflags;
     struct poldek_ctx   *ctx;
@@ -188,8 +191,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     char *source_type = NULL;
     int source_type_isset = 0;
 
-    
-    
     rt = state->input;
     if (rt->_opdata) {
         arg_s = rt->_opdata;
@@ -391,6 +392,15 @@ static int oprun(struct poclidek_opgroup_rt *rt)
 
     sources = poldek_get_sources(rt->ctx);
 
+    if (sources && poclidek_op_source_nodesc) {
+        int i;
+        for (i=0; i < n_array_size(sources); i++) {
+            struct source *src = n_array_nth(sources, i);
+            src->flags |= PKGSOURCE_NODESC;
+        }
+    }
+    poclidek_op_source_nodesc = 0;
+    
     if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN) {
         unsigned flags = PKGSOURCE_CLEAN;
         if (arg_s->cnflags & POLDEKCLI_SRC_CLEANA)
