@@ -455,14 +455,30 @@ void message_depmark(int indent, const struct pkg *marker,
           reqstr, capreq_snprintf_s(marker_req));
 }
 
+static
+int marked_for_removal(struct pkg *pkg, const struct capreq *req,
+                       struct upgrade_s *upg)
+{
+    const struct pkg *ppkg;
+    int rc;
+
+    if (pkg_is_rm_marked(pkg))
+        return 1;
+    
+    rc =  ((ppkg = dbpkg_set_provides(upg->uninst_set, req)) &&
+           pkg_cmp_name_evr(ppkg, pkg) == 0);
+    
+    if (rc)
+        pkg_rm_mark(pkg);
+    
+    return rc;
+}
 
 static
 int dep_mark_package(struct pkg *pkg,
                      struct pkg *bypkg, struct capreq *byreq,
                      struct upgrade_s *upg)
 {
-    const struct pkg *ppkg;
-
     if (pkg_has_badreqs(pkg)) {
         logn(LOGERR, _("%s: skip follow %s cause it's dependency errors"),
              pkg_snprintf_s(bypkg), pkg_snprintf_s0(pkg));
@@ -472,10 +488,7 @@ int dep_mark_package(struct pkg *pkg,
         return 0;
     }
 
-
-    if ((ppkg = dbpkg_set_provides(upg->uninst_set, byreq)) &&
-        pkg_cmp_name_evr(ppkg, pkg) == 0) {
-        
+    if (marked_for_removal(pkg, byreq, upg)) {
         logn(LOGERR, _("%s: dependency loop - "
                        "package already marked for removal"), pkg_snprintf_s(pkg));
         upg->nerr_fatal++; 
@@ -569,7 +582,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     struct db_dep *db_dep;
     struct capreq *req;
 
-    DBGF_NULL("%s: %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(cap));
+    //printf("VUN %s: %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(cap));
     if ((db_dep = db_deps_has(upg->db_deps, cap)) == NULL) {
         //       printf("  [1] -> NO in db_deps\n");
         return 1;
@@ -590,10 +603,14 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
         return 1;
     }
     	
+    
+    if (db_dep->spkg && !marked_for_removal(db_dep->spkg, req, upg) && 0) {
+        struct pkg *marker;
 
-    if (db_dep->spkg) {
-        message_depmark(indent, pkg, db_dep->spkg, req, PROCESS_AS_ORPHAN);
-        if (!dep_mark_package(db_dep->spkg, pkg, req, upg))
+        n_assert(n_array_size(db_dep->pkgs));
+        marker = n_array_nth(db_dep->pkgs, 0);
+        message_depmark(indent, marker, db_dep->spkg, req, PROCESS_AS_ORPHAN);
+        if (!dep_mark_package(db_dep->spkg, marker, req, upg))
             return 0;
         return process_pkg_deps(indent, db_dep->spkg, ps, upg, PROCESS_AS_NEW);
     }
@@ -601,15 +618,19 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     if (db_dep->flags & PROCESS_AS_NEW) {
         int i, n;
         char errmsg[4096];
-        n = snprintf(errmsg, sizeof(errmsg), _("%s is required by %s"),
-                     capreq_snprintf_s(req), 
-                     pkg_snprintf_s(n_array_nth(db_dep->pkgs, 0)));
+        n = snprintf(errmsg, sizeof(errmsg), _("%s is required by"), 
+                     capreq_snprintf_s(req));
         
-        for (i=1; i < n_array_size(db_dep->pkgs); i++)
-            n += snprintf(errmsg, sizeof(errmsg) - n, ", %s",
-                          pkg_snprintf_s(n_array_nth(db_dep->pkgs, i)));
+        for (i=0; i < n_array_size(db_dep->pkgs); i++) {
+            struct pkg *p = n_array_nth(db_dep->pkgs, i);
+        
+            snprintf(&errmsg[n], sizeof(errmsg) - n, "%s %s",
+                     pkg_is_installed(p) ? "" : " already marked", 
+                     pkg_snprintf_s(p));
             
-        logn(LOGERR, "%s", errmsg);
+            logn(LOGERR, "%s", errmsg);
+        }
+        
         pkg_set_badreqs(pkg);
         upg->nerr_dep++;
             
@@ -676,7 +697,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
         if ((dbpkg->flags & DBPKG_TOUCHED) == 0) {
             msgn_i(1, indent, _("%s obsoleted by %s"), dbpkg_snprintf_s(dbpkg),
                   pkg_snprintf_s(pkg));
-            pkg_mark_obsoleted(dbpkg->pkg);
+            pkg_rm_mark(dbpkg->pkg);
             db_deps_remove_pkg(upg->db_deps, dbpkg->pkg);
             dbpkg->flags |= DBPKG_TOUCHED;
 
@@ -830,8 +851,16 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                                    upg->uninst_set->dbpkgs)) {
             msg_i(3, indent, "%s: satisfied by db\n", capreq_snprintf_s(req));
             db_deps_add(upg->db_deps, req, pkg, tomark, process_as | DBDEP_DBSATISFIED);
-                    
+            
+        } else if (tomark && marked_for_removal(tomark, req, upg)) {
+            logn(LOGERR, _("%s (cap %s) is required by %s%s"),
+                 pkg_snprintf_s(tomark), capreq_snprintf_s(req),
+                 pkg_is_installed(pkg) ? "" : " already marked", 
+                 pkg_snprintf_s0(pkg));
+            
         } else if (tomark && (upg->inst->flags & INSTS_FOLLOW)) {
+            
+            //printf("DEPM %s\n", pkg_snprintf_s0(tomark));
             message_depmark(indent, pkg, tomark, req, process_as);
             if (dep_mark_package(tomark, pkg, req, upg)) 
                 process_pkg_deps(indent, tomark, ps, upg, PROCESS_AS_NEW);
@@ -901,7 +930,7 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
 
     DBGF("PROCESSING [%d] %s as %s\n", indent, pkg_snprintf_s(pkg),
          process_as == PROCESS_AS_NEW ? "NEW" : "ORPHAN");
-    msg_i(3, indent, "Checking%s%s dependencies...\n",
+    msg_i(1, indent, "Checking%s%s dependencies...\n",
           process_as == PROCESS_AS_ORPHAN ? " orphaned ":" ",
           pkg_snprintf_s(pkg));
 
@@ -1391,7 +1420,7 @@ static void show_pkg_list(const char *prefix, tn_array *pkgs, unsigned flags)
         if (--npkgs == 0)
             colon = "";
             
-        msg(1, "%s%s", p, colon);
+        msg(1, "_%s%s", p, colon);
         ncol += strlen(p) + strlen(colon);
     }
     if (hdr_printed)
@@ -1424,7 +1453,7 @@ static void show_dbpkg_list(const char *prefix, tn_array *dbpkgs)
         if (--npkgs == 0)
             colon = "";
             
-        msg(1, "%s%s", p, colon);
+        msg(1, "_%s%s", p, colon);
         ncol += strlen(p) + strlen(colon);
     }
     msg(1, "_\n");
@@ -1881,7 +1910,9 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
             continue;
 
         if (inst->instflags & INSTS_PARTITIONED) {
-            printf_c(PRCOLOR_YELLOW, "Installing set #%d\n", n++);
+            printf_c(PRCOLOR_YELLOW, "Installing set #%d\n", n);
+            msgn_f(0, "** Installing set #%d\n", n);
+            n++;
             pkgdb_reopendb(upg.inst->db);
         }
         

@@ -16,6 +16,7 @@ struct dbpkg *dbpkg_new(uint32_t recno, Header h, unsigned ldflags)
     dbpkg = malloc(sizeof(*dbpkg));
     dbpkg->recno = recno;
     dbpkg->pkg = pkg_ldhdr(h, "db", 0, ldflags);
+    dbpkg->pkg->flags |= PKG_DBPKG;
     dbpkg->flags = 0;
     pkg_add_selfcap(dbpkg->pkg);
     return dbpkg;

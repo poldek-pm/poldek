@@ -20,17 +20,19 @@
 
 #define PKG_HAS_SELFCAP     (1 << 6)
 
-#define PKG_DIRMARK         (1 << 8) /* marked directly, i.e. by the user*/
-#define PKG_INDIRMARK       (1 << 9) /* marked by poldek */
+#define PKG_DIRMARK         (1 << 8)  /* marked directly, i.e. by the user*/
+#define PKG_INDIRMARK       (1 << 9)  /* marked by deps */
 
 #define PKG_BADREQS         (1 << 10) /* has unsatisfied dependencies? */
 
-#define PKG_OBSOLETED       (1 << 11)
+#define PKG_RM_MARK         (1 << 11) /* marked for removal */
 
 #define PKG_HOLD            (1 << 12) /* non upgradable */
 
 #define PKG_ORDER_PREREQ    (1 << 13) /* see pkgset-order.c */
 
+
+#define PKG_DBPKG           (1 << 14) /* loaded from database, i.e. installed */
 
 /* DAG node colours */
 #define PKG_COLOR_WHITE    (1 << 20)
@@ -39,6 +41,8 @@
 #define PKG_ALL_COLORS     PKG_COLOR_WHITE | PKG_COLOR_GRAY | PKG_COLOR_BLACK
 
 #define PKG_INTERNALMARK    (1 << 23)
+
+
 
 /* colours */
 #define pkg_set_color(pkg, color) \
@@ -56,6 +60,7 @@
 #define pkg_hand_mark(pkg)  ((pkg)->flags |= PKG_DIRMARK)
 #define pkg_dep_mark(pkg)   ((pkg)->flags |= PKG_INDIRMARK)
 #define pkg_unmark(pkg)     ((pkg)->flags &= ~(PKG_DIRMARK | PKG_INDIRMARK))
+
 #define pkg_is_dep_marked(pkg)  ((pkg)->flags & PKG_INDIRMARK)
 #define pkg_is_hand_marked(pkg) ((pkg)->flags & PKG_DIRMARK)
 #define pkg_is_marked(pkg)      ((pkg)->flags & (PKG_DIRMARK | PKG_INDIRMARK))
@@ -72,8 +77,9 @@
 #define pkg_upgrade(pkg)      ((pkg)->flags & PKG_UPGRADE)
 #define pkg_mark_upgrade(pkg) ((pkg)->flags |= PKG_UPGRADE)
 
-#define pkg_mark_obsoleted(pkg) ((pkg)->flags |= PKG_OBSOLETED)
-#define pkg_is_obsoleted(pkg) ((pkg)->flags & PKG_OBSOLETED)
+#define pkg_rm_mark(pkg)      ((pkg)->flags |= PKG_RM_MARK)
+#define pkg_is_rm_marked(pkg) ((pkg)->flags & PKG_RM_MARK)
+#define pkg_rm_unmark(pkg)    ((pkg)->flags &= ~(PKG_RM_MARK))
 
 #define pkg_mark_hold(pkg) ((pkg)->flags |= PKG_HOLD)
 #define pkg_is_hold(pkg) ((pkg)->flags & PKG_HOLD)
@@ -82,6 +88,7 @@
 #define pkg_set_ldpkguinf(pkg) ((pkg)->flags |= PKG_HAS_PKGUINF)
 #define pkg_clr_ldpkguinf(pkg) ((pkg)->flags &= (~PKG_HAS_PKGUINF))
 
+#define pkg_is_installed(pkg)  ((pkg)->flags & PKG_DBPKG)
 
 struct pkg {
     uint32_t     flags;
