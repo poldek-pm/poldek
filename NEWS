@@ -1,3 +1,6 @@
+0.15.4:
+* conflicts detection bugfix 
+
 0.15.3:
 * another bugfix of dependency processing
 * splitted verify option to verify, verify-conflicts and verify-fileconflicts
