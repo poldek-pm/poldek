@@ -69,7 +69,8 @@ static char args_doc[] = "[PACKAGE...]";
 struct args {
     int       mjrmode;
 
-    char      *curr_pkg_prefix;
+    char      *curr_src_path;
+    int       curr_src_ldmethod;
     tn_array  *sources;
     
     int       idx_type;
@@ -267,6 +268,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct args *argsp = state->input;
     struct source *src = NULL;
+    int ldmethod = PKGSET_LD_NIL;
+
     
     if (arg)
         chkarg(key, arg);
@@ -299,33 +302,37 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             n_array_push(argsp->pkgdef_sets, arg);
             break;
             
-        case 's':
-            src = source_new(arg, argsp->curr_pkg_prefix);
-            n_array_push(argsp->sources, src);
-            argsp->curr_pkg_prefix = NULL;
-            break;
+        case OPT_SOURCETXT:     /* no break */
+            ldmethod = PKGSET_LD_IDX;
             
-        case OPT_SOURCEDIR:
-            src = source_new(arg, argsp->curr_pkg_prefix);
-            src->ldmethod = PKGSET_LD_DIR;
-            n_array_push(argsp->sources, src);
-            argsp->curr_pkg_prefix = NULL;
-            break;
-
-        case OPT_SOURCETXT:
-            src = source_new(arg, argsp->curr_pkg_prefix);
-            src->ldmethod = PKGSET_LD_IDX;
-            n_array_push(argsp->sources, src);
-            argsp->curr_pkg_prefix = NULL;
+        case OPT_SOURCEDIR:     /* no break */
+            if (ldmethod != PKGSET_LD_NIL)
+                ldmethod = PKGSET_LD_DIR;
+            
+            
+        case 's':
+            if (argsp->curr_src_path) { /* no prefix for curr_src_path */
+                src = source_new(argsp->curr_src_path, NULL);
+                //printf("new src %s\n", arg);
+                src->ldmethod = argsp->curr_src_ldmethod;
+                n_array_push(argsp->sources, src);
+            }
+            
+            argsp->curr_src_path = arg;
+            argsp->curr_src_ldmethod = ldmethod;
             break;
 
         case 'P':
-            if (argsp->curr_pkg_prefix) {
-                log(LOGERR, "prefix should be followed by -s\n");
+            if (argsp->curr_src_path == NULL) {
+                log(LOGERR, "prefix option should be preceded by source one\n");
                 exit(EXIT_FAILURE);
             }
-            
-            argsp->curr_pkg_prefix = trimslash(arg);
+            //printf("new src %s prefix %s\n", argsp->curr_src_path, arg);
+            src = source_new(argsp->curr_src_path, trimslash(arg));
+            src->ldmethod = argsp->curr_src_ldmethod;
+            n_array_push(argsp->sources, src);
+            argsp->curr_src_path = NULL;
+            argsp->curr_src_ldmethod = PKGSET_LD_NIL;
             break;
 
         case OPT_SOURCEUP:
@@ -545,7 +552,8 @@ void parse_options(int argc, char **argv)
     
     memset(&args, 0, sizeof(args));
     args.sources = n_array_new(4, (tn_fn_free)source_free, (tn_fn_cmp)source_cmp);
-    args.curr_pkg_prefix = NULL;
+    args.curr_src_path = NULL;
+    args.curr_src_ldmethod = PKGSET_LD_NIL;
     args.idx_path = NULL;
     args.fetchdir = NULL;
     args.install_root = NULL;
