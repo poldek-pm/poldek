@@ -22,9 +22,7 @@
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
-#include "pkgset.h"
 #include "misc.h"
-#include "install.h"
 #include "shell.h"
 
 
@@ -227,8 +225,9 @@ static int install(struct cmdarg *cmdarg)
         iinf.uninstalled_pkgs = pkgs_array_new(16);
     }
     
-    rc = install_pkgs(cmdarg->sh_s->pkgset, cmdarg->sh_s->inst,
-                      iinf.installed_pkgs ? &iinf : NULL);
+    //rc = install_pkgs(cmdarg->sh_s->pkgset, cmdarg->sh_s->inst,
+    //                  iinf.installed_pkgs ? &iinf : NULL);
+    logn(LOGERR, "NFY");
     
     if (rc == 0) 
         msgn(1, _("There were errors"));

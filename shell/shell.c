@@ -39,7 +39,7 @@
 #include "pkg.h"
 #include "pkgset.h"
 #include "pkgdb.h"
-#include "install.h"
+//#include "install.h"
 #include "misc.h"
 //#include "rpm.h"
 #include "log.h"
@@ -846,9 +846,10 @@ static char *mkrpmdb_path(char *path, size_t size, const char *root,
 
 static struct pkgdir *load_installed_pkgdir(int reload) 
 {
-    char rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX];
-    struct pkgdir *dir = NULL;
-    int ldflags = 0;
+    char            rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX];
+    const char      *lc_lang;
+    struct pkgdir   *dir = NULL;
+    int             ldflags = 0;
 
     
     if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path), shell_s.inst->rootdir,
@@ -859,19 +860,22 @@ static struct pkgdir *load_installed_pkgdir(int reload)
     if (mkdbcache_path(dbcache_path, sizeof(dbcache_path),
                        shell_s.inst->cachedir, rpmdb_path) == NULL)
         return NULL;
-    
+
+    lc_lang = lc_messages_lang();
+    if (lc_lang == NULL) 
+        lc_lang = "C";
     
     if (!reload) {              /* use cache */
         time_t mtime_rpmdb, mtime_dbcache;
         mtime_dbcache = mtime(dbcache_path);
         mtime_rpmdb = rpm_dbmtime(rpmdb_path);
         if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache)
-            dir = pkgdir_open_ext(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE, "rpmdb", 0,
-                                  lc_messages_lang());
+            dir = pkgdir_open_ext(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE,
+                                  "rpmdb", 0, lc_lang);
     }
     
     if (dir == NULL)
-        dir = pkgdir_open(rpmdb_path, NULL, "rpmdb", "rpmdb");
+        dir = pkgdir_open_ext(rpmdb_path, NULL, "rpmdb", "rpmdb", 0, lc_lang);
     
     
     if (dir != NULL) {
