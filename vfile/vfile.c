@@ -438,7 +438,7 @@ static int is_uptodate(const char *mdpath, int urltype)
     
     if (access(tmpdir, R_OK) == 0) /* unlink old *.md */
         if (unlink(tmpdir) != 0) {
-            vfile_err_fn("%s: unlink: %m\n");
+            vfile_err_fn("%s: %m\n", tmpdir);
             return -1;
         }
 
