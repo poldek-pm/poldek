@@ -48,10 +48,12 @@
 static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 
+static char *aliases[] = { "rpmdir", NULL };
+
 struct pkgdir_module pkgdir_module_dir = {
     PKGDIR_CAP_NOPREFIX, 
     "dir",
-    NULL,
+    (char **)aliases,
     "dynamic index build by scanning directory for packages",
     NULL,
     NULL,
