@@ -134,7 +134,7 @@ struct vflock *vf_lockdir(const char *path)
 
     vf_url_as_dirpath(lockfile, sizeof(lockfile), path);
     n = n_snprintf(lockpath, sizeof(lockpath), "%s/.vflock_%s", path, lockfile);
-    n_assert(n > 10 && n < sizeof(lockpath) - 5);
+    n_assert(n > 10 && n < (int)sizeof(lockpath) - 5);
     if (!(fd = vf_lock_obtain(lockpath))) {
         vf_loginfo(_("Unable to obtain lock %s...\n"), lockpath);
         return NULL;
