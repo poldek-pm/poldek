@@ -106,7 +106,7 @@ tn_array *read_patterns(const char *fpath, tn_array *patterns, unsigned type)
 static int pkg_cmp_ignored_(struct pkg *pkg, void *dummy) 
 {
     dummy = dummy;
-    if (pkg->flags & PKG_IGNORED)
+    if (pkg_is_scored(pkg, PKG_IGNORED))
         return 0;
     
     return 1;
