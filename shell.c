@@ -112,6 +112,22 @@ static struct argp_option options_uninstall[] = {
 };
 
 
+/* get */
+static int cmd_get(int argc, const char **argv, struct argp*);
+static error_t parse_get_opt(int key, char *arg, struct argp_state *state);
+
+
+#define OPT_GET_VERBOSE      (1 << 0) /* cmd_state->flags */
+#define OPT_GET_DIR          (1 << 1) /* cmd_state->flags */
+
+static struct argp_option options_get[] = {
+ { 0, 'v', 0, 0, "Be verbose", 1},
+ { "dir", 'd', "DIR", 0, "Download to directory DIR instead to current one", 1},
+ { 0, 0, 0, 0, 0, 0 },
+};
+
+
+
 static int cmd_reload(int argc, const char **argv, struct argp*);
 
 
@@ -131,6 +147,7 @@ struct command {
 #define CMD_UNINSTALL  4
 #define CMD_STAT       5
 #define CMD_RELOAD     6
+#define CMD_GET        6
 
 #define CMD_QUIT       20
 #define CMD_HELP       21
@@ -159,6 +176,9 @@ struct command commands_tab[] = {
 
 { CMD_RELOAD, "reload", NULL, NULL, NULL, cmd_reload,
       "Reload installed package list"},
+
+{ CMD_GET, "get", "PACKAGE...", options_get, parse_get_opt, cmd_get,
+      "Just download given package list"},
     
 { CMD_QUIT, "quit", NULL, NULL, NULL, cmd_quit, "Quit poldek"},
 { CMD_HELP, "help", NULL, NULL, NULL, cmd_help, "Display this help"},
@@ -733,11 +753,6 @@ error_t parse_install_opt(int key, char *arg, struct argp_state *state)
             /*argsp->psflags |= PSVERIFY_MERCY;*/
             break;
 
-        case OPT_INST_FETCH:
-            shell_s.inst->flags |= INSTS_JUSTFETCH;
-            shell_s.inst->fetchdir = trimslash(arg);
-            break;
-
         case OPT_INST_NODEPS:
             shell_s.inst->instflags  |= PKGINST_NODEPS;
             break;
@@ -890,7 +905,7 @@ static int cmd_uninstall(int argc, const char **argv, struct argp *argp)
     tn_array *shpkgs = NULL;
     int i, err = 0;
     tn_array *pkgnevrs;
-
+    
     shell_s.inst->flags = shell_s.inst_flags_orig;
     shell_s.inst->instflags = 0;
     cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
@@ -929,6 +944,101 @@ static int cmd_uninstall(int argc, const char **argv, struct argp *argp)
         err = 1;
     
  l_end:
+    return err == 0;
+}
+
+
+/*----------------------------------------------------------------------*/
+/* get                                                                   */
+/*----------------------------------------------------------------------*/
+static
+error_t parse_get_opt(int key, char *arg, struct argp_state *state)
+{
+    struct cmd_state *cmdst = state->input;
+    
+/*    if (arg)
+      chkarg(key, arg);*/
+    
+    switch (key) {
+        case 'd':
+            shell_s.inst->fetchdir = trimslash(arg);
+            break;
+
+        case 'v':
+            verbose = 1;
+            break;
+
+        case ARGP_KEY_ARG:
+            n_array_push(cmdst->pkgnames, strdup(arg));
+
+        case ARGP_KEY_END:
+            //argp_usage (state);
+            break;
+            
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+    
+    return 0;
+}
+
+
+static int cmd_get(int argc, const char **argv, struct argp *argp)
+{
+    struct cmd_state cmdst = { 0, NULL};
+    tn_array *shpkgs = NULL, *av_shpkgs, *pkgs;
+    char destdir[PATH_MAX], *destdirp;
+    int i, err = 0;
+    
+    
+    if (argv == NULL)
+        return 0;
+
+    shell_s.inst->flags = shell_s.inst_flags_orig | INSTS_JUSTFETCH;
+    shell_s.inst->instflags = 0;
+    shell_s.inst->fetchdir = NULL;
+    
+    cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
+    argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, (void*)&cmdst);
+
+    av_shpkgs = shell_s.avpkgs;
+    
+    if (n_array_size(cmdst.pkgnames)) 
+        resolve_packages(cmdst.pkgnames, av_shpkgs, &shpkgs);
+    else 
+        return 0;
+
+    if (shpkgs == NULL || n_array_size(shpkgs) == 0)
+        return 0;
+    
+   /* build array if struct pkg */
+    pkgs = n_array_new(n_array_size(shpkgs), NULL, NULL);
+    for (i=0; i<n_array_size(shpkgs); i++) {
+        struct shell_pkg *shpkg = n_array_nth(shpkgs, i);
+        n_array_push(pkgs, shpkg->pkg);
+    }
+
+
+    if (shell_s.inst->fetchdir != NULL) {
+        destdirp = (char*)shell_s.inst->fetchdir;
+        
+    } else {
+        if (getcwd(destdir, sizeof(destdir)) == NULL) {
+            log(LOGERR, "getcwd: %m\n");
+            err = 1;
+            goto l_end;
+        }
+        destdirp = destdir;
+    }
+    
+    if (!pkgset_fetch_pkgs(shell_s.pkgset, destdirp, pkgs))
+        err++;
+    
+ l_end:
+    if (pkgs)
+        n_array_free(pkgs);
+
+    shell_s.inst->fetchdir = NULL;
     return err == 0;
 }
 
