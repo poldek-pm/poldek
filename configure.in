@@ -58,10 +58,15 @@ ENABLE_STATIC=$enableval, ENABLE_STATIC=no)
 
 if test "${ENABLE_STATIC}." = "yes."; then
 	poldek_LDFLAGS="-static"
+	LIBS="$LIBS -ldb1"
+
 	if test "${INTERACTIVE_MODE}." = "yes."; then
 		LIBS="$LIBS -lncurses -ltinfo"
 	fi
-	LIBS="$LIBS -ldb1"
+
+	if test "${ENABLE_VFILE_CURL}." = "yes."; then 
+		LIBS="$LIBS $(curl-config --libs)"
+	fi
 fi
 
 AC_SUBST(poldek_LDFLAGS)
