@@ -11,34 +11,38 @@
 #define POLDEK_TS_DOWNGRADE       (1 << 3) /* rpm -U --oldpackage */
 #define POLDEK_TS_REINSTALL       (1 << 4) /* rpm -U --replacefiles --replacepkgs */
 #define POLDEK_TS_UNINSTALL       (1 << 5) /* rpm -e */
-#define POLDEK_TS_NODEPS          (1 << 6) /* rpm --nodeps */
-#define POLDEK_TS_FORCE           (1 << 7) /* rpm --force  */
-#define POLDEK_TS_IGNOREARCH      (1 << 8) /* rpm --ignorearch */
-#define POLDEK_TS_IGNOREOS        (1 << 9) /* rpm --ignoreos   */
-#define POLDEK_TS_TEST            (1 << 10) /* poldek test mode, not rpm one */
-#define POLDEK_TS_RPMTEST         (1 << 11) /* rpm --test */
-#define POLDEK_TS_JUSTDB          (1 << 12) /* rpm --justdb */
-#define POLDEK_TS_JUSTFETCH       (1 << 13)
-#define POLDEK_TS_JUSTPRINT       (1 << 14)
-#define POLDEK_TS_JUSTPRINT_N     (1 << 15) /* names, not filenames */
+
+#define POLDEK_TS_VRFYMERCY       (1 << 6)  /* --mercy */
+#define POLDEK_TS_PROMOTEPOCH     (1 << 7)  /* --promoteepoch */
+#define POLDEK_TS_FOLLOW          (1 << 8)  /* !--nofollow */
+#define POLDEK_TS_FRESHEN         (1 << 9)  /* --freshen */
+#define POLDEK_TS_GREEDY          (1 << 10)  /* --greedy */
+#define POLDEK_TS_OBSOLETES       POLDEK_TS_GREEDY  /* the same */
+#define POLDEK_TS_NODEPS          (1 << 11) /* rpm --nodeps */
+#define POLDEK_TS_FORCE           (1 << 12) /* rpm --force  */
+#define POLDEK_TS_IGNOREARCH      (1 << 13) /* rpm --ignorearch */
+#define POLDEK_TS_IGNOREOS        (1 << 14) /* rpm --ignoreos   */
+
+#define POLDEK_TS_TEST            (1 << 16) /* poldek test mode, not rpm one */
+#define POLDEK_TS_RPMTEST         (1 << 17) /* rpm --test */
+#define POLDEK_TS_JUSTDB          (1 << 18) /* rpm --justdb */
+#define POLDEK_TS_JUSTFETCH       (1 << 19)
+#define POLDEK_TS_JUSTPRINT       (1 << 20)
+#define POLDEK_TS_JUSTPRINT_N     (1 << 21) /* names, not filenames */
 
 #define POLDEK_TS_JUSTPRINTS      (POLDEK_TS_JUSTPRINT | POLDEK_TS_JUSTPRINT_N)
 
+#define POLDEK_TS_MKDBDIR         (1 << 22)  /* --mkdir */
+#define POLDEK_TS_USESUDO         (1 << 23)  /* use_sudo = yes  */
+#define POLDEK_TS_NOHOLD          (1 << 24)  /* --nohold  */
+#define POLDEK_TS_NOIGNORE        (1 << 25)  /* --noignore  */
+#define POLDEK_TS_PARTICLE        (1 << 26) /* particle_install = yes */
 
-#define POLDEK_TS_MKDBDIR         (1 << 16)  /* --mkdir */
-#define POLDEK_TS_FOLLOW          (1 << 17)  /* !--nofollow */
-#define POLDEK_TS_FRESHEN         (1 << 18)  /* --freshen */
-#define POLDEK_TS_USESUDO         (1 << 19)  /* use_sudo = yes  */
-#define POLDEK_TS_NOHOLD          (1 << 20)  /* --nohold  */
-#define POLDEK_TS_NOIGNORE        (1 << 21)  /* --noignore  */
-#define POLDEK_TS_GREEDY          (1 << 22)  /* --greedy */
-#define POLDEK_TS_OBSOLETES       (1 << 23)  /* the same */
-#define POLDEK_TS_KEEP_DOWNLOADS  (1 << 24) /* keep_downloads = yes */
-#define POLDEK_TS_PARTICLE        (1 << 25) /* particle_install = yes */
-#define POLDEK_TS_CHECKSIG        (1 << 26) /* not implemented yet */
-#define POLDEK_TS_CONFIRM_INST    (1 << 27) /* confirm_installation = yes  */
-#define POLDEK_TS_CONFIRM_UNINST  (1 << 28) /* confirm_removal = yes  */
-#define POLDEK_TS_EQPKG_ASKUSER   (1 << 29) /* choose_equivalents_manually = yes */
+#define POLDEK_TS_KEEP_DOWNLOADS  (1 << 27) /* keep_downloads = yes */
+#define POLDEK_TS_CHECKSIG        (1 << 28) /* not implemented yet */
+#define POLDEK_TS_CONFIRM_INST    (1 << 29) /* confirm_installation = yes  */
+#define POLDEK_TS_CONFIRM_UNINST  (1 << 30) /* confirm_removal = yes  */
+#define POLDEK_TS_EQPKG_ASKUSER   (1 << 31) /* choose_equivalents_manually = yes */
 
 #define POLDEK_TS_INTERACTIVE_ON  (POLDEK_TS_CONFIRM_INST  | \
                                    POLDEK_TS_EQPKG_ASKUSER | \
