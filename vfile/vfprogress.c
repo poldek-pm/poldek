@@ -112,7 +112,7 @@ void vf_progress(long total, long amount, void *data)
     if (bar->state == VF_PROGRESS_VIRGIN) {
         if (total > 0) {
             if (total == amount ||   /* downloaded before progress() call */
-                total < 1024) {       /* too small to show to */
+                total < 2048) {       /* too small to show to */
                 bar->state = VF_PROGRESS_DISABLED;
                 return;
             }
