@@ -599,8 +599,17 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     }
     
     if (db_dep->flags & PROCESS_AS_NEW) {
-        logn(LOGERR, _("%s: req %s not found"), pkg_snprintf_s(pkg),
-            capreq_snprintf_s(req));
+        int i, n;
+        char errmsg[4096];
+        n = snprintf(errmsg, sizeof(errmsg), _("%s is required by %s"),
+                     capreq_snprintf_s(req), 
+                     pkg_snprintf_s(n_array_nth(db_dep->pkgs, 0)));
+        
+        for (i=1; i < n_array_size(db_dep->pkgs); i++)
+            n += snprintf(errmsg, sizeof(errmsg) - n, ", %s",
+                          pkg_snprintf_s(n_array_nth(db_dep->pkgs, i)));
+            
+        logn(LOGERR, "%s", errmsg);
         pkg_set_badreqs(pkg);
         upg->nerr_dep++;
             
@@ -1009,7 +1018,7 @@ int is_file_conflict(const struct pkg *pkg,
             S_ISDIR(flfile->mode) ? "/" : "", dbpkg_snprintf_s(dbpkg));
             
     } else if (verbose > 1) {
-        msg(2, "/%s/%s%s: shared between %s and %s\n",
+        msg(3, "/%s/%s%s: shared between %s and %s\n",
             dirname, flfile->basename,
             S_ISDIR(flfile->mode) ? "/" : "",
             pkg_snprintf_s(pkg), dbpkg_snprintf_s(dbpkg));
@@ -1344,6 +1353,84 @@ static int valid_arch_os(tn_array *pkgs)
 }
 
 
+static void show_pkg_list(const char *prefix, tn_array *pkgs, unsigned flags)
+{
+    int   i, ncol = 2, npkgs = 0;
+    int   term_width;
+    char  *p, *colon = ", ";
+    int   hdr_printed = 0;
+
+    term_width = term_get_width() - 5;
+    ncol = strlen(prefix) + 1;
+    
+    npkgs =  n_array_size(pkgs);
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        
+        if (flags && (pkg->flags & flags) == 0)
+            npkgs--;
+    }
+        
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+
+        if (flags && (pkg->flags & flags) == 0)
+            continue;
+
+        if (hdr_printed == 0) {
+            msg(1, "%s ", prefix);
+            hdr_printed = 1;
+        }
+            	
+        p = pkg_snprintf_s(pkg);
+        if (ncol + (int)strlen(p) >= term_width) {
+            ncol = 3;
+            msg(1, "_\n%s ", prefix);
+        }
+        
+        if (--npkgs == 0)
+            colon = "";
+            
+        msg(1, "%s%s", p, colon);
+        ncol += strlen(p) + strlen(colon);
+    }
+    if (hdr_printed)
+        msg(1, "_\n");
+}
+
+static void show_dbpkg_list(const char *prefix, tn_array *dbpkgs)
+{
+    int   i, ncol = 2, npkgs = 0;
+    int   term_width;
+    char  *p, *colon = ", ";
+    int   hdr_printed = 0;
+
+    term_width = term_get_width() - 5;
+    ncol = strlen(prefix) + 1;
+    
+    npkgs = n_array_size(dbpkgs);
+    if (npkgs == 0)
+        return;
+    msg(1, "%s ", prefix);
+    
+    for (i=0; i < n_array_size(dbpkgs); i++) {
+        struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
+        p = pkg_snprintf_s(dbpkg->pkg);
+        if (ncol + (int)strlen(p) >= term_width) {
+            ncol = 3;
+            msg(1, "_\n%s ", prefix);
+        }
+        
+        if (--npkgs == 0)
+            colon = "";
+            
+        msg(1, "%s%s", p, colon);
+        ncol += strlen(p) + strlen(colon);
+    }
+    msg(1, "_\n");
+}
+
+
 static void print_install_summary(struct upgrade_s *upg) 
 {
     int i, n;
@@ -1366,7 +1453,14 @@ static void print_install_summary(struct upgrade_s *upg)
     if (n_array_size(upg->uninst_set->dbpkgs))
         msg(1, _("_, %d to uninstall"), n_array_size(upg->uninst_set->dbpkgs));
     msg(1, "_:\n");
-    
+
+    if (n_array_size(upg->install_pkgs) > 5) {
+        n_array_sort(upg->install_pkgs);
+        show_pkg_list("I", upg->install_pkgs, PKG_DIRMARK);
+        show_pkg_list("D", upg->install_pkgs, PKG_INDIRMARK);
+        show_dbpkg_list("R", upg->uninst_set->dbpkgs);
+        return;
+    }
     
     for (i=0; i<n_array_size(upg->install_pkgs); i++) {
         struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
@@ -1378,7 +1472,6 @@ static void print_install_summary(struct upgrade_s *upg)
         struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
         msg(1, "R %s\n", pkg_snprintf_s(dbpkg->pkg));
     }
-    
 }
 
 
@@ -1475,7 +1568,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg)
                 nerr++;
         }
 
-        logn(LOGERR, _("There are errors: %s"), errmsg);
+        logn(LOGERR, "%s", errmsg);
     }
     
     
