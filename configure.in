@@ -10,6 +10,7 @@ VERSION_CVSTAG="v$(echo $VERSION | sed 's/\./_/g')"
 AH_TEMPLATE([ENABLE_TRACE],[])
 AH_TEMPLATE([HAVE_RPM_4_0_4],[])
 AH_TEMPLATE([HAVE_RPM_4_1],[])
+AH_TEMPLATE([HAVE_RPM_4_2],[])
 AH_TEMPLATE([HAVE_RPM_EXTDEPS],[])
 AH_TEMPLATE([HAVE_TM_GMTOFF],[])
 AH_TEMPLATE([HAVE_TM___GMTOFF],[])
@@ -217,9 +218,11 @@ if test ${is_rpm4_0_4}. = no. ; then
 		DBLIB="$DBLIB -ldb1"
 	fi
 else
-	AC_CHECK_LIB(db-4.0, db_create, [DBLIB="-ldb-4.0"], 
-		     [AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"],,[$LIBS])], 
-		     [$LIBS])
+    AC_CHECK_LIB(db4, db_create, [DBLIB="-ldb4"],
+        [AC_CHECK_LIB(db-4.1, db_create, [DBLIB="-ldb-4.1"],
+             [AC_CHECK_LIB(db-4.0, db_create, [DBLIB="-ldb-4.0"],
+                     [AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"],,[$LIBS])],
+                     [$LIBS])],, [$LIBS])],, [$LIBS])
 
 	if test "${ENABLE_STATIC}." = "yes."; then 
 		DBLIB="$DBLIB"
@@ -241,9 +244,9 @@ if test ${is_rpm4}. = yes. ; then
 fi
 
 
-AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="$LIBS -lrpm $DBLIB"],
+AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="-lrpm $LIBS $DBLIB"],
 	AC_CHECK_LIB(rpm, rpmReadPackageHeader,
-		[LIBS="$LIBS -lrpm -lrpmdb $DBLIB"],
+		[LIBS="-lrpm -lrpmdb $DBLIB $LIBS"],
 		AC_CHECK_LIB(rpm, rpmReadPackageFile,
 			[LIBS="$LIBS -lrpm -lrpmdb $DBLIB"
 			 AC_DEFINE([HAVE_RPM_4_1],1,[])],
@@ -254,6 +257,11 @@ AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="$LIBS -lrpm $DBLIB"],
 
 AC_CHECK_FUNCS(rpmMachineScore,,[ AC_MSG_ERROR(["rpmlib not found"])])
 AC_CHECK_FUNCS(rpmlog rpmCheckSig rpmVerifySignature)
+
+dnl rpm 4.2?
+AC_CHECK_FUNCS(rpmtsColor, [LIBS="$LIBS -lpthread"
+                            AC_DEFINE([HAVE_RPM_4_2],1,[])])
+
 
 AC_CHECK_HEADERS(db_185.h,,[ 
 	AC_MSG_WARN(["disabled synchronization with db file-dependencies"]) ])
@@ -284,6 +292,11 @@ AC_CHECK_FUNCS(EVP_DigestInit,,
 	 [AC_MSG_ERROR(["libcryto is needed by $PACKAGE"])]
 	)], 
 	[$CONF_IN_LDFLAGS])
+
+if test -f /etc/redhat-release; then
+        LIBS="$LIBS -ldl" # rh's crypto needs this 
+fi
+
 
 dnl use local ../trurlib copy if it exists
 CONF_IN_LDFLAGS=

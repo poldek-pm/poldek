@@ -223,10 +223,11 @@ int other_version_marked(struct pkg *pkg, tn_array *pkgs, struct capreq *req)
         
         if (p != pkg && pkg_is_marked(p)) {
             if (req == NULL || pkg_statisfies_req(p, req, 0)) {
-            DBGF("%s -> yes, %s\n", pkg_snprintf_s0(pkg), pkg_snprintf_s1(p));
-            return 1;
+                DBGF("%s -> yes, %s\n", pkg_snprintf_s0(pkg),
+                     pkg_snprintf_s1(p));
+                return 1;
+            }
         }
-    }
     }
 
     return 0;
@@ -302,7 +303,7 @@ int select_best_pkg(const struct pkg *marker,
                     struct pkg **candidates, int npkgs,
                     struct pkgset *ps, struct upgrade_s *upg)
 {
-    int *ncnfls, i, j, i_min, cnfl_min;
+    int *ncnfls, i, j, i_best, cnfl_min;
     int i_ver_eq = -1, i_evr_eq = -1;
 
     DBGF("%s (%d)\n", pkg_snprintf_s(marker), npkgs);
@@ -344,39 +345,46 @@ int select_best_pkg(const struct pkg *marker,
         return i_ver_eq;
 
     cnfl_min = INT_MAX;
-    i_min = -1;
+    i_best = -1;
     for (i=0; i < npkgs; i++) {
         DBGF("%d. %s %d\n", i, pkg_snprintf_s(candidates[i]), ncnfls[i]);
         if (cnfl_min > ncnfls[i]) {
             cnfl_min = ncnfls[i];
-            i_min = i;
+            i_best = i;
         }
     }
     
-    DBGF("[after cnfls] i_min = %d\n", i_min);
+    DBGF("[after cnfls] i_best = %d\n", i_best);
     if (cnfl_min == 0) {
         int n = INT_MAX, *nmarks;
         
         nmarks = alloca(npkgs * sizeof(*nmarks));
         
         for (i=0; i < npkgs; i++) {
-            nmarks[i] = pkg_drags(candidates[i], ps, upg);
-            DBGF("%d %s -> %d\n", i, pkg_snprintf_s(candidates[i]), nmarks[i]);
-            if (n > nmarks[i]) {
-                n = nmarks[i];
+            if (other_version_marked(candidates[i], ps->pkgs, NULL)) {
+                DBGF("%d. %s other version is already marked, skipped\n",
+                     i, pkg_snprintf_s(candidates[i]));
+                continue;
             }
-            
+
+            nmarks[i] = pkg_drags(candidates[i], ps, upg);
+            DBGF("%d. %s -> %d\n", i, pkg_snprintf_s(candidates[i]), nmarks[i]);
+            if (n > nmarks[i])
+                n = nmarks[i];
+
             if (n == 0 && ncnfls[i] == 0) {
-                i_min = i;
+                i_best = i;
                 break;
             }
         }
     }
 
-    if (i_min == -1) 
-        i_min = 0;
-    return i_min;
+    if (i_best == -1) 
+        i_best = 0;
+    DBGF("RET %d. %s\n", i_best, pkg_snprintf_s(candidates[i]));
+    return i_best;
 }
+
 
 #define FINDREQ_BESTSEL    0
 #define FINDREQ_NOBESTSEL  1

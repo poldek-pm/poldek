@@ -555,14 +555,18 @@ int rpm_is_pkg_installed(rpmdb db, const struct pkg *pkg, int *cmprc,
     rpmdb_it_init(db, &it, RPMITER_NAME, pkg->name);
     count = rpmdb_it_get_count(&it);
     if (count > 0 && (cmprc || dbrecp)) {
-        dbrec = rpmdb_it_get(&it);
+        if ((dbrec = rpmdb_it_get(&it)) == NULL) {
+            logn(LOGWARN, "%s: rpmdb iterator returns NULL, "
+                 "possibly broken database", pkg->name);
+            
+        } else {
+            if (cmprc)
+                *cmprc = -hdr_pkg_cmp_evr(dbrec->h, pkg);
         
-        if (cmprc)
-            *cmprc = -hdr_pkg_cmp_evr(dbrec->h, pkg);
-        
-        if (dbrecp) {
-            dbrecp->recno = dbrec->recno;
-            dbrecp->h = headerLink(dbrec->h);
+            if (dbrecp) {
+                dbrecp->recno = dbrec->recno;
+                dbrecp->h = headerLink(dbrec->h);
+            }
         }
     }
 

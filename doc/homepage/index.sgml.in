@@ -174,8 +174,8 @@ For example:
       <p>	
       <itemize>
       <item> 
-<url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz" 
-     name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz"> 
+<url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.bz2" 
+     name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.bz2"> 
 
       <item> 
 <url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.src.rpm" 
@@ -191,38 +191,35 @@ For example:
      <item> Binary rpm packages
 	<p>
 	<itemize>
-	<item> PLD Linux packages (linked with rpm 4.0.2)
+	<item> PLD Linux
+	<itemize>
+	<item> PLD 1.0 (Ra)
+	<url url="download/poldek-@VERSION@-1.i386.rpm" 
+	     name="http://team.pld.org.pl/~mis/poldek/download/pld/ra/poldek-@VERSION@-1.i386.rpm">  
+	
+	<item> PLD 1.0 (Ra). Statically linked
+	    <url url="download/poldek-@VERSION@-1.static.i386.rpm" 
+	      name="http://team.pld.org.pl/~mis/poldek/download/pld/ra/poldek-@VERSION@-1.static.i386.rpm">  
+	</itemize>
+
+	<item> RedHat Linux 
+	<itemize>
+	<item> RedHat 9 (rpm 4.2)
+	<url url="download/fedora/c1/poldek-@VERSION@-1.i386.rpm" 
+	     name="http://team.pld.org.pl/~mis/poldek/download/rh/9.0/poldek-@VERSION@-1.i386.rpm">  
+
+        <p> Older versions of packages for several RedHat versions can be found
+            <url url="download/rh/" name="here">.
+	</itemize>
+
+        <item> Fedora Core 1  	
 	<itemize>
 	<item>
-	<url url="download/poldek-@VERSION@-1.i386.rpm" 
-	     name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm">  
-	
-	<item> Statically linked
-	    <url url="download/poldek-@VERSION@-1.static.i386.rpm" 
-	      name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.static.i386.rpm">  
-	</itemize>
-	
-	<item> RedHat Linux packages (rpm 4.0.4)
-	<itemize>
-	<item> 7.3
-	<url url="download/rh/7.3/poldek-@VERSION@-1.i386.rpm" 
-	     name="http://team.pld.org.pl/~mis/poldek/download/rh/7.3/poldek-@VERSION@-1.i386.rpm">  
+	<url url="download/fedora/c1/poldek-@VERSION@-1.i386.rpm" 
+	     name="http://team.pld.org.pl/~mis/poldek/download/fedora/c1/poldek-@VERSION@-1.i386.rpm">  
 
-       	<item> 7.2 (< 0.17.9 versions only) 
-	<url url="download/rh/7.2/poldek-0.17.8-1.i386.rpm" 
-	     name="http://team.pld.org.pl/~mis/poldek/download/rh/7.2/poldek-0.17.8-1.i386.rpm">  
-	
-	</itemize>
-        </itemize>	
-<!-- 
-     <p>
-     Non static rpm packages, for several architectures can be downloaded from
-     <url url="http://www.pld.org.pl/" name="PLD"> ftp site
-     <url url="ftp://ftp.pld.org.pl/" name="ftp://ftp.pld.org.pl/"> (directory
-	/dists/ra/PLD/<em>ARCH</em>/PLD/RPMS/)
-
--->         
-
+        </itemize>
+                 	
     <item> Anonymous CVS
     <p>
       Getting the module (no password is needed): 
@@ -233,7 +230,6 @@ For example:
       Particular files may be accessed via 
 	<url url="http://cvs.pld.org.pl/installer/poldek/" name="CVSWeb">
 
-    </item>
     </itemize>
     </sect>
 

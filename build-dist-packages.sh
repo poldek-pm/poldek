@@ -25,10 +25,15 @@ for distro in $@; do
     case "$distro" in
 	rh)
 	    distro_def="rh"
+	    rpm="rpmbuild"
 	    ;;
-	rh7.2)
+	fedora)
+    	    distro_def="fedora"
+            rpm="rpmbuild"
+	    ;;
+	rh8)
 	    distro_def="rh"
-	    rpm="/usr/lib/rpm/rpmb"
+	    rpm="rpm"
 	    ;;    
 	*)
             distro_def="$distro"
@@ -47,12 +52,12 @@ for distro in $@; do
 
     cp ${poldek} $ddir/tmp || exit 1
     /usr/sbin/chroot $ddir sh $buildscript || exit 1
-    destdir=/tmp/poldek-$ver-rpms/${distro}
+    destdir=/tmp/poldek-$ver/${distro}
     mkdir -p $destdir || true
 
     rpmd=$ddir/home/mis/rpm/RPMS	
-    if [ -d $ddir/home/mis/rpm/RPMS/i386 ]; then
-	rpmd=$ddir/home/mis/rpm/RPMS/i386
+    if [ -d $rpmd/i386 ]; then
+	rpmd=$rpmd/i386
     fi
     
     cp -v $rpmd/poldek-$ver*.rpm $destdir

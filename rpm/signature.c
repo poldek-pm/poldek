@@ -56,18 +56,19 @@
 #include "rpmdb_it.h"
 
 
-
+/* seems foolish, just beacuse historical reasons */
 static int rpm_read_signature(FD_t fd, Header *sighp, int sig_type)
 {
-#ifdef HAVE_RPM_4_1
-    return rpmReadSignature(fd, sighp, sig_type) == 0;
+#ifdef HAVE_RPM_4_2
+    return rpmReadSignature(fd, sighp, sig_type, NULL) == 0;
+#elif HAVE_RPM_4_1
+    return rpmReadSignature(fd, sighp, sig_type, NULL) == 0;
 #elif HAVE_RPM_4_0
     return rpmReadSignature(fd, sighp, sig_type, NULL) == 0;
 #endif
     return 0;
 }
-
-
+    
 /* rpmlib's rpmCheckSig reports success when GPG signature is missing,
    so it is useless for real sig verification */
 #if !defined HAVE_RPM_4_0
