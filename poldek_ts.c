@@ -106,7 +106,7 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
 {
     n_assert(bitvect_slot(optv) < sizeof(ts->_opvect)/sizeof(bitvect_slot_itype));
     
-    n_assert(optv != POLDEK_OP_VRFY_DEPS);
+    //n_assert(optv != POLDEK_OP_VRFY_DEPS);
     
     switch (optv) {
         case POLDEK_OP_PROMOTEPOCH:
@@ -992,14 +992,14 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
     }
     
     if (ts->getop(ts, POLDEK_OP_VRFY_CNFLS)) {
+        msgn(0, _("Verifying conflicts..."));
         if (poldek_ts_get_arg_count(ts) > 0) {
-            msgn(0, _("Verifying conflicts..."));
             if (!pkgmark_verify_set_conflicts(ts->pms))
                 nerr++;
             
         } else { /* whole set, just report all conflicts  */
             int i, j;
-            msgn(0, _("Package set conflicts..."));
+            
             for (i=0; i<n_array_size(ts->ctx->ps->pkgs); i++) {
                 struct pkg *pkg = n_array_nth(ts->ctx->ps->pkgs, i);
                 if (pkg->cnflpkgs == NULL) continue;
