@@ -16,6 +16,8 @@
 
 #include <rpm/rpmlib.h>
 #include "rpmdb_it.h"
+#include "rpmadds.h"
+#include "misc.h"
 
 #ifdef HAVE_RPM_4_0
 

@@ -18,13 +18,14 @@
 #define CAPREQ_CNFL     (1 << 5)
 
 /* sub types */
-#define CAPREQ_PREREQ      (1 << 6)
-#define CAPREQ_PREREQ_UN   (1 << 7)
-#define CAPREQ_OBCNFL      CAPREQ_PREREQ  /* alias, for obsolences */
+#define CAPREQ_PREREQ      (1 << 6)         /* '*' prefix */
+#define CAPREQ_PREREQ_UN   (1 << 7)         /* '^' prefix */
+
+#define CAPREQ_OBCNFL      CAPREQ_PREREQ    /* alias, for obsolences */
 
 #define CAPREQ_RPMLIB      (1 << 8)   /* rpmlib(...) */
-#define CAPREQ_PLDEKBAST   (1 << 9)   /* is added by poldek? */
-
+#define CAPREQ_PLDEKBAST   (1 << 9)   /* capreq added by poldek during mkidx,
+                                         '!' prefix */
 
 struct capreq {
     uint16_t cr_flags;
@@ -32,7 +33,7 @@ struct capreq {
     uint8_t  cr_ep_ofs;
     uint8_t  cr_ver_ofs;         /* 0 if capreq hasn't version */
     uint8_t  cr_rel_ofs;         /* 0 if capreq hasn't release */
-    char    _buf[0];            /* alias cr_name, first byte is always '\0' */
+    char    _buf[0];             /* alias cr_name, first byte is always '\0' */
 };
 
 /* CAUTION: side effects! */
