@@ -392,8 +392,10 @@ int pkg_add_selfcap(struct pkg *pkg)
             if (strcmp(capreq_name(cap), pkg->name) == 0 &&
                 capreq_epoch(cap) == pkg->epoch &&
                 strcmp(capreq_ver(cap), pkg->ver) == 0 &&
-                strcmp(capreq_rel(cap), pkg->rel) == 0)
+                strcmp(capreq_rel(cap), pkg->rel) == 0) {
                 has = 1;
+                break;
+            }
         }
     }
 
