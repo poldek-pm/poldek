@@ -362,6 +362,13 @@ tn_array *divide_into_pipelines(tn_array *cmd_chain)
             while (prev->next_piped)
                 prev = prev->next_piped;
             //printf("prev2 = %p %p\n", prev, prev->next_piped);
+
+            if (n_array_size(cmd_chain) == 0) { /* lonely pipe */
+                logn(LOGERR, _("%s: where is the pipe going?"),
+                     prev->cmd->name);
+                is_err = 1;
+                break;
+            }
             
             prev->next_piped = n_array_shift(cmd_chain);
             if ((prev->next_piped->cmd->flags & COMMAND_PIPEABLE_LEFT) == 0) {
