@@ -164,7 +164,9 @@ const struct dbpkg *rpmdb_it_get(struct rpmdb_it *it)
     if (it->dbpkg.h == NULL)
         rpm_die();
 #endif /* HAVE_RPM_4_0 */
-    
+
+    it->dbpkg.pkg = NULL;
+    it->dbpkg.flags = 0;
     return &it->dbpkg;
 }
 
