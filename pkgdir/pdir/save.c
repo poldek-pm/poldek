@@ -120,6 +120,49 @@ static int do_unlink(const char *path)
     return 0;
 }
 
+/* moved from pkg.c -- pdir rely on packages order strictly */
+static __inline__
+int do_pkg_deepcmp(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc;
+    
+    if ((rc = p1->btime - p2->btime))
+        return rc;
+
+    if ((rc = p1->size - p2->size))
+        return rc;
+
+    if ((rc = p1->fsize - p2->fsize))
+        return rc;
+
+    if (p1->arch && p2->arch == NULL)
+        return 1;
+
+    if (p1->arch == NULL && p2->arch)
+        return -1;
+
+    if ((rc = strcmp(p1->arch, p2->arch)))
+        return rc;
+    
+    if (p1->os && p2->os == NULL)
+        return 1;
+    
+    if (p1->os == NULL && p2->os)
+        return -1;
+
+    return strcmp(p1->os, p2->os);
+}
+
+static
+int pdir_pkg_cmp(const struct pkg *p1, const struct pkg *p2)
+{
+    register int rc;
+    
+    rc = pkg_strcmp_name_evr(p1, p2);
+    if (rc == 0)
+        rc = do_pkg_deepcmp(p1, p2);
+    return rc;
+}
 
 int pdir_create(struct pkgdir *pkgdir, const char *pathname,
                 unsigned flags)
@@ -250,7 +293,7 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
 
     //flags |= PKGDIR_CREAT_PKG_Fv017;
     //n_array_sort(pkgdir->pkgs);
-    n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_deepstrcmp_name_evr);
+    n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)pdir_pkg_cmp);
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
         pdir_pkg_store(pkg, vf->vf_tnstream, pkgdir->depdirs, flags);

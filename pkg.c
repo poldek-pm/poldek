@@ -32,9 +32,11 @@
 #include "pkgroup.h"
 #include "pkg_ver_cmp.h"
 
+static int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2);
+
 int poldek_conf_promote_epoch = 0;
 static tn_hash *architecture_h = NULL;
-static tn_hash *operatingsystem_h = NULL; 
+static tn_hash *operatingsystem_h = NULL;
 
 static inline const char *register_os(const char *os)
 {
@@ -322,21 +324,11 @@ int pkg_deepstrcmp_name_evr_debug(const struct pkg *p1, const struct pkg *p2)
 
 int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2) 
 {
-    register int rc = 0;
+    register int rc = pkg_strcmp_name_evr(p1, p2);
 
-    if ((rc = pkg_cmp_name(p1, p2)))
-        return rc;
-
-    if ((rc = p1->epoch - p2->epoch))
-        return rc;
-
-    if ((rc = strcmp(p1->ver, p2->ver)))
-        return rc;
-    
-    if ((rc = strcmp(p1->rel, p2->rel)))
-        return rc;
-    
-    return pkg_deepcmp_(p1, p2);
+    if (rc == 0)
+        return pkg_deepcmp_(p1, p2);
+    return rc;
 }
 
 
@@ -404,12 +396,15 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 }
 
 
-int pkg_cmp_name_evr_rev_srcpri(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_name_evr_arch_rev_srcpri(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
 
     if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && p1->pkgdir != p2->pkgdir)
-        return p1->pkgdir->pri - p2->pkgdir->pri;
+        rc = p1->pkgdir->pri - p2->pkgdir->pri;
+    
+    if (rc == 0)
+        rc = -pkg_cmp_arch(p1, p2);
     return rc;
 }
 
@@ -444,7 +439,7 @@ int pkg_strcmp_name_evr(const struct pkg *p1, const struct pkg *p2)
     
     if ((rc = strcmp(p2->ver, p1->ver)) == 0)
         rc = strcmp(p2->rel, p1->rel);
-    
+
     return rc;
 }
 
@@ -458,14 +453,16 @@ static int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2)
         s2 = pkg_archscore(p2);
         if (!s1) s1 = INT_MAX - 1;
         if (!s2) s2 = INT_MAX - 1;
-        return s1 - s2;
+        return s2 - s1;         /* lower score is better */
     }
+    
     if (p1->arch && p2->arch == NULL)
         return 10;
     
     if (p1->arch == NULL && p2->arch)
         return -10;
 
+    n_assert(0);
     rc = strcmp(p1->arch ? p1->arch : "" , p2->arch ? p2->arch : "");
     return rc;
 }
@@ -515,7 +512,7 @@ int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
     if ((rc = pkg_cmp_name_evr_rev(p1, p2)))
         return rc;
 
-    return pkg_deepcmp_(p1, p2);
+    return -pkg_deepcmp_(p1, p2);
 }
 
 int pkg_deepcmp_name_evr_rev_verify(const struct pkg *p1, const struct pkg *p2)
@@ -530,9 +527,25 @@ int pkg_deepcmp_name_evr_rev_verify(const struct pkg *p1, const struct pkg *p2)
     return rc;
 }
 
-int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_uniq_name(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc;
+    
+    if ((rc = pkg_cmp_name(p1, p2)) == 0 && verbose > 1)
+        logn(LOGWARN, _("duplicated name %s"), pkg_snprintf_s(p1));
+    
+    return rc;
+}
+
+
+int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc;
+
+    if (pkg_cmp_name_evr_rev(p1, p2) == 0)
+        logn(LOGNOTICE, "uniq %s: keep %s (score %d), removed %s (score %d)",
+             pkg_snprintf_s(p1), p1->arch, pkg_archscore(p1),
+             p2->arch, pkg_archscore(p2));
     
     if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && verbose > 1) {
         if (verbose > 2) {
@@ -548,17 +561,24 @@ int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2)
     return rc;
 }
 
-int pkg_cmp_name_uniq(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_uniq_name_evr_arch(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc;
     
-    if ((rc = pkg_cmp_name(p1, p2)) == 0 && verbose > 1)
-        logn(LOGWARN, _("duplicated name %s"), pkg_snprintf_s(p1));
+    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0) {
+        const char *a1, *a2;
+
+        a1 = p1->arch; if (a1 == NULL) a1 = "";
+        a2 = p2->arch; if (a2 == NULL) a2 = "";
+        if ((rc = strcmp(a1, a2)) == 0 && verbose > 1) {
+            logn(LOGWARN, _("%s%s%s: removed duplicate package"),
+                 pkg_snprintf_s(p2), p2->arch ? ".": "",
+                 p2->arch ? p2->arch: "");
+        }
+    }
     
     return rc;
 }
-
-
 
 int pkg_eq_name_evr(const struct pkg *p1, const struct pkg *p2) 
 {

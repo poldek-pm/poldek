@@ -249,6 +249,7 @@ static int pkgset_index(struct pkgset *ps)
     return 0;
 }
 
+extern int pkg_cmp_name_evr_arch_rev_srcpri(const struct pkg *p1, const struct pkg *p2);
 
 int pkgset_setup(struct pkgset *ps, unsigned flags) 
 {
@@ -266,12 +267,12 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     if (flags & PSET_UNIQ_PKGNAME) {
         //n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_srcpri);
         // <=  0.18.3 behaviour
-        n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev_srcpri);
-        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_uniq);
+        n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
+        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq_name);
             
     } else {
-        n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev_srcpri);
-        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
+        n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
+        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq_name_evr);
     }
         
     if (n != n_array_size(ps->pkgs)) {

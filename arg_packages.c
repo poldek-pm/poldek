@@ -414,7 +414,7 @@ int resolve_masks(tn_array *pkgs,
 
 static
 int resolve_pkgs(tn_array *pkgs,
-                     struct arg_packages *aps, tn_array *avpkgs, unsigned flags)
+                 struct arg_packages *aps, tn_array *avpkgs, unsigned flags)
 {
     int i, rc = 1;
 
@@ -474,7 +474,8 @@ tn_array *arg_packages_resolve(struct arg_packages *aps,
             return n_ref(avpkgs);
     }
 
-    pkgs = pkgs_array_new((nmasks * 3) + n_array_size(aps->packages));
+    pkgs = pkgs_array_new((nmasks * 3) + n_array_size(aps->packages),
+                          (tn_fn_cmp)pkg_cmp_name_evr_rev);
     
     if (resolve_pkgs(pkgs, aps, avpkgs, flags))
         rc = resolve_masks(pkgs, aps, avpkgs, flags);
@@ -489,7 +490,7 @@ tn_array *arg_packages_resolve(struct arg_packages *aps,
         n_array_uniq(pkgs);
         
         if (flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS)
-            n_array_uniq_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_uniq);
+            n_array_uniq_ex(pkgs, (tn_fn_cmp)pkg_cmp_uniq_name);
     }
 
     if (n_array_size(pkgs) == 0) {

@@ -794,7 +794,7 @@ int source_make_idx(struct source *src,
     struct pkgdir   *pkgdir;
     char            path[PATH_MAX];
     int             rc = 0;
-    unsigned        ldflags = PKGDIR_LD_NOUNIQ;
+    unsigned        ldflags = 0;
     
     n_assert(type);
     if (idxpath == NULL && strstr(src->path, "://")) {
@@ -834,7 +834,6 @@ int source_make_idx(struct source *src,
     rc = 0;
     if (pkgdir_load(pkgdir, NULL, ldflags)) {
         //int n = n_array_size(pkgdir->pkgs);
-        cr_flags |= PKGDIR_CREAT_NOUNIQ;
         rc = pkgdir_save(pkgdir, type, idxpath, cr_flags);
     }
     

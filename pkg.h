@@ -233,8 +233,9 @@ int pkg_strncmp_name(const struct pkg *p1, const struct pkg *p2);
 int pkg_strcmp_name_evr(const struct pkg *p1, const struct pkg *p2);
 
 /* with warn message */
-int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2);
-int pkg_cmp_name_uniq(const struct pkg *p1, const struct pkg *p2);
+int pkg_cmp_uniq_name(const struct pkg *p1, const struct pkg *p2);
+int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2);
+int pkg_cmp_uniq_name_evr_arch(const struct pkg *p1, const struct pkg *p2);
 
 int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
 int pkg_deepcmp_name_evr_rev_verify(const struct pkg *p1, const struct pkg *p2);
