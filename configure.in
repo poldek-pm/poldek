@@ -309,6 +309,7 @@ AC_OUTPUT([
 		vfile/vftp/Makefile
 		Makefile
 		poldek.spec
+		poldek-suse.spec
 		homepage.sgml
 		intl/Makefile 
 		po/Makefile.in

@@ -85,7 +85,7 @@ test_match_LDADD    = $(poldek_LDADD)
 
 EXTRA_DIST = poldek.1 poldek.pod \
 	     Makefile.extra *sample* \
-	     poldek.spec* $(bin_SCRIPTS) \
+	     poldek.spec* poldek-suse.spec* $(bin_SCRIPTS) \
 	     trurlib/
 
 OMIT_DEPENDENCIES = narray.h tfn_types.h nassert nbuf.h nhash.h nlist.h nstr.h \
