@@ -82,6 +82,8 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     }
     
     pkg = pkg_alloc_fn(sizeof(*pkg) + len);
+    memset(pkg, 0, sizeof(*pkg));
+    
     pkg->free = pkg_free_fn;
     pkg->flags = PKG_COLOR_WHITE;
     pkg->epoch = epoch;
@@ -112,7 +114,8 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
         buf += arch_len;
         *buf++ = '\0';
     }
-    
+
+    pkg->os = NULL;
     if (os) {
         pkg->os = buf;
         memcpy(buf, os, os_len);
@@ -187,7 +190,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
 {
     struct pkg *pkg;
     uint32_t   *epoch, *size, *btime;
-    char       *name, *version, *release, *arch, *os;
+    char       *name, *version, *release, *arch = NULL, *os = NULL;
     int        type;
     
     headerNVR(h, (void*)&name, (void*)&version, (void*)&release);
@@ -208,11 +211,11 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
         arch = NULL;
     
     if (!headerGetEntry(h, RPMTAG_OS, &type, (void *)&os, NULL)) {
-        logn(LOGERR, _("%s: read os tag failed"), fname);
-        return NULL;
-    }
-
-    if (type != RPM_STRING_TYPE)
+        if (verbose > 1)
+            logn(LOGWARN, _("%s: missing OS tag"), fname);
+        os = NULL;
+            
+    } else if (type != RPM_STRING_TYPE)
         os = NULL;
 
     if (!headerGetEntry(h, RPMTAG_SIZE, &type, (void *)&size, NULL)) 

@@ -249,32 +249,34 @@ static Header make_pkguinf_hdr(Header h, int *langs_cnt)
     char               **langs, **summs, **descrs;
     int                nsumms, ndescrs;
     int                i, n, nlangs = 0;
-    Header             hdr;
+    Header             hdr = NULL;
     unsigned           hdr_size;
     
     
-    langs = headerGetLangs(h);
+    if ((langs = headerGetLangs(h))) {
+        headerGetRawEntry(h, RPMTAG_SUMMARY, 0, (void*)&summs, &nsumms);
+        headerGetRawEntry(h, RPMTAG_DESCRIPTION, 0, (void*)&descrs, &ndescrs);
+        
+        n = nsumms;
+        if (n > ndescrs)
+            n = ndescrs;
+        
+        hdr = headerNew();
+        for (i=0; i<n; i++) {
+            if (langs[i] == NULL)
+                break;
+            headerAddI18NString(hdr, RPMTAG_SUMMARY, summs[i], langs[i]);
+            headerAddI18NString(hdr, RPMTAG_DESCRIPTION, descrs[i], langs[i]);
+        }
+        nlangs = n;
     
-    headerGetRawEntry(h, RPMTAG_SUMMARY, 0, (void*)&summs, &nsumms);
-    headerGetRawEntry(h, RPMTAG_DESCRIPTION, 0, (void*)&descrs, &ndescrs);
-
-    n = nsumms;
-    if (n > ndescrs)
-        n = ndescrs;
-
-    hdr = headerNew();
-    for (i=0; i<n; i++) {
-        if (langs[i] == NULL)
-            break;
-        headerAddI18NString(hdr, RPMTAG_SUMMARY, summs[i], langs[i]);
-        headerAddI18NString(hdr, RPMTAG_DESCRIPTION, descrs[i], langs[i]);
+        free(langs);
+        free(summs);
+        free(descrs);
     }
-    nlangs = n;
-    
-    free(langs);
-    free(summs);
-    free(descrs);
 
+    if (hdr == NULL)
+        hdr = headerNew();
     rpmhdr_ent_cp(&hdrent, h, RPMTAG_VENDOR, hdr);
     rpmhdr_ent_cp(&hdrent, h, RPMTAG_COPYRIGHT, hdr);
     rpmhdr_ent_cp(&hdrent, h, RPMTAG_URL, hdr);
