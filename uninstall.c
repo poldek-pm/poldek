@@ -205,6 +205,7 @@ int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
         tn_array *dbpkgs;
         int nmatches = 0;
 
+        
         pdef = n_array_nth(ups->pkgdefs, i);
         if ((pdef->tflags & PKGDEF_REGNAME) == 0) {
             logn(LOGERR, _("'%s': only exact selection is supported"),
@@ -216,10 +217,10 @@ int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
                 
         dbpkgs = rpm_get_packages(db->dbh, pdef->pkg, uninst_LDFLAGS);
         if (dbpkgs) {
-            int n;
+            int n, j;
 
-            for (i=0; i < n_array_size(dbpkgs); i++) {
-                struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
+            for (j=0; j < n_array_size(dbpkgs); j++) {
+                struct dbpkg *dbpkg = n_array_nth(dbpkgs, j);
 
                 if (pkg_match_pkgdef(dbpkg->pkg, pdef)) {
                     dbpkg->flags |= DBPKG_UNIST_MATCHED;
