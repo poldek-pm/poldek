@@ -109,12 +109,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         default:
-            
             return ARGP_ERR_UNKNOWN;
     }
 
     return 0;
 }
+
 
 static int find_pkg(struct shpkg *lshpkg, tn_array *shpkgs, int compare_ver, 
                     int *cmprc, char *evr, size_t size) 
@@ -185,7 +185,7 @@ static int ls(struct cmdarg *cmdarg)
 
 static int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg)
 {
-    char                 hdr[128], fmt_hdr[256], fmt_pkg[256];
+    char                 hdr[256], fmt_hdr[256], fmt_pkg[256];
     int                  i, size, err = 0, npkgs = 0;
     int                  compare_ver = 0;
     int                  term_width, term_width_div2;
@@ -229,6 +229,7 @@ static int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg)
         }
     }
     
+    hdr[sizeof(hdr) - 2] = '\n';
     compare_ver = flags & OPT_LS_UPGRADEABLE_VER;
     
     size = 0;
