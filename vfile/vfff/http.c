@@ -193,6 +193,7 @@ int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
         vfff_log("<   %s", &req[n]);
     n += nn;
     
+#if 0    
     nn = n_snprintf(&req[n], sizeof(req) - n, "Pragma: no-cache\r\n");
     if (*vfff_verbose > 1)
         vfff_log("<   %s", &req[n]);
@@ -202,6 +203,7 @@ int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
     if (*vfff_verbose > 1)
         vfff_log("<   %s", &req[n]);
     n += nn;
+#endif
     
     if (fmt) {
         va_start(args, fmt);
