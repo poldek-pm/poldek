@@ -15,7 +15,7 @@ Group:	    Applications/System
 Source0:	http://team.pld.org.pl/~mis/poldek/download/%{name}-%{version}%{?snap:-%{snap}}.tar.bz2
 URL:	    http://team.pld.org.pl/~mis/poldek/
 Requires:	rpm
-%{?_with_poldekuser: Requires: sudo}
+%{?_with_poldekuser:Requires: sudo}
 BuildRequires:	bzip2-devel
 BuildRequires:	rpm-devel >= 4.0
 BuildRequires:	openssl-devel
@@ -69,14 +69,15 @@ rm -rf $RPM_BUILD_ROOT
 install -d $RPM_BUILD_ROOT%{_sysconfdir}
 
 %{__make} install DESTDIR=$RPM_BUILD_ROOT
-%{?_with_static:rm -f $RPM_BUILD_ROOT/%{_bindir}/rpmvercmp}
+%{?_with_static:rm -f $RPM_BUILD_ROOT%{_bindir}/rpmvercmp}
 
 DISTRO=%{?distro:%{distro}}%{!?distro:pld}
 
 CONFIG="$RPM_BUILD_ROOT%{_sysconfdir}/%{name}/%{name}.conf"
 # set 'distro' macro
 perl -pi -e "s|^_distro\s*=\s*\w+\s*|_distro = $DISTRO\n|" $CONFIG
-%{?_with_poldekuser: perl -pi -e "s|^\#?\s*runas\s*=\s*\w+\s*|runas = poldek\n|" $CONFIG}
+%{?_with_poldekuser:perl -pi -e "s|^\#?\s*runas\s*=\s*\w+\s*|runas = poldek\n|" $CONFIG}
+%{?_with_poldekuser:mkdir -p $RPM_BUILD_ROOT%{_var}/cache/%{name}}
 
 # set PLD architecture
 perl -pi -e 's|_pld_arch\s*=\s*i686|_pld_arch = %{_target_cpu}|' $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/pld-*.conf
@@ -87,7 +88,7 @@ gzip -9nf README* conf/*sample* NEWS TODO
 rm -rf $RPM_BUILD_ROOT
 
 %pre
-%{?_with_poldekuser: if [ -z "$(id -u poldek 2>/dev/null)" ]; then POLDEKUSER="poldek" POLDEKHOME="%{_var}/cache/poldek" UNDERRPM="1" sh %{_libdir}%{name}/userpoldekadd.sh --yes; fi;}
+%{?_with_poldekuser: if [ -z "$(id -u poldek 2>/dev/null)" ]; then POLDEKUSER="poldek" POLDEKHOME="%{_var}/cache/poldek" UNDERRPM="1" sh %{_libdir}/%{name}/userpoldekadd.sh --yes; fi;}
 
 %post -p /sbin/ldconfig
 
@@ -130,6 +131,9 @@ fi
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.26  2004/10/17 19:55:44  mis
+- fixes
+
 Revision 1.25  2004/10/17 19:02:24  mis
 - --with poldekuser param to spec
 
