@@ -886,6 +886,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                                 (ps->flags & PSET_DBDIRS_LOADED) == 0);
 
         pkgmark_set(upg->dbpms, dbpkg, 1, DBPKG_TOUCHED);
+	DBGF("verifyuninstalled %s caps\n", pkg_snprintf_s(dbpkg));
         if (dbpkg->caps) {
             int j;
             for (j=0; j < n_array_size(dbpkg->caps); j++) {
@@ -893,8 +894,9 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                 verify_unistalled_cap(indent, cap, dbpkg, ps, upg);
             }
         }
-
-        if (pkg->fl && dbpkg->fl) {
+	DBGF("verifyuninstalled %s files? => %s \n", pkg_snprintf_s(dbpkg), 
+		dbpkg->fl ? "YES" : "NO");
+        if (dbpkg->fl) {
             struct capreq *cap;
             int j, k;
             
@@ -978,19 +980,22 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
             if (tomark == NULL) /* satisfied by already being installed set */
                 continue;
         }
-        DBGF("req %s %p\n", capreq_snprintf_s(true_req), tomark);
+        DBGF("req %s tomark=%s\n", capreq_snprintf_s(true_req),
+             tomark ? pkg_snprintf_s(tomark) : "NONE");
         /* cached */
         if (db_deps_provides(upg->db_deps, req, DBDEP_DBSATISFIED)) {
             DBGF("%s: satisfied by db [cached]\n", capreq_snprintf_s(req));
             
+        } else if (tomark && marked_for_removal(tomark, upg)) {
+            DBGF_F("%s: marked for removal\n", pkg_snprintf_s(tomark));
             
         } else if (pkgdb_match_req(upg->ts->db, req, 1,
                                    upg->uninst_set->dbpkgs)) {
 
             DBGF("%s: satisfied by dbX\n", capreq_snprintf_s(req));
             //dbpkg_set_dump(upg->uninst_set);
-            db_deps_add(upg->db_deps, true_req, pkg, tomark,
-                        PROCESS_AS_NEW | DBDEP_DBSATISFIED);
+            //db_deps_add(upg->db_deps, true_req, pkg, tomark,
+            //            PROCESS_AS_NEW | DBDEP_DBSATISFIED);
             
         } else if (tomark || tomark == NULL) { /* don't care found or not */
             ntoinstall++;
@@ -2034,6 +2039,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
     if (upg->nerr_fatal || sigint_reached())
         return 0;
 
+    n_array_sort(upg->install_pkgs);
     print_install_summary(upg);
     pkgdb_close(ts->db); /* release db as soon as possible */
 
@@ -2128,7 +2134,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
 static void init_upgrade_s(struct upgrade_s *upg, struct poldek_ts *ts)
 {
     upg->avpkgs = ts->ctx->ps->pkgs;
-    upg->install_pkgs = n_array_new(128, NULL, NULL);
+    upg->install_pkgs = n_array_new(128, NULL, (tn_fn_cmp)pkg_nvr_strcmp);
     upg->db_deps = db_deps_new();
     upg->uninst_set = dbpkg_set_new();
     upg->orphan_dbpkgs = pkgs_array_new_ex(128, pkg_cmp_recno);
