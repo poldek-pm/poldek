@@ -129,8 +129,8 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     /* merge pkgdis depdirs into ps->depdirs */
     for (i=0; i<n_array_size(ps->pkgdirs); i++) {
         pkgdir = n_array_nth(ps->pkgdirs, i);
-
-        if ((pkgdir->flags & PKGDIR_LDFROM_IDX) && pkgdir->depdirs) {
+        
+        if (pkgdir->depdirs) {
             for (j=0; j<n_array_size(pkgdir->depdirs); j++)
                 n_array_push(ps->depdirs, n_array_nth(pkgdir->depdirs, j));
         }
@@ -156,8 +156,9 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         for (j=0; j<n_array_size(pkgdir->pkgs); j++)
             n_array_push(ps->pkgs, pkg_link(n_array_nth(pkgdir->pkgs, j)));
     }
-    
-    msg(1, "%d packages read\n", n_array_size(ps->pkgs));
-    
+
+    if (n_array_size(ps->pkgs))
+        msg(1, "%d packages read\n", n_array_size(ps->pkgs));
+
     return n_array_size(ps->pkgs);
 }
