@@ -162,7 +162,7 @@ struct source *source_malloc(void)
     src->dscr = src->type = NULL;
     src->lc_lang = NULL;
     src->_refcnt = 0;
-
+    src->mkidx_exclpath = n_array_new(4, free, (tn_fn_cmp)strcmp);
     return src;
 }
 

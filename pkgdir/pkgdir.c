@@ -330,6 +330,7 @@ struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags)
         pkgdir->flags |= PKGDIR_VRFY_PGP;
     
     pkgdir->pri = src->pri;
+    pkgdir->src = source_link(src);
     return pkgdir;
 }
 

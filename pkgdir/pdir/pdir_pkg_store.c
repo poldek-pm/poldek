@@ -106,14 +106,14 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs)
         
     if (depdirs == NULL) {
         n_buf_printf(nbuf, "l:\n");
-        pkgfl_store_buf(fl, nbuf, depdirs, PKGFL_ALL);
+        pkgfl_store(fl, nbuf, NULL, depdirs, PKGFL_ALL);
         
     } else {
         n_buf_printf(nbuf, "L:\n");
-        pkgfl_store_buf(fl, nbuf, depdirs, PKGFL_DEPDIRS);
+        pkgfl_store(fl, nbuf, NULL, depdirs, PKGFL_DEPDIRS);
     
         n_buf_printf(nbuf, "l:\n");
-        pkgfl_store_buf(fl, nbuf, depdirs, PKGFL_NOTDEPDIRS);
+        pkgfl_store(fl, nbuf, NULL, depdirs, PKGFL_NOTDEPDIRS);
     }
     
     pkg_info_free_fl(pkg, fl);
@@ -185,7 +185,7 @@ int pdir_pkg_store(const struct pkg *pkg, tn_stream *st, tn_array *depdirs,
     tn_buf *nbuf;
     int n = 0;
     
-    nbuf = n_buf_new(1024 * 8);
+    nbuf = n_buf_new(1024 * 32);
     if (do_pkg_store(pkg, nbuf, depdirs, flags) > 0)
         n = n_stream_write(st, n_buf_ptr(nbuf), n_buf_size(nbuf));
 

@@ -35,10 +35,13 @@ int pkg_store_skiptag(int tag, int tag_binsize, tn_stream *st);
 #define PKGSTORE_NOEVR     (1 << 1)
 #define PKGSTORE_NOARCH    (1 << 2)
 #define PKGSTORE_NOOS      (1 << 3)
+#define PKGSTORE_NOFL      (1 << 4)
+#define PKGSTORE_NODEPFL   (1 << 5)
+#define PKGSTORE_NOANYFL   (PKGSTORE_NOFL | PKGSTORE_NODEPFL)
 
 struct pkg;
 int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
-              unsigned flags);
+              tn_array *exclpath, unsigned flags);
 
 int pkg_store_st(const struct pkg *pkg, tn_stream *st, tn_array *depdirs,
                  unsigned flags);

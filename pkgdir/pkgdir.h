@@ -53,15 +53,15 @@ struct pkgdir {
 
 
     char                *lc_lang;         /* configured languages ($LC_LANG format) */
-//    tn_array            *avlangs;         /* available languages */
     tn_hash             *avlangs_h; 
     tn_array            *langs;           /* used languages      */
 
     struct pkgdir       *prev_pkgdir;
-    
 
+    struct source       *src;            /* reference to its source (if any) */
     void                *_memalloc_ptr;
     void                *(*memalloc)(struct pkgdir *, size_t);
+    
     const struct pkgdir_module  *mod;
     void                        *mod_data;
 };
@@ -83,7 +83,7 @@ void pkgdir_free(struct pkgdir *pkgdir);
 /*
   if pkgdir source is poldeksindex then loading is 2-phase:
    1) pkgdir_open() opens index and reads its header
-   2) pkgdir_load() loads index confents
+   2) pkgdir_load() loads index content
 */
 #define PKGDIR_OPEN_REFRESH   (1 << 0) /* don't look into cache */
 #define PKGDIR_OPEN_DIFF      (1 << 1) /* diff is expected      */
@@ -113,8 +113,8 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 //struct pkgdir *pkgdir_load_hdl(const char *name, const char *path,
 //                               const char *prefix);
 
-#define PKGDIR_CREAT_NODESC     (1 << 0) /* don't save packages user level info */
-#define PKGDIR_CREAT_NOFL       (1 << 1) /* don't save packages file list       */
+#define PKGDIR_CREAT_NODESC     (1 << 0) /* don't save pkg's user level info */
+#define PKGDIR_CREAT_NOFL       (1 << 1) /* don't save pkg's file list       */
 #define PKGDIR_CREAT_MINi18n    (1 << 2) /* */
 #define PKGDIR_CREAT_NOUNIQ     (1 << 4)
 #define PKGDIR_CREAT_NOPATCH    (1 << 5) /* don't create diff */

@@ -59,8 +59,15 @@ void (*poldek_malloc_fault_hook)(void) = NULL;
 
 static void register_vf_handlers_compat(const tn_hash *htcnf);
 static void register_vf_handlers(const tn_array *fetchers);
-static int get_conf_sources(tn_array *sources, tn_array *srcs_named,
-                            tn_hash *htcnf, tn_array *htcnf_sources);
+
+static
+int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
+                     tn_array *srcs_named,
+                     tn_hash *htcnf, tn_array *htcnf_sources);
+
+static
+int get_conf_opt_list(const tn_hash *htcnf, const char *name, tn_array *tolist);
+
 
 
 static struct {
@@ -154,7 +161,8 @@ int addsource(tn_array *sources, struct source *src,
 
 
 static
-int prepare_sources(tn_hash *poldek_cnf, tn_array *sources)
+int prepare_sources(struct poldek_ctx *ctx,
+                    tn_hash *poldek_cnf, tn_array *sources)
 {
     struct source   *src;
     int             i, rc = 1;
@@ -168,7 +176,8 @@ int prepare_sources(tn_hash *poldek_cnf, tn_array *sources)
     
     for (i=0; i < n_array_size(sources); i++) {
         src = n_array_nth(sources, i);
-        if ((src->flags & PKGSOURCE_NAMED) && src->path == NULL) /* supplied by -n */
+           /* supplied by -n */
+        if ((src->flags & PKGSOURCE_NAMED) && src->path == NULL) 
             n_array_push(srcs_named, source_link(src));
         else if (src->path) 
             n_array_push(srcs_path, source_link(src));
@@ -187,8 +196,8 @@ int prepare_sources(tn_hash *poldek_cnf, tn_array *sources)
 
         htcnf = poldek_conf_get_section_ht(poldek_cnf, "global");
         htcnf_sources = poldek_conf_get_section_arr(poldek_cnf, "source");
-            
-        rc = get_conf_sources(srcs_path, srcs_named, htcnf, htcnf_sources);
+
+        rc = get_conf_sources(ctx, srcs_path, srcs_named, htcnf, htcnf_sources);
     }
     
     
@@ -210,9 +219,11 @@ int prepare_sources(tn_hash *poldek_cnf, tn_array *sources)
 }
 
 static
-struct source *source_new_htcnf(const tn_hash *htcnf, int no) 
+struct source *source_new_htcnf(struct poldek_ctx *ctx,
+                                const tn_hash *htcnf, int no) 
 {
     char spec[PATH_MAX], name[20];
+    struct source *src;
     int  n = 0;
     int  v;
     char *vs;
@@ -257,11 +268,25 @@ struct source *source_new_htcnf(const tn_hash *htcnf, int no)
     
     vs = poldek_conf_get(htcnf, "prefix", NULL);
     
-    return source_new_pathspec(NULL, spec, vs);
+    src = source_new_pathspec(NULL, spec, vs);
+    n_hash_dump(htcnf);
+    get_conf_opt_list(htcnf, "exclude path", src->mkidx_exclpath);
+    printf("exclude path %d\n", n_array_size(src->mkidx_exclpath));
+    
+    if (n_array_size(src->mkidx_exclpath) == 0 &&
+        n_array_size(ctx->ts->mkidx_exclpath) > 0) {
+        
+        src->mkidx_exclpath = n_array_dup(ctx->ts->mkidx_exclpath,
+                                          (tn_fn_dup)strdup);
+    }
+    
+    return src;
+    
 }
     
 static 
-int get_conf_sources(tn_array *sources, tn_array *srcs_named,
+int get_conf_sources(struct poldek_ctx *ctx,
+                     tn_array *sources, tn_array *srcs_named,
                      tn_hash *htcnf, tn_array *htcnf_sources)
 {
     struct source   *src;
@@ -305,7 +330,7 @@ int get_conf_sources(tn_array *sources, tn_array *srcs_named,
         for (i=0; i < n_array_size(htcnf_sources); i++) {
             tn_hash *ht = n_array_nth(htcnf_sources, i);
             
-            src = source_new_htcnf(ht, n_array_size(sources));
+            src = source_new_htcnf(ctx, ht, n_array_size(sources));
             if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
         }
@@ -332,11 +357,11 @@ int get_conf_sources(tn_array *sources, tn_array *srcs_named,
 
 
 static
-void get_conf_opt_list(const tn_hash *htcnf, const char *name,
-                       tn_array *tolist)
+int get_conf_opt_list(const tn_hash *htcnf, const char *name,
+                      tn_array *tolist)
 {
     tn_array *list;
-    int i;
+    int i = 0;
     
     if ((list = poldek_conf_get_multi(htcnf, name))) {
         for (i=0; i < n_array_size(list); i++)
@@ -347,6 +372,7 @@ void get_conf_opt_list(const tn_hash *htcnf, const char *name,
     
     n_array_sort(tolist);
     n_array_uniq(tolist);
+    return i;
 }
 
 
@@ -598,6 +624,7 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     get_conf_opt_list(htcnf, "rpmdef", ctx->ts->rpmacros);
     get_conf_opt_list(htcnf, "hold", ctx->ts->hold_patterns);
     get_conf_opt_list(htcnf, "ignore", ctx->ts->ign_patterns);
+    get_conf_opt_list(htcnf, "exclude path", ctx->ts->mkidx_exclpath);
 
     if ((v = poldek_conf_get(htcnf, "cachedir", NULL)))
         ctx->ts->cachedir = v;
@@ -861,7 +888,7 @@ int poldek_setup_sources(struct poldek_ctx *ctx)
     if (ctx->_iflags & SOURCES_SETUPDONE)
         return 1;
         
-    if (!prepare_sources(ctx->htconf, ctx->sources))
+    if (!prepare_sources(ctx, ctx->htconf, ctx->sources))
         return 0;
 
     for (i=0; i < n_array_size(ctx->sources); i++) {

@@ -29,6 +29,7 @@ struct source {
     int       no;
     char      *dscr;
     char      *lc_lang;
+    tn_array  *mkidx_exclpath;
     unsigned  subopt_flags;
     int       _refcnt;
 };
