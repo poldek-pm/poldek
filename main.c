@@ -69,19 +69,21 @@ char poldek_banner[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
 static char args_doc[] = N_("[PACKAGE...]");
 
 #define MODE_NULL         0
-#define MODE_VERIFY       1
-#define MODE_MKIDX        2
-#define MODE_INSTALLDIST  3
-#define MODE_INSTALL      4
-#define MODE_UPGRADEDIST  5
-#define MODE_UPGRADE      6
-#define MODE_SPLIT        7
-#define MODE_SRCLIST      8
-#define MODE_UNINSTALL    9
+#define MODE_VERIFY       (1 << 1)
+#define MODE_MKIDX        (1 << 2)
+#define MODE_INSTALLDIST  (1 << 3)
+#define MODE_INSTALL      (1 << 4)
+#define MODE_UPGRADEDIST  (1 << 5)
+#define MODE_UPGRADE      (1 << 6)
+#define MODE_SPLIT        (1 << 7)
+#define MODE_SRCLIST      (1 << 8)
+#define MODE_UNINSTALL    (1 << 9)
+                           
 #ifdef ENABLE_INTERACTIVE_MODE
-# define MODE_SHELL       10
+# define MODE_SHELL       (1 << 10)
 #endif
 
+#define MODE_IS_NOSCORE      (MODE_VERIFY | MODE_MKIDX | MODE_SPLIT | MODE_SRCLIST) 
 
 #define MODE_MNR_UPDATEIDX  (1 << 0)
 #define MODE_MNR_CLEANIDX   (1 << 1)
@@ -214,8 +216,8 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_INST_NOIGNORE         1056
 
 #define OPT_INST_GREEDY           'G'
-#define OPT_INST_REINSTALL        1055
-#define OPT_INST_DOWNGRADE        1056
+#define OPT_INST_REINSTALL        1057
+#define OPT_INST_DOWNGRADE        1058
 
 #define OPT_UNINSTALL             'e'
 
@@ -344,7 +346,8 @@ N_("Don't take held packages from config nor $HOME/.poldek_hold."), 71 },
 
 {"ignore", OPT_INST_IGNORE, "PACKAGE[,PACKAGE]...", 0,
 N_("Make packages listed invisible."), 71 },
-{"noignore", OPT_INST_IGNORE, "PACKAGE[,PACKAGE]...", 0,
+    
+{"noignore", OPT_INST_NOIGNORE, NULL, 0,
 N_("Make invisibled packages visible."), 71 },
 
 {"greedy", OPT_INST_GREEDY, 0, 0,
@@ -685,14 +688,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_INST_HOLD:
             if (strchr(arg, ',') == NULL) {
-                n_array_push(argsp->inst.hold_pkgnames, n_strdup(arg));
+                n_array_push(argsp->inst.hold_patterns, n_strdup(arg));
                 
             } else {
                 const char **pkgs, **p;
             
                 p = pkgs = n_str_tokl(arg, ",");
                 while (*p) {
-                    n_array_push(argsp->inst.hold_pkgnames, n_strdup(*p));
+                    n_array_push(argsp->inst.hold_patterns, n_strdup(*p));
                     p++;
                 }
                 n_str_tokl_free(pkgs);
@@ -701,6 +704,27 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
         case OPT_INST_NOHOLD:
             argsp->inst.flags |= INSTS_NOHOLD;
+            break;
+
+
+        case OPT_INST_IGNORE:
+            if (strchr(arg, ',') == NULL) {
+                n_array_push(argsp->inst.ign_patterns, n_strdup(arg));
+                
+            } else {
+                const char **pkgs, **p;
+            
+                p = pkgs = n_str_tokl(arg, ",");
+                while (*p) {
+                    n_array_push(argsp->inst.ign_patterns, n_strdup(*p));
+                    p++;
+                }
+                n_str_tokl_free(pkgs);
+            }
+            break;
+
+        case OPT_INST_NOIGNORE:
+            argsp->inst.flags |= INSTS_NOIGNORE;
             break;
 
         case OPT_INST_GREEDY:
@@ -1042,11 +1066,31 @@ int get_conf_sources(tn_array *sources, tn_array *src_names, tn_hash *htcnf)
 }
 
 
+static void get_conf_opt_list(const char *name, tn_array *tolist) 
+{
+    int is_multi = 0;
+    char *v;
+    
+    if ((v = conf_get(htcnf, name, &is_multi))) {
+        tn_array *list = NULL;
+        
+        if (is_multi) {
+            list = conf_get_multi(htcnf, name);
+            while (n_array_size(list)) 
+                n_array_push(tolist, n_array_shift(list));
+            
+        } else {
+            n_array_push(tolist, v);
+        }
+    }
+}
+
+
 static
 void parse_options(int argc, char **argv) 
 {
     struct argp argp = { options, parse_opt, args_doc, poldek_banner, 0, 0, 0};
-    int vfile_cnflags = 0, is_multi;
+    int vfile_cnflags = 0;
     char *v;
 
 
@@ -1243,31 +1287,9 @@ void parse_options(int argc, char **argv)
     if ((v = conf_get(htcnf, "cdrom_get", NULL)))
         vfile_register_ext_handler(VFURL_CDROM, v);
     
-    if ((v = conf_get(htcnf, "rpmdef", &is_multi))) {
-        tn_array *macros = NULL;
-        
-        if (is_multi) {
-            macros = conf_get_multi(htcnf, "rpmdef");
-            while (n_array_size(macros))
-                n_array_push(args.inst.rpmacros,
-                             n_strdup(n_array_shift(macros)));
-        } else {
-            n_array_push(args.inst.rpmacros, v);
-        }
-    }
-
-    if ((v = conf_get(htcnf, "hold", &is_multi))) {
-        tn_array *holds = NULL;
-        
-        if (is_multi) {
-            holds = conf_get_multi(htcnf, "hold");
-            while (n_array_size(holds)) 
-                n_array_push(args.inst.hold_pkgnames, n_array_shift(holds));
-            
-        } else {
-            n_array_push(args.inst.hold_pkgnames, v);
-        }
-    }
+    get_conf_opt_list("rpmdef", args.inst.rpmacros);
+    get_conf_opt_list("hold", args.inst.hold_patterns);
+    get_conf_opt_list("ignore", args.inst.ign_patterns);
     
     vfile_verbose = &verbose;
     n_assert(args.inst.cachedir);
@@ -1333,23 +1355,29 @@ static struct pkgset *load_pkgset(int ldflags)
     }
     mem_info(1, "MEM after load");
 
-    if (ps) {
-        pkgset_setup(ps, args.split_conf.conf);
-        if ((args.inst.flags & INSTS_NOHOLD) == 0) {
-            if (n_array_size(args.inst.hold_pkgnames) == 0) 
-                read_holds(NULL, args.inst.hold_pkgnames);
+    if (ps == NULL)
+        return ps;
 
-            if (n_array_size(args.inst.hold_pkgnames) > 0) {
-                pkgset_mark_holds(ps, args.inst.hold_pkgnames);
-                
-            } else {
-                n_array_free(args.inst.hold_pkgnames);
-                args.inst.hold_pkgnames = NULL;
+    
+    if ((args.mjrmode & MODE_IS_NOSCORE) == 0) {
+        if ((args.inst.flags & INSTS_NOHOLD) == 0) {
+            packages_score(ps->pkgs, args.inst.hold_patterns, PKG_HELD);
+            
+            if (n_array_size(args.inst.hold_patterns) == 0) {
+                n_array_free(args.inst.hold_patterns);
+                args.inst.hold_patterns = NULL;
             }
         }
-    }
-    
 
+        if ((args.inst.flags & INSTS_NOIGNORE) == 0) {
+            packages_score(ps->pkgs, args.inst.ign_patterns, PKG_IGNORED);
+            n_array_free(args.inst.ign_patterns);
+            args.inst.ign_patterns = NULL;
+        }
+    }
+        
+    pkgset_setup(ps, args.split_conf.conf);
+    
     return ps;
 }
 
@@ -1612,7 +1640,9 @@ int verify_args(void)
                 args.split_conf.prefix = "packages.chunk";
             
             break;
+            
         default:
+            logn(LOGERR, "unknown mode %d", args.mjrmode);
             n_assert(0);
             exit(EXIT_FAILURE);
     }
@@ -1640,6 +1670,7 @@ int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     usrpkgset_free(ups);
     return rc;
 }
+
 
 static
 int uninstall(struct usrpkgset *ups, struct inst_s *inst) 

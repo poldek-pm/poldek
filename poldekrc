@@ -41,6 +41,8 @@
 # prevent kernel* and dev from being upgraded if they are already installed.
 #hold   = kernel* dev
 
+# ignore *-smp-* packages 
+#ignore   = *-smp-*
 
 # External downloaders configuration 
 # Available semi-macros (as ws-separate tokens only):

@@ -149,7 +149,8 @@ void inst_s_init(struct inst_s *inst)
     inst->ask_fn = ask_yn;
     inst->rpmacros = n_array_new(2, NULL, NULL);
     inst->rpmopts = n_array_new(4, NULL, (tn_fn_cmp)strcmp);
-    inst->hold_pkgnames = n_array_new(4, free, (tn_fn_cmp)strcmp);
+    inst->hold_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
+    inst->ign_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
 }
 
 
@@ -435,6 +436,7 @@ static void set_priorities(tn_array *pkgs, const char *pri_fpath)
     if (access(pri_fpath, R_OK) == 0) 
         packages_set_priorities(pkgs, pri_fpath);
 }
+
 
 int pkgset_setup(struct pkgset *ps, const char *pri_fpath) 
 {

@@ -62,13 +62,14 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_FRESHEN         (1 << 17)  /* --freshen */
 #define INSTS_USESUDO         (1 << 18)  /* use_sudo = yes  */
 #define INSTS_NOHOLD          (1 << 19)  /* --nohold  */
-#define INSTS_GREEDY          (1 << 20) /* --greedy */
-#define INSTS_KEEP_DOWNLOADS  (1 << 21) /* keep_downloads = yes */
-#define INSTS_PARTICLE        (1 << 22) /* particle_install = yes */
-#define INSTS_CHECKSIG        (1 << 23) /* not implemented yet */
-#define INSTS_CONFIRM_INST    (1 << 24) /* confirm_installation = yes  */
-#define INSTS_CONFIRM_UNINST  (1 << 25) /* confirm_removal = yes  */
-#define INSTS_EQPKG_ASKUSER   (1 << 26) /* choose_equivalents_manually = yes */
+#define INSTS_NOIGNORE        (1 << 20)  /* --nohold  */
+#define INSTS_GREEDY          (1 << 21)  /* --greedy */
+#define INSTS_KEEP_DOWNLOADS  (1 << 22) /* keep_downloads = yes */
+#define INSTS_PARTICLE        (1 << 23) /* particle_install = yes */
+#define INSTS_CHECKSIG        (1 << 24) /* not implemented yet */
+#define INSTS_CONFIRM_INST    (1 << 25) /* confirm_installation = yes  */
+#define INSTS_CONFIRM_UNINST  (1 << 26) /* confirm_removal = yes  */
+#define INSTS_EQPKG_ASKUSER   (1 << 27) /* choose_equivalents_manually = yes */
 
 #define INSTS_INTERACTIVE_ON  (INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER)
 
@@ -81,7 +82,8 @@ struct inst_s {
     const char     *dumpfile;      /* file to dump fqpns     */
     tn_array       *rpmopts;       /* rpm cmdline opts (char *opts[]) */
     tn_array       *rpmacros;      /* rpm macros to pass to cmdline (char *opts[]) */
-    tn_array       *hold_pkgnames; 
+    tn_array       *hold_patterns;
+    tn_array       *ign_patterns; 
     
     int  (*askpkg_fn)(const char *, struct pkg **pkgs, struct pkg *deflt);
     int  (*ask_fn)(int default_a, const char *, ...);
@@ -156,12 +158,10 @@ int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst);
 int pkgset_install(struct pkgset *ps, struct inst_s *inst,
                    struct install_info *iinf);
 
-void pkgset_mark_holds(struct pkgset *ps, tn_array *hold_pkgnames);
-tn_array *read_holds(const char *fpath, tn_array *hold_pkgnames);
-
 int pkgset_dump_marked_pkgs(struct pkgset *ps, const char *dumpfile, int bn);
 
 
+void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag);
 int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs);
 int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst);
 

@@ -50,7 +50,7 @@ libpoldek_a_SOURCES = \
 	  split.c split.h		\
 	  pkgroup.c pkgroup.h		\
 	  rpmdb_it.c rpmdb_it.h         \
-	  hold.c			\
+	  pkgscore.c			\
 	  pkgfetch.c                    \
 	  rpminstall.c			\
 	  i18n.h 			\

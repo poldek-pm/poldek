@@ -28,8 +28,8 @@
 
 #define PKG_RM_MARK         (1 << 11) /* marked for removal */
 
-#define PKG_HOLD            (1 << 12) /* non upgradable */
-#define PKG_IGNORED         (1 << 13) /* non visible    */
+#define PKG_HELD            (1 << 12) /* non upgradable */
+#define PKG_IGNORED         (1 << 13) /* invisible      */
 
 #define PKG_ORDER_PREREQ    (1 << 14) /* see pkgset-order.c */
 
@@ -83,8 +83,11 @@
 #define pkg_is_rm_marked(pkg) ((pkg)->flags & PKG_RM_MARK)
 #define pkg_rm_unmark(pkg)    ((pkg)->flags &= ~(PKG_RM_MARK))
 
-#define pkg_mark_hold(pkg) ((pkg)->flags |= PKG_HOLD)
-#define pkg_is_hold(pkg) ((pkg)->flags & PKG_HOLD)
+#define pkg_mark_hold(pkg) ((pkg)->flags |= PKG_HELD)
+#define pkg_is_hold(pkg) ((pkg)->flags & PKG_HELD)
+
+#define pkg_score(pkg, v) ((pkg)->flags |= v)
+#define pkg_is_scored(pkg, v) ((pkg)->flags & v)
 
 #define pkg_has_ldpkguinf(pkg) ((pkg)->flags & PKG_HAS_PKGUINF)
 #define pkg_set_ldpkguinf(pkg) ((pkg)->flags |= PKG_HAS_PKGUINF)

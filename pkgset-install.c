@@ -1599,14 +1599,14 @@ static int check_holds(struct pkgset *ps, struct upgrade_s *upg)
     if ((ps->flags & (PSMODE_UPGRADE | PSMODE_UPGRADE_DIST)) == 0)
         return 1;
 
-    if (upg->inst->hold_pkgnames == NULL)
+    if (upg->inst->hold_patterns == NULL)
         return 1;
 
     for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
         struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
 
-        for (j=0; j<n_array_size(upg->inst->hold_pkgnames); j++) {
-            const char *mask = n_array_nth(upg->inst->hold_pkgnames, j);
+        for (j=0; j < n_array_size(upg->inst->hold_patterns); j++) {
+            const char *mask = n_array_nth(upg->inst->hold_patterns, j);
 
             if (fnmatch(mask, dbpkg->pkg->name, 0) == 0) {
                 logn(LOGERR, _("%s: refusing to uninstall held package"),
@@ -2016,7 +2016,7 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
     for (i = 0; i < n_array_size(ps->ordered_pkgs); i++) {
         struct pkg    *pkg = n_array_nth(ps->ordered_pkgs, i);
         int           install;
-        
+
         if (!pkg_is_marked(pkg))
             continue;
         
