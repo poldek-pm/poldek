@@ -545,7 +545,7 @@ int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang)
     
 
     if (pkgu->_ht == NULL)
-        pkgu->_ht = n_hash_new(3, free);
+        pkgu->_ht = n_hash_new(3, NULL);
     
     else if (n_hash_exists(pkgu->_ht, lang))
         return 1;
