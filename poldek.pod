@@ -151,7 +151,7 @@ from packages.dir.md.
 This option checks dependenecies and conflicts of package set.
 Without packages specified it checks all packages.
 
-=item B<--intall-dist[=DIR]>
+=item B<--install-dist[=DIR]>
 
 Install system from scratch under DIR as root directory (/).
 Needs packages to be specified.
