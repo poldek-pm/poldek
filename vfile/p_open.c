@@ -1,3 +1,16 @@
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
+
 #if HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -20,7 +33,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-
+#if HAVE_FORKPTY
+# include <pty.h>
+#endif
 
 #include "i18n.h"
 #include "p_open.h"
@@ -128,7 +143,7 @@ int p_close(struct p_open_st *pst)
         rc = WEXITSTATUS(st);
         
     } else if (WIFSIGNALED(st)) {
-#ifdef HAVE_STRSIGNAL
+#ifdef HAVE_STRSIGNALS
         snprintf(errmsg, sizeof(errmsg), "%s terminated by signal %s\n",
                  pst->cmd, strsignal(WTERMSIG(st)));
 #else
@@ -146,8 +161,16 @@ int p_close(struct p_open_st *pst)
     return rc;
 }
 
-#if ENABLE_PTYOPEN
-#include <pty.h>
+
+#ifndef HAVE_FORKPTY
+
+FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[]) 
+{
+    return p_open(pst, 0, cmd, argv);
+}
+
+#else 
+
 FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[])
 {
     int fd;
@@ -161,6 +184,7 @@ FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[])
     }
     
     if ((pid = forkpty(&fd, NULL, NULL, NULL)) == 0) {
+        close(0);
         execv(cmd, argv);
 	exit(EXIT_FAILURE);
         

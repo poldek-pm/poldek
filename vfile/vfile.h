@@ -21,8 +21,8 @@
 #include <trurl/narray.h>
 
 extern int *vfile_verbose;
-extern int (*vfile_msg_fn)(const char *fmt, ...);
-extern int (*vfile_err_fn)(const char *fmt, ...);
+extern void (*vfile_msg_fn)(const char *fmt, ...);
+extern void (*vfile_err_fn)(const char *fmt, ...);
 
 #define VFILE_USEXT_FTP    (1 << 0)
 #define VFILE_USEXT_HTTP   (1 << 1)
@@ -125,7 +125,33 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype);
 
 
 #ifdef VFILE_INTERNAL
+
+#define VF_PROGRESS_VIRGIN    0
+#define VF_PROGRESS_DISABLED  1
+#define VF_PROGRESS_RUNNING   2
+
+struct vf_progress_bar {
+    int     width;
+    int     state;
+    int     is_tty;
+    long    prev_n;
+};
+
+void vfile_progress_init(struct vf_progress_bar *bar);
+void vfile_progress(long total, long amount, void *data);
+
 void vfile_set_errno(const char *ctxname, int vf_errno);
-#endif
+
+
+struct vf_module {
+    char       vfmod_name[32];
+    unsigned   vf_protocols;
+    int (*init)(void);
+    int (*fetch)(const char *dest, const char *url);
+
+    int        _pri;            /* used by vfile only */
+};
+
+#endif /* VFILE_INTERNAL */
 
 #endif /* POLDEK_VFILE_H */

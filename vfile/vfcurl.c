@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000, 2002 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -20,6 +24,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #include <curl/curl.h>
 #include <curl/easy.h>
@@ -27,11 +32,22 @@
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>
 
-#define VFILE_INTERNAL
 #include "i18n.h"
+
+#define VFILE_INTERNAL
 #include "vfile.h"
 
-static const char *modname = "curl";
+static int vfile_curl_init(void);
+static int vfile_curl_fetch(const char *dest, const char *url);
+
+struct vf_module vf_mod_curl = {
+    "curl",
+    VFURL_FTP|VFURL_HTTP|VFURL_HTTPS,
+    vfile_curl_init,
+    vfile_curl_fetch,
+    0
+};
+
 
 #define PROGRESSBAR_WIDTH 50
 
@@ -59,9 +75,16 @@ struct progress_bar {
 
 
 static CURL *curlh = NULL;
+static volatile sig_atomic_t interruppted = 0;
+
+static void sigint_handler(int sig) 
+{
+    interruppted = 1;
+    signal(sig, sigint_handler);
+}
 
 
-int vfile_curl_init(void) 
+static int vfile_curl_init(void) 
 {
     char *errmsg = "curl_easy_setopt failed";
     
@@ -130,19 +153,19 @@ int vfile_curl_init(void)
 }
 
 
-int do_vfile_curl_fetch(const char *dest, const char *url)
+static int do_vfile_curl_fetch(const char *dest, const char *url)
 {
     struct progress_bar bar = {0, 0, 0, PROGRESSBAR_WIDTH, 0, 0, 0, 0, 0};
     struct stat st;
-    FILE *stream;
-    int  curl_rc;
-    char err[CURL_ERROR_SIZE * 2];
-    char *errmsg = "curl_easy_setopt failed";
+    FILE  *stream;
+    int   curl_rc;
+    char  err[CURL_ERROR_SIZE * 2];
+    char  *errmsg = "curl_easy_setopt failed";
+    void  *sigint_fn;
 
     
+
     bar.is_tty = isatty(fileno(stdout));
-    
-
     *err = '\0';
 
     if (curl_easy_setopt(curlh, CURLOPT_ERRORBUFFER, err) != 0) {
@@ -177,11 +200,17 @@ int do_vfile_curl_fetch(const char *dest, const char *url)
         return -1;
     }
     
-            //printf("resume from %ld\n", st.st_size);
     curl_easy_setopt(curlh, CURLOPT_RESUME_FROM, st.st_size);
     bar.resume_from = st.st_size;
+
+    
+    interruppted = 0;
+    sigint_fn = signal(SIGINT, sigint_handler);
     
     curl_rc = curl_easy_perform(curlh);
+    
+    signal(SIGINT, sigint_fn);
+    
     fclose(stream);
     
     if (bar.state == PBAR_ST_RUNNING || bar.state == PBAR_ST_FINISHED)
@@ -207,7 +236,7 @@ int do_vfile_curl_fetch(const char *dest, const char *url)
 }
 
 
-int vfile_curl_fetch(const char *dest, const char *url)
+static int vfile_curl_fetch(const char *dest, const char *url)
 {
     int curl_rc, vf_errno = 0;
 
@@ -228,7 +257,7 @@ int vfile_curl_fetch(const char *dest, const char *url)
         vf_errno = ENOENT;
 
     if (vf_errno)
-        vfile_set_errno(modname, vf_errno);
+        vfile_set_errno(vf_mod_curl.vfmod_name, vf_errno);
     
     return curl_rc == CURLE_OK;
 }
@@ -392,6 +421,8 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         bar->state = PBAR_ST_TERMINATED;
     }
 
+    if (interruppted)
+        return -1;  /* cURL aborts on non-zero result from callback fn */
     return 0;
 }
 

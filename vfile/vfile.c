@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -35,26 +39,36 @@
 #include <trurl/nhash.h>
 #include <trurl/narray.h>
 
-
 #include "i18n.h"
+
+#define VFILE_INTERNAL
 #include "vfile.h"
 
 #ifdef ENABLE_VFILE_CURL
-# include "vfcurl.h"
+extern struct vf_module vf_mod_curl;
 #endif
+
+extern struct vf_module vf_mod_vftp;
+
+struct vf_module *vfmod_tab[] = {
+    &vf_mod_vftp,
+#ifdef ENABLE_VFILE_CURL    
+    &vf_mod_curl,
+#endif
+    NULL
+};
 
 static int          vfile_err_no = 0;
 static const char   *vfile_err_ctx = NULL;
 
-static int verbose = 0; 
-int *vfile_verbose = &verbose;
+static int          verbose = 0; 
+int                 *vfile_verbose = &verbose;
 
-static int vfmsg(const char *fmt, ...);
 
-int (*vfile_msg_fn)(const char *fmt, ...) = vfmsg;
-int (*vfile_err_fn)(const char *fmt, ...) = vfmsg;
+static void vfmsg(const char *fmt, ...);
+void (*vfile_msg_fn)(const char *fmt, ...) = vfmsg;
+void (*vfile_err_fn)(const char *fmt, ...) = vfmsg;
 
-#define VFILE_CNFCURL (1 << 15)
 
 struct vfile_conf_s {
     char *cachedir;
@@ -62,6 +76,29 @@ struct vfile_conf_s {
 };
 
 static struct vfile_conf_s vfile_conf = { "/tmp", 0};
+
+
+
+void vfile_configure(const char *cachedir, int flags) 
+{
+    int n, len = 0;
+    
+    if (cachedir) {
+        vfile_conf.cachedir = strdup(cachedir);
+        len = strlen(vfile_conf.cachedir);
+        if (vfile_conf.cachedir[len - 1] == '/')
+            vfile_conf.cachedir[len - 1] = '\0';
+    }
+    
+    if (flags >= 0)
+        vfile_conf.flags = flags;
+
+    n = 0;
+    while (vfmod_tab[n] != NULL)
+        vfmod_tab[n++]->init();
+}
+
+
 
 
 #ifdef HAVE_FOPENCOOKIE
@@ -105,161 +142,78 @@ cookie_io_functions_t gzio_cookie = {
 
 #endif /* HAVE_FOPENCOOKIE */
 
-void vfile_configure(const char *cachedir, int flags) 
+static
+const struct vf_module *find_vf_module(int urltype) 
 {
-    int len = 0;
+    int n = 0;
     
-    if (cachedir) {
-        vfile_conf.cachedir = strdup(cachedir);
-        len = strlen(vfile_conf.cachedir);
-        if (vfile_conf.cachedir[len - 1] == '/')
-            vfile_conf.cachedir[len - 1] = '\0';
+    n = 0;
+    while (vfmod_tab[n] != NULL) {
+        if (vfmod_tab[n]->vf_protocols & urltype)
+            return vfmod_tab[n];
+        n++;
     }
-    
-    if (flags >= 0)
-        vfile_conf.flags = flags;
 
-#ifdef ENABLE_VFILE_CURL
-    if ((vfile_conf.flags & VFILE_CNFCURL) == 0) {
-        vfile_curl_init();
-        vfile_conf.flags |= VFILE_CNFCURL;
-    }
-#endif    
-    
-}
-
-
-#ifdef ENABLE_VFILE_RPMIO 
-static void *fetch_cb(const unsigned long amount, const unsigned long total) 
-{
-    static unsigned long prev_v = 0, vv = 0, tvv = 0;
-    
-    
-    if (amount && amount == total) /* last notification */
-        vfile_msg_fn(_(".done (%ld kB)\n"), total/1024);
-
-    else if (amount == 0) {
-        vfile_msg_fn("%6ld kB .", tvv*4032);
-        vv = 0;
-    }
-    else if (total == 0) {
-        vv++;
-        if (++vv % 63 == 0) {
-            tvv++;
-            vfile_msg_fn("\n%6ld kB .", tvv*4032);
-        } else
-            vfile_msg_fn(".");
-        
-            
-    }
-    else {
-        unsigned long i;
-        unsigned long v = amount * 60 / total;
-        for (i=prev_v; i<v; i++)
-            vfile_msg_fn(".");
-        prev_v = v;
-    }
     return NULL;
 }
 
-
-static void *fetch_cb_wrapper(const void *h __attribute__((unused)), 
-                              const rpmCallbackType t __attribute__((unused)), 
-                              const unsigned long amount, 
-                              const unsigned long total,
-                              const void *pkgKey __attribute__((unused)),
-                              void * data __attribute__((unused)))
-{
-    return fetch_cb(amount, total);
-}
-#endif /* ENABLE_VFILE_RPMIO */
-
-
 static
-int fetch_file_internal(const char *destdir, const char *path) 
+const struct vf_module *select_vf_module(int urltype) 
 {
-    char tmpath[PATH_MAX];
-    int rc = -1;
+    const struct vf_module *mod = NULL;
 
-    snprintf(tmpath, sizeof(tmpath), "%s/%s", destdir, n_basenam(path));
-
-    if (!vfile_valid_path(tmpath))
-        return 0;
-    
-    vfile_msg_fn(_("Retrieving %s...\n"), path);
-
-    if (vfile_conf.flags & VFILE_CNFCURL) {
-#ifdef ENABLE_VFILE_CURL
-        rc = vfile_curl_fetch(tmpath, path);
-#endif
-
-    } else {
-
-#ifdef ENABLE_VFILE_RPMIO
-        int rpmrc;
-        urlSetCallback(fetch_cb_wrapper, NULL, 65536);
-        if ((rpmrc = urlGetFile(path, tmpath)) < 0) {
-            vfile_err_fn(_("rpmio: %s transfer failed: %s\n"), path,
-                         ftpStrerror(rpmrc));
-        }
-        rc = (rpmrc == 0);
-    }
-#endif
-    return rc;
-}
-
-
-static int fetch_internal(int urltype) 
-{
-    int internal = 1;
     
     switch (urltype) {
         case VFURL_FTP:
-            if (vfile_conf.flags & VFILE_USEXT_FTP)
-                internal = 0;
+            if ((vfile_conf.flags & VFILE_USEXT_FTP) == 0)
+                mod = find_vf_module(urltype);
             break;
             
         case VFURL_HTTP:
-            if (vfile_conf.flags & VFILE_USEXT_HTTP)
-                internal = 0;
+            if ((vfile_conf.flags & VFILE_USEXT_HTTP) == 0)
+                mod = find_vf_module(urltype);
             break;
 
         case VFURL_HTTPS:
-            internal = 0;
-            if (vfile_conf.flags & VFILE_CNFCURL) /* has curl? */
-                internal = 1;
+            mod = find_vf_module(urltype);
             break;
 
         default:
-            internal = 0;
+            mod = NULL;
     }
 
-    if (vfile_configured_handlers() == 0)
-        internal = 1;
-
-    return internal;
+    if (mod == NULL && vfile_configured_handlers() == 0)
+        mod = find_vf_module(urltype);
+    
+    return mod;
 }
+
 
 int vfile_fetcha(const char *destdir, tn_array *urls, int urltype) 
 {
+    const struct vf_module *mod = NULL;
     int rc = 1;
-
+    
+    
     n_assert(urltype > 0);
     if (urltype == VFURL_UNKNOWN) 
         urltype = vfile_url_type(n_array_nth(urls, 0));
-
     
-    if (fetch_internal(urltype) == 0) {
+    if ((mod = select_vf_module(urltype)) == NULL) {
         rc = vfile_fetcha_ext(destdir, urls, urltype);
         
     } else {
         int i;
-        
-        for (i=0; i<n_array_size(urls); i++) 
-            if (!fetch_file_internal(destdir, n_array_nth(urls, i))) {
+        for (i=0; i<n_array_size(urls); i++) {
+            char destpath[PATH_MAX], *url;
+
+            url = n_array_nth(urls, i);
+            snprintf(destpath, sizeof(destpath), "%s/%s", destdir, url);
+            if (!mod->fetch(destpath, url)) {
                 rc = 0;
                 break;
             }
+        }
     }
     
     return rc;
@@ -268,6 +222,7 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype)
 
 int vfile_fetch(const char *destdir, const char *path, int urltype) 
 {
+    const struct vf_module *mod = NULL;
     int rc;
 
     if (!vfile_mkdir(destdir))
@@ -277,17 +232,20 @@ int vfile_fetch(const char *destdir, const char *path, int urltype)
     if (urltype == VFURL_UNKNOWN) 
         urltype = vfile_url_type(path);
 
-    if (fetch_internal(urltype)) {
-        rc = fetch_file_internal(destdir, path);
-        
-    } else if ((rc = vfile_fetch_ext(destdir, path, urltype)) == 0 &&
-               (urltype & (VFURL_HTTP | VFURL_FTP))) {
-        vfile_err_fn("Transfer failed, trying internal client...\n");
-        rc = fetch_file_internal(destdir, path);
+    if ((mod = select_vf_module(urltype)) == NULL)
+        rc = vfile_fetch_ext(destdir, path, urltype);
+    else {
+        char destpath[PATH_MAX];
+
+        snprintf(destpath, sizeof(destpath), "%s/%s", destdir,
+                 n_basenam(path));
+        rc = mod->fetch(destpath, path);
     }
+    
     
     return rc;
 }
+
 
 /* RET: bool */
 static int openvf(struct vfile *vf, const char *path, int vfmode) 
@@ -600,7 +558,7 @@ int vfile_unlink(struct vfile *vf)
 }
 
 
-static int vfmsg(const char *fmt, ...)
+static void vfmsg(const char *fmt, ...)
 {
     va_list args;
     
@@ -608,7 +566,6 @@ static int vfmsg(const char *fmt, ...)
     vfprintf(stdout, fmt, args);
     fflush(stdout);
     va_end(args);
-    return 1;
 }
 
 
