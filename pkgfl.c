@@ -108,7 +108,7 @@ int flfile_cmp(const struct flfile *f1, const struct flfile *f2, int strict)
                 cmprc = 1;
             else {
                 register char *l1, *l2;
-                
+               
                 l1 = strchr(f1->basename, '\0') + 1;
                 l2 = strchr(f2->basename, '\0') + 1;
                 cmprc = strcmp(l1, l2);
@@ -265,23 +265,21 @@ int pkgfl_asftag(tn_array *fl, char **ftag, int which)
 }
 
 __inline__ 
-static int valid_fname(const char *fname, mode_t mode, const char *errprefix) 
+static int valid_fname(const char *fname, mode_t mode, const char *pkgname) 
 {
     char *denychars = "\r\n\t |;";
     char *prdenychars = "\\r\\n\\t |;";
 
     if (strpbrk(fname, denychars)) {
-        msg(1, "%s: %s \"%s\" contains character(s) "
-            "I don't like (%s)\n", errprefix,
-            S_ISDIR(mode) ? "dirname" : "filename", fname,
-            prdenychars);
+        log_msg("%s: %s \"%s\" with whitespaces\n", pkgname, 
+            S_ISDIR(mode) ? "dirname" : "filename", fname, prdenychars);
         return 0;
     }
     return 1;
 }
 
 /* -1 on error  */
-int pkgfl_ldhdr(tn_array *fl, Header h, const char *errprefix) 
+int pkgfl_ldhdr(tn_array *fl, Header h, const char *pkgname) 
 {
     int t1, t2, t3, t4, c1, c2, c3, c4;
     char **names = NULL, **dirs = NULL, **symlinks = NULL, **skipdirs;
@@ -292,7 +290,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, const char *errprefix)
     struct    pkgfl_ent **fentdirs = NULL;
     int       *fentdirs_items;
     int       i, j, ndirs = 0, nerr = 0;
-
+    
     
     if (!headerGetEntry(h, RPMTAG_BASENAMES, (void*)&t1, (void*)&names, &c1))
         return 0;
@@ -303,20 +301,38 @@ int pkgfl_ldhdr(tn_array *fl, Header h, const char *errprefix)
     
     n_assert(t2 == RPM_STRING_ARRAY_TYPE);
     if (!headerGetEntry(h, RPMTAG_DIRINDEXES, (void*)&t3,(void*)&diridxs, &c3))
+    {
+        log_msg("%s: no DIRINDEXES tag\n", pkgname);
+        nerr++;
         goto l_endfunc;
+    }
+
     n_assert(t3 == RPM_INT32_TYPE);
-
-
-    headerGetEntry(h, RPMTAG_FILEMODES, (void*)&t4, (void*)&modes, &c4);
-    n_assert(modes);
-    n_assert(c4);
-    headerGetEntry(h, RPMTAG_FILESIZES, (void*)&t4, (void*)&sizes, &c4);
-    n_assert(sizes);
-    n_assert(c4);
-    headerGetEntry(h, RPMTAG_FILELINKTOS, (void*)&t4, (void*)&symlinks, &c4);
     
-    n_assert(c1 == c3);
-
+    if (c1 != c3) {
+        log_msg("%s: DIRINDEXES (%d) != BASENAMES (%d) tag\n", c3, c1,
+                pkgname);
+        nerr++;
+        goto l_endfunc;
+    }
+    
+    if (!headerGetEntry(h, RPMTAG_FILEMODES, (void*)&t4, (void*)&modes, &c4)) {
+        log_msg("%s: no FILEMODES tag\n", pkgname);
+        nerr++;
+        goto l_endfunc;
+    }
+    
+    if (!headerGetEntry(h, RPMTAG_FILESIZES, (void*)&t4, (void*)&sizes, &c4)) {
+        log_msg("%s: no FILESIZES tag\n", pkgname);
+        nerr++;
+        goto l_endfunc;
+    }
+    
+    if (!headerGetEntry(h, RPMTAG_FILELINKTOS, (void*)&t4, (void*)&symlinks,
+                        &c4)) {
+        symlinks = NULL;
+    }
+    
     skipdirs = alloca(sizeof(*skipdirs) * c2);
     fentdirs = alloca(sizeof(*fentdirs) * c2);
     fentdirs_items = alloca(sizeof(*fentdirs_items) * c2);
@@ -326,7 +342,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, const char *errprefix)
         struct pkgfl_ent *flent;
         
         fentdirs_items[i] = 0;
-        if (!valid_fname(dirs[i], 0, errprefix))
+        if (!valid_fname(dirs[i], 0, pkgname))
             nerr++;
 
         if (!in_depdirs(dirs[i] + 1)) {
@@ -353,10 +369,10 @@ int pkgfl_ldhdr(tn_array *fl, Header h, const char *errprefix)
         register int j = diridxs[i];
         int len;
 
-        if (!valid_fname(names[i], modes[i], errprefix))
+        if (!valid_fname(names[i], modes[i], pkgname))
             nerr++;
         
-        msg(5, "  %d: %s %s%s \n", i, skipdirs[j] ? "add " : "skip",
+        msg(5, "  %d: %s %s/%s \n", i, skipdirs[j] ? "add " : "skip",
             dirs[j], names[i]);
             
         if (skipdirs[j] == NULL)
@@ -395,7 +411,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, const char *errprefix)
         rpm_headerEntryFree(symlinks, t4);
 
     if (nerr) {
-        log(LOGERR, "%s skiped cause filenames errors\n", errprefix);
+        log(LOGERR, "%s: skiped\n", pkgname);
         
     } else if (ndirs) {
         for (i=0; i<c2; i++) 

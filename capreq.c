@@ -337,14 +337,17 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
             n_assert(0);
             abort();
     }
-    
+
+    names = NULL;
     if (!headerGetEntry(h, *tags, (void*)&t1, (void*)&names, &c1))
         return NULL;
     
     n_assert(t1 == RPM_STRING_ARRAY_TYPE);
     n_assert(names);
+
     
     tags++;
+    versions = NULL;
     if (headerGetEntry(h, *tags, (void*)&t2, (void*)&versions, &c2)) {
         n_assert(t2 == RPM_STRING_ARRAY_TYPE);
         n_assert(versions);
@@ -357,6 +360,7 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
     
     
     tags++;
+    flags = NULL;
     if (headerGetEntry(h, *tags, (void*)&t3, (void*)&flags, &c3)) {
         n_assert(t3 == RPM_INT32_TYPE);
         n_assert(flags);
