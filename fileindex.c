@@ -331,7 +331,7 @@ static void print_cnfl_pair(int *pathprinted, const char *path,
         *pathprinted = 1;
     }
 
-    msg(verblev, " %-5s %s(%c m%d s%d) %c-%c %s(%c m%d s%d)\n", prefix,
+    msg(verblev, " %-5s %s(%c m%o s%d) %c-%c %s(%c m%o s%d)\n", prefix,
         pkg_snprintf_s(ent1->pkg), S_ISDIR(ent1->flfile->mode) ? 'D' : 'F',
         ent1->flfile->mode, ent1->flfile->size,
         added2 ? '<' : ' ', added1 ? '>' : ' ',
@@ -373,7 +373,7 @@ void process_dups(const char *path, tn_array *fents, void *strict)
         for (j=i+1; j<n_array_size(fents); j++) {
             struct file_ent *ent2 = n_array_nth(fents, j);
 
-            if (flfile_cmp(ent1->flfile, ent2->flfile, (int)strict) != 0) {
+            if (flfile_cnfl(ent1->flfile, ent2->flfile, (int)strict) != 0) {
                 int rc;
                 int added1, added2;
                 
