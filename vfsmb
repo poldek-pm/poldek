@@ -1,6 +1,9 @@
 #! /bin/sh
 # $Id$
 
+# support smb://[login[:passwd]@]host/service/[path/]file
+# requires: basename, grep, sed, smbclient
+
 PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 
 if [ "$#" != "2" ]; then
@@ -9,8 +12,19 @@ if [ "$#" != "2" ]; then
 fi
 
 src=$1
-service=$(dirname $src | sed 's|^smb://|//|')
-file=$(basename $src)
+if echo $src|grep -qE '^smb://[^/@]+@' ; then
+	if echo $src|grep -qE '^smb://[^:@]+:[^@]+@' ; then
+		passwd=$(echo $src|sed 's|^smb://[^:]\+:\([^@]\+\)@.*|\1|')
+		user=$(echo $src|sed 's|^smb://\([^:]\+\):[^@]\+@.*|\1|')
+	else
+		user=$(echo $src|sed 's|^smb://\([^@]\+\)@.*|\1|')
+	fi
+	src=$(echo $src|sed 's|^smb://[^@]\+@|smb://|')
+else
+	user="guest"
+fi
+service=$(echo $src|sed 's|^smb://\([^/]\+/[^/]\+\)/|//\1|')
+file=$(echo $src|sed 's|^smb://[^/]\+/[^/]\+/||')
 
 dest=$2
 
@@ -19,6 +33,6 @@ if [ -z "$service" -o -z "$file" ]; then
     exit 1
 fi
 
-#echo "smbclient $service -U guest -N -c \"get $file $dest\""
-smbclient $service -U guest -N -c "get $file $dest"
+#echo "smbclient $service $passwd -U $user -N -c \"get $file $dest\""
+smbclient $service $passwd -U $user -N -c \"get $file $dest\"
 
