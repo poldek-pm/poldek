@@ -600,15 +600,17 @@ int ftp_login(struct ftpcn *cn, const char *login, const char *passwd)
     
     if (!ftpcn_resp(cn)) 
         goto l_err;
-
-    if (cn->last_respcode != 220 && !CODE_BETWEEN(cn->last_respcode, 300, 399))
-        goto l_err;
-
-    if (!ftpcn_cmd(cn, "PASS %s", passwd))
-        goto l_err;
-
-    if (!ftpcn_resp(cn) || cn->last_respcode > 500)
-        goto l_err;
+    
+    if (cn->last_respcode != 230) { /* logged in without passwd */
+        if (cn->last_respcode != 220 && !CODE_BETWEEN(cn->last_respcode, 300, 399))
+            goto l_err;
+        
+        if (!ftpcn_cmd(cn, "PASS %s", passwd))
+            goto l_err;
+    
+        if (!ftpcn_resp(cn) || cn->last_respcode > 500)
+            goto l_err;
+    }
     
     if (!ftpcn_cmd(cn, "TYPE I"))
         goto l_err;
