@@ -159,7 +159,7 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
         if (vf_find_external_command(p, PATH_MAX, path, NULL))
             path = p;
         else {
-            vf_logerr("%s: cmd must be precedenced by '/'\n", cmd);
+            vf_logerr("%s: command not found\n", path);
             return NULL;
         }
     }
