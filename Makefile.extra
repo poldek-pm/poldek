@@ -70,7 +70,7 @@ snap: tarball-bz2
 	rm -rf $(PACKAGE)-$(VERSION)-cvs$$dts && \
 	echo "$(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2"
 
-snap-rpm-package: 
+snap-rpm-package: snap
 		dts=`date +%Y%m%d.%H` && echo $$dts && ls -l $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2 &&\
 	        rpmbuild -tb --define "snap cvs$$dts" $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2
 
