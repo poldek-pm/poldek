@@ -64,7 +64,7 @@ if [ -z "$DISTRO" ]; then
 fi
 
 sed "s/i686/%{_target_cpu}/g" < conf/poldekrc.sample-${DISTRO} > $RPM_BUILD_ROOT/etc/%{name}.conf
-gzip -9nf README* *sample* conf/*sample* NEWS TODO 
+gzip -9nf README* *sample* conf/*sample.* NEWS TODO 
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -82,6 +82,9 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.16  2002/04/14 23:39:09  mis
+- fixed %doc list
+
 Revision 1.15  2002/04/10 17:02:31  mis
 - easier playing with configs
 
