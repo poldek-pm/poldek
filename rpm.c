@@ -10,6 +10,10 @@
   $Id$
 */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdint.h>
@@ -32,12 +36,6 @@
 #include "log.h"
 #include "pkg.h"
 #include "capreq.h"
-
-#ifdef RPMDBI_PACKAGES 
-# ifndef HAVE_RPM_4_0
-#  define HAVE_RPM_4_0
-# endif
-#endif
 
 static
 int header_evr_match_req(Header h, const struct capreq *req);
@@ -105,6 +103,14 @@ void rpm_closedb(rpmdb db)
 }
 
 
+static void rpm_die(void) 
+{
+    log(LOGERR, "database error\n");
+    die();
+}
+
+
+
 tn_array *rpm_get_file_conflict_hdrs(rpmdb db, const char *path,
                                      tn_array *exclrnos) 
 {
@@ -135,8 +141,9 @@ tn_array *rpm_get_file_conflict_hdrs(rpmdb db, const char *path,
     rc = rpmdbFindByFile(db, path, &matches);
 
     if (rc != 0) {
-        if (rc < 0)
-            log(LOGERR, "error reading from database\n");
+        if (rc < 0) 
+            rpm_die();
+        
         
     } else {
         int i;
@@ -199,7 +206,7 @@ int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *exclrnos)
 
     if (rc != 0) {
         if (rc < 0)
-            log(LOGERR, "error reading from database\n");
+            rpm_die();
         rc = 0;
         
     } else if (rc == 0) {
@@ -257,8 +264,8 @@ int lookup_file(rpmdb db, const struct capreq *req, tn_array *exclrnos)
     rc = rpmdbFindByFile(db, capreq_name(req), &matches);
 
     if (rc != 0) {
-        if (rc < 0)
-            log(LOGERR, "error reading from database\n");
+        if (rc < 0) 
+            rpm_die();
         finded = 0;
         
     } else {
@@ -310,7 +317,7 @@ int lookup_cap(rpmdb db, const struct capreq *req, int strict,
 
     if (rc != 0) {
         if (rc < 0)
-            log(LOGERR, "error reading from database");
+            rpm_die();
         rc = 0;
         
     } else if (rc == 0) {
@@ -353,7 +360,7 @@ int lookup_req(rpmdb db, const struct capreq *req, int strict,
 
     if (rc != 0) {
         if (rc < 0)
-            log(LOGERR, "error reading from database\n");
+            rpm_die();
         rc = 0;
         
     } else if (rc == 0) {
@@ -668,7 +675,6 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
 }
 
 
-
 int rpm_dbmap(rpmdb db,
               void (*mapfn)(void *header, off_t offs, void *arg),
               void *arg) 
@@ -676,7 +682,7 @@ int rpm_dbmap(rpmdb db,
     int n = 0;
     Header h;
 
-#ifdef HAVE_RPM_4_0	/* XXX should test HAVE_RPM_4_0 (but I'm lazy). */
+#ifdef HAVE_RPM_4_0
     rpmdbMatchIterator mi;
 
     mi = rpmdbInitIterator(db, RPMDBI_PACKAGES, NULL, 0);
@@ -693,11 +699,9 @@ int rpm_dbmap(rpmdb db,
     if (offs == 0)
         return 0;
 
-    if (offs < 0) {
-        log(LOGERR, "error reading rpm database\n");
-        return -1;
-    }
-
+    if (offs < 0)
+        rpm_die();
+    
     while (offs > 0) {
         if ((h = rpmdbGetRecord(db, offs))) {
             mapfn(h, offs, arg);
@@ -736,10 +740,8 @@ int rpm_dbiterate(rpmdb db, tn_array *offsets,
     if (offs == 0)
         return 0;
 
-    if (offs < 0) {
-        log(LOGERR, "error reading rpm database\n");
-        return -1;
-    }
+    if (offs < 0)
+        rpm_die();
 
     for (i=0; i<n_array_size(offsets); i++) {
         offs = (int)n_array_nth(offsets, i);
@@ -793,7 +795,7 @@ int rpm_get_pkgs_requires_capn(rpmdb db, const char *capname,
     rc = rpmdbFindByRequiredBy(db, capname, &matches);
 
     if (rc < 0) {
-        log(LOGERR, "error reading from database");
+        rpm_die();
         
     } else if (rc == 0) {
         Header h;
@@ -946,8 +948,7 @@ int rpm_get_pkgs_requires_obsl_pkg(rpmdb db, struct capreq *obsl,
     matches.recs = NULL;
     rc = rpmdbFindPackage(db, capreq_name(obsl), &matches);
     if (rc < 0) {
-        log(LOGERR, "error reading from database\n");
-        return -1;
+        rpm_die();
         
     } else if (rc == 0) {
         Header h;
@@ -1028,14 +1029,13 @@ int rpm_is_pkg_installed(rpmdb db, const struct pkg *pkg, int *cmprc)
     matches.recs = NULL;
     rc = rpmdbFindPackage(db, pkg->name, &matches);
 
-    if (rc != 0) {
-        if (rc < 0) {
-            log(LOGERR, "error reading from database\n");
-            count = -1;
-        } else 
-            count = 0;
+    if (rc < 0) 
+        rpm_die();
+    
+    else if (rc > 0)
+        count = 0;
 
-    } else if (rc == 0) {
+    else if (rc == 0) {
         Header h;
 
         count = matches.count;
