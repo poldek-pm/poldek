@@ -116,6 +116,7 @@ struct args {
     char        *log_path;
     
     unsigned    pkgdir_creat_flags; 
+    int         pkgdir_nodiff;
     
     int         shell_skip_installed;
     char        *shcmd;
@@ -134,6 +135,7 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_MKIDX        1001
 #define OPT_MKIDXZ       1002
 #define OPT_NODESC	 1004 /* don't put descriptions in package index */
+#define OPT_NODIFF	 1005 /* don't create diff */
 
 #define OPT_SOURCETXT   1015
 #define OPT_SOURCEDIR   1016
@@ -164,7 +166,7 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_INST_FRESHEN          'F'
 #define OPT_INST_HOLD             1053
 #define OPT_INST_NOHOLD           1054
-#define OPT_INST_GREEDY           1055
+#define OPT_INST_GREEDY           'G'
 
 #define OPT_SPLITSIZE             1100
 #define OPT_SPLITCONF             1101
@@ -225,6 +227,10 @@ static struct argp_option options[] = {
 {"nodesc", OPT_NODESC, 0, 0,
  N_("Don't put packages user-level information (like Summary or Description)"
      " in created index."), 60 },
+
+{"nodiff", OPT_NODIFF, 0, 0,
+ N_("Don't create \"diff\" with existig index"), 60 },
+
 
 {0,0,0,0, N_("Packages spec:"), 65},
 {"pkgset", 'p',  "FILE", 0, N_("Take package set definition from FILE"), 65 },
@@ -515,6 +521,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
         case OPT_NODESC:
 	    argsp->pkgdir_creat_flags |= PKGDIR_CREAT_NODESC;
+	    break;
+
+        case OPT_NODIFF:
+	    argsp->pkgdir_nodiff = 1;
 	    break;
             
         case OPT_INST_INSTDIST:
@@ -1020,7 +1030,7 @@ static int update_idx(void)
 static int mkidx(struct pkgset *ps) 
 {
     struct source   *src;
-    struct pkgdir   *pkgdir, *orig;
+    struct pkgdir   *pkgdir;
     char            path[PATH_MAX], *idx_path = NULL;
     int             nerr = 0;
     time_t          ts;
@@ -1070,9 +1080,10 @@ static int mkidx(struct pkgset *ps)
     ts = time(0);
     pkgdir = n_array_nth(ps->pkgdirs, 0);
     pkgdir->ts = ts;
+
     
-    if (access(idx_path, R_OK) == 0) {
-        struct pkgdir *diff;
+    if (args.pkgdir_nodiff == 0 && access(idx_path, R_OK) == 0) {
+        struct pkgdir *orig, *diff;
         
         msgn(1, _("Loading previous %s..."), idx_path);
         orig = pkgdir_new("", idx_path, NULL, PKGDIR_NEW_VERIFY);
@@ -1177,8 +1188,15 @@ int verify_args(void)
                 logn(LOGWARN, _("--v016 has no effect in this mode"));
                 args.v016compat = 0;
             }
-            
+
             n_assert(args.sources);
+
+            if (n_array_size(args.sources) > 1) {
+                logn(LOGERR, _("multiple sources are not allowed "
+                               "for mkidx option"));
+                exit(EXIT_FAILURE);
+            }
+            
             for (i=0; i<n_array_size(args.sources); i++) {
                 struct source *src = n_array_nth(args.sources, i);
                 src->ldmethod = PKGSET_LD_DIR;
