@@ -280,11 +280,16 @@ int http_resp_get_hdr_long(struct http_resp *resp, const char *name, long *val)
 }
 
 static
-int http_resp_has_close_cn(struct http_resp *resp)
+int http_resp_conn_status(struct http_resp *resp)
 {
     char *s;
-    return ((s = n_hash_get(resp->hdr, "connection")) &&
-            strcmp(s, "close") == 0);
+    if ((s = n_hash_get(resp->hdr, "connection")) == NULL)
+        return -1;
+
+    if (strcmp(s, "keep-alive") == 0)
+        return 1;
+
+    return 0;
 }
 
 static
@@ -918,6 +923,9 @@ static long httpcn_size(struct httpcn *cn, const char *path)
 int httpcn_is_alive(struct httpcn *cn) 
 {
     char req_line[256];
+
+    if (cn->state != HTTPCN_ALIVE)
+        return 0;
     
     make_req_line(req_line, sizeof(req_line), "HEAD /");
     
@@ -1028,13 +1036,13 @@ static void progress(long total, long amount, void *data)
 int httpcn_retr(struct httpcn *cn, int out_fd, off_t out_fdoff, 
                const char *path, void *progess_data)
 {
-    int   sockfd = -1, rc = 1;
+    int   close_cn = 0, rc = 1;
     long  from = 0, to = 0, total = 0, amount = 0;
     void  *sigint_fn;
     char  req_line[PATH_MAX];
     
     vhttp_errno = 0;
-
+    
     //http_progress_fn = progress;
     
     sigint_fn = establish_sigint();
@@ -1061,10 +1069,24 @@ int httpcn_retr(struct httpcn *cn, int out_fd, off_t out_fdoff,
     if (!httpcn_get_resp(cn))
         goto l_err_end;
 
-    if (cn->resp->http_ver == 0 || http_resp_has_close_cn(cn->resp))
-        sockfd = cn->sockfd;
+    switch (http_resp_conn_status(cn->resp)) {
+        case -1:                /* no Connection header */
+            if (cn->resp->http_ver > 0) /* HTTP > 1.0 */
+                break;
+                                 /* no break */
+        case 0:                  /* Connection: close    */
+            close_cn = 1;
+            break;
 
-    
+        case 1:                  /* Connection: keep-alive  */
+            close_cn = 0;
+            break;
+
+        default:
+            n_assert(0);
+            break;
+    }
+
     
     if (!status_code_ok(cn->resp->code, cn->resp->msg, path) &&
         cn->resp->code != HTTP_STATUS_BAD_RANGE)
@@ -1118,17 +1140,18 @@ int httpcn_retr(struct httpcn *cn, int out_fd, off_t out_fdoff,
     
  l_end:
     restore_sigint(sigint_fn);
-    if (sockfd > 0) {
-        close(sockfd);
-        cn->state = HTTPCN_DEAD;
-    }
+    if (close_cn)
+        httpcn_close(cn);
     
     return rc;
     
  l_err_end:
     rc = 0;
+    close_cn = 1;
+    
     if (vhttp_errno == 0)
         vhttp_errno = EIO;
+    
     goto l_end;
 }
 
