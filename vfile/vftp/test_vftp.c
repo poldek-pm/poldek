@@ -22,21 +22,21 @@ int test_ftp(void)
 int test_vftp(void) 
 {
     FILE *stream;
-    
-    vftp_init(1, NULL);
+    int verbose = 1;
+    vftp_init(&verbose, NULL);
 
 //    while(1) {
         
         stream = fopen("/tmp/dupa.txt", "w");
         if (!vftp_retr(stream, 0, "ftp://smok/welcome2.msg", NULL))
-            printf("retr: %s\n", ftp_errmsg());
+            printf("retr: %s\n", vftp_errmsg());
         
         fclose(stream);
         
         stream = fopen("/tmp/dupa2.txt", "w");
         if (!vftp_retr(stream, 0,
                        "ftp://localhost/RPMSt/vvgrab-0.15-1.i686.rpm", NULL))
-            printf("retr: %s: %m\n", ftp_errmsg());
+            printf("retr: %s: %m\n", vftp_errmsg());
     
     	
         //printf("Trasfered %ld bytes\n", size);
@@ -44,7 +44,7 @@ int test_vftp(void)
         
         stream = fopen("/tmp/dupa3.txt", "w");
         if (!vftp_retr(stream, 0, "ftp://smok/welcome2.msg", NULL))
-            printf("retr: %s\n", ftp_errmsg());
+            printf("retr: %s\n", vftp_errmsg());
         
         //printf("Trasfered %ld bytes\n", size);
         fclose(stream);
@@ -52,7 +52,7 @@ int test_vftp(void)
         stream = fopen("/tmp/dupa4.txt", "w");
         
         if (!vftp_retr(stream, 0, "ftp://localhost/welcome2.msg", NULL))
-            printf("retr: %s\n", ftp_errmsg());
+            printf("retr: %s\n", vftp_errmsg());
         
         //printf("Trasfered %ld bytes\n", size);
         fclose(stream);

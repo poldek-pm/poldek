@@ -28,40 +28,25 @@
 #include <trurl/nlist.h>
 
 #include "ftp.h"
+#include "vftp.h"
 #include "i18n.h"
 static void vftp_msg(const char *fmt, ...);
 
 void (*vftp_msg_fn)(const char *fmt, ...) = vftp_msg;
 
-
 static tn_list *vftp_cnl = NULL;               /* connections */
-static char errmsg[256] = { '\0' };
-static int vftp_errno = 0;
-static int vftp_verbose = 0;
 
-const char *vftp_errmsg(void) 
-{
-    if (vftp_errno)
-        return errmsg;
-    
-    return ftp_errmsg();
-}
-
-
-
-int vftp_init(int verbose, 
+int vftp_init(int *verbose, 
               void (*progress_fn)(long total, long amount, void *data)) 
 {
     if (progress_fn)
         ftp_progress_fn = progress_fn;
 
     vftp_verbose = verbose;
-    ftp_verbose = &vftp_verbose;
     
     vftp_cnl = n_list_new(TN_LIST_UNIQ, (t_fn_free)ftpcn_free, NULL);
     return vftp_cnl != NULL;
 }
-
 
 void vftp_destroy(void) 
 {
@@ -95,13 +80,10 @@ int vftp_retr(FILE *stream, long offset, const char *url,
     int                port = 0, rc;
     char               *err_msg = _("%s: URL parse error");
 
-
-    vftp_errno = 0;
-    
+    vftp_set_err(0, "");
     
     if ((rc = strncmp(url, "ftp://", sizeof("ftp://") - 1)) != 0) {
-        snprintf(errmsg, sizeof(errmsg), err_msg, url);
-        vftp_errno = 1;
+        vftp_set_err(EINVAL, err_msg, url);
         return 0;
     }
     
@@ -109,8 +91,7 @@ int vftp_retr(FILE *stream, long offset, const char *url,
     host = buf;
     
     if ((q = strchr(buf, '/')) == NULL) {
-        snprintf(errmsg, sizeof(errmsg), err_msg, url);
-        vftp_errno = 1;
+        vftp_set_err(EINVAL, err_msg, url);
         return 0;
     }
     
@@ -121,9 +102,8 @@ int vftp_retr(FILE *stream, long offset, const char *url,
         port = IPPORT_FTP;
     
     if ((p = strrchr(host, ':'))) {
-        if (sscanf(p + 1, "%d", &port) == 1) {
-            snprintf(errmsg, sizeof(errmsg), err_msg, url);
-            vftp_errno = 1;
+        if (sscanf(p + 1, "%d", &port) != 1) {
+            vftp_set_err(EINVAL, err_msg, url);
             return 0;
         }
         *p = '\0';
@@ -136,7 +116,7 @@ int vftp_retr(FILE *stream, long offset, const char *url,
         if (strcmp(cn->host, host) == 0 && cn->port == port &&
             ftpcn_is_alive(cn)) {
             
-            if (vftp_verbose > 1)
+            if (*vftp_verbose > 1)
                 vftp_msg_fn("Reusing connection %s:%d\n", cn->host, cn->port);
             break;
         }

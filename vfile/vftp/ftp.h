@@ -9,7 +9,8 @@
 #include <sys/types.h>
 #include <errno.h>
 
-extern int *ftp_verbose;
+const char *vftp_errmsg(void);
+void vftp_set_err(int err_no, const char *fmt, ...);
 extern void (*ftp_progress_fn)(long total, long amount, void *data);
 
 struct ftpcn {
