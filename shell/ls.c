@@ -341,11 +341,14 @@ int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg, const tn_array *evrs)
     int                  i, size, err = 0, npkgs = 0;
     int                  term_width, term_width_div2;
     unsigned             flags;
-    struct pager         pg = { NULL, 0 };
+    struct pager         pg;
     FILE                 *out_stream = stdout;
     
     if (n_array_size(shpkgs) == 0) 
         return 0;
+
+    memset(&pg, 0, sizeof(pg));
+    
     
     flags = cmdarg->flags;
     term_width = term_get_width();

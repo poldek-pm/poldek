@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <termios.h>
 
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>
@@ -45,7 +46,7 @@ static const char *select_pager_cmd(void)
     if (pager_cmd_notfound)
         return pager_cmd;
     
-    if ((cmd = getenv("PAGER")) == NULL)
+    if ((cmd = getenv("PAGER")) == NULL || *cmd == '\0')
         cmd = "less";
     
     n = 0;
@@ -88,6 +89,11 @@ FILE *pager(struct pager *pg)
         return NULL;
     }
     
+    if (tcgetattr(STDOUT_FILENO, &pg->_tios) != 0) {
+        logn(LOGERR, "tcgetattr(stdout): %m");
+        return NULL;
+    }
+
     if (pipe(pp) != 0) {
         logn(LOGERR, "pipe: %m");
         return NULL;
@@ -96,26 +102,33 @@ FILE *pager(struct pager *pg)
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, SIG_IGN);
     signal(SIGTERM, SIG_IGN);
+
     if ((pid = fork()) == 0) {
         close(pp[1]);
 	dup2(pp[0], 0);
 	close(pp[0]);
 
         execl(cmd, n_basenam(cmd), NULL);
+        logn(LOGERR, "execl %s: %m", cmd);
 	exit(EXIT_FAILURE);
         
     } else if (pid < 0) {
         logn(LOGERR, "fork %s: %m", cmd);
-        return NULL;
         
     } else {
         close(pp[0]);
         if ((pg->stream = fdopen(pp[1], "w")) == NULL) {
             logn(LOGERR, "fdopen %d: %m", pp[0]);
+            
         } else {
             setvbuf(pg->stream, NULL, _IONBF, 0);
             pg->pid = pid;
         }
+    }
+    
+    if (pg->stream == NULL) {
+        close(pp[0]);
+        close(pp[1]);
     }
     
     return pg->stream;
@@ -136,9 +149,19 @@ int pager_close(struct pager *pg)
     if (WIFEXITED(st))
         rc = WEXITSTATUS(st);
     
+    if (tcsetattr(STDOUT_FILENO, TCSANOW, &pg->_tios) != 0 ||
+        tcsetattr(STDERR_FILENO, TCSANOW, &pg->_tios) != 0) {
+        
+        logn(LOGERR, "tcgetattr(stdout): %m");
+        rc = -1;
+    }
+
+    
     signal(SIGPIPE, SIG_DFL);
     signal(SIGINT, SIG_DFL);
     signal(SIGTERM, SIG_DFL);
+
+    
     pg->stream = NULL;
     return rc;
 }

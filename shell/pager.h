@@ -1,11 +1,14 @@
-
+/* $Id$ */
 #ifndef POLDEK_SHELL_PAGER_H
 #define POLDEK_SHELL_PAGER_H
 
+#include <unistd.h>
+#include <termios.h>
 
 struct pager {
-    FILE *stream;
-    pid_t pid;
+    FILE             *stream;
+    pid_t            pid;
+    struct termios  _tios;
 };
 
 FILE *pager(struct pager *pg);
