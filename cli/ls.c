@@ -431,8 +431,7 @@ int do_ls(const tn_array *ents, struct cmdarg *cmdarg, const tn_array *evrs)
             snprintf(sizbuf, sizeof(sizbuf), "%.1f %cB", pkgsize, unit);
             
             if (pkg->btime)
-                strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
-                         localtime((time_t*)&pkg->btime));
+                pkg_strbtime(timbuf, sizeof(timbuf), pkg);
             else
                 *timbuf = '\0';
             

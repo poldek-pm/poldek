@@ -10,7 +10,6 @@
   $Id$
 */
 
-#include <time.h>
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
@@ -676,10 +675,9 @@ static void show_description(struct pkg *pkg, unsigned flags)
         return;
     }
         
-
-    if (pkg->btime) 
-        strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
-                 localtime((time_t*)&pkg->btime));
+    
+    if (pkg->btime)
+        pkg_strbtime(timbuf, sizeof(timbuf), pkg);
     else
         *timbuf = '\0';
 
