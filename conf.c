@@ -212,7 +212,7 @@ void copt_free(struct copt *opt)
     if (opt->flags & COPT_MULTIPLE)
         n_array_free(opt->vals);
     else
-        free(opt->val);
+        n_cfree(&opt->val);
 
     free(opt);
 }
@@ -484,7 +484,7 @@ static int expand_section_vars(tn_hash *ht, tn_hash *ht_global) /*  */
         val = do_expand_value(expanded_val, sizeof(expanded_val), opt->val,
                               ht, ht_global);
         if (val != opt->val) {
-            free(opt->val);
+            n_cfree(&opt->val);
             opt->val = n_strdup(val);
         }
         
@@ -801,7 +801,7 @@ tn_hash *open_section_ht(tn_hash *htconf, const struct section *sect,
         
         arr_sect = n_array_new(4, (tn_fn_free)n_hash_free, NULL);
         n_array_push(arr_sect, ht_sect);
-        n_hash_insert(htconf, n_strdup(sectnam), arr_sect);
+        n_hash_insert(htconf, sectnam, arr_sect);
     }
 
     return ht_sect;
@@ -1150,7 +1150,8 @@ static struct copt *do_conf_get(const tn_hash *htconf, const char *name)
 }
 
 
-char *poldek_conf_get(const tn_hash *htconf, const char *name, int *is_multi)
+const char *poldek_conf_get(const tn_hash *htconf, const char *name,
+                            int *is_multi)
 {
     struct copt *opt;
     char *v = NULL;
@@ -1169,7 +1170,7 @@ char *poldek_conf_get(const tn_hash *htconf, const char *name, int *is_multi)
 
 int poldek_conf_get_int(const tn_hash *htconf, const char *name, int default_v)
 {
-    char *vs;
+    const char *vs;
     int  v;
     
     if ((vs = poldek_conf_get(htconf, name, NULL)) == NULL)
@@ -1184,7 +1185,7 @@ int poldek_conf_get_int(const tn_hash *htconf, const char *name, int default_v)
 
 int poldek_conf_get_bool(const tn_hash *htconf, const char *name, int default_v)
 {
-    char *v;
+    const char *v;
     
     if ((v = poldek_conf_get(htconf, name, NULL)) == NULL)
         return default_v;

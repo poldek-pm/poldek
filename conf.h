@@ -16,7 +16,7 @@ tn_hash *poldek_conf_loadefault(unsigned flags);
 tn_array *poldek_conf_get_section_arr(const tn_hash *htconf, const char *name);
 tn_hash *poldek_conf_get_section_ht(const tn_hash *htconf, const char *name);
 
-char *poldek_conf_get(const tn_hash *htconf, const char *name, int *is_multi);
+const char *poldek_conf_get(const tn_hash *htconf, const char *name, int *is_multi);
 int poldek_conf_get_bool(const tn_hash *htconf, const char *name, int default_v);
 int poldek_conf_get_int(const tn_hash *htconf, const char *name, int default_v);
 tn_array *poldek_conf_get_multi(const tn_hash *htconf, const char *name);
