@@ -43,11 +43,17 @@ static const char *select_pager_cmd(void)
         "/usr/local/bin", "/usr/local/sbin", NULL
     };
 
+    
     if (pager_cmd_notfound)
         return pager_cmd;
     
-    if ((cmd = getenv("PAGER")) == NULL || *cmd == '\0')
+    if ((cmd = getenv("PAGER")) == NULL)
         cmd = "less";
+    
+    else if (*cmd == '\0') {
+        pager_cmd_notfound = 1;
+        return NULL;
+    }
     
     n = 0;
     while (path[n]) {
@@ -77,7 +83,8 @@ FILE *pager(struct pager *pg)
 
     pg->stream = NULL;
     pg->pid = 0;
-
+    pg->ec = 0;
+    
     if ((cmd = select_pager_cmd()) == NULL)
         return NULL;
 
@@ -134,21 +141,45 @@ FILE *pager(struct pager *pg)
     return pg->stream;
 }
 
+static
+int pager_waitpid(struct pager *pg, int woptions) 
+{
+    int     st;
+    pid_t   pid;
+    
+    if (pg->pid == 0)
+        return pg->ec;
+    
+    if ((pid = waitpid(pg->pid, &st, woptions)) <= 0)
+        return 0;
+
+    pg->pid = 0;
+    pg->ec = 0;
+    
+    if (WIFEXITED(st))
+        pg->ec = WEXITSTATUS(st);
+
+    return pg->ec;
+}
+
+
+int pager_exited(struct pager *pg)
+{
+    pager_waitpid(pg, WNOHANG);
+    return pg->pid == 0;       /* finished? */
+}
+
 
 int pager_close(struct pager *pg) 
 {
-    int st, rc = -1;
+    int rc = 0;
 
-    if (pg->pid == 0)
-        return 0;
+    if (pg->pid)
+        pager_waitpid(pg, 0);
     
     if (pg->stream)
         fclose(pg->stream);
 
-    waitpid(pg->pid, &st, 0);
-    if (WIFEXITED(st))
-        rc = WEXITSTATUS(st);
-    
     if (tcsetattr(STDOUT_FILENO, TCSANOW, &pg->_tios) != 0 ||
         tcsetattr(STDERR_FILENO, TCSANOW, &pg->_tios) != 0) {
         
@@ -161,6 +192,8 @@ int pager_close(struct pager *pg)
     signal(SIGINT, SIG_DFL);
     signal(SIGTERM, SIG_DFL);
 
+    if (rc == 0)
+        rc = pg->ec;
     
     pg->stream = NULL;
     return rc;

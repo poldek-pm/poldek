@@ -412,6 +412,9 @@ int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg, const tn_array *evrs)
         struct shpkg   *shpkg = n_array_nth(shpkgs, i);
         struct pkg     *pkg = shpkg->pkg;
         char           *pkg_name;
+
+        if (out_stream != stdout && pager_exited(&pg))
+            goto l_end;
         
         if (flags & OPT_LS_NAMES_ONLY) 
             pkg_name = pkg->name;
@@ -488,6 +491,7 @@ int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg, const tn_array *evrs)
         }
     }
 
+ l_end:
     if (out_stream != stdout)
         pager_close(&pg);
     
