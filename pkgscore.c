@@ -162,7 +162,7 @@ void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag)
             if (pkgscore_match(&psc, mask)) {
                 switch (scoreflag) {
                     case PKG_HELD:
-                        msgn(1, "held %s", pkg_snprintf_s(pkg));
+                        msgn(3, "held %s", pkg_snprintf_s(pkg));
                         DBGMSG_F("HELD %s\n", pkg_snprintf_s(pkg));
                         pkg_score(pkg, PKG_HELD);
                         break;
