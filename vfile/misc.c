@@ -33,6 +33,8 @@
 #include <unistd.h>
 #include <pwd.h>
 
+#include <trurl/nstr.h>
+
 #define VFILE_INTERNAL
 #include "vfile.h"
 
@@ -137,7 +139,7 @@ int vf_userathost(char *buf, int size)
 
     n = 0;
 
-    n += snprintf(buf, size, "%s@", passwd->pw_name);
+    n += n_snprintf(buf, size, "%s@", passwd->pw_name);
     
     if (gethostname(&buf[n], size - n) != 0)
         return 0;
@@ -147,4 +149,51 @@ int vf_userathost(char *buf, int size)
     return strlen(buf);
 }
 
+
+int vf_cleanpath(char *buf, int size, const char *path) 
+{
+    const char **tl, **tl_save;
+    const char *p; 
+    int n = 0, startsl = 0, i;
+
+    p = path;
+    startsl = (*path == '/');
     
+    if (vf_url_type(path) != VFURL_PATH) {
+        if ((p = strstr(path, "://")) != NULL)
+            p += 2;             /* not 3 -> '/%s' below */
+        else 
+            return 0;
+        startsl = 1;            /* add second '/' to PROTO:/ */
+    }
+    
+    if (p != path) {
+        int len = p - path + 1;
+        
+        if (len > size)
+            return 0;
+        
+        n = n_snprintf(buf, len, "%s", path);
+    }
+
+    
+    tl = tl_save = n_str_tokl(p, "/");
+
+    i = 0;
+    while (*tl) {
+        //printf("t = (%s), %s[%d]\n", *tl, buf, n);
+        if (**tl) {
+            if (i == 0 && startsl == 0)
+                n += n_snprintf(&buf[n], size - n, "%s", *tl);
+            else 
+                n += n_snprintf(&buf[n], size - n, "/%s", *tl);
+        }
+        
+        tl++;
+        i++;
+    }
+    //printf("%s ==> %s\n", path, buf);
+    n_str_tokl_free(tl_save);
+    
+    return n;
+}

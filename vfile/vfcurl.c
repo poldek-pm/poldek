@@ -450,9 +450,9 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
             nbytes2str(amount_str, sizeof(amount_str), amount_size);
 
             if (bar->state == PBAR_ST_FINISHED)
-                nn = snprintf(unit_line, sizeof(unit_line), "[%s]", total_str);
+                nn = n_snprintf(unit_line, sizeof(unit_line), "[%s]", total_str);
             else 
-                nn = snprintf(unit_line, sizeof(unit_line), "[%s of %s]",
+                nn = n_snprintf(unit_line, sizeof(unit_line), "[%s of %s]",
                               amount_str, total_str);
 
             unit_n = sizeof(unit_line) - nn - 1;

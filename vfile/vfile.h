@@ -143,9 +143,12 @@ int vf_localunlink(const char *path);
 int vf_userathost(char *buf, int size);
 void vf_cssleep(int cs);
 
+int vf_cleanpath(char *buf, int size, const char *path);
 
 
 #ifdef VFILE_INTERNAL
+
+#include <trurl/n_snprintf.h>
 
 #define VF_PROGRESS_VIRGIN    0
 #define VF_PROGRESS_DISABLED  1
@@ -181,6 +184,7 @@ struct vf_module {
 #define _purl(url) vf_url_hidepasswd_s(url)
 
 #endif /* VFILE_INTERNAL */
+
 
 
 

@@ -430,7 +430,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
         return 0;
     }
 
-    len = snprintf(buf, sizeof(buf), "%s/", vfile_conf.cachedir);
+    len = n_snprintf(buf, sizeof(buf), "%s/", vfile_conf.cachedir);
     
     
     vf_url_as_path(&buf[len], sizeof(buf) - len, path);
@@ -498,7 +498,6 @@ l_end:
 struct vfile *vfile_open(const char *path, int vftype, int vfmode) 
 {
     struct vfile *vf = NULL;
-    int n = 0;
 
     vfile_err_no = 0;
     if ((vf = do_vfile_open(path, vftype, vfmode)))
@@ -574,7 +573,7 @@ int vf_mksubdir(char *path, int size, const char *dirpath)
 {
     int n;
 
-    n = snprintf(path, size, "%s/%s", vfile_conf.cachedir, dirpath);
+    n = n_snprintf(path, size, "%s/%s", vfile_conf.cachedir, dirpath);
     if (vf_mkdir(path))
         return n;
     return 0;
@@ -585,7 +584,7 @@ int vf_localpath(char *path, size_t size, const char *url)
 {
     int n;
     
-    n = snprintf(path, size, "%s/", vfile_conf.cachedir);
+    n = n_snprintf(path, size, "%s/", vfile_conf.cachedir);
     return vf_url_as_path(&path[n], size - n, url);
 }
 

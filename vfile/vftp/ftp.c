@@ -39,7 +39,7 @@
 
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
-
+#include <trurl/n_snprintf.h>
 
 #include "ftp.h"
 #include "i18n.h"
@@ -705,7 +705,7 @@ static int parse_pasv(const char *resp, char *addr, int addr_size, int *port)
 
         *port = p1*256+p2;
 
-        n = snprintf(addr, addr_size, "%d.%d.%d.%d", a[0], a[1], a[2], a[3]);
+        n = n_snprintf(addr, addr_size, "%d.%d.%d.%d", a[0], a[1], a[2], a[3]);
         if (n == addr_size) {
             vftp_set_err(EIO, _("%s: address too long"), resp);
             is_err = 1;

@@ -134,9 +134,9 @@ void vfile_progress(long total, long amount, void *data)
         nbytes2str(amount_str, sizeof(amount_str), amount);
 
         if (total == amount)
-            nn = snprintf(unit_line, sizeof(unit_line), "[%s]", total_str);
+            nn = n_snprintf(unit_line, sizeof(unit_line), "[%s]", total_str);
         else 
-            nn = snprintf(unit_line, sizeof(unit_line), "[%s of %s]",
+            nn = n_snprintf(unit_line, sizeof(unit_line), "[%s of %s]",
                           amount_str, total_str);
 
         unit_n = sizeof(unit_line) - nn - 1;

@@ -536,12 +536,12 @@ int url_to_path(char *buf, int size, const char *url, int isdir)
         
         strncpy(buf, url, nn)[nn] = '\0';
         n = strlen(buf);
-        n += snprintf(&buf[n], size - n, "_");
+        n += n_snprintf(&buf[n], size - n, "_");
         p += 3;
     } 
 
     bufp = &buf[n];
-    n += snprintf(&buf[n], size - n, p);
+    n += n_snprintf(&buf[n], size - n, p);
 
     if (isdir)
         sl = strchr(buf, '\0');
@@ -551,18 +551,12 @@ int url_to_path(char *buf, int size, const char *url, int isdir)
     p = bufp;
     c = '\0';
     while (*p && p != sl) {
-        if (c == '/' && *p == '/') {
-            p++;
-            continue;
-        }
-        
         c = *p;
 
         if (!isalnum(*p) && strchr("-+", *p) == NULL)
             *p = '.';
         p++;
     }
-    
     return n;
 }
 
