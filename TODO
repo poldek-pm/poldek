@@ -1,12 +1,19 @@
 # $Id$
 
+* mis 2002/03/14
+- more compact install_summary()
+- modify rpmlib API to allow to read rpmdb indexes 
+  without reading headers data. Needed to replace dbopen() usage
+  in rpm_get_dbdepdirs()
+
 * mis 2001/05/18
 - unistalled packages should be ordered using uninst prerequirements 
 - detection of fatal rpmlib errors during install-dist
 
-* mis  2000/09/20
-- check packages MD5 sums and PGP signatures
 
+* mis  2000/09/20
+- check PGP signatures; this should be per source configureable
+   
 - patch wget, rsync and snarf to support syntax like:
   $ downloader --destdir=DIR --prefix=URLPREFIX [BASENAME...]
   
