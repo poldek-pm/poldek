@@ -52,6 +52,7 @@
 static int term_width  = DEFAULT_TERM_WIDTH;
 static int term_height = DEFAULT_TERM_HEIGHT;
 
+static int gmt_off = 0;
 
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
 static volatile sig_atomic_t winch_reached = 0;
@@ -152,6 +153,30 @@ int shpkg_ncmp_str(struct shpkg *pkg, const char *name)
 {
     return strncmp(pkg->nevr, name, strlen(name));
 }
+
+int shpkg_cmp_btime(struct shpkg *p1, struct shpkg *p2)
+{
+    return p1->pkg->btime - p2->pkg->btime;
+}
+
+int shpkg_cmp_btime_rev(struct shpkg *p1, struct shpkg *p2)
+{
+    return p2->pkg->btime - p1->pkg->btime;
+}
+
+int shpkg_cmp_bday(struct shpkg *p1, struct shpkg *p2)
+{
+    return ((p1->pkg->btime + gmt_off) / 86400) -
+        ((p2->pkg->btime + gmt_off) / 86400);
+        
+}
+
+int shpkg_cmp_bday_rev(struct shpkg *p1, struct shpkg *p2)
+{
+    return -shpkg_cmp_bday(p1, p2); 
+}
+
+
 
 struct shpkg *shpkg_link(struct shpkg *shpkg) 
 {
@@ -711,7 +736,7 @@ void db_map_fn(unsigned int recno, void *header, void *shpkgs)
     shpkg->_ucnt = 0;
     n_array_push(shpkgs, shpkg);
     if (n_array_size(shpkg) % 100 == 0)
-        msg(0, "_.");
+        msg(1, ".");
 }
 
 static tn_array *load_installed_packages(tn_array **shpkgsp) 
@@ -720,14 +745,14 @@ static tn_array *load_installed_packages(tn_array **shpkgsp)
     tn_array *shpkgs = *shpkgsp;
 
     n_array_clean(*shpkgsp);
-    msg(0, "Loading installed packages...");
+    msg(1, "Loading installed packages...");
     db = pkgdb_open(shell_s.inst->rootdir, NULL, O_RDONLY);
     rpm_dbmap(db->dbh, db_map_fn, shpkgs);
     pkgdb_free(db);
     
     n_array_sort(shpkgs);
-    msg(0, "_done.\n");
-    msg(0, "%d packages loaded\n", n_array_size(shpkgs));
+    msg(1, "_done.\n");
+    msg(1, "%d packages loaded\n", n_array_size(shpkgs));
     
     return shpkgs;
 }
@@ -803,7 +828,6 @@ int get_term_height(void)
     return term_height;
 }
 
-    
 
 static void init_commands(void) 
 {
@@ -850,32 +874,32 @@ static void init_commands(void)
     n_array_sort(commands);
 }
 
-    
 
-int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
+static void setup_gmt_off(void) 
 {
-    char *line, *s, *home;
+    time_t t;
+    struct tm *tm;
+
+    t = time(NULL);
+    if ((tm = localtime(&t))) 
+#ifdef HAVE_TM_GMTOFF
+        gmt_off = tm->tm_gmtoff;
+#elif defined HAVE_TM___GMTOFF
+        gmt_off = tm->__tm_gmtoff;
+#endif        
+}
+
+static
+int init_shell_data(struct pkgset *ps, struct inst_s *inst, int skip_installed) 
+{
     int i;
 
     argp_program_bug_address = NULL;
-    
-    if (!isatty(1)) {
-        log(LOGERR, "not a tty\n");
-        return 1;
-    }
-
-    term_init();
-    winch_reached = 1;
-    get_term_width();
-    
-    signal(SIGWINCH, sig_winch);
 
     setlocale (LC_ALL, "");
+    setup_gmt_off();
     
-    if (shell_s.pkgset != NULL) {
-        log(LOGERR, "shell_main: not reentrant func\n");
-        return 0;
-    }
+    n_assert (shell_s.pkgset == NULL);
     
     if (inst->rootdir == NULL)
         inst->rootdir = "/";
@@ -888,10 +912,10 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
                                  (tn_fn_cmp)shpkg_cmp);
     
     
-    for (i=0; i<n_array_size(ps->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->pkgs, i);
-        struct shpkg *shpkg;
-        char buf[1024];
+    for (i=0; i < n_array_size(ps->pkgs); i++) {
+        struct pkg    *pkg = n_array_nth(ps->pkgs, i);
+        struct shpkg  *shpkg;
+        char          buf[1024];
 
 
         pkg_snprintf(buf, sizeof(buf), pkg);
@@ -913,7 +937,50 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
                                        (tn_fn_cmp)shpkg_cmp);
         load_installed_packages(&shell_s.instpkgs);
     }
+
+    switch_pkg_completion(COMPL_CTX_AV_PKGS);
+    init_commands();
+    return 1;
+}
+
+int shell_exec(struct pkgset *ps, struct inst_s *inst, int skip_installed,
+               const char *cmd) 
+{
+    char *s, *p;
+
     
+    init_shell_data(ps, inst, skip_installed);
+    
+    p = alloca(strlen(cmd) + 1);
+    memcpy(p, cmd, strlen(cmd) + 1);
+    
+    s = stripwhite(p);
+    if (*s) 
+        return execute_line(s);
+    
+    return 0;
+}
+
+
+
+int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
+{
+    char *line, *s, *home;
+    
+
+    if (!isatty(1)) {
+        log(LOGERR, "not a tty\n");
+        return 0;
+    }
+    
+    
+    init_shell_data(ps, inst, skip_installed);
+            
+    term_init();
+    winch_reached = 1;
+    get_term_width();
+    signal(SIGWINCH, sig_winch);
+
     initialize_readline();
     histfile = NULL;
 
@@ -923,31 +990,28 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         read_history(histfile);
     }
     
-    switch_pkg_completion(COMPL_CTX_AV_PKGS);
-    
-    init_commands();
-    
     signal(SIGINT,  shell_end);
     signal(SIGTERM, shell_end);
     signal(SIGQUIT, shell_end);
     done = 0;
     
-    printf("\nWelcome to the poldek shell mode. Type \"help\" for help with commands\n\n");
+    printf("\nWelcome to the poldek shell mode. "
+           "Type \"help\" for help with commands\n\n");
     
     while (done == 0) {
-	if ((line = readline("poldek> ")) == NULL)
+        if ((line = readline("poldek> ")) == NULL)
             break;
         
-	s = stripwhite(line);
-	if (*s) {
+        s = stripwhite(line);
+        if (*s) {
             add_history(s);
             //print_mem_info("BEFORE");
-	    execute_line(s);
+            execute_line(s);
             //print_mem_info("AFTER ");
-	}
-	free(line);
+        }
+        free(line);
     }
-
+    
     shell_end(0);
     histfile = NULL;
     return 1;

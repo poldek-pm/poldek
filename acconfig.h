@@ -5,6 +5,7 @@
 #undef HAVE_RPM_4_0
 #undef HAVE_RPM_EXTDEPS
 #undef HAVE_READLINE_4_2
-
+#undef HAVE_TM_GMTOFF
+#undef HAVE_TM___GMTOFF
 
 

@@ -28,7 +28,10 @@ void shpkg_free(struct shpkg *shpkg);
 
 int shpkg_cmp(struct shpkg *p1, struct shpkg *p2);
 int shpkg_ncmp_str(struct shpkg *pkg, const char *name);
-
+int shpkg_cmp_btime(struct shpkg *p1, struct shpkg *p2);
+int shpkg_cmp_btime_rev(struct shpkg *p1, struct shpkg *p2);
+int shpkg_cmp_bday(struct shpkg *p1, struct shpkg *p2);
+int shpkg_cmp_bday_rev(struct shpkg *p1, struct shpkg *p2);
 
 struct shell_s {
     struct pkgset  *pkgset;

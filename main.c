@@ -40,7 +40,11 @@
 #endif
 
 #ifdef ENABLE_INTERACTIVE_MODE
-extern int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed);
+extern
+int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed);
+extern
+int shell_exec(struct pkgset *ps, struct inst_s *inst, int skip_installed,
+               const char *cmd);
 #endif
 
 static const char *argp_program_version = PACKAGE " " VERSION " (BETA)";
@@ -99,7 +103,10 @@ struct args {
     char        *conf_path;
     int         noconf;
     int         nodesc;		/* don't put descriptions in package index */
+
+    
     int         shell_skip_installed;
+    char        *shcmd;
 
     struct      split_conf split_conf;
 } args;
@@ -126,6 +133,7 @@ tn_hash *htcnf = NULL;          /* config file values */
 #ifdef ENABLE_INTERACTIVE_MODE
 # define OPT_SHELLMODE             1031
 # define OPT_SHELL_SKIPINSTALLED   'f'
+# define OPT_SHELL_CMD             1032
 #endif
 
 #define OPT_INST_INSTDIST         1041
@@ -254,6 +262,7 @@ static struct argp_option options[] = {
 {0,0,0,0, "Shell mode:", 80},
 {"shell", OPT_SHELLMODE, 0, 0, "Run in shell mode", 80 },
 {"fast", OPT_SHELL_SKIPINSTALLED, 0, 0, "Don't load installed packages at startup", 80 },
+{"shcmd", OPT_SHELL_CMD, "COMMAND", 0, "Run poldek shell COMMAND", 80 },
 #endif
 
 {0,0,0,0, "Splitting:", 90},
@@ -430,14 +439,21 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
 #ifdef ENABLE_INTERACTIVE_MODE
         case OPT_SHELLMODE:
-            check_mjrmode(argsp);
+            if (argsp->mjrmode != MODE_SHELL)
+                check_mjrmode(argsp);
             argsp->mjrmode = MODE_SHELL;
             argsp->psflags |= PSMODE_UPGRADE;
-            verbose = 1;
             break;
 
         case OPT_SHELL_SKIPINSTALLED:
             argsp->shell_skip_installed = 1;
+            break;
+
+        case OPT_SHELL_CMD:
+            if (argsp->mjrmode != MODE_SHELL)
+                check_mjrmode(argsp);
+            argsp->mjrmode = MODE_SHELL;
+            argsp->shcmd = arg;
             break;
 #endif            
         
@@ -699,6 +715,7 @@ void parse_options(int argc, char **argv)
     args.split_conf.first_free_space = 0;
     args.split_conf.conf = NULL;
     args.split_conf.prefix = NULL;
+    args.shcmd = NULL;
     inst_s_init(&args.inst);
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
@@ -1000,6 +1017,8 @@ int check_args(void)
 
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
+            if (verbose == 0)
+                verbose = 1;
 #endif            
         case MODE_UPDATEIDX:
             break;
@@ -1175,8 +1194,11 @@ int main(int argc, char **argv)
     switch (args.mjrmode) {
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
-            verbose = 1;
-            rc = shell_main(ps, &args.inst, args.shell_skip_installed);
+            if (args.shcmd != NULL) 
+                rc = shell_exec(ps, &args.inst, args.shell_skip_installed,
+                                args.shcmd);
+            else
+                rc = shell_main(ps, &args.inst, args.shell_skip_installed);
             break;
 #endif            
         case MODE_VERIFY:
