@@ -17,11 +17,11 @@ lib_LTLIBRARIES = _poldekmod.la
 
 _poldekmod_la_SOURCES = wrap_poldekmod.c
 _poldekmod_la_LDFLAGS = -avoid-version -module
-_poldekmod_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la @TRURL_LDFLAG@ 
+_poldekmod_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la ../cli/libpoclidek.la @TRURL_LDFLAG@ 
 
 AM_CFLAGS=
 CFLAGS=
-CPPFLAGS += -DSWIG
+CPPFLAGS += -DSWIG -DPOCLIDEK_ITSELF 
 
 poldekmod.i: local_stdint.h
 
