@@ -1,13 +1,21 @@
 # $Id$
 
-# RedHat 7.2; package info is taken from hdlist file
+
+# RedHat 7.3; package info is taken from hdlist file
 source1 = rh,noautoup,type=hdrl \
+    ftp://ftp.redhat.com/pub/redhat/redhat-7.3-en/os/i386/RedHat/base/hdlist
+
+prefix1 = ftp://ftp.redhat.com/pub/redhat/redhat-7.3-en/os/i386/RedHat/RPMS/
+
+
+# RedHat 7.2; package info is taken from hdlist file
+source2 = rh7.2,noautoup,type=hdrl \
     ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/base/hdlist
 
-prefix1 = ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/RPMS/
+prefix2 = ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/RPMS/
 
 # RedHat 6.2
-source2 = rh6.2,noautoup,noauto,type=hdrl \
+source3 = rh6.2,noautoup,noauto,type=hdrl \
     ftp://ftp.redhat.com/pub/redhat/redhat-6.2-en/os/i386/RedHat/base/hdlist
 
-prefix2 = ftp://ftp.redhat.com/pub/redhat/redhat-6.2-en/os/i386/RedHat/RPMS/
+prefix3 = ftp://ftp.redhat.com/pub/redhat/redhat-6.2-en/os/i386/RedHat/RPMS/
