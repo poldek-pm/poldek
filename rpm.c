@@ -512,8 +512,12 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
             
                 
             if (conflicts) {
+                FILE *fstream;
+                
                 logn(LOGERR, _("%s: failed dependencies:"), path);
                 printDepProblems(log_stream(), conflicts, numConflicts);
+                if ((fstream = log_file_stream()))
+                    printDepProblems(fstream, conflicts, numConflicts);
                 rpmdepFreeConflicts(conflicts, numConflicts);
                 goto l_err;
             }
@@ -525,8 +529,12 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
 
         if (rc != 0) {
             if (rc > 0) {
+                FILE *fstream;
+                
                 logn(LOGERR, _("%s: installation failed:"), path);
                 rpmProblemSetPrint(log_stream(), probs);
+                if ((fstream = log_file_stream()))
+                    rpmProblemSetPrint(fstream, probs);
                 goto l_err;
             } else {
                 logn(LOGERR, _("%s: installation failed (hgw why)"), path);

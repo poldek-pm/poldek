@@ -343,24 +343,20 @@ tn_hash *ldconf(const char *path)
 tn_hash *ldconf_deafult(void)
 {
     char *homedir;
-    char path[PATH_MAX];
+    char *etcpath = "/etc/poldek.conf";
     
-    if (access(path, R_OK) == 0)
-        return ldconf(path);
-
-    if ((homedir = getenv("HOME")) == NULL)
-        return NULL;
-
-    snprintf(path, sizeof(path), "%s/.poldekrc", homedir);
-    if (access(path, R_OK) != 0) {
-        char *path = "/etc/poldek.conf";
+    if ((homedir = getenv("HOME")) != NULL) {
+        char path[PATH_MAX];
         
+        snprintf(path, sizeof(path), "%s/.poldekrc", homedir);
         if (access(path, R_OK) == 0)
             return ldconf(path);
-        return NULL;
     }
     
-    return ldconf(path);
+    if (access(etcpath, R_OK) == 0)
+        return ldconf(etcpath);
+
+    return NULL;
 }
 
 

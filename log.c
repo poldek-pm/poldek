@@ -211,6 +211,16 @@ FILE *log_stream(void)
 }
 
 
+FILE *log_file_stream(void) 
+{
+    return l_fstream;
+}
+
+int log_enabled_filelog(void)
+{
+    return l_fstream != NULL;
+}
+
 static
 void vlog_tty(int pri, const char *fmt, va_list args)
 {
@@ -228,3 +238,26 @@ void vlog_tty(int pri, const char *fmt, va_list args)
     vfprintf(l_stream, fmt, args);
 }
 
+#if 0
+static char *text_wrap(char *dest, int size, const char *text, int tolen) 
+{
+    char *p, *q;
+    int n = 0;
+    
+        
+    p = dest;
+    while (*p) {
+        n++;
+        if (isspace(*p)) 
+            q = p;
+        
+        if (len > tolen) {
+            if (isspace(*p))
+                dest = '\n';
+            else
+                dest
+            
+        
+
+}
+#endif

@@ -269,7 +269,7 @@ must be given twice.
 =item B<--cachedir=DIR>
 
 DIR points to directory where downloaded files will be stored;
-the default is $HOME/.poldek; if set $TMPDIR is used.
+the default is $HOME/.poldek-cache; if set $TMPDIR is used.
 
 =item B<--log=FILE>
 
@@ -475,6 +475,7 @@ specified.
 =head1 FILES
 
 /etc/poldek.conf 
+$HOME/.poldek-cache
 $HOME/.poldekrc
 $HOME/.poldek_hold
 

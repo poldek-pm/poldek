@@ -215,18 +215,22 @@ int pdigest_calc(struct pdigest *pdg, FILE *stream, int v016_compat)
     }
     
     if (!hdr_digest(stream, mdh, &mdh_size, ctxp)) {
-        EVP_DigestFinal(&ctx, md, &md_size);
+        if (ctxp)
+            EVP_DigestFinal(&ctx, md, &md_size);
         return 0;
     }
 
     if (!digest(stream, mdd, &mdd_size, ctxp)) {
-        EVP_DigestFinal(&ctx, md, &md_size);
+        if (ctxp)
+            EVP_DigestFinal(&ctx, md, &md_size);
         return 0;
     }
 
-    if (ctxp)
+    if (ctxp) {
         EVP_DigestFinal(&ctx, md, &md_size);
-    
+        ctxp = NULL;
+    }
+        
     n = bin2hex(pdg->mdh, sizeof(pdg->mdh), mdh, mdh_size);
     if (n != PDIGEST_SIZE)
         is_err = 1;
@@ -243,6 +247,7 @@ int pdigest_calc(struct pdigest *pdg, FILE *stream, int v016_compat)
             pdg->md = strdup(mdhex);
     }
 
+    
     return is_err == 0;
 }
 

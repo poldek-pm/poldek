@@ -61,7 +61,7 @@ int uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
 {
     char **argv;
     char *cmd;
-    int i, n, nopts = 0, ec;
+    int i, n, nopts = 0;
 
     for (i=0; i<n_array_size(pkgnevrs); i++) 
         msg(1, "R %s\n", (char*)n_array_nth(pkgnevrs, i));
@@ -144,8 +144,7 @@ int uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
         
     }
 
-    ec = exec_rpm(cmd, argv);
-    return ec == 0;
+    return rpmr_exec(cmd, argv, 1, 0) == 0;
 }
 
 

@@ -57,6 +57,7 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_GREEDY         (1 << 10)
 #define INSTS_KEEP_DOWNLOADS (1 << 11)
 #define INSTS_PARTITIONED    (1 << 12)
+#define INSTS_CHECKSIG       (1 << 13)
 
 struct inst_s {
     struct pkgdb   *db;
@@ -144,7 +145,16 @@ int pkgset_dump_marked_fqpns(struct pkgset *ps, const char *dumpfile);
 int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs);
 int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst);
 
-int exec_rpm(const char *cmd, char *const argv[]);
+/* returns /bin/rpm exit code */
+int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level);
+
+
+#define PKGVERIFY_MD   (1 << 0)
+#define PKGVERIFY_PGPG (1 << 1)
+#define PKGVERIFY_ALL  PKGVERIFY_MD | PKGVERIFY_PGPG
+
+int package_verify_sign(const char *path, unsigned flags);
+
 
 #include "pkgset-load.h"
 

@@ -28,8 +28,10 @@ extern int verbose;
 
 int log_init(const char *pathname, FILE *tty, char *prefix);
 void log_closelog(void);
+int log_enabled_filelog(void);
 
 FILE *log_stream(void);
+FILE *log_file_stream(void);
 
 
 void log(int pri, const char *fmt, ...)
@@ -101,7 +103,7 @@ void log_msg_i(int indent, const char *fmt, ...)
 // to tty only
 #define msg_tty(verbose_level, fmt, args...)         \
   do {                                               \
-    if ((verbose_level) >= verbose && verbose > 0)   \
+    if ((verbose_level) <= verbose)                  \
       log(LOGTTY|LOGINFO, fmt, ## args);             \
   } while(0)
 

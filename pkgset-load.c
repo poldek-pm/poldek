@@ -150,7 +150,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 
         if (pkgdir == NULL) {
             if (n_array_size(sources) > 1)
-                logn(LOGERR, _("%s: load failed, skipped"), src->source_path);
+                logn(LOGWARN, _("%s: load failed, skipped"), src->source_path);
             continue;
         }
         

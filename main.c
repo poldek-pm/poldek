@@ -28,7 +28,6 @@
 #include <vfile/vfile.h>
 
 #include "i18n.h"
-#include "i18n.h"
 #include "log.h"
 #include "pkgset.h"
 #include "usrset.h"
@@ -241,7 +240,9 @@ static struct argp_option options[] = {
 {"upgrade", 'U', 0, 0, N_("Upgrade given packages"), 70 },
 
 
-{0,0,0,0, N_("Installation switches:"), 71},    
+{0,0,0,0, N_("Installation switches:"), 71},
+{"checksig", 'K', 0, OPTION_HIDDEN, /* not implemented yet */
+     N_("Verify packages signatures before install"), 71 },    
 {"root", 'r', "DIR", 0, N_("Set top directory to DIR"), 71 },
 {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
 N_("Prevent packages listed from being upgraded if they are already installed."), 71 },
@@ -987,7 +988,7 @@ static int update_idx(void)
         
         if (pkgdir == NULL) {
             if (n_array_size(args.sources) > 1)
-                logn(LOGERR, _("%s: load failed, skipped"), src->source_path);
+                logn(LOGWARN, _("%s: load failed, skipped"), src->source_path);
             nerr++;
             continue;
         }
@@ -1016,7 +1017,7 @@ static int mkidx(struct pkgset *ps)
     
     n_assert(ps);
     if (n_array_size(args.sources) > 1) {
-        logn(LOGERR, _("multiple sources not allowed for mkidx option"));
+        logn(LOGERR, _("multiple sources are not allowed for mkidx option"));
         return 0;
     }
 

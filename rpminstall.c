@@ -49,18 +49,104 @@
 #include "pkgset.h"
 #include "misc.h"
 
-#define EXEC_RPM 1
+#ifdef HAVE_FORKPTY
 
-#ifndef HAVE_FORKPTY
-# undef EXEC_RPM
-#endif
+static void rpmr_process_output(struct p_open_st *st, int verbose_level) 
+{
+    int           endl = 1;
 
-#ifdef EXEC_RPM
-int exec_rpm(const char *cmd, char *const argv[])
+    while (1) {
+        struct timeval to = { 1, 0 };
+        fd_set fdset;
+        int rc;
+        
+        FD_ZERO(&fdset);
+        FD_SET(st->fd, &fdset);
+        if ((rc = select(st->fd + 1, &fdset, NULL, NULL, &to)) < 0) {
+            if (errno == EAGAIN)
+                continue;
+            
+            break;
+            
+        } else if (rc > 0) {
+            char  buf[2048];
+            int   n;
+            
+            if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0) {
+                break;
+            
+            } else {
+                int i;
+                
+                buf[n] = '\0';
+                msg_tty(verbose_level, "_%s", buf);
+                if (!log_enabled_filelog())
+                    continue;
+                
+                for (i=0; i < n; i++) {
+                    int c = buf[i];
+                
+                    if (c == '\r')
+                        continue;
+                
+                    if (c == '\n')
+                        endl = 1;
+                    
+                    if (endl) {
+                        endl = 0;
+                        msg_f(0, "_\n");
+                        msg_f(0, "rpm: ");
+                        continue;
+                    }
+                    msg_f(0, "_%c", c);
+                }
+            }
+        }
+    }
+}
+
+
+int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
+{
+    struct p_open_st pst;
+    int n, ec;
+    
+    p_st_init(&pst);
+    if (ontty) {
+        if (pty_open(&pst, cmd, argv) == NULL) 
+            return 0;
+    } else {
+        if (p_open(&pst, 0, cmd, argv) == NULL) 
+            return 0;
+    }
+    
+    n = 0;
+    if (verbose == 0) {
+        verbose = 1;
+        n = 1;
+    }
+
+    rpmr_process_output(&pst, verbose_level);
+    if ((ec = p_close(&pst) != 0) && pst.errmsg != NULL)
+        logn(LOGERR, "%s", pst.errmsg);
+
+    p_st_destroy(&pst);
+    
+    if (n)
+        verbose--;
+    
+    return ec;
+}
+
+#else  /* HAVE_FORKPTY */
+
+int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
 {
     int rc, st, n;
     pid_t pid;
 
+    ontty = ontty;               /* unused */
+    
     msg_f(1, _("Executing %s "), cmd);
     n = 0;
     while (argv[n])
@@ -107,41 +193,12 @@ int exec_rpm(const char *cmd, char *const argv[])
     
     return rc;
 }
-#endif /* EXEC_RPM */
 
-#ifndef EXEC_RPM
-static void process_rpm_output(struct p_open_st *st) 
-{
-    int endl = 1;
-    char c;
-    
-    while (read(st->fd, &c, 1) == 1) {
-        msg_tty(1, "_%c", c);
-
-        if (c == '\r')
-            continue;
-        
-        if (c == '\n')
-            endl = 1;
-        
-        if (endl) {
-            endl = 0;
-            msg_f(0, "_\n");
-            msg_f(0, "rpm: ");
-            continue;
-        }
-        msg_f(0, "_%c", c);
-    }
-    
-}
-#endif /* !EXEC_RPM */
+#endif /* HAVE_FORKPTY */
 
 
 int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst) 
 {
-#ifndef EXEC_RPM    
-    struct p_open_st pst;
-#endif
     char **argv;
     char *cmd;
     int i, n, nopts = 0, ec;
@@ -263,29 +320,8 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
     }
     
 
-#ifdef EXEC_RPM    
-    ec = exec_rpm(cmd, argv);
-#else  
-    p_st_init(&pst);
-    if (pty_open(&pst, cmd, argv) == NULL) 
-        return 0;
+    ec = rpmr_exec(cmd, argv, 1, 1);
     
-    n = 0;
-    if (verbose == 0) {
-        verbose = 1;
-        n = 1;
-    }
-
-    process_rpm_output(&pst);
-    if ((ec = p_close(&pst) != 0))
-        logn(LOGERR, "%s", pst.errmsg);
-
-    p_st_destroy(&pst);
-    
-    if (n)
-        verbose--;
-#endif /* EXEC_RPM */
-
     if (ec == 0 && (inst->instflags & PKGINST_TEST) == 0 &&
         (inst->flags & INSTS_KEEP_DOWNLOADS) == 0) {
         

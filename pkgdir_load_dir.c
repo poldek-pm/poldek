@@ -54,13 +54,17 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
     struct stat    st;
     DIR            *dir;
     int            n;
+    char           *sepchr = "/";
 
     
     if ((dir = opendir(dirpath)) == NULL) {
 	logn(LOGERR, "opendir %s: %m", dirpath);
 	return 0;
     }
-
+    
+    if (dirpath[strlen(dirpath) - 1] == '/')
+        sepchr = "";
+    
     n = 0;
     while( (ent = readdir(dir)) ) {
         char path[PATH_MAX];
@@ -71,7 +75,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
         if (fnmatch("*.src.rpm", ent->d_name, 0) == 0) 
             continue;
 
-        snprintf(path, sizeof(path), "%s/%s", dirpath, ent->d_name);
+        snprintf(path, sizeof(path), "%s%s%s", dirpath, sepchr, ent->d_name);
         
         if (stat(path, &st) != 0) {
             logn(LOGERR, "stat %s: %m", path);
@@ -88,7 +92,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
             }
             
             if (rpmReadPackageHeader(fdt, &h, NULL, NULL, NULL) != 0) {
-                logn(LOGERR, "%s: read header failed, skipped", path);
+                logn(LOGWARN, "%s: read header failed, skipped", path);
                 
             } else {
                 struct pkg *pkg;
