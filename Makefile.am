@@ -66,7 +66,6 @@ man_MANS = poldek.1
 poldek.1: poldek.pod VERSION
 	$(POD2MAN) -s 1 -r "poldek" --center "poldek $(VERSION)" $< > $@
 
-poldek: VERSION
 
 dist-hook:
 	rm -rf $(distdir)/.deps

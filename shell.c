@@ -35,7 +35,7 @@ static int cmd_quit(int argc, const char **argv, struct argp*);
 
 /* ls */
 static int cmd_ls(int argc, const char **argv, struct argp*);
-static error_t parse_ls_opt(int key, const char *arg, struct argp_state *state);
+static error_t parse_ls_opt(int key, char *arg, struct argp_state *state);
 
 
 #define OPT_LS_LONG          (1 << 0) /* cmd_state->flags */
@@ -43,11 +43,11 @@ static error_t parse_ls_opt(int key, const char *arg, struct argp_state *state);
 #define OPT_LS_INSTALLED     (1 << 3) /* cmd_state->flags */
 
 static struct argp_option options_ls[] = {
- { "long", 'l', 0, 0, "use a long listing format", 1},
- { "upgradeable", 'u', 0, 0, "show upgradeable packages only", 1},
- { "installed", 'I', 0, 0, "list installed packages", 1},
+ { "long", 'l', 0, 0, "Use a long listing format", 1},
+ { "upgradeable", 'u', 0, 0, "Show upgradeable packages only", 1},
+ { "installed", 'I', 0, 0, "List installed packages", 1},
+ { 0, 0, 0, 0, 0, 0 },
 };
-
 
 /* stat */
 static int cmd_stat(int argc, const char **argv, struct argp*);
@@ -55,8 +55,9 @@ static error_t parse_stat_opt(int key, char *arg, struct argp_state *state);
 
 #define OPT_STAT_ALL   (1 << 10) /* cmd_state->flags */
 static struct argp_option options_stat[] = {
-{0,0,0,0, "stat [OPTION...] [PACKAGE...]", 1 },
+{0,0,0,0, "stat [OPTION...] [PACKAGEX...]", 1 },
 {"all", 'a', 0, 0, "print all packages", 1},
+{ 0, 0, 0, 0, 0, 0 },    
 };
 
 
@@ -135,8 +136,11 @@ struct command {
 #define CMD_HELP       21
 
 struct command commands_tab[] = {
-{ CMD_LS, "ls", "[OPTION...] [PACKAGE...]", options_ls, parse_ls_opt, cmd_ls,
-  "List packages"},
+    { CMD_LS, "ls", "[PACKAGE...]",
+      options_ls,
+      parse_ls_opt,
+      cmd_ls,
+      "List packages"},
 
 /*{ CMD_INF0, "info", "[PACKAGE...]", NULL, NULL, cmd_ls, "display package(s) info"},*/
     
@@ -145,16 +149,16 @@ struct command commands_tab[] = {
 /*{ CMD_STAT, "stat", "[OPTION...] [PACKAGE...]", options_stat, parse_stat_opt, cmd_stat,
   "Display given packages status"},*/
 
-{ CMD_INSTALL, "install", "[OPTION...] PACKAGE...",
+{ CMD_INSTALL, "install", "PACKAGE...",
       options_install, parse_install_opt, cmd_install,
       "Install given packages." },
     
-{ CMD_UNINSTALL, "uninstall", "[OPTION...] PACKAGE...", options_uninstall,
+{ CMD_UNINSTALL, "uninstall", "PACKAGE...", options_uninstall,
       parse_uninstall_opt, cmd_uninstall,
       "Uninstall given packages" },
 
 { CMD_RELOAD, "reload", NULL, NULL, NULL, cmd_reload,
-      "Reload installed package list (if you modify rpm database externally)"},
+      "Reload installed package list"},
     
 { CMD_QUIT, "quit", NULL, NULL, NULL, cmd_quit, "Quit poldek"},
 { CMD_HELP, "help", NULL, NULL, NULL, cmd_help, "Display this help"},
@@ -218,6 +222,7 @@ int shpkg_cmp_rm_uninstalled(struct shell_pkg *p1, struct shell_pkg *p2)
     
     if (p1->flags & SHPKG_UNINSTALL)
         return 0;
+    
     return -1;
 }
 
@@ -290,7 +295,7 @@ int execute_line(char *line)
     
     if ((args = n_str_tokl(line, " \t"))) {
         struct argp argp = { cmd->argp_opts, cmd->parse_opt_fn,
-                             NULL, cmd->doc, 0, 0, 0};
+                             cmd->arg, cmd->doc, 0, 0, 0};
         int argc = 0;
 
         while (args[argc])
@@ -430,7 +435,7 @@ void resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgsp)
     *pkgsp = NULL;
 
     pkgs = n_array_new(16, NULL, (tn_fn_cmp)shpkg_cmp);
-
+    
     for (i=0; i<n_array_size(pkgnames); i++) {
         int asterisk = 0, len;
         char *p, *name;
@@ -455,13 +460,14 @@ void resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgsp)
             n = n_array_bsearch_idx_ex(avshpkgs, name,
                                        (tn_fn_cmp)shpkg_cmp_str);
         }
-            
+        
         if (n == -1) {
             printf("%s: no such package\n", name);
             continue;
         }
-        
+
         n_array_push(pkgs, n_array_nth(avshpkgs, n++));
+        
         while (n < n_array_size(avshpkgs)) {
             struct shell_pkg *shpkg = n_array_nth(avshpkgs, n++);
                 
@@ -527,7 +533,7 @@ static int find_pkg(struct shell_pkg *lshpkg, tn_array *shpkgs, int *cmprc,
 /* ls                                                                   */
 /*----------------------------------------------------------------------*/
 static
-error_t parse_ls_opt(int key, const char *arg, struct argp_state *state)
+error_t parse_ls_opt(int key, char *arg, struct argp_state *state)
 {
     struct cmd_state *cmdst = state->input;
     
@@ -553,7 +559,7 @@ error_t parse_ls_opt(int key, const char *arg, struct argp_state *state)
         case ARGP_KEY_END:
             //argp_usage (state);
             break;
-
+            
         default:
             return ARGP_ERR_UNKNOWN;
     }
@@ -566,28 +572,43 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
 {
     struct cmd_state cmdst = { 0, NULL};
     tn_array *shpkgs = NULL, *av_shpkgs;
-    int i, size, err = 0, npkgs = 0;
+    int i, size, err = 0, npkgs = 0, is_help = 0;
     char hdr[128];
     
     if (argv == NULL)
         return 0;
 
+    /* argp workaround */
+    for (i=0; i<argc; i++) {
+        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-?") == 0) {
+            is_help = 1;
+            break;
+        }
+    }
+    
+            
     cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, (void*)&cmdst);
 
+    if (is_help) {
+        n_array_free(cmdst.pkgnames);
+        return 1;
+    }
+    
     if (cmdst.flags & OPT_LS_INSTALLED)
         av_shpkgs = shell_s.instpkgs;
     else
         av_shpkgs = shell_s.avpkgs;
-
+    
     if (n_array_size(cmdst.pkgnames)) 
         resolve_packages(cmdst.pkgnames, av_shpkgs, &shpkgs);
-    else
+    else 
         shpkgs = av_shpkgs;
-        
-    n_array_free(cmdst.pkgnames);
+    
+    if (shpkgs == NULL) 
+        shpkgs = av_shpkgs;
 
-    if (shpkgs == NULL || n_array_size(shpkgs) == 0) {
+    if (n_array_size(shpkgs) == 0) {
         n_array_free(shpkgs);
         shpkgs = av_shpkgs;
     }
@@ -760,6 +781,7 @@ static int cmd_install(int argc, const char **argv, struct argp *argp)
 
     shell_s.inst->flags = shell_s.inst_flags_orig;
     shell_s.inst->instflags = 0;
+    shell_s.pkgset->flags &= ~PSMODE_INSTALL;
     shell_s.pkgset->flags |= PSMODE_UPGRADE;
     
     cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
@@ -1045,8 +1067,16 @@ int cmd_help(int argc, const char **argv, struct argp* argp)
 
     while (commands_tab[i].name) {
         struct command *cmd = &commands_tab[i++];
-        printf("%-12s %-28s %s\n", cmd->name, cmd->arg ? cmd->arg : "", cmd->doc);
+        char buf[256], *p;
+
+        p = cmd->arg ? cmd->arg : "";
+        if (cmd->argp_opts) {
+            snprintf(buf, sizeof(buf), "[OPTION...] %s", cmd->arg);
+            p = buf;
+        }
+        printf("%-12s %-28s %s\n", cmd->name, p, cmd->doc);
     }
+    printf("\nType COMMAND -? for details\n");
     return 0;
 }
 
