@@ -23,16 +23,16 @@
 # "mercy" dependency checking; defalut "no"
 #mercy = yes
 
-# don't remove downloaded packages after successful installation; defalut "no"
+# don't remove downloaded packages after successful installation; default "no"
 #keep_downloads = yes
 
 
 
 
-# confirm each installation; defalut "no"
+# confirm each installation; default "no"
 #confirm_installation = yes
 
-# confirm each removal; defalut "yes"
+# confirm each removal; default "yes"
 #confirm_removal = no
 
 # let the user select package among equivalents 
