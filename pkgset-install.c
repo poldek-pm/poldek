@@ -1904,7 +1904,7 @@ static void mapfn_clean_pkg_flags(struct pkg *pkg)
 
 static
 void update_poldek_iinf(struct poldek_iinf *iinf, struct upgrade_s *upg,
-                         int vrfy)
+                        int vrfy)
 {
     int i, is_installed = 1;
 

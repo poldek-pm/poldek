@@ -93,20 +93,20 @@ void packages_fetch_summary(struct pm_ctx *pmctx,
         char buf[64];
         n_assert(bytesget);
         
-        snprintf_size(buf, sizeof(buf), bytesget, 0, 1);
+        snprintf_size(buf, sizeof(buf), bytesget, 1, 1);
         msg(1, _("Need to get %s of archives"), buf);
         
         if (bytesdownload == 0)
             msg(1, "_. ");
         
         else {
-            snprintf_size(buf, sizeof(buf), bytesdownload, 0, 1);
+            snprintf_size(buf, sizeof(buf), bytesdownload, 1, 1);
             msgn(1, _("_ (%s to download)."), buf);
         }
         
         if (bytesused) {
             char buf[64];
-            snprintf_size(buf, sizeof(buf), bytesused, 0, 1);
+            snprintf_size(buf, sizeof(buf), bytesused, 1, 1);
             msg(1, _("After unpacking %s will be used."), buf);
         }
     }
