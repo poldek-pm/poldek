@@ -365,9 +365,13 @@ int header_evr_match_req(Header h, const struct capreq *req)
         pkg.epoch = *epoch;
     else
         pkg.epoch = 0;
-
-    if (pkg_evr_match_req(&pkg, req))
+    
+    if (pkg_evr_match_req(&pkg, req)) {
+        DBGF("%s[%d] match %s!\n", pkg_snprintf_s(&pkg), pkg.epoch, capreq_snprintf_s0(req));
         return 1;
+    }
+    
+        
 
     return 0;
 }
@@ -752,7 +756,8 @@ int rpm_get_obsoletedby_pkg(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
     int i, n = 0;
     
 
-    self_cap = capreq_new(pkg->name, 0, NULL, NULL, 0, 0);
+    self_cap = capreq_new(pkg->name, pkg->epoch, pkg->ver, pkg->rel,
+                          REL_EQ | REL_LT, 0);
     n = rpm_get_obsoletedby_cap(db, dbpkgs, self_cap, ldflags);
     capreq_free(self_cap);
     
