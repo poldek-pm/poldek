@@ -31,6 +31,7 @@ const char *pkgroups_tag = "GROUPS:";
 struct pkgroup_idx {
     tn_hash *ht;                /* name => struct pkgroup */
     tn_array *arr;
+    int _refcnt;
 };
 
 struct tr {
@@ -265,6 +266,11 @@ struct pkgroup_idx *pkgroup_idx_new(void)
 
 void pkgroup_idx_free(struct pkgroup_idx *idx) 
 {
+    if (idx->_refcnt > 0) {
+        idx->_refcnt--;
+        return;
+    }
+    
     if (idx->ht) {
         n_hash_free(idx->ht);
         idx->ht = NULL;
@@ -276,6 +282,12 @@ void pkgroup_idx_free(struct pkgroup_idx *idx)
     }
         
     free(idx);
+}
+
+struct pkgroup_idx *pkgroup_idx_link(struct pkgroup_idx *idx) 
+{
+    idx->_refcnt++;
+    return idx;
 }
 
 

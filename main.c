@@ -956,8 +956,8 @@ static int mkidx(struct pkgset *ps)
     char *idx_path = NULL;
     char path[PATH_MAX];
     struct source *src;
+    struct pkgdir *orig;
     
-
     n_assert(ps);
     if (n_array_size(args.sources) > 1) {
         log(LOGERR, "You shouldn't specify multiple sources for this option\n");
@@ -998,7 +998,18 @@ static int mkidx(struct pkgset *ps)
     }
     
     n_assert(idx_path != NULL);
-    msg(1, "Writing package index to %s...\n", idx_path);
+    
+    if (access(idx_path, R_OK) == 0 &&
+        (orig = pkgdir_new("", idx_path, NULL))) {
+        
+        struct pkgdir *diff;
+        
+        msg(1, "Loading previous %s...\n", idx_path);
+        if (pkgdir_load(orig, NULL, 0)) {
+            if ((diff = pkgdir_diff(orig, n_array_nth(ps->pkgdirs, 0))))
+                pkgdir_create_idx(diff, idx_path, 0);
+        }
+    }
     
     rc = pkgdir_create_idx(n_array_nth(ps->pkgdirs, 0), idx_path, args.nodesc);
 

@@ -77,6 +77,30 @@ int parse_evr(char *evrstr,
     return 1;
 }
 
+int parse_nevr(char *nevrstr, const char **name,
+               int32_t *epoch, const char **version, const char **release)
+{
+    char *p;
+
+    while (isspace(*nevrstr))
+        nevrstr++;
+    
+    if (*nevrstr == '\0')
+        return 0;
+    
+    if ((p = strrchr(nevrstr, '-')) == NULL) 
+        return 0;
+    
+    p--;
+    if ((p = strrchr(p, '-')) == NULL) 
+        return 0;
+
+    *p = '\0';
+    p++;
+    *name = nevrstr;
+    return parse_evr(p, epoch, version, release);
+}
+
 
 int rpmhdr_nevr(Header h, char **name,
                 uint32_t **epoch, char **version, char **release)
