@@ -953,7 +953,7 @@ static
 int setup_sources(struct poldek_ctx *ctx)
 {
     int i, autoupa = 0;
-    tn_hash *htcnf;
+    tn_hash *htcnf = NULL;
     
     if (ctx->_iflags & SOURCES_SETUPDONE)
         return 1;
@@ -961,8 +961,10 @@ int setup_sources(struct poldek_ctx *ctx)
     if (!prepare_sources(ctx, ctx->htconf, ctx->sources))
         return 0;
 
-    htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
-    autoupa = poldek_conf_get_bool(htcnf, "autoupa", 1);
+    if (ctx->htconf) {
+        htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+        autoupa = poldek_conf_get_bool(htcnf, "autoupa", 1);
+    }
     
     for (i=0; i < n_array_size(ctx->sources); i++) {
         struct source *src = n_array_nth(ctx->sources, i);
