@@ -49,6 +49,7 @@ snap: dist
 	tar xpzf $(distdir).tar.gz && \
 	echo "$$dts" > $(distdir)/0_THIS_IS_SNAPSHOT && \
 	mv -f $(distdir) $(PACKAGE)-cvs$$dts && \
-	tar cvpzf $(PACKAGE)-cvs$$dts.tar.gz $(PACKAGE)-cvs$$dts && \
+	tar cpzf $(PACKAGE)-cvs$$dts.tar.gz $(PACKAGE)-cvs$$dts && \
+	rm -rf $(PACKAGE)-cvs$$dts && \
 	echo "$(PACKAGE)-cvs$$dts.tar.gz"
 
