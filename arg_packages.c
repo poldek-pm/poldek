@@ -187,8 +187,9 @@ int arg_packages_add_pkglist(struct arg_packages *aps, const char *path)
     return 1;
 }
 
-int arg_packages_add_pkgmask(struct arg_packages *aps, const char *mask) 
+int arg_packages_add_pkgmask(struct arg_packages *aps, const char *mask)
 {
+    
     n_array_push(aps->package_masks, n_strdup(mask));
     return 1;
 }
@@ -359,7 +360,7 @@ int resolve_masks(tn_array *pkgs,
                     break;
             }
             
-
+            
             if (strcmp(mask, pkg->name) == 0) {
                 n_array_push(pkgs, pkg_link(pkg));
                 matches_bycmp[j]++;
@@ -461,8 +462,8 @@ tn_array *arg_packages_resolve(struct arg_packages *aps,
         n_array_free(pkgs);
         pkgs = NULL;
     }
-    printf("arg_packages_resolve %d\n", n_array_size(pkgs));
     
+    DBGF("ret %d pkgs\n", pkgs ? n_array_size(pkgs) : 0);
     return pkgs;
 }
 
