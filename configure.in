@@ -4,6 +4,7 @@ dnl $Id$
 AC_INIT(poldek,0.19.0)
 AC_CONFIG_SRCDIR([capreq.c])
 
+PACKAGE_BUGREPORT="mis@pld.org.pl"
 VERSION_STATUS="devel"
 VERSION=0.19.0
 VERSION_CVSTAG="v$(echo $VERSION | sed 's/\./_/g')"
@@ -387,8 +388,31 @@ if test "${ENABLE_PYTHON}." = "yes."; then
     AC_CONFIG_SUBDIRS(python)
 fi
 
-CPPFLAGS="$CPPFLAGS -DPKGLIBDIR=\\\"\$(pkglibdir)\\\" -DSYSCONFDIR=\\\"\$(sysconfdir)\\\""
+#CPPFLAGS="$CPPFLAGS -DPKGLIBDIR=\\\"\$(pkglibdir)\\\" -DSYSCONFDIR=\\\"\$(sysconfdir)\\\""
+saved_prefix="$prefix"; saved_exec_prefix="$exec_prefix"
+if test "X$prefix" = "XNONE"; then prefix="$ac_default_prefix"; fi
+if test "X$exec_prefix" = "XNONE"; then exec_prefix="$prefix"; fi
 
+
+SYSCONFDIR="`echo $sysconfdir`"
+while echo ${SYSCONFDIR} | grep '\$' >/dev/null; do
+        SYSCONFDIR=$(eval echo ${SYSCONFDIR});
+done
+
+AC_DEFINE_UNQUOTED(SYSCONFDIR, "$SYSCONFDIR",
+        [Full path to system configuration directory (usually /etc)])
+AC_SUBST(SYSCONFDIR)
+
+
+PKGLIBDIR="`echo $libdir/$PACKAGE`"
+while echo ${PKGLIBDIR} | grep '\$' >/dev/null; do
+        PKGLIBDIR=$(eval echo ${PKGLIBDIR});
+done
+AC_DEFINE_UNQUOTED(PKGLIBDIR, "$PKGLIBDIR",
+        [Full path to package lib directory (usually /usr/lib/$PACKAGE)])
+AC_SUBST(PKGLIBDIR)
+
+prefix="$saved_prefix"; exec_prefix="$saved_exec_prefix"
 
 AC_CONFIG_FILES([  
 		po/Makefile.in
@@ -407,6 +431,7 @@ AC_CONFIG_FILES([
 		vfile/vfff/Makefile
                 python/Makefile
 		conf/Makefile
+		conf/poldek.conf
 		doc/Makefile
 		doc/homepage/Makefile
 		doc/homepage/index.sgml
