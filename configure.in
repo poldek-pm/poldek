@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl $Id$
 
-AC_INIT(poldek,0.17.9.1)
+AC_INIT(poldek,0.17.9.2)
 AC_CONFIG_SRCDIR([capreq.c])
 
 VERSION_STATUS="devel"

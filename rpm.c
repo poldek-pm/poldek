@@ -22,9 +22,6 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 #include <rpm/rpmlib.h>
 #include <rpm/rpmio.h>
@@ -35,10 +32,7 @@
 #include <trurl/nstr.h>
 
 #ifdef HAVE_RPM_4_1
-# include <rpm/rpmts.h>
-# include <rpm/rpmps.h>
 # include <rpm/rpmdb.h>
-# include <rpm/rpmcli.h>
 #endif
 
 #include <vfile/vfile.h>
@@ -370,277 +364,6 @@ int rpm_dbmatch_req(rpmdb db, const struct capreq *req, int strict,
 }
 
 
-/*
- * Installation 
- */
-static void progress(const unsigned long amount, const unsigned long total) 
-{
-    static int last_v = 0;
-    
-    if (amount == 0) {     /* first notification */
-        last_v = 0;
-        
-    } else {
-        char   line[256], outline[256], fmt[40];
-        float  frac, percent;
-        int    barwidth = 75, n;
-        
-
-        frac = (float) amount / (float) total;
-        percent = frac * 100.0f;
-        
-        barwidth -= 7;
-        n = (int) (((float)barwidth) * frac);
-        
-        if (n <= last_v)
-            return;
-            
-        n_assert(last_v < 100);
-	
-        memset(line, '.', n);
-        line[n] = '\0';
-        snprintf(fmt, sizeof(fmt), "%%-%ds %%5.1f%%%%", barwidth);
-        snprintf(outline, sizeof(outline), fmt, line, percent);
-    
-        if (amount && amount == total) { /* last notification */
-            msg_tty(0, "\r%s\n", outline);
-        } else {
-            msg_tty(0, "\r%s", outline);
-        }
-    }
-}
-
-
-static void *install_cb(const void *h __attribute__((unused)),
-                        const rpmCallbackType op, 
-                        const unsigned long amount, 
-                        const unsigned long total,
-                        const void *pkgpath,
-                        void *data __attribute__((unused)))
-{
-#ifdef RPM_V4    
-    Header h = arg;
-#endif    
-    void *rc = NULL;
-    
- 
-    switch (op) {
-        case RPMCALLBACK_INST_OPEN_FILE:
-        case RPMCALLBACK_INST_CLOSE_FILE:
-            n_assert(0);
-            break;
-
-        case RPMCALLBACK_INST_START:
-            msgn(0, _("Installing %s"), n_basenam(pkgpath));
-            progress(amount, total);
-            break;
-
-        case RPMCALLBACK_INST_PROGRESS:
-            progress(amount, total);
-            break;
-
-        default:
-            break;                 /* do nothing */
-    }
-    
-    return rc;
-}	
-
-
-#ifdef HAVE_RPM_4_1
-# define printdepProblems(file, conflicts, numConflicts) rpmpsPrint(file, conflicts)
-# define printProblems(file,probs) rpmpsPrint(file, probs)
-# define freeConflicts(conflicts, numConflicts) conflicts = rpmpsFree(conflicts)
-#else
-# define printdepProblems(file, conflicts, numConflicts) printDepProblems(file, conflicts, numConflicts)
-# define printProblems(file,probs) rpmProblemSetPrint(file, probs)
-# define freeConflicts(conflicts, numConflicts) rpmdepFreeConflicts(conflicts, numConflicts)
-#endif
-
-int rpm_install(rpmdb db, const char *rootdir, const char *path,
-                unsigned filterflags, unsigned transflags, unsigned instflags)
-{
-#ifdef HAVE_RPM_4_1
-    rpmts ts = NULL;
-    rpmps probs = NULL;
-#else
-    rpmTransactionSet ts = NULL;
-    rpmProblemSet probs = NULL;
-#endif
-    struct vfile *vf;
-    int rc;
-    Header h = NULL;
-
-    
-    if (rootdir == NULL)
-        rootdir = "/";
-
-    if ((vf = vfile_open(path, VFT_RPMIO, VFM_RO | VFM_STBRN)) == NULL)
-        return 0;
-    
-    rc = rpm_headerReadFD(vf->vf_fdt, &h, NULL);
-    
-    if (rc != 0) {
-        switch (rc) {
-            case 1:
-                logn(LOGERR, _("%s: does not appear to be a RPM package"), path);
-                goto l_err;
-                break;
-                
-            default:
-                logn(LOGERR, _("%s: cannot be installed (hgw why)"), path);
-                goto l_err;
-                break;
-        }
-        n_assert(0);
-        
-    } else {
-        if (rpm_headerIsSource(h)) {
-            logn(LOGERR, _("%s: source packages not supported"), path);
-            goto l_err;
-        }
-#ifdef HAVE_RPM_4_1       
-	ts = rpmtsCreate();
-	rpmtsSetRootDir(ts, rootdir);
-	rpmtsOpenDB(ts, O_RDWR);
-#else
-        ts = rpmtransCreateSet(db, rootdir);
-        rc = rpmtransAddPackage(ts, h, vf->vf_fdt, path, 
-                                (instflags & INSTALL_UPGRADE) != 0, NULL);
-#endif
-        
-        headerFree(h);	
-        h = NULL;
-        
-        switch(rc) {
-            case 0:
-                break;
-                
-            case 1:
-                logn(LOGERR, _("%s: rpm read error"), path);
-                goto l_err;
-                break;
-                
-                
-            case 2:
-		logn(LOGERR, _("%s requires a newer version of RPM"), path);
-                goto l_err;
-                break;
-                
-            default:
-                logn(LOGERR, "%s: rpmtransAddPackage() failed", path);
-                goto l_err;
-                break;
-        }
-
-        if ((instflags & INSTALL_NODEPS) == 0) {
-#ifdef HAVE_RPM_4_1
-	    rpmps conflicts = NULL;
-#else
-# ifdef HAVE_RPM_4_0_4
-            rpmDependencyConflict conflicts = NULL;
-# else /* rpm 3.x */
-            struct rpmDependencyConflict *conflicts = NULL;
-# endif
-#endif
-            int numConflicts = 0;
-
-#ifdef HAVE_RPM_4_1
-	    if (rpmtsCheck(ts) != 0) {
-                logn(LOGERR, "%s: rpmtsCheck() failed", path);
-                goto l_err;
-	    }
-	    conflicts = rpmtsProblems(ts);
-            numConflicts = rpmpsNumProblems(conflicts);
-#else
-            if (rpmdepCheck(ts, &conflicts, &numConflicts) != 0) {
-                logn(LOGERR, "%s: rpmdepCheck() failed", path);
-                goto l_err;
-            }            
-#endif
-                
-            if (conflicts) {
-                FILE *fstream;
-                
-                logn(LOGERR, _("%s: failed dependencies:"), path);
-                
-
-                printdepProblems(log_stream(), conflicts, numConflicts);
-                if ((fstream = log_file_stream()))
-                    printdepProblems(fstream, conflicts, numConflicts);
-#ifdef HAVE_RPM_4_1
-                rpmpsFree(conflicts);
-#else                
-                rpmdepFreeConflicts(conflicts, numConflicts);
-#endif                
-                goto l_err;
-            }
-        }
-
-#ifdef HAVE_RPM_4_1
-	rc = rpmtsRun(ts, NULL, (rpmprobFilterFlags) filterflags);
-#else
-	rc = rpmRunTransactions(ts, install_cb,
-                                (void *) ((long)instflags), 
-                                NULL, &probs, transflags, filterflags);
-#endif
-
-        if (rc != 0) {
-            if (rc > 0) {
-                FILE *fstream;
-#ifdef HAVE_RPM_4_1
-		probs = rpmtsProblems(ts);
-#endif
-                logn(LOGERR, _("%s: installation failed:"), path);
-                printProblems(log_stream(), probs);
-                if ((fstream = log_file_stream()))
-                    printProblems(fstream, probs);
-                goto l_err;
-            } else {
-                logn(LOGERR, _("%s: installation failed (hgw why)"), path);
-            }
-        }
-    }
-
-    
-    vfile_close(vf);
-    if (probs) 
-#ifdef HAVE_RPM_4_1
-	probs = rpmpsFree(probs);
-#else
-        rpmProblemSetFree(probs);
-#endif
-#ifdef HAVE_RPM_4_1
-    rpmtsFree(ts);
-#else
-    rpmtransFree(ts);
-#endif
-    return 1;
-    
- l_err:
-    vfile_close(vf);
-
-    if (probs) 
-#ifdef HAVE_RPM_4_1
-	probs = rpmpsFree(probs);
-#else
-        rpmProblemSetFree(probs);
-#endif
-    
-    if (ts)
-#ifdef HAVE_RPM_4_1
-	rpmtsFree(ts);
-#else
-        rpmtransFree(ts);
-#endif
-
-    if (h)
-        headerFree(h);
-
-    return 0;
-}
-
-
 int rpm_dbmap(rpmdb db,
               void (*mapfn)(unsigned recno, void *header, void *arg),
               void *arg) 
@@ -716,6 +439,7 @@ int rpm_get_pkgs_requires_capn(rpmdb db, tn_array *dbpkgs, const char *capname,
     return n;
 }
 
+
 int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, struct capreq *cap,
                             unsigned ldflags)
 {
@@ -768,7 +492,6 @@ int rpm_get_obsoletedby_pkg(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
 }
 
 
-
 static 
 int hdr_pkg_cmp_evr(Header h, const struct pkg *pkg)
 {
@@ -793,8 +516,6 @@ int hdr_pkg_cmp_evr(Header h, const struct pkg *pkg)
     
     return rc;
 }
-
-
 
 
 int rpm_is_pkg_installed(rpmdb db, const struct pkg *pkg, int *cmprc,

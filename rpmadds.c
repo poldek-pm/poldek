@@ -36,11 +36,24 @@
 
 int rpm_headerReadFD(FD_t fdt, Header *hdr, const char *path)
 {
-    int rc;
+    int rc = 0;
+    
 #ifdef HAVE_RPM_4_1
+    rpmRC rpmrc;
     rpmts ts = rpmtsCreate();
 
-    rc = rpmReadPackageFile(ts, fdt, path, hdr);
+    rpmrc = rpmReadPackageFile(ts, fdt, path, hdr);
+    switch (rpmrc) {
+        case RPMRC_NOTTRUSTED:
+        case RPMRC_NOKEY:
+        case RPMRC_OK:
+            rc = 0;
+            break;
+            
+        default:
+            rc = 1;
+    }
+            
 #else
     rc = rpmReadPackageHeader(fdt, hdr, NULL, NULL, NULL);
 #endif
@@ -59,7 +72,7 @@ int rpm_headerReadFD(FD_t fdt, Header *hdr, const char *path)
 int rpm_headerReadFile(const char *path, Header *hdr)
 {
     FD_t  fdt;
-    int   rc = 1;
+    int   rc = 0;
     
     
     if ((fdt = Fopen(path, "r")) == NULL) {
@@ -70,7 +83,7 @@ int rpm_headerReadFile(const char *path, Header *hdr)
         Fclose(fdt);
     }
     
-    return rc == 0;
+    return rc;
 }
 
 

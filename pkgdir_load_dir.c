@@ -91,7 +91,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
         if (S_ISREG(st.st_mode)) {
             Header h;
             
-            if (rpm_headerReadFile(path, &h) != 0) {
+            if (!rpm_headerReadFile(path, &h)) {
                 logn(LOGWARN, "%s: read header failed, skipped", path);
                 
             } else {
