@@ -43,6 +43,7 @@ static const char *argp_program_version = poldek_VERSION_BANNER;
 const char *argp_program_bug_address = poldek_BUG_MAILADDR;
 static char args_doc[] = N_("[PACKAGE...]");
 
+
 #define OPT_CACHEDIR  1002
 #define OPT_ASK       1003
 #define OPT_NOASK     1004
@@ -52,9 +53,10 @@ static char args_doc[] = N_("[PACKAGE...]");
 #define OPT_BANNER    1008
 #define OPT_LOG       1009
 #define OPT_SKIPINSTALLED 1010
-#define OPT_PM 1011
-#define OPT_SHELL  1012
-#define OPT_SHELL_CMD 1013
+#define OPT_KEEPDOWNLOADS 1013
+#define OPT_PM 1015
+#define OPT_SHELL  1020
+#define OPT_SHELL_CMD 1025
 
 
 #define POLDEKCLI_CMN_NOCONF         (1 << 0)
@@ -87,6 +89,9 @@ static struct argp_option common_options[] = {
 {"_conf", 'c', "FILE", OPTION_HIDDEN, N_("Read configuration from FILE"), 10500 }, 
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 10500 },
 {"upconf", OPT_CONFUP, 0, 0, N_("Update remote configuration files (if any)"), 10500 },
+
+{"keep-downloads", OPT_KEEPDOWNLOADS, 0, 0,
+N_("Do not remove downloaded packages just after their installation"), 10500 },
 {"version", OPT_BANNER, 0, 0, N_("Display program version information and exit"),
      10500 },    
 {"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), 10500 },
@@ -228,6 +233,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                                 /* no break */
         case OPT_SKIPINSTALLED:
             argsp->cctx->flags |= POLDEKCLI_SKIPINSTALLED;
+            break;
+
+        case OPT_KEEPDOWNLOADS:
+            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_KEEP_DOWNLOADS, 1);
             break;
 
         case OPT_PM:
