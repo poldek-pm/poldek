@@ -62,8 +62,9 @@ struct pkgdir_module pkgdir_module_rpmdb = {
 
 static Header ldhdr(const struct pkg *pkg, void *foo) 
 {
-    struct pkgdb *db;
-    struct pkgdb_it it;
+    struct pm_ctx    *pmctx;
+    struct pkgdb     *db;
+    struct pkgdb_it  it;
     const struct pm_dbrec *dbrec;
     Header              h = NULL;
 
@@ -72,12 +73,15 @@ static Header ldhdr(const struct pkg *pkg, void *foo)
     
     if (pkg->pkgdir == NULL)
         return NULL;
+
+    pmctx = pkg->pkgdir->mod_data;
+    if (pkg->pkgdir->mod_data == NULL) /* pkgdir are saved now  */
+        pmctx = pm_new("rpm");
     
-    db = pkgdb_open(pkg->pkgdir->mod_data, "/", pkg->pkgdir->idxpath,
+    db = pkgdb_open(pmctx, "/", pkg->pkgdir->idxpath,
                     O_RDONLY, NULL);
     if (db == NULL)
         return NULL;
-    
     
     pkgdb_it_init(db, &it, PMTAG_RECNO, (const char*)&pkg->recno);
     dbrec = pkgdb_it_get(&it);
@@ -88,6 +92,8 @@ static Header ldhdr(const struct pkg *pkg, void *foo)
 
     pkgdb_it_destroy(&it);
     pkgdb_free(db);
+    if (pkg->pkgdir->mod_data == NULL)
+        pm_free(pmctx);
     return h;
 }
 
@@ -98,7 +104,7 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg, void *ptr)
 {
     struct pkguinf      *pkgu = NULL;
     Header               h;
-    
+
     if ((h = ldhdr(pkg, ptr))) {
         pkgu = pkguinf_ldrpmhdr(na, h);
         pm_rpmhdr_free(h);
@@ -115,10 +121,9 @@ tn_tuple *load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
     Header              h;
 
     foreign_depdirs = foreign_depdirs;
-    
     if ((h = ldhdr(pkg, ptr))) {
         pm_rpm_ldhdr_fl(na, &fl, h, PKGFL_ALL, pkg->name);
-        if (n_tuple_size(fl) == 0) {
+        if (fl && n_tuple_size(fl) == 0) {
             n_tuple_free(na, fl);
             fl = NULL;
         }
@@ -144,7 +149,6 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
 
     if ((pkg = pm_rpm_ldhdr(ms->na, header, NULL, 0, PKG_LDCAPREQS))) {
         char **hdr_langs;
-        
         
         pkg->recno = recno;
         pkg->load_pkguinf = load_pkguinf;
