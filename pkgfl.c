@@ -20,6 +20,7 @@
 
 #include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 #include <trurl/nbuf.h>
@@ -32,8 +33,8 @@
 #include "depdirs.h"
 #include "h2n.h"
 
-#define obstack_chunk_alloc malloc
-#define obstack_chunk_free  free
+#define obstack_chunk_alloc n_malloc
+#define obstack_chunk_free  n_free
 
 struct flmark {
     tn_array              *dirs;
@@ -51,7 +52,7 @@ static struct fl_allocator_s *flalloct = NULL;
 
 int pkgflmodule_init(void) 
 {
-    flalloct = malloc(sizeof(*flalloct));
+    flalloct = n_malloc(sizeof(*flalloct));
     if (flalloct == NULL)
         return 0;
     
@@ -99,7 +100,7 @@ void *pkgflmodule_allocator_push_mark(void)
     if (flalloct->cur_mark) 
         n_array_push(flalloct->marks, flalloct->cur_mark);
     
-    flalloct->cur_mark = malloc(sizeof(*flalloct->cur_mark));
+    flalloct->cur_mark = n_malloc(sizeof(*flalloct->cur_mark));
     flalloct->cur_mark->ptr = obstack_alloc(&flalloct->ob, 1);
     flalloct->cur_mark->dirs = n_array_new(16, NULL, NULL);
     DBGF("PUSH %p\n", flalloct->cur_mark);

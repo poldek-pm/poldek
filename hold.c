@@ -70,7 +70,7 @@ tn_array *read_holds(const char *fpath, tn_array *hold_pkgnames)
 
         if (*p) {
             DBGMSG_F("read %s\n", p);
-            n_array_push(hold_pkgnames, strdup(p));
+            n_array_push(hold_pkgnames, n_strdup(p));
         }
         
     }

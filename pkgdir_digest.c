@@ -76,7 +76,7 @@ struct pdigest *pdigest_new(const char *path, int vfmode, int v016compat)
             return NULL;
     }
     
-    pdg = malloc(sizeof(*pdg));
+    pdg = n_malloc(sizeof(*pdg));
     memset(pdg, 0, sizeof(*pdg));
 
     pdg->mode = mode;
@@ -109,7 +109,7 @@ int pdigest_fill(struct pdigest *pdg, char *mdbuf, int size)
         return 0;
 
     if (pdg->mode & PDIGEST_MODE_v016) {
-        pdg->md = malloc(PDIGEST_SIZE + 1);
+        pdg->md = n_malloc(PDIGEST_SIZE + 1);
         memcpy(pdg->md, mdbuf, PDIGEST_SIZE);
         pdg->md[PDIGEST_SIZE] = '\0';
         
@@ -349,7 +349,7 @@ int pdigest_calc(struct pdigest *pdg, FILE *stream, unsigned flags)
         if (n != PDIGEST_SIZE)
             is_err = 1;
         else
-            pdg->md = strdup(mdhex);
+            pdg->md = n_strdup(mdhex);
     }
     
     return is_err == 0;

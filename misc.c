@@ -141,21 +141,21 @@ const char *setup_cachedir(void)
     char *dir, *default_dn = ".poldek-cache";
 
     if ((dir = getenv("TMPDIR")) && vf_valid_path(dir))
-        return strdup(dir);
+        return n_strdup(dir);
     
     if ((pw = getpwuid(getuid())) == NULL)
-        return strdup(tmpdir());
+        return n_strdup(tmpdir());
 
     if (!is_rwxdir(pw->pw_dir))
-        return strdup(tmpdir());
+        return n_strdup(tmpdir());
     
     if (vf_valid_path(pw->pw_dir) && mk_dir(pw->pw_dir, default_dn)) {
         char path[PATH_MAX];
         snprintf(path, sizeof(path), "%s/%s", pw->pw_dir, default_dn);
-        return strdup(path);
+        return n_strdup(path);
     }
 
-    return strdup(tmpdir());
+    return n_strdup(tmpdir());
 }
 
 const char *tmpdir(void) 

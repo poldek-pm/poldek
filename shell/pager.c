@@ -24,6 +24,7 @@
 
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 
 #include "log.h"
 #include "i18n.h"
@@ -61,7 +62,7 @@ static const char *select_pager_cmd(void)
         snprintf(cmdpath, sizeof(cmdpath), "%s/%s", path[n], cmd);
 
         if (access(cmdpath, R_OK | X_OK) == 0) {
-            pager_cmd = strdup(cmdpath);
+            pager_cmd = n_strdup(cmdpath);
             pager_cmd_notfound = 0;
             break;
         }

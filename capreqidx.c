@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 
 #include "i18n.h"
 #include "capreqidx.h"
@@ -61,7 +62,7 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
     struct capreq_idx_ent *ent;
             
     if ((p = n_hash_get(idx->ht, capname)) == NULL) {
-        ent = malloc(sizeof(*ent) + sizeof(void*));
+        ent = n_malloc(sizeof(*ent) + sizeof(void*));
         ent->items = 1;
         ent->_size = 1;
         ent->pkgs[0] = pkg;
@@ -92,7 +93,7 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
             int new_size;
             
             new_size = sizeof(*ent) + (2 * ent->_size * sizeof(void*));
-            new_ent = realloc(ent, new_size);
+            new_ent = n_realloc(ent, new_size);
             ent = new_ent;
             
             ent->_size *= 2;

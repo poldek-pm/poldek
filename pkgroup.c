@@ -59,7 +59,7 @@ struct tr *tr_new(const char *lang, const char *name)
 
 
     len = strlen(name) + 1;
-    tr = malloc(sizeof(*tr) + len);
+    tr = n_malloc(sizeof(*tr) + len);
     strncpy(tr->lang, lang, sizeof(tr->lang))[sizeof(tr->lang) - 1] = '\0';
     memcpy(tr->name, name, len);
     return tr;
@@ -123,7 +123,7 @@ struct pkgroup *pkgroup_new(int id, const char *name)
 
     len = strlen(name) + 1;
     
-    if ((gr = malloc(sizeof(*gr) + len)) == NULL)
+    if ((gr = n_malloc(sizeof(*gr) + len)) == NULL)
         return gr;
     
     gr->id = id;
@@ -282,7 +282,7 @@ struct pkgroup_idx *pkgroup_idx_new(void)
 {
     struct pkgroup_idx *idx;
 
-    idx = malloc(sizeof(*idx));
+    idx = n_malloc(sizeof(*idx));
     idx->ht = n_hash_new(101, NULL);
     n_hash_ctl(idx->ht, TN_HASH_NOCPKEY);
     idx->arr = n_array_new(128, (tn_fn_free)pkgroup_free,

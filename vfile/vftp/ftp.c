@@ -39,6 +39,7 @@
 
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 #include <trurl/n_snprintf.h>
 
 #include "ftp.h"
@@ -421,7 +422,7 @@ static int do_ftp_resp(int sock, int *resp_code, char **resp_msg, int readln)
                 vftp_msg_fn("> %d %s\n", resp.code, resp.msg);
             
             if (resp_msg) 
-                *resp_msg = strdup(resp.msg);
+                *resp_msg = n_strdup(resp.msg);
         }
     }
 
@@ -552,7 +553,7 @@ static int to_connect(const char *host, const char *service, struct addrinfo *ad
     
     else if (addr) {
         *addr = *resp;
-        addr->ai_addr = malloc(sizeof(*addr->ai_addr));
+        addr->ai_addr = n_malloc(sizeof(*addr->ai_addr));
         *addr->ai_addr = *resp->ai_addr;
     }
 
@@ -587,8 +588,8 @@ int ftp_login(struct ftpcn *cn, const char *login, const char *passwd)
     vftp_errno = 0;
     
     if (login && passwd) {
-        cn->login = strdup(login);
-        cn->passwd = strdup(passwd);
+        cn->login = n_strdup(login);
+        cn->passwd = n_strdup(passwd);
     } else {
 	login = "anonymous";
         passwd = "ftp@";
@@ -632,7 +633,7 @@ struct ftpcn *ftpcn_malloc(void)
 {
     struct ftpcn *cn;
 
-    cn = malloc(sizeof(*cn));
+    cn = n_malloc(sizeof(*cn));
     memset(cn, 0,  sizeof(*cn));
     cn->host = cn->login = cn->passwd = cn->last_respmsg = NULL;
     cn->flags |= FTP_SUPPORTS_SIZE;
@@ -657,7 +658,7 @@ struct ftpcn *ftpcn_new(const char *host, int port,
         cn = ftpcn_malloc();
         cn->sockfd = sockfd;
         cn->state = FTPCN_ALIVE;
-        cn->host = strdup(host);
+        cn->host = n_strdup(host);
         cn->port = port;
         cn->addr = addr;
         

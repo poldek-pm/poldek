@@ -162,7 +162,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             }
             
             if (arg)
-                cmdarg->sh_s->inst->fetchdir = strdup(arg);
+                cmdarg->sh_s->inst->fetchdir = n_strdup(arg);
             break;
             
         default:
@@ -232,7 +232,7 @@ static int install(struct cmdarg *cmdarg)
             
             len = pkg_snprintf(nevr, sizeof(nevr), pkg);
             //printf("+ %s\n", nevr);
-            shpkg = malloc(sizeof(*shpkg) + len + 1);
+            shpkg = n_malloc(sizeof(*shpkg) + len + 1);
             memcpy(shpkg->nevr, nevr, len + 1);
             shpkg->pkg = pkg_link(pkg);
 

@@ -27,6 +27,7 @@
 #include <rpm/rpmlib.h>
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 #include <trurl/n_snprintf.h>
 
 #include "i18n.h"
@@ -37,8 +38,8 @@
 #include "h2n.h"
 #include "misc.h"
 
-static void *(*capreq_alloc_fn)(size_t) = malloc;
-static void (*capreq_free_fn)(void*) = free;
+static void *(*capreq_alloc_fn)(size_t) = n_malloc;
+static void (*capreq_free_fn)(void*) = n_free;
 
 void set_capreq_allocfn(void *(*cr_allocfn)(size_t), void (*cr_freefn)(void*),
                          void **prev_alloc, void **prev_free)

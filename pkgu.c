@@ -203,7 +203,7 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
 
     
     if ((hdr = headerLoad(rawhdr)) != NULL) {
-        pkgu = malloc(sizeof(*pkgu));
+        pkgu = n_malloc(sizeof(*pkgu));
         pkgu->_hdr = headerCopy(hdr); /* propably headerLoad() bug  */
         headerFree(hdr);
         
@@ -307,7 +307,7 @@ struct pkguinf *pkguinf_ldhdr(Header h)
     if ((hdr = make_pkguinf_hdr(h, &nlangs)) == NULL)
         return NULL;
     
-    pkgu = malloc(sizeof(*pkgu));
+    pkgu = n_malloc(sizeof(*pkgu));
     pkgu->_hdr = hdr;
     pkgu->flags = 0;
     pkgu->nlangs = nlangs;

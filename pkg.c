@@ -32,8 +32,8 @@
 #include "pkgdir.h"
 #include "pkgroup.h"
 
-static void *(*pkg_alloc_fn)(size_t) = malloc;
-static void (*pkg_free_fn)(void*) = free;
+static void *(*pkg_alloc_fn)(size_t) = n_malloc;
+static void (*pkg_free_fn)(void*) = n_free;
 
 #if 0                           /* disabled cause gives not reasonable profit */
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*))

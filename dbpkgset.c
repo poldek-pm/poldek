@@ -32,7 +32,7 @@ struct dbpkg_set *dbpkg_set_new(void)
 {
     struct dbpkg_set *dbpkg_set; 
 
-    dbpkg_set = malloc(sizeof(*dbpkg_set));
+    dbpkg_set = n_malloc(sizeof(*dbpkg_set));
     dbpkg_set->dbpkgs = dbpkg_array_new(32);
     dbpkg_set->capcache = n_hash_new(103, NULL);
     return dbpkg_set;

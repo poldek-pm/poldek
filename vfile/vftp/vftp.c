@@ -27,7 +27,7 @@
 # define IPPORT_FTP 21
 #endif
 
-
+#include <trurl/nmalloc.h>
 #include <trurl/nlist.h>
 
 #include "ftp.h"

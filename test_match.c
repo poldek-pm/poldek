@@ -18,6 +18,8 @@
 #include <fcntl.h>
 
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
+
 #include "i18n.h"
 #include "pkg.h"
 
@@ -47,7 +49,7 @@ int main(int argc, char *argv[])
                 while (rels[k] > 0) {
                     int rc1, rc2;
                     
-                    req = capreq_new_evr("poldek", strdup("1.1"), rels[k++], 0);
+                    req = capreq_new_evr("poldek", n_strdup("1.1"), rels[k++], 0);
 
                     rc1 = pkg_match_req(pkg, req, 1) ? 1:0;
                     rc2 = cap_match_req(cap, req, 1) ? 1:0;

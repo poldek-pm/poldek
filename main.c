@@ -671,14 +671,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_INST_HOLD:
             if (strchr(arg, ',') == NULL) {
-                n_array_push(argsp->inst.hold_pkgnames, strdup(arg));
+                n_array_push(argsp->inst.hold_pkgnames, n_strdup(arg));
                 
             } else {
                 const char **pkgs, **p;
             
                 p = pkgs = n_str_tokl(arg, ",");
                 while (*p) {
-                    n_array_push(argsp->inst.hold_pkgnames, strdup(*p));
+                    n_array_push(argsp->inst.hold_pkgnames, n_strdup(*p));
                     p++;
                 }
                 n_str_tokl_free(pkgs);
@@ -855,6 +855,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
+static void n_malloc_fault(void) 
+{
+    printf("Something wrong, something not quite right...\n"
+           "Memory exhausted\n");
+    exit(EXIT_FAILURE);
+}
+
 
 static void n_assert_hook(const char *expr, const char *file, int line) 
 {
@@ -876,7 +883,7 @@ void *Fnn(size_t SIZE, const void *CALLER)
     void *p, *v;
     __malloc_hook = old_malloc_hook;
     
-    v = malloc(SIZE);
+    v = n_malloc(SIZE);
     //printf("malloc %d\n", SIZE);
     __malloc_hook = Fnn;
     return v;
@@ -898,6 +905,7 @@ void poldek_init(void)
 #endif /* HAVE_MALLOPT */
     
     n_assert_sethook(n_assert_hook);
+    n_malloc_set_failhook(n_malloc_fault);
     pkgflmodule_init();
     pkgsetmodule_init();
 }
@@ -1219,7 +1227,7 @@ void parse_options(int argc, char **argv)
             macros = conf_get_multi(htcnf, "rpmdef");
             while (n_array_size(macros))
                 n_array_push(args.inst.rpmacros,
-                             strdup(n_array_shift(macros)));
+                             n_strdup(n_array_shift(macros)));
         } else {
             n_array_push(args.inst.rpmacros, v);
         }

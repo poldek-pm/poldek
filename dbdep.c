@@ -96,7 +96,7 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
     if (!found) {
         struct db_dep *new_dep;
         
-        new_dep = malloc(sizeof(*new_dep));
+        new_dep = n_malloc(sizeof(*new_dep));
         new_dep->req = req;
         new_dep->spkg = spkg;
         new_dep->pkgs = n_array_new(4, NULL, (tn_fn_cmp)pkg_cmp_name_evr);

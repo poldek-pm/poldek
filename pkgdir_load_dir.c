@@ -201,7 +201,7 @@ static void is_depdir_req(const struct capreq *req, tn_array *depdirs)
             p++;
         
         if (n_array_bsearch(depdirs, p) == NULL) {
-            n_array_push(depdirs, strdup(p));
+            n_array_push(depdirs, n_strdup(p));
             n_array_sort(depdirs);
         }
     }
@@ -218,7 +218,7 @@ static void pkgdir_setup_depdirs(struct pkgdir *pkgdir)
 
     i = 0;
     while (std_depdirs[i] != NULL)
-        n_array_push(pkgdir->depdirs, strdup(std_depdirs[i++]));
+        n_array_push(pkgdir->depdirs, n_strdup(std_depdirs[i++]));
 
     n_array_sort(pkgdir->depdirs);
     for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
@@ -251,7 +251,7 @@ struct pkgdir *pkgdir_load_dir_or_hdl(const char *name, const char *path, int t)
         case LOAD_DIR:
             n = load_dir(path, pkgs, pkgroups);
             pkgdir_flags = PKGDIR_LDFROM_DIR;
-            pkgdir_path = strdup(path);
+            pkgdir_path = n_strdup(path);
             break;
 
         case LOAD_HDL:
@@ -272,7 +272,7 @@ struct pkgdir *pkgdir_load_dir_or_hdl(const char *name, const char *path, int t)
     }
     
     pkgdir = pkgdir_malloc();
-    pkgdir->name = strdup(name);
+    pkgdir->name = n_strdup(name);
     pkgdir->path = pkgdir_path;
     pkgdir->pkgs = pkgs;
     pkgdir->pkgroups = pkgroups;
@@ -305,7 +305,7 @@ struct pkgdir *pkgdir_load_hdl(const char *name, const char *path,
     
     if ((pkgdir = pkgdir_load_dir_or_hdl(name, path, LOAD_HDL)) && prefix) {
         free(pkgdir->path);
-        pkgdir->path = strdup(prefix);
+        pkgdir->path = n_strdup(prefix);
     }
     
     return pkgdir;
@@ -382,8 +382,8 @@ struct pkgdir *pkgdir_load_db(const char *rootdir, const char *path)
              path != NULL ? path : "");
         
     pkgdir = pkgdir_malloc();
-    pkgdir->name = strdup("db");
-    pkgdir->path = strdup(dbfull_path);
+    pkgdir->name = n_strdup("db");
+    pkgdir->path = n_strdup(dbfull_path);
     pkgdir->pkgs = pkgs;
         
     pkgdir->pkgroups = NULL;

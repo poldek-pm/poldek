@@ -167,7 +167,7 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
     }
 
         
-    pdef = malloc(sizeof(*pdef) +
+    pdef = n_malloc(sizeof(*pdef) +
                   (virtname ? strlen(virtname) + 1 : 0));
     pdef->tflags = tflags | deftyp;
 
@@ -204,7 +204,7 @@ int pkgdef_new_pkg(struct pkgdef **pdefp, struct pkg *pkg)
     struct pkgdef *pdef;
     
 
-    pdef = malloc(sizeof(*pdef));
+    pdef = n_malloc(sizeof(*pdef));
     pdef->tflags = PKGDEF_REGNAME;
     pdef->pkg = pkg_link(pkg);
     *pdefp = pdef;
@@ -222,7 +222,7 @@ int pkgdef_new_pkgfile(struct pkgdef **pdefp, const char *path)
     if ((pkg = pkg_ldrpm(path, PKG_LDNEVR)) == NULL)
         return -1;
 
-    pdef = malloc(sizeof(*pdef));
+    pdef = n_malloc(sizeof(*pdef));
     pdef->tflags = PKGDEF_PKGFILE;
     pdef->pkg = pkg;
     *pdefp = pdef;
@@ -235,7 +235,7 @@ struct usrpkgset *usrpkgset_new(void)
 {
     struct usrpkgset *ups;
 
-    ups = malloc(sizeof(*ups));
+    ups = n_malloc(sizeof(*ups));
     ups->pkgdefs = n_array_new(64, (tn_fn_free)pkgdef_free,
                                (tn_fn_cmp) pkgdef_cmp);
     ups->path = NULL;
@@ -295,7 +295,7 @@ int usrpkgset_add_list(struct usrpkgset *ups, const char *fpath)
     
     if (rc) {
         n_array_sort(ups->pkgdefs);
-        ups->path = strdup(fpath);
+        ups->path = n_strdup(fpath);
     }
 
     return rc;

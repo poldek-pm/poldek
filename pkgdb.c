@@ -24,7 +24,7 @@ struct pkgdb *pkgdb_open(const char *rootdir, const char *path, mode_t mode)
 {
     struct pkgdb *db;
 
-    if ((db = malloc(sizeof(*db))) == NULL)
+    if ((db = n_malloc(sizeof(*db))) == NULL)
         return NULL;
 
     if (path == NULL)
@@ -34,9 +34,9 @@ struct pkgdb *pkgdb_open(const char *rootdir, const char *path, mode_t mode)
         return NULL;
 
     db->mode = mode;
-    db->path = strdup(path);
+    db->path = n_strdup(path);
     if (rootdir)
-        db->rootdir = strdup(rootdir);
+        db->rootdir = n_strdup(rootdir);
     else
         db->rootdir = NULL;
     

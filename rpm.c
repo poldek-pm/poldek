@@ -237,7 +237,7 @@ int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs)
         
         if (n_array_bsearch(depdirs, dir) == NULL) {
             //printf("dir = %s\n", dir);
-            n_array_push(depdirs, strdup(dir));
+            n_array_push(depdirs, n_strdup(dir));
             n_array_isort(depdirs);
         }
     }

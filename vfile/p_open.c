@@ -39,6 +39,7 @@
 #endif
 
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 
 #include "i18n.h"
 #include "p_open.h"
@@ -126,13 +127,13 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     
     if (access(cmd, R_OK | X_OK) != 0) {
         snprintf(errmsg, sizeof(errmsg), _("%s: no such file"), cmd);
-        pst->errmsg = strdup(errmsg);
+        pst->errmsg = n_strdup(errmsg);
         return NULL;
     }
     
     if (pipe(pp) != 0) {
         snprintf(errmsg, sizeof(errmsg), "pipe: %m");
-        pst->errmsg = strdup(errmsg);
+        pst->errmsg = n_strdup(errmsg);
         return NULL;
     }
     
@@ -149,7 +150,7 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
         
     } else if (pid < 0) {
         snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
-        pst->errmsg = strdup(errmsg);
+        pst->errmsg = n_strdup(errmsg);
         
     } else {
         close(pp[1]);
@@ -157,7 +158,7 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
         if ((pst->stream = fdopen(pp[0], "r"))) {
             setvbuf(pst->stream, NULL, _IONBF, 0);
             pst->pid = pid;
-            pst->cmd = strdup(cmd);
+            pst->cmd = n_strdup(cmd);
         }
     }
 
@@ -201,13 +202,13 @@ int p_waitpid(struct p_open_st *pst, int woptions)
         snprintf(errmsg, sizeof(errmsg), _("%s terminated by signal %d"),
                  pst->cmd, WTERMSIG(st));
 #endif        
-        pst->errmsg = strdup(errmsg);
+        pst->errmsg = n_strdup(errmsg);
         
     } else {
         snprintf(errmsg, sizeof(errmsg),
                  _("%s (%d) died under inscrutable circumstances"),
                  pst->cmd, pst->pid);
-        pst->errmsg = strdup(errmsg);
+        pst->errmsg = n_strdup(errmsg);
     }
 
     pst->ec = rc;
@@ -267,19 +268,19 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     
     if (tcgetattr(STDOUT_FILENO, &termios) != 0) {
         snprintf(errmsg, sizeof(errmsg), "tcgetattr(1): %m");
-        pst->errmsg = strdup(errmsg);
+        pst->errmsg = n_strdup(errmsg);
         return NULL;
     }
     
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &winsize) != 0) {
         snprintf(errmsg, sizeof(errmsg), "ioctl(1, TIOCGWINSZ): %m");
-        pst->errmsg = strdup(errmsg);
+        pst->errmsg = n_strdup(errmsg);
         return NULL;
     }
     
     if (access(cmd, R_OK | X_OK) != 0) {
         snprintf(errmsg, sizeof(errmsg), _("%s: no such file"), cmd);
-        pst->errmsg = strdup(errmsg);
+        pst->errmsg = n_strdup(errmsg);
         return NULL;
     }
     
@@ -290,7 +291,7 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
         
     } else if (pid < 0) {
         snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
-        pst->errmsg = strdup(errmsg);
+        pst->errmsg = n_strdup(errmsg);
         
         
     } else {
@@ -298,7 +299,7 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
         pst->stream = fdopen(fd, "r");
         setvbuf(pst->stream, NULL, _IONBF, 0);
         pst->pid = pid;
-        pst->cmd = strdup(cmd);
+        pst->cmd = n_strdup(cmd);
     }
     
     return pst->stream;

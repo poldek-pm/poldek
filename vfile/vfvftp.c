@@ -27,6 +27,7 @@
 
 
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 
 #define VFILE_INTERNAL
 #include "i18n.h"
@@ -71,7 +72,7 @@ static void set_vftp_anonpasswd(void)
         char buf[256];
 
         if (vf_userathost(buf, sizeof(buf)) > 0) 
-            vftp_anonpasswd = strdup(buf);
+            vftp_anonpasswd = n_strdup(buf);
         isset = 1;
     }
 }

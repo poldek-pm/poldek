@@ -39,6 +39,7 @@
 #include <trurl/nstr.h>
 #include <trurl/nhash.h>
 #include <trurl/narray.h>
+#include <trurl/nmalloc.h>
 
 #include "i18n.h"
 
@@ -88,7 +89,7 @@ void vfile_configure(const char *cachedir, int flags)
     int n, len = 0;
     
     if (cachedir) {
-        vfile_conf.cachedir = strdup(cachedir);
+        vfile_conf.cachedir = n_strdup(cachedir);
         len = strlen(vfile_conf.cachedir);
         if (vfile_conf.cachedir[len - 1] == '/')
             vfile_conf.cachedir[len - 1] = '\0';
@@ -518,7 +519,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
         }
     
         if (openvf(&vf, rpath, vfmode)) {
-            vf.vf_tmpath = strdup(rpath);
+            vf.vf_tmpath = n_strdup(rpath);
             opened = 1;
             vf.vf_flags |= VF_FRMCACHE;
         }
@@ -561,7 +562,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
             
             
             if (openvf(&vf, rpath, VFM_RO)) {
-                vf.vf_tmpath = strdup(rpath);
+                vf.vf_tmpath = n_strdup(rpath);
                 opened = 1;
                 vf.vf_flags |= VF_FETCHED;
                     
@@ -575,7 +576,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
 
 l_end:    
     if (opened) {
-        rvf = malloc(sizeof(*rvf));
+        rvf = n_malloc(sizeof(*rvf));
         memcpy(rvf, &vf, sizeof(*rvf));
         rvf->vf_urltype = urltype;
     }
@@ -590,7 +591,7 @@ struct vfile *vfile_open(const char *path, int vftype, unsigned vfmode)
 
     vfile_err_no = 0;
     if ((vf = do_vfile_open(path, vftype, vfmode)))
-        vf->vf_path = strdup(path);
+        vf->vf_path = n_strdup(path);
     
     return vf;
 }

@@ -27,7 +27,7 @@
 # define IPPORT_HTTP 80
 #endif
 
-
+#include <trurl/nmalloc.h>
 #include <trurl/nlist.h>
 
 #include "http.h"

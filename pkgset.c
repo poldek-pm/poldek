@@ -23,9 +23,11 @@
 
 #include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 #include <trurl/nstr.h>
+
 #include <vfile/vfile.h>
 
 #include "i18n.h"
@@ -47,8 +49,8 @@
 int ask_yn(int default_a, const char *fmt, ...);
 int ask_pkg(const char *virtual, struct pkg **pkgs);
 
-#define obstack_chunk_alloc malloc
-#define obstack_chunk_free  free
+#define obstack_chunk_alloc n_malloc
+#define obstack_chunk_free  n_free
 
 struct obstack_s {
     int ucnt;
@@ -342,7 +344,7 @@ int pkgset_index(struct pkgset *ps)
 #if 0                           /* testing stuff */
         if (strcmp(pkg->name, "SVGATextMode") == 0) {
             struct capreq *req = capreq_new_evr("ghostscript-fonts-std",
-                                                strdup("6.0-7"), REL_LT, CAPREQ_CNFL);
+                                                n_strdup("6.0-7"), REL_LT, CAPREQ_CNFL);
             if (pkg->cnfls == NULL) 
                 pkg->cnfls = capreq_arr_new(2);
 
@@ -487,8 +489,7 @@ int pkgset_setup(struct pkgset *ps, const char *pri_fpath)
     pkgset_order(ps);
     mem_info(1, "MEM after order");
 
-    //set_pkg_allocfn(malloc, free);
-    set_capreq_allocfn(malloc, free, NULL, NULL);
+    set_capreq_allocfn(n_malloc, n_free, NULL, NULL);
     return ps->nerrors == 0;
 }
 

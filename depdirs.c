@@ -19,6 +19,7 @@
 
 #include <trurl/nhash.h>
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 
 #define ENABLE_TRACE 0
 #include "log.h"
@@ -38,10 +39,12 @@ void init_depdirs(tn_array *dirnames)
 {
     int i, n = 0;
 
-    depdirs = malloc((n_array_size(dirnames)+1) * sizeof(*depdirs));
+    depdirs = n_malloc((n_array_size(dirnames)+1) * sizeof(*depdirs));
     for (i = n_array_size(dirnames)-1; i >= 0; i--) {
-        depdirs[n].dir = strdup(n_array_nth(dirnames, i));
-        depdirs[n].len = strlen(depdirs[n].dir);
+        const char *dir = n_array_nth(dirnames, i);
+        
+        depdirs[n].len = strlen(dir);
+        depdirs[n].dir = n_strdupl(dir, depdirs[n].len);
         depdirs[n].endch = *(depdirs[n].dir + (depdirs[n].len - 1));
         DBGF("%s\n", depdirs[n].dir);
         n++;

@@ -420,7 +420,7 @@ Source type may be set by this option. Possible values are:
 
 =item * B<pdir> - for local directories, with it poldek
                   scans entire directory instead of reading index file.
- 
+		  
 =item * B<hdrl> - file with raw package headers in RPM format;
  available in many RPM-based distributions (named hdlist in RH), however 
  this format isn't optimal for poldek (is not updateable for example). 

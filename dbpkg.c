@@ -13,7 +13,7 @@ struct dbpkg *dbpkg_new(uint32_t recno, Header h, unsigned ldflags)
     struct dbpkg *dbpkg;
 
     n_assert(h);
-    dbpkg = malloc(sizeof(*dbpkg));
+    dbpkg = n_malloc(sizeof(*dbpkg));
     dbpkg->recno = recno;
     dbpkg->pkg = pkg_ldhdr(h, "db", 0, ldflags);
     dbpkg->pkg->flags |= PKG_DBPKG;

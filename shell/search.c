@@ -210,8 +210,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 }
                 
 
-                pt = malloc(sizeof(*pt));
-                pt->regexp = strdup(regexp);
+                pt = n_malloc(sizeof(*pt));
+                pt->regexp = n_strdup(regexp);
                 pt->flags = flags;
                 pt->pcre = NULL;
                 pt->pcre_extra = NULL;

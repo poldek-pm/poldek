@@ -149,9 +149,9 @@ char *pkgdir_setup_pkgprefix(const char *path)
     
     n_basedirnam(buf, &dn, &bn);
     if (dn)
-        rpath = strdup(dn);
+        rpath = n_strdup(dn);
     else
-        rpath = strdup(".");
+        rpath = n_strdup(".");
 
     return rpath;
 }
@@ -393,7 +393,7 @@ struct pkgdir *pkgdir_malloc(void)
     struct pkgdir *pkgdir;
 
     
-    pkgdir = malloc(sizeof(*pkgdir));
+    pkgdir = n_malloc(sizeof(*pkgdir));
     memset(pkgdir, 0, sizeof(*pkgdir));
 
     pkgdir->name = NULL;
@@ -650,7 +650,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
             nerr++;
     
     if (nerr == 0) {
-        pkgdir->mdd_orig = strdup(pdg_current.mdd); /* for verification during write */
+        pkgdir->mdd_orig = n_strdup(pdg_current.mdd); /* for verification during write */
 
         snprintf(path, sizeof(path), "%s/%s", dn, pdir_packages_incdir);
         if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath)) {
@@ -761,7 +761,7 @@ struct pkgdir *pkgdir_new(const char *name, const char *path,
     
     
     line_size = 4096;
-    linebuf = malloc(line_size);
+    linebuf = n_malloc(line_size);
     nline = 0;
     while ((nread = getline(&linebuf, &line_size, vf->vf_stream)) > 0) {
         char *p, *linep;
@@ -833,10 +833,10 @@ struct pkgdir *pkgdir_new(const char *name, const char *path,
                 
                 while ((dir = next_tokn(&p, ':', NULL)) != NULL) {
                     DBGF("depdir %s\n", dir);
-                    n_array_push(depdirs, strdup(dir));
+                    n_array_push(depdirs, n_strdup(dir));
                 }
                 
-                n_array_push(depdirs, strdup(p));
+                n_array_push(depdirs, n_strdup(p));
                 
                 if (n_array_size(depdirs)) 
                     n_array_sort(depdirs);
@@ -872,14 +872,14 @@ struct pkgdir *pkgdir_new(const char *name, const char *path,
 #endif    
     
     pkgdir = pkgdir_malloc();
-    pkgdir->name = strdup(name);
+    pkgdir->name = n_strdup(name);
     
     if (pkg_prefix) 
-        pkgdir->path = strdup(pkg_prefix);
+        pkgdir->path = n_strdup(pkg_prefix);
     else 
         pkgdir->path = pkgdir_setup_pkgprefix(idx.idxpath);
     
-    pkgdir->idxpath = strdup(idx.idxpath);
+    pkgdir->idxpath = n_strdup(idx.idxpath);
     pkgdir->vf = idx.vf;
     pkgdir->pdg = idx.pdg;
     
@@ -1023,7 +1023,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     vf = pkgdir->vf;
     memset(&pkgt, 0, sizeof(pkgt));
     line_size = 4096;
-    linebuf = malloc(line_size);
+    linebuf = n_malloc(line_size);
 
     while ((nread = getline(&linebuf, &line_size, vf->vf_stream)) > 0) {
         char *p, *val, *line;

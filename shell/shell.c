@@ -326,7 +326,7 @@ static char *help_filter(int key, const char *text, void *input)
         }
         
         if (n > 0) {
-            p = malloc(n + 1);
+            p = n_malloc(n + 1);
             return memcpy(p, buf, n + 1);
         }
     }
@@ -548,7 +548,7 @@ char *command_generator(const char *text, int state)
     if (i > -1 && i < n_array_size(all_commands)) {
         char *cmd = n_array_nth(all_commands, i++);
         if (len == 0 || strncmp(cmd, text, len) == 0) 
-            name = strdup(cmd);
+            name = n_strdup(cmd);
     }
     
     return name;
@@ -573,7 +573,7 @@ char *pkgname_generator(const char *text, int state)
     if (i > -1 && i < n_array_size(compl_shpkgs)) {
         struct shpkg *shpkg = n_array_nth(compl_shpkgs, i++);
         if (len == 0 || strncmp(shpkg->nevr, text, len) == 0) 
-            name = strdup(shpkg->nevr);
+            name = n_strdup(shpkg->nevr);
     }
     
     return name;
@@ -840,7 +840,7 @@ static struct pkgdir *load_installed_pkgdir(int reload)
         logn(LOGERR, _("Load installed packages failed"));
         
     } else {
-        dir->idxpath = strdup(dbcache_path);
+        dir->idxpath = n_strdup(dbcache_path);
         dir->ts = mtime_rpmdb;
     }
     
@@ -888,7 +888,7 @@ static void map_fn_2shpkg(void *pkg, void *shpkgs)
 
 
     len = pkg_snprintf(nevr, sizeof(nevr), pkg);
-    shpkg = malloc(sizeof(*shpkg) + len + 1);
+    shpkg = n_malloc(sizeof(*shpkg) + len + 1);
     memcpy(shpkg->nevr, nevr, len + 1);
     shpkg->pkg = pkg_link(pkg);
     shpkg->flags = 0;
@@ -1093,7 +1093,7 @@ int init_shell_data(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         int           len;
         
         len = pkg_snprintf(buf, sizeof(buf), pkg);
-        shpkg = malloc(sizeof(*shpkg) + len + 1);
+        shpkg = n_malloc(sizeof(*shpkg) + len + 1);
         memcpy(shpkg->nevr, buf, len + 1);
         shpkg->pkg = pkg_link(pkg);
         shpkg->flags = 0;

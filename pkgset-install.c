@@ -327,7 +327,7 @@ int find_req(const struct pkg *pkg, struct capreq *req, struct pkgset *ps,
                     struct pkg **pkgs;
                     int i;
                     
-                    pkgs = malloc(sizeof(*pkgs) * (nmatches + 1));
+                    pkgs = n_malloc(sizeof(*pkgs) * (nmatches + 1));
                     for (i=0; i < nmatches; i++)
                         pkgs[i] = matches[i];
                     

@@ -102,7 +102,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     if (pkgdir2->depdirs) {
         depdirs = n_array_new(64, NULL, (tn_fn_cmp)strcmp);
         for (i=0; i < n_array_size(pkgdir2->depdirs); i++)
-            n_array_push(depdirs, strdup(n_array_nth(pkgdir2->depdirs, i)));
+            n_array_push(depdirs, n_strdup(n_array_nth(pkgdir2->depdirs, i)));
     }
 
     if (n_array_size(plus_pkgs) == 0) {
@@ -126,7 +126,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     diff = pkgdir_malloc();
     diff->pkgs = plus_pkgs;
     diff->removed_pkgs = minus_pkgs;
-    diff->name = strdup("DIFF");
+    diff->name = n_strdup("DIFF");
     diff->path = NULL;
     diff->idxpath = NULL;
     diff->depdirs = depdirs;
@@ -135,7 +135,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     diff->pkgroups = pkgroup_idx_link(pkgdir2->pkgroups);
     diff->flags = PKGDIR_DIFF;
     diff->ts_orig = pkgdir->ts;
-    diff->mdd_orig = strdup(pkgdir->pdg->mdd);
+    diff->mdd_orig = n_strdup(pkgdir->pdg->mdd);
     diff->vf = NULL;
     
     return diff;
@@ -190,7 +190,7 @@ struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *patch)
     if (patch->depdirs) {
         pkgdir->depdirs = n_array_clone(patch->depdirs);
         for (i=0; i < n_array_size(patch->depdirs); i++) 
-            n_array_push(pkgdir->depdirs, strdup(n_array_nth(patch->depdirs, i)));
+            n_array_push(pkgdir->depdirs, n_strdup(n_array_nth(patch->depdirs, i)));
         
         n_array_sort(pkgdir->depdirs);
     }

@@ -42,6 +42,7 @@
 #include <trurl/nhash.h>
 #include <trurl/n_snprintf.h>
 #include <trurl/nstr.h>
+#include <trurl/nmalloc.h>
 
 #include "http.h"
 #include "i18n.h"
@@ -237,7 +238,7 @@ static struct http_resp *http_resp_new(void)
 {
     struct http_resp *resp;
 
-    resp = malloc(sizeof(*resp));
+    resp = n_malloc(sizeof(*resp));
     resp->buf = n_buf_new(2048);
     resp->last_i = 0;
     resp->state = ST_RESP_EMPTY;
@@ -574,7 +575,7 @@ static int http_resp_parse(struct http_resp *resp)
             if (p == NULL)      /* should not happen */
                 p = *status_tl;
             
-            resp->msg = strdup(p);
+            resp->msg = n_strdup(p);
             break;
         }
         i++;
@@ -624,7 +625,7 @@ static int http_resp_parse(struct http_resp *resp)
         }
         
         //printf("add %s -> %s\n", nam, val);
-        n_hash_insert(resp->hdr, nam, strdup(val));
+        n_hash_insert(resp->hdr, nam, n_strdup(val));
         tl++;
     }
     
@@ -844,7 +845,7 @@ struct httpcn *httpcn_malloc(void)
 {
     struct httpcn *cn;
 
-    cn = malloc(sizeof(*cn));
+    cn = n_malloc(sizeof(*cn));
     memset(cn, 0,  sizeof(*cn));
     cn->host = cn->login = cn->passwd = NULL;
     cn->resp = NULL;
@@ -866,11 +867,11 @@ struct httpcn *httpcn_new(const char *host, int port,
         cn = httpcn_malloc();
         cn->sockfd = sockfd;
         cn->state = HTTPCN_ALIVE;
-        cn->host = strdup(host);
+        cn->host = n_strdup(host);
         cn->port = port;
         if (login && pwd) {
-            cn->login = strdup(login);
-            cn->passwd = strdup(pwd);
+            cn->login = n_strdup(login);
+            cn->passwd = n_strdup(pwd);
         }
     }
 

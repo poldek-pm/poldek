@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
 
@@ -136,14 +137,14 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
 
     args = n_array_new(8, free, NULL);
     bn = n_basenam(path);
-    arg = malloc(sizeof(*arg) + strlen(bn) + 1);
+    arg = n_malloc(sizeof(*arg) + strlen(bn) + 1);
     arg->type = FETCHFMT_ARG;
     strcpy(arg->arg, bn);
     n_array_push(args, arg);
     
     while ((token = next_token(&fmt, ' ', NULL))) {
         if (*token != '%') {
-            arg = malloc(sizeof(*arg) + strlen(token) + 1);
+            arg = n_malloc(sizeof(*arg) + strlen(token) + 1);
             arg->type = FETCHFMT_ARG;
             arg->flags = 0;
             strcpy(arg->arg, token);
@@ -155,7 +156,7 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
             
         } else {
             char c;
-            arg = malloc(sizeof(*arg));
+            arg = n_malloc(sizeof(*arg));
 
             c = *(token + 2);
             switch(*(token + 1)) {
@@ -222,7 +223,7 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
     
     
     if (n_array_size(args) > 2 && has_d_arg && has_p_arg) {
-        ftch = malloc(sizeof(*ftch) + strlen(path) + 1);
+        ftch = n_malloc(sizeof(*ftch) + strlen(path) + 1);
         ftch->args = args;
         ftch->is_multi = is_multi;
         ftch->urltypes = urltypes;

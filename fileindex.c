@@ -21,8 +21,8 @@
 #include "pkg.h"
 #include "fileindex.h"
 
-#define obstack_chunk_alloc malloc
-#define obstack_chunk_free  free
+#define obstack_chunk_alloc n_malloc
+#define obstack_chunk_free  n_free
 
 struct file_ent {
     struct flfile *flfile;

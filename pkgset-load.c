@@ -175,11 +175,11 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
             return NULL;
     }
     
-    src = malloc(sizeof(*src));
+    src = n_malloc(sizeof(*src));
     src->flags = src->subopt_flags = 0;
-    src->path = strdup(clpath);
+    src->path = n_strdup(clpath);
     if (pkg_prefix)
-        src->pkg_prefix = strdup(clprefix);
+        src->pkg_prefix = n_strdup(clprefix);
     else
         src->pkg_prefix = NULL;
     src->type = PKGSRCT_NIL;
@@ -224,7 +224,7 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
         n_str_tokl_free(tl);
     }
 
-    src->name = strdup(name);
+    src->name = n_strdup(name);
     src->flags |= flags;
     
     if (src->type == PKGSRCT_HDL) /* not updateable type */

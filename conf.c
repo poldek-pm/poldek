@@ -26,6 +26,7 @@
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -89,7 +90,7 @@ struct copt *copt_new(const char *name)
 {
     struct copt *opt;
 
-    opt = malloc(sizeof(*opt) + strlen(name) + 1);
+    opt = n_malloc(sizeof(*opt) + strlen(name) + 1);
     strcpy(opt->name, name);
     opt->flags = 0;
     opt->val = NULL;
@@ -134,13 +135,13 @@ int getvlist(tn_hash *ht, char *name, char *vstr, const char *path, int nline)
     while (*p) {
         if (opt->val == NULL) {
             //printf("Lname = %s, v = %s\n", name, *p);
-            opt->val = strdup(*p);
+            opt->val = n_strdup(*p);
         } else {
             if (n_array_size(opt->vals) == 0) {
                 opt->flags |= COPT_MULTIPLE;
-                n_array_push(opt->vals, strdup(opt->val)); 
+                n_array_push(opt->vals, n_strdup(opt->val)); 
             }
-            n_array_push(opt->vals, strdup(*p));
+            n_array_push(opt->vals, n_strdup(*p));
             //printf("Lname = %s, v = %s\n", name, *p);
         }
         p++;
@@ -336,20 +337,20 @@ tn_hash *ldconf(const char *path)
         }
         
         if (opt->val == NULL) {
-            opt->val = strdup(val);
+            opt->val = n_strdup(val);
             
         } else if ((tag->flags & TYPE_MULTI) == 0) {
             logn(LOGWARN, _("%s:%d multiple '%s' not allowed"), path, nline, name);
             exit(0);
             
         } else if (opt->vals != NULL) {
-            n_array_push(opt->vals, strdup(val));
+            n_array_push(opt->vals, n_strdup(val));
             
         } else if (opt->vals == NULL) {
             opt->vals = n_array_new(2, free, (tn_fn_cmp)strcmp);
             /* put ALL opts to opt->vals */
-            n_array_push(opt->vals, strdup(opt->val)); 
-            n_array_push(opt->vals, strdup(val));
+            n_array_push(opt->vals, n_strdup(opt->val)); 
+            n_array_push(opt->vals, n_strdup(val));
             opt->flags |= COPT_MULTIPLE;
         }
     }
