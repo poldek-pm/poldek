@@ -18,7 +18,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+
+#define _GNU_SOURCE 1
 #include <fnmatch.h>
+#undef _GNU_SOURCE
 
 #include <pcre.h>
 #include <trurl/nassert.h>
@@ -45,7 +48,8 @@ static int                    pcre_established = 0;
 struct pattern {
     int              type; 
     char             *regexp;
-    unsigned         flags;
+    int              fnmatch_flags;
+    unsigned         pcre_flags;
     pcre             *pcre;
     pcre_extra       *pcre_extra;
 };
@@ -102,9 +106,10 @@ struct command command_search = {
     NULL, search,
     NULL, NULL,
     N_("With --perlre pattern must be supplied as:\n"
-       "     <delimiter>perl-regexp<delimiter>[imsx], see perlre(1) for more details.\n"
+       "     <delimiter>perl-regexp<delimiter>[imsx]\n"
        "  For example to find the packages containing foo.bar do:\n"
-       "     rsearch /foo\\.bar/\n")
+       "     search --perlre /foo\\.bar/\n"
+       "  See perlre(1) for more details.\n")
 };
 
 static
@@ -220,7 +225,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                                 break;
                             
                             default:
-                                logn(LOGERR, _("search: unknown regexp option -- %c"), *p);
+                                logn(LOGERR, _("search: unknown "
+                                               "regexp option -- %c"), *p);
                                 argp_usage(state);
                                 return EINVAL;
                         }
@@ -237,7 +243,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                     pt->type = PATTERN_FMASK;
                 
                 pt->regexp = n_strdup(regexp);
-                pt->flags = flags;
+                pt->fnmatch_flags = 0;
+                pt->pcre_flags = flags;
                 pt->pcre = NULL;
                 pt->pcre_extra = NULL;
                 
@@ -279,10 +286,14 @@ int pattern_compile(struct pattern *pt, int ntimes)
     n_assert(pt->pcre == NULL);
     n_assert(pt->pcre_extra == NULL);
 
+#ifdef FNM_CASEFOLD
+    pt->fnmatch_flags |= FNM_CASEFOLD;
+#endif    
+
     if (pt->type != PATTERN_PCRE)
         return 1;
     
-    pt->pcre = pcre_compile(pt->regexp, pt->flags, &pcre_err,
+    pt->pcre = pcre_compile(pt->regexp, pt->pcre_flags, &pcre_err,
                             &pcre_err_off, pcre_chartable);
     
     if (pt->pcre == NULL) {
@@ -306,10 +317,13 @@ int pattern_match(struct pattern *pt, const char *s, int len)
 {
     int match = 0;
 
+    if (len == 0)
+        len = strlen(s);
+
     switch (pt->type) {
         case PATTERN_FMASK:
             n_assert(s[len] == '\0');
-            match = (fnmatch(pt->regexp, s, 0) == 0);
+            match = (fnmatch(pt->regexp, s, pt->fnmatch_flags) == 0);
             break;
             
         case PATTERN_PCRE:
@@ -353,30 +367,45 @@ static int fl_match(tn_array *fl, struct pattern *pt)
 {
     int i, j, match = 0;
     
-    for (i=0; i<n_array_size(fl); i++) {
-        struct pkgfl_ent    *flent;
-        char                path[PATH_MAX];
 
+    for (i=0; i < n_array_size(fl); i++) {
+        struct pkgfl_ent    *flent;
+        char                path[PATH_MAX], *dn;
+        int                 n;
+
+        
         flent = n_array_nth(fl, i);
-        for (j=0; j<flent->items; j++) {
+        dn = flent->dirname;
+
+        if (*dn == '/') {
+            n_assert(*(dn + 1) == '\0');
+            n = n_snprintf(path, sizeof(path), dn);
+        } else {
+            n = n_snprintf(path, sizeof(path), "/%s/", dn);
+        }
+
+        for (j=0; j < flent->items; j++) {
             struct flfile *f = flent->files[j];
-            int n;
-            
-            n = n_snprintf(path, sizeof(path), "%s/%s", flent->dirname, f->basename);
-            if ((match = pattern_match(pt, path, n)))
-                goto l_end;
-                
+            int nn;
+
             if (S_ISLNK(f->mode)) {
-                char *name = f->basename + strlen(f->basename) + 1;
-                if ((match = pattern_match(pt, name, strlen(name))))
+                char *name;
+
+                name = f->basename + strlen(f->basename) + 1;
+                if ((match = pattern_match(pt, name, 0)))
                     goto l_end;
             }
+            
+            nn = n_snprintf(&path[n], sizeof(path) - n, "%s", f->basename);
+            if ((match = pattern_match(pt, path, n + nn)))
+                goto l_end;
         }
     }
     
  l_end:
     return match;
 }
+
 
 static int search_pkg_files(struct pkg *pkg, struct pattern *pt) 
 {
@@ -448,7 +477,10 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
         if ((match = pattern_match(pt, p, strlen(p))))
             goto l_end;
     }
-    
+
+    if (flags & (OPT_SEARCH_FL)) 
+        if ((match = search_pkg_files(pkg, pt)))
+            goto l_end;
 
     if (flags & (OPT_SEARCH_SUMM | OPT_SEARCH_DESC)) {
         struct pkguinf *pkgu;
@@ -477,11 +509,6 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
         
     }
 
-    if (match)
-        goto l_end;
-    
-    if (flags & (OPT_SEARCH_FL)) 
-        match = search_pkg_files(pkg, pt);
     
  l_end:
     return match;
@@ -496,7 +523,8 @@ static int search(struct cmdarg *cmdarg)
     int              term_height;
     struct pattern   *pt;
     unsigned         flags;
-    
+
+    pcre_malloc = n_malloc;
     
     if ((pt = cmdarg->d) == NULL) {
         logn(LOGERR, _("search: no pattern given"));
