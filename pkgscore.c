@@ -121,11 +121,19 @@ void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag)
 
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
+        char  pkgbuf[1024];
+        int   n = 0;
 
+        if (pkg->pkgdir)
+                n += n_snprintf(pkgbuf, sizeof(pkgbuf), "%s:", pkg->pkgdir->name);
+        
+        pkg_snprintf(&pkgbuf[n], sizeof(pkgbuf) - n, pkg);
+        
         for (j=0; j<n_array_size(patterns); j++) {
             const char *mask = n_array_nth(patterns, j);
             
-            if (fnmatch(mask, pkg->name, 0) == 0) {
+            if (fnmatch(mask, &pkgbuf[n], 0) == 0 || (n && fnmatch(mask, pkgbuf, 0) == 0)) {
+
                 switch (scoreflag) {
                     case PKG_HELD:
                         msgn(3, "held %s", pkg_snprintf_s(pkg));
