@@ -12,7 +12,8 @@ removelibs:
 	./getlib.sh trurlib link
 	./getlib.sh tndb link
 
-tarball: copylibs dist-bzip2 removelibs
+tarball: copylibs dist removelibs
+tarball-bz2: copylibs dist-bzip2 removelibs
 
 rpm-package: tarball
 	rpmbuild -tb $(distdir).tar.bz2
@@ -60,9 +61,9 @@ misarch: mclean
 #perl -pi -e "s/VERSION_STATUS=\"devel\"/VERSION_STATUS=\"devel $$dts\"/g" \
 #$(distdir)/configure* 
 
-snap: tarball
+snap: tarball-bz2
 	@dts=`date +%Y%m%d.%H` && rm -rf $(PACKAGE)-cvs$$dts* && \
-	tar xpzf $(distdir).tar.gz && \
+	tar xpjf $(distdir).tar.bz2 && \
 	echo "$$dts" > $(distdir)/0_THIS_IS_SNAPSHOT && \
 	mv -f $(distdir) $(PACKAGE)-$(VERSION)-cvs$$dts && \
 	tar cpjf $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2 $(PACKAGE)-$(VERSION)-cvs$$dts && \
