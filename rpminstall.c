@@ -33,6 +33,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/ioctl.h>
 #include <fnmatch.h>
 
 #include <rpm/rpmlib.h>
@@ -49,16 +50,22 @@
 #include "pkgset.h"
 #include "misc.h"
 
-#ifdef HAVE_FORKPTY
+
+#ifdef HAVE_OPENPTY
 
 static void rpmr_process_output(struct p_open_st *st, int verbose_level) 
 {
-    int           endl = 1;
+    int endl = 1;
 
     while (1) {
-        struct timeval to = { 1, 0 };
+        struct timeval to = { 0, 200000 };
         fd_set fdset;
         int rc;
+        
+        if (p_wait(st)) {
+            int yes = 1;
+            ioctl(st->fd, FIONBIO, &yes);
+        }
         
         FD_ZERO(&fdset);
         FD_SET(st->fd, &fdset);
@@ -68,57 +75,58 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
             
             break;
             
+        } else if (rc == 0) {
+            if (p_wait(st))
+                break;
+
         } else if (rc > 0) {
-            char  buf[2048];
-            int   n;
-            
-            if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0) {
+            char  buf[4096];
+            int   n, i;
+
+            if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0)
                 break;
             
-            } else {
-                int i;
+            buf[n] = '\0';
+            msg_tty(verbose_level, "_%s", buf);
+            if (!log_enabled_filelog())
+                continue;
                 
-                buf[n] = '\0';
-                msg_tty(verbose_level, "_%s", buf);
-                if (!log_enabled_filelog())
+            for (i=0; i < n; i++) {
+                int c = buf[i];
+                
+                if (c == '\r')
                     continue;
                 
-                for (i=0; i < n; i++) {
-                    int c = buf[i];
-                
-                    if (c == '\r')
-                        continue;
-                
-                    if (c == '\n')
-                        endl = 1;
+                if (c == '\n')
+                    endl = 1;
                     
-                    if (endl) {
-                        endl = 0;
-                        msg_f(0, "_\n");
-                        msg_f(0, "rpm: ");
-                        continue;
-                    }
-                    msg_f(0, "_%c", c);
+                if (endl) {
+                    endl = 0;
+                    msg_f(0, "_\n");
+                    msg_f(0, "rpm: ");
+                    continue;
                 }
+                msg_f(0, "_%c", c);
             }
         }
     }
+    
+    return;
 }
-
 
 int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
 {
     struct p_open_st pst;
     int n, ec;
+    unsigned p_open_flags = P_OPEN_KEEPSTDIN;
+
     
     p_st_init(&pst);
-    if (ontty) {
-        if (pty_open(&pst, cmd, argv) == NULL) 
-            return 0;
-    } else {
-        if (p_open(&pst, 0, cmd, argv) == NULL) 
-            return 0;
-    }
+    if (ontty)
+        p_open_flags |= P_OPEN_OUTPTYS;
+    
+    if (p_open(&pst, p_open_flags, cmd, argv) == NULL) 
+        return 0;
     
     n = 0;
     if (verbose == 0) {
@@ -138,7 +146,7 @@ int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
     return ec;
 }
 
-#else  /* HAVE_FORKPTY */
+#else  /* HAVE_OPENPTY */
 
 int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
 {

@@ -13,6 +13,7 @@
 /* $Id$ */
 
 #include <ctype.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -234,33 +235,57 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
     return NULL;
 }
 
-static 
-int process_output(struct p_open_st *st, const char *prefix) 
+
+static void process_output(struct p_open_st *st, const char *prefix) 
 {
-    int c, endl = 1, cnt = 0;
+    int endl = 1, cnt = 0;
+
     
     if (prefix == NULL)
         prefix = st->cmd;
-
-    setvbuf(st->stream, NULL, _IONBF, 0);
-    while ((c = fgetc(st->stream)) != EOF) {
-        if (*vfile_verbose == 0)
-            continue;
-        
-        if (endl) {
-            vfile_msg_fn("%s: ", prefix);
-            endl = 0;
-        }
-
-        vfile_msg_fn("%c", c);
-        if (c == '\n' && cnt > 0)
-            endl = 1;
-        
-        cnt++;
-    }
     
-    return 1;
+    while (1) {
+        struct timeval to = { 1, 0 };
+        fd_set fdset;
+        int rc;
+        
+        FD_ZERO(&fdset);
+        FD_SET(st->fd, &fdset);
+        if ((rc = select(st->fd + 1, &fdset, NULL, NULL, &to)) < 0) {
+            if (errno == EAGAIN || errno == EINTR)
+                continue;
+            
+            break;
+            
+        } else if (rc > 0) {
+            char  buf[2048];
+            int   n, i;
+            
+            if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0)
+                break;
+
+            if (*vfile_verbose == 0)
+                continue;
+            
+            buf[n] = '\0';
+            for (i=0; i < n; i++) {
+                int c = buf[i];
+        
+                if (endl) {
+                    vfile_msg_fn("%s: ", prefix);
+                    endl = 0;
+                }
+
+                vfile_msg_fn("_%c", c);
+                if (c == '\n' && cnt > 0)
+                    endl = 1;
+                
+                cnt++;
+            }
+        }
+    }
 }
+
 
 
 static
@@ -335,7 +360,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 break;
 
             default:
-                vfile_err_fn("vfile_fetch*: internal error");
+                vfile_err_fn("vfile_fetch*: internal error\n");
                 n_assert(0);
                 return 0;
         }
@@ -383,7 +408,8 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                    ((struct fetcharg*) n_array_nth(fftch->args, 0))->arg);
         
     if ((ec = p_close(&pst)) != 0)
-        vfile_err_fn("%s", pst.errmsg);
+        vfile_err_fn("%s\n", pst.errmsg ? pst.errmsg :
+                     _("program exited with non-zero value"));
     
     p_st_destroy(&pst);
     *vfile_verbose = verbose;

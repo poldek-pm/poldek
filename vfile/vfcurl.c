@@ -86,7 +86,7 @@ static void sigint_handler(int sig)
 
 static int vfile_curl_init(void) 
 {
-    char *errmsg = "curl_easy_setopt failed";
+    char *errmsg = "curl_easy_setopt failed\n";
     
     if ((curlh = curl_easy_init()) == NULL)
         return 0;
