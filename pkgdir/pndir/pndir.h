@@ -86,7 +86,7 @@ extern const char *pndir_tag_endhdr;
 
 
 int pndir_make_pkgkey(char *key, size_t size, const struct pkg *pkg);
-struct pkg *pndir_parse_pkgkey(char *key, int klen);
+struct pkg *pndir_parse_pkgkey(char *key, int klen, struct pkg *pkg);
 
 //static int pndir_m_open(struct pkgdir *pkgdir, unsigned flags);
 

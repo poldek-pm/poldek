@@ -3,7 +3,7 @@
 #define  POLDEK_PKGDIR_PDIR_H
 
 #include <trurl/narray.h>
-
+#include <trurl/nmalloc.h>
 #include <vfile/vfile.h>
 
 #include "misc.h"
@@ -85,7 +85,7 @@ extern const char *pdir_tag_endvarhdr;
 int pdir_create(struct pkgdir *pkgdir, const char *pathname,
                 unsigned flags);
 
-struct pkg *pdir_pkg_restore(tn_stream *st, struct pkg *pkg, 
+struct pkg *pdir_pkg_restore(tn_alloc *na, tn_stream *st, struct pkg *pkg, 
                              tn_array *depdirs, unsigned ldflags,
                              struct pkg_offs *pkgo, const char *fn);
 

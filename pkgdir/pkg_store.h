@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#include <trurl/trurl.h>
+
 #define PKG_STORETAG_NAME  'N'
 #define PKG_STORETAG_EVR   'V'
 #define PKG_STORETAG_ARCH  'A'
@@ -51,7 +53,7 @@ struct pkg_offs {
     off_t  pkguinf_offs;
 };
 
-struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg, 
+struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg, 
                            tn_array *depdirs, unsigned ldflags,
                            struct pkg_offs *pkgo, const char *fn);
 

@@ -26,10 +26,7 @@
 #include <time.h>
 #include <fnmatch.h>
 
-#include <trurl/nassert.h>
-#include <trurl/nstr.h>
-#include <trurl/nbuf.h>
-
+#include <trurl/trurl.h>
 #include <vfile/vfile.h>
 
 #define PKGDIR_INTERNAL
@@ -70,7 +67,8 @@ struct pkgdir_module pkgdir_module_hdrl = {
 
 static
 int load_header_list(const char *slabel, const char *path, tn_array *pkgs,
-                     struct pkgroup_idx *pkgroups, unsigned ldflags)
+                     struct pkgroup_idx *pkgroups, unsigned ldflags,
+                     tn_alloc *na)
 {
     struct vfile         *vf;
     struct pkg           *pkg;
@@ -103,9 +101,9 @@ int load_header_list(const char *slabel, const char *path, tn_array *pkgs,
             continue;
         }
         
-        if ((pkg = pkg_ldrpmhdr(h, NULL, 0, PKG_LDWHOLE))) {
+        if ((pkg = pkg_ldrpmhdr(NULL, h, NULL, 0, PKG_LDWHOLE))) {
             if (ldflags & PKGDIR_LD_DESC) {
-                pkg->pkg_pkguinf = pkguinf_ldhdr(h);
+                pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
                 pkg_set_ldpkguinf(pkg);
             }
 
@@ -135,7 +133,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
     n = load_header_list(pkgdir_idstr(pkgdir), pkgdir->idxpath, pkgdir->pkgs,
-                         pkgdir->pkgroups, ldflags);
+                         pkgdir->pkgroups, ldflags, pkgdir->na);
     return n;
 }
 

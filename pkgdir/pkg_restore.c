@@ -78,7 +78,7 @@ struct pkgtags_s {
     tn_array   *caps;
     tn_array   *reqs;
     tn_array   *cnfls;
-    tn_array   *pkgfl;
+    tn_tuple   *pkgfl;
     off_t      nodep_files_offs; /* non dep files tag off_t */
     
     struct pkguinf *pkguinf;
@@ -92,7 +92,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 const char *pathname, off_t offs);
 
 static
-struct pkg *pkg_ldtags(struct pkg *pkg,
+struct pkg *pkg_ldtags(tn_alloc *na, struct pkg *pkg,
                        struct pkgtags_s *pkgt, struct pkg_offs *pkgo);
 
 
@@ -126,7 +126,7 @@ inline static char *next_tokn(char **str, char delim, int *toklen)
     return token;
 }
 
-struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg, 
+struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg, 
                            tn_array *depdirs, unsigned ldflags,
                            struct pkg_offs *pkgo, const char *fn)
 {
@@ -166,7 +166,7 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
         //printf("line[%ld] = (%s)\n", offs, line);
         if (*line == '\n') {        /* empty line -> end of record */
             //printf("\n\nEOR\n");
-            pkg = pkg_ldtags(pkg, &pkgt, pkgo);
+            pkg = pkg_ldtags(na, pkg, &pkgt, pkgo);
             pkg->size = tmpkg.size;
             pkg->fsize = tmpkg.fsize;
             pkg->btime = tmpkg.btime;
@@ -245,7 +245,7 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
                     goto l_end;
                 }
                 
-                pkgt.caps = capreq_arr_restore_f(st);
+                pkgt.caps = capreq_arr_restore_st(na, st);
                 pkgt.flags |= PKGT_HAS_CAP;
                 break;
                     
@@ -256,7 +256,7 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
                     goto l_end;
                 }
                     
-                pkgt.reqs = capreq_arr_restore_f(st);
+                pkgt.reqs = capreq_arr_restore_st(na, st);
                 if (pkgt.reqs == NULL) {
                     logn(LOGERR, errmg_ldtag, fn, offs, *line);
                     nerr++;
@@ -272,7 +272,7 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
                     goto l_end;
                 }
                     
-                pkgt.cnfls = capreq_arr_restore_f(st);
+                pkgt.cnfls = capreq_arr_restore_st(na, st);
                 
                 if (pkgt.cnfls == NULL) {
                     logn(LOGERR, errmg_ldtag, fn, offs, *line);
@@ -289,16 +289,13 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
                 break;
 
             case PKG_STORETAG_DEPFL:
-                pkgt.pkgfl = pkgfl_restore_st(st, NULL, 0);
-                if (pkgt.pkgfl == NULL) {
+                if (pkgfl_restore_st(na, &pkgt.pkgfl, st, NULL, 0) < 0) {
                     logn(LOGERR, errmg_ldtag, fn, offs, *line);
                     nerr++;
                     goto l_end;
                 }
-                n_assert(pkgt.pkgfl);
-                //printf("DUMP %p %d\n", pkgt.pkgfl, n_array_size(pkgt.pkgfl));
-                //pkgfl_dump(pkgt.pkgfl);
-                pkgt.flags |= PKGT_HAS_FILES;
+                if (pkgt.pkgfl)
+                    pkgt.flags |= PKGT_HAS_FILES;
                 break;
                     
             case PKG_STORETAG_FL:
@@ -308,23 +305,35 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
                     pkgfl_skip_st(st);
                         
                 } else {
-                    tn_array *fl;
-                        
-                    fl = pkgfl_restore_st(st, depdirs, 1);
-                    if (fl == NULL) {
+                    tn_tuple *fl;
+                    if (pkgfl_restore_st(na, &fl, st, depdirs, 1) < 0) {
                         logn(LOGERR, errmg_ldtag, fn, offs, *line);
                         nerr++;
                         goto l_end;
                     }
+
+                    if (fl == NULL)
+                        break;
                     
                     if (pkgt.pkgfl == NULL) {
                         pkgt.pkgfl = fl;
                         pkgt.flags |= PKGT_HAS_FILES;
                             
                     } else {
-                        while (n_array_size(fl)) 
-                            n_array_push(pkgt.pkgfl, n_array_shift(fl));
-                        n_array_free(fl);
+                        int i, n;
+                        tn_tuple *ffl;
+                        
+                        ffl = n_tuple_new(na, n_tuple_size(pkgt.pkgfl) +
+                                          n_tuple_size(fl), NULL);
+
+                        n = 0;
+                        for (i=0; i < n_tuple_size(pkgt.pkgfl); i++)
+                            n_tuple_set_nth(ffl, n++, n_tuple_nth(pkgt.pkgfl, i));
+                        
+                        for (i=0; i < n_tuple_size(fl); i++)
+                            n_tuple_set_nth(ffl, n++, n_tuple_nth(fl, i));
+                        
+                        pkgt.pkgfl = ffl;
                     }
                 }
                 break;
@@ -335,7 +344,7 @@ struct pkg *pkg_restore_st(tn_stream *st, struct pkg *pkg,
                     pkguinf_skip_rpmhdr(st);
 					
                 } else {
-                    pkgt.pkguinf = pkguinf_restore_rpmhdr_st(st, 0);
+                    pkgt.pkguinf = pkguinf_restore_rpmhdr_st(na, st, 0);
                     if (pkgt.pkguinf == NULL) {
                         logn(LOGERR, errmg_ldtag, fn, offs, *line);
                         nerr++;
@@ -444,7 +453,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
 }
 
 static
-struct pkg *pkg_ldtags(struct pkg *pkg,
+struct pkg *pkg_ldtags(tn_alloc *na, struct pkg *pkg,
                        struct pkgtags_s *pkgt, struct pkg_offs *pkgo) 
 {
     const char *ver, *rel;
@@ -475,7 +484,7 @@ struct pkg *pkg_ldtags(struct pkg *pkg,
         arch = pkgt->arch;
 
     if (pkg == NULL) {
-        pkg = pkg_new_ext(pkgt->name, epoch, ver, rel, arch, os, 
+        pkg = pkg_new_ext(na, pkgt->name, epoch, ver, rel, arch, os, 
                           (pkgt->flags & PKGT_HAS_FN) ? pkgt->fn : NULL,
                           pkgt->size, pkgt->fsize, pkgt->btime);
     } else {
@@ -483,7 +492,7 @@ struct pkg *pkg_ldtags(struct pkg *pkg,
         n_assert(os == NULL);
         n_assert(arch == NULL);
         
-        pkg = pkg_new_ext(pkg->name, pkg->epoch, pkg->ver, pkg->rel, pkg->arch,
+        pkg = pkg_new_ext(na, pkg->name, pkg->epoch, pkg->ver, pkg->rel, pkg->arch,
                           pkg->os, 
                           (pkgt->flags & PKGT_HAS_FN) ? pkgt->fn : NULL,
                           pkgt->size, pkgt->fsize, pkgt->btime);
@@ -519,12 +528,12 @@ struct pkg *pkg_ldtags(struct pkg *pkg,
     }
 
     if (pkgt->flags & PKGT_HAS_FILES) {
-        if (n_array_size(pkgt->pkgfl) == 0) {
-            n_array_free(pkgt->pkgfl);
+        if (n_tuple_size(pkgt->pkgfl) == 0) {
+            n_tuple_free(na, pkgt->pkgfl);
             pkgt->pkgfl = NULL;
         } else {
             pkg->fl = pkgt->pkgfl;
-            n_array_sort(pkg->fl);
+            n_tuple_sort_ex(pkg->fl, (tn_fn_cmp)pkgfl_ent_cmp);
             //pkgfl_dump(pkg->fl);
             pkgt->pkgfl = NULL;
         }

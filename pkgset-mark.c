@@ -37,6 +37,7 @@
 #include "pkgset.h"
 #include "misc.h"
 #include "pkgset-req.h"
+#include "capreq.h"
 
 
 struct flags_s {
@@ -70,7 +71,7 @@ void packages_mark(tn_array *pkgs, unsigned flags_on, unsigned flags_off)
 
 
 static
-void visit_mark_reqs(struct pkg *parent_pkg, struct pkg *pkg,
+void visit_mark_reqs(struct pkg *parent_pkg, struct capreq *req, struct pkg *pkg, 
                      tn_array *marked, int deep) 
 {
     int i;
@@ -80,8 +81,9 @@ void visit_mark_reqs(struct pkg *parent_pkg, struct pkg *pkg,
     
     if (pkg_isnot_marked(pkg)) {
         n_assert(parent_pkg != NULL);
-        msgn_i(1, deep, _("%s marks %s"), pkg_snprintf_s(parent_pkg),
-               pkg_snprintf_s0(pkg));
+        n_assert(req != NULL);
+        msgn_i(1, deep, _("%s marks %s (cap %s)"), pkg_snprintf_s(parent_pkg),
+               pkg_snprintf_s0(pkg), capreq_snprintf_s(req));
         pkg_dep_mark(pkg);
         n_array_push(marked, pkg_link(pkg));
     }
@@ -113,7 +115,7 @@ void visit_mark_reqs(struct pkg *parent_pkg, struct pkg *pkg,
                 }
 
                 if (markit)
-                    visit_mark_reqs(pkg, rpkg->pkg, marked, deep);
+                    visit_mark_reqs(pkg, rpkg->req, rpkg->pkg, marked, deep);
             }
         }
     }
@@ -129,7 +131,7 @@ int mark_dependencies(tn_array *pkgs, tn_array *marked, int withdeps)
         struct pkg *pkg = n_array_nth(pkgs, i);
     
         if (pkg_is_hand_marked(pkg)) 
-            visit_mark_reqs(NULL, pkg, marked, 0);
+            visit_mark_reqs(NULL, NULL, pkg, marked, 0);
     }
 
     for (i=0; i < n_array_size(marked); i++) {
@@ -140,7 +142,7 @@ int mark_dependencies(tn_array *pkgs, tn_array *marked, int withdeps)
             continue;
 
         if (pkg_has_badreqs(pkg)) {
-            logn(LOGERR, _("%s: broken dependencies"), pkg_snprintf_s(pkg));
+            //logn(LOGERR, _("%s: broken dependencies"), pkg_snprintf_s(pkg));
             nerr++;
         }
         
@@ -148,7 +150,7 @@ int mark_dependencies(tn_array *pkgs, tn_array *marked, int withdeps)
             continue;
 
         for (j=0; j < n_array_size(pkg->cnflpkgs); j++) {
-            struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
+            struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
             if (pkg_is_marked(cpkg->pkg)) {
                 logn(LOGERR, _("conflict between %s and %s"), pkg->name,
                      cpkg->pkg->name);
@@ -163,10 +165,10 @@ int mark_dependencies(tn_array *pkgs, tn_array *marked, int withdeps)
     return nerr == 0;
 }
 
-
+#if 0
 inline static int mark_package(struct pkg *pkg, int withdeps)
 {
-    if (pkg_has_badreqs(pkg) && withdeps) {
+    if (pkg_has_badreqs(pkg) && withdeps && 0) {
         logn(LOGERR, _("mark: %s: broken dependencies"), pkg_snprintf_s(pkg));
         
     } else {
@@ -175,10 +177,11 @@ inline static int mark_package(struct pkg *pkg, int withdeps)
     }
     return pkg_is_marked(pkg);
 }
+#endif
 
-
+static
 int packages_depmark_packages(tn_array *pkgs, const tn_array *tomark,
-                              tn_array *marked, int withdeps, int nodeps)
+                              tn_array *marked, int withdeps)
 {
     int i, nerr = 0;
     
@@ -186,35 +189,32 @@ int packages_depmark_packages(tn_array *pkgs, const tn_array *tomark,
 
     for (i=0; i < n_array_size(tomark); i++) {
         struct pkg *pkg = n_array_nth(tomark, i);
+
+        if (pkg_has_badreqs(pkg))
+            nerr++;
+        pkg_hand_mark(pkg);
+        n_array_push(marked, pkg_link(pkg));
+        
+#if 0                           /* old */
         if (mark_package(pkg, withdeps))
             n_array_push(marked, pkg_link(pkg));
+#endif        
     }
     
-
     if (withdeps) {
-        msgn(1, _("\nProcessing dependencies..."));
         if (!mark_dependencies(pkgs, marked, withdeps))
             nerr++;
-        
-        if (nerr == 0)
-            msgn(1, _("Package set OK"));
-        
-        else {
-            if (nodeps)
-                packages_mark(pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
-            else 
-                logn(LOGERR, _("Buggy package set."));
-        }
     }
-    
+
+    packages_mark(pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK); /* clear tmp marks */
     return nerr == 0;
 }
 
 
 int pkgset_mark_packages(struct pkgset *ps, const tn_array *pkgs,
-                         tn_array *marked, int withdeps, int nodeps)
+                         tn_array *marked, int withdeps)
 {
-    return packages_depmark_packages(ps->pkgs, pkgs, marked, withdeps, nodeps);
+    return packages_depmark_packages(ps->pkgs, pkgs, marked, withdeps);
 }
 
 

@@ -199,8 +199,7 @@ struct pkgdir *pkgdir_malloc(void)
 {
     struct pkgdir *pkgdir;
 
-    pkgdir = n_malloc(sizeof(*pkgdir));
-    memset(pkgdir, 0, sizeof(*pkgdir));
+    pkgdir = n_calloc(sizeof(*pkgdir), 1);
 
     pkgdir->name = NULL;
     pkgdir->path = NULL;
@@ -223,7 +222,7 @@ struct pkgdir *pkgdir_malloc(void)
     pkgdir->avlangs_h = NULL;
     pkgdir->lc_lang = NULL;
     pkgdir->mod = pkgdir->mod_data = NULL;
-
+    pkgdir->na = n_alloc_new(128, TN_ALLOC_OBSTACK);
     return pkgdir;
 }
 
@@ -330,7 +329,7 @@ struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags)
         pkgdir->flags |= PKGDIR_VRFY_PGP;
     
     pkgdir->pri = src->pri;
-    pkgdir->src = source_link(src);
+    pkgdir->src = source_link((struct source *)src);
     return pkgdir;
 }
 
@@ -352,6 +351,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     const struct pkgdir_module  *mod;
     int                         rc;
     unsigned                    saved_flags;
+    tn_array                    *pkgs;
 
     n_assert(type);
     if ((mod = find_module(type)) == NULL)
@@ -379,7 +379,8 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     
     pkgdir->idxpath = n_strdup(idxpath);
     pkgdir->compress = compress ? n_strdup(compress) : NULL;
-    pkgdir->pkgs = pkgs_array_new(2048);
+    pkgdir->pkgs = pkgs = pkgs_array_new(2048);
+    
     pkgdir->mod = mod;
     pkgdir->type = mod->name;   /* just reference */
 
@@ -397,7 +398,9 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
             return NULL;
         }
     }
+    n_assert(pkgdir->pkgs == pkgs);
     n_assert((pkgdir->flags & saved_flags) == saved_flags);
+    
     if (pkgdir->langs && n_array_size(pkgdir->langs) == 0) {
         n_array_free(pkgdir->langs);
         pkgdir->langs = NULL;
@@ -415,6 +418,8 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 
 void pkgdir_free(struct pkgdir *pkgdir) 
 {
+
+    DBGF("%p %s\n", pkgdir,  pkgdir_idstr(pkgdir));
     if (pkgdir->name) {
         free(pkgdir->name);
         pkgdir->name = NULL;
@@ -440,13 +445,18 @@ void pkgdir_free(struct pkgdir *pkgdir)
         pkgdir->foreign_depdirs = NULL;
     }
 
+    if (pkgdir->src) {
+        source_free(pkgdir->src);
+        pkgdir->src = NULL;
+    }
+
     if (pkgdir->pkgs) {
         int i;
-        
         for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
             pkg->pkgdir = NULL;
         }
+        
         n_array_free(pkgdir->pkgs);
         pkgdir->pkgs = NULL;
     }
@@ -475,6 +485,12 @@ void pkgdir_free(struct pkgdir *pkgdir)
 
     if (pkgdir->mod && pkgdir->mod->free)
         pkgdir->mod->free(pkgdir);
+
+    if (pkgdir->na)
+        n_alloc_free(pkgdir->na);
+
+    if (pkgdir->prev_pkgdir)
+        pkgdir_free(pkgdir->prev_pkgdir);
     
     memset(pkgdir, 0, sizeof(*pkgdir));
     free(pkgdir);

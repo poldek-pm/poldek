@@ -184,7 +184,7 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
     pkg_set_color(pkg, PKG_COLOR_BLACK);
     pkg_clr_prereqed(pkg);
     msgn(4, "push %s", pkg_snprintf_s(pkg));
-    n_array_push(vs->ordered_pkgs, pkg_link(pkg));
+    n_array_push(vs->ordered_pkgs, pkg);
     if (last_stack_i != -1) 
         for (i=last_stack_i; i < n_array_size(vs->stack); i++) {
             pkg = n_array_pop(vs->stack);
@@ -200,8 +200,8 @@ static int do_order(tn_array *pkgs, tn_array **ordered_pkgs, int prereq_only)
     struct visit_install_order_s vs;
     int i;
     
-    vs.ordered_pkgs = n_array_new(n_array_size(pkgs),
-                                  (tn_fn_free)pkg_free, NULL);
+    vs.ordered_pkgs = n_array_new(n_array_size(pkgs), NULL, NULL);
+//                                  (tn_fn_free)pkg_free, NULL);
     vs.nerrors = 0;
     vs.stack = n_array_new(128, NULL, NULL);
     vs.prereq_only = prereq_only;

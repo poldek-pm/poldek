@@ -66,7 +66,7 @@ static int fent_cmp2str(const void *a,  const void *b)
 
 int file_index_init(struct file_index *fi, int nelem)  
 {
-    fi->dirs = n_hash_new(nelem, (tn_fn_free)n_array_free);
+    fi->dirs = n_hash_new_na(NULL, nelem, (tn_fn_free)n_array_free);
     if (fi->dirs == NULL)
        return 0;
     
@@ -240,6 +240,11 @@ static int register_file_conflict(struct pkg *pkg1, struct pkg *pkg2,
     return (c1 || c2);
 }
 
+struct map_struct {
+    int strict;
+    tn_array *cnfls;
+    int nfiles;
+};
 
 
 static
@@ -331,17 +336,18 @@ void verify_dups(int from, int to, const char *path, tn_array *fents, int strict
     }
 }
 
-
 static
-void find_dups(const char *dirname, void *data, void *strictp) 
+void find_dups(const char *dirname, void *data, void *ms_) 
 {
     struct file_ent *prev_ent, *ent;
     int i, ii, from;
     char path[PATH_MAX];
+    struct map_struct *ms = ms_;
       
     prev_ent = n_array_nth(data, 0);
     from = 0;
-    
+
+    ms->nfiles += n_array_size(data);
     for (i=1; i < n_array_size(data); i++) {
         ent = n_array_nth(data, i);
         
@@ -356,7 +362,7 @@ void find_dups(const char *dirname, void *data, void *strictp)
         if (ii != i) {
             snprintf(path, sizeof(path), "%s/%s", dirname,
                      prev_ent->flfile->basename);
-            verify_dups(from, ii, path, data, *(int*)strictp);
+            verify_dups(from, ii, path, data, ms->strict);
         }
         
         prev_ent = ent;
@@ -366,9 +372,14 @@ void find_dups(const char *dirname, void *data, void *strictp)
 }
 
 
-int file_index_find_conflicts(const struct file_index *fi, int strict)
+int file_index_find_conflicts(const struct file_index *fi, tn_array *errs,
+                              int strict)
 {
-    n_hash_map_arg(fi->dirs, find_dups, &strict);
+    struct map_struct ms;
+    ms.strict = strict;
+    ms.nfiles = 0;
+    n_hash_map_arg(fi->dirs, find_dups, &ms);
+    DBGF_F("%d dirnames, %d files\n", n_hash_size(fi->dirs), ms.nfiles);
     return 1;
 }
 

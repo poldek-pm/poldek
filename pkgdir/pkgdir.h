@@ -4,6 +4,7 @@
 
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
+#include <trurl/nmalloc.h>
 #include <vfile/vfile.h>
 
 #include "source.h"
@@ -59,9 +60,7 @@ struct pkgdir {
     struct pkgdir       *prev_pkgdir;
 
     struct source       *src;            /* reference to its source (if any) */
-    void                *_memalloc_ptr;
-    void                *(*memalloc)(struct pkgdir *, size_t);
-    
+    tn_alloc            *na;
     const struct pkgdir_module  *mod;
     void                        *mod_data;
 };

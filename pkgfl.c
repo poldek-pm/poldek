@@ -16,16 +16,12 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <obstack.h>
 #include <fnmatch.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-
-#include <rpm/rpmlib.h>
-#include <trurl/nassert.h>
-#include <trurl/nmalloc.h>
-#include <trurl/narray.h>
-#include <trurl/nhash.h>
-#include <trurl/nbuf.h>
+#include <trurl/trurl.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -33,122 +29,52 @@
 #include "pkgfl.h"
 #include "depdirs.h"
 
-#define obstack_chunk_alloc n_malloc
-#define obstack_chunk_free  n_free
-
-struct flmark {
-    tn_array              *dirs;
-    char                  *ptr;
+struct dirname_h {
+    tn_hash *dnh;
+    tn_alloc *na;
+    int      n;
 };
 
-struct fl_allocator_s {
-    tn_hash               *dirns;
-    struct obstack        ob;
-    struct flmark         *cur_mark;
-    tn_array              *marks;
-};
 
-static struct fl_allocator_s *flalloct = NULL;
+static struct dirname_h dirname_h = { 0, 0, 0 };
 
-int pkgflmodule_init(void) 
+static inline char *register_dn(char *dn)
 {
-    flalloct = n_malloc(sizeof(*flalloct));
-    if (flalloct == NULL)
-        return 0;
+    char *dnn;
     
-    flalloct->dirns = n_hash_new(30001, NULL);
-    if (flalloct->dirns == NULL)
-       return 0;
-    
-    n_hash_ctl(flalloct->dirns, TN_HASH_NOCPKEY);
-    obstack_init(&flalloct->ob);
-    obstack_chunk_size(&flalloct->ob) = 1024*128;
-    flalloct->cur_mark = NULL;
-    flalloct->marks = n_array_new(2, NULL, NULL);
-    return 1;
-}
-
-
-void pkgflmodule_free_unneeded(void) 
-{
-    if (flalloct && flalloct->dirns) {
-        n_hash_free(flalloct->dirns);
-        flalloct->dirns = NULL;
+    if (dirname_h.dnh == NULL) {
+        dirname_h.na = n_alloc_new(16, TN_ALLOC_OBSTACK);
+        dirname_h.dnh = n_hash_new_na(dirname_h.na, 4096, NULL);
+        n_hash_ctl(dirname_h.dnh, TN_HASH_NOCPKEY | TN_HASH_REHASH);
     }
-}
-
-
-void pkgflmodule_destroy(void) 
-{
-    if (flalloct) {
-        pkgflmodule_free_unneeded();
-
-        if (flalloct->marks) {
-            while (n_array_size(flalloct->marks))
-                pkgflmodule_allocator_pop_mark(n_array_pop(flalloct->marks));
-            n_array_free(flalloct->marks);
-        }
-
-        obstack_free(&flalloct->ob, NULL);
-        free(flalloct);
-        flalloct = NULL;
+    
+    if ((dnn = n_hash_get(dirname_h.dnh, dn)) == NULL) {
+        int len = strlen(dn) + 1;
+        dnn = dirname_h.na->na_malloc(dirname_h.na, len);
+        memcpy(dnn, dn, len);
+        n_hash_insert(dirname_h.dnh, dnn, dnn);
+        
+    } else {
+        dirname_h.n++;
+        //printf("hhhh %d %s\n", dirname_h.n, dnn);
     }
-}
 
-void *pkgflmodule_allocator_push_mark(void) 
-{
-    if (flalloct->cur_mark) 
-        n_array_push(flalloct->marks, flalloct->cur_mark);
-    
-    flalloct->cur_mark = n_malloc(sizeof(*flalloct->cur_mark));
-    flalloct->cur_mark->ptr = obstack_alloc(&flalloct->ob, 1);
-    flalloct->cur_mark->dirs = n_array_new(16, NULL, NULL);
-    DBGF("PUSH %p\n", flalloct->cur_mark);
-    return flalloct->cur_mark;
-}
-
-void pkgflmodule_allocator_pop_mark(void *ptr) 
-{
-    int i;
-    struct flmark *mark = ptr;
-    
-    DBGF("POP  %p\n", mark);
-    n_assert(mark == flalloct->cur_mark);
-    
-    for (i=0; i<n_array_size(mark->dirs); i++) 
-        n_hash_remove(flalloct->dirns, n_array_nth(mark->dirs, i));
-
-    n_array_free(mark->dirs);
-    if (n_array_size(flalloct->marks))
-        flalloct->cur_mark = n_array_pop(flalloct->marks);
-    else
-        flalloct->cur_mark = NULL;
-    
-    obstack_free(&flalloct->ob, mark->ptr);
-    free(mark);
-}
-
-__inline__
-static void *pkgfl_alloc(size_t size) 
-{
-    return obstack_alloc(&flalloct->ob, size);
-}
-
-__inline__
-static char *pkgfl_strdup(const char *str, size_t size)
-{
-    return obstack_copy0(&flalloct->ob, str, size);
+    return dnn;
 }
 
 
-struct flfile *flfile_new(uint32_t size, uint16_t mode, 
+struct flfile *flfile_new(tn_alloc *na, uint32_t size, uint16_t mode, 
                           const char *basename, int blen, 
                           const char *slinkto, int slen)
 {
     struct flfile *file;
     char *p;
+
+    if (na)
+        file = na->na_malloc(na, sizeof(*file) + blen + 1 + slen + 1);
+    else
+        file = n_malloc(sizeof(*file) + blen + 1 + slen + 1);
     
-    file = pkgfl_alloc(sizeof(*file) + blen + 1 + slen + 1);
     file->mode = mode;
     file->size = size;
 
@@ -300,12 +226,10 @@ tn_array *pkgfl_array_new(int size)
     return arr;
 }
 
-tn_array *pkgfl_array_store_order(tn_array *fl)
+tn_tuple *pkgfl_array_store_order(tn_tuple *fl)
 {
-    return n_array_isort_ex(fl, pkgfl_ent_deep_cmp);
+    return n_tuple_isort_ex(fl, pkgfl_ent_deep_cmp);
 }
-
-
 
 /* trim slashes from dirname, update dirnamelen  */
 static
@@ -324,29 +248,20 @@ char *prepare_dirname(char *dirname, int *dirnamelen)
 }
 
 
-struct pkgfl_ent *pkgfl_ent_new(char *dirname, int dirname_len, int nfiles) 
+struct pkgfl_ent *pkgfl_ent_new(tn_alloc *na,
+                                char *dirname, int dirname_len, int nfiles)
 {
     struct pkgfl_ent *flent;
-    char *dirnamep;
     
-    flent = pkgfl_alloc(sizeof(*flent)+(nfiles * sizeof(struct flfile*)));
-                        
+    flent = na->na_malloc(na, sizeof(*flent)+(nfiles * sizeof(struct flfile*)));
     dirname = prepare_dirname(dirname, &dirname_len);
 
-    //printf("n_hash_size = %d\n", n_hash_size(flalloct->dirns));
-    /* find directory */
-    if ((dirnamep = n_hash_get(flalloct->dirns, dirname)) == NULL) {
-        dirnamep = pkgfl_strdup(dirname, dirname_len);
-        n_hash_insert(flalloct->dirns, dirnamep, dirnamep);
-        if (flalloct->cur_mark)
-            n_array_push(flalloct->cur_mark->dirs, dirnamep);
-    }
-    
-    flent->dirname = dirnamep;
+    flent->dirname = register_dn(dirname);
     flent->items = 0;
-    //fprintf(stderr, "flent_new %s %d\n", dirnamep, nfiles);
+    DBGF("flent_new %s %d\n", flent->dirname, nfiles);
     return flent;
 }
+
 
 static int strncmp_path(const char *p1, const char *p2)
 {
@@ -360,7 +275,7 @@ static int strncmp_path(const char *p1, const char *p2)
   stores file list as binary data
  */
 static
-int pkgfl_store_buf(tn_array *fl, tn_buf *nbuf, tn_array *exclpath, 
+int pkgfl_store_buf(tn_tuple *fl, tn_buf *nbuf, tn_array *exclpath, 
                     tn_array *depdirs, int which)
 {
     int8_t *matches, *skipped, *lengths;
@@ -368,21 +283,21 @@ int pkgfl_store_buf(tn_array *fl, tn_buf *nbuf, tn_array *exclpath,
     int ndirs = 0;
     
 
-    matches = alloca(n_array_size(fl) * sizeof(*matches));
-    memset(matches, 0, n_array_size(fl) * sizeof(*matches));
-    skipped = alloca(n_array_size(fl) * sizeof(*matches));
-    memset(skipped, 0, n_array_size(fl) * sizeof(*skipped));
+    matches = alloca(n_tuple_size(fl) * sizeof(*matches));
+    memset(matches, 0, n_tuple_size(fl) * sizeof(*matches));
+    skipped = alloca(n_tuple_size(fl) * sizeof(*matches));
+    memset(skipped, 0, n_tuple_size(fl) * sizeof(*skipped));
 
-    lengths = alloca(n_array_size(fl) * sizeof(*lengths));
-    memset(lengths, 0, n_array_size(fl) * sizeof(*lengths));
+    lengths = alloca(n_tuple_size(fl) * sizeof(*lengths));
+    memset(lengths, 0, n_tuple_size(fl) * sizeof(*lengths));
 
     if (which == PKGFL_ALL && exclpath == NULL) {
-        memset(matches, 1, n_array_size(fl) * sizeof(*matches));
-        ndirs = n_array_size(fl);
+        memset(matches, 1, n_tuple_size(fl) * sizeof(*matches));
+        ndirs = n_tuple_size(fl);
         
     } else {
-        for (i=0; i<n_array_size(fl); i++) {
-            struct pkgfl_ent *flent = n_array_nth(fl, i);
+        for (i=0; i<n_tuple_size(fl); i++) {
+            struct pkgfl_ent *flent = n_tuple_nth(fl, i);
             int is_depdir = 0, dnl;
 
             dnl = strlen(flent->dirname);
@@ -400,8 +315,8 @@ int pkgfl_store_buf(tn_array *fl, tn_buf *nbuf, tn_array *exclpath,
                 ndirs++;
                 
             } else if (which == PKGFL_NOTDEPDIRS && !is_depdir) {
-                if (n_array_bsearch_ex(exclpath, flent->dirname,
-                                       (tn_fn_cmp)strncmp_path)) {
+                if (exclpath && n_array_bsearch_ex(exclpath, flent->dirname,
+                                                   (tn_fn_cmp)strncmp_path)) {
                     DBGF_F("%s skipped\n", flent->dirname);
                     skipped[i] = 1;
                     continue;
@@ -415,8 +330,8 @@ int pkgfl_store_buf(tn_array *fl, tn_buf *nbuf, tn_array *exclpath,
 
     n_buf_add_int32(nbuf, ndirs);
     
-    for (i=0; i<n_array_size(fl); i++) {
-        struct pkgfl_ent *flent = n_array_nth(fl, i);
+    for (i=0; i < n_tuple_size(fl); i++) {
+        struct pkgfl_ent *flent = n_tuple_nth(fl, i);
         uint8_t dnl;
         
         if (matches[i] == 0) 
@@ -431,7 +346,7 @@ int pkgfl_store_buf(tn_array *fl, tn_buf *nbuf, tn_array *exclpath,
         if (strstr(flent->dirname, "SourceForgeXX"))
             printf("\nDIR %s\n", flent->dirname);
 #endif        
-        for (j=0; j<flent->items; j++) {
+        for (j=0; j < flent->items; j++) {
             struct flfile *file = flent->files[j];
             uint8_t bnl = strlen(file->basename);
 
@@ -476,7 +391,7 @@ int pkgfl_store_st(tn_array *fl, tn_stream *st, tn_array *depdirs, int which)
 }
 #endif
 
-int pkgfl_store(tn_array *fl, tn_buf *nbuf,
+int pkgfl_store(tn_tuple *fl, tn_buf *nbuf,
                 tn_array *exclpath, tn_array *depdirs, int which) 
 {
     int sizeoffs, offs;
@@ -501,20 +416,23 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf,
 }
 
 
-tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *dirs, int include)
+int pkgfl_restore(tn_alloc *na, tn_tuple **fl,
+                  tn_buf_it *nbufi, tn_array *dirs, int include)
 {
-    tn_array *fl = NULL;
-    int32_t ndirs = 0;
+    struct pkgfl_ent **ents;
+    int32_t ndirs = 0, n;
     int j, default_loadir;
 
+    *fl = NULL;
     default_loadir = 1;
     if (dirs) 
         default_loadir = include ? 0 : 1;
     
     if (!n_buf_it_get_int32(nbufi, &ndirs))
-        return NULL;
-    
-    fl = pkgfl_array_new(ndirs);
+        return -1;
+
+    ents = alloca(ndirs * sizeof(*ents));
+    n = 0;
     
     while (ndirs--) {
         struct pkgfl_ent  *flent = NULL;
@@ -539,12 +457,13 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *dirs, int include)
         dnl--;
         n_buf_it_get_int32(nbufi, &nfiles);
 
-        if (loadir)
-            flent = pkgfl_ent_new(dn, dnl, nfiles);
+        if (loadir) {
+            flent = pkgfl_ent_new(na, dn, dnl, nfiles);
+            ents[n++] = flent;
+        }
         
         for (j=0; j < nfiles; j++) {
-            struct flfile      *file = NULL;
-            char               *bn = NULL, *linkto = NULL;
+            char               *bn, *linkto = NULL;
             uint8_t            bnl = 0, slen = 0;
             uint16_t           mode = 0;
             uint32_t           size = 0;
@@ -562,35 +481,38 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *dirs, int include)
             }
             
             if (loadir) {
-                file = flfile_new(size, mode, bn, bnl, linkto, slen);
+                struct flfile *file;
+                file = flfile_new(na, size, mode, bn, bnl, linkto, slen);
                 flent->files[flent->items++] = file;
             }
             
         }
-        
-        if (loadir)
-            n_array_push(fl, flent);
     }
-    
-    return fl;
+    DBGF("n = %d\n", n);
+    if (n > 0)
+        *fl = n_tuple_new(na, n, (void **)ents);
+        
+    return n;
 }
 
 
-tn_array *pkgfl_restore_st(tn_stream *st, tn_array *dirs, int include) 
+int pkgfl_restore_st(tn_alloc *na, tn_tuple **fl, 
+                     tn_stream *st, tn_array *dirs, int include) 
 {
-    tn_array *fl = NULL;
     tn_buf *nbuf = NULL;
     tn_buf_it nbufi;
-    
+    int rc = 0;
+
+    *fl = NULL;
     n_buf_restore(st, &nbuf, TN_BUF_STORE_32B);
-    if (nbuf) {
-        n_buf_it_init(&nbufi, nbuf);
-        fl = pkgfl_restore(&nbufi, dirs, include);
-        n_buf_free(nbuf);
-    }
+    if (nbuf == NULL)
+        return -1;
     
+    n_buf_it_init(&nbufi, nbuf);
+    rc = pkgfl_restore(na, fl, &nbufi, dirs, include);
+    n_buf_free(nbuf);
     n_stream_seek(st, 1, SEEK_CUR); /* skip ending '\n' */
-    return fl;
+    return rc;
 }
 
 
@@ -601,39 +523,15 @@ int pkgfl_skip_st(tn_stream *st)
     return 1;
 }
 
-
-__inline__ 
-static int valid_fname(const char *fname, mode_t mode, const char *pkgname) 
-{
-    
-#if 0  /* too many bad habits :-> */
-    char *denychars = "\r\n\t |;";
-    if (strpbrk(fname, denychars)) {
-        logn(LOGINFO, "%s: bad habit: %s \"%s\" with whitespaces",
-            pkgname, S_ISDIR(mode) ? "dirname" : "filename", fname);
-    }
-#endif     
-
-    if (strlen(fname) > 255) {
-        logn(LOGERR, _("%s: %s \"%s\" longer than 255 bytes"),
-            pkgname, S_ISDIR(mode) ? _("dirname") : _("filename"), fname);
-        return 0;
-    }
-    
-    return 1;
-}
-
-
-
-void pkgfl_dump(tn_array *fl)
+void pkgfl_dump(tn_tuple *fl)
 {
     int i, j;
 
     if (fl == NULL)
         return;
     
-    for (i=0; i<n_array_size(fl); i++) {
-        struct pkgfl_ent *flent = n_array_nth(fl, i);
+    for (i=0; i < n_tuple_size(fl); i++) {
+        struct pkgfl_ent *flent = n_tuple_nth(fl, i);
         printf("DIR %s:", flent->dirname);
         for (j=0; j<flent->items; j++) {
             printf(" %s,", flent->files[j]->basename);

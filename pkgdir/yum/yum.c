@@ -191,7 +191,6 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     pkgdir->mod_data = n_malloc(sizeof(idx));
     memcpy(pkgdir->mod_data, &idx, sizeof(idx));
     //pkgdir->flags |= pkgdir_flags;
-    pkgdir->pkgs = pkgs_array_new(1024);
     pkgdir->pkgroups = pkgroups;
     
 // l_end:
@@ -259,12 +258,12 @@ Header do_loadrpmhdr(const char *path, int vfmode, const char *pdir_name)
 }
 
 static
-struct pkg *do_loadpkg(Header h, int ldflags, const char *pkgfn) 
+struct pkg *do_loadpkg(tn_alloc *na, Header h, int ldflags, const char *pkgfn) 
 {
     struct pkg *pkg;
-    if ((pkg = pkg_ldrpmhdr(h, pkgfn, 0, PKG_LDWHOLE))) {
+    if ((pkg = pkg_ldrpmhdr(NULL, h, pkgfn, 0, PKG_LDWHOLE))) {
         if (ldflags & PKGDIR_LD_DESC) {
-            pkg->pkg_pkguinf = pkguinf_ldhdr(h);
+            pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
             pkg_set_ldpkguinf(pkg);
         }
     }
@@ -273,7 +272,7 @@ struct pkg *do_loadpkg(Header h, int ldflags, const char *pkgfn)
 }
 
 static 
-struct pkguinf *load_pkguinf(const struct pkg *pkg, void *ptr)
+struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg, void *ptr)
 {
     unsigned        vfmode = VFM_RO | VFM_CACHE | VFM_NOEMPTY;
     struct pkguinf  *pkgu = NULL;
@@ -289,11 +288,17 @@ struct pkguinf *load_pkguinf(const struct pkg *pkg, void *ptr)
     
     pkg = pkg;
     if ((h = do_loadrpmhdr(path, vfmode, n_basenam(path)))) {
-        pkgu = pkguinf_ldhdr(h);
+        pkgu = pkguinf_ldrpmhdr(na, h);
         headerFree(h);
     }
 
     return pkgu;
+}
+
+static
+void pkg_data_free(tn_alloc *na, void *ptr) 
+{
+    na->na_free(na, ptr);
 }
 
 
@@ -314,12 +319,15 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         n_snprintf(path, sizeof(path), "%s/%s.hdr", pkgdir->path, en->nvr);
 
         if ((h = do_loadrpmhdr(path, vfmode, pkgdir->name))) {
-            pkg = do_loadpkg(h, ldflags, en->fn);
+            pkg = do_loadpkg(pkgdir->na, h, ldflags, en->fn);
             headerFree(h);
             if (pkg) {
                 pkg->pkgdir = pkgdir;
-                pkg->pkgdir_data = n_strdup(en->nvr); /* .hdr */
-                pkg->pkgdir_data_free = free;
+                 /* .hdr */
+                pkg->pkgdir_data = pkgdir->na->na_malloc(pkgdir->na,
+                                                         strlen(en->nvr) + 1); 
+                memcpy(pkg->pkgdir_data, en->nvr, strlen(en->nvr) + 1);
+                pkg->pkgdir_data_free = pkg_data_free;
                 pkg->load_pkguinf = load_pkguinf;
                 n_array_push(pkgdir->pkgs, pkg);
                 if (n_array_size(pkgdir->pkgs) > 100)

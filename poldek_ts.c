@@ -27,6 +27,7 @@
 #include "poldek.h"
 #include "poldek_term.h"
 #include "pkgset.h"
+#include "pkgset-req.h"
 #include "arg_packages.h"
 #include "misc.h"
 #include "log.h"
@@ -166,8 +167,6 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         
         ts->aps = arg_packages_new(ctx->ps);
     }
-
-    
     
     ts->db = NULL;
 
@@ -218,6 +217,9 @@ void poldek_ts_destroy(struct poldek_ts *ts)
     if (ts->db)
         pkgdb_free(ts->db);
     ts->db = NULL;
+
+    if (ts->aps)
+        arg_packages_free(ts->aps);
 
     n_cfree(&ts->rootdir);
     n_cfree(&ts->fetchdir);
@@ -502,12 +504,18 @@ int ts_mark_arg_packages(struct poldek_ts *ts, int withdeps)
         tn_array *pkgs = arg_packages_resolve(ts->aps, ts->ctx->ps->pkgs, 0);
         if (pkgs == NULL)
             rc = 0;
+        
         else {
+            n_assert(ts->aps_pkgs == NULL);
+            
             ts->aps_pkgs = n_array_clone(pkgs);
+            if (withdeps)
+                msgn(1, _("\nProcessing dependencies..."));
             rc = pkgset_mark_packages(ts->ctx->ps, pkgs, ts->aps_pkgs,
-                                      withdeps,
-                                      ts->getop_v(ts, POLDEK_OP_NODEPS,
-                                                  POLDEK_OP_FORCE, 0));
+                                      withdeps);
+            if (!rc && ts->getop_v(ts, POLDEK_OP_NODEPS, POLDEK_OP_FORCE, 0))
+                rc = 1;
+            
             n_array_free(pkgs);
         }
     }
@@ -806,11 +814,27 @@ int ts_run_uninstall(struct poldek_ts *ts, struct install_info *iinf)
     return rc;
 }
 
+#if 0
+int
+for (i=0; i<n_array_size(ps->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ps->pkgs, i);
+        if (pkg->cnflpkgs == NULL)
+            continue;
+            msg(2, "%s -> ", pkg_snprintf_s(pkg)); 
+            for (j=0; j<n_array_size(pkg->cnflpkgs); j++) {
+                struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
+                msg(2, "_%s%s, ", cpkg->flags & CNFLPKG_OB ? "*":"", 
+                    pkg_snprintf_s(cpkg->pkg));
+            }
+            msg(2, "_\n");
+        }
+#endif    
+
 static
 int ts_run_verify(struct poldek_ts *ts, void *foo) 
 {
-    tn_array *pkgs;
-    int rc = 1;
+    tn_array *pkgs = NULL, *keys;
+    int i, j, nerr, rc = 1;
     
     //n_assert(poldek_ts_issetf(ts, POLDEK_TS_VERIFY));
     foo = foo;
@@ -828,8 +852,36 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
         rc = ts_mark_arg_packages(ts, 1);
         pkgs = ts->aps_pkgs;
     }
+
+    if (pkgs == NULL || n_array_size(pkgs) == 0)
+        return 0;
+
+#if 0    
+    if (ts->getop(ts, POLDEK_OP_VRFY_DEPS))
+        ps_flags |= PSET_VERIFY_DEPS;
+
+    if (ts->getop(ts, POLDEK_OP_VRFY_CNFLS))
+        ps_flags |= PSET_VERIFY_CNFLS;
+#endif
+
     
-    return rc;
+    nerr = 0;
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        tn_array *errs;
+        if ((errs = pkgset_get_unsatisfied_reqs(ts->ctx->ps, pkg))) {
+            for (j=0; j < n_array_size(errs); j++) {
+                struct pkg_unreq *unreq = n_array_nth(errs, j);
+                logn(LOGERR, _("%s: req %s %s"),
+                     pkg_snprintf_s(pkg), unreq->req,
+                     unreq->mismatch ? _("version mismatch") : _("not found"));
+                nerr++;
+            }
+        }
+    }
+    if (nerr)
+        msgn(0, _("%d unsatisfied dependencies"), nerr);
+    return nerr == 0;
 }
 
 
@@ -859,8 +911,3 @@ int poldek_ts_run(struct poldek_ts *ts, struct install_info *iinf)
         
     return ts_run->run(ts, iinf);
 }
-    
-
-
-
-

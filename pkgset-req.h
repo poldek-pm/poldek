@@ -16,19 +16,16 @@
 
 #define REQPKG_PREREQ     (1 << 0)
 #define REQPKG_PREREQ_UN  (1 << 1)
+#define REQPKG_CONFLICT   (1 << 2)
+#define REQPKG_OBSOLETE   (1 << 3)
+
 #define REQPKG_MULTI      (1 << 7) /* has adds */
 
 struct reqpkg {
     struct pkg    *pkg;
+    struct capreq *req;
     uint8_t       flags;
     struct reqpkg *adds[0];     /* NULL terminated  */
-};
-
-/* depency package struct */
-#define  CNFLPKG_OB  (1 << 0)
-struct cnflpkg {
-    struct pkg *pkg;
-    int8_t     flags;
 };
 
 /*
@@ -44,13 +41,12 @@ int psreq_match_pkgs(const struct pkg *pkg, struct capreq *req, int strict,
                      struct pkg *suspkgs[], int npkgs,
                      struct pkg **matches, int *nmatched);
 
-int pkgset_verify_deps(struct pkgset *ps, int strict, int verb);
-int pkgset_verify_conflicts(struct pkgset *ps, int strict, int verb);
+int pkgset_verify_deps(struct pkgset *ps, int strict);
+int pkgset_verify_conflicts(struct pkgset *ps, int strict);
 
 tn_array *pspkg_obsoletedby(struct pkgset *ps, struct pkg *pkg, int bymarked);
 
 struct pkg_unreq {
-    struct pkg    *pkg;
     uint8_t       mismatch;
     char          req[0];
 };

@@ -13,10 +13,6 @@
 #include "fileindex.h"
 #include "capreqidx.h"
 
-
-int pkgsetmodule_init(void);
-void pkgsetmodule_destroy(void);
-
 struct pkgset {
     unsigned           flags;
     
@@ -31,7 +27,6 @@ struct pkgset {
     tn_array           *rpmcaps;        /*  capreq* [] */
 
     tn_hash            *_vrfy_unreqs;
-    tn_array           *_vrfy_conflicts;
     tn_array           *_vrfy_file_conflicts;
     
     struct capreq_idx  cap_idx;    /* 'name'  => *pkg[]  */
@@ -61,11 +56,11 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 
 #define PSET_DBDIRS_LOADED       (1 << 4)
 
-#define PSET_VERIFY_DEPS         (1 << 6)
 #define PSET_VERIFY_ORDER        (1 << 7)
-#define PSET_VERIFY_CNFLS        (1 << 8)
 #define PSET_VERIFY_FILECNFLS    (1 << 9)
-#define PSET_UNIQ_PKGNAME        (1 << 10)  
+#define PSET_UNIQ_PKGNAME        (1 << 10)
+
+
 int pkgset_setup(struct pkgset *ps, unsigned flags);
 
 tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname);
@@ -75,7 +70,7 @@ tn_array *pkgset_get_packages_bynvr(const struct pkgset *ps);
 
 /* pkgset-mark.c */
 int pkgset_mark_packages(struct pkgset *ps, const tn_array *pkgs,
-                         tn_array *marked, int withdeps, int nodeps);
+                         tn_array *marked, int withdeps);
 
 void packages_mark(tn_array *pkgs, unsigned flags_on, unsigned flags_off);
 #define packages_unmark_all(pkgs) packages_mark(pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK)

@@ -18,7 +18,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
-#include <obstack.h>
 #include <fnmatch.h>
 
 #include <trurl/nassert.h>
@@ -49,95 +48,12 @@
 int ask_yn(int default_a, const char *fmt, ...);
 int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt);
 
-#define obstack_chunk_alloc n_malloc
-#define obstack_chunk_free  n_free
-
-struct obstack_s {
-    int ucnt;
-    struct obstack ob;
-};
-
-static struct obstack_s idx_obs;  /* for indexes */
-static struct obstack_s pkg_obs;  /* for packages */
-
-
-static
-void obstacks_init(void) 
-{
-    n_assert(idx_obs.ucnt == 0);
-    
-    if (idx_obs.ucnt)
-        idx_obs.ucnt++;
-    else {
-        obstack_init(&idx_obs.ob);
-        obstack_chunk_size(&idx_obs.ob) = 1024*128;
-        idx_obs.ucnt++;
-    }
-
-    if (pkg_obs.ucnt)
-        pkg_obs.ucnt++;
-    else {
-        obstack_init(&pkg_obs.ob);
-        obstack_chunk_size(&pkg_obs.ob) = 1024*128;
-        pkg_obs.ucnt++;
-    }
-}
-
-
-static
-void obstacks_free(void) 
-{
-    if (--idx_obs.ucnt <= 0) 
-        obstack_free(&idx_obs.ob, NULL);
-
-    if (--pkg_obs.ucnt <= 0) 
-        obstack_free(&pkg_obs.ob, NULL);
-    
-    idx_obs.ucnt = 0;
-}
-
-
-void *pkg_alloc(size_t size) 
-{
-    return obstack_alloc(&pkg_obs.ob, size);
-}
-
-
-static
-void *idx_alloc(size_t size) 
-{
-    return obstack_alloc(&idx_obs.ob, size);
-}
-
-static
-void fake_free(void *p)     /* do nothing */
-{
-    p = p;
-}
-
-int pkgsetmodule_init(void) 
-{
-    idx_obs.ucnt = 0;
-    pkg_obs.ucnt = 0;
-    obstacks_init();
-    // disabled: set_pkg_allocfn(pkg_alloc, fake_free);
-    set_capreq_allocfn(idx_alloc, fake_free, NULL, NULL);
-    return 1;
-}
-
-
-void pkgsetmodule_destroy(void) 
-{
-    //disabled: set_pkg_allocfn(pkg_alloc, fake_free);
-    set_capreq_allocfn(idx_alloc, fake_free, NULL, NULL);
-    obstacks_free();
-}
 
 struct pkgset *pkgset_new(void)
 {
     struct pkgset *ps;
     
-    ps = pkg_alloc(sizeof(*ps));
+    ps = n_malloc(sizeof(*ps));
     memset(ps, 0, sizeof(*ps));
     ps->pkgs = pkgs_array_new(2048);
     ps->ordered_pkgs = NULL;
@@ -146,12 +62,19 @@ struct pkgset *pkgset_new(void)
     ps->depdirs = n_array_new(64, NULL, (tn_fn_cmp)strcmp);
     n_array_ctl(ps->depdirs, TN_ARRAY_AUTOSORTED);
     
-    
     ps->pkgdirs = n_array_new(4, (tn_fn_free)pkgdir_free, NULL);
     ps->flags = 0;
     ps->rpmcaps = rpm_rpmlib_caps();
     return ps;
 }
+
+tn_array *pkgset_get_unsatisfied_reqs(struct pkgset *ps, struct pkg *pkg)
+{
+    if (ps->_vrfy_unreqs == NULL)
+        return NULL;
+    return n_hash_get(ps->_vrfy_unreqs, pkg_id(pkg));
+}
+
 
 void pkgset_free(struct pkgset *ps) 
 {
@@ -162,27 +85,41 @@ void pkgset_free(struct pkgset *ps)
         file_index_destroy(&ps->file_idx);
         ps->flags &= (unsigned)~_PKGSET_INDEXES_INIT;
     }
-
-    if (ps->depdirs) {
-        n_array_free(ps->depdirs);
-        ps->depdirs = NULL;
+    
+    if (ps->_vrfy_unreqs) {
+        n_hash_free(ps->_vrfy_unreqs);
+        ps->_vrfy_unreqs = NULL;
     }
 
-    if (ps->pkgdirs) {
-        n_array_free(ps->pkgdirs);
-        ps->pkgdirs = NULL;
+    if (ps->_vrfy_file_conflicts) {
+        n_array_free(ps->_vrfy_file_conflicts);
+        ps->_vrfy_file_conflicts = NULL;
     }
+    
+    
+    n_array_free(ps->pkgs);
 
     if (ps->ordered_pkgs) {
         n_array_free(ps->ordered_pkgs);
         ps->ordered_pkgs = NULL;
     }
-    n_array_free(ps->pkgs);
+    
+    if (ps->depdirs) {
+        n_array_free(ps->depdirs);
+        ps->depdirs = NULL;
+    }
+    
+    if (ps->pkgdirs) {
+        n_array_free(ps->pkgdirs);
+        ps->pkgdirs = NULL;
+    }
 
     if (ps->rpmcaps) {
         n_array_free(ps->rpmcaps);
         ps->rpmcaps = NULL;
     }
+    memset(ps, 0, sizeof(*ps));
+    free(ps);
 }
 
 
@@ -201,30 +138,6 @@ int pkgset_rpmprovides(const struct pkgset *ps, const struct capreq *req)
     
     return 0;
 }
-
-
-static void mapfn_free_pkgfl(struct pkg *pkg) 
-{
-    if (pkg->fl)
-        n_array_free(pkg->fl);
-    pkg->fl = NULL;
-}
-
-
-void pkgset_free_indexes(struct pkgset *ps) 
-{
-    if (ps->flags & _PKGSET_INDEXES_INIT) {
-        capreq_idx_destroy(&ps->cap_idx);
-        capreq_idx_destroy(&ps->req_idx);
-        capreq_idx_destroy(&ps->obs_idx);
-        file_index_destroy(&ps->file_idx);
-        
-        ps->flags &= (unsigned)~_PKGSET_INDEXES_INIT;
-    }
-
-    n_array_map(ps->pkgs, (tn_fn_map1)mapfn_free_pkgfl);
-}
-
 
 int pkgset_has_errors(struct pkgset *ps) 
 {
@@ -256,13 +169,12 @@ static int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx)
     if (pkg->fl == NULL)
         return 1;
     
-    for (i=0; i<n_array_size(pkg->fl); i++) {
-        struct pkgfl_ent *flent;
+    for (i=0; i<n_tuple_size(pkg->fl); i++) {
+        struct pkgfl_ent *flent = n_tuple_nth(pkg->fl, i);
         void *fidx_dir;
         
-        flent = n_array_nth(pkg->fl, i);
         fidx_dir = file_index_add_dirname(fidx, flent->dirname);
-        for (j=0; j<flent->items; j++) {
+        for (j=0; j < flent->items; j++) {
             file_index_add_basename(fidx, fidx_dir,
                                     flent->files[j], (struct pkg*)pkg);
         }
@@ -279,7 +191,7 @@ static int pkgset_index(struct pkgset *ps)
     msg(2, "Indexing...\n");
     add_self_cap(ps);
     n_array_map(ps->pkgs, (tn_fn_map1)sort_pkg_caps);
-    
+    mem_info(-1, "MEM after index[selfcap]");
     /* build indexes */
     capreq_idx_init(&ps->cap_idx, CAPREQ_IDX_CAP, 4 * n_array_size(ps->pkgs));
     capreq_idx_init(&ps->req_idx, CAPREQ_IDX_REQ, 4 * n_array_size(ps->pkgs));
@@ -314,13 +226,15 @@ static int pkgset_index(struct pkgset *ps)
         
         pkgfl2fidx(pkg, &ps->file_idx);
     }
-
-#if 0    
+    mem_info(-1, "MEM after index");
+    
+    
+    
+#if 0 
     capreq_idx_stats("cap", &ps->cap_idx);
     capreq_idx_stats("req", &ps->req_idx);
     capreq_idx_stats("obs", &ps->obs_idx);
 #endif    
-    
     file_index_setup(&ps->file_idx);
     msg(3, " ..%d done\n", i);
     
@@ -356,7 +270,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     int strict;
     int v = verbose;
 
-
+    mem_info(-1, "MEM before setup");
     ps->flags |= flags;
     strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
 
@@ -374,17 +288,16 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
         n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
     }
         
-        
     if (n != n_array_size(ps->pkgs)) {
         n -= n_array_size(ps->pkgs);
         msgn(1, ngettext(
                  "Removed %d duplicate package from available set",
                  "Removed %d duplicate packages from available set", n), n);
     }
-        
+
+    mem_info(-1, "MEM before index");
     pkgset_index(ps);
     
-    mem_info(1, "MEM after index");
 
     
     v = verbose;    
@@ -392,24 +305,19 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
         msgn(1, _("\nVerifying files conflicts..."));
     else
         verbose = -1;
-    
-    file_index_find_conflicts(&ps->file_idx, strict);
+
+    ps->_vrfy_file_conflicts = n_array_new(16, free, NULL);
+    file_index_find_conflicts(&ps->file_idx, ps->_vrfy_file_conflicts, strict);
     verbose = v;
 
-    flags |= PSET_VERIFY_DEPS;
-    pkgset_verify_deps(ps, strict, flags & PSET_VERIFY_DEPS);
+    pkgset_verify_deps(ps, strict);
     mem_info(1, "MEM after verify deps");
 
-    if (flags & PSET_VERIFY_CNFLS)
-        msgn(1, _("\nVerifying packages conflicts..."));
-    pkgset_verify_conflicts(ps, strict, flags & PSET_VERIFY_CNFLS);
-
+    pkgset_verify_conflicts(ps, strict);
     
     mem_info(1, "MEM after order");
     pkgset_order(ps, flags & PSET_VERIFY_ORDER);
-    
-    
-    set_capreq_allocfn(n_malloc, n_free, NULL, NULL);
+    mem_info(-1, "MEM after setup");
     return ps->nerrors == 0;
 }
 
@@ -442,7 +350,7 @@ int pkgset_order(struct pkgset *ps, int verb)
         int i;
             
         msg(2, "Installation order:\n");
-        for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
+        for (i=0; i < n_array_size(ps->ordered_pkgs); i++) {
             struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
             msg(2, "%d. %s\n", i, pkg->name);
         }

@@ -36,16 +36,21 @@ static void free_ptrs(void *p)
 int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)  
 {
     idx->flags = type;
+
+    mem_info(-1, "capreq_idx_init 0");
     
     idx->ht = n_hash_new(nelem, free_ptrs);
+
+    mem_info(-1, "capreq_idx_init 1");
     if (idx->ht == NULL)
        return 0;
     
     n_hash_ctl(idx->ht, TN_HASH_NOCPKEY);
     
     obstack_init(&idx->obs);
-    obstack_chunk_size(&idx->obs) = 1024*128;
+    obstack_chunk_size(&idx->obs) = 4096;
     obstack_alignment_mask(&idx->obs) = 0;
+    mem_info(-1, "capreq_idx_init 2 [end]");
     return 1;
 }
 
@@ -67,7 +72,7 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
         register int size = 1;
         
         if ((idx->flags & CAPREQ_IDX_CAP) == 0)
-            size = 8;
+            size = 4;
         
         ent = n_malloc(sizeof(*ent) + (size * sizeof(void*)));
         ent->_size = size;
@@ -143,6 +148,8 @@ void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
         stats[ent->items]++;
     }
     n_array_free(keys);
+    printf("CAPREQ_IDX %s %d\n", prefix, n_hash_size(idx->ht));
+    
     for (i=0; i < 100000; i++) {
         if (stats[i])
             printf("%s: %d: %d\n", prefix, i, stats[i]);

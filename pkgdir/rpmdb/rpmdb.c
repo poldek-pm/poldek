@@ -27,9 +27,7 @@
 #include <fcntl.h>
 
 
-#include <trurl/nassert.h>
-#include <trurl/narray.h>
-#include <trurl/nhash.h>
+#include <trurl/trurl.h>
 
 #define PKGDIR_INTERNAL
 #include "i18n.h"
@@ -101,13 +99,13 @@ static Header ldhdr(const struct pkg *pkg, struct pkg_data *pd)
     
 
 static 
-struct pkguinf *load_pkguinf(const struct pkg *pkg, void *ptr)
+struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg, void *ptr)
 {
     struct pkguinf      *pkgu = NULL;
     Header               h;
 
     if ((h = ldhdr(pkg, ptr))) {
-        pkgu = pkguinf_ldhdr(h);
+        pkgu = pkguinf_ldrpmhdr(na, h);
         headerFree(h);
     }
     
@@ -115,19 +113,18 @@ struct pkguinf *load_pkguinf(const struct pkg *pkg, void *ptr)
 }
 
 static 
-tn_array *load_nodep_fl(const struct pkg *pkg, void *ptr,
-                              tn_array *foreign_depdirs)
+tn_tuple *load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
+                        tn_array *foreign_depdirs)
 {
-    tn_array            *fl = NULL;
+    tn_tuple            *fl = NULL;
     Header              h;
 
     foreign_depdirs = foreign_depdirs;
     
     if ((h = ldhdr(pkg, ptr))) {
-        fl = pkgfl_array_new(32);
-        pkgfl_ldhdr(fl, h, PKGFL_ALL, pkg->name);
-        if (n_array_size(fl) == 0) {
-            n_array_free(fl);
+        pkgfl_ldhdr(na, &fl, h, PKGFL_ALL, pkg->name);
+        if (n_tuple_size(fl) == 0) {
+            n_tuple_free(na, fl);
             fl = NULL;
         }
         headerFree(h);
@@ -141,18 +138,19 @@ struct map_struct {
     tn_array  *pkgs;
     tn_hash   *langs;
     struct pkgroup_idx *pkgroups;
+    tn_alloc  *na;
 };
 
 static
 void db_map_fn(unsigned int recno, void *header, void *ptr) 
 {
     struct pkg        *pkg;
-    struct map_struct *ms;
+    struct map_struct *ms = ptr;
 
-    if ((pkg = pkg_ldrpmhdr(header, NULL, 0, PKG_LDCAPREQS))) {
+    if ((pkg = pkg_ldrpmhdr(ms->na, header, NULL, 0, PKG_LDCAPREQS))) {
         char **hdr_langs;
         
-        ms = ptr;
+        
         pkg->recno = recno;
         pkg->load_pkguinf = load_pkguinf;
         pkg->load_nodep_fl = load_nodep_fl;
@@ -184,7 +182,7 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
 static
 int load_db_packages(tn_array *pkgs, const char *rootdir, const char *path,
                      tn_hash *avlangs, struct pkgroup_idx *pkgroups,
-                     unsigned ldflags) 
+                     unsigned ldflags, tn_alloc *na) 
 {
     char dbfull_path[PATH_MAX];
     struct pkgdb       *db;
@@ -205,7 +203,8 @@ int load_db_packages(tn_array *pkgs, const char *rootdir, const char *path,
     ms.pkgs = pkgs;
     ms.langs = avlangs;
     ms.pkgroups = pkgroups;
-    
+    ms.na = na;
+
     rpm_dbmap(db->dbh, db_map_fn, &ms);
     pkgdb_free(db);
 
@@ -232,7 +231,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         pkgdir->pkgroups = pkgroup_idx_new();
     
     if (!load_db_packages(pkgdir->pkgs, "/", pkgdir->idxpath,
-                          pkgdir->avlangs_h, pkgdir->pkgroups, ldflags))
+                          pkgdir->avlangs_h, pkgdir->pkgroups,
+                          ldflags, pkgdir->na))
         return 0;
 
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {

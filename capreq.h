@@ -17,9 +17,11 @@
 
 #define REL_ALL     (REL_EQ | REL_GT | REL_LT)
 
+#if 0
 /* types */
 #define CAPREQ_PROV     (1 << 0)
 #define CAPREQ_REQ      (1 << 1)
+#endif
 #define CAPREQ_CNFL     (1 << 2)
 
 /* sub types */
@@ -29,9 +31,10 @@
 #define CAPREQ_OBCNFL      CAPREQ_PREREQ    /* alias, for obsolences */
 
 #define CAPREQ_RPMLIB            (1 << 5)   /* rpmlib(...) */
+
 #define CAPREQ_RPMLIB_SATISFIED  (1 << 6)   /* is rpmlib provides rpmlib(...)? */
 #define CAPREQ_PLDEKBAST   (1 << 7)   /* capreq added by poldek during mkidx,
-                                         '!' prefix */
+                                        '!' prefix */
 struct capreq {
     uint8_t  cr_flags;
     uint8_t  cr_relflags;
@@ -81,7 +84,8 @@ extern inline int32_t capreq_epoch_(const struct capreq *cr);
 
 struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags,
                               int32_t flags);
-struct capreq *capreq_new(const char *name, int32_t epoch,
+
+struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t relflags, int32_t flags);
 
@@ -97,13 +101,15 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
         crptr = __cr;                            \
     }
 
-void capreq_free(struct capreq *cr);
+void capreq_free(tn_alloc *na, struct capreq *cr);
 
 uint8_t capreq_sizeof(const struct capreq *cr);
 
+#if 0
 void capreq_store(struct capreq *cr, tn_buf *nbuf);
 struct capreq *capreq_restore(tn_buf_it *nbufi);
 
+#endif
 int capreq_strcmp_evr(struct capreq *pr1, struct capreq *pr2);
 int capreq_strcmp_name_evr(struct capreq *pr1, struct capreq *pr2);
 
@@ -115,10 +121,10 @@ tn_array *capreq_arr_new(int size);
 int capreq_arr_find(tn_array *capreqs, const char *name);
 
 tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf);
-int capreq_arr_store_f(tn_array *arr, const char *prefix, tn_stream *st);
+int capreq_arr_store_st(tn_array *arr, const char *prefix, tn_stream *st);
 
-tn_array *capreq_arr_restore(tn_buf *nbuf);
-tn_array *capreq_arr_restore_f(tn_stream *st);
+tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf);
+tn_array *capreq_arr_restore_st(tn_alloc *na, tn_stream *st);
 
 tn_array *capreq_pkg(tn_array *arr, int32_t epoch, 
                      const char *name, int name_len, 

@@ -27,6 +27,7 @@
 #include "capreq.h"
 #include "rpm/rpm.h"
 
+
 int test_match(int argc, char *argv[])
 {
     struct pkg *pkg;
@@ -49,7 +50,8 @@ int test_match(int argc, char *argv[])
                 struct capreq *cap;
                 
                 pkg = pkg_new("poldek", epoch, versions[i], relases[j], NULL, NULL);
-                cap = capreq_new("poldek", epoch, versions[i++], relases[j++],
+                cap = capreq_new(NULL,
+                                 "poldek", epoch, versions[i++], relases[j++],
                                  REL_EQ, 0);
                 k = 0;
                 while (rels[k] > 0) {

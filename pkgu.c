@@ -30,6 +30,27 @@
 #include "misc.h"
 #include "rpm/rpmhdr.h"
 
+#define NA_OWNED (1 << 0)
+
+
+struct pkguinf {
+    char              *license;
+    char              *url;
+    char              *summary;
+    char              *description;
+    char              *vendor;
+    char              *buildhost;
+    char              *distro;
+    
+    tn_hash           *_ht;
+    tn_array          *_langs;
+    tn_array          *_langs_rpmhdr; /* v018x legacy: for preserving
+                                         the langs order */
+    tn_alloc          *_na;
+    int16_t           _refcnt;
+    uint16_t          _flags;
+};
+
 struct pkguinf_i18n {
     char              *summary;
     char              *description;
@@ -39,7 +60,7 @@ struct pkguinf_i18n {
 static Header make_pkguinf_hdr(struct pkguinf *pkgu, int *langs_cnt);
 
 static
-struct pkguinf_i18n *pkguinf_i18n_new(const char *summary,
+struct pkguinf_i18n *pkguinf_i18n_new(tn_alloc *na, const char *summary,
                                       const char *description)
 {
     int s_len, d_len;
@@ -47,7 +68,7 @@ struct pkguinf_i18n *pkguinf_i18n_new(const char *summary,
     
     s_len = strlen(summary) + 1;
     d_len = strlen(description) + 1;
-    inf = n_malloc(sizeof(*inf) + s_len + d_len);
+    inf = na->na_malloc(na, sizeof(*inf) + s_len + d_len);
 
     memcpy(inf->_buf, summary, s_len);
     memcpy(&inf->_buf[s_len], description, d_len);
@@ -57,20 +78,28 @@ struct pkguinf_i18n *pkguinf_i18n_new(const char *summary,
 }
 
 static
-struct pkguinf *pkguinf_malloc(void)
+struct pkguinf *pkguinf_malloc(tn_alloc *na)
 {
     struct pkguinf *pkgu;
+    tn_alloc *_na = NULL;
+
+    if (na == NULL)
+        na = _na = n_alloc_new(8, TN_ALLOC_OBSTACK);
+        
     
-    pkgu = n_malloc(sizeof(*pkgu));
+    pkgu = na->na_malloc(na, sizeof(*pkgu));
     memset(pkgu, 0, sizeof(*pkgu));
-    
+    pkgu->_na = na;
+    if (_na)
+        pkgu->_flags |= NA_OWNED;
+
     pkgu->license = NULL;
     pkgu->url = NULL;
     pkgu->summary = NULL;
     pkgu->description = NULL;
     pkgu->vendor = NULL;
     pkgu->buildhost = NULL;
-    
+
     pkgu->_ht = NULL;
     pkgu->_langs = NULL;
     pkgu->_refcnt = 0;
@@ -86,24 +115,12 @@ void pkguinf_free(struct pkguinf *pkgu)
         return;
     }
     
-    if (pkgu->license)
-        free(pkgu->license);
-    
-    if (pkgu->url)
-        free(pkgu->url);
-        
     if (pkgu->summary)
         pkgu->summary = NULL;
         
     if (pkgu->description)
         pkgu->description = NULL;
     
-    if (pkgu->vendor)
-        free(pkgu->vendor);
-    
-    if (pkgu->buildhost)
-        free(pkgu->buildhost);
-
     if (pkgu->_langs)
         n_array_free(pkgu->_langs);
 
@@ -116,7 +133,9 @@ void pkguinf_free(struct pkguinf *pkgu)
     pkgu->_langs_rpmhdr = NULL;
     pkgu->_langs = NULL;
     pkgu->_ht = NULL;
-    free(pkgu);
+    
+    if (pkgu->_flags & NA_OWNED)
+        n_alloc_free(pkgu->_na);
 }
 
 struct pkguinf *pkguinf_link(struct pkguinf *pkgu)
@@ -156,8 +175,8 @@ int pkguinf_store_rpmhdr(struct pkguinf *pkgu, tn_buf *nbuf)
     return rc;
 }
 
-
-struct pkguinf *pkguinf_restore_rpmhdr_st(tn_stream *st, off_t offset)
+struct pkguinf *pkguinf_restore_rpmhdr_st(tn_alloc *na,
+                                          tn_stream *st, off_t offset)
 {
     uint16_t nsize, nlangs;
     struct pkguinf *pkgu = NULL;
@@ -192,7 +211,7 @@ struct pkguinf *pkguinf_restore_rpmhdr_st(tn_stream *st, off_t offset)
     }
     
     if ((hdr = headerLoad(rawhdr)) != NULL) {
-        pkgu = pkguinf_ldhdr(hdr);
+        pkgu = pkguinf_ldrpmhdr(na, hdr);
         headerFree(hdr); //rpm's memleak
     }
 
@@ -214,19 +233,34 @@ int pkguinf_skip_rpmhdr(tn_stream *st)
     return nsize;
 }
 
+static inline
+void set_member(struct pkguinf *pkgu, char **m, const char *v, int len)
+{
+    char *mm;
 
-static char *cp_tag(Header h, int rpmtag)
+    mm = pkgu->_na->na_malloc(pkgu->_na, len + 1);
+    memcpy(mm, v, len + 1);
+    *m = mm;
+}
+
+
+static char *cp_tag(tn_alloc *na, Header h, int rpmtag)
 {
     struct rpmhdr_ent  hdrent;
     char *t = NULL;
         
-    if (rpmhdr_ent_get(&hdrent, h, rpmtag))
-        t = n_strdup(rpmhdr_ent_as_str(&hdrent));
+    if (rpmhdr_ent_get(&hdrent, h, rpmtag)) {
+        char *s = rpmhdr_ent_as_str(&hdrent);
+        int len = strlen(s) + 1;
+        t = na->na_malloc(na, len + 1);
+        memcpy(t, s, len);
+    }
+    
     rpmhdr_ent_free(&hdrent);
     return t;
 }
 
-struct pkguinf *pkguinf_ldhdr(Header h) 
+struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, Header h) 
 {
     char               **langs, **summs, **descrs;
     int                nsumms, ndescrs;
@@ -234,8 +268,8 @@ struct pkguinf *pkguinf_ldhdr(Header h)
     struct pkguinf     *pkgu;
     
     
-    pkgu = pkguinf_malloc();
-    pkgu->_ht = n_hash_new(3, free);
+    pkgu = pkguinf_malloc(na);
+    pkgu->_ht = n_hash_new(3, NULL);
     
     if ((langs = rpmhdr_langs(h))) {
         tn_array *avlangs, *sl_langs;
@@ -248,7 +282,7 @@ struct pkguinf *pkguinf_ldhdr(Header h)
         if (n > ndescrs)
             n = ndescrs;
 
-        avlangs = n_array_new(4, NULL, (tn_fn_cmp)strcmp);
+        avlangs = n_array_new(4, free, (tn_fn_cmp)strcmp);
         pkgu->_langs_rpmhdr = n_array_new(4, free, NULL);
         
         for (i=0; i < n; i++) {
@@ -257,10 +291,10 @@ struct pkguinf *pkguinf_ldhdr(Header h)
             if (langs[i] == NULL)
                 break;
             
-            n_array_push(avlangs, langs[i]);
+            n_array_push(avlangs, n_strdup(langs[i]));
             n_array_push(pkgu->_langs_rpmhdr, n_strdup(langs[i]));
             
-            inf = pkguinf_i18n_new(summs[i], descrs[i]);
+            inf = pkguinf_i18n_new(pkgu->_na, summs[i], descrs[i]);
             n_hash_insert(pkgu->_ht, langs[i], inf);
         }
         nlangs = n;
@@ -288,11 +322,11 @@ struct pkguinf *pkguinf_ldhdr(Header h)
         free(descrs);
     }
 
-    pkgu->vendor = cp_tag(h, RPMTAG_VENDOR);
-    pkgu->license = cp_tag(h, RPMTAG_COPYRIGHT);
-    pkgu->url = cp_tag(h, RPMTAG_URL);
-    pkgu->distro = cp_tag(h, RPMTAG_DISTRIBUTION);
-    pkgu->buildhost = cp_tag(h, RPMTAG_BUILDHOST);
+    pkgu->vendor = cp_tag(pkgu->_na, h, RPMTAG_VENDOR);
+    pkgu->license = cp_tag(pkgu->_na, h, RPMTAG_COPYRIGHT);
+    pkgu->url = cp_tag(pkgu->_na, h, RPMTAG_URL);
+    pkgu->distro = cp_tag(pkgu->_na, h, RPMTAG_DISTRIBUTION);
+    pkgu->buildhost = cp_tag(pkgu->_na, h, RPMTAG_BUILDHOST);
 
     return pkgu;
 }
@@ -351,19 +385,11 @@ tn_array *pkguinf_langs(struct pkguinf *pkgu)
 {
     if (pkgu->_langs == NULL) 
         pkgu->_langs = n_hash_keys(pkgu->_ht);
+    
     if (pkgu->_langs)
         n_array_sort(pkgu->_langs);
     return pkgu->_langs;
 }
-
-
-#define PKGUINF_LICENSE      'l'
-#define PKGUINF_URL          'u'
-#define PKGUINF_SUMMARY      's'
-#define PKGUINF_DESCRIPTION  'd'
-#define PKGUINF_VENDOR       'v'
-#define PKGUINF_BUILDHOST    'b'
-#define PKGUINF_DISTRO       'D'
 
 #define PKGUINF_TAG_LANG     'L'
 #define PKGUINF_TAG_ENDCMN   'E'
@@ -459,13 +485,14 @@ tn_buf *pkguinf_store(const struct pkguinf *pkgu, tn_buf *nbuf,
 }
 
 
-struct pkguinf *pkguinf_restore(tn_buf_it *it, const char *lang)
+
+struct pkguinf *pkguinf_restore(tn_alloc *na, tn_buf_it *it, const char *lang)
 {
     struct pkguinf *pkgu;
     char *key = NULL, *val;
     size_t len = 0;
 
-    pkgu = pkguinf_malloc();
+    pkgu = pkguinf_malloc(na);
     
     if (lang && strcmp(lang, "C") == 0) {
         while ((key = n_buf_it_getz(it, &len))) {
@@ -478,23 +505,23 @@ struct pkguinf *pkguinf_restore(tn_buf_it *it, const char *lang)
             val = n_buf_it_getz(it, &len);
             switch (*key) {
                 case PKGUINF_LICENSE:
-                    pkgu->license = n_strdupl(val, len);
+                    set_member(pkgu, &pkgu->license, val, len);
                     break;
 
                 case PKGUINF_URL:
-                    pkgu->url = n_strdupl(val, len);
+                    set_member(pkgu, &pkgu->url, val, len);
                     break;
 
                 case PKGUINF_VENDOR:
-                    pkgu->vendor = n_strdupl(val, len);
+                    set_member(pkgu, &pkgu->vendor, val, len);
                     break;
 
                 case PKGUINF_BUILDHOST:
-                    pkgu->buildhost = n_strdupl(val, len);
+                    set_member(pkgu, &pkgu->buildhost, val, len);
                     break;
 
                 case PKGUINF_DISTRO:
-                    pkgu->distro = n_strdupl(val, len);
+                    set_member(pkgu, &pkgu->distro, val, len);
                     break;
 
                 default:
@@ -514,7 +541,7 @@ int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang)
 {
     struct pkguinf_i18n *inf;
     char *summary, *description, *key;
-    size_t len = 0;
+    size_t slen = 0, dlen = 0, len = 0;
     
 
     if (pkgu->_ht == NULL)
@@ -527,14 +554,14 @@ int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang)
     if (*key != PKGUINF_SUMMARY)
         return 0;
     
-    summary = n_buf_it_getz(it, &len);
+    summary = n_buf_it_getz(it, &slen);
 
     key = n_buf_it_getz(it, &len);
     if (*key != PKGUINF_DESCRIPTION)
         return 0;
-    description = n_buf_it_getz(it, &len);
+    description = n_buf_it_getz(it, &dlen);
 
-    inf = pkguinf_i18n_new(summary, description);
+    inf = pkguinf_i18n_new(pkgu->_na, summary, description);
     n_hash_insert(pkgu->_ht, lang, inf);
     
     pkgu->summary = inf->summary;
@@ -543,6 +570,38 @@ int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang)
     return 1;
 }
 
+
+const char *pkguinf_getstr(const struct pkguinf *pkgu, int tag)
+{
+    switch (tag) {
+        case PKGUINF_LICENSE:
+            return pkgu->license;
+
+        case PKGUINF_URL:
+            return pkgu->url;
+
+        case PKGUINF_VENDOR:
+            return pkgu->vendor;
+
+        case PKGUINF_BUILDHOST:
+            return pkgu->buildhost;
+
+        case PKGUINF_DISTRO:
+            return pkgu->distro;
+
+        case PKGUINF_SUMMARY:
+            return pkgu->summary;
+
+        case PKGUINF_DESCRIPTION:
+            return pkgu->description;
+
+        default:
+            n_assert(0);
+            break;
+    }
+
+    return NULL;
+}
 
 
 

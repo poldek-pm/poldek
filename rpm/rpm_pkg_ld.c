@@ -18,8 +18,7 @@
 
 #include <netinet/in.h>
 
-#include <trurl/nstr.h>
-#include <trurl/nassert.h>
+#include <trurl/trurl.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -236,7 +235,7 @@ static int valid_fname(const char *fname, mode_t mode, const char *pkgname)
 
 
 /* -1 on error  */
-int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
+int pkgfl_ldhdr(tn_alloc *na, tn_tuple **fl, Header h, int which, const char *pkgname)
 {
     int t1, t2, t3, t4, c1, c2, c3, c4;
     char **names = NULL, **dirs = NULL, **symlinks = NULL, **skipdirs;
@@ -328,7 +327,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
             if (diridxs[j] == i)
                 fentdirs_items[i]++;
         
-        flent = pkgfl_ent_new(dirs[i], strlen(dirs[i]), fentdirs_items[i]);
+        flent = pkgfl_ent_new(na, dirs[i], strlen(dirs[i]), fentdirs_items[i]);
         fentdirs[i] = flent;
         ndirs++;
     }
@@ -351,13 +350,13 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
         flent = fentdirs[j];
         len = strlen(names[i]);
         if (symlinks) { 
-            flfile = flfile_new(sizes ? sizes[i] : 0,
+            flfile = flfile_new(na, sizes ? sizes[i] : 0,
                                 modes ? modes[i] : 0,
                                 names[i], len,
                                 symlinks[i],
                                 strlen(symlinks[i]));
         } else {
-            flfile = flfile_new(sizes ? sizes[i] : 0,
+            flfile = flfile_new(na, sizes ? sizes[i] : 0,
                                 modes ? modes[i] : 0,
                                 names[i], len,
                                 NULL,
@@ -384,12 +383,26 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
         logn(LOGERR, _("%s: skipped file list"), pkgname);
         
     } else if (ndirs) {
+        int n = 0;
         for (i=0; i<c2; i++) 
-            if (fentdirs[i] != NULL) {
-                n_array_push(fl, fentdirs[i]);
-                qsort(&fentdirs[i]->files, fentdirs[i]->items, sizeof(struct flfile*), 
+            if (fentdirs[i] != NULL)
+                n++;
+        
+        if (n > 0) {
+            tn_tuple *t;
+            int j = 0;
+            
+            t = n_tuple_new(na, n, NULL);
+            for (i=0; i<c2; i++) {
+                if (fentdirs[i] != NULL)
+                    n_tuple_set_nth(t, j++, fentdirs[i]);
+                    
+                qsort(&fentdirs[i]->files, fentdirs[i]->items,
+                      sizeof(struct flfile*), 
                       (int (*)(const void *, const void *))flfile_cmp_qsort);
             }
+            *fl = t;
+        }
     }
 #if 0
     if (missing_file_hdrs_err) {
@@ -402,7 +415,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
     return nerr ? -1 : 1;
 }
 
-struct pkg *pkg_ldrpmhdr(Header h, const char *fname, unsigned fsize,
+struct pkg *pkg_ldrpmhdr(tn_alloc *na, Header h, const char *fname, unsigned fsize,
                          unsigned ldflags)
 {
     struct pkg *pkg;
@@ -450,7 +463,7 @@ struct pkg *pkg_ldrpmhdr(Header h, const char *fname, unsigned fsize,
     if (!headerGetEntry(h, RPMTAG_INSTALLTIME, &type, (void *)&itime, NULL)) 
         itime = NULL;
     
-    pkg = pkg_new_ext(name, epoch ? *epoch : 0, version, release, arch, os,
+    pkg = pkg_new_ext(na, name, epoch ? *epoch : 0, version, release, arch, os,
                       fname, size ? *size : 0, fsize, btime ? *btime : 0);
     
     if (pkg == NULL)
@@ -499,37 +512,31 @@ struct pkg *pkg_ldrpmhdr(Header h, const char *fname, unsigned fsize,
 
     if (ldflags & (PKG_LDFL_DEPDIRS | PKG_LDFL_WHOLE)) {
         unsigned flldflags = 0;
-        
-        pkg->fl = pkgfl_array_new(32);
         if (ldflags & PKG_LDFL_WHOLE)
             flldflags = PKGFL_ALL;
         else
             flldflags = PKGFL_DEPDIRS;
         
-        if (pkgfl_ldhdr(pkg->fl, h, flldflags, pkg_snprintf_s(pkg)) == -1) {
+        if (pkgfl_ldhdr(na, &pkg->fl, h, flldflags, pkg_snprintf_s(pkg)) == -1) {
             pkg_free(pkg);
             pkg = NULL;
         
-        } else if (n_array_size(pkg->fl) > 0) {
-            n_array_sort(pkg->fl);
-            
-        } else {
-            n_array_free(pkg->fl);
-            pkg->fl = NULL;
-        };
+        } else if (n_tuple_size(pkg->fl) > 0) {
+            n_tuple_sort_ex(pkg->fl, (tn_fn_cmp)pkgfl_ent_cmp);
+        }
     }
     
     return pkg;
 }
 
 
-struct pkg *pkg_ldrpm(const char *path, unsigned ldflags)
+struct pkg *pkg_ldrpm(tn_alloc *na, const char *path, unsigned ldflags)
 {
     struct pkg *pkg = NULL;
     Header h;
     
     if (rpmhdr_loadfile(path, &h)) {
-        pkg = pkg_ldrpmhdr(h, path, 0, ldflags);
+        pkg = pkg_ldrpmhdr(na, h, path, 0, ldflags);
         headerFree(h);
     }
 

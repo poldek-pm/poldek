@@ -35,17 +35,6 @@
 static tn_hash *architecture_h = NULL;
 static tn_hash *operatingsystem_h = NULL; 
 
-static void *(*pkg_alloc_fn)(size_t) = n_malloc;
-static void (*pkg_free_fn)(void*) = n_free;
-
-#if 0                           /* disabled cause gives not reasonable profit */
-void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*))
-{
-    pkg_alloc_fn = pkg_allocfn;
-    pkg_free_fn = pkg_freefn;
-}
-#endif
-
 static inline const char *register_os(const char *os)
 {
     const char *oss;
@@ -84,7 +73,8 @@ static inline const char *register_arch(const char *arch)
 
 
 /* always store fields in order: path, name, version, release, arch */
-struct pkg *pkg_new_ext(const char *name, int32_t epoch,
+struct pkg *pkg_new_ext(tn_alloc *na, 
+                        const char *name, int32_t epoch,
                         const char *version, const char *release,
                         const char *arch, const char *os, const char *fn,
                         uint32_t size, uint32_t fsize,
@@ -128,11 +118,15 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
     len += len + 1;             /* for nvr */
 
     len += 1;
-    pkg = pkg_alloc_fn(sizeof(*pkg) + len);
-    memset(pkg, 0, sizeof(*pkg));
+    if (na == NULL) {
+        pkg = n_calloc(1, sizeof(*pkg) + len);
+        
+    } else {
+        pkg = na->na_calloc(na, sizeof(*pkg) + len);
+        pkg->na = n_ref(na);
+    }
     
-    pkg->free = pkg_free_fn;
-    pkg->flags = PKG_COLOR_WHITE;
+    pkg->flags |= PKG_COLOR_WHITE;
     pkg->epoch = epoch;
     pkg->size = size;
     pkg->fsize = fsize;
@@ -154,7 +148,6 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
     memcpy(buf, release, release_len);
     buf += release_len;
     *buf++ = '\0';
-
     
     pkg->fn = NULL;
     if (fn) {
@@ -208,8 +201,10 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
 
 void pkg_free(struct pkg *pkg) 
 {
-
-    //printf("free %s (%d)\n", pkg_snprintf_s(pkg), pkg->_refcnt);
+    DBGF("%s (pdir %s, na %d), %d\n", pkg_snprintf_s(pkg),
+         pkg->pkgdir ? pkgdir_idstr(pkg->pkgdir) : "<none>",
+         pkg->na ? pkg->na->_refcnt : -1,
+         pkg->_refcnt);
     
     if (pkg->_refcnt > 0) {
         pkg->_refcnt--;
@@ -250,7 +245,7 @@ void pkg_free(struct pkg *pkg)
     }
     
     if (pkg->fl) {
-        n_array_free(pkg->fl);
+        n_tuple_free(pkg->na, pkg->fl);
         pkg->fl = NULL;
     }
     
@@ -261,11 +256,20 @@ void pkg_free(struct pkg *pkg)
     }
 
     if (pkg->pkgdir_data && pkg->pkgdir_data_free) {
-        pkg->pkgdir_data_free(pkg->pkgdir_data);
+        pkg->pkgdir_data_free(pkg->na, pkg->pkgdir_data);
         pkg->pkgdir_data = NULL;
     }
+
     
-    pkg->free(pkg);
+    if (pkg->na) {
+        tn_alloc *na = pkg->na;
+        memset(pkg, 0, sizeof(*pkg));
+        n_alloc_free(na);
+        return;
+    }
+    
+    memset(pkg, 0, sizeof(*pkg));
+    n_free(pkg);
 }
 
 #if 0
@@ -590,16 +594,16 @@ int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr)
 int pkg_add_selfcap(struct pkg *pkg) 
 {
     int i, has = 0;
+    struct capreq *selfcap;
     
     if (pkg->flags & PKG_HAS_SELFCAP)
         return 1;
-    
+
     if (pkg->caps == NULL) {
         pkg->caps = capreq_arr_new(0);
         
     } else if ((i = capreq_arr_find(pkg->caps, pkg->name)) != -1) {
-        
-        for (i = i; i<n_array_size(pkg->caps); i++) {
+        for (; i<n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
             
             if (strcmp(capreq_name(cap), pkg->name) != 0)
@@ -621,14 +625,14 @@ int pkg_add_selfcap(struct pkg *pkg)
         n_array_uniq(pkg->caps);
         return 1;
     }
-    
-    
-    capreq_pkg(pkg->caps, pkg->epoch, pkg->name, strlen(pkg->name),
-               pkg->ver, strlen(pkg->ver), pkg->rel, strlen(pkg->rel));
-    
+
+    selfcap = capreq_new(pkg->na, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
+                         REL_EQ, 0);
+    n_array_push(pkg->caps, selfcap);
     if (n_array_size(pkg->caps)) {
         n_array_sort(pkg->caps);
         n_array_uniq(pkg->caps);
+        
     } else {
         n_array_free(pkg->caps);
         pkg->caps = NULL;
@@ -662,7 +666,7 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
 {
     register int cmprc = 0, evr = 0;
 
-    DBGMSG_F("cap %s req %s\n", capreq_snprintf_s(cap), capreq_snprintf_s0(req));
+    DBGF("cap %s req %s\n", capreq_snprintf_s(cap), capreq_snprintf_s0(req));
     
     if ((strcmp(capreq_name(cap), capreq_name(req))) != 0)
         return 0;
@@ -773,7 +777,7 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req, int stric
             rc = pkg_evr_match_req_(pkg, req, 1) ? 1 : 0;
     }
 
-    DBGMSG_F("%s match %s ? %s\n", pkg_snprintf_epoch_s(pkg),
+    DBGF("%s match %s ? %s\n", pkg_snprintf_epoch_s(pkg),
              capreq_snprintf_s(req), rc ? "YES" : "NO");
     return rc;
 }
@@ -784,8 +788,8 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
 {
     int n;
         
-    DBGMSG("\npkg_caps_match_req %s %s\n", pkg_snprintf_s(pkg), 
-           capreq_snprintf_s(req));
+    DBGF("\npkg_caps_match_req %s %s\n", pkg_snprintf_s(pkg), 
+         capreq_snprintf_s(req));
         
     if (pkg->caps == NULL || n_array_size(pkg->caps) == 0)
         return 0;     /* not match */
@@ -799,8 +803,8 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
 
         cap = n_array_nth(pkg->caps, n);
         if (cap_match_req(cap, req, strict)) {
-            DBGMSG("chk%d (%s-%s-%s) -> match (%d)\n", n, capreq_name(cap),
-                   capreq_ver(cap), capreq_rel(cap), strict);
+            DBGF("chk%d (%s-%s-%s) -> match (%d)\n", n, capreq_name(cap),
+                 capreq_ver(cap), capreq_rel(cap), strict);
             return 1;
         }
         n++;
@@ -810,9 +814,9 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
 
             cap = n_array_nth(pkg->caps, n);
             if (strcmp(capreq_name(cap), capreq_name(req)) != 0) {
-                DBGMSG("chk%d %s-%s-%s -> NOT match IRET\n", i,
-                       capreq_name(cap), capreq_ver(cap),
-                       capreq_rel(cap));
+                DBGF("chk%d %s-%s-%s -> NOT match IRET\n", i,
+                     capreq_name(cap), capreq_ver(cap),
+                     capreq_rel(cap));
                 return 0;
             }
                 
@@ -840,7 +844,7 @@ int pkg_has_path(const struct pkg *pkg,
     struct pkgfl_ent *flent, tmp;
     int rc = 0;
     
-    if (pkg->fl == NULL || n_array_size(pkg->fl) == 0)
+    if (pkg->fl == NULL || n_tuple_size(pkg->fl) == 0)
         return 0;
 
     if (*dirname == '/' && *(dirname + 1) != '\0')
@@ -848,8 +852,9 @@ int pkg_has_path(const struct pkg *pkg,
 
     tmp.dirname = (char*)dirname;
     tmp.items = 0;
-    
-    if ((flent = n_array_bsearch(pkg->fl, &tmp)) != NULL) {
+
+    flent = n_tuple_bsearch_ex(pkg->fl, &tmp, (tn_fn_cmp)pkgfl_ent_cmp);
+    if (flent != NULL) {
         int i;
         
         for (i=0; i<flent->items; i++) {
@@ -970,7 +975,7 @@ int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard)
     
     if (n_array_bsearch_ex(pkg->cnfls, cpkg->name,
                            (tn_fn_cmp)capreq_cmp2name) == NULL) {
-        cnfl = capreq_new(cpkg->name, cpkg->epoch, cpkg->ver,
+        cnfl = capreq_new(pkg->na, cpkg->name, cpkg->epoch, cpkg->ver,
                           cpkg->rel, REL_EQ,
                           (isbastard ? CAPREQ_PLDEKBAST : 0));
         
@@ -990,22 +995,22 @@ int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg)
 struct pkguinf *pkg_info(const struct pkg *pkg) 
 {
     struct pkguinf *pkgu = NULL;
-
     if (pkg_has_ldpkguinf(pkg)) 
         pkgu = pkguinf_link(pkg->pkg_pkguinf);
 
     else if (pkg->load_pkguinf)
-        pkgu = pkg->load_pkguinf(pkg, pkg->pkgdir_data);
+        pkgu = pkg->load_pkguinf(NULL, pkg, pkg->pkgdir_data);
     
     return pkgu;
 }
 
-tn_array *pkg_other_fl(const struct pkg *pkg) 
+static
+tn_tuple *do_pkg_other_fl(tn_alloc *na, const struct pkg *pkg) 
 {
-    tn_array *fl = NULL;
+    tn_tuple *fl = NULL;
     
     if (pkg->load_nodep_fl)
-        fl = pkg->load_nodep_fl(pkg, 
+        fl = pkg->load_nodep_fl(na, pkg, 
                                 pkg->pkgdir_data, 
                                 pkg->pkgdir ?
                                 pkg->pkgdir->foreign_depdirs : NULL);
@@ -1013,32 +1018,87 @@ tn_array *pkg_other_fl(const struct pkg *pkg)
     return fl;
 }
 
-
-tn_array *pkg_info_get_fl(const struct pkg *pkg) 
+struct pkgflist *pkg_info_get_nodep_flist(const struct pkg *pkg) 
 {
-    tn_array *fl = NULL;
+    struct pkgflist *flist = NULL;
+    tn_tuple *fl = NULL;
+    tn_alloc *na;
 
-    fl = pkg_other_fl(pkg);
-    
-    if (fl == NULL) {
-        fl = pkg->fl;
-        
-    } else if (pkg->fl) {
-        int i;
-        for (i=0; i < n_array_size(pkg->fl); i++)
-            n_array_push(fl, n_array_nth(pkg->fl, i));
+    na = n_alloc_new(16, TN_ALLOC_OBSTACK);
+    fl = do_pkg_other_fl(na, pkg);
+    if (fl) {
+        flist = na->na_malloc(na, sizeof(*flist));
+        flist->_na = na;
+        flist->fl = fl;
+        n_tuple_sort_ex(flist->fl, (tn_fn_cmp)pkgfl_ent_cmp);
     }
     
-    if (fl)
-        n_array_sort(fl);
-    
-    return fl;
+    return flist;
 }
 
-void pkg_info_free_fl(const struct pkg *pkg, tn_array *fl) 
+
+struct pkgflist *pkg_info_get_flist(const struct pkg *pkg) 
 {
-    if (pkg->load_nodep_fl && pkg->pkgdir_data)
-        n_array_free(fl);
+    struct pkgflist *flist = NULL;
+    tn_tuple *fl = NULL;
+    tn_alloc *na;
+
+    na = n_alloc_new(16, TN_ALLOC_OBSTACK);
+    fl = do_pkg_other_fl(na, pkg);
+    
+    if (pkg->fl == NULL) {
+        if (fl == NULL) {
+            n_alloc_free(na);
+        } else {
+            flist = na->na_malloc(na, sizeof(*flist));
+            flist->_na = na;
+            flist->fl = fl;
+        }
+        
+    } else {                    /* pkg->fl != NULL  */
+        if (fl == NULL) {
+            n_alloc_free(na);
+            flist = n_malloc(sizeof(*flist));
+            flist->_na = NULL;
+            flist->fl = pkg->fl;
+            
+        } else {
+            tn_tuple *wholefl;
+            int i, n;
+            
+            wholefl = n_tuple_new(na, n_tuple_size(pkg->fl) + n_tuple_size(fl),
+                                  NULL);
+            n = 0;
+            for (i=0; i<n_tuple_size(pkg->fl); i++)
+                n_tuple_set_nth(wholefl, n++, n_tuple_nth(pkg->fl, i));
+
+            for (i=0; i<n_tuple_size(fl); i++)
+                n_tuple_set_nth(wholefl, n++, n_tuple_nth(fl, i));
+            
+            flist = na->na_malloc(na, sizeof(*flist));
+            flist->_na = na;
+            flist->fl = wholefl;
+        }
+    }
+    
+    if (flist)
+        n_tuple_sort_ex(flist->fl, (tn_fn_cmp)pkgfl_ent_cmp);
+
+    DBGF("RET %p, fl = %p, na = %p\n", flist, flist ? flist->fl : NULL,
+           flist ? flist->_na : NULL);
+    
+    return flist;
+}
+
+void pkg_info_free_flist(struct pkgflist *flist)
+{
+    DBGF("FRE %p, fl = %p, na = %p\n", flist, flist ? flist->fl : NULL,
+           flist ? flist->_na : NULL);
+    
+    if (flist->_na)
+        n_alloc_free(flist->_na);
+    else
+        n_free(flist);
 }
 
 
@@ -1300,4 +1360,13 @@ char *pkg_snprintf_epoch_s(const struct pkg *pkg)
 }
 
 
+void *pkg_na_malloc(struct pkg *pkg, size_t size)
+{
+    if (pkg->na)
+        return pkg->na->na_malloc(pkg->na, size);
+    n_assert(0);
+    return NULL;
+}
 
+    
+    

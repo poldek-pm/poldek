@@ -26,23 +26,28 @@ static char *nbytes2str(char *buf, int bufsize, unsigned long nbytes)
 }
 
 
-void print_mem_info(const char *prefix) 
+static
+void print_mem_info(const char *fmt, va_list args) 
 {
     struct mallinfo mi = mallinfo();
     char buf[32], barena[32], bford[32], bmmap[32], bunused[32];
     
     nbytes2str(buf, sizeof(buf), mi.arena - mi.fordblks + mi.hblkhd); 
-    
-    printf("MEMINFO %s: %s %s via malloc (%s unused, %s used), %s via mmap\n\n",
-           prefix, buf,
-           nbytes2str(barena, 32, mi.arena),
-           nbytes2str(bford, 32, mi.fordblks),
-           nbytes2str(bunused, 32, mi.arena - mi.fordblks),
-           nbytes2str(bmmap, 32, mi.hblkhd));
+
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, ": %s total: %s malloc (%s un, %s used), %s mmap\n",
+            buf, nbytes2str(barena, 32, mi.arena),
+            nbytes2str(bford, 32, mi.fordblks),
+            nbytes2str(bunused, 32, mi.arena - mi.fordblks),
+            nbytes2str(bmmap, 32, mi.hblkhd));
 }
 
-void mem_info(int vlevel, const char *prefix) 
+void mem_info(int vlevel, const char *fmt, ...)
 {
-    if (mem_info_verbose >= vlevel)
-        print_mem_info(prefix);
+    va_list args;
+    if (mem_info_verbose >= vlevel) {
+        va_start(args, fmt);
+        print_mem_info(fmt, args); 
+        va_end(args);
+    }
 }

@@ -26,9 +26,7 @@
 #include <time.h>
 #include <fnmatch.h>
 
-#include <trurl/nassert.h>
-#include <trurl/nstr.h>
-#include <trurl/nbuf.h>
+#include <trurl/trurl.h>
 
 #include <vfile/vfile.h>
 
@@ -71,7 +69,8 @@ struct pkgdir_module pkgdir_module_dir = {
 
 static
 int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
-             tn_hash *avlangs, unsigned ldflags, struct pkgdir *prev_pkgdir)
+             tn_hash *avlangs, unsigned ldflags, struct pkgdir *prev_pkgdir,
+             tn_alloc *na)
 {
     struct dirent  *ent;
     struct stat    st;
@@ -120,7 +119,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
 
             if (prev_pkgdir) {
                 struct pkg *tmp;
-                pkg = pkg_ldrpmhdr(h, n_basenam(path), st.st_size, PKG_LDNEVR);
+                pkg = pkg_ldrpmhdr(NULL, h, n_basenam(path), st.st_size, PKG_LDNEVR);
                 
                 if (pkg && (tmp = n_array_bsearch(prev_pkgdir->pkgs, pkg)) &&
                     pkg_deepstrcmp_name_evr(pkg, tmp) == 0) {
@@ -133,14 +132,14 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
                         tmp->groupid = gid;
                     }
                     
-                    
+                    pkg_free(pkg);
                     pkg = pkg_link(tmp);
                     msgn(3, "%s: seems untouched, loaded from previous index",
                          pkg_snprintf_s(tmp));
                     
                 } else {
                     if (pkg) {
-                        msgn(1, "%s: not found, new?", pkg_snprintf_s(pkg));
+                        msgn(3, "%s: not found, new?", pkg_snprintf_s(pkg));
                         pkg_free(pkg);
                     }
 
@@ -149,10 +148,11 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
             }
             
             if (pkg == NULL) {
-                pkg = pkg_ldrpmhdr(h, n_basenam(path), st.st_size, PKG_LDWHOLE);
+                pkg = pkg_ldrpmhdr(na, h, n_basenam(path), st.st_size,
+                                   PKG_LDWHOLE);
                 
                 if (ldflags & PKGDIR_LD_DESC) {
-                    pkg->pkg_pkguinf = pkguinf_ldhdr(h);
+                    pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
                     pkg_set_ldpkguinf(pkg);
                     if ((pkg_langs = pkguinf_langs(pkg->pkg_pkguinf))) {
                         int i;
@@ -166,7 +166,9 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
                 }
                 pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
             }
-
+            
+            headerFree(h);
+            
             if (pkg) {
                 n_array_push(pkgs, pkg);
                 n++;
@@ -188,14 +190,11 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     int n;
     
-    if (pkgdir->pkgs == NULL)
-        pkgdir->pkgs = pkgs_array_new(1024);
-    
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
     
     n = load_dir(pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups,
-                 pkgdir->avlangs_h, ldflags, pkgdir->prev_pkgdir);
+                 pkgdir->avlangs_h, ldflags, pkgdir->prev_pkgdir, pkgdir->na);
     
     return n;
 }

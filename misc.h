@@ -2,6 +2,8 @@
 #ifndef POLDEK_MISC_H
 #define POLDEK_MISC_H
 
+
+#include <stdarg.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -49,8 +51,7 @@ int mk_dir_parents(const char *path, const char *dn);
 const char *abs_path(char *buf, int size, const char *path);
 
 extern int mem_info_verbose;
-void print_mem_info(const char *prefix);
-void mem_info(int level, const char *msg);
+void mem_info(int vlevel, const char *fmt, ...);
 
 void process_cmd_output(struct p_open_st *st, const char *prefix);
 int lockfile(const char *lockfile);

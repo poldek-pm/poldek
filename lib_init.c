@@ -269,10 +269,7 @@ struct source *source_new_htcnf(struct poldek_ctx *ctx,
     vs = poldek_conf_get(htcnf, "prefix", NULL);
     
     src = source_new_pathspec(NULL, spec, vs);
-    n_hash_dump(htcnf);
     get_conf_opt_list(htcnf, "exclude path", src->mkidx_exclpath);
-    printf("exclude path %d\n", n_array_size(src->mkidx_exclpath));
-    
     if (n_array_size(src->mkidx_exclpath) == 0 &&
         n_array_size(ctx->ts->mkidx_exclpath) > 0) {
         
@@ -535,9 +532,11 @@ static void zlib_in_rpm(struct poldek_ctx *ctx)
     argv[1] = NULL;
 
     p_st_init(&pst);
-    if (p_open(&pst, 0, cmd, argv) == NULL)
+    if (p_open(&pst, 0, cmd, argv) == NULL) {
+        p_st_destroy(&pst);
         return;
-
+    }
+    
     if ((ec = p_close(&pst)) == 0) {
         logn(LOGNOTICE, "zlib-in-rpm detected, enabling workaround");
         vfile_configure(VFILE_CONF_EXTCOMPR, 1);
@@ -662,20 +661,7 @@ static void n_assert_hook(const char *expr, const char *file, int line)
     abort();
 }
 
-
-static void init_modules(void)
-{
-    pkgflmodule_init();
-    pkgsetmodule_init();
-}
-
-static void destroy_modules(void)
-{
-    pkgsetmodule_destroy();
-    pkgflmodule_destroy();
-}
-
-
+static
 void self_init(void) 
 {
     uid_t uid;
@@ -716,31 +702,33 @@ void init_internal(void)
 
     n_assert_sethook(poldek_assert_hook);
     n_malloc_set_failhook(poldek_malloc_fault_hook);
-    init_modules();
-    
 }
 
 
 void poldek_destroy(struct poldek_ctx *ctx) 
 {
-    destroy_modules();
     ctx = ctx;
     if (ctx->htconf)
         n_hash_free(ctx->htconf);
     sigint_destroy();
+
+    n_array_free(ctx->sources);
+    
+    if (ctx->pkgdirs) {
+        n_array_free(ctx->pkgdirs);
+        ctx->pkgdirs = NULL;
+    }
+    
+    if (ctx->ps)
+        pkgset_free(ctx->ps);
+
+    poldek_ts_free(ctx->ts);
 }
 
 void poldek_free(struct poldek_ctx *ctx)
 {
     poldek_destroy(ctx);
     free(ctx);
-}
-
-
-void poldek_reinit(void)
-{
-    destroy_modules();
-    init_modules();
 }
 
 
@@ -810,7 +798,9 @@ static void poldek_vf_vlog_cb(int pri, const char *fmt, va_list ap)
 int poldek_init(struct poldek_ctx *ctx, unsigned flags)
 {
     struct poldek_ts *ts;
+    char *cachedir;
     int i;
+    
     flags = flags;
 
     memset(ctx, 0, sizeof(*ctx));
@@ -834,8 +824,6 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     log_init(NULL, stdout, poldek_logprefix);
     self_init();
 
-    setlocale(LC_MESSAGES, "");
-    setlocale(LC_CTYPE, "");
     bindtextdomain(PACKAGE, NULL);
     textdomain(PACKAGE);
 
@@ -846,9 +834,11 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
 
     vfile_verbose = &verbose;
 
+    
     vfile_configure(VFILE_CONF_LOGCB, poldek_vf_vlog_cb);
-    vfile_configure(VFILE_CONF_CACHEDIR, setup_cachedir(NULL));
-
+    cachedir = setup_cachedir(NULL);
+    vfile_configure(VFILE_CONF_CACHEDIR, cachedir);
+    free(cachedir);
     return 1;
 }
 
@@ -931,8 +921,6 @@ int poldek_load_sources(struct poldek_ctx *ctx)
     if (ctx->_iflags & SOURCES_LOADED)
         return 1;
     
-    destroy_modules();
-    init_modules();
     rc = poldek_load_sources__internal(ctx, 1);
     ctx->_iflags |= SOURCES_LOADED;
     return rc;

@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <trurl/narray.h>
+#include <trurl/nmalloc.h>
+#include <trurl/ntuple.h>
 
 struct capreq;                  /* defined in capreq.h */
 struct pkguinf;                 /* defined in pkgu.h   */
@@ -35,6 +37,8 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 #define PKG_ALL_COLORS     PKG_COLOR_WHITE | PKG_COLOR_GRAY | PKG_COLOR_BLACK
 
 #define PKG_INTERNALMARK    (1 << 23)
+
+
 
 /* colours */
 #define pkg_set_color(pkg, color) \
@@ -98,8 +102,8 @@ struct pkg {
     char         *ver;
     char         *rel;
 
-    char         *fn;
-    char         *nvr;          /* NAME-VERSION-RELEASE */
+    char         *fn;         /* package filename */
+    char         *nvr;        /* NAME-VERSION-RELEASE */
 
     const char   *arch;
     const char   *os;
@@ -108,24 +112,25 @@ struct pkg {
     tn_array     *reqs;       /* requirements     */
     tn_array     *cnfls;      /* conflicts (with obsoletes)  */
     
-    tn_array     *fl;         /* files list, see pkgfl.h  */
+    tn_tuple     *fl;         /* file list, see pkgfl.h  */
     
     
     
-    tn_array     *reqpkgs;    /* require packages  */
+    tn_array     *reqpkgs;    /* required packages  */
     tn_array     *revreqpkgs; /* packages which requires me */
-    tn_array     *cnflpkgs;   /* conflict packages */
+    tn_array     *cnflpkgs;   /* conflicted packages */
 
-    struct pkgdir    *pkgdir;    /* refrence to its own pkgdir */
+    struct pkgdir    *pkgdir;    /* reference to its own pkgdir */
     void             *pkgdir_data;
-    void             (*pkgdir_data_free)(void*);
-    struct pkguinf   *(*load_pkguinf)(const struct pkg *pkg, void*);
-    tn_array         *(*load_nodep_fl)(const struct pkg *pkg, void*, tn_array*);
+    void             (*pkgdir_data_free)(tn_alloc *na, void*);
+    struct pkguinf   *(*load_pkguinf)(tn_alloc *na, const struct pkg *pkg, void*);
+    tn_tuple         *(*load_nodep_fl)(tn_alloc *na, const struct pkg *pkg,
+                                       void*, tn_array*);
 
     struct pkguinf *pkg_pkguinf; 
 
-    int pri;                    /* used for split */
-    int groupid;                /* package group id (see pkgroups.c) */
+    int pri;                  /* used for split */
+    int groupid;              /* package group id (see pkgroups.c) */
 
     /* for installed packages */
     int32_t      recno;        /* db's ID of the header */
@@ -136,21 +141,22 @@ struct pkg {
 
     /* private, don't touch */
     int16_t      _refcnt;
-    void         (*free)(void*); /* self free()  */
-
+    tn_alloc     *na;
     int16_t      _buf_size;
     char         _buf[0];  /* private, store all string members */
 };
 
 
-struct pkg *pkg_new_ext(const char *name, int32_t epoch,
+struct pkg *pkg_new_ext(tn_alloc *na,
+                        const char *name, int32_t epoch,
                         const char *version, const char *release,
                         const char *arch, const char *os,
                         const char *fn,
                         uint32_t size, uint32_t fsize,
                         uint32_t btime);
 
-#define pkg_new(n, e, v, r, a, o) pkg_new_ext(n, e, v, r, a, o, NULL, 0, 0, 0)
+#define pkg_new(n, e, v, r, a, o) \
+    pkg_new_ext(NULL, n, e, v, r, a, o, NULL, 0, 0, 0)
 
 
 #define PKG_LDNEVR       0
@@ -173,6 +179,7 @@ struct pkg *pkg_link(struct pkg *pkg);
 static inline struct pkg *pkg_link(struct pkg *pkg)
 {
     pkg->_refcnt++;
+    //n_assert(pkg->_refcnt < 3);
     return pkg;
 }
 #endif
@@ -272,13 +279,18 @@ int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg);
 char *pkg_evr_snprintf_s(const struct pkg *pkg);
 char *pkg_snprintf_epoch_s(const struct pkg *pkg);
 
-/* load and returns not loaded file list (l: tag in package index) */
-tn_array *pkg_other_fl(const struct pkg *pkg);
 
 struct pkguinf *pkg_info(const struct pkg *pkg);
 
-tn_array *pkg_info_get_fl(const struct pkg *pkg);
-void pkg_info_free_fl(const struct pkg *pkg, tn_array *fl);
+struct pkgflist {
+    tn_tuple *fl;
+    tn_alloc *_na;
+};
+
+/* load and returns not loaded file list (l: tag in package index) */
+struct pkgflist *pkg_info_get_nodep_flist(const struct pkg *pkg);
+struct pkgflist *pkg_info_get_flist(const struct pkg *pkg);
+void pkg_info_free_flist(struct pkgflist *flist);
 
 const char *pkg_group(const struct pkg *pkg);
 

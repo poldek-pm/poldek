@@ -27,7 +27,8 @@ int file_index_add_basename(struct file_index *fi, void *fidx_dir,
 int  file_index_lookup(struct file_index *fi, char *path,
                        struct pkg *pkgs[], int size);
 
-int file_index_find_conflicts(const struct file_index *fi, int strict);
+int file_index_find_conflicts(const struct file_index *fi, tn_array *errs,
+                              int strict);
 
 #endif /* POLDEK_FILEINDEX_H */
     

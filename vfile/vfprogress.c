@@ -191,7 +191,7 @@ void vf_progress(long total, long amount, void *data)
         
         if (nn < bar->maxlen) {
             int unit_n = bar->maxlen - nn;
-	    n_assert(sizeof(unit_line) > nn + unit_n);
+            n_assert((int)sizeof(unit_line) > nn + unit_n);
             memset(&unit_line[nn], ' ', unit_n);
         }
         

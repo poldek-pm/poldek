@@ -54,7 +54,7 @@ libpoldek_la_SOURCES =  \
 
 pkgincludedir = $(includedir)/poldek
 pkginclude_HEADERS = poldek.h conf.h pkg.h pkgset.h \
-					 pkgdir/pkgdir.h pkgdir/source.h
+		     pkgdir/pkgdir.h pkgdir/source.h
 
 
 libpoldek_la_LIBADD = \

@@ -245,15 +245,22 @@ int pndir_make_pkgkey(char *key, size_t size, const struct pkg *pkg)
 }
 
 
-struct pkg *pndir_parse_pkgkey(char *key, int klen)
+struct pkg *pndir_parse_pkgkey(char *key, int klen, struct pkg *pkg)
 {
     char        *name;
     const char  *ver, *rel, *arch = NULL, *os = NULL;
     char        *evr, *buf, *p;
     int32_t     epoch;
+
     
-    buf = alloca(klen + 1);
-    memcpy(buf, key, klen + 1);
+    if (pkg)    /* modify key if pkg is given i.e "in-place" */
+        buf = key;
+    
+    else {
+        buf = alloca(klen + 1);
+        memcpy(buf, key, klen + 1);
+    }
+    
     
     if ((p = strchr(buf, '#')) == NULL)
         return NULL;
@@ -296,9 +303,19 @@ struct pkg *pndir_parse_pkgkey(char *key, int klen)
     
     if (arch == NULL)
         arch = pndir_DEFAULT_ARCH;
-    
-    return pkg_new(name, epoch, ver, rel, arch, os); 
+
+    if (pkg == NULL)
+        return pkg_new(name, epoch, ver, rel, arch, os);
+
+    pkg->name = name;
+    pkg->epoch = epoch;
+    pkg->ver = (char*)ver;
+    pkg->rel = (char*)rel;
+    pkg->arch = arch;
+    pkg->os = os;
+    return pkg;
 }
+
 
 static
 int difftoc_vaccum(const struct pndir_paths *paths)

@@ -284,47 +284,39 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf,
                   tn_array *exclpath, tn_array *depdirs,
                   unsigned flags) 
 {
-    tn_array *fl;
-    void     *flmark;
+    struct pkgflist *flist;
 
     
     if ((flags & PKGSTORE_NOANYFL) == PKGSTORE_NOANYFL)
         return;
-    
-    flmark = pkgflmodule_allocator_push_mark();
-    fl = pkg_info_get_fl(pkg);
 
-    if (fl && n_array_size(fl) == 0) {
-        n_array_free(fl);
-        fl = NULL;
-    }
-    	
-    if (fl == NULL) {
-        pkgflmodule_allocator_pop_mark(flmark);
+    DBGF("%s\n", pkg_snprintf_s(pkg));
+    
+    flist = pkg_info_get_flist(pkg);
+    DBGF("flist = %p\n", flist);
+    if (flist == NULL)
         return;
-    }
         
     if (depdirs == NULL) {
         if ((flags & PKGSTORE_NOFL) == 0) {
             pkg_store_bintag(PKG_STORETAG_FL, nbuf);
-            pkgfl_store(fl, nbuf, exclpath, depdirs, PKGFL_ALL);
+            pkgfl_store(flist->fl, nbuf, exclpath, depdirs, PKGFL_ALL);
         }
         
     } else {
         if ((flags & PKGSTORE_NODEPFL) == 0) {
             pkg_store_bintag(PKG_STORETAG_DEPFL, nbuf);
-            pkgfl_store(fl, nbuf, exclpath, depdirs, PKGFL_DEPDIRS);
+            pkgfl_store(flist->fl, nbuf, exclpath, depdirs, PKGFL_DEPDIRS);
         }
         
 
         if ((flags & PKGSTORE_NOFL) == 0) {
             pkg_store_bintag(PKG_STORETAG_FL, nbuf);
-            pkgfl_store(fl, nbuf, exclpath, depdirs, PKGFL_NOTDEPDIRS);
+            pkgfl_store(flist->fl, nbuf, exclpath, depdirs, PKGFL_NOTDEPDIRS);
         }
     }
-
-    pkg_info_free_fl(pkg, fl);
-    pkgflmodule_allocator_pop_mark(flmark);
+    DBGF("END %s\n", pkg_snprintf_s(pkg));
+    pkg_info_free_flist(flist);
 }
 
 

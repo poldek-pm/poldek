@@ -504,10 +504,10 @@ int rpm_get_obsoletedby_pkg(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
     int i, n = 0;
     
 
-    self_cap = capreq_new(pkg->name, pkg->epoch, pkg->ver, pkg->rel,
+    self_cap = capreq_new(NULL, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
                           REL_EQ | REL_LT, 0);
     n = rpm_get_obsoletedby_cap(db, dbpkgs, self_cap, ldflags);
-    capreq_free(self_cap);
+    capreq_free(NULL, self_cap);
     
     if (pkg->cnfls == NULL)
         return n;

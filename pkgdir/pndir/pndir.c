@@ -429,7 +429,6 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     }
     
     pkgdir->flags |= pkgdir_flags;
-    pkgdir->pkgs = pkgs_array_new(1024);
     pkgdir->ts = ts;
     pkgdir->ts_orig = ts_orig;
     if (ts_orig)
@@ -482,11 +481,11 @@ static void do_free(struct pkgdir *pkgdir)
 }
 
 static
-struct pkg_data *pkg_data_malloc(void)  
+struct pkg_data *pkg_data_malloc(tn_alloc *na)  
 {
     struct pkg_data *pd;
     
-    pd = n_malloc(sizeof(*pd));
+    pd = na->na_malloc(na, sizeof(*pd));
     pd->off_nodep_files = 0; //pd->off_pkguinf = 0;
     pd->db = NULL;
     pd->db_dscr_h = NULL;
@@ -496,7 +495,7 @@ struct pkg_data *pkg_data_malloc(void)
 
 
 static
-void pkg_data_free(void *ptr) 
+void pkg_data_free(tn_alloc *na, void *ptr) 
 {
     struct pkg_data *pd = ptr;
 
@@ -514,12 +513,12 @@ void pkg_data_free(void *ptr)
         n_array_free(pd->langs);
         pd->langs = NULL;
     }
-    free(pd);
+    na->na_free(na, pd);
 }
 
 
 static 
-struct pkguinf *pndir_load_pkguinf(const struct pkg *pkg, void *ptr)
+struct pkguinf *pndir_load_pkguinf(tn_alloc *na, const struct pkg *pkg, void *ptr)
 {
     struct pkg_data  *pd = ptr;
     struct pkguinf   *pkgu = NULL;
@@ -542,7 +541,7 @@ struct pkguinf *pndir_load_pkguinf(const struct pkg *pkg, void *ptr)
         nbuf = n_buf_new(0);
         n_buf_init(nbuf, val, vlen);
         n_buf_it_init(&it, nbuf);
-        pkgu = pkguinf_restore(&it, "C");
+        pkgu = pkguinf_restore(na, &it, "C");
 
         if (pd->langs) {
             int i;
@@ -574,18 +573,18 @@ struct pkguinf *pndir_load_pkguinf(const struct pkg *pkg, void *ptr)
 }
 
 static 
-tn_array *pndir_load_nodep_fl(const struct pkg *pkg, void *ptr,
+tn_tuple *pndir_load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
                               tn_array *foreign_depdirs)
 {
     struct pkg_data *pd = ptr;
-    tn_array *fl = NULL;
+    tn_tuple *fl = NULL;
 
     pkg = pkg;
     if (pd->db && pd->off_nodep_files > 0) {
         tn_stream *st = tndb_tn_stream(pd->db);
         //printf("nodep_fl %p\n", pd->vf->vf_tnstream);
         n_stream_seek(st, pd->off_nodep_files, SEEK_SET);
-        fl = pkgfl_restore_st(st, foreign_depdirs, 0);
+        pkgfl_restore_st(na, &fl, st, foreign_depdirs, 0);
     }
     
     return fl;
@@ -603,15 +602,14 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     int                rc, klen;
     char               key[TNDB_KEY_MAX + 1];
 
-    idx = pkgdir->mod_data;
-    
 
+    idx = pkgdir->mod_data;
     if (!tndb_it_start(idx->db, &it))
         return 0;
 
     st = tndb_it_stream(&it);
     while ((rc = tndb_it_get_begin(&it, key, &klen, NULL)) > 0) {
-        struct pkg *kpkg;
+        struct pkg kpkg;
         
         n_assert(klen > 0);
             
@@ -621,17 +619,17 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             continue;
         }
 
-        if ((kpkg = pndir_parse_pkgkey(key, klen)) == NULL) {
+        if (pndir_parse_pkgkey(key, klen, &kpkg) == NULL) {
             logn(LOGERR, "%s: parse error", key);
             tndb_it_get_end(&it);
             continue;
         }
 
-        if ((pkg = pkg_restore_st(st, kpkg, pkgdir->foreign_depdirs,
+        if ((pkg = pkg_restore_st(st, pkgdir->na, &kpkg, pkgdir->foreign_depdirs,
                                   ldflags, &pkgo, pkgdir->path))) {
             pkg->pkgdir = pkgdir;
 
-            pkgd = pkg_data_malloc();
+            pkgd = pkg_data_malloc(pkgdir->na);
             pkgd->off_nodep_files = pkgo.nodep_files_offs;
             //pkgd->off_pkguinf = pkgo.pkguinf_offs;
             pkgd->db = tndb_ref(idx->db);
@@ -648,7 +646,6 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             pkg->load_nodep_fl = pndir_load_nodep_fl;
             n_array_push(pkgdir->pkgs, pkg);
         }
-        pkg_free(kpkg);
         tndb_it_get_end(&it);
     }
 
@@ -671,7 +668,7 @@ static tn_array *parse_removed(char *str)
         if (*p == '\0')
             continue;
         
-        if ((pkg = pndir_parse_pkgkey(p, strlen(p))) == NULL) {
+        if ((pkg = pndir_parse_pkgkey(p, strlen(p), NULL)) == NULL) {
             if (parse_nevr(p, &name, &epoch, &ver, &rel)) {
                 pkg = pkg_new(name, epoch, ver, rel, NULL, NULL);
             }

@@ -85,39 +85,29 @@ void store_pkg_fields_v0_17(tn_buf *nbuf, uint32_t size, uint32_t fsize,
 static
 void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs) 
 {
-    tn_array *fl;
-    void     *flmark;
+    struct pkgflist *flist;
 
-    
-    flmark = pkgflmodule_allocator_push_mark();
-    fl = pkg_info_get_fl(pkg);
-
-    if (fl && n_array_size(fl) == 0) {
-        n_array_free(fl);
-        fl = NULL;
-    }
-    	
-    if (fl == NULL) {
-        pkgflmodule_allocator_pop_mark(flmark);
+    flist = pkg_info_get_flist(pkg);
+    if (flist && n_tuple_size(flist->fl) == 0) {
+        pkg_info_free_flist(flist);
         return;
     }
-    
-    pkgfl_array_store_order(fl);
+
+    pkgfl_array_store_order(flist->fl);
         
     if (depdirs == NULL) {
         n_buf_printf(nbuf, "l:\n");
-        pkgfl_store(fl, nbuf, NULL, depdirs, PKGFL_ALL);
+        pkgfl_store(flist->fl, nbuf, NULL, depdirs, PKGFL_ALL);
         
     } else {
         n_buf_printf(nbuf, "L:\n");
-        pkgfl_store(fl, nbuf, NULL, depdirs, PKGFL_DEPDIRS);
+        pkgfl_store(flist->fl, nbuf, NULL, depdirs, PKGFL_DEPDIRS);
     
         n_buf_printf(nbuf, "l:\n");
-        pkgfl_store(fl, nbuf, NULL, depdirs, PKGFL_NOTDEPDIRS);
+        pkgfl_store(flist->fl, nbuf, NULL, depdirs, PKGFL_NOTDEPDIRS);
     }
     
-    pkg_info_free_fl(pkg, fl);
-    pkgflmodule_allocator_pop_mark(flmark);
+    pkg_info_free_flist(flist);
 }
 
 static

@@ -545,7 +545,7 @@ static
 int do_open(struct pkgdir *pkgdir, unsigned flags)
 {
     struct vfile         *vf;
-    char                 linebuf[1024 * 16];
+    char                 linebuf[1024 * 256];
     int                  nline;
     int                  nerr = 0, nread;
     struct pkgroup_idx   *pkgroups = NULL;
@@ -682,7 +682,6 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     memcpy(pkgdir->mod_data, &idx, sizeof(idx));
     pkgdir->depdirs = depdirs;
     pkgdir->flags |= pkgdir_flags;
-    pkgdir->pkgs = pkgs_array_new(1024);
     pkgdir->pkgroups = pkgroups;
     pkgdir->ts = ts;
     pkgdir->ts_orig = ts_orig;
@@ -718,7 +717,7 @@ void do_free(struct pkgdir *pkgdir)
 }
 
 static
-void pkg_data_free(void *ptr) 
+void pkg_data_free(tn_alloc *na, void *ptr) 
 {
     struct pkg_data *pd = ptr;
 
@@ -726,34 +725,36 @@ void pkg_data_free(void *ptr)
         vfile_close(pd->vf);
         pd->vf = NULL;
     }
-    
-    free(pd);
+    na->na_free(na, pd);
 }
 
 static 
-struct pkguinf *pdir_load_pkguinf(const struct pkg *pkg, void *ptr)
+struct pkguinf *pdir_load_pkguinf(tn_alloc *na,
+                                  const struct pkg *pkg, void *ptr)
 {
     struct pkg_data *pd = ptr;
     struct pkguinf *pkgu = NULL;
 
     pkg = pkg;
     if (pd->vf && pd->pkguinf_offs > 0)
-        pkgu = pkguinf_restore_rpmhdr_st(pd->vf->vf_tnstream, pd->pkguinf_offs);
+        pkgu = pkguinf_restore_rpmhdr_st(na,
+                                         pd->vf->vf_tnstream,
+                                         pd->pkguinf_offs);
 
     return pkgu;
 }
 
 static 
-tn_array *pdir_load_nodep_fl(const struct pkg *pkg, void *ptr,
+tn_tuple *pdir_load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
                              tn_array *foreign_depdirs)
 {
     struct pkg_data *pd = ptr;
-    tn_array *fl = NULL;
+    tn_tuple *fl = NULL;
 
     pkg = pkg;
     if (pd->vf && pd->nodep_files_offs > 0) {
         n_stream_seek(pd->vf->vf_tnstream, pd->nodep_files_offs, SEEK_SET);
-        fl = pkgfl_restore_st(pd->vf->vf_tnstream, foreign_depdirs, 0);
+        pkgfl_restore_st(na, &fl, pd->vf->vf_tnstream, foreign_depdirs, 0);
     }
     
     return fl;
@@ -778,12 +779,12 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 
     idx = pkgdir->mod_data;
     
-    while ((pkg = pdir_pkg_restore(idx->vf->vf_tnstream, NULL,
+    while ((pkg = pdir_pkg_restore(pkgdir->na, idx->vf->vf_tnstream, NULL,
                                    pkgdir->foreign_depdirs,
                                    ldflags, &pkgo, pkgdir->path))) {
         pkg->pkgdir = pkgdir;
 
-        pkgd = n_malloc(sizeof(*pkgd));
+        pkgd = pkgdir->na->na_malloc(pkgdir->na, sizeof(*pkgd));
         pkgd->nodep_files_offs = pkgo.nodep_files_offs;
         pkgd->pkguinf_offs = pkgo.pkguinf_offs;
         pkgd->vf = vfile_incref(idx->vf);

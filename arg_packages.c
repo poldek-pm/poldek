@@ -154,6 +154,7 @@ struct arg_packages *arg_packages_new(struct pkgset *ps)
 
 void arg_packages_free(struct arg_packages *aps) 
 {
+    n_array_free(aps->packages);
     n_array_free(aps->package_masks);
     n_array_free(aps->package_lists);
     n_hash_free(aps->package_caps);
@@ -162,6 +163,7 @@ void arg_packages_free(struct arg_packages *aps)
 
 void arg_packages_clean(struct arg_packages *aps) 
 {
+    n_array_clean(aps->packages);
     n_array_clean(aps->package_masks);
     n_array_clean(aps->package_lists);
     n_hash_clean(aps->package_caps);
@@ -215,7 +217,7 @@ int is_package_file(const char *path)
     return (stat(path, &st) == 0 && S_ISREG(st.st_mode));
 }
 
-
+#include <rpm/rpm_pkg_ld.h>
 int arg_packages_add_pkgfile(struct arg_packages *aps, const char *path)
 {
     int rc = 1;
@@ -225,9 +227,7 @@ int arg_packages_add_pkgfile(struct arg_packages *aps, const char *path)
     
     else {
         struct pkg *pkg;
-    
-
-        if ((pkg = pkg_ldrpm(path, PKG_LDNEVR)) == NULL)
+        if ((pkg = pkg_ldrpm(NULL, path, PKG_LDNEVR)) == NULL)
             return 0;
 
         arg_packages_add_pkg(aps, pkg);
@@ -386,7 +386,7 @@ int resolve_masks(tn_array *pkgs,
         }
         
         if (matches[j] == 0 && (flags & ARG_PACKAGES_RESOLV_MISSINGOK) == 0) {
-            logn(LOGERR, _("%s: no such packageMM"), mask);
+            logn(LOGERR, _("%s: no such package"), mask);
             rc = 0;
         }
 

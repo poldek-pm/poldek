@@ -27,8 +27,8 @@
 #include "capreq.h"
 #include "pkgset-req.h"
 
+void *pkg_na_malloc(struct pkg *pkg, size_t size);
 
-extern void *pkg_alloc(size_t size);
 
 static
 int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict, 
@@ -40,20 +40,22 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
 
 
 static
-struct reqpkg *reqpkg_new(struct pkg *pkg, uint8_t flags, int nadds)
+struct reqpkg *reqpkg_new(struct pkg *pkg, struct capreq *req,
+                          uint8_t flags, int nadds)
 {
     struct reqpkg *rpkg;
     
     if (flags & REQPKG_MULTI) {
         n_assert(nadds > 0);
-        rpkg = pkg_alloc(sizeof(*rpkg) + ((nadds + 1) * sizeof(rpkg)));
+        rpkg = pkg_na_malloc(pkg, sizeof(*rpkg) + ((nadds + 1) * sizeof(rpkg)));
         rpkg->adds[nadds] = NULL;
         
     } else {
-        rpkg = pkg_alloc(sizeof(*rpkg) + (nadds * sizeof(rpkg)));
+        rpkg = pkg_na_malloc(pkg, sizeof(*rpkg) + (nadds * sizeof(rpkg)));
     }
     	
     rpkg->pkg = pkg;
+    rpkg->req = req;
     rpkg->flags = flags;
     return rpkg;
 }
@@ -82,7 +84,7 @@ struct pkg_unreq *pkg_unreq_new(struct capreq *req, int mismatch)
 }
 
 static
-void visit_badreqs(struct pkg *pkg, int deep, int verb) 
+void visit_badreqs(struct pkg *pkg, int deep) 
 {
     int i;
     
@@ -90,8 +92,7 @@ void visit_badreqs(struct pkg *pkg, int deep, int verb)
         return;
 
     pkg_set_badreqs(pkg);
-    if (verb)
-        msg_i(2, deep, " %s\n", pkg_snprintf_s(pkg));
+    msg_i(4, deep, " %s\n", pkg_snprintf_s(pkg));
     deep += 2;
     
     if (pkg->revreqpkgs) {
@@ -99,25 +100,24 @@ void visit_badreqs(struct pkg *pkg, int deep, int verb)
             struct pkg *revpkg;
             revpkg = n_array_nth(pkg->revreqpkgs, i);
             if (!pkg_has_badreqs(revpkg)) 
-                visit_badreqs(revpkg, deep, verb);
+                visit_badreqs(revpkg, deep);
         }
     }
 }
 
 static 
-void mark_badreqs(struct pkgset *ps, int verb) 
+void mark_badreqs(struct pkgset *ps) 
 {
     int i, deep = 1;
 
-    if (verb)
-        msg(2, "Packages with unsatisfied dependencies:\n");
+    msg(4, "Packages with unsatisfied dependencies:\n");
     
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         if (pkg_has_badreqs(pkg)) {
             ps->nerrors++;
             pkg_clr_badreqs(pkg);
-            visit_badreqs(pkg, deep, verb);
+            visit_badreqs(pkg, deep);
         }
     }
 }
@@ -138,15 +138,14 @@ int pkgset_add_unreq(struct pkgset *ps, struct pkg *pkg, struct capreq *req,
 }
 
 
-int pkgset_verify_deps(struct pkgset *ps, int strict, int verb)
+int pkgset_verify_deps(struct pkgset *ps, int strict)
 {
     int i, j, nerrors = 0;
 
     n_assert(ps->_vrfy_unreqs == NULL);
     ps->_vrfy_unreqs = n_hash_new(127, (tn_fn_free)n_array_free);
 
-    if (verb)
-        msgn(1, _("\nVerifying dependencies..."));
+    msgn(4, _("\nVerifying dependencies..."));
     
     for (i=0; i < n_array_size(ps->pkgs); i++) {
         struct pkg *pkg;
@@ -182,11 +181,6 @@ int pkgset_verify_deps(struct pkgset *ps, int strict, int verb)
             nerrors++;
             if (verbose > 3)
                 msg(4, " req %-35s --> NOT FOUND\n", capreq_snprintf_s(req));
-#if 0            
-            else if (verb)
-                logn(LOGERR, _("%s: req %s not found"), pkg_snprintf_s(pkg),
-                     capreq_snprintf_s(req));
-#endif            
 
             pkgset_add_unreq(ps, pkg, req, 0);
             pkg_set_badreqs(pkg);
@@ -194,23 +188,18 @@ int pkgset_verify_deps(struct pkgset *ps, int strict, int verb)
             
         l_err_match:
             nerrors++;
-#if 0            
-            if (verb && verbose < 3)
-                logn(LOGERR, _("%s: req %s not matched"), pkg_snprintf_s(pkg),
-                     capreq_snprintf_s(req));
-#endif            
             pkgset_add_unreq(ps, pkg, req, 1);
             pkg_set_badreqs(pkg);
         }
     }
 
     if (nerrors)
-        mark_badreqs(ps, verb);
-    else if (verb)
-        msgn(2, _("No unsatisfied dependencies detected -- OK"));
+        mark_badreqs(ps);
+    else 
+        msgn(4, _("No unsatisfied dependencies detected -- OK"));
 
-    if (nerrors && verb) 
-        msgn(1, _("%d unsatisfied dependencies, %d packages cannot be installed"),
+    if (nerrors) 
+        msgn(4, _("%d unsatisfied dependencies, %d packages cannot be installed"),
             nerrors, ps->nerrors);
 
     return nerrors == 0;
@@ -221,7 +210,7 @@ __inline__
 static int add_reqpkg(struct pkg *pkg, struct capreq *req, struct pkg *dpkg)
 {
     struct reqpkg *rpkg;
-    struct reqpkg tmp_rpkg = { NULL, 0 };
+    struct reqpkg tmp_rpkg = { NULL, NULL, 0 };
 
     tmp_rpkg.pkg = dpkg;
     rpkg = n_array_bsearch(pkg->reqpkgs, &tmp_rpkg);
@@ -233,8 +222,9 @@ static int add_reqpkg(struct pkg *pkg, struct capreq *req, struct pkg *dpkg)
             rpkg->flags |= REQPKG_PREREQ_UN;
         
     } else {
-        rpkg = reqpkg_new(dpkg, capreq_is_prereq(req) ? REQPKG_PREREQ :
-                                capreq_is_prereq_un(req) ? REQPKG_PREREQ_UN : 0,
+        rpkg = reqpkg_new(dpkg, req,
+                          capreq_is_prereq(req) ? REQPKG_PREREQ :
+                          capreq_is_prereq_un(req) ? REQPKG_PREREQ_UN : 0,
                           0);
         
         n_array_push(pkg->reqpkgs, rpkg);
@@ -405,7 +395,7 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
         int isneq;
         uint8_t flags;
         struct reqpkg *rpkg;
-        struct reqpkg tmp_rpkg = {NULL, 0};
+        struct reqpkg tmp_rpkg = {NULL, NULL, 0};
 
         flags = 0;
         flags |= capreq_is_prereq(req) ? REQPKG_PREREQ : 0;
@@ -437,7 +427,7 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
             struct pkg *dpkg;
 
             dpkg = matches[0];
-            rpkg = reqpkg_new(dpkg, flags | REQPKG_MULTI, nmatched - 1);
+            rpkg = reqpkg_new(dpkg, req, flags | REQPKG_MULTI, nmatched - 1);
             n_array_push(pkg->reqpkgs, rpkg);
             n_array_sort(pkg->reqpkgs);
             if (dpkg->revreqpkgs == NULL)
@@ -447,7 +437,7 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
             for (i=1; i<nmatched; i++) {
                 dpkg = matches[i];
                 
-                rpkg->adds[i - 1] = reqpkg_new(dpkg, flags, 0);
+                rpkg->adds[i - 1] = reqpkg_new(dpkg, req, flags, 0);
                 if (dpkg->revreqpkgs == NULL)
                     dpkg->revreqpkgs = n_array_new(2, NULL, NULL);
                 n_array_push(dpkg->revreqpkgs, pkg);
@@ -458,28 +448,12 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
     return 1;
 }
 
-static
-struct cnflpkg *cnflpkg_new(struct pkg *pkg, uint8_t flags)
-{
-    struct cnflpkg *cpkg;
-    
-    cpkg = pkg_alloc(sizeof(*cpkg));
-    cpkg->pkg = pkg;
-    cpkg->flags = flags;
-    return cpkg;
-}
-
-static
-int cnflpkg_cmp(struct cnflpkg *p1, struct cnflpkg *p2)
-{
-    return (size_t)p1->pkg - (size_t)p2->pkg;
-}
 
 
-int pkgset_verify_conflicts(struct pkgset *ps, int strict, int verb) 
+int pkgset_verify_conflicts(struct pkgset *ps, int strict) 
 {
     int i, j;
-    
+
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg;
 
@@ -508,22 +482,6 @@ int pkgset_verify_conflicts(struct pkgset *ps, int strict, int verb)
             }
         }
     }
-
-    if (verb && verbose > 1) {
-        int j;
-        for (i=0; i<n_array_size(ps->pkgs); i++) {
-            struct pkg *pkg = n_array_nth(ps->pkgs, i);
-            if (pkg->cnflpkgs == NULL)
-                continue;
-            msg(2, "%s -> ", pkg_snprintf_s(pkg)); 
-            for (j=0; j<n_array_size(pkg->cnflpkgs); j++) {
-                struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
-                msg(2, "_%s%s, ", cpkg->flags & CNFLPKG_OB ? "*":"", 
-                    pkg_snprintf_s(cpkg->pkg));
-            }
-            msg(2, "_\n");
-        }
-    }
     
     return 1;
 }
@@ -534,15 +492,14 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
                     struct pkg *suspkgs[], int npkgs)
 {
     int i, nmatch = 0;
-    int isobsl = cnfl_is_obsl(cnfl) ? CNFLPKG_OB : 0;
     
     msg(4, " cnfl %-35s --> ",  capreq_snprintf_s(cnfl));
     n_assert(npkgs > 0);
     
     for (i = 0; i < npkgs; i++) {
         struct pkg *spkg = suspkgs[i];
-        struct cnflpkg *cnflpkg;
-
+        struct reqpkg *cnflpkg;
+        
         /* bastard conflicts are direct */
         if (capreq_is_bastard(cnfl) && pkg_cmp_name(pkg, spkg) != 0)
             continue;
@@ -559,22 +516,22 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
 
         cnflpkg = NULL;
         if (pkg->cnflpkgs) {
-            struct cnflpkg tmp_spkg = { spkg, 0 };
+            struct reqpkg tmp_spkg = { spkg, NULL, 0 };
             cnflpkg = n_array_bsearch(pkg->cnflpkgs, &tmp_spkg);
         }
         
         if (cnflpkg != NULL) {
             if (cnfl_is_obsl(cnfl)) 
-                cnflpkg->flags |= CNFLPKG_OB;
+                cnflpkg->flags |= REQPKG_OBSOLETE;
             
         } else {
-            cnflpkg = cnflpkg_new(spkg, isobsl);
+            cnflpkg = reqpkg_new(spkg, cnfl, REQPKG_CONFLICT, 0);
             if (pkg->cnflpkgs == NULL) 
                 pkg->cnflpkgs = n_array_new(n_array_size(pkg->cnfls)/2+2, NULL,
-                                            (tn_fn_cmp)cnflpkg_cmp);
+                                            (tn_fn_cmp)reqpkg_cmp);
 
             if (cnfl_is_obsl(cnfl))
-                cnflpkg->flags |= CNFLPKG_OB;
+                cnflpkg->flags |= REQPKG_OBSOLETE;
             n_array_push(pkg->cnflpkgs, cnflpkg);
             n_array_sort(pkg->cnflpkgs);
         }
@@ -588,6 +545,4 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
     
     return nmatch;
 }
-
-
 

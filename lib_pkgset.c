@@ -79,12 +79,6 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
     if (ts->getop(ts, POLDEK_OP_UNIQN))
         ps_flags |= PSET_UNIQ_PKGNAME;
 
-    if (ts->getop(ts, POLDEK_OP_VRFY_DEPS))
-        ps_flags |= PSET_VERIFY_DEPS;
-
-    if (ts->getop(ts, POLDEK_OP_VRFY_CNFLS))
-        ps_flags |= PSET_VERIFY_CNFLS;
-
     if (ts->getop(ts, POLDEK_OP_VRFY_FILECNFLS))
         ps_flags |= PSET_VERIFY_FILECNFLS;
         

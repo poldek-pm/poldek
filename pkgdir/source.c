@@ -198,7 +198,11 @@ void source_free(struct source *src)
 
     if (src->lc_lang)
         free(src->lc_lang);
-    
+
+    if (src->mkidx_exclpath)
+        n_array_free(src->mkidx_exclpath);
+
+    memset(src, 0, sizeof(*src));
     free(src);
 }
 

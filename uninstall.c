@@ -69,8 +69,8 @@ int visit_pkg(int indent, struct pkg *pkg, struct pkgdb *db,
         }
     
     if (pkg->fl)
-        for (i=0; i < n_array_size(pkg->fl); i++) {
-            struct pkgfl_ent *flent = n_array_nth(pkg->fl, i);
+        for (i=0; i < n_tuple_size(pkg->fl); i++) {
+            struct pkgfl_ent *flent = n_tuple_nth(pkg->fl, i);
             char path[PATH_MAX], *endp;
             
             endp = path;
@@ -204,11 +204,9 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
     struct dbpkg_set  *unpoldek_tset;
     tn_array          *pkgs = NULL;
     const tn_array    *pkgmasks;
-    void              *pkgflmod_mark = NULL;
     
 
     unpoldek_tset = dbpkg_set_new();
-    pkgflmod_mark = pkgflmodule_allocator_push_mark();
     pkgmasks = poldek_ts_get_arg_pkgmasks(ts);
     
     for (i=0; i < n_array_size(pkgmasks); i++) {
@@ -274,7 +272,6 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
     }
 
     dbpkg_set_free(unpoldek_tset);
-    pkgflmodule_allocator_pop_mark(pkgflmod_mark);
 
     if (nerr)
         doit = 0;

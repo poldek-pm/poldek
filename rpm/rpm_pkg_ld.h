@@ -15,11 +15,13 @@ tn_array *rpm_capreqs_ldhdr(tn_array *arr, const Header h, int crtype);
 
 #endif
 
-int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname);
+int pkgfl_ldhdr(tn_alloc *na, tn_tuple **fl, Header h, int which,
+                const char *pkgname);
 
-struct pkg *pkg_ldrpmhdr(Header h, const char *fname, unsigned fsize,
+struct pkg *pkg_ldrpmhdr(tn_alloc *na,
+                         Header h, const char *fname, unsigned fsize,
                          unsigned ldflags);
 
-struct pkg *pkg_ldrpm(const char *path, unsigned ldflags);
+struct pkg *pkg_ldrpm(tn_alloc *na, const char *path, unsigned ldflags);
 
 #endif

@@ -345,7 +345,7 @@ int select_best_pkg(const struct pkg *marker,
         
         if (pkg->cnflpkgs != NULL)
             for (j = 0; j < n_array_size(pkg->cnflpkgs); j++) {
-                struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
+                struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
                 if (pkg_is_marked(cpkg->pkg))
                     ncnfls[i]++;
             }
@@ -670,8 +670,8 @@ int process_pkg_orphans(struct pkg *pkg, struct pkgset *ps,
     if (pkg->fl == NULL)
         return n;
     
-    for (i=0; i < n_array_size(pkg->fl); i++) {
-        struct pkgfl_ent *flent = n_array_nth(pkg->fl, i);
+    for (i=0; i < n_tuple_size(pkg->fl); i++) {
+        struct pkgfl_ent *flent = n_tuple_nth(pkg->fl, i);
         char path[PATH_MAX], *endp;
 
         endp = path;
@@ -882,8 +882,8 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                 memset(cap, 0, sizeof(*cap));
                 cap->_buf[0] = '\0';
                 
-                for (j=0; j < n_array_size(dbpkg->pkg->fl); j++) {
-                    struct pkgfl_ent *flent = n_array_nth(dbpkg->pkg->fl, j);
+                for (j=0; j < n_tuple_size(dbpkg->pkg->fl); j++) {
+                    struct pkgfl_ent *flent = n_tuple_nth(dbpkg->pkg->fl, j);
                     char *path, *endp;
                     int path_left_size;
                     
@@ -1622,7 +1622,7 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
     /* conflicts in install set */
     if (pkg->cnflpkgs != NULL)
         for (i = 0; i < n_array_size(pkg->cnflpkgs); i++) {
-            struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, i);
+            struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, i);
 
             if (pkg_is_marked(cpkg->pkg)) {
                 logn(LOGERR, _("%s conflicts with %s"),
@@ -1984,12 +1984,7 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
         }
 
         if (is_installed == 0)
-            n_array_push(iinf->uninstalled_pkgs,
-                         pkg_new_ext(pkg->name, pkg->epoch, pkg->ver, pkg->rel,
-                                     pkg->arch, pkg->os,
-                                     pkg->fn,
-                                     pkg->size, pkg->fsize,
-                                     pkg->btime));
+            n_array_push(iinf->uninstalled_pkgs, pkg_link(pkg));
     }
 
     if (vrfy) 
@@ -2128,7 +2123,6 @@ static void init_upgrade_s(struct upgrade_s *upg, struct poldek_ts *ts)
     upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
     upg->ts = ts; 
-    upg->pkgflmod_mark = pkgflmodule_allocator_push_mark();
     upg->pkg_stack = n_array_new(32, NULL, NULL);
 }
 
@@ -2142,7 +2136,6 @@ static void destroy_upgrade_s(struct upgrade_s *upg)
     n_array_free(upg->orphan_dbpkgs);
     upg->ts = NULL;
     
-    pkgflmodule_allocator_pop_mark(upg->pkgflmod_mark);
     memset(upg, 0, sizeof(*upg));
 }
 
@@ -2159,9 +2152,6 @@ static void reset_upgrade_s(struct upgrade_s *upg)
     
     upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
-
-    pkgflmodule_allocator_pop_mark(upg->pkgflmod_mark);
-    upg->pkgflmod_mark = pkgflmodule_allocator_push_mark();
 }
 
 
