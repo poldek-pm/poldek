@@ -121,7 +121,17 @@ static char           *histfile;
 
 
 static struct shell_s shell_s = {NULL, NULL, 0, NULL, NULL, 0, NULL};
-static tn_array *compl_shpkgs = NULL;
+
+#define CMPLT_CTX_AVPKGS       0
+#define CMPLT_CTX_AVPKGS_UPGR  1
+#define CMPLT_CTX_INSTPKGS     2
+
+struct completion_ctx {
+    int      type;
+    tn_array *shpkgs;
+};
+
+static struct completion_ctx cmplt_ctx = { 0, NULL };
 
 static
 int command_cmp(struct command *c1, struct command *c2) 
@@ -511,18 +521,21 @@ char *stripwhite(char *string)
 }
 
 
-#define COMPL_CTX_AV_PKGS    0
-#define COMPL_CTX_INST_PKGS  1
-static void switch_pkg_completion(int ctx) 
+
+static void switch_pkg_completion(int ctx_type) 
 {
-    switch (ctx) {
-        case COMPL_CTX_AV_PKGS:
-            compl_shpkgs = shell_s.avpkgs;
+    switch (ctx_type) {
+        case CMPLT_CTX_AVPKGS_UPGR:
+        case CMPLT_CTX_AVPKGS:
+            cmplt_ctx.shpkgs = shell_s.avpkgs;
+            cmplt_ctx.type = ctx_type;
             break;
 
-        case COMPL_CTX_INST_PKGS:
-            if (shell_s.instpkgs)
-                compl_shpkgs = shell_s.instpkgs;
+        case CMPLT_CTX_INSTPKGS:
+            if (shell_s.instpkgs) {
+                cmplt_ctx.shpkgs = shell_s.instpkgs;
+                cmplt_ctx.type = ctx_type;
+            }
             break;
             
         default:
@@ -557,24 +570,47 @@ char *command_generator(const char *text, int state)
 static
 char *pkgname_generator(const char *text, int state)
 {
-    static int i, len;
-    char *name = NULL;
-
+    static int           i, len;
+    char                 *name = NULL;
+    
     
     if (state == 0) {
         len = strlen(text);
         if (len == 0)
             i = 0;
         else 
-            i = n_array_bsearch_idx_ex(compl_shpkgs, text,
+            i = n_array_bsearch_idx_ex(cmplt_ctx.shpkgs, text,
                                        (tn_fn_cmp)shpkg_ncmp_str);
     }
 
-    if (i > -1 && i < n_array_size(compl_shpkgs)) {
-        struct shpkg *shpkg = n_array_nth(compl_shpkgs, i++);
-        if (len == 0 || strncmp(shpkg->nevr, text, len) == 0) 
-            name = n_strdup(shpkg->nevr);
+    
+    while (i > -1 && i < n_array_size(cmplt_ctx.shpkgs)) {
+        struct shpkg *shpkg = n_array_nth(cmplt_ctx.shpkgs, i++);
+        
+        if (len == 0 || strncmp(shpkg->nevr, text, len) == 0) {
+            name = shpkg->nevr;
+            
+            if (cmplt_ctx.type == CMPLT_CTX_AVPKGS_UPGR && shell_s.instpkgs) {
+                int found, cmprc;
+
+                name = NULL;
+                found = shpkg_cmp_lookup(shpkg, shell_s.instpkgs, 0, &cmprc,
+                                         NULL, 0);
+                
+                if (found && cmprc > 0) {
+                    name = shpkg->nevr;
+                    break;
+                }
+                
+            } else {            /* no additional criteria */
+                break;
+            }
+            
+        }
     }
+    
+    if (name)
+        name = n_strdup(name);
     
     return name;
 }
@@ -601,9 +637,16 @@ char **poldek_completion(const char *text, int start, int end)
 
     if (*p) {
         if (strncmp(p, "un", 2) == 0) /* uninstall cmd */
-            switch_pkg_completion(COMPL_CTX_INST_PKGS);
+            switch_pkg_completion(CMPLT_CTX_INSTPKGS);
+        
+        else if (strncmp(p, "upgr", 4) == 0) /* upgrade cmd */
+            switch_pkg_completion(CMPLT_CTX_AVPKGS_UPGR);
+        
+        else if (strncmp(p, "gree", 4) == 0) /* greedy-upgrade cmd */
+            switch_pkg_completion(CMPLT_CTX_AVPKGS_UPGR);
+        
         else 
-            switch_pkg_completion(COMPL_CTX_AV_PKGS);
+            switch_pkg_completion(CMPLT_CTX_AVPKGS);
     }
         
     if (start == 0 || strchr(p, ' ') == NULL) 
@@ -819,22 +862,27 @@ static struct pkgdir *load_installed_pkgdir(int reload)
         
         if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache) {
             dir = pkgdir_new("db", dbcache_path, NULL, PKGDIR_NEW_VERIFY);
-            msgn(1, _("Loading cache %s..."), dbcache_path);
-            if (pkgdir_load(dir, NULL, PKGDIR_LD_NOUNIQ)) {
-                int n = n_array_size(dir->pkgs);
-                msgn(1, ngettext("%d package read",
-                                 "%d packages read", n), n);
-                
-            } else {
-                pkgdir_free(dir);
-                dir = NULL;
+            if (dir != NULL) {
+                msgn(1, _("Loading cache %s..."), dbcache_path);
+                if (pkgdir_load(dir, NULL, PKGDIR_LD_NOUNIQ)) {
+                    int n = n_array_size(dir->pkgs);
+                    msgn(1, ngettext("%d package read",
+                                     "%d packages read", n), n);
+                    
+                } else {
+                    pkgdir_free(dir);
+                    dir = NULL;
+                }
             }
         }
     }
     
     
-    if (dir == NULL) 
+    if (dir == NULL) {
+        mtime_rpmdb += 1;       /* will be saved on exit */
         dir = pkgdir_load_db(shell_s.inst->rootdir, dbpath);
+    }
+    
 
     if (dir == NULL) {
         logn(LOGERR, _("Load installed packages failed"));
@@ -917,6 +965,46 @@ static tn_array *shpkgs_to_pkgs(tn_array **pkgsp, tn_array *shpkgs)
     n_array_map_arg(shpkgs, map_fn_2pkg, *pkgsp);
     n_array_sort(*pkgsp);
     return *pkgsp;
+}
+
+
+int shpkg_cmp_lookup(struct shpkg *lshpkg, tn_array *shpkgs,
+                     int compare_ver, int *cmprc,
+                     char *evr, size_t size) 
+{
+    struct shpkg *shpkg = NULL;
+    char name[256];
+    int n, finded = 0;
+
+    snprintf(name, sizeof(name), "%s-", lshpkg->pkg->name);
+    n = n_array_bsearch_idx_ex(shpkgs, name, (tn_fn_cmp)shpkg_ncmp_str);
+
+    if (n == -1)
+        return 0;
+
+    while (n < n_array_size(shpkgs)) {
+        shpkg = n_array_nth(shpkgs, n++);
+
+        if (strcmp(shpkg->pkg->name, lshpkg->pkg->name) == 0) {
+            finded = 1;
+            break;
+        }
+
+        if (*shpkg->pkg->name != *lshpkg->pkg->name)
+            break;
+    }
+    
+    if (!finded)
+        return 0;
+    
+    if (compare_ver == 0)
+        *cmprc = pkg_cmp_evr(lshpkg->pkg, shpkg->pkg);
+    else 
+        *cmprc = pkg_cmp_ver(lshpkg->pkg, shpkg->pkg);
+    
+    snprintf(evr, size, "%s-%s", shpkg->pkg->ver, shpkg->pkg->rel);
+    
+    return finded;
 }
 
 
@@ -1113,7 +1201,7 @@ int init_shell_data(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         load_installed_packages(&shell_s, 0);
     }
 
-    switch_pkg_completion(COMPL_CTX_AV_PKGS);
+    switch_pkg_completion(CMPLT_CTX_AVPKGS);
     init_commands();
     return 1;
 }

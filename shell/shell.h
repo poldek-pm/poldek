@@ -51,7 +51,13 @@ void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs,
                          tn_array **pkgsp, int strict);
 
 
-
+/*
+  search shpkg in shpkgs, if found compare versions and store result in cmprc
+  and if evr isn't NULL store EVR in it.  
+ */
+int shpkg_cmp_lookup(struct shpkg *shpkg, tn_array *shpkgs,
+                     int compare_ver, int *cmprc,
+                     char *evr, size_t size);
 
 struct cmdarg {
     tn_array         *pkgnames; /* arguments */

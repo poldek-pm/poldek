@@ -172,44 +172,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 
-static int find_pkg(struct shpkg *lshpkg, tn_array *shpkgs, int compare_ver, 
-                    int *cmprc, char *evr, size_t size) 
-{
-    struct shpkg *shpkg = NULL;
-    char name[256];
-    int n, finded = 0;
-
-    snprintf(name, sizeof(name), "%s-", lshpkg->pkg->name);
-    n = n_array_bsearch_idx_ex(shpkgs, name, (tn_fn_cmp)shpkg_ncmp_str);
-
-    if (n == -1)
-        return 0;
-
-    while (n < n_array_size(shpkgs)) {
-        shpkg = n_array_nth(shpkgs, n++);
-
-        if (strcmp(shpkg->pkg->name, lshpkg->pkg->name) == 0) {
-            finded = 1;
-            break;
-        }
-
-        if (*shpkg->pkg->name != *lshpkg->pkg->name)
-            break;
-    }
-    
-    if (!finded)
-        return 0;
-    
-    if (compare_ver == 0)
-        *cmprc = pkg_cmp_evr(lshpkg->pkg, shpkg->pkg);
-    else 
-        *cmprc = pkg_cmp_ver(lshpkg->pkg, shpkg->pkg);
-    
-    snprintf(evr, size, "%s-%s", shpkg->pkg->ver, shpkg->pkg->rel);
-    
-    return finded;
-}
-
 static tn_fn_cmp select_cmpf(unsigned flags) 
 {
     tn_fn_cmp cmpf = NULL;
@@ -282,12 +244,14 @@ static int ls(struct cmdarg *cmdarg)
             shpkg = n_array_nth(ls_shpkgs, i);
             
             if (cmdarg->flags & OPT_LS_INSTALLED) {
-                finded = find_pkg(shpkg, cmdarg->sh_s->avpkgs, compare_ver, 
-                                  &cmprc, evr, sizeof(evr));
+                finded = shpkg_cmp_lookup(shpkg, cmdarg->sh_s->avpkgs,
+                                          compare_ver, &cmprc,
+                                          evr, sizeof(evr));
                 
             } else {
-                finded = find_pkg(shpkg, cmdarg->sh_s->instpkgs, compare_ver,
-                                  &cmprc, evr, sizeof(evr));
+                finded = shpkg_cmp_lookup(shpkg, cmdarg->sh_s->instpkgs,
+                                          compare_ver, &cmprc,
+                                          evr, sizeof(evr));
                 cmprc = -cmprc;
             }
             
