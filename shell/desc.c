@@ -713,6 +713,9 @@ static int desc(struct cmdarg *cmdarg)
 
         if (cmdarg->flags & OPT_DESC_FL)
             show_files(shpkg->pkg);
+
+        if (shSIGINT) 
+            goto l_end;
     }
     
  l_end:

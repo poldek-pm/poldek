@@ -479,7 +479,7 @@ static int search(struct cmdarg *cmdarg)
     }
     bar_v = 0;
     
-    for (i=0; i<n_array_size(shpkgs); i++) {
+    for (i=0; i < n_array_size(shpkgs); i++) {
         struct shpkg *shpkg = n_array_nth(shpkgs, i);
         
         if (pkg_match(shpkg->pkg, pt, cmdarg->flags)) 
@@ -493,6 +493,10 @@ static int search(struct cmdarg *cmdarg)
                 msg(0, "_.");
             bar_v = v;
         }
+        
+        if (shSIGINT)
+            goto l_end;
+        
     }
     
     if (display_bar) 

@@ -299,12 +299,16 @@ static int ls(struct cmdarg *cmdarg)
             memcpy(p, evr, n);
             n_array_push(evrs, p);
             n_array_push(shpkgs_tmp, shpkg);
+
+            if (shSIGINT)
+                break;
         }
         
         if (ls_shpkgs != av_shpkgs)
             n_array_free(ls_shpkgs);
         ls_shpkgs = shpkgs_tmp;
     }
+    
 
     if (n_array_size(ls_shpkgs))
         rc = do_ls(ls_shpkgs, cmdarg, evrs);
@@ -398,7 +402,7 @@ int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg, const tn_array *evrs)
     
     hdr[sizeof(hdr) - 2] = '\n';
     
-    if (shOnTTY && term_get_height() < n_array_size(shpkgs)) {
+    if (shOnTTY && (1.3 * term_get_height()) < n_array_size(shpkgs)) {
         if ((out_stream = pager(&pg)) == NULL)
             out_stream = stdout;
     }

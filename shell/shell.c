@@ -48,7 +48,9 @@
 
 int shOnTTY = 0;
 
-static volatile sig_atomic_t shDone = 0;
+static volatile sig_atomic_t shDone   = 0;
+static volatile sig_atomic_t shInCmd  = 0;
+volatile sig_atomic_t shSIGINT = 0;
 
 static int gmt_off = 0;         /* TZ offset */
 
@@ -371,9 +373,9 @@ int docmd(struct command *cmd, int argc, const char **argv)
     
     parse_flags = argp_parse_flags;
 
-/*    if (cmd->flags & COMMAND_NOHELP)
-      parse_flags |= ARGP_NO_HELP;*/
-
+    shSIGINT = 0;
+    shInCmd = 1;
+    
     if ((cmd->flags & COMMAND_NOHELP) &&
         (cmd->flags & COMMAND_NOARGS) &&
         (cmd->flags & COMMAND_NOOPTS)) {
@@ -404,6 +406,8 @@ int docmd(struct command *cmd, int argc, const char **argv)
     rc = cmd->do_cmd_fn(&cmdarg);
 
  l_end:
+    shInCmd = 0;
+    
     if (cmdarg.pkgnames)
         n_array_free(cmdarg.pkgnames);
 
@@ -421,8 +425,6 @@ int docmd(struct command *cmd, int argc, const char **argv)
     verbose = verbose_;
     return rc;
 }
-
-
 
 
 static
@@ -461,7 +463,6 @@ int execute_line(char *line)
             if (p == NULL) {    /* no args */
                 l = alloca(len);
                 memcpy(l, alias->cmdline, len);
-                
                 
             } else {
                 p++;
@@ -696,14 +697,15 @@ static int argv_is_help(int argc, const char **argv)
     return is_help;
 }
 
-
+extern char poldek_banner[];
 static
 int cmd_help(struct cmdarg *cmdarg)
 {
     int i = 0;
     
     cmdarg = cmdarg;
-    printf("%s %s (%s)\n", PACKAGE, VERSION, VERSION_STATUS);
+    
+    printf("%s\n", poldek_banner);
     while (commands_tab[i]) {
         struct command *cmd = commands_tab[i++];
         char buf[256], *p;
@@ -947,8 +949,17 @@ int sh_printf_c(FILE *stream, int color, const char *fmt, ...)
     return n;
 }
 
-
-
+static void sigint_handler(int sig)
+{
+    signal(sig, sigint_handler);
+    
+    if (shInCmd) {
+        shSIGINT = 1;
+        return;
+    }
+    
+    shDone = 1;
+}
 
 static void shell_end(int sig) 
 {
@@ -1116,7 +1127,7 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         read_history(histfile);
     }
     
-    signal(SIGINT,  shell_end);
+    signal(SIGINT,  sigint_handler);
     signal(SIGTERM, shell_end);
     signal(SIGQUIT, shell_end);
     
@@ -1138,7 +1149,7 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         free(line);
 
         /* reset handlers */
-        signal(SIGINT,  shell_end);
+        signal(SIGINT,  sigint_handler);
         signal(SIGTERM, shell_end);
         signal(SIGQUIT, shell_end);
     }

@@ -8,6 +8,7 @@
 
 #include <argp.h>
 #include <time.h>
+#include <signal.h>
 
 #include "pkg.h"
 #include "log.h"
@@ -100,5 +101,6 @@ struct command {
 int sh_printf_c(FILE *stream, int color, const char *fmt, ...);
 
 extern int shOnTTY;
+extern volatile sig_atomic_t shSIGINT;
 
 #endif 
