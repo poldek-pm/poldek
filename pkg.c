@@ -461,7 +461,7 @@ __inline__
 int cap_match_req(const struct capreq *cap, const struct capreq *req,
                   int strict)
 {
-    register int cmprc, evr = 0;
+    register int cmprc = 0, evr = 0;
 
     
     if ((strcmp(capreq_name(cap), capreq_name(req))) != 0)
@@ -503,7 +503,7 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
 
 int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req)
 {
-    register int cmprc, evr = 0;
+    register int cmprc = 0, evr = 0;
 
 
     n_assert(strcmp(pkg->name, capreq_name(req)) == 0);
