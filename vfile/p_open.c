@@ -20,7 +20,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <pty.h>
+
 
 #include "p_open.h"
 
@@ -145,7 +145,8 @@ int p_close(struct p_open_st *pst)
     return rc;
 }
 
-
+#if ENABLE_PTYOPEN
+#include <pty.h>
 FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[])
 {
     int fd;
@@ -177,4 +178,4 @@ FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[])
     
     return pst->stream;
 }
-
+#endif
