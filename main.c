@@ -1073,8 +1073,9 @@ int prepare_sources(tn_array *sources, tn_hash *htcnf)
         else
             n_array_push(srcs_path, source_link(src));
     }
-
-    rc = get_conf_sources(srcs_path, srcs_named, htcnf);
+    if (n_array_size(srcs_named) > 0 || n_array_size(sources) == 0)
+        rc = get_conf_sources(srcs_path, srcs_named, htcnf);
+    
     n_array_free(srcs_named);
     n_array_clean(sources);
 
