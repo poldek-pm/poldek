@@ -20,7 +20,7 @@
 
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>
-
+#define ENABLE_TRACE 0
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
@@ -32,6 +32,7 @@
 #include "pkgroup.h"
 #include "pkg_ver_cmp.h"
 
+int poldek_conf_promote_epoch = 0;
 static tn_hash *architecture_h = NULL;
 static tn_hash *operatingsystem_h = NULL; 
 
@@ -664,6 +665,15 @@ int rel_match(int cmprc, const struct capreq *req)
 
 #define rel_not_match(cmprc, req) (rel_match(cmprc, req) == 0)
 
+static void promote_epoch_warn(int verbose_level,
+                               const char *title0, const char *p0,
+                               const char *p1)
+{
+    if (verbose > verbose_level)
+        logn(LOGWARN, "%s '%s' needs an epoch (assuming same "
+             "epoch as %s)\n", title0, p0, p1);
+}
+
 __inline__
 int cap_match_req(const struct capreq *cap, const struct capreq *req,
                   int strict)
@@ -672,9 +682,48 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
 
     DBGF("cap %s req %s\n", capreq_snprintf_s(cap), capreq_snprintf_s0(req));
     
-    if ((strcmp(capreq_name(cap), capreq_name(req))) != 0)
+    if (strcmp(capreq_name(cap), capreq_name(req)) != 0)
         return 0;
-    
+
+    if (!capreq_versioned(req))
+        return 1;
+
+    if (capreq_has_epoch(cap) || capreq_has_epoch(req)) {
+        int promote = 0;
+        
+        if (poldek_conf_promote_epoch) {
+            if (!capreq_has_epoch(req)) {
+                promote_epoch_warn(1, "req", capreq_snprintf_s(req),
+                                   capreq_snprintf_s0(cap));
+                promote = 1;
+            }
+
+            if (!capreq_has_epoch(cap)) {
+                promote_epoch_warn(1, "cap", capreq_snprintf_s(cap),
+                                   capreq_snprintf_s0(req));
+                promote = 1;
+            }
+        }
+        
+        if (promote) {
+            cmprc = 0;
+            
+        } else {
+            cmprc = capreq_epoch(cap) - capreq_epoch(req);
+            if (cmprc != 0)
+                return rel_match(cmprc, req);
+        }
+        evr = 1;
+        
+    }
+#if 0                           /* disabled autopromotion */
+    else if (capreq_epoch(req) > 0) { /* always promote cap's epoch */
+        cmprc = 0;
+        evr = 1;
+    }
+#endif    
+
+#if 0    
     if (capreq_has_epoch(req)) {
         if (!capreq_has_epoch(cap))
             return strict == 0;
@@ -684,7 +733,8 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
             return rel_match(cmprc, req);
         evr = 1;
     }
-
+#endif
+    
     if (capreq_has_ver(req)) {
         if (!capreq_has_ver(cap))
             return strict == 0;
@@ -720,15 +770,24 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
     if (!capreq_versioned(req))
         return 1;
 
-    //if (promote_epoch == -1)
-    //promote_epoch = poldek_conf_promote_epoch; DUPA
+    if (promote_epoch == -1)
+        promote_epoch = poldek_conf_promote_epoch;
 
-    if (pkg->epoch) {
+    if (pkg->epoch || capreq_has_epoch(req)) {
+        int promote = 0;
         if (!capreq_has_epoch(req) && promote_epoch) {
-            if (verbose > 1)
-                logn(LOGWARN, "req '%s' needs an epoch "
-                     "(assuming same epoch as %s)\n",
-                     capreq_snprintf_s(req), pkg_snprintf_epoch_s(pkg));
+            promote_epoch_warn(1, "req", capreq_snprintf_s(req),
+                               pkg_snprintf_epoch_s(pkg));
+            promote = 1;
+        } 
+
+        if (!pkg->epoch && capreq_epoch(req) > 0 && promote_epoch) {
+            promote_epoch_warn(1, "package", pkg_snprintf_epoch_s(pkg),
+                               capreq_snprintf_s(req));
+            promote = 1;
+        }
+
+        if (promote) {
             cmprc = 0;
             
         } else {
@@ -738,14 +797,16 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
         }
         evr = 1;
         
-    } else if (capreq_epoch(req) > 0) { /* always promote package's epoch */
+    }
+#if 0    /* disabled autopromotion */
+    else if (capreq_epoch(req) > 0) { /* always promote package's epoch */
         cmprc = 0;
         evr = 1;
     }
-    
+#endif    
     
     if (capreq_has_ver(req)) {
-        cmprc = rpmvercmp(pkg->ver, capreq_ver(req));
+        cmprc = pkg_version_compare(pkg->ver, capreq_ver(req));
         if (cmprc != 0)
             return rel_match(cmprc, req);
         evr = 1;
@@ -753,7 +814,7 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
         
     if (capreq_has_rel(req)) {
         n_assert(capreq_has_ver(req));
-        cmprc = rpmvercmp(pkg->rel, capreq_rel(req));
+        cmprc = pkg_version_compare(pkg->rel, capreq_rel(req));
         if (cmprc != 0)
             return rel_match(cmprc, req);
         evr = 1;
@@ -767,6 +828,7 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
 #endif    
     return evr ? rel_match(cmprc, req) : 1;
 }
+
 
 int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
 {
@@ -953,17 +1015,17 @@ int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
                 continue;
             
             if (strcmp(capreq_name(cnfl), pkg->name) != 0) {
-                DBGMSG("chk%d %s-%s-%s -> NOT match IRET\n", i,
+                DBGMSG("chk%d %s -> NOT match IRET\n", i,
                        capreq_snprintf_s(cnfl));
                 return 0;
             }
                 
                 
             if (pkg_match_req(opkg, cnfl, 1)) {
-                DBGMSG("chk %s-%s-%s -> match\n", capreq_snprintf_s(cnfl));
+                DBGMSG("chk %s -> match\n", capreq_snprintf_s(cnfl));
                 return 1;
             } else {
-                DBGMSG("chk%d %s-%s-%s -> NOT match\n", i,
+                DBGMSG("chk%d %s -> NOT match\n", i,
                        capreq_snprintf_s(cnfl));
             }
         }
