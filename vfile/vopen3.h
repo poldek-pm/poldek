@@ -9,13 +9,15 @@
 
 /* custom popen(..., "r") */
 
-#define VOPEN3_SHARE_STDIN  (1 << 0) /* don't close stdin */
-#define VOPEN3_SHARE_STDOUT (1 << 1) /* don't close stdin */
-#define VOPEN3_SHARE_STDERR (1 << 2) /* pass output through pseudo-tty */
+#define VOPEN3_NOSTDIN      (1 << 0); /* use /dev/null as stdin */
+#define VOPEN3_NOSTDOUT     (1 << 1); /* use /dev/null as stdout */
+#define VOPEN3_NOSTDERR     (1 << 2); /* use /dev/null as stdout */
 
-#define VOPEN3_STDIN        (1 << 4)
-#define VOPEN3_STDOUT       (1 << 5)
-#define VOPEN3_STDERR       (1 << 6) 
+#define VOPEN3_PIPESTDIN    (1 << 3) /* pipe stdin */
+#define VOPEN3_PIPESTDOUT   (1 << 4) /* pipe stdout */
+#define VOPEN3_PIPESTDERR   (1 << 5) /* pipe stderr */
+
+#define VOPEN3_STDOUTERR    (1 << 6) /* merge stdout && stderr */
 
 struct vopen3_st {
     FILE    *stream_in;

@@ -117,7 +117,7 @@ void vopen3_destroy(struct vopen3_st *st)
     }
 }
 
-
+#if 0
 static void p_dupnull(int fdno, unsigned p_open_flags) 
 {
     switch (fdno) {
@@ -137,7 +137,7 @@ static void p_dupnull(int fdno, unsigned p_open_flags)
             n_assert(0);
     }
 }
-
+#endif 
 static void st_seterr(struct vopen3_st *st, const char *fmt, ...)
 {
     va_list args;
@@ -209,7 +209,7 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
         
         if (!p_pipe_creat(st, &out_pipe))
             break;
-    
+
         if (is_chain && st_prev) {
             in_pipe.out_fd = st_prev->fd_out;
             //in_pipe.in_fd = -1;
@@ -217,7 +217,9 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
         } else if (!p_pipe_creat(st, &in_pipe))
             break;
 
-        
+        //if (!st->next)
+        //   st->stream_in = fdopen(in_pipe.in_fd, "w");
+                                   
         if ((pid = fork()) < 0) {
             st_seterr(st, "fork %s: %m", st->cmd);
             break;
@@ -253,7 +255,7 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
             }
              
         
-        } else {                /* me */
+        } else {                /* parent (me) */
             close(out_pipe.in_fd);
             close(in_pipe.out_fd);
 
@@ -275,8 +277,12 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
     }
 
     st = vst;
+    //if (st->fd_in > 0)
+    //    st->stream_in = fdopen(st->fd_in, "w");
     while (st) {
         printf("EX %d %d, %d\n", st->pid, st->fd_in, st->fd_out);
+        //if (st->next == NULL && st->fd_out > 0)
+        //    st->stream_out = fdopen(st->fd_out, "r");
         st = st->next;
     }
     
@@ -298,7 +304,7 @@ int do_waitpid(struct vopen3_st *st, int woptions)
         free(st->errmsg);
     
     st->errmsg = NULL;
-    //printf("do_waitpid %d\n", st->pid);
+    printf("do_waitpid %d\n", st->pid);
     
     if ((pid = waitpid(st->pid, &status, woptions)) < 0) {
         printf("waitpid %s: %m\n", st->cmd);
@@ -455,7 +461,7 @@ void vopen3_process(struct vopen3_st *st, int verbose_level)
             int   n, i;
 
             if ((n = read(st->fd_out, buf, sizeof(buf) - 1)) <= 0) {
-                printf("BREAK %d: %m\n", n);
+                printf("BREAK %d %d: %m\n", st->fd_out, n);
                 break;
             }
             
