@@ -16,7 +16,7 @@ def test_avail(ctx):
 
 
 def test_search(ctx):
-    arr = ctx.search_avail_packages(ctx.ST_NAME, "poldek")
+    arr = ctx.get_avail_packages()
     print "Found %d package(s)" % len(arr)
     n = 0
     for ptr in arr:
@@ -34,32 +34,44 @@ def test_install(ctx):
 
 def test_cli_ls(cctx):
     cmd = cctx.rcmd_new(None)
-    if cmd.execline("desc poldek"):
+    if cmd.execline("ls poldek*"):
         pkgs = cmd.get_packages()
+        print pkgs
         n = 0
         for p in pkgs:
             print n, ' ', p
+            caps = p.requires()
+            print caps
+            for cap in caps:
+                print "   R:  %s" % cap
             n += 1
 
         if not pkgs:    
             print cmd.get_str()
 
+
+poldctx = poldek.poldek_ctx()
+#poldek_set_verbose(1)
+src = poldek.source('tt2')
+poldctx.configure(poldctx.CONF_SOURCE, src)
+poldctx.load_config()
+poldctx.setup()
+arr = poldctx.get_avail_packages()
+sys.exit(0)
     
 
 ctx = poldek.poldek_ctx()
-poldek.cvar.poldek_VERBOSE = 1
-src = poldek.source('ac')
+#poldek_set_verbose(1)
+src = poldek.source('tt2')
 ctx.configure(ctx.CONF_SOURCE, src)
 ctx.load_config()
 ctx.setup()
 
+test_search(ctx)
 cctx = poldek.poclidek_ctx(ctx);
 test_cli_ls(cctx)
 
 print "END"
-
-
-
 
 
 
