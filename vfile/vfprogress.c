@@ -106,7 +106,7 @@ void vfile_progress(long total, long amount, void *data)
     n = (int) (((float)bar->width) * frac);
 
     
-    if (amount > 0 && (10 * percent) - bar->prev_perc < 4) {
+    if (amount > 0 && amount != total && (10 * percent) - bar->prev_perc < 4) {
         //printf("v %ld, %d  %ld, %f -> %f\n", n, bar->prev_perc, bar->prev_n, 10 * percent,
         //(10 * percent) - (float)bar->prev_perc);
         return;
