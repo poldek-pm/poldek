@@ -405,7 +405,8 @@ int poclidek_shell(struct poclidek_ctx *cctx)
 
     if (histfile) 
         write_history(histfile);
-
+    
     sigint_pop();
+    msg(0, "\n");
     return 1;
 }

@@ -220,7 +220,6 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     n_assert(strlen(path) > 10);
     DBGF("%s %s, %d %d\n", cctx->ctx->ts->cachedir, path,
          mtime_rpmdb, cctx->ts_dbpkgdir);
-    msg(0, "\n");
     return pkgdir_save_as(pkgdir, RPMDBCACHE_PDIRTYPE, path,
                           PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
                           PKGDIR_CREAT_MINi18n);
