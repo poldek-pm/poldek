@@ -32,6 +32,12 @@
 #include "capreq.h"
 #include "vfile.h"
 
+#ifdef RPMDBI_PACKAGES 
+# ifndef HAVE_RPM_4_0
+#  define HAVE_RPM_4_0
+# endif
+#endif
+
 static
 int header_evr_match_req(Header h, const struct capreq *req);
 static
@@ -101,8 +107,28 @@ void rpm_closedb(rpmdb db)
 static
 int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *exclrnos)
 {
+    int rc = 0;
+
+#ifdef HAVE_RPM_4_0
+    rpmdbMatchIterator mi;
+    Header h;
+
+    mi = rpmdbInitIterator(db, RPMTAG_NAME, capreq_name(req), 0);
+    while((h = rpmdbNextIterator(mi)) != NULL) {
+	unsigned int recno = rpmdbGetIteratorOffset(mi);
+
+        if (exclrnos && n_array_bsearch(exclrnos, (void*)recno))
+	    continue;
+        
+ 	if (header_evr_match_req(h, req)) {
+	    rc = 1;
+	    break;
+	}
+    }
+    rpmdbFreeIterator(mi);
+    
+#else /* HAVE_RPM_4_0 */
     dbiIndexSet matches;
-    int rc;
 
     matches.count = 0;
     matches.recs = NULL;
@@ -110,7 +136,7 @@ int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *exclrnos)
 
     if (rc < 0) {
         log(LOGERR, "error reading from database");
-        return -1;
+        rc = -1;
         
     } else if (rc == 0) {
         Header h;
@@ -132,17 +158,35 @@ int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *exclrnos)
         }
         
         dbiFreeIndexRecord(matches);
-        return rc;
     }
-    
-    return 0;
+#endif /* HAVE_RPM_4_0 */
+
+    return rc;
 }
 
 static
 int lookup_file(rpmdb db, const struct capreq *req, tn_array *exclrnos)
 {
+    int finded = 0;
+
+#ifdef HAVE_RPM_4_0
+    rpmdbMatchIterator mi;
+    Header h;
+
+    mi = rpmdbInitIterator(db, RPMTAG_BASENAMES, capreq_name(req), 0);
+    while((h = rpmdbNextIterator(mi)) != NULL) {
+	unsigned int recno = rpmdbGetIteratorOffset(mi);
+ 	if (exclrnos && n_array_bsearch(exclrnos, (void*)recno))
+	    continue;
+   	finded = 1;
+	break;	
+    }
+    rpmdbFreeIterator(mi);
+    
+#else /* HAVE_RPM_4_0 */
+
     dbiIndexSet matches;
-    int rc, finded = 0;
+    int rc;
 
     matches.count = 0;
     matches.recs = NULL;
@@ -156,12 +200,14 @@ int lookup_file(rpmdb db, const struct capreq *req, tn_array *exclrnos)
                 continue;
             
             finded = 1;
+            break;
         }
         
     } else if (rc < 0) {
         log(LOGERR, "error reading from database");
         finded = -1;
     }
+#endif	/* !HAVE_RPM_4_0 */
 
     return finded;
 }
@@ -171,8 +217,26 @@ static
 int lookup_cap(rpmdb db, const struct capreq *req, int strict,
                tn_array *exclrnos)
 {
+    int rc = 0;
+
+#ifdef HAVE_RPM_4_0/* XXX should test HAVE_RPM_4_0 (but I'm lazy). */
+    rpmdbMatchIterator mi;
+    Header h;
+
+    mi = rpmdbInitIterator(db, RPMTAG_PROVIDES, capreq_name(req), 0);
+    while((h = rpmdbNextIterator(mi)) != NULL) {
+	unsigned int recOffset = rpmdbGetIteratorOffset(mi);
+ 	if (exclrnos &&
+	    n_array_bsearch(exclrnos, (void*)recOffset))
+	    continue;
+	if (header_cap_match_req(h, req, strict)) {
+	    rc = 1;
+	    break;
+	}
+    }
+    rpmdbFreeIterator(mi);
+#else	/* !HAVE_RPM_4_0 */
     dbiIndexSet matches;
-    int rc;
 
     matches.count = 0;
     matches.recs = NULL;
@@ -202,6 +266,7 @@ int lookup_cap(rpmdb db, const struct capreq *req, int strict,
         dbiFreeIndexRecord(matches);
         return rc;
     }
+#endif	/* !HAVE_RPM_4_0 */
 
     return 0;
 }
@@ -299,7 +364,6 @@ int header_cap_match_req(Header h, const struct capreq *req, int strict)
 }
 
     
-
 #if 0 
 static
 int is_req_match(rpmdb db, dbiIndexSet matches, const struct capreq *req) 
@@ -538,18 +602,22 @@ int rpm_dbmap(rpmdb db,
               void (*mapfn)(void *header, off_t offs, void *arg),
               void *arg) 
 {
-    int offs;
-    Header h;
     int n = 0;
+    Header h;
 
-#ifdef RPM4
+#ifdef HAVE_RPM_4_0	/* XXX should test HAVE_RPM_4_0 (but I'm lazy). */
+    rpmdbMatchIterator mi;
+
     mi = rpmdbInitIterator(db, RPMDBI_PACKAGES, NULL, 0);
-    rpmdbAppendIterator(mi, offsets, num);
-
-    fileInfo = replList;
     while ((h = rpmdbNextIterator(mi)) != NULL) {
-#endif
-    
+	unsigned int recOffset = rpmdbGetIteratorOffset(mi);
+	mapfn(h, recOffset, arg);
+	n++;
+    }
+    rpmdbFreeIterator(mi);
+#else	/* !HAVE_RPM_4_0 */
+    int offs;
+
     offs = rpmdbFirstRecNum(db);
     if (offs == 0)
         return 0;
@@ -568,6 +636,7 @@ int rpm_dbmap(rpmdb db,
         
         offs = rpmdbNextRecNum(db, offs);
     }
+#endif	/* !HAVE_RPM_4_0 */
     
     return n;
 }
@@ -576,10 +645,21 @@ int rpm_dbmap(rpmdb db,
 int rpm_dbiterate(rpmdb db, tn_array *offsets,
                   void (*mapfn)(void *header, off_t off, void *arg), void *arg)
 {
-    int i, offs;
-    Header h;
     int n = 0;
+    Header h;
 
+#ifdef HAVE_RPM_4_0	/* XXX should test HAVE_RPM_4_0 (but I'm lazy). */
+    rpmdbMatchIterator mi;
+
+    mi = rpmdbInitIterator(db, RPMDBI_PACKAGES, NULL, 0);
+    while ((h = rpmdbNextIterator(mi)) != NULL) {
+	unsigned int recOffset = rpmdbGetIteratorOffset(mi);
+	mapfn(h, recOffset, arg);
+	n++;
+    }
+    rpmdbFreeIterator(mi);
+#else	/* !HAVE_RPM_4_0 */
+    int i, offs;
 
     offs = rpmdbFirstRecNum(db);
     if (offs == 0)
@@ -598,6 +678,7 @@ int rpm_dbiterate(rpmdb db, tn_array *offsets,
             headerFree(h);
         }
     }
+#endif	/* !HAVE_RPM_4_0 */
     
     return n;
 }
@@ -606,8 +687,38 @@ int rpm_get_pkgs_requires_capn(rpmdb db, const char *capname,
                                tn_array *exclrnos,
                                tn_array *hasrnos, tn_array *pkgs)
 {
+    int rc = 0;
+
+#ifdef HAVE_RPM_4_0	/* XXX should test HAVE_RPM_4_0 (but I'm lazy). */
+    rpmdbMatchIterator mi;
+    Header h;
+
+    mi = rpmdbInitIterator(db, RPMTAG_REQUIRENAME, capname, 0);
+    while((h = rpmdbNextIterator(mi)) != NULL) {
+	unsigned int recOffset = rpmdbGetIteratorOffset(mi);
+	struct pkg *pkg;
+
+	if (exclrnos &&
+	    n_array_bsearch(exclrnos, (void*)recOffset)) {
+	    continue;
+	}
+
+	if (n_array_bsearch(hasrnos, (void*)recOffset))
+	    continue;
+            
+	n_array_push(hasrnos, (void*)recOffset);
+	n_array_sort(hasrnos);
+                
+	if ((pkg = pkg_ldhdr_udata(h, "db", PKG_LDNEVR | PKG_LDCAPREQS,
+		(void*)recOffset, sizeof(recOffset))) == NULL) {
+	    rc = -1;
+	    break;
+	}
+	n_array_push(pkgs, pkg);
+    }
+    rpmdbFreeIterator(mi);
+#else	/* !HAVE_RPM_4_0 */
     dbiIndexSet matches;
-    int rc;
 
     matches.count = 0;
     matches.recs = NULL;
@@ -649,6 +760,7 @@ int rpm_get_pkgs_requires_capn(rpmdb db, const char *capname,
         
         dbiFreeIndexRecord(matches);
     }
+#endif	/* !HAVE_RPM_4_0 */
     
     return rc;
 }
@@ -737,13 +849,35 @@ int rpm_get_pkgs_requires_obsl_pkg(rpmdb db, struct capreq *obsl,
                                    tn_array *exclrnos, tn_array *hasrnos,
                                    tn_array *pkgs) 
 {
+    int n = 0;
+
+#ifdef HAVE_RPM_4_0
+    rpmdbMatchIterator mi;
+    Header h;
+
+    mi = rpmdbInitIterator(db, RPMTAG_NAME, capreq_name(obsl), 0);
+    while((h = rpmdbNextIterator(mi)) != NULL) {
+	unsigned int recno = rpmdbGetIteratorOffset(mi);
+
+        if (exclrnos && n_array_bsearch(exclrnos, (void*)recno))
+	    continue;
+        
+	if (header_evr_match_req(h, obsl)) {
+	    rpm_get_pkgs_requires_pkgh(db, h, exclrnos, hasrnos, pkgs);
+	    n++;
+	}
+    }
+    rpmdbFreeIterator(mi);
+    
+#else	/* !HAVE_RPM_4_0 */
+
     dbiIndexSet matches;
-    int rc, n = 0;
+    int rc;
 
     matches.count = 0;
     matches.recs = NULL;
     rc = rpmdbFindPackage(db, capreq_name(obsl), &matches);
-
+    
     if (rc < 0) {
         log(LOGERR, "error reading from database");
         return -1;
@@ -768,8 +902,9 @@ int rpm_get_pkgs_requires_obsl_pkg(rpmdb db, struct capreq *obsl,
         }
         
         dbiFreeIndexRecord(matches);
-        return rc;
+        return n;
     }
+#endif	/* !HAVE_RPM_4_0 */
     
     return n;
 }

@@ -19,7 +19,8 @@ int rpm_dbmatch_req_excl(rpmdb db, const struct capreq *req, int strict,
                          tn_array *exclrnos);
 
 /*
-  Add to pkgs packages which requires cap/header, omit exclrnos && hasrnos
+  Add to pkgs packages which requires cap/header, omit
+  packages included in exclrnos && hasrnos
  */
 int rpm_get_pkgs_requires_capn(rpmdb db, const char *capname,
                                tn_array *exclrnos, tn_array *hasrnos,
@@ -31,7 +32,7 @@ int rpm_get_pkgs_requires_pkgh(rpmdb db, Header h, tn_array *exclrnos,
 
 /*
   Add to pkgs packages which requires packages obsoleted by obsl,
-  omit exclrnos && hasrnos
+  omit packages included in exclrnos && hasrnos
  */
 int rpm_get_pkgs_requires_obsl_pkg(rpmdb db, struct capreq *obsl,
                                    tn_array *exclrnos, tn_array *hasrnos,
