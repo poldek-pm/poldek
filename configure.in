@@ -12,7 +12,8 @@ PACKAGE=poldek
 AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
 AC_DEFINE_UNQUOTED(VERSION_STATUS, "$VERSION_STATUS")
 AC_SUBST(VERSION_CVSTAG)
-AC_CONFIG_HEADERS([config.h])
+#AC_CONFIG_HEADERS([config.h])
+AM_CONFIG_HEADER([config.h])
 
 ALL_LINGUAS="pl de"
 
@@ -189,7 +190,7 @@ dnl use local ../trurlib copy if it exists
 CONF_IN_LDFLAGS=
 
 TRURL_DIR=
-if test -f "./trurlib/trurl.h"; then
+if test -f "./trurlib/n_array_new.c"; then
 	TRURL_DIR="./trurlib"
 fi
 
@@ -200,8 +201,8 @@ fi
 if test -n "$TRURL_DIR"; then
 	AC_MSG_CHECKING(for local trurlib copy in $TRURL_DIR)
 	AC_MSG_RESULT([yes])
-	TRURL_INCLUDE="-I\$(top_srcdir)/$TRURL_DIR"
-	TRURL_LDFLAG="-L\$(top_srcdir)/$TRURL_DIR"
+	TRURL_INCLUDE="-I\$(top_srcdir)/$TRURL_DIR/include"
+	TRURL_LDFLAG="-L\$(top_srcdir)/$TRURL_DIR/"
 	TRURL_LDFLAG="$TRURL_LDFLAG -L\$(top_srcdir)/$TRURL_DIR/.libs"
 	LDFLAGS="$LDFLAGS -L\$(top_srcdir)/$TRURL_DIR -L\$(top_srcdir)/$TRURL_DIR/.libs"
 	TRURLIB_VERSION=$(egrep 'T_AUTOMAKE\(trurlib, ' $TRURL_DIR/configure.in | cut -d ' ' -f 2 | sed 's|)||')
@@ -315,25 +316,24 @@ if test -z "$TRURL_DIR"; then
 else
 	LIBS="$LIBS -ltrurl"
 	AC_CONFIG_SUBDIRS(trurlib)
-	NARRAY='"trurlib/narray.h"'
+	NARRAY="\"$TRURL_DIR/include/trurl/narray.h\""
 fi
 
 
-dnl AC_MSG_CHECKING([for trullib >= 0.43.9])
-dnl AC_EGREP_CPP(yes,
-dnl        [#include $NARRAY
-dnl         #ifdef n_array_has_free_fn
-dnl           yes
-dnl         #endif
-dnl        ], is_valid_trurlib_ver=yes, is_valid_trurlib_ver=no)
-dnl
-dnl 
-dnl if test ${is_valid_trurlib_ver}. = no. ; then
-dnl 	AC_MSG_RESULT(no)		
-dnl    	AC_MSG_ERROR(["trurlib >= 0.43.9 not found"])
-dnl else
-dnl 	AC_MSG_RESULT(yes)	
-dnl fi
+AC_MSG_CHECKING([for trullib >= 0.43.9])
+AC_EGREP_CPP(yes,
+       [#include $NARRAY
+        #ifdef n_array_has_free_fn
+          yes
+        #endif
+       ], is_valid_trurlib_ver=yes, is_valid_trurlib_ver=no)
+
+if test ${is_valid_trurlib_ver}. = no. ; then
+	AC_MSG_RESULT(no)		
+   	AC_MSG_ERROR(["trurlib >= 0.43.9 not found"])
+else
+	AC_MSG_RESULT(yes)	
+fi
 
 AC_CONFIG_FILES([  po/Makefile.in
 		intl/Makefile
