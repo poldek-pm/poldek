@@ -41,23 +41,16 @@ static int do_uninstall(tn_array *pkgs, struct inst_s *inst);
 
 
 static
-int visit_pkg(int indent, struct pkg *pkg, struct pkg *prev_pkg,
-              struct pkgdb *db, struct dbpkg_set *uninst_set) 
+int visit_pkg(int indent, struct pkg *pkg, struct pkgdb *db,
+              struct dbpkg_set *uninst_set) 
 {
     unsigned ldflags = uninst_LDFLAGS;
     int i, k, n = 0;
     
-    if (!pkg_is_color(pkg, PKG_COLOR_WHITE))
+    if (pkg_is_color(pkg, PKG_COLOR_BLACK))
         return 0;
-    
-    pkg_set_color(pkg, PKG_COLOR_BLACK);
-    if (!pkg_is_marked(pkg))
-        pkg_dep_mark(pkg);
 
-    if (prev_pkg != NULL && indent >= 0)
-        msg_i(1, indent, "%s marks %s\n", pkg_snprintf_s(prev_pkg),
-              pkg_snprintf_s0(pkg));
-    
+    pkg_set_color(pkg, PKG_COLOR_BLACK);
     indent += 2;
     
     n += rpm_get_pkgs_requires_capn(db->dbh, uninst_set->dbpkgs, pkg->name,
@@ -99,10 +92,26 @@ int visit_pkg(int indent, struct pkg *pkg, struct pkg *prev_pkg,
         }
     
     if (n) {
+        n_assert(pkg->revreqpkgs == NULL);
+        pkg->revreqpkgs = n_array_new(4, (tn_fn_free)pkg_free, NULL);
+                
         for (i=0; i < n_array_size(uninst_set->dbpkgs); i++) {
             struct dbpkg *dbpkg = n_array_nth(uninst_set->dbpkgs, i);
-            if (!pkg_is_marked(dbpkg->pkg))
-                n += visit_pkg(indent, dbpkg->pkg, pkg, db, uninst_set);
+            
+            if (pkg_is_color(dbpkg->pkg, PKG_COLOR_WHITE)) {
+                n_array_push(pkg->revreqpkgs, pkg_link(dbpkg->pkg));
+                pkg_set_color(dbpkg->pkg, PKG_COLOR_GRAY);
+            }
+        }
+        
+        for (i=0; i < n_array_size(pkg->revreqpkgs); i++) {
+            struct pkg *revreq_pkg = n_array_nth(pkg->revreqpkgs, i);
+            if (!pkg_is_marked(revreq_pkg)) {
+                pkg_dep_mark(revreq_pkg);
+                msg_i(1, indent, "%s marks %s\n", pkg_snprintf_s(pkg),
+                      pkg_snprintf_s0(revreq_pkg));
+                n += visit_pkg(indent, revreq_pkg, db, uninst_set);
+            }
         }
     }
     
@@ -116,6 +125,7 @@ int mark_to_uninstall(struct dbpkg_set *set, struct pkgdb *db, struct inst_s *in
 
     for (i=0; i < n_array_size(set->dbpkgs); i++) {
         struct dbpkg *dbpkg = n_array_nth(set->dbpkgs, i);
+        dbpkg->flags |= DBPKG_TOUCHED;
         pkg_hand_mark(dbpkg->pkg);
     }
     
@@ -123,7 +133,7 @@ int mark_to_uninstall(struct dbpkg_set *set, struct pkgdb *db, struct inst_s *in
         for (i=0; i < n_array_size(set->dbpkgs); i++) {
             struct dbpkg *dbpkg = n_array_nth(set->dbpkgs, i);
             if ((dbpkg->flags & DBPKG_UNIST_NOTFOLLOW) == 0) 
-                n += visit_pkg(-2, dbpkg->pkg, NULL, db, set);
+                n += visit_pkg(-2, dbpkg->pkg, db, set);
         }
     
     return n;

@@ -425,10 +425,10 @@ int rpm_get_pkgs_requires_capn(rpmdb db, tn_array *dbpkgs, const char *capname,
         struct dbpkg *dbpkg;
         
         if (unistdbpkgs && dbpkg_array_has(unistdbpkgs, dbrec->recno))
-	    continue;
+            continue;
         
         if (dbpkg_array_has(dbpkgs, dbrec->recno))
-	    continue;
+            continue;
 
         dbpkg = dbpkg_new(dbrec->recno, dbrec->h, ldflags);
         //msg(1, "%s <- %s\n", capname, pkg_snprintf_s(dbpkg->pkg));
