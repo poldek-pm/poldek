@@ -188,7 +188,7 @@ I<NOTE>: In this mode only one and only directory path as SOURCE is accepted.
 
 =item B<--up, --update>; B<--upa, --update-whole>
 
-Re-synchronize the package index from its source and verify it.
+Resynchronize the package index from its source and verify it.
 
 With B<--update> program looking up "patches" for existing local
 package index, if it fails, then whole index is downloaded.
@@ -399,13 +399,28 @@ B<OPTIONS> describes source options; possible values are:
 
 =over
 
-=item * B<noauto> - don't load this source by default
+=item * B<noauto>
 
-=item * B<noautoup> - don't update this source by default
+Source isn't loaded by default. 
 
-=item * B<gpg> - verify package GPG signatures
+=item * B<noautoup> 
 
-=item * B<pgp> - verify package PGP signatures
+Source index file is not resynchronized by default.
+
+=item * B<gpg> 
+
+With rpm <= 4.0.x GPG signature of package is verified before installation; 
+with rpm >= 4.1 this option is equivalent of 'sign' (see below) 
+
+=item * B<pgp> 
+
+With rpm <= 4.0.x PGP signature of packages is verified before installation;
+with rpm >= 4.1 this option is equivalent of 'sign' (see below) 
+
+=item * B<sign> 
+
+With rpm >= 4.1 all presented signatures of package are verified; with 
+rpm <= 4.0.x option is equivalent of 'gpg'; 
 
 =item * B<pri=NUMERICAL_VALUE>
 
