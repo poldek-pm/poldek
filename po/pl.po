@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
-"POT-Creation-Date: 2002-03-14 18:03+0100\n"
+"POT-Creation-Date: 2002-03-19 22:38+0100\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: \n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -343,11 +343,11 @@ msgstr ""
 
 #: main.c:352
 msgid "Read indexes created by versions < 0.17"
-msgstr ""
+msgstr "Czytaj indeks utworzony przez program w wersji < 0.17"
 
 #: main.c:353 shell/install.c:60
 msgid "Be verbose."
-msgstr ""
+msgstr "B±d¼ gadatliwy"
 
 #: main.c:354
 msgid "Do not produce any output."
@@ -376,106 +376,106 @@ msgstr ""
 
 #: main.c:720
 msgid "split: bad option argument"
-msgstr ""
+msgstr "split: z³y argument"
 
 #: main.c:752
 #, c-format
 msgid "'%s' option should be set by --%s"
 msgstr ""
 
-#: main.c:842
-msgid "--noconf and --conf are exclusive, aren't they?"
-msgstr "opcje --noconf i --conf wykluczaj± siê, czy¿ nie?"
-
-#: main.c:853
-msgid "--source and --sn are exclusive"
-msgstr "opcje --source i --sn wykluczaj± siê"
-
-#: main.c:918
+#: main.c:892
 #, c-format
 msgid "%s: no such source"
 msgstr "%s: nie ma takiego ¼ród³a"
 
-#: main.c:920
+#: main.c:935
+msgid "--noconf and --conf are exclusive, aren't they?"
+msgstr "opcje --noconf i --conf wykluczaj± siê, czy¿ nie?"
+
+#: main.c:946
+msgid "--source and --sn are exclusive"
+msgstr "opcje --source i --sn wykluczaj± siê"
+
+#: main.c:971 main.c:989
 msgid "no source specified"
 msgstr "nie podano ¼róde³ pakietów"
 
-#: main.c:933 main.c:1309
+#: main.c:998 main.c:1378
 msgid "so what?"
-msgstr "i?"
+msgstr "no i?"
 
-#: main.c:978
+#: main.c:1043
 msgid "--greedy and --nofollow are exclusive"
 msgstr "opcje --greedy i --nofollow wykluczaj± siê"
 
-#: main.c:985
+#: main.c:1050
 msgid "ignore config's follow - greedy implies it to \"yes\""
 msgstr "zignorowane \"follow\" - opcja \"greedy\" ustawia j± na \"yes\""
 
-#: main.c:1086
+#: main.c:1155
 msgid "no packages loaded"
 msgstr "nie za³adowano ¿adnych pakietów"
 
-#: main.c:1140 pkgset-load.c:162
+#: main.c:1209 pkgset-load.c:214
 #, c-format
 msgid "%s: load failed, skipped"
 msgstr "%s: ³adunek siê nie powiód³, pominiêto to"
 
-#: main.c:1172 main.c:1336
+#: main.c:1241 main.c:1405
 msgid "multiple sources are not allowed for mkidx option"
 msgstr "opcja mkidx nie dzia³a z wieloma ¼ród³ami pakietów"
 
-#: main.c:1179
+#: main.c:1248
 msgid "mkidx requested for remote source without destination specified"
 msgstr ""
 
-#: main.c:1219
+#: main.c:1288
 #, c-format
 msgid "Loading previous %s..."
 msgstr "Wczytywanie poprzedniego %s..."
 
-#: main.c:1225
+#: main.c:1294
 msgid "clock skew detected; create index with fake timestamp"
 msgstr ""
 
-#: main.c:1329
+#: main.c:1398
 msgid "--v016 has no effect in this mode"
 msgstr ""
 
-#: main.c:1355
+#: main.c:1424
 msgid "no packages to install"
 msgstr "nie podano pakietów do instalacji"
 
-#: main.c:1363
+#: main.c:1432
 msgid "this option upgrades whole system, not given packages"
 msgstr "opcja ta aktualizuje ca³o¶æ, nie podane pakiety"
 
-#: main.c:1371
+#: main.c:1440
 msgid "missing split size"
 msgstr ""
 
-#: main.c:1376
+#: main.c:1445
 msgid "split size too small"
 msgstr "rozmiar zbyt ma³y"
 
-#: main.c:1381
+#: main.c:1450
 msgid "first free space bigger than chunk size"
 msgstr ""
 
-#: main.c:1419
+#: main.c:1488
 #, c-format
 msgid "There seems another poldek%s uses %s"
 msgstr "Oj, jaki¶ inny poldek%s u¿ywa %s"
 
-#: main.c:1440
+#: main.c:1509
 msgid "no packages specified"
 msgstr "nie podano pakietów"
 
-#: main.c:1455
+#: main.c:1524
 msgid "I'm set*id'ed, give up"
-msgstr ""
+msgstr "Mam ustawiony bit suid/sgid, wymiêkam"
 
-#: main.c:1460
+#: main.c:1529
 msgid "Running me as root is not a good habbit"
 msgstr ""
 
@@ -487,12 +487,12 @@ msgstr "$TMPDIR (%s) zawiera nie alfanumeryczne znaki, przyjêto /tmp"
 #: misc.c:193
 #, c-format
 msgid "$TMPDIR (%s): %m, using /tmp"
-msgstr ""
+msgstr "$TMPDIR (%s): %m, przyjêto /tmp"
 
 #: misc.c:197
 #, c-format
 msgid "$TMPDIR (%s): not a directory, using /tmp"
-msgstr ""
+msgstr "$TMPDIR (%s): nie ma takiego katalogu, przyjêto /tmp"
 
 #: misc.c:221
 #, c-format
@@ -581,12 +581,12 @@ msgstr "%s: uszkodzona lista ³atek"
 msgid "%s: no patches available"
 msgstr "%s: nie odnaleziono ³at"
 
-#: pkgdir.c:489 pkgset-load.c:152 pkgset-load.c:188
+#: pkgdir.c:489 pkgset-load.c:204 pkgset-load.c:240
 #, c-format
 msgid "Loading %s..."
 msgstr "Wczytywanie %s..."
 
-#: pkgdir.c:491 pkgset-load.c:190
+#: pkgdir.c:491 pkgset-load.c:242
 #, c-format
 msgid "%s: load failed"
 msgstr "%s: odczyt siê nie powiód³"
@@ -619,7 +619,7 @@ msgstr "%s: wersja %s nie jest nieobs³ugiwana (poldek wywmaga aktualizacji)"
 #: pkgdir.c:573
 #, c-format
 msgid "%s: broken index (empty %s tag)"
-msgstr ""
+msgstr "%s: uszkodzony indeks (pusty %s)"
 
 #: pkgdir.c:657
 #, c-format
@@ -629,7 +629,7 @@ msgstr "%s: nie jest to poldekowy indeks"
 #: pkgdir.c:720
 #, c-format
 msgid "%s: missing '%s' tag"
-msgstr ""
+msgstr "%s: brak '%s'"
 
 #. continuation
 #: pkgdir.c:901 pkgdir.c:943
@@ -640,12 +640,12 @@ msgstr "%s:%ld: b³±d sk³adniowy"
 #: pkgdir.c:912
 #, c-format
 msgid "%s:%ld:%s ':' expected"
-msgstr ""
+msgstr "%s:%ld:%s oczekiwany ':'"
 
 #: pkgdir.c:1225
 #, c-format
 msgid "%s: failed to parse evr string"
-msgstr ""
+msgstr "%s: interpertacja siê nie powiod³a"
 
 #: pkgdir.c:1234
 #, c-format
@@ -915,7 +915,12 @@ msgstr "Wyst±pi³y b³êdy rpmowej bazy (?), wymiêkam"
 msgid "Nothing to do"
 msgstr "Nie ma roboty"
 
-#: pkgset-load.c:207 shell/shell.c:807
+#: pkgset-load.c:113
+#, c-format
+msgid "%s: %s unknown option"
+msgstr "%s: %s nieznana opcja"
+
+#: pkgset-load.c:259 shell/shell.c:807
 #, c-format
 msgid "%d package read"
 msgid_plural "%d packages read"
@@ -1478,7 +1483,7 @@ msgstr "%s:%d: b³±d sk³adniowy w okolicach %s"
 #: split.c:117 usrset.c:282
 #, c-format
 msgid "%s: give up at %d"
-msgstr "%s: wymiêk³em przy lini %d"
+msgstr "%s: wymiêk³em przy linii %d"
 
 #: split.c:174
 #, c-format
@@ -1545,99 +1550,97 @@ msgstr "program zakoñczy³ siê z niezerowym wynikiem"
 msgid "%s (%d) died under inscrutable circumstances"
 msgstr "$s (%d) zgin±³ w podejrzanych okoliczno¶ciach"
 
-#: vfile/vfcurl.c:422
-#, fuzzy
+#: vfile/vfcurl.c:433
 msgid "Done\n"
-msgstr "_Zrobione\n"
+msgstr "Zrobione\n"
 
-#: vfile/vfile.c:225 vfile/vfile.c:257
+#: vfile/vfile.c:244 vfile/vfile.c:276
 #, c-format
 msgid "Retrieving %s...\n"
 msgstr "Pobieranie %s...\n"
 
-#: vfile/vfile.c:506
+#: vfile/vfile.c:535
 #, c-format
 msgid "Give up (#%d)...\n"
 msgstr "Wymiêkam (#%d)...\n"
 
-#: vfile/vfile.c:510
+#: vfile/vfile.c:539
 #, c-format
 msgid "Retrying %s (#%d)...\n"
 msgstr "Ponowne pobieranie %s (#%d)...\n"
 
 #. last notification
-#: vfile/vfprogress.c:115
-#, fuzzy
+#: vfile/vfprogress.c:124
 msgid "done\n"
-msgstr "_zrobione\n"
+msgstr "zrobione\n"
 
-#: vfile/vftp/ftp.c:105
+#: vfile/vftp/ftp.c:107
 #, c-format
 msgid "write to socket %s: %m"
 msgstr ""
 
-#: vfile/vftp/ftp.c:180
+#: vfile/vftp/ftp.c:182
 #, c-format
 msgid "%s: response parse error at %s"
 msgstr "%s: b³±d interpretacji odpowiedzi w okolicach %s"
 
-#: vfile/vftp/ftp.c:221 vfile/vftp/ftp.c:233
+#: vfile/vftp/ftp.c:223 vfile/vftp/ftp.c:234
 #, c-format
 msgid "%s: response parse error"
 msgstr "%s: b³±d interpretacji odpowiedzi"
 
-#: vfile/vftp/ftp.c:325
+#: vfile/vftp/ftp.c:327
 msgid "response line too long"
 msgstr "zybt d³uga linia w odpowiedzi"
 
-#: vfile/vftp/ftp.c:329
+#: vfile/vftp/ftp.c:331
 #, c-format
 msgid "unexpected EOF: %m"
 msgstr "niespodziewany EOF: %m"
 
-#: vfile/vftp/ftp.c:334
+#: vfile/vftp/ftp.c:336
 msgid "timeout reached while waiting for server response"
 msgstr "up³yn±³ limit czasu oczekiwania"
 
-#: vfile/vftp/ftp.c:338
+#: vfile/vftp/ftp.c:344
 msgid "unexpected EOF"
 msgstr "niespodziewany EOF"
 
-#: vfile/vftp/ftp.c:467
+#: vfile/vftp/ftp.c:472
 #, c-format
 msgid "unable to connect to %s:%s: %s"
 msgstr "niemo¿no¶æ po³±czenia z %s:%s: %s"
 
-#: vfile/vftp/ftp.c:489
+#: vfile/vftp/ftp.c:494
 #, c-format
 msgid "unable to connect to %s:%s: %m"
 msgstr "niemo¿no¶æ po³±czenia z %s:%s: %m"
 
-#: vfile/vftp/ftp.c:551
+#: vfile/vftp/ftp.c:556
 #, c-format
 msgid "login failed: %s"
 msgstr "b³±d logowania: %s"
 
-#: vfile/vftp/ftp.c:552
+#: vfile/vftp/ftp.c:557
 msgid "unknown error"
 msgstr "b³±d nieokre¶lony"
 
-#: vfile/vftp/ftp.c:579
+#: vfile/vftp/ftp.c:584
 #, c-format
 msgid "Connecting to %s:%d...\n"
 msgstr "£±czenie z %s:%d...\n"
 
-#: vfile/vftp/ftp.c:639
+#: vfile/vftp/ftp.c:644
 #, c-format
 msgid "%s: PASV response parse error"
 msgstr "%s: b³±d interpretacji odpowiedzi PASV"
 
-#: vfile/vftp/ftp.c:648
+#: vfile/vftp/ftp.c:653
 #, c-format
 msgid "%s: address to long"
 msgstr "%s: zbyt d³ugi adres"
 
-#: vfile/vftp/ftp.c:847
+#: vfile/vftp/ftp.c:857
 #, c-format
 msgid "%s: no such file (serv says: %s)"
 msgstr "%s: nie ma takiego pliku (odpowied¼ serwera: %s)"
