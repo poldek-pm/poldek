@@ -40,9 +40,11 @@
 #define TYPE_STR        (1 << 0)
 #define TYPE_BOOL       (1 << 1)
 #define TYPE_LIST       (1 << 2)
-#define TYPE_MULTI      (1 << 3)
-#define TYPE_MULTI_EXCL (1 << 4)
-#define TYPE_ENUM       (1 << 5)
+#define TYPE_PATHLIST   (1 << 3)
+
+#define TYPE_MULTI      (1 << 5)
+#define TYPE_MULTI_EXCL (1 << 6)
+#define TYPE_ENUM       (1 << 7)
 
 #define TYPE_F_ENV      (1 << 10)
 #define TYPE_F_REQUIRED (1 << 11)
@@ -106,7 +108,7 @@ static struct tag global_tags[] = {
     { "promoteepoch", TYPE_BOOL, { 0 } },
     { "default index type", TYPE_STR, { 0 } },
     { "autoupa", TYPE_BOOL, { 0 } },
-    { "exclude path", TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
+    { "exclude path", TYPE_STR | TYPE_PATHLIST | TYPE_MULTI , { 0 } },
     {  NULL,           0, { 0 } }, 
 };
 
@@ -147,7 +149,7 @@ static struct tag source_tags[] = {
     { "signed",      TYPE_BOOL, { 0 } },
     { "hold",        TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "ignore",      TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
-    { "exclude path", TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
+    { "exclude path", TYPE_STR | TYPE_PATHLIST | TYPE_MULTI , { 0 } },
     {  NULL,         0, { 0 } }, 
 };
 
@@ -215,15 +217,18 @@ void copt_free(struct copt *opt)
 }
 
 static
-int getvlist(tn_hash *ht, char *name, char *vstr, const char *path, int nline)
+int getvlist(tn_hash *ht, char *name, char *vstr, const char *sep,
+             const char *path, int nline)
 {
     const char **v, **p;
     struct copt *opt;
 
 
     path = path; nline = nline;
+    if (sep == NULL)
+        sep = " \t,";
     
-    p = v = n_str_tokl(vstr, " \t,");
+    p = v = n_str_tokl(vstr, sep);
     if (v == NULL)
         return 0;
 
@@ -564,8 +569,10 @@ static int add_param(tn_hash *ht_sect, const char *section,
     msgn_i(3, 2, "%s::%s = %s", section, name, value);
     
     
-    if (tag->flags & TYPE_LIST) 
-        return getvlist(ht_sect, name, value, path, nline);
+    if (tag->flags & (TYPE_LIST | TYPE_PATHLIST)) 
+        return getvlist(ht_sect, name, value, 
+                        (tag->flags & TYPE_PATHLIST) ? " \t,:" : " \t,",
+                        path, nline);
         
     val = getv(value, path, nline);
     //printf("Aname = %s, v = %s\n", name, val);
