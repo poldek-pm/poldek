@@ -1044,7 +1044,7 @@ static int check_digest(struct vfile *vf, const char *path)
     off_t           offs;
     
 
-    msg(1, "Verifying %s...", path);
+    msg(0, "Verifying %s...", path);
     
     offs = ftell(vf->vf_stream);
     if (fseek(vf->vf_stream, 0L, SEEK_SET) != 0) {
@@ -1074,7 +1074,7 @@ static int check_digest(struct vfile *vf, const char *path)
     close(fd);
     
     rc = md1_size == md2_size && strcmp(md1, md2) == 0;
-    msg(1, "_ %s\n", rc ? "OK" : "BAD");
+    msg(0, "_ %s\n", rc ? "OK" : "BAD");
     return rc;
 }
 
