@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@pld.org.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -42,7 +46,6 @@ void check_hdr(char *s, struct pkguinf *pkgu)
 
 void pkguinf_free(struct pkguinf *pkgu)
 {
-
     if (pkgu->_refcnt > 0) {
         pkgu->_refcnt--;
         return;
@@ -183,13 +186,15 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
         }
     
     if (fread(&nlangs, sizeof(nlangs), 1, stream) != 1) {
-        logn(LOGERR, "pkguinf_restore: read error nlangs (%m) at %ld %p", ftell(stream), stream);
+        logn(LOGERR, "pkguinf_restore: read error nlangs (%m) at %ld %p",
+             ftell(stream), stream);
         return NULL;
     }
     nlangs = ntoh16(nlangs);
     
     if (fread(&nsize, sizeof(nsize), 1, stream) != 1) {
-        logn(LOGERR, "pkguinf_restore: read error nsize (%m) at %ld", ftell(stream));
+        logn(LOGERR, "pkguinf_restore: read error nsize (%m) at %ld",
+             ftell(stream));
         return NULL;
     }
     
@@ -197,7 +202,8 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
     rawhdr = alloca(nsize);
     
     if (fread(rawhdr, nsize, 1, stream) != 1) {
-        logn(LOGERR, "pkguinf_restore: read %d error at %ld", nsize, ftell(stream));
+        logn(LOGERR, "pkguinf_restore: read %d error at %ld", nsize,
+             ftell(stream));
         return NULL;
     }
 
@@ -218,7 +224,8 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
         pkgu->_refcnt = 0;
         
 #if 0    
-        printf("< %ld\t%d\n", ftell(stream), headerSizeof(pkgu->_hdr, HEADER_MAGIC_NO));
+        printf("< %ld\t%d\n", ftell(stream),
+               headerSizeof(pkgu->_hdr, HEADER_MAGIC_NO));
         headerDump(pkgu->_hdr, stdout, HEADER_DUMP_INLINE, rpmTagTable);
 #endif        
     }
@@ -308,7 +315,8 @@ struct pkguinf *pkguinf_ldhdr(Header h)
         return NULL;
     
     pkgu = n_malloc(sizeof(*pkgu));
-    pkgu->_hdr = hdr;
+    memset(pkgu, 0, sizeof(*pkgu));
+    
     pkgu->flags = 0;
     pkgu->nlangs = nlangs;
     pkgu->license = NULL;
@@ -317,6 +325,10 @@ struct pkguinf *pkguinf_ldhdr(Header h)
     pkgu->description = NULL;
     pkgu->vendor = NULL;
     pkgu->buildhost = NULL;
+    
+    pkgu->_hdr = hdr;
+    pkgu->_refcnt = 0;
+
     return pkgu;
 }
 
