@@ -5,7 +5,7 @@
 Summary:	RPM packages management helper tool
 Name:		poldek
 Version:	@VERSION@
-Release:	1%{?_with_static:_static}
+Release:	1%{?_with_static:.static}
 License:	GPL
 Group:		Applications/System
 Source0:	http://team.pld.org.pl/~mis/poldek/download/%{name}/%{name}-%{version}.tar.gz
@@ -70,10 +70,13 @@ rm -rf $RPM_BUILD_ROOT
 
 %define date    %(echo `LC_ALL="C" date +"%a %b %d %Y"`)
 %changelog
-* %{date}
+* %{date} poldek
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.10  2002/03/18 16:46:25  mis
+- added missing changelog name(?)
+
 Revision 1.9  2002/03/09 22:00:57  mis
 - updates && slimed down poldekrc.sample-pld
 
