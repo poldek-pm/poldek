@@ -29,8 +29,14 @@ struct vopen3_st {
 
     int     flags;
     pid_t   pid;
+
+    
     char    *cmd;
     char    **argv;
+    
+    int     (*pfunc)(void*);
+    void    *pfunc_arg;
+
     int     ec;                 /* exit code */
     char    *errmsg;
     int     nread;
@@ -38,6 +44,7 @@ struct vopen3_st {
 };
 
 void vopen3_init(struct vopen3_st *st, const char *cmd, char *const argv[]);
+void vopen3_init_fn(struct vopen3_st *st, int (*pfunc)(void*), void *pfunc_arg);
 void vopen3_destroy(struct vopen3_st *st);
 
 

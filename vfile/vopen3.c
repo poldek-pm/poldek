@@ -71,6 +71,16 @@ void vopen3_init(struct vopen3_st *st, const char *cmd, char *const argv[])
     st->errmsg = NULL;
 }
 
+void vopen3_init_fn(struct vopen3_st *st, int (*pfunc)(void*), void *pfunc_arg)
+{
+    memset(st, 0,  sizeof(*st));
+
+    st->pfunc = pfunc;
+    st->pfunc_arg = pfunc_arg;
+    st->errmsg = NULL;
+}
+
+
 static void my_fclose(FILE **stream)
 {
     if (*stream) {
@@ -202,11 +212,12 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
     
         if (is_chain && st_prev) {
             in_pipe.out_fd = st_prev->fd_out;
-            in_pipe.in_fd = -1;
+            //in_pipe.in_fd = -1;
             
         } else if (!p_pipe_creat(st, &in_pipe))
             break;
 
+        
         if ((pid = fork()) < 0) {
             st_seterr(st, "fork %s: %m", st->cmd);
             break;
@@ -216,34 +227,37 @@ int vopen3_exec(struct vopen3_st *vst, unsigned flags)
             
             printf("[%d] exec %s [->%d, %d->]\n", getpid(), 
                    st->cmd, out_pipe.in_fd, in_pipe.out_fd);
+
+            if (st->next != NULL) { /* not last one */
+                dup2(out_pipe.in_fd, STDOUT_FILENO);
+                dup2(out_pipe.in_fd, STDERR_FILENO);
+            }
             
-            dup2(out_pipe.in_fd, STDOUT_FILENO);
-            dup2(out_pipe.in_fd, STDERR_FILENO);
             p_pipe_close(&out_pipe);
             
-            if (st_prev == NULL) { /* head */
-                if ((flags & VOPEN3_SHARE_STDIN))
-                    dup2(in_pipe.out_fd, STDIN_FILENO);
-                else
-                    p_dupnull(STDIN_FILENO, flags);
-            }
-        
+            dup2(in_pipe.out_fd, STDIN_FILENO);
             p_pipe_close(&in_pipe);
             
             for (i = 3; i < 100; i++)
                 close(i);
 
-            if (execv(st->cmd, st->argv) < 0) {
-                printf("execv %s: %m\n", st->cmd);
+            if (st->cmd) {
+                if (execv(st->cmd, st->argv) < 0) {
+                    printf("execv %s: %m\n", st->cmd);
+                }
+                exit(EXIT_FAILURE);
+                
+            } else {
+                n_assert(st->pfunc);
+                exit(st->pfunc(st->pfunc_arg));
             }
-            
-            exit(EXIT_FAILURE);
+             
         
         } else {                /* me */
             close(out_pipe.in_fd);
             close(in_pipe.out_fd);
 
-            st->fd_in = -1;
+            //st->fd_in = -1;
             st->fd_out = out_pipe.out_fd;
             st->pid = pid;
 
@@ -284,7 +298,7 @@ int do_waitpid(struct vopen3_st *st, int woptions)
         free(st->errmsg);
     
     st->errmsg = NULL;
-    printf("do_waitpid %d\n", st->pid);
+    //printf("do_waitpid %d\n", st->pid);
     
     if ((pid = waitpid(st->pid, &status, woptions)) < 0) {
         printf("waitpid %s: %m\n", st->cmd);
@@ -348,14 +362,17 @@ static int p_waitpid(struct vopen3_st *st, int woptions)
         n++;
     }
     printf("p_waitpid (%d, %d)\n", n, nfinished);
-    while (1) {
+    
+    while (n > nfinished) {
         tmp = st;
         
         while (tmp) {
             if (tmp->pid != 0) {
                 do_waitpid(tmp, _woptions);
-                if (tmp->pid == 0)
+                if (tmp->pid == 0) {
+                    printf("finished %s\n", tmp->cmd);
                     nfinished++;
+                }
             }
             tmp = tmp->next;
             if (n == nfinished)
@@ -364,6 +381,8 @@ static int p_waitpid(struct vopen3_st *st, int woptions)
         
         if (woptions & WNOHANG)
             goto l_end;
+        
+        sleep(1);
     }
 
  l_end:
@@ -390,7 +409,7 @@ int vopen3_chain(struct vopen3_st *st1, struct vopen3_st *st2)
     struct vopen3_st *st;
 
     st = st1;
-    while (st->next && st->next->next)
+    while (st->next)
         st = st->next;
     
     n_assert(st->next == NULL);
