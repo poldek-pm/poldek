@@ -15,7 +15,7 @@ if [ -d trurlib ]; then
 fi	
 
 if [ -d ../trurlib ]; then 
-     TRURLIB_VERSION=$(egrep 'T_AUTOMAKE\(trurlib, ' ../trurlib/configure.in | cut -d ' ' -f 2 | sed 's|)||')
+     TRURLIB_VERSION=$(egrep 'AC_INIT\(trurlib, ' ../trurlib/configure.in | cut -d ' ' -f 2 | sed 's|)||')
      
      if [ -z "$TRURLIB_VERSION" ]; then
 	echo "$0: error extracting TRURLIB_VERSION";
