@@ -860,22 +860,30 @@ void rpmlog(int prii, const char *fmt, ...)
         return;
     
     va_start(args, fmt);
-
-    if (logpri != LOGERR) 
+    
+    if (logpri != LOGERR)
         vlog(logpri, 0, fmt, args);
         
     else {                  /* basename(path) */
         char m[1024], *p, *q;
-        vsnprintf(m, sizeof(m), fmt, args);
+        int n;
+
+        
+        n = vsnprintf(m, sizeof(m), fmt, args);
+
+        if (n > 0 && m[n - 1] == '\n')
+            m[n - 1] = '\0';
+        
         p = m;
-        if (*p == '/') {
+        if (*p == '/' && strstr(p, ".rpm")) {
             p++;
             q = p;
             while ((p = strchr(q, '/')))
                 q = p + 1;
             p = q;
         }
-        log(logpri, "%s", p);
+        
+        log(logpri, "%s\n", p);
     }
         
     va_end(args);
