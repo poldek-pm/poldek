@@ -237,7 +237,7 @@ int valid_dir(const char *envname, const char *dir)
         else if (!S_ISDIR(st.st_mode))
             logn(LOGERR, _("%s (%s): not a directory"), envname, dir);
             
-        else if (!(st.st_mode & S_IRWXU))
+        else if ((st.st_mode & S_IRWXU) != S_IRWXU)
             logn(LOGERR, _("%s (%s): permission denied"), envname, dir);
             
         else 
@@ -410,7 +410,7 @@ int mk_dir(const char *path, const char *dn)
         return 0;
     }
 
-    if (!(st.st_mode & S_IRWXU)) {
+    if ((st.st_mode & S_IRWXU) != S_IRWXU) {
         logn(LOGERR, _("%s: mkdir: permission denied"), path);
         return 0;
     }

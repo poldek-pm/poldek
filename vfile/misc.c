@@ -106,11 +106,11 @@ int vf_mkdir(const char *path)
     if (!vf_valid_path(path))
         return 0;
 
-    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode) && (st.st_mode & S_IRWXU))
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
         return 1;
     
     if (mkdir(path, 0750) != 0) {
-        vfile_err_fn("%s: mkdir %m\n", path);
+        vfile_err_fn("%s: mkdir: %m\n", path);
         return 0;
     }
     
