@@ -37,7 +37,7 @@ use_sudo  = yes
 
 
 # Some rpm macros
-rpmdef        = "_install_langs pl:lt"
+rpmdef        = "_install_langs pl:pl_PL:lt:lt_LT"
 
 # don't install any documentation
 rpmdef        = "_netsharedpath /usr/share/info:/usr/share/man"
