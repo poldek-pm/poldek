@@ -994,7 +994,7 @@ static int update_whole_idx(void)
 
 static int update_idx(void)
 {
-    int i, nerr = 0;
+    int i, nerr = 0, npatches;
     
     if (args.update_op == OPT_UPDATEIDX_WHOLE)
         return update_whole_idx();
@@ -1002,7 +1002,6 @@ static int update_idx(void)
     for (i=0; i < n_array_size(args.sources); i++) {
         struct source *src = n_array_nth(args.sources, i);
         struct pkgdir *pkgdir;
-        int n;
         
         pkgdir = pkgdir_new(src->source_name, src->source_path,
                             src->pkg_prefix, PKGDIR_NEW_VERIFY);
@@ -1017,10 +1016,13 @@ static int update_idx(void)
         if (pkgdir->vf->vf_flags & VF_FETCHED) /* already downloaded */
             continue;
 
-        n = 0;
-        if (pkgdir_update(pkgdir, &n) && n)
+        npatches = 0;
+        if (!pkgdir_update(pkgdir, &npatches))
+            nerr++;
+        else if (npatches)
             if (!pkgdir_create_idx(pkgdir, NULL, args.pkgdir_creat_flags))
                 nerr++;
+        
         pkgdir_free(pkgdir);
     }
     return nerr == 0;
@@ -1314,11 +1316,12 @@ void self_init(void)
         logn(LOGERR, _("I'm set*id'ed, give up"));
         exit(EXIT_FAILURE);
     }
-
+#if 0
     if (uid == 0) {
         logn(LOGWARN, _("Running me as root is not a good habbit"));
         sleep(1);
     }
+#endif    
 }
     
 
