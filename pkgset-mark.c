@@ -269,7 +269,8 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 
     packages_mark(ps->pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
 
-    nodeps = inst_s_flags & INSTS_NODEPS;
+    //nodeps = inst_s_flags & INSTS_NODEPS;
+    nodeps = withdeps ? 0 : 1;
  
     for (i=0; i < n_array_size(ups->pkgdefs); i++) {
         struct pkgdef *pdef = n_array_nth(ups->pkgdefs, i);

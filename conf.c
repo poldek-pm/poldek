@@ -555,7 +555,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
     }
     
         
-    msgn_i(0, 2, "%s::%s = %s", section, name, value);
+    msgn_i(3, 2, "%s::%s = %s", section, name, value);
     
     
     if (tag->flags & TYPE_LIST) 
@@ -690,7 +690,7 @@ struct afile *afile_open(const char *path, const char *parent_path,
     }
 
     if (ppath)  /* included file */
-        msgn(0, "-- %s --", path);
+        msgn(3, "-- %s --", path);
 
     vfmode = VFM_RO | VFM_CACHE | VFM_UNCOMPR | VFM_NOEMPTY;
     if (update)
@@ -731,7 +731,7 @@ tn_hash *open_section_ht(tn_hash *htconf, const struct section *sect,
     tn_hash  *ht_sect = NULL;
     
     arr_sect = n_hash_get(htconf, sectnam);
-    msgn(0, " [%s]", sectnam);
+    msgn(3, " [%s]", sectnam);
 
     if (arr_sect) {
         if (sect && sect->is_multi == 0) {
@@ -886,7 +886,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
         
         if (p == name || *p != '=') {
             logn(LOGERR, _("%s:%d: missing '='"), af->path, nline);
-            printf("%s\n", buf);
+            //printf("%s\n", buf);
             is_err++;
             goto l_end;
             
@@ -913,7 +913,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     }
     
 
-    msgn(0, "-- %s EOF --", af->path);
+    msgn(3, "-- %s EOF --", af->path);
     
 
     if (ht) {

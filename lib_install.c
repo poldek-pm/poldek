@@ -91,7 +91,7 @@ int poldek_install_dist(struct poldek_ctx *ctx)
 {
     int rc;
 
-    n_assert(ctx->inst->flags & (INSTS_INSTALL | INSTS_UPGRADE));
+    n_assert(ctx->inst->flags & INSTS_INSTALL);
     
     if (!chk_params(ctx->inst))
         return 0;
@@ -177,14 +177,14 @@ void update_installed_pkgs(struct poldek_ctx *ctx, struct install_info *iinf)
 int poldek_install(struct poldek_ctx *ctx, struct install_info *iinf) 
 {
     int rc;
+
     
-    n_assert(ctx->inst->flags & (INSTS_INSTALL | INSTS_UPGRADE));
-    
+    n_assert(ctx->inst->flags & INSTS_INSTALL);
     if (!chk_params(ctx->inst))
         return 0;
 
     ctx->inst->db = pkgdb_open(ctx->inst->rootdir, NULL, O_RDONLY);
-    if (ctx->inst->db == NULL) 
+    if (ctx->inst->db == NULL)
         return 0;
     
     rc = pkgset_install(ctx->ps, ctx->inst, iinf);
@@ -193,4 +193,11 @@ int poldek_install(struct poldek_ctx *ctx, struct install_info *iinf)
     return rc;
 }
 
-    
+
+int poldek_uninstall(struct poldek_ctx *ctx, 
+                     struct usrpkgset *ups, 
+                     struct install_info *iinf) 
+{
+    return uninstall_usrset(ups, ctx->inst, iinf);
+}
+

@@ -44,14 +44,16 @@ int pkgset_order(struct pkgset *ps, int verbose);
 #define INSTS_UPGRADE         (1 << 1) /* rpm -U */
 #define INSTS_DOWNGRADE       (1 << 3) /* rpm -U --oldpackage */
 #define INSTS_REINSTALL       (1 << 4) /* rpm -U --replacefiles --replacepkgs */
-#define INSTS_NODEPS          (1 << 5) /* rpm --nodeps */ 
+#define INSTS_NODEPS          (1 << 5) /* rpm --nodeps */
 #define INSTS_FORCE           (1 << 6) /* rpm --force  */
-#define INSTS_TEST            (1 << 7) /* poldek test mode, not rpm one */
-#define INSTS_RPMTEST         (1 << 8) /* rpm --test */
-#define INSTS_JUSTDB          (1 << 9) /* rpm --justdb */
-#define INSTS_JUSTFETCH       (1 << 10)
-#define INSTS_JUSTPRINT       (1 << 11)
-#define INSTS_JUSTPRINT_N     (1 << 12) /* names, not filenames */
+#define INSTS_IGNOREARCH      (1 << 7) /* rpm --ignorearch */
+#define INSTS_IGNOREOS        (1 << 8) /* rpm --ignoreos   */
+#define INSTS_TEST            (1 << 9) /* poldek test mode, not rpm one */
+#define INSTS_RPMTEST         (1 << 10) /* rpm --test */
+#define INSTS_JUSTDB          (1 << 11) /* rpm --justdb */
+#define INSTS_JUSTFETCH       (1 << 12)
+#define INSTS_JUSTPRINT       (1 << 13)
+#define INSTS_JUSTPRINT_N     (1 << 14) /* names, not filenames */
 
 #define INSTS_JUSTPRINTS      (INSTS_JUSTPRINT | INSTS_JUSTPRINT_N)
 
@@ -71,7 +73,9 @@ int pkgset_order(struct pkgset *ps, int verbose);
 #define INSTS_CONFIRM_UNINST  (1 << 29) /* confirm_removal = yes  */
 #define INSTS_EQPKG_ASKUSER   (1 << 30) /* choose_equivalents_manually = yes */
 
-#define INSTS_INTERACTIVE_ON  (INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER | INSTS_CONFIRM_UNINST)
+#define INSTS_INTERACTIVE_ON  (INSTS_CONFIRM_INST  | \
+                               INSTS_EQPKG_ASKUSER | \
+                               INSTS_CONFIRM_UNINST)
 
 struct inst_s {
     struct pkgdb   *db;

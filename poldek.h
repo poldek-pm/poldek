@@ -2,6 +2,9 @@
 #ifndef  POLDEK_LIB_H
 #define  POLDEK_LIB_H
 
+#include <trurl/narray.h>
+#include <trurl/nhash.h>
+
 //#include "conf.h"
 #include "pkg.h"
 
@@ -13,12 +16,20 @@ struct pkgdir;
 // pkgset.h structures
 struct pkgset;
 struct inst_s;
+struct install_info;
 
+
+/* usrset.c */
+struct usrpkgset;
+
+
+/* constans  */
 extern const char poldek_BUG_MAILADDR[];
 extern const char poldek_VERSION_BANNER[];
 extern const char poldek_BANNER[];
 
 struct poldek_ctx {
+    tn_hash        *htconf;
     tn_array       *sources;    /* struct source *[]  */
     tn_array       *pkgdirs;    /* struct pkgdir *[]  */
     
@@ -70,11 +81,12 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path);
 
 int poldek_setup(struct poldek_ctx *ctx);
 
-
-
 int poldek_load_sources(struct poldek_ctx *ctx, int load_dbdepdirs);
 
+
+
 tn_array *poldek_av_packages(void);
+
 
 int poldek_mark_usrset(struct poldek_ctx *ctx, struct usrpkgset *ups,
                        int withdeps);

@@ -249,8 +249,6 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
     int       i, j, ndirs = 0, nerr = 0, missing_file_hdrs_err = 0;
     const char *errmsg_notag = _("%s: no %s tag");
     
-
-    
     if (!headerGetEntry(h, RPMTAG_BASENAMES, (void*)&t1, (void*)&names, &c1))
         return 0;
 
@@ -421,13 +419,19 @@ struct pkg *pkg_ldrpmhdr(Header h, const char *fname, unsigned fsize,
     if (!headerGetEntry(h, RPMTAG_EPOCH, &type, (void *)&epoch, NULL)) 
         epoch = NULL;
 
-    if (!headerGetEntry(h, RPMTAG_ARCH, &type, (void *)&arch, NULL)) {
-        logn(LOGERR, _("%s: read architecture tag failed"), fname);
-        return NULL;
-    }
+    if (rpmhdr_issource(h)) {
+        arch = "src";
+        
+    } else {
+        if (!headerGetEntry(h, RPMTAG_ARCH, &type, (void *)&arch, NULL)) {
+            logn(LOGERR, _("%s: read architecture tag failed"), fname);
+            return NULL;
+        }
 
-    if (type != RPM_STRING_TYPE)
-        arch = NULL;
+        if (type != RPM_STRING_TYPE)
+            arch = NULL;
+    }
+    
     
     if (!headerGetEntry(h, RPMTAG_OS, &type, (void *)&os, NULL)) {
         if (verbose > 1)
@@ -445,7 +449,7 @@ struct pkg *pkg_ldrpmhdr(Header h, const char *fname, unsigned fsize,
 
     if (!headerGetEntry(h, RPMTAG_INSTALLTIME, &type, (void *)&itime, NULL)) 
         itime = NULL;
-
+    
     pkg = pkg_new_ext(name, epoch ? *epoch : 0, version, release, arch, os, 
                       size ? *size : 0, fsize, btime ? *btime : 0);
     
@@ -525,11 +529,7 @@ struct pkg *pkg_ldrpm(const char *path, unsigned ldflags)
     Header h;
     
     if (rpmhdr_loadfile(path, &h)) {
-        if (rpmhdr_issource(h))
-            logn(LOGERR, _("%s: reject source package"), path);
-        else
-            pkg = pkg_ldrpmhdr(h, path, 0, ldflags);
-        
+        pkg = pkg_ldrpmhdr(h, path, 0, ldflags);
         headerFree(h);
     }
 

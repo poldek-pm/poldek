@@ -1024,7 +1024,7 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     if (pkg->arch) {
         memcpy(s, pkg->arch, a_len);
         s += a_len;
-        n_assert(*s == '\0');
+        //n_assert(*s == '\0');
         *s++ = '.';
     }
 

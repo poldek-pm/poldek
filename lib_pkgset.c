@@ -60,7 +60,7 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
 
     if (ps == NULL)
         return 0;
-
+    
     
     if ((ctx->inst->flags & INSTS_NOHOLD) == 0) {
         packages_score(ps->pkgs, ctx->inst->hold_patterns, PKG_HELD);
@@ -84,6 +84,7 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
         packages_set_priorities(ps->pkgs, ctx->inst->prifile);
 
     ctx->ps = ps;
+    ctx->pkgs = n_ref(ps->pkgs);
     return 1;
 }
 

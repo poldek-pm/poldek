@@ -254,23 +254,23 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
         argv[n++] = "rpm";
     }
     
-    if (inst->flags & INSTS_INSTALL)
-        argv[n++] = "--install";
-    else if (inst->flags & INSTS_UPGRADE)
+    if (inst->flags & (INSTS_UPGRADE | INSTS_REINSTALL | INSTS_DOWNGRADE))
         argv[n++] = "--upgrade";
-    else {
-        n_assert(0);
+        
+    else if (inst->flags & INSTS_INSTALL)
+        argv[n++] = "--install";
+        
+    else
         die();
-    }
 
     if (inst->flags & INSTS_REINSTALL) {
-        n_assert(inst->flags & INSTS_UPGRADE);
+        n_assert(inst->flags & INSTS_INSTALL);
         argv[n++] = "--replacefiles";
         argv[n++] = "--replacepkgs";
     }
 
     if (inst->flags & INSTS_DOWNGRADE) {
-        n_assert(inst->flags & INSTS_UPGRADE);
+        n_assert(inst->flags & INSTS_INSTALL);
         argv[n++] = "--oldpackage";
     }
 

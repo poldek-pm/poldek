@@ -1656,20 +1656,22 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
 #endif
 
 
-static int valid_arch_os(tn_array *pkgs) 
+static int valid_arch_os(struct inst_s *inst, tn_array *pkgs) 
 {
     int i, nerr = 0;
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
 
-        if (pkg->arch && !rpmMachineScore(RPM_MACHTABLE_INSTARCH, pkg->arch)) {
+        if ((inst->flags & INSTS_IGNOREARCH) == 0 &&
+            pkg->arch && !rpmMachineScore(RPM_MACHTABLE_INSTARCH, pkg->arch)) {
             logn(LOGERR, _("%s: package is for a different architecture (%s)"),
-                pkg_snprintf_s(pkg), pkg->arch);
+                 pkg_snprintf_s(pkg), pkg->arch);
             nerr++;
         }
-        
-        if (pkg->os && !rpmMachineScore(RPM_MACHTABLE_INSTOS, pkg->os)) {
+    
+        if ((inst->flags & INSTS_IGNOREOS) == 0 &&
+            pkg->os && !rpmMachineScore(RPM_MACHTABLE_INSTOS, pkg->os)) {
             logn(LOGERR, _("%s: package is for a different operating "
                            "system (%s)"), pkg_snprintf_s(pkg), pkg->os);
             nerr++;
@@ -2229,10 +2231,7 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
     int i, nmarked = 0, nerr = 0, n, is_particle;
     struct upgrade_s upg;
     
-    n_assert(inst->flags & (INSTS_INSTALL | INSTS_UPGRADE));
-    if (inst->flags & INSTS_INSTALL)
-        n_assert((inst->flags & INSTS_UPGRADE) == 0);
-
+    n_assert(inst->flags & INSTS_INSTALL);
 
     packages_mark(ps->pkgs, 0, PKG_INTERNALMARK | PKG_INDIRMARK);
 

@@ -384,5 +384,6 @@ AC_CONFIG_FILES([
 		Makefile
 		poldek.spec
 		poldek-suse.spec
+		cli/Makefile
 	])
 AC_OUTPUT
