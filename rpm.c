@@ -432,13 +432,7 @@ int rpm_dbmatch_req(rpmdb db, const struct capreq *req, int strict,
  */
 static void progress(const unsigned long amount, const unsigned long total) 
 {
-    static int is_tty = -1;
     static int last_v = 0;
-    
-    if (is_tty == -1) {
-        FILE *stream = log_stream();
-        is_tty = isatty(fileno(stream));
-    }
     
     if (amount == 0) {     /* first notification */
         last_v = 0;
@@ -459,32 +453,16 @@ static void progress(const unsigned long amount, const unsigned long total)
             return;
             
         n_assert(last_v < 100);
-        if (!is_tty) {
-            int k;
-            
-            k = n - last_v;
-            memset(line, '.', k);
-            line[k] = '\0';
-            msg(0, "%s", line);
-
-            if (amount && amount == total) { /* last notification */
-                msgn(0, _(" done"));
-            }
-            
-            last_v = n;
-
+	
+        memset(line, '.', n);
+        line[n] = '\0';
+        snprintf(fmt, sizeof(fmt), "%%-%ds %%5.1f%%%%", barwidth);
+        snprintf(outline, sizeof(outline), fmt, line, percent);
+    
+        if (amount && amount == total) { /* last notification */
+            msg_tty(0, "\r%s\n", outline);
         } else {
-            memset(line, '.', n);
-            line[n] = '\0';
-            snprintf(fmt, sizeof(fmt), "%%-%ds %%5.1f%%%%", barwidth);
-            snprintf(outline, sizeof(outline), fmt, line, percent);
-        
-            if (amount && amount == total) { /* last notification */
-                msg(0, "\r%s\n", outline);
-                
-            } else {
-                msg(0, "\r%s", outline);
-            }
+            msg_tty(0, "\r%s", outline);
         }
     }
 }
@@ -519,7 +497,7 @@ static void *install_cb(const void *h __attribute__((unused)),
             break;
 
         default:
-                                /* do nothing */
+            break;                 /* do nothing */
     }
     
     return rc;
