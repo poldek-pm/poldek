@@ -163,7 +163,7 @@ integrity using its digest from packages.dir.mdd.
 
 =item B<-V|--verify>
 
-This option checks dependenecies and conflicts of package set.
+This option verifies dependenecies of package set.
 Without packages specified it checks all available packages.
 
 =item B<--install-dist[=DIR]>
@@ -176,7 +176,7 @@ Needs packages to be specified.
 Install the newest versions of all packages currently installed 
 on the system from the specified source (see L</SOURCE>).
 
-=item B<-i, --install|-U, --upgrade>
+=item B<-i, --install|-u, -U, --upgrade>
 
 Install or upgrade given packages.
 
@@ -210,20 +210,19 @@ file, the default PREFIX is "packages.chunk"
 
 Just dump packages file names to FILE or stdout instead of install them.
 
-
 =item B<--dumpn[=FILE]> 
 
 Just dump packages names to FILE or stdout instead of install them.
 
-=item B<--fetch=DIR> 
+=item B<--fetch[=DIR]> 
 
-Like B<--dump> but packages are downloaded to DIR
-
+Like B<--dump> but packages are downloaded and stored in poldek's cache
+directory by default
 
 =item B<-F, --fresh> 
 
 Upgrade packages, but only if an earlier version currently installed.
-I<Note> that equivalent of "rpm --freshen" is "poldek -U/-I --fresh --nofollow"
+I<Note> that equivalent of "rpm --freshen" is "poldek -u/-i --fresh --nofollow"
 
 =item B<--greedy> 
 
@@ -236,9 +235,9 @@ with requirement "foo = 1.0" than poldek upgrade foo-devel to version
 =item B<--hold=PACKAGE[,PACKAGE]...>
 
 Prevent packages listed from being upgraded if they are already installed.
-If option is not given packages to hold is taken from B<hold> configuration 
-option and $HOME/.poldek_hold. Held package won't be upgraded with exeption
-if it be pointed directly by the user.
+If option is not given then packages to hold are taken from B<hold> configuration 
+option and additioanlly from $HOME/.poldek_hold. Held package won't be upgraded 
+with exeption if it will be pointed directly by the user.
 
 =item B<-m, --mercy>
 
@@ -254,20 +253,21 @@ Have the same meanings like RPM ones. See next section.
 
 Don't automatically install packages required by selected ones.
 
-
 =item B<--nohold> 
 
-Don't take held packages from $HOME/.poldek_hold.
+Don't take held packages from $HOME/.poldek_hold nor config's hold paramater.
 
 =item B<--rpmdef="NAME VALUE"> 
 
-Like rpm's --define option.
+Like rpm --define option.
 
 =item B<-t, --test>
 
 Do not install packages, but tell if it would work or not. Given once 
-causes poldek's checks only, to perform full tests using rpm option
+causes poldek's checks only, to perform full tests using rpm, option
 must be given twice.
+
+=back
 
 =head1 OTHER OPTIONS
 
@@ -275,8 +275,9 @@ must be given twice.
 
 =item B<--cachedir=DIR>
 
-DIR points to directory where downloaded files will be stored;
-the default is $HOME/.poldek-cache; if set $TMPDIR is used.
+DIR points to directory where downloaded files will be stored.
+If option not set then $TMPDIR is used. If $TMPDIR isn't set
+then $HOME/.poldek-cache is created and used as cache directory.
 
 =item B<--log=FILE>
 
@@ -301,7 +302,7 @@ by RPM binary, which is executed in background. Options passed to rpm:
 
 =item * --nodeps
 
-=item * --test (if given twice, see above --test description)
+=item * --test (may be given twice, see above --test description)
 
 =item * --upgrade 
 
@@ -337,38 +338,44 @@ line represents a comment or a parameter.
 
 =item * B<source> = [NAME] SOURCE
 
+e.g.
+
+source = pld-stable ftp://zn/PLD/i686/PLD/RPMS
+
 Optional NAME may be specified later from cmdline by
 B<-n, --sn> B<SOURCE-NAME> option; for example if you 
 have 3 sources configured as follows:
 
-$ ./poldek -l
-pld-devel     /mnt/PLD-stable/RPMS
-pld-stable    ftp://zn/PLD/i686/PLD/RPMS
-misRPMS       ftp://zn/rpm/RPMS/
+source = pld-devel     /mnt/PLD-stable/RPMS
+source = pld-stable    ftp://zn/PLD/i686/PLD/RPMS
+source = misRPMS       ftp://zn/rpm/RPMS/
 
-then to load only ftp://zn/PLD/i686/PLD/RPMS use:
+then to use only ftp://zn/PLD/i686/PLD/RPMS do:
 
 $ poldek --sn pld-stable 
 
-..and to load all two pld-* use:
+..and to use all pld-* do:
 
 $ poldek --sn pld-\*
 
-If you want to configure "prefixed" source, then it should 
-be specified by suffixed paramteters pair to distinguish it from 
-other sources.   
+
+If you want to configure source with prefix (see B<-P> option description), 
+then it should be specified by suffixed paramteters pair to distinguish 
+that source from other ones:   
 
 =item * B<sourceXX> = SOURCE
+
 =item * B<prefixXX> - see B<-P> description
 
 
 =item * B<cachedir> - see B<--cachedir> option description
 
 =item * B<use_sudo = yes|no> - for r/w operations poldek will 
-                              run rpm using sudo. 
+        run rpm using sudo. The default is "no", but is is recommended
+        to change it to "yes" and use the poldek as ordinary user.
 
 =item * B<follow = yes|no> - automatically install|don't install 
-   packages required by selected ones (default: yes)
+         packages required by selected ones (default: yes)
 
 =item * B<greedy = yes|no> - see --greedy option description
 	(default: no)
@@ -429,7 +436,7 @@ vfjuggle should be configured, see poldekrc.sample-cdrom for details.
 
 =head2 Package index creation
 
-$ poldek -s /cdrom/PLD/RPMS --mkidx=/tmp/packages.dir.gz
+$ poldek -s /cdrom/PLD/RPMS --mkidxz=/tmp/packages.dir.gz
 
 $ poldek -s /ftp/pub/PLD/RPMS --mkidxz
 
@@ -441,12 +448,12 @@ $ mkpackagedir /ftp/pub/PLD/i686/RPMS /ftp/pub/PLD/sparc/RPMS
 
 $ poldek -s rsync://ala.ma.kota/PLD/RPMS/ -V
 
-$ poldek -s /dir/with/RPMS/packages.dir -V apache
+$ poldek -s /dir/with/RPMS -V apache
 
 =head2 Installation from scratch
 
 $ poldek -s ftp://ftp.trurl.net/PLD/RPMS/ 
-  --install-dist=/mnt/dest -p ftp://home.net/my-pkgsets/myset
+  --install-dist=/mnt/dest --pset ftp://home.net/my-pkgsets/myset
 
 Above command installs a "myset" package subset under 
 /mnt/dest as root. 
@@ -470,11 +477,10 @@ Test only:
 $ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/
   --upgrade-dist --test
 
-
 =head2 Install/upgrade particular packages:
 
 $ poldek -s ftp://ftp.znienacka.com/PLD/RPMS/
--U apache -n "ala-ma-kota 1.2" smail-12-389.i386.rpm
+-u apache --nevr "ala-ma-kota 1.2" smail-12-389.i386.rpm
 
 $ poldek -s ftp://ftp.dudy.net/RPMS/ -ti xteddy
 
@@ -482,7 +488,6 @@ $ poldek -s ftp://ftp.dudy.net/RPMS/ -ti xteddy
 
 $ poldek --split=100 --split-conf=zip-split.conf \
    --split-out=/tmp/zipchunk
-
 
 =head2 Execute shell command:
 
