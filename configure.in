@@ -188,19 +188,23 @@ fi
 dnl Checks for libraries.
 AC_CHECK_LIB(z, gzopen)
 AC_CHECK_LIB(bz2, BZ2_bzCompress)
-AC_CHECK_LIB(db, db_create)
+DBLIB=""
+AC_CHECK_LIB(db-4.0, db_create,[DBLIB=-ldb-4.0],[
+	AC_CHECK_LIB(db, db_create, [DBLIB=-ldb],,[$LIBS])],
+	[$LIBS])
 AC_CHECK_LIB(popt, poptReadConfigFile)
 
 if test ${is_rpm4}. = yes. ; then
-	AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR("rpmio not found"),
-		    -lpopt -ldb -lz -lbz2 -lrpm)
+	AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR("rpmio not found"))
 fi
 
-AC_CHECK_LIB(rpm, rpmReadPackageInfo,,AC_MSG_ERROR("rpmlib not found"),
-	    -lpopt -ldb -lz -lbz2)
+AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="$LIBS -lrpm $DBLIB"],
+	AC_CHECK_LIB(rpm, rpmReadPackageHeader,[LIBS="$LIBS -lrpm -lrpmdb $DBLIB"],
+		AC_MSG_ERROR("rpmlib not found"),
+		[$DBLIB -lrpmdb]),
+	    [$DBLIB])
 
-AC_CHECK_FUNCS(rpmMachineScore,, AC_MSG_ERROR("rpmlib not found"),
-	    -lpopt -ldb -lz -lbz2)
+AC_CHECK_FUNCS(rpmMachineScore,, AC_MSG_ERROR("rpmlib not found"))
 
 dnl trullib 0.43.4 has n_hash_size
 dnl test if linked with system copy only
@@ -244,4 +248,4 @@ if test -n "$TRURL_DIR"; then
 	sed 's/^all:/all: all-trurlib/' Makefile > Makefile-$$ && \
         mv -f Makefile-$$ Makefile
 fi
-	
+
