@@ -303,8 +303,11 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
     
     if (pkgs) {
         int doit = 0, is_test = ts->getop(ts, POLDEK_OP_RPMTEST);
+
+        if (is_test)
+            doit = 1;
         
-        if (!is_test && ts->getop(ts, POLDEK_OP_CONFIRM_UNINST) && ts->ask_fn)
+        else if (ts->getop(ts, POLDEK_OP_CONFIRM_UNINST) && ts->ask_fn)
             doit = ts->ask_fn(0, _("Proceed? [y/N]"));
         
         if (doit) {
