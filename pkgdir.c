@@ -48,7 +48,6 @@ static const char depdirs_tag[] = "DEPDIRS: ";
 
 #define PKGT_HAS_NAME  (1 << 0)
 #define PKGT_HAS_EVR   (1 << 1)
-#define PKGT_HAS_PATH  (1 << 2)
 #define PKGT_HAS_CAP   (1 << 3)
 #define PKGT_HAS_REQ   (1 << 4)
 #define PKGT_HAS_CNFL  (1 << 5)
@@ -64,7 +63,6 @@ struct pkgtags_s {
     char       arch[64];
     uint32_t   size;
     uint32_t   btime;
-    char       path[PATH_MAX];
     tn_array   *caps;
     tn_array   *reqs;
     tn_array   *cnfls;
@@ -568,17 +566,6 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             break;
 
 
-        case 'F':
-            if (pkgt->flags & PKGT_HAS_PATH) {
-                log(LOGERR, "%s:%d: double path tag\n", pathname, nline);
-                err++;
-            } else {
-                memcpy(pkgt->path, value, sizeof(pkgt->path)-1);
-                pkgt->evr[sizeof(pkgt->path)-1] = '\0';
-                pkgt->flags |= PKGT_HAS_PATH;
-            }
-            break;
-            
         case 'P':
             if (pkgt->flags & PKGT_HAS_CAP) {
                 log(LOGERR, "%s:%d: double cap tag\n", pathname, nline);
@@ -682,7 +669,6 @@ static
 struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt) 
 {
     struct pkg *pkg;
-    char *path;
     char *version, *release;
     int32_t epoch;
     
@@ -701,10 +687,8 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
         return NULL;
     }
 
-    path = (pkgt->flags & PKGT_HAS_PATH) ? pkgt->path : NULL;
-
     pkg = pkg_new(pkgt->name, epoch, version, release, pkgt->arch,
-                  pkgt->size, pkgt->btime, path);
+                  pkgt->size, pkgt->btime);
     
     if (pkg == NULL) {
         log(LOGERR, "Error reading %s's data", pkgt->name);
@@ -1047,6 +1031,7 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc)
     struct vfile *vf, *vf_toc;
     char tocpath[PATH_MAX];
     int i;
+    
 
     if (mktoc_pathname(tocpath, sizeof(tocpath), pathname) == NULL) {
         log(LOGERR, "Cannot prepare tocpath!?");
@@ -1082,7 +1067,7 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc)
         fprintf_pkg(pkg, vf->vf_stream, pkgdir->depdirs, nodesc);
         fprintf(vf_toc->vf_stream, "%s\n", pkg_snprintf_s(pkg));
     }
-    
+
 
     vfile_close(vf);
     vfile_close(vf_toc);

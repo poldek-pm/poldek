@@ -44,11 +44,9 @@ void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*))
 /* always store fields in order: path, name, version, release, arch */
 struct pkg *pkg_new(const char *name, int32_t epoch,
                     const char *version, const char *release,
-                    const char *arch, uint32_t size, uint32_t btime, 
-                    const char *fpath)
+                    const char *arch, uint32_t size, uint32_t btime)
 {
     struct pkg *pkg;
-    int fpath_len = 0;
     int name_len = 0, version_len = 0, release_len = 0, arch_len = 0;
     char *buf;
     int len;
@@ -64,11 +62,6 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     name_len = strlen(name);
     len = 1 + name_len + 1;
     
-    if (fpath) {
-        fpath_len = strlen(fpath);
-        len += fpath_len + 1;
-    }
-
     version_len = strlen(version);
     len += version_len + 1;
     	
@@ -89,16 +82,6 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     pkg->_buf_size = len;
     buf = pkg->_buf;
 
-    if (fpath_len == 0) 
-        pkg->dn = NULL;
-    else {
-        pkg->dn = buf;
-        memcpy(buf, fpath, fpath_len);
-        buf += fpath_len;
-        *buf++ = '\0';
-        pkg->flags |= PKG_HAS_DN;
-    }
-    
     pkg->name = buf;
     memcpy(buf, name, name_len);
     buf += name_len;
@@ -209,7 +192,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned ldflags)
         btime = NULL;
     
     pkg = pkg_new(name, epoch ? *epoch : 0, version, release, arch,
-                  size ? *size : 0, btime ? *btime : 0, NULL);
+                  size ? *size : 0, btime ? *btime : 0);
 
     if (pkg == NULL)
         return NULL;
@@ -270,6 +253,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned ldflags)
     
     return pkg;
 }
+
 
 struct pkg *pkg_ldrpm(const char *path, unsigned ldflags)
 {

@@ -177,7 +177,7 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
                 release = "";
                 
             pdef->pkg = pkg_new(name, epoch, version, release, architecture(),
-                                0, 0, NULL);
+                                0, 0);
         }
 
         if (virtname) 

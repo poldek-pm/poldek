@@ -133,12 +133,8 @@ int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs)
             n_array_push(urls_arr, pkgpath);
         }
         
-        if (pkg->dn) 
-            len = snprintf(path, sizeof(path), "%s/%s/%s", pkgpath, pkg->dn,
-                           pkg_filename_s(pkg));
-        else
-            len = snprintf(path, sizeof(path), "%s/%s", pkgpath,
-                           pkg_filename_s(pkg));
+        len = snprintf(path, sizeof(path), "%s/%s", pkgpath,
+                       pkg_filename_s(pkg));
         
         s = alloca(len + 1);
         memcpy(s, path, len);

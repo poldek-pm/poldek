@@ -25,7 +25,6 @@
 #include "pkgset.h"
 #include "usrset.h"
 #include "misc.h"
-#include "depdirs.h"
 #include "rpm.h"
 
 

@@ -12,7 +12,6 @@
 #include "pkgu.h"
 #include "pkgdir.h"
 
-#define PKG_HAS_DN          (1 << 0)
 #define PKG_HAS_CAPS        (1 << 1)
 #define PKG_HAS_REQS        (1 << 2)
 #define PKG_HAS_CNFLS       (1 << 3)
@@ -74,7 +73,6 @@ struct pkg {
     char         *ver;
     char         *rel;
     char         *arch;
-    char         *dn;         /* dirname */
 
     tn_array     *caps;       /* capabilities     */
     tn_array     *reqs;       /* requirements     */
@@ -106,8 +104,7 @@ struct pkg {
 
 struct pkg *pkg_new(const char *name, int32_t epoch,
                     const char *version, const char *release,
-                    const char *arch, uint32_t size, uint32_t btime,
-                    const char *fpath);
+                    const char *arch, uint32_t size, uint32_t btime);
 
 #define PKG_LDNEVR    0
 #define PKG_LDCAPS    (1 << 0)
