@@ -1,6 +1,19 @@
+0.17.6 (minor bugfix release; 2002/05/2?)
+
+* shell: search: pattern is treated as shell wildcard one (matched by fnmatch(3)) 
+  by default, to switch to Perl regular expression matching use --perlre 
+  ("rsearch" alias is created). 
+   
+* fixed bug of equivalent package selection (<Enter> was select first, not
+  default package).
+
+* shell: with 'upgrade' and 'greedy-upgrade' commands only upgradeable 
+  packages are auto-completed.  
+
+
 0.17.5 (minor bugfix release; 2002/05/15)
 
-* about 75% less memory is used incremental update of packages.dir 
+* about 75% less memory is used by incremental update of packages.dir 
 
 * improved package auto-selection among equivalents: package which marks
   less packages to install is preferred
