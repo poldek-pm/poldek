@@ -1796,17 +1796,17 @@ static int valid_arch_os(struct poldek_ts *ts, tn_array *pkgs)
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
         
-        if (!ts->getop(ts, POLDEK_OP_IGNOREARCH) && pkg->arch &&
-            !pm_machine_score(ts->pmctx, PMMSTAG_ARCH, pkg->arch)) {
+        if (!ts->getop(ts, POLDEK_OP_IGNOREARCH) && pkg->_arch &&
+            !pm_machine_score(ts->pmctx, PMMSTAG_ARCH, pkg_arch(pkg))) {
             logn(LOGERR, _("%s: package is for a different architecture (%s)"),
-                 pkg_snprintf_s(pkg), pkg->arch);
+                 pkg_snprintf_s(pkg), pkg_arch(pkg));
             nerr++;
         }
     
-        if (!ts->getop(ts, POLDEK_OP_IGNOREOS) && 
-            pkg->os && !pm_machine_score(ts->pmctx, PMMSTAG_OS, pkg->os)) {
+        if (!ts->getop(ts, POLDEK_OP_IGNOREOS) && pkg->_os &&
+            !pm_machine_score(ts->pmctx, PMMSTAG_OS, pkg_os(pkg))) {
             logn(LOGERR, _("%s: package is for a different operating "
-                           "system (%s)"), pkg_snprintf_s(pkg), pkg->os);
+                           "system (%s)"), pkg_snprintf_s(pkg), pkg_os(pkg));
             nerr++;
         }
     }

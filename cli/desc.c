@@ -691,17 +691,17 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
         cmdctx_printf(cmdctx, "%s\n", s);
     }
 
-    if (pkg->arch) {
+    if (pkg->_arch) {
         char *p = "Arch:";
         
-        if (pkg->os) 
+        if (pkg->_os) 
             p = "Arch/OS:";
         
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", p);
-        cmdctx_printf(cmdctx, "%s", pkg->arch);
+        cmdctx_printf(cmdctx, "%s", pkg_arch(pkg));
             
-        if (pkg->os) 
-            cmdctx_printf(cmdctx, "/%s", pkg->os);
+        if (pkg->_os) 
+            cmdctx_printf(cmdctx, "/%s", pkg_os(pkg));
         cmdctx_printf(cmdctx, "\n");
     }
         

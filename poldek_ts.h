@@ -81,9 +81,7 @@ struct arg_packages;
 struct pkgmark_set;
 struct pkg;
 
-#ifdef SWIG
-struct poldek_ts { int type; };
-#else
+#ifndef SWIG
 struct poldek_ts {
     int                type;
     char               *typenam;

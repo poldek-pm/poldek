@@ -441,16 +441,9 @@ int packages_split(const tn_array *pkgs, unsigned split_size,
     int i, rc = 1;
 
     
-    packages = n_array_new(n_array_size(pkgs), (tn_fn_free)pkg_free,
-                           (tn_fn_cmp)pkg_cmp_pri);
-    
-    
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-        n_array_push(packages, pkg_link(pkg));
-    }
+    packages = n_array_dup(pkgs, (tn_fn_dup)pkg_link);
+    n_array_ctl_set_cmpfn(packages, (tn_fn_cmp)pkg_cmp_pri);
     n_array_sort(packages);
-    n_array_isort(packages);
 
     msg(2, "\nPackages ordered by priority:\n");
     for (i=0; i < n_array_size(packages); i++) {

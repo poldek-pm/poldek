@@ -596,9 +596,8 @@ int pkgdir__uniq(struct pkgdir *pkgdir)
     
     if (pkgdir->pkgs == NULL || n_array_size(pkgdir->pkgs) == 0)
         return 0;
-
     n = n_array_size(pkgdir->pkgs);
-    n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_deepcmp_name_evr_rev_verify);
+    n_array_sort_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_deepcmp_name_evr_rev_verify);
     n_array_uniq_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_cmp_uniq_name_evr_arch);
     n -= n_array_size(pkgdir->pkgs);
     

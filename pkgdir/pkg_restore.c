@@ -492,8 +492,8 @@ struct pkg *pkg_ldtags(tn_alloc *na, struct pkg *pkg,
         n_assert(os == NULL);
         n_assert(arch == NULL);
         
-        pkg = pkg_new_ext(na, pkg->name, pkg->epoch, pkg->ver, pkg->rel, pkg->arch,
-                          pkg->os, 
+        pkg = pkg_new_ext(na, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
+                          pkg_arch(pkg), pkg_os(pkg), 
                           (pkgt->flags & PKGT_HAS_FN) ? pkgt->fn : NULL,
                           pkgt->size, pkgt->fsize, pkgt->btime);
         

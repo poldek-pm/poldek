@@ -46,6 +46,7 @@ packages_mark
 packages_score
 pkg_add_pkgcnfl
 pkg_add_selfcap
+pkg_arch
 pkg_caps_match_req
 pkg_caps_obsoletes_pkg_caps
 pkg_cmp_btime
@@ -96,10 +97,13 @@ pkg_nvr_strcmp_btime_rev
 pkg_nvr_strcmp_rev
 pkg_nvr_strncmp
 pkg_obsoletes_pkg
+pkg_os
 pkg_path
 pkg_path_s
 pkg_pkgdirpath
 pkg_printf
+pkg_set_arch
+pkg_set_os
 pkg_snprintf
 pkg_snprintf_epoch_s
 pkg_snprintf_s
@@ -208,6 +212,7 @@ poldek_configure
 poldek_free
 poldek_get_avail_packages
 poldek_get_pkgdirs
+poldek_get_pmctx
 poldek_get_sources
 poldek_iinf_destroy
 poldek_iinf_init

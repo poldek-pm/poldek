@@ -232,12 +232,17 @@ int pndir_make_pkgkey(char *key, size_t size, const struct pkg *pkg)
 
     nn = n;
 
-    if (pkg->arch && strcmp(pkg->arch, pndir_DEFAULT_ARCH) != 0)
-        n += n_snprintf(&key[n], size - n, "%s", pkg->arch);
-
-    if (pkg->os && strcmp(pkg->os, pndir_DEFAULT_OS) != 0)
-        n += n_snprintf(&key[n], size - n, ":%s", pkg->os);
-
+    if (pkg->_arch) {
+        const char *arch = pkg_arch(pkg);
+        if (strcmp(arch, pndir_DEFAULT_ARCH) != 0)
+            n += n_snprintf(&key[n], size - n, "%s", arch);
+    }
+    
+    if (pkg->_os) {
+        const char *os = pkg_os(pkg);
+        if (strcmp(os, pndir_DEFAULT_OS) != 0)
+            n += n_snprintf(&key[n], size - n, ":%s", os);
+    }
 
     if (nn == n) {              /* eat second '#' */
         n--;
@@ -314,8 +319,8 @@ struct pkg *pndir_parse_pkgkey(char *key, int klen, struct pkg *pkg)
     pkg->epoch = epoch;
     pkg->ver = (char*)ver;
     pkg->rel = (char*)rel;
-    pkg->arch = arch;
-    pkg->os = os;
+    pkg_set_arch(pkg, arch);
+    pkg_set_os(pkg, os);
     return pkg;
 }
 

@@ -64,8 +64,8 @@ struct pkg {
     uint32_t     fmtime;      /* package file mtime */
     char         *nvr;        /* NAME-VERSION-RELEASE */
 
-    const char   *arch;
-    const char   *os;
+    uint16_t      _arch;
+    uint16_t      _os;
     
     tn_array     *caps;       /* capabilities     */
     tn_array     *reqs;       /* requirements     */
@@ -139,6 +139,12 @@ void pkg_free(struct pkg *pkg);
 extern__inline struct pkg *pkg_link(struct pkg *pkg);
 extern__inline int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
 extern__inline const char *pkg_id(const struct pkg *p);
+
+int pkg_set_arch(struct pkg *pkg, const char *arch);
+const char *pkg_arch(const struct pkg *pkg);
+
+const char *pkg_os(const struct pkg *pkg);
+int pkg_set_os(struct pkg *pkg, const char *os);
 
 int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2);

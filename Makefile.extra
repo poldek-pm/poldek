@@ -7,6 +7,11 @@ prepdist:
 	./getlib.sh trurlib copy
 	./getlib.sh tndb copy
 
+trurl-uncp:
+	-rm -rf tndb trurlib
+	./getlib.sh trurlib link
+	./getlib.sh tndb link
+
 tarball: prepdist dist
 
 rpm-package: tarball
@@ -56,7 +61,7 @@ misarch: mclean
 #$(distdir)/configure* 
 
 snap: tarball
-	@dts=`date +%Y%m%d` && rm -rf $(PACKAGE)-cvs$$dts* && \
+	@dts=`date +%Y%m%d.%H` && rm -rf $(PACKAGE)-cvs$$dts* && \
 	tar xpzf $(distdir).tar.gz && \
 	echo "$$dts" > $(distdir)/0_THIS_IS_SNAPSHOT && \
 	mv -f $(distdir) $(PACKAGE)-$(VERSION)-cvs$$dts && \

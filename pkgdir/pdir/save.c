@@ -134,23 +134,23 @@ int do_pkg_deepcmp(const struct pkg *p1, const struct pkg *p2)
 
     if ((rc = p1->fsize - p2->fsize))
         return rc;
-
-    if (p1->arch && p2->arch == NULL)
+    
+    if (p1->_arch && !p2->_arch)
         return 1;
 
-    if (p1->arch == NULL && p2->arch)
+    if (!p1->_arch && p2->_arch)
         return -1;
 
-    if ((rc = strcmp(p1->arch, p2->arch)))
+    if ((rc = strcmp(pkg_arch(p1), pkg_arch(p2))))
         return rc;
     
-    if (p1->os && p2->os == NULL)
+    if (p1->_os && !p2->_os)
         return 1;
     
-    if (p1->os == NULL && p2->os)
+    if (!p1->_os && p2->_os)
         return -1;
 
-    return strcmp(p1->os, p2->os);
+    return strcmp(pkg_os(p1), pkg_os(p2));
 }
 
 

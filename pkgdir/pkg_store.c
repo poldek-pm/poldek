@@ -352,11 +352,11 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
             n_buf_printf(nbuf, "V: %s-%s\n", pkg->ver, pkg->rel);
     }
     
-    if ((flags & PKGSTORE_NOARCH) == 0 && pkg->arch)
-        n_buf_printf(nbuf, "A: %s\n", pkg->arch);
+    if ((flags & PKGSTORE_NOARCH) == 0 && pkg->_arch)
+        n_buf_printf(nbuf, "A: %s\n", pkg_arch(pkg));
     
-    if ((flags & PKGSTORE_NOOS) == 0 && pkg->os)
-        n_buf_printf(nbuf, "O: %s\n", pkg->os);
+    if ((flags & PKGSTORE_NOOS) == 0 && pkg->_os)
+        n_buf_printf(nbuf, "O: %s\n", pkg_os(pkg));
 
     if (pkg->fn)
         n_buf_printf(nbuf, "%c: %s\n", PKG_STORETAG_FN, pkg->fn);

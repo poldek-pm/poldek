@@ -595,8 +595,6 @@ struct pkg *pkg_ldtags(tn_alloc *na, struct pkg *pkg,
         }
     }
 
-    
-
     if (pkgo) {
         pkgo->nodep_files_offs = pkgt->nodep_files_offs;
         pkgo->pkguinf_offs = pkgt->pkguinf_offs;

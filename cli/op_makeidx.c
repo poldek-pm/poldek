@@ -24,7 +24,6 @@
 #include "i18n.h"
 #include "log.h"
 
-#include "poldek_intern.h"      /* to get ctx->sources, TOFIX */
 #include "pkgdir/pkgdir.h"
 #include "pkgdir/source.h"
 #include "cli.h"
@@ -196,12 +195,20 @@ static int make_idx(struct arg_s *arg_s)
 {
     struct source   *src;
     const char      *path = NULL;
-    tn_array        *types = NULL;
+    tn_array        *sources, *types = NULL;
     int i, j, nerr = 0;
 
-    if (n_array_size(arg_s->ctx->sources) > 1 && arg_s->src_mkidx) {
+    sources = poldek_get_sources(arg_s->ctx);
+    if (sources == NULL || n_array_size(sources) == 0) {
+        logn(LOGERR, _("no sources specified"));
+        nerr++;
+        goto l_end;
+    }
+    
+    if (n_array_size(sources) > 1 && arg_s->src_mkidx) {
         logn(LOGERR, _("multiple sources not allowed if index path is specified"));
-        return 0;
+        nerr++;
+        goto l_end;
     }
 
     if (arg_s->src_mkidx)
@@ -210,8 +217,8 @@ static int make_idx(struct arg_s *arg_s)
     if (arg_s->idx_type)
         types = parse_types(arg_s->idx_type);
     
-    for (i=0; i < n_array_size(arg_s->ctx->sources); i++) {
-        src = n_array_nth(arg_s->ctx->sources, i);
+    for (i=0; i < n_array_size(sources); i++) {
+        src = n_array_nth(sources, i);
         MEMINF("before mkidx");
 
         if (types == NULL) {     /* no types  */
@@ -239,6 +246,11 @@ static int make_idx(struct arg_s *arg_s)
         arg_s->src_mkidx = NULL;
     }
 
+ l_end:
+
+    if (sources)
+        n_array_free(sources);
+    
     if (types)
         n_array_free(types);
     n_cfree(&arg_s->idx_type);

@@ -10,10 +10,6 @@ extern const char poldek_BUG_MAILADDR[];
 extern const char poldek_VERSION_BANNER[];
 extern const char poldek_BANNER[];
 
-#ifdef SWIG
-struct poldek_ctx { void *foo; };
-#endif
-
 struct poldek_ctx;
 struct poldek_ctx *poldek_new(unsigned flags);
 void poldek_free(struct poldek_ctx *ctx);
@@ -44,8 +40,13 @@ int poldek_setup(struct poldek_ctx *ctx);
 int poldek_load_sources(struct poldek_ctx *ctx);
 
 int poldek_is_interactive_on(const struct poldek_ctx *ctx);
+
+
 tn_array *poldek_get_sources(struct poldek_ctx *ctx);
 tn_array *poldek_get_pkgdirs(struct poldek_ctx *ctx);
+
+struct pmctx;
+struct pmctx *poldek_get_pmctx(struct poldek_ctx *ctx);
 
 
 enum poldek_search_tag {

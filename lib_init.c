@@ -115,25 +115,6 @@ static inline void check_if_setup_done(struct poldek_ctx *ctx)
     logn(LOGERR | LOGDIE, "poldek_setup() call is a must...");
 }
 
-
-int poldek_selected_sources(struct poldek_ctx *ctx, unsigned srcflags_excl)
-{
-    int i, nsources = 0;
-    
-    n_array_sort(ctx->sources);
-    n_array_uniq(ctx->sources);
-        
-    for (i=0; i < n_array_size(ctx->sources); i++) {
-        struct source *src = n_array_nth(ctx->sources, i);
-
-        if ((src->flags & srcflags_excl) == 0)
-            nsources++;
-    }
-
-    return nsources;
-}
-
-
 static
 int addsource(tn_array *sources, struct source *src,
               int justaddit, tn_array *srcs_named, int *matches) 
@@ -1090,6 +1071,12 @@ int poldek_is_interactive_on(const struct poldek_ctx *ctx)
                             POLDEK_OP_CONFIRM_UNINST,
                             POLDEK_OP_EQPKG_ASKUSER, 0);
 }
+
+struct pmctx *poldek_get_pmctx(struct poldek_ctx *ctx)
+{
+    return ctx->pmctx;
+}
+
 
 const char *poldek_version(void) 
 {

@@ -24,7 +24,7 @@
 #include "i18n.h"
 #include "log.h"
 
-#include "poldek_intern.h"      /* to get ctx->sources, TOFIX */
+#include "poldek.h"
 #include "pkgdir/source.h"
 #include "pkgdir/pkgdir.h"
 #include "cli.h"
@@ -383,16 +383,19 @@ static void print_source_type_list(void)
 static int oprun(struct poclidek_opgroup_rt *rt)
 {
     struct arg_s *arg_s;
+    tn_array *sources;
     int rc = OPGROUP_RC_NIL;
-    
+
     arg_s = rt->_opdata;
     n_assert(arg_s);
+
+    sources = poldek_get_sources(rt->ctx);
 
     if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN) {
         unsigned flags = PKGSOURCE_CLEAN;
         if (arg_s->cnflags & POLDEKCLI_SRC_CLEANA)
             flags |= PKGSOURCE_CLEANA;
-        sources_clean(rt->ctx->sources, flags);
+        sources_clean(sources, flags);
         rc |= OPGROUP_RC_OK;
     }
 
@@ -403,7 +406,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
 
     if (arg_s->cnflags & POLDEKCLI_SRC_SRCLS) {
         rc |= OPGROUP_RC_FINI;
-        print_source_list(rt->ctx->sources);
+        print_source_list(sources);
     }
 
     if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE) {
@@ -415,13 +418,15 @@ static int oprun(struct poclidek_opgroup_rt *rt)
         if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE_AUTOA)
             flags |= PKGSOURCE_UPAUTOA;
 
-        if (!sources_update(rt->ctx->sources, flags)) {
+        if (!sources_update(sources, flags)) {
             rc |= OPGROUP_RC_ERROR | OPGROUP_RC_IFINI;
         }
 
         rc |= OPGROUP_RC_FINI;
     }
 
+    if (sources)
+        n_array_free(sources);
     
     DBGF("op_source %d\n", rc);
     return rc;

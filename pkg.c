@@ -42,42 +42,128 @@ static int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2);
 int poldek_conf_PROMOTE_EPOCH = 0;
 
 static tn_hash *architecture_h = NULL;
+static tn_array *architecture_a = NULL;
+
 static tn_hash *operatingsystem_h = NULL;
+static tn_array *operatingsystem_a = NULL;
 
-static inline const char *register_os(const char *os)
+struct an_arch {
+    int score;
+    int index;
+    char arch[0];
+};
+
+static
+int pkgmod_register_arch(const char *arch)
 {
-    const char *oss;
-    
-    if (operatingsystem_h == NULL) {
-        operatingsystem_h = n_hash_new(21, free);
-        n_hash_ctl(operatingsystem_h, TN_HASH_NOCPKEY);
-    }
-    
-    if ((oss = n_hash_get(operatingsystem_h, os)) == NULL) {
-        oss = n_strdup(os);
-        n_hash_insert(operatingsystem_h, oss, oss);
-    }
-
-    return oss;
-}
-
-static inline const char *register_arch(const char *arch)
-{
-    const char *aarch;
+    struct an_arch *an_arch;
     
     if (architecture_h == NULL) {
         architecture_h = n_hash_new(21, free);
+        architecture_a = n_array_new(16, NULL, NULL);
         n_hash_ctl(architecture_h, TN_HASH_NOCPKEY);
     }
 
-    if ((aarch = n_hash_get(architecture_h, arch)) == NULL) {
-        aarch = n_strdup(arch);
-        n_hash_insert(architecture_h, aarch, aarch);
-    }
+    if ((an_arch = n_hash_get(architecture_h, arch)) == NULL) {
+        int len = strlen(arch);
+        
+        an_arch = n_malloc(sizeof(*an_arch) + len + 1);
 
-    return aarch;
+        an_arch->score = pm_architecture_score(arch);
+        n_assert(an_arch->score >= 0);
+        if (!an_arch->score) an_arch->score = INT_MAX - 1;
+
+        memcpy(an_arch->arch, arch, len + 1);
+        n_array_push(architecture_a, an_arch);
+        /* +1 in fact; 0 means no arch */
+        an_arch->index = n_array_size(architecture_a);
+        n_assert(an_arch->index < UINT16_MAX);
+        n_hash_insert(architecture_h, an_arch->arch, an_arch);
+    }
+    
+    return an_arch->index;
 }
 
+const char *pkg_arch(const struct pkg *pkg)
+{
+    if (pkg->_arch) {
+        struct an_arch *a = n_array_nth(architecture_a, pkg->_arch - 1);
+        n_assert(a);
+        return a->arch;
+    }
+    return NULL;
+}
+
+static
+int pkg_archscore(const struct pkg *pkg)
+{
+    if (pkg->_arch) {
+        struct an_arch *a = n_array_nth(architecture_a, pkg->_arch - 1);
+        n_assert(a);
+        return a->score;
+    }
+    
+    return 0;
+}
+
+int pkg_set_arch(struct pkg *pkg, const char *arch)
+{
+    pkg->_arch = pkgmod_register_arch(arch);
+    return 1;
+}
+
+
+struct an_os {
+    //int score;
+    int index;
+    char os[0];
+};
+
+static
+int pkgmod_register_os(const char *os)
+{
+    struct an_os *an_os;
+    
+    if (operatingsystem_h == NULL) {
+        operatingsystem_h = n_hash_new(21, free);
+        operatingsystem_a = n_array_new(16, NULL, NULL);
+        n_hash_ctl(operatingsystem_h, TN_HASH_NOCPKEY);
+    }
+
+    if ((an_os = n_hash_get(operatingsystem_h, os)) == NULL) {
+        int len = strlen(os);
+        
+        an_os = n_malloc(sizeof(*an_os) + len + 1);
+
+        //an_os->score = pm__score(os);
+        //n_assert(an_os->score >= 0);
+        //if (!an_os->score) an_os->score = INT_MAX - 1;
+
+        memcpy(an_os->os, os, len + 1);
+        n_array_push(operatingsystem_a, an_os);
+        /* +1 in fact; 0 means no os */
+        an_os->index = n_array_size(operatingsystem_a); 
+        n_hash_insert(operatingsystem_h, an_os->os, an_os);
+    }
+
+    return an_os->index;
+}
+
+const char *pkg_os(const struct pkg *pkg)
+{
+    if (pkg->_os) {
+        struct an_os *o = n_array_nth(operatingsystem_a, pkg->_arch - 1);
+        n_assert(o);
+        return o->os;
+    }
+    return NULL;
+}
+
+int pkg_set_os(struct pkg *pkg, const char *os)
+{
+    pkg->_os = pkgmod_register_os(os);
+    return 1;
+}
 
 
 
@@ -167,10 +253,10 @@ struct pkg *pkg_new_ext(tn_alloc *na,
     }
 
     if (arch) 
-        pkg->arch = register_arch(arch);
+        pkg->_arch = pkgmod_register_arch(arch);
 
     if (os) 
-        pkg->os = register_os(os);
+        pkg->_os = pkgmod_register_os(os);
 
     pkg->nvr = buf;
     memcpy(buf, name, name_len);
@@ -456,26 +542,22 @@ int pkg_strcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 
 static int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2) 
 {
-    register int rc;
-    
-    if (p1->arch && p2->arch) {
+    if (p1->_arch && p2->_arch) {
         int s1, s2;
         s1 = pkg_archscore(p1);
         s2 = pkg_archscore(p2);
-        if (!s1) s1 = INT_MAX - 1;
-        if (!s2) s2 = INT_MAX - 1;
+        n_assert(s1 && s2);
         return s2 - s1;         /* lower score is better */
     }
     
-    if (p1->arch && p2->arch == NULL)
+    if (p1->_arch && !p2->_arch)
         return 10;
     
-    if (p1->arch == NULL && p2->arch)
+    if (!p1->_arch && p2->_arch)
         return -10;
 
     n_assert(0);
-    rc = strcmp(p1->arch ? p1->arch : "" , p2->arch ? p2->arch : "");
-    return rc;
+    return 0;
 }
 
 
@@ -496,13 +578,13 @@ int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2)
     if ((rc = p1->fsize - p2->fsize))
         return rc;
 
-    if (p1->os && p2->os == NULL)
+    if (p1->_os && !p2->_os)
         return 11;
     
-    if (p1->os == NULL && p2->os)
+    if (!p1->_os && p2->_os)
         return -11;
     
-    if ((rc = strcmp(p1->os ? p1->os : "" , p2->os ? p2->os : "")))
+    if ((rc = strcmp(p1->_os ? pkg_os(p1) : "" , p2->_os ? pkg_os(p2) : "")))
         return rc;
 
     if (p1->fn && p2->fn == NULL)
@@ -556,18 +638,19 @@ int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2)
 #if ENABLE_TRACE    
     if (pkg_cmp_name_evr_rev(p1, p2) == 0)
         logn(LOGNOTICE, "uniq %s: keep %s (score %d), removed %s (score %d)",
-             pkg_snprintf_s(p1), p1->arch, pkg_archscore(p1),
-             p2->arch, pkg_archscore(p2));
+             pkg_snprintf_s(p1), pkg_arch(p1), pkg_archscore(p1),
+             pkg_arch(p2), pkg_archscore(p2));
 #endif    
     
     if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && poldek_VERBOSE > 1) {
         if (poldek_VERBOSE > 2) {
             logn(LOGNOTICE, "uniq %s: keep %s (score %d), removed %s (score %d)",
-                 pkg_snprintf_s(p1), p1->arch, pkg_archscore(p1),
-                 p2->arch, pkg_archscore(p2));
+                 pkg_snprintf_s(p1), pkg_arch(p1), pkg_archscore(p1),
+                 pkg_arch(p2), pkg_archscore(p2));
         } else {
             logn(LOGWARN, _("%s%s%s: removed duplicate package"),
-                 pkg_snprintf_s(p2), p2->arch ? ".": "", p2->arch ? p2->arch: "");
+                 pkg_snprintf_s(p2), p2->_arch ? ".": "",
+                 p2->_arch ? pkg_arch(p2): "");
         }
     }
     
@@ -581,12 +664,12 @@ int pkg_cmp_uniq_name_evr_arch(const struct pkg *p1, const struct pkg *p2)
     if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0) {
         const char *a1, *a2;
 
-        a1 = p1->arch; if (a1 == NULL) a1 = "";
-        a2 = p2->arch; if (a2 == NULL) a2 = "";
+        a1 = pkg_arch(p1); if (a1 == NULL) a1 = "";
+        a2 = pkg_arch(p2); if (a2 == NULL) a2 = "";
         if ((rc = strcmp(a1, a2)) == 0 && poldek_VERBOSE > 1) {
             logn(LOGWARN, _("%s%s%s: removed duplicate package"),
-                 pkg_snprintf_s(p2), p2->arch ? ".": "",
-                 p2->arch ? p2->arch: "");
+                 pkg_snprintf_s(p2), p2->_arch ? ".": "",
+                 p2->_arch ? pkg_arch(p2): "");
         }
     }
     
@@ -1232,9 +1315,11 @@ const char *pkg_group(const struct pkg *pkg)
 
 char *pkg_filename(const struct pkg *pkg, char *buf, size_t size) 
 {
+    int n_len, v_len, r_len, a_len = 0;
     unsigned len = 0;
-    int n_len, v_len, r_len, a_len;
+    const char *arch = NULL;
     char *s;
+    
 
     if (pkg->fn) {
         n_snprintf(buf, size, pkg->fn);
@@ -1245,10 +1330,10 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     v_len = pkg->rel  - pkg->ver - 1;
     r_len = strlen(pkg->rel);
 
-    if (pkg->arch) 
-        a_len = strlen(pkg->arch);
-    else
-        a_len = 0;
+    if (pkg->_arch) {
+        arch  = pkg_arch(pkg);
+        a_len = strlen(arch);
+    }
     
     len = n_len + 1 + v_len + 1 +
         r_len + 1 + a_len + 1/* '.' */ + 3/* "rpm" */ + 1;
@@ -1272,8 +1357,8 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     n_assert(*s == '\0');	
     *s++ = '.';
 
-    if (pkg->arch) {
-        memcpy(s, pkg->arch, a_len);
+    if (arch) {
+        memcpy(s, arch, a_len);
         s += a_len;
         //n_assert(*s == '\0');
         *s++ = '.';

@@ -123,11 +123,11 @@ int do_pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     else 
         n_buf_printf(nbuf, "V: %s-%s\n", pkg->ver, pkg->rel);
     
-    if (pkg->arch)
-        n_buf_printf(nbuf, "A: %s\n", pkg->arch);
+    if (pkg->_arch)
+        n_buf_printf(nbuf, "A: %s\n", pkg_arch(pkg));
     
-    if (pkg->os)
-        n_buf_printf(nbuf, "O: %s\n", pkg->os);
+    if (pkg->_os)
+        n_buf_printf(nbuf, "O: %s\n", pkg_os(pkg));
 
     if (pkg->fn)
         n_buf_printf(nbuf, "n: %s\n", pkg->fn);

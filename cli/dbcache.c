@@ -35,7 +35,7 @@
 #include "log.h"
 #include "cli.h"
 #include "pm/pm.h"
-#include "poldek_intern.h"      /* for ctx->pmctx, TOFIX */
+#include "poldek_intern.h"      /* for ctx->ts->cachedir, etc, TOFIX */
 #include "poldek_util.h"
 
 static
@@ -120,8 +120,11 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     char            rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
     const char      *lc_lang;
     struct pkgdir   *dir = NULL;
+    struct pmctx    *pmctx;
+
+    pmctx = poldek_get_pmctx(cctx->ctx);
     
-    if (!pm_dbpath(cctx->ctx->pmctx, dbpath, sizeof(dbpath)))
+    if (!pm_dbpath(pmctx, dbpath, sizeof(dbpath)))
         return poldek_load_destination_pkgdir(cctx->ctx);
     
     if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
@@ -140,7 +143,7 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     if (!reload) {              /* use cache */
         time_t mtime_rpmdb, mtime_dbcache;
         mtime_dbcache = mtime(dbcache_path);
-        mtime_rpmdb = pm_dbmtime(cctx->ctx->pmctx, rpmdb_path);
+        mtime_rpmdb = pm_dbmtime(pmctx, rpmdb_path);
         if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache) {
             dir = pkgdir_open_ext(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE,
                                   dbpath, NULL, 0, lc_lang);
