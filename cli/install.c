@@ -84,10 +84,11 @@ static struct argp_option options[] = {
 {"nodeps", OPT_INST_NODEPS, 0, 0,
  N_("Install packages with broken dependencies"), OPT_GID },
 
-{"mercy", OPT_MERCY, 0, 0, N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
+{"mercy", OPT_MERCY, 0, 0, N_("Treat requirements with EVR as satisfied by "
+                              "capabilities without it (old RPM behaviour)"), OPT_GID},
 
 {"promoteepoch", OPT_PROMOTEEPOCH, 0, 0,
-     N_("Promote non-existent requiremet's epoch to "
+     N_("Promote non-existent requirement's epoch to "
         "package's one (rpm < 4.2.1 behaviour)"), OPT_GID }, 
                                            
 
@@ -97,7 +98,8 @@ N_("Just dump install marked package filenames to FILE (default stdout)"), OPT_G
 {"dumpn", OPT_INST_DUMPN, "FILE", OPTION_ARG_OPTIONAL,
 N_("Just dump install marked package names to FILE (default stdout)"), OPT_GID },
 
-
+{"justdb", OPT_INST_JUSTDB, 0, 0, N_("Modify only the database"), OPT_GID },
+                                           
 {"pm-nodeps", OPT_PMONLY_NODEPS, 0, 0, 
 N_("Install packages with broken dependencies (applied to PM only)"), OPT_GID },
 
@@ -344,7 +346,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             ts->setop(ts, POLDEK_OP_FRESHEN, 1);
             break;
 
-        case 'N':
+        case OPT_INST_NOFOLLOW:
             ts->setop(ts, POLDEK_OP_FOLLOW, 0);
             break;
 
@@ -366,6 +368,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_INST_ROOTDIR:
             poldek_ts_configure(ts, POLDEK_CONF_ROOTDIR, arg);
+            break;
+
+        case OPT_INST_JUSTDB:
+            ts->setop(ts, POLDEK_OP_JUSTDB, 1);
             break;
 
         case OPT_INST_DUMP:

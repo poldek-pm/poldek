@@ -26,6 +26,7 @@
 
 #include <trurl/trurl.h>
 
+#include "pkgdir/pkgdir.h"
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
@@ -81,8 +82,8 @@ struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
     
     return ent;
 }
-#define pkg_dent_new_pkg(cctx, pkg) pkg_dent_new(cctx, NULL, pkg, 0);
-#define pkg_dent_new_dir(cctx, name) pkg_dent_new(cctx, name, NULL, PKG_DENT_DIR);
+#define pkg_dent_new_pkg(cctx, pkg) pkg_dent_new(cctx, NULL, pkg, 0)
+#define pkg_dent_new_dir(cctx, name) pkg_dent_new(cctx, name, NULL, PKG_DENT_DIR)
 
 
 struct pkg_dent *pkg_dent_link(struct pkg_dent *ent)
@@ -192,7 +193,7 @@ void pkg_dent_remove_pkg(struct pkg_dent *dent, struct pkg *pkg)
 
 inline
 int pkg_dent_add_pkgs(struct poclidek_ctx *cctx,
-                     struct pkg_dent *dent, tn_array *pkgs)
+                      struct pkg_dent *dent, tn_array *pkgs)
 {
     int i;
     struct pkg_dent *ent;
@@ -249,7 +250,7 @@ char *poclidek_dent_dirpath(char *path, int size, const struct pkg_dent *dent)
 }
 
 
-
+#if 0                           /* old */
 void poclidek_dent_init(struct poclidek_ctx *cctx)
 {
     struct pkg_dent *root, *ent, *allav;
@@ -258,12 +259,11 @@ void poclidek_dent_init(struct poclidek_ctx *cctx)
 
     root = pkg_dent_new_dir(cctx, "/");
     allav = pkg_dent_adddir(cctx, root, POCLIDEK_AVAILDIR);
-    //cctx->dirs = n_array_new(8, free, (tn_fn_cmp)dir_cmp);
+
     pkgdirs = poldek_get_pkgdirs(cctx->ctx);
     for (i=0; i < n_array_size(pkgdirs); i++) {
         char *name, *p;
         struct pkgdir *pkgdir = n_array_nth(pkgdirs, i);
-        
 
         name = n_strdup(pkgdir_idstr(pkgdir));
         p = name;
@@ -283,6 +283,50 @@ void poclidek_dent_init(struct poclidek_ctx *cctx)
     cctx->homedir = allav;
     cctx->currdir = allav;
 }
+#endif
+
+void poclidek_dent_init(struct poclidek_ctx *cctx)
+{
+    struct pkg_dent *root, *allav, *curr_ent = NULL;
+    struct pkgdir *curr_pkgdir = NULL;
+    tn_array *pkgs;
+    int i;
+
+    root = pkg_dent_new_dir(cctx, "/");
+    allav = pkg_dent_adddir(cctx, root, POCLIDEK_AVAILDIR);
+    cctx->rootdir = root;
+    cctx->homedir = cctx->currdir = allav;
+
+    pkgs = poldek_get_avail_packages(cctx->ctx);
+    if (pkgs == NULL)
+        return;
+    
+    pkg_dent_add_pkgs(cctx, allav, pkgs);
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        
+        if (pkg->pkgdir != curr_pkgdir) {
+            char name[256], *p;
+
+            n_assert(pkg->pkgdir);
+            curr_pkgdir = pkg->pkgdir;
+            
+            n_snprintf(name, sizeof(name), pkgdir_idstr(pkg->pkgdir));
+            p = name;
+            while (*p) {
+                if (!isprint(*p)) *p = '.';
+                p++;
+            }
+            if (curr_ent)
+                n_array_sort(curr_ent->pkg_dent_ents);
+            curr_ent = pkg_dent_adddir(cctx, root, name);
+        }
+        n_array_push(curr_ent->pkg_dent_ents, pkg_dent_new_pkg(cctx, pkg));
+    }
+    n_array_free(pkgs);
+}
+
 
 static
 struct pkg_dent *get_dir_dent(struct poclidek_ctx *cctx,

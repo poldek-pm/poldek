@@ -30,6 +30,7 @@
 #include <trurl/trurl.h>
 
 #include <sigint/sigint.h>
+#include "pkgdir/pkgdir.h"
 #include "i18n.h"
 #include "misc.h"
 #include "log.h"
@@ -455,9 +456,11 @@ int poclidek_load_packages(struct poclidek_ctx *cctx)
         n_array_ctl_set_cmpfn(cctx->pkgs_available, (tn_fn_cmp)pkg_nvr_strcmp);
         n_array_sort(cctx->pkgs_available);
     }
+    
     poclidek_dent_init(cctx);
     if (cctx->flags & POLDEKCLI_SKIPINSTALLED)
         return 1;
+    
     
     return poclidek_load_installed(cctx, 0); 
 }

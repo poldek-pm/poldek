@@ -30,6 +30,7 @@
 #include <trurl/trurl.h>
 #include <sigint/sigint.h>
 
+#include "pkgdir/pkgdir.h"
 #include "i18n.h"
 #include "misc.h"
 #include "log.h"
@@ -119,7 +120,6 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     char            rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
     const char      *lc_lang;
     struct pkgdir   *dir = NULL;
-    int             ldflags = 0;
     
     if (!pm_dbpath(cctx->ctx->pmctx, dbpath, sizeof(dbpath)))
         return poldek_load_destination_pkgdir(cctx->ctx);
@@ -141,9 +141,15 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
         time_t mtime_rpmdb, mtime_dbcache;
         mtime_dbcache = mtime(dbcache_path);
         mtime_rpmdb = pm_dbmtime(cctx->ctx->pmctx, rpmdb_path);
-        if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache)
+        if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache) {
             dir = pkgdir_open_ext(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE,
                                   dbpath, NULL, 0, lc_lang);
+            if (dir)
+                if (!pkgdir_load(dir, NULL, 0)) {
+                    pkgdir_free(dir);
+                    dir = NULL;
+                }
+        }
     }
     
     if (dir == NULL)

@@ -740,9 +740,9 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
         cmdctx_printf(cmdctx, "%.1f %cB (%d B)\n", pkgsize, unit, pkg->fsize);
     }
     
-    if (pkg->pkgdir && pkg->pkgdir->path) {
+    if (pkg_pkgdirpath(pkg)) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Path:");
-        cmdctx_printf(cmdctx, "%s\n", pkg->pkgdir->path);
+        cmdctx_printf(cmdctx, "%s\n", pkg_pkgdirpath(pkg));
     }
 
     if ((fn = pkg_filename(pkg, fnbuf, sizeof(fnbuf)))) {
