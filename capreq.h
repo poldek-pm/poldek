@@ -102,7 +102,7 @@ tn_array *capreq_pkg(tn_array *arr, int32_t epoch,
 
 
 int capreq_fprintf(FILE *stream, const struct capreq *cr);
-char *capreq_snprintf(char *str, size_t size, const struct capreq *cr);
+int capreq_snprintf(char *str, size_t size, const struct capreq *cr);
 char *capreq_snprintf_s(const struct capreq *cr);
 char *capreq_snprintf_s0(const struct capreq *cr);
 
