@@ -85,7 +85,6 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 #define pkg_is_installed(pkg)  ((pkg)->flags & PKG_DBPKG)
 
 
-
 struct pkg {
     uint32_t     flags;
     uint32_t     size;        /* install size      */
@@ -98,9 +97,10 @@ struct pkg {
     char         *ver;
     char         *rel;
 
-    char         *nevr;
-    char         *arch;
-    char         *os;
+    char         *nvr;          /* NAME-VERSION-RELEASE */
+
+    const char   *arch;
+    const char   *os;
     
     tn_array     *caps;       /* capabilities     */
     tn_array     *reqs;       /* requirements     */
@@ -137,6 +137,7 @@ struct pkg {
     char         _buf[0];  /* private, store all string members */
 };
 
+
 struct pkg *pkg_new_ext(const char *name, int32_t epoch,
                         const char *version, const char *release,
                         const char *arch, const char *os,
@@ -169,6 +170,7 @@ static inline int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2)
 {
     return strcmp(p1->name, p2->name);
 }
+
 
 
 int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2);
@@ -260,5 +262,14 @@ const char *pkg_group(const struct pkg *pkg);
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*));
 
 tn_array *pkgs_array_new(int size);
+
+
+int pkg_nvr_strcmp(struct pkg *p1, struct pkg *p2);
+int pkg_nvr_strcmp_rev(struct pkg *p1, struct pkg *p2);
+int pkg_nvr_strncmp(struct pkg *pkg, const char *name);
+int pkg_nvr_strcmp_btime(struct pkg *p1, struct pkg *p2);
+int pkg_nvr_strcmp_btime_rev(struct pkg *p1, struct pkg *p2);
+int pkg_nvr_strcmp_bday(struct pkg *p1, struct pkg *p2);
+int pkg_nvr_strcmp_bday_rev(struct pkg *p1, struct pkg *p2);
 
 #endif /* POLDEK_PKG_H */

@@ -32,6 +32,9 @@
 #include "pkgroup.h"
 #include "pkg_ver_cmp.h"
 
+static tn_hash *architecture_h = NULL;
+static tn_hash *operatingsystem_h = NULL; 
+
 static void *(*pkg_alloc_fn)(size_t) = n_malloc;
 static void (*pkg_free_fn)(void*) = n_free;
 
@@ -43,6 +46,43 @@ void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*))
 }
 #endif
 
+static inline const char *register_os(const char *os)
+{
+    const char *oss;
+    
+    if (operatingsystem_h == NULL) {
+        operatingsystem_h = n_hash_new(21, free);
+        n_hash_ctl(operatingsystem_h, TN_HASH_NOCPKEY);
+    }
+    
+    if ((oss = n_hash_get(operatingsystem_h, os)) == NULL) {
+        oss = n_strdup(os);
+        n_hash_insert(operatingsystem_h, oss, oss);
+    }
+
+    return oss;
+}
+
+static inline const char *register_arch(const char *arch)
+{
+    const char *aarch;
+    
+    if (architecture_h == NULL) {
+        architecture_h = n_hash_new(21, free);
+        n_hash_ctl(architecture_h, TN_HASH_NOCPKEY);
+    }
+    
+    if ((aarch = n_hash_get(architecture_h, arch)) == NULL) {
+        aarch = n_strdup(arch);
+        n_hash_insert(architecture_h, aarch, aarch);
+    }
+
+    return aarch;
+}
+
+
+
+
 /* always store fields in order: path, name, version, release, arch */
 struct pkg *pkg_new_ext(const char *name, int32_t epoch,
                         const char *version, const char *release,
@@ -51,7 +91,7 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
                         uint32_t btime)
 {
     struct pkg *pkg;
-    int name_len = 0, version_len = 0, release_len = 0, arch_len = 0, os_len = 0;
+    int name_len = 0, version_len = 0, release_len = 0;
     char *buf;
     int len;
 
@@ -63,7 +103,7 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
         return NULL;
     
     name_len = strlen(name);
-    len = 1 + name_len + 1;
+    len = name_len + 1;
     
     version_len = strlen(version);
     len += version_len + 1;
@@ -71,16 +111,9 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
     release_len = strlen(release);
     len += release_len + 1;
 
-    if (arch) {
-        arch_len = strlen(arch);
-        len += arch_len + 1;
-    }
+    len += len + 1;             /* for nvr */
 
-    if (os) {
-        os_len = strlen(os);
-        len += os_len + 1;
-    }
-    
+    len += 1;
     pkg = pkg_alloc_fn(sizeof(*pkg) + len);
     memset(pkg, 0, sizeof(*pkg));
     
@@ -108,20 +141,25 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
     buf += release_len;
     *buf++ = '\0';
 
-    if (arch) {
-        pkg->arch = buf;
-        memcpy(buf, arch, arch_len);
-        buf += arch_len;
-        *buf++ = '\0';
-    }
+    
+    if (arch) 
+        pkg->arch = register_arch(arch);
 
-    pkg->os = NULL;
-    if (os) {
-        pkg->os = buf;
-        memcpy(buf, os, os_len);
-        buf += os_len;
-        *buf++ = '\0';
-    }
+    if (os) 
+        pkg->os = register_os(os);
+
+    pkg->nvr = buf;
+    memcpy(buf, name, name_len);
+    buf += name_len;
+    *buf++ = '-';
+    
+    memcpy(buf, version, version_len);
+    buf += version_len;
+    *buf++ = '-';
+    
+    memcpy(buf, release, release_len);
+    buf += release_len;
+    *buf++ = '\0';
     
     pkg->reqs = NULL;
     pkg->caps = NULL;
@@ -388,7 +426,7 @@ int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2)
 
     if (p1->arch && p2->arch == NULL)
         return 1;
-
+    
     if (p1->arch == NULL && p2->arch)
         return -1;
 
@@ -951,21 +989,26 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     unsigned len = 0;
     int n_len, v_len, r_len, a_len;
     char *s;
-    
-    s = buf;
+    const char *arch;
     
     n_len = pkg->ver  - pkg->name - 1;
     v_len = pkg->rel  - pkg->ver - 1;
-    r_len = pkg->arch - pkg->rel - 1;
-    a_len = strlen(pkg->arch);
+    r_len = strlen(pkg->rel);
+
+    if (pkg->arch) 
+        a_len = strlen(pkg->arch) + 1;
+    else
+        a_len = 0;
     
     len = n_len + 1 + v_len + 1 +
-        r_len + 1 + a_len + 1/* '.' */ + 3/* "rpm" */ + 1;
+        r_len + 1 + a_len/* '.' */ + 3/* "rpm" */ + 1;
 
     if (len >= size)
         return NULL;
-
-    memcpy(s, pkg->name, len - 4); /* all pkg members stored in _buf */
+    
+    s = buf;
+    /* all pkg members are stored in _buf */
+    memcpy(s, pkg->name, len - 4 - a_len); 
     
     s += n_len;
     n_assert(*s == '\0');
@@ -979,9 +1022,12 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     n_assert(*s == '\0');	
     *s++ = '.';
 
-    s += a_len;
-    n_assert(*s == '\0');	
-    *s++ = '.';
+    if (arch) {
+        memcpy(s, arch, a_len);
+        s += a_len;
+        n_assert(*s == '\0');
+        *s++ = '.';
+    }
 
     memcpy(s, "rpm\0", 4);
     return buf;
@@ -1087,3 +1133,76 @@ tn_array *pkgs_array_new(int size)
     return arr;
 }
 
+
+int pkg_nvr_strcmp(struct pkg *p1, struct pkg *p2) 
+{
+    return strcmp(p1->nvr, p2->nvr);
+}
+
+int pkg_nvr_strcmp_rev(struct pkg *p1, struct pkg *p2) 
+{
+    return -strcmp(p1->nvr, p2->nvr);
+}
+
+
+int pkg_nvr_strncmp(struct pkg *pkg, const char *name) 
+{
+    return strncmp(pkg->nvr, name, strlen(name));
+}
+
+int pkg_nvr_strcmp_btime(struct pkg *p1, struct pkg *p2)
+{
+    register int cmprc;
+
+    cmprc = p1->btime - p2->btime;
+    if (cmprc == 0)
+        cmprc = pkg_nvr_strcmp(p1, p2);
+
+    return cmprc;
+}
+
+int pkg_nvr_strcmp_btime_rev(struct pkg *p1, struct pkg *p2)
+{
+    return -pkg_nvr_strcmp_btime(p1, p2);
+}
+
+
+static int gmt_off = 0; /* TZ offset */
+static int gmt_off_flag = 0;
+
+#include <time.h>
+static void setup_gmt_off(void) 
+{
+    time_t t;
+    struct tm *tm;
+
+    t = time(NULL);
+    if ((tm = localtime(&t))) 
+#ifdef HAVE_TM_GMTOFF
+        gmt_off = tm->tm_gmtoff;
+#elif defined HAVE_TM___GMTOFF
+        gmt_off = tm->__tm_gmtoff;
+#endif        
+}
+
+int pkg_nvr_strcmp_bday(struct pkg *p1, struct pkg *p2)
+{
+    register int cmprc;
+
+    if (gmt_off_flag == 0) {
+        setup_gmt_off();
+        gmt_off_flag = 1;
+    }
+    
+    cmprc = ((p1->btime + gmt_off) / 86400) - ((p2->btime + gmt_off) / 86400);
+    
+    if (cmprc == 0)
+        cmprc = pkg_nvr_strcmp(p1, p2);
+    
+    return cmprc;
+}
+
+int pkg_nvr_strcmp_bday_rev(struct pkg *p1, struct pkg *p2)
+{
+    return -pkg_nvr_strcmp_bday(p1, p2); 
+}
