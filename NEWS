@@ -22,7 +22,7 @@ I) Source repositories
   (Description, Summary, etc) are stored in separate file(s) (one
   .dscr file per available language). 
 
-* 'hdrl' aka 'apt' format are updateable now. 
+* 'hdrl' aka 'apt' format are update-able now. 
 
 * repository indexes could be created in many formats at once
   (using --mkidx-type=TYPE[,TYPE]), ex:
@@ -51,7 +51,7 @@ II) Installation related
 III) Interactive mode
 
 * mode's commands are available without mode itself, i.e
-  one can execute interactive commands from commandline:
+  one can execute interactive commands from command-line:
   
   $ poldek -C ls 
   $ apoldek-get install libfoo-0.1-1
@@ -83,7 +83,7 @@ IV) Configuration file
   "${_sysconfdir}/poldek/poldek.conf", old /etc location is still supported. 
 
 * configuration file format has been changed to ini-like one. Sources and 
-  external dowloaders should be configured in its own sections "source" and 
+  external file getters should be configured in its own sections "source" and 
   "fetcher", see sample configs. Old configuration format is still supported.
 
 * environment variables in config files are expanded (ex: cachedir = $HOME/.cache)
@@ -106,8 +106,8 @@ IV) Configuration file
    _pld_prefix = ftp://ftp.pld.org.pl/dists/ra
   %include %{_pld_prefix}/source.conf
 
-  Included remote files once dowloaded are stored in cache, 
-  to resync them with it's remote copy use --upconf option. 
+  Included remote files once downloaded are stored in cache, 
+  to resynchronize them with it's remote copy use --upconf option. 
 
 * support for APT sources configuration has been added; by default
   /etc/apt/sources.list is loaded if user configuration ($HOME/.poldekrc) 
