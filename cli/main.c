@@ -337,7 +337,8 @@ void argp_prepare_child_options(const struct argp *argp)
 
     
 static
-void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode) 
+void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
+                   int argc, char **argv, int mode) 
 {
     struct argp argp = { common_options, parse_opt,
                          args_doc, poldek_BANNER, 0, 0, 0};
@@ -350,8 +351,7 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
     args.argv[0] = NULL;
 
     args.mode = mode;
-    
-    args.ts = poldek_ts_new(cctx->ctx, 0);
+    args.ts = ts;
     n = 0;
     while (poclidek_opgroup_tab[n])
         n++;
@@ -545,6 +545,7 @@ int main(int argc, char **argv)
 {
     struct poldek_ctx    *ctx;
     struct poclidek_ctx  *cctx;
+    struct poldek_ts     *ts;
     int  ec = 0, rrc, mode = RUNMODE_POLDEK;
     const char *bn;
 
@@ -565,8 +566,9 @@ int main(int argc, char **argv)
     DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
 
     ctx = poldek_new(0);
+    ts = poldek_ts_new(ctx, 0);
     cctx = poclidek_new(ctx);
-    parse_options(cctx, argc, argv, mode);
+    parse_options(cctx, ts, argc, argv, mode);
     
     rrc = do_run();
     if (rrc & OPGROUP_RC_FINI)
@@ -610,6 +612,7 @@ int main(int argc, char **argv)
         if (!rc)
             ec = 1;
     }
+    poldek_ts_free(ts);
     poclidek_free(cctx);
     poldek_free(ctx);
     poldeklib_destroy();
