@@ -157,6 +157,16 @@ int vfile_configure(int param, ...)
             
             break;    
         }
+
+        default: {
+            v = va_arg(ap, int);
+            if (v) 
+                vfile_conf.flags |= param;
+            else
+                vfile_conf.flags &= ~param;
+        }
+            break;
+            
     }
 
     va_end(ap);
@@ -320,6 +330,8 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
     const char *rpath;
     int len;
 
+    if (vfile_conf.flags & VFILE_CONF_EXTCOMPR)
+        vfmode |= VFM_UNCOMPR;
     
     vf.vf_stream = NULL;
     vf.vf_path = NULL;
@@ -501,7 +513,7 @@ void vfile_close(struct vfile *vf)
             n_assert(0);
     }
 
-    if (vf->vf_path && (vf->vf_mode & (VFM_UNCOMPR | VFM_RW))) {
+    if (vf->vf_path && (vf->vf_mode & VFM_UNCOMPR) && (vf->vf_mode & VFM_RW)) {
         if (vf_decompressable(vf->vf_path, NULL, 0)) {
             char src[PATH_MAX], *p;
             snprintf(src, sizeof(src), vf->vf_path);

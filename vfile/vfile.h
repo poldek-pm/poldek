@@ -45,6 +45,8 @@ extern int *vfile_verbose;
 #define VFILE_CONF_PROGRESSCB             (1 << 7)
 #define VFILE_CONF_PROGRESSDATA           (1 << 8)
 #define VFILE_CONF_STUBBORN_RETR          (1 << 9)
+#define VFILE_CONF_EXTCOMPR               (1 << 10) /* use external script to
+                                                       file (de)compression */
 
 int vfile_configure(int param, ...);
 

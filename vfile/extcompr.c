@@ -118,11 +118,8 @@ int vf_do_compr(struct uncompr *uncompr, const char *param,
     argv[n++] = (char*)dst;
     argv[n++] = NULL;
     
-    if (*vfile_verbose) 
-        vf_loginfo(_("Uncompressing %s...\n"), n_basenam(src));
-    
-    p_st_init(&pst);
 
+    p_st_init(&pst);
 
     verbose = *vfile_verbose;
     if (p_open(&pst, p_open_flags, uncompr->cmd, argv) == NULL) {
@@ -146,7 +143,7 @@ int vf_decompressable(const char *path, char *dest, int size)
 {
     char *p;
     int i;
-    
+
     if ((p = strrchr(path, '.')) == NULL)
         return 0;
     
@@ -154,11 +151,12 @@ int vf_decompressable(const char *path, char *dest, int size)
     i = 0; 
     while (uncompr_tab[i].type > 0) {
         if (strcmp(p, uncompr_tab[i].ext) == 0) {
-            snprintf(dest, size, "%s", path);
-            p = strrchr(dest, '.');
-            n_assert(p);
-            *p = '\0';
-
+            if (dest) {
+                snprintf(dest, size, "%s", path);
+                p = strrchr(dest, '.');
+                n_assert(p);
+                *p = '\0';
+            }
             return uncompr_tab[i].type;
         }
         i++;
@@ -192,6 +190,9 @@ int vf_extdecompress(const char *path, const char *destpath)
     if (uncompr == NULL)
         return -1;
 
+    unlink(destpath);
+    if (*vfile_verbose) 
+        vf_loginfo(_("Decompressing %s...\n"), n_basenam(path));
     return vf_do_compr(uncompr, "-d", path, destpath);
 }
 
