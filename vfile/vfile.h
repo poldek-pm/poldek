@@ -21,7 +21,7 @@
 #include <zlib.h>
 #include <trurl/narray.h>
 
-extern int vfile_verbose;
+extern int *vfile_verbose;
 extern int (*vfile_msg_fn)(const char *fmt, ...);
 extern int (*vfile_err_fn)(const char *fmt, ...);
 

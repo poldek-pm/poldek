@@ -36,7 +36,8 @@
 #include "log.h"
 #include "vfile.h"
 
-int vfile_verbose = 0;
+static int verbose = 0; 
+int *vfile_verbose = &verbose;
 int (*vfile_msg_fn)(const char *fmt, ...) = printf;
 int (*vfile_err_fn)(const char *fmt, ...) = printf;
 

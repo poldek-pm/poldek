@@ -39,8 +39,9 @@ void fetch(const char *url)
 
 int main(int argc, char *argv[])
 {
+    int verbose = 1;
     vfile_configure("/tmp", -1);
-    vfile_verbose = 1;
+    vfile_verbose = &verbose;
     
     dump_file("ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/tocfile.lst");
     fetch("http://sunsite.icm.edu.pl/index.html");

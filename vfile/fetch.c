@@ -239,7 +239,7 @@ int process_output(struct p_open_st *st, const char *prefix)
 
     setvbuf(st->stream, NULL, _IONBF, 0);
     while ((c = fgetc(st->stream)) != EOF) {
-        if (vfile_verbose == 0)
+        if (*vfile_verbose == 0)
             continue;
         
         if (endl) {
@@ -331,7 +331,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     }
     argv[n++] = NULL;
 
-    if (vfile_verbose) {
+    if (*vfile_verbose) {
         int i, len = 0;
         char *s, *p;
 

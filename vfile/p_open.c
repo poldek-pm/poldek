@@ -53,9 +53,9 @@ void p_st_destroy(struct p_open_st *pst)
 
 FILE *p_open(struct p_open_st *pst, const char *cmd, char *const argv[])
 {
-    int pp[2];
-    pid_t pid;
-    char errmsg[1024];
+    int    pp[2];
+    pid_t  pid;
+    char   errmsg[1024];
     
     if (access(cmd, X_OK) != 0) {
         snprintf(errmsg, sizeof(errmsg), "%s: no such file", cmd);
