@@ -1,1 +1,8 @@
 local_stdint.h
+.deps 
+.libs 
+Makefile 
+Makefile.in 
+*.la 
+poldek.py* 
+wrap_*
