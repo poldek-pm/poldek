@@ -145,7 +145,9 @@ static struct vcn *vcn_pool_do_connect(struct vf_request *req)
         
     } else
         n_assert(0);
-            
+
+    if (vcn_pool == NULL)
+        do_init();
     
     vcn_pool_vacuum();
     n_list_iterator_start(vcn_pool, &it);

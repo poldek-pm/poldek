@@ -17,10 +17,6 @@
 # include "config.h"
 #endif
 
-#ifdef HAVE_FOPENCOOKIE
-# define _GNU_SOURCE 1
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -83,7 +79,6 @@ int vfile_configure(int param, ...)
     va_list  ap;
     int      v, *vp, rc;
     char     *vs;
-    void     *vv;
 
     if (vfile_conf.default_clients_ht == NULL) {
         vfile_conf.default_clients_ht = n_hash_new(7, free);
@@ -96,9 +91,7 @@ int vfile_configure(int param, ...)
 
     switch (param) {
         case VFILE_CONF_LOGCB:
-            vp = va_arg(ap, void*);
-            if (vp)
-                vfile_conf.log = vv;
+            vfile_conf.log = va_arg(ap, void*);
             break;
             
         case VFILE_CONF_VERBOSE:
@@ -170,78 +163,6 @@ int vfile_configure(int param, ...)
     return rc;
 }
 
-
-
-#define ZLIB_TRACE 0
-
-#ifdef HAVE_FOPENCOOKIE
-
-#ifndef __GLIBC_MINOR__
-# error "glibc2 or later is required"
-#endif
-
-#ifndef __GLIBC_PREREQ
-# if defined __GLIBC__ && defined __GLIBC_MINOR__
-#  define __GLIBC_PREREQ(maj, min) \
-       ((__GLIBC__ << 16) + __GLIBC_MINOR__ >= ((maj) << 16) + (min))
-# else
-#  define __GLIBC_PREREQ(maj, min) 0
-# endif
-#endif /* __GLIBC_PREREQ */
-
-#if __GLIBC_PREREQ(2,2)
-static int gzfseek(void *stream, _IO_off64_t *offset, int whence)
-{
-    z_off_t rc, off = *offset;
-    
-    rc = gzseek(stream, off, whence);
-    if (rc >= 0)
-        rc = 0;
-#if ZLIB_TRACE
-    printf("zfseek (%p, %ld, %lld, %d) = %d\n", stream, off, *offset, whence, rc);
-#endif    
-    return rc;
-}
-
-#else  /* glibc < 2.2 */
-
-static int gzfseek(void *stream, _IO_off_t offset, int whence) 
-{
-    z_off_t rc;
-    
-    rc = gzseek(stream, offset, whence);
-#if ! __GLIBC_PREREQ(2,1)       /* AFAIK glibc2.1.x cookie streams required
-                                   offset to be returned */
-    if (rc >= 0) 
-        rc = 0;
-#endif
-    return rc;
-}
-#endif /* __GLIBC_PREREQ(2,2) */
-
-#if ZLIB_TRACE
-static int gzread_wrap(void *stream, char *buf, size_t size)
-{
-    int rc;
-    rc = gzread(stream, buf, size);
-    printf("zread (%p, %d) = %d (%m)\n", stream, size, rc);
-    return rc;
-}
-#endif
-
-static cookie_io_functions_t gzio_cookie = {
-#if ZLIB_TRACE    
-    (cookie_read_function_t*)gzread_wrap,
-#else
-    (cookie_read_function_t*)gzread,
-#endif    
-    (cookie_write_function_t*)gzwrite,
-    gzfseek,
-    (cookie_close_function_t*)gzclose
-};
-
-#endif /* HAVE_FOPENCOOKIE */
-
 /* RET: bool */
 static int openvf(struct vfile *vf, const char *path, int vfmode) 
 { 
@@ -269,8 +190,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
         break;
         
         case VFT_STDIO: {
-            char *p, *mode;
-            gzFile gzstream;
+            char *mode;
 
             if (vfmode & VFM_APPEND)
                 mode = "a+";
@@ -281,36 +201,10 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
             else
                 mode = "r";
 
-#ifdef HAVE_FOPENCOOKIE            
-            if ((p = strrchr(path, '.')) && strcmp(p, ".gz") == 0) {
-                if ((gzstream = gzopen(path, mode)) == NULL) {
-                    rc = 0;
-                    if (errno) 
-                        vf_logerr("%s: %m\n", CL_URL(path));
-                    else if (Z_MEM_ERROR) 
-                        vf_logerr("gzopen %s: insufficient memory\n",
-                                   CL_URL(path));
-                    else 
-                        vf_logerr("gzopen %s: unknown error\n", CL_URL(path));
-                    break;
-                }
-
-                vf->vf_stream = fopencookie(gzstream, mode, gzio_cookie);
-                if (vf->vf_stream != NULL) {
-                    rc = 1;
-                    fseek(vf->vf_stream, 0, SEEK_SET); /* glibc BUG (?) */
-                } else
-                    vf_logerr("fopencookie %s: hgw error\n", CL_URL(path));
-
-            } else {
-#endif                
-                if ((vf->vf_stream = fopen(path, mode)) != NULL) 
-                    rc = 1;
-                else 
-                    vf_logerr("%s: %m\n", CL_URL(path));
-#ifdef HAVE_FOPENCOOKIE                
-            }
-#endif            
+            if ((vf->vf_stream = fopen(path, mode)) != NULL) 
+                rc = 1;
+            else 
+                vf_logerr("%s: %m\n", CL_URL(path));
         }
         break;
         
@@ -358,28 +252,6 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
         break;
 #endif
         
-#ifdef ENABLE_VFILE_RPMIO
-        case VFT_RPMIO:
-            if (vfmode & VFM_RW) {
-                vf_logerr("%s: cannot open rw rpm\n", CL_URL(path));
-                return 0;
-            }
-
-            vf->vf_fdt = Fopen(path, "r.fdio");
-            if (vf->vf_fdt == NULL || Ferror(vf->vf_fdt)) {
-                vf_logerr("open %s: %s\n", CL_URL(path),
-                        Fstrerror(vf->vf_fdt));
-                if (vf->vf_fdt) {
-                    Fclose(vf->vf_fdt);
-                    vf->vf_fdt = NULL;
-                }
-                
-            } else 
-                rc = 1;
-            
-            break;
-#endif            
-            
         default:
             vf_logerr("vfile_open %s: type %d not supported\n",
                     CL_URL(path), vf->vf_type);
@@ -401,40 +273,36 @@ static int file_ok(const char *path, int vfmode)
 
 static const char *vfuncompr(const char *path, char *dest, int size) 
 {
-    char *p, *tmpath;
-    int  n;
+    char *destdir, destdir_buf[PATH_MAX], uncmpr_path[PATH_MAX];
+    int  len;
     
     
     *dest = '\0';
     
-    if (!vf_uncompr_able(path))
+    if (!vf_uncompr_able(path, uncmpr_path, sizeof(uncmpr_path)))
         return path;
 
-    n = n_snprintf(dest, size, "%s/", vfile_conf.cachedir);
-
-    if ((p = strrchr(path, '/')) == NULL) {
-        tmpath = (char*)path;
-                
-    } else {
-        int len = p - path;
-        
-        tmpath = alloca(len + 1);
-        memcpy(tmpath, path, len);
-        tmpath[len] = '\0';
-    } 
-            
-    vf_url_as_dirpath(&dest[n], size - n, tmpath);
+    len = strlen(vfile_conf.cachedir);
     
-    //printf("DEST = %s\n", dest);
-    if (!vf_mkdir(dest))
+    if (strncmp(uncmpr_path, vfile_conf.cachedir, len) == 0) {
+        char *bn;
+        n_snprintf(destdir_buf, sizeof(destdir_buf), "%s", uncmpr_path);
+        n_basedirnam(destdir_buf, &destdir, &bn);
+        n_snprintf(dest, size, "%s", uncmpr_path);
+        
+    } else {
+        vf_localdirpath(destdir_buf, sizeof(destdir_buf), uncmpr_path);
+        destdir = destdir_buf;
+        
+        vf_localpath(dest, size, uncmpr_path);
+    }
+    
+        
+    //printf("DEST %s = %s\n", path, dest);
+    n_assert(destdir);
+    if (!vf_mkdir(destdir))
         return NULL;
 
-    vf_url_as_path(&dest[n], size - n, path);
-
-    n_assert((p = strrchr(dest, '.')) != NULL);
-
-    *p = '\0';
-    
     if (vf_uncompr_do(path, dest))
         return dest;
     
@@ -452,7 +320,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
     int len;
 
     
-    vf.vf_fdt = NULL;
+    vf.vf_stream = NULL;
     vf.vf_path = NULL;
     vf.vf_tmpath = NULL;
     vf.vf_type = vftype;
@@ -503,7 +371,8 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
     if (opened == 0) {      /* fetch */
         char *p = NULL, *tmpath = NULL;
 
-        vf_localunlink(buf);
+        if ((vfmode & VFM_CACHE_NODEL) == 0)
+            vf_localunlink(buf);
         
         if ((p = strrchr(path, '/')) == NULL) {
             tmpath = (char*)path;
@@ -522,19 +391,18 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
         if (!vf_mkdir(tmpdir))
             return 0;
 
-        if (vfile_fetch(tmpdir, path)) {
+        if (vf_fetch(path, tmpdir)) {
             char tmpath[PATH_MAX], upath[PATH_MAX];;
 
             snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
                      n_basenam(path));
 
             rpath = tmpath;
-
+            
             if ((vfmode & VFM_UNCOMPR)) {
                 if ((rpath = vfuncompr(tmpath, upath, sizeof(upath))) == NULL)
                     return 0;
             }
-            
             
             if (openvf(&vf, rpath, VFM_RO)) {
                 vf.vf_tmpath = n_strdup(rpath);
@@ -542,7 +410,10 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
                 vf.vf_flags |= VF_FETCHED;
                     
             } else {
-                //vf_localunlink(tmpath); wget && co sometimes badly returns non zero 
+                if (*vfile_verbose > 1)
+                    vf_loginfo("vfile: rm -f %s\n", tmpath);
+                vf_localunlink(tmpath);
+                //wget && co sometimes badly returns non zero -> patch it!
             }
         }
     }
@@ -614,14 +485,6 @@ void vfile_close(struct vfile *vf)
             break;
 #endif            
             
-#ifdef ENABLE_VFILE_RPMIO
-        case VFT_RPMIO:
-            if (vf->vf_fdt) {
-                Fclose(vf->vf_fdt);
-                vf->vf_fdt = NULL;
-            }
-            break;
-#endif
         default:
             vf_logerr("vfile_close: type %d not supported\n", vf->vf_type);
             n_assert(0);
@@ -633,7 +496,7 @@ void vfile_close(struct vfile *vf)
     }
     
     if (vf->vf_tmpath) {        /* set for remote files only  */
-        if ((vf->vf_mode & (VFM_NORM | VFM_CACHE)) == 0)
+        if ((vf->vf_mode & (VFM_NODEL | VFM_CACHE)) == 0)
             vf_localunlink(vf->vf_tmpath);
         free(vf->vf_tmpath);
         vf->vf_tmpath = NULL;
@@ -694,10 +557,10 @@ int vf_localunlink(const char *path)
 }
 
 
-void vf_vlog(unsigned flags, const char *fmt, va_list ap)
+void vf_vlog(int pri, const char *fmt, va_list ap)
 {
     if (vfile_conf.log)
-        vfile_conf.log(flags, fmt, ap);
+        vfile_conf.log(pri, fmt, ap);
 
     else {
         vfprintf(stdout, fmt, ap);
@@ -705,12 +568,12 @@ void vf_vlog(unsigned flags, const char *fmt, va_list ap)
     }
 }
 
-void vf_log(unsigned flags, const char *fmt, ...)
+void vf_log(int pri, const char *fmt, ...)
 {
     va_list args;
 
     va_start(args, fmt);
-    vf_vlog(flags, fmt, args);
+    vf_vlog(pri, fmt, args);
     va_end(args);
 }
 

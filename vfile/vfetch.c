@@ -208,30 +208,40 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
     return rc;
 }
 
-int vf_fetch(const char *destdir, const char *path) 
+int vf_fetch(const char *url, const char *dest_dir)
 {
     const struct vf_module *mod = NULL;
+    const char *destdir = NULL;
     int rc;
 
+    if (dest_dir)
+        destdir = dest_dir;
+    
+    else {
+        char *p = alloca(PATH_MAX + 1);
+        vf_localdirpath(p, PATH_MAX, url);
+        destdir = p;
+    }
+    
     n_assert(destdir);
     if (!vf_mkdir(destdir))
         return 0;
 
-    if ((mod = select_vf_module(path)) == NULL)
-        rc = vfile_fetch_ext(destdir, path);
+    if ((mod = select_vf_module(url)) == NULL)
+        rc = vf_fetch_ext(url, destdir);
     
     else {
         struct vf_request *req = NULL;
         char destpath[PATH_MAX];
         
-        snprintf(destpath, sizeof(destpath), "%s/%s", destdir, n_basenam(path));
+        snprintf(destpath, sizeof(destpath), "%s/%s", destdir, n_basenam(url));
             
-        if ((req = vf_request_new(path, destpath)) == NULL)
+        if ((req = vf_request_new(url, destpath)) == NULL)
             return 0;
         
         if (req->proxy_url) {
             if ((mod = select_vf_module(req->proxy_url)) == NULL) {
-                rc = vfile_fetch_ext(destdir, path);
+                rc = vf_fetch_ext(url, destdir);
                 vf_request_free(req);
                 req = NULL;
                 goto l_end;
@@ -241,7 +251,7 @@ int vf_fetch(const char *destdir, const char *path)
         if (req->dest_fdoff > 0) { /* non-empty local file  */
             struct vf_stat vfst;
 
-            if ((rc = vf_stat(destdir, req->url, &vfst)) && 
+            if ((rc = vf_stat(req->url, destdir, &vfst)) && 
                 vfst.vf_size > 0 && vfst.vf_mtime > 0 &&
                 vfst.vf_size  == vfst.vf_local_size &&
                 vfst.vf_mtime == vfst.vf_local_mtime) {
@@ -251,6 +261,17 @@ int vf_fetch(const char *destdir, const char *path)
                 goto l_end;
                 
             } else {
+                if (*vfile_verbose > 1) {
+                    if (!rc || vfst.vf_size <= 0 || vfst.vf_mtime <= 0) {
+                        vf_loginfo("vf_fetch: %s: remove local copy because of"
+                                   " uncomplete status reached\n",
+                                   n_basenam(req->url));
+                    } else {
+                        vf_loginfo("vf_fetch: %s: remove uncomplete "
+                                   "local copy\n", n_basenam(req->url));
+                    }
+                }
+                
                 vf_unlink(req->destpath);
                 vf_request_close_destpath(req);
                 vf_request_open_destpath(req);
@@ -269,7 +290,7 @@ int vf_fetch(const char *destdir, const char *path)
                 snprintf(url, sizeof(url), req->url);
                 vf_request_free(req);
                 req = NULL;
-                rc = vf_fetch(destdir, req->url);
+                rc = vf_fetch(req->url, destdir);
             }
         }
         if (req)
@@ -282,7 +303,7 @@ int vf_fetch(const char *destdir, const char *path)
 }
 
 
-int vf_stat(const char *destdir, const char *url, struct vf_stat *vfstat) 
+int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat) 
 {
     const struct vf_module *mod = NULL;
     struct vf_request *req = NULL;
@@ -346,23 +367,24 @@ int vf_stat(const char *destdir, const char *url, struct vf_stat *vfstat)
 }
 
 
-int vf_fetcha(const char *destdir, tn_array *urls) 
+int vf_fetcha(tn_array *urls, const char *destdir) 
 {
     const struct vf_module *mod = NULL;
     int rc = 1;
 
+    n_assert(destdir);
     if (!vf_mkdir(destdir))
         return 0;
-    
+
     if ((mod = select_vf_module(n_array_nth(urls, 0))) == NULL) {
-        rc = vfile_fetcha_ext(destdir, urls);
+        rc = vf_fetcha_ext(urls, destdir);
         
     } else {
         int i;
         
         for (i=0; i < n_array_size(urls); i++) {
             const char *url = n_array_nth(urls, i);
-            if (!vf_fetch(destdir, url)) {
+            if (!vf_fetch(url, destdir)) {
                 rc = 0;
                 break;
             }

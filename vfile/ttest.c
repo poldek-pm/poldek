@@ -9,7 +9,7 @@
 
 void fetch(const char *url)
 {
-    vfile_fetch("/tmp", url);
+    vf_fetch("/tmp", url);
 }
 
 

@@ -59,7 +59,7 @@ struct vf_request {
 };
 
 
-struct vf_request *vf_request_new(const char *destpath, const char *url);
+struct vf_request *vf_request_new(const char *url, const char *destpath);
 void vf_request_free(struct vf_request *req);
 
 int vf_request_open_destpath(struct vf_request *req);

@@ -36,7 +36,7 @@ void fetch_ext(const char *url)
         return;
     }
 
-    if (vfile_fetch("/tmp", url))
+    if (vf_fetch("/tmp", url))
         puts("OK\n");
     else
         puts("FAIL\n");
@@ -44,7 +44,7 @@ void fetch_ext(const char *url)
 
 void fetch(const char *url)
 {
-    if (vfile_fetch("/tmp", url))
+    if (vf_fetch("/tmp", url))
         puts("OK\n");
     else
         puts("FAIL\n");

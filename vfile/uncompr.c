@@ -83,7 +83,7 @@ static void process_output(struct p_open_st *st, const char *prefix)
             buf[n] = '\0';
             for (i=0; i < n; i++) {
                 int c = buf[i];
-        
+                
                 if (endl) {
                     vf_loginfo("%s: ", prefix);
                     endl = 0;
@@ -98,7 +98,6 @@ static void process_output(struct p_open_st *st, const char *prefix)
         }
     }
 }
-
 
 static
 int vf_do_uncompr(struct uncompr *uncompr, const char *src, const char *dst)
@@ -115,7 +114,7 @@ int vf_do_uncompr(struct uncompr *uncompr, const char *src, const char *dst)
     argv[n++] = (char*)src;
     argv[n++] = (char*)dst;
     argv[n++] = NULL;
-        
+    
     if (*vfile_verbose) 
         vf_loginfo(_("Uncompressing %s...\n"), n_basenam(src));
     
@@ -132,7 +131,7 @@ int vf_do_uncompr(struct uncompr *uncompr, const char *src, const char *dst)
     
     if ((ec = p_close(&pst)) != 0)
         vf_logerr("%s\n", pst.errmsg ? pst.errmsg :
-                   _("program exited with non-zero value"));
+                  _("program exited with non-zero value"));
     
     p_st_destroy(&pst);
     *vfile_verbose = verbose;
@@ -140,7 +139,7 @@ int vf_do_uncompr(struct uncompr *uncompr, const char *src, const char *dst)
     return ec == 0;
 }
 
-int vf_uncompr_able(const char *path) 
+int vf_uncompr_able(const char *path, char *dest, int size) 
 {
     char *p;
     int i;
@@ -151,8 +150,14 @@ int vf_uncompr_able(const char *path)
     p++;
     i = 0; 
     while (uncompr_tab[i].type > 0) {
-        if (strcmp(p, uncompr_tab[i].ext) == 0) 
+        if (strcmp(p, uncompr_tab[i].ext) == 0) {
+            snprintf(dest, size, "%s", path);
+            p = strrchr(dest, '.');
+            n_assert(p);
+            *p = '\0';
+
             return uncompr_tab[i].type;
+        }
         i++;
     }
     
@@ -184,8 +189,6 @@ int vf_uncompr_do(const char *path, const char *destpath)
     if (uncompr == NULL)
         return -1;
 
-    vf_localunlink(destpath);
-    
     return vf_do_uncompr(uncompr, path, destpath);
 }
 

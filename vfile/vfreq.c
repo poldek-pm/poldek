@@ -162,7 +162,7 @@ int vf_request_open_destpath(struct vf_request *req)
 
 
 
-struct vf_request *vf_request_new(const char *url, const char *destpath) 
+struct vf_request *vf_request_new(const char *url, const char *destpath)
 {
     char               buf[PATH_MAX], tmp[PATH_MAX];
     const char         *proxy = NULL;

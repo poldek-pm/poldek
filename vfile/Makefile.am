@@ -31,7 +31,7 @@ noinst_PROGRAMS = vfget
 #sample_LDADD    = libvfile.la @TRURL_LDFLAG@ $(LDADD_) $(sigint_la)
 
 vfget_SOURCES  = vfget.c 
-vfget_LDADD    = libvfile.la -lrpmio $(sigint_la) -lutil
+vfget_LDADD    = libvfile.la $(sigint_la) -lutil
 EXTRA_DIST     = $(VFCURL_SRCS) \
 		 testcookie.c test_progress.c
 

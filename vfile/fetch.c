@@ -405,7 +405,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 break;
 
             default:
-                vf_logerr("vfile_fetch*: internal error\n");
+                vf_logerr("vf_fetch*: internal error\n");
                 n_assert(0);
                 return 0;
         }
@@ -542,7 +542,7 @@ struct ffetcher *find_fetcher(const char *proto, int multi)
 }
 
 
-int vf_fetch_ext(const char *destdir, const char *url) 
+int vf_fetch_ext(const char *url, const char *destdir) 
 {
     struct ffetcher *ftch;
     char proto[64];
@@ -560,7 +560,7 @@ int vf_fetch_ext(const char *destdir, const char *url)
 }
 
 
-int vf_fetcha_ext(const char *destdir, tn_array *urls) 
+int vf_fetcha_ext(tn_array *urls, const char *destdir) 
 {
     struct ffetcher *ftch;
     char proto[64];

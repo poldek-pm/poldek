@@ -56,32 +56,23 @@ void vfile_postconfigure_init(void);
 #define VFT_IO       1             /* open(2)                   */
 #define VFT_STDIO    2             /* fopen(3)                  */
 #define VFT_GZIO     3             /* zlib: gzopen()            */ 
-#define VFT_RPMIO    4             /* rpmlib: Fopen()           */
 #define VFT_TRURLIO  5             /* trurlib's tn_stream       */
 
-#define VFM_RO         (1 << 0)  /* RO, this is the default   */
-#define VFM_RW         (1 << 1)
-#define VFM_APPEND     (1 << 3)  /* a+ */
-
-#define VFM_NORM       (1 << 4)  /* (NoReMove) for remote files,
-                                    remove tmp at close? */
-
-#define VFM_CACHE      (1 << 5)  /* for remote files, use cached
-                                                 file if it exists */
-
-#define VFM_CACHE_ONLY (1 << 6)  /* for remote files, use cached file
-                                    if it not exists return NULL */
-
-#define VFM_STBRN      (1 << 10)  /* infinite retrying to open file  */
-
-
-#define VFM_NOEMPTY    (1 << 11)  /* treat empty files as non-existing ones */
-
-#define VFM_UNCOMPR    (1 << 12)  /* uncompress file before open  */
+#define VFM_RO          (1 << 0)  /* O_RDONLY, this is the default   */
+#define VFM_RW          (1 << 1)  /* O_RDWR */
+#define VFM_APPEND      (1 << 3)  /* O_RDWR | O_APPEND */
+#define VFM_NODEL       (1 << 4)  /* do not delete cached copy at close */
+#define VFM_NORM        VFM_NODEL /* legacy */
+#define VFM_CACHE       (1 << 5) /* use cached file if it exists, implies NODEL*/
+#define VFM_CACHE_ONLY  (1 << 6) /* use cached file or fail if it not exists   */
+#define VFM_CACHE_NODEL (1 << 7) /* don't delete cached file before downloading */
+#define VFM_STBRN       (1 << 8) /* infinite retrying to open file  */
+#define VFM_NOEMPTY     (1 << 9) /* treat empty files as non-existing ones */
+#define VFM_UNCOMPR     (1 << 10) /* uncompress file before open  */
 
 /* flags  */
-#define VF_FETCHED     (1 << 15) /* for remote files, file downloaded */
-#define VF_FRMCACHE    (1 << 16) /* file remote file, file taken form cache */
+#define VF_FETCHED     (1 << 12) /* for remote files, file downloaded */
+#define VF_FRMCACHE    (1 << 13) /* file remote file, file taken form cache */
 
 struct vfile {
     int       vf_type;                /* VFT_*   */
@@ -92,7 +83,6 @@ struct vfile {
         int        vfile_fd;
         FILE       *vfile_stream;
         gzFile     *vfile_gzstream;
-        void       *vfile_fdt;        /* RPM's FD_t */
 #ifdef ENABLE_VFILE_TRURLIO        
         tn_stream  *vfile_tnstream;
 #endif        
@@ -105,9 +95,8 @@ struct vfile {
 #define	vf_fd        vfile_fdescriptor.vfile_fd
 #define	vf_stream    vfile_fdescriptor.vfile_stream
 #define	vf_gzstream  vfile_fdescriptor.vfile_gzstream
-#define	vf_fdt       vfile_fdescriptor.vfile_fdt
 #ifdef ENABLE_VFILE_TRURLIO
-# define	vf_tnstream  vfile_fdescriptor.vfile_tnstream
+# define vf_tnstream  vfile_fdescriptor.vfile_tnstream
 #endif
 
 #define vfile_localpath(vf)  ((vf)->vf_tmpath ? (vf)->vf_tmpath : (vf)->vf_path)
@@ -146,20 +135,32 @@ struct vf_stat {
     time_t  vf_local_mtime;
 };
 
-int vf_stat(const char *destdir, const char *url, struct vf_stat *vfstat);
-int vf_fetch(const char *destdir, const char *url);
-int vf_fetcha(const char *destdir, tn_array *urls);
+int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat);
 
+#if 0                           /* NFY */
+#define VF_FETCH_DEFAULT  0
+#define VF_FETCH_NOEXT    (0 << 1) /* do not use external handlers */
+#define VF_FETCH_NOREST   (0 << 2) /* download file from scratch   */
+#endif
+
+int vf_fetch(const char *url, const char *destdir);
+int vf_fetcha(tn_array *urls, const char *destdir);
+
+#ifdef VFILE_INTERNAL
 /* only external handlers are used */
-int vf_fetch_ext(const char *destdir, const char *url);
-int vf_fetcha_ext(const char *destdir, tn_array *urls);
+int vf_fetch_ext(const char *url, const char *destdir);
+int vf_fetcha_ext(tn_array *urls, const char *destdir);
+#endif
 
+#if 0
+#ifndef VFILE_INTERNAL
 /* legacy */
-#define vfile_fetch(a, b) vf_fetch(a, b)
-#define vfile_fetcha(a, b) vf_fetcha(a, b)
-#define vfile_fetch_ext(a, b) vf_fetch_ext(a, b)
-#define vfile_fetcha_ext(a, b) vf_fetcha_ext(a, b)
-
+# define vfile_fetch(a, b) vf_fetch(a, b)
+# define vfile_fetcha(a, b) vf_fetcha(a, b)
+# define vfile_fetch_ext(a, b) vf_fetch_ext(a, b)
+# define vfile_fetcha_ext(a, b) vf_fetcha_ext(a, b)
+#endif
+#endif
 
 int vf_url_type(const char *url);
 char *vf_url_proto(char *proto, int size, const char *url);
@@ -173,6 +174,7 @@ const char *vf_url_hidepasswd_s(const char *url);
 /* applies vf_url_hidepasswd() + slim down url string to maxl */
 const char *vf_url_slim(char *buf, int size, const char *url, int maxl);
 const char *vf_url_slim_s(const char *url, int maxl);
+
 
 int vf_valid_path(const char *path);
 int vf_mkdir(const char *path);
@@ -194,8 +196,8 @@ int vf_cleanpath(char *buf, int size, const char *path);
 
 #ifdef VFILE_INTERNAL
 
-void vf_log(unsigned flags, const char *fmt, ...);
-void vf_vlog(unsigned flags, const char *fmt, va_list ap);
+void vf_log(int pri, const char *fmt, ...);
+void vf_vlog(int pri, const char *fmt, va_list ap);
 
 #define vf_logerr(fmt, args...) \
        vf_log(VFILE_LOG_ERR, fmt, ## args)
@@ -205,7 +207,6 @@ void vf_vlog(unsigned flags, const char *fmt, va_list ap);
 
 #include <trurl/n_snprintf.h>
 #include <trurl/nhash.h>
-
 
 struct vfile_configuration {
     char       *cachedir;
@@ -223,6 +224,7 @@ void vfile_set_errno(const char *ctxname, int vf_errno);
 
 #include "vfreq.h"
 
+
 struct vf_module {
     char       vfmod_name[32];
     unsigned   vf_protocols;
@@ -234,15 +236,11 @@ struct vf_module {
     int        _pri;            /* used by vfile only */
 };
 
-
-#define VFMOD_INFINITE_RETR       (1 << 0) /* retry download */
-#define VFMOD_USER_AS_ANONPASSWD  (1 << 1) /* send login@host as FTP password  */
-
 /* short alias for */
 #define CL_URL(url) vf_url_hidepasswd_s(url)
 #define PR_URL(url) vf_url_slim_s(url, 60)
 
-int vf_uncompr_able(const char *path);
+int vf_uncompr_able(const char *path, char *uncmpr_path, int size);
 int vf_uncompr_do(const char *path, const char *destpath);
 
 void vf_sigint_cb(void);
