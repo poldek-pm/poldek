@@ -38,7 +38,7 @@
 #define VFILE_INTERNAL
 #include "vfile.h"
 
-
+#if 0                           /* not nessecary  */
 void vf_cssleep(int cs) 
 {
     struct timespec ts;
@@ -47,6 +47,7 @@ void vf_cssleep(int cs)
     ts.tv_nsec = cs * 10000000;
     nanosleep(&ts, NULL);
 }
+#endif
 
 int vf_valid_path(const char *path) 
 {

@@ -660,6 +660,14 @@ int vf_localpath(char *path, size_t size, const char *url)
     return vf_url_as_path(&path[n], size - n, url);
 }
 
+int vf_localdirpath(char *path, size_t size, const char *url) 
+{
+    int n;
+    
+    n = n_snprintf(path, size, "%s/", vfile_conf.cachedir);
+    return vf_url_as_dirpath(&path[n], size - n, url);
+}
+
 
 int vf_localunlink(const char *path) 
 {

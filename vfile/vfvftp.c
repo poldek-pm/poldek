@@ -136,7 +136,7 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
             break;
         }
         
-        vf_cssleep(90);
+        sleep(1);
     }
 
  l_endloop:

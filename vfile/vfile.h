@@ -137,13 +137,13 @@ int vf_mksubdir(char *path, int size, const char *dirpath);
 
 /* url to local path */
 int vf_localpath(char *path, size_t size, const char *url);
+int vf_localdirpath(char *path, size_t size, const char *url);
 
 /* unlink local copy */
 int vf_localunlink(const char *path);
 
 
 int vf_userathost(char *buf, int size);
-void vf_cssleep(int cs);
 
 int vf_cleanpath(char *buf, int size, const char *path);
 
