@@ -562,7 +562,7 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     cmdctx.cmd = ent->cmd;
     cmdctx.cctx = cctx;
     if ((cmdctx.ts = ts) == NULL)
-        cmdctx.ts = poldek_ts_new(cctx->ctx);
+        cmdctx.ts = poldek_ts_new(cctx->ctx, 0);
 
     if (ent->next_piped) {
         ent->pipe_right = cmd_pipe_new();

@@ -33,7 +33,7 @@ _make_methods(poldek.tn_array, 'n_array_')
 ctx = poldek.poldek_ctx()
 poldek.cvar.poldek_VERBOSE = 1
 
-src = poldek.source('ac-ready')
+src = poldek.source('ac')
 ctx.configure(ctx.CONF_SOURCE, src)
 ctx.load_config()
 ctx.setup()
@@ -41,17 +41,17 @@ ctx.setup()
 arr = ctx.get_avail_packages()
 print "Loaded %d packages" % len(arr)
 n = 0
+
 #for ptr in arr:
-#    print ptr
+#    print n, " ", ptr
+#    n += 1
 #print "LoadedXX %d packages %d" % (len(arr), n)
     
 #    print ptr
 #for p in arr:
 #    print p
 
-ts = ctx.ts_new()
-ts.set_type(ts.INSTALL, "from python")
-ts.setf(ts.UPGRADE)
+ts = ctx.ts_new(poldek.poldek_ts.INSTALL | poldek.poldek_ts.UPGRADE)
 ts.setop(poldek.POLDEK_OP_TEST, 1)
 ts.add_pkgmask("poldek")
 ts.run(None)

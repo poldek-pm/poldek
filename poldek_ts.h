@@ -123,7 +123,7 @@ struct poldek_ts {
     
 };
 #endif
-struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx);
+struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx, unsigned flags);
 void poldek_ts_free(struct poldek_ts *ts);
 
 int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx);

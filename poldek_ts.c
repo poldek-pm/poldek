@@ -83,12 +83,13 @@ struct ts_run ts_run_tbl[] = {
 
 #define TS_CONFIG_LATER (1 << 0)
 
-struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx)
+struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx, unsigned flags)
 {
     struct poldek_ts *ts;
 
     ts = n_malloc(sizeof(*ts));
     poldek_ts_init(ts, ctx);
+    poldek_ts_setf(ts, flags);
     return ts;
 }
 
@@ -285,13 +286,14 @@ void poldek_ts_destroy(struct poldek_ts *ts)
 
 void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag)
 {
-    switch (flag) {
-        case POLDEK_TS_INSTALL:
-        case POLDEK_TS_UNINSTALL:
-        case POLDEK_TS_VERIFY:
-            ts->type = flag;
-            break;
-    }
+    if (flag & POLDEK_TS_INSTALL)
+        ts->type = POLDEK_TS_INSTALL;
+
+    else if (flag & POLDEK_TS_UNINSTALL)
+        ts->type = POLDEK_TS_UNINSTALL;
+
+    else if (flag & POLDEK_TS_VERIFY)
+        ts->type = POLDEK_TS_VERIFY;
 
     ts->_flags |= flag;
 }

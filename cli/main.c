@@ -338,7 +338,8 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
 
     if (mode == MODE_APT)
         args.eat_args = 1;
-    args.ts = poldek_ts_new(cctx->ctx);
+    
+    args.ts = poldek_ts_new(cctx->ctx, 0);
     n = 0;
     while (poclidek_opgroup_tab[n])
         n++;

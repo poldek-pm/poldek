@@ -869,7 +869,7 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     pm_module_init();
     ctx->pmctx = NULL;
     
-    ctx->ts = poldek_ts_new(NULL);
+    ctx->ts = poldek_ts_new(NULL, 0);
     ts = ctx->ts;
     
     i = 0;
