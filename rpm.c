@@ -156,6 +156,15 @@ time_t rpm_dbmtime(const char *dbfull_path)
   open req index directly, rpmlib API does not allow to extract
   all requirements without reading whole headers (which is too slow)
 */
+#ifndef HAVE_DB_185_H
+int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs)
+{
+    rootdir = rootdir; depdirs = depdirs;
+    return 0;
+}
+
+#else 
+
 int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs) 
 {
     DB        *db;
@@ -165,7 +174,7 @@ int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs)
     tn_array  *tmp_depdirs;
     int       len;
 
-#if !defined HAVE_DB_185_H || !defined HAVE___DB185_OPEN
+#ifndef HAVE___DB185_OPEN
     return 0;
 #endif    
     
@@ -232,7 +241,7 @@ int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs)
     //printf("s = %d\n", n_array_size(depdirs));
     return n_array_size(depdirs);
 }
-
+#endif /* HAVE_DB_185_H */
 
 void rpm_closedb(rpmdb db) 
 {
