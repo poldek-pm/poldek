@@ -411,6 +411,7 @@ int pdir_digest_verify(struct pdir_digest *pdg, struct vfile *vf)
 
     
     msg(0, _("Verifying %s..."), vf_url_slim_s(vf->vf_path, 0));
+
     offs = n_stream_tell(vf->vf_tnstream);
     if (n_stream_seek(vf->vf_tnstream, 0L, SEEK_SET) != 0) {
         logn(LOGERR, "%s: fseek(0): %ld -> 0: %m", vf->vf_path, offs);
@@ -427,12 +428,9 @@ int pdir_digest_verify(struct pdir_digest *pdg, struct vfile *vf)
         rc = 0;
         goto l_end;
     }
-    
-    if (n_stream_seek(vf->vf_tnstream, offs, SEEK_SET) != 0) {
-        logn(LOGERR, "%s: fseek(%ld): %m", vf->vf_path, offs);
-        rc = 0;
-        goto l_end;
-    }
+
+    /* zlib's fseek returns error on broken files */
+    n_stream_seek(vf->vf_tnstream, offs, SEEK_SET); 
 
     if (pdg->mode & PDIR_DIGEST_MODE_v016) {
         n_assert(pdg->md);
