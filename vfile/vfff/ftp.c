@@ -696,7 +696,7 @@ int vftpcn_retr(struct vcn *cn, struct vfff_req *req)
     if (vfff_sigint_reached())
         goto l_err;
 
-    if ((req->st_mtime = vftpcn_mtime(cn, req->uri)) < 0)
+    if ((req->st_remote_mtime = vftpcn_mtime(cn, req->uri)) < 0)
         goto l_err;
 
     if (vfff_sigint_reached())
@@ -740,7 +740,7 @@ int vftpcn_retr(struct vcn *cn, struct vfff_req *req)
         }
     }
 
-    req->st_size = total_size;
+    req->st_remote_size = total_size;
     
     errno = 0;
     if (!vfff_transfer_file(req, sockfd, total_size))
@@ -768,12 +768,12 @@ int vftpcn_stat(struct vcn *cn, struct vfff_req *req)
 {
     vfff_errno = 0;
 
-    req->st_size = vftpcn_size(cn, req->uri);
+    req->st_remote_size = vftpcn_size(cn, req->uri);
     
     if (!vfff_sigint_reached())
-        req->st_mtime = vftpcn_mtime(cn, req->uri);
+        req->st_remote_mtime = vftpcn_mtime(cn, req->uri);
     
-    if (req->st_mtime < 0 && req->st_size < 0)
+    if (req->st_remote_mtime < 0 && req->st_remote_size < 0)
         return 0;
     
     return 1;

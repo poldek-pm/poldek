@@ -326,8 +326,8 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat)
     else {
         vf_loginfo(_("Retrieving status of %s...\n"), PR_URL(req->url));
         if ((rc = do_vfile_req(REQTYPE_STAT, mod, req))) {
-            vfstat->vf_size = req->st_size > 0 ? req->st_size : 0;
-            vfstat->vf_mtime = req->st_mtime > 0 ? req->st_mtime : 0;
+            vfstat->vf_size = req->st_remote_size > 0 ? req->st_remote_size : 0;
+            vfstat->vf_mtime = req->st_remote_mtime > 0 ? req->st_remote_mtime : 0;
             
         } else if (req->flags & VF_REQ_INT_REDIRECTED) {
             vf_request_free(req);

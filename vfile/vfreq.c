@@ -253,15 +253,15 @@ void vf_request_close_destpath(struct vf_request *req)
         if (*vfile_verbose > 1) {
             char timbuf[64] = { '\0' };
 
-            if (req->st_mtime > 0) 
+            if (req->st_remote_mtime > 0) 
                 strftime(timbuf, sizeof(timbuf), "(mtime %Y-%m-%d %H:%M:%S)",
-                     gmtime(&req->st_mtime));
+                     gmtime(&req->st_remote_mtime));
             
             vf_loginfo("Closing %s %s\n", req->destpath, timbuf);
         }
         
-        if (req->st_mtime > 0) {
-            ut.actime = ut.modtime = req->st_mtime;
+        if (req->st_remote_mtime > 0) {
+            ut.actime = ut.modtime = req->st_remote_mtime;
             utime(req->destpath, &ut);
         }
 

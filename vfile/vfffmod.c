@@ -246,8 +246,8 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
     *vreq.redirected_to = '\0';
     
     if ((rc = dofn->fn(cn, &vreq))) {
-        req->st_mtime = vreq.st_mtime;
-        req->st_size = vreq.st_size;
+        req->st_remote_mtime = vreq.st_remote_mtime;
+        req->st_remote_size = vreq.st_remote_size;
         
     } else if (*vreq.redirected_to) {
         char topath[PATH_MAX], *topathp = vreq.redirected_to;

@@ -49,8 +49,8 @@ struct vf_request {
     struct vf_progress_bar *bar;
 
     /* filled by module's stat()s */
-    time_t    st_mtime;
-    off_t     st_size;
+    time_t    st_remote_mtime;
+    off_t     st_remote_size;
 
     time_t    st_local_mtime;
     off_t     st_local_size;

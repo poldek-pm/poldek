@@ -16,7 +16,7 @@
 
 #include <stdarg.h>
 #include <netinet/in.h>
-
+#include <time.h>
 
 #ifndef IPPORT_HTTP
 # define IPPORT_HTTP 80
@@ -102,8 +102,8 @@ struct vfff_req {
     
     char         redirected_to[PATH_MAX];
 
-    off_t        st_size;
-    time_t       st_mtime;
+    off_t        st_remote_size;
+    time_t       st_remote_mtime;
 };
 
 int vcn_retr(struct vcn *cn, struct vfff_req *req);

@@ -901,12 +901,12 @@ int vhttp_vcn_stat(struct vcn *cn, struct vfff_req *rreq)
         goto l_end;
     }
 
-    rreq->st_size = http_resp_get_content_length(resp);
+    rreq->st_remote_size = http_resp_get_content_length(resp);
 
     if ((s = http_resp_get_hdr(resp, "last-modified")) != NULL)
-        rreq->st_mtime = parse_date(s);
+        rreq->st_remote_mtime = parse_date(s);
 
-    if (rreq->st_size == -1 && rreq->st_mtime == -1)
+    if (rreq->st_remote_size == -1 && rreq->st_remote_mtime == -1)
         rc = 0;
 
  l_end:
@@ -985,7 +985,7 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
         goto l_err_end;
 
     if ((trenc = http_resp_get_hdr(resp, "last-modified")) != NULL)
-        rreq->st_mtime = parse_date(trenc);
+        rreq->st_remote_mtime = parse_date(trenc);
     
     if (rreq->out_fdoff == 0)
         total = amount;
@@ -1011,7 +1011,7 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
             } else {
                 if (*vfff_verbose > 1)
                     vfff_log(_("%s: already downloaded; mtime %s\n"),
-                                 rreq->uri, ctime(&rreq->st_mtime));
+                             rreq->uri, ctime(&rreq->st_remote_mtime));
                 goto l_end;         /* downloaded */
             } 
         }
@@ -1023,13 +1023,13 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
         }
     }
 
-    rreq->st_size = total;
+    rreq->st_remote_size = total;
     
     
     if (*vfff_verbose > 1) {
         long a = from ? total - from : total;
         vfff_log("Total file size %ld, %ld to download, mtime %s\n",
-                 total, a, ctime(&rreq->st_mtime));
+                 total, a, ctime(&rreq->st_remote_mtime));
     }
     
     errno = 0;
