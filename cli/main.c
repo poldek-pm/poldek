@@ -110,6 +110,9 @@ N_("Do not remove downloaded packages just after their installation"), 10500 },
 };
 
 
+#define RUNMODE_POLDEK       0
+#define RUNMODE_APT          1
+
 #define MODE_NULL         0
 #define MODE_VERIFY       1
 #define MODE_MKIDX        2
@@ -136,11 +139,11 @@ static struct poclidek_opgroup *poclidek_opgroup_tab[] = {
 
 
 struct args {
-    int                  eat_args;      
     struct poldek_ctx    *ctx;
     struct poclidek_ctx *cctx;
     struct poldek_ts     *ts;
-    
+
+    int       mode;
     int       mjrmode;
     unsigned  mnrmode;
 
@@ -206,7 +209,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'C':
-            argsp->eat_args = 1;
+            argsp->mode = RUNMODE_APT;
             break;
             
         case 'v': 
@@ -259,7 +262,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case ARGP_KEY_ARG:
             DBGF("main.arg %s\n", arg);
-            if (argsp->eat_args) {
+            if (argsp->mode == RUNMODE_APT) {
                 argsp->argv[argsp->argc++] = arg;
 
                 while (state->next < state->argc) {
@@ -270,7 +273,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 n_assert(state->next = state->argc);
                 break;
             }
-            /* no args->eat_args => no break */
+            /* apt => no break */
             
         default:
             return ARGP_ERR_UNKNOWN;
@@ -321,8 +324,7 @@ void argp_prepare_child_options(const struct argp *argp)
     }
 }
 
-#define MODE_POLDEK   0
-#define MODE_APT      1
+
     
 static
 void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode) 
@@ -337,8 +339,7 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
     args.argv = n_malloc(sizeof(*argv) * argc);
     args.argv[0] = NULL;
 
-    if (mode == MODE_APT)
-        args.eat_args = 1;
+    args.mode = mode;
     
     args.ts = poldek_ts_new(cctx->ctx, 0);
     n = 0;
@@ -437,20 +438,19 @@ int main(int argc, char **argv)
 {
     struct poldek_ctx    *ctx;
     struct poclidek_ctx  *cctx;
-    int  ec = 0, rrc, mode = MODE_POLDEK;
+    int  ec = 0, rrc, mode = RUNMODE_POLDEK;
     const char *bn;
     
     setlocale(LC_MESSAGES, "");
     setlocale(LC_CTYPE, "");
 
     bn = n_basenam(argv[0]);
-    
+
     if (strcmp(bn, "apoldek-get") == 0 || strcmp(bn, "ipoldek") == 0)
-        mode = MODE_APT;
+        mode = RUNMODE_APT;
     
     DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
     ctx = poldek_new(0);
-
     cctx = poclidek_new(ctx);
     parse_options(cctx, argc, argv, mode);
     
@@ -458,8 +458,8 @@ int main(int argc, char **argv)
     if (rrc & OPGROUP_RC_FINI)
         exit((rrc & OPGROUP_RC_ERROR) ? EXIT_FAILURE : EXIT_SUCCESS);
 
-    if (args.eat_args == 0) {
-        if (!poclidek_load_packages(cctx, 0)) {
+    if (args.mode == RUNMODE_POLDEK) {
+        if (!poclidek_load_packages(cctx, POCLIDEK_LOAD_ALL)) {
             logn(LOGERR, "packages load failed");
             ec = 1;
             
@@ -472,14 +472,11 @@ int main(int argc, char **argv)
             ec = !ec;
         }
         
-    } else {
+    } else {                    /* RUNMODE_APT */
         int rc = 1;
-        
-#define ENABLE_TRACE 0
 #if ENABLE_TRACE
-        printf("verbose %d\n", verbose);
-        printf("exec[%d] ", args.argc);
         i = 0;
+        DBGF("verbose %d, argc = %d\n", verbose, args.argc);
         while (args.argv[i])
             printf(" %s", args.argv[i++]);
         printf("\n");
@@ -487,6 +484,11 @@ int main(int argc, char **argv)
         if (args.argc > 0)
             rc = poclidek_exec(cctx, args.ts, args.argc,
                                (const char **)args.argv);
+        else {
+            msgn(0, _("Give me something to do."));
+            rc = 0;
+        }
+        
         if (!rc)
             ec = 1;
     }

@@ -13,7 +13,13 @@ struct poldek_ts;
 
 struct poclidek_ctx *poclidek_new(struct poldek_ctx *ctx);
 void poclidek_free(struct poclidek_ctx *cctx);
-int poclidek_load_packages(struct poclidek_ctx *cctx, int skip_installed);
+
+
+#define POCLIDEK_LOAD_AVAILABLE (1 << 0)
+#define POCLIDEK_LOAD_INSTALLED (1 << 1)
+#define POCLIDEK_LOAD_ALL       ((1 << 0) | (1 << 1))
+
+int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags);
 
 int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, 
                   int argc, const char **argv);

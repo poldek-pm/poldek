@@ -84,10 +84,13 @@ int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
 
 #define POCLIDEK_INSTALLEDDIR     "/installed"
 #define POCLIDEK_AVAILDIR         "/all-avail"
+#define POCLIDEK_HOMEDIR          POCLIDEK_AVAILDIR  
 
-#define POLDEKCLI_SKIPINSTALLED   (1 << 0)
-#define POLDEKCLI_CONFIG_LOADED   (1 << 5)
-#define POLDEKCLI_PACKAGES_LOADED (1 << 6)
+
+#define POLDEKCLI_SKIPINSTALLED    (1 << 0)
+#define POLDEKCLI_CONFIG_LOADED    (1 << 5)
+#define POLDEKCLI_LOADED_AVAILABLE (1 << 6)
+#define POLDEKCLI_LOADED_INSTALLED (1 << 7)
 
 struct pkg_dent;                /* package dirent struct */
 struct poclidek_ctx {
@@ -106,6 +109,7 @@ struct poclidek_ctx {
     struct pkg_dent     *rootdir;
     struct pkg_dent     *homedir;
     struct pkg_dent     *currdir;
+    
 };
 
 #endif

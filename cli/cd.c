@@ -62,8 +62,12 @@ static int cd(struct cmdctx *cmdctx)
     int rc;
 
     path = cmdctx->_data;
-    if (path == NULL)
-        path = cmdctx->cctx->homedir->name;
+    if (path == NULL) {
+        if (cmdctx->cctx->homedir)
+            path = cmdctx->cctx->homedir->name;
+        else
+            path = POCLIDEK_AVAILDIR;
+    }
     
     if (!(rc = poclidek_chdir(cmdctx->cctx, path))) {
         n_snprintf(path_buf, sizeof(path_buf), "/%s", path);

@@ -509,31 +509,46 @@ void poclidek_free(struct poclidek_ctx *cctx)
 }
 
 
-int poclidek_load_packages(struct poclidek_ctx *cctx, int skip_installed) 
+int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags) 
 {
-    struct poldek_ctx *ctx;
+    int nerr = 0;
 
-    if (cctx->_flags & POLDEKCLI_PACKAGES_LOADED)
-        return 1;
-
-    cctx->_flags |= POLDEKCLI_PACKAGES_LOADED;
-
-    ctx = cctx->ctx;
+    poclidek_dent_init(cctx);
+    DBGF_F("%d\n", flags);
     
-    if (!poldek_load_sources(ctx))
-        return 0;
-
-    cctx->pkgs_available = poldek_get_avail_packages(ctx);
-    if (cctx->pkgs_available) {
-        n_array_ctl_set_cmpfn(cctx->pkgs_available, (tn_fn_cmp)pkg_nvr_strcmp);
-        n_array_sort(cctx->pkgs_available);
+    if (flags & POCLIDEK_LOAD_AVAILABLE) {
+        if ((cctx->_flags & POLDEKCLI_LOADED_AVAILABLE) == 0) {
+            cctx->_flags |= POLDEKCLI_LOADED_AVAILABLE;
+            
+            if (!poldek_load_sources(cctx->ctx)) 
+                nerr++;
+            else {
+                cctx->pkgs_available = poldek_get_avail_packages(cctx->ctx);
+                
+                if (cctx->pkgs_available) {
+                    n_array_ctl_set_cmpfn(cctx->pkgs_available,
+                                          (tn_fn_cmp)pkg_nvr_strcmp);
+                    poclidek_dent_setup(cctx, POCLIDEK_AVAILDIR,
+                                        cctx->pkgs_available);
+                    n_array_sort(cctx->pkgs_available);
+                }
+            }
+        }
     }
     
-    poclidek_dent_init(cctx);
-    if (skip_installed || (cctx->_flags & POLDEKCLI_SKIPINSTALLED))
-        return 1;
     
-    return poclidek_load_installed(cctx, 0); 
+    if ((cctx->_flags & POLDEKCLI_SKIPINSTALLED))
+        return 1;
+
+    if (flags & POCLIDEK_LOAD_INSTALLED) {
+        if ((cctx->_flags & POLDEKCLI_LOADED_INSTALLED) == 0) {
+            cctx->_flags |= POLDEKCLI_LOADED_INSTALLED;
+            if (!poclidek_load_installed(cctx, 0))
+                nerr++;
+        }
+    }
+    
+    return nerr == 0;
 }
 
 static char **a_argv_to_argv(tn_array *a_argv, char **argv) 

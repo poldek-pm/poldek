@@ -218,6 +218,11 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
         cmpto_path = POCLIDEK_AVAILDIR;
     
     cmpto_pkgs = poclidek_get_dent_packages(cmdctx->cctx, cmpto_path);
+    if (cmpto_pkgs == NULL) {
+        logn(LOGERR, _("%s: no packages found"), cmpto_path);
+        return NULL;
+    }
+
     ls_ents2 = n_array_clone(ls_ents);
     
     for (i=0; i < n_array_size(ls_ents); i++) {
@@ -260,9 +265,16 @@ static int ls(struct cmdctx *cmdctx)
     tn_array             *evrs = NULL;
     int                  rc = 1;
     char                 *path = NULL, pwd[PATH_MAX];
+    unsigned             ldflags = 0;
 
-
+    if (cmdctx->_flags & OPT_LS_INSTALLED)
+        ldflags = POCLIDEK_LOAD_INSTALLED;
+    else
+        ldflags = POCLIDEK_LOAD_ALL;
+    
+    poclidek_load_packages(cmdctx->cctx, ldflags);
     poclidek_pwd(cmdctx->cctx, pwd, sizeof(pwd));
+    
     if (cmdctx->_flags & OPT_LS_INSTALLED)
         path = POCLIDEK_INSTALLEDDIR;
 
@@ -280,6 +292,8 @@ static int ls(struct cmdctx *cmdctx)
 
         evrs = n_array_new(n_array_size(ls_ents), free, NULL);
         tmp = do_upgradeable(cmdctx, ls_ents, evrs);
+        if (tmp == NULL)
+            goto l_end;
         n_array_free(ls_ents);
         ls_ents = tmp;
     }

@@ -80,7 +80,8 @@ static int get(struct cmdctx *cmdctx)
     int err = 0;
     
     cctx = cmdctx->cctx;
-
+    
+    poclidek_load_packages(cctx, POCLIDEK_LOAD_AVAILABLE);
     pkgs = poclidek_resolve_packages(NULL, cctx, cmdctx->ts, 0);
     if (pkgs == NULL) {
         err++;

@@ -179,7 +179,7 @@ static int uninstall(struct cmdctx *cmdctx)
     cctx = cmdctx->cctx;
     ts = cmdctx->ts;
 
-    if (poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR) == NULL) {
+    if (poclidek_dent_ldfind(cctx, POCLIDEK_INSTALLEDDIR) == NULL) {
         log(LOGERR, "uninstall: installed packages not loaded, "
             "type \"reload\" to load them\n");
         return 0;

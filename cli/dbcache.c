@@ -44,15 +44,14 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload);
 int poclidek_load_installed(struct poclidek_ctx *cctx, int reload) 
 {
     struct pkgdir *pkgdir;
-    struct pkg_dent *dent;
-        
+    DBGF_F("%d\n", reload);
+/* TODO: reload */
     if ((pkgdir = load_installed_pkgdir(cctx, reload)) == NULL)
         return 0;
 
-    if ((dent = poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR)) == NULL)
-        dent = pkg_dent_adddir(cctx, cctx->rootdir, POCLIDEK_INSTALLEDDIR);
-        
-    pkg_dent_add_pkgs(cctx, dent, pkgdir->pkgs);
+    if ((poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR)) == NULL)
+        poclidek_dent_setup(cctx, POCLIDEK_INSTALLEDDIR, pkgdir->pkgs);
+
     cctx->pkgs_installed = n_ref(pkgdir->pkgs);
     n_array_ctl(cctx->pkgs_installed, TN_ARRAY_AUTOSORTED);
     cctx->dbpkgdir = pkgdir;
