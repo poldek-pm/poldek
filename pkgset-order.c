@@ -139,14 +139,20 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg,
                               rp->pkg->name);
 
                     } else {
-                        int i;
-                        log(LOGERR, _("PreReq loop: "));
-                        log(LOGERR, "_%s", rp->pkg->name);
+                        int i, size, n = 0;
+                        char *error;
+
+                        size = n_array_size(vs->stack) * 128;
+                        error = alloca(size);
+
+                        n = 0;
+                        n += n_snprintf(error, size, _("PreReq loop: "));
+                        n += n_snprintf(&error[n], size - n, "%s", rp->pkg->name);
                         for (i=n_array_size(vs->stack)-1; i >= 0; i--) {
                             struct pkg *p = n_array_nth(vs->stack, i);
-                            log(LOGERR, "_ <- %s", p->name);
+                            n += n_snprintf(&error[n], size - n, " <- %s", p->name);
                         }
-                        log(LOGERR, "_\n");
+                        log(LOGERR, "%s\n", error);
                     }
                     
                 } else {

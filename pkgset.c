@@ -304,8 +304,9 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
 
     pkgset_verify_conflicts(ps, strict);
     
-    MEMINF("MEM after order");
-    pkgset_order(ps, flags & PSET_VERIFY_ORDER);
+    MEMINF("MEM before order");
+    if ((flags & PSET_NOORDER) == 0)
+        pkgset_order(ps, flags & PSET_VERIFY_ORDER);
     MEMINF("after setup[END]");
 
     if (n_array_size(ps->pkgs) > 10) { /* sanity check */

@@ -213,7 +213,9 @@ int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
                     }
                 }
             }
-            n_assert(bypkg);
+            if (bypkg == NULL)  /* unsatisfied requirement */
+                continue;
+            
             msgn_i(1, bypkg->pri, _("%s marks %s (req %s)"),
                    pkg_snprintf_s(bypkg), pkg_snprintf_s0(pkg),
                    capreq_snprintf_s(req));
@@ -433,7 +435,7 @@ static tn_array *reorder_packages(tn_array *pkgs)
         pkgset_add_package(ps, pkg);
     }
 
-    pkgset_setup(ps, 0);
+    pkgset_setup(ps, PSET_NOORDER);
     packages_order(ps->pkgs, &ordered_pkgs, PKGORDER_UNINSTALL);
 
     ordered_pkgs = n_array_reverse(ordered_pkgs);

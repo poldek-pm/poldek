@@ -58,6 +58,7 @@ int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir);
 
 #define PSET_DBDIRS_LOADED       (1 << 4)
 
+#define PSET_NOORDER             (1 << 6)
 #define PSET_VERIFY_ORDER        (1 << 7)
 #define PSET_VERIFY_FILECNFLS    (1 << 9)
 #define PSET_UNIQ_PKGNAME        (1 << 10)
