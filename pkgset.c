@@ -449,8 +449,15 @@ int pkgset_setup(struct pkgset *ps, const char *pri_fpath)
     n_array_sort(ps->pkgs);
     
     if ((ps->flags & PSMODE_MKIDX) == 0) {
-        n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev_srcpri);
-        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
+        if (ps->flags & PSUNIQ_PACKAGE_NAME) {
+            n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_srcpri);
+            n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_uniq);
+            
+        } else {
+            n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev_srcpri);
+            n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
+        }
+        
         
         if (n != n_array_size(ps->pkgs)) {
             n -= n_array_size(ps->pkgs);

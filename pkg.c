@@ -470,6 +470,23 @@ int pkg_cmp_name_evr_rev_srcpri(const struct pkg *p1, const struct pkg *p2)
 }
 
 
+int pkg_cmp_name_srcpri(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc;
+
+    if ((rc = pkg_cmp_name(p1, p2)) == 0) {
+        if (p1->pkgdir != p2->pkgdir)
+            rc = p1->pkgdir->pri - p2->pkgdir->pri;
+        
+        if (rc == 0)
+            rc = -pkg_cmp_evr(p1, p2);
+    }
+    
+    return rc;
+}
+
+
+
 static __inline__
 int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2) 
 {
@@ -536,6 +553,18 @@ int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2)
     
     return rc;
 }
+
+
+int pkg_cmp_name_uniq(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc;
+    
+    if ((rc = pkg_cmp_name(p1, p2)) == 0 && verbose > 1)
+        logn(LOGWARN, _("duplicated name %s"), pkg_snprintf_s(p1));
+    
+    return rc;
+}
+
 
 
 int pkg_eq_name_evr(const struct pkg *p1, const struct pkg *p2) 

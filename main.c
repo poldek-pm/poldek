@@ -218,6 +218,7 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_INST_GREEDY           'G'
 #define OPT_INST_REINSTALL        1057
 #define OPT_INST_DOWNGRADE        1058
+#define OPT_INST_UNIQNAMES        'Q'
 
 #define OPT_UNINSTALL             'e'
 
@@ -386,6 +387,9 @@ N_("Make invisibled packages visible."), 71 },
     
 {"mkdir", OPT_INST_MKDBDIR, 0, 0, 
      N_("make %{_dbpath} if not exists"), 71 },
+
+{"unique-pkg-names", OPT_INST_UNIQNAMES, 0, 0, 
+N_("Do sort | uniq on available package list"), 71 },        
 
 #ifdef ENABLE_INTERACTIVE_MODE
 {0,0,0,0, N_("Interactive mode:"), 80},
@@ -755,11 +759,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->inst.flags |= INSTS_INSTALL;
             break;
 
+        case OPT_INST_UNIQNAMES:
+            argsp->psflags |= PSUNIQ_PACKAGE_NAME;
+            break;
             
         case OPT_INST_DOWNGRADE:
             argsp->inst.flags |= INSTS_DOWNGRADE;
                                 /* no break */
-            
+
         case OPT_INST_REINSTALL:
             if ((argsp->inst.flags & INSTS_DOWNGRADE) == 0)
                 argsp->inst.flags |= INSTS_REINSTALL;
@@ -1274,7 +1281,11 @@ void parse_options(int argc, char **argv)
             else 
                 args.inst.flags &= ~INSTS_FOLLOW;
         }
-    }  
+    }
+
+    if ((args.psflags & PSUNIQ_PACKAGE_NAME) == 0)
+        if (conf_get_bool(htcnf, "unique_package_names", 0))
+            args.psflags |= PSUNIQ_PACKAGE_NAME;
     
     if ((v = conf_get(htcnf, "cachedir", NULL)))
         args.inst.cachedir = v;

@@ -105,7 +105,8 @@ void inst_s_init(struct inst_s *inst);
 #define PSVERIFY_CNFLS        (1 << 2)
 #define PSVERIFY_FILECNFLS    (1 << 3)
 
-#define PSDBDIRS_LOADED       (1 << 4)
+#define PSUNIQ_PACKAGE_NAME   (1 << 4)  
+#define PSDBDIRS_LOADED       (1 << 5)
 
 #define PSMODE_VERIFY        (1 << 11)
 #define PSMODE_MKIDX         (1 << 12)
