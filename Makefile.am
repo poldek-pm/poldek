@@ -89,9 +89,6 @@ EXTRA_DIST = poldek.1 poldek.pod \
 	     poldek.spec* poldek-suse.spec* $(bin_SCRIPTS) conf/ \
 	     trurlib/ 
 
-OMIT_DEPENDENCIES = narray.h tfn_types.h nassert nbuf.h nhash.h nlist.h nstr.h \
-		    nassert.h trurl.h
-
 man_MANS = poldek.1
 
 
