@@ -1013,11 +1013,13 @@ void parse_options(int argc, char **argv)
         src->type = args.curr_src_type;
         n_array_push(args.sources, src);
     }
-
+    
+#if 0
     if (n_array_size(args.sources) && n_array_size(args.source_names)) {
         logn(LOGERR, _("--source and --sn are exclusive"));
         exit(EXIT_FAILURE);
     }
+#endif
     
     if (args.conf_path != NULL)
         htcnf = ldconf(args.conf_path);
@@ -1033,7 +1035,7 @@ void parse_options(int argc, char **argv)
     }
 
     
-    if (n_array_size(args.sources) == 0) {
+    if (n_array_size(args.sources) == 0 || n_array_size(args.source_names) > 0) {
         if (!get_conf_sources(args.sources, args.source_names, htcnf))
             exit(EXIT_FAILURE);
     }
@@ -1050,6 +1052,9 @@ void parse_options(int argc, char **argv)
         
     } else {
         int i, nsources = 0;
+
+        n_array_sort(args.sources);
+        n_array_uniq(args.sources);
         
         for (i=0; i < n_array_size(args.sources); i++) {
             struct source *src = n_array_nth(args.sources, i);
