@@ -795,11 +795,8 @@ static struct pkgset *load_pkgset(int ldflags)
     }
     mem_info(1, "MEM after load");
 
-    if (ps)
-        if (!pkgset_setup(ps)) {
-            pkgset_free(ps);
-            ps = NULL;
-        }
+    if (ps) 
+        pkgset_setup(ps)
 
     return ps;
 }
