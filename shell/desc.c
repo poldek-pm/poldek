@@ -678,7 +678,8 @@ static int desc(struct cmdarg *cmdarg)
         shpkg = n_array_nth(shpkgs, i);
 
         if (n_array_size(shpkgs) > 1) {
-            printf_c(PRCOLOR_YELLOW, "%-16s", "\nPackage:");
+            printf("\n");
+            printf_c(PRCOLOR_YELLOW, "%-16s", "Package:");
             printf("%s\n", pkg_snprintf_s(shpkg->pkg));
         }
         
