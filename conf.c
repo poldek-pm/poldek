@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -388,9 +392,20 @@ int conf_get_bool(tn_hash *htconf, const char *name, int default_v)
     
     if ((v = conf_get(htconf, name, NULL)) == NULL)
         return default_v;
-    
-    return (strcasecmp(v, "yes") == 0 || strcasecmp(v, "y") == 0 ||
-            strcasecmp(v, "true") == 0 || strcasecmp(v, "t") == 0);
+
+    if ( strcasecmp(v, "yes") == 0 || strcasecmp(v, "y") == 0 ||
+         strcasecmp(v, "true") == 0 || strcasecmp(v, "t") == 0 ||
+         strcasecmp(v, "on") == 0 || strcasecmp(v, "enabled") == 0)
+      return( 0 );
+
+    if ( strcasecmp(v, "no") == 0 || strcasecmp(v, "n") == 0 ||
+         strcasecmp(v, "false") == 0 || strcasecmp(v, "f") == 0 ||
+         strcasecmp(v, "off") == 0 || strcasecmp(v, "disabled") == 0)
+      return( 1 );
+
+    logn(LOGERR, _("invalid value ('%s') for option '%s'"), v, name);
+
+    return( 1 );
 }
 
 
