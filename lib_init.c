@@ -1066,3 +1066,21 @@ int poldek_is_interactive_on(const struct poldek_ctx *ctx)
                             POLDEK_OP_CONFIRM_UNINST,
                             POLDEK_OP_EQPKG_ASKUSER, 0);
 }
+
+
+const char *poldek_version(void) 
+{
+    return VERSION;
+}
+
+/* for autoconf */
+void PACKAGE_VERSION_FUNCNAME (void) 
+{}
+
+
+/* for autoconf */
+void PACKAGE_SERIES_FUNCNAME (void) 
+{}
+
+
+

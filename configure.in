@@ -7,7 +7,9 @@ AC_CONFIG_SRCDIR([capreq.c])
 PACKAGE_BUGREPORT="mis@pld.org.pl"
 VERSION_STATUS="devel"
 VERSION=0.19.0
-VERSION_CVSTAG="v$(echo $VERSION | sed 's/\./_/g')"
+VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
+VERSION_CVSTAG="v$VERSION_TAG"
+PACKAGE_VERSION_SERIES="2"
 AH_TEMPLATE([ENABLE_TRACE],[])
 AH_TEMPLATE([HAVE_RPM_4_0_4],[])
 AH_TEMPLATE([HAVE_RPM_4_1],[])
@@ -17,7 +19,13 @@ AH_TEMPLATE([HAVE_TM_GMTOFF],[])
 AH_TEMPLATE([HAVE_TM___GMTOFF],[])
 
 AM_INIT_AUTOMAKE([dist-bzip2])
-AC_DEFINE_UNQUOTED([VERSION_STATUS], "$VERSION_STATUS", [stable or devel version])
+AC_DEFINE_UNQUOTED([VERSION_STATUS], "$VERSION_STATUS", [version status])
+AC_DEFINE_UNQUOTED([PACKAGE_VERSION_FUNCNAME],
+                   ${PACKAGE}_version_${VERSION_TAG},  [ version function name ])
+
+AC_DEFINE_UNQUOTED([PACKAGE_SERIES_FUNCNAME],
+                   ${PACKAGE}_version_series_${PACKAGE_VERSION_SERIES},  
+                    [ series function name ])
 AC_SUBST(VERSION_CVSTAG)
 #AC_CONFIG_HEADERS([config.h])
 AM_CONFIG_HEADER([config.h])
