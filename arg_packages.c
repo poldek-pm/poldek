@@ -476,6 +476,11 @@ int arg_packages_resolve(struct arg_packages *aps,
     nmasks = n_array_size(aps->package_masks);
     for (i=0; i < nmasks; i++) {
         char *mask = n_array_nth(aps->package_masks, i);
+        int len = strlen(mask);
+        
+        if (len > 1 && mask[len - 1] == '-')
+            mask[len - 1] = '\0';
+        
         if (*mask == '*' && *(mask + 1) == '\0') {
             for (j=0; j < n_array_size(avpkgs); j++)
                 n_array_push(aps->resolved_pkgs,

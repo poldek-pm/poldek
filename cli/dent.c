@@ -333,7 +333,7 @@ struct pkg_dent *get_dir_dent(struct poclidek_ctx *cctx,
                               struct pkg_dent *currdir, const char *path)
 {
     const char **tl, **tl_save, *p;
-    struct pkg_dent *ent;
+    struct pkg_dent *ent = NULL;
     int rc = 0;
 
     if (currdir == NULL)
@@ -501,7 +501,11 @@ tn_array *do_resolve(struct arg_packages *aps,
     nmasks = n_array_size(masks);
     
     for (i=0; i < nmasks; i++) {
-        char  *mask = n_array_nth(masks, i);
+        char *mask = n_array_nth(masks, i);
+        int len = strlen(mask);
+        
+        if (len > 1 && mask[len - 1] == '-')
+            mask[len - 1] = '\0';
         
         if (*mask == '*' && *(mask + 1) == '\0')
             return n_ref(ents);
