@@ -186,7 +186,7 @@ static int make_idx(struct arg_s *arg_s)
             source_set_type(src, "dir");
 
         if (itype == NULL)
-            itype = pkgdir_default_type;
+            itype = pkgdir_DEFAULT_TYPE;
 
         msgn(0, "Making '%s' index of %s (type=%s)...", itype, source_idstr(src),
              src->type);

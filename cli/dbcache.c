@@ -174,11 +174,11 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
                      cctx->ctx->ts->rootdir,
                      rpm_get_dbpath()) == NULL)
-        return;
+        return 0;
 
     mtime_rpmdb = rpm_dbmtime(rpmdb_path);
     if (mtime_rpmdb > pkgdir->ts) /* changed outside poldek */
-        return;
+        return 0;
 
     
     if (pkgdir_is_type(pkgdir, RPMDBCACHE_PDIRTYPE))
@@ -188,18 +188,22 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
                               cctx->ctx->ts->cachedir, pkgdir->idxpath);
 
     if (path == NULL)
-        return;
+        return 0;
     
-    if (mtime_rpmdb == pkgdir->ts) { /* not touched, check if cache exists  */
+    if (mtime_rpmdb == pkgdir->ts && 0) { /* not touched, check if cache exists  */
         mtime_dbcache = mtime(path);
         if (mtime_dbcache && mtime_dbcache >= pkgdir->ts)
-            return;
+            return 0;
     }
+
     
-    //printf("path = %s, %d, %d, %d\n", path, 
-    //       mtime_rpmdb, pkgdir->ts, mtime_dbcache);
+    //printf("path = %s, %s, %d, %d, %d\n", path, pkgdir->idxpath,
+    ///      mtime_rpmdb, pkgdir->ts, mtime_dbcache);
+    n_assert(*path != '\0');
+    n_assert(strlen(path) > 10);
     return pkgdir_save(pkgdir, RPMDBCACHE_PDIRTYPE, path,
                        PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
                        PKGDIR_CREAT_MINi18n);
+    return 1;
 }
 

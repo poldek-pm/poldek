@@ -44,7 +44,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
             continue;
 
         if (src->type == NULL)
-            source_set_type(src, pkgdir_default_type);
+            source_set_type(src, pkgdir_DEFAULT_TYPE);
 
         
         pkgdir = pkgdir_srcopen(src, 0);
