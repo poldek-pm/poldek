@@ -1,3 +1,14 @@
+0.17.2
+* "ported" to RedHat 7.2 (with rpm 4.0.4)
+* install-dist: --force forces installation of broken package sets
+* corrected package installation progress bar 
+	(Michal Moskal <malekith@pld.org.pl>)
+* install-dist: log INST-{OK,ERR} for PLD Installer
+	(Michal Moskal <malekith@pld.org.pl>)
+* --dump* works properly
+* vftp: fixed error handling
+
+
 0.17.1
 * ftp: fixed multiline responses handling
 
