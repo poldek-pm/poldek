@@ -3,7 +3,7 @@
 I) Source repositories
 * repositories code has been totally rewritten in the modular, 
   plugin-like way, so is is quite easy to add support for new 
-  format. 
+  formats. 
 
   Currently supported formats:
 
@@ -19,7 +19,9 @@ I) Source repositories
 
 * new 'pndir' is the default format now. It is based on tndb (cdb 
   like) DBM library. To save bandwidth package descriptions 
-  (Description, Summary, etc) are stored in separate file(s) (one
+  (Description, Summary, etc) are stored in 2 separate files:
+  first named packages.ndir.dscr with common (BuildHost, Distribution, 
+  etc) and "C" descriptions and second with all i18n 
   .dscr file per available language). 
 
 * 'hdrl' aka 'apt' format are update-able now. 
@@ -31,7 +33,7 @@ I) Source repositories
 
 * indexes may be created from any index format, i.e conversion to
   to another format is supported, ex:
-  $ poldek --st apt -s /foo/bar --mkdix=/ala/ma --mkidx-type=pdir
+  $ poldek --st apt -s /foo/bar --mkidx=/ala/ma --mkidx-type=pdir
 
 * (re)creation of native poldek's indexes (pdir, pndir) is much faster now 
   -- package headers are not loaded at all if package's file modification 
@@ -39,6 +41,9 @@ I) Source repositories
 
 
 II) Installation related
+
+* uninstallation code has been rewritten, --erase and 
+  'uninstall' command work as expected now
 
 * poldek can perform 'to repository' installation, i.e packages
   are copied from source to destination repository with full
@@ -54,9 +59,9 @@ III) Interactive mode
   one can execute interactive commands from command-line:
   
   $ poldek -C ls 
-  $ apoldek-get install libfoo-0.1-1
+  $ apoldek install libfoo-0.1-1
 
-* aliases are defined in to external configuration file 
+* aliases are defined in external configuration file 
   (Mariusz Mazur <mmazur a kernel pl>)
 
 * commands may be piped, ex:
@@ -106,7 +111,7 @@ IV) Configuration file
    _pld_prefix = ftp://ftp.pld.org.pl/dists/ra
   %include %{_pld_prefix}/source.conf
 
-  Included remote files once downloaded are stored in cache, 
+  Included remote files once downloaded are stored in cache directory, 
   to resynchronize them with it's remote copy use --upconf option. 
 
 * support for APT sources configuration has been added; by default
