@@ -203,7 +203,7 @@ struct conf_s *ldconf(const char *path)
                 nerrs++;
                 continue;
             }
-            
+            p++;
             v = getv(p, path, nline);
             if (v == NULL) {
                 nerrs++;
