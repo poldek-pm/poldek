@@ -137,13 +137,6 @@ int install_pkgs(struct pkgset *ps, struct inst_s *inst)
         return 0;
 
     inst->db = pkgdb_open(inst->rootdir, NULL, O_RDONLY);
-    
-#if 0    
-    if ((inst->instflags & PKGINST_TEST)) 
-        inst->db = pkgdb_open(inst->rootdir, NULL, O_RDONLY);
-    else 
-        inst->db = pkgdb_open(inst->rootdir, NULL, O_RDWR);
-#endif    
     if (inst->db == NULL) {
         log(LOGERR, "could not open database\n");
         return 0;

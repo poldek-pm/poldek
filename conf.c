@@ -22,26 +22,34 @@
 #include "log.h"
 #include "conf.h"
 
+#define TYPE_STR   1
+#define TYPE_BOOL  2 
+
 struct tag {
     char *name;
-    int is_mutliple;
+    int  is_mutliple;
+    int  type;
 };
 
 static struct tag valid_tags[] = {
-    { "source",       0 },
-    { "cachedir",     0 },
-    { "prefix",       0 }, 
-    { "ftp_http_get", 0 },
-    { "ftp_get",      0 },
-    { "http_get",     0 },
-    { "https_get",    0 },
-    { "rsync_get",    0 },
-    { "ssh_get",      0 },
-    { "install_cmd",  0 },
-    { "ignore_req",   1 },
-    { "ignore_pkg",   1 },
-    { "rpmdef",       1 }, 
-    {  NULL,          0 }, 
+    { "source",       0, TYPE_STR },
+    { "cachedir",     0, TYPE_STR },
+    { "prefix",       0, TYPE_STR }, 
+    { "ftp_http_get", 0, TYPE_STR },
+    { "ftp_get",      0, TYPE_STR },
+    { "http_get",     0, TYPE_STR },
+    { "https_get",    0, TYPE_STR },
+    { "rsync_get",    0, TYPE_STR },
+    { "ssh_get",      0, TYPE_STR },
+    { "ignore_req",   1, TYPE_STR },
+    { "ignore_pkg",   1, TYPE_STR },
+    { "rpmdef",       1, TYPE_STR },
+    { "rpm_install_opt", 0, TYPE_STR },
+    { "rpm_upgrade_opt", 0, TYPE_STR },
+    { "rpm_uninstall_opt", 0, TYPE_STR },
+    { "follow",       0, TYPE_BOOL },
+    { "use_sudo",     0, TYPE_BOOL },
+    {  NULL,          0, 0 }, 
 };
 
 #define COPT_MULTIPLE (1 << 0)
@@ -134,7 +142,7 @@ static void validate_tag(const char *key, void *unused)
         }
 
     if (!found) {
-        log(LOGWARN, "%s: invalid option\n", key);
+        log(LOGWARN, "%s: unknown option\n", key);
         sleep(1);
     }
 }

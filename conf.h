@@ -3,6 +3,7 @@
 #define POLDEK_CONF_H
 
 #include <trurl/narray.h>
+#include <trurl/nhash.h>
 
 tn_hash *ldconf(const char *path);
 tn_hash *ldconf_deafult(void);

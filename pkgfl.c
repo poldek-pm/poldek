@@ -161,8 +161,9 @@ int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict)
 {
     register int cmprc;
 
-    if ((cmprc = (f1->size - f2->size)) == 0)
-        cmprc = f1->mode - f2->mode;
+    if ((cmprc = (f1->mode - f2->mode)) == 0 &&
+        !S_ISDIR(f1->mode) && !S_ISDIR(f1->mode)) 
+        cmprc = f1->size - f2->size;
 
     if (cmprc == 0 || strict == 0) {
         if (S_ISLNK(f1->mode)) {

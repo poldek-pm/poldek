@@ -464,7 +464,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                          optname, optname);
                      exit(EXIT_FAILURE);
                  }
-
+                
                 if (argsp->rpmopts == NULL)
                     argsp->rpmopts = n_array_new(4, NULL, (tn_fn_cmp)strcmp);
 
@@ -524,9 +524,9 @@ static
 void parse_options(int argc, char **argv) 
 {
     struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0};
-    
+    char *p;
     verbose = 0;
-
+    
     memset(&args, 0, sizeof(args));
     args.source_path = NULL;
     args.pkg_prefix = NULL;
@@ -553,7 +553,9 @@ void parse_options(int argc, char **argv)
 
     if (args.source_path == NULL && htcnf != NULL)
         args.source_path = conf_get(htcnf, "source", NULL);
-    
+
+    if ((p = conf_get(htcnf, "use_sudo", NULL)) != NULL && strcmp(p, "yes") == 0)
+        args.inst_sflags |= INSTS_USESUDO;
     
     if (args.source_path == NULL) {
         log(LOGERR, "No source specified\n");
@@ -763,43 +765,15 @@ int prepare_given_packages(void)
 
     for (i=0; i<n_array_size(args.pkgdef_files); i++) {
         char *path = n_array_nth(args.pkgdef_files, i);
-        
-        if (!usrpkgset_add_file(args.ups, path))
-            rc = 0;
+
+        if (access(path, R_OK) == 0) 
+            rc = usrpkgset_add_file(args.ups, path);
+        else
+            rc = usrpkgset_add_str(args.ups, path, strlen(path));
     }
     
     usrpkgset_setup(args.ups);
     return usrpkgset_size(args.ups);
-}
-
-
-tn_array *prepare_install_cmd(void) 
-{
-    tn_array *install_cmd;
-    char *cmd;
-
-    install_cmd = n_array_new(2, free, NULL);
-
-    if ((cmd = conf_get(htcnf, "install_cmd", NULL)) == NULL)
-        n_array_push(install_cmd, strdup("/bin/rpm"));
-    
-    else {
-        const char **args;
-        char *p;
-        int n;
-        
-        p = alloca(strlen(cmd) + 1);
-        strcpy(p, cmd);
-        
-        args = n_str_tokl(p, " \t");
-        n = 0;
-        while (args[n])
-            n_array_push(install_cmd, strdup(args[n++]));
-        
-        n_str_tokl_free(args);
-    }
-    
-    return install_cmd;
 }
 
 
@@ -908,8 +882,7 @@ int main(int argc, char **argv)
     inst.flags     = args.inst_sflags;
     inst.rpmopts   = args.rpmopts;
     inst.rpmacros  = args.rpmacros;
-    
-    inst.install_cmd = prepare_install_cmd();
+
     select_ldmethod();
     rpm_initlib(inst.rpmacros);
 

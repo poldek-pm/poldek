@@ -14,16 +14,18 @@ struct pkgset;
 #define INSTS_JUSTFETCH    (1 << 0)
 #define INSTS_JUSTPRINT    (1 << 1)
 #define INSTS_MKDBDIR      (1 << 2)
+#define INSTS_FOLLOW       (1 << 3)
+#define INSTS_FRESHEN      (1 << 4)
+#define INSTS_USESUDO      (1 << 5)
 
 struct inst_s {
     struct pkgdb   *db;
-    unsigned       flags;
+    unsigned       flags;       /* INSTS_* */
     unsigned       instflags;   /* PKGINST_* from pkgdb.h */
     const char     *rootdir;    /* top level dir          */
     const char     *fetchdir;   /* dir to fetch files     */
     const char     *cachedir;   /* place for downloaded packages */
     const char     *dumpfile;   /* file to dump fqpns     */
-    tn_array       *install_cmd;
     tn_array       *rpmopts;
     tn_array       *rpmacros;
     

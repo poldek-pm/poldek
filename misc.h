@@ -32,5 +32,7 @@ void print_mem_info(const char *prefix);
 void mem_info(int level, const char *msg);
 
 void process_cmd_output(struct p_open_st *st, const char *prefix);
+int exec_rpm(const char *cmd, char *const argv[]);
+
 
 #endif /* POLDEK_MISC_H */

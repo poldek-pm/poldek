@@ -33,6 +33,7 @@
 
 extern void *pkg_alloc(size_t size);
 
+#define ps_verify_mode(ps) ((ps)->flags & PSMODE_VERIFY)
 
 static
 int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict, 
@@ -72,7 +73,7 @@ int reqpkg_cmp(struct reqpkg *p1, struct reqpkg *p2)
 
 
 static
-void visit_badreqs(struct pkg *pkg, int deep) 
+void visit_badreqs(struct pkg *pkg, int deep, int verb) 
 {
     int i;
     
@@ -80,7 +81,8 @@ void visit_badreqs(struct pkg *pkg, int deep)
         return;
 
     pkg_set_badreqs(pkg);
-    msg_i(2, deep, " %s\n", pkg_snprintf_s(pkg));
+    if (verb)
+        msg_i(2, deep, " %s\n", pkg_snprintf_s(pkg));
     deep += 2;
     
     if (pkg->revreqpkgs) {
@@ -88,7 +90,7 @@ void visit_badreqs(struct pkg *pkg, int deep)
             struct pkg *revpkg;
             revpkg = n_array_nth(pkg->revreqpkgs, i);
             if (!pkg_has_badreqs(revpkg)) 
-                visit_badreqs(revpkg, deep);
+                visit_badreqs(revpkg, deep, verb);
         }
     }
 }
@@ -97,14 +99,15 @@ static
 void mark_badreqs(struct pkgset *ps) 
 {
     int i, deep = 1;
-    
-    msg(2, "Packages with unsatisfied dependencies:\n");
+
+    if (ps_verify_mode(ps))
+        msg(2, "Packages with unsatisfied dependencies:\n");
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         if (pkg_has_badreqs(pkg)) {
             ps->nerrors++;
             pkg_clr_badreqs(pkg);
-            visit_badreqs(pkg, deep);
+            visit_badreqs(pkg, deep, ps_verify_mode(ps));
         }
     }
 }
@@ -115,7 +118,10 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
 {
     int i, j, nerrors = 0;
 
-    msg(1, "$Verifying dependencies...\n");
+
+    if (ps_verify_mode(ps))
+        msg(1, "$Verifying dependencies...\n");
+    
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg;
 
@@ -150,7 +156,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
             nerrors++;
             if (verbose > 2)
                 msg(4, " req %-35s --> NOT FOUND\n", capreq_snprintf_s(req));
-            else
+            else if (ps_verify_mode(ps))
                 log(LOGERR, "%s: req %s not found\n", pkg_snprintf_s(pkg),
                     capreq_snprintf_s(req));
             pkg_set_badreqs(pkg);
@@ -158,7 +164,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
             
         l_err_match:
             nerrors++;
-            if (verbose < 3)
+            if (verbose < 3 && ps_verify_mode(ps))
                 log(LOGERR, "%s: req %s not matched\n", pkg_snprintf_s(pkg),
                     capreq_snprintf_s(req));
             
@@ -167,7 +173,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
     }
 
     mark_badreqs(ps);
-    if (nerrors) 
+    if (nerrors && ps_verify_mode(ps)) 
         msg(1,"%d unsatisfied dependencies, %d packages cannot be installed\n",
             nerrors, ps->nerrors);
 
@@ -422,8 +428,8 @@ static
 int pkgset_verify_conflicts(struct pkgset *ps, int mmode) 
 {
     int i, j;
-
-    msg(1, "$Verifying conflicts...\n");
+    
+    
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg;
 
@@ -453,7 +459,7 @@ int pkgset_verify_conflicts(struct pkgset *ps, int mmode)
         }
     }
 
-    if (verbose > 1) {
+    if (verbose > 1 && ps_verify_mode(ps)) {
         int j;
         for (i=0; i<n_array_size(ps->pkgs); i++) {
             struct pkg *pkg = n_array_nth(ps->pkgs, i);

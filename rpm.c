@@ -48,7 +48,7 @@ int header_cap_match_req(Header h, const struct capreq *req, int strict);
 
 int rpm_initlib(tn_array *macros) 
 {
-    static initialized = 0;
+    static int initialized = 0;
 
     if (initialized)
         return 0;
@@ -620,7 +620,7 @@ int rpm_is_pkg_installed(rpmdb db, const struct pkg *pkg, int *cmprc,
     count = rpmdb_it_get_count(&it);
     if (count > 0 && (cmprc || dbrecp)) {
         dbrec = rpmdb_it_get(&it);
-
+        
         if (cmprc)
             *cmprc = -hdr_pkg_cmp_evr(dbrec->h, pkg);
         
