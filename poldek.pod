@@ -371,9 +371,9 @@ If you want to configure source with prefix (see B<-P> option description),
 then it should be specified by suffixed paramteters pair to distinguish 
 that source from other ones, for example:
 
-source = ~/tmp/my-cd-indexes/
+source1 = ~/tmp/my-cd-indexes/
 
-prefix = /mnt/cdrom/RPMS/
+prefix1 = /mnt/cdrom/RPMS/
 
 
 =item * B<cachedir> 

@@ -15,8 +15,7 @@
   - improved "greedy" selection - if foo-VER is upgraded, then eventual 
     "greedy" marks will mark foo-{devel,static,etc} in version VER too.
 
-* added simple ftp client; it is used for FTP downloads by
-  default
+* added simple ftp client; it is used for FTP downloads by default
 
 * shell: 
   - db package list is cached what speeds up program start
