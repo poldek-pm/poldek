@@ -375,7 +375,7 @@ int file_index_find_conflicts(const struct file_index *fi, tn_array *errs,
     ms.strict = strict;
     ms.nfiles = 0;
     n_hash_map_arg(fi->dirs, find_dups, &ms);
-    DBGF_F("%d dirnames, %d files\n", n_hash_size(fi->dirs), ms.nfiles);
+    DBGF("%d dirnames, %d files\n", n_hash_size(fi->dirs), ms.nfiles);
     return 1;
 }
 

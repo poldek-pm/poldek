@@ -34,7 +34,8 @@
 
 static int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2);
 
-int poldek_conf_promote_epoch = 0;
+int poldek_conf_PROMOTE_EPOCH = 0;
+
 static tn_hash *architecture_h = NULL;
 static tn_hash *operatingsystem_h = NULL;
 
@@ -732,7 +733,7 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
     if (capreq_has_epoch(cap) || capreq_has_epoch(req)) {
         int promote = 0;
         
-        if (poldek_conf_promote_epoch) {
+        if (poldek_conf_PROMOTE_EPOCH) {
             if (!capreq_has_epoch(req)) {
                 promote_epoch_warn(1, "req", capreq_snprintf_s(req),
                                    capreq_snprintf_s0(cap));
@@ -812,7 +813,7 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
         return 1;
 
     if (promote_epoch == -1)
-        promote_epoch = poldek_conf_promote_epoch;
+        promote_epoch = poldek_conf_PROMOTE_EPOCH;
 
     if (pkg->epoch || capreq_has_epoch(req)) {
         int promote = 0;

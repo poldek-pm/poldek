@@ -366,7 +366,7 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
 
 int do_run(void) 
 {
-    int i, all_rc = 0, ec, exit_program = 0;
+    int i, all_rc = 0, ec = EXIT_SUCCESS, exit_program = 0;
     n_assert(args.opgroup_rts);
     
     for (i=0; i < n_array_size(args.opgroup_rts); i++) {
@@ -394,7 +394,7 @@ int do_run(void)
     }
     
     if (exit_program) {
-        msgn(4, "exit(%d)\n", ec);
+        msgn(0, "exit(%d)\n", ec);
         exit(ec);
     }
     

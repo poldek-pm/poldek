@@ -582,6 +582,7 @@ static int pkgroupid(struct pkgroup_idx *idx, const char *name)
     return -1;
 }
 
+
 static void dumpidx(struct pkgroup_idx *idx, const char *prefix)
 {
     struct pkgroup *gr;

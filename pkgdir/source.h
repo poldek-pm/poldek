@@ -15,6 +15,8 @@
 #define PKGSOURCE_DSCR       (1 << 7)
 #define PKGSOURCE_NAMED      (1 << 10)
 #define PKGSOURCE_COMPRESS   (1 << 11)
+#define PKGSOURCE_AUTOUPA    (1 << 12) /* do --upa if --up returns
+                                          "desynchronized" index */
 
 struct source {
     unsigned  flags;
@@ -54,9 +56,9 @@ int source_cmp_pri(const struct source *s1, const struct source *s2);
 int source_cmp_pri_name(const struct source *s1, const struct source *s2);
 int source_cmp_no(const struct source *s1, const struct source *s2);
 
-#define PKGSOURCE_UP      (1 << 0)
-#define PKGSOURCE_UPA     (1 << 1)
-#define PKGSOURCE_UPAA    (1 << 2)
+#define PKGSOURCE_UP         (1 << 0)
+#define PKGSOURCE_UPA        (1 << 1)
+#define PKGSOURCE_UPAUTOA    (1 << 2)
 
 int source_update(struct source *src, unsigned flags);
 

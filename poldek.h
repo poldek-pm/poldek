@@ -11,6 +11,7 @@ extern const char poldek_BUG_MAILADDR[];
 extern const char poldek_VERSION_BANNER[];
 extern const char poldek_BANNER[];
 
+struct poldek_ctx;
 
 struct poldek_ctx *poldek_new(unsigned flags);
 void poldek_free(struct poldek_ctx *ctx);

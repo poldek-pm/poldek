@@ -35,12 +35,11 @@
 
 #include <vfile/vfile.h>
 
-#define PKGDIR_INTERNAL
-
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
 #include "pkgdir.h"
+#include "pkgdir_intern.h"
 #include "pkg.h"
 #include "pkgu.h"
 #include "pkgfl.h"

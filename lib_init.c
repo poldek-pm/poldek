@@ -88,6 +88,7 @@ static struct {
     { "greedy",               POLDEK_OP_GREEDY, 1    },
     { "allow_duplicates",     POLDEK_OP_ALLOWDUPS, 1 },
     { "unique_package_names", POLDEK_OP_UNIQN, 0  },
+    { "promoteepoch", POLDEK_OP_PROMOTEPOCH, 0  },
     { NULL, POLDEK_OP_HOLD,   1  },
     { NULL, POLDEK_OP_IGNORE, 1  }, 
     { NULL, 0, 0 }
@@ -604,7 +605,7 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     
     if (ctx->htconf == NULL)
         return 0;
-
+    
     poldek__apply_tsconfig(ctx, ctx->ts);
 
     htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
@@ -638,8 +639,8 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
         vfile_configure(VFILE_CONF_SYSUSER_AS_ANONPASSWD, 1);
 
     if ((v = poldek_conf_get(htcnf, "default_index_type", NULL)))
-        pkgdir_DEFAULT_TYPE = n_strdup(v);
-    
+        poldek_conf_PKGDIR_DEFAULT_TYPE = n_strdup(v);
+
     if (poldek_conf_get_bool(htcnf, "vfile_external_compress", 0))
         vfile_configure(VFILE_CONF_EXTCOMPR, 1);
     
@@ -889,16 +890,22 @@ int poldek_setup_cachedir(struct poldek_ctx *ctx)
 static
 int setup_sources(struct poldek_ctx *ctx)
 {
-    int i;
-
+    int i, autoupa = 0;
+    tn_hash *htcnf;
+    
     if (ctx->_iflags & SOURCES_SETUPDONE)
         return 1;
         
     if (!prepare_sources(ctx, ctx->htconf, ctx->sources))
         return 0;
 
+    htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+    autoupa = poldek_conf_get_bool(htcnf, "autoupa", 1);
+    
     for (i=0; i < n_array_size(ctx->sources); i++) {
         struct source *src = n_array_nth(ctx->sources, i);
+        if (autoupa)
+            src->flags |= PKGSOURCE_AUTOUPA;
         source_set_default_type(src);
     }
     

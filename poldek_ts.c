@@ -36,7 +36,7 @@
 #include "log.h"
 #include "i18n.h"
 
-extern int poldek_conf_promote_epoch;
+extern int poldek_conf_PROMOTE_EPOCH;
 
 #define bitvect_slot_itype  unsigned int
 #define bitvect_slot_size   sizeof(bitvect_slot_itype) * CHAR_BIT
@@ -104,7 +104,7 @@ void poldek_ts_setop(struct poldek_ts *ts, int optv, int on_off)
     n_assert(bitvect_slot(optv) < sizeof(ts->_opvect)/sizeof(bitvect_slot_itype));
     switch (optv) {
         case POLDEK_OP_PROMOTEPOCH:
-            poldek_conf_promote_epoch = on_off;
+            poldek_conf_PROMOTE_EPOCH = on_off;
             break;
         default:
             break;

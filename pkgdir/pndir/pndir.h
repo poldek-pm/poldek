@@ -10,6 +10,7 @@
 
 #include "misc.h"
 #include "pkgdir.h"
+#include "pkgdir_intern.h"
 
 #define FILEFMT_MAJOR 1
 #define FILEFMT_MINOR 0

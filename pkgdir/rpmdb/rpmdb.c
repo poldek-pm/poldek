@@ -29,13 +29,13 @@
 
 #include <trurl/trurl.h>
 
-#define PKGDIR_INTERNAL
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgu.h"
 #include "pkgfl.h"
 #include "pkgdir.h"
+#include "pkgdir_intern.h"
 #include "pm/rpm/pm_rpm.h"
 #include "pm/pm.h"
 #include "pkgroup.h"

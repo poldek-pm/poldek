@@ -30,8 +30,8 @@
 
 #define ENABLE_TRACE 0
 
-#define PKGDIR_INTERNAL
 #include "pkgdir.h"
+#include "pkgdir_intern.h"
 #include "source.h"
 #include "misc.h"
 #include "log.h"
@@ -40,7 +40,7 @@
 
 #define SOURCE_DEFAULT_PRI 0
 
-const char *pkgdir_DEFAULT_TYPE = "pndir";
+const char *poldek_conf_PKGDIR_DEFAULT_TYPE = "pndir";
 
 struct subopt {
     char      *name;
@@ -248,7 +248,7 @@ struct source *source_set_type(struct source *src, const char *type)
 struct source *source_set_default_type(struct source *src)
 {
     if ((src->flags & PKGSOURCE_TYPE) == 0) /* not set by config*/
-        source_set(&src->type, pkgdir_DEFAULT_TYPE);
+        source_set(&src->type, poldek_conf_PKGDIR_DEFAULT_TYPE);
     return src;
 }
 
@@ -372,7 +372,7 @@ struct source *source_new(const char *name, const char *type,
         src->flags |= PKGSOURCE_TYPE;
         
     } else {
-        src->type = n_strdup(pkgdir_DEFAULT_TYPE);
+        src->type = n_strdup(poldek_conf_PKGDIR_DEFAULT_TYPE);
     }
     
     if (path)
@@ -539,7 +539,7 @@ int source_cmp_no(const struct source *s1, const struct source *s2)
 static int source_update_a(struct source *src) 
 {
     if (src->type == NULL)
-        source_set_type(src, pkgdir_DEFAULT_TYPE);
+        source_set_type(src, poldek_conf_PKGDIR_DEFAULT_TYPE);
     
     return pkgdir_update_a(src);
 }
@@ -552,7 +552,7 @@ int source_update(struct source *src, unsigned flags)
 
 
     if (src->type == NULL)
-        source_set_type(src, pkgdir_DEFAULT_TYPE);
+        source_set_type(src, poldek_conf_PKGDIR_DEFAULT_TYPE);
     
 	pcaps = pkgdir_type_info(src->type);
 	
@@ -561,7 +561,7 @@ int source_update(struct source *src, unsigned flags)
 			 source_idstr(src), src->type);
 		
 	} else if ((pcaps & PKGDIR_CAP_UPDATEABLE_INC) == 0) {
-		if (flags & PKGSOURCE_UPA)
+		if (flags & (PKGSOURCE_UPA | PKGSOURCE_UPAUTOA))
 			return source_update_a(src);
 		
 		logn(LOGWARN, _("%s: this type (%s) of source is not updateable; "
@@ -569,8 +569,11 @@ int source_update(struct source *src, unsigned flags)
 			 source_idstr(src), src->type);
 		
 	} else {
-        if (flags & PKGSOURCE_UPA)
+        if ((flags & PKGSOURCE_UPA) && (flags & PKGSOURCE_UPAUTOA) == 0)
 			return source_update_a(src);
+
+        if (flags & PKGSOURCE_UPAUTOA)
+            src->flags |= PKGSOURCE_AUTOUPA;
         
 		pkgdir = pkgdir_srcopen(src, 0);
 		if (pkgdir != NULL) {
@@ -614,7 +617,7 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
             }
 
         } else if ((opt->flag & PKGSOURCE_TYPE)) {
-            if (src->type && !source_is_type(src, pkgdir_DEFAULT_TYPE)) {
+            if (src->type && !source_is_type(src, poldek_conf_PKGDIR_DEFAULT_TYPE)) {
                 n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s",
                                 opt->name);
                 n += n_snprintf(&str[n], size - n, "=%s,", src->type);

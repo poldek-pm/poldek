@@ -8,7 +8,7 @@ noinst_LTLIBRARIES = libpkgdir.la
 
 libpkgdir_la_SOURCES  = \
 			source.c source.h \
-			pkgdir.c pkgdir.h \
+			pkgdir.c pkgdir.h pkgdir_intern.h \
 			pkgdir_patch.c    \
 			pkgdir_clean.c    \
 			mod.c             \

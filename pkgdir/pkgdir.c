@@ -38,13 +38,11 @@
 
 #include <vfile/vfile.h>
 
-#define PKGDIR_INTERNAL
-#define PKGDIR_MODULE
-
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
 #include "pkgdir.h"
+#include "pkgdir_intern.h"
 #include "pkg.h"
 #include "capreq.h"
 #include "pkgroup.h"
@@ -262,7 +260,8 @@ int pkgdir_update_a(const struct source *src)
 
 int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
 {
-	int is_updated = 0, rc = 0;
+	int rc = 0;
+    enum pkgdir_uprc uprc = PKGDIR_UPRC_NIL;
     
     if (npatches)
         *npatches = 0;
@@ -270,9 +269,21 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
 	if (pkgdir->mod->update == NULL)
 		return 0;
 
-	rc = pkgdir->mod->update(pkgdir, &is_updated);
-	if (rc && is_updated)
+	rc = pkgdir->mod->update(pkgdir, &uprc);
+	if (rc && uprc == PKGDIR_UPRC_UPDATED)
 		rc = pkgdir_create_idx(pkgdir, pkgdir->type, NULL, 0);
+    
+    if (!rc && uprc == PKGDIR_UPRC_ERR_DESYNCHRONIZED) {
+        if (pkgdir->src && (pkgdir->src->flags & PKGSOURCE_AUTOUPA)) {
+            msgn(0, _("%s: update failed, trying to update whole index..."),
+                 pkgdir_idstr(pkgdir));
+            rc = pkgdir_update_a(pkgdir->src);
+        } else {
+            logn(LOGWARN, _("%s: desynchronized index, try --upa"),
+                 pkgdir_idstr(pkgdir));
+        }
+        
+    }
 	
 	return rc;
 }

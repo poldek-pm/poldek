@@ -44,7 +44,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
             continue;
 
         if (src->type == NULL)
-            source_set_type(src, pkgdir_DEFAULT_TYPE);
+            source_set_type(src, poldek_conf_PKGDIR_DEFAULT_TYPE);
 
         
         pkgdir = pkgdir_srcopen(src, 0);

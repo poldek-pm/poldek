@@ -4,6 +4,56 @@
   moved to separate file. Based on tndb (cdb like) DBM library
 
 
+0.18.7 (bugfix release; 2004/0)
+* another stupid SIGSEGV killed
+* fix: disabled package Epoch's autopromotion while checking if 
+  it matches requirement
+* with rpm >= 4.1 packages with same provide are obsoleted, not just name
+* fixed processing dependencies of orphaned packages 
+* SIGSEGV killed while reading packages with dir/file names longer than 127 bytes
+* fixed package ordering bug
+* with --caplookup packages may be installed by specifying its capabilities, 
+  i.e: "poldek --caplookup -uv foo" will install package provides 
+  "foo" (if any). 
+
+0.18.6 (major bugfix release; 2004/06/28)
+* fixed broken dist installation
+* fixed serious bug with  dependency processing of obsoleted packages
+* fixed --rpmdef '_dbpath DIR' (do not read rpm's configs many times)   
+* fix: --nofollow with --install-dist works as expected (#920)
+* vfile: fixed progress bar displaying on std sized terminal (79 cols)
+
+0.18.5 (bugfix release; 2004/05/23)
+* fixed dowloading packages from apt-like sources
+   
+0.18.4 (bugfix && minor improvements release; 2004/05/10)
+
+* package filenames in "non-standard" form (N-V.R.ARCH.rpm) are supported
+* killed SIGSEGVs on 64bit architecture (Jakub Bogusz <qboosh at pld-linux org>)
+* fixed Epoch comparison bug while checking uninstalled capabilities
+* vfile: progress bar shows remaining time and transfer rate
+  (Patryk Zawadzki <p zawadzki at vegaballs com>)
+* fixed setting cache directory bug (Andreas Piesk <a piesk at gmx net>)
+* fixed serious bug of checking unversioned dependencies 
+* --ignore{arch,os} rpm options are honored
+* rpm options could be passed as --rpm=OPTION too, i.e. 
+  --rpm=ignorearch is equivalent of -- --rpm-ignorearch
+* new cmdline options --rpm-{force,nodeps} which are passed 
+  as --force and --nodeps to /bin/rpm only.
+* more aggressive package upgrades - orphaned packages are upgraded 
+  instead of processing its dependencies. This behavior is enabled 
+  by "greedy" option. To disable put "aggressive_greedy = no" to config. 
+* "greedy" upgrade mode is enabled by default
+* conflicts with already installed packages are treated as resolved 
+  if at least one of multiple-installed package satisfies conflict. 
+  Of course RPM doesn't support such cases, so additionally --rpm-nodeps
+  is needed (use with care). This behavior is enabled by default, 
+  put "allow_duplicates=no" to config to disable it.
+* displaying package size summary of installed package set
+* --unique-pkg-names (-Q) behavior is more intuitive now - highest
+  version of package are taken instead of one from highest prioritized
+  source
+  
 
 0.18.3 (bugfix && improvements release; 2004/01/10)
 

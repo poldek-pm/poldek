@@ -188,7 +188,7 @@ static int make_idx(struct arg_s *arg_s)
 
     
     if (arg_s->idx_type == NULL)
-        arg_s->idx_type = n_strdup(pkgdir_DEFAULT_TYPE);
+        arg_s->idx_type = n_strdup(poldek_conf_PKGDIR_DEFAULT_TYPE);
     types = parse_types(arg_s->idx_type);
     
     

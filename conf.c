@@ -105,6 +105,7 @@ static struct tag global_tags[] = {
     { "vfile external compress", TYPE_BOOL , { 0 } },
     { "promoteepoch", TYPE_BOOL, { 0 } },
     { "default index type", TYPE_STR, { 0 } },
+    { "autoupa", TYPE_BOOL, { 0 } },
     { "exclude path", TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     {  NULL,           0, { 0 } }, 
 };
@@ -1157,6 +1158,3 @@ tn_array *poldek_conf_get_multi(const tn_hash *htconf, const char *name)
     
     return list;
 }
-
-
-

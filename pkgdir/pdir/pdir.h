@@ -8,6 +8,7 @@
 
 #include "misc.h"
 #include "pkgdir.h"
+#include "pkgdir_intern.h"
 
 /* packages.dir digest */
 #define PDIR_DIGEST_SIZE DIGEST_SIZE_SHA1

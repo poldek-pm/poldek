@@ -288,7 +288,7 @@ static char *eat_zlib_ext(char *path)
 }
 
 static
-int do_update(struct pkgdir *pkgdir, int *npatches) 
+int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc) 
 {
     char            idxpath[PATH_MAX], tmpath[PATH_MAX], path[PATH_MAX];
     char            *dn, *bn;
@@ -298,7 +298,7 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
     const char      *errmsg_broken_difftoc = _("%s: broken patch list");
     char            current_mdd[PDIR_DIGEST_SIZE + 1];
     struct pdir_digest  pdg_current;
-    int             first_patch_found;
+    int             first_patch_found, npatches;
     struct pdir     *idx;
 
     idx = pkgdir->mod_data;
@@ -309,6 +309,7 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
     n_assert(pdir_v016compat == 0);
     switch (is_uptodate(pkgdir->idxpath, idx->pdg, &pdg_current, pkgdir->name)) {
         case 1:
+            *uprc = PKGDIR_UPRC_UPTODATE;
             rc = 1;
             if ((pkgdir->flags & PKGDIR_VERIFIED) == 0)
                 rc = pdir_digest_verify(idx->pdg, idx->vf);
@@ -316,6 +317,7 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
             break;
             
         case -1:
+            *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
             return 0;
             
         case 0:
@@ -324,7 +326,8 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
         default:
             n_assert(0);
     }
-
+    
+    *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
     /* open diff toc */
     snprintf(idxpath, sizeof(idxpath), "%s", pkgdir->idxpath);
     eat_zlib_ext(idxpath);
@@ -336,9 +339,11 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
     if ((vf = vfile_open_sl(path, VFT_TRURLIO, VFM_RO, pkgdir->name)) == NULL) 
         return 0;
 
-    *npatches = 0;
+    
     n_assert(strlen(idx->pdg->mdd) == PDIR_DIGEST_SIZE);
     memcpy(current_mdd, idx->pdg->mdd, PDIR_DIGEST_SIZE + 1);
+
+    npatches = 0;
     first_patch_found = 0;
 
     while ((nread = n_stream_gets(vf->vf_tnstream, line, sizeof(line))) > 0) {
@@ -354,7 +359,6 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
             continue;
 
         if ((p = strchr(p, ' ')) == NULL) {
-			
             logn(LOGERR, errmsg_broken_difftoc, path);
             nerr++;
             break;
@@ -371,7 +375,6 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
 
         if (ts <= pkgdir->ts)
             continue;
-        
         
         if ((p = strchr(p, ' ')) == NULL) {
             logn(LOGERR, errmsg_broken_difftoc, path);
@@ -432,19 +435,24 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
         pkgdir_patch(pkgdir, diff);
         pkgdir_free(diff);
         
-        (*npatches)++;
+        npatches++;
     }
     
     vfile_close(vf);
     
-    if (*npatches == 0)         /* outdated and no patches */
+    if (npatches == 0) {        /* outdated and no patches */
+        *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
         nerr++;
+    }
 
     if (nerr == 0)
-        if (pkgdir_uniq(pkgdir) > 0) /* duplicates? -> error */
+        if (pkgdir_uniq(pkgdir) > 0) { /* duplicates? -> error */
+            *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
             nerr++;
+        }
     
     if (nerr == 0) {
+        *uprc = PKGDIR_UPRC_UPDATED;
         idx->mdd_orig = n_strdup(pdg_current.mdd); /* for verification during write */
 
         snprintf(path, sizeof(path), "%s/%s", dn, pdir_packages_incdir);
@@ -454,12 +462,7 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
             verbose++;
         }
         msg(1, "_\n");
-        
-    } else {
-        logn(LOGWARN, _("%s: desynchronized index, try --upa"),
-             pkgdir_pr_idxpath(pkgdir));
-        
-    }
+    } 
     
     return nerr == 0;
 }

@@ -28,12 +28,11 @@
 #include <trurl/n_snprintf.h>
 #include <trurl/nmalloc.h>
 
-#define PKGDIR_INTERNAL
-
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
 #include "pkgdir.h"
+#include "pkgdir_intern.h"
 
 static tn_hash *modules_h = NULL;
 

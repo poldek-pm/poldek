@@ -181,6 +181,6 @@ static int oprun(struct poclidek_opgroup_rt *rt)
             rc = 0;
     }
     
-    return rc ? 0 : OPGROUP_RC_ERROR;
+    return rc ? OPGROUP_RC_NIL : OPGROUP_RC_ERROR;
 }
 

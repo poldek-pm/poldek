@@ -100,12 +100,13 @@ static struct argp_option source_options[] = {
 { 0, 0, 0, 0, 0, 0 },
 };
 
-#define POLDEKCLI_SRC_SRCLS       (1 << 0)
-#define POLDEKCLI_SRC_SRCTYPE_LS  (1 << 1)
-#define POLDEKCLI_SRC_UPDATE      (1 << 2)
-#define POLDEKCLI_SRC_UPDATEA     (1 << 3)
-#define POLDEKCLI_SRC_CLEAN       (1 << 4)
-#define POLDEKCLI_SRC_CLEANA      (1 << 5)
+#define POLDEKCLI_SRC_SRCLS        (1 << 0)
+#define POLDEKCLI_SRC_SRCTYPE_LS   (1 << 1)
+#define POLDEKCLI_SRC_UPDATE       (1 << 2)
+#define POLDEKCLI_SRC_UPDATEA      (1 << 3)
+#define POLDEKCLI_SRC_UPDATE_AUTOA (1 << 4)
+#define POLDEKCLI_SRC_CLEAN        (1 << 5)
+#define POLDEKCLI_SRC_CLEANA       (1 << 6)
 
 struct arg_s {
     unsigned            cnflags;
@@ -234,7 +235,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_SRCUPDATE_A:
-            arg_s->cnflags |= POLDEKCLI_SRC_UPDATE;
+            if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE)
+                arg_s->cnflags |= POLDEKCLI_SRC_UPDATE_AUTOA;
+            else
+                arg_s->cnflags |= POLDEKCLI_SRC_UPDATE;
             arg_s->cnflags |= POLDEKCLI_SRC_UPDATEA;
             break;
 
@@ -306,8 +310,7 @@ static void print_source_type_list(void)
 static int oprun(struct poclidek_opgroup_rt *rt)
 {
     struct arg_s *arg_s;
-    int rc = 0;
-
+    int rc = OPGROUP_RC_NIL;
     
     arg_s = rt->_opdata;
     n_assert(arg_s);
@@ -332,18 +335,22 @@ static int oprun(struct poclidek_opgroup_rt *rt)
 
     if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE) {
         unsigned flags = PKGSOURCE_UP;
-    
+        
         if (arg_s->cnflags & POLDEKCLI_SRC_UPDATEA)
             flags |= PKGSOURCE_UPA;
 
-        if (!(rc = sources_update(rt->ctx->sources, flags)))
+        if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE_AUTOA)
+            flags |= PKGSOURCE_UPAUTOA;
+
+        if (!sources_update(rt->ctx->sources, flags)) {
             rc |= OPGROUP_RC_ERROR | OPGROUP_RC_IFINI;
-        
-        rc |= OPGROUP_RC_OK;
+        }
+
+        rc |= OPGROUP_RC_FINI;
     }
 
     
-    //printf("op_source %d\n", rc);
+    DBGF("op_source %d\n", rc);
     return rc;
 }
 
