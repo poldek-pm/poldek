@@ -1,3 +1,7 @@
+0.16:
+ * fixed removable media support in non-install-dist modes
+ * shell: uninstall: fix: don't remove pkg from install list if removal fails
+
 0.15.9:
  * shell:
    - desc: added package file size display

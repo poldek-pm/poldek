@@ -47,10 +47,13 @@ int shell_exec(struct pkgset *ps, struct inst_s *inst, int skip_installed,
                const char *cmd);
 #endif
 
-static const char *argp_program_version = PACKAGE " " VERSION " (BETA)";
-const char *argp_program_bug_address = "<mis@pld.org.pl>";
+static const char program_bug_address[] = "<mis@pld.org.pl>";
+
+static const char *argp_program_version = PACKAGE " " VERSION " (" VERSION_STATUS ")";
+const char *argp_program_bug_address = program_bug_address;
+
 /* Program documentation. */
-static char doc[] = PACKAGE " " VERSION " (BETA)\n"
+static char doc[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
 "This program may be freely redistributed under the terms of the GNU GPL\n";
 /* A description of the arguments we accept. */
 static char args_doc[] = "[PACKAGE...]";

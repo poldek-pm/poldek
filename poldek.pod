@@ -484,9 +484,8 @@ This manual should be finished and translated into English.
 
 =head1 CAUTION
 
-The program is in B<beta> stage and surely contains the bugs. 
-Backup your RPM database and be watchfull. Remember, that
-there is I<NO WARRANTY OF ANY KIND> and enjoy.
+The program surely contains the bugs. Backup your RPM database and be 
+watchfull. Remember, that there is I<NO WARRANTY OF ANY KIND> and enjoy.
 
 =head1 LICENSE
 
