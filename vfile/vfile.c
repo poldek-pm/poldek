@@ -179,6 +179,9 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
 { 
     int rc = 0;
 
+    if (vfmode & VFM_RW)
+        vf_unlink(path);
+
     switch (vf->vf_type) {
         case VFT_IO: {
             int flags = 0;
@@ -358,8 +361,8 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
             if (vfmode & VFM_RW) {
                 if (vf_decompressable(path, buf, sizeof(buf)))
                     opath = buf;
+                
             } else {
-                printf("decopr %s\n", path);
                 if ((opath = vfdecompr(path, buf, sizeof(buf))) == NULL)
                     return 0;
             }
