@@ -229,7 +229,7 @@ static int install(struct cmdarg *cmdarg)
 
             
             len = pkg_snprintf(nevr, sizeof(nevr), pkg);
-            printf("+ %s\n", nevr);
+            //printf("+ %s\n", nevr);
             shpkg = malloc(sizeof(*shpkg) + len + 1);
             memcpy(shpkg->nevr, nevr, len + 1);
             shpkg->pkg = pkg_link(pkg);
@@ -245,7 +245,7 @@ static int install(struct cmdarg *cmdarg)
             
             pkg_snprintf(shpkg->nevr, 1024, pkg);
             n_array_remove(cmdarg->sh_s->instpkgs, shpkg);
-            printf("- %s\n", shpkg->nevr);
+            //printf("- %s\n", shpkg->nevr);
         }
         
         n_array_sort(cmdarg->sh_s->instpkgs);
