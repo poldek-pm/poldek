@@ -43,8 +43,7 @@ int rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
 #else 
     rpmRC rpmrc;
     rpmts ts = rpmtsCreate();
-
-    rpmtsSetVSFlags(ts, RPMVSF_NODSA | RPMVSF_NORSA | RPMVSF_NOMD5);
+    rpmtsSetVSFlags(ts, _RPMVSF_NODIGESTS | _RPMVSF_NOSIGNATURES);
     rpmrc = rpmReadPackageFile(ts, fdt, path, hdr);
     switch (rpmrc) {
         case RPMRC_NOTTRUSTED:
