@@ -3,7 +3,7 @@ dnl $Id$
 
 AC_INIT(capreq.c)
 
-VERSION=`cat VERSION`
+VERSION=0.13
 PACKAGE=poldek
 
 AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
