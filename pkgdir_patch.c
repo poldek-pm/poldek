@@ -119,7 +119,8 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     n_array_sort(pkgdir2->pkgs);
 
     if (minus_pkgs == NULL && plus_pkgs == NULL) { /* equal */
-        n_array_free(depdirs);
+        if (depdirs)
+            n_array_free(depdirs);
         return NULL;
     }
 

@@ -279,9 +279,9 @@ struct pkgdir *pkgdir_load_dir_or_hdl(const char *name, const char *path, int t)
         }
             
         pkgdir_setup_depdirs(pkgdir);
-        pkgdir_uniq(pkgdir);
     }
     
+    pkgdir_uniq(pkgdir);
     return pkgdir;
 }
 

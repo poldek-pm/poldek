@@ -1010,7 +1010,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 
     only_dirs = NULL;
 
-    if (flag_fullflist == 0 && depdirs) {
+    if (flag_fullflist == 0 && depdirs && pkgdir->depdirs) {
         only_dirs = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
         for (i=0; i<n_array_size(depdirs); i++) {
             char *dn = n_array_nth(depdirs, i);
@@ -1231,12 +1231,12 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     pkgtags_clean(&pkgt);
     free(linebuf);
 
-    if (n_array_size(pkgdir->pkgs)) {
+    if (n_array_size(pkgdir->pkgs))
         n_array_sort(pkgdir->pkgs);
-        pkgdir->flags |= PKGDIR_LOADED;
-        if ((ldflags & PKGDIR_LD_NOUNIQ) == 0)
-            pkgdir_uniq(pkgdir);
-    }
+        
+    pkgdir->flags |= PKGDIR_LOADED;
+    if ((ldflags & PKGDIR_LD_NOUNIQ) == 0)
+        pkgdir_uniq(pkgdir);
     
     return nerr == 0;
 }

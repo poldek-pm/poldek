@@ -178,8 +178,9 @@ tn_hash *htcnf = NULL;          /* config file values */
 
 #define OPT_MKIDX        1001
 #define OPT_MKIDXZ       1002
-#define OPT_NODESC	 1004 /* don't put descriptions in package index */
-#define OPT_NODIFF	 1005 /* don't create diff */
+#define OPT_NODESC	     1004 /* don't put descriptions in package index */
+#define OPT_NODIFF	     1005 /* don't create diff */
+#define OPT_EMPTYOK	     1006 /* don't create diff */
 
 #define OPT_SOURCETXT   1015
 #define OPT_SOURCEDIR   1016
@@ -1439,9 +1440,9 @@ static struct pkgset *load_pkgset(int ldflags)
     load_db_depdirs(args.inst.rootdir, args.mjrmode, ps);
     
     if (!pkgset_load(ps, ldflags, args.sources)) {
-        logn(LOGERR, _("no packages loaded"));
-        pkgset_free(ps);
-        ps = NULL;
+        logn(LOGWARN, _("no packages loaded"));
+        //pkgset_free(ps);
+        //ps = NULL;
     }
     mem_info(1, "MEM after load");
 
@@ -1548,7 +1549,7 @@ static int make_idx(struct pkgset *ps)
     pkgdir = n_array_nth(ps->pkgdirs, 0);
     pkgdir->ts = ts;
 
-    
+
     if (args.pkgdir_nodiff == 0 && access(idx_path, R_OK) == 0) {
         struct pkgdir *orig, *diff;
         
