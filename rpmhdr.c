@@ -42,12 +42,16 @@ void rpmhdr_ent_free(struct rpmhdr_ent *ent)
 
 int rpmhdr_ent_cp(struct rpmhdr_ent *ent, Header h, int32_t tag, Header toh)
 {
+    int rc;
+    
     if (!headerGetEntry(h, tag, &ent->type, &ent->val, &ent->cnt)) {
         memset(ent, 0, sizeof(*ent));
         return 0;
     }
 
-    return headerAddEntry(toh, tag, ent->type, ent->val, ent->cnt);
+    rc = headerAddEntry(toh, tag, ent->type, ent->val, ent->cnt);
+    rpmhdr_ent_free(ent);
+    return rc;
 }
 
 

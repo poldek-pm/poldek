@@ -682,10 +682,11 @@ static struct pkgset *load_pkgset(int ldflags)
     }
     mem_info(1, "MEM after load");
 
-    if (!pkgset_setup(ps)) {
-        pkgset_free(ps);
-        ps = NULL;
-    }
+    if (ps)
+        if (!pkgset_setup(ps)) {
+            pkgset_free(ps);
+            ps = NULL;
+        }
 
     return ps;
 }
@@ -819,6 +820,7 @@ int check_args(void)
                 rc = prepare_given_packages();
             
         case MODE_MKIDX:
+            verbose = 1;
             break;
 
             
@@ -932,7 +934,7 @@ int main(int argc, char **argv)
     
     else if (args.mjrmode == MODE_VERIFY) 
         ldflags = PKGSET_IDX_LDVERIFY;
-    printf("ldflags = %d\n", ldflags);
+
     if ((ps = load_pkgset(ldflags)) == NULL)
         exit(EXIT_FAILURE);
 
