@@ -468,6 +468,8 @@ int pm_pset_packages_install(struct pkgdb *pdb,
     if (ts->getop(ts, POLDEK_OP_RPMTEST))
         return 1;
 
+    pm_pset_packages_uninstall(pdb, pkgs_toremove, ts);
+
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
     pkgdir = n_array_nth(db->ps->pkgdirs, 0);
 
@@ -486,7 +488,6 @@ int pm_pset_packages_install(struct pkgdb *pdb,
         }
     }
 
-    pm_pset_packages_uninstall(pdb, pkgs_toremove, ts);
     return 1;
 }
 
@@ -554,7 +555,7 @@ int pm_pset_commitdb(void *dbh)
     
     
     if (nchanges && rc && pkgdir_type_info(pkgdir->type) & PKGDIR_CAP_SAVEABLE)
-        rc = pkgdir_save(pkgdir, NULL, NULL, 0);
+        rc = pkgdir_save(pkgdir, 0);
     
     return rc;
 }
