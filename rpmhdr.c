@@ -21,7 +21,7 @@
 
 int rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag)
 {
-    if (headerGetEntry(h, tag, &ent->type, &ent->val, &ent->cnt)) {
+    if (!headerGetEntry(h, tag, &ent->type, &ent->val, &ent->cnt)) {
         memset(ent, 0, sizeof(*ent));
         return 0;
     }
@@ -37,4 +37,14 @@ void rpmhdr_ent_free(struct rpmhdr_ent *ent)
         free(ent->val);
         memset(ent, 0, sizeof(*ent));
     }
+}
+
+int rpmhdr_ent_cp(struct rpmhdr_ent *ent, Header h, int32_t tag, Header toh)
+{
+    if (!headerGetEntry(h, tag, &ent->type, &ent->val, &ent->cnt)) {
+        memset(ent, 0, sizeof(*ent));
+        return 0;
+    }
+
+    return headerAddEntry(toh, tag, ent->type, ent->val, ent->cnt);
 }
