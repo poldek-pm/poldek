@@ -296,15 +296,15 @@ struct pkg *select_pkg(const char *name, tn_array *pkgs,
             
             if (selected_pkg == NULL)
                 selected_pkg = p;
-            DBGF("%s [yes]\n", pkg_snprintf_s(selected_pkg));
+            DBGF("%s [yes (higher ver)]\n", pkg_snprintf_s(selected_pkg));
             break;
             
         } else if (selected_pkg == NULL && pkg_cmp_ver(p, curr_pkg) == 0) {
             selected_pkg = p;
-            DBGF("%s [maybe]\n", pkg_snprintf_s(selected_pkg));
+            DBGF("%s [maybe (evr are eq)]\n", pkg_snprintf_s(selected_pkg));
             
         } else {
-            DBGF("%s [no]\n", pkg_snprintf_s(p));
+            DBGF("%s [no (lower ver)]\n", pkg_snprintf_s(p));
         }
     }
 
