@@ -46,6 +46,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 static char *aliases[] = { "rpmdir", NULL };
 
 struct pkgdir_module pkgdir_module_dir = {
+    NULL, 
     PKGDIR_CAP_NOPREFIX, 
     "dir",
     (char **)aliases,

@@ -62,6 +62,7 @@ static int do_update_a(const struct source *src, const char *idxpath);
 static void do_free(struct pkgdir *pkgdir);
 
 struct pkgdir_module pkgdir_module_yum = {
+    NULL, 
     PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE,
     "yum", NULL,
     "Yum index format",

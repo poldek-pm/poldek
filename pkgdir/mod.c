@@ -42,6 +42,7 @@ extern struct pkgdir_module pkgdir_module_dir;
 extern struct pkgdir_module pkgdir_module_hdrl;
 extern struct pkgdir_module pkgdir_module_rpmdb;
 extern struct pkgdir_module pkgdir_module_yum;
+extern struct pkgdir_module pkgdir_module_rpmdbcache;
 
 static struct pkgdir_module *mod_tab[] = {
     &pkgdir_module_pndir,
@@ -50,8 +51,12 @@ static struct pkgdir_module *mod_tab[] = {
     &pkgdir_module_dir,
     &pkgdir_module_hdrl,
     &pkgdir_module_yum,
+    &pkgdir_module_rpmdbcache,
     NULL
 };
+
+static
+int pkgdir_mod_register(struct pkgdir_module *mod);
 
 static int pkgdir_type_uinf_cmp(struct pkgdir_type_uinf *inf1,
                                 struct pkgdir_type_uinf *inf2)
@@ -69,10 +74,12 @@ tn_array *pkgdir_typelist(void)
     list = n_array_new(16, free, (tn_fn_cmp)pkgdir_type_uinf_cmp);
     while (mod_tab[i]) {
         int n;
-        
         struct pkgdir_module *mod = mod_tab[i++];
-        inf = n_malloc(sizeof(*inf));
+
+        if (mod->cap_flags & PKGDIR_CAP_INTERNALTYPE)
+            continue;
         
+        inf = n_malloc(sizeof(*inf));
         snprintf(inf->name, sizeof(inf->name), "%s", mod->name);
 
         n = 0;
@@ -110,6 +117,7 @@ int pkgdirmodule_init(void)
 
     i = 0;
     while (mod_tab[i]) {
+        DBGF_F("%s\n", mod_tab[i]->name); 
         pkgdir_mod_register(mod_tab[i]);
         i++;
     }
@@ -135,11 +143,21 @@ void setup_mod_cap_flags(struct pkgdir_module *mod)
         mod->cap_flags &= ~(PKGDIR_CAP_SAVEABLE);
 }
 
-int pkgdir_mod_register(const struct pkgdir_module *mod) 
+static
+int pkgdir_mod_register(struct pkgdir_module *mod) 
 {
     if (modules_h == NULL) {
         modules_h = n_hash_new(21, NULL);
         n_hash_ctl(modules_h, TN_HASH_NOCPKEY);
+    }
+
+    if (mod->init_module) {
+        const char *name = mod->name;
+        mod = mod->init_module(mod);
+        if (!mod) {
+            logn(LOGERR, "%s: module initialization failed", name);
+            return 0;
+        }
     }
     
     n_assert(mod->name);
@@ -147,7 +165,8 @@ int pkgdir_mod_register(const struct pkgdir_module *mod)
         logn(LOGERR, "%s: module is already registered", mod->name);
         return 0;
     }
-    setup_mod_cap_flags((struct pkgdir_module *)mod);
+    
+    setup_mod_cap_flags(mod);
     n_hash_insert(modules_h, mod->name, mod);
 
     if (mod->aliases) {

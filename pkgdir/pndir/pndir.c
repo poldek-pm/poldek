@@ -71,6 +71,7 @@ static
 int posthook_diff(struct pkgdir *pd1, struct pkgdir* pd2, struct pkgdir *diff);
 
 struct pkgdir_module pkgdir_module_pndir = {
+    NULL, 
     PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE, 
     "pndir",
     NULL,

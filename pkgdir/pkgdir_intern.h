@@ -60,6 +60,7 @@ typedef int (*pkgdir_fn_setpaths)(struct pkgdir *pkgdir,
                                   const char *path, const char *pkg_prefix);
 
 struct pkgdir_module {
+    struct pkgdir_module* (*init_module)(struct pkgdir_module *);
     unsigned                    cap_flags;
     char                        *name;
     char                        **aliases;
@@ -79,7 +80,7 @@ struct pkgdir_module {
     int (*posthook_diff) (struct pkgdir*, struct pkgdir*, struct pkgdir*);
 };
 
-int pkgdir_mod_register(const struct pkgdir_module *mod);
+//int pkgdir_mod_register(const struct pkgdir_module *mod);
 const struct pkgdir_module *pkgdir_mod_find(const char *name);
 
 #endif

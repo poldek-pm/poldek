@@ -47,6 +47,7 @@ static int do_update(struct pkgdir *pkgdir, int *npatches);
 static char *aliases[] = { "apt", NULL };
 
 struct pkgdir_module pkgdir_module_hdrl = {
+    NULL, 
     PKGDIR_CAP_UPDATEABLE | PKGDIR_CAP_UPDATEABLE_INC, 
     "hdrl",
     (char **)aliases,

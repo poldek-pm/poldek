@@ -134,6 +134,7 @@ int pkgdir_update_a(const struct source *src);
 #define PKGDIR_CAP_UPDATEABLE_INC (1 << 1)
 #define PKGDIR_CAP_UPDATEABLE     (1 << 2)
 #define PKGDIR_CAP_SAVEABLE       (1 << 3)
+#define PKGDIR_CAP_INTERNALTYPE   (1 << 8)
 
 #define pkgdir_is_type(p, t) (strcmp((p)->type, t) == 0)
 

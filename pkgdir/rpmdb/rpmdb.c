@@ -43,7 +43,10 @@
 static void do_free(struct pkgdir *pkgdir);
 static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 
+static struct pkgdir_module *init_rpmdbcache(struct pkgdir_module *mod);
+
 struct pkgdir_module pkgdir_module_rpmdb = {
+    NULL,
     0,
     "rpmdb",
     NULL,
@@ -61,7 +64,7 @@ struct pkgdir_module pkgdir_module_rpmdb = {
     NULL,
 };
 
-static Header ldhdr(const struct pkg *pkg, void *foo) 
+static Header ldhdr(const struct pkg *pkg, void *foo, int dont_mod_data) 
 {
     struct pm_ctx    *pmctx;
     struct pkgdb     *db;
@@ -76,10 +79,10 @@ static Header ldhdr(const struct pkg *pkg, void *foo)
         return NULL;
 
     pmctx = pkg->pkgdir->mod_data;
-    if (pkg->pkgdir->mod_data == NULL) /* pkgdir are saved now  */
+    if (dont_mod_data || pkg->pkgdir->mod_data == NULL)
         pmctx = pm_new("rpm");
     
-    db = pkgdb_open(pmctx, "/", pkg->pkgdir->idxpath,
+    db = pkgdb_open(pmctx, "/", dont_mod_data ? NULL : pkg->pkgdir->idxpath,
                     O_RDONLY, NULL);
     if (db == NULL)
         return NULL;
@@ -93,7 +96,7 @@ static Header ldhdr(const struct pkg *pkg, void *foo)
 
     pkgdb_it_destroy(&it);
     pkgdb_free(db);
-    if (pkg->pkgdir->mod_data == NULL)
+    if (dont_mod_data || pkg->pkgdir->mod_data == NULL)
         pm_free(pmctx);
     return h;
 }
@@ -101,14 +104,14 @@ static Header ldhdr(const struct pkg *pkg, void *foo)
     
 
 static 
-struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
-                             void *ptr, tn_array *langs)
+struct pkguinf *do_load_pkguinf(tn_alloc *na, const struct pkg *pkg,
+                                void *ptr, tn_array *langs, int dont_mod_data)
 {
     struct pkguinf      *pkgu = NULL;
     Header               h;
 
     langs = langs;               /* ignored, no support */
-    if ((h = ldhdr(pkg, ptr))) {
+    if ((h = ldhdr(pkg, ptr, dont_mod_data))) {
         pkgu = pkguinf_ldrpmhdr(na, h);
         pm_rpmhdr_free(h);
     }
@@ -116,15 +119,23 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
     return pkgu;
 }
 
+static
+struct pkguinf *rpmdb_load_pkguinf(tn_alloc *na, const struct pkg *pkg,
+                                   void *ptr, tn_array *langs)
+{
+    return do_load_pkguinf(na, pkg, ptr, langs, 0);
+}
+
+
 static 
-tn_tuple *load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
-                        tn_array *foreign_depdirs)
+tn_tuple *do_load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
+                           tn_array *foreign_depdirs, int dont_mod_data)
 {
     tn_tuple            *fl = NULL;
     Header              h;
 
     foreign_depdirs = foreign_depdirs;
-    if ((h = ldhdr(pkg, ptr))) {
+    if ((h = ldhdr(pkg, ptr, dont_mod_data))) {
         pm_rpm_ldhdr_fl(na, &fl, h, PKGFL_ALL, pkg->name);
         if (fl && n_tuple_size(fl) == 0) {
             n_tuple_free(na, fl);
@@ -135,6 +146,13 @@ tn_tuple *load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
     
     return fl;
 }
+
+tn_tuple *rpmdb_load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
+                              tn_array *foreign_depdirs)
+{
+    return do_load_nodep_fl(na, pkg, ptr, foreign_depdirs, 0);
+}
+
 
 
 struct map_struct {
@@ -154,8 +172,8 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
         char **hdr_langs;
         
         pkg->recno = recno;
-        pkg->load_pkguinf = load_pkguinf;
-        pkg->load_nodep_fl = load_nodep_fl;
+        pkg->load_pkguinf = rpmdb_load_pkguinf;
+        pkg->load_nodep_fl = rpmdb_load_nodep_fl;
         
         if (poldek_VERBOSE > 3)
             msgn(4, "rpmdb: ld %s", pkg_snprintf_s(pkg));
@@ -253,3 +271,91 @@ static void do_free(struct pkgdir *pkgdir)
         pm_free(pkgdir->mod_data);
 }
 
+/* rpmdbcache */
+
+struct pkgdir_module pkgdir_module_rpmdbcache = {
+    init_rpmdbcache,
+    0,
+    "rpmdbcache",
+    NULL,
+    "RPM package database cache",
+    NULL,
+    NULL, 
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL, 
+    NULL,
+    NULL,
+    NULL,
+};
+
+
+extern struct pkgdir_module pkgdir_module_pndir;
+
+static
+struct pkguinf *dbcache_load_pkguinf(tn_alloc *na, const struct pkg *pkg,
+                                   void *ptr, tn_array *langs)
+{
+    return do_load_pkguinf(na, pkg, ptr, langs, 1);
+}
+
+tn_tuple *dbcache_load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
+                              tn_array *foreign_depdirs)
+{
+    return do_load_nodep_fl(na, pkg, ptr, foreign_depdirs, 1);
+}
+
+
+static
+int dbcache_load(struct pkgdir *pkgdir, unsigned ldflags)
+{
+    int rc;
+
+    if ((rc = pkgdir_module_pndir.load(pkgdir, ldflags))) {
+        int i;
+            
+        for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
+            struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+            if (!pkg->recno) {
+                logn(LOGERR, "%s: not a rpmdbcache index", pkgdir_idstr(pkgdir));
+                rc = 0;
+                break;
+            }
+
+            pkg->load_nodep_fl = dbcache_load_nodep_fl;
+            pkg->load_pkguinf = dbcache_load_pkguinf;
+            
+        }
+    }
+
+    return rc;
+}
+
+static
+int dbcache_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
+
+{
+    flags |= PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
+        PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NODESC | PKGDIR_CREAT_NOFL;
+
+    return pkgdir_module_pndir.create(pkgdir, pathname, flags);
+}
+
+struct pkgdir_module *init_rpmdbcache(struct pkgdir_module *mod)
+{
+    *mod = pkgdir_module_pndir;
+    mod->cap_flags = PKGDIR_CAP_INTERNALTYPE;
+    mod->name = "rpmdbcache";
+    mod->aliases = NULL;
+    mod->description = "RPM package database cache";
+    
+    mod->update = NULL;
+    mod->update_a = NULL;
+    mod->unlink = NULL;
+    mod->create = dbcache_create;
+    mod->load = dbcache_load;
+    return mod;
+}

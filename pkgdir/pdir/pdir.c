@@ -77,6 +77,7 @@ int posthook_diff(struct pkgdir *pd1, struct pkgdir* pd2, struct pkgdir *diff);
 static char *aliases[] = { "pidx", NULL };
 
 struct pkgdir_module pkgdir_module_pdir = {
+    NULL, 
     PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE, 
     "pdir",
     (char **)aliases,
