@@ -401,8 +401,11 @@ int pkg_add_selfcap(struct pkg *pkg)
 
     pkg->flags |= PKG_HAS_SELFCAP;
 
-    if (has == 1)
+    if (has == 1) {
+        n_array_uniq(pkg->caps);
         return 1;
+    }
+    
     
     capreq_pkg(pkg->caps, pkg->epoch, pkg->name, strlen(pkg->name),
                pkg->ver, strlen(pkg->ver), pkg->rel, strlen(pkg->rel));

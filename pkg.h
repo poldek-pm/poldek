@@ -94,7 +94,7 @@ struct pkg {
     } package_uinf;
 
     uint16_t     _refcnt;
-    void         (*free)(void*);
+    void         (*free)(void*); /* self free()  */
 
     void         *udata;      /* for some additional, user level data */
     int32_t      _buf_size;
