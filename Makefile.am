@@ -25,6 +25,7 @@ libpoldek_a_SOURCES = \
 	  fileindex.c fileindex.h	\
 	  capreqidx.c capreqidx.h	\
 	  capreq.c capreq.h		\
+	  source.c source.h             \
 	  pkgdir.c pkgdir.h		\
 	  pkgdir_tags.c			\
 	  pkgdir_load_dir.c             \

@@ -34,6 +34,7 @@
 
 #include "i18n.h"
 #include "log.h"
+#include "source.h"
 #include "pkgset.h"
 #include "usrset.h"
 #include "misc.h"
@@ -209,6 +210,9 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_INST_FRESHEN          'F'
 #define OPT_INST_HOLD             1053
 #define OPT_INST_NOHOLD           1054
+#define OPT_INST_IGNORE           1055
+#define OPT_INST_NOIGNORE         1056
+
 #define OPT_INST_GREEDY           'G'
 #define OPT_INST_REINSTALL        1055
 #define OPT_INST_DOWNGRADE        1056
@@ -335,9 +339,13 @@ static struct argp_option options[] = {
 {"root", 'r', "DIR", 0, N_("Set top directory to DIR"), 71 },
 {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
 N_("Prevent packages listed from being upgraded if they are already installed."), 71 },
-
 {"nohold", OPT_INST_NOHOLD, 0, 0,
-N_("Don't take held packages from $HOME/.poldek_hold."), 71 },
+N_("Don't take held packages from config nor $HOME/.poldek_hold."), 71 },
+
+{"ignore", OPT_INST_IGNORE, "PACKAGE[,PACKAGE]...", 0,
+N_("Make packages listed invisible."), 71 },
+{"noignore", OPT_INST_IGNORE, "PACKAGE[,PACKAGE]...", 0,
+N_("Make invisibled packages visible."), 71 },
 
 {"greedy", OPT_INST_GREEDY, 0, 0,
  N_("Automatically upgrade packages which dependencies are broken "
@@ -1348,93 +1356,23 @@ static struct pkgset *load_pkgset(int ldflags)
 
 static int clean_idx(void)
 {
-    int i, nerr = 0;
-    
-    for (i=0; i < n_array_size(args.sources); i++) {
-        struct source *src = n_array_nth(args.sources, i);
+    unsigned flags = PKGSOURCE_CLEAN;
 
-        if (!unlink_pkgdir_files(src->path, args.clean_whole > 0))
-            nerr = 1;
-    }
+    if (args.clean_whole > 0)
+        flags |= PKGSOURCE_CLEANA;
 
-    return nerr == 0;
-}
-
-
-static int update_whole_idx(void)
-{
-    int i, nerr = 0;
-    
-    for (i=0; i < n_array_size(args.sources); i++) {
-        struct source *src = n_array_nth(args.sources, i);
-        
-        if (src->flags & PKGSOURCE_NOAUTOUP)
-            continue;
-        
-        if (!source_update(src))
-            nerr++;
-    }
-
-    return nerr == 0;
+    return sources_clean(args.sources, flags);
 }
 
 
 static int update_idx(void)
 {
-    int i, nerr = 0, npatches;
+    unsigned flags = PKGSOURCE_UP;
     
     if (args.update_op == OPT_UPDATEIDX_WHOLE)
-        return update_whole_idx();
+        flags |= PKGSOURCE_UPA;
 
-    for (i=0; i < n_array_size(args.sources); i++) {
-        struct source *src = n_array_nth(args.sources, i);
-        struct pkgdir *pkgdir;
-
-        if (src->flags & PKGSOURCE_NOAUTOUP)
-            continue;
-
-        if (src->type == PKGSRCT_HDL) {
-            logn(LOGWARN, _("%s: this type of source is not updateable"),
-                 source_idstr(src));
-            continue;
-        }
-
-        if (i > 0)
-            msgn(0, "\n");
-        
-        pkgdir = pkgdir_new(src->name, src->path,
-                            src->pkg_prefix, PKGDIR_NEW_VERIFY);
-
-        if (pkgdir == NULL) {
-            if (!source_is_remote(src)) {
-                nerr++;
-                continue;
-            }
-            
-            logn(LOGNOTICE, _("%s: load of local index failed, "
-                              "updating whole index..."), source_idstr(src));
-            
-            unlink_pkgdir_files(src->path, 0);
-            if (!source_update(src))
-                nerr++;
-
-            continue;
-        }
-
-        if (pkgdir->vf->vf_flags & VF_FETCHED) /* already downloaded */
-            continue;
-
-        npatches = 0;
-        if (!pkgdir_update(pkgdir, &npatches))
-            nerr++;
-        else if (npatches)
-            if (!pkgdir_create_idx(pkgdir, NULL, args.pkgdir_creat_flags))
-                nerr++;
-
-        pkgdir_free(pkgdir);
-    }
-
-    return nerr == 0;
+    return sources_update(args.sources, flags);
 }
 
 
