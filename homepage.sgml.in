@@ -9,10 +9,19 @@
     
     <sect> Introduction
     <p>
-    The poldek is designed to automate the verify, install and upgrade 
-    of rpm packages. It can be used in batch or interactive mode. 
-    It was inspired by <em>apt_get</em> from Debian's APT, the interactive mode 
-    was inspired by shell mode of Perl CPAN module <em>($ perl -MCPAN -e shell)</em>.
+    The poldek is an rpm package management tool which allows you to easily
+    perform package verification, installation (including system installation from scratch), 
+    upgrading and removal. Package dependencies are automatically handled, so if you 
+    try to install a package that needs others to be installed, it will download all needed 
+    packages and install them.
+
+    Besides poldek can divide distribution packages into fixed size chunks for the purpose of 
+    placing package set on removable media like CDROM or ZIP.
+	
+
+    Program can be used in batch (like <em>apt_get</em> from Debian's APT) or in interactive mode, 
+    which puts you into a readline interface with command line with autocompletion and history,
+    similar to shell mode of Perl CPAN module. 
     
     For more information see 
 	<url url="poldek.html" name="man page">, 
