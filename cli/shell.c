@@ -384,12 +384,14 @@ int poclidek_shell(struct poclidek_ctx *cctx)
 
     shDone = 0;
     while (!shDone) {
+        struct pkg_dent *currdir = sh_ctx.cctx->currdir;
         char prompt[255];
+        
         
         sigint_reset();
         snprintf(prompt, sizeof(prompt), "poldek:%s%s> ",
-                 *sh_ctx.cctx->currdir->name == '/' ? "" : "/",
-                 sh_ctx.cctx->currdir->name);
+                 currdir == NULL ? "/" : *currdir->name == '/' ? "" : "/",
+                 currdir == NULL ? "" : currdir->name);
         if ((line = readline(prompt)) == NULL)
             break;
 
