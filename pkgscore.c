@@ -164,6 +164,8 @@ void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag)
         for (j=0; j < n_array_size(patterns); j++) {
             const char *mask = n_array_nth(patterns, j);
 
+            pkg_clr_score(pkg, scoreflag);
+
             if (pkgscore_match(&psc, mask)) {
                 switch (scoreflag) {
                     case PKG_HELD:
