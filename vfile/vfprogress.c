@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2001 - 2003 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2001 - 2004 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -46,12 +46,12 @@ static int nbytes2str(char *buf, int bufsize, unsigned long nbytes)
     nb = nbytes;
     
     if (nb > 1024) {
-        nb /= 1024;
+        nb /= 1024.0;
         unit = 'K';
     }
     
     if (nb > 1024) {
-        nb /= 1024;
+        nb /= 1024.0;
         unit = 'M';
     }
 
@@ -60,13 +60,15 @@ static int nbytes2str(char *buf, int bufsize, unsigned long nbytes)
 
 static int eta2str(char *buf, int bufsize, struct vf_progress_bar *bar) 
 {
-    int mm, ss, n = 0;
+    int hh, mm, ss, n = 0;
     float eta = bar->eta + 0.5;
 
-    
-    mm = (int)(eta / 60.0);
+    hh = (int)(eta / 60.0 / 60.0);
+    mm = (int)(eta / 60.0) % 60;
     ss = (int)eta % 60;
-    if (mm || ss)
+    if (hh)
+        n = n_snprintf(&buf[n], bufsize - n, "%.2d:%.2d:%.2d ETA", hh, mm, ss);
+    else if (mm || ss)
         n = n_snprintf(&buf[n], bufsize - n, "%.2d:%.2d ETA", mm, ss);
     return n;
 }
@@ -84,8 +86,6 @@ static void calculate_tt(long total, long amount, struct vf_progress_bar *bar)
     bar->transfer_rate = (float)amount / (current_time - bar->time_base);
     if (bar->transfer_rate > 0)
         bar->eta = (total - amount) / bar->transfer_rate;
-
-    bar->transfer_rate /= 1024.0;
 }
 
 
@@ -161,37 +161,35 @@ void vf_progress(long total, long amount, void *data)
         }
         
     } else {
-        char unit_line[45], amount_str[16], total_str[16];
+        char unit_line[45], amount_str[16], total_str[16], transfer_str[16];
         int nn;
             
         nbytes2str(total_str, sizeof(total_str), total);
         nbytes2str(amount_str, sizeof(amount_str), amount);
-
+        nbytes2str(transfer_str, sizeof(transfer_str), bar->transfer_rate);
+        
         if (total == amount) {
             if (bar->time_base == bar->time_last) /* fetched in less than 1s */
-                bar->transfer_rate = total / 1024.0;
-                    
-            nn = n_snprintf(unit_line, sizeof(unit_line), "[%s (%.1fK/s)]",
-                            total_str, bar->transfer_rate);
+                bar->transfer_rate = total;
+
+            nn = n_snprintf(unit_line, sizeof(unit_line), "[%s (%s/s)]",
+                            total_str, total_str);
         } else {
             int n = 0;
             char eta_str[64];
 
             n = eta2str(eta_str, sizeof(eta_str), bar);
-            
             nn = n_snprintf(unit_line, sizeof(unit_line),
-                            "[%s of %s (%.1fK/s)%s%s]",
-                            amount_str, total_str, bar->transfer_rate,
-                            n ? ", ": "",
-                            n ? eta_str : "");
+                            "[%s of %s (%s/s)] [%s]",
+                            amount_str, total_str, transfer_str,
+                            n ? eta_str : "--:--:--");
         }
         if (nn > bar->maxlen)
             bar->maxlen = nn;
-
         
         if (nn < bar->maxlen) {
             int unit_n = bar->maxlen - nn;
-            n_assert((int)sizeof(unit_line) > nn + unit_n);
+            //n_assert((int)sizeof(unit_line) > nn + unit_n);
             memset(&unit_line[nn], ' ', unit_n);
         }
         
