@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <rpmlib.h>
+#include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
 
 #include "misc.h"
@@ -94,3 +94,15 @@ int rpmhdr_nevr(Header h, char **name,
     return 1;
 }
 
+char *rpmhdr_snprintf(char *buf, size_t size, Header h) 
+{
+    char *name, *ver, *rel;
+    uint32_t *epoch;
+
+    if (rpmhdr_nevr(h, &name, &epoch, &ver, &rel))
+        snprintf(buf, size, "%s-%s-%s", name, ver, rel);
+    else
+        snprintf(buf, size, "(bad hdr)");
+    
+    return buf;
+}

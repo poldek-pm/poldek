@@ -32,10 +32,14 @@
 
 #include <vfile/vfile.h>
 
+#include "rpm.h"
 #include "rpmadds.h"
+#include "misc.h"
 #include "log.h"
 #include "pkg.h"
+#include "dbpkg.h"
 #include "capreq.h"
+#include "rpmdb_it.h"
 
 static
 int header_evr_match_req(Header h, const struct capreq *req);
@@ -80,7 +84,7 @@ int rpm_initlib(tn_array *macros)
 }
 
 
-rpmdb rpm_opendb(const char *dbpath, const char *rootdir, int mode) 
+rpmdb rpm_opendb(const char *dbpath, const char *rootdir, mode_t mode) 
 {
     rpmdb db = NULL;
     
@@ -111,10 +115,10 @@ static void rpm_die(void)
 
 
 
-tn_array *rpm_get_file_conflict_hdrs(rpmdb db, const char *path,
-                                     tn_array *exclrnos) 
+tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path,
+                                         tn_array *unistdbpkgs)
 {
-    tn_array *cnflpkghdrs = n_array_new(4, (tn_fn_free)headerFree, NULL);
+    tn_array *cnfldbpkgs = dbpkg_array_new(4);
     
 #ifdef HAVE_RPM_4_0
     rpmdbMatchIterator mi;
@@ -123,10 +127,11 @@ tn_array *rpm_get_file_conflict_hdrs(rpmdb db, const char *path,
     mi = rpmdbInitIterator(db, RPMTAG_BASENAMES, path, 0);
     while((h = rpmdbNextIterator(mi)) != NULL) {
 	unsigned int recno = rpmdbGetIteratorOffset(mi);
- 	if (exclrnos && n_array_bsearch(exclrnos, (void*)recno))
-	    continue;
-        
-        n_array_push(cnflpkghdrs, headerLink(h));
+
+        if (unistdbpkgs && dbpkg_array_has(unistdbpkgs, recno))
+            continue;
+
+        n_array_push(cnfldbpkgs, dbpkg_new(recno, h));
 	break;	
     }
     rpmdbFreeIterator(mi);
@@ -148,34 +153,37 @@ tn_array *rpm_get_file_conflict_hdrs(rpmdb db, const char *path,
     } else {
         int i;
         for (i = 0; i < matches.count; i++) {
+            unsigned recno = matches.recs[i].recOffset;
             Header h;
             
-            if (exclrnos &&
-                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
+            if (unistdbpkgs && dbpkg_array_has(unistdbpkgs, recno))
                 continue;
             
-            if ((h = rpmdbGetRecord(db, matches.recs[i].recOffset))) {
-                n_array_push(cnflpkghdrs, headerLink(h));
-                headerFree(h);
-            }
-
-            break;
+            if ((h = rpmdbGetRecord(db, recno)) == NULL)
+                rpm_die();
+            
+            
+            //headerGetEntry(h, RPMTAG_NAME, NULL, (void *)&name, NULL);
+            //if (strcmp(name, pkg->name) != 0)
+            
+            n_array_push(cnfldbpkgs, dbpkg_new(recno, h));
+            headerFree(h);
         }
     }
 #endif	/* !HAVE_RPM_4_0 */
 
-    if (n_array_size(cnflpkghdrs) == 0) {
-        n_array_free(cnflpkghdrs);
-        cnflpkghdrs = NULL;
+    if (n_array_size(cnfldbpkgs) == 0) {
+        n_array_free(cnfldbpkgs);
+        cnfldbpkgs = NULL;
     }
     
-    return cnflpkghdrs;
+    return cnfldbpkgs;
 }
 
 
 
 static
-int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *exclrnos)
+int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *unistdbpkgs)
 {
     int rc = 0;
 
@@ -187,7 +195,7 @@ int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *exclrnos)
     while((h = rpmdbNextIterator(mi)) != NULL) {
 	unsigned int recno = rpmdbGetIteratorOffset(mi);
 
-        if (exclrnos && n_array_bsearch(exclrnos, (void*)recno))
+        if (unistdbpkgs && dbpkg_array_has(unistdbpkgs, recno))
 	    continue;
         
  	if (header_evr_match_req(h, req)) {
@@ -214,18 +222,21 @@ int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *exclrnos)
         int i;
         
         for (i = 0; i < matches.count; i++) {
-            if (exclrnos &&
-                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
+            unsigned recno = matches.recs[i].recOffset;
+            
+            if (unistdbpkgs && dbpkg_array_has(unistdbpkgs, recno))
                 continue;
-        
-            if ((h = rpmdbGetRecord(db, matches.recs[i].recOffset))) {
-                if (header_evr_match_req(h, req)) {
-                    rc = 1;
-                    headerFree(h);
-                    break;
-                }
+
+            if ((h = rpmdbGetRecord(db, recno)) == NULL)
+                rpm_die();
+            
+            if (header_evr_match_req(h, req)) {
+                rc = 1;
                 headerFree(h);
+                break;
             }
+
+            headerFree(h);
         }
         
         dbiFreeIndexRecord(matches);
@@ -236,159 +247,46 @@ int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *exclrnos)
 }
 
 static
-int lookup_file(rpmdb db, const struct capreq *req, tn_array *exclrnos)
+int lookup_file(rpmdb db, const struct capreq *req, tn_array *unistdbpkgs)
 {
+    struct rpmdb_it it;
+    const struct dbpkg *dbpkg;
     int finded = 0;
-
-#ifdef HAVE_RPM_4_0
-    rpmdbMatchIterator mi;
-    Header h;
-
-    mi = rpmdbInitIterator(db, RPMTAG_BASENAMES, capreq_name(req), 0);
-    while((h = rpmdbNextIterator(mi)) != NULL) {
-	unsigned int recno = rpmdbGetIteratorOffset(mi);
- 	if (exclrnos && n_array_bsearch(exclrnos, (void*)recno))
+    
+    rpmdb_it_init(db, &it, RPMITER_FILE, capreq_name(req));
+    while((dbpkg = rpmdb_it_get(&it)) != NULL) {
+        if (n_array_bsearch(unistdbpkgs, dbpkg))
 	    continue;
    	finded = 1;
 	break;	
     }
-    rpmdbFreeIterator(mi);
-    
-#else /* HAVE_RPM_4_0 */
-
-    dbiIndexSet matches;
-    int rc;
-
-    matches.count = 0;
-    matches.recs = NULL;
-    rc = rpmdbFindByFile(db, capreq_name(req), &matches);
-
-    if (rc != 0) {
-        if (rc < 0) 
-            rpm_die();
-        finded = 0;
-        
-    } else {
-        int i;
-        for (i = 0; i < matches.count; i++) {
-            if (exclrnos &&
-                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
-                continue;
-            
-            finded = 1;
-            break;
-        }
-    }
-#endif	/* !HAVE_RPM_4_0 */
-
+    rpmdb_it_destroy(&it);
     return finded;
 }
 
 
 static
 int lookup_cap(rpmdb db, const struct capreq *req, int strict,
-               tn_array *exclrnos)
+               tn_array *unistdbpkgs)
 {
+    struct rpmdb_it it;
+    const struct dbpkg *dbpkg;
     int rc = 0;
-
-#ifdef HAVE_RPM_4_0
-    rpmdbMatchIterator mi;
-    Header h;
-
-    mi = rpmdbInitIterator(db, RPMTAG_PROVIDES, capreq_name(req), 0);
-    while((h = rpmdbNextIterator(mi)) != NULL) {
-	unsigned int recOffset = rpmdbGetIteratorOffset(mi);
- 	if (exclrnos &&
-	    n_array_bsearch(exclrnos, (void*)recOffset))
-	    continue;
-	if (header_cap_match_req(h, req, strict)) {
-	    rc = 1;
-	    break;
-	}
-    }
-    rpmdbFreeIterator(mi);
     
-#else	/* !HAVE_RPM_4_0 */
-    dbiIndexSet matches;
-
-    matches.count = 0;
-    matches.recs = NULL;
-    rc = rpmdbFindByProvides(db, capreq_name(req), &matches);
-
-    if (rc != 0) {
-        if (rc < 0)
-            rpm_die();
-        rc = 0;
+    rpmdb_it_init(db, &it, RPMITER_CAP, capreq_name(req));
+    while ((dbpkg = rpmdb_it_get(&it)) != NULL) {
+        if (unistdbpkgs && n_array_bsearch(unistdbpkgs, dbpkg))
+            continue;
         
-    } else if (rc == 0) {
-        Header h;
-        int i;
-        
-        for (i = 0; i < matches.count; i++) {
-            if (exclrnos &&
-                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
-                continue;
-
-            if ((h = rpmdbGetRecord(db, matches.recs[i].recOffset))) {
-                if (header_cap_match_req(h, req, strict)) {
-                    rc = 1;
-                    headerFree(h);
-                    break;
-                }
-                headerFree(h);
-            }
+        if (header_cap_match_req(dbpkg->h, req, strict)) {
+            rc = 1;
+            break;
         }
-        
-        dbiFreeIndexRecord(matches);
     }
-#endif	/* !HAVE_RPM_4_0 */
-
+    rpmdb_it_destroy(&it);
     return rc;
 }
 
-#if 0
-static
-int lookup_req(rpmdb db, const struct capreq *req, int strict,
-               tn_array *exclrnos)
-{
-    dbiIndexSet matches;
-    int rc;
-
-    matches.count = 0;
-    matches.recs = NULL;
-    rc = rpmdbFindByProvides(db, capreq_name(req), &matches);
-
-    if (rc != 0) {
-        if (rc < 0)
-            rpm_die();
-        rc = 0;
-        
-    } else if (rc == 0) {
-        Header h;
-        int i;
-        
-        for (i = 0; i < matches.count; i++) {
-            if (exclrnos &&
-                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
-                continue;
-
-            if ((h = rpmdbGetRecord(db, matches.recs[i].recOffset))) {
-                if (header_cap_match_req(h, req, strict)) {
-                    rc = 1;
-                    headerFree(h);
-                    break;
-                }
-                headerFree(h);
-            }
-        }
-        
-        dbiFreeIndexRecord(matches);
-        return rc;
-    }
-
-    return 0;
-}
-#endif
 
 static
 int header_evr_match_req(Header h, const struct capreq *req)
@@ -467,21 +365,21 @@ int is_req_match(rpmdb db, dbiIndexSet matches, const struct capreq *req)
 
 
 int rpm_dbmatch_req(rpmdb db, const struct capreq *req, int strict,
-                    tn_array *exclrnos) 
+                    tn_array *unistallrnos) 
 {
     int rc;
     int is_file;
 
     is_file = (*capreq_name(req) == '/' ? 1:0);
 
-    if (!is_file && lookup_pkg(db, req, exclrnos))
+    if (!is_file && lookup_pkg(db, req, unistallrnos))
         return 1;
     
-    rc = lookup_cap(db, req, strict, exclrnos);
+    rc = lookup_cap(db, req, strict, unistallrnos);
     if (rc)
         return 1;
     
-    if (is_file && lookup_file(db, req, exclrnos))
+    if (is_file && lookup_file(db, req, unistallrnos))
         return 1;
     
     return 0;
@@ -676,7 +574,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
 
 
 int rpm_dbmap(rpmdb db,
-              void (*mapfn)(void *header, off_t offs, void *arg),
+              void (*mapfn)(unsigned recno, void *header, void *arg),
               void *arg) 
 {
     int n = 0;
@@ -687,29 +585,29 @@ int rpm_dbmap(rpmdb db,
 
     mi = rpmdbInitIterator(db, RPMDBI_PACKAGES, NULL, 0);
     while ((h = rpmdbNextIterator(mi)) != NULL) {
-	unsigned int recOffset = rpmdbGetIteratorOffset(mi);
-	mapfn(h, recOffset, arg);
+	unsigned int recno = rpmdbGetIteratorOffset(mi);
+	mapfn(recno, h, arg);
 	n++;
     }
     rpmdbFreeIterator(mi);
 #else	/* !HAVE_RPM_4_0 */
-    int offs;
+    int recno;
 
-    offs = rpmdbFirstRecNum(db);
-    if (offs == 0)
+    recno = rpmdbFirstRecNum(db);
+    if (recno == 0)
         return 0;
 
-    if (offs < 0)
+    if (recno < 0)
         rpm_die();
     
-    while (offs > 0) {
-        if ((h = rpmdbGetRecord(db, offs))) {
-            mapfn(h, offs, arg);
+    while (recno > 0) {
+        if ((h = rpmdbGetRecord(db, recno))) {
+            mapfn(recno, h, arg);
             n++;
             headerFree(h);
         }
         
-        offs = rpmdbNextRecNum(db, offs);
+        recno = rpmdbNextRecNum(db, recno);
     }
 #endif	/* !HAVE_RPM_4_0 */
     
@@ -717,126 +615,35 @@ int rpm_dbmap(rpmdb db,
 }
 
 
-int rpm_dbiterate(rpmdb db, tn_array *offsets,
-                  void (*mapfn)(void *header, off_t off, void *arg), void *arg)
+static
+int get_pkgs_requires_capn(rpmdb db, const char *capname,
+                           tn_array *dbpkgs, tn_array *unistdbpkgs) 
 {
+    struct rpmdb_it it;
+    const struct dbpkg *dbpkg;
     int n = 0;
-    Header h;
-
-#ifdef HAVE_RPM_4_0	/* XXX should test HAVE_RPM_4_0 (but I'm lazy). */
-    rpmdbMatchIterator mi;
-
-    mi = rpmdbInitIterator(db, RPMDBI_PACKAGES, NULL, 0);
-    while ((h = rpmdbNextIterator(mi)) != NULL) {
-	unsigned int recOffset = rpmdbGetIteratorOffset(mi);
-	mapfn(h, recOffset, arg);
-	n++;
-    }
-    rpmdbFreeIterator(mi);
-#else	/* !HAVE_RPM_4_0 */
-    int i, offs;
-
-    offs = rpmdbFirstRecNum(db);
-    if (offs == 0)
-        return 0;
-
-    if (offs < 0)
-        rpm_die();
-
-    for (i=0; i<n_array_size(offsets); i++) {
-        offs = (int)n_array_nth(offsets, i);
-        if ((h = rpmdbGetRecord(db, offs))) {
-            mapfn(h, offs, arg);
-            n++;
-            headerFree(h);
-        }
-    }
-#endif	/* !HAVE_RPM_4_0 */
     
-    return n;
-}
-
-int rpm_get_pkgs_requires_capn(rpmdb db, const char *capname,
-                               tn_array *exclrnos, tn_array *pkgs)
-{
-    int rc = 0;
-
-#ifdef HAVE_RPM_4_0	/* XXX should test HAVE_RPM_4_0 (but I'm lazy). */
-    rpmdbMatchIterator mi;
-    Header h;
-
-    mi = rpmdbInitIterator(db, RPMTAG_REQUIRENAME, capname, 0);
-    while((h = rpmdbNextIterator(mi)) != NULL) {
-	unsigned int recOffset = rpmdbGetIteratorOffset(mi);
-	struct pkg *pkg;
-
-	if (exclrnos &&
-	    n_array_bsearch(exclrnos, (void*)recOffset)) {
+    rpmdb_it_init(db, &it, RPMITER_REQ, capname);
+    while ((dbpkg = rpmdb_it_get(&it)) != NULL) {
+        
+        if (n_array_bsearch(unistdbpkgs, dbpkg))
 	    continue;
-	}
         
-	n_array_push(exclrnos, (void*)recOffset);
-	n_array_sort(exclrnos);
-                
-	if ((pkg = pkg_ldhdr_udata(h, "db", PKG_LDNEVR | PKG_LDCAPREQS,
-		(void*)recOffset, sizeof(recOffset))) == NULL) {
-	    rc = -1;
-	    break;
-	}
-        pkg_add_selfcap(pkg);
-	n_array_push(pkgs, pkg);
+        if (n_array_bsearch(dbpkgs, dbpkg))
+	    continue;
+
+        msg(1, "%s <- %s\n", capname, dbpkg_snprintf_s(dbpkg));
+        n_array_push(dbpkgs, dbpkg_new(dbpkg->recno, dbpkg->h));
+        n++;
     }
-    rpmdbFreeIterator(mi);
-#else	/* !HAVE_RPM_4_0 */
-    dbiIndexSet matches;
-
-    matches.count = 0;
-    matches.recs = NULL;
-    rc = rpmdbFindByRequiredBy(db, capname, &matches);
-
-    if (rc < 0) {
-        rpm_die();
-        
-    } else if (rc == 0) {
-        Header h;
-        int i;
-        
-        for (i = 0; i < matches.count; i++) {
-            register off_t recno = matches.recs[i].recOffset;
-
-            if (exclrnos &&
-                n_array_bsearch(exclrnos, (void*)recno)) {
-                continue;
-            }
-
-            n_array_push(exclrnos, (void*)recno);
-            n_array_sort(exclrnos);
-            
-            if ((h = rpmdbGetRecord(db, recno))) {
-                struct pkg *pkg;
-                
-                if ((pkg = pkg_ldhdr_udata(h, "db", PKG_LDNEVR | PKG_LDCAPREQS,
-                                  (void*)recno, sizeof(recno))) == NULL) {
-                    rc = -1;
-                    break;
-                }
-                pkg_add_selfcap(pkg);
-                n_array_push(pkgs, pkg);
-                headerFree(h);
-            }
-        }
-        
-        dbiFreeIndexRecord(matches);
-    }
-#endif	/* !HAVE_RPM_4_0 */
-    
-    return rc;
+    rpmdb_it_destroy(&it);
+    return n;
 }
 
 
 static 
-int get_pkgs_requires_hfiles(rpmdb db, Header h, tn_array *exclrnos,
-                             tn_array *pkgs)
+int get_pkgs_requires_pkgfiles(rpmdb db, tn_array *dbpkgs,
+                               struct dbpkg *dbpkg, tn_array *excldbpkgs) 
 {
     int t1, t2, t3, c1, c2, c3;
     char **names = NULL, **dirs = NULL;
@@ -844,6 +651,10 @@ int get_pkgs_requires_hfiles(rpmdb db, Header h, tn_array *exclrnos,
     char      path[PATH_MAX], *prevdir;
     int       *dirlens;
     int       i;
+    Header    h;
+
+    h = dbpkg->h;
+    n_assert(h);
     
     if (!headerGetEntry(h, RPMTAG_BASENAMES, (void*)&t1, (void*)&names, &c1))
         return 0;
@@ -860,11 +671,11 @@ int get_pkgs_requires_hfiles(rpmdb db, Header h, tn_array *exclrnos,
     n_assert(c1 == c3);
 
     dirlens = alloca(sizeof(*dirlens) * c2);
-    for (i=0; i<c2; i++) 
+    for (i=0; i < c2; i++) 
         dirlens[i] = strlen(dirs[i]);
     
     prevdir = NULL;
-    for (i=0; i<c1; i++) {
+    for (i=0; i < c1; i++) {
         register int diri = diridxs[i];
         if (prevdir == dirs[diri]) {
             n_strncpy(&path[dirlens[diri]], names[i], PATH_MAX-dirlens[diri]);
@@ -876,7 +687,7 @@ int get_pkgs_requires_hfiles(rpmdb db, Header h, tn_array *exclrnos,
             prevdir = dirs[diri];
         }
 
-        rpm_get_pkgs_requires_capn(db, path, exclrnos, pkgs);
+        get_pkgs_requires_capn(db, path, dbpkgs, excldbpkgs);
     }
     
  l_endfunc:
@@ -890,93 +701,52 @@ int get_pkgs_requires_hfiles(rpmdb db, Header h, tn_array *exclrnos,
     return 1;
 }
 
-/* add to pkgs packages which requires package given in Header */ 
-int rpm_get_pkgs_requires_pkgh(rpmdb db, Header h, tn_array *exclrnos,
-                               tn_array *pkgs)
+
+int rpm_get_pkg_pkgreqs(rpmdb db, tn_array *dbpkgs, struct dbpkg *dbpkg,
+                        tn_array *unistdbpkgs)
 {
     tn_array *caps;
     char *pkgname = NULL;
     int i;
 
-    headerGetEntry(h, RPMTAG_NAME, NULL, (void *)&pkgname, NULL);
+    n_assert(dbpkg->h);
+    
+    headerGetEntry(dbpkg->h, RPMTAG_NAME, NULL, (void *)&pkgname, NULL);
     n_assert(pkgname);
-    rpm_get_pkgs_requires_capn(db, pkgname, exclrnos, pkgs);
+    get_pkgs_requires_capn(db, pkgname, dbpkgs, unistdbpkgs);
 
     caps = capreq_arr_new();
-    get_pkg_caps(caps, h);
+    get_pkg_caps(caps, dbpkg->h);
     
     for (i=0; i<n_array_size(caps); i++) {
         struct capreq *cap = n_array_nth(caps, i);
-        rpm_get_pkgs_requires_capn(db, capreq_name(cap), exclrnos, pkgs);
+        get_pkgs_requires_capn(db, capreq_name(cap), dbpkgs, unistdbpkgs);
     }
     
     n_array_free(caps);
-    get_pkgs_requires_hfiles(db, h, exclrnos, pkgs);
+    get_pkgs_requires_pkgfiles(db, dbpkgs, dbpkg, unistdbpkgs);
     return 0;
 }
 
 
-int rpm_get_pkgs_requires_obsl_pkg(rpmdb db, struct capreq *obsl,
-                                   tn_array *exclrnos, tn_array *pkgs) 
+int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, struct capreq *cap)
 {
+    struct rpmdb_it it;
+    const struct dbpkg *dbpkg;
     int n = 0;
-
-#ifdef HAVE_RPM_4_0
-    rpmdbMatchIterator mi;
-    Header h;
-
-    mi = rpmdbInitIterator(db, RPMTAG_NAME, capreq_name(obsl), 0);
-    while((h = rpmdbNextIterator(mi)) != NULL) {
-	unsigned int recno = rpmdbGetIteratorOffset(mi);
-
-        if (exclrnos && n_array_bsearch(exclrnos, (void*)recno))
+    
+    rpmdb_it_init(db, &it, RPMITER_NAME, capreq_name(cap));
+    while ((dbpkg = rpmdb_it_get(&it)) != NULL) {
+        if (n_array_bsearch(dbpkgs, dbpkg))
 	    continue;
-        
-	if (header_evr_match_req(h, obsl)) {
-	    rpm_get_pkgs_requires_pkgh(db, h, exclrnos, pkgs);
-	    n++;
-	}
-    }
-    rpmdbFreeIterator(mi);
-    
-#else	/* !HAVE_RPM_4_0 */
 
-    dbiIndexSet matches;
-    int rc;
-    
-    matches.count = 0;
-    matches.recs = NULL;
-    rc = rpmdbFindPackage(db, capreq_name(obsl), &matches);
-    if (rc < 0) {
-        rpm_die();
-        
-    } else if (rc == 0) {
-        Header h;
-        int i;
-        
-        for (i = 0; i < matches.count; i++) {
-            if (exclrnos &&
-                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
-                continue;
-
-            if ((h = rpmdbGetRecord(db, matches.recs[i].recOffset))) {
-                if (header_evr_match_req(h, obsl)) {
-                    rpm_get_pkgs_requires_pkgh(db, h, exclrnos, pkgs);
-                    n_array_push(exclrnos, (void*)matches.recs[i].recOffset);
-                    n_array_sort(exclrnos);
-                    rc = 1;
-                    n++;
-                    
-                }
-                headerFree(h);
-            }
+        if (header_evr_match_req(dbpkg->h, cap)) {
+            n_array_push(dbpkgs, dbpkg_new(dbpkg->recno, dbpkg->h));
+            n_array_sort(dbpkgs);
+            n++;
         }
-        
-        dbiFreeIndexRecord(matches);
-        return n;
     }
-#endif	/* !HAVE_RPM_4_0 */
-    
+    rpmdb_it_destroy(&it);
     return n;
 }
 
@@ -1004,50 +774,51 @@ int cmp_evr_header2pkg(Header h, const struct pkg *pkg)
 
 
 
-int rpm_is_pkg_installed(rpmdb db, const struct pkg *pkg, int *cmprc)
+int rpm_is_pkg_installed(rpmdb db, const struct pkg *pkg, int *cmprc,
+                         struct dbpkg *dbpkgp)
 {
-    int count = -1;
-
-#ifdef HAVE_RPM_4_0
-    rpmdbMatchIterator mi;
-    Header h;
-
-    mi = rpmdbInitIterator(db, RPMTAG_NAME, pkg->name, 0);
-    count = rpmdbGetIteratorCount(mi);
+    int count = 0;
+    struct rpmdb_it it;
+    const struct dbpkg *dbpkg;
     
-    if (count > 0) {
-        h = rpmdbNextIterator(mi);
- 	*cmprc = cmp_evr_header2pkg(h, pkg);
-    }
-    rpmdbFreeIterator(mi);
-    
-#else /* HAVE_RPM_4_0 */
-    dbiIndexSet matches;
-    int rc;
-    
-    matches.count = 0;
-    matches.recs = NULL;
-    rc = rpmdbFindPackage(db, pkg->name, &matches);
+    rpmdb_it_init(db, &it, RPMITER_NAME, pkg->name);
+    count = rpmdb_it_get_count(&it);
+    if (count > 0 && (cmprc || dbpkg)) {
+        dbpkg = rpmdb_it_get(&it);
 
-    if (rc < 0) 
-        rpm_die();
-    
-    else if (rc > 0)
-        count = 0;
-
-    else if (rc == 0) {
-        Header h;
-
-        count = matches.count;
-        if (count > 0) {
-            if ((h = rpmdbGetRecord(db, matches.recs[0].recOffset))) {
-                *cmprc = cmp_evr_header2pkg(h, pkg);
-                headerFree(h);
-            }
+        if (cmprc)
+            *cmprc = cmp_evr_header2pkg(dbpkg->h, pkg);
+        
+        if (dbpkgp) {
+            dbpkgp->recno = dbpkg->recno;
+            dbpkgp->h = headerLink(dbpkg->h);
         }
-        dbiFreeIndexRecord(matches);
     }
-#endif /* HAVE_RPM_4_0 */
 
+    rpmdb_it_destroy(&it);
     return count;
 }
+
+
+tn_array *rpm_get_conflicted_dbpkgs(rpmdb db, const struct capreq *cap,
+                                    tn_array *unistdbpkgs)
+{
+    tn_array *dbpkgs = NULL;
+    struct rpmdb_it it;
+    const struct dbpkg *dbpkg;
+    
+
+    rpmdb_it_init(db, &it, RPMITER_CNFL, capreq_name(cap));
+    while ((dbpkg = rpmdb_it_get(&it))) {
+        if (dbpkg_array_has(unistdbpkgs, dbpkg->recno))
+            continue;
+
+        if (dbpkgs == NULL)
+            dbpkgs = dbpkg_array_new(4);
+            
+        n_array_push(dbpkgs, dbpkg_new(dbpkg->recno, dbpkg->h));
+    }
+
+    return dbpkgs;
+}
+
