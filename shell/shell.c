@@ -287,10 +287,11 @@ static char *help_filter(int key, const char *text, void *input)
                 i++;
             }
         }
-
         
-        p = malloc(n + 1);
-        return memcpy(p, buf, n + 1);
+        if (n > 0) {
+            p = malloc(n + 1);
+            return memcpy(p, buf, n + 1);
+        }
     }
     
     return (char*)text;
