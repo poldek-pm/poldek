@@ -127,7 +127,8 @@ int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked)
         if (is_hand_marked && freshen)
             install = 0;
         
-    } else if (is_hand_marked && npkgs > 1 && (inst->flags & INSTS_UPGRADE) && force == 0) {
+    } else if (is_hand_marked && npkgs > 1 && (inst->flags & INSTS_UPGRADE)
+               && force == 0) {
         logn(LOGERR, _("%s: multiple instances installed, give up"), pkg->name);
         install = -1;
         
@@ -137,7 +138,8 @@ int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked)
                 pkg_snprintf_s(pkg));
             install = 0;
             
-        } else if (cmprc <= 0 && force == 0 && (inst->flags & INSTS_UPGRADE)) {
+        } else if (cmprc <= 0 && force == 0 &&
+                   ((inst->flags & INSTS_UPGRADE) || cmprc == 0)) {
             char *msg = "%s: %s version installed, %s";
             char *eqs = cmprc == 0 ? "equal" : "newer";
             char *skiped =  "skipped";
