@@ -17,7 +17,7 @@
 
 
 static int ls(struct cmdarg *cmdarg);
-static int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg);
+static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg);
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 
@@ -25,13 +25,19 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state);
 #define OPT_LS_UPGRADEABLE     (1 << 1) /* cmd_state->flags */
 #define OPT_LS_UPGRADEABLE_VER (1 << 2) /* cmd_state->flags */
 #define OPT_LS_INSTALLED       (1 << 3) /* cmd_state->flags */
-#define OPT_LS_ERR             (1 << 4);
+#define OPT_LS_SORTBUILDTIME   (1 << 4) /* cmd_state->flags */
+#define OPT_LS_SORTBUILDAY     (1 << 5) /* cmd_state->flags */
+#define OPT_LS_SORTREV         (1 << 6) /* cmd_state->flags */
+#define OPT_LS_ERR             (1 << 10);
 
 static struct argp_option options[] = {
  { "long", 'l', 0, 0, "Use a long listing format", 1},
  { "upgradeable", 'u', 0, 0, "Show upgradeable packages only", 1},
  { "upgradeablev", 'U', 0, 0, "Like above but omit packages with diffrent releases only", 1},
  { "installed", 'I', 0, 0, "List installed packages", 1},
+ { NULL, 't', 0, 0, "Sort by build time", 1},
+ { NULL, 'T', 0, 0, "Sort by build day", 1},
+ { "reverse", 'r', 0, 0, "Reverse order while sorting", 1},
 // { NULL, 'i', 0, OPTION_ALIAS, 0, 1 }, 
  { 0, 0, 0, 0, 0, 0 },
 };
@@ -85,6 +91,18 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             cmdarg->flags |= OPT_LS_LONG;
             break;
 
+        case 't':
+            cmdarg->flags |= OPT_LS_SORTBUILDTIME;
+            break;
+
+        case 'T':
+            cmdarg->flags |= OPT_LS_SORTBUILDAY;
+            break;
+
+        case 'r':
+            cmdarg->flags |= OPT_LS_SORTREV;
+            break;
+            
         case 'U':
             cmdarg->flags |= OPT_LS_UPGRADEABLE_VER;
                                 /* no break */
@@ -183,7 +201,7 @@ static int ls(struct cmdarg *cmdarg)
 }
 
 
-static int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg)
+static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
 {
     char                 hdr[256], fmt_hdr[256], fmt_pkg[256];
     int                  i, size, err = 0, npkgs = 0;
@@ -231,6 +249,23 @@ static int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg)
     
     hdr[sizeof(hdr) - 2] = '\n';
     compare_ver = flags & OPT_LS_UPGRADEABLE_VER;
+
+    if (flags & (OPT_LS_SORTBUILDTIME | OPT_LS_SORTBUILDAY)) {
+        tn_fn_cmp cmpf = (tn_fn_cmp)shpkg_cmp_btime;
+        
+        if (flags & OPT_LS_SORTREV)
+            cmpf = (tn_fn_cmp)shpkg_cmp_btime_rev;
+
+        if (flags & OPT_LS_SORTBUILDAY) {
+            cmpf = (tn_fn_cmp)shpkg_cmp_bday;
+
+            if (flags & OPT_LS_SORTREV)
+                cmpf = (tn_fn_cmp)shpkg_cmp_bday_rev;
+        }
+        
+
+        n_array_isort_ex(shpkgs, cmpf);
+    }
     
     size = 0;
     for (i=0; i<n_array_size(shpkgs); i++) {
@@ -273,7 +308,7 @@ static int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg)
 
             snprintf(sizbuf, sizeof(sizbuf), "%.1f%c", pkgsize, unit);
             
-            if (pkg->btime) 
+            if (pkg->btime)
                 strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
                          localtime((time_t*)&pkg->btime));
             else
