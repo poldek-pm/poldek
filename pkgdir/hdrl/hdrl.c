@@ -45,7 +45,7 @@
 
 static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags);
-static int do_update_a(const struct source *src);
+static int do_update_a(const struct source *src, const char *idxpath);
 static int do_update(struct pkgdir *pkgdir, int *npatches);
 
 static char *aliases[] = { "apt", NULL };
@@ -167,12 +167,13 @@ int hdrl_update(const char *path, int vfmode)
 
 
 static
-int do_update_a(const struct source *src)
+int do_update_a(const struct source *src, const char *idxpath)
 {
     int vfmode;
-    
-    vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;;
-    return hdrl_update(src->path, vfmode);
+
+    src = src;                  /* unused */
+    vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
+    return hdrl_update(idxpath, vfmode);
 }
 
 static 

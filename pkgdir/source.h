@@ -22,7 +22,6 @@ struct source {
     char      *type;
     char      *name;            /* source name */
     char      *path;            /* path to idx */
-    char      *idxpath;         /* real, full path to idx */
     char      *pkg_prefix;      /* packages prefix path */
     
     char      *compress;        /* none, gz, bz2, etc */

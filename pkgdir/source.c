@@ -40,7 +40,7 @@
 
 #define SOURCE_DEFAULT_PRI 0
 
-const char *pkgdir_default_type = "pndir";
+const char *pkgdir_DEFAULT_TYPE = "pndir";
 
 struct subopt {
     char      *name;
@@ -159,7 +159,7 @@ struct source *source_malloc(void)
     src->pri = 0;
     src->no = 0;
     //src->flags |= PKGSOURCE_PRI;
-    src->name = src->path = src->idxpath = src->pkg_prefix = NULL;
+    src->name = src->path = src->pkg_prefix = NULL;
     src->dscr = src->type = NULL;
     src->lc_lang = NULL;
     src->_refcnt = 0;
@@ -185,9 +185,6 @@ void source_free(struct source *src)
     if (src->path)    
         free(src->path);
 
-    if (src->idxpath)    
-        free(src->idxpath);
-    
     if (src->pkg_prefix)
         free(src->pkg_prefix);
     
@@ -250,17 +247,6 @@ char *source_set(char **member, char *value)
         *member = n_strdup(value);
 
     return *member;
-}
-
-    
-
-const char *source_set_idxpath(struct source *src)
-{
-    if (src->idxpath != NULL)
-        free(src->idxpath);
-
-    src->idxpath = pkgdir_idxpath(src->path, src->type, src->compress);
-    return src->idxpath;
 }
 
 
@@ -466,10 +452,10 @@ struct source *source_new(const char *type, const char *pathspec,
     if (src->type)
         src->flags |= PKGSOURCE_TYPE;
     else
-        src->type = n_strdup(pkgdir_default_type);
+        src->type = n_strdup(pkgdir_DEFAULT_TYPE);
 
     setup_langs(src);
-    source_set_idxpath(src);
+    //source_set_idxpath(src);
     return src;
 }
 
@@ -529,8 +515,7 @@ int source_cmp_pri_name(const struct source *s1, const struct source *s2)
 static int source_update_a(struct source *src) 
 {
     if (src->type == NULL)
-        source_set_type(src, pkgdir_default_type);
-    source_set_idxpath(src);
+        source_set_type(src, pkgdir_DEFAULT_TYPE);
     
     return pkgdir_update_a(src);
 }
@@ -543,8 +528,7 @@ int source_update(struct source *src, unsigned flags)
 
 
     if (src->type == NULL)
-        source_set_type(src, pkgdir_default_type);
-    source_set_idxpath(src);
+        source_set_type(src, pkgdir_DEFAULT_TYPE);
     
 	pcaps = pkgdir_type_info(src->type);
 	
@@ -606,7 +590,7 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
             }
 
         } else if ((opt->flag & PKGSOURCE_TYPE)) {
-            if (src->type && !source_is_type(src, pkgdir_default_type)) {
+            if (src->type && !source_is_type(src, pkgdir_DEFAULT_TYPE)) {
                 n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s",
                                 opt->name);
                 n += n_snprintf(&str[n], size - n, "=%s,", src->type);
@@ -692,7 +676,7 @@ int sources_update(tn_array *sources, unsigned flags)
 
 int source_clean(struct source *src, unsigned flags)
 {
-    char                        *p, *idxpath;
+    char                        *p, idxpath[PATH_MAX];
     int                         urltype;
 
 
@@ -700,8 +684,8 @@ int source_clean(struct source *src, unsigned flags)
     if ((urltype = vf_url_type(src->path)) == VFURL_UNKNOWN)
         return 1;
 
-    idxpath = pkgdir_idxpath(src->path, src->type, "none");
-    if (idxpath == NULL)
+    if (pkgdir_idxpath(idxpath, sizeof(idxpath), src->path,
+                       src->type, "none") == NULL)
         return 0;
 
     
@@ -726,7 +710,6 @@ int source_clean(struct source *src, unsigned flags)
         pkgdir_cache_clean(idxpath, mask);
     }
     
-    free(idxpath);
     return 1;
 }
 
@@ -799,14 +782,11 @@ int source_make_idx(struct source *src,
     if (idxpath == NULL)
         idxpath = src->path;
     
-    if (is_dir(idxpath)) {
-        const char *fn = pkgdir_type_default_idxfn(type);
-        if (fn) {
-            pkgdir_make_idxpath(path, sizeof(path), type, idxpath,
-                                fn, src->compress);
-            idxpath = path;
-        }
-    }
+    if (is_dir(idxpath))
+        idxpath = pkgdir_idxpath(path, sizeof(path), idxpath, type, 
+                                 src->compress);
+
+    n_assert(idxpath);
     
     printf("mkidx[%s, %s] %s\n", src->type, type, src->path);
     pkgdir = pkgdir_srcopen(src, 0);

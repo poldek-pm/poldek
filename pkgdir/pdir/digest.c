@@ -391,6 +391,7 @@ int pdir_digest_save(struct pdir_digest *pdg, const char *pathname)
     fprintf(vf->vf_stream, "%s%s", pdg->mdd, pdg->mdh);
     vfile_close(vf);
 
+    return 1;                   /* do not create v016 digest */
     if (pdg->md) {
         path[n - 1] = '\0';             /* eat last 'd' */
         if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
@@ -463,7 +464,6 @@ int pdir_digest_create(struct pkgdir *pkgdir, const char *pathname,
         return 0;
 
 	idx = pkgdir->mod_data;
-    printf("idx = %p\n", idx);
 	if (idx == NULL) {
 		idx = &iddx;
 		pdir_init(idx);

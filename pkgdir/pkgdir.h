@@ -10,7 +10,7 @@
 
 int pkgdirmodule_init(void);
 
-extern const char *pkgdir_default_type;
+extern const char *pkgdir_DEFAULT_TYPE;
 
 #define PKGDIR_NAMED              (1 << 0)
 #define PKGDIR_LOADED             (1 << 1)  /* for idx */
@@ -165,9 +165,10 @@ void pkgdir_setup_depdirs(struct pkgdir *pkgdir);
 int  pkgdir_uniq(struct pkgdir *pkgdir);
 char *pkgdir_setup_pkgprefix(const char *path);
 int pkgdir_rmf(const char *dirpath, const char *mask);
-int pkgdir_make_idxpath(char *dpath, int size, const char *type,
-                        const char *path, const char *fn, const char *ext);
-char *pkgdir_idxpath(const char *path, const char *type, const char *compress);
+//int pkgdir_make_idxpath(char *dpath, int size, const char *type,
+//                        const char *path, const char *fn, const char *ext);
+char *pkgdir_idxpath(char *dpath, int dsize,
+                     const char *path, const char *type, const char *compress);
 
 struct pkg;
 
@@ -208,7 +209,8 @@ typedef int (*pkgdir_fn_create)(struct pkgdir *pkgdir,
                                 const char *path, unsigned flags);
 
 typedef int (*pkgdir_fn_update)(struct pkgdir *pkgdir, int *npatches);
-typedef int (*pkgdir_fn_update_a)(const struct source *src);
+typedef int (*pkgdir_fn_update_a)(const struct source *src,
+                                  const char *idxpath);
 
 typedef int (*pkgdir_fn_unlink)(const char *path, int allfiles);
 typedef void (*pkgdir_fn_free)(struct pkgdir *pkgdir);

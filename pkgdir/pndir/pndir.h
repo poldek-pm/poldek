@@ -89,7 +89,7 @@ struct pkg *pndir_parse_pkgkey(char *key, int klen);
 int pndir_m_create(struct pkgdir *pkgdir, const char *pathname,
                    unsigned flags);
 
-int pndir_m_update_a(const struct source *src);
+int pndir_m_update_a(const struct source *src, const char *idxpath);
 int pndir_m_update(struct pkgdir *pkgdir, int *npatches);
 
 #endif /* POLDEK_PKGDIR_H*/

@@ -125,12 +125,13 @@ int update_whole_idx(const struct source *src)
 }
 
 
-int pndir_m_update_a(const struct source *src)
+int pndir_m_update_a(const struct source *src, const char *idxpath)
 {
     struct pndir   *idx;
     struct pkgdir  *pkgdir;
     int            rc = 0;
 
+    idxpath = idxpath;          /* unused */
     pkgdir = pkgdir_srcopen(src, 0);
     
     if (pkgdir == NULL)

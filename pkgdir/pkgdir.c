@@ -133,13 +133,16 @@ char *pkgdir_setup_pkgprefix(const char *path)
     return rpath;
 }
 
+static
 int pkgdir_make_idxpath(char *dpath, int size, const char *type,
                         const char *path, const char *fn, const char *ext)
 {
     int n;
+    char *p;
 
+    p = strrchr(path, '\0') - 1;
 
-    if (path[strlen(path) - 1] != '/')
+    if (*p != '/')
         n = n_snprintf(dpath, size, "%s", path);
         
     else {
@@ -161,20 +164,20 @@ int pkgdir_make_idxpath(char *dpath, int size, const char *type,
     return n;
 }
 
-char *pkgdir_idxpath(const char *path, const char *type, const char *compress)
+char *pkgdir_idxpath(char *dpath, int dsize,
+                     const char *path, const char *type, const char *compress)
 {
-    char tmp[PATH_MAX];
     const char *fn;
     int n;
     
-    if ((fn = pkgdir_type_default_idxfn(type)) == NULL)
-        return n_strdup(path);
+    if ((fn = pkgdir_type_default_idxfn(type)) != NULL) {
+        n = pkgdir_make_idxpath(dpath, dsize, type, path, fn, compress);
+        if (n > 0)
+            return dpath;
+    }
     
-    n = pkgdir_make_idxpath(tmp, sizeof(tmp), type, path, fn, compress);
-    if (n > 0)
-        return n_strdupl(tmp, n);
-    
-    return n_strdup(path);
+    n_snprintf(dpath, dsize, "%s", path);
+    return dpath;
 }
 
 
@@ -242,7 +245,7 @@ const struct pkgdir_module *find_module(const char *type)
 int pkgdir_update_a(const struct source *src)
 {
 	const struct pkgdir_module  *mod;
-
+    char idxpath[PATH_MAX];
     n_assert(src->path);
     
 	if ((mod = find_module(src->type)) == NULL)
@@ -252,8 +255,9 @@ int pkgdir_update_a(const struct source *src)
 		logn(LOGERR, _("%s: this type of source is not updateable"), src->type);
 		return 0;
 	}
-
-    return mod->update_a(src);
+    pkgdir_idxpath(idxpath, sizeof(idxpath), src->path, src->type,
+                   src->compress);
+    return mod->update_a(src, idxpath);
 }
 
 
@@ -342,7 +346,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
                                unsigned flags, const char *lc_lang)
 
 {
-    char                        *idxpath;
+    char                        idxpath[PATH_MAX];
     struct pkgdir               *pkgdir;
     const struct pkgdir_module  *mod;
     int                         rc;
@@ -359,7 +363,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
         pkgdir->flags |= PKGDIR_NAMED;
 
     printf("pkgdir_open_ext[%s] %s, %s, %p\n", type, path, pkg_prefix, pkgdir);
-    idxpath = pkgdir_idxpath(path, type, compress);
+    pkgdir_idxpath(idxpath, sizeof(idxpath), path, type, compress);
     
     if (pkg_prefix) 
         pkgdir->path = n_strdup(pkg_prefix);
@@ -371,7 +375,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
         pkgdir->path = n_strdup(idxpath);
 
     
-    pkgdir->idxpath = idxpath;
+    pkgdir->idxpath = n_strdup(idxpath);
     pkgdir->compress = compress ? n_strdup(compress) : NULL;
     pkgdir->pkgs = pkgs_array_new(2048);
     pkgdir->mod = mod;

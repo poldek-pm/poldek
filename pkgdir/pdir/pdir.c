@@ -66,7 +66,7 @@ static int is_uptodate(const char *path, const struct pdir_digest *pdg_local,
 static int do_open(struct pkgdir *pkgdir, unsigned flags);
 static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 static int do_update(struct pkgdir *pkgdir, int *npatches);
-static int do_update_a(const struct source *src);
+static int do_update_a(const struct source *src, const char *idxpath);
 //static int do_unlink(const char *path, unsigned flags);
 static void do_free(struct pkgdir *pkgdir);
 
@@ -241,15 +241,14 @@ int update_whole_idx(const char *path, const char *pdir_name)
     return rc;
 }
 
-static int do_update_a(const struct source *src)
+static int do_update_a(const struct source *src, const char *idxpath)
 {
     unsigned int   vf_mode = VFM_RO | VFM_CACHE;
     struct pdir    idx;
     int            rc = 0;
 
-    printf("do_update_a %s\n", src->idxpath);
-    if (!pdir_open(&idx, src->idxpath, vf_mode, src->name))
-        return update_whole_idx(src->idxpath, src->name);
+    if (!pdir_open(&idx, idxpath, vf_mode, src->name))
+        return update_whole_idx(idxpath, src->name);
 
     if (idx.vf->vf_flags & VF_FETCHED) {
         rc = pdir_digest_verify(idx.pdg, idx.vf);
@@ -268,7 +267,7 @@ static int do_update_a(const struct source *src)
             
         case -1:
         case 0:
-            rc = update_whole_idx(src->idxpath, src->name);
+            rc = update_whole_idx(idxpath, src->name);
             break;
                 
         default:

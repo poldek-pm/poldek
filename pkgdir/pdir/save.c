@@ -280,7 +280,8 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
         }
     }
     
-    i = pdir_digest_create(pkgdir, path, flags); // & PKGDIR_CREAT_wMD);
+    i = pdir_digest_create(pkgdir, path, 0); // skip .md creation,
+                                             // old, old poldek  
 
 	if (!i)
 		nerr++;
