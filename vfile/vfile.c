@@ -416,10 +416,11 @@ static int read_md(const char *path, char *md, int mdsize)
     return nread;
 }
 
+/* -1 on err */
 static int is_uptodate(const char *mdpath, int urltype) 
 {
     char tmpdir[PATH_MAX];
-    int len, is_uptod = 0;
+    int len, is_uptod = -1;
 
 
     len = snprintf(tmpdir, sizeof(tmpdir), "%s/%d", vfile_conf.cachedir, getpid());
@@ -429,9 +430,10 @@ static int is_uptodate(const char *mdpath, int urltype)
         mkdir(tmpdir, 0755);
 
     if (vfile_fetch(tmpdir, mdpath, urltype)) {
-        char tmpath[PATH_MAX], md1[128], md2[128], md1_size, md2_size; 
-        snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir, n_basenam(mdpath));
+        char tmpath[PATH_MAX], md1[128], md2[128], md1_size, md2_size;
 
+        is_uptod = 0;
+        snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir, n_basenam(mdpath));
         len = snprintf(tmpdir, sizeof(tmpdir), "%s/", vfile_conf.cachedir);
         vfile_url_as_path(&tmpdir[len], sizeof(tmpdir) - len, mdpath);
         
@@ -504,10 +506,12 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
         if (vfmode & VFM_CACHE) {
             int is_uptod = 1;
             
-            if (vfmode & VFM_MDUP)
-                is_uptod = is_uptodate(mdpath, urltype);
+            if (vfmode & VFM_MDUP) {
+                if ((is_uptod = is_uptodate(mdpath, urltype)) < 0)
+                    return 0;
+            }
             
-            if (is_uptod) {
+            if (is_uptod > 0) {
                 vfile_url_as_path(&buf[len], sizeof(buf) - len, path);
                 if (access(buf, R_OK) == 0 && openvf(&vf, buf, vfmode)) {
                     vf.vf_tmpath = strdup(buf);
@@ -520,6 +524,7 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
                 }
             }
         }
+        
         
         if (opened == 0) {
             char *p = NULL, *tmpath = NULL;
