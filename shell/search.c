@@ -68,7 +68,10 @@ static int search(struct cmdarg *cmdarg);
 #define OPT_SEARCH_DEFAULT (OPT_SEARCH_SUMM | OPT_SEARCH_DESC)
 
 /* options which requires packages.dir processing */
-#define OPT_SEARCH_HDD     (OPT_SEARCH_SUMM | OPT_SEARCH_DESC | OPT_SEARCH_FL)  
+#define OPT_SEARCH_HDD     (OPT_SEARCH_SUMM | OPT_SEARCH_DESC | OPT_SEARCH_FL)
+
+
+#define OPT_NO_SEARCHSW    OPT_PATTERN_PCRE
 
 static struct argp_option options[] = {
     { "provides",  'p', 0, 0, N_("Search capabilities"), 1},
@@ -166,7 +169,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_PATTERN_PCRE:
             cmdarg->flags |= OPT_PATTERN_PCRE;
-        
+            break;
+
+            
         case ARGP_KEY_ARG:
             if (arg == NULL)
                 break;
@@ -498,6 +503,7 @@ static int search(struct cmdarg *cmdarg)
     int              i, err = 0, display_bar = 0, bar_v;
     int              term_height;
     struct pattern   *pt;
+    unsigned         flags;
     
     
     if ((pt = cmdarg->d) == NULL) {
@@ -506,9 +512,11 @@ static int search(struct cmdarg *cmdarg)
         goto l_end;
     }
     cmdarg->d = NULL;            /* we'll free pattern myself */
-    
-    if (cmdarg->flags == 0)
-        cmdarg->flags = OPT_SEARCH_DEFAULT;
+
+    flags = cmdarg->flags;
+    flags &= ~OPT_NO_SEARCHSW;
+    if (flags == 0)
+        cmdarg->flags |= OPT_SEARCH_DEFAULT;
     
     init_pcre();
     if (!pattern_compile(pt, n_array_size(cmdarg->pkgnames))) {
