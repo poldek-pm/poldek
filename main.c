@@ -576,7 +576,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 't':
-            argsp->inst.instflags |= PKGINST_TEST;
+            if (argsp->inst.flags & INSTS_TEST)
+                argsp->inst.instflags |= PKGINST_TEST;
+            else
+                argsp->inst.flags |= INSTS_TEST;
             break;
 
         case OPT_INST_MKDBDIR:

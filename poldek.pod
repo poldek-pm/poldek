@@ -226,7 +226,13 @@ Prevent packages listed from being upgraded if they are already installed.
 If option is not given packages to hold is taken from B<hold> configuration 
 option and $HOME/.poldek_hold.
 
-=item B<--nodeps>; B<-t, --test>; B<--justdb>; B<--force>; B<--root>;
+=item B<-t, --test>
+
+Do not install packages, but tell if it would work or not. Given once 
+causes poldek's checks only, to perform full tests using rpm option
+must be given twice.
+
+=item B<--nodeps>; B<--justdb>; B<--force>; B<--root>;
 
 Have the same meanings like RPM ones. See next section.
 

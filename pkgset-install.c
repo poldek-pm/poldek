@@ -1076,7 +1076,7 @@ static int check_holds(struct pkgset *ps, struct upgrade_s *upg)
 static
 int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
 {
-    int ncnfl = 0, ndbcnfl = 0, rc, nerr = 0;
+    int ncnfl = 0, ndbcnfl = 0, rc, nerr = 0, any_err = 0;
     
     msg(1, "Processing dependencies...\n");
 
@@ -1088,10 +1088,12 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
     print_install_summary(upg);
     msg(1, "Verifying conflicts...\n");
     ncnfl = find_conflicts(upg, &ndbcnfl);
+    pkgdb_closedb(upg->inst->db); /* close db as soon as possible */
+
     
     if (ncnfl) {
+        any_err++;
         log(LOGERR, "There are %d conflicts\n", ncnfl);
-        
         if (upg->inst->instflags & (PKGINST_FORCE | PKGINST_TEST)) 
             ncnfl = ndbcnfl = 0;
         else
@@ -1099,6 +1101,7 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
     }
     
     if (upg->ndep_err) {
+        any_err++;
         log(LOGERR, "There are %d unresolved dependencies.\n", upg->ndep_err);
         if (upg->inst->instflags & (PKGINST_NODEPS | PKGINST_TEST))
             upg->ndep_err = 0;
@@ -1106,20 +1109,23 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
             nerr++;
     }
     
+    rc = (any_err == 0);
     if (nerr)
         return 0;
     
-
     if ((upg->inst->flags & (INSTS_JUSTPRINT | INSTS_JUSTFETCH)) == 0)
         if (!valid_arch_os(upg->install_pkgs)) 
             return 0;
-        
+    
+#if 0                           /* temporary commented out */
     if (upg->inst->ask_fn) {
         if (!upg->inst->ask_fn("Proceed?"))
             return 1;
     }
+#endif
     
-    pkgdb_closedb(upg->inst->db);
+    if ((upg->inst->instflags & PKGINST_TEST) == 0 && (upg->inst->flags & INSTS_TEST))
+        return rc;
     
     if (upg->inst->flags & INSTS_JUSTPRINT) {
         rc = dump_pkgs_fqpns(ps, upg);

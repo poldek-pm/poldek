@@ -124,11 +124,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_FORCE:
             cmdarg->sh_s->inst->instflags |= PKGINST_FORCE;
             break;
+
             
         case 't':
-            cmdarg->sh_s->inst->instflags |= PKGINST_TEST;
+            if (cmdarg->sh_s->inst->flags & INSTS_TEST)
+                cmdarg->sh_s->inst->instflags |= PKGINST_TEST;
+            else 
+                cmdarg->sh_s->inst->flags |= INSTS_TEST;
             break;
-
+            
         case 'F':
             cmdarg->sh_s->inst->flags |= INSTS_FRESHEN;
             break;
