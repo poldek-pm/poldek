@@ -22,6 +22,9 @@ ttest_SOURCES  = ttest.c
 ttest_LDADD    = libvfile.a @TRURL_LDFLAG@ -lutil
 EXTRA_DIST      = $(CURL_SRCS) 
 
+OMIT_DEPENDENCIES = narray.h tfn_types.h nassert nbuf.h nhash.h nlist.h nstr.h \
+		    nassert.h trurl.h
+
 dist-hook:
 	rm -rf $(distdir)/.deps
 
