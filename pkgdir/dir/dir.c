@@ -73,14 +73,18 @@ static tn_hash *build_mtime_index(tn_array *pkgs)
         struct pkg *pkg = n_array_nth(pkgs, i);
         char key[2048];
 
-        n_assert(pkg->fmtime);
-        n_assert(pkg->fsize);
         if (pkg->fmtime && pkg->fsize) {
             n_snprintf(key, sizeof(key), "%s-%d-%d", pkg_filename_s(pkg),
                        pkg->fmtime, pkg->fsize);
             n_hash_insert(ht, key, pkg);
         }
     }
+    
+    if (n_hash_size(ht) == 0) {
+        n_hash_free(ht);
+        return NULL;
+    }
+    
     return ht;
 }
 
@@ -121,7 +125,6 @@ void remap_groupid(struct pkg *pkg, struct pkgroup_idx *pkgroups,
         pkg->groupid = gid;
     }
 }
-
 
 
 static
