@@ -38,7 +38,7 @@ libpoldek_a_SOURCES = \
 	  pkgroup.c pkgroup.h		\
 	  rpmdb_it.c rpmdb_it.h
 
-SHELL_MOD = shell/shell.a
+SHELL_MOD = shell/libshell.a
 
 if ENABLE_INTERACTIVE_MODE
 SHELL_MOD_ = $(SHELL_MOD)
