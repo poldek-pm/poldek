@@ -7,7 +7,7 @@ source1 = rh,noautoup,type=hdrl \
 prefix1 = ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/RPMS/
 
 # RedHat 6.2
-source2 = rh6.2,noautoup,type=hdrl \
+source2 = rh6.2,noautoup,noauto,type=hdrl \
     ftp://ftp.redhat.com/pub/redhat/redhat-6.2-en/os/i386/RedHat/base/hdlist
 
 prefix2 = ftp://ftp.redhat.com/pub/redhat/redhat-6.2-en/os/i386/RedHat/RPMS/
