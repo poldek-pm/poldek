@@ -226,6 +226,19 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
 
 #endif /* HAVE_FORKPTY */
 
+static void find_commands(struct pm_rpm *pm)
+{
+    char path[PATH_MAX];
+    
+    if (!pm->rpm)
+        if (vf_find_external_command(path, sizeof(path), "rpm", NULL))
+            pm->rpm = n_strdup(path);
+
+    if (!pm->sudo)
+        if (vf_find_external_command(path, sizeof(path), "sudo", NULL))
+            pm->sudo = n_strdup(path);
+}
+
 int pm_rpm_packages_install(struct pkgdb *db,
                             tn_array *pkgs, tn_array *pkgs_toremove,
                             struct poldek_ts *ts) 
@@ -237,6 +250,12 @@ int pm_rpm_packages_install(struct pkgdb *db,
     int nv = verbose;
 
     pkgs_toremove = pkgs_toremove;
+
+    find_commands(pm);
+    if (!pm->rpm) {
+        logn(LOGWARN, _("%s: command not found"), "rpm");
+        return 0;
+    }
     
     n = 128 + n_array_size(pkgs);
     argv = alloca((n + 1) * sizeof(*argv));
@@ -248,6 +267,11 @@ int pm_rpm_packages_install(struct pkgdb *db,
         argv[n++] = "rpm";
         
     } else if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0) {
+        if (!pm->sudo) {
+            logn(LOGWARN, _("%s: command not found"), "sudo");
+            return 0;
+        }
+
         cmd = pm->sudo;
         argv[n++] = "sudo";
         argv[n++] = pm->rpm;
@@ -418,9 +442,14 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
     char **argv;
     char *cmd;
     int i, n, nopts = 0;
+
+    find_commands(pm);
+    if (!pm->rpm) {
+        logn(LOGWARN, _("%s: command not found"), "rpm");
+        return 0;
+    }
     
     n = 128 + n_array_size(pkgs);
-    
     argv = alloca((n + 1) * sizeof(*argv));
     argv[n] = NULL;
     
@@ -431,6 +460,10 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
         argv[n++] = "rpm";
         
     } else if (ts->getop(ts, POLDEK_OP_USESUDO)) {
+        if (!pm->sudo) {
+            logn(LOGWARN, _("%s: command not found"), "sudo");
+            return 0;
+        }
         cmd = pm->sudo;
         argv[n++] = "sudo";
         argv[n++] = pm->rpm;

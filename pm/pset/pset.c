@@ -31,8 +31,7 @@
 #include <trurl/n_snprintf.h>
 
 
-#include <vfile/vfile.h>
-
+#include "vfile/vfile.h"
 #include "sigint/sigint.h"
 #include "i18n.h"
 
@@ -60,7 +59,7 @@ void *pm_pset_init(void)
 
     pm = n_malloc(sizeof(*pm));
 
-    if (poldek_lookup_external_command(path, sizeof(path), "pset-pm.sh"))
+    if (vf_find_external_command(path, sizeof(path), "pset-pm.sh", NULL))
         pm->installer_path = n_strdup(path);
     else
         pm->installer_path = NULL;

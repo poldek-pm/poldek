@@ -39,8 +39,7 @@
 #include <trurl/n_snprintf.h>
 
 
-#include <vfile/vfile.h>
-
+#include "vfile/vfile.h"
 #include "sigint/sigint.h"
 #include "i18n.h"
 
@@ -67,13 +66,7 @@ void pm_rpm_destroy(void *pm_rpm)
 void *pm_rpm_init(void) 
 {
     struct pm_rpm *pm_rpm;
-    char path[PATH_MAX];
 
-    if (!poldek_lookup_external_command(path, sizeof(path), "rpm")) {
-        logn(LOGERR, _("%s: command not found"), "rpm");
-        return NULL;
-    }
-    
     if (initialized == 0) {
         if (rpmReadConfigFiles(NULL, NULL) != 0) {
             logn(LOGERR, "failed to read rpmlib configs");
@@ -83,11 +76,8 @@ void *pm_rpm_init(void)
     }
     
     pm_rpm = n_malloc(sizeof(*pm_rpm));
-    pm_rpm->rpm = n_strdup(path);
-    if (poldek_lookup_external_command(path, sizeof(path), "sudo"))
-        pm_rpm->sudo = n_strdup(path);
-    else
-        pm_rpm->sudo = NULL;
+    pm_rpm->rpm = NULL;
+    pm_rpm->sudo = NULL;
     return pm_rpm;
 }
 
