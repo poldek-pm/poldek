@@ -84,7 +84,7 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
     FILE                    *stream;
     int                     rc = 0, vf_errno = 0;
     int                     end = 1, ntry = 0;
-    void                    *sigint_fn = NULL;
+    void                    *vf_sigint_fn = NULL;
     
     if ((stream = fopen(dest, "a+")) == NULL) {
         vfile_err_fn("%s: fopen %s: %m\n", vf_mod_vftp.vfmod_name, dest);
@@ -103,12 +103,12 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
     if (flags & VFMOD_INFINITE_RETR)
         end = 1000;
     
-    sigint_fn = sigint_establish();
+    vf_sigint_fn = vf_sigint_establish();
     
     while (end-- > 0) {
         struct vf_progress_bar  bar;
 
-        if (sigint_reached()) {
+        if (vf_sigint_reached()) {
             vf_errno = EINTR;
             break;
         }
@@ -150,7 +150,7 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
  l_endloop:
     
     fclose(stream);
-    sigint_restore(sigint_fn);
+    vf_sigint_restore(vf_sigint_fn);
     errno = vf_errno;
     return rc;
 }

@@ -196,9 +196,9 @@ struct vf_module {
 int vf_uncompr_able(const char *path);
 int vf_uncompr_do(const char *path, const char *destpath);
 
-void *sigint_establish(void);
-void sigint_restore(void *sigint_fn);
-int sigint_reached(void);
+void *vf_sigint_establish(void);
+void vf_sigint_restore(void *vf_sigint_fn);
+int vf_sigint_reached(void);
 
 #endif /* VFILE_INTERNAL */
 

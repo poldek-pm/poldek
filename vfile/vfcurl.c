@@ -159,30 +159,30 @@ void vfile_curl_destroy(void)
 }
 
 
-static void sigint_handler(int sig) 
+static void vf_sigint_handler(int sig) 
 {
     interrupted = 1;
-    signal(sig, sigint_handler);
+    signal(sig, vf_sigint_handler);
 }
 
 static void *establish_sigint(void)
 {
-    void *sigint_fn;
+    void *vf_sigint_fn;
 
     interrupted = 0;
-    sigint_fn = signal(SIGINT, SIG_IGN);
+    vf_sigint_fn = signal(SIGINT, SIG_IGN);
 
-    if (sigint_fn == NULL)      /* disable transfer interrupt */
+    if (vf_sigint_fn == NULL)      /* disable transfer interrupt */
         signal(SIGINT, SIG_DFL);
     else 
-        signal(SIGINT, sigint_handler);
+        signal(SIGINT, vf_sigint_handler);
     
-    return sigint_fn;
+    return vf_sigint_fn;
 }
 
-static void restore_sigint(void *sigint_fn)
+static void restore_sigint(void *vf_sigint_fn)
 {
-    signal(SIGINT, sigint_fn);
+    signal(SIGINT, vf_sigint_fn);
 }
 
 
@@ -268,12 +268,12 @@ int vfile_curl_fetch(const char *dest, const char *url, unsigned flags)
     int curl_rc = CURLE_OK,
         vf_errno = 0;
     int end = 1, ntry = 0;
-    void  *sigint_fn;
+    void  *vf_sigint_fn;
     
     if (flags & VFMOD_INFINITE_RETR)
         end = 1000;
     
-    sigint_fn = establish_sigint();
+    vf_sigint_fn = establish_sigint();
     while (end-- > 0) {
         vf_errno = 0;
         curl_rc = do_vfile_curl_fetch(dest, url);
@@ -312,7 +312,7 @@ int vfile_curl_fetch(const char *dest, const char *url, unsigned flags)
             vfile_msg_fn(_("Retrying...(#%d)\n"), ntry++);
     }
     
-    restore_sigint(sigint_fn);
+    restore_sigint(vf_sigint_fn);
  l_endloop:
     
     if (vf_errno)

@@ -726,31 +726,31 @@ int httpcn_get_resp(struct httpcn *cn)
     return rc;
 }
 
-static void sigint_handler(int sig) 
+static void vf_sigint_handler(int sig) 
 {
     interrupted = 1;
-    signal(sig, sigint_handler);
+    signal(sig, vf_sigint_handler);
 }
 
 static void *establish_sigint(void)
 {
-    void *sigint_fn;
+    void *vf_sigint_fn;
 
     interrupted = 0;
-    sigint_fn = signal(SIGINT, SIG_IGN);
+    vf_sigint_fn = signal(SIGINT, SIG_IGN);
 
-    //printf("sigint_fn %p, %d\n", sigint_fn, *vhttp_verbose);
-    if (sigint_fn == NULL)      /* disable transfer interrupt */
+    //printf("vf_sigint_fn %p, %d\n", vf_sigint_fn, *vhttp_verbose);
+    if (vf_sigint_fn == NULL)      /* disable transfer interrupt */
         signal(SIGINT, SIG_DFL);
     else 
-        signal(SIGINT, sigint_handler);
+        signal(SIGINT, vf_sigint_handler);
     
-    return sigint_fn;
+    return vf_sigint_fn;
 }
 
-static void restore_sigint(void *sigint_fn)
+static void restore_sigint(void *vf_sigint_fn)
 {
-    signal(SIGINT, sigint_fn);
+    signal(SIGINT, vf_sigint_fn);
 }
 
 static void sigalarmfunc(int unused)
@@ -1048,7 +1048,7 @@ int httpcn_retr(struct httpcn *cn,
 {
     int   close_cn = 0, rc = 1;
     long  from = 0, to = 0, total = 0, amount = 0;
-    void  *sigint_fn;
+    void  *vf_sigint_fn;
     char  req_line[PATH_MAX];
     const char *trenc;
     
@@ -1057,7 +1057,7 @@ int httpcn_retr(struct httpcn *cn,
     //http_progress_fn = progress;
 
     
-    sigint_fn = establish_sigint();
+    vf_sigint_fn = establish_sigint();
     if (redirect_to)
         *redirect_to = '\0';
     
@@ -1172,7 +1172,7 @@ int httpcn_retr(struct httpcn *cn,
 
     
  l_end:
-    restore_sigint(sigint_fn);
+    restore_sigint(vf_sigint_fn);
     if (close_cn)
         httpcn_close(cn);
     

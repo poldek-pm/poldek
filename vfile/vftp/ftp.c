@@ -455,31 +455,31 @@ int ftpcn_resp_ext(struct ftpcn *cn, int readln)
 #define ftpcn_resp_readln(cn)    ftpcn_resp_ext(cn, 1)
 
 
-static void sigint_handler(int sig) 
+static void vf_sigint_handler(int sig) 
 {
     interrupted = 1;
-    signal(sig, sigint_handler);
+    signal(sig, vf_sigint_handler);
 }
 
 static void *establish_sigint(void)
 {
-    void *sigint_fn;
+    void *vf_sigint_fn;
 
     interrupted = 0;
-    sigint_fn = signal(SIGINT, SIG_IGN);
+    vf_sigint_fn = signal(SIGINT, SIG_IGN);
 
-    //printf("sigint_fn %p, %d\n", sigint_fn, *vftp_verbose);
-    if (sigint_fn == NULL)      /* disable transfer interrupt */
+    //printf("vf_sigint_fn %p, %d\n", vf_sigint_fn, *vftp_verbose);
+    if (vf_sigint_fn == NULL)      /* disable transfer interrupt */
         signal(SIGINT, SIG_DFL);
     else 
-        signal(SIGINT, sigint_handler);
+        signal(SIGINT, vf_sigint_handler);
     
-    return sigint_fn;
+    return vf_sigint_fn;
 }
 
-static void restore_sigint(void *sigint_fn)
+static void restore_sigint(void *vf_sigint_fn)
 {
-    signal(SIGINT, sigint_fn);
+    signal(SIGINT, vf_sigint_fn);
 }
 
 static void sigalarmfunc(int unused)
@@ -935,11 +935,11 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
 {
     int   sockfd = -1;
     long  total_size;
-    void  *sigint_fn;
+    void  *vf_sigint_fn;
 
     vftp_errno = 0;
     
-    sigint_fn = establish_sigint();
+    vf_sigint_fn = establish_sigint();
     
     if ((lseek(out_fd, out_fdoff, SEEK_SET)) == (off_t)-1) {
         vftp_set_err(errno, "%s: lseek %ld: %m", path, out_fdoff);
@@ -993,11 +993,11 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
     if (!ftpcn_resp(cn) || cn->last_respcode != 226)
         goto l_err;
 
-    restore_sigint(sigint_fn);
+    restore_sigint(vf_sigint_fn);
     return 1;
     
  l_err:
-    restore_sigint(sigint_fn);
+    restore_sigint(vf_sigint_fn);
     if (vftp_errno == 0)
         vftp_errno = EIO;
     

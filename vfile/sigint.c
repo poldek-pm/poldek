@@ -23,34 +23,34 @@
 static volatile sig_atomic_t interrupted = 0;
 
 
-static void sigint_handler(int sig) 
+static void vf_sigint_handler(int sig) 
 {
     interrupted = 1;
-    signal(sig, sigint_handler);
+    signal(sig, vf_sigint_handler);
 }
 
 
-void *sigint_establish(void)
+void *vf_sigint_establish(void)
 {
-    void *sigint_fn;
+    void *vf_sigint_fn;
 
     interrupted = 0;
-    sigint_fn = signal(SIGINT, SIG_IGN);
+    vf_sigint_fn = signal(SIGINT, SIG_IGN);
 
-    if (sigint_fn == NULL)
+    if (vf_sigint_fn == NULL)
         signal(SIGINT, SIG_DFL);
     else 
-        signal(SIGINT, sigint_handler);
+        signal(SIGINT, vf_sigint_handler);
     
-    return sigint_fn;
+    return vf_sigint_fn;
 }
 
-void sigint_restore(void *sigint_fn)
+void vf_sigint_restore(void *vf_sigint_fn)
 {
-    signal(SIGINT, sigint_fn);
+    signal(SIGINT, vf_sigint_fn);
 }
 
-int sigint_reached(void)
+int vf_sigint_reached(void)
 {
     return interrupted;
 }
