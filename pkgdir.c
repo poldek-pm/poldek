@@ -993,13 +993,19 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                     
                 pkgt.cnfls = capreq_arr_restore(vf->vf_stream,
                                                 flag_skip_bastards);
-
+                
                 if (pkgt.cnfls == NULL) {
                     logn(LOGERR, errmg_ldtag, pkgdir->path, offs, *line);
                     nerr++;
                     goto l_end;
+                    
+                } else if (n_array_size(pkgt.cnfls) == 0) {
+                    n_array_free(pkgt.cnfls);
+                    pkgt.cnfls = NULL;
                 }
-                pkgt.flags |= PKGT_HAS_CNFL;
+                
+                if (pkgt.cnfls)
+                    pkgt.flags |= PKGT_HAS_CNFL;
                 break;
 
             case 'L':
