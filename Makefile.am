@@ -6,7 +6,8 @@ ACLOCAL_AMFLAGS = -I m4
 TRURL_DIR = @TRURL_DIR@
 TNDB_DIR = @TNDB_DIR@
 
-SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile shell conf pkgdir rpm .
+CLI=
+SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile shell conf pkgdir rpm . $(CLI)
 DIST_SUBDIRS = $(SUBDIRS)
 
 INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@
@@ -98,8 +99,8 @@ test_match_LDADD    = $(poldek_LDADD)
 vfscripts           = vfjuggle vfuncompr vfsmb
 
 EXTRA_DIST = \
-		 $(vfscripts) \
-	     Makefile.extra poldekrc \
+	     $(vfscripts) \
+	     Makefile.extra \
 	     poldek.spec poldek-suse.spec \
 	     package-set.sample pkgsplit.conf.sample vfjugglerc.sample \
 	     m4/codeset.m4 m4/gettext.m4 m4/glibc21.m4 m4/iconv.m4 \

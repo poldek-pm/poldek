@@ -384,10 +384,5 @@ AC_CONFIG_FILES([
 		Makefile
 		poldek.spec
 		poldek-suse.spec
-		conf/poldekrc.sample:conf/sample.src:poldekrc
-		conf/poldekrc.sample-cdrom:conf/sample-cdrom.src:poldekrc
-		conf/poldekrc.sample-mdk:conf/mdk.src:poldekrc
-		conf/poldekrc.sample-rh:conf/rh.src:poldekrc
-		conf/poldekrc.sample-pld:conf/pld.src:poldekrc
 	])
 AC_OUTPUT

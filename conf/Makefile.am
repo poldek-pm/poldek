@@ -1,4 +1,4 @@
 # $Id$
 
-EXTRA_DIST = poldekrc.sample poldekrc.sample-cdrom poldekrc.sample-rh \
-	     poldekrc.sample-mdk poldekrc.sample-pld
+EXTRA_DIST = fetch.conf pld-source.conf  rh-source.conf  sample-source.conf \
+             mdk-source.conf  poldek.conf  sample-cdrom-source.conf
