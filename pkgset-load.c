@@ -372,9 +372,13 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
                 else
                     break;
                 
-            case PKGSRCT_DIR:
-                msg(1, _("Loading %s..."), vf_url_slim_s(src->path, 0));
-                pkgdir = pkgdir_load_dir(src->name, src->path);
+            case PKGSRCT_DIR: {
+                const char *path = src->path;
+                if (src->pkg_prefix)
+                    path = src->pkg_prefix;
+                msg(1, _("Loading %s..."), vf_url_slim_s(path, 0));
+                pkgdir = pkgdir_load_dir(src->name, path);
+            }
                 break;
 
             case PKGSRCT_HDL:
