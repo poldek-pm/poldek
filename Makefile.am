@@ -104,10 +104,10 @@ poldek.1: poldek.pod
 poldek.html: poldek.pod
 	$(POD2HTML) $< > $@
 
-homepage.html: homepage.sgml
+%.html:	%.sgml
 	sgml2html -s 0 $<
 
-website: homepage.html poldek.html
+website: homepage.html screenshoots.html poldek.html
 
 website-whole-up: website dist website-up
 	rpm -ts poldek-@VERSION@.tar.gz
@@ -127,6 +127,7 @@ vfjuggle:
 
 dist-hook: 
 	-rm -rf $(distdir)/.deps
+	$(MAKE) -C $(distdir)/trurlib distclean
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa*
