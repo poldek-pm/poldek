@@ -285,7 +285,7 @@ int http_resp_conn_status(struct http_resp *resp)
     if ((s = n_hash_get(resp->hdr, "connection")) == NULL)
         return -1;
 
-    if (strcmp(s, "keep-alive") == 0)
+    if (strcasecmp(s, "keep-alive") == 0)
         return 1;
 
     return 0;
@@ -618,12 +618,7 @@ static int http_resp_parse(struct http_resp *resp)
         }
         
         val = q = p;
-        while (*q) {
-            *q = tolower(*q);
-            q++;
-        }
         
-        //printf("add %s -> %s\n", nam, val);
         if (!n_hash_exists(resp->hdr, nam))
             n_hash_insert(resp->hdr, nam, n_strdup(val));
         tl++;
@@ -1086,7 +1081,7 @@ int httpcn_retr(struct httpcn *cn,
     /* poor HTTP client doesn't supports Trasfer-Encodings */
     if ((trenc = http_resp_get_hdr(cn->resp, "transfer-encoding"))) {
         if (*vhttp_verbose > 1)
-            vhttp_msg_fn("Closing connection cause unimplemented HTTP "
+            vhttp_msg_fn("Closing connection cause to unimplemented HTTP "
                          "transfer encodins\n");
         close_cn = 1;
     }
