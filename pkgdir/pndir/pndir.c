@@ -463,7 +463,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             int i, loadC = 0, loadi18n = 0;
             for (i=0; i < n_array_size(pkgdir->langs); i++) {
                 const char *lang = n_array_nth(pkgdir->langs, i);
-                DBGF_F("lang %s\n", lang);
+                DBGF("lang %s\n", lang);
                 if (strcmp(lang, "C") == 0)
                     loadC = 1;
                 else
