@@ -10,7 +10,6 @@ URL:		http://team.pld.org.pl/~mis/poldek/
 Requires:	/bin/rpm
 BuildRequires:	bzip
 BuildRequires:	db-devel >= 3.1.14
-BuildRequires:	curl-devel >= 7.8
 BuildRequires:	rpm-devel >= 4.0
 BuildRequires:	popt
 BuildRequires:	openssl-devel

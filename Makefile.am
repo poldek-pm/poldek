@@ -68,7 +68,8 @@ LDADD_              = @INTLLIBS@
 bin_PROGRAMS        = poldek rpmvercmp
 bin_SCRIPTS         = mkpackagedir vfjuggle
 poldek_SOURCES      = main.c
-poldek_LDADD        = libpoldek.a vfile/libvfile.a vfile/vftp/libvftp.a \
+poldek_LDADD        = libpoldek.a vfile/libvfile.a \
+		      vfile/vftp/libvftp.a vfile/vhttp/libvhttp.a \
 	              $(SHELL_MOD_) $(LDADD_)
 poldek_DEPENDENCIES = libpoldek.a vfile/libvfile.a $(SHELL_MOD_)
 

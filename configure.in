@@ -59,8 +59,8 @@ else
 fi
 
 AC_ARG_WITH(curl,
-[  --without-curl	compile without libcurl],
-ENABLE_VFILE_CURL=$enableval, ENABLE_VFILE_CURL=yes)
+[  --with-curl	compile with libcurl],
+ENABLE_VFILE_CURL=$enableval, ENABLE_VFILE_CURL=no)
 if test "${ENABLE_VFILE_CURL}." != "yes."; then
 	AM_CONDITIONAL(ENABLE_VFILE_CURL, false)
 else
@@ -308,6 +308,7 @@ AC_OUTPUT([
 		shell/Makefile
 	        vfile/Makefile
 		vfile/vftp/Makefile
+		vfile/vhttp/Makefile
 		Makefile
 		poldek.spec
 		poldek-suse.spec

@@ -41,9 +41,8 @@ file (I<packages.dir.gz> by default) and performs one of the following actions:
 =back
 
 Remote files can be retrieved from remote servers by poldek
-itself (by internal FTP client or compiled in cURL) or by external 
-downloaders (not configured by default, see L</CONFIG FILE> for
-details). 
+itself or by external downloaders (not configured by default, 
+see L</CONFIG FILE> for details). 
 
 =head2 Interactive Mode
 

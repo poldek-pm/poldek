@@ -1,4 +1,8 @@
 0.17.3 (not released yet)
+
+* added simple HTTP client which it is used for HTTP downloads by default;
+  cURL backend is not compiled by default.
+
 * support for GPG/PGP signatures verification (new "gpg" and "pgp" 
   source options)
 
@@ -10,11 +14,11 @@
 
 * new "noautoup" source option
 
-* shell: added long listig format of file list
+* shell: added long listig format of file list ($ desc -ll)
 
 * misc fixes to compile on SuSE
 
-* support for rpm 3.x is back (with help of Roger Luethi <rl@hellgate.ch>)
+* fixed support for rpm 3.x (with help of Roger Luethi <rl@hellgate.ch>)
 
 
 0.17.2

@@ -50,9 +50,11 @@ extern struct vf_module vf_mod_curl;
 #endif
 
 extern struct vf_module vf_mod_vftp;
+extern struct vf_module vf_mod_vhttp;
 
 struct vf_module *vfmod_tab[] = {
     &vf_mod_vftp,
+    &vf_mod_vhttp,
 #ifdef ENABLE_VFILE_CURL    
     &vf_mod_curl,
 #endif

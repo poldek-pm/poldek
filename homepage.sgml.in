@@ -239,7 +239,7 @@ For example:
     
     <sect> Build
     <p>
-    Program depends on following packages/libraries: curl, glibc, ncurses, 
+    Program depends on following packages/libraries: glibc, ncurses, 
     openssl, pcre, readline, rpm and zlib <p>
     
     <sect> Author

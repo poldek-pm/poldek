@@ -35,10 +35,14 @@ backup:
 arch : mclean backup 
 
 POTFILES_in:
-	-find . -type f -name \*.c | egrep -v '(Cellar/|intl/)'  | sed 's|^\./||' | sort > po/POTFILES.in
+	-rm -r poldek-cvs*
+	-find . -type f -name \*.c | egrep -v '(Cellar/|intl/|trurlib/)'  | sed 's|^\./||' | sort > po/POTFILES.in
 
 misarch: mclean
 	$(MAKE) -C . backup cparch=1 backupdir=/z
+
+#perl -pi -e "s/VERSION_STATUS=\"devel\"/VERSION_STATUS=\"devel $$dts\"/g" \
+#$(distdir)/configure* && \
 
 snap: dist
 	@dts=`date +%Y%m%d` && rm -rf $(PACKAGE)-cvs$$dts* && \
