@@ -512,28 +512,54 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype)
 
 
 static 
-int url_to_path(char *buf, size_t size, const char *url, int isdir) 
+int url_to_path(char *buf, int size, const char *url, int isdir) 
 {
-    char *sl, *p = buf;
-    size_t len = strlen(url) + 1;
+    char *sl, *p, c, *bufp;
+    int n;
 
-    n_assert(len <= size);
+    *buf = '\0';
+    n = 0;
     
-    memcpy(buf, url, len > size - 1 ? size - 1 : len); /* with '\"0' */
-    buf[size - 1] = '\0';
+    if ((p = strstr(url, "://")) == NULL) {
+        n = 0;
+        p = (char*)url;
+        
+    } else {
+        int nn = p - url;
+        
+        if (size <= nn)
+            return 0;
+        
+        strncpy(buf, url, nn)[nn] = '\0';
+        n = strlen(buf);
+        n += snprintf(&buf[n], size - n, "_");
+        p += 3;
+    } 
+
+    bufp = &buf[n];
+    n += snprintf(&buf[n], size - n, p);
 
     if (isdir)
         sl = strchr(buf, '\0');
     else
         sl = strrchr(buf, '/');
-    
+
+    p = bufp;
+    c = '\0';
     while (*p && p != sl) {
-        if (!isalnum(*p))
-            *p = '_';
+        if (c == '/' && *p == '/') {
+            p++;
+            continue;
+        }
+        
+        c = *p;
+
+        if (!isalnum(*p) && strchr("-+", *p) == NULL)
+            *p = '.';
         p++;
     }
     
-    return len > size ? size - 1 : len - 1;
+    return n;
 }
 
 
@@ -606,7 +632,7 @@ int vfile_valid_path(const char *path)
                 ndots = 0;
                 
                 if (!isalnum(*p) && strchr("-+/._@", *p) == NULL) {
-                    vfile_err_fn("%s: %c non alphanumeric characters not allowed\n",
+                    vfile_err_fn("%s:%c non alphanumeric characters not allowed\n",
                                  path, *p);
                     return 0;
                 }
