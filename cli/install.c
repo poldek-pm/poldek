@@ -52,16 +52,17 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_INST_NOHOLD           (OPT_GID + 25)
 #define OPT_INST_IGNORE           (OPT_GID + 26)
 #define OPT_INST_NOIGNORE         (OPT_GID + 27)
-#define OPT_INST_GREEDY           'G'
+#define OPT_INST_OLDGREEDY        'G'
+#define OPT_INST_GREEDY           (OPT_GID + 28)
 #define OPT_INST_UNIQNAMES        'Q'
-#define OPT_INST_UNIQNAMES_ALIAS  (OPT_GID + 28)
+#define OPT_INST_UNIQNAMES_ALIAS  (OPT_GID + 30)
 #define OPT_INST_ROOTDIR          'r' 
-#define OPT_MERCY                  (OPT_GID + 29)
-#define OPT_PROMOTEEPOCH           (OPT_GID + 30)
-#define OPT_PMONLY_NODEPS         (OPT_GID + 31)
-#define OPT_PMONLY_FORCE          (OPT_GID + 32)
-#define OPT_PM                    (OPT_GID + 33)
-#define OPT_INST_NOFETCH          (OPT_GID + 34)
+#define OPT_MERCY                  (OPT_GID + 31)
+#define OPT_PROMOTEEPOCH           (OPT_GID + 32)
+#define OPT_PMONLY_NODEPS         (OPT_GID + 33)
+#define OPT_PMONLY_FORCE          (OPT_GID + 34)
+#define OPT_PM                    (OPT_GID + 35)
+#define OPT_INST_NOFETCH          (OPT_GID + 36)
 
 static struct argp_option options[] = {
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
@@ -78,9 +79,15 @@ static struct argp_option options[] = {
 {"follow", OPT_INST_FOLLOW, "[on|off]", OPTION_ARG_OPTIONAL,
      N_("Install packages required by selected ones"), OPT_GID },
     
-{"greedy", 'G', "[on|off]", OPTION_ARG_OPTIONAL,
-      N_("Automatically upgrade packages which dependencies "
-         "are broken by unistalled ones"), OPT_GID }, 
+{"greedy", OPT_INST_GREEDY, "[on|off]", OPTION_ARG_OPTIONAL,
+        N_("Automatically upgrade packages which dependencies "
+           "are broken by unistalled ones"), OPT_GID },
+
+/* legacy, -G w/o parameter */                                           
+{"oldgreedy", OPT_INST_OLDGREEDY, NULL, OPTION_HIDDEN, 
+        N_("Automatically upgrade packages which dependencies "
+           "are broken by unistalled ones"), OPT_GID },
+                                           
 {"fetch", OPT_INST_FETCH, "DIR", OPTION_ARG_OPTIONAL,
      N_("Do not install, only download packages"), OPT_GID },
 
@@ -374,7 +381,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             }
             break;
 
-        case 'G':
+        case OPT_INST_OLDGREEDY:
+            ts->setop(ts, POLDEK_OP_GREEDY, 1);
+            break;
+
+        case OPT_INST_GREEDY:
             if (!arg) {
                 ts->setop(ts, POLDEK_OP_GREEDY, 1);
                 
