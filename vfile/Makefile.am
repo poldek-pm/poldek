@@ -27,19 +27,22 @@ pkginclude_HEADERS = vfile.h p_open.h
 
 sigint_la = $(top_srcdir)/sigint/libsigint.la
 
-noinst_PROGRAMS = vfget test_vopen3
+noinst_PROGRAMS = vfget test_vopen3 test_vfile
 #sample_SOURCES  = sample.c
 #sample_LDADD    = libvfile.la @TRURL_LDFLAG@ $(LDADD_) $(sigint_la)
 
-vfget_SOURCES  = vfget.c 
-vfget_LDADD    = libvfile.la $(sigint_la) -lutil
+TEST_LDADDS    = libvfile.la $(sigint_la) -lutil
 
+vfget_SOURCES  = vfget.c 
+vfget_LDADD    = $(TEST_LDADDS)
 
 test_vopen3_SOURCES  = test_vopen3.c 
-test_vopen3_LDADD    = libvfile.la $(sigint_la) -lutil
+test_vopen3_LDADD    = $(TEST_LDADDS)
+test_vfile_SOURCES   = test_vfile.c 
+test_vfile_LDADD     = $(TEST_LDADDS)
 
 EXTRA_DIST     = $(VFCURL_SRCS) \
-		 testcookie.c test_progress.c
+		 testcookie.c test_progress.c test_vfile.c
 
 
 

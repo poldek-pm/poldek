@@ -24,6 +24,8 @@
 #include <zlib.h>
 #include <trurl/narray.h>
 
+#undef ENABLE_VFILE_TRURLIO
+#define ENABLE_VFILE_TRURLIO    /* is ON, cond compilation NFY  */
 #ifdef ENABLE_VFILE_TRURLIO
 # include <trurl/nstream.h>
 #endif
