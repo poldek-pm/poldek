@@ -54,9 +54,6 @@ void vfile_configure(const char *cachedir, int flags);
 #define VFM_CACHE_ONLY (1 << 6)  /* for remote files, use cached file
                                     if it not exists return NULL */
 
-#define VFM_NORMCACHE  (1 << 7)  /* for remote files, use cached file
-                                    if it exists */
-
 #define VFM_STBRN      (1 << 10)  /* infinite retrying to open file  */
 
 
@@ -193,7 +190,7 @@ struct vf_module {
 #define CL_URL(url) vf_url_hidepasswd_s(url)
 #define PR_URL(url) vf_url_slim_s(url, 60)
 
-#endif /* VFILE_INTERNAL */
+
 
 
 int vf_uncompr_able(const char *path);
@@ -202,6 +199,8 @@ int vf_uncompr_do(const char *path, const char *destpath);
 void *sigint_establish(void);
 void sigint_restore(void *sigint_fn);
 int sigint_reached(void);
+
+#endif /* VFILE_INTERNAL */
 
 #endif /* POLDEK_VFILE_H */
 

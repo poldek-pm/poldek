@@ -449,7 +449,7 @@ int update_whole_idx(const char *path)
                  _("assuming index is not fully downloaded, retrying..."));
             
         } else {
-            vf_flags |= VFM_NORMCACHE;
+            /* vf_flags |= VFM_NORMCACHE; TO INVASIGATE */
             try = 0;
         }
         
