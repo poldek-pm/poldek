@@ -147,8 +147,9 @@ void vfile_set_errno(const char *ctxname, int vf_errno);
 struct vf_module {
     char       vfmod_name[32];
     unsigned   vf_protocols;
-    int (*init)(void);
-    int (*fetch)(const char *dest, const char *url);
+    int  (*init)(void);
+    void (*destroy)(void);
+    int  (*fetch)(const char *dest, const char *url);
 
     int        _pri;            /* used by vfile only */
 };

@@ -35,6 +35,8 @@
 # define IPPORT_FTP 21
 #endif
 
+#define TIMEOUT     300         /* 5 min. */
+
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
 
@@ -229,8 +231,7 @@ int response_complete(struct ftp_response *resp)
             return 1;
             
         case ST_RESP_BAD:
-            snprintf(errmsg, sizeof(errmsg),
-                     _("%s: response parse error"),
+            snprintf(errmsg, sizeof(errmsg),_("%s: response parse error"),
                      (char*)n_buf_ptr(resp->buf));
             return -1;
             
@@ -248,7 +249,7 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
     char buf[4096];
     
     errno = 0;
-    ttl = 180;
+    ttl = TIMEOUT;
     
     while (1) {
         struct timeval to = { 1, 0 };
@@ -291,6 +292,7 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
                 continue;
             
             else if (n <= 0) {
+                errno = ECONNRESET;
                 is_err = 1;
                 break;
                 
@@ -333,6 +335,10 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
                 snprintf(errmsg, sizeof(errmsg), "%s", 
                          _("timeout reached while waiting for server response"));
                 break;
+
+            case ECONNRESET:
+                snprintf(errmsg, sizeof(errmsg), "%m");
+                break;
                 
             default:
                 snprintf(errmsg, sizeof(errmsg), "%s", _("unexpected EOF"));
@@ -344,8 +350,6 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
 }
 
     
-
-
 static int do_ftp_resp(int sock, int *resp_code, char **resp_msg, int readln)
 {
     struct ftp_response resp;
@@ -448,10 +452,11 @@ static void install_alarm(int sec)
 };
 
 
-void uninstall_alarm(void)
+static void uninstall_alarm(void)
 {
     alarm(0);
 };
+
 
 static int to_connect(const char *host, const char *service)
 {
@@ -475,7 +480,7 @@ static int to_connect(const char *host, const char *service)
         sockfd = socket(resp->ai_family, resp->ai_socktype, resp->ai_protocol);
         if (sockfd < 0)
             continue;
-        install_alarm(180);
+        install_alarm(TIMEOUT);
         if (connect(sockfd, resp->ai_addr, resp->ai_addrlen) == 0)
             break; 
         uninstall_alarm();
@@ -744,7 +749,7 @@ int rcvfile(int out_fd,  off_t out_fdoff, int in_fd, long total_size,
 	FD_ZERO(&fdset);
 	FD_SET(in_fd, &fdset);
 
-	tv.tv_sec = 300;
+	tv.tv_sec = TIMEOUT;
 	tv.tv_usec = 0;
         
         rc = select(in_fd + 1, &fdset, NULL, NULL, &tv);
@@ -793,9 +798,14 @@ int rcvfile(int out_fd,  off_t out_fdoff, int in_fd, long total_size,
         
     }
     
-    if (is_err)
+    if (is_err) {
         if (errno == 0 && errno != EINTR)
             errno = EIO;
+    }
+
+    if (ftp_progress_fn)
+        ftp_progress_fn(total_size, -1, progess_data);
+    
     return is_err == 0;
 }
 
@@ -818,7 +828,7 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
     interrupted = 0;
     sigint_fn = signal(SIGINT, sigint_handler);
     
-    if ((lseek(out_fd, out_fdoff, SEEK_SET)) != 0) {
+    if ((lseek(out_fd, out_fdoff, SEEK_SET)) == (off_t)-1) {
         snprintf(errmsg, sizeof(errmsg), "%s: lseek %ld: %m", path, out_fdoff);
         goto l_err;
     }
@@ -865,8 +875,10 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
     
     
     if (!rcvfile(out_fd, out_fdoff, sockfd, total_size, progess_data)) {
-        if (errno)
+        if (errno) {
             snprintf(errmsg, sizeof(errmsg), "download %s: %m", path);
+            l_errno = errno;
+        }
         goto l_err;
     }
 	

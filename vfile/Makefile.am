@@ -18,10 +18,10 @@ pkginclude_HEADERS = vfile.h p_open.h
 
 noinst_PROGRAMS = sample ttest
 sample_SOURCES  = sample.c
-sample_LDADD    = libvfile.a vftp/libvftp.a @TRURL_LDFLAG@ -lutil $(LDADD_)
+sample_LDADD    = libvfile.a vftp/libvftp.a @TRURL_LDFLAG@ $(LDADD_)
 
 ttest_SOURCES  = ttest.c 
-ttest_LDADD    = libvfile.a vftp/libvftp.a @TRURL_LDFLAG@ -lutil $(LDADD_)
+ttest_LDADD    = libvfile.a vftp/libvftp.a @TRURL_LDFLAG@ $(LDADD_)
 EXTRA_DIST     = $(VFCURL_SRCS) 
 
 OMIT_DEPENDENCIES = narray.h tfn_types.h nassert nbuf.h nhash.h nlist.h nstr.h \

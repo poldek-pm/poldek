@@ -22,7 +22,7 @@ void dump_file(const char *url)
     vfile_close(vf);
 }
 
-void fetch(const char *url)
+void fetch_ext(const char *url)
 {
     if (!vfile_register_ext_handler(VFURL_FTP | VFURL_HTTP,
                                     "/usr/bin/wget -N -P %d %Pn")) {
@@ -36,6 +36,14 @@ void fetch(const char *url)
         puts("FAIL\n");
 }
 
+void fetch(const char *url)
+{
+    if (vfile_fetch("/tmp", url, vfile_url_type(url)))
+        puts("OK\n");
+    else
+        puts("FAIL\n");
+}
+
                          
 
 int main(int argc, char *argv[])
@@ -43,9 +51,11 @@ int main(int argc, char *argv[])
     int verbose = 1;
     vfile_configure("/tmp", -1);
     vfile_verbose = &verbose;
+
+    fetch("ftp://localhost/bigg");
     
-    dump_file("ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/tocfile.lst");
-    fetch("http://sunsite.icm.edu.pl/index.html");
-    dump_file("/tmp/index.html");
+    //dump_file("ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/tocfile.lst");
+    //fetch_ext("http://sunsite.icm.edu.pl/index.html");
+    //dump_file("/tmp/index.html");
     return 0;
 }

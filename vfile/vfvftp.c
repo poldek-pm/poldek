@@ -35,16 +35,17 @@
 #include "vftp/vftp.h"
 
 static int vfile_vftp_init(void);
+static void vfile_vftp_destroy(void);
 static int vfile_vftp_fetch(const char *dest, const char *url);
 
 struct vf_module vf_mod_vftp = {
     "vftp",
     VFURL_FTP,
     vfile_vftp_init,
+    vfile_vftp_destroy, 
     vfile_vftp_fetch,
     0
 };
-
 
 
 static int vfile_vftp_init(void) 
@@ -53,8 +54,14 @@ static int vfile_vftp_init(void)
     return vftp_init(*vfile_verbose, vfile_progress);
 }
 
-static
-int do_fetch(const char *dest, const char *url)
+
+static void vfile_vftp_destroy(void)
+{
+    vftp_destroy();
+}
+
+
+static int do_fetch(const char *dest, const char *url)
 {
     struct vf_progress_bar  bar;
     struct stat             st;

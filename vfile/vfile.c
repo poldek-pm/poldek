@@ -200,6 +200,25 @@ const struct vf_module *select_vf_module(int urltype)
     return mod;
 }
 
+static
+int mod_fetch(const struct vf_module *mod, const char *destpath,
+              const char *url)
+{
+
+    while (1) {
+        vfile_err_no = 0;
+        if (mod->fetch(destpath, url))
+            break;
+        else {
+            if (vfile_err_no == ENOENT || vfile_err_no == EINTR)
+                return 0;
+            //printf("errno = %s\n", strerror(vfile_err_no));
+        }
+        
+    }
+    return 1;
+}
+
 
 int vfile_fetcha(const char *destdir, tn_array *urls, int urltype) 
 {
@@ -223,7 +242,7 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype)
             snprintf(destpath, sizeof(destpath), "%s/%s", destdir,
                      n_basenam(url));
             vfile_msg_fn(_("Retrieving %s...\n"), url);
-            if (!mod->fetch(destpath, url)) {
+            if (!mod_fetch(mod, destpath, url)) {
                 rc = 0;
                 break;
             }
@@ -255,7 +274,7 @@ int vfile_fetch(const char *destdir, const char *path, int urltype)
         snprintf(destpath, sizeof(destpath), "%s/%s", destdir,
                  n_basenam(path));
         vfile_msg_fn(_("Retrieving %s...\n"), path);
-        rc = mod->fetch(destpath, path);
+        rc = mod_fetch(mod, destpath, path);
     }
     
     

@@ -38,12 +38,14 @@
 #include "vfile.h"
 
 static int vfile_curl_init(void);
+static void vfile_curl_destroy(void);
 static int vfile_curl_fetch(const char *dest, const char *url);
 
 struct vf_module vf_mod_curl = {
     "curl",
     VFURL_FTP|VFURL_HTTP|VFURL_HTTPS,
     vfile_curl_init,
+    vfile_curl_destroy, 
     vfile_curl_fetch,
     0
 };
@@ -150,6 +152,15 @@ static int vfile_curl_init(void)
     }
 #endif
     return 1;
+}
+
+
+void vfile_curl_destroy(void) 
+{
+    if (curlh) {
+        curl_easy_cleanup(curlh);
+        curlh = NULL;
+    }
 }
 
 

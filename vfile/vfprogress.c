@@ -66,9 +66,18 @@ void vfile_progress(long total, long amount, void *data)
     float                   frac, percent;
     long                    n;
 
-
+    
+    
     if (bar->state == VF_PROGRESS_DISABLED)
         return;
+
+    if (amount == -1) { /* aborted */
+        if (bar->state == VF_PROGRESS_RUNNING) 
+            vfile_msgtty_fn("\n");
+        
+        bar->state = VF_PROGRESS_DISABLED;
+        return;
+    }
     
     if (bar->state == VF_PROGRESS_VIRGIN) {
         if (total > 0) {
