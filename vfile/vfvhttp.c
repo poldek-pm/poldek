@@ -83,7 +83,6 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
     if (flags & VFMOD_INFINITE_RETR)
         end = 1000;
 
-    sigint_push(vf_sigint_cb);
     while (end-- > 0) {
         struct vf_progress_bar  bar;
 
@@ -128,7 +127,7 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
  l_endloop:
     
     fclose(stream);
-    sigint_pop();
+
     errno = vf_errno;
     return rc;
 }

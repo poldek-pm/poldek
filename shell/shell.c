@@ -33,6 +33,7 @@
 #include <readline/history.h>
 #include <trurl/trurl.h>
 
+#include "sigint/sigint.h"
 #include "i18n.h"
 #include "pkgdir.h"
 #include "pkg.h"
@@ -1218,6 +1219,11 @@ int shell_exec(struct pkgset *ps, struct inst_s *inst, int skip_installed,
     return 0;
 }
 
+static void sigint_reached_fn(void)
+{
+    logn(LOGNOTICE, "interrupt signal reached");
+}
+
 int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
 {
     char *line, *s, *home;
@@ -1241,6 +1247,8 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         read_history(histfile);
     }
 
+    sigint_init();
+    sigint_reached_cb = sigint_reached_fn;
     sigint_push(sigint_cb);
     signal(SIGTERM, shell_end);
     signal(SIGQUIT, shell_end);

@@ -976,12 +976,6 @@ void *Fnn(size_t SIZE, const void *CALLER)
 #endif /* POLDEK_MEM_DEBUG */
 
 
-
-static void sigint_reached_fn(void)
-{
-    logn(LOGNOTICE, "interrupt signal reached");
-}
-    
 void poldek_init(void) 
 {
 #ifdef HAVE_MALLOPT
@@ -1000,8 +994,6 @@ void poldek_init(void)
     n_malloc_set_failhook(n_malloc_fault);
     pkgflmodule_init();
     pkgsetmodule_init();
-    sigint_init();
-    sigint_reached_cb = sigint_reached_fn;
 }
 
 void poldek_destroy(void) 
