@@ -180,6 +180,9 @@ For example:
      Older versions are available 
 	<url url="http://team.pld.org.pl/~mis/poldek/download/" name="here">
 
+     Development snapshots are available
+        <url url="http://team.pld.org.pl/~mis/poldek/download/snapshots/" name="here">
+
      <item> Binary rpm packages
 	<p>
 	<itemize>
@@ -224,6 +227,12 @@ For example:
     </item>
     </itemize>
     </sect>
+
+    <sect> Mailing list
+    <p>
+    Program mailing list <tt>poldek@pld-linux.org</tt>. 
+    To subscribe send mail to <url url="mailto:poldek-subscribe@pld-linux.org" 
+    name="poldek-subscribe@pld-linux.org">
     
     <sect> Build
     <p>
