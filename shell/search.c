@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <fnmatch.h>
 
 #include <pcre.h>
 #include <trurl/nassert.h>
@@ -35,7 +36,11 @@
 static const unsigned char   *pcre_chartable = NULL;
 static int                    pcre_established = 0;
 
+#define PATTERN_FMASK   0
+#define PATTERN_PCRE    1
+
 struct pattern {
+    int              type; 
     char             *regexp;
     unsigned         flags;
     pcre             *pcre;
@@ -44,6 +49,8 @@ struct pattern {
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int search(struct cmdarg *cmdarg);
+
+#define OPT_PATTERN_PCRE   (1 << 20)
 
 #define OPT_SEARCH_CAP     (1 << 0)
 #define OPT_SEARCH_REQ     (1 << 1)
@@ -64,6 +71,7 @@ static int search(struct cmdarg *cmdarg);
 #define OPT_SEARCH_HDD     (OPT_SEARCH_SUMM | OPT_SEARCH_DESC | OPT_SEARCH_FL)  
 
 static struct argp_option options[] = {
+    { "perlre",    OPT_PATTERN_PCRE, 0, 0, N_("Thread PATTERN as Perl regular expression"), 1},
     { "provides",  'p', 0, 0, N_("Search capabilities"), 1},
     { "requires",  'r', 0, 0, N_("Search requirements"), 1},
     { "conflicts", 'c', 0, 0, N_("Search conflicts"), 1},
@@ -93,6 +101,10 @@ struct command_alias cmd_aliases[] = {
     },
 
     {
+        "rsearch", "search --perlre", &command_search,
+    },
+
+    {
         NULL, NULL, NULL
     },
 };
@@ -105,7 +117,8 @@ struct command command_search = {
     NULL, search,
     NULL, NULL,
     (struct command_alias*)&cmd_aliases, 
-    N_("PATTERN := /perl-regexp/[imsx], see perlre(1) for help\n")
+    N_("With --perlre pattern must be supplied as:\n"
+       "   <delimiter>perl-regexp<delimiter>[imsx], see perlre(1) for help\n")
 };
 
 static
@@ -150,80 +163,101 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'd':
             cmdarg->flags |= OPT_SEARCH_DESC;
             break;
+
+        case OPT_PATTERN_PCRE:
+            cmdarg->flags |= OPT_PATTERN_PCRE;
         
         case ARGP_KEY_ARG:
+            if (arg == NULL)
+                break;
+            
+            printf("arg = %s\n", arg);
+            
             if (n_array_size(cmdarg->pkgnames) == 0 && cmdarg->d == NULL) {
                 struct pattern   *pt;
-                char             *p, delim, *lastp, *regexp;
-                int              len;
+                char             *regexp = NULL;
                 unsigned         flags = 0;
                 
-                
-                p = arg;
-                delim = *arg;
-#if 0                           /* allow any delimiter */
-                if (delim != '/' && delim != '|') {
-                    argp_usage(state);
-                    return EINVAL;
-                }
-#endif                
-                len = strlen(p) - 1;
-                lastp = p + len;
-                
-                if (strchr("imsx", *lastp) == NULL && *lastp != delim) {
-                    argp_usage(state);
-                    return EINVAL;
+                if ((cmdarg->flags & OPT_PATTERN_PCRE) == 0) {
+                    regexp = arg;
                     
-                }
-                
-                regexp = p + 1;
-                
-                if ((p = strrchr(regexp, delim)) == NULL) {
-                    argp_usage(state);
-                    return EINVAL;
-                }
-                
-                *p = '\0';
-                p++;
-                
-                
-                while (*p) {
-                    switch (*p) {
-                        case 'i':
-                            flags |= PCRE_CASELESS;
-                            break;
+                } else {
+                    char             *p, delim, *lastp;
+                    int              len;
 
-                        case 'm':
-                            flags |= PCRE_MULTILINE;
-                            break;
-
-                        case 's':
-                            flags |= PCRE_DOTALL;
-                            break;
-
-                        case 'x':
-                            flags |= PCRE_EXTENDED;
-                            break;
-                            
-                        default:
-                            logn(LOGERR, _("search: unknown regexp option -- %c"), *p);
-                            argp_usage(state);
-                            return EINVAL;
+                    p = arg;
+                    delim = *arg;
+#if 0                           /* allow any delimiter */
+                    if (delim != '/' && delim != '|') {
+                        argp_usage(state);
+                        return EINVAL;
                     }
+#endif                
+                    len = strlen(p) - 1;
+                    lastp = p + len;
+                
+                    if (strchr("imsx", *lastp) == NULL && *lastp != delim) {
+                        argp_usage(state);
+                        return EINVAL;
+                    
+                    }
+                
+                    regexp = p + 1;
+                
+                    if ((p = strrchr(regexp, delim)) == NULL) {
+                        argp_usage(state);
+                        return EINVAL;
+                    }
+                
+                    *p = '\0';
                     p++;
+                
+                
+                    while (*p) {
+                        switch (*p) {
+                            case 'i':
+                                flags |= PCRE_CASELESS;
+                                break;
+
+                            case 'm':
+                                flags |= PCRE_MULTILINE;
+                                break;
+
+                            case 's':
+                                flags |= PCRE_DOTALL;
+                                break;
+
+                            case 'x':
+                                flags |= PCRE_EXTENDED;
+                                break;
+                            
+                            default:
+                                logn(LOGERR, _("search: unknown regexp option -- %c"), *p);
+                                argp_usage(state);
+                                return EINVAL;
+                        }
+                        p++;
+                    }
                 }
                 
-
+                
                 pt = n_malloc(sizeof(*pt));
+                
+                if (cmdarg->flags & OPT_PATTERN_PCRE)
+                    pt->type = PATTERN_PCRE;
+                else
+                    pt->type = PATTERN_FMASK;
+                
                 pt->regexp = n_strdup(regexp);
                 pt->flags = flags;
                 pt->pcre = NULL;
                 pt->pcre_extra = NULL;
+                
                 cmdarg->d = pt;
                 
                 break;
             }
-            /* no break, let default handler collect arguments */
+            
             
         default:
             return ARGP_ERR_UNKNOWN;
@@ -256,6 +290,9 @@ int pattern_compile(struct pattern *pt, int ntimes)
     
     n_assert(pt->pcre == NULL);
     n_assert(pt->pcre_extra == NULL);
+
+    if (pt->type != PATTERN_PCRE)
+        return 1;
     
     pt->pcre = pcre_compile(pt->regexp, pt->flags, &pcre_err,
                             &pcre_err_off, pcre_chartable);
@@ -279,10 +316,25 @@ int pattern_compile(struct pattern *pt, int ntimes)
 static
 int pattern_match(struct pattern *pt, const char *s, int len) 
 {
-    int match;
+    int match = 0;
+
+    switch (pt->type) {
+        case PATTERN_FMASK:
+            n_assert(s[len] == '\0');
+            match = (fnmatch(pt->regexp, s, 0) == 0);
+            break;
+            
+        case PATTERN_PCRE:
+            if (pcre_exec(pt->pcre, pt->pcre_extra, s, len, 0, 0, NULL, 0) == 0)
+                match = 1;
+            break;
+
+        default:
+            n_assert(0);
+            break;
+    }
     
-    match = pcre_exec(pt->pcre, pt->pcre_extra, s, len, 0, 0, NULL, 0);
-    return match == 0;
+    return match;
 }
 
 static
@@ -293,13 +345,13 @@ void pattern_free(struct pattern *pt)
         free(pt->regexp);
         pt->regexp = NULL;
     }
+
     
     if (pt->pcre) {
         free(pt->pcre);
         pt->pcre = NULL;
     }
     
- 
     if (pt->pcre_extra) {
         free(pt->pcre_extra);
         pt->pcre_extra = NULL;
@@ -325,8 +377,6 @@ static int fl_match(tn_array *fl, struct pattern *pt)
             n = n_snprintf(path, sizeof(path), "%s/%s", flent->dirname, f->basename);
             if ((match = pattern_match(pt, path, n)))
                 goto l_end;
-
-            
                 
             if (S_ISLNK(f->mode)) {
                 char *name = f->basename + strlen(f->basename) + 1;
