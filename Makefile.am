@@ -59,7 +59,7 @@ rpmvercmp_LDFLAGS   =
 
 EXTRA_DIST = poldek.1 poldek.pod \
 	     Makefile.extra *sample* \
-	     poldek.spec
+	     poldek.spec $(bin_SCRIPTS)
 
 man_MANS = poldek.1
 
