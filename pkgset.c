@@ -33,6 +33,7 @@
 #include "rpmadds.h"
 #include "pkgset-req.h"
 #include "split.h"
+#include "term.h"
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -606,10 +607,29 @@ static int setup_tmpdir(const char *rootdir)
 }
 #endif
 
+struct inf {
+    int       npackages;
+    double    nbytes;
+    double    nfbytes; 
+};
+
+
+static void is_marked_mapfn(struct pkg *pkg, struct inf *inf) 
+{
+    if (pkg_is_marked(pkg)) {
+        inf->npackages++;
+        inf->nbytes += pkg->size;
+        inf->nfbytes += pkg->fsize;
+    }
+}
+    
+
 int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
 {
-    int i, ninstalled, nerr;
-    char tmpdir[PATH_MAX];
+    int               i, ninstalled, nerr, is_remote = -1;
+    double            ninstalled_bytes; 
+    struct inf        inf;
+    char              tmpdir[PATH_MAX];
     
     n_assert(inst->db->rootdir);
     if (!is_rwxdir(inst->db->rootdir)) {
@@ -633,13 +653,20 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
     
     nerr = 0;
     ninstalled = 0;
+    ninstalled_bytes = 0;
+    
+    memset(&inf, 0, sizeof(inf));
+    n_array_map_arg(ps->pkgs, (tn_fn_map2)is_marked_mapfn, &inf);
 
     for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
         
         if (pkg_is_marked(pkg)) {
             char *pkgpath = pkg_path_s(pkg);
-                
+
+            if (is_remote == -1)
+                is_remote = vfile_url_type(pkgpath) & VFURL_REMOTE;
+            
             if (verbose > 1) {
                 char *p = pkg_is_hand_marked(pkg) ? "" : "dep";
                 if (pkg_has_badreqs(pkg)) 
@@ -654,6 +681,21 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
             if (!pkgdb_install(inst->db, pkgpath,
                                inst->instflags | PKGINST_NODEPS)) 
                 nerr++;
+
+            
+            ninstalled++;
+            ninstalled_bytes += pkg->size;
+            inf.nfbytes -= pkg->fsize;
+            printf_c(PRCOLOR_YELLOW,
+                     _(" %d of %d (%.2f of %.2f MB) packages done"),
+                     ninstalled, inf.npackages,
+                     ninstalled_bytes/(1024*1000), 
+                     inf.nbytes/(1024*1000));
+
+            if (is_remote)
+                printf_c(PRCOLOR_YELLOW, _("; (%.2f MB left to download)"),
+                         inf.nfbytes/(1024*1000));
+            printf_c(PRCOLOR_YELLOW, "\n");
         }
     }
     
