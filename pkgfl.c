@@ -350,6 +350,7 @@ struct pkgfl_ent *pkgfl_ent_new(char *dirname, int dirname_len, int nfiles)
 /*
   stores file list as binary data
  */
+static
 int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
 {
     int8_t *matches;
@@ -368,9 +369,10 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
         for (i=0; i<n_array_size(fl); i++) {
             struct pkgfl_ent *flent = n_array_nth(fl, i);
             int dnl, is_depdir = 0;
-            
+
             dnl = strlen(flent->dirname);
             is_depdir = (n_array_bsearch(depdirs, flent->dirname) != NULL);
+
         
             if (which == PKGFL_DEPDIRS && is_depdir) {
                 matches[i] = 1;
@@ -486,7 +488,7 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *dirs, int include)
     while (ndirs--) {
         struct pkgfl_ent  *flent = NULL;
         char              *dn = NULL;
-        int8_t            dnl = 0;
+        uint8_t           dnl = 0;
         int32_t           nfiles = 0;
         int               loadir;
         
