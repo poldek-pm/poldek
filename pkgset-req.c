@@ -248,21 +248,23 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         }
     }
 
+    if (strncmp("rpmlib", capreq_name(req), 6) == 0 && !capreq_is_rpmlib(req))
+        n_assert(0);
+    
+
     if (capreq_is_rpmlib(req)) {
         struct capreq *cap;
 
-        *suspkgs = NULL;
-        *npkgs = 0;
-        
         if (matched) {
             int i;
             
             for (i=0; i<*npkgs; i++) {
-                if (strcmp((*suspkgs)[i]->name, "rpm") != 0) 
+                if (strcmp((*suspkgs)[i]->name, "rpm") != 0) {
                     log(LOGERR, "%s: provides %s\n",
                         pkg_snprintf_s((*suspkgs)[i]), reqname);
+                    matched = 0;
+                }
             }
-            matched = 0;
         }
         
         if ((cap = n_array_bsearch(ps->rpmcaps, req))) {
@@ -277,6 +279,9 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
             log(LOGWARN, "%s: not found (poldek needs to be linked with newer"
                 " rpmlib)\n", capreq_snprintf_s(req));
         }
+        
+        *suspkgs = NULL;
+        *npkgs = 0;
     }
     
     return matched;
