@@ -1660,23 +1660,53 @@ static void mapfn_clean_pkg_flags(struct pkg *pkg)
 }
 
 
-static void update_install_info(struct install_info *iinf, struct upgrade_s *upg)
+static
+void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
+                         int vrfy)
 {
-    int i;
-        
-    for (i=0; i<n_array_size(upg->install_pkgs); i++)
-        n_array_push(iinf->installed_pkgs,
-                     pkg_link(n_array_nth(upg->install_pkgs, i)));
+    int i, is_installed = 1;
+    
 
+    if (vrfy) {
+        pkgdb_reopendb(upg->inst->db);
+        is_installed = 1;
+    }
+
+    
+    for (i=0; i<n_array_size(upg->install_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
+
+        
+        if (vrfy)
+            is_installed = rpm_is_pkg_installed(upg->inst->db->dbh, pkg,
+                                                NULL, NULL);
+
+        if (is_installed)
+            n_array_push(iinf->installed_pkgs, pkg_link(pkg));
+    }
+
+    
+    if (vrfy == 0)
+        is_installed = 0;
+    
     for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
         struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
         struct pkg *pkg = dbpkg->pkg;
-        n_array_push(iinf->uninstalled_pkgs,
-                     pkg_new(pkg->name, pkg->epoch, pkg->ver, pkg->rel,
-                             pkg->arch, pkg->os, pkg->size, pkg->fsize,
-                             pkg->btime));
+
         
+        if (vrfy)
+            is_installed = rpm_is_pkg_installed(upg->inst->db->dbh, pkg,
+                                                NULL, NULL);
+
+        if (is_installed == 0)
+            n_array_push(iinf->uninstalled_pkgs,
+                         pkg_new(pkg->name, pkg->epoch, pkg->ver, pkg->rel,
+                                 pkg->arch, pkg->os, pkg->size, pkg->fsize,
+                                 pkg->btime));
     }
+
+    if (vrfy) 
+        pkgdb_closedb(upg->inst->db);
 }
 
 
@@ -1788,8 +1818,8 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         }
         
         rc = packages_rpminstall(pkgs, ps, inst);
-        if (!is_test && rc > 0 && iinf)
-            update_install_info(iinf, upg);
+        if (!is_test && iinf)
+            update_install_info(iinf, upg, rc <= 0);
     }
     
     return rc;
@@ -2020,8 +2050,11 @@ int unmark_name_dups(tn_array *pkgs)
             DBGF("unmark %s\n", pkg_snprintf_s(pkg2));
 
             i++;
-            pkg2 = n_array_nth(pkgs, i);
             n++;
+            if (i == n_array_size(pkgs))
+                break;
+            pkg2 = n_array_nth(pkgs, i);
+            
         }
     }
     
