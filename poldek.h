@@ -75,8 +75,6 @@ int poldek_setup_sources(struct poldek_ctx *ctx);
 
 int poldek_load_sources(struct poldek_ctx *ctx);
 
-tn_array *poldek_av_packages(void);
-
 
 int poldek_split(const struct poldek_ctx *ctx, unsigned size,
                  unsigned first_free_space, const char *outprefix);
