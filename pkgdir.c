@@ -660,12 +660,10 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
         }
         
     } else {
-        logn(LOGWARN, _("%s: desynchronized index, try --update-whole"),
+        logn(LOGWARN, _("%s: desynchronized index, try --upa"),
              pkgdir_pr_idxpath(pkgdir));
         
     }
-
-    
     
     return nerr == 0;
 }

@@ -494,8 +494,9 @@ int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
                 
             } else {
                 rc = 0;
-                logn(LOGERR, "%s, %s", pkgdir->pdg->mdd, pkgdir->mdd_orig);
-                logn(LOGERR, _("%s: desynchronized index"), vf_url_slim_s(pkgdir->path, 0));
+                msgn(2, "md %s, orig md %s", pkgdir->pdg->mdd, pkgdir->mdd_orig);
+                logn(LOGWARN, _("%s: desynchronized index, try --upa"),
+                     pkgdir_pr_path(pkgdir));
             }
         }
     }
