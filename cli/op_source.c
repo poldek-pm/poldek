@@ -49,6 +49,9 @@
 
 #define OPT_SRCTYPE_LS  (OPT_SRC_GID + 10)
 
+#define OPT_DEST        (OPT_SRC_GID + 11)
+#define OPT_DEST_NAME   (OPT_SRC_GID + 12)
+
 /* The options we understand. */
 static struct argp_option source_options[] = {
 {0,0,0,0, N_("Source repository selection:"), OPT_SRC_GID },
@@ -56,6 +59,11 @@ static struct argp_option source_options[] = {
      OPT_SRC_GID },
 {"sn", 'n', "SOURCE-NAME", 0,
      N_("Get packages info from repository named SOURCE-NAME"), OPT_SRC_GID },
+
+{"install-dest", OPT_DEST, "PATH", 0, 
+    N_("Install to repository under PATH instead to system"), OPT_SRC_GID },                                                  
+{"install-dest-dn", OPT_DEST_NAME, "SOURCE-NAME", 0,
+    N_("Install to source SOURCE-NAME instead to system"), OPT_SRC_GID },
 
 {"sidx", OPT_SRC, "FILE", OPTION_HIDDEN, /* legacy */
  N_("Get packages info from package index file FILE"), OPT_SRC_GID },
@@ -112,6 +120,7 @@ struct arg_s {
     unsigned            cnflags;
     struct poldek_ctx   *ctx;
     struct source       *src;
+    struct source       *dst;
     char                *curr_src_path;
     char                *curr_src_type;
 };
@@ -155,6 +164,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         arg_s = n_malloc(sizeof(*arg_s));
         arg_s->cnflags = 0;
         arg_s->src = NULL;
+        arg_s->dst = NULL;
         arg_s->curr_src_type = arg_s->curr_src_path = NULL;
         arg_s->ctx = rt->ctx;
         rt->_opdata = arg_s;
@@ -176,6 +186,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             arg_s->src = source_new(arg, NULL, NULL, NULL);
             poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->src);
             //arg_s->src = NULL;
+            break;
+
+        case OPT_DEST_NAME:
+            if (arg_s->dst != NULL) {
+                logn(LOGERR, _("destination repository is already set"));
+                exit(EXIT_FAILURE);
+            }
+            arg_s->dst = source_new(arg, NULL, NULL, NULL);
             break;
 
         case OPT_SRCTYPE:
@@ -206,6 +224,18 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
             arg_s->src = source_new_pathspec(arg_s->curr_src_type, arg, NULL);
 			poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->src);
+            break;
+
+        case OPT_DEST:
+            if (arg_s->dst != NULL) {
+                logn(LOGERR, _("destination repository is already set"));
+                exit(EXIT_FAILURE);
+            }
+            arg_s->curr_src_path = arg;
+            if (arg_s->curr_src_type == NULL)
+                arg_s->curr_src_type = source_type;
+            
+            arg_s->dst = source_new_pathspec(arg_s->curr_src_type, arg, NULL);
             break;
             
         case 'P':
@@ -252,6 +282,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case ARGP_KEY_END:
+            if (arg_s->dst) {    /* configure as last source */
+                poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->dst);
+                poldek_configure(arg_s->ctx, POLDEK_CONF_PM, "pset");
+            }
             //argp_usage (state);
             break;
            
