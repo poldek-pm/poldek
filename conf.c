@@ -42,7 +42,9 @@
 #define TYPE_MULTI    (1 << 3)
 #define TYPE_ENUM     (1 << 4)
 
-#define TYPE_W_ENV    (1 << 10)
+#define TYPE_F_ENV      (1 << 10)
+#define TYPE_F_REQUIRED (1 << 11)
+#define TYPE_F_ALIAS    (1 << 12)
 
 struct tag {
     char      *name;
@@ -51,16 +53,14 @@ struct tag {
 };
 
 static struct tag unknown_tag = {
-    NULL, TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 },
+    NULL, TYPE_STR | TYPE_MULTI | TYPE_F_ENV, { 0 },
 };
 
-    
-
 static struct tag global_tags[] = {
-    { "source",        TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 } },
-    { "source?*",      TYPE_STR | TYPE_W_ENV, { 0 } },
-    { "prefix?*",      TYPE_STR | TYPE_W_ENV, { 0 } },
-    { "cachedir",      TYPE_STR | TYPE_W_ENV, { 0 } },
+    { "source",        TYPE_STR | TYPE_MULTI | TYPE_F_ENV, { 0 } },
+    { "source?*",      TYPE_STR | TYPE_F_ENV, { 0 } },
+    { "prefix?*",      TYPE_STR | TYPE_F_ENV, { 0 } },
+    { "cachedir",      TYPE_STR | TYPE_F_ENV, { 0 } },
     
     { "ftp_http_get",  TYPE_STR , { 0 } }, /* obsolete */
     { "ftp_get",       TYPE_STR , { 0 } }, /* obsolete */
@@ -72,7 +72,7 @@ static struct tag global_tags[] = {
     { "ignore_req",    TYPE_STR | TYPE_MULTI , { 0 } },
     { "ignore_pkg",    TYPE_STR | TYPE_MULTI , { 0 } },
 
-    { "rpmdef",        TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 } },
+    { "rpmdef",        TYPE_STR | TYPE_MULTI | TYPE_F_ENV, { 0 } },
     { "rpm_install_opt",  TYPE_STR , { 0 } },
     { "rpm_uninstall_opt",  TYPE_STR , { 0 } },
 
@@ -97,23 +97,24 @@ static struct tag global_tags[] = {
 
 static struct tag fetcher_tags[] = {
     { "name",       TYPE_STR,  { 0 } },
-    { "proto",      TYPE_STR, { 0 } },
-    { "cmd",        TYPE_STR | TYPE_W_ENV, { 0 } },
+    { "proto",      TYPE_STR | TYPE_F_REQUIRED, { 0 } },
+    { "cmd",        TYPE_STR | TYPE_F_ENV | TYPE_F_REQUIRED, { 0 } },
 };
 
 static struct tag proxy_tags[] = {
     { "name",       TYPE_STR,  { 0 } },
     { "proto",      TYPE_STR, { 0 } },
-    { "url",        TYPE_STR | TYPE_W_ENV, { 0 } },
+    { "url",        TYPE_STR | TYPE_F_ENV, { 0 } },
 };
 
 
 static struct tag source_tags[] = {
     { "name",        TYPE_STR, { 0 } },
-    { "url",         TYPE_STR | TYPE_W_ENV, { 0 } },
-    { "prefix",      TYPE_STR | TYPE_W_ENV, { 0 } },
+    { "url",         TYPE_STR | TYPE_F_ENV | TYPE_F_REQUIRED, { 0 } },
+    { "path",         TYPE_STR | TYPE_F_ENV | TYPE_F_ALIAS, { 0 } }, /* alias for url */
+    { "prefix",      TYPE_STR | TYPE_F_ENV, { 0 } },
     { "pri",         TYPE_STR , { 0 } },
-    { "dscr",        TYPE_STR | TYPE_W_ENV, { 0 } },
+    { "dscr",        TYPE_STR | TYPE_F_ENV, { 0 } },
     { "type",        TYPE_STR , { 0 } },
     { "noauto",      TYPE_BOOL, { 0 } },
     { "noautoup",    TYPE_BOOL, { 0 } },
@@ -146,10 +147,11 @@ struct copt {
     
     tn_array *vals;
     char     *val;
+    int      _refcnt;
     char     name[0];
 };
 
-
+static
 struct copt *copt_new(const char *name)
 {
     struct copt *opt;
@@ -157,14 +159,27 @@ struct copt *copt_new(const char *name)
     opt = n_malloc(sizeof(*opt) + strlen(name) + 1);
     strcpy(opt->name, name);
     opt->flags = 0;
+    opt->_refcnt = 0;
     opt->val = NULL;
     opt->vals= NULL;
+    return opt;
+}
+
+static
+struct copt *copt_link(struct copt *opt)
+{
+    opt->_refcnt++;
     return opt;
 }
 
 static                                                      
 void copt_free(struct copt *opt)
 {
+    if (opt->_refcnt > 0) {
+        opt->_refcnt--;
+        return;
+    }
+    
     if (opt->flags & COPT_MULTIPLE)
         n_array_free(opt->vals);
     else
@@ -264,7 +279,7 @@ static
 const struct tag *find_tag(const char *sectname, const char *key) 
 {
     int i = 0;
-    struct tag     *tags = NULL;
+    struct tag   *tags = NULL;
     const struct section *sect;
 
     if ((sect = find_section(sectname)) == NULL)
@@ -366,6 +381,40 @@ static char *eat_wws(char *s)
 }
 
 
+static int verify_section(const struct section *sect, tn_hash *ht) 
+{
+    int i = 0, nerr = 0;
+    struct tag *tags;
+
+    tags = sect->tags;
+    
+    while (tags[i].name) {
+        if (tags[i].flags & TYPE_F_REQUIRED)
+            if (n_hash_get(ht, tags[i].name) == NULL) {
+                struct copt *opt;
+                struct tag  *t = NULL;
+
+                if (tags[i + 1].name)
+                    t = &tags[i + 1];
+                
+                if (t && (t->flags & TYPE_F_ALIAS) &&
+                    (opt = n_hash_get(ht, t->name))) {
+                    
+                    n_hash_insert(ht, tags[i].name, copt_link(opt));
+                    
+                } else {
+                    logn(LOGERR, "%s: missing required '%s'", sect->name,
+                         tags[i].name);
+                    nerr++;
+                }
+            }
+        i++;
+    }
+
+    return nerr == 0;
+}
+
+
 static const char *do_expand_value(const char *val, tn_hash *ht, tn_hash *ht_global)
 {
     const char *new_val;
@@ -392,7 +441,7 @@ static int expand_section_vars(tn_hash *ht, tn_hash *ht_global) /*  */
     const char *val;
     tn_array *keys, *vals;
     int i, j, rc = 1;
-    
+
     keys = n_hash_keys(ht);
     for (i=0; i<n_array_size(keys); i++) {
         const char *key = n_array_nth(keys, i);
@@ -427,11 +476,11 @@ static int expand_section_vars(tn_hash *ht, tn_hash *ht_global) /*  */
     return rc;
 }
 
-static void poldek_conf_expand_vars(tn_hash *ht) 
+static int poldek_conf_postsetup(tn_hash *ht) 
 {
     
     tn_hash *ht_global = NULL;
-    int i, j;
+    int i, j, nerr = 0;
 
     ht_global = poldek_conf_get_section_ht(ht, "global");
     expand_section_vars(ht_global, NULL);
@@ -441,11 +490,17 @@ static void poldek_conf_expand_vars(tn_hash *ht)
         if (strcmp(sections[i].name, "global")  != 0) {
             tn_array *list = poldek_conf_get_section_arr(ht, sections[i].name);
             if (list)
-                for (j=0; j < n_array_size(list); j++)
-                    expand_section_vars(n_array_nth(list, j), ht_global);
+                for (j=0; j < n_array_size(list); j++) {
+                    tn_hash *htsect = n_array_nth(list, j);
+                    expand_section_vars(htsect, ht_global);
+                    if (!verify_section(&sections[i], htsect))
+                        nerr++;
+                }
         }
         i++;
     }
+
+    return nerr == 0;
 }
 
 
@@ -514,7 +569,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
         n_hash_insert(ht_sect, opt->name, opt);
     }
 
-    if (tag->flags & TYPE_W_ENV)
+    if (tag->flags & TYPE_F_ENV)
         val = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), val);
     
     if (opt->val == NULL) {
@@ -793,7 +848,8 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
 
     
     if (ht)
-        poldek_conf_expand_vars(ht);
+        if (!poldek_conf_postsetup(ht))
+            is_err = 1;
 
  l_end:
     if (af_stack)
