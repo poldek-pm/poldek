@@ -98,11 +98,11 @@ int capreq_idx_add(struct capreq_idx *idx, const char *prname,
 
 const
 struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
-                                           const char *prname)
+                                           const char *crname)
 {
     void **p;
     
-    if ((p = n_hash_get(idx->ht, prname)) == NULL)
+    if ((p = n_hash_get(idx->ht, crname)) == NULL)
         return 0;
 
     return *p;
@@ -110,19 +110,20 @@ struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
 
 
 
-static void find_depdirs(const char *reqname,
-                         void *dummy __attribute__((unused)), void *arr) 
+static void find_depdirs(const char *reqname, void *dummy, void *arr) 
 {
+    dummy = dummy;
+    
     if (*reqname == '/') {
         char *p;
-
+        
         p = strrchr(reqname, '/');
-        if (p  != reqname) {
+        if (p != reqname) {
             char *dirname;
             int len;
 
             len = p - reqname;
-            dirname = alloca(p - reqname);
+            dirname = alloca(len + 1);
             memcpy(dirname, reqname, len);
             dirname[len] = '\0';
             p = dirname;
