@@ -252,7 +252,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned ldflags)
     }
 
     if (ldflags & PKG_LDFL) {
-        pkg->fl = n_array_new(32, NULL, pkgfl_ent_cmp);
+        pkg->fl = pkgfl_array_new(32);
     
         if (pkgfl_ldhdr(pkg->fl, h, PKGFL_ALL, pkg_snprintf_s(pkg)) == -1) {
             pkg_free(pkg);
@@ -528,7 +528,7 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req)
     return 1;
 }
 
-/* look up into package caps */
+/* look up into package caps only */
 int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
                        int strict)
 {
@@ -587,6 +587,35 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
 }
 
 
+int pkg_has_path(const struct pkg *pkg,
+                 const char *dirname, const char *basename)
+{
+    struct pkgfl_ent *flent, tmp;
+    int rc = 0;
+    
+    if (pkg->fl == NULL || n_array_size(pkg->fl) == 0)
+        return 0;
+
+    if (*dirname == '/' && *(dirname + 1) != '\0')
+        dirname++;
+
+    tmp.dirname = (char*)dirname;
+    tmp.items = 0;
+    
+    if ((flent = n_array_bsearch(pkg->fl, &tmp)) != NULL) {
+        int i;
+        
+        for (i=0; i<flent->items; i++) {
+            if (strcmp(basename, flent->files[i]->basename) == 0) {
+                rc = 1;
+                break;
+            }
+        }
+    }
+
+    return rc;
+}
+
 int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
 {
     /* package should not provide itself with diffrent version */
@@ -595,6 +624,7 @@ int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
     
     return pkg_caps_match_req(pkg, req, strict);
 }
+
 
 #if 0
 static __inline__

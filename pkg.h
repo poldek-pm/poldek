@@ -144,9 +144,14 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req);
 
 int cap_match_req(const struct capreq *cap, const struct capreq *req,
                   int strict);
-/*  */
+
+/* CAUTION: looks into NEVR and caps only */
 int pkg_match_req(const struct pkg *pkg, const struct capreq *req,
                   int strict);
+
+int pkg_has_path(const struct pkg *pkg,
+                 const char *dirname, const char *basename);
+
 #if 0
 int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg);
 #endif
