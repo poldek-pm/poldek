@@ -115,11 +115,7 @@ int pkg_cmp_lookup(struct pkg *pkg, tn_array *pkgs,
                    int compare_ver, int *cmprc,
                    char *evr, size_t size);
 
-#define COMMAND_ARGS_PKGS_AV      1
-#define COMMAND_ARGS_PKGS_AVUPGR  2
-#define COMMAND_ARGS_PKGS_INST    3
-
-
+struct cmd_pipe;
 struct cmdarg {
     struct poclidek_ctx *cctx;     /* common shell_s struct */
     struct poldek_ts     *ts;
@@ -127,6 +123,8 @@ struct cmdarg {
     unsigned            flags;     /* cmd private flags */
     int                 is_help;   /*  */
     void                *d;        /* cmd private data */
+    struct cmd_pipe     *leftp;
+    struct cmd_pipe     *rightp;
 };
 
 
@@ -140,6 +138,10 @@ struct cmdarg {
 #define COMMAND_IS_ALIAS     (1 << 9)
 #define COMMAND_IS_BREAK     (1 << 10)
 #define COMMAND_IS_PIPE      (1 << 11)
+#define COMMAND_IS_EXTERNAL  (1 << 12)
+
+#define COMMAND_PIPEABLE_LEFT  (1 << 13)
+#define COMMAND_PIPEABLE_RIGTH (1 << 14)
 
 struct poclidek_cmd {
     unsigned            flags;

@@ -19,8 +19,10 @@ libpoldekcli_la_SOURCES  = cli.c cli.h  \
 		        pager.c pager.h \
 			shell.c	        \
 			dent.c          \
-			cd.c \
-			dbcache.c
+			cd.c            \
+			dbcache.c       \
+			external.c      \
+			cmd.c cmd.h
 
 libpoldekcli_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
 bin_PROGRAMS      = ziuk

@@ -168,6 +168,47 @@ static tn_fn_cmp select_cmpf(unsigned flags)
     return cmpf;
 }
 
+static
+int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
+                   int compare_ver, int *cmprc,
+                   char *evr, size_t size) 
+{
+    struct pkg *pkg = NULL;
+    char name[256];
+    int n, found = 0;
+
+    snprintf(name, sizeof(name), "%s-", lpkg->name);
+    n = n_array_bsearch_idx_ex(pkgs, name, (tn_fn_cmp)pkg_nvr_strncmp);
+
+    if (n == -1)
+        return 0;
+
+    while (n < n_array_size(pkgs)) {
+        pkg = n_array_nth(pkgs, n++);
+
+        if (strcmp(pkg->name, lpkg->name) == 0) {
+            found = 1;
+            break;
+        }
+
+        if (*pkg->name != *lpkg->name)
+            break;
+    }
+    
+    if (!found)
+        return 0;
+    
+    if (compare_ver == 0)
+        *cmprc = pkg_cmp_evr(lpkg, pkg);
+    else 
+        *cmprc = pkg_cmp_ver(lpkg, pkg);
+    
+    snprintf(evr, size, "%s-%s", pkg->ver, pkg->rel);
+    
+    return found;
+}
+
+
 #if 0                           /* NFY */
 static tn_array *do_upgradeable (struct cmdarg *cmdarg, tn_array *pkgs)
 {
@@ -387,10 +428,10 @@ int do_ls(const tn_array *ents, struct cmdarg *cmdarg, const tn_array *evrs)
     
     hdr[sizeof(hdr) - 2] = '\n';
     
-    if (shOnTTY && (1.3 * term_get_height()) < n_array_size(ents)) {
-        if ((out_stream = pager(&pg)) == NULL)
-            out_stream = stdout;
-    }
+    //if (shOnTTY && (1.3 * term_get_height()) < n_array_size(ents)) {
+    //    if ((out_stream = pager(&pg)) == NULL)
+    //        out_stream = stdout;
+    //}
     
     size = 0;
     for (i=0; i < n_array_size(ents); i++) {
