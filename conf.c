@@ -110,6 +110,7 @@ static struct tag global_tags[] = {
     { "vfile ftp sysuser as anon passwd", TYPE_BOOL , { 0 } },
     { "ftp sysuser as anon passwd", TYPE_BOOL | TYPE_F_ALIAS, { 0 } },
     { "vfile external compress", TYPE_BOOL , { 0 } },
+    { "auto zlib in rpm", TYPE_BOOL , { 0 } },
     { "promoteepoch", TYPE_BOOL, { 0 } },
     { "default index type", TYPE_STR, { 0 } },
     { "autoupa", TYPE_BOOL, { 0 } },
