@@ -55,19 +55,20 @@ static char doc[] = PACKAGE " " VERSION " (BETA)\n"
 /* A description of the arguments we accept. */
 static char args_doc[] = "[PACKAGE...]";
 
-
+#define MODE_NULL         0
 #define MODE_VERIFY       1
 #define MODE_MKIDX        2
 #define MODE_INSTALLDIST  3
 #define MODE_INSTALL      4
 #define MODE_UPGRADEDIST  5
 #define MODE_UPGRADE      6
-#define MODE_UPDATEIDX    7
-#define MODE_SPLIT        8
+#define MODE_SPLIT        7
 
 #ifdef ENABLE_INTERACTIVE_MODE
 # define MODE_SHELL       20
 #endif
+
+#define MODE_MNR_UPDATEIDX  (1 << 0)
 
 #define INDEXTYPE_TXT     1
 #define INDEXTYPE_TXTZ    2
@@ -79,10 +80,10 @@ struct split_conf {
     char  *prefix;
 };
 
-
 struct args {
     int       mjrmode;
-
+    unsigned  mnrmode;
+    
     char      *curr_src_path;
     int       curr_src_ldmethod;
     tn_array  *sources;
@@ -127,7 +128,7 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_SOURCEDIR   1016
 #define OPT_SOURCEHDR   1017
 #define OPT_PKGPREFIX   1018
-#define OPT_SOURCEUP    1019
+#define OPT_UPDATEIDX   1019
 #define OPT_SOURCECACHE 1020
 
 #ifdef ENABLE_INTERACTIVE_MODE
@@ -176,7 +177,7 @@ static struct argp_option options[] = {
 {"prefix", 'P', "PREFIX", 0,
  "Get packages from PREFIX instead of SOURCE", 1 },
 
-{"update", OPT_SOURCEUP, 0, 0, 
+{"update", OPT_UPDATEIDX, 0, 0, 
  "Update package index (for remote indexes)", 1 },
 
 {"cachedir", OPT_SOURCECACHE, "DIR", 0, 
@@ -396,9 +397,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->curr_src_ldmethod = PKGSET_LD_NIL;
             break;
 
-        case OPT_SOURCEUP:
-            check_mjrmode(argsp);
-            argsp->mjrmode = MODE_UPDATEIDX;
+        case OPT_UPDATEIDX:
+            argsp->mnrmode |= MODE_MNR_UPDATEIDX;
             break;
 
         case OPT_SOURCECACHE:
@@ -774,9 +774,14 @@ void parse_options(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    if (args.mjrmode == 0) {
-        log(LOGERR, "so what?\n");
+
+    if (args.mjrmode == 0 && args.mnrmode == 0) {
+#ifdef ENABLE_INTERACTIVE_MODE
+        args.mjrmode = MODE_SHELL;
+#else         
+        log(LOGERR, "so what??\n");
         exit(EXIT_FAILURE);
+#endif        
     }
     
     if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0)
@@ -1024,11 +1029,18 @@ static
 int check_args(void) 
 {
     int i, rc = 1;
-    
+
+#ifdef ENABLE_INTERACTIVE_MODE
+    if (args.mjrmode == MODE_NULL && args.mnrmode == MODE_NULL) 
+        args.mjrmode = MODE_SHELL;
+#endif    
+
     switch (args.mjrmode) {
-        case 0: 
-            log(LOGERR, "so what?\n");
-            exit(EXIT_FAILURE);
+        case MODE_NULL:
+            if (args.mnrmode == 0) {
+                log(LOGERR, "so what?\n");
+                exit(EXIT_FAILURE);
+            }
             break;
 
 #ifdef ENABLE_INTERACTIVE_MODE
@@ -1036,9 +1048,6 @@ int check_args(void)
             if (verbose == 0)
                 verbose = 1;
 #endif            
-        case MODE_UPDATEIDX:
-            break;
-            
         case MODE_VERIFY:
             if (args.has_pkgdef)
                 rc = prepare_given_packages();
@@ -1183,13 +1192,15 @@ int main(int argc, char **argv)
     poldek_init();
     rpm_initlib(args.inst.rpmacros);
     
-    if (args.mjrmode == MODE_UPDATEIDX) {
+    if (args.mnrmode & MODE_MNR_UPDATEIDX) {
+        int v = verbose;
+        
         if (verbose < 1 && verbose != -1)
             verbose = 1;
         
-        if (update_idx())
-            exit(EXIT_SUCCESS);
-        exit(EXIT_FAILURE);
+        if (!update_idx())
+            exit(EXIT_FAILURE);
+        verbose = v;
     }
 
     if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0 &&
@@ -1208,6 +1219,14 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
 
     switch (args.mjrmode) {
+
+        case MODE_NULL:
+            if (args.mnrmode != 0)
+                break;
+#ifndef ENABLE_INTERACTIVE_MODE
+            n_assert(0);
+#endif
+            
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
             if (args.shcmd != NULL) 
@@ -1257,6 +1276,7 @@ int main(int argc, char **argv)
                                 args.split_conf.first_free_space, 
                                 args.split_conf.conf, args.split_conf.prefix);
             break;
+
             
         default:
             n_assert(0);
