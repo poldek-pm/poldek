@@ -20,10 +20,10 @@
 #define PKGDIR_PATCHED            (1 << 7)  /* patched  */
 #define PKGDIR_UNIQED             (1 << 8) /* passed through pkgdir_uniq() */
 
-#define PKGDIR_VER_GPG            (1 << 10) /* verify package GPG signatures */
-#define PKGDIR_VER_PGP            (1 << 11) /* verify package PGP signatures */
+#define PKGDIR_VRFY_GPG            (1 << 10) /* verify package GPG signatures */
+#define PKGDIR_VRFY_PGP            (1 << 11) /* verify package PGP signatures */
 
-#define PKGDIR_VERSIGN            (PKGDIR_VER_GPG | PKGDIR_VER_PGP)
+#define PKGDIR_VERSIGN            (PKGDIR_VRFY_GPG | PKGDIR_VRFY_PGP)
 
 /* packages.dir digest */
 

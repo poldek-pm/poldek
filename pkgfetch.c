@@ -125,10 +125,10 @@ int package_verify_pgpg_sign(const struct pkg *pkg, const char *localpath)
         
         verbose = rpmlib_verbose = 1;
 
-        if (pkg->pkgdir->flags & PKGDIR_VER_GPG)
+        if (pkg->pkgdir->flags & PKGDIR_VRFY_GPG)
             verify_flags |= PKGVERIFY_GPG;
 
-        if (pkg->pkgdir->flags & PKGDIR_VER_PGP)
+        if (pkg->pkgdir->flags & PKGDIR_VRFY_PGP)
             verify_flags |= PKGVERIFY_PGP;
         
         if (!package_verify_sign(localpath, verify_flags)) {

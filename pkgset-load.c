@@ -55,8 +55,8 @@ static struct subopt type_subopts[] = {
 static struct src_option source_options[] = {
     { "noauto",   0, PKGSOURCE_NOAUTO,     NULL}, 
     { "noautoup", 0, PKGSOURCE_NOAUTOUP,   NULL}, 
-    { "gpg",      0, PKGSOURCE_VER_GPG,    NULL},
-    { "pgp",      0, PKGSOURCE_VER_PGP,    NULL},
+    { "gpg",      0, PKGSOURCE_VRFY_GPG,    NULL},
+    { "pgp",      0, PKGSOURCE_VRFY_PGP,    NULL},
     { "type",     0, PKGSOURCE_TYPE | PKGSRC_OPTION_SUBOPT, type_subopts }, 
     {  NULL,      0, 0, NULL }, 
 };
@@ -241,7 +241,6 @@ void source_free(struct source *src)
     free(src);
 }
 
-
 int source_cmp(struct source *s1, struct source *s2)
 {
     return strcmp(s1->path, s2->path);
@@ -393,11 +392,11 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
             continue;
         }
 
-        if (src->flags & PKGSOURCE_VER_GPG)
-            pkgdir->flags |= PKGDIR_VER_GPG;
+        if (src->flags & PKGSOURCE_VRFY_GPG)
+            pkgdir->flags |= PKGDIR_VRFY_GPG;
 
-        if (src->flags & PKGSOURCE_VER_PGP)
-            pkgdir->flags |= PKGDIR_VER_PGP;
+        if (src->flags & PKGSOURCE_VRFY_PGP)
+            pkgdir->flags |= PKGDIR_VRFY_PGP;
         
         n_array_push(ps->pkgdirs, pkgdir);
     }

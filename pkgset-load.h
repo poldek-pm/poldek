@@ -12,8 +12,8 @@
 /* options */
 #define PKGSOURCE_NOAUTO     (1 << 0)
 #define PKGSOURCE_NOAUTOUP   (1 << 1)
-#define PKGSOURCE_VER_GPG    (1 << 2)
-#define PKGSOURCE_VER_PGP    (1 << 3)
+#define PKGSOURCE_VRFY_GPG   (1 << 2)
+#define PKGSOURCE_VRFY_PGP   (1 << 3)
 #define PKGSOURCE_TYPE       (1 << 4)
 
 #define PKGSOURCE_ISNAMED    (1 << 10)
@@ -38,7 +38,10 @@ int source_update(struct source *src);
 void source_printf(const struct source *src);
 
 #define source_idstr(src) \
-        (((src)->flags & PKGSOURCE_ISNAMED) ? (src)->name : vf_url_slim_s((src)->path, 0))
+ (((src)->flags & PKGSOURCE_ISNAMED) ? (src)->name : vf_url_slim_s((src)->path, 0))
+
+#define source_is_remote(src) \
+    (vf_url_type((src)->path) & VFURL_REMOTE)
 
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 
