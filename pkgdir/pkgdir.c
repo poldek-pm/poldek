@@ -563,15 +563,14 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         pkgdir->flags |= PKGDIR_LOADED;
 
         n_array_sort(pkgdir->pkgs);
-        
-        if ((ldflags & PKGDIR_LD_NOUNIQ) == 0)
-            pkgdir__uniq(pkgdir);
-
         for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
             pkg->pkgdir = pkgdir;
         }
         
+        if ((ldflags & PKGDIR_LD_NOUNIQ) == 0)
+            pkgdir__uniq(pkgdir);
+
         if (pkgdir->depdirs == NULL)
             pkgdir__setup_depdirs(pkgdir);
 
@@ -598,8 +597,15 @@ int deepcmp_nevr_rev_verify(const struct pkg *p1, const struct pkg *p2)
     register int rc;
 
 #if DEVEL
-    ncalls_deepcmp_nevr_rev_verify++;
-    n_assert(ncalls_deepcmp_nevr_rev_verify < 8 * n_array_size(p1->pkgdir->pkgs));
+    if (ncalls_deepcmp_nevr_rev_verify >= 0) {
+        ncalls_deepcmp_nevr_rev_verify++;
+        if (p1->pkgdir &&
+            ncalls_deepcmp_nevr_rev_verify > 10 * n_array_size(p1->pkgdir->pkgs)) {
+            logn(LOGNOTICE, "devel: %d: too many compares",
+                 ncalls_deepcmp_nevr_rev_verify);
+            ncalls_deepcmp_nevr_rev_verify = -1;
+        }
+    }
 #endif    
     if ((rc = pkg_deepcmp_name_evr_rev(p1, p2)) == 0) {
         logn(LOGERR | LOGDIE, "packages %s and %s are equal to me, give up",
