@@ -66,7 +66,8 @@
 #define HTTP_STATUS_MOVED_TEMPORARILY	302
 #define HTTP_STATUS_NOT_MODIFIED	304
 
-#define HTTP_STATUS_IS_REDIR(code) (code >= 300 && code % 300 < 100)
+#define HTTP_STATUS_IS_REDIR(code) (code == HTTP_STATUS_MOVED_TEMPORARILY || \
+                                    code == HTTP_STATUS_MOVED_PERMANENTLY)
 
 /* Client error 4xx.  */
 #define HTTP_STATUS_BAD_REQUEST		400
@@ -694,6 +695,10 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
             vhttp_set_err(EINVAL, _("%s: invalid range requested"), path);
             break;
 
+        case HTTP_STATUS_MOVED_TEMPORARILY:
+        case HTTP_STATUS_MOVED_PERMANENTLY:
+            break;
+
         default:
             if (errno == 0)
                 errno = EINVAL;
@@ -1033,19 +1038,25 @@ static void progress(long total, long amount, void *data)
 }
 #endif
 
-int httpcn_retr(struct httpcn *cn, int out_fd, off_t out_fdoff, 
-               const char *path, void *progess_data)
+int httpcn_retr(struct httpcn *cn,
+                int out_fd, off_t out_fdoff,
+                const char *path, void *progess_data, 
+                char *redirect_to, int size) 
 {
     int   close_cn = 0, rc = 1;
     long  from = 0, to = 0, total = 0, amount = 0;
     void  *sigint_fn;
     char  req_line[PATH_MAX];
+    const char *trenc;
     
     vhttp_errno = 0;
     
     //http_progress_fn = progress;
+
     
     sigint_fn = establish_sigint();
+    if (redirect_to)
+        *redirect_to = '\0';
     
     if ((lseek(out_fd, out_fdoff, SEEK_SET)) == (off_t)-1) {
         vhttp_set_err(errno, "%s: lseek %ld: %m", path, out_fdoff);
@@ -1069,6 +1080,7 @@ int httpcn_retr(struct httpcn *cn, int out_fd, off_t out_fdoff,
     if (!httpcn_get_resp(cn))
         goto l_err_end;
 
+    close_cn = 0;
     switch (http_resp_conn_status(cn->resp)) {
         case -1:                /* no Connection header */
             if (cn->resp->http_ver > 0) /* HTTP > 1.0 */
@@ -1087,17 +1099,36 @@ int httpcn_retr(struct httpcn *cn, int out_fd, off_t out_fdoff,
             break;
     }
 
+    /* poor HTTP client doesn't supports Trasfer-Encodings */
+    if ((trenc = http_resp_get_hdr(cn->resp, "transfer-encoding"))) {
+        if (*vhttp_verbose > 1)
+            vhttp_msg_fn("Closing connection cause unimplemented HTTP "
+                         "transfer encodins\n");
+        close_cn = 1;
+    }
     
+
+    if (HTTP_STATUS_IS_REDIR(cn->resp->code)) {
+        const char *redirto = http_resp_get_hdr(cn->resp, "location");
+        if (redirto && redirect_to && strlen(redirto)) {
+            snprintf(redirect_to, size, redirto);
+            rc = 0;             /* treat redirects as errors, caller should
+                                   check redirect_to */
+            goto l_end;
+        }
+    }
+
     if (!status_code_ok(cn->resp->code, cn->resp->msg, path) &&
         cn->resp->code != HTTP_STATUS_BAD_RANGE)
         goto l_err_end;
+    
 
     if (!http_resp_get_hdr_long(cn->resp, "content-length", &amount)) {
         vhttp_set_err(EINVAL, _("%s: Content-Length parse error (%s)"),
                       path, http_resp_get_hdr(cn->resp, "content-length"));
         goto l_err_end;
     }
-
+    
     if (out_fdoff == 0)
         total = amount;
     
@@ -1129,14 +1160,13 @@ int httpcn_retr(struct httpcn *cn, int out_fd, off_t out_fdoff,
         long a = from ? total - from : total;
         vhttp_msg_fn(_("Total file size %ld, %ld to download\n"), total, a);
     }
+
     
     
     errno = 0;
     if (!rcvfile(out_fd, out_fdoff, cn->sockfd, total, progess_data))
         goto l_err_end;
 
-    
-    
     
  l_end:
     restore_sigint(sigint_fn);
@@ -1151,7 +1181,7 @@ int httpcn_retr(struct httpcn *cn, int out_fd, off_t out_fdoff,
     
     if (vhttp_errno == 0)
         vhttp_errno = EIO;
-    
     goto l_end;
+
 }
 

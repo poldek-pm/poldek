@@ -34,8 +34,10 @@ void httpcn_free(struct httpcn *cn);
 
 int httpcn_is_alive(struct httpcn *cn);
 
-int httpcn_retr(struct httpcn *cn, int out_fd, off_t out_fdoff, const char *path,
-               void *progess_data);
+int httpcn_retr(struct httpcn *cn,
+                int out_fd, off_t out_fdoff,
+                const char *path, void *progess_data, 
+                char *redirect_to, int size);
 
 const char *http_errmsg(void);
 

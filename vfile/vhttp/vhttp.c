@@ -74,12 +74,13 @@ void vhttp_vacuum(void)
 }
 
 
-int vhttp_retr(FILE *stream, long offset, const char *url,
-              void *progress_data) 
+static
+int do_vhttp_retr(FILE *stream, long offset, const char *url,
+                  void *progress_data, int recursion_level) 
 {
     tn_list_iterator   it;
     struct httpcn       *cn;
-    char               buf[PATH_MAX];
+    char               buf[PATH_MAX], redirect_to[PATH_MAX];
     char               *p, *q, *host, *path;
     const char         *login = NULL, *passwd = NULL;
     int                port = 0, rc;
@@ -87,6 +88,11 @@ int vhttp_retr(FILE *stream, long offset, const char *url,
 
     
     vhttp_set_err(0, "");
+
+    if (recursion_level > 10) {
+        vhttp_set_err(EINVAL, "redir to %s: too many redirects", url);
+        return 0;
+    }
     
     if ((rc = strncmp(url, "http://", sizeof("http://") - 1)) != 0) {
         vhttp_set_err(EINVAL, err_msg, url);
@@ -160,8 +166,39 @@ int vhttp_retr(FILE *stream, long offset, const char *url,
     if (cn == NULL)
         return 0;
     
-    return httpcn_retr(cn, fileno(stream), offset, path, progress_data);
+    rc = httpcn_retr(cn, fileno(stream), offset, path, progress_data,
+                     redirect_to, sizeof(redirect_to));
+
+
+    if (rc == 0 && *redirect_to) {
+        char topath[PATH_MAX], *topathp = topath;
+
+        *q = '\0';
+        if (*redirect_to == '/') 
+            snprintf(topath, sizeof(topath), "http://%s%s", host, redirect_to);
+        
+        else if (strncmp(redirect_to, "http://", 7) == 0)
+            topathp = redirect_to;
+
+        else {
+            vhttp_set_err(EINVAL, "%s: invalid redirect URI", redirect_to);
+            topathp = NULL;
+        }
+        
+        if (topathp) 
+            rc = do_vhttp_retr(stream, offset, topathp, progress_data,
+                               ++recursion_level);
+    }
+    
+    return rc;
 }
+
+
+int vhttp_retr(FILE *stream, long offset, const char *url, void *progress_data)
+{
+    return do_vhttp_retr(stream, offset, url, progress_data, 0);
+}
+
 
 static void vhttp_msg(const char *fmt, ...)
 {

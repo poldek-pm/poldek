@@ -14,7 +14,7 @@ int test_http(void)
         return 0;
         
     stream = fopen("/tmp/dupa.txt", "w");
-    httpcn_retr(cn, fileno(stream), 0, "/welcome.msg", NULL);
+    httpcn_retr(cn, fileno(stream), 0, "/welcome.msg", NULL, NULL, 0);
     httpcn_free(cn);
     return 0;
 }
@@ -32,9 +32,14 @@ int test_vhttp(void)
     stream = fopen("/tmp/dupa.txt", "a");
     off = ftell(stream);
     printf("\n\nFROM %ld\n", off);
-    if (!vhttp_retr(stream, off, "http://localhost/PLD/ddd-3.3.1-7.i686.rpm", NULL))
-        printf("retr: %s\n", vhttp_errmsg());
 
+    if (!vhttp_retr(stream, off, "http://localhost/cgi-bin/cc", NULL))
+        printf("retr: %s\n", vhttp_errmsg());
+    
+    //if (!vhttp_retr(stream, off, "http://localhost/PLD/ddd-3.3.1-7.i686.rpm", NULL))
+    //    printf("retr: %s\n", vhttp_errmsg());
+
+    exit(0);
     fclose(stream);
     stream = fopen("/tmp/dupa.txt", "a");
     off = ftell(stream);
