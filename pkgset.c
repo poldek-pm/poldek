@@ -382,6 +382,15 @@ static void mapfn_clean_pkg_color(struct pkg *pkg)
 #endif
 
 
+static int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2) 
+{
+    int rc;
+    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0)
+        log(LOGWARN, "duplicated %s\n", pkg_snprintf_s(p1), pkg_snprintf_s0(p2));
+    
+    return rc;
+}
+
 int pkgset_setup(struct pkgset *ps) 
 {
     int n;
@@ -391,7 +400,7 @@ int pkgset_setup(struct pkgset *ps)
 
     n = n_array_size(ps->pkgs);
     n_array_sort(ps->pkgs);
-    n_array_uniq(ps->pkgs);
+    n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
 
     if (n != n_array_size(ps->pkgs)) 
         log(LOGWARN, "Removed %d duplicate package(s)\n",
