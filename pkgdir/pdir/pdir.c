@@ -294,6 +294,9 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
     struct pdir     *idx;
 
     idx = pkgdir->mod_data;
+
+    if (idx->vf->vf_flags & VF_FETCHED)
+        return 1;
     
     n_assert(pdir_v016compat == 0);
     switch (is_uptodate(pkgdir->idxpath, idx->pdg, &pdg_current)) {

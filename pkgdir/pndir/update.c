@@ -175,6 +175,9 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
     struct pndir    *idx;
 
     idx = pkgdir->mod_data;
+
+    if (idx->_vf->vf_flags & VF_FETCHED)
+        return 1;
     
     switch (is_uptodate(pkgdir->idxpath, idx->dg, &dg_remote)) {
         case 1:
