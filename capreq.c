@@ -227,6 +227,7 @@ char *capreq_snprintf_s(const struct capreq *cr)
     return str;
 }
 
+
 struct capreq *capreq_new(const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t flags) 
@@ -257,7 +258,7 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
         name_len = strlen(name);
     }
     
-        len = 1 + name_len + 1;
+    len = 1 + name_len + 1;
 
     if (epoch) {
         if (version == NULL)
@@ -322,10 +323,8 @@ struct capreq *capreq_new_evr(const char *name, char *evr, int32_t flags)
     char *version = NULL, *release = NULL;
     int32_t epoch = 0;
 
-    if (evr) {
-        if (!parse_evr(evr, &epoch, &version, &release))
-            return NULL;
-    }
+    if (evr && !parse_evr(evr, &epoch, &version, &release))
+        return NULL;
     
     return capreq_new(name, epoch, version, release, flags);
 }
@@ -446,12 +445,34 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
 
     for (i=0; i<c1 ; i++) {
         int epoch_len = 0, name_len = 0, version_len = 0, release_len = 0;
-        unsigned int len = 1, has_ver;
-        char *version, *release;
+        unsigned int len = 1, has_ver, isrpmreq = 0;
+        char *name, *version, *release;
         int32_t epoch;
         char *buf;
+
+        name = names[i];
         
-        name_len = strlen(names[i]);
+        if (*name == 'r' && strncmp(name, "rpmlib(", 7) == 0) {
+            char *p, *q, *nname;
+
+            p = (char*)name + 7;
+            if ((q = strchr(p, ')'))) {
+                name_len = q - p;
+                nname = alloca(name_len + 1);
+                memcpy(nname, p, name_len);
+                nname[name_len] = '\0';
+                name = nname;
+                
+                isrpmreq = 1;
+            
+            } else {
+                log(LOGERR, "%s: invalid rpmlib capreq\n", name);
+            }
+        
+        } else {
+            name_len = strlen(name);
+        }
+
         len += name_len + 1;
         
         has_ver = c2 && *versions[i];
@@ -480,7 +501,7 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
         buf = cr->_buf;
         *buf++ = '\0';          /* set buf[0] to '\0' */
         
-        strcat(buf, names[i]);
+        memcpy(buf, name, name_len);
         buf += name_len;
         *buf++ = '\0';
         
@@ -494,14 +515,14 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
             }
                 
             cr->cr_ver_ofs = buf - cr->_buf;
-            strcpy(buf, version);
+            memcpy(buf, version, version_len);
             buf += version_len ;
             *buf++ = '\0';
 
             if (release != NULL) {
                 cr->cr_rel_ofs = buf - cr->_buf;
-                strcpy(buf, release);
-                buf += release_len ;
+                memcpy(buf, release, release_len);
+                buf += release_len;
                 *buf++ = '\0';
             }
         }
@@ -527,6 +548,9 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
 
         if (crtype == CRTYPE_OBSL) 
             cr->cr_flags |= CAPREQ_OBCNFL;
+
+        if (isrpmreq)
+            cr->cr_flags |= CAPREQ_RPMLIB;
         
         msg(4, "%s%s: %s\n",
             cr->cr_flags & CAPREQ_PREREQ ?
