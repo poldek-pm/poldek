@@ -3,9 +3,10 @@
 
 PATH="/bin:/usr/bin:/usr/sbin:/sbin"
 NAME=packages.dir
+
 usage()
 {
-    echo "usage: mkpackagesdir DIR..."
+    echo "usage: `basename $0` DIR..."
 }
 
 if [ "$#" = 0 ]; then
