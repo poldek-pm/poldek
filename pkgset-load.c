@@ -197,7 +197,7 @@ int source_snprintf_flags(char *str, int size, struct source *src)
 int source_update(struct source *src)
 {
     if (src->ldmethod == PKGSET_LD_HDL) {
-        logn(LOGWARN, _("%s: this type of source is not update-able"),
+        logn(LOGWARN, _("%s: this type of source is not updateable"),
              src->source_path);
         return 0;
     }

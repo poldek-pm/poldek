@@ -213,7 +213,7 @@ static struct argp_option options[] = {
  N_("Get packages info from directory DIR"), 1 },
 
 {"shdl", OPT_SOURCEHDL, "FILE", 0, /* RH's hdlist,  PLD's tocfile */
- N_("Get packages info from package header list file (hdlist)"), 1 },    
+ N_("Get packages info from package header list file (aka hdlist)"), 1 },    
 
 {"prefix", 'P', "PREFIX", 0,
  N_("Get packages from PREFIX instead of SOURCE"), 1 },
@@ -346,10 +346,10 @@ N_("Don't take held packages from $HOME/.poldek_hold."), 71 },
 
 {0,0,0,0, N_("Other:"), 500},
 {"cachedir", OPT_SOURCECACHE, "DIR", 0, 
- N_("Store downloaded files under DIR"), 1 },
+ N_("Store downloaded files under DIR"), 500 },
 
 {"clean-cache", OPT_CACHECLEAN, "DIR", OPTION_HIDDEN, /* NIY */
- N_("Remove index files stored in cache directory"), 1 },    
+ N_("Remove index files stored in cache directory"), 500 },    
 
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
                           "let user choose among equivalent packages"), 500 },
