@@ -378,13 +378,62 @@ int pkgroup_idx_update(struct pkgroup_idx *idx, Header h)
 }
 
 
+static const char *find_tr(const char *lang, const struct pkgroup *gr)
+{
+    struct tr *tr;
+    const char **langs, **p;
+    
+    langs = n_str_tokl(lang, ":");
+
+    p = langs;
+    while (*p) {
+        char   *l, *q, *sep = "@._";
+        int    len;
+        
+        if ((tr = n_hash_get(gr->trs, *p)))
+            return tr->name;
+
+        len = strlen(*p) + 1;
+        l = alloca(len + 1);
+        memcpy(l, *p, len);
+
+        while (*sep) {
+            if ((q = strchr(l, *sep))) {
+                *q = '\0';
+                
+                if ((tr = n_hash_get(gr->trs, l)))
+                    return tr->name;
+            }
+            sep++;
+        }
+
+        p++;
+    }
+    
+    n_str_tokl_free(langs);
+    
+    return gr->name;
+}
+
 const char *pkgroup(struct pkgroup_idx *idx, int groupid) 
 {
     struct pkgroup *gr, tmpgr;
-
+    const char *lang;
+        
     tmpgr.id = groupid;
-    if ((gr = n_array_bsearch(idx->arr, &tmpgr)))
+    if ((gr = n_array_bsearch(idx->arr, &tmpgr)) == NULL)
+        return NULL;
+
+    if (gr->trs == NULL)
+        return gr->name;
+    
+    if ((lang = getenv("LANGUAGE")) == NULL &&
+        (lang = getenv("LC_ALL")) == NULL &&
+        (lang = getenv("LC_MESSAGES")) == NULL &&
+	(lang = getenv("LANG")) == NULL)
         return gr->name;
 
-    return NULL;
+    return find_tr(lang, gr);
 }
+
+
