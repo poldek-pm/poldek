@@ -193,14 +193,16 @@ int log_init(const char *pathname, FILE *tty, char *prefix)
         fclose(l_fstream);
     
     l_stream = tty;
-    l_fstream = fopen(pathname, "a");
+    if (pathname)
+        l_fstream = fopen(pathname, "a");
 
     l_prefix[0] = '\0';
     if (prefix)
         snprintf(l_prefix, sizeof(l_prefix), "%s:", prefix);
     
-    
-    return l_fstream != NULL;
+    if (pathname)
+        return l_fstream != NULL;
+    return 1;
 }
 
 
