@@ -203,7 +203,7 @@ struct pkg *select_supersede_pkg(const struct pkg *pkg, struct pkgset *ps)
 }
 
 static
-int other_version_marked(struct pkg *pkg, tn_array *pkgs)
+int other_version_marked(struct pkg *pkg, tn_array *pkgs, struct capreq *req)
 {
     struct pkg *tmp;
     int i;
@@ -221,9 +221,11 @@ int other_version_marked(struct pkg *pkg, tn_array *pkgs)
             break;
         
         if (p != pkg && pkg_is_marked(p)) {
+            if (req == NULL || pkg_statisfies_req(p, req, 0)) {
             DBGF("%s -> yes, %s\n", pkg_snprintf_s0(pkg), pkg_snprintf_s1(p));
             return 1;
         }
+    }
     }
 
     return 0;
@@ -314,9 +316,9 @@ int select_best_pkg(const struct pkg *marker,
     for (i=0; i < npkgs; i++) {
         struct pkg *pkg = candidates[i];
 
-        DBGF("%d. %s %s (color white %d)\n", i, 
+        DBGF("%d. %s %s (color white %d, marked %d, %p)\n", i, 
              pkg_snprintf_s(marker), pkg_snprintf_s0(pkg),
-             pkg_is_color(pkg, PKG_COLOR_WHITE));
+             pkg_is_color(pkg, PKG_COLOR_WHITE), pkg_is_marked(pkg), pkg);
 
         if (pkg_eq_name_prefix(marker, pkg)) {
             if (i_evr_eq == -1 && pkg_cmp_evr(marker, pkg) == 0)
@@ -412,7 +414,7 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
                     best_i = select_best_pkg(pkg, matches, nmatches, ps, upg);
                 *best_pkg = matches[best_i];
 
-                if (other_version_marked(*best_pkg, ps->pkgs)) {
+                if (other_version_marked(*best_pkg, ps->pkgs, NULL)) {
                     found = 0;
                     *best_pkg = NULL;
                     
@@ -475,6 +477,16 @@ static int do_mark_package(struct pkg *pkg, struct upgrade_s *upg,
                            unsigned mark)
 {
     int rc;
+    
+#if 0
+    static struct pkg *rpm = NULL;
+
+    if (strcmp(pkg->name, "rpm") == 0 && strcmp(pkg->ver, "4.1") == 0) {
+        rpm = pkg;
+    }
+    if (rpm)
+        log(LOGNOTICE, "DUPA %s(%p): %d\n", pkg_snprintf_s(rpm), rpm, pkg_is_marked(rpm));
+#endif    
     
     n_assert(pkg_is_marked(pkg) == 0);
     if ((rc = is_installable(pkg, upg->inst, pkg_is_marked_i(pkg))) <= 0) {
@@ -671,7 +683,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     struct db_dep *db_dep;
     struct capreq *req;
 
-    DBG("VUN %s: %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(cap));
+    DBGF("VUN %s: %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(cap));
     if ((db_dep = db_deps_contains(upg->db_deps, cap, 0)) == NULL) {
         DBG("  [1] -> NO in db_deps\n");
         return 1;
@@ -693,7 +705,9 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     }
     	
     
-    if (db_dep->spkg && !marked_for_removal_by_req(db_dep->spkg, req, upg)) {
+    
+    if (db_dep->spkg && !marked_for_removal_by_req(db_dep->spkg, req, upg) &&
+        !other_version_marked(db_dep->spkg, ps->pkgs, req)) {
         struct pkg *marker;
         
         n_assert(n_array_size(db_dep->pkgs));
@@ -726,9 +740,24 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
                 
     } else if (db_dep->flags & PROCESS_AS_ORPHAN) {
         int i;
+        tn_array *pkgs = db_dep->pkgs;
+        
+        if (n_array_size(db_dep->pkgs) > 1) {
+            pkgs = n_array_clone(db_dep->pkgs);
+            
+            for (i=0; i < n_array_size(db_dep->pkgs); i++) {
+                struct pkg *pp = n_array_nth(db_dep->pkgs, i);
+                if (n_array_has_free_fn(db_dep->pkgs))
+                    pp = pkg_link(pp);
+                
+                n_array_push(pkgs, pp);
+            }
+        }
+        
 
-        for (i=0; db_dep->pkgs && i < n_array_size(db_dep->pkgs); i++) {
-            struct pkg *opkg = n_array_nth(db_dep->pkgs, i);
+        for (i=0; i < n_array_size(pkgs); i++) {
+            //for (i=0; db_dep->pkgs && i < n_array_size(db_dep->pkgs); i++) {
+            struct pkg *opkg = n_array_nth(pkgs, i);
             struct pkg *p;
             int not_found = 1;
 
@@ -764,6 +793,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
                 upg->nerr_dep++;
             }
         }
+        n_array_free(pkgs);
     }
     
 
@@ -896,6 +926,7 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
             continue;
 
         req = capreq_new_name_a(capreq_name(true_req));
+        //req = capreq_new(capreq_name(true_req), 0, 0, 0, 0, 0);
         
         if (do_find_req(pkg, req, &tomark, NULL, ps, upg, FINDREQ_NOBESTSEL)) {
             if (tomark == NULL)
@@ -912,7 +943,7 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
 
             DBGF("%s: satisfied by dbX\n", capreq_snprintf_s(req));
             //dbpkg_set_dump(upg->uninst_set);
-            db_deps_add(upg->db_deps, req, pkg, tomark,
+            db_deps_add(upg->db_deps, true_req, pkg, tomark,
                         PROCESS_AS_NEW | DBDEP_DBSATISFIED);
             
         } else if (tomark || tomark == NULL) { /* don't care found or not */
@@ -1094,6 +1125,7 @@ static
 int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
                      struct upgrade_s *upg, int process_as) 
 {
+    
     n_assert(process_as == PROCESS_AS_NEW || process_as == PROCESS_AS_ORPHAN);
     
     if (upg->nerr_fatal)
@@ -1106,6 +1138,21 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
         //      pkg_snprintf_s(pkg));
         return 0;
     }
+
+#if 0
+    {
+        
+        static struct pkg *rpm = NULL;
+        
+        if (strcmp(pkg->name, "rpm") == 0 && strcmp(pkg->ver, "4.1") == 0) {
+            rpm = pkg;
+        }
+        if (rpm)
+            log(LOGNOTICE, "DD %s(%p): %d\n", pkg_snprintf_s(rpm), rpm, pkg_is_marked(rpm));
+    }
+    
+#endif    
+
 
     if (process_as == PROCESS_AS_NEW)
         n_array_push(upg->pkg_stack, pkg);
@@ -1216,13 +1263,16 @@ int resolve_conflict(int indent,
     
     if (by_replacement || pkg_obsoletes_pkg(tomark, dbpkg->pkg)) {
         if (pkg_is_marked_i(tomark)) {
-            //    msg_i(1, indent, "%s 'MARX' => %s (cnfl %s)\n",
+            //msg_i(1, indent, "%s 'MARX' => %s (cnfl %s)\n",
             //      pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark),
             //      capreq_snprintf_s(req));
             found = mark_package(tomark, upg);
             indent = -2;
                 
         } else {
+            //msg_i(1, indent, "%s 'DEPMARX' => %s (cnfl %s)\n",
+            //      pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark),
+            //      capreq_snprintf_s(req));
             message_depmark(indent, pkg, tomark, req, PROCESS_AS_NEW);
             found = dep_mark_package(tomark, pkg, req, upg);
         }

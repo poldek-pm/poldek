@@ -136,6 +136,72 @@ void db_deps_remove_cap(tn_hash *db_deph, struct capreq *cap)
 }
 
 
+static void remove_files(tn_hash *db_deph, struct pkg *pkg) 
+{
+    tn_array  *fl;
+    void      *flmark;
+    int       i, j;
+    
+    if ((fl = pkg_info_get_fl(pkg)) == NULL || n_array_size(fl) == 0)
+        return;
+    
+    flmark = pkgflmodule_allocator_push_mark();
+
+    for (i=0; i<n_array_size(fl); i++) {
+        struct pkgfl_ent    *flent;
+        char                tmpbuf[PATH_MAX], *slash = "";
+        
+        
+        flent = n_array_nth(fl, i);
+        
+        for (j=0; j<flent->items; j++) {
+            struct flfile     *f = flent->files[j];
+            tn_list           *l;
+            tn_list_iterator  it;
+            struct db_dep     *dep;
+            char              buf[1024];
+            int               n;
+            
+
+            if (S_ISDIR(f->mode)) {
+                struct pkgfl_ent tmpent;
+                
+                if (*flent->dirname != '/')
+                    slash = "/";
+                snprintf(tmpbuf, sizeof(tmpbuf), "%s/%s", flent->dirname,
+                         f->basename);
+                tmpent.dirname = tmpbuf;
+                //if (n_array_bsearch(fl, &tmpent))
+                //    continue;
+            }
+            
+            n = n_snprintf(buf, sizeof(buf), "%s%s%s%s%s",
+                         *flent->dirname == '/' ? "":"/",
+                         flent->dirname,
+                         *flent->dirname == '/' ? "":"/",
+                         f->basename, slash);
+
+            
+            if ((l = n_hash_get(db_deph, buf)) == NULL)
+                continue;
+            
+            n_list_iterator_start(l, &it);
+            while ((dep = n_list_iterator_get(&it))) {
+                if (dep->req && strcmp(capreq_name(dep->req), buf) == 0) {
+                    DBGF("rmcap %s (%s)\n", buf, capreq_snprintf_s0(dep->req));
+                    dep->req = NULL;
+                    n_array_free(dep->pkgs);
+                    dep->pkgs = NULL;
+                }
+            }
+        }
+    }
+
+    pkg_info_free_fl(pkg, fl);
+    pkgflmodule_allocator_pop_mark(flmark);
+}
+
+
 void db_deps_remove_pkg(tn_hash *db_deph, struct pkg *pkg)
 {
     int i;
@@ -147,8 +213,8 @@ void db_deps_remove_pkg(tn_hash *db_deph, struct pkg *pkg)
         
     for (i=0; i < n_array_size(pkg->reqs); i++)
         db_deps_remove_cap(db_deph, n_array_nth(pkg->reqs, i));
-}
 
+}
 
 
 void db_deps_remove_pkg_caps(tn_hash *db_deph, struct pkg *pkg)
@@ -156,6 +222,8 @@ void db_deps_remove_pkg_caps(tn_hash *db_deph, struct pkg *pkg)
     int i;
 
     DBGF("%s\n", pkg_snprintf_s(pkg));
+    remove_files(db_deph, pkg);
+    
     if (pkg->caps == NULL)
         return;
     
@@ -194,6 +262,7 @@ struct db_dep *provides_cap(tn_hash *db_deph, struct capreq *cap,
     struct db_dep     *dep = NULL;
     tn_list           *l = NULL;
     
+    DBGF("%p %s\n", cap, capreq_snprintf_s0(cap));
 
     if ((l = n_hash_get(db_deph, capreq_name(cap)))) {
         tn_list_iterator  it;

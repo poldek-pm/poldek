@@ -7,10 +7,11 @@ if [ -n "$inhome" ]; then
 
     DISTDIR=/mnt/PLD
 else
+
     SRCDIR=/home/httpd/html/RPMSt
     SRCURL=http://localhost/RPMSt/
 
-    DISTDIR=/mnt/i686/PLD/RPMS/
+    DISTDIR=/mnt/nest-test/i686/
 fi
 
 TMPDIR=/tmp

@@ -212,6 +212,10 @@ int pkg_match_req(const struct pkg *pkg, const struct capreq *req,
 int pkg_has_path(const struct pkg *pkg,
                  const char *dirname, const char *basename);
 
+/* match with caps && files */
+int pkg_statisfies_req(const struct pkg *pkg, const struct capreq *req,
+                       int strict);
+
 int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg);
 int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg);
 
@@ -245,5 +249,7 @@ const char *pkg_group(const struct pkg *pkg);
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*));
 
 tn_array *pkgs_array_new(int size);
+
+
 
 #endif /* POLDEK_PKG_H */

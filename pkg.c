@@ -868,6 +868,31 @@ int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
     return pkg_caps_match_req(pkg, req, strict);
 }
 
+
+int pkg_statisfies_req(const struct pkg *pkg, const struct capreq *req,
+                       int strict) 
+{
+    if (!capreq_is_file(req))
+        return pkg_match_req(pkg, req, strict);
+    
+    else {
+        char *dirname, *basename, path[PATH_MAX];
+        
+        strncpy(path, capreq_name(req), sizeof(path));
+        path[PATH_MAX - 1] = '\0';
+        n_basedirnam(path, &dirname, &basename);
+        n_assert(dirname);
+        n_assert(*dirname);
+        if (*dirname == '/' && *(dirname + 1) != '\0')
+            dirname++;
+        
+        return pkg_has_path(pkg, dirname, basename);
+    }
+
+    return 1;
+}
+
+
 int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg) 
 {
     if (strcmp(pkg->name, opkg->name) != 0)
