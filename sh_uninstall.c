@@ -28,7 +28,6 @@ int shell_uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
     char **argv;
     char *cmd;
     int i, n, nopts = 0, ec;
-    int nv = verbose;
 
     for (i=0; i<n_array_size(pkgnevrs); i++) 
         msg(1, "U %s\n", n_array_nth(pkgnevrs, i));
@@ -59,17 +58,9 @@ int shell_uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
     
     argv[n++] = "-e";
 
-    if (nv > 0) {
+    for (i=1; i<verbose; i++)
         argv[n++] = "-v";
-        nv--;
-    }
-    
-    if (nv > 0)
-        nv--;
 
-    while (nv-- > 0) 
-        argv[n++] = "-v";
-    
     if (inst->instflags & PKGINST_TEST)
         argv[n++] = "--test";
     
@@ -115,20 +106,12 @@ int shell_uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
     if (p_open(&pst, cmd, argv) == NULL) 
         return 0;
     
-    n = 0;
-    if (verbose == 0) {
-        verbose = 1;
-        n = 1;
-    }
-
     process_rpm_output(&pst);
     if ((ec = p_close(&pst) != 0))
         log(LOGERR, "%s", pst.errmsg);
 
     p_st_destroy(&pst);
 #endif
-    if (n)
-        verbose--;
-
+    
     return ec == 0;
 }
