@@ -6,6 +6,7 @@ CFLAGS    = @CFLAGS@
 INCLUDES  = @TRURL_INCLUDE@
 LDFLAGS   = @LDFLAGS@
 POD2MAN   = @POD2MAN@
+POD2HTML  = pod2html
 
 noinst_LIBRARIES = libpoldek.a
 libpoldek_a_SOURCES = \
@@ -76,10 +77,33 @@ man_MANS = poldek.1
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 *.html
 
 poldek.1: poldek.pod
 	$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@
+
+poldek.html: poldek.pod
+	$(POD2HTML) $< > $@
+
+homepage.html: homepage.sgml
+	sgml2html -s 0 $<
+
+website: homepage.html poldek.html
+
+website-whole-up: website dist
+	rpm -ts poldek-@VERSION@.tar.gz
+	scp -p $$HOME/rpm/SRPMS/poldek-@VERSION@-1.src.rpm poldek-@VERSION@.tar.gz \
+	   team.pld.org.pl:public_html/poldek/download
+	ssh team.pld.org.pl \
+	'(cd public_html/poldek/download && md5sum *.gz *.rpm > md5sums && \
+	~/mkindexpage.pl * > index.html && chmod 644 * && ls -l)'
+	scp -p homepage.html team.pld.org.pl:public_html/poldek/index.html
+	scp -p poldek.html team.pld.org.pl:public_html/poldek/poldek.html
+
+
+website-up: website 
+	scp -p homepage.html team.pld.org.pl:public_html/poldek/index.html
+	scp -p poldek.html team.pld.org.pl:public_html/poldek/poldek.html
 
 mkpackagedir:
 

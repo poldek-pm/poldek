@@ -152,9 +152,14 @@ if test -f "../trurlib/trurl/trurl.h"; then
 	AC_SUBST(TRURL_INCLUDE)
 	AC_SUBST(TRURL_LDFLAG)
 	LDFLAGS="$LDFLAGS -L../trurlib"
+	TRURLIB_VERSION=$(egrep 'T_AUTOMAKE\(trurlib, ' ../trurlib/configure.in | cut -d ' ' -f 2 | sed 's|)||')
+	AC_SUBST(TRURLIB_VERSION)
 else 
 	AC_CHECK_HEADER(trurl/trurl.h,,AC_MSG_ERROR("trurl.h is missing"))
+	TRURLIB_VERSION=0.43.3
+	AC_SUBST(TRURLIB_VERSION)
 fi
+
 
 dnl Checks for libraries.
 AC_CHECK_LIB(z, gzopen)
@@ -199,4 +204,5 @@ AC_OUTPUT([
 	        vfile/Makefile
 		Makefile
 		poldek.spec
+		homepage.sgml
 	])

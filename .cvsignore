@@ -23,3 +23,5 @@ rpmvercmp
 ccmalloc-log
 depcomp
 test_match
+*.html
+homepage.sgml

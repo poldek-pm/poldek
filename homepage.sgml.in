@@ -1,0 +1,98 @@
+<!doctype linuxdoc system>
+<!-- $Id$ -->
+
+<linuxdoc>
+  <article> 
+    <title> the poldek </title>
+    <author>  </author>
+    <date> </date>
+    
+    <sect> Introduction
+    <p>
+    The poldek is designed to automate the verify, install and upgrade 
+    of rpm packages. It can be used in batch or interactive mode. 
+    It was inspired by <em>apt_get</em> from Debian's APT, the interactive mode 
+    was inspired by shell mode of Perl CPAN module <em>($ perl -MCPAN -e shell)</em>.
+    
+    For more information see 
+	<url url="poldek.html" name="man page">, 
+    see also PLD admin manual 
+    <url url="http://team.pld.org.pl/~klakier/doc/pld-admin-manual/en/index.html#id129972" 
+         name="subsection about poldek">
+    </sect> 
+
+    <sect> Availability
+    <p>
+    The program is free software (GPL).
+    It is not yet well tested so consider it "beta" software. 
+
+    <itemize> 
+
+    <item> Homepage 
+
+      <url url="http://team.pld.org.pl/~mis/poldek/" 
+           name="http://team.pld.org.pl/~mis/poldek/"> 
+    </item>
+    
+
+    <item> Source tarballs and rpm source packages
+      <itemize>
+      <item> <url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz" 
+                  name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz"> 
+
+      <item> <url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.src.rpm" 
+                  name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.src.rpm">  
+      </itemize>
+    </item>
+
+    <item> Binary rpm packages for several architectures can be downloaded from
+                 <url url="http://www.pld.org.pl/" name="PLD"> ftp site 
+         <url url="ftp://ftp.pld.org.pl/" name="ftp://ftp.pld.org.pl/"> (directory
+         PLD-1.0/<em>ARCH</em>/PLD/RPMS/)
+        
+    </item>
+
+    <item> Anonymous CVS
+    <p>
+      Getting the module (password: "cvs"): 
+      <tscreen><verb>
+      cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot login
+      cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get installer/poldek
+      </verb></tscreen>            
+      Particular files may be accessed via 
+	<url url="http://cvs.pld.org.pl/installer/poldek/" name="CVSWeb">
+
+    </item>
+    </itemize>
+    </sect>
+    
+    <sect> Build
+    <p>
+    Program depends on following packages/libraries: bzip2, curl, db3, glibc, ncurses, openssl, 
+     pcre, popt, readline, rpm, zlib and trurlib. <p>
+    The last one, <em>trurlib</em> is small C library with some useful data structures and routines, 
+    it can be downloaded from following URLs:
+     <itemize>
+      <item> source 
+         <url url="http://team.pld.org.pl/~mis/poldek/download/trurlib-@TRURLIB_VERSION@.tar.gz" 
+              name="http://team.pld.org.pl/~mis/poldek/download/trurlib-@TRURLIB_VERSION@.tar.gz">
+
+      <item> source rpm package 
+         <url url="http://team.pld.org.pl/~mis/poldek/download/trurlib-@TRURLIB_VERSION@-1.src.rpm" 
+             name="http://team.pld.org.pl/~mis/poldek/download/trurlib-@TRURLIB_VERSION@-1.src.rpm"> 
+
+      <item> binary rpm packages <url url="ftp://ftp.pld.org.pl/" 
+             name="ftp://team.pld.org.pl/"> (directory PLD-1.0/<em>ARCH</em>/PLD/RPMS/)
+      </itemize>
+    </sect>
+       
+    
+    <sect> Author
+	<p>
+	Pawel A. Gajda (mis at pld.org.pl)
+	<p>
+	Thanks to: Artur Fysiak (widget at pld.org.pl), Rafal Kleger-Rudomin (klakier at pld.org.pl),
+	Michal Moskal (malekith at pld.org.pl) for ideas, testing, bug reports and patches. 
+    </sect>	
+    
+</article>

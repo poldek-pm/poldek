@@ -14,13 +14,12 @@ poldek [--source=SOURCE ...] --shell
 =head1 DESCRIPTION
 
 The poldek is designed to automate the verify, install and upgrade 
-of rpm packages. It can be used in two ways: as cmdline tool or as 
-interactive tool. It was inspired by L<apt_get(8)> from Debian's 
-APT, the interactive mode was inspired by shell mode of Perl CPAN module
-($ perl -MCPAN -e shell). 
+of rpm packages. It can be used in two modes: batch and interactive mode. 
+It was inspired by L<apt_get(8)> from Debian's APT, the interactive mode 
+was inspired by shell mode of Perl CPAN module ($ perl -MCPAN -e shell). 
 
 In general poldek gets packages information from special package index
-file (called I<packages.dir>) and performs one of the following actions:
+file (I<packages.dir> by default) and performs one of the following actions:
 
 =over
 
@@ -136,7 +135,7 @@ One of the following basic modes must be selected:
 =item B<--mkidx[z][=FILE]>  
 
 Build package index, by default it's stored in SOURCE/packages.dir[.gz].
-The other two files are created: packages.dir.md with coputed packages.dir 
+The other two files are created: packages.dir.md with computed packages.dir 
 digest and packages.dir.toc[.gz] with packages NAME-EVR per line.
 I<NOTE>: SOURCE must be directory.
 
@@ -176,7 +175,7 @@ Run poldek in interactive mode. Type "help" after running for available commands
 
 =item B<--split=SIZE[:FIRST_FREE_SPACE]  [--split-conf=FILE] [--split-out=PREFIX]>
 
-Split package set into parts, each SIZE MB size, the first part will
+Split package set into parts, each SIZE MB size. The first part will
 be FIRST_FREE_SPACE MB smaller. 
 
 Package priorities are taken from FILE given by --split-conf (see sample 
@@ -226,28 +225,34 @@ Prevent packages listed from being upgraded if they are already installed.
 If option is not given packages to hold is taken from B<hold> configuration 
 option and $HOME/.poldek_hold.
 
-=item B<-t, --test>
+=item B<-m, --mercy>
 
-Do not install packages, but tell if it would work or not. Given once 
-causes poldek's checks only, to perform full tests using rpm option
-must be given twice.
+Be tolerant for unmatched versioned dependencies which RPM tolerates, e.g.
+package A requires capability foo >= 1.0 while package B provides "foo"
+without any version.
 
 =item B<--nodeps>; B<--justdb>; B<--force>; B<--root>;
 
 Have the same meanings like RPM ones. See next section.
 
-
 =item B<-N, --nofollow> 
+
 Don't automatically install packages required by selected ones.
 
 
 =item B<--nohold> 
-Don't take held packages from $HOME/.poldek_hold.
 
+Don't take held packages from $HOME/.poldek_hold.
 
 =item B<--rpmdef="NAME VALUE"> 
 
 Like rpm's --define option.
+
+=item B<-t, --test>
+
+Do not install packages, but tell if it would work or not. Given once 
+causes poldek's checks only, to perform full tests using rpm option
+must be given twice.
 
 
 =head1 COOPERATING WITH RPM
@@ -267,7 +272,7 @@ by RPM binary, which is executed in background. Options passed to rpm:
 
 =item * --nodeps
 
-=item * --test
+=item * --test (if given twice, see above --test description)
 
 =item * --upgrade 
 
@@ -286,9 +291,9 @@ $ poldek ... -- --rpm-noscripts --rpm-notriggers
 
 =head1 CONFIG FILE
 
-Program tries to read configuration from F<$HOME/.poldekrc>
-by default, B<-c,--conf> option could points to other location.
-With B<--noconf> poldek don't read any config. 
+Program tries to read configuration from F</etc/poldek.conf> by default,
+F<$HOME/.poldekrc> is used instead if it exists. B<-c,--conf> option could points to 
+other location of config. With B<--noconf> poldek don't read any config. 
 
 Config file consists of parameters of the form
 
@@ -323,6 +328,12 @@ line represents a comment or a parameter.
 	(default: no)
 
 =item * B<hold = PACKAGE[ PACKAGE...]> - see --hold option description
+
+=item * B<mercy = yes|no> - see --mercy option description
+
+=item * B<keep_downloads = yes|no> - by default poldek removes downloaded
+        packages files after successfull installation, if option is set to 
+        "yes" then program will never remove downloaded packages from cache dir.
 
 =back
 
@@ -431,6 +442,12 @@ $HOME is used to read config file.
 
 $TMPDIR (if set) is used as temporary directory if no cachedir 
 specified.
+
+=head1 FILES
+
+/etc/poldek.conf 
+$HOME/.poldekrc
+$HOME/.poldek_hold
 
 =head1 BUGS
 

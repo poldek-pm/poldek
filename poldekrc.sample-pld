@@ -36,6 +36,9 @@ source = ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/
 # prevent kernel* and dev from being upgraded if they are already installed.
 #hold   = kernel* dev
 
+# don't remove downloaded packages after successful installation (defalut "no")
+#keep_downloads = yes
+
 # Some rpm macros
 #rpmdef        = "_install_langs pl:pl_PL:lt:lt_LT"
 
