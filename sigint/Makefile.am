@@ -1,6 +1,8 @@
 # $Id$
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
+AM_CFLAGS = @AM_CFLAGS@
+
 lib_LIBRARIES      = libsigint.a
 libsigint_a_SOURCES  = sigint.h sigint.c
 
