@@ -47,18 +47,20 @@ static char args_doc[] = N_("[PACKAGE...]");
 #define OPT_ASK       1003
 #define OPT_NOASK     1004
 #define OPT_CONF      1005
-#define OPT_NOCONF    1006
-#define OPT_BANNER    1007
-#define OPT_LOG       1008
-#define OPT_SKIPINSTALLED 1009
-#define OPT_PM 1010
-#define OPT_SHELL  1011
-#define OPT_SHELL_CMD 1012
+#define OPT_CONFUP    1006
+#define OPT_NOCONF    1007
+#define OPT_BANNER    1008
+#define OPT_LOG       1009
+#define OPT_SKIPINSTALLED 1010
+#define OPT_PM 1011
+#define OPT_SHELL  1012
+#define OPT_SHELL_CMD 1013
 
 
 #define POLDEKCLI_CMN_NOCONF         (1 << 0)
 #define POLDEKCLI_CMN_NOASK          (1 << 1)
 #define POLDEKCLI_CMN_SKIPINSTALLED  (1 << 2)
+#define POLDEKCLI_CMN_CONFUP         (1 << 3)
 
 /* The options we understand. */
 static struct argp_option common_options[] = {
@@ -81,9 +83,10 @@ static struct argp_option common_options[] = {
 {"fast", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, 10500 },
 { 0, 'f', 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, 10500 },
 
-{"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), 10500 }, 
-{"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 10500 }, 
-
+{"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), 10500 },
+{"_conf", 'c', "FILE", OPTION_HIDDEN, N_("Read configuration from FILE"), 10500 }, 
+{"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 10500 },
+{"upconf", OPT_CONFUP, 0, 0, N_("Update remote configuration files (if any)"), 10500 },
 {"version", OPT_BANNER, 0, 0, N_("Display program version information and exit"),
      10500 },    
 {"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), 10500 },
@@ -172,9 +175,16 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_CACHEDIR:
             poldek_configure(ctx, POLDEK_CONF_CACHEDIR, arg);
             break;
-            
+
+        case 'c':
+            logn(LOGNOTICE, _("-c is depreciated, use --conf instead"));
+                                /* no break */
         case OPT_CONF:
             args.path_conf = n_strdup(arg);
+            break;
+
+        case OPT_CONFUP:
+            argsp->cnflags |= POLDEKCLI_CMN_CONFUP;
             break;
             
         case 'q':
@@ -341,7 +351,8 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
     poldek_setup_cachedir(args.ctx);
     
     if ((args.cnflags & POLDEKCLI_CMN_NOCONF) == 0) 
-        if (!poldek_load_config(args.ctx, args.path_conf))
+        if (!poldek_load_config(args.ctx, args.path_conf,
+                                (args.cnflags & POLDEKCLI_CMN_CONFUP) ? 1 : 0))
             exit(EXIT_FAILURE);
 
     if (!poldek_setup(args.ctx))
@@ -443,7 +454,7 @@ int main(int argc, char **argv)
         }
         
     } else {
-        int rc;
+        int rc = 1;
         
 #define ENABLE_TRACE 0
 #if ENABLE_TRACE
