@@ -3,10 +3,11 @@
   ("/etc/poldek-pkgsplit.conf" or "/etc/poldek-pri.conf" is used by default)
 * added global config /etc/poldek.conf usage 
 * fixed prereq loop detection
-* vfile/fetch.c: - added '@' to list of valid characters in filename
+* added '@' to list of valid characters in package filename
   (Rafa³ Kleger-Rudomin  <klakier@pld.org.pl>)
 * vfjuggle: sed is used instead of awk (Rafa³ Kleger-Rudomin  <klakier@pld.org.pl>)
 * shell: ls: fixed packages sorting 
+* minor bugfixes 
 
 0.15.5:
 * another bugfix of dependency processing
