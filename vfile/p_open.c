@@ -38,6 +38,8 @@
 # include <termios.h>
 #endif
 
+#include <trurl/nassert.h>
+
 #include "i18n.h"
 #include "p_open.h"
 
@@ -74,6 +76,8 @@ FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     int    pp[2];
     pid_t  pid;
     char   errmsg[1024];
+
+    n_assert(pst->stream == NULL);
     
     if (access(cmd, R_OK | X_OK) != 0) {
         snprintf(errmsg, sizeof(errmsg), _("%s: no such file"), cmd);
@@ -90,14 +94,14 @@ FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     if ((pid = fork()) == 0) {
         if ((flags & P_OPEN_KEEPSTDIN) == 0) {
             int fd = open("/dev/null", O_RDWR);
-            dup2(fd, 0);
+            dup2(fd, STDIN_FILENO);
             close(fd);
         }
         
         close(pp[0]);
 
-	dup2(pp[1], 1);
-	dup2(pp[1], 2);
+	dup2(pp[1], STDOUT_FILENO);
+	dup2(pp[1], STDERR_FILENO);
 	close(pp[1]);
 
         execv(cmd, argv);
@@ -106,15 +110,20 @@ FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     } else if (pid < 0) {
         snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
         pst->errmsg = strdup(errmsg);
-        return NULL;
         
     } else {
         close(pp[1]);
         pst->fd = pp[0];
-        pst->stream = fdopen(pp[0], "r");
-        setvbuf(pst->stream, NULL, _IONBF, 0);
-        pst->pid = pid;
-        pst->cmd = strdup(cmd);
+        if ((pst->stream = fdopen(pp[0], "r"))) {
+            setvbuf(pst->stream, NULL, _IONBF, 0);
+            pst->pid = pid;
+            pst->cmd = strdup(cmd);
+        }
+    }
+
+    if (pst->stream == NULL) {
+        close(pp[0]);
+        close(pp[1]);
     }
     
     return pst->stream;
@@ -140,7 +149,7 @@ int p_close(struct p_open_st *pst)
         rc = WEXITSTATUS(st);
         
     } else if (WIFSIGNALED(st)) {
-#ifdef HAVE_STRSIGNALS
+#ifdef HAVE_STRSIGNAL
         snprintf(errmsg, sizeof(errmsg), _("%s terminated by signal %s"),
                  pst->cmd, strsignal(WTERMSIG(st)));
 #else
@@ -180,13 +189,13 @@ FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[])
     if (!isatty(1))
         return p_open(pst, 0, cmd, argv);
     
-    if (tcgetattr(1, &termios) != 0) {
+    if (tcgetattr(STDOUT_FILENO, &termios) != 0) {
         snprintf(errmsg, sizeof(errmsg), "tcgetattr(1): %m");
         pst->errmsg = strdup(errmsg);
         return NULL;
     }
     
-    if (ioctl(1, TIOCGWINSZ, &winsize) != 0) {
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &winsize) != 0) {
         snprintf(errmsg, sizeof(errmsg), "ioctl(1, TIOCGWINSZ): %m");
         pst->errmsg = strdup(errmsg);
         return NULL;
@@ -200,7 +209,7 @@ FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[])
     }
     
     if ((pid = forkpty(&fd, NULL, &termios, &winsize)) == 0) {
-        close(0);
+        close(STDIN_FILENO);
         execv(cmd, argv);
 	exit(EXIT_FAILURE);
         
