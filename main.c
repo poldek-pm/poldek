@@ -273,9 +273,11 @@ static struct argp_option options[] = {
 {0,0,0,0, N_("Packages spec:"), 65},
 {"pset", OPT_PKGSET, "FILE", 0, N_("Take package set definition from FILE"), 65 },
 {"pkgset", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, 65 }, /* backward compat */
-    
-{"nevr", OPT_NEVR, "\"NAME [[E:][V[-R]]]\"", 0,
+
+// obsoleted by '#'    
+{"nevr", OPT_NEVR, "\"NAME [[E:][V[-R]]]\"", OPTION_HIDDEN,
      N_("Specifies package by NAME and EVR"), 65 },
+    
 {"pkgnevr", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0,  65 }, /* backward compat */
 
 {0,0,0,0, N_("Installation:"), 70},
@@ -1670,15 +1672,15 @@ void self_init(void)
     }
 #endif    
 }
-    
+
 
 int main(int argc, char **argv)
 {
     struct pkgset   *ps;
     char            *logprefix = "poldek";
     int             rc = 1, ldflags;
-    
-    
+
+
     mem_info_verbose = -1;
 
     log_init(NULL, stdout, logprefix);

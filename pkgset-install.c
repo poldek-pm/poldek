@@ -217,7 +217,7 @@ struct pkg *find_pkg(const char *name, tn_array *pkgs,
             break;
         
         if (pkg_cmp_evr(p, curr_pkg) == 0) {
-            if (selected_pkg && pkg_cmp_evr(selected_pkg, curr_pkg) != 0)
+            if (selected_pkg && pkg_cmp_evr(selected_pkg, curr_pkg) > 0)
                 selected_pkg = NULL;
             
             if (selected_pkg == NULL)
@@ -341,6 +341,30 @@ int find_req(const struct pkg *pkg, struct capreq *req, struct pkgset *ps,
     return found;
 }
 
+static
+int installset_provides(const struct pkg *pkg, struct capreq *cap,
+                        struct pkgset *ps)
+{
+    struct pkg *tomark = NULL;
+
+    if (find_req(pkg, cap, ps, &tomark, NULL) && tomark == NULL) {
+        //printf("cap satisfied %s\n", capreq_snprintf_s(cap));
+        return 1;
+    }
+    return 0;
+}
+
+static
+int installset_provides_capn(const struct pkg *pkg, const char *capn,
+                             struct pkgset *ps)
+{
+    struct capreq *cap;
+    
+    cap = capreq_new_name_a(capn);
+    return installset_provides(pkg, cap, ps);
+}
+
+
 
 #define mark_package(a, b) do_mark_package(a, b, PKG_DIRMARK);
 
@@ -460,7 +484,7 @@ int do_greedymark(int indent, struct pkg *pkg, struct pkg *oldpkg,
     if (pkg_is_marked(pkg))
         n_assert(0);
     
-    if (pkg_cmp_evr(pkg, oldpkg) == 0)
+    if (pkg_cmp_evr(pkg, oldpkg) <= 0)
         return 0;
     
     msgn_i(1, indent, _("greedy upgrade %s to %s-%s (unresolved %s)"),
@@ -476,7 +500,8 @@ int do_greedymark(int indent, struct pkg *pkg, struct pkg *oldpkg,
 
 /* add to upg->orphan_dbpkgs packages required by pkg */
 static
-int process_pkg_orphans(struct pkg *pkg, struct upgrade_s *upg) 
+int process_pkg_orphans(struct pkg *pkg, struct pkgset *ps,
+                        struct upgrade_s *upg)
 {
     unsigned ldflags = PKG_LDNEVR | PKG_LDREQS;
     int i, k, n = 0;
@@ -486,15 +511,22 @@ int process_pkg_orphans(struct pkg *pkg, struct upgrade_s *upg)
     dbh = upg->inst->db->dbh;
     DBGF("%s\n", pkg_snprintf_s(pkg));
     mem_info(1, "process_pkg_orphans:");
-    n += rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, pkg->name,
-                                    upg->uninst_set->dbpkgs, ldflags);
+
+    if (!installset_provides_capn(pkg, pkg->name, ps)) 
+        n += rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, pkg->name,
+                                        upg->uninst_set->dbpkgs, ldflags);
         
     if (pkg->caps)
         for (i=0; i < n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
+
+            if (installset_provides(pkg, cap, ps)) 
+                continue;
+            
             n += rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs,
                                             capreq_name(cap),
                                             upg->uninst_set->dbpkgs, ldflags);
+            //printf("cap %s\n", capreq_snprintf_s(cap));
         }
     
     if (pkg->fl == NULL)
@@ -507,10 +539,11 @@ int process_pkg_orphans(struct pkg *pkg, struct upgrade_s *upg)
         endp = path;
         if (*flent->dirname != '/')
             *endp++ = '/';
-            
+        
         endp = n_strncpy(endp, flent->dirname, sizeof(path));
+        
             
-        for (k=0; k<flent->items; k++) {
+        for (k=0; k < flent->items; k++) {
             struct flfile *file = flent->files[k];
             int path_left_size;
                 
@@ -519,9 +552,10 @@ int process_pkg_orphans(struct pkg *pkg, struct upgrade_s *upg)
                 
             path_left_size = sizeof(path) - (endp - path);
             n_strncpy(endp, file->basename, path_left_size);
-                
-            rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, path,
-                                       upg->uninst_set->dbpkgs, ldflags);
+
+            if (!installset_provides_capn(pkg, path, ps)) 
+                n += rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, path,
+                                            upg->uninst_set->dbpkgs, ldflags);
         }
     }
     
@@ -643,7 +677,8 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
     
     DBGMSG_F("%s\n", pkg_snprintf_s(pkg));
     
-    n = rpm_get_obsoletedby_pkg(dbh, upg->uninst_set->dbpkgs, pkg, PKG_LDWHOLE);
+    n = rpm_get_obsoletedby_pkg(dbh, upg->uninst_set->dbpkgs, pkg,
+                                PKG_LDWHOLE_FLDEPDIRS);
     if (n == 0)
         return;
 
@@ -667,7 +702,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                 }
             }
 
-            if (pkg->fl) {
+            if (pkg->fl && dbpkg->pkg->fl) {
                 struct capreq *cap;
                 int j, k;
 
@@ -682,9 +717,10 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                     int path_left_size;
                     
                     endp = path = &cap->_buf[1];
-                    
-                    if (n_array_bsearch(ps->depdirs, flent->dirname) == NULL)
-                        continue;
+
+                    // not needed cause depdirs module is used 
+                    //if (n_array_bsearch(ps->depdirs, flent->dirname) == NULL)
+                    //    continue;
                     
                     if (*flent->dirname != '/')
                         *endp++ = '/';
@@ -704,7 +740,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                 }
             }
             
-            n += process_pkg_orphans(dbpkg->pkg, upg);
+            n += process_pkg_orphans(dbpkg->pkg, ps, upg);
         }
     }
 
@@ -871,9 +907,8 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                         
                     } else if ((upg->inst->flags & INSTS_GREEDY)) {
                         n_assert(!pkg_is_marked(p));
-                        do_greedymark(indent, p, pkg, req, ps, upg);
-                        not_found = 0;
-                        return 1;
+                        if (do_greedymark(indent, p, pkg, req, ps, upg))
+                            not_found = 0;
                     }
                 }
                 
@@ -890,7 +925,6 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
         if (tomark_candidates)
             free(tomark_candidates);
     }
-    
 
     return 1;
 }
@@ -1064,15 +1098,19 @@ int find_file_conflicts(struct pkgfl_ent *flent, struct pkg *pkg,
           
         
         //flent->files[i]->basename
-        cnfldbpkgs = rpm_get_file_conflicted_dbpkgs(db->dbh, flent->files[i]->basename,
+        cnfldbpkgs = rpm_get_file_conflicted_dbpkgs(db->dbh,
+                                                    flent->files[i]->basename,
                                                     cnfldbpkgs, 
-                                                    uninst_dbpkgs, PKG_LDWHOLE);
+                                                    uninst_dbpkgs,
+                                                    PKG_LDWHOLE_FLDEPDIRS);
         
         printf("** PATH = %s -> %d ", path, cnfldbpkgs ? n_array_size(cnfldbpkgs):0);
         
         if (cnfldbpkgs == NULL)
-            cnfldbpkgs = rpm_get_file_conflicted_dbpkgs(db->dbh, path, cnfldbpkgs, 
-                                                        uninst_dbpkgs, PKG_LDWHOLE);
+            cnfldbpkgs = rpm_get_file_conflicted_dbpkgs(db->dbh, path,
+                                                        cnfldbpkgs,
+                                                        uninst_dbpkgs,
+                                                        PKG_LDWHOLE_FLDEPDIRS);
 
         printf("-> %d\n", cnfldbpkgs ? n_array_size(cnfldbpkgs):0);
         if (cnfldbpkgs == NULL) 
@@ -1200,7 +1238,7 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
     if (pkg->cnflpkgs != NULL)
         for (i = 0; i < n_array_size(pkg->cnflpkgs); i++) {
             struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, i);
-            
+
             if (pkg_is_marked(cpkg->pkg)) {
                 logn(LOGERR, _("%s conflicts with %s"),
                     pkg_snprintf_s(pkg), pkg_snprintf_s0(cpkg->pkg));
@@ -1215,11 +1253,14 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
     for (i = 0; i < n_array_size(pkg->caps); i++) {
         struct capreq *cap = n_array_nth(pkg->caps, i);
         tn_array *dbpkgs;
-
+        
+        if ((ps->flags & PSVERIFY_MERCY) && capreq_is_bastard(cap))
+            continue;
+        
         msg_i(3, indent, "cap %s\n", capreq_snprintf_s(cap));
         dbpkgs = rpm_get_conflicted_dbpkgs(dbh, cap,
                                            upg->uninst_set->dbpkgs,
-                                           PKG_LDWHOLE);
+                                           PKG_LDWHOLE_FLDEPDIRS);
         if (dbpkgs == NULL)
             continue;
             
@@ -1246,7 +1287,7 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
                 
             dbpkgs = rpm_get_provides_dbpkgs(dbh, cnfl,
                                              upg->uninst_set->dbpkgs,
-                                             PKG_LDWHOLE);
+                                             PKG_LDWHOLE_FLDEPDIRS);
             if (dbpkgs == NULL)
                 continue;
                 
@@ -1304,7 +1345,7 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
             msg_i(3, 3, "cap %s\n", capreq_snprintf_s(cap));
             dbpkgs = rpm_get_conflicted_dbpkgs(dbh, cap,
                                                upg->uninst_set->dbpkgs,
-                                               PKG_LDWHOLE);
+                                               PKG_LDWHOLE_FLDEPDIRS);
             if (dbpkgs == NULL)
                 continue;
             
@@ -1326,7 +1367,7 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
                 
                 dbpkgs = rpm_get_provides_dbpkgs(dbh, cnfl,
                                                  upg->uninst_set->dbpkgs,
-                                                 PKG_LDWHOLE);
+                                                 PKG_LDWHOLE_FLDEPDIRS);
                 if (dbpkgs != NULL) {
                     ncnfl += find_db_conflicts(pkg, cnfl, dbpkgs, 1);
                     n_array_free(dbpkgs);

@@ -140,14 +140,16 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
                     uint32_t size, uint32_t fsize,
                     uint32_t btime);
 
-#define PKG_LDNEVR    0
-#define PKG_LDCAPS    (1 << 0)
-#define PKG_LDREQS    (1 << 1)
-#define PKG_LDCNFLS   (1 << 2)
-#define PKG_LDFL      (1 << 3)
+#define PKG_LDNEVR       0
+#define PKG_LDCAPS       (1 << 0)
+#define PKG_LDREQS       (1 << 1)
+#define PKG_LDCNFLS      (1 << 2)
+#define PKG_LDFL_DEPDIRS (1 << 3)
+#define PKG_LDFL_WHOLE   (1 << 4)
 
 #define PKG_LDCAPREQS PKG_LDCAPS | PKG_LDREQS | PKG_LDCNFLS
-#define PKG_LDWHOLE   PKG_LDCAPREQS | PKG_LDFL
+#define PKG_LDWHOLE   PKG_LDCAPREQS | PKG_LDFL_WHOLE
+#define PKG_LDWHOLE_FLDEPDIRS PKG_LDCAPREQS | PKG_LDFL_DEPDIRS
 
 struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
                       unsigned ldflags);

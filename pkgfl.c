@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -595,8 +599,8 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
     int       *fentdirs_items;
     int       i, j, ndirs = 0, nerr = 0, missing_file_hdrs_err = 0;
     const char *errmsg_notag = _("%s: no %s tag");
+    
 
-    n_assert(which == PKGFL_ALL); /* others not implemented */
     
     if (!headerGetEntry(h, RPMTAG_BASENAMES, (void*)&t1, (void*)&names, &c1))
         return 0;
@@ -653,7 +657,6 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
         if (!valid_fname(dirs[i], 0, pkgname))
             nerr++;
 
-#if 0                           /* NIY */
         if (which != PKGFL_ALL) {
             int is_depdir;
 
@@ -672,7 +675,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
                 continue;
             }
         }
-#endif        
+
         skipdirs[i] = dirs[i];
         for (j=0; j<c1; j++)
             if (diridxs[j] == i)

@@ -653,7 +653,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
         pkgdir->mdd_orig = strdup(pdg_current.mdd); /* for verification during write */
 
         snprintf(path, sizeof(path), "%s/%s", dn, pdir_packages_incdir);
-        if (vf_localdirpath(tmpath, sizeof(tmpath), path) < sizeof(tmpath)) {
+        if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath)) {
             verbose--; /* verbosity need to be reorganized... */
             rm_dir_files(tmpath);
             verbose++;
@@ -833,8 +833,11 @@ struct pkgdir *pkgdir_new(const char *name, const char *path,
                 depdirs = n_array_new(16, free, (tn_fn_cmp)strcmp);
                 p = eatws(p);
                 
-                while ((dir = next_tokn(&p, ':', NULL)) != NULL) 
+                while ((dir = next_tokn(&p, ':', NULL)) != NULL) {
+                    DBGF("depdir %s\n", dir);
                     n_array_push(depdirs, strdup(dir));
+                }
+                
                 n_array_push(depdirs, strdup(p));
                 
                 if (n_array_size(depdirs)) 

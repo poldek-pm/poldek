@@ -29,6 +29,7 @@
 #include "misc.h"
 #include "log.h"
 #include "poldek_term.h"
+#include "depdirs.h"
 
 struct subopt {
     char      *name;
@@ -435,6 +436,8 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
             for (j=0; j<n_array_size(pkgdir->pkgs); j++)
                 n_array_push(ps->pkgs, pkg_link(n_array_nth(pkgdir->pkgs, j)));
         }
+
+        init_depdirs(ps->depdirs);
     }
     
     if (n_array_size(ps->pkgs)) {

@@ -268,10 +268,16 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
         };
     }
 
-    if (ldflags & PKG_LDFL) {
+    if (ldflags & (PKG_LDFL_DEPDIRS | PKG_LDFL_WHOLE)) {
+        unsigned flldflags = 0;
+        
         pkg->fl = pkgfl_array_new(32);
-    
-        if (pkgfl_ldhdr(pkg->fl, h, PKGFL_ALL, pkg_snprintf_s(pkg)) == -1) {
+        if (ldflags & PKG_LDFL_WHOLE)
+            flldflags = PKGFL_ALL;
+        else
+            flldflags = PKGFL_DEPDIRS;
+        
+        if (pkgfl_ldhdr(pkg->fl, h, flldflags, pkg_snprintf_s(pkg)) == -1) {
             pkg_free(pkg);
             pkg = NULL;
         

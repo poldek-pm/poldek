@@ -1,21 +1,27 @@
-/* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
   $Id$
 */
-
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <trurl/nhash.h>
 #include <trurl/nassert.h>
 
+#define ENABLE_TRACE 0
+#include "log.h"
 #include "i18n.h"
 #include "depdirs.h"
 
@@ -26,25 +32,18 @@ struct depdir {
 };
 
 static struct depdir *depdirs = NULL;
-#if 0
-static struct depdir not_depdirs[] = {
-    { "usr/share/doc", 0, 0, }, 
-    { "usr/share/info", 0, 0, }, 
-    { "usr/share/man", 0, 0, }, 
-    { "usr/share/locale", 0, 0, }, 
-    { "usr/src", 0, 0 }, 
-};
-#endif
+
 
 void init_depdirs(tn_array *dirnames) 
 {
     int i, n = 0;
 
     depdirs = malloc((n_array_size(dirnames)+1) * sizeof(*depdirs));
-    for (i=n_array_size(dirnames)-1; i >= 0; i--) {
-        depdirs[n].dir = strdup(((char*)n_array_nth(dirnames, i)) + 1);
+    for (i = n_array_size(dirnames)-1; i >= 0; i--) {
+        depdirs[n].dir = strdup(n_array_nth(dirnames, i));
         depdirs[n].len = strlen(depdirs[n].dir);
         depdirs[n].endch = *(depdirs[n].dir + (depdirs[n].len - 1));
+        DBGF("%s\n", depdirs[n].dir);
         n++;
     }
     depdirs[n].dir = NULL;
@@ -65,54 +64,43 @@ void destroy_depdirs(void)
 int in_depdirs_l(const char *dir, int dirlen) 
 {
     register int i = 0;
-    
+
     if (depdirs == NULL)
         return 1;
     
     if (*dir == '\0')
         return 1;
 
+    DBGF("in_depdirs_l %s -> ", dir);
     while (depdirs[i].dir) {
-        if (dirlen >= depdirs[i].len &&
-            depdirs[i].endch == *(dir + depdirs[i].len - 1) && 
-            strncmp(depdirs[i].dir, dir, depdirs[i].len - 1) == 0)
-            return 1;
-        i++;
+        register struct depdir *ddir = &depdirs[i++];
         
+        if (dirlen < ddir->len)
+            continue;
+        
+        if (ddir->endch != *(dir + ddir->len - 1))
+            continue;
+        
+        if (strncmp(ddir->dir, dir, ddir->len - 1) == 0) {
+            DBG("YES (%d)\n", i);
+            return 1;
+        }
+        	
     }
+    
+    DBG("NO\n");
     return 0;
 }
-
 
 int in_depdirs(const char *dir) 
 {
-    register int i = 0;
-
-    if (depdirs == NULL)
-        return 1;
-
-    if (*dir == '\0')
-        return 1;
-
-    while (depdirs[i].dir) {
-        if (*depdirs[i].dir != *dir) {
-            i++;
-            continue;
-        }
-        
-        if (strncmp(depdirs[i].dir, dir, depdirs[i].len) == 0)
-            return 1;
-        i++;
-        
-    }
-
-    return 0;
+    return in_depdirs_l(dir, strlen(dir));
 }
+
 
 char *path2depdir(char *path) 
 {
     char *p;
-
     
     n_assert(*path == '/');
 
