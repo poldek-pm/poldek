@@ -46,22 +46,31 @@
 #include "shell.h"
 #include "term.h"
 
+#define DEFAULT_TERM_WIDTH  80
+#define DEFAULT_TERM_HEIGHT 24
+
+static int term_width  = DEFAULT_TERM_WIDTH;
+static int term_height = DEFAULT_TERM_HEIGHT;
+
+
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
 static volatile sig_atomic_t winch_reached = 0;
-static int term_width = 80;
+
 
 static int argv_is_help(int argc, const char **argv);
 
 static int cmd_quit(struct cmdarg *cmdarg);
 struct command command_quit = {
     COMMAND_NOARGS | COMMAND_NOHELP | COMMAND_NOOPTS,
-    "quit", NULL, "Quit poldek", NULL, NULL, NULL, cmd_quit, NULL, NULL 
+    "quit", NULL, "Quit poldek", NULL, NULL, NULL, cmd_quit,
+    NULL, NULL, NULL, NULL
 };
 
 static int cmd_help(struct cmdarg *cmdarg);
 struct command command_help = {
     COMMAND_NOARGS | COMMAND_NOHELP | COMMAND_NOOPTS,
-    "help", NULL, "Display this help", NULL, NULL, NULL, cmd_help, NULL, NULL 
+    "help", NULL, "Display this help", NULL, NULL, NULL, cmd_help,
+    NULL, NULL, NULL, NULL
 };
 
 static 
@@ -69,8 +78,8 @@ int cmd_reload(struct cmdarg *cmdarg,
                int argc, const char **argv, struct argp *argp);
 
 struct command command_reload = {
-    COMMAND_NOARGS | COMMAND_NOOPTS, "reload", NULL, "Reload installed package list",
-    NULL, NULL, cmd_reload, NULL, NULL, NULL,
+    COMMAND_NOARGS | COMMAND_NOOPTS, "reload", NULL, "Reload installed packages",
+    NULL, NULL, cmd_reload, NULL, NULL, NULL, NULL, NULL
 };
 
 
@@ -80,6 +89,7 @@ extern struct command command_uninstall;
 extern struct command command_get;
 extern struct command command_search;
 extern struct command command_desc;
+
 
 struct command *commands_tab[] = {
     &command_ls,
@@ -94,14 +104,19 @@ struct command *commands_tab[] = {
     NULL
 };
 
+
+
 struct sh_cmdarg {
     unsigned        cmdflags;
     int             err;
     struct cmdarg   *cmdarg;
+    struct command  *cmd;   
     error_t (*parse_opt_fn)(int, char*, struct argp_state*);
 };
 
 static tn_array       *commands;
+static tn_array       *aliases;
+static tn_array       *all_commands; /* for command_generator() */
 static char           *histfile;
 static int            done = 0;
 
@@ -115,6 +130,18 @@ int command_cmp(struct command *c1, struct command *c2)
 {
     return strcmp(c1->name, c2->name);
 }
+
+static
+int command_alias_cmp(struct command_alias *a1, struct command_alias *a2)
+{
+    return strcmp(a1->name, a2->name);
+}
+
+int cmd_ncmp(const char *name, const char *s) 
+{
+    return strncmp(name, s, strlen(s));
+}
+
 
 int shpkg_cmp(struct shpkg *p1, struct shpkg *p2) 
 {
@@ -237,15 +264,51 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     return rc;
 }
 
+static char *help_filter(int key, const char *text, void *input) 
+{
+    struct sh_cmdarg *sh_cmdarg = input;
+
+    if (key == ARGP_KEY_HELP_EXTRA) {
+        char *p, buf[4096];
+        int n = 0;
+
+        
+        if (sh_cmdarg->cmd->extra_help) 
+            n += snprintf(&buf[n], sizeof(buf) - n, "  %s\n",
+                          sh_cmdarg->cmd->extra_help);
+            
+        if (sh_cmdarg->cmd->aliases) {
+            struct command_alias *aliases = sh_cmdarg->cmd->aliases;
+            int i = 0;
+            
+            n += snprintf(&buf[n], sizeof(buf) - n, "  Defined aliases:\n");
+            while (aliases[i].name) {
+                n += snprintf(&buf[n], sizeof(buf) - n, "    %-12s  \"%s\"\n",
+                              aliases[i].name, aliases[i].cmdline);
+                i++;
+            }
+        }
+
+        
+        p = malloc(n + 1);
+        return memcpy(p, buf, n + 1);
+    }
+    
+    return (char*)text;
+}
+
+
 
 static
-int docmd(struct command *cmd, int argc, const char **argv, struct argp *argp)
+int docmd(struct command *cmd, int argc, const char **argv)
 {
     struct cmdarg        cmdarg;
     struct sh_cmdarg     sh_cmdarg;
     int                  rc;
     unsigned             parse_flags;
-    
+    struct argp          argp = { cmd->argp_opts,
+                                  parse_opt,
+                                  cmd->arg, cmd->doc, 0, 0, 0};
 
     
     if (argv == NULL)
@@ -264,7 +327,7 @@ int docmd(struct command *cmd, int argc, const char **argv, struct argp *argp)
         cmdarg.d = cmd->init_cmd_arg_d();
 
     if (cmd->cmd_fn) {
-        rc = cmd->cmd_fn(&cmdarg, argc, argv, argp);
+        rc = cmd->cmd_fn(&cmdarg, argc, argv, &argp);
         goto l_end;
     }
 
@@ -282,12 +345,14 @@ int docmd(struct command *cmd, int argc, const char **argv, struct argp *argp)
         goto l_end;
     }
 
-    sh_cmdarg.cmdflags = cmd->flags;
+    sh_cmdarg.cmdflags = cmd->flags; 
     sh_cmdarg.err = 0;
     sh_cmdarg.cmdarg = &cmdarg;
+    sh_cmdarg.cmd = cmd;
     sh_cmdarg.parse_opt_fn = cmd->parse_opt_fn;
-    
-    argp_parse(argp, argc, (char**)argv, parse_flags, 0, (void*)&sh_cmdarg);
+
+    argp.help_filter = help_filter;
+    argp_parse(&argp, argc, (char**)argv, parse_flags, 0, (void*)&sh_cmdarg);
 
     if (sh_cmdarg.err)
         return 0;
@@ -338,22 +403,48 @@ int execute_line(char *line)
     
     tmpcmd.name = line;
     if ((cmd = n_array_bsearch(commands, &tmpcmd)) == NULL) {
-	log(LOGERR, "%s: no such command\n", line);
-	return 0;
+        struct command_alias *alias, tmpalias;
+        
+        
+        tmpalias.name = tmpcmd.name;
+        if ((alias = n_array_bsearch(aliases, &tmpalias)) == NULL) {
+            log(LOGERR, "%s: no such command\n", line);
+            return 0;
+            
+        } else {
+            char *l;
+            int len = strlen(alias->cmdline) + 1;
+            
+            cmd = alias->cmd;
+
+            if (p == NULL) {    /* no args */
+                l = alloca(len);
+                memcpy(l, alias->cmdline, len);
+                
+                
+            } else {
+                p++;
+                len += strlen(p) + len + 1;
+                l = alloca(len);
+                snprintf(l, len, "%s %s", alias->cmdline, p);
+                
+                p = NULL;
+            }
+            //printf("alias exp %s -> %s\n", line, l);
+            line = l;
+        }
     }
 
     if (p)
         *p = ' ';
     
     if ((args = n_str_tokl(line, " \t"))) {
-        struct argp argp = { cmd->argp_opts, parse_opt,
-                             cmd->arg, cmd->doc, 0, 0, 0};
         int argc = 0;
 
         while (args[argc])
             argc++;
         
-        rc = docmd(cmd, argc, args, &argp);
+        rc = docmd(cmd, argc, args);
         n_str_tokl_free(args);
     }
     
@@ -402,31 +493,25 @@ static void switch_pkg_completion(int ctx)
 static
 char *command_generator(const char *text, int state)
 {
-    static int list_index, len;
-    char *name;
+    static int i, len;
+    char *name = NULL;
 
-    if (!state) {
-	list_index = 0;
-	len = strlen(text);
+    
+    if (state == 0) {
+        len = strlen(text);
+        if (len == 0)
+            i = 0;
+        else 
+            i = n_array_bsearch_idx_ex(all_commands, text, (tn_fn_cmp)cmd_ncmp);
     }
 
-    while (commands_tab[list_index]) {
-        name = commands_tab[list_index]->name;
-        n_assert(name);
-	list_index++;
-        
-	if (strncmp(name, text, len) == 0) {
-            if (strcmp(name, "uninstall") == 0) 
-                switch_pkg_completion(COMPL_CTX_INST_PKGS);
-            else 
-                switch_pkg_completion(COMPL_CTX_AV_PKGS);
-            
-	    return strdup(name);
-        }
+    if (i > -1 && i < n_array_size(all_commands)) {
+        char *cmd = n_array_nth(all_commands, i++);
+        if (len == 0 || strncmp(cmd, text, len) == 0) 
+            name = strdup(cmd);
     }
-
-    /* If no names matched, then return NULL. */
-    return NULL;
+    
+    return name;
 }
 
 static
@@ -462,18 +547,26 @@ static
 char **poldek_completion(const char *text, int start, int end)
 {
     char **matches;
-
+    char *p;
+    
     
     start = start;
     end = end;
     matches = NULL;
 
-    if (strncmp(rl_line_buffer, "un", 2) == 0) /* uninstall cmd */
-        switch_pkg_completion(COMPL_CTX_INST_PKGS);
-    else 
-        switch_pkg_completion(COMPL_CTX_AV_PKGS);
-    
-    if (strchr(rl_line_buffer, ' ') == NULL) 
+    p = rl_line_buffer;
+
+    while (isspace(*p))
+        p++;
+
+    if (*p) {
+        if (strncmp(p, "un", 2) == 0) /* uninstall cmd */
+            switch_pkg_completion(COMPL_CTX_INST_PKGS);
+        else 
+            switch_pkg_completion(COMPL_CTX_AV_PKGS);
+    }
+        
+    if (start == 0 || strchr(p, ' ') == NULL) 
 	matches = rl_completion_matches(text, command_generator);
     else
         matches = rl_completion_matches(text, pkgname_generator);
@@ -572,7 +665,8 @@ int cmd_help(struct cmdarg *cmdarg)
     while (commands_tab[i]) {
         struct command *cmd = commands_tab[i++];
         char buf[256], *p;
-
+        
+        
         p = cmd->arg ? cmd->arg : "";
         if (cmd->argp_opts) {
             snprintf(buf, sizeof(buf), "[OPTION...] %s", cmd->arg);
@@ -580,6 +674,9 @@ int cmd_help(struct cmdarg *cmdarg)
         }
         printf("%-9s %-36s %s\n", cmd->name, p, cmd->doc);
     }
+    printf("\nFor now \"search\" and \"desc\" commands doesn't work with "
+           "installed packages\n");
+    
     printf("\nType COMMAND -? for details\n");
     return 0;
 }
@@ -673,20 +770,82 @@ static void sig_winch(int signo)
     signal(SIGWINCH, sig_winch);
 }
 
-
-int get_term_width(void) 
+static void update_term_width(void) 
 {
     struct winsize ws;
 
     if (winch_reached) {
-        if (ioctl(1, TIOCGWINSZ, &ws) == 0)
+        if (ioctl(1, TIOCGWINSZ, &ws) == 0) {
             term_width = ws.ws_col;
-        else
-            term_width = 80;
+            term_height = ws.ws_row;
+
+        } else {
+            term_width  = DEFAULT_TERM_WIDTH;
+            term_height = DEFAULT_TERM_HEIGHT;
+        }
+        
 
         winch_reached = 0;
     }
+}
+
+int get_term_width(void)
+{
+    update_term_width();
     return term_width;
+}
+
+int get_term_height(void)
+{
+    update_term_width();
+    return term_height;
+}
+
+    
+
+static void init_commands(void) 
+{
+    int n = 0;
+    
+    commands = n_array_new(16, NULL, (tn_fn_cmp)command_cmp);
+    aliases  = n_array_new(16, NULL, (tn_fn_cmp)command_alias_cmp);
+    all_commands = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
+    
+    while (commands_tab[n] != NULL) {
+        struct command *cmd = commands_tab[n++];
+
+        n_array_push(commands, cmd);
+        if (n_array_bsearch(all_commands, cmd->name)) {
+            log(LOGERR, "Ambigous command %s\n", cmd->name);
+            exit(EXIT_FAILURE);
+        }
+        n_array_push(all_commands, cmd->name);
+        n_array_sort(all_commands);
+        
+        if (cmd->aliases) {
+            int i = 0;
+
+            while (cmd->aliases[i].name) {
+                if (n_array_bsearch(aliases, &cmd->aliases[i])) {
+                    log(LOGERR, "Ambigous alias %s\n", cmd->aliases[i].name);
+                    exit(EXIT_FAILURE);
+                }
+                
+                n_array_push(aliases, &cmd->aliases[i]);
+                n_array_sort(aliases);
+                
+                if (n_array_bsearch(all_commands, cmd->aliases[i].name)) {
+                    log(LOGERR, "Ambigous alias %s\n", cmd->aliases[i].name);
+                    exit(EXIT_FAILURE);
+                }
+                n_array_push(all_commands, cmd->aliases[i].name);
+                n_array_sort(all_commands);
+                i++;
+            }
+        }
+    }
+    
+    n_array_sort(commands);
 }
 
     
@@ -694,7 +853,7 @@ int get_term_width(void)
 int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
 {
     char *line, *s, *home;
-    int n, i;
+    int i;
 
     argp_program_bug_address = NULL;
     
@@ -764,13 +923,8 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
     
     switch_pkg_completion(COMPL_CTX_AV_PKGS);
     
-    n = 0;
-    commands = n_array_new(16, NULL, (tn_fn_cmp)command_cmp);
-    while (commands_tab[n] != NULL)
-        n_array_push(commands, commands_tab[n++]);
-    n_array_sort(commands);
-
-
+    init_commands();
+    
     signal(SIGINT,  shell_end);
     signal(SIGTERM, shell_end);
     signal(SIGQUIT, shell_end);

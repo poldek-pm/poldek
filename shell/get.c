@@ -42,12 +42,10 @@ static struct argp_option options[] = {
 
 struct command command_get = {
     0, 
-
-    "get", "[PACKAGE...]", "Download packages", 
-    
+    "get", "PACKAGE...", "Download packages", 
     options, parse_opt,
-    
-    NULL, get, NULL, NULL, 
+    NULL, get,
+    NULL, NULL, NULL, NULL
 };
 
 

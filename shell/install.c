@@ -43,7 +43,7 @@ static struct argp_option options[] = {
      "currently exists", 1 },
 
 {"nofollow", 'N', 0, 0, "Don't automatically install packages required by "
-     "installed ones", 1 }, 
+     "selected ones", 1 }, 
 
 {0, 'I', 0, 0, "Install, not upgrade packages", 1 },
 
@@ -58,11 +58,32 @@ static struct argp_option options[] = {
 { 0, 0, 0, 0, 0, 0 },
 };
 
+
+struct command command_install;
+
+static
+struct command_alias cmd_aliases[] = {
+    {
+        "freshen", "install -F",  &command_install,
+    },
+
+    {
+        "just-install", "install -N", &command_install,
+    },
+    
+    {
+        NULL, NULL, NULL
+    }, 
+};
+
+
 struct command command_install = {
     0, 
-    "install", "[PACKAGE...]", "Install packages", 
+    "install", "PACKAGE...", "Install packages", 
     options, parse_opt,
-    NULL, install, NULL, NULL, 
+    NULL, install, NULL, NULL,
+    (struct command_alias*)&cmd_aliases,
+    NULL
 };
 
 

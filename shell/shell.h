@@ -38,30 +38,25 @@ struct shell_s {
     tn_array       *instpkgs;   /* array of shpkgs  */
 };
 
+
 int get_term_width(void);
+int get_term_height(void);
+
+
 void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs,
                          tn_array **pkgsp, int strict);
 
 
 
-//#define CMD_ARG_NOPKGS   (1 << 0) /* command doesn't needs packages   */
-//#define CMD_ARG_ALLPKGS  (1 << 1) /* command can operate on whole set */
 
 struct cmdarg {
     tn_array         *pkgnames; /* arguments */
     tn_array         *shpkgs;   /* resolved arguments */
     struct shell_s   *sh_s;     /* common shell_s struct */
     unsigned         flags;     /* cmd private flags */
-    int              is_help;
+    int              is_help;   /*  */
     void             *d;        /* cmd private data */
 };
-
-struct command_alias {
-    char                *name;
-    char                *arg;
-    char                *doc;
-};
-
 
 
 #define COMMAND_NOARGS       (1 << 0) /* cmd don't accept arguments */
@@ -69,6 +64,12 @@ struct command_alias {
 #define COMMAND_NOHELP       (1 << 2) /* cmd hasn't help */
 #define COMMAND_EMPTYARGS    (1 << 3) /* cmd accepts empty arg list */
 #define COMMAND_HASVERBOSE   (1 << 4) /* cmd has verbose command */
+
+struct command_alias {
+    char                *name;      /* alias name    */
+    char                *cmdline;   /* alias content */
+    struct command      *cmd;
+};
 
 struct command {
     unsigned            flags;
@@ -84,6 +85,10 @@ struct command {
     
     void* (*init_cmd_arg_d)(void);
     void  (*destroy_cmd_arg_d)(void*);
+    
+    struct command_alias *aliases;
+    char                 *extra_help;
 };
+
 
 #endif 

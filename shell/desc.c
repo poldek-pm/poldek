@@ -78,7 +78,9 @@ struct command command_desc = {
     0, 
     "desc", "PACKAGE...", "Display packages info", 
     options, parse_opt,
-    NULL, desc, NULL, NULL, 
+    NULL, desc,
+    NULL, NULL, 
+    NULL, NULL
 };
 
 static
@@ -92,7 +94,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'a':
             cmdarg->flags |= OPT_DESC_ALL;
             break;
-            
             
         case 'C':
             cmdarg->flags |= OPT_DESC_CAPS | OPT_DESC_REQS | OPT_DESC_CNFLS;
@@ -182,7 +183,7 @@ static void show_caps(struct pkg *pkg)
 
 static void show_reqs(struct pkg *pkg)
 {
-    int ncol = IDENT, nrpmreqs = 0, nreqs = 0;
+    int ncol = IDENT, nrpmreqs = 0, nreqs = 0, nprereqs = 0;
     int term_width;
     int i;
 
@@ -196,11 +197,45 @@ static void show_reqs(struct pkg *pkg)
 
         if (pkg_eq_capreq(pkg, cr))
             continue;
-
+        
         if (capreq_is_rpmlib(cr))
             nrpmreqs++;
-        else
+        else if (capreq_is_prereq(cr))
+            nprereqs++;
+        else 
             nreqs++;
+    }
+
+
+    if (nprereqs) {
+        char *p, *colon = ", ";
+        int n = 0;
+
+        ncol = IDENT;
+        printf_c(PRCOLOR_CYAN, "Prereqs:\t");
+        for (i=0; i<n_array_size(pkg->reqs); i++) {
+            struct capreq *cr = n_array_nth(pkg->reqs, i);
+                
+            if (pkg_eq_capreq(pkg, cr))
+                continue;
+                
+            if (capreq_is_rpmlib(cr))
+                continue;
+
+            if (!capreq_is_prereq(cr))
+                continue;
+            
+            if (++n == nprereqs)
+                colon = "";
+                
+            p = capreq_snprintf_s(cr);
+            if (ncol + (int)strlen(p) >= term_width) {
+                printf("\n    ");
+                ncol = SUBIDENT;
+            }
+            ncol += printf("%s%s", p, colon);
+        }
+        printf("\n");
     }
 
         
@@ -213,14 +248,17 @@ static void show_reqs(struct pkg *pkg)
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
                 
-            if (n++ == nreqs)
-                colon = "";
-                
             if (pkg_eq_capreq(pkg, cr))
                 continue;
                 
             if (capreq_is_rpmlib(cr))
                 continue;
+
+            if (capreq_is_prereq(cr))
+                continue;
+            
+            if (++n == nreqs)
+                colon = "";
                 
             p = capreq_snprintf_s(cr);
             if (ncol + (int)strlen(p) >= term_width) {
@@ -574,11 +612,10 @@ static int desc(struct cmdarg *cmdarg)
         return 0;
 
     if (n_array_size(shpkgs) == 0) {
-        printf("desc: no package given\n");
         err++;
         goto l_end;
     }
-
+    
     if (cmdarg->flags == 0) 
         cmdarg->flags = OPT_DESC_DESCR;
     

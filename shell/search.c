@@ -31,6 +31,8 @@ static const unsigned char   *pcre_chartable = NULL;
 static int                    pcre_established = 0;
 
 struct pattern {
+    char             *regexp;
+    unsigned         flags;
     pcre             *pcre;
     pcre             *pcre_extra;
 };
@@ -61,7 +63,7 @@ static struct argp_option options[] = {
     { "conflicts", 'c', 0, 0, "Search package conflicts", 1},
     { "obsoletes", 'o', 0, 0, "Search package obsolences", 1},
     { "summary",   's', 0, 0, "Search summaries, urls and license", 1},
-    { "description",   'd', 0, 0, "Search in packages descriptions", 1},
+    { "description",   'd', 0, 0, "Search packages descriptions", 1},
     { "files",     'l', 0,  0, "Search package file list", 1},
     { "all",       'a', 0, 0,
       "Search all described fields, the defaults are: -sd", 1
@@ -69,11 +71,32 @@ static struct argp_option options[] = {
     { 0, 0, 0, 0, 0, 0 },
 };
 
+struct command command_search;
+
+static
+struct command_alias cmd_aliases[] = {
+    {
+        "what-requires", "search -r", &command_search,
+    },
+
+    {
+        "what-provides", "search -p", &command_search,
+    },
+
+    {
+        NULL, NULL, NULL
+    },
+};
+
+
 struct command command_search = {
     0, 
-    "search", "/PATTERN/ [PACKAGE...]", "Search packages", 
+    "search", "PATTERN [PACKAGE...]", "Search packages", 
     options, parse_opt,
-    NULL, search, NULL, NULL, 
+    NULL, search,
+    NULL, NULL,
+    (struct command_alias*)&cmd_aliases, 
+    "PATTERN := /perl-regexp/[imsx], see perlre(1) for help\n"
 };
 
 static
@@ -116,9 +139,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         
         case ARGP_KEY_ARG:
             if (n_array_size(cmdarg->pkgnames) == 0 && cmdarg->d == NULL) {
-                char *p, delim;
-                int len;
-
+                struct pattern   *pt;
+                char             *p, delim, *lastp, *regexp;
+                int              len;
+                unsigned         flags = 0;
+                
+                
                 p = arg;
                 delim = *arg;
                 if (delim != '/' && delim != '|') {
@@ -127,15 +153,58 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 }
                 
                 len = strlen(p) - 1;
+                lastp = p + len;
                 
-                if (*(p + len) != delim) {
+                if (strchr("imsx", *lastp) == NULL && *lastp != delim) {
+                    argp_usage(state);
+                    return EINVAL;
+                    
+                }
+                
+                regexp = p + 1;
+                
+                if ((p = strrchr(regexp, delim)) == NULL) {
                     argp_usage(state);
                     return EINVAL;
                 }
                 
-                *(p + len) = '\0';
+                *p = '\0';
                 p++;
-                cmdarg->d = strdup(p);
+                
+                
+                while (*p) {
+                    switch (*p) {
+                        case 'i':
+                            flags |= PCRE_CASELESS;
+                            break;
+
+                        case 'm':
+                            flags |= PCRE_MULTILINE;
+                            break;
+
+                        case 's':
+                            flags |= PCRE_DOTALL;
+                            break;
+
+                        case 'x':
+                            flags |= PCRE_EXTENDED;
+                            break;
+                            
+                        default:
+                            log(LOGERR, "search: unknown regexp option -- %c\n", *p);
+                            argp_usage(state);
+                            return EINVAL;
+                    }
+                    p++;
+                }
+                
+
+                pt = malloc(sizeof(*pt));
+                pt->regexp = strdup(regexp);
+                pt->flags = flags;
+                pt->pcre = NULL;
+                pt->pcre_extra = NULL;
+                cmdarg->d = pt;
                 
                 break;
             }
@@ -164,29 +233,28 @@ void init_pcre(void)
 }
 
 static
-int pattern_compile(struct pattern *pt, const char *pattern, int ntimes) 
+int pattern_compile(struct pattern *pt, int ntimes) 
 {
     const char       *pcre_err = NULL;
     int              pcre_err_off = 0;
 
     
-    pt->pcre = NULL;
-    pt->pcre_extra = NULL;
+    n_assert(pt->pcre == NULL);
+    n_assert(pt->pcre_extra == NULL);
     
-    pt->pcre = pcre_compile(pattern, PCRE_CASELESS, &pcre_err,
+    pt->pcre = pcre_compile(pt->regexp, pt->flags, &pcre_err,
                             &pcre_err_off, pcre_chartable);
     
     if (pt->pcre == NULL) {
-        log(LOGERR, "search: pattern compile: %s:%d: %s\n", pattern,
+        log(LOGERR, "search: pattern: %s:%d: %s\n", pt->regexp,
             pcre_err_off, pcre_err);
         return 0;
     }
 
-    pt->pcre_extra = NULL;
     if (ntimes > 10) {
         pt->pcre_extra = pcre_study(pt->pcre, PCRE_CASELESS, &pcre_err);
         if (pt->pcre_extra == NULL) {
-            log(LOGERR, "search: pattern compile: %s: %s\n", pattern, pcre_err);
+            log(LOGERR, "search: pattern: %s: %s\n", pt->regexp, pcre_err);
             return 0;
         }
     }
@@ -203,8 +271,14 @@ int pattern_match(struct pattern *pt, const char *s, int len)
 }
 
 static
-void pattern_destroy(struct pattern *pt) 
+void pattern_free(struct pattern *pt) 
 {
+
+    if (pt->regexp) {
+        free(pt->regexp);
+        pt->regexp = NULL;
+    }
+    
     if (pt->pcre) {
         free(pt->pcre);
         pt->pcre = NULL;
@@ -215,6 +289,8 @@ void pattern_destroy(struct pattern *pt)
         free(pt->pcre_extra);
         pt->pcre_extra = NULL;
     }
+
+    free(pt);
 }
 
 
@@ -347,20 +423,22 @@ static int search(struct cmdarg *cmdarg)
     tn_array         *shpkgs = NULL;
     tn_array         *matched_pkgs = NULL;
     int              i, err = 0, display_bar = 0, bar_v;
-    struct pattern   pt;
+    int              term_height;
+    struct pattern   *pt;
     
     
-    if (cmdarg->d == NULL) {
+    if ((pt = cmdarg->d) == NULL) {
         log(LOGERR, "search: no pattern given\n");
         err++;
         goto l_end;
     }
+    cmdarg->d = NULL;            /* we'll free pattern myself */
     
     if (cmdarg->flags == 0)
         cmdarg->flags = OPT_SEARCH_DEFAULT;
     
     init_pcre();
-    if (!pattern_compile(&pt, cmdarg->d, n_array_size(cmdarg->pkgnames))) {
+    if (!pattern_compile(pt, n_array_size(cmdarg->pkgnames))) {
         err++;
         goto l_end;
     }
@@ -378,7 +456,7 @@ static int search(struct cmdarg *cmdarg)
     
     matched_pkgs = n_array_new(16, NULL, NULL);
 
-    if (n_array_size(shpkgs) > 15 && (cmdarg->flags & OPT_SEARCH_HDD)) {
+    if (n_array_size(shpkgs) > 5 && (cmdarg->flags & OPT_SEARCH_HDD)) {
         display_bar = 1;
         msg(0, "Searching packages...");
     }
@@ -387,7 +465,7 @@ static int search(struct cmdarg *cmdarg)
     for (i=0; i<n_array_size(shpkgs); i++) {
         struct shpkg *shpkg = n_array_nth(shpkgs, i);
         
-        if (pkg_match(shpkg->pkg, &pt, cmdarg->flags)) 
+        if (pkg_match(shpkg->pkg, pt, cmdarg->flags)) 
             n_array_push(matched_pkgs, shpkg);
         
         if (display_bar) {
@@ -403,10 +481,13 @@ static int search(struct cmdarg *cmdarg)
     if (display_bar) 
         msg(0, "_done.\n");
 
+    term_height = get_term_height();
     if (n_array_size(matched_pkgs) == 0) 
-        printf_c(PRCOLOR_YELLOW, "No one package matches /%s/\n", (char*)cmdarg->d);
-    else 
-        printf_c(PRCOLOR_YELLOW, "%d package(s) found:\n", n_array_size(matched_pkgs));
+        printf_c(PRCOLOR_YELLOW, "No one package matches /%s/\n", pt->regexp);
+    
+    else if (n_array_size(matched_pkgs) < term_height)
+        printf_c(PRCOLOR_YELLOW, "%d package(s) found:\n",
+                 n_array_size(matched_pkgs));
     
         
     for (i=0; i<n_array_size(matched_pkgs); i++) {
@@ -415,7 +496,11 @@ static int search(struct cmdarg *cmdarg)
         shpkg = n_array_nth(matched_pkgs, i);
         printf("%s\n", shpkg->nevr);
     }
-    
+
+    if (n_array_size(matched_pkgs) >= term_height)
+        printf_c(PRCOLOR_YELLOW, "%d package(s) found:\n",
+                 n_array_size(matched_pkgs));
+        
  l_end:
 
     if (shpkgs && shpkgs != cmdarg->sh_s->avpkgs)
@@ -425,11 +510,10 @@ static int search(struct cmdarg *cmdarg)
         n_array_free(matched_pkgs);
     
     if (cmdarg->d) {
-        free(cmdarg->d);
         cmdarg->d = NULL;
     }
 
-    pattern_destroy(&pt);
+    pattern_free(pt);
     return 1;
 }
 

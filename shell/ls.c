@@ -32,14 +32,43 @@ static struct argp_option options[] = {
  { "upgradeable", 'u', 0, 0, "Show upgradeable packages only", 1},
  { "upgradeablev", 'U', 0, 0, "Like above but omit packages with diffrent releases only", 1},
  { "installed", 'I', 0, 0, "List installed packages", 1},
+// { NULL, 'i', 0, OPTION_ALIAS, 0, 1 }, 
  { 0, 0, 0, 0, 0, 0 },
 };
+
+struct command command_ls;
+
+static
+struct command_alias cmd_aliases[] = {
+    {
+        "ll", "ls -l", &command_ls,
+    },
+
+    {
+        "llu", "ls -lu", &command_ls,
+    },
+
+    {
+        "llU", "ls -lU", &command_ls,
+    },
+
+    {
+        "lli", "ls -lI", &command_ls,
+    },
+
+    {
+        NULL, NULL, NULL
+    },
+};
+
 
 
 struct command command_ls = {
     COMMAND_EMPTYARGS, 
     "ls", "[PACKAGE...]", "List packages", 
-    options, parse_opt, NULL, ls, NULL, NULL, 
+    options, parse_opt, NULL, ls,
+    NULL, NULL,
+    (struct command_alias*)&cmd_aliases, NULL
 };
 
 
