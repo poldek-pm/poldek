@@ -309,12 +309,14 @@ static int ls(struct cmdctx *cmdctx)
 static void ls_summary(struct cmdctx *cmdctx, struct pkg *pkg)
 {
     struct pkguinf  *pkgu;
+    const char *s;
+    
     
     if ((pkgu = pkg_info(pkg)) == NULL)
         return;
     
-    if (pkgu->summary)
-        cmdctx_printf(cmdctx, "    %s\n", pkgu->summary);
+    if ((s = pkguinf_getstr(pkgu, PKGUINF_SUMMARY)))
+        cmdctx_printf(cmdctx, "    %s\n", s);
     pkguinf_free(pkgu);
 }
 

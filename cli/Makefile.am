@@ -17,21 +17,25 @@ libpolclidek_la_SOURCES  =  \
 			op_makeidx.c    \
 			op_split.c      \
 			op_verify.c     \
-	        ls.c            \
-	        install.c       \
-	        uninstall.c     \
-	        desc.c          \
-	        search.c        \
+		        ls.c            \
+		        install.c       \
+	        	uninstall.c     \
+		        desc.c          \
+		        search.c        \
 			cd.c            \
-			help.c			\
+			help.c		\
 			external.c      \
-		    get.c      
+		        get.c      
 
 libpolclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
-bin_PROGRAMS      = poldek
+pkginclude_HEADERS = poclidek.h
+
+bin_PROGRAMS      = poldek test_cli
 poldek_SOURCES    = shell.c main.c
 poldek_LDADD      = libpolclidek.la   
 
+test_cli_SOURCES  = test_cli.c
+test_cli_LDADD    = libpolclidek.la
 
 dist-hook:
 	rm -rf $(distdir)/.deps

@@ -24,3 +24,5 @@ depcomp
 *.lo
 .libs
 *.la
+test_*
+*.log

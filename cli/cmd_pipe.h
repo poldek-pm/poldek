@@ -3,12 +3,20 @@
 
 #include <trurl/narray.h>
 
-struct cmd_pipe;
-
+struct cmd_pipe {
+    int       _refcnt;
+    tn_array *pkgs;
+    int       nread_pkgs;
+    
+    tn_buf   *nbuf;
+    tn_buf_it nbuf_it;
+    int       nwritten;
+};
 
 
 struct cmd_pipe *cmd_pipe_new(void);
 void cmd_pipe_free(struct cmd_pipe *pipe);
+struct cmd_pipe *cmd_pipe_link(struct cmd_pipe *p);
 
 int cmd_pipe_writepkg(struct cmd_pipe *p, struct pkg *pkg);
 struct pkg *cmd_pipe_getpkg(struct cmd_pipe *p);

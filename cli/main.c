@@ -30,6 +30,7 @@
 #include "poldek.h"
 #include "cli.h"
 #include "op.h"
+#include "poclidek.h"
 
 #ifndef VERSION
 # error "undefined VERSION"
@@ -342,6 +343,7 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
     return;
 }
 
+
 int do_run(void) 
 {
     int i, all_rc = 0, ec, exit_program = 0;
@@ -372,7 +374,7 @@ int do_run(void)
     }
     
     if (exit_program) {
-        printf("exit(%d)\n", ec);
+        msgn(4, "exit(%d)\n", ec);
         exit(ec);
     }
     
@@ -382,10 +384,12 @@ int do_run(void)
 
 int main(int argc, char **argv)
 {
-    int                   i, rc = 1, rrc, mode = MODE_POLDEK;
+    int                   i, ec = 0, rrc, mode = MODE_POLDEK;
     struct poldek_ctx     ctx;
     struct poclidek_ctx  cctx;
-    
+
+    setlocale(LC_MESSAGES, "");
+    setlocale(LC_CTYPE, "");
     
     mem_info_verbose = -1;
     if (strcmp(n_basenam(argv[0]), "apoldek-get") == 0)
@@ -401,13 +405,21 @@ int main(int argc, char **argv)
     
     rrc = do_run();
     if (rrc & OPGROUP_RC_FINI)
-        exit((rc & OPGROUP_RC_ERROR) ? EXIT_FAILURE : EXIT_SUCCESS);
+        exit((rrc & OPGROUP_RC_ERROR) ? EXIT_FAILURE : EXIT_SUCCESS);
 
     if (args.eat_args == 0) {
-        poclidek_load_packages(&cctx);
-        poclidek_shell(&cctx);
+        if (!poclidek_load_packages(&cctx)) {
+            logn(LOGERR, "packages load failed");
+            ec = 1;
+            
+        } else {
+            poclidek_shell(&cctx);
+        }
+        
         
     } else {
+        int rc;
+        
 #define ENABLE_TRACE 0
 #if ENABLE_TRACE
         printf("verbose %d\n", verbose);
@@ -417,11 +429,13 @@ int main(int argc, char **argv)
             printf(" %s", args.argv[i++]);
         printf("\n");
 #endif        
-        if (args.argc > 0) 
+        if (args.argc > 0)
             rc = poclidek_exec(&cctx, args.ts, args.argc,
-                                (const char **)args.argv);
+                               (const char **)args.argv);
+        if (!rc)
+            ec = 1;
     }
-    
     poclidek_destroy(&cctx);
-    return rc;
+    poldek_destroy(&ctx);
+    return ec;
 }

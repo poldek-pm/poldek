@@ -71,7 +71,7 @@ int is_pkg_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg)
     char name[256];
     int n;
 
-    dents = poclidek_get_dents(cctx, POCLIDEK_INSTALLEDDIR);
+    dents = poclidek_get_dent_ents(cctx, POCLIDEK_INSTALLEDDIR);
     if (dents == NULL)
         return 1;
     
@@ -353,7 +353,7 @@ int poclidek_shell(struct poclidek_ctx *cctx)
             add_history(s);
             //print_mem_info("BEFORE");
             shInCmd = 1;
-            poclidek_exec_line(cctx, NULL, s);
+            poclidek_execline(cctx, NULL, s);
             shInCmd = 0;
             //print_mem_info("AFTER ");
         }

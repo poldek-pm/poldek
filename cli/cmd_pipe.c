@@ -26,23 +26,12 @@
 #include "cli.h"
 #include "cmd_pipe.h"
 
-struct cmd_pipe {
-    tn_array *pkgs;
-    int       nread_pkgs;
-    
-    tn_buf   *nbuf;
-    tn_buf_it nbuf_it;
-    int       nwritten;
-};
-
 
 struct cmd_pipe *cmd_pipe_new(void) 
 {
     struct cmd_pipe *p;
     
-    p = n_malloc(sizeof(*p));
-    memset(p, 0, sizeof(*p));
-    
+    p = n_calloc(sizeof(*p), 1);
     p->pkgs = pkgs_array_new(64);
     p->nbuf = n_buf_new(4096);
     n_buf_it_init(&p->nbuf_it, p->nbuf);
@@ -51,11 +40,23 @@ struct cmd_pipe *cmd_pipe_new(void)
 
 void cmd_pipe_free(struct cmd_pipe *p)
 {
+    if (p->_refcnt > 0) {
+        p->_refcnt--;
+        return;
+    }
+    
     n_array_free(p->pkgs);
     n_buf_free(p->nbuf);
     memset(p, 0, sizeof(*p));
     free(p);
 }
+
+struct cmd_pipe *cmd_pipe_link(struct cmd_pipe *p) 
+{
+    p->_refcnt++;
+    return p;
+}
+
 
 
 int cmd_pipe_writepkg(struct cmd_pipe *p, struct pkg *pkg) 
@@ -115,6 +116,7 @@ char *cmd_pipe_getline(struct cmd_pipe *p, char *line, int size)
         if (size < len)
             len = size - 1;
         memcpy(line, ptr, len);
+        line[len] = '\0';
         return line;
     }
     return NULL;

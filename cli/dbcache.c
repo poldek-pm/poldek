@@ -50,11 +50,11 @@ int poclidek_load_installed(struct poclidek_ctx *cctx, int reload)
     if ((dent = poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR)) == NULL)
         dent = pkg_dent_adddir(cctx, cctx->rootdir, POCLIDEK_INSTALLEDDIR);
         
-    pkg_dent_addpkgs(cctx, dent, pkgdir->pkgs);
+    pkg_dent_add_pkgs(cctx, dent, pkgdir->pkgs);
     cctx->pkgs_installed = n_ref(pkgdir->pkgs);
     n_array_ctl(cctx->pkgs_installed, TN_ARRAY_AUTOSORTED);
     cctx->dbpkgdir = pkgdir;
-    cctx->ts_instpkgs = pkgdir->ts;
+    cctx->ts_dbpkgdir = pkgdir->ts;
     return 1;
 }
 
@@ -175,7 +175,6 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     char         rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
     const char   *path;
 
-
     if (!rpm_get_dbpath(dbpath, sizeof(dbpath)))
         return 0;
 
@@ -193,7 +192,7 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     else 
         path = mkdbcache_path(dbcache_path, sizeof(dbcache_path),
                               cctx->ctx->ts->cachedir, pkgdir->idxpath);
-
+    
     if (path == NULL)
         return 0;
     
@@ -208,9 +207,11 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     ///      mtime_rpmdb, pkgdir->ts, mtime_dbcache);
     n_assert(*path != '\0');
     n_assert(strlen(path) > 10);
+    DBGF_F("%s %s\n", cctx->ctx->ts->cachedir, path);
     return pkgdir_save(pkgdir, RPMDBCACHE_PDIRTYPE, path,
                        PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
                        PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NODESC);
+    
     return 1;
 }
 

@@ -93,6 +93,8 @@ struct pkg_dent *pkg_dent_link(struct pkg_dent *ent)
 
 void pkg_dent_free(struct pkg_dent *ent)
 {
+    DBGF("%s, refcnt %d\n", ent->name, ent->_refcnt);
+    
     if (ent->_refcnt > 0) {
         ent->_refcnt--;
         return;
@@ -166,20 +168,30 @@ int pkg_dent_cmp_bday(struct pkg_dent *ent1, struct pkg_dent *ent2)
 
 
 
-static inline
-struct pkg_dent *pkg_dent_addpkg(struct poclidek_ctx *cctx,
-                                 struct pkg_dent *dent, struct pkg *pkg)
+struct pkg_dent *pkg_dent_add_pkg(struct poclidek_ctx *cctx,
+                                  struct pkg_dent *dent, struct pkg *pkg)
 {
     struct pkg_dent *ent;
 
     ent = pkg_dent_new_pkg(cctx, pkg);
     n_array_push(dent->pkg_dent_ents, ent);
+    n_array_sort(dent->pkg_dent_ents);
     return ent;
 }
 
+void pkg_dent_remove_pkg(struct pkg_dent *dent, struct pkg *pkg)
+{
+    struct pkg_dent tmp;
+
+    n_array_sort(dent->pkg_dent_ents);
+    tmp.name = pkg->nvr;
+    n_array_remove(dent->pkg_dent_ents, &tmp);
+}
+
+
 
 inline
-int pkg_dent_addpkgs(struct poclidek_ctx *cctx,
+int pkg_dent_add_pkgs(struct poclidek_ctx *cctx,
                      struct pkg_dent *dent, tn_array *pkgs)
 {
     int i;
@@ -261,8 +273,8 @@ void poclidek_dent_init(struct poclidek_ctx *cctx)
         }
 
         ent = pkg_dent_adddir(cctx, root, name);
-        pkg_dent_addpkgs(cctx, ent, pkgdir->pkgs);
-        pkg_dent_addpkgs(cctx, allav, pkgdir->pkgs);
+        pkg_dent_add_pkgs(cctx, ent, pkgdir->pkgs);
+        pkg_dent_add_pkgs(cctx, allav, pkgdir->pkgs);
         free(name);
     }
 
@@ -375,7 +387,7 @@ struct pkg_dent *poclidek_dent_find(struct poclidek_ctx *cctx, const char *path)
     return get_dir_dent(cctx, cctx->currdir, path);
 }
 
-tn_array *poclidek_get_dents(struct poclidek_ctx *cctx, const char *path)
+tn_array *poclidek_get_dent_ents(struct poclidek_ctx *cctx, const char *path)
 {
     struct pkg_dent *ent;
 
@@ -390,7 +402,7 @@ tn_array *poclidek_get_dent_packages(struct poclidek_ctx *cctx, const char *dir)
     tn_array *pkgs, *ents;
     register int i;
 
-    if ((ents = poclidek_get_dents(cctx, dir)) == NULL)
+    if ((ents = poclidek_get_dent_ents(cctx, dir)) == NULL)
         return NULL;
 
     
@@ -421,7 +433,7 @@ tn_array *poclidek_resolve_dents(const char *path,
 {
     tn_array *ents;
 
-    if ((ents = poclidek_get_dents(cctx, path)) == NULL)
+    if ((ents = poclidek_get_dent_ents(cctx, path)) == NULL)
         return NULL;
 
     if (poldek_ts_get_arg_count(ts) == 0)

@@ -19,7 +19,6 @@
 #define POLDEKCLI_CMDL            (1 << 7)
 
 struct poclidek_ctx;
-struct poclidek_command;
 
 struct poclidek_ctx {
     struct poldek_ctx   *ctx;
@@ -27,17 +26,16 @@ struct poclidek_ctx {
     tn_array            *pkgs_available;   /* array of available pkgs  */
     tn_array            *pkgs_installed;   /* array of installed pkgs  */
     
-    time_t         ts_instpkgs; /* instpkgs timestamp */
-    struct pkgdir       *dbpkgdir;   /* db packages        */
+    struct pkgdir       *dbpkgdir;   /* db packages */
+    time_t              ts_dbpkgdir; /* timestamp */
 
     unsigned            flags;
 
-    void             *_dent_obstack;
-    void             *(*dent_alloc)(struct poclidek_ctx *, size_t);
-    struct pkg_dent  *rootdir;
-    struct pkg_dent  *homedir;
-    struct pkg_dent  *currdir;
-    
+    tn_alloc            *_dent_na;
+    void                *(*dent_alloc)(struct poclidek_ctx *, size_t);
+    struct pkg_dent     *rootdir;
+    struct pkg_dent     *homedir;
+    struct pkg_dent     *currdir;
 };
 
 
@@ -45,12 +43,9 @@ int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx);
 void poclidek_destroy(struct poclidek_ctx *cctx);
 int poclidek_load_packages(struct poclidek_ctx *cctx);
 
-int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, 
-                  int argc, const char **argv);
 
-int poclidek_exec_line(struct poclidek_ctx *cctx, struct poldek_ts *ts,
-                       const char *cmdline);
 
+/* cmdctx */
 struct cmd_pipe;
 
 #define CMDCTX_ISHELP        (1 << 0)
@@ -71,6 +66,8 @@ int cmdctx_addtoresult(struct cmdctx *cmdctx, struct pkg *pkg);
 int cmdctx_printf(struct cmdctx *cmdctx, const char *fmt, ...);
 int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ...);
 
+
+/* poclidek_cmd */
 #define COMMAND_NOARGS       (1 << 0) /* cmd don't accept arguments */
 #define COMMAND_NOOPTS       (1 << 1) /* cmd don't accept options */
 #define COMMAND_NOHELP       (1 << 2) /* cmd hasn't help */
@@ -93,7 +90,7 @@ int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ...);
                                COMMAND_PIPE_PACKAGES
 
 struct poclidek_cmd {
-    uint32_t            flags;
+    unsigned            flags;
     char                *name;
     char                *arg;
     char                *doc;
@@ -112,7 +109,6 @@ struct poclidek_cmd {
     char                 *cmdline;   /* alias content */
     int                  _seqno;
 };
-
 
 int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd);
 int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);

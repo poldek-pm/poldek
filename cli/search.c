@@ -361,23 +361,21 @@ void pattern_free(struct pattern *pt)
 }
 
 
-static int fl_match(tn_array *fl, struct pattern *pt) 
+static int fl_match(tn_tuple *fl, struct pattern *pt) 
 {
     int i, j, match = 0;
     
 
-    for (i=0; i < n_array_size(fl); i++) {
-        struct pkgfl_ent    *flent;
+    for (i=0; i < n_tuple_size(fl); i++) {
+        struct pkgfl_ent    *flent = n_tuple_nth(fl, i);
         char                path[PATH_MAX], *dn;
         int                 n;
 
-        
-        flent = n_array_nth(fl, i);
         dn = flent->dirname;
-
         if (*dn == '/') {
             n_assert(*(dn + 1) == '\0');
             n = n_snprintf(path, sizeof(path), dn);
+            
         } else {
             n = n_snprintf(path, sizeof(path), "/%s/", dn);
         }
@@ -407,22 +405,17 @@ static int fl_match(tn_array *fl, struct pattern *pt)
 
 static int search_pkg_files(struct pkg *pkg, struct pattern *pt) 
 {
-    tn_array  *fl;
-    void      *flmark;
+    struct pkgflist *flist;
     int       match = 0;
 
 
     if (pkg->fl && fl_match(pkg->fl, pt))
         return 1;
 
-    flmark = pkgflmodule_allocator_push_mark();
-
-    if ((fl = pkg_other_fl(pkg)) != NULL) {
-        match = fl_match(fl, pt);
-        n_array_free(fl);
+    if ((flist = pkg_info_get_nodep_flist(pkg)) != NULL) {
+        match = fl_match(flist->fl, pt);
+        pkg_info_free_flist(flist);
     }
-    
-    pkgflmodule_allocator_pop_mark(flmark);
     
     return match;
 }
@@ -482,26 +475,29 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
 
     if (flags & (OPT_SEARCH_SUMM | OPT_SEARCH_DESC)) {
         struct pkguinf *pkgu;
+        const char *s;
         
         if ((pkgu = pkg_info(pkg)) == NULL) {
             logn(LOGERR, _("%s: load package info failed"), pkg_snprintf_s(pkg));
             
         } else {
             if (flags & OPT_SEARCH_SUMM) {
-                if (pkgu->summary != NULL)
-                    match = pattern_match(pt, pkgu->summary, strlen(pkgu->summary));
-                
-                if (!match && pkgu->license != NULL) 
-                    match = pattern_match(pt, pkgu->license, strlen(pkgu->license));
-                
-                if (!match && pkgu->url != NULL)
-                    match = pattern_match(pt, pkgu->url, strlen(pkgu->url));
+                if ((s = pkguinf_getstr(pkgu, PKGUINF_SUMMARY)))
+                    match = pattern_match(pt, s, strlen(s));
+
+                if (!match && (s = pkguinf_getstr(pkgu, PKGUINF_LICENSE)))
+                    match = pattern_match(pt, s, strlen(s));
+
+                if (!match && (s = pkguinf_getstr(pkgu, PKGUINF_URL)))
+                    match = pattern_match(pt, s, strlen(s));
             }
             
-            if (!match && ((flags & OPT_SEARCH_DESC) && pkgu->description))
-                match = pattern_match(pt, pkgu->description,
-                                      strlen(pkgu->description));
-            
+            if (!match && ((flags & OPT_SEARCH_DESC))) {
+                s = pkguinf_getstr(pkgu, PKGUINF_DESCRIPTION);
+                if (s)
+                    match = pattern_match(pt, s, strlen(s));
+            }
+
             pkguinf_free(pkgu);
         }
         

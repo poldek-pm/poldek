@@ -31,6 +31,7 @@
 #include "log.h"
 #include "cli.h"
 #include "cmd.h"
+#include "cmd_pipe.h"
 
 static
 struct cmd_chain_ent *cmd_chain_ent_new(unsigned flags,
@@ -50,15 +51,18 @@ struct cmd_chain_ent *cmd_chain_ent_new(unsigned flags,
     return ent;
 }
 
-
 static
 void cmd_chain_ent_free(struct cmd_chain_ent *ent)
 {
     if (ent->a_argv) 
         n_array_free(ent->a_argv);
+
+    if (ent->pipe_right)
+        cmd_pipe_free(ent->pipe_right);
     
     if (ent->next_piped)
         cmd_chain_ent_free(ent->next_piped);
+    
     free(ent);
 }
 

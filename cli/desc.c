@@ -502,7 +502,7 @@ static void mode_t_to_str(char *str, int size, mode_t mode)
 
 
     
-static void list_files_long(struct cmdctx *cmdctx, tn_array *fl, int mode_octal)
+static void list_files_long(struct cmdctx *cmdctx, tn_tuple *fl, int mode_octal)
 {
     int i, j;
     const char *fmt = "!%-10s%10s\t%s\n";
@@ -513,12 +513,9 @@ static void list_files_long(struct cmdctx *cmdctx, tn_array *fl, int mode_octal)
         
     cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, fmt, _("mode"), _("size"), _("name"));
     
-    for (i=0; i < n_array_size(fl); i++) {
-        struct pkgfl_ent    *flent;
+    for (i=0; i < n_tuple_size(fl); i++) {
+        struct pkgfl_ent    *flent = n_tuple_nth(fl, i);
         char                tmpbuf[PATH_MAX];
-        
-        
-        flent = n_array_nth(fl, i);
         
         for (j=0; j < flent->items; j++) {
             struct flfile *f = flent->files[j];
@@ -561,17 +558,14 @@ static void list_files_long(struct cmdctx *cmdctx, tn_array *fl, int mode_octal)
 }
 
 
-static void list_files(struct cmdctx *cmdctx, tn_array *fl, int term_width) 
+static void list_files(struct cmdctx *cmdctx, tn_tuple *fl, int term_width) 
 {
     int i, j, ncol = 0;
 
-    for (i=0; i<n_array_size(fl); i++) {
-        struct pkgfl_ent    *flent;
+    for (i=0; i < n_tuple_size(fl); i++) {
+        struct pkgfl_ent    *flent = n_tuple_nth(fl, i);
         char                tmpbuf[PATH_MAX];
         int                 dn_printed = 0;
-
-        
-        flent = n_array_nth(fl, i);
         
         for (j=0; j<flent->items; j++) {
             struct flfile *f = flent->files[j];
@@ -586,7 +580,7 @@ static void list_files(struct cmdctx *cmdctx, tn_array *fl, int term_width)
                 snprintf(tmpbuf, sizeof(tmpbuf),
                                 "%s/%s", flent->dirname, f->basename);
                 tmpent.dirname = tmpbuf;
-                if (n_array_bsearch(fl, &tmpent))
+                if (n_tuple_bsearch_ex(fl, &tmpent, (tn_fn_cmp)pkgfl_ent_cmp))
                     continue;
             }
             
@@ -620,23 +614,20 @@ static void list_files(struct cmdctx *cmdctx, tn_array *fl, int term_width)
 
 static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt) 
 {
-    tn_array *fl;
+    struct pkgflist *flist;
     int term_width;
-    void *flmark;
     
-    if ((fl = pkg_info_get_fl(pkg)) == NULL || n_array_size(fl) == 0)
+    if ((flist = pkg_info_get_flist(pkg)) == NULL)
         return;
 
-    flmark = pkgflmodule_allocator_push_mark();
     term_width = term_get_width() - RMARGIN;
     
     if (longfmt)
-        list_files_long(cmdctx, fl, 0);
+        list_files_long(cmdctx, flist->fl, 0);
     else
-        list_files(cmdctx, fl, term_width);
+        list_files(cmdctx, flist->fl, term_width);
 
-    pkg_info_free_fl(pkg, fl);
-    pkgflmodule_allocator_pop_mark(flmark);
+    pkg_info_free_flist(flist);
 }
 
 static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags)
@@ -664,7 +655,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
     struct pkguinf  *pkgu;
     char            timbuf[30], fnbuf[PATH_MAX], *fn;
     char            unit = 'K';
-    const char      *group;
+    const char      *group, *s;
     double          pkgsize;
     
     if ((pkgu = pkg_info(pkg)) == NULL && verbose > 1) {
@@ -678,9 +669,9 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
     else
         *timbuf = '\0';
 
-    if (pkgu && pkgu->summary) {
+    if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_SUMMARY))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Summary:");
-        cmdctx_printf(cmdctx, "%s\n", pkgu->summary);
+        cmdctx_printf(cmdctx, "%s\n", s);
     }
 
     if ((group = pkg_group(pkg))) {
@@ -688,14 +679,14 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
         cmdctx_printf(cmdctx, "%s\n", group);
     }
 
-    if (pkgu && pkgu->vendor) {
+    if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_VENDOR))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Vendor:");
-        cmdctx_printf(cmdctx, "%s\n", pkgu->vendor);
+        cmdctx_printf(cmdctx, "%s\n", s);
     }
 
-    if (pkgu && pkgu->license) {
+    if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_LICENSE))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "License:");
-        cmdctx_printf(cmdctx, "%s\n", pkgu->license);
+        cmdctx_printf(cmdctx, "%s\n", s);
     }
 
     if (pkg->arch) {
@@ -712,17 +703,17 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
         cmdctx_printf(cmdctx, "\n");
     }
         
-    if (pkgu && pkgu->url) {
+    if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_URL))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "URL:");
-        cmdctx_printf(cmdctx, "%s\n", pkgu->url);
+        cmdctx_printf(cmdctx, "%s\n", s);
     }
         	
         
     if (*timbuf) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Built:");
         cmdctx_printf(cmdctx, "%s", timbuf);
-        if (pkgu && pkgu->buildhost) 
-            cmdctx_printf(cmdctx, " at %s", pkgu->buildhost);
+        if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_BUILDHOST))) 
+            cmdctx_printf(cmdctx, " at %s", s);
         cmdctx_printf(cmdctx, "\n");
     }
 
@@ -763,9 +754,9 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
 
     show_pkg(cmdctx, pkg, flags);
         
-    if (pkgu && pkgu->description) {
+    if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_DESCRIPTION))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "Description:\n");
-        cmdctx_printf(cmdctx, "%s\n", pkgu->description);
+        cmdctx_printf(cmdctx, "%s\n", s);
     }
 
     if (pkgu)
