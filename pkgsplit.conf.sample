@@ -1,0 +1,32 @@
+# $Id$
+# By default all packages have 0 priority value. 
+# Packages specified by mask only (e.g. quota below) 
+# have -1 priority.
+# 
+# MASK [PRI]
+
+quota
+vim		
+postfix
+geninitrd
+kernel
+FHS
+gcc 
+xemacs*
+vim-static
+xmms
+rpm
+poldek                  -100
+
+# low priorities
+
+XFree86*                10
+lesstif			10
+kde*			100
+gnome*			100
+Atari800*		200
+MHonArc*                100
+Glide*			100
+*-devel*                2 
+*-static* 		100
+
