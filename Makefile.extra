@@ -49,19 +49,19 @@ snap: dist
 	tar xpzf $(distdir).tar.gz && \
 	echo "$$dts" > $(distdir)/0_THIS_IS_SNAPSHOT && \
 	mv -f $(distdir) $(PACKAGE)-cvs$$dts && \
-	tar cpzf $(PACKAGE)-cvs$$dts.tar.gz $(PACKAGE)-cvs$$dts && \
+	tar cpjf $(PACKAGE)-cvs$$dts.tar.bz2 $(PACKAGE)-cvs$$dts && \
 	rm -rf $(PACKAGE)-cvs$$dts && \
-	echo "$(PACKAGE)-cvs$$dts.tar.gz"
+	echo "$(PACKAGE)-cvs$$dts.tar.bz2"
 
 ann_from = mis@pld.org.pl
 ann_to   = poldek@pld-linux.org
-
+ann_from_ = mis@k2.net.pl
 ann:
-	@echo -ne "MAIL FROM: $(ann_from)\r\n"        >  ann.1; \
+	@echo -ne "MAIL FROM: $(ann_from_)\r\n"        >  ann.1; \
 	echo -ne "RCPT TO: $(ann_to)\r\nDATA\r\n"     >> ann.1; \
 	echo -ne "From: Pawel A. Gajda <$(ann_from)>\nTo: $(ann_to)\n" >> ann.1; \
 	perl -ne 'BEGIN { $$n = 0; }; if (/(^\d+\.\d+.+?)\s/) { exit if $$n; print "Subject: [ANN] poldek $$1 released\n\n"; $$n++ } print;' NEWS >> ann.1; \
-	echo -ne "-- \nmis@pld.org.pl\nhttp://team.pld.org.pl/~mis/poldek" >> ann.1; \
+	echo -ne "-- \nmis@pld.org.pl\nhttp://team.pld.org.pl/~mis/poldek/" >> ann.1; \
 	echo -ne "\r\n.\r\n" >> ann.1; \
 	echo "Saved ann.1"
 
