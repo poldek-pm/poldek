@@ -5,7 +5,8 @@ source1 = rh,,noauto,noautoup,type=hdrl \
   ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/base/hdlist
 prefix1 = ftp://ftp.redhat.com/pub/redhat/redhat-7.2-en/os/i386/RedHat/RPMS/
 
-source20 = md,noauto,noautoup,type=hdrl ftp://ftp.ps.pl/mirrors/mandrake/8.2/i586/Mandrake/base/pkglist.cooker.bz2
+source20 = md,noauto,noautoup,type=hdrl \
+  ftp://ftp.ps.pl/mirrors/mandrake/8.2/i586/Mandrake/base/pkglist.cooker.bz2
 prefix20 = ftp://ftp.ps.pl/mirrors/mandrake/8.2/i586/Mandrake/RPMS/
 
 

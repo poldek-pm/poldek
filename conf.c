@@ -228,28 +228,38 @@ tn_hash *ldconf(const char *path)
     n_hash_ctl(ht, TN_HASH_NOCPKEY);
 
     
-    while (fgets(buf, sizeof(buf), stream)) {
+    while (fgets(buf, sizeof(buf) - 1, stream)) {
         char *p = buf;
         char *name, *val;
         struct copt *opt;
         const struct tag *tag;
 
         
-        nline++;
-        
-        p = strrchr(buf, '\0'); /* eat trailing ws */
-        n_assert(p);
-        while (isspace(*p))
-            *p-- = '\0';
-
         p = buf;
         while (isspace(*p))
             p++;
 
-        if (*p == '#' || *p == '\0')
+        if (*p == '#' || *p == '\0') {
+            nline++;
             continue;
+        }
+
+        while (1) {
+            nline++;
+            p = strrchr(buf, '\0'); /* eat trailing ws */
+            n_assert(p);
+            p--;
+            while (isspace(*p))
+                *p-- = '\0';
+            
+            if (*p != '\\')
+                break;
+            
+            *p = '\0';
+            fgets(p, sizeof(buf) - (p - buf) - 1, stream);
+        }
         
-        name = p;
+        name = p = buf;
 
         while (isalnum(*p) || *p == '_')
             p++;
