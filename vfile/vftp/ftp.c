@@ -240,10 +240,11 @@ int response_complete(struct ftp_response *resp)
 }
 
 
-static int readresp(int sockfd, struct ftp_response *resp) 
+static int readresp(int sockfd, struct ftp_response *resp, int readln) 
 {
-    int ttl, is_err = 0;
-
+    int ttl, is_err = 0, buf_pos = 0;
+    char buf[4096];
+    
     errno = 0;
     ttl = 180;
     
@@ -270,22 +271,37 @@ static int readresp(int sockfd, struct ftp_response *resp)
             }
             
         } else if (rc > 0) {
-            char buf[2048];
+            char c;
             int n;
+
+            if (readln) 
+                n = read(sockfd, &c, 1);
+            else 
+                n = read(sockfd, buf, sizeof(buf));
             
-            if ((n = read(sockfd, buf, sizeof(buf) - 1)) > 0) {
-                buf[n] = '\0';
-                n_buf_addz(resp->buf, buf, n);
-                break;
-                
-            } else if (n < 0) {
+            if (n <= 0) {
                 is_err = 1;
                 break;
                 
-            } else if (n == 0) {
-                is_err = 1;
-                break;
+            } else if (n >= 1) {
+                if (!readln) {
+                    n_buf_addz(resp->buf, buf, n);
+                    break;
+                    
+                } else {
+                    buf[buf_pos++] = c;
                 
+                    if (buf_pos == sizeof(buf)) {
+                        is_err = 1;
+                        errno = EMSGSIZE;
+                        break;
+                    }
+
+                    if (c == '\n') {
+                        n_buf_addz(resp->buf, buf, buf_pos);
+                        break;
+                    }
+                }
             } else {
                 n_assert(0);
             }
@@ -294,6 +310,10 @@ static int readresp(int sockfd, struct ftp_response *resp)
     
     if (is_err) {
         switch (errno) {
+            case EMSGSIZE:
+                snprintf(errmsg, sizeof(errmsg), _("response line too long"));
+                break;
+                
             case EINTR:
                 snprintf(errmsg, sizeof(errmsg), _("unexpected EOF: %m"));
                 break;
@@ -315,7 +335,7 @@ static int readresp(int sockfd, struct ftp_response *resp)
     
 
 
-static int do_ftp_resp(int sock, int *resp_code, char **resp_msg)
+static int do_ftp_resp(int sock, int *resp_code, char **resp_msg, int readln)
 {
     struct ftp_response resp;
     int is_err = 0;
@@ -332,7 +352,7 @@ static int do_ftp_resp(int sock, int *resp_code, char **resp_msg)
     while (1) {
         int n;
         
-        if ((n = readresp(sock, &resp)) > 0) {
+        if ((n = readresp(sock, &resp, readln)) > 0) {
             if (response_complete(&resp))
                 break;
         } else {
@@ -367,7 +387,7 @@ static int do_ftp_resp(int sock, int *resp_code, char **resp_msg)
 }
 
 
-int ftpcn_resp(struct ftpcn *cn) 
+int ftpcn_resp_ext(struct ftpcn *cn, int readln) 
 {
     int rc;
 
@@ -380,12 +400,15 @@ int ftpcn_resp(struct ftpcn *cn)
     }
     cn->last_respcode = 0;
     
-    rc = do_ftp_resp(cn->sockfd, &cn->last_respcode, &cn->last_respmsg);
+    rc = do_ftp_resp(cn->sockfd, &cn->last_respcode, &cn->last_respmsg, readln);
     if (rc == 0)
         cn->state = FTPCN_DEAD;
 
     return rc;
 }
+
+#define ftpcn_resp(cn)           ftpcn_resp_ext(cn, 0)
+#define ftpcn_resp_readln(cn)    ftpcn_resp_ext(cn, 1)
 
 static void sigalarmfunc(int unused)
 {
@@ -461,7 +484,7 @@ static int ftp_open(const char *host, int port)
     if ((sockfd = to_connect(host, portstr)) < 0)
         return 0;
 
-    if (!do_ftp_resp(sockfd, &code, NULL) || code != 220) {
+    if (!do_ftp_resp(sockfd, &code, NULL, 0) || code != 220) {
         close(sockfd);
         sockfd = -1;
     }
@@ -780,7 +803,7 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
         goto l_err;
     
     ftpcn_cmd(cn, "RETR %s", path);
-    if (!ftpcn_resp(cn))
+    if (!ftpcn_resp_readln(cn))
         goto l_err;
 
     
