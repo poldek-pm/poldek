@@ -6,3 +6,4 @@ Makefile.in
 *.la 
 *[a-z]mod.py* 
 wrap_*
+*.py[co]
