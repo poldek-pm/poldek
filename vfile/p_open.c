@@ -126,13 +126,15 @@ int p_close(struct p_open_st *pst)
     int st, rc = -1;
     char errmsg[1024];
 
+    if (pst->errmsg)
+        free(pst->errmsg);
+    
     pst->errmsg = NULL;
     
     if (pst->pid == 0)
         return 0;
     
     waitpid(pst->pid, &st, 0);
-    
     
     if (WIFEXITED(st)) {
         rc = WEXITSTATUS(st);
@@ -153,7 +155,7 @@ int p_close(struct p_open_st *pst)
                  pst->cmd, pst->pid);
         pst->errmsg = strdup(errmsg);
     }
-    
+
     return rc;
 }
 
