@@ -1,6 +1,8 @@
 #ifndef POLDEK_VFILE_VFREQ_H
 #define POLDEK_VFILE_VFREQ_H
 
+#include <time.h>
+
 #define VF_PROGRESS_VIRGIN    0
 #define VF_PROGRESS_DISABLED  1
 #define VF_PROGRESS_RUNNING   2
@@ -13,16 +15,10 @@ struct vf_progress_bar {
     int     prev_perc;
 };
 
-void vfile_progress_init(struct vf_progress_bar *bar);
-void vfile_progress(long total, long amount, void *data);
+void vf_progress_init(struct vf_progress_bar *bar);
+void vf_progress(long total, long amount, void *data);
 
-
-
-
-/* send login@host as FTP password */
-
-#define VF_REQ_SYSUSER_AS_ANONPASSWD  (1 << 1) 
-#define VF_REQ_INT_REDIRECTED         (1 << 12)
+#define VF_REQ_INT_REDIRECTED         (1 << 0)
 
 struct vf_request {
     unsigned  flags;
@@ -44,10 +40,20 @@ struct vf_request {
 
     /* destination  */
     char      *destpath;
-    FILE      *stream;
-    long      stream_offset;
+    int       dest_fd;
+    int       dest_fdoff;
+    
+    //FILE      *stream;
+    //long      stream_offset;
     
     struct vf_progress_bar *bar;
+
+    /* filled by module's stat()s */
+    time_t    st_mtime;
+    off_t     st_size;
+
+    time_t    st_local_mtime;
+    off_t     st_local_size;
     
     int       req_errno;
 };
@@ -55,6 +61,9 @@ struct vf_request {
 
 struct vf_request *vf_request_new(const char *destpath, const char *url);
 void vf_request_free(struct vf_request *req);
+
+int vf_request_open_destpath(struct vf_request *req);
+void vf_request_close_destpath(struct vf_request *req);
 
 struct vf_request *vf_request_redirto(struct vf_request *req, const char *url);
 

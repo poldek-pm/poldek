@@ -17,10 +17,6 @@
 # include "config.h"
 #endif
 
-#ifdef HAVE_FOPENCOOKIE
-# define _GNU_SOURCE 1
-#endif
-
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,7 +52,7 @@ int vf_valid_path(const char *path)
     
 
     if (*path != '/') {
-        vfile_err_fn("%s: path must must begin with a /\n", CL_URL(path));
+        vf_logerr("%s: path must must begin with a /\n", CL_URL(path));
         return 0;
     }
     
@@ -68,7 +64,7 @@ int vf_valid_path(const char *path)
         switch (*p) {
             case '/':
                 if (ndots == 2) {
-                    vfile_err_fn("%s: relative paths not allowed\n", path);
+                    vf_logerr("%s: relative paths not allowed\n", path);
                     return 0;
                 }
                 ndots = 0;
@@ -82,13 +78,13 @@ int vf_valid_path(const char *path)
                 ndots = 0;
                 
                 if (!isalnum(*p) && strchr("-+/._@", *p) == NULL) {
-                    vfile_err_fn("%s:%c non alphanumeric characters not allowed\n",
+                    vf_logerr("%s:%c non alphanumeric characters not allowed\n",
                                  path, *p);
                     return 0;
                 }
                 
                 if (isspace(*p)) {
-                    vfile_err_fn("%s: whitespaces not allowed\n", path);
+                    vf_logerr("%s: whitespaces not allowed\n", path);
                     return 0;
                 }
         }
@@ -110,7 +106,7 @@ int vf_mkdir(const char *path)
         return 1;
     
     if (mkdir(path, 0750) != 0) {
-        vfile_err_fn("%s: mkdir: %m\n", path);
+        vf_logerr("%s: mkdir: %m\n", path);
         return 0;
     }
     

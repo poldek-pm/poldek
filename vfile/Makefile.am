@@ -1,7 +1,7 @@
 # $Id$
 
 VFCURL_SRCS = vfcurl.c
-SUBDIRS   = vftp vhttp
+SUBDIRS   = vfff
 
 LIBS = -ltrurl -lz
 
@@ -15,23 +15,23 @@ INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
 lib_LTLIBRARIES     = libvfile.la 
-libvfile_la_SOURCES = vfile.c vfprogress.c fetch.c misc.c \
-		      p_open.c uncompr.c vfreq.c vfreq.h \
-		      $(VFCURL_SRCS_) vfvftp.c vfvhttp.c 
+libvfile_la_SOURCES = vfile.c fetch.c vfetch.c vfprogress.c misc.c \
+				      p_open.c uncompr.c vfreq.c vfreq.h \
+		      		  vfffmod.c $(VFCURL_SRCS_)
 
-libvfile_la_LIBADD = vftp/libvftp.la vhttp/libvhttp.la 
+libvfile_la_LIBADD = vfff/libvfff.la
 
 pkgincludedir = $(includedir)/vfile
 pkginclude_HEADERS = vfile.h p_open.h
 
 sigint_la = $(top_srcdir)/sigint/libsigint.la
 
-#noinst_PROGRAMS = sample ttest
+noinst_PROGRAMS = vfget
 #sample_SOURCES  = sample.c
 #sample_LDADD    = libvfile.la @TRURL_LDFLAG@ $(LDADD_) $(sigint_la)
 
-#ttest_SOURCES  = ttest.c 
-#ttest_LDADD    = libvfile.la @TRURL_LDFLAG@ $(LDADD_) $(sigint_la)
+vfget_SOURCES  = vfget.c 
+vfget_LDADD    = libvfile.la -lrpmio $(sigint_la) -lutil
 EXTRA_DIST     = $(VFCURL_SRCS) \
 		 testcookie.c test_progress.c
 

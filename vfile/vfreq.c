@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <utime.h>
 #include <fcntl.h>
 #include <time.h>
 
@@ -130,7 +131,37 @@ static const char *get_proxy(const char *proto)
     return url;
 }
 
+int vf_request_open_destpath(struct vf_request *req)
+{
+    int          fd;
+    struct stat  st;
+
     
+    n_assert(req->dest_fd <= 0);
+    n_assert(req->destpath);
+    
+    if ((fd = open(req->destpath, O_WRONLY|O_APPEND|O_CREAT, 0644)) < 0) {
+        vf_logerr("open %s: %m\n", req->destpath);
+        return 0;
+    }
+    
+    if (fstat(fd, &st) != 0) {
+        vf_logerr("fstat %s: %m\n", req->destpath);
+        close(fd);
+        return 0;
+    }
+    
+    req->dest_fd = fd;
+    req->dest_fdoff = st.st_size;
+    if (st.st_size > 0) {      /* existing file */
+        req->st_local_mtime = st.st_mtime;
+        req->st_local_size = st.st_size;
+    }
+    return 1;
+}
+
+
+
 struct vf_request *vf_request_new(const char *url, const char *destpath) 
 {
     char               buf[PATH_MAX], tmp[PATH_MAX];
@@ -145,10 +176,9 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
     snprintf(buf, sizeof(buf), "%s", url);
     
     if (!vf_parse_url(buf, &rreq) || rreq.uri == NULL) {
-        vfile_err_fn(err_msg, CL_URL(url));
+        vf_logerr(err_msg, CL_URL(url));
         return NULL;
     }
-    
     
     if ((proxy = get_proxy(rreq.proto))) {
         char pbuf[PATH_MAX];
@@ -157,12 +187,17 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
         memset(&preq, 0, sizeof(preq));
         
         if (!vf_parse_url(pbuf, &preq)) {
-            vfile_err_fn(err_msg, CL_URL(proxy));
+            vf_logerr(err_msg, CL_URL(proxy));
             return NULL;
         }
     }
-        
-        
+    
+    if (destpath) {
+        rreq.destpath = (char*)destpath;
+        if (!vf_request_open_destpath(&rreq))
+            return NULL;
+    }
+    
     req = n_malloc(sizeof(*req));
     memset(req, 0, sizeof(*req));
     
@@ -170,9 +205,12 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
         req->destpath = n_strdup(destpath);
     else
         req->destpath = NULL;
-    req->stream = NULL;
-    req->stream_offset = 0;
-
+    
+    req->dest_fd = rreq.dest_fd;
+    req->dest_fdoff = rreq.dest_fdoff;
+    req->st_local_size = rreq.st_local_size;
+    req->st_local_mtime = rreq.st_local_mtime;
+    
     len = n_snprintf(tmp, sizeof(tmp), "%s://%s/%s", rreq.proto, rreq.host,
                      rreq.uri);
     req->url = n_strdupl(tmp, len);
@@ -205,7 +243,36 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
     
     return req;
 }
-    
+
+void vf_request_close_destpath(struct vf_request *req)
+{
+    if (req->dest_fd > 0) {
+        struct utimbuf ut;
+
+        n_assert(req->destpath);
+        if (*vfile_verbose > 1) {
+            char timbuf[64] = { '\0' };
+
+            if (req->st_mtime > 0) 
+                strftime(timbuf, sizeof(timbuf), "(mtime %Y-%m-%d %H:%M:%S)",
+                     gmtime(&req->st_mtime));
+            
+            vf_loginfo("Closing %s %s\n", req->destpath, timbuf);
+        }
+        
+        if (req->st_mtime > 0) {
+            ut.actime = ut.modtime = req->st_mtime;
+            utime(req->destpath, &ut);
+        }
+
+        close(req->dest_fd);
+        req->dest_fd = -1;
+        req->st_local_size = 0;
+        req->st_local_mtime = 0;
+    }
+}
+
+
 void vf_request_free(struct vf_request *req)
 {
     n_cfree(&req->url);
@@ -222,12 +289,8 @@ void vf_request_free(struct vf_request *req)
     n_cfree(&req->proxy_login);
     n_cfree(&req->proxy_passwd);
 
+    vf_request_close_destpath(req);
     n_cfree(&req->destpath);
-    if (req->stream) {
-        fclose(req->stream);
-        req->stream = NULL;
-    }
-
     free(req);
 }
 
@@ -243,9 +306,8 @@ struct vf_request *vf_request_redirto(struct vf_request *req, const char *url)
         return NULL;
 
     
-        
-    
-    vfile_msg_fn("Redirected to %s\n", PR_URL(tmpreq->url));
+    if (*vfile_verbose > 1)
+        vf_loginfo("Redirected to %s\n", PR_URL(tmpreq->url));
     
     xx_replace(req->url, tmpreq->url);
 

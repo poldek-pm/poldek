@@ -49,53 +49,58 @@
 #include "vfile.h"
 
 
-#define VFMOD_INFINITE_RETR       (1 << 0) /* retry download */
-
-#ifdef ENABLE_VFILE_CURL
-extern struct vf_module vf_mod_curl;
-#endif
-
-extern struct vf_module vf_mod_vftp;
-extern struct vf_module vf_mod_vhttp;
-
-struct vf_module *vfmod_tab[] = {
-    &vf_mod_vftp,
-    &vf_mod_vhttp,
-#ifdef ENABLE_VFILE_CURL    
-    &vf_mod_curl,
-#endif
-    NULL
-};
-
 static int          vfile_err_no = 0;
 static const char   *vfile_err_ctx = NULL;
 
 static int          verbose = 0; 
 int                 *vfile_verbose = &verbose;
-const char          *vfile_anonftp_passwd = "poldek@znienacka.net";
 
-static void vfmsg(const char *fmt, ...);
-
-void (*vfile_msgtty_fn)(const char *fmt, ...) = vfmsg;
-void (*vfile_msg_fn)(const char *fmt, ...) = vfmsg;
-void (*vfile_err_fn)(const char *fmt, ...) = vfmsg;
+static const char   default_anon_passwd[] = "poldek@znienacka.net";
 
 struct vfile_configuration vfile_conf = {
-    "/tmp", 0, VFMOD_INFINITE_RETR, NULL, NULL, NULL
+    "/tmp", VFILE_CONF_STUBBORN_RETR, NULL, NULL, &verbose, 
+    (char*)default_anon_passwd,
+    NULL
 };
 
+static void set_anonpasswd(void)
+{
+    if (vfile_conf.anon_passwd != default_anon_passwd) {
+        free(vfile_conf.anon_passwd);
+        vfile_conf.anon_passwd = (char*)default_anon_passwd;
+    }
+    
+    if (vfile_conf.flags & VFILE_CONF_SYSUSER_AS_ANONPASSWD) {
+        char buf[256];
+
+        if (vf_userathost(buf, sizeof(buf)) > 0) 
+            vfile_conf.anon_passwd = n_strdup(buf);
+    }
+}
 
 int vfile_configure(int param, ...) 
 {
     va_list  ap;
     int      v, *vp, rc;
     char     *vs;
+    void     *vv;
 
+    if (vfile_conf.default_clients_ht == NULL) {
+        vfile_conf.default_clients_ht = n_hash_new(7, free);
+        vfile_conf.proxies_ht = n_hash_new(7, free);
+    }
     
+        
     rc = 1;
     va_start(ap, param);
 
     switch (param) {
+        case VFILE_CONF_LOGCB:
+            vp = va_arg(ap, void*);
+            if (vp)
+                vfile_conf.log = vv;
+            break;
+            
         case VFILE_CONF_VERBOSE:
             vp = va_arg(ap, int*);
             if (vp)
@@ -103,7 +108,6 @@ int vfile_configure(int param, ...)
             else
                 vfile_verbose = &verbose;
             break;
-
             
                 
         case VFILE_CONF_CACHEDIR:
@@ -119,10 +123,10 @@ int vfile_configure(int param, ...)
         case VFILE_CONF_SYSUSER_AS_ANONPASSWD:
             v = va_arg(ap, int);
             if (v) 
-                vfile_conf.mod_fetch_flags |= VFMOD_USER_AS_ANONPASSWD;
+                vfile_conf.flags |= VFILE_CONF_SYSUSER_AS_ANONPASSWD;
             else
-                vfile_conf.mod_fetch_flags &= ~VFMOD_USER_AS_ANONPASSWD;
-            
+                vfile_conf.flags &= ~VFILE_CONF_SYSUSER_AS_ANONPASSWD;
+            set_anonpasswd();
             break;
             
         case VFILE_CONF_DEFAULT_CLIENT: {
@@ -133,6 +137,7 @@ int vfile_configure(int param, ...)
                 client = va_arg(ap, char *);
             
             if (proto && client) {
+                
                 if (strcmp(client, "internal") == 0) {
                     if (n_hash_exists(vfile_conf.default_clients_ht, proto))
                         n_hash_remove(vfile_conf.default_clients_ht, proto);
@@ -165,17 +170,6 @@ int vfile_configure(int param, ...)
     return rc;
 }
 
-void vfile_init(void) 
-{
-    int n;
-
-    n = 0;
-    while (vfmod_tab[n] != NULL)
-        vfmod_tab[n++]->init();
-
-    vfile_conf.default_clients_ht = n_hash_new(7, free);
-    vfile_conf.proxies_ht = n_hash_new(7, free);
-}
 
 
 #define ZLIB_TRACE 0
@@ -248,193 +242,6 @@ static cookie_io_functions_t gzio_cookie = {
 
 #endif /* HAVE_FOPENCOOKIE */
 
-static
-const struct vf_module *find_vf_module(int urltype) 
-{
-    int n = 0;
-    
-    n = 0;
-    while (vfmod_tab[n] != NULL) {
-        if (vfmod_tab[n]->vf_protocols & urltype)
-            return vfmod_tab[n];
-        n++;
-    }
-
-    return NULL;
-}
-
-static
-const struct vf_module *select_vf_module(const char *path) 
-{
-    const struct vf_module *mod = NULL;
-    char proto[64];
-
-    vf_url_proto(proto, sizeof(proto), path);
-
-    if (!vfile_is_configured_ext_handler(path) ||
-        !n_hash_exists(vfile_conf.default_clients_ht, proto)) {
-        unsigned urltype = vf_url_type(path);
-        mod = find_vf_module(urltype);
-    }
-    
-    return mod;
-}
-
-static
-int do_vfile_fetch(const struct vf_module *mod, struct vf_request *req,
-                   unsigned flags)
-{
-    struct stat             st;
-    FILE                    *stream;
-    int                     rc = 0, vf_errno = 0;
-    int                     end = 1, ntry = 0;
-    struct vf_progress_bar  bar;
-    
-    if ((stream = fopen(req->destpath, "a+")) == NULL) {
-        vfile_err_fn("fopen %s: %m\n", req->destpath);
-        return 0;
-    }
-    
-    if (fstat(fileno(stream), &st) != 0) {
-        vfile_err_fn("fstat %s: %m\n", req->destpath);
-        fclose(stream);
-        return 0;
-    }
-    
-    req->stream = stream;
-    req->stream_offset = st.st_size;
-    req->bar = &bar;
-    
-        
-    if (flags & VFMOD_INFINITE_RETR)
-        end = 1000;
-    
-    while (end-- > 0) {
-        if (sigint_reached()) {
-            vf_errno = EINTR;
-            break;
-        }
-        
-        if (ntry++ && (flags & VFMOD_INFINITE_RETR)) {
-            vfile_msg_fn(_("Retrying...(#%d)\n"), ntry);
-            sleep(1);
-        }
-        
-        vfile_progress_init(&bar);
-        req->req_errno = 0;
-        vf_request_resetflags(req);
-        
-        if ((rc = mod->fetch(req)))
-            break;
-        
-        switch (req->req_errno) {
-            case ENOENT:
-            case EINTR:
-            case ENOSPC:
-                goto l_endloop;
-                break;
-        }
-
-        fflush(stream);
-        
-        if (fstat(fileno(req->stream), &st) != 0) {
-            vfile_err_fn("fstat %s: %m\n", req->destpath);
-            break;
-        }
-        req->stream_offset = st.st_size;
-
-        if (req->flags & VF_REQ_INT_REDIRECTED) {
-            rc = 0;
-            break;
-        }
-        
-            
-    }
-
- l_endloop:
-    
-    fclose(req->stream);
-    req->stream = NULL;
-    req->bar = NULL;
-    if (!rc)
-        vf_unlink(req->destpath);
-    
-    return rc;
-}
-
-
-int vfile_fetcha(const char *destdir, tn_array *urls) 
-{
-    const struct vf_module *mod = NULL;
-    int rc = 1;
-
-    if (!vf_mkdir(destdir))
-        return 0;
-    
-    if ((mod = select_vf_module(n_array_nth(urls, 0))) == NULL) {
-        rc = vfile_fetcha_ext(destdir, urls);
-        
-    } else {
-        int i;
-        
-        for (i=0; i < n_array_size(urls); i++) {
-            const char *url = n_array_nth(urls, i);
-            if (!vfile_fetch(destdir, url)) {
-                rc = 0;
-                break;
-            }
-        }
-    }
-    
-    return rc;
-}
-
-
-int vfile_fetch(const char *destdir, const char *path) 
-{
-    const struct vf_module *mod = NULL;
-    int rc;
-
-    if (!vf_mkdir(destdir))
-        return 0;
-
-    if ((mod = select_vf_module(path)) == NULL)
-        rc = vfile_fetch_ext(destdir, path);
-
-    else {
-        struct vf_request *req;
-        char destpath[PATH_MAX];
-        
-        snprintf(destpath, sizeof(destpath), "%s/%s", destdir, n_basenam(path));
-            
-        if ((req = vf_request_new(path, destpath)) == NULL)
-            return 0;
-        
-        if (req->proxy_url) {
-            if ((mod = select_vf_module(req->proxy_url)) == NULL) {
-                rc = vfile_fetch_ext(destdir, path);
-                vf_request_free(req);
-                goto l_end;
-            }
-        }
-        
-        vfile_msg_fn(_("Retrieving %s...\n"), PR_URL(req->url));
-        if ((rc = do_vfile_fetch(mod, req, vfile_conf.mod_fetch_flags)) == 0) {
-            if (req->flags & VF_REQ_INT_REDIRECTED)
-                rc = vfile_fetch(destdir, req->url);
-            else 
-                vfile_set_errno(mod->vfmod_name, req->req_errno);
-        }
-        
-        vf_request_free(req);
-    }
-    
- l_end:
-    
-    return rc;
-}
-
-
 /* RET: bool */
 static int openvf(struct vfile *vf, const char *path, int vfmode) 
 { 
@@ -455,7 +262,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
             
             
             if ((vf->vf_fd = open(path, flags)) == -1) 
-                vfile_err_fn("open %s: %m\n", CL_URL(path));
+                vf_logerr("open %s: %m\n", CL_URL(path));
             else
                 rc = 1;
         }
@@ -479,11 +286,12 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
                 if ((gzstream = gzopen(path, mode)) == NULL) {
                     rc = 0;
                     if (errno) 
-                        vfile_err_fn("%s: %m\n", CL_URL(path));
+                        vf_logerr("%s: %m\n", CL_URL(path));
                     else if (Z_MEM_ERROR) 
-                        vfile_err_fn("gzopen %s: insufficient memory\n", CL_URL(path));
+                        vf_logerr("gzopen %s: insufficient memory\n",
+                                   CL_URL(path));
                     else 
-                        vfile_err_fn("gzopen %s: unknown error\n", CL_URL(path));
+                        vf_logerr("gzopen %s: unknown error\n", CL_URL(path));
                     break;
                 }
 
@@ -492,14 +300,14 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
                     rc = 1;
                     fseek(vf->vf_stream, 0, SEEK_SET); /* glibc BUG (?) */
                 } else
-                    vfile_err_fn("fopencookie %s: hgw error\n", CL_URL(path));
+                    vf_logerr("fopencookie %s: hgw error\n", CL_URL(path));
 
             } else {
 #endif                
                 if ((vf->vf_stream = fopen(path, mode)) != NULL) 
                     rc = 1;
                 else 
-                    vfile_err_fn("%s: %m\n", CL_URL(path));
+                    vf_logerr("%s: %m\n", CL_URL(path));
 #ifdef HAVE_FOPENCOOKIE                
             }
 #endif            
@@ -520,11 +328,12 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
 
             } else {
                 if (errno) 
-                    vfile_err_fn("%s: %m\n", CL_URL(path));
+                    vf_logerr("%s: %m\n", CL_URL(path));
                 else if (Z_MEM_ERROR) 
-                    vfile_err_fn("gzopen %s: insufficient memory\n", CL_URL(path));
+                    vf_logerr("gzopen %s: insufficient memory\n",
+                               CL_URL(path));
                 else 
-                    vfile_err_fn("gzopen %s: unknown error\n", CL_URL(path));
+                    vf_logerr("gzopen %s: unknown error\n", CL_URL(path));
             }
         }
         break;
@@ -544,7 +353,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
             if (vf->vf_tnstream != NULL)
                 rc = 1;
             else 
-                vfile_err_fn("%s: %m\n", CL_URL(path));
+                vf_logerr("%s: %m\n", CL_URL(path));
         }
         break;
 #endif
@@ -552,13 +361,14 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
 #ifdef ENABLE_VFILE_RPMIO
         case VFT_RPMIO:
             if (vfmode & VFM_RW) {
-                vfile_err_fn("%s: cannot open rw rpm\n", CL_URL(path));
+                vf_logerr("%s: cannot open rw rpm\n", CL_URL(path));
                 return 0;
             }
 
             vf->vf_fdt = Fopen(path, "r.fdio");
             if (vf->vf_fdt == NULL || Ferror(vf->vf_fdt)) {
-                vfile_err_fn("open %s: %s\n", CL_URL(path), Fstrerror(vf->vf_fdt));
+                vf_logerr("open %s: %s\n", CL_URL(path),
+                        Fstrerror(vf->vf_fdt));
                 if (vf->vf_fdt) {
                     Fclose(vf->vf_fdt);
                     vf->vf_fdt = NULL;
@@ -571,8 +381,8 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
 #endif            
             
         default:
-            vfile_err_fn("vfile_open %s: type %d not supported\n",
-                         CL_URL(path), vf->vf_type);
+            vf_logerr("vfile_open %s: type %d not supported\n",
+                    CL_URL(path), vf->vf_type);
             n_assert(0);
             rc = 0;
     }
@@ -601,8 +411,6 @@ static const char *vfuncompr(const char *path, char *dest, int size)
         return path;
 
     n = n_snprintf(dest, size, "%s/", vfile_conf.cachedir);
-
-    
 
     if ((p = strrchr(path, '/')) == NULL) {
         tmpath = (char*)path;
@@ -668,7 +476,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
     }
     
     if (vfmode & VFM_RW) {
-        vfile_err_fn("%s: cannot open remote file for writing\n", CL_URL(path));
+        vf_logerr("%s: cannot open remote file for writing\n", CL_URL(path));
         return 0;
     }
     
@@ -815,8 +623,7 @@ void vfile_close(struct vfile *vf)
             break;
 #endif
         default:
-            vfile_err_fn("vfile_close: type %d not supported\n",
-                         vf->vf_type);
+            vf_logerr("vfile_close: type %d not supported\n", vf->vf_type);
             n_assert(0);
     }
 
@@ -860,7 +667,6 @@ int vf_mksubdir(char *path, int size, const char *dirpath)
     return 0;
 }
 
-
 int vf_localpath(char *path, size_t size, const char *url) 
 {
     int n;
@@ -888,16 +694,25 @@ int vf_localunlink(const char *path)
 }
 
 
-static void vfmsg(const char *fmt, ...)
+void vf_vlog(unsigned flags, const char *fmt, va_list ap)
 {
-    va_list args;
-    
-    va_start(args, fmt);
-    vfprintf(stdout, fmt, args);
-    fflush(stdout);
-    va_end(args);
+    if (vfile_conf.log)
+        vfile_conf.log(flags, fmt, ap);
+
+    else {
+        vfprintf(stdout, fmt, ap);
+        fflush(stdout);
+    }
 }
 
+void vf_log(unsigned flags, const char *fmt, ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    vf_vlog(flags, fmt, args);
+    va_end(args);
+}
 
 void vfile_set_errno(const char *ctxname, int vf_errno) 
 {

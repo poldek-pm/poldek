@@ -85,11 +85,11 @@ static void process_output(struct p_open_st *st, const char *prefix)
                 int c = buf[i];
         
                 if (endl) {
-                    vfile_msg_fn("%s: ", prefix);
+                    vf_loginfo("%s: ", prefix);
                     endl = 0;
                 }
 
-                vfile_msg_fn("_%c", c);
+                vf_loginfo("_%c", c);
                 if (c == '\n' && cnt > 0)
                     endl = 1;
                 
@@ -117,22 +117,22 @@ int vf_do_uncompr(struct uncompr *uncompr, const char *src, const char *dst)
     argv[n++] = NULL;
         
     if (*vfile_verbose) 
-        vfile_msg_fn(_("Uncompressing %s...\n"), n_basenam(src));
+        vf_loginfo(_("Uncompressing %s...\n"), n_basenam(src));
     
     p_st_init(&pst);
 
 
     verbose = *vfile_verbose;
     if (p_open(&pst, p_open_flags, uncompr->cmd, argv) == NULL) {
-        vfile_err_fn("p_open: %s\n", pst.errmsg);
+        vf_logerr("p_open: %s\n", pst.errmsg);
         return 0;
     }
     
     process_output(&pst, n_basenam(uncompr->cmd));
     
     if ((ec = p_close(&pst)) != 0)
-        vfile_err_fn("%s\n", pst.errmsg ? pst.errmsg :
-                     _("program exited with non-zero value"));
+        vf_logerr("%s\n", pst.errmsg ? pst.errmsg :
+                   _("program exited with non-zero value"));
     
     p_st_destroy(&pst);
     *vfile_verbose = verbose;

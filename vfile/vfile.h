@@ -28,26 +28,29 @@
 # include <trurl/nstream.h>
 #endif
 
+#define VFILE_LOG_INFO  (1 << 0)
+#define VFILE_LOG_WARN  (1 << 1)
+#define VFILE_LOG_ERR   (1 << 2)
+#define VFILE_LOG_TTY   (1 << 8)
+
 extern int *vfile_verbose;
-extern const char *vfile_anonftp_passwd;
-extern void (*vfile_msg_fn)(const char *fmt, ...);
-extern void (*vfile_msgtty_fn)(const char *fmt, ...);
-extern void (*vfile_err_fn)(const char *fmt, ...);
 
-void vfile_init(void);
-
-#define VFILE_CONF_CACHEDIR                     0
-#define VFILE_CONF_DEFAULT_CLIENT               1
-#define VFILE_CONF_SYSUSER_AS_ANONPASSWD        2
-#define VFILE_CONF_VERBOSE                      3
-#define VFILE_CONF_PROXY                        4
+#define VFILE_CONF_CACHEDIR               (1 << 0) /*const char *path        */
+#define VFILE_CONF_DEFAULT_CLIENT         (1 << 1) /*const char *proto, *name */
+#define VFILE_CONF_SYSUSER_AS_ANONPASSWD  (1 << 2)  /*int 0/non zero          */
+#define VFILE_CONF_VERBOSE                (1 << 3) /*int &verbose_level      */
+#define VFILE_CONF_PROXY                  (1 << 4) /*const char *proto, *url */
+#define VFILE_CONF_ANONFTP_PASSWD         (1 << 5) /*const char *passwd      */
+#define VFILE_CONF_LOGCB                  (1 << 6) /*vf_vlog() like fn     */
+#define VFILE_CONF_PROGRESSCB             (1 << 7)
+#define VFILE_CONF_PROGRESSDATA           (1 << 8)
+#define VFILE_CONF_STUBBORN_RETR          (1 << 9)
 
 int vfile_configure(int param, ...);
 
-struct vfile_url {
-    char *url;
-    char label[128];
-};
+/* run it after configuration is done */
+void vfile_postconfigure_init(void);
+
 
 
 #define VFT_IO       1             /* open(2)                   */
@@ -94,7 +97,6 @@ struct vfile {
         tn_stream  *vfile_tnstream;
 #endif        
     } vfile_fdescriptor;
-
     char          *vf_path;
     char          *vf_tmpath;
     int16_t       _refcnt;
@@ -136,13 +138,27 @@ int vfile_register_ext_handler(const char *name, tn_array *protocols,
                                const char *cmd);
 int vfile_is_configured_ext_handler(const char *url);
 
+struct vf_stat {
+    off_t   vf_size;
+    time_t  vf_mtime;
 
-int vfile_fetch_ext(const char *destdir, const char *url);
-int vfile_fetcha_ext(const char *destdir, tn_array *urls);
+    off_t   vf_local_size;
+    time_t  vf_local_mtime;
+};
 
+int vf_stat(const char *destdir, const char *url, struct vf_stat *vfstat);
+int vf_fetch(const char *destdir, const char *url);
+int vf_fetcha(const char *destdir, tn_array *urls);
 
-int vfile_fetch(const char *destdir, const char *url);
-int vfile_fetcha(const char *destdir, tn_array *urls);
+/* only external handlers are used */
+int vf_fetch_ext(const char *destdir, const char *url);
+int vf_fetcha_ext(const char *destdir, tn_array *urls);
+
+/* legacy */
+#define vfile_fetch(a, b) vf_fetch(a, b)
+#define vfile_fetcha(a, b) vf_fetcha(a, b)
+#define vfile_fetch_ext(a, b) vf_fetch_ext(a, b)
+#define vfile_fetcha_ext(a, b) vf_fetcha_ext(a, b)
 
 
 int vf_url_type(const char *url);
@@ -178,17 +194,27 @@ int vf_cleanpath(char *buf, int size, const char *path);
 
 #ifdef VFILE_INTERNAL
 
+void vf_log(unsigned flags, const char *fmt, ...);
+void vf_vlog(unsigned flags, const char *fmt, va_list ap);
+
+#define vf_logerr(fmt, args...) \
+       vf_log(VFILE_LOG_ERR, fmt, ## args)
+
+#define vf_loginfo(fmt, args...) \
+       vf_log(VFILE_LOG_INFO, fmt, ## args)
+
 #include <trurl/n_snprintf.h>
 #include <trurl/nhash.h>
 
-struct vfile_configuration {
-    char      *cachedir;
-    unsigned  flags;
-    unsigned  mod_fetch_flags;   /* passed to mod->fetch() */
 
-    tn_hash   *default_clients_ht;
-    tn_hash   *proxies_ht;
-    int       *verbose;
+struct vfile_configuration {
+    char       *cachedir;
+    unsigned   flags;
+    tn_hash    *default_clients_ht;
+    tn_hash    *proxies_ht;
+    int        *verbose;
+    char       *anon_passwd;
+    void       (*log)(unsigned flags, const char *fmt, ...);
 };
 
 extern struct vfile_configuration vfile_conf;
@@ -204,6 +230,7 @@ struct vf_module {
     int        (*init)(void);
     void       (*destroy)(void);
     int        (*fetch)(struct vf_request *req);
+    int        (*stat)(struct vf_request *req);
     int        _pri;            /* used by vfile only */
 };
 

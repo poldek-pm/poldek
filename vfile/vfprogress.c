@@ -29,7 +29,7 @@
 
 #define PROGRESSBAR_WIDTH 50
 
-void vfile_progress_init(struct vf_progress_bar *bar)
+void vf_progress_init(struct vf_progress_bar *bar)
 {
     memset(bar, 0, sizeof(*bar));
 
@@ -59,7 +59,7 @@ static int nbytes2str(char *buf, int bufsize, unsigned long nbytes)
 }
 
 
-void vfile_progress(long total, long amount, void *data)
+void vf_progress(long total, long amount, void *data)
 {
     struct vf_progress_bar  *bar = data;
     char                    line[256], outline[256], fmt[40];
@@ -73,7 +73,7 @@ void vfile_progress(long total, long amount, void *data)
 
     if (amount == -1) { /* aborted */
         if (bar->state == VF_PROGRESS_RUNNING) 
-            vfile_msgtty_fn("\n");
+            vf_log(VFILE_LOG_INFO | VFILE_LOG_TTY, "\n");
         
         bar->state = VF_PROGRESS_DISABLED;
         return;
@@ -96,7 +96,7 @@ void vfile_progress(long total, long amount, void *data)
     if (total == 0) {
         n = amount/HASH_SIZE;
         while (n > bar->prev_n++)
-            vfile_msgtty_fn(".");
+            vf_log(VFILE_LOG_INFO | VFILE_LOG_TTY, ".");
         return;
     }
     
@@ -122,10 +122,11 @@ void vfile_progress(long total, long amount, void *data)
         n_assert(k < (int)sizeof(line));
         memset(line, '.', k);
         line[k] = '\0';
-        vfile_msgtty_fn("%s", line);
+        vf_log(VFILE_LOG_INFO | VFILE_LOG_TTY, "%s", line);
         
         if (amount && amount == total) { /* last notification */
-            vfile_msgtty_fn(_("done\n"));
+            vf_log(VFILE_LOG_INFO | VFILE_LOG_TTY, _("done"));
+            vf_log(VFILE_LOG_INFO | VFILE_LOG_TTY, "\n");
             bar->state = VF_PROGRESS_DISABLED;
         }
         
@@ -158,10 +159,10 @@ void vfile_progress(long total, long amount, void *data)
         
         if (total == amount) {
             bar->state = VF_PROGRESS_DISABLED;
-            vfile_msgtty_fn("\r%s\n", outline);
+            vf_log(VFILE_LOG_INFO | VFILE_LOG_TTY, "\r%s\n", outline);
             
         } else 
-            vfile_msgtty_fn("\r%s", outline);
+            vf_log(VFILE_LOG_INFO | VFILE_LOG_TTY, "\r%s", outline);
     }
     
     bar->prev_n = n;

@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -30,12 +31,9 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
-
-#ifndef IPPORT_HTTP
-# define IPPORT_HTTP 80
-#endif
-
-#define TIMEOUT     30
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
@@ -47,6 +45,7 @@
 #include <sigint/sigint.h>
 
 #include "http.h"
+#include "ftp.h"
 #include "i18n.h"
 #include "sigint/sigint.h"
 
@@ -68,7 +67,7 @@
 #define HTTP_STATUS_MULTIPLE_CHOICES	300
 #define HTTP_STATUS_MOVED_PERMANENTLY	301
 #define HTTP_STATUS_MOVED_TEMPORARILY	302
-#define HTTP_STATUS_NOT_MODIFIED	304
+#define HTTP_STATUS_NOT_MODIFIED	    304
 
 #define HTTP_STATUS_IS_REDIR(code) (code == HTTP_STATUS_MOVED_TEMPORARILY || \
                                     code == HTTP_STATUS_MOVED_PERMANENTLY)
@@ -78,7 +77,7 @@
 #define HTTP_STATUS_UNAUTHORIZED	401
 #define HTTP_STATUS_FORBIDDEN		403
 #define HTTP_STATUS_NOT_FOUND		404
-#define HTTP_STATUS_BAD_RANGE           416 
+#define HTTP_STATUS_BAD_RANGE       416 
 
 #define HTTP_STATUS_IS_CLIENT_ERROR(code) (code >= 400 && code % 400 < 100)
 
@@ -95,19 +94,6 @@
 #endif
 #undef is_endl
 #define is_endl(c) ((c) == '\n' || (c) == '\r')
-
-static int verbose = 0;
-static char errmsg[512] = { '\0' };
-
-int vhttp_errno = 0;
-int *vhttp_verbose = &verbose;
-
-
-extern void (*vhttp_msg_fn)(const char *fmt, ...);
-void   (*http_progress_fn)(long total, long amount, void *data) = NULL;
-
-
-#define HTTP_SUPPORTS_SIZE  (1 << 0)
 
 #define ST_RESP_TIMEOUT         -2
 #define ST_RESP_BAD             -1
@@ -132,34 +118,7 @@ struct http_resp {
     int      http_ver;
 };
 
-
-const char *vhttp_errmsg(void) 
-{
-    if (*errmsg == '\0')
-        return "unknown error";
-    return errmsg;
-}
-
-void vhttp_set_err(int err_no, const char *fmt, ...)
-{
-    va_list args;
-    
-    va_start(args, fmt);
-    vsnprintf(errmsg, sizeof(errmsg), fmt, args);
-    va_end(args);
-    
-    vhttp_errno = err_no;
-}
-
-static int vhttp_sigint_reached(void)
-{
-    int v;
-    if ((v = sigint_reached()) && vhttp_errno == 0)
-        vhttp_set_err(EINTR, _("connection cancelled"));
-
-    return v;
-}
-
+extern int vhttp_misc_base64(char *b64, int size, const char *bin);
 
 static char *make_req_line(char *buf, int size, char *fmt, ...) 
 {
@@ -186,19 +145,19 @@ int mk_auth(char *auth, int size, const char *login, const char *passwd)
 }
 
 static
-int httpcn_req(struct httpcn *cn, const char *req_line, char *fmt, ...) 
+int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...) 
 {
     char     req[4096];
     va_list  args;
     int      rc = 1, n = 0, nn = 0;
     
-    if (cn->state != HTTPCN_ALIVE)
+    if (cn->state != VCN_ALIVE)
         return 0;
 
     n = 0;
     n += n_snprintf(&req[n], sizeof(req) - n, "%s", req_line);
-    if (*vhttp_verbose > 1)
-        vhttp_msg_fn("< %s", req);
+    if (*vfff_verbose > 1)
+        vfff_log("< %s", req);
 
 
     if (cn->login && cn->passwd && cn->auth_basic_str == NULL) {
@@ -226,23 +185,23 @@ int httpcn_req(struct httpcn *cn, const char *req_line, char *fmt, ...)
                         cn->proxy_auth_basic_str);
 
     nn = n_snprintf(&req[n], sizeof(req) - n, "Host: %s\r\n", cn->host);
-    if (*vhttp_verbose > 1)
-        vhttp_msg_fn("<   %s", &req[n]);
+    if (*vfff_verbose > 1)
+        vfff_log("<   %s", &req[n]);
     n += nn;
 
     nn = n_snprintf(&req[n], sizeof(req) - n, "User-Agent: %s\r\n", HTTP_UA);
-    if (*vhttp_verbose > 1)
-        vhttp_msg_fn("<   %s", &req[n]);
+    if (*vfff_verbose > 1)
+        vfff_log("<   %s", &req[n]);
     n += nn;
     
     nn = n_snprintf(&req[n], sizeof(req) - n, "Pragma: no-cache\r\n");
-    if (*vhttp_verbose > 1)
-        vhttp_msg_fn("<   %s", &req[n]);
+    if (*vfff_verbose > 1)
+        vfff_log("<   %s", &req[n]);
     n += nn;
     
     nn = n_snprintf(&req[n], sizeof(req) - n, "Cache-Control: no-cache\r\n");
-    if (*vhttp_verbose > 1)
-        vhttp_msg_fn("<   %s", &req[n]);
+    if (*vfff_verbose > 1)
+        vfff_log("<   %s", &req[n]);
     n += nn;
     
     if (fmt) {
@@ -250,16 +209,16 @@ int httpcn_req(struct httpcn *cn, const char *req_line, char *fmt, ...)
         nn = n_vsnprintf(&req[n], sizeof(req) - n, fmt, args);
         va_end(args);
         
-        if (*vhttp_verbose > 1)
-            vhttp_msg_fn("<   %s", &req[n]);
+        if (*vfff_verbose > 1)
+            vfff_log("<   %s", &req[n]);
         n += nn;
     }
     
     n += n_snprintf(&req[n], sizeof(req) - n, "\r\n");
     
     if (write(cn->sockfd, req, n) != n) {
-        vhttp_set_err(errno, _("write to socket %s: %m"), req);
-        cn->state = HTTPCN_DEAD;
+        vfff_set_err(errno, _("write to socket %s: %m"), req);
+        cn->state = VCN_DEAD;
         rc = 0;
     }
     
@@ -298,6 +257,7 @@ static void http_resp_free(struct http_resp *resp)
     free(resp);
 }
 
+static
 const char *http_resp_get_hdr(struct http_resp *resp, const char *name)
 {
     return n_hash_get(resp->hdr, name);
@@ -330,7 +290,7 @@ int http_resp_conn_status(struct http_resp *resp)
 
 static
 int http_resp_get_range(struct http_resp *resp,
-                             long *from, long *to, long *total)
+                        long *from, long *to, long *total)
 {
     const char *s, *p;
     int rc = 0;
@@ -456,7 +416,7 @@ int response_complete(struct http_resp *resp)
             return 1;
             
         case ST_RESP_BAD:
-            vhttp_set_err(EIO, _("%s: response parse error"),
+            vfff_set_err(EIO, _("%s: response parse error"),
                           (char*)n_buf_ptr(resp->buf));
             return -1;
             
@@ -470,10 +430,10 @@ int response_complete(struct http_resp *resp)
 
 static int readresp(int sockfd, struct http_resp *resp, int readln) 
 {
-    int is_err = 0, buf_pos = 0, ttl = TIMEOUT;
+    int is_err = 0, buf_pos = 0, ttl = VFFF_TIMEOUT;
     char buf[4096];
 
-    vhttp_errno = 0;
+    vfff_errno = 0;
 
     n_assert(readln);            /* todo: support for chunk-read */
 
@@ -487,7 +447,7 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
         FD_SET(sockfd, &fdset);
         errno = 0;
         if ((rc = select(sockfd + 1, &fdset, NULL, NULL, &to)) < 0) {
-            if (vhttp_sigint_reached()) {
+            if (vfff_sigint_reached()) {
                 is_err = 1;
                 errno = EINTR;
                 break;
@@ -508,7 +468,7 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
             char c;
             int n;
 
-            ttl = TIMEOUT;
+            ttl = VFFF_TIMEOUT;
             
             if (readln) 
                 n = read(sockfd, &c, 1);
@@ -534,7 +494,7 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
                 
                     if (buf_pos == sizeof(buf)) {
                         is_err = 1;
-                        vhttp_errno = EMSGSIZE;
+                        vfff_errno = EMSGSIZE;
                         break;
                     }
 
@@ -551,26 +511,26 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
     
     if (is_err) {
         if (errno)
-            vhttp_errno = errno;
+            vfff_errno = errno;
         else
-            vhttp_errno = EIO;
+            vfff_errno = EIO;
         
-        switch (vhttp_errno) {
+        switch (vfff_errno) {
             case EMSGSIZE:
-                vhttp_set_err(vhttp_errno, _("response line too long"));
+                vfff_set_err(vfff_errno, _("response line too long"));
                 break;
                 
             case ETIMEDOUT:
             case ECONNRESET:
-                vhttp_set_err(vhttp_errno, "%m");
+                vfff_set_err(vfff_errno, "%m");
                 break;
                 
             case EINTR:
-                if (vhttp_sigint_reached()) 
+                if (vfff_sigint_reached()) 
                     break;
 
             default:
-                vhttp_set_err(vhttp_errno, "%s: %m", _("unexpected EOF"));
+                vfff_set_err(vfff_errno, "%s: %m", _("unexpected EOF"));
                 
         }
         
@@ -589,8 +549,8 @@ static int http_resp_parse(struct http_resp *resp)
 
     tl = tl_save = n_str_tokl(n_buf_ptr(resp->buf), "\r\n");
 
-    if (*vhttp_verbose > 1)
-        vhttp_msg_fn("> %s\n", *tl);
+    if (*vfff_verbose > 1)
+        vfff_log("> %s\n", *tl);
 
     status_tl = status_tl_save = n_str_tokl(*tl, " \r\n\t");
 
@@ -628,8 +588,8 @@ static int http_resp_parse(struct http_resp *resp)
             continue;
         }
 
-        if (*vhttp_verbose > 1)
-            vhttp_msg_fn(">   %s\n", *tl);
+        if (*vfff_verbose > 1)
+            vfff_log(">   %s\n", *tl);
 
         if ((p = strchr(*tl, ':')) == NULL) {
             is_err = 1;
@@ -676,7 +636,7 @@ struct http_resp *do_http_read_resp(int sock)
     while (1) {
         int n;
 
-        if (vhttp_sigint_reached()) {
+        if (vfff_sigint_reached()) {
             is_err = 1;
             break;
         }
@@ -692,7 +652,7 @@ struct http_resp *do_http_read_resp(int sock)
     
     if (is_err == 0) {
         if (!http_resp_parse(resp)) {
-            vhttp_set_err(EIO, _("%s: response parse error"),
+            vfff_set_err(EIO, _("%s: response parse error"),
                           (char*)n_buf_ptr(resp->buf));
             is_err = 1;
         }
@@ -720,15 +680,15 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
             break;
             
         case HTTP_STATUS_NOT_FOUND: 
-            vhttp_set_err(ENOENT, _("%s: no such file"), path);
+            vfff_set_err(ENOENT, _("%s: no such file"), path);
             break;
             
         case HTTP_STATUS_FORBIDDEN:
-            vhttp_set_err(EPERM, _("%s: permission denied"), path);
+            vfff_set_err(EPERM, _("%s: permission denied"), path);
             break;
 
         case HTTP_STATUS_BAD_RANGE:
-            vhttp_set_err(EINVAL, _("%s: invalid range requested"), path);
+            vfff_set_err(EINVAL, _("%s: invalid range requested"), path);
             break;
 
         case HTTP_STATUS_MOVED_TEMPORARILY:
@@ -738,236 +698,107 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
         default:
             if (errno == 0)
                 errno = EINVAL;
-            vhttp_set_err(EINVAL, "%s: %m (%s)", path, msg);
+            vfff_set_err(EINVAL, "%s: %m (%s)", path, msg);
             break;
     }
 
     return is_err == 0;
 }
 
-int httpcn_get_resp(struct httpcn *cn) 
+int httpcn_get_resp(struct vcn *cn) 
 {
     int rc = 1;
 
-    if (cn->state != HTTPCN_ALIVE)
+    if (cn->state != VCN_ALIVE)
         return 0;
+    
+    if (cn->resp) 
+        http_resp_free(cn->resp);
 
     if ((cn->resp = do_http_read_resp(cn->sockfd)) == NULL) {
-        cn->state = HTTPCN_DEAD;
+        cn->state = VCN_DEAD;
         rc = 0;
     }
     
     return rc;
 }
 
-static sig_atomic_t alarm_reached = 0;
-
-static void sigalarmfunc(int unused)
+static int decode_wday(const char *s)
 {
-    unused = unused;
-    alarm_reached = 1;
-    //printf("receive alarm");
-}
+    int i;
+    char *weekdays[] = { "sun", "mon", "tue", "wed", "thu", "fri", "sat"};
 
-
-static void install_alarm(int sec)
-{
-    struct sigaction act;
-
-    alarm_reached = 0;
-    sigaction(SIGALRM, NULL, &act);
-    act.sa_flags &=  ~SA_RESTART;
-    act.sa_handler =  sigalarmfunc;
-    sigaction(SIGALRM, &act, NULL);
-    alarm(sec);
-};
-
-
-static void uninstall_alarm(void)
-{
-    alarm(0);
-};
-
-
-static int to_connect(const char *host, const char *service)
-{
-    struct addrinfo hints, *res, *resp;
-    int sockfd, n;
-    
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-
-    if (*vhttp_verbose > 1)
-        vhttp_msg_fn("Connecting to %s:%s...\n", host, service);
-
-    if ((n = getaddrinfo(host, service, &hints, &res)) != 0) {
-        vhttp_set_err(errno, _("unable to connect to %s:%s: %s"),
-                     host, service, gai_strerror(n));
-        return -1;
+    i = 0;
+    while (i < 7) {
+        if (strncasecmp(weekdays[i], s, 3) == 0)
+            return i;
+        i++;
     }
-    resp = res;
 
-    vhttp_errno = 0;
-    
-    do {
-        sigint_reset();
+    return -1;
+}
+
+static int decode_month(const char *s)
+{
+    int i;
+    char *months[] = { "jan", "feb", "mar", "apr", "may", "jun",
+                       "jul", "aug", "sep", "oct", "nov", "dec" };
+
+    i = 0;
+    while (i < 12) {
+        if (strncasecmp(months[i], s, 3) == 0)
+            return i;
+        i++;
+    }
+
+    return -1;
+}
+
+static time_t parse_date(const char *dt)
+{
+    char weekday[32], month[32];
+    struct tm tm;
+    time_t ts = -1;
+    int is_ok = 1;
+
+    /* Sun, 06 Nov 1994 08:49:37 GMT  (RFC 822, updated by RFC 1123) */
+    if (sscanf(dt, "%16[a-zA-Z], %d %16[a-zA-Z] %d %d:%d:%d GMT",
+               weekday, &tm.tm_mday, month, &tm.tm_year,
+               &tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 7) {
         
-        sockfd = socket(resp->ai_family, resp->ai_socktype, resp->ai_protocol);
-        if (sockfd < 0)
-            continue;
-        install_alarm(TIMEOUT);
-
-        if (connect(sockfd, resp->ai_addr, resp->ai_addrlen) == 0)
-            break;
-
-        if (alarm_reached)
-            vhttp_errno = errno = ETIMEDOUT;
-
-        else if (vhttp_sigint_reached() && errno == EINTR)
-            break;
-
-        uninstall_alarm();
-        close(sockfd);
-        sockfd = -1;
-        
-    } while ((resp = resp->ai_next) != NULL);
-
-    if (sockfd == -1)
-        vhttp_set_err(errno, _("unable to connect to %s:%s: %m"), host, service);
-
-    uninstall_alarm();
-    freeaddrinfo(res);
-    return sockfd;
-}
-
-
-static int http_open(const char *host, int port)
-{
-    int sockfd;
-    char portstr[64] = "http";
-
-    errno = 0;
-    snprintf(portstr, sizeof(portstr), "%d", port);
-    if ((sockfd = to_connect(host, portstr)) < 0)
-        return 0;
-
-    
-    return sockfd;
-}
-
-
-struct httpcn *httpcn_malloc(void) 
-{
-    struct httpcn *cn;
-
-    cn = n_malloc(sizeof(*cn));
-    memset(cn, 0,  sizeof(*cn));
-    cn->host = cn->login = cn->passwd = NULL;
-    cn->resp = NULL;
-    cn->flags |= HTTP_SUPPORTS_SIZE;
-    return cn;
-}
-
-
-struct httpcn *httpcn_new(const char *host, int port,
-                          const char *login, const char *passwd,
-                          const char *proxy_login, const char *proxy_passwd)
-{
-    struct httpcn *cn = NULL;
-    int sockfd;
-
-    if (port <= 0)
-        port = IPPORT_HTTP;
-
-    if ((sockfd = http_open(host, port)) > 0) {
-        cn = httpcn_malloc();
-        cn->sockfd = sockfd;
-        cn->state = HTTPCN_ALIVE;
-        cn->host = n_strdup(host);
-        cn->port = port;
-        cn->login = cn->passwd = cn->proxy_login = cn->proxy_passwd = NULL;
-        cn->auth_basic_str = cn->proxy_auth_basic_str = NULL;
-        if (login && passwd) {
-            cn->login = n_strdup(login);
-            cn->passwd = n_strdup(passwd);
-        } 
-
-        if (proxy_login && proxy_passwd) {
-            cn->proxy_login = n_strdup(proxy_login);
-            cn->proxy_passwd = n_strdup(proxy_passwd);
+        /* Sunday, 06-Nov-94 08:49:37 GMT (RFC 850, obsoleted by RFC 1036) */
+        if (sscanf(dt, "%16[a-zA-Z], %2d-%16[a-zA-Z]-%2d %d:%d:%d GMT",
+                   weekday, &tm.tm_mday, month, &tm.tm_year,
+                   &tm.tm_hour, &tm.tm_min, &tm.tm_sec) == 7) {
+            
+            tm.tm_year += 2000;
+            
+        /* Sun Nov  6 08:49:37 1994  (ANSI C's asctime() format)  */
+        } else if (sscanf(dt, "%16[a-zA-Z] %16[a-zA-Z] %2d %d:%d:%d %d",
+                          weekday, month, &tm.tm_mday, &tm.tm_hour, &tm.tm_min,
+                          &tm.tm_sec, &tm.tm_year) != 7) {
+            is_ok = 0;
         }
     }
-
-    return cn;
+    
+    if (is_ok) {
+        tm.tm_wday = decode_wday(weekday);
+        tm.tm_mon = decode_month(month);
+        if (tm.tm_mon >= 0 && tm.tm_wday >= 0) {
+            tm.tm_year -= 1900;
+            ts = mktime(&tm);
+        }
+    }
+    
+    return ts;
 }
 
-
-static void httpcn_close(struct httpcn *cn)
-{
-    
-    if (cn->state == HTTPCN_CLOSED)
-        return;
-    
-    cn->state = HTTPCN_CLOSED;
-    close(cn->sockfd);
-    cn->sockfd = -1;
-}
-
-
-void httpcn_free(struct httpcn *cn) 
-{
-    httpcn_close(cn);
-
-    n_cfree(&cn->host);
-    
-    n_cfree(&cn->login);
-    n_cfree(&cn->passwd);
-
-    n_cfree(&cn->proxy_login);
-    n_cfree(&cn->proxy_passwd);
-
-    n_cfree(&cn->auth_basic_str);
-    n_cfree(&cn->proxy_auth_basic_str);
-    
-    if (cn->resp)
-        http_resp_free(cn->resp);
-    memset(cn, 0, sizeof(*cn));
-}
-
-
-time_t httpcn_mtime(struct httpcn *cn, const char *path) 
-{ 
-    time_t ts;
-    //struct tm tm;
-    char req_line[PATH_MAX];
-    const char *s;
-    
-    
-    
-    make_req_line(req_line, sizeof(req_line), "HEAD %s", path);
-    if (!httpcn_req(cn, req_line, NULL))
-        return 0;
-    
-    if (!httpcn_get_resp(cn))
-        return 0;
-    
-    if (!status_code_ok(cn->resp->code, cn->resp->msg, path))
-        return 0;
-    
-    if ((s = http_resp_get_hdr(cn->resp, "last-modified")) == NULL)
-        return 0;
-        
-    //if (sscanf(s, "%s, %d %s %d %d:%d:%d %s", tm.tm_
-    
-    return 0;                   /* NFY */
-}
-
-int httpcn_is_alive(struct httpcn *cn) 
+static
+int vhttp_vcn_is_alive(struct vcn *cn) 
 {
     char req_line[256];
 
-    if (cn->state != HTTPCN_ALIVE)
+    if (cn->state != VCN_ALIVE)
         return 0;
     
     make_req_line(req_line, sizeof(req_line), "HEAD /");
@@ -976,150 +807,20 @@ int httpcn_is_alive(struct httpcn *cn)
         return 0;
     
     if (!httpcn_get_resp(cn)) {
-        cn->state = HTTPCN_DEAD;
+        cn->state = VCN_DEAD;
         return 0;
     }
 
     return 1;
 }
 
-
-static
-int rcvfile(int out_fd, off_t out_fdoff, int in_fd, long total_size,
-            void *progess_data) 
+static int is_closing_connection_status(struct http_resp *resp)
 {
-    struct  timeval tv;
-    int     rc, is_err = 0;
-    long    amount = 0;
-    
+    int close_cn = 0;
 
-    amount = out_fdoff;
-    if (http_progress_fn) {
-        http_progress_fn(total_size, 0, progess_data);
-        if (amount) 
-            http_progress_fn(total_size, amount, progess_data);
-    }
-
-    while (1) {
-        fd_set fdset;
-
-        if (total_size > 0 && amount == total_size)
-            break;
-        
-	FD_ZERO(&fdset);
-	FD_SET(in_fd, &fdset);
-
-	tv.tv_sec = TIMEOUT;
-	tv.tv_usec = 0;
-        
-        rc = select(in_fd + 1, &fdset, NULL, NULL, &tv);
-        if (vhttp_sigint_reached()) {
-            is_err = 1;
-            errno = EINTR;
-            break;
-        }
-
-        if (rc == 0) {
-            errno = ETIMEDOUT;
-            is_err = 1;
-            break;
-            
-        } else if (rc < 0) {
-            if (errno == EINTR)
-                continue;
-            
-            is_err = 1;
-            break;
-            
-        } else if (rc > 0) {
-            char buf[8192];
-            int n;
-            
-            if ((n = read(in_fd, buf, sizeof(buf))) == 0) 
-                break;
-            
-            if (n > 0) {
-                int nw;
-                
-                if ((nw = write(out_fd, buf, n)) != n) {
-                    is_err = 1;
-                    break;
-                }
-                amount += nw;
-                if (http_progress_fn)
-                    http_progress_fn(total_size, amount, progess_data);
-                
-            } else {
-                is_err = 1;
-                break;
-            } 
-        }
-    }
-    
-    if (is_err) {
-        vhttp_errno = errno;
-        if (vhttp_errno == 0)
-            vhttp_errno = errno = EIO;
-
-        vhttp_set_err(errno, "%m");
-    }
-
-    if (http_progress_fn)
-        http_progress_fn(total_size, -1, progess_data);
-    
-    return is_err == 0;
-}
-
-#if 0
-static void progress(long total, long amount, void *data)
-{
-    printf("P %ld of total %ld\n", amount, total);
-}
-#endif
-
-int httpcn_retr(struct httpcn *cn,
-                int out_fd, off_t out_fdoff,
-                const char *path, void *progess_data, 
-                char *redirect_to, int size) 
-{
-    int   close_cn = 0, rc = 1;
-    long  from = 0, to = 0, total = 0, amount = 0;
-    char  req_line[PATH_MAX];
-    const char *trenc;
-    
-    vhttp_errno = 0;
-    
-    //http_progress_fn = progress;
-    
-    if (redirect_to)
-        *redirect_to = '\0';
-    
-    if ((lseek(out_fd, out_fdoff, SEEK_SET)) == (off_t)-1) {
-        vhttp_set_err(errno, "%s: lseek %ld: %m", path, out_fdoff);
-        goto l_err_end;
-    }
-
-    //if ((total_size = httpcn_size(cn, path)) < 0)
-    //    goto l_err_end;
-    
-    if (out_fdoff < 0)
-        out_fdoff = 0;
-
-    make_req_line(req_line, sizeof(req_line), "GET %s", path);
-
-    if (out_fdoff > 0) 
-        httpcn_req(cn, req_line, "Range: bytes=%ld-\r\n", out_fdoff);
-    else 
-        httpcn_req(cn, req_line, NULL);
-
-    
-    if (!httpcn_get_resp(cn))
-        goto l_err_end;
-
-    close_cn = 0;
-    switch (http_resp_conn_status(cn->resp)) {
+    switch (http_resp_conn_status(resp)) {
         case -1:                /* no Connection header */
-            if (cn->resp->http_ver > 0) /* HTTP > 1.0 */
+            if (resp->http_ver > 0) /* HTTP > 1.0 */
                 break;
                                  /* no break */
         case 0:                  /* Connection: close    */
@@ -1134,81 +835,213 @@ int httpcn_retr(struct httpcn *cn,
             n_assert(0);
             break;
     }
+    
+    return close_cn;
+}
+
+static
+int is_redirected_connection(struct http_resp *resp, struct vfff_req *rreq)
+{
+    int is_redirected = 0;
+    
+    if (HTTP_STATUS_IS_REDIR(resp->code)) {
+        const char *redirto = http_resp_get_hdr(resp, "location");
+        if (redirto && *redirto != '\0') 
+            snprintf(rreq->redirected_to, sizeof(rreq->redirected_to), redirto);
+        else 
+            vfff_set_err(ENOENT, "wrong or empty redirect location");
+        
+        is_redirected = 1;
+    }
+    
+    return is_redirected;
+}
+
+static
+off_t http_resp_get_content_length(struct http_resp *resp) 
+{
+    off_t size;
+    
+    if (!http_resp_get_hdr_long(resp, "content-length", &size)) {
+        vfff_set_err(EINVAL, _("Content-Length parse error (%s)"),
+                      http_resp_get_hdr(resp, "content-length"));
+        size = -1;
+    }
+
+    return size;
+}
+
+static
+int vhttp_vcn_stat(struct vcn *cn, struct vfff_req *rreq) 
+{ 
+    char req_line[PATH_MAX];
+    const char *s;
+    int close_cn = 0, rc = 1;
+    struct http_resp *resp;
+    
+    vfff_errno = 0;
+    *rreq->redirected_to = '\0';
+    
+    make_req_line(req_line, sizeof(req_line), "HEAD %s", rreq->uri);
+    if (!httpcn_req(cn, req_line, NULL))
+        return 0;
+    
+    if (!httpcn_get_resp(cn))
+        return 0;
+    
+    resp = cn->resp;
+    close_cn = is_closing_connection_status(resp);
+
+    if (is_redirected_connection(resp, rreq)) {
+        rc = 0;                 /* see the comment in httpcn_retr() */
+        goto l_end;
+    }
+    
+    if (!status_code_ok(resp->code, resp->msg, rreq->uri)) {
+        rc = 0;
+        goto l_end;
+    }
+
+    rreq->st_size = http_resp_get_content_length(resp);
+
+    if ((s = http_resp_get_hdr(resp, "last-modified")) != NULL)
+        rreq->st_mtime = parse_date(s);
+
+    if (rreq->st_size == -1 && rreq->st_mtime == -1)
+        rc = 0;
+
+ l_end:
+    if (close_cn)
+        vcn_close(cn);
+    
+    return rc;
+}
 
 
-    if (HTTP_STATUS_IS_REDIR(cn->resp->code)) {
-        const char *redirto = http_resp_get_hdr(cn->resp, "location");
-        if (redirto && redirect_to && strlen(redirto)) {
-            snprintf(redirect_to, size, redirto);
-            rc = 0;             /* treat redirects as errors, caller should
-                                   check redirect_to */
-            goto l_end;
-        }
+static
+int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
+{
+    int    close_cn = 0, rc = 1;
+    long   from = 0, to = 0, total = 0, amount = 0;
+    char   req_line[PATH_MAX];
+    const  char *trenc;
+    struct http_resp *resp;
+    struct stat st;  
+    
+    vfff_errno = 0;
+    *rreq->redirected_to = '\0';
+    n_assert(rreq->out_fd > 0);
+    
+    if ((lseek(rreq->out_fd, rreq->out_fdoff, SEEK_SET)) == (off_t)-1) {
+        vfff_set_err(errno, "%s[%d]: lseek %ld: %m", n_basenam(rreq->uri),
+                     rreq->out_fd, rreq->out_fdoff);
+        goto l_err_end;
+    }
+
+    if ((fstat(rreq->out_fd, &st)) != 0) {
+        vfff_set_err(errno, "%s: stat: %m", rreq->out_path);
+        goto l_err_end;
+    }
+    
+
+    if (rreq->out_fdoff < 0)
+        rreq->out_fdoff = 0;
+    
+    make_req_line(req_line, sizeof(req_line), "GET %s", rreq->uri);
+
+    if (rreq->out_fdoff > 0) 
+        httpcn_req(cn, req_line, "Range: bytes=%ld-\r\n", rreq->out_fdoff);
+    else 
+        httpcn_req(cn, req_line, NULL);
+
+    if (!httpcn_get_resp(cn))
+        goto l_err_end;
+    
+    resp = cn->resp;
+    
+    close_cn = is_closing_connection_status(resp);
+
+    if (is_redirected_connection(resp, rreq)) {
+        rc = 0;             /* treat redirects as errors, caller should
+                               check rreq's redirected_to  */
+        goto l_end;
     }
 
     /* poor HTTP client doesn't supports Trasfer-Encodings */
-    if ((trenc = http_resp_get_hdr(cn->resp, "transfer-encoding"))) {
-        if (*vhttp_verbose > 1)
-            vhttp_msg_fn("Trasfer-Encoding is an unimplemented tag, give up\n");
-        vhttp_set_err(ENOENT, "%s: unimplemented HTTP "
+
+    if (!status_code_ok(resp->code, resp->msg, rreq->uri) &&
+        resp->code != HTTP_STATUS_BAD_RANGE)
+        goto l_err_end;
+
+    if ((trenc = http_resp_get_hdr(resp, "transfer-encoding"))) {
+        if (*vfff_verbose > 1)
+            vfff_log("Trasfer-Encoding is an unimplemented tag, give up\n");
+        vfff_set_err(ENOENT, "%s: unimplemented HTTP "
                       "transfer encoding", trenc);
         close_cn = 1;
         goto l_err_end;
     }
-
-    if (!status_code_ok(cn->resp->code, cn->resp->msg, path) &&
-        cn->resp->code != HTTP_STATUS_BAD_RANGE)
-        goto l_err_end;
     
-
-    if (!http_resp_get_hdr_long(cn->resp, "content-length", &amount)) {
-        vhttp_set_err(EINVAL, _("%s: Content-Length parse error (%s)"),
-                      path, http_resp_get_hdr(cn->resp, "content-length"));
+    if ((amount = http_resp_get_content_length(resp)) < 0)
         goto l_err_end;
-    }
+
+    if ((trenc = http_resp_get_hdr(resp, "last-modified")) != NULL)
+        rreq->st_mtime = parse_date(trenc);
     
-    if (out_fdoff == 0)
+    if (rreq->out_fdoff == 0)
         total = amount;
     
     else {
-        if (!http_resp_get_range(cn->resp, &from, &to, &total)) {
-            vhttp_set_err(EINVAL, _("%s: Content-Range parse error (%s)"),
-                          path, http_resp_get_hdr(cn->resp, "content-range"));
+        if (!http_resp_get_range(resp, &from, &to, &total)) {
+            vfff_set_err(EINVAL, _("%s: Content-Range parse error (%s)"),
+                         rreq->uri, http_resp_get_hdr(resp, "content-range"));
             goto l_err_end;
         }
 
-        if (cn->resp->code == HTTP_STATUS_BAD_RANGE) {
-            if (out_fdoff != total) {
+        if (resp->code == HTTP_STATUS_BAD_RANGE) {
+            if (rreq->out_fdoff != total) {
+                if (*vfff_verbose > 1)
+                    vfff_log(_("%s: invalid Content-Range, truncate %s\n"),
+                             rreq->uri, rreq->out_path);
+                
+                if ((ftruncate(rreq->out_fd, 0) == 0))
+                    rreq->out_fdoff = 0;
+                
                 goto l_err_end;
                 
             } else {
-                if (*vhttp_verbose > 1)
-                    vhttp_msg_fn(_("%s: already downloaded\n"), path);
+                if (*vfff_verbose > 1)
+                    vfff_log(_("%s: already downloaded; mtime %s\n"),
+                                 rreq->uri, ctime(&rreq->st_mtime));
                 goto l_end;         /* downloaded */
             } 
         }
         
-        if (from != out_fdoff) {
-            vhttp_set_err(EINVAL, _("%s: invalid Content-Range reached"), path);
+        if (from != rreq->out_fdoff) {
+            vfff_set_err(EINVAL, _("%s: invalid Content-Range reached"),
+                         rreq->uri);
             goto l_err_end;
         }
     }
-    
-    if (*vhttp_verbose > 1) {
-        long a = from ? total - from : total;
-        vhttp_msg_fn("Total file size %ld, %ld to download\n", total, a);
-    }
 
+    rreq->st_size = total;
     
+    
+    if (*vfff_verbose > 1) {
+        long a = from ? total - from : total;
+        vfff_log("Total file size %ld, %ld to download, mtime %s\n",
+                 total, a, ctime(&rreq->st_mtime));
+    }
     
     errno = 0;
-    if (!rcvfile(out_fd, out_fdoff, cn->sockfd, total, progess_data))
+    if (!vfff_transfer_file(rreq, cn->sockfd, total))
         goto l_err_end;
 
     
  l_end:
     if (close_cn)
-        httpcn_close(cn);
+        vcn_close(cn);
+    
     
     return rc;
     
@@ -1216,10 +1049,21 @@ int httpcn_retr(struct httpcn *cn,
     rc = 0;
     close_cn = 1;
     
-    if (vhttp_errno == 0)
-        vhttp_errno = EIO;
+    if (vfff_errno == 0)
+        vfff_errno = EIO;
 
     goto l_end;
 
 }
+
+void vhttp_vcn_init(struct vcn *cn)
+{
+    cn->m_open = NULL;
+    cn->m_close = NULL;
+    cn->m_free = (void (*)(void*))http_resp_free;
+    cn->m_is_alive = vhttp_vcn_is_alive;
+    cn->m_retr = vhttp_vcn_retr;
+    cn->m_stat = vhttp_vcn_stat;
+}
+
 

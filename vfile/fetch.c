@@ -145,6 +145,7 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
     struct ffetcher   *ftch;
     int               has_p_arg = 0, has_d_arg = 0, is_multi = 0;
     int               len;
+    const char        *invalid_fmt_msg = "%s: invalid format\n";
     
     len = strlen(cmd) + 1;
     fmt = alloca(len);
@@ -154,7 +155,7 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
         return NULL;
     
     if (*path != '/') {
-        vfile_err_fn("%s: cmd must be precedenced by '/'\n", CL_URL(path));
+        vf_logerr("%s: cmd must be precedenced by '/'\n", cmd);
         return NULL;
     }
 
@@ -175,7 +176,7 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
             n_array_push(args, arg);
             
         } else if (strlen(token) > 3) {
-            vfile_err_fn("%s: invalid format specified\n", fmt);
+            vf_logerr(invalid_fmt_msg, cmd);
             goto l_err_end;
             
         } else {
@@ -192,9 +193,8 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
                         arg->flags = FETCHFMT_MULTI;
                         is_multi = 1;
                     } else if (c != '\0') {
-                        vfile_err_fn("%s: invalid format specified\n", fmt);
+                        vf_logerr(invalid_fmt_msg, cmd);
                         goto l_err_end;
-                        
                     }
                     break;
                     
@@ -206,7 +206,7 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
                         arg->flags = FETCHFMT_MULTI;
                         is_multi = 1;
                     } else if (c != '\0') {
-                        vfile_err_fn("%s: invalid format specified\n", fmt);
+                        vf_logerr(invalid_fmt_msg, cmd);
                         goto l_err_end;
                     } 
                         
@@ -216,7 +216,7 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
                     arg->type = FETCHFMT_DIR;
                     has_d_arg++;
                     if (c != '\0') {
-                        vfile_err_fn("%s: invalid format specified\n", fmt);
+                        vf_logerr(invalid_fmt_msg, cmd);
                         goto l_err_end;
                     }
                     break;
@@ -230,15 +230,14 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
                     if (c == 'n') {
                         arg->flags = FETCHFMT_MULTI;
                     } else if (c != '\0') {
-                        vfile_err_fn("%s: %c invalid format specified\n",
-                                     fmt, c);
+                        vf_logerr(invalid_fmt_msg, cmd);
                         goto l_err_end;
                     }
                     
                     break;
 
                 default:
-                    vfile_err_fn("%s: invalid format specified\n", fmt);
+                    vf_logerr(invalid_fmt_msg, cmd);
                     goto l_err_end;
             }
             n_array_push(args, arg);
@@ -318,11 +317,11 @@ static void process_output(struct p_open_st *st, const char *prefix)
                 int c = buf[i];
         
                 if (endl) {
-                    vfile_msg_fn("%s: ", prefix);
+                    vf_loginfo("%s: ", prefix);
                     endl = 0;
                 }
 
-                vfile_msg_fn("_%c", c);
+                vf_loginfo("_%c", c);
                 if (c == '\n' && cnt > 0)
                     endl = 1;
                 
@@ -406,7 +405,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 break;
 
             default:
-                vfile_err_fn("vfile_fetch*: internal error\n");
+                vf_logerr("vfile_fetch*: internal error\n");
                 n_assert(0);
                 return 0;
         }
@@ -431,7 +430,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
             p = n_strncpy(p, " ", len);
             len--;
         }
-        vfile_msg_fn(_("Running %s\n"), s);
+        vf_loginfo(_("Running %s\n"), s);
     }
     
     p_st_init(&pst);
@@ -446,7 +445,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     }
 
     if (p_open(&pst, p_open_flags, fftch->path, argv) == NULL) {
-        vfile_err_fn("p_open: %s\n", pst.errmsg);
+        vf_logerr("p_open: %s\n", pst.errmsg);
         return 0;
     }
     
@@ -454,8 +453,8 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                    ((struct fetcharg*) n_array_nth(fftch->args, 0))->arg);
         
     if ((ec = p_close(&pst)) != 0)
-        vfile_err_fn("%s\n", pst.errmsg ? pst.errmsg :
-                     _("program exited with non-zero value"));
+        vf_logerr("%s\n", pst.errmsg ? pst.errmsg :
+                   _("program exited with non-zero value"));
     
     p_st_destroy(&pst);
     *vfile_verbose = verbose;
@@ -471,7 +470,7 @@ int vfile_register_ext_handler(const char *name, tn_array *protocols,
     int i;
     
     if ((ftch = ffetcher_new(name, protocols, cmd)) == NULL) {
-        vfile_err_fn("External downloader '%s': registration failed\n", cmd);
+        vf_logerr("External downloader '%s': registration failed\n", cmd);
         
     } else {
         if (ffetchers == NULL) {
@@ -516,7 +515,7 @@ struct ffetcher *find_fetcher(const char *proto, int multi)
             ftch = n_hash_get(ffetchers, clname);
 
         if (ftch == NULL) {
-            vfile_err_fn("vfile: %s: no such ext. fetcher found\n", clname);
+            vf_logerr("vfile: %s: no such ext. fetcher found\n", clname);
             return NULL;
         }
         
@@ -543,7 +542,7 @@ struct ffetcher *find_fetcher(const char *proto, int multi)
 }
 
 
-int vfile_fetch_ext(const char *destdir, const char *url) 
+int vf_fetch_ext(const char *destdir, const char *url) 
 {
     struct ffetcher *ftch;
     char proto[64];
@@ -552,8 +551,8 @@ int vfile_fetch_ext(const char *destdir, const char *url)
     vf_url_proto(proto, sizeof(proto), url);
     
     if ((ftch = find_fetcher(proto, 0)) == NULL) {
-        vfile_err_fn("vfile: %s://...: no ext. fetcher for this type "
-                     "of url found\n", proto);
+        vf_logerr("vfile: %s://...: no ext. fetcher for this type "
+                   "of url found\n", proto);
         return 0;
     }
 
@@ -561,7 +560,7 @@ int vfile_fetch_ext(const char *destdir, const char *url)
 }
 
 
-int vfile_fetcha_ext(const char *destdir, tn_array *urls) 
+int vf_fetcha_ext(const char *destdir, tn_array *urls) 
 {
     struct ffetcher *ftch;
     char proto[64];
@@ -582,8 +581,8 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls)
         rc = nerrs == 0;
         
     } else {
-        vfile_err_fn("vfile: %s://...: no ext. fetcher for this type"
-                     " of url found\n", proto);
+        vf_logerr("vfile: %s://...: no ext. fetcher "
+                   "for this type of url found\n", proto);
         rc = 0;
     }
 

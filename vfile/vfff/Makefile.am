@@ -1,19 +1,15 @@
 # $Id$
+# vfff - VFile File Fetch
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
 LIBS = 
-noinst_LTLIBRARIES  = libvhttp.la 
-libvhttp_la_SOURCES  = vhttp.c http.c base64.c vhttp.h http.h 
-
-#pkgincludedir = $(includedir)/vhttp
-#pkginclude_HEADERS = vhttp.h http.h 
-
-#noinst_PROGRAMS    = test_vhttp
-#test_vhttp_SOURCES  = test_vhttp.c
-#test_vhttp_LDADD    = libvhttp.a @TRURL_LDFLAG@ $(top_srcdir)/sigint/libsigint.a
-
+noinst_LTLIBRARIES  = libvfff.la 
+libvfff_la_SOURCES  = \
+						vfff.c vfff.h \
+						http.c base64.c \
+						ftp.c
 dist-hook:
 	rm -rf $(distdir)/.deps
 
