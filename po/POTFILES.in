@@ -37,7 +37,6 @@ pkg.c
 pkgdb.c
 pkgdir/dir/dir.c
 pkgdir/hdrl/hdrl.c
-pkgdir/hdrl/tags.c
 pkgdir/mod.c
 pkgdir/pdir/digest.c
 pkgdir/pdir/pdir.c
@@ -56,7 +55,6 @@ pkgdir/pndir/tags.c
 pkgdir/pndir/update.c
 pkgdir/rpmdb/rpmdb.c
 pkgdir/source.c
-pkgdir/yum/tags.c
 pkgdir/yum/yum.c
 pkgfetch.c
 pkgfl.c
@@ -69,17 +67,6 @@ pkgset-mark.c
 pkgset-order.c
 pkgset-req.c
 pkgset.c
-pkgset/av_set.c
-pkgset/capreqidx.c
-pkgset/depdirs.c
-pkgset/fileindex.c
-pkgset/install.c
-pkgset/load.c
-pkgset/mark.c
-pkgset/order.c
-pkgset/pkgset.c
-pkgset/req.c
-pkgset/set.c
 pkgu.c
 poldek_term.c
 poldek_ts.c

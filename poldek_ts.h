@@ -56,11 +56,13 @@ enum poldek_tsopt {
 
 struct poldek_ctx;
 struct arg_packages;
-
+#ifdef SWIG
+struct poldek_ts { int foo; };
+#else
 struct poldek_ts {
+    int                foo;
     struct poldek_ctx  *ctx;
     struct pkgdb       *db;
-    uint32_t           flags;      /* POLDEK_TS_* */
     tn_array  *pkgs;
     
     struct arg_packages  *aps;
@@ -80,7 +82,7 @@ struct poldek_ts {
     int  (*askpkg_fn)(const char *, struct pkg **pkgs, struct pkg *deflt);
     int  (*ask_fn)(int default_a, const char *, ...);
 
-    
+    uint32_t           _flags;      /* POLDEK_TS_* */
     uint32_t           _iflags;    /* internal flags */
     uint32_t           _opvect[4];
     int   (*getop)(const struct poldek_ts *, int op);
@@ -88,7 +90,7 @@ struct poldek_ts {
     void  (*setop)(struct poldek_ts *, int op, int onoff);
     
 };
-
+#endif
 struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx);
 void poldek_ts_free(struct poldek_ts *ts);
 
@@ -98,9 +100,9 @@ void poldek_ts_destroy(struct poldek_ts *ts);
 void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag);
 void poldek_ts_clrf(struct poldek_ts *ts, uint32_t flag);
 uint32_t poldek_ts_issetf(struct poldek_ts *ts, uint32_t flag);
-#define poldek_ts_setf(ts, flag) (ts->flags |= (flag))
-#define poldek_ts_clrf(ts, flag) (ts->flags &= ~(flag))
-#define poldek_ts_issetf(ts, flag) (ts->flags & (flag))
+#define poldek_ts_setfXX(ts, flag) (ts->flags |= (flag))
+#define poldek_ts_clrfXX(ts, flag) (ts->flags &= ~(flag))
+#define poldek_ts_issetfXX(ts, flag) (ts->flags & (flag))
 
 int poldek_ts_is_interactive_on(const struct poldek_ts *ts);
 

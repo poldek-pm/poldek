@@ -35,6 +35,7 @@
 #include "log.h"
 #include "misc.h"
 #include "i18n.h"
+#define POLDEK_INTERNAL
 #include "poldek.h"
 #include "poldek_term.h"
 
@@ -47,7 +48,7 @@
 const char poldek_BUG_MAILADDR[] = "<mis@pld.org.pl>";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
 const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
-"Copyright (C) 2000-2003 Pawel A. Gajda <mis@pld.org.pl>\n"
+"Copyright (C) 2000-2004 Pawel A. Gajda <mis@pld.org.pl>\n"
 "This program may be freely redistributed under the terms of the GNU GPL v2";
 
 static const char *poldek_logprefix = "poldek";
@@ -55,8 +56,6 @@ static const char *poldek_logprefix = "poldek";
 void (*poldek_assert_hook)(const char *expr, const char *file, int line) = NULL;
 void (*poldek_malloc_fault_hook)(void) = NULL;
 
-
-static tn_hash     *poldek_cnf = NULL;          /* config file values */
 
 static void register_vf_handlers_compat(const tn_hash *htcnf);
 static void register_vf_handlers(const tn_array *fetchers);
@@ -69,19 +68,19 @@ static struct {
     int op;
     int defaultv;
 } default_op_map[] = {
-    { "use_sudo",             POLDEK_OP_USESUDO, 0 },
-    { "confirm_installation", POLDEK_OP_CONFIRM_INST, 0 },
+    { "use_sudo",             POLDEK_OP_USESUDO, 0        },
+    { "confirm_installation", POLDEK_OP_CONFIRM_INST, 0   },
     { "confirm_removal",      POLDEK_OP_CONFIRM_UNINST, 1 },
     { "keep_downloads",       POLDEK_OP_KEEP_DOWNLOADS, 0 },
     { "choose_equivalents_manually", POLDEK_OP_EQPKG_ASKUSER, 0 },
-    { "particle_install",     POLDEK_OP_PARTICLE, 1 },
-    { "follow",               POLDEK_OP_FOLLOW, 1 },
+    { "particle_install",     POLDEK_OP_PARTICLE, 1  },
+    { "follow",               POLDEK_OP_FOLLOW, 1    },
     { "mercy",                POLDEK_OP_VRFYMERCY, 1 },
-    { "greedy",               POLDEK_OP_GREEDY, 1 },
+    { "greedy",               POLDEK_OP_GREEDY, 1    },
     { "allow_duplicates",     POLDEK_OP_ALLOWDUPS, 1 },
-    { "unique_package_names", POLDEK_OP_PS_UNIQN, 0 },
-    { NULL, POLDEK_OP_HOLD, 1 },
-    { NULL, POLDEK_OP_IGNORE, 1 }, 
+    { "unique_package_names", POLDEK_OP_PS_UNIQN, 0  },
+    { NULL, POLDEK_OP_HOLD,   1  },
+    { NULL, POLDEK_OP_IGNORE, 1  }, 
     { NULL, 0, 0 }
 };
 
@@ -155,7 +154,7 @@ int addsource(tn_array *sources, struct source *src,
 
 
 static
-int prepare_sources(tn_array *sources)
+int prepare_sources(tn_hash *poldek_cnf, tn_array *sources)
 {
     struct source   *src;
     int             i, rc = 1;
@@ -522,6 +521,41 @@ static void zlib_in_rpm(struct poldek_ctx *ctx)
 }
 
 
+void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
+{
+    tn_hash           *htcnf = NULL;
+    int               i;
+
+    htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+    i = 0;
+    while (default_op_map[i].name) {
+        int op = default_op_map[i].op;
+        int v0 = ts->getop(ts, op);
+        if (v0 == default_op_map[i].defaultv) { /* not modified by cmdl opts */
+            int v = poldek_conf_get_bool(htcnf,
+                                         default_op_map[i].name,
+                                         default_op_map[i].defaultv);
+            ts->setop(ts, op, v);
+        } else if (ts != ctx->ts) {
+            printf("apply_c %d %d\n", op, ctx->ts->getop(ctx->ts, op));
+            ts->setop(ts, op, ctx->ts->getop(ctx->ts, op));
+        }
+        
+        i++;
+    }
+    
+    if (ts->getop(ts, POLDEK_OP_CONFIRM_INST) && verbose < 1)
+        verbose = 1;
+    
+    if (ts->getop(ts, POLDEK_OP_GREEDY)) {
+        int v = poldek_conf_get_bool(htcnf, "aggressive greedy", 1);
+        ts->setop(ts, POLDEK_OP_AGGREEDY, v);
+        ts->setop(ts, POLDEK_OP_FOLLOW, 1);
+    }
+}
+
+    
+
 int poldek_load_config(struct poldek_ctx *ctx, const char *path)
 {
     struct poldek_ts  *ts;
@@ -531,46 +565,22 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     tn_array          *list;
     
         
-    if (poldek_is_setup_done(ctx))
+    if (poldek__is_setup_done(ctx))
         logn(LOGERR | LOGDIE, "load_config() called after setup()");
     
     if (path != NULL)
-        poldek_cnf = poldek_ldconf(path, 0);
+        ctx->htconf = poldek_ldconf(path, 0);
     else 
-        poldek_cnf = poldek_ldconf_default();
+        ctx->htconf = poldek_ldconf_default();
     
-    if (poldek_cnf == NULL)
+    if (ctx->htconf == NULL)
         return 0;
 
-    ctx->htconf = poldek_cnf;
-    htcnf = poldek_conf_get_section_ht(poldek_cnf, "global");
+    poldek__apply_tsconfig(ctx, ctx->ts);
 
-    ts = ctx->ts;
-    i = 0;
-    while (default_op_map[i].name) {
-        int v0 = ts->getop(ts, default_op_map[i].op);
-        if (v0 == default_op_map[i].defaultv) { /* not modified by cmdl opts */
-            int v = poldek_conf_get_bool(htcnf,
-                                         default_op_map[i].name,
-                                         default_op_map[i].defaultv);
-            ts->setop(ts, default_op_map[i].op, v);
-        }
-        i++;
-    }
-    
-    if (ts->getop(ts, POLDEK_OP_CONFIRM_INST) && verbose < 1)
-        verbose = 1;
-    
-    if (ts->getop(ts, POLDEK_OP_GREEDY)) {
-        int v = poldek_conf_get_bool(htcnf, "aggressive_greedy", 1);
-        ts->setop(ts, POLDEK_OP_AGGREEDY, v);
-        ts->setop(ts, POLDEK_OP_FOLLOW, 1);
-    }
-    
-    
-
+    htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
     register_vf_handlers_compat(htcnf);
-    register_vf_handlers(poldek_conf_get_section_arr(poldek_cnf, "fetcher"));
+    register_vf_handlers(poldek_conf_get_section_arr(ctx->htconf, "fetcher"));
 
     if ((list = poldek_conf_get_multi(htcnf, "default_fetcher"))) {
         int i;
@@ -690,8 +700,8 @@ void poldek_destroy(struct poldek_ctx *ctx)
 {
     destroy_modules();
     ctx = ctx;
-    if (poldek_cnf)
-        n_hash_free(poldek_cnf);
+    if (ctx->htconf)
+        n_hash_free(ctx->htconf);
     sigint_destroy();
 }
 
@@ -706,33 +716,17 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
 {
     va_list ap;
     int rc;
-    unsigned uv;
     void     *vv;
     
     va_start(ap, param);
     
     switch (param) {
-        case POLDEK_CONF_PSFLAGS:
-            uv = va_arg(ap, unsigned);
-            if (uv) {
-                ctx->ps_flags |= uv;
-            }
-            break;
-
-        case POLDEK_CONF_PS_SETUP_FLAGS:
-            uv = va_arg(ap, unsigned);
-            if (uv) {
-                ctx->ps_setup_flags |= uv;
-            }
-            break;
-
-            
         case POLDEK_CONF_SOURCE:
             vv = va_arg(ap, void*);
             if (vv) {
                 struct source *src = (struct source*)vv;
                 if (src->path)
-                    src->path = poldek_i_conf_path(src->path, NULL);
+                    src->path = poldek__conf_path(src->path, NULL);
                 sources_add(ctx->sources, src);
             }
             break;
@@ -849,7 +843,7 @@ int poldek_setup_sources(struct poldek_ctx *ctx)
     if (ctx->_iflags & SOURCES_SETUPDONE)
         return 1;
         
-    if (!prepare_sources(ctx->sources))
+    if (!prepare_sources(ctx->htconf, ctx->sources))
         return 0;
 
     for (i=0; i < n_array_size(ctx->sources); i++) {
@@ -868,7 +862,7 @@ int poldek_setup(struct poldek_ctx *ctx)
     return 1;
 }
 
-int poldek_is_setup_done(struct poldek_ctx *ctx) 
+int poldek__is_setup_done(struct poldek_ctx *ctx) 
 {
     return (ctx->_iflags & SETUP_DONE) == SETUP_DONE;
 }

@@ -49,10 +49,8 @@ int poldek_load_sources(struct poldek_ctx *ctx);
 tn_array *poldek_get_avpkgs(struct poldek_ctx *ctx);
 tn_array *poldek_get_avpkgs_bynvr(struct poldek_ctx *ctx);
 
-#define POLDEK_CONF_FLAGS           0
-#define POLDEK_CONF_PSFLAGS         1
-#define POLDEK_CONF_PS_SETUP_FLAGS  2
 
+#define POLDEK_CONF_OPT             0
 #define POLDEK_CONF_CACHEDIR        3 
 #define POLDEK_CONF_FETCHDIR        4
 #define POLDEK_CONF_ROOTDIR         5 
@@ -76,9 +74,14 @@ int poldek_setup_cachedir(struct poldek_ctx *ctx);
 int poldek_setup_sources(struct poldek_ctx *ctx);
 
 int poldek_setup(struct poldek_ctx *ctx);
-int poldek_is_setup_done(struct poldek_ctx *ctx);
+
 
 int poldek_split(const struct poldek_ctx *ctx, unsigned size,
                  unsigned first_free_space, const char *outprefix);
+
+#ifdef POLDEK_INTERNAL
+int poldek__is_setup_done(struct poldek_ctx *ctx);
+void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts);
+#endif
 
 #endif 

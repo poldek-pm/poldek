@@ -20,7 +20,7 @@
 
 #include <trurl/nmalloc.h>
 #include <trurl/nstr.h>
-
+#define POLDEK_INTERNAL
 #include "vfile/vfile.h"
 #include "pkgdir/source.h"
 #include "pkgdb.h"
@@ -34,7 +34,7 @@
 
 #define bitvect_slot_itype  unsigned int
 #define bitvect_slot_size   sizeof(bitvect_slot_itype) * CHAR_BIT
-#define bitvect_mask(b)     (1 << ((b) % bitvect_slot_size))
+#define bitvect_mask(b)     (1 << ((b) % (bitvect_slot_size)))
 #define bitvect_slot(b)     ((b) / (bitvect_slot_size))
 #define bitvect_set(a, b)   ((a)[bitvect_slot(b)] |= bitvect_mask(b))
 #define bitvect_clr(a, b)   ((a)[bitvect_slot(b)] &= ~(bitvect_mask(b)))
@@ -52,6 +52,8 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf);
 extern
 int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf);
 
+
+#define TS_CONFIG_LATER (1 << 0)
 
 struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx)
 {
@@ -76,12 +78,14 @@ void poldek_ts_setop(struct poldek_ts *ts, int optv, int on_off)
         bitvect_set(ts->_opvect, optv);
     else
         bitvect_clr(ts->_opvect, optv);
+
+    printf("setop %d TO %d\n", optv, on_off);
 }
 
 int poldek_ts_getop(const struct poldek_ts *ts, int optv)
 {
     n_assert(bitvect_slot(optv) < sizeof(ts->_opvect)/sizeof(bitvect_slot_itype));
-    return bitvect_isset(ts->_opvect, optv) ? 1 : 0;
+    return bitvect_isset(ts->_opvect, optv) > 0;
 }
 
 int poldek_ts_getop_v(const struct poldek_ts *ts, int optv, ...)
@@ -90,11 +94,18 @@ int poldek_ts_getop_v(const struct poldek_ts *ts, int optv, ...)
     va_list ap;
 
     va_start(ap, optv);
-    if (poldek_ts_getop(ts, optv))
+    if (poldek_ts_getop(ts, optv)) {
+        printf("getop_v %d ON\n", optv);
         v++;
+    }
+    
+        
     while ((optv = va_arg(ap, int)) > 0) {
-        if (poldek_ts_getop(ts, optv))
+        if (poldek_ts_getop(ts, optv)) {
+            printf("getop_v %d ON\n", optv);
             v++;
+        }
+        
     }
     va_end(ap);
     return v;
@@ -126,8 +137,10 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
     if (ctx) {
         ts->ctx = ctx;
         memcpy(ts->_opvect, ctx->ts->_opvect, sizeof(ts->_opvect));
+        if (!poldek__is_setup_done(ctx))
+            ts->_iflags |= TS_CONFIG_LATER;
+        
     }
-    
 
     ts->aps = arg_packages_new();
 
@@ -168,7 +181,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
 
 void poldek_ts_destroy(struct poldek_ts *ts)
 {
-    ts->flags = 0;
+    ts->_flags = 0;
     ts->ctx = NULL;
     
     if (ts->db)
@@ -205,17 +218,24 @@ void poldek_ts_destroy(struct poldek_ts *ts)
 
 void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag)
 {
-    ts->flags |= flag;
+    ts->_flags |= flag;
+    if (flag & POLDEK_TS_INSTALL) {
+        printf("POLDEK_TS_INSTALL_ON\n");
+    }
+    
 }
 
 void poldek_ts_clrf(struct poldek_ts *ts, uint32_t flag)
 {
-    ts->flags &= ~flag;
+    ts->_flags &= ~flag;
+    if (flag & POLDEK_TS_INSTALL) {
+        printf("POLDEK_TS_INSTALL_OFF\n");
+    }
 }
 
 uint32_t poldek_ts_issetf(struct poldek_ts *ts, uint32_t flag)
 {
-    return ts->flags & flag;
+    return ts->_flags & flag;
 }
 
 static char *prepare_path(char *pathname) 
@@ -235,7 +255,7 @@ static char *prepare_path(char *pathname)
 }
 
 
-char *poldek_i_conf_path(char *s, char *v)
+char *poldek__conf_path(char *s, char *v)
 {
     char *ss;
 
@@ -271,16 +291,23 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
 {
     int      rc;
     char     *vs;
+    unsigned uv, uv_val;
 
     
     rc = 1;
     vs = va_arg(ap, char*);
 
     switch (param) {
+        case POLDEK_CONF_OPT:
+            uv = va_arg(ap, unsigned);
+            uv_val = va_arg(ap, unsigned);
+            ts->setop(ts, uv, uv_val);
+            break;
+
         case POLDEK_CONF_CACHEDIR:
             if (vs) {
                 printf("cachedirX0 %s\n", vs);
-                ts->cachedir = poldek_i_conf_path(ts->cachedir, vs);
+                ts->cachedir = poldek__conf_path(ts->cachedir, vs);
                 trimslash(ts->cachedir);
                 printf("cachedirX %s\n", ts->cachedir);
             }
@@ -288,7 +315,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
 
         case POLDEK_CONF_FETCHDIR:
             if (vs) {
-                ts->fetchdir = poldek_i_conf_path(ts->fetchdir, vs);
+                ts->fetchdir = poldek__conf_path(ts->fetchdir, vs);
                 trimslash(ts->fetchdir);
                 printf("fetchdir %s\n", ts->fetchdir);
             }
@@ -297,7 +324,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
         case POLDEK_CONF_ROOTDIR:
             vs = va_arg(ap, char*);
             if (vs) {
-                ts->rootdir = poldek_i_conf_path(ts->rootdir, vs);
+                ts->rootdir = poldek__conf_path(ts->rootdir, vs);
                 trimslash(ts->rootdir);
                 printf("rootdir %s\n", ts->rootdir);
             }
@@ -307,7 +334,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
             vs = va_arg(ap, char*);
             if (vs) {
                 printf("dumpfile %s\n", vs);
-                ts->dumpfile = poldek_i_conf_path(ts->dumpfile, vs);
+                ts->dumpfile = poldek__conf_path(ts->dumpfile, vs);
             }
             break;
 
@@ -315,7 +342,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
             vs = va_arg(ap, char*);
             if (vs) {
                 printf("prifile %s\n", vs);
-                ts->prifile = poldek_i_conf_path(ts->prifile, vs);
+                ts->prifile = poldek__conf_path(ts->prifile, vs);
             }
             break;
 
@@ -590,10 +617,12 @@ static int ts_prerun(struct poldek_ts *ts, struct install_info *iinf)
 {
     int rc = 1;
 
-    n_assert (ts->ctx);
-    
-    //poldek_ts_setf(ts, ts->ctx->ts->flags);
+    n_assert(ts->ctx);
+    n_assert(poldek__is_setup_done(ts->ctx));
 
+    if (ts->_iflags & TS_CONFIG_LATER)
+        poldek__apply_tsconfig(ts->ctx, ts);
+              
     cp_str_ifnull(&ts->rootdir, ts->ctx->ts->rootdir);
     cp_str_ifnull(&ts->fetchdir, ts->ctx->ts->fetchdir);
     cp_str_ifnull(&ts->cachedir, ts->ctx->ts->cachedir);
@@ -646,7 +675,7 @@ int ts_run_install_dist(struct poldek_ts *ts)
 {
     int rc;
 
-    n_assert(ts->flags & POLDEK_TS_INSTALL);
+    n_assert(poldek_ts_issetf(ts, POLDEK_TS_INSTALL));
     
     if (!ts_prerun(ts, NULL))
         return 0;
@@ -674,7 +703,7 @@ int ts_run_upgrade_dist(struct poldek_ts *ts)
 {
     int rc;
 
-    n_assert(ts->flags & POLDEK_TS_UPGRADE);
+    n_assert(poldek_ts_issetf(ts, POLDEK_TS_UPGRADE));
     
     if (!ts_mark_arg_packages(ts, 1))
         return 0;
@@ -696,7 +725,7 @@ int ts_run_install(struct poldek_ts *ts, struct install_info *iinf)
 {
     int rc;
 
-    n_assert(ts->flags & POLDEK_TS_INSTALL);
+    n_assert(poldek_ts_issetf(ts, POLDEK_TS_INSTALL));
     if (!ts_mark_arg_packages(ts, 0))
         return 0;
 
@@ -716,7 +745,7 @@ int ts_run_uninstall(struct poldek_ts *ts, struct install_info *iinf)
 {
     int rc;
 
-    n_assert(ts->flags & POLDEK_TS_UNINSTALL);
+    n_assert(poldek_ts_issetf(ts, POLDEK_TS_UNINSTALL));
 
     printf("poldek_ts_do_uninstall %d\n", arg_packages_size(ts->aps));
     
@@ -748,10 +777,11 @@ int poldek_ts_run(struct poldek_ts *ts, struct install_info *iinf)
                poldek_ts_issetf(ts, POLDEK_TS_DIST)) {
         rc = ts_run_upgrade_dist(ts);
         
-    } else if (poldek_ts_issetf(ts, POLDEK_TS_INSTALL)) {
+    } else if (poldek_ts_issetf(ts, POLDEK_TS_INSTALL | POLDEK_TS_UPGRADE)) {
         rc = ts_run_install(ts, iinf);
         
     } else {
+        printf("f = %x\n", ts->_flags);
         n_assert(0);
     }
 

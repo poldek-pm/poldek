@@ -136,8 +136,8 @@ int is_installable(struct pkg *pkg, struct poldek_ts *ts, int is_hand_marked)
         if (is_hand_marked && freshen)
             install = 0;
         
-    } else if (is_hand_marked && npkgs > 1 && (ts->flags & POLDEK_TS_UPGRADE)
-               && force == 0) {
+    } else if (is_hand_marked && npkgs > 1 &&
+               poldek_ts_issetf(ts, POLDEK_TS_UPGRADE) && force == 0) {
         logn(LOGERR, _("%s: multiple instances installed, give up"), pkg->name);
         install = -1;
         
@@ -148,7 +148,7 @@ int is_installable(struct pkg *pkg, struct poldek_ts *ts, int is_hand_marked)
             install = 0;
             
         } else if (cmprc <= 0 && force == 0 &&
-                   ((ts->flags & POLDEK_TS_UPGRADE) || cmprc == 0)) {
+                   (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE) || cmprc == 0)) {
             char *msg = "%s: %s version installed, %s";
             char *eqs = cmprc == 0 ? "equal" : "newer";
             char *skiped =  "skipped";
@@ -156,10 +156,10 @@ int is_installable(struct pkg *pkg, struct poldek_ts *ts, int is_hand_marked)
 
             install = 0;
             
-            if (cmprc == 0 && ts->flags & POLDEK_TS_REINSTALL) {
+            if (cmprc == 0 && poldek_ts_issetf(ts, POLDEK_TS_REINSTALL)) {
                 install = 1;
                 
-            } else if (cmprc < 0 && ts->flags & POLDEK_TS_DOWNGRADE) {
+            } else if (cmprc < 0 && poldek_ts_issetf(ts, POLDEK_TS_DOWNGRADE)) {
                 install = 1;
             
             } else if (!is_hand_marked) {
@@ -1781,7 +1781,7 @@ static int verify_holds(struct upgrade_s *upg)
     int i, j, rc = 1;
 
 
-    if ((upg->ts->flags & POLDEK_TS_UPGRADE) == 0)
+    if (poldek_ts_issetf(upg->ts, POLDEK_TS_UPGRADE) == 0)
         return 1;
 
     if (upg->ts->hold_patterns == NULL)
@@ -2234,7 +2234,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
     struct pkgset *ps = ts->ctx->ps;
 
     
-    n_assert(ts->flags & POLDEK_TS_INSTALL);
+    n_assert(poldek_ts_issetf(ts, POLDEK_TS_INSTALL));
 
     packages_mark(ps->pkgs, 0, PKG_INTERNALMARK | PKG_INDIRMARK);
     

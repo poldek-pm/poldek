@@ -48,7 +48,6 @@
 #define TYPE_F_ALIAS    (1 << 12)
 #define TYPE_F_UNIQUE   (1 << 13)
 
-
 static const char *global_tag = "global";
 static const char *include_tag = "%include";
 
@@ -84,9 +83,10 @@ static struct tag global_tags[] = {
     { "rpm install opt",  TYPE_STR , { 0 } },
     { "rpm uninstall opt",  TYPE_STR , { 0 } },
 
-    { "follow",         TYPE_BOOL , { 0 } },
-    { "greedy",         TYPE_BOOL , { 0 } }, 
-    { "use sudo",       TYPE_BOOL , { 0 } },
+    { "follow",            TYPE_BOOL , { 0 } },
+    { "greedy",            TYPE_BOOL , { 0 } },
+    { "aggressive_greedy", TYPE_BOOL , { 0 } },
+    { "use sudo",          TYPE_BOOL , { 0 } },
     { "mercy",          TYPE_BOOL , { 0 } },
     { "default fetcher", TYPE_STR | TYPE_MULTI , { 0 } },
     { "proxy",          TYPE_STR | TYPE_MULTI, { 0 } },
@@ -117,10 +117,9 @@ static struct tag fetcher_tags[] = {
 static struct tag alias_tags[] = {
     { "name",       TYPE_STR | TYPE_F_REQUIRED,  { 0 } },
     { "cmd",        TYPE_STR | TYPE_F_REQUIRED, { 0 } },
-    { "ctx",        TYPE_ENUM, { "none", "installed", "available", NULL } },
+    { "ctx",        TYPE_ENUM, { "none", "installed", "available", "upgradeable", NULL } },
     {  NULL,        0, { 0 } }, 
 };
-
 
 static struct tag proxy_tags[] = {
     { "name",       TYPE_STR,  { 0 } },

@@ -75,7 +75,7 @@ extern int verbose;
     struct poldek_ts *ts_new() { return poldek_ts_new(self); }
 }
 
-
+%immutable poldek_ts;
 
     
             

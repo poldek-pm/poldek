@@ -132,7 +132,7 @@ int mark_to_uninstall(struct dbpkg_set *set, struct pkgdb *db,
         pkg_hand_mark(dbpkg->pkg);
     }
     
-    if (ts->flags & POLDEK_OP_FOLLOW)
+    if (ts->getop(ts, POLDEK_OP_FOLLOW))
         for (i=0; i < n_array_size(set->dbpkgs); i++) {
             struct dbpkg *dbpkg = n_array_nth(set->dbpkgs, i);
             if ((dbpkg->flags & DBPKG_UNIST_NOTFOLLOW) == 0) 
