@@ -141,12 +141,12 @@ int fetch_file_internal(const char *destdir, const char *path)
     snprintf(tmpath, sizeof(tmpath), "%s/%s", destdir, n_basenam(path));
     vfile_msg_fn("Retrieving %s...\n", path);
 
-    if (vfile_conf.flags & VFILE_CNFCURL)
+    if (vfile_conf.flags & VFILE_CNFCURL) {
 #ifdef ENABLE_VFILE_CURL
         rc = vfile_curl_fetch(tmpath, path);
 #endif
 
-    else {
+    } else {
 
 #ifdef ENABLE_VFILE_RPMIO
         int rpmrc;
