@@ -252,16 +252,19 @@ tn_hash *ldconf(const char *path)
         while (isalnum(*p) || *p == '_')
             p++;
         
-        if (!isspace(*p)) {
+        if (*p != '=' && !isspace(*p)) {
             logn(LOGERR, _("%s:%d: '%s': invalid parameter"), path, nline, name);
             continue;
         }
-        *p++ = '\0';
-
-        while (isspace(*p))
-            p++;
         
-        if (*p != '=') {
+        while (isspace(*p))
+            *p++ = '\0';
+        
+        if (*p == '=') {
+            *p++ = '\0';
+            while (isspace(*p))
+                p++;
+        } else {
             logn(LOGERR, _("%s:%d: missing '='"), path, nline);
             continue;
         }
@@ -278,11 +281,10 @@ tn_hash *ldconf(const char *path)
         }
 
         if (tag->flags & TYPE_LIST) {
-            getvlist(ht, name, ++p, path, nline);
+            getvlist(ht, name, p, path, nline);
             continue;
         }
         
-        p++;
         val = getv(p, path, nline);
         if (val == NULL) {
             logn(LOGERR, _("%s:%d: no value for '%s'"), path, nline, name);
