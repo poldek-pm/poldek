@@ -9,7 +9,7 @@
 
 void fetch(const char *url)
 {
-    vfile_fetch("/tmp", url, VFURL_UNKNOWN);
+    vfile_fetch("/tmp", url);
 }
 
 
@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 
     const char *uu  =  "/a/v/b/ftp:,,ftp.pld.org.pl,PLD-1.0,i686,PLD,RPMS,kernel-video-nvidia-1.0.2880-1@2.2.20_18.i686.rpm";
     
-    vfile_configure(",tmp", 0);
+    vfile_configure(VFILE_CONF_CACHEDIR, ",tmp");
     vfile_verbose = &verbose;
 
     printf("%s\n", vf_url_slim_s(up,  0));

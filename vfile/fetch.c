@@ -27,12 +27,14 @@
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
 #include <trurl/narray.h>
+#include <trurl/nhash.h>
 #include <trurl/nstr.h>
 
 #include "i18n.h"
 #define VFILE_INTERNAL
 #include "vfile.h"
 #include "p_open.h"
+
 
 /* 
    %p[n] - package basename
@@ -60,20 +62,22 @@ struct fetcharg {
 };
 
 struct ffetcher {
+    char      *name;
+    tn_array  *protocols;
     uint16_t  urltypes;
-    int16_t   is_multi;
+    int16_t   is_multi;   /* is able to download more than one file at once? */
     tn_array  *args;
     char      path[0];
 };
 
+extern tn_hash *vfile_default_clients_ht;
 
-#define MAX_FETCHERS  64
-static struct ffetcher *ffetchers[MAX_FETCHERS];
-static int nffetchers = 0;
+static tn_hash *ffetchers = NULL;
+static tn_hash *ffetchers_proto_idx = NULL;
 
 int vfile_configured_handlers(void)
 {
-    return nffetchers;
+    return ffetchers ? n_hash_size(ffetchers) : 0;
 }
 
 static 
@@ -106,21 +110,39 @@ char *next_token(char **str, char delim, int *toklen)
     return token;
 }
 
+static unsigned protocols_to_urltypes(const tn_array *protocols) 
+{
+    char proto[64];
+    int i;
+    unsigned urltypes, type;
+
+    for (i=0; i<n_array_size(protocols); i++) {
+        char *p = n_array_nth(protocols, i);
+        n_snprintf(proto, sizeof(proto), "%s://", p);
+        if ((type = vf_url_type(proto)) != VFURL_UNKNOWN)
+            urltypes |= type;
+        
+    }
+    
+    return urltypes;
+}
+
 
 static
-struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
+struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
+                              const char *cmd)
 {
-    char *token, *path, *bn;
-    struct fetcharg *arg;
-    tn_array *args;
-    struct ffetcher *ftch;
-    int has_p_arg = 0, has_d_arg = 0, is_multi = 0;
+    char              *token, *path, *bn, *fmt;
+    struct fetcharg   *arg;
+    tn_array          *args;
+    struct ffetcher   *ftch;
+    int               has_p_arg = 0, has_d_arg = 0, is_multi = 0;
+    int               len;
+    
+    len = strlen(cmd) + 1;
+    fmt = alloca(len);
+    memcpy(fmt, cmd, len);
 
-    n_assert(fmt);
-    if (fmt == NULL)
-        return NULL;
-    
-    
     if ((path = next_token(&fmt, ' ', NULL)) == NULL) 
         return NULL;
     
@@ -129,14 +151,9 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
         return NULL;
     }
 
-    if (access(path, X_OK) != 0) {
-        vfile_err_fn("%s: %m\n", CL_URL(path));
-        return NULL;
-    }
-    
-
     args = n_array_new(8, free, NULL);
     bn = n_basenam(path);
+    
     arg = n_malloc(sizeof(*arg) + strlen(bn) + 1);
     arg->type = FETCHFMT_ARG;
     strcpy(arg->arg, bn);
@@ -223,11 +240,22 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
     
     
     if (n_array_size(args) > 2 && has_d_arg && has_p_arg) {
-        ftch = n_malloc(sizeof(*ftch) + strlen(path) + 1);
-        ftch->args = args;
+        int path_len, name_len;
+
+        path_len = strlen(path) + 1;
+        name_len = strlen(name) + 1;
+        
+        ftch = n_malloc(sizeof(*ftch) + path_len + name_len);
+        memset(ftch, 0, sizeof(*ftch));
+        
+        ftch->protocols = n_array_dup(protocols, (tn_fn_dup)n_strdup);
+        ftch->args     = args;
         ftch->is_multi = is_multi;
-        ftch->urltypes = urltypes;
-        strcpy(ftch->path, path);
+        ftch->urltypes = protocols_to_urltypes(protocols);
+        memcpy(ftch->path, path, path_len);
+        memcpy(&ftch->path[path_len + 1], name, name_len);
+        ftch->name = &ftch->path[path_len + 1];
+        
     } else
         goto l_err_end;
     
@@ -237,6 +265,13 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
     if (args) 
         n_array_free(args);
     return NULL;
+}
+
+static void ffetcher_free(struct ffetcher *ftch)
+{
+    n_array_free(ftch->protocols);
+    n_array_free(ftch->args);
+    free(ftch);
 }
 
 
@@ -422,62 +457,86 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
 }
 
 
-int vfile_register_ext_handler(unsigned urltypes, const char *fmt) 
+int vfile_register_ext_handler(const char *name, tn_array *protocols,
+                               const char *cmd) 
 {
     struct ffetcher *ftch;
-    char *s;
-    int len;
+    int i;
     
-    if (nffetchers == MAX_FETCHERS)
-        return 0;
-    
-    len = strlen(fmt) + 1;
-    s = alloca(len);
-    memcpy(s, fmt, len);
-    
-    if ((ftch = ffetcher_new(urltypes, s)) == NULL) {
-        vfile_err_fn("External downloader '%s' not registered\n", fmt);
+    if ((ftch = ffetcher_new(name, protocols, cmd)) == NULL) {
+        vfile_err_fn("External downloader '%s': registration failed\n", cmd);
         
     } else {
-        ffetchers[nffetchers++] = ftch;
-        return nffetchers;
+        if (ffetchers == NULL) {
+            ffetchers = n_hash_new(21, (tn_fn_free)ffetcher_free);
+            ffetchers_proto_idx = n_hash_new(21, (tn_fn_free)n_array_free);
+        }
+        
+        n_hash_insert(ffetchers, name, ftch);
+        
+        for (i=0; i < n_array_size(protocols); i++) {
+            const char *proto = n_array_nth(protocols, i);
+            tn_array *arr = NULL;
+
+            if ((arr = n_hash_get(ffetchers_proto_idx, proto)) == NULL) {
+                arr = n_array_new(2, NULL, NULL);
+                n_hash_insert(ffetchers_proto_idx, proto, arr);
+            }
+            n_array_push(arr, ftch);
+        }
+        
+        return 1;
     }
     return 0;
 }
 
 
 static
-struct ffetcher *find_fetcher(int urltype, int multi) 
+struct ffetcher *find_fetcher(const char *proto, int multi) 
 {
-    int i;
+    struct ffetcher  *ftch;
+    tn_array         *arr;
+    int              i;
+    const char       *clname;
     
-    for (i=0; i<nffetchers; i++) {
-        if (urltype & ffetchers[i]->urltypes) {
-            if (!multi)
-                return ffetchers[i];
-            else if (ffetchers[i]->is_multi)
-                return ffetchers[i];
-        }
+    n_assert(vfile_default_clients_ht);
+
+    if ((clname = n_hash_get(vfile_default_clients_ht, proto))) {
+        ftch = n_hash_get(ffetchers, clname);
+        if (multi && !ftch->is_multi)
+            return NULL;
+        else 
+            return ftch;
     }
+    
+    if ((arr = n_hash_get(ffetchers_proto_idx, proto)) == NULL) 
+        return NULL;
+    
+    for (i=0; i < n_array_size(arr); i++) {
+        ftch = n_array_nth(arr, i);
+        
+        if (!multi || ftch->is_multi)
+            return ftch;
+    }
+    
     return NULL;
 }
 
 
-int vfile_fetch_ext(const char *destdir, const char *url, int urltype) 
+int vfile_fetch_ext(const char *destdir, const char *url) 
 {
     struct ffetcher *ftch;
-
-    n_assert(urltype > 0);
-    if (urltype == VFURL_UNKNOWN)
-        urltype = vf_url_type(url);
+    char proto[64];
     
-    if (nffetchers == 0) {
-        vfile_err_fn("vfile_fetch: %s: no handlers configured\n", CL_URL(url));
+    if (vfile_configured_handlers() == 0) {
+        vfile_err_fn("vfile_fetch: %s: no URL handler found\n", CL_URL(url));
         return 0;
     }
+
+    vf_url_proto(proto, sizeof(proto), url);
     
-    if ((ftch = find_fetcher(urltype, 0)) == NULL) {
-        vfile_err_fn("vfile_fetch: %s: no handler for this URL\n", CL_URL(url));
+    if ((ftch = find_fetcher(proto, 0)) == NULL) {
+        vfile_err_fn("vfile_fetch: %s: no URL handler found\n", CL_URL(url));
         return 0;
     }
 
@@ -485,23 +544,22 @@ int vfile_fetch_ext(const char *destdir, const char *url, int urltype)
 }
 
 
-int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype) 
+int vfile_fetcha_ext(const char *destdir, tn_array *urls) 
 {
     struct ffetcher *ftch;
+    char proto[64];
     int rc = 1;
+
+    vf_url_proto(proto, sizeof(proto), n_array_nth(urls, 0));
     
-    n_assert(urltype > 0);
-    if (urltype == VFURL_UNKNOWN) 
-        urltype = vf_url_type(n_array_nth(urls, 0));
-    
-    if ((ftch = find_fetcher(urltype, 1))) {
+    if ((ftch = find_fetcher(proto, 1))) {
         rc = ffetch_file(ftch, destdir, NULL, urls);
         
-    } else if ((ftch = find_fetcher(urltype, 0))) {
+    } else if ((ftch = find_fetcher(proto, 0))) {
         int i;
         int nerrs = 0;
         
-        for (i=0; i<n_array_size(urls); i++) 
+        for (i=0; i < n_array_size(urls); i++) 
             if (!ffetch_file(ftch, destdir, n_array_nth(urls, i), NULL))
                 nerrs++;
         rc = nerrs == 0;
@@ -578,9 +636,34 @@ int vf_url_as_path(char *buf, size_t size, const char *url)
     return url_to_path(buf, size, url, 0);
 }
 
+char *vf_url_proto(char *proto, int size, const char *url)
+{
+    char *p;
+
+    n_assert(size > 2);
+    *proto = '\0';
+    
+    if (*url == '/')
+        n_snprintf(proto, size, "file");
+    
+    else if ((p = strstr(url, "://"))) {
+        int len = p - url;
+
+        if (len > size - 1)
+            len = size - 1;
+        
+        memcpy(proto, url, len);
+        proto[len] = '\0';
+    }
+    
+    return *proto ? proto : NULL;
+}
+
 
 int vf_url_type(const char *url)  
 {
+    char *p;
+    
     if (*url == '/')
         return VFURL_PATH;
 
@@ -598,6 +681,22 @@ int vf_url_type(const char *url)
 
     if (strncmp(url, "cdrom://", 8) == 0)
         return VFURL_CDROM;
+
+    if ((p = strstr(url, "://"))) {
+        int is_url = 1;
+        
+        while (url != p) {
+            if (!isalpha(*url)) {
+                is_url = 1;
+                break;
+            }
+            url++;
+        }
+        
+        if (is_url)
+            return VFURL_UNKNOWN;
+    }
+    
 
     return VFURL_PATH;
 }

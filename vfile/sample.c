@@ -25,13 +25,18 @@ void dump_file(const char *url)
 
 void fetch_ext(const char *url)
 {
-    if (!vfile_register_ext_handler(VFURL_FTP | VFURL_HTTP,
+    tn_array *protocols;
+
+    protocols = n_array_new(4, NULL, NULL);
+    n_array_push(protocols, "http");
+    n_array_push(protocols, "ftp");
+    if (!vfile_register_ext_handler("wget", protocols, 
                                     "/usr/bin/wget -N -P %d %Pn")) {
         printf("bad handler def\n");
         return;
     }
 
-    if (vfile_fetch("/tmp", url, -1))
+    if (vfile_fetch("/tmp", url))
         puts("OK\n");
     else
         puts("FAIL\n");
@@ -39,7 +44,7 @@ void fetch_ext(const char *url)
 
 void fetch(const char *url)
 {
-    if (vfile_fetch("/tmp", url, vf_url_type(url)))
+    if (vfile_fetch("/tmp", url))
         puts("OK\n");
     else
         puts("FAIL\n");
@@ -52,7 +57,7 @@ int main(int argc, char *argv[])
     int verbose = 10;
     
     vfile_verbose = &verbose;
-    vfile_configure("/tmp", -1);
+    vfile_configure(VFILE_CONF_CACHEDIR, "/tmp");
     
     
     

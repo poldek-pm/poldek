@@ -75,36 +75,81 @@ void (*vfile_msgtty_fn)(const char *fmt, ...) = vfmsg;
 void (*vfile_msg_fn)(const char *fmt, ...) = vfmsg;
 void (*vfile_err_fn)(const char *fmt, ...) = vfmsg;
 
+tn_hash *vfile_default_clients_ht = NULL;
 
 struct vfile_conf_s {
-    char *cachedir;
-    unsigned flags;
-    unsigned mod_fetch_flags;   /* passed to mod->fetch() */
+    char      *cachedir;
+    unsigned  flags;
+    unsigned  mod_fetch_flags;   /* passed to mod->fetch() */
 };
 
 static struct vfile_conf_s vfile_conf = { "/tmp", 0, 0 };
 
-void vfile_configure(const char *cachedir, int flags) 
+
+int vfile_configure(int param, ...) 
 {
-    int n, len = 0;
+    va_list  ap;
+    int      v, rc;
+    char     *vs;
+
     
-    if (cachedir) {
-        vfile_conf.cachedir = n_strdup(cachedir);
-        len = strlen(vfile_conf.cachedir);
-        if (vfile_conf.cachedir[len - 1] == '/')
-            vfile_conf.cachedir[len - 1] = '\0';
+    rc = 1;
+    va_start(ap, param);
+
+    switch (param) {
+        
+        case VFILE_CONF_CACHEDIR:
+            vs = va_arg(ap, char*);
+            if (vs) {
+                vfile_conf.cachedir = n_strdup(vs);
+                v = strlen(vfile_conf.cachedir);
+                if (vfile_conf.cachedir[v - 1] == '/')
+                    vfile_conf.cachedir[v - 1] = '\0';
+            }
+            break;
+            
+        case VFILE_CONF_REALUSERHOST_AS_ANONPASSWD:
+            v = va_arg(ap, int);
+            if (v) 
+                vfile_conf.mod_fetch_flags |= VFMOD_USER_AS_ANONPASSWD;
+            else
+                vfile_conf.mod_fetch_flags &= ~VFMOD_USER_AS_ANONPASSWD;
+            
+            break;
+
+        case VFILE_CONF_DEFAULT_CLIENT: {
+            char *proto, *client;
+
+            proto = va_arg(ap, char *);
+            if (proto)
+                client = va_arg(ap, char *);
+            
+            if (proto && client) {
+                if (strcmp(client, "internal") == 0) {
+                    if (n_hash_exists(vfile_default_clients_ht, proto))
+                        n_hash_remove(vfile_default_clients_ht, proto);
+                } else 
+                    n_hash_replace(vfile_default_clients_ht, proto,
+                                   n_strdup(client));
+            }
+            break;    
+        };
     }
-    
-    if (flags >= 0) {
-        vfile_conf.flags = flags;
-        vfile_conf.mod_fetch_flags = VFMOD_INFINITE_RETR;
-        if (flags & VFILE_REALUSERHOST_AS_ANONPASSWD)
-            vfile_conf.mod_fetch_flags |= VFMOD_USER_AS_ANONPASSWD;
-    }
-    
+
+    va_end(ap);
+    return rc;
+}
+
+
+void vfile_init(void) 
+{
+    int n;
+
     n = 0;
     while (vfmod_tab[n] != NULL)
         vfmod_tab[n++]->init();
+
+    vfile_default_clients_ht = n_hash_new(7, free);
 }
 
 
@@ -194,37 +239,22 @@ const struct vf_module *find_vf_module(int urltype)
 }
 
 static
-const struct vf_module *select_vf_module(int urltype) 
+const struct vf_module *select_vf_module(const char *path) 
 {
     const struct vf_module *mod = NULL;
+    char proto[64];
 
+    vf_url_proto(proto, sizeof(proto), path);
     
-    switch (urltype) {
-        case VFURL_FTP:
-            if ((vfile_conf.flags & VFILE_USEXT_FTP) == 0)
-                mod = find_vf_module(urltype);
-            break;
-            
-        case VFURL_HTTP:
-            if ((vfile_conf.flags & VFILE_USEXT_HTTP) == 0)
-                mod = find_vf_module(urltype);
-            break;
-
-        case VFURL_HTTPS:
-            mod = find_vf_module(urltype);
-            break;
-
-        default:
-            mod = NULL;
-    }
-
-    if (mod == NULL && vfile_configured_handlers() == 0)
+    if (!n_hash_exists(vfile_default_clients_ht, proto)) {
+        unsigned urltype = vf_url_type(path);
         mod = find_vf_module(urltype);
+    }
     
     return mod;
 }
 
-int vfile_fetcha(const char *destdir, tn_array *urls, int urltype) 
+int vfile_fetcha(const char *destdir, tn_array *urls) 
 {
     const struct vf_module *mod = NULL;
     int rc = 1;
@@ -232,12 +262,8 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype)
     if (!vf_mkdir(destdir))
         return 0;
     
-    n_assert(urltype > 0);
-    if (urltype == VFURL_UNKNOWN) 
-        urltype = vf_url_type(n_array_nth(urls, 0));
-    
-    if ((mod = select_vf_module(urltype)) == NULL) {
-        rc = vfile_fetcha_ext(destdir, urls, urltype);
+    if ((mod = select_vf_module(n_array_nth(urls, 0))) == NULL) {
+        rc = vfile_fetcha_ext(destdir, urls);
         
     } else {
         int i;
@@ -259,7 +285,7 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype)
 }
 
 
-int vfile_fetch(const char *destdir, const char *path, int urltype) 
+int vfile_fetch(const char *destdir, const char *path) 
 {
     const struct vf_module *mod = NULL;
     int rc;
@@ -267,12 +293,8 @@ int vfile_fetch(const char *destdir, const char *path, int urltype)
     if (!vf_mkdir(destdir))
         return 0;
 
-    n_assert(urltype > 0);
-    if (urltype == VFURL_UNKNOWN) 
-        urltype = vf_url_type(path);
-
-    if ((mod = select_vf_module(urltype)) == NULL)
-        rc = vfile_fetch_ext(destdir, path, urltype);
+    if ((mod = select_vf_module(path)) == NULL)
+        rc = vfile_fetch_ext(destdir, path);
     
     else {
         char destpath[PATH_MAX];
@@ -567,7 +589,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
         if (!vf_mkdir(tmpdir))
             return 0;
 
-        if (vfile_fetch(tmpdir, path, urltype)) {
+        if (vfile_fetch(tmpdir, path)) {
             char tmpath[PATH_MAX], upath[PATH_MAX];;
 
             snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,

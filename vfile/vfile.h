@@ -34,14 +34,21 @@ extern void (*vfile_msg_fn)(const char *fmt, ...);
 extern void (*vfile_msgtty_fn)(const char *fmt, ...);
 extern void (*vfile_err_fn)(const char *fmt, ...);
 
-#define VFILE_USEXT_FTP    (1 << 0)
-#define VFILE_USEXT_HTTP   (1 << 1)
-#define VFILE_USEXT_HTTPS  (1 << 2)
+//#define VFILE_USEXT_FTP    (1 << 0)
+//#define VFILE_USEXT_HTTP   (1 << 1)
+//#define VFILE_USEXT_HTTPS  (1 << 2)
 
-#define VFILE_REALUSERHOST_AS_ANONPASSWD (1 << 5)
+//#define VFILE_REALUSERHOST_AS_ANONPASSWD (1 << 5)
 
+void vfile_init(void);
+
+#define VFILE_CONF_CACHEDIR                     0
+#define VFILE_CONF_DEFAULT_CLIENT               1
+#define VFILE_CONF_REALUSERHOST_AS_ANONPASSWD   2
+
+int vfile_configure(int param, ...);
 /* if any of args is not NULL or -1 then set up it */
-void vfile_configure(const char *cachedir, int flags);
+//void vfile_configure(const char *cachedir, int flags);
 
 
 #define VFT_IO       1             /* open(2)                   */
@@ -119,23 +126,25 @@ int vfile_unlink(struct vfile *vf);
 #define VFURL_CDROM   (1 << 6)
 
 #define VFURL_LOCAL    (VFURL_CDROM | VFURL_PATH)
-#define VFURL_REMOTE   (VFURL_FTP | VFURL_HTTP | VFURL_HTTPS | VFURL_RSYNC)
+#define VFURL_REMOTE   ~(VFURL_LOCAL)
 
 
 #define vfile_is_remote(vf) ((vf)->vf_urltype & VFURL_REMOTE)
 
 /* external downloaders */
-int vfile_register_ext_handler(unsigned urltypes, const char *fmt);
+int vfile_register_ext_handler(const char *name, tn_array *protocols,
+                               const char *cmd);
 int vfile_configured_handlers(void);
 
-int vfile_fetch_ext(const char *destdir, const char *url, int urltype);
-int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype);
+int vfile_fetch_ext(const char *destdir, const char *url);
+int vfile_fetcha_ext(const char *destdir, tn_array *urls);
 
-int vfile_fetch(const char *destdir, const char *url, int urltype);
-int vfile_fetcha(const char *destdir, tn_array *urls, int urltype);
+int vfile_fetch(const char *destdir, const char *url);
+int vfile_fetcha(const char *destdir, tn_array *urls);
 
 
 int vf_url_type(const char *url);
+char *vf_url_proto(char *proto, int size, const char *url);
 int vf_url_as_dirpath(char *buf, size_t size, const char *url);
 int vf_url_as_path(char *buf, size_t size, const char *url);
 
