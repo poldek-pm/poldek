@@ -61,11 +61,12 @@ struct poclidek_cmd command_quit = {
 
 static volatile sig_atomic_t shDone   = 0;
 static volatile sig_atomic_t shInCmd  = 0;
+static int shQuit = 0;          /* cmd_quit */
 static char *histfile;
 
-#define COMPLETITION_CTX_NONE            0
-#define COMPLETITION_CTX_AVAILABLE       1
-#define COMPLETITION_CTX_UPGRADEABLE     2
+#define COMPLETITION_CTX_NONE            0 /* current directory */
+#define COMPLETITION_CTX_AVAILABLE       1 /* /all-avail */
+#define COMPLETITION_CTX_UPGRADEABLE     2 
 #define COMPLETITION_CTX_INSTALLED       3
 
 struct sh_ctx {
@@ -127,7 +128,6 @@ char *command_generator(const char *text, int state)
     struct poclidek_cmd tmpcmd;
 
 	tmpcmd.name = (char*)text;
-
     if (state == 0) {
         len = strlen(text);
         if (len == 0)
@@ -153,9 +153,14 @@ char *arg_generator(const char *text, int state, int genpackages)
     static int           i, len;
     char                 *name = NULL;
     tn_array             *ents;
-    
-    ents = sh_ctx.cctx->currdir->pkg_dent_ents;
-    if (!genpackages) {
+
+    if (genpackages) {
+        if (sh_ctx.completion_ctx == COMPLETITION_CTX_INSTALLED)
+            ents = poclidek_get_dent_ents(sh_ctx.cctx, POCLIDEK_INSTALLEDDIR);
+        else
+            ents = sh_ctx.cctx->currdir->pkg_dent_ents;
+        
+    } else {
         ents = sh_ctx.cctx->rootdir->pkg_dent_ents;
         // completion through directory tree, NFY
         //const char *path = text ? n_dirname(n_strdup(text)) : n_strdup(".");
@@ -164,6 +169,9 @@ char *arg_generator(const char *text, int state, int genpackages)
         //printf("path %s, ents = %d, %s\n", path, ents ? n_array_size(ents) : 0, text);
         //free(path);
     }
+    
+    if (ents == NULL)
+        return NULL;
     
     //printf("text %s\n", text); 
     if (state == 0) {
@@ -251,7 +259,7 @@ char **poldek_completion(const char *text, int start, int end)
     while (isspace(*p))
         p++;
     
-    if (*p) {
+    if (*p) {  /* alias context should be configurable, TODO */
         if (strncmp(p, "un", 2) == 0) /* uninstall cmd */
             sh_ctx.completion_ctx = COMPLETITION_CTX_INSTALLED;
         
@@ -262,13 +270,13 @@ char **poldek_completion(const char *text, int start, int end)
             sh_ctx.completion_ctx = COMPLETITION_CTX_UPGRADEABLE;
         
         else 
-            sh_ctx.completion_ctx = COMPLETITION_CTX_AVAILABLE;
+            sh_ctx.completion_ctx = COMPLETITION_CTX_NONE;
     }
     
-    if (start == 0 || strchr(p, ' ') == NULL) 
+    if (start == 0 || strchr(p, ' ') == NULL) {
         matches = rl_completion_matches(text, command_generator);
-    
-    else {
+        
+    } else {
         if (strncmp(p, "cd ", 3) == 0)
             matches = rl_completion_matches(text, dirname_generator);
         else 
@@ -291,7 +299,7 @@ static
 int cmd_quit(struct cmdctx *cmdctx)
 {
     cmdctx = cmdctx;
-    shDone = 1;
+    shQuit = 1;
     return 1;
 }
 
@@ -315,6 +323,7 @@ static int init_shell(struct poclidek_ctx *cctx)
     poldek_term_init();
     sh_ctx.completion_ctx = COMPLETITION_CTX_NONE;
     sh_ctx.cctx = cctx;
+    cctx->_flags |= POLDEKCLI_UNDERIMODE;
     poclidek_add_command(cctx, &command_reload);
     return poclidek_add_command(cctx, &command_quit);
 }
@@ -401,6 +410,9 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         
         signal(SIGTERM, shell_end);
         signal(SIGQUIT, shell_end);
+
+        if (shQuit)
+            shDone = 1;
     }
 
     if (histfile) 
