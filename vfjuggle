@@ -1,160 +1,169 @@
-#! /bin/sh
+#!/bin/sh
 # $Id$
-# Enviroment: 
-# VF_MNTPOINT - the default is /cdrom
-# VF_MNTDEV   - the default is empty
-# VF_EJECT    - e.g. VF_EJECT="ziptool -e /dev/zip", 
-#                    VF_EJECT="cdeject -d $VF_MNTDEV"
+# Enviroment:
+# VF_MNTDEV	- the default is empty
+#			VF_MNTDEV=/dev/hdd
+# VF_MNTPOINT	- the default is /cdrom
+#			VF_MNTPOINT=/mnt/cdrom
+# VF_MOUNT	- the default is mount
+#			VF_MOUNT="eject -t [$VF_MNTDEV]; hdparm -E 4 $VF_MNTDEV; mount"
+# VF_UMOUNT	= the default is umount
+# VF_EJECT	- the default is empty
+#			VF_EJECT="eject [$VF_MNTDEV]"
+#			VF_EJECT="ziptool -e /dev/zip",
+#			VF_EJECT="cdeject -d $VF_MNTDEV"
 
-cdid() 
+cdid()
 {
-    URI=`echo $1 | sed 's@^cdrom://@@'`
-    CDID=`echo $URI | sed 's@/.*@@'`
-    URI=`echo $URI | sed 's@[^/]*/@@'`
-    BN=`basename $URI`
-    
-    #echo "$1 -> uri $URI, id $CDID"
-    if [ -z "$URI" -o -z "$CDID" ]; then
-	echo "$1: URL syntax error"
-	exit 1
-    fi
+	URI=${1#cdrom://}
+	CDID=`echo $URI | sed 's@/.*@@'`
+	URI=`echo $URI | sed 's@[^/]*/@@'`
+	BN=`basename $URI`
+
+	#echo "$1 -> uri $URI, id $CDID"
+	if [ -z "$URI" -o -z "$CDID" ]; then
+		echo "$1: URL syntax error"
+		exit 1
+	fi
 }
 
 mount_()
 {
-    typeset id=$1
-
-    if [ -f "$VF_MNTPOINT/$id" ]; then
-	return 0
-    fi
-
-    $VF_MOUNT $VF_MNTDEV $VF_MNTPOINT 2>/dev/null 
-    if [ -f "$VF_MNTPOINT/$id" ]; then
-	return 0
-    fi
-	    
-    while true; do
-	echo "Umounting $id $VF_MNTPOINT/$id $VF_MNTPOINT..."
-	$VF_UMOUNT $VF_MNTPOINT
-	
-	if [ -n "$VF_EJECT" ]; then
-	    "$VF_EJECT"
-	fi    
-
-	echo "Insert the $id disk into drive you're using, and press ENTER"
-	read k
-	if [ $? -ne 0 ]; then
-	    echo "read error; this should not happen, give up."
-	    exit 1
-        fi
-
-	echo "Mounting $VF_MNTDEV $VF_MNTPOINT..."
-	$VF_MOUNT $VF_MNTDEV $VF_MNTPOINT
-	typeset rc=$?
+	typeset id=$1
 
 	if [ -f "$VF_MNTPOINT/$id" ]; then
-	    return 0
+		return 0
+	fi
 
-	elif [ $rc -eq 0 ]; then
-	    echo "Not a $id disk"
-	fi    
-    done
+	eval $VF_MOUNT $VF_MNTDEV $VF_MNTPOINT 2>/dev/null
+	if [ -f "$VF_MNTPOINT/$id" ]; then
+		return 0
+	fi
+
+	while true; do
+		echo "Umounting $VF_MNTPOINT..."
+		$VF_UMOUNT $VF_MNTPOINT
+
+		if [ -n "$VF_EJECT" ]; then
+			"$VF_EJECT"
+		fi
+
+		echo "Insert the $id disk into drive you're using, and press ENTER"
+		read
+		if [ $? -ne 0 ]; then
+			echo "read error; this should not happen, give up."
+			exit 1
+		fi
+
+		echo "Mounting $VF_MNTDEV $VF_MNTPOINT..."
+		eval $VF_MOUNT $VF_MNTDEV $VF_MNTPOINT
+		typeset rc=$?
+
+		if [ -f "$VF_MNTPOINT/$id" ]; then
+			return 0
+		elif [ $rc -eq 0 ]; then
+			echo "Not a $id disk"
+		fi
+	done
 }
 
 must_be_copied() {
-    case "$1" in
-	Packages*|packages.dir|packages.dir.*)
-	    return 0 
-	    ;;
-	
-	*)
-	    return 1
-    esac
-    return 1
+	case "$1" in
+		Packages*|packages.dir|packages.dir.*)
+			return 0
+			;;
+
+		*)
+			return 1
+	esac
 }
 
 usage()
 {
-    echo "usage: `basename $0` DESTDIR [cdrom://DISK_ID_FILE/PATH...]"
+	echo "usage: `basename $0` DESTDIR [cdrom://DISK_ID_FILE/PATH...]"
 }
 
 
 #
-# main 
-# 
+# main
+#
 
 if [ -f ~/.vfjugglerc ]; then
-  . ~/.vfjugglerc
+	. ~/.vfjugglerc
 fi
 
-PATH="/bin:/usr/bin:/usr/sbin:/sbin"
+PATH="/bin:/usr/bin:/sbin:/usr/sbin"
 
 VF_MNTPOINT=${VF_MNTPOINT:-"/cdrom"}
 if [ ! -d "$VF_MNTPOINT" ]; then
-    echo "$VF_MNTPOINT: no such directory"
-    exit 1
+	echo "$VF_MNTPOINT: no such directory"
+	exit 1
 fi
 
-if [ -n "$VF_MNTDEV" ]; then #   by default run mount $VF_MNTPOINT only 
-    if [ ! -b "$VF_MNTDEV" ]; then
-	echo "$VF_MNTDEV: no such device"
-	exit 1
-    fi
+if [ -n "$VF_MNTDEV" ]; then #	by default run mount $VF_MNTPOINT only
+	if [ ! -b "$VF_MNTDEV" ]; then
+		echo "$VF_MNTDEV: no such device"
+		exit 1
+	fi
 fi
 
 VF_MOUNT=${VF_MOUNT:-"mount"}
 VF_UMOUNT=${VF_UMOUNT:-"umount"}
 
 if [ "$#" = 0 ]; then
-    usage
-    exit 0
+	usage
+	exit 0
 fi
 
 DESTDIR=$1; shift;
-if [ ! -d "$DESTDIR" ]; then 
-    echo "$DESTDIR: no such directory"
-    exit 1
+if [ ! -d "$DESTDIR" ]; then
+	echo "$DESTDIR: no such directory"
+	exit 1
 fi
 
 #echo "POLDEK_VFJUGGLE_CPMODE = $POLDEK_VFJUGGLE_CPMODE"
-while  [ $# -gt 0 ]; do
-    URL=$1; shift;
+while [ $# -gt 0 ]; do
+	URL=$1; shift;
 
-    cdid $URL
+	cdid $URL
 
-    if [ -r $DESTDIR/$BN ]; then
-	continue
-    fi
+	if [ -r $DESTDIR/$BN ]; then
+		continue
+	fi
 
+	if [ ! -f "$VF_MNTPOINT/$CDID" ]; then
+		mount_ $CDID
+	fi
 
-    if [ ! -f "$VF_MNTPOINT/$CDID" ]; then 
-	mount_ $CDID
-    fi
+	if [ ! -f "$VF_MNTPOINT/$URI" ]; then
+		echo "$VF_MNTPOINT/$URI: no such file"
+		exit 1
+	fi
 
-    if [ ! -f "$VF_MNTPOINT/$URI" ]; then
-	echo "$VF_MNTPOINT/$URI: no such file"
-	exit 1
-    fi
+	if must_be_copied $BN; then
+		POLDEK_VFJUGGLE_CPMODE="copy"
+	fi
 
-    if must_be_copied $BN; then
-	POLDEK_VFJUGGLE_CPMODE="copy"
-    fi
+#	we only check if "$POLDEK..." == "copy", "link" != "copy"
+#	and "" != "copy" too, so this condition is not needed I think
 
-    if [ -z "$POLDEK_VFJUGGLE_CPMODE" ]; then
-	POLDEK_VFJUGGLE_CPMODE="link"
-    fi
+#	if [ -z "$POLDEK_VFJUGGLE_CPMODE" ]; then
+#		POLDEK_VFJUGGLE_CPMODE="link"
+#	fi
 
-    if [ "$POLDEK_VFJUGGLE_CPMODE" == "copy" ]; then
-#	 echo "cp $VF_MNTPOINT/$URI $DESTDIR/"
-         cp -L --remove-destination $VF_MNTPOINT/$URI $DESTDIR/
-    else 	 
-#	 echo ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$BN"
-	 ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$BN"
-    fi
-	
-    if [ $? -ne 0 ]; then
-	exit 1
-    fi
+	if [ "$POLDEK_VFJUGGLE_CPMODE" == "copy" ]; then
+#		echo "cp -L --remove-destination $VF_MNTPOINT/$URI $DESTDIR/"
+		cp -L --remove-destination $VF_MNTPOINT/$URI $DESTDIR/
+	else
+#		echo "ln -sf $VF_MNTPOINT/$URI $DESTDIR/"
+		ln -sf $VF_MNTPOINT/$URI $DESTDIR/
+	fi
+
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 done
 exit 0
-    
+
+# This must be last line !
+# vi:ts=8
