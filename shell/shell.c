@@ -149,6 +149,12 @@ int shpkg_cmp(struct shpkg *p1, struct shpkg *p2)
     return strcmp(p1->nevr, p2->nevr);
 }
 
+int shpkg_cmp_rev(struct shpkg *p1, struct shpkg *p2) 
+{
+    return -strcmp(p1->nevr, p2->nevr);
+}
+
+
 int shpkg_ncmp_str(struct shpkg *pkg, const char *name) 
 {
     return strncmp(pkg->nevr, name, strlen(name));
@@ -156,19 +162,31 @@ int shpkg_ncmp_str(struct shpkg *pkg, const char *name)
 
 int shpkg_cmp_btime(struct shpkg *p1, struct shpkg *p2)
 {
-    return p1->pkg->btime - p2->pkg->btime;
+    register int cmprc;
+
+    cmprc = p1->pkg->btime - p2->pkg->btime;
+    if (cmprc == 0)
+        cmprc = shpkg_cmp(p1, p2);
+
+    return cmprc;
 }
 
 int shpkg_cmp_btime_rev(struct shpkg *p1, struct shpkg *p2)
 {
-    return p2->pkg->btime - p1->pkg->btime;
+    return -shpkg_cmp_btime(p1, p2);
 }
 
 int shpkg_cmp_bday(struct shpkg *p1, struct shpkg *p2)
 {
-    return ((p1->pkg->btime + gmt_off) / 86400) -
+    register int cmprc;
+    
+    cmprc = ((p1->pkg->btime + gmt_off) / 86400) -
         ((p2->pkg->btime + gmt_off) / 86400);
-        
+    
+    if (cmprc == 0)
+        cmprc = shpkg_cmp(p1, p2);
+    
+    return cmprc;
 }
 
 int shpkg_cmp_bday_rev(struct shpkg *p1, struct shpkg *p2)

@@ -27,6 +27,7 @@ struct shpkg *shpkg_link(struct shpkg *shpkg);
 void shpkg_free(struct shpkg *shpkg);
 
 int shpkg_cmp(struct shpkg *p1, struct shpkg *p2);
+int shpkg_cmp_rev(struct shpkg *p1, struct shpkg *p2);
 int shpkg_ncmp_str(struct shpkg *pkg, const char *name);
 int shpkg_cmp_btime(struct shpkg *p1, struct shpkg *p2);
 int shpkg_cmp_btime_rev(struct shpkg *p1, struct shpkg *p2);

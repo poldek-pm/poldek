@@ -196,7 +196,10 @@ static int ls(struct cmdarg *cmdarg)
     
     if (shpkgs && shpkgs != av_shpkgs)
         n_array_free(shpkgs);
-
+    
+    if (av_shpkgs == cmdarg->sh_s->avpkgs)
+        n_array_sort(av_shpkgs);
+    
     return rc;
 }
 
@@ -208,7 +211,7 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
     int                  compare_ver = 0;
     int                  term_width, term_width_div2;
     unsigned             flags;
-    
+    tn_fn_cmp            cmpf = NULL;
 
     if (n_array_size(shpkgs) == 0) 
         return 0;
@@ -249,13 +252,13 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
     
     hdr[sizeof(hdr) - 2] = '\n';
     compare_ver = flags & OPT_LS_UPGRADEABLE_VER;
-
+    
     if (flags & (OPT_LS_SORTBUILDTIME | OPT_LS_SORTBUILDAY)) {
-        tn_fn_cmp cmpf = (tn_fn_cmp)shpkg_cmp_btime;
+        cmpf = (tn_fn_cmp)shpkg_cmp_btime;
         
         if (flags & OPT_LS_SORTREV)
             cmpf = (tn_fn_cmp)shpkg_cmp_btime_rev;
-
+        
         if (flags & OPT_LS_SORTBUILDAY) {
             cmpf = (tn_fn_cmp)shpkg_cmp_bday;
 
@@ -263,9 +266,12 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
                 cmpf = (tn_fn_cmp)shpkg_cmp_bday_rev;
         }
         
-
-        n_array_isort_ex(shpkgs, cmpf);
+    } else if (flags & OPT_LS_SORTREV) {
+        cmpf = (tn_fn_cmp)shpkg_cmp_rev;
     }
+
+    if (cmpf) 
+        n_array_sort_ex(shpkgs, cmpf);
     
     size = 0;
     for (i=0; i<n_array_size(shpkgs); i++) {
@@ -342,6 +348,7 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
         }
         npkgs++;
     }
+    
 
     if (flags & OPT_LS_LONG && n_array_size(shpkgs)) {
         char *unit;
