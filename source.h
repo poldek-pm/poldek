@@ -29,14 +29,20 @@ struct source {
     char      *name;            /* source name */
     char      *path;            /* path to idx */
     char      *pkg_prefix;      /* packages prefix path */
+    int       _refcnt;
 };
 
-struct source *source_new(const char *path, const char *pkg_prefix);
+struct source *source_malloc(void);
+struct source *source_new(const char *pathspec, const char *pkg_prefix);
 void source_free(struct source *src);
-int source_cmp(struct source *s1, struct source *s2);
-int source_cmp_name(struct source *s1, struct source *s2);
-int source_cmp_pri(struct source *s1, struct source *s2);
-int source_cmp_pri_name(struct source *s1, struct source *s2);
+struct source *source_link(struct source *src);
+struct source *source_set_pkg_prefix(struct source *src, const char *prefix);
+
+int source_cmp(const struct source *s1, const struct source *s2);
+int source_cmp_uniq(const struct source *s1, const struct source *s2);
+int source_cmp_name(const struct source *s1, const struct source *s2);
+int source_cmp_pri(const struct source *s1, const struct source *s2);
+int source_cmp_pri_name(const struct source *s1, const struct source *s2);
 
 #define PKGSOURCE_UP      (1 << 0)
 #define PKGSOURCE_UPA     (1 << 1)

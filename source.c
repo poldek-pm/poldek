@@ -27,6 +27,8 @@
 
 #include <vfile/vfile.h>
 
+#define ENABLE_TRACE 0
+
 #include "pkgdir.h"
 #include "source.h"
 #include "misc.h"
@@ -123,6 +125,67 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
 }
 
 
+struct source *source_malloc(void)
+{
+    struct source *src;
+    
+    src = n_malloc(sizeof(*src));
+    memset(src, '\0', sizeof(*src));
+
+    src->type = PKGSRCT_NIL;
+    src->flags = src->subopt_flags = 0;
+    src->pri = 0;
+    src->no = 0;
+    //src->flags |= PKGSOURCE_PRI;
+    src->name = src->path = src->pkg_prefix = NULL;
+    src->_refcnt = 0;
+
+    return src;
+}
+
+
+struct source *source_link(struct source *src) 
+{
+    src->_refcnt++;
+    return src;
+}
+
+
+void source_free(struct source *src)
+{
+    if (src->_refcnt > 0) {
+        src->_refcnt--;
+        return;
+    }
+    
+    if (src->path)    
+        free(src->path);
+    
+    if (src->pkg_prefix)
+        free(src->pkg_prefix);
+    
+    if (src->name)
+        free(src->name);
+    free(src);
+}
+
+struct source *source_set_pkg_prefix(struct source *src, const char *prefix)
+{
+    char  clprefix[PATH_MAX];
+    int   n;
+
+    n_assert(prefix);
+    n_assert(src->pkg_prefix == NULL);
+    
+    if ((n = vf_cleanpath(clprefix, sizeof(clprefix), prefix)) == 0 ||
+        n == sizeof(clprefix))
+        return NULL;
+    
+    
+    src->pkg_prefix = n_strdup(clprefix);
+    return src;
+}
+
 struct source *source_new(const char *pathspec, const char *pkg_prefix)
 {
     struct source   *src;
@@ -133,9 +196,9 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     char            clpath[PATH_MAX], clprefix[PATH_MAX];
     int             n;
     unsigned        flags = 0;
-    
+
+
     p = pathspec;
-    
     while (*p && *p != '|' && !isspace(*p))
         p++;
 
@@ -186,15 +249,12 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
             return NULL;
     }
     
-    src = n_malloc(sizeof(*src));
-    src->flags = src->subopt_flags = 0;
+    src = source_malloc();
     src->path = n_strdup(clpath);
     if (pkg_prefix)
         src->pkg_prefix = n_strdup(clprefix);
     else
         src->pkg_prefix = NULL;
-    src->type = PKGSRCT_NIL;
-    src->pri = 0;
     
     if ((q = strchr(name, ','))) {
         const char **tl, **t;
@@ -243,30 +303,38 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     return src;
 }
 
-void source_free(struct source *src)
-{
-    free(src->path);
-    if (src->pkg_prefix)
-        free(src->pkg_prefix);
-    if (src->name)
-        free(src->name);
-    free(src);
-}
 
 
-int source_cmp(struct source *s1, struct source *s2)
+int source_cmp(const struct source *s1, const struct source *s2)
 {
+    n_assert(s1->path);
+    n_assert(s2->path);
+    
     return strcmp(s1->path, s2->path);
 }
 
 
-int source_cmp_pri(struct source *s1, struct source *s2)
+int source_cmp_uniq(const struct source *s1, const struct source *s2)
+{
+    register int rc;
+    
+    if ((rc = source_cmp(s1, s2)) == 0) 
+        logn(LOGWARN, _("remove duplicated source %s%s%s"),
+             (s2->flags & PKGSOURCE_ISNAMED) ? s2->name : "",
+             (s2->flags & PKGSOURCE_ISNAMED) ? " -- " : "",
+             s2->path);
+    
+    return rc;
+}
+
+
+int source_cmp_pri(const struct source *s1, const struct source *s2)
 {
     return s1->pri - s2->pri;
 }
 
 
-int source_cmp_name(struct source *s1, struct source *s2)
+int source_cmp_name(const struct source *s1, const struct source *s2)
 {
     if (strcmp(s1->name, "-") == 0)
         return 1;
@@ -278,7 +346,7 @@ int source_cmp_name(struct source *s1, struct source *s2)
 }
 
 
-int source_cmp_pri_name(struct source *s1, struct source *s2)
+int source_cmp_pri_name(const struct source *s1, const struct source *s2)
 {
     int rc;
     
@@ -421,7 +489,7 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
             n += n_snprintf(&str[n], size - n, ",");
             // n += n_snprintf(&str[n], size - n, "%s,", opt->name);
 
-        } else if (opt->flag & PKGSOURCE_PRI) {
+        } else if ((opt->flag & PKGSOURCE_PRI)) {
             if (src->pri) {
                 n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s", opt->name);
                 n += n_snprintf(&str[n], size - n, "=%d,", src->pri);
@@ -512,7 +580,12 @@ int sources_clean(tn_array *sources, unsigned flags)
 
 int sources_add(tn_array *sources, struct source *src) 
 {
-    src->no = n_array_size(sources);
+    if (src->no == 0)
+        src->no = n_array_size(sources) * 10;
+    
+    DBGF("%p %s (%d) %s\n", sources, src->name ? src->name: "-", src->no,
+         src->path ? src->path:"null");
+         
     n_array_push(sources, src);
     return n_array_size(sources);
 }
@@ -531,7 +604,10 @@ void sources_score(tn_array *sources)
 
     for (i=0; i < n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
-        if (src->pri == 0)
+        if (src->pri == 0) {
             src->pri = src->no + pri_min + 1;
+            if (src->pri < 0)   /* set to default 0 */
+                src->pri = 0;
+        }
     }
 }

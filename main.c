@@ -138,7 +138,7 @@ struct args {
     char      *curr_src_path;
     int       curr_src_type;
     tn_array  *sources;         /* --source args */
-    tn_array  *source_names;    /* --sn args */
+    tn_array  *sources_named;   /* --sn args */
     
     int       idx_type;
     char      *idx_path;
@@ -528,15 +528,18 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_PKGSET:
             n_array_push(argsp->pkgdef_sets, arg);
             break;
-
-        case 'n':
-            n_array_push(argsp->source_names, arg);
-            break;
-
+            
         case 'l':
             if (argsp->mjrmode != MODE_SRCLIST)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_SRCLIST;
+            break;
+
+        case 'n':
+            src = source_malloc();
+            src->name = n_strdup(arg);
+            src->flags |= PKGSOURCE_ISNAMED;
+            sources_add(argsp->sources, src);
             break;
             
         case OPT_SOURCETXT:     /* no break */
@@ -549,34 +552,43 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_SOURCEHDL:     /* no break */
             if (source_type == PKGSRCT_NIL)
                 source_type = PKGSRCT_HDL;
-            
+
         case 's':
-            if (argsp->curr_src_path) { /* no prefix for curr_src_path */
-                src = source_new(argsp->curr_src_path, NULL);
-                src->type = argsp->curr_src_type;
-                sources_add(argsp->sources, src);
-            }
-            
+            // (argsp->curr_src_path) { /* no prefix for curr_src_path */
             argsp->curr_src_path = prepare_path(arg);
             argsp->curr_src_type = source_type;
+            
+            src = source_new(argsp->curr_src_path, NULL);
+            src->type = source_type;
+            sources_add(argsp->sources, src);
             break;
 
         case 'P':
             if (argsp->curr_src_path == NULL) {
                 logn(LOGERR, _("prefix option should be preceded by source one"));
                 exit(EXIT_FAILURE);
-            }
-            
-            if (argsp->curr_src_type == PKGSRCT_DIR) {
+                
+            } else if (argsp->curr_src_type == PKGSRCT_DIR) {
                 logn(LOGERR, _("prefix for directory source makes no sense"));
                 exit(EXIT_FAILURE);
+                
+            } else {
+                struct source *src;
+            
+                src = n_array_pop(argsp->sources);
+                if (src->flags & PKGSOURCE_ISNAMED) {
+                    logn(LOGERR, _("dupa"));
+                    exit(EXIT_FAILURE);
+                }
+                
+                if (!source_set_pkg_prefix(src, trimslash(arg)))
+                    exit(EXIT_FAILURE);
+                
+                n_array_push(argsp->sources, src);
+                argsp->curr_src_path = NULL;
+                argsp->curr_src_type = PKGSRCT_NIL;
             }
             
-            src = source_new(argsp->curr_src_path, trimslash(arg));
-            src->type = argsp->curr_src_type;
-            sources_add(argsp->sources, src);
-            argsp->curr_src_path = NULL;
-            argsp->curr_src_type = PKGSRCT_NIL;
             break;
 
             
@@ -1001,27 +1013,36 @@ void poldek_reinit(void)
 
 static
 int addsource(tn_array *sources, struct source *src,
-              tn_array *src_names, int *matches) 
+              int justaddit, tn_array *srcs_named, int *matches) 
 {
     int rc = 0;
     
-    if (n_array_size(src_names) == 0) {
+    if (n_array_size(srcs_named) == 0 || justaddit) {
         sources_add(sources, src);
         rc = 1;
                 
     } else {
         int i;
+        int added = 0;
         
-        for (i=0; i<n_array_size(src_names); i++) {
-            char *sn = n_array_nth(src_names, i);
-            
-            if (fnmatch(sn, src->name, 0) == 0) {
+        for (i=0; i < n_array_size(srcs_named); i++) {
+            struct source *s = n_array_nth(srcs_named, i);
+
+            if (fnmatch(s->name, src->name, 0) == 0) {
+                matches[i]++;
+                if (added)
+                    continue;
+                
                 /* given by name -> clear flags */
                 src->flags &= ~(PKGSOURCE_NOAUTO | PKGSOURCE_NOAUTOUP);
+
+                /* reproritize */
+                src->no = s->no + matches[i];
+                src->pri = 0;
+                
                 sources_add(sources, src);
-                matches[i]++;
+                added = 1;
                 rc = 1;
-                break;
             }
         }
     }
@@ -1029,25 +1050,69 @@ int addsource(tn_array *sources, struct source *src,
     return rc;
 }
 
-        
+
 static
-int get_conf_sources(tn_array *sources, tn_array *src_names, tn_hash *htcnf)
+int prepare_sources(tn_array *sources, tn_hash *htcnf)
 {
     struct source   *src;
-    int             i, nerr;
+    int             i, rc;
     int             *matches = NULL, is_multi = 0;
     char            *v;
-    
+    tn_array        *srcs_path, *srcs_named;
 
-    if (n_array_size(src_names) > 0) {
-        matches = alloca(n_array_size(src_names) * sizeof(int));
-        memset(matches, 0, n_array_size(src_names) * sizeof(int));
-    }
     
+    sources_score(sources);
+    
+    srcs_path = n_array_clone(sources);
+    srcs_named = n_array_clone(sources);
+    
+    for (i=0; i < n_array_size(sources); i++) {
+        src = n_array_nth(sources, i);
+        if (src->flags & PKGSOURCE_ISNAMED) /* supplied by -n */
+            n_array_push(srcs_named, source_link(src));
+        else
+            n_array_push(srcs_path, source_link(src));
+    }
+
+    rc = get_conf_sources(srcs_path, srcs_named, htcnf);
+    n_array_free(srcs_named);
+    n_array_clean(sources);
+
+    for (i=0; i < n_array_size(srcs_path); i++) {
+        struct source *src = n_array_nth(srcs_path, i);
+        n_array_push(sources, source_link(src));
+    }
+
+    n_array_free(srcs_path);
+    n_array_sort(sources);
+    n_array_uniq_ex(sources, (tn_fn_cmp)source_cmp_uniq);
+    
+    sources_score(sources);
+    
+    return rc;
+}
+
+ 
+int get_conf_sources(tn_array *sources, tn_array *srcs_named, tn_hash *htcnf)
+{
+    struct source   *src;
+    int             i, nerr, getall = 0;
+    int             *matches = NULL, is_multi = 0;
+    char            *v;
+
+
+    if (n_array_size(srcs_named) == 0 && n_array_size(sources) == 0)
+        getall = 1;
+    
+    else if (n_array_size(srcs_named) > 0) {
+        matches = alloca(n_array_size(srcs_named) * sizeof(int));
+        memset(matches, 0, n_array_size(srcs_named) * sizeof(int));
+    }
+
     if ((v = conf_get(htcnf, "source", &is_multi))) {
         if (is_multi == 0) {
             src = source_new(v, NULL);
-            if (!addsource(sources, src, src_names, matches))
+            if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
             
         } else {
@@ -1055,7 +1120,7 @@ int get_conf_sources(tn_array *sources, tn_array *src_names, tn_hash *htcnf)
             if ((paths = conf_get_multi(htcnf, "source"))) {
                 while (n_array_size(paths)) {
                     src = source_new(n_array_shift(paths), NULL);
-                    if (!addsource(sources, src, src_names, matches))
+                    if (!addsource(sources, src, getall, srcs_named, matches))
                         source_free(src);
                 }
             }
@@ -1071,24 +1136,31 @@ int get_conf_sources(tn_array *sources, tn_array *src_names, tn_hash *htcnf)
             snprintf(opt, sizeof(opt), "prefix%d", i);
             src = source_new(src_val, conf_get(htcnf, opt, NULL));
             
-            if (!addsource(sources, src, src_names, matches))
+            if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
         }
     }
 
 
     nerr = 0;
-    for (i=0; i < n_array_size(src_names); i++) {
+    for (i=0; i < n_array_size(srcs_named); i++) {
         if (matches[i] == 0) {
-            logn(LOGERR, _("%s: no such source"),
-                 (char*)n_array_nth(src_names, i));
+            struct source *src = n_array_nth(srcs_named, i);
+            logn(LOGERR, _("%s: no such source"), src->name);
             nerr++;
         }
     }
 
+    if (nerr == 0 && getall)
+        for (i=0; i < n_array_size(sources); i++) {
+            struct source *src = n_array_nth(sources, i);
+            src->no = i;
+        }
+
+
     return nerr == 0;
 }
-
+    
 
 static void get_conf_opt_list(const char *name, tn_array *tolist) 
 {
@@ -1123,7 +1195,6 @@ void parse_options(int argc, char **argv)
     memset(&args, 0, sizeof(args));
 
     args.sources = n_array_new(4, (tn_fn_free)source_free, (tn_fn_cmp)source_cmp);
-    args.source_names = n_array_new(4, NULL, (tn_fn_cmp)strcmp);
     args.curr_src_path = NULL;
     args.curr_src_type = PKGSRCT_NIL;
     args.idx_path = NULL;
@@ -1147,18 +1218,11 @@ void parse_options(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    if (args.curr_src_path) { 
-        struct source *src = source_new(args.curr_src_path, NULL);
-        src->type = args.curr_src_type;
-        sources_add(args.sources, src);
-    }
-    
-#if 0
-    if (n_array_size(args.sources) && n_array_size(args.source_names)) {
-        logn(LOGERR, _("--source and --sn are exclusive"));
-        exit(EXIT_FAILURE);
-    }
-#endif
+    //if (args.curr_src_path) { 
+    //   struct source *src = source_new(args.curr_src_path, NULL);
+    //    src->type = args.curr_src_type;
+    //    sources_add(args.sources, src);
+    //}
     
     if (args.conf_path != NULL)
         htcnf = ldconf(args.conf_path);
@@ -1166,26 +1230,15 @@ void parse_options(int argc, char **argv)
         htcnf = ldconf_deafult();
 
     
-    if (args.mjrmode == MODE_SRCLIST)
-        n_array_clean(args.source_names);
-    else {
-        n_array_sort(args.source_names);
-        n_array_uniq(args.source_names);
-    }
-
-    
-    if (n_array_size(args.sources) == 0 || n_array_size(args.source_names) > 0) {
-        if (!get_conf_sources(args.sources, args.source_names, htcnf))
-            exit(EXIT_FAILURE);
-    }
-    
+    if (!prepare_sources(args.sources, htcnf))
+        exit(EXIT_FAILURE);
+        
 
     if (n_array_size(args.sources) == 0) {
         logn(LOGERR, _("no source specified"));
         exit(EXIT_FAILURE);
     }
 
-    sources_score(args.sources);
     if (args.mjrmode == MODE_SRCLIST) {
         print_source_list(args.sources);
         exit(EXIT_SUCCESS);
@@ -1347,7 +1400,7 @@ static void print_source_list(tn_array *sources)
     int i;
 
     n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_pri_name);
-    for (i=0; i<n_array_size(sources); i++)
+    for (i=0; i < n_array_size(sources); i++)
         source_printf(n_array_nth(sources, i));
     n_array_sort(sources);
 }
