@@ -667,19 +667,18 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
     const char      *group;
     double          pkgsize;
     
-    if ((pkgu = pkg_info(pkg)) == NULL) {
-        log(LOGERR, _("%s: description unavailable (index without packages "
-                      "info loaded?)\n"), pkg_snprintf_s(pkg));
-        return;
+    if ((pkgu = pkg_info(pkg)) == NULL && verbose > 1) {
+        log(LOGWARN, _("%s: description unavailable (index without packages "
+                       "info loaded?)\n"), pkg_snprintf_s(pkg));
     }
-        
+    
     
     if (pkg->btime)
         pkg_strbtime(timbuf, sizeof(timbuf), pkg);
     else
         *timbuf = '\0';
 
-    if (pkgu->summary) {
+    if (pkgu && pkgu->summary) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Summary:");
         cmdctx_printf(cmdctx, "%s\n", pkgu->summary);
     }
@@ -689,12 +688,12 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
         cmdctx_printf(cmdctx, "%s\n", group);
     }
 
-    if (pkgu->vendor) {
+    if (pkgu && pkgu->vendor) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Vendor:");
         cmdctx_printf(cmdctx, "%s\n", pkgu->vendor);
     }
 
-    if (pkgu->license) {
+    if (pkgu && pkgu->license) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "License:");
         cmdctx_printf(cmdctx, "%s\n", pkgu->license);
     }
@@ -713,7 +712,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
         cmdctx_printf(cmdctx, "\n");
     }
         
-    if (pkgu->url) {
+    if (pkgu && pkgu->url) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "URL:");
         cmdctx_printf(cmdctx, "%s\n", pkgu->url);
     }
@@ -722,7 +721,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
     if (*timbuf) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Built:");
         cmdctx_printf(cmdctx, "%s", timbuf);
-        if (pkgu->buildhost) 
+        if (pkgu && pkgu->buildhost) 
             cmdctx_printf(cmdctx, " at %s", pkgu->buildhost);
         cmdctx_printf(cmdctx, "\n");
     }
@@ -764,13 +763,13 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
 
     show_pkg(cmdctx, pkg, flags);
         
-    if (pkgu->description) {
+    if (pkgu && pkgu->description) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "Description:\n");
         cmdctx_printf(cmdctx, "%s\n", pkgu->description);
     }
-            
-    pkguinf_free(pkgu);
 
+    if (pkgu)
+        pkguinf_free(pkgu);
 }
 
 
@@ -798,7 +797,7 @@ static int desc(struct cmdctx *cmdctx)
 
         cmdctx_printf(cmdctx, "\n");
         cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, "%-16s", "Package:");
-        cmdctx_printf(cmdctx, "%s\n", pkg_snprintf_s(pkg));
+        cmdctx_printf(cmdctx, "%s\n", pkg_snprintf_epoch_s(pkg));
         
         if (cmdctx->_flags & OPT_DESC_DESCR) 
             show_description(cmdctx, pkg, cmdctx->_flags);
