@@ -41,7 +41,7 @@ int vf_lockfile(const char *lockfile)
     struct flock fl;
     int    fd;
     
-    
+    DBGF("%s\n", lockfile);
     if ((fd = open(lockfile, O_RDWR | O_CREAT, 0644)) < 0) {
         vf_logerr("open %s: %m", lockfile);
         return 0;
@@ -117,60 +117,64 @@ int vf_lock_obtain(const char *path)
     return fd;
 }
 
-void vf_lock_release(int fd) 
+void vf_lock_release(struct vflock *vflock) 
 {
-    
-    //vf_loginfo("vf_lock_release %d\n", fd);
-    if (fd > 0)
-        close(fd);
+    DBGF("%d %s\n", vflock->fd, vflock->path);
+    if (vflock->fd > 0)
+        close(vflock->fd);
+    vf_unlink(vflock->path);
+    free(vflock);
 }
 
-int vf_lockdir(const char *path) 
+struct vflock *vf_lockdir(const char *path) 
 {
-    char lockpath[PATH_MAX];
-    int fd;
-    
-    n_snprintf(lockpath, sizeof(lockpath), "%s/.lock", path);
-        
+    char lockpath[PATH_MAX], lockfile[PATH_MAX];
+    struct vflock *vflock = NULL;
+    int fd, n;
+
+    vf_url_as_dirpath(lockfile, sizeof(lockfile), path);
+    n = n_snprintf(lockpath, sizeof(lockpath), "%s/.vflock_%s", path, lockfile);
+    n_assert(n > 10 && n < sizeof(lockpath) - 5);
     if (!(fd = vf_lock_obtain(lockpath))) {
         vf_loginfo(_("Unable to obtain lock %s...\n"), lockpath);
-        return 0;
+        return NULL;
     }
-    //n_assert(fd < 10);
-            
-    return fd;
+    vflock = n_malloc(sizeof(*vflock) + n + 1);
+    vflock->fd = fd;
+    memcpy(vflock->path, lockpath, n + 1);
+    return vflock;
 }
 
 
-int vf_lock_mkdir(const char *path) 
+struct vflock *vf_lock_mkdir(const char *path) 
 {
     char tmp[PATH_MAX], *dn, *bn;
-    int fd, lockfd = 0;
+    struct vflock *vflock = NULL, *subdir_vflock = NULL;
     struct stat st;
+    
 
     if (!vf_valid_path(path))
-        return 0;
-
+        return NULL;
     
     if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
         return vf_lockdir(path);
 
     DBGF("** vf_lock_mkdir %s\n", path);
-    if (strcmp(path, "/home/mis/.poldek-cache") == 0)
+    if (strcmp(path, "/home/mis") == 0)
         n_assert(0);
     
     n_snprintf(tmp, sizeof(tmp), "%s", path);
     n_basedirnam(tmp, &dn, &bn);
 
-    if (!(fd = vf_lockdir(dn)))
-        return 0;
+    if ((subdir_vflock = vf_lockdir(dn)) == NULL)
+        return NULL;
 
     if (mkdir(path, 0750) != 0)
         vf_logerr("%s: mkdir: %m\n", path);
     else 
-        lockfd = vf_lockdir(path);
-        
-    vf_lock_release(fd);
-    return lockfd;
+        vflock = vf_lockdir(path);
+    
+    vf_lock_release(subdir_vflock);
+    return vflock;
 }
 

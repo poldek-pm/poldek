@@ -6,9 +6,22 @@
 int vf_fetch_ext(const char *url, const char *destdir);
 int vf_fetcha_ext(tn_array *urls, const char *destdir);
 
-int vf_lockdir(const char *path);
-int vf_lock_mkdir(const char *path);
-void vf_lock_release(int fd);
+struct vflock {
+    int fd;
+    char path[0];
+};
+
+struct vflock *vf_lockdir(const char *path);
+void vf_lock_release(struct vflock *vflock);
+struct vflock *vf_lock_mkdir(const char *path);
+
+
+#ifndef VFILE_LOG_INFO
+#define VFILE_LOG_INFO  (1 << 0)
+#define VFILE_LOG_WARN  (1 << 1)
+#define VFILE_LOG_ERR   (1 << 2)
+#define VFILE_LOG_TTY   (1 << 8)
+#endif
 
 void vf_log(int pri, const char *fmt, ...);
 void vf_vlog(int pri, const char *fmt, va_list ap);

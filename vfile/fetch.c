@@ -343,12 +343,13 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 const char *url /* or */, tn_array *urls)
 {
     char              *bn = NULL, **argv;
+    struct vflock     *vflock = NULL;
     struct p_open_st  pst;
-    int               i, n, ec, verbose, lockfd;
+    int               i, n, ec, verbose;
     unsigned          p_open_flags = 0;
 
 
-    if (!(lockfd = vf_lock_mkdir(destdir)))
+    if ((vflock = vf_lock_mkdir(destdir)) == NULL)
         return 0;
 
     if (url)
@@ -468,8 +469,8 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     }
     
     *vfile_verbose = verbose;
-    if (lockfd)
-        vf_lock_release(lockfd);
+    if (vflock)
+        vf_lock_release(vflock);
     return ec == 0;
 }
 
@@ -480,6 +481,11 @@ int vfile_register_ext_handler(const char *name, tn_array *protocols,
     struct ffetcher *ftch;
     int i;
     
+    if (ffetchers && n_hash_exists(ffetchers, name)) {
+        vf_log(VFILE_LOG_WARN, "%s: fetcher already exists, not overwritten\n", name);
+        return 0;
+    }
+    
     if ((ftch = ffetcher_new(name, protocols, cmd)) == NULL) {
         vf_logerr("External downloader '%s': registration failed\n", cmd);
         
@@ -488,7 +494,7 @@ int vfile_register_ext_handler(const char *name, tn_array *protocols,
             ffetchers = n_hash_new(21, (tn_fn_free)ffetcher_free);
             ffetchers_proto_idx = n_hash_new(21, (tn_fn_free)n_array_free);
         }
-        
+
         n_hash_insert(ffetchers, name, ftch);
         
         for (i=0; i < n_array_size(protocols); i++) {

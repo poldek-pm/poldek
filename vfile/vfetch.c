@@ -211,7 +211,8 @@ int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
 {
     const struct vf_module *mod = NULL;
     const char *destdir = NULL;
-    int rc, lockfd = 0;
+    struct vflock *vflock = NULL;
+    int rc;
 
     if (dest_dir)
         destdir = dest_dir;
@@ -231,7 +232,7 @@ int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
         struct vf_request *req = NULL;
         char destpath[PATH_MAX];
 
-        if (!(lockfd = vf_lock_mkdir(destdir)))
+        if ((vflock = vf_lock_mkdir(destdir)) == NULL)
             return 0;
         
         snprintf(destpath, sizeof(destpath), "%s/%s", destdir, n_basenam(url));
@@ -304,8 +305,8 @@ int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
     }
     
  l_end:
-    if (lockfd)
-        vf_lock_release(lockfd);
+    if (vflock)
+        vf_lock_release(vflock);
     return rc;
 }
 

@@ -290,7 +290,8 @@ static int file_ok(const char *path, int vfmode)
 static const char *vfdecompr(const char *path, char *dest, int size) 
 {
     char *destdir, destdir_buf[PATH_MAX], uncmpr_path[PATH_MAX];
-    int  len, lockfd, rc;
+    struct vflock *vflock;
+    int  len, rc;
     
     
     *dest = '\0';
@@ -321,12 +322,12 @@ static const char *vfdecompr(const char *path, char *dest, int size)
         
     //printf("DEST %s = %s\n", path, dest);
     n_assert(destdir);
-    if (!(lockfd = vf_lock_mkdir(destdir)))
+    if ((vflock = vf_lock_mkdir(destdir)) == NULL)
         return NULL;
     
     rc = vf_extdecompress(path, dest);
 
-    vf_lock_release(lockfd);
+    vf_lock_release(vflock);
     return rc ? dest : NULL;
 }
 
