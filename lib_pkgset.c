@@ -43,11 +43,11 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
 
     n_assert(ctx->ps == NULL);
     
-    if ((ps = pkgset_new(ctx->inst->ps_flags)) == NULL)
+    if ((ps = pkgset_new(ctx->ps_flags)) == NULL)
         return 0;
 
     if (load_dbdepdirs) {
-        if (rpmdb_get_depdirs(ctx->inst->rootdir, ps->depdirs) >= 0)
+        if (rpmdb_get_depdirs(ctx->ts->rootdir, ps->depdirs) >= 0)
             ps->flags |= PSDBDIRS_LOADED;
     }
     
@@ -62,33 +62,19 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
         return 0;
     
     
-    if ((ctx->inst->flags & INSTS_NOHOLD) == 0) {
-        packages_score(ps->pkgs, ctx->inst->hold_patterns, PKG_HELD);
-        
-        if (n_array_size(ctx->inst->hold_patterns) == 0) {
-            n_array_free(ctx->inst->hold_patterns);
-            ctx->inst->hold_patterns = NULL;
-        }
-    }
+    if ((ctx->ts->flags & POLDEK_TS_NOHOLD) == 0)
+        packages_score(ps->pkgs, ctx->ts->hold_patterns, PKG_HELD);
 
-    if ((ctx->inst->flags & INSTS_NOIGNORE) == 0) {
-        packages_score(ps->pkgs, ctx->inst->ign_patterns, PKG_IGNORED);
-            n_array_free(ctx->inst->ign_patterns);
-            ctx->inst->ign_patterns = NULL;
-    }
+    if ((ctx->ts->flags & POLDEK_TS_NOIGNORE) == 0)
+        packages_score(ps->pkgs, ctx->ts->ign_patterns, PKG_IGNORED);
     
     //exit(0);    
-    pkgset_setup(ps, ctx->inst->ps_setup_flags);
-
-    if (ctx->inst->prifile) 
-        packages_set_priorities(ps->pkgs, ctx->inst->prifile);
+    pkgset_setup(ps, ctx->ps_setup_flags);
+    
+    if (ctx->ts->prifile) 
+        packages_set_priorities(ps->pkgs, ctx->ts->prifile);
 
     ctx->ps = ps;
     ctx->pkgs = n_ref(ps->pkgs);
     return 1;
-}
-
-int poldek_mark_usrset(struct poldek_ctx *ctx, struct usrpkgset *ups, int withdeps)
-{
-    return pkgset_mark_usrset(ctx->ps, ups, ctx->inst->flags, withdeps);
 }

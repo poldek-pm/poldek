@@ -50,6 +50,7 @@
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
+#include "poldek.h"
 #include "misc.h"
 
 
@@ -224,7 +225,7 @@ int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
 #endif /* HAVE_FORKPTY */
 
 
-int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst) 
+int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts) 
 {
     char **argv;
     char *cmd;
@@ -237,14 +238,14 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
     n = 0;
 
     
-    if (!packages_fetch(pkgs, inst->cachedir, 0))
+    if (!packages_fetch(pkgs, ts->cachedir, 0))
         return 0;
     
-    if (inst->flags & INSTS_RPMTEST) {
+    if (ts->flags & POLDEK_TS_RPMTEST) {
         cmd = "/bin/rpm";
         argv[n++] = "rpm";
         
-    } else if (inst->flags & INSTS_USESUDO) {
+    } else if (ts->flags & POLDEK_TS_USESUDO) {
         cmd = "/usr/bin/sudo";
         argv[n++] = "sudo";
         argv[n++] = "/bin/rpm";
@@ -254,23 +255,23 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
         argv[n++] = "rpm";
     }
     
-    if (inst->flags & (INSTS_UPGRADE | INSTS_REINSTALL | INSTS_DOWNGRADE))
+    if (ts->flags & (POLDEK_TS_UPGRADE | POLDEK_TS_REINSTALL | POLDEK_TS_DOWNGRADE))
         argv[n++] = "--upgrade";
         
-    else if (inst->flags & INSTS_INSTALL)
+    else if (ts->flags & POLDEK_TS_INSTALL)
         argv[n++] = "--install";
         
     else
         die();
 
-    if (inst->flags & INSTS_REINSTALL) {
-        n_assert(inst->flags & INSTS_INSTALL);
+    if (ts->flags & POLDEK_TS_REINSTALL) {
+        n_assert(ts->flags & POLDEK_TS_INSTALL);
         argv[n++] = "--replacefiles";
         argv[n++] = "--replacepkgs";
     }
 
-    if (inst->flags & INSTS_DOWNGRADE) {
-        n_assert(inst->flags & INSTS_INSTALL);
+    if (ts->flags & POLDEK_TS_DOWNGRADE) {
+        n_assert(ts->flags & POLDEK_TS_INSTALL);
         argv[n++] = "--oldpackage";
     }
 
@@ -285,39 +286,40 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
     while (nv-- > 0) 
         argv[n++] = "-v";
     
-    if (inst->flags & INSTS_RPMTEST)
+    if (ts->flags & POLDEK_TS_RPMTEST)
         argv[n++] = "--test";
     
-    if (inst->flags & INSTS_JUSTDB)
+    if (ts->flags & POLDEK_TS_JUSTDB)
         argv[n++] = "--justdb";
         
-    if (inst->flags & INSTS_FORCE)
+    if (ts->flags & POLDEK_TS_FORCE)
         argv[n++] = "--force";
     
-    if (inst->flags & INSTS_NODEPS)
+    if (ts->flags & POLDEK_TS_NODEPS)
         argv[n++] = "--nodeps";
 	
-    if (inst->rootdir) {
+    if (ts->rootdir) {
     	argv[n++] = "--root";
-	argv[n++] = (char*)inst->rootdir;
+	argv[n++] = (char*)ts->rootdir;
     }
 
     argv[n++] = "--noorder";    /* packages always ordered by me */
 
-    if (inst->rpmacros) 
-        for (i=0; i<n_array_size(inst->rpmacros); i++) {
+    if (ts->rpmacros) 
+        for (i=0; i<n_array_size(ts->rpmacros); i++) {
             argv[n++] = "--define";
-            argv[n++] = n_array_nth(inst->rpmacros, i);
+            argv[n++] = n_array_nth(ts->rpmacros, i);
         }
     
-    if (inst->rpmopts) 
-        for (i=0; i<n_array_size(inst->rpmopts); i++)
-            argv[n++] = n_array_nth(inst->rpmopts, i);
+    if (ts->rpmopts) 
+        for (i=0; i < n_array_size(ts->rpmopts); i++)
+            argv[n++] = n_array_nth(ts->rpmopts, i);
 
+    
     nsignerr = 0;
     nopts = n;
-    for (i=0; i < n_array_size(ps->ordered_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
+    for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
         if (pkg_is_marked(pkg)) {
             char path[PATH_MAX], *s, *name;
             char *pkgpath = pkg->pkgdir->path;
@@ -333,7 +335,7 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
                 char buf[1024];
                 
                 vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
-                len = n_snprintf(path, sizeof(path), "%s/%s/%s", inst->cachedir,
+                len = n_snprintf(path, sizeof(path), "%s/%s/%s", ts->cachedir,
                                buf, name);
             }
 
@@ -348,8 +350,8 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
     }
 
     if (nsignerr) {
-        if ((inst->flags & (INSTS_INTERACTIVE_ON)) && inst->ask_fn) {
-            if (!inst->ask_fn(0,
+        if ((ts->flags & (POLDEK_TS_INTERACTIVE_ON)) && ts->ask_fn) {
+            if (!ts->ask_fn(0,
                               _("There were signature verification errors. "
                                 "Proceed? [y/N]")))
                 goto l_err_end;
@@ -366,7 +368,7 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
         char buf[1024], *p;
         p = buf;
         
-        for (i=0; i<nopts; i++) 
+        for (i=0; i < nopts; i++) 
             p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
         *p = '\0';
         msgn(1, _("Executing%s..."), buf);
@@ -375,12 +377,12 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
     
     ec = rpmr_exec(cmd, argv, 1, 1);
     
-    if (ec == 0 && (inst->flags & INSTS_RPMTEST) == 0 &&
-        (inst->flags & INSTS_KEEP_DOWNLOADS) == 0) {
+    if (ec == 0 && (ts->flags & POLDEK_TS_RPMTEST) == 0 &&
+        (ts->flags & POLDEK_TS_KEEP_DOWNLOADS) == 0) {
         
         n = nopts;
-        for (i=0; i < n_array_size(ps->ordered_pkgs); i++) {
-            struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
+        for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
+            struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
             int url_type;
             
             if (!pkg_is_marked(pkg))

@@ -3,12 +3,13 @@
 #include "cli.h"
 #include "op.h"
 
-struct poclidek_opgroup_rt *poclidek_opgroup_rt_new(struct poldekcli_ctx *cctx)
+struct poclidek_opgroup_rt *poclidek_opgroup_rt_new(struct poldek_ts *ts)
 {
     struct poclidek_opgroup_rt *rt;
 
     rt = n_malloc(sizeof(*rt));
-    rt->cctx = cctx;
+    rt->ctx = ts->ctx;
+    rt->ts = ts;
     rt->_opdata = NULL;
     rt->_opdata_free = NULL;
     return rt;
@@ -22,5 +23,5 @@ void poclidek_opgroup_rt_free(struct poclidek_opgroup_rt *rt)
         rt->_opdata = NULL;
     }
     
-    rt->cctx = NULL;
+    rt->ctx = NULL;
 };

@@ -20,6 +20,7 @@
 
 #include "i18n.h"
 #include "pkgdb.h"
+#include "poldek_ts.h"
 #include "rpm/rpm.h"
 
 struct pkgdb *pkgdb_open(const char *rootdir, const char *path, mode_t mode)
@@ -88,22 +89,22 @@ int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, int strict,
 }
 
 
-int pkgdb_install(struct pkgdb *db, const char *path, unsigned flags) 
+int pkgdb_install(struct pkgdb *db, const char *path, unsigned tsflags) 
 {
     unsigned instflags = 0, filterflags = 0, transflags = 0;
 
     n_assert(db->dbh);
 
-    if (flags & PKGINST_NODEPS) 
+    if (tsflags & POLDEK_TS_NODEPS) 
         instflags |= INSTALL_NODEPS;
     
-    if (flags & PKGINST_JUSTDB) 
+    if (tsflags & POLDEK_TS_JUSTDB) 
         transflags |= RPMTRANS_FLAG_JUSTDB;
     
-    if (flags & PKGINST_TEST) 
+    if (tsflags & POLDEK_TS_TEST) 
         transflags |= RPMTRANS_FLAG_TEST;
     
-    if (flags & PKGINST_FORCE) 
+    if (tsflags & POLDEK_TS_FORCE) 
         filterflags |= RPMPROB_FILTER_REPLACEPKG |
             RPMPROB_FILTER_REPLACEOLDFILES |
             RPMPROB_FILTER_REPLACENEWFILES |

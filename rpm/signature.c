@@ -171,8 +171,9 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
 #ifdef HAVE_RPMCHECKSIG         /* 4.0.x series */
 
 #ifdef HAVE_RPM_4_1
-# error "dupa"
+# error "shouldn't happen"      /* 4.1 hasnt't rpmCheckSig */
 #endif
+
 int rpm_verify_signature(const char *path, unsigned flags) 
 {
     const char *argv[2];

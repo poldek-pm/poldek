@@ -23,6 +23,8 @@ struct pkguinf {
     
     tn_hash           *_ht;
     tn_array          *_langs;
+    tn_array          *_langs_rpmhdr; /* v018x legacy: for preserving
+                                         the langs order */
     int               _refcnt;
 };
 

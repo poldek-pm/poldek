@@ -57,20 +57,20 @@ static char args_doc[] = N_("[PACKAGE...]");
 
 /* The options we understand. */
 static struct argp_option common_options[] = {
-{0,0,0,0, N_("Other:"), 2500},    
+{0,0,0,0, N_("Other:"), 10500 },    
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
-                          "let user choose among equivalent packages"), 2500 },
-{"noask", OPT_NOASK, 0, 0, N_("Don't ask about anything"), 2500 }, 
+                          "let user choose among equivalent packages"), 10500 },
+{"noask", OPT_NOASK, 0, 0, N_("Don't ask about anything"), 10500 }, 
 
-{"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), 2500 }, 
-{"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 2500 }, 
+{"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), 10500 }, 
+{"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 10500 }, 
 
 {"version", OPT_BANNER, 0, 0, N_("Display program version information and exit"),
-     2500 },    
-{"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), 2500 },
+     10500 },    
+{"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), 10500 },
 //{"v016", OPT_V016, 0, 0, N_("Read indexes created by versions < 0.17"), 500 },
-{0,  'v', 0, 0, N_("Be verbose."), 2500 },
-{0,  'q', 0, 0, N_("Do not produce any output."), 2500 },
+{0,  'v', 0, 0, N_("Be verbose."), 10500 },
+{0,  'q', 0, 0, N_("Do not produce any output."), 10500 },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -109,6 +109,8 @@ static struct poclidek_opgroup *poclidek_opgroup_tab[] = {
     &poclidek_opgroup_source,
     &poclidek_opgroup_packages,
     &poclidek_opgroup_install,
+    &poclidek_opgroup_uninstall,
+    &poclidek_opgroup_makeidx,
     NULL
 };
 
@@ -116,7 +118,7 @@ static struct poclidek_opgroup *poclidek_opgroup_tab[] = {
 struct args {
     struct poldek_ctx    *ctx;
     struct poldekcli_ctx *cctx;
-    
+    struct poldek_ts     *ts;  
     int       mjrmode;
     unsigned  mnrmode;
 
@@ -272,25 +274,21 @@ void parse_options(struct poldekcli_ctx *cctx, int argc, char **argv)
     args.argv = n_malloc(sizeof(*argv) * argc);
     args.argv[0] = NULL;
 
-    //argp_parse(poclidek_opgroup_install.argp, argc, argv, 0, 0, &args);
-    //return 0;
-
+    args.ts = poldek_ts_new(cctx->ctx);
     n = 0;
     while (poclidek_opgroup_tab[n])
         n++;
 
-    printf("n = %d\n", n);
     child = alloca((n + 2) * sizeof(*child));
     args.opgroup_rts = n_array_new(n, NULL, NULL);
     
     for (i=0; i < n; i++) {
         struct poclidek_opgroup_rt *rt;
         child[i] = *(poclidek_opgroup_tab[i]->argp_child);
-        rt = poclidek_opgroup_rt_new(cctx);
+        rt = poclidek_opgroup_rt_new(args.ts);
         rt->run = poclidek_opgroup_tab[i]->run;
         n_array_push(args.opgroup_rts, rt);
     }
-    printf("i = %d\n", i);
     child[i].argp = NULL;
     argp.children = child;
     
@@ -312,9 +310,10 @@ void parse_options(struct poldekcli_ctx *cctx, int argc, char **argv)
         exit(EXIT_FAILURE);
 
     if (args.cnflags & POLDEKCLI_CMN_NOASK) 
-        poldek_configure_f_clr(args.ctx, INSTS_INTERACTIVE_ON);
+        poldek_ts_setf(args.ctx->ts, POLDEK_TS_INTERACTIVE_ON);
     
-    else if (poldek_configure_f_isset(args.ctx, INSTS_CONFIRM_INST) && verbose < 1)
+    else if (poldek_ts_issetf(args.ctx->ts, POLDEK_TS_CONFIRM_INST) &&
+             verbose < 1)
         verbose = 1;
             
 #if 0
@@ -329,10 +328,6 @@ void parse_options(struct poldekcli_ctx *cctx, int argc, char **argv)
     }
 #endif
     
-    //args.has_pkgdef = n_array_size(args.pkgdef_sets) +
-    //    n_array_size(args.pkgdef_defs) +
-    //    n_array_size(args.pkgdef_files);
-
     for (i=0; i < n_array_size(args.opgroup_rts); i++) {
         int rc;
         struct poclidek_opgroup_rt *rt = n_array_nth(args.opgroup_rts, i);
@@ -340,7 +335,6 @@ void parse_options(struct poldekcli_ctx *cctx, int argc, char **argv)
         rc = 0;
         if (rt->run) {
             int rc;
-            
             rc = rt->run(rt);
             
             if (rc & OPGROUP_RC_FINI)
@@ -374,13 +368,13 @@ int main(int argc, char **argv)
     //if (!poldek_setup(ctx))
     //    exit(EXIT_FAILURE);
 
-    
-    if (!poldekcli_load_packages(&cctx, 1))
-        exit(EXIT_FAILURE);
+    //
+    //if (!poldekcli_load_packages(&cctx, 1))
+    //    exit(EXIT_FAILURE);
 
-    printf("exec %d\n", args.argc);
-    if (args.argc > 0) 
-        rc = poldekcli_exec(&cctx, args.argc, args.argv);
+    //printf("exec %d\n", args.argc);
+    //if (args.argc > 0) 
+    //    rc = poldekcli_exec(&cctx, args.argc, args.argv);
 
     poldekcli_destroy(&cctx);
     return rc;

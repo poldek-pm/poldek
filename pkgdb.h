@@ -9,12 +9,6 @@
 #include "pkg.h"
 #include "rpm/rpm.h"
 
-#define PKGINST_NODEPS        (1 << 1) /* rpm --nodeps */
-#define PKGINST_JUSTDB        (1 << 2) /* rpm --justdb */
-#define PKGINST_TEST          (1 << 3) /* rpm --test */
-#define PKGINST_FORCE         (1 << 6) /* rpm --force */
-#define PKGINST_UPGRADE       (1 << 7) /* rpm -U  */
-
 struct pkgdb {
     void    *dbh;
     char    *path;
@@ -30,7 +24,7 @@ void pkgdb_closedb(struct pkgdb *db);
 int pkgdb_reopendb(struct pkgdb *db);
 void pkgdb_free(struct pkgdb *db);
 
-int pkgdb_install(struct pkgdb *db, const char *path, unsigned flags);
+int pkgdb_install(struct pkgdb *db, const char *path, unsigned tsflags);
 
 int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, int strict,
                     tn_array *excloffs);

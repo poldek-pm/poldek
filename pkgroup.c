@@ -239,10 +239,11 @@ struct pkgroup *pkgroup_restore(tn_stream *st)
     uint32_t        nid, ntrs;
 	uint8_t         nlen;
     struct pkgroup  *gr;
-    char            name[255];
+    char            name[256];
 
-    if (!n_stream_read_uint32(st, &nid))
+    if (!n_stream_read_uint32(st, &nid)) 
         return 0;
+    
 
     if (!n_stream_read_uint8(st, &nlen))
         return 0;
@@ -250,6 +251,9 @@ struct pkgroup *pkgroup_restore(tn_stream *st)
     if (n_stream_read(st, name, nlen) != nlen)
         return 0;
 
+    name[nlen] = '\0';
+    //dbgf("gid %d, name[%d] = %s\n", nid, nlen, name); 
+    
     if (!n_stream_read_uint32(st, &ntrs))
         return 0;
     

@@ -25,74 +25,139 @@
 #include "misc.h"
 #include "cli.h"
 #include "misc.h"
+#include "op.h"
+
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int uninstall(struct cmdarg *cmdarg);
 
-
-#define OPT_INST_NODEPS  2
-#define OPT_INST_FORCE   3
+#define OPT_GID             2500
+#define OPT_UNINSTALL       'e'
+#define OPT_INST_NODEPS     (OPT_GID + 2)
+#define OPT_INST_FORCE      (OPT_GID + 3)
 
 static struct argp_option options[] = {
-{"force", OPT_INST_FORCE, 0, 0, N_("Be unconcerned"), 1 },
-{"test", 't', 0, 0, N_("Don't uninstall, but tell if it would work or not"), 1 },
+{"force", OPT_INST_FORCE, 0, 0, N_("Be unconcerned"), OPT_GID },
+{"test", 't', 0, 0, N_("Don't uninstall, but tell if it would work or not"), OPT_GID },
 {"nofollow", 'N', 0, 0, N_("Don't automatically remove packages orphaned by "
-                           "selected ones"), 1 },    
-{"nodeps", OPT_INST_NODEPS, 0, 0,
- N_("Ignore broken dependencies"), 1 },
-{0,  'v', 0, 0, N_("Be verbose"), 1 },
-{NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
+                           "selected ones"), OPT_GID },    
+{"nodeps", OPT_INST_NODEPS, 0, 0, N_("Ignore broken dependencies"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
+};
+
+static struct argp_option cmdl_options[] = {
+    {0,0,0,0, N_("Package deinstallation:"), OPT_GID - 100 },
+    {"erase", OPT_UNINSTALL, 0, 0, N_("Uninstall given packages"), OPT_GID - 100 },
+    {"uninstall", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, 11 }, 
+    { 0, 0, 0, 0, 0, 0 },
 };
 
 
 struct command command_uninstall = {
     COMMAND_HASVERBOSE | COMMAND_MODIFIESDB, 
-
     "uninstall", N_("PACKAGE..."), N_("Uninstall packages"), 
-    
     options, parse_opt,
-    
     NULL, uninstall, NULL, NULL, NULL
 };
 
+static struct argp cmd_argp = {
+    options, parse_opt, 0, 0, 0, 0, 0
+};
+
+static struct argp_child cmd_argp_child[2] = {
+    { &cmd_argp, 0, NULL, 0 },
+    { NULL, 0, NULL, 0 },
+};
+
+static
+error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state);
+
+static struct argp poclidek_argp = {
+    cmdl_options, cmdl_parse_opt, 0, 0, cmd_argp_child, 0, 0
+};
+
+
+static 
+struct argp_child poclidek_argp_child = {
+    &poclidek_argp, 0, NULL, OPT_GID,
+};
+
+
+static int cmdl_run(struct poclidek_opgroup_rt *rt);
+
+struct poclidek_opgroup poclidek_opgroup_uninstall = {
+    "Package deinstallation", 
+    &poclidek_argp, 
+    &poclidek_argp_child,
+    cmdl_run
+};
+
+
+struct cmdl_arg_s {
+    struct cmdarg cmdarg;
+};
+
+static
+error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct poclidek_opgroup_rt  *rt;
+    struct poldek_ts            *ts;
+    struct cmdarg               cmdarg;
+
+
+    rt = state->input;
+    ts = rt->ts;
+    arg = arg;
+    
+    cmdarg.ts = rt->ts;
+    
+    switch (key) {
+        case ARGP_KEY_INIT:
+            state->child_inputs[0] = &cmdarg;
+            state->child_inputs[1] = NULL;
+            break;
+
+        case OPT_UNINSTALL:
+            poldek_ts_setf(ts, POLDEK_TS_UNINSTALL);
+            break;
+
+        default:
+            return ARGP_ERR_UNKNOWN;
+            
+    }
+    
+    return 0;
+}
 
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
-    struct cmdarg *cmdarg = state->input;
-    struct poldekcli_ctx *cctx = cmdarg->cctx;
+    struct cmdarg     *cmdarg = state->input;
+    struct poldek_ts  *ts = cmdarg->ts;
     
     arg = arg;
     switch (key) {
-        case ARGP_KEY_INIT:
-            
-            //cmdarg->cctx->pkgset->flags |= PSMODE_UPGRADE;
-            //cmdarg->cctx->pkgset->flags &= ~PSMODE_INSTALL;
-            poldek_configure_f_reset(cctx->ctx);
-            break;
-            
         case 'm':
             //cmdarg->cctx->pkgset->flags |= PSVERIFY_MERCY;
             break;
 
         case OPT_INST_NODEPS:
-            poldek_configure_f(cctx->ctx, INSTS_NODEPS);
+            poldek_ts_setf(ts, POLDEK_TS_NODEPS);
             break;
             
         case OPT_INST_FORCE:
-            poldek_configure_f(cctx->ctx, INSTS_FORCE);
+            poldek_ts_setf(ts, POLDEK_TS_FORCE);
             break;
 
         case 't':
-            if (poldek_configure_f_isset(cctx->ctx, INSTS_TEST))
-                poldek_configure_f(cctx->ctx, INSTS_RPMTEST);
+            if (poldek_ts_issetf(ts, POLDEK_TS_TEST))
+                poldek_ts_setf(ts, POLDEK_TS_RPMTEST);
             else
-                poldek_configure_f(cctx->ctx, INSTS_TEST);
+                poldek_ts_setf(ts, POLDEK_TS_TEST);
             break;
 
         case 'N':
-            poldek_configure_f_clr(cctx->ctx, INSTS_FOLLOW);
+            poldek_ts_clrf(ts, POLDEK_TS_FOLLOW);
             break;
         
         default:
@@ -105,11 +170,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 static int uninstall(struct cmdarg *cmdarg) 
 {
-    struct poldekcli_ctx  *cctx = cmdarg->cctx;
+    struct poldekcli_ctx  *cctx;
+    struct poldek_ts      *ts;
     tn_array              *pkgs = NULL;
-    struct install_info   iinf;
+    struct install_info   iinf, *iinfp;
     int                   i, err = 0;
     
+    
+    cctx = cmdarg->cctx;
+    ts = cmdarg->ts;
     
     if (cctx->instpkgs == NULL) {
         log(LOGERR, "uninstall: installed packages not loaded, "
@@ -131,29 +200,18 @@ static int uninstall(struct cmdarg *cmdarg)
     if (err) 
         goto l_end;
 
-#if 0                           /* DUPA */
-    pkgs = pkgs_array_new(n_array_size(pkgs));
-
-    for (i=0; i<n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-        n_array_push(pkgs, pkg_link(pkg->pkg));
-    }
-#endif
+    for (i=0; i < n_array_size(pkgs); i++)
+        poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
     
-    if (poldek_configure_f_isset(cctx->ctx, INSTS_TEST | INSTS_RPMTEST)) {
-        iinf.installed_pkgs = NULL;
-        iinf.uninstalled_pkgs = pkgs_array_new(16);
-        
-    } else {
-        iinf.installed_pkgs = NULL;
-        iinf.uninstalled_pkgs = NULL;
-    }
+    if (poldek_ts_issetf(ts, POLDEK_TS_TEST | POLDEK_TS_RPMTEST))
+        iinfp = NULL;
+    else
+        iinfp = &iinf;
     
-    if (!packages_uninstall(pkgs, cctx->ctx->inst,
-                            iinf.uninstalled_pkgs ? &iinf : NULL))
+    if (!poldek_ts_do_uninstall(ts, iinfp))
         err++;
     
-    if (poldek_configure_f_isset(cctx->ctx, INSTS_TEST | INSTS_RPMTEST)) {
+    if (iinfp) {
         for (i=0; i < n_array_size(iinf.uninstalled_pkgs); i++) {
             struct pkg *pkg = n_array_nth(iinf.uninstalled_pkgs, i);
             n_array_remove(cmdarg->cctx->instpkgs, pkg);
@@ -162,13 +220,28 @@ static int uninstall(struct cmdarg *cmdarg)
         n_array_sort(cmdarg->cctx->instpkgs);
         //cmdarg->cctx->ts_instpkgs = time(0);
     }
-    
-    if (iinf.uninstalled_pkgs)
-        n_array_free(iinf.uninstalled_pkgs);
+
+    if (iinfp)
+        install_info_destroy(iinfp);
     
  l_end:
     if (pkgs && pkgs != cmdarg->cctx->instpkgs) 
         n_array_free(pkgs);
     
     return err == 0;
+}
+
+
+static int cmdl_run(struct poclidek_opgroup_rt *rt)
+{
+    int rc;
+
+    printf("oprun UNINSTALL\n");
+
+    if (!poldek_ts_issetf(rt->ts, POLDEK_TS_UNINSTALL))
+        return 0;
+
+    rc = poldek_ts_do_uninstall(rt->ts, NULL);
+    printf("oprun UNINSTALL2 = %d\n", rc);
+    return rc ? 0 : OPGROUP_RC_ERROR;
 }

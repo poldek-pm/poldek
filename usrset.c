@@ -83,11 +83,11 @@ static int argvlen(char **argv)
 }
 
 static 
-int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
+int pkgdef_new_str(struct pkgdef **pdefp, const char *str, int str_len,
                    const char *fpath, int nline)
 {
     struct pkgdef      *pdef = NULL;
-    char               *p, *s[1024];
+    char               *p, *s[1024], *buf;
     int                n, tflags = 0, deftyp = 0;
     const char         **tl, **tl_save;
     const char         *evrstr = NULL, *name = NULL, *virtname = NULL;
@@ -95,9 +95,12 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
     int32_t            epoch = 0;
     
 
-    n = buflen;
-    *pdefp = NULL;
     
+    *pdefp = NULL;
+
+    n_strdupap(str, &buf);
+    
+    n = strlen(buf);
     s[0] = NULL;
 
     while (n && isspace(buf[n - 1]))
@@ -301,7 +304,7 @@ int usrpkgset_add_list(struct usrpkgset *ups, const char *fpath)
     return rc;
 }
 
-int usrpkgset_add_str(struct usrpkgset *ups, char *def, int deflen) 
+int usrpkgset_add_str(struct usrpkgset *ups, const char *def, int deflen) 
 {
     struct pkgdef *pdef = NULL;
 

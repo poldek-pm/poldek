@@ -52,10 +52,11 @@
 
 /* The options we understand. */
 static struct argp_option source_options[] = {
-{0,0,0,0, N_("Source selection:"), OPT_SRC_GID },
-{"source", 's', "PATH", 0, N_("Get packages info from SOURCE"), OPT_SRC_GID },
+{0,0,0,0, N_("Source repository selection:"), OPT_SRC_GID },
+{"source", 's', "PATH", 0, N_("Get packages info from repository under PATH"),
+     OPT_SRC_GID },
 {"sn", 'n', "SOURCE-NAME", 0,
-     N_("Get packages info from source named SOURCE-NAME"), OPT_SRC_GID },
+     N_("Get packages info from repository named SOURCE-NAME"), OPT_SRC_GID },
 
 {"sidx", OPT_SRC, "FILE", OPTION_HIDDEN, /* legacy */
  N_("Get packages info from package index file FILE"), OPT_SRC_GID },
@@ -107,7 +108,7 @@ static struct argp_option source_options[] = {
 #define POLDEKCLI_SRC_CLEAN       (1 << 4)
 #define POLDEKCLI_SRC_CLEANA      (1 << 5)
 
-struct args_s {
+struct arg_s {
     unsigned            cnflags;
     struct poldek_ctx   *ctx;
     struct source       *src;
@@ -140,7 +141,7 @@ static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct poclidek_opgroup_rt   *rt;
-    struct args_s *arg_s;
+    struct arg_s *arg_s;
     char *source_type = NULL;
     int source_type_isset = 0;
 
@@ -151,12 +152,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         arg_s = rt->_opdata;
         
     } else {
-        printf("source %p\n", rt);
         arg_s = n_malloc(sizeof(*arg_s));
         arg_s->cnflags = 0;
         arg_s->src = NULL;
         arg_s->curr_src_type = arg_s->curr_src_path = NULL;
-        arg_s->ctx = rt->cctx->ctx;
+        arg_s->ctx = rt->ctx;
         rt->_opdata = arg_s;
         rt->run = oprun;
     }
@@ -167,7 +167,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     switch (key) {
         case 'l':
             arg_s->cnflags |= POLDEKCLI_SRC_SRCLS;
-            printf("OPT -l\n");
             break;
 
         case OPT_SRCTYPE_LS:
@@ -191,12 +190,17 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             source_type_isset = 1;
             
         case OPT_SRCDIR:     /* no break */
-            if (source_type_isset == 0)
+            if (source_type_isset == 0) {
                 source_type = n_strdup("dir");
+                source_type_isset = 1;
+            }
+            
             
         case OPT_SRCHDL:     /* no break */
-            if (source_type_isset == 0)
+            if (source_type_isset == 0) {
                 source_type = n_strdup("hdrl");
+                source_type_isset = 1;
+            }
 
         case 's':
             arg_s->curr_src_path = arg;
@@ -270,9 +274,7 @@ static void print_source_list(tn_array *sources)
 
 static int oprun(struct poclidek_opgroup_rt *rt)
 {
-    struct args_s *arg_s;
-
-    printf("oprun source %p\n", rt);
+    struct arg_s *arg_s;
 
     arg_s = rt->_opdata;
     n_assert(arg_s);
@@ -282,7 +284,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
         if (arg_s->cnflags & POLDEKCLI_SRC_CLEANA)
             flags |= PKGSOURCE_CLEANA;
         
-        sources_clean(rt->cctx->ctx->sources, flags);
+        sources_clean(rt->ctx->sources, flags);
     }
 
     if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE) {
@@ -291,14 +293,14 @@ static int oprun(struct poclidek_opgroup_rt *rt)
         if (arg_s->cnflags & POLDEKCLI_SRC_UPDATEA)
             flags |= PKGSOURCE_UPA;
 
-        sources_update(rt->cctx->ctx->sources, flags);
+        sources_update(rt->ctx->sources, flags);
     }
 
     if (arg_s->cnflags & POLDEKCLI_SRC_SRCTYPE_LS)
         printf("op: srctype ls\n");
 
     if (arg_s->cnflags & POLDEKCLI_SRC_SRCLS)
-        print_source_list(rt->cctx->ctx->sources);
+        print_source_list(rt->ctx->sources);
     
     return 0;
 }

@@ -7,7 +7,7 @@ TRURL_DIR = @TRURL_DIR@
 TNDB_DIR = @TNDB_DIR@
 
 CLI=cli
-SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile shell conf pkgdir rpm . $(CLI)
+SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir rpm . $(CLI)
 DIST_SUBDIRS = $(SUBDIRS)
 
 INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@
@@ -29,7 +29,7 @@ libpoldek_la_SOURCES =  \
 	  fileindex.c fileindex.h	\
 	  capreqidx.c capreqidx.h	\
 	  capreq.c capreq.h 		\
-	  pkgset-load.c      	        \
+	  pkgset-load.c    	        \
 	  pkgset.c		\
 	  pkgset-req.c pkgset-req.h	\
 	  pkgset-order.c    	\
@@ -49,8 +49,8 @@ libpoldek_la_SOURCES =  \
 	  ask.c                 \
 	  uninstall.c           \
 	  lib_init.c            \
-      lib_install.c  	    \
-	  lib_pkgset.c
+	  lib_pkgset.c          \
+	  poldek_ts.c poldek_ts.h	  
 
 pkgincludedir = $(includedir)/poldek
 pkginclude_HEADERS = poldek.h conf.h pkg.h pkgset.h \
@@ -77,24 +77,21 @@ poldek_DEPENDENCIES_ = libpoldek.la vfile/libvfile.la
 
 if ENABLE_INTERACTIVE_MODE
 SHELL_MOD_ = $(SHELL_MOD)
-poldek_DEPENDENCIES = $(poldek_DEPENDENCIES_) $(SHELL_MOD)
+#poldek_DEPENDENCIES = $(poldek_DEPENDENCIES_) $(SHELL_MOD)
 else
 SHELL_MOD_ =
-poldek_DEPENDENCIES = $(poldek_DEPENDENCIES_) $(SHELL_MOD_)
+#poldek_DEPENDENCIES = $(poldek_DEPENDENCIES_) $(SHELL_MOD_)
 endif
 
 LDADD_              = @INTLLIBS@
 
-bin_PROGRAMS        = poldek
-poldek_SOURCES      = main.c
-poldek_LDADD        = $(poldek_DEPENDENCIES) $(SHELL_MOD_) $(LDADD_)
-
-#poldek_get_SOURCES  = main-get.c
-#poldek_get_LDADD    = $(poldek_DEPENDENCIES) $(SHELL_MOD_) $(LDADD_)
+bin_PROGRAMS        =
+#poldek_SOURCES      = main.c
+#poldek_LDADD        = $(poldek_DEPENDENCIES) $(SHELL_MOD_) $(LDADD_)
 
 noinst_PROGRAMS     = test_match
 test_match_SOURCES  = test_match.c
-test_match_LDADD    = $(poldek_LDADD) 
+test_match_LDADD    = libpoldek.la 
 
 vfscripts           = vfjuggle vfuncompr vfsmb
 

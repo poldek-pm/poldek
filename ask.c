@@ -33,7 +33,7 @@
 #include "pkg.h"
 
 
-int ask_yn(int default_a, const char *fmt, ...) 
+int poldek_term_ask_yn(int default_a, const char *fmt, ...) 
 {
     va_list args;
     int a;
@@ -46,7 +46,7 @@ int ask_yn(int default_a, const char *fmt, ...)
     vlog(LOGINFO, 0, fmt, args);
     va_end(args);
     
-    a = askuser(STDIN_FILENO, "YyNn\n", NULL);
+    a = poldek_term_ask(STDIN_FILENO, "YyNn\n", NULL);
     a = toupper(a);
     switch(a) {
         case 'Y': a = 1; break;
@@ -60,7 +60,7 @@ int ask_yn(int default_a, const char *fmt, ...)
 }
 
 
-int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt)
+int poldek_term_ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt)
 {
     int i, a, default_i = 0;
     char *validchrs, *p;
@@ -94,7 +94,7 @@ int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt)
     }
     
     msg(-1, _("Which one do you want to install? [%c]"), 'a' + default_i); 
-    a = askuser(STDIN_FILENO, validchrs, NULL);
+    a = poldek_term_ask(STDIN_FILENO, validchrs, NULL);
     msg(-1, "_\n");
     
     if (a == '\n')

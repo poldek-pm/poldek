@@ -113,4 +113,8 @@ int rpm_verify_signature(const char *path, unsigned flags);
 
 tn_array *rpm_rpmlib_caps(void);
 
+
+int rpmr_exec(const char *cmd, char *const argv[], int ontty,
+              int verbose_level);
+
 #endif

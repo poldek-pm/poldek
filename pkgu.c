@@ -108,10 +108,14 @@ void pkguinf_free(struct pkguinf *pkgu)
 
     if (pkgu->_langs)
         n_array_free(pkgu->_langs);
+
+    if (pkgu->_langs_rpmhdr)
+        n_array_free(pkgu->_langs_rpmhdr);
     
     if (pkgu->_ht)
         n_hash_free(pkgu->_ht);
 
+    pkgu->_langs_rpmhdr = NULL;
     pkgu->_langs = NULL;
     pkgu->_ht = NULL;
     free(pkgu);
@@ -237,7 +241,6 @@ static char *cp_tag(Header h, int rpmtag)
     return t;
 }
 
-
 struct pkguinf *pkguinf_ldhdr(Header h) 
 {
     char               **langs, **summs, **descrs;
@@ -261,6 +264,8 @@ struct pkguinf *pkguinf_ldhdr(Header h)
             n = ndescrs;
 
         avlangs = n_array_new(4, NULL, (tn_fn_cmp)strcmp);
+        pkgu->_langs_rpmhdr = n_array_new(4, free, NULL);
+        
         for (i=0; i < n; i++) {
             struct pkguinf_i18n *inf;
             
@@ -268,12 +273,13 @@ struct pkguinf *pkguinf_ldhdr(Header h)
                 break;
             
             n_array_push(avlangs, langs[i]);
-
+            n_array_push(pkgu->_langs_rpmhdr, n_strdup(langs[i]));
+            
             inf = pkguinf_i18n_new(summs[i], descrs[i]);
             n_hash_insert(pkgu->_ht, langs[i], inf);
         }
         nlangs = n;
-        
+
         sl_langs = lc_lang_select(avlangs, lc_messages_lang());
         if (sl_langs == NULL)
             sl_lang = "C";
@@ -288,7 +294,7 @@ struct pkguinf *pkguinf_ldhdr(Header h)
             pkgu->description = inf->description;
         }
         
-        n_array_free(avlangs);
+        
         if (sl_langs)
             n_array_free(sl_langs);
         
@@ -316,7 +322,8 @@ static Header make_pkguinf_hdr(struct pkguinf *pkgu, int *langs_cnt)
     
 
     hdr = headerNew();
-    langs = pkguinf_langs(pkgu);
+    if ((langs = pkgu->_langs_rpmhdr) == NULL)
+        langs = pkguinf_langs(pkgu);
     
     for (i=0; i < n_array_size(langs); i++) {
         const char *lang = n_array_nth(langs, i);

@@ -66,6 +66,7 @@ int pkg_cmp_lookup(struct pkg *pkg, tn_array *pkgs,
 
 struct cmdarg {
     struct poldekcli_ctx *cctx;     /* common shell_s struct */
+    struct poldek_ts     *ts;
     tn_array         *pkgnames; /* arguments */
     tn_array         *pkgs;     /* resolved arguments */
     

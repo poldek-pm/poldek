@@ -54,24 +54,21 @@ static int install(struct cmdarg *cmdarg);
 
 
 static struct argp_option options[] = {
-{"mercy", 'm', 0, 0, N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
-{"force", OPT_INST_FORCE, 0, 0, N_("Be unconcerned"), OPT_GID },
-{"test", 't', 0, 0, N_("Don't install, but tell if it would work or not"), OPT_GID },
-{"fresh", 'F', 0, 0, N_("Upgrade packages, but only if an earlier version "
-     "currently exists"), OPT_GID },
-
-{"nofollow", 'N', 0, 0, N_("Don't automatically install packages required by "
-     "selected ones"), OPT_GID },
-
-{"greedy", 'G', 0, 0, N_("Automatically upgrade packages which dependencies "
-     "are broken by unistalled ones"), OPT_GID }, 
-    
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
 {"reinstall", OPT_INST_REINSTALL, 0, 0, N_("Reinstall"), OPT_GID }, 
-{"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade"), OPT_GID },     
-
+{"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade"), OPT_GID },
+{"mercy", 'm', 0, 0, N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
+{"force", OPT_INST_FORCE, 0, 0, N_("Be unconcerned"), OPT_GID },
+{"test", 't', 0, 0, N_("Don't install, but tell if it would work or not"),
+     OPT_GID },
+{"fresh", 'F', 0, 0, N_("Upgrade packages, but only if an earlier version "
+                        "currently exists"), OPT_GID },
+{"nofollow", 'N', 0, 0, N_("Don't automatically install packages required by "
+                           "selected ones"), OPT_GID },
+{"greedy", 'G', 0, 0, N_("Automatically upgrade packages which dependencies "
+                         "are broken by unistalled ones"), OPT_GID }, 
 {"fetch", OPT_INST_FETCH, "DIR", OPTION_ARG_OPTIONAL,
-N_("Do not install, only download packages"), OPT_GID },
+     N_("Do not install, only download packages"), OPT_GID },
 
 {"nodeps", OPT_INST_NODEPS, 0, 0,
  N_("Install packages with broken dependencies"), OPT_GID },
@@ -80,6 +77,7 @@ N_("Do not install, only download packages"), OPT_GID },
 {NULL, 'h', 0, OPTION_HIDDEN, "", OPT_GID }, /* alias for -? */
 { 0, 0, 0, 0, 0, 0 },
 };
+
 
 static struct argp_option cmdl_options[] = {
     {0,0,0,0, N_("Package installation:"), OPT_GID - 100 },
@@ -136,13 +134,14 @@ struct cmdl_arg_s {
 static
 error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
 {
-    struct poclidek_opgroup_rt *rt;
-    struct poldekcli_ctx *cctx = NULL;
-    struct cmdl_arg_s *arg_s;
+    struct poclidek_opgroup_rt  *rt;
+    struct poldek_ts            *ts;
+    struct cmdl_arg_s           *arg_s;
 
 
     rt = state->input;
-    cctx = rt->cctx;
+    ts = rt->ts;
+    arg = arg;
     
     if (rt->_opdata != NULL) {
         arg_s = rt->_opdata;
@@ -150,41 +149,35 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
     } else {
         arg_s = n_malloc(sizeof(*arg_s));
         memset(arg_s, 0, sizeof(*arg_s));
-        arg_s->cmdarg.cctx = rt->cctx;
+        arg_s->cmdarg.ts = rt->ts;
         rt->_opdata = arg_s;
-        
     }
     
-    arg = arg;
     switch (key) {
         case ARGP_KEY_INIT:
             state->child_inputs[0] = &arg_s->cmdarg;
             state->child_inputs[1] = NULL;
-            printf("parse_opt0 %p %p\n", state->child_inputs[0], arg_s->cmdarg.cctx);
-            //cmdarg->cctx->pkgset->flags |= PSMODE_UPGRADE;
-            //cmdarg->cctx->pkgset->flags &= ~PSMODE_INSTALL;
-            poldek_configure_f_reset(cctx->ctx);
-            //poldek_configure_f(cctx->ctx, INSTS_UPGRADE);
             break;
 
-
-            
         case OPT_INST_DOWNGRADE:
         case OPT_INST_REINSTALL:
         case 'U':
         case 'u':
         case 'i':
-            poldek_configure_f(cctx->ctx, INSTS_INSTALL);
+            poldek_ts_setf(ts, POLDEK_TS_INSTALL);
 
             if (key == 'u' || key == 'U')
-                poldek_configure_f(cctx->ctx, INSTS_UPGRADE);
+                poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
             
             else if (key == OPT_INST_DOWNGRADE)
-                poldek_configure_f(cctx->ctx, INSTS_DOWNGRADE);
+                poldek_ts_setf(ts, POLDEK_TS_DOWNGRADE);
             
             else if (key == OPT_INST_REINSTALL)
-                poldek_configure_f(cctx->ctx, INSTS_REINSTALL);
+                poldek_ts_setf(ts, POLDEK_TS_REINSTALL);
             break;
+
+        default:
+            return ARGP_ERR_UNKNOWN;
             
     }
     
@@ -194,63 +187,56 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
-    struct cmdarg *cmdarg = state->input;
-    struct poldekcli_ctx *cctx;
+    struct cmdarg         *cmdarg = state->input;
+    struct poldek_ts      *ts;
 
-    //printf("parse_opt  %p %p\n", cmdarg, cmdarg->cctx);
-    cctx = cmdarg->cctx;
+
+    ts = cmdarg->ts;
     
-    
-    arg = arg;
     switch (key) {
-        case ARGP_KEY_INIT:
-            poldek_configure_f_reset(cctx->ctx);
-            //poldek_configure_f(cctx->ctx, INSTS_UPGRADE);
-            break;
-            
         case 'm':
             //cmdarg->cctx->pkgset->flags |= PSVERIFY_MERCY;
             break;
 
         case OPT_INST_NODEPS:
-            poldek_configure_f(cctx->ctx, INSTS_NODEPS);
+            poldek_ts_setf(ts, POLDEK_TS_NODEPS);
             break;
             
         case OPT_INST_FORCE:
-            poldek_configure_f(cctx->ctx, INSTS_FORCE);
+            poldek_ts_setf(ts, POLDEK_TS_FORCE);
             break;
             
             
         case 't':
-            if (poldek_configure_f_isset(cctx->ctx, INSTS_TEST))
-                poldek_configure_f(cctx->ctx, INSTS_RPMTEST);
+            if (poldek_ts_issetf(ts, POLDEK_TS_TEST))
+                poldek_ts_setf(ts, POLDEK_TS_RPMTEST);
             else
-                poldek_configure_f(cctx->ctx, INSTS_TEST);
+                poldek_ts_setf(ts, POLDEK_TS_TEST);
             break;
             
         case 'F':
-            poldek_configure_f(cctx->ctx, INSTS_FRESHEN);
+            poldek_ts_setf(ts, POLDEK_TS_FRESHEN);
             break;
 
         case 'N':
-            poldek_configure_f_clr(cctx->ctx, INSTS_FOLLOW);
+            poldek_ts_clrf(ts, POLDEK_TS_FOLLOW);
             break;
 
         case 'G':
-            poldek_configure_f(cctx->ctx, INSTS_GREEDY);
+            poldek_ts_setf(ts, POLDEK_TS_GREEDY);
             break;
 
         case 'I':
-            poldek_configure_f(cctx->ctx, INSTS_INSTALL);
-            poldek_configure_f_clr(cctx->ctx, INSTS_UPGRADE);
+            poldek_ts_setf(ts, POLDEK_TS_INSTALL);
+            poldek_ts_clrf(ts, POLDEK_TS_UPGRADE);
             break;
 
         case OPT_INST_REINSTALL:
-            poldek_configure_f(cctx->ctx, INSTS_REINSTALL);
+            poldek_ts_setf(ts, POLDEK_TS_REINSTALL);
             break;
 
         case OPT_INST_DOWNGRADE:
-            poldek_configure_f(cctx->ctx, INSTS_DOWNGRADE);
+            poldek_ts_setf(ts, POLDEK_TS_DOWNGRADE);
             break;
 
         case OPT_INST_FETCH:
@@ -260,10 +246,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                     return EINVAL;
                 }
                 
-                poldek_configure(cctx->ctx, POLDEK_CONF_FETCHDIR, arg);
+                poldek_ts_configure(ts, POLDEK_CONF_FETCHDIR, arg);
             }
 
-            poldek_configure_f(cctx->ctx, INSTS_JUSTFETCH);
+            poldek_ts_setf(ts, POLDEK_TS_JUSTFETCH);
             break;
             
         default:
@@ -278,10 +264,12 @@ static int install(struct cmdarg *cmdarg)
 {
     tn_array              *pkgs = NULL;
     struct install_info   iinf;
-    int                   i, rc = 1, is_test = 0;
+    int                   i, rc = 1;
     struct poldekcli_ctx  *cctx;
+    struct poldek_ts      *ts;
     
     cctx = cmdarg->cctx;
+    ts = cmdarg->ts;
     
     sh_resolve_packages(cmdarg->pkgnames, cctx->avpkgs, &pkgs, 1);
     
@@ -296,7 +284,7 @@ static int install(struct cmdarg *cmdarg)
         pkg_hand_mark(pkg);
     }
 
-    if (poldek_configure_f_isset(cctx->ctx, INSTS_TEST | INSTS_RPMTEST)) {
+    if (poldek_ts_issetf(ts, POLDEK_TS_TEST | POLDEK_TS_RPMTEST)) {
         iinf.installed_pkgs = NULL;
         iinf.uninstalled_pkgs = NULL;
         
@@ -351,29 +339,23 @@ static int install(struct cmdarg *cmdarg)
     return rc;
 }
 
-
 static int cmdl_run(struct poclidek_opgroup_rt *rt)
 {
-    struct poldek_ctx *ctx = rt->cctx->ctx;
     int rc;
 
-    
-    printf("oprun install %p\n", rt);
-
-    if (!poldek_configure_f_isset(ctx, INSTS_INSTALL))
+    printf("cmdl_run install\n");
+    if (!poldek_ts_issetf(rt->ts, POLDEK_TS_INSTALL))
         return 0;
 
-    if (usrpkgset_size(rt->cctx->ups) == 0) {
-        logn(LOGERR, _("no packages specified"));
-        return OPGROUP_RC_ERROR;
-    }
+    dbgf("%p->%p, %p->%p\n", rt->ts, rt->ts->hold_patterns,
+         rt->ts->ctx->ts, rt->ts->ctx->ts->hold_patterns);
 
-    if (!poldekcli_load_packages(rt->cctx, 1))
-        exit(EXIT_FAILURE);
+    if (!poldek_load_sources(rt->ctx, 1))
+        return 0;
+
     
-    if ((rc = poldek_mark_usrset(ctx, rt->cctx->ups, 0))) {
-        rc = poldek_install(ctx, NULL);
-    }
     
+    rc = poldek_ts_do_install(rt->ts, NULL);
+    printf("cmdl_run install1 = %d\n", rc);
     return rc ? 0 : OPGROUP_RC_ERROR;
 }

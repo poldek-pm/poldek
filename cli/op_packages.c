@@ -46,7 +46,6 @@ static struct argp_option options[] = {
 };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
-static int oprun(struct poclidek_opgroup_rt *rt);
 
 static struct argp poclidek_argp = {
     options, parse_opt, 0, 0, 0, 0, 0
@@ -61,7 +60,7 @@ struct poclidek_opgroup poclidek_opgroup_packages = {
     "Package selection", 
     &poclidek_argp, 
     &poclidek_argp_child,
-    oprun,
+    NULL
 };
 
 static
@@ -70,28 +69,37 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     struct poclidek_opgroup_rt *rt;
 
     rt = state->input;
-    printf("OPP %d %s\n", key, arg);
+
     switch (key) {
         case OPT_NEVR:
-            n_array_push(rt->cctx->arg_packages, arg);
+            poldek_ts_add_pkgdef(rt->ts, arg);
             break;
 
         case OPT_PKGSET:
-            n_array_push(rt->cctx->arg_package_sets, arg);
+            poldek_ts_add_pkglist(rt->ts, arg);
             break;
 
         
         case ARGP_KEY_ARG:
-            if (strncmp(arg, "--rpm-", 6) != 0)
-                n_array_push(rt->cctx->arg_packages, arg);
-                
+            if (strncmp(arg, "--rpm-", 6) != 0 && strncmp(arg, "rpm--", 5) != 0)
+                poldek_ts_add_pkgfile(rt->ts, arg);
             
-            else if (strlen(arg) > 8) {
+            else if (strlen(arg) < 7)
+                argp_usage (state);
+            
+            else {
                 char *optname;
-                arg += strlen("--rp");
-                *arg = '-';
+                
+                if (*arg == '-') { /* --rpm-FOO */
+                    arg += strlen("--rp");
+                    *arg = '-';
+                    
+                } else { /* rpm--FOO */
+                    arg += 3;
+                }
                 
                 optname = arg + 2;
+
                 if (strncmp(optname, "force", 5) == 0 ||
                     strncmp(optname, "install", 7) == 0 ||
                     strncmp(optname, "upgrade", 7) == 0 ||
@@ -103,18 +111,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                           optname, optname);
                      exit(EXIT_FAILURE);
                 }
-
-                if (strcmp(optname, "ignorearch") == 0)
-                    poldek_configure_f(rt->cctx->ctx, INSTS_IGNOREARCH);
-                else if (strcmp(optname, "ignoreos") == 0)
-                    poldek_configure_f(rt->cctx->ctx, INSTS_IGNOREOS);
-                else 
-                    ;           /* DUPA */
-                //n_assert(argsp->inst.rpmopts != NULL);
-                //n_array_push(argsp->inst.rpmopts, arg);
                 
-            } else {
-                argp_usage (state);
+                if (strcmp(optname, "ignorearch") == 0)
+                    poldek_ts_setf(rt->ts, POLDEK_TS_IGNOREARCH);
+                else if (strcmp(optname, "ignoreos") == 0)
+                    poldek_ts_setf(rt->ts, POLDEK_TS_IGNOREOS);
+                else
+                    poldek_ts_configure(rt->ts, POLDEK_CONF_RPMOPTS, arg);
             }
             break;
     
@@ -123,53 +126,5 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             return ARGP_ERR_UNKNOWN;
     }
     
-    return 0;
-}
-
-static
-int is_package_file(const char *path)
-{
-    struct stat st;
-    
-    if (strstr(path, ".rpm") == 0)
-        return 0;
-
-    return (stat(path, &st) == 0 && S_ISREG(st.st_mode));
-}
-
-static
-int prepare_given_packages(struct poldekcli_ctx *cctx) 
-{
-    int i, rc = 1;
-    
-    if (cctx->ups == NULL)
-        cctx->ups = usrpkgset_new();
-
-    for (i=0; i < n_array_size(cctx->arg_package_sets); i++) {
-        char *path = n_array_nth(cctx->arg_package_sets, i);
-        
-        if (!usrpkgset_add_list(cctx->ups, path))
-            rc = 0;
-    }
-
-    for (i=0; i<n_array_size(cctx->arg_packages); i++) {
-        char *path = n_array_nth(cctx->arg_packages, i);
-
-        if (is_package_file(path)) 
-            rc = usrpkgset_add_pkgfile(cctx->ups, path);
-        else
-            rc = usrpkgset_add_str(cctx->ups, path, strlen(path));
-    }
-    
-    usrpkgset_setup(cctx->ups);
-    return usrpkgset_size(cctx->ups);
-}
-
-static int oprun(struct poclidek_opgroup_rt *rt)
-{
-    printf("oprun packages %p\n", rt);
-
-    prepare_given_packages(rt->cctx);
-    printf("oprun packages %p, %d\n", rt, usrpkgset_size(rt->cctx->ups));
     return 0;
 }

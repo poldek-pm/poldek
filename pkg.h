@@ -78,6 +78,7 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 
 #define pkg_score(pkg, v) ((pkg)->flags |= v)
 #define pkg_is_scored(pkg, v) ((pkg)->flags & v)
+#define pkg_clr_score(pkg, v) ((pkg)->flags &= ~(v))
 
 #define pkg_has_ldpkguinf(pkg) ((pkg)->flags & PKG_HAS_PKGUINF)
 #define pkg_set_ldpkguinf(pkg) ((pkg)->flags |= PKG_HAS_PKGUINF)

@@ -118,7 +118,7 @@ static void visit_mark_reqs(struct pkg *parent_pkg, struct pkg *pkg, int deep)
 }
 
 static
-int mark_dependencies(struct pkgset *ps, int nodeps) 
+int mark_dependencies(struct pkgset *ps, int withdeps) 
 {
     int i, j;
     int nerr = 0;
@@ -154,16 +154,16 @@ int mark_dependencies(struct pkgset *ps, int nodeps)
         }
     }
     
-    if (nerr && nodeps)
+    if (nerr && withdeps == 0)
         nerr = 0;
     
     return nerr == 0;
 }
 
 
-inline static int mark_package(struct pkg *pkg, int nodeps)
+inline static int mark_package(struct pkg *pkg, int withdeps)
 {
-    if (pkg_has_badreqs(pkg) && nodeps == 0) {
+    if (pkg_has_badreqs(pkg) && withdeps) {
         logn(LOGERR, _("mark: %s: broken dependencies"), pkg_snprintf_s(pkg));
         
     } else {
@@ -175,7 +175,7 @@ inline static int mark_package(struct pkg *pkg, int nodeps)
 
 static
 int pkgset_mark_pkgdef_exact(struct pkgset *ps, const struct pkgdef *pdef,
-                             int nodeps) 
+                             int withdeps) 
 {
     int i, marked = 0, matched = 0;
     struct pkg *pkg, tmpkg, *findedpkg;
@@ -195,7 +195,7 @@ int pkgset_mark_pkgdef_exact(struct pkgset *ps, const struct pkgdef *pdef,
     findedpkg = pkg = n_array_nth(ps->pkgs, i);
     
     if (pkgdef_match_pkg(pdef, pkg)) {
-        marked = mark_package(pkg, nodeps);
+        marked = mark_package(pkg, withdeps);
         matched = 1;
         
     } else {
@@ -207,7 +207,7 @@ int pkgset_mark_pkgdef_exact(struct pkgset *ps, const struct pkgdef *pdef,
                 break;
 
             if (pkgdef_match_pkg(pdef, pkg)) {
-                marked = mark_package(pkg, nodeps);
+                marked = mark_package(pkg, withdeps);
                 matched = 1;
                 break;
             }
@@ -223,7 +223,7 @@ int pkgset_mark_pkgdef_exact(struct pkgset *ps, const struct pkgdef *pdef,
 
 static
 int pkgset_mark_pkgdefs_patterns(struct pkgset *ps, tn_array *pkgdefs,
-                                 int nodeps) 
+                                 int withdeps) 
 {
     int i, j, nerr = 0;
     int *matches;
@@ -243,7 +243,7 @@ int pkgset_mark_pkgdefs_patterns(struct pkgset *ps, tn_array *pkgdefs,
 
             n_assert(pdef->pkg != NULL);
             if (fnmatch(pdef->pkg->name, pkg->name, 0) == 0)
-                matches[j] += mark_package(pkg, nodeps);
+                matches[j] += mark_package(pkg, withdeps);
         }
     }
 
@@ -263,19 +263,16 @@ int pkgset_mark_pkgdefs_patterns(struct pkgset *ps, tn_array *pkgdefs,
 
 
 int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
-                       unsigned inst_s_flags, int withdeps)
+                       int withdeps, int nodeps)
 {
-    int i, nerr = 0, nodeps = 0, npatterns = 0;
+    int i, nerr = 0, npatterns = 0;
 
     packages_mark(ps->pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
 
-    //nodeps = inst_s_flags & INSTS_NODEPS;
-    nodeps = withdeps ? 0 : 1;
- 
     for (i=0; i < n_array_size(ups->pkgdefs); i++) {
         struct pkgdef *pdef = n_array_nth(ups->pkgdefs, i);
         if (pdef->tflags & (PKGDEF_REGNAME | PKGDEF_PKGFILE)) { 
-            if (!pkgset_mark_pkgdef_exact(ps, pdef, nodeps))
+            if (!pkgset_mark_pkgdef_exact(ps, pdef, withdeps))
                 nerr++;
             
         } else if (pdef->tflags & PKGDEF_PATTERN) {
@@ -331,7 +328,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                     }
                 } 
                             
-                if (!mark_package(pkg, nodeps))
+                if (!mark_package(pkg, withdeps))
                     nerr++;
             }
                 
@@ -343,7 +340,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
             if ((inst->flags & INSTS_CONFIRM_INST) && inst->ask_fn &&
                 inst->ask_fn(0, "Install %s? [y/N]", pdef->pkg->name));
 #endif                
-            if (!pkgset_mark_pkgdef_exact(ps, pdef, nodeps))
+            if (!pkgset_mark_pkgdef_exact(ps, pdef, withdeps))
                 nerr++;
             
         } else {
@@ -352,21 +349,21 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     }
 
     if (npatterns)
-        nerr += pkgset_mark_pkgdefs_patterns(ps, ups->pkgdefs, nodeps);
+        nerr += pkgset_mark_pkgdefs_patterns(ps, ups->pkgdefs, withdeps);
     
     if (withdeps) {
         msgn(1, _("\nProcessing dependencies..."));
-        if (!mark_dependencies(ps, nodeps))
+        if (!mark_dependencies(ps, withdeps))
             nerr++;
         
         if (nerr == 0)
             msgn(1, _("Package set OK"));
         
         else {
-            if ((inst_s_flags & INSTS_FORCE) == 0)
+            if (nodeps)
                 packages_mark(ps->pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
-            //pkgset_mark(ps, PS_MARK_OFF_ALL);
-            logn(LOGERR, _("Buggy package set."));
+            else 
+                logn(LOGERR, _("Buggy package set."));
         }
     }
     

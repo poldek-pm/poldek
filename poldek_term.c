@@ -253,7 +253,7 @@ int term_get_height(void)
 }
 
 
-int askuser(int fd, const char *validchrs, const char *msg)
+int poldek_term_ask(int fd, const char *validchrs, const char *msg)
 {
     struct termios t, tmp;
     unsigned char c;

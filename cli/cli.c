@@ -577,7 +577,6 @@ static void init_commands(struct poldekcli_ctx *cctx)
             logn(LOGERR, _("ambiguous command %s"), cmd->name);
             exit(EXIT_FAILURE);
         }
-        printf("init_commands %s\n", cmd->name);
         n_array_push(cctx->all_commands, cmd->name);
         n_array_sort(cctx->all_commands);
         

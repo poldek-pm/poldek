@@ -38,7 +38,9 @@
 #include "poldek.h"
 #include "poldek_term.h"
 
-#define POLDEKCTX_SETUP_DONE  (1 << 0)
+/* _iflags */
+#define POLDEKCTX_SETUP_DONE      (1 << 0)
+#define POLDEKCTX_SOURCES_LOADED  (1 << 1)
 
 const char poldek_BUG_MAILADDR[] = "<mis@pld.org.pl>";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
@@ -46,11 +48,12 @@ const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
 "Copyright (C) 2000-2003 Pawel A. Gajda <mis@pld.org.pl>\n"
 "This program may be freely redistributed under the terms of the GNU GPL v2";
 
+static const char *poldek_logprefix = "poldek";
 
 void (*poldek_assert_hook)(const char *expr, const char *file, int line) = NULL;
 void (*poldek_malloc_fault_hook)(void) = NULL;
 
-static const char  *poldek_logprefix = "poldek";
+
 //static FILE        *log_stream = stdout, *log_fstream = NULL;
 static tn_hash     *poldek_cnf = NULL;          /* config file values */
 
@@ -462,13 +465,11 @@ int set_default_vf_fetcher(int tag, const char *confvalue)
 int poldek_load_config(struct poldek_ctx *ctx, const char *path)
 {
     tn_hash   *htcnf = NULL;
-    struct    inst_s *inst;
     int       rc = 1;
     char      *v;
     tn_array  *list;
-    
-    inst = ctx->inst;
-    
+
+
     if (path != NULL)
         poldek_cnf = poldek_ldconf(path, 0);
     else 
@@ -481,55 +482,55 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
 
     
     if (poldek_conf_get_bool(htcnf, "use_sudo", 0))
-        inst->flags |= INSTS_USESUDO;
+        ctx->ts->flags |= POLDEK_TS_USESUDO;
 
     if (poldek_conf_get_bool(htcnf, "keep_downloads", 0))
-        inst->flags |= INSTS_KEEP_DOWNLOADS;
+        ctx->ts->flags |= POLDEK_TS_KEEP_DOWNLOADS;
     
     if (poldek_conf_get_bool(htcnf, "confirm_installation", 0))
-        inst->flags |= INSTS_CONFIRM_INST;
+        ctx->ts->flags |= POLDEK_TS_CONFIRM_INST;
     
     /* backward compat */
     if (poldek_conf_get_bool(htcnf, "confirm_installs", 0))
-        inst->flags |= INSTS_CONFIRM_INST;
+        ctx->ts->flags |= POLDEK_TS_CONFIRM_INST;
 
     if (poldek_conf_get_bool(htcnf, "confirm_removal", 1))
-        inst->flags |= INSTS_CONFIRM_UNINST;
+        ctx->ts->flags |= POLDEK_TS_CONFIRM_UNINST;
 
     if (poldek_conf_get_bool(htcnf, "choose_equivalents_manually", 0))
-        inst->flags |= INSTS_EQPKG_ASKUSER;
+        ctx->ts->flags |= POLDEK_TS_EQPKG_ASKUSER;
 
-    else if ((inst->flags & INSTS_CONFIRM_INST) && verbose < 1)
+    else if ((ctx->ts->flags & POLDEK_TS_CONFIRM_INST) && verbose < 1)
         verbose = 1;
 
     if (poldek_conf_get_bool(htcnf, "particle_install", 1))
-        inst->flags |= INSTS_PARTICLE;
+        ctx->ts->flags |= POLDEK_TS_PARTICLE;
 
-    if (inst->flags & INSTS_FOLLOW) { /* no --nofollow specified */
+    if (ctx->ts->flags & POLDEK_TS_FOLLOW) { /* no --nofollow specified */
         if (!poldek_conf_get_bool(htcnf, "follow", 1))
-            inst->flags &= ~INSTS_FOLLOW;
+            ctx->ts->flags &= ~POLDEK_TS_FOLLOW;
     }
 
-    if (inst->flags & INSTS_GREEDY) 
-        inst->flags |= INSTS_FOLLOW;
+    if (ctx->ts->flags & POLDEK_TS_GREEDY) 
+        ctx->ts->flags |= POLDEK_TS_FOLLOW;
         
     else if (poldek_conf_get_bool(htcnf, "greedy", 0))
-        inst->flags |= INSTS_GREEDY | INSTS_FOLLOW;
+        ctx->ts->flags |= POLDEK_TS_GREEDY | POLDEK_TS_FOLLOW;
     
 
-    if ((inst->flags & (INSTS_GREEDY | INSTS_FOLLOW)) == INSTS_GREEDY) {
+    if ((ctx->ts->flags & (POLDEK_TS_GREEDY | POLDEK_TS_FOLLOW)) == POLDEK_TS_GREEDY) {
         logn(LOGWARN, _("greedy and follow options are inclusive"));
-        inst->flags |= INSTS_FOLLOW;
+        ctx->ts->flags |= POLDEK_TS_FOLLOW;
         rc = 0;
     }
         
 
     if (poldek_conf_get_bool(htcnf, "mercy", 0))
-        inst->ps_flags |= PSVERIFY_MERCY;
+        ctx->ps_flags |= PSVERIFY_MERCY;
 
-    if ((inst->ps_setup_flags & PSET_DO_UNIQ_PKGNAME) == 0)
+    if ((ctx->ps_setup_flags & PSET_DO_UNIQ_PKGNAME) == 0)
         if (poldek_conf_get_bool(htcnf, "unique_package_names", 0))
-            inst->ps_setup_flags |= PSET_DO_UNIQ_PKGNAME;
+            ctx->ps_setup_flags |= PSET_DO_UNIQ_PKGNAME;
     
     register_vf_handlers_compat(htcnf);
     register_vf_handlers(poldek_conf_get_section_arr(poldek_cnf, "fetcher"));
@@ -549,12 +550,12 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
         n_array_free(list);
     }
     
-    get_conf_opt_list(htcnf, "rpmdef", inst->rpmacros);
-    get_conf_opt_list(htcnf, "hold", inst->hold_patterns);
-    get_conf_opt_list(htcnf, "ignore", inst->ign_patterns);
+    get_conf_opt_list(htcnf, "rpmdef", ctx->ts->rpmacros);
+    get_conf_opt_list(htcnf, "hold", ctx->ts->hold_patterns);
+    get_conf_opt_list(htcnf, "ignore", ctx->ts->ign_patterns);
 
     if ((v = poldek_conf_get(htcnf, "cachedir", NULL)))
-        inst->cachedir = v;
+        ctx->ts->cachedir = v;
     
     if ((poldek_conf_get_bool(htcnf, "ftp_sysuser_as_anon_passwd", 0)))
         vfile_configure(VFILE_CONF_SYSUSER_AS_ANONPASSWD, 1);
@@ -654,182 +655,59 @@ void poldek_reinit(void)
     init_modules();
 }
 
-static char *prepare_path(char *pathname) 
-{
-    if (pathname == NULL)
-        return pathname;
-
-    if (vf_url_type(pathname) & VFURL_LOCAL) {
-        char path[PATH_MAX];
-        const char *ppath;
-        
-        if ((ppath = abs_path(path, sizeof(path), pathname)))
-            return n_strdup(ppath);
-    }
-    
-    return pathname;
-}
-
-
-
-static char *conf_path(char *s, char *v)
-{
-    char *ss;
-
-    if ((v && s && v != s) || s == NULL) {
-        if (s)
-            free(s);
-        s = n_strdup(v);
-    }
-    
-    ss = prepare_path(s);
-    if (ss != s) {
-        free(s);
-        s = ss;
-    }
-    
-    return s;
-}
-
 
 int poldek_configure(struct poldek_ctx *ctx, int param, ...) 
 {
-    va_list  ap;
-    int      rc;
-    char     *vs;
-    void     *vv;
+    va_list ap;
+    int rc;
     unsigned uv;
-
+    void     *vv;
     
-    rc = 1;
+
     va_start(ap, param);
-
+    
     switch (param) {
-        case POLDEK_CONF_FLAGS:
-            uv = va_arg(ap, unsigned);
-            if (uv == 0) 
-                ctx->inst->flags = ctx->inst_flags_orig;
-            else
-                ctx->inst->flags |= uv;
-            break;
-
         case POLDEK_CONF_PSFLAGS:
             uv = va_arg(ap, unsigned);
             if (uv) {
-                ctx->inst->ps_flags |= uv;
+                ctx->ps_flags |= uv;
             }
             break;
 
         case POLDEK_CONF_PS_SETUP_FLAGS:
             uv = va_arg(ap, unsigned);
             if (uv) {
-                ctx->inst->ps_setup_flags |= uv;
-            }
-            break;
-        
-        case POLDEK_CONF_CACHEDIR:
-            vs = va_arg(ap, char*);
-            if (vs) {
-                printf("cachedirX0 %s\n", vs);
-                ctx->inst->cachedir = conf_path(ctx->inst->cachedir, vs);
-                trimslash(ctx->inst->cachedir);
-                printf("cachedirX %s\n", ctx->inst->cachedir);
+                ctx->ps_setup_flags |= uv;
             }
             break;
 
-        case POLDEK_CONF_FETCHDIR:
-            vs = va_arg(ap, char*);
-            if (vs) {
-                ctx->inst->fetchdir = conf_path(ctx->inst->fetchdir, vs);
-                trimslash(ctx->inst->fetchdir);
-                printf("fetchdir %s\n", ctx->inst->fetchdir);
-            }
-            break;
-
-        case POLDEK_CONF_ROOTDIR:
-            vs = va_arg(ap, char*);
-            if (vs) {
-                ctx->inst->rootdir = conf_path(ctx->inst->rootdir, vs);
-                trimslash(ctx->inst->rootdir);
-                printf("rootdir %s\n", ctx->inst->rootdir);
-            }
-            break;
-
-        case POLDEK_CONF_DUMPFILE:
-            vs = va_arg(ap, char*);
-            if (vs) {
-                printf("dumpfile %s\n", vs);
-                ctx->inst->dumpfile = conf_path(ctx->inst->dumpfile, vs);
-            }
-            break;
-
-        case POLDEK_CONF_PRIFILE:
-            vs = va_arg(ap, char*);
-            if (vs) {
-                printf("prifile %s\n", vs);
-                ctx->inst->prifile = conf_path(ctx->inst->prifile, vs);
-            }
-            break;
 
         case POLDEK_CONF_SOURCE:
             vv = va_arg(ap, void*);
             if (vv) {
-                struct source *src = vv;
+                struct source *src = (struct source*)vv;
                 if (src->path)
-                    src->path = conf_path(src->path, NULL);
+                    src->path = poldek_i_conf_path(src->path, NULL);
                 sources_add(ctx->sources, src);
             }
             break;
 
         case POLDEK_CONF_LOGFILE:
-            vs = va_arg(ap, char*);
-            if (vs)
-                log_init(vs, stdout, poldek_logprefix);
+            vv = va_arg(ap, void*);
+            if (vv)
+                log_init(vv, stdout, poldek_logprefix);
             break;
 
         case POLDEK_CONF_LOGTTY:
-            vs = va_arg(ap, char*);
-            if (vs)
-                log_init(vs, stdout, poldek_logprefix);
-            break;
-
-        case POLDEK_CONF_RPMMACROS: 
             vv = va_arg(ap, void*);
             if (vv)
-                rpm_initlib(vv);
+                log_init(vv, stdout, poldek_logprefix);
             break;
 
-        case POLDEK_CONF_HOLD:
-        case POLDEK_CONF_IGNORE: {
-            tn_array *patterns = NULL;
-            
-            if (param == POLDEK_CONF_HOLD)
-                patterns = ctx->inst->hold_patterns;
-            else if (param == POLDEK_CONF_IGNORE)
-                patterns = ctx->inst->ign_patterns;
 
-            vs = va_arg(ap, char*);
-            
-            if (vs) {
-                if (strchr(vs, ',') == NULL) {
-                    n_array_push(patterns, n_strdup(vs));
-                
-                } else {
-                    const char **tl_save, **tl;
-            
-                    tl = tl_save = n_str_tokl(vs, ",");
-                    while (*tl) {
-                        n_array_push(patterns, n_strdup(*tl));
-                        tl++;
-                    }
-                    n_str_tokl_free(tl_save);
-                }
-            }
-            break;
-        }
-            
         default:
-            n_assert(0);
+            rc = poldek_ts_vconfigure(ctx->ts, param, ap);
+            break;
     }
     
     va_end(ap);
@@ -866,11 +744,8 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     memset(ctx, 0, sizeof(*ctx));
     ctx->sources = n_array_new(4, (tn_fn_free)source_free, (tn_fn_cmp)source_cmp);
     ctx->ps = NULL;
-    ctx->inst = n_malloc(sizeof(*ctx->inst));
-    inst_s_init(ctx->inst);
+    ctx->ts = poldek_ts_new(NULL);
     
-    ctx->inst_flags_orig = 0;
-    //ctx->avpkgs = ctx->instpkgs = NULL;
     ctx->dbpkgdir = NULL;
     ctx->ts_instpkgs = 0;
 
@@ -906,15 +781,15 @@ int poldek_setup(struct poldek_ctx *ctx)
 {
     char *path = NULL;
     
-    path = setup_cachedir(ctx->inst->cachedir);
-    free(ctx->inst->cachedir);
-    ctx->inst->cachedir = path;
+    path = setup_cachedir(ctx->ts->cachedir);
+    free(ctx->ts->cachedir);
+    ctx->ts->cachedir = path;
     vfile_configure(VFILE_CONF_CACHEDIR, path);
 
     if (!prepare_sources(ctx->sources))
         return 0;
 
-    if (!mklock(ctx->inst->cachedir))
+    if (!mklock(ctx->ts->cachedir))
         return 0;
 
     return 1;
@@ -926,7 +801,13 @@ extern int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepd
 
 int poldek_load_sources(struct poldek_ctx *ctx, int load_dbdepdirs)
 {
+    int rc;
+    if (ctx->_iflags & POLDEKCTX_SOURCES_LOADED)
+        return 1;
+    
     destroy_modules();
     init_modules();
-    return poldek_load_sources__internal(ctx, load_dbdepdirs);
+    rc = poldek_load_sources__internal(ctx, load_dbdepdirs);
+    ctx->_iflags |= POLDEKCTX_SOURCES_LOADED;
+    return rc;
 }

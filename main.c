@@ -49,7 +49,7 @@
 # error "undefined VERSION"
 #endif
 
-#ifdef ENABLE_INTERACTIVE_MODE
+#ifdef ENABLE_INTERACTIVE_MODEX
 extern
 int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed);
 extern
@@ -133,13 +133,8 @@ struct args {
 
     struct source *src_mkidx;
 
-    int       has_pkgdef;
-    tn_array  *pkgdef_files;    /* foo.rpm      */
-    tn_array  *pkgdef_defs;     /* --nevr "foo 1.2" or "foo" or "foo*" */
-    tn_array  *pkgdef_sets;     /* -p ftp://ftp.zenek.net/PLD/tiny */
-
     struct poldek_ctx *ctx;
-    struct usrpkgset  *ups;
+    struct poldek_ts  *ts;
     
     char        *conf_path;
     char        *log_path;
@@ -582,13 +577,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_VERIFY_MERCY:
-            poldek_configure(argsp->ctx, POLDEK_CONF_PSFLAGS, PSVERIFY_MERCY);
+            poldek_configure(argsp->ctx, POLDEK_CONF_PSFLAGS,
+                             (unsigned)PSVERIFY_MERCY);
             break;
 
             
         case OPT_VERIFY_DEPS:
             poldek_configure(argsp->ctx, POLDEK_CONF_PS_SETUP_FLAGS,
-                             PSET_VERIFY_DEPS);
+                             (unsigned)PSET_VERIFY_DEPS);
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
@@ -596,7 +592,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_VERIFY_CNFLS:
             poldek_configure(argsp->ctx, POLDEK_CONF_PS_SETUP_FLAGS,
-                             PSET_VERIFY_CNFLS);
+                             (unsigned)PSET_VERIFY_CNFLS);
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
@@ -604,7 +600,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_VERIFY_FILECNFLS:
             poldek_configure(argsp->ctx, POLDEK_CONF_PS_SETUP_FLAGS,
-                             PSET_VERIFY_FILECNFLS);
+                             (unsigned)PSET_VERIFY_FILECNFLS);
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
@@ -612,8 +608,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_VERIFY_ALL:
             poldek_configure(argsp->ctx, POLDEK_CONF_PS_SETUP_FLAGS,
-                             PSET_VERIFY_DEPS | PSET_VERIFY_CNFLS |
-                             PSET_VERIFY_FILECNFLS);
+                             (unsigned)(PSET_VERIFY_DEPS | PSET_VERIFY_CNFLS |
+                             PSET_VERIFY_FILECNFLS));
             
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
@@ -641,9 +637,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_MKIDXZ:
         case OPT_MKIDX:
-            check_mjrmode(argsp);
-            argsp->mjrmode = MODE_MKIDX;
-            //argsp->idx_path = prepare_path(arg);
             if (arg)
                 argsp->src_mkidx = source_new(NULL, arg, NULL);
             break;
@@ -1002,15 +995,6 @@ static int make_idx(void)
     return nerr == 0;
 }
 
-int is_package_file(const char *path)
-{
-    struct stat st;
-    
-    if (strstr(path, ".rpm") == 0)
-        return 0;
-
-    return (stat(path, &st) == 0 && S_ISREG(st.st_mode));
-}
 
 int prepare_given_packages(void) 
 {

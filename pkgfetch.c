@@ -302,3 +302,32 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
     return nerr == 0;
 }
 
+
+int packages_dump(tn_array *pkgs, const char *path, int fqfn)
+{
+    int i;
+    FILE *stream = stdout;
+
+    if (path) {
+        if ((stream = fopen(path, "w")) == NULL) {
+            logn(LOGERR, "fopen %s: %m", path);
+            return 0;
+        }
+        fprintf(stream, "# Packages to install (in the right order)\n");
+    }
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        if (pkg_is_marked(pkg)) {
+            if (fqfn)
+                fprintf(stream, "%s\n", pkg_filename_s(pkg));
+            else
+                fprintf(stream, "%s\n", pkg->name);
+        }
+    }
+    
+    if (stream != stdout)
+        fclose(stream);
+    
+    return 1;
+}

@@ -35,15 +35,15 @@
 #include "misc.h"
 #include "pkg.h"
 #include "dbpkgset.h"
+#include "poldek_ts.h"
 
 #define uninst_LDFLAGS (PKG_LDNEVR | PKG_LDCAPS | PKG_LDFL_DEPDIRS)
 
-static int do_uninstall(tn_array *pkgs, struct inst_s *inst);
-
+static int do_uninstall(tn_array *pkgs, struct poldek_ts *ts);
 
 static
 int visit_pkg(int indent, struct pkg *pkg, struct pkgdb *db,
-              struct dbpkg_set *uninst_set) 
+              struct dbpkg_set *unpoldek_tset) 
 {
     unsigned ldflags = uninst_LDFLAGS;
     int i, k, n = 0;
@@ -54,14 +54,14 @@ int visit_pkg(int indent, struct pkg *pkg, struct pkgdb *db,
     pkg_set_color(pkg, PKG_COLOR_BLACK);
     indent += 2;
     
-    n += rpm_get_pkgs_requires_capn(db->dbh, uninst_set->dbpkgs, pkg->name,
+    n += rpm_get_pkgs_requires_capn(db->dbh, unpoldek_tset->dbpkgs, pkg->name,
                                     NULL, ldflags);
     
     if (pkg->caps)
         for (i=0; i < n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
 
-            n += rpm_get_pkgs_requires_capn(db->dbh, uninst_set->dbpkgs,
+            n += rpm_get_pkgs_requires_capn(db->dbh, unpoldek_tset->dbpkgs,
                                             capreq_name(cap), NULL, ldflags);
         }
     
@@ -87,7 +87,7 @@ int visit_pkg(int indent, struct pkg *pkg, struct pkgdb *db,
                 path_left_size = sizeof(path) - (endp - path);
                 n_strncpy(endp, file->basename, path_left_size);
 
-                n += rpm_get_pkgs_requires_capn(db->dbh, uninst_set->dbpkgs, path,
+                n += rpm_get_pkgs_requires_capn(db->dbh, unpoldek_tset->dbpkgs, path,
                                                 NULL, ldflags);
             }
         }
@@ -96,8 +96,8 @@ int visit_pkg(int indent, struct pkg *pkg, struct pkgdb *db,
         n_assert(pkg->revreqpkgs == NULL);
         pkg->revreqpkgs = n_array_new(4, (tn_fn_free)pkg_free, NULL);
                 
-        for (i=0; i < n_array_size(uninst_set->dbpkgs); i++) {
-            struct dbpkg *dbpkg = n_array_nth(uninst_set->dbpkgs, i);
+        for (i=0; i < n_array_size(unpoldek_tset->dbpkgs); i++) {
+            struct dbpkg *dbpkg = n_array_nth(unpoldek_tset->dbpkgs, i);
             
             if (pkg_is_color(dbpkg->pkg, PKG_COLOR_WHITE)) {
                 n_array_push(pkg->revreqpkgs, pkg_link(dbpkg->pkg));
@@ -111,7 +111,7 @@ int visit_pkg(int indent, struct pkg *pkg, struct pkgdb *db,
                 pkg_dep_mark(revreq_pkg);
                 msg_i(1, indent, "%s marks %s\n", pkg_snprintf_s(pkg),
                       pkg_snprintf_s0(revreq_pkg));
-                n += visit_pkg(indent, revreq_pkg, db, uninst_set);
+                n += visit_pkg(indent, revreq_pkg, db, unpoldek_tset);
             }
         }
     }
@@ -120,7 +120,8 @@ int visit_pkg(int indent, struct pkg *pkg, struct pkgdb *db,
 }
 
 static 
-int mark_to_uninstall(struct dbpkg_set *set, struct pkgdb *db, struct inst_s *inst)
+int mark_to_uninstall(struct dbpkg_set *set, struct pkgdb *db,
+                      struct poldek_ts *ts)
 {
     int i, n = 0;
 
@@ -130,7 +131,7 @@ int mark_to_uninstall(struct dbpkg_set *set, struct pkgdb *db, struct inst_s *in
         pkg_hand_mark(dbpkg->pkg);
     }
     
-    if (inst->flags & INSTS_FOLLOW)
+    if (ts->flags & POLDEK_TS_FOLLOW)
         for (i=0; i < n_array_size(set->dbpkgs); i++) {
             struct dbpkg *dbpkg = n_array_nth(set->dbpkgs, i);
             if ((dbpkg->flags & DBPKG_UNIST_NOTFOLLOW) == 0) 
@@ -194,50 +195,24 @@ void update_install_info(struct install_info *iinf, tn_array *pkgs,
 }
 
 
-
-int packages_uninstall(tn_array *pkgs, struct inst_s *inst,
-                       struct install_info *iinf)
-{
-    struct usrpkgset *ups;
-    int rc, i;
-    
-    ups = usrpkgset_new();
-    for (i=0; i<n_array_size(pkgs); i++)
-        usrpkgset_add_pkg(ups, n_array_nth(pkgs, i));
-
-    rc = uninstall_usrset(ups, inst, iinf);
-    usrpkgset_free(ups);
-    return rc;
-}
-
-
-int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
-                     struct install_info *iinf)
+int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
 {
     int               i, nerr = 0, ndep_marked = 0, doit = 1;
-    struct dbpkg_set  *uninst_set;
-    struct pkgdb      *db;
+    struct dbpkg_set  *unpoldek_tset;
     tn_array          *pkgs = NULL;
     void              *pkgflmod_mark = NULL;
     
-    
-    if (inst->rootdir == NULL)
-        inst->rootdir = "/";
-    
-    db = pkgdb_open(inst->rootdir, NULL, O_RDONLY);
-    if (db == NULL) 
-        return 0;
 
-    uninst_set = dbpkg_set_new();
+    unpoldek_tset = dbpkg_set_new();
     pkgflmod_mark = pkgflmodule_allocator_push_mark();
     
-    for (i=0; i < n_array_size(ups->pkgdefs); i++) {
+    for (i=0; i < n_array_size(ts->ups->pkgdefs); i++) {
         struct pkgdef *pdef;
         tn_array *dbpkgs;
         int nmatches = 0;
 
         
-        pdef = n_array_nth(ups->pkgdefs, i);
+        pdef = n_array_nth(ts->ups->pkgdefs, i);
         if ((pdef->tflags & PKGDEF_REGNAME) == 0) {
             logn(LOGERR, _("'%s': only exact selection is supported"),
                  pdef->virtname);
@@ -246,7 +221,7 @@ int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
         }
         
                 
-        dbpkgs = rpm_get_packages(db->dbh, pdef->pkg, uninst_LDFLAGS);
+        dbpkgs = rpm_get_packages(ts->db->dbh, pdef->pkg, uninst_LDFLAGS);
         if (dbpkgs) {
             int n, j;
 
@@ -267,7 +242,7 @@ int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
                     dbpkg->flags |= DBPKG_UNIST_NOTFOLLOW;
 
                 if (dbpkg->flags & DBPKG_UNIST_MATCHED)
-                    dbpkg_set_add(uninst_set, dbpkg);
+                    dbpkg_set_add(unpoldek_tset, dbpkg);
                 else
                     dbpkg_free(dbpkg);
             }
@@ -283,52 +258,50 @@ int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
         }
     }
 
-    n_array_uniq(uninst_set->dbpkgs);
-    if (nerr == 0 && n_array_size(uninst_set->dbpkgs)) {
-        ndep_marked = mark_to_uninstall(uninst_set, db, inst);
-        pkgs = dbpkgs_to_pkgs(uninst_set->dbpkgs);
+    n_array_uniq(unpoldek_tset->dbpkgs);
+    if (nerr == 0 && n_array_size(unpoldek_tset->dbpkgs)) {
+        ndep_marked = mark_to_uninstall(unpoldek_tset, ts->db, ts);
+        pkgs = dbpkgs_to_pkgs(unpoldek_tset->dbpkgs);
     }
 
-    dbpkg_set_free(uninst_set);
-    pkgdb_closedb(db);
+    dbpkg_set_free(unpoldek_tset);
     pkgflmodule_allocator_pop_mark(pkgflmod_mark);
 
     if (nerr)
         doit = 0;
     
-    if ((inst->flags & INSTS_TEST) && (inst->flags & INSTS_RPMTEST) == 0)
+    if ((ts->flags & POLDEK_TS_TEST) && (ts->flags & POLDEK_TS_RPMTEST) == 0)
         doit = 0;
     
     if (pkgs && doit) {
-        int is_test = inst->flags & INSTS_RPMTEST;
+        int is_test = ts->flags & POLDEK_TS_RPMTEST;
         
         print_uninstall_summary(pkgs, ndep_marked);
-        if (!is_test && (inst->flags & INSTS_CONFIRM_UNINST) && inst->ask_fn)
-            doit = inst->ask_fn(0, _("Proceed? [y/N]"));
+        if (!is_test && (ts->flags & POLDEK_TS_CONFIRM_UNINST) && ts->ask_fn)
+            doit = ts->ask_fn(0, _("Proceed? [y/N]"));
         
         if (doit) {
             int vrfy = 0;
             
-            if (!do_uninstall(pkgs, inst)) {
+            if (!do_uninstall(pkgs, ts)) {
                 nerr++;
                 vrfy = 1;
             }
             
             if (iinf)
-                update_install_info(iinf, pkgs, db, vrfy);
+                update_install_info(iinf, pkgs, ts->db, vrfy);
         }
     }
 
     if (pkgs)
         n_array_free(pkgs);
     
-    pkgdb_free(db);
     return nerr == 0;
 }
 
 
 static
-int do_uninstall(tn_array *pkgs, struct inst_s *inst)
+int do_uninstall(tn_array *pkgs, struct poldek_ts *ts)
 {
     char **argv;
     char *cmd;
@@ -341,11 +314,11 @@ int do_uninstall(tn_array *pkgs, struct inst_s *inst)
     
     n = 0;
     
-    if (inst->flags & INSTS_RPMTEST) {
+    if (ts->flags & POLDEK_TS_RPMTEST) {
         cmd = "/bin/rpm";
         argv[n++] = "rpm";
         
-    } else if (inst->flags & INSTS_USESUDO) {
+    } else if (ts->flags & POLDEK_TS_USESUDO) {
         cmd = "/usr/bin/sudo";
         argv[n++] = "sudo";
         argv[n++] = "/bin/rpm";
@@ -360,23 +333,23 @@ int do_uninstall(tn_array *pkgs, struct inst_s *inst)
     for (i=1; i<verbose; i++)
         argv[n++] = "-v";
 
-    if (inst->flags & INSTS_RPMTEST)
+    if (ts->flags & POLDEK_TS_RPMTEST)
         argv[n++] = "--test";
     
-    if (inst->flags & INSTS_FORCE)
+    if (ts->flags & POLDEK_TS_FORCE)
         argv[n++] = "--force";
     
-    if (inst->flags & INSTS_NODEPS)
+    if (ts->flags & POLDEK_TS_NODEPS)
         argv[n++] = "--nodeps";
 
-    if (inst->rootdir) {
+    if (ts->rootdir) {
     	argv[n++] = "--root";
-	argv[n++] = (char*)inst->rootdir;
+	argv[n++] = (char*)ts->rootdir;
     }
 
-    if (inst->rpmopts) 
-        for (i=0; i<n_array_size(inst->rpmopts); i++)
-            argv[n++] = n_array_nth(inst->rpmopts, i);
+    if (ts->rpmopts) 
+        for (i=0; i<n_array_size(ts->rpmopts); i++)
+            argv[n++] = n_array_nth(ts->rpmopts, i);
     
     nopts = n;
     for (i=0; i<n_array_size(pkgs); i++) {
