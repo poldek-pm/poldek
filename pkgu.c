@@ -53,9 +53,7 @@ struct pkguinf_i18n *pkguinf_i18n_new(const char *summary,
     memcpy(&inf->_buf[s_len], description, d_len);
     inf->summary = inf->_buf;
     inf->description = &inf->_buf[s_len];
-    
     return inf;
-        
 }
 
 static
@@ -195,7 +193,7 @@ struct pkguinf *pkguinf_restore_rpmhdr_st(tn_stream *st, off_t offset)
     
     if ((hdr = headerLoad(rawhdr)) != NULL) {
         pkgu = pkguinf_ldhdr(hdr);
-        //headerFree(hdr); rpm's memleak
+        headerFree(hdr); //rpm's memleak
     }
 
     return pkgu;
@@ -280,8 +278,8 @@ struct pkguinf *pkguinf_ldhdr(Header h)
             pkgu->summary = inf->summary;
             pkgu->description = inf->description;
         }
-        
-        
+
+        n_array_free(avlangs);
         if (sl_langs)
             n_array_free(sl_langs);
         
