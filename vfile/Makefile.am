@@ -16,7 +16,7 @@ AM_CFLAGS = @AM_CFLAGS@
 
 lib_LTLIBRARIES     = libvfile.la 
 libvfile_la_SOURCES = vfile.c fetch.c vfetch.c vfprogress.c misc.c \
-		      p_open.c uncompr.c vfreq.c vfreq.h \
+		      p_open.c extcompr.c vfreq.c vfreq.h \
 		      vopen3.c vopen3.h \
 		      vfffmod.c $(VFCURL_SRCS_)
 

@@ -44,8 +44,8 @@ struct uncompr {
 };
 
 struct uncompr uncompr_tab[] = {
-    {  COMPRESST_BZIP2, "/usr/bin/vfuncompr", "bz2" },
-    {  COMPRESST_GZIP, "/usr/bin/vfuncompr", "gz"   },
+    {  COMPRESST_BZIP2, "/usr/bin/vfcompr", "bz2" },
+    {  COMPRESST_GZIP, "/usr/bin/vfcompr", "gz"   },
     {  0, NULL, NULL }
 };
 
@@ -100,7 +100,8 @@ static void process_output(struct p_open_st *st, const char *prefix)
 }
 
 static
-int vf_do_uncompr(struct uncompr *uncompr, const char *src, const char *dst)
+int vf_do_compr(struct uncompr *uncompr, const char *param,
+                const char *src, const char *dst)
 {
     char              **argv;
     struct p_open_st  pst;
@@ -111,6 +112,8 @@ int vf_do_uncompr(struct uncompr *uncompr, const char *src, const char *dst)
     argv = alloca(sizeof(*argv) * 10);
     n = 0;
     argv[n++] = uncompr->cmd;
+    if (param)
+        argv[n++] = (char*)param;
     argv[n++] = (char*)src;
     argv[n++] = (char*)dst;
     argv[n++] = NULL;
@@ -139,7 +142,7 @@ int vf_do_uncompr(struct uncompr *uncompr, const char *src, const char *dst)
     return ec == 0;
 }
 
-int vf_uncompr_able(const char *path, char *dest, int size) 
+int vf_decompressable(const char *path, char *dest, int size) 
 {
     char *p;
     int i;
@@ -166,7 +169,7 @@ int vf_uncompr_able(const char *path, char *dest, int size)
 }
 
 
-int vf_uncompr_do(const char *path, const char *destpath) 
+int vf_extdecompress(const char *path, const char *destpath) 
 {
     struct uncompr *uncompr;
     char *p;
@@ -189,9 +192,33 @@ int vf_uncompr_do(const char *path, const char *destpath)
     if (uncompr == NULL)
         return -1;
 
-    return vf_do_uncompr(uncompr, path, destpath);
+    return vf_do_compr(uncompr, "-d", path, destpath);
 }
 
+int vf_extcompress(const char *path, const char *ext) 
+{
+    struct uncompr *uncompr;
+    char destpath[PATH_MAX];
+    int i;
+    
+    
+    uncompr = NULL;
+    i = 0;
+    while (uncompr_tab[i].type > 0) {
+        if (strcmp(ext, uncompr_tab[i].ext) == 0) 
+            uncompr = &uncompr_tab[i];
+        i++;
+    }
+    
+    if (uncompr == NULL)
+        return -1;
+
+    snprintf(destpath, sizeof(destpath), "%s.%s", path, ext);
+    unlink(destpath);
+    if (*vfile_verbose) 
+        vf_loginfo(_("Compressing %s...\n"), n_basenam(path));
+    return vf_do_compr(uncompr, NULL, path, destpath);
+}
     
 
 

@@ -208,7 +208,14 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
     return rc;
 }
 
-int vf_fetch(const char *url, const char *dest_dir)
+int vf_fetch_sl(const char *url, const char *dest_dir, const char *site_label);
+int vf_fetch(const char *url, const char *dest_dir) 
+{
+    return vf_fetch_sl(url, dest_dir, NULL);
+}
+
+
+int vf_fetch_sl(const char *url, const char *dest_dir, const char *site_label)
 {
     const struct vf_module *mod = NULL;
     const char *destdir = NULL;
@@ -278,8 +285,11 @@ int vf_fetch(const char *url, const char *dest_dir)
             }
         }
         
-        
-        vf_loginfo(_("Retrieving %s...\n"), PR_URL(req->url));
+        if (site_label)
+            vf_loginfo(_("Retrieving %s:%s...\n"), site_label, n_basenam(req->url));
+        else
+            vf_loginfo(_("Retrieving %s...\n"), PR_URL(req->url));
+            
         if ((rc = do_vfile_req(REQTYPE_FETCH, mod, req)) == 0) {
             if ((req->flags & VF_REQ_INT_REDIRECTED) == 0) {
                 vfile_set_errno(mod->vfmod_name, req->req_errno);
@@ -366,8 +376,12 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat)
     return rc;
 }
 
+int vf_fetcha(tn_array *urls, const char *destdir)
+{
+    return vf_fetcha_sl(urls, destdir, NULL);
+}
 
-int vf_fetcha(tn_array *urls, const char *destdir) 
+int vf_fetcha_sl(tn_array *urls, const char *destdir, const char *site_label)
 {
     const struct vf_module *mod = NULL;
     int rc = 1;
@@ -384,7 +398,7 @@ int vf_fetcha(tn_array *urls, const char *destdir)
         
         for (i=0; i < n_array_size(urls); i++) {
             const char *url = n_array_nth(urls, i);
-            if (!vf_fetch(url, destdir)) {
+            if (!vf_fetch_sl(url, destdir, site_label)) {
                 rc = 0;
                 break;
             }

@@ -102,6 +102,8 @@ struct vfile {
 #define vfile_localpath(vf)  ((vf)->vf_tmpath ? (vf)->vf_tmpath : (vf)->vf_path)
 
 struct vfile *vfile_open(const char *path, int vftype, unsigned vfmode);
+struct vfile *vfile_open_sl(const char *path, int vftype, unsigned vfmode,
+                            const char *site_label);
 void vfile_close(struct vfile *vf);
 struct vfile *vfile_incref(struct vfile *vf);
 
@@ -143,7 +145,9 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat);
 #define VF_FETCH_NOREST   (0 << 2) /* download file from scratch   */
 #endif
 
+int vf_fetch_sl(const char *url, const char *dest_dir, const char *site_label);
 int vf_fetch(const char *url, const char *destdir);
+int vf_fetcha_sl(tn_array *urls, const char *destdir, const char *site_label);
 int vf_fetcha(tn_array *urls, const char *destdir);
 
 #ifdef VFILE_INTERNAL
@@ -240,8 +244,9 @@ struct vf_module {
 #define CL_URL(url) vf_url_hidepasswd_s(url)
 #define PR_URL(url) vf_url_slim_s(url, 60)
 
-int vf_uncompr_able(const char *path, char *uncmpr_path, int size);
-int vf_uncompr_do(const char *path, const char *destpath);
+int vf_decompressable(const char *path, char *uncmpr_path, int size);
+int vf_extdecompress(const char *path, const char *destpath);
+int vf_extcompress(const char *path, const char *ext);
 
 void vf_sigint_cb(void);
 
