@@ -161,38 +161,31 @@ tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, int crtype)
             
             if (flag & RPMSENSE_EQUAL) 
                 cr_relflags |= REL_EQ;
-
-                
+            
+            if (crtype == PMCAP_REQ) {
 #ifndef HAVE_RPM_EXTDEPS
-            if (flag & RPMSENSE_PREREQ) {
-                n_assert(crtype == PMCAP_REQ);
-                cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
-            }
+                if (flag & RPMSENSE_PREREQ) {
+                    n_assert(crtype == PMCAP_REQ);
+                    cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
+                }
 #else
-            if (isLegacyPreReq(flag)) { /* prepared by rpm < 4.0.2  */
-                n_assert(crtype == PMCAP_REQ);
-                cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
                 
-            } else {
-                if (isInstallPreReq(flag)) {
-                    n_assert(crtype == PMCAP_REQ);
+                if (isLegacyPreReq(flag)) /* prepared by rpm < 4.0.2  */
+                    cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
+                    
+                else if (isInstallPreReq(flag))
                     cr_flags |= CAPREQ_PREREQ;
-                }
-                
-                if (isErasePreReq(flag)) {
-                    n_assert(crtype == PMCAP_REQ);
+
+                if (isErasePreReq(flag))
                     cr_flags |= CAPREQ_PREREQ_UN;
-                }
                 
                 DBGFIF(cr_flags & (CAPREQ_PREREQ | CAPREQ_PREREQ_UN),
                        "%s (%s, %s)\n", name,
                        cr_flags & CAPREQ_PREREQ ? "pre":"",
                        cr_flags & CAPREQ_PREREQ_UN ? "postun":"");
+#endif /* HAVE_RPM_EXTDEPS */                
             }
-            
-#endif /* HAVE_RPM_EXTDEPS */
         }
-        
 
         if (crtype == PMCAP_OBSL) 
             cr_flags |= CAPREQ_OBCNFL;
