@@ -17,64 +17,63 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <trurl/nhash.h>
+
 #include "log.h"
 #include "conf.h"
 
-struct conf_tag {
+struct tag {
     char *name;
-    int  namlen;
-    char *val;                  /* if  */
+    int is_mutliple;
 };
 
-#define TAG_SOURCE      0
-#define TAG_CACHEDIR    1
-#define TAG_PREFIX      2
-#define TAG_FTPHTTPGET  3
-#define TAG_FTPGET      4
-#define TAG_HTTPGET     5
-#define TAG_HTTPSGET    6
-#define TAG_RSYNCGET    7
-#define TAG_SSHGET      8
+static struct tag valid_tags[] = {
+    { "source",       0 },
+    { "cachedir",     0 },
+    { "prefix",       0 }, 
+    { "ftp_http_get", 0 },
+    { "ftp_get",      0 },
+    { "http_get",     0 },
+    { "https_get",    0 },
+    { "rsync_get",    0 },
+    { "ssh_get",      0 },
+    { "install_cmd",  0 },
+    { "rpmdef",       1 }, 
+    {  NULL,          0 }, 
+};
 
-
-static struct conf_tag tags[] = {
-    { "source",    0, 0    },
-    { "cachedir",  0, 0    },
-    { "prefix",    0, 0    }, 
-    { "ftp_http_get", 0, 0 },
-    { "ftp_get",   0, 0    },
-    { "http_get",  0, 0    },
-    { "https_get", 0, 0    },
-    { "rsync_get", 0, 0    },
-    { "ssh_get",   0, 0    },
-    {  NULL,       0, 0    }, 
+#define COPT_MULTIPLE (1 << 0)
+struct copt {
+    unsigned flags;
+    
+    tn_array *vals;
+    char     *val;
+    char     name[0];
 };
 
 
-static void init_tags(void)
+struct copt *copt_new(const char *name)
 {
-    int n = 0;
+    struct copt *opt;
 
-    while (tags[n].name != NULL) {
-        tags[n].namlen = strlen(tags[n].name);
-        tags[n].val = NULL;
-        n++;
-    }
+    opt = malloc(sizeof(*opt) + strlen(name) + 1);
+    strcpy(opt->name, name);
+    opt->flags = 0;
+    opt->val = NULL;
+    opt->vals= NULL;
+    return opt;
+}  
+                                                      
+void copt_free(struct copt *opt)
+{
+    if (opt->flags & COPT_MULTIPLE)
+        n_array_free(opt->vals);
+    else
+        free(opt->val);
+    free(opt);
 }
 
 
-static void free_tags_values(void)
-{
-    int n = 0;
-
-    while (tags[n].name != NULL) {
-        if (tags[n].val != NULL) {
-            free(tags[n].val);
-            tags[n].val = NULL;
-        }
-        n++;
-    }
-}
 
 static char *getv(char *vstr, const char *path, int nline) 
 {
@@ -122,31 +121,84 @@ static char *getv(char *vstr, const char *path, int nline)
 }
 
 
-static char *getagv(char *buf, const char *tag, int taglen,
-                  const char *path, int nline) 
+
+tn_hash *ldconf(const char *path) 
 {
-    char *p = NULL;
+    FILE *stream;
+    int n, nline = 0;
+    tn_hash *ht;
+    char buf[1024];
     
-    if (strncmp(buf, tag, taglen) == 0) {
-        p = buf + taglen;
+    if ((stream = fopen(path, "r")) == NULL) {
+        log(LOGERR, "fopen %s: %m", path);
+        return NULL;
+    }
+
+    ht = n_hash_new(23, (tn_fn_free)copt_free);
+    n_hash_ctl(ht, TN_HASH_NOCPKEY);
+
+    
+    while (fgets(buf, sizeof(buf), stream)) {
+        char *p = buf;
+        char *name, *val;
+        struct copt *opt;
+        
+        nline++;
+        while (isspace(*p))
+            p++;
+
+        if (*p == '#' || *p == '\n' || *p == '\0')
+            continue;
+
+        name = p;
+
+        while (isalnum(*p) || *p == '_')
+            p++;
+        
+        if (!isspace(*p)) {
+            log(LOGERR, "%s:%d: invalid parameter %c %s\n", path, nline, *p, name);
+            continue;
+        }
+        *p++ = '\0';
+
         while (isspace(*p))
             p++;
         
         if (*p != '=') {
             log(LOGERR, "%s:%d: missing '='\n", path, nline);
-            p = NULL;
-            
+            continue;
+        }
+        
+        p++;
+        val = getv(p, path, nline);
+        if (val == NULL) {
+            log(LOGERR, "%s:%d: no value for %s\n", path, nline, name);
+            continue;
+        }
+
+        printf("%s -> %s\n", name, val);
+        if (n_hash_exists(ht, name)) {
+            opt = n_hash_get(ht, name);
         } else {
-            p++;
-            p = getv(p, path, nline);
+            opt = copt_new(name);
+            n_hash_insert(ht, opt->name, opt);
+        }
+        
+        if (opt->val == NULL)
+            opt->val = strdup(val);
+        else {
+            opt->vals = n_array_new(2, free, (tn_fn_cmp)strcmp);
+            n_array_push(opt->vals, strdup(opt->val));
+            n_array_push(opt->vals, strdup(val));
+            opt->flags |= COPT_MULTIPLE;
         }
     }
-    
-    return p;
+
+    return ht;
 }
 
 
-struct conf_s *ldconf_deafult(void)
+tn_hash *ldconf_deafult(void)
 {
     char *homedir;
     char path[PATH_MAX];
@@ -162,123 +214,32 @@ struct conf_s *ldconf_deafult(void)
 }
 
 
-struct conf_s *ldconf(const char *path) 
+char *conf_get(tn_hash *htconf, const char *name, int *is_multi)
 {
-    FILE *stream;
-    int n, nline = 0, nvals = 0, nerrs = 0;
-    struct conf_s *cnf = NULL;
-    tn_array *rpmacros = NULL;
-    char buf[1024];
+    struct copt *opt;
+    const char *v = NULL;
+
+    if (is_multi)
+        *is_multi = 0;
     
-    if ((stream = fopen(path, "r")) == NULL) {
-        log(LOGERR, "fopen %s: %m", path);
-        return NULL;
+    if ((opt = n_hash_get(htconf, name))) {
+        v = opt->val;
+        if (is_multi)
+            *is_multi = (opt->flags & COPT_MULTIPLE);
     }
-    
-    init_tags();
-    
-    while (fgets(buf, sizeof(buf), stream)) {
-        char *p = buf;
 
-        nline++;
-        while (isspace(*p))
-            p++;
-        
-        if (*p == '#')
-            continue;
-
-        if (strncmp(p, "rpmdef", 6) == 0) {
-            char *v;
-            
-            p += 6;
-            if (!isspace(*p)) {
-                log(LOGERR, "%s:%d: invalid parameter (%s)\n", path, nline,
-                    buf);
-            }
-            while (isspace(*p))
-                p++;
-
-            if (*p != '=') {
-                log(LOGERR, "%s:%d: missing '='\n", path, nline);
-                nerrs++;
-                continue;
-            }
-            p++;
-            v = getv(p, path, nline);
-            if (v == NULL) {
-                nerrs++;
-            } else {
-                if (rpmacros == NULL)
-                    rpmacros = n_array_new(2, free, (tn_fn_cmp)strcmp);
-                    
-                n_array_push(rpmacros, strdup(v));
-            }
-            continue;
-        }
-        
-        
-        n = 0;
-        while (tags[n].name != NULL) {
-            if (tags[n].val == NULL) {
-                char *v;
-                
-                v = getagv(p, tags[n].name, tags[n].namlen, path, nline);
-                if (v != NULL) {
-                    tags[n].val = strdup(v);
-                    nvals++;
-                    goto l_continue;
-                }
-            }
-            n++;
-        }
-    l_continue:
-    }
-    
-    
-    fclose(stream);
-    
-    if (nerrs) {
-        free_tags_values();
-        if (rpmacros)
-            n_array_free(rpmacros);
-        
-    } else if (nvals || rpmacros != NULL) {
-        cnf = malloc(sizeof(*cnf));
-        cnf->source = tags[TAG_SOURCE].val;
-        cnf->cachedir = tags[TAG_CACHEDIR].val;
-        cnf->prefix   = tags[TAG_PREFIX].val;
-        
-        cnf->ftp_http_get = tags[TAG_FTPHTTPGET].val;
-        cnf->ftp_get   = tags[TAG_FTPGET].val;
-        cnf->http_get  = tags[TAG_HTTPGET].val;
-        cnf->https_get = tags[TAG_HTTPSGET].val;
-        cnf->rsync_get = tags[TAG_RSYNCGET].val;
-
-        cnf->rpmacros = rpmacros;
-    }
-    
-    return cnf;
+    printf("get %s %s\n", name, v);
+    return v;
 }
 
-
-void conf_s_free(struct conf_s *cnf) 
+tn_array *conf_get_multi(tn_hash *htconf, const char *name)
 {
-    if (cnf->source)
-        free(cnf->source);
+    struct copt *opt;
     
-    if (cnf->cachedir)
-        free(cnf->cachedir);
-
-    if (cnf->prefix)
-        free(cnf->cachedir);
+    if ((opt = n_hash_get(htconf, name)))
+        return opt->vals;
     
-    if (cnf->rpm_path)
-        free(cnf->rpm_path);
-
-    if (cnf->rpm_args)
-        free(cnf->rpm_args);
-
-    free(cnf);
+    return NULL;
 }
 
 
