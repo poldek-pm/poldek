@@ -498,7 +498,7 @@ static int search(struct cmdarg *cmdarg)
     }
 
     if (n_array_size(matched_pkgs) >= term_height)
-        printf_c(PRCOLOR_YELLOW, "%d package(s) found:\n",
+        printf_c(PRCOLOR_YELLOW, "%d package(s) found.\n",
                  n_array_size(matched_pkgs));
         
  l_end:
