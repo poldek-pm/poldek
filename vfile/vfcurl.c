@@ -29,6 +29,8 @@
 
 #include "vfile.h"
 
+#define PROGRESSBAR_WIDTH 75
+
 static int progress (void *clientp, size_t dltotal, size_t dlnow,
                      size_t ultotal, size_t ulnow);
 
@@ -107,7 +109,7 @@ int vfile_curl_init(void)
 
 int vfile_curl_fetch(const char *dest, const char *url)
 {
-    struct progress_bar bar = {0, 0, 0, 75, 0, 0, 0};
+    struct progress_bar bar = {0, 0, 0, PROGRESSBAR_WIDTH, 0, 0, 0};
     struct stat st;
     FILE *stream;
     int rc = 1;
@@ -218,8 +220,15 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
     bar = (struct progress_bar *)clientp;
     total = dltotal + ultotal;
 
-    bar->point = dlnow + ulnow; /* we've come this far */
+    
 
+    bar->point = dlnow + ulnow; /* we've come this far */
+    
+    if (total < bar->point) {    /* cURL w/o (?) */
+        vfile_err_fn("cURL bug detected: current size %d, total size %d\n", bar->point, total);
+        bar->point = total;
+    }
+    
     if (total == 0) {
         int prevblock = bar->prev / 1024;
         int thisblock = bar->point / 1024;
@@ -232,6 +241,12 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         bar->state = 1;         
         frac = (float) bar->point / (float) total;
         percent = frac * 100.0f;
+
+        if (bar->width != PROGRESSBAR_WIDTH) {
+            vfile_err_fn("cURL bug detected: memory overrun\n");
+            bar->width = PROGRESSBAR_WIDTH;
+        }
+        
         barwidth = bar->width - 7;
         n = (int) (((float)barwidth) * frac);
 
