@@ -51,9 +51,9 @@ static struct argp_option options[] = {
  { NULL, 'T', 0, 0, N_("Sort by build day"), 1},
  { NULL, 'h', 0, OPTION_HIDDEN, "", 1 }, 
  { "reverse", 'r', 0, 0, N_("Reverse order while sorting"), 1},
- { NULL, 'n', 0, 0, N_("Print only package's names"), 1},
- { NULL, 'G', 0, 0, N_("Print package's group"), 1},
- { NULL, 'O', 0, 0, N_("Print package's summary"), 1},
+ { NULL, 'n', 0, 0, N_("Print only package names"), 1},
+ { NULL, 'G', 0, 0, N_("Print package groups"), 1},
+ { NULL, 'O', 0, 0, N_("Print package summaries"), 1},
 // { NULL, 'i', 0, OPTION_ALIAS, 0, 1 }, 
  { 0, 0, 0, 0, 0, 0 },
 };
@@ -458,7 +458,9 @@ int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg, const tn_array *evrs)
     
     if (npkgs) {
         if ((flags & OPT_LS_LONG) == 0 && out_stream != stdout) {
-            sh_printf_c(out_stream, PRCOLOR_YELLOW, _("%d packages\n"), npkgs);
+            sh_printf_c(out_stream, PRCOLOR_YELLOW,
+                        ngettext_n_packages_fmt(npkgs), npkgs);
+            fprintf(out_stream, "\n");
             
         } else if (flags & OPT_LS_LONG) {
             char *unit;
@@ -473,7 +475,9 @@ int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg, const tn_array *evrs)
             }
             
             sh_printf_c(out_stream, PRCOLOR_YELLOW,
-                        _("%d packages, %d %s\n"), npkgs, val, unit);
+                        ngettext_n_packages_fmt(npkgs), npkgs);
+            sh_printf_c(out_stream, PRCOLOR_YELLOW,
+                        ", %d %s\n", val, unit);
         }
     }
 

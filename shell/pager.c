@@ -15,6 +15,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -77,7 +78,7 @@ FILE *pager(struct pager *pg)
     pg->pid = 0;
 
     if ((cmd = select_pager_cmd()) == NULL)
-        return;
+        return NULL;
 
     if (!isatty(1))
         return NULL;
@@ -132,13 +133,12 @@ int pager_close(struct pager *pg)
         fclose(pg->stream);
 
     waitpid(pg->pid, &st, 0);
-    signal(SIGPIPE, SIG_DFL);
-    signal(SIGINT, SIG_DFL);
-    signal(SIGTERM, SIG_DFL);
     if (WIFEXITED(st))
         rc = WEXITSTATUS(st);
     
-    
+    signal(SIGPIPE, SIG_DFL);
+    signal(SIGINT, SIG_DFL);
+    signal(SIGTERM, SIG_DFL);
     pg->stream = NULL;
     return rc;
 }
