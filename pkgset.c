@@ -163,7 +163,7 @@ static tn_array *get_rpmlibcaps(void)
 #if HAVE_RPMGETRPMLIBPROVIDES
     n = rpmGetRpmlibProvides((const char ***)&names, &flags, (const char ***)&versions);
 #else
-    return capreq_arr_new();
+    return capreq_arr_new(2);
 #endif    
     if (n <= 0)
         return NULL;
