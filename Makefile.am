@@ -56,9 +56,6 @@ rpmvercmp_LDADD     =
 rpmvercmp_LIBS      = -lrpm
 rpmvercmp_LDFLAGS   = 
 
-mkpackagedir_SOURCES = mkpackagedir
-vfjuggle_SOURCES     = vfjuggle
-
 EXTRA_DIST = poldek.1 poldek.pod \
 	     Makefile.extra *sample* \
 	     poldek.spec
