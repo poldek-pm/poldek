@@ -219,6 +219,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         }
         
     } else {
+        bar->anybfetched = 1;
         frac = (float) bar->point / (float) total;
         percent = frac * 100.0f;
         barwidth = bar->width - 7;
