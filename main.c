@@ -796,7 +796,10 @@ void parse_options(int argc, char **argv)
         strcmp(v, "yes") == 0)
         args.inst.flags |= INSTS_USESUDO;
 
-    
+    if ((v = conf_get(htcnf, "mercy", NULL)) != NULL &&
+        strcmp(v, "yes") == 0)
+        args.psflags |= PSVERIFY_MERCY;
+
     if ((args.inst.flags & INSTS_GREEDY) == 0) { /* no --greedy specified */
         if ((v = conf_get(htcnf, "greedy", NULL)) && strcmp(v, "yes") == 0)
             args.inst.flags |= INSTS_GREEDY;

@@ -5,6 +5,7 @@
 source = ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/
 #source = rsync://ftp.pld.org.pl/pld/test/i686/
 #source = /home/zenek/rpm/RPMS/
+#source = ftp://ftp.pld.org.pl/test/i686/
 
 # NOTE: directory *must* exists 
 #cachedir = /var/tmp/poldek
@@ -24,10 +25,13 @@ source = ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/
 #use_sudo  = yes
 
 # automatically install packages required by installed ones (default "yes") 
-#follow = yes
+#follow = no
 
 # greedy upgrades (defalut "no")
 #greedy = yes
+
+# mercy dependency checking (defalut "no")
+#mercy = yes
 
 # prevent kernel* and dev from being upgraded if they are already installed.
 #hold   = kernel* dev

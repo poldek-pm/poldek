@@ -55,6 +55,7 @@ static struct tag valid_tags[] = {
     { "follow",        TYPE_BOOL },
     { "greedy",        TYPE_BOOL }, 
     { "use_sudo",      TYPE_BOOL },
+    { "mercy",         TYPE_BOOL },
     { "hold",          TYPE_STR | TYPE_LIST | TYPE_MULTI },
     {  NULL,           0 }, 
 };

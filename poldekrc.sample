@@ -34,10 +34,13 @@ cdrom_get     = "/usr/bin/vfjuggle %d %Pn"
 use_sudo  = yes
 
 # automatically install packages required by installed ones (default "yes") 
-#follow = yes
+#follow = no
 
 # greedy upgrades (defalut "no")
 #greedy = yes
+
+# mercy dependency checking (defalut "no")
+#mercy = yes
 
 # prevent kernel* and dev from being upgraded if they are already installed.
 #hold   = kernel* dev
