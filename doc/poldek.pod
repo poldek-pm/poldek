@@ -426,10 +426,13 @@ rpm <= 4.0.x option is equivalent of 'gpg';
 
 Source priority may be set by this option. If the same packages
 (identical name and EVR) are available in more than one source then
-packages from highest prioritized source are taken.
+packages from highest prioritized source are taken. Lower number means
+higher priority, and negative priorities are allowed. Priority defaults 
+to 0.
 
-If source priorities aren't set sources are prioritized in order
-they are appear in config file.
+If several sources have the same priority (including default priority
+of 0), they are prioritized in order they appear in config file, first
+listed source has highest priority.
 
 =item * B<type=SOURCE_TYPE>
 
