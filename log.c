@@ -27,6 +27,7 @@
 #include <trurl/n_snprintf.h>
 #include "i18n.h"
 #include "poldek_term.h"
+#define POLDEK_LOG_H_INTERNAL
 #include "log.h"
 
 int verbose;
@@ -39,26 +40,26 @@ static FILE      *l_stream = NULL, *l_fstream = NULL;
 static void vlog_tty(int pri, const char *fmt, va_list args);
 
 
-void log(int pri, const char *fmt, ...)
+void poldek_log(int pri, const char *fmt, ...)
 {
     va_list args;
 
     va_start(args, fmt);
-    vlog(pri, 0, fmt, args);
+    poldek_vlog(pri, 0, fmt, args);
     va_end(args);
 }
 
-void log_i(int pri, int indent, const char *fmt, ...)
+void poldek_log_i(int pri, int indent, const char *fmt, ...)
 {
     va_list args;
 
     va_start(args, fmt);
-    vlog(pri, indent, fmt, args);
+    poldek_vlog(pri, indent, fmt, args);
     va_end(args);
 }
 
 
-void vlog(int pri, int indent, const char *fmt, va_list args)
+void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
 {
     static int last_endlined = 1;
     char buf[1024], tmp_fmt[1024];
@@ -154,7 +155,7 @@ void log_msg(const char *fmt, ...)
     va_list args;
     if (verbose > -1) {
         va_start(args, fmt);
-        vlog(LOGINFO, 0, fmt, args);
+        poldek_vlog(LOGINFO, 0, fmt, args);
         va_end(args);
     }
 }
@@ -164,7 +165,7 @@ void log_err(const char *fmt, ...)
     va_list args;
     if (verbose > -1) {
         va_start(args, fmt);
-        vlog(LOGERR, 0, fmt, args);
+        poldek_vlog(LOGERR, 0, fmt, args);
         va_end(args);
     }
 }
@@ -184,7 +185,7 @@ void log_msg_i(int indent, const char *fmt, ...)
     va_list args;
     
     va_start(args, fmt);
-    vlog(LOGINFO, indent, fmt, args);
+    poldek_vlog(LOGINFO, indent, fmt, args);
     va_end(args);
 }
 

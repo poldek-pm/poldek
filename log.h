@@ -37,25 +37,13 @@ FILE *log_stream(void);
 FILE *log_file_stream(void);
 
 
-void log(int pri, const char *fmt, ...)
+void poldek_log(int pri, const char *fmt, ...)
    __attribute__((format(printf,2,3)));
    
-void log_i(int pri, int indent, const char *fmt, ...)
+void poldek_log_i(int pri, int indent, const char *fmt, ...)
    __attribute__((format(printf,3,4)));
    
-void vlog(int pri, int indent, const char *fmt, va_list args);
-
-#define logn(pri, fmt, args...) \
-       log(pri | LOGOPT_N, fmt, ## args)
-
-#define log_debug(fmt, args...) \
-  log(LOG_DEBUG, "%s: " fmt, __FUNCTION__ , ## args)
-
-#define logv(verbose_level, pri, indent, fmt, args...)   \
-  do {                                     \
-    if ((verbose_level) <= verbose)        \
-      vlog(pri, fmt, ## args);             \
-  } while(0)
+void poldek_vlog(int pri, int indent, const char *fmt, va_list args);
 
 void log_err(const char *fmt, ...)
   __attribute__((format(printf,1,2)));
@@ -65,17 +53,41 @@ void log_msg_i(int indent, const char *fmt, ...)
   __attribute__((format(printf,2,3)));
 void log_tty(const char *fmt, ...)  
   __attribute__((format(printf,1,2)));
+
+#ifndef POLDEK_LOG_H_INTERNAL  
+
+#define log(pri, fmt, args...) \
+       poldek_log(pri, fmt, ## args)
+
+#define logn(pri, fmt, args...) \
+       poldek_log(pri | LOGOPT_N, fmt, ## args)
+
+#define log_i(pri, indent, fmt, args...) \
+       poldek_log_i(pri, indent, fmt, ## args)
+
+#define vlog(pri, fmt, args...) \
+       poldek_vlog(pri, fmt, ## args)
+
+#define log_debug(fmt, args...) \
+  poldek_log(LOG_DEBUG, "%s: " fmt, __FUNCTION__ , ## args)
+
+#define logv(verbose_level, pri, indent, fmt, args...)   \
+  do {                                     \
+    if ((verbose_level) <= verbose)        \
+      poldek_vlog(pri, fmt, ## args);             \
+  } while(0)
+
   
 #define msg(verbose_level, fmt, args...)   \
   do {                                     \
     if ((verbose_level) <= verbose)        \
-      log(LOGINFO, fmt, ## args);       \
+      poldek_log(LOGINFO, fmt, ## args);       \
   } while(0)
 
 #define msgn(verbose_level, fmt, args...)        \
   do {                                           \
     if ((verbose_level) <= verbose)              \
-      log(LOGINFO|LOGOPT_N, fmt, ## args);       \
+      poldek_log(LOGINFO|LOGOPT_N, fmt, ## args);       \
   } while(0)
 
 #define msg_i(verbose_level, indent, fmt, args...)   \
@@ -95,13 +107,13 @@ void log_tty(const char *fmt, ...)
 #define msg_f(verbose_level, fmt, args...)           \
   do {                                               \
     if ((verbose_level) <= verbose)                  \
-      log(LOGFILE|LOGINFO, fmt, ## args);            \
+      poldek_log(LOGFILE|LOGINFO, fmt, ## args);            \
   } while(0)
 
 #define msgn_f(verbose_level, fmt, args...)           \
   do {                                                \
     if ((verbose_level) <= verbose)                   \
-      log(LOGFILE|LOGINFO|LOGOPT_N, fmt, ## args);    \
+      poldek_log(LOGFILE|LOGINFO|LOGOPT_N, fmt, ## args);    \
   } while(0)
 
 
@@ -109,7 +121,7 @@ void log_tty(const char *fmt, ...)
 #define msg_tty(verbose_level, fmt, args...)         \
   do {                                               \
     if ((verbose_level) <= verbose)                  \
-      log(LOGTTY|LOGINFO, fmt, ## args);             \
+      poldek_log(LOGTTY|LOGINFO, fmt, ## args);             \
   } while(0)
 
 
@@ -117,7 +129,7 @@ void log_tty(const char *fmt, ...)
 #define msgn_tty(verbose_level, fmt, args...)         \
   do {                                                \
     if ((verbose_level) <= verbose)                   \
-      log(LOGTTY|LOGINFO|LOGOPT_N, fmt, ## args);     \
+      poldek_log(LOGTTY|LOGINFO|LOGOPT_N, fmt, ## args);     \
   } while(0)
 
 
@@ -139,4 +151,5 @@ void log_tty(const char *fmt, ...)
 #define dbgf(fmt, args...)  fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
 #define dbgf_(fmt, args...) ((void) 0)
 
+#endif /* POLDEK_LOG_H_INTERNAL */
 #endif /* POLDEK_LOG_H */
