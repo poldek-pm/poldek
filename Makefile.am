@@ -57,12 +57,12 @@ rpmvercmp_LDFLAGS   =
 EXTRA_DIST = $(SHELL_SRCS) \
 	     poldek.1 poldek.pod \
 	     Makefile.extra *sample* \
-	     VERSION poldek.spec
+	     poldek.spec
 
 man_MANS = poldek.1
 
-poldek.1: poldek.pod VERSION
-	$(POD2MAN) -s 1 -r "poldek" --center "poldek $(VERSION)" $< > $@
+poldek.1: poldek.pod
+	$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@
 
 
 dist-hook:
