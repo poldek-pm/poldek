@@ -45,19 +45,21 @@
 
 static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags);
+static int do_update_a(const struct source *src);
+static int do_update(struct pkgdir *pkgdir, int *npatches);
 
 static char *aliases[] = { "apt", "wuch", NULL };
 
 struct pkgdir_module pkgdir_module_hdrl = {
-    PKGDIR_CAP_UPDATEABLE, 
+    PKGDIR_CAP_UPDATEABLE | PKGDIR_CAP_UPDATEABLE_INC, 
     "hdrl",
     (char **)aliases, 
     "hdlist",
     NULL,
     do_load,
     NULL,
-    NULL,
-    NULL,
+    do_update,
+    do_update_a,
     NULL,
     NULL,
     NULL
@@ -73,13 +75,29 @@ int load_header_list(const char *path, tn_array *pkgs,
     struct vfile         *vf;
     struct pkg           *pkg;
     Header               h;
+    FD_t                 fdt = NULL;
     int                  n = 0;
     unsigned             vfmode = VFM_RO | VFM_CACHE | VFM_UNCOMPR | VFM_NOEMPTY;
 
-    if ((vf = vfile_open(path, VFT_RPMIO, vfmode)) == NULL)
+
+    if ((vf = vfile_open(path, VFT_IO, vfmode)) == NULL)
         return -1;
+
+    fdt = fdDup(vf->vf_fd);
+    if (fdt == NULL || Ferror(fdt)) {
+        const char *err = "unknown error";
+        if (fdt)
+            err = Fstrerror(fdt);
+        
+        logn(LOGERR, "rpmio's fdDup failed: %s", err);
+
+        if (fdt)
+            Fclose(fdt);
+        vfile_close(vf);
+        return -1;
+    }
     
-    while ((h = headerRead(vf->vf_fdt, HEADER_MAGIC_YES))) {
+    while ((h = headerRead(fdt, HEADER_MAGIC_YES))) {
         if (headerIsEntry(h, RPMTAG_SOURCEPACKAGE)) { /* omit src.rpms */
             headerFree(h);
             continue;
@@ -99,7 +117,13 @@ int load_header_list(const char *path, tn_array *pkgs,
         headerFree(h);
     }
     
+    if (fdt)
+        Fclose(fdt);
     vfile_close(vf);
+    
+    if (n == 0)
+        logn(LOGWARN, "%s: empty or invalid 'hdrl' file", n_basenam(path));
+    
     return n;
 }
 
@@ -111,3 +135,51 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     return n;
 }
 
+
+static
+int hdrl_update(const char *path, int vfmode)
+{
+    struct vfile         *vf;
+    FD_t                 fdt = NULL;
+    int                  rc = 1;
+    
+    if ((vf = vfile_open(path, VFT_IO, vfmode)) == NULL)
+        return 0;
+
+    fdt = fdDup(vf->vf_fd);
+    if (fdt == NULL || Ferror(fdt)) {
+        const char *err = "unknown error";
+        if (fdt)
+            err = Fstrerror(fdt);
+        
+        logn(LOGERR, "rpmio's fdDup failed: %s", err);
+        rc = 0;
+    }
+    
+    
+    if (fdt)
+        Fclose(fdt);
+    vfile_close(vf);
+    return rc;
+}
+
+
+static
+int do_update_a(const struct source *src)
+{
+    int vfmode;
+    
+    vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;;
+    return hdrl_update(src->path, vfmode);
+}
+
+static 
+int do_update(struct pkgdir *pkgdir, int *npatches) 
+{
+    int vfmode;
+
+    npatches = npatches;
+    
+    vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL | VFM_CACHE_NODEL;
+    return hdrl_update(pkgdir->idxpath, vfmode);
+}
