@@ -23,6 +23,7 @@
 
 #include "pkgset.h"
 #include "pkgdir/source.h"
+#include "pkgdir/pkgdir.h"
 #include "log.h"
 #include "misc.h"
 #include "i18n.h"

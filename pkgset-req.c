@@ -275,7 +275,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
     matched = 0;
 
     if ((ent = capreq_idx_lookup(&ps->cap_idx, reqname))) {
-        *suspkgs = (struct pkg **)ent->pkgs;
+        *suspkgs = (struct pkg **)ent->crent_pkgs;
         *npkgs = ent->items;
         matched = 1;
         
@@ -429,7 +429,7 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
             n_array_push(pkg->reqpkgs, rpkg);
             n_array_sort(pkg->reqpkgs);
             if (dpkg->revreqpkgs == NULL)
-                dpkg->revreqpkgs = n_array_new(2, NULL, NULL);
+                dpkg->revreqpkgs = n_array_new(2, NULL, (tn_fn_cmp)pkg_nvr_strcmp);
             n_array_push(dpkg->revreqpkgs, pkg);
 
             for (i=1; i<nmatched; i++) {
@@ -471,7 +471,8 @@ int pkgset_verify_conflicts(struct pkgset *ps, int strict)
             
             if ((ent = capreq_idx_lookup(&ps->cap_idx, cnflname))) {
                 if (setup_cnfl_pkgs(pkg, cnfl, strict,
-                                   (struct pkg **)ent->pkgs, ent->items)) {
+                                    (struct pkg **)ent->crent_pkgs,
+                                    ent->items)) {
                     continue;
                 }
                 

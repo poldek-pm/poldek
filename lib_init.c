@@ -30,6 +30,7 @@
 #include "sigint/sigint.h"
 
 #include "pkgdir/source.h"
+#include "pkgdir/pkgdir.h"
 #include "pkgset.h"
 #include "conf.h"
 #include "log.h"
@@ -575,14 +576,18 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
 
         if (ts != ctx->ts &&
             ts->getop(ts, op) != ctx->ts->getop(ctx->ts, op)) {
-            if (poldek_ts_op_touched(ts, op))
-                continue;
+            if (poldek_ts_op_touched(ts, op)) {
+                DBGF("NOT apply %s(%d) = %d\n", default_op_map[i].name,
+                   op, ts->getop(ts, op));
+                goto l_continue_loop;
+            }
+            
             
             DBGF("apply %s(%d) = %d\n", default_op_map[i].name,
                    op, ctx->ts->getop(ctx->ts, op));
             ts->setop(ts, op, ctx->ts->getop(ctx->ts, op));
         }
-        
+    l_continue_loop:
         i++;
     }
     

@@ -199,7 +199,7 @@ static int pkgset_index(struct pkgset *ps)
     msg(2, "Indexing...\n");
     add_self_cap(ps);
     n_array_map(ps->pkgs, (tn_fn_map1)sort_pkg_caps);
-    MEMINF("after index[selfcap]");
+    MEMINF_F("after index[selfcap]");
     
     /* build indexes */
     capreq_idx_init(&ps->cap_idx,  CAPREQ_IDX_CAP, 4 * n_array_size(ps->pkgs));
@@ -217,9 +217,9 @@ static int pkgset_index(struct pkgset *ps)
 
         do_pkgset_add_package(ps, pkg, 0);
     }
-    MEMINF("after index");
+    MEMINF_F("after index");
     
-#if 0 
+#if 1
     capreq_idx_stats("cap", &ps->cap_idx);
     capreq_idx_stats("req", &ps->req_idx);
     capreq_idx_stats("obs", &ps->obs_idx);
@@ -230,7 +230,26 @@ static int pkgset_index(struct pkgset *ps)
     return 0;
 }
 
-extern int pkg_cmp_name_evr_arch_rev_srcpri(const struct pkg *p1, const struct pkg *p2);
+static
+int do_pkg_cmp_uniq_nevr(const struct pkg *p1, struct pkg *p2) 
+{
+    register int rc;
+    
+    if ((rc = pkg_cmp_uniq_name_evr(p1, p2)) == 0)
+        pkg_score(p2, PKG_IGNORED_UNIQ);
+    return rc;
+}
+
+static
+int do_pkg_cmp_uniq_n(const struct pkg *p1, struct pkg *p2) 
+{
+    register int rc;
+    
+    if ((rc = pkg_cmp_uniq_name(p1, p2)) == 0)
+        pkg_score(p2, PKG_IGNORED_UNIQ);
+    return rc;
+}
+
 
 int pkgset_setup(struct pkgset *ps, unsigned flags) 
 {
@@ -238,7 +257,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     int strict;
     int v = verbose;
 
-    MEMINF("before setup");
+    MEMINF_F("before setup");
     ps->flags |= flags;
     strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
 
@@ -249,11 +268,11 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
         //n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_srcpri);
         // <=  0.18.3 behaviour
         n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
-        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq_name);
+        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)do_pkg_cmp_uniq_n);
             
     } else {
         n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
-        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq_name_evr);
+        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)do_pkg_cmp_uniq_nevr);
     }
         
     if (n != n_array_size(ps->pkgs)) {
@@ -263,7 +282,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
                  "Removed %d duplicate packages from available set", n), n);
     }
 
-    MEMINF("before index");
+    MEMINF_F("before index");
     pkgset_index(ps);
     
     v = verbose;    
@@ -277,13 +296,13 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     verbose = v;
 
     pkgset_verify_deps(ps, strict);
-    MEMINF("after verify deps");
+    MEMINF_F("after verify deps");
 
     pkgset_verify_conflicts(ps, strict);
     
-    MEMINF("MEM after order");
+    MEMINF_F("MEM after order");
     pkgset_order(ps, flags & PSET_VERIFY_ORDER);
-    MEMINF("after setup[END]");
+    MEMINF_F("after setup[END]");
     return ps->nerrors == 0;
 }
 
@@ -484,7 +503,7 @@ tn_array *find_capreq(struct pkgset *ps, tn_array *pkgs,
     if (ent && ent->items > 0) {
         int i;
         for (i=0; i < ent->items; i++)
-            n_array_push(pkgs, pkg_link(ent->pkgs[i]));
+            n_array_push(pkgs, pkg_link(ent->crent_pkgs[i]));
         
     }
 

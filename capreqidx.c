@@ -21,12 +21,14 @@
 #include <trurl/nmalloc.h>
 
 #include "i18n.h"
+#include "pkg.h"
 #include "capreqidx.h"
 #include "log.h"
 
-static void free_ptrs(void *p) 
+static void capreq_ent_free(struct capreq_idx_ent *ent) 
 {
-    free(*(void**)p);
+    if (ent->_size > 1)
+        free(ent->crent_pkgs);
 }
 
 int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)  
@@ -34,14 +36,9 @@ int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)
     idx->flags = type;
 
     MEMINF("START");
-    
-    idx->ht = n_hash_new(nelem, free_ptrs);
-
-    if (idx->ht == NULL)
-       return 0;
-    
-    n_hash_ctl(idx->ht, TN_HASH_NOCPKEY);
     idx->na = n_alloc_new(4, TN_ALLOC_OBSTACK);
+    idx->ht = n_hash_new_na(idx->na, nelem, (tn_fn_free)capreq_ent_free);
+    n_hash_ctl(idx->ht, TN_HASH_NOCPKEY);
     MEMINF("END");
     return 1;
 }
@@ -54,27 +51,31 @@ void capreq_idx_destroy(struct capreq_idx *idx)
     memset(idx, 0, sizeof(*idx));
 }
 
+static int capreq_idx_ent_transform_to_array(struct capreq_idx_ent *ent)
+{
+    struct pkg *tmp;
+    
+    n_assert(ent->_size == 1);   /* crent_pkgs is NOT allocated */
+    tmp = ent->crent_pkg;
+    ent->crent_pkgs = n_malloc(2 * sizeof(*ent->crent_pkgs));
+    ent->crent_pkgs[0] = tmp;
+    ent->_size = 2;
+    return 1;
+}
+
+
 
 int capreq_idx_add(struct capreq_idx *idx, const char *capname,
                    struct pkg *pkg, int isprov)
 {
-    void **p;
     struct capreq_idx_ent *ent;
             
-    if ((p = n_hash_get(idx->ht, capname)) == NULL) {
-        register int size = 1;
-        
-        if ((idx->flags & CAPREQ_IDX_CAP) == 0)
-            size = 4;
-        
-        ent = n_malloc(sizeof(*ent) + (size * sizeof(void*)));
-        ent->_size = size;
-
+    if ((ent = n_hash_get(idx->ht, capname)) == NULL) {
+        ent = idx->na->na_malloc(idx->na, sizeof(*ent));
+        ent->_size = 1;
         ent->items = 1;
-        ent->pkgs[0] = pkg;
-        p = idx->na->na_malloc(idx->na, sizeof(ent));
-        *p = ent;
-        n_hash_insert(idx->ht, capname, p);
+        ent->crent_pkg = pkg;
+        n_hash_insert(idx->ht, capname, ent);
 #if ENABLE_TRACE        
         if ((n_hash_size(idx->ht) % 1000) == 0)
             n_hash_stats(idx->ht);
@@ -82,64 +83,55 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
         
     } else {
         register int i;
-        ent = *p;
 
-#ifndef HAVE_RPM_4_0            /* rpm 4.x packages has NAME = E:V-R cap */
-        if (isprov) {
-            for (i=0; i<ent->items; i++) 
-                if (ent->pkgs[i] == pkg) {
-                    logn(LOGWARN, _("%s: redundant capability \"%s\""),
-                        pkg_snprintf_s(pkg), capname);
-                    return 1;
-                }
-        }
-#else
-        i = i;
-        isprov = isprov;        /* avoid gcc's warn */
-#endif
+        if (ent->_size == 1)    /* crent_pkgs is NOT allocated */
+            capreq_idx_ent_transform_to_array(ent);
+        
         if (idx->flags & CAPREQ_IDX_CAP) { /* check for duplicates */
-            //printf("%s: %d: %s\n", capname, ent->items, pkg_snprintf_s(pkg));
             for (i=0; i < ent->items; i++) { 
-                if (pkg == ent->pkgs[i])
+                if (pkg == ent->crent_pkgs[i])
                     return 1;
             }
         }
         
-        
         if (ent->items == ent->_size) {
-            struct capreq_idx_ent *new_ent;
-            int new_size;
-            new_size = sizeof(*ent) + (2 * ent->_size * sizeof(void*));
-            new_ent = n_realloc(ent, new_size);
-            ent = new_ent;
             ent->_size *= 2;
-            *p = ent;
+            ent->crent_pkgs = n_realloc(ent->crent_pkgs,
+                                        ent->_size * sizeof(*ent->crent_pkgs));
         }
-        ent->pkgs[ent->items++] = pkg;
+        
+        ent->crent_pkgs[ent->items++] = pkg;
     }
     
     return 1;
 }
 
+
 void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
                        struct pkg *pkg)
 {
     struct capreq_idx_ent *ent;
-    void **p;
     int i;
             
-    if ((p = n_hash_get(idx->ht, capname)) == NULL)
+    if ((ent = n_hash_get(idx->ht, capname)) == NULL)
         return;
+
+    if (ent->_size == 1) {      /* no crent_pkgs */
+        if (pkg_cmp_name_evr(pkg, ent->crent_pkg) == 0) {
+            ent->items = 0;
+            ent->crent_pkg = NULL;
+        }
+        return;
+    }
     
-    ent = *p;
     for (i=0; i < ent->items; i++) {
-        if (pkg_cmp_name_evr(pkg, ent->pkgs[i]) == 0) {
+        if (pkg_cmp_name_evr(pkg, ent->crent_pkgs[i]) == 0) {
             if (i == ent->items - 1) 
-                ent->pkgs[i] = NULL;
+                ent->crent_pkgs[i] = NULL;
             else 
-                memmove(&ent->pkgs[i], &ent->pkgs[i + 1],
-                        (ent->_size - 1 - i) * sizeof(*ent->pkgs));
-            ent->pkgs[ent->_size - 1] = NULL;
+                memmove(&ent->crent_pkgs[i], &ent->crent_pkgs[i + 1],
+                        (ent->_size - 1 - i) * sizeof(*ent->crent_pkgs));
+            ent->crent_pkgs[ent->_size - 1] = NULL;
             ent->items--;
         }
     }
@@ -155,9 +147,7 @@ void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
     
     for (i=0; i < n_array_size(keys); i++) {
         struct capreq_idx_ent *ent;
-        void **p;
-        p = n_hash_get(idx->ht, n_array_nth(keys, i));
-        ent = *p;
+        ent = n_hash_get(idx->ht, n_array_nth(keys, i));
         stats[ent->items]++;
     }
     n_array_free(keys);
@@ -174,12 +164,18 @@ const
 struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
                                          const char *capname)
 {
-    void **p;
+    struct capreq_idx_ent *ent;
     
-    if ((p = n_hash_get(idx->ht, capname)) == NULL)
+    if ((ent = n_hash_get(idx->ht, capname)) == NULL)
         return NULL;
 
-    return *p;
+    if (ent->items == 0)
+        return 0;
+    
+    if (ent->_size == 1)        /* return only transformed ents */
+        capreq_idx_ent_transform_to_array(ent);
+    
+    return ent;
 }
 
 

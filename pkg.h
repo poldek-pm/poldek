@@ -29,10 +29,11 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 
 #define PKG_HELD            (1 << 12) /* non upgradable */
 #define PKG_IGNORED         (1 << 13) /* invisible      */
+#define PKG_IGNORED_UNIQ    (1 << 14) /* uniqued        */
 
-#define PKG_ORDER_PREREQ    (1 << 14) /* see pkgset-order.c */
+#define PKG_ORDER_PREREQ    (1 << 15) /* see pkgset-order.c */
 
-#define PKG_DBPKG           (1 << 15) /* loaded from database, i.e. installed */
+#define PKG_DBPKG           (1 << 16) /* loaded from database, i.e. installed */
 
 /* DAG node colours */
 #define PKG_COLOR_WHITE    (1 << 20)
@@ -217,6 +218,7 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
 
 int pkg_cmp_name_srcpri(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_evr_rev_srcpri(const struct pkg *p1, const struct pkg *p2);
+int pkg_cmp_name_evr_arch_rev_srcpri(const struct pkg *p1, const struct pkg *p2);
 
 int pkg_cmp_pri(struct pkg *p1, struct pkg *p2);
 
@@ -281,6 +283,7 @@ char *pkg_path_s(const struct pkg *pkg);
 char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
                     const char *cachedir);
 
+const char *pkg_pkgdirpath(const struct pkg *pkg);
 unsigned pkg_file_url_type(const struct pkg *pkg);
 
 int pkg_printf(const struct pkg *pkg, const char *str);

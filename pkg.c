@@ -1302,6 +1302,13 @@ char *pkg_path_s(const struct pkg *pkg)
     return pkg_path(pkg, buf, sizeof(buf));
 }
 
+const char *pkg_pkgdirpath(const struct pkg *pkg) 
+{
+    if (pkg->pkgdir)
+        return pkg->pkgdir->path;
+    return NULL;
+}
+
 unsigned pkg_file_url_type(const struct pkg *pkg)
 {
     n_assert(pkg->pkgdir);

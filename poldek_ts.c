@@ -99,29 +99,34 @@ void poldek_ts_free(struct poldek_ts *ts)
 }
 
 
-void poldek_ts_setop(struct poldek_ts *ts, int optv, int on_off)
+void poldek_ts_setop(struct poldek_ts *ts, int optv, int on)
 {
     n_assert(bitvect_slot(optv) < sizeof(ts->_opvect)/sizeof(bitvect_slot_itype));
     switch (optv) {
         case POLDEK_OP_PROMOTEPOCH:
-            poldek_conf_PROMOTE_EPOCH = on_off;
+            poldek_conf_PROMOTE_EPOCH = on;
             break;
 
         case POLDEK_OP_CONFLICTS:
         case POLDEK_OP_OBSOLETES:
-            DBGF("set %d %d\n", optv, on_off);
+            DBGF("set %d %d\n", optv, on);
+            break;
+
+        case POLDEK_OP_FOLLOW:
+            if (!on)
+                poldek_ts_setop(ts, POLDEK_OP_GREEDY, 0);
             break;
             
         default:
             break;
     }
     
-    if (on_off)
+    if (on)
         bitvect_set(ts->_opvect, optv);
     else
         bitvect_clr(ts->_opvect, optv);
     
-    bitvect_set(ts->_opvect_setmark, 1); /* touched */
+    bitvect_set(ts->_opvect_setmark, optv); /* touched */
     //printf("setop %d TO %d\n", optv, on_off);
 }
 
@@ -734,7 +739,7 @@ int ts_run_install(struct poldek_ts *ts, struct install_info *iinf)
     if (poldek_ts_issetf_all(ts, POLDEK_TS_INSTALLDIST))
         return ts_run_install_dist(ts);
 
-    
+    DBGF("%p follow = %d\n", ts, ts->getop(ts, POLDEK_OP_FOLLOW));
     if (!ts_mark_arg_packages(ts, 0)) {
         logn(LOGERR, _("Nothing to do"));
         DBGF("ts_mark_arg_packages failed\n");

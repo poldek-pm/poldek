@@ -45,6 +45,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
+#include "pkgdir/pkgdir.h"
 #include "pkgset.h"
 #include "pkgmisc.h"
 #include "misc.h"
@@ -196,22 +197,21 @@ struct pkg *select_supersede_pkg(const struct pkg *pkg, struct pkgset *ps,
 
     if ((ent = capreq_idx_lookup(&ps->obs_idx, pkg->name))) {
         int i, best_i;
-
-        best_i = select_best_pkg(pkg, (struct pkg**)ent->pkgs, ent->items,
-                                 ps, upg);
+        struct pkg **ent_pkgs = (struct pkg**)ent->crent_pkgs;
+        best_i = select_best_pkg(pkg, ent_pkgs, ent->items, ps, upg);
 
         for (i=best_i; i < ent->items; i++) {
-            if (strcmp(pkg->name, ent->pkgs[i]->name) == 0)
+            if (strcmp(pkg->name, ent_pkgs[i]->name) == 0)
                 continue;
             DBGF("found %s <- %s, %d, %d\n", pkg_snprintf_s(pkg),
-                 pkg_snprintf_s0(ent->pkgs[i]),
-                 pkg_caps_obsoletes_pkg_caps(ent->pkgs[i], pkg), 
-                 pkg_caps_obsoletes_pkg_caps(pkg, ent->pkgs[i]));
+                 pkg_snprintf_s0(ent_pkgs[i]),
+                 pkg_caps_obsoletes_pkg_caps(ent_pkgs[i], pkg), 
+                 pkg_caps_obsoletes_pkg_caps(pkg, ent_pkgs[i]));
             
-            if (pkg_caps_obsoletes_pkg_caps(ent->pkgs[i], pkg) &&
-                !pkg_caps_obsoletes_pkg_caps(pkg, ent->pkgs[i])) {
+            if (pkg_caps_obsoletes_pkg_caps(ent_pkgs[i], pkg) &&
+                !pkg_caps_obsoletes_pkg_caps(pkg, ent_pkgs[i])) {
                 
-                bypkg = ent->pkgs[i];
+                bypkg = ent_pkgs[i];
                 break;
             }
         }
@@ -1312,10 +1312,10 @@ int find_replacement(struct upgrade_s *upg, struct pkg *pkg, struct pkg **rpkg)
         int i;
         
         for (i=0; i < ent->items; i++) {
-            if (pkg_caps_obsoletes_pkg_caps(ent->pkgs[i], pkg) &&
-                pkg_cmp_name_evr(ent->pkgs[i], pkg) > 0) {
+            if (pkg_caps_obsoletes_pkg_caps(ent->crent_pkgs[i], pkg) &&
+                pkg_cmp_name_evr(ent->crent_pkgs[i], pkg) > 0) {
                 
-                *rpkg = ent->pkgs[i];
+                *rpkg = ent->crent_pkgs[i];
                 break;
             }
         }
