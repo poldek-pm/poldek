@@ -39,11 +39,11 @@
 #endif
 
 #ifdef ENABLE_INTERACTIVE_CLIENT
-extern int shell_main(struct pkgset *ps);
+extern int shell_main(struct pkgset *ps, struct inst_s *inst);
 #endif
 
 const char *argp_program_version = "poldek " VERSION " (ALPHA)";
-const char *argp_program_bug_address = "<pld-installer@pld.org.pl>";
+const char *argp_program_bug_address = "<mis@pld.org.pl>";
 /* Program documentation. */
 static char doc[] = "poldek " VERSION " (ALPHA)\n"
 "This program may be freely redistributed under the terms of the GNU GPL\n";
@@ -58,7 +58,10 @@ static char args_doc[] = "[PACKAGE..] [--rpm-RPM_LONG_OPTION...]";
 #define MODE_UPGRADEDIST  5
 #define MODE_UPGRADE      6
 #define MODE_UPDATEIDX    7
-#define MODE_SHELL        8
+
+#ifdef ENABLE_INTERACTIVE_CLIENT
+# define MODE_SHELL       8
+#endif
 
 #define INDEXTYPE_TXT     1
 #define INDEXTYPE_TXTZ    2
@@ -107,7 +110,10 @@ struct args {
 #define OPT_PKGPREFIX   1018
 #define OPT_SOURCEUP    1019
 #define OPT_SOURCECACHE 1020
-#define OPT_SHELLMODE   1021
+
+#ifdef ENABLE_INTERACTIVE_CLIENT
+# define OPT_SHELLMODE   1021
+#endif
 
 #define OPT_INST_INSTDIST  1041
 #define OPT_INST_UPGRDIST  1042
@@ -229,21 +235,6 @@ void check_mjrmode(struct args *argsp)
     }
 }
 
-
-static char *trimslash(char *path) 
-{
-    if (path) {
-        char *p = strchr(path, '\0');
-    
-        if (p) {
-            p--;
-            if (*p == '/')
-                *p = '\0';
-        }
-    }
-    return path;
-}
-
 /* buggy glibc argp... */
 static inline void chkarg(int key, char *arg) 
 {
@@ -336,12 +327,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
             break;
-
+            
+#ifdef ENABLE_INTERACTIVE_CLIENT
         case OPT_SHELLMODE:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_SHELL;
+            argsp->psflags |= PSMODE_UPGRADE;
             break;
-            
+#endif            
         case 'm':
             argsp->psflags |= PSVERIFY_MERCY;
             break;
@@ -516,6 +509,7 @@ void poldek_destroy(void)
     pkgsetmodule_destroy();
 }
 
+static
 void parse_options(int argc, char **argv) 
 {
     struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0};
@@ -530,7 +524,7 @@ void parse_options(int argc, char **argv)
     args.idx_path = NULL;
     args.fetchdir = NULL;
     args.install_root = NULL;
-
+    
     args.pkgdef_files = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_defs  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_sets  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
@@ -766,7 +760,9 @@ int check_args(void)
             exit(EXIT_FAILURE);
             break;
 
+#ifdef ENABLE_INTERACTIVE_CLIENT            
         case MODE_SHELL:
+#endif            
         case MODE_UPDATEIDX:
             break;
             
@@ -857,7 +853,7 @@ int main(int argc, char **argv)
     inst.dumpfile  = args.dumpfile;
     inst.flags     = args.inst_sflags;
     inst.rpmopts   = args.rpmopts;
-    inst.rpmacros = args.rpmacros;
+    inst.rpmacros  = args.rpmacros;
     
 
     select_ldmethod();
@@ -884,13 +880,14 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
 
     switch (args.mjrmode) {
+#ifdef ENABLE_INTERACTIVE_CLIENT        
         case MODE_SHELL:
-            if (shell_main(ps))
+            if (shell_main(ps, &inst))
                 exit(EXIT_SUCCESS);
             else
                 exit(EXIT_FAILURE);
             break;
-            
+#endif            
         case MODE_VERIFY:
             if (args.has_pkgdef)
                 if ((rc = usrpkgset_size(args.ups)))
