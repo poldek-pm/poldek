@@ -444,7 +444,7 @@ int pkgset_setup(struct pkgset *ps, const char *pri_fpath)
 
     n = n_array_size(ps->pkgs);
     n_array_sort(ps->pkgs);
-
+    
     if ((ps->flags & PSMODE_MKIDX) == 0) {
         n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
         
@@ -460,15 +460,20 @@ int pkgset_setup(struct pkgset *ps, const char *pri_fpath)
     pkgset_index(ps);
     mem_info(1, "MEM after index");
 
-    if (ps->flags & PSVERIFY_FILECNFLS) {
-        msgn(1, _("\nVerifying files conflicts..."));
+    /*
+      don't incude pkg conflicts based on file conflicts ("bastards")
+      to created index because it's broke index diffs 
+    */
+    if ((ps->flags & PSMODE_MKIDX) == 0) {
+        int v = verbose;
+        
+        if (ps->flags & PSVERIFY_FILECNFLS) 
+            msgn(1, _("\nVerifying files conflicts..."));
+        else
+            verbose = -1;
+        
         file_index_find_conflicts(&ps->file_idx, strict);
 
-    /* detect conflicts between pkgdirs */
-    } else if (n_array_size(ps->pkgdirs) > 1) { 
-        int v = verbose;
-        verbose = -1;
-        file_index_find_conflicts(&ps->file_idx, strict);
         verbose = v;
     }
 
