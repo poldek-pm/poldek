@@ -31,10 +31,12 @@
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int install(struct cmdarg *cmdarg);
 
-#define OPT_INST_FETCH    1
-#define OPT_INST_NODEPS   2
-#define OPT_INST_FORCE    3
-#define OPT_INST_INSTALL  1
+#define OPT_INST_FETCH      1
+#define OPT_INST_NODEPS     2
+#define OPT_INST_FORCE      3
+#define OPT_INST_REINSTALL  4
+#define OPT_INST_DOWNGRADE  5
+
 
 static struct argp_option options[] = {
 {"mercy", 'm', 0, 0, N_("Be tolerant for bugs which RPM tolerates"), 1},
@@ -50,6 +52,8 @@ static struct argp_option options[] = {
      "are broken by unistalled ones"), 1 }, 
     
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), 1 },
+{"reinstall", OPT_INST_REINSTALL, 0, 0, N_("Reinstall"), 1}, 
+{"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade"), 1},     
 
 {"fetch", 'd', "DIR", OPTION_ARG_OPTIONAL,
 N_("Do not install, only download packages"), 1},
@@ -152,6 +156,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             cmdarg->sh_s->inst->flags &= ~INSTS_UPGRADE;
             cmdarg->sh_s->pkgset->flags |= PSMODE_INSTALL;
             cmdarg->sh_s->pkgset->flags &= ~PSMODE_UPGRADE;
+            break;
+
+
+        case OPT_INST_REINSTALL:
+            cmdarg->sh_s->inst->flags |= INSTS_REINSTALL;
+            break;
+
+        case OPT_INST_DOWNGRADE:
+            cmdarg->sh_s->inst->flags |= INSTS_DOWNGRADE;
             break;
 
         case 'd':
