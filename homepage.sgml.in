@@ -15,7 +15,7 @@
     The poldek is a RPM packages management helper tool; its
     basic features are similar to any modern package updater like <em>apt-get</em> --
     program takes information about packages from package index file
-    (called <em>packages.dir.gz</em> by default), and allows to package 
+    (<em>packages.dir.gz</em> by default) and allows to package 
     install, upgrade and removal. 
     Package dependencies are automatically handled, so if you try to install 
     a package that needs others to be installed, it will download all
@@ -180,14 +180,14 @@ For example:
      Older versions are available 
 	<url url="http://team.pld.org.pl/~mis/poldek/download/" name="here">
 
-     <item> Binary rpm packages
+     <item> Binary rpm packages (linked with rpm-4.0.2)
 	<p>
 	<itemize>
 	<item> 
 	<url url="download/poldek-@VERSION@-1.i386.rpm" 
 	     name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm">  
 	
-	<item> Statically linked with rpm-4.0.2 (with db3 backend)
+	<item> Statically linked
 	    <url url="download/poldek-@VERSION@-1.static.src.rpm" 
 	      name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.static.src.rpm">  
 	</itemize>
