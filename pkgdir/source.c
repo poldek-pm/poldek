@@ -800,7 +800,7 @@ int source_make_idx(struct source *src,
 
     n_assert(idxpath);
     
-    printf("mkidx[%s, %s] %s\n", src->type, type, src->path);
+    printf("mkidx[%s, %s] %s %d\n", src->type, type, src->path, cr_flags);
     pkgdir = pkgdir_srcopen(src, 0);
     if (pkgdir == NULL)
         return 0;

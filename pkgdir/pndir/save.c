@@ -510,10 +510,11 @@ void db_dscr_free(struct db_dscr *dbh)
 };
 
 
+
 int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 {
     struct tndb      *db = NULL;
-    int              i, nerr = 0;
+    int              i, nerr = 0, save_descr = 0;
     struct pndir     *idx;
     tn_array         *keys = NULL;
     tn_buf           *nbuf = NULL;
@@ -534,7 +535,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 
     n_assert(pathname);
     mk_paths(&paths, pathname, pkgdir);
-    
+
+    printf("flags %d\n", flags);
     msgn_tty(1, _("Writing %s..."), vf_url_slim_s(paths.path, 0));
     msgn_f(1, _("Writing %s..."), vf_url_slim_s(paths.path, 0));
 
@@ -558,7 +560,12 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     pkg_st_flags = flags;
     pkg_st_flags |= PKGSTORE_NOEVR | PKGSTORE_NOARCH |
         PKGSTORE_NOOS | PKGSTORE_NODESC;
+
+    save_descr = 0;
+    if (pkgdir->avlangs_h && (flags & PKGDIR_CREAT_NODESC) == 0)
+        save_descr = 1;
     
+    mem_info(-1, "pndir_save start");
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg         *pkg;
         struct pkguinf     *pkgu;
@@ -573,10 +580,12 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         n_buf_clean(nbuf);
         if (pkg_store(pkg, nbuf, pkgdir->depdirs, pkg_st_flags))
             tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
+
+        if (i % 100 == 0)
+            mem_info(-1, "pndir_save");
+        continue;
         
-        if (pkgdir->avlangs_h && (flags & PKGDIR_CREAT_NODESC) == 0 &&
-            (pkgu = pkg_info(pkg))) {
-            
+        if (save_descr && (pkgu = pkg_info(pkg))) {
             tn_array *langs = pkguinf_langs(pkgu);
             int j;
 
@@ -585,8 +594,10 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
                 char *lang;
                 
                 lang = n_array_nth(langs, j);
-                if (!n_hash_exists(pkgdir->avlangs_h, lang))
+                if (n_hash_size(pkgdir->avlangs_h) > 0 &&
+                    !n_hash_exists(pkgdir->avlangs_h, lang)) {
                     continue;
+                }
 
                 if ((dbh = n_hash_get(db_dscr_h, lang)) == NULL) {
                     struct tndb *tmpdb;
@@ -599,21 +610,20 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
                         dot = "";
                     }
 
-                    snprintf(path, sizeof(path), paths.fmt_dscr,
-                             dot, langstr);
+                    snprintf(path, sizeof(path), paths.fmt_dscr, dot, langstr);
                     
                     tmpdb = tndb_creat(path, TNDB_SIGN_DIGEST);
                     if (tmpdb == NULL) {
                         logn(LOGERR, "%s: %m\n", path);
                         nerr++;
-                        goto l_end;
+                        goto l_close;
                     }
                     dbh = n_malloc(sizeof(*dbh));
                     dbh->db = tmpdb;
                     dbh->npackages = 0;
                     n_hash_insert(db_dscr_h, lang, dbh);
                 }
-
+                
                 n_buf_clean(nbuf);
                 if (pkguinf_store(pkgu, nbuf, lang)) {
                     tndb_put(dbh->db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
@@ -621,7 +631,9 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
                 }
                 n_buf_clean(nbuf);
             }
+            pkguinf_free(pkgu);
         }
+        
         
 #if 0                           /* debug stuff */
         if (i % 200 == 0) {
@@ -681,7 +693,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 
     if (db_dscr_h)
         n_hash_free(db_dscr_h);
-    
+
+    mem_info(-1, "pndir_save END");
     return nerr == 0;
 }
 

@@ -74,7 +74,7 @@ void pkgdir_setup_langs(struct pkgdir *pkgdir)
 {
     tn_array *avlangs;
 
-#if 0    
+#if 0
     if (pkgdir->avlangs) {
         iny i;
         
@@ -86,7 +86,7 @@ void pkgdir_setup_langs(struct pkgdir *pkgdir)
     }
 #endif
     
-    //printf("pkgdir_setup_langs %s, %s\n", pkgdir->idxpath, pkgdir->lc_lang);
+    printf("pkgdir_setup_langs %s, %s\n", pkgdir->idxpath, pkgdir->lc_lang);
     if (pkgdir->lc_lang == NULL)
         return;
 
@@ -728,6 +728,9 @@ int pkgdir_save(struct pkgdir *pkgdir, const char *type,
 
     if (pkgdir->prev_pkgdir) {
         orig = pkgdir->prev_pkgdir;
+        
+    } else if (strcmp(pkgdir->path, path) == 0) {
+        goto l_end;
         
     } else {
         msgn(1, _("Loading previous %s..."), vf_url_slim_s(path, 0));

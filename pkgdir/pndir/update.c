@@ -161,22 +161,63 @@ int pndir_m_update_a(const struct source *src, const char *idxpath)
     return rc;
 }
 
+static int parse_toc_line(char *line, time_t *tsp, char **mdp) 
+{
+    char *p, *md;
+    time_t ts;
+
+    p = line;
+
+    *tsp = 0;
+    *mdp = NULL;
+    
+    while (*p && isspace(*p))
+        p++;
+        
+    if (*p == '#')
+        return 1;
+    
+
+    if ((p = strchr(p, ' ')) == NULL)
+        return 0;
+    
+    while (*p && isspace(*p))
+        *p++ = '\0';
+        
+    if (sscanf(p, "%lu", &ts) != 1) /* read ts */
+        return 0;
+    
+    if ((p = strchr(p, ' ')) == NULL)
+        return 0;
+
+    while (*p && isspace(*p))
+        *p++ = '\0';
+        
+    md = p;                 /* read orig md */
+    if ((p = strchr(p, ' ')) == NULL)
+        return 0;
+    
+    *p = '\0';
+        
+    if (p - md != TNIDX_DIGEST_SIZE)
+        return 0;
+
+    return 0;
+}
+
 
 int pndir_m_update(struct pkgdir *pkgdir, int *npatches) 
 {
-    char            idxpath[PATH_MAX], tmpath[PATH_MAX], path[PATH_MAX];
-    char            *dn, *bn;
-    struct vfile    *vf;
-    char            line[1024];
-    int             nread, nerr = 0, rc, npatch;
-    const char      *errmsg_broken_difftoc = _("%s: broken patch list");
-    char            current_md[TNIDX_DIGEST_SIZE + 1];
+    char                idxpath[PATH_MAX], tmpath[PATH_MAX], path[PATH_MAX];
+    struct vfile        *vf;
     struct pndir_digest dg_remote;
-    int             first_patch_found;
-    struct pndir    *idx;
+    struct pndir        *idx;
+    char                line[1024], *dn, *bn;
+    int                 nread, nerr = 0, rc, npatch, first_patch_found;
+    const char          *errmsg_broken_difftoc = _("%s: broken patch list");
+    char                current_md[TNIDX_DIGEST_SIZE + 1];
 
     idx = pkgdir->mod_data;
-
     if (idx->_vf->vf_flags & VF_FETCHED)
         return 1;
     
@@ -217,60 +258,22 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
 
     first_patch_found = 0;
     npatch = 0;
-    
     while ((nread = n_stream_gets(vf->vf_tnstream, line, sizeof(line))) > 0) {
         struct pkgdir *diff;
-        char *p, *md;
+        char *md;
         time_t ts;
-		
-        p = line;
-        while (*p && isspace(*p))
-            p++;
-        
-        if (*p == '#')
-            continue;
 
-        if ((p = strchr(p, ' ')) == NULL) {
+        if (!parse_toc_line(line, &ts, &md)) {
             logn(LOGERR, errmsg_broken_difftoc, path);
             nerr++;
             break;
         }
-        
-        while (*p && isspace(*p))
-            *p++ = '\0';
-        
-        if (sscanf(p, "%lu", &ts) != 1) { /* read ts */
-            logn(LOGERR, errmsg_broken_difftoc, path);
-            nerr++;
-            break;
-        }
+
+        if (md == NULL) /* i.e comment */
+            continue;
 
         if (ts <= pkgdir->ts)
             continue;
-        
-        
-        if ((p = strchr(p, ' ')) == NULL) {
-            logn(LOGERR, errmsg_broken_difftoc, path);
-            nerr++;
-            break;
-        }
-        
-        while (*p && isspace(*p))
-            *p++ = '\0';
-        
-        md = p;                 /* read orig md */
-        if ((p = strchr(p, ' ')) == NULL) {
-            logn(LOGERR, errmsg_broken_difftoc, path);
-            nerr++;
-            break;
-        }
-        *p = '\0';
-        
-        if (p - md != TNIDX_DIGEST_SIZE) {
-            logn(LOGERR, errmsg_broken_difftoc, path);
-            nerr++;
-            break;
-        }
         
         if (!first_patch_found) {
             if (memcmp(md, current_md, TNIDX_DIGEST_SIZE) == 0)
@@ -315,10 +318,10 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
     vfile_close(vf);
     //nerr++;
     /* outdated and no patches || package duplicates */
-    if (nerr || npatch == 0 || pkgdir_uniq(pkgdir) > 0) 
+    if (nerr || npatch == 0 || pkgdir_uniq(pkgdir) > 0) {
         nerr++;
-    
-    else {
+        
+    } else {
         struct pndir_digest dg;
 
         pndir_digest_calc_pkgs(&dg, pkgdir->pkgs);
