@@ -910,6 +910,7 @@ int init_shell_data(struct pkgset *ps, struct inst_s *inst, int skip_installed)
     if (skip_installed == 0) {
         shell_s.instpkgs = n_array_new(1024, (tn_fn_free)shpkg_free,
                                        (tn_fn_cmp)shpkg_cmp);
+        n_array_ctl(shell_s.instpkgs, TN_ARRAY_AUTOSORTED);
         load_installed_packages(&shell_s.instpkgs);
     }
 

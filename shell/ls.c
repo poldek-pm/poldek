@@ -235,7 +235,8 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
                      term_width_div2 + term_width_div2/10, (term_width/7), 15);
 
             snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%%ds%%%ds\n",
-                     term_width_div2 + term_width_div2/10, (term_width/7), (term_width/8));
+                     term_width_div2 + term_width_div2/10, (term_width/7),
+                     (term_width/8));
        
             snprintf(hdr, sizeof(hdr), fmt_hdr, "package", "build date", "size");
 
