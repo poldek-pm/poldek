@@ -284,7 +284,6 @@ int cmd_quit(struct cmdctx *cmdctx)
 static void sigint_cb(void)
 {
     if (!shInCmd) {
-        DBGF_F("sh DONE");
         shDone = 1;
     }
 }
