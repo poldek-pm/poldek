@@ -98,8 +98,9 @@ struct pkg *pndir_parse_pkgkey(char *key, int klen, struct pkg *pkg);
 int pndir_m_create(struct pkgdir *pkgdir, const char *pathname,
                    unsigned flags);
 
-int pndir_m_update_a(const struct source *src, const char *idxpath);
-int pndir_m_update(struct pkgdir *pkgdir, int *npatches);
+int pndir_m_update_a(const struct source *src, const char *idxpath,
+                     enum pkgdir_uprc *uprc);
+int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc);
 
 const char *pndir_localidxpath(struct pkgdir *pkgdir);
 

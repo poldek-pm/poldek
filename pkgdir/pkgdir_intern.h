@@ -31,6 +31,11 @@ const char *pkgdir_localidxpath(struct pkgdir *pkgdir);
 
 #include "pkg_store.h"
 
+/* internal module capabilities */
+#define PKGDIR_CAP_INTERNALTYPE   (1 << 8) /* do not show it outside  */
+#define PKGDIR_CAP_NOSAVAFTUP     (1 << 9) /* needn't saving after update() */
+
+
 /*  module methods */
 
 typedef int (*pkgdir_fn_open)(struct pkgdir *pkgdir, unsigned flags);
@@ -50,7 +55,7 @@ enum pkgdir_uprc {
 
 typedef int (*pkgdir_fn_update)(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc);
 typedef int (*pkgdir_fn_update_a)(const struct source *src,
-                                  const char *idxpath);
+                                  const char *idxpath, enum pkgdir_uprc *uprc);
 
 typedef int (*pkgdir_fn_unlink)(const char *path, int allfiles);
 typedef void (*pkgdir_fn_free)(struct pkgdir *pkgdir);

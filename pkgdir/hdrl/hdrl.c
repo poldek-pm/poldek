@@ -41,14 +41,15 @@
 
 static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags);
-static int do_update_a(const struct source *src, const char *idxpath);
-static int do_update(struct pkgdir *pkgdir, int *npatches);
+static int do_update_a(const struct source *src, const char *idxpath,
+                       enum pkgdir_uprc *uprc);
+static int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc);
 
 static char *aliases[] = { "apt", NULL };
 
 struct pkgdir_module pkgdir_module_hdrl = {
     NULL, 
-    PKGDIR_CAP_UPDATEABLE | PKGDIR_CAP_UPDATEABLE_INC, 
+    PKGDIR_CAP_UPDATEABLE | PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_NOSAVAFTUP,
     "hdrl",
     (char **)aliases,
     "File with raw RPM package headers; used by apt-rpm",
@@ -140,14 +141,18 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 
 
 static
-int hdrl_update(const char *path, int vfmode, const char *sl)
+int hdrl_update(const char *path, int vfmode, const char *sl,
+                enum pkgdir_uprc *uprc)
 {
     struct vfile         *vf;
     FD_t                 fdt = NULL;
     int                  rc = 1;
-    
-    if ((vf = vfile_open_ul(path, VFT_IO, vfmode, sl)) == NULL)
+
+    *uprc = PKGDIR_UPRC_NIL;
+    if ((vf = vfile_open_ul(path, VFT_IO, vfmode, sl)) == NULL) {
+        *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
         return 0;
+    }
 
     fdt = fdDup(vf->vf_fd);
     if (fdt == NULL || Ferror(fdt)) {
@@ -156,35 +161,41 @@ int hdrl_update(const char *path, int vfmode, const char *sl)
             err = Fstrerror(fdt);
         
         logn(LOGERR, "rpmio's fdDup failed: %s", err);
+        *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
         rc = 0;
     }
     
-    
     if (fdt)
         Fclose(fdt);
+
+    if (rc) {
+        if (vf->vf_flags & VF_FETCHED) /* updated */
+            *uprc = PKGDIR_UPRC_UPDATED;
+        else
+            *uprc = PKGDIR_UPRC_UPTODATE;
+    }
+    
     vfile_close(vf);
     return rc;
 }
 
 
-static
-int do_update_a(const struct source *src, const char *idxpath)
+
+static int do_update_a(const struct source *src, const char *idxpath,
+                       enum pkgdir_uprc *uprc)
 {
     int vfmode;
 
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
-    return hdrl_update(idxpath, vfmode, src->name);
+    return hdrl_update(idxpath, vfmode, src->name, uprc);
 }
 
-static 
-int do_update(struct pkgdir *pkgdir, int *npatches) 
+static int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 {
     int vfmode;
-
-    npatches = npatches;
     
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL | VFM_CACHE_NODEL;
-    return hdrl_update(pkgdir->idxpath, vfmode, pkgdir->name);
+    return hdrl_update(pkgdir->idxpath, vfmode, pkgdir->name, uprc);
 }
 
 #if 0                           /* NFY */

@@ -274,9 +274,11 @@ const struct pkgdir_module *find_module(const char *type)
 int pkgdir_update_a(const struct source *src)
 {
 	const struct pkgdir_module  *mod;
+    enum pkgdir_uprc            uprc = PKGDIR_UPRC_NIL;
     char idxpath[PATH_MAX];
-    n_assert(src->path);
+    int  rc;
     
+    n_assert(src->path);
 	if ((mod = find_module(src->type)) == NULL)
 		return 0;
 
@@ -284,9 +286,14 @@ int pkgdir_update_a(const struct source *src)
 		logn(LOGERR, _("%s: this type of source is not updateable"), src->type);
 		return 0;
 	}
+
     pkgdir__make_idxpath(idxpath, sizeof(idxpath), src->path, src->type,
-                   src->compress);
-    return mod->update_a(src, idxpath);
+                         src->compress);
+    rc = mod->update_a(src, idxpath, &uprc);
+    
+    if (rc && uprc == PKGDIR_UPRC_UPTODATE) 
+        msgn(1, _("%s is up to date"), source_idstr(src));
+    return rc;
 }
 
 
@@ -299,10 +306,18 @@ int pkgdir_update(struct pkgdir *pkgdir)
 		return 0;
 
 	rc = pkgdir->mod->update(pkgdir, &uprc);
-	if (rc && uprc == PKGDIR_UPRC_UPDATED)
-		rc = pkgdir_save(pkgdir, PKGDIR_CREAT_NOPATCH);
-    
-    if (!rc && uprc == PKGDIR_UPRC_ERR_DESYNCHRONIZED) {
+    if (rc) {
+        if (uprc == PKGDIR_UPRC_UPTODATE) 
+            msgn(1, _("%s is up to date"), pkgdir_idstr(pkgdir));
+            
+        else if (uprc == PKGDIR_UPRC_UPDATED &&
+                 (pkgdir->mod->cap_flags & PKGDIR_CAP_NOSAVAFTUP) == 0) {
+
+            if (pkgdir->mod->cap_flags & PKGDIR_CAP_SAVEABLE)
+                rc = pkgdir_save(pkgdir, PKGDIR_CREAT_NOPATCH);
+        }
+            
+    } else if (!rc && uprc == PKGDIR_UPRC_ERR_DESYNCHRONIZED) {
         if (pkgdir->src && (pkgdir->src->flags & PKGSOURCE_AUTOUPA)) {
             msgn(0, _("%s: update failed, trying to update whole index..."),
                  pkgdir_idstr(pkgdir));

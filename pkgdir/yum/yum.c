@@ -58,12 +58,13 @@ struct pkg_data {
 static int do_open(struct pkgdir *pkgdir, unsigned flags);
 static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 static int do_update(struct pkgdir *pkgdir, int *npatches);
-static int do_update_a(const struct source *src, const char *idxpath);
+static int do_update_a(const struct source *src, const char *idxpath,
+                       enum pkgdir_uprc *uprc);
 static void do_free(struct pkgdir *pkgdir);
 
 struct pkgdir_module pkgdir_module_yum = {
     NULL, 
-    PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE,
+    PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE | PKGDIR_CAP_NOSAVAFTUP,
     "yum", NULL,
     "Yum index format",
     "headers/header.info",
@@ -352,36 +353,43 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 }
 
 static
-int yum_update(const char *path, int vfmode, const char *sl)
+int yum_update(const char *path, int vfmode, const char *sl,
+               enum pkgdir_uprc *uprc)
 {
     struct vfile    *vf;
-    int                  rc = 1;
+    int             rc = 1;
     
-    if ((vf = vfile_open_ul(path, VFT_IO, vfmode, sl)) == NULL)
+    *uprc = PKGDIR_UPRC_NIL;
+    if ((vf = vfile_open_ul(path, VFT_IO, vfmode, sl)) == NULL) {
+        *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
         return 0;
+    }
+
+    /* Download all the headers there? Probably yes, TODO */
+    if (vf->vf_flags & VF_FETCHED) /* updated */
+        *uprc = PKGDIR_UPRC_UPDATED;
+    else
+        *uprc = PKGDIR_UPRC_UPTODATE;
 
     vfile_close(vf);
     return rc;
 }
 
 
-static
-int do_update_a(const struct source *src, const char *idxpath)
+static int do_update_a(const struct source *src, const char *idxpath,
+                       enum pkgdir_uprc *uprc)
 {
     int vfmode;
 
-    src = src;                  /* unused */
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
-    return yum_update(idxpath, vfmode, src->name);
+    return yum_update(idxpath, vfmode, src->name, uprc);
 }
 
 static 
-int do_update(struct pkgdir *pkgdir, int *npatches) 
+int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc) 
 {
     int vfmode;
-
-    npatches = npatches;
     
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL | VFM_CACHE_NODEL;
-    return yum_update(pkgdir->idxpath, vfmode, pkgdir->name);
+    return yum_update(pkgdir->idxpath, vfmode, pkgdir->name, uprc);
 }

@@ -125,7 +125,8 @@ int update_whole_idx(const struct source *src)
 }
 
 
-int pndir_m_update_a(const struct source *src, const char *idxpath)
+int pndir_m_update_a(const struct source *src, const char *idxpath,
+                     enum pkgdir_uprc *uprc)
 {
     struct pndir   *idx;
     struct pkgdir  *pkgdir;
@@ -133,24 +134,34 @@ int pndir_m_update_a(const struct source *src, const char *idxpath)
 
     idxpath = idxpath;          /* unused */
     pkgdir = pkgdir_srcopen(src, 0);
-    
-    if (pkgdir == NULL)
-        return update_whole_idx(src);
+
+    *uprc = PKGDIR_UPRC_NIL;
+    if (pkgdir == NULL) {
+        rc = update_whole_idx(src);
+        if (rc)
+            *uprc = PKGDIR_UPRC_UPDATED;
+        return rc;
+    }
+
     idx = pkgdir->mod_data;
     
     if (idx->_vf->vf_flags & VF_FETCHED) {
         pkgdir_free(pkgdir);
+        *uprc = PKGDIR_UPRC_UPDATED;
         return 1;
     }
     
     switch (is_uptodate(idx->idxpath, idx->dg, NULL, idx->srcnam)) {
         case 1:
             rc = 1;
+            *uprc = PKGDIR_UPRC_UPTODATE;
             break;
             
         case -1:
         case 0:
             rc = update_whole_idx(src);
+            if (rc)
+                *uprc = PKGDIR_UPRC_UPTODATE;
             break;
                 
         default:
@@ -158,6 +169,8 @@ int pndir_m_update_a(const struct source *src, const char *idxpath)
     }
 
     pkgdir_free(pkgdir);
+    if (!rc)
+        *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
     return rc;
 }
 

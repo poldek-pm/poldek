@@ -65,7 +65,8 @@ static int is_uptodate(const char *path, const struct pdir_digest *pdg_local,
 static int do_open(struct pkgdir *pkgdir, unsigned flags);
 static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 static int do_update(struct pkgdir *pkgdir, int *npatches);
-static int do_update_a(const struct source *src, const char *idxpath);
+static int do_update_a(const struct source *src, const char *idxpath,
+                       enum pkgdir_uprc *uprc);
 //static int do_unlink(const char *path, unsigned flags);
 static void do_free(struct pkgdir *pkgdir);
 
@@ -251,18 +252,26 @@ int update_whole_idx(const char *path, const char *pdir_name)
     return rc;
 }
 
-static int do_update_a(const struct source *src, const char *idxpath)
+static int do_update_a(const struct source *src, const char *idxpath,
+                       enum pkgdir_uprc *uprc)
 {
     unsigned int   vf_mode = VFM_RO | VFM_CACHE;
     struct pdir    idx;
     int            rc = 0;
 
-    if (!pdir_open(&idx, idxpath, vf_mode, src->name))
-        return update_whole_idx(idxpath, src->name);
+    *uprc = PKGDIR_UPRC_NIL;
+    if (!pdir_open(&idx, idxpath, vf_mode, src->name)) {
+        rc = update_whole_idx(idxpath, src->name);
+        if (rc)
+            *uprc = PKGDIR_UPRC_UPDATED;
+        return rc;
+    }
 
     if (idx.vf->vf_flags & VF_FETCHED) {
         rc = pdir_digest_verify(idx.pdg, idx.vf);
         pdir_close(&idx);
+        if (rc)
+            *uprc = PKGDIR_UPRC_UPDATED;
         return rc;
     }
     
@@ -270,14 +279,18 @@ static int do_update_a(const struct source *src, const char *idxpath)
         case 1: {
             rc = pdir_digest_verify(idx.pdg, idx.vf);
             pdir_close(&idx);
-            if (rc)
+            if (rc) {
+                *uprc = PKGDIR_UPRC_UPTODATE;
                 break;          /* else download whole index  */
-                
+            }
+            
         } /* no break */
             
         case -1:
         case 0:
             rc = update_whole_idx(idxpath, src->name);
+            if (rc)
+                *uprc = PKGDIR_UPRC_UPDATED;
             break;
                 
         default:
@@ -285,6 +298,8 @@ static int do_update_a(const struct source *src, const char *idxpath)
     }
 
     pdir_close(&idx);
+    if (!rc)
+        *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
     return rc;
 }
 
