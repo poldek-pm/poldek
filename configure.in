@@ -4,8 +4,8 @@ dnl $Id$
 AC_INIT
 AC_CONFIG_SRCDIR([capreq.c])
 
-VERSION=0.17.9
-VERSION_STATUS="beta"
+VERSION=0.17.9.1
+VERSION_STATUS="devel"
 VERSION_CVSTAG="v$(echo $VERSION | sed 's/\./_/g')"
 PACKAGE=poldek
 
@@ -308,13 +308,32 @@ AC_CHECK_FUNCS(EVP_DigestInit,,
 
 
 dnl trullib 0.43.5 has n_hash_size; test if linked with system copy only
+NARRAY="<trurl/narray.h>"
 if test -z "$TRURL_DIR"; then
 	AC_CHECK_LIB(trurl, n_hash_size,,
 		[AC_MSG_ERROR(["trurlib >= 0.43.5 not found"])], [$CONF_IN_LDFLAGS])
 else
 	LIBS="$LIBS -ltrurl"
 	AC_CONFIG_SUBDIRS(trurlib)
+	NARRAY='"trurlib/narray.h"'
 fi
+
+
+dnl AC_MSG_CHECKING([for trullib >= 0.43.9])
+dnl AC_EGREP_CPP(yes,
+dnl        [#include $NARRAY
+dnl         #ifdef n_array_has_free_fn
+dnl           yes
+dnl         #endif
+dnl        ], is_valid_trurlib_ver=yes, is_valid_trurlib_ver=no)
+dnl
+dnl 
+dnl if test ${is_valid_trurlib_ver}. = no. ; then
+dnl 	AC_MSG_RESULT(no)		
+dnl    	AC_MSG_ERROR(["trurlib >= 0.43.9 not found"])
+dnl else
+dnl 	AC_MSG_RESULT(yes)	
+dnl fi
 
 AC_CONFIG_FILES([  po/Makefile.in
 		intl/Makefile
