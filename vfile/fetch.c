@@ -349,7 +349,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
             p = n_strncpy(p, " ", len);
             len--;
         }
-        vfile_msg_fn("execute %s\n", s);
+        vfile_msg_fn("Running %s\n", s);
     }
     
     p_st_init(&pst);

@@ -11,6 +11,7 @@
 
 struct p_open_st {
     FILE *stream;
+    int   fd;
     pid_t pid;
     char *cmd;
     char *errmsg;
@@ -21,5 +22,7 @@ void p_st_destroy(struct p_open_st *pst);
 
 FILE *p_open(struct p_open_st *pst, const char *cmd, char *const argv[]);
 int p_close(struct p_open_st *pst);
+
+FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[]);
 
 #endif /* POLDEK_POPEN_H */

@@ -17,6 +17,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include <pty.h>
 
 #include "p_open.h"
 
@@ -66,7 +70,13 @@ FILE *p_open(struct p_open_st *pst, const char *cmd, char *const argv[])
     }
     
     if ((pid = fork()) == 0) {
-	close(pp[0]);
+        int fd = open("/dev/null", O_RDWR);
+	
+        dup2(fd, 0);
+        close(fd);
+        
+        close(pp[0]);
+
 	dup2(pp[1], 1);
 	dup2(pp[1], 2);
 	close(pp[1]);
@@ -81,7 +91,9 @@ FILE *p_open(struct p_open_st *pst, const char *cmd, char *const argv[])
         
     } else {
         close(pp[1]);
+        pst->fd = pp[0];
         pst->stream = fdopen(pp[0], "r");
+        setvbuf(pst->stream, NULL, _IONBF, 0);
         pst->pid = pid;
         pst->cmd = strdup(cmd);
     }
@@ -112,7 +124,7 @@ int p_close(struct p_open_st *pst)
         rc = WEXITSTATUS(st);
         
     } else if (WIFSIGNALED(st)) {
-#ifdef HAVE_STRSIGNAL        
+#ifdef HAVE_STRSIGNAL
         snprintf(errmsg, sizeof(errmsg), "%s terminated by signal %s\n",
                  pst->cmd, strsignal(WTERMSIG(st)));
 #else
@@ -130,4 +142,36 @@ int p_close(struct p_open_st *pst)
     return rc;
 }
 
+
+FILE *pty_open(struct p_open_st *pst, const char *cmd, char *const argv[])
+{
+    int fd;
+    pid_t pid;
+    char errmsg[1024];
+    
+    if (access(cmd, X_OK) != 0) {
+        snprintf(errmsg, sizeof(errmsg), "%s: no such file", cmd);
+        pst->errmsg = strdup(errmsg);
+        return NULL;
+    }
+    
+    if ((pid = forkpty(&fd, NULL, NULL, NULL)) == 0) {
+        execv(cmd, argv);
+	exit(EXIT_FAILURE);
+        
+    } else if (pid < 0) {
+        snprintf(errmsg, sizeof(errmsg), "%s: no such file", cmd);
+        pst->errmsg = strdup(errmsg);
+        return NULL;
+        
+    } else {
+        pst->fd = fd;
+        pst->stream = fdopen(fd, "r");
+        setvbuf(pst->stream, NULL, _IONBF, 0);
+        pst->pid = pid;
+        pst->cmd = strdup(cmd);
+    }
+    
+    return pst->stream;
+}
 

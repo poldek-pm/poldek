@@ -16,3 +16,5 @@ mkinstalldirs
 install-sh
 stamp-h
 stamp-h.in
+sample
+.deps
