@@ -1,5 +1,8 @@
 0.17.3 (not released yet)
 
+* new "--clean" and "--clean-whole" options for cache directory
+  cleanup
+
 * added IPv6 support to internal FTP client
 
 * support for "hdlist" sources in which information about packages 
@@ -45,7 +48,9 @@
 
 * various bugs fixed:
    - double '/' in paths handling
-   - SIGSEV   
+   - ambiguous p_open() flags (Michal Moskal <malekith@pld.org.pl>)
+   - removed [v]snprintf() (wrong) usage; n_[v]snprintf() are used
+     instead
 
 0.17.2
 * "ported" to RedHat 7.2 (with rpm 4.0.4)
