@@ -1288,14 +1288,14 @@ static int cmd_search(int argc, const char **argv, struct argp *argp)
             
             
             if (pkgu->url) {
-                match += pcre_exec(pcre, NULL, pkgu->url, strlen(pkgu->url),
+                match = pcre_exec(pcre, NULL, pkgu->url, strlen(pkgu->url),
                                    0, 0, NULL, 0);
                 if (match == 0) 
                     goto l_mathed;
             }
             
             if (pkgu->description) {
-                match += pcre_exec(pcre, NULL, pkgu->description,
+                match = pcre_exec(pcre, NULL, pkgu->description,
                                    strlen(pkgu->description), 0, 0, NULL, 0);
             }
             
