@@ -33,22 +33,25 @@
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 
-#include "log.h"
 #include "vfile.h"
+
+#ifdef ENABLE_VFILE_CURL
+# include "vfcurl.h"
+#endif
 
 static int verbose = 0; 
 int *vfile_verbose = &verbose;
 int (*vfile_msg_fn)(const char *fmt, ...) = printf;
 int (*vfile_err_fn)(const char *fmt, ...) = printf;
 
+#define VFILE_CNFCURL (1 << 15)
+
 struct vfile_conf_s {
     char *cachedir;
     unsigned flags;
 };
 
-static struct vfile_conf_s vfile_conf = {
-    "/tmp", VFILE_USEXT_FTP | VFILE_USEXT_HTTP
-};
+static struct vfile_conf_s vfile_conf = { "/tmp", 0};
 
 #ifdef HAVE_FOPENCOOKIE
 cookie_io_functions_t gzio_cookie = {
@@ -72,28 +75,37 @@ void vfile_configure(const char *cachedir, int flags)
     
     if (flags >= 0)
         vfile_conf.flags = flags;
+
+#ifdef ENABLE_VFILE_CURL
+    if ((vfile_conf.flags & VFILE_CNFCURL) == 0) {
+        vfile_curl_init();
+        vfile_conf.flags |= VFILE_CNFCURL;
+    }
+#endif    
+    
 }
 
-#ifdef ENABLE_VFILE_RPMIO
+
+#ifdef ENABLE_VFILE_RPMIO 
 static void *fetch_cb(const unsigned long amount, const unsigned long total) 
 {
     static unsigned long prev_v = 0, vv = 0, tvv = 0;
     
     
     if (amount && amount == total) /* last notification */
-        vfile_msg_fn("_.done (%ld kB)\n", total/1024);
+        vfile_msg_fn(".done (%ld kB)\n", total/1024);
 
     else if (amount == 0) {
-        vfile_msg_fn("_%6ld kB .", tvv*4032);
+        vfile_msg_fn("%6ld kB .", tvv*4032);
         vv = 0;
     }
     else if (total == 0) {
         vv++;
         if (++vv % 63 == 0) {
             tvv++;
-            vfile_msg_fn("_\n%6ld kB .", tvv*4032);
+            vfile_msg_fn("\n%6ld kB .", tvv*4032);
         } else
-            vfile_msg_fn("_.");
+            vfile_msg_fn(".");
         
             
     }
@@ -101,7 +113,7 @@ static void *fetch_cb(const unsigned long amount, const unsigned long total)
         unsigned long i;
         unsigned long v = amount * 60 / total;
         for (i=prev_v; i<v; i++)
-            vfile_msg_fn("_.");
+            vfile_msg_fn(".");
         prev_v = v;
     }
     return NULL;
@@ -117,34 +129,43 @@ static void *fetch_cb_wrapper(const Header h __attribute__((unused)),
 {
     return fetch_cb(amount, total);
 }
+#endif /* ENABLE_VFILE_RPMIO */
+
 
 static
 int fetch_file_internal(const char *destdir, const char *path) 
 {
     char tmpath[PATH_MAX];
-    int rpmrc = -1;
-    
-    snprintf(tmpath, sizeof(tmpath), "%s/%s", destdir, n_basenam(path));
-    vfile_msg_fn("Retrieving %s as %s\n", path, tmpath);
-    
-    urlSetCallback(fetch_cb_wrapper, NULL, 65536);
-    if ((rpmrc = urlGetFile(path, tmpath)) < 0) {
-        vfile_err_fn("vfile: %s transfer failed: %s\n", path,
-            ftpStrerror(rpmrc));
-    }
+    int rc = -1;
 
-    return rpmrc == 0;
+    snprintf(tmpath, sizeof(tmpath), "%s/%s", destdir, n_basenam(path));
+    vfile_msg_fn("Retrieving %s...\n", path);
+
+    if (vfile_conf.flags & VFILE_CNFCURL)
+#ifdef ENABLE_VFILE_CURL
+        rc = vfile_curl_fetch(tmpath, path);
+#endif
+
+    else {
+
+#ifdef ENABLE_VFILE_RPMIO
+        int rpmrc;
+        urlSetCallback(fetch_cb_wrapper, NULL, 65536);
+        if ((rpmrc = urlGetFile(path, tmpath)) < 0) {
+            vfile_err_fn("rpmio: %s transfer failed: %s\n", path,
+                         ftpStrerror(rpmrc));
+        }
+        rc = (rpmrc == 0);
+    }
+#endif
+    return rc;
 }
 
 
-static
-int fetch_file(const char *destdir, const char *path, int urltype) 
+static int fetch_internal(int urltype) 
 {
-    int rc, internal = 1;
+    int internal = 1;
     
-    
-    mkdir(destdir, 0755);
-
     switch (urltype) {
         case VFURL_FTP:
             if (vfile_conf.flags & VFILE_USEXT_FTP)
@@ -156,6 +177,12 @@ int fetch_file(const char *destdir, const char *path, int urltype)
                 internal = 0;
             break;
 
+        case VFURL_HTTPS:
+            internal = 0;
+            if (vfile_conf.flags & VFILE_CNFCURL) /* has curl? */
+                internal = 1;
+            break;
+
         default:
             internal = 0;
     }
@@ -163,11 +190,44 @@ int fetch_file(const char *destdir, const char *path, int urltype)
     if (vfile_configured_handlers() == 0)
         internal = 1;
 
-    n_assert(destdir);
-    if (internal) {
+    return internal;
+}
+
+int vfile_fetcha(const char *destdir, tn_array *urls, int urltype) 
+{
+    int rc = 1;
+    
+    if (urltype < 0) 
+        urltype = vfile_url_type(n_array_nth(urls, 0));
+
+    
+    if (fetch_internal(urltype) == 0) {
+        rc = vfile_fetcha_ext(destdir, urls, urltype);
+        
+    } else {
+        int i;
+        
+        for (i=0; i<n_array_size(urls); i++) 
+            if (!fetch_file_internal(destdir, n_array_nth(urls, i))) {
+                rc = 0;
+                break;
+            }
+    }
+    
+    return rc;
+}
+
+
+int vfile_fetch(const char *destdir, const char *path, int urltype) 
+{
+    int rc;
+    
+    mkdir(destdir, 0755);
+
+    if (fetch_internal(urltype)) {
         rc = fetch_file_internal(destdir, path);
         
-    } else if ((rc = vfile_fetch(destdir, path, urltype)) == 0 &&
+    } else if ((rc = vfile_fetch_ext(destdir, path, urltype)) == 0 &&
                (urltype & (VFURL_HTTP | VFURL_FTP))) {
         vfile_err_fn("Transfer failed, trying internal client...\n");
         rc = fetch_file_internal(destdir, path);
@@ -175,19 +235,6 @@ int fetch_file(const char *destdir, const char *path, int urltype)
     
     return rc;
 }
-
-#else /* ENABLE_VFILE_RPMIO */
-
-static
-int fetch_file(const char *destdir, const char *path, int urltype) 
-{
-    int rc;
-    
-    mkdir(destdir, 0755);
-    return vfile_fetch(destdir, path, urltype);
-}
-
-#endif /* ENABLE_VFILE_RPMIO */
 
 static int isdir(const char *path)
 {
@@ -369,7 +416,7 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
             if (!isdir(tmpdir))
                 mkdir(tmpdir, 0755);
 
-            if (fetch_file(tmpdir, path, urltype)) {
+            if (vfile_fetch(tmpdir, path, urltype)) {
                 char tmpath[PATH_MAX];
                 snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
                          n_basenam(path));

@@ -25,8 +25,9 @@ extern int *vfile_verbose;
 extern int (*vfile_msg_fn)(const char *fmt, ...);
 extern int (*vfile_err_fn)(const char *fmt, ...);
 
-#define VFILE_USEXT_FTP   (1 << 0)
-#define VFILE_USEXT_HTTP  (1 << 1)
+#define VFILE_USEXT_FTP    (1 << 0)
+#define VFILE_USEXT_HTTP   (1 << 1)
+#define VFILE_USEXT_HTTPS  (1 << 2)
 
 /* if any of args is not NULL or -1 then set up it */
 void vfile_configure(const char *cachedir, int flags);
@@ -78,6 +79,9 @@ char *vfile_url_as_path(char *buf, size_t size, const char *url);
 /* external downloaders */
 int vfile_register_ext_handler(unsigned urltypes, const char *fmt);
 int vfile_configured_handlers(void);
+
+int vfile_fetch_ext(const char *destdir, const char *url, int urltype);
+int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype);
 
 int vfile_fetch(const char *destdir, const char *url, int urltype);
 int vfile_fetcha(const char *destdir, tn_array *urls, int urltype);

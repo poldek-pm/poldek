@@ -413,7 +413,7 @@ struct ffetcher *find_fetcher(int urltype, int multi)
 }
 
 
-int vfile_fetch(const char *destdir, const char *url, int urltype) 
+int vfile_fetch_ext(const char *destdir, const char *url, int urltype) 
 {
     struct ffetcher *ftch;
     
@@ -434,7 +434,7 @@ int vfile_fetch(const char *destdir, const char *url, int urltype)
 }
 
 
-int vfile_fetcha(const char *destdir, tn_array *urls, int urltype) 
+int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype) 
 {
     struct ffetcher *ftch;
     int rc = 1;
