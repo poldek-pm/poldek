@@ -323,7 +323,7 @@ int select_best_pkg(const struct pkg *marker,
     int *ncnfls, i, j, i_best, cnfl_min;
     int i_ver_eq = -1, i_evr_eq = -1;
 
-    DBGF("%s (%d)\n", pkg_snprintf_s(marker), npkgs);
+    DBGF("marker=%s (%d)\n", marker ? pkg_snprintf_s(marker) : "(nil)", npkgs);
     n_assert(npkgs > 0);
     if (npkgs == 1)
         return 0;
@@ -336,11 +336,11 @@ int select_best_pkg(const struct pkg *marker,
         struct pkg *pkg = candidates[i];
 
         DBGF("%d. %s %s (color white %d, marked %d, %p)\n", i, 
-             pkg_snprintf_s(marker), pkg_snprintf_s0(pkg),
+             marker ? pkg_snprintf_s(marker) : "(nil)", pkg_snprintf_s0(pkg),
              pkg_is_color(pkg, PKG_COLOR_WHITE),
              pkg_is_marked(upg->ts->pms, pkg), pkg);
 
-        if (pkg_eq_name_prefix(marker, pkg)) {
+        if (marker && pkg_eq_name_prefix(marker, pkg)) {
             if (i_evr_eq == -1 && pkg_cmp_evr(marker, pkg) == 0)
                 i_evr_eq = i;
             
@@ -768,8 +768,8 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
         for (i=0; i < n_array_size(db_dep->pkgs); i++) {
             struct pkg *p = n_array_nth(db_dep->pkgs, i);
         
-            snprintf(&errmsg[n], sizeof(errmsg) - n, "%s %s",
-                     pkg_is_installed(p) ? "" : " already marked", 
+            snprintf(&errmsg[n], sizeof(errmsg) - n, "%s%s",
+                     pkg_is_installed(p) ? "" : " already marked ", 
                      pkg_snprintf_s(p));
             
             logn(LOGERR, "%s", errmsg);
@@ -1141,10 +1141,9 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                 n = upg->ts->askpkg_fn(capreq_snprintf_s(req),
                                          tomark_candidates, tomark);
                 real_tomark = tomark_candidates[n];
+                free(tomark_candidates);
+                tomark_candidates = NULL;
             }
-            
-            free(tomark_candidates);
-            tomark_candidates = NULL;
             
             if (marked_for_removal_by_req(real_tomark, req, upg)) {
                 logn(LOGERR, _("%s (cap %s) is required by %s%s"),
