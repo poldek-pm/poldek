@@ -227,6 +227,8 @@ void copt_free(struct copt *opt)
     free(opt);
 }
 
+
+
 static
 int getvlist(tn_hash *ht, char *name, char *vstr, const char *sep,
              const char *path, int nline)
@@ -277,13 +279,23 @@ static char *getv(char *vstr, const char *path, int nline)
 {
     char *p, *q;
     
-    p = vstr;
-    while (isspace(*p))
-        p++;
+    p = n_str_strip_ws(vstr);
+    if (p == NULL || *p == '\0')
+        return NULL;
+
+    q = p;
+    if (q && (q = strchr(q, '#'))) {
+        if (q == p)
+            p = NULL;
+        else
+            if (*(q - 1) != '\\') {
+                *q = '\0';
+                p = n_str_strip_ws(p);
+            }
+    }
     
-    if (*p == '"') {
+    if (p && *p == '"') {
         p++;
-        
         q = strchr(p, '\0');
         q--;
         while (isspace(*q))
@@ -297,7 +309,6 @@ static char *getv(char *vstr, const char *path, int nline)
         *q = '\0';
         if (p == q)
             p = NULL;
-        
     }
     
     return p;
