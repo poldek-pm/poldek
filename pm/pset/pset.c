@@ -527,11 +527,15 @@ int pm_pset_commitdb(void *dbh)
     struct pm_psetdb *db = dbh;
     struct pkgdir *pkgdir;
     char dstpath[PATH_MAX];
-    int i, rc = 1, nchanges = 0;
+    int i, rc = 1, nchanges;
 
+    nchanges = n_array_size(db->paths_removed) + n_array_size(db->paths_added);
+    if (nchanges == 0)
+        return 1;
+    
+    nchanges = 0;               /* count real made changes */
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
     pkgdir = n_array_nth(db->ps->pkgdirs, 0);
-
     msgn(0, "Installing to %s", pkgdir->path);
     for (i=0; i < n_array_size(db->paths_removed); i++) {
         const char *path = n_array_nth(db->paths_removed, i);
