@@ -325,7 +325,8 @@ $ poldek -s ftp://ftp.dudy.net/RPMS/Packages.gz -ti -n xteddy
 =head1 ENVIROMENT
 
 $HOME is used to read config file.
-  
+$TMPDIR (if set) is used as temporary directory 
+
 =head1 BUGS
 
 =head2 File conflicts
@@ -333,7 +334,7 @@ $HOME is used to read config file.
 Conflicts are detected by comparision files sizes and modes only,
 which means that not all conflicts may be detected because files MD5
 sums are not compared (including they will increase memory consumption
-over 100.000 * 16 bytes).
+too much).
 
 =head2 Upgrade and "Obsoletes" RPM tag
 

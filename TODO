@@ -1,18 +1,15 @@
 # $Id$
 
-* mis  2000/11/28
-- libcurl's backed for vfile
+* mis 2001/05/18
+- check Packages MD5 sum
+- unistalled packages should be ordered using uninst prerequirements 
+- listing of packages contents
+- detection of fatal rpmlib errors during install-dist
+- shell: synchronization of available and installed package sets 
+  to avoid "reload" usage. 
 
 * mis  2000/09/20
-- interactive mode (see README.package-sets)
-
 - check packages MD5 sums and PGP signatures
-
-- support packages user level information (Summaries, Descriptions, etc).
-  It should be placed in a separate index file (IMO format used by dictd
-  (<http://www.dict.org>) is suitable for this purpose)
-
-- easy to use libpoldek API for external programs.
 
 - patch wget, rsync and snarf to support syntax like:
   $ downloader --destdir=DIR --prefix=URLPREFIX [BASENAME...]
@@ -25,20 +22,9 @@
   MDTM ftp command for timestamping. Currently only wget supports 
   timestamping but fetches file list for every file. 
 
-- write as small as possible an unrpm tool for unpacking given files from
-  rpm package (use tools/*.c from rpm sources and cpio*.c from pldilib 
-  sources). 
-  It will be used on bootdisks for extract poldek.static from fetched 
-  say, "install-suite" rpm package.
-
-
 Long term:
 - Use external db for file list storage (custom binary format? modified cdb?). 
-  Currently PLD distribution (about 1800 packages) contains about 110.000 
+  Currently PLD distribution (about 2400 packages) contains about 110.000 
   files.
-
-- Do a complete check (dependencies and conflicts) during upgrade/install.
-  It will make possible to use rpm only for install package (now is done 
-  only for install-dist, where is no installed packages)
 
 
