@@ -140,7 +140,7 @@ static int uninstall(struct cmdarg *cmdarg)
                             iinf.uninstalled_pkgs ? &iinf : NULL))
         err++;
     
-    if (!err && !is_test) {
+    if (!is_test) {
         for (i=0; i < n_array_size(iinf.uninstalled_pkgs); i++) {
             struct pkg   *pkg = n_array_nth(iinf.uninstalled_pkgs, i);
             struct shpkg *shpkg = alloca(sizeof(*shpkg) + 1024);

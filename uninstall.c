@@ -153,7 +153,7 @@ static void print_uninstall_summary(tn_array *pkgs, int ndep)
     
 }
 
-static void update_install_info(struct install_info *iinf, tn_array *pkgs)
+static void update_install_info_OLD(struct install_info *iinf, tn_array *pkgs)
 {
     int i;
         
@@ -162,6 +162,35 @@ static void update_install_info(struct install_info *iinf, tn_array *pkgs)
                      pkg_link(n_array_nth(pkgs, i)));
 
 }
+
+static
+void update_install_info(struct install_info *iinf, tn_array *pkgs,
+                         struct pkgdb *db, int vrfy)
+{
+    int i, is_installed = 0;
+    
+    if (vrfy) {
+        pkgdb_reopendb(db);
+        is_installed = 1;
+    }
+
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+
+        
+        if (vrfy)
+            is_installed = rpm_is_pkg_installed(db->dbh, pkg,
+                                                NULL, NULL);
+
+        if (!is_installed)
+            n_array_push(iinf->uninstalled_pkgs, pkg_link(pkg));
+    }
+    
+    if (vrfy) 
+        pkgdb_closedb(db);
+}
+
 
 
 int packages_uninstall(tn_array *pkgs, struct inst_s *inst,
@@ -259,7 +288,7 @@ int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
     }
 
     dbpkg_set_free(uninst_set);
-    pkgdb_free(db);
+    pkgdb_closedb(db);
     pkgflmodule_allocator_pop_mark(pkgflmod_mark);
 
     if (nerr)
@@ -276,16 +305,22 @@ int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
             doit = inst->ask_fn(0, _("Proceed? [y/N]"));
         
         if (doit) {
-            if (!do_uninstall(pkgs, inst))
+            int vrfy = 0;
+            
+            if (!do_uninstall(pkgs, inst)) {
                 nerr++;
-            else if (iinf)
-                update_install_info(iinf, pkgs);
+                vrfy = 1;
+            }
+            
+            if (iinf)
+                update_install_info(iinf, pkgs, db, vrfy);
         }
     }
 
     if (pkgs)
         n_array_free(pkgs);
     
+    pkgdb_free(db);
     return nerr == 0;
 }
 
