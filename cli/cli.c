@@ -103,13 +103,17 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         
             
         case ARGP_KEY_ARG:
-            DBGF("cli.arg %s\n", arg);
+            DBGF("cli.arg %s, %d\n", arg,
+                 cmdctx->cmd->flags & COMMAND_SELFARGS);
+            if (cmdctx->cmd->flags & COMMAND_SELFARGS)
+                return ARGP_ERR_UNKNOWN;
+            
+            
             if (cmdctx->cmd->flags & COMMAND_NOARGS) {
                 argp_usage (state);
                 cmdctx->rtflags |= CMDCTX_ERR;
                 return EINVAL;
             }
-            //printf("push\n");
             poldek_ts_add_pkgmask(cmdctx->ts, arg);
             break;
             
@@ -120,9 +124,11 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case ARGP_KEY_NO_ARGS:
-            if (cmdctx->rtflags & CMDCTX_ISHELP)
+            DBGF("NOARGS %d\n",
+                 cmdctx->rtflags & (CMDCTX_ISHELP|CMDCTX_GOTARGS));
+            if (cmdctx->rtflags & (CMDCTX_ISHELP | CMDCTX_GOTARGS))
                 break;
-
+            
             if ((cmdctx->cmd->flags & (COMMAND_NOARGS|COMMAND_EMPTYARGS)) == 0) {
                 argp_usage (state);
                 cmdctx->rtflags |= CMDCTX_ERR;

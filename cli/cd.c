@@ -25,7 +25,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 
 struct poclidek_cmd command_cd = {
-    COMMAND_EMPTYARGS | COMMAND_NOOPTS, 
+    COMMAND_SELFARGS | COMMAND_EMPTYARGS | COMMAND_NOOPTS, 
     "cd", N_("[PATH]"), N_("Change current package directory"), 
     NULL, parse_opt, NULL, cd,
     NULL, NULL, NULL, NULL, 0, 0
@@ -50,6 +50,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             cmdctx->_data = n_strdup(arg);
         else 
             argp_usage (state);
+        cmdctx->rtflags |= CMDCTX_GOTARGS;
     }
 
     return 0;

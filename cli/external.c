@@ -27,7 +27,7 @@ static int external(struct cmdctx *cmdctx);
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 struct poclidek_cmd command_external = {
-    COMMAND_PIPEABLE | COMMAND_HIDDEN, 
+    COMMAND_SELFARGS | COMMAND_PIPEABLE | COMMAND_HIDDEN, 
     "!", N_("COMMAND"), N_("Execute external command"), 
     NULL, parse_opt, NULL, external,
     NULL, NULL, NULL, NULL, 0, 0
@@ -44,6 +44,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         if (cmdctx->_data == NULL)
             cmdctx->_data = n_array_new(4, free, NULL);
         n_array_push(cmdctx->_data, n_strdup(arg));
+        cmdctx->rtflags |= CMDCTX_GOTARGS;
     }
 
     return 0;

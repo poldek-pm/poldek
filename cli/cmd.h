@@ -16,6 +16,7 @@ struct cmd_pipe;
 #define CMDCTX_ISHELP        (1 << 0)
 #define CMDCTX_NOCTRLMSGS    (1 << 1)
 #define CMDCTX_ERR           (1 << 2)
+#define CMDCTX_GOTARGS       (1 << 3) /* args have been eaten; argp w/o */
     
 struct cmdctx {
     int                  rtflags;   /* CMDCTX_* */
@@ -41,6 +42,7 @@ int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ...);
 #define COMMAND_EMPTYARGS    (1 << 3) /* cmd accepts empty arg list */
 #define COMMAND_HASVERBOSE   (1 << 4) /* cmd has verbose command */
 #define COMMAND_HIDDEN       (1 << 5) /* help doesn't displays it */
+#define COMMAND_SELFARGS     (1 << 7) /* cmd parses its args itself */
 
 #define COMMAND_MODIFIESDB   (1 << 8)
 #define COMMAND_IS_ALIAS     (1 << 9)

@@ -101,7 +101,8 @@ static struct argp_option options[] = {
 
 
 struct poclidek_cmd command_search = {
-    COMMAND_PIPEABLE | COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES,
+    COMMAND_SELFARGS | COMMAND_PIPEABLE |
+    COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES,
     "search", N_("PATTERN [PACKAGE...]"), N_("Search packages"), 
     options, parse_opt,
     NULL, search,
@@ -112,6 +113,88 @@ struct poclidek_cmd command_search = {
        "     search --perlre /foo\\.bar/\n"
        "  See perlre(1) for more details.\n"), NULL, 0, 0
 };
+
+static struct pattern *build_pattern(struct cmdctx *cmdctx, char *arg)
+{
+    struct pattern   *pt = NULL;
+    char             *regexp = NULL;
+    unsigned         flags = 0;
+    
+    if ((cmdctx->_flags & OPT_PATTERN_PCRE) == 0) {
+        regexp = arg;
+        
+    } else {
+        char *p, delim, *lastp;
+        int  len;
+        
+        p = arg;
+        delim = *arg;
+#if 0                           /* allow any delimiter */
+        if (delim != '/' && delim != '|') {
+            argp_usage(state);
+            return EINVAL;
+        }
+#endif                
+        len = strlen(p) - 1;
+        lastp = p + len;
+        
+        if (strchr("imsx", *lastp) == NULL && *lastp != delim)
+            return NULL;
+                
+        regexp = p + 1;
+                
+        if ((p = strrchr(regexp, delim)) == NULL)
+            return NULL;
+                
+        *p = '\0';
+        p++;
+        
+        while (*p) {
+            switch (*p) {
+                case 'i':
+                    flags |= PCRE_CASELESS;
+                    break;
+
+                case 'm':
+                    flags |= PCRE_MULTILINE;
+                    break;
+
+                case 's':
+                    flags |= PCRE_DOTALL;
+                    break;
+
+                case 'x':
+                    flags |= PCRE_EXTENDED;
+                    break;
+                            
+                default:
+                    logn(LOGERR, _("search: unknown "
+                                   "regexp option -- %c"), *p);
+                    return NULL;
+            }
+            p++;
+        }
+    }
+    
+                
+                
+    pt = n_malloc(sizeof(*pt));
+                
+    if (cmdctx->_flags & OPT_PATTERN_PCRE)
+        pt->type = PATTERN_PCRE;
+    else
+        pt->type = PATTERN_FMASK;
+                
+    pt->regexp = n_strdup(regexp);
+    pt->fnmatch_flags = 0;
+    pt->pcre_flags = flags;
+    pt->pcre = NULL;
+    pt->pcre_extra = NULL;
+    return pt;
+}
+
+        
+    
 
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -166,93 +249,19 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 break;
             DBGF("search.arg (%s)\n", arg);
             
-            if (poldek_ts_get_arg_count(cmdctx->ts) == 0 && cmdctx->_data == NULL) {
-                struct pattern   *pt;
-                char             *regexp = NULL;
-                unsigned         flags = 0;
+            if (cmdctx->_data != NULL) { /* already got pattern */
+                poldek_ts_add_pkgmask(cmdctx->ts, arg);
                 
-                if ((cmdctx->_flags & OPT_PATTERN_PCRE) == 0) {
-                    regexp = arg;
-                    
-                } else {
-                    char             *p, delim, *lastp;
-                    int              len;
-
-                    p = arg;
-                    delim = *arg;
-#if 0                           /* allow any delimiter */
-                    if (delim != '/' && delim != '|') {
-                        argp_usage(state);
-                        return EINVAL;
-                    }
-#endif                
-                    len = strlen(p) - 1;
-                    lastp = p + len;
-                
-                    if (strchr("imsx", *lastp) == NULL && *lastp != delim) {
-                        argp_usage(state);
-                        return EINVAL;
-                    
-                    }
-                
-                    regexp = p + 1;
-                
-                    if ((p = strrchr(regexp, delim)) == NULL) {
-                        argp_usage(state);
-                        return EINVAL;
-                    }
-                
-                    *p = '\0';
-                    p++;
-                
-                
-                    while (*p) {
-                        switch (*p) {
-                            case 'i':
-                                flags |= PCRE_CASELESS;
-                                break;
-
-                            case 'm':
-                                flags |= PCRE_MULTILINE;
-                                break;
-
-                            case 's':
-                                flags |= PCRE_DOTALL;
-                                break;
-
-                            case 'x':
-                                flags |= PCRE_EXTENDED;
-                                break;
-                            
-                            default:
-                                logn(LOGERR, _("search: unknown "
-                                               "regexp option -- %c"), *p);
-                                argp_usage(state);
-                                return EINVAL;
-                        }
-                        p++;
-                    }
+            } else {
+                struct pattern *pt;
+                if ((pt = build_pattern(cmdctx, arg)) == NULL) {
+                    argp_usage(state);
+                    return EINVAL;
                 }
-                
-                
-                pt = n_malloc(sizeof(*pt));
-                
-                if (cmdctx->_flags & OPT_PATTERN_PCRE)
-                    pt->type = PATTERN_PCRE;
-                else
-                    pt->type = PATTERN_FMASK;
-                
-                pt->regexp = n_strdup(regexp);
-                pt->fnmatch_flags = 0;
-                pt->pcre_flags = flags;
-                pt->pcre = NULL;
-                pt->pcre_extra = NULL;
-                
                 cmdctx->_data = pt;
-                
-                break;
+                cmdctx->rtflags |= CMDCTX_GOTARGS;
             }
-            
+            break;
             
         default:
             return ARGP_ERR_UNKNOWN;
@@ -298,7 +307,7 @@ int pattern_compile(struct pattern *pt, int ntimes)
     
     if (pt->pcre == NULL) {
         logn(LOGERR, _("search: pattern: %s:%d: %s"), pt->regexp,
-            pcre_err_off, pcre_err);
+             pcre_err_off, pcre_err);
         return 0;
     }
 
@@ -400,7 +409,7 @@ static int fl_match(tn_tuple *fl, struct pattern *pt)
         }
     }
     
- l_end:
+l_end:
     return match;
 }
 
@@ -514,7 +523,7 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
     }
 
     
- l_end:
+l_end:
     return match;
 }
 
@@ -614,7 +623,7 @@ static int search(struct cmdctx *cmdctx)
         cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, "!%d package(s) found.\n",
                         n_array_size(matched_pkgs));
         
- l_end:
+l_end:
 
     if (pkgs)
         n_array_free(pkgs);
@@ -624,8 +633,9 @@ static int search(struct cmdctx *cmdctx)
     
     if (cmdctx->_data)
         cmdctx->_data = NULL;
-
-    pattern_free(pt);
+    
+    if (pt)
+        pattern_free(pt);
     return 1;
 }
 
