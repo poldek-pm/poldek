@@ -380,6 +380,7 @@ static int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2)
     return rc;
 }
 
+
 int pkgset_setup(struct pkgset *ps) 
 {
     int n;
@@ -415,7 +416,7 @@ int pkgset_setup(struct pkgset *ps)
 
     set_pkg_allocfn(malloc, free);
     set_capreq_allocfn(malloc, free, NULL, NULL);
-    return ps->nerrors;
+    return ps->nerrors == 0;
 }
 
     
