@@ -82,20 +82,15 @@ static int cmd_desc(int argc, const char **argv, struct argp*);
 static error_t parse_desc_opt(int key, char *arg, struct argp_state *state);
 
 static struct argp_option options_desc[] = {
-{0,0,0,0, "desc PACKAGE...", 1 },
 { 0, 0, 0, 0, 0, 0 },    
 };
 
 /* search */
 static int cmd_search(int argc, const char **argv, struct argp*);
 static error_t parse_search_opt(int key, char *arg, struct argp_state *state);
-
 static struct argp_option options_search[] = {
-{ 0,0,0,0, "search [PACKAGE...]", 1 },
-{ 0, 0, 0, 0, 0, 0 },    
+{ 0, 0, 0, 0, 0, 0 }
 };
-
-
 
 /* install */
 static int cmd_install(int argc, const char **argv, struct argp*);
@@ -754,12 +749,12 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
         if (cmdst.flags & OPT_LS_LONG) {
             char timbuf[30];
             char sizbuf[30];
-            char unit = 'K';
+            char unit = 'k';
             double pkgsize = pkg->size/1024;
 
             if (pkgsize > 1000) {
                 pkgsize /= 1024;
-                unit = 'M';
+                unit = 'm';
             }
 
             snprintf(sizbuf, sizeof(sizbuf), "%.1f%c", pkgsize, unit);
@@ -1157,7 +1152,7 @@ static int cmd_get(int argc, const char **argv, struct argp *argp)
         destdirp = destdir;
     }
     
-    if (!pkgset_fetch_pkgs(destdirp, pkgs))
+    if (!pkgset_fetch_pkgs(destdirp, pkgs, 1))
         err++;
     
  l_end:
@@ -1214,6 +1209,40 @@ error_t parse_search_opt(int key, char *arg, struct argp_state *state)
 }
 
 
+static int pkg_match(struct pkg *pkg, pcre *pcre) 
+{
+    int match = -1;
+    struct pkguinf *pkgu;
+    
+        
+    if ((pkgu = pkg_info(pkg)) == NULL) {
+        printf("%s: load package info failed\n", pkg_snprintf_s(pkg));
+        
+    } else {
+        match = pcre_exec(pcre, NULL, pkgu->summary,
+                          strlen(pkgu->summary), 0, 0, NULL, 0);
+        
+        if (match != 0) 
+            match = pcre_exec(pcre, NULL, pkgu->license,
+                              strlen(pkgu->license), 0, 0, NULL, 0);
+        
+        if (match != 0 && pkgu->url) 
+            match = pcre_exec(pcre, NULL, pkgu->url, strlen(pkgu->url),
+                              0, 0, NULL, 0);
+        
+    }
+    
+    if (match != 0 && pkgu->description) {
+        match = pcre_exec(pcre, NULL, pkgu->description,
+                          strlen(pkgu->description), 0, 0, NULL, 0);
+    }
+
+    pkguinf_free(pkgu);
+
+    return match == 0;
+}
+
+
 static int cmd_search(int argc, const char **argv, struct argp *argp)
 {
     struct cmd_state cmdst = { 0, NULL, NULL};
@@ -1236,7 +1265,6 @@ static int cmd_search(int argc, const char **argv, struct argp *argp)
         return 1;
     }
     
-    argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, &cmdst);
     if (cmdst.pattern == NULL) {
         printf("search: no pattern given\n");
         err++;
@@ -1267,58 +1295,23 @@ static int cmd_search(int argc, const char **argv, struct argp *argp)
     matched_pkgs = n_array_new(16, NULL, NULL);
     
     for (i=0; i<n_array_size(shpkgs); i++) {
-        struct pkguinf *pkgu;
-        struct shell_pkg *shpkg;
-
-        shpkg = n_array_nth(shpkgs, i);
-        if ((pkgu = pkg_info(shpkg->pkg))) {
-            int match;
-            
-            match = pcre_exec(pcre, NULL, pkgu->summary, strlen(pkgu->summary),
-                              0, 0, NULL, 0);
-
-            if (match == 0) 
-                goto l_mathed;
-            
-            match = pcre_exec(pcre, NULL, pkgu->license, strlen(pkgu->license),
-                              0, 0, NULL, 0);
-
-            if (match == 0) 
-                goto l_mathed;
-            
-            
-            if (pkgu->url) {
-                match = pcre_exec(pcre, NULL, pkgu->url, strlen(pkgu->url),
-                                   0, 0, NULL, 0);
-                if (match == 0) 
-                    goto l_mathed;
-            }
-            
-            if (pkgu->description) {
-                match = pcre_exec(pcre, NULL, pkgu->description,
-                                   strlen(pkgu->description), 0, 0, NULL, 0);
-            }
-            
-            if (match != 0) 
-                continue;
-
-        l_mathed:
-            //printf("MATCHED %s\n", shpkg->nevr);
+        struct shell_pkg *shpkg = n_array_nth(shpkgs, i);
+        
+        if (pkg_match(shpkg->pkg, pcre)) 
             n_array_push(matched_pkgs, shpkg);
-        }
     }
 
     if (n_array_size(matched_pkgs) == 0) {
         printf("No one package matches /%s/\n", cmdst.pattern);
     } else {
-        printf("%d packages found:\n", n_array_size(matched_pkgs));
+        printf("%d package(s) found:\n", n_array_size(matched_pkgs));
     }
         
     for (i=0; i<n_array_size(matched_pkgs); i++) {
         struct shell_pkg *shpkg;
 
         shpkg = n_array_nth(matched_pkgs, i);
-        printf("%d. %s\n", i+1, shpkg->nevr);
+        printf("%.2d. %s\n", i+1, shpkg->nevr);
     }
     
  l_end:
@@ -1415,6 +1408,8 @@ static int cmd_desc(int argc, const char **argv, struct argp *argp)
             if (*timbuf)
                 printf("Built:\t\t%s\n", timbuf);
 
+            printf("Size:\t\t%d\n", shpkg->pkg->size);
+
             if (shpkg->pkg->pkgdir && shpkg->pkg->pkgdir->path)
                 printf("Path:\t\t%s\n", shpkg->pkg->pkgdir->path);
             
@@ -1431,17 +1426,6 @@ static int cmd_desc(int argc, const char **argv, struct argp *argp)
         n_array_free(shpkgs);
     return err == 0;
 }
-
-
-#if 0
-static int cmd_fetch(char **argv)
-{
-    printf("stat");
-    return (0);
-}
-#endif
-
-
 
 static
 int cmd_help(int argc, const char **argv, struct argp* argp)

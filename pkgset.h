@@ -103,7 +103,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 #define PS_MARK_UNMARK_DEPS (1 << 1)
 void pkgset_unmark(struct pkgset *ps, unsigned markflags);
 
-int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs);
+int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs, int nosubdirs);
 
 int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst);
 int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst);

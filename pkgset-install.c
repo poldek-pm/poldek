@@ -105,7 +105,7 @@ static int dump_pkgs_fqpns(struct pkgset *ps, struct upgrade_s *upg)
 }
 
 
-int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs)
+int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs, int nosubdirs)
 {
     int       i, nerr, urltype;
     tn_array  *urls = NULL;
@@ -144,16 +144,20 @@ int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs)
 
     nerr = 0;
     for (i=0; i<n_array_size(urls_arr); i++) {
-        char buf[1024], path[PATH_MAX];
+        char path[PATH_MAX];
         char *pkgpath = n_array_nth(urls_arr, i);
-        int len;
-        
+
         urls = n_hash_get(urls_h, pkgpath);
 
-        vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
-        len = snprintf(path, sizeof(path), "%s/%s", destdir, buf);
+        if (nosubdirs == 0) {
+            char buf[1024];
+            
+            vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
+            snprintf(path, sizeof(path), "%s/%s", destdir, buf);
+            destdir = path;
+        }
         
-        if (!vfile_fetcha(path, urls, VFURL_UNKNOWN))
+        if (!vfile_fetcha(destdir, urls, VFURL_UNKNOWN))
             nerr++;
     }
     
@@ -210,7 +214,7 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
     n = 0;
 
     
-    if (!pkgset_fetch_pkgs(upg->inst->cachedir, upg->install_pkgs))
+    if (!pkgset_fetch_pkgs(upg->inst->cachedir, upg->install_pkgs, 0))
         return 0;
     
     if (upg->inst->instflags & PKGINST_TEST) {
@@ -1037,7 +1041,8 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
         rc = dump_pkgs_fqpns(ps, upg);
         
     } else if (upg->inst->flags & INSTS_JUSTFETCH) {
-        rc = pkgset_fetch_pkgs(upg->inst->fetchdir, upg->install_pkgs);
+        n_assert(upg->inst->fetchdir);
+        rc = pkgset_fetch_pkgs(upg->inst->fetchdir, upg->install_pkgs, 1);
         
     } else {
         rc = runrpm(ps, upg);
