@@ -594,7 +594,7 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
     }
     
     if (nerr) 
-        log(LOGERR, "There are errors during install\n");
+        log(LOGERR, "There were errors during install\n");
     
     return nerr == 0;
 }
