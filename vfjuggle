@@ -12,8 +12,6 @@ cdid()
     CDID=`echo $URI | sed 's@/.*@@'`
     URI=`echo $URI | sed 's@[^/]*/@@'`
     BN=`basename $URI`
-
-    echo "URI=$URI CDID=$CDID BN=$BN"
     
     #echo "$1 -> uri $URI, id $CDID"
     if [ -z "$URI" -o -z "$CDID" ]; then
