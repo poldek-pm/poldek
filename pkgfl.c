@@ -591,7 +591,8 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
     int       *fentdirs_items;
     int       i, j, ndirs = 0, nerr = 0;
     const char *errmsg_notag = _("%s: no %s tag");
-    
+
+    n_assert(which == PKGFL_ALL); /* others not implemented */
     
     if (!headerGetEntry(h, RPMTAG_BASENAMES, (void*)&t1, (void*)&names, &c1))
         return 0;

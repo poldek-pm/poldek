@@ -14,6 +14,8 @@
 #include <string.h>
 
 #include <trurl/nhash.h>
+#include <trurl/nassert.h>
+
 #include "i18n.h"
 #include "depdirs.h"
 
@@ -107,4 +109,21 @@ int in_depdirs(const char *dir)
     return 0;
 }
 
+char *path2depdir(char *path) 
+{
+    char *p;
+
+    
+    n_assert(*path == '/');
+
+    if (*(path + 1) == '\0')
+        return path;
+    
+    p = strrchr(path, '/');
+
+    if (p != path)
+        *p = '\0';
+    
+    return path + 1;
+}
 

@@ -620,7 +620,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->mjrmode = MODE_INSTALL;
             argsp->psflags |= PSMODE_INSTALL;
             break;
-            
+
+        case 'U':
         case 'u':
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UPGRADE;
@@ -1075,6 +1076,11 @@ static struct pkgset *load_pkgset(int ldflags)
     
     if ((ps = pkgset_new(args.psflags)) == NULL)
         return NULL;
+
+    if (args.mjrmode == MODE_INSTALL || args.mjrmode == MODE_UPGRADE
+        || args.mjrmode == MODE_UPGRADEDIST)
+        
+        rpm_get_dbdepdirs(args.inst.rootdir, ps->depdirs);
     
     if (!pkgset_load(ps, ldflags, args.sources)) {
         logn(LOGERR, _("no packages loaded"));

@@ -202,7 +202,9 @@ struct pkgset *pkgset_new(unsigned optflags)
     ps->ordered_pkgs = NULL;
     
     /* just merge pkgdirs->depdirs */
-    ps->depdirs = n_array_new(32, NULL, (tn_fn_cmp)strcmp);
+    ps->depdirs = n_array_new(64, NULL, (tn_fn_cmp)strcmp);
+    n_array_ctl(ps->depdirs, TN_ARRAY_AUTOSORTED);
+    
     
     ps->pkgdirs = n_array_new(4, (tn_fn_free)pkgdir_free, NULL);
     ps->flags = optflags;

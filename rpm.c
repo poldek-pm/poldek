@@ -22,6 +22,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#ifdef HAVE_DB_185_H
+# include <db_185.h>
+#endif
+
 #include <rpm/rpmlib.h>
 #include <rpm/rpmio.h>
 #include <rpm/rpmurl.h>
@@ -35,6 +39,7 @@
 #include "i18n.h"
 #include "rpm.h"
 #include "rpmadds.h"
+#include "depdirs.h"
 #include "misc.h"
 #include "log.h"
 #include "pkg.h"
@@ -43,7 +48,6 @@
 #include "rpmdb_it.h"
 
 static int initialized = 0;
-
 int rpmlib_verbose = 0;
 
 static
@@ -51,8 +55,13 @@ int header_evr_match_req(Header h, const struct capreq *req);
 static
 int header_cap_match_req(Header h, const struct capreq *req, int strict);
 
+
 int rpm_initlib(tn_array *macros) 
 {
+    //if (depdirs == NULL) 
+    //tn_array *depdirs = n_array_new(16, free, (tn_fn_cmp)strcmp);
+    //rpmdb_depdirs(depdirs);
+    
     if (initialized == 0)
         if (rpmReadConfigFiles(NULL, NULL) != 0) {
             logn(LOGERR, "failed to read rpmlib configs");
@@ -142,6 +151,88 @@ time_t rpm_dbmtime(const char *dbfull_path)
 
     return st.st_mtime;
 }
+
+/*
+  open req index directly, rpmlib API does not allow to extract
+  all requirements without reading whole headers (which is too slow)
+*/
+int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs) 
+{
+    DB        *db;
+    DBT       dbt_k, dbt_d;
+    char      buf[PATH_MAX], path[PATH_MAX], *depdir;
+    char      *index, *p, *dbpath;
+    tn_array  *tmp_depdirs;
+    int       len;
+
+#if !defined HAVE_DB_185_H || !defined HAVE_DBOPEN
+    return 0;
+#endif    
+    
+    index = "requirename.rpm";
+#ifdef HAVE_RPM_4_0
+    index = "Requirename";
+#endif
+    
+    if (rootdir == NULL)
+        rootdir = "/";
+    dbpath = rpm_get_dbpath();
+    snprintf(path, sizeof(path), "%s%s/%s", *(rootdir + 1) == '\0' ? "" : rootdir,
+             dbpath != NULL ? dbpath : "", index);
+    
+    if ((db = dbopen(path, O_RDONLY, 0, DB_HASH, NULL)) == NULL)
+        return 0;
+    
+    if (db->seq(db, &dbt_k, &dbt_d, R_FIRST) != 0) {
+        db->close(db);
+        return 0;
+    }
+    
+    tmp_depdirs = n_array_new(128, NULL, (tn_fn_cmp)strcmp);
+    
+    if (dbt_k.size > 0 && *(char*)dbt_k.data == '/' && dbt_k.size < sizeof(buf)) {
+        memcpy(buf, dbt_k.data, dbt_k.size);
+        buf[dbt_k.size] = '\0';
+        DBGF("ldbreq %s\n", buf);
+        depdir = path2depdir(buf);
+        len = strlen(depdir);
+        p = alloca(len + 1);
+        memcpy(p, depdir, len + 1);
+        n_array_push(tmp_depdirs, p);
+    }
+            
+    while (db->seq(db, &dbt_k, &dbt_d, R_NEXT) == 0) {
+        if (dbt_k.size > 0 && *(char*)dbt_k.data == '/' && dbt_k.size < sizeof(buf)) {
+            memcpy(buf, dbt_k.data, dbt_k.size);
+            buf[dbt_k.size] = '\0';
+            DBGF("ldbreq %s\n", buf);
+            depdir = path2depdir(buf);
+            len = strlen(depdir);
+            p = alloca(len + 1);
+            memcpy(p, depdir, len + 1);
+            n_array_push(tmp_depdirs, p);
+        }
+    }
+    db->close(db);
+    
+
+    n_array_sort(tmp_depdirs);
+    n_array_uniq(tmp_depdirs);
+    
+    while (n_array_size(tmp_depdirs)) {
+        char *dir = n_array_shift(tmp_depdirs);
+        
+        if (n_array_bsearch(depdirs, dir) == NULL) {
+            //printf("dir = %s\n", dir);
+            n_array_push(depdirs, strdup(dir));
+            n_array_isort(depdirs);
+        }
+    }
+    n_array_free(tmp_depdirs);
+    //printf("s = %d\n", n_array_size(depdirs));
+    return n_array_size(depdirs);
+}
+
 
 void rpm_closedb(rpmdb db) 
 {

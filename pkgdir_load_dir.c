@@ -46,6 +46,8 @@
 #include "pkgroup.h"
 #include "pkgdb.h"
 
+static char *std_depdirs[] = { "bin", "etc", "lib", "sbin", "usr/X11R6/bin",
+                               "usr/bin", "usr/lib", "usr/sbin", NULL };
 
 static
 int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
@@ -174,8 +176,12 @@ static void pkgdir_setup_depdirs(struct pkgdir *pkgdir)
     n_assert(pkgdir->depdirs == NULL);
     pkgdir->depdirs = n_array_new(16, free, (tn_fn_cmp)strcmp);
     n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
-    
-    
+
+    i = 0;
+    while (std_depdirs[i] != NULL)
+        n_array_push(pkgdir->depdirs, strdup(std_depdirs[i++]));
+
+    n_array_sort(pkgdir->depdirs);
     for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
 
