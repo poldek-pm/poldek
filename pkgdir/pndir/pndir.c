@@ -73,7 +73,7 @@ struct pkgdir_module pkgdir_module_pndir = {
     PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE, 
     "pndir",
     NULL,
-    "native poldek's index format; the default",
+    "Native poldek's index format",
     "packages.ndir",
     "gz",
     do_open,
@@ -268,13 +268,13 @@ int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags,
 	pndir_init(idx);
 
     if ((flags & PKGDIR_OPEN_DIFF) == 0)
-        if ((idx->dg = pndir_digest_new(path, vfmode, idx->srcnam)) == NULL)
+        if ((idx->dg = pndir_digest_new(path, vfmode, srcnam)) == NULL)
             return 0;
     
     if (srcnam)
         idx->srcnam = n_strdup(srcnam);
     
-    idx->db = do_dbopen(path, vfmode, &idx->_vf, idx->srcnam);
+    idx->db = do_dbopen(path, vfmode, &idx->_vf, srcnam);
     if (idx->db == NULL)
         goto l_err;
         
@@ -352,8 +352,8 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     if ((flags & PKGDIR_OPEN_REFRESH) == 0) 
         vfmode |= VFM_CACHE;
 
-    DBGF("do_open %s\n", pkgdir->idxpath);
-    if (!pndir_open(&idx, pkgdir->idxpath, vfmode, flags, pkgdir_idstr(pkgdir)))
+    DBGF("do_open %s [%s]\n", pkgdir->idxpath, pkgdir->name);
+    if (!pndir_open(&idx, pkgdir->idxpath, vfmode, flags, pkgdir->name))
         return 0;
     
     nerr = 0;

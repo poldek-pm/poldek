@@ -80,7 +80,7 @@ struct pkgdir_module pkgdir_module_pdir = {
     PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE, 
     "pdir",
     (char **)aliases,
-    "native poldek's index format prior to 0.20 version",
+    "Native poldek's index format prior to 0.20 version",
     
     "packages.dir",
     "gz",

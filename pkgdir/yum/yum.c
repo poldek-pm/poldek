@@ -64,7 +64,7 @@ static void do_free(struct pkgdir *pkgdir);
 struct pkgdir_module pkgdir_module_yum = {
     PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE,
     "yum", NULL,
-    "yum index",
+    "Yum index format",
     "headers/header.info",
     NULL,
     do_open,

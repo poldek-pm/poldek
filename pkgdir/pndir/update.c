@@ -55,7 +55,7 @@ static char *eat_zlib_ext(char *path)
 
 static
 int is_uptodate(const char *path, const struct pndir_digest *dg_local,
-                struct pndir_digest *dg_remote)
+                struct pndir_digest *dg_remote, const char *pdir_name)
 {
     char                   mdpath[PATH_MAX], mdtmpath[PATH_MAX];
     struct pndir_digest    remote_dg;
@@ -82,7 +82,7 @@ int is_uptodate(const char *path, const struct pndir_digest *dg_local,
     unlink(mdtmpath);
     mdtmpath[n] = '\0';
 
-    if (!vf_fetch(mdpath, mdtmpath)) {
+    if (!vf_fetch_sl(mdpath, mdtmpath, pdir_name)) {
         rc = -1;
         goto l_end;
     }
@@ -143,7 +143,7 @@ int pndir_m_update_a(const struct source *src, const char *idxpath)
         return 1;
     }
     
-    switch (is_uptodate(idx->idxpath, idx->dg, NULL)) {
+    switch (is_uptodate(idx->idxpath, idx->dg, NULL, idx->srcnam)) {
         case 1:
             rc = 1;
             break;
@@ -221,7 +221,7 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
     if (idx->_vf->vf_flags & VF_FETCHED)
         return 1;
     
-    switch (is_uptodate(pkgdir->idxpath, idx->dg, &dg_remote)) {
+    switch (is_uptodate(pkgdir->idxpath, idx->dg, &dg_remote, idx->srcnam)) {
         case 1:
             rc = 1;
             //if ((pkgdir->flags & PKGDIR_VERIFIED) == 0)
@@ -247,7 +247,7 @@ int pndir_m_update(struct pkgdir *pkgdir, int *npatches)
     snprintf(path, sizeof(path), "%s/%s/%s%s", dn,
              pndir_packages_incdir, bn, pndir_difftoc_suffix);
     
-    vf = vfile_open_sl(path, VFT_TRURLIO, VFM_RO, pkgdir_idstr(pkgdir));
+    vf = vfile_open_sl(path, VFT_TRURLIO, VFM_RO, pkgdir->name);
     if (vf == NULL)
         return 0;
 

@@ -76,21 +76,10 @@ tn_array *pkgdir_typelist(void)
         snprintf(inf->name, sizeof(inf->name), "%s", mod->name);
 
         n = 0;
-
-        if (mod->load) {
-            inf->mode[n++] = 'r';
-            inf->mode[n] = '\0';
-        }
-        
-        if (mod->create) {
-            inf->mode[n++] = 'w';
-            inf->mode[n] = '\0';
-        }
-
-        if (mod->update_a || mod->update) {
-            inf->mode[n++] = 'u';
-            inf->mode[n] = '\0';
-        }
+        inf->mode[n++] = mod->load ? 'r' : '-';
+        inf->mode[n++] = mod->create ? 'w' : '-';
+        inf->mode[n++] = mod->update || mod->update_a ? 'u' : '-';
+        inf->mode[n] = '\0';
         n_assert(n < (int)sizeof(inf->mode));
         
         inf->aliases[0] = '\0';

@@ -367,7 +367,8 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
         return NULL;
     
     pkgdir = pkgdir_malloc();
-    pkgdir->name = n_strdup(name);
+    if (name)
+        pkgdir->name = n_strdup(name);
 
     if (name && n_str_ne(name, "-"))
         pkgdir->flags |= PKGDIR_NAMED;
@@ -752,10 +753,8 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
             idxpath = pkgdir_localidxpath(pkgdir);
     }
 
-	if (mod == NULL) {
-        logn(LOGERR, "%s: no such pkgdir type", type);
+	if (mod == NULL)
 		return 0;
-    }
     
     avlangs_h = avlangs_h_tmp = NULL;
     if (flags & PKGDIR_CREAT_MINi18n) {
@@ -775,7 +774,11 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
     orig = NULL;
     loadorig = 1;
 
-    if (pkgdir_isremote(pkgdir))
+    if (pkgdir->prev_pkgdir) {
+        loadorig = 0;
+        orig = pkgdir->prev_pkgdir;
+        
+    } else if (pkgdir_isremote(pkgdir))
         loadorig = 0;
     
     else if (flags & PKGDIR_CREAT_NOPATCH)

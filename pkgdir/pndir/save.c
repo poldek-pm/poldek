@@ -763,7 +763,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         
         if (!pndir_digest_calc(&dg, keys))
             nerr++;
-        else if (!pndir_digest_save(&dg, paths.path, pkgdir_idstr(pkgdir)))
+        else if (!pndir_digest_save(&dg, paths.path, pkgdir->name))
             nerr++;
     }
     

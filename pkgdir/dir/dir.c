@@ -49,7 +49,7 @@ struct pkgdir_module pkgdir_module_dir = {
     PKGDIR_CAP_NOPREFIX, 
     "dir",
     (char **)aliases,
-    "dynamic index build by scanning directory for packages",
+    "Dynamic index built by scanning directory for packages",
     NULL,
     NULL,
     NULL,

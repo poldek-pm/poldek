@@ -381,12 +381,11 @@ struct source *source_new(const char *name, const char *type,
     }
     
     src = source_malloc();
-    if (name)
+    if (name) {
         src->flags |= PKGSOURCE_NAMED;
-    else
-        name = "-";
+        src->name = n_strdup(name);
+    }
     
-    src->name = n_strdup(name);
     if (type) {
         src->type = n_strdup(type);
         src->flags |= PKGSOURCE_TYPE;
@@ -423,7 +422,7 @@ struct source *source_new_pathspec(const char *type, const char *pathspec,
 
     if (*p == '\0') {           /* path only */
         path = pathspec;
-        name = "-";
+        name = NULL;
         
     } else {
         path = p + 1;
@@ -527,13 +526,10 @@ int source_cmp_pri(const struct source *s1, const struct source *s2)
 
 int source_cmp_name(const struct source *s1, const struct source *s2)
 {
-    if (strcmp(s1->name, "-") == 0)
-        return 1;
-
-    if (strcmp(s2->name, "-") == 0)
-        return -1;
-    
-    return strcmp(s1->name, s2->name);
+    const char *n1, *n2;
+    n1 = s1->name ? s1->name : "";
+    n2 = s2->name ? s2->name : "";
+    return strcmp(n1, n2);
 }
 
 
@@ -690,7 +686,7 @@ void source_printf(const struct source *src)
     source_snprintf_flags(optstr, sizeof(optstr), src);
     
     printf("%-12s %s%s%s%s\n",
-           src->name, vf_url_slim_s(src->path, 0),
+           src->name ? src->name : "-", vf_url_slim_s(src->path, 0),
            *optstr ? "  (" : "", optstr, *optstr ? ")" : "");
 
     if (src->pkg_prefix) {
@@ -819,11 +815,6 @@ int do_source_make_idx(struct source *src,
     unsigned        ldflags = 0;
     
     n_assert(type);
-    if (idxpath == NULL && strstr(src->path, "://")) {
-        logn(LOGERR, _("mkidx requested for remote source without destination "
-            "specified"));
-        return 0;
-    }
 
     if (idxpath == NULL) {
         int len = strlen(src->path) + 1;
@@ -908,16 +899,25 @@ int source_make_idx(struct source *src, const char *stype,
     ssrc = source_dup(src);
     /* swap types */
     source_set(&ssrc->type, stype);
-    source_set(&ssrc->name, "-");
     ssrc->flags &= ~(PKGSOURCE_NAMED);
 
-    if (source_is_type(ssrc, dtype) && idxpath == NULL) { /* same type */
-        logn(LOGERR, "%s: could not make index of same type (%s)",
-             source_idstr(ssrc), dtype);
-        rc = 0;
-    } else {
-        rc = do_source_make_idx(ssrc, dtype, idxpath, flags);
+    
+    rc = 1;
+    if (idxpath == NULL) {
+        if (source_is_remote(src)) { 
+            logn(LOGERR, _("%s: unable to write remote index"),
+                 source_idstr(src));
+            rc = 0;
+            
+        } else if (source_is_type(ssrc, dtype)) { /* same type */
+            logn(LOGERR, _("%s: refusing to overwrite index"),
+                 source_idstr(ssrc));
+            rc = 0;
+        }
     }
+
+    if (rc)
+        rc = do_source_make_idx(ssrc, dtype, idxpath, flags);
     
     source_free(ssrc);
     return rc;

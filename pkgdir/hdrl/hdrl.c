@@ -50,7 +50,7 @@ struct pkgdir_module pkgdir_module_hdrl = {
     PKGDIR_CAP_UPDATEABLE | PKGDIR_CAP_UPDATEABLE_INC, 
     "hdrl",
     (char **)aliases,
-    "file with raw package headers; used by apt-rpm",
+    "File with raw RPM package headers; used by apt-rpm",
     "pkglist",
     "bz2",
     NULL,

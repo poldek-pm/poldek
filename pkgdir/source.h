@@ -66,7 +66,7 @@ int source_update(struct source *src, unsigned flags);
 void source_printf(const struct source *src);
 
 #define source_idstr(src) \
- (((src)->flags & PKGSOURCE_NAMED) ? (src)->name : vf_url_slim_s((src)->path, 0))
+(((src)->flags & PKGSOURCE_NAMED) ? (src)->name : vf_url_slim_s((src)->path, 0))
 
 #define source_is_remote(src) \
     (vf_url_type((src)->path) & VFURL_REMOTE)
