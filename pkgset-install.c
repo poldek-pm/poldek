@@ -987,7 +987,7 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
             DBGF("%s: satisfied by db [cached]\n", capreq_snprintf_s(req));
             
         } else if (tomark && marked_for_removal(tomark, upg)) {
-            DBGF_F("%s: marked for removal\n", pkg_snprintf_s(tomark));
+            DBGF("%s: marked for removal\n", pkg_snprintf_s(tomark));
             
         } else if (pkgdb_match_req(upg->ts->db, req, 1,
                                    upg->uninst_set->dbpkgs)) {
