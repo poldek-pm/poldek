@@ -226,18 +226,19 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
                 else 
                     p++;
                 
-                if (lnerr != 0) {
-                    log(LOGERR, "%s: not a poldek index file\n", path);
-                    nerr++;
-                    goto l_end;
-                }
-
-                if (strncmp(p, filefmt_version, strlen(filefmt_version)) != 0) {
+                if (lnerr == 0 && strncmp(p, filefmt_version,
+                                          strlen(filefmt_version)) != 0) {
                     log(LOGERR, "%s: usupported version %s (need to be %s)\n",
                         path, p, filefmt_version);
                     nerr++;
                     goto l_end;
                 }
+            }
+
+            if (lnerr) {
+                log(LOGERR, "%s: not a poldek index file\n", path);
+                nerr++;
+                goto l_end;
             }
             continue;
         }
