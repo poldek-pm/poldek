@@ -468,7 +468,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 'P':
             if (argsp->curr_src_path == NULL) {
-                logn(LOGERR, _("prefix should be preceded by source one"));
+                logn(LOGERR, _("prefix option should be preceded by source one"));
                 exit(EXIT_FAILURE);
             }
             
