@@ -21,6 +21,7 @@
 #include <ncurses/term.h>
 #include <trurl/nassert.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "term.h"
 
@@ -181,12 +182,12 @@ int term_init(void)
     term = getenv("TERM");
     
     if (term == NULL || *term == '\0') {
-	log(LOGERR, "No value for $TERM\n");
+	logn(LOGERR, _("$TERM undefined"));
         return 0;
     }
     
     if (setupterm(term, fileno(stdout), &rc) != OK && rc <= 0) {
-	log(LOGERR, "Unknown terminal \"%s\"", term);
+	logn(LOGERR, _("%s: unknown terminal"), term);
         return 0;
     }
 

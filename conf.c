@@ -22,6 +22,7 @@
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "conf.h"
 
@@ -102,6 +103,8 @@ int getvlist(tn_hash *ht, char *name, char *vstr, const char *path, int nline)
     const char **v, **p;
     struct copt *opt;
 
+
+    path = path; nline = nline;
     
     p = v = n_str_tokl(vstr, " \t,");
     if (v == NULL)
@@ -160,7 +163,7 @@ static char *getv(char *vstr, const char *path, int nline)
             q++;
         
         if (*q == '\0') {
-            log(LOGERR, "%s:%d: \" missing\n", path, nline);
+            logn(LOGERR, _("%s:%d: missing '\"'"), path, nline);
             p = NULL;
         }
         
@@ -168,7 +171,7 @@ static char *getv(char *vstr, const char *path, int nline)
         q++;
         while (*q) {
             if (!isspace(*q)) {
-                log(LOGERR, "%s:%d: syntax error\n", path, nline);
+                logn(LOGERR, _("%s:%d: syntax error"), path, nline);
                 p = NULL;
                 break;
             }
@@ -208,7 +211,7 @@ static void validate_tag(const char *key, void *unused)
     }
     
     if (!found) {
-        log(LOGWARN, "%s: unknown option\n");
+        logn(LOGWARN, _("%s: unknown option"), key);
         sleep(1);
     }
 }
@@ -222,7 +225,7 @@ tn_hash *ldconf(const char *path)
     char buf[1024];
     
     if ((stream = fopen(path, "r")) == NULL) {
-        log(LOGERR, "fopen %s: %m\n", path);
+        logn(LOGERR, "fopen %s: %m", path);
         return NULL;
     }
 
@@ -250,7 +253,7 @@ tn_hash *ldconf(const char *path)
             p++;
         
         if (!isspace(*p)) {
-            log(LOGERR, "%s:%d: invalid parameter %c '%s'\n", path, nline, *p, name);
+            logn(LOGERR, _("%s:%d: '%s': invalid parameter"), path, nline, name);
             continue;
         }
         *p++ = '\0';
@@ -259,7 +262,7 @@ tn_hash *ldconf(const char *path)
             p++;
         
         if (*p != '=') {
-            log(LOGERR, "%s:%d: missing '='\n", path, nline);
+            logn(LOGERR, _("%s:%d: missing '='"), path, nline);
             continue;
         }
 
@@ -270,7 +273,7 @@ tn_hash *ldconf(const char *path)
         }
 
         if ((tag = find_tag(name)) == NULL) {
-            log(LOGWARN, "%s:%d unknown option '%s'\n", path, nline, name);
+            logn(LOGWARN, _("%s:%d unknown option '%s'"), path, nline, name);
             continue;
         }
 
@@ -282,7 +285,7 @@ tn_hash *ldconf(const char *path)
         p++;
         val = getv(p, path, nline);
         if (val == NULL) {
-            log(LOGERR, "%s:%d: no value for '%s'\n", path, nline, name);
+            logn(LOGERR, _("%s:%d: no value for '%s'"), path, nline, name);
             continue;
         }
 
@@ -296,7 +299,7 @@ tn_hash *ldconf(const char *path)
             }
 
             if (!valid) {
-                log(LOGWARN, "%s:%d invalid value '%s' of option '%s'\n",
+                logn(LOGWARN, _("%s:%d invalid value '%s' of option '%s'"),
                     path, nline, val, name);
                 continue;
             }
@@ -305,6 +308,7 @@ tn_hash *ldconf(const char *path)
         
         if (n_hash_exists(ht, name)) {
             opt = n_hash_get(ht, name);
+            
         } else {
             opt = copt_new(name);
             n_hash_insert(ht, opt->name, opt);
@@ -314,7 +318,7 @@ tn_hash *ldconf(const char *path)
             opt->val = strdup(val);
             
         } else if ((tag->flags & TYPE_MULTI) == 0) {
-            log(LOGWARN, "%s:%d multiple '%s' not allowed\n", path, nline, name);
+            logn(LOGWARN, _("%s:%d multiple '%s' not allowed"), path, nline, name);
             exit(0);
             
         } else if (opt->vals != NULL) {

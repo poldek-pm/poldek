@@ -21,6 +21,7 @@
 #include <trurl/narray.h>
 #include <vfile/vfile.h>
 
+#include "i18n.h"
 #include "pkgset.h"
 #include "pkgset-req.h"
 #include "log.h"
@@ -76,7 +77,7 @@ int read_pridef(char *buf, int buflen, struct pridef **pridef,
 
         if (*p) {
             if (sscanf(p, "%d", &pri) != 1) {
-                log(LOGERR, "%s:%d: syntax error near %s\n", fpath, nline, p);
+                logn(LOGERR, _("%s:%d: syntax error near %s"), fpath, nline, p);
                 return -1;
             }
         }
@@ -113,7 +114,7 @@ tn_array *read_split_conf(const char *fpath)
         nline++;
 
         if (read_pridef(buf, strlen(buf), &pd, fpath, nline) == -1) {
-            log(LOGERR, "%s: give up at %d\n", fpath, nline);
+            logn(LOGERR, _("%s: give up at %d"), fpath, nline);
             rc = 0;
             break;
         } 
@@ -170,7 +171,7 @@ void set_chunk(struct pkg *pkg, int chunk_no, int deep, int verb)
     
     if (pkg_is_color(pkg, PKG_COLOR_WHITE)) {
         if (verb && pkg->pri != chunk_no)
-            msg_i(1, deep, "move %s to chunk #%d\n", pkg_snprintf_s(pkg), chunk_no);
+            msgn_i(1, deep, _("move %s to chunk #%d"), pkg_snprintf_s(pkg), chunk_no);
         deep += 2;
 
         pkg->pri = chunk_no;
@@ -242,7 +243,7 @@ int make_chunks(tn_array *pkgs, unsigned split_size, unsigned first_free_space,
         chunk.size = chunk.items = 0;
         n_array_map_arg(pkgs, (tn_fn_map2)mapfn_chunk_size, &chunk);
         if (chunk.size > split_size) {
-            log(LOGERR, "Split failed, try to rearrange package priorities\n");
+            logn(LOGERR, _("split failed, try to rearrange package priorities"));
             return 0;
         }
     }
@@ -258,7 +259,7 @@ int make_chunks(tn_array *pkgs, unsigned split_size, unsigned first_free_space,
 
         
         snprintf(path, sizeof(path), "%s.%d", outprefix, i);
-        msg(0, "Writing %s (%4d packages, % 10d bytes)\n", path, chunk.items,
+        msgn(0, _("Writing %s (%4d packages, % 10d bytes)"), path, chunk.items,
             chunk.size);
         
         if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
@@ -335,7 +336,7 @@ int packages_split(tn_array *pkgs, unsigned split_size, unsigned first_free_spac
         int mached = 0, pri = 0;
 
         if (pkg->fsize == 0) {
-            log(LOGERR, "version 0.4.1 of package index is required for spliting\n");
+            logn(LOGERR, _("package index version >= 1.0 is required for spliting"));
             rc = 0;
             goto l_end;
         }

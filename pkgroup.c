@@ -20,6 +20,7 @@
 
 #define ENABLE_TRACE 0
 
+#include "i18n.h"
 #include "rpmhdr.h"
 #include "log.h"
 #include "pkgu.h"
@@ -46,7 +47,7 @@ struct pkgroup {
     char     name[0];
 };
 
-
+static
 struct tr *tr_new(const char *lang, const char *name) 
 {
     struct tr *tr;
@@ -59,6 +60,13 @@ struct tr *tr_new(const char *lang, const char *name)
     memcpy(tr->name, name, len);
     return tr;
 }
+
+static
+int tr_cmp(struct tr *tr1, struct tr *tr2) 
+{
+    return strcmp(tr1->lang, tr2->lang);
+}
+
 
 static
 int tr_store(struct tr *tr, FILE *stream) 
@@ -173,19 +181,28 @@ int pkgroup_add(struct pkgroup *gr, const char *lang, const char *name)
     return 0;
 }
 
-
-void map_fn_store_tr(const char *lang, void *tr, void *stream) 
+static
+void map_fn_store_tr(void *tr, void *stream) 
 {
-    lang = lang;
     tr_store(tr, stream);
 }
 
 static
+void map_fn_trs_keys(const char *lang, void *tr, void *array) 
+{
+    lang = lang;
+    n_array_push(array, tr);
+}
+
+
+static
 int pkgroup_store(struct pkgroup *gr, FILE *stream)  
 {
-    int      len;
-    uint8_t  nlen;
     uint32_t nid, nntrs;
+    uint8_t  nlen;
+    tn_array *arr;
+    int      len;
+    
     
     nid = hton32(gr->id);
     if (fwrite(&nid, sizeof(nid), 1, stream) != 1)
@@ -204,8 +221,12 @@ int pkgroup_store(struct pkgroup *gr, FILE *stream)
     nntrs = hton32(gr->ntrs);
     if (fwrite(&nntrs, sizeof(nntrs), 1, stream) != 1)
         return 0;
-    
-    n_hash_map_arg(gr->trs, map_fn_store_tr, stream);
+
+    arr = n_array_new(8, NULL, (tn_fn_cmp)tr_cmp);
+    n_hash_map_arg(gr->trs, map_fn_trs_keys, arr);
+    n_array_sort(arr);
+    n_array_map_arg(arr, map_fn_store_tr, stream);
+    n_array_free(arr);
     return 1;
 }
 
@@ -231,6 +252,7 @@ struct pkgroup *pkgroup_restore(FILE *stream)
         return 0;
 
     gr = pkgroup_new(ntoh32(nid), name);
+    //printf("gr %d %s %d\n", ntoh32(nid), name, ntoh32(nntrs));
     ntrs = ntoh32(nntrs);
     
     for (i=0; i < ntrs; i++) {
@@ -240,6 +262,7 @@ struct pkgroup *pkgroup_restore(FILE *stream)
             nerr++;
         else
             pkgroup_add_tr(gr, tr);
+        //printf("gr tr %s %s\n", tr->lang, tr->name);
     }
     
     if (nerr > 0) {
@@ -303,6 +326,7 @@ int pkgroup_idx_store(struct pkgroup_idx *idx, FILE *stream)
     uint32_t nsize;
 
     fprintf(stream, "%%%s\n", pkgroups_tag);
+    n_array_sort(idx->arr);
     nsize = hton32(n_array_size(idx->arr));
     if (fwrite(&nsize, sizeof(nsize), 1, stream) != 1)
         return 0;
@@ -326,7 +350,7 @@ struct pkgroup_idx *pkgroup_idx_restore(FILE *stream, unsigned flags)
     nsize = ntoh32(nsize);
     
     idx = pkgroup_idx_new();
-
+    
     for (i=0; i < (int)nsize; i++) 
         n_array_push(idx->arr, pkgroup_restore(stream));
 
@@ -464,21 +488,25 @@ static int pkgroupid(struct pkgroup_idx *idx, const char *name)
 }
 
 
-int pkgroup_idx_merge(struct pkgroup_idx *idx,
-                      struct pkgroup_idx *idx2, int groupid) 
+int pkgroup_idx_remap_groupid(struct pkgroup_idx *idx_to,
+                              struct pkgroup_idx *idx_from,
+                              int groupid) 
 {
     struct pkgroup *gr, tmpgr;
     int new_id;
     
         
     tmpgr.id = groupid;
-    if ((gr = n_array_bsearch(idx2->arr, &tmpgr)) == NULL)
+    if ((gr = n_array_bsearch(idx_from->arr, &tmpgr)) == NULL)
         n_assert(0);
-
-    if ((new_id = pkgroupid(idx, gr->name)) < 0) {
-        new_id = n_array_size(idx->arr) + 1;
-        n_array_push(idx->arr, gr);
-        n_array_sort(idx->arr);
+    
+    if ((new_id = pkgroupid(idx_to, gr->name)) < 0) {
+        logn(LOGERR, "%s: group not found", gr->name);
+        n_assert(0);
+        new_id = n_array_size(idx_to->arr) + 1;
+        gr->id = new_id;
+        n_array_push(idx_to->arr, gr);
+        n_array_sort(idx_to->arr);
     }
     
     return new_id;

@@ -17,9 +17,8 @@ struct pkgroup_idx *pkgroup_idx_restore(FILE *stream, unsigned flags);
 int pkgroup_idx_update(struct pkgroup_idx *idx, Header h);
 const char *pkgroup(struct pkgroup_idx *idx, int groupid);
 
-/* returns new group id of given groupid from idx2 */
-int pkgroup_idx_merge(struct pkgroup_idx *idx,
-                      struct pkgroup_idx *idx2, int groupid);
-
+int pkgroup_idx_remap_groupid(struct pkgroup_idx *idx_to,
+                              struct pkgroup_idx *idx_from,
+                              int groupid);
 
 #endif

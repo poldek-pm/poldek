@@ -20,6 +20,7 @@
 #include <trurl/narray.h>
 #include <vfile/vfile.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "usrset.h"
 #include "rpmadds.h"
@@ -122,9 +123,9 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
                 
     if (!isalnum(*p)) {
         if (nline > 0)
-            log(LOGERR, "%s: syntax error at line %d\n", fpath, nline);
+            logn(LOGERR, _("%s:%d: syntax error"), fpath, nline);
         else 
-            log(LOGERR, "syntax error in package definition\n");
+            logn(LOGERR, _("syntax error in package definition"));
         return -1;
     }
     
@@ -172,10 +173,10 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
         deftyp = deftype(name);
         if (name && deftyp == 0) {
             if (nline) 
-                log(LOGERR, "%s: invalid name (%s) at line %d\n",
-                    name, fpath, nline);
+                logn(LOGERR, _("%s:%d %s: invalid package name"),
+                    fpath, nline, name);
             else 
-                log(LOGERR, "invalid package name (%s)\n", name);
+                logn(LOGERR, _("%s: invalid package name"), name);
             return -1;
         }
 
@@ -278,7 +279,7 @@ int usrpkgset_add_list(struct usrpkgset *ups, const char *fpath)
                 break;
                 
             case -1:
-                log(LOGERR, "%s: give up at %d\n", fpath, nline);
+                logn(LOGERR, _("%s: give up at %d"), fpath, nline);
                 rc = 0;
                 break;
                 
@@ -336,7 +337,7 @@ int usrpkgset_setup(struct usrpkgset *ups)
         n_array_uniq(ups->pkgdefs);
 
         if (n != n_array_size(ups->pkgdefs)) {
-            msg(1, "Removed %d duplicates from given packages\n",
+            msgn(1, _("Removed %d duplicates from given packages"),
                 n - n_array_size(ups->pkgdefs));
         }
     }

@@ -20,6 +20,7 @@
 #include <trurl/nhash.h>
 #include <trurl/nbuf.h>
 
+#include "i18n.h"
 #include "rpmadds.h"
 #include "log.h"
 #include "pkg.h"
@@ -558,18 +559,18 @@ int pkgfl_skip_f(FILE *stream)
 __inline__ 
 static int valid_fname(const char *fname, mode_t mode, const char *pkgname) 
 {
-
+    
 #if 0  /* too many bad habbits :-> */
     char *denychars = "\r\n\t |;";
     if (strpbrk(fname, denychars)) {
-        log(LOGINFO, "%s: bad habit: %s \"%s\" with whitespaces\n",
+        logn(LOGINFO, "%s: bad habit: %s \"%s\" with whitespaces",
             pkgname, S_ISDIR(mode) ? "dirname" : "filename", fname);
     }
 #endif     
 
     if (strlen(fname) > 255) {
-        log(LOGERR, "%s: %s \"%s\" longer than 255 bytes\n",
-            pkgname, S_ISDIR(mode) ? "dirname" : "filename", fname);
+        logn(LOGERR, _("%s: %s \"%s\" longer than 255 bytes"),
+            pkgname, S_ISDIR(mode) ? _("dirname") : _("filename"), fname);
         return 0;
     }
     
@@ -589,6 +590,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
     struct    pkgfl_ent **fentdirs = NULL;
     int       *fentdirs_items;
     int       i, j, ndirs = 0, nerr = 0;
+    const char *errmsg_notag = _("%s: no %s tag");
     
     
     if (!headerGetEntry(h, RPMTAG_BASENAMES, (void*)&t1, (void*)&names, &c1))
@@ -601,7 +603,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
     n_assert(t2 == RPM_STRING_ARRAY_TYPE);
     if (!headerGetEntry(h, RPMTAG_DIRINDEXES, (void*)&t3,(void*)&diridxs, &c3))
     {
-        log_msg("%s: no DIRINDEXES tag\n", pkgname);
+        logn(LOGERR, errmsg_notag, pkgname, "DIRINDEXES");
         nerr++;
         goto l_endfunc;
     }
@@ -609,20 +611,20 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
     n_assert(t3 == RPM_INT32_TYPE);
     
     if (c1 != c3) {
-        log(LOGERR, "%s: DIRINDEXES (%d) != BASENAMES (%d) tag\n", c3, c1,
-            pkgname);
+        logn(LOGERR, "%s: size of DIRINDEXES (%d) != size of BASENAMES (%d)",
+             pkgname, c3, c1);
         nerr++;
         goto l_endfunc;
     }
     
     if (!headerGetEntry(h, RPMTAG_FILEMODES, (void*)&t4, (void*)&modes, &c4)) {
-        log_msg("%s: no FILEMODES tag\n", pkgname);
+        logn(LOGERR, errmsg_notag, pkgname, "FILEMODES");
         nerr++;
         goto l_endfunc;
     }
     
     if (!headerGetEntry(h, RPMTAG_FILESIZES, (void*)&t4, (void*)&sizes, &c4)) {
-        log_msg("%s: no FILESIZES tag\n", pkgname);
+        logn(LOGERR, errmsg_notag, pkgname, "FILESIZES");
         nerr++;
         goto l_endfunc;
     }
@@ -722,7 +724,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
         rpm_headerEntryFree(symlinks, t4);
 
     if (nerr) {
-        log(LOGERR, "%s: skiped\n", pkgname);
+        logn(LOGERR, _("%s: skipped"), pkgname);
         
     } else if (ndirs) {
         for (i=0; i<c2; i++) 

@@ -24,6 +24,7 @@
 
 #include <vfile/vfile.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"

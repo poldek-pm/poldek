@@ -23,6 +23,7 @@
 
 #define  ENABLE_TRACE 0
 
+#include "i18n.h"
 #include "pkgset.h"
 #include "log.h"
 #include "pkg.h"

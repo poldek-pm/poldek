@@ -6,6 +6,7 @@ mclean:
 	@if [ -f Makefile ]; then         \
 		$(MAKE) maintainer-clean; \
 	fi
+	-rm -rf intl trurlib
 
 
 backup:
@@ -32,6 +33,9 @@ backup:
 	md5sum --check $$ARCHIVE_MD5
 
 arch : mclean backup 
+
+POTFILES_in:
+	-find . -type f -name \*.c | egrep -v '(Cellar/|intl/)'  | sed 's|^\./||' | sort > po/POTFILES.in
 
 misarch: mclean
 	$(MAKE) -C . backup cparch=1 backupdir=/z

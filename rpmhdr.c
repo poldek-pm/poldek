@@ -17,6 +17,7 @@
 #include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
 
+#include "i18n.h"
 #include "rpmhdr.h"
 #include "log.h"
 
@@ -61,7 +62,7 @@ char *rpmhdr_strnvr(char *buf, int size, Header h)
     
     headerNVR(h, (void*)&n, (void*)&v, (void*)&r);
     if (n == NULL || v == NULL || r == NULL) {
-        log(LOGERR, "headerNVR failed\n");
+        logn(LOGERR, "headerNVR() failed");
         return NULL;
     }
     
@@ -101,7 +102,7 @@ int rpmhdr_fl_ld(struct rpmhdr_fl *hdrfl, Header h, const char *pkgname)
     n_assert(t2 == RPM_STRING_ARRAY_TYPE);
     if (!headerGetEntry(h, RPMTAG_DIRINDEXES, (void*)&t3,(void*)&diridxs, &c3))
     {
-        log(LOGERR, "%s: no DIRINDEXES tag\n", pkgname);
+        logn(LOGERR, "%s: no DIRINDEXES tag", pkgname);
         nerr++;
         goto l_err_end;
     }
@@ -109,34 +110,33 @@ int rpmhdr_fl_ld(struct rpmhdr_fl *hdrfl, Header h, const char *pkgname)
     n_assert(t3 == RPM_INT32_TYPE);
     
     if (c1 != c3) {
-        log(LOGERR, "%s: DIRINDEXES (%d) != BASENAMES (%d) tag\n", c3, c1,
-            pkgname);
+        logn(LOGERR, "%s: DIRINDEXES size (%d) != BASENAMES one (%d)",
+             pkgname, c3, c1);
         nerr++;
         goto l_err_end;
     }
     
     if (!headerGetEntry(h, RPMTAG_FILEMODES, (void*)&t4, (void*)&modes, &c4)) {
-        log_msg("%s: no FILEMODES tag\n", pkgname);
+        logn(LOGERR, "%s: no FILEMODES tag", pkgname);
         nerr++;
         goto l_err_end;
     }
 
     if (c1 != c4) {
-        log(LOGERR, "%s: FILEMODES (%d) != BASENAMES (%d) tag\n", c4, c1,
-            pkgname);
+        logn(LOGERR, "%s: FILEMODES (%d) != BASENAMES (%d) tag",
+             pkgname, c4, c1);
         nerr++;
         goto l_err_end;
     }
     
     if (!headerGetEntry(h, RPMTAG_FILESIZES, (void*)&t4, (void*)&sizes, &c4)) {
-        log_msg("%s: no FILESIZES tag\n", pkgname);
+        logn(LOGERR, "%s: no FILESIZES tag", pkgname);
         nerr++;
         goto l_err_end;
     }
 
     if (c1 != c4) {
-        log(LOGERR, "%s: FILESIZES (%d) != BASENAMES (%d) tag\n", c4, c1,
-            pkgname);
+        logn(LOGERR, "%s: FILESIZES (%d) != BASENAMES (%d) tag", pkgname, c4, c1);
         nerr++;
         goto l_err_end;
     }

@@ -2,7 +2,7 @@
   Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
+  it under the terms of the GNU General Public License as published by
   the Free Software Foundation (see file COPYING for details).
 */
 
@@ -21,11 +21,14 @@
 #include <sys/types.h>
 #include <sys/stat.h> 
 #include <unistd.h>
+#include <time.h>
 
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
 #include <vfile/vfile.h>
 
+#include "i18n.h"
+#include "i18n.h"
 #include "log.h"
 #include "pkgset.h"
 #include "usrset.h"
@@ -54,10 +57,11 @@ static const char *argp_program_version = PACKAGE " " VERSION " (" VERSION_STATU
 const char *argp_program_bug_address = program_bug_address;
 
 /* Program documentation. */
-static char doc[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
-"This program may be freely redistributed under the terms of the GNU GPL\n";
+char poldek_banner[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
+"Copyright (C) 2000-2002 - <mis@pld.org.pl>\n"
+"This program may be freely redistributed under the terms of the GNU GPL v2\n";
 /* A description of the arguments we accept. */
-static char args_doc[] = "[PACKAGE...]";
+static char args_doc[] = N_("[PACKAGE...]");
 
 #define MODE_NULL         0
 #define MODE_VERIFY       1
@@ -87,6 +91,8 @@ struct split_conf {
 struct args {
     int       mjrmode;
     unsigned  mnrmode;
+
+    int       update_op;
     
     char      *curr_src_path;
     int       curr_src_ldmethod;
@@ -109,8 +115,7 @@ struct args {
     int         noconf;
     char        *log_path;
     
-    int         nodesc;		/* don't put descriptions in package index */
-
+    unsigned    pkgdir_creat_flags; 
     
     int         shell_skip_installed;
     char        *shcmd;
@@ -128,14 +133,15 @@ tn_hash *htcnf = NULL;          /* config file values */
 
 #define OPT_MKIDX        1001
 #define OPT_MKIDXZ       1002
-#define OPT_NODESC	 1004
+#define OPT_NODESC	 1004 /* don't put descriptions in package index */
 
 #define OPT_SOURCETXT   1015
 #define OPT_SOURCEDIR   1016
 #define OPT_SOURCEHDR   1017
 #define OPT_PKGPREFIX   1018
 #define OPT_UPDATEIDX   1019
-#define OPT_SOURCECACHE 1020
+#define OPT_UPDATEIDX_WHOLE   1020
+#define OPT_SOURCECACHE 1021
 
 #ifdef ENABLE_INTERACTIVE_MODE
 # define OPT_SHELLMODE             1031
@@ -171,130 +177,145 @@ tn_hash *htcnf = NULL;          /* config file values */
 /* The options we understand. */
 static struct argp_option options[] = {
 
-{0,0,0,0, "Source options:", 1 },    
-{"source", 's', "SOURCE", 0, "Get packages info from SOURCE", 1 },
+{0,0,0,0, N_("Source options:"), 1 },    
+{"source", 's', "SOURCE", 0, N_("Get packages info from SOURCE"), 1 },
     
 {"sidx", OPT_SOURCETXT, "FILE", 0,
- "Get packages info from package index file FILE", 1 },
+ N_("Get packages info from package index file FILE"), 1 },
 
 {"sdir", OPT_SOURCEDIR, "DIR", 0,
- "Get packages info from directory DIR", 1 },
+ N_("Get packages info from directory DIR"), 1 },
 
 {"prefix", 'P', "PREFIX", 0,
- "Get packages from PREFIX instead of SOURCE", 1 },
+ N_("Get packages from PREFIX instead of SOURCE"), 1 },
 
 {"update", OPT_UPDATEIDX, 0, 0, 
- "Update package index (for remote indexes)", 1 },
+ N_("Update sources (for remote indexes) and verify its integrity"), 1 },
+
+{"up", OPT_UPDATEIDX, 0, OPTION_ALIAS, 0, 1 }, 
+
+{"update-whole", OPT_UPDATEIDX_WHOLE, 0, 0, 
+ N_("Update whole sources (for remote indexes) and verify its checksum"), 1 },
+
+{"upa", OPT_UPDATEIDX_WHOLE, 0, OPTION_ALIAS, 0, 1}, 
 
 {"cachedir", OPT_SOURCECACHE, "DIR", 0, 
- "Store fetched packages and indexes under DIR (default is /tmp or if set, $TMPDIR)", 1 },    
+ N_("Store downloaded files under DIR"), 1 },
   
-{0,0,0,0, "Verify options:", 50 },        
-{"verify",  OPT_VERIFY_DEPS, 0, 0, "Verify package dependencies", 50 },
-{"verify-conflicts",  OPT_VERIFY_CNFLS, 0, 0, "Verify package conflicts", 50 },
-{"verify-fileconflicts",  OPT_VERIFY_FILECNFLS, 0, 0, "Verify package file conflicts", 50 },
-{"verify-all",  OPT_VERIFY_ALL, 0, 0, "Verify dependencies, conflicts and file conflicts", 50 },
-{"mercy",   OPT_VERIFY_MERCY, 0, 0, "Be tolerant for bugs which RPM tolerates", 50 },
+{0,0,0,0, N_("Verify options:"), 50 },        
+{"verify",  OPT_VERIFY_DEPS, 0, 0, N_("Verify package dependencies"), 50 },
+{"verify-conflicts",  OPT_VERIFY_CNFLS, 0, 0, N_("Verify package conflicts"), 50 },
+{"verify-fileconflicts",  OPT_VERIFY_FILECNFLS, 0, 0,
+     N_("Verify package file conflicts"), 50 },
+{"verify-all",  OPT_VERIFY_ALL, 0, 0,
+     N_("Verify dependencies, conflicts and file conflicts"), 50 },
+{"mercy",   OPT_VERIFY_MERCY, 0, 0,
+     N_("Be tolerant for bugs which RPM tolerates"), 50 },
 
 
 {0,0,0,0, "Indexes creation:", 60},
 {"mkidx", OPT_MKIDX, "FILE", OPTION_ARG_OPTIONAL,
- "Create package index, SOURCE/packages.dir by default", 60},
+ N_("Create package index, SOURCE/packages.dir by default"), 60},
 
 {"mkidxz", OPT_MKIDXZ, "FILE", OPTION_ARG_OPTIONAL,
- "Like above, but gzipped file is created", 60},
+ N_("Like above, but gzipped file is created"), 60},
 
 {"nodesc", OPT_NODESC, 0, 0,
- "Don't put packages user-level information (like Summary or Description) in created index.", 60 },
+ N_("Don't put packages user-level information (like Summary or Description)"
+     " in created index."), 60 },
     
 
-{0,0,0,0, "Installation:", 70},
-{"pkgset", 'p',  "FILE", 0, "Take package set from FILE", 70 },
+{0,0,0,0, N_("Installation:"), 70},
+{"pkgset", 'p',  "FILE", 0, N_("Take package set definition from FILE"), 70 },
 {"pkgnevr",'n',  "\"NAME [[E:][V[-R]]]\"", 0,
-     "Take package by NAME /and EVR", 70 },
+     N_("Specifies package by NAME and EVR"), 70 },
 
 {"install-dist", OPT_INST_INSTDIST, "DIR", 0,
-     "Install package set under DIR as root directory", 70 },
+     N_("Install package set under DIR as root directory"), 70 },
 
 {"upgrade-dist", OPT_INST_UPGRDIST, "DIR", OPTION_ARG_OPTIONAL,
-     "Upgrade all packages needs upgrade", 70 },
+     N_("Upgrade all packages needs upgrade"), 70 },
 
-{"install", 'i', 0, 0, "Install given package set", 70 },    
-{"upgrade", 'U', 0, 0, "Upgrade given package set", 70 },
-{"root", 'r', "DIR", 0, "Set top directory to DIR", 70 },
+{"install", 'i', 0, 0, N_("Install given packages"), 70 },    
+{"upgrade", 'U', 0, 0, N_("Upgrade given packages"), 70 },
+{"root", 'r', "DIR", 0, N_("Set top directory to DIR"), 70 },
 {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
-"Prevent packages listed from being upgraded if they are already installed.", 70 },
+N_("Prevent packages listed from being upgraded if they are already installed."), 70 },
 
 {"nohold", OPT_INST_NOHOLD, 0, 0,
- "Don't take held packages from $HOME/.poldek_hold.", 70 },
+N_("Don't take held packages from $HOME/.poldek_hold."), 70 },
 
 {"greedy", OPT_INST_GREEDY, 0, 0,
- "Automatically upgrade packages which dependencies are broken "
-  "by unistalled ones", 70 }, 
+ N_("Automatically upgrade packages which dependencies are broken "
+    "by unistalled ones"), 70 }, 
     
 {"dump", OPT_INST_MKSCRIPT, "FILE", OPTION_ARG_OPTIONAL,
-     "Just dump install marked package filenames to FILE (default stdout)", 70 },
+     N_("Just dump install marked package filenames to FILE (default stdout)"), 70 },
 
 {"dumpn", OPT_INST_POLDEK_MKSCRIPT, "FILE", OPTION_ARG_OPTIONAL,
-     "Just dump install marked package names to FILE (default stdout)", 70 },
+     N_("Just dump install marked package names to FILE (default stdout)"), 70 },
 
 {"fresh", OPT_INST_FRESHEN, 0, 0, 
-     "Upgrade packages, but only if an earlier version currently exists", 70 },
+     N_("Upgrade packages, but only if an earlier version currently exists"), 70 },
 
 {"nofollow", OPT_INST_NOFOLLOW, 0, 0, 
-     "Don't automatically install packages required by installed ones", 70 },    
+     N_("Don't automatically install packages required by installed ones"), 70 },    
     
 {"fetch", OPT_INST_FETCH, "DIR", 0,
-     "Do not install, only fetch packages", 70}, 
+     N_("Do not install, only fetch packages"), 70}, 
     
 {"nodeps", OPT_INST_NODEPS, 0, 0,
-     "Install packages with broken dependencies", 70 },
+     N_("Install packages with broken dependencies"), 70 },
     
 {"force", OPT_INST_FORCE, 0, 0,
-     "Be unconcerned", 70 },
+     N_("Be unconcerned"), 70 },
     
 {"justdb", OPT_INST_JUSTDB, 0, 0,
-     "Modify only the database", 70 },
+     N_("Modify only the database"), 70 },
     
 {"rpmdef", OPT_INST_RPMDEF, "RPMMACRO", 0,
-     "Set up rpm macro (only simple definitions)", 70 },
+     N_("Set up rpm macro (only simple definitions)"), 70 },
     
 {"test", 't', 0, 0,
- "Don't install, but tell if it would work or not", 70 },
+ N_("Don't install, but tell if it would work or not"), 70 },
     
 {"mkdir", OPT_INST_MKDBDIR, 0, 0, 
-     "make %{_dbpath} if not exists", 70 },
+     N_("make %{_dbpath} if not exists"), 70 },
 
 #ifdef ENABLE_INTERACTIVE_MODE
-{0,0,0,0, "Shell mode:", 80},
-{"shell", OPT_SHELLMODE, 0, 0, "Run in shell mode", 80 },
-{"fast", OPT_SHELL_SKIPINSTALLED, 0, 0, "Don't load installed packages at startup", 80 },
-{"shcmd", OPT_SHELL_CMD, "COMMAND", 0, "Run poldek shell COMMAND", 80 },
+{0,0,0,0, N_("Interactive mode:"), 80},
+{"shell", OPT_SHELLMODE, 0, 0, N_("Run in interactive mode"), 80 },
+{"fast", OPT_SHELL_SKIPINSTALLED, 0, 0,
+     N_("Don't load installed packages at startup"), 80 },
+{"shcmd", OPT_SHELL_CMD, "COMMAND", 0,
+     N_("Run poldek shell COMMAND and exit"), 80 },
 #endif
 
-{0,0,0,0, "Splitting:", 90},
+{0,0,0,0, N_("Splitting:"), 90},
 {"split", OPT_SPLITSIZE, "SIZE[:FIRST_FREE_SPACE]", 0,
-     "Split packages to SIZE MB size chunks, the first chunk will "
-     "be FIRST_FREE_SPACE MB smaller", 90 },
+     N_("Split packages to SIZE MB size chunks, the first chunk will "
+           "be FIRST_FREE_SPACE MB smaller"), 90 },
     
-{"split-conf", OPT_SPLITCONF, "FILE", 0, "Take package priorities from FILE", 90 },
+{"split-conf", OPT_SPLITCONF, "FILE", 0,
+     N_("Take package priorities from FILE"), 90 },
     
-{"priconf", OPT_SPLITCONF, "FILE", 0, "Take package priorities from FILE", 70 },
+{"priconf", OPT_SPLITCONF, "FILE", 0,
+     N_("Take package priorities from FILE"), 70 },
     
-{"split-out", OPT_SPLITOUTPATH, "PREFIX", 0, "Write chunks to PREFIX.XX, "
-     "default PREFIX is packages.chunk", 90 },    
+{"split-out", OPT_SPLITOUTPATH, "PREFIX", 0,
+     N_("Write chunks to PREFIX.XX, default PREFIX is packages.chunk"), 90 },    
 
-{0,0,0,0, "Other:", 500},    
-{"conf", OPT_CONF, "FILE", 0, "Read configuration from FILE", 500 }, 
-{"noconf", OPT_NOCONF, 0, 0, "Do not read configuration", 500 }, 
+{0,0,0,0, N_("Other:"), 500},    
+{"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), 500 }, 
+{"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 500 }, 
 
 
-{"log", 'l', "FILE", OPTION_ARG_OPTIONAL, "Log program messages"
-" to FILE ($TMPDIR/poldek.log if not given)", 500 },    
+{"log", 'l', "FILE", OPTION_ARG_OPTIONAL, N_("Log program messages"
+" to FILE ($TMPDIR/poldek.log if not given)"), 500 },    
 {0,  'v', 0, 0,
- "Be verbose.", 500 },
+     N_("Be verbose."), 500 },
 {0,  'q', 0, 0,
- "Do not produce any output.", 500 },
+     N_("Do not produce any output."), 500 },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -302,9 +323,9 @@ static struct argp_option options[] = {
 void check_mjrmode(struct args *argsp) 
 {
     if (argsp->mjrmode) {
-        log(LOGERR,
-     "only one mode of mkidx, update, verify*, install*, upgrade*, split, or shell\n"
-     "may be specified\n");
+        logn(LOGERR, _("only one major mode may be specified "
+        "(available modes are: mkidx, update, verify*, install*, "
+                       "upgrade*, split and shell)"));
         exit(EXIT_FAILURE);
     }
 }
@@ -317,8 +338,8 @@ static inline void chkarg(int key, char *arg)
         while (options[n].doc) {
             if (key == options[n].key) {
                 char skey[2] = { key, '\0' };
-                log(LOGERR, "poldek: option requires an argument -- %s\n",
-                    isascii(key) ? skey : options[n].name);
+                logn(LOGERR, _("option requires an argument -- %s"),
+                     isascii(key) ? skey : options[n].name);
                 exit(EXIT_FAILURE);
             }
             n++;
@@ -340,7 +361,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     
     switch (key) {
         case 'l':
-            printf("arg %s\n", arg);
             if (arg) {
                 argsp->log_path = arg;
                 
@@ -388,12 +408,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 'P':
             if (argsp->curr_src_path == NULL) {
-                log(LOGERR, "prefix option should be preceded by source one\n");
+                logn(LOGERR, _("prefix should be preceded by source one"));
                 exit(EXIT_FAILURE);
             }
             
             if (argsp->curr_src_ldmethod == PKGSET_LD_DIR) {
-                log(LOGERR, "prefix for directory source makes no sense\n");
+                logn(LOGERR, _("prefix for directory source makes no sense"));
                 exit(EXIT_FAILURE);
             }
             
@@ -404,8 +424,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->curr_src_ldmethod = PKGSET_LD_NIL;
             break;
 
+            
         case OPT_UPDATEIDX:
             argsp->mnrmode |= MODE_MNR_UPDATEIDX;
+            break;
+
+        case OPT_UPDATEIDX_WHOLE:
+            argsp->mnrmode |= MODE_MNR_UPDATEIDX;
+            argsp->update_op = OPT_UPDATEIDX_WHOLE;
             break;
 
         case OPT_SOURCECACHE:
@@ -484,7 +510,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case OPT_NODESC:
-	    argsp->nodesc = 1;
+	    argsp->pkgdir_creat_flags |= PKGDIR_CREAT_NODESC;
 	    break;
             
         case OPT_INST_INSTDIST:
@@ -620,7 +646,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 rc = (rc == 1);
             }
             if (!rc) {
-                log(LOGERR, "split: bad option argument\n");
+                logn(LOGERR, _("split: bad option argument"));
                 exit(EXIT_FAILURE);
             }
         }
@@ -652,7 +678,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                     strncmp(optname, "test", 4) == 0    ||
                     strncmp(optname, "root", 4) == 0)
                  {
-                     log(LOGERR, "'%s' option should be set by --%s\n",
+                     logn(LOGERR, _("'%s' option should be set by --%s"),
                          optname, optname);
                      exit(EXIT_FAILURE);
                  }
@@ -713,7 +739,7 @@ void poldek_destroy(void)
 static
 void parse_options(int argc, char **argv) 
 {
-    struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0};
+    struct argp argp = { options, parse_opt, args_doc, poldek_banner, 0, 0, 0};
     int vfile_cnflags = 0, is_multi;
     char *v;
 
@@ -739,7 +765,7 @@ void parse_options(int argc, char **argv)
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
     if (args.noconf && args.conf_path) {
-        log(LOGERR, "--noconf and --conf are exclusive, aren't they?\n");
+        logn(LOGERR, _("--noconf and --conf are exclusive, aren't they?"));
         exit(EXIT_FAILURE);
     }
 
@@ -785,7 +811,7 @@ void parse_options(int argc, char **argv)
     
 
     if (n_array_size(args.sources) == 0) {
-        log(LOGERR, "No source specified\n");
+        logn(LOGERR, _("no source specified"));
         exit(EXIT_FAILURE);
     }
 
@@ -794,7 +820,7 @@ void parse_options(int argc, char **argv)
 #ifdef ENABLE_INTERACTIVE_MODE
         args.mjrmode = MODE_SHELL;
 #else         
-        log(LOGERR, "so what??\n");
+        logn(LOGERR, _("so what?"));
         exit(EXIT_FAILURE);
 #endif        
     }
@@ -826,15 +852,15 @@ void parse_options(int argc, char **argv)
 
     if ((args.inst.flags & INSTS_GREEDY) &&
         (args.inst.flags & INSTS_FOLLOW) == 0) {
-        log(LOGERR, "--greedy and --nofollow are exclusive\n");
+        logn(LOGERR, _("--greedy and --nofollow are exclusive"));
         exit(EXIT_FAILURE);
     }
         
     if (args.inst.flags & INSTS_FOLLOW) { /* no --nofollow specified */
         if ((v = conf_get(htcnf, "follow", NULL)) && strcmp(v, "no") == 0) {
             if (args.inst.flags & INSTS_GREEDY) 
-                log(LOGWARN, "ignore config's follow - greedy implies "
-                    "it to \"yes\"\n");
+                logn(LOGWARN, _("ignore config's follow - greedy implies "
+                    "it to \"yes\""));
             else 
                 args.inst.flags &= ~INSTS_FOLLOW;
         }
@@ -912,7 +938,7 @@ static struct pkgset *load_pkgset(int ldflags)
         return NULL;
     
     if (!pkgset_load(ps, ldflags, args.sources)) {
-        log(LOGERR, "No packages loaded\n");
+        logn(LOGERR, _("no packages loaded"));
         pkgset_free(ps);
         ps = NULL;
     }
@@ -938,7 +964,7 @@ static struct pkgset *load_pkgset(int ldflags)
     return ps;
 }
 
-static int update_idx(void)
+static int update_whole_idx(void)
 {
     int i, nerr = 0;
     
@@ -949,26 +975,62 @@ static int update_idx(void)
     return nerr == 0;
 }
 
+
+static int update_idx(void)
+{
+    int i, nerr = 0;
     
+    if (args.update_op == OPT_UPDATEIDX_WHOLE)
+        return update_whole_idx();
+    
+    for (i=0; i < n_array_size(args.sources); i++) {
+        struct source *src = n_array_nth(args.sources, i);
+        struct pkgdir *pkgdir;
+        int n;
+        
+        pkgdir = pkgdir_new(src->source_name, src->source_path,
+                            src->pkg_prefix, PKGDIR_NEW_VERIFY);
+        
+        if (pkgdir == NULL) {
+            if (n_array_size(args.sources) > 1)
+                logn(LOGERR, _("%s: load failed, skipped"), src->source_path);
+            nerr++;
+            continue;
+        }
+
+        if (pkgdir->vf->vf_flags & VF_FETCHED) /* already downloaded */
+            continue;
+
+        n = 0;
+        if (pkgdir_update(pkgdir, &n) && n)
+            if (!pkgdir_create_idx(pkgdir, NULL, args.pkgdir_creat_flags))
+                nerr++;
+        pkgdir_free(pkgdir);
+    }
+    return nerr == 0;
+}
+
+
 static int mkidx(struct pkgset *ps) 
 {
-    int rc;
-    char *idx_path = NULL;
-    char path[PATH_MAX];
-    struct source *src;
-    struct pkgdir *orig;
+    struct source   *src;
+    struct pkgdir   *pkgdir, *orig;
+    char            path[PATH_MAX], *idx_path = NULL;
+    int             nerr = 0;
+    time_t          ts;
+    unsigned        cr_flags = args.pkgdir_creat_flags;
     
     n_assert(ps);
     if (n_array_size(args.sources) > 1) {
-        log(LOGERR, "You shouldn't specify multiple sources for this option\n");
+        logn(LOGERR, _("multiple sources not allowed for mkidx option"));
         return 0;
     }
 
     src = n_array_nth(args.sources, 0);
     
     if (strstr(src->source_path, "://")) {
-        log(LOGERR, "mkidx requested for URL source without destination "
-            "specified\n");
+        logn(LOGERR, _("mkidx requested for remote source without destination "
+            "specified"));
         return 0;
     }
 
@@ -998,22 +1060,37 @@ static int mkidx(struct pkgset *ps)
     }
     
     n_assert(idx_path != NULL);
+
+    ts = time(0);
+    pkgdir = n_array_nth(ps->pkgdirs, 0);
+    pkgdir->ts = ts;
     
-    if (access(idx_path, R_OK) == 0 &&
-        (orig = pkgdir_new("", idx_path, NULL))) {
-        
+    if (access(idx_path, R_OK) == 0) {
         struct pkgdir *diff;
         
-        msg(1, "Loading previous %s...\n", idx_path);
-        if (pkgdir_load(orig, NULL, 0)) {
-            if ((diff = pkgdir_diff(orig, n_array_nth(ps->pkgdirs, 0))))
-                pkgdir_create_idx(diff, idx_path, 0);
+        msgn(1, _("Loading previous %s..."), idx_path);
+        orig = pkgdir_new("", idx_path, NULL, PKGDIR_NEW_VERIFY);
+        
+        
+        if (orig != NULL && pkgdir_load(orig, NULL, 0)) {
+            if (orig->ts > pkgdir->ts) {
+                logn(LOGWARN, _("clock skew detected; create index with fake "
+                                "timestamp"));
+            }
+            if (orig->ts >= pkgdir->ts) 
+                pkgdir->ts = orig->ts + 1;
+            
+            if ((diff = pkgdir_diff(orig, pkgdir))) {
+                diff->ts = pkgdir->ts;
+                if (!pkgdir_create_idx(diff, idx_path, cr_flags))
+                    nerr++;
+            }
         }
     }
-    
-    rc = pkgdir_create_idx(n_array_nth(ps->pkgdirs, 0), idx_path, args.nodesc);
 
-    return rc;
+    if (nerr == 0 && !pkgdir_create_idx(pkgdir, idx_path, cr_flags))
+        nerr++;
+    return nerr == 0;
 }
 
 
@@ -1071,7 +1148,7 @@ int check_args(void)
     switch (args.mjrmode) {
         case MODE_NULL:
             if (args.mnrmode == 0) {
-                log(LOGERR, "so what?\n");
+                logn(LOGERR, _("so what?"));
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1087,8 +1164,8 @@ int check_args(void)
             break;
             
         case MODE_MKIDX:
-            if (verbose != -1)
-                verbose = 1;
+            if (verbose >= 0)
+                verbose += 1;
             
             n_assert(args.sources);
             for (i=0; i<n_array_size(args.sources); i++) {
@@ -1101,16 +1178,19 @@ int check_args(void)
         case MODE_INSTALLDIST:
         case MODE_INSTALL:
         case MODE_UPGRADE:
-            if (prepare_given_packages() == 0) {
-                log(LOGERR, "no packages to install\n");
+            if (prepare_given_packages() > 0) {
+                rc = check_install_flags();
+                
+            } else {
+                logn(LOGERR, _("no packages to install"));
                 rc = 0;
             }
-            rc = check_install_flags();
+                
             break;
             
         case MODE_UPGRADEDIST:
             if (args.has_pkgdef) {
-                log(LOGERR, "this option upgrades whole dist, not given packages\n");
+                logn(LOGERR, _("this option upgrades whole dist, not given packages"));
                 exit(EXIT_FAILURE);
             }
             rc = check_install_flags();
@@ -1118,17 +1198,17 @@ int check_args(void)
 
         case MODE_SPLIT:
             if (args.split_conf.size == 0) {
-                log(LOGERR, "missing split size\n");
+                logn(LOGERR, _("missing split size"));
                 exit(EXIT_FAILURE);
             }
             
             if (args.split_conf.size < 50) {
-                log(LOGERR, "split size too small\n");
+                logn(LOGERR, _("split size too small"));
                 exit(EXIT_FAILURE);
             }
             
             if (args.split_conf.size < args.split_conf.first_free_space) {
-                log(LOGERR, "first free space bigger than chunk size\n");
+                logn(LOGERR, _("first free space bigger than chunk size"));
                 exit(EXIT_FAILURE);
             }
 
@@ -1166,7 +1246,7 @@ int mklock(void)
         else
             *buf = '\0';
             
-        log(LOGERR, "There seems another poldek%s use %s\n",
+        logn(LOGERR, _("There seems another poldek%s uses %s"),
             buf, args.inst.cachedir);
     }
 
@@ -1187,13 +1267,29 @@ int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
         markflag = MARK_DEPS;
     
     if (n_array_size(ups->pkgdefs) == 0) {
-        log(LOGERR, "no packages specified\n");
+        logn(LOGERR, _("no packages specified"));
         exit(EXIT_FAILURE);
     }
 
     rc = pkgset_mark_usrset(ps, ups, inst, markflag);
     usrpkgset_free(ups);
     return rc;
+}
+
+void self_init(void) 
+{
+    uid_t uid;
+
+    uid = getuid();
+    if (uid != geteuid() || getgid() != getegid()) {
+        logn(LOGERR, _("I'm set*id'ed, give up"));
+        exit(EXIT_FAILURE);
+    }
+
+    if (uid == 0) {
+        logn(LOGWARN, _("Running me as root is not a good habbit"));
+        sleep(1);
+    }
 }
     
 
@@ -1206,6 +1302,15 @@ int main(int argc, char **argv)
     
     mem_info_verbose = -1;
 
+    log_init(NULL, stdout, logprefix);
+    self_init();
+
+    setlocale(LC_MESSAGES, "");
+    setlocale(LC_CTYPE, "");
+    bindtextdomain(PACKAGE, NULL);
+    textdomain(PACKAGE);
+    translate_argp_options(options);
+    
     
     term_init();
     log_init(NULL, stdout, logprefix);
@@ -1226,32 +1331,40 @@ int main(int argc, char **argv)
     
     if (args.mnrmode & MODE_MNR_UPDATEIDX) {
         int v = verbose;
-        
-        if (verbose < 1 && verbose != -1)
-            verbose = 1;
+
+        if (verbose >= 0) 
+            verbose++;
+        //if (verbose < 1 && verbose != -1)
+        //verbose = 1;
         
         if (!update_idx())
             exit(EXIT_FAILURE);
+        
+        if (args.mjrmode == MODE_NULL)
+            exit(EXIT_SUCCESS);
         verbose = v;
     }
 
-    if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0 &&
-        verbose < 2 && verbose != -1)
-        verbose = 2;
+    if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0 && verbose != -1)
+        verbose += 2;
 
     ldflags = 0;
-
     if (args.mjrmode == MODE_MKIDX)
         ldflags = PKGDIR_LD_RAW;
     
     else if (args.mjrmode == MODE_VERIFY) 
         ldflags = PKGDIR_LD_VERIFY;
 
+#ifdef ENABLE_INTERACTIVE_MODE        
+    if (args.mjrmode == MODE_SHELL && args.shcmd == NULL)
+        printf("%s\n", poldek_banner);        
+#endif
+    
     if ((ps = load_pkgset(ldflags)) == NULL)
         exit(EXIT_FAILURE);
 
+    
     switch (args.mjrmode) {
-
         case MODE_NULL:
             if (args.mnrmode != 0)
                 break;
@@ -1266,6 +1379,8 @@ int main(int argc, char **argv)
                                 args.shcmd);
             else
                 rc = shell_main(ps, &args.inst, args.shell_skip_installed);
+            
+            
             break;
 #endif            
         case MODE_VERIFY:

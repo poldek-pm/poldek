@@ -6,17 +6,23 @@
 # include "config.h"
 #endif
 
+#ifndef __GNUC__                                                            
+#  define __attribute__(x) /*nothing*/                                      
+#endif   
+
 #include <stdio.h>
 #include <stdarg.h>
 
-
 #define	LOGTTY	        (1 << 0)	/* log only to TTY output */
 #define LOGFILE         (1 << 1)	/* log only to non-TTY output */
-#define	LOGERR	        (1 << 8)	/* error conditions */
-#define	LOGWARN	        (1 << 9)	/* warning conditions */
-#define	LOGINFO	        (1 << 10)	/* informational */
-#define	LOGNOTICE       (1 << 11)	/* informational */
-#define	LOGDEBUG	(1 << 12)	/* debug-level messages */
+
+#define	LOGERR	        (1 << 5)	/* error conditions */
+#define	LOGWARN	        (1 << 6)	/* warning conditions */
+#define	LOGINFO	        (1 << 7)	/* informational */
+#define	LOGNOTICE       (1 << 8)	/* informational */
+#define	LOGDEBUG	(1 << 9)	/* debug-level messages */
+
+#define LOGOPT_N        (1 << 11)       /* add "\n" */
 
 extern int verbose;
 
@@ -25,8 +31,17 @@ void log_closelog(void);
 
 FILE *log_stream(void);
 
+
+void log(int pri, const char *fmt, ...)
+   __attribute__((format(printf,2,3)));
+   
+void log_i(int pri, int indent, const char *fmt, ...)
+   __attribute__((format(printf,3,4)));
+   
 void vlog(int pri, int indent, const char *fmt, va_list args);
-void log(int pri, const char *fmt, ...);
+
+#define logn(pri, fmt, args...) \
+       log(pri | LOGOPT_N, fmt, ## args)
 
 #define log_debug(fmt, args...) \
   log(LOG_DEBUG, "%s: " fmt, __FUNCTION__ , ## args)
@@ -37,21 +52,37 @@ void log(int pri, const char *fmt, ...);
       vlog(pri, fmt, ## args);             \
   } while(0)
 
-void log_err(const char *fmt, ...);
-void log_msg(const char *fmt, ...);
-void log_msg_i(int indent, const char *fmt, ...);
+void log_err(const char *fmt, ...)
+  __attribute__((format(printf,1,2)));
+void log_msg(const char *fmt, ...)
+  __attribute__((format(printf,1,2))); 
+void log_msg_i(int indent, const char *fmt, ...)
+  __attribute__((format(printf,2,3))); 
 
 #define msg(verbose_level, fmt, args...)   \
   do {                                     \
     if ((verbose_level) <= verbose)        \
-      log_msg(fmt, ## args);               \
+      log(LOGINFO, fmt, ## args);       \
+  } while(0)
+
+#define msgn(verbose_level, fmt, args...)        \
+  do {                                           \
+    if ((verbose_level) <= verbose)              \
+      log(LOGINFO|LOGOPT_N, fmt, ## args);    \
   } while(0)
 
 #define msg_i(verbose_level, indent, fmt, args...)   \
   do {                                               \
     if ((verbose_level) <= verbose)                  \
-      log_msg_i(indent, fmt, ## args);               \
+      log_i(LOGINFO, indent, fmt, ## args);          \
   } while(0)
+
+#define msgn_i(verbose_level, indent, fmt, args...)  \
+  do {                                               \
+    if ((verbose_level) <= verbose)                  \
+      log_i(LOGINFO|LOGOPT_N, indent, fmt, ## args); \
+  } while(0)
+
 
 // to file only
 #define msg_f(verbose_level, fmt, args...)           \
@@ -59,6 +90,13 @@ void log_msg_i(int indent, const char *fmt, ...);
     if ((verbose_level) >= verbose && verbose > 0)   \
       log(LOGFILE|LOGINFO, fmt, ## args);            \
   } while(0)
+
+#define msgn_f(verbose_level, fmt, args...)           \
+  do {                                                \
+    if ((verbose_level) >= verbose && verbose > 0)    \
+      log(LOGFILE|LOGINFO|LOGOPT_N, fmt, ## args);    \
+  } while(0)
+
 
 // to tty only
 #define msg_tty(verbose_level, fmt, args...)         \

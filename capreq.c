@@ -24,6 +24,7 @@
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
 
+#include "i18n.h"
 #include "rpmadds.h"
 #include "capreq.h"
 #include "log.h"
@@ -308,7 +309,7 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
             isrpmreq = 1;
             
         } else {
-            log(LOGERR, "%s: invalid rpmlib capreq\n", name);
+            logn(LOGERR, _("%s: invalid rpmlib capreq"), name);
         }
         
     } else {
@@ -507,8 +508,8 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
 
     if (c2) 
         if (c1 != c2) {
-            log(LOGERR, "read%ss: nnames %d != nversions %d, broken rpm\n",
-                label, c1, c2);
+            logn(LOGERR, "read %s: nnames (%d) != nversions (%d), broken rpm",
+                 label, c1, c2);
 #if 0            
             for (i=0; i<c1; i++) 
                 printf("n %s\n", names[i]);
@@ -519,7 +520,7 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
         }
         
     if (c2 != c3) {
-        log(LOGERR, "read%ss: nversions %d != nflags %d, broken rpm\n", label,
+        logn(LOGERR, "read %s: nversions %d != nflags %d, broken rpm", label,
             c2, c3);
         goto l_err_endfunc;
     }
@@ -547,7 +548,7 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
                 isrpmreq = 1;
             
             } else {
-                log(LOGERR, "%s: invalid rpmlib capreq\n", name);
+                logn(LOGERR, _("%s: invalid rpmlib capreq"), name);
             }
         
         } else {

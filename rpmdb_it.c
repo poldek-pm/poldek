@@ -15,6 +15,7 @@
 #endif
 
 #include <rpm/rpmlib.h>
+#include "i18n.h"
 #include "rpmdb_it.h"
 #include "rpmadds.h"
 #include "misc.h"

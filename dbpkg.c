@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <trurl/nassert.h>
 
+#include "i18n.h"
 #include "pkg.h"
 #include "dbpkg.h"
 #include "rpmadds.h"
@@ -43,17 +44,17 @@ int dbpkg_cmp(const struct dbpkg *p1, const struct dbpkg *p2)
 
 char *dbpkg_snprintf(char *buf, size_t size, const struct dbpkg *dbpkg)
 {
-    return pkg_snprintf(buf, size, dbpkg->pkg);
+    pkg_snprintf(buf, size, dbpkg->pkg);
+    return buf;
 }
 
 
 char *dbpkg_snprintf_s(const struct dbpkg *dbpkg)
 {
     static char buf[256];
-    return pkg_snprintf(buf, sizeof(buf), dbpkg->pkg);
+    pkg_snprintf(buf, sizeof(buf), dbpkg->pkg);
+    return buf;
 }
-
-
 
 
 tn_array *dbpkg_array_new(int size) 

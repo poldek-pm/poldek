@@ -21,6 +21,7 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
@@ -116,7 +117,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
 
 
     if (ps->flags & PSVERIFY_DEPS)
-        msg(1, "\nVerifying dependencies...\n");
+        msgn(1, _("\nVerifying dependencies..."));
     
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg;
@@ -153,7 +154,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
             if (verbose > 3)
                 msg(4, " req %-35s --> NOT FOUND\n", capreq_snprintf_s(req));
             else if (ps->flags & PSVERIFY_DEPS)
-                log(LOGERR, "%s: req %s not found\n", pkg_snprintf_s(pkg),
+                logn(LOGERR, _("%s: req %s not found"), pkg_snprintf_s(pkg),
                     capreq_snprintf_s(req));
             pkg_set_badreqs(pkg);
             continue;
@@ -161,7 +162,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
         l_err_match:
             nerrors++;
             if (verbose < 3 && (ps->flags & PSVERIFY_DEPS))
-                log(LOGERR, "%s: req %s not matched\n", pkg_snprintf_s(pkg),
+                logn(LOGERR, _("%s: req %s not matched"), pkg_snprintf_s(pkg),
                     capreq_snprintf_s(req));
             
             pkg_set_badreqs(pkg);
@@ -170,7 +171,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
 
     mark_badreqs(ps);
     if (nerrors && (ps->flags & PSVERIFY_DEPS)) 
-        msg(1,"%d unsatisfied dependencies, %d packages cannot be installed\n",
+        msgn(1, _("%d unsatisfied dependencies, %d packages cannot be installed"),
             nerrors, ps->nerrors);
 
     return nerrors == 0;
@@ -275,7 +276,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
             
             for (i=0; i<*npkgs; i++) {
                 if (strcmp((*suspkgs)[i]->name, "rpm") != 0) {
-                    log(LOGERR, "%s: provides rpmlib cap \"%s\"\n",
+                    logn(LOGERR, _("%s: provides rpmlib cap \"%s\""),
                         pkg_snprintf_s((*suspkgs)[i]), reqname);
                     matched = 0;
                 }
@@ -291,8 +292,8 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         
         if (!matched && (ps->flags & (PSMODE_VERIFY | PSMODE_MKIDX))) {
             matched = 1;
-            log(LOGWARN, "%s: not found (poldek needs to be linked with newer"
-                " rpmlib)\n", capreq_snprintf_s(req));
+            logn(LOGWARN, "%s: not found (poldek needs to be linked with newer"
+                 " rpmlib)\n", capreq_snprintf_s(req));
         }
         
         *suspkgs = NULL;

@@ -29,29 +29,66 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <pwd.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <argp.h>
 
 #include <openssl/evp.h>
 #include <trurl/nassert.h>
-#include <vfile/p_open.h>
 
+#include <vfile/p_open.h>
+#include <vfile/vfile.h>
+
+#include "i18n.h"
 #include "log.h"
 #include "misc.h"
 
 
-int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size)
+static
+int valid_dir(const char *envname, const char *dir);
+
+
+void translate_argp_options(struct argp_option *arr) 
+{
+    int i = 0;
+
+    while (arr[i].doc) {
+        arr[i].doc = _(arr[i].doc);
+        if (arr[i].arg)
+            arr[i].arg = _(arr[i].arg);
+        i++;
+    }
+}
+
+int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size)
+{
+    int i, n = 0, nn = 0;
+
+    n_assert(hex_size > 2 * bin_size); /* with end '\0' */
+    
+    for (i=0; i < bin_size; i++) {
+        n = snprintf(hex + nn, hex_size - nn, "%02x", bin[i]);
+        nn += n;
+        if (nn >= hex_size)
+            break;
+    }
+    return nn;
+}
+
+
+int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size, int digest_type)
 {
     unsigned char md[128];
     int  md_size = sizeof(md);
 
     
-    if (mdigest(stream, md, &md_size)) {
+    if (mdigest(stream, md, &md_size, digest_type)) {
         int i, n = 0, nn = 0;
         
-        for (i=0; i<md_size; i++) {
+        for (i=0; i < md_size; i++) {
             n = snprintf(mdhex + nn, *mdhex_size - nn, "%02x", md[i]);
             nn += n;
         }
@@ -66,7 +103,7 @@ int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size)
 }
 
 
-int mdigest(FILE *stream, unsigned char *md, int *md_size)
+int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type)
 {
     unsigned char buf[8*1024];
     EVP_MD_CTX ctx;
@@ -74,8 +111,11 @@ int mdigest(FILE *stream, unsigned char *md, int *md_size)
 
 
     n_assert(md_size && *md_size);
-    
-    EVP_DigestInit(&ctx, EVP_sha1());
+
+    if (digest_type == DIGEST_MD5) 
+        EVP_DigestInit(&ctx, EVP_md5());
+    else
+        EVP_DigestInit(&ctx, EVP_sha1());
 
     while ((n = fread(buf, 1, sizeof(buf), stream)) > 0) {
         EVP_DigestUpdate(&ctx, buf, n);
@@ -95,6 +135,28 @@ int mdigest(FILE *stream, unsigned char *md, int *md_size)
     return *md_size;
 }
 
+const char *setup_cachedir(void) 
+{
+    struct passwd *pw;
+    char *dir;
+
+    if ((dir = getenv("TMPDIR")) && valid_dir("$TMPDIR", dir))
+        return strdup(dir);
+    
+    if ((pw = getpwuid(getuid())) == NULL)
+        return strdup(tmpdir());
+
+    if (!is_rwxdir(pw->pw_dir))
+        return strdup(tmpdir());
+    
+    if (valid_dir("HOME", pw->pw_dir) && mk_dir(pw->pw_dir, ".poldek")) {
+        char path[PATH_MAX];
+        snprintf(path, sizeof(path), "%s/%s", pw->pw_dir, ".poldek");
+        return strdup(path);
+    }
+
+    return strdup(tmpdir());
+}
 
 const char *tmpdir(void) 
 {
@@ -118,7 +180,8 @@ const char *tmpdir(void)
         while (*p) {
             if (!isalnum(*p) && *p != '/' && *p != '-') {
                 tmpdir = "/tmp";
-                log(LOGERR, "$TMPDIR (%s) contains non alnum characters, using /tmp\n", dir);
+                logn(LOGWARN,
+                     _("$TMPDIR (%s) contains non alnum characters, using /tmp"), dir);
                 break;
             }
             p++;
@@ -126,11 +189,11 @@ const char *tmpdir(void)
 
         if (tmpdir == NULL) {
             if (stat(dir, &st) != 0) {
-                log(LOGERR, "$TMPDIR (%s): %m, using /tmp\n", dir);
+                logn(LOGERR, _("$TMPDIR (%s): %m, using /tmp"), dir);
                 tmpdir = "/tmp";
                 
             } else if (!S_ISDIR(st.st_mode)) {
-                log(LOGERR, "$TMPDIR (%s): not a directory, using /tmp\n", dir);
+                logn(LOGERR, _("$TMPDIR (%s): not a directory, using /tmp"), dir);
                 tmpdir = "/tmp";
             }
         }
@@ -140,6 +203,44 @@ const char *tmpdir(void)
         tmpdir = dir;
 
     return tmpdir;
+}
+
+static
+int valid_dir(const char *envname, const char *dir) 
+{
+    struct stat st;
+    const char *p;
+    int rc = 1;
+
+    
+    p = dir + 1;
+    while (*p) {
+        if (!isalnum(*p) && *p != '/' && *p != '-') {
+            logn(LOGWARN,
+                 _("%s (%s) contains non alphanumeric characters"),
+                 envname, dir);
+            rc = 0;
+            break;
+        }
+        p++;
+    }
+    
+    if (rc) {
+        rc = 0;
+        if (stat(dir, &st) != 0)
+            logn(LOGERR, _("%s (%s): %m, using /tmp"), envname, dir);
+            
+        else if (!S_ISDIR(st.st_mode))
+            logn(LOGERR, _("%s (%s): not a directory"), envname, dir);
+            
+        else if (!(st.st_mode & S_IRWXU))
+            logn(LOGERR, _("%s (%s): permission denied"), envname, dir);
+            
+        else 
+            rc = 1;
+    }
+
+    return rc;
 }
 
 
@@ -237,7 +338,7 @@ int lockfile(const char *lockfile)
     
     
     if ((fd = open(lockfile, O_RDWR | O_CREAT, 0644)) < 0) {
-        log(LOGERR, "open %s: %m\n", lockfile);
+        logn(LOGERR, "open %s: %m", lockfile);
         return -1;
     }
 
@@ -250,13 +351,13 @@ int lockfile(const char *lockfile)
         if (errno == EAGAIN || errno == EACCES)
             fd = 0;
         else
-            log(LOGERR, "fcntl %s: %m\n", lockfile);
+            logn(LOGERR, "fcntl %s: %m", lockfile);
         
     } else {
         char buf[64];
         
         ftruncate(fd, 0);
-        sprintf(buf, "%d", getpid());
+        snprintf(buf, sizeof(buf), "%d", getpid());
         write(fd, buf, strlen(buf));
     }
     
@@ -288,21 +389,24 @@ int mk_dir(const char *path, const char *dn)
 {
     struct stat st;
     char fpath[PATH_MAX];
+
+    if (!vfile_valid_path(path))
+        return 0;
     
     if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode)) {
-        log(LOGERR, "%s: no such directory\n", path);
+        logn(LOGERR, _("%s: no such directory"), path);
         return 0;
     }
 
     if (!(st.st_mode & S_IRWXU)) {
-        log(LOGERR, "%s: mkdir: permission denied\n", path);
+        logn(LOGERR, _("%s: mkdir: permission denied"), path);
         return 0;
     }
     
     snprintf(fpath, sizeof(fpath), "%s/%s", path, dn);
     if (!is_dir(fpath)) {
         if (mkdir(fpath, 0755) != 0) {
-            log(LOGERR, "%s: mkdir: %m\n", fpath);
+            logn(LOGERR, "%s: mkdir: %m", fpath);
             return 0;
         }
     }

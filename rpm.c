@@ -32,6 +32,7 @@
 
 #include <vfile/vfile.h>
 
+#include "i18n.h"
 #include "rpm.h"
 #include "rpmadds.h"
 #include "misc.h"
@@ -41,6 +42,8 @@
 #include "capreq.h"
 #include "rpmdb_it.h"
 
+static int initialized = 0;
+
 static
 int header_evr_match_req(Header h, const struct capreq *req);
 static
@@ -48,15 +51,12 @@ int header_cap_match_req(Header h, const struct capreq *req, int strict);
 
 int rpm_initlib(tn_array *macros) 
 {
-    static int initialized = 0;
-
-    if (initialized)
-        return 0;
+    if (initialized == 0)
+        if (rpmReadConfigFiles(NULL, NULL) != 0) {
+            logn(LOGERR, "failed to read rpmlib configs");
+            return 0;
+        }
     
-    if (rpmReadConfigFiles(NULL, NULL) != 0) {
-        log(LOGERR, "rpmlib init failed\n");
-        return 0;
-    }
 
     if (macros) {
         int i;
@@ -69,7 +69,7 @@ int rpm_initlib(tn_array *macros)
             
             if ((def = strchr(macro, ' ')) == NULL && 
                 (def = strchr(macro, '\t')) == NULL) {
-                log(LOGERR, "%s: invalid macro definition\n", macro);
+                logn(LOGERR, _("%s: invalid macro definition"), macro);
                 return 0;
                 
             } else {
@@ -85,6 +85,7 @@ int rpm_initlib(tn_array *macros)
             }
         }
     }
+    
     return 1;
 }
 
@@ -103,13 +104,43 @@ rpmdb rpm_opendb(const char *dbpath, const char *rootdir, mode_t mode)
 
     if (rpmdbOpen(rootdir ? rootdir : "/", &db, mode, 0) != 0) {
         db = NULL;
-        log(LOGERR, "Could not open rpm database from %s%s\n",
+        logn(LOGERR, _("%s%s: open rpm database failed"),
             rootdir ? rootdir:"", dbpath ? dbpath : RPM_DBPATH);
     }
     
     return db;
 }
 
+char *rpm_get_dbpath(void)
+{
+    char *p;
+
+    rpm_initlib(NULL);
+    p = (char*)rpmGetPath("%{_dbpath}", NULL);
+    if (p == NULL || *p == '%') {
+        free(p);
+        p = NULL;
+    }
+    return p;
+}
+
+time_t rpm_dbmtime(const char *dbfull_path) 
+{
+    const char *file = "packages.rpm";
+    char path[PATH_MAX];
+    struct stat st;
+    
+#ifdef HAVE_RPM_4_0
+    file = "Packages";
+#endif
+    
+    snprintf(path, sizeof(path), "%s/%s", dbfull_path, file);
+     
+    if (stat(path, &st) != 0)
+        return 0;
+
+    return st.st_mtime;
+}
 
 void rpm_closedb(rpmdb db) 
 {
@@ -117,7 +148,8 @@ void rpm_closedb(rpmdb db)
     db = NULL;
 }
 
-tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path, tn_array *cnfldbpkgs, 
+tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path,
+                                         tn_array *cnfldbpkgs, 
                                          tn_array *unistdbpkgs, unsigned ldflags)
 {
     const struct dbrec *dbrec;
@@ -220,7 +252,7 @@ int header_evr_match_req(Header h, const struct capreq *req)
     
     headerNVR(h, (void*)&pkg.name, (void*)&pkg.ver, (void*)&pkg.rel);
     if (pkg.name == NULL || pkg.ver == NULL || pkg.rel == NULL) {
-        log(LOGERR, "headerNVR failed\n");
+        logn(LOGERR, "headerNVR() failed");
         return 0;
     }
 
@@ -344,7 +376,7 @@ static void progress(const unsigned long amount, const unsigned long total)
             msg(0, "%s", line);
 
             if (amount && amount == total) { /* last notification */
-                msg(0, " Done\n");
+                msgn(0, _(" done"));
             }
             
             last_v = n;
@@ -386,7 +418,7 @@ static void *install_cb(const void *h __attribute__((unused)),
             break;
 
         case RPMCALLBACK_INST_START:
-            msg(0, "Installing %s\n", n_basenam(pkgpath));
+            msgn(0, _("Installing %s"), n_basenam(pkgpath));
             progress(amount, total);
             break;
 
@@ -424,12 +456,12 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
     if (rc != 0) {
         switch (rc) {
             case 1:
-                log(LOGERR, "%s: does not appear to be a RPM package\n", path);
+                logn(LOGERR, _("%s: does not appear to be a RPM package"), path);
                 goto l_err;
                 break;
                 
             default:
-                log(LOGERR, "%s: cannot be installed (hgw why)\n", path);
+                logn(LOGERR, _("%s: cannot be installed (hgw why)"), path);
                 goto l_err;
                 break;
         }
@@ -437,7 +469,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
         
     } else {
         if (issrc) {
-            log(LOGERR, "%s: source packages not supported\n", path);
+            logn(LOGERR, _("%s: source packages not supported"), path);
             goto l_err;
         }
         
@@ -453,18 +485,18 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
                 break;
                 
             case 1:
-                log(LOGERR, "%s: rpm read error\n", path);
+                logn(LOGERR, _("%s: rpm read error"), path);
                 goto l_err;
                 break;
                 
                 
             case 2:
-		log(LOGERR, "%s requires a newer version of RPM\n", path);
+		logn(LOGERR, _("%s requires a newer version of RPM"), path);
                 goto l_err;
                 break;
                 
             default:
-                log(LOGERR, "%s: rpmtransAddPackage() failed\n", path);
+                logn(LOGERR, _("%s: rpmtransAddPackage() failed"), path);
                 goto l_err;
                 break;
         }
@@ -474,13 +506,13 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
             int numConflicts = 0;
             
             if (rpmdepCheck(rpmts, &conflicts, &numConflicts) != 0) {
-                log(LOGERR, "%s: rpmdepCheck() failed\n", path);
+                logn(LOGERR, _("%s: rpmdepCheck() failed"), path);
                 goto l_err;
             }
             
                 
             if (conflicts) {
-                log(LOGERR, "%s: failed dependencies:\n", path);
+                logn(LOGERR, _("%s: failed dependencies:"), path);
                 printDepProblems(log_stream(), conflicts, numConflicts);
                 rpmdepFreeConflicts(conflicts, numConflicts);
                 goto l_err;
@@ -493,11 +525,11 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
 
         if (rc != 0) {
             if (rc > 0) {
-                log(LOGERR, "%s: installation failed:\n", path);
+                logn(LOGERR, _("%s: installation failed:"), path);
                 rpmProblemSetPrint(log_stream(), probs);
                 goto l_err;
             } else {
-                //log(LOGERR, "%s: installation failed (hgw why)\n", path);
+                logn(LOGERR, _("%s: installation failed (hgw why)"), path);
             }
         }
     }
@@ -657,7 +689,7 @@ int hdr_pkg_cmp_evr(Header h, const struct pkg *pkg)
               (void*)&tmpkg.rel);
     
     if (tmpkg.name == NULL || tmpkg.ver == NULL || tmpkg.rel == NULL) {
-        log(LOGERR, "headerNVR failed\n");
+        logn(LOGERR, "headerNVR() failed");
         return 0;
     }
         

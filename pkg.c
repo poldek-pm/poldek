@@ -22,6 +22,7 @@
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>
 
+#include "i18n.h"
 #include "rpmadds.h"
 #include "log.h"
 #include "misc.h"
@@ -191,7 +192,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
     
     headerNVR(h, (void*)&name, (void*)&version, (void*)&release);
     if (name == NULL || version == NULL || release == NULL) {
-        log(LOGERR, "%s: read name/version/release failed\n", fname);
+        logn(LOGERR, _("%s: read name/version/release failed"), fname);
         return NULL;
     }
     
@@ -199,7 +200,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
         epoch = NULL;
 
     if (!headerGetEntry(h, RPMTAG_ARCH, &type, (void *)&arch, NULL)) {
-        log(LOGERR, "%s: read architecture tag failed\n", fname);
+        logn(LOGERR, _("%s: read architecture tag failed"), fname);
         return NULL;
     }
 
@@ -207,7 +208,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
         arch = NULL;
     
     if (!headerGetEntry(h, RPMTAG_OS, &type, (void *)&os, NULL)) {
-        log(LOGERR, "%s: read os tag failed\n", fname);
+        logn(LOGERR, _("%s: read os tag failed"), fname);
         return NULL;
     }
 
@@ -226,7 +227,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
     if (pkg == NULL)
         return NULL;
 
-    msg(3, "ld %s\n", pkg_snprintf_s(pkg));
+    msg(4, "ld %s\n", pkg_snprintf_s(pkg));
     
     if (ldflags & PKG_LDCAPS) {
         pkg->caps = capreq_arr_new(0);
@@ -291,15 +292,15 @@ struct pkg *pkg_ldrpm(const char *path, unsigned ldflags)
     Header h;
     
     if ((fdt = Fopen(path, "r")) == NULL) 
-        log(LOGERR, "open %s: %s\n", path, rpmErrorString());
+        logn(LOGERR, "open %s: %s", path, rpmErrorString());
         
     else {
         if (rpmReadPackageHeader(fdt, &h, NULL, NULL, NULL) != 0) {
-            log(LOGERR, "%s: read header failed\n", path);
+            logn(LOGERR, _("%s: read header failed"), path);
             
         } else {
             if (headerIsEntry(h, RPMTAG_SOURCEPACKAGE))
-                log(LOGERR, "%s: reject source package\n", path);
+                logn(LOGERR, _("%s: reject source package"), path);
             else
                 pkg = pkg_ldhdr(h, path, 0, ldflags);
             
@@ -377,6 +378,69 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
     
     return -pkg_cmp_evr(p1, p2);
 }
+
+
+int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc;
+    
+    if ((rc = pkg_cmp_name_evr_rev(p1, p2)))
+        return rc;
+
+    if ((rc = p1->btime - p2->btime))
+        return rc;
+
+    if ((rc = p1->size - p2->size))
+        return rc;
+
+    if ((rc = p1->fsize - p2->fsize))
+        return rc;
+
+    if (p1->arch && p2->arch == NULL)
+        return 1;
+
+    if (p1->arch == NULL && p2->arch)
+        return -1;
+
+    if ((rc = strcmp(p1->arch, p2->arch)))
+        return rc;
+    
+    if (p1->os && p2->os == NULL)
+        return 1;
+
+    if (p1->os == NULL && p2->os)
+        return -1;
+
+    if ((rc = strcmp(p1->os, p2->os)))
+        return rc;
+    
+    return 0;
+}
+
+int pkg_deepcmp_name_evr_rev_verify(const struct pkg *p1, const struct pkg *p2)
+{
+    register int rc;
+
+    if ((rc = pkg_deepcmp_name_evr_rev(p1, p2)) == 0) {
+        logn(LOGERR, "packages %s and %s are equal to me, give up",
+             pkg_snprintf_s(p1), pkg_snprintf_s0(p2));
+        n_assert(0);
+    }
+    
+    return rc;
+}
+
+
+int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc;
+    
+    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && verbose > 1)
+        logn(LOGWARN, _("duplicated %s"), pkg_snprintf_s(p1));
+    
+    return rc;
+}
+
 
 int pkg_eq_name_evr(const struct pkg *p1, const struct pkg *p2) 
 {
@@ -898,10 +962,12 @@ int pkg_printf(const struct pkg *pkg, const char *str)
 }
 
 
-char *pkg_snprintf(char *str, size_t size, const struct pkg *pkg)
+int pkg_snprintf(char *str, size_t size, const struct pkg *pkg)
 {
-    snprintf(str, size, "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
-    return str;
+    int n;
+    
+    n = snprintf(str, size, "%s-%s-%s", pkg->name, pkg->ver, pkg->rel);
+    return n;
 }
 
 

@@ -20,6 +20,7 @@
 
 #include <vfile/vfile.h>
 
+#include "i18n.h"
 #include "pkgset.h"
 #include "pkgset-load.h"
 #include "misc.h"
@@ -111,7 +112,7 @@ int source_cmp(struct source *s1, struct source *s2)
 
 int source_update(struct source *src)
 {
-    return update_pkgdir_idx(src->source_path);
+    return update_whole_pkgdir(src->source_path);
 }
 
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
@@ -129,21 +130,19 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         switch (src->ldmethod) {
             case PKGSET_LD_IDX:
                 pkgdir = pkgdir_new(src->source_name, src->source_path,
-                                    src->pkg_prefix);
+                                    src->pkg_prefix, PKGDIR_NEW_VERIFY);
                 if (pkgdir != NULL) 
                     break;
                 
                 if (is_dir(src->source_path)) 
-                    src->ldmethod = PKGSET_LD_DIR;
+                    src->ldmethod = PKGSET_LD_DIR; /* no break */
                 else
                     break;
                 
             case PKGSET_LD_DIR:
-                msg(1, "Loading %s...\n", src->source_path);
+                msg(1, _("Loading %s..."), src->source_path);
                 pkgdir = pkgdir_load_dir(src->source_name, src->source_path);
                 break;
-                
-            
 
             default:
                 n_assert(0);
@@ -151,7 +150,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 
         if (pkgdir == NULL) {
             if (n_array_size(sources) > 1)
-                log(LOGERR, "%s: load failed, skiped\n", src->source_path);
+                logn(LOGERR, _("%s: load failed, skipped"), src->source_path);
             continue;
         }
         
@@ -177,9 +176,9 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         pkgdir = n_array_nth(ps->pkgdirs, i);
 
         if (pkgdir->flags & PKGDIR_LDFROM_IDX) {
-            msg(1, "Loading %s...\n", pkgdir->idxpath);
+            msgn(1, _("Loading %s..."), pkgdir->idxpath);
             if (!pkgdir_load(pkgdir, ps->depdirs, ldflags)) {
-                log(LOGERR, "%s: load failed\n", pkgdir->idxpath);
+                logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
                 iserr = 1;
             }
         }
@@ -194,8 +193,11 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         }
     }
     
-    if (n_array_size(ps->pkgs))
-        msg(1, "%d packages read\n", n_array_size(ps->pkgs));
-
+    if (n_array_size(ps->pkgs)) {
+        int n = n_array_size(ps->pkgs);
+        msgn(1, ngettext("%d package read",
+                        "%d packages read", n), n);
+    }
+    
     return n_array_size(ps->pkgs);
 }

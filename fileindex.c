@@ -15,6 +15,7 @@
 
 #include <trurl/trurl.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkgfl.h"
 #include "pkg.h"
@@ -294,7 +295,7 @@ static int register_file_conflict(struct pkg *pkg1, struct pkg *pkg2,
     if ((c1 || c2) && verbose > 1) {
         char buf[256];
         pkg_snprintf(buf, sizeof(buf), pkg1);
-        msg(1, "add cnfl: %s %c-%c %s\n", buf, c2 ? :' ', c1 ? :' ', 
+        msgn(3, "add cnfl: %s %c-%c %s", buf, c2 ? :' ', c1 ? :' ', 
             pkg_snprintf_s(pkg2));
     }
 #endif

@@ -4,84 +4,180 @@
 <linuxdoc>
   <article> 
     <title> the poldek </title>
-    <author>  </author>
-    <date> </date>
-    
-    <sect> Introduction
+    <author> <tt/mis@pld.org.pl/ </author>
+    <date> $Date$ </date>
+    <abstract>
+    This document is a the poldek project homepage
+    </abstract>
+
+    <!-- Table of contents -->
+    <toc>
+
+
+    <sect> What is this.
     <p>
-    The poldek is a RPM packages management helper tool. 
 
-    Features include:
-    <itemize>	
-    <item> package installation, upgrade and removal. Package dependencies 
-           are automatically handled, so if you try to install a package 
-           that needs others to be installed, it will download all
-           needed packages and install them. 
+    The poldek is a RPM packages management helper tool; it's
+    basic features are similar to any package updater like <em>apt-get</em> 
+    or <em>urpmi</em>.
 
-    <item> system installation from scratch 
-	(used by <url name="PLD Installer" url="http://team.pld.org.pl/~klakier/doc/pld-installer/en/index.html">)
+    Program takes information about packages form custom index file
+    (called <em>package.dir.gz</em> by default), and allows to package 
+    install, upgrade and removal. Package
+    dependencies are automatically handled, so if you try to install 
+    a package that needs others to be installed, it will download all
+    needed packages and install them. 
 
-    <item> system upgrade by checking what packages are outdated,
-       verifying any eventual new dependencies and installing
-       everything;
-
-    <item> package set verification for unresolved dependencies 
-        unneeded conflicts and dependency loops. 
-
-    <item> packages download from through FTP, HTTP, HTTPS and RSYNC;
-	
-    <item> package set divide for the purpose of placing packages 
-      on removable media like CDROM or ZIP; 
-
-    <item> batch (like <em>apt_get</em> from Debian's APT) and an interactive mode, 
-    which puts you into a readline interface with command line with autocompletion 
-    and history, similar to shell mode of Perl's CPAN module. 
-    </itemize>
+    Of course system upgrade is supported too - poldek checks what 
+    packages are outdated, verifying any eventual new dependencies 
+    and installing everything. 
      
+    Program supports various sources of packages: filesystem, removable media 
+    (like CDROM), FTP, HTTP(S), RSYNC.
+ 
+    
+    The main poldek's advantages are:
+    <itemize>
+
+    <item> Relatively fast dependencies processing
     <p>
     Package dependencies, conflicts and ordering are handled by poldek
-    itself without rpmlib usage, so program is significatly faster and uses 
+    itself, without rpmlib usage, so program is significatly faster and uses
     less memory than rpmlib-based tools.
+
+
+    <item> Smart install or upgrade of a big package sets 
+    <p> 
+    Before packages installation they are divided into small groups,
+    usually 2 - 10 items (depends on their reciprocal dependencies).
+
+    Each group is installed separately in the manner that ensures 
+    that broken packages dependencies in one of group doesn't affect 
+    the rest i.e. it is allowed to upgrade as many as possible packages. 
+
+    Another profit is that upgrade/install huge set of packages (e.g. upgrade 
+    whole system) needs less memory and disk space (if packages need 
+    to be downloaded).
+   
+    <item> Interactive mode 
+    <p>
+    Except a batch mode (similar to <em>apt-get</em> one) poldek has   
+    <em>interactive</em> mode, which puts the user into a readline 
+    interface with command line autocompletion and history. 
+    In this mode user is able to browse, search, download, install/upgrade and 
+    uninstall packages. Mode is similar in concept to shell mode of Perl's CPAN module. 
+
+    <item> Installation system from scratch needs 8-12 MB memory only
+    <p>	
+    During this type of install packages are downloaded and installed separately, 
+    so used memory size is independent of number of packages intended
+    to install. Program is used by <url name="PLD Installer" 
+    url="http://team.pld.org.pl/~klakier/doc/pld-installer/en/index.html">
     
-    For more information see 
-	<url url="poldek.html" name="man page">, 
-    see also PLD admin manual 
-    <url url="http://team.pld.org.pl/~klakier/doc/pld-admin-manual/en/index.html#id129972" 
-         name="subsection about poldek">
+
+    <item> Quick package set verification for unresolved dependencies 
+    unneeded conflicts and dependency loops. <p>
+    Feature is is useful for distribution maintainers.
+
+    <item> Division package set for the purpose of placing it
+      on removable media (like CDROM or ZIP).
+    <p>
+
+    Program divide packages in the way that minimize needs of  
+    drives changes; for example if distribution fits on 3 CDs, then 
+    only 2 changes of CD disk are necessary during installation system 
+    from scratch.
+    This feature is used for making PLD CD ISO images, see 
+    <url name="geniso-poldek" 
+    url="ftp://ftp.pld.org.pl/.stat/geniso-poldek"> 
+    script for details. 
+
+
+    <item> Support for "patches" of poldek custom index 
+    <p>
+    To save users time and bandwidth program supports "incremental indexes"
+    which is very useful with repositories which frequently change (PLD package 
+    repository is changed few times a week). This feature consist in 
+    creation "patches" of index which gives the users possibilty to update 
+    his local index by download "patch" with information on changes only.
+    </itemize>
+
+    <sect> Quick start 
+    <p>
+    <sect1> Prepare package repository to be usable to poldek
+    <p>
+    This is extremaly simple:
+    <tscreen><verb>
+    $ poldek -s PATH --mkidxz
+    </verb></tscreen>
+
+    For example:
+    <tscreen><verb>
+    $ poldek -s /home/ftp/pub/PLD/i686/PLD/RPMS --mkidxz
+    </verb></tscreen>
+
+    <sect1> Use package repository
+    <p>
+    Created index may be used locally:
+    <tscreen><verb>
+    $ poldek -s /home/ftp/pub/PLD/i686/PLD/RPMS --shell
+    </verb></tscreen>
+
+    or remotely:
+
+    <tscreen><verb>
+    $ poldek -s ftp://ftp.host.org/pub/PLD/i686/PLD/RPMS/ --shell
+    </verb></tscreen> 
+
+    To add URL to poldek sources list do: 
+    <tscreen><verb>
+    $ echo "source = ftp://ftp.host.org/pub/PLD/i686/PLD/RPMS/" >> $HOME/.poldekrc
+    </verb></tscreen> 
+     
+    <sect> Documentation 
+    <p>
+    <itemize>
+    <item> <url url="poldek.html" name="man page">
+    <item> PLD admin manual 
+  <url url="http://team.pld.org.pl/~klakier/doc/pld-admin-manual/en/index.html#id129972" 
+   name="subsection"> about poldek (partially obsolete)
+    </itemize>
     </sect> 
 
     <sect> Availability
     <p>
     The program is free software (GPL).
-    See the file <url url="http://team.pld.org.pl/~mis/poldek/NEWS" name="NEWS"> for a list 
-    of major changes in the current release.
+    See the file <url url="http://team.pld.org.pl/~mis/poldek/NEWS" name="NEWS"> 
+    for a list of major changes in the current release.
 	
     <itemize> 
-
     <item> Homepage 
-
       <url url="http://team.pld.org.pl/~mis/poldek/" 
            name="http://team.pld.org.pl/~mis/poldek/"> 
     </item>
     
-
     <item> Source tarballs and rpm source packages. 
 
       <itemize>
-      <item> <url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz" 
-                  name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz"> 
+      <item> 
+<url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz" 
+     name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz"> 
 
-      <item> <url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.src.rpm" 
-                  name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.src.rpm">  
-      </itemize>
-    </item>
+      <item> 
+<url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.src.rpm" 
+     name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.src.rpm">  
+     </itemize>
 
-    <item> Binary rpm packages for several architectures can be downloaded from
-                 <url url="http://www.pld.org.pl/" name="PLD"> ftp site 
-         <url url="ftp://ftp.pld.org.pl/" name="ftp://ftp.pld.org.pl/"> (directory
-         PLD-1.0/<em>ARCH</em>/PLD/RPMS/)
-        
-    </item>
+     <item> Binary rpm package (statically linked)
+<url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm" 
+     name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm">  
+     <p>
+     Non static rpm packages, for several architectures can be downloaded from
+     <url url="http://www.pld.org.pl/" name="PLD"> ftp site 
+     <url url="ftp://ftp.pld.org.pl/" name="ftp://ftp.pld.org.pl/"> (directory
+      PLD-1.0/<em>ARCH</em>/PLD/RPMS/)
+         
+     </item>
 
     <item> Anonymous CVS
     <p>
@@ -99,31 +195,17 @@
     
     <sect> Build
     <p>
-    Program depends on following packages/libraries: bzip2, curl, db3, glibc, ncurses, openssl, 
-     pcre, popt, readline, rpm, zlib and trurlib. <p>
-    The last one, <em>trurlib</em> is small C library with some useful data structures and routines, 
-    it can be downloaded from following URLs:
-     <itemize>
-      <item> source 
-         <url url="http://team.pld.org.pl/~mis/poldek/download/trurlib-@TRURLIB_VERSION@.tar.gz" 
-              name="http://team.pld.org.pl/~mis/poldek/download/trurlib-@TRURLIB_VERSION@.tar.gz">
-
-      <item> source rpm package 
-         <url url="http://team.pld.org.pl/~mis/poldek/download/trurlib-@TRURLIB_VERSION@-1.src.rpm" 
-             name="http://team.pld.org.pl/~mis/poldek/download/trurlib-@TRURLIB_VERSION@-1.src.rpm"> 
-
-      <item> binary rpm packages <url url="ftp://ftp.pld.org.pl/" 
-             name="ftp://team.pld.org.pl/"> (directory PLD-1.0/<em>ARCH</em>/PLD/RPMS/)
-      </itemize>
-    </sect>
-       
+    Program depends on following packages/libraries: curl, glibc, ncurses, 
+    openssl, pcre, readline, rpm, zlib <p>
     
     <sect> Author
 	<p>
 	Pawel A. Gajda (mis at pld.org.pl)
 	<p>
-	Thanks to: Artur Frysiak (widget at pld.org.pl), Rafal Kleger-Rudomin (klakier at pld.org.pl),
-	Michal Moskal (malekith at pld.org.pl) for ideas, testing, bug reports and patches. 
+	Thanks to: Artur Frysiak (widget at pld.org.pl), 
+        Rafal Kleger-Rudomin (klakier at pld.org.pl),
+	Michal Moskal (malekith at pld.org.pl) for ideas, testing, 
+        bug reports and patches. 
     </sect>	
     
 </article>

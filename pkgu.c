@@ -18,6 +18,7 @@
 #include <trurl/trurl.h>
 #include <rpm/rpmlib.h>
 
+#include "i18n.h"
 #include "rpmhdr.h"
 #include "log.h"
 #include "pkgu.h"
@@ -177,18 +178,18 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
     
     if (offset > 0)
         if (fseek(stream, offset, SEEK_SET) != 0) {
-            log(LOGERR, "pkguinf_restore: fseek %ld: %m\n", offset);
+            logn(LOGERR, "pkguinf_restore: fseek %ld: %m", offset);
             return NULL;
         }
     
     if (fread(&nlangs, sizeof(nlangs), 1, stream) != 1) {
-        log(LOGERR, "pkguinf_restore: read error (%m) at %ld\n", ftell(stream));
+        logn(LOGERR, "pkguinf_restore: read error (%m) at %ld", ftell(stream));
         return NULL;
     }
     nlangs = ntoh16(nlangs);
     
     if (fread(&nsize, sizeof(nsize), 1, stream) != 1) {
-        log(LOGERR, "pkguinf_restore: read error (%m) at %ld\n", ftell(stream));
+        logn(LOGERR, "pkguinf_restore: read error (%m) at %ld", ftell(stream));
         return NULL;
     }
     
@@ -196,7 +197,7 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
     rawhdr = alloca(nsize);
     
     if (fread(rawhdr, nsize, 1, stream) != 1) {
-        log(LOGERR, "pkguinf_restore: read error at %ld\n", ftell(stream));
+        logn(LOGERR, "pkguinf_restore: read error at %ld", ftell(stream));
         return NULL;
     }
 
@@ -283,7 +284,7 @@ static Header make_pkguinf_hdr(Header h, int *langs_cnt)
     hdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
     
     if (hdr_size > UINT16_MAX) {
-        log(LOGERR, "hdr size too big: %d\n", hdr_size);
+        logn(LOGERR, "internal: header size too large: %d", hdr_size);
         headerFree(hdr);
         hdr = NULL;
     }

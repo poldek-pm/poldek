@@ -25,3 +25,4 @@ depcomp
 test_match
 *.html
 homepage.sgml
+intl

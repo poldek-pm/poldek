@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include <trurl/nhash.h>
+#include "i18n.h"
 #include "depdirs.h"
 
 struct depdir {

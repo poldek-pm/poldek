@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <rpm/rpmlib.h>
 
+#include "i18n.h"
 #include "rpmadds.h"
 
 int main(int argc, char *argv[])

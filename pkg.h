@@ -164,6 +164,14 @@ int pkg_cmp_pri(struct pkg *p1, struct pkg *p2);
 int pkg_cmp_btime(struct pkg *p1, struct pkg *p2);
 int pkg_cmp_btime_rev(struct pkg *p1, struct pkg *p2);
 
+
+/* with warn message */
+int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2);
+
+int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
+int pkg_deepcmp_name_evr_rev_verify(const struct pkg *p1, const struct pkg *p2);
+
+
 int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr);
 
 /* look up into package caps only */
@@ -196,8 +204,9 @@ char *pkg_filename_s(const struct pkg *pkg);
 char *pkg_path(const struct pkg *pkg, char *buf, size_t size);
 char *pkg_path_s(const struct pkg *pkg);
 
+
 int pkg_printf(const struct pkg *pkg, const char *str);
-char *pkg_snprintf(char *str, size_t size, const struct pkg *pkg);
+int pkg_snprintf(char *str, size_t size, const struct pkg *pkg);
 char *pkg_snprintf_s(const struct pkg *pkg);
 char *pkg_snprintf_s0(const struct pkg *pkg);
 char *pkg_snprintf_s1(const struct pkg *pkg);

@@ -24,6 +24,7 @@
 #include <trurl/nstr.h>
 #include <vfile/vfile.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
@@ -130,7 +131,7 @@ void inst_s_init(struct inst_s *inst)
     inst->instflags = 0;
     inst->rootdir = NULL;
     inst->fetchdir = NULL;
-    inst->cachedir = tmpdir();
+    inst->cachedir = setup_cachedir();
     inst->dumpfile = NULL;
     inst->rpmopts = NULL;
     inst->rpmacros = NULL;
@@ -315,7 +316,7 @@ int pkgset_index(struct pkgset *ps)
 {
     int i, j;
     
-    msg(1, "Indexing...\n");
+    msg(2, "Indexing...\n");
     add_self_cap(ps);
     n_array_map(ps->pkgs, (tn_fn_map1)sort_pkg_caps);
 
@@ -412,15 +413,6 @@ static void mapfn_clean_pkg_color(struct pkg *pkg)
 #endif
 
 
-static int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2) 
-{
-    int rc;
-    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0)
-        log(LOGWARN, "duplicated %s\n", pkg_snprintf_s(p1), pkg_snprintf_s0(p2));
-    
-    return rc;
-}
-
 static void set_priorities(tn_array *pkgs, const char *pri_fpath) 
 {
     if (pri_fpath == NULL) {
@@ -446,9 +438,12 @@ int pkgset_setup(struct pkgset *ps, const char *pri_fpath)
     if ((ps->flags & PSMODE_MKIDX) == 0) {
         n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
         
-        if (n != n_array_size(ps->pkgs)) 
-            log(LOGWARN, "Removed %d duplicate package(s)\n",
-                n - n_array_size(ps->pkgs));
+        if (n != n_array_size(ps->pkgs)) {
+            n -= n_array_size(ps->pkgs);
+            msgn(1, ngettext(
+                "Removed %d duplicate package from available set",
+                "Removed %d duplicate packages from available set", n), n);
+        }
     }
     
         
@@ -456,7 +451,7 @@ int pkgset_setup(struct pkgset *ps, const char *pri_fpath)
     mem_info(1, "MEM after index");
 
     if (ps->flags & PSVERIFY_FILECNFLS) {
-        msg(1, "\nVerifying files conflicts...\n");
+        msgn(1, _("\nVerifying files conflicts..."));
         file_index_find_conflicts(&ps->file_idx, strict);
     }
 
@@ -464,7 +459,7 @@ int pkgset_setup(struct pkgset *ps, const char *pri_fpath)
     mem_info(1, "MEM after verify deps");
 
     if (ps->flags & PSVERIFY_CNFLS)
-        msg(1, "\nVerifying packages conflicts...\n");
+        msgn(1, _("\nVerifying packages conflicts..."));
     pkgset_verify_conflicts(ps, strict);
 
     set_priorities(ps->pkgs, pri_fpath);
@@ -489,8 +484,8 @@ static void visit_mark_reqs(struct pkg *parent_pkg, struct pkg *pkg, int deep)
     
     if (pkg_isnot_marked(pkg)) {
         n_assert(parent_pkg != NULL);
-        msg_i(1, deep, "%s marks %s\n", pkg_snprintf_s(parent_pkg),
-              pkg_snprintf_s0(pkg));
+        msgn_i(1, deep, _("%s marks %s"), pkg_snprintf_s(parent_pkg),
+               pkg_snprintf_s0(pkg));
         pkg_dep_mark(pkg);
     }
     
@@ -547,7 +542,7 @@ int mark_dependencies(struct pkgset *ps, unsigned instflags)
             continue;
         
         if (pkg_has_badreqs(pkg)) {
-            log(LOGERR, "%s: broken dependencies\n", pkg_snprintf_s(pkg));
+            logn(LOGERR, _("%s: broken dependencies"), pkg_snprintf_s(pkg));
             req_nerr++;
         }
         
@@ -557,7 +552,8 @@ int mark_dependencies(struct pkgset *ps, unsigned instflags)
         for (j=0; j<n_array_size(pkg->cnflpkgs); j++) {
             struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
             if (pkg_is_marked(cpkg->pkg)) {
-                log(LOGERR, "Conflict %s <-> %s\n", pkg->name, cpkg->pkg->name);
+                logn(LOGERR, _("conflict between %s and %s"), pkg->name,
+                     cpkg->pkg->name);
                 cnfl_nerr++;
             }
         }
@@ -582,7 +578,7 @@ static int setup_tmpdir(const char *rootdir)
     char path[PATH_MAX];
     
     if (!is_rwxdir(rootdir)) {
-        log(LOGERR, "access %s: %m\n", rootdir);
+        logn(LOGERR, "access %s: %m", rootdir);
         return 0;
     }
 
@@ -591,12 +587,12 @@ static int setup_tmpdir(const char *rootdir)
     n_assert (*path != '\0');
 
     if (mkdir(path, 0755) != 0 && errno != EEXIST) {
-        log(LOGERR, "mkdir %s: %m\n", path);
+        logn(LOGERR, "mkdir %s: %m", path);
         return 0;
     }
     
     if (!is_rwxdir(path)) {
-        log(LOGERR, "access %s: %m\n", path);
+        logn(LOGERR, "access %s: %m", path);
         return 0;
     }
     
@@ -612,7 +608,7 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
     
     n_assert(inst->db->rootdir);
     if (!is_rwxdir(inst->db->rootdir)) {
-        log(LOGERR, "access %s: %m\n", inst->db->rootdir);
+        logn(LOGERR, "access %s: %m", inst->db->rootdir);
         return 0;
     }
     
@@ -657,7 +653,7 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
     }
     
     if (nerr) 
-        log(LOGERR, "There were errors during install\n");
+        logn(LOGERR, _("there were errors during install"));
     
     return nerr == 0;
 }
@@ -694,11 +690,11 @@ void pkgset_mark(struct pkgset *ps, unsigned flags)
 inline static int mark_package(struct pkg *pkg, int nodeps)
 {
     if (pkg_has_badreqs(pkg) && nodeps == 0) {
-        log(LOGERR, "mark: %s: broken dependencies\n", pkg_snprintf_s(pkg));
+        logn(LOGERR, _("mark: %s: broken dependencies"), pkg_snprintf_s(pkg));
         
     } else {
         pkg_hand_mark(pkg);
-        msg(1, "mark %s\n", pkg_snprintf_s(pkg));
+        msgn(1, _("mark %s"), pkg_snprintf_s(pkg));
     }
     return pkg_is_marked(pkg);
 }
@@ -735,7 +731,7 @@ int pkg_match_pkgdef(const struct pkg *pkg, const struct pkgdef *pdef)
         if (strcmp(pdef->pkg->rel, pkg->rel) != 0)
             rc = 0;
 #if 0    
-    msg(1, "MATCH %d e%d e%d %s %s\n", rc, 
+    msgn(1, "MATCH %d e%d e%d %s %s", rc, 
         pkg->epoch, pdef->pkg->epoch,
         pkg_snprintf_s(pkg),
         pkg_snprintf_s0(pdef->pkg));
@@ -758,7 +754,7 @@ int pkgset_mark_pkgdef_exact(struct pkgset *ps, const struct pkgdef *pdef,
 
     i = n_array_bsearch_idx_ex(ps->pkgs, pdef->pkg, (tn_fn_cmp)pkg_cmp_name); 
     if (i < 0) {
-        log(LOGERR, "mark: %s not found\n", pdef->pkg->name);
+        logn(LOGERR, _("mark: %s not found"), pdef->pkg->name);
         return 0;
     }
     
@@ -785,7 +781,7 @@ int pkgset_mark_pkgdef_exact(struct pkgset *ps, const struct pkgdef *pdef,
     }
 
     if (!marked && !matched) 
-        log(LOGERR, "mark: %s: versions not match\n", pdef->pkg->name);
+        logn(LOGERR, _("mark: %s: versions not match"), pdef->pkg->name);
     
     return marked;
 }
@@ -823,7 +819,7 @@ int pkgset_mark_pkgdefs_patterns(struct pkgset *ps, tn_array *pkgdefs,
             continue;
         
         if (matches[j] == 0) {
-            log(LOGERR, "mark: %s: no such package found\n", pdef->pkg->name);
+            logn(LOGERR, _("mark: %s: no such package found"), pdef->pkg->name);
             nerr++;
         }
     }
@@ -859,7 +855,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
             tn_array *avpkgs;
                 
             if (pdef->pkg == NULL) {
-                log(LOGERR, "virtual %s: default package expected\n",
+                logn(LOGERR, _("virtual %s: default package expected"),
                     pdef->virtname);
                 nerr++;
                     
@@ -867,7 +863,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 
             avpkgs = pkgset_lookup_cap(ps, pdef->virtname);
             if (avpkgs == NULL || n_array_size(avpkgs) == 0) {
-                log(LOGERR, "virtual %s not found\n", pdef->virtname);
+                logn(LOGERR, _("virtual %s not found"), pdef->virtname);
                 nerr++;
                     
             } else {
@@ -886,7 +882,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                 } 
                     
                 if (pdef->pkg == NULL) {
-                    log(LOGWARN, "%s: missing default package, using %s\n",
+                    logn(LOGWARN, _("%s: missing default package, using %s"),
                         pdef->virtname, pkg->name);
                         
                 } else {
@@ -902,9 +898,9 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                     
                     if (found == 0) {
                         pkg = n_array_nth(avpkgs, 0);
-                        log(LOGWARN, "%s: default package %s not found, "
-                            "using %s\n", pdef->virtname, pdef->pkg->name,
-                            pkg->name);
+                        logn(LOGWARN, _("%s: default package %s not found, "
+                                        "using %s"), pdef->virtname,
+                             pdef->pkg->name, pkg->name);
                     }
                 } 
                             
@@ -928,16 +924,16 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
         nerr += pkgset_mark_pkgdefs_patterns(ps, ups->pkgdefs, nodeps);
     
     if (markflag == MARK_DEPS) {
-        msg(1, "\nProcessing dependencies...\n");
+        msgn(1, _("\nProcessing dependencies..."));
         if (!mark_dependencies(ps, nodeps))
             nerr++;
         
         if (nerr) {
             pkgset_mark(ps, PS_MARK_OFF_ALL);
-            log(LOGERR, "Buggy package set.\n");
+            logn(LOGERR, _("Buggy package set."));
             
         } else {
-            msg(1, "Package set OK\n");
+            msgn(1, _("Package set OK"));
         }
     }
     
@@ -974,7 +970,7 @@ int pkgset_dump_marked_fqpns(struct pkgset *ps, const char *dumpfile)
 
     if (dumpfile) {
         if ((stream = fopen(dumpfile, "w")) == NULL) {
-            log(LOGERR, "fopen %s: %m\n", dumpfile);
+            logn(LOGERR, "fopen %s: %m", dumpfile);
             return 0;
         }
         fprintf(stream, "# Packages to install (in the right order)\n");

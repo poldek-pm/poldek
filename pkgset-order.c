@@ -21,6 +21,7 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
@@ -141,7 +142,7 @@ int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg, int d
 
                     } else {
                         int i;
-                        log(LOGERR, "Prereq loop: ");
+                        log(LOGERR, _("Prereq loop: "));
                         log(LOGERR, "_%s", rp->pkg->name);
                         for (i=n_array_size(vs->stack)-1; i >= 0; i--) {
                             struct pkg *p = n_array_nth(vs->stack, i);
@@ -230,7 +231,7 @@ int pkgset_order(struct pkgset *ps)
     int nloops;
                    
     if (ps_verify_mode(ps))
-        msg(1, "\nVerifying (pre)requirements...\n");
+        msgn(1, _("\nVerifying (pre)requirements..."));
 
     if (ps->ordered_pkgs != NULL)
         n_array_free(ps->ordered_pkgs);
@@ -240,11 +241,11 @@ int pkgset_order(struct pkgset *ps)
     
     if (nloops) {
         ps->nerrors += nloops;
-        msg(1, "%d prerequirement loop%s detected\n", nloops,
+        msgn(1, _("%d prerequirement loop%s detected"), nloops,
             nloops > 1 ? "s":"");
         
     } else if (ps_verify_mode(ps)) {
-        msg(1, "No loops -- OK\n");
+        msgn(1, _("No loops -- OK"));
     }
         	
     

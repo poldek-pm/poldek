@@ -17,6 +17,7 @@
 #include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
 
+#include "i18n.h"
 #include "misc.h"
 #include "log.h"
 
@@ -80,7 +81,7 @@ int parse_evr(char *evrstr,
 int parse_nevr(char *nevrstr, const char **name,
                int32_t *epoch, const char **version, const char **release)
 {
-    char *p;
+    char *p, *q;
 
     while (isspace(*nevrstr))
         nevrstr++;
@@ -91,10 +92,13 @@ int parse_nevr(char *nevrstr, const char **name,
     if ((p = strrchr(nevrstr, '-')) == NULL) 
         return 0;
     
-    p--;
-    if ((p = strrchr(p, '-')) == NULL) 
+    q = p;
+    *q = '\0';
+    
+    if ((p = strrchr(nevrstr, '-')) == NULL) 
         return 0;
-
+    
+    *q = '-';
     *p = '\0';
     p++;
     *name = nevrstr;

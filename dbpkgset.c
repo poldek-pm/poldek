@@ -19,6 +19,7 @@
 #include <trurl/nhash.h>
 #include <trurl/narray.h>
 
+#include "i18n.h"
 #include "pkg.h"
 #include "dbpkg.h"
 #include "dbpkgset.h"

@@ -14,15 +14,15 @@
 # include "config.h"
 #endif
 
-#ifdef HAVE_STRSIGNAL
+#if HAVE_STRSIGNAL
 # define __USE_GNU 1
 #endif
 
 #include <string.h>
 
-#ifdef HAVE_STRSIGNAL
-# undef __USE_GNU
-#endif
+//#if HAVE_STRSIGNAL
+//# undef __USE_GNU
+//#endif
 
 
 #include <limits.h>
@@ -42,6 +42,7 @@
 #include <vfile/vfile.h>
 #include <vfile/p_open.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
@@ -54,13 +55,13 @@ int exec_rpm(const char *cmd, char *const argv[])
     int rc, st, n;
     pid_t pid;
 
-    msg_f(1, "Executing %s ", cmd);
+    msg_f(1, _("Executing %s "), cmd);
     n = 0;
     while (argv[n])
         msg_f(1, "_%s ", argv[n++]);
     msg_f(1, "\n");
     if (access(cmd, X_OK) != 0) {
-        log(LOGERR, "%s: no such file", cmd);
+        logn(LOGERR, _("%s: no such file"), cmd);
         return -1;
     }
     
@@ -69,30 +70,31 @@ int exec_rpm(const char *cmd, char *const argv[])
 	exit(EXIT_FAILURE);
         
     } else if (pid < 0) {
-        log(LOGERR, "%s: no such file", cmd);
+        logn(LOGERR, _("%s: no such file"), cmd);
         return -1;
     }
 
     rc = 0;
     while (wait(&st) > 0) {
         if (WIFEXITED(st)) {
+            const char *errmsg_exited = N_("%s exited with %d");
             rc = WEXITSTATUS(st);
             if (rc != 0)
-                log(LOGERR, "%s exited with %d\n", cmd, WEXITSTATUS(st));
+                logn(LOGERR, _(errmsg_exited), cmd, WEXITSTATUS(st));
             else 
-                msg_f(1, "%s exited with %d\n", cmd, rc);
+                msgn_f(1, _(errmsg_exited), cmd, rc);
             
         } else if (WIFSIGNALED(st)) {
-#ifdef HAVE_STRSIGNAL
-            log(LOGERR, "%s terminated by signal %s\n", cmd,
-                strsignal(WTERMSIG(st)));
+#if HAVE_STRSIGNAL
+            logn(LOGERR, _("%s terminated by signal %s"), cmd,
+                 strsignal(WTERMSIG(st)));
 #else
-            log(LOGERR, "%s terminated by signal %d\n", cmd,
-                WTERMSIG(st));
+            logn(LOGERR, _("%s terminated by signal %d"), cmd,
+                 WTERMSIG(st));
 #endif        
             rc = -1;
         } else {
-            log(LOGERR, "%s died under inscrutable circumstances\n", cmd);
+            logn(LOGERR, _("%s died under inscrutable circumstances"), cmd);
             rc = -1;
         }
     }
@@ -120,7 +122,7 @@ static void reaper (int sig)
 
     sig = sig;
     while ((pid = waitpid (-1, NULL, WNOHANG)) > 0) {
-	msg(0, "SIGCHLD from %d\n", pid);
+	msgn(0, _("SIGCHLD from %d"), pid);
     }
     
     signal (SIGCHLD, reaper);
@@ -151,10 +153,12 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
     if (inst->instflags & PKGINST_TEST) {
         cmd = "/bin/rpm";
         argv[n++] = "rpm";
+        
     } else if (inst->flags & INSTS_USESUDO) {
         cmd = "/usr/bin/sudo";
         argv[n++] = "sudo";
         argv[n++] = "/bin/rpm";
+        
     } else {
         cmd = "/bin/rpm";
         argv[n++] = "rpm";
@@ -197,7 +201,7 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
 	argv[n++] = (char*)inst->rootdir;
     }
 
-    argv[n++] = "--noorder";    /* packages always ordered */
+    argv[n++] = "--noorder";    /* packages always ordered by me */
 
     if (inst->rpmacros) 
         for (i=0; i<n_array_size(inst->rpmacros); i++) {
@@ -249,7 +253,7 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
         for (i=0; i<nopts; i++) 
             p += snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
         *p = '\0';
-        msg(1, "Executing%s...\n", buf);
+        msgn(1, _("Executing%s..."), buf);
     }
     
 
@@ -270,7 +274,7 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
 
     process_rpm_output(&pst);
     if ((ec = p_close(&pst) != 0))
-        log(LOGERR, "%s", pst.errmsg);
+        logn(LOGERR, "%s", pst.errmsg);
 
     p_st_destroy(&pst);
     

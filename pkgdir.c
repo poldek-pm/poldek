@@ -32,13 +32,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 #include <trurl/nbuf.h>
 
 #include <vfile/vfile.h>
 
+#define PKGDIR_INTERNAL
+
+#include "i18n.h"
 #include "log.h"
 #include "misc.h"
 #include "rpmadds.h"
@@ -46,21 +48,6 @@
 #include "pkg.h"
 #include "h2n.h"
 #include "pkgroup.h"
-
-#define FILEFMT_MAJOR 1
-#define FILEFMT_MINOR 0
-
-
-const char *default_pkgidx_name = "packages.dir";
-
-static const char poldeksindex[] = "poldeksindex";
-static const char poldeksindex_toc[] = "poldekstocf";
-static const char packages_incdir[] = "packages.i";
-static const char depdirs_tag[] = "DEPDIRS: ";
-static const char ts_tag[] = "TS: ";
-static const char ts_orig_tag[] = "TS_ORIG: ";
-static const char removed_tag[] = "REMOVED: ";
-static const char endhdr_tag[] = "ENDH";
 
 #define PKGT_HAS_NAME     (1 << 0)
 #define PKGT_HAS_EVR      (1 << 1)
@@ -110,7 +97,9 @@ int restore_pkg_fields(FILE *stream, uint32_t *size, uint32_t *fsize,
 
 static tn_array *parse_removed(char *str);
 
-static int check_digest(struct vfile *vf, const char *path);
+static int is_uptodate(const char *path, const struct pdigest *pdg_local,
+                       struct pdigest *pdg_remote);
+
 
 inline static char *eatws(char *str) 
 {
@@ -161,122 +150,477 @@ static char *setup_pkgprefix(const char *path)
     return rpath;
 }
 
-static struct vfile *open_idx(const char *path, int vfmode,  
-                              char *idx_path, int idx_path_size) 
-{
-    struct vfile *vf = NULL;
-    
-    if (path[strlen(path) - 1] != '/') {
-        vf = vfile_open(path, VFT_STDIO, vfmode);
-        if (idx_path) 
-            strncpy(idx_path, path, idx_path_size);
-        
-    } else {
-        
-        if (idx_path == NULL) {
-            idx_path = alloca(PATH_MAX);
-            idx_path_size = PATH_MAX;
-        }
-            
-        snprintf(idx_path, idx_path_size, "%s%s.gz", path, default_pkgidx_name);
 
-        if ((vf = vfile_open(idx_path, VFT_STDIO, vfmode)) == NULL) {
-            snprintf(idx_path, idx_path_size, "%s%s", path,default_pkgidx_name);
-            vf = vfile_open(idx_path, VFT_STDIO, vfmode);
+static char *eat_zlib_ext(char *path) 
+{
+    char *p;
+    
+    if ((p = strrchr(n_basenam(path), '.')) != NULL) 
+        if (strcmp(p, ".gz") == 0)
+            *p = '\0';
+
+    return path;
+}
+
+
+struct idx_s {
+    struct vfile   *vf;
+    struct vfile   *vfmd;
+    char           idxpath[PATH_MAX];
+    struct pdigest pdg;
+};
+
+
+static int do_open_idx(struct idx_s *idx, const char *path, int vfmode) 
+{
+    if ((idx->vfmd = i_pkgdir_open_digest(path, vfmode))) {
+        if ((idx->vf = vfile_open(path, VFT_STDIO, vfmode)))
+            snprintf(idx->idxpath, sizeof(idx->idxpath), "%s", path);
+        else {
+            vfile_close(idx->vfmd);
+            idx->vfmd = NULL;
         }
     }
     
-    return vf;
+    if (idx->vfmd != NULL)
+        if (!pdigest_read(&idx->pdg, idx->vfmd->vf_fd, idx->idxpath)) {
+            vfile_close(idx->vfmd);
+            vfile_close(idx->vf);
+            idx->vf = NULL;
+            idx->vfmd = NULL;
+        }
+    
+    return idx->vfmd != NULL;
 }
 
 
-
-int update_pkgdir_idx(const char *path) 
+static
+int open_idx(struct idx_s *idx, const char *path, int vfmode) 
 {
-    struct vfile *vf;
-    char idxpath[PATH_MAX];
+    char tmpath[PATH_MAX];
     int rc;
-
-    vf = open_idx(path, VFM_RO | VFM_CACHE | VFM_MDUP, idxpath,
-                  sizeof(idxpath));
-    if (vf == NULL)
-        return 0;
     
-    rc = check_digest(vf, idxpath);
-    vfile_close(vf);
+    idx->vf = NULL;
+    idx->vfmd = NULL;
+    idx->idxpath[0] = '\0';
+    pdigest_init(&idx->pdg, NULL, 0);
+    
+    if (path[strlen(path) - 1] != '/') {
+        rc = do_open_idx(idx, path, vfmode);
+        
+    } else {
+        int n;
+        
+        n = snprintf(tmpath, sizeof(tmpath), "%s%s.gz", path,
+                     default_pkgidx_name);
+        
+        if ((rc = do_open_idx(idx, tmpath, vfmode)) == 0) {
+            tmpath[n - 3] = '\0'; /* trim *.gz */
+            rc = do_open_idx(idx, path, vfmode);
+        }
+    }
+
     return rc;
 }
+
+static
+void close_idx(struct idx_s *idx) 
+{
+    if (idx->vf)
+        vfile_close(idx->vf);
+
+    if (idx->vfmd)
+        vfile_close(idx->vfmd);
+
+    idx->vf = NULL;
+    idx->vfmd = NULL;
+    idx->idxpath[0] = '\0';
+    pdigest_init(&idx->pdg, NULL, 0);
+}
+
+
+#if 0
+void pkgs_dump(tn_array *pkgs, const char *hdr) 
+{
+    int i;
+
+    fprintf(stderr, "\nDUMP %d %s\n", n_array_size(pkgs), hdr);
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        fprintf(stderr, "P %s\n", pkg_snprintf_s(pkg));
+        n_assert((int)pkg->reqs != 2);
+    }
+}
+#endif
+
+struct pkgdir *pkgdir_malloc(void)
+{
+    struct pkgdir *pkgdir;
+
+    
+    pkgdir = malloc(sizeof(*pkgdir));
+    memset(pkgdir, 0, sizeof(*pkgdir));
+
+    pkgdir->name = NULL;
+    pkgdir->path = NULL;
+    pkgdir->idxpath = NULL;
+    pkgdir->pkgs = NULL;
+    
+    pkgdir->depdirs = NULL;
+    pkgdir->foreign_depdirs = NULL;
+    
+    pkgdir->pkgroups = NULL;
+    pkgdir->vf = NULL;
+    pkgdir->vfmd = NULL;
+    pkgdir->flags = 0;
+    pkgdir->ts = 0;
+
+    pkgdir->removed_pkgs = NULL;
+    pkgdir->ts_orig = 0;
+    pkgdir->mdd_orig = NULL;
+
+    pdigest_init(&pkgdir->pdg, NULL, 0);
+    return pkgdir;
+}
+
+
+static
+int update_whole_idx(const char *path) 
+{
+    struct vfile *vf;
+    int rc, try = 2;
+    unsigned vf_flags = VFM_RO | VFM_NORM;
+
+    while (try > 0) {
+        struct idx_s idx;
+        
+        if (!open_idx(&idx, path, vf_flags))
+            return 0;
+        try--;
+
+        vf = idx.vf;
+
+        rc = pdigest_verify(&idx.pdg, vf);
+        if (rc) {
+            if (vf->vf_flags & VF_FETCHED)
+                i_pkgdir_creat_md5(vf_localpath(vf));
+            try = 0;
+            
+        } else if (!vfile_is_remote(vf)) {
+            try = 0;
+            logn(LOGERR, _("broken index; try remade it"));
+            
+        } else if (try) {
+            logn(LOGWARN,
+                 _("assuming index is not fully downloaded, retrying..."));
+            
+        } else {
+            vf_flags |= VFM_NORMCACHE;
+            try = 0;
+        }
+        
+        close_idx(&idx);
+    }
+
+    return rc;
+}
+
+
+int update_whole_pkgdir(const char *path)
+{
+    unsigned int   vf_mode = VFM_RO | VFM_CACHE;
+    struct idx_s   idx;
+    int            rc = 0;
+    
+    if (!open_idx(&idx, path, vf_mode))
+        return update_whole_idx(path);
+
+    if (idx.vf->vf_flags & VF_FETCHED) {
+        rc = pdigest_verify(&idx.pdg, idx.vf);
+        close_idx(&idx);
+        return rc;
+    }
+    
+    switch (is_uptodate(idx.idxpath, &idx.pdg, NULL)) {
+        case 1: {
+            rc = pdigest_verify(&idx.pdg, idx.vf);
+            close_idx(&idx);
+            if (rc)
+                break;          /* else download whole index  */
+                
+        } /* no break */
+            
+        case -1:
+        case 0:
+            rc = update_whole_idx(path);
+            break;
+                
+        default:
+            n_assert(0);
+    }
+
+    close_idx(&idx);
+    return rc;
+}
+
+
+int pkgdir_update(struct pkgdir *pkgdir, int *npatches) 
+{
+    char            idxpath[PATH_MAX], tmp[PATH_MAX], path[PATH_MAX], *dn, *bn;
+    struct vfile    *vf;
+    char            *linebuf = NULL;
+    int             line_size = 0, nread, nerr = 0;
+    const char      *errmsg_broken_difftoc = _("%s: broken patch list");
+    char            current_mdd[PDIGEST_SIZE];
+    struct pdigest pdg_current;
+
+    
+    switch (is_uptodate(pkgdir->idxpath, &pkgdir->pdg, &pdg_current)) {
+        case 1:
+            //msgn(1, _("%s is up to date"), pkgdir->idxpath);
+            pdigest_verify(&pkgdir->pdg, pkgdir->vf);
+            return 1;
+            break;
+            
+        case -1:
+            return 0;
+            
+        case 0:
+            break;
+
+        default:
+            n_assert(0);
+    }
+
+    /* open diff toc */
+    snprintf(idxpath, sizeof(idxpath), "%s", pkgdir->idxpath);
+    eat_zlib_ext(idxpath);
+    snprintf(tmp, sizeof(tmp), "%s", idxpath);
+    n_basedirnam(tmp, &dn, &bn);
+    snprintf(path, sizeof(path), "%s/%s/%s.diff.toc.gz", dn,
+             pdir_packages_incdir, bn);
+    
+    if ((vf = vfile_open(path, VFT_STDIO, VFM_RO)) == NULL) 
+        return update_whole_idx(pkgdir->idxpath);
+
+    *npatches = 0;
+    memcpy(current_mdd, pkgdir->pdg.mdd, PDIGEST_SIZE);
+    while ((nread = getline(&linebuf, &line_size, vf->vf_stream)) > 0) {
+        struct pkgdir *diff;
+        char *p, *mdd;
+        time_t ts;
+
+        p = linebuf;
+        while (*p && isspace(*p))
+            p++;
+        
+        if (*p == '#')
+            continue;
+
+        if ((p = strchr(p, ' ')) == NULL) {
+            logn(LOGERR, errmsg_broken_difftoc, path);
+            nerr++;
+            break;
+        }
+        
+        while (*p && isspace(*p))
+            *p++ = '\0';
+        
+        if (sscanf(p, "%lu", &ts) != 1) { /* read ts */
+            logn(LOGERR, errmsg_broken_difftoc, path);
+            nerr++;
+            break;
+        }
+
+        if (ts <= pkgdir->ts)
+            continue;
+
+        
+        if ((p = strchr(p, ' ')) == NULL) {
+            logn(LOGERR, errmsg_broken_difftoc, path);
+            nerr++;
+            break;
+        }
+        
+        while (*p && isspace(*p))
+            *p++ = '\0';
+        
+        mdd = p;                 /* read orig mdd */
+        if ((p = strchr(p, ' ')) == NULL) {
+            logn(LOGERR, errmsg_broken_difftoc, path);
+            nerr++;
+            break;
+        }
+        *p = '\0';
+        
+        if (p - mdd != PDIGEST_SIZE) {
+            logn(LOGERR, errmsg_broken_difftoc, path);
+            nerr++;
+            break;
+        }
+        
+        if (memcmp(mdd, current_mdd, PDIGEST_SIZE) == 0) {
+            memcpy(current_mdd, mdd, PDIGEST_SIZE);
+            
+        } else {
+            logn(LOGERR, _("%s, %s"), pkgdir->pdg.mdd, mdd);
+            logn(LOGERR, _("%s: no patches available"), pkgdir->idxpath);
+            nerr++;
+            break;
+        }
+
+        snprintf(path, sizeof(path), "%s/%s/%s", dn, pdir_packages_incdir, linebuf);
+        if ((diff = pkgdir_new("diff", path, NULL, 0)) == NULL) {
+            nerr++;
+            break;
+        }
+
+        if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
+            msgn(1, _("Loading %s..."), pkgdir->idxpath);
+            if (!pkgdir_load(pkgdir, NULL, PKGDIR_LD_RAW)) {
+                logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
+                nerr++;
+                break;
+            }
+        }
+        msgn(1, _("Applying patch %s..."), diff->idxpath);
+        pkgdir_load(diff, NULL, PKGDIR_LD_RAW);
+        pkgdir_patch(pkgdir, diff);
+        pkgdir_free(diff);
+        (*npatches)++;
+        
+    }
+    
+    vfile_close(vf);
+    if (linebuf)
+        free(linebuf);
+
+    if (*npatches == 0)         /* outdated and no patches */
+        nerr++;
+
+    if (nerr == 0)
+        if (pkgdir_uniq(pkgdir) > 0) /* duplicates ? -> error */
+            nerr++;
+    
+    if (nerr) {
+        logn(LOGWARN, _("%s: desynchronized index, try --update-whole"),
+            pkgdir->idxpath);
+        nerr++;
+        
+    } else {
+        //printf("current_md = %s\n", current_md);
+        pkgdir->mdd_orig = strdup(pdg_current.mdd); /* for verification during write */
+    }
+    
+    return nerr == 0;
+}
+
 
 static int valid_version(const char *ver, const char *path) 
 {
     int major, minor;
     
     if (sscanf(ver, "%u.%u", &major, &minor) != 2) {
-        log(LOGERR, "%s: invalid version %s", path, ver);
+        logn(LOGERR, _("%s: invalid version string %s"), path, ver);
         return 0;
     }
     
     if (major != FILEFMT_MAJOR) 
-        log(LOGERR, "%s: unsupported version %s (%d.x is required)\n",
+        logn(LOGERR, _("%s: unsupported version %s (%d.x is required)"),
             path, ver, FILEFMT_MAJOR);
     
     else if (minor > FILEFMT_MINOR) 
-        log(LOGERR, "%s: unsupported version %s (upgrade the poldek)\n",
+        logn(LOGERR, _("%s: unsupported version %s (upgrade the poldek)"),
             path, ver);
 
     return major == FILEFMT_MAJOR && minor <= FILEFMT_MINOR;
 }
 
+static char *is_tag(char *s, const char *tag)
+{
+    int len;
+    char *p = NULL;
     
+    len = strlen(tag);
+    
+    if (strncmp(s, tag, len) == 0)
+        p = s + len;
+    
+    return p;    
+}
 
 struct pkgdir *pkgdir_new(const char *name, const char *path,
-                          const char *pkg_prefix)
+                          const char *pkg_prefix, unsigned flags)
 {
     struct pkgdir        *pkgdir = NULL;
     struct vfile         *vf;
-    char                 *line, *linebuf;
+    char                 *linebuf;
     int                  line_size, nline;
     int                  nerr = 0, nread;
-    tn_array             *depdirs = NULL;
-    char                 idxpath[PATH_MAX];
     struct pkgroup_idx   *pkgroups = NULL;
     time_t               ts = 0, ts_orig = 0;
+    tn_array             *depdirs = NULL;
     tn_array             *removed_pkgs = NULL;
+    const char           *errmsg_brokenidx = _("%s: broken index (empty %s tag)");
+    struct idx_s         idx;
+    unsigned             vfmode = VFM_RO | VFM_CACHE;
     
+    if (!open_idx(&idx, path, vfmode))
+        return NULL;
     
-    vf = open_idx(path, VFM_RO | VFM_CACHE | VFM_MD, idxpath, sizeof(idxpath));
+    vf = idx.vf;
+    
+    nerr = 0;
 
-    if (vf && vf->vf_flags & VF_FETCHED) {
-        if (!check_digest(vf, idxpath)) {
-            vfile_close(vf);
-            vf = NULL;
+    if (vf->vf_flags & VF_FRMCACHE)
+        flags |= PKGDIR_NEW_VERIFY;
+    
+    if (vf->vf_flags & VF_FETCHED) {
+        if (pdigest_verify(&idx.pdg, vf)) 
+            i_pkgdir_creat_md5(vf_localpath(vf));
+        else
+            nerr++;
+        
+        
+    } else if (flags & PKGDIR_NEW_VERIFY) {
+        const char *local_idxpath = vf_localpath(vf);
+        
+        if (local_idxpath == NULL ||
+            !i_pkgdir_verify_md5(idx.idxpath, local_idxpath)) {
+            
+            if (pdigest_verify(&idx.pdg, vf)) 
+                i_pkgdir_creat_md5(local_idxpath);
+            else 
+                nerr++;
         }
     }
-    
-    if (vf == NULL)
+
+    if (nerr) {
+        close_idx(&idx);
         return NULL;
-        
+    }
+    
     
     line_size = 4096;
-    line = linebuf = malloc(line_size);
+    linebuf = malloc(line_size);
     nline = 0;
-    
-    while ((nread = getline(&line, &line_size, vf->vf_stream)) > 0) {
-        char *p;
+    while ((nread = getline(&linebuf, &line_size, vf->vf_stream)) > 0) {
+        char *p, *linep;
 
+        linep = linebuf;
         nline++;
         if (nline == 1) {
             char *p;
             int lnerr = 0;
                 
-            if (*line != '#')
+            if (*linep != '#')
                 lnerr++;
             
-            else if ((p = strstr(line, poldeksindex)) == NULL) 
+            else if ((p = strstr(linep, pdir_poldeksindex)) == NULL) 
                 lnerr++;
                     
             else {
-                p += strlen(poldeksindex);
+                p += strlen(pdir_poldeksindex);
                 p = eatws(p);
                 
                 if (*p != 'v') {
@@ -295,39 +639,37 @@ struct pkgdir *pkgdir_new(const char *name, const char *path,
             }
 
             if (lnerr) {
-                log(LOGERR, "%s: not a poldek index file\n", path);
+                logn(LOGERR, _("%s: not a poldek index file"), path);
                 nerr++;
                 goto l_end;
             }
             continue;
         }
         
-	if (*line != '#' && *line != '%')
+	if (*linep != '#' && *linep != '%')
             break;
         
-        if (*line == '%') {
-            while (nread && line[nread - 1] == '\n')
-                line[--nread] = '\0';
-            line++;
+        if (*linep == '%') {
+            while (nread && linep[nread - 1] == '\n')
+                linep[--nread] = '\0';
+            linep++;
 
-            if (strncmp(line, pkgroups_tag, strlen(pkgroups_tag)) == 0) {
+            if (strncmp(linep, pkgroups_tag, strlen(pkgroups_tag)) == 0) {
                 pkgroups = pkgroup_idx_restore(vf->vf_stream, 0);
 
-            } else if (strncmp(line, removed_tag, strlen(removed_tag)) == 0) {
-                char *p;
-                if ((p = strchr(line, ' ')) == NULL) {
-                    log(LOGERR, "%s: broken index (empty REMOVED tag)\n", path);
+            } else if ((p = is_tag(linep, pdir_tag_removed))) {
+                if (*p == '\0') {
+                    logn(LOGERR, errmsg_brokenidx, path, pdir_tag_removed);
                     nerr++;
                     goto l_end;
                 }
                 removed_pkgs = parse_removed(p);
                 
-            } else if (strncmp(line, depdirs_tag, strlen(depdirs_tag)) == 0) {
+            } else if ((p = is_tag(linep, pdir_tag_depdirs))) {
                 char *dir;
                 n_assert(depdirs == NULL);
 
                 depdirs = n_array_new(16, free, (tn_fn_cmp)strcmp);
-                p = line + strlen(depdirs_tag);
                 p = eatws(p);
                 
                 while ((dir = next_tokn(&p, ':', NULL)) != NULL) 
@@ -337,53 +679,53 @@ struct pkgdir *pkgdir_new(const char *name, const char *path,
                 if (n_array_size(depdirs)) 
                     n_array_sort(depdirs);
                 
-            } else if (strncmp(line, ts_tag, strlen(ts_tag)) == 0) {
-                char *p;
-                if ((p = strchr(line, ' ')) == NULL ||
-                    sscanf(p, "%lu", &ts) != 1) {
-                    log(LOGERR, "%s: broken index (empty TS tag)\n", path);
+            } else if ((p = is_tag(linep, pdir_tag_ts))) {
+                if (sscanf(p, "%lu", &ts) != 1) {
+                    logn(LOGERR, errmsg_brokenidx, path, pdir_tag_ts);
+                    nerr++;
+                    goto l_end;
+                }
+
+            } else if (((p = is_tag(linep, pdir_tag_ts_orig)))) {
+                if (sscanf(p, "%lu", &ts_orig) != 1) {
+                    logn(LOGERR, errmsg_brokenidx, path, pdir_tag_ts_orig);
                     nerr++;
                     goto l_end;
                 }
                 
-            } else if (strncmp(line, ts_orig_tag, strlen(ts_orig_tag)) == 0) {
-                char *p;
-                if ((p = strchr(line, ' ')) == NULL ||
-                    sscanf(p, "%lu", &ts_orig) != 1) {
-                    log(LOGERR, "%s: broken index (empty TS_ORIG tag)\n", path);
-                    nerr++;
-                    goto l_end;
-                }
-            } else if (strncmp(line, endhdr_tag, strlen(endhdr_tag)) == 0) 
+            } else if (is_tag(linep, pdir_tag_endhdr)) 
                 break;              /* finish at %ENDH */
         }
     }
     
     free(linebuf);
 
-
-    if (depdirs == NULL) {
-        log(LOGERR, "%s: missing %s tag\n",
+#if 0
+    if (depdirs == NULL && ts_orig == 0) {
+        logn(LOGERR, _("%s: missing '%s' tag"),
             vf->vf_tmpath ? vf->vf_tmpath : path, depdirs_tag);
         nerr++;
         goto l_end;
     }
+#endif    
     
-    
-    pkgdir = malloc(sizeof(*pkgdir));
+    pkgdir = pkgdir_malloc();
     pkgdir->name = strdup(name);
     
     if (pkg_prefix) 
         pkgdir->path = strdup(pkg_prefix);
     else 
-        pkgdir->path = setup_pkgprefix(idxpath);
+        pkgdir->path = setup_pkgprefix(idx.idxpath);
     
-    pkgdir->idxpath = strdup(idxpath);
-    pkgdir->vf = vf;
+    pkgdir->idxpath = strdup(idx.idxpath);
+    pkgdir->vf = idx.vf;
+    pkgdir->vfmd = idx.vfmd;
+    pkgdir->pdg = idx.pdg;
     pkgdir->depdirs = depdirs;
-    n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
-    n_array_sort(pkgdir->depdirs);
-    pkgdir->foreign_depdirs = NULL;
+    if (depdirs) {
+        n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
+        n_array_sort(pkgdir->depdirs);
+    }
     pkgdir->flags = PKGDIR_LDFROM_IDX;
     pkgdir->pkgs = pkgs_array_new(1024);
     pkgdir->pkgroups = pkgroups;
@@ -392,7 +734,7 @@ struct pkgdir *pkgdir_new(const char *name, const char *path,
     pkgdir->removed_pkgs = removed_pkgs;
     if (ts_orig)
         pkgdir->flags |= PKGDIR_DIFF;
-    
+
  l_end:
 
     if (nerr) {
@@ -448,6 +790,11 @@ void pkgdir_free(struct pkgdir *pkgdir)
         pkgdir->vf = NULL;
     }
 
+    if (pkgdir->mdd_orig) {
+        free(pkgdir->mdd_orig);
+        pkgdir->mdd_orig = NULL;
+    }
+
     pkgdir->flags = 0;
     free(pkgdir);
 }
@@ -457,7 +804,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 {
     struct pkgtags_s   pkgt;
     off_t              offs;
-    char               *line;
+    char               *linebuf;
     int                line_size;
     int                nerr = 0, nread, i;
     struct vfile       *vf;
@@ -465,6 +812,9 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     int                flag_lddesc = 0;
     tn_array           *only_dirs;
 
+    const  char        *errmg_double_tag = "%s:%ld: double '%c' tag";
+    const  char        *errmg_ldtag = "%s:%ld: load '%c' tag error";
+    
 #if 0
     if (depdirs) 
         for (i=0; i<n_array_size(depdirs); i++) {
@@ -505,11 +855,13 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     vf = pkgdir->vf;
     memset(&pkgt, 0, sizeof(pkgt));
     line_size = 4096;
-    line = malloc(line_size);
+    linebuf = malloc(line_size);
 
-    while ((nread = getline(&line, &line_size, vf->vf_stream)) > 0) {
-        char *p, *val;
+    while ((nread = getline(&linebuf, &line_size, vf->vf_stream)) > 0) {
+        char *p, *val, *line;
+        
         offs = ftell(vf->vf_stream);
+        line = linebuf;
         
         if (*line == '\n') {        /* empty line -> end of record */
             struct pkg *pkg;
@@ -525,7 +877,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         }
 
         if (*line == ' ') {      /* continuation */
-            log(LOGERR, "%s:%d: syntax error\n", pkgdir->path, offs);
+            logn(LOGERR, _("%s:%ld: syntax error"), pkgdir->path, offs);
             nerr++;
             goto l_end;
         }
@@ -536,7 +888,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         
         p = val = line + 1;
         if (*line == '\0' || *p != ':') {
-            log(LOGERR, "%s:%d:%s ':' expected\n", pkgdir->path, offs, line);
+            logn(LOGERR, _("%s:%ld:%s ':' expected"), pkgdir->path, offs, line);
             nerr++;
             goto l_end;
         }
@@ -567,7 +919,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 
             case 'F':
                 if (pkgt.flags & PKGT_HAS_SIZE) {
-                    log(LOGERR, "%s:%d: syntax error\n", pkgdir->path, offs);
+                    logn(LOGERR, _("%s:%ld: syntax error"), pkgdir->path, offs);
                     nerr++;
                     goto l_end;
                 }
@@ -580,7 +932,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 
             case 'P':
                 if (pkgt.flags & PKGT_HAS_CAP) {
-                    log(LOGERR, "%s:%d: double 'P' tag\n", pkgdir->path, offs);
+                    logn(LOGERR, errmg_double_tag, pkgdir->path, offs, *line);
                     nerr++;
                     goto l_end;
                 }
@@ -592,7 +944,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                     
             case 'R':
                 if (pkgt.flags & PKGT_HAS_REQ) {
-                    log(LOGERR, "%s:%d: double 'R' tag\n", pkgdir->path, offs);
+                    logn(LOGERR, errmg_double_tag, pkgdir->path, offs, *line);
                     nerr++;
                     goto l_end;
                 }
@@ -600,8 +952,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                 pkgt.reqs = capreq_arr_restore(vf->vf_stream,
                                                flag_skip_bastards);
                 if (pkgt.reqs == NULL) {
-                    log(LOGERR, "%s:%d: load 'R' tag error\n", pkgdir->path,
-                        offs);
+                    logn(LOGERR, errmg_ldtag, pkgdir->path, offs, *line);
                     nerr++;
                     goto l_end;
                 }
@@ -610,7 +961,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                     
             case 'C':
                 if (pkgt.flags & PKGT_HAS_CNFL) {
-                    log(LOGERR, "%s:%d: double 'C' tag\n", pkgdir->path, offs);
+                    logn(LOGERR, _(errmg_double_tag), pkgdir->path, offs, *line);
                     nerr++;
                     goto l_end;
                 }
@@ -619,8 +970,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                                                 flag_skip_bastards);
 
                 if (pkgt.cnfls == NULL) {
-                    log(LOGERR, "%s:%d: load 'C' tag error\n", pkgdir->path,
-                        offs);
+                    logn(LOGERR, errmg_ldtag, pkgdir->path, offs, *line);
                     nerr++;
                     goto l_end;
                 }
@@ -630,8 +980,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
             case 'L':
                 pkgt.pkgfl = pkgfl_restore_f(vf->vf_stream, NULL, 0);
                 if (pkgt.pkgfl == NULL) {
-                    log(LOGERR, "%s:%d: load 'L' tag error\n", pkgdir->path,
-                        offs);
+                    logn(LOGERR, errmg_ldtag, pkgdir->path, offs, *line);
                     nerr++;
                     goto l_end;
                 }
@@ -652,8 +1001,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                         
                     fl = pkgfl_restore_f(vf->vf_stream, only_dirs, 1);
                     if (fl == NULL) {
-                        log(LOGERR, "%s:%d: load 'l' tag error\n", pkgdir->path,
-                            offs);
+                        logn(LOGERR, errmg_ldtag, pkgdir->path, offs, *line);
                         nerr++;
                         goto l_end;
                     }
@@ -665,7 +1013,6 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                     } else {
                         while (n_array_size(fl)) 
                             n_array_push(pkgt.pkgfl, n_array_shift(fl));
-
                         n_array_free(fl);
                     }
                 }
@@ -675,8 +1022,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                 if (flag_lddesc) {
                     pkgt.pkguinf = pkguinf_restore(vf->vf_stream, 0);
                     if (pkgt.pkguinf == NULL) {
-                        log(LOGERR, "%s:%d: load 'U' tag error\n", pkgdir->path,
-                            offs);
+                        logn(LOGERR, errmg_ldtag, pkgdir->path, offs, *line);
                         nerr++;
                         goto l_end;
                     }
@@ -689,7 +1035,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                 break;
 
             default:
-                log(LOGERR, "%s:%d: unknown %c tag\n", pkgdir->path, offs, *line);
+                logn(LOGERR, "%s:%ld: unknown tag '%c'", pkgdir->path, offs, *line);
                 nerr++;
                 goto l_end;
         }
@@ -699,15 +1045,16 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
  l_end:
     
     pkgtags_clean(&pkgt);
-    free(line);
+    free(linebuf);
 
-    if (nerr == 0 && n_array_size(pkgdir->pkgs) == 0) {
-        msg(2, "%s: empty(?)\n", pkgdir->path);
-        nerr = 1;
+    if (n_array_size(pkgdir->pkgs)) {
+        n_array_sort(pkgdir->pkgs);
+        pkgdir->flags |= PKGDIR_LOADED;
+        if ((ldflags & PKGDIR_LD_NOUNIQ) == 0)
+            pkgdir_uniq(pkgdir);
     }
-    n_array_sort(pkgdir->pkgs);
     
-    return nerr ? 0 : n_array_size(pkgdir->pkgs);
+    return nerr == 0;
 }
 
 
@@ -717,11 +1064,12 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 const char *pathname, off_t offs) 
 {
     int err = 0;
+    const char *errmg_double_tag = "%s:%d: double '%c' tag";
     
     switch (tag) {
         case 'N':
             if (pkgt->flags & PKGT_HAS_NAME) {
-                log(LOGERR, "%s:%d: double name tag\n", pathname, offs);
+                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
             } else {
                 memcpy(pkgt->name, value, sizeof(pkgt->name)-1);
@@ -731,7 +1079,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             
         case 'V':
             if (pkgt->flags & PKGT_HAS_EVR) {
-                log(LOGERR, "%s:%d: double evr tag\n", pathname, offs);
+                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
             } else {
                 memcpy(pkgt->evr, value, sizeof(pkgt->evr)-1);
@@ -742,7 +1090,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             
         case 'A':
             if (pkgt->flags & PKGT_HAS_ARCH) {
-                log(LOGERR, "%s:%d: double arch tag\n", pathname, offs);
+                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
             } else {
                 memcpy(pkgt->arch, value, sizeof(pkgt->arch)-1);
@@ -753,7 +1101,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
 
         case 'O':
             if (pkgt->flags & PKGT_HAS_OS) {
-                log(LOGERR, "%s:%d: double os tag\n", pathname, offs);
+                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
             } else {
                 memcpy(pkgt->os, value, sizeof(pkgt->os) - 1);
@@ -764,7 +1112,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             
         case 'S':
             if (pkgt->flags & PKGT_HAS_SIZE) {
-                log(LOGERR, "%s:%d: double size tag\n", pathname, offs);
+                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
             } else {
                 pkgt->size = atoi(value);
@@ -774,7 +1122,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
 
         case 's':
             if (pkgt->flags & PKGT_HAS_FSIZE) {
-                log(LOGERR, "%s:%d: double file size tag\n", pathname, offs);
+                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
             } else {
                 pkgt->size = atoi(value);
@@ -784,7 +1132,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             
         case 'T':
             if (pkgt->flags & PKGT_HAS_BTIME) {
-                log(LOGERR, "%s:%d: double btime tag\n", pathname, offs);
+                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
                 err++;
             } else {
                 pkgt->btime = atoi(value);
@@ -793,7 +1141,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             break;
             
         default:
-            log(LOGERR, "%s:%d: unknown tag %c\n", pathname, offs, tag);
+            logn(LOGERR, "%s:%ld: unknown tag '%c'", pathname, offs, tag);
             n_assert(0);
     }
     
@@ -853,7 +1201,7 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
         return NULL;
     
     if (version == NULL || release == NULL) {
-        log(LOGERR, "failed to extract version and release from evr\n");
+        logn(LOGERR, _("%s: failed to parse evr string"), pkgt->name);
         return NULL;
     }
 
@@ -862,7 +1210,7 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
     pkg->groupid = pkgt->groupid;
     
     if (pkg == NULL) {
-        log(LOGERR, "Error reading %s's data", pkgt->name);
+        logn(LOGERR, _("error reading %s's data"), pkgt->name);
         return NULL;
     }
 
@@ -893,6 +1241,7 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
             pkgt->pkgfl = NULL;
         } else {
             pkg->fl = pkgt->pkgfl;
+            n_array_sort(pkg->fl);
             //pkgfl_dump(pkg->fl);
             pkgt->pkgfl = NULL;
         }
@@ -914,12 +1263,12 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
 
 static tn_array *parse_removed(char *str) 
 {
-    char *p;
+    char *p, *q;
     tn_array *pkgs;
 
     pkgs = pkgs_array_new(64);
-    p = eatws(str);
-    while ((p = next_tokn(&p, ' ', NULL)) != NULL) {
+    p = q = eatws(str);
+    while ((p = next_tokn(&q, ' ', NULL)) != NULL) {
         const char   *name = NULL, *ver = NULL, *rel = NULL;
         int32_t      epoch = 0;
 
@@ -930,57 +1279,12 @@ static tn_array *parse_removed(char *str)
         }
     }
     
-    if (n_array_size(pkgs)) {
+    if (n_array_size(pkgs) == 0) {
         n_array_free(pkgs);
         pkgs = NULL;
     }
     
     return pkgs;
-}
-
-    
-    
-int fprintf_pkg_caps(const struct pkg *pkg, FILE *stream) 
-{
-    tn_array *arr;
-    int i;
-
-    arr = n_array_new(32, NULL, NULL);
-    for (i=0; i<n_array_size(pkg->caps); i++) {
-        struct capreq *cr = n_array_nth(pkg->caps, i);
-        if (pkg_eq_capreq(pkg, cr))
-            continue;
-        n_array_push(arr, cr);
-    }
-
-    if (n_array_size(arr)) 
-        i = capreq_arr_store(arr, stream, "P:\n");
-    else
-        i = 1;
-    
-    n_array_free(arr);
-    return i;
-}
-
-static 
-void store_pkg_fields(FILE *stream, uint32_t size, uint32_t fsize,
-                      uint32_t btime, uint32_t groupid) 
-{
-    uint32_t nsize, nfsize, nbtime, ngroupid;
-    uint8_t n = 4;
-
-    nsize = hton32(size);
-    nfsize = hton32(fsize);
-    nbtime = hton32(btime);
-    ngroupid = hton32(groupid);
-    
-    fwrite(&n, sizeof(n), 1, stream);
-    fwrite(&nsize, sizeof(nsize), 1, stream);
-    fwrite(&nfsize, sizeof(nfsize), 1, stream);
-    fwrite(&nbtime, sizeof(nbtime), 1, stream);
-    fwrite(&ngroupid, sizeof(ngroupid), 1, stream);
-    
-    fprintf(stream, "\n");
 }
 
 static 
@@ -1005,610 +1309,89 @@ int restore_pkg_fields(FILE *stream, uint32_t *size, uint32_t *fsize,
     return nread == 5;
 }
 
-static
-int fprintf_pkg(const struct pkg *pkg, FILE *stream, tn_array *depdirs, int nodesc)
+
+int pkgdir_uniq(struct pkgdir *pkgdir) 
 {
-    fprintf(stream, "N: %s\n", pkg->name);
-    if (pkg->epoch)
-        fprintf(stream, "V: %d:%s-%s\n", pkg->epoch, pkg->ver, pkg->rel);
-    else 
-        fprintf(stream, "V: %s-%s\n", pkg->ver, pkg->rel);
+    int n = 0;
 
-    if (pkg->arch)
-        fprintf(stream, "A: %s\n", pkg->arch);
+    pkgdir->flags |= PKGDIR_UNIQED;
     
-    if (pkg->os)
-        fprintf(stream, "O: %s\n", pkg->os);
-    
-    fprintf(stream, "F:\n");
-    store_pkg_fields(stream, pkg->size, pkg->fsize, pkg->btime, pkg->groupid);
-
-    if (pkg->caps && n_array_size(pkg->caps))
-        fprintf_pkg_caps(pkg, stream);
-    
-    if (pkg->reqs && n_array_size(pkg->reqs)) 
-        capreq_arr_store(pkg->reqs, stream, "R:\n");
-    
-    if (pkg->cnfls && n_array_size(pkg->cnfls)) 
-        capreq_arr_store(pkg->cnfls, stream, "C:\n");
-    
-    if (pkg->fl && n_array_size(pkg->fl)) {
-        fprintf(stream, "L:\n");
-        pkgfl_store_f(pkg->fl, stream, depdirs, PKGFL_DEPDIRS);
-    
-        fprintf(stream, "l:\n");
-        pkgfl_store_f(pkg->fl, stream, depdirs, PKGFL_NOTDEPDIRS);
-    }
-
-    if (nodesc == 0 && pkg_has_ldpkguinf(pkg)) {
-        fprintf(stream, "U:\n");
-        pkguinf_store(pkg->pkg_pkguinf, stream);
-        fprintf(stream, "\n");
-    }
-    
-    fprintf(stream, "\n");
-    return 1;
-}
-
-
-static 
-void put_fheader(FILE *stream, const char *name, struct pkgdir *pkgdir) 
-{
-    time_t t;
-    char datestr[128];
-    
-    t = time(0);
-    strftime(datestr, sizeof(datestr),
-             "%a, %d %b %Y %H:%M:%S GMT", gmtime(&pkgdir->ts));
-    
-    fprintf(stream,
-            "# %s v%d.%d\n"
-            "# This file was generated by poldek v%s on %s.\n"
-            "# PLEASE DO *NOT* EDIT or poldek will hate you.\n"
-            "# Contains %d packages\n",
-            name, FILEFMT_MAJOR, FILEFMT_MINOR,
-            VERSION, datestr, pkgdir->pkgs ? n_array_size(pkgdir->pkgs) : 0);
-}
-
-
-static
-char *mkidx_pathname(char *dest, size_t size, const char *pathname,
-                     const char *suffix) 
-{
-    char *ext, *bn = NULL;
-        
-    if (strlen(pathname) + strlen(suffix) + 1 > size)
-        return NULL;
-    
-    bn = n_basenam(pathname);
-    if ((ext = strrchr(bn, '.')) == NULL || strcmp(ext, ".dir") == 0) {
-        snprintf(dest, size, "%s%s", pathname, suffix);
-        
-    } else {
-        int len = ext - pathname + 1;
-        n_assert(len + strlen(suffix) + strlen(ext) + 1 < size);
-        n_strncpy(dest, pathname, len);
-        strcat(dest, suffix);
-        strcat(dest, ext);
-        dest[size - 1] = '\0';
-    }
-
-    return dest;
-}
-
-
-static int check_digest(struct vfile *vf, const char *path) 
-{
-    char            md1[128], md2[128];
-    int             rc, fd, md2_size, md1_size = sizeof(md1);
-    off_t           offs;
-    
-
-    msg(0, "Verifying %s...", path);
-    
-    offs = ftell(vf->vf_stream);
-    if (fseek(vf->vf_stream, 0L, SEEK_SET) != 0) {
-        log(LOGERR, "%s: fseek(0): %d %m\n", path, offs);
-        return 0;
-    }
-
-    mhexdigest(vf->vf_stream, md1, &md1_size);
-
-    if (fseek(vf->vf_stream, offs, SEEK_SET) != 0) {
-        log(LOGERR, "%s: fseek(%ld): %m\n", path, offs);
-        return 0;
-    }
-    
-    
-    if (md1_size <= 0) 
+    if (pkgdir->pkgs == NULL || n_array_size(pkgdir->pkgs) == 0)
         return 0;
 
-    n_assert(vf->vf_mdtmpath);
+    n = n_array_size(pkgdir->pkgs);
+    n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_deepcmp_name_evr_rev_verify);
+    n_array_uniq_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
+    n -= n_array_size(pkgdir->pkgs);
     
-    if ((fd = open(vf->vf_mdtmpath, O_RDONLY)) < 0) {
-        log(LOGERR, "open %s: %m\n", vf->vf_mdtmpath);
-        return 0;
-    }
-    	
-    md2_size = read(fd, md2, sizeof(md2));
-    close(fd);
-    
-    rc = md1_size == md2_size && strcmp(md1, md2) == 0;
-    msg(0, "_ %s\n", rc ? "OK" : "BAD");
-    return rc;
-}
-
-
-static int creat_digest_file(const char *pathname) 
-{
-    struct vfile    *vf;
-    unsigned char   md[128];
-    char            path[PATH_MAX], *ext;
-    int             md_size = sizeof(md);
-    
-    if ((vf = vfile_open(pathname, VFT_STDIO, VFM_RO)) == NULL)
-        return 0;
-
-    if ((ext = strrchr(n_basenam(pathname), '.')) == NULL)
-        snprintf(path, sizeof(path), "%s%s", pathname, ".md");
-    else {
-        int len = ext - pathname + 1;
-        n_strncpy(path, pathname, len);
-        strcat(path, ".md");
-    }
-    	
-    mhexdigest(vf->vf_stream, md, &md_size);
-    vfile_close(vf);
-
-    if (md_size) {
-        if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
-            return 0;
-        fprintf(vf->vf_stream, "%s", md);
-        vfile_close(vf);
-    }
-
-    return md_size;
-}
-
-int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
-                      unsigned flags)
-{
-    struct vfile *vf, *vf_toc;
-    char tocpath[PATH_MAX], path[PATH_MAX], tmp[PATH_MAX];
-    char suffix[64] = "", tocsuffix[64] = ".toc", difftoc_suffix[PATH_MAX] = "";
-    int i;
-
-
-    pkgdir->ts = time(0);
-    
-    if (pkgdir->flags & PKGDIR_DIFF) {
-        char tstr[32];
-        char *dn, *bn;
+    if (n) {
+        char m[1024], *name;
         
-        strftime(tstr, sizeof(tstr), "%Y.%m.%d-%H.%M.%S", gmtime(&pkgdir->ts_orig));
-        snprintf(suffix, sizeof(suffix), ".diff.%s", tstr);
-        snprintf(tocsuffix, sizeof(tocsuffix), ".diff.%s.toc", tstr);
+        snprintf(m, sizeof(m), ngettext("removed %d duplicate package",
+                                        "removed %d duplicate packages", n), n);
         
-        snprintf(difftoc_suffix, sizeof(difftoc_suffix), ".diff.toc");
-
-        memcpy(tmp, pathname, sizeof(tmp));
-        n_basedirnam(tmp, &dn, &bn);
-        if (!mk_dir(dn, packages_incdir))
-            return 0;
-
-        snprintf(path, sizeof(path), "%s/%s/%s", dn, packages_incdir, bn);
-        memcpy(tmp, path, sizeof(tmp));
-        pathname = tmp;
-    }
-    
-    if (mkidx_pathname(tocpath, sizeof(tocpath), pathname, tocsuffix) == NULL) {
-        log(LOGERR, "Cannot prepare tocpath!?\n");
-        return 0;
-    }
-
-    if (mkidx_pathname(path, sizeof(path), pathname, suffix) == NULL) {
-        log(LOGERR, "Cannot prepare idxpath!?\n");
-        return 0;
-    }
-
-    msg(1, "Writing %s...\n", path);
-    if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
-        return 0;
-
-    if ((vf_toc = vfile_open(tocpath, VFT_STDIO, VFM_RW)) == NULL) {
-        vfile_close(vf);
-        return 0;
-    }
-    
-    put_fheader(vf->vf_stream, poldeksindex, pkgdir);
-    put_fheader(vf_toc->vf_stream, poldeksindex_toc, pkgdir);
-    
-    
-    fprintf(vf->vf_stream, "%%%s%lu\n", ts_tag, pkgdir->ts);
-
-    if (pkgdir->flags & PKGDIR_DIFF) {
-        fprintf(vf->vf_stream, "%%%s%lu\n", ts_orig_tag, pkgdir->ts_orig);
-
-        if (pkgdir->removed_pkgs) {
-            fprintf(vf->vf_stream, "%%%s", removed_tag);
-            for (i=0; i < n_array_size(pkgdir->removed_pkgs); i++) {
-                struct pkg *pkg = n_array_nth(pkgdir->removed_pkgs, i);
-            
-                fprintf(vf->vf_stream, "%s-", pkg->name);
-                if (pkg->epoch)
-                    fprintf(vf->vf_stream, "%d:", pkg->epoch);
-                fprintf(vf->vf_stream, "%s-%s ", pkg->ver, pkg->rel);
-            }
-            fprintf(vf->vf_stream, "\n");
-        }
+        name = pkgdir->idxpath ? pkgdir->idxpath :
+            pkgdir->path ? pkgdir->idxpath : pkgdir->name;
         
+        if (name)
+            logn(LOGWARN, "%s: %s", name, m);
+        else 
+            logn(LOGWARN, "%s", m);
     }
-
-    if (pkgdir->pkgs == NULL)
-        goto l_end;
-
-    if (pkgdir->depdirs && n_array_size(pkgdir->depdirs)) {
-        fprintf(vf->vf_stream, "%%%s", depdirs_tag);
-        
-        for (i=0; i<n_array_size(pkgdir->depdirs); i++) {
-            fprintf(vf->vf_stream, "%s%c",
-                    (char*)n_array_nth(pkgdir->depdirs, i),
-                    i + 1 == n_array_size(pkgdir->depdirs) ? '\n':':');
-        }
-    }
-
-    if (pkgdir->pkgroups) 
-        pkgroup_idx_store(pkgdir->pkgroups, vf->vf_stream);
-
-    fprintf(vf->vf_stream, "%%%s\n", endhdr_tag);
-
-    
-    n_array_sort(pkgdir->pkgs);
-    
-    for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
-        fprintf_pkg(pkg, vf->vf_stream, pkgdir->depdirs, flags);
-        fprintf(vf_toc->vf_stream, "%s\n", pkg_snprintf_s(pkg));
-    }
-
- l_end:
-    vfile_close(vf);
-    vfile_close(vf_toc);
-
-    /* update diff.toc file  */
-    if (pkgdir->flags & PKGDIR_DIFF) {
-        char difftoc_path[PATH_MAX];
-        
-        if (mkidx_pathname(difftoc_path, sizeof(difftoc_path),
-                           pathname, difftoc_suffix) == NULL) {
-            log(LOGERR, "Cannot prepare idxpath!?\n");
-            return 0;
-        }
-        
-        
-        if ((vf = vfile_open(difftoc_path, VFT_STDIO, VFM_APPEND)) == NULL)
-            return 0;
-        fprintf(vf->vf_stream, "%s %lu\n", n_basenam(tocpath), pkgdir->ts_orig);
-        vfile_close(vf);
-    }
-    
-    return creat_digest_file(path);
-}
-
-
-int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
-{
-    struct dirent  *ent;
-    struct stat    st;
-    DIR            *dir;
-    int            n;
-
-    
-    if ((dir = opendir(dirpath)) == NULL) {
-	log(LOGERR, "opendir %s: %m\n", dirpath);
-	return 0;
-    }
-
-    n = 0;
-    while( (ent = readdir(dir)) ) {
-        char path[PATH_MAX];
-        
-        if (fnmatch("*.rpm", ent->d_name, 0) != 0) 
-            continue;
-
-        if (fnmatch("*.src.rpm", ent->d_name, 0) == 0) 
-            continue;
-
-        snprintf(path, sizeof(path), "%s/%s", dirpath, ent->d_name);
-        
-        if (stat(path, &st) != 0) {
-            log(LOGERR, "stat %s: %m", path);
-            continue;
-        }
-        
-        if (S_ISREG(st.st_mode)) {
-            Header h;
-            FD_t fdt;
-            
-            if ((fdt = Fopen(path, "r")) == NULL) {
-                log(LOGERR, "open %s: %s\n", path, rpmErrorString());
-                continue;
-            }
-            
-            if (rpmReadPackageHeader(fdt, &h, NULL, NULL, NULL) != 0) {
-                log(LOGERR, "%s: read header failed, skiped\n", path);
-                
-            } else {
-                struct pkg *pkg;
-                 
-
-                if (headerIsEntry(h, RPMTAG_SOURCEPACKAGE)) /* omit src.rpms */
-                    continue;
-
-                if ((pkg = pkg_ldhdr(h, path, st.st_size, PKG_LDWHOLE))) {
-                    pkg->pkg_pkguinf = pkguinf_ldhdr(h);
-                    pkg_set_ldpkguinf(pkg);
-                    n_array_push(pkgs, pkg);
-                    n++;
-                }
-                
-                pkg->groupid = pkgroup_idx_update(pkgroups, h);
-                headerFree(h);
-            }
-            Fclose(fdt);
-            
-            if (n && n % 100 == 0) 
-                msg(2, "_%d..", n);
-            	
-        }
-    }
-
-    if (n && n > 100)
-        msg(2, "_%d\n", n);
-    closedir(dir);
     return n;
 }
 
 
-static void is_depdir_req(const struct capreq *req, tn_array *depdirs) 
+static int is_uptodate(const char *path, const struct pdigest *pdg_local,
+                       struct pdigest *pdg_remote)
 {
-    if (capreq_is_file(req)) {
-        const char *reqname;
-        char *p;
-        int reqlen;
+    char                   mdpath[PATH_MAX], mdtmpath[PATH_MAX];
+    struct pdigest         remote_pdg;
+    int                    fd, n;
+
+    if (pdg_remote)
+        pdigest_init(pdg_remote, NULL, 0);
         
-        reqname = capreq_name(req);
-        reqlen = strlen(reqname);
+    if (vfile_url_type(path) & VFURL_LOCAL)
+        return 1;
+    
+    if (!(n = vfile_mksubdir(mdtmpath, sizeof(mdtmpath), "tmpmd")))
+        goto l_err_end;
+    
+    mkdigest_path(mdpath, sizeof(mdpath), path, ".mdd");
+    
+    snprintf(&mdtmpath[n], sizeof(mdtmpath) - n, "/%s", n_basenam(mdpath));
+    unlink(mdtmpath);
+    mdtmpath[n] = '\0';
+
+    if (!vfile_fetch(mdtmpath, mdpath, VFURL_UNKNOWN))
+        goto l_err_end;
+    
+    mdtmpath[n] = '/';
+    
+    if ((fd = open(mdtmpath, O_RDONLY)) < 0 || 
+        !pdigest_read(&remote_pdg, fd, mdtmpath)) {
         
-        p = strrchr(reqname, '/');
-        
-        if (p != reqname) {
-            char *dirname;
-            int len;
-
-            len = p - reqname;
-            dirname = alloca(len + 1);
-            memcpy(dirname, reqname, len);
-            dirname[len] = '\0';
-            p = dirname;
-
-            
-        } else if (*(p+1) != '\0') {
-            char *dirname;
-            dirname = alloca(reqlen + 1);
-            memcpy(dirname, reqname, reqlen + 1);
-            p = dirname;
-        }
-
-        if (*(p+1) != '\0' && *p == '/')
-            p++;
-        
-        if (n_array_bsearch(depdirs, p) == NULL) {
-            n_array_push(depdirs, strdup(p));
-            n_array_sort(depdirs);
-        }
+        close(fd);
+        goto l_err_end;
     }
-}
-
-
-static void pkgdir_setup_depdirs(struct pkgdir *pkgdir) 
-{
-    int i;
-
-    n_assert(pkgdir->depdirs == NULL);
-    pkgdir->depdirs = n_array_new(16, free, (tn_fn_cmp)strcmp);
-    n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
+    close(fd);
     
+    n = memcmp(pdg_local->mdd, &remote_pdg.mdd, sizeof(remote_pdg.mdd));
+    if (n != 0 && pdg_remote)
+        memcpy(pdg_remote, &remote_pdg, sizeof(remote_pdg));
     
-    for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
-
-        if (pkg->reqs) 
-            n_array_map_arg(pkg->reqs, (tn_fn_map2) is_depdir_req,
-                            pkgdir->depdirs);
-    }
-}
-
-
-struct pkgdir *pkgdir_load_dir(const char *name, const char *path) 
-{
-    struct pkgdir        *pkgdir = NULL;
-    tn_array             *pkgs;
-    struct pkgroup_idx   *pkgroups;
+    return n == 0;
     
+ l_err_end:
 
-    pkgs = pkgs_array_new(1024);
-    pkgroups = pkgroup_idx_new();
-    
-    if (load_dir(path, pkgs, pkgroups) >= 0) {
-        pkgdir = malloc(sizeof(*pkgdir));
-
-        pkgdir->name = strdup(name);
-        pkgdir->path = strdup(path);
-        pkgdir->idxpath = NULL;
-        pkgdir->depdirs = NULL;
-        pkgdir->foreign_depdirs = NULL;
-        pkgdir->pkgs = pkgs;
-        pkgdir->pkgroups = pkgroups;
-        pkgdir->flags = PKGDIR_LDFROM_DIR;
-        pkgdir->vf = NULL;
-        
-        if (n_array_size(pkgs)) {
-            int i;
-            
-            for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
-                struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
-                pkg->pkgdir = pkgdir;
-            }
-            
-            pkgdir_setup_depdirs(pkgdir);
-        }
-    }
-    
-    return pkgdir;
-}
-
-static int pkg_cmp_uniq_name(const struct pkg *p1, const struct pkg *p2) 
-{
-    int rc;
-    if ((rc = pkg_cmp_name(p1, p2)) == 0)
-        msg(1, "%s replaced by %s\n", pkg_snprintf_s(p2), pkg_snprintf_s0(p1));
-    
-    return rc;
-}
-
-
-struct pkgdir *pkgdir_merge(struct pkgdir *pkgdir, struct pkgdir *pkgdir2) 
-{
-    struct pkg *pkg;
-    tn_array *depdirs;
-    int i;
-    
-    for (i=0; i < n_array_size(pkgdir2->pkgs); i++) {
-        pkg = n_array_nth(pkgdir2->pkgs, i);
-        pkg->groupid = pkgroup_idx_merge(pkgdir->pkgroups, pkgdir2->pkgroups,
-                                         pkg->groupid);
-        n_array_push(pkgdir->pkgs, pkg);
-    }
-    
-    n_array_uniq_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_cmp_uniq_name);
-
-    
-    /* merge depdirs */
-    depdirs = pkgdir->depdirs;
-    if (depdirs == NULL)
-        depdirs = n_array_new(64, NULL, (tn_fn_cmp)strcmp);
-    
-    if (pkgdir2->depdirs) {
-        for (i=0; i < n_array_size(pkgdir2->depdirs); i++)
-            n_array_push(depdirs, n_array_nth(pkgdir2->depdirs, i));
-    }
-    
-    if (n_array_size(depdirs) == 0) {
-        n_array_free(depdirs);
-        
-    } else {
-        n_array_sort(depdirs);
-        n_array_uniq(depdirs);
-        pkgdir->depdirs = depdirs;
-    }
-    
-    return pkgdir;
-}
-
-
-struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2) 
-{
-    struct pkg *pkg;
-    tn_array *depdirs, *plus_pkgs, *minus_pkgs;
-    struct pkgdir *diff;
-    int i;
-
-    n_array_sort(pkgdir->pkgs);
-    n_array_uniq_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_cmp_name);
-    n_array_sort(pkgdir2->pkgs);
-    n_array_uniq_ex(pkgdir2->pkgs, (tn_fn_cmp)pkg_cmp_name);
-    
-
-    plus_pkgs = pkgs_array_new(256);
-    for (i=0; i < n_array_size(pkgdir2->pkgs); i++) {
-        pkg = n_array_nth(pkgdir2->pkgs, i);
-
-        if (n_array_bsearch(pkgdir->pkgs, pkg) == NULL) {
-            pkg->groupid = pkgroup_idx_merge(pkgdir->pkgroups, pkgdir2->pkgroups,
-                                             pkg->groupid);
-            n_array_push(plus_pkgs, pkg);
-            msg(2, "+ %s\n", pkg_snprintf_s(pkg));
-        }
-    }
-
-    minus_pkgs = pkgs_array_new(256);
-    for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
-        pkg = n_array_nth(pkgdir->pkgs, i);
-
-        if (n_array_bsearch(pkgdir2->pkgs, pkg) == NULL) {
-            n_array_push(minus_pkgs, pkg);
-            msg(2, "- %s\n", pkg_snprintf_s(pkg));
-        }
-    }
-    
-    
-    /* merge depdirs */
-    depdirs = n_array_new(64, NULL, (tn_fn_cmp)strcmp);
-    
-    if (pkgdir->depdirs) {
-        for (i=0; i < n_array_size(pkgdir->depdirs); i++)
-            n_array_push(depdirs, n_array_nth(pkgdir->depdirs, i));
-    }
-    
-    if (pkgdir2->depdirs) {
-        for (i=0; i < n_array_size(pkgdir2->depdirs); i++)
-            n_array_push(depdirs, n_array_nth(pkgdir2->depdirs, i));
-    }
-    
-    if (n_array_size(depdirs) == 0) {
-        n_array_free(depdirs);
-        depdirs = NULL;
-        
-    } else {
-        n_array_sort(depdirs);
-        n_array_uniq(depdirs);
-    }
-
-    if (n_array_size(plus_pkgs) == 0) {
-        n_array_free(plus_pkgs);
-        plus_pkgs = NULL;
-    }
-
-    if (n_array_size(minus_pkgs) == 0) {
-        n_array_free(minus_pkgs);
-        minus_pkgs = NULL;
-    }
-
-    if (minus_pkgs == NULL && plus_pkgs == NULL) { /* equal */
-        n_array_free(depdirs);
-        return NULL;
-    }
-
-    diff = malloc(sizeof(*pkgdir));
-    diff->pkgs = plus_pkgs;
-    diff->removed_pkgs = minus_pkgs;
-    diff->name = strdup("DIFF");
-    diff->path = NULL;
-    diff->idxpath = NULL;
-    diff->depdirs = depdirs;
-    diff->foreign_depdirs = NULL;
-    diff->pkgs = plus_pkgs;
-    diff->pkgroups = pkgroup_idx_link(pkgdir->pkgroups);
-    diff->flags = PKGDIR_DIFF;
-    diff->ts_orig = pkgdir->ts;
-    diff->vf = NULL;
-    
-    return diff;
+    return 0;
 }
 
 
 int pkgdir_isremote(struct pkgdir *pkgdir)
 {
-    return vfile_url_type(pkgdir->path) != VFURL_PATH;
+    return vfile_url_type(pkgdir->path) & VFURL_REMOTE;
 }
+
+

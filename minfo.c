@@ -1,4 +1,5 @@
 #include <malloc.h>
+#include "i18n.h"
 #include "log.h"
 
 int mem_info_verbose = 0;
@@ -6,7 +7,7 @@ int mem_info_verbose = 0;
 void print_mem_info(const char *prefix) 
 {
     struct mallinfo mi = mallinfo();
-    msg(0, "%s: %db via malloc (%d unused), %db via mmap\n",
+    msgn(0, "%s: %db via malloc (%d unused), %db via mmap",
         prefix, mi.arena, mi.fordblks,  mi.hblkhd);
 }
 

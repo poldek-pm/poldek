@@ -20,6 +20,7 @@
 #include <time.h>
 
 #include <trurl/nstr.h>
+#include "i18n.h"
 #include "term.h"
 #include "log.h"
 
@@ -42,11 +43,21 @@ void log(int pri, const char *fmt, ...)
     va_end(args);
 }
 
+void log_i(int pri, int indent, const char *fmt, ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    vlog(pri, indent, fmt, args);
+    va_end(args);
+}
+
 
 void vlog(int pri, int indent, const char *fmt, va_list args)
 {
-    char buf[1024];
-    int n = 0, flags, is_cont = 0;
+    static int last_endlined = 1;
+    char buf[1024], tmp_fmt[1024];
+    int n = 0, flags, is_cont = 0, is_endlined = 0;
     
     if (*fmt == '_') {
         fmt++;
@@ -55,8 +66,30 @@ void vlog(int pri, int indent, const char *fmt, va_list args)
     } else if (*fmt == '\n') {
         buf[n++] = '\n';
         fmt++;
+        is_endlined = 1;
     }
 
+    if (*fmt) {
+        int n;
+        
+        n = strlen(fmt);
+        is_endlined = (fmt[n - 1] == '\n');
+        
+        if ((pri & LOGOPT_N) && is_endlined == 0 &&
+            (int)sizeof(tmp_fmt) > n + 2) {
+            
+            memcpy(tmp_fmt, fmt, n);
+            tmp_fmt[n++] = '\n';
+            tmp_fmt[n] = '\0';
+            fmt = tmp_fmt;
+            is_endlined = 1;
+        }
+    }
+
+    if (last_endlined == 0 && !is_cont && (pri & (LOGERR|LOGWARN)))
+        buf[n++] = '\n';        
+    last_endlined = is_endlined;
+        
     if (indent > 0) {
         memset(&buf[n], ' ', indent);
         n += indent;
@@ -80,8 +113,7 @@ void vlog(int pri, int indent, const char *fmt, va_list args)
         fflush(l_stream);
     }
 
-    if (flags & LOGFILE && l_fstream) {
-        
+    if ((flags & LOGFILE) && l_fstream) {
         if (*fmt == '\0') {
             fprintf(l_fstream, "%s", buf);
             
@@ -151,10 +183,9 @@ int log_init(const char *pathname, FILE *tty, char *prefix)
     l_fstream = fopen(pathname, "a");
 
     l_prefix[0] = '\0';
-    if (prefix) {
-        n_strncpy(l_prefix, prefix, sizeof(l_prefix) - 4);
-        strcat(&l_prefix[strlen(l_prefix)], ": ");
-    }
+    if (prefix)
+        snprintf(l_prefix, sizeof(l_prefix), "%s:", prefix);
+    
     
     return l_fstream != NULL;
 }
@@ -187,10 +218,10 @@ void vlog_tty(int pri, const char *fmt, va_list args)
     int n = 0;
     
     if (pri & LOGERR)
-        n = snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), "error: ");
+        n = snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("error: "));
     
     else if (pri & LOGWARN)
-        n = snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), "warn: ");
+        n = snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("warn: "));
 
     if (n > 0)
         fprintf(l_stream, "%s", buf);

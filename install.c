@@ -21,6 +21,7 @@
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
 
+#include "i18n.h"
 #include "log.h"
 #include "pkgset.h"
 #include "usrset.h"
@@ -35,19 +36,19 @@ int mkdbdir(const char *rootdir)
 
     snprintf(path, sizeof(path), "%s%s", rootdir, "/var");
     if (mkdir(path, 0755) != 0 && errno != EEXIST) {
-        log(LOGERR, "mkdir %s: %m\n", path);
+        logn(LOGERR, "mkdir %s: %m", path);
         return 0;
     }
     
     snprintf(path, sizeof(path), "%s%s", rootdir, "/var/lib");
     if (mkdir(path, 0755) != 0 && errno != EEXIST) {
-        log(LOGERR, "mkdir %s: %m\n", path);
+        logn(LOGERR, "mkdir %s: %m", path);
         return 0;
     }
 
     snprintf(path, sizeof(path), "%s%s", rootdir, "/var/lib/rpm");
     if (mkdir(path, 0755) != 0 && errno != EEXIST) {
-        log(LOGERR, "mkdir %s: %m\n", path);
+        logn(LOGERR, "mkdir %s: %m", path);
         return 0;
     }
 
@@ -69,7 +70,7 @@ static int chk_params(struct inst_s *inst)
         
     } else {
         if (!is_rwxdir(inst->rootdir)) {
-            log(LOGERR, "write %s: %m\n", inst->rootdir);
+            logn(LOGERR, "write %s: %m", inst->rootdir);
             return 0;
         }
 

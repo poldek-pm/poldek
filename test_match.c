@@ -18,6 +18,7 @@
 #include <fcntl.h>
 
 #include <trurl/nassert.h>
+#include "i18n.h"
 #include "pkg.h"
 
 

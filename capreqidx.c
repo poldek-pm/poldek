@@ -19,6 +19,7 @@
 
 #include <trurl/nassert.h>
 
+#include "i18n.h"
 #include "capreqidx.h"
 #include "log.h"
 
@@ -76,7 +77,7 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
         if (isprov) {
             for (i=0; i<ent->items; i++) 
                 if (ent->pkgs[i] == pkg) {
-                    log(LOGWARN, "%s: redundant capability \"%s\"\n",
+                    logn(LOGWARN, _("%s: redundant capability \"%s\""),
                         pkg_snprintf_s(pkg), capname);
                     return 1;
                 }

@@ -15,6 +15,8 @@ int rpm_initlib(tn_array *macros);
 void rpm_define(const char *name, const char *val);
 rpmdb rpm_opendb(const char *dbpath, const char *rootdir, mode_t mode);
 void rpm_closedb(rpmdb db);
+char *rpm_get_dbpath(void);
+time_t rpm_dbmtime(const char *dbfull_path);
 
 int rpm_dbmap(rpmdb db,
               void (*mapfn)(unsigned recno, void *header, void *arg),
@@ -28,8 +30,10 @@ tn_array *rpm_get_provides_dbpkgs(rpmdb db, const struct capreq *cap,
                                   tn_array *unistdbpkgs, unsigned ldflags);
 
 /* returns installed packages which conflicts with given path */
-tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path, tn_array *cnfldbpkgs, 
-                                         tn_array *unistdbpkgs, unsigned ldflags);
+tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path,
+                                         tn_array *cnfldbpkgs, 
+                                         tn_array *unistdbpkgs,
+                                         unsigned ldflags);
 
 
 /* is req matched by db packages? */
