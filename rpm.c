@@ -164,7 +164,7 @@ time_t rpm_dbmtime(const char *dbfull_path)
 int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs)
 {
     rootdir = rootdir; depdirs = depdirs;
-    return 0;
+    return -1;
 }
 
 #else 
@@ -179,7 +179,7 @@ int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs)
     int       len;
 
 #ifndef HAVE___DB185_OPEN
-    return 0;
+    return -1;
 #endif    
     
     index = "requirename.rpm";
@@ -194,11 +194,11 @@ int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs)
              dbpath != NULL ? dbpath : "", index);
     
     if ((db = __db185_open(path, O_RDONLY, 0, DB_HASH, NULL)) == NULL)
-        return 0;
+        return -1;
     
     if (db->seq(db, &dbt_k, &dbt_d, R_FIRST) != 0) {
         db->close(db);
-        return 0;
+        return -1;
     }
     
     tmp_depdirs = n_array_new(128, NULL, (tn_fn_cmp)strcmp);
