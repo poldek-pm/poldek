@@ -3,6 +3,7 @@
 #define  POLDEK_PKG_H
 
 #include <stdint.h>
+#include <string.h>
 #include <trurl/narray.h>
 
 struct capreq;                  /* defined in capreq.h */

@@ -101,7 +101,7 @@ static void *install_cb(const void *h __attribute__((unused)),
         case RPMCALLBACK_INST_OPEN_FILE:
             fd = Fopen(pkgpath, "r.ufdio");
             if (fd == NULL || Ferror(fd)) {
-                logn(LOGERR, "%s: %s", pkgpath, Fstrerror(fd));
+                logn(LOGERR, "%s: %s", (const char*)pkgpath, Fstrerror(fd));
                 if (fd)
                     Fclose(fd);
                 
@@ -231,7 +231,8 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
     }
 
     
-#ifdef HAVE_RPM_4_1       
+#ifdef HAVE_RPM_4_1
+    db = db;   /* avoid gcc's warn */
 	ts = rpmtsCreate();
 	rpmtsSetRootDir(ts, rootdir);
 	rpmtsOpenDB(ts, O_RDWR);

@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <string.h>
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
 

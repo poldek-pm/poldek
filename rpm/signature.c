@@ -222,7 +222,6 @@ int rpm_verify_signature(const char *path, unsigned flags)
 
 int rpm_verify_signature(const char *path, unsigned flags) 
 {
-    const char                *argv[2];
     unsigned                  presented_signs = 0;
     struct rpmQVKArguments_s  qva; /* poor RPM API... */
     rpmts                     ts;

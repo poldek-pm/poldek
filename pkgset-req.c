@@ -184,7 +184,7 @@ __inline__
 static int add_reqpkg(struct pkg *pkg, struct capreq *req, struct pkg *dpkg)
 {
     struct reqpkg *rpkg;
-    struct reqpkg tmp_rpkg = {NULL, 0, {NULL}};
+    struct reqpkg tmp_rpkg = { NULL, 0 };
 
     tmp_rpkg.pkg = dpkg;
     rpkg = n_array_bsearch(pkg->reqpkgs, &tmp_rpkg);
@@ -368,7 +368,7 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
         int isneq;
         uint8_t flags;
         struct reqpkg *rpkg;
-        struct reqpkg tmp_rpkg = {NULL, 0, {NULL}};
+        struct reqpkg tmp_rpkg = {NULL, 0};
 
         flags = 0;
         flags |= capreq_is_prereq(req) ? REQPKG_PREREQ : 0;

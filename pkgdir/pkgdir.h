@@ -59,8 +59,6 @@ struct pkgdir {
     void                        *mod_data;
 };
 
-#define pkgdir_is_type(pkgdir, t) (strcmp((pkgdir)->type, t) == 0)
-
 #define pkgdir_pr_path(pkgdir) \
    (pkgdir->path ? vf_url_hidepasswd_s(pkgdir->path) : NULL)
 

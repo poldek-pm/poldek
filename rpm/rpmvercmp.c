@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <rpm/rpmlib.h>
 
 #include "i18n.h"

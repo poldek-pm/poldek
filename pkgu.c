@@ -506,7 +506,7 @@ struct pkguinf *pkguinf_restore(tn_buf_it *it, const char *lang)
                     break;
 
                 default:
-                    
+                    n_assert(0);
             }
         }
     }
