@@ -53,3 +53,5 @@ snap: dist
 	rm -rf $(PACKAGE)-cvs$$dts && \
 	echo "$(PACKAGE)-cvs$$dts.tar.gz"
 
+announce:
+	@perl -ne 'BEGIN { $$n = 0; }; if (/(^\d+\.\d+.+?)\s/) { exit if $$n; print "From: mis\@pld.org.pl\nTo: poldek\@pld-linux.org\nSubject: [ANN] poldek $$1 released\n\n"; $$n++ } print;' NEWS > /tmp/ann.txt
