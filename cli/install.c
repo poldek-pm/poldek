@@ -81,7 +81,6 @@ N_("Just dump install marked package filenames to FILE (default stdout)"), OPT_G
 
 {"dumpn", OPT_INST_DUMPN, "FILE", OPTION_ARG_OPTIONAL,
 N_("Just dump install marked package names to FILE (default stdout)"), OPT_GID },
-    
 
 {0,  'v', 0, 0, N_("Be verbose."), OPT_GID },
 {NULL, 'h', 0, OPTION_HIDDEN, "", OPT_GID }, /* alias for -? */
@@ -112,6 +111,19 @@ static struct argp_option cmdl_options[] = {
     {"mercy", 'm', 0, 0, N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
     {"promoteepoch", OPT_INST_PROMOTEEPOCH, 0, 0,
          N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
+
+    {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
+N_("Prevent packages listed from being upgraded if they are already installed."),
+     OPT_GID },
+{"nohold", OPT_INST_NOHOLD, 0, 0,
+N_("Do not hold any packages"), OPT_GID },
+
+{"ignore", OPT_INST_IGNORE, "PACKAGE[,PACKAGE]...", 0,
+N_("Make packages listed invisible."), OPT_GID },
+    
+{"noignore", OPT_INST_NOIGNORE, NULL, 0,
+N_("Make invisibled packages visible."), OPT_GID },    
+
     { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -200,6 +212,25 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
                 poldek_ts_setf(ts, POLDEK_TS_REINSTALL);
             break;
 
+        case OPT_INST_HOLD:
+            poldek_ts_clrf(ts, POLDEK_TS_NOHOLD);
+            poldek_configure(ts->ctx, POLDEK_CONF_HOLD, arg);
+            break;
+            
+        case OPT_INST_NOHOLD:
+            poldek_ts_setf(ts, POLDEK_TS_NOHOLD);
+            break;
+            
+        case OPT_INST_IGNORE:
+            poldek_ts_clrf(ts->ctx->ts, POLDEK_TS_NOIGNORE);
+            poldek_configure(ts->ctx, POLDEK_CONF_IGNORE, arg);
+            break;
+
+        case OPT_INST_NOIGNORE:
+            poldek_ts_setf(ts->ctx->ts, POLDEK_TS_NOIGNORE);
+            break;
+    
+
         default:
             return ARGP_ERR_UNKNOWN;
             
@@ -277,7 +308,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             poldek_ts_setf(ts, POLDEK_TS_JUSTPRINT_N);
             break;
 
-
+ 
         case OPT_INST_FETCH:
             if (arg) {
                 if (!is_rwxdir(arg)) {
@@ -349,12 +380,12 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
 {
     int rc;
 
+    dbgf_("%p->%p, %p->%p\n", rt->ts, rt->ts->hold_patterns,
+          rt->ts->ctx->ts, rt->ts->ctx->ts->hold_patterns);
+
     if (!poldek_ts_issetf(rt->ts, POLDEK_TS_INSTALL))
         return 0;
 
-    dbgf_("%p->%p, %p->%p\n", rt->ts, rt->ts->hold_patterns,
-         rt->ts->ctx->ts, rt->ts->ctx->ts->hold_patterns);
-    
     if (!poldek_load_sources(rt->ctx))
         return 0;
     
