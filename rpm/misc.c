@@ -72,3 +72,9 @@ tn_array *rpm_rpmlib_caps(void)
     n_array_sort(caps);
     return caps;
 }
+
+const char *rpm_get_arch(void) 
+{
+    return rpmGetVar(RPM_MACHTABLE_INSTARCH);
+}
+

@@ -55,11 +55,11 @@ int pkgfl_ent_cmp(const void *a, const void *b);
 tn_array *pkgfl_array_store_order(tn_array *fl);
 int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which);
 int pkgfl_store_buf(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which);
-int pkgfl_store_f(tn_array *fl, tn_stream *st, tn_array *depdirs, int which);
+int pkgfl_store_st(tn_array *fl, tn_stream *st, tn_array *depdirs, int which);
 
 tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *dirs, int include);
-tn_array *pkgfl_restore_f(tn_stream *st, tn_array *dirs, int include);
-int pkgfl_skip_f(tn_stream *st);
+tn_array *pkgfl_restore_st(tn_stream *st, tn_array *dirs, int include);
+int pkgfl_skip_st(tn_stream *st);
 
 tn_array *pkgfl_array_new(int size);
 

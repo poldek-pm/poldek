@@ -430,7 +430,7 @@ int pkgfl_store(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which)
     return ndirs;
 }
 
-int pkgfl_store_f(tn_array *fl, tn_stream *st, tn_array *depdirs, int which) 
+int pkgfl_store_st(tn_array *fl, tn_stream *st, tn_array *depdirs, int which) 
 {
     tn_buf *nbuf;
     int rc;
@@ -534,7 +534,7 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *dirs, int include)
 }
 
 
-tn_array *pkgfl_restore_f(tn_stream *st, tn_array *dirs, int include) 
+tn_array *pkgfl_restore_st(tn_stream *st, tn_array *dirs, int include) 
 {
     tn_array *fl = NULL;
     tn_buf *nbuf = NULL;
@@ -547,15 +547,15 @@ tn_array *pkgfl_restore_f(tn_stream *st, tn_array *dirs, int include)
         n_buf_free(nbuf);
     }
     
-    n_stream_seek(st, 1, SEEK_CUR); /* skip final '\n' */
+    n_stream_seek(st, 1, SEEK_CUR); /* skip ending '\n' */
     return fl;
 }
 
 
-int pkgfl_skip_f(tn_stream *st) 
+int pkgfl_skip_st(tn_stream *st) 
 {
     n_buf_restore_skip(st, TN_BUF_STORE_32B);
-    n_stream_seek(st, 1, SEEK_CUR);
+    n_stream_seek(st, 1, SEEK_CUR); /* skip ending '\n' */
     return 1;
 }
 
