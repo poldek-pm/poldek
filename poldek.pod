@@ -15,9 +15,9 @@ poldek [--source=SOURCE ...]
 =head1 DESCRIPTION
 
 The poldek is designed to automate the verify, install and upgrade 
-of rpm packages. It can be used in two modes: batch and interactive mode. 
-It was inspired by L<apt-get(8)> from Debian's APT, the interactive mode 
-was inspired by shell mode of Perl CPAN module ($ perl -MCPAN -e shell). 
+of rpm packages. It can be used in two modes: batch and interactive. 
+It was inspired by L<apt-get(8)> from Debian's APT and by interactive mode 
+of Perl CPAN module ($ perl -MCPAN -e shell). 
 
 In general poldek gets packages information from special package index
 file (I<packages.dir.gz> by default) and performs one of the following actions:
@@ -34,7 +34,7 @@ file (I<packages.dir.gz> by default) and performs one of the following actions:
 
 =item * Upgrade whole system
 
-=item * Install or upgrade custom packages 
+=item * Install or upgrade desired packages 
 
 =item * Split package set into fixed size package sets 
 
@@ -137,11 +137,11 @@ Build package index, by default it's stored in SOURCE/packages.dir[.gz].
 The other two files are created: packages.dir.mdd with computed packages.dir's 
 digest and packages.dir.toc[.gz] with packages NAME-EVR per line.
 
-Additionally previous SOURCE/packages.dir[.gz] is different from 
+Additionally if previous package index is different from 
 currently created one then index "patch" is created 
 under SOURCE/packages.i/ directory. Every patch consist of two 
-data file: packages.dir.diff.YYYY.MM.DD-HH.mm.SS.gz and 
-digest file packages.dir.diff.YYYY.MM.DD-HH.mm.SS.mdd. 
+files: packages.dir.diff.YYYY.MM.DD-HH.mm.SS.gz and 
+packages.dir.diff.YYYY.MM.DD-HH.mm.SS.mdd. 
 
 Outdated patches are automatically removed. 
 
@@ -236,7 +236,7 @@ with requirement "foo = 1.0" than poldek upgrade foo-devel to version
 
 Prevent packages listed from being upgraded if they are already installed.
 If option is not given then packages to hold are taken from B<hold> configuration 
-option and additioanlly from $HOME/.poldek_hold. Held package won't be upgraded 
+option and additionally from $HOME/.poldek_hold. Held package won't be upgraded 
 with exeption if it will be pointed directly by the user.
 
 =item B<-m, --mercy>
@@ -281,7 +281,7 @@ then $HOME/.poldek-cache is created and used as cache directory.
 
 =item B<--log=FILE>
 
-Log all poldek's messages to FILE
+Log all poldek messages to FILE
 
 =back
 
@@ -302,7 +302,7 @@ by RPM binary, which is executed in background. Options passed to rpm:
 
 =item * --nodeps
 
-=item * --test (may be given twice, see above --test description)
+=item * --test (must be given twice, see above --test description)
 
 =item * --upgrade 
 
@@ -371,7 +371,7 @@ that source from other ones:
 =item * B<cachedir> - see B<--cachedir> option description
 
 =item * B<use_sudo = yes|no> - for r/w operations poldek will 
-        run rpm using sudo. The default is "no", but is is recommended
+        run rpm using sudo. The default is "no", but it is recommended
         to change it to "yes" and use the poldek as ordinary user.
 
 =item * B<follow = yes|no> - automatically install|don't install 
@@ -523,7 +523,7 @@ too much).
 =head2 Upgrade and "Obsoletes" RPM tag
 
 In PLD I<http://www.pld.org.pl>, which is primary developement
-platform for poldek, Obsoletes tag is used in two diffrent meanings:
+platform for poldek, Obsoletes tag is used in two different meanings:
 the first means B<A> I<obsoletes> B<B>, the second means B<A> I<is
 equivalent of> B<B>. Obviously it makes impossible to distinguish them
 and use during upgrades (in Red Hat Linux the first mean is used only,

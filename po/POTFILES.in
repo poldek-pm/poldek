@@ -1,6 +1,8 @@
+ask.c
 capreq.c
 capreqidx.c
 conf.c
+dbdep.c
 dbpkg.c
 dbpkgset.c
 depdirs.c
@@ -38,6 +40,7 @@ shell/desc.c
 shell/get.c
 shell/install.c
 shell/ls.c
+shell/pager.c
 shell/search.c
 shell/shell.c
 shell/uninstall.c
@@ -117,3 +120,8 @@ vfile/testcookie.c
 vfile/ttest.c
 vfile/vfcurl.c
 vfile/vfile.c
+vfile/vfprogress.c
+vfile/vftp/ftp.c
+vfile/vftp/test_vftp.c
+vfile/vftp/vftp.c
+vfile/vfvftp.c

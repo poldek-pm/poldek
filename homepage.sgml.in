@@ -14,7 +14,7 @@
 
     The poldek is a RPM packages management helper tool; its
     basic features are similar to any modern package updater like <em>apt-get</em> --
-    program takes information about packages from custom package index file
+    program takes information about packages from package index file
     (called <em>packages.dir.gz</em> by default), and allows to package 
     install, upgrade and removal. 
     Package dependencies are automatically handled, so if you try to install 
