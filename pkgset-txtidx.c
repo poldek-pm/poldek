@@ -28,7 +28,6 @@
 
 #include <zlib.h>
 #include <rpm/rpmlib.h>
-#include <rpm/misc.h>
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 #include <trurl/nbuf.h>

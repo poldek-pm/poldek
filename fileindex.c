@@ -81,15 +81,13 @@ void *file_index_add_dirname(struct file_index *fi, const char *dirname)
     tn_array *files;
 
     if (last_files != NULL && strcmp(dirname, last_dirname) == 0) {
-        //printf("HIT dirname = %s %s\n", dirname, last_dirname);
+        DBGMSG("HIT dirname = %s %s\n", dirname, last_dirname);
         files = last_files;
         
     } else {
-        //printf("dirname = %s\n", dirname);
         /* find directory */
         if ((files = n_hash_get(fi->dirs, dirname)) == NULL) {
             files = n_array_new(4, NULL, fent_cmp);
-//        n_array_ctl_growth(files, TN_ARRAY_INCLINEAR, 2);
             n_hash_insert(fi->dirs, dirname, files);
         }
         
@@ -112,19 +110,6 @@ int file_index_add_basename(struct file_index *fi, void *fidx_dir,
     fent->flfile = flfile;
     fent->pkg = pkg;
     n_array_push(files, fent);
-#if 0    
-    {
-        if (strcmp(flfile->basename, "qmail-queue") == 0) {
-            int i;
-            printf("qmail-queue %s %d %d (",
-                   pkg_snprintf_s(pkg), flfile->mode, flfile->size);
-            if (pkg->cnfls) 
-                for (i=0; i<n_array_size(pkg->cnfls); i++)
-                    printf("%s, ", capreq_snprintf_s(n_array_nth(pkg->cnfls, i)));
-            printf(")\n");
-        }
-    }
-#endif    
     return 1;
 }
 

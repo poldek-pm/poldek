@@ -15,7 +15,7 @@
 #include <errno.h>
 #include <fnmatch.h>
 #include <obstack.h>
-#include <rpmlib.h>
+#include <rpm/rpmlib.h>
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>

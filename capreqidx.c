@@ -10,6 +10,10 @@
   $Id$
 */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -50,7 +54,7 @@ void capreq_idx_destroy(struct capreq_idx *idx)
 
 
 int capreq_idx_add(struct capreq_idx *idx, const char *prname,
-                    struct pkg *pkg, int isprov)
+                   struct pkg *pkg, int isprov)
 {
     void **p;
     struct capreq_idx_ent *ent;
@@ -66,9 +70,9 @@ int capreq_idx_add(struct capreq_idx *idx, const char *prname,
         
     } else {
         int i;
-
         ent = *p;
 
+#ifndef HAVE_RPM_4_0            /* rpm 4.x packages has NAME = E:V-R cap */
         if (isprov) {
             for (i=0; i<ent->items; i++) 
                 if (ent->pkgs[i] == pkg) {
@@ -77,7 +81,9 @@ int capreq_idx_add(struct capreq_idx *idx, const char *prname,
                     return 1;
                 }
         }
-        
+#else
+        isprov = isprov;        /* avoid gcc's warn */
+#endif        
         
         if (ent->items == ent->_size) {
             struct capreq_idx_ent *new_ent;
@@ -166,12 +172,6 @@ tn_array *capreq_idx_find_depdirs(struct capreq_idx *reqidx)
                 dirlen = strlen(d);
             }
         }
-#if 0       
-        printf("DEPDIRS=\"");
-        for (i=1; i<n_array_size(depdirs); i++) 
-            printf("%s:",n_array_nth(depdirs, i));
-        printf("\"\n");
-#endif        
     }
     n_array_free(dirs);
     return depdirs;
