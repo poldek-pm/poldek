@@ -26,7 +26,6 @@
 #include <time.h>
 #include <argp.h>
 #include <fnmatch.h>
-#include <locale.h>
 #include <time.h>
 
 #include <pcre.h>
@@ -1042,7 +1041,6 @@ int init_shell_data(struct pkgset *ps, struct inst_s *inst, int skip_installed)
 {
     int i;
 
-    setlocale (LC_ALL, "");
     setup_gmt_off();
     
     n_assert (shell_s.pkgset == NULL);
