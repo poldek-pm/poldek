@@ -91,9 +91,13 @@ int pkgset_load_dir(struct pkgset *ps, const char *dirpath)
                 headerFree(h);
             }
             Fclose(fdt);
+            
+            if (n && n % 100 == 0) 
+                msg_l(2, "_%d..", n);
+            	
         }
     }
-    
+    msg_l(2, "_%d\n", n);
     closedir(dir);
     return n;
 }
