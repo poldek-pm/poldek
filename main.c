@@ -306,14 +306,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             ldmethod = PKGSET_LD_IDX;
             
         case OPT_SOURCEDIR:     /* no break */
-            if (ldmethod != PKGSET_LD_NIL)
+            if (ldmethod == PKGSET_LD_NIL)
                 ldmethod = PKGSET_LD_DIR;
             
             
         case 's':
             if (argsp->curr_src_path) { /* no prefix for curr_src_path */
                 src = source_new(argsp->curr_src_path, NULL);
-                //printf("new src %s\n", arg);
+                //printf("new src %s %d\n", arg, ldmethod);
                 src->ldmethod = argsp->curr_src_ldmethod;
                 n_array_push(argsp->sources, src);
             }
@@ -327,7 +327,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 log(LOGERR, "prefix option should be preceded by source one\n");
                 exit(EXIT_FAILURE);
             }
-            //printf("new src %s prefix %s\n", argsp->curr_src_path, arg);
+            
+            if (argsp->curr_src_ldmethod == PKGSET_LD_DIR) {
+                log(LOGERR, "prefix for directory source makes no sense\n");
+                exit(EXIT_FAILURE);
+            }
+            
+            //printf("new src %s prefix %s, ld %d\n", argsp->curr_src_path, arg,
+            //                                        argsp->curr_src_ldmethod);
             src = source_new(argsp->curr_src_path, trimslash(arg));
             src->ldmethod = argsp->curr_src_ldmethod;
             n_array_push(argsp->sources, src);
@@ -370,7 +377,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_MKIDX;
             argsp->psflags |= PSMODE_MKIDX;
-            argsp->idx_path = arg;
+            argsp->idx_path = trimslash(arg);
             argsp->idx_type = INDEXTYPE_TXT;
             break;
 
@@ -565,10 +572,16 @@ void parse_options(int argc, char **argv)
     
     
     argp_parse(&argp, argc, argv, 0, 0, &args);
-
+    
     if (args.noconf && args.conf_path) {
         log(LOGERR, "--noconf and --conf are exclusive, aren't they?\n");
         exit(EXIT_FAILURE);
+    }
+
+    if (args.curr_src_path) { 
+        struct source *src = source_new(args.curr_src_path, NULL);
+        src->ldmethod = args.curr_src_ldmethod;
+        n_array_push(args.sources, src);
     }
     
     if (args.conf_path != NULL)
