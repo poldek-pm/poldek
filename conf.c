@@ -69,8 +69,10 @@ static struct tag valid_tags[] = {
     { "use_sudo",       TYPE_BOOL , { 0 } },
     { "mercy",          TYPE_BOOL , { 0 } },
     { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
+    { "ignore",         TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
+    { "prefer",         TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "keep_downloads", TYPE_BOOL , { 0 } },
-    { "confirm_installs", TYPE_BOOL , { 0 } },
+    { "confirm_installs", TYPE_BOOL , { 0 } }, /* backward compat */
     { "confirm_installation", TYPE_BOOL , { 0 } },
     { "confirm_removal", TYPE_BOOL , { 0 } },
     { "choose_equivalents_manually", TYPE_BOOL , { 0 } },

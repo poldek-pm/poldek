@@ -12,8 +12,9 @@
 #include "pkgu.h"
 #include "pkgdir.h"
 
-#define PKG_HAS_CAPS        (1 << 1)
-#define PKG_HAS_REQS        (1 << 2)
+
+//#define PKG_HAS_CAPS        (1 << 1)
+//#define PKG_HAS_REQS        (1 << 2)
 #define PKG_HAS_CNFLS       (1 << 3)
 #define PKG_HAS_FL          (1 << 4)
 #define PKG_HAS_PKGUINF     (1 << 5)
@@ -28,11 +29,12 @@
 #define PKG_RM_MARK         (1 << 11) /* marked for removal */
 
 #define PKG_HOLD            (1 << 12) /* non upgradable */
+#define PKG_IGNORED         (1 << 13) /* non visible    */
 
-#define PKG_ORDER_PREREQ    (1 << 13) /* see pkgset-order.c */
+#define PKG_ORDER_PREREQ    (1 << 14) /* see pkgset-order.c */
 
 
-#define PKG_DBPKG           (1 << 14) /* loaded from database, i.e. installed */
+#define PKG_DBPKG           (1 << 15) /* loaded from database, i.e. installed */
 
 /* DAG node colours */
 #define PKG_COLOR_WHITE    (1 << 20)
