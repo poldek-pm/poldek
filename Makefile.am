@@ -7,9 +7,9 @@ TRURL_DIR = @TRURL_DIR@
 TNDB_DIR = @TNDB_DIR@
 
 CLI=cli
-SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir \
-            pm . $(CLI)
-DIST_SUBDIRS = $(SUBDIRS)
+SUBDIRS   = po doc $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir \
+            pm . $(CLI) 
+DIST_SUBDIRS = $(SUBDIRS) python
 
 INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@
 AM_CFLAGS = @AM_CFLAGS@
@@ -31,13 +31,13 @@ libpoldek_la_SOURCES =  \
 	  capreqidx.c capreqidx.h	\
 	  capreq.c capreq.h 		\
 	  pkgset-load.c    	        \
-	  pkgset.c		\
+	  pkgset.c pkgset.h 		\
 	  pkgset-req.c pkgset-req.h	\
 	  pkgset-order.c    	\
 	  pkgset-install.c		\
 	  dbdep.c dbdep.h		\
 	  arg_packages.c arg_packages.h		\
-	  conf.c 	    	\
+	  conf.c conf.h	    	\
 	  dbpkgset.c dbpkgset.h \
 	  split.c split.h		\
 	  pkgroup.c pkgroup.h	\
@@ -50,11 +50,13 @@ libpoldek_la_SOURCES =  \
 	  uninstall.c           \
 	  lib_init.c            \
 	  lib_pkgset.c          \
-	  poldek_ts.c poldek_ts.h	  
+	  poldek_ts.c poldek_ts.h \
+	  poldek_intern.h \
+	  plg_ver_cmp.h 
 
 pkgincludedir = $(includedir)/poldek
-pkginclude_HEADERS = poldek.h poldek_ts.h pkg.h \
-				     pkgdir/pkgdir.h pkgdir/source.h
+nobase_pkginclude_HEADERS = poldek.h poldek_ts.h pkg.h \
+		            pkgdir/pkgdir.h pkgdir/source.h
 
 
 libpoldek_la_LIBADD = \
@@ -120,11 +122,11 @@ vfjuggle:
 dist-hook: 
 	-rm -rf $(distdir)/.deps
 
-install-exec-local:
+#install-exec-local:
 #	$(install_sh) -m 0755 -d $(DESTDIR)$(libexecdir)/$(PACKAGE)
 #	$(install_sh) -m 0755 $(vfscripts) $(DESTDIR)$(libexecdir)/$(PACKAGE)
 
-# libtool hack
+# libtool hack 
 install-exec-hook:
 	for p in poldek vfile tndb trurl; do                        \
 		laf="$(DESTDIR)$(libdir)/lib$$p.la";                    \

@@ -5,8 +5,6 @@ SUBDIRS = pl homepage
 POD2HTML  = pod2html
 
 man_MANS  = poldek.1
-mandir    = @mandir@/pl
-
 
 EXTRA_DIST = poldek.pod poldek.1 
 
