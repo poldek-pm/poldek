@@ -232,14 +232,17 @@ int p_close(struct p_open_st *pst)
 
 
 #ifdef HAVE_OPENPTY
-pid_t forkptys(int *master, struct termios *tios, struct winsize *wsize) 
+pid_t forkptys(int *master, struct termios *tios, struct winsize *wsize,
+	       char *errmsg, int errmsg_size) 
 {
     int slave;
     pid_t pid;
     
     
-    if (openpty(master, &slave, NULL, tios, wsize) != 0)
+    if (openpty(master, &slave, NULL, tios, wsize) != 0) {
+	snprintf(errmsg, errmsg_size, "openpty: %m");
         return -1;
+    }	
     
     if ((pid = fork()) == 0) {
         close(*master);
@@ -247,6 +250,7 @@ pid_t forkptys(int *master, struct termios *tios, struct winsize *wsize)
         dup2(slave, STDERR_FILENO);
         return 0;
     }
+    
     return pid;
 }
 
@@ -284,13 +288,16 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
         return NULL;
     }
     
-    if ((pid = forkptys(&fd, &termios, &winsize)) == 0) {
+    *errmsg = '\0';
+    if ((pid = forkptys(&fd, &termios, &winsize,
+                        errmsg, sizeof(errmsg))) == 0) {
         p_dupnull(STDIN_FILENO, flags);
         execv(cmd, argv);
 	exit(EXIT_FAILURE);
         
     } else if (pid < 0) {
-        snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
+	if (*errmsg == '\0') 
+	    snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
         pst->errmsg = n_strdup(errmsg);
         
         
