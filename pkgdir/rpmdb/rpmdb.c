@@ -139,7 +139,7 @@ tn_tuple *load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
 
 struct map_struct {
     tn_array  *pkgs;
-    tn_hash   *langs;
+    struct pkgdir *pkgdir;
     struct pkgroup_idx *pkgroups;
     tn_alloc  *na;
 };
@@ -169,8 +169,7 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
         if (hdr_langs) {
             int i = 0;
             while (hdr_langs[i]) {
-                if (!n_hash_exists(ms->langs, hdr_langs[i]))
-                    n_hash_insert(ms->langs, hdr_langs[i], NULL);
+                pkgdir__update_avlangs(ms->pkgdir, hdr_langs[i], 1);
                 i++;
             }
             free(hdr_langs);
@@ -182,9 +181,9 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
 }
 
 static
-int load_db_packages(struct pm_ctx *pmctx,
+int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
                      tn_array *pkgs, const char *rootdir, const char *path,
-                     tn_hash *avlangs, struct pkgroup_idx *pkgroups,
+                     struct pkgroup_idx *pkgroups,
                      unsigned ldflags, tn_alloc *na) 
 {
     char dbfull_path[PATH_MAX];
@@ -204,7 +203,7 @@ int load_db_packages(struct pm_ctx *pmctx,
         dbfull_path, *dbfull_path ? "]":"");
 
     ms.pkgs = pkgs;
-    ms.langs = avlangs;
+    ms.pkgdir = pkgdir;
     ms.pkgroups = pkgroups;
     ms.na = na;
 
@@ -234,10 +233,9 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
     
-    if (!load_db_packages(pkgdir->mod_data,
-                          pkgdir->pkgs, "/", pkgdir->idxpath,
-                          pkgdir->avlangs_h, pkgdir->pkgroups,
-                          ldflags, pkgdir->na))
+    if (!load_db_packages(pkgdir->mod_data, pkgdir, pkgdir->pkgs, "/",
+                          pkgdir->idxpath, pkgdir->pkgroups, ldflags,
+                          pkgdir->na))
         return 0;
 
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
