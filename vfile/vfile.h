@@ -62,6 +62,8 @@ void vfile_configure(const char *cachedir, int flags);
 
 #define VFM_NOEMPTY    (1 << 11)  /* treat empty files as non-existing ones */
 
+#define VFM_UNCOMPR    (1 << 12)  /* uncompress file before open  */
+
 /* flags  */
 #define VF_FETCHED     (1 << 15) /* for remote files, file downloaded */
 #define VF_FRMCACHE    (1 << 16) /* file remote file, file taken form cache */
@@ -89,7 +91,7 @@ struct vfile {
 
 #define vfile_localpath(vf)  ((vf)->vf_tmpath ? (vf)->vf_tmpath : (vf)->vf_path)
 
-struct vfile *vfile_open(const char *path, int vftype, int vfmode);
+struct vfile *vfile_open(const char *path, int vftype, unsigned vfmode);
 void vfile_close(struct vfile *vf);
 int vfile_unlink(struct vfile *vf);
 
@@ -186,8 +188,8 @@ struct vf_module {
 #endif /* VFILE_INTERNAL */
 
 
-
-
+int vf_uncompr_able(const char *path);
+int vf_uncompr_do(const char *path, const char *destpath);
 
 #endif /* POLDEK_VFILE_H */
 

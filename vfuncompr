@@ -1,0 +1,38 @@
+#! /bin/sh
+# $Id$
+
+PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+if [ "$#" != "2" ]; then
+    echo "usage: `basename $0` FILE[.gz][.bz2] DESTFILE"
+    exit 1
+fi
+
+src=$1
+dest=$2
+
+cmd="bunzip2 --keep --stdout ${src}"
+if echo ${src} | egrep ".gz" >/dev/null; then
+    cmd="gunzip --stdout ${src}"
+fi
+
+if [ ! -r $src -o ! -f $src ]; then
+    echo "$src: no such file"
+    exit 1
+fi	
+
+if [ -r $dest ]; then
+    echo "$dest: file exists"
+    exit 1
+fi
+
+if [ $dest == $src ]; then
+    echo "dest and src are the same"
+    exit 1
+fi
+
+
+echo -e "$cmd\n -> ${dest}"
+$cmd > ${dest}
+
+

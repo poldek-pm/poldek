@@ -550,6 +550,8 @@ int url_to_path(char *buf, int size, const char *url, int isdir)
 
     p = bufp;
     c = '\0';
+    if (*p == '/')
+        *p++ = '_';
     while (*p && p != sl) {
         c = *p;
 
@@ -557,6 +559,8 @@ int url_to_path(char *buf, int size, const char *url, int isdir)
             *p = '.';
         p++;
     }
+    
+    //printf("%s[%d] => %s(%s)\n", url, isdir, buf, sl);
     return n;
 }
 

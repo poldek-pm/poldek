@@ -10,7 +10,7 @@ endif
 
 INCLUDES = @TRURL_INCLUDE@
 lib_LIBRARIES      = libvfile.a 
-libvfile_a_SOURCES = vfile.c vfprogress.c fetch.c misc.c p_open.c \
+libvfile_a_SOURCES = vfile.c vfprogress.c fetch.c misc.c p_open.c uncompr.c \
 		     $(VFCURL_SRCS_) vfvftp.c vfvhttp.c 
 
 pkgincludedir = $(includedir)/vfile

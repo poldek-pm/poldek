@@ -66,7 +66,7 @@ endif
 LDADD_              = @INTLLIBS@
 
 bin_PROGRAMS        = poldek rpmvercmp
-bin_SCRIPTS         = mkpackagedir vfjuggle
+bin_SCRIPTS         = mkpackagedir vfjuggle vfuncompr
 poldek_SOURCES      = main.c
 poldek_LDADD        = libpoldek.a vfile/libvfile.a \
 		      vfile/vftp/libvftp.a vfile/vhttp/libvhttp.a \

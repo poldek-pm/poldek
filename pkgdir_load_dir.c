@@ -139,9 +139,10 @@ int load_header_list(const char *path, tn_array *pkgs,
     struct pkg           *pkg;
     Header               h;
     int                  n = 0;
+    unsigned             vfmode = VFM_RO | VFM_CACHE | VFM_UNCOMPR;
+    
 
-
-    if ((vf = vfile_open(path, VFT_RPMIO, VFM_RO | VFM_CACHE)) == NULL)
+    if ((vf = vfile_open(path, VFT_RPMIO, vfmode)) == NULL)
         return -1;
     
     while ((h = headerRead(vf->vf_fdt, HEADER_MAGIC_YES))) {

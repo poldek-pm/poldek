@@ -404,12 +404,58 @@ static int file_ok(const char *path, int vfmode)
 }
 
 
+static const char *vfuncompr(const char *path, char *dest, int size) 
+{
+    char *p, *tmpath;
+    int  n;
+    
+    
+    *dest = '\0';
+    
+    if (!vf_uncompr_able(path))
+        return path;
+
+    n = n_snprintf(dest, size, "%s/", vfile_conf.cachedir);
+
+    
+
+    if ((p = strrchr(path, '/')) == NULL) {
+        tmpath = (char*)path;
+                
+    } else {
+        int len = p - path;
+        
+        tmpath = alloca(len + 1);
+        memcpy(tmpath, path, len);
+        tmpath[len] = '\0';
+    } 
+            
+    vf_url_as_dirpath(&dest[n], size - n, tmpath);
+    
+    //printf("DEST = %s\n", dest);
+    if (!vf_mkdir(dest))
+        return NULL;
+
+    vf_url_as_path(&dest[n], size - n, path);
+
+    n_assert((p = strrchr(dest, '.')) != NULL);
+
+    *p = '\0';
+    
+    if (vf_uncompr_do(path, dest))
+        return dest;
+    
+    return NULL;
+}
+
+
 struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
 {
     struct vfile vf, *rvf = NULL;
     int opened, urltype;
     char buf[PATH_MAX];
     char *tmpdir;
+    const char *rpath;
     int len;
 
     
@@ -424,7 +470,14 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
     opened = 0;
 
     if (urltype == VFURL_PATH) {
-        if (openvf(&vf, path, vfmode)) 
+        rpath = path;
+        
+        if (vfmode & VFM_UNCOMPR) {
+            if ((rpath = vfuncompr(path, buf, sizeof(buf))) == NULL)
+                return 0;
+        }
+        
+        if (openvf(&vf, rpath, vfmode)) 
             opened = 1;
         goto l_end;
     }
@@ -433,24 +486,31 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
         vfile_err_fn("%s: cannot open remote file for writing\n", _purl(path));
         return 0;
     }
-
+    
     len = n_snprintf(buf, sizeof(buf), "%s/", vfile_conf.cachedir);
-    
-    
     vf_url_as_path(&buf[len], sizeof(buf) - len, path);
-    if ((vfmode & VFM_CACHE) && file_ok(buf, vfmode) &&
-        openvf(&vf, buf, vfmode)) {
+    
+    if ((vfmode & VFM_CACHE) && file_ok(buf, vfmode)) {
+        char tmpath[PATH_MAX];
         
-        vf.vf_tmpath = strdup(buf);
-        opened = 1;
-        vf.vf_flags |= VF_FRMCACHE;
+        rpath = buf;
         
-    } else {
-        vf_localunlink(buf);
+        if ((vfmode & VFM_UNCOMPR)) {
+            if ((rpath = vfuncompr(buf, tmpath, sizeof(tmpath))) == NULL)
+                return 0;
+        }
+    
+        if (openvf(&vf, rpath, vfmode)) {
+            vf.vf_tmpath = strdup(rpath);
+            opened = 1;
+            vf.vf_flags |= VF_FRMCACHE;
+        }
     }
     
     if (opened == 0) {      /* fetch */
         char *p = NULL, *tmpath = NULL;
+
+        vf_localunlink(buf);
         
         if ((p = strrchr(path, '/')) == NULL) {
             tmpath = (char*)path;
@@ -470,13 +530,21 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
             return 0;
 
         if (vfile_fetch(tmpdir, path, urltype)) {
-            char tmpath[PATH_MAX];
+            char tmpath[PATH_MAX], upath[PATH_MAX];;
 
             snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
                      n_basenam(path));
-                
-            if (openvf(&vf, tmpath, VFM_RO)) {
-                vf.vf_tmpath = strdup(tmpath);
+
+            rpath = tmpath;
+
+            if ((vfmode & VFM_UNCOMPR)) {
+                if ((rpath = vfuncompr(tmpath, upath, sizeof(upath))) == NULL)
+                    return 0;
+            }
+            
+            
+            if (openvf(&vf, rpath, VFM_RO)) {
+                vf.vf_tmpath = strdup(rpath);
                 opened = 1;
                 vf.vf_flags |= VF_FETCHED;
                     
@@ -499,7 +567,7 @@ l_end:
 }
 
 
-struct vfile *vfile_open(const char *path, int vftype, int vfmode) 
+struct vfile *vfile_open(const char *path, int vftype, unsigned vfmode) 
 {
     struct vfile *vf = NULL;
 
