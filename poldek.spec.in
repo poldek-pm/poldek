@@ -9,6 +9,7 @@ Release:	1%{?_with_static:.static}
 License:	GPL
 Group:		Applications/System
 Source0:	http://team.pld.org.pl/~mis/poldek/download/%{name}/%{name}-%{version}.tar.gz
+URL:		http://team.pld.org.pl/~mis/poldek/
 Requires:	/bin/rpm
 BuildRequires:	bzip2-devel
 BuildRequires:	db3-devel >= 3.1.14-2
@@ -73,6 +74,9 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.13  2002/04/04 21:27:31  mis
+- +URL
+
 Revision 1.12  2002/03/28 23:37:36  mis
 - commented out popt-static build requirement (no such RH package)
 
