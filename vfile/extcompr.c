@@ -190,7 +190,6 @@ int vf_extdecompress(const char *path, const char *destpath)
     if (uncompr == NULL)
         return -1;
 
-    unlink(destpath);
     if (*vfile_verbose) 
         vf_loginfo(_("Decompressing %s...\n"), n_basenam(path));
     return vf_do_compr(uncompr, "-d", path, destpath);

@@ -19,13 +19,26 @@ uncompr() {
     typeset src=$1
     typeset dest=$2
 
+    md5file="${src}-vfcompr.md5"
+    #echo "$md5file"
+    if [ -f $dest -a -f "$md5file" ]; then
+        #echo md5sum --check "$md5file"
+        md5sum --check "$md5file"
+        if [ $? -eq 0 ]; then
+            echo "$src already decompressed"
+            exit 0
+        fi
+    fi
+
     cmd="bunzip2 --keep --stdout ${src}"
     if echo ${src} | egrep ".gz" >/dev/null; then
         cmd="gunzip --stdout ${src}"
     fi
+    rm -f "$dest"
     echo "$cmd > $dest"
     #echo -e "$cmd\n -> ${dest}"
-    $cmd > ${dest}
+    $cmd > ${dest} && md5sum $src $dest > $md5file
+    
 }
 
 usage() {
@@ -59,10 +72,10 @@ fi
 #   exit 1
 #fi	
 
-if [ -r $dest ]; then
-    echo "$dest: file exists"
-    exit 1
-fi
+#if [ -r $dest ]; then
+#    echo "$dest: file exists"
+#    exit 1
+#fi
 
 
 if [ $dest == $src ]; then
