@@ -410,7 +410,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     
     pkgdir->idxpath = n_strdup(idxpath);
     pkgdir->compress = compress ? n_strdup(compress) : NULL;
-    pkgdir->pkgs = pkgs = pkgs_array_new(2048);
+    pkgdir->pkgs = pkgs = pkgs_array_new_ex(2048, pkg_strcmp_name_evr_rev);
     
     pkgdir->mod = mod;
     pkgdir->type = mod->name;   /* just reference */
