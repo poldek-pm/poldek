@@ -185,8 +185,8 @@ struct pkg *pkg_ldhdr_udata(Header h, const char *fname, unsigned ldflags,
     if (pkg == NULL)
         return NULL;
 
-    msg(4, "== %s ==\n", pkg_snprintf_s(pkg));
-
+    msg(3, "ld %s\n", pkg_snprintf_s(pkg));
+    
     if (ldflags & PKG_LDCAPS) {
         pkg->caps = capreq_arr_new();
         get_pkg_caps(pkg->caps, h);

@@ -39,7 +39,7 @@ static int fent_cmp(const void *a,  const void *b)
 static int fent_cmp2str(const void *a,  const void *b)
 {
     const struct file_ent *aa = a;
-    return strcmp(aa->flfile->basename, b);
+    return strcmp(aa->flfile->basename, (char*)b);
 }
 
 static int fent_cmp_aspkg(const void *a,  const void *b)
