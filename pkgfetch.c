@@ -119,7 +119,7 @@ int package_verify_pgpg_sign(const struct pkg *pkg, const char *localpath)
 {
     int rc = 1;
 
-    if (pkg->pkgdir->flags & PKGDIR_VERSIGN) {
+    if (pkg->pkgdir->flags & PKGDIR_VRFYSIGN) {
         int rv = rpmlib_verbose, v = verbose;
         unsigned verify_flags = 0;
         
@@ -179,7 +179,7 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
             snprintf(path, sizeof(path), "%s/%s", pkgpath, pkg_basename);
             
             if (access(path, R_OK) != 0) {
-                logn(LOGERR, _("%s: %m"), path);
+                logn(LOGERR, "%s: %m", path);
                 nerr++;
                 
             } else {

@@ -314,7 +314,6 @@ int rm_dir_files(const char *dirpath)
     return 1;
 }
 
-	
 
 int unlink_pkgdir_files(const char *path, int allfiles)
 {
@@ -501,7 +500,8 @@ int update_whole_pkgdir(const char *path)
 
 int pkgdir_update(struct pkgdir *pkgdir, int *npatches) 
 {
-    char            idxpath[PATH_MAX], tmp[PATH_MAX], path[PATH_MAX], *dn, *bn;
+    char            idxpath[PATH_MAX], tmpath[PATH_MAX], path[PATH_MAX];
+    char            *dn, *bn;
     struct vfile    *vf;
     char            *linebuf = NULL;
     int             line_size = 0, nread, nerr = 0, rc;
@@ -533,8 +533,8 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
     /* open diff toc */
     snprintf(idxpath, sizeof(idxpath), "%s", pkgdir->idxpath);
     eat_zlib_ext(idxpath);
-    snprintf(tmp, sizeof(tmp), "%s", idxpath);
-    n_basedirnam(tmp, &dn, &bn);
+    snprintf(tmpath, sizeof(tmpath), "%s", idxpath);
+    n_basedirnam(tmpath, &dn, &bn);
     snprintf(path, sizeof(path), "%s/%s/%s%s", dn,
              pdir_packages_incdir, bn, pdir_difftoc_suffix);
     
@@ -550,7 +550,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
         struct pkgdir *diff;
         char *p, *mdd;
         time_t ts;
-
+        
         p = linebuf;
         while (*p && isspace(*p))
             p++;
@@ -634,6 +634,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
         pkgdir_load(diff, NULL, PKGDIR_LD_RAW);
         pkgdir_patch(pkgdir, diff);
         pkgdir_free(diff);
+        
         (*npatches)++;
     }
     
@@ -650,12 +651,21 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
     
     if (nerr == 0) {
         pkgdir->mdd_orig = strdup(pdg_current.mdd); /* for verification during write */
+
+        snprintf(path, sizeof(path), "%s/%s", dn, pdir_packages_incdir);
+        if (vf_localdirpath(tmpath, sizeof(tmpath), path) < sizeof(tmpath)) {
+            verbose--; /* verbosity need to be reorganized... */
+            rm_dir_files(tmpath);
+            verbose++;
+        }
         
     } else {
         logn(LOGWARN, _("%s: desynchronized index, try --update-whole"),
              pkgdir_pr_idxpath(pkgdir));
         
     }
+
+    
     
     return nerr == 0;
 }

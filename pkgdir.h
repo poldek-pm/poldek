@@ -23,7 +23,7 @@
 #define PKGDIR_VRFY_GPG            (1 << 10) /* verify package GPG signatures */
 #define PKGDIR_VRFY_PGP            (1 << 11) /* verify package PGP signatures */
 
-#define PKGDIR_VERSIGN            (PKGDIR_VRFY_GPG | PKGDIR_VRFY_PGP)
+#define PKGDIR_VRFYSIGN            (PKGDIR_VRFY_GPG | PKGDIR_VRFY_PGP)
 
 /* packages.dir digest */
 
