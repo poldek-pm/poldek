@@ -1,0 +1,42 @@
+News:
+
+1) Source repositries related
+
+New "source" options: --stl, --st, --mkidx-type  (see --help)
+
+* new repository index format ('pndir') with package descriptions
+  moved to separate file(s). Based on tndb (cdb like) DBM library.
+  This is the *default* format. 
+
+* APT repositories ("hdrl" alias "apt" type) are updateable now. 
+
+* support for Yum repositries ("yum" type)
+
+* if --up fails with "desynchronized index" then --upa is performed 
+  by default 
+
+* --mkidxz is depreciated - created indexes are compressed by default
+
+* with option --mkidx-type=TYPE[,TYPE] type(s) of created indexe(s)
+  may be set, it is possible to create index in many formats at once
+
+* with --nodiff index's diffs are not created
+
+* creation of native indexes (pdir, pndir) are much faster -- package
+  headers are not loaded at all if package's file modification time
+  is the same as saved in existing index.
+
+2) Installation related
+
+* poldek can perform 'to repository' installation, i.e packages
+  are copied from source to destination repository with full
+  dependency checking, ex:
+
+  $ poldek -n ...  --install-dest /var/foo/rpms-repo --upgrade-dist
+
+
+
+
+
+
+
