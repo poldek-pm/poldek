@@ -1144,9 +1144,10 @@ char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
         
         vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
         n = n_snprintf(path, size, "%s%s%s/%s", cachedir ? cachedir : "",
-                       cachedir ? "/" : "", n_basenam(fn));
+                       cachedir ? "/" : "", buf, n_basenam(fn));
     }
 
+    DBGF("%s\n", path);
     if (size - n > 2)
         return path;
 
