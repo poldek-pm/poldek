@@ -327,9 +327,10 @@ static int fl_match(tn_array *fl, struct pattern *pt)
 
 static int search_pkg_files(struct pkg *pkg, struct pattern *pt) 
 {
-    tn_array *fl;
-    int match;
-    void *flmark;
+    tn_array  *fl;
+    void      *flmark;
+    int       match = 0;
+
     
 
     if (pkg->fl && fl_match(pkg->fl, pt))
