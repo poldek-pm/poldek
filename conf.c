@@ -93,6 +93,8 @@ static struct tag global_tags[] = {
     { "greedy",            TYPE_BOOL , { 0 } },
     { "aggressive greedy", TYPE_BOOL , { 0 } },
     { "use sudo",          TYPE_BOOL , { 0 } },
+    { "run as",            TYPE_STR, { 0 } },
+    { "runas",             TYPE_STR | TYPE_F_ALIAS, { 0 } },
     { "mercy",          TYPE_BOOL , { 0 } },
     { "default fetcher", TYPE_STR | TYPE_MULTI , { 0 } },
     { "proxy",          TYPE_STR | TYPE_MULTI, { 0 } },
@@ -867,12 +869,13 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
             nline++;
             continue;
         }
-
         
         if (strncmp(p, include_tag, strlen(include_tag)) == 0) {
             tn_hash *inc_ht;
             char   *inc_sectnam = NULL, ipath[PATH_MAX];
-            
+
+            if (flags & POLDEK_LDCONF_NOINCLUDE)
+                continue;
             
             p = include_path(ipath, sizeof(ipath), p, &inc_sectnam,
                              ht_sect, ht);
@@ -893,6 +896,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
         
         while (1) {
             char *q;
+            
             nline++;
             q = strrchr(buf, '\0'); /* eat trailing ws */
             n_assert(q);
@@ -900,7 +904,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
             while (isspace(*q))
                 *q-- = '\0';
             
-            if (*q != '\\')
+            if (*q != '\\')     /* not continuation? */
                 break;
             
             *q = '\0';
@@ -1038,41 +1042,47 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
     af_htconf = n_hash_new(23, (tn_fn_free)n_hash_free);
 
     if (do_ldconf(af_htconf, path, NULL, NULL, flags) != NULL) {
-        tn_array *paths;
-        int i;
-        
         htconf = n_hash_get(af_htconf, path);
-        paths = n_hash_keys(af_htconf);
+        
+        if ((flags & POLDEK_LDCONF_NOINCLUDE) == 0) {
+            tn_array *paths;
+            int i;
+            
+            paths = n_hash_keys(af_htconf);
+            DBGF("htconf %s %p\n", path, htconf);
 
-        DBGF("htconf %s %p\n", path, htconf);
+            for (i=0; i < n_array_size(paths); i++) {
+                char *apath = n_array_nth(paths, i);
+                tn_hash  *ht;
 
-        for (i=0; i < n_array_size(paths); i++) {
-            char *apath = n_array_nth(paths, i);
-            tn_hash  *ht;
+                if (strcmp(path, apath) == 0) /* skip main config */
+                    continue;
+                
+                if ((ht = n_hash_get(af_htconf, apath)))
+                    merge_htconf(htconf, ht);
+            }
 
-            if (strcmp(path, apath) == 0) /* skip main config */
-                continue;
-
-            if ((ht = n_hash_get(af_htconf, apath)))
-                merge_htconf(htconf, ht);
+            n_array_free(paths);
         }
-
-        n_array_free(paths);
     }
 
     DBGF("ret htconf %s %p\n", path, htconf);
     if (htconf) {
-        tn_hash *global;
         htconf = n_ref(htconf);
         
-        global = poldek_conf_get_section_ht(htconf, "global");
-
-        if (poldek_conf_get_bool(global, "load apt sources list", 0))
-            flags |= POLDEK_LDCONF_APTSOURCES;
+        if ((flags & POLDEK_LDCONF_NOINCLUDE) == 0) {
+            tn_hash *global;
         
-        if (flags & POLDEK_LDCONF_APTSOURCES)
-            load_apt_sources_list(htconf, "/etc/apt/sources.list");
+            global = poldek_conf_get_section_ht(htconf, "global");
+            
+            if (poldek_conf_get_bool(global, "load apt sources list", 0))
+                flags |= POLDEK_LDCONF_APTSOURCES;
+            
+            if (flags & POLDEK_LDCONF_APTSOURCES)
+                load_apt_sources_list(htconf, "/etc/apt/sources.list");
+        }
     }
+    
     
     n_hash_free(af_htconf);
     return htconf;
@@ -1098,7 +1108,8 @@ tn_hash *poldek_conf_loadefault(unsigned flags)
             return poldek_conf_load(path, flags);
     }
     
-    flags |= POLDEK_LDCONF_APTSOURCES;
+    if ((flags & POLDEK_LDCONF_NOINCLUDE) == 0)
+        flags |= POLDEK_LDCONF_APTSOURCES;
     DBGF("%s\n", sysconfdir);
     
     n_snprintf(confpath, sizeof(confpath), "%s/poldek.conf", sysconfdir);

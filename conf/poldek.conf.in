@@ -13,7 +13,12 @@ _distro  = pld
 # NOTE: basename of the directory *must* exists; default is $HOME/.poldek-cache
 #cachedir = $HOME/.poldek-cache
 
-# Permits using root privs for installation only; default "no"
+
+# Switch to ordinary user ("poldek" by default) at startup when executed by root
+#runas = poldek
+ 
+# Permits using root privs for installation only; default "no",
+# but it automatically turned on when poldek executed as ordinary user
 #use sudo  = yes
 
 # Loading of /etc/apt/sources.list. The default is "yes" if 
@@ -120,10 +125,10 @@ auto zlib in rpm = yes
 # strange dependency errors.
 #mercy = yes
 
-# Taking into accout package Obsoletes; defalut "yes"
+# Taking into account package Obsoletes; defalut "yes"
 #obsoletes = yes
 
-# Taking into accout package Conlicts; defalut "yes"
+# Taking into account package Conlicts; defalut "yes"
 #conflicts = yes
 
 

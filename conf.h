@@ -6,9 +6,10 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
-#define POLDEK_LDCONF_FOREIGN  (1 << 0) /* not a poldek file */
-#define POLDEK_LDCONF_NOVRFY   POLDEK_LDCONF_FOREIGN /* legacy */
-#define POLDEK_LDCONF_UPDATE   (1 << 1) 
+#define POLDEK_LDCONF_FOREIGN   (1 << 0) /* not a poldek file */
+#define POLDEK_LDCONF_NOVRFY    POLDEK_LDCONF_FOREIGN /* legacy */
+#define POLDEK_LDCONF_UPDATE    (1 << 1)
+#define POLDEK_LDCONF_NOINCLUDE (1 << 2) /* ignore %include directives */
 
 tn_hash *poldek_conf_load(const char *path, unsigned flags);
 tn_hash *poldek_conf_loadefault(unsigned flags);

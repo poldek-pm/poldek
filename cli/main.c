@@ -65,6 +65,7 @@ static char args_doc[] = N_("[PACKAGE...]");
 #define OPT_PM 1015
 #define OPT_SHELL  1020
 #define OPT_SHELL_CMD 1025
+#define OPT_RUNAS 1026
 
 
 #define OPT_CMN_NOCONF         (1 << 0)
@@ -103,6 +104,7 @@ N_("Do not remove downloaded packages just after their installation"), 10500 },
 {"version", OPT_BANNER, 0, 0, N_("Display program version information and exit"),
      10500 },    
 {"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), 10500 },
+{"runas", OPT_RUNAS, "USER", 0, N_("Run program as user USER"), 10500 },    
 //{"v016", OPT_V016, 0, 0, N_("Read indexes created by versions < 0.17"), 500 },
 {0,  'v', 0, 0, N_("Be verbose."), 10500 },
 {0,  'q', 0, 0, N_("Do not produce any output."), 10500 },
@@ -228,6 +230,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_INST, 0);
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_UNINST, 0);
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_EQPKG_ASKUSER, 0);
+            break;
+
+        case OPT_RUNAS:         /* ignored, catched at startup */
             break;
 
         case OPT_SHELL:         /* default */
@@ -433,6 +438,85 @@ int do_run(void)
     return all_rc;
 }
 
+extern int poldek_su(const char *user);
+
+static int do_su(int argc, char **argv) 
+{
+    const char *oprunas = "--runas";
+    char *user = NULL;
+    int rc, i, is_runas = 0, oprunas_len = strlen(oprunas), verbose = 0;
+
+    for (i=1; i < argc; i++) {
+        if (strncmp(argv[i], "-v", 2) == 0) {
+            char *p = argv[i] + 1;
+            while (*p) {
+                if (*p == 'v')
+                    verbose++;
+                else if (*p) {
+                    verbose = 0;
+                    break;
+                }
+                p++;
+            }
+        }
+            
+        if (!is_runas && strncmp(argv[i], oprunas, oprunas_len) == 0) {
+            char *p = argv[i] + oprunas_len;
+            if (*p == '=') {
+                p++;
+                user = n_strdup(p);
+                
+            } else {            /* next arg? */
+                if (i < argc - 1)
+                    user = n_strdup(argv[i + 1]);
+            }
+            is_runas = 1;
+        }
+    }
+    
+    
+    if (is_runas) {
+        if (user == NULL) {
+            logn(LOGERR, _("%s: option '%s' requires an argument\n"),
+                 n_basenam(argv[0]), oprunas);
+            return 0;
+        } else if (getuid() != 0) {
+            logn(LOGERR, _("%s: option '%s' gives no effect if program executed"
+                           " by ordinary user"),
+                 n_basenam(argv[0]), oprunas);
+            return 0;
+        }
+            
+    } else if (getuid() == 0) {  /* check default config settings */
+        tn_hash *cnf;
+        
+        cnf = poldek_conf_loadefault(POLDEK_LDCONF_NOINCLUDE |
+                                     POLDEK_LDCONF_FOREIGN);
+        if (cnf) {
+            tn_hash *global;
+            const char *u;
+            
+            global = poldek_conf_get_section_ht(cnf, "global");
+            if (global && (u = poldek_conf_get(global, "run_as", NULL))) {
+                user = n_strdup(u);
+                is_runas = 1;
+            }
+        }
+    }
+    
+    if (!is_runas)
+        return 1;
+    
+    n_assert(user);
+    if (*user == '\0' || strcmp(user, "none") == 0) /* empty or 'none' => ret */
+        return 1;
+    
+    verbose = poldek_set_verbose(verbose);
+    rc = poldek_su(user);
+    free(user);
+    poldek_set_verbose(verbose);
+    return rc;
+}
 
 int main(int argc, char **argv)
 {
@@ -440,6 +524,12 @@ int main(int argc, char **argv)
     struct poclidek_ctx  *cctx;
     int  ec = 0, rrc, mode = RUNMODE_POLDEK;
     const char *bn;
+
+    if (!poldeklib_init())
+        return 1;
+
+    if (!do_su(argc, argv))
+        return 1;
     
     setlocale(LC_MESSAGES, "");
     setlocale(LC_CTYPE, "");
@@ -450,6 +540,7 @@ int main(int argc, char **argv)
         mode = RUNMODE_APT;
     
     DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
+
     ctx = poldek_new(0);
     cctx = poclidek_new(ctx);
     parse_options(cctx, argc, argv, mode);
@@ -498,5 +589,6 @@ int main(int argc, char **argv)
     }
     poclidek_free(cctx);
     poldek_free(ctx);
+    poldeklib_destroy();
     return ec;
 }

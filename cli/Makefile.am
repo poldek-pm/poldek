@@ -54,7 +54,7 @@ endif
 
 
 bin_PROGRAMS      = poldek
-poldek_SOURCES    = $(SHELL_MOD_) main.c
+poldek_SOURCES    = $(SHELL_MOD_) main.c su.c
 poldek_LDADD      = libpoclidek.la   
 
 noinst_PROGRAMS   = test_cli
