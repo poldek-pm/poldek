@@ -43,6 +43,21 @@ char *architecture(void)
 }
 
 
+char *trimslash(char *path) 
+{
+    if (path) {
+        char *p = strchr(path, '\0');
+    
+        if (p) {
+            p--;
+            if (*p == '/')
+                *p = '\0';
+        }
+    }
+    return path;
+}
+
+
 char *next_token(char **str, char delim, int *toklen) 
 {
     char *p, *token;

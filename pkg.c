@@ -356,6 +356,10 @@ int pkg_eq_capreq(const struct pkg *p, const struct capreq *cr)
 
 int pkg_add_selfcap(struct pkg *pkg) 
 {
+
+    if (pkg->flags & PKG_HAS_SELFCAP)
+        return 1;
+    
     if (pkg->caps == NULL)
         pkg->caps = capreq_arr_new();
     
@@ -369,6 +373,9 @@ int pkg_add_selfcap(struct pkg *pkg)
         pkg->caps = NULL;
         n_assert(0);
     }
+    
+    if (pkg->flags |= PKG_HAS_SELFCAP)
+        return 1;
     
     return pkg->caps != NULL;
 }

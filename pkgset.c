@@ -128,7 +128,11 @@ void inst_s_init(struct inst_s *inst)
     inst->instflags = 0;
     inst->rootdir = NULL;
     inst->fetchdir = NULL;
-    
+    inst->cachedir = NULL;
+    inst->dumpfile = NULL;
+    inst->rpmopts = NULL;
+    inst->rpmacros = NULL;
+
     inst->selpkg_fn = NULL;
     inst->ask_fn = NULL;
     inst->inf_fn = NULL;

@@ -72,7 +72,7 @@ int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, int strict,
                     tn_array *excloffs) 
 {
     n_assert(db->dbh);
-    return rpm_dbmatch_req_excl(db->dbh, req, strict, excloffs);
+    return rpm_dbmatch_req(db->dbh, req, strict, excloffs);
 }
 
 

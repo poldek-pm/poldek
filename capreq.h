@@ -60,6 +60,8 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t flags);
 
+void capreq_free(struct capreq *cr);
+
 int16_t capreq_sizeof(const struct capreq *cr);
 
 void capreq_store(struct capreq *cr, tn_buf *nbuf);

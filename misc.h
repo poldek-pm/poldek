@@ -11,7 +11,7 @@
 
 char *architecture(void);
 
-
+char *trimslash(char *path);
 char *next_token(char **str, char delim, int *toklen);
 int is_rwxdir(const char *path);
 

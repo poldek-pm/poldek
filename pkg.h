@@ -16,8 +16,9 @@
 #define PKG_HAS_REQS        (1 << 2)
 #define PKG_HAS_CNFLS       (1 << 3)
 #define PKG_HAS_FL          (1 << 4)
-
 #define PKG_HAS_PKGUINF     (1 << 5)
+
+#define PKG_HAS_SELFCAP     (1 << 6)
 
 #define PKG_DIRMARK         (1 << 8) /* marked directly, i.e. by the user*/
 #define PKG_INDIRMARK       (1 << 9) /* marked by poldek */
@@ -120,7 +121,8 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
 struct pkg *pkg_ldhdr_udata(Header h, const char *fname, unsigned ldflags, 
                             void *udata, size_t udsize);
 
-#define pkg_ldhdr(h, fname, ldflags) pkg_ldhdr_udata(h, fname, ldflags, NULL, 0)
+#define pkg_ldhdr(h, fname, ldflags) \
+   pkg_ldhdr_udata(h, fname, ldflags, NULL, 0)
 
 struct pkg *pkg_ldrpm_udata(const char *path, unsigned ldflags,
                             void *udata, size_t udsize);
