@@ -1181,7 +1181,6 @@ char *pkg_strbtime(char *buf, int size, const struct pkg *pkg)
     return buf;
 }
 
-
 void *pkg_na_malloc(struct pkg *pkg, size_t size)
 {
     if (pkg->na)
@@ -1190,14 +1189,11 @@ void *pkg_na_malloc(struct pkg *pkg, size_t size)
     return NULL;
 }
 
-
 struct pkg *pkg_link(struct pkg *pkg)
 {
     pkg->_refcnt++;
     return pkg;
 }
-
-
 
 const char *pkg_id(const struct pkg *p) 
 {

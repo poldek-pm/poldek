@@ -52,7 +52,13 @@ struct capreq {
 /* CAUTION: side effects! */
 #define capreq_name(cr)     &(cr)->_buf[1]
 
-extern inline int32_t capreq_epoch_(const struct capreq *cr);
+#ifdef SWIG
+# define extern__inline
+#else
+# define extern__inline extern inline
+#endif
+
+extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 
 #define capreq_epoch(cr) \
     ((cr)->cr_ep_ofs ? capreq_epoch_(cr) : 0)
@@ -83,9 +89,6 @@ extern inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_revrel(cr) ((cr)->cr_relflags = (cr)->cr_relflags ? \
                           (((uint8_t)~cnfl->cr_relflags) & REL_ALL) : (cr)->cr_relflags)
 
-//#define capreq_is_resolved(cr)   ((cr)->cr_flags & CAPREQ_RESOLVED)
-//#define capreq_mark_resolved(cr) ((cr)->cr_flags |= CAPREQ_RESOLVED)
-
 struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags,
                               int32_t flags);
 
@@ -110,13 +113,6 @@ void capreq_free(struct capreq *cr);
 
 struct capreq *capreq_clone(tn_alloc *na, const struct capreq *cr);
 
-uint8_t capreq_sizeof(const struct capreq *cr);
-
-#if 0
-void capreq_store(struct capreq *cr, tn_buf *nbuf);
-struct capreq *capreq_restore(tn_buf_it *nbufi);
-#endif
-
 int capreq_strcmp_evr(struct capreq *pr1, struct capreq *pr2);
 int capreq_strcmp_name_evr(struct capreq *pr1, struct capreq *pr2);
 
@@ -134,18 +130,8 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n);
 tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf);
 tn_array *capreq_arr_restore_st(tn_alloc *na, tn_stream *st);
 
-tn_array *capreq_pkg(tn_array *arr, int32_t epoch, 
-                     const char *name, int name_len, 
-                     const char *version, int version_len, 
-                     const char *release, int release_len);
-
-
 int capreq_snprintf(char *str, size_t size, const struct capreq *cr);
 char *capreq_snprintf_s(const struct capreq *cr);
 char *capreq_snprintf_s0(const struct capreq *cr);
-
-
-void set_capreq_allocfn(void *(*cr_allocfn)(size_t), void (*cr_freefn)(void*),
-                        void **prev_alloc, void **prev_free);
 
 #endif /* POLDEK_CAPREQ_H */

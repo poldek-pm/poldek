@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <netinet/in.h>
+//#include <netinet/in.h>
 
 #include <trurl/trurl.h>
 
@@ -39,23 +39,6 @@
 static void capreq_store(struct capreq *cr, tn_buf *nbuf);
 static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi);
 
-#if 0
-static const char *get_rpm_capreq(const char *name) 
-{
-    static tn_hash *rpm_capreq_ht = NULL;
-    const char *s;
-    
-    if (rpm_capreq_ht == NULL)
-        rpm_capreq_ht = n_hash_new(21, free);
-
-    if ((s = n_hash_get(rpm_capreq_ht, name)) == NULL) {
-        n_hash_insert(rpm_capreq_ht, name, name);
-        s = n_hash_get(rpm_capreq_ht, name);
-    }
-    
-    return s;   
-}
-#endif
 
 void capreq_free_na(tn_alloc *na, struct capreq *cr) 
 {
@@ -235,7 +218,7 @@ uint8_t capreq_bufsize(const struct capreq *cr)
     return max_ofs;
 }
 
-
+static
 uint8_t capreq_sizeof(const struct capreq *cr) 
 {
     size_t size;
@@ -425,7 +408,7 @@ int capreq_arr_find(tn_array *capreqs, const char *name)
                                   (tn_fn_cmp)capreq_cmp2name);
 }
 
-
+static
 void capreq_store(struct capreq *cr, tn_buf *nbuf) 
 {
     int32_t epoch, nepoch;
