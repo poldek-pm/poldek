@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -29,6 +30,7 @@
 #include <argp.h>
 #include <fnmatch.h>
 
+#include <pcre.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <trurl/trurl.h>
@@ -74,14 +76,25 @@ static struct argp_option options_ls[] = {
  { 0, 0, 0, 0, 0, 0 },
 };
 
+
 /* desc */
 static int cmd_desc(int argc, const char **argv, struct argp*);
 static error_t parse_desc_opt(int key, char *arg, struct argp_state *state);
 
 static struct argp_option options_desc[] = {
-{0,0,0,0, "desc [PACKAGE...]", 1 },
+{0,0,0,0, "desc PACKAGE...", 1 },
 { 0, 0, 0, 0, 0, 0 },    
 };
+
+/* search */
+static int cmd_search(int argc, const char **argv, struct argp*);
+static error_t parse_search_opt(int key, char *arg, struct argp_state *state);
+
+static struct argp_option options_search[] = {
+{ 0,0,0,0, "search [PACKAGE...]", 1 },
+{ 0, 0, 0, 0, 0, 0 },    
+};
+
 
 
 /* install */
@@ -171,6 +184,7 @@ struct command {
 #define CMD_DESC       5
 #define CMD_RELOAD     6
 #define CMD_GET        7
+#define CMD_SEARCH     8
 
 #define CMD_QUIT       20
 #define CMD_HELP       21
@@ -202,6 +216,9 @@ struct command commands_tab[] = {
 
 { CMD_GET, "get", "PACKAGE...", options_get, parse_get_opt, cmd_get,
       "Just download given package list"},
+
+{ CMD_SEARCH, "search", "/PATTERN/ [PACKAGE...]", options_search, parse_search_opt, cmd_search, 
+      "Search packages"},    
     
 { CMD_QUIT, "quit", NULL, NULL, NULL, cmd_quit, "Quit poldek"},
 { CMD_HELP, "help", NULL, NULL, NULL, cmd_help, "Display this help"},
@@ -241,6 +258,7 @@ static tn_array    *compl_shpkgs = NULL;
 struct cmd_state {
     unsigned flags;
     tn_array *pkgnames;
+    char *pattern;               /* cmd_search */
 };
 
 static
@@ -560,6 +578,21 @@ static int find_pkg(struct shell_pkg *lshpkg, tn_array *shpkgs, int compare_ver,
 }
 
 
+/* argp workaround */
+static int argv_is_help(int argc, const char **argv)
+{
+    int i, is_help = 0;
+
+    for (i=0; i<argc; i++) {
+        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-?") == 0) {
+            is_help = 1;
+            break;
+        }
+    }
+    return is_help;
+}
+
+
 /*----------------------------------------------------------------------*/
 /* ls                                                                   */
 /*----------------------------------------------------------------------*/
@@ -614,24 +647,17 @@ error_t parse_ls_opt(int key, char *arg, struct argp_state *state)
 
 static int cmd_ls(int argc, const char **argv, struct argp *argp)
 {
-    struct cmd_state     cmdst = { 0, NULL};
+    struct cmd_state     cmdst = { 0, NULL, NULL};
     tn_array             *shpkgs = NULL, *av_shpkgs;
     char                 hdr[128], fmt_hdr[256], fmt_pkg[256];
-    int                  i, size, err = 0, npkgs = 0, is_help = 0;
+    int                  i, size, err = 0, npkgs = 0, is_help;
     int                  compare_ver = 0;
     int                  term_width_div2;
     
     if (argv == NULL)
         return 0;
 
-    /* argp workaround */
-    for (i=0; i<argc; i++) {
-        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-?") == 0) {
-            is_help = 1;
-            break;
-        }
-    }
-            
+    is_help = argv_is_help(argc, argv);
     cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, (void*)&cmdst);
 
@@ -851,18 +877,23 @@ error_t parse_install_opt(int key, char *arg, struct argp_state *state)
 
 static int cmd_install(int argc, const char **argv, struct argp *argp)
 {
-    struct cmd_state cmdst = { 0, NULL};
+    struct cmd_state cmdst = { 0, NULL, NULL};
     tn_array *shpkgs = NULL;
-    int i, err = 0;
+    tn_array *uninst_pkgs;
+    int i, err = 0, is_help;
 
     shell_s.inst->flags = shell_s.inst_flags_orig;
     shell_s.inst->instflags = 0;
     shell_s.pkgset->flags &= ~PSMODE_INSTALL;
     shell_s.pkgset->flags |= PSMODE_UPGRADE;
     
+    is_help = argv_is_help(argc, argv);
     cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
-    
     argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, &cmdst);
+    if (is_help) {
+        n_array_free(cmdst.pkgnames);
+        return 1;
+    }
 
     resolve_packages(cmdst.pkgnames, shell_s.avpkgs, &shpkgs, 1);
     
@@ -887,15 +918,28 @@ static int cmd_install(int argc, const char **argv, struct argp *argp)
         pkg_hand_mark(shpkg->pkg);
     }
 
-    if (install_pkgs(shell_s.pkgset, shell_s.inst) && shell_s.instpkgs) {
-        for (i=0; i<n_array_size(shpkgs); i++)
-            n_array_push(shell_s.instpkgs, shpkg_link(n_array_nth(shpkgs, i)));
-        n_array_sort(shell_s.instpkgs);
-        
+    
+    uninst_pkgs = pkgs_array_new(16);
+    if (install_pkgs(shell_s.pkgset, shell_s.inst, uninst_pkgs) &&
+        shell_s.instpkgs)
+     {
+         struct shell_pkg *shpkg = alloca(sizeof(*shpkg) + 1024);
+
+         for (i=0; i<n_array_size(shpkgs); i++)
+             n_array_push(shell_s.instpkgs, shpkg_link(n_array_nth(shpkgs, i)));
+         n_array_sort(shell_s.instpkgs);
+         
+         for (i=0; i<n_array_size(uninst_pkgs); i++) {
+             struct pkg *pkg = n_array_nth(uninst_pkgs, i);
+             pkg_snprintf(shpkg->nevr, 1024, pkg);
+             n_array_remove(shell_s.instpkgs, shpkg);
+         }
+         n_array_sort(shell_s.instpkgs);
+         
     } else {
         printf("Installation failed\n");
     }
-    
+    n_array_free(uninst_pkgs);
     
  l_end:
 
@@ -970,21 +1014,26 @@ error_t parse_uninstall_opt(int key, char *arg, struct argp_state *state)
 
 static int cmd_uninstall(int argc, const char **argv, struct argp *argp)
 {
-    struct cmd_state cmdst = { 0, NULL};
+    struct cmd_state cmdst = { 0, NULL, NULL};
     tn_array *shpkgs = NULL;
-    int i, err = 0;
+    int i, err = 0, is_help;
     tn_array *pkgnevrs;
 
     if (shell_s.instpkgs == NULL) {
         printf("uninstall: installed packages not loaded\n");
         return 0;
     }
-    
-    
     shell_s.inst->flags = shell_s.inst_flags_orig;
     shell_s.inst->instflags = 0;
+
+    is_help = argv_is_help(argc, argv);
     cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, &cmdst);
+    if (is_help) {
+        n_array_free(cmdst.pkgnames);
+        return 1;
+    }
+
     resolve_packages(cmdst.pkgnames, shell_s.instpkgs, &shpkgs, 1);
     n_array_free(cmdst.pkgnames);
     
@@ -1062,7 +1111,7 @@ error_t parse_get_opt(int key, char *arg, struct argp_state *state)
 
 static int cmd_get(int argc, const char **argv, struct argp *argp)
 {
-    struct cmd_state cmdst = { 0, NULL};
+    struct cmd_state cmdst = { 0, NULL, NULL};
     tn_array *shpkgs = NULL, *av_shpkgs, *pkgs;
     char destdir[PATH_MAX], *destdirp;
     int i, err = 0;
@@ -1121,7 +1170,173 @@ static int cmd_get(int argc, const char **argv, struct argp *argp)
 
 
 /*----------------------------------------------------------------------*/
-/* status                                                               */
+/* search                                                               */
+/*----------------------------------------------------------------------*/
+static
+error_t parse_search_opt(int key, char *arg, struct argp_state *state)
+{
+    struct cmd_state *cmdst = state->input;
+    
+    switch (key) {
+        case ARGP_KEY_ARG:
+            if (n_array_size(cmdst->pkgnames) == 0) {
+                char *p = arg;
+                int len;
+                
+                if (*arg != '/') 
+                    break;
+
+                len = strlen(p) - 1;
+                
+                if (*(p + len) != '/')
+                    break;
+                
+                *(p + len) = '\0';
+                p++;
+                cmdst->pattern = strdup(p);
+                
+            } else if (cmdst->pattern == NULL) {
+                break;
+                
+            } else {
+                n_array_push(cmdst->pkgnames, strdup(arg));
+            }
+            
+        case ARGP_KEY_END:
+            //argp_usage (state);
+            break;
+
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+    
+    return 0;
+}
+
+
+static int cmd_search(int argc, const char **argv, struct argp *argp)
+{
+    struct cmd_state cmdst = { 0, NULL, NULL};
+    tn_array *shpkgs = NULL;
+    tn_array *matched_pkgs = NULL;
+    int i, err = 0, is_help;
+    pcre *pcre = NULL;
+    const char *pcre_err;
+    int  pcre_err_off;
+    
+    
+    cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
+    cmdst.pattern = NULL;
+    is_help = argv_is_help(argc, argv);
+    argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, &cmdst);
+    if (is_help) {
+        n_array_free(cmdst.pkgnames);
+        if (cmdst.pattern)
+            free(cmdst.pattern);
+        return 1;
+    }
+    
+    argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, &cmdst);
+    if (cmdst.pattern == NULL) {
+        printf("search: no pattern given\n");
+        err++;
+        goto l_end;
+    }
+
+    pcre_malloc = malloc;
+    pcre = pcre_compile(cmdst.pattern, PCRE_CASELESS, &pcre_err,
+                        &pcre_err_off, NULL);
+    
+    if (pcre == NULL) {
+        printf("search: pattern compile: %s\n", pcre_err);
+        err++;
+        goto l_end;
+    }
+    
+    resolve_packages(cmdst.pkgnames, shell_s.avpkgs, &shpkgs, 0);
+    n_array_free(cmdst.pkgnames);
+    
+    if (shpkgs == NULL)
+        return 0;
+
+    if (n_array_size(shpkgs) == 0) {
+        n_array_free(shpkgs);
+        shpkgs = shell_s.avpkgs;
+    }
+
+    matched_pkgs = n_array_new(16, NULL, NULL);
+    
+    for (i=0; i<n_array_size(shpkgs); i++) {
+        struct pkguinf *pkgu;
+        struct shell_pkg *shpkg;
+
+        shpkg = n_array_nth(shpkgs, i);
+        if ((pkgu = pkg_info(shpkg->pkg))) {
+            int match;
+            
+            match = pcre_exec(pcre, NULL, pkgu->summary, strlen(pkgu->summary),
+                              0, 0, NULL, 0);
+
+            if (match == 0) 
+                goto l_mathed;
+            
+            match = pcre_exec(pcre, NULL, pkgu->license, strlen(pkgu->license),
+                              0, 0, NULL, 0);
+
+            if (match == 0) 
+                goto l_mathed;
+            
+            
+            if (pkgu->url) {
+                match += pcre_exec(pcre, NULL, pkgu->url, strlen(pkgu->url),
+                                   0, 0, NULL, 0);
+                if (match == 0) 
+                    goto l_mathed;
+            }
+            
+            if (pkgu->description) {
+                match += pcre_exec(pcre, NULL, pkgu->description,
+                                   strlen(pkgu->description), 0, 0, NULL, 0);
+            }
+            
+            if (match != 0) 
+                continue;
+
+        l_mathed:
+            //printf("MATCHED %s\n", shpkg->nevr);
+            n_array_push(matched_pkgs, shpkg);
+        }
+    }
+
+    if (n_array_size(matched_pkgs) == 0) {
+        printf("No one package matches /%s/\n", cmdst.pattern);
+    } else {
+        printf("%d packages found:\n", n_array_size(matched_pkgs));
+    }
+        
+    for (i=0; i<n_array_size(matched_pkgs); i++) {
+        struct shell_pkg *shpkg;
+
+        shpkg = n_array_nth(matched_pkgs, i);
+        printf("%d. %s\n", i+1, shpkg->nevr);
+    }
+    
+ l_end:
+    
+    if (matched_pkgs)
+        n_array_free(matched_pkgs);
+    
+    if (cmdst.pattern)
+        free(cmdst.pattern);
+
+    if (pcre)
+        free(pcre);
+    
+    return 1;
+}
+
+/*----------------------------------------------------------------------*/
+/* descr                                                               */
 /*----------------------------------------------------------------------*/
 static
 error_t parse_desc_opt(int key, char *arg, struct argp_state *state)
@@ -1143,19 +1358,23 @@ error_t parse_desc_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
-
 static int cmd_desc(int argc, const char **argv, struct argp *argp)
 {
-    struct cmd_state cmdst = { 0, NULL};
+    struct cmd_state cmdst = { 0, NULL, NULL};
     tn_array *shpkgs = NULL;
-    int i, err = 0;
+    int i, err = 0, is_help;
 
     shell_s.inst->flags = shell_s.inst_flags_orig;
     shell_s.inst->instflags = 0;
     
+    is_help = argv_is_help(argc, argv);
     cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
-    
     argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, &cmdst);
+    if (is_help) {
+        n_array_free(cmdst.pkgnames);
+        return 1;
+    }
+
     resolve_packages(cmdst.pkgnames, shell_s.avpkgs, &shpkgs, 0);
     n_array_free(cmdst.pkgnames);
     
@@ -1308,6 +1527,7 @@ static tn_array *load_installed_packages(tn_array **shpkgsp)
     struct pkgdb *db;
     tn_array *shpkgs = *shpkgsp;
 
+    
     n_array_clean(*shpkgsp);
     msg(0, "Loading installed packages...");
     db = pkgdb_open(shell_s.inst->rootdir, NULL, O_RDONLY);
@@ -1326,7 +1546,17 @@ int cmd_reload(int argc, const char **argv, struct argp* argp)
 {
     argc = argc;
     argv = argv;
-    argp = argp; 
+    argp = argp;
+
+    if (argv_is_help(argc, argv)) {
+        printf("Just type \"reload\"\n");
+        return 1;
+    }
+
+    if (shell_s.instpkgs == NULL)
+        shell_s.instpkgs = n_array_new(1024, (tn_fn_free)shpkg_free,
+                                       (tn_fn_cmp)shpkg_cmp);
+    
     load_installed_packages(&shell_s.instpkgs);
     return 1;
 }
@@ -1442,6 +1672,7 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
 
     
     shell_s.done = 0;
+    printf("\nWelcome to the poldek shell mode.  Type \"help\" for help with commands\n\n");
     while (shell_s.done == 0) {
 	if ((line = readline("poldek> ")) == NULL)
             break;

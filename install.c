@@ -125,7 +125,7 @@ int upgrade_dist(struct pkgset *ps, struct inst_s *inst)
     return rc;
 }
 
-int install_pkgs(struct pkgset *ps, struct inst_s *inst) 
+int install_pkgs(struct pkgset *ps, struct inst_s *inst, tn_array *unist_pkgs) 
 {
     int rc;
 
@@ -141,7 +141,7 @@ int install_pkgs(struct pkgset *ps, struct inst_s *inst)
         return 0;
     }
     
-    rc = pkgset_install(ps, inst);
+    rc = pkgset_install(ps, inst, unist_pkgs);
     pkgdb_free(inst->db);
     inst->db = NULL;
     return rc;

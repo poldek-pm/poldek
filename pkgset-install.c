@@ -586,7 +586,7 @@ int add_obsoleted_pkgs(const struct pkg *pkg, struct upgrade_s *upg)
     int j, idx;
     
     idx = k = n_array_size(upg->uninst_dbpkgs);
-    self_cap = capreq_new(pkg->name, 0, NULL, NULL, 0);
+    self_cap = capreq_new(pkg->name, 0, NULL, NULL, 0, 0);
     rpm_get_obsoletedby_cap(upg->inst->db->dbh, upg->uninst_dbpkgs, self_cap,
                             PKG_LDWHOLE);
     capreq_free(self_cap);
@@ -1164,7 +1164,8 @@ int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst)
 
 
 
-int pkgset_install(struct pkgset *ps, struct inst_s *inst)
+int pkgset_install(struct pkgset *ps, struct inst_s *inst,
+                   tn_array *uninstalled_pkgs)
 {
     int i, rc = 1, cmprc, is_upgrade = 0;
     struct upgrade_s upg;
@@ -1226,6 +1227,19 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst)
 
     if (upg.ninstall)
         rc = pkgset_do_install(ps, &upg);
+
+    if (rc && uninstalled_pkgs) {
+        for (i=0; i<n_array_size(upg.uninst_dbpkgs); i++) {
+            struct dbpkg *dbpkg = n_array_nth(upg.uninst_dbpkgs, i);
+            struct pkg *pkg = dbpkg->pkg;
+            n_array_push(uninstalled_pkgs, pkg_new(pkg->name, pkg->epoch,
+                                                   pkg->ver, pkg->rel,
+                                                   pkg->arch, pkg->size,
+                                                   pkg->btime));
+            
+        }
+    }
+    
     
     destroy_upgrade_s(&upg);
     mem_info(1, "RETURN pkgset_install:");
