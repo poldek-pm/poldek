@@ -165,17 +165,24 @@ on the system from the specified source (see L</SOURCE>).
 
 Install or upgrade given packages.
 
+
+=item B<--shcmd=COMMAND>
+
+Run interactive mode command and exit.
+
 =item B<--shell>
 
 Run poldek in interactive mode. Type "help" after running for available commands. 
 
-=item B<--split=[SIZE] [--split-conf=FILE] [--split-out=PREFIX]>
+=item B<--split=SIZE[:FIRST_FREE_SPACE]  [--split-conf=FILE] [--split-out=PREFIX]>
 
-Split package set into parts, each SIZE MB size. Priorities 
-are taken from FILE given by --split-conf (see sample pkgsplit.conf 
-from distribution). By default packages has 0 priority.
+Split package set into parts, each SIZE MB size, the first part will
+be FIRST_FREE_SPACE MB smaller. 
 
-Each part is written as NAME-EVR list to PREFIX.XX 
+Package priorities are taken from FILE given by --split-conf (see sample 
+pkgsplit.conf from distribution). By default packages has 0 priority.
+
+Each part is written as NAME-EVR.ARCH.rpm list to PREFIX.XX 
 file, the default PREFIX is "packages.chunk"
 
 
