@@ -35,7 +35,7 @@ static int is_a_tty    = 0;
 static int term_width  = TERM_DEFAULT_WIDTH;
 static int term_height = TERM_DEFAULT_HEIGHT;
 static volatile sig_atomic_t winch_reached = 0;
-
+static void (*orig_sigwinch_handler)(int) = NULL;
 
 /*
 #define PRCOLOR_BLACK    0
@@ -183,6 +183,7 @@ int poldek_term_init(void)
     int i, rc, n;
     char *term, *s;
 
+    n_assert(orig_sigwinch_handler == NULL);
     if (!(is_a_tty = isatty(fileno(stdout))))
         return 0;
     
@@ -219,9 +220,16 @@ int poldek_term_init(void)
     
     winch_reached = 1;
     poldek_term_get_width();
-    signal(SIGWINCH, sig_winch);
+    orig_sigwinch_handler = signal(SIGWINCH, sig_winch);
     return 1;
 }
+
+
+void poldek_term_destroy(void) 
+{
+    signal(SIGWINCH, orig_sigwinch_handler);
+}
+
 
 static void update_term_width(void) 
 {
