@@ -1,6 +1,6 @@
 /* 
   Copyright (C) 2001 Pawel A. Gajda (mis@k2.net.pl)
- 
+  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
   the Free Software Foundation (see file COPYING for details).
@@ -186,14 +186,13 @@ static int uninstall(struct cmdctx *cmdctx)
     }
     
 
-    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx,
-                                     cmdctx->ts, 1);
+    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, ts, 1);
     if (pkgs == NULL) {
         err++;
         goto l_end;
     }
-    
-    poldek_ts_clean_arg_pkgmasks(ts);
+
+    poldek_ts_clean_args(ts);
     for (i=0; i < n_array_size(pkgs); i++) {
         poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
     }

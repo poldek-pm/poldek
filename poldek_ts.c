@@ -537,14 +537,14 @@ int poldek_ts_add_pkgfile(struct poldek_ts *ts, const char *path)
     return arg_packages_add_pkgfile(ts->aps, path);
 }
 
-void poldek_ts_clean_arg_pkgmasks(struct poldek_ts *ts)
+void poldek_ts_clean_args(struct poldek_ts *ts)
 {
     arg_packages_clean(ts->aps);
 }
 
-const tn_array* poldek_ts_get_arg_pkgmasks(struct poldek_ts *ts) 
+tn_array* poldek_ts_get_args_asmasks(struct poldek_ts *ts, int hashed)
 {
-    return arg_packages_get_pkgmasks(ts->aps);
+    return arg_packages_get_masks(ts->aps, hashed);
 }
 
 int poldek_ts_get_arg_count(struct poldek_ts *ts) 

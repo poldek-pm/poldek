@@ -123,7 +123,7 @@ int poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path)
     keys = n_hash_keys(ht);
 
     for (i=0; i < n_array_size(keys); i++) {
-        char *name, *cmdline;
+        const char *name, *cmdline;
 
         name = n_array_nth(keys, i);
         if ((cmdline = poldek_conf_get(ht, name, NULL)))

@@ -133,7 +133,6 @@ char *setup_cachedir(const char *path)
     struct passwd *pw;
     char *dir, *default_dn = ".poldek-cache";
 
-
     if (path) {
         if (vf_valid_path(path) && poldek_util_is_rwxdir(path)) 
             return n_strdup(path);
@@ -183,7 +182,8 @@ const char *tmpdir(void)
             if (!isalnum(*p) && *p != '/' && *p != '-') {
                 tmpdir = "/tmp";
                 logn(LOGWARN,
-                     _("$TMPDIR (%s) contains non alnum characters, using /tmp"), dir);
+                     _("$TMPDIR (%s) contains non alnum characters, "
+                       "using /tmp"), dir);
                 break;
             }
             p++;
@@ -195,7 +195,8 @@ const char *tmpdir(void)
                 tmpdir = "/tmp";
                 
             } else if (!S_ISDIR(st.st_mode)) {
-                logn(LOGERR, _("$TMPDIR (%s): not a directory, using /tmp"), dir);
+                logn(LOGERR, _("$TMPDIR (%s): not a directory, "
+                               "using /tmp"), dir);
                 tmpdir = "/tmp";
             }
         }

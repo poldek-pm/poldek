@@ -509,7 +509,7 @@ tn_array *do_resolve(struct arg_packages *aps,
     int i, j, nmasks;
     int *matches, *matches_bycmp;
 
-    masks = arg_packages_get_pkgmasks(aps);
+    masks = arg_packages_get_masks(aps, 0);
     nmasks = n_array_size(masks);
     
     for (i=0; i < nmasks; i++) {
@@ -577,6 +577,7 @@ tn_array *do_resolve(struct arg_packages *aps,
     
     n_array_sort(ments);
     n_array_uniq(ments);
+    n_array_free(masks);
     
     //if (flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS)
     //    n_array_uniq_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_uniq);

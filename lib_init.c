@@ -70,8 +70,12 @@ int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
 static
 int get_conf_opt_list(const tn_hash *htcnf, const char *name, tn_array *tolist);
 
+static
+int do_poldek_setup_cachedir(struct poldek_ctx *ctx);
+
 extern
 int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs);
+
 
 static struct {
     const char *name;
@@ -627,6 +631,8 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path, int up)
         
     if (poldek__is_setup_done(ctx))
         logn(LOGERR | LOGDIE, "load_config() called after setup()");
+
+    do_poldek_setup_cachedir(ctx);
     
     if (path != NULL)
         ctx->htconf = poldek_conf_load(path, up ? POLDEK_LDCONF_UPDATE : 0);
@@ -643,7 +649,6 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path, int up)
     register_vf_handlers(poldek_conf_get_section_arr(ctx->htconf, "fetcher"));
 
     if ((list = poldek_conf_get_multi(htcnf, "default_fetcher"))) {
-        DBGF("aaaa\n");
         int i;
         for (i=0; i < n_array_size(list); i++)
             set_default_vf_fetcher(VFILE_CONF_DEFAULT_CLIENT,
@@ -663,8 +668,11 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path, int up)
     get_conf_opt_list(htcnf, "ignore", ctx->ts->ign_patterns);
     get_conf_opt_list(htcnf, "exclude path", ctx->ts->exclude_path);
 
-    if ((vs = poldek_conf_get(htcnf, "cachedir", NULL)))
-        ctx->ts->cachedir = n_strdup(vs);
+    if ((ctx->_iflags & CACHEDIR_SETUPDONE) == 0) /* don't overwrite if set */
+        if ((vs = poldek_conf_get(htcnf, "cachedir", NULL))) {
+            poldek_configure(ctx, POLDEK_CONF_CACHEDIR, vs);
+            poldek_setup_cachedir(ctx);
+        }
     
     if (poldek_conf_get_bool(htcnf, "vfile_ftp_sysuser_as_anon_passwd", 0))
         vfile_configure(VFILE_CONF_SYSUSER_AS_ANONPASSWD, 1);
@@ -847,7 +855,6 @@ static
 int poldek_init(struct poldek_ctx *ctx, unsigned flags)
 {
     struct poldek_ts *ts;
-    char *cachedir;
     int i;
     
     flags = flags;
@@ -885,9 +892,10 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     vfile_configure(VFILE_CONF_SIGINT_REACHED, sigint_reached_reset);
     vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
     vfile_configure(VFILE_CONF_LOGCB, poldek_vf_vlog_cb);
-    cachedir = setup_cachedir(NULL);
-    vfile_configure(VFILE_CONF_CACHEDIR, cachedir);
-    free(cachedir);
+
+    /* Kind of egg and chicken problem with cachedir;
+       on start set it to $TMPDIR. */
+    do_poldek_setup_cachedir(ctx);
 
 #ifdef PKGLIBDIR
     {
@@ -925,20 +933,29 @@ struct poldek_ctx *poldek_new(unsigned flags)
 
 int poldek_setup_cachedir(struct poldek_ctx *ctx)
 {
-    char *path = NULL;
-    
     if (ctx->_iflags & CACHEDIR_SETUPDONE)
         return 1;
-
-    path = setup_cachedir(ctx->ts->cachedir);
-    DBGF("%s -> %s\n", ctx->ts->cachedir, path);
-    n_assert(path);
-    free(ctx->ts->cachedir);
-    ctx->ts->cachedir = path;
-    vfile_configure(VFILE_CONF_CACHEDIR, path);
+    do_poldek_setup_cachedir(ctx);
+    
     ctx->_iflags |= CACHEDIR_SETUPDONE;
     return 1;
 }
+
+static
+int do_poldek_setup_cachedir(struct poldek_ctx *ctx)
+{
+    char *path;
+    
+    path = setup_cachedir(ctx->ts->cachedir);
+    DBGF("%s -> %s\n", ctx->ts->cachedir, path);
+    n_assert(path);
+    if (ctx->ts->cachedir)
+        free(ctx->ts->cachedir);
+    ctx->ts->cachedir = path;
+    vfile_configure(VFILE_CONF_CACHEDIR, path);
+    return 1;
+}
+
 
 static
 int setup_sources(struct poldek_ctx *ctx)
@@ -1064,15 +1081,12 @@ struct pkgdir *poldek_load_destination_pkgdir(struct poldek_ctx *ctx)
                            NULL);
 }
 
-
-
 int poldek_is_interactive_on(const struct poldek_ctx *ctx)
 {
     return ctx->ts->getop_v(ctx->ts, POLDEK_OP_CONFIRM_INST,
                             POLDEK_OP_CONFIRM_UNINST,
                             POLDEK_OP_EQPKG_ASKUSER, 0);
 }
-
 
 const char *poldek_version(void) 
 {

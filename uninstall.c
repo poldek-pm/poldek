@@ -198,23 +198,22 @@ void update_poldek_iinf(struct poldek_iinf *iinf, tn_array *pkgs,
 
 int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
 {
-    int               i, nerr = 0, ndep_marked = 0, doit = 1;
+    int               i, nerr = 0, ndep_marked = 0;
     struct dbpkg_set  *unpoldek_tset;
     tn_array          *pkgs = NULL;
-    const tn_array    *pkgmasks;
+    tn_array          *masks;
     
-
     unpoldek_tset = dbpkg_set_new();
-    pkgmasks = poldek_ts_get_arg_pkgmasks(ts);
+    masks = poldek_ts_get_args_asmasks(ts, 1);
     
-    for (i=0; i < n_array_size(pkgmasks); i++) {
+    for (i=0; i < n_array_size(masks); i++) {
         char           *mask, *p;
         tn_array       *dbpkgs;
         struct capreq  *cr, *cr_evr;
         int            nmatches = 0;
 
         
-        mask = n_array_nth(pkgmasks, i);
+        mask = n_array_nth(masks, i);
 #if 0 //DUPA        
         if ((pdef->tflags & PKGDEF_REGNAME) == 0) {
             logn(LOGERR, _("'%s': only exact selection is supported"),
@@ -243,7 +242,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
         }
         
         dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cr, NULL, uninst_LDFLAGS);
-        DBGF("mask %s (%s) -> %d packages\n", mask, capreq_snprintf_s(cr), 
+        DBGF("mask %s (%s) -> %d package(s)\n", mask, capreq_snprintf_s(cr), 
              dbpkgs ? n_array_size(dbpkgs) : 0);
         
         if (dbpkgs) {
@@ -294,15 +293,17 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
     }
 
     if (nerr)
-        doit = 0;
-
-    if (ts->getop(ts, POLDEK_OP_TEST) && !ts->getop(ts, POLDEK_OP_RPMTEST))
-        doit = 0;
+        goto l_end;
     
-    if (pkgs && doit) {
-        int is_test = ts->getop(ts, POLDEK_OP_RPMTEST);
-        
+    if (pkgs)
         print_uninstall_summary(pkgs, ts->pms, ndep_marked);
+    
+    if (ts->getop(ts, POLDEK_OP_TEST) && !ts->getop(ts, POLDEK_OP_RPMTEST))
+        goto l_end;
+    
+    if (pkgs) {
+        int doit = 0, is_test = ts->getop(ts, POLDEK_OP_RPMTEST);
+        
         if (!is_test && ts->getop(ts, POLDEK_OP_CONFIRM_UNINST) && ts->ask_fn)
             doit = ts->ask_fn(0, _("Proceed? [y/N]"));
         
@@ -319,7 +320,10 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
         }
     }
 
+ l_end:
+    
     dbpkg_set_free(unpoldek_tset);
+    n_array_free(masks);
     return nerr == 0;
 }
 

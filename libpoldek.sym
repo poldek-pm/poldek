@@ -4,7 +4,7 @@ arg_packages_add_pkglist
 arg_packages_add_pkgmask
 arg_packages_clean
 arg_packages_free
-arg_packages_get_pkgmasks
+arg_packages_get_masks
 arg_packages_get_resolved
 arg_packages_get_resolved_caps
 arg_packages_new
@@ -246,13 +246,13 @@ poldek_ts_add_pkg
 poldek_ts_add_pkgfile
 poldek_ts_add_pkglist
 poldek_ts_add_pkgmask
-poldek_ts_clean_arg_pkgmasks
+poldek_ts_clean_args
 poldek_ts_clrf
 poldek_ts_configure
 poldek_ts_destroy
 poldek_ts_free
 poldek_ts_get_arg_count
-poldek_ts_get_arg_pkgmasks
+poldek_ts_get_args_asmasks
 poldek_ts_init
 poldek_ts_is_interactive_on
 poldek_ts_issetf

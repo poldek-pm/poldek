@@ -42,7 +42,7 @@
 struct arg_packages {
     unsigned  flags;
     struct pm_ctx *pmctx;
-    tn_array  *packages;
+    tn_array  *packages;        /*  */
     tn_array  *package_masks;   /* [@]foo(#|-)[VERSION[-RELEASE]] || foo.rpm   */
     tn_array  *package_lists;   /* --pset FILE */
     tn_hash   *resolved_caps;
@@ -185,9 +185,67 @@ int arg_packages_size(struct arg_packages *aps)
 //        n_hash_size(aps->resolved_caps);
 }
 
-tn_array *arg_packages_get_pkgmasks(struct arg_packages *aps) 
+/* tries to convert N-[E:]V-R to N#[E:]V-R */
+static char *mask2evrhashedmask(const char *mask) 
 {
-    return aps->package_masks;
+    const char *name, *ver, *rel, *p;
+    char nmask[1024], e[32] = "", *tmp;
+    int32_t epoch = 0;
+    int n;
+    
+    n_strdupap(mask, &tmp);
+    if (!poldek_util_parse_nevr(tmp, &name, &epoch, &ver, &rel))
+        return NULL;
+    
+    p = ver;          /* check if it is really version */
+    while (*p) {
+        if (isdigit(*p))
+            break;
+        p++;
+    }
+    
+    if (*p == '\0')    /* no digits => part of name propably */
+        return NULL;
+            
+    if (epoch)
+        snprintf(e, sizeof(e), "%d:", epoch);
+    n = n_snprintf(nmask, sizeof(nmask), "%s#%s%s-%s", name, e, ver, rel);
+    return n_strdupl(nmask, n);
+}
+
+tn_array *arg_packages_get_masks(struct arg_packages *aps, int hashed)
+{
+    tn_array *masks;
+    int i;
+
+    masks = n_array_clone(aps->package_masks);
+    for (i=0; i < n_array_size(aps->package_masks); i++) {
+        const char *mask;
+
+        mask = n_array_nth(aps->package_masks, i);
+        if (hashed && strchr(mask, '-') && strchr(mask, '*') == NULL) {
+            char *nmask;
+
+            if ((nmask = mask2evrhashedmask(mask)))
+                mask = nmask;
+        }
+        n_array_push(masks, n_strdup(mask));
+    }
+    
+    for (i=0; i < n_array_size(aps->packages); i++) {
+        struct pkg *pkg = n_array_nth(aps->packages, i);
+        char mask[1024], e[32] = "";
+        int n;
+        
+        if (pkg->epoch)
+            snprintf(e, sizeof(e), "%d:", pkg->epoch);
+        
+        n = n_snprintf(mask, sizeof(mask), "%s%s%s%s-%s", pkg->name,
+                   hashed ? "#" : "-", e, pkg->ver, pkg->rel);
+        n_array_push(masks, n_strdupl(mask, n));
+    }
+                   
+    return masks;
 }
 
 
@@ -308,7 +366,7 @@ int arg_packages_setup(struct arg_packages *aps)
     
 
     if (nremoved > 0)
-        msgn(1, _("Removed %d duplicates from given packages"), nremoved); 
+        msgn(2, _("Removed %d duplicates from given packages"), nremoved); 
 
     aps->flags |= ARG_PACKAGES_SETUPDONE;
     
@@ -520,5 +578,5 @@ tn_hash *arg_packages_get_resolved_caps(struct arg_packages *aps)
 
 tn_array *arg_packages_get_resolved(struct arg_packages *aps)
 {
-    return n_ref(aps->resolved_pkgs);
+    return n_array_dup(aps->resolved_pkgs, (tn_fn_dup)pkg_link);
 }

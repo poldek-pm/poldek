@@ -145,13 +145,15 @@ int poldek_ts_is_interactive_on(const struct poldek_ts *ts);
 int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap);
 int poldek_ts_configure(struct poldek_ts *ts, int param, ...);
 
+
+/* add package arguments */
 int poldek_ts_add_pkg(struct poldek_ts *ts, struct pkg *pkg);
-int poldek_ts_add_pkgmask(struct poldek_ts *ts, const char *def);
+int poldek_ts_add_pkgmask(struct poldek_ts *ts, const char *mask);
 int poldek_ts_add_pkgfile(struct poldek_ts *ts, const char *pathname);
 int poldek_ts_add_pkglist(struct poldek_ts *ts, const char *path);
 
-void poldek_ts_clean_arg_pkgmasks(struct poldek_ts *ts);
-const tn_array* poldek_ts_get_arg_pkgmasks(struct poldek_ts *ts);
+void poldek_ts_clean_args(struct poldek_ts *ts);
+tn_array* poldek_ts_get_args_asmasks(struct poldek_ts *ts, int hashed);
 int poldek_ts_get_arg_count(struct poldek_ts *ts);
 
 struct poldek_iinf {            /* install info struct */
