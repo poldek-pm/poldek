@@ -16,6 +16,9 @@
 #define PKGSOURCE_VER_PGP    (1 << 3)
 #define PKGSOURCE_TYPE       (1 << 4)
 
+#define PKGSOURCE_ISNAMED    (1 << 10)
+
+
 struct source {
     unsigned  type;            /* PKGSRCT_* too */
     unsigned  flags;
@@ -33,6 +36,9 @@ int source_cmp_name(struct source *s1, struct source *s2);
 int source_update(struct source *src);
 
 void source_printf(const struct source *src);
+
+#define source_idstr(src) \
+        (((src)->flags & PKGSOURCE_ISNAMED) ? (src)->name : (src)->path)
 
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 

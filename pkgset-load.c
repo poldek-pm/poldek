@@ -120,7 +120,7 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     int             len;
     char            clpath[PATH_MAX], clprefix[PATH_MAX];
     int             n;
-    
+    unsigned        flags = 0;
     
     p = pathspec;
     
@@ -146,8 +146,11 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
         
         if ((q = strrchr(name, ']')))
             *q = '\0';
+        
         if (*name == '\0')
             name = "-";
+        else
+            flags = PKGSOURCE_ISNAMED;
     }
 
 
@@ -221,6 +224,10 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     }
 
     src->name = strdup(name);
+    src->flags |= flags;
+    
+    if (src->type == PKGSRCT_HDL) /* not updateable type */
+        src->flags |= PKGSOURCE_NOAUTOUP;
     return src;
 }
 
@@ -256,7 +263,7 @@ int source_update(struct source *src)
 {
     if (src->type == PKGSRCT_HDL) {
         logn(LOGWARN, _("%s: this type of source is not updateable"),
-             src->path);
+             (src->flags & PKGSOURCE_ISNAMED) ? src->name: src->path);
         return 0;
     }
     

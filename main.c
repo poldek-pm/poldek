@@ -1031,12 +1031,17 @@ void parse_options(int argc, char **argv)
         
         for (i=0; i < n_array_size(args.sources); i++) {
             struct source *src = n_array_nth(args.sources, i);
-            if ((src->flags & PKGSOURCE_NOAUTO) == 0)
+            
+            if (args.mnrmode == MODE_MNR_UPDATEIDX) {
+                if ((src->flags & PKGSOURCE_NOAUTOUP) == 0)
+                    nsources++;
+                
+            } else if ((src->flags & PKGSOURCE_NOAUTO) == 0)
                 nsources++;
         }
         
         if (nsources == 0) {
-            logn(LOGERR, _("no source specified"));
+            logn(LOGERR, _("no source, nothing to do"));
             exit(EXIT_FAILURE);
         }
     }
@@ -1185,19 +1190,18 @@ static void print_source_list(tn_array *sources)
 
 void load_db_depdirs(const char *rootdir, int mjrmode, struct pkgset *ps) 
 {
-    int load = 0;
-    
-    if (args.mjrmode == MODE_INSTALL || args.mjrmode == MODE_UPGRADE
-        || args.mjrmode == MODE_UPGRADEDIST)
-        load = 1;
-
+    switch (mjrmode) {
 #ifdef ENABLE_INTERACTIVE_MODE
-    if (args.mjrmode == MODE_SHELL)
-        load = 1;
+        case MODE_SHELL:
 #endif
-    
-    if (rpm_get_dbdepdirs(rootdir, ps->depdirs) >= 0)
-        ps->flags |= PSDBDIRS_LOADED;
+        case MODE_INSTALL:
+        case MODE_UPGRADE:
+        case MODE_UPGRADEDIST:
+            if (rpm_get_dbdepdirs(rootdir, ps->depdirs) >= 0)
+                ps->flags |= PSDBDIRS_LOADED;
+            break;
+            
+    }
 }
 
 static struct pkgset *load_pkgset(int ldflags) 
@@ -1265,14 +1269,13 @@ static int update_idx(void)
         struct source *src = n_array_nth(args.sources, i);
         struct pkgdir *pkgdir;
 
-        
         if (src->flags & PKGSOURCE_NOAUTOUP)
             continue;
 
         if (src->type == PKGSRCT_HDL) {
             logn(LOGWARN, _("%s: this type of source is not updateable"),
-                 src->path);
-            return 0;
+                 source_idstr(src));
+            continue;
         }
         
         pkgdir = pkgdir_new(src->name, src->path,
@@ -1280,7 +1283,7 @@ static int update_idx(void)
 
         if (pkgdir == NULL) {
             if (n_array_size(args.sources) > 1)
-                logn(LOGWARN, _("%s: load failed, skipped"), src->path);
+                logn(LOGWARN, _("%s: load failed, skipped"), source_idstr(src));
             nerr++;
             continue;
         }
@@ -1663,7 +1666,7 @@ int main(int argc, char **argv)
 
         if (verbose == 0) 
             verbose = 1;
-
+        
         if (!update_idx())
             exit(EXIT_FAILURE);
 
