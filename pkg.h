@@ -109,6 +109,7 @@ struct pkg {
     char         *rel;
 
     char         *fn;         /* package filename */
+    uint32_t     fmtime;      /* package file mtime */
     char         *nvr;        /* NAME-VERSION-RELEASE */
 
     const char   *arch;

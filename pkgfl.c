@@ -301,7 +301,7 @@ int pkgfl_store_buf(tn_tuple *fl, tn_buf *nbuf, tn_array *exclpath,
             int is_depdir = 0, dnl;
 
             dnl = strlen(flent->dirname);
-            n_assert(dnl > 0 && dnl < 256);
+            n_assert(dnl < UINT8_MAX - 1);
             
             lengths[i] = dnl;
 

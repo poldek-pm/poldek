@@ -166,12 +166,14 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
 }
 
 
-#define PKGFIELD_TAG_SIZE   'S'
-#define PKGFIELD_TAG_FSIZE  's'
-#define PKGFIELD_TAG_BTIME  'b'
-#define PKGFIELD_TAG_ITIME  'i'
-#define PKGFIELD_TAG_GID    'g'
-#define PKGFIELD_TAG_RECNO  'r'
+#define PKGFIELD_TAG_SIZE    'S'
+#define PKGFIELD_TAG_FSIZE   's'
+#define PKGFIELD_TAG_BTIME   'b'
+#define PKGFIELD_TAG_ITIME   'i'
+#define PKGFIELD_TAG_GID     'g'
+#define PKGFIELD_TAG_RECNO   'r'
+#define PKGFIELD_TAG_FMTIME  't'
+
 static
 void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg) 
 {
@@ -194,6 +196,9 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg)
         n++;
 
     if (pkg->recno) 
+        n++;
+
+    if (pkg->fmtime) 
         n++;
 
     size = (sizeof(int32_t) + 1) * n;
@@ -233,6 +238,13 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg)
         n_buf_add_int8(nbuf, PKGFIELD_TAG_RECNO);
         n_buf_add_int32(nbuf, pkg->recno);
     }
+
+    n_assert(pkg->fmtime);
+    if (pkg->fmtime) {
+        n_buf_add_int8(nbuf, PKGFIELD_TAG_FMTIME);
+        n_buf_add_int32(nbuf, pkg->fmtime);
+    }
+    
     n_buf_printf(nbuf, "\n");
 }
 
@@ -240,7 +252,8 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg)
 int pkg_restore_fields(tn_stream *st, struct pkg *pkg) 
 {
     uint8_t n = 0, nsize, tag;
-
+    uint32_t tmp;
+    
     n_stream_read_uint8(st, &nsize);
     n_stream_read_uint8(st, &n);
         
@@ -270,10 +283,19 @@ int pkg_restore_fields(tn_stream *st, struct pkg *pkg)
             case PKGFIELD_TAG_RECNO:
                 n_stream_read_uint32(st, &pkg->recno);
                 break;
+
+            case PKGFIELD_TAG_FMTIME:
+                n_stream_read_uint32(st, &pkg->fmtime);
+                break;
+
+            default:
+                n_stream_read_uint32(st, &tmp);
+                break;
         }
         n--;
     }
-    
+
+    n_assert(pkg->fmtime);
     return n_stream_read_uint8(st, &n); /* '\n' */
 }
 

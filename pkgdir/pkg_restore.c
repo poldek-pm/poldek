@@ -173,6 +173,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
             pkg->itime = tmpkg.itime;
             pkg->groupid = tmpkg.groupid;
             pkg->recno = tmpkg.recno;
+            pkg->fmtime = tmpkg.fmtime;
 			//if (pkg)
             //    printf("ld %s\n", pkg_snprintf_s(pkg));
             break;

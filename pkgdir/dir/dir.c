@@ -63,6 +63,66 @@ struct pkgdir_module pkgdir_module_dir = {
     NULL
 };
 
+static tn_hash *build_mtime_index(tn_array *pkgs) 
+{
+    tn_hash *ht;
+    int i;
+    
+    ht = n_hash_new(n_array_size(pkgs), NULL);
+
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        char key[2048];
+
+        n_assert(pkg->fmtime);
+        n_assert(pkg->fsize);
+        if (pkg->fmtime && pkg->fsize) {
+            n_snprintf(key, sizeof(key), "%s-%d-%d", pkg_filename_s(pkg),
+                       pkg->fmtime, pkg->fsize);
+            n_hash_insert(ht, key, pkg);
+        }
+    }
+    return ht;
+}
+
+struct pkg *search_in_mtime_index(tn_hash *mtime_index, const char *fn,
+                                  struct stat *st)
+{
+    char key[2048];
+
+    n_snprintf(key, sizeof(key), "%s-%d-%d", fn, st->st_mtime, st->st_size);
+    return n_hash_get(mtime_index, key);
+}
+
+struct pkg *search_in_prev(struct pkgdir *prev_pkgdir, Header h, const char *fn,
+                           struct stat *st)
+{
+    struct pkg *tmp, *pkg;
+    
+    pkg = pm_rpm_ldhdr(NULL, h, fn, st->st_size, PKG_LDNEVR);
+    if (pkg && (tmp = n_array_bsearch(prev_pkgdir->pkgs, pkg))) {
+        if (pkg_deepstrcmp_name_evr(pkg, tmp) != 0)
+            tmp = NULL;
+    }
+    
+    if (pkg)
+        pkg_free(pkg);
+
+    return tmp;
+}
+
+void remap_groupid(struct pkg *pkg, struct pkgroup_idx *pkgroups,
+                  struct pkgdir *prev_pkgdir)
+{
+    if (pkg->groupid > 0 && prev_pkgdir->pkgroups) {
+        int gid;
+        gid = pkgroup_idx_remap_groupid(pkgroups,
+                                        prev_pkgdir->pkgroups,
+                                        pkg->groupid, 1);
+        pkg->groupid = gid;
+    }
+}
+
 
 
 static
@@ -70,6 +130,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
              tn_hash *avlangs, unsigned ldflags, struct pkgdir *prev_pkgdir,
              tn_alloc *na)
 {
+    tn_hash        *mtime_index = NULL;  
     struct dirent  *ent;
     struct stat    st;
     DIR            *dir;
@@ -80,13 +141,20 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
         logn(LOGERR, "opendir %s: %m", dirpath);
         return -1;
     }
-    
+
+    if (prev_pkgdir)
+        mtime_index = build_mtime_index(prev_pkgdir->pkgs);
+
     if (dirpath[strlen(dirpath) - 1] == '/')
         sepchr = "";
 
     n = 0;
     while ((ent = readdir(dir))) {
         char path[PATH_MAX];
+        struct pkg *pkg = NULL;
+        tn_array *pkg_langs;
+        Header h = NULL;
+
         
         if (fnmatch("*.rpm", ent->d_name, 0) != 0) 
             continue;
@@ -101,12 +169,21 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
             continue;
         }
         
-        if (S_ISREG(st.st_mode)) {
-            struct pkg *pkg = NULL;
-            tn_array *pkg_langs;
-            Header h;
+        if (!S_ISREG(st.st_mode))
+            continue;
 
-            
+        if (mtime_index) {
+            pkg = search_in_mtime_index(mtime_index, ent->d_name, &st);
+            if (pkg) {
+                msgn(3, "%s: file seems untouched, loaded from previous index",
+                     pkg_filename_s(pkg));
+                pkg = pkg_link(pkg);
+                remap_groupid(pkg, pkgroups, prev_pkgdir);
+            }
+        }
+        
+
+        if (pkg == NULL) {
             if (!pm_rpmhdr_loadfile(path, &h)) {
                 logn(LOGWARN, "%s: read header failed, skipped", path);
                 continue;
@@ -116,70 +193,57 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
             //    continue;
 
             if (prev_pkgdir) {
-                struct pkg *tmp;
-                pkg = pm_rpm_ldhdr(NULL, h, n_basenam(path), st.st_size, PKG_LDNEVR);
-                
-                if (pkg && (tmp = n_array_bsearch(prev_pkgdir->pkgs, pkg)) &&
-                    pkg_deepstrcmp_name_evr(pkg, tmp) == 0) {
-
-                    if (tmp->groupid > 0 && prev_pkgdir->pkgroups) {
-                        int gid;
-                        gid = pkgroup_idx_remap_groupid(pkgroups,
-                                                        prev_pkgdir->pkgroups,
-                                                        tmp->groupid, 1);
-                        tmp->groupid = gid;
-                    }
-                    
-                    pkg_free(pkg);
-                    pkg = pkg_link(tmp);
+                pkg = search_in_prev(prev_pkgdir, h, ent->d_name, &st);
+                if (pkg) {
                     msgn(3, "%s: seems untouched, loaded from previous index",
-                         pkg_snprintf_s(tmp));
-                    
-                } else {
-                    if (pkg) {
-                        msgn(3, "%s: not found, new?", pkg_snprintf_s(pkg));
-                        pkg_free(pkg);
-                    }
-
-                    pkg = NULL;
+                         pkg_snprintf_s(pkg));
+                    pkg = pkg_link(pkg);
+                    remap_groupid(pkg, pkgroups, prev_pkgdir);
                 }
             }
+        }
             
-            if (pkg == NULL) {
-                pkg = pm_rpm_ldhdr(na, h, n_basenam(path), st.st_size,
-                                   PKG_LDWHOLE);
+            
+        if (pkg == NULL) {      /* not found */
+            n_assert(h);
+            pkg = pm_rpm_ldhdr(na, h, n_basenam(path), st.st_size,
+                               PKG_LDWHOLE);
                 
-                if (ldflags & PKGDIR_LD_DESC) {
-                    pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
-                    pkg_set_ldpkguinf(pkg);
-                    if ((pkg_langs = pkguinf_langs(pkg->pkg_pkguinf))) {
-                        int i;
+            if (ldflags & PKGDIR_LD_DESC) {
+                pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
+                pkg_set_ldpkguinf(pkg);
+                if ((pkg_langs = pkguinf_langs(pkg->pkg_pkguinf))) {
+                    int i;
                         
-                        for (i=0; i < n_array_size(pkg_langs); i++) {
-                            char *l = n_array_nth(pkg_langs, i);
-                            if (!n_hash_exists(avlangs, l))
-                                n_hash_insert(avlangs, l, NULL);
-                        }
+                    for (i=0; i < n_array_size(pkg_langs); i++) {
+                        char *l = n_array_nth(pkg_langs, i);
+                        if (!n_hash_exists(avlangs, l))
+                            n_hash_insert(avlangs, l, NULL);
                     }
                 }
-                pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
             }
-            
+            pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
+        }
+
+        if (h)
             headerFree(h);
             
-            if (pkg) {
-                n_array_push(pkgs, pkg);
-                n++;
-            }
-        
-            if (n && n % 200 == 0) 
-                msg(1, "_%d..", n);
+        if (pkg) {
+            pkg->fmtime = st.st_mtime;
+            n_array_push(pkgs, pkg);
+            n++;
         }
+        
+        if (n && n % 200 == 0) 
+            msg(1, "_%d..", n);
     }
+
 
     if (n && n > 200)
         msg(1, "_%d\n", n);
     closedir(dir);
+    if (mtime_index)
+        n_hash_free(mtime_index);
     return n;
 }
 
