@@ -63,7 +63,7 @@
 #define PKGT_HAS_FSIZE    (1 << 10)
 #define PKGT_HAS_BTIME    (1 << 11)
 #define PKGT_HAS_GROUPID  (1 << 12)
-#define PKGT_F_v017   (1 << 15);
+#define PKGT_F_v017       (1 << 15)
 
 struct pkgtags_s {
     unsigned   flags;
@@ -161,6 +161,7 @@ struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg,
         with_pkg = 1;
     
     memset(&pkgt, 0, sizeof(pkgt));
+    memset(&tmpkg, 0, sizeof(tmpkg));
     
     while ((nread = n_stream_gets(st, linebuf, sizeof(linebuf))) > 0) {
         char *p, *val, *line;
@@ -171,12 +172,15 @@ struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg,
         if (*line == '\n') {        /* empty line -> end of record */
             //printf("\n\nEOR\n");
             pkg = pkg_ldtags(pkg, &pkgt, pkgo);
-            pkg->size = tmpkg.size;
-            pkg->fsize = tmpkg.fsize;
-            pkg->btime = tmpkg.btime;
-            pkg->itime = tmpkg.itime;
-            pkg->groupid = tmpkg.groupid;
-            pkg->recno = tmpkg.recno;
+            if ((pkgt.flags & PKGT_F_v017) == 0) {
+                pkg->size = tmpkg.size;
+                pkg->fsize = tmpkg.fsize;
+                pkg->btime = tmpkg.btime;
+                pkg->itime = tmpkg.itime;
+                pkg->groupid = tmpkg.groupid;
+                pkg->recno = tmpkg.recno;
+            }
+            
 			//if (pkg)
             //    printf("ld %s\n", pkg_snprintf_s(pkg));
             break;

@@ -237,6 +237,7 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     if (pkgdir->pkgs == NULL)
         goto l_close;
 
+    flags |= PKGDIR_CREAT_PKG_Fv017;
     //n_array_sort(pkgdir->pkgs);
     n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_deepstrcmp_name_evr);
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {

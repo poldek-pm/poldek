@@ -599,6 +599,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             linep++;
 
             if (strncmp(linep, pkgroups_tag, strlen(pkgroups_tag)) == 0) {
+                dbgf("LOAD %s\n", pkgdir->idxpath);
                 pkgroups = pkgroup_idx_restore(vf->vf_tnstream, 0);
 
             } else if ((p = is_tag(linep, pdir_tag_removed))) {
