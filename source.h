@@ -14,12 +14,14 @@
 #define PKGSOURCE_VRFY_GPG   (1 << 2)
 #define PKGSOURCE_VRFY_PGP   (1 << 3)
 #define PKGSOURCE_TYPE       (1 << 4)
+#define PKGSOURCE_PRI        (1 << 5)
 
 #define PKGSOURCE_ISNAMED    (1 << 10)
 
 struct source {
     unsigned  type;            /* PKGSRCT_* too */
     unsigned  flags;
+    int       pri;
     unsigned  subopt_flags;     /* PKGSRCT_*  */
     
     char      *name;            /* source name */
@@ -31,6 +33,8 @@ struct source *source_new(const char *path, const char *pkg_prefix);
 void source_free(struct source *src);
 int source_cmp(struct source *s1, struct source *s2);
 int source_cmp_name(struct source *s1, struct source *s2);
+int source_cmp_pri(struct source *s1, struct source *s2);
+int source_cmp_pri_name(struct source *s1, struct source *s2);
 
 #define PKGSOURCE_UP      (1 << 0)
 #define PKGSOURCE_UPA     (1 << 1)

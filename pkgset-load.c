@@ -33,7 +33,8 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     int i, j, iserr = 0;
     struct pkgdir *pkgdir = NULL;
 
-
+    n_array_isort_ex(sources, (tn_fn_cmp)source_cmp_pri);
+    
     for (i=0; i < n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
 
@@ -79,13 +80,14 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
                 logn(LOGWARN, _("%s: load failed, skipped"), vf_url_slim_s(src->path, 0));
             continue;
         }
-
+        
         if (src->flags & PKGSOURCE_VRFY_GPG)
             pkgdir->flags |= PKGDIR_VRFY_GPG;
 
         if (src->flags & PKGSOURCE_VRFY_PGP)
             pkgdir->flags |= PKGDIR_VRFY_PGP;
-        
+
+        pkgdir->pri = src->pri;
         n_array_push(ps->pkgdirs, pkgdir);
     }
 
@@ -120,7 +122,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         /* merge pkgdirs packages into ps->pkgs */
         for (i=0; i<n_array_size(ps->pkgdirs); i++) {
             pkgdir = n_array_nth(ps->pkgdirs, i);
-            for (j=0; j<n_array_size(pkgdir->pkgs); j++)
+            for (j=0; j < n_array_size(pkgdir->pkgs); j++)
                 n_array_push(ps->pkgs, pkg_link(n_array_nth(pkgdir->pkgs, j)));
         }
 
@@ -130,7 +132,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     if (n_array_size(ps->pkgs)) {
         int n = n_array_size(ps->pkgs);
         msgn(1, ngettext("%d package read",
-                        "%d packages read", n), n);
+                         "%d packages read", n), n);
     }
     
     return n_array_size(ps->pkgs);

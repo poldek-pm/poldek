@@ -400,6 +400,7 @@ struct pkgdir *pkgdir_malloc(void)
     pkgdir->path = NULL;
     pkgdir->idxpath = NULL;
     pkgdir->pkgs = NULL;
+    pkgdir->pri = 0;
     
     pkgdir->depdirs = NULL;
     pkgdir->foreign_depdirs = NULL;

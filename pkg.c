@@ -469,6 +469,17 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
     //return rc;
 }
 
+
+int pkg_cmp_name_evr_rev_srcpri(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc;
+
+    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && p1->pkgdir != p2->pkgdir)
+        return p1->pkgdir->pri - p2->pkgdir->pri;
+    return rc;
+}
+
+
 static __inline__
 int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2) 
 {

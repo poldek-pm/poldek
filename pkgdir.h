@@ -48,6 +48,8 @@ struct pkgdir {
     char                 *idxpath;         /* path | URL        */
     struct pdigest       *pdg;
     tn_array             *pkgs;            /* struct *pkg[]     */
+
+    int                  pri;              /* pri of pkgdir source */
     
     tn_array             *depdirs;         /* char *[]          */
     tn_array             *foreign_depdirs; /* depdirs not presented in depdirs,

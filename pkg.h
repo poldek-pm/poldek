@@ -174,6 +174,7 @@ int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_ver(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
+int pkg_cmp_name_evr_rev_srcpri(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_pri(struct pkg *p1, struct pkg *p2);
 
 int pkg_cmp_btime(struct pkg *p1, struct pkg *p2);

@@ -34,6 +34,8 @@
 #include "poldek_term.h"
 #include "i18n.h"
 
+#define SOURCE_DEFAULT_PRI 0
+
 struct subopt {
     char      *name;
     unsigned  flag;              /* MUST BE non-zero */
@@ -47,7 +49,7 @@ struct src_option {
     struct subopt *subopts;
 };
 
-#define PKGSRC_OPTION_SUBOPT (1 << 15)
+#define PKGSRC_OPTION_SUBOPT  (1 << 15)
 
 static struct subopt type_subopts[] = {
     { "pidx",    PKGSRCT_IDX, 1 }, 
@@ -59,9 +61,10 @@ static struct subopt type_subopts[] = {
 static struct src_option source_options[] = {
     { "noauto",   0, PKGSOURCE_NOAUTO,     NULL}, 
     { "noautoup", 0, PKGSOURCE_NOAUTOUP,   NULL}, 
-    { "gpg",      0, PKGSOURCE_VRFY_GPG,    NULL},
-    { "pgp",      0, PKGSOURCE_VRFY_PGP,    NULL},
-    { "type",     0, PKGSOURCE_TYPE | PKGSRC_OPTION_SUBOPT, type_subopts }, 
+    { "gpg",      0, PKGSOURCE_VRFY_GPG,   NULL},
+    { "pgp",      0, PKGSOURCE_VRFY_PGP,   NULL},
+    { "type",     0, PKGSOURCE_TYPE | PKGSRC_OPTION_SUBOPT, type_subopts },
+    { "pri",      0, PKGSOURCE_PRI | PKGSRC_OPTION_SUBOPT, NULL},
     {  NULL,      0, 0, NULL }, 
 };
 
@@ -104,6 +107,10 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
             src->type = v;
             src->subopt_flags |= v;
         }
+        
+    } else if (opt->flag & PKGSOURCE_PRI) {
+        if (sscanf(str, "%d", &v) == 1)
+            src->pri = v;
     }
 
     if (v == 0)
@@ -186,7 +193,7 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     else
         src->pkg_prefix = NULL;
     src->type = PKGSRCT_NIL;
-    
+    src->pri = 0;
     
     if ((q = strchr(name, ','))) {
         const char **tl, **t;
@@ -245,10 +252,18 @@ void source_free(struct source *src)
     free(src);
 }
 
+
 int source_cmp(struct source *s1, struct source *s2)
 {
     return strcmp(s1->path, s2->path);
 }
+
+
+int source_cmp_pri(struct source *s1, struct source *s2)
+{
+    return s1->pri - s2->pri;
+}
+
 
 int source_cmp_name(struct source *s1, struct source *s2)
 {
@@ -260,6 +275,18 @@ int source_cmp_name(struct source *s1, struct source *s2)
     
     return strcmp(s1->name, s2->name);
 }
+
+
+int source_cmp_pri_name(struct source *s1, struct source *s2)
+{
+    int rc;
+    
+    if ((rc = (s1->pri - s2->pri)) == 0)
+        return source_cmp_name(s1, s2);
+    
+    return rc;
+}
+
 
 static int source_update_a(struct source *src) 
 {
@@ -392,10 +419,16 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
             n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s", opt->name);
             n += n_snprintf(&str[n], size - n, ",");
             // n += n_snprintf(&str[n], size - n, "%s,", opt->name);
+
+        } else if (opt->flag & PKGSOURCE_PRI) {
+            if (src->pri) {
+                n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s", opt->name);
+                n += n_snprintf(&str[n], size - n, "=%d,", src->pri);
+            }
             
         } else {
             int j = 0;
-
+            
             while (opt->subopts[j].name != NULL) {
                 struct subopt *subopt = &opt->subopts[j++];
                 
