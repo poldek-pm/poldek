@@ -114,31 +114,6 @@ char *pm_dbpath(struct pm_ctx *ctx, char *path, size_t size)
     return NULL;
 }
 
-int pkgdb_it_init(struct pkgdb *db, struct pkgdb_it *it,
-                  int tag, const char *arg) 
-{
-    memset(it, 0, sizeof(*it));
-    it->_db = db;
-    return db->_ctx->mod->db_it_init(it, tag, arg);
-}
-
-void pkgdb_it_destroy(struct pkgdb_it *it)
-{
-    it->_destroy(it);
-    memset(it, 0, sizeof(*it));
-}
-
-const struct pm_dbrec *pkgdb_it_get(struct pkgdb_it *it)
-{
-    return it->_get(it);
-}
-
-int pkgdb_it_get_count(struct pkgdb_it *it)
-{
-    return it->_get_count(it);
-}
-
-
 int pm_machine_score(struct pm_ctx *ctx,
                      enum pm_machine_score_tag tag, const char *val)
 {
@@ -184,3 +159,5 @@ int pm_configure(struct pm_ctx *ctx, const char *key, void *val)
     
     return 0;
 }
+
+

@@ -33,6 +33,8 @@ struct pm_module pm_module_pset = {
     NULL,
     
     pm_pset_hdr_nevr,
+    pm_pset_hdr_link,
+    pm_pset_hdr_free,
     pm_pset_ldhdr,                       /* ldhdr */
     pm_pset_ldhdr_capreqs,               /* ldhdr_capreqs */
     NULL,            /* ldpkg */

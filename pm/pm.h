@@ -86,6 +86,8 @@ struct pm_dbrec {
 };
 
 int pkgdb_is_pkg_installed(struct pkgdb *db, const struct pkg *pkg, int *cmprc);
+int pkgdb_get_package_hdr(struct pkgdb *db, const struct pkg *pkg,
+                          struct pm_dbrec *dbrec);
 
 
 enum capreq_type {

@@ -50,6 +50,7 @@ struct pm_psetdb {
     char *tsdir;
     tn_array *paths_added;
     tn_array *paths_removed;
+    int _recno;
 };
 
 void *pm_pset_init(void) 
@@ -103,6 +104,7 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
     struct source *src;
     struct pkgdir *dir;
     struct pkgset *ps;
+    int i, recno;
     
     rootdir = rootdir; dbpath = dbpath; mode = mode;
     
@@ -149,6 +151,13 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
         return NULL;
     }
 
+    /*  */
+    recno = 1;
+    for (i=0; i<n_array_size(ps->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ps->pkgs, i);
+        pkg->recno = recno++;
+    }
+
     pkgset_setup(ps, PSET_VRFY_MERCY);
     db = n_malloc(sizeof(*db));
     db->src = src;
@@ -156,6 +165,7 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
     db->paths_added = n_array_new(32, free, NULL);
     db->paths_removed = n_array_new(32, free, NULL);
     db->tsdir = NULL;
+    db->_recno = recno;
     return db;
 }
 
@@ -358,6 +368,17 @@ int pm_pset_hdr_nevr(void *h, char **name,
     return 1;
 }
 
+void *pm_pset_hdr_link(void *h)
+{
+    struct pkg *pkg = h;
+    return pkg_link(pkg);
+}
+
+void pm_pset_hdr_free(void *h)
+{
+    struct pkg *pkg = h;
+    pkg_free(pkg);
+}
 
 struct pkg *pm_pset_ldhdr(tn_alloc *na, void *hdr, const char *fname,
                           unsigned fsize, unsigned ldflags)
@@ -479,6 +500,8 @@ int pm_pset_packages_install(struct pkgdb *pdb,
         if (pkg_localpath(pkg, path, sizeof(path), ts->cachedir)) {
             pkgset_add_package(db->ps, pkg);
             pkgdir_add_package(pkgdir, pkg);
+            n_assert(pkg->recno == 0);
+            pkg->recno = db->_recno++;
             if (ts->getop(ts, POLDEK_OP_JUSTDB))
                 continue;
             

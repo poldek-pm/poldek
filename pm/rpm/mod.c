@@ -28,8 +28,8 @@ struct pm_module pm_module_rpm = {
     pm_rpm_verify_signature,
     
     pm_rpmhdr_nevr,
-//    pm_rpmhdr_link,
-//    pm_rpmhdr_free, 
+    pm_rpmhdr_link,
+    pm_rpmhdr_free, 
     
     (struct pkg *(*)(tn_alloc *, void *, const char *, unsigned, unsigned))pm_rpm_ldhdr,
     (tn_array *(*)(tn_array *, void *, int))pm_rpm_ldhdr_capreqs,

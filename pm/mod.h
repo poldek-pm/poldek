@@ -53,8 +53,8 @@ struct pm_module {
     int (*hdr_nevr)(void *hdr, char **name,
                     int32_t *epoch, char **version, char **release);
 
-//    void *(*hdr_link)(void *hdr);
-//    void  (*hdr_free)(void *hdr);
+    void *(*hdr_link)(void *hdr);
+    void  (*hdr_free)(void *hdr);
 
 
     struct pkg *(*hdr_ld)(tn_alloc *na, void *hdr,

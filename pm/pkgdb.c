@@ -137,14 +137,29 @@ int pkgdb_tx_commit(struct pkgdb *db)
     return db->_txcnt;
 }
 
-int pkgdb_install(struct pkgdb *db, const char *path,
-                  const struct poldek_ts *ts) 
+
+int pkgdb_it_init(struct pkgdb *db, struct pkgdb_it *it,
+                  int tag, const char *arg) 
 {
-    n_assert(db->dbh);
-    if (db->_ctx->mod->dbinstall)
-        return db->_ctx->mod->dbinstall(db, path, ts);
-    logn(LOGERR, "%s: dbinstall is not supported", db->_ctx->mod->name);
-    return 0;
+    memset(it, 0, sizeof(*it));
+    it->_db = db;
+    return db->_ctx->mod->db_it_init(it, tag, arg);
+}
+
+void pkgdb_it_destroy(struct pkgdb_it *it)
+{
+    it->_destroy(it);
+    memset(it, 0, sizeof(*it));
+}
+
+const struct pm_dbrec *pkgdb_it_get(struct pkgdb_it *it)
+{
+    return it->_get(it);
+}
+
+int pkgdb_it_get_count(struct pkgdb_it *it)
+{
+    return it->_get_count(it);
 }
 
 int pkgdb_map(struct pkgdb *db,
@@ -195,8 +210,6 @@ int pkgdb_map_nevr(struct pkgdb *db,
     return n;
 }
 
-
-
 static 
 int pkg_hdr_cmp_evr(struct pm_ctx *ctx, void *hdr, const struct pkg *pkg,
                     int *cmprc)
@@ -211,31 +224,61 @@ int pkg_hdr_cmp_evr(struct pm_ctx *ctx, void *hdr, const struct pkg *pkg,
     return 1;
 }
 
-
-int pkgdb_is_pkg_installed(struct pkgdb *db, const struct pkg *pkg,
-                           int *cmprc)
+int do_search_package(struct pkgdb *db, const struct pkg *pkg, int *cmprcptr,
+                      struct pm_dbrec *todbrec)
 {
-    int count = 0;
+    int count = 0, n, cmprc = 0;
     struct pkgdb_it it;
     const struct pm_dbrec *dbrec;
 
     pkgdb_it_init(db, &it, PMTAG_NAME, pkg->name);
     count = pkgdb_it_get_count(&it);
-    if (count > 0 && cmprc) {
-        if ((dbrec = pkgdb_it_get(&it)) == NULL) {
-            logn(LOGWARN, "%s: pkgdb iterator returns NULL, "
-                 "possibly corrupted %s database", pkg->name,
-                 db->_ctx->mod->name);
-            count = 0; /* assume package isn't installed */
-            
-        } else if (cmprc) {
-            pkg_hdr_cmp_evr(db->_ctx, dbrec->hdr, pkg, cmprc);
+    if (count > 0) {
+        n = 0;
+        while ((dbrec = pkgdb_it_get(&it)) != NULL) {
+            n++;
+            if (!pkg_hdr_cmp_evr(db->_ctx, dbrec->hdr, pkg, &cmprc)) 
+                continue; /* fail */
+
+            if (cmprc == 0) {
+                if (todbrec) {
+                    todbrec->hdr = db->_ctx->mod->hdr_link(dbrec->hdr);
+                    todbrec->recno = dbrec->recno;
+                    todbrec->_ctx = db->_ctx;
+                }
+                break;
+            }
         }
     }
 
+    if (count > 0 && n == 0) {
+        logn(LOGWARN, "%s: pkgdb iterator returns NULL, "
+             "possibly corrupted %s database", pkg->name,
+             db->_ctx->mod->name);
+        count = 0; /* assume package isn't installed */
+    }
+    
     pkgdb_it_destroy(&it);
+    if (cmprcptr)
+        *cmprcptr = cmprc;
     return count;
 }
+
+int pkgdb_is_pkg_installed(struct pkgdb *db, const struct pkg *pkg, int *cmprc)
+{
+    return do_search_package(db, pkg, cmprc, NULL);
+}
+
+int pkgdb_get_package_hdr(struct pkgdb *db, const struct pkg *pkg,
+                          struct pm_dbrec *dbrec)
+{
+    n_assert(dbrec);
+    if (!do_search_package(db, pkg, NULL, dbrec))
+        return 0;
+    n_assert(dbrec->hdr);
+    return 1;
+}
+
 
 static struct pkg *load_pkg(tn_alloc *na, struct pkgdb *db,
                             const struct pm_dbrec *dbrec, unsigned ldflags) 
@@ -258,6 +301,16 @@ static struct pkg *load_pkg(tn_alloc *na, struct pkgdb *db,
         n_alloc_free(na); /* per pkg na (pkg hold its reference); TODO better */
 
     return pkg;
+}
+
+int pkgdb_install(struct pkgdb *db, const char *path,
+                  const struct poldek_ts *ts) 
+{
+    n_assert(db->dbh);
+    if (db->_ctx->mod->dbinstall)
+        return db->_ctx->mod->dbinstall(db, path, ts);
+    logn(LOGERR, "%s: dbinstall is not supported", db->_ctx->mod->name);
+    return 0;
 }
 
 static int dbpkg_array_has(tn_array *pkgs, int recno)
