@@ -303,8 +303,16 @@ int rpm_dbmatch_req(rpmdb db, const struct capreq *req, int strict,
  */
 static void progress(const unsigned long amount, const unsigned long total) 
 {
+    static int is_tty = -1;
+    static int last_v = 0;
+    
+    if (is_tty == -1) {
+        FILE *stream = log_stream();
+        is_tty = isatty(fileno(stream));
+    }
+    
     if (amount == 0) {     /* first notification */
-        msg(0, ".");
+        last_v = 0;
         
     } else {
         char   line[256], outline[256], fmt[40];
@@ -318,16 +326,36 @@ static void progress(const unsigned long amount, const unsigned long total)
         barwidth -= 7;
         n = (int) (((float)barwidth) * frac);
         
-        memset(line, '.', n);
-        line[n] = '\0';
-        snprintf(fmt, sizeof(fmt), "%%-%ds %%5.1f%%%%", barwidth);
-        snprintf(outline, sizeof(outline), fmt, line, percent);
-        
-        if (amount && amount == total) { /* last notification */
-            msg(0, "\r%s\n", outline);
+        if (n <= last_v)
+            return;
             
+        n_assert(last_v < 100);
+        if (!is_tty) {
+            int k;
+            
+            k = n - last_v;
+            memset(line, '.', k);
+            line[k] = '\0';
+            msg(0, "%s", line);
+
+            if (amount && amount == total) { /* last notification */
+                msg(0, " Done\n");
+            }
+            
+            last_v = n;
+
         } else {
-            msg(0, "\r%s", outline);
+            memset(line, '.', n);
+            line[n] = '\0';
+            snprintf(fmt, sizeof(fmt), "%%-%ds %%5.1f%%%%", barwidth);
+            snprintf(outline, sizeof(outline), fmt, line, percent);
+        
+            if (amount && amount == total) { /* last notification */
+                msg(0, "\r%s\n", outline);
+                
+            } else {
+                msg(0, "\r%s", outline);
+            }
         }
     }
 }
@@ -383,7 +411,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
     if (rootdir == NULL)
         rootdir = "";
 
-    if ((vf = vfile_open(path, VFT_RPMIO, VFM_RO)) == NULL)
+    if ((vf = vfile_open(path, VFT_RPMIO, VFM_RO | VFM_STBRN)) == NULL)
         return 0;
     
     rc = rpmReadPackageHeader(vf->vf_fdt, &h, &issrc, NULL, NULL);
