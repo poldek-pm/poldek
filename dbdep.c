@@ -292,10 +292,20 @@ struct db_dep *provides_cap(tn_hash *db_deph, struct capreq *cap,
 
             if (dep->req == NULL) /* removed */
                 continue;
+            
 
             if (flags & DBDEP_PROVIDES_PROVIDES) {
-                matched = cap_match_req(dep->req, cap, 1);
-                DBGF("cap_match_req %s %s = %d\n", capreq_snprintf_s(dep->req),
+                if (!capreq_versioned(cap)) {
+                    matched = (strcmp(capreq_name(dep->req),
+                                      capreq_name(cap)) == 0);
+                    
+                } else {
+                    matched = (strcmp(capreq_snprintf_s(dep->req),
+                                      capreq_snprintf_s0(cap)) == 0);
+                }
+                
+                //matched = cap_match_req(dep->req, cap, 1);
+                DBGF("cap_match_req %s,  %s = %d\n", capreq_snprintf_s(dep->req),
                      capreq_snprintf_s0(cap), matched);
                 
             } else if (flags & DBDEP_PROVIDES_CONTAINS) {
