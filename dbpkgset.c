@@ -113,19 +113,21 @@ const struct pkg *dbpkg_set_provides(struct dbpkg_set *dbpkg_set,
     pkg = NULL;
     for (i=0; i < n_array_size(dbpkg_set->dbpkgs); i++) {
         struct pkg *dbpkg = n_array_nth(dbpkg_set->dbpkgs, i);
+        if (is_file && pkg_has_path(dbpkg, dirname, basename))
+            pkg = dbpkg;
+        
+        else if (pkg_match_req(dbpkg, cap, 0))
+            pkg = dbpkg;
 
-        if (is_file && pkg_has_path(dbpkg, dirname, basename)) {
-            pkg = dbpkg;
+        DBGF("  -%s provides %s -> %s\n", pkg_snprintf_s(dbpkg),
+             capreq_snprintf_s(cap), pkg ? "YES" : "NO");
+        
+        if (pkg)
             break;
-            
-        } else if (pkg_match_req(dbpkg, cap, 0)) {
-            pkg = dbpkg;
-            break;
-        }
     }
 
     if (pkg != NULL) {
-        DBGF("addto cache %s\n", capreq_name(cap));
+        DBGF("addto cache %s\n", capnvr ? capnvr : capname);
         if (capnvr == NULL) {
             n_hash_insert(dbpkg_set->capcache, capname, pkg);
             
@@ -135,7 +137,8 @@ const struct pkg *dbpkg_set_provides(struct dbpkg_set *dbpkg_set,
                 n_hash_insert(dbpkg_set->capcache, capname, pkg);
         }
     }
-    
+    DBGF("%s -> %s\n", capreq_snprintf_s(cap),
+         pkg ? pkg_snprintf_s(pkg) : "NO");
     return pkg;
 }
 
