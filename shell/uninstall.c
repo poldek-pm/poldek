@@ -78,7 +78,7 @@ int uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
     
     n = 0;
     
-    if (inst->instflags & PKGINST_TEST) {
+    if (inst->flags & INSTS_RPMTEST) {
         cmd = "/bin/rpm";
         argv[n++] = "rpm";
         
@@ -97,13 +97,13 @@ int uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
     for (i=1; i<verbose; i++)
         argv[n++] = "-v";
 
-    if (inst->instflags & PKGINST_TEST)
+    if (inst->flags & INSTS_RPMTEST)
         argv[n++] = "--test";
     
-    if (inst->instflags & PKGINST_FORCE)
+    if (inst->flags & INSTS_FORCE)
         argv[n++] = "--force";
     
-    if (inst->instflags & PKGINST_NODEPS)
+    if (inst->flags & INSTS_NODEPS)
         argv[n++] = "--nodeps";
 
     if (inst->rootdir) {
@@ -154,15 +154,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     
     switch (key) {
         case OPT_UNINST_NODEPS:
-            cmdarg->sh_s->inst->instflags  |= PKGINST_NODEPS;
+            cmdarg->sh_s->inst->flags  |= INSTS_NODEPS;
             break;
             
         case OPT_UNINST_FORCE:
-            cmdarg->sh_s->inst->instflags |= PKGINST_FORCE;
+            cmdarg->sh_s->inst->flags |= INSTS_FORCE;
             break;
             
         case 't':
-            cmdarg->sh_s->inst->instflags |= PKGINST_TEST;
+            cmdarg->sh_s->inst->flags |= INSTS_RPMTEST;
             break;
 
         default:
@@ -230,7 +230,7 @@ static int uninstall(struct cmdarg *cmdarg)
     if (!uninstall_pkgs(pkgnevrs, cmdarg->sh_s->inst))
         err++;
     
-    if (err || cmdarg->sh_s->inst->instflags & PKGINST_TEST) {
+    if (err || cmdarg->sh_s->inst->flags & INSTS_RPMTEST) {
         n_array_map(shpkgs, (tn_fn_map1)shpkg_clean_uninstall_flag);
         
     } else {

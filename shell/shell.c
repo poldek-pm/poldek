@@ -358,7 +358,6 @@ int docmd(struct command *cmd, int argc, const char **argv)
     cmdarg.flags = 0;
     cmdarg.sh_s = &shell_s;
     cmdarg.sh_s->inst->flags = cmdarg.sh_s->inst_flags_orig;
-    cmdarg.sh_s->inst->instflags = 0;
     cmdarg.d = NULL;
     
     if (cmd->init_cmd_arg_d)

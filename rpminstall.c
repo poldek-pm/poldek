@@ -221,7 +221,7 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
     if (!packages_fetch(pkgs, inst->cachedir, 0))
         return 0;
     
-    if (inst->instflags & PKGINST_TEST) {
+    if (inst->flags & INSTS_RPMTEST) {
         cmd = "/bin/rpm";
         argv[n++] = "rpm";
         
@@ -235,9 +235,9 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
         argv[n++] = "rpm";
     }
     
-    if (ps->flags & PSMODE_INSTALL)
+    if (inst->flags & INSTS_INSTALL)
         argv[n++] = "--install";
-    else if (ps->flags & PSMODE_UPGRADE)
+    else if (inst->flags & INSTS_UPGRADE)
         argv[n++] = "--upgrade";
     else {
         n_assert(0);
@@ -255,16 +255,16 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
     while (nv-- > 0) 
         argv[n++] = "-v";
     
-    if (inst->instflags & PKGINST_TEST)
+    if (inst->flags & INSTS_RPMTEST)
         argv[n++] = "--test";
     
-    if (inst->instflags & PKGINST_JUSTDB)
+    if (inst->flags & INSTS_JUSTDB)
         argv[n++] = "--justdb";
         
-    if (inst->instflags & PKGINST_FORCE)
+    if (inst->flags & INSTS_FORCE)
         argv[n++] = "--force";
     
-    if (inst->instflags & PKGINST_NODEPS)
+    if (inst->flags & INSTS_NODEPS)
         argv[n++] = "--nodeps";
 	
     if (inst->rootdir) {
@@ -345,7 +345,7 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
 
     ec = rpmr_exec(cmd, argv, 1, 1);
     
-    if (ec == 0 && (inst->instflags & PKGINST_TEST) == 0 &&
+    if (ec == 0 && (inst->flags & INSTS_RPMTEST) == 0 &&
         (inst->flags & INSTS_KEEP_DOWNLOADS) == 0) {
         
         n = nopts;

@@ -195,7 +195,7 @@ Split package set into parts, each SIZE MB size. The first part will
 be FIRST_FREE_SPACE MB smaller. 
 
 Package priorities are taken from FILE given by --split-conf (see sample 
-pkgsplit.conf from program distribution). By default packages has 0 priority.
+pkgsplit.conf from program distribution). By default packages have 0 priority.
 
 Each part is written as NAME-EVR.ARCH.rpm list to PREFIX.XX 
 file, the default PREFIX is "packages.chunk"

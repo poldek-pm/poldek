@@ -110,8 +110,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case ARGP_KEY_INIT:
             cmdarg->sh_s->pkgset->flags |= PSMODE_UPGRADE;
             cmdarg->sh_s->pkgset->flags &= ~PSMODE_INSTALL;
-            
-            cmdarg->sh_s->inst->flags |= INSTS_FOLLOW;
+
+            cmdarg->sh_s->inst->flags &= ~(INSTS_UPGRADE | INSTS_INSTALL);
+            cmdarg->sh_s->inst->flags |= INSTS_FOLLOW | INSTS_UPGRADE;
             break;
             
         case 'm':
@@ -119,17 +120,17 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_INST_NODEPS:
-            cmdarg->sh_s->inst->instflags  |= PKGINST_NODEPS;
+            cmdarg->sh_s->inst->flags  |= INSTS_NODEPS;
             break;
             
         case OPT_INST_FORCE:
-            cmdarg->sh_s->inst->instflags |= PKGINST_FORCE;
+            cmdarg->sh_s->inst->flags |= INSTS_FORCE;
             break;
             
             
         case 't':
             if (cmdarg->sh_s->inst->flags & INSTS_TEST)
-                cmdarg->sh_s->inst->instflags |= PKGINST_TEST;
+                cmdarg->sh_s->inst->flags |= INSTS_RPMTEST;
             else 
                 cmdarg->sh_s->inst->flags |= INSTS_TEST;
             break;
@@ -147,6 +148,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'I':
+            cmdarg->sh_s->inst->flags |= INSTS_INSTALL;
+            cmdarg->sh_s->inst->flags &= ~INSTS_UPGRADE;
             cmdarg->sh_s->pkgset->flags |= PSMODE_INSTALL;
             cmdarg->sh_s->pkgset->flags &= ~PSMODE_UPGRADE;
             break;
@@ -174,13 +177,12 @@ static int install(struct cmdarg *cmdarg)
 {
     tn_array              *shpkgs = NULL;
     struct install_info   iinf;
-    int                   i, rc = 1, is_test;
+    int                   i, rc = 1, is_test = 0;
     struct inst_s         *inst;
 
     inst = cmdarg->sh_s->inst;
     n_assert(inst);
 
-    
     if ((inst->flags & INSTS_JUSTFETCH) && inst->fetchdir)
         if (!is_rwxdir(inst->fetchdir)) {
             logn(LOGERR, _("%s: no such directory"), inst->fetchdir);
@@ -201,7 +203,7 @@ static int install(struct cmdarg *cmdarg)
         pkg_hand_mark(shpkg->pkg);
     }
 
-    is_test = (inst->flags & INSTS_TEST) || (inst->instflags & PKGINST_TEST);
+    is_test = (inst->flags & (INSTS_TEST | INSTS_RPMTEST));
     
     if (!is_test) {
         iinf.installed_pkgs = pkgs_array_new(16);
