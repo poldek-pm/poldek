@@ -51,6 +51,7 @@ struct reqpkg *reqpkg_new(struct pkg *pkg, uint8_t flags, int nadds)
     struct reqpkg *rpkg;
     
     if (flags & REQPKG_MULTI) {
+        n_assert(nadds > 0);
         rpkg = pkg_alloc(sizeof(*rpkg) + ((nadds + 1) * sizeof(rpkg)));
         rpkg->adds[nadds] = NULL;
         
@@ -280,7 +281,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
 
 int psreq_match_pkgs(struct pkg *pkg, struct capreq *req, int strict, 
                      struct pkg *suspkgs[], int npkgs,
-                     struct pkg *matchedpkgs[], int *nmatched)
+                     struct pkg **matches, int *nmatched)
 {
     int i, n, nmatch;
     
@@ -299,7 +300,7 @@ int psreq_match_pkgs(struct pkg *pkg, struct capreq *req, int strict,
         nmatch++;
         
         if (spkg != pkg) /* do not add itself */
-            matchedpkgs[n++] = spkg;
+            matches[n++] = spkg;
 #if 0 /* too many packages requires itself  */
         else {
             log(LOGERR, "\n");
@@ -309,11 +310,11 @@ int psreq_match_pkgs(struct pkg *pkg, struct capreq *req, int strict,
     }
 
     if (n > 1) 
-        isort_pkgs(matchedpkgs, n);
-
-    msg(4, nmatch ? "\n" : "_UNMATCHED\n");
-    *nmatched = n;
+        isort_pkgs(matches, n);
     
+    msg(4, nmatch ? "\n" : "_UNMATCHED\n");
+
+    *nmatched = n;
     return nmatch;
 }
 
@@ -322,18 +323,19 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
                    struct pkg *suspkgs[], int npkgs)
 {
     int i, nmatched;
-    struct pkg *matched[npkgs];
+    struct pkg **matches;
+
+    matches = alloca(sizeof(*matches) * npkgs);
     
     if (!psreq_match_pkgs(pkg, req, strict, suspkgs, npkgs,
-                          (struct pkg **)matched, &nmatched))
+                          matches, &nmatched))
         return 0;
-
     
     if (nmatched == 0)          /* selfmatched */
         return 1;
     
     if (nmatched == 1) {
-        return add_reqpkg(pkg, req, matched[0]);
+        return add_reqpkg(pkg, req, matches[0]);
         
     } else {
         int isneq;
@@ -343,7 +345,7 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
 
         flags = 0;
         flags |= capreq_is_prereq(req) ? REQPKG_PREREQ : 0;
-        tmp_rpkg.pkg = matched[0];
+        tmp_rpkg.pkg = matches[0];
         rpkg = n_array_bsearch(pkg->reqpkgs, &tmp_rpkg);
 
         isneq = 1;
@@ -357,7 +359,7 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
                     break;
                 }
                 
-                if (rpkg->adds[i]->pkg != matched[i+1]) {
+                if (rpkg->adds[i]->pkg != matches[i+1]) {
                     isneq = 1;
                     break;
                 }
@@ -368,8 +370,8 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
         if (isneq) {
             struct pkg *dpkg;
 
-            dpkg = matched[0];
-            rpkg = reqpkg_new(dpkg, flags | REQPKG_MULTI, nmatched);
+            dpkg = matches[0];
+            rpkg = reqpkg_new(dpkg, flags | REQPKG_MULTI, nmatched - 1);
             n_array_push(pkg->reqpkgs, rpkg);
             n_array_sort(pkg->reqpkgs);
             if (dpkg->revreqpkgs == NULL)
@@ -377,9 +379,9 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
             n_array_push(dpkg->revreqpkgs, pkg);
             
             for (i=1; i<nmatched; i++) {
-                dpkg = matched[i];
+                dpkg = matches[i];
                 
-                rpkg->adds[i - 1] = reqpkg_new(dpkg, flags, -1);
+                rpkg->adds[i - 1] = reqpkg_new(dpkg, flags, 0);
                 if (dpkg->revreqpkgs == NULL)
                     dpkg->revreqpkgs = n_array_new(2, NULL, NULL);
                 n_array_push(dpkg->revreqpkgs, pkg);
