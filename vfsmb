@@ -1,0 +1,24 @@
+#! /bin/sh
+# $Id$
+
+PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+if [ "$#" != "2" ]; then
+    echo "usage: `basename $0` SMBURL-FILE DESTFILE"
+    exit 1
+fi
+
+src=$1
+service=$(dirname $src | sed 's|^smb://|//|')
+file=$(basename $src)
+
+dest=$2
+
+if [ -z "$service" -o -z "$file" ]; then
+	echo "`basename $0`: wrong URL argument"
+    exit 1
+fi
+
+#echo "smbclient $service -U guest -N -c \"get $file $dest\""
+smbclient $service -U guest -N -c "get $file $dest"
+
