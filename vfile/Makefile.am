@@ -9,7 +9,9 @@ libvfile_a_SOURCES = vfile.c fetch.c p_open.c
 pkgincludedir = $(includedir)/vfile
 pkginclude_HEADERS = vfile.h p_open.h
 
-#libvfile_a_LDADD  = -Ltrurlib -L$(top_srcdir)/trurlib -lvfile
+noinst_PROGRAMS = sample
+sample_SOURCES  = sample.c
+sample_LDADD    = libvfile.a
 
 dist-hook:
 	rm -rf $(distdir)/.deps
