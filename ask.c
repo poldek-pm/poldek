@@ -63,9 +63,21 @@ int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt)
     int i, a, default_i = 0;
     char *validchrs, *p;
 
+
+    if (deflt) {
+        i = 0;
+        while(pkgs[i] != NULL && i < 24) {
+            if (deflt && deflt == pkgs[i]) {
+                default_i = i;
+                break;
+            }
+            i++;
+        }
+    }
+
     
     if (!isatty(STDIN_FILENO))
-        return 0;
+        return default_i;
     
     msgn(-1, _("There are more than one package which provide \"%s\":"), capname);
     validchrs = alloca(64);
@@ -76,9 +88,6 @@ int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt)
     while(pkgs[i] != NULL && i < 24) {
         msgn(-1, "%c) %s", 'a' + i, pkg_snprintf_s(pkgs[i]));
         *p++ = 'a' + i;
-
-        if (deflt && deflt == pkgs[i])
-            default_i = i;
         i++;
     }
     
@@ -87,11 +96,12 @@ int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt)
     msg(-1, "_\n");
     
     if (a == '\n')
-        return 0;
+        return default_i;
     
     a -= 'a';
     //printf("Selected %d\n", a);
     if (a >= 0 && a < i)
         return a;
-    return 0;
+    
+    return default_i;
 }
