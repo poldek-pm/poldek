@@ -61,7 +61,7 @@ line, type 'help' and the rest should be self-explanatory.
 The source is specified by B<--source> option or B<source> parameter 
 in config file:
 
-B<--source,--sidx,--sdir,-s> B<SOURCE>
+B<-s, --source> B<SOURCE>
 
 where SOURCE can be a local path or URL. 
 
@@ -92,7 +92,7 @@ could be used to point packages location, e.g:
 $ poldek -s /tmp/packages.dir.gz --prefix=/cdrom/RPMS/ -s ... --prefix=...
 
 If source is configured with the name (see L</CONFIG FILE>) then it 
-could be specified by B<-S, --sn> B<SOURCE-NAME>, e.g:
+could be specified by B<-n, --sn> B<SOURCE-NAME>, e.g:
 
 $ poldek --sn pld-dist ...
 
@@ -108,7 +108,7 @@ $ poldek ...  ala-ma-kota-2.1-2.i386.rpm
 
 =item * as package name mask, or if EVR must be set, with:
 
-B<-n, --pkgnevr="NAME [[E:][V[-R]]]">
+B<--nevr="NAME [[E:][V[-R]]]">
 
 for example:
 
@@ -116,12 +116,12 @@ $ poldek ...  apache
 
 $ poldek ...  'apache*'
 
-$ poldek ... -n "apache 1.3.12" 
+$ poldek ... --nevr "apache 1.3.12" 
 
-=item * as package sets taken from pkgset files B<-p, --pkgset=FILE>,
+=item * as package set taken from file B<--pset=FILE>,
 (see README.package-sets):
 
-$ poldek ... -p ../package-sets/tiny-system
+$ poldek ... --pset ~/.package-sets/tiny-system
 
 =back
 
@@ -342,13 +342,13 @@ line represents a comment or a parameter.
 =item * B<source> = [NAME;]SOURCE
 
 Optional NAME may be specified later from cmdline by
-B<-S, --sn> B<SOURCE-NAME> option; for example if you 
+B<-n, --sn> B<SOURCE-NAME> option; for example if you 
 have 3 sources configured as follows:
 
-$ grep source ~/.poldekrc
-source    = pld-devel;/mnt/PLD-stable/RPMS
-source    = pld-stable;ftp://zn/PLD/i686/PLD/RPMS
-source    = misRPMS;ftp://zn/rpm/RPMS/
+$ ./poldek -l
+pld-devel     /mnt/PLD-stable/RPMS
+pld-stable    ftp://zn/PLD/i686/PLD/RPMS
+misRPMS       ftp://zn/rpm/RPMS/
 
 then to load only ftp://zn/PLD/i686/PLD/RPMS use:
 
@@ -357,7 +357,6 @@ $ poldek --sn pld-stable
 ..and to load all two pld-* use:
 
 $ poldek --sn pld-\*
-
 
 If you want to configure prefixed source, then it should be specified 
 by suffixed source/prefix pair to distinguish it from other sources.   
