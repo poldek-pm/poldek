@@ -21,7 +21,7 @@
 #include <trurl/narray.h>
 #include <vfile/vfile.h>
 
-#define  ENABLE_TRACE 1
+#define  ENABLE_TRACE 0
 
 #include "pkgset.h"
 #include "log.h"

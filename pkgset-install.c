@@ -438,7 +438,6 @@ static struct pkg *find_pkg(tn_array *pkgs, const char *name)
     return n_array_nth(pkgs, i);
 }
 
-
 #define PROCESS_DEPS       0 
 #define PROCESS_ORPHANS    1
 
@@ -476,17 +475,18 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                 struct pkg **suspkgs, pkgsbuf[1024], *tomark = NULL;
                 int nsuspkgs = 0;
                 char *reqname;
-                int reqnover;
                 
                 req = n_array_nth(pkg->reqs, j);
                 reqname = capreq_name(req);
-                reqnover = capreq_has_ver(req) == 0;
-            
-                if (reqnover && n_hash_exists(upg->depcache, reqname)) {
+                if (capreq_has_ver(req) != 0) {
+                    reqname = alloca(256);
+                    capreq_snprintf(reqname, 256, req);
+                }
+                
+                if (n_hash_exists(upg->depcache, reqname)) {
                     msg_i(4, nloop, " in cache %s\n", reqname);
                     continue;
                 }
-
                 
                 if (how == PROCESS_ORPHANS && !uninstpkgs_provides(upg, req)) {
                     msg(5, " skip %s from %s\n", reqname, pkg_snprintf_s(pkg));
@@ -510,8 +510,7 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                         if (nmatched == 0 || one_is_marked(matches, nmatched)){
                             msg_i(2, nloop, " %s satisfied by install set\n",
                                   capreq_snprintf_s(req));
-                            if (reqnover)
-                                n_hash_insert(upg->depcache, reqname, (void*)1);
+                            n_hash_insert(upg->depcache, reqname, req);
                             continue;
                             
                        } else if (upg->inst->flags & INSTS_FOLLOW) {
@@ -525,8 +524,7 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                                     upg->uninst_dbpkgs)) {
                     msg_i(2, nloop, " %s satisfied by db\n",
                           capreq_snprintf_s(req));
-                    if (reqnover)
-                        n_hash_insert(upg->depcache, reqname, (void*)1);
+                    n_hash_insert(upg->depcache, reqname, req);
                 
                 } else if (tomark) {
                     char *prefix = "";
@@ -559,8 +557,7 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                     upg->ninstall++;
                     ndepadds++;
                     
-                    if (reqnover)
-                        n_hash_insert(upg->depcache, reqname, (void*)1);
+                    n_hash_insert(upg->depcache, reqname, req);
                     
                 } else {
                     if (how == PROCESS_DEPS) {
@@ -578,7 +575,11 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                             
                             if ((p = find_pkg(ps->pkgs, pkg->name))) {
                                 if (!pkg_is_marked(p)) {
-                                    msg_i(1, nloop, " greedy upgrade %s\n", pkg_snprintf_s(p));
+                                    msg_i(1, nloop, " greedy upgrade %s "
+                                          "to %s-%s (unresolved %s)\n",
+                                          pkg_snprintf_s(pkg), p->ver, p->rel, 
+                                          capreq_snprintf_s(req));
+                                          
                                     pkg_dep_mark(p);
                                     n_array_push(markarr[nmarkarr], p);
                                     nmarked++;

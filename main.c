@@ -98,7 +98,6 @@ struct args {
     struct usrpkgset  *ups;
     
     char        *conf_path;
-    int         nofollow;
     int         noconf;
     int         nodesc;		/* don't put descriptions in package index */
     int         shell_skip_installed;
@@ -209,8 +208,8 @@ static struct argp_option options[] = {
  "Don't take held packages from $HOME/.poldek_hold.", 70 },
 
 {"greedy", OPT_INST_GREEDY, 0, 0,
- "Automatically upgrade packages which dependencies are broken"
- "by unistalling selected ones.", 70 },
+ "Automatically upgrade packages which dependencies are broken "
+  "by unistalled ones", 70 }, 
     
 {"dump", OPT_INST_MKSCRIPT, "FILE", OPTION_ARG_OPTIONAL,
      "Just dump install marked package filenames to FILE (default stdout)", 70 },
@@ -511,7 +510,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_INST_NOFOLLOW:
             argsp->inst.flags &= ~(INSTS_FOLLOW);
-            argsp->nofollow = 0;
             break;
             
         case OPT_INST_NODEPS:
@@ -650,8 +648,8 @@ static
 void parse_options(int argc, char **argv) 
 {
     struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0};
-    int vfile_cnflags = 0;
-    char *p;
+    int vfile_cnflags = 0, is_multi;
+    char *v;
 
 
     verbose = 0;
@@ -688,11 +686,9 @@ void parse_options(int argc, char **argv)
         htcnf = ldconf(args.conf_path);
     else if (args.noconf == 0)
         htcnf = ldconf_deafult();
-
-    if (n_array_size(args.sources) == 0 && htcnf != NULL) {
-        char *v;
-        int i, is_multi = 0;
-        
+    
+    if (n_array_size(args.sources) == 0) {
+        int i;
         
         if ((v = conf_get(htcnf, "source", &is_multi))) {
             if (is_multi == 0) {
@@ -719,6 +715,7 @@ void parse_options(int argc, char **argv)
             }
         }
     }
+    
 
     if (n_array_size(args.sources) == 0) {
         log(LOGERR, "No source specified\n");
@@ -738,73 +735,74 @@ void parse_options(int argc, char **argv)
         n_array_size(args.pkgdef_files);
     
     
-    
-    if ((p = conf_get(htcnf, "use_sudo", NULL)) != NULL &&
-        strcmp(p, "yes") == 0)
+    if ((v = conf_get(htcnf, "use_sudo", NULL)) != NULL &&
+        strcmp(v, "yes") == 0)
         args.inst.flags |= INSTS_USESUDO;
+
     
-    if (htcnf) {
-        char *v;
-        int is_multi;
+    if ((args.inst.flags & INSTS_GREEDY) == 0) { /* no --greedy specified */
+        if ((v = conf_get(htcnf, "greedy", NULL)) && strcmp(v, "yes") == 0)
+            args.inst.flags |= INSTS_GREEDY;
+    }
 
-        if ((v = conf_get(htcnf, "use_sudo", NULL)) != NULL &&
-            strcmp(v, "yes") == 0)
-            args.inst.flags |= INSTS_USESUDO;
-
-        if (args.inst.flags & INSTS_FOLLOW) { /* no --nofollow specified */
-            if ((v = conf_get(htcnf, "follow", NULL)) != NULL &&
-                strcmp(v, "no") == 0)
-                args.inst.flags &= ~(INSTS_FOLLOW);
-        }
-
-        if ((args.inst.flags & INSTS_GREEDY) == 0) { /* no --greedy specified */
-            if ((v = conf_get(htcnf, "greedy", NULL)) != NULL &&
-                strcmp(v, "yes") == 0)
-                args.inst.flags |= INSTS_FOLLOW | INSTS_GREEDY;
-        }
+    if ((args.inst.flags & INSTS_GREEDY) &&
+        (args.inst.flags & INSTS_FOLLOW) == 0) {
+        log(LOGERR, "--greedy and --nofollow are exclusive\n");
+        exit(EXIT_FAILURE);
+    }
         
-	if ((v = conf_get(htcnf, "cachedir", NULL)))
-	    args.inst.cachedir = v;
-        
-        if ((v = conf_get(htcnf, "ftp_http_get", NULL))) {
-            vfile_cnflags |= VFILE_USEXT_FTP | VFILE_USEXT_HTTP;
-            vfile_register_ext_handler(VFURL_FTP | VFURL_HTTP, v);
+    if (args.inst.flags & INSTS_FOLLOW) { /* no --nofollow specified */
+        if ((v = conf_get(htcnf, "follow", NULL)) && strcmp(v, "no") == 0) {
+            if (args.inst.flags & INSTS_GREEDY) 
+                log(LOGWARN, "ignore config's follow - greedy implies "
+                    "it to \"yes\"\n");
+            else 
+                args.inst.flags &= ~INSTS_FOLLOW;
         }
+    }  
+    
+    if ((v = conf_get(htcnf, "cachedir", NULL)))
+        args.inst.cachedir = v;
+    
+    if ((v = conf_get(htcnf, "ftp_http_get", NULL))) {
+        vfile_cnflags |= VFILE_USEXT_FTP | VFILE_USEXT_HTTP;
+        vfile_register_ext_handler(VFURL_FTP | VFURL_HTTP, v);
+    }
+    
+    if ((v = conf_get(htcnf, "ftp_get", NULL))) {
+        vfile_cnflags |= VFILE_USEXT_FTP;
+        vfile_register_ext_handler(VFURL_FTP, v);
+    }
+    
+    if ((v = conf_get(htcnf, "http_get", NULL))) {
+        vfile_cnflags |= VFILE_USEXT_HTTP;
+        vfile_register_ext_handler(VFURL_HTTP, v);
+    }
+    
+    if ((v = conf_get(htcnf, "https_get", NULL))) {
+        vfile_cnflags |= VFILE_USEXT_HTTPS;
+        vfile_register_ext_handler(VFURL_HTTPS, v);
+    }
         
-        if ((v = conf_get(htcnf, "ftp_get", NULL))) {
-            vfile_cnflags |= VFILE_USEXT_FTP;
-            vfile_register_ext_handler(VFURL_FTP, v);
-        }
-
-        if ((v = conf_get(htcnf, "http_get", NULL))) {
-            vfile_cnflags |= VFILE_USEXT_HTTP;
-            vfile_register_ext_handler(VFURL_HTTP, v);
-        }
+    if ((v = conf_get(htcnf, "rsync_get", NULL))) 
+        vfile_register_ext_handler(VFURL_RSYNC, v);
+    
+    if ((v = conf_get(htcnf, "cdrom_get", NULL)))
+        vfile_register_ext_handler(VFURL_CDROM, v);
+    
+    if ((v = conf_get(htcnf, "rpmdef", &is_multi))) {
+        tn_array *macros = NULL;
         
-        if ((v = conf_get(htcnf, "https_get", NULL))) {
-            vfile_cnflags |= VFILE_USEXT_HTTPS;
-            vfile_register_ext_handler(VFURL_HTTPS, v);
-        }
-        
-        if ((v = conf_get(htcnf, "rsync_get", NULL))) 
-            vfile_register_ext_handler(VFURL_RSYNC, v);
-
-        if ((v = conf_get(htcnf, "cdrom_get", NULL)))
-            vfile_register_ext_handler(VFURL_CDROM, v);
-
-        if ((v = conf_get(htcnf, "rpmdef", &is_multi))) {
-            tn_array *macros = NULL;
-
-            if (is_multi) {
-                macros = conf_get_multi(htcnf, "rpmdef");
-                while (n_array_size(macros))
-                    n_array_push(args.inst.rpmacros,
-                                 strdup(n_array_shift(macros)));
-            } else {
-                n_array_push(args.inst.rpmacros, v);
-            }
+        if (is_multi) {
+            macros = conf_get_multi(htcnf, "rpmdef");
+            while (n_array_size(macros))
+                n_array_push(args.inst.rpmacros,
+                             strdup(n_array_shift(macros)));
+        } else {
+            n_array_push(args.inst.rpmacros, v);
         }
     }
+
     
     vfile_verbose = &verbose;
     n_assert(args.inst.cachedir); 
