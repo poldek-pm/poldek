@@ -24,7 +24,7 @@
 #include "pkgset.h"
 #include "misc.h"
 #include "shell.h"
-
+#include "misc.h"
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int uninstall(struct cmdarg *cmdarg);
@@ -60,14 +60,16 @@ static
 int uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst) 
 {
     char **argv;
-    char *cmd;
+    char *cmd, m[1024];
     int i, n, nopts = 0;
 
     for (i=0; i<n_array_size(pkgnevrs); i++) 
         msg(1, "R %s\n", (char*)n_array_nth(pkgnevrs, i));
-    
-    msgn(1, _("Uninstalling %d package%s"), n_array_size(pkgnevrs),
-        n_array_size(pkgnevrs) > 1 ? "s" : "");
+
+
+    snprintf(m, sizeof(m), "%s %s", _("Uninstalling"), 
+             ngettext_n_packages_fmt(n_array_size(pkgnevrs)));
+    msgn(1, m, n_array_size(pkgnevrs));
     
     n = 128 + n_array_size(pkgnevrs);
     

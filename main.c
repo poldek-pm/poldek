@@ -820,7 +820,7 @@ void parse_options(int argc, char **argv)
     }
 
     if (n_array_size(args.sources) && args.source_name) {
-        logn(LOGERR, _("-s and -S are exclusive"));
+        logn(LOGERR, _("--source and --sn are exclusive"));
         exit(EXIT_FAILURE);
     }
     
