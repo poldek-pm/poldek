@@ -1038,8 +1038,8 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     char *s;
 
     if (pkg->fn) {
-        *buf = '\0';
-        return pkg->fn;
+        n_snprintf(buf, size, pkg->fn);
+        return buf;
     }
     
     n_len = pkg->ver  - pkg->name - 1;
