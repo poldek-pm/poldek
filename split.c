@@ -192,6 +192,9 @@ void set_pri(int deep, struct pkg *pkg, int pri)
 {
     int i;
 
+    if (pkg->pri == pri)
+        return;
+
     if (pkg->pri != 0) {
         if (pri > 0 && pkg->pri < 0) { /* priorities < 0 are stronger */
             msg_i(3, deep, "skip pri %d %s [%d]\n", pri, pkg_snprintf_s(pkg),
