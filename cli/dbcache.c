@@ -103,7 +103,8 @@ char *mkdbcache_path(char *path, size_t size, const char *cachedir,
         p++;
     }
 
-    snprintf(path, size, "%s/packages.dbcache.%s.gz", cachedir, tmp);
+    n_snprintf(path, size, "%s/packages.%s.%s.gz", cachedir,
+               RPMDBCACHE_PDIRTYPE, tmp);
     return path;
 }
 
@@ -221,6 +222,8 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     n_assert(strlen(path) > 10);
     DBGF("%s %s, %d %d\n", cctx->ctx->ts->cachedir, path,
          mtime_rpmdb, cctx->ts_dbpkgdir);
-    return pkgdir_save_as(pkgdir, RPMDBCACHE_PDIRTYPE, path, 0);
+    return pkgdir_save_as(pkgdir, RPMDBCACHE_PDIRTYPE, path,
+                          PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
+                          PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NOFL);
 }
 
