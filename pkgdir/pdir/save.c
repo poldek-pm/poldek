@@ -153,15 +153,27 @@ int do_pkg_deepcmp(const struct pkg *p1, const struct pkg *p2)
     return strcmp(p1->os, p2->os);
 }
 
+
 static
 int pdir_pkg_cmp(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
+
+    if ((rc = pkg_cmp_name(p1, p2)))
+        return rc;
+
+    if ((rc = p1->epoch - p2->epoch))
+        return rc;
+
+    n_assert(p1->ver && p2->ver && p1->rel && p2->rel);
+
+    if ((rc = strcmp(p1->ver, p2->ver)))
+        return rc;
     
-    rc = pkg_strcmp_name_evr(p1, p2);
-    if (rc == 0)
-        rc = do_pkg_deepcmp(p1, p2);
-    return rc;
+    if ((rc = strcmp(p1->rel, p2->rel)))
+        return rc;
+
+    return do_pkg_deepcmp(p1, p2);
 }
 
 int pdir_create(struct pkgdir *pkgdir, const char *pathname,
