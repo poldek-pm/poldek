@@ -58,7 +58,7 @@ Examples:
 
 =item $ poldek -s /dir/with/RPMS/ [OPTION...]
 
-=item $ poldek -s /dir/with/RPMS/Package.gz [OPTION...]
+=item $ poldek -s /dir/with/RPMS/Packages.gz [OPTION...]
 
 =item $ poldek -s ftp://ftp.ala.ma.kota/RPMS/Packages.gz
 
@@ -109,7 +109,8 @@ $ poldek ... -p ../package-sets/tiny-system
 
 =back
 
-All above options could be combined.
+All above options could be combined. Note that specified packages
+should be present in SOURCE. 
 
 
 =head1 BASIC MODES
@@ -121,6 +122,7 @@ One of the following basic modes must be selected:
 =item B<--mkidx[z][=FILE]>  
 
 Build package index, by default it's stored in SOURCE/Packages.[gz].
+The second file Packages-toc with packages NAME-EVR per line is created.
 I<NOTE>: SOURCE must be directory.
 
 =item B<--update>    
@@ -154,15 +156,15 @@ Install or upgrade given packages.
 
 =over
 
-=item B<--dump[=FILE]> just dump packages FQPNs to FILE or stdout instead 
+=item B<--dump[=FILE]> just dump packages file names to FILE or stdout instead 
 of install them.
 
 =item B<--fetch=DIR> like B<--dump> but packages are downloaded.
 
 =item B<--rpmdef="NAME VALUE"> like rpm's --define option.
+
 =item B<--nodeps>; B<-t, --test>; B<--justdb>; B<--force> have the 
 same meanings like RPM ones. See next section.
-
 
 
 =head1 COOPERATING WITH RPM
@@ -230,7 +232,7 @@ available should be used:
 
 =over 
 
-=item B<%p[n]> - package basename (FQPN)
+=item B<%p[n]> - package file name
 
 =item B<%P[n]> - package full path
 
@@ -242,9 +244,9 @@ available should be used:
 
 =head1
 
-Currently three protocols are available: FTP, HTTP and RSYNC.  Special
+Currently four protocols are available: FTP, HTTP, HTTPS and RSYNC.  Special
 B<ftp_http> "protocol" could be used for describe downloader for both
-HTTP and FTP; by default wget is used as FTP/HTTP downloader.
+HTTP and FTP.
 
 Examples:
 
@@ -292,10 +294,10 @@ Only fetch packages marked for upgrade:
 $ poldek -s ftp://ftp.rankiem.net.pl/PLD/RPMS/Packages 
   --upgrade-dist --fetch=/tmp/PLD-up/
 
-Dump packages FQPNs marked for upgrade:
+Dump packages filenames marked for upgrade:
 
 $ poldek -s ftp://ftp.pld.org.pl/PLD/RPMS/Packages 
- --upgrade-dist --dump=/tmp/PLD-up-`date +%Y.%m.%d-%H.%M`
+ --upgrade-dist --dump=/tmp/PLD-up-`date +%Y.%m.%d`
 
 Test only:
 

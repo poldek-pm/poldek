@@ -34,7 +34,6 @@ int mkdbdir(const char *rootdir)
 {
     char path[PATH_MAX];
 
-    printf("MKDBIR %s\n", rootdir);
     snprintf(path, sizeof(path), "%s%s", rootdir, "/var");
     if (mkdir(path, 0755) != 0 && errno != EEXIST) {
         log(LOGERR, "mkdir %s: %m\n", path);

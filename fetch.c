@@ -21,7 +21,7 @@
 
 #include "misc.h"
 #include "log.h"
-#include "fetch.h"
+#include "vfile.h"
 
 /* 
    %p[n] - package basename
@@ -59,6 +59,12 @@ struct ffetcher {
 #define MAX_FETCHERS  64
 static struct ffetcher *ffetchers[MAX_FETCHERS];
 static int nffetchers = 0;
+
+int vfile_configured_handlers(void)
+{
+    return nffetchers;
+}
+
 
 static
 struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
@@ -159,7 +165,8 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
                     if (c == 'n') {
                         arg->flags = FETCHFMT_MULTI;
                     } else if (c != '\0') {
-                        log(LOGERR, "%s: %c invalid format specified\n", fmt, c);
+                        log(LOGERR, "%s: %c invalid format specified\n",
+                            fmt, c);
                         goto l_err_end;
                     }
                     
@@ -270,17 +277,18 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
 }
 
 
-int fetch_register_handler(unsigned urltypes, char *fmt) 
+int vfile_register_ext_handler(unsigned urltypes, char *fmt) 
 {
     struct ffetcher *ftch;
+    
     if (nffetchers == MAX_FETCHERS)
-        return -1;
+        return 0;
 
     if ((ftch = ffetcher_new(urltypes, fmt))) {
         ffetchers[nffetchers++] = ftch;
         return nffetchers;
     }
-    return -1;
+    return 0;
 }
 
 
@@ -301,12 +309,12 @@ struct ffetcher *find_fetcher(int urltype, int multi)
 }
 
 
-int fetch_file(const char *destdir, const char *url, int urltype) 
+int vfile_fetch(const char *destdir, const char *url, int urltype) 
 {
     struct ffetcher *ftch;
     
     if (urltype < 0) 
-        urltype = url_type(url);
+        urltype = vfile_url_type(url);
     
     if ((ftch = find_fetcher(urltype, 0)) == NULL) {
         log(LOGERR, "URL like %s not supported\n", url);
@@ -317,13 +325,13 @@ int fetch_file(const char *destdir, const char *url, int urltype)
 }
 
 
-int fetch_files(const char *destdir, tn_array *urls, int urltype) 
+int vfile_fetcha(const char *destdir, tn_array *urls, int urltype) 
 {
     struct ffetcher *ftch;
     int rc = 1;
     
     if (urltype < 0) 
-        urltype = url_type(n_array_nth(urls, 0));
+        urltype = vfile_url_type(n_array_nth(urls, 0));
     
     if ((ftch = find_fetcher(urltype, 1))) {
         rc = ffetch_file(ftch, destdir, NULL, urls);
@@ -368,35 +376,35 @@ char *url_to_path(char *buf, size_t size, const char *url, int with_bn)
     return buf;
 }
 
-char *url_as_dirpath(char *buf, size_t size, const char *url) 
+
+char *vfile_url_as_dirpath(char *buf, size_t size, const char *url) 
 {
     return url_to_path(buf, size, url, 0);
 }
 
-char *url_as_path(char *buf, size_t size, const char *url) 
+
+char *vfile_url_as_path(char *buf, size_t size, const char *url) 
 {
     return url_to_path(buf, size, url, 1);
 }
 
 
-int url_type(const char *url)  
+int vfile_url_type(const char *url)  
 {
-
     if (*url == '/')
-        return URL_PATH;
+        return VFURL_PATH;
 
     if (strncmp(url, "ftp://", 6) == 0)
-        return URL_FTP;
+        return VFURL_FTP;
     
     if (strncmp(url, "http://", 7) == 0)
-        return URL_HTTP;
+        return VFURL_HTTP;
 
     if (strncmp(url, "https://", 7) == 0)
-        return URL_HTTPS;
+        return VFURL_HTTPS;
 
     if (strncmp(url, "rsync://", 8) == 0)
-        return URL_RSYNC;
+        return VFURL_RSYNC;
 
-    return URL_PATH;
+    return VFURL_PATH;
 }
-

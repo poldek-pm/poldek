@@ -447,6 +447,33 @@ int mark_dependencies(struct pkgset *ps, unsigned instflags)
 }
 
 
+
+static int setup_tmpdir(const char *rootdir) 
+{
+    char path[PATH_MAX];
+    
+    if (!is_rwxdir(rootdir)) {
+        log(LOGERR, "access %s: %m\n", rootdir);
+        return 0;
+    }
+
+    snprintf(path, sizeof(path), "%s/tmp", rootdir);
+
+    if (mkdir(path, 0755) != 0 && errno != EEXIST) {
+        log(LOGERR, "mkdir %s: %m\n", path);
+        return 0;
+    }
+    
+    if (!is_rwxdir(path)) {
+        log(LOGERR, "access %s: %m\n", path);
+        return 0;
+    }
+    
+    vfile_configure(path, -1);
+    return 1;
+}
+
+
 int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
 {
     int i, ninstalled, nerr;
@@ -461,12 +488,13 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
         n_assert(inst->db == NULL);
 
     n_assert(inst->db->rootdir);
-    
-    vfile_configure(inst->db->rootdir, inst->db->rootdir, -1);
+
+    if (!setup_tmpdir(inst->db->rootdir))
+        return 0;
     
     for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
-
+        
         if (pkg_is_marked(pkg)) {
             char path[PATH_MAX];
 
@@ -492,7 +520,7 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
                 nerr++;
         }
     }
-
+    
     if (nerr) 
         log(LOGERR, "There are errors during install\n");
     

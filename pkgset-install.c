@@ -28,7 +28,7 @@
 #include "misc.h"
 #include "rpmadds.h"
 #include "pkgset-req.h"
-#include "fetch.h"
+#include "vfile.h"
 
 #define INST_INSTALL  1
 #define INST_UPGRADE  2
@@ -99,7 +99,7 @@ static int fetch_pkgs(struct pkgset *ps, struct upgrade_s *upg)
         return 0;
     }
 
-    if ((urltype = url_type(ps->path)) == URL_PATH) {
+    if ((urltype = vfile_url_type(ps->path)) == VFURL_PATH) {
         log(LOGERR, "Think! Packages path is not remote path\n");
         return 0;
     }
@@ -109,7 +109,7 @@ static int fetch_pkgs(struct pkgset *ps, struct upgrade_s *upg)
         
         snprintf(path, sizeof(path), "%s/%s", ps->path,
                  pkg_filename_s(n_array_nth(upg->install_pkgs, 0)));
-        return fetch_file(upg->inst->fetchdir, path, urltype);
+        return vfile_fetch(upg->inst->fetchdir, path, urltype);
     } 
 
     urls = n_array_new(n_array_size(upg->install_pkgs), NULL, NULL);
@@ -130,7 +130,7 @@ static int fetch_pkgs(struct pkgset *ps, struct upgrade_s *upg)
         }
     }
     
-    return fetch_files(upg->inst->fetchdir, urls, urltype);
+    return vfile_fetcha(upg->inst->fetchdir, urls, urltype);
 }
 
 

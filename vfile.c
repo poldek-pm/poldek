@@ -29,16 +29,14 @@
 
 #include "log.h"
 #include "vfile.h"
-#include "fetch.h"
 
 struct vfile_conf_s {
-    char *tmpdir;
     char *cachedir;
     unsigned flags;
 };
 
 static struct vfile_conf_s vfile_conf = {
-    "/var/tmp", "/var/tmp/poldek", VFILE_USEXT_FTP | VFILE_USEXT_HTTP
+    "/var/tmp", VFILE_USEXT_FTP | VFILE_USEXT_HTTP
 };
 
 cookie_io_functions_t gzio_cookie = {
@@ -49,17 +47,10 @@ cookie_io_functions_t gzio_cookie = {
 };
 
 
-void vfile_configure(const char *tmpdir, const char *cachedir, int flags) 
+void vfile_configure(const char *cachedir, int flags) 
 {
     int len = 0;
     
-    if (tmpdir) {
-        vfile_conf.tmpdir = strdup(tmpdir);
-        len = strlen(vfile_conf.tmpdir);
-        if (vfile_conf.tmpdir[len - 1] == '/')
-            vfile_conf.tmpdir[len - 1] = '\0';
-    }
-
     if (cachedir) {
         vfile_conf.cachedir = strdup(cachedir);
         len = strlen(vfile_conf.cachedir);
@@ -71,7 +62,7 @@ void vfile_configure(const char *tmpdir, const char *cachedir, int flags)
         vfile_conf.flags = flags;
 }
 
-
+#ifdef VFILE_RPMIO_SUPPORT
 static void *fetch_cb(const unsigned long amount, const unsigned long total) 
 {
     static unsigned long prev_v = 0, vv = 0, tvv = 0;
@@ -115,13 +106,12 @@ static void *fetch_cb_wrapper(const Header h __attribute__((unused)),
     return fetch_cb(amount, total);
 }
 
-
 static
 int fetch_file_internal(const char *destdir, const char *path) 
 {
     char tmpath[PATH_MAX];
-    int rpmrc;
-
+    int rpmrc = -1;
+    
     snprintf(tmpath, sizeof(tmpath), "%s/%s", destdir, n_basenam(path));
     msg(1, "Retrieving %s as %s\n", path, tmpath);
     
@@ -136,19 +126,20 @@ int fetch_file_internal(const char *destdir, const char *path)
 
 
 static
-int fetch_remote_file(const char *destdir, const char *path, int urltype) 
+int fetch_file(const char *destdir, const char *path, int urltype) 
 {
     int rc, internal = 1;
-
+    
+    
     mkdir(destdir, 0755);
 
     switch (urltype) {
-        case URL_FTP:
+        case VFURL_FTP:
             if (vfile_conf.flags & VFILE_USEXT_FTP)
                 internal = 0;
             break;
             
-        case URL_HTTP:
+        case VFURL_HTTP:
             if (vfile_conf.flags & VFILE_USEXT_HTTP)
                 internal = 0;
             break;
@@ -157,20 +148,31 @@ int fetch_remote_file(const char *destdir, const char *path, int urltype)
             internal = 0;
     }
 
-    if (destdir == NULL)
-        destdir = vfile_conf.tmpdir;
-    
+    n_assert(destdir);
     if (internal) {
         rc = fetch_file_internal(destdir, path);
         
-    } else if ((rc = fetch_file(destdir, path, urltype)) == 0 &&
-               (urltype & (URL_HTTP | URL_FTP))) {
+    } else if ((rc = vfile_fetch(destdir, path, urltype)) == 0 &&
+               (urltype & (VFURL_HTTP | VFURL_FTP))) {
         log(LOGWARN, "Transfer failed, trying internal client...\n");
         rc = fetch_file_internal(destdir, path);
     }
     
     return rc;
 }
+
+#else /* VFILE_RPMIO_SUPPORT */
+
+static
+int fetch_file(const char *destdir, const char *path, int urltype) 
+{
+    int rc;
+    
+    mkdir(destdir, 0755);
+    return vfile_fetch(destdir, path, urltype);
+}
+
+#endif /* VFILE_RPMIO_SUPPORT */
 
 
 /* RET: bool */
@@ -255,7 +257,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
         }
         break;
 
-
+#ifdef VFILE_RPMIO_SUPPORT
         case VFT_RPMIO:
             if (vfmode & VFM_RW) {
                 log(LOGERR, "%s: cannot open rw rpm\n", path);
@@ -274,13 +276,16 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
                 rc = 1;
             
             break;
+#endif            
             
         default:
+            log(LOGERR, "vfile_open %s: type %d not supported\n",
+                path, vf->vf_type);
             n_assert(0);
-        }
-        
-            
-        return rc;
+            rc = 0;
+    }
+    
+    return rc;
 }
 
 
@@ -294,10 +299,10 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
     vf.vf_type = vftype;
     vf.vf_mode = vfmode;
 
-    urltype = url_type(path);
+    urltype = vfile_url_type(path);
     opened = 0;
 
-    if (urltype == URL_PATH) {
+    if (urltype == VFURL_PATH) {
         if (openvf(&vf, path, vfmode))
             opened = 1;
         
@@ -314,16 +319,16 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
         len = snprintf(buf, sizeof(buf), "%s/", vfile_conf.cachedir);
 
         if (vfmode & VFM_CACHE) {
-            url_as_path(&buf[len], sizeof(buf) - len, path);
+            vfile_url_as_path(&buf[len], sizeof(buf) - len, path);
             if (access(buf, R_OK) == 0 && openvf(&vf, buf, vfmode)) 
                 opened = 1;
         }
         
         if (opened == 0) {
-            url_as_dirpath(&buf[len], sizeof(buf) - len, path);
+            vfile_url_as_dirpath(&buf[len], sizeof(buf) - len, path);
             tmpdir = buf;
             
-            if (fetch_remote_file(tmpdir, path, urltype)) {
+            if (fetch_file(tmpdir, path, urltype)) {
                 char tmpath[PATH_MAX];
                 snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
                          n_basenam(path));
@@ -337,9 +342,6 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
             }
         }
     }
-    
-    
-
 
     if (opened) {
         rvf = malloc(sizeof(*rvf));
@@ -368,14 +370,17 @@ void vfile_close(struct vfile *vf)
             vf->vf_gzstream = NULL;
             break;
             
+#ifdef VFILE_RPMIO_SUPPORT            
         case VFT_RPMIO:
             if (vf->vf_fdt) {
                 Fclose(vf->vf_fdt);
                 vf->vf_fdt = NULL;
             }
             break;
-            
+#endif
         default:
+            log(LOGERR, "vfile_close: type %d not supported\n",
+                vf->vf_type);
             n_assert(0);
     }
     

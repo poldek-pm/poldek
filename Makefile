@@ -11,11 +11,11 @@ endif
 # RPMLIB_VERDEP_CAP - support for RPM hack -- handle internally special 
 # "rpmlib(VersionedDependencies)" capability.
 
-DEFINES  = -DRPMLIB_VERDEP_CAP
+DEFINES  = -DVFILE_RPMIO_SUPPORT -DRPMLIB_VERDEP_CAP
 INCLUDES = -Itrurlib
 CPPFLAGS = $(INCLUDES) $(DEFINES)
 override CFLAGS += -g -Wall -W $(CPPFLAGS)
-LIBS     = -ltrurl -lrpm -lpopt -lz -lbz2 -ldb3
+LIBS     = -Wl,-Bstatic -ltrurl -Wl,-Bdynamic -lrpm -lpopt -lz -lbz2 -ldb3
 LDFLAGS  = -Ltrurlib
 
 CC 	 = gcc
@@ -123,7 +123,7 @@ clean:
 	-rm -f $(TARGETS) $(TEST_PROGS) $(STATIC_LIB) TAGS gmon.out
 
 distclean: clean
-	-rm -f .depend *.log Packages* dupa*
+	-rm -f .depend *.log Packages*
 
 backup:
 	@cd $(PROJ_DIR); \
@@ -152,18 +152,27 @@ arch : distclean  backup
 misarch: distclean 
 	$(MAKE) -C . backup cparch=1 backupdir=/z/
 
+#
+# Make dist archives of $(PROJ_DIR). Archives are stored in TMPDIR (see below)
+# as $(PROJ_DIR)-`cat VERSION`.tar.[gz, bz2]
+# 
 dist:   distclean
-	@cd $(PROJ_DIR) ;\
-	rev=`cat VERSION` ;\
-	curdir=`basename  $(PROJ_DIR)` ;\
-	DISTDIR=/tmp/$$curdir-$$rev/ ;\
-	rm -rf $$DISTDIR ;\
-	mkdir $$DISTDIR || true ;\
-	cp -a * $$DISTDIR ;\
-	cd /tmp ;\
-	arch_name=`basename $$DISTDIR` ;\
-	tar cvpf `basename $$DISTDIR`.tar `basename $$DISTDIR` ;\
-	gzip -nf `basename $$DISTDIR`.tar
+	@cd $(PROJ_DIR)                       ;\
+	TMPDIR=/tmp                           ;\
+	REV=`cat VERSION`                     ;\
+	CURDIR=`basename  $(PROJ_DIR)`        ;\
+	DISTDIR=$$TMPDIR/$$CURDIR-$$REV/      ;\
+	rm -rf $$DISTDIR                      ;\
+	mkdir $$DISTDIR                       ;\
+	cp -a * $$DISTDIR                     ;\
+	for f in `cat .cvsignore`; do          \
+             rm -rf $$DISTDIR/$$f             ;\
+        done                                  ;\
+	rm -rf $$DISTDIR/CVS                  ;\
+	cd $$TMPDIR                           ;\
+	arch_name=`basename $$DISTDIR`        ;\
+	tar cvpf $$arch_name.tar $$arch_name  ;\
+	gzip -9f $$arch_name.tar && rm -rf $$DISTDIR
 
 rpm:    dist
 	@rpm -ta /tmp/poldek-$(VERSION).tar.gz 

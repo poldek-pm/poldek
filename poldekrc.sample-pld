@@ -4,6 +4,9 @@
 
 source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/Packages
 
+# large tocfile can be used also (not recommended)
+#source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/tocfile 
+
 # NOTE: directory *must* exists 
 cachedir = /var/tmp/poldek
 

@@ -28,7 +28,6 @@
 #include "rpm.h"
 #include "install.h"
 #include "conf.h"
-#include "fetch.h"
 #include "vfile.h"
 
 
@@ -280,7 +279,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             n_array_push(argsp->pkgdef_defs, arg);
             break;
 
-            
         case 'p':
             n_array_push(argsp->pkgdef_sets, arg);
             break;
@@ -314,7 +312,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_SOURCECACHE:
-            argsp->cachedir = arg;
+            argsp->cachedir = trimslash(arg);
             break;
             
         case 'V':
@@ -354,14 +352,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_INSTDIST:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_INSTALLDIST;
-            argsp->install_root = arg ? arg : "/";
+            argsp->install_root = trimslash(arg);
             argsp->psflags |= PSMODE_INSTALL;
             break;
             
         case OPT_INST_UPGRDIST:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UPGRADEDIST;
-            argsp->install_root = arg ? arg : "/";
+            argsp->install_root = arg ? trimslash(arg) : "/";
             argsp->psflags |= PSMODE_UPGRADE;
             break;
 
@@ -378,7 +376,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'r':
-            argsp->install_root = arg;
+            argsp->install_root = trimslash(arg);
             break;
             
         case OPT_INST_RPMDEF:
@@ -471,9 +469,21 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     
     return 0;
 }
+
+
+static void n_assert_hook(const char *expr, const char *file, int line) 
+{
+    printf("Something wrong, something not quite right.\n"
+           "Assertion '%s' failed, %s:%d\n"
+           "Please report this bug to %s.\n\n",
+           expr, file, line, argp_program_bug_address);
+    abort();
+}
+
      
 void poldek_init(void) 
 {
+    n_assert_sethook(n_assert_hook);
     pkgflmodule_init();
     pkgsetmodule_init();
     
@@ -542,19 +552,20 @@ void parse_options(int argc, char **argv)
             args.cachedir = cnf->cachedir;
 
         if (cnf->ftp_http_get) 
-            fetch_register_handler(URL_FTP | URL_HTTP, cnf->ftp_http_get);
+            vfile_register_ext_handler(VFURL_FTP | VFURL_HTTP,
+                                       cnf->ftp_http_get);
 
         if (cnf->ftp_get) 
-            fetch_register_handler(URL_FTP, cnf->ftp_get);
+            vfile_register_ext_handler(VFURL_FTP, cnf->ftp_get);
 
         if (cnf->http_get) 
-            fetch_register_handler(URL_HTTP, cnf->http_get);
+            vfile_register_ext_handler(VFURL_HTTP, cnf->http_get);
 
         if (cnf->https_get) 
-            fetch_register_handler(URL_HTTPS, cnf->https_get);
+            vfile_register_ext_handler(VFURL_HTTPS, cnf->https_get);
 
         if (cnf->rsync_get) 
-            fetch_register_handler(URL_RSYNC, cnf->rsync_get);
+            vfile_register_ext_handler(VFURL_RSYNC, cnf->rsync_get);
 
         if (cnf->rpmacros) {
             if (args.rpmacros == NULL) {
@@ -572,7 +583,7 @@ void parse_options(int argc, char **argv)
         }
     }
     
-    vfile_configure("/tmp", args.cachedir ? args.cachedir : "/tmp",
+    vfile_configure(args.cachedir ? args.cachedir : "/tmp",
                     VFILE_USEXT_FTP | VFILE_USEXT_HTTP);
 }
 
@@ -749,14 +760,15 @@ int check_args(void)
             
         case MODE_MKIDX:
             break;
+
             
         case MODE_INSTALLDIST:
-            rc = prepare_given_packages();
-            break;
-
         case MODE_INSTALL:
         case MODE_UPGRADE:
-            rc = prepare_given_packages();
+            if (prepare_given_packages() == 0) {
+                log(LOGERR, "no packages to install\n");
+                rc = 0;
+            }
             break;
             
         case MODE_UPGRADEDIST:
@@ -798,7 +810,6 @@ int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     return rc;
 }
     
-
 
 int main(int argc, char **argv)
 {
@@ -895,6 +906,6 @@ int main(int argc, char **argv)
     mem_info(1, "MEM at the end");
     poldek_destroy();
     mem_info(1, "MEM at the *real* end");
-    
-    return rc == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+
+    return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -46,7 +46,6 @@ void log(int pri, const char *fmt, ...)
 
 /*
  */
-    
 void vlog(int pri, int indent_size, const char *fmt, va_list args)
 {
     if (l_stream == NULL) {
@@ -99,6 +98,7 @@ void log_msg(const char *fmt, ...)
     va_end(args);
 }
 
+
 void log_msg_i(int indent_size, const char *fmt, ...) 
 {
     va_list args;
@@ -149,6 +149,7 @@ int log_sopenlog(FILE *stream, unsigned mask, char *prefix)
     return l_stream != NULL;
 }
 
+
 /*
   
  */
@@ -160,10 +161,12 @@ void log_closelog(void)
     l_stream = NULL;
 }
 
+
 FILE *log_stream(void) 
 {
     return l_stream ? l_stream : stderr;
 }
+
 
 void log_set_vprintf(int (*vprintffn)(const char *format, va_list args))
 {

@@ -870,26 +870,21 @@ void put_tocfheader(FILE *stream, const struct pkgset *ps)
 
 static char *mktoc_pathname(char *dest, size_t size, const char *pathname) 
 {
-    char *ext, *p = NULL;
+    char *ext, *bn = NULL;
     char *suffix = "-toc";
 
     
     if (strlen(pathname) + strlen(suffix) + 1 > size)
         return NULL;
 
-    if ((p = strrchr(pathname, '/')))
-        p++;
-    else 
-        p = (char*)pathname;
-    
-    if ((ext = strrchr(p, '.')) == NULL) {
+    bn = n_basenam(pathname);
+    if ((ext = strrchr(bn, '.')) == NULL) {
         snprintf(dest, size, "%s%s", pathname, suffix);
         
     } else {
-        int len = ext - pathname;
+        int len = ext - pathname + 1;
         n_assert(len + strlen(suffix) + strlen(ext) + 1 < size);
         n_strncpy(dest, pathname, len);
-        dest[len] = '\0';
         strcat(dest, suffix);
         strcat(dest, ext);
         dest[size - 1] = '\0';
