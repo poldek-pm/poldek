@@ -16,9 +16,8 @@ runcmd () {
 
 runcmd aclocal
 runcmd autoheader
-runcmd automake --add-missing 
-runcmd automake --add-missing Makefile
 runcmd autoconf
+runcmd automake --add-missing --copy
 
 CONFOPTS="--enable-maintainer-mode --enable-compile-warnings $@"
 runcmd ./configure $CONFOPTS
