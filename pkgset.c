@@ -321,22 +321,22 @@ int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt)
     if (pkg->caps)
         for (j=0; j < n_array_size(pkg->caps); j++) {
             struct capreq *cap = n_array_nth(pkg->caps, j);
-            capreq_idx_add(&ps->cap_idx, capreq_name(cap), pkg, 1);
+            capreq_idx_add(&ps->cap_idx, capreq_name(cap), pkg);
         }
     
     if (pkg->reqs)
         for (j=0; j < n_array_size(pkg->reqs); j++) {
             struct capreq *req = n_array_nth(pkg->reqs, j);
-            capreq_idx_add(&ps->req_idx, capreq_name(req), pkg, 0);
+            capreq_idx_add(&ps->req_idx, capreq_name(req), pkg);
         }
     
     if (pkg->cnfls)
         for (j=0; j < n_array_size(pkg->cnfls); j++) {
             struct capreq *cnfl = n_array_nth(pkg->cnfls, j);
             if (capreq_is_obsl(cnfl))
-                capreq_idx_add(&ps->obs_idx, capreq_name(cnfl), pkg, 0);
+                capreq_idx_add(&ps->obs_idx, capreq_name(cnfl), pkg);
             else
-                capreq_idx_add(&ps->cnfl_idx, capreq_name(cnfl), pkg, 0);
+                capreq_idx_add(&ps->cnfl_idx, capreq_name(cnfl), pkg);
         }
     
     pkgfl2fidx(pkg, &ps->file_idx, rt);

@@ -35,7 +35,7 @@ int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem);
 void capreq_idx_destroy(struct capreq_idx *idx);
 
 int capreq_idx_add(struct capreq_idx *idx, const char *capname,
-                   struct pkg *pkg, int isprov);
+                   struct pkg *pkg);
 
 void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
                        struct pkg *pkg);

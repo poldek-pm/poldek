@@ -66,7 +66,7 @@ static int capreq_idx_ent_transform_to_array(struct capreq_idx_ent *ent)
 
 
 int capreq_idx_add(struct capreq_idx *idx, const char *capname,
-                   struct pkg *pkg, int isprov)
+                   struct pkg *pkg)
 {
     struct capreq_idx_ent *ent;
             
