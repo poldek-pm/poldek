@@ -494,6 +494,13 @@ struct source *source_new_pathspec(const char *type, const char *pathspec,
     return src;
 }
 
+struct source *source_new_v0_18(const char *pathspec, const char *pkg_prefix)
+{
+    struct source *src = source_new_pathspec(NULL, pathspec, pkg_prefix);
+    if ((src->flags & PKGSOURCE_TYPE) == 0)
+        source_set_type(src, "pdir"); /* default in v0.18.x */
+    return src;
+}
 
 int source_cmp(const struct source *s1, const struct source *s2)
 {

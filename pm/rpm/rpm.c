@@ -270,9 +270,9 @@ void rpmlog(int prii, const char *fmt, ...)
 
     va_start(args, fmt);
 
-#if 0    
+#if 0
     printf("%d, v = %d, verbose = %d, pm_rpm_verbose = %d\n", pri,
-           verbose_level, verbose, pm_rpm_verbose);
+           verbose_level, poldek_VERBOSE, pm_rpm_verbose);
     vprintf(fmt, args);
 #endif
     

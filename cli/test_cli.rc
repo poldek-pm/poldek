@@ -14,3 +14,17 @@ mercy	      = yes
 particle install = yes
 
 #exclude path = usr/share/doc usr/share/doc
+
+[source]
+name          = tt2
+type          = pndir
+original type = pdir
+path          = ${HOME}/rpm/RPMS
+
+
+[source]
+name          = tt2-tiny
+type          = pndir
+original type = dir
+path          = ${HOME}/rpm/RPMS/packages-tiny.dir.gz
+exclude path  = usr/share/doc:usr/share/man:usr/src

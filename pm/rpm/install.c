@@ -281,7 +281,6 @@ int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
 # endif
 #endif
         int numConflicts = 0;
-
 #ifdef HAVE_RPM_4_1
 	    if (rpmtsCheck(ts) != 0) {
             logn(LOGERR, "%s: rpmtsCheck() failed", path);
@@ -296,12 +295,10 @@ int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
         }            
 #endif
                 
-        if (conflicts) {
+        if (numConflicts) {
             FILE *fstream;
-                
-            logn(LOGERR, _("%s: failed dependencies:"), path);
-                
-
+            
+            logn(LOGERR, _("%s: failed dependencies:"), n_basenam(path));
             printdepProblems(poldek_log_stream(), conflicts, numConflicts);
             if ((fstream = poldek_log_file_stream()))
                 printdepProblems(fstream, conflicts, numConflicts);

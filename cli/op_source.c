@@ -147,6 +147,8 @@ struct poclidek_opgroup poclidek_opgroup_source = {
     &poclidek_source_argp_child,
     oprun,
 };
+
+
 #if 0
 /* PM[:SOURCE|PATH] */
 static int parse_destspec(char *spec, struct arg_s *arg_s)
@@ -201,6 +203,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         arg_s->curr_src_type = arg_s->curr_src_path = NULL;
         arg_s->ctx = rt->ctx;
         rt->_opdata = arg_s;
+        rt->_opdata_free = free;
         rt->run = oprun;
     }
 

@@ -28,7 +28,7 @@ struct poclidek_cmd command_help = {
     COMMAND_NOOPTS | COMMAND_NOHELP | COMMAND_NOARGS, 
     "help", NULL, N_("Display this help"), 
     NULL, NULL, NULL, cmd_help,
-    NULL, NULL, NULL, NULL, 0
+    NULL, NULL, NULL, NULL, 0, 0
 };
 
 static

@@ -116,6 +116,7 @@ struct poldek_ts {
     uint32_t           _iflags;    /* internal flags */
     uint32_t           _opvect[4];
     uint32_t           _opvect_setmark[4];
+    uint32_t           _opvect_preserve[4];
     int   (*getop)(const struct poldek_ts *, int op);
     int   (*getop_v)(const struct poldek_ts *, int op, ...);
     void  (*setop)(struct poldek_ts *, int op, int onoff);
@@ -139,9 +140,6 @@ int poldek_ts_issetf_all(struct poldek_ts *ts, uint32_t flag);
 
 int poldek_ts_op_touched(const struct poldek_ts *ts, int optv);
 int poldek_ts_is_interactive_on(const struct poldek_ts *ts);
-#define poldek_ts_keep_downloads(ts) \
-    (ts->getop_v(ts, POLDEK_OP_RPMTEST, POLDEK_OP_KEEP_DOWNLOADS, 0) == 0)
-
 
 #include <stdarg.h>
 int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap);

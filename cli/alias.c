@@ -33,7 +33,7 @@ struct poclidek_cmd command_alias = {
     COMMAND_NOARGS | COMMAND_NOOPTS, 
     "alias", NULL, N_("Print defined command aliases"), 
     NULL, NULL, NULL, alias,
-    NULL, NULL, NULL, NULL, 0
+    NULL, NULL, NULL, NULL, 0, 0
 };
 
 static int alias(struct cmdctx *cmdctx) 
@@ -48,6 +48,14 @@ static int alias(struct cmdctx *cmdctx)
     return 1;
 }
 
+static void free_alias(struct poclidek_cmd *cmd)
+{
+    if (cmd->flags & COMMAND_IS_ALIAS) {
+        n_cfree(&cmd->cmdline);
+        n_cfree(&cmd->name);
+        memset(cmd, 0, sizeof(*cmd));
+    }
+}
 
 
 static
@@ -57,9 +65,10 @@ struct poclidek_cmd *command_new_alias(const char *name, const char *cmdline)
 
     alias = n_malloc(sizeof(*alias));
     memset(alias, 0, sizeof(*alias));
-    alias->flags = COMMAND_IS_ALIAS;
+    alias->flags = COMMAND_IS_ALIAS | COMMAND__MALLOCED;
     alias->name = n_strdup(name);
     alias->cmdline = n_strdup(cmdline);
+    alias->_free = free_alias;
     return alias;
 }
 

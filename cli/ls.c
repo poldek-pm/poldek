@@ -68,7 +68,7 @@ struct poclidek_cmd command_ls = {
     COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES, 
     "ls", N_("[PACKAGE...]"), N_("List packages"), 
     options, parse_opt, NULL, ls,
-    NULL, NULL, NULL, NULL, 0
+    NULL, NULL, NULL, NULL, 0, 0
 };
 
 

@@ -48,7 +48,7 @@ struct poclidek_cmd command_quit = {
     COMMAND_NOARGS | COMMAND_NOOPTS, 
     "quit", NULL, N_("Exit poldek"), 
     NULL, NULL, NULL, cmd_quit,
-    NULL, NULL, NULL, NULL, 0
+    NULL, NULL, NULL, NULL, 0, 0
 };
 
 static volatile sig_atomic_t shDone   = 0;

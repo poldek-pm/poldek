@@ -528,7 +528,8 @@ void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,
     npkgs =  n_array_size(pkgs);
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
-        DBGF("%s %d %d\n", pkg_snprintf_s(pkg), flags, pkgmark_isset(pms, pkg, flags));
+        DBGF("%s %d %d\n", pkg_snprintf_s(pkg), flags,
+             pkgmark_isset(pms, pkg, flags));
         if (flags && !pkgmark_isset(pms, pkg, flags))
             npkgs--;
     }
@@ -664,21 +665,26 @@ const char *abs_path(char *buf, int size, const char *path)
 int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
                   int ndigits, int longunit) 
 {
-    char *unit = "B", fmt[32];
+    char unit[3], fmt[32];
     double nb;
     
 
     nb = nbytes;
+    unit[0] = 'B';
+    unit[1] = '\0';
     
     if (nb > 1024) {
-        nb /= 1024;
-        unit = "KB";
+        nb /= 1024.0;
+        
+        unit[0] = 'K';
+        unit[1] = 'B';
+        
+        if (nb > 1024) {
+            nb /= 1024;
+            unit[0] = 'M';
+        }
     }
     
-    if (nb > 1024) {
-        nb /= 1024;
-        unit = "MB";
-    }
     n_snprintf(fmt, sizeof(fmt), "%%.%df%%s", ndigits);
     if (!longunit)
         unit[1] = '\0';

@@ -111,7 +111,7 @@ struct poclidek_cmd command_search = {
        "     <delimiter>perl-regexp<delimiter>[imsx]\n"
        "  For example to find the packages containing foo.bar do:\n"
        "     search --perlre /foo\\.bar/\n"
-       "  See perlre(1) for more details.\n"), NULL, 0
+       "  See perlre(1) for more details.\n"), NULL, 0, 0
 };
 
 static
@@ -428,16 +428,24 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
 {
     int i, match = 0;
     struct capreq *cr;
-    char *p;
+    const char *p;
 
-    
-    if ((flags & OPT_SEARCH_CAP) && pkg->caps)
-        for (i=0; i<n_array_size(pkg->caps); i++) {
-            cr = n_array_nth(pkg->caps, i);
-            p = capreq_name(cr);
-            if ((match = pattern_match(pt, p, strlen(p))))
-                goto l_end;
-        }
+    if (flags & OPT_SEARCH_CAP) {
+        if ((match = pattern_match(pt, pkg->name, strlen(pkg->name))))
+            goto l_end;
+
+        if ((match = pattern_match(pt, pkg->nvr, strlen(pkg->nvr))))
+            goto l_end;
+        
+        if (pkg->caps)
+            for (i=0; i<n_array_size(pkg->caps); i++) {
+                cr = n_array_nth(pkg->caps, i);
+                p = capreq_name(cr);
+                if ((match = pattern_match(pt, p, strlen(p))))
+                    goto l_end;
+            }
+    }
+        
     
     if ((flags & OPT_SEARCH_REQ) && pkg->reqs)
         for (i=0; i<n_array_size(pkg->reqs); i++) {

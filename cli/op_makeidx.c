@@ -93,11 +93,25 @@ struct argp_child poclidek_argp_child = {
 static int oprun(struct poclidek_opgroup_rt *);
 
 struct poclidek_opgroup poclidek_opgroup_makeidx = {
-    N_(""), 
+    "", 
     &poclidek_argp, 
     &poclidek_argp_child,
     oprun,
 };
+
+static void arg_s_free(void *a) 
+{
+    struct arg_s *arg_s = a;
+    
+    if (arg_s->src_mkidx) {
+        source_free(arg_s->src_mkidx);
+        arg_s->src_mkidx = NULL;
+    }
+
+    n_cfree(&arg_s->idx_type);
+    n_cfree(&arg_s->idx_compress);
+    free(arg_s);
+}
 
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -111,12 +125,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         arg_s = rt->_opdata;
         
     } else {
-        arg_s = n_malloc(sizeof(*arg_s));
+        arg_s = n_calloc(1, sizeof(*arg_s));
         arg_s->crflags = arg_s->cnflags = 0;
-        arg_s->idx_type = NULL;
+        arg_s->idx_type = arg_s->idx_compress = NULL;
         arg_s->src_mkidx = NULL;
         arg_s->ctx = rt->ctx;
         rt->_opdata = arg_s;
+        rt->_opdata_free = arg_s_free;
         rt->run = oprun;
     }
 

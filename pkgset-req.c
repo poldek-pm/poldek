@@ -22,6 +22,7 @@
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"
+#include "pkgmisc.h"
 #include "capreq.h"
 #include "pkgset-req.h"
 
@@ -82,14 +83,14 @@ struct pkg_unreq *pkg_unreq_new(struct capreq *req, int mismatch)
 }
 
 static
-void visit_badreqs(struct pkg *pkg, int deep) 
+void visit_badreqs(struct pkgmark_set *pms, struct pkg *pkg, int deep)
 {
     int i;
     
-    if (pkg_has_badreqs(pkg)) 
+    if (pkg_has_unmetdeps(pms, pkg)) 
         return;
 
-    pkg_set_badreqs(pkg);
+    pkg_set_unmetdeps(pms, pkg);
     msg_i(4, deep, " %s\n", pkg_snprintf_s(pkg));
     deep += 2;
     
@@ -97,28 +98,35 @@ void visit_badreqs(struct pkg *pkg, int deep)
         for (i=0; i<n_array_size(pkg->revreqpkgs); i++) {
             struct pkg *revpkg;
             revpkg = n_array_nth(pkg->revreqpkgs, i);
-            if (!pkg_has_badreqs(revpkg)) 
-                visit_badreqs(revpkg, deep);
+            if (!pkg_has_unmetdeps(pms, revpkg))
+                visit_badreqs(pms, revpkg, deep);
         }
     }
 }
 
 static 
-void mark_badreqs(struct pkgset *ps) 
+int mark_badreqs(struct pkgmark_set *pms) 
 {
-    int i, deep = 1;
-
-    msg(4, "Packages with unsatisfied dependencies:\n");
+    int i, deep = 1, nerrors = 0;
+    tn_array *pkgs;
     
-    for (i=0; i<n_array_size(ps->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->pkgs, i);
-        if (pkg_has_badreqs(pkg)) {
-            ps->nerrors++;
-            pkg_clr_badreqs(pkg);
-            visit_badreqs(pkg, deep);
+    pkgs = pkgmark_get_packages(pms, PKGMARK_UNMETDEPS);
+    if (pkgs) {
+        n_assert(n_array_size(pkgs));
+        msg(4, "Packages with unsatisfied dependencies:\n");
+    
+        for (i=0; i < n_array_size(pkgs); i++) {
+            struct pkg *pkg = n_array_nth(pkgs, i);
+            nerrors++;
+            pkg_clr_unmetdeps(pms, pkg);
+            visit_badreqs(pms, pkg, deep);
         }
+        n_array_free(pkgs);
     }
+    
+    return nerrors;
 }
+
 
 static
 int pkgset_add_unreq(struct pkgset *ps, struct pkg *pkg, struct capreq *req,
@@ -139,9 +147,11 @@ int pkgset_add_unreq(struct pkgset *ps, struct pkg *pkg, struct capreq *req,
 int pkgset_verify_deps(struct pkgset *ps, int strict)
 {
     int i, j, nerrors = 0;
-
+    struct pkgmark_set *pms;
+    
     n_assert(ps->_vrfy_unreqs == NULL);
     ps->_vrfy_unreqs = n_hash_new(127, (tn_fn_free)n_array_free);
+    pms = pkgmark_set_new();
 
     msgn(4, _("\nVerifying dependencies..."));
     
@@ -181,25 +191,26 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
                 msg(4, " req %-35s --> NOT FOUND\n", capreq_snprintf_s(req));
 
             pkgset_add_unreq(ps, pkg, req, 0);
-            pkg_set_badreqs(pkg);
+            pkg_set_unmetdeps(pms, pkg);
             continue;
             
         l_err_match:
             nerrors++;
             pkgset_add_unreq(ps, pkg, req, 1);
-            pkg_set_badreqs(pkg);
+            pkg_set_unmetdeps(pms, pkg);
         }
     }
 
     if (nerrors)
-        mark_badreqs(ps);
+        mark_badreqs(pms);
     else 
         msgn(4, _("No unsatisfied dependencies detected -- OK"));
 
     if (nerrors) 
         msgn(4, _("%d unsatisfied dependencies, %d packages cannot be installed"),
             nerrors, ps->nerrors);
-
+    
+    pkgmark_set_free(pms);
     return nerrors == 0;
 }
 

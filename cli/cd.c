@@ -28,14 +28,14 @@ struct poclidek_cmd command_cd = {
     COMMAND_EMPTYARGS | COMMAND_NOOPTS, 
     "cd", N_("[PATH]"), N_("Change current package directory"), 
     NULL, parse_opt, NULL, cd,
-    NULL, NULL, NULL, NULL, 0
+    NULL, NULL, NULL, NULL, 0, 0
 };
 
 struct poclidek_cmd command_pwd = {
     COMMAND_NOARGS | COMMAND_NOOPTS, 
     "pwd", NULL, N_("Print name of current directory"), 
     NULL, NULL, NULL, pwd,
-    NULL, NULL, NULL, NULL, 0
+    NULL, NULL, NULL, NULL, 0, 0
 };
 
 

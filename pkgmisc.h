@@ -54,34 +54,63 @@ int pkgmark_isset(struct pkgmark_set *pms, struct pkg *pkg, uint32_t flag);
 
 tn_array *pkgmark_get_packages(struct pkgmark_set *pmark, uint32_t flag);
 
+// pkg_set_mARKfLAG
+#define pkg_set_mf(pms, pkg, flag) pkgmark_set(pms, pkg, 1, flag)
+#define pkg_clr_mf(pms, pkg, flag) pkgmark_set(pms, pkg, 0, flag)
+#define pkg_isset_mf(pms, pkg, flag) pkgmark_isset(pms, pkg, flag)
+
 #define PKGMARK_MARK        (1 << 1)  /* marked directly, i.e. by the user*/
 #define PKGMARK_DEP         (1 << 2)  /* marked by deps */
-#define PKGMARK_RM          (1 << 3) /* marked for removal */
-#define PKGMARK_INTERNAL    (1 << 4)
-
 #define pkg_hand_mark(pms, pkg) pkgmark_set(pms, pkg, 1, PKGMARK_MARK)
 #define pkg_dep_mark(pms, pkg) pkgmark_set(pms, pkg, 1, PKGMARK_DEP)
 #define pkg_unmark(pms, pkg) pkgmark_set(pms, pkg, 0, PKGMARK_DEP|PKGMARK_MARK)
-    
+
 #define pkg_is_dep_marked(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_DEP)
 #define pkg_is_hand_marked(pms, pkg)  pkgmark_isset(pms, pkg, PKGMARK_MARK)
 #define pkg_is_marked(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_MARK|PKGMARK_DEP) 
 #define pkg_isnot_marked(pms, pkg) (!pkgmark_isset(pms, pkg, PKGMARK_MARK|PKGMARK_DEP))
 
+
+#define PKGMARK_RM          (1 << 3) /* marked for removal */
+#define pkg_rm_mark(pms, pkg) pkgmark_set(pms, pkg, 1, PKGMARK_RM)
+#define pkg_is_rm_marked(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_RM)
+#define pkg_rm_unmark(pms, pkg) pkgmark_set(pms, pkg, 0, PKGMARK_RM)
+
+
+#define PKGMARK_INTERNAL    (1 << 4)
 #define pkg_mark_i(pms, pkg) pkgmark_set(pms, pkg, 1, PKGMARK_INTERNAL)
 #define pkg_unmark_i(pms, pkg) pkgmark_set(pms, pkg, 0, PKGMARK_INTERNAL)
 #define pkg_is_marked_i(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_INTERNAL)
 
-#define pkg_rm_mark(pms, pkg) pkgmark_set(pms, pkg, 1, PKGMARK_RM)
-#define pkg_is_rm_marked(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_RM)
+
+#define PKGMARK_UNMETDEPS   (1 << 5)
+#define pkg_set_unmetdeps(pms, pkg) pkgmark_set(pms, pkg, 1, PKGMARK_UNMETDEPS)
+#define pkg_clr_unmetdeps(pms, pkg) pkgmark_set(pms, pkg, 0, PKGMARK_UNMETDEPS)
+#define pkg_has_unmetdeps(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_UNMETDEPS)
 
 
-#define pkg_rm_unmark(pms, pkg) pkgmark_set(pms, pkg, 0, PKGMARK_RM)
+#define PKGMARK_WHITE     (1 << 10)
+#define PKGMARK_GRAY      (1 << 11)
+#define PKGMARK_BLACK     (1 << 12)
+#define PKGMARK_ALLCOLORS (PKGMARK_WHITE | PKGMARK_GRAY | PKGMARK_BLACK)
+
+#if 0
+#define pkg_set_color(pms, pkg, c) \
+   do { pkg_clr_mf(pms, pkg, ~(PKGMARK_ALLCOLORS)); \
+        pkg_set_mf(pms, pkg, c); } while (0)
+
+#define pkg_is_color(pms, pkg, c) pkg_isset_mf(pms, pkg, c)
+#endif
 
 void pkgmark_massset(struct pkgmark_set *pmark, int set, uint32_t flag);
 
-int packages_mark(struct pkgmark_set *pms,
-                  const tn_array *pkgs, const tn_array *avpkgs, int withdeps);
+/* mark packages (PKGMARK_{MARK,DEP}) to pms */
+int packages_mark(struct pkgmark_set *pms, const tn_array *pkgs, int withdeps);
+/* .. and then verify marked set  */
+int pkgmark_verify_set_conflicts(struct pkgmark_set *pms);
+
+struct pkgset;
+int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps);
 
 #endif
 

@@ -27,7 +27,8 @@
 
 #include "capreq.h"
 #include "pkg.h"
-#include "pkgset-req.h"
+#include "pkgset-req.h"         /* for struct reqpkg */
+#include "pkgset.h"
 #include "pkgmisc.h"
 
 #include "i18n.h"
@@ -85,8 +86,7 @@ tn_array *pkgmark_get_packages(struct pkgmark_set *pmark, uint32_t flag)
     }
 
     n_array_free(pmarks);
-    
-    return NULL;
+    return pkgs;
 }
 
 
@@ -125,11 +125,9 @@ int pkgmark_isset(struct pkgmark_set *pmark, struct pkg *pkg, uint32_t flag)
 }
 
 
-
-
-
 static
-void visit_mark_reqs(struct pkg *parent_pkg, struct capreq *req, struct pkg *pkg, 
+void visit_mark_reqs(struct pkg *parent_pkg,
+                     struct capreq *req, struct pkg *pkg, 
                      struct pkgmark_set *pms, int deep) 
 {
     int i;
@@ -179,53 +177,8 @@ void visit_mark_reqs(struct pkg *parent_pkg, struct capreq *req, struct pkg *pkg
 }
 
 static
-int mark_dependencies(struct pkgmark_set *pms, const tn_array *pkgs, int withdeps)
-{
-    tn_array *marked;
-    int i, j, nerr = 0;
-    
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-    
-        if (pkg_is_hand_marked(pms, pkg)) 
-            visit_mark_reqs(NULL, NULL, pkg, pms, 0);
-    }
-
-    marked = pkgmark_get_packages(pms, PKGMARK_MARK | PKGMARK_DEP);
-    for (i=0; i < n_array_size(marked); i++) {
-        struct pkg *pkg = n_array_nth(marked, i);
-
-        n_assert(pkg_is_marked(pms, pkg));
-
-        if (pkg_has_badreqs(pkg)) {
-            //logn(LOGERR, _("%s: broken dependencies"), pkg_snprintf_s(pkg));
-            nerr++;
-        }
-        
-        if (pkg->cnflpkgs == NULL)
-            continue;
-
-        for (j=0; j < n_array_size(pkg->cnflpkgs); j++) {
-            struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
-            if (pkg_is_marked(pms, cpkg->pkg)) {
-                logn(LOGERR, _("conflict between %s and %s"), pkg->name,
-                     cpkg->pkg->name);
-                nerr++;
-            }
-        }
-    }
-
-    n_array_free(marked);
-    if (nerr && withdeps == 0)
-        nerr = 0;
-    
-    return nerr == 0;
-}
-
-static
-int packages_depmark_packages(struct pkgmark_set *pms,
-                              const tn_array *tomark, const tn_array *avpkgs,
-                              int withdeps)
+int depmark_packages(struct pkgmark_set *pms,
+                     const tn_array *tomark, int withdeps)
 {
     int i, nerr = 0;
     
@@ -235,20 +188,24 @@ int packages_depmark_packages(struct pkgmark_set *pms,
     }
     
     if (withdeps) {
-        if (!mark_dependencies(pms, avpkgs, withdeps))
-            nerr++;
+        for (i=0; i < n_array_size(tomark); i++) {
+            struct pkg *pkg = n_array_nth(tomark, i);
+    
+            n_assert(pkg_is_hand_marked(pms, pkg));
+            visit_mark_reqs(NULL, NULL, pkg, pms, 0);
+        }
     }
 
     return nerr == 0;
 }
 
 
-int packages_mark(struct pkgmark_set *pms,
-                  const tn_array *pkgs, const tn_array *avpkgs, int withdeps)
+int packages_mark(struct pkgmark_set *pms, const tn_array *pkgs, int withdeps)
 
 {
-    return packages_depmark_packages(pms, pkgs, avpkgs, withdeps);
+    return depmark_packages(pms, pkgs, withdeps);
 }
+
 
 
 void pkgmark_massset(struct pkgmark_set *pmark, int set, uint32_t flag)
@@ -269,4 +226,60 @@ void pkgmark_massset(struct pkgmark_set *pmark, int set, uint32_t flag)
     } 
 
     n_array_free(pmarks);
+}
+
+
+int pkgmark_verify_set_conflicts(struct pkgmark_set *pms)
+{
+    tn_array *marked;
+    int i, j, nerr = 0;
+    
+    marked = pkgmark_get_packages(pms, PKGMARK_MARK | PKGMARK_DEP);
+    for (i=0; i < n_array_size(marked); i++) {
+        struct pkg *pkg = n_array_nth(marked, i);
+
+        n_assert(pkg_is_marked(pms, pkg));
+
+        if (pkg->cnflpkgs == NULL)
+            continue;
+
+        for (j=0; j < n_array_size(pkg->cnflpkgs); j++) {
+            struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
+            if (pkg_is_marked(pms, cpkg->pkg)) {
+                logn(LOGERR, _("%s: conflicts with %s"), pkg_snprintf_s(pkg),
+                     pkg_snprintf_s0(cpkg->pkg));
+                nerr++;
+            }
+        }
+    }
+    
+    if (nerr)
+        msgn(0, _("%d conflicts found"), nerr);
+    n_array_free(marked);
+    return nerr == 0;
+}
+
+
+int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps)
+{
+    int i, j, nerr = 0;
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        tn_array *errs;
+        
+        if ((errs = pkgset_get_unsatisfied_reqs(ps, pkg))) {
+            for (j=0; j < n_array_size(errs); j++) {
+                struct pkg_unreq *unreq = n_array_nth(errs, j);
+                logn(LOGERR, _("%s: req %s %s"),
+                     pkg_snprintf_s(pkg), unreq->req,
+                     unreq->mismatch ? _("version mismatch") : _("not found"));
+                nerr++;
+            }
+        }
+    }
+    
+    if (nerr)
+        msgn(0, _("%d unsatisfied dependencies"), nerr);
+    return nerr == 0;
 }

@@ -40,6 +40,7 @@
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
 
 static int argv_is_help(int argc, const char **argv);
+static int command_cmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
 
 extern struct poclidek_cmd command_ls;
 extern struct poclidek_cmd command_install;
@@ -159,23 +160,67 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     return rc;
 }
 
+static tn_array *find_command_aliases(struct poclidek_cmd *cmd,
+                                      struct poclidek_ctx  *cctx) 
+{
+    char nam[PATH_MAX];
+    tn_array *aliases;
+    int i, n;
+    
+    
+    if (cmd->flags & COMMAND_IS_ALIAS)
+        return NULL;
+    
+    n = n_snprintf(nam, sizeof(nam), "%s ", cmd->name);
+    for (i=0; i < n_array_size(cctx->commands); i++) {
+        struct poclidek_cmd *cm = n_array_nth(cctx->commands, i);
+        if ((cm->flags & COMMAND_IS_ALIAS) == 0)
+            continue;
+
+        if (strncmp(nam, cm->cmdline, n) == 0) {
+            if (aliases == NULL)
+                aliases = n_array_new(4, NULL, (tn_fn_cmp)command_cmp);
+            n_array_push(aliases, cm);
+        }
+    }
+    
+    if (aliases)
+        n_array_sort(aliases);
+    return aliases;
+}
+
 static char *help_filter(int key, const char *text, void *input) 
 {
     struct sh_cmdctx *sh_cmdctx = input;
+    char *p, buf[4096];
+    tn_array *aliases;
+    int n = 0;
+    
+    if (key != ARGP_KEY_HELP_EXTRA)
+        return (char*)text;
+        
+    if (sh_cmdctx->cmd->extra_help) 
+        n += n_snprintf(&buf[n], sizeof(buf) - n, "  %s\n",
+                        sh_cmdctx->cmd->extra_help);
 
-    if (key == ARGP_KEY_HELP_EXTRA) {
-        char *p, buf[4096];
-        int n = 0;
-        
-        
-        if (sh_cmdctx->cmd->extra_help) 
-            n += n_snprintf(&buf[n], sizeof(buf) - n, "  %s\n",
-                          sh_cmdctx->cmd->extra_help);
-        
-        if (n > 0) {
-            p = n_malloc(n + 1);
-            return memcpy(p, buf, n + 1);
+    aliases = find_command_aliases(sh_cmdctx->cmd, sh_cmdctx->cmdctx->cctx);
+    if (aliases) {
+        int i = 0;
+            
+        n += n_snprintf(&buf[n], sizeof(buf) - n, "%s",
+                        _("  Defined aliases:\n"));
+
+        for (i=0; i < n_array_size(aliases); i++) {
+            struct poclidek_cmd *al = n_array_nth(aliases, i);
+            n += n_snprintf(&buf[n], sizeof(buf) - n, "    %-16s  \"%s\"\n",
+                            al->name, al->cmdline);
         }
+        n_array_free(aliases);
+    }
+
+    if (n > 0) {
+        p = n_malloc(n + 1);
+        return memcpy(p, buf, n + 1);
     }
     
     return (char*)text;
@@ -332,6 +377,12 @@ int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2)
     return strncmp(c1->name, c2->name, strlen(c2->name));
 }
 
+static void command_free(struct poclidek_cmd *cmd)
+{
+    if (cmd->_free) 
+        cmd->_free(cmd);
+}
+
 static void translate_argp_options(struct argp_option *arr) 
 {
     int i = 0;
@@ -366,10 +417,11 @@ int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
 
 static void init_commands(struct poclidek_ctx *cctx) 
 {
-    int n = 0, owndir = 0;;
-	char   *homedir, *sysconfdir = "/etc", path[PATH_MAX];
+    char *homedir, *sysconfdir = "/etc", path[PATH_MAX];
+    int n = 0;
     
-    cctx->commands = n_array_new(16, NULL, (tn_fn_cmp)command_cmp);
+    cctx->commands = n_array_new(16, (tn_fn_free)command_free,
+                                 (tn_fn_cmp)command_cmp);
     n_array_ctl(cctx->commands, TN_ARRAY_AUTOSORTED);
     while (commands_tab[n] != NULL) {
         struct poclidek_cmd *cmd = commands_tab[n++];
@@ -378,16 +430,12 @@ static void init_commands(struct poclidek_ctx *cctx)
 	n_array_sort(cctx->commands);
 
 #ifdef SYSCONFDIR
-    if (access(SYSCONFDIR, R_OK) == 0) {
+    if (access(SYSCONFDIR, R_OK) == 0)
         sysconfdir = SYSCONFDIR;
-        owndir = 1;
-    }
-    
 #endif
-    if (owndir) {
-        n_snprintf(path, sizeof(path), "%s/aliases.conf", sysconfdir);
-        poclidek_load_aliases(cctx, path);
-    }
+
+    n_snprintf(path, sizeof(path), "%s/poldek/aliases.conf", sysconfdir);
+    poclidek_load_aliases(cctx, path);
 
     if ((homedir = getenv("HOME")) != NULL) {
 		char path[PATH_MAX];
@@ -697,7 +745,7 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf)
             pkg_dent_remove_pkg(ent, pkg);
         
         n++;
-        DBGF_F("- %s\n", pkg->nvr);
+        DBGF("- %s\n", pkg->nvr);
     }
 
     for (i=0; i < n_array_size(iinf->installed_pkgs); i++) {
@@ -705,7 +753,7 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf)
         n_array_push(cctx->pkgs_installed, pkg_link(pkg));
         if (ent)
             pkg_dent_add_pkg(cctx, ent, pkg);
-        DBGF_F("+ %s\n", pkg->nvr);
+        DBGF("+ %s\n", pkg->nvr);
         n++;
     }
     

@@ -62,7 +62,6 @@
 #define DBPKG_DEPS_PROCESSED      (1 << 16) /* is its deps processed? */
 #define DBPKG_TOUCHED             (1 << 17)
 
-
 #define PROCESS_AS_NEW       (1 << 0)
 #define PROCESS_AS_ORPHAN    (1 << 1)
 
@@ -74,6 +73,8 @@ struct upgrade_s {
 
     struct dbpkg_set *uninst_set;
     struct pkgmark_set *dbpms;
+    struct pkgmark_set *unmetpms;     /* to mark pkgs with unmet dependencies */
+    
     tn_array       *orphan_dbpkgs;    /* array of orphaned dbpkg*s */
     
     int            strict;
@@ -92,7 +93,6 @@ struct upgrade_s {
     int             nmarked;
 
     tn_array       *pkg_stack;  /* stack for current processed packages  */
-    void           *pkgflmod_mark;
 };
 
 int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
@@ -528,7 +528,7 @@ static int do_mark_package(struct pkg *pkg, struct upgrade_s *upg,
     DBGF("%s, is_installable = %d\n", pkg_snprintf_s(pkg), rc);
     pkg_unmark_i(upg->ts->pms, pkg);
 
-    n_assert(!pkg_has_badreqs(pkg));
+    n_assert(!pkg_has_unmetdeps(upg->unmetpms, pkg));
 
     if (rc > 0) {
         if (mark == PKGMARK_MARK) {
@@ -601,11 +601,11 @@ int dep_mark_package(struct pkg *pkg,
                      struct pkg *bypkg, struct capreq *byreq,
                      struct upgrade_s *upg)
 {
-    if (pkg_has_badreqs(pkg)) {
+    if (pkg_has_unmetdeps(upg->unmetpms, pkg)) {
         logn(LOGERR, _("%s: skip follow %s cause it's dependency errors"),
              pkg_snprintf_s(bypkg), pkg_snprintf_s0(pkg));
         
-        pkg_set_badreqs(bypkg);
+        pkg_set_unmetdeps(upg->unmetpms, bypkg);
         upg->nerr_dep++;
         return 0;
     }
@@ -762,20 +762,20 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
         int i, n;
         char errmsg[4096];
 
-        n = n_snprintf(errmsg, sizeof(errmsg), _("%s is required by"), 
-                     capreq_snprintf_s(req));
+        n = n_snprintf(errmsg, sizeof(errmsg), _("%s is required by "), 
+                       capreq_snprintf_s(req));
         
         for (i=0; i < n_array_size(db_dep->pkgs); i++) {
             struct pkg *p = n_array_nth(db_dep->pkgs, i);
         
-            snprintf(&errmsg[n], sizeof(errmsg) - n, "%s%s",
-                     pkg_is_installed(p) ? "" : " already marked ", 
-                     pkg_snprintf_s(p));
+            n_snprintf(&errmsg[n], sizeof(errmsg) - n, "%s%s",
+                       (p->flags & PKG_DBPKG) ? "" : "already marked ", 
+                       pkg_snprintf_s(p));
             
             logn(LOGERR, "%s", errmsg);
         }
         
-        pkg_set_badreqs(pkg);
+        pkg_set_unmetdeps(upg->unmetpms, pkg);
         upg->nerr_dep++;
             
                 
@@ -828,7 +828,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
                      pkg_snprintf_s0(opkg));
                 
                 
-                pkg_set_badreqs(pkg);
+                pkg_set_unmetdeps(upg->unmetpms, pkg);
                 upg->nerr_dep++;
             }
         }
@@ -1064,7 +1064,7 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
             if (process_as == PROCESS_AS_NEW && !capreq_is_satisfied(req)) {
                 logn(LOGERR, _("%s: rpmcap %s not found, upgrade rpm."),
                      pkg_snprintf_s(pkg), capreq_snprintf_s(req));
-                pkg_set_badreqs(pkg);
+                pkg_set_unmetdeps(upg->unmetpms, pkg);
                 upg->nerr_dep++;
             }
             continue;
@@ -1152,7 +1152,7 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
             if (marked_for_removal_by_req(real_tomark, req, upg)) {
                 logn(LOGERR, _("%s (cap %s) is required by %s%s"),
                      pkg_snprintf_s(real_tomark), capreq_snprintf_s(req),
-                     pkg_is_installed(pkg) ? "" : " already marked", 
+                     (pkg->flags & PKG_DBPKG) ? "" : " already marked", 
                      pkg_snprintf_s0(pkg));
                 upg->nerr_dep++;
                 
@@ -1167,7 +1167,7 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
             if (process_as == PROCESS_AS_NEW) {
                 logn(LOGERR, _("%s: req %s not found"),
                     pkg_snprintf_s(pkg), capreq_snprintf_s(req));
-                pkg_set_badreqs(pkg);
+                pkg_set_unmetdeps(upg->unmetpms, pkg);
                 upg->nerr_dep++;
                 
                 
@@ -1215,7 +1215,7 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                 if (not_found) {
                     logn(LOGERR, _("%s is required by %s"),
                          capreq_snprintf_s(req), pkg_snprintf_s(pkg));
-                    pkg_set_badreqs(pkg);
+                    pkg_set_unmetdeps(upg->unmetpms, pkg);
                     upg->nerr_dep++;
                 }
             }
@@ -1668,7 +1668,7 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
         ncnfl += n;
         n_array_free(dbpkgs);
         if (n)
-            pkg_set_badreqs(pkg);
+            pkg_set_unmetdeps(upg->unmetpms, pkg);
     }
         
         
@@ -1695,7 +1695,7 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
             n_array_free(dbpkgs);
                 
             if (n)
-                pkg_set_badreqs(pkg);
+                pkg_set_unmetdeps(upg->unmetpms, pkg);
         }
         
 #ifdef ENABLE_FILES_CONFLICTS  /* too slow, needs rpmlib API modifcations */
@@ -1937,7 +1937,6 @@ static int verify_holds(struct upgrade_s *upg)
 static void mapfn_clean_pkg_flags(struct pkg *pkg) 
 {
     pkg_set_color(pkg, PKG_COLOR_WHITE);
-    pkg_clr_badreqs(pkg);
 }
 
 
@@ -2116,7 +2115,8 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         if (!is_test && iinf)
             update_poldek_iinf(iinf, upg, rc <= 0);
 
-        if (!poldek_ts_keep_downloads(ts) && !ts->getop(ts, POLDEK_OP_NOFETCH))
+        if (rc && !ts->getop_v(ts, POLDEK_OP_RPMTEST, POLDEK_OP_KEEP_DOWNLOADS,
+                               POLDEK_OP_NOFETCH, 0))
             packages_fetch_remove(pkgs, ts->cachedir);
     }
     
@@ -2485,8 +2485,6 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
         install = is_installable(pkg, ts, 1);
         
         pkg_unmark(ts->pms, pkg);
-        pkg_clr_badreqs(pkg);
-        
         if (install > 0) {
             pkg_mark_i(ts->pms, pkg);
             nmarked++;

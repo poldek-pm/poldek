@@ -93,11 +93,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         arg_s = n_malloc(sizeof(*arg_s));
         arg_s->verify = 0;
         rt->_opdata = arg_s;
+        rt->_opdata_free = free;
         rt->run = oprun;
     }
     switch (key) {
         case OPT_DEPS:
             arg_s->verify = 1;
+            ts->setop(ts, POLDEK_OP_VRFY_DEPS, 1);
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_VRFY_DEPS, 1);
             break;
 

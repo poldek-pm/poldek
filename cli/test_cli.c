@@ -85,8 +85,6 @@ int test_03(void)
 {
     struct poclidek_rcmd  *cmd;
     init();
-
-    
     
     cmd = poclidek_rcmd_new(cctx, NULL);
     if (poclidek_rcmd_execline(cmd, "ls xmms*")) {
@@ -122,5 +120,5 @@ int main(int argc, char *argv[])
 {
     setlocale(LC_MESSAGES, "");
     setlocale(LC_CTYPE, "");
-    test_02();
+    test_01();
 }

@@ -234,10 +234,9 @@ struct source *source_new_htcnf(struct poldek_ctx *ctx,
 {
     char spec[PATH_MAX], name[20];
     struct source *src;
+    const char *vs;
     int  n = 0;
     int  v;
-    char *vs;
-    
     
     vs = poldek_conf_get(htcnf, "name", NULL);
     if (vs == NULL) {
@@ -279,15 +278,17 @@ struct source *source_new_htcnf(struct poldek_ctx *ctx,
     vs = poldek_conf_get(htcnf, "prefix", NULL);
     
     src = source_new_pathspec(NULL, spec, vs);
-    src->original_type = poldek_conf_get(htcnf, "original type", NULL);
-    if (src->original_type && src->type &&
-        n_str_eq(src->type, src->original_type)) {
+    
+    vs = poldek_conf_get(htcnf, "original type", NULL);
+    if (vs && src->type && n_str_eq(src->type, vs)) {
         logn(LOGERR, "%s: original type and type must be differ",
              source_idstr(src));
         
         source_free(src);
         return NULL;
     }
+    if (vs)
+        src->original_type = n_strdup(vs);
     
     get_conf_opt_list(htcnf, "exclude path", src->exclude_path);
     
@@ -319,10 +320,10 @@ int get_conf_sources(struct poldek_ctx *ctx,
         matches = alloca(n_array_size(srcs_named) * sizeof(int));
         memset(matches, 0, n_array_size(srcs_named) * sizeof(int));
     }
-
+    /* legacy source = ...  */
     if ((list = poldek_conf_get_multi(htcnf, "source"))) {
         for (i=0; i < n_array_size(list); i++) {
-            src = source_new_pathspec(NULL, n_array_nth(list, i), NULL);
+            src = source_new_v0_18(n_array_nth(list, i), NULL);
             if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
         }
@@ -331,13 +332,13 @@ int get_conf_sources(struct poldek_ctx *ctx,
     
     /* source\d+, prefix\d+ pairs  */
     for (i=0; i < 100; i++) {
-        char opt[64], *src_val;
+        const char *src_val;
+        char opt[64];
         
         snprintf(opt, sizeof(opt), "source%d", i);
         if ((src_val = poldek_conf_get(htcnf, opt, NULL))) {
             snprintf(opt, sizeof(opt), "prefix%d", i);
-            src = source_new_pathspec(NULL, src_val,
-                                      poldek_conf_get(htcnf, opt, NULL));
+            src = source_new_v0_18(src_val, poldek_conf_get(htcnf, opt, NULL));
             
             if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
@@ -410,56 +411,57 @@ static char *extract_handler_name(char *name, int size, const char *cmd)
 
 static void register_vf_handlers_compat(const tn_hash *htcnf) 
 {
-    char name[128], *v;
+    char name[128];
+    const char *vs;
     tn_array *protocols;
 
     protocols = n_array_new(2, NULL, (tn_fn_cmp)strcmp);
     
-    if ((v = poldek_conf_get(htcnf, "ftp_http_get", NULL))) {
-        extract_handler_name(name, sizeof(name), v);
+    if ((vs = poldek_conf_get(htcnf, "ftp_http_get", NULL))) {
+        extract_handler_name(name, sizeof(name), vs);
         n_array_clean(protocols);
         n_array_push(protocols, "ftp");
         n_array_push(protocols, "http");
         //vfile_cnflags |= VFILE_USEXT_FTP | VFILE_USEXT_HTTP;
-        vfile_register_ext_handler(name, protocols, v);
+        vfile_register_ext_handler(name, protocols, vs);
     }
     
-    if ((v = poldek_conf_get(htcnf, "ftp_get", NULL))) {
+    if ((vs = poldek_conf_get(htcnf, "ftp_get", NULL))) {
         //vfile_cnflags |= VFILE_USEXT_FTP;
-        extract_handler_name(name, sizeof(name), v);
+        extract_handler_name(name, sizeof(name), vs);
         n_array_clean(protocols);
         n_array_push(protocols, "ftp");
-        vfile_register_ext_handler(name, protocols, v);
+        vfile_register_ext_handler(name, protocols, vs);
     }
     
-    if ((v = poldek_conf_get(htcnf, "http_get", NULL))) {
+    if ((vs = poldek_conf_get(htcnf, "http_get", NULL))) {
         //vfile_cnflags |= VFILE_USEXT_HTTP;
-        extract_handler_name(name, sizeof(name), v);
+        extract_handler_name(name, sizeof(name), vs);
         n_array_clean(protocols);
         n_array_push(protocols, "http");
-        vfile_register_ext_handler(name, protocols, v);
+        vfile_register_ext_handler(name, protocols, vs);
     }
     
-    if ((v = poldek_conf_get(htcnf, "https_get", NULL))) {
+    if ((vs = poldek_conf_get(htcnf, "https_get", NULL))) {
         //vfile_cnflags |= VFILE_USEXT_HTTPS;
-        extract_handler_name(name, sizeof(name), v);
+        extract_handler_name(name, sizeof(name), vs);
         n_array_clean(protocols);
         n_array_push(protocols, "https");
-        vfile_register_ext_handler(name, protocols, v);
+        vfile_register_ext_handler(name, protocols, vs);
     }
         
-    if ((v = poldek_conf_get(htcnf, "rsync_get", NULL))) {
-        extract_handler_name(name, sizeof(name), v);
+    if ((vs = poldek_conf_get(htcnf, "rsync_get", NULL))) {
+        extract_handler_name(name, sizeof(name), vs);
         n_array_clean(protocols);
         n_array_push(protocols, "rsync");
-        vfile_register_ext_handler(name, protocols, v);
+        vfile_register_ext_handler(name, protocols, vs);
     }
     
-    if ((v = poldek_conf_get(htcnf, "cdrom_get", NULL))) {
-        extract_handler_name(name, sizeof(name), v);
+    if ((vs = poldek_conf_get(htcnf, "cdrom_get", NULL))) {
+        extract_handler_name(name, sizeof(name), vs);
         n_array_clean(protocols);
         n_array_push(protocols, "cdrom");
-        vfile_register_ext_handler(name, protocols, v);
+        vfile_register_ext_handler(name, protocols, vs);
     }
     n_array_free(protocols);
 }
@@ -477,7 +479,7 @@ static void register_vf_handlers(const tn_array *fetchers)
     protocols = n_array_new(2, NULL, (tn_fn_cmp)strcmp);
 
     for (i=0; i<n_array_size(fetchers); i++) {
-        char     *nam, *cmd;
+        const char *nam, *cmd;
         tn_hash  *ht;
         
         ht = n_array_nth(fetchers, i);
@@ -537,7 +539,8 @@ int set_default_vf_fetcher(int tag, const char *confvalue)
 
 static void zlib_in_rpm(struct poldek_ctx *ctx) 
 {
-    char              *argv[2], *libdir, cmd[256];
+    char              *argv[2], cmd[256];
+    const char        *libdir;
     struct p_open_st  pst;
     tn_hash           *htcnf;
     int               ec;
@@ -596,7 +599,7 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
             
             
             DBGF("apply %s(%d) = %d\n", default_op_map[i].name,
-                   op, ctx->ts->getop(ctx->ts, op));
+                  op, ctx->ts->getop(ctx->ts, op));
             ts->setop(ts, op, ctx->ts->getop(ctx->ts, op));
         }
     l_continue_loop:
@@ -618,7 +621,7 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
 int poldek_load_config(struct poldek_ctx *ctx, const char *path, int up)
 {
     tn_hash           *htcnf = NULL;
-    char              *v;
+    const char        *vs;
     tn_array          *list;
     
         
@@ -660,14 +663,14 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path, int up)
     get_conf_opt_list(htcnf, "ignore", ctx->ts->ign_patterns);
     get_conf_opt_list(htcnf, "exclude path", ctx->ts->exclude_path);
 
-    if ((v = poldek_conf_get(htcnf, "cachedir", NULL)))
-        ctx->ts->cachedir = n_strdup(v);
+    if ((vs = poldek_conf_get(htcnf, "cachedir", NULL)))
+        ctx->ts->cachedir = n_strdup(vs);
     
     if (poldek_conf_get_bool(htcnf, "vfile_ftp_sysuser_as_anon_passwd", 0))
         vfile_configure(VFILE_CONF_SYSUSER_AS_ANONPASSWD, 1);
 
-    if ((v = poldek_conf_get(htcnf, "default_index_type", NULL)))
-        poldek_conf_PKGDIR_DEFAULT_TYPE = n_strdup(v);
+    if ((vs = poldek_conf_get(htcnf, "default_index_type", NULL)))
+        poldek_conf_PKGDIR_DEFAULT_TYPE = n_strdup(vs);
 
     if (poldek_conf_get_bool(htcnf, "vfile_external_compress", 0))
         vfile_configure(VFILE_CONF_EXTCOMPR, 1);
@@ -758,6 +761,10 @@ void poldek_destroy(struct poldek_ctx *ctx)
         pkgset_free(ctx->ps);
 
     poldek_ts_free(ctx->ts);
+    n_hash_free(ctx->_cnf);
+    if (ctx->pmctx)
+        pm_free(ctx->pmctx);
+    
 }
 
 void poldek_free(struct poldek_ctx *ctx)

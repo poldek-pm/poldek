@@ -54,6 +54,8 @@ int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ...);
 #define COMMAND_PIPE_DEFAULTS  COMMAND_PIPEABLE | COMMAND_PIPE_XARGS | \
                                COMMAND_PIPE_PACKAGES
 
+#define COMMAND__MALLOCED      (1 << 17) /* internal */
+
 struct poclidek_cmd {
     unsigned            flags;
     char                *name;
@@ -73,6 +75,7 @@ struct poclidek_cmd {
 
     char                 *cmdline;   /* alias content */
     int                  _seqno;
+    void                 (*_free)(struct poclidek_cmd *);
 };
 
 int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd);

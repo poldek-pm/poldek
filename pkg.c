@@ -1,14 +1,19 @@
-/* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
   $Id$
 */
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -821,12 +826,12 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
         int promote = 0;
         if (!capreq_has_epoch(req) && promote_epoch) {
             promote_epoch_warn(1, "req", capreq_snprintf_s(req),
-                               pkg_snprintf_epoch_s(pkg));
+                               pkg_evr_snprintf_s(pkg));
             promote = 1;
         } 
 
         if (!pkg->epoch && capreq_epoch(req) > 0 && promote_epoch) {
-            promote_epoch_warn(1, "package", pkg_snprintf_epoch_s(pkg),
+            promote_epoch_warn(1, "package", pkg_evr_snprintf_s(pkg),
                                capreq_snprintf_s(req));
             promote = 1;
         }
@@ -866,7 +871,7 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
 
 #if 0    
     if (strcmp(pkg->name, "nspr") == 0 && strcmp(pkg->name, capreq_name(req)) == 0) {
-        printf("   __MATCH %s %s %d %d-> %d\n", pkg_snprintf_epoch_s(pkg),
+        printf("   __MATCH %s %s %d %d-> %d\n", pkg_evr_snprintf_s(pkg),
                capreq_snprintf_s(req), cmprc, evr, rel_match(cmprc, req));
     }
 #endif    
@@ -887,8 +892,8 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req, int stric
             rc = pkg_evr_match_req_(pkg, req, 1) ? 1 : 0;
     }
 
-    DBGF("%s match %s ? %s\n", pkg_snprintf_epoch_s(pkg),
-             capreq_snprintf_s(req), rc ? "YES" : "NO");
+    DBGF("%s match %s ? %s\n", pkg_evr_snprintf_s(pkg),
+         capreq_snprintf_s(req), rc ? "YES" : "NO");
     return rc;
 }
 
@@ -1354,14 +1359,13 @@ int pkg_printf(const struct pkg *pkg, const char *str)
 
 int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg)
 {
-    char epoch[32];
+    char e[32];
 
-    *epoch = '\0';
+    *e = '\0';
     if (pkg->epoch)
-        snprintf(epoch, sizeof(epoch), "%d:", pkg->epoch);
+        snprintf(e, sizeof(e), "%d:", pkg->epoch);
     
-    return n_snprintf(str, size, "%s-%s%s-%s", pkg->name, epoch, pkg->ver,
-                      pkg->rel);
+    return n_snprintf(str, size, "%s-%s%s-%s", pkg->name, e, pkg->ver, pkg->rel);
 }
 
 char *pkg_evr_snprintf_s(const struct pkg *pkg)
@@ -1505,18 +1509,6 @@ char *pkg_strbtime(char *buf, int size, const struct pkg *pkg)
     
     buf[size-1] = '\0';
     return buf;
-}
-
-char *pkg_snprintf_epoch_s(const struct pkg *pkg)
-{
-    static char str[256];
-    char es[16] = {0};
-    
-    if (pkg->epoch)
-        snprintf(es, sizeof(es), "%d:", pkg->epoch);
-            
-    snprintf(str, sizeof(str), "%s-%s%s-%s", pkg->name, es, pkg->ver, pkg->rel);
-    return str;
 }
 
 

@@ -84,6 +84,15 @@ struct poclidek_opgroup poclidek_opgroup_split = {
     oprun,
 };
 
+static void arg_s_free(void *a) 
+{
+    struct arg_s *arg_s = a;
+    
+    n_cfree(&arg_s->prefix);
+    free(arg_s);
+}
+
+
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
@@ -101,6 +110,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         arg_s->size = arg_s->first_free_space = 0;
         arg_s->prefix = NULL;
         rt->_opdata = arg_s;
+        rt->_opdata_free = arg_s_free;
         rt->run = oprun;
     }
 

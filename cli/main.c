@@ -421,11 +421,12 @@ int do_run(void)
         if (rc & OPGROUP_RC_FINI)
             exit_program = 1;
     }
+
+    n_array_free(args.opgroup_rts);
+    args.opgroup_rts = NULL;
     
-    if (exit_program) {
-        msgn(0, "exit(%d)\n", ec);
+    if (exit_program)
         exit(ec);
-    }
     
     return all_rc;
 }
@@ -436,11 +437,14 @@ int main(int argc, char **argv)
     struct poldek_ctx    *ctx;
     struct poclidek_ctx  *cctx;
     int  ec = 0, rrc, mode = MODE_POLDEK;
+    const char *bn;
     
     setlocale(LC_MESSAGES, "");
     setlocale(LC_CTYPE, "");
+
+    bn = n_basenam(argv[0]);
     
-    if (strcmp(n_basenam(argv[0]), "apoldek-get") == 0)
+    if (strcmp(bn, "apoldek-get") == 0 || strcmp(bn, "ipoldek") == 0)
         mode = MODE_APT;
     
     DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);

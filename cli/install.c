@@ -169,7 +169,7 @@ struct poclidek_cmd command_install = {
     COMMAND_PIPEABLE_LEFT | COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES, 
     "install", N_("PACKAGE..."), N_("Install packages"), 
     options, parse_opt,
-    NULL, install, NULL, NULL, NULL, NULL, 0
+    NULL, install, NULL, NULL, NULL, NULL, 0, 0
 };
 
 static struct argp cmd_argp = {
@@ -216,7 +216,7 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
     ts = rt->ts;
     arg = arg;
     
-    if (rt->_opdata != NULL) {
+    if (rt->_opdata != NULL) {  /* TODO: is it really needed? */
         arg_s = rt->_opdata;
         
     } else {
@@ -224,6 +224,7 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
         memset(arg_s, 0, sizeof(*arg_s));
         arg_s->cmdctx.ts = rt->ts;
         rt->_opdata = arg_s;
+        rt->_opdata_free = free;
     }
     
     switch (key) {

@@ -22,6 +22,8 @@
 
 #include <trurl/nmalloc.h>
 #include <trurl/nstr.h>
+
+#include "sigint/sigint.h"
 #include "vfile/vfile.h"
 #include "pkgdir/source.h"
 #include "pm/pm.h"
@@ -41,8 +43,9 @@
  */ 
 struct inf {
     int       npackages;
-    double    nbytes;
-    double    nfbytes;
+    int       ninstalled;
+    double    bytes_used;
+    double    bytes_toget;
     struct pkgmark_set *pms;
 };
 
@@ -51,15 +54,44 @@ static void is_marked_mapfn(struct pkg *pkg, struct inf *inf)
 {
     if (pkg_is_marked(inf->pms, pkg)) {
         inf->npackages++;
-        inf->nbytes += pkg->size;
-        inf->nfbytes += pkg->fsize;
+        inf->bytes_used += pkg->size;
+        inf->bytes_toget += pkg->fsize;
     }
 }
 
+void display_iinf_start(struct inf *inf)
+{
+    if (inf->bytes_toget) {
+        char buf[64];
+        
+        snprintf_size(buf, sizeof(buf), inf->bytes_toget, 0, 1);
+        msg(1, _("Need to get about %s of archives."), buf);
+        if (inf->bytes_used) {
+            char buf[64];
+            snprintf_size(buf, sizeof(buf), inf->bytes_used, 0, 1);
+            msg(1, _(" After unpacking about %s will be used."), buf);
+        }
+        msg(1, "_\n");
+    }
+    
+    
+}
+
+void display_iinf_progress(struct inf *inf)
+{
+    char buf[64];
+    
+    snprintf_size(buf, sizeof(buf), inf->bytes_toget, 1, 0);
+    poldek_term_printf_c(PRCOLOR_YELLOW,
+                         _("Installing #%d package of total %d (%s left to get)\n"),
+                         inf->ninstalled + 1, inf->npackages, buf);
+}
+
+    
+
 int do_poldek_ts_install_dist(struct poldek_ts *ts)
 {
-    int               i, ninstalled, nerr, is_remote = -1;
-    double            ninstalled_bytes; 
+    int               i, nerr;
     struct inf        inf;
     char              tmpdir[PATH_MAX];
     
@@ -79,13 +111,12 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
     pm_configure(ts->pmctx, "%tmppath", "/tmp");
     pm_configure(ts->pmctx, "%tmpdir", "/tmp");
     nerr = 0;
-    ninstalled = 0;
-    ninstalled_bytes = 0;
     
     memset(&inf, 0, sizeof(inf));
     inf.pms = ts->pms;
     n_array_map_arg(ts->ctx->ps->pkgs, (tn_fn_map2)is_marked_mapfn, &inf);
-
+    
+    display_iinf_start(&inf);
     for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
         char *pkgpath;
@@ -94,21 +125,26 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
             continue;
         
         pkgpath = pkg_path_s(pkg);
-        if (is_remote == -1)
-            is_remote = vf_url_type(pkgpath) & VFURL_REMOTE;
         
         if (poldek_VERBOSE > 1) {
             char *p = pkg_is_hand_marked(ts->pms, pkg) ? "" : "dep";
-            if (pkg_has_badreqs(pkg)) 
-                msg(2, "not%sInstall %s\n", p, pkg->name);
-            else
-                msg(2, "%sInstall %s\n", p, pkgpath);
+            msg(2, "%sInstall %s\n", p, pkgpath);
         }
 
         if (ts->getop(ts, POLDEK_OP_TEST))
             continue;
-            
-        if (pkgdb_install(ts->db, pkgpath, ts))
+
+        if (sigint_reached()) {
+            logn(LOGNOTICE, _("Interrupted"));
+            nerr++;
+            break;
+        }
+        
+        if (inf.ninstalled < inf.npackages)
+            display_iinf_progress(&inf);
+
+        
+        if (pkgdb_install(ts->db, pkgpath, ts)) /* message for external scripts */
             logn(LOGNOTICE | LOGFILE, "INST-OK %s", pkg->name);
             
         else {
@@ -116,23 +152,15 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
             nerr++;
         }
             
-        ninstalled++;
-        ninstalled_bytes += pkg->size;
-        inf.nfbytes -= pkg->fsize;
-        poldek_term_printf_c(PRCOLOR_YELLOW,
-                             _(" %d of %d (%.2f of %.2f MB) packages done"),
-                             ninstalled, inf.npackages,
-                             ninstalled_bytes/(1024*1000), 
-                             inf.nbytes/(1024*1000));
-
-        if (is_remote)
-            poldek_term_printf_c(PRCOLOR_YELLOW, _("; %.2f MB to download"),
-                                 inf.nfbytes/(1024*1000));
-        poldek_term_printf_c(PRCOLOR_YELLOW, "\n");
+        inf.ninstalled++;
+        inf.bytes_toget -= pkg->fsize;
     }
-    
+
+    poldek_term_printf_c(PRCOLOR_YELLOW,
+                         _("Done, %d packages were installed.\n"),
+                         inf.ninstalled);
     if (nerr) 
-        logn(LOGERR, _("there were errors during install"));
+        logn(LOGERR, _("There were errors during install"));
     
     return nerr == 0;
 }

@@ -27,6 +27,7 @@
 
 static void capreq_ent_free(struct capreq_idx_ent *ent) 
 {
+    DBGF("ent %p, %p %d, %d\n", ent, ent->crent_pkgs, ent->_size, ent->items);
     if (ent->_size > 1)
         free(ent->crent_pkgs);
 }
@@ -38,7 +39,6 @@ int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)
     MEMINF("START");
     idx->na = n_alloc_new(4, TN_ALLOC_OBSTACK);
     idx->ht = n_hash_new_na(idx->na, nelem, (tn_fn_free)capreq_ent_free);
-    n_hash_ctl(idx->ht, TN_HASH_NOCPKEY);
     MEMINF("END");
     return 1;
 }
@@ -170,7 +170,7 @@ struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
         return NULL;
 
     if (ent->items == 0)
-        return 0;
+        return NULL;
     
     if (ent->_size == 1)        /* return only transformed ents */
         capreq_idx_ent_transform_to_array(ent);

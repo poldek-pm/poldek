@@ -95,7 +95,7 @@ struct poclidek_cmd command_desc = {
     "desc", N_("PACKAGE..."), N_("Display packages info"), 
     options, parse_opt,
     NULL, desc,
-    NULL, NULL, NULL, NULL, 0
+    NULL, NULL, NULL, NULL, 0, 0
 };
 
 static
@@ -790,7 +790,7 @@ static int desc(struct cmdctx *cmdctx)
 
         cmdctx_printf(cmdctx, "\n");
         cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, "%-16s", "Package:");
-        cmdctx_printf(cmdctx, "%s\n", pkg_snprintf_epoch_s(pkg));
+        cmdctx_printf(cmdctx, "%s\n", pkg_evr_snprintf_s(pkg));
         
         if (cmdctx->_flags & OPT_DESC_DESCR) 
             show_description(cmdctx, pkg, cmdctx->_flags);
