@@ -857,6 +857,7 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                  pkg_snprintf_s(tomark), capreq_snprintf_s(req),
                  pkg_is_installed(pkg) ? "" : " already marked", 
                  pkg_snprintf_s0(pkg));
+            upg->nerr_dep++;
             
         } else if (tomark && (upg->inst->flags & INSTS_FOLLOW)) {
             
