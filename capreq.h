@@ -85,17 +85,17 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t relflags, int32_t flags);
 
-#define capreq_new_name_a(name)	             \
-    ({                                       \
-        struct capreq *cr;                   \
+#define capreq_new_name_a(name, crptr)	     \
+    {                                        \
+        struct capreq *__cr;                   \
         int len = strlen((name));            \
-        cr = alloca(sizeof(*cr) + len + 2);  \
-        cr->cr_flags = cr->cr_relflags = 0;  \
-        cr->cr_ep_ofs = cr->cr_ver_ofs = cr->cr_rel_ofs = 0; \
-        cr->_buf[0] = '\0';                  \
-        memcpy(&cr->_buf[1], (name), len + 1);  \
-        cr = cr;                             \
-    })
+        __cr = alloca(sizeof(*__cr) + len + 2);  \
+        __cr->cr_flags = __cr->cr_relflags = 0;  \
+        __cr->cr_ep_ofs = __cr->cr_ver_ofs = __cr->cr_rel_ofs = 0; \
+        __cr->_buf[0] = '\0';                  \
+        memcpy(&__cr->_buf[1], (name), len + 1);  \
+        crptr = __cr;                            \
+    }
 
 void capreq_free(struct capreq *cr);
 
