@@ -1,8 +1,6 @@
 # $Id$
 
-CFLAGS    = @CFLAGS@
-INCLUDES  = -I$(top_srcdir)/trurlib
-
+INCLUDES = @TRURL_INCLUDE@
 lib_LIBRARIES      = libvfile.a
 libvfile_a_SOURCES = vfile.c fetch.c p_open.c 
 
@@ -11,7 +9,7 @@ pkginclude_HEADERS = vfile.h p_open.h
 
 noinst_PROGRAMS = sample
 sample_SOURCES  = sample.c
-sample_LDADD    = -L../trurlib libvfile.a
+sample_LDADD    = libvfile.a @TRURL_LDFLAG@
 
 dist-hook:
 	rm -rf $(distdir)/.deps
