@@ -241,8 +241,8 @@ int pkgset_order(struct pkgset *ps)
     
     if (nloops) {
         ps->nerrors += nloops;
-        msgn(1, _("%d prerequirement loop%s detected"), nloops,
-            nloops > 1 ? "s":"");
+        msgn(1, _("%d prerequirement %s detected"), nloops,
+            nloops > 1 ? _("loops"):_("loop"));
         
     } else if (ps_verify_mode(ps)) {
         msgn(1, _("No loops -- OK"));
