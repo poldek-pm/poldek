@@ -15,7 +15,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-
+#include <time.h>
 #include <netinet/in.h>
 
 #include <trurl/nstr.h>
@@ -71,7 +71,7 @@ static inline const char *register_arch(const char *arch)
         architecture_h = n_hash_new(21, free);
         n_hash_ctl(architecture_h, TN_HASH_NOCPKEY);
     }
-    
+
     if ((aarch = n_hash_get(architecture_h, arch)) == NULL) {
         aarch = n_strdup(arch);
         n_hash_insert(architecture_h, aarch, aarch);
@@ -86,13 +86,13 @@ static inline const char *register_arch(const char *arch)
 /* always store fields in order: path, name, version, release, arch */
 struct pkg *pkg_new_ext(const char *name, int32_t epoch,
                         const char *version, const char *release,
-                        const char *arch, const char *os,
+                        const char *arch, const char *os, const char *fn,
                         uint32_t size, uint32_t fsize,
                         uint32_t btime)
 {
     struct pkg *pkg;
-    int name_len = 0, version_len = 0, release_len = 0;
-    char *buf;
+    int name_len = 0, version_len = 0, release_len = 0, fn_len = 0;
+    char *buf, pkg_fn[PATH_MAX];
     int len;
 
     n_assert(name);
@@ -110,6 +110,20 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
     	
     release_len = strlen(release);
     len += release_len + 1;
+
+    if (fn && arch) {
+        fn = n_basenam(fn);
+        n_snprintf(pkg_fn, sizeof(pkg_fn), "%s-%s-%s.%s.rpm", name,
+                   version, release, arch);
+        //printf("cmp %s %s\n", pkg_fn, fn);
+        if (strcmp(pkg_fn, fn) == 0)
+            fn = NULL;
+        else {
+            fn_len = strlen(fn);
+            len += fn_len + 1;
+        }
+    }
+    
 
     len += len + 1;             /* for nvr */
 
@@ -142,6 +156,14 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
     *buf++ = '\0';
 
     
+    pkg->fn = NULL;
+    if (fn) {
+        pkg->fn = buf;
+        memcpy(buf, fn, fn_len);
+        buf += fn_len;
+        *buf++ = '\0';
+    }
+
     if (arch) 
         pkg->arch = register_arch(arch);
 
@@ -160,6 +182,7 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
     memcpy(buf, release, release_len);
     buf += release_len;
     *buf++ = '\0';
+
     
     pkg->reqs = NULL;
     pkg->caps = NULL;
@@ -192,7 +215,7 @@ void pkg_free(struct pkg *pkg)
         pkg->_refcnt--;
         return;
     }
-    
+
     if (pkg->caps) {
         n_array_free(pkg->caps);
         pkg->caps = NULL;
@@ -359,10 +382,10 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
     if ((rc = pkg_cmp_name(p1, p2)))
         return rc;
     
-    return -pkg_cmp_evr(p1, p2);
+    rc = -pkg_cmp_evr(p1, p2);
 
     //printf("cmp %s %s -> %d\n", pkg_snprintf_s(p1), pkg_snprintf_s0(p2), rc);
-    //return rc;
+    return rc;
 }
 
 
@@ -431,7 +454,7 @@ int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2)
     if (p1->arch == NULL && p2->arch)
         return -1;
 
-    if ((rc = strcmp(p1->arch, p2->arch)))
+    if ((rc = strcmp(p1->arch ? p1->arch : "" , p2->arch ? p2->arch : "")))
         return rc;
     
     if (p1->os && p2->os == NULL)
@@ -439,8 +462,18 @@ int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2)
     
     if (p1->os == NULL && p2->os)
         return -1;
+    
+    if ((rc = strcmp(p1->os ? p1->os : "" , p2->os ? p2->os : "")))
+        return rc;
 
-    return strcmp(p1->os, p2->os);
+    if (p1->fn && p2->fn == NULL)
+        return 1;
+    
+    if (p1->fn == NULL && p2->fn)
+        return -1;
+
+    rc = strcmp(p1->fn ? p1->fn : "" , p2->fn ? p2->fn : "");
+    return rc;
 }
 
     
@@ -985,11 +1018,17 @@ const char *pkg_group(const struct pkg *pkg)
     return NULL;
 }
 
+
 char *pkg_filename(const struct pkg *pkg, char *buf, size_t size) 
 {
     unsigned len = 0;
     int n_len, v_len, r_len, a_len;
     char *s;
+
+    if (pkg->fn) {
+        *buf = '\0';
+        return pkg->fn;
+    }
     
     n_len = pkg->ver  - pkg->name - 1;
     v_len = pkg->rel  - pkg->ver - 1;
@@ -1036,6 +1075,9 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
 char *pkg_filename_s(const struct pkg *pkg) 
 {
     static char buf[256];
+    if (pkg->fn) 
+        return pkg->fn;
+        
     return pkg_filename(pkg, buf, sizeof(buf));
 }
 
@@ -1128,7 +1170,7 @@ tn_array *pkgs_array_new(int size)
     tn_array *arr;
     
     arr = n_array_new(size, (tn_fn_free)pkg_free,
-                      (tn_fn_cmp)pkg_cmp_name_evr_rev);
+                      (tn_fn_cmp)pkg_strcmp_name_evr);//pkg_cmp_name_evr_rev);
     n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
     return arr;
 }
@@ -1167,33 +1209,12 @@ int pkg_nvr_strcmp_btime_rev(struct pkg *p1, struct pkg *p2)
 }
 
 
-static int gmt_off = 0; /* TZ offset */
-static int gmt_off_flag = 0;
-
-#include <time.h>
-static void setup_gmt_off(void) 
-{
-    time_t t;
-    struct tm *tm;
-
-    t = time(NULL);
-    if ((tm = localtime(&t))) 
-#ifdef HAVE_TM_GMTOFF
-        gmt_off = tm->tm_gmtoff;
-#elif defined HAVE_TM___GMTOFF
-        gmt_off = tm->__tm_gmtoff;
-#endif        
-}
-
 int pkg_nvr_strcmp_bday(struct pkg *p1, struct pkg *p2)
 {
-    register int cmprc;
+    register int cmprc, gmt_off;
 
-    if (gmt_off_flag == 0) {
-        setup_gmt_off();
-        gmt_off_flag = 1;
-    }
-    
+    gmt_off = get_gmt_offs();
+
     cmprc = ((p1->btime + gmt_off) / 86400) - ((p2->btime + gmt_off) / 86400);
     
     if (cmprc == 0)
@@ -1206,3 +1227,34 @@ int pkg_nvr_strcmp_bday_rev(struct pkg *p1, struct pkg *p2)
 {
     return -pkg_nvr_strcmp_bday(p1, p2); 
 }
+
+
+char *pkg_strsize(char *buf, int size, const struct pkg *pkg) 
+{
+    char unit = 'K';
+    double pkgsize = pkg->size/1024;
+
+    if (pkgsize >= 1024) {
+        pkgsize /= 1024;
+        unit = 'M';
+    }
+
+    n_snprintf(buf, size, "%.1f %cB", pkgsize, unit);
+    return buf;
+}
+
+char *pkg_strbtime(char *buf, int size, const struct pkg *pkg) 
+{
+    time_t t = pkg->btime;
+    
+    if (pkg->btime)
+        strftime(buf, size, "%Y/%m/%d %H:%M", localtime(&t));
+    else
+        *buf = '\0';
+    
+    buf[size-1] = '\0';
+    return buf;
+}
+
+
+

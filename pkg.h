@@ -99,6 +99,7 @@ struct pkg {
     char         *ver;
     char         *rel;
 
+    char         *fn;
     char         *nvr;          /* NAME-VERSION-RELEASE */
 
     const char   *arch;
@@ -143,10 +144,11 @@ struct pkg {
 struct pkg *pkg_new_ext(const char *name, int32_t epoch,
                         const char *version, const char *release,
                         const char *arch, const char *os,
+                        const char *fn,
                         uint32_t size, uint32_t fsize,
                         uint32_t btime);
 
-#define pkg_new(n, e, v, r, a, o) pkg_new_ext(n, e, v, r, a, o, 0, 0, 0)
+#define pkg_new(n, e, v, r, a, o) pkg_new_ext(n, e, v, r, a, o, NULL, 0, 0, 0)
 
 
 #define PKG_LDNEVR       0
