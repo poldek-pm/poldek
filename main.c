@@ -316,7 +316,7 @@ static struct argp_option options[] = {
 
 // obsoleted by '#'    
 {"nevr", OPT_NEVR, "\"NAME [[E:][V[-R]]]\"", OPTION_HIDDEN,
-     N_("Specifies package by NAME and EVR"), 65 },
+     "Specifies package by NAME and EVR", 65 },
     
 {"pkgnevr", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0,  65 }, /* backward compat */
 
