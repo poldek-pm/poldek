@@ -38,10 +38,13 @@ int rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
 {
     int rc = 0;
     
-#ifdef HAVE_RPM_4_1
+#ifndef HAVE_RPM_4_1
+    rc = rpmReadPackageHeader(fdt, hdr, NULL, NULL, NULL);
+#else 
     rpmRC rpmrc;
     rpmts ts = rpmtsCreate();
 
+    rpmtsSetVSFlags(ts, RPMVSF_NODSA | RPMVSF_NORSA | RPMVSF_NOMD5);
     rpmrc = rpmReadPackageFile(ts, fdt, path, hdr);
     switch (rpmrc) {
         case RPMRC_NOTTRUSTED:
@@ -53,18 +56,12 @@ int rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
         default:
             rc = 1;
     }
-            
-#else
-    rc = rpmReadPackageHeader(fdt, hdr, NULL, NULL, NULL);
+    rpmtsFree(ts);
 #endif
-
+    
     if (rc != 0)
         logn(LOGERR, _("%s: read header failed"), path);
     
-#ifdef HAVE_RPM_4_1
-    rpmtsFree(ts);
-#endif
-
     return rc == 0;
 }
 
