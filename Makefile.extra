@@ -42,7 +42,7 @@ misarch: mclean
 	$(MAKE) -C . backup cparch=1 backupdir=/z
 
 #perl -pi -e "s/VERSION_STATUS=\"devel\"/VERSION_STATUS=\"devel $$dts\"/g" \
-#$(distdir)/configure* && \
+#$(distdir)/configure* 
 
 snap: dist
 	@dts=`date +%Y%m%d` && rm -rf $(PACKAGE)-cvs$$dts* && \
@@ -51,5 +51,4 @@ snap: dist
 	mv -f $(distdir) $(PACKAGE)-cvs$$dts && \
 	tar cvpzf $(PACKAGE)-cvs$$dts.tar.gz $(PACKAGE)-cvs$$dts && \
 	echo "$(PACKAGE)-cvs$$dts.tar.gz"
-
 
