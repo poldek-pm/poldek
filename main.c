@@ -41,7 +41,7 @@
 #include "install.h"
 #include "conf.h"
 #include "split.h"
-#include "term.h"
+#include "poldek_term.h"
 
 #ifndef VERSION
 # error "undefined VERSION"
@@ -1114,7 +1114,11 @@ void parse_options(int argc, char **argv)
     }
     
     vfile_verbose = &verbose;
-    n_assert(args.inst.cachedir); 
+    n_assert(args.inst.cachedir);
+
+    if ((conf_get_bool(htcnf, "ftp_sysuser_as_anon_passwd", 0)))
+        vfile_cnflags |= VFILE_REALUSERHOST_AS_ANONPASSWD;
+    
     vfile_configure(args.inst.cachedir, vfile_cnflags);
     
     vfile_msg_fn = log_msg;

@@ -65,6 +65,7 @@ static struct tag valid_tags[] = {
     { "confirm_installs", TYPE_BOOL , { 0 } },
     { "choose_equivalents_manually", TYPE_BOOL , { 0 } },
     { "particle_install", TYPE_BOOL, { 0 } },
+    { "ftp_sysuser_as_anon_passwd", TYPE_BOOL , { 0 } },
     {  NULL,           0, { 0 } }, 
 };
 
