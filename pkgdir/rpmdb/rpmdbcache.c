@@ -195,7 +195,8 @@ int dbcache_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 
 {
     flags |= PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
-        PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NODESC | PKGDIR_CREAT_NOFL;
+        PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NODESC | PKGDIR_CREAT_NOFL |
+        PKGDIR_CREAT_wRECNO;
 
     return pkgdir_module_pndir.create(pkgdir, pathname, flags);
 }

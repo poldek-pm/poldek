@@ -673,10 +673,13 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 
     st_flags = 0;
     st_flags |= PKGSTORE_NOEVR | PKGSTORE_NOARCH | PKGSTORE_NOOS |
-        PKGSTORE_NODESC;
+        PKGSTORE_NODESC;        /* have them in key */
 
     if (flags & PKGDIR_CREAT_NOFL)
         st_flags |= PKGSTORE_NOANYFL;
+
+    if (flags & PKGDIR_CREAT_wRECNO)
+        st_flags |= PKGSTORE_RECNO;
 
     save_descr = 0;
     if (pkgdir->avlangs_h && (flags & PKGDIR_CREAT_NODESC) == 0)

@@ -164,7 +164,7 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
     return 1;
 }
 
-
+/* local tags of PKG_STORETAG_BINF tag */
 #define PKGFIELD_TAG_SIZE    'S'
 #define PKGFIELD_TAG_FSIZE   's'
 #define PKGFIELD_TAG_BTIME   'b'
@@ -174,7 +174,7 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
 #define PKGFIELD_TAG_FMTIME  't'
 
 static
-void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg) 
+void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg, unsigned flags) 
 {
     uint8_t n = 0, size8t;
     int size = 0;
@@ -194,7 +194,7 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg)
     if (pkg->groupid) 
         n++;
 
-    if (pkg->recno) 
+    if ((flags & PKGSTORE_RECNO) && pkg->recno) 
         n++;
 
     if (pkg->fmtime) 
@@ -233,7 +233,7 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg)
         n_buf_add_int32(nbuf, pkg->groupid);
     }
 
-    if (pkg->recno) {
+    if ((flags & PKGSTORE_RECNO) && pkg->recno) {
         n_buf_add_int8(nbuf, PKGFIELD_TAG_RECNO);
         n_buf_add_int32(nbuf, pkg->recno);
     }
@@ -362,7 +362,7 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
         n_buf_printf(nbuf, "%c: %s\n", PKG_STORETAG_FN, pkg->fn);
     
     pkg_store_bintag(PKG_STORETAG_BINF, nbuf);
-    pkg_store_fields(nbuf, pkg);
+    pkg_store_fields(nbuf, pkg, flags);
     
     if (pkg->caps && n_array_size(pkg->caps))
         pkg_store_caps(pkg, nbuf);

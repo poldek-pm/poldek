@@ -40,6 +40,7 @@ int pkg_store_skiptag(int tag, int tag_binsize, tn_stream *st);
 #define PKGSTORE_NOFL      (1 << 4)
 #define PKGSTORE_NODEPFL   (1 << 5)
 #define PKGSTORE_NOANYFL   (PKGSTORE_NOFL | PKGSTORE_NODEPFL)
+#define PKGSTORE_RECNO     (1 << 6)
 
 struct pkg;
 int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,

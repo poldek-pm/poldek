@@ -79,13 +79,15 @@ void pkgdir_free(struct pkgdir *pkgdir);
 
 
 /*
-  if pkgdir source is poldeksindex then loading is 2-phase:
+  pkgdir loading is 2-phase:
    1) pkgdir_open() opens index and reads its header
    2) pkgdir_load() loads index content
 */
 #define PKGDIR_OPEN_REFRESH   (1 << 0) /* don't look into cache */
 #define PKGDIR_OPEN_DIFF      (1 << 1) /* diff is expected      */
+#if 0                           /* unused */
 #define PKGDIR_OPEN_ALLANGS   (1 << 2)
+#endif
 
 struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags);
 
@@ -98,25 +100,20 @@ struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
                            const char *type, const char *name);
 
 /* ldflags */
-//#define PKGDIR_LD_SKIPBASTS   (1 << 0) /* don't load capreqs added by poldek */
 #define PKGDIR_LD_FULLFLIST   (1 << 1) /* load full file list */
 #define PKGDIR_LD_DESC        (1 << 2) /* load pkg info to memory */
 #define PKGDIR_LD_NOUNIQ      (1 << 3) /* don't perform pkgdir_uniq() */
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 
-
-//struct pkgdir *pkgdir_load_db(const char *rootdir, const char *path);
-//struct pkgdir *pkgdir_load_dir(const char *name, const char *path);
-//struct pkgdir *pkgdir_load_hdl(const char *name, const char *path,
-//                               const char *prefix);
-
 #define PKGDIR_CREAT_NODESC     (1 << 0) /* don't save pkg's user level info */
 #define PKGDIR_CREAT_NOFL       (1 << 1) /* don't save pkg's file list       */
 #define PKGDIR_CREAT_MINi18n    (1 << 2) /* */
-#define PKGDIR_CREAT_NOUNIQ     (1 << 4)
+#define PKGDIR_CREAT_NOUNIQ     (1 << 4) /* don't remove duplicates (same NEVR-A)*/
 #define PKGDIR_CREAT_NOPATCH    (1 << 5) /* don't create diff */
 #define PKGDIR_CREAT_NOCOMPR    (1 << 6) /* create uncompressed index (NFY) */
+#define PKGDIR_CREAT_wRECNO     (1 << 7) /* store packages recno if it exists;
+                                            honored by pndir only */
 
 int pkgdir_save(struct pkgdir *pkgdir, unsigned flags);
 
