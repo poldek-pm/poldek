@@ -512,6 +512,7 @@ int mark_dependencies(struct pkgset *ps, unsigned instflags)
     return (cnfl_nerr + req_nerr) == 0;
 }
 
+#if 0
 /*
   function prepares directory where downloaded packages will be stored,
   used only for install-dist
@@ -542,11 +543,17 @@ static int setup_tmpdir(const char *rootdir)
     vfile_configure(path, -1);
     return 1;
 }
-
+#endif
 
 int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
 {
     int i, ninstalled, nerr;
+    
+    n_assert(inst->db->rootdir);
+    if (!is_rwxdir(inst->db->rootdir)) {
+        log(LOGERR, "access %s: %m\n", inst->db->rootdir);
+        return 0;
+    }
 
     if (!mark_dependencies(ps, inst->instflags))
         return 0;
@@ -554,11 +561,6 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
     nerr = 0;
     ninstalled = 0;
 
-    n_assert(inst->db->rootdir);
-
-    if (!setup_tmpdir(inst->db->rootdir))
-        return 0;
-    
     for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
         
