@@ -90,16 +90,13 @@ homepage.html: homepage.sgml
 
 website: homepage.html poldek.html
 
-website-whole-up: website dist
+website-whole-up: website dist website-up
 	rpm -ts poldek-@VERSION@.tar.gz
 	scp -p $$HOME/rpm/SRPMS/poldek-@VERSION@-1.src.rpm poldek-@VERSION@.tar.gz \
 	   team.pld.org.pl:public_html/poldek/download
 	ssh team.pld.org.pl \
 	'(cd public_html/poldek/download && md5sum *.gz *.rpm > md5sums && \
 	~/mkindexpage.pl * > index.html && chmod 644 * && ls -l)'
-	scp -p homepage.html team.pld.org.pl:public_html/poldek/index.html
-	scp -p poldek.html team.pld.org.pl:public_html/poldek/poldek.html
-
 
 website-up: website 
 	scp -p homepage.html team.pld.org.pl:public_html/poldek/index.html
