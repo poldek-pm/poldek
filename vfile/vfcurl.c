@@ -349,7 +349,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         int prevblock = bar->prev / HASH_SIZE;
         int thisblock = bar->point / HASH_SIZE;
         while ( thisblock > prevblock ) {
-            vfile_msg_fn("_.");
+            vfile_msgtty_fn(".");
             prevblock++;
         }
         
@@ -380,7 +380,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
             k = n - bar->prev_n;
             memset(line, '.', k);
             line[k] = '\0';
-            vfile_msg_fn("_%s", line);
+            vfile_msgtty_fn("%s", line);
             
         } else {
             char unit_line[23], amount_str[16], total_str[16];
@@ -406,7 +406,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
 
             snprintf(format, sizeof(format), "%%-%ds %%5.1f%%%% %%s", barwidth );
             snprintf(outline, sizeof(outline), format, line, percent, unit_line);
-            vfile_msg_fn("_\r%s", outline);
+            vfile_msgtty_fn("\r%s", outline);
         }
         bar->prev_n = n;
         if (total == bar->point)
@@ -417,9 +417,9 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
     bar->prev = bar->point;
     if (bar->state == PBAR_ST_FINISHED) {
         if (bar->is_tty)
-            vfile_msg_fn("_\n");
+            vfile_msgtty_fn("\n");
         else
-            vfile_msg_fn(_("_Done\n"));
+            vfile_msgtty_fn(_("Done\n"));
         bar->state = PBAR_ST_TERMINATED;
     }
 

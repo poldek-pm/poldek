@@ -1048,6 +1048,7 @@ void parse_options(int argc, char **argv)
     vfile_configure(args.inst.cachedir, vfile_cnflags);
     
     vfile_msg_fn = log_msg;
+    vfile_msgtty_fn = log_tty;
     vfile_err_fn = log_err;
 }
 

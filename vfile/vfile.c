@@ -66,6 +66,8 @@ int                 *vfile_verbose = &verbose;
 
 
 static void vfmsg(const char *fmt, ...);
+
+void (*vfile_msgtty_fn)(const char *fmt, ...) = vfmsg;
 void (*vfile_msg_fn)(const char *fmt, ...) = vfmsg;
 void (*vfile_err_fn)(const char *fmt, ...) = vfmsg;
 

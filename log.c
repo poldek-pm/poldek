@@ -161,7 +161,15 @@ void log_err(const char *fmt, ...)
     }
 }
 
-
+void log_tty(const char *fmt, ...)
+{
+    va_list args;
+    if (verbose > -1) {
+        va_start(args, fmt);
+        vlog_tty(LOGINFO, fmt, args);
+        va_end(args);
+    }
+}
 
 void log_msg_i(int indent, const char *fmt, ...) 
 {
@@ -241,6 +249,7 @@ void vlog_tty(int pri, const char *fmt, va_list args)
     if (n > 0)
         fprintf(l_stream, "%s", buf);
     vfprintf(l_stream, fmt, args);
+    fflush(l_stream);
 }
 
 #if 0

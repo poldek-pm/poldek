@@ -59,8 +59,10 @@ void log_err(const char *fmt, ...)
 void log_msg(const char *fmt, ...)
   __attribute__((format(printf,1,2))); 
 void log_msg_i(int indent, const char *fmt, ...)
-  __attribute__((format(printf,2,3))); 
-
+  __attribute__((format(printf,2,3)));
+void log_tty(const char *fmt, ...)  
+  __attribute__((format(printf,1,2)));
+  
 #define msg(verbose_level, fmt, args...)   \
   do {                                     \
     if ((verbose_level) <= verbose)        \

@@ -22,6 +22,7 @@
 
 extern int *vfile_verbose;
 extern void (*vfile_msg_fn)(const char *fmt, ...);
+extern void (*vfile_msgtty_fn)(const char *fmt, ...);
 extern void (*vfile_err_fn)(const char *fmt, ...);
 
 #define VFILE_USEXT_FTP    (1 << 0)

@@ -37,7 +37,6 @@ void vfile_progress_init(struct vf_progress_bar *bar)
     bar->is_tty = isatty(fileno(stdout));
 }
 
-    
 
 static int nbytes2str(char *buf, int bufsize, unsigned long nbytes) 
 {
@@ -58,6 +57,7 @@ static int nbytes2str(char *buf, int bufsize, unsigned long nbytes)
 
     return snprintf(buf, bufsize, "%.1f%c", nb, unit);
 }
+
 
 void vfile_progress(long total, long amount, void *data)
 {
@@ -87,7 +87,7 @@ void vfile_progress(long total, long amount, void *data)
     if (total == 0) {
         n = amount/HASH_SIZE;
         while (n > bar->prev_n++)
-            vfile_msg_fn("_.");
+            vfile_msgtty_fn(".");
         return;
     }
     
@@ -109,10 +109,10 @@ void vfile_progress(long total, long amount, void *data)
         n_assert(k < (int)sizeof(line));
         memset(line, '.', k);
         line[k] = '\0';
-        vfile_msg_fn("_%s", line);
+        vfile_msgtty_fn("%s", line);
         
         if (amount && amount == total) { /* last notification */
-            vfile_msg_fn(_("_done\n"));
+            vfile_msgtty_fn(_("done\n"));
             bar->state = VF_PROGRESS_DISABLED;
         }
         
@@ -142,16 +142,15 @@ void vfile_progress(long total, long amount, void *data)
 
         snprintf(fmt, sizeof(fmt), "%%-%ds %%5.1f%%%% %%s", bar->width);
         snprintf(outline, sizeof(outline), fmt, line, percent, unit_line);
+        
         if (total == amount) {
             bar->state = VF_PROGRESS_DISABLED;
-            vfile_msg_fn("_\r%s\n", outline);
+            vfile_msgtty_fn("\r%s\n", outline);
             
         } else 
-            vfile_msg_fn("_\r%s", outline);
+            vfile_msgtty_fn("\r%s", outline);
     }
     
-    
     bar->prev_n = n;
-    
 }
 
