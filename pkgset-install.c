@@ -892,11 +892,12 @@ int find_db_conflicts2(const struct pkg *pkg, const struct capreq *cap,
         
         for (j=0; j<n_array_size(dbpkg->pkg->cnfls); j++) {
             struct capreq *cnfl = n_array_nth(dbpkg->pkg->cnfls, j);
-            if (cap_match_req(cap, cnfl, 1))
+            if (cap_match_req(cap, cnfl, 1)) {
                 log(LOGERR, "%s (%s) conflicts with installed %s (%s)\n",
                     pkg_snprintf_s(pkg), capreq_snprintf_s(cap), 
                     pkg_snprintf_s0(dbpkg->pkg),capreq_snprintf_s0(cnfl));
-            ncnfl++;
+                ncnfl++;
+            }
         }
     }
     
@@ -1077,7 +1078,7 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
     ncnfl = find_conflicts(upg, &ndbcnfl);
     
     if (ncnfl) {
-        log(LOGERR, "There %d are conflicts\n", ncnfl);
+        log(LOGERR, "There are %d conflicts\n", ncnfl);
         
         if (upg->inst->instflags & (PKGINST_FORCE | PKGINST_TEST)) 
             ncnfl = ndbcnfl = 0;
