@@ -1,10 +1,5 @@
 0.17.3 (not released yet)
 
-* new "--clean" and "--clean-whole" options for cache directory
-  cleanup
-
-* added IPv6 support to internal FTP client
-
 * supported "hdlist" files as sources. These files contain raw RPM package
   headers. They are used by APT-RPM as they are widely supported 
   by RPM based distributions. However this format isn't optimal, now 
@@ -18,13 +13,18 @@
   "native" index format. Cmdline options: --source for 'pidx', --sdir for
   'dir' and  --shdrl for 'hdrl'.
 
+* support for GPG/PGP signatures verification (new "gpg" and "pgp" 
+  source options). Verification works well with rpm >= 4.0.4 or patched 
+  PLD's rpm 4.0.2 package (release 62). 
+
 * simple HTTP client (with partly HTTP/1.1 support) which it is used for 
   HTTP downloads; cURL backend is not compiled by default. 
 
-* support for GPG/PGP signatures verification (new "gpg" and "pgp" 
-  source options). Verification works well with rpm >= 4.0.4 or patched 
-  PLD's rpm 4.0.2 (release 62 of the package). 
-   
+* added IPv6 support to internal FTP client
+
+* new "--clean" and "--clean-whole" options for cache directory
+  cleanup
+
 * URLs with user and password (ftp://user:passwd@host:port/path/ syntax) 
   are supported (Andreas Piesk <a.piesk@gmx.net>)
 
@@ -34,11 +34,11 @@
 * new "noautoup" source option tells poldek to do not update 
   source by default. 
 
-* shell: added long listig format of file list ($ desc -ll)
+* shell: added long listig format of file list (poldek> desc -ll)
 
 * misc fixes to compile on SuSE
 
-* fixed support for rpm 3.x (with help of Roger Luethi <rl@hellgate.ch>)
+* fixed rpm 3.x support (with help of Roger Luethi <rl@hellgate.ch>)
 
 * fixed and improved handling of bool configuration options, 
   added on/off and enable/disable to the list of valid choices
@@ -46,11 +46,25 @@
 
 * fixed detection of file based conflicts between available packages. 
 
-* various bugs fixed:
+* capabilities with the same name and different versions
+  are handled properly
+
+* misc fixes to compile and work with glibc2.1 (with 
+  help of Andreas Piesk <a.piesk@gmx.net>) 
+
+* installation of multiple instances of package is allowed ($ poldek -i)
+
+* German translation (Andreas Piesk <a.piesk@gmx.net>)
+
+* various bugs are fixed:
    - double '/' in paths handling
+   - huge mem leak on --update 
    - ambiguous p_open() flags (Michal Moskal <malekith@pld.org.pl>)
-   - removed [v]snprintf() (wrong) usage; n_[v]snprintf() are used
-     instead
+   - removed [v]snprintf() (wrong) usage; trurlib's n_[v]snprintf() 
+     are used instead
+   - automake/autoconf fixes (Artur Frysiak <wiget@pld.org.pl>)
+   - many minor fixes (thanks to Andreas Piesk <a.piesk@gmx.net>)
+
 
 0.17.2
 * "ported" to RedHat 7.2 (with rpm 4.0.4)
