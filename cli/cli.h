@@ -1,6 +1,6 @@
 /* $Id$ */
-#ifndef  POLDEK_SHELL_H
-#define  POLDEK_SHELL_H
+#ifndef  POCLIDEK_H
+#define  POCLIDEK_H
 
 #include <argp.h>
 #include <time.h>
@@ -13,16 +13,60 @@
 
 #define POLDEKCLI_CONFIG_LOADED   (1 << 0)
 #define POLDEKCLI_PACKAGES_LOADED (1 << 1)
-
+#define POLDEKCLI_CMDL            (1 << 2)
 #define POLDEKCLI_PKGCTX_AVAIL    1
 #define POLDEKCLI_PKGCTX_INSTD    2
 
 extern int shOnTTY;
+struct poclidek_ctx;
 
-struct poclidek_dir {
-    char      name[256];
-    tn_array  *pkgs;
+#define PKG_DENT_DIR (1 << 0)
+
+struct pkg_dent {
+    uint16_t         _refcnt;
+    uint16_t         flags;
+    struct pkg_dent  *parent;
+    
+    union {
+        tn_array        *ents;
+        struct pkg      *pkg;
+    } ent;
+    
+    char      *name;
+    char      _buf[0];
 };
+
+#define	pkg_dent_ents ent.ents
+#define	pkg_dent_pkg  ent.pkg
+
+#define pkg_dent_isdir(ent) (ent->flags & PKG_DENT_DIR)
+
+void pkg_dent_free(struct pkg_dent *ent);
+
+struct pkg_dent *pkg_dent_adddir(struct pkg_dent *dent, const char *name);
+int pkg_dent_addpkgs(struct pkg_dent *dent, tn_array *pkgs);
+
+int pkg_dent_cmp(struct pkg_dent *ent1, struct pkg_dent *ent2);
+int pkg_dent_strncmp(struct pkg_dent *ent, const char *name);
+void pkg_dent_sort(struct pkg_dent *ent,
+                   int (*cmpf)(struct pkg_dent *, struct pkg_dent*));
+
+void poclidek_dent_init(struct poclidek_ctx *cctx);
+int poclidek_chdir(struct poclidek_ctx *cctx, const char *path);
+char *poclidek_dent_dirpath(char *path, int size, const struct pkg_dent *dent);
+tn_array *poclidek_get_dents(struct poclidek_ctx *cctx, const char *dir);
+tn_array *poclidek_get_dent_packages(struct poclidek_ctx *cctx, const char *dir);
+tn_array *poclidek_resolve_dents(const char *path,
+                                 struct poclidek_ctx *cctx,
+                                 struct poldek_ts *ts,
+                                 int exact);
+
+
+struct cmdarg;
+tn_array *poclidek_cmdarg_dents(struct cmdarg *cmdarg, const char *path,
+                                int exact);
+
+
 
 struct poclidek_ctx {
     int                 pkg_ctx;
@@ -36,15 +80,18 @@ struct poclidek_ctx {
 
     unsigned            flags;
 
-    tn_array             *dirs;
-    struct poclidek_dir  *current_dir;
+    struct pkg_dent  *rootdir;
+    struct pkg_dent  *homedir;
+    struct pkg_dent  *currdir;
 };
+
+
+
 
 #define poclidek_set_pkgctx(cctx, pkgctx) (cctx->pkg_ctx = pkgctx)
 tn_array *poclidek_get_current_pkgs(struct poclidek_ctx *cctx);
 
-int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx,
-                   int skip_installed);
+int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx);
 
 int poclidek_load_packages(struct poclidek_ctx *cctx, int skip_installed);
 
@@ -115,12 +162,6 @@ struct poclidek_cmd {
 };
 
 
-struct poclidek_cmd_result {
-    tn_array    *pkgs;
-    tn_array    *lines;
-    void  (*display)(void*);
-};
-
 
 int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
 
@@ -129,4 +170,9 @@ int sh_printf_c(FILE *stream, int color, const char *fmt, ...);
 void poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path);
 struct install_info;
 void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct install_info *iinf);
+
+int poclidek_save_installedcache(struct poclidek_ctx *cctx,
+                                 struct pkgdir *pkgdir);
+int poclidek_load_installed(struct poclidek_ctx *cctx, int reload);
+
 #endif 

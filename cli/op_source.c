@@ -181,7 +181,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_SRCTYPE:
-            arg_s->curr_src_type = arg; /* guess */
+            arg_s->curr_src_type = arg;
             break;
             
         case OPT_SRCTXT:     /* no break */
@@ -309,7 +309,7 @@ static void print_source_type_list(void)
 static int oprun(struct poclidek_opgroup_rt *rt)
 {
     struct arg_s *arg_s;
-    int rc = 0;
+    int ec = OPGROUP_RC_NIL, rc = 0;
 
     
     arg_s = rt->_opdata;
@@ -319,17 +319,8 @@ static int oprun(struct poclidek_opgroup_rt *rt)
         unsigned flags = PKGSOURCE_CLEAN;
         if (arg_s->cnflags & POLDEKCLI_SRC_CLEANA)
             flags |= PKGSOURCE_CLEANA;
-        
         sources_clean(rt->ctx->sources, flags);
-    }
-
-    if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE) {
-        unsigned flags = PKGSOURCE_UP;
-    
-        if (arg_s->cnflags & POLDEKCLI_SRC_UPDATEA)
-            flags |= PKGSOURCE_UPA;
-
-        sources_update(rt->ctx->sources, flags);
+        rc |= OPGROUP_RC_OK;
     }
 
     if (arg_s->cnflags & POLDEKCLI_SRC_SRCTYPE_LS) {
@@ -341,7 +332,21 @@ static int oprun(struct poclidek_opgroup_rt *rt)
         rc |= OPGROUP_RC_FINI;
         print_source_list(rt->ctx->sources);
     }
+
+    if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE) {
+        unsigned flags = PKGSOURCE_UP;
     
+        if (arg_s->cnflags & POLDEKCLI_SRC_UPDATEA)
+            flags |= PKGSOURCE_UPA;
+
+        if (!(rc = sources_update(rt->ctx->sources, flags)))
+            rc |= OPGROUP_RC_ERROR | OPGROUP_RC_IFINI;
+        
+        rc |= OPGROUP_RC_OK;
+    }
+
+    
+    //printf("op_source %d\n", rc);
     return rc;
 }
 

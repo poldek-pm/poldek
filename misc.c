@@ -746,3 +746,30 @@ tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
     
     return r_langs;
 }
+
+static int gmt_off = 0; /* TZ offset */
+static int gmt_off_flag = 0;
+
+#include <time.h>
+static void setup_gmt_off(void) 
+{
+    time_t t;
+    struct tm *tm;
+
+    t = time(NULL);
+    if ((tm = localtime(&t))) 
+#ifdef HAVE_TM_GMTOFF
+        gmt_off = tm->tm_gmtoff;
+#elif defined HAVE_TM___GMTOFF
+        gmt_off = tm->__tm_gmtoff;
+#endif        
+}
+
+int get_gmt_offs(void)
+{
+    if (gmt_off_flag == 0) {
+        setup_gmt_off();
+        gmt_off_flag = 1;
+    }
+    return gmt_off;
+}

@@ -55,7 +55,9 @@ struct poldek_ts {
     tn_array  *pkgs;
     
     struct arg_packages  *aps;
-    
+
+    char               *rpm_bin;       /* /usr/bin/rpm   */ 
+    char               *sudo_bin;      /* /usr/bin/sudo  */
     char               *rootdir;       /* top level dir          */
     char               *fetchdir;      /* dir to fetch files to  */
     char               *cachedir;      /* cache directory        */

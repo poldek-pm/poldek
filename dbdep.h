@@ -13,7 +13,7 @@
 #include "capreq.h"
 
 struct db_dep {
-    struct capreq *req;
+    struct capreq *req;        /* requirement */
     struct pkg    *spkg;       /* package which satisfies req */
     tn_array      *pkgs;       /* packages which requires req */
     unsigned      flags;       /* DBDEP_* */

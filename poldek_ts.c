@@ -503,8 +503,11 @@ static int ts_prerun(struct poldek_ts *ts, struct install_info *iinf)
 
     n_assert (ts->ctx);
     poldek_ts_setf(ts, ts->ctx->ts->flags);
+    printf("ts_prerun %d\n", poldek_ts_issetf(ts, POLDEK_TS_FOLLOW));
     if (!poldek_ts_issetf(ts->ctx->ts, POLDEK_TS_FOLLOW))
         poldek_ts_clrf(ts, POLDEK_TS_FOLLOW);
+
+    printf("ts_prerun0 %d\n", poldek_ts_issetf(ts, POLDEK_TS_FOLLOW));
 
     cp_str_ifnull(&ts->rootdir, ts->ctx->ts->rootdir);
     cp_str_ifnull(&ts->fetchdir, ts->ctx->ts->fetchdir);
@@ -588,7 +591,7 @@ int poldek_ts_do_install(struct poldek_ts *ts, struct install_info *iinf)
     int rc;
 
     n_assert(ts->flags & POLDEK_TS_INSTALL);
-
+    printf("poldek_ts_do_install %d\n", poldek_ts_issetf(ts, POLDEK_TS_FOLLOW));
     if (!ts_prerun(ts, iinf))
         return 0;
 
@@ -598,7 +601,7 @@ int poldek_ts_do_install(struct poldek_ts *ts, struct install_info *iinf)
     ts->db = pkgdb_open(ts->rootdir, NULL, O_RDONLY);
     if (ts->db == NULL)
         return 0;
-    printf("poldek_ts_do_install0\n");
+    printf("poldek_ts_do_install0 %d\n", poldek_ts_issetf(ts, POLDEK_TS_FOLLOW));
     rc = do_poldek_ts_install(ts, iinf);
     pkgdb_free(ts->db);
     ts->db = NULL;

@@ -1,9 +1,28 @@
-0.19.0 (major enhancements release; not released yet)
+0.19.0 (major enhancements release; not released yet, not usable yet)
 
-* new package index format ('pndir') with descriptions
-  of packages moved to separate file. 
-* dependency removed   
+* new package index format ('pndir') with package descriptions
+  moved to separate file. Based on tndb (cdb like) DBM library
 
+
+
+0.18.3 (bugfix && improvements release; 2004/01/10)
+
+* internal HTTP client does not prevent proxy caching 
+  (Arkadiusz Miskiewicz <arekm at pld-linux org>)
+* fixed bug on getting package capabilities having EVR with empty Epoch
+  like "foo = :1.0-1"
+* do not die if rpmdb iterator returns NULL (possibly broken rpm database).
+  (Arkadiusz Miskiewicz <arekm at pld-linux org>)
+* vfile_external_compress=yes in config allows gzipped indexes 
+  to be used on systems with broken zlib linked in rpmio library
+  (rpm 4.2 from RedHat 9, Fedora) 
+* kill unaligned traps on Alpha, time_t is not 32bit long 
+  (Jakub Bogusz <qboosh at pld-linux org>)
+* new "promoteepoch" config and cmdline option switches Epoch comparision
+  by rpm prior to 4.2.1 (thanks to Jakub Bogusz <qboosh at pld-linux org>).     
+* support for RPM 4.2/4.3
+* dependency processing fixes
+* RPM 4.1 related fixes 
 
 0.18.1 (major bugfix release; 2002/11/27)
 
@@ -20,7 +39,7 @@
 
 0.18 (bugfix/minor enhancements release; 2002/11/07)
 
-* support for RPM 4.1 (with help of Artur Frysiak <wiget@pld.org.pl>)
+* support for RPM 4.1 (with help of Artur Frysiak <wiget at pld-linux org>)
 
 * few dependency processing improvements:
   - greedy upgrades are performed instead of marking different versions 
@@ -42,9 +61,9 @@
 * fixed available package list management in interactive mode 
 
 * AM/AC stuff cleanup and adaptation to their new versions (automake 1.7 and autoconf 2.54)
-  (Artur Frysiak <wiget@pld.org.pl>)
+  (Artur Frysiak <wiget at pld-linux org>)
 
-* Polish translation of manual page (GoTaR <gotar@pld.org.pl>)
+* Polish translation of manual page (GoTaR <gotar at pld-linux org>)
 
 * fix: progress bar isn't refreshed so frequently (#367)
 
@@ -62,9 +81,9 @@
 0.17.8 (major bugfix release; 2002/08/18)
 
 * package installation is verified with rpm database if rpm reports failure
-* fixed obsoletes matching (Jakub Bogusz <qboosh@pld.org.pl>)
+* fixed obsoletes matching (Jakub Bogusz <qboosh at pld-linux org>)
 * improved and fixed file based conflicts detection
-* fixed size units display (GoTaR <gotar@poczta.onet.pl>)
+* fixed size units display (GoTaR <gotar at poczta.onet.pl>)
 
 
 0.17.7 (bugfix release; 2002/06/14)
@@ -101,12 +120,12 @@
 * improved package auto-selection among equivalents: package which marks
   less packages to install is preferred
 * vftp: fixed logging in when server doesn't ask for password 
-  (Przemyslaw Frasunek <venglin@freebsd.lublin.pl>)
+  (Przemyslaw Frasunek <venglin at freebsd.lublin.pl>)
 * bugfix: root directory (--rootdir) is always passed to rpm as absolute path  
 * shell: desc: file mode is displayed in human readable form
 * fixed vfjuggle: packages.dir.md* are copied to hdd too
 * few SIGSEVs killed on "search" command when APT's pkglist file 
-  is used as package index (thanks to Gustavo Niemeyer <niemeyer@conectiva.com>)
+  is used as package index (thanks to Gustavo Niemeyer <niemeyer at conectiva.com>)
 
 
 0.17.4 (bugfix/minor enhancements release; 2002/05/06)
@@ -151,11 +170,11 @@
 * new "--clean" and "--clean-whole" options for cache directory
   cleanup
 
-* URLs with user and password (ftp://user:passwd@host:port/path/ syntax) 
-  are supported (Andreas Piesk <a.piesk@gmx.net>)
+* URLs with user and password (ftp://user:passwd at host:port/path/ syntax) 
+  are supported (Andreas Piesk <a.piesk at gmx.net>)
 
 * new "ftp_sysuser_as_anon_passwd" option causes sending 
-  login@hostname as anonymous FTP password 
+  login at hostname as anonymous FTP password 
 
 * new "noautoup" source option tells poldek to do not update 
   source by default. 
@@ -164,11 +183,11 @@
 
 * misc fixes to compile on SuSE
 
-* fixed rpm 3.x support (with help of Roger Luethi <rl@hellgate.ch>)
+* fixed rpm 3.x support (with help of Roger Luethi <rl at hellgate.ch>)
 
 * fixed and improved handling of bool configuration options, 
   added on/off and enable/disable to the list of valid choices
-  (Andreas Piesk <a.piesk@gmx.net>)
+  (Andreas Piesk <a.piesk at gmx.net>)
 
 * fixed detection of file based conflicts between available packages. 
 
@@ -176,7 +195,7 @@
   versions are handled properly
 
 * misc fixes to compile and work with glibc2.1 (with 
-  help of Andreas Piesk <a.piesk@gmx.net>) 
+  help of Andreas Piesk <a.piesk at gmx.net>) 
 
 * installation of multiple instances of package is allowed (by poldek -i)
 
@@ -185,24 +204,24 @@
   - fixed handling package conflicts added by poldek  
   - faster dependency checking
 
-* German translation (Andreas Piesk <a.piesk@gmx.net>)
+* German translation (Andreas Piesk <a.piesk at gmx.net>)
 
 * various bugs are fixed:
    - double '/' in paths handling
    - huge mem leak on --update 
-   - ambiguous p_open() flags (Michal Moskal <malekith@pld.org.pl>)
+   - ambiguous p_open() flags (Michal Moskal <malekith at pld-linux org>)
    - removed [v]snprintf() (wrong) usage; trurlib's n_[v]snprintf() 
      are used instead
-   - automake/autoconf fixes (Artur Frysiak <wiget@pld.org.pl>)
-   - many minor fixes (thanks to Andreas Piesk <a.piesk@gmx.net>)
+   - automake/autoconf fixes (Artur Frysiak <wiget at pld-linux org>)
+   - many minor fixes (thanks to Andreas Piesk <a.piesk at gmx.net>)
 
 0.17.2
 * "ported" to RedHat 7.2 (with rpm 4.0.4)
 * install-dist: --force forces installation of broken package sets
 * corrected package installation progress bar 
-	(Michal Moskal <malekith@pld.org.pl>)
+	(Michal Moskal <malekith at pld-linux org>)
 * install-dist: log INST-{OK,ERR} for PLD Installer
-	(Michal Moskal <malekith@pld.org.pl>)
+	(Michal Moskal <malekith at pld-linux org>)
 * --dump* works properly
 * vftp: fixed error handling
 
@@ -267,7 +286,7 @@
    - uninstall: fix: don't remove pkg from install list if --test is used
    - added -h opt. to all commands
 * removed GCC's nested functions usage -- seems that it causes SIGSEVs on
-   some machines (Arkadiusz Patyk <areq@pld.org.pl>)
+   some machines (Arkadiusz Patyk <areq at pld-linux org>)
 * fix: don't include trailing whitespaces in config values
 
 0.15.8:
@@ -278,7 +297,7 @@
        doesn't contain package descriptions at all
 * shell: fixed installed package list management
 * curl: fixed progress bar if total file size is unknown 
-  (Michal Moskal <malekith@pld.org.pl>)
+  (Michal Moskal <malekith at pld-linux org>)
 * "mercy" mode bugfix
 
 0.15.7:
@@ -299,8 +318,8 @@
 * added global config /etc/poldek.conf usage 
 * fixed prereq loop detection
 * added '@' to list of valid characters in package filename
-  (Rafal Kleger-Rudomin  <klakier@pld.org.pl>)
-* vfjuggle: sed is used instead of awk (Rafal Kleger-Rudomin  <klakier@pld.org.pl>)
+  (Rafal Kleger-Rudomin  <klakier at pld-linux org>)
+* vfjuggle: sed is used instead of awk (Rafal Kleger-Rudomin  <klakier at pld-linux org>)
 * shell: ls: fixed packages sorting 
 * minor bugfixes 
 
@@ -358,8 +377,8 @@
    - extended "desc" and "search" commands -- almost all
      package fields could be specified
    - colorized output
-* bugfixes (thanks to Rafal Kleger-Rudomin <klakier@pld.org.pl> and 
-	     Michal Moskal <malekith@pld.org.pl>)
+* bugfixes (thanks to Rafal Kleger-Rudomin <klakier at pld-linux org> and 
+	     Michal Moskal <malekith at pld-linux org>)
 
 0.14:
 
@@ -380,10 +399,10 @@
 * support for rpm 4.0.2 pre/post requirements
 * readline 4.2 updates
 * vfile: added curl backend (curl >= 7.7.4-pre1 is needed)
-* added --nodesc option for index creation (Michal Moskal <malekith@pld.org.pl>)
+* added --nodesc option for index creation (Michal Moskal <malekith at pld-linux org>)
 * rpmvercmp returns 2 instead of -1
 * file names are stored without trailing '\0' (saves about 100 kB disk space)
 * temporary dir may be set by $TMPDIR
 * fixed checking dependencies of unistalled packages
 * shell: added "desc" command
-* fixed a lot of bugs (with help of Michal Moskal <malekith@pld.org.pl>)
+* fixed a lot of bugs (with help of Michal Moskal <malekith at pld-linux org>)

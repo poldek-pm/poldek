@@ -67,4 +67,6 @@ const char *lc_messages_lang(void);
 tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang);
 
 char *poldek_i_conf_path(char *s, char *v);
+
+int get_gmt_offs(void);
 #endif /* POLDEK_MISC_H */

@@ -100,6 +100,7 @@ static struct tag global_tags[] = {
     { "particle install", TYPE_BOOL, { 0 } },
     { "unique package names", TYPE_BOOL, { 0 } },
     { "ftp sysuser as anon passwd", TYPE_BOOL , { 0 } },
+    { "vfile external compress", TYPE_BOOL , { 0 } },
     {  NULL,           0, { 0 } }, 
 };
 

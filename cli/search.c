@@ -546,7 +546,7 @@ static int search(struct cmdarg *cmdarg)
     }
     
     if (poldek_ts_get_arg_count(cmdarg->ts) == 0) {
-        pkgs = poclidek_get_current_pkgs(cctx);
+        pkgs = poclidek_get_dent_packages(cctx, NULL);
         
     } else {
         pkgs = poclidek_resolve_packages(cctx, cmdarg->ts, 0);

@@ -26,6 +26,7 @@
 #include "log.h"
 
 #include "pkgdir/pkgdir.h"
+#include "pkgdir/source.h"
 
 #include "cli.h"
 #include "op.h"
@@ -35,7 +36,7 @@
 #define OPT_MKIDX       (OPT_GID + 1)
 #define OPT_MKIDXZ      (OPT_GID + 2) /* legacy */
 #define OPT_NODESC      (OPT_GID + 3)
-#define OPT_NOCOMPR     (OPT_GID + 4)
+#define OPT_COMPR       (OPT_GID + 4)
 #define OPT_TYPE        (OPT_GID + 5)
 #define OPT_NODIFF      (OPT_GID + 6)
 
@@ -60,8 +61,8 @@ static struct argp_option options[] = {
 {"nodiff", OPT_NODIFF, 0, 0,
  N_("Don't create index delta files"), OPT_GID },
 
-{"nocompress", OPT_NOCOMPR, 0, OPTION_HIDDEN,
- N_("Create uncompressed index"), OPT_GID },
+{"compress", OPT_COMPR, "type", 0, 
+ N_("Sets compression type (none, bz2, gz)"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -71,6 +72,7 @@ struct arg_s {
     struct poldek_ctx   *ctx;
     struct source       *src_mkidx;
     char                *idx_type;
+    char                *idx_compress;
 };
 #define DO_MAKEIDX (1 << 0)
 
@@ -136,8 +138,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             arg_s->crflags |= PKGDIR_CREAT_NOPATCH;
             break;
             
-        case OPT_NOCOMPR:
-            arg_s->crflags |= PKGDIR_CREAT_NOCOMPR;
+        case OPT_COMPR:
+            arg_s->idx_compress = n_strdup(arg);
             break;
            
         default:
@@ -167,16 +169,28 @@ static int make_idx(struct arg_s *arg_s)
         type = arg_s->idx_type;
     }
     
-    if (type == NULL)
-        type = PKGDIR_DEFAULT_TYPE;
     
     for (i=0; i < n_array_size(arg_s->ctx->sources); i++) {
+        const char *stype, *itype = type;
+        
         src = n_array_nth(arg_s->ctx->sources, i);
-        if (src->type == NULL)
-            source_set_type(src, "dir");
-        msgn(0, "Preparing %s...", src->path);
         mem_info(-2, "MEM before mkidx");
-        if (!source_make_idx(src, type, path, arg_s->crflags))
+
+        stype = src->type;
+            
+            /* type not specified */
+        if ((src->flags & PKGSOURCE_TYPE) == 0 || src->type == NULL) 
+            source_set_type(src, "dir");
+        
+        else if (itype && source_is_type(src, itype)) /* the same type */
+            source_set_type(src, "dir");
+
+        if (itype == NULL)
+            itype = pkgdir_default_type;
+
+        msgn(0, "Making '%s' index of %s (type=%s)...", itype, source_idstr(src),
+             src->type);
+        if (!source_make_idx(src, itype, path, arg_s->crflags))
             nerr++;
         mem_info(-2, "MEM after mkidx");
     }
@@ -198,14 +212,16 @@ static int make_idx(struct arg_s *arg_s)
 static int oprun(struct poclidek_opgroup_rt *rt)
 {
     struct arg_s *arg_s;
-    int rc = 1;
+    int rc = OPGROUP_RC_NIL;
     
     arg_s = rt->_opdata;
     n_assert(arg_s);
     
-    if (arg_s->cnflags & DO_MAKEIDX)
-        rc = make_idx(arg_s);
+    if (arg_s->cnflags & DO_MAKEIDX) {
+        rc = make_idx(arg_s); 
+        rc = rc ? OPGROUP_RC_FINI : OPGROUP_RC_ERROR;
+    }
 
-    return rc ? 0 : OPGROUP_RC_ERROR;
+    return rc;
 }
 

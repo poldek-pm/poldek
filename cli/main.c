@@ -14,7 +14,6 @@
 #include <sys/stat.h> 
 #include <unistd.h>
 #include <time.h>
-#include <fnmatch.h>
 
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
@@ -152,6 +151,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_LOG:
             poldek_configure(argsp->ctx, POLDEK_CONF_LOGFILE, arg);
+            break;
+
+        case OPT_CONF:
+            args.path_conf = n_strdup(arg);
             break;
             
         case 'q':
@@ -302,36 +305,50 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv)
 #endif        
     }
 #endif
+    return;
+}
+
+int do_run(void) 
+{
+    int i, all_rc = 0, ec, exit_program = 0;
+    n_assert(args.opgroup_rts);
     
     for (i=0; i < n_array_size(args.opgroup_rts); i++) {
-        int rc;
         struct poclidek_opgroup_rt *rt = n_array_nth(args.opgroup_rts, i);
-        
-        rc = 0;
-        if (rt->run) {
-            int rc;
-            rc = rt->run(rt);
+        int rc;
 
-            
-            if (rc & OPGROUP_RC_ERROR)
-                ec = EXIT_FAILURE;
-            
-            if (rc & OPGROUP_RC_IFINI)
-                exit(ec);
-            
-            if (rc & OPGROUP_RC_FINI)
-                exit_program = 1;
+        if (rt->run == NULL)
+            continue;
+        
+        rc = rt->run(rt);
+
+        if (rc != OPGROUP_RC_NIL)
+            all_rc |= OPGROUP_RC_FINI;
+
+        if (rc & OPGROUP_RC_ERROR) {
+            ec = EXIT_FAILURE;
+            exit_program = 1;
         }
+        
+        if (rc & OPGROUP_RC_IFINI)
+            exit(ec);
+            
+        if (rc & OPGROUP_RC_FINI)
+            exit_program = 1;
     }
     
-    if (exit_program)
+    if (exit_program) {
+        printf("exit(%d)\n", ec);
         exit(ec);
+    }
+    
+    return all_rc;
 }
 
 
 int main(int argc, char **argv)
 {
-    int                   i, rc = 1;
+    int                   i, rc = 1, rrc;
     struct poldek_ctx     ctx;
     struct poclidek_ctx  cctx;
     
@@ -340,13 +357,16 @@ int main(int argc, char **argv)
     poldek_init(&ctx, 0);
 
     memset(&cctx, 0, sizeof(cctx));
-    poclidek_init(&cctx, &ctx, 1);
+    poclidek_init(&cctx, &ctx);
     
     parse_options(&cctx, argc, argv);
-
+    
+    rrc = do_run();
+    if (rrc & OPGROUP_RC_FINI)
+        exit((rc & OPGROUP_RC_ERROR) ? EXIT_FAILURE : EXIT_SUCCESS);
+    
     if (args.eat_args == 0) {
         poclidek_load_packages(&cctx, 1);
-        //poldek_load_sources(cctx.ctx);
         poclidek_shell(&cctx);
         
     } else {

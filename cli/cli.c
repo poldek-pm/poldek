@@ -1,6 +1,5 @@
-
 /* 
-  Copyright (C) 2000 - 2003 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2004 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
@@ -52,13 +51,17 @@ extern struct poclidek_cmd command_uninstall;
 //extern struct poclidek_cmd command_get;
 extern struct poclidek_cmd command_search;
 extern struct poclidek_cmd command_desc;
+extern struct poclidek_cmd command_cd;
+extern struct poclidek_cmd command_pwd;
 
 static struct poclidek_cmd *commands_tab[] = {
     &command_ls,
     &command_install, 
     &command_uninstall,
     &command_search,
-    &command_desc, 
+    &command_desc,
+    &command_cd,
+    &command_pwd,
     NULL
 };
 
@@ -79,6 +82,7 @@ struct sh_cmdarg {
     struct poclidek_cmd  *cmd;   
     error_t (*parse_opt_fn)(int, char*, struct argp_state*);
 };
+
 
 /* default parse_opt */
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -299,7 +303,7 @@ int docmd(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 }
 
 
-tn_array *poclidek_get_current_pkgs(struct poclidek_ctx *cctx)
+tn_array *poclidek_get_current_pkgs_XXXX(struct poclidek_ctx *cctx)
 {
     tn_array *pkgs;
     
@@ -318,16 +322,35 @@ tn_array *poclidek_get_current_pkgs(struct poclidek_ctx *cctx)
 }
 
 
-tn_array *poclidek_resolve_packages(struct poclidek_ctx *cctx,
-                                     struct poldek_ts *ts,
-                                     int exact)
+tn_array *poclidek_cmdarg_dents(struct cmdarg *cmdarg, const char *path,
+                                int exact)
 {
-    tn_array *avpkgs;
+    tn_array *ents = NULL;
     
-    if ((avpkgs = poclidek_get_current_pkgs(cctx)) == NULL)
+    if (poldek_ts_get_arg_count(cmdarg->ts))
+        ents = poclidek_resolve_dents(path, cmdarg->cctx, cmdarg->ts, exact);
+    
+    else {
+        ents = poclidek_get_dents(cmdarg->cctx, path);
+        ents = n_ref(ents);
+    }
+    
+    return ents;
+}
+
+
+
+
+tn_array *poclidek_resolve_packages(struct poclidek_ctx *cctx,
+                                    struct poldek_ts *ts,
+                                    int exact)
+{
+    tn_array *pkgs;
+
+    if ((pkgs = poclidek_get_dent_packages(cctx, NULL)) == NULL)
         return NULL;
-    
-    return arg_packages_resolve(ts->aps, avpkgs,
+
+    return arg_packages_resolve(ts->aps, pkgs,
                                 exact ? ARG_PACKAGES_RESOLV_EXACT : 0);
 }
 
@@ -375,13 +398,14 @@ int cmd_help(struct cmdarg *cmdarg)
     return 0;
 }
 
+
 int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
                    int compare_ver, int *cmprc,
                    char *evr, size_t size) 
 {
     struct pkg *pkg = NULL;
     char name[256];
-    int n, finded = 0;
+    int n, found = 0;
 
     snprintf(name, sizeof(name), "%s-", lpkg->name);
     n = n_array_bsearch_idx_ex(pkgs, name, (tn_fn_cmp)pkg_nvr_strncmp);
@@ -393,7 +417,7 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
         pkg = n_array_nth(pkgs, n++);
 
         if (strcmp(pkg->name, lpkg->name) == 0) {
-            finded = 1;
+            found = 1;
             break;
         }
 
@@ -401,7 +425,7 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
             break;
     }
     
-    if (!finded)
+    if (!found)
         return 0;
     
     if (compare_ver == 0)
@@ -411,7 +435,7 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
     
     snprintf(evr, size, "%s-%s", pkg->ver, pkg->rel);
     
-    return finded;
+    return found;
 }
 
 int sh_printf_c(FILE *stream, int color, const char *fmt, ...)
@@ -501,38 +525,7 @@ static void init_commands(struct poclidek_ctx *cctx)
     n_array_sort(cctx->commands);
 }
 
-static int dir_cmp(struct poclidek_dir *dir1, struct poclidek_dir *dir2)
-{
-    return strcmp(dir1->name, dir2->name);
-};
-
-static void init_dirs(struct poclidek_ctx *cctx)
-{
-    struct poclidek_dir *dir;
-    int i;
-        
-    cctx->dirs = n_array_new(8, free, (tn_fn_cmp)dir_cmp);
-
-    for (i=0; i < n_array_size(cctx->ctx->pkgdirs); i++) {
-        struct pkgdir *pkgdir = n_array_nth(cctx->ctx->pkgdirs, i);
-
-        dir = n_malloc(sizeof(*dir));
-        snprintf(dir->name, sizeof(dir->name), "%s", pkgdir->name);
-        dir->pkgs = pkgdir->pkgs;
-        n_array_push(cctx->dirs, dir);
-    }
-
-    dir = n_malloc(sizeof(*dir));
-    snprintf(dir->name, sizeof(dir->name), "all-avail");
-    dir->pkgs = poldek_get_avpkgs_bynvr(cctx->ctx);
-    n_array_push(cctx->dirs, dir);
-    n_array_sort(cctx->dirs);
-    cctx->current_dir = dir;
-}
-
-
-int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx,
-                  int skip_installed) 
+int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
 {
     n_assert (cctx->ctx == NULL);
     cctx->flags = 0;
@@ -554,6 +547,13 @@ void poclidek_destroy(struct poclidek_ctx *cctx)
     if (cctx->instpkgs)
         n_array_free(cctx->instpkgs);
 
+    pkg_dent_free(cctx->rootdir);
+
+    if (cctx->dbpkgdir) {
+        poclidek_save_installedcache(cctx, cctx->dbpkgdir);
+        pkgdir_free(cctx->dbpkgdir);
+    }
+    
     memset(cctx, 0, sizeof(*cctx));
 }
 
@@ -574,17 +574,17 @@ int poclidek_load_packages(struct poclidek_ctx *cctx, int skip_installed)
         return 0;
 
     cctx->avpkgs = poldek_get_avpkgs_bynvr(ctx);
+    poclidek_dent_init(cctx);
     
+    poclidek_load_installed(cctx, 0); 
     
     cctx->instpkgs = NULL;
     if (skip_installed == 0) {
-        cctx->instpkgs = n_array_new(1024, (tn_fn_free)pkg_free,
-                                       (tn_fn_cmp)pkg_nvr_strcmp);
+        
         n_array_ctl(cctx->instpkgs, TN_ARRAY_AUTOSORTED);
         //load_installed_packages(&shell_s, 0);
     }
 
-    init_dirs(cctx);
     
     return 1;
 }
@@ -778,16 +778,17 @@ static
 tn_array *prepare_cmdline(struct poclidek_ctx *cctx, const char *line)
 {
     tn_array  *cmd_chain, *arr, *tl;
-    int       i, rc = 1;
+    int       i;
 
     
     if ((tl = n_str_etokl(line)) == NULL) {
         logn(LOGERR, _("%s: parse error"), line);
         return NULL;
     }
-    
+
+    printf("line = (%s)\n", line);
     for (i=0; i<n_array_size(tl); i++)
-        printf("tl[%d] = %s\n", i, n_array_nth(tl, i));
+        printf("tl[%d] = %s\n", i, (char*)n_array_nth(tl, i));
 
     cmd_chain = n_array_new(2, (tn_fn_free)cmd_chain_ent_free, NULL);
     arr = a_argv_split(tl, ";|");
@@ -811,7 +812,7 @@ tn_array *prepare_cmdline(struct poclidek_ctx *cctx, const char *line)
                     
                     for (j=0; j < n_array_size(ent->a_argv); j++)
                         printf("tl[%d][%d] = %s\n", i, j,
-                               n_array_nth(ent->a_argv, j));
+                               (char*)n_array_nth(ent->a_argv, j));
                     
                     prepare_a_argv(cctx, cmd_chain, ent->a_argv);
                     break;
@@ -837,7 +838,7 @@ int poclidek_exec_line(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     tn_array            *cmd_chain;
     int                 nerr = 0, arg_ts, i, j;
 
-    
+    printf("exec_line = %s\n", cmdline);
     cmd_chain = prepare_cmdline(cctx, cmdline);
 
     arg_ts = (ts != NULL);
@@ -879,15 +880,16 @@ int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     char                *cmdline;
     int                 len, n, i ;
 
-    
+    len = 0;
     for (i=0; i < argc; i++)
         len += 2 * strlen(argv[i]);
-    
+
     cmdline = alloca(len + 1);
     n = 0;
+    
     for (i=0; i < argc; i++)
-        n += n_snprintf(&cmdline[n], len - n, "%s", argv[i]);
-
+        n += n_snprintf(&cmdline[n], len - n, "%s ", argv[i]);
+    
     return poclidek_exec_line(cctx, ts, cmdline);
 }
 
@@ -920,5 +922,3 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct install_info *iinf)
             cctx->ts_instpkgs = time(0);
     }
 }
-
-

@@ -38,6 +38,7 @@ if [ "$#" -lt 2 ]; then
     exit 0
 fi
 
+echo "$0: $@"
 un=$1
 if [ "$un" == "-d" ]; then
     src=$2

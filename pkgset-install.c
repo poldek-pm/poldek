@@ -57,9 +57,6 @@
 #include "poldek.h"
 #include "rpm/rpmhdr.h"
 
-#define INST_INSTALL  1
-#define INST_UPGRADE  2
-
 #define PROCESS_AS_NEW       (1 << 0)
 #define PROCESS_AS_ORPHAN    (1 << 1)
 
@@ -813,7 +810,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
     int n, i;
     rpmdb dbh = upg->ts->db->dbh;
     
-    if (upg->ts->flags & POLDEK_TS_INSTALL)
+    if (!poldek_ts_issetf(upg->ts, POLDEK_TS_UPGRADE))
         return;
 
     if (sigint_reached())
@@ -1860,6 +1857,7 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
             n_array_push(iinf->uninstalled_pkgs,
                          pkg_new_ext(pkg->name, pkg->epoch, pkg->ver, pkg->rel,
                                      pkg->arch, pkg->os,
+                                     pkg->fn,
                                      pkg->size, pkg->fsize,
                                      pkg->btime));
     }

@@ -129,7 +129,7 @@ tn_array *rpm_capreqs_ldhdr(tn_array *arr, const Header h, int crtype)
         if (c1 != c2) {
             logn(LOGERR, "read %s: nnames (%d) != nversions (%d), broken rpm",
                  label, c1, c2);
-#if 0            
+#if 0
             for (i=0; i<c1; i++) 
                 printf("n %s\n", names[i]);
             for (i=0; i<c2; i++) 
@@ -450,8 +450,8 @@ struct pkg *pkg_ldrpmhdr(Header h, const char *fname, unsigned fsize,
     if (!headerGetEntry(h, RPMTAG_INSTALLTIME, &type, (void *)&itime, NULL)) 
         itime = NULL;
     
-    pkg = pkg_new_ext(name, epoch ? *epoch : 0, version, release, arch, os, 
-                      size ? *size : 0, fsize, btime ? *btime : 0);
+    pkg = pkg_new_ext(name, epoch ? *epoch : 0, version, release, arch, os,
+                      fname, size ? *size : 0, fsize, btime ? *btime : 0);
     
     if (pkg == NULL)
         return NULL;

@@ -180,6 +180,7 @@ static int uninstall(struct cmdarg *cmdarg)
     
     cctx = cmdarg->cctx;
     ts = cmdarg->ts;
+
     
     if (cctx->instpkgs != NULL) {
         //log(LOGERR, "uninstall: installed packages not loaded, "

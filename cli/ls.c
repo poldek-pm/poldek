@@ -22,7 +22,7 @@
 
 static int ls(struct cmdarg *cmdarg);
 static
-int do_ls(const tn_array *pkgs, struct cmdarg *cmdarg, const tn_array *evrs);
+int do_ls(const tn_array *ents, struct cmdarg *cmdarg, const tn_array *evrs);
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 
@@ -115,19 +115,19 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'u':
             cmdarg->flags |= OPT_LS_UPGRADEABLE;
             
-            if (cmdarg->cctx->instpkgs == NULL) {
-                log(LOGERR, _("ls: installed packages not loaded, "
-                              "type \"reload\" to load them\n"));
-                return EINVAL;
-            }
+            //if (cmdarg->cctx->instpkgs == NULL) {
+            //    log(LOGERR, _("ls: installed packages not loaded, "
+            //                  "type \"reload\" to load them\n"));
+            //    return EINVAL;
+            //}
             break;
             
         case 'I':
-            if (cmdarg->cctx->instpkgs == NULL) {
-                log(LOGERR, _("ls: installed packages not loaded, "
-                              "type \"reload\" to load them\n"));
-                return EINVAL;
-            }
+            //if (cmdarg->cctx->instpkgs == NULL) {
+            //    log(LOGERR, _("ls: installed packages not loaded, "
+            //                 "type \"reload\" to load them\n"));
+            //    return EINVAL;
+            //}
             
             cmdarg->flags |= OPT_LS_INSTALLED;
             break;
@@ -168,39 +168,79 @@ static tn_fn_cmp select_cmpf(unsigned flags)
     return cmpf;
 }
 
+#if 0                           /* NFY */
+static tn_array *do_upgradeable (struct cmdarg *cmdarg, tn_array *pkgs)
+{
+    
+    int        finded, compare_ver = 0, i;
+    tn_array   *pkgs_tmp;
 
+    compare_ver = cmdarg->flags & OPT_LS_UPGRADEABLE_VER;
+    pkgs_tmp = n_array_new(64, NULL, (tn_fn_cmp)pkg_nvr_strcmp);
+    evrs = n_array_new(64, NULL, NULL);
+        
+    for (i=0; i < n_array_size(ls_ents); i++) {
+        struct pkg   *pkg;
+        char          evr[128], *p;
+        int           cmprc = 0, n;
+        
+        pkg = n_array_nth(ls_ents, i);
+            
+        if (cmdarg->flags & OPT_LS_INSTALLED) {
+            finded = pkg_cmp_lookup(pkg, avpkgs,
+                                    compare_ver, &cmprc,
+                                    evr, sizeof(evr));
+            
+        } else {
+            finded = pkg_cmp_lookup(pkg, instpkgs,
+                                    compare_ver, &cmprc,
+                                    evr, sizeof(evr));
+            cmprc = -cmprc;
+        }
+            
+        if (!finded || cmprc >= 0)
+            continue;
+
+        n = strlen(evr) + 1;
+        p = alloca(n + 1);
+        memcpy(p, evr, n);
+        n_array_push(evrs, p);
+        n_array_push(pkgs_tmp, pkg);
+        
+        if (sigint_reached())
+            break;
+    }
+
+    return pkgs_tmp;
+}
+#endif
 
 static int ls(struct cmdarg *cmdarg) 
 {
-    tn_array             *ls_pkgs = NULL;
+    tn_array             *ls_ents = NULL, *instpkgs, *avpkgs;
     tn_array             *evrs = NULL;
     int                  rc = 1, ls_all;
     tn_fn_cmp            cmpf = NULL;
-
+    const char           *path = NULL;
     
+
     ls_all = 0;
-
-    poclidek_set_pkgctx(cmdarg->cctx, POLDEKCLI_PKGCTX_AVAIL);
-    if (cmdarg->flags & OPT_LS_INSTALLED && cmdarg->cctx->instpkgs)
-        poclidek_set_pkgctx(cmdarg->cctx, POLDEKCLI_PKGCTX_INSTD);
-
-    if (poldek_ts_get_arg_count(cmdarg->ts))
-        ls_pkgs = poclidek_resolve_packages(cmdarg->cctx, cmdarg->ts, 0);
-
-    else {
-        ls_all = 1;
-        ls_pkgs = poclidek_get_current_pkgs(cmdarg->cctx);
-    }
-
-    if (ls_pkgs == NULL) {
+    
+    if (cmdarg->flags & OPT_LS_INSTALLED)
+        path = "/installed";
+    
+    if ((ls_ents = poclidek_cmdarg_dents(cmdarg, path, 0)) == NULL) {
         rc = 0;
         goto l_end;
     }
     
-    if ((cmpf = select_cmpf(cmdarg->flags)))
-        n_array_sort_ex(ls_pkgs, cmpf);
+    //if ((cmpf = select_cmpf(cmdarg->flags)))
+    //    n_array_sort_ex(ls_ents, cmpf);
 
-    if (cmdarg->flags & OPT_LS_UPGRADEABLE && cmdarg->cctx->instpkgs) {
+    instpkgs = poclidek_get_dent_packages(cmdarg->cctx, "/installed");
+    avpkgs = poclidek_get_dent_packages(cmdarg->cctx, "/all-avail");
+    
+    if (cmdarg->flags & OPT_LS_UPGRADEABLE) {
         int        finded, compare_ver = 0, i;
         tn_array   *pkgs_tmp;
 
@@ -208,22 +248,22 @@ static int ls(struct cmdarg *cmdarg)
         pkgs_tmp = n_array_new(64, NULL, (tn_fn_cmp)pkg_nvr_strcmp);
         evrs = n_array_new(64, NULL, NULL);
         
-        for (i=0; i < n_array_size(ls_pkgs); i++) {
-            struct pkg  *pkg;
+        for (i=0; i < n_array_size(ls_ents); i++) {
+            struct pkg   *pkg;
             char          evr[128], *p;
             int           cmprc = 0, n;
 
-            pkg = n_array_nth(ls_pkgs, i);
+            pkg = n_array_nth(ls_ents, i);
             
             if (cmdarg->flags & OPT_LS_INSTALLED) {
-                finded = pkg_cmp_lookup(pkg, cmdarg->cctx->avpkgs,
-                                          compare_ver, &cmprc,
-                                          evr, sizeof(evr));
+                finded = pkg_cmp_lookup(pkg, avpkgs,
+                                        compare_ver, &cmprc,
+                                        evr, sizeof(evr));
                 
             } else {
-                finded = pkg_cmp_lookup(pkg, cmdarg->cctx->instpkgs,
-                                          compare_ver, &cmprc,
-                                          evr, sizeof(evr));
+                finded = pkg_cmp_lookup(pkg, instpkgs,
+                                        compare_ver, &cmprc,
+                                        evr, sizeof(evr));
                 cmprc = -cmprc;
             }
             
@@ -240,45 +280,50 @@ static int ls(struct cmdarg *cmdarg)
                 break;
         }
         
-        if (ls_pkgs)
-            n_array_free(ls_pkgs);
-        ls_pkgs = pkgs_tmp;
+        if (ls_ents)
+            n_array_free(ls_ents);
+        ls_ents = pkgs_tmp;
     }
+
+
     
-    if (n_array_size(ls_pkgs))
-        rc = do_ls(ls_pkgs, cmdarg, evrs);
+    if (n_array_size(ls_ents))
+        rc = do_ls(ls_ents, cmdarg, evrs);
 
  l_end:
 
     if (!ls_all) {
-        if (ls_pkgs)
-            n_array_free(ls_pkgs);
+        if (ls_ents)
+            n_array_free(ls_ents);
         
     } else if (cmpf) {
-        n_array_sort(ls_pkgs);
+        n_array_sort(ls_ents);
     }
 
-    if (evrs)
+
+    if (evrs) 
         n_array_free(evrs);
     
     return rc;
 }
 
 
+
 static void ls_summary(FILE *stream, struct pkg *pkg)
 {
     struct pkguinf  *pkgu;
     
-    if ((pkgu = pkg_info(pkg)) && pkgu->summary)
+    if ((pkgu = pkg_info(pkg)) == NULL)
+        return;
+    
+    if (pkgu->summary)
         fprintf(stream, "    %s\n", pkgu->summary);
-
-    if (pkgu)
-        pkguinf_free(pkgu);
+    pkguinf_free(pkgu);
 }
 
 
 static
-int do_ls(const tn_array *pkgs, struct cmdarg *cmdarg, const tn_array *evrs)
+int do_ls(const tn_array *ents, struct cmdarg *cmdarg, const tn_array *evrs)
 {
     char                 hdr[256], fmt_hdr[256], fmt_pkg[256];
     int                  i, size, err = 0, npkgs = 0;
@@ -286,8 +331,9 @@ int do_ls(const tn_array *pkgs, struct cmdarg *cmdarg, const tn_array *evrs)
     unsigned             flags;
     struct pager         pg;
     FILE                 *out_stream = stdout;
-    
-    if (n_array_size(pkgs) == 0) 
+
+    //printf("do_ls %d\n", n_array_size(ents));
+    if (n_array_size(ents) == 0) 
         return 0;
 
     memset(&pg, 0, sizeof(pg));
@@ -341,18 +387,27 @@ int do_ls(const tn_array *pkgs, struct cmdarg *cmdarg, const tn_array *evrs)
     
     hdr[sizeof(hdr) - 2] = '\n';
     
-    if (shOnTTY && (1.3 * term_get_height()) < n_array_size(pkgs)) {
+    if (shOnTTY && (1.3 * term_get_height()) < n_array_size(ents)) {
         if ((out_stream = pager(&pg)) == NULL)
             out_stream = stdout;
     }
     
     size = 0;
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg     *pkg = n_array_nth(pkgs, i);
-        char           *pkg_name;
+    for (i=0; i < n_array_size(ents); i++) {
+        struct pkg_dent *ent = n_array_nth(ents, i);
+        struct pkg      *pkg;
+        char            *pkg_name;
 
+        
         if (out_stream != stdout && pager_exited(&pg))
             goto l_end;
+
+        if (pkg_dent_isdir(ent)) {
+            sh_printf_c(out_stream, PRCOLOR_GREEN, "%s/\n", ent->name);
+            continue;
+        }
+
+        pkg = ent->pkg_dent_pkg;
         
         if (flags & OPT_LS_NAMES_ONLY) 
             pkg_name = pkg->name;

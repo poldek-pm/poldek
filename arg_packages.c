@@ -163,7 +163,7 @@ int arg_packages_size(struct arg_packages *aps)
     return n_array_size(aps->package_masks);
 }
 
-const tn_array *arg_packages_get_pkgmasks(struct arg_packages *aps) 
+tn_array *arg_packages_get_pkgmasks(struct arg_packages *aps) 
 {
     return aps->package_masks;
 }

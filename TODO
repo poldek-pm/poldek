@@ -2,7 +2,6 @@
 
 * mis 2002/11/07
 - reinstall && reinstall-dist to refresh/swith package instalation.  
-
 * mis 2002/05/13
 - use Obsoletes tag on greedy selection (optional)  [ done v0.18 ]
 - "block" option ("hold" like) which blocks package installation (RFC)
@@ -17,6 +16,8 @@
   without reading headers data. Needed to replace dbopen() usage
   in rpm_get_dbdepdirs()
 
+ssss
+ss
 * mis 2001/05/18
 - unistalled packages should be ordered using uninst prerequirements 
 - detection of fatal rpmlib errors during install-dist
@@ -34,4 +35,5 @@ Long term:
   Currently PLD distribution (about 2400 packages) contains about 110.000 
   files.
 
-
+ssss
+ssss

@@ -88,7 +88,7 @@ char *command_generator(const char *text, int state)
 {
     static int i, len;
     char *name = NULL;
-    struct poclidek_cmd *cmd, tmpcmd;
+    struct poclidek_cmd tmpcmd;
 
 	tmpcmd.name = (char*)text;
 
@@ -112,49 +112,64 @@ char *command_generator(const char *text, int state)
 
 
 static
-char *pkgname_generator(const char *text, int state)
+char *arg_generator(const char *text, int state, int genpackages)
 {
     static int           i, len;
     char                 *name = NULL;
-    tn_array             *pkgs;
+    tn_array             *ents;
 
-    pkgs = sh_ctx.cctx->current_dir->pkgs;
+    
+    ents = sh_ctx.cctx->currdir->pkg_dent_ents;
+    if (!genpackages) {
+        ents = sh_ctx.cctx->rootdir->pkg_dent_ents;
+        // completion through directory tree, DUPA
+        //const char *path = text ? n_dirname(n_strdup(text)) : n_strdup(".");
+        //ents = poclidek_get_dents(sh_ctx.cctx, path);
+        //ents = sh_ctx.cctx->rootdir->pkg_dent_ents;
+        //printf("path %s, ents = %d, %s\n", path, ents ? n_array_size(ents) : 0, text);
+        //free(path);
+    }
+    
     
     if (state == 0) {
         len = strlen(text);
         if (len == 0)
             i = 0;
         else 
-            i = n_array_bsearch_idx_ex(pkgs, text,
-                                       (tn_fn_cmp)pkg_nvr_strncmp);
+            i = n_array_bsearch_idx_ex(ents, n_basenam(text),
+                                       (tn_fn_cmp)pkg_dent_strncmp);
     }
 
-    
-    while (i > -1 && i < n_array_size(pkgs)) {
-        struct pkg *pkg = n_array_nth(pkgs, i++);
+
+    while (i > -1 && i < n_array_size(ents)) {
+        struct pkg_dent *ent = n_array_nth(ents, i++);
+        char ent_path[PATH_MAX], *path;
         
-        if (len == 0 || strncmp(pkg->nvr, text, len) == 0) {
-            name = pkg->nvr;
+        if (genpackages) {
+            if (pkg_dent_isdir(ent))
+                continue;
+            path = ent->name;
+            
+        } else {
+            if (!pkg_dent_isdir(ent))
+                continue;
+            path = ent->name;
+            //path = poclidek_dent_dirpath(ent_path, sizeof(ent_path), ent);
+        }
+        //printf("path %s, (%s)\n", path, text); 
+        if (len == 0 || strncmp(text, path, len) == 0) {
+            name = path;
+            break;
+
+        } else if (len > 1 && *text == '/' &&
+                   strncmp((text + 1), path, len - 1) == 0) {
+            name = poclidek_dent_dirpath(ent_path, sizeof(ent_path), ent);
+            break;
+            
+        } else if (len == 1 && *text == '/') {
+            name = poclidek_dent_dirpath(ent_path, sizeof(ent_path), ent);
             break;
         }
-        
-#if 0            
-            if (cmplt_ctx.type == CMPLT_CTX_AVPKGS_UPGR && shell_s.instpkgs) {
-                int found, cmprc;
-
-                name = NULL;
-                found = shpkg_cmp_lookup(shpkg, shell_s.instpkgs, 0, &cmprc,
-                                         NULL, 0);
-                
-                if (found && cmprc > 0) {
-                    name = shpkg->nevr;
-                    break;
-                }
-                
-            } else {            /* no additional criteria */
-                break;
-            }
-#endif            
     }
     
     if (name)
@@ -163,6 +178,19 @@ char *pkgname_generator(const char *text, int state)
     return name;
 }
 
+static
+char *pkgname_generator(const char *text, int state)
+{
+    return arg_generator(text, state, 1);
+}
+
+static
+char *dirname_generator(const char *text, int state)
+{
+    return arg_generator(text, state, 0);
+}
+
+
 #ifndef HAVE_READLINE_4_2
 # define rl_completion_matches(a, b) completion_matches(a, b)
 #endif
@@ -170,7 +198,7 @@ char *pkgname_generator(const char *text, int state)
 static
 char **poldek_completion(const char *text, int start, int end)
 {
-    char **matches;
+    char **matches = NULL;
     char *p;
     
     
@@ -197,11 +225,16 @@ char **poldek_completion(const char *text, int start, int end)
         else 
             switch_pkg_completion(CMPLT_CTX_AVPKGS);
     }
-#endif        
+#endif
+    
     if (start == 0 || strchr(p, ' ') == NULL) 
         matches = rl_completion_matches(text, command_generator);
-    else
-        matches = rl_completion_matches(text, pkgname_generator);
+    else {
+        if (strncmp(p, "cd ", 3) == 0) {
+            matches = rl_completion_matches(text, dirname_generator);
+        } else 
+            matches = rl_completion_matches(text, pkgname_generator);
+    }
     
     return matches;
 }
@@ -291,9 +324,6 @@ static void sigint_reached_fn(void)
 
 static void init_shell(struct poclidek_ctx *cctx) 
 {
-    int i;
-    struct sh_dir *dir;
-        
     sh_ctx.cctx = cctx;
 }
 
@@ -334,8 +364,9 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         char prompt[255];
         
         sigint_reset();
-        snprintf(prompt, sizeof(prompt), "poldek:/%s> ",
-                 sh_ctx.cctx->current_dir->name);
+        snprintf(prompt, sizeof(prompt), "poldek:%s%s> ",
+                 *sh_ctx.cctx->currdir->name == '/' ? "" : "/",
+                 sh_ctx.cctx->currdir->name);
         if ((line = readline(prompt)) == NULL)
             break;
 

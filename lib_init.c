@@ -461,6 +461,37 @@ int set_default_vf_fetcher(int tag, const char *confvalue)
 }
 
 
+static void zlib_in_rpm(struct poldek_ctx *ctx) 
+{
+    char              *argv[2], *libdir, cmd[256];
+    struct p_open_st  pst;
+    tn_hash           *htcnf;
+    int               ec;
+
+
+    htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+    libdir = poldek_conf_get(htcnf, "_libdir", NULL);
+    if (libdir == NULL)
+        libdir = "/usr/lib";
+
+    n_snprintf(cmd, sizeof(cmd), "%s/poldek/zlib-in-rpm.sh", libdir);
+    
+    argv[0] = cmd;
+    argv[1] = NULL;
+
+    p_st_init(&pst);
+    if (p_open(&pst, 0, cmd, argv) == NULL)
+        return;
+
+    if ((ec = p_close(&pst)) == 0) {
+        logn(LOGNOTICE, "zlib-in-rpm detected, enabling workaround");
+        vfile_configure(VFILE_CONF_EXTCOMPR, 1);
+    }
+    
+    p_st_destroy(&pst);
+}
+
+
 int poldek_load_config(struct poldek_ctx *ctx, const char *path)
 {
     tn_hash   *htcnf = NULL;
@@ -477,8 +508,8 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     if (poldek_cnf == NULL)
         return 0;
 
+    ctx->htconf = poldek_cnf;
     htcnf = poldek_conf_get_section_ht(poldek_cnf, "global");
-
     
     if (poldek_conf_get_bool(htcnf, "use_sudo", 0))
         ctx->ts->flags |= POLDEK_TS_USESUDO;
@@ -523,7 +554,6 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
         rc = 0;
     }
         
-
     if (poldek_conf_get_bool(htcnf, "mercy", 0))
         ctx->ps_flags |= PSVERIFY_MERCY;
 
@@ -556,9 +586,19 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     if ((v = poldek_conf_get(htcnf, "cachedir", NULL)))
         ctx->ts->cachedir = v;
     
-    if ((poldek_conf_get_bool(htcnf, "ftp_sysuser_as_anon_passwd", 0)))
+    if (poldek_conf_get_bool(htcnf, "vfile_ftp_sysuser_as_anon_passwd", 0) ||
+        poldek_conf_get_bool(htcnf, "ftp_sysuser_as_anon_passwd", 0))
         vfile_configure(VFILE_CONF_SYSUSER_AS_ANONPASSWD, 1);
-    
+
+
+    if ((v = poldek_conf_get(htcnf, "default_index_type", NULL)))
+        pkgdir_default_type = n_strdup(v);
+
+    if (poldek_conf_get_bool(htcnf, "vfile_external_compress", 0))
+        vfile_configure(VFILE_CONF_EXTCOMPR, 1);
+    else
+        zlib_in_rpm(ctx);
+    vfile_configure(VFILE_CONF_EXTCOMPR, 1);
     return 1;
 }
 
@@ -779,7 +819,7 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
 int poldek_setup(struct poldek_ctx *ctx)
 {
     char *path = NULL;
-    
+        
     path = setup_cachedir(ctx->ts->cachedir);
     free(ctx->ts->cachedir);
     ctx->ts->cachedir = path;
@@ -788,8 +828,8 @@ int poldek_setup(struct poldek_ctx *ctx)
     if (!prepare_sources(ctx->sources))
         return 0;
 
-    if (!mklock(ctx->ts->cachedir))
-        return 0;
+    //if (!mklock(ctx->ts->cachedir))
+    //    return 0;
 
     return 1;
 }

@@ -134,7 +134,6 @@ static struct argp poclidek_argp = {
     cmdl_options, cmdl_parse_opt, 0, 0, cmd_argp_child, 0, 0
 };
 
-
 static 
 struct argp_child poclidek_argp_child = {
     &poclidek_argp, 0, NULL, OPT_GID,
@@ -188,7 +187,7 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
         case 'u':
         case 'i':
             poldek_ts_setf(ts, POLDEK_TS_INSTALL);
-
+            
             if (key == 'u' || key == 'U')
                 poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
             
@@ -253,7 +252,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'I':
-            poldek_ts_setf(ts, POLDEK_TS_INSTALL);
             poldek_ts_clrf(ts, POLDEK_TS_UPGRADE);
             break;
 
@@ -309,7 +307,7 @@ static int install(struct cmdarg *cmdarg)
     cctx = cmdarg->cctx;
     ts = cmdarg->ts;
     
-    poldek_ts_setf(ts, POLDEK_TS_INSTALL);
+    poldek_ts_setf(ts, POLDEK_TS_INSTALL | POLDEK_TS_UPGRADE);
     is_test = poldek_ts_issetf(ts, POLDEK_TS_TEST | POLDEK_TS_RPMTEST);
 
     rc = poldek_ts_do_install(ts, is_test ? NULL : &iinf);

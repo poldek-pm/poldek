@@ -17,9 +17,12 @@ struct poclidek_opgroup_rt {
     int                   (*run)(struct poclidek_opgroup_rt *);
 };
 
-#define OPGROUP_RC_ERROR  (1 << 0)
-#define OPGROUP_RC_IFINI  (1 << 1)
-#define OPGROUP_RC_FINI   (1 << 2)
+#define OPGROUP_RC_NIL    0
+#define OPGROUP_RC_OK     (1 << 0)
+#define OPGROUP_RC_ERROR  (1 << 1)
+
+#define OPGROUP_RC_IFINI  ((1 << 2) | OPGROUP_RC_OK)
+#define OPGROUP_RC_FINI   ((1 << 3) | OPGROUP_RC_OK)
 
 struct poclidek_opgroup {
     const char          *doc;

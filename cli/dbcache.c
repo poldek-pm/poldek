@@ -1,20 +1,60 @@
-static int load_installed_packages(struct shell_s *sh_s, int reload) 
+/* 
+  Copyright (C) 2000 - 2004 Pawel A. Gajda (mis@k2.net.pl)
+ 
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License published by
+  the Free Software Foundation (see file COPYING for details).
+*/
+
+/*
+  $Id$
+*/
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/file.h>
+#include <sys/stat.h>
+#include <sys/errno.h>
+#include <signal.h>
+#include <time.h>
+#include <argp.h>
+#include <time.h>
+
+#include <trurl/trurl.h>
+#include <sigint/sigint.h>
+
+#include "i18n.h"
+#include "misc.h"
+#include "log.h"
+#include "cli.h"
+#include "rpm/rpm.h"
+
+static
+struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload);
+
+int poclidek_load_installed(struct poclidek_ctx *cctx, int reload) 
 {
     struct pkgdir *pkgdir;
-    
-    if ((pkgdir = load_installed_pkgdir(reload)) == NULL)
+    struct pkg_dent *dent;
+        
+    if ((pkgdir = load_installed_pkgdir(cctx, reload)) == NULL)
         return 0;
-    
-    if (sh_s->dbpkgdir)
-        pkgdir_free(sh_s->dbpkgdir);
-    
-    sh_s->dbpkgdir = pkgdir;
-    sh_s->ts_instpkgs = pkgdir->ts;
-    pkgs_to_pkgs(&sh_s->instpkgs, pkgdir->pkgs);
 
+    if ((dent = poclidek_dent_find(cctx, "/installed")) == NULL)
+        dent = pkg_dent_adddir(cctx->rootdir, "installed");
+        
+    pkg_dent_addpkgs(dent, pkgdir->pkgs);
+    cctx->dbpkgdir = pkgdir;
+    cctx->ts_instpkgs = pkgdir->ts;
     return 1;
 }
-
 
 static time_t mtime(const char *pathname) 
 {
@@ -26,6 +66,7 @@ static time_t mtime(const char *pathname)
     return st.st_mtime;
 }
 
+static
 char *mkdbcache_path(char *path, size_t size, const char *cachedir,
                      const char *dbfull_path)
 {
@@ -55,19 +96,20 @@ char *mkdbcache_path(char *path, size_t size, const char *cachedir,
 }
 
 
-static char *mkrpmdb_path(char *path, size_t size, const char *root,
-                          const char *dbpath)
+static
+char *mkrpmdb_path(char *path, size_t size, const char *root, const char *dbpath)
 {
     *path = '\0';
     n_snprintf(path, size, "%s%s",
-               *(root + 1) == '\0' ? "" : root,
+               root ? (*(root + 1) == '\0' ? "" : root) : "",
                dbpath != NULL ? dbpath : "");
     return *path ? path : NULL;
 }
 
 #define RPMDBCACHE_PDIRTYPE "pndir"
 
-static struct pkgdir *load_installed_pkgdir(int reload) 
+static
+struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload) 
 {
     char            rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX];
     const char      *lc_lang;
@@ -75,13 +117,13 @@ static struct pkgdir *load_installed_pkgdir(int reload)
     int             ldflags = 0;
 
     
-    if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path), shell_s.inst->rootdir,
-                     rpm_get_dbpath()) == NULL)
+    if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
+                     cctx->ctx->ts->rootdir, rpm_get_dbpath()) == NULL)
         return NULL;
 
     
     if (mkdbcache_path(dbcache_path, sizeof(dbcache_path),
-                       shell_s.inst->cachedir, rpmdb_path) == NULL)
+                       cctx->ctx->ts->cachedir, rpmdb_path) == NULL)
         return NULL;
 
     lc_lang = lc_messages_lang();
@@ -94,11 +136,11 @@ static struct pkgdir *load_installed_pkgdir(int reload)
         mtime_rpmdb = rpm_dbmtime(rpmdb_path);
         if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache)
             dir = pkgdir_open_ext(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE,
-                                  "rpmdb", 0, lc_lang);
+                                  "rpmdb", NULL, 0, lc_lang);
     }
     
     if (dir == NULL)
-        dir = pkgdir_open_ext(rpmdb_path, NULL, "rpmdb", "rpmdb", 0, lc_lang);
+        dir = pkgdir_open_ext(rpmdb_path, NULL, "rpmdb", "rpmdb", NULL, 0, lc_lang);
     
     
     if (dir != NULL) {
@@ -121,14 +163,16 @@ static struct pkgdir *load_installed_pkgdir(int reload)
 }
 
 
-static void save_installed_pkgdir(struct pkgdir *pkgdir) 
+int poclidek_save_installedcache(struct poclidek_ctx *cctx,
+                                 struct pkgdir *pkgdir)
 {
     time_t       mtime_rpmdb, mtime_dbcache;
     char         rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX];
     const char   *path;
 
 
-    if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path), shell_s.inst->rootdir,
+    if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
+                     cctx->ctx->ts->rootdir,
                      rpm_get_dbpath()) == NULL)
         return;
 
@@ -141,7 +185,7 @@ static void save_installed_pkgdir(struct pkgdir *pkgdir)
         path = pkgdir->idxpath;
     else 
         path = mkdbcache_path(dbcache_path, sizeof(dbcache_path),
-                              shell_s.inst->cachedir, pkgdir->idxpath);
+                              cctx->ctx->ts->cachedir, pkgdir->idxpath);
 
     if (path == NULL)
         return;
@@ -154,32 +198,8 @@ static void save_installed_pkgdir(struct pkgdir *pkgdir)
     
     //printf("path = %s, %d, %d, %d\n", path, 
     //       mtime_rpmdb, pkgdir->ts, mtime_dbcache);
-    pkgdir_save(pkgdir, RPMDBCACHE_PDIRTYPE, path,
-                PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
-                PKGDIR_CREAT_MINi18n);
+    return pkgdir_save(pkgdir, RPMDBCACHE_PDIRTYPE, path,
+                       PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
+                       PKGDIR_CREAT_MINi18n);
 }
 
-static 
-int cmd_reload(struct cmdarg *cmdarg,
-               int argc, const char **argv, struct argp *argp)
-{
-    argp = argp;
-    cmdarg = cmdarg;
-    
-    if (argv_is_help(argc, argv)) {
-        printf(_("Just type \"reload\"\n"));
-        return 1;
-    }
-
-    if (shell_s.instpkgs) {
-        load_installed_packages(&shell_s, 1);
-        
-    } else {
-        shell_s.instpkgs = n_array_new(1024, (tn_fn_free)pkg_free,
-                                       (tn_fn_cmp)pkg_nvr_strcmp);
-        
-        load_installed_packages(&shell_s, 0);
-    }
-
-    return 1;
-}
