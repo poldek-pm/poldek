@@ -1,7 +1,12 @@
 #ifndef POLDEK_HTON_H
 #define POLDEK_HTON_H
 
+#ifdef HAVE_CONFIG_H            /* for inline */
+# include "config.h"
+#endif
+
 #include <stdint.h>
+#include <stdlib.h>
 #include <netinet/in.h>
 
 #include <trurl/nbuf.h>
@@ -31,7 +36,7 @@
     } while(0);
 
 
-static __inline__
+static inline
 int n_buf_it_get_int8(tn_buf_it *nbufi, uint8_t *vp) 
 {
     char *p;
@@ -44,9 +49,7 @@ int n_buf_it_get_int8(tn_buf_it *nbufi, uint8_t *vp)
     return 1;
 }
 
-
-
-static __inline__
+static inline
 int n_buf_it_get_int16(tn_buf_it *nbufi, uint16_t *vp) 
 {
     char *p;
@@ -55,11 +58,12 @@ int n_buf_it_get_int16(tn_buf_it *nbufi, uint16_t *vp)
     if (p == NULL)
         return 0;
     
-    *vp = ntoh16(*(uint16_t*)p);
+    memcpy(vp, p, sizeof(*vp));
+    *vp = ntoh16(*vp);
     return 1;
 }
 
-static __inline__
+static inline
 int n_buf_it_get_int32(tn_buf_it *nbufi, uint32_t *vp) 
 {
     char *p;
@@ -67,8 +71,9 @@ int n_buf_it_get_int32(tn_buf_it *nbufi, uint32_t *vp)
     p = n_buf_it_get(nbufi, sizeof(*vp));
     if (p == NULL)
         return 0;
-    
-    *vp = ntoh32(*(uint32_t*)p);
+
+    memcpy(vp, p, sizeof(*vp));
+    *vp = ntoh32(*vp);
     return 1;
 }
 

@@ -2,6 +2,10 @@
 #ifndef POLDEK_CAPREQ_H
 #define POLDEK_CAPREQ_H
 
+#ifdef HAVE_CONFIG_H            /* for inline */
+# include "config.h"
+#endif
+
 #include <stdint.h>
 
 #include <rpm/rpmlib.h>
@@ -38,8 +42,12 @@ struct capreq {
 
 /* CAUTION: side effects! */
 #define capreq_name(cr)     &(cr)->_buf[1]
+
+extern inline int32_t capreq_epoch_(const struct capreq *cr);
+
 #define capreq_epoch(cr) \
-    ((cr)->cr_ep_ofs ? *(int32_t*)&(cr)->_buf[(cr)->cr_ep_ofs] : 0)
+    ((cr)->cr_ep_ofs ? capreq_epoch_(cr) : 0)
+
 #define capreq_ver(cr)  (&(cr)->_buf[(cr)->cr_ver_ofs])
 #define capreq_rel(cr)  (&(cr)->_buf[(cr)->cr_rel_ofs])
 

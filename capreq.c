@@ -329,7 +329,7 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
     memcpy(buf, name, name_len);
     buf += name_len;
     *buf++ = '\0';
-
+    
     if (epoch) {
         cr->cr_ep_ofs = buf - cr->_buf;
         memcpy(buf, &epoch, sizeof(epoch));
@@ -368,6 +368,14 @@ struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags, int
         return NULL;
     
     return capreq_new(name, epoch, version, release, relflags, flags);
+}
+
+int32_t capreq_epoch_(const struct capreq *cr)
+{
+    int32_t epoch;
+
+    memcpy(&epoch, &cr->_buf[cr->cr_ep_ofs], sizeof(epoch));
+    return epoch;
 }
 
 
