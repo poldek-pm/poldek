@@ -106,7 +106,7 @@ struct args {
     
     int       has_pkgdef;
     tn_array  *pkgdef_files;    /* foo.rpm      */
-    tn_array  *pkgdef_defs;     /* -n "foo 1.2" or "foo" or "foo*" */
+    tn_array  *pkgdef_defs;     /* --nevr "foo 1.2" or "foo" or "foo*" */
     tn_array  *pkgdef_sets;     /* -p ftp://ftp.zenek.net/PLD/tiny */
     
     unsigned   psflags;
@@ -358,16 +358,21 @@ static void print_source_list(tn_array *sources);
 /* buggy glibc argp... */
 static inline void chkarg(int key, char *arg) 
 {
+    n_assert(key);
     if (*arg == '-') {
         int n = 0;
-        while (options[n].doc) {
-            if (key == options[n].key) {
+        while (1) {
+            struct argp_option *opt = &options[n++];
+            if (opt->name == NULL && opt->key == 0 && opt->doc == NULL)
+                break;
+            
+            if (key == opt->key) {
                 char skey[2] = { key, '\0' };
                 logn(LOGERR, _("option requires an argument -- %s"),
-                     isascii(key) ? skey : options[n].name);
+                     isascii(key) ? skey : opt->name);
                 exit(EXIT_FAILURE);
             }
-            n++;
+            
         }
         exit(EXIT_FAILURE);
     }
@@ -381,7 +386,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     struct source *src = NULL;
     int ldmethod = PKGSET_LD_NIL;
 
-    if (arg)
+    if (key && arg)
         chkarg(key, arg);
     
     switch (key) {
@@ -1195,14 +1200,14 @@ int prepare_given_packages(void)
     if (args.ups == NULL)
         args.ups = usrpkgset_new();
 
-    for (i=0; i<n_array_size(args.pkgdef_sets); i++) {
+    for (i=0; i < n_array_size(args.pkgdef_sets); i++) {
         char *path = n_array_nth(args.pkgdef_sets, i);
         
         if (!usrpkgset_add_list(args.ups, path))
             rc = 0;
     }
 
-    for (i=0; i<n_array_size(args.pkgdef_defs); i++) {
+    for (i=0; i < n_array_size(args.pkgdef_defs); i++) {
         char *str = n_array_nth(args.pkgdef_defs, i);
 
         if (!usrpkgset_add_str(args.ups, str, strlen(str)))
