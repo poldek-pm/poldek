@@ -245,6 +245,7 @@ int pkgset_load_txtidx(struct pkgset *ps, int ldflags, const char *pathname)
             if (pkg) {
                 pkg->pkg_stream = vf->vf_stream;
                 n_array_push(ps->pkgs, pkg);
+                pkg = NULL;
             }
             
             pkgtags_clean(&pkgtags);
@@ -579,10 +580,8 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
 
     path = (pkgt->flags & PKGT_HAS_PATH) ? pkgt->path : NULL;
 
-    
     pkg = pkg_new(pkgt->name, epoch, version, release, pkgt->arch,
                   pkgt->size, pkgt->btime, path);
-    
     
     if (pkg == NULL) {
         log(LOGERR, "Error reading %s's data", pkgt->name);
@@ -624,7 +623,6 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
     if (pkgt->pkguinf_offs) {
         n_assert(pkg_has_ldpkguinf(pkg) == 0);
         pkg->pkg_pkguinf_offs = pkgt->pkguinf_offs;
-        
     } else {
         pkg->pkg_pkguinf = pkgt->pkguinf;
         pkg_set_ldpkguinf(pkg);

@@ -205,7 +205,7 @@ struct pkgset *pkgset_new(unsigned optflags)
     ps->depdirs = NULL;
     ps->path = NULL;
     ps->flags = optflags;
-
+    ps->vf = NULL;
     ps->rpmcaps = get_rpmlibcaps();
     return ps;
 }

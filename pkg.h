@@ -90,13 +90,12 @@ struct pkg {
 
     union {
         off_t           pkg_pkguinf_offs;
-        struct pkguinf *pkg_pkguinf;
+        struct pkguinf *pkg_pkguinf; 
     } package_uinf;
 
     uint16_t     _refcnt;
     void         (*free)(void*); /* self free()  */
 
-    void         *udata;      /* for some additional, user level data */
     int32_t      _buf_size;
     char         _buf[0];     /* private, store all string members */
 };
@@ -104,36 +103,22 @@ struct pkg {
 #define	pkg_pkguinf_offs  package_uinf.pkg_pkguinf_offs
 #define	pkg_pkguinf       package_uinf.pkg_pkguinf
 
-struct pkg *pkg_new_udata(const char *name, int32_t epoch,
-                          const char *version, const char *release,
-                          const char *arch, uint32_t size, uint32_t btime,
-                          const char *fpath,
-                          void *udata, size_t adsize);
-
-#define pkg_new(name, epoch, version, release, arch, size, btime, fpath) \
- pkg_new_udata(name, epoch, version, release, arch, size, btime, fpath, NULL,0)
+struct pkg *pkg_new(const char *name, int32_t epoch,
+                    const char *version, const char *release,
+                    const char *arch, uint32_t size, uint32_t btime,
+                    const char *fpath);
 
 #define PKG_LDNEVR    0
 #define PKG_LDCAPS    (1 << 0)
 #define PKG_LDREQS    (1 << 1)
 #define PKG_LDCNFLS   (1 << 2)
 #define PKG_LDFL      (1 << 3)
-//#define PKG_LDFL      (1 << 3)
-//#define PKG_LDFL      (1 << 3)
 
 #define PKG_LDCAPREQS PKG_LDCAPS | PKG_LDREQS | PKG_LDCNFLS
 #define PKG_LDWHOLE   PKG_LDCAPREQS | PKG_LDFL
 
-struct pkg *pkg_ldhdr_udata(Header h, const char *fname, unsigned ldflags, 
-                            void *udata, size_t udsize);
-
-#define pkg_ldhdr(h, fname, ldflags) \
-   pkg_ldhdr_udata(h, fname, ldflags, NULL, 0)
-
-struct pkg *pkg_ldrpm_udata(const char *path, unsigned ldflags,
-                            void *udata, size_t udsize);
-
-#define pkg_ldrpm(path, ldflags) pkg_ldrpm_udata(path, ldflags, NULL, 0)
+struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned ldflags);
+struct pkg *pkg_ldrpm(const char *path, unsigned ldflags);
 
 void pkg_free(struct pkg *pkg);
 struct pkg *pkg_link(struct pkg *pkg);
@@ -141,7 +126,8 @@ struct pkg *pkg_link(struct pkg *pkg);
 /* add self name-evr to caps */
 int pkg_add_selfcap(struct pkg *pkg);
 
-int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2); 
+int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
+int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_ver(const struct pkg *p1, const struct pkg *p2);
@@ -178,11 +164,8 @@ char *pkg_snprintf_s(const struct pkg *pkg);
 char *pkg_snprintf_s0(const struct pkg *pkg);
 char *pkg_snprintf_s1(const struct pkg *pkg);
 
-void *pkg_uinf_tag(struct pkg *pkg, int tag);
+struct pkguinf *pkg_info(const struct pkg *pkg);
 
-#define pkg_group(pkg) pkg_uinf_tag(pkg, RPMTAG_GROUP)
-#define pkg_summary(pkg) pkg_uinf_tag(pkg, RPMTAG_SUMMARY)
-#define pkg_description(pkg) pkg_uinf_tag(pkg, RPMTAG_DESCRIPTION)
 
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*));
 

@@ -156,7 +156,9 @@ int pkgset_fetch_pkgs(struct pkgset *ps, const char *destdir, tn_array *pkgs)
     return rc;
 }
 
+#define EXEC_RPM 1
 
+#ifndef EXEC_RPM    
 static void process_rpm_output(struct p_open_st *st) 
 {
     int c;
@@ -169,6 +171,7 @@ static void process_rpm_output(struct p_open_st *st)
     while (read(st->fd, &c, 1) == 1)
         msg(1, "_%c", c);
 }
+#endif
 
 static void reaper (int sig)
 {
@@ -183,16 +186,19 @@ static void reaper (int sig)
 }
 
 
+
 static int runrpm(struct pkgset *ps, struct upgrade_s *upg) 
 {
+#ifndef EXEC_RPM    
+    struct p_open_st pst;
+#endif
     char **argv;
     char *cmd;
     char *local_prefix;
     int i, n, nopts = 0, ec;
     int nv = verbose;
-    
-    struct p_open_st pst;
 
+    
     n = 128 + n_array_size(upg->install_pkgs);
     argv = alloca((n + 1) * sizeof(*argv));
     argv[n] = NULL;
@@ -258,7 +264,7 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
 	
     if (upg->inst->rootdir) {
     	argv[n++] = "--root";
-	argv[n++] = upg->inst->rootdir;
+	argv[n++] = (char*)upg->inst->rootdir;
     }
 
     argv[n++] = "--noorder";    /* packages always ordered */
@@ -317,11 +323,11 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
         msg(1, "Running%s...\n", buf);
     }
     
-#define EXEC_RPM 1
-#if EXEC_RPM    
+
+#ifdef EXEC_RPM    
     ec = exec_rpm(cmd, argv);
     
-#else 
+#else  /* p_open() doesn't works propely with rpm, I don't now why */
     signal(SIGCHLD, reaper);
     p_st_init(&pst);
     if (p_open(&pst, cmd, argv) == NULL) 
@@ -338,9 +344,10 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
         log(LOGERR, "%s", pst.errmsg);
 
     p_st_destroy(&pst);
-#endif
+    
     if (n)
         verbose--;
+#endif    
 
     return ec == 0;
 }
@@ -550,7 +557,7 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
         nmarkarr %= 2;
         n_array_clean(markarr[nmarkarr]);
         nloop++;
-        }
+    }
     
  l_end:
     
@@ -714,6 +721,8 @@ void process_dependecies(struct pkgset *ps, struct upgrade_s *upg)
     n_array_free(opkgs);
 }
 
+/* rpmlib() detects conflicts internally, header*() API usage is too slow */
+#undef ENABLE_FILES_CONFLICTS   
 #ifdef ENABLE_FILES_CONFLICTS
 static
 int is_file_conflict(const struct pkg *pkg,
@@ -824,7 +833,7 @@ int find_db_files_conflicts(struct pkg *pkg, struct pkgdb *db,
     n_array_free(fl);
     return ncnfl;
 }
-#endif
+#endif /* ENABLE_FILES_CONFLICTS */
 
 
 int find_db_conflicts(const struct pkg *pkg, const struct capreq *cnfl,

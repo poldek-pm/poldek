@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include <trurl/trurl.h>
 #include <rpm/rpmlib.h>
@@ -23,7 +24,7 @@
 
 
 static Header make_pkguinf_hdr(Header h, int *langs_cnt);
-
+static void *pkguinf_tag(struct pkguinf *pkgu, int32_t tag);
 
 #if 0
 /* headerLoad bug hunt func  */
@@ -32,13 +33,19 @@ void check_hdr(char *s, struct pkguinf *pkgu)
     void *p;
 
     printf("%s\n", s);
-    p = headerUnload(pkgu->hdr);
-    //n_assert(memcmp(pkgu->hdr, sav, savsize) == 0);
+    p = headerUnload(pkgu->_hdr);
+    //n_assert(memcmp(pkgu->_hdr, sav, savsize) == 0);
 }
 #endif 
 
-void pkguinf_free(struct pkguinf *pkgu) 
+void pkguinf_free(struct pkguinf *pkgu)
 {
+
+    if (pkgu->_refcnt > 0) {
+        pkgu->_refcnt--;
+        return;
+    }
+    
     if (pkgu->flags & PKGUINF_MEMB_MALLOCED) {
         if (pkgu->license)
             free(pkgu->license);
@@ -53,34 +60,69 @@ void pkguinf_free(struct pkguinf *pkgu)
             free(pkgu->description);
     }
     
-    if (pkgu->hdr)
-        headerFree(pkgu->hdr);
+    if (pkgu->_hdr)
+        headerFree(pkgu->_hdr);
     
-    pkgu->hdr = NULL;
+    pkgu->_hdr = NULL;
     free(pkgu);
 }
 
+struct pkguinf *pkguinf_link(struct pkguinf *pkgu)
+{
+    pkgu->_refcnt++;
+    return pkgu;
+}
 
-void *pkguinf_tag(struct pkguinf *pkgu, int32_t tag)
+struct pkguinf *pkguinf_touser(struct pkguinf *pkgu) 
+{
+    pkgu->license = pkguinf_tag(pkgu, RPMTAG_COPYRIGHT);
+    pkgu->url = pkguinf_tag(pkgu, RPMTAG_URL);
+    pkgu->summary = pkguinf_tag(pkgu, RPMTAG_SUMMARY);
+    pkgu->description = pkguinf_tag(pkgu, RPMTAG_DESCRIPTION);
+
+    
+    return pkgu;
+}
+
+
+static int is_empty(const char *s) 
+{
+    int is_empty = 1;
+    
+    while (*s) {
+        if (!isspace(*s)) {
+            is_empty = 0;
+            break;
+        }
+    }
+    return is_empty;
+}
+
+static void *pkguinf_tag(struct pkguinf *pkgu, int32_t tag)
 {
     struct rpmhdr_ent ent;
 
-    n_assert(pkgu->hdr);
+    n_assert(pkgu->_hdr);
     
-    if (!rpmhdr_ent_get(&ent, pkgu->hdr, tag))
+    if (!rpmhdr_ent_get(&ent, pkgu->_hdr, tag))
         ent.val = NULL;
+
+    if (ent.val && ent.type == RPM_STRING_TYPE) 
+        if (is_empty(ent.val))
+            ent.val = NULL;
 
     return ent.val;
 }
 
-int32_t pkguinf_int32_tag(struct pkguinf *pkgu, int32_t tag)
+#if 0                           /* currently unused  */
+static int32_t pkguinf_int32_tag(struct pkguinf *pkgu, int32_t tag)
 {
     int32_t *v;
     
     v = pkguinf_tag(pkgu, tag);
     return *v;
 }
-
+#endif
 
 int pkguinf_store(struct pkguinf *pkgu, FILE *stream) 
 {
@@ -91,15 +133,15 @@ int pkguinf_store(struct pkguinf *pkgu, FILE *stream)
     
     int rc;
 
-    /* headerUnload(pkgu->hdr) gives diffrent a bit raw header(!), so copy tags by hand */
-//    hdr = make_pkguinf_hdr(pkgu->hdr, NULL);
-    hdr = pkgu->hdr;
+    /* headerUnload(pkgu->_hdr) gives diffrent a bit raw header(!), so copy tags by hand */
+
+    hdr = make_pkguinf_hdr(pkgu->_hdr, NULL);
     rawhdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
     rawhdr = headerUnload(hdr);
 
 #if 0    
-    printf("> %ld\t%d\n", ftell(stream), headerSizeof(pkgu->hdr, HEADER_MAGIC_NO));
-    headerDump(pkgu->hdr, stdout, HEADER_DUMP_INLINE, rpmTagTable);
+    printf("> %ld\t%d\n", ftell(stream), headerSizeof(pkgu->_hdr, HEADER_MAGIC_NO));
+    headerDump(pkgu->_hdr, stdout, HEADER_DUMP_INLINE, rpmTagTable);
 #endif     
     
     nsize = hton16(rawhdr_size);
@@ -125,16 +167,19 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
 
     
     if (offset > 0)
-        fseek(stream, SEEK_SET, offset);
+        if (fseek(stream, offset, SEEK_SET) != 0) {
+            log(LOGERR, "pkguinf_restore: fseek %ld: %m\n", offset);
+            return NULL;
+        }
     
     if (fread(&nlangs, sizeof(nlangs), 1, stream) != 1) {
-        log(LOGERR, "pkguinf_restore: read error at %ld\n", ftell(stream));
+        log(LOGERR, "pkguinf_restore: read error (%m) at %ld\n", ftell(stream));
         return NULL;
     }
     nlangs = ntoh16(nlangs);
     
     if (fread(&nsize, sizeof(nsize), 1, stream) != 1) {
-        log(LOGERR, "pkguinf_restore: read error at %ld\n", ftell(stream));
+        log(LOGERR, "pkguinf_restore: read error (%m) at %ld\n", ftell(stream));
         return NULL;
     }
     
@@ -149,7 +194,7 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
     
     if ((hdr = headerLoad(rawhdr)) != NULL) {
         pkgu = malloc(sizeof(*pkgu));
-        pkgu->hdr = headerCopy(hdr); /* propably headerLoad() bug  */
+        pkgu->_hdr = headerCopy(hdr); /* propably headerLoad() bug  */
         headerFree(hdr);
         
         pkgu->flags = 0;
@@ -158,10 +203,11 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
         pkgu->url = NULL;
         pkgu->summary = NULL;
         pkgu->description = NULL;
+        pkgu->_refcnt = 0;
         
 #if 0    
-        printf("< %ld\t%d\n", ftell(stream), headerSizeof(pkgu->hdr, HEADER_MAGIC_NO));
-        headerDump(pkgu->hdr, stdout, HEADER_DUMP_INLINE, rpmTagTable);
+        printf("< %ld\t%d\n", ftell(stream), headerSizeof(pkgu->_hdr, HEADER_MAGIC_NO));
+        headerDump(pkgu->_hdr, stdout, HEADER_DUMP_INLINE, rpmTagTable);
 #endif        
     }
 
@@ -254,7 +300,7 @@ struct pkguinf *pkguinf_ldhdr(Header h)
         return NULL;
     
     pkgu = malloc(sizeof(*pkgu));
-    pkgu->hdr = hdr;
+    pkgu->_hdr = hdr;
     pkgu->flags = 0;
     pkgu->nlangs = nlangs;
     pkgu->license = NULL;

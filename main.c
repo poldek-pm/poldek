@@ -42,8 +42,8 @@
 extern int shell_main(struct pkgset *ps, struct inst_s *inst);
 #endif
 
-const char *argp_program_version = "poldek " VERSION " (ALPHA)";
-const char *argp_program_bug_address = "<mis@pld.org.pl>";
+static const char *argp_program_version = "poldek " VERSION " (ALPHA)";
+static const char *argp_program_bug_address = "<mis@pld.org.pl>";
 /* Program documentation. */
 static char doc[] = "poldek " VERSION " (ALPHA)\n"
 "This program may be freely redistributed under the terms of the GNU GPL\n";
@@ -341,6 +341,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_SHELL;
             argsp->psflags |= PSMODE_UPGRADE;
+            verbose = 1;
             break;
 #endif            
         case 'm':
@@ -942,6 +943,7 @@ int main(int argc, char **argv)
     switch (args.mjrmode) {
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
+            verbose = 1;
             log_sopenlog(stdout, 0, "ERR");
             rc = shell_main(ps, &inst);
             break;

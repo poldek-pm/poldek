@@ -35,16 +35,16 @@ static void (*pkg_free_fn)(void*) = free;
 
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*))
 {
-    //pkg_alloc_fn = pkg_allocfn;
-    //pkg_free_fn = pkg_freefn;
-    
+//    pkg_alloc_fn = pkg_allocfn;
+//    pkg_free_fn = pkg_freefn;
 }
 
+
 /* always store fields in order: path, name, version, release, arch */
-struct pkg *pkg_new_udata(const char *name, int32_t epoch,
-                          const char *version, const char *release,
-                          const char *arch, uint32_t size, uint32_t btime, 
-                          const char *fpath, void *udata, size_t udsize)
+struct pkg *pkg_new(const char *name, int32_t epoch,
+                    const char *version, const char *release,
+                    const char *arch, uint32_t size, uint32_t btime, 
+                    const char *fpath)
 {
     struct pkg *pkg;
     int fpath_len = 0;
@@ -68,9 +68,6 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
         len += fpath_len + 1;
     }
 
-    if (udata)
-        len += udsize;
-    
     version_len = strlen(version);
     len += version_len + 1;
     	
@@ -122,12 +119,6 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
     buf += arch_len;
     *buf++ = '\0';
     
-    if (udata) {
-        memcpy(buf, &udata, udsize);
-        pkg->udata = buf;
-        buf += udsize;
-    }
-
     pkg->reqs = NULL;
     pkg->caps = NULL;
     pkg->cnfls = NULL;
@@ -137,6 +128,7 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
     pkg->cnflpkgs = NULL;
     pkg->other_files_offs = 0;
     pkg->pkg_stream = NULL;
+    pkg->pkg_pkguinf_offs = 0;
 
     pkg->_refcnt = 0;
     
@@ -171,8 +163,11 @@ void pkg_free(struct pkg *pkg)
     if (pkg->fl) 
         n_array_free(pkg->fl);
 
-    if (pkg_has_ldpkguinf(pkg))
+    if (pkg_has_ldpkguinf(pkg)) {
         pkguinf_free(pkg->pkg_pkguinf);
+        pkg_clr_ldpkguinf(pkg);
+    }
+    
 
     pkg->free(pkg);
 }
@@ -185,8 +180,7 @@ struct pkg *pkg_link(struct pkg *pkg)
 }
 
 
-struct pkg *pkg_ldhdr_udata(Header h, const char *fname, unsigned ldflags, 
-                            void *udata, size_t udsize)
+struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned ldflags)
 {
     struct pkg *pkg;
     uint32_t   *epoch, *size, *btime;
@@ -213,9 +207,8 @@ struct pkg *pkg_ldhdr_udata(Header h, const char *fname, unsigned ldflags,
     if (!headerGetEntry(h, RPMTAG_BUILDTIME, &type, (void *)&btime, NULL)) 
         btime = NULL;
     
-    pkg = pkg_new_udata(name, epoch ? *epoch : 0, version, release, arch,
-                        size ? *size : 0, btime ? *btime : 0, NULL,
-                        udata, udsize);
+    pkg = pkg_new(name, epoch ? *epoch : 0, version, release, arch,
+                  size ? *size : 0, btime ? *btime : 0, NULL);
 
     if (pkg == NULL)
         return NULL;
@@ -277,8 +270,7 @@ struct pkg *pkg_ldhdr_udata(Header h, const char *fname, unsigned ldflags,
     return pkg;
 }
 
-struct pkg *pkg_ldrpm_udata(const char *path, unsigned ldflags,
-                            void *udata, size_t udsize)
+struct pkg *pkg_ldrpm(const char *path, unsigned ldflags)
 {
     struct pkg *pkg = NULL;
     FD_t fdt;
@@ -295,7 +287,7 @@ struct pkg *pkg_ldrpm_udata(const char *path, unsigned ldflags,
             if (headerIsEntry(h, RPMTAG_SOURCEPACKAGE))
                 log(LOGERR, "%s: reject source package\n", path);
             else
-                pkg = pkg_ldhdr_udata(h, path, ldflags, udata, udsize);
+                pkg = pkg_ldhdr(h, path, ldflags);
             
             headerFree(h);
         }
@@ -311,6 +303,16 @@ int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2)
     return strcmp(p1->name, p2->name);
 }
 
+int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc = 0;
+
+    if ((rc = p1->epoch - p2->epoch))
+        return rc;
+
+    return rpmvercmp(p1->ver, p2->ver);
+}
+
 
 int pkg_cmp_name_ver(const struct pkg *p1, const struct pkg *p2) 
 {
@@ -319,10 +321,7 @@ int pkg_cmp_name_ver(const struct pkg *p1, const struct pkg *p2)
     if ((rc = pkg_cmp_name(p1, p2)))
         return rc;
 
-    if ((rc = p1->epoch - p2->epoch))
-        return rc;
-
-    return rpmvercmp(p1->ver, p2->ver);
+    return pkg_cmp_ver(p1, p2);
 }
 
 
@@ -354,6 +353,7 @@ int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2)
     return pkg_cmp_evr(p1, p2);
 }
 
+
 int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc;
@@ -374,6 +374,7 @@ int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr)
         cr->cr_flags & REL_EQ;
 }
 
+
 int pkg_add_selfcap(struct pkg *pkg) 
 {
     int has = 0;
@@ -389,10 +390,12 @@ int pkg_add_selfcap(struct pkg *pkg)
         
         for (i=0; i<n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
+            
             if (strcmp(capreq_name(cap), pkg->name) == 0 &&
                 capreq_epoch(cap) == pkg->epoch &&
                 strcmp(capreq_ver(cap), pkg->ver) == 0 &&
                 strcmp(capreq_rel(cap), pkg->rel) == 0) {
+                
                 has = 1;
                 break;
             }
@@ -821,7 +824,25 @@ struct pkg *pkg_restore(tn_buf_it *nbufi)
     pkg->cnfls = capreqs_restore(nbufi);
     return pkg;
 }
+
+struct pkguinf *pkg_info(const struct pkg *pkg) 
+{
+    struct pkguinf *pkgu = NULL;
+
     
+    if (pkg_has_ldpkguinf(pkg)) 
+        pkgu = pkguinf_link(pkg->pkg_pkguinf);
+    
+    else if (pkg->pkg_stream)
+        pkgu = pkguinf_restore(pkg->pkg_stream, pkg->pkg_pkguinf_offs);
+    
+    if (pkgu)
+        pkgu = pkguinf_touser(pkgu);
+
+    return pkgu;
+    
+}
+
 
 char *pkg_filename(const struct pkg *pkg, char *buf, size_t size) 
 {
