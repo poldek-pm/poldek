@@ -100,6 +100,14 @@ void poldek_ts_free(struct poldek_ts *ts)
 void poldek_ts_setop(struct poldek_ts *ts, int optv, int on_off)
 {
     n_assert(bitvect_slot(optv) < sizeof(ts->_opvect)/sizeof(bitvect_slot_itype));
+    switch (optv) {
+        case POLDEK_OP_PROMOTEPOCH:
+            poldek_conf_promote_epoch = on_off;
+            break;
+        default:
+            break;
+    }
+         
     if (on_off)
         bitvect_set(ts->_opvect, optv);
     else
@@ -504,14 +512,19 @@ static
 int ts_mark_arg_packages(struct poldek_ts *ts, int withdeps) 
 {
     int rc = 0;
+    unsigned apsflags = 0;
     
     arg_packages_setup(ts->aps);
     if (arg_packages_size(ts->aps) == 0) {
         logn(LOGERR, _("Nothing to do"));
         return 0;
     }
-        
-    if (arg_packages_resolve(ts->aps, ts->ctx->ps->pkgs, ts->ctx->ps, 0)) {
+
+    if (ts->getop(ts, POLDEK_OP_CAPLOOKUP))
+        apsflags |= ARG_PACKAGES_RESOLV_CAPS;
+    
+    if (arg_packages_resolve(ts->aps, ts->ctx->ps->pkgs,
+                             ts->ctx->ps, apsflags)) {
         tn_array *pkgs;
         
         rc = 1;

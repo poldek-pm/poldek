@@ -42,7 +42,6 @@
 struct arg_packages {
     unsigned  flags;
     struct pm_ctx *pmctx;
-    struct pkgset *ps;
     tn_array  *packages;
     tn_array  *package_masks;   /* [@]foo(#|-)[VERSION[-RELEASE]] || foo.rpm   */
     tn_array  *package_lists;   /* --pset FILE */
@@ -394,7 +393,7 @@ int resolve_masks(tn_array *pkgs,
     for (j=0; j < n_array_size(aps->package_masks); j++) {
         const char *mask = n_array_nth(aps->package_masks, j);
 
-        if (matches[j] == 0 && ps) {
+        if (matches[j] == 0 && ps && (flags & ARG_PACKAGES_RESOLV_CAPS)) {
             if (resolve_bycap(aps, ps, mask)) {
                 matches[j]++;
                 continue;
@@ -402,7 +401,6 @@ int resolve_masks(tn_array *pkgs,
         }
         
         if (matches[j] == 0 && (flags & ARG_PACKAGES_RESOLV_MISSINGOK) == 0) {
-            n_assert(aps->ps);
             logn(LOGERR, _("%s: no such package"), mask);
             rc = 0;
         }
