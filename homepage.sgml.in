@@ -180,10 +180,12 @@ For example:
      Older versions are available 
 	<url url="http://team.pld.org.pl/~mis/poldek/download/" name="here">
 
-     <item> Binary rpm packages (linked with rpm-4.0.2)
+     <item> Binary rpm packages
 	<p>
 	<itemize>
-	<item> 
+	<item> PLD Linux packages (linked with rpm 4.0.2)
+	<itemize>
+	<item>
 	<url url="download/poldek-@VERSION@-1.i386.rpm" 
 	     name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm">  
 	
@@ -191,6 +193,15 @@ For example:
 	    <url url="download/poldek-@VERSION@-1.static.i386.rpm" 
 	      name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.static.i386.rpm">  
 	</itemize>
+	
+	<item> RedHat Linux 7.2 package (linked with rpm 4.0.4)
+	<itemize>
+	<item>
+	<url url="download/poldek-@VERSION@-1.i386.rpm" 
+	     name="http://team.pld.org.pl/~mis/poldek/download/rh7.2/poldek-@VERSION@-1.i386.rpm">  
+	
+	</itemize>
+        </itemize>	
 <!-- 
      <p>
      Non static rpm packages, for several architectures can be downloaded from
