@@ -60,14 +60,14 @@ static int search(struct cmdarg *cmdarg);
 #define OPT_SEARCH_HDD     (OPT_SEARCH_SUMM | OPT_SEARCH_DESC | OPT_SEARCH_FL)  
 
 static struct argp_option options[] = {
-    { "provides",  'p', 0, 0, N_("Search capablities"), 1},
+    { "provides",  'p', 0, 0, N_("Search capabilities"), 1},
     { "requires",  'r', 0, 0, N_("Search requirements"), 1},
     { "conflicts", 'c', 0, 0, N_("Search conflicts"), 1},
     { "obsoletes", 'o', 0, 0, N_("Search obsolences"), 1},
     { "summary",   's', 0, 0, N_("Search summaries, urls and license"), 1},
-    { "description",   'd', 0, 0, N_("Search descriptions"), 1},
+    { "description", 'd', 0, 0, N_("Search descriptions"), 1},
     { "group",     'g', 0, 0, N_("Search groups"), 1 }, 
-    { "files",     'f', 0,  0, N_("Search file list"), 1},
+    { "files",     'f', 0, 0, N_("Search file list"), 1},
     { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},
     { "all",       'a', 0, 0,
       N_("Search all described fields, the defaults are: -sd"), 1
@@ -96,12 +96,12 @@ struct command_alias cmd_aliases[] = {
 
 struct command command_search = {
     0, 
-    "search", "PATTERN [PACKAGE...]", "Search packages", 
+    "search", N_("PATTERN [PACKAGE...]"), N_("Search packages"), 
     options, parse_opt,
     NULL, search,
     NULL, NULL,
     (struct command_alias*)&cmd_aliases, 
-    "PATTERN := /perl-regexp/[imsx], see perlre(1) for help\n"
+    N_("PATTERN := /perl-regexp/[imsx], see perlre(1) for help\n")
 };
 
 static

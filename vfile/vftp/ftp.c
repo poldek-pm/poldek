@@ -35,7 +35,7 @@
 # define IPPORT_FTP 21
 #endif
 
-#define TIMEOUT     1         /* 5 min. */
+#define TIMEOUT     60         /* 5 min. */
 
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
@@ -342,7 +342,7 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
                 
             case EINTR:
                 if (interrupted) {
-                    vftp_set_err(vftp_errno, _("connection cancelled"));
+                    vftp_set_err(vftp_errno, _("connection canceled"));
                     break;
                 }
                 

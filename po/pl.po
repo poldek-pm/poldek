@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
-"POT-Creation-Date: 2002-03-25 17:43+0100\n"
+"POT-Creation-Date: 2002-03-25 20:52+0100\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: \n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -152,12 +152,16 @@ msgstr "Sprawd¼ zale¿no¶ci i konflikty (w tym plikowe)"
 msgid "Be tolerant for bugs which RPM tolerates"
 msgstr "Ignoruj b³êdy które ignoruje RPM"
 
+#: main.c:237
+msgid "Index creation:"
+msgstr "Tworzenie indeksu:"
+
 #: main.c:239
 msgid "Create package index, SOURCE/packages.dir by default"
 msgstr "Utwórz pakietowy indeks; domy¶lnie: SOURCE/packages.dir"
 
 #: main.c:242
-msgid "Like above, but gzipped file is created"
+msgid "Likewise, but gzipped file is created"
 msgstr "jw. z tym, ¿e indeks jest kopresowany gzipem"
 
 #: main.c:245
@@ -173,7 +177,7 @@ msgstr "Nie twórz \"³atki\""
 
 #: main.c:252
 msgid "Packages spec:"
-msgstr "Specyfikowanie pakietów"
+msgstr "Specyfikowanie pakietów:"
 
 #: main.c:253
 msgid "Take package set definition from FILE"
@@ -258,7 +262,7 @@ msgstr "Nie instaluj, a jedynie ¶ci±gnij pakiety"
 msgid "Install packages with broken dependencies"
 msgstr "Instaluj pakiety z niespe³nionymi zale¿no¶ciami"
 
-#: main.c:305 shell/install.c:41
+#: main.c:305 shell/install.c:41 shell/uninstall.c:37
 msgid "Be unconcerned"
 msgstr "B±d¼ niefrasobliwy"
 
@@ -329,19 +333,19 @@ msgstr ""
 
 #: main.c:347
 msgid "Read configuration from FILE"
-msgstr ""
+msgstr "Czytaj konfiguracjê z pliku FILE"
 
 #: main.c:348
 msgid "Do not read configuration"
-msgstr ""
+msgstr "Nie czytaj ¿adnej konfiguracji"
 
 #: main.c:350
 msgid "Display program version information and exit"
-msgstr ""
+msgstr "Wypisz informacjê o wersji programu i wyjd¼"
 
 #: main.c:351
 msgid "Log program messages to FILE"
-msgstr ""
+msgstr "Rejestruj wszystkie komunikaty w pliku FILE"
 
 #: main.c:352
 msgid "Read indexes created by versions < 0.17"
@@ -353,7 +357,7 @@ msgstr "B±d¼ gadatliwy"
 
 #: main.c:354
 msgid "Do not produce any output."
-msgstr ""
+msgstr "Nie wypisuj ¿anych komunikatów"
 
 #: main.c:362
 msgid ""
@@ -370,11 +374,11 @@ msgstr "opcja wymaga argumentu -- %s"
 
 #: main.c:467
 msgid "prefix should be preceded by source one"
-msgstr ""
+msgstr "opcja 'prefix' musi byæ poprzedzona przez 'source'"
 
 #: main.c:472
 msgid "prefix for directory source makes no sense"
-msgstr ""
+msgstr "podanie opcji 'prefix' dla katalou nie ma sensu"
 
 #: main.c:720
 msgid "split: bad option argument"
@@ -482,7 +486,7 @@ msgid "I'm set*id'ed, give up"
 msgstr "Mam ustawiony bit suid/sgid, wymiêkam"
 
 #: main.c:1535
-msgid "Running me as root is not a good habbit"
+msgid "Running me as root is not a good habit"
 msgstr ""
 
 #: misc.c:185
@@ -508,7 +512,7 @@ msgstr "%s (%s) zawiera znaki nie alfanumeryczne"
 #: misc.c:233
 #, c-format
 msgid "%s (%s): %m, using /tmp"
-msgstr ""
+msgstr "%s (%s): %m, biorê /tmp"
 
 #: misc.c:236
 #, c-format
@@ -926,7 +930,7 @@ msgstr "Nie ma roboty"
 msgid "%s: %s unknown option"
 msgstr "%s: %s nieznana opcja"
 
-#: pkgset-load.c:259 shell/shell.c:807
+#: pkgset-load.c:259 shell/shell.c:808
 #, c-format
 msgid "%d package read"
 msgid_plural "%d packages read"
@@ -1024,12 +1028,12 @@ msgstr "konflikt pomiêdzy %s i %s"
 #: pkgset.c:697
 #, c-format
 msgid " %d of %d (%.2f of %.2f MB) packages done"
-msgstr ""
+msgstr "%d z %d (%.2f z %.2f MB) pakietów"
 
 #: pkgset.c:703
 #, c-format
 msgid "; %.2f MB to download"
-msgstr ""
+msgstr "; %.2f MB do pobrania"
 
 #: pkgset.c:710
 msgid "there were errors during install"
@@ -1193,7 +1197,7 @@ msgid "Show all described below fields"
 msgstr "Poka¿ wszystkie pozycje wymienione wy¿ej"
 
 #: shell/desc.c:59
-msgid "Show package capablities, requirements, conflicts and obsolences"
+msgid "Show capabilities, requirements, conflicts and obsolences"
 msgstr "Poka¿ w³asno¶ci, wymagania, konflikty i zast±pienia(iii... obsoletes)"
 
 #: shell/desc.c:62
@@ -1201,8 +1205,8 @@ msgid "Show package's capablities"
 msgstr "Poka¿ w³asno¶ci (capablities) pakietu"
 
 #: shell/desc.c:65
-msgid "Show package's requirements"
-msgstr "Poka¿ wymagania pakietu"
+msgid "Show requirements"
+msgstr "Poka¿ wymagania (requirements)"
 
 #: shell/desc.c:68
 msgid "Show required packages"
@@ -1213,18 +1217,18 @@ msgid "Show packages which requires given package"
 msgstr "Poka¿ pakiety, które wymagaj± podanego pakietu"
 
 #: shell/desc.c:74
-msgid "Show package's conflicts and obsolences"
-msgstr "Poka¿ konflikty i obsolences"
+msgid "Show conflicts and obsolences"
+msgstr "Poka¿ konflikty i zast±pienia(sic!)"
 
 #: shell/desc.c:76
-msgid "Show package description (the default)"
+msgid "Show description (the default)"
 msgstr "Poka¿ opis pakietu (akcja domy¶lna)"
 
 #: shell/desc.c:78
 msgid "Show package files"
 msgstr "Poka¿ pliki pakietu"
 
-#: shell/desc.c:87 shell/install.c:94
+#: shell/desc.c:87 shell/get.c:47 shell/install.c:94 shell/uninstall.c:50
 msgid "PACKAGE..."
 msgstr "PAKIET..."
 
@@ -1236,6 +1240,18 @@ msgstr "Wy¶wietlaj informacje o pakietach"
 #, c-format
 msgid "%s: description unavailable (index without packages info loaded?)\n"
 msgstr "%s: opis niedostêpny (prawdopodobnie u¿ywany indeks nie zawiera ich)\n"
+
+#: shell/get.c:38 shell/uninstall.c:41
+msgid "Be verbose"
+msgstr "B±d¼ gadatliwy"
+
+#: shell/get.c:39
+msgid "Download to directory DIR instead to current one"
+msgstr ""
+
+#: shell/get.c:47
+msgid "Download packages"
+msgstr "¦ci±gaj pakiety"
 
 #: shell/get.c:92
 msgid "get: specify what packages you want to download"
@@ -1268,14 +1284,14 @@ msgstr "Wyst±pi³y b³êdy podczas instalacji"
 
 #: shell/ls.c:45
 msgid "Use a long listing format"
-msgstr ""
+msgstr "Wypisuj u¿ywaj±c rozszerzonego formatu"
 
 #: shell/ls.c:46
-msgid "Show upgradeable packages only"
+msgid "Show upgrade-able packages only"
 msgstr "Poka¿ pakiety, które mog± zostaæ zaktualizowane"
 
 #: shell/ls.c:48
-msgid "Like above but omit packages with diffrent releases only"
+msgid "Likewise but omit packages with different releases only"
 msgstr "jw. z pominiêciem pakietów ró¿ni±cych siê jedynie Release"
 
 #: shell/ls.c:49
@@ -1345,7 +1361,7 @@ msgid "available"
 msgstr "dostêpny"
 
 #: shell/search.c:63
-msgid "Search capablities"
+msgid "Search capabilities"
 msgstr "Przeszukuj w³asno¶ci (capablities)"
 
 #: shell/search.c:64
@@ -1380,6 +1396,18 @@ msgstr "Przeszukuj listy plików"
 msgid "Search all described fields, the defaults are: -sd"
 msgstr "Przeszukuj ww. pola pakietów, domy¶lnie jest to -sd"
 
+#: shell/search.c:99
+msgid "PATTERN [PACKAGE...]"
+msgstr "WZORZEC [PAKIET...]"
+
+#: shell/search.c:99
+msgid "Search packages"
+msgstr "Przeszukiwanie pakietów"
+
+#: shell/search.c:104
+msgid "PATTERN := /perl-regexp/[imsx], see perlre(1) for help\n"
+msgstr "WZORZEC:= /perl-regexp/[imsx], zob. perlre(1)\n"
+
 #: shell/search.c:205
 #, c-format
 msgid "search: unknown regexp option -- %c"
@@ -1412,28 +1440,48 @@ msgstr "Przeszukiwanie pakietów..."
 msgid "_done."
 msgstr "_zrobione."
 
-#: shell/shell.c:321
+#: shell/shell.c:64
+msgid "Quit poldek"
+msgstr ""
+
+#: shell/shell.c:71
+msgid "Display this help"
+msgstr ""
+
+#: shell/shell.c:81
+msgid "Reload installed packages"
+msgstr "Prze³aduj listê zainstalowanych pakietów"
+
+#: shell/shell.c:322
 msgid "  Defined aliases:\n"
 msgstr "  Zdefiniowane aliasy:\n"
 
-#: shell/shell.c:454
+#: shell/shell.c:455
 #, c-format
 msgid "%s: no such command"
 msgstr "%s: nie ma takiej komendy"
 
-#: shell/shell.c:667
+#: shell/shell.c:668
 #, c-format
 msgid "%s: no such package"
 msgstr "%s: nie ma takiego pakietu"
 
-#: shell/shell.c:721
+#: shell/shell.c:717
+#, c-format
+msgid "[OPTION...] %s"
+msgstr "[OPCJA...] %s"
+
+#: shell/shell.c:722
 msgid ""
 "\n"
 "For now \"search\" and \"desc\" commands doesn't work with installed "
 "packages.\n"
 msgstr ""
+"\n"
+"Jak dot±d komendy \"search\" i \"desc\" nie dzia³aj± z zainstalowanymi "
+"pakietami.\n"
 
-#: shell/shell.c:724
+#: shell/shell.c:725
 msgid ""
 "\n"
 "Type COMMAND -? for details.\n"
@@ -1441,34 +1489,34 @@ msgstr ""
 "\n"
 "Wpisz KOMENDA -? by otrzymaæ pomoc na temat danej komendy.\n"
 
-#: shell/shell.c:804
+#: shell/shell.c:805
 #, c-format
 msgid "Loading cache %s..."
 msgstr "Wczytywanie %s..."
 
-#: shell/shell.c:822
+#: shell/shell.c:823
 msgid "Load installed packages failed"
 msgstr "B³±d odczytu zainstalowanych pakietów"
 
-#: shell/shell.c:919
+#: shell/shell.c:920
 msgid "Just type \"reload\"\n"
 msgstr "Po prostu daj \"reload\"\n"
 
-#: shell/shell.c:988
+#: shell/shell.c:993
 #, c-format
-msgid "Ambigous command %s"
-msgstr "Wieloznaczna komenda %s"
+msgid "ambiguous command %s"
+msgstr "niejednoznaczna komenda %s"
 
-#: shell/shell.c:999 shell/shell.c:1007
+#: shell/shell.c:1004 shell/shell.c:1012
 #, c-format
-msgid "Ambigous alias %s"
-msgstr "Wieloznaczny alias %s"
+msgid "ambiguous alias %s"
+msgstr "niejednoznaczny alias %s"
 
-#: shell/shell.c:1113
+#: shell/shell.c:1118
 msgid "not a tty"
 msgstr ""
 
-#: shell/shell.c:1134
+#: shell/shell.c:1139
 msgid ""
 "\n"
 "Welcome to the poldek shell mode. Type \"help\" for help with commands.\n"
@@ -1477,6 +1525,18 @@ msgstr ""
 "\n"
 "Witaj w poldekowym trybie interaktywnym. Wpisz \"help\" aby otrzymaæ pomoc.\n"
 "\n"
+
+#: shell/uninstall.c:38
+msgid "Don't uninstall, but tell if it would work or not"
+msgstr "Nie deinstaluj, tylko sprawd¼ czy operacja przebiegnie pomy¶lnie"
+
+#: shell/uninstall.c:40
+msgid "%s: broken dependencies"
+msgstr "%s: niespe³nione zale¿no¶ci"
+
+#: shell/uninstall.c:50
+msgid "Uninstall packages"
+msgstr "Deinstaluj pakiety"
 
 #: shell/uninstall.c:70
 msgid "Uninstalling"
@@ -1615,7 +1675,7 @@ msgid "response line too long"
 msgstr "zybt d³uga linia w odpowiedzi"
 
 #: vfile/vftp/ftp.c:345
-msgid "connection cancelled"
+msgid "connection canceled"
 msgstr "po³±czenie zosta³o przerwane"
 
 #: vfile/vftp/ftp.c:350
@@ -1665,3 +1725,6 @@ msgstr "%s: nie ma takiego pliku (odpowied¼ serwera: %s)"
 #, c-format
 msgid "%s: URL parse error"
 msgstr "%s: b³±d interpretacji URLa"
+
+#~ msgid "Show package's requirements"
+#~ msgstr "Poka¿ wymagania pakietu"

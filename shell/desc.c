@@ -56,13 +56,13 @@ static struct argp_option options[] = {
       N_("Show all described below fields"), 1},
     
     { "capreqs",  'C', 0, 0,
-      N_("Show package capablities, requirements, conflicts and obsolences"),
+      N_("Show capabilities, requirements, conflicts and obsolences"),
       1},
 
     { "provides",  'p', 0, 0, N_("Show package's capablities"), 1},
 
     { "requires",  'r', 0, 0,
-      N_("Show package's requirements"), 1},
+      N_("Show requirements"), 1},
     
     { "reqpkgs",  'R', 0, 0,
       N_("Show required packages"), 1},
@@ -71,9 +71,9 @@ static struct argp_option options[] = {
       N_("Show packages which requires given package"), 1},
 
     { "conflicts",  'c', 0, 0,
-      N_("Show package's conflicts and obsolences"), 1},
+      N_("Show conflicts and obsolences"), 1},
     
-    { "descr", 'd', 0, 0, N_("Show package description (the default)"), 1},
+    { "descr", 'd', 0, 0, N_("Show description (the default)"), 1},
     
     { "files", 'f', 0, 0, N_("Show package files"), 1},
     { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},

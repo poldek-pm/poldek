@@ -43,9 +43,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 static struct argp_option options[] = {
  { "long", 'l', 0, 0, N_("Use a long listing format"), 1},
- { "upgradeable", 'u', 0, 0, N_("Show upgradeable packages only"), 1},
+ { "upgradeable", 'u', 0, 0, N_("Show upgrade-able packages only"), 1},
  { "upgradeablev", 'U', 0, 0,
-   N_("Like above but omit packages with diffrent releases only"), 1},
+   N_("Likewise but omit packages with different releases only"), 1},
  { "installed", 'I', 0, 0, N_("List installed packages"), 1},
  { NULL, 't', 0, 0, N_("Sort by build time"), 1},
  { NULL, 'T', 0, 0, N_("Sort by build day"), 1},

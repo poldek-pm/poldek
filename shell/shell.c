@@ -61,14 +61,14 @@ static int argv_is_help(int argc, const char **argv);
 static int cmd_quit(struct cmdarg *cmdarg);
 struct command command_quit = {
     COMMAND_NOARGS | COMMAND_NOHELP | COMMAND_NOOPTS,
-    "quit", NULL, "Quit poldek", NULL, NULL, NULL, cmd_quit,
+    "quit", NULL, N_("Quit poldek"), NULL, NULL, NULL, cmd_quit,
     NULL, NULL, NULL, NULL
 };
 
 static int cmd_help(struct cmdarg *cmdarg);
 struct command command_help = {
     COMMAND_NOARGS | COMMAND_NOHELP | COMMAND_NOOPTS,
-    "help", NULL, "Display this help", NULL, NULL, NULL, cmd_help,
+    "help", NULL, N_("Display this help"), NULL, NULL, NULL, cmd_help,
     NULL, NULL, NULL, NULL
 };
 
@@ -77,7 +77,8 @@ int cmd_reload(struct cmdarg *cmdarg,
                int argc, const char **argv, struct argp *argp);
 
 struct command command_reload = {
-    COMMAND_NOARGS | COMMAND_NOOPTS, "reload", NULL, "Reload installed packages",
+    COMMAND_NOARGS | COMMAND_NOOPTS, "reload", NULL,
+    N_("Reload installed packages"),
     NULL, NULL, cmd_reload, NULL, NULL, NULL, NULL, NULL
 };
 
@@ -713,7 +714,7 @@ int cmd_help(struct cmdarg *cmdarg)
         
         p = cmd->arg ? cmd->arg : "";
         if (cmd->argp_opts) {
-            snprintf(buf, sizeof(buf), "[OPTION...] %s", cmd->arg);
+            snprintf(buf, sizeof(buf), _("[OPTION...] %s"), cmd->arg);
             p = buf;
         }
         printf("%-9s %-36s %s\n", cmd->name, p, cmd->doc);
@@ -983,9 +984,13 @@ static void init_commands(void)
         struct command *cmd = commands_tab[n++];
         if (cmd->argp_opts)
             translate_argp_options(cmd->argp_opts);
+
+        cmd->arg = _(cmd->arg);
+        cmd->doc = _(cmd->doc);
+
         n_array_push(commands, cmd);
         if (n_array_bsearch(all_commands, cmd->name)) {
-            logn(LOGERR, _("Ambigous command %s"), cmd->name);
+            logn(LOGERR, _("ambiguous command %s"), cmd->name);
             exit(EXIT_FAILURE);
         }
         n_array_push(all_commands, cmd->name);
@@ -996,7 +1001,7 @@ static void init_commands(void)
 
             while (cmd->aliases[i].name) {
                 if (n_array_bsearch(aliases, &cmd->aliases[i])) {
-                    logn(LOGERR, _("Ambigous alias %s"), cmd->aliases[i].name);
+                    logn(LOGERR, _("ambiguous alias %s"), cmd->aliases[i].name);
                     exit(EXIT_FAILURE);
                 }
                 
@@ -1004,7 +1009,7 @@ static void init_commands(void)
                 n_array_sort(aliases);
                 
                 if (n_array_bsearch(all_commands, cmd->aliases[i].name)) {
-                    logn(LOGERR, _("Ambigous alias %s"), cmd->aliases[i].name);
+                    logn(LOGERR, _("ambiguous alias %s"), cmd->aliases[i].name);
                     exit(EXIT_FAILURE);
                 }
                 n_array_push(all_commands, cmd->aliases[i].name);

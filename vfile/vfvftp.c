@@ -89,7 +89,7 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
         struct vf_progress_bar  bar;
 
         if (ntry++ && (flags & VFMOD_INFINITE_RETR))
-            vfile_msg_fn(_("Retrying...(#%d)\n"), ntry++);
+            vfile_msg_fn(_("Retrying...(#%d)\n"), ntry);
         
         vfile_progress_init(&bar);
         

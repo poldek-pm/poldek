@@ -34,11 +34,11 @@ static int uninstall(struct cmdarg *cmdarg);
 #define OPT_UNINST_FORCE   3
 
 static struct argp_option options[] = {
-{"force", OPT_UNINST_FORCE, 0, 0, "Be unconcerned", 1 },
-{"test", 't', 0, 0, "Don't uninstall, but tell if it would work or not", 1 },
+{"force", OPT_UNINST_FORCE, 0, 0, N_("Be unconcerned"), 1 },
+{"test", 't', 0, 0, N_("Don't uninstall, but tell if it would work or not"), 1 },
 {"nodeps", OPT_UNINST_NODEPS, 0, 0,
- "Ignore broken dependencies", 1 },
-{0,  'v', 0, 0, "Be more (and more) verbose.", 1 },
+ N_("Ignore broken dependencies"), 1 },
+{0,  'v', 0, 0, N_("Be verbose"), 1 },
 {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
 { 0, 0, 0, 0, 0, 0 },
 };
@@ -47,7 +47,7 @@ static struct argp_option options[] = {
 struct command command_uninstall = {
     COMMAND_HASVERBOSE | COMMAND_MODIFIESDB, 
 
-    "uninstall", "PACKAGE...", "Uninstall packages", 
+    "uninstall", N_("PACKAGE..."), N_("Uninstall packages"), 
     
     options, parse_opt,
     

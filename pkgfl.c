@@ -560,7 +560,7 @@ __inline__
 static int valid_fname(const char *fname, mode_t mode, const char *pkgname) 
 {
     
-#if 0  /* too many bad habbits :-> */
+#if 0  /* too many bad habits :-> */
     char *denychars = "\r\n\t |;";
     if (strpbrk(fname, denychars)) {
         logn(LOGINFO, "%s: bad habit: %s \"%s\" with whitespaces",

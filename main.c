@@ -234,12 +234,12 @@ static struct argp_option options[] = {
      N_("Be tolerant for bugs which RPM tolerates"), 50 },
 
 
-{0,0,0,0, "Indexes creation:", 60},
+{0,0,0,0, N_("Index creation:"), 60},
 {"mkidx", OPT_MKIDX, "FILE", OPTION_ARG_OPTIONAL,
  N_("Create package index, SOURCE/packages.dir by default"), 60},
 
 {"mkidxz", OPT_MKIDXZ, "FILE", OPTION_ARG_OPTIONAL,
- N_("Like above, but gzipped file is created"), 60},
+ N_("Likewise, but gzipped file is created"), 60},
 
 {"nodesc", OPT_NODESC, 0, 0,
  N_("Don't put packages user-level information (like Summary or Description)"
@@ -1532,7 +1532,7 @@ void self_init(void)
     }
 #if 0
     if (uid == 0) {
-        logn(LOGWARN, _("Running me as root is not a good habbit"));
+        logn(LOGWARN, _("Running me as root is not a good habit"));
         sleep(1);
     }
 #endif    
