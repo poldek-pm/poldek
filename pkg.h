@@ -93,6 +93,8 @@ struct pkg {
         struct pkguinf *pkg_pkguinf;
     } package_uinf;
 
+    int          _refcnt;
+
     void         *udata;      /* for some additional, user level data */
     int32_t      _buf_size;
     char         _buf[0];     /* private, store all string members */
@@ -132,7 +134,8 @@ struct pkg *pkg_ldrpm_udata(const char *path, unsigned ldflags,
 
 #define pkg_ldrpm(path, ldflags) pkg_ldrpm_udata(path, ldflags, NULL, 0)
 
-void pkg_free(struct pkg *p);
+void pkg_free(struct pkg *pkg);
+struct pkg *pkg_link(struct pkg *pkg);
 
 /* add self name-evr to caps */
 int pkg_add_selfcap(struct pkg *pkg);
@@ -143,7 +146,7 @@ int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_ver(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
 
-int pkg_eq_capreq(const struct pkg *p, const struct capreq *cr);
+int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr);
 
 /* look up into package caps only */
 int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,

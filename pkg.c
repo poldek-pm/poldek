@@ -9,6 +9,9 @@
 /*
   $Id$
 */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <stdlib.h>
 #include <string.h>
@@ -16,7 +19,6 @@
 #include <netinet/in.h>
 
 #include <rpm/rpmlib.h>
-#include <rpm/misc.h>
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>
 
@@ -134,36 +136,51 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
     pkg->cnflpkgs = NULL;
     pkg->other_files_offs = 0;
     pkg->pkg_stream = NULL;
+
+    pkg->_refcnt = 0;
+    
     return pkg;
 }
 
-void pkg_free(struct pkg *p) 
+void pkg_free(struct pkg *pkg) 
 {
-    if (p->caps)
-        n_array_free(p->caps);
+    if (pkg->_refcnt > 0) {
+        pkg->_refcnt--;
+        return;
+    }
+        
+    if (pkg->caps)
+        n_array_free(pkg->caps);
     
-    if (p->reqs)
-        n_array_free(p->reqs);
+    if (pkg->reqs)
+        n_array_free(pkg->reqs);
 
-    if (p->cnfls)
-        n_array_free(p->cnfls);
+    if (pkg->cnfls)
+        n_array_free(pkg->cnfls);
 
-    if (p->reqpkgs)
-        n_array_free(p->reqpkgs);
+    if (pkg->reqpkgs)
+        n_array_free(pkg->reqpkgs);
 
-    if (p->revreqpkgs)
-        n_array_free(p->revreqpkgs);
+    if (pkg->revreqpkgs)
+        n_array_free(pkg->revreqpkgs);
 
-    if (p->cnflpkgs)
-        n_array_free(p->cnflpkgs);
+    if (pkg->cnflpkgs)
+        n_array_free(pkg->cnflpkgs);
     
-    if (p->fl) 
-        n_array_free(p->fl);
+    if (pkg->fl) 
+        n_array_free(pkg->fl);
 
-    if (pkg_has_ldpkguinf(p))
-        pkguinf_free(p->pkg_pkguinf);
+    if (pkg_has_ldpkguinf(pkg))
+        pkguinf_free(pkg->pkg_pkguinf);
 
-    pkg_free_fn(p);
+    pkg_free_fn(pkg);
+}
+
+
+struct pkg *pkg_link(struct pkg *pkg) 
+{
+    pkg->_refcnt++;
+    return pkg;
 }
 
 
@@ -347,18 +364,17 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 }
 
 
-int pkg_eq_capreq(const struct pkg *p, const struct capreq *cr) 
+int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr) 
 {
-    return strcmp(p->name, capreq_name(cr)) == 0 &&
-        strcmp(p->ver, capreq_ver(cr)) == 0 &&
-        strcmp(p->rel, capreq_rel(cr)) == 0 &&
-        p->epoch == capreq_epoch(cr) &&
+    return strcmp(pkg->name, capreq_name(cr)) == 0 &&
+        strcmp(pkg->ver, capreq_ver(cr)) == 0 &&
+        strcmp(pkg->rel, capreq_rel(cr)) == 0 &&
+        pkg->epoch == capreq_epoch(cr) &&
         cr->cr_flags & REL_EQ;
 }
 
 int pkg_add_selfcap(struct pkg *pkg) 
 {
-
     if (pkg->flags & PKG_HAS_SELFCAP)
         return 1;
     
@@ -376,8 +392,7 @@ int pkg_add_selfcap(struct pkg *pkg)
         n_assert(0);
     }
     
-    if (pkg->flags |= PKG_HAS_SELFCAP)
-        return 1;
+    pkg->flags |= PKG_HAS_SELFCAP;
     
     return pkg->caps != NULL;
 }
@@ -792,8 +807,8 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     s = buf;
     
     n_len = pkg->ver  - pkg->name - 1;
-    v_len = pkg->rel  - pkg->ver  - 1;
-    r_len = pkg->arch - pkg->rel  - 1;
+    v_len = pkg->rel  - pkg->ver - 1;
+    r_len = pkg->arch - pkg->rel - 1;
     a_len = strlen(pkg->arch);
     
     len = n_len + 1 + v_len + 1 +
