@@ -162,7 +162,7 @@ static int install(struct cmdarg *cmdarg)
 {
     tn_array *shpkgs = NULL;
     tn_array *uninst_pkgs = NULL;
-    int i, rc = 1;
+    int i, rc = 1, is_test;
 
     
     sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->avpkgs, &shpkgs, 1);
@@ -178,14 +178,17 @@ static int install(struct cmdarg *cmdarg)
         struct shpkg *shpkg = n_array_nth(shpkgs, i);
         pkg_hand_mark(shpkg->pkg);
     }
+
+    is_test = (cmdarg->sh_s->inst->flags & INSTS_TEST) |
+        (cmdarg->sh_s->inst->instflags & PKGINST_TEST);
     
     uninst_pkgs = pkgs_array_new(16);
     rc = install_pkgs(cmdarg->sh_s->pkgset, cmdarg->sh_s->inst, uninst_pkgs);
-
+    
     if (rc == 0) {
-        printf("Installation failed\n");
+        log(LOGERR, "Installation failed\n");
         
-    } else if (cmdarg->sh_s->instpkgs) { /* update installed set */
+    } else if (!is_test && cmdarg->sh_s->instpkgs) { /* update installed set */
         for (i=0; i<n_array_size(cmdarg->sh_s->avpkgs); i++) {
             struct shpkg *shpkg = n_array_nth(cmdarg->sh_s->avpkgs, i);
             if (pkg_is_marked(shpkg->pkg))
