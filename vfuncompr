@@ -3,6 +3,31 @@
 
 PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 
+md5() {
+	typeset fn=$1
+    md5sum $1 | awk '{print $1}'
+}
+
+file_changed() {
+	typeset fn0=$1
+	typeset fn1=$2
+	typeset md0, md1
+
+	#echo "${fn}.vfuncompr_md5";
+
+	[ -r "${fn1}.vfuncompr_md5" ] || return 0;
+
+	md0=$(md5 $fn0)
+	md1=$(cat "${fn1}.vfuncompr_md5")
+#	echo -e "\n$md0 $fn\n$md1" >&2
+	if [ "$md0" = "$md1" ]; then
+		return 1
+	fi
+	
+	return 0
+}
+
+
 if [ "$#" != "2" ]; then
     echo "usage: `basename $0` FILE[.gz][.bz2] DESTFILE"
     exit 1
@@ -21,10 +46,8 @@ if [ ! -r $src -o ! -f $src ]; then
     exit 1
 fi	
 
-if [ -r $dest ]; then
-    echo "$dest: file exists"
-    exit 1
-fi
+#echo "src=$src"
+#echo "dst=$dest"
 
 if [ $dest == $src ]; then
     echo "dest and src are the same"
@@ -32,7 +55,22 @@ if [ $dest == $src ]; then
 fi
 
 
-echo -e "$cmd\n -> ${dest}"
-$cmd > ${dest}
+if [ -r $dest ]; then
+	if file_changed $src $dest; then
+		rm -f $dest ${dest}.vfuncompr_md5
+    else
+		#echo "$dest: the same"
+		exit 0
+    fi
+fi
 
+
+if [ -r $dest ]; then
+    echo "$dest: file exists"
+    exit 1
+fi
+
+#echo -e "$cmd -> ${dest}"
+echo "Uncompressing $(basename $src)..."
+$cmd > ${dest} && md5 ${src} > ${dest}.vfuncompr_md5
 
