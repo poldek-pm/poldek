@@ -184,7 +184,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         memcpy(en->nvr, nevr, n);
         memcpy(&en->nvr[n], fn, fn_len + 1);
         en->fn = &en->nvr[n];
-        printf("  en.nevr = %s, en.fn = %s, %s\n", en->nvr, en->fn, fn);
+        DBGF_F("yum  en.nevr = %s, en.fn = %s, %s\n", en->nvr, en->fn, fn);
         n_array_push(idx.ents, en);
     }
     n_array_sort(idx.ents);
