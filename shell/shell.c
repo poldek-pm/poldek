@@ -629,7 +629,7 @@ void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgs
 {
     tn_array *pkgs = NULL;
     int i, j;
-    int *matches;
+    int *matches, *matches_bycmp;
     
     
     *pkgsp = NULL;
@@ -645,6 +645,9 @@ void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgs
 
     matches = alloca(n_array_size(pkgnames) * sizeof(*matches));
     memset(matches, 0, n_array_size(pkgnames) * sizeof(*matches));
+
+    matches_bycmp = alloca(n_array_size(pkgnames) * sizeof(*matches_bycmp));
+    memset(matches_bycmp, 0, n_array_size(pkgnames) * sizeof(*matches_bycmp));
     
     
     pkgs = n_array_new(16, NULL, (tn_fn_cmp)shpkg_cmp);
@@ -654,11 +657,13 @@ void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgs
         
         for (j=0; j < n_array_size(pkgnames); j++) {
             char *mask = n_array_nth(pkgnames, j);
-            
-            
-            if (fnmatch(mask, shpkg->nevr, 0) == 0 ||
-                strcmp(mask, shpkg->pkg->name) == 0) {
+
+            if (strcmp(mask, shpkg->pkg->name) == 0) {
+                n_array_push(pkgs, shpkg);
+                matches_bycmp[j]++;
+                matches[j]++;
                 
+            } else if (fnmatch(mask, shpkg->nevr, 0) == 0) {
                 n_array_push(pkgs, shpkg);
                 matches[j]++;
             }
@@ -666,9 +671,18 @@ void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgs
     }
 
     
-    for (j=0; j<n_array_size(pkgnames); j++) {
+    for (j=0; j < n_array_size(pkgnames); j++) {
+        const char *mask = n_array_nth(pkgnames, j);
+        
         if (matches[j] == 0) {
-            logn(LOGERR, _("%s: no such package"), (char*)n_array_nth(pkgnames, j));
+            logn(LOGERR, _("%s: no such package"), mask);
+            if (strict && n_array_size(pkgs))
+                n_array_clean(pkgs);
+        }
+
+        if (matches_bycmp[j] > 1) {
+            int pri = strict ? LOGERR : LOGWARN;
+            logn(pri, _("%s: ambiguous name"), mask);
             if (strict && n_array_size(pkgs))
                 n_array_clean(pkgs);
         }
