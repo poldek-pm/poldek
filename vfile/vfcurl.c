@@ -102,6 +102,8 @@ int vfile_curl_init(void)
         return 0;
     }
 
+#if 0 /* disabled, cURL's timeouts make no sense, e.g. CURLOPT_TIMEOUT
+         it is a time to transfer file */
     if (curl_easy_setopt(curlh, CURLOPT_TIMEOUT, 300) != 0) { /* read to */
         vfile_err_fn(errmsg);
         return 0;
@@ -111,7 +113,7 @@ int vfile_curl_init(void)
         vfile_err_fn(errmsg);
         return 0;
     }
-
+#endif
     return 1;
 }
 
