@@ -25,6 +25,7 @@
 #include "misc.h"
 #include "capreq.h"
 #include "pkg.h"
+#include "h2n.h"
 
 static void *(*pkg_alloc_fn)(size_t) = malloc;
 static void (*pkg_free_fn)(void*) = free;
@@ -39,8 +40,8 @@ void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*))
 /* always store fields in order: path, name, version, release, arch */
 struct pkg *pkg_new_udata(const char *name, int32_t epoch,
                           const char *version, const char *release,
-                          const char *arch, const char *fpath,
-                          void *udata, size_t udsize)
+                          const char *arch, uint32_t size, uint32_t btime, 
+                          const char *fpath, void *udata, size_t udsize)
 {
     struct pkg *pkg;
     int fpath_len = 0;
@@ -82,7 +83,8 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
     
     pkg->flags = PKG_COLOR_WHITE;
     pkg->epoch = epoch;
-
+    pkg->size = size;
+    pkg->btime = btime;
     pkg->_buf_size = len;
     buf = pkg->_buf;
 
@@ -156,6 +158,9 @@ void pkg_free(struct pkg *p)
     if (p->fl) 
         n_array_free(p->fl);
 
+    if (pkg_has_ldpkguinf(p))
+        pkguinf_free(p->pkg_pkguinf);
+
     pkg_free_fn(p);
 }
 
@@ -164,7 +169,7 @@ struct pkg *pkg_ldhdr_udata(Header h, const char *fname, unsigned ldflags,
                             void *udata, size_t udsize)
 {
     struct pkg *pkg;
-    uint32_t   *epoch;
+    uint32_t   *epoch, *size, *btime;
     char       *name, *version, *release, *arch;
     int        type;
     
@@ -181,9 +186,16 @@ struct pkg *pkg_ldhdr_udata(Header h, const char *fname, unsigned ldflags,
         log(LOGERR, "%s: read architecture tag failed\n", fname);
         return NULL;
     }
+
+    if (!headerGetEntry(h, RPMTAG_SIZE, &type, (void *)&size, NULL)) 
+        size = NULL;
+
+    if (!headerGetEntry(h, RPMTAG_BUILDTIME, &type, (void *)&btime, NULL)) 
+        btime = NULL;
     
     pkg = pkg_new_udata(name, epoch ? *epoch : 0, version, release, arch,
-                        NULL, udata, udsize);
+                        size ? *size : 0, btime ? *btime : 0, NULL,
+                        udata, udsize);
 
     if (pkg == NULL)
         return NULL;
@@ -651,7 +663,7 @@ int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg)
 
 
 static
-int capreqs_serialize(tn_array *capreqs, tn_buf *nbuf) 
+int capreqs_store(tn_array *capreqs, tn_buf *nbuf) 
 {
     int32_t size, nsize = 0;
     
@@ -659,30 +671,30 @@ int capreqs_serialize(tn_array *capreqs, tn_buf *nbuf)
         n_buf_add(nbuf, &nsize, sizeof(nsize));
     else {
         size = n_array_size(capreqs);
-        nsize = htonl(size);
+        nsize = hton32(size);
         n_buf_add(nbuf, &nsize, sizeof(nsize));
-        n_array_map_arg(capreqs, (tn_fn_map2)capreq_serialize, nbuf);
+        n_array_map_arg(capreqs, (tn_fn_map2)capreq_store, nbuf);
     }
     
     return 1;
 }
 
 static
-tn_array *capreqs_deserialize(tn_buf *nbuf) 
+tn_array *capreqs_restore(tn_buf_it *nbufi) 
 {
     tn_array *capreqs = NULL;
     int32_t size;
     char *p;
     
     
-    p = n_buf_cutoff(nbuf, sizeof(size));
-    size = ntohl(*(int32_t*)p);
+    p = n_buf_it_get(nbufi, sizeof(size));
+    size = ntoh32(*(int32_t*)p);
     if (size > 0) {
         int i;
         
         capreqs = capreq_arr_new();
         for (i=0; i<size; i++) {
-            struct capreq *cr = capreq_deserialize(nbuf);
+            struct capreq *cr = capreq_restore(nbufi);
             n_array_push(capreqs, cr);
         }
     }
@@ -691,56 +703,73 @@ tn_array *capreqs_deserialize(tn_buf *nbuf)
 }
 
 
-
-void pkg_serialize(const struct pkg *pkg, tn_buf *nbuf) 
+void pkg_store(const struct pkg *pkg, tn_buf *nbuf) 
 {
-    uint32_t nflags; 
+    uint32_t nflags, nsize; 
     int32_t nepoch, nbuf_size;
 
-    nflags = htonl(pkg->flags);
-    nepoch = htonl(pkg->epoch);
-    nbuf_size = htonl(pkg->_buf_size);
+    nflags = hton32(pkg->flags);
+    nepoch = hton32(pkg->epoch);
+    nsize = hton32(pkg->size);
+    nbuf_size = hton32(pkg->_buf_size);
     
     n_buf_add(nbuf, &nflags, sizeof(nflags));
+    n_buf_add(nbuf, &nsize, sizeof(nsize));
     n_buf_add(nbuf, &nepoch, sizeof(nepoch));
     n_buf_add(nbuf, &nbuf_size, sizeof(nbuf_size));
     n_buf_add(nbuf, pkg->_buf, pkg->_buf_size);
     
-    capreqs_serialize(pkg->caps, nbuf);
-    capreqs_serialize(pkg->reqs, nbuf);
-    capreqs_serialize(pkg->cnfls, nbuf);
+    capreqs_store(pkg->caps, nbuf);
+    capreqs_store(pkg->reqs, nbuf);
+    capreqs_store(pkg->cnfls, nbuf);
 }
     
 
-struct pkg *pkg_deserialize(tn_buf *nbuf) 
+struct pkg *pkg_restore(tn_buf_it *nbufi) 
 {
-    uint32_t flags; 
+    uint32_t flags, size; 
     int32_t epoch, buf_size;
     struct pkg *pkg;
     char *p;
     
 
-    p = n_buf_cutoff(nbuf, sizeof(flags));
-    flags = ntohl(*(uint32_t*)p);
+    p = n_buf_it_get(nbufi, sizeof(flags));
 
-    p = n_buf_cutoff(nbuf, sizeof(epoch));
-    epoch = ntohl(*(int32_t*)p);
+    if (p == NULL)
+        return NULL;
+    
+    flags = ntoh32(*(uint32_t*)p);
 
-    p = n_buf_cutoff(nbuf, sizeof(buf_size));
-    buf_size = ntohl(*(int32_t*)p);
+    p = n_buf_it_get(nbufi, sizeof(size));
+    if (p == NULL)
+        return NULL;
+    size = ntoh32(*(int32_t*)p);
+    
+    p = n_buf_it_get(nbufi, sizeof(epoch));
+    if (p == NULL)
+        return NULL;
+    epoch = ntoh32(*(int32_t*)p);
+
+    p = n_buf_it_get(nbufi, sizeof(buf_size));
+    if (p == NULL)
+        return NULL;
+    
+    buf_size = ntoh32(*(int32_t*)p);
+
+    p = n_buf_it_get(nbufi, buf_size);
+    if (p == NULL)
+        return NULL;
 
     pkg = pkg_alloc_fn(sizeof(*pkg) + buf_size);
-
     pkg->flags = flags;
+    pkg->size = size;
     pkg->epoch = epoch;
     pkg->_buf_size = buf_size;
-    
-    p = n_buf_cutoff(nbuf, buf_size);
     memcpy(pkg->_buf, p, buf_size);
     
-    pkg->caps = capreqs_deserialize(nbuf);
-    pkg->reqs = capreqs_deserialize(nbuf);
-    pkg->cnfls = capreqs_deserialize(nbuf);
+    pkg->caps = capreqs_restore(nbufi);
+    pkg->reqs = capreqs_restore(nbufi);
+    pkg->cnfls = capreqs_restore(nbufi);
     return pkg;
 }
     

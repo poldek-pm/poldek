@@ -253,7 +253,13 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         struct capreq *cap;
         
         if (matched) {
-            log(LOGERR, "something provides %s\n", reqname);
+            int i;
+            
+            for (i=0; i<*npkgs; i++) {
+                if (strcmp((*suspkgs)[i]->name, "rpm") != 0) 
+                    log(LOGERR, "%s: provides %s\n",
+                        pkg_snprintf_s((*suspkgs)[i]), reqname);
+            }
             matched = 0;
             *npkgs = 0;
             *suspkgs = NULL;

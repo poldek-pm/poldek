@@ -19,9 +19,10 @@
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
 
-#include "log.h"
 #include "rpmadds.h"
 #include "capreq.h"
+#include "log.h"
+#include "h2n.h"
 
 static void *(*capreq_alloc_fn)(size_t) = malloc;
 static void (*capreq_free_fn)(void*) = free;
@@ -190,7 +191,7 @@ char *capreq_snprintf(char *str, size_t size, const struct capreq *cr)
 }
 
 
-int capreq_sizeof(const struct capreq *cr) 
+int16_t capreq_sizeof(const struct capreq *cr) 
 {
     size_t size = sizeof(*cr);
     int max_ofs = 0;
@@ -206,7 +207,7 @@ int capreq_sizeof(const struct capreq *cr)
     
     n_assert(max_ofs);
     size += max_ofs + strlen(&cr->_buf[max_ofs]) + 1;
-    
+    n_assert (size < INT16_MAX);
     return size;
 }
 
@@ -570,16 +571,16 @@ tn_array *capreq_pkg(tn_array *arr, int32_t epoch,
 }
 
 
-void capreq_serialize(struct capreq *cr, tn_buf *nbuf) 
+void capreq_store(struct capreq *cr, tn_buf *nbuf) 
 {
     int32_t epoch, nepoch;
-    int16_t size = htonl(capreq_sizeof(cr));
+    int16_t size = hton16(capreq_sizeof(cr));
     
 
     n_buf_add(nbuf, &size, sizeof(size));
     if (cr->cr_ep_ofs) {
         epoch = capreq_epoch(cr);
-        nepoch = htonl(epoch);
+        nepoch = hton32(epoch);
         memcpy(&cr->_buf[cr->cr_ep_ofs], &nepoch, sizeof(nepoch));
     }
 
@@ -588,23 +589,28 @@ void capreq_serialize(struct capreq *cr, tn_buf *nbuf)
 }
 
 
-struct capreq *capreq_deserialize(tn_buf *nbuf) 
+struct capreq *capreq_restore(tn_buf_it *nbufi) 
 {
     struct capreq *cr;
     int16_t size;
     char *p;
     
-    p = n_buf_cutoff(nbuf, sizeof(size));
-    size = ntohl(*(int16_t*)p);
-
+    p = n_buf_it_get(nbufi, sizeof(size));
+    if (p == NULL)
+        return NULL;
+    
+    size = ntoh16(*(int16_t*)p);
+    p = n_buf_it_get(nbufi, size);
+    if (p == NULL)
+        return NULL;
+    
     if ((cr = capreq_alloc_fn(size)) == NULL)
         return NULL;
     
-    p = n_buf_cutoff(nbuf, size);
     memcpy(cr, p, size);
 
     if (cr->cr_ep_ofs) {
-        int32_t epoch = ntohl(capreq_epoch(cr));
+        int32_t epoch = ntoh32(capreq_epoch(cr));
         memcpy(&cr->_buf[cr->cr_ep_ofs], &epoch, sizeof(epoch));
     }
     

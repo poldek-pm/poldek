@@ -22,12 +22,14 @@
 #include <trurl/nhash.h>
 #include <trurl/nstr.h>
 
+#include <vfile/vfile.h>
+
 #include "log.h"
-#include "vfile.h"
 #include "rpmadds.h"
 #include "depdirs.h"
 #include "misc.h"
 #include "pkg.h"
+#include "pkgu.h"
 #include "pkgset-def.h"
 #include "pkgset.h"
 #include "pkgset-load.h"
@@ -219,8 +221,11 @@ struct pkg *pkgset_addpkg_rpmhdr(struct pkgset *ps, const char *path, Header h)
 {
     struct pkg *pkg;
     
-    if ((pkg = pkg_ldhdr(h, path, PKG_LDWHOLE)))
+    if ((pkg = pkg_ldhdr(h, path, PKG_LDWHOLE))) {
+        pkg->pkg_pkguinf = pkguinf_ldhdr(h);
+        pkg_set_ldpkguinf(pkg);
         n_array_push(ps->pkgs, pkg);
+    }
     
     return pkg;
 }

@@ -18,9 +18,9 @@
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
+#include <vfile/vfile.h>
 
 #include "log.h"
-#include "vfile.h"
 #include "usrset.h"
 #include "rpmadds.h"
 #include "misc.h"
@@ -176,7 +176,8 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
             if (release == NULL)
                 release = "";
                 
-            pdef->pkg = pkg_new(name, epoch, version, release, NULL, NULL);
+            pdef->pkg = pkg_new(name, epoch, version, release, architecture(),
+                                0, 0, NULL);
         }
 
         if (virtname) 

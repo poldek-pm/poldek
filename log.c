@@ -116,7 +116,8 @@ int log_openlog(const char *pathname, unsigned mask, char *prefix)
 
 {
     int is_not_stdstream = l_stream != stdout && l_stream != stderr;
-    
+
+    l_prefix[0] = '\0';
     if(l_stream != NULL && is_not_stdstream) 
         fclose(l_stream);
 
@@ -125,8 +126,11 @@ int log_openlog(const char *pathname, unsigned mask, char *prefix)
     if (mask) 
         l_mask = mask;
 
-    n_strncpy(l_prefix, prefix, sizeof(l_prefix) - 4);
-    strcat(&l_prefix[strlen(l_prefix)], ": ");
+    if (prefix) {
+        n_strncpy(l_prefix, prefix, sizeof(l_prefix) - 4);
+        strcat(&l_prefix[strlen(l_prefix)], ": ");
+    }
+    
     return l_stream != NULL;
 }
 
@@ -135,7 +139,7 @@ int log_sopenlog(FILE *stream, unsigned mask, char *prefix)
 {
     int is_not_stdstream = l_stream != stdout && l_stream != stderr;
     
-    
+    l_prefix[0] = '\0';
     if(l_stream != NULL && is_not_stdstream) 
         fclose(l_stream);
     
@@ -144,8 +148,10 @@ int log_sopenlog(FILE *stream, unsigned mask, char *prefix)
     if (mask) 
         l_mask = mask;
 
-    n_strncpy(l_prefix, prefix, sizeof(l_prefix) - 4);
-    strcat(&l_prefix[strlen(l_prefix)], ": ");
+    if (prefix) {
+        n_strncpy(l_prefix, prefix, sizeof(l_prefix) - 4);
+        strcat(&l_prefix[strlen(l_prefix)], ": ");
+    }
     return l_stream != NULL;
 }
 

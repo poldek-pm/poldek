@@ -26,11 +26,12 @@
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
 
+#include <vfile/vfile.h>
+
 #include "rpmadds.h"
 #include "log.h"
 #include "pkg.h"
 #include "capreq.h"
-#include "vfile.h"
 
 #ifdef RPMDBI_PACKAGES 
 # ifndef HAVE_RPM_4_0
@@ -134,9 +135,10 @@ int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *exclrnos)
     matches.recs = NULL;
     rc = rpmdbFindPackage(db, capreq_name(req), &matches);
 
-    if (rc < 0) {
-        log(LOGERR, "error reading from database");
-        rc = -1;
+    if (rc != 0) {
+        if (rc < 0)
+            log(LOGERR, "error reading from database");
+        rc = 0;
         
     } else if (rc == 0) {
         Header h;
@@ -219,7 +221,7 @@ int lookup_cap(rpmdb db, const struct capreq *req, int strict,
 {
     int rc = 0;
 
-#ifdef HAVE_RPM_4_0/* XXX should test HAVE_RPM_4_0 (but I'm lazy). */
+#ifdef HAVE_RPM_4_0
     rpmdbMatchIterator mi;
     Header h;
 
@@ -235,6 +237,7 @@ int lookup_cap(rpmdb db, const struct capreq *req, int strict,
 	}
     }
     rpmdbFreeIterator(mi);
+    
 #else	/* !HAVE_RPM_4_0 */
     dbiIndexSet matches;
 
@@ -242,8 +245,11 @@ int lookup_cap(rpmdb db, const struct capreq *req, int strict,
     matches.recs = NULL;
     rc = rpmdbFindByProvides(db, capreq_name(req), &matches);
 
-    if (rc < 0) {
-        log(LOGERR, "error reading from database");
+    if (rc != 0) {
+        if (rc < 0)
+            log(LOGERR, "error reading from database");
+        rc = 0;
+        
     } else if (rc == 0) {
         Header h;
         int i;
@@ -264,11 +270,10 @@ int lookup_cap(rpmdb db, const struct capreq *req, int strict,
         }
         
         dbiFreeIndexRecord(matches);
-        return rc;
     }
 #endif	/* !HAVE_RPM_4_0 */
 
-    return 0;
+    return rc;
 }
 
 #if 0

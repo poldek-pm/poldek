@@ -60,10 +60,10 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t flags);
 
-int capreq_sizeof(const struct capreq *cr);
+int16_t capreq_sizeof(const struct capreq *cr);
 
-void capreq_serialize(struct capreq *cr, tn_buf *nbuf);
-struct capreq *capreq_deserialize(tn_buf *nbuf);
+void capreq_store(struct capreq *cr, tn_buf *nbuf);
+struct capreq *capreq_restore(tn_buf_it *nbufi);
 
 int capreq_cmp_name_evr(struct capreq *pr1, struct capreq *pr2);
 //#define capreq_eq(pr1, pr2) (capreq_evr_cmp(pr1, pr2) == 0)

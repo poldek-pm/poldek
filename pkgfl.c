@@ -125,6 +125,7 @@ int flfile_cmp(const struct flfile *f1, const struct flfile *f2, int strict)
     return cmprc;
 }
 
+
 __inline__
 static char *pkgfl_strdup(const char *str, size_t size)
 {
@@ -241,7 +242,7 @@ int pkgfl_asftag(tn_array *fl, char **ftag, int which)
             
             strcpy(p, file->basename);
             p += bnl;
-            p += snprintf(p, 256, " s%u m%u", file->size, file->mode);
+            p += snprintf(p, 256, " %u %u", file->size, file->mode);
 
             if (S_ISLNK(file->mode)) {
                 *p++ = ' ';

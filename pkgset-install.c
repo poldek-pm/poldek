@@ -21,6 +21,9 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
+#include <vfile/vfile.h>
+#include <vfile/p_open.h>
+
 #include "log.h"
 #include "pkg.h"
 #include "pkgset-def.h"
@@ -28,7 +31,7 @@
 #include "misc.h"
 #include "rpmadds.h"
 #include "pkgset-req.h"
-#include "vfile.h"
+
 
 #define INST_INSTALL  1
 #define INST_UPGRADE  2
@@ -91,14 +94,13 @@ static int dump_pkgs_fqpns(struct pkgset *ps, struct upgrade_s *upg)
 }
 
 
-static int fetch_pkgs(struct pkgset *ps, struct upgrade_s *upg) 
+int pkgset_fetch_pkgs(struct pkgset *ps, const char *destdir, tn_array *pkgs) 
 {
     int rc, i, urltype;
     tn_array *urls = NULL;
     
-    
     if (ps->path == NULL) {
-        log(LOGERR, "Oj!, packages url not set!?\n");
+        log(LOGERR, "Oj! Packages URL not set!?\n");
         return 0;
     }
 
@@ -107,34 +109,36 @@ static int fetch_pkgs(struct pkgset *ps, struct upgrade_s *upg)
         return 0;
     }
 
-    if (n_array_size(upg->install_pkgs) == 1) {
+    if (n_array_size(pkgs) == 1) {
         char path[PATH_MAX];
         
         snprintf(path, sizeof(path), "%s/%s", ps->path,
-                 pkg_filename_s(n_array_nth(upg->install_pkgs, 0)));
+                 pkg_filename_s(n_array_nth(pkgs, 0)));
         
-        return vfile_fetch(upg->inst->fetchdir, path, urltype);
+        return vfile_fetch(destdir, path, urltype);
     } 
 
-    urls = n_array_new(n_array_size(upg->install_pkgs), NULL, NULL);
+    urls = n_array_new(n_array_size(pkgs), NULL, NULL);
     
-    for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
-        if (pkg_is_marked(pkg)) {
-            char path[PATH_MAX], *s;
-            int len;
-            
-            len = snprintf(path, sizeof(path), "%s/%s", ps->path, 
+    for (i=0; i<n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        char path[PATH_MAX], *s;
+        int len;
+
+        if (pkg->dn) 
+            len = snprintf(path, sizeof(path), "%s/%s/%s", ps->path, pkg->dn,
                            pkg_filename_s(pkg));
-            
-            s = alloca(len + 1);
-            memcpy(s, path, len);
-            s[len] = '\0';
-            n_array_push(urls, s);
-        }
+        else
+            len = snprintf(path, sizeof(path), "%s/%s", ps->path,
+                           pkg_filename_s(pkg));
+        
+        s = alloca(len + 1);
+        memcpy(s, path, len);
+        s[len] = '\0';
+        n_array_push(urls, s);
     }
     
-    rc = vfile_fetcha(upg->inst->fetchdir, urls, urltype);
+    rc = vfile_fetcha(destdir, urls, urltype);
     if (urls)
         n_array_free(urls);
     return rc;
@@ -146,88 +150,101 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
 {
     char *argv[128 + n_array_size(ps->pkgs) + 1];
     char *cmd, *cmdbn;
-    int rc, i, n, nopts = 0;
-    struct runst rst;
+    char *local_prefix;
+    int i, n, nopts = 0, ec;
+    int nv = verbose;
+    struct p_open_st pst;
     
     argv[128 + n_array_size(ps->pkgs) + 1] = NULL;
     n = 0;
 
-    if (upg->inst->flags & INSTS_JUSTPRINT) {
-        return dump_pkgs_fqpns(ps, upg);
+    local_prefix = NULL;
+    if (pkgset_isremote(ps)) {
+        int len = strlen(upg->inst->cachedir);
+        char buf[1024 + len + 1];
+
+        strncpy(buf, upg->inst->cachedir, len);
+        buf[len++] = '/';
+        vfile_url_as_dirpath(&buf[len], 1024, ps->path);
         
-    } else if (upg->inst->flags & INSTS_JUSTFETCH) {
-        return fetch_pkgs(ps, upg);
+        if (!pkgset_fetch_pkgs(ps, buf, upg->install_pkgs))
+            return 0;
         
-    } else {
-        int nv = verbose;
-        
-        cmd = "/bin/rpm";
-        cmdbn = "rpm";
-        argv[n++] = cmdbn;
-
-        if (ps->flags & PSMODE_INSTALL)
-            argv[n++] = "--install";
-        else if (ps->flags & PSMODE_UPGRADE)
-            argv[n++] = "--upgrade";
-        else {
-            n_assert(0);
-            abort();
-        }
-
-        if (nv) {
-            argv[n++] = "-vh";
-            nv--;
-        }
-
-        while (nv--) 
-            argv[n++] = "-v";
-
-        if (upg->inst->instflags & PKGINST_TEST)
-            argv[n++] = "--test";
-        
-        if (upg->inst->instflags & PKGINST_JUSTDB)
-            argv[n++] = "--justdb";
-
-        if (upg->inst->instflags & PKGINST_FORCE)
-            argv[n++] = "--force";
-        
-        if (upg->inst->instflags & PKGINST_NODEPS)
-            argv[n++] = "--nodeps";
-
-        if (upg->inst->rpmacros) 
-            for (i=0; i<n_array_size(upg->inst->rpmacros); i++) {
-                argv[n++] = "--define";
-                argv[n++] = n_array_nth(upg->inst->rpmacros, i);
-            }
-
-        if (upg->inst->rpmopts) 
-            for (i=0; i<n_array_size(upg->inst->rpmopts); i++)
-                argv[n++] = n_array_nth(upg->inst->rpmopts, i);
+        local_prefix = alloca(strlen(buf) + 1);
+        strcpy(local_prefix, buf);
     }
-    nopts = n;
+    	
+    cmd = "/bin/rpm";
+    cmdbn = "rpm";
+    argv[n++] = cmdbn;
     
+    if (ps->flags & PSMODE_INSTALL)
+        argv[n++] = "--install";
+    else if (ps->flags & PSMODE_UPGRADE)
+        argv[n++] = "--upgrade";
+    else {
+        n_assert(0);
+        abort();
+    }
+
+    if (nv) {
+        argv[n++] = "-vh";
+        nv--;
+    }
+    
+    while (nv--) 
+        argv[n++] = "-v";
+    
+    if (upg->inst->instflags & PKGINST_TEST)
+        argv[n++] = "--test";
+    
+    if (upg->inst->instflags & PKGINST_JUSTDB)
+        argv[n++] = "--justdb";
+        
+    if (upg->inst->instflags & PKGINST_FORCE)
+        argv[n++] = "--force";
+    
+    if (upg->inst->instflags & PKGINST_NODEPS)
+        argv[n++] = "--nodeps";
+
+    if (upg->inst->rpmacros) 
+        for (i=0; i<n_array_size(upg->inst->rpmacros); i++) {
+            argv[n++] = "--define";
+            argv[n++] = n_array_nth(upg->inst->rpmacros, i);
+        }
+    
+    if (upg->inst->rpmopts) 
+        for (i=0; i<n_array_size(upg->inst->rpmopts); i++)
+            argv[n++] = n_array_nth(upg->inst->rpmopts, i);
+    
+    nopts = n;
+
     for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
         if (pkg_is_marked(pkg)) {
             char path[PATH_MAX], *s;
             int len;
             
-            if (pkg->dn) 
-                len = snprintf(path, sizeof(path), "%s/%s", pkg->dn, 
+            if (local_prefix) 
+                len = snprintf(path, sizeof(path), "%s/%s", local_prefix, 
                                pkg_filename_s(pkg));
+            else if (pkg->dn) 
+                len = snprintf(path, sizeof(path), "%s/%s/%s", ps->path,
+                               pkg->dn, pkg_filename_s(pkg));
             else if (ps->path) 
                 len = snprintf(path, sizeof(path), "%s/%s", ps->path, 
                                pkg_filename_s(pkg));
             else
                 len = snprintf(path, sizeof(path), "%s", pkg_filename_s(pkg));
-
+            
             s = alloca(len + 1);
             memcpy(s, path, len);
             s[len] = '\0';
             argv[n++] = s;
         }
     }
-
+    
+        
     n_assert(n > nopts); 
     argv[n++] = NULL;
     
@@ -240,8 +257,9 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
         *p = '\0';
         msg(1, "$Running%s...\n", buf);
     }
-    
-    if (p_open(&rst, cmd, argv) == NULL) 
+
+    p_st_init(&pst);
+    if (p_open(&pst, cmd, argv) == NULL) 
         return 0;
     
     n = 0;
@@ -250,12 +268,16 @@ static int runrpm(struct pkgset *ps, struct upgrade_s *upg)
         n = 1;
     }
     
-    rc = p_process_cmd(&rst, cmdbn);
+    process_cmd_output(&pst, cmdbn);
+    if ((ec = p_close(&pst) != 0))
+        log(LOGERR, "%s", pst.errmsg);
+
+    p_st_destroy(&pst);
 
     if (n)
         verbose--;
 
-    return rc;
+    return ec == 0;
 }
 
 
@@ -410,7 +432,6 @@ void add_obsoletes(struct pkgset *ps, struct upgrade_s *upg)
                                                        upg->install_rnos,
                                                        upg->orphan_rnos,
                                                        upg->orphan_pkgs);
-                    
                 }
             }
         }
@@ -426,7 +447,7 @@ void add_obsoletes(struct pkgset *ps, struct upgrade_s *upg)
 static
 int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
 {
-    int i, j, strict, cnfl_nerr = 0;
+    int i, j, strict, cnfl_nerr = 0, rc;
     
     strict = ps->flags & PSVERIFY_MERCY ? 0 : 1;
     
@@ -436,9 +457,8 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
 
     while (process_deps(ps, upg->install_pkgs, upg, PROCESS_DEPS) ||
            process_deps(ps, upg->orphan_pkgs, upg, PROCESS_ORPHANS)) {
-
-        add_obsoletes(ps, upg);
         
+        add_obsoletes(ps, upg);
     }
     
     msg(1, "$Verifying conflicts...\n");
@@ -487,13 +507,23 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
     }
 
     pkgdb_closedb(upg->inst->db);
-    return runrpm(ps, upg);
+    if (upg->inst->flags & INSTS_JUSTPRINT) {
+        rc = dump_pkgs_fqpns(ps, upg);
+        
+    } else if (upg->inst->flags & INSTS_JUSTFETCH) {
+        rc = pkgset_fetch_pkgs(ps, upg->inst->fetchdir, upg->install_pkgs);
+        
+    } else {
+        rc = runrpm(ps, upg);
+    }
+    
+    return rc;
 }
 
 
 /* save in upg->install_pkgs if newer version finded */
 static 
-void mapfn_chk_pkg(Header h, off_t offs, void *upgptr) 
+void mapfn_chk_newer_pkg(Header h, off_t offs, void *upgptr) 
 {
     struct upgrade_s *upg = upgptr;
     uint32_t *epoch;
@@ -592,7 +622,7 @@ int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst)
     //set_capreq_allocfn(malloc, free, &capreq_alloc_fn, &capreq_free_fn);
 
     /* find packages to upgrade */
-    pkgdb_map(inst->db, mapfn_chk_pkg, &upg);
+    pkgdb_map(inst->db, mapfn_chk_newer_pkg, &upg);
     n_array_sort(upg.install_rnos);
 
     /* collect packages which requires upgraded packages */
@@ -609,7 +639,6 @@ int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst)
         return 0;
     }
     
-
     if (n_array_size(upg.install_pkgs) == 0) {
         msg(1, "All packages are up to date, nothing to do\n");
         
@@ -634,7 +663,6 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst)
             n_array_push(upg.install_pkgs, pkg);
             upg.ninstall++;
         }
-        
     }
     
     rc = pkgset_do_install(ps, &upg);

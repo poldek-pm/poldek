@@ -18,11 +18,14 @@ struct pkgset {
     tn_array           *ordered_pkgs;
     unsigned           flags;
     char               *path;      /* path | URL */
+    struct vfile       *vf;        /* Packages handle */
+    
+
     tn_array           *depdirs;   /*  char* []  */
     int                nerrors;
-
+    
     tn_array           *rpmcaps;
-
+    
     struct capreq_idx  cap_idx;    /* 'name'  => *pkg[]  */
     struct capreq_idx  req_idx;    /*  -"-               */
     struct capreq_idx  obs_idx;    /*  -"-               */     

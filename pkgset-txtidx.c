@@ -22,13 +22,15 @@
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 
+#include <vfile/vfile.h>
+
 #include "log.h"
-#include "vfile.h"
 #include "depdirs.h"
 #include "rpmadds.h"
 #include "misc.h"
 #include "capreq.h"
 #include "pkg.h"
+#include "pkgu.h"
 #include "pkgset-def.h"
 #include "pkgset.h"
 #include "pkgset-load.h"
@@ -36,26 +38,31 @@
 #define PKGT_HAS_NAME  (1 << 0)
 #define PKGT_HAS_EVR   (1 << 1)
 #define PKGT_HAS_PATH  (1 << 2)
-#define PKGT_HAS_CAP  (1 << 3)
+#define PKGT_HAS_CAP   (1 << 3)
 #define PKGT_HAS_REQ   (1 << 4)
 #define PKGT_HAS_CNFL  (1 << 5)
 #define PKGT_HAS_FILES (1 << 6)
 #define PKGT_HAS_ARCH  (1 << 7)
+#define PKGT_HAS_SIZE  (1 << 8)
+#define PKGT_HAS_BTIME (1 << 9)
 
 
 struct pkgtags_s {
-    unsigned flags;
-    char name[64];
-    char evr[64];
-    char arch[64];
-    char path[PATH_MAX];
-    tn_array *caps;
-    tn_array *reqs;
-    tn_array *cnfls;
-    char *files_tag;
-    int  files_tag_len;
-    char files_buf[1024];
+    unsigned   flags;
+    char       name[64];
+    char       evr[64];
+    char       arch[64];
+    uint32_t   size;
+    uint32_t   btime;
+    char       path[PATH_MAX];
+    off_t      pkguinf_offs;
+    tn_array   *caps;
+    tn_array   *reqs;
+    tn_array   *cnfls;
     
+    char       *files_tag;
+    int        files_tag_len;
+    char       files_buf[1024];
 };
 
 static const char url_tag[] = "URL: ";
@@ -82,6 +89,7 @@ inline static char *eatws(char *str)
         str++;
     return str;
 }
+
 
 inline static char *next_tokn(char **str, char delim, int *toklen) 
 {
@@ -136,6 +144,7 @@ int pkgset_load_txtidx(struct pkgset *ps, const char *pathname)
     line_bufs[1] = malloc(line_bufs_size[1]);
     line = line_bufs[0];
     line_size = &line_bufs_size[0];
+
 
     while ((nread = getline(&line_bufs[n], &line_bufs_size[n],
                             vf->vf_stream)) > 0) {
@@ -247,6 +256,14 @@ int pkgset_load_txtidx(struct pkgset *ps, const char *pathname)
                 add2pkgtags(&pkgtags, last_tag, last_value, last_value_len,
                             pathname, nline, addbastards);
             }
+
+            if (*line == 'U') { /* pkguinf binary data */
+                pkgtags.pkguinf_offs = ftell(vf->vf_stream);
+                pkguinf_skip(vf->vf_stream);
+                last_value_endp = NULL;
+                continue;
+            } 
+            
             
             p = q;
             
@@ -264,7 +281,6 @@ int pkgset_load_txtidx(struct pkgset *ps, const char *pathname)
     
  l_end:
     
-    vfile_close(vf);
     pkgtags_clean(&pkgtags);
     free(line_bufs[0]);
     free(line_bufs[1]);
@@ -272,6 +288,14 @@ int pkgset_load_txtidx(struct pkgset *ps, const char *pathname)
     if (err == 0 && n_array_size(ps->pkgs) == 0) {
         msg(2, "%s: empty(?)\n", pathname);
         err = 1;
+    }
+
+    if (err) {
+        vfile_close(vf);
+        ps->vf = NULL;
+
+    } else {
+        ps->vf = vf;
     }
     
     return err ? 0 : n_array_size(ps->pkgs);
@@ -327,6 +351,26 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 memcpy(pkgt->arch, value, sizeof(pkgt->arch)-1);
                 pkgt->arch[sizeof(pkgt->arch)-1] = '\0';
                 pkgt->flags |= PKGT_HAS_ARCH;
+            }
+            break;
+
+        case 'S':
+            if (pkgt->flags & PKGT_HAS_SIZE) {
+                log(LOGERR, "%s:%d: double size tag\n", pathname, nline);
+                err++;
+            } else {
+                pkgt->size = atoi(value);
+                pkgt->flags |= PKGT_HAS_SIZE;
+            }
+            break;
+            
+        case 'T':
+            if (pkgt->flags & PKGT_HAS_BTIME) {
+                log(LOGERR, "%s:%d: double btime tag\n", pathname, nline);
+                err++;
+            } else {
+                pkgt->btime = atoi(value);
+                pkgt->flags |= PKGT_HAS_BTIME;
             }
             break;
 
@@ -453,8 +497,7 @@ static void pkgtags_clean(struct pkgtags_s *pkgt)
         }
     pkgt->files_tag_len = 0;
     pkgt->flags = 0;
-    
-    
+    pkgt->pkguinf_offs = 0;
 }
     
 
@@ -484,7 +527,8 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt, int fullflist)
     path = (pkgt->flags & PKGT_HAS_PATH) ? pkgt->path : NULL;
 
     
-    pkg = pkg_new(pkgt->name, epoch, version, release, pkgt->arch, path);
+    pkg = pkg_new(pkgt->name, epoch, version, release, pkgt->arch,
+                  pkgt->size, pkgt->btime, path);
     
     
     if (pkg == NULL) {
@@ -519,6 +563,7 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt, int fullflist)
         parse_files_tag(pkgt->files_tag, pkg, fullflist);
     }
 
+    pkg->pkg_pkguinf_offs = pkgt->pkguinf_offs;
     return pkg;
 }
 
@@ -698,7 +743,7 @@ int parse_files_tag(char *ftag, struct pkg *pkg, int fullflist)
                     mode = symlink;
                     symlink = NULL;
                 }
-                flfiles[nfiles++] = flfile_new(atoi(++size), atoi(++mode),
+                flfiles[nfiles++] = flfile_new(atoi(size), atoi(mode),
                                                name, name_len,
                                                symlink, symlink_len);
                 if (nfiles == MAXDIRFILES) {
@@ -739,7 +784,9 @@ int fprintf_pkg(const struct pkg *pkg, FILE *stream)
         fprintf(stream, "V: %s-%s\n", pkg->ver, pkg->rel);
     
     fprintf(stream, "A: %s\n", pkg->arch);
-      
+    fprintf(stream, "S: %u\n", pkg->size);
+    fprintf(stream, "T: %u\n", pkg->btime);
+    
     if (pkg->caps && n_array_size(pkg->caps)) {
         int i, tagprinted = 0;
         
@@ -819,7 +866,13 @@ int fprintf_pkg(const struct pkg *pkg, FILE *stream)
         }
 #endif        
     }
-        
+
+    if (pkg_has_ldpkguinf(pkg)) {
+        fprintf(stream, "U:\n");
+        pkguinf_store(pkg->pkg_pkguinf, stream);
+        fprintf(stream, "\n");
+    }
+    
     fprintf(stream, "\n");
     return 1;
 }

@@ -21,6 +21,7 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 #include <trurl/nstr.h>
+#include <vfile/vfile.h>
 
 #include "log.h"
 #include "pkg.h"
@@ -30,7 +31,11 @@
 #include "usrset.h"
 #include "rpmadds.h"
 #include "pkgset-req.h"
-#include "vfile.h"
+
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #define obstack_chunk_alloc malloc
 #define obstack_chunk_free  free
@@ -147,14 +152,17 @@ static tn_array *get_rpmlibcaps(void)
     char **names = NULL, **versions = NULL, *evr;
     int *flags = NULL, n, i;
     tn_array *caps;
-
+    
+#if HAVE_RPMGETRPMLIBPROVIDES
     n = rpmGetRpmlibProvides(&names, &flags, &versions);
-
+#else
+    return capreq_arr_new();
+#endif    
     if (n <= 0)
         return NULL;
 
     caps = capreq_arr_new();
-
+    
     evr = alloca(128);
     
     for (i=0; i<n; i++) {
@@ -281,7 +289,7 @@ void add_self_cap(struct pkgset *ps)
 }
 
 
-static __inline__
+static
 int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx)
 {
     int i, j;
@@ -867,4 +875,9 @@ tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname)
     }
 
     return pkgs;
+}
+
+int pkgset_isremote(struct pkgset *ps)
+{
+    return vfile_url_type(ps->path) != VFURL_PATH;
 }

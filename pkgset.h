@@ -21,6 +21,7 @@ struct inst_s {
     unsigned       instflags;   /* PKGINST_* from pkgdb.h */
     const char     *rootdir;    /* top level dir          */
     const char     *fetchdir;   /* dir to fetch files     */
+    const char     *cachedir;   /* place for downloaded packages */
     const char     *dumpfile;   /* file to dump fqpns     */
     tn_array       *rpmopts;
     tn_array       *rpmacros;
@@ -75,6 +76,8 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 #define PS_MARK_UNMARK_DEPS (1 << 1)
 void pkgset_unmark(struct pkgset *ps, unsigned markflags);
 
+int pkgset_isremote(struct pkgset *ps);
+int pkgset_fetch_pkgs(struct pkgset *ps, const char *destdir, tn_array *pkgs);
 
 int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst);
 int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst);

@@ -10,6 +10,10 @@
   $Id$
 */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -20,6 +24,7 @@
 
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
+#include <vfile/vfile.h>
 
 #include "log.h"
 #include "pkgset.h"
@@ -28,14 +33,20 @@
 #include "rpm.h"
 #include "install.h"
 #include "conf.h"
-#include "vfile.h"
 
+#ifndef VERSION
+# error "undefined VERSION"
+#endif
 
-const char *argp_program_version = "poldek v0.1 (ALPHA)";
+#ifdef ENABLE_INTERACTIVE_CLIENT
+extern int shell_main(struct pkgset *ps);
+#endif
+
+const char *argp_program_version = "poldek " VERSION " (ALPHA)";
 const char *argp_program_bug_address = "<pld-installer@pld.org.pl>";
 /* Program documentation. */
-static char doc[] = "poldek v0.1 (ALPHA)\n"
-"This may be freely redistributed under the terms of the GNU GPL\n";
+static char doc[] = "poldek " VERSION " (ALPHA)\n"
+"This program may be freely redistributed under the terms of the GNU GPL\n";
 /* A description of the arguments we accept. */
 static char args_doc[] = "[PACKAGE..] [--rpm-RPM_LONG_OPTION...]";
 
@@ -47,6 +58,7 @@ static char args_doc[] = "[PACKAGE..] [--rpm-RPM_LONG_OPTION...]";
 #define MODE_UPGRADEDIST  5
 #define MODE_UPGRADE      6
 #define MODE_UPDATEIDX    7
+#define MODE_SHELL        8
 
 #define INDEXTYPE_TXT     1
 #define INDEXTYPE_TXTZ    2
@@ -95,18 +107,19 @@ struct args {
 #define OPT_PKGPREFIX   1018
 #define OPT_SOURCEUP    1019
 #define OPT_SOURCECACHE 1020
+#define OPT_SHELLMODE   1021
 
-#define OPT_INST_INSTDIST  1021
-#define OPT_INST_UPGRDIST  1022
-#define OPT_INST_NODEPS    1023
-#define OPT_INST_FORCE     1024
-#define OPT_INST_JUSTDB    1025
-#define OPT_INST_TEST      1026
-#define OPT_INST_MKDBDIR   1027
-#define OPT_INST_KILLDB    1028
-#define OPT_INST_RPMDEF    1029
-#define OPT_INST_FETCH     1030
-#define OPT_INST_MKSCRIPT  1031
+#define OPT_INST_INSTDIST  1041
+#define OPT_INST_UPGRDIST  1042
+#define OPT_INST_NODEPS    1043
+#define OPT_INST_FORCE     1044
+#define OPT_INST_JUSTDB    1045
+#define OPT_INST_TEST      1046
+#define OPT_INST_MKDBDIR   1047
+#define OPT_INST_KILLDB    1048
+#define OPT_INST_RPMDEF    1049
+#define OPT_INST_FETCH     1050
+#define OPT_INST_MKSCRIPT  1051
 
 
 /* The options we understand. */
@@ -193,12 +206,15 @@ static struct argp_option options[] = {
     
 {"conf", 'c', "FILE", 0, "Read configuration from FILE", 80 }, 
 {"noconf", 'z', 0, 0, "Do not read configuration", 80 }, 
+
+#ifdef ENABLE_INTERACTIVE_CLIENT    
+{"shell", OPT_SHELLMODE, 0, 0, "Shell mode", 80 },
+#endif
     
 {0,  'v', "v...", OPTION_ARG_OPTIONAL,
  "Be more (and more) verbose.", 80 },
 {0,  'q', 0, 0,
  "Do not produce any output.", 80 },
-
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -207,8 +223,8 @@ void check_mjrmode(struct args *argsp)
 {
     if (argsp->mjrmode) {
         log(LOGERR,
-            "only one mode of mkidx, update, verify, install* and upgrade*\n"
-            "may be specified\n");
+     "only one mode of mkidx, update, verify, install*, upgrade* or shell\n"
+     "may be specified\n");
         exit(EXIT_FAILURE);
     }
 }
@@ -319,6 +335,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->verify = 1;
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
+            break;
+
+        case OPT_SHELLMODE:
+            check_mjrmode(argsp);
+            argsp->mjrmode = MODE_SHELL;
             break;
             
         case 'm':
@@ -582,7 +603,8 @@ void parse_options(int argc, char **argv)
             }
         }
     }
-    
+
+    vfile_verbose = verbose;
     vfile_configure(args.cachedir ? args.cachedir : "/tmp",
                     VFILE_USEXT_FTP | VFILE_USEXT_HTTP);
 }
@@ -744,6 +766,7 @@ int check_args(void)
             exit(EXIT_FAILURE);
             break;
 
+        case MODE_SHELL:
         case MODE_UPDATEIDX:
             break;
             
@@ -809,13 +832,17 @@ int main(int argc, char **argv)
     int rc = 1;
     struct pkgset *ps;
     struct inst_s inst;
+    char *logprefix = "poldek";
 
-//    rpm_init("pl");
-//    exit(0);
-    
-       
     mem_info_verbose = -1;
-    log_sopenlog(stdout, 0, "poldek");
+    
+#ifdef ENABLE_INTERACTIVE_CLIENT    
+    if (strcmp(n_basenam(argv[0]), "poldeksh") == 0) {
+        args.mjrmode = MODE_SHELL;
+        logprefix = NULL;
+    }
+#endif    
+    log_sopenlog(stdout, 0, logprefix);
     parse_options(argc, argv);
 
     if (!check_args())
@@ -826,6 +853,7 @@ int main(int argc, char **argv)
     inst.rootdir   = args.install_root;
     inst.instflags = args.instflags;
     inst.fetchdir  = args.fetchdir;
+    inst.cachedir  = args.cachedir;
     inst.dumpfile  = args.dumpfile;
     inst.flags     = args.inst_sflags;
     inst.rpmopts   = args.rpmopts;
@@ -856,6 +884,13 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
 
     switch (args.mjrmode) {
+        case MODE_SHELL:
+            if (shell_main(ps))
+                exit(EXIT_SUCCESS);
+            else
+                exit(EXIT_FAILURE);
+            break;
+            
         case MODE_VERIFY:
             if (args.has_pkgdef)
                 if ((rc = usrpkgset_size(args.ups)))

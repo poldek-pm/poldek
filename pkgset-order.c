@@ -55,7 +55,8 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
     
     pkg_set_color(pkg, PKG_COLOR_GRAY);
     if (pkg->reqpkgs == NULL || n_array_size(pkg->reqpkgs) == 0) {
-        msg_i(4, deep, "\n visit %s -> (NO REQS)", pkg->name);
+        msg(4, "_\n");
+        msg_i(4, deep, "_ visit %s -> (NO REQS)", pkg->name);
         goto l_end;
     }
 
@@ -63,7 +64,8 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
     last_stack_i = n_array_size(vs->stack) - 1;
     
     if (verbose > 2) {
-        msg_i(4, deep, "\n visit %s -> (", pkg->name);
+        msg(4, "_\n");
+        msg_i(4, deep, "_ visit %s -> (", pkg->name);
         for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
             struct reqpkg *rp;	
             
@@ -82,7 +84,7 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
             }
         }
         msg(4, "_)\n");
-        msg_i(4, deep, " {");
+        msg_i(4, deep, "_ {");
     }
     
     for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
@@ -93,18 +95,20 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
         rpkg = rp = n_array_nth(pkg->reqpkgs, i);
         
         while (rp != NULL) {
-            if (pkg_is_color(rp->pkg, PKG_COLOR_WHITE)) 
+            if (pkg_is_color(rp->pkg, PKG_COLOR_WHITE)) {
                 visit_order(vs, rp->pkg, deep);
             
-            else if (pkg_is_color(rp->pkg, PKG_COLOR_BLACK))
-                msg_i(4, deep, "\n   visited %s", rp->pkg->name);
-            
-            else if (pkg_is_color(rp->pkg, PKG_COLOR_GRAY)) { /* cycle  */
+            } else if (pkg_is_color(rp->pkg, PKG_COLOR_BLACK)) {
+                msg(4, "_\n");
+                msg_i(4, deep, "_   visited %s", rp->pkg->name);
+                
+            } else if (pkg_is_color(rp->pkg, PKG_COLOR_GRAY)) { /* cycle  */
                 if (rp->flags & REQPKG_PREREQ) {
                     vs->nerrors++;
                     
                     if (verbose > 2) {
-                        msg_i(4, deep, "\n   cycle   %s -> %s", pkg->name,
+                        msg(4, "\n");
+                        msg_i(4, deep, "   cycle   %s -> %s", pkg->name,
                             rp->pkg->name);
 
                     } else {
@@ -119,7 +123,8 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
                     }
                     
                 } else {
-                    msg_i(4, deep, "\n%s   fakecycle   %s -> %s", pkg->name,
+                    msg(4, "\n");
+                    msg_i(4, deep, "   fakecycle   %s -> %s", pkg->name,
                         rp->pkg->name);
                 }
                 
@@ -135,7 +140,7 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
     
     if (verbose > 3) {
         msg(4, "\n");
-        msg_i(4, deep, " } ");
+        msg_i(4, deep, "_ } ");
         msg(4, "_%s",  pkg->name);
         for (i=n_array_size(vs->stack)-2; i >= 0; i--) {
             struct pkg *p = n_array_nth(vs->stack, i);
@@ -174,7 +179,6 @@ int pkgset_order(struct pkgset *ps)
 	    visit_order(&vs, pkg, 1);
             n_array_clean(vs.stack);
         }
-        
     }
 
     if (vs.nerrors) {

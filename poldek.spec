@@ -1,7 +1,7 @@
 # $Revision$, $Date$
 Summary:	The poldek - rpm packages management helper tool
 Name:		poldek
-Version:	0.1
+Version:	0.11
 Release:	1
 License:	GPL
 Group:		Utilities/System
@@ -9,7 +9,7 @@ Group(pl):	Narzêdzia/System
 Source:		%{name}-%{version}.tar.gz
 Requires:	/bin/rpm
 BuildRequires:  db3-devel >= 3.1.14-2
-BuildRequires:	rpm-devel >= 3.0.5
+BuildRequires:	rpm-devel >= 3.0.6-2
 BuildRequires:	zlib-devel, zlib-static
 BuildRequires:	bzip2-devel, bzip2-static
 BuildRequires:	/usr/bin/pod2man
@@ -25,32 +25,20 @@ Summary:	poldek linked almost statically (except glibc)
 Group:		Utilities/System
 Group(pl):	Narzêdzia/System
 
-%description semistatic
-poldek linked almost statically (except glibc)
-
-
-%package	static
-Summary:	Statically linked poldek
-Group:		Utilities/System
-Group(pl):	Narzêdzia/System
-
-%description static
-Statically linked poldek
-
 %prep 
 %setup -q 
 
 %build
-make CFLAGS="$RPM_OPT_FLAGS" all poldek.semistatic poldek.static
+%configure
+make 
 
 %install
 rm -rf $RPM_BUILD_ROOT
 install -d $RPM_BUILD_ROOT%{_prefix}
 
-# no strip cause program's alpha stage and core may be useful
-make install install-statics DESTDIR=$RPM_BUILD_ROOT%{_prefix}
+make install DESTDIR=$RPM_BUILD_ROOT
 
-gzip -9nf README* *sample* poldek.1
+gzip -9nf README* *sample*
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -60,10 +48,6 @@ rm -rf $RPM_BUILD_ROOT
 %attr(755,root,root) %{_bindir}/%{name}
 %{_mandir}/man1/%{name}*
 %doc README* *sample*
-
-%files semistatic
-%defattr(644,root,root,755)
-%{_bindir}/%{name}.semistatic
 
 %files static
 %defattr(644,root,root,755)
@@ -75,6 +59,12 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.2  2000/10/29 02:47:11  mis
+- packages user-level data added to Packages (NFY)
+- starting develeop interactive tool
+- fixed a lot of bugs and added many code improvements
+- rpmlib(...) capabilities support
+
 Revision 1.1  2000/09/22 18:19:45  mis
 - set him free ;-)
 

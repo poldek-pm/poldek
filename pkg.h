@@ -9,6 +9,7 @@
 
 #include "capreq.h"
 #include "pkgfl.h"
+#include "pkgu.h"
 
 #define PKG_HAS_DN          (1 << 0)
 #define PKG_HAS_CAPS        (1 << 1)
@@ -16,12 +17,14 @@
 #define PKG_HAS_CNFLS       (1 << 3)
 #define PKG_HAS_FL          (1 << 4)
 
-#define PKG_DIRMARK         (1 << 5) /* marked directly, i.e. by the user*/
-#define PKG_INDIRMARK       (1 << 6) /* marked by poldek */
+#define PKG_HAS_PKGUINF     (1 << 5)
 
-#define PKG_BADREQS         (1 << 9) /* has unsatisfied dependencies? */
+#define PKG_DIRMARK         (1 << 8) /* marked directly, i.e. by the user*/
+#define PKG_INDIRMARK       (1 << 9) /* marked by poldek */
 
-#define PKG_OBSOLETED       (1 << 10)
+#define PKG_BADREQS         (1 << 10) /* has unsatisfied dependencies? */
+
+#define PKG_OBSOLETED       (1 << 11)
 
 /* DAG node colours */
 #define PKG_COLOR_WHITE    (1 << 13)
@@ -45,7 +48,6 @@
 #define pkg_is_marked(pkg)      ((pkg)->flags & (PKG_DIRMARK | PKG_INDIRMARK))
 #define pkg_isnot_marked(pkg)   (!pkg_is_marked((pkg)))
 
-                                     
 #define pkg_has_badreqs(pkg) ((pkg)->flags & PKG_BADREQS)
 #define pkg_set_badreqs(pkg) ((pkg)->flags |= PKG_BADREQS)
 #define pkg_clr_badreqs(pkg) ((pkg)->flags &= (~PKG_BADREQS))
@@ -56,10 +58,15 @@
 #define pkg_mark_obsoleted(pkg) ((pkg)->flags |= PKG_OBSOLETED)
 #define pkg_is_obsoleted(pkg) ((pkg)->flags & PKG_OBSOLETED)
 
+#define pkg_has_ldpkguinf(pkg) ((pkg)->flags & PKG_HAS_PKGUINF)
+#define pkg_set_ldpkguinf(pkg) ((pkg)->flags |= PKG_HAS_PKGUINF)
+#define pkg_clr_ldpkguinf(pkg) ((pkg)->flags &= (~PKG_HAS_PKGUINF))
 
 
 struct pkg {
     uint32_t     flags;
+    uint32_t     size;
+    uint32_t     btime;
     int32_t      epoch;
     char         *name;
     char         *ver;
@@ -76,27 +83,36 @@ struct pkg {
     tn_array     *reqpkgs;    /* require packages  */
     tn_array     *revreqpkgs; /* packages which requires */
     tn_array     *cnflpkgs;   /* conflict packages */
-    
-    char         *udata;      /* for some additional, user level data */
+
+    union {
+        off_t           pkg_pkguinf_offs;
+        struct pkguinf *pkg_pkguinf;
+    } package_uinf;
+
+    void         *udata;      /* for some additional, user level data */
     int32_t      _buf_size;
     char         _buf[0];     /* private, store all string members */
 };
 
-
+#define	pkg_pkguinf_offs  package_uinf.pkg_pkguinf_offs
+#define	pkg_pkguinf       package_uinf.pkg_pkguinf
 
 struct pkg *pkg_new_udata(const char *name, int32_t epoch,
                           const char *version, const char *release,
-                          const char *arch, const char *fpath,
+                          const char *arch, uint32_t size, uint32_t btime,
+                          const char *fpath,
                           void *udata, size_t adsize);
 
-#define pkg_new(name, epoch, version, release, arch, fpath) \
-  pkg_new_udata(name, epoch, version, release, arch, fpath, NULL, 0)
+#define pkg_new(name, epoch, version, release, arch, size, btime, fpath) \
+ pkg_new_udata(name, epoch, version, release, arch, size, btime, fpath, NULL,0)
 
 #define PKG_LDNEVR    0
 #define PKG_LDCAPS    (1 << 0)
 #define PKG_LDREQS    (1 << 1)
 #define PKG_LDCNFLS   (1 << 2)
 #define PKG_LDFL      (1 << 3)
+//#define PKG_LDFL      (1 << 3)
+//#define PKG_LDFL      (1 << 3)
 
 #define PKG_LDCAPREQS PKG_LDCAPS | PKG_LDREQS | PKG_LDCNFLS
 #define PKG_LDWHOLE   PKG_LDCAPREQS | PKG_LDFL
@@ -153,7 +169,11 @@ char *pkg_snprintf_s(const struct pkg *pkg);
 char *pkg_snprintf_s0(const struct pkg *pkg);
 char *pkg_snprintf_s1(const struct pkg *pkg);
 
+void *pkg_uinf_tag(struct pkg *pkg, int tag);
 
+#define pkg_group(pkg) pkg_uinf_tag(pkg, RPMTAG_GROUP)
+#define pkg_summary(pkg) pkg_uinf_tag(pkg, RPMTAG_SUMMARY)
+#define pkg_description(pkg) pkg_uinf_tag(pkg, RPMTAG_DESCRIPTION)
 
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*));
 
