@@ -217,9 +217,13 @@ Needs packages to be specified.
 Install the newest versions of all packages currently installed 
 on the system from the specified source (see L</SOURCE>).
 
-=item B<-i, --install|-u, -U, --upgrade>
+=item B<-i, --install|-u, -U, --upgrade|--downgrade>
 
-Install or upgrade given packages.
+Install, upgrade and downgrade given packages.
+
+=item B<--reinstall>
+
+Reinstall given packages
 
 =item B<--shcmd=COMMAND>
 
