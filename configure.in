@@ -173,7 +173,6 @@ AC_CHECK_HEADERS(fcntl.h limits.h malloc.h locale.h)
 AC_CHECK_HEADERS(sys/file.h sys/time.h syslog.h unistd.h)
 
 AC_CHECK_HEADER(stdint.h,,AC_MSG_ERROR(["C9X compiler is needed by $PACKAGE"]))
-AC_CHECK_HEADER(obstack.h,,AC_MSG_ERROR(["obstacks are needed by $PACKAGE"]))
 AC_CHECK_HEADER(argp.h,,AC_MSG_ERROR(["missing required argp.h"]))
 
 dnl RH rpm needs this

@@ -29,7 +29,6 @@
 #include <limits.h>
 #include <stdint.h>
 #include <errno.h>
-#include <obstack.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/time.h>
