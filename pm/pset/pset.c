@@ -52,50 +52,75 @@ struct pm_psetdb {
     tn_array *paths_removed;
 };
 
+void *pm_pset_init(void) 
+{
+    struct pm_pset *pm;
+    char path[PATH_MAX];
+
+    pm = n_malloc(sizeof(*pm));
+
+    if (poldek_lookup_external_command(path, sizeof(path), "pset-pm.sh"))
+        pm->installer_path = n_strdup(path);
+    else
+        pm->installer_path = NULL;
+    
+    pm->cnf = n_hash_new(16, NULL);
+    return pm;
+}
+
 void pm_pset_destroy(void *pm_pset) 
 {
     struct pm_pset *pm = pm_pset;
+    struct source *src;
+    
     n_cfree(&pm->installer_path);
+    src = n_hash_get(pm->cnf, "source");
+    if (src)
+        source_free(src);
+    n_hash_free(pm->cnf);
+    
+    memset(pm, 0, sizeof(*pm));
     free(pm);
 }
 
-void *pm_pset_init(void *null) 
-{
-    struct pm_pset *pm_pset;
-    char path[PATH_MAX];
 
-    null = null;
+int pm_pset_configure(void *pm_pset, const char *key, void *val)
+{
+    struct pm_pset *pm = pm_pset;
     
-    pm_pset = n_malloc(sizeof(*pm_pset));
+    if (n_str_eq(key, "source"))
+        n_hash_insert(pm->cnf, key, val);
     
-    if (poldek_lookup_external_command(path, sizeof(path), "pset-pm.sh"))
-        pm_pset->installer_path = n_strdup(path);
-    else
-        pm_pset->installer_path = NULL;
-    return pm_pset;
+    return 1;
 }
 
 void *pm_pset_opendb(void *pm_pset, void *dbh,
                      const char *rootdir, const char *dbpath,
                      mode_t mode, tn_hash *kw)
 {
+    struct pm_pset *pm = pm_pset;
+    struct pm_psetdb *db = dbh;
     struct source *src;
     struct pkgdir *dir;
     struct pkgset *ps;
-    struct pm_psetdb *db = dbh;
     
-    rootdir = rootdir; dbpath = dbpath; mode = mode; pm_pset = pm_pset;
+    rootdir = rootdir; dbpath = dbpath; mode = mode;
     
     if (db)
         return db;
 
     src = n_hash_get(kw, "source");
+    if (src == NULL) {
+        src = n_hash_get(pm->cnf, "source"); /* default */
+    }
+    
     if (!src) {
-        logn(LOGERR, _("Could not open 'pset' database, missing source..."));
+        logn(LOGERR,
+             _("Could not open 'pset' database: missing source parameter"));
         return NULL;
     }
 
-    if (source_is_remote(src) && 0)
+    if (source_is_remote(src) && 0 /* for testing */)
         return NULL;
 
     if ((dir = pkgdir_srcopen(src, 0)) == NULL) {
@@ -191,7 +216,7 @@ static int do_cp(const char *src, const char *dst)
 
     //process_output(&pst, verbose_level);
     if ((ec = p_close(&pst) != 0) && pst.errmsg != NULL)
-        logn(LOGERR, "%s", pst.errmsg);
+        logn(LOGERR, "cp %s: %s", pst.errmsg, src);
 
     p_st_destroy(&pst);
     return ec == 0;
@@ -321,7 +346,7 @@ int pm_pset_db_it_init(struct pkgdb_it *it, int tag, const char *arg)
 
 
 
-int pm_psethdr_nevr(void *h, char **name,
+int pm_pset_hdr_nevr(void *h, char **name,
                     int32_t *epoch, char **version, char **release)
 {
     struct pkg *pkg = h;
@@ -422,10 +447,8 @@ static int do_pkgtslink(struct pm_psetdb *db, const char *cachedir,
         }
     } else {
         if (link(pkgpath, tspath) != 0) {
-            if (!do_cp(pkgpath, tspath)) {
-                logn(LOGERR, "%s: could not copy to %s\n", pkgpath, db->tsdir);
+            if (!do_cp(pkgpath, tspath))
                 return 0;
-            }
         }
     }
     n_array_push(db->paths_added, n_strdup(tspath));
@@ -442,6 +465,9 @@ int pm_pset_packages_install(struct pkgdb *pdb,
     char path[PATH_MAX];
     int i;
 
+    if (ts->getop(ts, POLDEK_OP_RPMTEST))
+        return 1;
+
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
     pkgdir = n_array_nth(db->ps->pkgdirs, 0);
 
@@ -451,9 +477,12 @@ int pm_pset_packages_install(struct pkgdb *pdb,
         if (pkg_localpath(pkg, path, sizeof(path), ts->cachedir)) {
             pkgset_add_package(db->ps, pkg);
             pkgdir_add_package(pkgdir, pkg);
+            if (ts->getop(ts, POLDEK_OP_JUSTDB))
+                continue;
+            
             if (!do_pkgtslink(db, ts->cachedir, pkg, path))
                 return 0;
-            msgn(0, "%%install %s %s", path, pkgdir->path);
+            msgn(2, "%%install %s %s", path, pkgdir->path);
         }
     }
 
@@ -470,6 +499,9 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb,
     char path[PATH_MAX];
     int i;
 
+    if (ts->getop(ts, POLDEK_OP_RPMTEST))
+        return 1;
+
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
     pkgdir = n_array_nth(db->ps->pkgdirs, 0);
     ts = ts;
@@ -480,36 +512,97 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb,
         if (pkg_path(pkg, path, sizeof(path))) {
             pkgset_remove_package(db->ps, pkg);
             pkgdir_remove_package(pkgdir, pkg);
+            if (ts->getop(ts, POLDEK_OP_JUSTDB))
+                continue;
             n_array_push(db->paths_removed, n_strdup(path));
-            msgn(0, "%%uninstall %s", path);
+            msgn(2, "%%uninstall %s", path);
         }
     }
     return 1;
 }
 
-void pm_pset_commitdb(void *dbh) 
+int pm_pset_commitdb(void *dbh) 
 {
     struct pm_psetdb *db = dbh;
     struct pkgdir *pkgdir;
     char dstpath[PATH_MAX];
-    int i;
+    int i, rc = 1, nchanges = 0;
 
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
     pkgdir = n_array_nth(db->ps->pkgdirs, 0);
 
-    logn(LOGNOTICE, "commit");
+    msgn(0, "Installing to %s", pkgdir->path);
     for (i=0; i < n_array_size(db->paths_removed); i++) {
         const char *path = n_array_nth(db->paths_removed, i);
         DBGF_F("rm %s\n", path);
         unlink(path);
+        nchanges++;
     }
 
     for (i=0; i < n_array_size(db->paths_added); i++) {
         const char *path = n_array_nth(db->paths_added, i);
-        snprintf(dstpath, sizeof(dstpath), "%s/%s", pkgdir->path,
-                 n_basenam(path));
+        n_snprintf(dstpath, sizeof(dstpath), "%s/%s", pkgdir->path,
+                   n_basenam(path));
         DBGF_F("cp %s %s\n", path, dstpath);
-        do_cp(path, dstpath);
+        if (!do_cp(path, dstpath)) {
+            rc = 0;
+            break;
+        }
         unlink(path);
+        nchanges++;
     }
+    
+    
+    if (nchanges && rc && pkgdir_type_info(pkgdir->type) & PKGDIR_CAP_SAVEABLE)
+        rc = pkgdir_save(pkgdir, NULL, NULL, 0);
+    
+    return rc;
 }
+
+
+struct pkgdir *pm_pset_db_to_pkgdir(void *pm_pset, const char *rootdir,
+                                    const char *dbpath, tn_hash *kw)
+{
+    struct pm_pset *pm = pm_pset;
+    struct source *src;
+    struct pkgdir *dir;
+    
+    rootdir = rootdir; dbpath = dbpath; 
+    
+    src = n_hash_get(kw, "source");
+    if (src == NULL)
+        src = n_hash_get(pm->cnf, "source"); /* default */
+    
+    if (!src) {
+        logn(LOGERR,
+             _("Could not open 'pset' database: missing source parameter"));
+        return NULL;
+    }
+
+    if (source_is_remote(src)) {
+        logn(LOGERR, _("%s: source could not be remote one"),
+             source_idstr(src)); 
+        return NULL;
+    }
+    
+    if ((dir = pkgdir_srcopen(src, 0)) == NULL) {
+        if (!source_is_type(src, "dir") && is_dir(src->path)) {
+            logn(LOGNOTICE, _("trying to scan directory %s..."), src->path);
+            source_set_type(src, "dir");
+            dir = pkgdir_srcopen(src, 0);
+        }
+    }
+    
+    if (dir == NULL)
+        return NULL;
+    
+    if (!pkgdir_load(dir, 0, 0)) {
+        pkgdir_free(dir);
+        return NULL;
+    }
+    
+    return dir;
+}
+
+
+

@@ -33,10 +33,11 @@
 #define CAPREQ_RPMLIB            (1 << 5)   /* rpmlib(...) */
 
 #define CAPREQ_RPMLIB_SATISFIED  (1 << 6)   /* is rpmlib provides rpmlib(...)? */
-#define CAPREQ_PLDEKBAST   (1 << 7)   /* capreq added by poldek during mkidx,
+#define CAPREQ_BASTARD   (1 << 7)   /* capreq added by poldek during mkidx,
                                         '!' prefix */
 
-#define CAPREQ_RT_FLAGS    (CAPREQ_RPMLIB_SATISFIED | CAPREQ_PLDEKBAST)
+/* 'runtime' i.e. not storable flags  */
+#define CAPREQ_RT_FLAGS    (CAPREQ_RPMLIB_SATISFIED | CAPREQ_BASTARD)
 
 struct capreq {
     uint8_t  cr_flags;
@@ -72,7 +73,7 @@ extern inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_is_file(cr)      ((cr)->_buf[1] == '/')
 #define capreq_isnot_file(cr)   ((cr)->_buf[1] != '/')
 
-#define capreq_is_bastard(cr)   ((cr)->cr_flags & CAPREQ_PLDEKBAST)
+#define capreq_is_bastard(cr)   ((cr)->cr_flags & CAPREQ_BASTARD)
 
 #define capreq_is_rpmlib(cr)     ((cr)->cr_flags & CAPREQ_RPMLIB)
 #define capreq_set_satisfied(cr)  ((cr)->cr_flags |= CAPREQ_RPMLIB_SATISFIED)
@@ -126,8 +127,9 @@ int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2);
 tn_array *capreq_arr_new(int size);
 int capreq_arr_find(tn_array *capreqs, const char *name);
 
-tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf);
-int capreq_arr_store_st(tn_array *arr, const char *prefix, tn_stream *st);
+int capreq_arr_store_n(tn_array *arr);
+tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n);
+//int capreq_arr_store_st(tn_array *arr, const char *prefix, tn_stream *st);
 
 tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf);
 tn_array *capreq_arr_restore_st(tn_alloc *na, tn_stream *st);

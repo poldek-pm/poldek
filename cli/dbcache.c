@@ -122,7 +122,7 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     int             ldflags = 0;
     
     if (!pm_dbpath(cctx->ctx->pmctx, dbpath, sizeof(dbpath)))
-        return NULL;
+        return poldek_load_destination_pkgdir(cctx->ctx);
     
     if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
                      cctx->ctx->ts->rootdir, dbpath) == NULL)
@@ -146,28 +146,17 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
                                   dbpath, NULL, 0, lc_lang);
     }
     
-    if (dir == NULL) {
-        char name[255];
-        n_snprintf(name, sizeof(name), "%sdb", pm_get_name(cctx->ctx->pmctx));
-        dir = pkgdir_open_ext(rpmdb_path, NULL, name, dbpath, NULL, 0, lc_lang);
-    }
-    
-    
-    if (dir != NULL) {
-        if (pkgdir_load(dir, NULL, PKGDIR_LD_NOUNIQ | ldflags)) {
-            int n = n_array_size(dir->pkgs);
-            msgn(2, ngettext("%d package loaded",
-                             "%d packages loaded", n), n);
-            
-        } else {
-            pkgdir_free(dir);
-            dir = NULL;
-        }
-    }
-    
-    
+    if (dir == NULL)
+        dir = poldek_load_destination_pkgdir(cctx->ctx);
+
     if (dir == NULL)
         logn(LOGERR, _("Load installed packages failed"));
+    
+    else {
+        int n = n_array_size(dir->pkgs);
+        msgn(2, ngettext("%d package loaded",
+                         "%d packages loaded", n), n);
+    } 
     
     return dir;
 }

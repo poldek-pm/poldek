@@ -5,7 +5,7 @@
 #include "log.h"
 #include "mod.h"
 
-struct pm_ctx *pm_new(const char *name, void *modarg)
+struct pm_ctx *pm_new(const char *name)
 {
     struct pm_ctx *ctx;
     const struct pm_module *mod;
@@ -14,7 +14,7 @@ struct pm_ctx *pm_new(const char *name, void *modarg)
     if ((mod = pm_module_find(name)) == NULL)
         return NULL;
 
-    if ((modh = mod->init(modarg)) == NULL)
+    if ((modh = mod->init()) == NULL)
         return NULL;
     
     ctx = n_malloc(sizeof(*ctx));
@@ -82,12 +82,16 @@ int pm_verify_signature(struct pm_ctx *ctx, const char *path, unsigned flags)
 
 time_t pm_dbmtime(struct pm_ctx *ctx, const char *path) 
 {
-    return ctx->mod->dbmtime(ctx->modh, path);
+    if (ctx->mod->dbmtime)
+        return ctx->mod->dbmtime(ctx->modh, path);
+    return 0;
 }
 
 char *pm_dbpath(struct pm_ctx *ctx, char *path, size_t size)
 {
-    return ctx->mod->dbpath(ctx->modh, path, size);
+    if (ctx->mod->dbpath)
+        return ctx->mod->dbpath(ctx->modh, path, size);
+    return NULL;
 }
 
 int pkgdb_it_init(struct pkgdb *db, struct pkgdb_it *it,
@@ -150,4 +154,13 @@ int pm_get_dbdepdirs(struct pm_ctx *ctx,
         return 0;
     
     return ctx->mod->dbdepdirs(ctx->modh, rootdir, dbpath, depdirs) >= 0;
+}
+
+
+int pm_configure(struct pm_ctx *ctx, const char *key, void *val)
+{
+    if (ctx->mod->configure)
+        return ctx->mod->configure(ctx->modh, key, val);
+    
+    return 0;
 }

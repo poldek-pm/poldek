@@ -7,6 +7,7 @@
 #include <trurl/trurl.h>
 #include <trurl/nmalloc.h>
 
+struct pkgdir;
 struct pkgdb;
 struct poldek_ts; 
 struct pkgdb_it;
@@ -16,8 +17,9 @@ struct pm_module {
     unsigned                    cap_flags;
     char                        *name;
 
-    void *(*init)(void *);
+    void *(*init)(void);
     void (*destroy)(void *modh);
+    int  (*configure)(void *modh, const char *key, void *val);
 
     tn_array *(*pm_caps)(void *modh);
     char *(*dbpath)(void *modh, char *path, size_t size);
@@ -30,7 +32,7 @@ struct pm_module {
     void (*dbclose)(void *dbh);
 
     void (*dbtxbegin)(void *dbh);
-    void (*dbtxcommit)(void *dbh);
+    int  (*dbtxcommit)(void *dbh);
 
     void (*dbfree)(void *dbh);
     
@@ -61,7 +63,11 @@ struct pm_module {
     
     tn_array *(*hdr_ld_capreqs)(tn_array *caps, void *hdr, int captype);
 
-    struct pkg *(*ldpkg)(void *modh, tn_alloc *na, const char *path, unsigned ldflags);
+    struct pkg *(*ldpkg)(void *modh, tn_alloc *na, const char *path,
+                         unsigned ldflags);
+
+    struct pkgdir *(*db_to_pkgdir)(void *pm_rpm, const char *rootdir,
+                                   const char *dbpath, tn_hash *kw);
     int (*machine_score)(void *modh, int tag, const char *val);
 };
 

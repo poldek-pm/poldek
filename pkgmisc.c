@@ -82,7 +82,6 @@ int parse_nevr(char *nevrstr, const char **name,
     *p = '\0';
     p++;
     *name = nevrstr;
-
     
     return parse_evr(p, epoch, version, release);
 }

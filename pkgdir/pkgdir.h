@@ -17,9 +17,10 @@ extern const char *poldek_conf_PKGDIR_DEFAULT_TYPE;
 #define PKGDIR_LOADED             (1 << 1)  /* for idx */
 #define PKGDIR_VERIFIED           (1 << 2)  /* to avoid double verification
                                                during --update */
-#define PKGDIR_DIFF               (1 << 3)  /* is patch */
-#define PKGDIR_PATCHED            (1 << 4)  /* patched  */
+#define PKGDIR_DIFF               (1 << 3) /* is patch */
+#define PKGDIR_PATCHED            (1 << 4) /* patched  */
 #define PKGDIR_UNIQED             (1 << 5) /* passed through pkgdir_uniq() */
+#define PKGDIR_CHANGED            (1 << 6) /* added/removed packages */
 
 #define PKGDIR_VRFY_GPG            (1 << 10) /* verify package GPG signatures */
 #define PKGDIR_VRFY_PGP            (1 << 11) /* verify package PGP signatures */

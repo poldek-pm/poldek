@@ -136,11 +136,12 @@ int pkgdir_make_idxpath(char *dpath, int size, const char *type,
                         const char *path, const char *fn, const char *ext)
 {
     int n;
-    char *p;
+    char *endp;
 
-    p = strrchr(path, '\0') - 1;
+    n_assert(*path);
+    endp = strrchr(path, '\0') - 1;
 
-    if (*p != '/')
+    if (*endp != '/')
         n = n_snprintf(dpath, size, "%s", path);
         
     else {
@@ -155,10 +156,11 @@ int pkgdir_make_idxpath(char *dpath, int size, const char *type,
         else if (strcmp(ext, "none") == 0)
             ext = NULL;
             
-        n = n_snprintf(dpath, size, "%s%s%s%s", path, fn,
-                       ext ? "." : "", ext ? ext : "");
+        n = n_snprintf(dpath, size, "%s%s%s%s%s", path,
+                       *endp != '/' ? "/" : "",
+                       fn, ext ? "." : "", ext ? ext : "");
     }
-    //printf("pkgdir_make_idxpath %s -> %d, %s\n", path, n, dpath);
+    DBGF("%s -> %d, %s\n", path, n, dpath);
     return n;
 }
 
@@ -705,7 +707,6 @@ int do_create(struct pkgdir *pkgdir, const char *type,
         return 0;
     }
     
-    
     rc = pkgdir->mod->create(pkgdir, path, flags);
     
     if (orig_mod) {
@@ -724,12 +725,18 @@ int pkgdir_save(struct pkgdir *pkgdir, const char *type,
 	const struct pkgdir_module  *mod;
     int                         nerr = 0;
     tn_hash                     *avlh, *avlh_tmp;
+
+    if (type == NULL)
+        type = pkgdir->type;
+    
+    if (path == NULL)
+        path = pkgdir->idxpath;
 	
     if (type != NULL && strcmp(type, pkgdir->type) != 0) 
 		mod = find_module(type);
-	else 
+	else
  		mod = pkgdir->mod;
-	
+    
 	if (mod == NULL)
 		return 0;
 
@@ -759,10 +766,12 @@ int pkgdir_save(struct pkgdir *pkgdir, const char *type,
 
     if (pkgdir->prev_pkgdir) {
         orig = pkgdir->prev_pkgdir;
-        
-    } else if (strcmp(pkgdir->path, path) == 0) {
+
+        /* the same and not changed */
+    } else if ((pkgdir->flags & PKGDIR_CHANGED) == 0 && 
+               strcmp(pkgdir->path, path) == 0) {
         goto l_end;
-        
+
     } else {
         msgn(1, _("Loading previous %s..."), vf_url_slim_s(path, 0));
         if ((orig = pkgdir_open(path, NULL, type, ""))) {
@@ -817,14 +826,19 @@ int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg)
     if (n_array_bsearch(pkgdir->pkgs, pkg))
         return 0;
     n_array_push(pkgdir->pkgs, pkg_link(pkg));
+    pkgdir->flags |= PKGDIR_CHANGED;
     return 1;
 }
 
 int pkgdir_remove_package(struct pkgdir *pkgdir, struct pkg *pkg)
 {
-    if (n_array_bsearch(pkgdir->pkgs, pkg))
+    int n;
+    
+    if ((n = n_array_bsearch_idx(pkgdir->pkgs, pkg)) < 0)
         return 0;
-    n_array_push(pkgdir->pkgs, pkg_link(pkg));
+    
+    n_array_remove_nth(pkgdir->pkgs, n);
+    pkgdir->flags |= PKGDIR_CHANGED;
     return 1;
 }
 

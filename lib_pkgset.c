@@ -115,3 +115,13 @@ tn_array *poldek_get_pkgdirs(struct poldek_ctx *ctx)
 {
     return ctx->pkgdirs ? n_ref(ctx->pkgdirs) : NULL;
 }
+
+struct pkgdb;
+struct pkgdb *poldek_open_installeddb(struct poldek_ctx *ctx)
+{
+    return poldek_ts_dbopen(ctx->ts, 0);
+}
+
+
+
+    

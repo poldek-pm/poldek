@@ -157,7 +157,7 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
 
     if (n_array_size(arr)) {
         pkg_store_bintag(PKG_STORETAG_CAPS, nbuf);
-        capreq_arr_store(arr, nbuf);
+        capreq_arr_store(arr, nbuf, n_array_size(arr));
     }
     
     n_array_free(arr);
@@ -342,7 +342,8 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf,
 int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
               tn_array *exclpath, unsigned flags)
 {
-
+    int ncaps;
+    
     if ((flags & PKGSTORE_NOEVR) == 0) {
         n_buf_printf(nbuf, "N: %s\n", pkg->name);
         if (pkg->epoch)
@@ -366,14 +367,14 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     if (pkg->caps && n_array_size(pkg->caps))
         pkg_store_caps(pkg, nbuf);
     
-    if (pkg->reqs && n_array_size(pkg->reqs)) {
+    if (pkg->reqs && (ncaps = capreq_arr_store_n(pkg->reqs))) {
         pkg_store_bintag(PKG_STORETAG_REQS, nbuf); 
-        capreq_arr_store(pkg->reqs, nbuf);
+        capreq_arr_store(pkg->reqs, nbuf, ncaps);
     }
     
-    if (pkg->cnfls && n_array_size(pkg->cnfls)) {
+    if (pkg->cnfls && (ncaps = capreq_arr_store_n(pkg->cnfls))) {
         pkg_store_bintag(PKG_STORETAG_CNFLS, nbuf);
-        capreq_arr_store(pkg->cnfls, nbuf);
+        capreq_arr_store(pkg->cnfls, nbuf, ncaps);
     }
     
     //mem_info(-10, "before fl");

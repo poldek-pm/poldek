@@ -281,6 +281,7 @@ char *pkg_path_s(const struct pkg *pkg);
 char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
                     const char *cachedir);
 
+unsigned pkg_file_url_type(const struct pkg *pkg);
 
 int pkg_printf(const struct pkg *pkg, const char *str);
 int pkg_snprintf(char *str, size_t size, const struct pkg *pkg);

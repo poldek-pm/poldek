@@ -102,7 +102,6 @@ N_("Just dump install marked package names to FILE (default stdout)"), OPT_GID }
 N_("Install packages with broken dependencies (applied to PM only)"), OPT_GID },
 
 {"rpm-nodeps", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
-    
 
 {"pm-force", OPT_PMONLY_FORCE, 0, 0,
 N_("Be unconcerned (applied to PM only)"), OPT_GID },

@@ -19,8 +19,9 @@ struct pm_rpm {
     char *sudo;
 };
 
-void *pm_rpm_init(tn_array *macros);
+void *pm_rpm_init(void);
 void pm_rpm_destroy(void *pm_rpm);
+int pm_rpm_configure(void *modh, const char *key, void *val);
 tn_array *pm_rpm_rpmlib_caps(void *pm_rpm);
 const char *pm_rpm_get_arch(void *pm_rpm);
 
@@ -111,6 +112,9 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
 tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, int crtype);
 int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val);
 
+struct pkgdir;
+struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
+                                   const char *dbpath, tn_hash *kw);
 
 int pm_rpm_arch_score(const char *arch);
 int pm_rpm_vercmp(const char *one, const char *two);

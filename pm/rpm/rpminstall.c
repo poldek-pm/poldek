@@ -382,7 +382,7 @@ int pm_rpm_packages_install(struct pkgdb *db,
     
     
     ec = pm_rpm_execrpm(cmd, argv, 1, 1);
-#if 0                           /* moved to packages_fetch_remove */
+#if 0                           /* moved to packages_fetch_remove() */
     if (ec == 0 && !ts->getop(ts, POLDEK_OP_RPMTEST) &&
         !ts->getop(ts, POLDEK_OP_KEEP_DOWNLOADS)) {
         

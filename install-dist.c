@@ -74,12 +74,10 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
 
     snprintf(tmpdir, sizeof(tmpdir), "%s/tmp", ts->db->rootdir);
     mkdir(tmpdir, 0755);
-#if 0    
-    rpm_define("_tmpdir", "/tmp");
-    rpm_define("_tmppath", "/tmp");
-    rpm_define("tmppath", "/tmp");
-    rpm_define("tmpdir", "/tmp");
-#endif    
+    pm_configure(ts->pmctx, "%_tmpdir", "/tmp");
+    pm_configure(ts->pmctx, "%_tmppath", "/tmp");
+    pm_configure(ts->pmctx, "%tmppath", "/tmp");
+    pm_configure(ts->pmctx, "%tmpdir", "/tmp");
     nerr = 0;
     ninstalled = 0;
     ninstalled_bytes = 0;

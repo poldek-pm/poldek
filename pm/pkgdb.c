@@ -39,7 +39,7 @@ struct pkgdb *pkgdb_malloc(struct pm_ctx *ctx, const char *rootdir,
         db->rootdir = n_strdup(rootdir);
 
     db->kw = n_hash_new(16, NULL);
-    while (key) {
+    while (key != NULL) {
         void *val = va_arg(ap, void*);
         n_hash_insert(db->kw, key, val); /* pm module should free val */
         key = va_arg(ap, const char*);
@@ -54,12 +54,16 @@ struct pkgdb *pkgdb_open(struct pm_ctx *ctx, const char *rootdir,
                          const char *key, ...)
 {
     struct pkgdb *db;
+    char dbpath[PATH_MAX];
     va_list ap;
+
+    if (path == NULL && pm_dbpath(ctx, dbpath, sizeof(dbpath)))
+        path = dbpath;
 
     va_start(ap, key);
     db = pkgdb_malloc(ctx, rootdir, path, key, ap);
     va_end(ap);
-    
+
     if (pkgdb_reopen(db, mode))
         return db;
     pkgdb_free(db);
@@ -598,3 +602,25 @@ int pkgdb_get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
     
     return n;
 }
+
+
+struct pkgdir *pkgdb_to_pkgdir(struct pm_ctx *ctx, const char *rootdir,
+                               const char *path, const char *key, ...)
+{
+    struct pkgdb *db;
+    struct pkgdir *pkgdir;
+    va_list ap;
+
+    if (ctx->mod->db_to_pkgdir == NULL)
+        return NULL;
+
+    va_start(ap, key);
+    db = pkgdb_malloc(ctx, rootdir, path, key, ap);
+    va_end(ap);
+
+    pkgdir = ctx->mod->db_to_pkgdir(ctx->modh, db->rootdir,
+                                    db->path, db->kw);
+    pkgdb_free(db);
+    return pkgdir;
+}
+

@@ -79,7 +79,7 @@ static void setup_diff_langs(struct pkgdir *pkgdir)
         if ((pkgu = pkg_info(pkg)) == NULL)
             continue;
         
-        if ((pkg_langs = pkguinf_langs(pkg->pkg_pkguinf))) {
+        if ((pkg_langs = pkguinf_langs(pkgu))) {
             int i;
                             
             if (pkgdir->avlangs_h == NULL)

@@ -222,7 +222,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     struct pm_ctx *pmctx;
     
     n_assert(pkgdir->mod_data == NULL);
-    pkgdir->mod_data = pmctx = pm_new("rpm", NULL);
+    pkgdir->mod_data = pmctx = pm_new("rpm");
 
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();

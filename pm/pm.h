@@ -19,9 +19,10 @@ struct pm_ctx {
     void                    *modh;
 };
 
-struct pm_ctx *pm_new(const char *name, void *arg);
+struct pm_ctx *pm_new(const char *name);
 void pm_free(struct pm_ctx *ctx);
 
+int pm_configure(struct pm_ctx *ctx, const char *key, void *val);
 const char *pm_get_name(struct pm_ctx *ctx);
 
 
@@ -50,7 +51,7 @@ struct pkgdb {
 struct pkgdb *pkgdb_open(struct pm_ctx *ctx, const char *rootdir,
                          const char *path, mode_t mode,
                          const char *key, ...);
-#define pkgdb_creat(ctx, rootdir, path, key, args) \
+#define pkgdb_creat(ctx, rootdir, path, key, args...) \
     pkgdb_open(ctx, rootdir, path, O_RDWR | O_CREAT | O_EXCL, key, ##args)
 
 int pkgdb_reopen(struct pkgdb *db, mode_t mode);
@@ -164,8 +165,10 @@ int pm_get_dbdepdirs(struct pm_ctx *ctx,
                      const char *rootdir, const char *dbpath,
                      tn_array *depdirs);
 
-
 struct pkg *pm_load_package(struct pm_ctx *ctx,
                             tn_alloc *na, const char *path, unsigned ldflags);
+struct pkgdir;
+struct pkgdir *pkgdb_to_pkgdir(struct pm_ctx *ctx, const char *rootdir,
+                               const char *path, const char *key, ...);
 
 #endif

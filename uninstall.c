@@ -208,9 +208,9 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
     pkgmasks = poldek_ts_get_arg_pkgmasks(ts);
     
     for (i=0; i < n_array_size(pkgmasks); i++) {
-        char           *mask;
+        char           *mask, *p;
         tn_array       *dbpkgs;
-        struct capreq  *cr;
+        struct capreq  *cr, *cr_evr;
         int            nmatches = 0;
 
         
@@ -223,17 +223,40 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
             continue;
         }
 #endif
-        cr = NULL;
-        capreq_new_name_a(mask, cr);
+        cr = NULL; cr_evr = NULL;
+        if ((p = strchr(mask, '#')) == NULL) {
+            capreq_new_name_a(mask, cr);
+            
+        } else {
+            const char *ver, *rel;
+            char *tmp;
+            uint32_t epoch;
+
+            n_strdupap(mask, &tmp);
+            p = strchr(tmp, '#');
+            n_assert(p);
+            *p = '\0';
+            p++;
+
+            if (parse_evr(p, &epoch, &ver, &rel))
+                cr = cr_evr = capreq_new(NULL, tmp, epoch, ver, rel, REL_EQ, 0);
+        }
+        
         dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cr, NULL, uninst_LDFLAGS);
+        DBGF("mask %s (%s) -> %d packages\n", mask, capreq_snprintf_s(cr), 
+             dbpkgs ? n_array_size(dbpkgs) : 0);
+        
         if (dbpkgs) {
             int n, j;
 
             for (j=0; j < n_array_size(dbpkgs); j++) {
                 struct pkg *dbpkg = n_array_nth(dbpkgs, j);
 
-                if (strcmp(mask, dbpkg->name) == 0 ||
-                    fnmatch(mask, dbpkg->nvr, 0) == 0) {
+                if (cr_evr && pkg_match_req(dbpkg, cr_evr, 1)) {
+                    pkgmark_set(ts->pms, dbpkg, 1, UNINST_MATCHED);
+                    nmatches++;
+                    
+                } else if (cr_evr == NULL && strcmp(mask, dbpkg->name) == 0) {
                     pkgmark_set(ts->pms, dbpkg, 1, UNINST_MATCHED);
                     nmatches++;
                 }
@@ -259,6 +282,9 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct install_info *iinf)
             logn(LOGERR, _("%s: no such package"), mask);
             nerr++;
         }
+
+        if (cr_evr)
+            capreq_free(cr_evr);
     }
 
     n_array_uniq(unpoldek_tset->dbpkgs);

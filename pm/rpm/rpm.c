@@ -63,10 +63,15 @@ void pm_rpm_destroy(void *pm_rpm)
     free(pm);
 }
 
-void *pm_rpm_init(tn_array *macros) 
+void *pm_rpm_init(void) 
 {
     struct pm_rpm *pm_rpm;
     char path[PATH_MAX];
+
+    if (!poldek_lookup_external_command(path, sizeof(path), "rpm")) {
+        logn(LOGERR, _("%s: command not found"), "rpm");
+        return NULL;
+    }
     
     if (initialized == 0) {
         if (rpmReadConfigFiles(NULL, NULL) != 0) {
@@ -75,8 +80,28 @@ void *pm_rpm_init(tn_array *macros)
         }
         initialized = 1;
     }
+    
+    pm_rpm = n_malloc(sizeof(*pm_rpm));
+    pm_rpm->rpm = n_strdup(path);
+    if (poldek_lookup_external_command(path, sizeof(path), "sudo"))
+        pm_rpm->sudo = n_strdup(path);
+    else
+        pm_rpm->sudo = NULL;
+    return pm_rpm;
+}
 
-    if (macros) {
+
+int pm_rpm_configure(void *pm_rpm, const char *key, void *val)
+{
+    pm_rpm = pm_rpm;
+    
+    if (*key == '%') {           /* macro */
+        key++;
+        msg(4, "addMacro %s %s\n", key, (char*)val);
+        addMacro(NULL, key, NULL, val, RMIL_DEFAULT);
+        
+    } else if (n_str_eq(key, "macros")) {
+        tn_array *macros = val;
         int i;
         
         for (i=0; i<n_array_size(macros); i++) {
@@ -103,26 +128,7 @@ void *pm_rpm_init(tn_array *macros)
             }
         }
     }
-    
-    if (poldek_lookup_external_command(path, sizeof(path), "rpm")) {
-        pm_rpm = n_malloc(sizeof(*pm_rpm));
-        pm_rpm->rpm = n_strdup(path);
-        if (poldek_lookup_external_command(path, sizeof(path), "sudo"))
-            pm_rpm->sudo = n_strdup(path);
-        else
-            pm_rpm->sudo = NULL;
-        return pm_rpm;
-    }
-    
-    return NULL;
-}
-
-
-
-void pm_rpm_define(void *ctx, const char *name, const char *val) 
-{
-    ctx = ctx;
-    addMacro(NULL, name, NULL, val, RMIL_DEFAULT);
+    return 1;
 }
 
 #define RPM_DBPATH "/var/lib/rpm"
@@ -205,6 +211,43 @@ void pm_rpm_closedb(rpmdb db)
     db = NULL;
 }
 
+struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
+                                   const char *dbpath, tn_hash *kw)
+{
+    char            rpmdb_path[PATH_MAX], tmpdbpath[PATH_MAX];
+    const char      *lc_lang;
+    struct pkgdir   *dir = NULL;
+
+    kw = kw;
+
+    if (!dbpath) 
+        dbpath = pm_rpm_dbpath(pm_rpm, tmpdbpath, sizeof(tmpdbpath));
+    
+    if (!dbpath)
+        return NULL;
+
+    *rpmdb_path = '\0';
+    n_snprintf(rpmdb_path, sizeof(rpmdb_path), "%s%s",
+               rootdir ? (*(rootdir + 1) == '\0' ? "" : rootdir) : "",
+               dbpath != NULL ? dbpath : "");
+    
+    if (*rpmdb_path == '\0')
+        return NULL;
+
+    lc_lang = lc_messages_lang();
+    if (lc_lang == NULL) 
+        lc_lang = "C";
+    
+    dir = pkgdir_open_ext(rpmdb_path, NULL, "rpmdb", dbpath, NULL, 0, lc_lang);
+    if (dir != NULL) {
+        if (!pkgdir_load(dir, NULL, PKGDIR_LD_NOUNIQ)) {
+            pkgdir_free(dir);
+            dir = NULL;
+        }
+    }
+
+    return dir;
+}
 
 
 #if defined HAVE_RPMLOG && !defined ENABLE_STATIC

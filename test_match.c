@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
     test_match2();
     exit(0);
     log_init(NULL, stdout, "aa");
-    pm_rpm_init(NULL);
+    pm_rpm_init();
     db = pm_rpm_opendb(NULL, NULL, "/var/lib/rpm", "/", O_RDONLY, NULL);
     sleep(20);
     pm_rpm_closedb(db);

@@ -1087,7 +1087,7 @@ int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard)
                            (tn_fn_cmp)capreq_cmp2name) == NULL) {
         cnfl = capreq_new(pkg->na, cpkg->name, cpkg->epoch, cpkg->ver,
                           cpkg->rel, REL_EQ,
-                          (isbastard ? CAPREQ_PLDEKBAST : 0));
+                          (isbastard ? CAPREQ_BASTARD : 0));
         
         n_array_push(pkg->cnfls, cnfl);
         n_array_sort(pkg->cnfls);
@@ -1305,7 +1305,6 @@ char *pkg_path_s(const struct pkg *pkg)
 unsigned pkg_file_url_type(const struct pkg *pkg)
 {
     n_assert(pkg->pkgdir);
-
     return vf_url_type(pkg->pkgdir->path);
 }
 

@@ -767,7 +767,7 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
                 sources_add(ctx->sources, src);
             }
             break;
-
+            
         case POLDEK_CONF_PM:
             vv = va_arg(ap, void*);
             if (vv)
@@ -923,13 +923,15 @@ int setup_sources(struct poldek_ctx *ctx)
     return 1;
 }
 
+
 static int setup_pm(struct poldek_ctx *ctx) 
 {
     const char *pm = n_hash_get(ctx->_cnf, "pm");
     n_assert(pm);
 
     if (strcmp(pm, "rpm") == 0) {
-        ctx->pmctx = pm_new(pm, ctx->ts->rpmacros);
+        ctx->pmctx = pm_new(pm);
+        pm_configure(ctx->pmctx, "macros", ctx->ts->rpmacros);
         
     } else if (strcmp(pm, "pset") == 0) {
         struct source *dest = NULL;
@@ -947,8 +949,8 @@ static int setup_pm(struct poldek_ctx *ctx)
                      source_idstr(dest));
                 
             } else {
-                ctx->pmctx = pm_new(pm, NULL);
-                ctx->ts->_destsrc = dest;
+                ctx->pmctx = pm_new(pm);
+                pm_configure(ctx->pmctx, "source", dest);
                 n_array_pop(ctx->sources); /* remove dest */
             }
         }
@@ -1009,6 +1011,15 @@ int poldek_load_sources(struct poldek_ctx *ctx)
     ctx->_iflags |= SOURCES_LOADED;
     return rc;
 }
+
+struct pkgdir *poldek_load_destination_pkgdir(struct poldek_ctx *ctx)
+{
+    return pkgdb_to_pkgdir(ctx->pmctx, ctx->ts->rootdir, NULL,
+                           ctx->ts->pm_pdirsrc ? "source" : NULL,
+                           ctx->ts->pm_pdirsrc ? ctx->ts->pm_pdirsrc : NULL,
+                           NULL);
+}
+
 
 
 int poldek_is_interactive_on(const struct poldek_ctx *ctx)

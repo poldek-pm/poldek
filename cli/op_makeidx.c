@@ -211,9 +211,10 @@ static int make_idx(struct arg_s *arg_s)
             const char *t = n_array_nth(types, j);
             msgn(0, "Making '%s' index of %s (type=%s)...", t,
                  source_idstr(src), src->type);
+            MEMINF("before");
             if (!source_make_idx(src, t, path, arg_s->crflags))
                 nerr++;
-            mem_info(-2, "MEM after mkidx");
+            MEMINF("after");
         }
     }
 

@@ -519,8 +519,20 @@ struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi)
     return cr;
 }
 
+int capreq_arr_store_n(tn_array *arr)
+{
+    register int i, n = 0;
+    
+    for (i=0; i < n_array_size(arr); i++) {
+        struct capreq *cr = n_array_nth(arr, i);
+        if (capreq_is_bastard(cr))
+            continue;
+        n++;
+    }
+    return n;
+}
 
-tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf)
+tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
 {
     int32_t size;
     int16_t arr_size;
@@ -528,13 +540,15 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf)
 
     n_assert(n_array_size(arr) < INT16_MAX);
     
-    arr_size = 0;
-    for (i=0; i < n_array_size(arr); i++) {
-        struct capreq *cr = n_array_nth(arr, i);
-        if (!capreq_is_bastard(cr))
-            arr_size++;
+    arr_size = n;
+    if (n == 0) {
+        for (i=0; i < n_array_size(arr); i++) {
+            struct capreq *cr = n_array_nth(arr, i);
+            if (!capreq_is_bastard(cr))
+                arr_size++;
+        }
     }
-    
+    n_assert(arr_size);
     if (arr_size == 0)
         return NULL;
     
@@ -557,7 +571,6 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf)
     }
 
     n_buf_puts(nbuf, "\n");
-    
     //printf("tells %d\n", n_buf_tell(nbuf));
     
     size = n_buf_tell(nbuf) - off - sizeof(uint16_t);
@@ -573,6 +586,7 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf)
     return nbuf;
 }
 
+#if 0                           /* ununsed */
 int capreq_arr_store_st(tn_array *arr, const char *prefix, tn_stream *st)
 {
     tn_buf *nbuf;
@@ -587,7 +601,7 @@ int capreq_arr_store_st(tn_array *arr, const char *prefix, tn_stream *st)
     
     return rc;
 }
-
+#endif
 
 tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf) 
 {

@@ -4,8 +4,8 @@
 
 struct pm_module pm_module_rpm = {
     0, "rpm",
-    (void *(*)(void *))pm_rpm_init, pm_rpm_destroy,
-    
+    (void *(*)(void))pm_rpm_init, pm_rpm_destroy,
+    pm_rpm_configure,
     pm_rpm_rpmlib_caps,
     
     pm_rpm_dbpath, 
@@ -34,6 +34,7 @@ struct pm_module pm_module_rpm = {
     (struct pkg *(*)(tn_alloc *, void *, const char *, unsigned, unsigned))pm_rpm_ldhdr,
     (tn_array *(*)(tn_array *, void *, int))pm_rpm_ldhdr_capreqs,
     pm_rpm_ldpkg,
+    pm_rpm_db_to_pkgdir,
     pm_rpm_machine_score,
 };
 

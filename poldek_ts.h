@@ -86,8 +86,8 @@ struct poldek_ts {
     struct poldek_ctx  *ctx;
     struct pkgdb       *db;
     struct pm_ctx      *pmctx;
-    struct source      *_destsrc; /* for pset */
-    tn_array  *pkgs;
+    struct source      *pm_pdirsrc; /* for 'pdir' PM */
+    tn_array           *pkgs;
     
     struct arg_packages  *aps;
     struct pkgmark_set   *pms;
@@ -161,6 +161,8 @@ void install_info_destroy(struct install_info *iinf);
 
 int poldek_ts_run(struct poldek_ts *ts, struct install_info *iinf);
 
+struct pkgdir;
+struct pkgdir *poldek_ts_load_dest_pkgdir(struct poldek_ts *ts);
 //int poldek_ts_do_install_dist(struct poldek_ts *ts);
 //int poldek_ts_do_install(struct poldek_ts *ts, struct install_info *iinf);
 //int poldek_ts_do_uninstall(struct poldek_ts *ts, struct install_info *iinf);

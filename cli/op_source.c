@@ -1,4 +1,3 @@
-
 /* 
   Copyright (C) 2000 - 2003 Pawel A. Gajda (mis@k2.net.pl)
  
@@ -147,6 +146,36 @@ struct poclidek_opgroup poclidek_opgroup_source = {
     &poclidek_source_argp_child,
     oprun,
 };
+#if 0
+/* PM[:SOURCE|PATH] */
+static int parse_destspec(char *spec, struct arg_s *arg_s)
+{
+    char *p, *q;
+
+    if ((p = strchr(spec, ':')) == NULL) {
+        logn(LOGERR, _("%s: invalid destination specified"), spec);
+        return 0;
+    }
+    *p = '\0';
+
+    if (strlen(spec) > sizeof(arg_s->destpm) - 1) {
+        logn(LOGERR, _("%s: unknown PM specified"), spec);
+        return 0;
+    }
+    
+    q = spec;
+    while (*q) {
+        if (!isalnum(*q)) {
+            logn(LOGERR, _("%s: unknown PM specified"), spec);
+            return 0;
+        }
+        q++;
+    }
+    n_snprintf(arg_s->destpm, sizeof(arg_s->destpm), "%s", spec);
+    
+    if (strchr(spec, 
+}
+#endif
 
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -239,7 +268,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (arg_s->curr_src_type == NULL)
                 arg_s->curr_src_type = source_type;
             
-            arg_s->dst = source_new_pathspec(arg_s->curr_src_type, arg, NULL);
+            arg_s->srcdst = source_new_pathspec(arg_s->curr_src_type, arg, NULL);
             break;
             
         case 'P':
@@ -286,8 +315,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case ARGP_KEY_END:
-            if (arg_s->dst) {    /* configure as last source */
-                poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->dst);
+            if (arg_s->srcdst) {    /* configure as last source */
+                poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->srcdst);
                 poldek_configure(arg_s->ctx, POLDEK_CONF_PM, "pset");
             }
             //argp_usage (state);
