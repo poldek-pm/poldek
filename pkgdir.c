@@ -659,6 +659,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
             rm_dir_files(tmpath);
             verbose++;
         }
+        msg(1, "_\n");
         
     } else {
         logn(LOGWARN, _("%s: desynchronized index, try --upa"),

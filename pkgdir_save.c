@@ -129,8 +129,10 @@ static void fprintf_pkg_fl(const struct pkg *pkg, FILE *stream, tn_array *depdir
         fl = NULL;
     }
     	
-    if (fl == NULL)
+    if (fl == NULL) {
+        pkgflmodule_allocator_pop_mark(flmark);
         return;
+    }
     
     pkgfl_array_store_order(fl);
         
@@ -306,7 +308,7 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
         logn(LOGERR, "cannot prepare idxpath");
         return 0;
     }
-    
+
     msgn_tty(1, _("Writing %s..."), vf_url_slim_s(path, 0));
     msgn_f(1, _("Writing %s..."), path);
     
