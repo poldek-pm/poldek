@@ -30,6 +30,9 @@ int arg_packages_setup(struct arg_packages *aps);
 #define ARG_PACKAGES_RESOLV_MISSINGOK   (1 << 1)/* be quiet if nothing matches*/
 #define ARG_PACKAGES_RESOLV_UNAMBIGUOUS (1 << 2)/* don't match duplicates */
 #define ARG_PACKAGES_RESOLV_CAPS        (1 << 3)/* search in package caps too */
+#define ARG_PACKAGES_RESOLV_CAPSINLINE  (1 << 4)/* add packages found by caps
+                                                   to resolved packages
+                                                 */
 
 int arg_packages_resolve(struct arg_packages *aps,
                          tn_array *avpkgs,

@@ -367,6 +367,9 @@ int get_conf_opt_list(const tn_hash *htcnf, const char *name,
 {
     tn_array *list;
     int i = 0;
+
+    if (n_array_size(tolist) > 0)
+        return 0;
     
     if ((list = poldek_conf_get_multi(htcnf, name))) {
         for (i=0; i < n_array_size(list); i++)

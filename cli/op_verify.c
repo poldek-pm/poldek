@@ -47,7 +47,7 @@ static struct argp_option options[] = {
 {"verify-fileconflicts",  OPT_FILECNFLS, 0, 0,
      N_("Verify file conflicts"),OPT_GID },
 {"verify-all",  OPT_ALL, 0, 0,
-     N_("Verify dependencies, conflicts and file conflicts"), OPT_ALL },
+     N_("Verify dependencies, conflicts and file conflicts"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -100,12 +100,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_DEPS:
             arg_s->verify = 1;
             ts->setop(ts, POLDEK_OP_VRFY_DEPS, 1);
-            poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_VRFY_DEPS, 1);
+            //poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_VRFY_DEPS, 1);
             break;
 
         case OPT_CNFLS:
             arg_s->verify = 1;
-            poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_VRFY_CNFLS, 1);
+            ts->setop(ts, POLDEK_OP_VRFY_CNFLS, 1);
+            //poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_VRFY_CNFLS, 1);
             break;
 
         case OPT_FILECNFLS:

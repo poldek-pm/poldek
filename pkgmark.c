@@ -130,6 +130,46 @@ int pkgmark_isset(struct pkgmark_set *pmark, struct pkg *pkg, uint32_t flag)
     return 0;
 }
 
+int pkgmark_pkg_drags(struct pkg *pkg, struct pkgmark_set *pms, int deep) 
+{
+    int i, ndragged = 0;
+    
+    if (pkg->reqpkgs == NULL || deep <= 0)
+        return 0;
+    
+    for (i=0; i < n_array_size(pkg->reqpkgs); i++) {
+        struct reqpkg *rpkg = n_array_nth(pkg->reqpkgs, i);
+        int markit = 1;
+        
+        if (pms && pkg_is_marked(pms, rpkg->pkg))
+            continue;
+        
+        if (pms)
+            n_assert(!pkg_is_dep_marked(pms, rpkg->pkg));
+                
+        if (rpkg->flags & REQPKG_MULTI) {
+            struct reqpkg *eqpkg;
+            int n;
+
+            n = 1;
+            eqpkg = rpkg->adds[0];
+            while (eqpkg) {
+                if (pms && pkg_is_marked(pms, eqpkg->pkg)) {
+                    markit = 0;
+                    break;
+                }
+                eqpkg = rpkg->adds[n++];
+            }
+        }
+
+        if (markit) {
+            ndragged += pkgmark_pkg_drags(rpkg->pkg, pms, deep - 1);
+            ndragged++;
+        }
+    }
+    
+    return ndragged;
+}
 
 static
 void visit_mark_reqs(struct pkg *parent_pkg,
@@ -144,40 +184,74 @@ void visit_mark_reqs(struct pkg *parent_pkg,
     if (pkg_isnot_marked(pms, pkg)) {
         n_assert(parent_pkg != NULL);
         n_assert(req != NULL);
+        n_assert(deep >= 0);
         msgn_i(1, deep, _("%s marks %s (cap %s)"), pkg_snprintf_s(parent_pkg),
                pkg_snprintf_s0(pkg), capreq_snprintf_s(req));
         pkg_dep_mark(pms, pkg);
     }
     
-    deep += 2;
-    if (pkg->reqpkgs) {
-        for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
-            struct reqpkg *rpkg = n_array_nth(pkg->reqpkgs, i);
-
-            if (pkg_is_marked(pms, rpkg->pkg))
-                continue;
+    if (pkg->reqpkgs == NULL)
+        return;
+    
+    DBGF("%s (%s)\n", pkg_snprintf_s0(pkg),
+         req ? capreq_snprintf_s(req) : "null");
+    
+    for (i=0; i < n_array_size(pkg->reqpkgs); i++) {
+        struct reqpkg *rpkg = n_array_nth(pkg->reqpkgs, i);
+        tn_array *equivalents = NULL;
+        struct pkg *tomark = NULL;
+        int markit = 1;
             
-            if (!pkg_is_dep_marked(pms, rpkg->pkg)) {
-                int markit = 1;
+            
+        if (pkg_is_marked(pms, rpkg->pkg))
+            continue;
+            
+        n_assert(!pkg_is_dep_marked(pms, rpkg->pkg));
+            
+        tomark = rpkg->pkg;
+        if (rpkg->flags & REQPKG_MULTI) {
+            struct reqpkg *eqpkg;
+            int n = 0;
                 
-                if (rpkg->flags & REQPKG_MULTI) {
-                    struct reqpkg *eqpkg;
-                    int n;
-
-                    n = 1;
-                    eqpkg = rpkg->adds[0];
-                    while (eqpkg) {
-                        if (pkg_is_marked(pms, eqpkg->pkg)) {
-                            markit = 0;
-                            break;
-                        }
-                        eqpkg = rpkg->adds[n++];
+            while ((eqpkg = rpkg->adds[n++])) {
+                if (pkg_is_marked(pms, eqpkg->pkg)) {
+                    markit = 0;
+                    break;
+                        
+                } else {
+                    if (equivalents == NULL) {
+                        equivalents = n_array_new(32, NULL, NULL);
+                        n_array_push(equivalents, rpkg->pkg);
                     }
+                    n_array_push(equivalents, eqpkg->pkg);
                 }
-
-                if (markit)
-                    visit_mark_reqs(pkg, rpkg->req, rpkg->pkg, pms, deep);
             }
+        }
+
+        tomark = rpkg->pkg;
+        if (markit && equivalents) {
+            int j, ndragged_min = INT_MAX - 1;
+            for (j=0; j < n_array_size(equivalents); j++) {
+                struct pkg *p = n_array_nth(equivalents, j);
+                int ndragged = pkgmark_pkg_drags(p, pms, 2);
+
+                DBGF("- %s %d\n", pkg_snprintf_s0(p), ndragged);
+                if (ndragged < ndragged_min) {
+                    ndragged_min = ndragged;
+                    tomark = p;
+                }
+            }
+        }
+        
+        if (equivalents) {
+            n_array_free(equivalents);
+            equivalents = NULL;
+        }
+        
+        if (markit) {
+            n_assert(tomark);
+            DBGF("-> %s\n", pkg_snprintf_s0(tomark));
+            visit_mark_reqs(pkg, rpkg->req, tomark, pms, deep + 2);
         }
     }
 }
@@ -198,7 +272,7 @@ int depmark_packages(struct pkgmark_set *pms,
             struct pkg *pkg = n_array_nth(tomark, i);
     
             n_assert(pkg_is_hand_marked(pms, pkg));
-            visit_mark_reqs(NULL, NULL, pkg, pms, 0);
+            visit_mark_reqs(NULL, NULL, pkg, pms, -2);
         }
     }
 

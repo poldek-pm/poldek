@@ -151,6 +151,7 @@ pkgfl_store
 pkgmark_get_packages
 pkgmark_isset
 pkgmark_massset
+pkgmark_pkg_drags
 pkgmark_set
 pkgmark_set_free
 pkgmark_set_new

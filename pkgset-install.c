@@ -153,9 +153,9 @@ int is_installable(struct pkg *pkg, struct poldek_ts *ts, int is_hand_marked)
         install = -1;
         
     } else {
-        if (pkg_is_scored(pkg, PKG_HELD)) {
+        if (pkg_is_scored(pkg, PKG_HELD) && ts->getop(ts, POLDEK_OP_HOLD)) {
             logn(LOGERR, _("%s: refusing to upgrade held package"),
-                pkg_snprintf_s(pkg));
+                 pkg_snprintf_s(pkg));
             install = 0;
             
         } else if (cmprc <= 0 && force == 0 &&
@@ -1920,7 +1920,7 @@ static int verify_holds(struct upgrade_s *upg)
     if (poldek_ts_issetf(upg->ts, POLDEK_TS_UPGRADE) == 0)
         return 1;
 
-    if (upg->ts->hold_patterns == NULL)
+    if (upg->ts->hold_patterns == NULL || !upg->ts->getop(upg->ts, POLDEK_OP_HOLD))
         return 1;
 
     for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
@@ -2230,7 +2230,8 @@ void mapfn_mark_newer_pkg(const char *n, uint32_t e,
 
     pkg = n_array_nth(upg->avpkgs, i);
     if (cmprc > 0) {
-        if (pkg_is_scored(pkg, PKG_HELD)) {
+        if (pkg_is_scored(pkg, PKG_HELD) &&
+            upg->ts->getop(upg->ts, POLDEK_OP_HOLD)) {
             msgn(1, _("%s: skip held package"), pkg_snprintf_s(pkg));
             
         } else {

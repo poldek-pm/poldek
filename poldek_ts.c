@@ -29,6 +29,7 @@
 #include "poldek_intern.h"
 #include "poldek_term.h"
 #include "pkgset.h"
+#include "pkgset-req.h"
 #include "pkgmisc.h"
 #include "pkgset-req.h"
 #include "arg_packages.h"
@@ -104,6 +105,9 @@ void poldek_ts_free(struct poldek_ts *ts)
 void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
 {
     n_assert(bitvect_slot(optv) < sizeof(ts->_opvect)/sizeof(bitvect_slot_itype));
+    
+    n_assert(optv != POLDEK_OP_VRFY_DEPS);
+    
     switch (optv) {
         case POLDEK_OP_PROMOTEPOCH:
             poldek_conf_PROMOTE_EPOCH = on;
@@ -479,12 +483,23 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
                     
                     tl = tl_save = n_str_tokl(vs, ",");
                     while (*tl) {
-                        n_array_push(patterns, n_strdup(*tl));
+                        if (**tl)
+                            n_array_push(patterns, n_strdup(*tl));
                         tl++;
                     }
                     n_str_tokl_free(tl_save);
                 }
             }
+#if ENABLE_TRACE            
+            {
+                int i;
+                for (i=0; i < n_array_size(ts->hold_patterns); i++) {
+                    char *mask = n_array_nth(ts->hold_patterns, i);
+                    DBGF_F("hold %s\n", mask);
+                }
+            }
+#endif            
+            
             break;
         }
             
@@ -571,9 +586,9 @@ int poldek_ts_get_arg_count(struct poldek_ts *ts)
     return arg_packages_size(ts->aps);
 }
 
-#define TS_MARK_DEPS     (1 << 0)
-#define TS_MARK_VERBOSE  (1 << 1)
-
+#define TS_MARK_DEPS        (1 << 0)
+#define TS_MARK_VERBOSE     (1 << 1)
+#define TS_MARK_CAPSINLINE  (1 << 2)
 static
 int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags) 
 {
@@ -586,6 +601,9 @@ int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags)
 
     if (ts->getop(ts, POLDEK_OP_CAPLOOKUP))
         apsflags |= ARG_PACKAGES_RESOLV_CAPS;
+
+    if (flags & TS_MARK_CAPSINLINE)
+        apsflags |= ARG_PACKAGES_RESOLV_CAPSINLINE;
     
     if (arg_packages_resolve(ts->aps, ts->ctx->ps->pkgs,
                              ts->ctx->ps, apsflags)) {
@@ -720,7 +738,18 @@ static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf)
           ts->ctx->ts->hold_patterns);
     cp_arr_ifnull(&ts->hold_patterns, ts->ctx->ts->hold_patterns);
     cp_arr_ifnull(&ts->ign_patterns, ts->ctx->ts->ign_patterns);
-    
+
+#if 0
+    {
+        int i;
+        
+        for (i=0; i < n_array_size(ts->hold_patterns); i++) {
+            char *mask = n_array_nth(ts->hold_patterns, i);
+            DBGF_F("hold %s\n", mask);
+        }
+    }
+#endif
+
     if (ts->rootdir == NULL)
         ts->rootdir = n_strdup("/");
     
@@ -789,7 +818,7 @@ int ts_run_install_dist(struct poldek_ts *ts)
     int rc, ndeperr = 0;
     tn_array *pkgs = NULL;
 
-    if (!ts_mark_arg_packages(ts, TS_MARK_DEPS)) {
+    if (!ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_CAPSINLINE)) {
         logn(LOGERR, _("Nothing to do"));
         return 0;
     }
@@ -949,7 +978,8 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
         if (!poldek_load_sources(ts->ctx))
             return 0;
         
-        rc = ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_VERBOSE);
+        rc = ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_VERBOSE |
+                                  TS_MARK_CAPSINLINE);
         pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
     }
 
@@ -963,16 +993,30 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
     }
     
     if (ts->getop(ts, POLDEK_OP_VRFY_CNFLS)) {
-        msgn(0, _("Verifying conflicts..."));
-        if (poldek_ts_get_arg_count(ts) == 0) { /* whole set */
-            logn(LOGNOTICE, "Not implemented yet...");
-            
-        } else {
+        if (poldek_ts_get_arg_count(ts) > 0) {
+            msgn(0, _("Verifying conflicts..."));
             if (!pkgmark_verify_set_conflicts(ts->pms))
                 nerr++;
+            
+        } else { /* whole set, just report all conflicts  */
+            int i, j;
+            msgn(0, _("Package set conflicts..."));
+            for (i=0; i<n_array_size(ts->ctx->ps->pkgs); i++) {
+                struct pkg *pkg = n_array_nth(ts->ctx->ps->pkgs, i);
+                if (pkg->cnflpkgs == NULL) continue;
+                
+                msg(0, "%s -> ", pkg_snprintf_s(pkg)); 
+                for (j=0; j<n_array_size(pkg->cnflpkgs); j++) {
+                    struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
+                    msg(0, "_%s%s, ", cpkg->flags & REQPKG_OBSOLETE ? "*":"", 
+                        pkg_snprintf_s(cpkg->pkg));
+                }
+                msg(0, "_\n");
+            }
         }
     }
-        
+
+    
     if (nerr == 0)
         msgn(0, _("Package set OK"));
     return nerr == 0;

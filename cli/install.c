@@ -94,7 +94,7 @@ static struct argp_option options[] = {
 
 {"promoteepoch", OPT_PROMOTEEPOCH, 0, 0,
      N_("Promote non-existent requirement's epoch to "
-        "package's one (rpm < 4.2.1 behaviour)"), OPT_GID }, 
+        "package's one (rpm < 4.2.1 behaviour)"), OPT_GID },
                                            
 
 {"dump", OPT_INST_DUMP, "FILE", OPTION_ARG_OPTIONAL,
@@ -153,10 +153,10 @@ static struct argp_option cmdl_options[] = {
      OPT_GID },
 {"nohold", OPT_INST_NOHOLD, 0, 0,
  N_("Do not hold any packages"), OPT_GID },
-
+                                                
 {"ignore", OPT_INST_IGNORE, "PACKAGE[,PACKAGE]...", 0,
  N_("Make packages listed invisible."), OPT_GID },
-    
+
 {"noignore", OPT_INST_NOIGNORE, NULL, 0,
  N_("Make invisibled packages visible."), OPT_GID },
 
@@ -288,9 +288,9 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case OPT_INST_NOHOLD:
-            ts->setop(ts, POLDEK_OP_HOLD, 0);
+            poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_HOLD, 0);
             break;
-            
+
         case OPT_INST_IGNORE:
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_IGNORE, 1);
             poldek_configure(ts->ctx, POLDEK_CONF_IGNORE, arg);
@@ -298,6 +298,7 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_INST_NOIGNORE:
             ts->setop(ts, POLDEK_OP_IGNORE, 0);
+            poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_IGNORE, 0);
             break;
 
         case OPT_INST_UNIQNAMES:
@@ -400,6 +401,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_INST_DOWNGRADE:
             poldek_ts_setf(ts, POLDEK_TS_DOWNGRADE);
+            break;
+
+        case OPT_INST_HOLD:
+            ts->setop(ts, POLDEK_OP_HOLD, 1);
+            poldek_ts_configure(ts, POLDEK_CONF_HOLD, arg);
+            break;
+            
+        case OPT_INST_NOHOLD:
+            ts->setop(ts, POLDEK_OP_HOLD, 0);
             break;
 
         case OPT_INST_ROOTDIR:

@@ -5,20 +5,16 @@
 # It's sample, but really works and takes about 50 MB
 
 basesystem
-bdflush
 binutils
-bsp
 bzip2
 chkconfig
 cracklib
 cracklib-dicts
-db3
 dev
 e2fsprogs
 ed
 FHS
 file
-fileutils
 findutils
 fix-info-dir
 diffutils
@@ -59,12 +55,10 @@ rpm
 sed
 setup
 shadow
-sh-utils
 @syslogdaemon syslog
 SysVinit
 tar
 terminfo
-textutils
 tmpwatch
 utempter
 util-linux

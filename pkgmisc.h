@@ -106,6 +106,8 @@ void pkgmark_massset(struct pkgmark_set *pmark, int set, uint32_t flag);
 
 /* mark packages (PKGMARK_{MARK,DEP}) to pms */
 int packages_mark(struct pkgmark_set *pms, const tn_array *pkgs, int withdeps);
+/* check how many packages are required by pkg */
+int pkgmark_pkg_drags(struct pkg *pkg, struct pkgmark_set *pms, int deep);
 /* .. and then verify marked set  */
 int pkgmark_verify_set_conflicts(struct pkgmark_set *pms);
 
