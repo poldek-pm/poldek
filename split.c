@@ -215,7 +215,7 @@ static void mapfn_chunk_dump(struct pkg *pkg, void *arg)
 {
     struct chunk *chunk = arg;
     if (pkg->pri == chunk->no)
-        fprintf(chunk->stream, "%s\n", pkg_snprintf_s(pkg));
+        fprintf(chunk->stream, "%s\n", pkg_filename_s(pkg));
 }
 
 
@@ -243,7 +243,6 @@ int make_chunks(tn_array *pkgs, int split_size, const char *outprefix)
         struct pkg *pkg = n_array_nth(pkgs, i);
         set_chunk(pkg, pkg->pri, 0, 1);
     }
-
 
     n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
     for (i=0; i < chunk_no; i++) {
@@ -275,9 +274,10 @@ int make_chunks(tn_array *pkgs, int split_size, const char *outprefix)
         if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
             return 0;
 
+#if 0        
         fprintf(vf->vf_stream, "# chunk #%d: %d packages, %d bytes\n",
                 i, chunk.items, chunk.size);
-
+#endif
         chunk.stream = vf->vf_stream;
         n_array_map_arg(pkgs, (tn_fn_map2)mapfn_chunk_dump, &chunk);
         vfile_close(vf);
@@ -330,7 +330,7 @@ int packages_split(tn_array *pkgs, unsigned split_size,
             }
 
         if (pri != 0)
-            set_pri(pkg, pri, verbose, 1);
+            set_pri(pkg, pri, 1, verbose);
         n_array_push(packages, pkg_link(pkg));
     }
     
