@@ -48,7 +48,9 @@ else
 	fi
 fi
 
-AC_CHECK_LIB(tinfo, tigetstr,,AC_MSG_ERROR("tinfo not found"))
+
+AC_CHECK_LIB(tinfo, tigetstr,,
+	AC_CHECK_LIB(ncurses, tigetstr, , AC_MSG_ERROR("tinfo nor ncurses not found")))
 
 AC_ARG_WITH(curl,
 [  --without-curl	compile without libcurl],
