@@ -1,14 +1,10 @@
 # $Id$
 # Sample poldek configuration
 
-source = [pld] ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
+source = pld ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
 
-source = [pld-test,noauto] ftp://ftp.pld.org.pl/dists/ra/test/i686/
-source = [mysrc,noauto] ftp://ftp.znienacka.com.pl/RPMS/
-#source = http://www.znienacka.com.pl/RPMS/
-#source = rsync://rsync.znienacka.com.pl/PLD/packages.dir
-source = [pld-rsync,noauto] rsync://ftp.pld.org.pl/PLD-1.0/i686/PLD/
-
+source = pld-test,noauto ftp://ftp.pld.org.pl/dists/ra/test/i686/
+source = mysrc,noauto ftp://ftp.znienacka.com.pl/RPMS/
 
 # If package index and packages stored under diffrent locations, 
 # then source and packages prefix must be numbered
