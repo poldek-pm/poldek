@@ -836,6 +836,9 @@ static void poldek_vf_vlog_cb(int pri, const char *fmt, va_list ap)
     
     if (pri & VFILE_LOG_INFO)
         logpri |= LOGINFO;
+
+    if (pri & VFILE_LOG_WARN)
+        logpri |= LOGWARN;
     
     else if (pri & VFILE_LOG_ERR)
         logpri |= LOGERR;
