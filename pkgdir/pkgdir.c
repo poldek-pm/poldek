@@ -815,6 +815,34 @@ int pkgdir_save(struct pkgdir *pkgdir, unsigned flags)
 }
 
 
+static
+struct pkgdir *load_orig_pkgdir(struct pkgdir *pkgdir, const char *path,
+                                const char *idxpath, const char *type)
+{
+    struct pkgdir *orig = NULL;
+    const char *orig_path;
+    char orig_name[64];
+
+    orig_path = path ? path : idxpath ? idxpath : pkgdir->path;
+    n_assert(orig_path);
+        
+    if (access(orig_path, R_OK) == 0) {
+        n_snprintf(orig_name, sizeof(orig_name), "previous %s", 
+                   vf_url_slim_s(orig_path, 0));
+
+        orig = pkgdir_open_ext(orig_path, pkgdir->path, type,
+                               orig_name, NULL, 0, pkgdir->lc_lang);
+    }
+        
+    if (orig && pkgdir_load(orig, NULL, 0) <= 0) {
+        pkgdir_free(orig);
+        orig = NULL;
+    }
+    return orig;
+}
+
+    
+
 int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
                    const char *path, unsigned flags)
 {
@@ -822,7 +850,7 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
 	const struct pkgdir_module  *mod;
     const char                  *idxpath = NULL;
     tn_hash                     *avlangs_h, *avlangs_h_tmp;
-    int                         nerr = 0, loadorig = 0;
+    int                         nerr = 0;
 
 
     n_assert(pkgdir->idxpath);
@@ -841,14 +869,17 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
 		return 0;
     
     avlangs_h = avlangs_h_tmp = NULL;
-    if (flags & PKGDIR_CREAT_MINi18n) {
+    
+    /* strip langs to current locale settings? */
+    if (flags & PKGDIR_CREAT_MINi18n) { 
         n_assert(flags & PKGDIR_CREAT_NOPATCH);
         if ((avlangs_h = pkgdir__strip_langs(pkgdir))) {
             avlangs_h_tmp = pkgdir->avlangs_h;
             pkgdir->avlangs_h = avlangs_h;
         }
     }
-    
+
+    /* sanity check: UNIQ is requested for already uniqued pkgdir */
     if ((flags & PKGDIR_CREAT_NOUNIQ) == 0 &&
         (pkgdir->flags & (PKGDIR_DIFF | PKGDIR_UNIQED)) == 0) {
         n_assert(0);
@@ -856,51 +887,14 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
     }
 
     orig = NULL;
-    loadorig = 1;
-
-    if (pkgdir->prev_pkgdir) {
-        loadorig = 0;
+    if (pkgdir->prev_pkgdir) {  /* already loaded, so use it */
         orig = pkgdir->prev_pkgdir;
         
-    } else if (pkgdir_isremote(pkgdir))
-        loadorig = 0;
+    } else if (! (pkgdir_isremote(pkgdir) || (flags & PKGDIR_CREAT_NOPATCH) ||
+                  (mod->cap_flags & PKGDIR_CAP_UPDATEABLE_INC) == 0         ||
+                  (idxpath && access(idxpath, R_OK) != 0)) )
+        orig = load_orig_pkgdir(pkgdir, path, idxpath, type);
     
-    else if (flags & PKGDIR_CREAT_NOPATCH)
-        loadorig = 0;
-    
-    else if ((mod->cap_flags & PKGDIR_CAP_UPDATEABLE_INC) == 0)
-        loadorig = 0;
-    
-    else if (idxpath && access(idxpath, R_OK) != 0)
-        loadorig = 0;
-
-#if 0        
-        /* the same and not changed */
-    if ((pkgdir->flags & PKGDIR_CHANGED) == 0 && 
-           (path && strcmp(pkgdir->path, path) == 0))
-        goto l_end;
-#endif
-    
-    if (loadorig) {
-        const char *orig_path;
-        char orig_name[64];
-
-        orig_path = path ? path : idxpath ? idxpath : pkgdir->path;
-        n_assert(orig_path);
-        
-        if (access(orig_path, R_OK) == 0) {
-            n_snprintf(orig_name, sizeof(orig_name), "previous %s", 
-                       vf_url_slim_s(orig_path, 0));
-
-            orig = pkgdir_open_ext(orig_path, pkgdir->path, type,
-                                   orig_name, NULL, 0, pkgdir->lc_lang);
-        }
-        
-        if (orig && pkgdir_load(orig, NULL, 0) <= 0) {
-            pkgdir_free(orig);
-            orig = NULL;
-        }
-    }
 
     n_assert(nerr == 0);
     if (!do_create(pkgdir, type, path, flags))
