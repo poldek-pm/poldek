@@ -84,7 +84,7 @@ test_match_LDADD    = $(poldek_LDADD)
 EXTRA_DIST = poldek.1 poldek.pod \
 	     Makefile.extra *sample* \
 	     poldek.spec* $(bin_SCRIPTS) \
-	     trurlib
+	     trurlib/
 
 OMIT_DEPENDENCIES = narray.h tfn_types.h nassert nbuf.h nhash.h nlist.h nstr.h \
 		    nassert.h trurl.h
@@ -125,11 +125,8 @@ mkpackagedir:
 
 vfjuggle: 
 
-dist-hook: dist-trurlib
+dist-hook: 
 	-rm -rf $(distdir)/.deps
-
-dist-trurlib:
-	-cp -a trurlib $(distdir)/trurlib
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa*
