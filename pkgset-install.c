@@ -868,7 +868,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
     n = pkgdb_get_obsoletedby_pkg(db, upg->uninst_set->dbpkgs, pkg, getflags,
                                   PKG_LDWHOLE_FLDEPDIRS);
     
-    DBGF_F("%s, n = %d\n", pkg_snprintf_s(pkg), n);
+    DBGF("%s, n = %d\n", pkg_snprintf_s(pkg), n);
     if (n == 0)
         return;
     
