@@ -913,8 +913,9 @@ void parse_options(int argc, char **argv)
     }
 
     if ((args.switches & OPT_SW_NOCONF) == 0) 
-        poldek_load_config(args.ctx, args.conf_path);
-
+        if (!poldek_load_config(args.ctx, args.conf_path))
+            exit(EXIT_FAILURE);
+            
 
 
     if (args.mjrmode == MODE_NULL && args.mnrmode == MODE_NULL) {
