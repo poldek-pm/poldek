@@ -206,6 +206,7 @@ const char *tmpdir(void)
     return tmpdir;
 }
 
+#if 0                           /* not used */
 static
 int valid_dir(const char *envname, const char *dir) 
 {
@@ -243,7 +244,7 @@ int valid_dir(const char *envname, const char *dir)
 
     return rc;
 }
-
+#endif
 
 char *trimslash(char *path) 
 {
