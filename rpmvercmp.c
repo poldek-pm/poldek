@@ -7,16 +7,37 @@
 
 int main(int argc, char *argv[])
 {
-    int cmprc;
+    int cmprc, is_test = 0;
+    const char *v1, *v2;
+
     
-    if (argc != 3) {
-        printf("Usage: rpmvercmp VERSION1 VERSION2\n");
+    if (argc < 3) {
+        printf("Usage: rpmvercmp [-t] VERSION1 VERSION2\n");
         exit(EXIT_SUCCESS);
     }
 
-    cmprc = rpmvercmp(argv[1], argv[2]);
-    printf("%s %s %s\n", argv[1], cmprc == 0 ?  "==" : cmprc > 0 ? ">" : "<",
-           argv[2]);
+    if (argc == 3) {
+        v1 = argv[1];
+        v2 = argv[2];
+        
+    } else if (argc == 4 && strcmp(argv[1], "-t") == 0) {
+        v1 = argv[2];
+        v2 = argv[3];
+        is_test = 1;
+        
+    } else {
+        printf("Usage: rpmvercmp [-t] VERSION1 VERSION2\n");
+        exit(1);
+    }
+
+    
+    cmprc = rpmvercmp(v1, v2);
+    printf("%s %s %s\n", v1, cmprc == 0 ?  "==" : cmprc > 0 ? ">" : "<", v2);
+    if (is_test) {
+        cmprc = rpmvercmp(v2, v1);
+        printf("%s %s %s\n", v2, cmprc == 0 ?  "==" : cmprc > 0 ? ">" : "<", v1);
+    }
+    
     if (cmprc < 0)
         cmprc = 2;
     exit(cmprc);
