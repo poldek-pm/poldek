@@ -465,7 +465,7 @@ static int valid_fname(const char *fname, mode_t mode, const char *pkgname)
 #if 0  /*  */
     char *denychars = "\r\n\t |;";
     if (strpbrk(fname, denychars)) {
-        log(LOGINFO, "%s: bad habbit: %s \"%s\" with whitespaces\n",
+        log(LOGINFO, "%s: bad habit: %s \"%s\" with whitespaces\n",
             pkgname, S_ISDIR(mode) ? "dirname" : "filename", fname);
     }
 #endif     
