@@ -74,7 +74,8 @@ struct pkgdir {
    (pkgdir->idxpath ? vf_url_hidepasswd_s(pkgdir->idxpath) : NULL)
 
 #define pkgdir_idstr(p) \
- (((p)->flags & PKGDIR_NAMED) ? (p)->name : vf_url_slim_s((p)->idxpath, 0))
+ (((p)->flags & PKGDIR_NAMED) ? (p)->name : vf_url_slim_s((p)->idxpath ? \
+ (p)->idxpath : (p)->path ? (p)->path : "anon", 0))
 
 struct pkgdir *pkgdir_malloc(void);
 void pkgdir_free(struct pkgdir *pkgdir);

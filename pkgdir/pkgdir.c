@@ -524,7 +524,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         for (i=0; i < n_array_size(depdirs); i++) {
             char *dn = n_array_nth(depdirs, i);
             if (n_array_bsearch(pkgdir->depdirs, dn) == NULL) {
-                DBGMSG_F("ONLYDIR for %s: %s\n", pkgdir->path, dn);
+                DBGF("ONLYDIR for %s: %s\n", pkgdir->path, dn);
                 if (*dn == '/' && *(dn + 1) != '\0') 
                     dn++;
                 n_array_push(foreign_depdirs, dn);
@@ -539,8 +539,13 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     
     pkgdir->foreign_depdirs = foreign_depdirs;
 
-    if ((pkgdir->flags & PKGDIR_DIFF) == 0)
-        msgn(1, _("Loading %s..."), pkgdir_idstr(pkgdir));
+    if ((pkgdir->flags & PKGDIR_DIFF) == 0) {
+        if (verbose < 2)
+            msgn(1, _("Loading [%s]%s..."), pkgdir->type, pkgdir_idstr(pkgdir));
+        else
+            msgn(2, _("Loading [%s]%s..."), pkgdir->type,
+                 vf_url_slim_s(pkgdir->idxpath, 0));
+    }
     
     rc = 0;
     if (pkgdir->mod->load(pkgdir, ldflags) >= 0) {
@@ -690,7 +695,13 @@ int do_create(struct pkgdir *pkgdir, const char *type,
 
     orig_mod = NULL;
     mod_data = NULL;
-    
+
+    /*
+      MESS: pkgdir's mod && mod_data are replaced to saving it as other type.
+      The consequence is that module's create() nor pkg's load_pkguinf() and
+      load_nodep_fl() must NOT rely on pkgdir->mod_data -- modules should use
+      pkg's pkgdir_data to pass its arguments to this functions.
+    */
     if (!pkgdir_is_type(pkgdir, type)) {
         if ((mod = find_module(type)) == NULL)
             return 0;
@@ -773,8 +784,10 @@ int pkgdir_save(struct pkgdir *pkgdir, const char *type,
         goto l_end;
 
     } else {
-        msgn(1, _("Loading previous %s..."), vf_url_slim_s(path, 0));
-        if ((orig = pkgdir_open(path, NULL, type, ""))) {
+        char orig_name[64];
+        n_snprintf(orig_name, sizeof(orig_name), "previous %s",
+                   vf_url_slim_s(path, 0));
+        if ((orig = pkgdir_open(path, NULL, type, orig_name))) {
             if (pkgdir_load(orig, NULL, 0) <= 0) {
                 pkgdir_free(orig);
                 orig = NULL;
