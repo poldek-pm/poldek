@@ -134,6 +134,8 @@ int poldek_ts_issetf_all(struct poldek_ts *ts, uint32_t flag);
 
 int poldek_ts_op_touched(const struct poldek_ts *ts, int optv);
 int poldek_ts_is_interactive_on(const struct poldek_ts *ts);
+#define poldek_ts_keep_downloads(ts) \
+    (ts->getop_v(ts, POLDEK_OP_RPMTEST, POLDEK_OP_KEEP_DOWNLOADS, 0) == 0)
 
 
 #include <stdarg.h>

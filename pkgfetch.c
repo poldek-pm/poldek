@@ -274,6 +274,23 @@ int packages_fetch(struct pm_ctx *pmctx,
 }
 
 
+int packages_fetch_remove(tn_array *pkgs, const char *destdir)
+{
+    int i;
+    char path[PATH_MAX];
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        if (pkg->pkgdir && (vf_url_type(pkg->pkgdir->path) != VFURL_PATH))
+            if (pkg_localpath(pkg, path, sizeof(path), destdir)) {
+                DBGF("unlink %s\n", path); 
+                unlink(path);
+            }
+    }
+    return 1;
+}
+
+
 int packages_dump(tn_array *pkgs, const char *path, int fqfn)
 {
     int i;

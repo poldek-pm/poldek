@@ -2034,7 +2034,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         return 0;
 
     print_install_summary(upg);
-    pkgdb_close(ts->db); /* close db as soon as possible */
+    pkgdb_close(ts->db); /* release db as soon as possible */
 
     if (upg->nerr_dep || upg->nerr_cnfl) {
         char errmsg[256];
@@ -2112,8 +2112,12 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
                 return 0;
 
         rc = pm_pminstall(ts->db, pkgs, upg->uninst_set->dbpkgs, ts);
+        
         if (!is_test && iinf)
             update_install_info(iinf, upg, rc <= 0);
+
+        if (!poldek_ts_keep_downloads(ts) && !ts->getop(ts, POLDEK_OP_NOFETCH))
+            packages_fetch_remove(pkgs, ts->cachedir);
     }
     
     return rc;

@@ -137,25 +137,18 @@ int poldek_ts_op_touched(const struct poldek_ts *ts, int optv)
     return bitvect_isset(ts->_opvect_setmark, optv) > 0;
 }
 
-
 int poldek_ts_getop_v(const struct poldek_ts *ts, int optv, ...)
 {
     unsigned v = 0;
     va_list ap;
 
     va_start(ap, optv);
-    if (poldek_ts_getop(ts, optv)) {
-        DBGF("getop_v %d ON\n", optv);
-        v++;
-    }
-    
-        
-    while ((optv = va_arg(ap, int)) > 0) {
+    while (optv > 0) {
         if (poldek_ts_getop(ts, optv)) {
             DBGF("getop_v %d ON\n", optv);
             v++;
         }
-        
+        optv = va_arg(ap, int);
     }
     va_end(ap);
     return v;
@@ -708,8 +701,11 @@ int ts_run_upgrade_dist(struct poldek_ts *ts)
     ts->db = ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)
         return 0;
-    
+
+    pkgdb_tx_begin(ts->db);
     rc = do_poldek_ts_upgrade_dist(ts);
+    if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
+        pkgdb_tx_commit(ts->db);
     pkgdb_free(ts->db);
     ts->db = NULL;
     return rc;
@@ -742,8 +738,13 @@ int ts_run_install(struct poldek_ts *ts, struct install_info *iinf)
     ts->db = ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)
         return 0;
+    
+    pkgdb_tx_begin(ts->db);
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
     rc = do_poldek_ts_install(ts, iinf);
+    
+    if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
+        pkgdb_tx_commit(ts->db);
     pkgdb_free(ts->db);
     ts->db = NULL;
     return rc;
@@ -760,8 +761,10 @@ int ts_run_uninstall(struct poldek_ts *ts, struct install_info *iinf)
     ts->db = ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)
         return 0;
-    
+    pkgdb_tx_commit(ts->db);
     rc = do_poldek_ts_uninstall(ts, iinf);
+    if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
+        pkgdb_tx_commit(ts->db);
     pkgdb_free(ts->db);
     ts->db = NULL;
     return rc;

@@ -47,22 +47,6 @@ static struct pm_module *mod_tab[] = {
     NULL
 };
 
-
-struct pm_confent *pm_confent_new(void *data, void (*entfree)(void *))
-{
-    struct pm_confent *ent = n_malloc(sizeof(*ent));
-    ent->ent = data;
-    ent->entfree = entfree;
-}
-
-void pm_confent_free(struct pm_confent *ent)
-{
-    if (ent->ent && ent->entfree)
-        ent->entfree(ent->ent);
-    free(ent);
-}
-
-
 int pm_module_init(void) 
 {
     int i;

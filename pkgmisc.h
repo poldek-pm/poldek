@@ -19,6 +19,7 @@ void packages_fetch_summary(struct pm_ctx *pmctx,
                             tn_array *pkgs, const char *destdir, int nosubdirs);
 int packages_fetch(struct pm_ctx *pmctx,
                    tn_array *pkgs, const char *destdir, int nosubdirs);
+int packages_fetch_remove(tn_array *pkgs, const char *destdir);
 
 struct poldek_ts;
 int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts);

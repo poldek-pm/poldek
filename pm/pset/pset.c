@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
@@ -43,10 +44,12 @@
 #include "pm_pset.h"
 #include "pkgset.h"
 
-struct pm_psetdb 
-{
+struct pm_psetdb {
     struct source *src;
     struct pkgset *ps;
+    char *tsdir;
+    tn_array *paths_added;
+    tn_array *paths_removed;
 };
 
 void pm_pset_destroy(void *pm_pset) 
@@ -65,7 +68,7 @@ void *pm_pset_init(void *null)
     
     pm_pset = n_malloc(sizeof(*pm_pset));
     
-    if (poldek_lookup_external_command(path, sizeof(path), "pset-install.sh"))
+    if (poldek_lookup_external_command(path, sizeof(path), "pset-pm.sh"))
         pm_pset->installer_path = n_strdup(path);
     else
         pm_pset->installer_path = NULL;
@@ -125,6 +128,9 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
     db = n_malloc(sizeof(*db));
     db->src = src;
     db->ps = ps;
+    db->paths_added = n_array_new(32, free, NULL);
+    db->paths_removed = n_array_new(32, free, NULL);
+    db->tsdir = NULL;
     return db;
 }
 
@@ -137,20 +143,59 @@ void pm_pset_closedb(void *dbh)
 void pm_pset_freedb(void *dbh) 
 {
     struct pm_psetdb *db = dbh;
-    if (db) {
-        if (db->ps)
-            pkgset_free(db->ps);
-        free(db);
+    
+    if (db == NULL)
+        return;
+    
+    if (db->ps)
+        pkgset_free(db->ps);
+    
+    if (db->tsdir) {
+        int i;
+        for (i=0; i < n_array_size(db->paths_added); i++) {
+            char *path = n_array_nth(db->paths_added, i);
+            DBGF_F("unlink %s\n", path);
+            unlink(path);
+        }
+        rmdir(db->tsdir);
     }
     
+    n_array_free(db->paths_added);
+    n_array_free(db->paths_removed);
+    memset(db, 0, sizeof(*db));
+    free(db);
 }
 
-void pm_pset_commitdb(void *dbh) 
+static int do_cp(const char *src, const char *dst)
 {
-    struct pm_psetdb *db = dbh;
-    logn(LOGNOTICE, "commit NIY");
-}
+    struct p_open_st pst;
+    unsigned p_open_flags = P_OPEN_KEEPSTDIN;
+    char *argv[5];
+    int n, ec;
+    
+    p_st_init(&pst);
 
+    n = 0;
+    argv[n++] = "cp";
+    argv[n++] = "-v";
+    argv[n++] = (char*)src;
+    argv[n++] = (char*)dst;
+    argv[n++] = NULL;
+
+    if (p_open(&pst, p_open_flags, "/bin/cp", argv) == NULL) {
+        if (pst.errmsg) {
+            logn(LOGERR, "%s", pst.errmsg);
+            p_st_destroy(&pst);
+        }
+    }
+
+    //process_output(&pst, verbose_level);
+    if ((ec = p_close(&pst) != 0) && pst.errmsg != NULL)
+        logn(LOGERR, "%s", pst.errmsg);
+
+    p_st_destroy(&pst);
+    return ec == 0;
+}
 
 /* remeber! don't touch any member */
 struct psetdb_it {
@@ -348,6 +393,45 @@ tn_array *pm_pset_ldhdr_capreqs(tn_array *arr, void *hdr, int crtype)
     return arr;
 }
 
+static int do_pkgtslink(struct pm_psetdb *db, const char *cachedir,
+                         struct pkg *pkg, const char *pkgpath)
+{
+    char tspath[PATH_MAX];
+    
+    if (db->tsdir == NULL) {
+        char tsdir[PATH_MAX];
+        n_snprintf(tsdir, sizeof(tsdir), "%s/tsXXXXXX", cachedir);
+#ifdef HAVE_MKDTEMP
+        if (mkdtemp(tsdir) == NULL) {
+            logn(LOGERR, "mkdtemp %s: %m", tsdir);
+            return 0;
+        }
+#else
+#error "mkdtemp is needed"        
+#endif        
+        db->tsdir = n_strdup(tsdir);
+    }
+    
+    n_snprintf(tspath, sizeof(tspath), "%s/%s", db->tsdir, n_basenam(pkgpath));
+
+
+    if (pkg_file_url_type(pkg) == VFURL_PATH) {
+        if (symlink(pkgpath, tspath) != 0) {
+            logn(LOGERR, "%s: symlink failed: %m\n", pkgpath);
+            return 0;
+        }
+    } else {
+        if (link(pkgpath, tspath) != 0) {
+            if (!do_cp(pkgpath, tspath)) {
+                logn(LOGERR, "%s: could not copy to %s\n", pkgpath, db->tsdir);
+                return 0;
+            }
+        }
+    }
+    n_array_push(db->paths_added, n_strdup(tspath));
+    return 1;
+}
+
 
 int pm_pset_packages_install(struct pkgdb *pdb,
                              tn_array *pkgs, tn_array *pkgs_toremove,
@@ -367,6 +451,8 @@ int pm_pset_packages_install(struct pkgdb *pdb,
         if (pkg_localpath(pkg, path, sizeof(path), ts->cachedir)) {
             pkgset_add_package(db->ps, pkg);
             pkgdir_add_package(pkgdir, pkg);
+            if (!do_pkgtslink(db, ts->cachedir, pkg, path))
+                return 0;
             msgn(0, "%%install %s %s", path, pkgdir->path);
         }
     }
@@ -394,8 +480,36 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb,
         if (pkg_path(pkg, path, sizeof(path))) {
             pkgset_remove_package(db->ps, pkg);
             pkgdir_remove_package(pkgdir, pkg);
+            n_array_push(db->paths_removed, n_strdup(path));
             msgn(0, "%%uninstall %s", path);
         }
     }
     return 1;
+}
+
+void pm_pset_commitdb(void *dbh) 
+{
+    struct pm_psetdb *db = dbh;
+    struct pkgdir *pkgdir;
+    char dstpath[PATH_MAX];
+    int i;
+
+    n_assert(n_array_size(db->ps->pkgdirs) == 1);
+    pkgdir = n_array_nth(db->ps->pkgdirs, 0);
+
+    logn(LOGNOTICE, "commit");
+    for (i=0; i < n_array_size(db->paths_removed); i++) {
+        const char *path = n_array_nth(db->paths_removed, i);
+        DBGF_F("rm %s\n", path);
+        unlink(path);
+    }
+
+    for (i=0; i < n_array_size(db->paths_added); i++) {
+        const char *path = n_array_nth(db->paths_added, i);
+        snprintf(dstpath, sizeof(dstpath), "%s/%s", pkgdir->path,
+                 n_basenam(path));
+        DBGF_F("cp %s %s\n", path, dstpath);
+        do_cp(path, dstpath);
+        unlink(path);
+    }
 }

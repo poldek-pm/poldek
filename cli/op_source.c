@@ -60,8 +60,9 @@ static struct argp_option source_options[] = {
 {"sn", 'n', "SOURCE-NAME", 0,
      N_("Get packages info from repository named SOURCE-NAME"), OPT_SRC_GID },
 
-{"install-dest", OPT_DEST, "PATH", 0, 
-    N_("Install to repository under PATH instead to system"), OPT_SRC_GID },                                                  
+{"install-dest", OPT_DEST, "PM:SOURCESPEC", 0, 
+    N_("Install to specified destination"), OPT_SRC_GID },
+
 {"install-dest-dn", OPT_DEST_NAME, "SOURCE-NAME", 0,
     N_("Install to source SOURCE-NAME instead to system"), OPT_SRC_GID },
 
@@ -120,7 +121,8 @@ struct arg_s {
     unsigned            cnflags;
     struct poldek_ctx   *ctx;
     struct source       *src;
-    struct source       *dst;
+    struct source       *srcdst;
+    char                destpm[32];
     char                *curr_src_path;
     char                *curr_src_type;
 };
@@ -164,7 +166,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         arg_s = n_malloc(sizeof(*arg_s));
         arg_s->cnflags = 0;
         arg_s->src = NULL;
-        arg_s->dst = NULL;
+        arg_s->srcdst = NULL;
+        arg_s->destpm[0] = '\0';
         arg_s->curr_src_type = arg_s->curr_src_path = NULL;
         arg_s->ctx = rt->ctx;
         rt->_opdata = arg_s;
@@ -189,11 +192,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_DEST_NAME:
-            if (arg_s->dst != NULL) {
+            if (arg_s->srcdst != NULL) {
                 logn(LOGERR, _("destination repository is already set"));
                 exit(EXIT_FAILURE);
             }
-            arg_s->dst = source_new(arg, NULL, NULL, NULL);
+            arg_s->srcdst = source_new(arg, NULL, NULL, NULL);
             break;
 
         case OPT_SRCTYPE:
@@ -227,10 +230,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_DEST:
-            if (arg_s->dst != NULL) {
-                logn(LOGERR, _("destination repository is already set"));
+            if (arg_s->destpm[0] != '\0') {
+                logn(LOGERR, _("destination is already set"));
                 exit(EXIT_FAILURE);
             }
+            
             arg_s->curr_src_path = arg;
             if (arg_s->curr_src_type == NULL)
                 arg_s->curr_src_type = source_type;
