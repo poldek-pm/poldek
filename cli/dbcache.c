@@ -148,7 +148,7 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
             dir = pkgdir_open_ext(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE,
                                   dbpath, NULL, 0, lc_lang);
             if (dir)
-                if (!pkgdir_load(dir, NULL, 0)) {
+                if (!pkgdir_load(dir, NULL, PKGDIR_LD_NOUNIQ)) {
                     pkgdir_free(dir);
                     dir = NULL;
                 }
