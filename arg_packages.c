@@ -91,7 +91,7 @@ int prepare_file_pkgmask(struct arg_packages *aps,
     
     n_strdupap(maskstr, &buf);
     s[0] = NULL;
-    p = strip(buf);
+    p = n_str_strip_ws(buf);
         
     if (*p == '\0' || *p == '#')
         return 0;
@@ -364,7 +364,7 @@ int arg_packages_load_list(struct arg_packages *aps, const char *fpath)
 
     nline = 0;
     while (fgets(buf, sizeof(buf), vf->vf_stream))
-        prepare_file_pkgmask(aps, strip(buf), fpath, ++nline);
+        prepare_file_pkgmask(aps, n_str_strip_ws(buf), fpath, ++nline);
 
     vfile_close(vf);
     return rc;

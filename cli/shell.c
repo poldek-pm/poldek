@@ -328,28 +328,6 @@ static int init_shell(struct poclidek_ctx *cctx)
     return poclidek_add_command(cctx, &command_quit);
 }
 
-static char *strstrip(char *str) 
-{
-    if (str) {
-        char *p = str;
-
-        while(isspace(*p))
-            p++;
-
-        str = p;
-        
-        p = strchr(str, '\0');
-        n_assert(p);
-        p--;
-        while (p != str && isspace(*p)) {
-            *p = '\0';
-            p--;
-        }
-    }
-    
-    return str;
-}
-
 
 int poclidek_shell(struct poclidek_ctx *cctx)
 {
@@ -394,8 +372,7 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         if ((line = readline(prompt)) == NULL)
             break;
 
-        s = line;
-        s = strstrip(line);
+        s = n_str_strip_ws(line);
         if (*s) {
             int _verbose = poldek_verbose();
             add_history(s);
