@@ -266,7 +266,7 @@ static tn_array *load_db_packages(const char *rootdir, const char *path)
     if ((db = pkgdb_open(rootdir, path, O_RDONLY)) == NULL)
         return NULL;
 
-    msg(1, _("Loading db packages%s%s%s"), *dbfull_path ? " [":"",
+    msg(1, _("Loading db packages%s%s%s..."), *dbfull_path ? " [":"",
         dbfull_path, *dbfull_path ? "]":"");
     
     rpm_dbmap(db->dbh, db_map_fn, pkgs);
