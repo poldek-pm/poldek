@@ -761,7 +761,7 @@ static
 void parse_options(int argc, char **argv) 
 {
     struct argp argp = { options, parse_opt, args_doc, poldek_banner, 0, 0, 0};
-    int vfile_cnflags = 0, is_multi;
+    int vfile_cnflags = 0, is_multi, nsources;
     char *v;
 
 
@@ -797,11 +797,18 @@ void parse_options(int argc, char **argv)
         src->ldmethod = args.curr_src_ldmethod;
         n_array_push(args.sources, src);
     }
+
+    if (n_array_size(args.sources) && args.source_name) {
+        logn(LOGERR, _("-s and -S are exclusive"));
+        exit(EXIT_FAILURE);
+    }
     
     if (args.conf_path != NULL)
         htcnf = ldconf(args.conf_path);
     else if (args.noconf == 0)
         htcnf = ldconf_deafult();
+
+    nsources = n_array_size(args.sources);
     
     if (n_array_size(args.sources) == 0) {
         struct source *src;
@@ -813,9 +820,11 @@ void parse_options(int argc, char **argv)
         if ((v = conf_get(htcnf, "source", &is_multi))) {
             if (is_multi == 0) {
                 src = source_new(v, NULL);
-                if ((sn == NULL) || (sn && fnmatch(sn, src->source_name, 0) == 0))
+                if ((sn == NULL) || (sn && fnmatch(sn, src->source_name, 0) == 0)) {
                     n_array_push(args.sources, src);
-                else
+                    nsources++;
+                    
+                } else
                     source_free(src);
                     
             } else {
@@ -823,9 +832,10 @@ void parse_options(int argc, char **argv)
                 if ((paths = conf_get_multi(htcnf, "source"))) {
                     while (n_array_size(paths)) {
                         src = source_new(n_array_shift(paths), NULL);
-                        if ((sn == NULL) || (sn && fnmatch(sn, src->source_name, 0) == 0))
+                        if ((!sn) || (sn && fnmatch(sn, src->source_name, 0) == 0)) {
                             n_array_push(args.sources, src);
-                        else
+                            nsources++;
+                        } else
                             source_free(src);
                     }
                 }
@@ -841,17 +851,20 @@ void parse_options(int argc, char **argv)
                 snprintf(opt, sizeof(opt), "prefix%d", i);
 
                 src = source_new(src_val, conf_get(htcnf, opt, NULL));
-                if ((sn == NULL) || (sn && fnmatch(sn, src->source_name, 0) == 0))
+                if ((sn == NULL) || (sn && fnmatch(sn, src->source_name, 0) == 0)) {
+                    nsources++;
                     n_array_push(args.sources, src);
-                else
+                } else
                     source_free(src);
             }
         }
     }
-    
 
-    if (n_array_size(args.sources) == 0) {
-        logn(LOGERR, _("no source specified"));
+    if (nsources == 0) {
+        if (args.source_name)
+            logn(LOGERR, _("%s: no such source"), args.source_name);
+        else
+            logn(LOGERR, _("no source specified"));
         exit(EXIT_FAILURE);
     }
 
