@@ -887,7 +887,7 @@ msgstr "_zrobione."
 #: cli/shell.c:49
 #, fuzzy
 msgid "Exit poldek"
-msgstr "Zamknij poldeka"
+msgstr "Zamknij poldka"
 
 #: cli/shell.c:335
 msgid "not a tty"
@@ -901,7 +901,7 @@ msgid ""
 "\n"
 msgstr ""
 "\n"
-"Witaj w poldekowym trybie interaktywnym. Wpisz \"help\" aby otrzymaæ pomoc.\n"
+"Witaj w poldkowym trybie interaktywnym. Wpisz \"help\" aby otrzymaæ pomoc.\n"
 "\n"
 
 #: cli/uninstall.c:38
@@ -1204,7 +1204,7 @@ msgstr "%s: uszkodzony indeks (pusty %s)"
 #: pkgdir/pdir/pdir.c:624 pkgdir/pndir/pndir.c:373 pkgdir/pndir/pndir.c:384
 #, c-format
 msgid "%s: not a poldek index file"
-msgstr "%s: nie jest to poldekowy indeks"
+msgstr "%s: nie jest to poldkowy indeks"
 
 #: pkgdir/pdir/pdir.c:689
 #, c-format
@@ -1306,7 +1306,7 @@ msgstr "Czyszczenie %s..."
 #: pkgdir/pndir/pndir.c:378
 #, fuzzy, c-format
 msgid "%s: not a poldek index file, %s"
-msgstr "%s: nie jest to poldekowy indeks"
+msgstr "%s: nie jest to poldkowy indeks"
 
 #: pkgdir/pndir/pndir.c:401
 #, fuzzy, c-format
