@@ -61,6 +61,18 @@ mount_()
     done
 }
 
+must_be_copied() {
+    case "$1" in
+	Packages*|packages.dir|packages.dir.*)
+	    return 0 
+	    ;;
+	
+	*)
+	    return 1
+    esac
+    return 1
+}
+
 usage()
 {
     echo "usage: `basename $0` DESTDIR [cdrom://DISK_ID_FILE/PATH...]"
@@ -124,9 +136,8 @@ while  [ $# -gt 0 ]; do
 	exit 1
     fi
 
-    if [ "$BN" = "packages.dir" -o "$BN" = "packages.dir.gz" -o \
-	 "$BN" = "Packages" -o "$BN" = "Packages.gz" ]; then
-	  POLDEK_VFJUGGLE_CPMODE="copy"
+    if must_be_copied $BN; then
+	POLDEK_VFJUGGLE_CPMODE="copy"
     fi
 
     if [ -z "$POLDEK_VFJUGGLE_CPMODE" ]; then
