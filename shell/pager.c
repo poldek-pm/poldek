@@ -174,12 +174,14 @@ int pager_close(struct pager *pg)
 {
     int rc = 0;
 
+    if (pg->stream) {
+        fclose(pg->stream);
+        pg->stream = NULL;
+    }
+    
     if (pg->pid)
         pager_waitpid(pg, 0);
     
-    if (pg->stream)
-        fclose(pg->stream);
-
     if (tcsetattr(STDOUT_FILENO, TCSANOW, &pg->_tios) != 0 ||
         tcsetattr(STDERR_FILENO, TCSANOW, &pg->_tios) != 0) {
         
@@ -195,7 +197,6 @@ int pager_close(struct pager *pg)
     if (rc == 0)
         rc = pg->ec;
     
-    pg->stream = NULL;
     return rc;
 }
 
