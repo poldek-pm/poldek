@@ -532,6 +532,7 @@ msgstr "%s: odczyt nag³ówka siê nie powiód³"
 #: pkg.c:303
 #, c-format
 msgid "%s: reject source package"
+msgstr "%s: pakietów ¼ród³owych nie prowadzimy"
 
 #: pkg.c:439
 #, c-format
