@@ -28,6 +28,7 @@
 #include <time.h>
 
 #include <trurl/trurl.h>
+#include <trurl/nobstack.h>
 
 #include <sigint/sigint.h>
 #include "i18n.h"
@@ -402,6 +403,12 @@ static void init_commands(struct poclidek_ctx *cctx)
     n_array_sort(cctx->commands);
 }
 
+static void *dent_alloc(struct poclidek_ctx *cctx, size_t size)
+{
+    return n_obstack_alloc(cctx->_dent_obstack, size);
+}
+
+
 int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
 {
     n_assert (cctx->ctx == NULL);
@@ -409,6 +416,8 @@ int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
     cctx->ctx = ctx;
     cctx->pkgs_available = NULL;
     cctx->pkgs_installed = NULL;
+    cctx->_dent_obstack = n_obstack_new(32);
+    cctx->dent_alloc = dent_alloc;
     init_commands(cctx);
     return 1;
 }

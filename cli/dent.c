@@ -32,8 +32,13 @@
 #include "cli.h"
 #include "arg_packages.h"
 
+struct pkg_dent *pkg_dent_adddir(struct poclidek_ctx *cctx,
+                                 struct pkg_dent *dent, const char *name);
+int pkg_dent_addpkgs(struct poclidek_ctx *cctx,
+                     struct pkg_dent *dent, tn_array *pkgs);
 
-struct pkg_dent *pkg_dent_new(const char *name, struct pkg *pkg, int flags)
+struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
+                              struct pkg *pkg, int flags)
 {
     struct pkg_dent *ent;
     int len = 0;
@@ -45,7 +50,7 @@ struct pkg_dent *pkg_dent_new(const char *name, struct pkg *pkg, int flags)
         n_assert(flags & PKG_DENT_DIR);
     }
     
-    ent = n_malloc(sizeof(*ent) + len);
+    ent = cctx->dent_alloc(cctx, sizeof(*ent) + len);
     ent->_refcnt = 0;
     ent->flags = flags;
     ent->parent = NULL;
@@ -67,8 +72,8 @@ struct pkg_dent *pkg_dent_new(const char *name, struct pkg *pkg, int flags)
     
     return ent;
 }
-#define pkg_dent_new_pkg(pkg) pkg_dent_new(NULL, pkg, 0);
-#define pkg_dent_new_dir(name) pkg_dent_new(name, NULL, PKG_DENT_DIR);
+#define pkg_dent_new_pkg(cctx, pkg) pkg_dent_new(cctx, NULL, pkg, 0);
+#define pkg_dent_new_dir(cctx, name) pkg_dent_new(cctx, name, NULL, PKG_DENT_DIR);
 
 
 struct pkg_dent *pkg_dent_link(struct pkg_dent *ent)
@@ -88,7 +93,9 @@ void pkg_dent_free(struct pkg_dent *ent)
         n_array_free(ent->pkg_dent_ents);
     else
         pkg_free(ent->pkg_dent_pkg);
-    free(ent);
+
+    ent->flags |= PKG_DENT_DELETED;
+    //free(ent);
 }
 
 
@@ -171,17 +178,19 @@ int pkg_dent_cmp_bday_rev(struct pkg_dent *ent1, struct pkg_dent *ent2)
 }
 
 static inline
-struct pkg_dent *pkg_dent_addpkg(struct pkg_dent *dent, struct pkg *pkg)
+struct pkg_dent *pkg_dent_addpkg(struct poclidek_ctx *cctx,
+                                 struct pkg_dent *dent, struct pkg *pkg)
 {
     struct pkg_dent *ent;
 
-    ent = pkg_dent_new_pkg(pkg);
+    ent = pkg_dent_new_pkg(cctx, pkg);
     n_array_push(dent->pkg_dent_ents, ent);
     return ent;
 }
 
 inline
-int pkg_dent_addpkgs(struct pkg_dent *dent, tn_array *pkgs)
+int pkg_dent_addpkgs(struct poclidek_ctx *cctx,
+                     struct pkg_dent *dent, tn_array *pkgs)
 {
     int i;
     struct pkg_dent *ent;
@@ -190,7 +199,7 @@ int pkg_dent_addpkgs(struct pkg_dent *dent, tn_array *pkgs)
         struct pkg *pkg = n_array_nth(pkgs, i);
         if (pkg_is_scored(pkg, PKG_IGNORED))
             continue;
-        ent = pkg_dent_new_pkg(pkg);
+        ent = pkg_dent_new_pkg(cctx, pkg);
         n_array_push(dent->pkg_dent_ents, ent);
     }
     
@@ -199,11 +208,12 @@ int pkg_dent_addpkgs(struct pkg_dent *dent, tn_array *pkgs)
 
 
 inline
-struct pkg_dent *pkg_dent_adddir(struct pkg_dent *dent, const char *name)
+struct pkg_dent *pkg_dent_adddir(struct poclidek_ctx *cctx,
+                                 struct pkg_dent *dent, const char *name)
 {
     struct pkg_dent *ent;
     
-    ent = pkg_dent_new_dir(name);
+    ent = pkg_dent_new_dir(cctx, name);
     printf("adddir %s\n", name);
     ent->parent = dent;
     n_array_push(dent->pkg_dent_ents, ent);
@@ -243,8 +253,8 @@ void poclidek_dent_init(struct poclidek_ctx *cctx)
     struct pkg_dent *root, *ent, *allav;
     int i;
 
-    root = pkg_dent_new_dir("/");
-    allav = pkg_dent_adddir(root, POCLIDEK_AVAILDIR);
+    root = pkg_dent_new_dir(cctx, "/");
+    allav = pkg_dent_adddir(cctx, root, POCLIDEK_AVAILDIR);
     //cctx->dirs = n_array_new(8, free, (tn_fn_cmp)dir_cmp);
 
     for (i=0; i < n_array_size(cctx->ctx->pkgdirs); i++) {
@@ -260,9 +270,9 @@ void poclidek_dent_init(struct poclidek_ctx *cctx)
             p++;
         }
 
-        ent = pkg_dent_adddir(root, name);
-        pkg_dent_addpkgs(ent, pkgdir->pkgs);
-        pkg_dent_addpkgs(allav, pkgdir->pkgs);
+        ent = pkg_dent_adddir(cctx, root, name);
+        pkg_dent_addpkgs(cctx, ent, pkgdir->pkgs);
+        pkg_dent_addpkgs(cctx, allav, pkgdir->pkgs);
         free(name);
     }
 

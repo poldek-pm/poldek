@@ -5,7 +5,8 @@
 #include <trurl/narray.h>
 struct poclidek_ctx;
 
-#define PKG_DENT_DIR (1 << 0)
+#define PKG_DENT_DIR     (1 << 0)
+#define PKG_DENT_DELETED (1 << 1)
 
 struct pkg_dent {
     uint16_t         _refcnt;
@@ -28,8 +29,12 @@ struct pkg_dent {
 
 void pkg_dent_free(struct pkg_dent *ent);
 
-struct pkg_dent *pkg_dent_adddir(struct pkg_dent *dent, const char *name);
-int pkg_dent_addpkgs(struct pkg_dent *dent, tn_array *pkgs);
+struct pkg_dent *pkg_dent_adddir(struct poclidek_ctx *cctx,
+                                 struct pkg_dent *dent, const char *name);
+
+int pkg_dent_addpkgs(struct poclidek_ctx *cctx,
+                     struct pkg_dent *dent, tn_array *pkgs);
+
 
 int pkg_dent_cmp(struct pkg_dent *ent1, struct pkg_dent *ent2);
 int pkg_dent_strncmp(struct pkg_dent *ent, const char *name);

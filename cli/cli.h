@@ -3,10 +3,7 @@
 #define  POCLIDEK_CLI_H
 
 #include <argp.h>
-#include <time.h>
-#include <signal.h>
-
-
+#include <trurl/narray.h>
 #include "poldek.h"
 #include "pkg.h"
 #include "log.h"
@@ -36,10 +33,12 @@ struct poclidek_ctx {
 
     unsigned            flags;
 
+    void             *_dent_obstack;
+    void             *(*dent_alloc)(struct poclidek_ctx *, size_t);
     struct pkg_dent  *rootdir;
     struct pkg_dent  *homedir;
     struct pkg_dent  *currdir;
-
+    
 };
 
 
@@ -100,7 +99,7 @@ struct poclidek_cmd {
     char                *arg;
     char                *doc;
     struct argp_option  *argp_opts;
-    
+     
     error_t (*parse_opt_fn)(int, char*, struct argp_state*);
     
     int (*cmd_fn)(struct cmdctx *, int, const char **, struct argp*);
