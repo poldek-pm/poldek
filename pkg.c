@@ -395,6 +395,17 @@ int pkg_cmp_pri(struct pkg *p1, struct pkg *p2)
     return pkg_cmp_name_evr_rev(p1, p2);
 }
 
+int pkg_cmp_btime(struct pkg *p1, struct pkg *p2)
+{
+    register int cmprc;
+
+    cmprc = p1->btime - p2->btime;
+    if (cmprc == 0)
+        cmprc = pkg_cmp_name_evr_rev(p1, p2);
+    
+    return cmprc;
+}
+
 
 
 int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr) 

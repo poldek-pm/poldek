@@ -26,6 +26,7 @@ char *trimslash(char *path);
 char *next_token(char **str, char delim, int *toklen);
 int is_rwxdir(const char *path);
 int is_dir(const char *path);
+int mk_dir(const char *path, const char *dn);
 
 extern int mem_info_verbose;
 void print_mem_info(const char *prefix);

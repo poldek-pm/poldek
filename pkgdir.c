@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
@@ -52,6 +52,7 @@
 
 const char *default_pkgidx_name = "packages.dir";
 static const char depdirs_tag[] = "DEPDIRS: ";
+static const char timestamp_tag[] = "TS: ";
 static const char endhdr_tag[] = "ENDH";
 
 #define PKGT_HAS_NAME     (1 << 0)
@@ -487,7 +488,6 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
             goto l_end;
         }
 
-        
             
         while (nread && line[nread - 1] == '\n')
             line[--nread] = '\0';
@@ -1045,6 +1045,54 @@ static char *mktoc_pathname(char *dest, size_t size, const char *pathname)
     return dest;
 }
 
+static
+char *mkidx_pathname(char *dest, size_t size, const char *pathname,
+                     time_t ts, const char *_suffix) 
+{
+    char *ext, *bn = NULL, timbuf[32], suffix[64];
+
+    if (ts == 0) {
+        timbuf[0] = '\0';
+        snprintf(suffix, sizeof(suffix), ".%s", _suffix);
+
+    } else {
+        struct tm *tm = gmtime(&ts);
+        strftime(timbuf, sizeof(timbuf), "%Y%m%d", tm);
+        snprintf(suffix, sizeof(suffix), ".%s.%s", timbuf, _suffix);
+    }
+    
+    
+    if (strlen(pathname) + strlen(suffix) + 1 > size)
+        return NULL;
+
+    bn = n_basenam(pathname);
+    if ((ext = strrchr(bn, '.')) == NULL || strcmp(ext, ".dir") == 0) {
+        snprintf(dest, size, "%s%s", pathname, suffix);
+        
+    } else {
+        int len = ext - pathname + 1;
+        n_assert(len + strlen(suffix) + strlen(ext) + 1 < size);
+        n_strncpy(dest, pathname, len);
+        strcat(dest, suffix);
+        strcat(dest, ext);
+        dest[size - 1] = '\0';
+    }
+
+    if (ts) {
+        char *dn, *bn, path[PATH_MAX];
+        
+        n_basedirnam(dest, &dn, &bn);
+        if (!mk_dir(dn, "packages.i"))
+            return NULL;
+
+        snprintf(path, sizeof(path), "%s/packages.i/%s", dn, bn);
+        snprintf(dest, size, "%s", path);
+    }
+
+    return dest;
+}
+
+
 static int check_digest(struct vfile *vf, const char *path) 
 {
     char            md1[128], md2[128];
@@ -1118,19 +1166,37 @@ static int creat_digest_file(const char *pathname)
     return md_size;
 }
 
-int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc)
+static
+int create_idx(struct pkgdir *pkgdir, const char *pathname, time_t ts,
+               unsigned flags)
 {
     struct vfile *vf, *vf_toc;
-    char tocpath[PATH_MAX];
+    char tocpath[PATH_MAX], path[PATH_MAX];
+    struct tm ts_tm, *tm;
     int i;
-    
 
-    if (mktoc_pathname(tocpath, sizeof(tocpath), pathname) == NULL) {
-        log(LOGERR, "Cannot prepare tocpath!?");
-        return 0;
+    if (ts) {
+        tm = gmtime(&ts);
+        ts_tm = *tm;
     }
     
-    if ((vf = vfile_open(pathname, VFT_STDIO, VFM_RW)) == NULL)
+    if (mkidx_pathname(tocpath, sizeof(tocpath), pathname, ts, "toc") == NULL) {
+        log(LOGERR, "Cannot prepare tocpath!?\n");
+        return 0;
+    }
+
+    if (ts == 0) {
+        snprintf(path, sizeof(path), pathname);
+        
+    } else {
+        if (mkidx_pathname(path, sizeof(path), pathname, ts, "") == NULL) {
+            log(LOGERR, "Cannot prepare idxpath!?\n");
+            return 0;
+        }
+    }
+    
+    
+    if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
         return 0;
 
     if ((vf_toc = vfile_open(tocpath, VFT_STDIO, VFM_RW)) == NULL) {
@@ -1140,6 +1206,8 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc)
     
     put_fheader(vf->vf_stream, pkgdir);
     put_tocfheader(vf_toc->vf_stream, pkgdir);
+
+    fprintf(vf->vf_stream, "%%%s%lu\n", timestamp_tag, time(NULL));
     
     if (pkgdir->depdirs && n_array_size(pkgdir->depdirs)) {
         fprintf(vf->vf_stream, "%%%s", depdirs_tag);
@@ -1161,7 +1229,94 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc)
     for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
         
-        fprintf_pkg(pkg, vf->vf_stream, pkgdir->depdirs, nodesc);
+
+        if (ts) {
+            tm = gmtime((time_t *)&pkg->btime);
+            if (tm->tm_mday != ts_tm.tm_mday ||
+                tm->tm_mon  != ts_tm.tm_mon ||
+                tm->tm_year != ts_tm.tm_year)
+                continue;
+        }
+        
+        fprintf_pkg(pkg, vf->vf_stream, pkgdir->depdirs,
+                    flags & PKGDIR_CREAT_NODESC);
+        fprintf(vf_toc->vf_stream, "%s\n", pkg_snprintf_s(pkg));
+    }
+
+
+    vfile_close(vf);
+    vfile_close(vf_toc);
+    
+    return creat_digest_file(path);
+}
+
+int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
+                       unsigned flags)
+{
+    struct pkg *pkg;
+    time_t ts = 0;
+    int rc;
+
+    
+    if (!(rc = create_idx(pkgdir, pathname, 0, flags)))
+        return rc;
+    
+    n_array_sort_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_cmp_btime);
+    pkg = n_array_nth(pkgdir->pkgs, n_array_size(pkgdir->pkgs) - 1);
+    ts = pkg->btime;
+    return create_idx(pkgdir, pathname, ts, flags);
+    
+}
+
+    
+
+int pkgdir_create_idx_(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
+{
+    struct vfile *vf, *vf_toc;
+    char tocpath[PATH_MAX];
+    int i;
+    
+
+    if (mktoc_pathname(tocpath, sizeof(tocpath), pathname) == NULL) {
+        log(LOGERR, "Cannot prepare tocpath!?");
+        return 0;
+    }
+    
+    if ((vf = vfile_open(pathname, VFT_STDIO, VFM_RW)) == NULL)
+        return 0;
+
+    if ((vf_toc = vfile_open(tocpath, VFT_STDIO, VFM_RW)) == NULL) {
+        vfile_close(vf);
+        return 0;
+    }
+    
+    put_fheader(vf->vf_stream, pkgdir);
+    put_tocfheader(vf_toc->vf_stream, pkgdir);
+
+    fprintf(vf->vf_stream, "%%%s%lu\n", timestamp_tag, time(NULL));
+    
+    if (pkgdir->depdirs && n_array_size(pkgdir->depdirs)) {
+        fprintf(vf->vf_stream, "%%%s", depdirs_tag);
+        
+        for (i=0; i<n_array_size(pkgdir->depdirs); i++) {
+            fprintf(vf->vf_stream, "%s%c",
+                    (char*)n_array_nth(pkgdir->depdirs, i),
+                    i + 1 == n_array_size(pkgdir->depdirs) ? '\n':':');
+        }
+    }
+
+    if (pkgdir->pkgroups) 
+        pkgroup_idx_store(pkgdir->pkgroups, vf->vf_stream);
+
+    fprintf(vf->vf_stream, "%%%s\n", endhdr_tag);
+    
+    n_array_sort(pkgdir->pkgs);
+    
+    for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+        
+        fprintf_pkg(pkg, vf->vf_stream, pkgdir->depdirs,
+                    flags & PKGDIR_CREAT_NODESC);
         fprintf(vf_toc->vf_stream, "%s\n", pkg_snprintf_s(pkg));
     }
 
@@ -1344,6 +1499,55 @@ struct pkgdir *pkgdir_load_dir(const char *name, const char *path)
     
     return pkgdir;
 }
+
+static int pkg_cmp_uniq_name(const struct pkg *p1, const struct pkg *p2) 
+{
+    int rc;
+    if ((rc = pkg_cmp_name(p1, p2)) == 0)
+        msg(1, "%s replaced by %s\n", pkg_snprintf_s(p2), pkg_snprintf_s0(p1));
+    
+    return rc;
+}
+
+
+struct pkgdir *pkgdir_merge_pkgdir(struct pkgdir *pkgdir, struct pkgdir *pkgdir2) 
+{
+    struct pkg *pkg;
+    tn_array *depdirs;
+    int i;
+    
+    for (i=0; i < n_array_size(pkgdir2->pkgs); i++) {
+        pkg = n_array_nth(pkgdir2->pkgs, i);
+        pkg->groupid = pkgroup_idx_merge(pkgdir->pkgroups, pkgdir2->pkgroups,
+                                         pkg->groupid);
+        n_array_push(pkgdir->pkgs, pkg);
+    }
+    
+    n_array_uniq_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_cmp_uniq_name);
+
+    
+    /* merge depdirs */
+    depdirs = pkgdir->depdirs;
+    if (depdirs == NULL)
+        depdirs = n_array_new(64, NULL, (tn_fn_cmp)strcmp);
+    
+    if (pkgdir2->depdirs) {
+        for (i=0; i < n_array_size(pkgdir2->depdirs); i++)
+            n_array_push(depdirs, n_array_nth(pkgdir2->depdirs, i));
+    }
+    
+    if (n_array_size(depdirs) == 0) {
+        n_array_free(depdirs);
+        
+    } else {
+        n_array_sort(depdirs);
+        n_array_uniq(depdirs);
+        pkgdir->depdirs = depdirs;
+    }
+    
+    return pkgdir;
+}
+
 
 int pkgdir_isremote(struct pkgdir *pkgdir)
 {

@@ -438,4 +438,38 @@ const char *pkgroup(struct pkgroup_idx *idx, int groupid)
     return find_tr(lang, gr);
 }
 
+static int pkgroupid(struct pkgroup_idx *idx, const char *name) 
+{
+    int i;
+
+    for (i=0; i < n_array_size(idx->arr); i++) {
+        struct pkgroup *gr = n_array_nth(idx->arr, i);
+        if (strcmp(gr->name, name) == 0)
+            return gr->id;
+    }
+
+    return -1;
+}
+
+
+int pkgroup_idx_merge(struct pkgroup_idx *idx,
+                      struct pkgroup_idx *idx2, int groupid) 
+{
+    struct pkgroup *gr, tmpgr;
+    int new_id;
+    
+        
+    tmpgr.id = groupid;
+    if ((gr = n_array_bsearch(idx2->arr, &tmpgr)) == NULL)
+        n_assert(0);
+
+    if ((new_id = pkgroupid(idx, gr->name)) < 0) {
+        new_id = n_array_size(idx->arr) + 1;
+        n_array_push(idx->arr, gr);
+        n_array_sort(idx->arr);
+    }
+    
+    return new_id;
+}
+
 

@@ -284,4 +284,30 @@ pid_t readlockfile(const char *lockfile)
 
 
 
+int mk_dir(const char *path, const char *dn) 
+{
+    struct stat st;
+    char fpath[PATH_MAX];
+    
+    if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode)) {
+        log(LOGERR, "%s: no such directory\n", path);
+        return 0;
+    }
+
+    if (!(st.st_mode & S_IRWXU)) {
+        log(LOGERR, "%s: mkdir: permission denied\n", path);
+        return 0;
+    }
+    
+    snprintf(fpath, sizeof(fpath), "%s/%s", path, dn);
+    if (!is_dir(fpath)) {
+        if (mkdir(fpath, 0755) != 0) {
+            log(LOGERR, "%s: mkdir: %m\n", fpath);
+            return 0;
+        }
+    }
+    
+    return 1;
+}
+
 

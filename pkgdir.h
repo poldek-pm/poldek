@@ -47,7 +47,11 @@ void pkgdir_free(struct pkgdir *pkgdir);
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 struct pkgdir *pkgdir_load_dir(const char *name, const char *path);
 
-int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc);
+#define PKGDIR_CREAT_NODESC (1 << 0)
+#define PKGDIR_CREAT_INCR   (1 << 1)
+
+int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
+                      unsigned flags);
 
 
 int update_pkgdir_idx(const char *path);
