@@ -19,6 +19,7 @@
 #include <trurl/nmalloc.h>
 #include <trurl/narray.h>
 
+#include "sigint/sigint.h"
 #include "i18n.h"
 #include "capreq.h"
 #include "poldek_ts.h"
@@ -176,6 +177,11 @@ int pkgdb_map(struct pkgdb *db,
             mapfn(dbrec->recno, dbrec->hdr, arg);
             n++;
         }
+
+        if (sigint_reached()) {
+            n = 0;
+            break;
+        }
     }
     
     pkgdb_it_destroy(&it);
@@ -203,6 +209,11 @@ int pkgdb_map_nevr(struct pkgdb *db,
             
             mapfn(tmpkg.name, tmpkg.epoch, tmpkg.ver, tmpkg.rel, arg);
             n++;
+        }
+        
+        if (sigint_reached()) {
+            n = 0;
+            break;
         }
     }
     
