@@ -433,7 +433,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
         vf_loginfo(_("Running %s\n"), s);
     }
     
-    p_st_init(&pst);
+    
 
 
     verbose = *vfile_verbose;
@@ -443,6 +443,8 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
             *vfile_verbose = 1;
         
     }
+
+    p_st_init(&pst);
 
     if (p_open(&pst, p_open_flags, fftch->path, argv) == NULL) {
         vf_logerr("p_open: %s\n", pst.errmsg);
