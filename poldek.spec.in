@@ -12,7 +12,7 @@ Version:	@VERSION@
 Release:	1%{?_with_static:.static}
 License:	GPL
 Group:		Applications/System
-Source0:	http://team.pld.org.pl/~mis/poldek/download/%{name}-%{version}.tar.gz
+Source0:	http://team.pld.org.pl/~mis/poldek/download/%{name}-%{version}.tar.bz2
 URL:		http://team.pld.org.pl/~mis/poldek/
 Requires:	/bin/rpm
 BuildRequires:	bzip2-devel
@@ -78,6 +78,9 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.20  2002/11/07 17:41:07  mis
+- used tar.bz2 source
+
 Revision 1.19  2002/06/03 15:45:25  mis
 - fixes source URL
 
