@@ -521,7 +521,14 @@ int source_cmp_uniq(const struct source *s1, const struct source *s2)
 {
     register int rc;
     
-    if ((rc = source_cmp(s1, s2)) == 0) 
+    if ((rc = source_cmp(s1, s2)) == 0) {
+        const char *n1, *n2;
+        n1 = s1->type ? s1->type : "";
+        n2 = s2->type ? s2->type : "";
+        rc = strcmp(n1, n2);
+    }
+
+    if (rc == 0)
         logn(LOGWARN, _("removed duplicated source %s%s%s"),
              (s2->flags & PKGSOURCE_NAMED) ? s2->name : "",
              (s2->flags & PKGSOURCE_NAMED) ? " -- " : "",
@@ -648,7 +655,7 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
             }
 
         } else if ((opt->flag & PKGSOURCE_TYPE)) {
-            if (src->type && !source_is_type(src, poldek_conf_PKGDIR_DEFAULT_TYPE)) {
+            if (src->type) {
                 n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
                                             "%s", opt->name);
                 n += n_snprintf(&str[n], size - n, "=%s,", src->type);
@@ -848,7 +855,8 @@ int do_source_make_idx(struct source *src,
         if (is_dir(dn))
             source_set(&src->path, dn);
     }
-    
+
+    msgn(1, "Creating %s index of %s (type=%s)...", type, src->path, src->type);
     DBGF("mkidx[%s => %s] %s %d\n", src->type, type, src->path, cr_flags);
     pkgdir = pkgdir_srcopen(src, 0);
     if (pkgdir == NULL)
@@ -887,6 +895,26 @@ int do_source_make_idx(struct source *src,
     return rc;
 }
 
+#define DEFAULT_STYPE "dir"
+static const char *determine_stype(struct source *src, const char *idxpath)
+{
+    if (src->original_type)
+        return src->original_type;
+
+    if (is_dir(src->path)) {
+        if ((src->flags & PKGSOURCE_TYPE) == 0) /* no type */
+            return DEFAULT_STYPE;
+        
+        if (idxpath == NULL)
+            return DEFAULT_STYPE;
+        
+    }
+    return poldek_conf_PKGDIR_DEFAULT_TYPE;
+}
+
+    
+    
+
 int source_make_idx(struct source *src, const char *stype, 
                     const char *dtype, const char *idxpath,
                     unsigned flags)
@@ -894,19 +922,9 @@ int source_make_idx(struct source *src, const char *stype,
     struct source *ssrc;
     int typcaps;
     int rc = 0;
-                         /* type not set */
-    if (stype == NULL && (src->flags & PKGSOURCE_TYPE) == 0 && is_dir(src->path))
-        stype = "dir";
-            
+                         
     if (stype == NULL)
-        if ((stype = src->original_type) == NULL &&
-            (stype = src->type) == NULL) {
-            
-            if (strstr(src->path, "://")) /* remote */
-                stype = src->type ? src->type : poldek_conf_PKGDIR_DEFAULT_TYPE;
-            else
-                stype = "dir";
-        }
+        stype = determine_stype(src, idxpath);
     
     if (src->type == NULL)
         source_set_default_type(src);
