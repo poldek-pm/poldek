@@ -20,6 +20,8 @@
 #include <sys/errno.h>
 #include <time.h>
 #include <signal.h>
+#include <termios.h>
+#include <sys/ioctl.h>
 #include <argp.h>
 
 #include <readline/readline.h>
@@ -35,40 +37,48 @@
 #include "rpm.h"
 #include "log.h"
 
+static volatile sig_atomic_t winch_reached = 0;
+static int term_width = 80;
+
+static void get_term_width();   /* updates term_width */
 
 extern int shell_uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst);
 
+
+
+
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
+static const char *argp_program_bug_address = NULL;
+
 
 
 static int cmd_help(int argc, const char **argv, struct argp*);
 static int cmd_quit(int argc, const char **argv, struct argp*);
-
 
 /* ls */
 static int cmd_ls(int argc, const char **argv, struct argp*);
 static error_t parse_ls_opt(int key, char *arg, struct argp_state *state);
 
 
-#define OPT_LS_LONG          (1 << 0) /* cmd_state->flags */
-#define OPT_LS_UPGRADEABLE   (1 << 1) /* cmd_state->flags */
-#define OPT_LS_INSTALLED     (1 << 3) /* cmd_state->flags */
+#define OPT_LS_LONG            (1 << 0) /* cmd_state->flags */
+#define OPT_LS_UPGRADEABLE     (1 << 1) /* cmd_state->flags */
+#define OPT_LS_UPGRADEABLE_VER (1 << 2) /* cmd_state->flags */
+#define OPT_LS_INSTALLED       (1 << 3) /* cmd_state->flags */
 
 static struct argp_option options_ls[] = {
  { "long", 'l', 0, 0, "Use a long listing format", 1},
  { "upgradeable", 'u', 0, 0, "Show upgradeable packages only", 1},
+ { "upgradeablev", 'U', 0, 0, "Like above but omit packages with diffrent release only", 1},
  { "installed", 'I', 0, 0, "List installed packages", 1},
  { 0, 0, 0, 0, 0, 0 },
 };
 
-/* stat */
-static int cmd_stat(int argc, const char **argv, struct argp*);
-static error_t parse_stat_opt(int key, char *arg, struct argp_state *state);
+/* desc */
+static int cmd_desc(int argc, const char **argv, struct argp*);
+static error_t parse_desc_opt(int key, char *arg, struct argp_state *state);
 
-#define OPT_STAT_ALL   (1 << 10) /* cmd_state->flags */
-static struct argp_option options_stat[] = {
-{0,0,0,0, "stat [OPTION...] [PACKAGEX...]", 1 },
-{"all", 'a', 0, 0, "print all packages", 1},
+static struct argp_option options_desc[] = {
+{0,0,0,0, "desc [PACKAGE...]", 1 },
 { 0, 0, 0, 0, 0, 0 },    
 };
 
@@ -157,9 +167,9 @@ struct command {
 #define CMD_INF0       2
 #define CMD_INSTALL    3
 #define CMD_UNINSTALL  4
-#define CMD_STAT       5
+#define CMD_DESC       5
 #define CMD_RELOAD     6
-#define CMD_GET        6
+#define CMD_GET        7
 
 #define CMD_QUIT       20
 #define CMD_HELP       21
@@ -175,9 +185,6 @@ struct command commands_tab[] = {
     
 /*{"fetch", "[FILE...]", cmd_fetch, "fetch package(s)"},*/
 
-/*{ CMD_STAT, "stat", "[OPTION...] [PACKAGE...]", options_stat, parse_stat_opt, cmd_stat,
-  "Display given packages status"},*/
-
 { CMD_INSTALL, "install", "PACKAGE...",
       options_install, parse_install_opt, cmd_install,
       "Install given packages." },
@@ -188,6 +195,9 @@ struct command commands_tab[] = {
 
 { CMD_RELOAD, "reload", NULL, NULL, NULL, cmd_reload,
       "Reload installed package list"},
+
+{ CMD_DESC, "desc", "PACKAGE", options_desc, parse_desc_opt, cmd_desc, 
+      "Print package description"},    
 
 { CMD_GET, "get", "PACKAGE...", options_get, parse_get_opt, cmd_get,
       "Just download given package list"},
@@ -231,10 +241,6 @@ struct cmd_state {
     unsigned flags;
     tn_array *pkgnames;
 };
-
-
-
-
 
 static
 int command_cmp(struct command *c1, struct command *c2) 
@@ -525,14 +531,13 @@ void resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgsp)
 }
 
 
-static int find_pkg(struct shell_pkg *lshpkg, tn_array *shpkgs, int *cmprc, 
-                    char *evr, size_t size) 
+static int find_pkg(struct shell_pkg *lshpkg, tn_array *shpkgs, int compare_ver, 
+                    int *cmprc, char *evr, size_t size) 
 {
     struct shell_pkg *shpkg;
     char name[256];
     int n, finded = 0;
 
-    
     snprintf(name, sizeof(name), "%s-", lshpkg->pkg->name);
     n = n_array_bsearch_idx_ex(shpkgs, name, (tn_fn_cmp)shpkg_ncmp_str);
 
@@ -554,7 +559,11 @@ static int find_pkg(struct shell_pkg *lshpkg, tn_array *shpkgs, int *cmprc,
     if (!finded)
         return 0;
     
-    *cmprc = pkg_cmp_evr(lshpkg->pkg, shpkg->pkg);
+    if (compare_ver == 0)
+        *cmprc = pkg_cmp_evr(lshpkg->pkg, shpkg->pkg);
+    else 
+        *cmprc = pkg_cmp_ver(lshpkg->pkg, shpkg->pkg);
+    
     snprintf(evr, size, "%s-%s", shpkg->pkg->ver, shpkg->pkg->rel);
     
     return finded;
@@ -581,6 +590,10 @@ error_t parse_ls_opt(int key, char *arg, struct argp_state *state)
             cmdst->flags |= OPT_LS_UPGRADEABLE;
             break;
 
+        case 'U':
+            cmdst->flags |= OPT_LS_UPGRADEABLE_VER | OPT_LS_UPGRADEABLE;
+            break;
+
         case 'I':
             cmdst->flags |= OPT_LS_INSTALLED;
             break;
@@ -602,10 +615,12 @@ error_t parse_ls_opt(int key, char *arg, struct argp_state *state)
 
 static int cmd_ls(int argc, const char **argv, struct argp *argp)
 {
-    struct cmd_state cmdst = { 0, NULL};
-    tn_array *shpkgs = NULL, *av_shpkgs;
-    int i, size, err = 0, npkgs = 0, is_help = 0;
-    char hdr[128];
+    struct cmd_state     cmdst = { 0, NULL};
+    tn_array             *shpkgs = NULL, *av_shpkgs;
+    char                 hdr[128], fmt_hdr[256], fmt_pkg[256];
+    int                  i, size, err = 0, npkgs = 0, is_help = 0;
+    int                  compare_ver = 0;
+
     
     if (argv == NULL)
         return 0;
@@ -617,7 +632,6 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
             break;
         }
     }
-    
             
     cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     argp_parse(argp, argc, (char**)argv, argp_parse_flags, 0, (void*)&cmdst);
@@ -645,19 +659,33 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
         shpkgs = av_shpkgs;
     }
 
+    get_term_width();
+
     if (cmdst.flags & OPT_LS_LONG) {
-        if (cmdst.flags & OPT_LS_UPGRADEABLE) {
-            if (cmdst.flags & OPT_LS_INSTALLED) 
-                snprintf(hdr, sizeof(hdr), "%-42s%-12s%-12s%16s\n", "installed",
-                         "available", "build date", "size (kB)");
-            else
-                snprintf(hdr, sizeof(hdr), "%-42s%-12s%-12s%16s\n", "available",
-                         "installed", "build date", "size (kB)");
-        } else
+        if ((cmdst.flags & OPT_LS_UPGRADEABLE) == 0) {
             snprintf(hdr, sizeof(hdr), "%-42s%-12s%16s\n", "package",
                      "build date", "size (kB)");
+        } else {
+            snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds%%-%ds%%%ds\n",
+                     (term_width/2) - 1, (term_width/6) - 1,
+                     (term_width/6) - 1, (term_width/5) - 1);
+
+            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%-%ds%%-%ds%%%dd\n",
+                     (term_width/2) - 1, (term_width/6) - 1,
+                     (term_width/6) - 1, (term_width/6) - 1);
+
+            //printf("fmt = %s, %s\n", fmt_hdr, fmt_pkg);
+            
+            if (cmdst.flags & OPT_LS_INSTALLED) 
+                snprintf(hdr, sizeof(hdr), fmt_hdr, "installed",
+                         "available", "build date", "size (kB)");
+            else
+                snprintf(hdr, sizeof(hdr), fmt_hdr, "available",
+                         "installed", "build date", "size (kB)");
+        }
     }
     
+    compare_ver = cmdst.flags & OPT_LS_UPGRADEABLE_VER;
     
     size = 0;
     for (i=0; i<n_array_size(shpkgs); i++) {
@@ -666,16 +694,17 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
         char evr[128]; 
         int cmprc = 0;
         
+        
         if (cmdst.flags & OPT_LS_UPGRADEABLE) {
             int finded;
-
+            
             if (cmdst.flags & OPT_LS_INSTALLED) {
-                finded = find_pkg(shpkg, shell_s.avpkgs, &cmprc,
-                                  evr, sizeof(evr));
+                finded = find_pkg(shpkg, shell_s.avpkgs, compare_ver, 
+                                  &cmprc, evr, sizeof(evr));
                 
             } else {
-                finded = find_pkg(shpkg, shell_s.instpkgs, &cmprc,
-                                  evr, sizeof(evr));
+                finded = find_pkg(shpkg, shell_s.instpkgs, compare_ver,
+                                  &cmprc, evr, sizeof(evr));
                 cmprc = -cmprc;
             }
             
@@ -688,14 +717,15 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
         
         if (cmdst.flags & OPT_LS_LONG) {
             char timbuf[30];
+            
             if (pkg->btime) 
                 strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
                          localtime((time_t*)&pkg->btime));
             else
                 *timbuf = '\0';
+            
             if (cmdst.flags & OPT_LS_UPGRADEABLE) 
-                printf("%-42s%-12s%12s%8d\n", shpkg->nevr, evr, timbuf,
-                       pkg->size/1024);
+                printf(fmt_pkg, shpkg->nevr, evr, timbuf, pkg->size/1024);
             else
                 printf("%-42s%12s%8d\n", shpkg->nevr, timbuf,
                        pkg->size/1024);
@@ -1063,16 +1093,13 @@ static int cmd_get(int argc, const char **argv, struct argp *argp)
 /* status                                                               */
 /*----------------------------------------------------------------------*/
 static
-error_t parse_stat_opt(int key, char *arg, struct argp_state *state)
+error_t parse_desc_opt(int key, char *arg, struct argp_state *state)
 {
     struct cmd_state *cmdst = state->input;
     
     switch (key) {
         case ARGP_KEY_ARG:
             n_array_push(cmdst->pkgnames, strdup(arg));
-
-        case 'a':
-            
 
         case ARGP_KEY_END:
             //argp_usage (state);
@@ -1086,11 +1113,11 @@ error_t parse_stat_opt(int key, char *arg, struct argp_state *state)
 }
 
 
-static int cmd_stat(int argc, const char **argv, struct argp *argp)
+static int cmd_desc(int argc, const char **argv, struct argp *argp)
 {
     struct cmd_state cmdst = { 0, NULL};
     tn_array *shpkgs = NULL;
-    int i, j, err = 0;
+    int i, err = 0;
 
     shell_s.inst->flags = shell_s.inst_flags_orig;
     shell_s.inst->instflags = 0;
@@ -1105,69 +1132,50 @@ static int cmd_stat(int argc, const char **argv, struct argp *argp)
         return 0;
 
     if (n_array_size(shpkgs) == 0) {
-        printf("stat: specify what packages you want to install\n");
+        printf("desc: no package given\n");
         err++;
         goto l_end;
     }
     
-    if (err) 
-        goto l_end;
-
-    pkgset_unmark(shell_s.pkgset, PS_MARK_UNMARK_ALL);
-
-    shell_s.inst->db = pkgdb_open(shell_s.inst->rootdir, NULL, O_RDONLY);
-    if (shell_s.inst->db == NULL) {
-        log(LOGERR, "could not open database\n");
-        goto l_end;
-    }
-    
     for (i=0; i<n_array_size(shpkgs); i++) {
-        struct shell_pkg *shpkg = n_array_nth(shpkgs, i);
-        tn_array *dbpkgs;
-        
-        dbpkgs = rpm_get_packages(shell_s.inst->db->dbh, shpkg->pkg, PKG_LDNEVR);
-        if (dbpkgs == NULL) {
-            if (cmdst.flags & OPT_STAT_ALL) 
-                msg(0, "%-32s not installed\n", pkg_snprintf_s(shpkg->pkg));
-            continue;
-        }
-        
-        msg(0, "%-32s", pkg_snprintf_s(shpkg->pkg));    
-        for (j=0; j<n_array_size(dbpkgs); j++) {
-            struct dbpkg *dbpkg = n_array_nth(dbpkgs, j);
-            int cmprc, c;
-            char *p = ", ", *msg;
-            
-            cmprc = pkg_cmp_evr(dbpkg->pkg, shpkg->pkg);
-            
-            if (cmprc == 0)
-                msg = "up to date";
-            else if (cmprc < 0)
-                msg = "upgradable";
-            else
-                msg = "up to date;";
-            
+        struct pkguinf *pkgu;
+        struct shell_pkg *shpkg;
 
-            if (j == n_array_size(dbpkgs) - 1)
-                p = "";
+        shpkg = n_array_nth(shpkgs, i);
+        if ((pkgu = pkg_info(shpkg->pkg))) {
+            char timbuf[30];
+
+            if (shpkg->pkg->btime) 
+                strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
+                         localtime((time_t*)&shpkg->pkg->btime));
+            else
+                *timbuf = '\0';
             
-            msg(0, "_%s %s", msg, pkg_snprintf_s(dbpkg->pkg));
+            printf("\n"
+                   "Name:\t\t%s\n", pkg_snprintf_s(shpkg->pkg));
+            if (pkgu->summary) 
+                printf("Summary:\t%s\n", pkgu->summary);
+
+            if (pkgu->license) 
+                printf("License:\t%s\n", pkgu->license);
+
+            if (pkgu->url)
+                printf("URL:\t\t%s\n", pkgu->url);
+
+            if (*timbuf)
+                printf("Built:\t\t%s\n", timbuf);
+            
+            if (pkgu->description) 
+                printf("Description:\n%s\n", pkgu->description);
+            
+            pkguinf_free(pkgu);
         }
-        msg(0, "_\n");
-        if (dbpkgs)
-            n_array_free(dbpkgs);
     }
     
  l_end:
-
-    if (shell_s.inst->db) {
-        pkgdb_free(shell_s.inst->db);
-        shell_s.inst->db = NULL;
-    }
     
     if (shpkgs != shell_s.avpkgs)
         n_array_free(shpkgs);
-    n_array_map(shell_s.avpkgs, (tn_fn_map1)shpkg_clean_flags);
     return err == 0;
 }
 
@@ -1287,11 +1295,46 @@ int cmd_reload(int argc, const char **argv, struct argp* argp)
 }
 
 
+
+static void sig_winch(int signo)
+{
+    n_assert(signo == SIGWINCH);
+    winch_reached = 1;
+    signal(SIGWINCH, sig_winch);
+}
+
+
+static void get_term_width(void) 
+{
+    struct winsize ws;
+
+    if (winch_reached) {
+        if (ioctl(1, TIOCGWINSZ, &ws) == 0)
+            term_width = ws.ws_col;
+        else
+            term_width = 80;
+
+        winch_reached = 0;
+    }
+    
+}
+
+
 int shell_main(struct pkgset *ps, struct inst_s *inst)
 {
     char *line, *s, *histfile = NULL, *home;
     int n, i;
 
+    
+    if (!isatty(1)) {
+        log(LOGERR, "not a tty\n");
+        return 1;
+    }
+
+    winch_reached = 1;
+    get_term_width();
+    signal(SIGWINCH, sig_winch);
+    
     
     if (shell_s.pkgset != NULL) {
         log(LOGERR, "shell_main: not reentrant func\n");
@@ -1303,6 +1346,8 @@ int shell_main(struct pkgset *ps, struct inst_s *inst)
     
     shell_s.avpkgs = n_array_new(n_array_size(ps->pkgs), (tn_fn_free)shpkg_free,
                                  (tn_fn_cmp)shpkg_cmp);
+
+    
     
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
@@ -1319,7 +1364,9 @@ int shell_main(struct pkgset *ps, struct inst_s *inst)
         
         n_array_push(shell_s.avpkgs, shpkg);
     }
-
+    n_array_ctl(shell_s.avpkgs, TN_ARRAY_AUTOSORTED);
+    n_array_sort(shell_s.avpkgs);
+    
     shell_s.pkgset = ps;
     shell_s.inst = inst;
     shell_s.inst_flags_orig = inst->flags;
