@@ -290,6 +290,48 @@ struct pkg *pkg_new_ext(tn_alloc *na,
     return pkg;
 }
 
+#if 0                           /* nfy */
+static tn_array *clone_array(tn_array *arr, unsigned flags)
+{
+    flags = flags;
+    if (arr)
+        return n_ref(arr);
+    return NULL;
+}
+
+struct pkg *pkg_clone(tn_alloc *na, struct pkg *pkg, unsigned flags) 
+{
+    struct pkg *new;
+
+    new = pkg_new_ext(na, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
+                      pkg_arch(pkg), pkg_os(pkg), pkg->fn,
+                      pkg->size, pkg->fsize, pkg->btime);
+    
+    new->fmtime = pkg->fmtime;
+    n_assert(flags & PKG_LDNEVR); /* deep copy not implemented yet */
+        
+    new->caps  = clone_array(pkg->caps, flags);
+    new->reqs  = clone_array(pkg->reqs, flags);
+    new->cnfls = clone_array(pkg->cnfls, flags);
+    if (pkg->fl)
+        new->fl = n_ref(pkg->fl)
+    new->reqpkgs = clone_array(pkg->reqpkgs, flags);
+    new->revreqpkgs = clone_array(pkg->revreqpkgs, flags);
+    new->cnflpkgs = clone_array(pkg->cnflpkgs, flags);
+
+    pkg->pkgdir = NULL;
+    pkg->pkgdir_data = NULL;
+    pkg->pkgdir_data_free = NULL;
+    pkg->load_pkguinf = NULL;
+    pkg->load_nodep_fl = NULL;
+    
+    pkg->pri = 0;
+    pkg->groupid = 0;           /* remapping not implemented */
+    pkg->_refcnt = 0;
+    
+    return pkg;
+}
+#endif
 
 void pkg_free(struct pkg *pkg) 
 {
