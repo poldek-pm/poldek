@@ -58,12 +58,17 @@ libpoldek_a_SOURCES = \
 
 SHELL_MOD = shell/libshell.a
 
+poldek_DEPENDENCIES_ = libpoldek.a            \
+	               vfile/libvfile.a       \
+		       vfile/vftp/libvftp.a   \
+		       vfile/vhttp/libvhttp.a
+
 if ENABLE_INTERACTIVE_MODE
 SHELL_MOD_ = $(SHELL_MOD)
-poldek_DEPENDENCIES = libpoldek.a vfile/libvfile.a $(SHELL_MOD_)
+poldek_DEPENDENCIES = $(poldek_DEPENDENCIES_) $(SHELL_MOD)
 else
 SHELL_MOD_ =
-poldek_DEPENDENCIES = libpoldek.a vfile/libvfile.a $(SHELL_MOD_)
+poldek_DEPENDENCIES = $(poldek_DEPENDENCIES_) $(SHELL_MOD_)
 endif
 
 LDADD_              = @INTLLIBS@
