@@ -60,7 +60,7 @@ ann:
 	@echo -ne "MAIL FROM: $(ann_from_)\r\n"        >  ann.1; \
 	echo -ne "RCPT TO: $(ann_to)\r\nDATA\r\n"     >> ann.1; \
 	echo -ne "From: Pawel A. Gajda <$(ann_from)>\nTo: $(ann_to)\n" >> ann.1; \
-	perl -ne 'BEGIN { $$n = 0; }; if (/(^\d+\.\d+.+?)\s/) { exit if $$n; print "Subject: [ANN] poldek $$1 released\n\n"; $$n++ } print;' NEWS >> ann.1; \
+	perl -ne 'BEGIN { $$n = 0; }; if (/(^\d+\.\d+.+?)\s/) { exit if $$n; print "Subject: [ANN] poldek $$1\n\n"; $$n++ } print;' NEWS >> ann.1; \
 	echo -ne "-- \nmis@pld.org.pl\nhttp://team.pld.org.pl/~mis/poldek/" >> ann.1; \
 	echo -ne "\r\n.\r\n" >> ann.1; \
 	echo "Saved ann.1"
