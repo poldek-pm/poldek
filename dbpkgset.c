@@ -57,6 +57,19 @@ int dbpkg_set_has_pkg_recno(struct dbpkg_set *dbpkg_set, int recno)
 }
 
 
+int dbpkg_set_has_pkg(struct dbpkg_set *dbpkg_set, const struct pkg *pkg)
+{
+    int i;
+
+    for (i=0; i<n_array_size(dbpkg_set->dbpkgs); i++) {
+        struct dbpkg *dbpkg = n_array_nth(dbpkg_set->dbpkgs, i);
+        if (pkg_cmp_name_evr(dbpkg->pkg, pkg) == 0)
+            return 1;
+    }
+    return 0;
+}
+
+
 const struct pkg *dbpkg_set_provides(struct dbpkg_set *dbpkg_set,
                                      const struct capreq *cap)
 {
@@ -120,3 +133,16 @@ const struct pkg *dbpkg_set_provides(struct dbpkg_set *dbpkg_set,
 }
 
     
+void dbpkg_set_dump(struct dbpkg_set *dbpkg_set)
+{
+    int i;
+
+    printf("dbpkg_set dump %p: ",  dbpkg_set);
+    
+        
+    for (i=0; i<n_array_size(dbpkg_set->dbpkgs); i++) {
+        struct dbpkg *dbpkg = n_array_nth(dbpkg_set->dbpkgs, i);
+        printf("%s, ", dbpkg_snprintf_s(dbpkg));
+    }
+    printf("\n");
+}

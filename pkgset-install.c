@@ -16,7 +16,7 @@
 #endif
 
 
-#define ENABLE_TRACE 0
+
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
@@ -31,10 +31,12 @@
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
+#include <trurl/nlist.h>
 
 #include <vfile/vfile.h>
 #include <vfile/p_open.h>
 
+#define ENABLE_TRACE 0
 #include "i18n.h"
 #include "log.h"
 #include "term.h"
@@ -47,7 +49,7 @@
 #include "dbpkg.h"
 #include "dbpkgset.h"
 #include "rpmdb_it.h"
-
+#include "dbdep.h"
 
 #define INST_INSTALL  1
 #define INST_UPGRADE  2
@@ -93,105 +95,6 @@ int process_pkg_deps(int indent, struct pkg *pkg,
                      struct pkgset *ps, struct upgrade_s *upg, int process_as);
 
 
-
-#define DBDEP_FOREIGN          (1 << 3)
-#define DBDEP_DBSATISFIED      (1 << 4)
-
-struct db_dep {
-    struct capreq *req;
-    struct pkg    *spkg;       /* package which satisfies req */
-    tn_array      *pkgs;       /* packages which requires req */
-    unsigned      flags;
-};
-
-
-static
-void db_dep_free(struct db_dep *db_dep) 
-{
-    n_array_free(db_dep->pkgs);
-    db_dep->req = NULL;
-    db_dep->pkgs = NULL;
-    db_dep->spkg = NULL;
-    free(db_dep);
-}
-
-static
-tn_hash *db_deps_new(void) 
-{
-    tn_hash *h;
-    h = n_hash_new(103, (tn_fn_free)db_dep_free);
-    return h;
-}
-
-static 
-void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
-                 struct pkg *spkg, unsigned flags) 
-{
-    struct db_dep *dep;
-
-    
-    DBGF_NULL("%s from %s stby %s [%s]\n", capreq_snprintf_s(req),
-             pkg_snprintf_s(pkg), spkg ? pkg_snprintf_s0(spkg) : "NULL",
-             (flags & DBDEP_FOREIGN) ? "foreign" :
-             (flags & DBDEP_DBSATISFIED) ? "db" : "UNKNOWN");
-    
-    if ((dep = n_hash_get(db_deph, capreq_name(req)))) {
-        n_array_push(dep->pkgs, pkg);
-        dep->flags |= flags;
-        
-    } else {
-        dep = malloc(sizeof(*dep));
-        dep->req = req;
-        dep->spkg = spkg;
-        dep->pkgs = n_array_new(4, NULL, (tn_fn_cmp)pkg_cmp_name_evr);
-        n_array_push(dep->pkgs, pkg);
-        dep->flags = flags;
-        n_hash_insert(db_deph, capreq_name(req), dep);
-    }
-}
-
-static
-void db_deps_remove_pkg(tn_hash *db_deph, struct pkg *pkg)
-{
-    int i;
-
-    DBGF_NULL("%s\n", pkg_snprintf_s(pkg));
-    
-    if (pkg->reqs == NULL)
-        return;
-        
-    for (i=0; i<n_array_size(pkg->reqs); i++) {
-        struct db_dep *dep;
-        struct capreq *req;
-
-        req = n_array_nth(pkg->reqs, i);
-        if ((dep = n_hash_get(db_deph, capreq_name(req)))) {
-            DBGF_NULL("rm %s\n", capreq_snprintf_s(req));
-            n_array_remove(dep->pkgs, pkg);
-            if (n_array_size(dep->pkgs) == 0) 
-                n_hash_remove(db_deph, capreq_name(req));
-        }
-    }
-}
-
-static
-struct db_dep *db_deps_has(tn_hash *db_deph, struct capreq *req) 
-{
-    return n_hash_get(db_deph, capreq_name(req));
-}
-
-static
-int db_deps_provides_req(tn_hash *db_deph, struct capreq *req, int flags) 
-{
-    struct db_dep *dep;
-
-    if ((dep = n_hash_get(db_deph, capreq_name(req))))
-        if ((dep->flags & flags) &&
-            capreq_strcmp_evr(req, dep->req) == 0)
-            return 1;
-    
-    return 0;
-}
 
 /* anyone of pkgs is marked? */
 static inline int one_is_marked(struct pkg *pkgs[], int npkgs)
@@ -456,8 +359,8 @@ void message_depmark(int indent, const struct pkg *marker,
 }
 
 static
-int marked_for_removal(struct pkg *pkg, const struct capreq *req,
-                       struct upgrade_s *upg)
+int marked_for_removal_by_req(struct pkg *pkg, const struct capreq *req,
+                              struct upgrade_s *upg)
 {
     const struct pkg *ppkg;
     int rc;
@@ -465,7 +368,7 @@ int marked_for_removal(struct pkg *pkg, const struct capreq *req,
     if (pkg_is_rm_marked(pkg))
         return 1;
     
-    rc =  ((ppkg = dbpkg_set_provides(upg->uninst_set, req)) &&
+    rc = ((ppkg = dbpkg_set_provides(upg->uninst_set, req)) &&
            pkg_cmp_name_evr(ppkg, pkg) == 0);
     
     if (rc)
@@ -473,6 +376,20 @@ int marked_for_removal(struct pkg *pkg, const struct capreq *req,
     
     return rc;
 }
+
+
+static
+int marked_for_removal(struct pkg *pkg, struct upgrade_s *upg)
+{
+    if (pkg_is_rm_marked(pkg))
+        return 1;
+
+    if (dbpkg_set_has_pkg(upg->uninst_set, pkg))
+        pkg_rm_mark(pkg);
+    
+    return pkg_is_rm_marked(pkg);
+}
+
 
 static
 int dep_mark_package(struct pkg *pkg,
@@ -488,7 +405,7 @@ int dep_mark_package(struct pkg *pkg,
         return 0;
     }
 
-    if (marked_for_removal(pkg, byreq, upg)) {
+    if (marked_for_removal_by_req(pkg, byreq, upg)) {
         logn(LOGERR, _("%s: dependency loop - "
                        "package already marked for removal"), pkg_snprintf_s(pkg));
         upg->nerr_fatal++; 
@@ -531,7 +448,7 @@ int process_pkg_orphans(struct pkg *pkg, struct upgrade_s *upg)
 
 
     dbh = upg->inst->db->dbh;
-
+    DBGF("%s\n", pkg_snprintf_s(pkg));
     mem_info(1, "process_pkg_orphans:");
     n += rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, pkg->name,
                                     upg->uninst_set->dbpkgs, ldflags);
@@ -582,14 +499,14 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     struct db_dep *db_dep;
     struct capreq *req;
 
-    //printf("VUN %s: %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(cap));
-    if ((db_dep = db_deps_has(upg->db_deps, cap)) == NULL) {
-        //       printf("  [1] -> NO in db_deps\n");
+    DBG("VUN %s: %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(cap));
+    if ((db_dep = db_deps_contains(upg->db_deps, cap, 0)) == NULL) {
+        DBG("  [1] -> NO in db_deps\n");
         return 1;
     }
 
     if (db_dep->spkg && pkg_is_marked(db_dep->spkg)) {
-        //printf("  [1] -> marked %s\n", pkg_snprintf_s(db_dep->spkg));
+        DBG("  [1] -> marked %s\n", pkg_snprintf_s(db_dep->spkg));
         return 1;
     }
     
@@ -599,12 +516,12 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     // still satisfied by db? 
     if (pkgdb_match_req(upg->inst->db, req, upg->strict,
                         upg->uninst_set->dbpkgs)) {
-        //printf("  [1] -> satisfied by db\n");
+        DBG("  [1] -> satisfied by db\n");
         return 1;
     }
     	
     
-    if (db_dep->spkg && !marked_for_removal(db_dep->spkg, req, upg) && 0) {
+    if (db_dep->spkg && !marked_for_removal_by_req(db_dep->spkg, req, upg)) {
         struct pkg *marker;
 
         n_assert(n_array_size(db_dep->pkgs));
@@ -697,8 +614,10 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
         if ((dbpkg->flags & DBPKG_TOUCHED) == 0) {
             msgn_i(1, indent, _("%s obsoleted by %s"), dbpkg_snprintf_s(dbpkg),
                   pkg_snprintf_s(pkg));
+            
             pkg_rm_mark(dbpkg->pkg);
             db_deps_remove_pkg(upg->db_deps, dbpkg->pkg);
+            db_deps_remove_pkg_caps(upg->db_deps, pkg);
             dbpkg->flags |= DBPKG_TOUCHED;
 
             if (dbpkg->pkg->caps) {
@@ -785,6 +704,8 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
 
     if (pkg->reqs == NULL)
         return 1;
+
+    DBGF("%s\n", pkg_snprintf_s(pkg));
     
     for (i=0; i < n_array_size(pkg->reqs); i++) {
         struct capreq *req;
@@ -795,6 +716,14 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
 
         if (capreq_is_rpmlib(req)) 
             continue;
+
+        /* obsoleted by greedy mark */
+        if (process_as == PROCESS_AS_ORPHAN &&
+            marked_for_removal(pkg, upg)) {
+            DBGF("%s: obsoleted, return\n", pkg_snprintf_s(pkg));
+            db_deps_remove_pkg(upg->db_deps, pkg);
+            return 1;
+        }
         
         reqname = capreq_name(req);
         if (capreq_has_ver(req)) {
@@ -802,7 +731,7 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
             capreq_snprintf(reqname, 256, req);
         }
 
-        //printf("REQ = %s\n", reqname);
+        DBGF("req %s\n", capreq_snprintf_s(req));
 
         if (find_req(pkg, req, ps, &tomark)) {
             if (tomark == NULL) {
@@ -811,24 +740,28 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                 continue;
             }
         }
-        
         /* don't check foreign dependencies */
         if (process_as == PROCESS_AS_ORPHAN) {
-            if (db_deps_provides_req(upg->db_deps, req, DBDEP_FOREIGN)) {
+#if 0   /* buggy,  TODO - unmark foreign on adding to uninst_set */
+            if (db_deps_provides(upg->db_deps, req, DBDEP_FOREIGN)) {
+                
                 msg_i(3, indent, "%s: %s skipped foreign req [cached]\n",
                       pkg_snprintf_s(pkg), reqname);
                 continue;
-                
-            } else if (!dbpkg_set_provides(upg->uninst_set, req)) {
-                msg_i(3, indent, "%s: %s skipped foreign req\n",
-                      pkg_snprintf_s(pkg), reqname);
 
+            }
+#endif
+            if (!dbpkg_set_provides(upg->uninst_set, req)) {
+                DBGF("%s: %s skipped foreign req\n",
+                     pkg_snprintf_s(pkg), reqname);
+                
                 db_deps_add(upg->db_deps, req, pkg, tomark,
                             process_as | DBDEP_FOREIGN);
                 continue;
             }
         }
-#if 0                           /* hungry update */
+        
+#if 0                           /* very, very hungry upgrade */
         /* in "to-install" set */
         if (0 && tomark && pkg_is_marked_i(tomark) && !pkg_has_badreqs(tomark) &&
             upg->nmarked < 10) { 
@@ -838,21 +771,25 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
             mark_package(tomark, upg);
             process_pkg_deps(tomark, ps, upg, PROCESS_AS_NEW, -1);
         }
-        //else 
-        
 #endif
 
         /* cached */
-        if (db_deps_provides_req(upg->db_deps, req, DBDEP_DBSATISFIED)) { 
+        if (db_deps_provides(upg->db_deps, req, DBDEP_DBSATISFIED)) {
             msg_i(3, indent, "%s: satisfied by db [cached]\n",
                   capreq_snprintf_s(req));
+            DBGF("%s: satisfied by db [cached]\n", capreq_snprintf_s(req));
+            
             
         } else if (pkgdb_match_req(upg->inst->db, req, upg->strict,
                                    upg->uninst_set->dbpkgs)) {
+
+            DBGF("%s: satisfied by db\n", capreq_snprintf_s(req));
             msg_i(3, indent, "%s: satisfied by db\n", capreq_snprintf_s(req));
-            db_deps_add(upg->db_deps, req, pkg, tomark, process_as | DBDEP_DBSATISFIED);
+            //dbpkg_set_dump(upg->uninst_set);
+            db_deps_add(upg->db_deps, req, pkg, tomark,
+                        process_as | DBDEP_DBSATISFIED);
             
-        } else if (tomark && marked_for_removal(tomark, req, upg)) {
+        } else if (tomark && marked_for_removal_by_req(tomark, req, upg)) {
             logn(LOGERR, _("%s (cap %s) is required by %s%s"),
                  pkg_snprintf_s(tomark), capreq_snprintf_s(req),
                  pkg_is_installed(pkg) ? "" : " already marked", 
@@ -860,7 +797,6 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
             upg->nerr_dep++;
             
         } else if (tomark && (upg->inst->flags & INSTS_FOLLOW)) {
-            
             //printf("DEPM %s\n", pkg_snprintf_s0(tomark));
             message_depmark(indent, pkg, tomark, req, process_as);
             if (dep_mark_package(tomark, pkg, req, upg)) 
