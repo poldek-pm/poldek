@@ -444,12 +444,21 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
     
     if ((flags & (OPT_SEARCH_CNFL | OPT_SEARCH_OBSL)) && pkg->cnfls)
         for (i=0; i<n_array_size(pkg->cnfls); i++) {
+            int matchit = 0;
+            
             cr = n_array_nth(pkg->cnfls, i);
             p = capreq_name(cr);
             
-            if ((flags & OPT_SEARCH_CNFL) == 0 || cnfl_is_obsl(cr))
-                if ((match = pattern_match(pt, p, strlen(p))))
-                    goto l_end;
+            if (cnfl_is_obsl(cr)) {
+                if ((flags & OPT_SEARCH_OBSL))
+                    matchit = 1;
+                
+            } else if (flags & OPT_SEARCH_CNFL) {
+                matchit = 1;
+            }
+            
+            if (matchit && (match = pattern_match(pt, p, strlen(p))))
+                goto l_end;
         }
 
     if ((flags & OPT_SEARCH_GROUP) && (p = (char*)pkg_group(pkg))) {
