@@ -43,8 +43,10 @@ struct source *source_new(const char *name, const char *type,
                           const char *path, const char *pkg_prefix);
 struct source *source_new_pathspec(const char *type, const char *pathspec,
                                    const char *pkg_prefix);
+#ifndef SWIG
 /* sets type to v0.18.x default */
 struct source *source_new_v0_18(const char *pathspec, const char *pkg_prefix);
+#endif
 void source_free(struct source *src);
 struct source *source_link(struct source *src);
 struct source *source_set_pkg_prefix(struct source *src, const char *prefix);

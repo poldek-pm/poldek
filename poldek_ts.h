@@ -138,6 +138,8 @@ void poldek_ts_clrf(struct poldek_ts *ts, uint32_t flag);
 uint32_t poldek_ts_issetf(struct poldek_ts *ts, uint32_t flag);
 int poldek_ts_issetf_all(struct poldek_ts *ts, uint32_t flag);
 
+void poldek_ts_setop(struct poldek_ts *ts, int optv, int on);
+int poldek_ts_getop(const struct poldek_ts *ts, int optv);
 int poldek_ts_op_touched(const struct poldek_ts *ts, int optv);
 int poldek_ts_is_interactive_on(const struct poldek_ts *ts);
 
@@ -166,8 +168,8 @@ void poldek_iinf_destroy(struct poldek_iinf *iinf);
 
 int poldek_ts_run(struct poldek_ts *ts, struct poldek_iinf *iinf);
 
-struct pkgdir;
-struct pkgdir *poldek_ts_load_dest_pkgdir(struct poldek_ts *ts);
+//struct pkgdir;
+//struct pkgdir *poldek_ts_load_dest_pkgdir(struct poldek_ts *ts);
 //int poldek_ts_do_install_dist(struct poldek_ts *ts);
 //int poldek_ts_do_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
 //int poldek_ts_do_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf);

@@ -131,27 +131,14 @@ struct pkg *pkg_new_ext(tn_alloc *na,
 void pkg_free(struct pkg *pkg);
 
 #ifdef SWIG
-struct pkg *pkg_link(struct pkg *pkg);
-int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
-const char *pkg_id(const struct pkg *p);
+# define extern__inline
+#else
+# define extern__inline extern inline
+#endif
 
-#else 
-static inline struct pkg *pkg_link(struct pkg *pkg)
-{
-    pkg->_refcnt++;
-    return pkg;
-}
-
-static inline int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2) 
-{
-    return strcmp(p1->name, p2->name);
-}
-
-static inline const char *pkg_id(const struct pkg *p) 
-{
-    return p->nvr;
-}
-#endif /* SWIG */
+extern__inline struct pkg *pkg_link(struct pkg *pkg);
+extern__inline int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
+extern__inline const char *pkg_id(const struct pkg *p);
 
 int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2);
@@ -160,7 +147,7 @@ int pkg_cmp_name_ver(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
 
 int pkg_cmp_name_srcpri(const struct pkg *p1, const struct pkg *p2);
-int pkg_cmp_name_evr_rev_srcpri(const struct pkg *p1, const struct pkg *p2);
+//int pkg_cmp_name_evr_rev_srcpri(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_evr_arch_rev_srcpri(const struct pkg *p1, const struct pkg *p2);
 
 int pkg_cmp_pri(struct pkg *p1, struct pkg *p2);

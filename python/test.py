@@ -31,14 +31,14 @@ _make_methods(poldek.source, 'source_')
 _make_methods(poldek.tn_array, 'n_array_')
 
 ctx = poldek.poldek_ctx()
-poldek.cvar.verbose = 1
+poldek.cvar.poldek_VERBOSE = 1
 
-src = poldek.source('ac')
+src = poldek.source('ac-ready')
 ctx.configure(ctx.CONF_SOURCE, src)
 ctx.load_config()
 ctx.setup()
 
-arr = ctx.get_avpkgs()
+arr = ctx.get_avail_packages()
 print "Loaded %d packages" % len(arr)
 n = 0
 #for ptr in arr:
@@ -50,8 +50,10 @@ n = 0
 #    print p
 
 ts = ctx.ts_new()
-ts.add_pkgmask("SysVinit")
-ts.setf(ts.INSTALL | ts.UPGRADE)
+ts.set_type(ts.INSTALL, "from python")
+ts.setf(ts.UPGRADE)
+ts.setop(poldek.POLDEK_OP_TEST, 1)
+ts.add_pkgmask("poldek")
 ts.run(None)
 
 

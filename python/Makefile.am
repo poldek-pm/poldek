@@ -21,6 +21,7 @@ _poldek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la @TRURL_LDFLAG@
 
 AM_CFLAGS=
 CFLAGS=
+CPPFLAGS += -DSWIG
 
 poldek.i: local_stdint.h
 

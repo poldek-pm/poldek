@@ -17,7 +17,7 @@
 %include "poldek_ts.h"
 %include "pkgdir/source.h"
 
-extern int verbose;
+extern int poldek_VERBOSE;
 
 
 %extend tn_array {
@@ -59,16 +59,14 @@ extern int verbose;
     ~poldek_ts() { poldek_ts_free(self); }
 }
 
-
 %extend poldek_ctx {
     poldek_ctx() {
-         struct poldek_ctx *ctx = malloc(sizeof(*ctx));
-         poldek_init(ctx, 0);
+         struct poldek_ctx *ctx = poldek_new(0);
          return ctx;
     }
     
-    ~poldek_ctx() { poldek_destroy(self); free(self); }
-    int load_config(const char *path = NULL) { poldek_load_config(self, path); }
+    ~poldek_ctx() { poldek_free(self); }
+    int load_config(const char *path = NULL) { poldek_load_config(self, path, 0); }
     int configure(int param, void *val) { poldek_configure(self, param, val); }
     int configure(int param, unsigned val) { poldek_configure(self, param, val); }
     int configure(int param, char *val) { poldek_configure(self, param, val); }

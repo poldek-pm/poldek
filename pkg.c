@@ -1520,4 +1520,19 @@ void *pkg_na_malloc(struct pkg *pkg, size_t size)
     return NULL;
 }
 
-    
+
+struct pkg *pkg_link(struct pkg *pkg)
+{
+    pkg->_refcnt++;
+    return pkg;
+}
+
+int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2) 
+{
+    return strcmp(p1->name, p2->name);
+}
+
+const char *pkg_id(const struct pkg *p) 
+{
+    return p->nvr;
+}

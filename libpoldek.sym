@@ -253,6 +253,7 @@ poldek_ts_destroy
 poldek_ts_free
 poldek_ts_get_arg_count
 poldek_ts_get_args_asmasks
+poldek_ts_getop
 poldek_ts_init
 poldek_ts_is_interactive_on
 poldek_ts_issetf
@@ -262,6 +263,7 @@ poldek_ts_op_touched
 poldek_ts_run
 poldek_ts_set_type
 poldek_ts_setf
+poldek_ts_setop
 poldek_ts_type
 poldek_ts_vconfigure
 poldek_util_get_gmt_offs
