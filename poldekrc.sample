@@ -1,0 +1,37 @@
+# $Id$
+# Sample poldek configuration
+
+# Only one source may be presented
+#source = ftp://ftp.znienacka.com.pl/RPMS/Packages.gz
+#source = http://www.znienacka.com.pl/RPMS/Packages.gz
+#source = https://www.znienacka.com.pl/RPMS/Packages.gz
+#source = rsync://rsync.znienacka.com.pl/PLD/Packages.gz
+#source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/Packages.gz
+source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/tocfile
+
+
+cachedir = /var/tmp/poldek-cache/
+
+# If package index and packages stored under diffrent locations:
+#source = /var/tmp/Packages-for-cdrom-without-package-index
+#prefix = /cdrom/RPMS/
+
+# Downloaders configuration
+# Available semi-macros (as ws-separate tokens only):
+#   %p[n] - package basename
+#   %d - cache dir
+#   %D - cache dir/package basename
+#   %P[n] - package full path(URL)
+
+ftp_get       = "/usr/bin/snarf %P %D"
+http_get      = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
+https_get     = "/usr/bin/curl %P -o %D"
+rsync_get     = "/usr/bin/rsync -v %P %d"
+
+
+# Some rpm macros
+rpmdef        = "_install_langs pl:lt"
+
+# don't install any documentation
+rpmdef        = "_netsharedpath /usr/share/info:/usr/share/man"
+rpmdef	      = "_excludedocs 1"	

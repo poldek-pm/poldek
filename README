@@ -1,0 +1,26 @@
+# $Id$ 
+
+See man page for user documentation. 
+
+For build requirements see poldek.spec. 
+
+Required trurlib may be downloaded from PLD CVS Repository:
+cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get -r v0_42 installer/pldi/trurlib
+
+To build its rpm packages do:
+$ make -C trurlib rpm
+
+install them and try:
+
+$ make -C poldek rpm
+
+Program have been tested on Polish(ed) Linux Distribution
+(rpm 3.0.5, Berkeley DB 3.14, glibc 2.1.3, gcc 2.95.2).
+
+Please send comments, bug reports, etc to (preferred)
+<pld-installer@pld.org.pl> or to <mis@pld.org.pl>.
+
+
+Copyright (C) 2000 Pawel A. Gajda 
+Poldek is free software and may be distributed under the terms 
+of the GNU General Public License (see file COPYING for details).

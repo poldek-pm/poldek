@@ -1,0 +1,369 @@
+=pod
+ $Id$
+=cut
+
+=head1 NAME
+
+poldek - rpm packages management helper tool
+
+=head1 SYNOPSIS
+
+poldek [--source=SOURCE] [OPTION...] [PACKAGE...]
+
+
+=head1 DESCRIPTION
+
+poldek is a cmdline tool which can be used to verify, install and
+upgrade given package sets. It was inspired by L<apt_get(8)> tool
+from Debian's APT.
+
+In general poldek gets packages information from special package index
+file (called I<Packages>) and performs one of the following actions:
+
+=over
+
+=item * Build package index
+
+=item * Update package index
+
+=item * Verify package set
+
+=item * Install system from scratch
+
+=item * Upgrade whole system
+
+=item * Install or upgrade custom packages 
+
+=back
+
+Packages and indexes can be retrieved from remote servers by poldek
+itself (by simple FTP and HTTP clients from rpmlib) or by external
+downloaders (not configured by default, see L</CONFIG FILE> for
+details). Currently four types of URLs are supported: FTP, HTTP, 
+HTTPS and RSYNC.
+
+[to be continued...]
+
+=head1 SPECIFING SOURCE
+
+The source is specified by B<--source> option:
+
+B<--source,--stxt,--sdir,-s> B<SOURCE>
+
+where SOURCE can be a local path or URL.
+
+Examples:
+
+=over
+
+=item $ poldek -s /dir/with/RPMS/ [OPTION...]
+
+=item $ poldek -s /dir/with/RPMS/Package.gz [OPTION...]
+
+=item $ poldek -s ftp://ftp.ala.ma.kota/RPMS/Packages.gz
+
+=item $ poldek -s rsync://rsync.ala-ma-kota.com/RPMS/Packages.gz
+
+=back
+
+If you want to build Packages, then only directory
+path as SOURCE is accepted.
+
+If Packages and packages are stored in diffrent
+locations then option:
+
+B<-P, --prefix> B<PREFIX>
+
+could be used to point packages one, e.g.:
+
+$ poldek -s /tmp/Packages.gz --prefix=/cdrom/RPMS/
+
+Another parameter is B<--cachedir=DIR>, which points to
+directory where fetched packages and indexes are 
+store (default is /tmp).
+
+=head1 SPECIFING PACKAGES
+
+Packages could be specified in three ways:
+
+=over
+
+=item * as packages files in arguments:
+
+$ poldek ...  ala-ma-kota-2.1-2.i386.rpm
+
+=item * as packages names with:
+
+B<-n, --pkgnevr="NAME [[E:][V[-R]]]">
+
+for example:
+
+$ poldek ... -n "apache 1.3.12" -n gzip 
+
+$ poldek ... -n "Bezdany 1:908.9-26" -n ziptool
+
+=item * as package sets taken from pkgset files B<-p, --pkgset=FILE>,
+(see README.package-sets):
+
+$ poldek ... -p ../package-sets/tiny-system
+
+=back
+
+All above options could be combined.
+
+
+=head1 BASIC MODES
+
+One of the following basic modes must be selected:
+
+=over 4
+
+=item B<--mkidx[z][=FILE]>  
+
+Build package index, by default it's stored in SOURCE/Packages.[gz].
+I<NOTE>: SOURCE must be directory.
+
+=item B<--update>    
+
+Resynchronize the package index from its source.
+It is necessary only for remote Packages and it 
+should be the first operation before program usage. 
+
+=item B<-V|--verify>
+
+This option checks dependenecies and conflicts of package set.
+Without packages specified it checks all packages.
+
+=item B<--intall-dist[=DIR]>
+
+Install system from scratch under DIR as root directory (/).
+Needs packages to be specified.
+
+=item B<--upgrade-dist[=DIR]>
+
+Install the newest versions of all packages currently installed 
+on the system from the specified source (see L</SOURCE>).
+
+=item B<-i, --install|-U, --upgrade>
+
+Install or upgrade given packages.
+
+=back 
+
+=head2 Options for install modes
+
+=over
+
+=item B<--dump[=FILE]> just dump packages FQPNs to FILE or stdout instead 
+of install them.
+
+=item B<--fetch=DIR> like B<--dump> but packages are downloaded.
+
+=item B<--rpmdef="NAME VALUE"> like rpm's --define option.
+=item B<--nodeps>; B<-t, --test>; B<--justdb>; B<--force> have the 
+same meanings like RPM ones. See next section.
+
+
+
+=head1 COOPERATING WITH RPM
+
+Currently all installations except B<install-dist> are made
+by RPM, which is executed in background. Options passed to rpm:
+
+=over
+
+=item * --force 
+
+=item * --install
+
+=item * --justdb
+
+=item * --nodeps
+
+=item * --test
+
+=item * --upgrade 
+
+=item * --rpmdef (passed as --define)
+
+=back
+
+=head2
+
+
+Other rpm options may be passed as arguments like B<--rpm-RPM_LONG_OPTION>,
+e.g:
+
+$ poldek ... -- --rpm-noscripts --rpm-notriggers
+
+
+=head1 CONFIG FILE
+
+Program tries to read configuration from F<$HOME/.poldekrc>
+by default, B<-c,--conf> option could points to other location.
+With B<-z, --noconf> poldek don't read any config. 
+
+Config file consists of parameters of the form
+
+'name = value'
+
+The file is line-based - that is, each newline-terminated
+line represents a comment or a parameter.
+
+=head2 Parameters:
+
+=over
+
+=item * B<source>
+
+=item * B<prefix>
+
+=item * B<cachedir>
+
+=back
+
+=head1
+
+Downloaders are configured by B<PROTOCOL_get="SPEC"> parameter.  The
+SPEC is a command formated string, where at least 2 semi-macros of 4
+available should be used:
+
+=over 
+
+=item B<%p[n]> - package basename (FQPN)
+
+=item B<%P[n]> - package full path
+
+=item B<%d> - cache directory
+
+=item B<%D> - cache directory/package basename
+
+=back
+
+=head1
+
+Currently three protocols are available: FTP, HTTP and RSYNC.  Special
+B<ftp_http> "protocol" could be used for describe downloader for both
+HTTP and FTP; by default wget is used as FTP/HTTP downloader.
+
+Examples:
+
+ftp_http_get   = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
+
+ftp_get        = "/usr/bin/curl %P -o %D"
+
+ftp_get        = "/usr/bin/snarf %P %D"
+
+rsync_get      = "/usr/bin/rsync -v %P %d"
+
+See also sample configs included in distribution.
+
+=head1 EXAMPLES
+
+=head2 Packages creation
+
+$ poldek -s /cdrom/PLD/RPMS/ --mkidx=/tmp/dummy.txt
+
+$ poldek -s /ftp/pub/PLD/RPMS/ --mkidxz
+
+=head2 Verification
+
+$ poldek -s rsync://ala.ma.kota/PLD/RPMS/Packages.gz -V
+
+$ poldek -s /dir/with/RPMS/Packages.gz -V -n "apache"
+
+=head2 Installation from scratch
+
+$ poldek -s ftp://ftp.trurl.net/PLD/RPMS/Packages.gz 
+  --install-dist=/mnt/dest -p ftp://home.net/my-pkgsets/myset
+
+Above command installs a "myset" package subset under 
+/mnt/dest as root. 
+
+I<NOTE>: mounted ROOT/proc is propably needed for 
+some package postinstall scripts.  
+
+=head2 Upgrade whole system:
+
+$ poldek -s ftp://ftp.tatry.pl/PLD/RPMS/Packages --upgrade-dist
+
+Only fetch packages marked for upgrade:
+
+$ poldek -s ftp://ftp.rankiem.net.pl/PLD/RPMS/Packages 
+  --upgrade-dist --fetch=/tmp/PLD-up/
+
+Dump packages FQPNs marked for upgrade:
+
+$ poldek -s ftp://ftp.pld.org.pl/PLD/RPMS/Packages 
+ --upgrade-dist --dump=/tmp/PLD-up-`date +%Y.%m.%d-%H.%M`
+
+Test only:
+
+$ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/Packages 
+  --upgrade-dist --test
+
+
+=head2 Install/upgrade custom packages:
+
+$ poldek -s ftp://ftp.znienacka.com/PLD/RPMS/Packages.gz 
+-U -n apache -n "ala-ma-kota 1.2" smail-12-389.i386.rpm
+
+$ poldek -s ftp://ftp.dudy.net/RPMS/Packages.gz -ti -n xteddy
+
+=head1 ENVIROMENT
+
+$HOME is used to read config file.
+  
+=head1 BUGS
+
+=head2 File conflicts
+
+Conflicts are detected by comparision files sizes and modes only,
+which means that not all conflicts may be detected because files MD5
+sums are not compared (including they will increase memory consumption
+over 100.000 * 16 bytes).
+
+=head2 Upgrade and "Obsoletes" RPM tag
+
+In PLD I<http://www.pld.org.pl>, which is primary developement
+platform for poldek, Obsoletes tag is used in two diffrent meanings:
+the first means B<A> I<obsoletes> B<B>, the second means B<A> I<is
+equivalent of> B<B>. Obviously it makes impossible to distinguish them
+and use during upgrades (in Red Hat Linux only the first mean is used,
+so Red Hat Installer use this tag).
+
+=head2 Upgrade and more than one instance of the package
+
+AFAIK rpm 3.x doesn't handle this case (4.x introduces special 
+tag RPMTAG_MULTILIB for these cases, I suppose), so poldek
+does not handle it also.  
+
+=head2 Documentation
+
+This manual should be finished and translated into English.
+
+
+=head1 CAUTION
+
+The program is in B<alpha> stage and surely contains the bugs. 
+Backup your RPM database and be watchfull. Remember, that
+there is I<NO WARRANTY OF ANY KIND> and enjoy.
+
+=head1 LICENSE
+
+This program is distributed under the terms of GNU General Public License.
+
+=head1 AUTHOR
+
+Pawel A. Gajda <mis@pld.org.pl>
+
+=head1 CONTACT
+
+Please send comments, bug reports, etc to (preferred)
+I<<pld-installer@pld.org.pl>> or to the author.
+
+=head1 SEE ALSO
+
+L<curl(1)>, L<rpm(1)>, L<rsync(1)>, L<snarf(1)>, L<wget(1)>
+
+=cut

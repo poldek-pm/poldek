@@ -1,0 +1,34 @@
+# $Id$
+
+Syntax of package set file.
+
+Each package is specified in one line: 
+
+[!]NAME [EVR] | @VIRTUAL [DEFAULT_NAME [DEFAULT_EVR]]
+
+'!' before means that poldek in interactive mode will ask 
+user before install it, in batch mode package will not be 
+installed.
+
+'@' specifies virtual package, like '!', in interactive mode 
+poldek will ask user which one of available packages he want 
+to install, otherwise, in batch mode the default package will 
+be selected.
+
+Hashed lines are treated as comments.
+
+Example:
+
+FHS 2.1 
+basesystem
+pdksh
+@bootloader lilo 2.1
+@smtpdaemon exim
+!dhcp-client
+
+After every modification set should be verified by:
+$ poldek -s YOUR_SOURCE -V --pkgset=PKGSETFILE 
+
+NOTE: Interactive mode not implemented yet.
+
+Comments, suggestions, etc >> pld-installer@pld.org.pl

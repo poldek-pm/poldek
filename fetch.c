@@ -1,0 +1,402 @@
+/* 
+  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
+ 
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License published by
+  the Free Software Foundation (see file COPYING for details).
+*/
+
+/*
+  $Id$
+*/
+
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <trurl/nassert.h>
+#include <trurl/narray.h>
+#include <trurl/nstr.h>
+
+#include "misc.h"
+#include "log.h"
+#include "fetch.h"
+
+/* 
+   %p[n] - package basename
+   %d - cache dir
+   %D - cache dir/package basename
+   %P[n] - package full path
+
+   "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
+   "/usr/bin/snarf %P %D"
+   "/usr/bin/curl %P -o %D"
+*/
+
+#define FETCHFMT_ARG    0
+#define FETCHFMT_DIR    1
+#define FETCHFMT_DIRBN  2
+#define FETCHFMT_BN     3
+#define FETCHFMT_FN     4
+
+#define FETCHFMT_MULTI  (1 << 0)
+
+struct fetcharg {
+    int8_t type;
+    int8_t flags;
+    char arg[0];
+};
+
+struct ffetcher {
+    uint16_t  urltypes;
+    int16_t   is_multi;
+    tn_array  *args;
+    char      path[0];
+};
+
+
+#define MAX_FETCHERS  64
+static struct ffetcher *ffetchers[MAX_FETCHERS];
+static int nffetchers = 0;
+
+static
+struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
+{
+    char *token, *path, *bn;
+    struct fetcharg *arg;
+    tn_array *args;
+    struct ffetcher *ftch;
+    int has_p_arg = 0, has_d_arg = 0, is_multi = 0;
+
+    n_assert(fmt);
+    if (fmt == NULL)
+        return NULL;
+    
+    
+    if ((path = next_token(&fmt, ' ', NULL)) == NULL) 
+        return NULL;
+    
+    if (*path != '/') {
+        log(LOGERR, "%s: cmd must be precedenced by '/'\n", path);
+        return NULL;
+    }
+
+    if (access(path, X_OK) != 0) {
+        log(LOGWARN, "%s: %m\n", path);
+        return NULL;
+    }
+    
+
+    args = n_array_new(8, free, NULL);
+    bn = n_basenam(path);
+    arg = malloc(sizeof(*arg) + strlen(bn) + 1);
+    arg->type = FETCHFMT_ARG;
+    strcpy(arg->arg, bn);
+    n_array_push(args, arg);
+    
+    while ((token = next_token(&fmt, ' ', NULL))) {
+        if (*token != '%') {
+            arg = malloc(sizeof(*arg) + strlen(token) + 1);
+            arg->type = FETCHFMT_ARG;
+            arg->flags = 0;
+            strcpy(arg->arg, token);
+            n_array_push(args, arg);
+            
+        } else if (strlen(token) > 3) {
+            log(LOGERR, "%s: invalid format specified\n", fmt);
+            goto l_err_end;
+            
+        } else {
+            char c;
+            arg = malloc(sizeof(*arg));
+
+            c = *(token + 2);
+            switch(*(token + 1)) {
+                case 'p':
+                    arg->type = FETCHFMT_BN;
+                    arg->flags = 0;
+                    has_p_arg++;
+                    if (c == 'n') {
+                        arg->flags = FETCHFMT_MULTI;
+                        is_multi = 1;
+                    } else if (c != '\0') {
+                        log(LOGERR, "%s: invalid format specified\n", fmt);
+                        goto l_err_end;
+                        
+                    }
+                    break;
+                    
+                case 'P':
+                    arg->type = FETCHFMT_FN;
+                    arg->flags = 0;
+                    has_p_arg++;
+                    if (c == 'n') {
+                        arg->flags = FETCHFMT_MULTI;
+                        is_multi = 1;
+                    } else if (c != '\0') {
+                        log(LOGERR, "%s: invalid format specified\n", fmt);
+                        goto l_err_end;
+                    } 
+                        
+                    break;
+                    
+                case 'd':
+                    arg->type = FETCHFMT_DIR;
+                    has_d_arg++;
+                    if (c != '\0') {
+                        log(LOGERR, "%s: invalid format specified\n", fmt);
+                        goto l_err_end;
+                    }
+                    break;
+
+                case 'D':
+                    arg->type = FETCHFMT_DIRBN;
+                    arg->flags = 0;
+                    has_d_arg++;
+                    
+                    
+                    if (c == 'n') {
+                        arg->flags = FETCHFMT_MULTI;
+                    } else if (c != '\0') {
+                        log(LOGERR, "%s: %c invalid format specified\n", fmt, c);
+                        goto l_err_end;
+                    }
+                    
+                    break;
+
+                default:
+                    log(LOGERR, "%s: invalid format specified\n", fmt);
+                    goto l_err_end;
+            }
+            n_array_push(args, arg);
+        }
+    }
+    
+    
+    if (n_array_size(args) > 2 && has_d_arg && has_p_arg) {
+        ftch = malloc(sizeof(*ftch) + strlen(path) + 1);
+        ftch->args = args;
+        ftch->is_multi = is_multi;
+        ftch->urltypes = urltypes;
+        strcpy(ftch->path, path);
+    } else
+        goto l_err_end;
+    
+    return ftch;
+
+ l_err_end:
+    if (args) 
+        n_array_free(args);
+    return NULL;
+}
+
+static
+int ffetch_file(struct ffetcher *fftch, const char *destdir,
+                const char *url /* or */, tn_array *urls)
+{
+    char *bn = NULL;
+    char *argv[n_array_size(fftch->args) + 1];
+    struct runst rst;
+    int i, n = 0;
+
+    if (url)
+        n_assert(urls == NULL);
+    
+    if (urls)
+        n_assert(url == NULL && fftch->is_multi);
+
+    if (url)
+        bn = n_basenam(url);
+    
+    for (i=0; i<n_array_size(fftch->args); i++) {
+        struct fetcharg *arg = n_array_nth(fftch->args, i);
+        switch (arg->type) {
+            case FETCHFMT_ARG:
+                argv[n++] = arg->arg;
+                break;
+                
+            case FETCHFMT_DIRBN: 
+                argv[n] = alloca(strlen(destdir) + strlen(bn) + 2);
+                sprintf(argv[n], "%s/%s", destdir, bn ? bn : "ERROR");
+                n++;
+                break;
+
+            case FETCHFMT_DIR:
+                argv[n++] = (char*)destdir;
+                break;
+
+            case FETCHFMT_BN:
+                if (url) {
+                    argv[n++] = bn;
+                } else {
+                    int i;
+                    for (i=0; i<n_array_size(urls); i++) 
+                        argv[n++] = n_basenam(n_array_nth(urls, i));
+                }
+                break;
+
+            case FETCHFMT_FN:
+                if (url) {
+                    argv[n++] = (char*)url;
+                } else {
+                    int i;
+                    for (i=0; i<n_array_size(urls); i++) 
+                        argv[n++] = n_array_nth(urls, i);
+                }
+                break;
+
+            default:
+                n_assert(0);
+                abort();
+        }
+    }
+    argv[n++] = NULL;
+
+    if (verbose) {
+        int i;
+        
+        msg(1, "exec ");
+        for (i=0; i<n-1; i++) 
+            msg(1, "_%s ", argv[i]);
+        msg(1, "_\n");
+    }
+    
+    if (p_open(&rst, fftch->path, argv) == NULL) 
+        return 0;
+
+    p_process_cmd(&rst, ((struct fetcharg*) n_array_nth(fftch->args, 0))->arg);
+    return p_close(&rst) == 0;
+}
+
+
+int fetch_register_handler(unsigned urltypes, char *fmt) 
+{
+    struct ffetcher *ftch;
+    if (nffetchers == MAX_FETCHERS)
+        return -1;
+
+    if ((ftch = ffetcher_new(urltypes, fmt))) {
+        ffetchers[nffetchers++] = ftch;
+        return nffetchers;
+    }
+    return -1;
+}
+
+
+static
+struct ffetcher *find_fetcher(int urltype, int multi) 
+{
+    int i;
+    
+    for (i=0; i<nffetchers; i++) {
+        if (urltype & ffetchers[i]->urltypes) {
+            if (!multi)
+                return ffetchers[i];
+            else if (ffetchers[i]->is_multi)
+                return ffetchers[i];
+        }
+    }
+    return NULL;
+}
+
+
+int fetch_file(const char *destdir, const char *url, int urltype) 
+{
+    struct ffetcher *ftch;
+    
+    if (urltype < 0) 
+        urltype = url_type(url);
+    
+    if ((ftch = find_fetcher(urltype, 0)) == NULL) {
+        log(LOGERR, "URL like %s not supported\n", url);
+        return 0;
+    }
+
+    return ffetch_file(ftch, destdir, url, NULL);
+}
+
+
+int fetch_files(const char *destdir, tn_array *urls, int urltype) 
+{
+    struct ffetcher *ftch;
+    int rc = 1;
+    
+    if (urltype < 0) 
+        urltype = url_type(n_array_nth(urls, 0));
+    
+    if ((ftch = find_fetcher(urltype, 1))) {
+        rc = ffetch_file(ftch, destdir, NULL, urls);
+        
+    } else if ((ftch = find_fetcher(urltype, 0))) {
+        int i;
+        int nerrs = 0;
+        
+        for (i=0; i<n_array_size(urls); i++) 
+            if (!ffetch_file(ftch, destdir, n_array_nth(urls, i), NULL))
+                nerrs++;
+        rc = nerrs == 0;
+        
+    } else {
+        log(LOGERR, "URL %s not supported\n", n_array_nth(urls, 0));
+        rc = 0;
+    }
+
+    return rc;
+}
+
+
+static 
+char *url_to_path(char *buf, size_t size, const char *url, int with_bn) 
+{
+    char *sl, *p = buf;
+    size_t len = strlen(url);
+    
+    memcpy(buf, url, len > size - 1 ? size-1 : len);
+    buf[size - 1] = '\0';
+    sl = strrchr(buf, '/');
+    
+    while (*p && p != sl) {
+        if (!isalnum(*p))
+            *p = '_';
+        p++;
+    }
+    
+    if (!with_bn)
+        *sl = '\0';
+
+    return buf;
+}
+
+char *url_as_dirpath(char *buf, size_t size, const char *url) 
+{
+    return url_to_path(buf, size, url, 0);
+}
+
+char *url_as_path(char *buf, size_t size, const char *url) 
+{
+    return url_to_path(buf, size, url, 1);
+}
+
+
+int url_type(const char *url)  
+{
+
+    if (*url == '/')
+        return URL_PATH;
+
+    if (strncmp(url, "ftp://", 6) == 0)
+        return URL_FTP;
+    
+    if (strncmp(url, "http://", 7) == 0)
+        return URL_HTTP;
+
+    if (strncmp(url, "https://", 7) == 0)
+        return URL_HTTPS;
+
+    if (strncmp(url, "rsync://", 8) == 0)
+        return URL_RSYNC;
+
+    return URL_PATH;
+}
+

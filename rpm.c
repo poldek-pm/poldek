@@ -1,0 +1,775 @@
+/* 
+  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
+ 
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License published by
+  the Free Software Foundation (see file COPYING for details).
+*/
+
+/*
+  $Id$
+*/
+
+#include <ctype.h>
+#include <errno.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include <rpm/rpmlib.h>
+#include <rpm/rpmio.h>
+#include <rpm/rpmurl.h>
+#include <rpm/rpmmacro.h>
+#include <trurl/nassert.h>
+#include <trurl/narray.h>
+#include <trurl/nstr.h>
+
+#include "rpmadds.h"
+#include "log.h"
+#include "pkg.h"
+#include "capreq.h"
+#include "vfile.h"
+
+static
+int header_evr_match_req(Header h, const struct capreq *req);
+static
+int header_cap_match_req(Header h, const struct capreq *req, int strict);
+
+int rpm_initlib(tn_array *macros) 
+{
+    if (rpmReadConfigFiles(NULL, NULL) != 0) {
+        log(LOGERR, "rpmlib init failed\n");
+        return 0;
+    }
+
+    if (macros) {
+        int i;
+        
+        for (i=0; i<n_array_size(macros); i++) {
+            char *def, *macro;
+            
+            if ((macro = n_array_nth(macros, i)) == NULL)
+                continue;
+            
+            if ((def = strchr(macro, ' ')) == NULL && 
+                (def = strchr(macro, '\t')) == NULL) {
+                log(LOGERR, "%s: invalid macro definition\n", macro);
+                return 0;
+                
+            } else {
+                char *sav = def;
+                
+                *def = '\0';
+                def++;
+                while(isspace(*def))
+                    def++;
+                msg(1, "addMacro %s %s\n", macro, def);
+                addMacro(NULL, macro, NULL, def, RMIL_DEFAULT);
+                *sav = ' ';
+            }
+        }
+    }
+    return 1;
+}
+
+
+rpmdb rpm_opendb(const char *dbpath, const char *rootdir, int mode) 
+{
+    rpmdb db = NULL;
+    
+    if (dbpath)
+        addMacro(NULL, "_dbpath", NULL, dbpath, RMIL_DEFAULT);
+
+    if (rpmdbOpen(rootdir ? rootdir : "/", &db, mode, 0) != 0) {
+        db = NULL;
+        log(LOGERR, "failed to open rpm database\n");
+    }
+    
+    return db;
+}
+
+
+void rpm_closedb(rpmdb db) 
+{
+    rpmdbClose(db);
+    db = NULL;
+}
+
+
+static
+int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *exclrnos)
+{
+    dbiIndexSet matches;
+    int rc;
+
+    matches.count = 0;
+    matches.recs = NULL;
+    rc = rpmdbFindPackage(db, capreq_name(req), &matches);
+
+    if (rc < 0) {
+        log(LOGERR, "error reading from database");
+        return -1;
+        
+    } else if (rc == 0) {
+        Header h;
+        int i;
+        
+        for (i = 0; i < matches.count; i++) {
+            if (exclrnos &&
+                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
+                continue;
+        
+            if ((h = rpmdbGetRecord(db, matches.recs[i].recOffset))) {
+                if (header_evr_match_req(h, req)) {
+                    rc = 1;
+                    headerFree(h);
+                    break;
+                }
+                headerFree(h);
+            }
+        }
+        
+        dbiFreeIndexRecord(matches);
+        return rc;
+    }
+    
+    return 0;
+}
+
+static
+int lookup_file(rpmdb db, const struct capreq *req, tn_array *exclrnos)
+{
+    dbiIndexSet matches;
+    int rc, finded = 0;
+
+    matches.count = 0;
+    matches.recs = NULL;
+    rc = rpmdbFindByFile(db, capreq_name(req), &matches);
+    
+    if (rc == 0) {
+        int i;
+        for (i = 0; i < matches.count; i++) {
+            if (exclrnos &&
+                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
+                continue;
+            
+            finded = 1;
+        }
+        
+    } else if (rc < 0) {
+        log(LOGERR, "error reading from database");
+        finded = -1;
+    }
+
+    return finded;
+}
+
+
+static
+int lookup_cap(rpmdb db, const struct capreq *req, int strict,
+               tn_array *exclrnos)
+{
+    dbiIndexSet matches;
+    int rc;
+
+    matches.count = 0;
+    matches.recs = NULL;
+    rc = rpmdbFindByProvides(db, capreq_name(req), &matches);
+
+    if (rc < 0) {
+        log(LOGERR, "error reading from database");
+    } else if (rc == 0) {
+        Header h;
+        int i;
+        
+        for (i = 0; i < matches.count; i++) {
+            if (exclrnos &&
+                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
+                continue;
+
+            if ((h = rpmdbGetRecord(db, matches.recs[i].recOffset))) {
+                if (header_cap_match_req(h, req, strict)) {
+                    rc = 1;
+                    headerFree(h);
+                    break;
+                }
+                headerFree(h);
+            }
+        }
+        
+        dbiFreeIndexRecord(matches);
+        return rc;
+    }
+
+    return 0;
+}
+
+#if 0
+static
+int lookup_req(rpmdb db, const struct capreq *req, int strict,
+               tn_array *exclrnos)
+{
+    dbiIndexSet matches;
+    int rc;
+
+    matches.count = 0;
+    matches.recs = NULL;
+    rc = rpmdbFindByProvides(db, capreq_name(req), &matches);
+
+    if (rc < 0) {
+        log(LOGERR, "error reading from database");
+    } else if (rc == 0) {
+        Header h;
+        int i;
+        
+        for (i = 0; i < matches.count; i++) {
+            if (exclrnos &&
+                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
+                continue;
+
+            if ((h = rpmdbGetRecord(db, matches.recs[i].recOffset))) {
+                if (header_cap_match_req(h, req, strict)) {
+                    rc = 1;
+                    headerFree(h);
+                    break;
+                }
+                headerFree(h);
+            }
+        }
+        
+        dbiFreeIndexRecord(matches);
+        return rc;
+    }
+
+    return 0;
+}
+#endif
+
+static
+int header_evr_match_req(Header h, const struct capreq *req)
+{
+    struct pkg  pkg;
+    uint32_t    *epoch;
+    int         rc;
+    
+    headerNVR(h, (void*)&pkg.name, (void*)&pkg.ver, (void*)&pkg.rel);
+    if (pkg.name == NULL || pkg.ver == NULL || pkg.rel == NULL) {
+        log(LOGERR, "headerNVR failed\n");
+        return 0;
+    }
+
+    if (headerGetEntry(h, RPMTAG_EPOCH, &rc, (void *)&epoch, NULL)) 
+        pkg.epoch = *epoch;
+    else
+        pkg.epoch = 0;
+
+    if (pkg_evr_match_req(&pkg, req))
+        return 1;
+
+    return 0;
+}
+
+
+static
+int header_cap_match_req(Header h, const struct capreq *req, int strict)
+{
+    void        *saved_allocfn, *saved_freefn;
+    struct pkg  pkg;
+    int         rc;
+
+    
+    rc = 0;
+    /* do not alloc on capreq obstack */
+    set_capreq_allocfn(malloc, free, &saved_allocfn, &saved_freefn);
+
+    pkg.caps = capreq_arr_new();
+    get_pkg_caps(pkg.caps, h);
+    
+    if (n_array_size(pkg.caps) > 0) {
+        n_array_sort(pkg.caps);
+        rc = pkg_caps_match_req(&pkg, req, strict);
+    }
+
+    n_array_free(pkg.caps);
+    set_capreq_allocfn(saved_allocfn, saved_freefn, NULL, NULL);
+
+    return rc;
+}
+
+    
+
+#if 0 
+static
+int is_req_match(rpmdb db, dbiIndexSet matches, const struct capreq *req) 
+{
+    Header h;
+    int i, rc;
+
+    rc = 0;
+    for (i = 0; i < matches.count; i++) 
+        if ((h = rpmdbGetRecord(db, matches.recs[i].recOffset))) {
+            if (header_match_req(h, req, strict)) {
+                rc = 1;
+                headerFree(h);
+                break;
+            }
+            headerFree(h);
+        }
+
+    dbiFreeIndexRecord(matches);
+    return rc;
+}
+#endif
+
+
+int rpm_dbmatch_req_excl(rpmdb db, const struct capreq *req, int strict,
+                         tn_array *exclrnos) 
+{
+    int rc;
+    int is_file;
+
+    is_file = (*capreq_name(req) == '/' ? 1:0);
+
+    if (!is_file && lookup_pkg(db, req, exclrnos))
+        return 1;
+    
+    rc = lookup_cap(db, req, strict, exclrnos);
+    if (rc)
+        return 1;
+    
+    if (is_file && lookup_file(db, req, exclrnos))
+        return 1;
+    
+    return 0;
+}
+
+
+/*
+ * Installation 
+ */
+static void progress(const unsigned long amount, const unsigned long total) 
+{
+    static unsigned long prev_v = 0, vv = 0;
+    
+    if (amount && amount == total) { /* last notification */
+        msg(1, "_. (%ld kB)\n", total/1024);
+
+    } else if (amount == 0) {     /* first notification */
+        msg(1, "_.");
+        vv = 0;
+        prev_v = 0;
+        
+    } else if (total == 0) {     /* impossible */
+        assert(0);
+
+    } else {
+        unsigned long i;
+        unsigned long v = amount * 60 / total;
+        for (i=prev_v; i<v; i++)
+            msg(1, "_.");
+        prev_v = v;
+    }
+}
+
+
+static void *install_cb(const Header arg __attribute__((unused)),
+                        const rpmCallbackType op, 
+                        const unsigned long amount, 
+                        const unsigned long total,
+                        const void *pkgpath,
+                        void *data __attribute__((unused)))
+{
+#ifdef RPM_V4    
+    Header h = arg;
+#endif    
+    void *rc = NULL;
+    
+ 
+    switch (op) {
+        case RPMCALLBACK_INST_OPEN_FILE:
+        case RPMCALLBACK_INST_CLOSE_FILE:
+            n_assert(0);
+            break;
+
+        case RPMCALLBACK_INST_START:
+            msg(1, "Installing %s\n", n_basenam(pkgpath));
+            progress(amount, total);
+            break;
+
+        case RPMCALLBACK_INST_PROGRESS:
+            progress(amount, total);
+            break;
+
+        default:
+                                /* do nothing */
+    }
+    
+    return rc;
+}	
+
+
+int rpm_install(rpmdb db, const char *rootdir, const char *path,
+                unsigned filterflags, unsigned transflags, unsigned instflags)
+{
+    rpmTransactionSet rpmts = NULL;
+    rpmProblemSet probs = NULL;
+    int issrc;
+    struct vfile *vf;
+    int rc;
+    Header h = NULL;
+
+
+    if (rootdir == NULL)
+        rootdir = "";
+
+    if ((vf = vfile_open(path, VFT_RPMIO, VFM_RO)) == NULL)
+        return 0;
+    
+    rc = rpmReadPackageHeader(vf->vf_fdt, &h, &issrc, NULL, NULL);
+    
+    if (rc != 0) {
+        switch (rc) {
+            case 1:
+                log(LOGERR, "%s: does not appear to be a RPM package\n", path);
+                goto l_err;
+                break;
+                
+            default:
+                log(LOGERR, "%s: cannot be installed (hgw why)\n", path);
+                goto l_err;
+                break;
+        }
+        n_assert(0);
+        
+    } else {
+        if (issrc) {
+            log(LOGERR, "%s: pakietów ¼ród³owych nie prowadzimy\n", path);
+            goto l_err;
+        }
+        
+        rpmts = rpmtransCreateSet(db, rootdir);
+        rc = rpmtransAddPackage(rpmts, h, vf->vf_fdt, path, 
+                                (instflags & INSTALL_UPGRADE) != 0, NULL);
+        
+        headerFree(h);	
+        h = NULL;
+        
+        switch(rc) {
+            case 0:
+                break;
+                
+            case 1:
+                log(LOGERR, "%s: rpm read error\n", path);
+                goto l_err;
+                break;
+                
+                
+            case 2:
+		log(LOGERR, "%s requires a newer version of RPM\n", path);
+                goto l_err;
+                break;
+                
+            default:
+                log(LOGERR, "%s: rpmtransAddPackage() failed\n", path);
+                goto l_err;
+                break;
+        }
+
+        if ((instflags & INSTALL_NODEPS) == 0) {
+            struct rpmDependencyConflict *conflicts;
+            int numConflicts = 0;
+            
+            if (rpmdepCheck(rpmts, &conflicts, &numConflicts) != 0) {
+                log(LOGERR, "%s: rpmdepCheck() failed\n", path);
+                goto l_err;
+            }
+            
+                
+            if (conflicts) {
+                log(LOGERR, "%s: failed dependencies:\n", path);
+                printDepProblems(log_stream(), conflicts, numConflicts);
+                rpmdepFreeConflicts(conflicts, numConflicts);
+                goto l_err;
+            }
+        }
+
+	rc = rpmRunTransactions(rpmts, install_cb,
+                                (void *) ((long)instflags), 
+                                NULL, &probs, transflags, filterflags);
+
+        if (rc != 0) {
+            if (rc > 0) {
+                log(LOGERR, "%s: installation failed:\n", path);
+                rpmProblemSetPrint(log_stream(), probs);
+                goto l_err;
+            } else {
+                //log(LOGERR, "%s: installation failed (hgw why)\n", path);
+            }
+        }
+    }
+
+    
+    vfile_close(vf);
+    if (probs) 
+        rpmProblemSetFree(probs);
+    rpmtransFree(rpmts);
+    return 1;
+    
+ l_err:
+    vfile_close(vf);
+
+    if (probs) 
+        rpmProblemSetFree(probs);
+    
+    if (rpmts)
+        rpmtransFree(rpmts);
+
+    if (h)
+        headerFree(h);
+
+    return 0;
+}
+
+
+
+int rpm_dbmap(rpmdb db,
+              void (*mapfn)(void *header, off_t offs, void *arg),
+              void *arg) 
+{
+    int offs;
+    Header h;
+    int n = 0;
+
+#ifdef RPM4
+    mi = rpmdbInitIterator(db, RPMDBI_PACKAGES, NULL, 0);
+    rpmdbAppendIterator(mi, offsets, num);
+
+    fileInfo = replList;
+    while ((h = rpmdbNextIterator(mi)) != NULL) {
+#endif
+    
+    offs = rpmdbFirstRecNum(db);
+    if (offs == 0)
+        return 0;
+
+    if (offs < 0) {
+        log(LOGERR, "error reading rpm database\n");
+        return -1;
+    }
+
+    while (offs > 0) {
+        if ((h = rpmdbGetRecord(db, offs))) {
+            mapfn(h, offs, arg);
+            n++;
+            headerFree(h);
+        }
+        
+        offs = rpmdbNextRecNum(db, offs);
+    }
+    
+    return n;
+}
+
+
+int rpm_dbiterate(rpmdb db, tn_array *offsets,
+                  void (*mapfn)(void *header, off_t off, void *arg), void *arg)
+{
+    int i, offs;
+    Header h;
+    int n = 0;
+
+
+    offs = rpmdbFirstRecNum(db);
+    if (offs == 0)
+        return 0;
+
+    if (offs < 0) {
+        log(LOGERR, "error reading rpm database\n");
+        return -1;
+    }
+
+    for (i=0; i<n_array_size(offsets); i++) {
+        offs = (int)n_array_nth(offsets, i);
+        if ((h = rpmdbGetRecord(db, offs))) {
+            mapfn(h, offs, arg);
+            n++;
+            headerFree(h);
+        }
+    }
+    
+    return n;
+}
+
+int rpm_get_pkgs_requires_capn(rpmdb db, const char *capname,
+                               tn_array *exclrnos,
+                               tn_array *hasrnos, tn_array *pkgs)
+{
+    dbiIndexSet matches;
+    int rc;
+
+    matches.count = 0;
+    matches.recs = NULL;
+    rc = rpmdbFindByRequiredBy(db, capname, &matches);
+
+    if (rc < 0) {
+        log(LOGERR, "error reading from database");
+        
+    } else if (rc == 0) {
+        Header h;
+        int i;
+        
+        for (i = 0; i < matches.count; i++) {
+            register off_t recno = matches.recs[i].recOffset;
+
+            if (exclrnos &&
+                n_array_bsearch(exclrnos, (void*)recno)) {
+                continue;
+            }
+
+            if (n_array_bsearch(hasrnos, (void*)recno))
+                continue;
+            
+            n_array_push(hasrnos, (void*)recno);
+            n_array_sort(hasrnos);
+            
+            if ((h = rpmdbGetRecord(db, recno))) {
+                struct pkg *pkg;
+                
+                if ((pkg = pkg_ldhdr_udata(h, "db", PKG_LDNEVR | PKG_LDCAPREQS,
+                                  (void*)recno, sizeof(recno))) == NULL) {
+                    rc = -1;
+                    break;
+                }
+                n_array_push(pkgs, pkg);
+                headerFree(h);
+            }
+        }
+        
+        dbiFreeIndexRecord(matches);
+    }
+    
+    return rc;
+}
+
+
+static 
+int get_pkgs_requires_hfiles(rpmdb db, Header h, tn_array *exclrnos,
+                             tn_array *hasrnos, tn_array *pkgs)
+{
+    int t1, t2, t3, c1, c2, c3;
+    char **names = NULL, **dirs = NULL;
+    int32_t   *diridxs;
+    char      path[PATH_MAX], *prevdir;
+    int       *dirlens;
+    int       i;
+    
+    if (!headerGetEntry(h, RPMTAG_BASENAMES, (void*)&t1, (void*)&names, &c1))
+        return 0;
+
+    n_assert(t1 == RPM_STRING_ARRAY_TYPE);
+    if (!headerGetEntry(h, RPMTAG_DIRNAMES, (void*)&t2, (void*)&dirs, &c2))
+        goto l_endfunc;
+    
+    n_assert(t2 == RPM_STRING_ARRAY_TYPE);
+    if (!headerGetEntry(h, RPMTAG_DIRINDEXES, (void*)&t3,(void*)&diridxs, &c3))
+        goto l_endfunc;
+    n_assert(t3 == RPM_INT32_TYPE);
+
+    n_assert(c1 == c3);
+
+    dirlens = alloca(sizeof(*dirlens) * c2);
+    for (i=0; i<c2; i++) 
+        dirlens[i] = strlen(dirs[i]);
+    
+    prevdir = NULL;
+    for (i=0; i<c1; i++) {
+        register int diri = diridxs[i];
+        if (prevdir == dirs[diri]) {
+            n_strncpy(&path[dirlens[diri]], names[i], PATH_MAX-dirlens[diri]);
+        } else {
+            char *endp;
+            
+            endp = n_strncpy(path, dirs[diri], sizeof(path));
+            n_strncpy(endp, names[i], sizeof(path) - (endp - path));
+            prevdir = dirs[diri];
+        }
+
+        rpm_get_pkgs_requires_capn(db, path, exclrnos, hasrnos, pkgs);
+    }
+    
+ l_endfunc:
+    
+    if (c1 && names)
+        rpm_headerEntryFree(names, t1);
+
+    if (c2 && dirs)
+        rpm_headerEntryFree(dirs, t2);
+
+    return 1;
+}
+
+ 
+int rpm_get_pkgs_requires_pkgh(rpmdb db, Header h, tn_array *exclrnos,
+                               tn_array *hasrnos, tn_array *pkgs)
+{
+    tn_array *caps;
+    int i;
+
+
+    caps = capreq_arr_new();
+    get_pkg_caps(caps, h);
+    
+    for (i=0; i<n_array_size(caps); i++) {
+        struct capreq *cap = n_array_nth(caps, i);
+        rpm_get_pkgs_requires_capn(db, capreq_name(cap), exclrnos,
+                                   hasrnos, pkgs);
+    }
+    
+    n_array_free(caps);
+    get_pkgs_requires_hfiles(db, h, exclrnos, hasrnos, pkgs);
+    return 0;
+}
+
+
+int rpm_get_pkgs_requires_obsl_pkg(rpmdb db, struct capreq *obsl,
+                                   tn_array *exclrnos, tn_array *hasrnos,
+                                   tn_array *pkgs) 
+{
+    dbiIndexSet matches;
+    int rc, n = 0;
+
+    matches.count = 0;
+    matches.recs = NULL;
+    rc = rpmdbFindPackage(db, capreq_name(obsl), &matches);
+
+    if (rc < 0) {
+        log(LOGERR, "error reading from database");
+        return -1;
+        
+    } else if (rc == 0) {
+        Header h;
+        int i;
+        
+        for (i = 0; i < matches.count; i++) {
+            if (exclrnos &&
+                n_array_bsearch(exclrnos, (void*)matches.recs[i].recOffset))
+                continue;
+        
+            if ((h = rpmdbGetRecord(db, matches.recs[i].recOffset))) {
+                if (header_evr_match_req(h, obsl)) {
+                    rpm_get_pkgs_requires_pkgh(db, h, exclrnos, hasrnos, pkgs);
+                    rc = 1;
+                    n++;
+                }
+                headerFree(h);
+            }
+        }
+        
+        dbiFreeIndexRecord(matches);
+        return rc;
+    }
+    
+    return n;
+}

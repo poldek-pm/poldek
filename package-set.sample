@@ -1,0 +1,71 @@
+# $Id$
+# Description: absolutely minimal PLD system.
+#
+# pinfo used instead of man (->groff->stdc++) and info. 
+# It's sample, but really works and takes about 50 MB
+
+basesystem
+bdflush
+binutils
+bzip2
+chkconfig
+console-data
+console-tools
+cracklib
+cracklib-dicts
+dev
+e2fsprogs
+ed
+FHS
+file
+fileutils
+findutils
+fix-info-dir
+diffutils
+gettext
+glibc
+grep
+gzip
+iproute2
+iputils
+iputils-ping
+kernel
+klogd
+less
+#@bootloader lilo
+localedb-src
+login
+logrotate
+make
+man-pages
+mawk
+mingetty
+mktemp
+modutils
+mount
+ncurses
+net-tools
+pam
+passwd
+pcre
+pdksh
+pinfo
+popt
+procps
+rc-scripts
+rpm
+sed
+setup
+shadow
+sh-utils
+#@syslogdaemon syslog
+SysVinit
+tar
+terminfo
+textutils
+tmpwatch
+utempter
+util-linux
+nvi
+which
+zlib
