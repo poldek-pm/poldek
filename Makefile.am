@@ -15,7 +15,7 @@ else
 TNDB_DIR=
 endif
 
-SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile shell conf pkgdir
+SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile shell conf pkgdir rpm
 DIST_SUBDIRS = $(SUBDIRS)
 
 INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@
@@ -30,7 +30,7 @@ libpoldek_a_SOURCES =  \
 	  poldek_term.c poldek_term.h	\
 	  minfo.c			    \
 	  misc.c misc.h			\
-	  rpmadds.c rpmadds.h	\
+	  pkgmisc.c pkgmisc.h			\
 	  depdirs.c depdirs.h   \
 	  pkg.c pkg.h			\
 	  pkgu.c pkgu.h        	\
@@ -38,14 +38,12 @@ libpoldek_a_SOURCES =  \
 	  fileindex.c fileindex.h	\
 	  capreqidx.c capreqidx.h	\
 	  capreq.c capreq.h 		\
-	  pkgset-load.c pkgset-load.h	\
+	  pkgset-load.c      	        \
 	  pkgset.c pkgset.h		\
 	  pkgset-req.c pkgset-req.h	\
 	  pkgset-order.c    		\
 	  pkgset-install.c		\
 	  dbdep.c dbdep.h		\
-	  rpm.c rpm.h rpmdb_depdirs.c rpm_signature.c rpm_install.c \
-	  rpmhdr.c rpmhdr.h		\
 	  pkgdb.c pkgdb.h		\
 	  usrset.c usrset.h		\
 	  install.c install.h	    	\
@@ -55,10 +53,8 @@ libpoldek_a_SOURCES =  \
 	  dbpkgset.c dbpkgset.h         \
 	  split.c split.h		\
 	  pkgroup.c pkgroup.h		\
-	  rpmdb_it.c rpmdb_it.h         \
 	  pkgscore.c			\
 	  pkgfetch.c                    \
-	  rpminstall.c			\
 	  i18n.h 			\
 	  ask.c                         \
 	  uninstall.c
@@ -72,11 +68,13 @@ pkgdir_modules = pkgdir/dir/libpkgdir_dir.a      \
 		 pkgdir/pndir/libpkgdir_pndir.a
 
 poldek_DEPENDENCIES_ = libpoldek.a            \
+		       rpm/libpkg_rpm.a       \
+	  	       libpoldek.a            \
 		       pkgdir/libpkgdir.a     \
 		       $(pkgdir_modules)      \
 		       pkgdir/libpkgdir.a     \
 		       sigint/libsigint.a     \
-               vfile/libvfile.a       \
+	               vfile/libvfile.a       \
 		       vfile/vftp/libvftp.a   \
 		       vfile/vhttp/libvhttp.a
 
@@ -90,15 +88,10 @@ endif
 
 LDADD_              = @INTLLIBS@
 
-bin_PROGRAMS        = poldek rpmvercmp
+bin_PROGRAMS        = poldek
 dist_bin_SCRIPTS    = mkpackagedir vfjuggle vfuncompr
 poldek_SOURCES      = main.c
 poldek_LDADD        = $(poldek_DEPENDENCIES) $(SHELL_MOD_) $(LDADD_)
-
-rpmvercmp_SOURCES   = rpmvercmp.c
-rpmvercmp_LDADD     = $(LDADD_)
-rpmvercmp_LIBS      = -lrpm
-rpmvercmp_LDFLAGS   = 
 
 noinst_PROGRAMS     = test_match
 test_match_SOURCES  = test_match.c

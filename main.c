@@ -39,7 +39,6 @@
 #include "pkgset.h"
 #include "usrset.h"
 #include "misc.h"
-#include "rpm.h"
 #include "install.h"
 #include "conf.h"
 #include "split.h"
@@ -1906,6 +1905,7 @@ int main(int argc, char **argv)
     }
 
  l_end:
+    
     if (ps)
         pkgset_free(ps);
     mem_info(1, "MEM at the end");

@@ -23,9 +23,9 @@
 #include "i18n.h"
 #include "log.h"
 #include "usrset.h"
-#include "rpmadds.h"
 #include "misc.h"
-
+#include "pkgmisc.h"
+#include "rpm/rpm_pkg_ld.h"
 
 
 inline static int deftype(const char *str) 
@@ -43,7 +43,6 @@ inline static int deftype(const char *str)
 }
 
 
-
 void pkgdef_free(struct pkgdef *pdef)
 {
     if (pdef->pkg)
@@ -51,6 +50,7 @@ void pkgdef_free(struct pkgdef *pdef)
     pdef->pkg = NULL;
     free(pdef);
 }
+
 
 int pkgdef_cmp(struct pkgdef *pdef1, struct pkgdef *pdef2)
 {
@@ -68,7 +68,6 @@ int pkgdef_cmp(struct pkgdef *pdef1, struct pkgdef *pdef2)
     
     return cmprc;
 }
-
 
 
 __inline__
@@ -89,7 +88,7 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
     int                n, tflags = 0, deftyp = 0;
     const char         **tl, **tl_save;
     const char         *evrstr = NULL, *name = NULL, *virtname = NULL;
-    char               *version = NULL, *release = NULL;
+    const char         *version = NULL, *release = NULL;
     int32_t            epoch = 0;
     
 
@@ -167,8 +166,7 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
     }
 
         
-    pdef = n_malloc(sizeof(*pdef) +
-                  (virtname ? strlen(virtname) + 1 : 0));
+    pdef = n_malloc(sizeof(*pdef) + (virtname ? strlen(virtname) + 1 : 0));
     pdef->tflags = tflags | deftyp;
 
     if (name == NULL) {

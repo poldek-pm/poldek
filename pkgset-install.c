@@ -45,15 +45,12 @@
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"
-#include "rpmadds.h"
-#include "rpmhdr.h"
 #include "pkgset-req.h"
 #include "dbpkg.h"
 #include "dbpkgset.h"
-#include "rpmdb_it.h"
 #include "dbdep.h"
 #include "poldek_term.h"
-
+#include "rpm/rpmhdr.h"
 
 #define INST_INSTALL  1
 #define INST_UPGRADE  2

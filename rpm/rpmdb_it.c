@@ -21,18 +21,25 @@
 
 #define ENABLE_TRACE 0
 #include "i18n.h"
-#include "rpmdb_it.h"
-#include "rpmadds.h"
 #include "misc.h"
 #include "log.h"
+
+#include "rpmhdr.h"
+#include "rpmdb_it.h"
 
 #ifdef HAVE_RPM_4_0
 
 int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
 {
-    int rpmtag = 0;
+    int rpmtag = 0, argsize = 0;
 
     switch (tag) {
+        case RPMITER_RECNO:
+            rpmtag = RPMDBI_PACKAGES;
+            if (arg)
+                argsize = sizeof(int);
+            break;
+            
         case RPMITER_NAME:
             rpmtag = RPMTAG_NAME;
             break;
@@ -65,7 +72,7 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
 
     DBGF("%p, %p (%d)\n", it, db, db->nrefs);
     it->db = db;
-    it->mi = rpmdbInitIterator(db, rpmtag, arg, 0);
+    it->mi = rpmdbInitIterator(db, rpmtag, arg, argsize);
     return rpmdbGetIteratorCount(it->mi);
 }
 
@@ -83,6 +90,10 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
     it->dbrec.recno = 0;
     
     switch (tag) {
+        case RPMITER_RECNO:
+            n_die("not implemented");
+            break;
+            
         case RPMITER_NAME:
             rc = rpmdbFindPackage(db, arg, &it->matches);
             break;

@@ -37,14 +37,15 @@
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
-#include "rpmadds.h"
+//#include "rpmadds.h"
 #include "pkgdir.h"
 #include "pkg.h"
 #include "h2n.h"
 #include "pkgroup.h"
+#include "rpm/rpm_pkg_ld.h"
 
 static
-int do_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
+int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 
 static char *aliases[] = { "apt", "wuch", NULL };
 
@@ -68,7 +69,7 @@ struct pkgdir_module pkgdir_module_hdrl = {
 static
 int load_header_list(const char *path, tn_array *pkgs,
                      struct pkgroup_idx *pkgroups,
-                     tn_array *depdirs, unsigned ldflags)
+                     unsigned ldflags)
 {
     struct vfile         *vf;
     struct pkg           *pkg;
@@ -76,8 +77,6 @@ int load_header_list(const char *path, tn_array *pkgs,
     int                  n = 0;
     unsigned             vfmode = VFM_RO | VFM_CACHE | VFM_UNCOMPR;
 
-    depdirs = depdirs;
-    
     if ((vf = vfile_open(path, VFT_RPMIO, vfmode)) == NULL)
         return -1;
     
@@ -87,7 +86,7 @@ int load_header_list(const char *path, tn_array *pkgs,
             continue;
         }
         
-        if ((pkg = pkg_ldhdr(h, path, 0, PKG_LDWHOLE))) {
+        if ((pkg = pkg_ldrpmhdr(h, path, 0, PKG_LDWHOLE))) {
             if (ldflags & PKGDIR_LD_DESC) {
                 pkg->pkg_pkguinf = pkguinf_ldhdr(h);
                 pkg_set_ldpkguinf(pkg);
@@ -106,11 +105,10 @@ int load_header_list(const char *path, tn_array *pkgs,
 }
 
 static
-int do_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
+int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     int n;
-    n = load_header_list(pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups,
-                         depdirs, ldflags);
+    n = load_header_list(pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups, ldflags);
     return n;
 }
 

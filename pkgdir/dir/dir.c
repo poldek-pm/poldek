@@ -37,7 +37,8 @@
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
-#include "rpmadds.h"
+#include "rpm/rpmhdr.h"
+#include "rpm/rpm_pkg_ld.h"
 #include "pkgdir.h"
 #include "pkg.h"
 #include "h2n.h"
@@ -45,7 +46,7 @@
 //#include "pkgdb.h"
 
 static
-int do_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
+int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 
 struct pkgdir_module pkgdir_module_dir = {
     PKGDIR_CAP_NOPREFIX, 
@@ -66,7 +67,7 @@ struct pkgdir_module pkgdir_module_dir = {
 
 static
 int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
-             tn_array *depdirs, tn_array **avlangs, unsigned ldflags)
+             tn_array **avlangs, unsigned ldflags)
 {
     struct dirent  *ent;
     struct stat    st;
@@ -74,8 +75,6 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
     int            n;
     char           *sepchr = "/";
     tn_hash        *langs = NULL;
-    
-    depdirs = depdirs;
     
     if ((dir = opendir(dirpath)) == NULL) {
         logn(LOGERR, "opendir %s: %m", dirpath);
@@ -105,17 +104,17 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
         if (S_ISREG(st.st_mode)) {
             Header h;
             
-            if (!rpm_headerReadFile(path, &h)) {
+            if (!rpmhdr_loadfile(path, &h)) {
                 logn(LOGWARN, "%s: read header failed, skipped", path);
                 
             } else {
                 struct pkg *pkg;
                 tn_array *pkg_langs;
 
-                if (headerIsEntry(h, RPMTAG_SOURCEPACKAGE)) /* omit src.rpms */
+                if (rpmhdr_issource(h)) /* omit src.rpms */
                     continue;
 
-                if ((pkg = pkg_ldhdr(h, path, st.st_size, PKG_LDWHOLE))) {
+                if ((pkg = pkg_ldrpmhdr(h, path, st.st_size, PKG_LDWHOLE))) {
                     if (ldflags & PKGDIR_LD_DESC) {
                         pkg->pkg_pkguinf = pkguinf_ldhdr(h);
                         pkg_set_ldpkguinf(pkg);
@@ -159,7 +158,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
 }
 
 static
-int do_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
+int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     int n;
     tn_array *avlangs = NULL;
@@ -170,10 +169,9 @@ int do_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
     
-    n = load_dir(pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups,
-                 depdirs, &avlangs, ldflags);
-    
+    n = load_dir(pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups, &avlangs, ldflags);
     pkgdir->avlangs = avlangs;
+    
     return n;
 }
 

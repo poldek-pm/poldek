@@ -83,7 +83,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     n_array_uniq(ps->depdirs);
 
     
-    for (i=0; i<n_array_size(ps->pkgdirs); i++) {
+    for (i=0; i < n_array_size(ps->pkgdirs); i++) {
         struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
 
         if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
@@ -96,7 +96,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     
     if (!iserr) {
         /* merge pkgdirs packages into ps->pkgs */
-        for (i=0; i<n_array_size(ps->pkgdirs); i++) {
+        for (i=0; i < n_array_size(ps->pkgdirs); i++) {
             struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
             for (j=0; j < n_array_size(pkgdir->pkgs); j++)
                 n_array_push(ps->pkgs, pkg_link(n_array_nth(pkgdir->pkgs, j)));

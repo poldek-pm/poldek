@@ -18,12 +18,10 @@
 
 #include <netinet/in.h>
 
-#include <rpm/rpmlib.h>
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>
 
 #include "i18n.h"
-#include "rpmadds.h"
 #include "log.h"
 #include "misc.h"
 #include "capreq.h"
@@ -148,8 +146,7 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
 void pkg_free(struct pkg *pkg) 
 {
 
-    //printf("free %s (%d) (%d)\n", pkg_snprintf_s(pkg), pkg->_refcnt,
-    //pkg->vf ? pkg->vf->_refcnt : -10);
+    //printf("free %s (%d)\n", pkg_snprintf_s(pkg), pkg->_refcnt);
     
     if (pkg->_refcnt > 0) {
         pkg->_refcnt--;
@@ -212,135 +209,7 @@ void pkg_free(struct pkg *pkg)
 struct pkg *pkg_link(struct pkg *pkg) 
 {
     pkg->_refcnt++;
-    //if (pkg->vf && pkg->_refcnt == 1) 
-    //    pkg->vf = vfile_incref(pkg->vf);
-    return pkg;
-}
-
-
-struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
-                      unsigned ldflags)
-{
-    struct pkg *pkg;
-    uint32_t   *epoch, *size, *btime;
-    char       *name, *version, *release, *arch = NULL, *os = NULL;
-    int        type;
-    
-    headerNVR(h, (void*)&name, (void*)&version, (void*)&release);
-    if (name == NULL || version == NULL || release == NULL) {
-        logn(LOGERR, _("%s: read name/version/release failed"), fname);
-        return NULL;
-    }
-    
-    if (!headerGetEntry(h, RPMTAG_EPOCH, &type, (void *)&epoch, NULL)) 
-        epoch = NULL;
-
-    if (!headerGetEntry(h, RPMTAG_ARCH, &type, (void *)&arch, NULL)) {
-        logn(LOGERR, _("%s: read architecture tag failed"), fname);
-        return NULL;
-    }
-
-    if (type != RPM_STRING_TYPE)
-        arch = NULL;
-    
-    if (!headerGetEntry(h, RPMTAG_OS, &type, (void *)&os, NULL)) {
-        if (verbose > 1)
-            logn(LOGWARN, _("%s: missing OS tag"), fname);
-        os = NULL;
-            
-    } else if (type != RPM_STRING_TYPE)
-        os = NULL;
-
-    if (!headerGetEntry(h, RPMTAG_SIZE, &type, (void *)&size, NULL)) 
-        size = NULL;
-
-    if (!headerGetEntry(h, RPMTAG_BUILDTIME, &type, (void *)&btime, NULL)) 
-        btime = NULL;
-
-    pkg = pkg_new_ext(name, epoch ? *epoch : 0, version, release, arch, os, 
-                      size ? *size : 0, fsize, btime ? *btime : 0);
-
-    if (pkg == NULL)
-        return NULL;
-
-    msg(4, "ld %s\n", pkg_snprintf_s(pkg));
-    
-    if (ldflags & PKG_LDCAPS) {
-        pkg->caps = capreq_arr_new(0);
-        get_pkg_caps(pkg->caps, h);
-    
-        if (n_array_size(pkg->caps)) 
-            n_array_sort(pkg->caps);
-        else {
-            n_array_free(pkg->caps);
-            pkg->caps = NULL;
-        }
-    }
-    
-    if (ldflags & PKG_LDREQS) {
-        pkg->reqs = capreq_arr_new(0);
-        get_pkg_reqs(pkg->reqs, h);
-
-        if (n_array_size(pkg->reqs) == 0) {
-            n_array_free(pkg->reqs);
-            pkg->reqs = NULL;
-        }
-    }
-
-    if (ldflags & PKG_LDCNFLS) {
-        pkg->cnfls = capreq_arr_new(0);
-        get_pkg_cnfls(pkg->cnfls, h);
-        get_pkg_obsls(pkg->cnfls, h);
-        
-        if (n_array_size(pkg->cnfls) > 0) {
-            n_array_sort(pkg->cnfls);
-        
-        } else {
-            n_array_free(pkg->cnfls);
-            pkg->cnfls = NULL;
-        };
-    }
-
-    if (ldflags & (PKG_LDFL_DEPDIRS | PKG_LDFL_WHOLE)) {
-        unsigned flldflags = 0;
-        
-        pkg->fl = pkgfl_array_new(32);
-        if (ldflags & PKG_LDFL_WHOLE)
-            flldflags = PKGFL_ALL;
-        else
-            flldflags = PKGFL_DEPDIRS;
-        
-        if (pkgfl_ldhdr(pkg->fl, h, flldflags, pkg_snprintf_s(pkg)) == -1) {
-            pkg_free(pkg);
-            pkg = NULL;
-        
-        } else if (n_array_size(pkg->fl) > 0) {
-            n_array_sort(pkg->fl);
-            
-        } else {
-            n_array_free(pkg->fl);
-            pkg->fl = NULL;
-        };
-    }
-    
-    return pkg;
-}
-
-
-struct pkg *pkg_ldrpm(const char *path, unsigned ldflags)
-{
-    struct pkg *pkg = NULL;
-    Header h;
-    
-    if (rpm_headerReadFile(path, &h)) {
-        if (rpm_headerIsSource(h))
-            logn(LOGERR, _("%s: reject source package"), path);
-        else
-            pkg = pkg_ldhdr(h, path, 0, ldflags);
-        
-        headerFree(h);
-    }
-
+    //printf("link %s (%d)\n", pkg_snprintf_s(pkg), pkg->_refcnt);
     return pkg;
 }
 
@@ -1026,7 +895,7 @@ struct pkguinf *pkg_info(const struct pkg *pkg)
     if (pkg_has_ldpkguinf(pkg)) 
         pkgu = pkguinf_link(pkg->pkg_pkguinf);
 
-    else if (pkg->load_pkguinf && pkg->pkgdir_data)
+    else if (pkg->load_pkguinf)
         pkgu = pkg->load_pkguinf(pkg, pkg->pkgdir_data);
     
     return pkgu;

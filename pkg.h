@@ -4,7 +4,6 @@
 
 #include <stdint.h>
 
-#include <rpm/rpmlib.h>
 #include <trurl/narray.h>
 
 #include "capreq.h"
@@ -130,6 +129,11 @@ struct pkg {
 
     int pri;                    /* used for split */
     int groupid;                /* package group id (see pkgroups.c) */
+
+    /* for installed packages */
+    int32_t      recno;        /* db's ID of the header */
+    int32_t      itime;        /* date of installation  */
+
     /* private, don't touch */
     int16_t      _refcnt;
     void         (*free)(void*); /* self free()  */
@@ -158,10 +162,7 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
 #define PKG_LDWHOLE   PKG_LDCAPREQS | PKG_LDFL_WHOLE
 #define PKG_LDWHOLE_FLDEPDIRS PKG_LDCAPREQS | PKG_LDFL_DEPDIRS
 
-struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned fsize,
-                      unsigned ldflags);
 
-struct pkg *pkg_ldrpm(const char *path, unsigned ldflags);
 
 void pkg_free(struct pkg *pkg);
 struct pkg *pkg_link(struct pkg *pkg);

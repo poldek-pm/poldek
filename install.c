@@ -30,7 +30,6 @@
 #include "pkgset.h"
 #include "usrset.h"
 #include "misc.h"
-#include "rpm.h"
 
 
 static

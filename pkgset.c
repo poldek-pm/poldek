@@ -35,7 +35,6 @@
 #include "pkgset.h"
 #include "misc.h"
 #include "usrset.h"
-#include "rpmadds.h"
 #include "pkgset-req.h"
 #include "split.h"
 #include "poldek_term.h"
@@ -158,7 +157,7 @@ struct pkgset *pkgset_new(unsigned optflags)
     
     ps = pkg_alloc(sizeof(*ps));
     memset(ps, 0, sizeof(*ps));
-    ps->pkgs = pkgs_array_new(1024);
+    ps->pkgs = pkgs_array_new(2048);
     ps->ordered_pkgs = NULL;
     
     /* just merge pkgdirs->depdirs */
@@ -196,13 +195,12 @@ void pkgset_free(struct pkgset *ps)
         n_array_free(ps->ordered_pkgs);
         ps->ordered_pkgs = NULL;
     }
+    n_array_free(ps->pkgs);
 
     if (ps->rpmcaps) {
         n_array_free(ps->rpmcaps);
         ps->rpmcaps = NULL;
     }
-    
-    n_array_free(ps->pkgs);
 }
 
 

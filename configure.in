@@ -371,6 +371,7 @@ AC_CONFIG_SUBDIRS(tndb)
 
 AC_CONFIG_FILES([  
 		po/Makefile.in
+		rpm/Makefile
 		pkgdir/Makefile
 		pkgdir/dir/Makefile
 		pkgdir/hdrl/Makefile

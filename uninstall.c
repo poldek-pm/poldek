@@ -30,10 +30,10 @@
 #include "pkgset.h"
 #include "usrset.h"
 #include "misc.h"
-#include "rpm.h"
 #include "pkg.h"
 #include "dbpkgset.h"
-#include "pkgfl.h"
+
+//#include "rpm.h"
 
 #define uninst_LDFLAGS (PKG_LDNEVR | PKG_LDCAPS | PKG_LDFL_DEPDIRS)
 

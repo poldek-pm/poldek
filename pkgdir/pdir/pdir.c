@@ -42,10 +42,10 @@
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
-#include "rpmadds.h"
 #include "pkgdir.h"
 #include "pdir.h"
 #include "pkg.h"
+#include "pkgmisc.h"
 #include "h2n.h"
 #include "pkgroup.h"
 
@@ -62,7 +62,7 @@ static int is_uptodate(const char *path, const struct pdir_digest *pdg_local,
                        struct pdir_digest *pdg_remote);
 
 static int do_open(struct pkgdir *pkgdir, unsigned flags);
-static int do_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
+static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 static int do_update(struct pkgdir *pkgdir, int *npatches);
 static int do_update_a(const struct source *src);
 //static int do_unlink(const char *path, unsigned flags);
@@ -503,6 +503,9 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     unsigned             vfmode = VFM_RO | VFM_CACHE;
     unsigned             pkgdir_flags = 0;
     char                 *path = pkgdir->path;
+
+    
+    flags = flags;              /* unused */
     
     if (!pdir_open(&idx, pkgdir->idxpath, vfmode))
         return 0;
@@ -731,7 +734,7 @@ tn_array *pdir_load_nodep_fl(const struct pkg *pkg, void *ptr,
 
 
 static
-int do_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
+int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     struct pdir        *idx;
     struct pkg         *pkg;

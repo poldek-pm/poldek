@@ -42,7 +42,6 @@
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
-#include "rpmadds.h"
 #include "pkgdir.h"
 #include "pkg.h"
 #include "h2n.h"
@@ -51,8 +50,6 @@
 
 void pkgdir_setup_langs(struct pkgdir *pkgdir)
 {
-    int i;
-
     if (pkgdir->lc_lang == NULL)
         return;
 
@@ -306,7 +303,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 
     
     pkgdir->idxpath = n_strdup(idx_path);
-    pkgdir->pkgs = pkgs_array_new(1024);
+    pkgdir->pkgs = pkgs_array_new(2048);
     pkgdir->mod = mod;
     pkgdir->type = mod->name;   /* just reference */
 
@@ -362,11 +359,10 @@ void pkgdir_free(struct pkgdir *pkgdir)
     if (pkgdir->pkgs) {
         int i;
         
-        for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
+        for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
             pkg->pkgdir = NULL;
         }
-
         n_array_free(pkgdir->pkgs);
         pkgdir->pkgs = NULL;
     }
@@ -427,7 +423,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     
     msgn(1, _("Loading %s..."), vf_url_slim_s(pkgdir->idxpath, 0));
     
-    n = pkgdir->mod->load(pkgdir, depdirs, ldflags);
+    n = pkgdir->mod->load(pkgdir, ldflags);
 
     if (n_array_size(pkgdir->pkgs)) {
         int i;
@@ -610,7 +606,7 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *type,
 	if (mod == NULL)
 		return 0;
 
-    if ((flags & PKGDIR_CREAT_asCACHE) == 0 && 
+    if ((flags & PKGDIR_CREAT_NOUNIQ) == 0 &&
         (pkgdir->flags & (PKGDIR_DIFF | PKGDIR_UNIQED)) == 0) {
         n_assert(0);
         pkgdir_uniq(pkgdir);

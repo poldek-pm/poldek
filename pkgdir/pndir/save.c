@@ -35,8 +35,8 @@
 #include "log.h"
 #include "pkgdir.h"
 #include "pkg.h"
+#include "pkgmisc.h"
 #include "pkgroup.h"
-#include "rpmadds.h"
 #include "pndir.h"
 
 struct pndir_paths {
@@ -219,7 +219,8 @@ int pndir_make_pkgkey(char *key, size_t size, const struct pkg *pkg)
 
 struct pkg *pndir_parse_pkgkey(char *key, int klen)
 {
-    char        *name, *ver, *rel, *arch = NULL, *os = NULL;
+    char        *name, *arch = NULL, *os = NULL;
+    const char  *ver, *rel;
     char        *evr, *buf, *p;
     int32_t     epoch;
     
@@ -477,8 +478,7 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
     
 
 
-int pndir_m_create(struct pkgdir *pkgdir, const char *pathname,
-                   unsigned flags)
+int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 {
     struct tndb      *db = NULL;
     int              i, nerr = 0;
@@ -537,13 +537,12 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname,
 
         klen = pndir_make_pkgkey(key, sizeof(key), pkg);
         n_array_push(keys, n_strdupl(key, klen));
-                     
+
+        n_buf_clean(nbuf);
         if (pkg_store(pkg, nbuf, pkgdir->depdirs, pkg_st_flags))
             tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
         
-        n_buf_clean(nbuf);
-
-        if ((pkgu = pkg_info(pkg))) {
+        if ((flags & PKGDIR_CREAT_NODESC) == 0 && (pkgu = pkg_info(pkg))) {
             tn_array *langs = pkguinf_langs(pkgu);
             int j;
             

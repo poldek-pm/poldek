@@ -8,8 +8,6 @@
 #include <trurl/narray.h>
 #include <trurl/nstream.h>
 
-#include <rpm/rpmlib.h>
-
 int pkgflmodule_init(void);
 void pkgflmodule_destroy(void);
 void pkgflmodule_free_unneeded(void);
@@ -26,6 +24,9 @@ struct flfile {
 struct flfile *flfile_new(uint32_t size, uint16_t mode, 
                           const char *basename, int blen, 
                           const char *slinkto, int slen);
+
+int flfile_cmp(const struct flfile *f1, const struct flfile *f2);
+int flfile_cmp_qsort(const struct flfile **f1, const struct flfile **f2);
 
 /*
   both functions returns true(non-zero) if given files are conflicted
@@ -61,9 +62,6 @@ tn_array *pkgfl_restore_f(tn_stream *st, tn_array *dirs, int include);
 int pkgfl_skip_f(tn_stream *st);
 
 tn_array *pkgfl_array_new(int size);
-
-int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname);
-
 
 void pkgfl_dump(tn_array *fl);
 #endif /* POLDEK_PKGFL_H */

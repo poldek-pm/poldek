@@ -41,14 +41,14 @@
 #include <vfile/vfile.h>
 
 #include "i18n.h"
-#include "rpm.h"
-#include "rpmadds.h"
+
 #include "depdirs.h"
 #include "misc.h"
 #include "log.h"
 #include "pkg.h"
 #include "dbpkg.h"
 #include "capreq.h"
+#include "rpm.h"
 #include "rpmdb_it.h"
 
 

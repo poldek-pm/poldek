@@ -778,7 +778,8 @@ static int desc(struct cmdarg *cmdarg)
     int i, err = 0;
 
 
-    sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->avpkgs, &shpkgs, 0);
+    sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->instpkgs, &shpkgs, 0);
+    //sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->avpkgs, &shpkgs, 0);
     if (shpkgs == NULL)
         return 0;
 

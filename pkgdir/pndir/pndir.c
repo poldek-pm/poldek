@@ -41,12 +41,12 @@
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
-#include "rpmadds.h"
 #include "pkgdir.h"
 #include "pndir.h"
 #include "pkg.h"
 #include "h2n.h"
 #include "pkgroup.h"
+#include "pkgmisc.h"
 
 struct pkg_data {
     off_t             off_nodep_files;  /* no dep files offset in index */
@@ -61,7 +61,7 @@ static tn_array *parse_removed(char *str);
 static tn_array *parse_depdirs(char *str);
 
 static int do_open(struct pkgdir *pkgdir, unsigned flags);
-static int do_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
+static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 static void do_free(struct pkgdir *pkgdir);
 
 static
@@ -473,6 +473,11 @@ void pkg_data_free(void *ptr)
         n_hash_free(pd->db_dscr_h);
         pd->db_dscr_h = NULL;
     }
+
+    if (pd->langs) {
+        n_array_free(pd->langs);
+        pd->langs = NULL;
+    }
     free(pd);
 }
 
@@ -551,7 +556,7 @@ tn_array *pndir_load_nodep_fl(const struct pkg *pkg, void *ptr,
 }
 
 static
-int do_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
+int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     struct pndir       *idx;
     struct pkg         *pkg;
@@ -593,11 +598,11 @@ int do_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
             pkgd = pkg_data_malloc();
             pkgd->off_nodep_files = pkgo.nodep_files_offs;
             //pkgd->off_pkguinf = pkgo.pkguinf_offs;
-            pkgd->db = tndb_incref(idx->db);
+            pkgd->db = tndb_ref(idx->db);
             
             if (idx->db_dscr_h)
-                pkgd->db_dscr_h = n_hash_dup(idx->db_dscr_h,
-                                             (tn_fn_dup)tndb_incref);
+                pkgd->db_dscr_h = n_ref(idx->db_dscr_h);
+            
             if (pkgdir->langs)
                 pkgd->langs = n_array_dup(pkgdir->langs, (tn_fn_dup)n_strdup);
             

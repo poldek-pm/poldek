@@ -135,8 +135,6 @@ int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type)
     return *md_size;
 }
 
-    
-
 
 const char *setup_cachedir(void) 
 {
@@ -394,7 +392,6 @@ pid_t readlockfile(const char *lockfile)
     
     return -1;
 }
-
 
 
 int mk_dir(const char *path, const char *dn) 

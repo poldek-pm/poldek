@@ -24,7 +24,6 @@
 
 #include <netinet/in.h>
 
-#include <rpm/rpmlib.h>
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
@@ -32,12 +31,11 @@
 #include <trurl/nstream.h>
 
 #include "i18n.h"
-#include "rpmadds.h"
 #include "capreq.h"
 #include "log.h"
 #include "misc.h"
 #include "h2n.h"
-#include "misc.h"
+#include "pkgmisc.h"
 
 static void *(*capreq_alloc_fn)(size_t) = n_malloc;
 static void (*capreq_free_fn)(void*) = n_free;
@@ -122,52 +120,6 @@ int capreq_strcmp_name_evr(struct capreq *cr1, struct capreq *cr2)
     return capreq_strcmp_evr(cr1, cr2);
 }
 
-int capreq_fprintf(FILE *stream, const struct capreq *cr) 
-{
-    char relstr[64], *p;
-    
-    p = relstr;
-    *p = '\0';
-    
-    if (cr->cr_relflags & REL_LT) 
-        *p++ = '<';
-    else if (cr->cr_relflags & REL_GT) 
-        *p++ = '>';
-
-    if (cr->cr_relflags & REL_EQ) 
-        *p++ = '=';
-
-    *p = '\0';
-
-    fprintf(stream, "%s%s%s%s", 
-            capreq_is_bastard(cr) ? "!" : "",
-            capreq_is_prereq(cr) ? "*" : "",
-            capreq_is_prereq_un(cr) ? "^" : "",
-            capreq_name(cr));
-    
-    if (p == relstr) {
-        n_assert(*capreq_ver(cr) == '\0');
-        
-    } else {
-        n_assert(*capreq_ver(cr));
-
-        fprintf(stream, "(%s ", relstr);
-
-        if (capreq_has_epoch(cr)) {
-            fprintf(stream, "%u:", capreq_epoch(cr));
-        }
-
-        if (capreq_has_ver(cr)) {
-            fprintf(stream, "%s", capreq_ver(cr));
-        }
-
-        if (capreq_has_rel(cr)) {
-            n_assert(capreq_has_ver(cr));
-            fprintf(stream, "-%s)", capreq_rel(cr));
-        }
-    }
-    return 1;
-}
 
 static
 int capreq_snprintf_(char *str, size_t size, const struct capreq *cr,
@@ -392,9 +344,10 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
 }
 
 
-struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags, int32_t flags)
+struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags,
+                              int32_t flags)
 {
-    char *version = NULL, *release = NULL;
+    const char *version = NULL, *release = NULL;
     int32_t epoch = 0;
 
     if (evr && !parse_evr(evr, &epoch, &version, &release))
@@ -437,257 +390,6 @@ int capreq_arr_find(tn_array *capreqs, const char *name)
 {
     return n_array_bsearch_idx_ex(capreqs, name,
                                   (tn_fn_cmp)capreq_cmp2name);
-}
-
-tn_array *capreqs_get(tn_array *arr, const Header h, int crtype) 
-{
-    struct capreq *cr;
-    int t1, t2, t3, c1 = 0, c2 = 0, c3 = 0;
-    char **names, **versions, *label;
-    int  *flags, *tags;
-    int  i;
-
-    int req_tags[3] = {
-        RPMTAG_REQUIRENAME, RPMTAG_REQUIREVERSION, RPMTAG_REQUIREFLAGS
-    };
-
-    int prov_tags[3] = {
-        RPMTAG_PROVIDENAME, RPMTAG_PROVIDEVERSION, RPMTAG_PROVIDEFLAGS
-    };
-
-    int cnfl_tags[3] = {
-        RPMTAG_CONFLICTNAME, RPMTAG_CONFLICTVERSION, RPMTAG_CONFLICTFLAGS
-    };
-
-    int obsl_tags[3] = {
-        RPMTAG_OBSOLETENAME, RPMTAG_OBSOLETEVERSION, RPMTAG_OBSOLETEFLAGS
-    };
-    
-    n_assert(arr);
-
-    switch (crtype) {
-        case CRTYPE_CAP:
-            tags = prov_tags;
-            label = "prov";
-            break;
-            
-        case CRTYPE_REQ:
-            tags = req_tags;
-            label = "req";
-            break;
-            
-        case CRTYPE_CNFL:
-            tags = cnfl_tags;
-            label = "cnfl";
-            break;
-
-        case CRTYPE_OBSL:
-            tags = obsl_tags;
-            label = "cnfl";
-            break;
-            
-        default:
-            tags = NULL;
-            label = NULL;
-            n_assert(0);
-            die();
-    }
-
-    names = NULL;
-    if (!headerGetEntry(h, *tags, (void*)&t1, (void*)&names, &c1))
-        return NULL;
-    
-    n_assert(names);
-
-    
-    tags++;
-    versions = NULL;
-    if (headerGetEntry(h, *tags, (void*)&t2, (void*)&versions, &c2)) {
-        n_assert(t2 == RPM_STRING_ARRAY_TYPE);
-        n_assert(versions);
-        n_assert(c2);
-        
-    } else if (crtype == CRTYPE_REQ) { /* reqs should have version tag */
-        rpm_headerEntryFree(names, t1);
-        return 0;
-    }
-    
-    
-    tags++;
-    flags = NULL;
-    if (headerGetEntry(h, *tags, (void*)&t3, (void*)&flags, &c3)) {
-        n_assert(t3 == RPM_INT32_TYPE);
-        n_assert(flags);
-        n_assert(c3);
-        
-    } else if (crtype == CRTYPE_REQ) {  /* reqs should have flags */
-        rpm_headerEntryFree(names, t1);
-        rpm_headerEntryFree(versions, t2);
-        return 0;
-    }
-
-    if (c2) 
-        if (c1 != c2) {
-            logn(LOGERR, "read %s: nnames (%d) != nversions (%d), broken rpm",
-                 label, c1, c2);
-#if 0            
-            for (i=0; i<c1; i++) 
-                printf("n %s\n", names[i]);
-            for (i=0; i<c2; i++) 
-                printf("v %s\n", versions[i]);
-#endif            
-            goto l_err_endfunc;
-        }
-        
-    if (c2 != c3) {
-        logn(LOGERR, "read %s: nversions %d != nflags %d, broken rpm", label,
-            c2, c3);
-        goto l_err_endfunc;
-    }
-
-    for (i=0; i<c1 ; i++) {
-        int epoch_len = 0, name_len = 0, version_len = 0, release_len = 0;
-        unsigned int len = 1, has_ver, isrpmreq = 0;
-        char *name, *version, *release;
-        int32_t epoch;
-        char *buf;
-
-        name = names[i];
-        
-        if (*name == 'r' && strncmp(name, "rpmlib(", 7) == 0) {
-            char *p, *q, *nname;
-
-            p = (char*)name + 7;
-            if ((q = strchr(p, ')'))) {
-                name_len = q - p;
-                nname = alloca(name_len + 1);
-                memcpy(nname, p, name_len);
-                nname[name_len] = '\0';
-                name = nname;
-                
-                isrpmreq = 1;
-            
-            } else {
-                logn(LOGERR, _("%s: invalid rpmlib capreq"), name);
-            }
-        
-        } else {
-            name_len = strlen(name);
-        }
-
-        len += name_len + 1;
-        
-        has_ver = c2 && *versions[i];
-        
-        if (has_ver) {
-            parse_evr(versions[i], &epoch, &version, &release);
-            
-            if (epoch)
-                epoch_len = sizeof(epoch);
-            
-            version_len = strlen(version);
-            
-            if (release != NULL)
-                release_len = strlen(release);
-            
-            len += epoch_len + version_len + 1 + release_len + 1;
-        }
-        
-        n_assert(len <= UINT8_MAX);
-        cr = capreq_alloc_fn(sizeof(*cr) + len);
-        if (cr == NULL) 
-            goto l_err_endfunc;
-        
-        memset(cr, 0, sizeof(*cr) + len);
-        
-        buf = cr->_buf;
-        *buf++ = '\0';          /* set buf[0] to '\0' */
-        
-        memcpy(buf, name, name_len);
-        buf += name_len;
-        *buf++ = '\0';
-        
-        if (has_ver) {
-            n_assert(*versions[i]);
-            
-            if (epoch) {
-                cr->cr_ep_ofs = name_len + 2;
-                memcpy(buf, &epoch, sizeof(epoch));
-                buf += sizeof(epoch);
-            }
-                
-            cr->cr_ver_ofs = buf - cr->_buf;
-            memcpy(buf, version, version_len);
-            buf += version_len ;
-            *buf++ = '\0';
-
-            if (release != NULL) {
-                cr->cr_rel_ofs = buf - cr->_buf;
-                memcpy(buf, release, release_len);
-                buf += release_len;
-                *buf++ = '\0';
-            }
-        }
-        
-        if (c3) {               /* translate flags to poldek one */
-            register uint32_t flag = flags[i];
-
-            if (flag & RPMSENSE_LESS) 
-                cr->cr_relflags |= REL_LT;
-            
-            if (flag & RPMSENSE_GREATER) 
-                cr->cr_relflags |= REL_GT;
-            
-            if (flag & RPMSENSE_EQUAL) 
-                cr->cr_relflags |= REL_EQ;
-
-                
-#ifndef HAVE_RPM_EXTDEPS
-            if (flag & RPMSENSE_PREREQ) {
-                n_assert(crtype == CRTYPE_REQ);
-                cr->cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
-            }
-#else
-            if (isLegacyPreReq(flag)) { /* prepared by rpm < 4.0.2  */
-                n_assert(crtype == CRTYPE_REQ);
-                cr->cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
-                
-            } else if (isInstallPreReq(flag)) {
-                n_assert(crtype == CRTYPE_REQ);
-                cr->cr_flags |= CAPREQ_PREREQ;
-                
-            } else if (isErasePreReq(flag)) {
-                n_assert(crtype == CRTYPE_REQ);
-                cr->cr_flags |= CAPREQ_PREREQ_UN;
-            }
-#endif /* HAVE_RPM_EXTDEPS */
-        }
-        
-
-        if (crtype == CRTYPE_OBSL) 
-            cr->cr_flags |= CAPREQ_OBCNFL;
-
-        if (isrpmreq)
-            cr->cr_flags |= CAPREQ_RPMLIB;
-        
-        msg(4, "%s%s: %s\n",
-            cr->cr_flags & CAPREQ_PREREQ ?
-              (crtype == CRTYPE_OBSL ? "obsl" : "pre" ):"", 
-            label, capreq_snprintf_s(cr));
-        n_array_push(arr, cr);
-    }
-    
-    rpm_headerEntryFree(names, t1);
-    rpm_headerEntryFree(versions, t2);
-    rpm_headerEntryFree(flags, t3);
-
-    return arr;
-    
- l_err_endfunc:
-    rpm_headerEntryFree(names, t1);
-    rpm_headerEntryFree(versions, t2);
-    rpm_headerEntryFree(flags, t3);
-    return NULL;
 }
 
 

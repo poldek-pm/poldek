@@ -85,11 +85,10 @@ struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
                            const char *type, const char *name);
 
 /* ldflags */
-#define PKGDIR_LD_SKIPBASTS   (1 << 0) /* don't load capreqs added by poldek */
+//#define PKGDIR_LD_SKIPBASTS   (1 << 0) /* don't load capreqs added by poldek */
 #define PKGDIR_LD_FULLFLIST   (1 << 1) /* load full file list */
 #define PKGDIR_LD_DESC        (1 << 2) /* load pkg info to memory */
 #define PKGDIR_LD_NOUNIQ      (1 << 3) /* don't perform pkgdir_uniq() */
-
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 
@@ -100,11 +99,11 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 //                               const char *prefix);
 
 #define PKGDIR_CREAT_NODESC     (1 << 0) /* don't save packages user level info */
-#define PKGDIR_CREAT_asCACHE    (1 << 2) /* don't verify pkgdir strictly        */
-#define PKGDIR_CREAT_woTOC      (1 << 3) /* don't create pathname.dir.toc       */
-#define PKGDIR_CREAT_wMD        (1 << 4) /* create pathname*.md (v016 compat file) */
+#define PKGDIR_CREAT_NOFL       (1 << 1) /* don't save packages file list       */
+
+#define PKGDIR_CREAT_NOUNIQ     (1 << 4)
 #define PKGDIR_CREAT_NOPATCH    (1 << 5) /* don't create diff */
-#define PKGDIR_CREAT_NOCOMPR    (1 << 6) /* create uncompressed index */
+#define PKGDIR_CREAT_NOCOMPR    (1 << 6) /* create uncompressed index (NIY) */
                                             
 int pkgdir_create_idx(struct pkgdir *pkgdir, const char *type,
                       const char *path, unsigned flags);
@@ -159,6 +158,7 @@ struct pkg;
 #define PKGDIR_CREAT_PKG_NOEVR     (1 << 10)
 #define PKGDIR_CREAT_PKG_NOARCH    (1 << 11)
 #define PKGDIR_CREAT_PKG_NOOS      (1 << 12)
+#define PKGDIR_CREAT_PKG_Fv017     (1 << 13)
 
 int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
               unsigned flags);
@@ -180,8 +180,7 @@ struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg,
 /*  module methods */
 
 typedef int (*pkgdir_fn_open)(struct pkgdir *pkgdir, unsigned flags);
-typedef int (*pkgdir_fn_load)(struct pkgdir *pkgdir,
-                              tn_array *depdirs, unsigned ldflags);
+typedef int (*pkgdir_fn_load)(struct pkgdir *pkgdir, unsigned ldflags);
 
 typedef int (*pkgdir_fn_create)(struct pkgdir *pkgdir,
                                 const char *path, unsigned flags);
@@ -191,9 +190,6 @@ typedef int (*pkgdir_fn_update_a)(const struct source *src);
 
 typedef int (*pkgdir_fn_unlink)(const char *path, int allfiles);
 typedef void (*pkgdir_fn_free)(struct pkgdir *pkgdir);
-
-//int ppkgdir_get_pkgfl(struct pidx *pidx, tn_array *fl);
-//int ppkgdir_get_pkgdesc(struct pidx *pidx, tn_array *fl);
 
 struct pkgdir_module {
     unsigned                    cap_flags;

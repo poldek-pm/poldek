@@ -39,10 +39,9 @@
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"
-#include "rpm.h"
+#include "rpm/rpm.h"
 
 #ifdef HAVE_RPM_4_0    
-
 int package_verify_sign(const char *path, unsigned flags) 
 {
     unsigned rpmflags = 0;
@@ -51,7 +50,6 @@ int package_verify_sign(const char *path, unsigned flags)
         logn(LOGERR, "%s: verify signature failed: %m", path);
         return 0;
     }
-    
     
     if (flags & PKGVERIFY_GPG)
         rpmflags |= VRFYSIG_SIGNGPG;
@@ -144,6 +142,7 @@ int package_verify_pgpg_sign(const struct pkg *pkg, const char *localpath)
     
     return rc;
 }
+
 
 int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
 {

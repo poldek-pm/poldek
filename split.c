@@ -30,7 +30,6 @@
 #include "pkgset-req.h"
 #include "log.h"
 #include "pkg.h"
-#include "rpmadds.h"
 #include "misc.h"
 
 struct chunk {
@@ -482,7 +481,7 @@ int packages_split(tn_array *pkgs, unsigned split_size, unsigned first_free_spac
     n_array_isort(packages);
 
     msg(2, "\nPackages ordered by priority:\n");
-    for (i=0; i<n_array_size(packages); i++) {
+    for (i=0; i < n_array_size(packages); i++) {
         struct pkg *pkg = n_array_nth(packages, i);
         msg(2, "%d. [%d] %s\n", i, pkg->pri,  pkg_snprintf_s(pkg));
     }
@@ -491,7 +490,7 @@ int packages_split(tn_array *pkgs, unsigned split_size, unsigned first_free_spac
     packages_order(packages, &ordered_pkgs);
 
     msg(2, "\nPackages ordered:\n");
-    for (i=0; i<n_array_size(ordered_pkgs); i++) {
+    for (i=0; i < n_array_size(ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ordered_pkgs, i);
         msg(2, "%d. [%d] %s\n", i, pkg->pri,  pkg_snprintf_s(pkg));
     }

@@ -26,6 +26,10 @@ void rpm_define(const char *name, const char *val);
 rpmdb rpm_opendb(const char *dbpath, const char *rootdir, mode_t mode);
 void rpm_closedb(rpmdb db);
 
+
+/* rpmlib prototype */
+int rpmvercmp(const char * one, const char * two);
+
 char *rpm_get_dbpath(void);
 time_t rpm_dbmtime(const char *dbfull_path);
 
@@ -35,6 +39,15 @@ int rpm_dbmap(rpmdb db,
 
 
 int rpmdb_get_depdirs(const char *rootdir, tn_array *depdirs);
+
+
+struct dbrec_process {
+    int  (*skip)(uint32_t recno, Header h, void *arg);
+    int  (*process)(uint32_t recno, Header h, void *arg);
+    void *arg;
+};
+
+
 
 tn_array *rpm_get_conflicted_dbpkgs(rpmdb db, const struct capreq *cap,
                                     tn_array *unistdbpkgs, unsigned ldflags);

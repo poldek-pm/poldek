@@ -27,7 +27,6 @@
 #include "pkgset.h"
 #include "misc.h"
 #include "usrset.h"
-#include "rpmadds.h"
 #include "pkgset-req.h"
 
 

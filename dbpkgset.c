@@ -23,7 +23,6 @@
 #include "pkg.h"
 #include "dbpkg.h"
 #include "dbpkgset.h"
-#include "rpmadds.h"
 #include "log.h"
 
 #define DBPKGSET_CHANGED (1 << 0)

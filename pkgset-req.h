@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
-#include <obstack.h>
 
 #include <rpm/rpmlib.h>
 #include <trurl/nassert.h>

@@ -6,6 +6,18 @@
 #include <stdint.h>
 #include <rpm/rpmlib.h>
 
+
+int rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path);
+int rpmhdr_loadfile(const char *path, Header *hdr);
+int rpmhdr_nevr(Header h, char **name,
+                uint32_t **epoch, char **version, char **release);
+char **rpmhdr_langs(Header h);
+void rpmhdr_free_entry(void *e, int type);
+
+#define rpmhdr_issource(h) headerIsEntry((h), RPMTAG_SOURCEPACKAGE)
+
+char *rpmhdr_snprintf(char *buf, size_t size, Header h);
+
 struct rpmhdr_ent {
     int32_t tag;
     int32_t type;
@@ -21,32 +33,5 @@ struct rpmhdr_ent {
 int rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag);
 void rpmhdr_ent_free(struct rpmhdr_ent *ent);
 int rpmhdr_ent_cp(struct rpmhdr_ent *ent, Header h, int32_t tag, Header toh);
-
-char *rpmhdr_strnvr(char *buf, int size, Header h);
-
-struct rpmhdr_fl {
-    char      **bnames;
-    int       nbnames; 
-
-    char      **dnames;
-    int       ndnames;
-    
-    char      **symlinks;
-    int       nsymlinks;
-    
-    int32_t   *diridxs;
-    int       ndiridxs;
-    
-    uint32_t  *sizes;
-    int       nsizes;
-    
-    uint16_t  *modes;
-    int       nmodes;
-
-    Header    h;
-};
-
-int rpmhdr_fl_ld(struct rpmhdr_fl *hdrfl, Header h, const char *pkgname);
-void rpmhdr_fl_free(struct rpmhdr_fl *fl);
 
 #endif

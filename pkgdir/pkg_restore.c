@@ -43,9 +43,9 @@
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
-#include "rpmadds.h"
 #include "pkgdir.h"
 #include "pkg.h"
+#include "pkgmisc.h"
 #include "h2n.h"
 #include "pkgroup.h"
 
@@ -61,6 +61,7 @@
 #define PKGT_HAS_FSIZE    (1 << 10)
 #define PKGT_HAS_BTIME    (1 << 11)
 #define PKGT_HAS_GROUPID  (1 << 12)
+#define PKGT_F_v017   (1 << 15);
 
 struct pkgtags_s {
     unsigned   flags;
@@ -82,6 +83,8 @@ struct pkgtags_s {
     off_t      pkguinf_offs;
 };
 
+extern int pkg_restore_fields(tn_stream *st, struct pkg *pkg);
+
 static
 int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 const char *pathname, off_t offs);
@@ -91,8 +94,9 @@ struct pkg *pkg_ldtags(struct pkg *pkg,
                        struct pkgtags_s *pkgt, struct pkg_offs *pkgo);
 
 static 
-int restore_pkg_fields(tn_stream *st, uint32_t *size, uint32_t *fsize,
-                       uint32_t *btime, uint32_t *groupid);
+int restore_pkg_fields_v0_17(tn_stream *st, uint32_t *size,
+                             uint32_t *fsize, uint32_t *btime,
+                             uint32_t *groupid);
 
 
 inline static char *eatws(char *str) 
@@ -130,6 +134,7 @@ struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg,
                         struct pkg_offs *pkgo, const char *fn)
 {
     struct pkgtags_s   pkgt;
+    struct pkg         tmpkg;
     off_t              offs;
     char               linebuf[4096];
     int                nerr = 0, nread, with_pkg = 0;
@@ -158,6 +163,12 @@ struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg,
         if (*line == '\n') {        /* empty line -> end of record */
             //printf("\n\nEOR\n");
             pkg = pkg_ldtags(pkg, &pkgt, pkgo);
+            pkg->size = tmpkg.size;
+            pkg->fsize = tmpkg.fsize;
+            pkg->btime = tmpkg.btime;
+            pkg->itime = tmpkg.itime;
+            pkg->groupid = tmpkg.groupid;
+            pkg->recno = tmpkg.recno;
 			//if (pkg)
             //    printf("ld %s\n", pkg_snprintf_s(pkg));
             break;
@@ -203,8 +214,22 @@ struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg,
                     nerr++;
                     goto l_end;
                 }
-                restore_pkg_fields(st, &pkgt.size, &pkgt.fsize,
-                                   &pkgt.btime, &pkgt.groupid);
+                restore_pkg_fields_v0_17(st, &pkgt.size, &pkgt.fsize,
+                                         &pkgt.btime, &pkgt.groupid);
+                pkgt.flags |= PKGT_HAS_SIZE | PKGT_HAS_FSIZE | PKGT_HAS_BTIME |
+                    PKGT_HAS_GROUPID;
+                pkgt.flags |= PKGT_F_v017;
+                break;
+
+            case 'f':
+                if (pkgt.flags & PKGT_HAS_SIZE) {
+                    logn(LOGERR, _("%s:%ld: syntax error"), fn, offs);
+                    nerr++;
+                    goto l_end;
+                }
+                
+                memset(&tmpkg, 0, sizeof(tmpkg)); /* make it nicer in the future */
+                pkg_restore_fields(st, &tmpkg);
                 pkgt.flags |= PKGT_HAS_SIZE | PKGT_HAS_FSIZE | PKGT_HAS_BTIME |
                     PKGT_HAS_GROUPID;
                 break;
@@ -216,7 +241,7 @@ struct pkg *pkg_restore(tn_stream *st, struct pkg *pkg,
                     nerr++;
                     goto l_end;
                 }
-                    
+                
                 pkgt.caps = capreq_arr_restore_f(st);
                 pkgt.flags |= PKGT_HAS_CAP;
                 break;
@@ -462,7 +487,8 @@ static
 struct pkg *pkg_ldtags(struct pkg *pkg,
                        struct pkgtags_s *pkgt, struct pkg_offs *pkgo) 
 {
-    char *ver, *rel, *arch = NULL, *os = NULL;
+    const char *ver, *rel;
+    char *arch = NULL, *os = NULL;
     int32_t epoch;
 
     if (pkg == NULL) {
@@ -566,10 +592,10 @@ struct pkg *pkg_ldtags(struct pkg *pkg,
 
 
 static 
-int restore_pkg_fields(tn_stream *st, uint32_t *size, uint32_t *fsize,
-                       uint32_t *btime, uint32_t *groupid) 
+int restore_pkg_fields_v0_17(tn_stream *st, uint32_t *size, uint32_t *fsize,
+                             uint32_t *btime, uint32_t *groupid) 
 {
-    uint8_t n;
+    uint8_t n, dummy;
 
     
     n_stream_read_uint8(st, &n);
@@ -578,7 +604,7 @@ int restore_pkg_fields(tn_stream *st, uint32_t *size, uint32_t *fsize,
     n_stream_read_uint32(st, fsize);
     n_stream_read_uint32(st, btime);
     n_stream_read_uint32(st, groupid);
-    n_stream_read_uint8(st, &n);               /* eat '\n' */
+    n_stream_read_uint8(st, &dummy);               /* eat '\n' */
     return n == 4;
 }
 

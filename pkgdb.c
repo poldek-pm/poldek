@@ -18,7 +18,7 @@
 #include <trurl/nassert.h>
 #include "i18n.h"
 #include "pkgdb.h"
-#include "rpm.h"
+#include "rpm/rpm.h"
 
 struct pkgdb *pkgdb_open(const char *rootdir, const char *path, mode_t mode)
 {
@@ -113,3 +113,12 @@ int pkgdb_install(struct pkgdb *db, const char *path, unsigned flags)
     return rpm_install(db->dbh, db->rootdir, path,
                        filterflags, transflags, instflags);
 }
+
+int pkgdb_map(struct pkgdb *db,
+              void (*mapfn)(unsigned recno, void *header, void *arg),
+              void *arg) 
+{
+    return rpm_dbmap(db->dbh, mapfn, arg);
+}
+
+

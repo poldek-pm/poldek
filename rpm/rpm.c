@@ -39,15 +39,18 @@
 
 #include "sigint/sigint.h"
 #include "i18n.h"
-#include "rpm.h"
-#include "rpmadds.h"
+
 #include "depdirs.h"
 #include "misc.h"
 #include "log.h"
 #include "pkg.h"
 #include "dbpkg.h"
 #include "capreq.h"
+
+#include "rpm.h"
 #include "rpmdb_it.h"
+#define POLDEK_RPM_INTERNAL
+#include "rpm_pkg_ld.h"
 
 static int initialized = 0;
 int rpmlib_verbose = 0;
@@ -306,7 +309,7 @@ int header_cap_match_req(Header h, const struct capreq *req, int strict)
 
     rc = 0;
     pkg.caps = capreq_arr_new(0);
-    get_pkg_caps(pkg.caps, h);
+    rpm_capreqs_ldhdr(pkg.caps, h, CRTYPE_CAP);
     
     if (n_array_size(pkg.caps) > 0) {
         n_array_sort(pkg.caps);
@@ -376,7 +379,7 @@ int rpm_dbmap(rpmdb db,
     rpmdbMatchIterator mi;
     mi = rpmdbInitIterator(db, RPMDBI_PACKAGES, NULL, 0);
     while ((h = rpmdbNextIterator(mi)) != NULL) {
-	unsigned int recno = rpmdbGetIteratorOffset(mi);
+        unsigned int recno = rpmdbGetIteratorOffset(mi);
 #ifdef HAVE_RPM_4_1             /* omit pubkeys */
         if (headerIsEntry(h, RPMTAG_PUBKEYS))
             continue;
@@ -385,7 +388,7 @@ int rpm_dbmap(rpmdb db,
             return 0;
         
         mapfn(recno, h, arg);
-	n++;
+        n++;
     }
     rpmdbFreeIterator(mi);
 #else	/* !HAVE_RPM_4_0 */
@@ -441,6 +444,27 @@ int rpm_get_pkgs_requires_capn(rpmdb db, tn_array *dbpkgs, const char *capname,
 }
 
 
+int rpm_get_obsoletedby_cap_N(rpmdb db, struct capreq *cap, struct dbrec_process *dp)
+{
+    struct rpmdb_it it;
+    const struct dbrec *dbrec;
+    int n = 0;
+    
+    rpmdb_it_init(db, &it, RPMITER_NAME, capreq_name(cap));
+    while ((dbrec = rpmdb_it_get(&it)) != NULL) {
+        if (dp->skip && dp->skip(dbrec->recno, dbrec->h, dp->arg))
+            continue;
+        
+        if (header_evr_match_req(dbrec->h, cap)) {
+            if ((dp->process(dbrec->recno, dbrec->h, dp->arg)))
+                n++;
+        }
+    }
+    rpmdb_it_destroy(&it);
+    return n;
+}
+
+
 int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, struct capreq *cap,
                             unsigned ldflags)
 {
@@ -451,7 +475,7 @@ int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, struct capreq *cap,
     rpmdb_it_init(db, &it, RPMITER_NAME, capreq_name(cap));
     while ((dbrec = rpmdb_it_get(&it)) != NULL) {
         if (dbpkg_array_has(dbpkgs, dbrec->recno))
-	    continue;
+            continue;
         
         if (header_evr_match_req(dbrec->h, cap)) {
             struct dbpkg *dbpkg = dbpkg_new(dbrec->recno, dbrec->h, ldflags);
@@ -565,7 +589,6 @@ tn_array *rpm_get_packages(rpmdb db, const struct pkg *pkg, unsigned ldflags)
     rpmdb_it_destroy(&it);
     return dbpkgs;
 }
-
 
 tn_array *rpm_get_conflicted_dbpkgs(rpmdb db, const struct capreq *cap,
                                     tn_array *unistdbpkgs, unsigned ldflags)

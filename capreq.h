@@ -8,7 +8,6 @@
 
 #include <stdint.h>
 
-#include <rpm/rpmlib.h>
 #include <trurl/narray.h>
 #include <trurl/nbuf.h>
 
@@ -121,26 +120,12 @@ int capreq_arr_store_f(tn_array *arr, const char *prefix, tn_stream *st);
 tn_array *capreq_arr_restore(tn_buf *nbuf);
 tn_array *capreq_arr_restore_f(tn_stream *st);
 
-#define CRTYPE_CAP  1
-#define CRTYPE_REQ  2
-#define CRTYPE_CNFL 3
-#define CRTYPE_OBSL 4
-
-tn_array *capreqs_get(tn_array *arr, const Header h, int prtype);
-
-#define get_pkg_caps(arr, h)   capreqs_get(arr, h, CRTYPE_CAP)
-#define get_pkg_reqs(arr, h)   capreqs_get(arr, h, CRTYPE_REQ)
-#define get_pkg_cnfls(arr, h)  capreqs_get(arr, h, CRTYPE_CNFL)
-#define get_pkg_obsls(arr, h)  capreqs_get(arr, h, CRTYPE_OBSL)
-
-
 tn_array *capreq_pkg(tn_array *arr, int32_t epoch, 
                      const char *name, int name_len, 
                      const char *version, int version_len, 
                      const char *release, int release_len);
 
 
-int capreq_fprintf(FILE *stream, const struct capreq *cr);
 int capreq_snprintf(char *str, size_t size, const struct capreq *cr);
 char *capreq_snprintf_s(const struct capreq *cr);
 char *capreq_snprintf_s0(const struct capreq *cr);

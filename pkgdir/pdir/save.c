@@ -130,14 +130,13 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     int              i, nerr = 0;
     struct pdir      *idx;
     
-    if ((flags & PKGDIR_CREAT_asCACHE) == 0 && 
-        (pkgdir->flags & (PKGDIR_DIFF | PKGDIR_UNIQED)) == 0) {
+    if ((pkgdir->flags & (PKGDIR_DIFF | PKGDIR_UNIQED)) == 0) {
         n_assert(0);
         pkgdir_uniq(pkgdir);
     }
 
     idx = pkgdir->mod_data;
-    printf("idx0 = %p\n", idx);
+    //printf("idx0 = %p\n", idx);
     if (pkgdir->ts == 0) 
         pkgdir->ts = time(0);
 
@@ -150,8 +149,8 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     n_assert(pathname);
     orig_pathname = pathname;
     
-    if ((pkgdir->flags & (PKGDIR_DIFF | PKGDIR_PATCHED)) == 0)
-        flags |= PKGDIR_CREAT_wMD;
+    //if ((pkgdir->flags & (PKGDIR_DIFF | PKGDIR_PATCHED)) == 0)
+    //    flags |= PKGDIR_CREAT_wMD;
 
     
     if (pkgdir->flags & PKGDIR_DIFF) {
@@ -272,7 +271,7 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
         }
     }
     
-    i = pdir_digest_create(pkgdir, path, flags & PKGDIR_CREAT_wMD);
+    i = pdir_digest_create(pkgdir, path, flags); // & PKGDIR_CREAT_wMD);
 
 	if (!i)
 		nerr++;

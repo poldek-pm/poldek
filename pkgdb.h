@@ -7,7 +7,7 @@
 
 #include "capreq.h"
 #include "pkg.h"
-#include "rpm.h"
+#include "rpm/rpm.h"
 
 #define PKGINST_NODEPS        (1 << 1) /* rpm --nodeps */
 #define PKGINST_JUSTDB        (1 << 2) /* rpm --justdb */
@@ -35,5 +35,8 @@ int pkgdb_install(struct pkgdb *db, const char *path, unsigned flags);
 int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, int strict,
                     tn_array *excloffs);
 
-#define pkgdb_map(db, mapfn, arg) rpm_dbmap((db)->dbh, mapfn, arg);
+int pkgdb_map(struct pkgdb *db,
+              void (*mapfn)(unsigned recno, void *header, void *arg),
+              void *arg);
+
 #endif

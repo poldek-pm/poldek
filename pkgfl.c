@@ -26,7 +26,6 @@
 #include <trurl/nbuf.h>
 
 #include "i18n.h"
-#include "rpmadds.h"
 #include "log.h"
 #include "pkg.h"
 #include "pkgfl.h"
@@ -231,7 +230,6 @@ int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict)
     return cmprc;
 }
 
-static
 int flfile_cmp(const struct flfile *f1, const struct flfile *f2)
 {
     register int cmprc;
@@ -242,7 +240,6 @@ int flfile_cmp(const struct flfile *f1, const struct flfile *f2)
     
     if ((cmprc = (f1->size - f2->size)) == 0)
         cmprc = f1->mode - f2->mode;
-    
     
     if (cmprc == 0 && S_ISLNK(f1->mode)) {
         register char *l1, *l2;
@@ -255,7 +252,6 @@ int flfile_cmp(const struct flfile *f1, const struct flfile *f2)
     return cmprc;
 }
 
-static
 int flfile_cmp_qsort(const struct flfile **f1, const struct flfile **f2)
 {
     return flfile_cmp(*f1, *f2);
@@ -586,175 +582,6 @@ static int valid_fname(const char *fname, mode_t mode, const char *pkgname)
     return 1;
 }
 
-
-/* -1 on error  */
-int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
-{
-    int t1, t2, t3, t4, c1, c2, c3, c4;
-    char **names = NULL, **dirs = NULL, **symlinks = NULL, **skipdirs;
-    int32_t   *diridxs;
-    uint32_t  *sizes;
-    uint16_t  *modes;
-    struct    flfile *flfile;
-    struct    pkgfl_ent **fentdirs = NULL;
-    int       *fentdirs_items;
-    int       i, j, ndirs = 0, nerr = 0, missing_file_hdrs_err = 0;
-    const char *errmsg_notag = _("%s: no %s tag");
-    
-
-    
-    if (!headerGetEntry(h, RPMTAG_BASENAMES, (void*)&t1, (void*)&names, &c1))
-        return 0;
-
-    n_assert(t1 == RPM_STRING_ARRAY_TYPE);
-    if (!headerGetEntry(h, RPMTAG_DIRNAMES, (void*)&t2, (void*)&dirs, &c2))
-        goto l_endfunc;
-    
-    n_assert(t2 == RPM_STRING_ARRAY_TYPE);
-    if (!headerGetEntry(h, RPMTAG_DIRINDEXES, (void*)&t3,(void*)&diridxs, &c3))
-    {
-        logn(LOGERR, errmsg_notag, pkgname, "DIRINDEXES");
-        nerr++;
-        goto l_endfunc;
-    }
-
-    n_assert(t3 == RPM_INT32_TYPE);
-    
-    if (c1 != c3) {
-        logn(LOGERR, "%s: size of DIRINDEXES (%d) != size of BASENAMES (%d)",
-             pkgname, c3, c1);
-        nerr++;
-        goto l_endfunc;
-    }
-    
-    if (!headerGetEntry(h, RPMTAG_FILEMODES, (void*)&t4, (void*)&modes, &c4)) {
-        if (verbose > 1)
-            logn(LOGWARN, errmsg_notag, pkgname, "FILEMODES");
-        missing_file_hdrs_err = 1;
-        modes = NULL;
-    }
-    
-    if (!headerGetEntry(h, RPMTAG_FILESIZES, (void*)&t4, (void*)&sizes, &c4)) {
-        if (verbose > 1)
-            logn(LOGWARN, errmsg_notag, pkgname, "FILESIZES");
-        missing_file_hdrs_err = 2;
-        sizes = NULL;
-    }
-    
-    if (!headerGetEntry(h, RPMTAG_FILELINKTOS, (void*)&t4, (void*)&symlinks,
-                        &c4)) {
-        symlinks = NULL;
-    }
-    
-    skipdirs = alloca(sizeof(*skipdirs) * c2);
-    fentdirs = alloca(sizeof(*fentdirs) * c2);
-    fentdirs_items = alloca(sizeof(*fentdirs_items) * c2);
-
-    /* skip unneded dirnames */
-    for (i=0; i<c2; i++) {
-        struct pkgfl_ent *flent;
-
-        fentdirs_items[i] = 0;
-        if (!valid_fname(dirs[i], 0, pkgname))
-            nerr++;
-
-        if (which != PKGFL_ALL) {
-            int is_depdir;
-
-            is_depdir = in_depdirs(dirs[i] + 1);
-            
-            if (!is_depdir && which == PKGFL_DEPDIRS) {
-                msg(5, "skip files in dir %s\n", dirs[i]);
-                skipdirs[i] = NULL;
-                fentdirs[i] = NULL;
-                continue;
-                
-            } else if (is_depdir && which == PKGFL_NOTDEPDIRS) {
-                msg(5, "skip files in dir %s\n", dirs[i]);
-                skipdirs[i] = NULL;
-                fentdirs[i] = NULL;
-                continue;
-            }
-        }
-
-        skipdirs[i] = dirs[i];
-        for (j=0; j<c1; j++)
-            if (diridxs[j] == i)
-                fentdirs_items[i]++;
-        
-        flent = pkgfl_ent_new(dirs[i], strlen(dirs[i]), fentdirs_items[i]);
-        fentdirs[i] = flent;
-        ndirs++;
-    }
-    
-    msg(4, "%d files in package\n", c1);
-    for (i=0; i<c1; i++) {
-        struct pkgfl_ent *flent;
-        register int j = diridxs[i];
-        int len;
-
-        if (!valid_fname(names[i], modes ? modes[i] : 0, pkgname))
-            nerr++;
-        
-        msg(5, "  %d: %s %s/%s \n", i, skipdirs[j] ? "add " : "skip",
-            dirs[j], names[i]);
-            
-        if (skipdirs[j] == NULL)
-            continue;
-        
-        flent = fentdirs[j];
-        len = strlen(names[i]);
-        if (symlinks) { 
-            flfile = flfile_new(sizes ? sizes[i] : 0,
-                                modes ? modes[i] : 0,
-                                names[i], len,
-                                symlinks[i],
-                                strlen(symlinks[i]));
-        } else {
-            flfile = flfile_new(sizes ? sizes[i] : 0,
-                                modes ? modes[i] : 0,
-                                names[i], len,
-                                NULL,
-                                0);
-            
-        }
-        
-        flent->files[flent->items++] = flfile;
-        n_assert(flent->items <= fentdirs_items[j]);
-    }
-    
- l_endfunc:
-    
-    if (c1 && names)
-        rpm_headerEntryFree(names, t1);
-
-    if (c2 && dirs)
-        rpm_headerEntryFree(dirs, t2);
-
-    if (c4 && symlinks)
-        rpm_headerEntryFree(symlinks, t4);
-    
-    if (nerr) {
-        logn(LOGERR, _("%s: skipped file list"), pkgname);
-        
-    } else if (ndirs) {
-        for (i=0; i<c2; i++) 
-            if (fentdirs[i] != NULL) {
-                n_array_push(fl, fentdirs[i]);
-                qsort(&fentdirs[i]->files, fentdirs[i]->items, sizeof(struct flfile*), 
-                      (int (*)(const void *, const void *))flfile_cmp_qsort);
-            }
-    }
-#if 0
-    if (missing_file_hdrs_err) {
-        char *missing = _("FILEMODES tag");
-        if (missing_file_hdrs_err > 1)
-            missing = _("FILEMODES and FILESIZES tags");
-        logn(LOGERR, _("%s: missing %s in some packages"), pkgname, missing);
-    }
-#endif    
-    return nerr ? -1 : 1;
-}
 
 
 void pkgfl_dump(tn_array *fl)

@@ -42,13 +42,13 @@
 #include <vfile/vfile.h>
 
 #include "i18n.h"
-#include "rpm.h"
-#include "rpmadds.h"
+
 #include "misc.h"
 #include "log.h"
 #include "pkg.h"
 
-
+#include "rpm.h"
+#include "rpmhdr.h"
 static void progress(const unsigned long amount, const unsigned long total) 
 {
     static int last_v = 0;
@@ -212,10 +212,10 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
     if ((vf = vfile_open(path, VFT_RPMIO, VFM_RO | VFM_STBRN)) == NULL)
         return 0;
     
-    if (!rpm_headerReadFD(vf->vf_fdt, &h, path)) {
+    if (!rpmhdr_loadfdt(vf->vf_fdt, &h, path)) {
         goto l_err;
         
-    } else if (rpm_headerIsSource(h)) {
+    } else if (rpmhdr_issource(h)) {
         logn(LOGERR, _("%s: source packages are not supported"), path);
         goto l_err;
     }

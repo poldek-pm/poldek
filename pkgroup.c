@@ -24,12 +24,12 @@
 #define ENABLE_TRACE 0
 
 #include "i18n.h"
-#include "rpmhdr.h"
-#include "rpmadds.h"
 #include "log.h"
 #include "pkgu.h"
 #include "h2n.h"
 #include "pkgroup.h"
+#include "misc.h"
+#include "rpm/rpmhdr.h"
 
 const char *pkgroups_tag = "GROUPS:";
 

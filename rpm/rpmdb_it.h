@@ -17,7 +17,7 @@ void dbrec_clean(struct dbrec *dbrec); /* free members */
 char *dbrec_snprintf(char *buf, size_t size, const struct dbrec *dbrec);
 char *dbrec_snprintf_s(const struct dbrec *dbrec);
 
-/*#define RPMITER_PACKAGES  0 - not implemented yet*/
+#define RPMITER_RECNO     0
 #define RPMITER_NAME      1
 #define RPMITER_CAP       2
 #define RPMITER_REQ       3

@@ -26,8 +26,7 @@
 #include <rpm/rpmlib.h>
 
 #include "i18n.h"
-#include "rpmhdr.h"
-#include "rpmadds.h"
+#include "rpm/rpmhdr.h"
 #include "log.h"
 #include "pkgu.h"
 #include "h2n.h"
@@ -252,7 +251,7 @@ struct pkguinf *pkguinf_ldhdr(Header h)
     pkgu = pkguinf_malloc();
     pkgu->_ht = n_hash_new(3, free);
     
-    if ((langs = headerGetLangs(h))) {
+    if ((langs = rpmhdr_langs(h))) {
         tn_array *avlangs, *sl_langs;
         char *sl_lang;
         

@@ -67,8 +67,8 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
 }
 
 static 
-void store_pkg_fields(tn_buf *nbuf, uint32_t size, uint32_t fsize,
-                      uint32_t btime, uint32_t groupid) 
+void store_pkg_fields_v0_17(tn_buf *nbuf, uint32_t size, uint32_t fsize,
+                            uint32_t btime, uint32_t groupid) 
 {
     uint8_t n = 4;
 
@@ -80,6 +80,111 @@ void store_pkg_fields(tn_buf *nbuf, uint32_t size, uint32_t fsize,
     n_buf_add_int32(nbuf, groupid);
     n_buf_printf(nbuf, "\n");
 }
+
+#define PKGFIELD_TAG_SIZE   'S'
+#define PKGFIELD_TAG_FSIZE  's'
+#define PKGFIELD_TAG_BTIME  'b'
+#define PKGFIELD_TAG_ITIME  'i'
+#define PKGFIELD_TAG_GID    'g'
+#define PKGFIELD_TAG_RECNO  'r'
+static
+void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg) 
+{
+    uint8_t n = 0;
+
+    if (pkg->size) 
+        n++;
+
+    if (pkg->fsize) 
+        n++;
+
+    if (pkg->btime) 
+        n++;
+
+    if (pkg->itime) 
+        n++;
+
+    if (pkg->groupid) 
+        n++;
+
+    if (pkg->recno) 
+        n++;
+
+    n_buf_add_int8(nbuf, n);
+
+    if (pkg->size) {
+        n_buf_add_int8(nbuf, PKGFIELD_TAG_SIZE);
+        n_buf_add_int32(nbuf, pkg->size);
+    }
+
+    if (pkg->fsize) {
+        n_buf_add_int8(nbuf, PKGFIELD_TAG_FSIZE);
+        n_buf_add_int32(nbuf, pkg->fsize);
+    }
+    
+    if (pkg->btime) {
+        n_buf_add_int8(nbuf, PKGFIELD_TAG_BTIME);
+        n_buf_add_int32(nbuf, pkg->btime);
+    }
+
+    if (pkg->itime) {
+        n_buf_add_int8(nbuf, PKGFIELD_TAG_ITIME);
+        n_buf_add_int32(nbuf, pkg->itime);
+    }
+
+    if (pkg->groupid) {
+        n_buf_add_int8(nbuf, PKGFIELD_TAG_GID);
+        n_buf_add_int32(nbuf, pkg->groupid);
+    }
+
+    if (pkg->recno) {
+        n_buf_add_int8(nbuf, PKGFIELD_TAG_RECNO);
+        n_buf_add_int32(nbuf, pkg->recno);
+    }
+    n_buf_printf(nbuf, "\n");
+}
+
+
+int pkg_restore_fields(tn_stream *st, struct pkg *pkg) 
+{
+    uint8_t n = 0, tag;
+
+    n_stream_read_uint8(st, &n);
+        
+    while (n) {
+        n_stream_read_uint8(st, &tag);
+        switch (tag) {
+            case PKGFIELD_TAG_SIZE:
+                n_stream_read_uint32(st, &pkg->size);
+                break;
+                
+            case PKGFIELD_TAG_FSIZE:
+                n_stream_read_uint32(st, &pkg->fsize);
+                break;
+                
+            case PKGFIELD_TAG_BTIME:
+                n_stream_read_uint32(st, &pkg->btime);
+                break;
+
+            case PKGFIELD_TAG_ITIME:
+                n_stream_read_uint32(st, &pkg->itime);
+                break;
+
+            case PKGFIELD_TAG_GID:
+                n_stream_read_uint32(st, &pkg->groupid);
+                break;
+                
+            case PKGFIELD_TAG_RECNO:
+                n_stream_read_uint32(st, &pkg->recno);
+                break;
+        }
+        n--;
+    }
+    
+    return n_stream_read_uint8(st, &n); /* '\n' */
+}
+
+
 
 static
 void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs) 
@@ -139,9 +244,18 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     if ((flags & PKGDIR_CREAT_PKG_NOOS) == 0 && pkg->os)
         n_buf_printf(nbuf, "O: %s\n", pkg->os);
     
-    n_buf_printf(nbuf, "F:\n");
-    store_pkg_fields(nbuf, pkg->size, pkg->fsize, pkg->btime, pkg->groupid);
-
+    
+    
+    if (flags & PKGDIR_CREAT_PKG_Fv017) {
+        n_buf_printf(nbuf, "F:\n");
+        store_pkg_fields_v0_17(nbuf, pkg->size, pkg->fsize, pkg->btime, pkg->groupid);
+        
+    } else {
+        n_buf_printf(nbuf, "f:\n");
+        pkg_store_fields(nbuf, pkg);
+    }
+    
+    
     if (pkg->caps && n_array_size(pkg->caps))
         pkg_store_caps(pkg, nbuf);
     

@@ -41,7 +41,7 @@
 #include "pkgdb.h"
 #include "install.h"
 #include "misc.h"
-#include "rpm.h"
+//#include "rpm.h"
 #include "log.h"
 #include "shell.h"
 
@@ -649,7 +649,7 @@ char **poldek_completion(const char *text, int start, int end)
     }
         
     if (start == 0 || strchr(p, ' ') == NULL) 
-	matches = rl_completion_matches(text, command_generator);
+        matches = rl_completion_matches(text, command_generator);
     else
         matches = rl_completion_matches(text, pkgname_generator);
     
@@ -796,7 +796,7 @@ int cmd_quit(struct cmdarg *cmdarg)
 static time_t mtime(const char *pathname) 
 {
     struct stat st;
-    
+    printf("stat %s %d\n", pathname, stat(pathname, &st));
     if (stat(pathname, &st) != 0)
         return 0;
 
@@ -909,7 +909,6 @@ static void save_installed_pkgdir(struct pkgdir *pkgdir)
         return;
 
     
-    //printf("%s, %s\n", pkgdir->type, pkgdir->idxpath);
     if (pkgdir_is_type(pkgdir, RPMDBCACHE_PDIRTYPE))
         path = pkgdir->idxpath;
     else 
@@ -920,14 +919,15 @@ static void save_installed_pkgdir(struct pkgdir *pkgdir)
         return;
     
     if (mtime_rpmdb == pkgdir->ts) { /* not touched, check if cache exists  */
-        mtime_dbcache = mtime(dbcache_path);
+        mtime_dbcache = mtime(path);
         if (mtime_dbcache && mtime_dbcache >= pkgdir->ts)
             return;
     }
-    //printf("path = %s, %d, %d, %d\n", path, mtime_rpmdb, pkgdir->ts, mtime_dbcache);
+    
+    //printf("path = %s, %d, %d, %d\n", path, 
+    //       mtime_rpmdb, pkgdir->ts, mtime_dbcache);
     pkgdir_create_idx(pkgdir, RPMDBCACHE_PDIRTYPE, path,
-                      PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NODESC |
-                      PKGDIR_CREAT_asCACHE);
+                      PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ);
 }
 
 
@@ -1204,12 +1204,26 @@ int init_shell_data(struct pkgset *ps, struct inst_s *inst, int skip_installed)
     return 1;
 }
 
+static
+void destroy_shell_data(void) 
+{
+    shell_s.pkgset = NULL;
+    shell_s.inst = NULL;
+    shell_s.inst_flags_orig = 0;
+
+    
+    n_array_free(shell_s.avpkgs);
+    if (shell_s.instpkgs)
+        n_array_free(shell_s.instpkgs);
+}
+
+
 
 int shell_exec(struct pkgset *ps, struct inst_s *inst, int skip_installed,
                const char *cmd) 
 {
     char *s, *p;
-
+    int rc = 0;
     
     init_shell_data(ps, inst, skip_installed);
     
@@ -1218,9 +1232,10 @@ int shell_exec(struct pkgset *ps, struct inst_s *inst, int skip_installed,
     
     s = stripwhite(p);
     if (*s) 
-        return execute_line(s);
-    
-    return 0;
+        rc = execute_line(s);
+
+    destroy_shell_data();
+    return rc;
 }
 
 static void sigint_reached_fn(void)
@@ -1288,6 +1303,7 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         save_installed_pkgdir(shell_s.dbpkgdir);
     }
 
+    destroy_shell_data();
     sigint_pop();
     return 1;
 }
