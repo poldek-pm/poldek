@@ -1,26 +1,28 @@
 # $Id$
 
 * mis 2002/11/07
-- reinstall && reinstall-dist to refresh/swith package instalation.  
+- reinstall && reinstall-dist to refresh/swith package instalation
+  [ done v0.19.0]
+
 * mis 2002/05/13
 - use Obsoletes tag on greedy selection (optional)  [ done v0.18 ]
 - "block" option ("hold" like) which blocks package installation (RFC)
-- add transfer speed calculation to vfprogress (vfile/vfprogress.c)
+- add transfer speed calculation to vfprogress (vfile/vfprogress.c) 
+  [ done v0.18.5 by patrys ]
 
 * mis 2002/04/07
-- vhttp: support for HTTP auth
+- vhttp: support for HTTP auth [ done v0.19 ]
 
 * mis 2002/03/14
-- more compact install_summary()
+- more compact install_summary() [ done v0.18.x ]
 - modify rpmlib API to allow to read rpmdb indexes 
   without reading headers data. Needed to replace dbopen() usage
   in rpm_get_dbdepdirs()
 
-ssss
-ss
 * mis 2001/05/18
 - unistalled packages should be ordered using uninst prerequirements 
 - detection of fatal rpmlib errors during install-dist
+
 
 * mis  2000/09/20
 - patch wget, rsync and snarf to support syntax like:
@@ -28,12 +30,11 @@ ss
   
   Currently, except wget, no one support that, which forces poldek to 
   execute downloader for every file. Wget doesn't support --prefix
-  like option, which makes cmdline longer than can be.   
+  like option, which makes cmdline longer than can be. 
+  [ out, we have own FTP/HTTP client ]            
+
 
 Long term:
 - Use external db for file list storage (custom binary format? modified cdb?). 
   Currently PLD distribution (about 2400 packages) contains about 110.000 
   files.
-
-ssss
-ssss
