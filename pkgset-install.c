@@ -744,18 +744,16 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
                 
     } else if (db_dep->flags & PROCESS_AS_ORPHAN) {
         int i;
-        tn_array *pkgs = db_dep->pkgs;
-        
-        if (n_array_size(db_dep->pkgs) > 1) {
-            pkgs = n_array_clone(db_dep->pkgs);
+        tn_array *pkgs;
+
+        n_assert(db_dep->pkgs);
+        pkgs = n_array_clone(db_dep->pkgs);
+        for (i=0; i < n_array_size(db_dep->pkgs); i++) {
+            struct pkg *pp = n_array_nth(db_dep->pkgs, i);
+            if (n_array_has_free_fn(db_dep->pkgs))
+                pp = pkg_link(pp);
             
-            for (i=0; i < n_array_size(db_dep->pkgs); i++) {
-                struct pkg *pp = n_array_nth(db_dep->pkgs, i);
-                if (n_array_has_free_fn(db_dep->pkgs))
-                    pp = pkg_link(pp);
-                
-                n_array_push(pkgs, pp);
-            }
+            n_array_push(pkgs, pp);
         }
         
 

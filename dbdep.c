@@ -34,14 +34,21 @@
 #include "misc.h"
 #include "dbdep.h"
 
+static db_dep_free_pkgs(struct db_dep *db_dep) 
+{
+    if (db_dep->pkgs) {
+        n_array_free(db_dep->pkgs);
+        db_dep->pkgs = NULL;
+    }
+}
+
 
 static
 void db_dep_free(struct db_dep *db_dep) 
 {
-    if (db_dep->pkgs)
-        n_array_free(db_dep->pkgs);
+    
+    db_dep_free_pkgs(db_dep);
     db_dep->req = NULL;
-    db_dep->pkgs = NULL;
     db_dep->spkg = NULL;
     free(db_dep);
 }
@@ -129,8 +136,7 @@ void db_deps_remove_cap(tn_hash *db_deph, struct capreq *cap)
             DBGF("rmcap %s (%s)\n", capreq_snprintf_s(cap),
                  capreq_snprintf_s0(dep->req));
             dep->req = NULL;
-            n_array_free(dep->pkgs);
-            dep->pkgs = NULL;
+            db_dep_free_pkgs(dep);
         }
     }
 }
@@ -197,8 +203,7 @@ static void remove_files(tn_hash *db_deph, struct pkg *pkg, int load_full_fl)
                 if (dep->req && strcmp(capreq_name(dep->req), buf) == 0) {
                     DBGF("rmcap %s (%s)\n", buf, capreq_snprintf_s0(dep->req));
                     dep->req = NULL;
-                    n_array_free(dep->pkgs);
-                    dep->pkgs = NULL;
+                    db_dep_free_pkgs(dep);
                 }
             }
         }
@@ -253,8 +258,7 @@ void db_deps_remove_pkg_caps(tn_hash *db_deph, struct pkg *pkg, int load_full_fl
                 DBGF("rmcap %s (%s)\n", capreq_snprintf_s(cap),
                      capreq_snprintf_s0(dep->req));
                 dep->req = NULL;
-                n_array_free(dep->pkgs);
-                dep->pkgs = NULL;
+                db_dep_free_pkgs(dep);
             }
         }
     }
