@@ -8,8 +8,8 @@
 
 extern const char *default_pkgidx_name;
 
-
 struct pkgdir {
+    char                *name;
     char                *path;            /* path | URL        */
     char                *idxpath;         /* path | URL        */
     tn_array            *pkgs;            /* struct *pkg[]     */
@@ -18,11 +18,12 @@ struct pkgdir {
     tn_array            *foreign_depdirs; /* depdirs not presented in depdirs,
                                             but presented in other pkgdirs */
     struct pkgroup_idx  *pkgroups;
-    struct vfile        *vf;              /* Packages handle   */
+    struct vfile        *vf;              /* packages.dir.gz handle   */
     unsigned            flags;
 };
 
-struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix);
+struct pkgdir *pkgdir_new(const char *name, const char *path,
+                          const char *pkg_prefix);
 void pkgdir_free(struct pkgdir *pkgdir);
 
 /* flags */
@@ -44,8 +45,7 @@ void pkgdir_free(struct pkgdir *pkgdir);
 #define PKGDIR_LD_VERIFY   (PKGDIR_LD_FULLFLIST | PKGDIR_LD_SKIPBASTS)
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
-
-struct pkgdir *pkgdir_load_dir(const char *path);
+struct pkgdir *pkgdir_load_dir(const char *name, const char *path);
 
 int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc);
 

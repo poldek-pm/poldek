@@ -28,7 +28,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state);
 #define OPT_LS_SORTBUILDTIME   (1 << 4) /* cmd_state->flags */
 #define OPT_LS_SORTBUILDAY     (1 << 5) /* cmd_state->flags */
 #define OPT_LS_SORTREV         (1 << 6) /* cmd_state->flags */
-#define OPT_LS_ERR             (1 << 10);
+
+#define OPT_LS_NAMES_ONLY      (1 << 10) /* cmd_state->flags */
+#define OPT_LS_ERR             (1 << 16);
 
 static struct argp_option options[] = {
  { "long", 'l', 0, 0, "Use a long listing format", 1},
@@ -39,6 +41,7 @@ static struct argp_option options[] = {
  { NULL, 'T', 0, 0, "Sort by build day", 1},
  { NULL, 'h', 0, OPTION_HIDDEN, "", 1 }, 
  { "reverse", 'r', 0, 0, "Reverse order while sorting", 1},
+ { NULL, 'n', 0, 0, "Print only package's names", 1},
 // { NULL, 'i', 0, OPTION_ALIAS, 0, 1 }, 
  { 0, 0, 0, 0, 0, 0 },
 };
@@ -125,6 +128,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             }
             
             cmdarg->flags |= OPT_LS_INSTALLED;
+            break;
+
+        case 'n':
+            cmdarg->flags |= OPT_LS_NAMES_ONLY;
             break;
             
         default:
@@ -218,7 +225,7 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
         return 0;
     
     flags = cmdarg->flags;
-    term_width = get_term_width();
+    term_width = term_get_width();
     term_width_div2 = term_width/2;
 
     *hdr = '\0';
@@ -278,9 +285,13 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
     for (i=0; i<n_array_size(shpkgs); i++) {
         struct shpkg *shpkg = n_array_nth(shpkgs, i);
         struct pkg *pkg = shpkg->pkg;
-        char evr[128]; 
+        char evr[128], *pkg_name;
         int cmprc = 0;
-        
+
+        if (flags & OPT_LS_NAMES_ONLY) 
+            pkg_name = pkg->name;
+        else
+            pkg_name = shpkg->nevr;
         
         if (flags & OPT_LS_UPGRADEABLE && cmdarg->sh_s->instpkgs) {
             int finded;
@@ -322,7 +333,7 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
                 *timbuf = '\0';
             
             if ((flags & OPT_LS_UPGRADEABLE) == 0) {
-                printf(fmt_pkg, shpkg->nevr, timbuf, sizbuf);
+                printf(fmt_pkg, pkg_name, timbuf, sizbuf);
                 
             } else {
 #if 0                
@@ -340,12 +351,12 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
                            shpkg->pkg->rel);
 #endif
                 
-                printf(fmt_pkg, shpkg->nevr, evr, timbuf, sizbuf);
+                printf(fmt_pkg, pkg_name, evr, timbuf, sizbuf);
             }
             size += pkg->size/1024;
             
         } else {
-            printf("%s\n", shpkg->nevr);
+            printf("%s\n", pkg_name);
         }
         npkgs++;
     }
@@ -366,6 +377,9 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
         if (npkgs > 1)
             printf_c(PRCOLOR_YELLOW, "%d packages, %d %s\n", npkgs, val, unit);
     }
+
+    if (flags & (OPT_LS_SORTBUILDTIME | OPT_LS_SORTBUILDAY))
+        n_array_sort(shpkgs);
     
     return err == 0;
 }

@@ -43,10 +43,6 @@ struct shell_s {
 };
 
 
-int get_term_width(void);
-int get_term_height(void);
-
-
 void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs,
                          tn_array **pkgsp, int strict);
 

@@ -12,12 +12,23 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <termios.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
 
 #include <ncurses/curses.h>
 #include <ncurses/term.h>
+#include <trurl/nassert.h>
 
 #include "log.h"
 #include "term.h"
+
+static int is_a_tty    = 0;
+static int term_width  = TERM_DEFAULT_WIDTH;
+static int term_height = TERM_DEFAULT_HEIGHT;
+static volatile sig_atomic_t winch_reached = 0;
+
 
 /*
 #define PRCOLOR_BLACK    0
@@ -66,18 +77,6 @@ static char *get_color(char *buf, int size, int color)
 }
 
 
-void color_vlog(int pri, int indent, const char *fmt, va_list args)
-{
-    if (pri & LOGERR) 
-        printf("%s%sERR: %s%s", at_bold, pr_colors[COLOR_RED].seq, color_default, at_no_attr);
-
-    if (pri & LOGWARN)
-        printf("%s%sWARN: %s%s", at_bold, pr_colors[COLOR_RED].seq, color_default, at_no_attr);
-    
-    do_vlog(pri, indent, fmt, args);
-}
-
-    
 int vprintf_c(int color, const char *fmt, va_list args)
 {
     int n, isbold = 0;
@@ -113,27 +112,38 @@ int printf_c(int color, const char *fmt, ...)
     return n;
 }
 
-int snprintf_c(int color, char *buf, int size, const char *fmt, ...)
+
+int vsnprintf_c(int color, char *str, size_t size, const char *fmt,
+                va_list args)
 {
-    va_list args;
     int n = 0, isbold = 0;
-    
-    va_start(args, fmt);
 
     if (color & PRAT_BOLD) {
-        n += snprintf(buf, size, "%s", at_bold);
+        n += snprintf(&str[n], size - n, "%s", at_bold);
         color &= ~PRAT_BOLD;
         isbold = 1;
     }
 
     if (*pr_colors[color].seq)
-        n += snprintf(buf, size, "%s", pr_colors[color].seq);
+        n += snprintf(&str[n], size - n, "%s", pr_colors[color].seq);
 
-    n += vsnprintf(&buf[n], size - n, fmt, args);
+    n += vsnprintf(&str[n], size - n, fmt, args);
     
     if (*pr_colors[color].seq) 
-        n += snprintf(&buf[n], size - n, "%s%s", color_default, isbold ? at_no_attr:"");
-        
+        n += snprintf(&str[n], size - n, "%s%s", color_default,
+                      isbold ? at_no_attr:"");
+    
+    return n;
+}
+
+
+int snprintf_c(int color, char *str, size_t size, const char *fmt, ...)
+{
+    va_list args;
+    int n;
+    
+    va_start(args, fmt);
+    n = vsnprintf_c(color, str, size, fmt, args);
     va_end(args);
     return n;
 }
@@ -153,22 +163,31 @@ int puts_c(int color, const char *s)
                   isbold ? at_no_attr:"");
 }
 
+static void sig_winch(int signo)
+{
+    n_assert(signo == SIGWINCH);
+    winch_reached = 1;
+    signal(SIGWINCH, sig_winch);
+}
 
-void term_init(void) 
+int term_init(void) 
 {
     int i, rc, n;
     char *term, *s;
+
+    if (!(is_a_tty = isatty(fileno(stdout))))
+        return 0;
     
     term = getenv("TERM");
     
     if (term == NULL || *term == '\0') {
 	log(LOGERR, "No value for $TERM\n");
-        return;
+        return 0;
     }
     
     if (setupterm(term, fileno(stdout), &rc) != OK && rc <= 0) {
 	log(LOGERR, "Unknown terminal \"%s\"", term);
-        return;
+        return 0;
     }
 
     for (i=0; i<7; i++) 
@@ -190,11 +209,43 @@ void term_init(void)
     if (s != NULL && s != (char*)-1)
         snprintf(at_no_attr, sizeof(at_no_attr), "%s", s);
     
-    
-
-    log_sopenlog(stdout, 0, NULL);
-    log_set_vlogfn(color_vlog);
+    winch_reached = 1;
+    term_get_width();
+    signal(SIGWINCH, sig_winch);
+    return 1;
 }
+
+static void update_term_width(void) 
+{
+    struct winsize ws;
+
+    if (winch_reached) {
+        if (ioctl(1, TIOCGWINSZ, &ws) == 0) {
+            term_width = ws.ws_col;
+            term_height = ws.ws_row;
+
+        } else {
+            term_width  = TERM_DEFAULT_WIDTH;
+            term_height = TERM_DEFAULT_HEIGHT;
+        }
+
+        winch_reached = 0;
+    }
+}
+
+int term_get_width(void)
+{
+    update_term_width();
+    return term_width;
+}
+
+int term_get_height(void)
+{
+    update_term_width();
+    return term_height;
+}
+
+
     
 #if 0
 int main(int argc, char *argv[])

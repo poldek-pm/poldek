@@ -29,36 +29,39 @@
 #define TYPE_BOOL     (1 << 1)
 #define TYPE_LIST     (1 << 2)
 #define TYPE_MULTI    (1 << 3)
+#define TYPE_ENUM     (1 << 4)
 
 struct tag {
     char *name;
     int  flags;
+    char *enums[8];
 };
 
 static struct tag valid_tags[] = {
-    { "source",        TYPE_STR | TYPE_MULTI },
-    { "source?*",      TYPE_STR },
-    { "prefix?*",      TYPE_STR },
-    { "cachedir",      TYPE_STR },
-    { "ftp_http_get",  TYPE_STR },
-    { "ftp_get",       TYPE_STR },
-    { "http_get",      TYPE_STR },
-    { "https_get",     TYPE_STR },
-    { "rsync_get",     TYPE_STR },
-    { "cdrom_get",     TYPE_STR },
-    { "ssh_get",       TYPE_STR },
-    { "ignore_req",    TYPE_STR | TYPE_MULTI },
-    { "ignore_pkg",    TYPE_STR | TYPE_MULTI },
-    { "rpmdef",        TYPE_STR | TYPE_MULTI },
-    { "rpm_install_opt",  TYPE_STR },
-    { "rpm_uninstall_opt",  TYPE_STR },
-    { "follow",         TYPE_BOOL },
-    { "greedy",         TYPE_BOOL }, 
-    { "use_sudo",       TYPE_BOOL },
-    { "mercy",          TYPE_BOOL },
-    { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI },
-    { "keep_downloads", TYPE_BOOL }, 
-    {  NULL,           0 }, 
+    { "source",        TYPE_STR | TYPE_MULTI, { 0 } },
+    { "source?*",      TYPE_STR , { 0 } },
+    { "prefix?*",      TYPE_STR , { 0 } },
+    { "cachedir",      TYPE_STR , { 0 } },
+    { "ftp_http_get",  TYPE_STR , { 0 } },
+    { "ftp_get",       TYPE_STR , { 0 } },
+    { "http_get",      TYPE_STR , { 0 } },
+    { "https_get",     TYPE_STR , { 0 } },
+    { "rsync_get",     TYPE_STR , { 0 } },
+    { "cdrom_get",     TYPE_STR , { 0 } },
+    { "ssh_get",       TYPE_STR , { 0 } },
+    { "ignore_req",    TYPE_STR | TYPE_MULTI , { 0 } },
+    { "ignore_pkg",    TYPE_STR | TYPE_MULTI , { 0 } },
+    { "rpmdef",        TYPE_STR | TYPE_MULTI , { 0 } },
+    { "rpm_install_opt",  TYPE_STR , { 0 } },
+    { "rpm_uninstall_opt",  TYPE_STR , { 0 } },
+    { "follow",         TYPE_BOOL , { 0 } },
+    { "greedy",         TYPE_BOOL , { 0 } }, 
+    { "use_sudo",       TYPE_BOOL , { 0 } },
+    { "mercy",          TYPE_BOOL , { 0 } },
+    { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
+    { "keep_downloads", TYPE_BOOL , { 0 } },
+    { "particle_install", TYPE_BOOL, { 0 } },
+    {  NULL,           0, { 0 } }, 
 };
 
 #define COPT_MULTIPLE (1 << 0)
@@ -89,10 +92,12 @@ void copt_free(struct copt *opt)
         n_array_free(opt->vals);
     else
         free(opt->val);
+
     free(opt);
 }
 
-static int getvlist(tn_hash *ht, char *name, char *vstr, const char *path, int nline) 
+static
+int getvlist(tn_hash *ht, char *name, char *vstr, const char *path, int nline)
 {
     const char **v, **p;
     struct copt *opt;
@@ -174,21 +179,19 @@ static char *getv(char *vstr, const char *path, int nline)
     return p;
 }
 
-static int is_tag(const char *key, unsigned flags) 
+static const struct tag *find_tag(const char *key) 
 {
     int i = 0;
     
     while (valid_tags[i].name) {
         if (strcmp(valid_tags[i].name, key) == 0)
-            return valid_tags[i].flags & flags;
+            return &valid_tags[i];
         
-            
-        if (fnmatch(valid_tags[i++].name, key, 0) == 0) {
-            return valid_tags[i].flags & flags;
-            break;
-        }
+        if (fnmatch(valid_tags[i].name, key, 0) == 0) 
+            return &valid_tags[i];
+        i++;
     }
-    return -1;
+    return NULL;
 }
 
 
@@ -203,6 +206,7 @@ static void validate_tag(const char *key, void *unused)
             break;
         }
     }
+    
     if (!found) {
         log(LOGWARN, "%s: unknown option\n");
         sleep(1);
@@ -230,7 +234,7 @@ tn_hash *ldconf(const char *path)
         char *p = buf;
         char *name, *val;
         struct copt *opt;
-        int is_mutliple, is_list;
+        const struct tag *tag;
         
         
         nline++;
@@ -264,12 +268,13 @@ tn_hash *ldconf(const char *path)
             while (isspace(*q))
                 *q-- = '\0';
         }
-        
-        if ((is_list = is_tag(name, TYPE_LIST)) < 0) {
+
+        if ((tag = find_tag(name)) == NULL) {
             log(LOGWARN, "%s:%d unknown option '%s'\n", path, nline, name);
             continue;
-            
-        } else if (is_list) {
+        }
+
+        if (tag->flags & TYPE_LIST) {
             getvlist(ht, name, ++p, path, nline);
             continue;
         }
@@ -281,9 +286,21 @@ tn_hash *ldconf(const char *path)
             continue;
         }
 
-        if ((is_mutliple = is_tag(name, TYPE_MULTI)) < 0) {
-            log(LOGWARN, "%s:%d unknown option '%s'\n", path, nline, name);
-            continue;
+        if ((tag->flags & TYPE_ENUM)) {
+            int n = 0, valid = 0;
+            while (tag->enums[n]) {
+                if (strcmp(tag->enums[n++], val) == 0) {
+                    valid = 1;
+                    break;
+                }
+            }
+
+            if (!valid) {
+                log(LOGWARN, "%s:%d invalid value '%s' of option '%s'\n",
+                    path, nline, val, name);
+                continue;
+            }
+            
         }
         
         if (n_hash_exists(ht, name)) {
@@ -296,7 +313,7 @@ tn_hash *ldconf(const char *path)
         if (opt->val == NULL) {
             opt->val = strdup(val);
             
-        } else if (!is_mutliple) {
+        } else if ((tag->flags & TYPE_MULTI) == 0) {
             log(LOGWARN, "%s:%d multiple '%s' not allowed\n", path, nline, name);
             exit(0);
             
@@ -313,6 +330,8 @@ tn_hash *ldconf(const char *path)
     }
 
     n_hash_map(ht, validate_tag);
+
+    
     return ht;
 }
 

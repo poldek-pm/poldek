@@ -28,7 +28,7 @@ tn_array *rpm_get_provides_dbpkgs(rpmdb db, const struct capreq *cap,
                                   tn_array *unistdbpkgs, unsigned ldflags);
 
 /* returns installed packages which conflicts with given path */
-tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path,
+tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path, tn_array *cnfldbpkgs, 
                                          tn_array *unistdbpkgs, unsigned ldflags);
 
 
@@ -58,6 +58,8 @@ int rpm_get_pkgs_requires_capn(rpmdb db, tn_array *dbpkgs, const char *capname,
 */
 int rpm_get_obsoletedby_pkg(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
                             unsigned ldflags);
+
+
 
 
 int rpm_install(rpmdb db, const char *rootdir, const char *path,

@@ -27,22 +27,11 @@ char *next_token(char **str, char delim, int *toklen);
 int is_rwxdir(const char *path);
 int is_dir(const char *path);
 
-inline static int validstr(const char *str) 
-{
-    while (*str) {
-        if (isspace(*str) || *str == '*' || *str == '?' || *str == '&')
-            return 0;
-        str++;
-    }
-    return 1;
-}
-
 extern int mem_info_verbose;
 void print_mem_info(const char *prefix);
 void mem_info(int level, const char *msg);
 
 void process_cmd_output(struct p_open_st *st, const char *prefix);
-int exec_rpm(const char *cmd, char *const argv[]);
 int lockfile(const char *lockfile);
 pid_t readlockfile(const char *lockfile);
 

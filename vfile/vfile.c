@@ -32,6 +32,9 @@
 #include <rpm/rpmmacro.h>
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
+#include <trurl/nhash.h>
+#include <trurl/narray.h>
+
 
 #include "vfile.h"
 
@@ -419,7 +422,7 @@ static int is_uptodate(const char *mdpath, int urltype)
     int l_md_size, md_size;
 
     len = snprintf(l_mdpath, sizeof(l_mdpath), "%s/", vfile_conf.cachedir);
-    vfile_url_as_path(&l_mdpath[len], sizeof(l_mdpath) - len, mdpath);
+    len += vfile_url_as_path(&l_mdpath[len], sizeof(l_mdpath) - len, mdpath);
     if ((l_md_size = read_md(l_mdpath, l_md, sizeof(l_md))) < 31) 
         return 0;   /* no *.md in cache */
     

@@ -54,6 +54,8 @@ char *dbpkg_snprintf_s(const struct dbpkg *dbpkg)
 }
 
 
+
+
 tn_array *dbpkg_array_new(int size) 
 {
     tn_array *arr;
@@ -68,12 +70,8 @@ int dbpkg_array_has(tn_array *dbpkgs, unsigned recno)
 {
 
     struct dbpkg tmpkg;
-
     tmpkg.recno = recno;
-
     return n_array_bsearch(dbpkgs, &tmpkg) != NULL;
 }
 
 
-
-    

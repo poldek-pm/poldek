@@ -25,7 +25,7 @@
 * "mercy" mode bugfix
 
 0.15.7:
-* donwloaded packages are removed after successful installation by default
+* downloaded packages are removed after successful installation by default
   (keep_downloads=yes in config can change to previous behavior)
 * changed semantics of --test: -t causes poldek's checks only, 
   -tt turns on tests performed by rpm too.

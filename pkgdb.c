@@ -31,7 +31,8 @@ struct pkgdb *pkgdb_open(const char *rootdir, const char *path, mode_t mode)
     
     if ((db->dbh = rpm_opendb(path, rootdir, mode)) == NULL)
         return NULL;
-    
+
+    db->mode = mode;
     db->path = strdup(path);
     if (rootdir)
         db->rootdir = strdup(rootdir);
@@ -49,6 +50,14 @@ void pkgdb_closedb(struct pkgdb *db)
         db->dbh = NULL;
     }
 }
+
+int pkgdb_reopendb(struct pkgdb *db) 
+{
+    if (db->dbh == NULL) 
+        db->dbh = rpm_opendb(db->path, db->rootdir, db->mode);
+    return db->dbh != NULL;
+}
+
 
 void pkgdb_free(struct pkgdb *db) 
 {

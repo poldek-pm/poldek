@@ -173,7 +173,7 @@ static int install(struct cmdarg *cmdarg)
         goto l_end;
     }
 
-    pkgset_unmark(cmdarg->sh_s->pkgset, PS_MARK_UNMARK_ALL);
+    pkgset_mark(cmdarg->sh_s->pkgset, PS_MARK_OFF_ALL);
     
     for (i=0; i<n_array_size(shpkgs); i++) {
         struct shpkg *shpkg = n_array_nth(shpkgs, i);
@@ -187,7 +187,7 @@ static int install(struct cmdarg *cmdarg)
     rc = install_pkgs(cmdarg->sh_s->pkgset, cmdarg->sh_s->inst, uninst_pkgs);
     
     if (rc == 0) {
-        log(LOGERR, "Installation failed\n");
+        log(LOGWARN, "There were errors during install\n");
         
     } else if (!is_test && cmdarg->sh_s->instpkgs) { /* update installed set */
         for (i=0; i<n_array_size(cmdarg->sh_s->avpkgs); i++) {

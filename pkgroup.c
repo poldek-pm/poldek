@@ -306,6 +306,8 @@ struct pkgroup_idx *pkgroup_idx_restore(FILE *stream, unsigned flags)
     uint32_t nsize;
     int i;
 
+    
+    flags = flags;
     if (fread(&nsize, sizeof(nsize), 1, stream) != 1)
         return NULL;
 

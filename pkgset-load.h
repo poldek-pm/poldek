@@ -5,12 +5,13 @@
 /* ldmethod  */
 #define PKGSET_LD_NIL      0    /* guess                   */
 #define PKGSET_LD_DIR      1    /* scan directory          */
-#define PKGSET_LD_IDX      2    /* read Packages file      */
+#define PKGSET_LD_IDX      2    /* read index file         */
 
 struct source {
+    char      *source_name;
     char      *source_path;
     char      *pkg_prefix;
-    int       ldmethod;
+    int       ldmethod;         /* PKGSET_LD_* */
 };
 
 struct source *source_new(const char *path, const char *pkg_prefix);

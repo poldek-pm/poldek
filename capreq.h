@@ -16,6 +16,8 @@
 #define REL_GT	    (1 << 1)
 #define REL_LT	    (1 << 2)
 
+#define REL_ALL     (REL_EQ | REL_GT | REL_LT)
+
 /* types */
 #define CAPREQ_PROV     (1 << 0)
 #define CAPREQ_REQ      (1 << 1)
@@ -54,7 +56,10 @@ extern inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_has_epoch(cr)    (cr)->cr_ep_ofs   
 #define capreq_has_ver(cr)      (cr)->cr_ver_ofs
 #define capreq_has_rel(cr)      (cr)->cr_rel_ofs
+#define capreq_versioned(cr)    (cr)->cr_relflags
 
+
+#define capreq_is_cnfl(cr)      ((cr)->cr_flags & CAPREQ_CNFL)
 #define capreq_is_prereq(cr)    ((cr)->cr_flags & CAPREQ_PREREQ)
 #define capreq_is_prereq_un(cr) ((cr)->cr_flags & CAPREQ_PREREQ_UN)
 #define cnfl_is_obsl(cr)        capreq_is_prereq((cr))
@@ -65,6 +70,8 @@ extern inline int32_t capreq_epoch_(const struct capreq *cr);
 
 #define capreq_is_rpmlib(cr)   ((cr)->cr_flags & CAPREQ_RPMLIB)
 
+#define capreq_revrel(cr) ((cr)->cr_relflags = (cr)->cr_relflags ? \
+                          (((uint8_t)~cnfl->cr_relflags) & REL_ALL) : (cr)->cr_relflags)
 
 //#define capreq_is_resolved(cr)   ((cr)->cr_flags & CAPREQ_RESOLVED)
 //#define capreq_mark_resolved(cr) ((cr)->cr_flags |= CAPREQ_RESOLVED)
@@ -82,8 +89,8 @@ uint8_t capreq_sizeof(const struct capreq *cr);
 void capreq_store(struct capreq *cr, tn_buf *nbuf);
 struct capreq *capreq_restore(tn_buf_it *nbufi);
 
-int capreq_cmp_name_evr(struct capreq *pr1, struct capreq *pr2);
-//#define capreq_eq(pr1, pr2) (capreq_evr_cmp(pr1, pr2) == 0)
+int capreq_strcmp_evr(struct capreq *pr1, struct capreq *pr2);
+int capreq_strcmp_name_evr(struct capreq *pr1, struct capreq *pr2);
 int capreq_cmp2name(struct capreq *pr1, const char *name);
 
 tn_array *capreq_arr_new(int size);

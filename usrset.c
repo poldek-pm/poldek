@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
+   Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
@@ -24,6 +24,22 @@
 #include "usrset.h"
 #include "rpmadds.h"
 #include "misc.h"
+
+
+
+inline static int deftype(const char *str) 
+{
+    while (*str) {
+        if (isspace(*str) || *str == '&') 
+            return 0;
+        
+        if (*str == '*' || *str == '?')
+            return PKGDEF_PATTERN;
+        str++;
+    }
+    return PKGDEF_REGNAME;
+}
+
 
 
 void pkgdef_free(struct pkgdef *pdef)
@@ -68,7 +84,7 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
 {
     struct pkgdef *pdef = NULL;
     char *q, *p, *s[1024];
-    int i, n, tflags = 0;
+    int i, n, tflags = 0, deftyp;
     
     n = buflen;
     *pdefp = NULL;
@@ -94,6 +110,9 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
                 
             case  '@': 
                 tflags |= PKGDEF_VIRTUAL;
+
+            default:
+                tflags |= PKGDEF_REGNAME;
         }
         p++;
     }
@@ -150,7 +169,8 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
         
         DBGF("name = %s, evrstr = %s\n", name, evrstr);
 
-        if (name && !validstr(name)) {
+        deftyp = deftype(name);
+        if (name && deftyp == 0) {
             if (nline) 
                 log(LOGERR, "%s: invalid name (%s) at line %d\n",
                     name, fpath, nline);
@@ -158,10 +178,11 @@ int pkgdef_new_str(struct pkgdef **pdefp, char *buf, int buflen,
                 log(LOGERR, "invalid package name (%s)\n", name);
             return -1;
         }
+
         
         pdef = malloc(sizeof(*pdef) +
                       (virtname ? strlen(virtname) + 1 : 0));
-        pdef->tflags = tflags;
+        pdef->tflags = tflags | deftyp;
 
         if (name == NULL) {
             pdef->pkg = NULL;
@@ -202,7 +223,7 @@ int pkgdef_new_pkgfile(struct pkgdef **pdefp, const char *path)
     
     
     pdef = malloc(sizeof(*pdef));
-    pdef->tflags = 0;
+    pdef->tflags = PKGDEF_PKGFILE;
     pdef->pkg = pkg;
     *pdefp = pdef;
 

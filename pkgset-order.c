@@ -40,7 +40,7 @@ static void mapfn_clean_pkg_color(struct pkg *pkg)
 /*
  * Ordering: sort packages topologically
  */
-struct visit_order_s {
+struct visit_install_order_s {
     tn_array *ordered_pkgs;
     tn_array *stack;
     int nerrors;
@@ -48,7 +48,7 @@ struct visit_order_s {
 
 
 static
-int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep) 
+int visit_install_order(struct visit_install_order_s *vs, struct pkg *pkg, int deep) 
 {
     int i, last_stack_i = -1;
 
@@ -101,7 +101,7 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
                     pkg_set_prereqed(rp->pkg);
                 else
                     pkg_clr_prereqed(rp->pkg);
-                visit_order(vs, rp->pkg, deep);
+                visit_install_order(vs, rp->pkg, deep);
             
             } else if (pkg_is_color(rp->pkg, PKG_COLOR_BLACK)) {
                 msg(4, "_\n");
@@ -196,7 +196,7 @@ int visit_order(struct visit_order_s *vs, struct pkg *pkg, int deep)
 int packages_order(tn_array *pkgs, tn_array **ordered_pkgs) 
 {
     struct pkg *pkg;
-    struct visit_order_s vs;
+    struct visit_install_order_s vs;
     int i;
     
     vs.ordered_pkgs = n_array_new(n_array_size(pkgs),
@@ -211,7 +211,7 @@ int packages_order(tn_array *pkgs, tn_array **ordered_pkgs)
         pkg = n_array_nth(pkgs, i);
         //printf("V %d %s\n", i, pkg_snprintf_s(pkg));
         if (pkg_is_color(pkg, PKG_COLOR_WHITE)) {
-	    visit_order(&vs, pkg, 1);
+	    visit_install_order(&vs, pkg, 1);
             n_array_clean(vs.stack);
         }
     }

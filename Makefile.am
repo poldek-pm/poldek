@@ -11,6 +11,7 @@ POD2HTML  = pod2html
 noinst_LIBRARIES = libpoldek.a
 libpoldek_a_SOURCES = \
 	  log.c log.h			\
+	  term.c term.h			\
 	  minfo.c			\
 	  misc.c misc.h			\
 	  rpmadds.c rpmadds.h		\
@@ -35,10 +36,13 @@ libpoldek_a_SOURCES = \
 	  conf.c conf.h	    		\
 	  h2n.h 			\
 	  dbpkg.c dbpkg.h		\
+	  dbpkgset.c dbpkgset.h         \
 	  split.c split.h		\
 	  pkgroup.c pkgroup.h		\
 	  rpmdb_it.c rpmdb_it.h         \
-	  hold.c
+	  hold.c			\
+	  pkgfetch.c                    \
+	  rpminstall.c
 
 SHELL_MOD = shell/libshell.a
 
@@ -61,7 +65,7 @@ rpmvercmp_LDFLAGS   =
 
 noinst_PROGRAMS     = test_match
 test_match_SOURCES  = test_match.c
-test_match_LDADD        = vfile/libvfile.a libpoldek.a @TRURL_LDFLAG@
+test_match_LDADD    = vfile/libvfile.a libpoldek.a @TRURL_LDFLAG@
 
 
 EXTRA_DIST = poldek.1 poldek.pod \
@@ -76,7 +80,7 @@ man_MANS = poldek.1
 
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
-			config.sub config.guess aclocal.m4 \
+			config.sub config.guess config.status config.log aclocal.m4 \
 			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 *.html
 
 poldek.1: poldek.pod

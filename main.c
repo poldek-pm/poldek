@@ -34,6 +34,7 @@
 #include "install.h"
 #include "conf.h"
 #include "split.h"
+#include "term.h"
 
 #ifndef VERSION
 # error "undefined VERSION"
@@ -95,8 +96,8 @@ struct args {
     char      *idx_path;
 
     int       has_pkgdef;
-    tn_array  *pkgdef_files;    /* A.rpm      */
-    tn_array  *pkgdef_defs;     /* -n "A 1.2" */
+    tn_array  *pkgdef_files;    /* foo.rpm      */
+    tn_array  *pkgdef_defs;     /* -n "foo 1.2" or "foo" or "foo*" */
     tn_array  *pkgdef_sets;     /* -p ftp://ftp.zenek.net/PLD/tiny */
     
     unsigned   psflags;
@@ -106,6 +107,8 @@ struct args {
     
     char        *conf_path;
     int         noconf;
+    char        *log_path;
+    
     int         nodesc;		/* don't put descriptions in package index */
 
     
@@ -117,7 +120,7 @@ struct args {
 
 tn_hash *htcnf = NULL;          /* config file values */
 
-
+#define OPT_VERIFY_MERCY      'm'
 #define OPT_VERIFY_DEPS       'V'
 #define OPT_VERIFY_CNFLS      902
 #define OPT_VERIFY_FILECNFLS  903
@@ -191,7 +194,7 @@ static struct argp_option options[] = {
 {"verify-conflicts",  OPT_VERIFY_CNFLS, 0, 0, "Verify package conflicts", 50 },
 {"verify-fileconflicts",  OPT_VERIFY_FILECNFLS, 0, 0, "Verify package file conflicts", 50 },
 {"verify-all",  OPT_VERIFY_ALL, 0, 0, "Verify dependencies, conflicts and file conflicts", 50 },
-{"mercy",   'm', 0, 0, "Be tolerant for bugs which RPM tolerates", 50 },
+{"mercy",   OPT_VERIFY_MERCY, 0, 0, "Be tolerant for bugs which RPM tolerates", 50 },
 
 
 {0,0,0,0, "Indexes creation:", 60},
@@ -286,9 +289,10 @@ static struct argp_option options[] = {
 {"noconf", OPT_NOCONF, 0, 0, "Do not read configuration", 500 }, 
 
 
-    
-{0,  'v', "v...", OPTION_ARG_OPTIONAL,
- "Be more (and more) verbose.", 500 },
+{"log", 'l', "FILE", OPTION_ARG_OPTIONAL, "Log program messages"
+" to FILE ($TMPDIR/poldek.log if not given)", 500 },    
+{0,  'v', 0, 0,
+ "Be verbose.", 500 },
 {0,  'q', 0, 0,
  "Do not produce any output.", 500 },
 { 0, 0, 0, 0, 0, 0 },
@@ -335,25 +339,25 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         chkarg(key, arg);
     
     switch (key) {
+        case 'l':
+            printf("arg %s\n", arg);
+            if (arg) {
+                argsp->log_path = arg;
+                
+            } else {
+                char path[PATH_MAX];
+                snprintf(path, sizeof(path), "%s/poldek.log", tmpdir());
+                argsp->log_path = strdup(path);
+            }
+            break;
+            
         case 'q':
             verbose = -1;
             break;
             
-        case 'v': {
-            if (arg == NULL)
-                verbose = 1;
-            else  {
-                char *p = arg;
-                while (*p == 'v') {
-                    verbose++;
-                    p++;
-                }
-
-                if (*p != '\0')
-                    argp_usage (state);
-            }
-        }
-        break;
+        case 'v': 
+            verbose++;
+            break;
 
         case 'n': 
             n_array_push(argsp->pkgdef_defs, arg);
@@ -408,7 +412,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->inst.cachedir = trimslash(arg);
             break;
 
-        case 'm':
+        case OPT_VERIFY_MERCY:
             argsp->psflags |= PSVERIFY_MERCY;
             break;
 
@@ -493,7 +497,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_UPGRDIST:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UPGRADEDIST;
-            argsp->inst.rootdir = arg ? trimslash(arg) : "/";
+            if (arg) 
+                argsp->inst.rootdir = trimslash(arg);
+            else if (argsp->inst.rootdir == NULL)
+                argsp->inst.rootdir = "/";
+            
             argsp->psflags |= PSMODE_UPGRADE | PSMODE_UPGRADE_DIST;
             break;
 
@@ -892,7 +900,7 @@ void parse_options(int argc, char **argv)
     vfile_configure(args.inst.cachedir, vfile_cnflags);
     
     vfile_msg_fn = log_msg;
-    vfile_err_fn = log_msg;
+    vfile_err_fn = log_err;
 }
 
 
@@ -1091,7 +1099,7 @@ int check_args(void)
             
         case MODE_UPGRADEDIST:
             if (args.has_pkgdef) {
-                log(LOGERR, "-p is not valid in this mode\n");
+                log(LOGERR, "this option upgrades whole dist, not given packages\n");
                 exit(EXIT_FAILURE);
             }
             rc = check_install_flags();
@@ -1186,16 +1194,15 @@ int main(int argc, char **argv)
     
     
     mem_info_verbose = -1;
-    
-#ifdef ENABLE_INTERACTIVE_MODE
-    if (strcmp(n_basenam(argv[0]), "poldeksh") == 0) {
-        args.mjrmode = MODE_SHELL;
-        logprefix = NULL;
-    }
-#endif
 
-    log_sopenlog(stdout, 0, logprefix);
+    
+    term_init();
+    log_init(NULL, stdout, logprefix);
     parse_options(argc, argv);
+
+    if (args.log_path) 
+        log_init(args.log_path, stdout, logprefix);
+
     
     if (!mklock())
         exit(EXIT_FAILURE);

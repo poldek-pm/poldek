@@ -103,7 +103,8 @@ rpmdb rpm_opendb(const char *dbpath, const char *rootdir, mode_t mode)
 
     if (rpmdbOpen(rootdir ? rootdir : "/", &db, mode, 0) != 0) {
         db = NULL;
-        log(LOGERR, "failed to open rpm database\n");
+        log(LOGERR, "Could not open rpm database from %s%s\n",
+            rootdir ? rootdir:"", dbpath ? dbpath : RPM_DBPATH);
     }
     
     return db;
@@ -116,17 +117,21 @@ void rpm_closedb(rpmdb db)
     db = NULL;
 }
 
-tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path,
+tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path, tn_array *cnfldbpkgs, 
                                          tn_array *unistdbpkgs, unsigned ldflags)
 {
-    tn_array *cnfldbpkgs = dbpkg_array_new(4);
     const struct dbrec *dbrec;
     struct rpmdb_it it;
 
+    if (cnfldbpkgs == NULL)
+        cnfldbpkgs = dbpkg_array_new(4);
+    
     rpmdb_it_init(db, &it, RPMITER_FILE, path);
     while((dbrec = rpmdb_it_get(&it)) != NULL) {
-        if (dbpkg_array_has(unistdbpkgs, dbrec->recno))
+        if (dbpkg_array_has(unistdbpkgs, dbrec->recno) ||
+            dbpkg_array_has(cnfldbpkgs, dbrec->recno))
 	    continue;
+        
         n_array_push(cnfldbpkgs, dbpkg_new(dbrec->recno, dbrec->h, ldflags));
 	break;	
     }
@@ -409,7 +414,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
 
     
     if (rootdir == NULL)
-        rootdir = "";
+        rootdir = "/";
 
     if ((vf = vfile_open(path, VFT_RPMIO, VFM_RO | VFM_STBRN)) == NULL)
         return 0;
@@ -589,8 +594,8 @@ int rpm_get_pkgs_requires_capn(rpmdb db, tn_array *dbpkgs, const char *capname,
     return n;
 }
 
-int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
-                            struct capreq *cap, unsigned ldflags)
+int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, struct capreq *cap,
+                            unsigned ldflags)
 {
     struct rpmdb_it it;
     const struct dbrec *dbrec;
@@ -605,8 +610,6 @@ int rpm_get_obsoletedby_cap(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
             struct dbpkg *dbpkg = dbpkg_new(dbrec->recno, dbrec->h, ldflags);
             n_array_push(dbpkgs, dbpkg);
             n_array_sort(dbpkgs);
-            msg(1, " %s obsoleted by %s (cap %s)\n", dbpkg_snprintf_s(dbpkg), 
-                pkg_snprintf_s(pkg), capreq_snprintf_s(cap));
             n++;
         }
     }
@@ -623,7 +626,7 @@ int rpm_get_obsoletedby_pkg(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
     
 
     self_cap = capreq_new(pkg->name, 0, NULL, NULL, 0, 0);
-    n = rpm_get_obsoletedby_cap(db, dbpkgs, pkg, self_cap, ldflags);
+    n = rpm_get_obsoletedby_cap(db, dbpkgs, self_cap, ldflags);
     capreq_free(self_cap);
     
     if (pkg->cnfls == NULL)
@@ -635,7 +638,7 @@ int rpm_get_obsoletedby_pkg(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
         if (!cnfl_is_obsl(cnfl))
             continue;
 
-        n += rpm_get_obsoletedby_cap(db, dbpkgs, pkg, cnfl, ldflags);
+        n += rpm_get_obsoletedby_cap(db, dbpkgs, cnfl, ldflags);
     }
     
     return n;
@@ -757,7 +760,10 @@ tn_array *rpm_get_provides_dbpkgs(rpmdb db, const struct capreq *cap,
 
         if (dbpkgs == NULL)
             dbpkgs = dbpkg_array_new(4);
-            
+        
+        else if (dbpkg_array_has(dbpkgs, dbrec->recno))
+            continue;
+        
         n_array_push(dbpkgs, dbpkg_new(dbrec->recno, dbrec->h, ldflags));
     }
 

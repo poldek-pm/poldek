@@ -159,7 +159,7 @@ static void show_caps(struct pkg *pkg)
     char *p, *colon = ", ";
     
 
-    term_width = get_term_width() - RMARGIN;
+    term_width = term_get_width() - RMARGIN;
     
     if (pkg->caps && n_array_size(pkg->caps)) {
         int ncaps, hdr_printed = 0;
@@ -212,7 +212,7 @@ static void show_reqs(struct pkg *pkg)
     if (pkg->reqs == NULL || n_array_size(pkg->reqs) == 0)
         return;
     
-    term_width = get_term_width() - RMARGIN;
+    term_width = term_get_width() - RMARGIN;
 
     for (i=0; i<n_array_size(pkg->reqs); i++) {
         struct capreq *cr = n_array_nth(pkg->reqs, i);
@@ -325,7 +325,7 @@ static void show_reqpkgs(struct pkg *pkg)
     int i, term_width;
     
     
-    term_width = get_term_width() - RMARGIN;
+    term_width = term_get_width() - RMARGIN;
 
     if (pkg->reqpkgs && n_array_size(pkg->reqpkgs)) {
         int ncol = IDENT;
@@ -376,7 +376,7 @@ void show_revreqpkgs(struct pkg *pkg)
     int i, term_width;
     
     
-    term_width = get_term_width() - RMARGIN;
+    term_width = term_get_width() - RMARGIN;
 
     if (pkg->revreqpkgs && n_array_size(pkg->revreqpkgs)) {
         int ncol = IDENT;
@@ -410,7 +410,7 @@ static void show_cnfls(struct pkg *pkg)
     int i, ncol = 0;
     int term_width;
 
-    term_width = get_term_width() - RMARGIN;
+    term_width = term_get_width() - RMARGIN;
     if (pkg->cnfls && n_array_size(pkg->cnfls)) {
         int nobsls = 0;
         
@@ -481,7 +481,7 @@ static void show_files(struct pkg *pkg)
         return;
 
     flmark = pkgflmodule_allocator_push_mark();
-    term_width = get_term_width() - RMARGIN;
+    term_width = term_get_width() - RMARGIN;
     
     printf_c(PRCOLOR_CYAN, "Files:\n");
     

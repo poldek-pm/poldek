@@ -118,7 +118,7 @@ static int get(struct cmdarg *cmdarg)
         destdirp = destdir;
     }
     
-    if (!pkgset_fetch_pkgs(destdirp, pkgs, 1))
+    if (!packages_fetch(pkgs, destdirp, 1))
         err++;
     
  l_end:

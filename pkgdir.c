@@ -219,7 +219,8 @@ static int valid_version(const char *ver, const char *path)
 
     
 
-struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
+struct pkgdir *pkgdir_new(const char *name, const char *path,
+                          const char *pkg_prefix)
 {
     struct pkgdir        *pkgdir = NULL;
     struct vfile         *vf;
@@ -332,7 +333,7 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     
     
     pkgdir = malloc(sizeof(*pkgdir));
-
+    pkgdir->name = strdup(name);
     
     if (pkg_prefix) 
         pkgdir->path = strdup(pkg_prefix);
@@ -363,6 +364,11 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
 
 void pkgdir_free(struct pkgdir *pkgdir) 
 {
+    if (pkgdir->name) {
+        free(pkgdir->name);
+        pkgdir->name = NULL;
+    }
+    
     if (pkgdir->path) {
         free(pkgdir->path);
         pkgdir->path = NULL;
@@ -657,7 +663,8 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         msg(2, "%s: empty(?)\n", pkgdir->path);
         nerr = 1;
     }
-
+    n_array_sort(pkgdir->pkgs);
+    
     return nerr ? 0 : n_array_size(pkgdir->pkgs);
 }
 
@@ -1228,13 +1235,13 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups)
             Fclose(fdt);
             
             if (n && n % 100 == 0) 
-                msg_l(2, "_%d..", n);
+                msg(2, "_%d..", n);
             	
         }
     }
 
     if (n && n > 100)
-        msg_l(2, "_%d\n", n);
+        msg(2, "_%d\n", n);
     closedir(dir);
     return n;
 }
@@ -1300,7 +1307,7 @@ static void pkgdir_setup_depdirs(struct pkgdir *pkgdir)
 }
 
 
-struct pkgdir *pkgdir_load_dir(const char *path) 
+struct pkgdir *pkgdir_load_dir(const char *name, const char *path) 
 {
     struct pkgdir        *pkgdir = NULL;
     tn_array             *pkgs;
@@ -1312,7 +1319,8 @@ struct pkgdir *pkgdir_load_dir(const char *path)
     
     if (load_dir(path, pkgs, pkgroups) >= 0) {
         pkgdir = malloc(sizeof(*pkgdir));
-    
+
+        pkgdir->name = strdup(name);
         pkgdir->path = strdup(path);
         pkgdir->idxpath = NULL;
         pkgdir->depdirs = NULL;
@@ -1332,7 +1340,6 @@ struct pkgdir *pkgdir_load_dir(const char *path)
             
             pkgdir_setup_depdirs(pkgdir);
         }
-        
     }
     
     return pkgdir;

@@ -19,7 +19,7 @@ int pkgsetmodule_init(void);
 void pkgsetmodule_destroy(void);
 
 
-#define _PKGSET_INDEXES_INIT      (1 << 16) /* internal flag  */
+#define _PKGSET_INDEXES_INIT      (1 << 20) /* internal flag  */
 
 struct pkgset {
     tn_array           *pkgs;           /*  pkg* []    */
@@ -56,6 +56,7 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_NOHOLD         (1 << 9)
 #define INSTS_GREEDY         (1 << 10)
 #define INSTS_KEEP_DOWNLOADS (1 << 11)
+#define INSTS_PARTITIONED    (1 << 12)
 
 struct inst_s {
     struct pkgdb   *db;
@@ -75,7 +76,8 @@ struct inst_s {
 };
 
 void inst_s_init(struct inst_s *inst);
-
+#define inst_iflags_set(inst, flags) ((inst)->instflags & flags)
+#define inst_flags_set(inst, flags) ((inst)->flags & flags)
 
 /* if set then:
  * - requirements matched even if requirement has version
@@ -103,6 +105,8 @@ int pkgset_setup(struct pkgset *ps, const char *pri_fpath);
 
 /* returns sorted list of packages, free it by n_array_free() */
 tn_array *pkgset_getpkgs(const struct pkgset *ps);
+
+
 tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname);
 
 
@@ -112,20 +116,35 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                        struct inst_s *inst, int markflag);
 
 
-#define PS_MARK_UNMARK_ALL  (1 << 0)
-#define PS_MARK_UNMARK_DEPS (1 << 1)
-void pkgset_unmark(struct pkgset *ps, unsigned markflags);
+#define PS_MARK_OFF_ALL      (1 << 0)
+#define PS_MARK_OFF_DEPS     (1 << 1)
+#define PS_MARK_ON_INTERNAL  (1 << 2) /* use with one of above PS_MARK_* */
+
+void pkgset_mark(struct pkgset *ps, unsigned markflags);
 
 int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs, int nosubdirs);
 
+
 int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst);
+
+/* pkgset-install.c */
 int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst);
 
 int pkgset_install(struct pkgset *ps, struct inst_s *inst,
                    tn_array *unistalled_pkgs);
 
+
+
 void pkgset_mark_holds(struct pkgset *ps, tn_array *hold_pkgnames);
 tn_array *read_holds(const char *fpath, tn_array *hold_pkgnames);
+
+int pkgset_dump_marked_fqpns(struct pkgset *ps, const char *dumpfile);
+
+
+int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs);
+int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst);
+
+int exec_rpm(const char *cmd, char *const argv[]);
 
 #include "pkgset-load.h"
 

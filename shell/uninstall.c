@@ -134,25 +134,16 @@ int uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
         for (i=0; i<nopts; i++) 
             p += snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
         *p = '\0';
+        //logv(1, LOGTTY|LOG, "Running%s...\n", buf);
+
+        for (i=0; i<nopts; i++) 
+            p += snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
+        *p = '\0';
         msg(1, "Running%s...\n", buf);
+        
     }
-    
 
-#if ! USE_P_OPEN    
     ec = exec_rpm(cmd, argv);
-    
-#else 
-    p_st_init(&pst);
-    if (p_open(&pst, cmd, argv) == NULL) 
-        return 0;
-    
-    process_rpm_output(&pst);
-    if ((ec = p_close(&pst) != 0) && (inst->instflags & PKGINST_TEST) == 0)
-        log(LOGERR, "%s", pst.errmsg);
-
-    p_st_destroy(&pst);
-#endif
-    
     return ec == 0;
 }
 

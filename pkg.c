@@ -378,6 +378,12 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
     return -pkg_cmp_evr(p1, p2);
 }
 
+int pkg_eq_name_evr(const struct pkg *p1, const struct pkg *p2) 
+{
+    if (p1 == p2)
+        return 1;
+    return pkg_cmp_name_evr(p1, p2);
+}
 
 int pkg_cmp_pri(struct pkg *p1, struct pkg *p2)
 {
@@ -640,46 +646,17 @@ int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
     return pkg_caps_match_req(pkg, req, strict);
 }
 
-
-#if 0
-static __inline__
-int pkg_match_cnfl(const struct pkg *pkg, const struct capreq *cnfl)
+int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg) 
 {
-    register int cmprc;
-    
-    if (strcmp(pkg->name, capreq_name(cnfl)) != 0)
-        return 0;
-    
-    if (capreq_has_epoch(cnfl)) {
-        cmprc = pkg->epoch - capreq_epoch(cnfl);
-        if (rel_not_match(cmprc, cnfl))
-            return 0;
+    if (strcmp(pkg->name, opkg->name) != 0)
+        return pkg_caps_obsoletes_pkg_caps(pkg, opkg);
 
-        /* if epochs are not equal versions and releases doesn't matter */
-        if (cmprc != 0) 
-            return 1;
-    }
-
-    if (capreq_has_ver(cnfl)) {
-        cmprc = rpmvercmp(pkg->ver, capreq_ver(cnfl));
-        if (rel_not_match(cmprc, cnfl))
-            return 0;
-
-        /* if versions are not equal releases doesn't matter */
-        if (cmprc != 0) 
-            return 1;
-    }
-
-    if (capreq_has_rel(cnfl)) 
-        if (rel_not_match(rpmvercmp(pkg->rel, capreq_rel(cnfl)), cnfl))
-            return 0;
-    
-    return 1;
+    return pkg_cmp_evr(pkg, opkg) > 0;
 }
 
 
 /* look up into package caps */
-int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg)
+int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
 {
     int n;
         
@@ -699,7 +676,7 @@ int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg)
 
         cnfl = n_array_nth(pkg->cnfls, n);
         
-        if (cnfl_is_obsl(cnfl) && pkg_match_cnfl(opkg, cnfl)) {
+        if (cnfl_is_obsl(cnfl) && pkg_match_req(opkg, cnfl, 1)) {
             DBGMSG("chk%d (%s-%s-%s) -> match\n", n,
                    capreq_snprintf_s(cnfl));
             return 1;
@@ -720,7 +697,7 @@ int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg)
             }
                 
                 
-            if (pkg_match_cnfl(opkg, cnfl)) {
+            if (pkg_match_req(opkg, cnfl, 1)) {
                 DBGMSG("chk %s-%s-%s -> match\n", capreq_snprintf_s(cnfl));
                 return 1;
             } else {
@@ -733,7 +710,6 @@ int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg)
     
     return 0;
 }
-#endif 
 
 int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard)
 {
@@ -892,7 +868,6 @@ char *pkg_path_s(const struct pkg *pkg)
     return pkg_path(pkg, buf, sizeof(buf));
 }
 
-
 int pkg_printf(const struct pkg *pkg, const char *str) 
 {
     return printf("%s-%s-%s%s", pkg->name, pkg->ver, pkg->rel,
@@ -938,3 +913,4 @@ tn_array *pkgs_array_new(int size)
     n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
     return arr;
 }
+

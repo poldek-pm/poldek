@@ -497,7 +497,7 @@ static int search(struct cmdarg *cmdarg)
     if (display_bar) 
         msg(0, "_done.\n");
 
-    term_height = get_term_height();
+    term_height = term_get_height();
     if (n_array_size(matched_pkgs) == 0) 
         printf_c(PRCOLOR_YELLOW, "No one package matches '%s'\n", pt->regexp);
     

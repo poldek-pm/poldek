@@ -31,11 +31,14 @@
 
 #define PKG_ORDER_PREREQ    (1 << 13) /* see pkgset-order.c */
 
+
 /* DAG node colours */
 #define PKG_COLOR_WHITE    (1 << 20)
 #define PKG_COLOR_GRAY     (1 << 21)
 #define PKG_COLOR_BLACK    (1 << 22)
 #define PKG_ALL_COLORS     PKG_COLOR_WHITE | PKG_COLOR_GRAY | PKG_COLOR_BLACK
+
+#define PKG_INTERNALMARK    (1 << 23)
 
 /* colours */
 #define pkg_set_color(pkg, color) \
@@ -57,6 +60,10 @@
 #define pkg_is_hand_marked(pkg) ((pkg)->flags & PKG_DIRMARK)
 #define pkg_is_marked(pkg)      ((pkg)->flags & (PKG_DIRMARK | PKG_INDIRMARK))
 #define pkg_isnot_marked(pkg)   (!pkg_is_marked((pkg)))
+
+#define pkg_mark_i(pkg)       ((pkg)->flags |= PKG_INTERNALMARK)
+#define pkg_unmark_i(pkg)     ((pkg)->flags &= ~PKG_INTERNALMARK)
+#define pkg_is_marked_i(pkg)  ((pkg)->flags & PKG_INTERNALMARK)
 
 #define pkg_has_badreqs(pkg) ((pkg)->flags & PKG_BADREQS)
 #define pkg_set_badreqs(pkg) ((pkg)->flags |= PKG_BADREQS)
@@ -173,9 +180,8 @@ int pkg_match_req(const struct pkg *pkg, const struct capreq *req,
 int pkg_has_path(const struct pkg *pkg,
                  const char *dirname, const char *basename);
 
-#if 0
 int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg);
-#endif
+int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg);
 
 int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard);
 int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg);
@@ -193,7 +199,7 @@ char *pkg_snprintf_s(const struct pkg *pkg);
 char *pkg_snprintf_s0(const struct pkg *pkg);
 char *pkg_snprintf_s1(const struct pkg *pkg);
 
-/* load and returns not loaded file list (l: tag in Packages) */
+/* load and returns not loaded file list (l: tag in package index) */
 tn_array *pkg_other_fl(const struct pkg *pkg);
 
 struct pkguinf *pkg_info(const struct pkg *pkg);

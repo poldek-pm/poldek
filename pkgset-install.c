@@ -1,15 +1,14 @@
 /* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
   the Free Software Foundation (see file COPYING for details).
 */
-
 /*
   $Id$
 */
-
+#define ENABLE_TRACE 0
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
@@ -29,6 +28,7 @@
 #include <vfile/p_open.h>
 
 #include "log.h"
+#include "term.h"
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"
@@ -36,429 +36,211 @@
 #include "rpmhdr.h"
 #include "pkgset-req.h"
 #include "dbpkg.h"
+#include "dbpkgset.h"
 #include "rpmdb_it.h"
 
 
 #define INST_INSTALL  1
 #define INST_UPGRADE  2
 
+#define PROCESS_AS_NEW       (1 << 0)
+#define PROCESS_AS_ORPHAN    (1 << 1)
+
 struct upgrade_s {
-    tn_array       *avpkgs;     
-    tn_array       *install_pkgs; /* pkgs to install */
-    tn_hash        *depcache;     /* cache of resolved db dependencies */
+    tn_array       *avpkgs;
+    tn_array       *install_pkgs;     /* pkgs to install */
     
-    tn_array       *uninst_dbpkgs;    /* array of uninst_pkg* */
-    tn_hash        *capcache;         /* cache of resolved uninst packages caps */
-    tn_array       *orphan_dbpkgs;    /* array of uninst_pkg* */
+    tn_hash        *db_deps;          /* cache of resolved db dependencies */
+
+    struct dbpkg_set *uninst_set;
+    
+    tn_array       *orphan_dbpkgs;    /* array of orphaned dbpkg*s */
     
     int            strict;
     int            ndberrs;
     int            ndep;
     int            ninstall;
-    int            ndep_err;
-    int            ncnfl_err;
-    int            nfatal_err;
+
+    int            nerr_dep;
+    int            nerr_cnfl;
+    int            nerr_dbcnfl;
+    int            nerr_fatal;
+    
     struct inst_s  *inst;
 
+    tn_hash        *db_pkgs;    /* used by mapfn_mark_newer_pkg() */
+    int             nmarked;
     void           *pkgflmod_mark;
 };
 
+static
+int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
+                          struct upgrade_s *upg);
 
-/* anyone of pkgs is marked? */
-__inline__
-static int one_is_marked(struct pkg *pkgs[], int npkgs) 
+static
+int process_pkg_deps(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg,
+                     int process_as, int indent);
+
+
+
+#define DBDEP_FOREIGN          (1 << 3)
+#define DBDEP_DBSATISFIED      (1 << 4)
+
+struct db_dep {
+    struct capreq *req;
+    struct pkg    *spkg;       /* package which satisfies req */
+    tn_array      *pkgs;       /* packages which requires req */
+    unsigned      flags;
+};
+
+
+static
+void db_dep_free(struct db_dep *db_dep) 
+{
+    n_array_free(db_dep->pkgs);
+    db_dep->req = NULL;
+    db_dep->pkgs = NULL;
+    db_dep->spkg = NULL;
+    free(db_dep);
+}
+
+static
+tn_hash *db_deps_new(void) 
+{
+    tn_hash *h;
+    h = n_hash_new(103, (tn_fn_free)db_dep_free);
+    return h;
+}
+
+static 
+void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
+                 struct pkg *spkg, unsigned flags) 
+{
+    struct db_dep *dep;
+
+    
+    DBGF_NULL("%s from %s stby %s [%s]\n", capreq_snprintf_s(req),
+             pkg_snprintf_s(pkg), spkg ? pkg_snprintf_s0(spkg) : "NULL",
+             (flags & DBDEP_FOREIGN) ? "foreign" :
+             (flags & DBDEP_DBSATISFIED) ? "db" : "UNKNOWN");
+    
+    if ((dep = n_hash_get(db_deph, capreq_name(req)))) {
+        n_array_push(dep->pkgs, pkg);
+        dep->flags |= flags;
+        
+    } else {
+        dep = malloc(sizeof(*dep));
+        dep->req = req;
+        dep->spkg = spkg;
+        dep->pkgs = n_array_new(4, NULL, (tn_fn_cmp)pkg_cmp_name_evr);
+        n_array_push(dep->pkgs, pkg);
+        dep->flags = flags;
+        n_hash_insert(db_deph, capreq_name(req), dep);
+    }
+}
+
+static
+void db_deps_remove_pkg(tn_hash *db_deph, struct pkg *pkg)
 {
     int i;
 
-    for (i=0; i<npkgs; i++) 
+    DBGF_NULL("%s\n", pkg_snprintf_s(pkg));
+    
+    if (pkg->reqs == NULL)
+        return;
+        
+    for (i=0; i<n_array_size(pkg->reqs); i++) {
+        struct db_dep *dep;
+        struct capreq *req;
+
+        req = n_array_nth(pkg->reqs, i);
+        if ((dep = n_hash_get(db_deph, capreq_name(req)))) {
+            DBGF_NULL("rm %s\n", capreq_snprintf_s(req));
+            n_array_remove(dep->pkgs, pkg);
+            if (n_array_size(dep->pkgs) == 0) 
+                n_hash_remove(db_deph, capreq_name(req));
+        }
+    }
+}
+
+static
+struct db_dep *db_deps_has(tn_hash *db_deph, struct capreq *req) 
+{
+    return n_hash_get(db_deph, capreq_name(req));
+}
+
+static
+int db_deps_provides_req(tn_hash *db_deph, struct capreq *req, int flags) 
+{
+    struct db_dep *dep;
+
+    if ((dep = n_hash_get(db_deph, capreq_name(req))))
+        if ((dep->flags & flags) &&
+            capreq_strcmp_evr(req, dep->req) == 0)
+            return 1;
+    
+    return 0;
+}
+
+/* anyone of pkgs is marked? */
+static inline int one_is_marked(struct pkg *pkgs[], int npkgs)
+{
+    int i;
+
+    for (i=0; i < npkgs; i++) 
         if (pkg_is_marked(pkgs[i])) 
             return 1;
     
     return 0;
 }
 
-
-static int dump_pkgs_fqpns(struct pkgset *ps, struct upgrade_s *upg)
-{
-    int i;
-    FILE *stream = stdout;
-    
-    if (upg->inst->dumpfile) {
-        if ((stream = fopen(upg->inst->dumpfile, "w")) == NULL) {
-            log(LOGERR, "fopen %s: %m\n", upg->inst->dumpfile);
-            return 0;
-        }
-        fprintf(stream, "# Packages to install (in the right order)\n");
-    }
-    
-    for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
-        if (pkg_is_marked(pkg))
-            fprintf(stream, "%s\n", pkg_filename_s(pkg));
-    }
-    
-    return 1;
-}
-
-
-int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs, int nosubdirs)
-{
-    int       i, nerr, urltype, ncdroms;
-    tn_array  *urls = NULL;
-    tn_array  *urls_arr = NULL;
-    tn_hash   *urls_h = NULL;
-
-
-    urls_h = n_hash_new(21, (tn_fn_free)n_array_free);
-    urls_arr = n_array_new(n_array_size(pkgs), NULL, (tn_fn_cmp)strcmp);
-    
-    n_hash_ctl(urls_h, TN_HASH_NOCPKEY);
-    
-    // group by URL
-    ncdroms = 0;
-    for (i=0; i<n_array_size(pkgs); i++) {
-        struct pkg  *pkg = n_array_nth(pkgs, i);
-        char        *pkgpath = pkg->pkgdir->path;
-        char        path[PATH_MAX], *s;
-        int         len;
-
-        if ((urltype = vfile_url_type(pkgpath)) == VFURL_PATH)
-            continue;
-        
-        if (urltype == VFURL_CDROM)
-            ncdroms++;
-
-        if ((urls = n_hash_get(urls_h, pkgpath)) == NULL) {
-            urls = n_array_new(n_array_size(pkgs), NULL, NULL);
-            n_hash_insert(urls_h, pkgpath, urls);
-            n_array_push(urls_arr, pkgpath);
-        }
-        
-        len = snprintf(path, sizeof(path), "%s/%s", pkgpath,
-                       pkg_filename_s(pkg));
-        
-        s = alloca(len + 1);
-        memcpy(s, path, len);
-        s[len] = '\0';
-        n_array_push(urls, s);
-    }
-
-    /* files must be copied if they are taken from more than
-       one removable media;
-       
-       Not so nice, but it works
-    */
-    if (ncdroms > 1) 
-        putenv("POLDEK_VFJUGGLE_CPMODE=copy");
-    
-    else if (ncdroms == 1) 
-        putenv("POLDEK_VFJUGGLE_CPMODE=link");
-
-    nerr = 0;
-    for (i=0; i<n_array_size(urls_arr); i++) {
-        char path[PATH_MAX];
-        const char *real_destdir;
-        char *pkgpath = n_array_nth(urls_arr, i);
-
-        urls = n_hash_get(urls_h, pkgpath);
-        real_destdir = destdir;
-        if (nosubdirs == 0) {
-            char buf[1024];
-            
-            vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
-            snprintf(path, sizeof(path), "%s/%s", destdir, buf);
-            real_destdir = path;
-        }
-        
-        if (!vfile_fetcha(real_destdir, urls, VFURL_UNKNOWN))
-            nerr++;
-    }
-    
-    n_array_free(urls_arr);
-    n_hash_free(urls_h);
-    return nerr == 0;
-}
-
-
-
-#define EXEC_RPM 1
-#ifndef EXEC_RPM    
-static void process_rpm_output(struct p_open_st *st) 
-{
-    int c;
-    
-    //while ((c = fgetc(st->stream)) != EOF) {
-    //  printf("%c", c);
-        //msg(1, "_%c", c);
-    //}
-    /*while ((c = fgetc(st->stream)) != EOF)*/
-    while (read(st->fd, &c, 1) == 1)
-        msg(1, "_%c", c);
-}
-#endif
-
-static void reaper (int sig)
-{
-    pid_t pid;
-
-    sig = sig;
-    while ((pid = waitpid (-1, NULL, WNOHANG)) > 0) {
-	msg(0, "SIGCHLD from %d\n", pid);
-    }
-    
-    signal (SIGCHLD, reaper);
-}
-
-
-static int runrpm(struct pkgset *ps, struct upgrade_s *upg) 
-{
-#ifndef EXEC_RPM    
-    struct p_open_st pst;
-#endif
-    char **argv;
-    char *cmd;
-    int i, n, nopts = 0, ec;
-    int nv = verbose;
-    
-    n = 128 + n_array_size(upg->install_pkgs);
-    argv = alloca((n + 1) * sizeof(*argv));
-    argv[n] = NULL;
-    n = 0;
-
-    if (!pkgset_fetch_pkgs(upg->inst->cachedir, upg->install_pkgs, 0))
-        return 0;
-    
-    if (upg->inst->instflags & PKGINST_TEST) {
-        cmd = "/bin/rpm";
-        argv[n++] = "rpm";
-    } else if (upg->inst->flags & INSTS_USESUDO) {
-        cmd = "/usr/bin/sudo";
-        argv[n++] = "sudo";
-        argv[n++] = "/bin/rpm";
-    } else {
-        cmd = "/bin/rpm";
-        argv[n++] = "rpm";
-    }
-    
-    if (ps->flags & PSMODE_INSTALL)
-        argv[n++] = "--install";
-    else if (ps->flags & PSMODE_UPGRADE)
-        argv[n++] = "--upgrade";
-    else {
-        n_assert(0);
-        die();
-    }
-
-    if (nv > 0) {
-        argv[n++] = "-vh";
-        nv--;
-    }
-
-    if (nv > 0)
-        nv--;
-    
-    while (nv-- > 0) 
-        argv[n++] = "-v";
-    
-    if (upg->inst->instflags & PKGINST_TEST)
-        argv[n++] = "--test";
-    
-    if (upg->inst->instflags & PKGINST_JUSTDB)
-        argv[n++] = "--justdb";
-        
-    if (upg->inst->instflags & PKGINST_FORCE)
-        argv[n++] = "--force";
-    
-    if (upg->inst->instflags & PKGINST_NODEPS)
-        argv[n++] = "--nodeps";
-	
-    if (upg->inst->rootdir) {
-    	argv[n++] = "--root";
-	argv[n++] = (char*)upg->inst->rootdir;
-    }
-
-    argv[n++] = "--noorder";    /* packages always ordered */
-
-    if (upg->inst->rpmacros) 
-        for (i=0; i<n_array_size(upg->inst->rpmacros); i++) {
-            argv[n++] = "--define";
-            argv[n++] = n_array_nth(upg->inst->rpmacros, i);
-        }
-    
-    if (upg->inst->rpmopts) 
-        for (i=0; i<n_array_size(upg->inst->rpmopts); i++)
-            argv[n++] = n_array_nth(upg->inst->rpmopts, i);
-    
-    nopts = n;
-    for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
-        if (pkg_is_marked(pkg)) {
-            char path[PATH_MAX], *s, *name;
-            char *pkgpath = pkg->pkgdir->path;
-            int len;
-            
-            
-            name = pkg_filename_s(pkg);
-            
-            if (vfile_url_type(pkgpath) == VFURL_PATH) {
-                len = snprintf(path, sizeof(path), "%s/%s", pkgpath, name);
-            
-            } else {
-                char buf[1024];
-                
-                vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
-                len = snprintf(path, sizeof(path), "%s/%s/%s",
-                               upg->inst->cachedir, buf, name);
-            }
-
-            s = alloca(len + 1);
-            memcpy(s, path, len);
-            s[len] = '\0';
-            argv[n++] = s;
-        }
-    }
-    
-        
-    n_assert(n > nopts); 
-    argv[n++] = NULL;
-
-    if (verbose > 0) {
-        char buf[1024], *p;
-        p = buf;
-        
-        for (i=0; i<nopts; i++) 
-            p += snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
-        *p = '\0';
-        msg(1, "Running%s...\n", buf);
-    }
-    
-
-#ifdef EXEC_RPM    
-    ec = exec_rpm(cmd, argv);
-    
-#else  /* p_open() doesn't works propely with rpm, I don't now why */
-    signal(SIGCHLD, reaper);
-    p_st_init(&pst);
-    if (p_open(&pst, cmd, argv) == NULL) 
-        return 0;
-    
-    n = 0;
-    if (verbose == 0) {
-        verbose = 1;
-        n = 1;
-    }
-
-    process_rpm_output(&pst);
-    if ((ec = p_close(&pst) != 0))
-        log(LOGERR, "%s", pst.errmsg);
-
-    p_st_destroy(&pst);
-    
-    if (n)
-        verbose--;
-#endif
-
-    if (ec == 0 && (upg->inst->instflags & PKGINST_TEST) == 0 &&
-        (upg->inst->flags & INSTS_KEEP_DOWNLOADS) == 0) {
-        
-        n = nopts;
-        for (i=0; i < n_array_size(ps->ordered_pkgs); i++) {
-            struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
-            int url_type;
-            
-            if (!pkg_is_marked(pkg))
-                continue;
-            
-            url_type = vfile_url_type(pkg->pkgdir->path);
-            if ((url_type & (VFURL_PATH | VFURL_UNKNOWN | VFURL_CDROM)) == 0) {
-                DBG("unlink %s\n", argv[n]); 
-                unlink(argv[n]);
-            }
-            n++;
-        }
-    }
-
-
-    return ec == 0;
-}
-
 static
-int is_installable(struct pkgdb *db, struct pkg *pkg, tn_array *uninst_dbpkgs,
-                   struct inst_s *inst) 
+int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked) 
 {
-    int rc, cmprc = 0;
-    struct dbrec dbrec = {0, 0};
-    
-    rc = rpm_is_pkg_installed(db->dbh, pkg, &cmprc, &dbrec);
+    int cmprc = 0, npkgs, install = 1, freshen;
 
-    if (rc < 0)
+    
+    freshen = (inst->flags & INSTS_FRESHEN);
+    npkgs = rpm_is_pkg_installed(inst->db->dbh, pkg, &cmprc, NULL);
+    
+    if (npkgs < 0) 
         die();
-    
-    
-    if (rc == 0)
-        return 1;
 
-    if (rc > 1) {
-        log(LOGERR, "%s: multiple instances installed, give up\n", pkg->name);
-        rc = 0;
+    n_assert(npkgs >= 0);
+    
+    if (npkgs == 0) {
+        if (is_hand_marked && freshen)
+            install = 0;
         
-    } else if (cmprc <= 0 && (inst->instflags & PKGINST_FORCE) == 0) {
-//        if ((inst->flags & INSTS_FRESHEN) == 0)
-        log(LOGERR, "%s: %s version installed\n",
-            pkg_snprintf_s(pkg), cmprc == 0 ? "equal" : "newer");
-        rc = 0;
+    } else if (is_hand_marked && npkgs > 1) {
+        log(LOGERR, "%s: multiple instances installed, give up\n", pkg->name);
+        install = -1;
         
     } else {
-        msg(2, "%s will be uninstalled\n", dbrec_snprintf_s(&dbrec));
-        n_array_push(uninst_dbpkgs, dbpkg_new(dbrec.recno, dbrec.h, PKG_LDWHOLE));
-        rc = 1;
-    }
-    
-    dbrec_clean(&dbrec);
-    return rc;
-}
-
-int uninstpkgs_provides(struct upgrade_s *upg, struct capreq *req) 
-{
-    int i, is_file = 0;
-    char *dirname, *basename, path[PATH_MAX];
-
-    if (n_hash_exists(upg->capcache, capreq_name(req))) {
-        msg(4, "uninstpkgs_provides: capcache hit %s\n", capreq_name(req));
-        return 1;
-    }
-
-    if (capreq_is_file(req)) {
-        is_file = 1;
-        strncpy(path, capreq_name(req), sizeof(path));
-        path[PATH_MAX - 1] = '\0';
-        n_basedirnam(path, &dirname, &basename);
-        n_assert(dirname);
-        n_assert(*dirname);
-        if (*dirname == '/' && *(dirname + 1) != '\0')
-            dirname++;
-    }
-    
-    for (i=0; i<n_array_size(upg->uninst_dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(upg->uninst_dbpkgs, i);
-        if (pkg_match_req(dbpkg->pkg, req, 0)) {
-            msg(4, "uninstpkgs_provides: %s matches %s\n",
-                pkg_snprintf_s(dbpkg->pkg), capreq_snprintf_s(req));
-            n_hash_insert(upg->capcache, capreq_name(req), NULL);
-            return 1;
+        if (pkg_is_hold(pkg)) {
+            log(LOGERR, "%s: refusing to upgrade held package\n",
+                pkg_snprintf_s(pkg));
+            install = 0;
             
-        } else if (is_file && pkg_has_path(dbpkg->pkg, dirname, basename)) {
-            n_hash_insert(upg->capcache, capreq_name(req), NULL);
-            return 1;
+        } else if (cmprc <= 0 && (inst->instflags & PKGINST_FORCE) == 0) {
+            char *msg = "%s: %s version installed, %s\n";
+            char *eqs = cmprc == 0 ? "equal" : "newer";
+            char *skiped =  "skipped";
+            char *giveup =  "give up";
+            
+            install = 0;
+            
+            if (!is_hand_marked) {
+                log(LOGERR, msg, pkg_snprintf_s(pkg), eqs, giveup);
+                install = -1;
+                
+            } else if (is_hand_marked && !freshen) { /* msg without "freshen" */
+                msg(0, msg, pkg_snprintf_s(pkg), eqs, skiped);
+            }
         }
     }
-    return 0;
-}
 
-
-static void mapfn_clean_pkg_color(struct pkg *pkg) 
-{
-    pkg_set_color(pkg, PKG_COLOR_WHITE);
+    return install;
 }
 
 
@@ -477,367 +259,696 @@ static struct pkg *find_pkg(tn_array *pkgs, const char *name)
     return n_array_nth(pkgs, i);
 }
 
-#define PROCESS_DEPS       0 
-#define PROCESS_ORPHANS    1
-
-static int process_deps(struct pkgset *ps, tn_array *pkgs,
-                        struct upgrade_s *upg, int how) 
+static struct pkg *find_pkg_for_greedy_upgr(struct pkgset *ps, struct pkg *pkg)
 {
-    int i, j, ndepadds = 0;
-    tn_array *markarr[2], *tmparr;
-    int nmarkarr = 0, nmarked, nloop;
-    
-    tmparr = pkgs;
-    nmarked = n_array_size(tmparr);
-    markarr[0] = n_array_new(64, NULL, NULL);
-    markarr[1] = n_array_new(64, NULL, NULL);
-    
-    nloop = 0;
-    
-    n_assert(how == PROCESS_DEPS || how == PROCESS_ORPHANS);
+    struct pkg *p;
 
-    while (nmarked > 0) {
-        nmarked = 0;
-        for (i=0; i<n_array_size(tmparr); i++) {
-            struct pkg *pkg = n_array_nth(tmparr, i);
-            if (!pkg_is_color(pkg, PKG_COLOR_WHITE))
-                continue;
-            
-            pkg_set_color(pkg, PKG_COLOR_GRAY); /* processed */
-            if (pkg->reqs == NULL)
-                continue;
-            
-            msg_i(2, nloop, "\nChecking%s%s dependencies\n",
-                  how == PROCESS_ORPHANS ? " orphaned ":" ",
-                  pkg_snprintf_s(pkg));
-            
-            for (j=0; j<n_array_size(pkg->reqs); j++) {
-                struct capreq *req;
-                struct pkg **suspkgs, pkgsbuf[1024], *tomark = NULL;
-                int nsuspkgs = 0;
-                char *reqname;
-                
-                req = n_array_nth(pkg->reqs, j);
-                reqname = capreq_name(req);
-                if (capreq_has_ver(req) != 0) {
-                    reqname = alloca(256);
-                    capreq_snprintf(reqname, 256, req);
-                }
-                
-                if (n_hash_exists(upg->depcache, reqname)) {
-                    msg_i(4, nloop, " in cache %s\n", reqname);
-                    continue;
-                }
-
-                /* don't check foreign dependencies */
-                if (how == PROCESS_ORPHANS && !uninstpkgs_provides(upg, req)) {
-                    msg_i(4, nloop, " skip %s from %s\n", reqname, pkg_snprintf_s(pkg));
-                    continue;
-                }
-                
-                /* lookup in pkgset */
-                if (psreq_lookup(ps, req, &suspkgs, (struct pkg **)pkgsbuf,
-                                 &nsuspkgs)) {
-                    int nmatched = 0;
-                    struct pkg **matches;
-                    
-                    if (nsuspkgs == 0)
-                        continue;
-
-                    matches = alloca(sizeof(*matches) * nsuspkgs);
-                    if (psreq_match_pkgs(pkg, req, upg->strict, suspkgs,
-                                         nsuspkgs, matches, &nmatched)) {
-                        
-                        /* already marked for upgrade */
-                        if (nmatched == 0 || one_is_marked(matches, nmatched)){
-                            msg_i(2, nloop, " %s satisfied by install set\n",
-                                  capreq_snprintf_s(req));
-                            n_hash_insert(upg->depcache, reqname, req);
-                            continue;
-                            
-                       } else if (upg->inst->flags & INSTS_FOLLOW) {
-                           /* save candidate */
-                           tomark = matches[0];
-                       }
-                    }
-                } 
-            
-                if (pkgdb_match_req(upg->inst->db, req, upg->strict,
-                                    upg->uninst_dbpkgs)) {
-                    msg_i(2, nloop, " %s satisfied by db\n",
-                          capreq_snprintf_s(req));
-                    n_hash_insert(upg->depcache, reqname, req);
-                
-                } else if (tomark) {
-                    char *prefix = "";
-                    
-                    if (how == PROCESS_ORPHANS)
-                        prefix = "orphaned ";
-                    
-                    if (verbose > 1) {
-                        msg_i(2, nloop, "%s%s marks %s (cap %s)\n", prefix, 
-                              pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark),
-                              capreq_snprintf_s(req));
-                    } else if (verbose) {
-                        msg(1, " %s%s marks %s (cap %s)\n", prefix, 
-                            pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark), 
-                            capreq_snprintf_s(req));
-                    }
-                    
-                    if (!is_installable(upg->inst->db, tomark,
-                                        upg->uninst_dbpkgs, 
-                                            upg->inst)) {
-                        upg->nfatal_err++; 
-                        ndepadds = 0;
-                        goto l_end;
-                    }
-                    
-                    pkg_dep_mark(tomark);
-                    n_array_push(markarr[nmarkarr], tomark);
-                    nmarked++;
-                    upg->ndep++;
-                    upg->ninstall++;
-                    ndepadds++;
-                    
-                    n_hash_insert(upg->depcache, reqname, req);
-                    
-                } else {
-                    if (how == PROCESS_DEPS) {
-                        log(LOGERR, "%s: req %s not found\n",
-                            pkg_snprintf_s(pkg), capreq_snprintf_s(req));
-                        pkg_set_badreqs(pkg);
-                        upg->ndep_err++;
-
-                        
-                    } else if (how == PROCESS_ORPHANS) {
-                        int not_found = 1;
-                        
-                        if ((upg->inst->flags & INSTS_GREEDY)) {
-                            struct pkg *p;
-                            
-                            if ((p = find_pkg(ps->pkgs, pkg->name))) {
-                                if (!pkg_is_marked(p)) {
-                                    msg_i(1, nloop, " greedy upgrade %s "
-                                          "to %s-%s (unresolved %s)\n",
-                                          pkg_snprintf_s(pkg), p->ver, p->rel, 
-                                          capreq_snprintf_s(req));
-                                          
-                                    pkg_dep_mark(p);
-                                    n_array_push(markarr[nmarkarr], p);
-                                    nmarked++;
-                                    upg->ndep++;
-                                    upg->ninstall++;
-                                    ndepadds++;
-                                }
-                                not_found = 0;
-                            }
-                        }
-                        
-                        if (not_found) {
-                            log(LOGERR, "%s is required by %s\n", 
-                                capreq_snprintf_s(req), pkg_snprintf_s(pkg));
-                            pkg_set_badreqs(pkg);
-                            upg->ndep_err++;
-                        }
-                    }
-                }
-            }
-        }
-        
-                
-        for (i=0; i<n_array_size(markarr[nmarkarr]); i++) 
-            n_array_push(upg->install_pkgs, n_array_nth(markarr[nmarkarr], i));
-        
-        /* swap tables */
-        tmparr = markarr[nmarkarr];
-        nmarkarr++;
-        nmarkarr %= 2;
-        n_array_clean(markarr[nmarkarr]);
-        nloop++;
-        how = PROCESS_DEPS;     /* after first loop there are only dep-marked
-                                   packages  */
-    }
+    if ((p = find_pkg(pkg->pkgdir->pkgs, pkg->name)))
+        return p;
     
-    
- l_end:
-    
-    n_array_free(markarr[0]);
-    n_array_free(markarr[1]);
-    
-    return ndepadds;
+//    return n_array_nth(pkgs, i);
 }
 
-/* add to upg->uninst_dbpkgs packages obsoleted by pkg */
-static
-int add_obsoleted_pkgs(struct upgrade_s *upg) 
+
+static int select_best_pkg(struct pkg **candidates,  int npkgs) 
 {
-    int i, n = 0;
-    
-    for (i=0; i<n_array_size(upg->install_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
-        if (pkg_is_color(pkg, PKG_COLOR_GRAY)) {
-            n += rpm_get_obsoletedby_pkg(upg->inst->db->dbh,
-                                         upg->uninst_dbpkgs, pkg,
-                                         PKG_LDWHOLE);
-            
-            pkg_set_color(pkg, PKG_COLOR_BLACK);
+    int *ncnfls, i, i_min, cnfl_min;
+
+    ncnfls = alloca(npkgs * sizeof(*ncnfls));
+    for (i=0; i < npkgs; i++)
+        ncnfls[i] = 0;
+        
+    for (i=0; i<npkgs; i++) {
+        struct pkg *pkg = candidates[i];
+        
+        if (pkg->cnflpkgs == NULL)
+            return 0;
+        
+        for (i = 0; i < n_array_size(pkg->cnflpkgs); i++) {
+            struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, i);
+            if (pkg_is_marked(cpkg->pkg))
+                ncnfls[i]++;
         }
     }
-    return n;
+    
+    cnfl_min = INT_MAX;
+    i_min = -1;
+    for (i=0; i<npkgs; i++) {
+        //DBGF("%d. %s %d\n", i, pkg_snprintf_s(candidates[i]), ncnfls[i]);
+        if (cnfl_min > ncnfls[i]) {
+            cnfl_min = ncnfls[i];
+            i_min = i;
+        }
+    }
+    
+    if (i_min < 0)
+        i_min = 0;
+    return i_min;
 }
 
-/* add to upg->orphan_dbpkgs packages which are required by uninst_dbpkgs */
-static
-int add_orphans(struct upgrade_s *upg) 
+/* lookup in pkgset */
+static int find_req(const struct pkg *pkg, struct capreq *req, struct pkgset *ps,
+                    struct pkg **mpkg)
 {
-    int i, j, k, n = 0;
+    struct pkg **suspkgs, pkgsbuf[1024];
+    int    nsuspkgs = 0, found = 0;
+
+    
+    *mpkg = NULL;
+    found = psreq_lookup(ps, req, &suspkgs, (struct pkg **)pkgsbuf, &nsuspkgs);
+        
+    if (found && nsuspkgs) {
+        struct pkg **matches;
+        int nmatched = 0, strict;
+
+        found = 0;
+        matches = alloca(sizeof(*matches) * nsuspkgs);
+        strict = ps->flags & PSVERIFY_MERCY ? 0 : 1;
+        if (psreq_match_pkgs(pkg, req, strict, suspkgs,
+                             nsuspkgs, matches, &nmatched)) {
+            found = 1;
+            
+            /* already not marked for upgrade */
+            if (nmatched > 0 && !one_is_marked(matches, nmatched))
+                *mpkg = matches[select_best_pkg(matches, nmatched)];
+        }
+    }
+    
+    return found;
+}
+
+
+#define mark_package(a, b) do_mark_package(a, b, PKG_DIRMARK);
+
+static int do_mark_package(struct pkg *pkg, struct upgrade_s *upg,
+                           unsigned mark)
+{
+    int rc;
+    
+    n_assert(pkg_is_marked(pkg) == 0);
+    if ((rc = is_installable(pkg, upg->inst, pkg_is_marked_i(pkg))) <= 0) {
+        upg->nerr_fatal++; 
+        return 0;
+    }
+    
+    DBGF("%s, is_installable = %d\n", pkg_snprintf_s(pkg), rc);
+    pkg_unmark_i(pkg);
+
+    n_assert(!pkg_has_badreqs(pkg));
+
+    if (rc > 0) {
+        if (mark == PKG_DIRMARK) {
+            pkg_hand_mark(pkg);
+            
+        } else {
+            pkg_dep_mark(pkg);
+            upg->ndep++;
+        }
+        n_array_push(upg->install_pkgs, pkg);
+    }
+
+    return rc >= 0;
+}
+
+static
+void message_depmark(int indent, const struct pkg *marker,
+                     const struct pkg *pkg, 
+                     const struct capreq *marker_req, int process_as)
+{
+    const char *reqstr = "cap";
+    const char *marker_prefix = "";
+
+    
+    if (process_as == PROCESS_AS_ORPHAN)
+        marker_prefix = "orphaned ";
+
+    if (capreq_is_cnfl(marker_req))
+        reqstr = "cnfl";
+            
+    msg_i(1, indent, "%s%s marks %s (%s %s)\n", marker_prefix, 
+          pkg_snprintf_s(marker), pkg_snprintf_s0(pkg),
+          reqstr, capreq_snprintf_s(marker_req));
+}
+
+
+static
+int dep_mark_package(struct pkg *pkg,
+                     struct pkg *bypkg, struct capreq *byreq,
+                     struct upgrade_s *upg)
+{
+    const struct pkg *ppkg;
+
+    if (pkg_has_badreqs(pkg)) {
+        log(LOGERR, "%s: skip follow %s cause it's dependency"
+            "errors.\n", pkg_snprintf_s(bypkg), pkg_snprintf_s0(pkg),
+            capreq_snprintf_s(byreq));
+                
+        pkg_set_badreqs(bypkg);
+        upg->nerr_dep++;
+        return 0;
+    }
+
+
+    if ((ppkg = dbpkg_set_provides(upg->uninst_set, byreq)) &&
+        pkg_cmp_name_evr(ppkg, pkg) == 0) {
+        
+        log(LOGERR, "%s: dependency loop - "
+            "package is marked for removal\n", pkg_snprintf_s(pkg));
+        upg->nerr_fatal++; 
+        return 0;
+    }
+    
+    return do_mark_package(pkg, upg, PKG_INDIRMARK);
+}
+
+static int do_greedymark(struct pkg *pkg, struct pkg *oldpkg,
+                         struct capreq *unresolved_req,
+                         struct pkgset *ps, 
+                         struct upgrade_s *upg, int indent) 
+{
+    
+    if (pkg_is_marked(pkg))
+        n_assert(0);
+    
+    if (pkg_cmp_evr(pkg, oldpkg) == 0)
+        return 0;
+    
+    msg_i(1, indent, "greedy upgrade %s to %s-%s "
+          "(unresolved %s)\n", pkg_snprintf_s(oldpkg),
+          pkg->ver, pkg->rel, capreq_snprintf_s(unresolved_req));
+
+    if (dep_mark_package(pkg, NULL, unresolved_req, upg))
+        process_pkg_deps(pkg, ps, upg, PROCESS_AS_NEW, indent);
+    return 1;
+}
+
+
+
+/* add to upg->orphan_dbpkgs packages required by pkg */
+static
+int process_pkg_orphans(struct pkg *pkg, struct upgrade_s *upg) 
+{
     unsigned ldflags = PKG_LDNEVR | PKG_LDREQS;
+    int i, k, n = 0;
+    rpmdb dbh;
 
-    //tn_array *uninst_caps = capreq_arr_new();
+
+    dbh = upg->inst->db->dbh;
+
+    mem_info(1, "process_pkg_orphans:");
+    n += rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, pkg->name,
+                                    upg->uninst_set->dbpkgs, ldflags);
+        
+    if (pkg->caps)
+        for (i=0; i < n_array_size(pkg->caps); i++) {
+            struct capreq *cap = n_array_nth(pkg->caps, i);
+            n += rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs,
+                                            capreq_name(cap),
+                                            upg->uninst_set->dbpkgs, ldflags);
+        }
     
-    mem_info(1, "add_orphans:");
-    for (i=0; i < n_array_size(upg->uninst_dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(upg->uninst_dbpkgs, i);
-        struct pkg *pkg = dbpkg->pkg;
-        rpmdb dbh = upg->inst->db->dbh;
-        
-        if (dbpkg->flags & DBPKG_ORPHANS_PROCESSED)
-            continue;
-        
-        n++;
-        dbpkg->flags |= DBPKG_ORPHANS_PROCESSED;
-        rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, pkg->name,
-                                   upg->uninst_dbpkgs, ldflags);
-        
-        if (pkg->caps)
-            for (j=0; j<n_array_size(pkg->caps); j++) {
-                struct capreq *cap = n_array_nth(pkg->caps, j);
-                rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs,
-                                           capreq_name(cap),
-                                           upg->uninst_dbpkgs, ldflags);
-            }
+    if (pkg->fl == NULL)
+        return n;
+    
+    for (i=0; i < n_array_size(pkg->fl); i++) {
+        struct pkgfl_ent *flent = n_array_nth(pkg->fl, i);
+        char path[PATH_MAX], *endp;
 
-        if (pkg->fl)
-            for (j=0; j<n_array_size(pkg->fl); j++) {
-                struct pkgfl_ent *flent = n_array_nth(pkg->fl, j);
-                char path[PATH_MAX], *endp;
-
-                endp = path;
-                if (*flent->dirname != '/')
-                    *endp++ = '/';
-
-                endp = n_strncpy(endp, flent->dirname, sizeof(path));
+        endp = path;
+        if (*flent->dirname != '/')
+            *endp++ = '/';
+            
+        endp = n_strncpy(endp, flent->dirname, sizeof(path));
+            
+        for (k=0; k<flent->items; k++) {
+            struct flfile *file = flent->files[k];
+            int path_left_size;
                 
-                for (k=0; k<flent->items; k++) {
-                    struct flfile *file = flent->files[k];
-                    int path_left_size;
-
-                    if (*(endp - 1) != '/')
-                        *endp++ = '/';
-
-                    path_left_size = sizeof(path) - (endp - path);
-                    n_strncpy(endp, file->basename, path_left_size);
-                    
-                    rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, path,
-                                               upg->uninst_dbpkgs, ldflags);
-                    if (S_ISLNK(file->mode)) {
-                        char *linkto = strchr(file->basename, '\0') + 1;
-                        n_strncpy(endp, linkto, path_left_size);
-                        rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, path,
-                                                   upg->uninst_dbpkgs, ldflags);
-                    }
-                }
-            }
+            if (*(endp - 1) != '/')
+                *endp++ = '/';
+                
+            path_left_size = sizeof(path) - (endp - path);
+            n_strncpy(endp, file->basename, path_left_size);
+                
+            rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, path,
+                                       upg->uninst_set->dbpkgs, ldflags);
+        }
     }
     
     return n;
 }
 
 static
-void process_dependecies(struct pkgset *ps, struct upgrade_s *upg) 
+int verify_unistalled_cap(struct capreq *cap, struct pkg *pkg,
+                          struct pkgset *ps, struct upgrade_s *upg, int indent) 
 {
-    tn_array *opkgs;
-    
-    opkgs = n_array_new(128, NULL, (tn_fn_cmp)pkg_cmp_name_evr_rev);
-    
-    while (1) {
-        int i, norphans_added = 0;
-        
-        process_deps(ps, upg->install_pkgs, upg, PROCESS_DEPS);
-        if (upg->nfatal_err)
-            break;
+    struct db_dep *db_dep;
+    struct capreq *req;
 
-        add_obsoleted_pkgs(upg);
-        norphans_added = add_orphans(upg);
-        if (norphans_added == 0)
-            break;
-        
+    DBGF_NULL("%s: %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(cap));
+    if ((db_dep = db_deps_has(upg->db_deps, cap)) == NULL) {
+        //       printf("  [1] -> NO in db_deps\n");
+        return 1;
+    }
+
+    if (db_dep->spkg && pkg_is_marked(db_dep->spkg)) {
+        //printf("  [1] -> marked %s\n", pkg_snprintf_s(db_dep->spkg));
+        return 1;
+    }
+    
+    
+    req = db_dep->req;
+
+    // still satisfied by db? 
+    if (pkgdb_match_req(upg->inst->db, req, upg->strict, upg->uninst_set->dbpkgs)) {
+        //printf("  [1] -> satisfied by db\n");
+        return 1;
+    }
+    	
+
+    if (db_dep->spkg) {
+        message_depmark(indent, pkg, db_dep->spkg, req, PROCESS_AS_ORPHAN);
+        if (!dep_mark_package(db_dep->spkg, pkg, req, upg))
+            return 0;
+        return process_pkg_deps(db_dep->spkg, ps, upg, PROCESS_AS_NEW, indent);
+    }
+    
+    if (db_dep->flags & PROCESS_AS_NEW) {
+        log(LOGERR, "%s: req %s not found\n", pkg_snprintf_s(pkg),
+            capreq_snprintf_s(req));
+        pkg_set_badreqs(pkg);
+        upg->nerr_dep++;
+            
+                
+    } else if (db_dep->flags & PROCESS_AS_ORPHAN) {
+        int i;
+
+        for (i=0; i<n_array_size(db_dep->pkgs); i++) {
+            struct pkg *opkg = n_array_nth(db_dep->pkgs, i);
+            struct pkg *p;
+            int not_found = 1;
+
+            
+            if (pkg_cmp_name_evr(opkg, pkg) == 0) /* packages orphanes itself */
+                continue;
+                
+            if ((p = find_pkg(ps->pkgs, opkg->name))) {
+                if (pkg_is_marked_i(p)) {
+                    mark_package(p, upg);
+                    process_pkg_deps(p, ps, upg, PROCESS_AS_NEW, -1);
+                    not_found = 0;
+                        
+                } else if (upg->inst->flags & INSTS_GREEDY) {
+                    if (!pkg_is_marked(p) && do_greedymark(p, opkg, req, ps,
+                                                           upg, indent))
+                        not_found = 0;
+                }
+            }
+            
+            if (not_found) {
+                log(LOGERR, "%s (cap %s) is required by %s\n",
+                    pkg_snprintf_s(pkg), capreq_snprintf_s(req),
+                    pkg_snprintf_s0(opkg));
+                
+                
+                pkg_set_badreqs(pkg);
+                upg->nerr_dep++;
+            }
+        }
+    }
+    
+
+    
+    return 1;
+}
+    
+
+static
+void process_pkg_obsl(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg,
+                      int indent)
+{
+    int n, i;
+    rpmdb dbh = upg->inst->db->dbh;
+    
+    DBGMSG_F("%s\n", pkg_snprintf_s(pkg));
+    
+    n = rpm_get_obsoletedby_pkg(dbh, upg->uninst_set->dbpkgs, pkg, PKG_LDWHOLE);
+    if (n == 0)
+        return;
+
+    n = 0;
+    for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
+        struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
+        if ((dbpkg->flags & DBPKG_TOUCHED) == 0) {
+            msg_i(1, indent, "%s obsoleted by %s\n", dbpkg_snprintf_s(dbpkg),
+                  pkg_snprintf_s(pkg));
+            pkg_mark_obsoleted(dbpkg->pkg);
+            db_deps_remove_pkg(upg->db_deps, dbpkg->pkg);
+            dbpkg->flags |= DBPKG_TOUCHED;
+
+            if (dbpkg->pkg->caps) {
+                int j;
+                for (j=0; j < n_array_size(dbpkg->pkg->caps); j++) {
+                    struct capreq *cap = n_array_nth(dbpkg->pkg->caps, j);
+                    verify_unistalled_cap(cap, dbpkg->pkg, ps, upg, indent);
+                }
+            }
+
+            if (pkg->fl) {
+                struct capreq *cap;
+                int j, k;
+
+                
+                cap = alloca(sizeof(cap) + PATH_MAX);
+                memset(cap, 0, sizeof(*cap));
+                cap->_buf[0] = '\0';
+                
+                for (j=0; j < n_array_size(dbpkg->pkg->fl); j++) {
+                    struct pkgfl_ent *flent = n_array_nth(dbpkg->pkg->fl, j);
+                    char *path, *endp;
+                    int path_left_size;
+                    
+                    endp = path = &cap->_buf[1];
+                    
+                    if (n_array_bsearch(ps->depdirs, flent->dirname) == NULL)
+                        continue;
+                    
+                    if (*flent->dirname != '/')
+                        *endp++ = '/';
+                            
+                    endp = n_strncpy(endp, flent->dirname, PATH_MAX);
+                    if (*(endp - 1) != '/')
+                            *endp++ = '/';
+                    
+                    path_left_size = PATH_MAX - (endp - path);
+                    
+                    for (k=0; k < flent->items; k++) {
+                        struct flfile *file = flent->files[k];
+                        
+                        n_strncpy(endp, file->basename, path_left_size);
+                        verify_unistalled_cap(cap, dbpkg->pkg, ps, upg, indent);
+                    }
+                }
+            }
+            
+            n += process_pkg_orphans(dbpkg->pkg, upg);
+        }
+    }
+
+    if (n) 
         for (i=0; i<n_array_size(upg->orphan_dbpkgs); i++) {
             struct dbpkg *dbpkg = n_array_nth(upg->orphan_dbpkgs, i);
-            msg(2, "orphaned %u %s\n", dbpkg->recno,
-                pkg_snprintf_s(dbpkg->pkg));
-            n_array_push(opkgs, dbpkg->pkg);
+            int process_as;
+            
+            if (dbpkg->flags & DBPKG_DEPS_PROCESSED)
+                continue;
+            dbpkg->flags |= DBPKG_DEPS_PROCESSED;
+#if 0
+            if ((pkg = is_pkg_obsoletedby_installset(ps, dbpkg->pkg))) {
+                process_as = PROCESS_AS_NEW;
+                
+            } else
+#endif                
+             {
+                pkg = dbpkg->pkg;
+                process_as = PROCESS_AS_ORPHAN;
+             }
+            
+            process_pkg_deps(pkg, ps, upg, process_as, indent);
+        }
+}
+
+
+static
+int process_pkg_reqs(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg,
+                     int process_as, int indent) 
+{
+    int i;
+
+    if (upg->nerr_fatal)
+        return 0;
+
+    if (pkg->reqs == NULL)
+        return 1;
+    
+    for (i=0; i < n_array_size(pkg->reqs); i++) {
+        struct capreq *req;
+        struct pkg    *tomark = NULL;
+        char          *reqname;
+        
+        req = n_array_nth(pkg->reqs, i);
+
+        if (capreq_is_rpmlib(req)) 
+            continue;
+        
+        reqname = capreq_name(req);
+        if (capreq_has_ver(req)) {
+            reqname = alloca(256);
+            capreq_snprintf(reqname, 256, req);
+        }
+
+        //printf("REQ = %s\n", reqname);
+
+        if (find_req(pkg, req, ps, &tomark)) {
+            if (tomark == NULL) {
+                msg_i(3, indent, "%s: satisfied by install set\n",
+                      capreq_snprintf_s(req));
+                continue;
+            }
         }
         
-        process_deps(ps, opkgs, upg, PROCESS_ORPHANS);
-        n_array_clean(opkgs);
-        add_obsoleted_pkgs(upg);
+        /* don't check foreign dependencies */
+        if (process_as == PROCESS_AS_ORPHAN) {
+            if (db_deps_provides_req(upg->db_deps, req, DBDEP_FOREIGN)) {
+                msg_i(3, indent, "%s: %s skipped foreign req [cached]\n",
+                      pkg_snprintf_s(pkg), reqname);
+                continue;
+                
+            } else if (!dbpkg_set_provides(upg->uninst_set, req)) {
+                msg_i(3, indent, "%s: %s skipped foreign req\n",
+                      pkg_snprintf_s(pkg), reqname);
+
+                db_deps_add(upg->db_deps, req, pkg, tomark,
+                            process_as | DBDEP_FOREIGN);
+                continue;
+            }
+        }
+#if 0                           /* hungry update */
+        /* in "to-install" set */
+        if (0 && tomark && pkg_is_marked_i(tomark) && !pkg_has_badreqs(tomark) &&
+            upg->nmarked < 10) { 
+            msg_i(1, indent, "%s 'MARKS' => %s (cap %s)\n", pkg_snprintf_s(pkg),
+                  pkg_snprintf_s0(tomark), capreq_snprintf_s(req));
+            
+            mark_package(tomark, upg);
+            process_pkg_deps(tomark, ps, upg, PROCESS_AS_NEW, -1);
+        }
+        //else 
+        
+#endif
+
+        /* cached */
+        if (db_deps_provides_req(upg->db_deps, req, DBDEP_DBSATISFIED)) { 
+            msg_i(3, indent, "%s: satisfied by db [cached]\n",
+                  capreq_snprintf_s(req));
+            
+        } else if (pkgdb_match_req(upg->inst->db, req, upg->strict,
+                                   upg->uninst_set->dbpkgs)) {
+            msg_i(3, indent, "%s: satisfied by db\n", capreq_snprintf_s(req));
+            db_deps_add(upg->db_deps, req, pkg, tomark, process_as | DBDEP_DBSATISFIED);
+                    
+        } else if (tomark && (upg->inst->flags & INSTS_FOLLOW)) {
+            message_depmark(indent, pkg, tomark, req, process_as);
+            if (dep_mark_package(tomark, pkg, req, upg)) 
+                process_pkg_deps(tomark, ps, upg, PROCESS_AS_NEW, indent);
+            
+        } else {
+            if (process_as == PROCESS_AS_NEW) {
+                log(LOGERR, "%s: req %s not found\n",
+                    pkg_snprintf_s(pkg), capreq_snprintf_s(req));
+                pkg_set_badreqs(pkg);
+                upg->nerr_dep++;
+                
+                
+            } else if (process_as == PROCESS_AS_ORPHAN) {
+                int not_found = 1;
+                struct pkg *p;
+                
+                
+                if ((p = find_pkg(ps->pkgs, pkg->name))) {
+                    if (pkg_is_marked_i(p)) 
+                        mark_package(p, upg);
+                        
+                    if (pkg_is_marked(p)) {
+                        process_pkg_deps(p, ps, upg, PROCESS_AS_NEW, -1);
+                        not_found = 0;
+                        
+                    } else if ((upg->inst->flags & INSTS_GREEDY)) {
+                        n_assert(!pkg_is_marked(p));
+                        do_greedymark(p, pkg, req, ps, upg, indent);
+                        not_found = 0;
+                        return 1;
+                    }
+                }
+                
+                if (not_found) {
+                    log(LOGERR, "%s is required by %s\n",
+                        capreq_snprintf_s(req), pkg_snprintf_s(pkg));
+                    pkg_set_badreqs(pkg);
+                    upg->nerr_dep++;
+                }
+            }
+        }
+    }
+
+    return 1;
+}
+
+
+static
+int process_pkg_deps(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg,
+                     int process_as, int indent) 
+{
+    n_assert(process_as == PROCESS_AS_NEW || process_as == PROCESS_AS_ORPHAN);
+    if (upg->nerr_fatal)
+        return 0;
+
+    indent += 2;
+    if (!pkg_is_color(pkg, PKG_COLOR_WHITE)) { /* processed */
+        //msg_i(1, indent, "CHECKED%s%s dependencies...\n",
+        //      process_as == PROCESS_AS_ORPHAN ? " orphaned ":" ",
+        //      pkg_snprintf_s(pkg));
+        return 0;
     }
     
-    n_array_free(opkgs);
+
+    DBGF("PROCESSING [%d] %s as %s\n", indent, pkg_snprintf_s(pkg),
+         process_as == PROCESS_AS_NEW ? "NEW" : "ORPHAN");
+    msg_i(3, indent, "Checking%s%s dependencies...\n",
+          process_as == PROCESS_AS_ORPHAN ? " orphaned ":" ",
+          pkg_snprintf_s(pkg));
+
+    pkg_set_color(pkg, PKG_COLOR_GRAY); /* dep processed */
+
+    if (process_as == PROCESS_AS_NEW) 
+        process_pkg_obsl(pkg, ps, upg, indent);
+
+    if (pkg->reqs)
+        process_pkg_reqs(pkg, ps, upg, process_as, indent);
+
+    if (process_as == PROCESS_AS_NEW) {
+        process_pkg_conflicts(indent, pkg, ps, upg);
+        //process_pkg_obsl(pkg, ps, upg, indent);
+    }
+
+    DBGF("END PROCESSING [%d] %s as %s\n", indent, pkg_snprintf_s(pkg),
+         process_as == PROCESS_AS_NEW ? "NEW" : "ORPHAN");
+    
+    return 1;
+}
+
+static
+int mark_by_conflict(int indent,
+                     struct pkg *pkg, const struct capreq *cnfl,
+                     struct dbpkg *dbpkg, struct pkgset *ps,
+                     struct upgrade_s *upg) 
+{
+    struct pkg *tomark = NULL;
+    struct capreq *req = (struct capreq*)cnfl;
+    int found = 0;
+
+    if (!capreq_versioned(req))
+        return 0;
+#if 0    
+    printf("B %s -> ", capreq_snprintf_s(req));
+    capreq_revrel(req);
+    printf("%s -> ", capreq_snprintf_s(req));
+    capreq_revrel(req);
+    printf("%s\n", capreq_snprintf_s(req));
+#endif
+
+    DBGF("find_req %s %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(req));
+    capreq_revrel(req);
+    DBGF("find_req %s %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(req));
+    
+    found = find_req(pkg, req, ps, &tomark);
+    capreq_revrel(req);
+    if (!found)
+        return 0;
+        
+    
+    if (tomark == NULL)
+        return 0;
+
+    found = 0;
+    
+    if (pkg_obsoletes_pkg(tomark, dbpkg->pkg)) {
+        if (pkg_is_marked_i(tomark)) {
+            //    msg_i(1, indent, "%s 'MARX' => %s (cnfl %s)\n",
+            //      pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark),
+            //      capreq_snprintf_s(req));
+            found = mark_package(tomark, upg);
+            indent = -2;
+                
+        } else {
+            message_depmark(indent, pkg, tomark, req, PROCESS_AS_NEW);
+            found = dep_mark_package(tomark, pkg, req, upg);
+        }
+        
+        if (found)
+            process_pkg_deps(tomark, ps, upg, PROCESS_AS_NEW, indent);
+    }
+    
+    return found;
 }
 
 /* rpmlib() detects conflicts internally, header*() API usage is too slow */
-#undef ENABLE_FILES_CONFLICTS   
+#undef ENABLE_FILES_CONFLICTS
+//#define ENABLE_FILES_CONFLICTS
 #ifdef ENABLE_FILES_CONFLICTS
 static
 int is_file_conflict(const struct pkg *pkg,
                      const char *dirname, const struct flfile *flfile,
-                     struct dbpkg *dbpkg, int strict) 
+                     struct dbpkg *dbpkg) 
 {
-    struct rpmhdr_fl hdrfl;
-    int i, is_cnfl = 0;
+    int i, j, is_cnfl = 0;
     
-    for (i=0; i<hdrfl.nbnames; i++) {
-        char *dn;
+    for (i=0; i < n_array_size(dbpkg->pkg->fl); i++) {
+        struct pkgfl_ent *flent = n_array_nth(dbpkg->pkg->fl, i);
 
-        if (strcmp(hdrfl.bnames[i], flfile->basename) != 0)
+        if (strcmp(flent->dirname, dirname) != 0)
             continue;
 
-        dn = hdrfl.dnames[hdrfl.diridxs[i]];
-        if (*(dn+1) != '\0') {    /* skip leading '/' */
-            char *p;
-            
-            dn++;
-            if ((p = strrchr(dn, '/')))
-                *p = '\0';
+        for (j=0; j < flent->items; j++) {
+            struct flfile *file = flent->files[j];
+            if (strcmp(file->basename, flfile->basename) != 0)
+                continue;
+            printf("is_file_conflict %s %s\n", dirname, flfile->basename);
+            if ((is_cnfl = flfile_cnfl(flfile, file, 0)))
+                goto l_end;
         }
+
         
-        if (strcmp(dn, dirname) != 0)
-            continue;
         
-        is_cnfl = flfile_cnfl2(flfile, hdrfl.sizes[i], hdrfl.modes[i],
-                              hdrfl.symlinks ? hdrfl.symlinks[i] : NULL,
-                              strict);
-        
-        if (is_cnfl) {
-            log(LOGERR, "%s: /%s/%s%s: conflicts with %s's one\n",
-                pkg_snprintf_s(pkg),
-                dirname, flfile->basename,
-                S_ISDIR(flfile->mode) ? "/" : "", dbpkg_snprintf_s(dbpkg));
+    }
+
+ l_end:
+    if (is_cnfl) {
+        log(LOGERR, "%s: /%s/%s%s: conflicts with %s's one\n",
+            pkg_snprintf_s(pkg),
+            dirname, flfile->basename,
+            S_ISDIR(flfile->mode) ? "/" : "", dbpkg_snprintf_s(dbpkg));
             
-        } else if (verbose > 1) {
-            msg(2, "/%s/%s%s: shared between %s and %s\n",
-                dirname, flfile->basename,
-                S_ISDIR(flfile->mode) ? "/" : "",
-                pkg_snprintf_s(pkg), dbpkg_snprintf_s(dbpkg));
-        }
+    } else if (verbose > 1) {
+        msg(2, "/%s/%s%s: shared between %s and %s\n",
+            dirname, flfile->basename,
+            S_ISDIR(flfile->mode) ? "/" : "",
+            pkg_snprintf_s(pkg), dbpkg_snprintf_s(dbpkg));
     }
     
-    rpmhdr_fl_free(&hdrfl);
     return is_cnfl;
 }
-    
+
 
 static 
 int find_file_conflicts(struct pkgfl_ent *flent, struct pkg *pkg,
@@ -847,20 +958,38 @@ int find_file_conflicts(struct pkgfl_ent *flent, struct pkg *pkg,
     int i, j, ncnfl = 0;
     
     for (i=0; i<flent->items; i++) {
-        tn_array *cnfldbpkgs;
+        tn_array *cnfldbpkgs = NULL;
         char path[PATH_MAX];
         
         snprintf(path, sizeof(path), "/%s/%s", flent->dirname,
                  flent->files[i]->basename);
-        
-        cnfldbpkgs = rpm_get_file_conflicted_dbpkgs(db->dbh, flent->files[i]->basename, 
-                                                    uninst_dbpkgs, PKG_LDWHOLE);
-        if (cnfldbpkgs == NULL)
-            continue;
 
-        for (j=0; j<n_array_size(cnfldbpkgs); j++)
+
+        //if (strcmp(path, "/usr/X11R6/lib/X11/XErrorDB") == 0)
+          
+        
+        //flent->files[i]->basename
+        cnfldbpkgs = rpm_get_file_conflicted_dbpkgs(db->dbh, flent->files[i]->basename,
+                                                    cnfldbpkgs, 
+                                                    uninst_dbpkgs, PKG_LDWHOLE);
+        
+        printf("** PATH = %s -> %d ", path, cnfldbpkgs ? n_array_size(cnfldbpkgs):0);
+        
+        if (cnfldbpkgs == NULL)
+            cnfldbpkgs = rpm_get_file_conflicted_dbpkgs(db->dbh, path, cnfldbpkgs, 
+                                                        uninst_dbpkgs, PKG_LDWHOLE);
+
+        printf("-> %d\n", cnfldbpkgs ? n_array_size(cnfldbpkgs):0);
+        if (cnfldbpkgs == NULL) 
+            continue;
+        
+        for (j=0; j<n_array_size(cnfldbpkgs); j++) {
+            struct dbpkg *dbpkg = n_array_nth(cnfldbpkgs, j);
+            printf("CHECK = %s against %s\n", path, dbpkg_snprintf_s(dbpkg));
             ncnfl += is_file_conflict(pkg, flent->dirname, flent->files[i],
-                                      n_array_nth(cnfldbpkgs, j), strict);
+                                      n_array_nth(cnfldbpkgs, j));
+        }
+        
         n_array_free(cnfldbpkgs);
     }
     
@@ -870,11 +999,13 @@ int find_file_conflicts(struct pkgfl_ent *flent, struct pkg *pkg,
 
 
 static
-int find_db_files_conflicts(struct pkg *pkg, struct pkgdb *db,
+int find_db_files_conflicts(struct pkg *pkg, struct pkgdb *db, struct pkgset *ps, 
                             tn_array *uninst_dbpkgs, int strict)
 {
     tn_array *fl;
     int i, ncnfl = 0;
+
+    
     if (pkg->fl)
         for (i=0; i < n_array_size(pkg->fl); i++) {
             ncnfl += find_file_conflicts(n_array_nth(pkg->fl, i), pkg, db,
@@ -884,13 +1015,11 @@ int find_db_files_conflicts(struct pkg *pkg, struct pkgdb *db,
     if (ncnfl)                  /* skip the rest conflicts test */
         return ncnfl;
     
-    n_assert(pkg->pkg_stream != NULL);
-    if (pkg->pkg_stream == NULL)
-        die();
+    n_assert(pkg->pkgdir->vf->vf_stream != NULL);
     
-    fseek(pkg->pkg_stream, pkg->other_files_offs, SEEK_SET);
-    fl = pkgfl_restore_f(pkg->pkg_stream);
-    
+    fseek(pkg->pkgdir->vf->vf_stream, pkg->other_files_offs, SEEK_SET);
+
+    fl = pkgfl_restore_f(pkg->pkgdir->vf->vf_stream, ps->depdirs, 0);
     for (i=0; i < n_array_size(fl); i++) {
         ncnfl += find_file_conflicts(n_array_nth(fl, i), pkg, db,
                                      uninst_dbpkgs, strict);
@@ -902,49 +1031,27 @@ int find_db_files_conflicts(struct pkg *pkg, struct pkgdb *db,
 #endif /* ENABLE_FILES_CONFLICTS */
 
 
-int find_db_conflicts(const struct pkg *pkg, const struct capreq *cnfl,
-                      tn_array *dbpkgs, int strict) 
+/* check if cnfl conflicts with db */
+static
+int find_db_conflicts_cnfl_w_db(int indent,
+                                struct pkg *pkg,
+                                const struct capreq *cnfl,
+                                tn_array *dbpkgs,
+                                struct pkgset *ps, struct upgrade_s *upg)
 {
     int i, ncnfl = 0;
     
     for (i=0; i<n_array_size(dbpkgs); i++) {
         struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
         
-        msg(6, "%s (%s) <-> %s ?\n", pkg_snprintf_s(pkg),
+        msg_i(6, indent, "%d. %s (%s) <-> %s ?\n", i, pkg_snprintf_s(pkg),
             capreq_snprintf_s(cnfl), pkg_snprintf_s0(dbpkg->pkg));
         
-        if (pkg_match_req(dbpkg->pkg, cnfl, strict)) {
-            log(LOGERR, "%s (%s) conflicts with installed %s\n",
-                pkg_snprintf_s(pkg), capreq_snprintf_s(cnfl), 
-                pkg_snprintf_s0(dbpkg->pkg));
-            
-            ncnfl++;
-        }
-    }
-    
-    return ncnfl;
-}
-
-int find_db_conflicts2(const struct pkg *pkg, const struct capreq *cap,
-                       tn_array *dbpkgs, int strict) 
-{
-    int i, j, ncnfl = 0;
-
-
-    strict = strict;
-    
-    for (i=0; i<n_array_size(dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
-        
-        msg(6, "%s (%s) <-> %s ?\n", pkg_snprintf_s(pkg),
-            capreq_snprintf_s(cap), pkg_snprintf_s0(dbpkg->pkg));
-        
-        for (j=0; j<n_array_size(dbpkg->pkg->cnfls); j++) {
-            struct capreq *cnfl = n_array_nth(dbpkg->pkg->cnfls, j);
-            if (cap_match_req(cap, cnfl, 1)) {
-                log(LOGERR, "%s (%s) conflicts with installed %s (%s)\n",
-                    pkg_snprintf_s(pkg), capreq_snprintf_s(cap), 
-                    pkg_snprintf_s0(dbpkg->pkg),capreq_snprintf_s0(cnfl));
+        if (pkg_match_req(dbpkg->pkg, cnfl, 1)) {
+            if (!mark_by_conflict(indent, pkg, cnfl, dbpkg, ps, upg)) {
+                log(LOGERR, "%s (cnfl %s) conflicts with installed %s\n",
+                    pkg_snprintf_s(pkg), capreq_snprintf_s(cnfl),
+                    pkg_snprintf_s0(dbpkg->pkg));
                 ncnfl++;
             }
         }
@@ -953,7 +1060,124 @@ int find_db_conflicts2(const struct pkg *pkg, const struct capreq *cap,
     return ncnfl;
 }
 
+/* check if db cnfl conflicts with cap */
+static
+int find_db_conflicts_dbcnfl_w_cap(int indent,
+                                   struct pkg *pkg, const struct capreq *cap,
+                                   tn_array *dbpkgs,
+                                   struct pkgset *ps, struct upgrade_s *upg) 
+{
+    int i, j, ncnfl = 0;
 
+
+    for (i = 0; i<n_array_size(dbpkgs); i++) {
+        struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
+        
+        msg(6, "%s (%s) <-> %s ?\n", pkg_snprintf_s(pkg),
+            capreq_snprintf_s(cap), pkg_snprintf_s0(dbpkg->pkg));
+        
+        for (j = 0; j < n_array_size(dbpkg->pkg->cnfls); j++) {
+            struct capreq *cnfl = n_array_nth(dbpkg->pkg->cnfls, j);
+            if (cap_match_req(cap, cnfl, 1)) {
+                if (!mark_by_conflict(indent, pkg, cnfl, dbpkg, ps, upg)) {
+                    log(LOGERR, "%s (cap %s) conflicts with installed %s (%s)\n",
+                        pkg_snprintf_s(pkg), capreq_snprintf_s(cap), 
+                        pkg_snprintf_s0(dbpkg->pkg), capreq_snprintf_s0(cnfl));
+                    ncnfl++;
+                }
+            }
+        }
+    }
+    
+    return ncnfl;
+}
+
+static
+int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
+                          struct upgrade_s *upg)
+{
+    rpmdb dbh;
+    int i, n, ncnfl;
+
+    dbh = upg->inst->db->dbh;
+
+    /* conflicts in install set */
+    if (pkg->cnflpkgs != NULL)
+        for (i = 0; i < n_array_size(pkg->cnflpkgs); i++) {
+            struct cnflpkg *cpkg = n_array_nth(pkg->cnflpkgs, i);
+            
+            if (pkg_is_marked(cpkg->pkg)) {
+                log(LOGERR, "%s conflicts with %s\n",
+                    pkg_snprintf_s(pkg), pkg_snprintf_s0(cpkg->pkg));
+                upg->nerr_cnfl++;
+                ncnfl++;
+            }
+        }
+
+    
+    /* conflicts with db packages */
+
+    for (i = 0; i < n_array_size(pkg->caps); i++) {
+        struct capreq *cap = n_array_nth(pkg->caps, i);
+        tn_array *dbpkgs;
+
+        msg_i(3, indent, "cap %s\n", capreq_snprintf_s(cap));
+        dbpkgs = rpm_get_conflicted_dbpkgs(dbh, cap,
+                                           upg->uninst_set->dbpkgs,
+                                           PKG_LDWHOLE);
+        if (dbpkgs == NULL)
+            continue;
+            
+            
+        n = find_db_conflicts_dbcnfl_w_cap(indent, pkg, cap, dbpkgs, ps, upg);
+        upg->nerr_cnfl += n;
+        upg->nerr_dbcnfl += n;
+        ncnfl += n;
+        n_array_free(dbpkgs);
+        if (n)
+            pkg_set_badreqs(pkg);
+    }
+        
+        
+    if (pkg->cnfls != NULL)
+        for (i = 0; i < n_array_size(pkg->cnfls); i++) {
+            struct capreq *cnfl = n_array_nth(pkg->cnfls, i);
+            tn_array *dbpkgs;
+                
+            if (cnfl_is_obsl(cnfl))
+                continue;
+
+            msg_i(3, indent, "cnfl %s\n", capreq_snprintf_s(cnfl));
+                
+            dbpkgs = rpm_get_provides_dbpkgs(dbh, cnfl,
+                                             upg->uninst_set->dbpkgs,
+                                             PKG_LDWHOLE);
+            if (dbpkgs == NULL)
+                continue;
+                
+            n = find_db_conflicts_cnfl_w_db(indent, pkg, cnfl, dbpkgs, ps, upg);
+            upg->nerr_cnfl += n;
+            upg->nerr_dbcnfl += n;
+            ncnfl += n;
+            n_array_free(dbpkgs);
+                
+            if (n)
+                pkg_set_badreqs(pkg);
+        }
+        
+#ifdef ENABLE_FILES_CONFLICTS  /* too slow, needs rpmlib API modifcations */
+    msg(1, "%s's files...\n", pkg_snprintf_s(pkg));
+    ncnfl += find_db_files_conflicts(pkg, upg->inst->db, ps, 
+                                     upg->uninst_set->dbpkgs, upg->strict);
+#endif        
+
+        
+    return ncnfl == 0;
+}
+
+
+#if 0
+static
 int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl) 
 {
     int i, j, ncnfl = 0, nisetcnfl = 0;
@@ -964,7 +1188,7 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
     for (i=0; i<n_array_size(upg->install_pkgs); i++) {
         struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
         
-        msg(2, " checking %s\n", pkg_snprintf_s(pkg));
+        msg(3, " checking %s\n", pkg_snprintf_s(pkg));
         
         if (pkg->cnflpkgs != NULL)
             for (j = 0; j < n_array_size(pkg->cnflpkgs); j++) {
@@ -982,9 +1206,10 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
             struct capreq *cap = n_array_nth(pkg->caps, j);
             tn_array *dbpkgs;
 
-            msg_i(2, 3, "cap %s\n", capreq_snprintf_s(cap));
+            msg_i(3, 3, "cap %s\n", capreq_snprintf_s(cap));
             dbpkgs = rpm_get_conflicted_dbpkgs(dbh, cap,
-                                               upg->uninst_dbpkgs, PKG_LDWHOLE);
+                                               upg->uninst_set->dbpkgs,
+                                               PKG_LDWHOLE);
             if (dbpkgs == NULL)
                 continue;
             
@@ -1002,10 +1227,11 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
                 if (cnfl_is_obsl(cnfl))
                     continue;
 
-                msg_i(2, 3, "cnfl %s\n", capreq_snprintf_s(cnfl));
+                msg_i(3, 3, "cnfl %s\n", capreq_snprintf_s(cnfl));
                 
                 dbpkgs = rpm_get_provides_dbpkgs(dbh, cnfl,
-                                                 upg->uninst_dbpkgs, PKG_LDWHOLE);
+                                                 upg->uninst_set->dbpkgs,
+                                                 PKG_LDWHOLE);
                 if (dbpkgs != NULL) {
                     ncnfl += find_db_conflicts(pkg, cnfl, dbpkgs, 1);
                     n_array_free(dbpkgs);
@@ -1015,13 +1241,15 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
 #ifdef ENABLE_FILES_CONFLICTS  /* too slow, needs rpmlib API modifcations */
         msg_i(1, 3, "files...\n");
         ncnfl += find_db_files_conflicts(pkg, upg->inst->db,
-                                         upg->uninst_dbpkgs, upg->strict);
+                                         upg->uninst_set->dbpkgs, upg->strict);
 #endif        
     }
     
     *install_set_cnfl = nisetcnfl;
     return ncnfl;
 }
+#endif
+
 
 static int valid_arch_os(tn_array *pkgs) 
 {
@@ -1049,18 +1277,18 @@ static int valid_arch_os(tn_array *pkgs)
 
 static void print_install_summary(struct upgrade_s *upg) 
 {
-    int i;
-    
-    msg(1, "There are %d package%s to install", upg->ninstall,
-        upg->ninstall > 1 ? "s":"");
+    int i, n;
 
+    n = n_array_size(upg->install_pkgs);
+    msg(1, "There are %d package%s to install", n, n > 1 ? "s":"");
+    
     
     if (upg->ndep) 
-        msg(1, " (%d marked by dependencies)", upg->ndep);
+        msg(1, "_ (%d marked by dependencies)", upg->ndep);
 
-    if (n_array_size(upg->uninst_dbpkgs))
-        msg(1, ", %d to uninstall", n_array_size(upg->uninst_dbpkgs));
-    msg(1, ":\n");
+    if (n_array_size(upg->uninst_set->dbpkgs))
+        msg(1, "_, %d to uninstall", n_array_size(upg->uninst_set->dbpkgs));
+    msg(1, "_:\n");
     
     
     for (i=0; i<n_array_size(upg->install_pkgs); i++) {
@@ -1069,8 +1297,8 @@ static void print_install_summary(struct upgrade_s *upg)
             pkg_snprintf_s(pkg));
     }
 
-    for (i=0; i<n_array_size(upg->uninst_dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(upg->uninst_dbpkgs, i);
+    for (i=0; i<n_array_size(upg->uninst_set->dbpkgs); i++) {
+        struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
         msg(1, "R %s\n", pkg_snprintf_s(dbpkg->pkg));
     }
     
@@ -1087,8 +1315,8 @@ static int check_holds(struct pkgset *ps, struct upgrade_s *upg)
     if (upg->inst->hold_pkgnames == NULL)
         return 1;
 
-    for (i=0; i < n_array_size(upg->uninst_dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(upg->uninst_dbpkgs, i);
+    for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
+        struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
 
         for (j=0; j<n_array_size(upg->inst->hold_pkgnames); j++) {
             const char *mask = n_array_nth(upg->inst->hold_pkgnames, j);
@@ -1104,6 +1332,11 @@ static int check_holds(struct pkgset *ps, struct upgrade_s *upg)
     return rc;
 }
 
+static void mapfn_clean_pkg_color(struct pkg *pkg) 
+{
+    pkg_set_color(pkg, PKG_COLOR_WHITE);
+}
+
 
 /* process packages to install:
    - check dependencies
@@ -1111,40 +1344,62 @@ static int check_holds(struct pkgset *ps, struct upgrade_s *upg)
    - check conflicts
  */
 static
-int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
+int do_install(struct pkgset *ps, struct upgrade_s *upg)
 {
-    int ncnfl = 0, ndbcnfl = 0, rc, nerr = 0, any_err = 0;
-    
-    msg(1, "Processing dependencies...\n");
+    int rc, nerr = 0, any_err = 0;
+    tn_array *pkgs;
+    int i;
 
+    msg(1, "Processing dependencies...\n");
     n_array_map(ps->pkgs, (tn_fn_map1)mapfn_clean_pkg_color);
-    process_dependecies(ps, upg);
-    if (upg->nfatal_err)
+
+    for (i = n_array_size(ps->ordered_pkgs) - 1; i > -1; i--) {
+        struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
+        if (pkg_is_hand_marked(pkg)) 
+            process_pkg_deps(pkg, ps, upg, PROCESS_AS_NEW, -1);
+    }
+
+    pkgs = n_array_new(64, NULL, NULL);
+    for (i = n_array_size(ps->ordered_pkgs) - 1; i > -1; i--) {
+        struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
+        if (pkg_is_marked(pkg))
+            n_array_push(pkgs, pkg);
+    }
+    
+    if (upg->nerr_fatal)
         return 0;
 
     print_install_summary(upg);
-    msg(1, "Verifying conflicts...\n");
-    ncnfl = find_conflicts(upg, &ndbcnfl);
     pkgdb_closedb(upg->inst->db); /* close db as soon as possible */
 
-    
-    if (ncnfl) {
+    if (upg->nerr_dep || upg->nerr_cnfl) {
+        char errmsg[256];
+        int n = 0;
+        
         any_err++;
-        log(LOGERR, "There are %d conflicts\n", ncnfl);
-        if (upg->inst->instflags & (PKGINST_FORCE | PKGINST_TEST)) 
-            ncnfl = ndbcnfl = 0;
-        else
-            nerr++;
+        if (upg->nerr_dep) {
+            n = snprintf(&errmsg[n], sizeof(errmsg) - n,
+                         "%d unresolved dependencies", upg->nerr_dep);
+            
+            
+            if (upg->inst->instflags & (PKGINST_NODEPS | PKGINST_TEST))
+                upg->nerr_dep = 0;
+            else
+                nerr++;
+        }
+        
+        if (upg->nerr_cnfl) {
+            n = snprintf(&errmsg[n], sizeof(errmsg) - n,
+                         "%s%d conflicts", n ? ", ":"", upg->nerr_cnfl);
+            if (upg->inst->instflags & (PKGINST_FORCE | PKGINST_TEST)) 
+                upg->nerr_cnfl = 0;
+            else
+                nerr++;
+        }
+
+        log(LOGERR, "There are errors: %s\n", errmsg);
     }
     
-    if (upg->ndep_err) {
-        any_err++;
-        log(LOGERR, "There are %d unresolved dependencies.\n", upg->ndep_err);
-        if (upg->inst->instflags & (PKGINST_NODEPS | PKGINST_TEST))
-            upg->ndep_err = 0;
-        else 
-            nerr++;
-    }
     
     rc = (any_err == 0);
     if (nerr)
@@ -1160,94 +1415,39 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
             return 1;
     }
 #endif
-    
-    if ((upg->inst->instflags & PKGINST_TEST) == 0 && (upg->inst->flags & INSTS_TEST))
+
+    if ((upg->inst->flags & INSTS_TEST) &&
+        (upg->inst->instflags & PKGINST_TEST) == 0)
         return rc;
     
     if (upg->inst->flags & INSTS_JUSTPRINT) {
-        rc = dump_pkgs_fqpns(ps, upg);
+        rc = pkgset_dump_marked_fqpns(ps, upg->inst->dumpfile);
         
     } else if (upg->inst->flags & INSTS_JUSTFETCH) {
         n_assert(upg->inst->fetchdir);
-        rc = pkgset_fetch_pkgs(upg->inst->fetchdir, upg->install_pkgs, 1);
+        rc = packages_fetch(upg->install_pkgs, upg->inst->fetchdir, 1);
         
     } else if ((upg->inst->flags & INSTS_NOHOLD) || (rc=check_holds(ps, upg))) {
-        rc = runrpm(ps, upg);
+        rc = packages_rpminstall(pkgs, ps, upg->inst);
     }
     
     return rc;
 }
 
-
-/* save in upg->install_pkgs if newer version finded */
-static 
-void mapfn_check_newer_pkg(unsigned recno, void *h, void *upgptr) 
-{
-    struct upgrade_s *upg = upgptr;
-    uint32_t *epoch;
-    struct pkg *pkg, tmpkg;
-    
-    if (!rpmhdr_nevr(h, &tmpkg.name, &epoch, &tmpkg.ver, &tmpkg.rel)) {
-        log(LOGERR, "db package header corrupted (!?)\n");
-        upg->ndberrs++;
-        
-    } else {
-        int i, cmprc;
-        tmpkg.epoch = epoch ? *epoch : 0;
-        
-        i = n_array_bsearch_idx_ex(upg->avpkgs, &tmpkg,
-                                   (tn_fn_cmp)pkg_cmp_name); 
-        if (i < 0) {
-            msg(3, "%-32s not found in repository\n", pkg_snprintf_s(&tmpkg));
-            return;
-        }
-
-        pkg = n_array_nth(upg->avpkgs, i);
-        cmprc = pkg_cmp_evr(pkg, &tmpkg);
-        if (verbose) {
-            if (cmprc == 0) 
-                msg(3, "%-32s up to date\n", pkg_snprintf_s(&tmpkg));
-                
-            else if (cmprc < 0)
-                msg(3, "%-32s newer than repository one\n",
-                    pkg_snprintf_s(&tmpkg));
-                
-            else
-                msg(1, "%-32s |-> %-30s\n", pkg_snprintf_s(&tmpkg),
-                    pkg_snprintf_s0(pkg));
-        }
-        
-        if (cmprc > 0) {
-            if (pkg_is_hold(pkg)) {
-                msg(0, "%s: skip held package\n", pkg_snprintf_s(pkg));
-                
-            } else {
-                pkg_hand_mark(pkg);
-                n_array_push(upg->install_pkgs, pkg);
-                n_array_push(upg->uninst_dbpkgs, dbpkg_new(recno, h, PKG_LDWHOLE));
-                upg->ninstall++;
-            }
-        }
-    }
-}
-
-
 static void init_upgrade_s(struct upgrade_s *upg, struct pkgset *ps,
                            struct inst_s *inst)
 {
-
-    memset(upg, 0, sizeof(*upg));
-    upg->pkgflmod_mark = pkgflmodule_allocator_push_mark();
     upg->avpkgs = ps->pkgs;
     upg->install_pkgs = n_array_new(128, NULL, NULL);
-    upg->uninst_dbpkgs = dbpkg_array_new(128);
+    upg->db_deps = db_deps_new();
+    upg->uninst_set = dbpkg_set_new();
     upg->orphan_dbpkgs = dbpkg_array_new(128);
-    
-    upg->ndberrs = 0;
-    upg->inst = inst;
-    upg->depcache = n_hash_new(1003, NULL);
-    upg->capcache = n_hash_new(1003, NULL);
+
     upg->strict = ps->flags & PSVERIFY_MERCY ? 0 : 1;
+    upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
+    upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
+    upg->inst = inst; 
+    upg->pkgflmod_mark = pkgflmodule_allocator_push_mark();
 }
 
 
@@ -1255,132 +1455,285 @@ static void destroy_upgrade_s(struct upgrade_s *upg)
 {
     upg->avpkgs = NULL;
     n_array_free(upg->install_pkgs);
-    n_array_free(upg->uninst_dbpkgs);
+    n_hash_free(upg->db_deps);
+    dbpkg_set_free(upg->uninst_set);
     n_array_free(upg->orphan_dbpkgs);
     upg->inst = NULL;
-    n_hash_free(upg->depcache);
-    n_hash_free(upg->capcache);
+    
     pkgflmodule_allocator_pop_mark(upg->pkgflmod_mark);
     memset(upg, 0, sizeof(*upg));
 }
 
+
+static void reset_upgrade_s(struct upgrade_s *upg)
+{
+
+    n_array_clean(upg->install_pkgs);
+    
+    n_hash_clean(upg->db_deps);
+    dbpkg_set_free(upg->uninst_set);
+    upg->uninst_set = dbpkg_set_new();
+    n_array_clean(upg->orphan_dbpkgs);
+    
+    upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
+    upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
+
+    pkgflmodule_allocator_pop_mark(upg->pkgflmod_mark);
+    upg->pkgflmod_mark = pkgflmodule_allocator_push_mark();
+}
+
+
+static 
+void mapfn_mark_newer_pkg(unsigned recno, void *h, void *upgptr) 
+{
+    struct upgrade_s  *upg = upgptr;
+    struct pkg        *pkg, tmpkg;
+    uint32_t          *epoch;
+    int               i, cmprc;
+
+    
+    recno = recno;
+    
+    if (!rpmhdr_nevr(h, &tmpkg.name, &epoch, &tmpkg.ver, &tmpkg.rel)) {
+        log(LOGERR, "db package header corrupted (!?)\n");
+        upg->ndberrs++;
+        return;
+    }
+
+    tmpkg.epoch = epoch ? *epoch : 0;
+    i = n_array_bsearch_idx_ex(upg->avpkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
+    if (i < 0) {
+        msg(3, "%-32s not found in repository\n", pkg_snprintf_s(&tmpkg));
+        return;
+    }
+    
+    pkg = n_array_nth(upg->avpkgs, i);
+    cmprc = pkg_cmp_evr(pkg, &tmpkg);
+    if (verbose) {
+        if (cmprc == 0) 
+            msg(3, "%-32s up to date\n", pkg_snprintf_s(&tmpkg));
+        
+        else if (cmprc < 0)
+            msg(3, "%-32s newer than repository one\n", pkg_snprintf_s(&tmpkg));
+        
+        else 
+            msg(2, "%-32s -> %-30s\n", pkg_snprintf_s(&tmpkg),
+                pkg_snprintf_s0(pkg));
+    }
+
+    if ((pkg = n_hash_get(upg->db_pkgs, tmpkg.name))) {
+        if (pkg_is_marked(pkg)) {
+            upg->nmarked--;
+            log(LOGWARN, "%s: multiple instances installed, skipped\n", tmpkg.name);
+            pkg_unmark(pkg);        /* display above once */
+        }
+
+        return;
+    }
+
+    pkg = n_array_nth(upg->avpkgs, i);
+    if (cmprc > 0) {
+        if (pkg_is_hold(pkg)) {
+            msg(0, "%s: skip held package\n", pkg_snprintf_s(pkg));
+            
+        } else {
+            n_hash_insert(upg->db_pkgs, tmpkg.name, pkg);
+            pkg_hand_mark(pkg);
+            upg->nmarked++;
+        }
+    }
+    
+}
+
+void mapfn_unmark_pkg(const char *key, void *pkgptr) 
+{
+    struct pkg *pkg = pkgptr;
+    key = key;
+    pkg_unmark(pkg);
+}
+
+
 int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst) 
 {
-    int rc = 1;
     struct upgrade_s upg;
-    
 
+    
     init_upgrade_s(&upg, ps, inst);
-
-    msg(1, "Looking up packages for upgrade...\n");
+    upg.db_pkgs = n_hash_new(103, NULL);
     
-    //set_capreq_allocfn(malloc, free, &capreq_alloc_fn, &capreq_free_fn);
-
-    /* find packages to upgrade */
-    pkgdb_map(inst->db, mapfn_check_newer_pkg, &upg);
-    n_array_sort(upg.uninst_dbpkgs);
-
-    // set_capreq_allocfn(capreq_alloc_fn, capreq_free_fn, NULL, NULL);
-
+    msg(1, "Looking up packages for upgrade...\n");
+    pkgdb_map(inst->db, mapfn_mark_newer_pkg, &upg);
+    n_hash_free(upg.db_pkgs);
+               
     if (upg.ndberrs) {
         log(LOGERR, "There are database errors (?), give up\n");
         destroy_upgrade_s(&upg);
         return 0;
     }
 
-    if (n_array_size(upg.install_pkgs) == 0) {
-        msg(1, "All packages are up to date, nothing to do\n");
-        
-    } else {
-        rc = pkgset_do_install(ps, &upg);
+    destroy_upgrade_s(&upg);
+    
+    if (upg.nmarked > 0) {
+        msg(0, "Nothing to do\n");
+        return 1;
+    } 
+    
+    return pkgset_install(ps, inst, NULL);
+}
+
+
+static
+int install(struct pkgset *ps, struct upgrade_s *upg,
+            tn_array *uninstalled_pkgs)
+{
+    int i, rc = 1, is_upgrade = 0;
+
+    is_upgrade = ps->flags & PSMODE_UPGRADE;
+    
+    mem_info(1, "ENTER pkgset_install: install()");
+    
+    if ((rc = do_install(ps, upg)) > 0 && uninstalled_pkgs) {
+        for (i=0; i<n_array_size(upg->uninst_set->dbpkgs); i++) {
+            struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
+            struct pkg *pkg = dbpkg->pkg;
+            n_array_push(uninstalled_pkgs,
+                         pkg_new(pkg->name, pkg->epoch, pkg->ver, pkg->rel,
+                                 pkg->arch, pkg->os, pkg->size, pkg->fsize,
+                                 pkg->btime));
+                    
+        }
     }
     
-    destroy_upgrade_s(&upg);
     return rc;
 }
 
 
 
+static void mark_namegroup(tn_array *pkgs, struct pkg *pkg, struct upgrade_s *upg) 
+{
+    struct pkg tmpkg;
+    int n, i, len;
+    char *p, prefix[512];
+
+
+    n_array_sort(pkgs);
+    
+    len = snprintf(prefix, sizeof(prefix), "%s", pkg->name);
+    if ((p = strchr(prefix, '-')))
+        *p = '\0';
+    
+    tmpkg.name = prefix;
+    
+    n = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
+    if (n < 0 && p) {
+        *p = '-';
+        n = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name);
+    }
+
+    if (n < 0)
+        return;
+    
+    len = strlen(prefix);
+    
+    for (i = n; i < n_array_size(pkgs); i++) {
+        struct pkg *p = n_array_nth(pkgs, i);
+        int pkg_name_len;
+
+        if ((pkg_name_len = strlen(pkg->name)) < len)
+            break;
+        
+        if (strncmp(p->name, prefix, len) != 0) 
+            break;
+
+        if (!pkg_is_marked_i(p)) 
+            continue;
+        
+        if (pkg->pkgdir != p->pkgdir)
+            continue;
+
+        if (!pkg_is_marked(p))
+            mark_package(p, upg);
+    }
+}
+
+
 int pkgset_install(struct pkgset *ps, struct inst_s *inst,
                    tn_array *uninstalled_pkgs)
 {
-    int i, rc = 1, cmprc, is_upgrade = 0;
+    int i, is_upgrade = 0, nmarked = 0, nerr = 0, n;
     struct upgrade_s upg;
 
     is_upgrade = ps->flags & PSMODE_UPGRADE;
     
     mem_info(1, "ENTER pkgset_install:");
     init_upgrade_s(&upg, ps, inst);
+
+    inst->instflags |= INSTS_PARTITIONED;
     
-    for (i=0; i<n_array_size(ps->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->pkgs, i);
-        int npkgs, install;
-        struct dbrec dbrec = {0, 0};
+    
+    /* tests make sense on whole set only  */
+    if ((inst->flags & INSTS_TEST) || (inst->instflags & PKGINST_TEST))
+        inst->instflags &= ~INSTS_PARTITIONED;
+
+    for (i = 0; i < n_array_size(ps->ordered_pkgs); i++) {
+        struct pkg    *pkg = n_array_nth(ps->ordered_pkgs, i);
+        int           install;
         
         if (!pkg_is_marked(pkg))
             continue;
-
-        install = 0;
-        npkgs = rpm_is_pkg_installed(inst->db->dbh, pkg, &cmprc, &dbrec);
         
-        if (npkgs < 0) {
-            rc = 0;
-            
-        } else if (npkgs == 0) {
-            install = ((inst->flags & INSTS_FRESHEN) == 0);
-            
-        } else if (npkgs == 1) {
-            if (cmprc <= 0 && ((inst->instflags & PKGINST_FORCE) == 0)) {
-                if ((inst->flags & INSTS_FRESHEN) == 0)
-                    msg(0, "%s: %s version installed, skiped\n",
-                        pkg_snprintf_s(pkg), cmprc == 0 ? "equal" : "newer");
-            } else {
-                install = 1;
-            }
-            
-        } else {
-            log(LOGERR, "%s: multiple instances installed, give up\n",
-                pkg->name);
-            rc = 0;
-        }
-
-        if (!install) {
-            pkg_unmark(pkg);
-            
-        } else {
-            n_array_push(upg.install_pkgs, pkg);
-            if (npkgs == 1) {
-                n_array_push(upg.uninst_dbpkgs, dbpkg_new(dbrec.recno,
-                                                          dbrec.h, PKG_LDWHOLE));
-                msg(1, "%s obsoleted by %s\n",
-                    dbrec_snprintf_s(&dbrec), pkg_snprintf_s(pkg));
-            }
-            
-            upg.ninstall++;
-        }
-        dbrec_clean(&dbrec);
-    }
-    
-    n_array_sort(upg.uninst_dbpkgs);
-
-    if (upg.ninstall)
-        rc = pkgset_do_install(ps, &upg);
-
-    if (rc && uninstalled_pkgs) {
-        for (i=0; i<n_array_size(upg.uninst_dbpkgs); i++) {
-            struct dbpkg *dbpkg = n_array_nth(upg.uninst_dbpkgs, i);
-            struct pkg *pkg = dbpkg->pkg;
-            n_array_push(uninstalled_pkgs, pkg_new(pkg->name, pkg->epoch,
-                                                   pkg->ver, pkg->rel,
-                                                   pkg->arch, pkg->os,
-                                                   pkg->size, pkg->fsize,
-                                                   pkg->btime));
-            
+        install = is_installable(pkg, inst, 1);
+        
+        pkg_unmark(pkg);
+        pkg_clr_badreqs(pkg);
+        
+        if (install > 0) {
+            pkg_mark_i(pkg);
+            nmarked++;
         }
     }
     
+    if (nmarked == 0) 
+        goto l_end;
+
+    if (nmarked == 1)
+        inst->instflags &= ~INSTS_PARTITIONED;
     
+    n = 1;
+    pkgset_mark(ps, PS_MARK_OFF_ALL);
+    
+    for (i = 0; i < n_array_size(ps->ordered_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
+
+        if (!pkg_is_marked_i(pkg)) 
+            continue;
+
+        if (inst->instflags & INSTS_PARTITIONED) {
+            printf_c(PRCOLOR_YELLOW, "Installing set #%d\n", n++);
+            pkgdb_reopendb(upg.inst->db);
+        }
+        
+        mark_package(pkg, &upg);
+
+        if (inst->instflags & INSTS_PARTITIONED) {
+            mark_namegroup(pkg->pkgdir->pkgs, pkg, &upg);
+                
+            if (!install(ps, &upg, uninstalled_pkgs))
+                nerr++;
+            
+            pkgset_mark(ps, PS_MARK_OFF_ALL);
+            reset_upgrade_s(&upg);
+        }
+    }
+
+    
+    if ((inst->instflags & INSTS_PARTITIONED) == 0) 
+        nerr = !install(ps, &upg, uninstalled_pkgs);
+
+ l_end:
     destroy_upgrade_s(&upg);
     mem_info(1, "RETURN pkgset_install:");
-    return rc;
+
+    
+    return nerr == 0;
 }

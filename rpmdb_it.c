@@ -23,35 +23,39 @@
 
 int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
 {
+    int rpmtag = 0;
+
     switch (tag) {
         case RPMITER_NAME:
-            it->mi = rpmdbInitIterator(db, RPMTAG_NAME, arg, 0);
+            rpmtag = RPMTAG_NAME;
             break;
             
         case RPMITER_FILE:
-            it->mi = rpmdbInitIterator(db, RPMTAG_BASENAMES, arg, 0);
+            //rpmtag = RPMTAG_ORIGBASENAMES;
+            rpmtag = RPMTAG_BASENAMES;
             break;
 
         case RPMITER_CAP:
-            it->mi = rpmdbInitIterator(db, RPMTAG_PROVIDENAME, arg, 0);
+            rpmtag = RPMTAG_PROVIDENAME;
             break;
             
         case RPMITER_REQ:
-            it->mi = rpmdbInitIterator(db, RPMTAG_REQUIRENAME, arg, 0);
+            rpmtag = RPMTAG_REQUIRENAME;
             break;
             
         case RPMITER_CNFL:
-            it->mi = rpmdbInitIterator(db, RPMTAG_CONFLICTNAME, arg, 0);
+            rpmtag = RPMTAG_CONFLICTNAME;
             break;
             
         case RPMITER_OBSL:
-            it->mi = rpmdbInitIterator(db, RPMTAG_OBSOLETENAME, arg, 0);
+            rpmtag = RPMTAG_OBSOLETENAME;
             break;
             
         default:
             die();
     }
     
+    it->mi = rpmdbInitIterator(db, rpmtag, arg, 0);
     return rpmdbGetIteratorCount(it->mi);
 }
 

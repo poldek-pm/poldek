@@ -23,6 +23,15 @@ struct depdir {
 };
 
 static struct depdir *depdirs = NULL;
+#if 0
+static struct depdir not_depdirs[] = {
+    { "usr/share/doc", 0, 0, }, 
+    { "usr/share/info", 0, 0, }, 
+    { "usr/share/man", 0, 0, }, 
+    { "usr/share/locale", 0, 0, }, 
+    { "usr/src", 0, 0 }, 
+};
+#endif
 
 void init_depdirs(tn_array *dirnames) 
 {

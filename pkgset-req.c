@@ -217,7 +217,7 @@ void isort_pkgs(struct pkg *pkgs[], size_t size)
 
 	j = i;
 
-	while (j > 0 && pkg_cmp_name_evr(tmp, pkgs[j - 1]) > 0) {
+	while (j > 0 && pkg_cmp_name_evr(tmp, pkgs[j - 1]) < 0) {
 	    pkgs[j] = pkgs[j - 1];
 	    j--;
 	}
@@ -226,15 +226,23 @@ void isort_pkgs(struct pkg *pkgs[], size_t size)
     }
 }
 
+/*
+  Lookup req in ps
+  If found returns true and
+  - if req is rpmlib() requirement set npkgs to zero
+  - otherwise suspkgs is pointed to array of "suspect" packages,  
+    in npkgs suspkgs size is stored
+  
+*/   
 int psreq_lookup(struct pkgset *ps, struct capreq *req,
                  struct pkg ***suspkgs, struct pkg **pkgsbuf, int *npkgs)
 {
     const struct capreq_idx_ent *ent;
     char *reqname;
     int matched;
-            
-    reqname = capreq_name(req);
 
+
+    reqname = capreq_name(req);
     *npkgs = 0;
     matched = 0;
 
@@ -254,10 +262,11 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         }
     }
 
-    if (strncmp("rpmlib", capreq_name(req), 6) == 0 && !capreq_is_rpmlib(req))
-        n_assert(0);
+    /* disabled - well tested
+      if (strncmp("rpmlib", capreq_name(req), 6) == 0 && !capreq_is_rpmlib(req))
+         n_assert(0);
+    */ 
     
-
     if (capreq_is_rpmlib(req)) {
         struct capreq *cap;
 
@@ -266,7 +275,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
             
             for (i=0; i<*npkgs; i++) {
                 if (strcmp((*suspkgs)[i]->name, "rpm") != 0) {
-                    log(LOGERR, "%s: provides an rpmlib cap \"%s\"\n",
+                    log(LOGERR, "%s: provides rpmlib cap \"%s\"\n",
                         pkg_snprintf_s((*suspkgs)[i]), reqname);
                     matched = 0;
                 }
@@ -289,13 +298,12 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         *suspkgs = NULL;
         *npkgs = 0;
     }
-    
-    
+
     return matched;
 }
 
 
-int psreq_match_pkgs(struct pkg *pkg, struct capreq *req, int strict, 
+int psreq_match_pkgs(const struct pkg *pkg, struct capreq *req, int strict, 
                      struct pkg *suspkgs[], int npkgs,
                      struct pkg **matches, int *nmatched)
 {
@@ -538,26 +546,3 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
     return nmatch;
 }
 
-#if 0
-tn_array *pspkg_obsoletedby(struct pkgset *ps, struct pkg *pkg, int bymarked)
-{
-    const struct capreq_idx_ent *ent;
-    tn_array *obspkgs = NULL;
-    
-    if ((ent = capreq_idx_lookup(&ps->obs_idx, pkg->name))) {
-        int i;
-        for (i=0; i<ent->items; i++) {
-            if (pkg_obsoletes_pkg(ent->pkgs[i], pkg)) {
-                if (bymarked && !pkg_is_marked(pkg))
-                    continue;
-
-                if (obspkgs == NULL)
-                    obspkgs = n_array_new(2, NULL, pkg_cmp_name_evr);
-                n_array_push(obspkgs, pkg);
-            }
-        }
-    }
-    
-    return obspkgs;
-}
-#endif

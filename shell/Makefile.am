@@ -3,7 +3,6 @@
 INCLUDES = @TRURL_INCLUDE@
 lib_LIBRARIES    = libshell.a 
 libshell_a_SOURCES  = shell.c shell.h \
-		   term.c  term.h  \
 		   ls.c            \
 		   install.c       \
 		   uninstall.c     \

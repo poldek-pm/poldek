@@ -481,12 +481,12 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype)
 
 
 static 
-char *url_to_path(char *buf, size_t size, const char *url, int isdir) 
+int url_to_path(char *buf, size_t size, const char *url, int isdir) 
 {
     char *sl, *p = buf;
     size_t len = strlen(url) + 1;
 
-    memcpy(buf, url, len > size - 1 ? size - 1 : len);
+    memcpy(buf, url, len > size - 1 ? size - 1 : len); /* with '\0' */
     buf[size - 1] = '\0';
 
     if (isdir)
@@ -500,17 +500,17 @@ char *url_to_path(char *buf, size_t size, const char *url, int isdir)
         p++;
     }
     
-    return buf;
+    return len > size ? size - 1 : len - 1;
 }
 
 
-char *vfile_url_as_dirpath(char *buf, size_t size, const char *url) 
+int vfile_url_as_dirpath(char *buf, size_t size, const char *url) 
 {
     return url_to_path(buf, size, url, 1);
 }
 
 
-char *vfile_url_as_path(char *buf, size_t size, const char *url) 
+int vfile_url_as_path(char *buf, size_t size, const char *url) 
 {
     return url_to_path(buf, size, url, 0);
 }

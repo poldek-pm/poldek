@@ -53,20 +53,20 @@ void capreq_idx_destroy(struct capreq_idx *idx)
 }
 
 
-int capreq_idx_add(struct capreq_idx *idx, const char *prname,
+int capreq_idx_add(struct capreq_idx *idx, const char *capname,
                    struct pkg *pkg, int isprov)
 {
     void **p;
     struct capreq_idx_ent *ent;
             
-    if ((p = n_hash_get(idx->ht, prname)) == NULL) {
+    if ((p = n_hash_get(idx->ht, capname)) == NULL) {
         ent = malloc(sizeof(*ent) + sizeof(void*));
         ent->items = 1;
         ent->_size = 1;
         ent->pkgs[0] = pkg;
         p = obstack_alloc(&idx->obs, sizeof(ent));
         *p = ent;
-        n_hash_insert(idx->ht, prname, p);
+        n_hash_insert(idx->ht, capname, p);
         
     } else {
         int i;
@@ -77,7 +77,7 @@ int capreq_idx_add(struct capreq_idx *idx, const char *prname,
             for (i=0; i<ent->items; i++) 
                 if (ent->pkgs[i] == pkg) {
                     log(LOGWARN, "%s: redundant capability \"%s\"\n",
-                        pkg_snprintf_s(pkg), prname);
+                        pkg_snprintf_s(pkg), capname);
                     return 1;
                 }
         }
@@ -103,13 +103,18 @@ int capreq_idx_add(struct capreq_idx *idx, const char *prname,
     return 1;
 }
 
+void capreq_idx_remove(struct capreq_idx *idx, const char *capname) 
+{
+    n_hash_remove(idx->ht, capname);
+}
+
 const
 struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
-                                           const char *crname)
+                                         const char *capname)
 {
     void **p;
     
-    if ((p = n_hash_get(idx->ht, crname)) == NULL)
+    if ((p = n_hash_get(idx->ht, capname)) == NULL)
         return 0;
 
     return *p;

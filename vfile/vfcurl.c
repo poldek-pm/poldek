@@ -169,8 +169,8 @@ int vfile_curl_fetch(const char *dest, const char *url)
 
     rc = curl_easy_perform(curlh);
 
-    if (bar.state < 3)
-         vfile_msg_fn("\n");
+    if (bar.state == 2)
+         vfile_msg_fn("_\n");
 
     if (rc == CURLE_OK) {
         rc = 1;
@@ -249,7 +249,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         int prevblock = bar->prev / HASH_SIZE;
         int thisblock = bar->point / HASH_SIZE;
         while ( thisblock > prevblock ) {
-            vfile_msg_fn(".");
+            vfile_msg_fn("_.");
             prevblock++;
         }
         
@@ -277,7 +277,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
             k = n - bar->prev_n;
             memset(line, '.', k);
             line[k] = '\0';
-            vfile_msg_fn("%s", line);
+            vfile_msg_fn("_%s", line);
             
         } else {
             char total_unit = 'K', amount_unit = 'B';
@@ -311,7 +311,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
             
             snprintf(format, sizeof(format), "%%-%ds %%5.1f%%%% %%s", barwidth );
             snprintf(outline, sizeof(outline), format, line, percent, unit_line);
-            vfile_msg_fn("\r%s", outline);
+            vfile_msg_fn("_\r%s", outline);
         }
         bar->prev_n = n;
         if (total == bar->point)
@@ -323,9 +323,9 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
     
     if (total == bar->point && bar->state == 2) {
         if (bar->is_tty)
-            vfile_msg_fn("\n");
+            vfile_msg_fn("_\n");
         else
-            vfile_msg_fn(" Done\n");
+            vfile_msg_fn("_Done\n");
         bar->state = 3;
     }
 

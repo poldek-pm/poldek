@@ -53,24 +53,43 @@ void capreq_free(struct capreq *cr)
     capreq_free_fn(cr);
 }
 
-
+__inline__
 int capreq_cmp_name(struct capreq *cr1, struct capreq *cr2) 
 {
     return strcmp(capreq_name(cr1), capreq_name(cr2));
 }
 
+__inline__
 int capreq_cmp2name(struct capreq *cr1, const char *name)
 {
     return strcmp(capreq_name(cr1), name);
 }
 
+__inline__
+int capreq_strcmp_evr(struct capreq *cr1, struct capreq *cr2) 
+{
+    int rc;
 
-int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2) 
+    if ((rc = capreq_epoch(cr1) - capreq_epoch(cr2)))
+        return rc;
+        
+    if ((rc = strcmp(capreq_ver(cr1), capreq_ver(cr2))))
+        return rc;
+
+    if ((rc = strcmp(capreq_rel(cr1), capreq_rel(cr2))))
+        return rc;
+
+    return cr1->cr_flags - cr2->cr_flags;
+}
+
+__inline__
+int capreq_strcmp_name_evr(struct capreq *cr1, struct capreq *cr2) 
 {
     int rc;
 
     if ((rc = strcmp(capreq_name(cr1), capreq_name(cr2))))
         return rc;
+    return capreq_strcmp_evr(cr1, cr2);
     
     if ((rc = capreq_epoch(cr1) - capreq_epoch(cr2)))
         return rc;
@@ -368,6 +387,17 @@ struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags, int
         return NULL;
     
     return capreq_new(name, epoch, version, release, relflags, flags);
+}
+
+struct capreq *capreq_new_capreq(const struct capreq *cr) 
+{
+    uint8_t size;
+    struct capreq *new_cr;
+    
+    size = capreq_sizeof(cr);
+    new_cr = capreq_alloc_fn(size);
+    memcpy(new_cr, cr, size);
+    return new_cr;
 }
 
 int32_t capreq_epoch_(const struct capreq *cr)

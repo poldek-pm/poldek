@@ -95,10 +95,8 @@ int install_dist(struct pkgset *ps, struct inst_s *inst)
     else 
         inst->db = pkgdb_creat(inst->rootdir, NULL);
     
-    if (inst->db == NULL) {
-        log(LOGERR, "could not open database\n");
+    if (inst->db == NULL) 
         return 0;
-    }
     
     rc = pkgset_install_dist(ps, inst);
     pkgdb_free(inst->db);
@@ -114,10 +112,8 @@ int upgrade_dist(struct pkgset *ps, struct inst_s *inst)
         return 0;
     
     inst->db = pkgdb_open(inst->rootdir, NULL, O_RDONLY);
-    if (inst->db == NULL) {
-        log(LOGERR, "could not open database\n");
+    if (inst->db == NULL) 
         return 0;
-    }
     
     rc = pkgset_upgrade_dist(ps, inst);
     pkgdb_free(inst->db);
@@ -136,10 +132,8 @@ int install_pkgs(struct pkgset *ps, struct inst_s *inst, tn_array *unist_pkgs)
         return 0;
 
     inst->db = pkgdb_open(inst->rootdir, NULL, O_RDONLY);
-    if (inst->db == NULL) {
-        log(LOGERR, "could not open database\n");
+    if (inst->db == NULL) 
         return 0;
-    }
     
     rc = pkgset_install(ps, inst, unist_pkgs);
     pkgdb_free(inst->db);

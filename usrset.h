@@ -6,8 +6,12 @@
 #include <trurl/narray.h>
 #include "pkg.h"
 
-#define PKGDEF_OPTIONAL (1 << 0) 
-#define PKGDEF_VIRTUAL  (1 << 1)
+
+#define PKGDEF_REGNAME  (1 << 0) 
+#define PKGDEF_PATTERN  (1 << 1)
+#define PKGDEF_PKGFILE  (1 << 3)
+#define PKGDEF_OPTIONAL (1 << 4) 
+#define PKGDEF_VIRTUAL  (1 << 5)
 
 struct pkgdef {
     struct pkg *pkg;

@@ -23,10 +23,8 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/errno.h>
-#include <time.h>
 #include <signal.h>
-#include <termios.h>
-#include <sys/ioctl.h>
+#include <time.h>
 #include <argp.h>
 #include <fnmatch.h>
 #include <locale.h>
@@ -46,17 +44,9 @@
 #include "shell.h"
 #include "term.h"
 
-#define DEFAULT_TERM_WIDTH  80
-#define DEFAULT_TERM_HEIGHT 24
-
-static int term_width  = DEFAULT_TERM_WIDTH;
-static int term_height = DEFAULT_TERM_HEIGHT;
-
 static int gmt_off = 0;
 
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
-static volatile sig_atomic_t winch_reached = 0;
-
 
 static int argv_is_help(int argc, const char **argv);
 
@@ -714,7 +704,8 @@ static
 int cmd_help(struct cmdarg *cmdarg)
 {
     int i = 0;
-
+    
+    cmdarg = cmdarg;
     while (commands_tab[i]) {
         struct command *cmd = commands_tab[i++];
         char buf[256], *p;
@@ -762,7 +753,7 @@ void db_map_fn(unsigned int recno, void *header, void *shpkgs)
     shpkg->_ucnt = 0;
     n_array_push(shpkgs, shpkg);
     if (n_array_size(shpkgs) % 100 == 0)
-        msg(1, ".");
+        msg(1, "_.");
 }
 
 static tn_array *load_installed_packages(tn_array **shpkgsp) 
@@ -812,45 +803,6 @@ static void shell_end(int sig)
     if (histfile)
         write_history(histfile);
     done = 1;
-}
-
-
-
-static void sig_winch(int signo)
-{
-    n_assert(signo == SIGWINCH);
-    winch_reached = 1;
-    signal(SIGWINCH, sig_winch);
-}
-
-static void update_term_width(void) 
-{
-    struct winsize ws;
-
-    if (winch_reached) {
-        if (ioctl(1, TIOCGWINSZ, &ws) == 0) {
-            term_width = ws.ws_col;
-            term_height = ws.ws_row;
-
-        } else {
-            term_width  = DEFAULT_TERM_WIDTH;
-            term_height = DEFAULT_TERM_HEIGHT;
-        }
-
-        winch_reached = 0;
-    }
-}
-
-int get_term_width(void)
-{
-    update_term_width();
-    return term_width;
-}
-
-int get_term_height(void)
-{
-    update_term_width();
-    return term_height;
 }
 
 
@@ -918,8 +870,6 @@ static
 int init_shell_data(struct pkgset *ps, struct inst_s *inst, int skip_installed) 
 {
     int i;
-
-    argp_program_bug_address = NULL;
 
     setlocale (LC_ALL, "");
     setup_gmt_off();
@@ -992,20 +942,14 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
 {
     char *line, *s, *home;
     
-
-    if (!isatty(1)) {
+    
+    if (!isatty(fileno(stdout))) {
         log(LOGERR, "not a tty\n");
         return 0;
     }
-    
-    
-    init_shell_data(ps, inst, skip_installed);
-            
-    term_init();
-    winch_reached = 1;
-    get_term_width();
-    signal(SIGWINCH, sig_winch);
 
+    init_shell_data(ps, inst, skip_installed);
+    term_init();
     initialize_readline();
     histfile = NULL;
 

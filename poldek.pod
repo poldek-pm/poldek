@@ -223,7 +223,8 @@ with requirement "foo = 1.0" than poldek upgrade foo-devel to version
 
 Prevent packages listed from being upgraded if they are already installed.
 If option is not given packages to hold is taken from B<hold> configuration 
-option and $HOME/.poldek_hold.
+option and $HOME/.poldek_hold. Held package won't be upgraded with exeption
+if it be pointed directly by the user.
 
 =item B<-m, --mercy>
 

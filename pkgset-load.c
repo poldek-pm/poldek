@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
@@ -26,12 +26,41 @@
 #include "log.h"
 
 
-struct source *source_new(const char *path, const char *pkg_prefix)
+struct source *source_new(const char *pathspec, const char *pkg_prefix)
 {
     struct source *src;
     struct stat st;
+    const char *path, *p;
+    char *name, *q;
     int len;
 
+    p = pathspec;
+    while (*p && !isspace(*p))
+        p++;
+
+    if (isspace(*p)) {
+        path = p;
+        while (isspace(*path))
+            path++;
+        
+        len = p - pathspec;
+        name = alloca(len + 1);
+        memcpy(name, pathspec, len);
+        name[len] = '\0';
+        
+        if (*name == '[') 
+            name++;
+        
+        if ((q = strrchr(name, ']')))
+            *q = '\0';
+        if (*name == '\0')
+            name = "unnamed";
+        
+    } else {
+        path = pathspec;
+        name = "unnamed";
+    }
+    
     
     src = malloc(sizeof(*src));
     src->source_path = NULL;
@@ -59,16 +88,18 @@ struct source *source_new(const char *path, const char *pkg_prefix)
     if (pkg_prefix)
         src->pkg_prefix = strdup(pkg_prefix);
     src->ldmethod = PKGSET_LD_NIL;
-    
+    src->source_name = strdup(name);
+    DBGF("source_new %s -> %s\n", name, src->source_path);
     return src;
 }
 
 void source_free(struct source *src)
 {
-    
     free(src->source_path);
     if (src->pkg_prefix)
         free(src->pkg_prefix);
+    if (src->source_name)
+        free(src->source_name);
     free(src);
 }
 
@@ -97,7 +128,8 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         
         switch (src->ldmethod) {
             case PKGSET_LD_IDX:
-                pkgdir = pkgdir_new(src->source_path, src->pkg_prefix);
+                pkgdir = pkgdir_new(src->source_name, src->source_path,
+                                    src->pkg_prefix);
                 if (pkgdir != NULL) 
                     break;
                 
@@ -108,7 +140,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
                 
             case PKGSET_LD_DIR:
                 msg(1, "Loading %s...\n", src->source_path);
-                pkgdir = pkgdir_load_dir(src->source_path);
+                pkgdir = pkgdir_load_dir(src->source_name, src->source_path);
                 break;
                 
             

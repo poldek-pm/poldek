@@ -13,11 +13,10 @@ kernel
 FHS
 gcc 
 xemacs*
-vim-static
 xmms
 rpm
 poldek                  -100
-
+vim-static              -10
 # low priorities
 
 XFree86*                10

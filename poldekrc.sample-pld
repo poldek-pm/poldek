@@ -3,9 +3,9 @@
 # 
 
 source = ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
-#source = rsync://ftp.pld.org.pl/pld/test/i686/
-#source = /home/zenek/rpm/RPMS/
 #source = ftp://ftp.pld.org.pl/dists/ra/test/i686/
+#source = /home/zenek/rpm/RPMS/
+
 
 # NOTE: directory *must* exists 
 #cachedir = /var/tmp/poldek

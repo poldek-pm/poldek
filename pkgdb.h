@@ -16,9 +16,10 @@
 #define PKGINST_UPGRADE       (1 << 7) 
 
 struct pkgdb {
-    void *dbh;
-    char *path;
-    char *rootdir;
+    void    *dbh;
+    char    *path;
+    char    *rootdir;
+    mode_t  mode;
 };
 
 struct pkgdb *pkgdb_open(const char *rootdir, const char *path, mode_t mode);
@@ -26,6 +27,7 @@ struct pkgdb *pkgdb_open(const char *rootdir, const char *path, mode_t mode);
        pkgdb_open(path, rootdir, O_RDWR | O_CREAT | O_EXCL)
 
 void pkgdb_closedb(struct pkgdb *db);
+int pkgdb_reopendb(struct pkgdb *db);
 void pkgdb_free(struct pkgdb *db);
 
 int pkgdb_install(struct pkgdb *db, const char *path, unsigned flags);

@@ -47,7 +47,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
                  struct pkg ***suspkgs, struct pkg **pkgsbuf, int *npkgs);
 
 /* match suspkgs to req, store matches in matchedpkgs */
-int psreq_match_pkgs(struct pkg *pkg, struct capreq *req, int strict, 
+int psreq_match_pkgs(const struct pkg *pkg, struct capreq *req, int strict, 
                      struct pkg *suspkgs[], int npkgs,
                      struct pkg **matches, int *nmatched);
 

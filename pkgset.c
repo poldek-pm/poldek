@@ -15,6 +15,7 @@
 #include <string.h>
 #include <errno.h>
 #include <obstack.h>
+#include <fnmatch.h>
 
 #include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
@@ -327,6 +328,52 @@ int pkgset_index(struct pkgset *ps)
 
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
+
+#if 0                           /* testing sruff */
+        if (strcmp(pkg->name, "SVGATextMode") == 0) {
+            struct capreq *req = capreq_new_evr("ghostscript-fonts-std",
+                                                strdup("6.0-7"), REL_LT, CAPREQ_CNFL);
+            if (pkg->cnfls == NULL) 
+                pkg->cnfls = capreq_arr_new(2);
+
+            n_array_push(pkg->cnfls, req);
+        }
+
+        
+
+        if (strcmp(pkg->name, "libltdl-devel") == 0) {
+            struct capreq *req = capreq_new("postfix", 0, 0, 0, 0, CAPREQ_OBCNFL);
+            if (pkg->cnfls == NULL) 
+                pkg->cnfls = capreq_arr_new(2);
+            n_array_push(pkg->cnfls, req);
+        }
+
+        if (strcmp(pkg->name, "exim") == 0) {
+            struct capreq *req = capreq_new("wget", 0, 0, 0, 0, CAPREQ_REQ);
+           if (pkg->reqs == NULL) 
+                pkg->reqs = capreq_arr_new(2);
+
+            n_array_push(pkg->reqs, req);
+        }
+        
+        if (strcmp(pkg->name, "libxml") == 0) {
+            struct capreq *req = capreq_new("postfix", 0, 0, 0, 0, CAPREQ_OBCNFL);
+            if (pkg->cnfls == NULL) 
+                pkg->cnfls = capreq_arr_new(2);
+
+            n_array_push(pkg->cnfls, req);
+        }
+
+
+        if (strcmp(pkg->name, "wget") == 0) {
+            struct capreq *req = capreq_new("exim", 0, 0, 0, 0, CAPREQ_OBCNFL);
+            if (pkg->cnfls == NULL)
+                pkg->cnfls = capreq_arr_new(2);
+
+            n_array_push(pkg->cnfls, req);
+        }
+#endif
+
         if (i % 200 == 0) 
             msg(3, " %d..\n", i);
         if (pkg->caps)
@@ -616,33 +663,31 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
 }
 
 
-/*
-  User interface
- */
-static void mapfn_unmark_dep_marked(struct pkg *pkg) 
+static void mapfn_mark(struct pkg *pkg, unsigned *flags) 
 {
-    if (pkg_is_dep_marked(pkg))
+    n_assert(flags);
+    
+    if (*flags & PS_MARK_OFF_ALL) {
+        if ((*flags & PS_MARK_ON_INTERNAL) && pkg_is_marked(pkg))
+            pkg_mark_i(pkg);
         pkg_unmark(pkg);
-}
+        
+    } else if (*flags & PS_MARK_OFF_DEPS) {
+        if ((*flags & PS_MARK_ON_INTERNAL)) 
+            if (pkg_is_dep_marked(pkg))
+                pkg_mark_i(pkg);
 
-static void mapfn_unmark(struct pkg *pkg) 
-{
-    pkg_unmark(pkg);
-}
-
-
-void pkgset_unmark(struct pkgset *ps, unsigned flags) 
-{
-    if (ps->pkgs) {
-        if (flags == PS_MARK_UNMARK_ALL)
-            n_array_map(ps->pkgs, (tn_fn_map1) mapfn_unmark);
-        else if (flags == PS_MARK_UNMARK_DEPS) 
-            n_array_map(ps->pkgs, (tn_fn_map1) mapfn_unmark_dep_marked);
-        else {
-            n_assert(0);
-            die();
-        }
+        if (pkg_is_dep_marked(pkg))
+            pkg_unmark(pkg);
     }
+}
+
+
+void pkgset_mark(struct pkgset *ps, unsigned flags) 
+{
+    if (ps->pkgs) 
+        n_array_map_arg(ps->pkgs, (tn_fn_map2) mapfn_mark, &flags);
+    
 }
 
 
@@ -699,8 +744,8 @@ int pkg_match_pkgdef(const struct pkg *pkg, const struct pkgdef *pdef)
 }
 
 static
-int pkgset_mark_pkgdef(struct pkgset *ps, const struct pkgdef *pdef,
-                       int nodeps) 
+int pkgset_mark_pkgdef_exact(struct pkgset *ps, const struct pkgdef *pdef,
+                             int nodeps) 
 {
     int i, marked = 0, matched = 0;
     struct pkg *pkg, tmpkg, *findedpkg;
@@ -746,12 +791,54 @@ int pkgset_mark_pkgdef(struct pkgset *ps, const struct pkgdef *pdef,
 }
 
 
+static
+int pkgset_mark_pkgdefs_patterns(struct pkgset *ps, tn_array *pkgdefs,
+                                 int nodeps) 
+{
+    int i, j, nerr = 0;
+    int *matches;
+
+
+    matches = alloca(n_array_size(pkgdefs) * sizeof(*matches));
+    memset(matches, 0, n_array_size(pkgdefs) * sizeof(*matches));
+    
+    
+    for (i=0; i<n_array_size(ps->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ps->pkgs, i);
+        
+        for (j=0; j<n_array_size(pkgdefs); j++) {
+            struct pkgdef *pdef = n_array_nth(pkgdefs, j);
+            if (pdef->tflags != PKGDEF_PATTERN)
+                continue;
+
+            n_assert(pdef->pkg != NULL);
+            if (fnmatch(pdef->pkg->name, pkg->name, 0) == 0)
+                matches[j] += mark_package(pkg, nodeps);
+        }
+    }
+
+    for (j=0; j<n_array_size(pkgdefs); j++) {
+        struct pkgdef *pdef = n_array_nth(pkgdefs, j);
+        if (pdef->tflags != PKGDEF_PATTERN)
+            continue;
+        
+        if (matches[j] == 0) {
+            log(LOGERR, "mark: %s: no such package found\n", pdef->pkg->name);
+            nerr++;
+        }
+    }
+    
+    return nerr;
+}
+
+
+
 int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                        struct inst_s *inst, int markflag)
 {
-    int i, nerr = 0, nodeps;
-    
-    n_array_map(ps->pkgs, (tn_fn_map1)mapfn_unmark);
+    int i, nerr = 0, nodeps, npatterns = 0;
+
+    pkgset_mark(ps, PS_MARK_OFF_ALL);
 
     if (ps->flags & PSMODE_INSTALL_DIST)
         nodeps = inst->instflags & PKGINST_NODEPS;
@@ -761,7 +848,14 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     for (i=0; i<n_array_size(ups->pkgdefs); i++) {
         struct pkgdef *pdef = n_array_nth(ups->pkgdefs, i);
 
-        if (pdef->tflags & PKGDEF_VIRTUAL) { /* VIRTUAL implies OPTIONAL */
+        if (pdef->tflags & PKGDEF_REGNAME) { 
+            if (!pkgset_mark_pkgdef_exact(ps, pdef, nodeps))
+                nerr++;
+            
+        } else if (pdef->tflags & PKGDEF_PATTERN) {
+            npatterns++;
+
+        } else if (pdef->tflags & PKGDEF_VIRTUAL) { /* VIRTUAL implies OPTIONAL */
             tn_array *avpkgs;
                 
             if (pdef->pkg == NULL) {
@@ -792,7 +886,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                 } 
                     
                 if (pdef->pkg == NULL) {
-                    log(LOGWARN, "%s hasn't default, use %s\n",
+                    log(LOGWARN, "%s: missing default package, using %s\n",
                         pdef->virtname, pkg->name);
                         
                 } else {
@@ -808,9 +902,9 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                     
                     if (found == 0) {
                         pkg = n_array_nth(avpkgs, 0);
-                        log(LOGWARN, "%s's default %s not found, "
-                            "use %s\n", pdef->virtname,
-                            pdef->pkg->name, pkg->name);
+                        log(LOGWARN, "%s: default package %s not found, "
+                            "using %s\n", pdef->virtname, pdef->pkg->name,
+                            pkg->name);
                     }
                 } 
                             
@@ -823,13 +917,15 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
             
         } else if (pdef->tflags & PKGDEF_OPTIONAL) {
             if (inst->ask_fn && inst->ask_fn(pdef->pkg->name, NULL))
-                if (!pkgset_mark_pkgdef(ps, pdef, nodeps))
+                if (!pkgset_mark_pkgdef_exact(ps, pdef, nodeps))
                     nerr++;
             
-        } else if (!pkgset_mark_pkgdef(ps, pdef, nodeps))
-            nerr++;
+        }
+        
     }
-    
+
+    if (npatterns)
+        nerr += pkgset_mark_pkgdefs_patterns(ps, ups->pkgdefs, nodeps);
     
     if (markflag == MARK_DEPS) {
         msg(1, "\nProcessing dependencies...\n");
@@ -837,7 +933,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
             nerr++;
         
         if (nerr) {
-            n_array_map(ps->pkgs, (tn_fn_map1)mapfn_unmark);
+            pkgset_mark(ps, PS_MARK_OFF_ALL);
             log(LOGERR, "Buggy package set.\n");
             
         } else {
@@ -871,3 +967,24 @@ tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname)
     return pkgs;
 }
 
+int pkgset_dump_marked_fqpns(struct pkgset *ps, const char *dumpfile)
+{
+    int i;
+    FILE *stream = stdout;
+
+    if (dumpfile) {
+        if ((stream = fopen(dumpfile, "w")) == NULL) {
+            log(LOGERR, "fopen %s: %m\n", dumpfile);
+            return 0;
+        }
+        fprintf(stream, "# Packages to install (in the right order)\n");
+    }
+    
+    for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
+        if (pkg_is_marked(pkg))
+            fprintf(stream, "%s\n", pkg_filename_s(pkg));
+    }
+    
+    return 1;
+}

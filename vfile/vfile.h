@@ -88,8 +88,8 @@ void vfile_close(struct vfile *vf);
 #define VFURL_CDROM   (1 << 6)
 
 int vfile_url_type(const char *url);
-char *vfile_url_as_dirpath(char *buf, size_t size, const char *url);
-char *vfile_url_as_path(char *buf, size_t size, const char *url);
+int vfile_url_as_dirpath(char *buf, size_t size, const char *url);
+int vfile_url_as_path(char *buf, size_t size, const char *url);
 int vfile_valid_path(const char *path);
 int vfile_mkdir(const char *path);
 

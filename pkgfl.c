@@ -89,7 +89,6 @@ void pkgflmodule_destroy(void)
     }
 }
 
-#if 1
 void *pkgflmodule_allocator_push_mark(void) 
 {
     if (flalloct->cur_mark) 
@@ -98,6 +97,7 @@ void *pkgflmodule_allocator_push_mark(void)
     flalloct->cur_mark = malloc(sizeof(*flalloct->cur_mark));
     flalloct->cur_mark->ptr = obstack_alloc(&flalloct->ob, 1);
     flalloct->cur_mark->dirs = n_array_new(16, NULL, NULL);
+    DBGF("PUSH %p\n", flalloct->cur_mark);
     return flalloct->cur_mark;
 }
 
@@ -105,7 +105,8 @@ void pkgflmodule_allocator_pop_mark(void *ptr)
 {
     int i;
     struct flmark *mark = ptr;
-
+    
+    DBGF("POP  %p\n", mark);
     n_assert(mark == flalloct->cur_mark);
     
     for (i=0; i<n_array_size(mark->dirs); i++) 
@@ -120,7 +121,6 @@ void pkgflmodule_allocator_pop_mark(void *ptr)
     obstack_free(&flalloct->ob, mark->ptr);
     free(mark);
 }
-#endif
 
 __inline__
 static void *pkgfl_alloc(size_t size) 
@@ -195,7 +195,7 @@ int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,
 int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict)
 {
     register int cmprc;
-
+    
     if ((cmprc = (f1->mode - f2->mode)) == 0 &&
         !S_ISDIR(f1->mode) && !S_ISDIR(f1->mode)) 
         cmprc = f1->size - f2->size;
