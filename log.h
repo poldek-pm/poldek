@@ -2,6 +2,10 @@
 #ifndef POLDEK_LOG_H
 #define POLDEK_LOG_H
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -42,13 +46,12 @@ void log(int pri, const char *fmt, ...);
 
 void log_set_vprintf(int (*vprintffn)(const char *format, va_list args));
 
-
-#ifndef DBG
+#ifdef ENABLE_TRACE
+# define DBGMSG_F(fmt, args...) fprintf(stderr, "%s: " fmt, __FUNCTION__ , ## args)
+# define DBGMSG(fmt, args...)   fprintf(stderr, fmt, ## args)
+#else 
 # define DBGMSG_F(fmt, args...)  ((void) 0)
 # define DBGMSG(fmt, args...)    ((void) 0)
-#else
-# define DBGMSG_F(fmt, args...) printf("%s: " fmt, __FUNCTION__ , ## args)
-# define DBGMSG(fmt, args...) printf(fmt, ## args)
-#endif                                  
-
 #endif
+
+#endif /* POLDEK_LOG_H */
