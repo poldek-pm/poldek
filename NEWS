@@ -1,9 +1,5 @@
 0.17.3 (not released yet)
 
-* new "type=[pidx|dir|hdrl]" source option lets define source 
-  type in configuration file. Needed to distinguish "hdlist" 
-  from "native" sources. 
-
 * support for "hdlist" sources in which information about packages 
   is taken from file with raw RPM package headers. This format
   is widely supported by RPM based distributions, so they are usable 
@@ -12,6 +8,11 @@
   on RedHat box just do: 
 
   $ poldek --conf=poldekrc.sample-redhat-hdlist  
+
+* new "type=[pidx|dir|hdrl]" source option lets define source type in
+  configuration file. Needed to distinguish "hdlist" ('hdrl' type) from
+  "native" sources. Cmdline options: --source for 'pidx', --sdir for
+  'dir' and  --shdrl for 'hdrl'.
 
 * added simple HTTP client which it is used for HTTP downloads;
   cURL backend is not compiled by default.

@@ -2,6 +2,8 @@
 
 * mis 2002/04/07
 - vhttp: support for HTTP redirects and auth
+- don't load full file list from db if "depdirs"
+  is loaded from local db.
 
 * mis 2002/03/14
 - more compact install_summary()
