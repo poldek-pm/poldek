@@ -184,7 +184,6 @@ int response_complete(struct ftp_response *resp)
                 return 1;
                 break;
                 
-            case ST_RESP_NEWL:
 	    case ST_RESP_EMPTY:
                 if (isdigit(c)) {
                     resp->code_len++;
@@ -196,6 +195,23 @@ int response_complete(struct ftp_response *resp)
                     resp->state = ST_RESP_BAD;
                 }
                 break;
+
+            case ST_RESP_NEWL:
+                if (isdigit(c)) {
+                    resp->code_len++;
+                    resp->state = ST_RESP_CODE;
+                    
+                } else if (isspace(c)) {
+                    resp->code_len = 0;
+                    resp->state = ST_RESP_MARKLINE;
+                    
+                } else {
+                    vftp_set_err(EIO, _("response parse error: %s"),
+                                 (char*)n_buf_ptr(resp->buf));
+                    resp->state = ST_RESP_BAD;
+                }
+                break;
+                
 
             case ST_RESP_CODE:
                 if (isdigit(c)) {
@@ -493,7 +509,7 @@ static int to_connect(const char *host, const char *service)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-    if (*vftp_verbose > 2)
+    if (*vftp_verbose > 1)
         vftp_msg_fn("Connecting to %s:%s...\n", host, service);
 
     if ((n = getaddrinfo(host, service, &hints, &res)) != 0) {
@@ -619,9 +635,6 @@ struct ftpcn *ftpcn_new(const char *host, int port,
     if (port <= 0)
         port = IPPORT_FTP;
 
-    if (*vftp_verbose > 1)
-        vftp_msg_fn(_("Connecting to %s:%d...\n"), host, port);
-    
     if ((sockfd = ftp_open(host, port)) > 0) {
         cn = ftpcn_malloc();
         cn->sockfd = sockfd;
