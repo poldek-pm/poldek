@@ -125,7 +125,7 @@
     </verb></tscreen>
 <p>      
 Local repositories is usable to poldek directly, without existing packages.dir.*,
-although this is much slower. 
+however this is much slower. 
 </p>
 
     <sect1> Use the program 
