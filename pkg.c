@@ -444,9 +444,9 @@ static void promote_epoch_warn(int verbose_level,
              "epoch as %s)\n", title0, p0, p1);
 }
 
-__inline__
-int cap_match_req(const struct capreq *cap, const struct capreq *req,
-                  int strict)
+
+int cap_xmatch_req(const struct capreq *cap, const struct capreq *req,
+                   unsigned flags)
 {
     register int cmprc = 0, evr = 0;
 
@@ -459,23 +459,26 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
         return 1;
 
     if (capreq_has_epoch(cap) || capreq_has_epoch(req)) {
-        int promote = 0;
+        int do_promote = 0;
+
+        if (poldek_conf_PROMOTE_EPOCH)
+            flags |= POLDEK_MA_PROMOTE_EPOCH;
         
-        if (poldek_conf_PROMOTE_EPOCH) {
-            if (!capreq_has_epoch(req)) {
+        if (flags & POLDEK_MA_PROMOTE_EPOCH) {
+            if (!capreq_has_epoch(req) && (flags & POLDEK_MA_PROMOTE_REQEPOCH)){
                 promote_epoch_warn(1, "req", capreq_snprintf_s(req),
                                    capreq_snprintf_s0(cap));
-                promote = 1;
+                do_promote = 1;
             }
 
-            if (!capreq_has_epoch(cap)) {
+            if (!capreq_has_epoch(cap) && (flags & POLDEK_MA_PROMOTE_CAPEPOCH)){
                 promote_epoch_warn(1, "cap", capreq_snprintf_s(cap),
                                    capreq_snprintf_s0(req));
-                promote = 1;
+                do_promote = 1;
             }
         }
         
-        if (promote) {
+        if (do_promote) {
             cmprc = 0;
             
         } else {
@@ -507,7 +510,7 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
     
     if (capreq_has_ver(req)) {
         if (!capreq_has_ver(cap))
-            return strict == 0;
+            return (flags & POLDEK_MA_PROMOTE_VERSION);
         
         cmprc = pkg_version_compare(capreq_ver(cap), capreq_ver(req));
         if (cmprc != 0)
@@ -517,7 +520,7 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
 
     if (capreq_has_rel(req)) {
         if (!capreq_has_rel(cap))
-            return strict == 0;
+            return (flags & POLDEK_MA_PROMOTE_VERSION);
         
         cmprc = pkg_version_compare(capreq_rel(cap), capreq_rel(req));
         if (cmprc != 0)
@@ -527,6 +530,20 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
     
     return evr ? rel_match(cmprc, req) : 1;
 }
+
+#if 0                           /* TODO: strict => ma_flags  */
+int cap_match_req(const struct capreq *cap, const struct capreq *req)
+{
+    return cap_match_reqX(cap, req, 0);
+}
+#endif
+
+int cap_match_req(const struct capreq *cap, const struct capreq *req,
+                  int strict)
+{
+    return cap_xmatch_req(cap, req, strict ? 0 : POLDEK_MA_PROMOTE_VERSION);
+}
+
 
 static inline 
 int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,

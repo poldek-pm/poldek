@@ -149,6 +149,11 @@ int pkg_arch_score(const struct pkg *pkg);
 const char *pkg_os(const struct pkg *pkg);
 int pkg_set_os(struct pkg *pkg, const char *os);
 
+#define POLDEK_MA_PROMOTE_VERSION    (1 << 0) /* old strict = 0 */
+#define POLDEK_MA_PROMOTE_REQEPOCH   (1 << 2)
+#define POLDEK_MA_PROMOTE_CAPEPOCH   (1 << 3)
+#define POLDEK_MA_PROMOTE_EPOCH      ((1 << 2) | (1 << 3))
+
 /* look up into package caps only */
 int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
                        int strict);
@@ -156,8 +161,13 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
 int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req,
                       int strict);
 
+
+int cap_xmatch_req(const struct capreq *cap, const struct capreq *req,
+                   unsigned ma_flags);
+
 int cap_match_req(const struct capreq *cap, const struct capreq *req,
                   int strict);
+
 
 /* CAUTION: looks into NEVR and caps only */
 int pkg_match_req(const struct pkg *pkg, const struct capreq *req,

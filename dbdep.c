@@ -81,8 +81,8 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
     //    printf("db_deps_add %s\n", capreq_snprintf_s(req));
     //}
     
-    DBGF("%s from %s stby %s [%s]\n", capreq_snprintf_s(req),
-         pkg_snprintf_s(pkg), spkg ? pkg_snprintf_s0(spkg) : "NULL",
+    DBGF("%s requiredby=%s satisfiedby=%s [type=%s]\n", capreq_snprintf_s(req),
+         pkg_snprintf_s(pkg), spkg ? pkg_snprintf_s0(spkg) : "NONE",
          (flags & DBDEP_FOREIGN) ? "foreign" :
          (flags & DBDEP_DBSATISFIED) ? "db" : "UNKNOWN");
 
@@ -148,8 +148,9 @@ void db_deps_remove_cap(tn_hash *db_deph, struct pkg *pkg,
     
     n_list_iterator_start(l, &it);
     while ((dep = n_list_iterator_get(&it))) {
-        DBGF("rmcap? %s (%s) %s\n", capreq_snprintf_s(cap),
-                 capreq_snprintf_s0(dep->req), pkg_snprintf_s(pkg));
+        DBGF("- %s (req=%s, pkg=%s)\n", capreq_snprintf_s(cap),
+             dep->req ? capreq_snprintf_s0(dep->req) : "none", pkg_snprintf_s(pkg));
+        
         if (dep->req && cap_match_req(cap, dep->req, 1)) {
             int i, i_del = -1;
 
@@ -330,7 +331,7 @@ struct db_dep *provides_cap(tn_hash *db_deph, struct capreq *cap,
 
             if (flags & DBDEP_PROVIDES_PROVIDES) {
                 matched = cap_match_req(dep->req, cap, 1);
-                DBGF("cap_match_req %s %s = %d\n", capreq_snprintf_s(dep->req),
+                DBGF("cap_match_req(%s, %s) = %d\n", capreq_snprintf_s(dep->req),
                      capreq_snprintf_s0(cap), matched);
                 //if (strcmp(capreq_name(cap), "libglade2-devel") == 0) {
                 //    printf("cap_match_req %s %s = %d, %s\n", capreq_snprintf_s(dep->req),
@@ -342,9 +343,9 @@ struct db_dep *provides_cap(tn_hash *db_deph, struct capreq *cap,
                     
                 
             } else if (flags & DBDEP_PROVIDES_CONTAINS) {
-                matched = cap_match_req(cap, dep->req, 1);
-                DBGF("cap_match_req %s %s = %d\n", capreq_snprintf_s(cap),
-                     capreq_snprintf_s(dep->req), matched);
+                matched = cap_xmatch_req(cap, dep->req, POLDEK_MA_PROMOTE_REQEPOCH);
+                DBGF("cap_match_req(%s, %s) = %d\n", capreq_snprintf_s(cap),
+                     capreq_snprintf_s0(dep->req), matched);
             } else
                 n_assert(0);
             
