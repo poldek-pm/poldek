@@ -19,6 +19,8 @@
 #include <fnmatch.h>
 
 #include <trurl/nhash.h>
+#include <trurl/narray.h>
+#include <trurl/nstr.h>
 
 #include "log.h"
 #include "conf.h"
@@ -26,36 +28,35 @@
 #define TYPE_STR      (1 << 0)
 #define TYPE_BOOL     (1 << 1)
 #define TYPE_LIST     (1 << 2)
-#define TYPE_ISMULTI  (1 << 3)
+#define TYPE_MULTI    (1 << 3)
 
 struct tag {
     char *name;
-    int  is_mutliple;
-    int  type;
+    int  flags;
 };
 
 static struct tag valid_tags[] = {
-    { "source",       1, TYPE_STR },
-    { "source?*",     0, TYPE_STR },
-    { "prefix?*",     0, TYPE_STR },
-    { "cachedir",     0, TYPE_STR },
-    { "ftp_http_get", 0, TYPE_STR },
-    { "ftp_get",      0, TYPE_STR },
-    { "http_get",     0, TYPE_STR },
-    { "https_get",    0, TYPE_STR },
-    { "rsync_get",    0, TYPE_STR },
-    { "cdrom_get",    0, TYPE_STR },
-    { "ssh_get",      0, TYPE_STR },
-    { "ignore_req",   1, TYPE_STR },
-    { "ignore_pkg",   1, TYPE_STR },
-    { "rpmdef",       1, TYPE_STR },
-    { "rpm_install_opt", 0, TYPE_STR },
-    { "rpm_uninstall_opt", 0, TYPE_STR },
-    { "follow",       0, TYPE_BOOL },
-    { "greedy",       0, TYPE_BOOL }, 
-    { "use_sudo",     0, TYPE_BOOL },
-    { "hold",         1, TYPE_STR | TYPE_LIST },
-    {  NULL,          0, 0 }, 
+    { "source",        TYPE_STR | TYPE_MULTI },
+    { "source?*",      TYPE_STR },
+    { "prefix?*",      TYPE_STR },
+    { "cachedir",      TYPE_STR },
+    { "ftp_http_get",  TYPE_STR },
+    { "ftp_get",       TYPE_STR },
+    { "http_get",      TYPE_STR },
+    { "https_get",     TYPE_STR },
+    { "rsync_get",     TYPE_STR },
+    { "cdrom_get",     TYPE_STR },
+    { "ssh_get",       TYPE_STR },
+    { "ignore_req",    TYPE_STR | TYPE_MULTI },
+    { "ignore_pkg",    TYPE_STR | TYPE_MULTI },
+    { "rpmdef",        TYPE_STR | TYPE_MULTI },
+    { "rpm_install_opt",  TYPE_STR },
+    { "rpm_uninstall_opt",  TYPE_STR },
+    { "follow",        TYPE_BOOL },
+    { "greedy",        TYPE_BOOL }, 
+    { "use_sudo",      TYPE_BOOL },
+    { "hold",          TYPE_STR | TYPE_LIST | TYPE_MULTI },
+    {  NULL,           0 }, 
 };
 
 #define COPT_MULTIPLE (1 << 0)
@@ -89,15 +90,42 @@ void copt_free(struct copt *opt)
     free(opt);
 }
 
-#if 0
-static char *getvlist(char *vstr, const char *path, int nline) 
+static int getvlist(tn_hash *ht, char *name, char *vstr, const char *path, int nline) 
 {
     const char **v, **p;
+    struct copt *opt;
+
     
-    p = v = n_str_tokl(vstr, " \t");
-    return p;
+    p = v = n_str_tokl(vstr, " \t,");
+    if (v == NULL)
+        return 0;
+
+    if (n_hash_exists(ht, name)) {
+        opt = n_hash_get(ht, name);
+        
+    } else {
+        opt = copt_new(name);
+        n_hash_insert(ht, opt->name, opt);
+    }
+
+    if (opt->vals == NULL) 
+        opt->vals = n_array_new(2, free, (tn_fn_cmp)strcmp);
+    
+    while (*p) {
+        if (opt->val == NULL) {
+            opt->val = strdup(*p);
+        } else {
+            if (n_array_size(opt->vals) == 0) {
+                opt->flags |= COPT_MULTIPLE;
+                n_array_push(opt->vals, strdup(opt->val)); 
+            }
+            n_array_push(opt->vals, strdup(*p));
+        }
+        p++;
+    }
+    n_str_tokl_free(v);
+    return 1;
 }
-#endif
 
 static char *getv(char *vstr, const char *path, int nline) 
 {
@@ -144,17 +172,17 @@ static char *getv(char *vstr, const char *path, int nline)
     return p;
 }
 
-static int is_multi_tag(const char *key) 
+static int is_tag(const char *key, unsigned flags) 
 {
     int i = 0;
     
     while (valid_tags[i].name) {
         if (strcmp(valid_tags[i].name, key) == 0)
-            return valid_tags[i].is_mutliple;
+            return valid_tags[i].flags & flags;
         
             
         if (fnmatch(valid_tags[i++].name, key, 0) == 0) {
-            return valid_tags[i].is_mutliple;
+            return valid_tags[i].flags & flags;
             break;
         }
     }
@@ -200,7 +228,7 @@ tn_hash *ldconf(const char *path)
         char *p = buf;
         char *name, *val;
         struct copt *opt;
-        int is_mutliple;
+        int is_mutliple, is_list;
         
         
         nline++;
@@ -209,7 +237,7 @@ tn_hash *ldconf(const char *path)
 
         if (*p == '#' || *p == '\n' || *p == '\0')
             continue;
-
+        
         name = p;
 
         while (isalnum(*p) || *p == '_')
@@ -229,6 +257,15 @@ tn_hash *ldconf(const char *path)
             continue;
         }
         
+        if ((is_list = is_tag(name, TYPE_LIST)) < 0) {
+            log(LOGWARN, "%s:%d unknown option '%s'\n", path, nline, name);
+            continue;
+            
+        } else if (is_list) {
+            getvlist(ht, name, ++p, path, nline);
+            continue;
+        }
+        
         p++;
         val = getv(p, path, nline);
         if (val == NULL) {
@@ -236,7 +273,7 @@ tn_hash *ldconf(const char *path)
             continue;
         }
 
-        if ((is_mutliple = is_multi_tag(name)) < 0) {
+        if ((is_mutliple = is_tag(name, TYPE_MULTI)) < 0) {
             log(LOGWARN, "%s:%d unknown option '%s'\n", path, nline, name);
             continue;
         }

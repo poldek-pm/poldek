@@ -855,6 +855,18 @@ void parse_options(int argc, char **argv)
         }
     }
 
+    if ((v = conf_get(htcnf, "hold", &is_multi))) {
+        tn_array *holds = NULL;
+        
+        if (is_multi) {
+            holds = conf_get_multi(htcnf, "hold");
+            while (n_array_size(holds)) 
+                n_array_push(args.inst.hold_pkgnames, n_array_shift(holds));
+            
+        } else {
+            n_array_push(args.inst.hold_pkgnames, v);
+        }
+    }
     
     vfile_verbose = &verbose;
     n_assert(args.inst.cachedir); 
