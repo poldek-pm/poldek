@@ -171,7 +171,6 @@ static
 struct copt *copt_new(const char *name)
 {
     struct copt *opt;
-
     opt = n_malloc(sizeof(*opt) + strlen(name) + 1);
     strcpy(opt->name, name);
     opt->flags = 0;
@@ -1045,10 +1044,25 @@ char *poldek_conf_get(const tn_hash *htconf, const char *name, int *is_multi)
     struct copt *opt;
     char *v = NULL;
 
+    n_assert(htconf);
+
     if (is_multi)
         *is_multi = 0;
     
-    if (htconf && (opt = n_hash_get(htconf, name))) {
+    if ((opt = n_hash_get(htconf, name)) == NULL && strchr(name, '_')) {
+        char *s, *p;
+
+        n_strdupap(name, &s);
+        p = s;
+        while (*p) {
+            if (*p == '_')
+                *p = ' ';
+            p++;
+        }
+        opt = n_hash_get(htconf, s);
+    }
+
+    if (opt) {
         v = opt->val;
         if (is_multi)
             *is_multi = (opt->flags & COPT_MULTIPLE);
