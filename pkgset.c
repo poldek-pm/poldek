@@ -136,7 +136,7 @@ void pkgsetmodule_destroy(void)
 
 void inst_s_init(struct inst_s *inst)
 {
-    inst->flags = INSTS_FOLLOW | INSTS_OBSOLETES;
+    inst->flags = INSTS_FOLLOW;
     inst->db = NULL;
     
     inst->rootdir = NULL;

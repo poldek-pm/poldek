@@ -64,7 +64,7 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_NOHOLD          (1 << 19)  /* --nohold  */
 #define INSTS_NOIGNORE        (1 << 20)  /* --noignore  */
 #define INSTS_GREEDY          (1 << 21)  /* --greedy */
-#define INSTS_OBSOLETES       (1 << 22)  /* --noobsoletes */
+#define INSTS_OBSOLETES       (1 << 21)  /* the same */
 #define INSTS_KEEP_DOWNLOADS  (1 << 25) /* keep_downloads = yes */
 #define INSTS_PARTICLE        (1 << 26) /* particle_install = yes */
 #define INSTS_CHECKSIG        (1 << 27) /* not implemented yet */
