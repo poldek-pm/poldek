@@ -32,6 +32,7 @@ struct poldek_ctx {
 //    struct pkgdir  *dbpkgdir;   /* db packages        */
     tn_hash        *_cnf;       /* runtime config */
     unsigned       _iflags;     /* internal flags */
+    int            _refcnt;
 };
 
 int poldek__is_setup_done(struct poldek_ctx *ctx);

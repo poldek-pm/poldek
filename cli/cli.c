@@ -454,8 +454,9 @@ static
 int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
 {
     n_assert (cctx->ctx == NULL);
+
     cctx->_flags = 0;
-    cctx->ctx = ctx;
+    cctx->ctx = poldek_link(ctx);
     cctx->pkgs_available = NULL;
     cctx->pkgs_installed = NULL;
     cctx->_dent_na = n_alloc_new(32, TN_ALLOC_OBSTACK);
@@ -495,7 +496,9 @@ void poclidek_destroy(struct poclidek_ctx *cctx)
 
     n_alloc_free(cctx->_dent_na);
     n_array_free(cctx->commands);
-    
+
+    n_assert(cctx->ctx);
+    poldek_free(cctx->ctx);
     memset(cctx, 0, sizeof(*cctx));
 }
 

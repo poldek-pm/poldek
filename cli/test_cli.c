@@ -53,11 +53,13 @@ int test_02(void)
     
     cmd = poclidek_rcmd_new(cctx, NULL);
     if (poclidek_rcmd_execline(cmd, "ls xmms*")) {
+        tn_array *pkgs;
         tn_buf  *buf;
         tn_buf_it it;
         char *p, line[1024];
         int len, n = 0;
 
+        pkgs = poclidek_rcmd_get_packages(cmd);
         buf = poclidek_rcmd_get_buf(cmd);
         n_buf_it_init(&it, buf);
         n = 0;
@@ -71,7 +73,6 @@ int test_02(void)
         }
         
     }
-    
     poclidek_rcmd_free(cmd);
     
     
@@ -85,5 +86,6 @@ int main(int argc, char *argv[])
 {
     setlocale(LC_MESSAGES, "");
     setlocale(LC_CTYPE, "");
+    poldeklib_init();
     test_01();
 }

@@ -787,6 +787,11 @@ void poldek_destroy(struct poldek_ctx *ctx)
 
 void poldek_free(struct poldek_ctx *ctx)
 {
+    if (ctx->_refcnt > 0) {
+        ctx->_refcnt--;
+        return;
+    }
+    
     poldek_destroy(ctx);
     free(ctx);
 }
@@ -972,6 +977,13 @@ struct poldek_ctx *poldek_new(unsigned flags)
     free(ctx);
     return NULL;
 }
+
+struct poldek_ctx *poldek_link(struct poldek_ctx *ctx)
+{
+    ctx->_refcnt++;
+    return ctx;
+}
+
 
 int poldek_setup_cachedir(struct poldek_ctx *ctx)
 {

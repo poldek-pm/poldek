@@ -73,7 +73,7 @@ static struct argp_option options[] = {
      OPT_GID },
 {"fresh", 'F', 0, 0, N_("Upgrade packages, but only if an earlier version "
                         "currently exists"), OPT_GID },
-{"nofollow", 'N', 0, 0, N_("Don't install packages required by "
+{"nofollow", OPT_INST_NOFOLLOW, 0, 0, N_("Don't install packages required by "
                            "selected ones"), OPT_GID },
 
 {"follow", OPT_INST_FOLLOW, "[on|off]", OPTION_ARG_OPTIONAL,

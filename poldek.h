@@ -16,6 +16,7 @@ void poldeklib_destroy(void);
 struct poldek_ctx;
 struct poldek_ctx *poldek_new(unsigned flags);
 void poldek_free(struct poldek_ctx *ctx);
+struct poldek_ctx *poldek_link(struct poldek_ctx *ctx);
 
 #define POLDEK_CONF_OPT             0
 #define POLDEK_CONF_CACHEDIR        3 
