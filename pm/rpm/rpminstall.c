@@ -53,7 +53,7 @@
 #include "pkgset.h"
 #include "poldek.h"
 #include "misc.h"
-
+#include "pm_rpm.h"
 
 #ifdef HAVE_OPENPTY
 
@@ -118,7 +118,7 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
     return;
 }
 
-int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
+int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_level)
 {
     struct p_open_st pst;
     int n, ec;
@@ -168,8 +168,7 @@ int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
 }
 
 #else  /* HAVE_OPENPTY */
-
-int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
+int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_level)
 {
     int rc, st, n;
     pid_t pid;
@@ -225,34 +224,34 @@ int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
 
 #endif /* HAVE_FORKPTY */
 
-
-int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts) 
+int pm_rpm_packages_install(void *pm_rpm,
+                            tn_array *pkgs, tn_array *pkgs_toremove,
+                            struct poldek_ts *ts) 
 {
+    struct pm_rpm *pm = pm_rpm;
     char **argv;
     char *cmd;
     int i, n, nopts = 0, ec, nsignerr = 0;
     int nv = verbose;
+
+    pkgs_toremove = pkgs_toremove;
     
     n = 128 + n_array_size(pkgs);
     argv = alloca((n + 1) * sizeof(*argv));
     argv[n] = NULL;
     n = 0;
-
-    
-    if (!packages_fetch(pkgs, ts->cachedir, 0))
-        return 0;
     
     if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
-        cmd = "/bin/rpm";
+        cmd = pm->rpm;
         argv[n++] = "rpm";
         
     } else if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0) {
-        cmd = "/usr/bin/sudo";
+        cmd = pm->sudo;
         argv[n++] = "sudo";
-        argv[n++] = "/bin/rpm";
+        argv[n++] = pm->rpm;
         
     } else {
-        cmd = "/bin/rpm";
+        cmd = pm->rpm;
         argv[n++] = "rpm";
     }
     
@@ -320,14 +319,14 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
     nopts = n;
     for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
-        if (pkg_is_marked(pkg)) {
+        if (pkg_is_marked(ts->pms, pkg)) {
             char path[PATH_MAX], *s, *name;
             char *pkgpath = pkg->pkgdir->path;
+            unsigned vrfyflags;
             int len;
             
             
             name = pkg_filename_s(pkg);
-            
             if (vf_url_type(pkgpath) == VFURL_PATH) {
                 len = n_snprintf(path, sizeof(path), "%s/%s", pkgpath, name);
             
@@ -336,11 +335,17 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
                 
                 vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
                 len = n_snprintf(path, sizeof(path), "%s/%s/%s", ts->cachedir,
-                               buf, name);
+                                 buf, name);
             }
 
-            if (!package_verify_pgpg_sign(pkg, path))
-                nsignerr++;
+            if ((vrfyflags = pkg_get_verify_signflags(pkg))) {
+                if (!pm_rpm_verify_signature(pm_rpm, path, vrfyflags)) {
+                    logn(LOGERR, _("%s: signature verification failed"),
+                         pkg_snprintf_s(pkg));
+                    nsignerr++;
+                }
+            }
+            
             
             s = alloca(len + 1);
             memcpy(s, path, len);
@@ -375,7 +380,7 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
     }
     
     
-    ec = rpmr_exec(cmd, argv, 1, 1);
+    ec = pm_rpm_execrpm(cmd, argv, 1, 1);
     
     if (ec == 0 && !ts->getop(ts, POLDEK_OP_RPMTEST) &&
         !ts->getop(ts, POLDEK_OP_KEEP_DOWNLOADS)) {
@@ -385,7 +390,7 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
             struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
             int url_type;
             
-            if (!pkg_is_marked(pkg))
+            if (!pkg_is_marked(ts->pms, pkg))
                 continue;
             
             url_type = vf_url_type(pkg->pkgdir->path);
@@ -404,3 +409,81 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
     return 0;
 }
 
+int pm_rpm_packages_uninstall(void *pm_rpm, tn_array *pkgs, struct poldek_ts *ts)
+{
+    struct pm_rpm *pm = pm_rpm;
+    char **argv;
+    char *cmd;
+    int i, n, nopts = 0;
+    
+    n = 128 + n_array_size(pkgs);
+    
+    argv = alloca((n + 1) * sizeof(*argv));
+    argv[n] = NULL;
+    
+    n = 0;
+    
+    if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
+        cmd = pm->rpm;
+        argv[n++] = "rpm";
+        
+    } else if (ts->getop(ts, POLDEK_OP_USESUDO)) {
+        cmd = pm->sudo;
+        argv[n++] = "sudo";
+        argv[n++] = pm->rpm;
+        
+    } else {
+        cmd = pm->rpm;
+        argv[n++] = "rpm";
+    }
+    
+    argv[n++] = "--erase";
+
+    for (i=1; i<verbose; i++)
+        argv[n++] = "-v";
+
+    if (ts->getop(ts, POLDEK_OP_RPMTEST))
+        argv[n++] = "--test";
+    
+    if (ts->getop(ts, POLDEK_OP_FORCE))
+        argv[n++] = "--force";
+    
+    if (ts->getop(ts, POLDEK_OP_NODEPS))
+        argv[n++] = "--nodeps";
+
+    if (ts->rootdir) {
+    	argv[n++] = "--root";
+        argv[n++] = (char*)ts->rootdir;
+    }
+
+    if (ts->rpmopts) 
+        for (i=0; i<n_array_size(ts->rpmopts); i++)
+            argv[n++] = n_array_nth(ts->rpmopts, i);
+    
+    nopts = n;
+    for (i=0; i < n_array_size(pkgs); i++) {
+        char nevr[256];
+        int len;
+        
+        len = pkg_snprintf(nevr, sizeof(nevr), n_array_nth(pkgs, i));
+        argv[n] = alloca(len + 1);
+        memcpy(argv[n], nevr, len + 1);
+        n++;
+    }
+    
+    n_assert(n > nopts); 
+    argv[n++] = NULL;
+    
+    if (verbose > 0) {
+        char buf[1024], *p;
+        p = buf;
+        
+        for (i=0; i<nopts; i++) 
+            p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
+        *p = '\0';
+        msgn(1, _("Running%s..."), buf);
+        
+    }
+
+    return pm_rpm_execrpm(cmd, argv, 0, 0) == 0;
+}

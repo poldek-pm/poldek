@@ -31,8 +31,9 @@
 #include "i18n.h"
 #include "misc.h"
 #include "log.h"
+#include "pm/pm.h"
 
-tn_array *rpm_rpmlib_caps(void) 
+tn_array *pm_rpm_rpmlib_caps(void) 
 {
     char **names = NULL, **versions = NULL, *evr;
     int *flags = NULL, n = 0, i;
@@ -73,8 +74,30 @@ tn_array *rpm_rpmlib_caps(void)
     return caps;
 }
 
-const char *rpm_get_arch(void) 
+const char *pm_rpm_get_arch(void *pm_rpm) 
 {
+    pm_rpm = pm_rpm;
     return rpmGetVar(RPM_MACHTABLE_INSTARCH);
 }
 
+int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val)
+{
+    int rpmtag;
+    
+    pm_rpm = pm_rpm;
+    switch (tag) {
+        case PMMSTAG_ARCH:
+            rpmtag = RPM_MACHTABLE_INSTARCH;
+            break;
+            
+        case PMMSTAG_OS:
+            rpmtag = RPM_MACHTABLE_INSTOS;
+            break;
+
+        default:
+            n_assert(0);
+            break;
+    }
+    
+    return rpmMachineScore(rpmtag, val);
+}

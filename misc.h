@@ -50,17 +50,16 @@ int mk_dir_parents(const char *path, const char *dn);
 
 const char *abs_path(char *buf, int size, const char *path);
 
-extern int mem_info_verbose;
-void mem_info(int vlevel, const char *fmt, ...);
-
 void process_cmd_output(struct p_open_st *st, const char *prefix);
 int lockfile(const char *lockfile);
 pid_t readlockfile(const char *lockfile);
 
 int mklock(const char *dir);
 
-void display_pkg_list(int verbose_l, const char *prefix,
-                      tn_array *pkgs, unsigned flags);
+
+struct pkgmark_set;
+void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,
+                           struct pkgmark_set *pms, unsigned flags);
 
 int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
                   int ndigits, int longunit);
@@ -71,4 +70,7 @@ tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang);
 char *poldek__conf_path(char *s, char *v);
 
 int get_gmt_offs(void);
+
+int poldek_lookup_external_command(char *cmdpath, int size, const char *cmd);
+
 #endif /* POLDEK_MISC_H */

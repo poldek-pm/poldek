@@ -52,6 +52,7 @@ int source_cmp_uniq(const struct source *s1, const struct source *s2);
 int source_cmp_name(const struct source *s1, const struct source *s2);
 int source_cmp_pri(const struct source *s1, const struct source *s2);
 int source_cmp_pri_name(const struct source *s1, const struct source *s2);
+int source_cmp_no(const struct source *s1, const struct source *s2);
 
 #define PKGSOURCE_UP      (1 << 0)
 #define PKGSOURCE_UPA     (1 << 1)

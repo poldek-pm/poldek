@@ -133,13 +133,17 @@ void log_tty(const char *fmt, ...)
   } while(0)
 
 
+extern int mem_info_verbose;
+void mem_info(int vlevel, const char *fmt, ...);
 
 #if ENABLE_TRACE
 # define DBGF(fmt, args...)  fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
 # define DBG(fmt, args...)   fprintf(stdout, fmt, ## args)
+# define MEMINF(fmt, args...) mem_info(-5, "%-18s: " fmt, __FUNCTION__ , ## args)
 #else 
 # define DBGF(fmt, args...)  ((void) 0)
 # define DBG(fmt, args...)    ((void) 0)
+# define MEMINF(fmt, args...) ((void) 0)
 #endif
 
 #define DBGMSG_F DBGF
@@ -147,9 +151,11 @@ void log_tty(const char *fmt, ...)
 
 #define DBGF_NULL(fmt, args...) ((void) 0)
 #define DBGF_F(fmt, args...) fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
+# define MEMINF_F(fmt, args...) mem_info(-5, "%-18s: " fmt, __FUNCTION__ , ## args)
 
 #define dbgf(fmt, args...)  fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
 #define dbgf_(fmt, args...) ((void) 0)
 
 #endif /* POLDEK_LOG_H_INTERNAL */
+
 #endif /* POLDEK_LOG_H */

@@ -88,12 +88,13 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs)
     struct pkgflist *flist;
 
     flist = pkg_info_get_flist(pkg);
-    if (flist && n_tuple_size(flist->fl) == 0) {
-        pkg_info_free_flist(flist);
+    if (flist == NULL || n_tuple_size(flist->fl) == 0) {
+        if (flist)
+            pkg_info_free_flist(flist);
         return;
     }
 
-    pkgfl_array_store_order(flist->fl);
+    pkgfl_array_pdir_sort(flist->fl);
         
     if (depdirs == NULL) {
         n_buf_printf(nbuf, "l:\n");

@@ -20,6 +20,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 int parse_evr(char *evrstr,
               int32_t *epoch, const char **version, const char **release)
@@ -56,6 +57,7 @@ int parse_evr(char *evrstr,
     return 1;
 }
 
+
 int parse_nevr(char *nevrstr, const char **name,
                int32_t *epoch, const char **version, const char **release)
 {
@@ -80,5 +82,7 @@ int parse_nevr(char *nevrstr, const char **name,
     *p = '\0';
     p++;
     *name = nevrstr;
+
+    
     return parse_evr(p, epoch, version, release);
 }

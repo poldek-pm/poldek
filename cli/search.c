@@ -18,6 +18,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define _GNU_SOURCE 1
 #include <fnmatch.h>
@@ -452,7 +455,7 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
             cr = n_array_nth(pkg->cnfls, i);
             p = capreq_name(cr);
             
-            if (cnfl_is_obsl(cr)) {
+            if (capreq_is_obsl(cr)) {
                 if ((flags & OPT_SEARCH_OBSL))
                     matchit = 1;
                 

@@ -17,6 +17,8 @@ struct pkgdir;
 // pkgset.h structures
 struct pkgset;
 
+struct pm_ctx;
+
 /* constans  */
 extern const char poldek_BUG_MAILADDR[];
 extern const char poldek_VERSION_BANNER[];
@@ -32,13 +34,13 @@ struct poldek_ctx {
     unsigned         ps_flags;
     unsigned         ps_setup_flags;
     struct pkgset    *ps;
+    struct pm_ctx    *pmctx;
+
+//    tn_array       *inst_pkgs;  /* array of installed packages  */
+//    time_t         ts_instpkgs; /* inst_pkgs timestamp */
     
-    
-    tn_array       *inst_pkgs;  /* array of installed packages  */
-    time_t         ts_instpkgs; /* inst_pkgs timestamp */
-    
-    struct pkgdir  *dbpkgdir;   /* db packages        */
-    tn_hash        *cnf;
+//    struct pkgdir  *dbpkgdir;   /* db packages        */
+    tn_hash        *_cnf;       /* runtime config */
     unsigned       _iflags;     /* internal flags */
 };
 
@@ -49,6 +51,7 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags);
 void poldek_destroy(struct poldek_ctx *ctx);
 
 int poldek_load_sources(struct poldek_ctx *ctx);
+
 tn_array *poldek_get_avail_packages(struct poldek_ctx *ctx);
 tn_array *poldek_get_avail_packages_bynvr(struct poldek_ctx *ctx);
 
@@ -64,9 +67,10 @@ tn_array *poldek_get_avail_packages_bynvr(struct poldek_ctx *ctx);
 #define POLDEK_CONF_RPMOPTS         10
 #define POLDEK_CONF_HOLD            11
 #define POLDEK_CONF_IGNORE          12
+#define POLDEK_CONF_PM              13
 
-#define POLDEK_CONF_LOGFILE         13
-#define POLDEK_CONF_LOGTTY          14
+#define POLDEK_CONF_LOGFILE         20
+#define POLDEK_CONF_LOGTTY          21
 
 int poldek_configure(struct poldek_ctx *ctx, int param, ...);
 

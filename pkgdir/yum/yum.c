@@ -49,7 +49,7 @@
 #include "pkgfl.h"
 #include "pkgmisc.h"
 #include "pkgroup.h"
-#include "rpm/rpm_pkg_ld.h"
+#include "pm/rpm/pm_rpm.h"
 
 struct pkg_data {
     char *hdr_path;
@@ -261,7 +261,7 @@ static
 struct pkg *do_loadpkg(tn_alloc *na, Header h, int ldflags, const char *pkgfn) 
 {
     struct pkg *pkg;
-    if ((pkg = pkg_ldrpmhdr(NULL, h, pkgfn, 0, PKG_LDWHOLE))) {
+    if ((pkg = pm_rpm_ldhdr(NULL, h, pkgfn, 0, PKG_LDWHOLE))) {
         if (ldflags & PKGDIR_LD_DESC) {
             pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
             pkg_set_ldpkguinf(pkg);

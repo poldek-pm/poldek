@@ -29,6 +29,7 @@ extern const char *pkgdir_DEFAULT_TYPE;
 #define PKGDIR_NODESC              (1 << 12)
 
 struct pkgdir_module;
+struct pm_ctx;
 
 struct pkgdir {
     char                 *type;

@@ -35,16 +35,19 @@
 #include "misc.h"
 #include "pkgmisc.h"
 #include "pkgset.h"
+#include "pm/pm.h"
 
 #define ARG_PACKAGES_SETUPDONE (1 << 0)
 
 struct arg_packages {
     unsigned  flags;
+    struct pm_ctx *pmctx;
     struct pkgset *ps;
     tn_array  *packages;
     tn_array  *package_masks;   /* [@]foo(#|-)[VERSION[-RELEASE]] || foo.rpm   */
     tn_array  *package_lists;   /* --pset FILE */
     tn_hash   *package_caps;
+    tn_alloc  *na;
 };
 
 static 
@@ -138,13 +141,14 @@ char *prepare_pkgmask(const char *maskstr, const char *fpath, int nline)
 }
 
 
-struct arg_packages *arg_packages_new(struct pkgset *ps) 
+struct arg_packages *arg_packages_new(struct pkgset *ps, struct pm_ctx *ctx) 
 {
     struct arg_packages *aps;
 
     aps = n_malloc(sizeof(*aps));
-    aps->flags = 0;
+    memset(aps, 0, sizeof(*aps));
     aps->ps = ps;
+    aps->pmctx = ctx;
     aps->packages = pkgs_array_new(64);
     aps->package_masks = n_array_new(64, free, (tn_fn_cmp)strcmp);
     aps->package_lists = n_array_new(64, free, (tn_fn_cmp)strcmp);
@@ -158,6 +162,8 @@ void arg_packages_free(struct arg_packages *aps)
     n_array_free(aps->package_masks);
     n_array_free(aps->package_lists);
     n_hash_free(aps->package_caps);
+    if (aps->na)
+        n_alloc_free(aps->na);
     free(aps);
 }
 
@@ -217,7 +223,6 @@ int is_package_file(const char *path)
     return (stat(path, &st) == 0 && S_ISREG(st.st_mode));
 }
 
-#include <rpm/rpm_pkg_ld.h>
 int arg_packages_add_pkgfile(struct arg_packages *aps, const char *path)
 {
     int rc = 1;
@@ -227,7 +232,12 @@ int arg_packages_add_pkgfile(struct arg_packages *aps, const char *path)
     
     else {
         struct pkg *pkg;
-        if ((pkg = pkg_ldrpm(NULL, path, PKG_LDNEVR)) == NULL)
+        
+        if (aps->na == NULL)
+            aps->na = n_alloc_new(4, TN_ALLOC_OBSTACK);
+        
+        pkg = pm_load_package(aps->pmctx, aps->na, path, PKG_LDNEVR);
+        if (pkg == NULL)
             return 0;
 
         arg_packages_add_pkg(aps, pkg);

@@ -3,16 +3,16 @@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-noinst_LTLIBRARIES = libpkg_rpm.la
+noinst_LTLIBRARIES = libpm_rpm.la
 
-libpkg_rpm_la_SOURCES  = rpmdb_it.c rpmdb_it.h   \
-			 rpmdb_depdirs.c         \
-			 install.c  signature.c  \
-			 misc.c                  \
-			 rpm.c rpm.h             \
-			 rpmhdr.c rpmhdr.h       \
-			 rpminstall.c            \
-			 rpm_pkg_ld.c rpm_pkg_ld.h   	
+libpm_rpm_la_SOURCES  = mod.c rpmdb_it.c \
+		        rpmdb_depdirs.c \
+			install.c signature.c  \
+			misc.c                 \
+			rpm.c pm_rpm.h         \
+			rpmhdr.c        \
+			rpminstall.c    \
+			rpm_pkg_ld.c 
 
 bin_PROGRAMS    = rpmvercmp
 

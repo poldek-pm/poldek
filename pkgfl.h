@@ -24,7 +24,6 @@ struct flfile *flfile_new(tn_alloc *na, uint32_t size, uint16_t mode,
 
 int flfile_cmp(const struct flfile *f1, const struct flfile *f2);
 int flfile_cmp_qsort(const struct flfile **f1, const struct flfile **f2);
-#if 0
 
 /*
   both functions returns true(non-zero) if given files are conflicted
@@ -33,8 +32,6 @@ int flfile_cmp_qsort(const struct flfile **f1, const struct flfile **f2);
 int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict);
 int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,
                  const char *slinkto, int strict);
-
-#endif
 
 struct pkgfl_ent {
     char     *dirname; /* dirname without leading '/' if strlen(dirname) > 1 */
@@ -54,6 +51,9 @@ int pkgfl_ent_cmp(const void *a, const void *b);
 tn_tuple *pkgfl_array_store_order(tn_tuple *fl);
 
 struct pkg;
+
+/* legacy */
+tn_tuple *pkgfl_array_pdir_sort(tn_tuple *fl);
 
 int pkgfl_store(tn_tuple *fl, tn_buf *nbuf, tn_array *exclpath,
                 tn_array *depdirs, int which);

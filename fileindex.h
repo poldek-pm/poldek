@@ -24,8 +24,9 @@ int file_index_add_basename(struct file_index *fi, void *fidx_dir,
                             struct flfile *flfile,
                             struct pkg *pkg);
 
-int  file_index_lookup(struct file_index *fi, char *path,
-                       struct pkg *pkgs[], int size);
+int file_index_lookup(struct file_index *fi,
+                      const char *apath, int apath_len, 
+                      struct pkg *pkgs[], int size);
 
 int file_index_find_conflicts(const struct file_index *fi, tn_array *errs,
                               int strict);

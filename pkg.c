@@ -286,7 +286,6 @@ int pkg_strncmp_name(const struct pkg *p1, const struct pkg *p2)
     return strncmp(p1->name, p2->name, strlen(p2->name));
 }
 
-
 int pkg_eq_name_prefix(const struct pkg *pkg1, const struct pkg *pkg2) 
 {
     char *p1, *p2;
@@ -556,6 +555,11 @@ int pkg_cmp_pri(struct pkg *p1, struct pkg *p2)
     return pkg_cmp_name_evr_rev(p1, p2);
 }
 
+
+int pkg_cmp_recno(const struct pkg *p1, const struct pkg *p2) 
+{
+    return p1->recno - p2->recno;
+}
 
 int pkg_cmp_btime(struct pkg *p1, struct pkg *p2)
 {
@@ -934,7 +938,7 @@ int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
 
         cnfl = n_array_nth(pkg->cnfls, n);
         
-        if (cnfl_is_obsl(cnfl) && pkg_match_req(opkg, cnfl, 1)) {
+        if (capreq_is_obsl(cnfl) && pkg_match_req(opkg, cnfl, 1)) {
             DBGMSG("chk%d (%s-%s-%s) -> match\n", n,
                    capreq_snprintf_s(cnfl));
             return 1;
@@ -945,7 +949,7 @@ int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
             struct capreq *cnfl;
             
             cnfl = n_array_nth(pkg->cnfls, n);
-            if (!cnfl_is_obsl(cnfl))
+            if (!capreq_is_obsl(cnfl))
                 continue;
             
             if (strcmp(capreq_name(cnfl), pkg->name) != 0) {
@@ -1192,6 +1196,35 @@ char *pkg_path_s(const struct pkg *pkg)
     return pkg_path(pkg, buf, sizeof(buf));
 }
 
+char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
+                    const char *cachedir)
+{
+    int n = 0;
+    char *s, name[1024];
+    char *pkgpath;
+
+    n_assert(pkg->pkgdir);
+    pkgpath = pkg->pkgdir->path;
+    
+    if (vf_url_type(pkgpath) == VFURL_PATH) {
+        n = n_snprintf(path, size, "%s/%s", pkgpath,
+                       pkg_filename(pkg, name, sizeof(name)));
+        
+    } else {
+        char buf[1024];
+        
+        vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
+        n = n_snprintf(path, sizeof(path), "%s/%s/%s", cachedir,
+                       buf, pkg_filename(pkg, name, sizeof(name)));
+    }
+
+    if (size - n > 2)
+        return path;
+
+    return NULL;
+}
+
+
 int pkg_printf(const struct pkg *pkg, const char *str) 
 {
     return printf("%s-%s-%s%s", pkg->name, pkg->ver, pkg->rel,
@@ -1255,17 +1288,24 @@ char *pkg_snprintf_s1(const struct pkg *pkg)
     return str;
 }
 
-
-tn_array *pkgs_array_new(int size)
+tn_array *pkgs_array_new_ex(int size,
+                            int (*cmpfn)(const struct pkg *p1,
+                                         const struct pkg *p2))
 {
     tn_array *arr;
+
+    if (cmpfn == NULL)
+        cmpfn = pkg_strcmp_name_evr;
     
-    arr = n_array_new(size, (tn_fn_free)pkg_free,
-                      (tn_fn_cmp)pkg_strcmp_name_evr);//pkg_cmp_name_evr_rev);
+    arr = n_array_new(size, (tn_fn_free)pkg_free, (tn_fn_cmp)cmpfn);
     n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
     return arr;
 }
 
+tn_array *pkgs_array_new(int size) 
+{
+    return pkgs_array_new_ex(size, NULL);
+}
 
 int pkg_nvr_strcmp(struct pkg *p1, struct pkg *p2) 
 {
@@ -1368,5 +1408,4 @@ void *pkg_na_malloc(struct pkg *pkg, size_t size)
     return NULL;
 }
 
-    
     

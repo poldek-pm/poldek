@@ -1,22 +1,17 @@
 # $Id$
 
-#SUBDIRS = dir pdir hdrl rpmdb pndir yum
+SUBDIRS = rpm pset
 INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-noinst_LTLIBRARIES = libpkgdb.la
+noinst_LTLIBRARIES = libpm.la
+libpm_la_SOURCES  = \
+		pm.c pm.h \
+		mod.h mod.c pkgdb.c
 
-libpkgdb_la_SOURCES  = pkgdb.h pkgdb.c 
+pm_modules = rpm/libpm_rpm.la pset/libpm_pset.la
 
-#pkgdir_modules = dir/libpkgdir_dir.la      \
-#		 hdrl/libpkgdir_hdrl.la    \
-#	         rpmdb/libpkgdir_rpmdb.la  \
-#		 pdir/libpkgdir_pdir.la    \
-#		 pndir/libpkgdir_pndir.la  \
-#		 yum/libpkgdir_yum.la
-
-
-#libpkgdir_la_LIBADD  = $(pkgdir_modules)
+libpm_la_LIBADD  = $(pm_modules)
 
 dist-hook:
 	rm -rf $(distdir)/.deps

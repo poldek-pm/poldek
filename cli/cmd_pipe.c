@@ -40,6 +40,8 @@ struct cmd_pipe *cmd_pipe_new(void)
 
 void cmd_pipe_free(struct cmd_pipe *p)
 {
+    DBGF_F("%p\n", p);
+    
     if (p->_refcnt > 0) {
         p->_refcnt--;
         return;

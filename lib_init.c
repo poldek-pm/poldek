@@ -38,12 +38,13 @@
 #define POLDEK_INTERNAL
 #include "poldek.h"
 #include "poldek_term.h"
+#include "pm/pm.h"
 
 /* _iflags */
 #define SOURCES_SETUPDONE   (1 << 1)
 #define CACHEDIR_SETUPDONE  (1 << 2)
 #define SOURCES_LOADED      (1 << 3)
-#define SETUP_DONE    (SOURCES_SETUPDONE | CACHEDIR_SETUPDONE)
+#define SETUP_DONE          (1 << 4)  
 
 const char poldek_BUG_MAILADDR[] = "<mis@pld.org.pl>";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
@@ -592,9 +593,9 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
         logn(LOGERR | LOGDIE, "load_config() called after setup()");
     
     if (path != NULL)
-        ctx->htconf = poldek_ldconf(path, 0);
+        ctx->htconf = poldek_conf_load(path, 0);
     else 
-        ctx->htconf = poldek_ldconf_default();
+        ctx->htconf = poldek_conf_loadefault();
     
     if (ctx->htconf == NULL)
         return 0;
@@ -751,6 +752,13 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
             }
             break;
 
+        case POLDEK_CONF_PM:
+            vv = va_arg(ap, void*);
+            if (vv)
+                n_hash_replace(ctx->_cnf, "pm", n_strdup(vv));
+            break;
+            
+
         case POLDEK_CONF_LOGFILE:
             vv = va_arg(ap, void*);
             if (vv)
@@ -804,8 +812,15 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     flags = flags;
 
     memset(ctx, 0, sizeof(*ctx));
-    ctx->sources = n_array_new(4, (tn_fn_free)source_free, (tn_fn_cmp)source_cmp);
+    ctx->sources = n_array_new(4, (tn_fn_free)source_free,
+                               (tn_fn_cmp)source_cmp);
     ctx->ps = NULL;
+    ctx->_cnf = n_hash_new(16, free);
+    n_hash_insert(ctx->_cnf, "pm", n_strdup("rpm")); /* default pm */
+    
+    pm_module_init();
+    ctx->pmctx = NULL;
+    
     ctx->ts = poldek_ts_new(NULL);
     ts = ctx->ts;
     
@@ -815,9 +830,6 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
         i++;
     }
     
-    ctx->dbpkgdir = NULL;
-    ctx->ts_instpkgs = 0;
-
     mem_info_verbose = -1;
     verbose = 0;
     
@@ -830,8 +842,6 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     term_init();
     init_internal();
     pkgdirmodule_init();
-    rpm_initlib(NULL);
-
     vfile_verbose = &verbose;
 
     
@@ -871,7 +881,8 @@ int poldek_setup_cachedir(struct poldek_ctx *ctx)
     return 1;
 }
 
-int poldek_setup_sources(struct poldek_ctx *ctx)
+static
+int setup_sources(struct poldek_ctx *ctx)
 {
     int i;
 
@@ -892,8 +903,38 @@ int poldek_setup_sources(struct poldek_ctx *ctx)
 
 int poldek_setup(struct poldek_ctx *ctx) 
 {
+    const char *pm;
+    
+    if ((ctx->_iflags & SETUP_DONE) == SETUP_DONE)
+        return 1;
+    
     poldek_setup_cachedir(ctx);
-    poldek_setup_sources(ctx);
+    
+    setup_sources(ctx);
+
+    pm = n_hash_get(ctx->_cnf, "pm");
+    n_assert(pm);
+    if (strcmp(pm, "rpm") == 0)
+        ctx->pmctx = pm_new(pm, ctx->ts->rpmacros);
+    
+    else if (strcmp(pm, "pset") == 0) {
+        struct source *dest = NULL;
+        
+        n_array_sort_ex(ctx->sources, (tn_fn_cmp)source_cmp_no);
+        if (n_array_size(ctx->sources) > 1)
+            dest = n_array_pop(ctx->sources);
+        
+        if (dest)
+            ctx->pmctx = pm_new(pm, dest);
+        n_array_sort(ctx->sources);
+    }
+    
+    if (ctx->pmctx == NULL) {
+        logn(LOGERR, "%s: unknown PM type", pm);
+        return 0;
+    }
+        
+    ctx->_iflags |= SETUP_DONE;
     return 1;
 }
 

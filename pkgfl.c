@@ -226,7 +226,7 @@ tn_array *pkgfl_array_new(int size)
     return arr;
 }
 
-tn_tuple *pkgfl_array_store_order(tn_tuple *fl)
+tn_tuple *pkgfl_array_pdir_sort(tn_tuple *fl)
 {
     return n_tuple_isort_ex(fl, pkgfl_ent_deep_cmp);
 }
@@ -278,7 +278,7 @@ static
 int pkgfl_store_buf(tn_tuple *fl, tn_buf *nbuf, tn_array *exclpath, 
                     tn_array *depdirs, int which)
 {
-    int8_t *matches, *skipped, *lengths;
+    uint8_t *matches, *skipped, *lengths;
     int i, j;
     int ndirs = 0;
     
@@ -302,6 +302,7 @@ int pkgfl_store_buf(tn_tuple *fl, tn_buf *nbuf, tn_array *exclpath,
 
             dnl = strlen(flent->dirname);
             n_assert(dnl > 0 && dnl < 256);
+            
             lengths[i] = dnl;
 
             if (depdirs)

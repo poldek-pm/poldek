@@ -36,11 +36,12 @@
 # error "undefined VERSION"
 #endif
 
+extern int poclidek_shell(struct poclidek_ctx *cctx);
+
 static const char *argp_program_version = poldek_VERSION_BANNER;
 const char *argp_program_bug_address = poldek_BUG_MAILADDR;
 static char args_doc[] = N_("[PACKAGE...]");
 
-#define OPT_ROOTDIR   'r'
 #define OPT_CACHEDIR  1002
 #define OPT_ASK       1003
 #define OPT_NOASK     1004
@@ -49,6 +50,10 @@ static char args_doc[] = N_("[PACKAGE...]");
 #define OPT_BANNER    1007
 #define OPT_LOG       1008
 #define OPT_SKIPINSTALLED 1009
+#define OPT_PM 1010
+#define OPT_SHELL  1011
+#define OPT_SHELL_CMD 1012
+
 
 #define POLDEKCLI_CMN_NOCONF         (1 << 0)
 #define POLDEKCLI_CMN_NOASK          (1 << 1)
@@ -57,15 +62,21 @@ static char args_doc[] = N_("[PACKAGE...]");
 /* The options we understand. */
 static struct argp_option common_options[] = {
 {0,0,0,0, N_("Other:"), 10500 },
-{"cachedir", OPT_CACHEDIR, "DIR", 0, N_("Store downloaded files & co. under DIR"), 10500 },
+{"pm", OPT_PM, "PM", OPTION_HIDDEN, 0, 10500 },
+{"cachedir", OPT_CACHEDIR, "DIR", 0,
+     N_("Store downloaded files & co. under DIR"), 10500 },
 {"cmd", 'C', 0, 0, N_("Run in cmd mode"), 10500 },
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
                           "let user choose among equivalent packages"), 10500 },
 {"noask", OPT_NOASK, 0, 0, N_("Don't ask about anything"), 10500 },
 
+{"shell", OPT_SHELL, 0, 0, N_("Run in interactive mode (default)"), 10500 },
+
+{"shcmd", OPT_SHELL_CMD, "COMMAND", OPTION_HIDDEN,
+                 N_("Run poldek shell COMMAND and exit"), 10500 },    
+
 {"skip-installed", OPT_SKIPINSTALLED, 0, 0,
      N_("Don't load installed packages at startup"), 10500 },
-
 {"fast", 'f', 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, 10500 },    
 
 {"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), 10500 }, 
@@ -89,14 +100,9 @@ static struct argp_option common_options[] = {
 #define MODE_UNINSTALL    6
 #define MODE_SPLIT        7
 #define MODE_SRCLIST      8
+#define MODE_SHELL        9 
 
 #define MODE_F_LDSOURCES  (1 << 0)
-
-struct mjrmode_conf {
-    int         no;
-    const char  *cmd;
-    unsigned    flags;
-};
 
 
 static struct poclidek_opgroup *poclidek_opgroup_tab[] = {
@@ -196,12 +202,25 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_EQPKG_ASKUSER, 0);
             break;
 
+        case OPT_SHELL:         /* default */
+            argsp->mjrmode = MODE_SHELL;
+            break;
+            
+        case OPT_SHELL_CMD:
+            argsp->shcmd = arg;
+            argsp->mjrmode = MODE_SHELL;
+            break;
+
         case 'f':
             logn(LOGWARN, "-f is obsoleted, use --skip-installed instead");
                                 /* no break */
         case OPT_SKIPINSTALLED:
             argsp->cctx->flags |= POLDEKCLI_SKIPINSTALLED;
             break;
+
+        case OPT_PM:
+            poldek_configure(ctx, POLDEK_CONF_PM, arg);
+            break;            
 
         case OPT_BANNER:
             msgn(-1, "%s", poldek_BANNER);
@@ -323,7 +342,7 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
         if (!poldek_load_config(args.ctx, args.path_conf))
             exit(EXIT_FAILURE);
 
-    if (!poldek_setup_sources(args.ctx))
+    if (!poldek_setup(args.ctx))
         exit(EXIT_FAILURE);
 
     if (poldek_ts_is_interactive_on(args.ctx->ts) && verbose == 0)
@@ -384,10 +403,10 @@ int do_run(void)
 
 int main(int argc, char **argv)
 {
-    int                   i, ec = 0, rrc, mode = MODE_POLDEK;
     struct poldek_ctx     ctx;
     struct poclidek_ctx  cctx;
-
+    int  ec = 0, rrc, mode = MODE_POLDEK;
+    
     setlocale(LC_MESSAGES, "");
     setlocale(LC_CTYPE, "");
     
@@ -413,9 +432,13 @@ int main(int argc, char **argv)
             ec = 1;
             
         } else {
-            poclidek_shell(&cctx);
+            if (args.shcmd) 
+                ec = poclidek_execline(&cctx, args.ts, args.shcmd);
+            else
+                ec = poclidek_shell(&cctx);
+
+            ec = !ec;
         }
-        
         
     } else {
         int rc;

@@ -24,7 +24,6 @@
 #include "i18n.h"
 #include "pkg.h"
 #include "capreq.h"
-#include "dbpkg.h"
 #include "dbpkgset.h"
 #include "log.h"
 
@@ -35,8 +34,8 @@ struct dbpkg_set *dbpkg_set_new(void)
     struct dbpkg_set *dbpkg_set; 
 
     dbpkg_set = n_malloc(sizeof(*dbpkg_set));
-    dbpkg_set->dbpkgs = dbpkg_array_new(32);
-    dbpkg_set->capcache = n_hash_new(103, NULL);
+    dbpkg_set->dbpkgs = pkgs_array_new_ex(128, pkg_cmp_recno);
+    dbpkg_set->capcache = n_hash_new(128, NULL);
     return dbpkg_set;
 }
 
@@ -48,14 +47,16 @@ void dbpkg_set_free(struct dbpkg_set *dbpkg_set)
     free(dbpkg_set);
 }
 
-void dbpkg_set_add(struct dbpkg_set *dbpkg_set, struct dbpkg *dbpkg) 
+void dbpkg_set_add(struct dbpkg_set *dbpkg_set, struct pkg *dbpkg) 
 {
     n_array_push(dbpkg_set->dbpkgs, dbpkg);
 }
 
 int dbpkg_set_has_pkg_recno(struct dbpkg_set *dbpkg_set, int recno) 
 {
-    return dbpkg_array_has(dbpkg_set->dbpkgs, recno);
+    struct pkg tmpkg;
+    tmpkg.recno = recno;
+    return n_array_bsearch(dbpkg_set->dbpkgs, &tmpkg) != NULL;
 }
 
 
@@ -64,8 +65,8 @@ int dbpkg_set_has_pkg(struct dbpkg_set *dbpkg_set, const struct pkg *pkg)
     int i;
 
     for (i=0; i<n_array_size(dbpkg_set->dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(dbpkg_set->dbpkgs, i);
-        if (pkg_cmp_name_evr(dbpkg->pkg, pkg) == 0)
+        struct pkg *dbpkg = n_array_nth(dbpkg_set->dbpkgs, i);
+        if (pkg_cmp_name_evr(dbpkg, pkg) == 0)
             return 1;
     }
     return 0;
@@ -107,14 +108,14 @@ const struct pkg *dbpkg_set_provides(struct dbpkg_set *dbpkg_set,
 
     pkg = NULL;
     for (i=0; i < n_array_size(dbpkg_set->dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(dbpkg_set->dbpkgs, i);
+        struct pkg *dbpkg = n_array_nth(dbpkg_set->dbpkgs, i);
 
-        if (is_file && pkg_has_path(dbpkg->pkg, dirname, basename)) {
-            pkg = dbpkg->pkg;
+        if (is_file && pkg_has_path(dbpkg, dirname, basename)) {
+            pkg = dbpkg;
             break;
             
-        } else if (pkg_match_req(dbpkg->pkg, cap, 0)) {
-            pkg = dbpkg->pkg;
+        } else if (pkg_match_req(dbpkg, cap, 0)) {
+            pkg = dbpkg;
             break;
         }
     }
@@ -143,8 +144,8 @@ void dbpkg_set_dump(struct dbpkg_set *dbpkg_set)
     
         
     for (i=0; i<n_array_size(dbpkg_set->dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(dbpkg_set->dbpkgs, i);
-        printf("%s, ", dbpkg_snprintf_s(dbpkg));
+        struct pkg *dbpkg = n_array_nth(dbpkg_set->dbpkgs, i);
+        printf("%s, ", pkg_snprintf_s(dbpkg));
     }
     printf("\n");
 }

@@ -34,7 +34,7 @@
 #include "misc.h"
 #include "log.h"
 #include "cli.h"
-#include "rpm/rpm.h"
+#include "pm/pm.h"
 
 static
 struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload);
@@ -117,9 +117,8 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     const char      *lc_lang;
     struct pkgdir   *dir = NULL;
     int             ldflags = 0;
-
-
-    if (!rpm_get_dbpath(dbpath, sizeof(dbpath)))
+    
+    if (!pm_dbpath(cctx->ctx->pmctx, dbpath, sizeof(dbpath)))
         return NULL;
     
     if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
@@ -138,14 +137,17 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     if (!reload) {              /* use cache */
         time_t mtime_rpmdb, mtime_dbcache;
         mtime_dbcache = mtime(dbcache_path);
-        mtime_rpmdb = rpm_dbmtime(rpmdb_path);
+        mtime_rpmdb = pm_dbmtime(cctx->ctx->pmctx, rpmdb_path);
         if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache)
             dir = pkgdir_open_ext(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE,
                                   dbpath, NULL, 0, lc_lang);
     }
     
-    if (dir == NULL)
-        dir = pkgdir_open_ext(rpmdb_path, NULL, "rpmdb", dbpath, NULL, 0, lc_lang);
+    if (dir == NULL) {
+        char name[255];
+        n_snprintf(name, sizeof(name), "%sdb", pm_get_name(cctx->ctx->pmctx));
+        dir = pkgdir_open_ext(rpmdb_path, NULL, name, dbpath, NULL, 0, lc_lang);
+    }
     
     
     if (dir != NULL) {
@@ -175,14 +177,14 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     char         rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
     const char   *path;
 
-    if (!rpm_get_dbpath(dbpath, sizeof(dbpath)))
+    if (!pm_dbpath(cctx->ctx->pmctx, dbpath, sizeof(dbpath)))
         return 0;
 
     if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
                      cctx->ctx->ts->rootdir, dbpath) == NULL)
         return 0;
 
-    mtime_rpmdb = rpm_dbmtime(rpmdb_path);
+    mtime_rpmdb = pm_dbmtime(cctx->ctx->pmctx, rpmdb_path);
     if (mtime_rpmdb > pkgdir->ts) /* changed outside poldek */
         return 0;
 

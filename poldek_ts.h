@@ -2,6 +2,7 @@
 #ifndef  POLDEK_LIB_TX_H
 #define  POLDEK_LIB_TX_H
 
+#include <trurl/nmalloc.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
@@ -65,8 +66,10 @@ enum poldek_ts_opt {
 };
 
 
-
+struct pkgmark_set;
 struct poldek_ctx;
+struct pkg;
+
 struct arg_packages;
 #ifdef SWIG
 struct poldek_ts { int type; };
@@ -76,10 +79,11 @@ struct poldek_ts {
     char               *typenam;
     struct poldek_ctx  *ctx;
     struct pkgdb       *db;
+    struct pm_ctx      *pmctx;
     tn_array  *pkgs;
     
     struct arg_packages  *aps;
-    tn_array             *aps_pkgs;
+    struct pkgmark_set   *pms;
     char               *rpm_bin;       /* /usr/bin/rpm   */ 
     char               *sudo_bin;      /* /usr/bin/sudo  */
     char               *rootdir;       /* top level dir          */
@@ -96,6 +100,7 @@ struct poldek_ts {
     int  (*askpkg_fn)(const char *, struct pkg **pkgs, struct pkg *deflt);
     int  (*ask_fn)(int default_a, const char *, ...);
 
+    tn_alloc           *_na;
     uint32_t           _flags;      /* POLDEK_TS_* */
     uint32_t           _iflags;    /* internal flags */
     uint32_t           _opvect[4];

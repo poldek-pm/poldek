@@ -33,7 +33,8 @@
 #include "pkgmisc.h"
 #include "pkg_ver_cmp.h"
 
-#define _ALLOCATED_W_NA (1 << 7)
+#define __NAALLOC   (1 << 7)
+#define REL_RT_FLAGS __NAALLOC
 
 static void capreq_store(struct capreq *cr, tn_buf *nbuf);
 static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi);
@@ -57,16 +58,18 @@ static const char *get_rpm_capreq(const char *name)
 }
 #endif
 
-void capreq_free(tn_alloc *na, struct capreq *cr) 
+void capreq_free_na(tn_alloc *na, struct capreq *cr) 
 {
-    if (na) {
-        n_assert(cr->cr_relflags & _ALLOCATED_W_NA);
-        na->na_free(na, cr);
-        return;
-    }
-    
-    n_free(cr);
+    n_assert(cr->cr_relflags & __NAALLOC);
+    na->na_free(na, cr);
 }
+
+void capreq_free(struct capreq *cr) 
+{
+    if ((cr->cr_relflags & __NAALLOC) == 0)
+        n_free(cr);
+}
+
 
 __inline__
 int capreq_cmp_name(struct capreq *cr1, struct capreq *cr2) 
@@ -224,7 +227,6 @@ uint8_t capreq_bufsize(const struct capreq *cr)
 
     if (max_ofs == 0)
         max_ofs = 1;
-
     
     max_ofs += strlen(&cr->_buf[max_ofs]) + 1;
     //printf("sizeof %s = %d (5 + %d + (%s) + %d)\n", capreq_snprintf_s(cr),
@@ -311,7 +313,7 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
         len += release_len + 1;
     }
 
-    if (na) 
+    if (na)
         cr = na->na_malloc(na, sizeof(*cr) + len);
     else
         cr = n_malloc(sizeof(*cr) + len);
@@ -352,7 +354,7 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
         cr->cr_flags |= CAPREQ_RPMLIB;
 
     if (na)
-        cr->cr_relflags |= _ALLOCATED_W_NA;
+        cr->cr_relflags |= __NAALLOC;
 
     return cr;
 }
@@ -370,18 +372,26 @@ struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags,
     return capreq_new(NULL, name, epoch, version, release, relflags, flags);
 }
 
-#if 0
-struct capreq *capreq_new_capreq(const struct capreq *cr) 
+struct capreq *capreq_clone(tn_alloc *na, const struct capreq *cr) 
 {
     uint8_t size;
-    struct capreq *new_cr;
+    struct capreq *newcr;
     
     size = capreq_sizeof(cr);
-    new_cr = capreq_alloc_fn(size);
-    memcpy(new_cr, cr, size);
-    return new_cr;
+    if (na)
+        newcr = na->na_malloc(na, size);
+    else
+        newcr = n_malloc(size);
+    
+    memcpy(newcr, cr, size);
+    if (na)
+        newcr->cr_relflags |= __NAALLOC;
+    else
+        newcr->cr_relflags &= ~(__NAALLOC);
+    
+    return newcr;
 }
-#endif
+
 
 int32_t capreq_epoch_(const struct capreq *cr)
 {
@@ -397,7 +407,7 @@ tn_array *capreq_arr_new_ex(int size, void **data)
 {
     tn_array *arr;
     arr = n_array_new_ex(size > 0 ? size : 2,
-                         NULL,  /* TODO */
+                         (tn_fn_free)capreq_free, 
                          (tn_fn_cmp)capreq_cmp_name_evr,
                          data);
     n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
@@ -422,11 +432,16 @@ void capreq_store(struct capreq *cr, tn_buf *nbuf)
     int32_t epoch, nepoch;
     uint8_t size, bufsize;
     uint8_t cr_buf[5];
-    uint8_t cr_flags = 0;
+    uint8_t cr_flags = 0, cr_relflags = 0;
 
-	if (capreq_is_satisfied(cr)) {
+	if (cr->cr_flags & CAPREQ_RT_FLAGS) {
 		cr_flags = cr->cr_flags;
-		capreq_clr_satisfied(cr);
+        cr->cr_flags &= ~CAPREQ_RT_FLAGS;
+	}
+
+    if (cr->cr_relflags & REL_RT_FLAGS) {
+		cr_relflags = cr->cr_relflags;
+        cr->cr_relflags &= ~REL_RT_FLAGS;
 	}
 
     cr_buf[0] = cr->cr_relflags;
@@ -454,6 +469,9 @@ void capreq_store(struct capreq *cr, tn_buf *nbuf)
 
     if (cr_flags)
 		cr->cr_flags = cr_flags;
+
+    if (cr_relflags)
+		cr->cr_relflags = cr_relflags;
 }
 
 static
@@ -481,6 +499,9 @@ struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi)
     cr->cr_ep_ofs   = cr_bufp[2];
     cr->cr_ver_ofs  = cr_bufp[3];
     cr->cr_rel_ofs  = cr_bufp[4];
+
+    if (na)
+        cr->cr_relflags |= __NAALLOC;
 
     cr->_buf[size] = '\0';
     cr_bufp = n_buf_it_get(nbufi, size);

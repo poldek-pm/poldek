@@ -527,6 +527,14 @@ int source_cmp_pri_name(const struct source *s1, const struct source *s2)
     return rc;
 }
 
+int source_cmp_no(const struct source *s1, const struct source *s2)
+{
+    int rc;
+    
+    rc = s1->no - s2->no;
+    n_assert(rc);
+    return rc;
+}
 
 static int source_update_a(struct source *src) 
 {

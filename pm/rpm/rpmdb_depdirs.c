@@ -48,10 +48,8 @@
 #include "misc.h"
 #include "log.h"
 #include "pkg.h"
-#include "dbpkg.h"
 #include "capreq.h"
-#include "rpm.h"
-#include "rpmdb_it.h"
+#include "pm_rpm.h"
 
 
 /*
@@ -59,22 +57,24 @@
   all requirements without reading whole headers (which is too slow)
 */
 #ifndef HAVE_DB_185_H
-int rpmdb_get_depdirs(const char *rootdir, tn_array *depdirs)
+int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath, 
+                     tn_array *depdirs)
 {
-    rootdir = rootdir; depdirs = depdirs;
+    path = path; depdirs = depdirs;
     return -1;
 }
 
 #else 
-int rpmdb_get_depdirs(const char *rootdir, tn_array *depdirs) 
+int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath, 
+                     tn_array *depdirs) 
 {
     DB        *db;
     DBT       dbt_k, dbt_d;
     char      buf[PATH_MAX], path[PATH_MAX], *depdir;
-    char      *index, *p, dbpath_buf[PATH_MAX], *dbpath;
+    char      *index, *p, dbpath_buf[PATH_MAX];
     tn_array  *tmp_depdirs;
     int       len;
-
+    
 #ifndef HAVE___DB185_OPEN
     return -1;
 #endif    
@@ -87,7 +87,9 @@ int rpmdb_get_depdirs(const char *rootdir, tn_array *depdirs)
     if (rootdir == NULL)
         rootdir = "/";
     
-    dbpath = rpm_get_dbpath(dbpath_buf, sizeof(dbpath_buf));
+    if (dbpath == NULL)
+        dbpath = pm_rpm_dbpath(pm_rpm, dbpath_buf, sizeof(dbpath_buf));
+    
     snprintf(path, sizeof(path),
              "%s%s/%s", *(rootdir + 1) == '\0' ? "" : rootdir,
              dbpath != NULL ? dbpath : "", index);

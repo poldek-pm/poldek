@@ -49,11 +49,9 @@
 #include "misc.h"
 #include "log.h"
 #include "pkg.h"
-#include "dbpkg.h"
 #include "capreq.h"
-
-#include "rpm.h"
-#include "rpmdb_it.h"
+#include "pkgmisc.h"
+#include "pm_rpm.h"
 
 #ifdef HAVE_RPM_4_2
 /* from internal lib/signature.h, no public prototype (at least in 4.3 snaps) */
@@ -145,27 +143,27 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
 #ifdef HAVE_RPM_4_1
             case RPMSIGTAG_RSA:
 #endif                
-	    case RPMSIGTAG_PGP5:	/* XXX legacy */
-	    case RPMSIGTAG_PGP:
-		flags |= VRFYSIG_SIGNPGP;
-		break;
+            case RPMSIGTAG_PGP5:	/* XXX legacy */
+            case RPMSIGTAG_PGP:
+                flags |= VRFYSIG_SIGNPGP;
+                break;
 
 #ifdef HAVE_RPM_4_1
             case RPMSIGTAG_DSA:
 #endif                
-	    case RPMSIGTAG_GPG:
-		flags |= VRFYSIG_SIGNGPG;
+            case RPMSIGTAG_GPG:
+                flags |= VRFYSIG_SIGNGPG;
                 break;
                 
-	    case RPMSIGTAG_LEMD5_2:
-	    case RPMSIGTAG_LEMD5_1:
-	    case RPMSIGTAG_MD5:
-		flags |= VRFYSIG_DGST;
-		break;
+            case RPMSIGTAG_LEMD5_2:
+            case RPMSIGTAG_LEMD5_1:
+            case RPMSIGTAG_MD5:
+                flags |= VRFYSIG_DGST;
+                break;
                 
-	    default:
-		continue;
-		break;
+            default:
+                continue;
+                break;
         }
         ptr = headerFreeData(ptr, type);
     }
@@ -185,8 +183,8 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
 #ifdef HAVE_RPM_4_1
 # error "shouldn't happen"      /* 4.1 hasnt't rpmCheckSig */
 #endif
-
-int rpm_verify_signature(const char *path, unsigned flags) 
+static
+int do_verify_signature(const char *path, unsigned flags) 
 {
     const char *argv[2];
     unsigned presented_signs;
@@ -232,8 +230,8 @@ int rpm_verify_signature(const char *path, unsigned flags)
 }
 
 #else  /* rpm 4.1 */
-
-int rpm_verify_signature(const char *path, unsigned flags) 
+static
+int do_verify_signature(const char *path, unsigned flags) 
 {
     unsigned                  presented_signs = 0;
     struct rpmQVKArguments_s  qva; /* poor RPM API... */
@@ -291,3 +289,95 @@ int rpm_verify_signature(const char *path, unsigned flags)
 }
 
 #endif
+
+
+#ifdef HAVE_RPM_4_0
+static
+int do_pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags) 
+{
+    unsigned rpmflags = 0;
+
+    pm_rpm = pm_rpm;
+    if (access(path, R_OK) != 0) {
+        logn(LOGERR, "%s: verify signature failed: %m", path);
+        return 0;
+    }
+    
+    if (flags & PKGVERIFY_GPG)
+        rpmflags |= VRFYSIG_SIGNGPG;
+
+    if (flags & PKGVERIFY_PGP)
+        rpmflags |= VRFYSIG_SIGNPGP;
+    
+    if (flags & PKGVERIFY_MD)
+        rpmflags |= VRFYSIG_DGST;
+
+    return do_verify_signature(path, rpmflags);
+}
+
+#else  /* HAVE_RPMCHECKSIG */
+extern int pm_rpm_execrpm(const char *cmd, char *const argv[],
+                          int ontty, int verbose_level);
+static
+int do_pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags) 
+{
+    struct pm_rpm *pm = pm_rpm;
+    char **argv;
+    char *cmd;
+    int i, n, nopts = 0;
+    
+    
+    n = 32;
+    
+    argv = alloca((n + 1) * sizeof(*argv));
+    argv[n] = NULL;
+    n = 0;
+    
+    cmd = pm->rpm;
+    argv[n++] = "rpm";
+    argv[n++] = "-K";
+
+    nopts = n;
+    
+    if ((flags & PKGVERIFY_GPG) == 0)
+        argv[n++] = "--nogpg";
+
+    if ((flags & PKGVERIFY_PGP) == 0)
+        argv[n++] = "--nopgp";
+    
+    
+    if ((flags & PKGVERIFY_MD) == 0) {
+        argv[n++] = "--nomd5";
+    }
+    n_assert(n > nopts);        /* any PKGVERIFY_* given? */
+    
+    argv[n++] = (char*)path;
+    nopts = n;
+    argv[n++] = NULL;
+    
+    if (verbose > 1) {
+        char buf[1024], *p;
+        p = buf;
+        
+        for (i=0; i < nopts; i++) 
+            p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
+        *p = '\0';
+        msgn(1, _("Executing%s..."), buf);
+    }
+
+    return pm_rpm_execrpm(cmd, argv, 0, 4) == 0;
+}
+
+#endif /* HAVE_RPMCHECKSIG */
+
+extern int pm_rpm_verbose;
+int pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags) 
+{
+    int rv = pm_rpm_verbose, v = verbose, rc;
+        
+    verbose = pm_rpm_verbose = 1;
+    rc = do_pm_rpm_verify_signature(pm_rpm, path, flags);
+    pm_rpm_verbose = rv;
+    verbose = v;
+    return rc;
+}

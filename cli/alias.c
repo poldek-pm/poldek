@@ -106,8 +106,7 @@ void poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path)
     if (access(path, R_OK) != 0)
         return;
     
-    aliases_htcnf = poldek_ldconf(path, POLDEK_LDCONF_NOVRFY);
-    
+    aliases_htcnf = poldek_conf_load(path, POLDEK_LDCONF_NOVRFY);
     if (aliases_htcnf == NULL)
         return;
     

@@ -190,8 +190,6 @@ int packages_depmark_packages(tn_array *pkgs, const tn_array *tomark,
     for (i=0; i < n_array_size(tomark); i++) {
         struct pkg *pkg = n_array_nth(tomark, i);
 
-        if (pkg_has_badreqs(pkg))
-            nerr++;
         pkg_hand_mark(pkg);
         n_array_push(marked, pkg_link(pkg));
         
@@ -211,47 +209,13 @@ int packages_depmark_packages(tn_array *pkgs, const tn_array *tomark,
 }
 
 
-int pkgset_mark_packages(struct pkgset *ps, const tn_array *pkgs,
-                         tn_array *marked, int withdeps)
+int packages_mark_packages(struct pkgmark_set *pms,
+                           const tn_array *avpkgs,
+                           const tn_array *pkgs, int withdeps);
+
 {
     return packages_depmark_packages(ps->pkgs, pkgs, marked, withdeps);
 }
 
 
-struct pkg *pkgset_lookup_pkgn(struct pkgset *ps, const char *name) 
-{
-    struct pkg tmpkg;
-    int i;
-    
-    tmpkg.name = (char*)name;
-
-    n_array_sort(ps->pkgs);
-    i = n_array_bsearch_idx_ex(ps->pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
-    if (i < 0)
-        return NULL;
-
-    return n_array_nth(ps->pkgs, i);
-}
-
-
-tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname)
-{
-    const struct capreq_idx_ent *ent;
-    tn_array *pkgs = NULL;
-    
-    if ((ent = capreq_idx_lookup(&ps->cap_idx, capname))) {
-        int i;
-        
-        pkgs = n_array_new(ent->items, NULL, (tn_fn_cmp)pkg_cmp_name_evr_rev);
-        for (i=0; i<ent->items; i++) 
-            n_array_push(pkgs, ent->pkgs[i]);
-
-        if (n_array_size(pkgs) == 0) {
-            n_array_free(pkgs);
-            pkgs = NULL;
-        }
-    }
-
-    return pkgs;
-}
 

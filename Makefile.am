@@ -8,7 +8,7 @@ TNDB_DIR = @TNDB_DIR@
 
 CLI=cli
 SUBDIRS   = po $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir \
-            rpm pkgdb . $(CLI) python
+            pm . $(CLI)
 DIST_SUBDIRS = $(SUBDIRS)
 
 INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@
@@ -34,18 +34,17 @@ libpoldek_la_SOURCES =  \
 	  pkgset.c		\
 	  pkgset-req.c pkgset-req.h	\
 	  pkgset-order.c    	\
-	  pkgset-mark.c         \
 	  pkgset-install.c		\
 	  dbdep.c dbdep.h		\
 	  arg_packages.c arg_packages.h		\
 	  conf.c 	    	\
-	  dbpkg.c dbpkg.h		\
 	  dbpkgset.c dbpkgset.h \
 	  split.c split.h		\
 	  pkgroup.c pkgroup.h	\
-	  pkgscore.c			\
+	  pkgscore.c		\
 	  pkgfetch.c            \
-	  i18n.h 			    \
+	  pkgmark.c             \
+	  i18n.h 		\
 	  ask.c                 \
 	  uninstall.c           \
 	  lib_init.c            \
@@ -58,10 +57,9 @@ pkginclude_HEADERS = poldek.h conf.h pkg.h pkgset.h \
 
 
 libpoldek_la_LIBADD = \
-	   	        rpm/libpkg_rpm.la    \
 			sigint/libsigint.la  \
 			pkgdir/libpkgdir.la  \
-			pkgdb/libpkgdb.la    \
+			pm/libpm.la    \
 			vfile/libvfile.la
 
 SHELL_MOD = shell/libshell.la

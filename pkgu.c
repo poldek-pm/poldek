@@ -28,7 +28,7 @@
 #include "log.h"
 #include "pkgu.h"
 #include "misc.h"
-#include "rpm/rpmhdr.h"
+#include "pm/rpm/pm_rpm.h"
 
 #define NA_OWNED (1 << 0)
 
@@ -249,29 +249,29 @@ static char *cp_tag(tn_alloc *na, Header h, int rpmtag)
     struct rpmhdr_ent  hdrent;
     char *t = NULL;
         
-    if (rpmhdr_ent_get(&hdrent, h, rpmtag)) {
-        char *s = rpmhdr_ent_as_str(&hdrent);
+    if (pm_rpmhdr_ent_get(&hdrent, h, rpmtag)) {
+        char *s = pm_rpmhdr_ent_as_str(&hdrent);
         int len = strlen(s) + 1;
         t = na->na_malloc(na, len + 1);
         memcpy(t, s, len);
     }
     
-    rpmhdr_ent_free(&hdrent);
+    pm_rpmhdr_ent_free(&hdrent);
     return t;
 }
 
-struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, Header h) 
+struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
 {
     char               **langs, **summs, **descrs;
     int                nsumms, ndescrs;
     int                i, n, nlangs = 0;
     struct pkguinf     *pkgu;
-    
+    Header             h = hdr;
     
     pkgu = pkguinf_malloc(na);
     pkgu->_ht = n_hash_new(3, NULL);
     
-    if ((langs = rpmhdr_langs(h))) {
+    if ((langs = pm_rpmhdr_langs(h))) {
         tn_array *avlangs, *sl_langs;
         char *sl_lang;
         

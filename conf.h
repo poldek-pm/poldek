@@ -9,8 +9,8 @@
 #define POLDEK_LDCONF_NOVRFY   POLDEK_LDCONF_FOREIGN /* legacy */
 #define POLDEK_LDCONF_UPDATE   (1 << 1) 
 
-tn_hash *poldek_ldconf(const char *path, unsigned flags);
-tn_hash *poldek_ldconf_default(void);
+tn_hash *poldek_conf_load(const char *path, unsigned flags);
+tn_hash *poldek_conf_loadefault(void);
 
 tn_array *poldek_conf_get_section_arr(const tn_hash *htconf, const char *name);
 tn_hash *poldek_conf_get_section_ht(const tn_hash *htconf, const char *name);

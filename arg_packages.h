@@ -8,8 +8,9 @@
 struct pkg;
 struct arg_packages;
 struct pkgset;
+struct pm_ctx;
 
-struct arg_packages *arg_packages_new(struct pkgset *ps);
+struct arg_packages *arg_packages_new(struct pkgset *ps, struct pm_ctx *ctx);
 void arg_packages_free(struct arg_packages *aps);
 
 void arg_packages_clean(struct arg_packages *aps);

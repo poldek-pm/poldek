@@ -28,10 +28,10 @@
 #include "i18n.h"
 #include "depdirs.h"
 
+
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 {
     int i, j, iserr = 0;
-    
 
     n_array_isort_ex(sources, (tn_fn_cmp)source_cmp_pri);
     
@@ -85,7 +85,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     
     for (i=0; i < n_array_size(ps->pkgdirs); i++) {
         struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
-
+        
         if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
             if (!pkgdir_load(pkgdir, ps->depdirs, ldflags)) {
                 logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
@@ -95,11 +95,15 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     }
     
     if (!iserr) {
+        int32_t recno = 0;
         /* merge pkgdirs packages into ps->pkgs */
         for (i=0; i < n_array_size(ps->pkgdirs); i++) {
             struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
-            for (j=0; j < n_array_size(pkgdir->pkgs); j++)
-                n_array_push(ps->pkgs, pkg_link(n_array_nth(pkgdir->pkgs, j)));
+            for (j=0; j < n_array_size(pkgdir->pkgs); j++) {
+                struct pkg *pkg = n_array_nth(pkgdir->pkgs, j);
+                pkg->recno = ++recno;
+                n_array_push(ps->pkgs, pkg_link(pkg));
+            }
         }
 
         init_depdirs(ps->depdirs);
@@ -110,5 +114,29 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         msgn(1, ngettext("%d package read",
                          "%d packages read", n), n);
     }
+    
+    return n_array_size(ps->pkgs);
+}
+
+
+int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir)
+{
+    int i;
+    
+    n_array_push(ps->depdirs, pkgdir);
+    if (pkgdir->depdirs) {
+        for (i=0; i < n_array_size(pkgdir->depdirs); i++)
+            n_array_push(ps->depdirs, n_array_nth(pkgdir->depdirs, i));
+    }
+
+    n_array_sort(ps->depdirs);
+    n_array_uniq(ps->depdirs);
+    
+    for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+        n_assert(pkg->name);
+        n_array_push(ps->pkgs, pkg_link(pkg));
+    }
+
     return n_array_size(ps->pkgs);
 }

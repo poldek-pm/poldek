@@ -83,6 +83,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     struct poldek_ts *ts;
     struct arg_s *arg_s;
 
+    arg = arg;
     rt = state->input;
     ts = rt->ts;
     if (rt->_opdata) {

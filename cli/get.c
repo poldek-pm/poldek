@@ -96,7 +96,7 @@ static int get(struct cmdctx *cmdctx)
         destdirp = destdir;
     }
     
-    if (!packages_fetch(pkgs, destdirp, 1))
+    if (!packages_fetch(cmdctx->ts->pmctx, pkgs, destdirp, 1))
         err++;
     
  l_end:

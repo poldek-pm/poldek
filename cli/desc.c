@@ -14,6 +14,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
@@ -426,7 +429,7 @@ static void show_cnfls(struct cmdctx *cmdctx, struct pkg *pkg)
         
         for (i=0; i<n_array_size(pkg->cnfls); i++) {
             struct capreq *cr = n_array_nth(pkg->cnfls, i);
-            if (cnfl_is_obsl(cr))
+            if (capreq_is_obsl(cr))
                 nobsls++;
         }
         
@@ -437,7 +440,7 @@ static void show_cnfls(struct cmdctx *cmdctx, struct pkg *pkg)
             for (i=0; i<n_array_size(pkg->cnfls); i++) {
                 struct capreq *cr = n_array_nth(pkg->cnfls, i);
                 
-                if (cnfl_is_obsl(cr))
+                if (capreq_is_obsl(cr))
                     continue;
                 n++;
                 ncol += cmdctx_printf(cmdctx, capreq_snprintf_s(cr));
@@ -460,7 +463,7 @@ static void show_cnfls(struct cmdctx *cmdctx, struct pkg *pkg)
                 struct capreq *cr = n_array_nth(pkg->cnfls, i);
                 char s[255], slen;
                 
-                if (!cnfl_is_obsl(cr))
+                if (!capreq_is_obsl(cr))
                     continue;
                 n++;
 

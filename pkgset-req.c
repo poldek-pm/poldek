@@ -16,7 +16,6 @@
 #include <errno.h>
 #include <obstack.h>
 
-#include <rpm/rpmlib.h>
 #include <trurl/trurl.h>
 
 #include "i18n.h"
@@ -284,7 +283,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
     } else if (*reqname == '/') {
         int n;
         
-        n = file_index_lookup(&ps->file_idx, reqname, pkgsbuf, *npkgs);
+        n = file_index_lookup(&ps->file_idx, reqname, 0, pkgsbuf, *npkgs);
         if (n > 0) {
             *npkgs = n;
             matched = 1;
@@ -310,10 +309,10 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
             }
         }
 
-        if (pkgset_rpmprovides(ps, req)) {
+        if (pkgset_pmprovides(ps, req)) {
             matched = 1;
             capreq_set_satisfied(req);
-            msg(4, " req %-35s --> RPMLIB_CAP\n", capreq_snprintf_s(req));
+            msg(4, " req %-35s --> PM_CAP\n", capreq_snprintf_s(req));
         }
 #if 0
 DUPA        
@@ -521,7 +520,7 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
         }
         
         if (cnflpkg != NULL) {
-            if (cnfl_is_obsl(cnfl)) 
+            if (capreq_is_obsl(cnfl)) 
                 cnflpkg->flags |= REQPKG_OBSOLETE;
             
         } else {
@@ -530,7 +529,7 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
                 pkg->cnflpkgs = n_array_new(n_array_size(pkg->cnfls)/2+2, NULL,
                                             (tn_fn_cmp)reqpkg_cmp);
 
-            if (cnfl_is_obsl(cnfl))
+            if (capreq_is_obsl(cnfl))
                 cnflpkg->flags |= REQPKG_OBSOLETE;
             n_array_push(pkg->cnflpkgs, cnflpkg);
             n_array_sort(pkg->cnflpkgs);

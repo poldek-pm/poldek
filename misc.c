@@ -51,7 +51,7 @@
 #include "misc.h"
 #include "pkg.h"
 #include "poldek_term.h"
-
+#include "pkgmisc.h"
 //static
 //int valid_dir(const char *envname, const char *dir);
 
@@ -528,8 +528,8 @@ const char *ngettext_n_packages_fmt(int n)
 }
 
 
-void display_pkg_list(int verbose_l, const char *prefix,
-                      tn_array *pkgs, unsigned flags)
+void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,
+                           struct pkgmark_set *pms, unsigned flags)
 {
     int   i, ncol = 2, npkgs = 0;
     int   term_width;
@@ -542,15 +542,15 @@ void display_pkg_list(int verbose_l, const char *prefix,
     npkgs =  n_array_size(pkgs);
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
-        
-        if (flags && (pkg->flags & flags) == 0)
+        DBGF("%s %d %d\n", pkg_snprintf_s(pkg), flags, pkgmark_isset(pms, pkg, flags));
+        if (flags && !pkgmark_isset(pms, pkg, flags))
             npkgs--;
     }
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
 
-        if (flags && (pkg->flags & flags) == 0)
+        if (flags && !pkgmark_isset(pms, pkg, flags))
             continue;
 
         if (hdr_printed == 0) {
@@ -806,4 +806,28 @@ int get_gmt_offs(void)
         gmt_off_flag = 1;
     }
     return gmt_off;
+}
+
+int poldek_lookup_external_command(char *cmdpath, int size, const char *cmd)
+{
+    const char **tl, **tl_save;
+    char *path, buf[PATH_MAX];
+    int  found = 0;
+        
+    if ((path = getenv("PATH")) == NULL)
+        path = "/bin:/usr/bin";
+
+    n_snprintf(buf, sizeof(buf), "/usr/lib/poldek:%s", path);
+    
+    tl = tl_save = n_str_tokl(buf, ":");
+    while (*tl) {
+        snprintf(cmdpath, size, "%s/%s", *tl, cmd);
+        if (access(cmdpath, R_OK | X_OK) == 0) {
+            found = 1;
+            break;
+        }
+        tl++;
+    }
+    n_str_tokl_free(tl_save);
+    return found;
 }

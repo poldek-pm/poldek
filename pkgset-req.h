@@ -7,7 +7,6 @@
 #include <string.h>
 #include <errno.h>
 
-#include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
@@ -28,6 +27,7 @@ struct reqpkg {
     struct reqpkg *adds[0];     /* NULL terminated  */
 };
 
+struct pkgset;
 /*
   Find requirement looking into capabilities and file list.
   ARGS: pkgsbuf to store suspects (used if finded in file list *only*)

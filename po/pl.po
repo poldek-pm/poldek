@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2004-07-14 13:12+0200\n"
+"POT-Creation-Date: 2004-08-06 21:29+0200\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: mis@pld.org.pl\n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -17,32 +17,32 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2\n"
 
-#: arg_packages.c:87
+#: arg_packages.c:90
 #, c-format
 msgid "%s:%d: syntax error"
 msgstr "%s:%d: b³±d sk³adniowy"
 
-#: arg_packages.c:89
+#: arg_packages.c:92
 #, fuzzy
 msgid "syntax error in package specification"
 msgstr "b³±d sk³adniowy w definicji pakietu"
 
-#: arg_packages.c:299
+#: arg_packages.c:309
 #, c-format
 msgid "Removed %d duplicates from given packages"
 msgstr "Usuniêto %d zduplikowanych pakietów z listy dostêpnych"
 
-#: arg_packages.c:389 uninstall.c:263
+#: arg_packages.c:399 uninstall.c:261
 #, c-format
 msgid "%s: no such package"
 msgstr "%s: nie ma takiego pakietu"
 
-#: arg_packages.c:395 cli/dent.c:499
+#: arg_packages.c:405 cli/dent.c:510
 #, c-format
 msgid "%s: ambiguous name"
 msgstr "niejednoznaczna nazwa %s"
 
-#: arg_packages.c:418
+#: arg_packages.c:428
 #, fuzzy, c-format
 msgid "%s: no such packageXX"
 msgstr "%s: nie ma takiego pakietu"
@@ -57,12 +57,12 @@ msgstr "Wiêcej ni¿ jeden pakiet udostêpnia w³a¶ciwo¶æ \"%s\":"
 msgid "Which one do you want to install? [%c]"
 msgstr "Który z nich wybierasz? [%c]"
 
-#: capreq.c:286
+#: capreq.c:288
 #, c-format
 msgid "%s: invalid rpmlib capreq"
 msgstr "%s: nieprawid³owa rpmlib()owa zale¿no¶æ"
 
-#: capreqidx.c:93
+#: capreqidx.c:98
 #, c-format
 msgid "%s: redundant capability \"%s\""
 msgstr "%s: nadmiarowa w³asno¶æ \"%s\""
@@ -94,37 +94,37 @@ msgstr ""
 msgid "Print name of current directory"
 msgstr ""
 
-#: cli/cli.c:354
+#: cli/cli.c:351
 #, c-format
 msgid "ambiguous command %s"
 msgstr "niejednoznaczna komenda %s"
 
-#: cli/cmd.c:179
+#: cli/cmd.c:184
 #, c-format
 msgid "%s: no such command"
 msgstr "%s: nie ma takiej komendy"
 
-#: cli/cmd.c:196
+#: cli/cmd.c:201
 #, fuzzy, c-format
 msgid "%s: ambiguous command"
 msgstr "niejednoznaczna komenda %s"
 
-#: cli/cmd.c:295
+#: cli/cmd.c:300
 #, fuzzy, c-format
 msgid "%s: not a right pipe-able command"
 msgstr "%s: nie ma takiej komendy"
 
-#: cli/cmd.c:307
+#: cli/cmd.c:312
 #, c-format
 msgid "%s: not a left pipe-able command"
 msgstr ""
 
-#: cli/cmd.c:350
+#: cli/cmd.c:355
 #, fuzzy, c-format
 msgid "%s: parse error"
 msgstr "%s: b³±d interpretacji URLa"
 
-#: cli/dbcache.c:154 pkgdir/pkgdir.c:556
+#: cli/dbcache.c:156 pkgdir/pkgdir.c:554
 #, c-format
 msgid "%d package loaded"
 msgid_plural "%d packages loaded"
@@ -132,86 +132,86 @@ msgstr[0] "Przeczytano %d pakiet"
 msgstr[1] "Przeczytano %d pakiety"
 msgstr[2] "Przeczytano %d pakietów"
 
-#: cli/dbcache.c:165
+#: cli/dbcache.c:167
 msgid "Load installed packages failed"
 msgstr "B³±d odczytu zainstalowanych pakietów"
 
-#: cli/dent.c:493
+#: cli/dent.c:504
 #, fuzzy, c-format
 msgid "%s: no such package or directory"
 msgstr "%s: nie ma takiego katalogu"
 
-#: cli/desc.c:61
+#: cli/desc.c:64
 msgid "Show all described below fields"
 msgstr "Poka¿ wszystkie pozycje wymienione wy¿ej"
 
-#: cli/desc.c:64
+#: cli/desc.c:67
 msgid "Show capabilities, requirements, conflicts and obsolences"
 msgstr "Poka¿ w³asno¶ci, wymagania, konflikty i zast±pienia(iii... obsoletes)"
 
-#: cli/desc.c:67
+#: cli/desc.c:70
 msgid "Show package's capablities"
 msgstr "Poka¿ w³asno¶ci (capablities) pakietu"
 
-#: cli/desc.c:70
+#: cli/desc.c:73
 msgid "Show requirements"
 msgstr "Poka¿ wymagania (requirements)"
 
-#: cli/desc.c:73
+#: cli/desc.c:76
 msgid "Show required packages"
 msgstr "Poka¿ wymagane pakiety"
 
-#: cli/desc.c:76
+#: cli/desc.c:79
 msgid "Show packages which requires given package"
 msgstr "Poka¿ pakiety, które wymagaj± podanego pakietu"
 
-#: cli/desc.c:79
+#: cli/desc.c:82
 msgid "Show conflicts and obsolences"
 msgstr "Poka¿ konflikty i zast±pienia(sic!)"
 
-#: cli/desc.c:81
+#: cli/desc.c:84
 msgid "Show description (the default)"
 msgstr "Poka¿ opis pakietu (akcja domy¶lna)"
 
-#: cli/desc.c:84
+#: cli/desc.c:87
 msgid "Show package files (doubled gives long listing format)"
 msgstr ""
 "Poka¿ pliki pakietu (opcja dana dwukrotnie wy¶wietli listê w pe³nym formacie)"
 
-#: cli/desc.c:93 cli/get.c:43 cli/install.c:139 cli/uninstall.c:60
+#: cli/desc.c:96 cli/get.c:43 cli/install.c:139 cli/uninstall.c:60
 msgid "PACKAGE..."
 msgstr "PAKIET..."
 
-#: cli/desc.c:93
+#: cli/desc.c:96
 msgid "Display packages info"
 msgstr "Wy¶wietlaj informacje o pakietach"
 
-#: cli/desc.c:514
+#: cli/desc.c:517
 msgid "mode"
 msgstr "mode"
 
-#: cli/desc.c:514 cli/ls.c:362 cli/ls.c:376 cli/ls.c:379
+#: cli/desc.c:517 cli/ls.c:362 cli/ls.c:376 cli/ls.c:379
 msgid "size"
 msgstr "rozmiar"
 
-#: cli/desc.c:514
+#: cli/desc.c:517
 msgid "name"
 msgstr "nazwa"
 
-#: cli/desc.c:662
+#: cli/desc.c:665
 #, c-format
 msgid "%s: description unavailable (index without packages info loaded?)\n"
 msgstr "%s: opis niedostêpny (prawdopodobnie u¿ywany indeks nie zawiera ich)\n"
 
-#: cli/external.c:29
+#: cli/external.c:31
 msgid "COMMAND"
 msgstr ""
 
-#: cli/external.c:29
+#: cli/external.c:31
 msgid "Execute external command"
 msgstr ""
 
-#: cli/external.c:84
+#: cli/external.c:83
 #, fuzzy, c-format
 msgid "%s: external command not found"
 msgstr "%s: nie znaleziono wymaganego %s"
@@ -319,7 +319,7 @@ msgstr ""
 "Nie instaluj, a tylko wypisz nazwy pakietów przeznaczonych do instalacji do "
 "pliku FILE"
 
-#: cli/install.c:94 cli/main.c:77 main.c:417
+#: cli/install.c:94 cli/main.c:80 main.c:417
 msgid "Be verbose."
 msgstr "B±d¼ gadatliwy"
 
@@ -431,7 +431,7 @@ msgstr "Poka¿ grupy pakietów"
 msgid "Print package summaries"
 msgstr "Poka¿ krótkie opisy pakietów"
 
-#: cli/ls.c:69 cli/main.c:40 main.c:63
+#: cli/ls.c:69 cli/main.c:43 main.c:63
 msgid "[PACKAGE...]"
 msgstr "[PAKIET...]"
 
@@ -463,56 +463,56 @@ msgstr "zainstalowany"
 msgid "available"
 msgstr "dostêpny"
 
-#: cli/main.c:58 main.c:403
+#: cli/main.c:61 main.c:403
 msgid "Other:"
 msgstr "Pozosta³e:"
 
-#: cli/main.c:59
+#: cli/main.c:62
 #, fuzzy
 msgid "Store downloaded files & co. under DIR"
 msgstr "Umieszczaj ¶ci±gniête pliki w katalogu DIR"
 
-#: cli/main.c:60
+#: cli/main.c:63
 #, fuzzy
 msgid "Run in cmd mode"
 msgstr "Uruchom w trybie interaktywnym"
 
-#: cli/main.c:61 main.c:407
+#: cli/main.c:64 main.c:407
 msgid ""
 "Confirm packages installation and let user choose among equivalent packages"
 msgstr ""
 "Potwierdzaj installacje oraz pozwól u¿ytkownikowi wybieraæ po¶ród "
 "równowa¿nych pakietów"
 
-#: cli/main.c:63 main.c:409
+#: cli/main.c:66 main.c:409
 msgid "Don't ask about anything"
 msgstr "O nic nie pytaj"
 
-#: cli/main.c:66 main.c:384
+#: cli/main.c:69 main.c:384
 msgid "Don't load installed packages at startup"
 msgstr "Nie ³aduj bazy zainstalowanych pakietów przy starcie"
 
-#: cli/main.c:70 main.c:411
+#: cli/main.c:73 main.c:411
 msgid "Read configuration from FILE"
 msgstr "Czytaj konfiguracjê z pliku FILE"
 
-#: cli/main.c:71 main.c:412
+#: cli/main.c:74 main.c:412
 msgid "Do not read configuration"
 msgstr "Nie czytaj ¿adnej konfiguracji"
 
-#: cli/main.c:73 main.c:414
+#: cli/main.c:76 main.c:414
 msgid "Display program version information and exit"
 msgstr "Wypisz informacjê o wersji programu i wyjd¼"
 
-#: cli/main.c:75 main.c:415
+#: cli/main.c:78 main.c:415
 msgid "Log program messages to FILE"
 msgstr "Rejestruj wszystkie komunikaty w pliku FILE"
 
-#: cli/main.c:78 main.c:418
+#: cli/main.c:81 main.c:418
 msgid "Do not produce any output."
 msgstr "Nie wypisuj ¿anych komunikatów"
 
-#: cli/main.c:337 main.c:911 main.c:1046
+#: cli/main.c:340 main.c:911 main.c:1046
 msgid "so what?"
 msgstr "no i?"
 
@@ -712,55 +712,55 @@ msgstr ""
 msgid "Verify dependencies, conflicts and file conflicts"
 msgstr "Sprawd¼ zale¿no¶ci i konflikty (w tym plikowe)"
 
-#: cli/search.c:84
+#: cli/search.c:87
 msgid "Search capabilities"
 msgstr "Przeszukuj w³asno¶ci (capablities)"
 
-#: cli/search.c:85
+#: cli/search.c:88
 msgid "Search requirements"
 msgstr "Przeszukuj wymagania (requirements)"
 
-#: cli/search.c:86
+#: cli/search.c:89
 msgid "Search conflicts"
 msgstr "Przeszukuj konflikty"
 
-#: cli/search.c:87
+#: cli/search.c:90
 msgid "Search obsolences"
 msgstr "Przeszukuj przedawnienia (sic!, obsolences)"
 
-#: cli/search.c:88
+#: cli/search.c:91
 msgid "Search summaries, urls and license"
 msgstr "Przeszukuj licencje, URLe oraz krótkie opisy pakietów"
 
-#: cli/search.c:89
+#: cli/search.c:92
 msgid "Search descriptions"
 msgstr "Przeszukuj opisy"
 
-#: cli/search.c:90
+#: cli/search.c:93
 msgid "Search groups"
 msgstr "Przeszukuj grupy"
 
-#: cli/search.c:91
+#: cli/search.c:94
 msgid "Search file list"
 msgstr "Przeszukuj listy plików"
 
-#: cli/search.c:94
+#: cli/search.c:97
 msgid "Search all described fields, the defaults are: -sd"
 msgstr "Przeszukuj wszystkie pola pakietów, domy¶lnie s± to -sd"
 
-#: cli/search.c:96
+#: cli/search.c:99
 msgid "Threat PATTERN as Perl regular expression"
 msgstr "Traktuj WZORZEC jako perlowe wyra¿enie regularne"
 
-#: cli/search.c:104
+#: cli/search.c:107
 msgid "PATTERN [PACKAGE...]"
 msgstr "WZORZEC [PAKIET...]"
 
-#: cli/search.c:104
+#: cli/search.c:107
 msgid "Search packages"
 msgstr "Przeszukiwanie pakietów"
 
-#: cli/search.c:108
+#: cli/search.c:111
 #, fuzzy
 msgid ""
 "With --perlre pattern must be supplied as:\n"
@@ -772,39 +772,39 @@ msgstr ""
 "Z opcj± --perlre wzorzec nale¿y podaæ w formie:\n"
 "   <delimiter>perl-regexp<delimiter>[imsx], zob. perlre(1)\n"
 
-#: cli/search.c:226
+#: cli/search.c:229
 #, c-format
 msgid "search: unknown regexp option -- %c"
 msgstr "search: nieznana opcja wzorca -- %c"
 
-#: cli/search.c:298
+#: cli/search.c:301
 #, c-format
 msgid "search: pattern: %s:%d: %s"
 msgstr "search: wzorzec: %s:%d: %s"
 
-#: cli/search.c:306
+#: cli/search.c:309
 #, c-format
 msgid "search: pattern: %s: %s"
 msgstr "search: wzorzec: %s: %s"
 
-#: cli/search.c:481
+#: cli/search.c:484
 #, c-format
 msgid "%s: load package info failed"
 msgstr "%s: b³±d odczytu informacji o pakiecie"
 
-#: cli/search.c:523
+#: cli/search.c:526
 msgid "search: no pattern given"
 msgstr "search: nie podano wzorca"
 
-#: cli/search.c:556
+#: cli/search.c:559
 msgid "Searching packages..."
 msgstr "Przeszukiwanie pakietów..."
 
-#: cli/search.c:576
+#: cli/search.c:579
 msgid "_interrupted."
 msgstr "_przerwano"
 
-#: cli/search.c:582
+#: cli/search.c:585
 msgid "_done."
 msgstr "_zrobione."
 
@@ -909,20 +909,20 @@ msgstr "%s: b³±d odczytu informacji o pakiecie"
 msgid "invalid value ('%s') of option '%s'"
 msgstr "niedozwolona warto¶æ ('%s') dla opcji '%s'"
 
-#: lib_init.c:340
+#: lib_init.c:341
 #, c-format
 msgid "%s: no such source"
 msgstr "%s: nie ma takiego ¼ród³a"
 
-#: lib_init.c:671
+#: lib_init.c:672
 msgid "I'm set*id'ed, give up"
 msgstr "Mam ustawiony bit suid/sgid, wymiêkam"
 
-#: lib_init.c:676
+#: lib_init.c:677
 msgid "Running me as root is not a good habit"
 msgstr ""
 
-#: lib_pkgset.c:62
+#: lib_pkgset.c:61 pm/pset/pset.c:67
 msgid "no packages loaded"
 msgstr "nie za³adowano ¿adnych pakietów"
 
@@ -1284,8 +1284,8 @@ msgstr "%s: interpertacja siê nie powiod³a"
 msgid "error reading %s's data"
 msgstr "b³±d odczytu danych z %s"
 
-#: pkgdir/pdir/save.c:187 pkgdir/pdir/save.c:188 pkgdir/pndir/save.c:651
-#: pkgdir/pndir/save.c:652
+#: pkgdir/pdir/save.c:187 pkgdir/pdir/save.c:188 pkgdir/pndir/save.c:654
+#: pkgdir/pndir/save.c:655
 #, c-format
 msgid "Writing %s..."
 msgstr "Zapisywanie %s..."
@@ -1295,7 +1295,7 @@ msgstr "Zapisywanie %s..."
 msgid "%s: format error"
 msgstr "%s: b³êdny format"
 
-#: pkgdir/pdir/save.c:403 pkgdir/pndir/save.c:398
+#: pkgdir/pdir/save.c:403 pkgdir/pndir/save.c:401
 #, c-format
 msgid "Removing outdated %s"
 msgstr "Usuwanie przedawnionego %s"
@@ -1310,12 +1310,12 @@ msgstr "%s: nieznana opcja"
 msgid "%s: this type of source is not updateable"
 msgstr "%s: tego typu ¼ród³a nie mo¿na aktualizowaæ"
 
-#: pkgdir/pkgdir.c:531
+#: pkgdir/pkgdir.c:529
 #, c-format
 msgid "Loading %s..."
 msgstr "Wczytywanie %s..."
 
-#: pkgdir/pkgdir.c:584
+#: pkgdir/pkgdir.c:582
 #, c-format
 msgid "removed %d duplicate package"
 msgid_plural "removed %d duplicate packages"
@@ -1323,17 +1323,17 @@ msgstr[0] "usuniêto %d zdublowany pakiet"
 msgstr[1] "usuniêto %d zdublowane pakiety"
 msgstr[2] "usuniêto %d zdublowanych pakietów"
 
-#: pkgdir/pkgdir.c:694
+#: pkgdir/pkgdir.c:692
 #, fuzzy, c-format
 msgid "%s: this type of source could not be created"
 msgstr "%s: tego typu ¼ród³a nie mo¿na aktualizowaæ"
 
-#: pkgdir/pkgdir.c:758
+#: pkgdir/pkgdir.c:756
 #, c-format
 msgid "Loading previous %s..."
 msgstr "Wczytywanie poprzedniego %s..."
 
-#: pkgdir/pkgdir.c:776
+#: pkgdir/pkgdir.c:774
 #, c-format
 msgid "clock skew detected; create index with fake timestamp %lu %lu"
 msgstr ""
@@ -1363,37 +1363,37 @@ msgstr "%s: nie jest to poldekowy indeks"
 msgid "%s:%s: unknown index opt"
 msgstr "%s: nieznana opcja"
 
-#: pkgdir/pndir/save.c:297
+#: pkgdir/pndir/save.c:300
 #, fuzzy, c-format
 msgid "%s:%s: failed to parse evr string"
 msgstr "%s: interpertacja siê nie powiod³a"
 
-#: pkgdir/pndir/save.c:374
+#: pkgdir/pndir/save.c:377
 #, fuzzy, c-format
 msgid "vaccum: %s: format error"
 msgstr "%s: b³êdny format"
 
-#: pkgdir/pndir/save.c:611
+#: pkgdir/pndir/save.c:614
 #, fuzzy, c-format
 msgid " Omiting '%s' descriptions (%d - %.1lf%% only)..."
 msgstr "Zapisywanie sumy kontrolnej %s..."
 
-#: pkgdir/pndir/save.c:742
+#: pkgdir/pndir/save.c:745
 #, c-format
 msgid " Skipping '%s' descriptions (%d - %.1lf%% only)..."
 msgstr ""
 
-#: pkgdir/pndir/save.c:749
+#: pkgdir/pndir/save.c:752
 #, fuzzy, c-format
 msgid " Writing %d '%s' descriptions %s..."
 msgstr "Zapisywanie sumy kontrolnej %s..."
 
-#: pkgdir/rpmdb/rpmdb.c:200
+#: pkgdir/rpmdb/rpmdb.c:196
 #, c-format
 msgid "Loading db packages%s%s%s..."
 msgstr "£adowanie pakietów z bazy%s%s%s..."
 
-#: pkgdir/rpmdb/rpmdb.c:212
+#: pkgdir/rpmdb/rpmdb.c:206
 msgid "_done"
 msgstr "_zrobione"
 
@@ -1433,124 +1433,129 @@ msgstr ""
 msgid "%s:%d syntax error"
 msgstr "%s:%d: b³±d sk³adniowy"
 
-#: pkgfetch.c:113 rpm/rpminstall.c:374
-#, c-format
-msgid "Executing%s..."
-msgstr "Uruchamianie%s..."
-
-#: pkgfetch.c:197 pkgfetch.c:293
+#: pkgfetch.c:110 pkgfetch.c:207
 #, c-format
 msgid "%s: MD5 signature verification failed"
 msgstr "%s: suma kontrolna MD5 siê nie zgadza"
 
-#: pkgset-install.c:148
+#: pkgmark.c:143 pkgset-mark.c:85
+#, fuzzy, c-format
+msgid "%s marks %s (cap %s)"
+msgstr "%s%s zaznaczy³ %s (%s %s)"
+
+#: pkgmark.c:211 pkgset-mark.c:155
+#, c-format
+msgid "conflict between %s and %s"
+msgstr "konflikt pomiêdzy %s i %s"
+
+#: pkgset-install.c:150
 #, c-format
 msgid "%s: multiple instances installed, give up"
 msgstr "%s: wielokrotnie zainstalowany, poddajê siê"
 
-#: pkgset-install.c:153
+#: pkgset-install.c:155
 #, c-format
 msgid "%s: refusing to upgrade held package"
 msgstr "%s: odmawiam aktualizacji wstrzymanego (hold) pakietu"
 
-#: pkgset-install.c:543
+#: pkgset-install.c:551
 msgid "cap"
 msgstr "w³."
 
-#: pkgset-install.c:548
+#: pkgset-install.c:556
 msgid "orphaned "
 msgstr "'osierocony' "
 
-#: pkgset-install.c:551
+#: pkgset-install.c:559
 msgid "cnfl"
 msgstr "konfl."
 
-#: pkgset-install.c:553
+#: pkgset-install.c:561
 #, c-format
 msgid "%s%s marks %s (%s %s)"
 msgstr "%s%s zaznaczy³ %s (%s %s)"
 
-#: pkgset-install.c:596
+#: pkgset-install.c:604
 #, c-format
 msgid "%s: skip follow %s cause it's dependency errors"
 msgstr "%s: pominiêty %s z powodu niespe³nionych zale¿no¶ci"
 
-#: pkgset-install.c:605
+#: pkgset-install.c:613
 #, c-format
 msgid "%s: dependency loop - package already marked for removal"
 msgstr "%s: zapêtlenie zale¿no¶ci -- pakiet jest ju¿ zaznaczony do usuniêcia"
 
-#: pkgset-install.c:626
+#: pkgset-install.c:634
 #, c-format
 msgid "greedy upgrade %s to %s-%s (unresolved %s)"
 msgstr "zach³anna aktualizacja %s do %s-%s (niespe³nione %s)"
 
-#: pkgset-install.c:755
+#: pkgset-install.c:764
 #, c-format
 msgid "%s is required by"
 msgstr "%s jest wymagany przez"
 
-#: pkgset-install.c:816
+#: pkgset-install.c:825
 #, c-format
 msgid "%s (cap %s) is required by %s"
 msgstr "%s (w³. %s) jest wymagany przez %s"
 
-#: pkgset-install.c:859
+#: pkgset-install.c:869
 #, c-format
 msgid "%s obsoleted by %s"
 msgstr "%s zostanie zast±piony przez %s"
 
-#: pkgset-install.c:1057
+#: pkgset-install.c:1062
 #, c-format
 msgid "%s: rpmcap %s not found, upgrade rpm."
 msgstr "%s: brak w³. RPM-a %s, zaktualizuj rpm-a."
 
-#: pkgset-install.c:1146
+#: pkgset-install.c:1151
 #, c-format
 msgid "%s (cap %s) is required by %s%s"
 msgstr "%s (w³. %s) jest wymagany przez %s%s"
 
-#: pkgset-install.c:1161
+#: pkgset-install.c:1166
 #, c-format
 msgid "%s: req %s not found"
 msgstr "%s: nie znaleziono wymaganego %s"
 
-#: pkgset-install.c:1208
+#: pkgset-install.c:1214
 #, c-format
 msgid "%s is required by %s"
 msgstr "%s jest wymagany przez %s"
 
-#: pkgset-install.c:1422
+#: pkgset-install.c:1429
 #, c-format
 msgid "%s: /%s/%s%s: conflicts with %s's one"
 msgstr "%s: /%s/%s%s: jest w konflicie z tym samym plikem z %s"
 
-#: pkgset-install.c:1567
+#: pkgset-install.c:1574
 #, c-format
 msgid "%s (cnfl %s) conflicts with installed %s"
 msgstr "%s (cnfl %s) jest w konflicie z zainstalowanm %s"
 
-#: pkgset-install.c:1601
+#: pkgset-install.c:1608
 #, c-format
 msgid "%s (cap %s) conflicts with installed %s (%s)"
 msgstr "%s (w³. %s) jest w konflicie z zainstalowanm %s (%s)"
 
-#: pkgset-install.c:1628
+#: pkgset-install.c:1635
 #, c-format
 msgid "%s conflicts with %s"
 msgstr "%s jest w konflicie z %s"
 
-#: pkgset-install.c:1784
+#: pkgset-install.c:1791
 #, c-format
 msgid "%s: package is for a different architecture (%s)"
 msgstr "%s: pakiet zbudowano dla innej architektury (%s)"
 
-#: pkgset-install.c:1791
+#: pkgset-install.c:1798
 #, c-format
 msgid "%s: package is for a different operating system (%s)"
 msgstr "%s: pakiet zbudowano dla innego systemu operacyjnego (%s)"
 
-#: pkgset-install.c:1850 pkgset-install.c:1857 uninstall.c:154 uninstall.c:161
+#: pkgset-install.c:1857 pkgset-install.c:1864 uninstall.c:157 uninstall.c:164
 #, c-format
 msgid "_ (%d marked by dependencies)"
 msgid_plural "_ (%d marked by dependencies)"
@@ -1558,7 +1563,7 @@ msgstr[0] "_ (%d zaznaczony po¶rednio)"
 msgstr[1] "_ (%d zaznaczone po¶rednio)"
 msgstr[2] "_ (%d zaznaczonych po¶rednio)"
 
-#: pkgset-install.c:1853
+#: pkgset-install.c:1860
 #, c-format
 msgid "There are %d package to install"
 msgid_plural "There are %d packages to install"
@@ -1566,31 +1571,31 @@ msgstr[0] "Zaznaczono %d pakiet do instalacji"
 msgstr[1] "Zaznaczono %d pakiety do instalacji"
 msgstr[2] "Zaznaczono %d pakietów do instalacji"
 
-#: pkgset-install.c:1862
+#: pkgset-install.c:1869
 #, c-format
 msgid "_, %d to uninstall"
 msgstr "_, %d do usuniêcia"
 
-#: pkgset-install.c:1888
+#: pkgset-install.c:1898
 #, c-format
 msgid "Need to download about %s of archives. "
 msgstr ""
 
-#: pkgset-install.c:1894
+#: pkgset-install.c:1904
 #, c-format
 msgid "_After unpacking about %s will be used."
 msgstr ""
 
-#: pkgset-install.c:1921
+#: pkgset-install.c:1931
 #, c-format
 msgid "%s: refusing to uninstall held package"
 msgstr "%s: odmawiam usuniêcia wstrzymanego (hold) pakietu"
 
-#: pkgset-install.c:2011
+#: pkgset-install.c:2019
 msgid "Processing dependencies..."
 msgstr "Przetwarzanie zale¿no¶ci..."
 
-#: pkgset-install.c:2047
+#: pkgset-install.c:2055
 #, c-format
 msgid "%d unresolved dependency"
 msgid_plural "%d unresolved dependencies"
@@ -1598,33 +1603,29 @@ msgstr[0] "%d niespe³niona zale¿no¶æ"
 msgstr[1] "%d niespe³nione zale¿no¶ci"
 msgstr[2] "%d niespe³nionych zale¿no¶ci"
 
-#: pkgset-install.c:2102
+#: pkgset-install.c:2111
 msgid "Proceed? [Y/n]"
 msgstr "Kontynuowaæ? [Y/n]"
 
-#: pkgset-install.c:2170
-msgid "db package header corrupted (!?)"
-msgstr "uszkodzony nag³ówek pakietu z bazy (!?)"
-
-#: pkgset-install.c:2199
+#: pkgset-install.c:2208
 #, c-format
 msgid "%s: multiple instances installed, skipped"
 msgstr "%s: wielokrotnie zainstalowany, zosta³ pominiêty"
 
-#: pkgset-install.c:2209
+#: pkgset-install.c:2218
 #, c-format
 msgid "%s: skip held package"
 msgstr "%s: pomijam wstrzymany (hold) pakiet"
 
-#: pkgset-install.c:2229
+#: pkgset-install.c:2238
 msgid "Looking up packages for upgrade..."
 msgstr "Szukam pakietów do aktualizacji..."
 
-#: pkgset-install.c:2234
+#: pkgset-install.c:2243
 msgid "There are database errors (?), give up"
 msgstr "Wyst±pi³y b³êdy rpmowej bazy (?), wymiêkam"
 
-#: pkgset-install.c:2245
+#: pkgset-install.c:2254
 msgid "Nothing to do"
 msgstr "Nie ma roboty"
 
@@ -1638,23 +1639,13 @@ msgstr "Zapisywanie sumy kontrolnej %s..."
 msgid "%s: load failed, skipped"
 msgstr "%s: ³adunek siê nie powiód³, pominiêto to"
 
-#: pkgset-load.c:110
+#: pkgset-load.c:114
 #, c-format
 msgid "%d package read"
 msgid_plural "%d packages read"
 msgstr[0] "Przeczytano %d pakiet"
 msgstr[1] "Przeczytano %d pakiety"
 msgstr[2] "Przeczytano %d pakietów"
-
-#: pkgset-mark.c:85
-#, fuzzy, c-format
-msgid "%s marks %s (cap %s)"
-msgstr "%s%s zaznaczy³ %s (%s %s)"
-
-#: pkgset-mark.c:155
-#, c-format
-msgid "conflict between %s and %s"
-msgstr "konflikt pomiêdzy %s i %s"
 
 #: pkgset-mark.c:172
 #, c-format
@@ -1666,11 +1657,11 @@ msgstr "mark: %s: niespe³nione zale¿no¶ci"
 msgid "mark %s"
 msgstr "zazn. %s"
 
-#: pkgset-order.c:146
+#: pkgset-order.c:145
 msgid "PreReq loop: "
 msgstr "Zapêtlenie zale¿no¶ci: "
 
-#: pkgset-req.c:148
+#: pkgset-req.c:147
 msgid ""
 "\n"
 "Verifying dependencies..."
@@ -1678,21 +1669,21 @@ msgstr ""
 "\n"
 "Sprawdzanie zale¿no¶ci..."
 
-#: pkgset-req.c:199
+#: pkgset-req.c:198
 msgid "No unsatisfied dependencies detected -- OK"
 msgstr "Brak niespe³nionych zale¿no¶ci -- To dobrze"
 
-#: pkgset-req.c:202
+#: pkgset-req.c:201
 #, c-format
 msgid "%d unsatisfied dependencies, %d packages cannot be installed"
 msgstr "%d niespe³nionych zale¿no¶ci, %d pakiet(ów)"
 
-#: pkgset-req.c:306
+#: pkgset-req.c:305
 #, c-format
 msgid "%s: provides rpmlib cap \"%s\""
 msgstr "%s zawiera rpmlib()ow± w³asno¶æ \"%s\""
 
-#: pkgset.c:288
+#: pkgset.c:299
 #, c-format
 msgid "Removed %d duplicate package from available set"
 msgid_plural "Removed %d duplicate packages from available set"
@@ -1700,7 +1691,7 @@ msgstr[0] "Usuniêto %d zdublowany pakiet z listy dostêpnych"
 msgstr[1] "Usuniêto %d zdublowane pakiety z listy dostêpnych"
 msgstr[2] "Usuniêto %d zdublowanych pakietów z listy dostêpnych"
 
-#: pkgset.c:299
+#: pkgset.c:310
 msgid ""
 "\n"
 "Verifying files conflicts..."
@@ -1708,7 +1699,7 @@ msgstr ""
 "\n"
 "Sprawdzanie konfliktów plikowych..."
 
-#: pkgset.c:324
+#: pkgset.c:335
 msgid ""
 "\n"
 "Verifying (pre)requirements..."
@@ -1716,7 +1707,7 @@ msgstr ""
 "\n"
 "Sprawdzanie \"pre\" wymagañ..."
 
-#: pkgset.c:334
+#: pkgset.c:345
 #, c-format
 msgid "%d prerequirement loop detected"
 msgid_plural "%d prerequirement loops detected"
@@ -1724,9 +1715,166 @@ msgstr[0] "Wykryto %d zapêtlenie zale¿no¶ci"
 msgstr[1] "Wykryto %d zapêtlenia zale¿no¶ci"
 msgstr[2] "Wykryto %d zapêtleñ zale¿no¶ci"
 
-#: pkgset.c:339
+#: pkgset.c:350
 msgid "No loops -- OK"
 msgstr "Brak zapêtleñ -- To dobrze"
+
+#: pm/rpm/install.c:129 pm/rpm/install.c:163
+#, c-format
+msgid "Installing %s"
+msgstr "Instalacja %s"
+
+#: pm/rpm/install.c:231
+#, fuzzy, c-format
+msgid "%s: source packages are not supported"
+msgstr "%s: pakiety ¼ród³owe (src.rpm) nie s± obs³ugiwane"
+
+#: pm/rpm/install.c:257
+#, c-format
+msgid "%s: rpm read error"
+msgstr "%s: nie mo¿na odczytaæ pakietu"
+
+#: pm/rpm/install.c:263
+#, c-format
+msgid "%s requires a newer version of RPM"
+msgstr "%s wymaga nowszego RPMa"
+
+#: pm/rpm/install.c:302
+#, c-format
+msgid "%s: failed dependencies:"
+msgstr "%s: niespe³nione zale¿no¶ci:"
+
+#: pm/rpm/install.c:329
+#, c-format
+msgid "%s: installation failed:"
+msgstr "%s: instalacja siê nie powiod³a:"
+
+#: pm/rpm/install.c:336
+#, c-format
+msgid "%s: installation failed (hgw why)"
+msgstr "%s: instalacja siê nie powiod³a (nie wiadomo dlaczego)"
+
+#: pm/rpm/rpm.c:90
+#, c-format
+msgid "%s: invalid macro definition"
+msgstr "%s: nieprawid³owa definicja makra"
+
+#: pm/rpm/rpm.c:140
+#, c-format
+msgid "%s%s: open rpm database failed"
+msgstr "%s%s: nie mo¿na otworzyæ rpmowej bazy"
+
+#: pm/rpm/rpm_pkg_ld.c:226
+#, c-format
+msgid "%s: %s \"%s\" longer than 255 bytes"
+msgstr "%s: %s \"%s\" jest d³u¿szy ni¿ 255 bajtów"
+
+#: pm/rpm/rpm_pkg_ld.c:227
+msgid "dirname"
+msgstr "nazwa katalogu"
+
+#: pm/rpm/rpm_pkg_ld.c:227
+msgid "filename"
+msgstr "nazwa pliku"
+
+#: pm/rpm/rpm_pkg_ld.c:247
+#, c-format
+msgid "%s: no %s tag"
+msgstr "%s: brak tagu %s"
+
+#: pm/rpm/rpm_pkg_ld.c:381
+#, c-format
+msgid "%s: skipped file list"
+msgstr "%s: pominiêto listê plików"
+
+#: pm/rpm/rpm_pkg_ld.c:408
+msgid "FILEMODES tag"
+msgstr "tag FILEMODES"
+
+#: pm/rpm/rpm_pkg_ld.c:410
+msgid "FILEMODES and FILESIZES tags"
+msgstr "tagi FILEMODES oraz FILESIZES"
+
+#: pm/rpm/rpm_pkg_ld.c:411
+#, c-format
+msgid "%s: missing %s in some packages"
+msgstr "%s: brak '%s' w niektórych pakietach"
+
+#: pm/rpm/rpm_pkg_ld.c:427
+#, c-format
+msgid "%s: read name/version/release failed"
+msgstr ""
+
+#: pm/rpm/rpm_pkg_ld.c:439
+#, c-format
+msgid "%s: read architecture tag failed"
+msgstr ""
+
+#: pm/rpm/rpm_pkg_ld.c:450
+#, c-format
+msgid "%s: missing OS tag"
+msgstr "%s: brak tagu OS"
+
+#: pm/rpm/rpmhdr.c:61
+#, c-format
+msgid "%s: read header failed"
+msgstr "%s: odczyt nag³ówka siê nie powiód³"
+
+#: pm/rpm/rpminstall.c:178
+#, c-format
+msgid "Executing %s "
+msgstr "Uruchamianie %s "
+
+#: pm/rpm/rpminstall.c:184 pm/rpm/rpminstall.c:193 vfile/p_open.c:129
+#: vfile/p_open.c:286 vfile/vfff/http.c:684 vfile/vopen3.c:166
+#: vfile/vopen3.c:574
+#, c-format
+msgid "%s: no such file"
+msgstr "%s: nie ma takiego pliku"
+
+#: pm/rpm/rpminstall.c:200
+#, c-format
+msgid "%s exited with %d"
+msgstr "%s zakoñczony z rezultatem %d"
+
+#: pm/rpm/rpminstall.c:209 vfile/p_open.c:199
+#, c-format
+msgid "%s terminated by signal %s"
+msgstr "%s usieczon za spraw± sygna³u %s"
+
+#: pm/rpm/rpminstall.c:212 vfile/p_open.c:202 vfile/vopen3.c:341
+#, c-format
+msgid "%s terminated by signal %d"
+msgstr "%s usieczon za spraw± sygna³u %d"
+
+#: pm/rpm/rpminstall.c:217
+#, c-format
+msgid "%s died under inscrutable circumstances"
+msgstr "%s zgin±³ w podejrzanych okoliczno¶ciach"
+
+#: pm/rpm/rpminstall.c:342
+#, fuzzy, c-format
+msgid "%s: signature verification failed"
+msgstr "%s: suma kontrolna MD5 siê nie zgadza"
+
+#: pm/rpm/rpminstall.c:359
+msgid "There were signature verification errors. Proceed? [y/N]"
+msgstr "Wyst±pi³y b³êdy weryfikacji podpisu. Kontynuowaæ? [y/N]"
+
+#: pm/rpm/rpminstall.c:378 pm/rpm/signature.c:365
+#, c-format
+msgid "Executing%s..."
+msgstr "Uruchamianie%s..."
+
+#: pm/rpm/rpminstall.c:483
+#, c-format
+msgid "Running%s..."
+msgstr "Uruchamianie%s..."
+
+#: pm/rpm/signature.c:218 pm/rpm/signature.c:263
+#, c-format
+msgid "%s: %s signature not found"
+msgstr "%s: %s nie znaleziono podpisu"
 
 #: poldek_term.c:191
 msgid "$TERM undefined"
@@ -1745,180 +1893,38 @@ msgstr ""
 "\n"
 "Przetwarzanie zale¿no¶ci..."
 
-#: poldek_ts.c:609
+#: poldek_ts.c:614
 #, c-format
 msgid " %d of %d (%.2f of %.2f MB) packages done"
 msgstr "%d z %d (%.2f z %.2f MB) pakietów"
 
-#: poldek_ts.c:615
+#: poldek_ts.c:620
 #, c-format
 msgid "; %.2f MB to download"
 msgstr "; %.2f MB do pobrania"
 
-#: poldek_ts.c:622
+#: poldek_ts.c:626
 msgid "there were errors during install"
 msgstr "wyst±pi³y b³êdy podczas instalacji"
 
-#: poldek_ts.c:875
+#: poldek_ts.c:879
 #, fuzzy, c-format
 msgid "%s: req %s %s"
 msgstr "%s zaznaczy³ %s"
 
-#: poldek_ts.c:877
+#: poldek_ts.c:881
 msgid "version mismatch"
 msgstr ""
 
-#: poldek_ts.c:877
+#: poldek_ts.c:881
 #, fuzzy
 msgid "not found"
 msgstr "mark: nie znaleziono %s"
 
-#: poldek_ts.c:883
+#: poldek_ts.c:887
 #, fuzzy, c-format
 msgid "%d unsatisfied dependencies"
 msgstr "%s: niespe³nione zale¿no¶ci:"
-
-#: rpm/install.c:129 rpm/install.c:163
-#, c-format
-msgid "Installing %s"
-msgstr "Instalacja %s"
-
-#: rpm/install.c:229
-#, fuzzy, c-format
-msgid "%s: source packages are not supported"
-msgstr "%s: pakiety ¼ród³owe (src.rpm) nie s± obs³ugiwane"
-
-#: rpm/install.c:255
-#, c-format
-msgid "%s: rpm read error"
-msgstr "%s: nie mo¿na odczytaæ pakietu"
-
-#: rpm/install.c:261
-#, c-format
-msgid "%s requires a newer version of RPM"
-msgstr "%s wymaga nowszego RPMa"
-
-#: rpm/install.c:300
-#, c-format
-msgid "%s: failed dependencies:"
-msgstr "%s: niespe³nione zale¿no¶ci:"
-
-#: rpm/install.c:327
-#, c-format
-msgid "%s: installation failed:"
-msgstr "%s: instalacja siê nie powiod³a:"
-
-#: rpm/install.c:334
-#, c-format
-msgid "%s: installation failed (hgw why)"
-msgstr "%s: instalacja siê nie powiod³a (nie wiadomo dlaczego)"
-
-#: rpm/rpm.c:89
-#, c-format
-msgid "%s: invalid macro definition"
-msgstr "%s: nieprawid³owa definicja makra"
-
-#: rpm/rpm.c:124
-#, c-format
-msgid "%s%s: open rpm database failed"
-msgstr "%s%s: nie mo¿na otworzyæ rpmowej bazy"
-
-#: rpm/rpm_pkg_ld.c:228
-#, c-format
-msgid "%s: %s \"%s\" longer than 255 bytes"
-msgstr "%s: %s \"%s\" jest d³u¿szy ni¿ 255 bajtów"
-
-#: rpm/rpm_pkg_ld.c:229
-msgid "dirname"
-msgstr "nazwa katalogu"
-
-#: rpm/rpm_pkg_ld.c:229
-msgid "filename"
-msgstr "nazwa pliku"
-
-#: rpm/rpm_pkg_ld.c:249
-#, c-format
-msgid "%s: no %s tag"
-msgstr "%s: brak tagu %s"
-
-#: rpm/rpm_pkg_ld.c:383
-#, c-format
-msgid "%s: skipped file list"
-msgstr "%s: pominiêto listê plików"
-
-#: rpm/rpm_pkg_ld.c:409
-msgid "FILEMODES tag"
-msgstr "tag FILEMODES"
-
-#: rpm/rpm_pkg_ld.c:411
-msgid "FILEMODES and FILESIZES tags"
-msgstr "tagi FILEMODES oraz FILESIZES"
-
-#: rpm/rpm_pkg_ld.c:412
-#, c-format
-msgid "%s: missing %s in some packages"
-msgstr "%s: brak '%s' w niektórych pakietach"
-
-#: rpm/rpm_pkg_ld.c:428
-#, c-format
-msgid "%s: read name/version/release failed"
-msgstr ""
-
-#: rpm/rpm_pkg_ld.c:440
-#, c-format
-msgid "%s: read architecture tag failed"
-msgstr ""
-
-#: rpm/rpm_pkg_ld.c:451
-#, c-format
-msgid "%s: missing OS tag"
-msgstr "%s: brak tagu OS"
-
-#: rpm/rpmhdr.c:62
-#, c-format
-msgid "%s: read header failed"
-msgstr "%s: odczyt nag³ówka siê nie powiód³"
-
-#: rpm/rpminstall.c:179
-#, c-format
-msgid "Executing %s "
-msgstr "Uruchamianie %s "
-
-#: rpm/rpminstall.c:185 rpm/rpminstall.c:194 vfile/p_open.c:129
-#: vfile/p_open.c:286 vfile/vfff/http.c:684 vfile/vopen3.c:166
-#: vfile/vopen3.c:575
-#, c-format
-msgid "%s: no such file"
-msgstr "%s: nie ma takiego pliku"
-
-#: rpm/rpminstall.c:201
-#, c-format
-msgid "%s exited with %d"
-msgstr "%s zakoñczony z rezultatem %d"
-
-#: rpm/rpminstall.c:210 vfile/p_open.c:199
-#, c-format
-msgid "%s terminated by signal %s"
-msgstr "%s usieczon za spraw± sygna³u %s"
-
-#: rpm/rpminstall.c:213 vfile/p_open.c:202 vfile/vopen3.c:341
-#, c-format
-msgid "%s terminated by signal %d"
-msgstr "%s usieczon za spraw± sygna³u %d"
-
-#: rpm/rpminstall.c:218
-#, c-format
-msgid "%s died under inscrutable circumstances"
-msgstr "%s zgin±³ w podejrzanych okoliczno¶ciach"
-
-#: rpm/rpminstall.c:355
-msgid "There were signature verification errors. Proceed? [y/N]"
-msgstr "Wyst±pi³y b³êdy weryfikacji podpisu. Kontynuowaæ? [y/N]"
-
-#: rpm/signature.c:220 rpm/signature.c:265
-#, c-format
-msgid "%s: %s signature not found"
-msgstr "%s: %s nie znaleziono podpisu"
 
 #: split.c:133
 #, c-format
@@ -1941,7 +1947,7 @@ msgstr ""
 msgid "Writing %s (%4d packages, % 10d bytes, pri min, max = %d, %d)"
 msgstr "Zapisywanie %s (%4d pakiety, % 10d bajtów, pri min, max = %d, %d)"
 
-#: uninstall.c:157
+#: uninstall.c:160
 #, c-format
 msgid "There are %d package to remove"
 msgid_plural "There are %d packages to remove"
@@ -1954,14 +1960,9 @@ msgstr[2] "Zaznaczono %d pakietów do usuniêcia"
 msgid "'%s': only exact selection is supported"
 msgstr "'%s': pakietów nie mo¿na tu podawaæ w postaci maski"
 
-#: uninstall.c:287
+#: uninstall.c:283
 msgid "Proceed? [y/N]"
 msgstr "Kontynuowaæ? [y/N]"
-
-#: uninstall.c:381
-#, c-format
-msgid "Running%s..."
-msgstr "Uruchamianie%s..."
 
 #: vfile/extcompr.c:134 vfile/fetch.c:460
 msgid "program exited with non-zero value"
@@ -2133,6 +2134,9 @@ msgstr "%s: b³±d interpretacji URLa"
 #, fuzzy, c-format
 msgid "%s terminated by signal %d (%s)"
 msgstr "%s usieczon za spraw± sygna³u %d"
+
+#~ msgid "db package header corrupted (!?)"
+#~ msgstr "uszkodzony nag³ówek pakietu z bazy (!?)"
 
 #~ msgid "%s marks %s"
 #~ msgstr "%s zaznaczy³ %s"

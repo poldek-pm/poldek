@@ -36,19 +36,12 @@
 #include "pkgu.h"
 #include "pkgfl.h"
 #include "pkgdir.h"
-#include "rpm/rpm_pkg_ld.h"
-#include "rpm/rpmdb_it.h"
-#include "rpm/rpmhdr.h"
-#include "pkgdb/pkgdb.h"
+#include "pm/rpm/pm_rpm.h"
+#include "pm/pm.h"
 #include "pkgroup.h"
 
-struct pkg_data {
-};
-
-    
-
-static
-int do_load(struct pkgdir *pkgdir, unsigned ldflags);
+static void do_free(struct pkgdir *pkgdir);
+static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 
 struct pkgdir_module pkgdir_module_rpmdb = {
     0,
@@ -63,36 +56,38 @@ struct pkgdir_module pkgdir_module_rpmdb = {
     NULL,
     NULL,
     NULL, 
-    NULL,
+    do_free,
     NULL
 };
 
-static Header ldhdr(const struct pkg *pkg, struct pkg_data *pd) 
+static Header ldhdr(const struct pkg *pkg, void *foo) 
 {
-    struct pkgdb        *db;
-    struct rpmdb_it     it;
-    const struct dbrec  *dbrec;
+    struct pkgdb *db;
+    struct pkgdb_it it;
+    const struct pm_dbrec *dbrec;
     Header              h = NULL;
 
-    pd = pd;
+    foo = foo;
     n_assert(pkg->recno > 0);
     
     if (pkg->pkgdir == NULL)
         return NULL;
     
-    if ((db = pkgdb_open("/", pkg->pkgdir->idxpath, O_RDONLY)) == NULL)
+    db = pkgdb_new_open(pkg->pkgdir->mod_data, "/", pkg->pkgdir->idxpath,
+                        O_RDONLY);
+    if (db == NULL)
         return NULL;
     
-    rpmdb_it_init(db->dbh, &it, RPMITER_RECNO, (const char*)&pkg->recno);
-    dbrec = rpmdb_it_get(&it);
     
-    // rpm's error: rpmdb_it_get_count(&it) is always 0 
-    if (dbrec->h)
-        h = headerLink(dbrec->h);
+    pkgdb_it_init(db, &it, PMTAG_RECNO, (const char*)&pkg->recno);
+    dbrec = pkgdb_it_get(&it);
+    
+    // rpm's error: rpmdb_it_get_count(&it) with RECNO is always 0 
+    if (dbrec->hdr)
+        h = pm_rpmhdr_link(dbrec->hdr);
 
-    rpmdb_it_destroy(&it);
+    pkgdb_it_destroy(&it);
     pkgdb_free(db);
-    
     return h;
 }
 
@@ -103,10 +98,10 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg, void *ptr)
 {
     struct pkguinf      *pkgu = NULL;
     Header               h;
-
+    
     if ((h = ldhdr(pkg, ptr))) {
         pkgu = pkguinf_ldrpmhdr(na, h);
-        headerFree(h);
+        pm_rpmhdr_free(h);
     }
     
     return pkgu;
@@ -122,12 +117,12 @@ tn_tuple *load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
     foreign_depdirs = foreign_depdirs;
     
     if ((h = ldhdr(pkg, ptr))) {
-        pkgfl_ldhdr(na, &fl, h, PKGFL_ALL, pkg->name);
+        pm_rpm_ldhdr_fl(na, &fl, h, PKGFL_ALL, pkg->name);
         if (n_tuple_size(fl) == 0) {
             n_tuple_free(na, fl);
             fl = NULL;
         }
-        headerFree(h);
+        pm_rpmhdr_free(h);
     }
     
     return fl;
@@ -147,7 +142,7 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
     struct pkg        *pkg;
     struct map_struct *ms = ptr;
 
-    if ((pkg = pkg_ldrpmhdr(ms->na, header, NULL, 0, PKG_LDCAPREQS))) {
+    if ((pkg = pm_rpm_ldhdr(ms->na, header, NULL, 0, PKG_LDCAPREQS))) {
         char **hdr_langs;
         
         
@@ -162,7 +157,7 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
             pkg->groupid = pkgroup_idx_update_rpmhdr(ms->pkgroups, header);
         n_array_push(ms->pkgs, pkg);
 
-        hdr_langs = rpmhdr_langs(header);
+        hdr_langs = pm_rpmhdr_langs(header);
         
         if (hdr_langs) {
             int i = 0;
@@ -180,7 +175,8 @@ void db_map_fn(unsigned int recno, void *header, void *ptr)
 }
 
 static
-int load_db_packages(tn_array *pkgs, const char *rootdir, const char *path,
+int load_db_packages(struct pm_ctx *pmctx,
+                     tn_array *pkgs, const char *rootdir, const char *path,
                      tn_hash *avlangs, struct pkgroup_idx *pkgroups,
                      unsigned ldflags, tn_alloc *na) 
 {
@@ -194,7 +190,7 @@ int load_db_packages(tn_array *pkgs, const char *rootdir, const char *path,
              *(rootdir + 1) == '\0' ? "" : rootdir, path != NULL ? path : "");
 
     
-    if ((db = pkgdb_open(rootdir, path, O_RDONLY)) == NULL)
+    if ((db = pkgdb_new_open(pmctx, rootdir, path, O_RDONLY)) == NULL)
         return 0;
 
     msg(3, _("Loading db packages%s%s%s..."), *dbfull_path ? " [":"",
@@ -205,12 +201,9 @@ int load_db_packages(tn_array *pkgs, const char *rootdir, const char *path,
     ms.pkgroups = pkgroups;
     ms.na = na;
 
-    rpm_dbmap(db->dbh, db_map_fn, &ms);
+    pkgdb_map(db, db_map_fn, &ms);
     pkgdb_free(db);
-
-    
     msgn(3, _("_done"));
-
     return n_array_size(pkgs);
 }
 
@@ -226,11 +219,16 @@ static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     int i;
+    struct pm_ctx *pmctx;
+    
+    n_assert(pkgdir->mod_data == NULL);
+    pkgdir->mod_data = pmctx = pm_new("rpm", NULL);
 
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
     
-    if (!load_db_packages(pkgdir->pkgs, "/", pkgdir->idxpath,
+    if (!load_db_packages(pkgdir->mod_data,
+                          pkgdir->pkgs, "/", pkgdir->idxpath,
                           pkgdir->avlangs_h, pkgdir->pkgroups,
                           ldflags, pkgdir->na))
         return 0;
@@ -240,9 +238,13 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         pkg->pkgdir = pkgdir;
     }
 
-    pkgdir->ts = rpm_dbmtime(pkgdir->idxpath);
-    
-    
+    pkgdir->ts = pm_dbmtime(pmctx, pkgdir->idxpath);
     return n_array_size(pkgdir->pkgs);
+}
+
+static void do_free(struct pkgdir *pkgdir)
+{
+    if (pkgdir->mod_data)
+        pm_free(pkgdir->mod_data);
 }
 

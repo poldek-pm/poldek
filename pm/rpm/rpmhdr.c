@@ -30,11 +30,10 @@
 #include <trurl/nassert.h>
 
 #include "i18n.h"
-#include "rpmhdr.h"
 #include "log.h"
+#include "pm_rpm.h"
 
-
-int rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
+int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
 {
     int rc = 0;
     
@@ -65,7 +64,7 @@ int rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
 }
 
 
-int rpmhdr_loadfile(const char *path, Header *hdr)
+int pm_rpmhdr_loadfile(const char *path, Header *hdr)
 {
     FD_t  fdt;
     int   rc = 0;
@@ -75,49 +74,37 @@ int rpmhdr_loadfile(const char *path, Header *hdr)
         logn(LOGERR, "open %s: %s", path, rpmErrorString());
         
     } else {
-        rc = rpmhdr_loadfdt(fdt, hdr, path);
+        rc = pm_rpmhdr_loadfdt(fdt, hdr, path);
         Fclose(fdt);
     }
     
     return rc;
 }
 
-char **rpmhdr_langs(Header h)
+char **pm_rpmhdr_langs(Header h)
 {
     return headerGetLangs(h);
 }
 
 
-int rpmhdr_nevr(Header h, char **name,
-                uint32_t **epoch, char **version, char **release)
+int pm_rpmhdr_nevr(void *h, char **name,
+                   int32_t *epoch, char **version, char **release)
 {
     int type;
-
-
+    int32_t *anepoch;
+    
+    *epoch = 0;
     headerNVR(h, (void*)name, (void*)version, (void*)release);
     if (*name == NULL || *version == NULL || *release == NULL) 
         return 0;
     
-    if (!headerGetEntry(h, RPMTAG_EPOCH, &type, (void *)epoch, NULL))
-        *epoch = NULL;
+    if (headerGetEntry(h, RPMTAG_EPOCH, &type, (void *)&anepoch, NULL))
+        *epoch = *anepoch;
     
     return 1;
 }
 
-char *rpmhdr_snprintf(char *buf, size_t size, Header h) 
-{
-    char *name, *ver, *rel;
-    uint32_t *epoch;
-
-    if (rpmhdr_nevr(h, &name, &epoch, &ver, &rel))
-        snprintf(buf, size, "%s-%s-%s", name, ver, rel);
-    else
-        snprintf(buf, size, "(bad hdr)");
-    
-    return buf;
-}
-
-void rpmhdr_free_entry(void *e, int type) 
+void pm_rpmhdr_free_entry(void *e, int type) 
 {
     if (e && (type == RPM_STRING_ARRAY_TYPE || type == RPM_I18NSTRING_TYPE))
         free(e);
@@ -126,7 +113,7 @@ void rpmhdr_free_entry(void *e, int type)
 
 /* struct rpmhdr_ent stuff */
 
-int rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag)
+int pm_rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag)
 {
     if (!headerGetEntry(h, tag, &ent->type, &ent->val, &ent->cnt)) {
         memset(ent, 0, sizeof(*ent));
@@ -136,7 +123,7 @@ int rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag)
     return 1;
 }
 
-void rpmhdr_ent_free(struct rpmhdr_ent *ent)
+void pm_rpmhdr_ent_free(struct rpmhdr_ent *ent)
 {
     if (ent->type == RPM_STRING_ARRAY_TYPE ||
         ent->type == RPM_I18NSTRING_TYPE) {
@@ -147,7 +134,7 @@ void rpmhdr_ent_free(struct rpmhdr_ent *ent)
     }
 }
 
-int rpmhdr_ent_cp(struct rpmhdr_ent *ent, Header h, int32_t tag, Header toh)
+int pm_rpmhdr_ent_cp(struct rpmhdr_ent *ent, Header h, int32_t tag, Header toh)
 {
     int rc;
     
@@ -157,7 +144,21 @@ int rpmhdr_ent_cp(struct rpmhdr_ent *ent, Header h, int32_t tag, Header toh)
     }
 
     rc = headerAddEntry(toh, tag, ent->type, ent->val, ent->cnt);
-    rpmhdr_ent_free(ent);
+    pm_rpmhdr_ent_free(ent);
     return rc;
 }
 
+int pm_rpmhdr_issource(Header h) {
+    return headerIsEntry((h), RPMTAG_SOURCEPACKAGE);
+}
+
+
+void *pm_rpmhdr_link(void *h)
+{
+    return headerLink(h);
+}
+
+void pm_rpmhdr_free(void *h)
+{
+    headerFree(h);
+}

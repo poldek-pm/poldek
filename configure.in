@@ -389,7 +389,6 @@ fi
 
 AC_CONFIG_FILES([  
 		po/Makefile.in
-		rpm/Makefile
 		pkgdir/Makefile
 		pkgdir/dir/Makefile
 		pkgdir/hdrl/Makefile
@@ -397,7 +396,9 @@ AC_CONFIG_FILES([
 		pkgdir/pndir/Makefile
 		pkgdir/rpmdb/Makefile
                 pkgdir/yum/Makefile
-                pkgdb/Makefile
+                pm/Makefile
+                pm/rpm/Makefile
+                pm/pset/Makefile
 		sigint/Makefile
 		vfile/Makefile
 		vfile/vfff/Makefile

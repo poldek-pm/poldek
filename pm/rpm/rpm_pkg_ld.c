@@ -28,16 +28,14 @@
 #include "pkgfl.h"
 #include "depdirs.h"
 
-#include "rpmhdr.h"
-#define POLDEK_RPM_INTERNAL
-#include "rpm_pkg_ld.h"
+#include "pm_rpm.h"
 
-#define get_pkg_caps(arr, h)   rpm_capreqs_ldhdr(arr, h, CRTYPE_CAP)
-#define get_pkg_reqs(arr, h)   rpm_capreqs_ldhdr(arr, h, CRTYPE_REQ)
-#define get_pkg_cnfls(arr, h)  rpm_capreqs_ldhdr(arr, h, CRTYPE_CNFL)
-#define get_pkg_obsls(arr, h)  rpm_capreqs_ldhdr(arr, h, CRTYPE_OBSL)
+#define get_pkg_caps(arr, h)   pm_rpm_ldhdr_capreqs(arr, h, PMCAP_CAP)
+#define get_pkg_reqs(arr, h)   pm_rpm_ldhdr_capreqs(arr, h, PMCAP_REQ)
+#define get_pkg_cnfls(arr, h)  pm_rpm_ldhdr_capreqs(arr, h, PMCAP_CNFL)
+#define get_pkg_obsls(arr, h)  pm_rpm_ldhdr_capreqs (arr, h, PMCAP_OBSL)
 
-tn_array *rpm_capreqs_ldhdr(tn_array *arr, const Header h, int crtype) 
+tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, int crtype) 
 {
     struct capreq *cr;
     int t1, t2, t3, c1 = 0, c2 = 0, c3 = 0;
@@ -65,22 +63,22 @@ tn_array *rpm_capreqs_ldhdr(tn_array *arr, const Header h, int crtype)
     n_assert(arr);
 
     switch (crtype) {
-        case CRTYPE_CAP:
+        case PMCAP_CAP:
             tags = prov_tags;
             label = "prov";
             break;
             
-        case CRTYPE_REQ:
+        case PMCAP_REQ:
             tags = req_tags;
             label = "req";
             break;
             
-        case CRTYPE_CNFL:
+        case PMCAP_CNFL:
             tags = cnfl_tags;
             label = "cnfl";
             break;
 
-        case CRTYPE_OBSL:
+        case PMCAP_OBSL:
             tags = obsl_tags;
             label = "cnfl";
             break;
@@ -105,8 +103,8 @@ tn_array *rpm_capreqs_ldhdr(tn_array *arr, const Header h, int crtype)
         n_assert(versions);
         n_assert(c2);
         
-    } else if (crtype == CRTYPE_REQ) { /* reqs should have version tag */
-        rpmhdr_free_entry(names, t1);
+    } else if (crtype == PMCAP_REQ) { /* reqs should have version tag */
+        pm_rpmhdr_free_entry(names, t1);
         return 0;
     }
     
@@ -118,9 +116,9 @@ tn_array *rpm_capreqs_ldhdr(tn_array *arr, const Header h, int crtype)
         n_assert(flags);
         n_assert(c3);
         
-    } else if (crtype == CRTYPE_REQ) {  /* reqs should have flags */
-        rpmhdr_free_entry(names, t1);
-        rpmhdr_free_entry(versions, t2);
+    } else if (crtype == PMCAP_REQ) {  /* reqs should have flags */
+        pm_rpmhdr_free_entry(names, t1);
+        pm_rpmhdr_free_entry(versions, t2);
         return 0;
     }
 
@@ -167,48 +165,48 @@ tn_array *rpm_capreqs_ldhdr(tn_array *arr, const Header h, int crtype)
                 
 #ifndef HAVE_RPM_EXTDEPS
             if (flag & RPMSENSE_PREREQ) {
-                n_assert(crtype == CRTYPE_REQ);
+                n_assert(crtype == PMCAP_REQ);
                 cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
             }
 #else
             if (isLegacyPreReq(flag)) { /* prepared by rpm < 4.0.2  */
-                n_assert(crtype == CRTYPE_REQ);
+                n_assert(crtype == PMCAP_REQ);
                 cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
                 
             } else if (isInstallPreReq(flag)) {
-                n_assert(crtype == CRTYPE_REQ);
+                n_assert(crtype == PMCAP_REQ);
                 cr_flags |= CAPREQ_PREREQ;
                 
             } else if (isErasePreReq(flag)) {
-                n_assert(crtype == CRTYPE_REQ);
+                n_assert(crtype == PMCAP_REQ);
                 cr_flags |= CAPREQ_PREREQ_UN;
             }
 #endif /* HAVE_RPM_EXTDEPS */
         }
         
 
-        if (crtype == CRTYPE_OBSL) 
+        if (crtype == PMCAP_OBSL) 
             cr_flags |= CAPREQ_OBCNFL;
 
         if ((cr = capreq_new_evr(name, evr, cr_relflags, cr_flags))) {
             msg(4, "%s%s: %s\n",
                 cr->cr_flags & CAPREQ_PREREQ ?
-                (crtype == CRTYPE_OBSL ? "obsl" : "pre" ):"", 
+                (crtype == PMCAP_OBSL ? "obsl" : "pre" ):"", 
                 label, capreq_snprintf_s(cr));
             n_array_push(arr, cr);
         }
     }
     
-    rpmhdr_free_entry(names, t1);
-    rpmhdr_free_entry(versions, t2);
-    rpmhdr_free_entry(flags, t3);
+    pm_rpmhdr_free_entry(names, t1);
+    pm_rpmhdr_free_entry(versions, t2);
+    pm_rpmhdr_free_entry(flags, t3);
 
     return arr;
     
  l_err_endfunc:
-    rpmhdr_free_entry(names, t1);
-    rpmhdr_free_entry(versions, t2);
-    rpmhdr_free_entry(flags, t3);
+    pm_rpmhdr_free_entry(names, t1);
+    pm_rpmhdr_free_entry(versions, t2);
+    pm_rpmhdr_free_entry(flags, t3);
     return NULL;
 }
 
@@ -233,9 +231,9 @@ static int valid_fname(const char *fname, mode_t mode, const char *pkgname)
     return 1;
 }
 
-
 /* -1 on error  */
-int pkgfl_ldhdr(tn_alloc *na, tn_tuple **fl, Header h, int which, const char *pkgname)
+int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
+                    Header h, int which, const char *pkgname)
 {
     int t1, t2, t3, t4, c1, c2, c3, c4;
     char **names = NULL, **dirs = NULL, **symlinks = NULL, **skipdirs;
@@ -371,13 +369,13 @@ int pkgfl_ldhdr(tn_alloc *na, tn_tuple **fl, Header h, int which, const char *pk
  l_endfunc:
     
     if (c1 && names)
-        rpmhdr_free_entry(names, t1);
+        pm_rpmhdr_free_entry(names, t1);
 
     if (c2 && dirs)
-        rpmhdr_free_entry(dirs, t2);
+        pm_rpmhdr_free_entry(dirs, t2);
 
     if (c4 && symlinks)
-        rpmhdr_free_entry(symlinks, t4);
+        pm_rpmhdr_free_entry(symlinks, t4);
     
     if (nerr) {
         logn(LOGERR, _("%s: skipped file list"), pkgname);
@@ -416,7 +414,7 @@ int pkgfl_ldhdr(tn_alloc *na, tn_tuple **fl, Header h, int which, const char *pk
     return nerr ? -1 : 1;
 }
 
-struct pkg *pkg_ldrpmhdr(tn_alloc *na, Header h, const char *fname, unsigned fsize,
+struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsize,
                          unsigned ldflags)
 {
     struct pkg *pkg;
@@ -433,7 +431,7 @@ struct pkg *pkg_ldrpmhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
     if (!headerGetEntry(h, RPMTAG_EPOCH, &type, (void *)&epoch, NULL)) 
         epoch = NULL;
 
-    if (rpmhdr_issource(h)) {
+    if (pm_rpmhdr_issource(h)) {
         arch = "src";
         
     } else {
@@ -518,11 +516,11 @@ struct pkg *pkg_ldrpmhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
         else
             flldflags = PKGFL_DEPDIRS;
         
-        if (pkgfl_ldhdr(na, &pkg->fl, h, flldflags, pkg_snprintf_s(pkg)) == -1) {
+        if (pm_rpm_ldhdr_fl(na, &pkg->fl, h, flldflags, pkg_snprintf_s(pkg)) == -1) {
             pkg_free(pkg);
             pkg = NULL;
         
-        } else if (n_tuple_size(pkg->fl) > 0) {
+        } else if (pkg->fl && n_tuple_size(pkg->fl) > 0) {
             n_tuple_sort_ex(pkg->fl, (tn_fn_cmp)pkgfl_ent_cmp);
         }
     }
@@ -531,13 +529,15 @@ struct pkg *pkg_ldrpmhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
 }
 
 
-struct pkg *pkg_ldrpm(tn_alloc *na, const char *path, unsigned ldflags)
+struct pkg *pm_rpm_ldpkg(void *pm_rpm,
+                         tn_alloc *na, const char *path, unsigned ldflags)
 {
     struct pkg *pkg = NULL;
     Header h;
-    
-    if (rpmhdr_loadfile(path, &h)) {
-        pkg = pkg_ldrpmhdr(na, h, path, 0, ldflags);
+
+    pm_rpm = pm_rpm;
+    if (pm_rpmhdr_loadfile(path, &h)) {
+        pkg = pm_rpm_ldhdr(na, h, path, 0, ldflags);
         headerFree(h);
     }
 

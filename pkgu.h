@@ -8,8 +8,6 @@
 #include <trurl/trurl.h>
 #include <trurl/nstream.h>
 
-#include <rpm/rpmlib.h>
-
 #define PKGUINF_LICENSE      'l'
 #define PKGUINF_URL          'u'
 #define PKGUINF_SUMMARY      's'
@@ -34,11 +32,7 @@ int pkguinf_skip_rpmhdr(tn_stream *st);
 struct pkguinf *pkguinf_restore_rpmhdr_st(tn_alloc *na,
                                           tn_stream *st, off_t offset);
 
-struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, Header h);
-
-
-
-
+struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr);
 
 tn_buf *pkguinf_store(const struct pkguinf *pkgu, tn_buf *nbuf,
                       const char *lang);

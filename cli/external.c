@@ -15,8 +15,10 @@
 
 #include <trurl/trurl.h>
 
+
 #include "vfile/vopen3.h"
 #include "sigint/sigint.h"
+#include "misc.h"
 #include "i18n.h"
 #include "cli.h"
 #include "cmd_pipe.h"
@@ -45,9 +47,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     return 0;
 }
-
-static
-int lookup_external_command(char *cmdpath, int size, const char *cmd);
 
 static int grabfunc(const char *buf, void *cmdctx)
 {
@@ -80,7 +79,7 @@ static int external(struct cmdctx *cmdctx)
     }
     argv[i] = NULL;
 
-    if (!lookup_external_command(cmd, sizeof(cmd), argv[0])) {
+    if (!poldek_lookup_external_command(cmd, sizeof(cmd), argv[0])) {
         logn(LOGERR, _("%s: external command not found"), argv[0]);
         return 0;
     }
@@ -106,28 +105,5 @@ static int external(struct cmdctx *cmdctx)
     rc = vopen3_close(st) == 0;
     DBGF("END\n");
     return rc;
-}
-
-static
-int lookup_external_command(char *cmdpath, int size, const char *cmd)
-{
-    char *path = getenv("PATH");
-    const char **tl, **tl_save;
-    int  found = 0;
-        
-    if ((path = getenv("PATH")) == NULL)
-        path = "/bin:/usr/bin";
-
-    tl = tl_save = n_str_tokl(path, ":");
-    while (*tl) {
-        snprintf(cmdpath, size, "%s/%s", *tl, cmd);
-        if (access(cmdpath, R_OK | X_OK) == 0) {
-            found = 1;
-            break;
-        }
-        tl++;
-    }
-    n_str_tokl_free(tl_save);
-    return found;
 }
 

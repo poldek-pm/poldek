@@ -35,6 +35,9 @@
 #define CAPREQ_RPMLIB_SATISFIED  (1 << 6)   /* is rpmlib provides rpmlib(...)? */
 #define CAPREQ_PLDEKBAST   (1 << 7)   /* capreq added by poldek during mkidx,
                                         '!' prefix */
+
+#define CAPREQ_RT_FLAGS    (CAPREQ_RPMLIB_SATISFIED | CAPREQ_PLDEKBAST)
+
 struct capreq {
     uint8_t  cr_flags;
     uint8_t  cr_relflags;
@@ -65,7 +68,7 @@ extern inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_is_cnfl(cr)      ((cr)->cr_flags & CAPREQ_CNFL)
 #define capreq_is_prereq(cr)    ((cr)->cr_flags & CAPREQ_PREREQ)
 #define capreq_is_prereq_un(cr) ((cr)->cr_flags & CAPREQ_PREREQ_UN)
-#define cnfl_is_obsl(cr)        capreq_is_prereq((cr))
+#define capreq_is_obsl(cr)        capreq_is_prereq((cr))
 #define capreq_is_file(cr)      ((cr)->_buf[1] == '/')
 #define capreq_isnot_file(cr)   ((cr)->_buf[1] != '/')
 
@@ -101,7 +104,8 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
         crptr = __cr;                            \
     }
 
-void capreq_free(tn_alloc *na, struct capreq *cr);
+void capreq_free_na(tn_alloc *na, struct capreq *cr);
+void capreq_free(struct capreq *cr);
 
 uint8_t capreq_sizeof(const struct capreq *cr);
 

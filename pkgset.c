@@ -28,15 +28,16 @@
 
 #include <vfile/vfile.h>
 
-#include "rpm/rpm.h"
 #include "i18n.h"
 #include "log.h"
+#include "capreq.h"
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"
 #include "pkgset-req.h"
 #include "split.h"
 #include "poldek_term.h"
+#include "pm/pm.h"
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -49,7 +50,7 @@ int ask_yn(int default_a, const char *fmt, ...);
 int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt);
 
 
-struct pkgset *pkgset_new(void)
+struct pkgset *pkgset_new(struct pm_ctx *pmctx)
 {
     struct pkgset *ps;
     
@@ -64,7 +65,10 @@ struct pkgset *pkgset_new(void)
     
     ps->pkgdirs = n_array_new(4, (tn_fn_free)pkgdir_free, NULL);
     ps->flags = 0;
-    ps->rpmcaps = rpm_rpmlib_caps();
+    
+    if (pmctx) {
+        ps->rpmcaps = pm_get_pmcaps(pmctx);
+    }
     return ps;
 }
 
@@ -82,6 +86,7 @@ void pkgset_free(struct pkgset *ps)
         capreq_idx_destroy(&ps->cap_idx);
         capreq_idx_destroy(&ps->req_idx);
         capreq_idx_destroy(&ps->obs_idx);
+        capreq_idx_destroy(&ps->cnfl_idx);
         file_index_destroy(&ps->file_idx);
         ps->flags &= (unsigned)~_PKGSET_INDEXES_INIT;
     }
@@ -123,7 +128,7 @@ void pkgset_free(struct pkgset *ps)
 }
 
 
-int pkgset_rpmprovides(const struct pkgset *ps, const struct capreq *req)
+int pkgset_pmprovides(const struct pkgset *ps, const struct capreq *req)
 {
     struct capreq *cap;
     
@@ -193,42 +198,43 @@ static int pkgset_index(struct pkgset *ps)
     n_array_map(ps->pkgs, (tn_fn_map1)sort_pkg_caps);
     mem_info(-1, "MEM after index[selfcap]");
     /* build indexes */
-    capreq_idx_init(&ps->cap_idx, CAPREQ_IDX_CAP, 4 * n_array_size(ps->pkgs));
-    capreq_idx_init(&ps->req_idx, CAPREQ_IDX_REQ, 4 * n_array_size(ps->pkgs));
-    capreq_idx_init(&ps->obs_idx, CAPREQ_IDX_REQ, n_array_size(ps->pkgs)/5 + 4);
+    capreq_idx_init(&ps->cap_idx,  CAPREQ_IDX_CAP, 4 * n_array_size(ps->pkgs));
+    capreq_idx_init(&ps->req_idx,  CAPREQ_IDX_REQ, 4 * n_array_size(ps->pkgs));
+    capreq_idx_init(&ps->obs_idx,  CAPREQ_IDX_REQ, n_array_size(ps->pkgs)/5 + 4);
+    capreq_idx_init(&ps->cnfl_idx, CAPREQ_IDX_REQ, n_array_size(ps->pkgs)/5 + 4);
     file_index_init(&ps->file_idx, 512);
     ps->flags |= _PKGSET_INDEXES_INIT;
 
-    for (i=0; i<n_array_size(ps->pkgs); i++) {
+    for (i=0; i < n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         
         if (i % 200 == 0) 
             msg(3, " %d..\n", i);
         
         if (pkg->caps)
-            for (j=0; j<n_array_size(pkg->caps); j++) {
+            for (j=0; j < n_array_size(pkg->caps); j++) {
                 struct capreq *cap = n_array_nth(pkg->caps, j);
                 capreq_idx_add(&ps->cap_idx, capreq_name(cap), pkg, 1);
             }
 
         if (pkg->reqs)
-            for (j=0; j<n_array_size(pkg->reqs); j++) {
+            for (j=0; j < n_array_size(pkg->reqs); j++) {
                 struct capreq *req = n_array_nth(pkg->reqs, j);
                 capreq_idx_add(&ps->req_idx, capreq_name(req), pkg, 0);
             }
 
         if (pkg->cnfls)
-            for (j=0; j<n_array_size(pkg->cnfls); j++) {
+            for (j=0; j < n_array_size(pkg->cnfls); j++) {
                 struct capreq *cnfl = n_array_nth(pkg->cnfls, j);
-                if (cnfl_is_obsl(cnfl))
+                if (capreq_is_obsl(cnfl))
                     capreq_idx_add(&ps->obs_idx, capreq_name(cnfl), pkg, 0);
+                else
+                    capreq_idx_add(&ps->cnfl_idx, capreq_name(cnfl), pkg, 0);
             }
-        
+
         pkgfl2fidx(pkg, &ps->file_idx);
     }
     mem_info(-1, "MEM after index");
-    
-    
     
 #if 0 
     capreq_idx_stats("cap", &ps->cap_idx);
@@ -248,7 +254,6 @@ tn_array *pkgset_get_packages_bynvr(const struct pkgset *ps)
     
     if (ps->pkgs == NULL)
         return NULL;
-
     
     pkgs = n_array_new(n_array_size(ps->pkgs),
                        (tn_fn_free)pkg_free, (tn_fn_cmp)pkg_nvr_strcmp);
@@ -358,4 +363,157 @@ int pkgset_order(struct pkgset *ps, int verb)
     }
     
     return 1;
+}
+
+static
+tn_array *find_package(struct pkgset *ps, tn_array *pkgs, const char *name)
+{
+    struct pkg tmpkg, *pkg;
+    int i;
+    
+    tmpkg.name = (char*)name;
+
+    n_array_sort(ps->pkgs);
+    i = n_array_bsearch_idx_ex(ps->pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
+    if (i < 0)
+        return NULL;
+
+    pkg = n_array_nth(ps->pkgs, i);
+    while (strcmp(name, pkg->name) == 0) {
+        n_array_push(pkgs, pkg_link(pkg));
+        i++;
+        if (i == n_array_size(ps->pkgs))
+            break;
+        pkg = n_array_nth(ps->pkgs, i);
+    }
+    
+    return pkgs;
+}
+
+struct pkg *pkgset_lookup_1package(struct pkgset *ps, const char *name) 
+{
+    struct pkg tmpkg;
+    int i;
+    
+    tmpkg.name = (char*)name;
+
+    n_array_sort(ps->pkgs);
+    i = n_array_bsearch_idx_ex(ps->pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
+    if (i < 0)
+        return NULL;
+
+    return n_array_nth(ps->pkgs, i);
+}
+
+
+static
+tn_array *find_capreq(struct pkgset *ps, tn_array *pkgs,
+                      enum pkgset_lookup_tag tag,
+                      const char *name)
+{
+    const struct capreq_idx_ent *ent;
+    
+    switch (tag) {
+        case PS_LOOKUP_CAP:
+            ent = capreq_idx_lookup(&ps->cap_idx, name);
+            break;
+
+        case PS_LOOKUP_REQ:
+            ent = capreq_idx_lookup(&ps->req_idx, name);
+            break;
+            
+        case PS_LOOKUP_OBSL:
+            ent = capreq_idx_lookup(&ps->obs_idx, name);
+            break;
+            
+        case PS_LOOKUP_CNFL:
+            ent = capreq_idx_lookup(&ps->cnfl_idx, name);
+            break;
+
+        default:
+            n_assert(0);
+            break;
+    }
+    
+    
+    if (ent && ent->items > 0) {
+        int i;
+        for (i=0; i < ent->items; i++)
+            n_array_push(pkgs, pkg_link(ent->pkgs[i]));
+        
+    }
+
+    return pkgs;
+}
+
+tn_array *pkgset_search(struct pkgset *ps, enum pkgset_lookup_tag tag,
+                        const char *value)
+{
+    tn_array *pkgs;
+    int32_t recno;
+    
+    n_array_sort(ps->pkgs);
+    
+    pkgs = pkgs_array_new(4);
+    n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    
+    switch (tag) {
+        case PS_LOOKUP_RECNO:
+            n_assert(value == NULL); /* not implemented */
+            //recno = *((int32_t*)value);
+            //n_array_push(pkgs, pkg_link(n_array_nth(ps->pkgs, recno)));
+            n_array_free(pkgs);
+            pkgs = n_array_dup(ps->pkgs, (tn_fn_dup)pkg_link);
+            n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+            break;
+            
+        case PS_LOOKUP_PACKAGE:
+            if (value) 
+                find_package(ps, pkgs, value);
+            else {
+                n_array_free(pkgs);
+                pkgs = n_array_dup(ps->pkgs, (tn_fn_dup)pkg_link);
+                n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+            }
+            break;
+            
+        case PS_LOOKUP_PROVIDES:
+            n_assert(value);
+            find_capreq(ps, pkgs, PS_LOOKUP_CAP, value);
+                                /* no break */
+
+        case PS_LOOKUP_FILE:
+            n_assert(value);
+            if (*value != '/')
+                break;
+            else {
+                struct pkg *buf[1024];
+                int i, n;
+                n = file_index_lookup(&ps->file_idx, value, 0, buf, 1024);
+                if (n > 0) {
+                    for (i=0; i < n; i++)
+                        n_array_push(pkgs, pkg_link(buf[i]));
+                }
+            }
+            break;
+
+        default:
+            n_assert(value);
+            find_capreq(ps, pkgs, tag, value);
+            break;
+            
+    }
+    
+    if (n_array_size(pkgs) == 0) {
+        n_array_free(pkgs);
+        pkgs = NULL;
+    }
+    
+    return pkgs;
+}
+
+
+tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname)
+{
+    return pkgset_search(ps, PS_LOOKUP_CAP, capname);
 }

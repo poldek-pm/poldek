@@ -16,12 +16,16 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 #define PKG_HAS_PKGUINF     (1 << 5)
 #define PKG_HAS_SELFCAP     (1 << 6)
 
+#if 0
 #define PKG_DIRMARK         (1 << 8)  /* marked directly, i.e. by the user*/
 #define PKG_INDIRMARK       (1 << 9)  /* marked by deps */
+#endif
 
 #define PKG_BADREQS         (1 << 10) /* has unsatisfied dependencies? */
 
+#if 0
 #define PKG_RM_MARK         (1 << 11) /* marked for removal */
+#endif
 
 #define PKG_HELD            (1 << 12) /* non upgradable */
 #define PKG_IGNORED         (1 << 13) /* invisible      */
@@ -52,7 +56,7 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 #define pkg_clr_prereqed(pkg)  ((pkg)->flags &= ~PKG_ORDER_PREREQ) 
 #define pkg_is_prereqed(pkg)  ((pkg)->flags & PKG_ORDER_PREREQ)
 
-
+#if 0
 #define pkg_hand_mark(pkg)  ((pkg)->flags |= PKG_DIRMARK)
 #define pkg_dep_mark(pkg)   ((pkg)->flags |= PKG_INDIRMARK)
 #define pkg_unmark(pkg)     ((pkg)->flags &= ~(PKG_DIRMARK | PKG_INDIRMARK))
@@ -66,6 +70,11 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 #define pkg_unmark_i(pkg)     ((pkg)->flags &= ~PKG_INTERNALMARK)
 #define pkg_is_marked_i(pkg)  ((pkg)->flags & PKG_INTERNALMARK)
 
+#define pkg_rm_mark(pkg)      ((pkg)->flags |= PKG_RM_MARK)
+#define pkg_is_rm_marked(pkg) ((pkg)->flags & PKG_RM_MARK)
+#define pkg_rm_unmark(pkg)    ((pkg)->flags &= ~(PKG_RM_MARK))
+#endif
+
 #define pkg_has_badreqs(pkg) ((pkg)->flags & PKG_BADREQS)
 #define pkg_set_badreqs(pkg) ((pkg)->flags |= PKG_BADREQS)
 #define pkg_clr_badreqs(pkg) ((pkg)->flags &= (~PKG_BADREQS))
@@ -73,9 +82,6 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 //#define pkg_upgrade(pkg)      ((pkg)->flags & PKG_UPGRADE)
 //#define pkg_mark_upgrade(pkg) ((pkg)->flags |= PKG_UPGRADE)
 
-#define pkg_rm_mark(pkg)      ((pkg)->flags |= PKG_RM_MARK)
-#define pkg_is_rm_marked(pkg) ((pkg)->flags & PKG_RM_MARK)
-#define pkg_rm_unmark(pkg)    ((pkg)->flags &= ~(PKG_RM_MARK))
 
 //#define pkg_mark_hold(pkg) ((pkg)->flags |= PKG_HELD)
 //#define pkg_is_hold(pkg) ((pkg)->flags & PKG_HELD)
@@ -98,7 +104,7 @@ struct pkg {
     
     
     char         *name;
-    int32_t      epoch; 
+    int32_t      epoch;
     char         *ver;
     char         *rel;
 
@@ -216,6 +222,8 @@ int pkg_cmp_pri(struct pkg *p1, struct pkg *p2);
 int pkg_cmp_btime(struct pkg *p1, struct pkg *p2);
 int pkg_cmp_btime_rev(struct pkg *p1, struct pkg *p2);
 
+int pkg_cmp_recno(const struct pkg *p1, const struct pkg *p2);
+
 int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2);
 
 /* strncmp(p1->name, p2->name, strlen(p2->name))*/
@@ -268,6 +276,9 @@ char *pkg_filename_s(const struct pkg *pkg);
 char *pkg_path(const struct pkg *pkg, char *buf, size_t size);
 char *pkg_path_s(const struct pkg *pkg);
 
+char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
+                    const char *cachedir);
+
 
 int pkg_printf(const struct pkg *pkg, const char *str);
 int pkg_snprintf(char *str, size_t size, const struct pkg *pkg);
@@ -296,6 +307,10 @@ const char *pkg_group(const struct pkg *pkg);
 
 
 tn_array *pkgs_array_new(int size);
+tn_array *pkgs_array_new_ex(int size,
+                            int (*cmpfn)(const struct pkg *p1,
+                                         const struct pkg *p2));
+
 
 
 int pkg_nvr_strcmp(struct pkg *p1, struct pkg *p2);

@@ -21,6 +21,9 @@
 #include <string.h>
 #include <time.h>
 #include <fnmatch.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
@@ -591,7 +594,7 @@ int pndir_save_pkginfo(int nth, struct pkguinf *pkgu, struct pkgdir *pkgdir,
                 
         n_buf_clean(nbuf);
         if (dbh->db && pkguinf_store(pkgu, nbuf, lang)) {
-            char dkey[512];
+            //char dkey[512];
             const char *akey;
             int  dklen;
             

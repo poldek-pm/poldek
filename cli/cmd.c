@@ -43,6 +43,7 @@ struct cmd_chain_ent *cmd_chain_ent_new(unsigned flags,
     ent->cmd = cmd;
     ent->next_piped = NULL;
     ent->prev_piped = NULL;
+    ent->pipe_right = NULL;
     if (a_argv)
         ent->a_argv = n_ref(a_argv);
     else

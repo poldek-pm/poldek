@@ -28,7 +28,7 @@
 #include "pkgu.h"
 #include "pkgroup.h"
 #include "misc.h"
-#include "rpm/rpmhdr.h"
+#include "pm/rpm/pm_rpm.h"
 
 struct pkgroup_idx {
     tn_hash *ht;                /* name => struct pkgroup */
@@ -456,7 +456,7 @@ int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr)
     Header             h;
 
     h = rpmhdr;
-    if ((langs = rpmhdr_langs(h)) == NULL)
+    if ((langs = pm_rpmhdr_langs(h)) == NULL)
         return 0;
 
     rc = headerGetRawEntry(h, RPMTAG_GROUP, 0, (void*)&groups, &ngroups);

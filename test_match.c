@@ -25,7 +25,8 @@
 #include "pkg.h"
 #include "misc.h"
 #include "capreq.h"
-#include "rpm/rpm.h"
+#include "pm/pm.h"
+#include "pm/rpm/pm_rpm.h"
 
 
 int test_match(int argc, char *argv[])
@@ -144,10 +145,10 @@ int main(int argc, char *argv[])
     test_match2();
     exit(0);
     log_init(NULL, stdout, "aa");
-    rpm_initlib(NULL);
-    db = rpm_opendb("/var/lib/rpm", "/", O_RDONLY);
+    pm_rpm_init(NULL);
+    db = pm_rpm_opendb(NULL, "/var/lib/rpm", "/", O_RDONLY);
     sleep(20);
-    rpm_closedb(db);
+    pm_rpm_closedb(db);
     sleep(30);
     return 0;
 }

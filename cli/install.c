@@ -56,8 +56,10 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_INST_NOIGNORE         (OPT_GID + 27)
 #define OPT_INST_GREEDY           'G'
 #define OPT_INST_UNIQNAMES        'Q'
-#define OPT_MERCY                  (OPT_GID + 28)
-#define OPT_PROMOTEEPOCH           (OPT_GID + 29)
+#define OPT_INST_UNIQNAMES_ALIAS  (OPT_GID + 28)
+#define OPT_INST_ROOTDIR          'r' 
+#define OPT_MERCY                  (OPT_GID + 29)
+#define OPT_PROMOTEEPOCH           (OPT_GID + 30)
 
 static struct argp_option options[] = {
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
@@ -74,6 +76,8 @@ static struct argp_option options[] = {
                          "are broken by unistalled ones"), OPT_GID }, 
 {"fetch", OPT_INST_FETCH, "DIR", OPTION_ARG_OPTIONAL,
      N_("Do not install, only download packages"), OPT_GID },
+
+{"root", OPT_INST_ROOTDIR, "DIR", 0, N_("Set top directory to DIR"), OPT_GID },    
 
 {"nodeps", OPT_INST_NODEPS, 0, 0,
  N_("Install packages with broken dependencies"), OPT_GID },
@@ -127,7 +131,13 @@ static struct argp_option cmdl_options[] = {
  N_("Make packages listed invisible."), OPT_GID },
     
 {"noignore", OPT_INST_NOIGNORE, NULL, 0,
- N_("Make invisibled packages visible."), OPT_GID },    
+ N_("Make invisibled packages visible."), OPT_GID },
+
+{"uniq", OPT_INST_UNIQNAMES, 0, 0, 
+N_("Do sort | uniq on available package list"), OPT_GID },
+
+{"unique-pkg-names", OPT_INST_UNIQNAMES_ALIAS, 0, OPTION_ALIAS | OPTION_HIDDEN,
+     0, OPT_GID },     
 
     { 0, 0, 0, 0, 0, 0 },
 };
@@ -221,6 +231,8 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_INSTDIST:
             poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "install-dist");
             poldek_ts_setf(ts, POLDEK_TS_DIST);
+            if (arg)
+                poldek_ts_configure(ts, POLDEK_CONF_ROOTDIR, arg);
             break;
 
         case OPT_INST_REINSTDIST:
@@ -228,14 +240,17 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             poldek_ts_setf(ts, POLDEK_TS_DIST);
             poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
             poldek_ts_setf(ts, POLDEK_TS_REINSTALL);
+            if (arg)
+                poldek_ts_configure(ts, POLDEK_CONF_ROOTDIR, arg);
             break;
 
         case OPT_INST_UPGRDIST:
             poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "upgrade-dist");
             poldek_ts_setf(ts, POLDEK_TS_DIST);
             poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
+            if (arg)
+                poldek_ts_configure(ts, POLDEK_CONF_ROOTDIR, arg);
             break;
-
 
         case OPT_INST_HOLD:
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_HOLD, 1);
@@ -253,6 +268,11 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_INST_NOIGNORE:
             ts->setop(ts, POLDEK_OP_IGNORE, 0);
+            break;
+
+        case OPT_INST_UNIQNAMES:
+        case OPT_INST_UNIQNAMES_ALIAS:
+            poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_UNIQN, 1);
             break;
     
 
@@ -312,7 +332,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'G':
             ts->setop(ts, POLDEK_OP_GREEDY, 1);
             break;
-
+            
         case 'I':
             poldek_ts_clrf(ts, POLDEK_TS_UPGRADE);
             break;
@@ -323,6 +343,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_INST_DOWNGRADE:
             poldek_ts_setf(ts, POLDEK_TS_DOWNGRADE);
+            break;
+
+        case OPT_INST_ROOTDIR:
+            poldek_ts_configure(ts, POLDEK_CONF_ROOTDIR, arg);
             break;
 
         case OPT_INST_DUMP:

@@ -38,7 +38,7 @@
 #include "pkg.h"
 #include "pkgu.h"
 #include "pkgroup.h"
-#include "rpm/rpm_pkg_ld.h"
+#include "pm/rpm/pm_rpm.h"
 
 static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags);
@@ -101,7 +101,7 @@ int load_header_list(const char *slabel, const char *path, tn_array *pkgs,
             continue;
         }
         
-        if ((pkg = pkg_ldrpmhdr(NULL, h, NULL, 0, PKG_LDWHOLE))) {
+        if ((pkg = pm_rpm_ldhdr(NULL, h, NULL, 0, PKG_LDWHOLE))) {
             if (ldflags & PKGDIR_LD_DESC) {
                 pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
                 pkg_set_ldpkguinf(pkg);

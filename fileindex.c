@@ -171,30 +171,32 @@ int findfile(struct file_index *fi, const char *dirname, const char *basename,
 }
 
 
-int file_index_lookup(struct file_index *fi, char *path,
+int file_index_lookup(struct file_index *fi,
+                      const char *apath, int apath_len, 
                       struct pkg *pkgs[], int size)
 {
-    int n;
-    char *tmpdirname, *dirname, buf[2] = {'\0', '\0'}, *basename;
+    char *tmpdirname, *dirname, buf[2] = {'\0', '\0'}, *basename, *path;
     
-    if (*path != '/') 
+    if (*apath != '/') 
         return 0;
 
+    if (apath_len == 0)
+        apath_len = strlen(apath);
+    apath_len++;
+    path = alloca(apath_len);
+    memcpy(path, apath, apath_len);
+    
     path++;
     dirname = buf;
     
-    n_basedirnam((char*)path, &tmpdirname, &basename);
+    n_basedirnam(path, &tmpdirname, &basename);
     
     if (tmpdirname && tmpdirname != '\0')
         dirname = tmpdirname;
     else 
         *dirname = '/';
 
-    n = findfile(fi, dirname, basename, pkgs, size);
-    
-    if (basename != path) 
-        *(basename - 1) = '/';
-    return n;
+    return findfile(fi, dirname, basename, pkgs, size);
 }
 
 

@@ -28,7 +28,6 @@
 #include <sys/wait.h>
 #include <fnmatch.h>
 
-#include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
@@ -51,14 +50,16 @@
 #include "pkgmisc.h"
 #include "misc.h"
 #include "pkgset-req.h"
-#include "dbpkg.h"
 #include "dbpkgset.h"
 #include "dbdep.h"
 #include "poldek_term.h"
 #include "poldek.h"
-#include "rpm/rpmhdr.h"
-#include "rpm/rpm.h"
-#include "pkgdb/pkgdb.h"
+#include "pm/pm.h"
+
+#define DBPKG_ORPHANS_PROCESSED   (1 << 15) /* is its orphan processed ?*/
+#define DBPKG_DEPS_PROCESSED      (1 << 16) /* is its deps processed? */
+#define DBPKG_TOUCHED             (1 << 17)
+
 
 #define PROCESS_AS_NEW       (1 << 0)
 #define PROCESS_AS_ORPHAN    (1 << 1)
@@ -70,7 +71,7 @@ struct upgrade_s {
     tn_hash        *db_deps;          /* cache of resolved db dependencies */
 
     struct dbpkg_set *uninst_set;
-    
+    struct pkgmark_set *dbpms;
     tn_array       *orphan_dbpkgs;    /* array of orphaned dbpkg*s */
     
     int            strict;
@@ -111,12 +112,13 @@ static
 int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg);
 
 /* anyone of pkgs is marked? */
-static inline int one_is_marked(struct pkg *pkgs[], int npkgs)
+static inline int one_is_marked(struct pkgmark_set *pms, struct pkg *pkgs[],
+                                int npkgs)
 {
     int i;
 
     for (i=0; i < npkgs; i++) 
-        if (pkg_is_marked(pkgs[i])) 
+        if (pkg_is_marked(pms, pkgs[i])) 
             return 1;
     
     return 0;
@@ -130,7 +132,7 @@ int is_installable(struct pkg *pkg, struct poldek_ts *ts, int is_hand_marked)
 
     freshen = ts->getop(ts, POLDEK_OP_FRESHEN);
     force = ts->getop(ts, POLDEK_OP_FORCE);
-    npkgs = rpm_is_pkg_installed(ts->db->dbh, pkg, &cmprc, NULL);
+    npkgs = pkgdb_is_pkg_installed(ts->db, pkg, &cmprc);
     
     if (npkgs < 0) 
         die();
@@ -218,7 +220,8 @@ struct pkg *select_supersede_pkg(const struct pkg *pkg, struct pkgset *ps,
 }
 
 static
-int other_version_marked(struct pkg *pkg, tn_array *pkgs, struct capreq *req)
+int other_version_marked(struct pkgmark_set *pms, struct pkg *pkg,
+                         tn_array *pkgs, struct capreq *req)
 {
     int i;
     
@@ -234,7 +237,7 @@ int other_version_marked(struct pkg *pkg, tn_array *pkgs, struct capreq *req)
         if (strcmp(p->name, pkg->name) != 0)
             break;
         
-        if (p != pkg && pkg_is_marked(p)) {
+        if (p != pkg && pkg_is_marked(pms, p)) {
             if (req == NULL || pkg_statisfies_req(p, req, 0)) {
                 DBGF("%s -> yes, %s\n", pkg_snprintf_s0(pkg),
                      pkg_snprintf_s1(p));
@@ -333,7 +336,8 @@ int select_best_pkg(const struct pkg *marker,
 
         DBGF("%d. %s %s (color white %d, marked %d, %p)\n", i, 
              pkg_snprintf_s(marker), pkg_snprintf_s0(pkg),
-             pkg_is_color(pkg, PKG_COLOR_WHITE), pkg_is_marked(pkg), pkg);
+             pkg_is_color(pkg, PKG_COLOR_WHITE),
+             pkg_is_marked(upg->ts->pms, pkg), pkg);
 
         if (pkg_eq_name_prefix(marker, pkg)) {
             if (i_evr_eq == -1 && pkg_cmp_evr(marker, pkg) == 0)
@@ -346,7 +350,7 @@ int select_best_pkg(const struct pkg *marker,
         if (pkg->cnflpkgs != NULL)
             for (j = 0; j < n_array_size(pkg->cnflpkgs); j++) {
                 struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
-                if (pkg_is_marked(cpkg->pkg))
+                if (pkg_is_marked(upg->ts->pms, cpkg->pkg))
                     ncnfls[i]++;
             }
     }
@@ -374,7 +378,7 @@ int select_best_pkg(const struct pkg *marker,
         nmarks = alloca(npkgs * sizeof(*nmarks));
         
         for (i=0; i < npkgs; i++) {
-            if (other_version_marked(candidates[i], ps->pkgs, NULL)) {
+            if (other_version_marked(upg->ts->pms, candidates[i], ps->pkgs, NULL)) {
                 DBGF("%d. %s other version is already marked, skipped\n",
                      i, pkg_snprintf_s(candidates[i]));
                 continue;
@@ -429,14 +433,16 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
             found = 1;
             
             /* already not marked for upgrade */
-            if (nmatches > 0 && !one_is_marked(matches, nmatches)) {
+            if (nmatches > 0 && !one_is_marked(upg->ts->pms, matches,
+                                               nmatches)) {
                 int best_i = 0;
 
                 if (nobest == 0 && nmatches > 1)
                     best_i = select_best_pkg(pkg, matches, nmatches, ps, upg);
                 *best_pkg = matches[best_i];
 
-                if (other_version_marked(*best_pkg, ps->pkgs, NULL)) {
+                if (other_version_marked(upg->ts->pms, *best_pkg, ps->pkgs,
+                                         NULL)) {
                     found = 0;
                     *best_pkg = NULL;
                     
@@ -493,7 +499,7 @@ int installset_provides_capn(const struct pkg *pkg, const char *capn,
 
 
 
-#define mark_package(a, b) do_mark_package(a, b, PKG_DIRMARK);
+#define mark_package(a, b) do_mark_package(a, b, PKGMARK_MARK);
 
 static int do_mark_package(struct pkg *pkg, struct upgrade_s *upg,
                            unsigned mark)
@@ -507,26 +513,28 @@ static int do_mark_package(struct pkg *pkg, struct upgrade_s *upg,
         rpm = pkg;
     }
     if (rpm)
-        log(LOGNOTICE, "DUPA %s(%p): %d\n", pkg_snprintf_s(rpm), rpm, pkg_is_marked(rpm));
+        log(LOGNOTICE, "DUPA %s(%p): %d\n", pkg_snprintf_s(rpm),
+            rpm, pkg_is_marked(rpm));
 #endif    
     
-    n_assert(pkg_is_marked(pkg) == 0);
-    if ((rc = is_installable(pkg, upg->ts, pkg_is_marked_i(pkg))) <= 0) {
+    n_assert(pkg_is_marked(upg->ts->pms, pkg) == 0);
+    if ((rc = is_installable(pkg, upg->ts,
+                             pkg_is_marked_i(upg->ts->pms, pkg))) <= 0) {
         upg->nerr_fatal++; 
         return 0;
     }
     
     DBGF("%s, is_installable = %d\n", pkg_snprintf_s(pkg), rc);
-    pkg_unmark_i(pkg);
+    pkg_unmark_i(upg->ts->pms, pkg);
 
     n_assert(!pkg_has_badreqs(pkg));
 
     if (rc > 0) {
-        if (mark == PKG_DIRMARK) {
-            pkg_hand_mark(pkg);
+        if (mark == PKGMARK_MARK) {
+            pkg_hand_mark(upg->ts->pms, pkg);
             
         } else {
-            pkg_dep_mark(pkg);
+            pkg_dep_mark(upg->ts->pms, pkg);
             upg->ndep++;
         }
         n_array_push(upg->install_pkgs, pkg);
@@ -562,14 +570,14 @@ int marked_for_removal_by_req(struct pkg *pkg, const struct capreq *req,
     const struct pkg *ppkg;
     int rc;
 
-    if (pkg_is_rm_marked(pkg))
+    if (pkg_is_rm_marked(upg->ts->pms, pkg))
         return 1;
     
     rc = ((ppkg = dbpkg_set_provides(upg->uninst_set, req)) &&
            pkg_cmp_name_evr(ppkg, pkg) == 0);
     
     if (rc)
-        pkg_rm_mark(pkg);
+        pkg_rm_mark(upg->ts->pms, pkg);
     
     return rc;
 }
@@ -578,13 +586,13 @@ int marked_for_removal_by_req(struct pkg *pkg, const struct capreq *req,
 static
 int marked_for_removal(struct pkg *pkg, struct upgrade_s *upg)
 {
-    if (pkg_is_rm_marked(pkg))
+    if (pkg_is_rm_marked(upg->ts->pms, pkg))
         return 1;
 
     if (dbpkg_set_has_pkg(upg->uninst_set, pkg))
-        pkg_rm_mark(pkg);
+        pkg_rm_mark(upg->ts->pms, pkg);
     
-    return pkg_is_rm_marked(pkg);
+    return pkg_is_rm_marked(upg->ts->pms, pkg);
 }
 
 static
@@ -608,7 +616,7 @@ int dep_mark_package(struct pkg *pkg,
         return 0;
     }
     
-    return do_mark_package(pkg, upg, PKG_INDIRMARK);
+    return do_mark_package(pkg, upg, PKGMARK_DEP);
 }
 
 static
@@ -617,7 +625,7 @@ int do_greedymark(int indent, struct pkg *pkg, struct pkg *oldpkg,
                   struct pkgset *ps, struct upgrade_s *upg) 
 {
     
-    if (pkg_is_marked(pkg))
+    if (pkg_is_marked(upg->ts->pms, pkg))
         n_assert(0);
     
     if (pkg_cmp_evr(pkg, oldpkg) <= 0)
@@ -641,18 +649,18 @@ int process_pkg_orphans(struct pkg *pkg, struct pkgset *ps,
 {
     unsigned ldflags = PKG_LDNEVR | PKG_LDREQS;
     int i, k, n = 0;
-    rpmdb dbh;
+    struct pkgdb *db;
 
     if (sigint_reached())
         return 0;
     
-    dbh = upg->ts->db->dbh;
+    db = upg->ts->db;
     DBGF("%s\n", pkg_snprintf_s(pkg));
     mem_info(1, "process_pkg_orphans:");
 
     if (!installset_provides_capn(pkg, pkg->name, ps, upg)) 
-        n += rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, pkg->name,
-                                        upg->uninst_set->dbpkgs, ldflags);
+        n += pkgdb_get_pkgs_requires_capn(db, upg->orphan_dbpkgs, pkg->name,
+                                          upg->uninst_set->dbpkgs, ldflags);
         
     if (pkg->caps)
         for (i=0; i < n_array_size(pkg->caps); i++) {
@@ -661,9 +669,9 @@ int process_pkg_orphans(struct pkg *pkg, struct pkgset *ps,
             if (installset_provides(pkg, cap, ps, upg)) 
                 continue;
             
-            n += rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs,
-                                            capreq_name(cap),
-                                            upg->uninst_set->dbpkgs, ldflags);
+            n += pkgdb_get_pkgs_requires_capn(db, upg->orphan_dbpkgs,
+                                              capreq_name(cap),
+                                              upg->uninst_set->dbpkgs, ldflags);
             //printf("cap %s\n", capreq_snprintf_s(cap));
         }
     
@@ -692,8 +700,9 @@ int process_pkg_orphans(struct pkg *pkg, struct pkgset *ps,
             n_strncpy(endp, file->basename, path_left_size);
 
             if (!installset_provides_capn(pkg, path, ps, upg)) 
-                n += rpm_get_pkgs_requires_capn(dbh, upg->orphan_dbpkgs, path,
-                                            upg->uninst_set->dbpkgs, ldflags);
+                n += pkgdb_get_pkgs_requires_capn(db, upg->orphan_dbpkgs, path,
+                                                  upg->uninst_set->dbpkgs,
+                                                  ldflags);
         }
     }
     
@@ -713,7 +722,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
         return 1;
     }
 
-    if (db_dep->spkg && pkg_is_marked(db_dep->spkg)) {
+    if (db_dep->spkg && pkg_is_marked(upg->ts->pms, db_dep->spkg)) {
         DBG("  [1] -> marked %s\n", pkg_snprintf_s(db_dep->spkg));
         return 1;
     }
@@ -737,7 +746,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     }
     
     if (db_dep->spkg && !marked_for_removal_by_req(db_dep->spkg, req, upg) &&
-        !other_version_marked(db_dep->spkg, ps->pkgs, req)) {
+        !other_version_marked(upg->ts->pms, db_dep->spkg, ps->pkgs, req)) {
         struct pkg *marker;
         
         n_assert(n_array_size(db_dep->pkgs));
@@ -799,10 +808,10 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
                 //    printf("DUPA\n");
                 //}
                 
-                if (pkg_is_marked_i(p))
+                if (pkg_is_marked_i(upg->ts->pms, p))
                     mark_package(p, upg);
 
-                if (pkg_is_marked(p)) {
+                if (pkg_is_marked(upg->ts->pms, p)) {
                     process_pkg_deps(-2, p, ps, upg, PROCESS_AS_NEW);
                     not_found = 0;
                         
@@ -836,7 +845,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                       struct upgrade_s *upg)
 {
     int n, i;
-    rpmdb dbh = upg->ts->db->dbh;
+    struct pkgdb *db = upg->ts->db;
     
     if (!poldek_ts_issetf(upg->ts, POLDEK_TS_UPGRADE))
         return;
@@ -846,83 +855,79 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
     
     DBGMSG_F("%s\n", pkg_snprintf_s(pkg));
     
-    n = rpm_get_obsoletedby_pkg(dbh, upg->uninst_set->dbpkgs, pkg,
-                                PKG_LDWHOLE_FLDEPDIRS);
+    n = pkgdb_get_obsoletedby_pkg(db, upg->uninst_set->dbpkgs, pkg,
+                                  PKG_LDWHOLE_FLDEPDIRS);
     if (n == 0)
         return;
     DBGMSG_F("%s, n = %d\n", pkg_snprintf_s(pkg), n);
     n = 0;
     for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
-        if ((dbpkg->flags & DBPKG_TOUCHED) == 0) {
-            
-            msgn_i(1, indent, _("%s obsoleted by %s"), dbpkg_snprintf_s(dbpkg),
-                   pkg_snprintf_s(pkg));
-            pkg_rm_mark(dbpkg->pkg);
-            db_deps_remove_pkg(upg->db_deps, dbpkg->pkg);
-            db_deps_remove_pkg_caps(upg->db_deps, pkg,
-                                    (ps->flags & PSET_DBDIRS_LOADED) == 0);
-            
-            dbpkg->flags |= DBPKG_TOUCHED;
-            
-            if (dbpkg->pkg->caps) {
-                int j;
-                for (j=0; j < n_array_size(dbpkg->pkg->caps); j++) {
-                    struct capreq *cap = n_array_nth(dbpkg->pkg->caps, j);
-                    verify_unistalled_cap(indent, cap, dbpkg->pkg, ps, upg);
-                }
+        struct pkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
+        if (pkgmark_isset(upg->dbpms, dbpkg, DBPKG_TOUCHED))
+            continue;
+        
+        msgn_i(1, indent, _("%s obsoleted by %s"), pkg_snprintf_s(dbpkg),
+               pkg_snprintf_s0(pkg));
+        pkg_rm_mark(upg->ts->pms, dbpkg);
+        db_deps_remove_pkg(upg->db_deps, dbpkg);
+        db_deps_remove_pkg_caps(upg->db_deps, pkg,
+                                (ps->flags & PSET_DBDIRS_LOADED) == 0);
+
+        pkgmark_set(upg->dbpms, dbpkg, 1, DBPKG_TOUCHED);
+        if (dbpkg->caps) {
+            int j;
+            for (j=0; j < n_array_size(dbpkg->caps); j++) {
+                struct capreq *cap = n_array_nth(dbpkg->caps, j);
+                verify_unistalled_cap(indent, cap, dbpkg, ps, upg);
             }
-
-            if (pkg->fl && dbpkg->pkg->fl) {
-                struct capreq *cap;
-                int j, k;
-
-                
-                cap = alloca(sizeof(cap) + PATH_MAX);
-                memset(cap, 0, sizeof(*cap));
-                cap->_buf[0] = '\0';
-                
-                for (j=0; j < n_tuple_size(dbpkg->pkg->fl); j++) {
-                    struct pkgfl_ent *flent = n_tuple_nth(dbpkg->pkg->fl, j);
-                    char *path, *endp;
-                    int path_left_size;
-                    
-                    endp = path = &cap->_buf[1];
-
-                    // not needed cause depdirs module is used 
-                    //if (n_array_bsearch(ps->depdirs, flent->dirname) == NULL)
-                    //    continue;
-                    
-                    if (*flent->dirname != '/')
-                        *endp++ = '/';
-                            
-                    endp = n_strncpy(endp, flent->dirname, PATH_MAX);
-                    if (*(endp - 1) != '/')
-                            *endp++ = '/';
-                    
-                    path_left_size = PATH_MAX - (endp - path);
-                    
-                    for (k=0; k < flent->items; k++) {
-                        struct flfile *file = flent->files[k];
-                        
-                        n_strncpy(endp, file->basename, path_left_size);
-                        verify_unistalled_cap(indent, cap, dbpkg->pkg, ps, upg);
-                    }
-                }
-            }
-            
-            n += process_pkg_orphans(dbpkg->pkg, ps, upg);
         }
-    }
 
+        if (pkg->fl && dbpkg->fl) {
+            struct capreq *cap;
+            int j, k;
+            
+            cap = alloca(sizeof(cap) + PATH_MAX);
+            memset(cap, 0, sizeof(*cap));
+            cap->_buf[0] = '\0';
+            
+            for (j=0; j < n_tuple_size(dbpkg->fl); j++) {
+                struct pkgfl_ent *flent = n_tuple_nth(dbpkg->fl, j);
+                char *path, *endp;
+                int path_left_size;
+                
+                endp = path = &cap->_buf[1];
+                
+                // not needed cause depdirs module is used 
+                //if (n_array_bsearch(ps->depdirs, flent->dirname) == NULL)
+                //    continue;
+                
+                if (*flent->dirname != '/')
+                    *endp++ = '/';
+                
+                endp = n_strncpy(endp, flent->dirname, PATH_MAX);
+                if (*(endp - 1) != '/')
+                    *endp++ = '/';
+                    
+                path_left_size = PATH_MAX - (endp - path);
+                for (k=0; k < flent->items; k++) {
+                    struct flfile *file = flent->files[k];
+                    
+                    n_strncpy(endp, file->basename, path_left_size);
+                    verify_unistalled_cap(indent, cap, dbpkg, ps, upg);
+                }
+            }
+        }
+        n += process_pkg_orphans(dbpkg, ps, upg);
+    }
+    
     if (n) 
         for (i=0; i<n_array_size(upg->orphan_dbpkgs); i++) {
-            struct dbpkg *dbpkg = n_array_nth(upg->orphan_dbpkgs, i);
+            struct pkg *dbpkg = n_array_nth(upg->orphan_dbpkgs, i);
             int process_as;
-            
-            if (dbpkg->flags & DBPKG_DEPS_PROCESSED)
+
+            if (pkgmark_isset(upg->dbpms, dbpkg, DBPKG_DEPS_PROCESSED))
                 continue;
-            dbpkg->flags |= DBPKG_DEPS_PROCESSED;
+            pkgmark_set(upg->dbpms, dbpkg, 1, DBPKG_DEPS_PROCESSED);
 #if 0
             if ((pkg = is_pkg_obsoletedby_installset(ps, dbpkg->pkg))) {
                 process_as = PROCESS_AS_NEW;
@@ -930,7 +935,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
             } else
 #endif                
              {
-                pkg = dbpkg->pkg;
+                pkg = dbpkg;
                 process_as = PROCESS_AS_ORPHAN;
              }
             
@@ -1190,15 +1195,16 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
 #endif           
 
                 if (p != NULL) {
-                    if (pkg_is_marked_i(p) || (by_obsoletes && !pkg_is_marked(p)))
+                    if (pkg_is_marked_i(upg->ts->pms, p) ||
+                        (by_obsoletes && !pkg_is_marked(upg->ts->pms, p)))
                         mark_package(p, upg);
                         
-                    if (pkg_is_marked(p)) {
+                    if (pkg_is_marked(upg->ts->pms, p)) {
                         process_pkg_deps(-2, p, ps, upg, PROCESS_AS_NEW);
                         not_found = 0;
                         
                     } else if (upg->ts->getop(upg->ts, POLDEK_OP_GREEDY)) {
-                        n_assert(!pkg_is_marked(p));
+                        n_assert(!pkg_is_marked(upg->ts->pms, p));
                         if (do_greedymark(indent, p, pkg, req, ps, upg))
                             not_found = 0;
                     }
@@ -1286,7 +1292,7 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
 
 
 static
-int find_replacement(struct pkgset *ps, struct pkg *pkg, struct pkg **rpkg)
+int find_replacement(struct upgrade_s *upg, struct pkg *pkg, struct pkg **rpkg)
 {
     const struct capreq_idx_ent *ent;
     struct pkg *bypkg = NULL;
@@ -1294,12 +1300,13 @@ int find_replacement(struct pkgset *ps, struct pkg *pkg, struct pkg **rpkg)
 
     *rpkg = NULL;
     
-    if ((bypkg = pkgset_lookup_pkgn(ps, pkg->name)) &&
+    if ((bypkg = pkgset_lookup_1package(upg->ts->ctx->ps, pkg->name)) &&
         pkg_cmp_name_evr(bypkg, pkg) > 0) {
         
         *rpkg = bypkg;
         
-    } else if ((ent = capreq_idx_lookup(&ps->obs_idx, pkg->name))) {
+    } else if ((ent = capreq_idx_lookup(&upg->ts->ctx->ps->obs_idx,
+                                        pkg->name))) {
         int i;
         
         for (i=0; i < ent->items; i++) {
@@ -1312,7 +1319,7 @@ int find_replacement(struct pkgset *ps, struct pkg *pkg, struct pkg **rpkg)
         }
     }
 
-    if (*rpkg && pkg_is_marked(*rpkg)) {
+    if (*rpkg && pkg_is_marked(upg->ts->pms, *rpkg)) {
         *rpkg = NULL;
         return 1;
     }
@@ -1324,7 +1331,7 @@ int find_replacement(struct pkgset *ps, struct pkg *pkg, struct pkg **rpkg)
 static
 int resolve_conflict(int indent,
                      struct pkg *pkg, const struct capreq *cnfl,
-                     struct dbpkg *dbpkg, struct pkgset *ps,
+                     struct pkg *dbpkg, struct pkgset *ps,
                      struct upgrade_s *upg) 
 {
     struct pkg *tomark = NULL;
@@ -1352,7 +1359,7 @@ int resolve_conflict(int indent,
     capreq_revrel(req);
     
     if (!found) {
-        found = find_replacement(ps, dbpkg->pkg, &tomark);
+        found = find_replacement(upg, dbpkg, &tomark);
         by_replacement = 1;
     }
     	
@@ -1364,8 +1371,8 @@ int resolve_conflict(int indent,
 
     found = 0;
     
-    if (by_replacement || pkg_obsoletes_pkg(tomark, dbpkg->pkg)) {
-        if (pkg_is_marked_i(tomark)) {
+    if (by_replacement || pkg_obsoletes_pkg(tomark, dbpkg)) {
+        if (pkg_is_marked_i(upg->ts->pms, tomark)) {
             //msg_i(1, indent, "%s 'MARX' => %s (cnfl %s)\n",
             //      pkg_snprintf_s(pkg), pkg_snprintf_s0(tomark),
             //      capreq_snprintf_s(req));
@@ -1394,7 +1401,7 @@ int resolve_conflict(int indent,
 static
 int is_file_conflict(const struct pkg *pkg,
                      const char *dirname, const struct flfile *flfile,
-                     struct dbpkg *dbpkg) 
+                     struct pkg *dbpkg) 
 {
     int i, j, is_cnfl = 0;
     
@@ -1473,7 +1480,7 @@ int find_file_conflicts(struct pkgfl_ent *flent, struct pkg *pkg,
             continue;
         
         for (j=0; j<n_array_size(cnfldbpkgs); j++) {
-            struct dbpkg *dbpkg = n_array_nth(cnfldbpkgs, j);
+            struct pkg *dbpkg = n_array_nth(cnfldbpkgs, j);
             printf("CHECK = %s against %s\n", path, dbpkg_snprintf_s(dbpkg));
             ncnfl += is_file_conflict(pkg, flent->dirname, flent->files[i],
                                       n_array_nth(cnfldbpkgs, j));
@@ -1541,32 +1548,32 @@ int find_db_conflicts_cnfl_w_db(int indent,
         n_hash_ctl(ht, TN_HASH_NOCPKEY);
         
         for (i=0; i<n_array_size(dbpkgs); i++) {
-            struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
-            if (n_hash_exists(ht, dbpkg->pkg->name))
+            struct pkg *dbpkg = n_array_nth(dbpkgs, i);
+            if (n_hash_exists(ht, dbpkg->name))
                 continue;
             
-            if (!pkg_match_req(dbpkg->pkg, cnfl, 1)) {
+            if (!pkg_match_req(dbpkg, cnfl, 1)) {
                 msgn_i(5, indent, "%s: conflict disarmed by %s",
-                       capreq_snprintf_s(cnfl), pkg_snprintf_s(dbpkg->pkg));
-                n_hash_insert(ht, dbpkg->pkg->name, pkg);
+                       capreq_snprintf_s(cnfl), pkg_snprintf_s(dbpkg));
+                n_hash_insert(ht, dbpkg->name, pkg);
             }
         }
     }
     
     for (i=0; i<n_array_size(dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
+        struct pkg *dbpkg = n_array_nth(dbpkgs, i);
         
         msg_i(6, indent, "%d. %s (%s) <-> %s ?\n", i, pkg_snprintf_s(pkg),
-            capreq_snprintf_s(cnfl), pkg_snprintf_s0(dbpkg->pkg));
+            capreq_snprintf_s(cnfl), pkg_snprintf_s0(dbpkg));
         
-        if (ht && n_hash_exists(ht, dbpkg->pkg->name))
+        if (ht && n_hash_exists(ht, dbpkg->name))
             continue;
         
-        if (pkg_match_req(dbpkg->pkg, cnfl, 1)) {
+        if (pkg_match_req(dbpkg, cnfl, 1)) {
             if (!resolve_conflict(indent, pkg, cnfl, dbpkg, ps, upg)) {
                 logn(LOGERR, _("%s (cnfl %s) conflicts with installed %s"),
                     pkg_snprintf_s(pkg), capreq_snprintf_s(cnfl),
-                    pkg_snprintf_s0(dbpkg->pkg));
+                    pkg_snprintf_s0(dbpkg));
                 ncnfl++;
             }
         }
@@ -1589,18 +1596,18 @@ int find_db_conflicts_dbcnfl_w_cap(int indent,
 
 
     for (i = 0; i<n_array_size(dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
+        struct pkg *dbpkg = n_array_nth(dbpkgs, i);
         
         msg(6, "%s (%s) <-> %s ?\n", pkg_snprintf_s(pkg),
-            capreq_snprintf_s(cap), pkg_snprintf_s0(dbpkg->pkg));
+            capreq_snprintf_s(cap), pkg_snprintf_s0(dbpkg));
         
-        for (j = 0; j < n_array_size(dbpkg->pkg->cnfls); j++) {
-            struct capreq *cnfl = n_array_nth(dbpkg->pkg->cnfls, j);
+        for (j = 0; j < n_array_size(dbpkg->cnfls); j++) {
+            struct capreq *cnfl = n_array_nth(dbpkg->cnfls, j);
             if (cap_match_req(cap, cnfl, 1)) {
                 if (!resolve_conflict(indent, pkg, cnfl, dbpkg, ps, upg)) {
                     logn(LOGERR, _("%s (cap %s) conflicts with installed %s (%s)"),
                         pkg_snprintf_s(pkg), capreq_snprintf_s(cap), 
-                        pkg_snprintf_s0(dbpkg->pkg), capreq_snprintf_s0(cnfl));
+                        pkg_snprintf_s0(dbpkg), capreq_snprintf_s0(cnfl));
                     ncnfl++;
                 }
             }
@@ -1614,17 +1621,17 @@ static
 int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
                           struct upgrade_s *upg)
 {
-    rpmdb dbh;
+    struct pkgdb *db;
     int i, n, ncnfl = 0;
 
-    dbh = upg->ts->db->dbh;
+    db = upg->ts->db;
 
     /* conflicts in install set */
     if (pkg->cnflpkgs != NULL)
         for (i = 0; i < n_array_size(pkg->cnflpkgs); i++) {
             struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, i);
 
-            if (pkg_is_marked(cpkg->pkg)) {
+            if (pkg_is_marked(upg->ts->pms, cpkg->pkg)) {
                 logn(LOGERR, _("%s conflicts with %s"),
                     pkg_snprintf_s(pkg), pkg_snprintf_s0(cpkg->pkg));
                 upg->nerr_cnfl++;
@@ -1643,9 +1650,9 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
             continue;
         
         msg_i(3, indent, "cap %s\n", capreq_snprintf_s(cap));
-        dbpkgs = rpm_get_conflicted_dbpkgs(dbh, cap,
-                                           upg->uninst_set->dbpkgs,
-                                           PKG_LDWHOLE_FLDEPDIRS);
+        dbpkgs = pkgdb_get_conflicted_dbpkgs(db, cap,
+                                             upg->uninst_set->dbpkgs,
+                                             PKG_LDWHOLE_FLDEPDIRS);
         if (dbpkgs == NULL)
             continue;
             
@@ -1665,14 +1672,14 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
             struct capreq *cnfl = n_array_nth(pkg->cnfls, i);
             tn_array *dbpkgs;
                 
-            if (cnfl_is_obsl(cnfl))
+            if (capreq_is_obsl(cnfl))
                 continue;
 
             msg_i(3, indent, "cnfl %s\n", capreq_snprintf_s(cnfl));
                 
-            dbpkgs = rpm_get_provides_dbpkgs(dbh, cnfl,
-                                             upg->uninst_set->dbpkgs,
-                                             PKG_LDWHOLE_FLDEPDIRS);
+            dbpkgs = pkgdb_get_provides_dbpkgs(db, cnfl,
+                                               upg->uninst_set->dbpkgs,
+                                               PKG_LDWHOLE_FLDEPDIRS);
             if (dbpkgs == NULL)
                 continue;
                 
@@ -1745,7 +1752,7 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
                 struct capreq *cnfl = n_array_nth(pkg->cnfls, j);
                 tn_array *dbpkgs;
                 
-                if (cnfl_is_obsl(cnfl))
+                if (capreq_is_obsl(cnfl))
                     continue;
 
                 msg_i(3, 3, "cnfl %s\n", capreq_snprintf_s(cnfl));
@@ -1765,7 +1772,7 @@ int find_conflicts(struct upgrade_s *upg, int *install_set_cnfl)
                                          upg->uninst_set->dbpkgs, upg->strict);
 #endif        
     }
-    
+     
     *install_set_cnfl = nisetcnfl;
     return ncnfl;
 }
@@ -1778,16 +1785,16 @@ static int valid_arch_os(struct poldek_ts *ts, tn_array *pkgs)
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
-
-        if (!ts->getop(ts, POLDEK_OP_IGNOREARCH) &&
-            pkg->arch && !rpmMachineScore(RPM_MACHTABLE_INSTARCH, pkg->arch)) {
+        
+        if (!ts->getop(ts, POLDEK_OP_IGNOREARCH) && pkg->arch &&
+            !pm_machine_score(ts->pmctx, PMMSTAG_ARCH, pkg->arch)) {
             logn(LOGERR, _("%s: package is for a different architecture (%s)"),
                  pkg_snprintf_s(pkg), pkg->arch);
             nerr++;
         }
     
         if (!ts->getop(ts, POLDEK_OP_IGNOREOS) && 
-            pkg->os && !rpmMachineScore(RPM_MACHTABLE_INSTOS, pkg->os)) {
+            pkg->os && !pm_machine_score(ts->pmctx, PMMSTAG_OS, pkg->os)) {
             logn(LOGERR, _("%s: package is for a different operating "
                            "system (%s)"), pkg_snprintf_s(pkg), pkg->os);
             nerr++;
@@ -1814,8 +1821,8 @@ static void show_dbpkg_list(const char *prefix, tn_array *dbpkgs)
     msg(1, "%s ", prefix);
     
     for (i=0; i < n_array_size(dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(dbpkgs, i);
-        p = pkg_snprintf_s(dbpkg->pkg);
+        struct pkg *dbpkg = n_array_nth(dbpkgs, i);
+        p = pkg_snprintf_s(dbpkg);
         if (ncol + (int)strlen(p) >= term_width) {
             ncol = 3;
             msg(1, "_\n%s ", prefix);
@@ -1865,20 +1872,23 @@ static void print_install_summary(struct upgrade_s *upg)
     
     if (n_array_size(upg->install_pkgs) > 2) {
         n_array_sort(upg->install_pkgs);
-        display_pkg_list(1, "I", upg->install_pkgs, PKG_DIRMARK);
-        display_pkg_list(1, "D", upg->install_pkgs, PKG_INDIRMARK);
+        packages_iinf_display(1, "I", upg->install_pkgs, upg->ts->pms,
+                              PKGMARK_MARK);
+
+        packages_iinf_display(1, "D", upg->install_pkgs, upg->ts->pms,
+                              PKGMARK_DEP);
         show_dbpkg_list("R", upg->uninst_set->dbpkgs);
         
     } else {
         for (i=0; i<n_array_size(upg->install_pkgs); i++) {
             struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
-            msg(1, "%c %s\n", pkg_is_dep_marked(pkg) ? 'D' : 'I',
+            msg(1, "%c %s\n", pkg_is_dep_marked(upg->ts->pms, pkg) ? 'D' : 'I',
                 pkg_snprintf_s(pkg));
         }
 
         for (i=0; i<n_array_size(upg->uninst_set->dbpkgs); i++) {
-            struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
-            msg(1, "R %s\n", pkg_snprintf_s(dbpkg->pkg));
+            struct pkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
+            msg(1, "R %s\n", pkg_snprintf_s(dbpkg));
         }
     }
     
@@ -1908,18 +1918,18 @@ static int verify_holds(struct upgrade_s *upg)
         return 1;
 
     for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
-        struct dbpkg *dbpkg; 
+        struct pkg *dbpkg; 
         struct pkgscore_s psc;
 
         dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
-        pkgscore_match_init(&psc, dbpkg->pkg);
+        pkgscore_match_init(&psc, dbpkg);
         
         for (j=0; j < n_array_size(upg->ts->hold_patterns); j++) {
             const char *mask = n_array_nth(upg->ts->hold_patterns, j);
             
             if (pkgscore_match(&psc, mask)) {
                 logn(LOGERR, _("%s: refusing to uninstall held package"),
-                     pkg_snprintf_s(dbpkg->pkg));
+                     pkg_snprintf_s(dbpkg));
                 rc = 0;
                 break;
             }
@@ -1944,7 +1954,7 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
 
     
     if (vrfy)
-        pkgdb_reopendb(upg->ts->db);
+        pkgdb_open(upg->ts->db, O_RDONLY);
     
     
     for (i=0; i<n_array_size(upg->install_pkgs); i++) {
@@ -1954,8 +1964,7 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
         if (vrfy) {
             int cmprc = 0;
             
-            is_installed = rpm_is_pkg_installed(upg->ts->db->dbh, pkg,
-                                                &cmprc, NULL);
+            is_installed = pkgdb_is_pkg_installed(upg->ts->db, pkg, &cmprc);
             if (is_installed && cmprc != 0) 
                 is_installed = 0;
         }
@@ -1970,15 +1979,14 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
         is_installed = 0;
     
     for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
-        struct pkg *pkg = dbpkg->pkg;
+        struct pkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
+        struct pkg *pkg = dbpkg;
 
 
         if (vrfy) {
             int cmprc = 0;
             
-            is_installed = rpm_is_pkg_installed(upg->ts->db->dbh, pkg,
-                                                &cmprc, NULL);
+            is_installed = pkgdb_is_pkg_installed(upg->ts->db, pkg, &cmprc);
             if (is_installed && cmprc != 0) 
                 is_installed = 0;
         }
@@ -1988,7 +1996,7 @@ void update_install_info(struct install_info *iinf, struct upgrade_s *upg,
     }
 
     if (vrfy) 
-        pkgdb_closedb(upg->ts->db);
+        pkgdb_close(upg->ts->db);
 }
 
 
@@ -2013,7 +2021,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
 
     for (i = n_array_size(ps->ordered_pkgs) - 1; i > -1; i--) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
-        if (pkg_is_hand_marked(pkg)) 
+        if (pkg_is_hand_marked(upg->ts->pms, pkg)) 
             process_pkg_deps(-2, pkg, ps, upg, PROCESS_AS_NEW);
         
         if (sigint_reached())
@@ -2023,7 +2031,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
     pkgs = n_array_new(64, NULL, NULL);
     for (i = n_array_size(ps->ordered_pkgs) - 1; i > -1; i--) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
-        if (pkg_is_marked(pkg))
+        if (pkg_is_marked(upg->ts->pms, pkg))
             n_array_push(pkgs, pkg);
     }
     
@@ -2031,7 +2039,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         return 0;
 
     print_install_summary(upg);
-    pkgdb_closedb(ts->db); /* close db as soon as possible */
+    pkgdb_close(ts->db); /* close db as soon as possible */
 
     if (upg->nerr_dep || upg->nerr_cnfl) {
         char errmsg[256];
@@ -2093,7 +2101,8 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         if (destdir == NULL)
             destdir = ts->cachedir;
 
-        rc = packages_fetch(upg->install_pkgs, destdir, ts->fetchdir ? 1 : 0);
+        rc = packages_fetch(ts->pmctx, upg->install_pkgs, destdir,
+                            ts->fetchdir ? 1 : 0);
 
     } else if (!ts->getop(ts, POLDEK_OP_HOLD) || (rc = verify_holds(upg))) {
         int is_test = ts->getop(ts, POLDEK_OP_RPMTEST);
@@ -2102,8 +2111,11 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
             if (!ts->ask_fn(1, _("Proceed? [Y/n]")))
                 return 1;
         }
-        
-        rc = packages_rpminstall(pkgs, ts);
+
+        if (!packages_fetch(ts->pmctx, pkgs, ts->cachedir, 0))
+            return 0;
+
+        rc = pm_pminstall(ts->pmctx, pkgs, upg->uninst_set->dbpkgs, ts);
         if (!is_test && iinf)
             update_install_info(iinf, upg, rc <= 0);
     }
@@ -2117,13 +2129,14 @@ static void init_upgrade_s(struct upgrade_s *upg, struct poldek_ts *ts)
     upg->install_pkgs = n_array_new(128, NULL, NULL);
     upg->db_deps = db_deps_new();
     upg->uninst_set = dbpkg_set_new();
-    upg->orphan_dbpkgs = dbpkg_array_new(128);
+    upg->orphan_dbpkgs = pkgs_array_new_ex(128, pkg_cmp_recno);
 
     upg->strict = ts->ctx->ps->flags & PSET_VRFY_MERCY ? 0 : 1;
     upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
     upg->ts = ts; 
     upg->pkg_stack = n_array_new(32, NULL, NULL);
+    upg->dbpms = pkgmark_set_new();
 }
 
 
@@ -2135,7 +2148,7 @@ static void destroy_upgrade_s(struct upgrade_s *upg)
     dbpkg_set_free(upg->uninst_set);
     n_array_free(upg->orphan_dbpkgs);
     upg->ts = NULL;
-    
+    pkgmark_set_free(upg->dbpms);
     memset(upg, 0, sizeof(*upg));
 }
 
@@ -2149,30 +2162,26 @@ static void reset_upgrade_s(struct upgrade_s *upg)
     dbpkg_set_free(upg->uninst_set);
     upg->uninst_set = dbpkg_set_new();
     n_array_clean(upg->orphan_dbpkgs);
-    
+    pkgmark_set_free(upg->dbpms);
+    upg->dbpms = pkgmark_set_new();
     upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
 }
 
 
 static 
-void mapfn_mark_newer_pkg(unsigned recno, void *h, void *upgptr) 
+void mapfn_mark_newer_pkg(const char *n, uint32_t e,
+                          const char *v, const char *r, void *upgptr) 
 {
     struct upgrade_s  *upg = upgptr;
     struct pkg        *pkg, tmpkg;
-    uint32_t          *epoch;
     int               i, cmprc;
-
     
-    recno = recno;
+    tmpkg.name = (char*)n;
+    tmpkg.epoch = e;
+    tmpkg.ver = (char*)v;
+    tmpkg.rel = (char*)r;
     
-    if (!rpmhdr_nevr(h, &tmpkg.name, &epoch, &tmpkg.ver, &tmpkg.rel)) {
-        logn(LOGERR, _("db package header corrupted (!?)"));
-        upg->ndberrs++;
-        return;
-    }
-
-    tmpkg.epoch = epoch ? *epoch : 0;
     i = n_array_bsearch_idx_ex(upg->avpkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
     if (i < 0) {
         msg(3, "%-32s not found in repository\n", pkg_snprintf_s(&tmpkg));
@@ -2194,10 +2203,10 @@ void mapfn_mark_newer_pkg(unsigned recno, void *h, void *upgptr)
     }
 
     if ((pkg = n_hash_get(upg->db_pkgs, tmpkg.name))) {
-        if (pkg_is_marked(pkg)) {
+        if (pkg_is_marked(upg->ts->pms, pkg)) {
             upg->nmarked--;
             logn(LOGWARN, _("%s: multiple instances installed, skipped"), tmpkg.name);
-            pkg_unmark(pkg);        /* display above once */
+            pkg_unmark(upg->ts->pms, pkg);        /* display above once */
         }
 
         return;
@@ -2210,7 +2219,7 @@ void mapfn_mark_newer_pkg(unsigned recno, void *h, void *upgptr)
             
         } else {
             n_hash_insert(upg->db_pkgs, tmpkg.name, pkg);
-            pkg_hand_mark(pkg);
+            pkg_hand_mark(upg->ts->pms, pkg);
             upg->nmarked++;
         }
     }
@@ -2227,7 +2236,7 @@ int do_poldek_ts_upgrade_dist(struct poldek_ts *ts)
     upg.db_pkgs = n_hash_new(103, NULL);
     
     msgn(1, _("Looking up packages for upgrade..."));
-    pkgdb_map(ts->db, mapfn_mark_newer_pkg, &upg);
+    pkgdb_map_nevr(ts->db, mapfn_mark_newer_pkg, &upg);
     n_hash_free(upg.db_pkgs);
 
     if (upg.ndberrs) {
@@ -2287,19 +2296,19 @@ static void mark_namegroup(tn_array *pkgs, struct pkg *pkg, struct upgrade_s *up
         if (strncmp(p->name, prefix, len) != 0) 
             break;
 
-        if (!pkg_is_marked_i(p)) 
+        if (!pkg_is_marked_i(upg->ts->pms, p)) 
             continue;
         
         if (pkg->pkgdir != p->pkgdir)
             continue;
 
-        if (!pkg_is_marked(p))
+        if (!pkg_is_marked(upg->ts->pms, p))
             mark_package(p, upg);
     }
 }
 
 static
-int unmark_name_dups(tn_array *pkgs) 
+int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs) 
 {
     struct pkg *pkg, *pkg2;
     int i, n;
@@ -2314,7 +2323,7 @@ int unmark_name_dups(tn_array *pkgs)
         pkg = n_array_nth(pkgs, i);
         i++;
         
-        if (!pkg_is_marked(pkg))
+        if (!pkg_is_marked(pms, pkg))
             continue;
 
         DBGF("%s\n", pkg_snprintf_s(pkg));
@@ -2322,7 +2331,7 @@ int unmark_name_dups(tn_array *pkgs)
         
         pkg2 = n_array_nth(pkgs, i);
         while (pkg_cmp_name(pkg, pkg2) == 0) {
-            pkg_unmark(pkg2);
+            pkg_unmark(pms, pkg2);
             DBGF("unmark %s\n", pkg_snprintf_s(pkg2));
 
             i++;
@@ -2330,12 +2339,12 @@ int unmark_name_dups(tn_array *pkgs)
             if (i == n_array_size(pkgs))
                 break;
             pkg2 = n_array_nth(pkgs, i);
-            
         }
     }
     
     return n;
 }
+
 
 int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
 {
@@ -2345,10 +2354,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
 
     
     n_assert(ts->type == POLDEK_TSt_INSTALL);
-
-    packages_mark(ps->pkgs, 0, PKG_INTERNALMARK | PKG_INDIRMARK);
-    
-    unmark_name_dups(ps->pkgs);
+    unmark_name_dups(ts->pms, ps->pkgs);
     
     mem_info(1, "ENTER pkgset_install:");
     init_upgrade_s(&upg, ts);
@@ -2367,7 +2373,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
         struct pkg    *pkg = n_array_nth(ps->ordered_pkgs, i);
         int           install;
 
-        if (!pkg_is_marked(pkg))
+        if (!pkg_is_marked(ts->pms, pkg))
             continue;
 
         if (sigint_reached())
@@ -2375,11 +2381,11 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
         
         install = is_installable(pkg, ts, 1);
         
-        pkg_unmark(pkg);
+        pkg_unmark(ts->pms, pkg);
         pkg_clr_badreqs(pkg);
         
         if (install > 0) {
-            pkg_mark_i(pkg);
+            pkg_mark_i(ts->pms, pkg);
             nmarked++;
         }
     }
@@ -2391,8 +2397,6 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
         ts->setop(ts, POLDEK_OP_PARTICLE, 0);
     
     n = 1;
-    packages_mark(ps->pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
-    //pkgset_mark(ps, PS_MARK_OFF_ALL);
 #if 0                           /* debug */
     for (i = 0; i < n_array_size(ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
@@ -2403,7 +2407,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
     for (i = 0; i < n_array_size(ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
 
-        if (!pkg_is_marked_i(pkg)) 
+        if (!pkg_is_marked_i(ts->pms, pkg)) 
             continue;
 
         if (sigint_reached())
@@ -2419,7 +2423,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
             }
             
             n++;
-            pkgdb_reopendb(upg.ts->db);
+            pkgdb_open(upg.ts->db, 0);
         }
         
         mark_package(pkg, &upg);
@@ -2429,9 +2433,8 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct install_info *iinf)
                 
             if (!do_install(ps, &upg, iinf))
                 nerr++;
-            
-            packages_mark(ps->pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
-            //pkgset_mark(ps, PS_MARK_OFF_ALL);
+
+            pkgmark_massset(ts->pms, 0, PKGMARK_MARK | PKGMARK_DEP);
             reset_upgrade_s(&upg);
         }
     }

@@ -47,8 +47,8 @@
 #include "log.h"
 #include "pkg.h"
 
-#include "rpm.h"
-#include "rpmhdr.h"
+#include "pm_rpm.h"
+
 static void progress(const unsigned long amount, const unsigned long total) 
 {
     static int last_v = 0;
@@ -191,8 +191,10 @@ static void *install_cb(const void *h __attribute__((unused)),
 # define freeTS(ts) rpmtransFree(ts)
 #endif
 
-int rpm_install(rpmdb db, const char *rootdir, const char *path,
-                unsigned filterflags, unsigned transflags, unsigned instflags)
+static
+int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
+                 unsigned filterflags, unsigned transflags,
+                 unsigned instflags)
 {
 #ifdef HAVE_RPM_4_1
     rpmts ts = NULL;
@@ -222,10 +224,10 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
         goto l_err;
     }
 
-    if (!rpmhdr_loadfdt(fdt, &h, path)) {
+    if (!pm_rpmhdr_loadfdt(fdt, &h, path)) {
         goto l_err;
         
-    } else if (rpmhdr_issource(h)) {
+    } else if (pm_rpmhdr_issource(h)) {
         logn(LOGERR, _("%s: source packages are not supported"), path);
         goto l_err;
     }
@@ -365,3 +367,34 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
     return 0;
 }
 
+
+int pm_rpm_dbinstall(struct pkgdb *db, const char *path,
+                     const struct poldek_ts *ts)
+{
+    unsigned instflags = 0, filterflags = 0, transflags = 0;
+
+    n_assert(db->dbh);
+
+    
+    if (ts->getop(ts, POLDEK_OP_NODEPS))
+        instflags |= INSTALL_NODEPS;
+    
+    if (ts->getop(ts, POLDEK_OP_JUSTDB))
+        transflags |= RPMTRANS_FLAG_JUSTDB;
+    
+    if (ts->getop(ts, POLDEK_OP_TEST))
+        transflags |= RPMTRANS_FLAG_TEST;
+    
+    if (ts->getop(ts, POLDEK_OP_FORCE))
+        filterflags |= RPMPROB_FILTER_REPLACEPKG |
+            RPMPROB_FILTER_REPLACEOLDFILES |
+            RPMPROB_FILTER_REPLACENEWFILES |
+            RPMPROB_FILTER_OLDPACKAGE;
+
+    filterflags |= RPMPROB_FILTER_DISKSPACE;
+    instflags |= INSTALL_NOORDER | INSTALL_UPGRADE;
+
+    
+    return do_dbinstall(db->dbh, db->rootdir, path,
+                        filterflags, transflags, instflags);
+}

@@ -36,27 +36,26 @@
 #include "misc.h"
 #include "i18n.h"
 #include "poldek.h"
+#include "pm/pm.h"
 #include "split.h"
 
-int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs)
+int poldek_load_sources__internal(struct poldek_ctx *ctx)
 {
     struct pkgset *ps;
     struct poldek_ts *ts;
     unsigned ps_flags = 0;
 
-    
+    n_assert(ctx->pmctx);
     n_assert(ctx->ps == NULL);
 
     ts = ctx->ts;
     
-    
-    if ((ps = pkgset_new()) == NULL)
+    if ((ps = pkgset_new(ctx->pmctx)) == NULL)
         return 0;
         
-    if (load_dbdepdirs) {
-        if (rpmdb_get_depdirs(ctx->ts->rootdir, ps->depdirs) >= 0)
-            ps->flags |= PSET_DBDIRS_LOADED;
-    }
+    if (pm_get_dbdepdirs(ctx->pmctx, ctx->ts->rootdir, NULL, ps->depdirs) >= 0)
+        ps->flags |= PSET_DBDIRS_LOADED;
+    
         
     if (!pkgset_load(ps, 0, ctx->sources)) {
         logn(LOGWARN, _("no packages loaded"));
@@ -106,4 +105,11 @@ tn_array *poldek_get_avail_packages_bynvr(struct poldek_ctx *ctx)
         return NULL;
 
     return pkgset_get_packages_bynvr(ctx->ps);
+}
+
+tn_array *poldek_search_avail_packages(struct poldek_ctx *ctx,
+                                       enum pkgset_lookup_tag tag,
+                                       const char *value)
+{
+    return pkgset_search(ctx->ps, tag, value);
 }

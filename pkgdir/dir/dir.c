@@ -35,13 +35,11 @@
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
-#include "rpm/rpmhdr.h"
-#include "rpm/rpm_pkg_ld.h"
+#include "pm/rpm/pm_rpm.h"
 #include "pkgdir.h"
 #include "pkg.h"
 #include "pkgu.h"
 #include "pkgroup.h"
-//#include "pkgdb.h"
 
 static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags);
@@ -109,7 +107,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
             Header h;
 
             
-            if (!rpmhdr_loadfile(path, &h)) {
+            if (!pm_rpmhdr_loadfile(path, &h)) {
                 logn(LOGWARN, "%s: read header failed, skipped", path);
                 continue;
             }
@@ -119,7 +117,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
 
             if (prev_pkgdir) {
                 struct pkg *tmp;
-                pkg = pkg_ldrpmhdr(NULL, h, n_basenam(path), st.st_size, PKG_LDNEVR);
+                pkg = pm_rpm_ldhdr(NULL, h, n_basenam(path), st.st_size, PKG_LDNEVR);
                 
                 if (pkg && (tmp = n_array_bsearch(prev_pkgdir->pkgs, pkg)) &&
                     pkg_deepstrcmp_name_evr(pkg, tmp) == 0) {
@@ -148,7 +146,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
             }
             
             if (pkg == NULL) {
-                pkg = pkg_ldrpmhdr(na, h, n_basenam(path), st.st_size,
+                pkg = pm_rpm_ldhdr(na, h, n_basenam(path), st.st_size,
                                    PKG_LDWHOLE);
                 
                 if (ldflags & PKGDIR_LD_DESC) {

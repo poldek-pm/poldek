@@ -995,7 +995,7 @@ static void merge_htconf(tn_hash *htconf, tn_hash *ht)
 }
 
 
-tn_hash *poldek_ldconf(const char *path, unsigned flags) 
+tn_hash *poldek_conf_load(const char *path, unsigned flags) 
 {
     tn_hash   *af_htconf, *htconf = NULL;
 
@@ -1033,7 +1033,7 @@ tn_hash *poldek_ldconf(const char *path, unsigned flags)
 }
 
 
-tn_hash *poldek_ldconf_default(void)
+tn_hash *poldek_conf_loadefault(void)
 {
     char *homedir;
     char *etcpath = "/etc/poldek.conf";
@@ -1043,11 +1043,11 @@ tn_hash *poldek_ldconf_default(void)
         
         snprintf(path, sizeof(path), "%s/.poldekrc", homedir);
         if (access(path, R_OK) == 0)
-            return poldek_ldconf(path, 0);
+            return poldek_conf_load(path, 0);
     }
     
     if (access(etcpath, R_OK) == 0)
-        return poldek_ldconf(etcpath, 0);
+        return poldek_conf_load(etcpath, 0);
 
     return NULL;
 }
