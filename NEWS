@@ -1,6 +1,6 @@
 0.17 (beta release):
 * added support for package.dir's "patches" (new option --update-whole
-  updates whole index while --update looking for patches first)
+  updates whole index; --update looking for patches first)
 
 * packages are divided into groups before install and each group 
   is installed separately; this ensures that broken dependencies in 
@@ -21,13 +21,13 @@
 * shell: 
   - db package list is cached what speeds up program start
   - ls: long listings are passed to $PAGER program (default is "less")
-  - ls: new switches: -n (list package name only), -G (list group)
+  - ls: new switches: -n (list package names only), -G (list group)
         and -O (show package summaries)
 
 * added log file suppport (--log option)
 
-* sources may be configured as name and URL pair; and be later 
-  selected using that name (new --sn|-n option). 
+* sources may be configured as name and URL pair and later 
+  selected by that name (new --sn|-n option). 
   With --sl|-l program lists all configured sources.
   
 * packages.dir's integrity is verified before each loading
@@ -35,9 +35,13 @@
 
 * changed default cache directory to $HOME/.poldek-cache
 
-* package MD5 sums are verified before installl
+* package MD5 sums are verified before install
 
-* few (nice) improvements and (not so nice) bug fixes 
+* with --ask program confirms each installation (confirm_install config 
+  option) and allows the user to choose among equivalent packages 
+  (choose_equivalents_manually config option)
+ 
+* few (nice) improvements and (not so nice ;-) bugs fixed
 
 
 0.16 (stable release):

@@ -122,10 +122,10 @@ int upgrade_dist(struct pkgset *ps, struct inst_s *inst)
     return rc;
 }
 
-int install_pkgs(struct pkgset *ps, struct inst_s *inst, tn_array *unist_pkgs) 
+int install_pkgs(struct pkgset *ps, struct inst_s *inst, struct install_info *iinf) 
 {
     int rc;
-
+    
     if (inst->rootdir == NULL)
         inst->rootdir = "/";
     
@@ -136,7 +136,7 @@ int install_pkgs(struct pkgset *ps, struct inst_s *inst, tn_array *unist_pkgs)
     if (inst->db == NULL) 
         return 0;
     
-    rc = pkgset_install(ps, inst, unist_pkgs);
+    rc = pkgset_install(ps, inst, iinf);
     pkgdb_free(inst->db);
     inst->db = NULL;
     return rc;

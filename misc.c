@@ -45,7 +45,8 @@
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
-
+#include "term.h"
+#include "pkg.h"
 
 static
 int valid_dir(const char *envname, const char *dir);
@@ -423,3 +424,4 @@ const char *ngettext_n_packages_fmt(int n)
     return "%d package(s)";
 #endif
 }
+

@@ -6,6 +6,6 @@
 
 int install_dist(struct pkgset *ps, struct inst_s *inst);
 int upgrade_dist(struct pkgset *ps, struct inst_s *inst);
-int install_pkgs(struct pkgset *ps, struct inst_s *inst, tn_array *unist_pkgs);
+int install_pkgs(struct pkgset *ps, struct inst_s *inst, struct install_info *iinf);
 
 #endif

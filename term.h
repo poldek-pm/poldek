@@ -38,4 +38,6 @@ int vsnprintf_c(int color, char *str, size_t size, const char *fmt,
 
 int puts_c(int color, const char *s);
 
+int askuser(int fd, const char *validchrs, const char *msg);
+
 #endif

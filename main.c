@@ -58,7 +58,7 @@ const char *argp_program_bug_address = program_bug_address;
 
 /* Program documentation. */
 char poldek_banner[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
-"Copyright (C) 2000-2002 <mis@pld.org.pl>\n"
+"Copyright (C) 2000-2002 Pawel A. Gajda <mis@pld.org.pl>\n"
 "This program may be freely redistributed under the terms of the GNU GPL v2\n";
 /* A description of the arguments we accept. */
 static char args_doc[] = N_("[PACKAGE...]");
@@ -92,9 +92,9 @@ struct split_conf {
 struct args {
     int       mjrmode;
     unsigned  mnrmode;
-    
+
+    unsigned  switches;
     int       update_op;
-    int       v016compat;
     
     char      *curr_src_path;
     int       curr_src_ldmethod;
@@ -179,11 +179,18 @@ tn_hash *htcnf = NULL;          /* config file values */
 #define OPT_NEVR                  1110
 #define OPT_PKGSET                1111
 
+
 #define OPT_CONF                  'c'
 #define OPT_NOCONF                2002 
 #define OPT_LOG                   'L'
 #define OPT_V016                  2004
 #define OPT_BANNER                2005
+#define OPT_ASK                   2006
+#define OPT_NOASK                 2007
+
+#define OPT_SW_V016               (1 << 0)
+#define OPT_SW_NOASK              (1 << 1)
+#define OPT_SW_NOCONF             (1 << 2)
 
 /* The options we understand. */
 static struct argp_option options[] = {
@@ -333,11 +340,14 @@ N_("Don't take held packages from $HOME/.poldek_hold."), 71 },
      N_("Write chunks to PREFIX.XX, default PREFIX is packages.chunk"), 90 },    
 
 {0,0,0,0, N_("Other:"), 500},    
+{"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
+                          "let user choose among equivalent packages"), 500 },
+{"noask", OPT_NOASK, 0, 0, N_("not --ask"), 500 }, 
+
 {"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), 500 }, 
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 500 }, 
 
-
-{"version", OPT_BANNER, 0, 0, N_("Display program version and exit"), 500 },    
+{"version", OPT_BANNER, 0, 0, N_("Display program version information and exit"), 500 },    
 {"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), 500 },
 {"v016", OPT_V016, 0, 0, N_("Read indexes created by versions < 0.17"), 500 },
 {0,  'v', 0, 0, N_("Be verbose."), 500 },
@@ -394,7 +404,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     
     switch (key) {
         case OPT_V016:
-            argsp->v016compat = 1;
+            argsp->switches |= OPT_SW_V016;
             argsp->update_op = OPT_UPDATEIDX_WHOLE;
             break;
 
@@ -408,6 +418,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
         case 'v': 
             verbose++;
+            break;
+
+        case OPT_BANNER:
+            printf("%s\n", poldek_banner);
+            exit(EXIT_SUCCESS);
             break;
 
         case OPT_NEVR:
@@ -606,7 +621,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->psflags |= PSMODE_INSTALL;
             break;
             
-        case 'U':
+        case 'u':
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UPGRADE;
             argsp->psflags |= PSMODE_UPGRADE;
@@ -670,12 +685,21 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->inst.flags |= INSTS_MKDBDIR;
             break;
 
+        case OPT_ASK:
+            argsp->inst.flags |= (INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER);
+            break;
+
+        case OPT_NOASK:
+            argsp->switches |= OPT_SW_NOASK;
+            argsp->inst.flags &= ~(INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER);
+            break;
+            
         case OPT_CONF:
             argsp->conf_path = arg;
             break;
             
         case OPT_NOCONF:
-            argsp->noconf = 1;
+            argsp->switches |= OPT_SW_NOCONF;
             break;
 
         case OPT_SPLITSIZE: {
@@ -810,9 +834,10 @@ void parse_options(int argc, char **argv)
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
-    pkgdir_v016compat = args.v016compat;
+    pkgdir_v016compat = (args.switches & OPT_SW_V016);
 
-    if (args.noconf && args.conf_path) {
+    
+    if ((args.switches & OPT_SW_NOCONF) && args.conf_path) {
         logn(LOGERR, _("--noconf and --conf are exclusive, aren't they?"));
         exit(EXIT_FAILURE);
     }
@@ -916,21 +941,34 @@ void parse_options(int argc, char **argv)
         n_array_size(args.pkgdef_defs) +
         n_array_size(args.pkgdef_files);
     
-    
-    if ((v = conf_get(htcnf, "use_sudo", NULL)) != NULL &&
-        strcmp(v, "yes") == 0)
+
+    if (conf_get_bool(htcnf, "use_sudo", 0))
         args.inst.flags |= INSTS_USESUDO;
 
-    if ((v = conf_get(htcnf, "mercy", NULL)) != NULL &&
-        strcmp(v, "yes") == 0)
+    if (conf_get_bool(htcnf, "mercy", 0))
         args.psflags |= PSVERIFY_MERCY;
 
-    if ((v = conf_get(htcnf, "keep_downloads", NULL)) != NULL &&
-        strcmp(v, "yes") == 0)
+    if (conf_get_bool(htcnf, "keep_downloads", 0))
         args.inst.flags |= INSTS_KEEP_DOWNLOADS;
+    
+    if (conf_get_bool(htcnf, "confirm_installs", 0))
+        args.inst.flags |= INSTS_CONFIRM_INST;
 
+    if (conf_get_bool(htcnf, "choose_equivalents_manually", 0))
+        args.inst.flags |= INSTS_EQPKG_ASKUSER;
+
+    if (args.switches & OPT_SW_NOASK) 
+        args.inst.flags &= ~(INSTS_EQPKG_ASKUSER | INSTS_CONFIRM_INST);
+    
+    else if ((args.inst.flags & INSTS_CONFIRM_INST) && verbose < 1)
+        verbose = 1;
+
+    if (conf_get_bool(htcnf, "particle_install", 1))
+        args.inst.flags |= INSTS_PARTICLE;
+
+    
     if ((args.inst.flags & INSTS_GREEDY) == 0) { /* no --greedy specified */
-        if ((v = conf_get(htcnf, "greedy", NULL)) && strcmp(v, "yes") == 0)
+        if (conf_get_bool(htcnf, "greedy", 0))
             args.inst.flags |= INSTS_GREEDY;
     }
 
@@ -1196,6 +1234,16 @@ static int mkidx(struct pkgset *ps)
     return nerr == 0;
 }
 
+int is_package_file(const char *path)
+{
+    struct stat st;
+    
+    if (strstr(path, ".rpm") == 0)
+        return 0;
+
+    return (stat(path, &st) == 0 && S_ISREG(st.st_mode));
+}
+
 
 int prepare_given_packages(void) 
 {
@@ -1221,7 +1269,7 @@ int prepare_given_packages(void)
     for (i=0; i<n_array_size(args.pkgdef_files); i++) {
         char *path = n_array_nth(args.pkgdef_files, i);
 
-        if (access(path, R_OK) == 0) 
+        if (is_package_file(path)) 
             rc = usrpkgset_add_file(args.ups, path);
         else
             rc = usrpkgset_add_str(args.ups, path, strlen(path));
@@ -1270,9 +1318,9 @@ int verify_args(void)
             if (verbose >= 0)
                 verbose += 1;
 
-            if (args.v016compat) {
+            if (args.switches & OPT_SW_V016) {
                 logn(LOGWARN, _("--v016 has no effect in this mode"));
-                args.v016compat = 0;
+                args.switches &= ~OPT_SW_V016;
             }
 
             n_assert(args.sources);
@@ -1450,7 +1498,6 @@ int main(int argc, char **argv)
     if (!verify_args())
         exit(EXIT_FAILURE);
 
-    pkgdir_v016compat = args.v016compat;
     poldek_init();
     rpm_initlib(args.inst.rpmacros);
     
@@ -1478,11 +1525,6 @@ int main(int argc, char **argv)
     else if (args.mjrmode == MODE_VERIFY) 
         ldflags = PKGDIR_LD_VERIFY;
 
-#ifdef ENABLE_INTERACTIVE_MODE        
-    if (args.mjrmode == MODE_SHELL && args.shcmd == NULL)
-        printf("%s\n", poldek_banner);        
-#endif
-    
     if ((ps = load_pkgset(ldflags)) == NULL)
         exit(EXIT_FAILURE);
 

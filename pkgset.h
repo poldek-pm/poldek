@@ -49,31 +49,32 @@ int pkgset_order(struct pkgset *ps);
 #define INSTS_JUSTPRINT_N  (1 << 2) /* names, not filenames */
 #define INSTS_TEST         (1 << 3) /* poldek's test mode, not rpm's one */
 
-#define INSTS_MKDBDIR        (1 << 5)
-#define INSTS_FOLLOW         (1 << 6)
-#define INSTS_FRESHEN        (1 << 7)
-#define INSTS_USESUDO        (1 << 8)
-#define INSTS_NOHOLD         (1 << 9)
-#define INSTS_GREEDY         (1 << 10)
-#define INSTS_KEEP_DOWNLOADS (1 << 11)
-#define INSTS_PARTITIONED    (1 << 12)
-#define INSTS_CHECKSIG       (1 << 13)
+#define INSTS_MKDBDIR         (1 << 5)  /* --mkdir */
+#define INSTS_FOLLOW          (1 << 6)  /* !--nofollow */
+#define INSTS_FRESHEN         (1 << 7)  /* --freshen */
+#define INSTS_USESUDO         (1 << 8)  /* use_sudo = yes  */
+#define INSTS_NOHOLD          (1 << 9)  /* --nohold  */
+#define INSTS_GREEDY          (1 << 10) /* --greedy */
+#define INSTS_KEEP_DOWNLOADS  (1 << 11) /* keep_downloads = yes */
+#define INSTS_PARTICLE        (1 << 12)
+#define INSTS_CHECKSIG        (1 << 13) /* not implemented yet */
+#define INSTS_CONFIRM_INST    (1 << 14)
+#define INSTS_EQPKG_ASKUSER   (1 << 15) /* not implemented yet */
 
 struct inst_s {
     struct pkgdb   *db;
     unsigned       flags;          /* INSTS_* */
     unsigned       instflags;      /* PKGINST_* from pkgdb.h */
     const char     *rootdir;       /* top level dir          */
-    const char     *fetchdir;      /* dir to fetch files     */
-    const char     *cachedir;      /* place for downloaded packages */
+    const char     *fetchdir;      /* dir to fetch files to  */
+    const char     *cachedir;      /* cache directory        */
     const char     *dumpfile;      /* file to dump fqpns     */
     tn_array       *rpmopts;       /* rpm cmdline opts (char *opts[]) */
     tn_array       *rpmacros;      /* rpm macros to pass to cmdline (char *opts[]) */
     tn_array       *hold_pkgnames; 
     
-    int  (*selpkg_fn)(const char *, const tn_array *);
-    int  (*ask_fn)(const char *, ...);
-    void (*inf_fn)(const char *, ...);
+    int  (*askpkg_fn)(const char *, struct pkg **pkgs);
+    int  (*ask_fn)(int default_a, const char *, ...);
 };
 
 void inst_s_init(struct inst_s *inst);
@@ -131,9 +132,13 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst);
 /* pkgset-install.c */
 int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst);
 
-int pkgset_install(struct pkgset *ps, struct inst_s *inst,
-                   tn_array *unistalled_pkgs);
+struct install_info {
+    tn_array *installed_pkgs;
+    tn_array *uninstalled_pkgs;
+};
 
+int pkgset_install(struct pkgset *ps, struct inst_s *inst,
+                   struct install_info *iinf);
 
 
 void pkgset_mark_holds(struct pkgset *ps, tn_array *hold_pkgnames);
@@ -157,6 +162,5 @@ int package_verify_sign(const char *path, unsigned flags);
 
 
 #include "pkgset-load.h"
-
 
 #endif /* POLDEK_PKGSET_H */

@@ -62,6 +62,8 @@ static struct tag valid_tags[] = {
     { "mercy",          TYPE_BOOL , { 0 } },
     { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "keep_downloads", TYPE_BOOL , { 0 } },
+    { "confirm_installs", TYPE_BOOL , { 0 } },
+    { "choose_equivalents_manually", TYPE_BOOL , { 0 } },
     { "particle_install", TYPE_BOOL, { 0 } },
     {  NULL,           0, { 0 } }, 
 };
@@ -378,6 +380,18 @@ char *conf_get(tn_hash *htconf, const char *name, int *is_multi)
     
     return v;
 }
+
+int conf_get_bool(tn_hash *htconf, const char *name, int default_v)
+{
+    char *v;
+    
+    if ((v = conf_get(htconf, name, NULL)) == NULL)
+        return default_v;
+    
+    return (strcasecmp(v, "yes") == 0 || strcasecmp(v, "y") == 0 ||
+            strcasecmp(v, "true") == 0 || strcasecmp(v, "t") == 0);
+}
+
 
 tn_array *conf_get_multi(tn_hash *htconf, const char *name)
 {

@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <signal.h>
 #include <termios.h>
 #include <unistd.h>
@@ -246,6 +247,36 @@ int term_get_height(void)
     return term_height;
 }
 
+
+int askuser(int fd, const char *validchrs, const char *msg)
+{
+    struct termios t, tmp;
+    unsigned char c;
+    
+    if (!isatty(fd))
+        return 0;
+    
+    tcgetattr(fd, &t);
+    memcpy(&tmp, &t, sizeof(tmp));
+    
+    t.c_lflag &= ~(ICANON | ISIG | IEXTEN | ECHO);
+    t.c_lflag &= ~(ECHOE | ECHOK | ECHONL|ECHOCTL|ECHOPRT|ECHOKE);
+    t.c_iflag &= ~(IXON | IXANY | BRKINT);
+    t.c_cc[VTIME] = 0;
+    t.c_cc[VMIN] = 1;
+    tcsetattr(0, TCSAFLUSH, &t);
+
+    while (1) {
+        if ((read(fd, &c, sizeof(c)) == 1) && strchr(validchrs, c))
+            break;
+
+        if (msg)
+            printf("%s\n", msg);
+    }
+    
+    tcsetattr(fd, TCSAFLUSH, &tmp);
+    return c;
+}
 
     
 #if 0

@@ -52,7 +52,8 @@ libpoldek_a_SOURCES = \
 	  hold.c			\
 	  pkgfetch.c                    \
 	  rpminstall.c			\
-	  i18n.h
+	  i18n.h 			\
+	  ask.c
 
 SHELL_MOD = shell/libshell.a
 

@@ -172,10 +172,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 static int install(struct cmdarg *cmdarg)
 {
-    tn_array *shpkgs = NULL;
-    tn_array *uninst_pkgs = NULL;
-    int i, rc = 1, is_test;
-    struct inst_s *inst;
+    tn_array              *shpkgs = NULL;
+    struct install_info   iinf;
+    int                   i, rc = 1, is_test;
+    struct inst_s         *inst;
 
     inst = cmdarg->sh_s->inst;
     n_assert(inst);
@@ -203,41 +203,62 @@ static int install(struct cmdarg *cmdarg)
 
     is_test = (inst->flags & INSTS_TEST) || (inst->instflags & PKGINST_TEST);
     
-    uninst_pkgs = pkgs_array_new(16);
-    rc = install_pkgs(cmdarg->sh_s->pkgset, cmdarg->sh_s->inst, uninst_pkgs);
+    if (!is_test) {
+        iinf.installed_pkgs = pkgs_array_new(16);
+        iinf.uninstalled_pkgs = pkgs_array_new(16);
+        
+    } else {
+        iinf.installed_pkgs = NULL;
+        iinf.uninstalled_pkgs = NULL;
+    }
     
-    if (rc == 0) {
+    rc = install_pkgs(cmdarg->sh_s->pkgset, cmdarg->sh_s->inst,
+                      iinf.installed_pkgs ? &iinf : NULL);
+    
+    if (rc == 0) 
         msgn(1, _("There were errors"));
-        
-    } else if (!is_test && cmdarg->sh_s->instpkgs) { /* update installed set */
-        int instpkgs_changed = 0;
-        
-        for (i=0; i < n_array_size(cmdarg->sh_s->avpkgs); i++) {
-            struct shpkg *shpkg = n_array_nth(cmdarg->sh_s->avpkgs, i);
-            if (pkg_is_marked(shpkg->pkg)) {
-                n_array_push(cmdarg->sh_s->instpkgs, shpkg_link(shpkg));
-                instpkgs_changed = 1;
-            }
+
+
+    /* update installed set */
+    if (iinf.installed_pkgs && cmdarg->sh_s->instpkgs) { 
+        for (i=0; i < n_array_size(iinf.installed_pkgs); i++) {
+            struct pkg     *pkg = n_array_nth(iinf.installed_pkgs, i);
+            struct shpkg   *shpkg;
+            char           nevr[1024];
+            int            len;
+
+            
+            len = pkg_snprintf(nevr, sizeof(nevr), pkg);
+            printf("+ %s\n", nevr);
+            shpkg = malloc(sizeof(*shpkg) + len + 1);
+            memcpy(shpkg->nevr, nevr, len + 1);
+            shpkg->pkg = pkg_link(pkg);
+
+            n_array_push(cmdarg->sh_s->instpkgs, shpkg_link(shpkg));
         }
             
         n_array_sort(cmdarg->sh_s->instpkgs);
 
-        if (n_array_size(uninst_pkgs))
-            instpkgs_changed = 1;
-            
-        for (i=0; i < n_array_size(uninst_pkgs); i++) {
-            struct pkg   *pkg = n_array_nth(uninst_pkgs, i);
+        for (i=0; i < n_array_size(iinf.uninstalled_pkgs); i++) {
+            struct pkg   *pkg = n_array_nth(iinf.uninstalled_pkgs, i);
             struct shpkg *shpkg = alloca(sizeof(*shpkg) + 1024);
             
             pkg_snprintf(shpkg->nevr, 1024, pkg);
             n_array_remove(cmdarg->sh_s->instpkgs, shpkg);
+            printf("- %s\n", shpkg->nevr);
         }
+        
         n_array_sort(cmdarg->sh_s->instpkgs);
-
-        if (instpkgs_changed)
+        
+        if (n_array_size(iinf.installed_pkgs) + n_array_size(iinf.uninstalled_pkgs))
             cmdarg->sh_s->ts_instpkgs = time(0);
     }
-    n_array_free(uninst_pkgs);
+    
+    if (iinf.installed_pkgs) {
+        n_array_free(iinf.installed_pkgs);
+        n_array_free(iinf.uninstalled_pkgs);
+    }
+    
     
  l_end:
 

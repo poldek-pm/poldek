@@ -38,6 +38,10 @@
 # include "config.h"
 #endif
 
+/* prototypes from ask.c */
+int ask_yn(int default_a, const char *fmt, ...);
+int ask_pkg(const char *virtual, struct pkg **pkgs);
+
 #define obstack_chunk_alloc malloc
 #define obstack_chunk_free  free
 
@@ -135,9 +139,8 @@ void inst_s_init(struct inst_s *inst)
     inst->dumpfile = NULL;
     inst->rpmopts = NULL;
     inst->rpmacros = NULL;
-    inst->selpkg_fn = NULL;
-    inst->ask_fn = NULL;
-    inst->inf_fn = NULL;
+    inst->askpkg_fn = ask_pkg;
+    inst->ask_fn = ask_yn;
     inst->rpmacros = n_array_new(2, NULL, NULL);
     inst->rpmopts = n_array_new(4, NULL, (tn_fn_cmp)strcmp);
     inst->hold_pkgnames = n_array_new(4, free, (tn_fn_cmp)strcmp);
@@ -869,17 +872,13 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
             } else {
                 struct pkg *pkg;
                 int n = 0;
-                    
-                if (inst->selpkg_fn == NULL || n_array_size(avpkgs) == 1)
-                    pkg = n_array_nth(avpkgs, 0);
-                    
-                else {
-                    n = inst->selpkg_fn(pdef->virtname, avpkgs);
-                    if (n < 0)
-                        continue;
-                    else 
-                        pkg = n_array_nth(avpkgs, n);
-                } 
+                
+                pkg = n_array_nth(avpkgs, 0);
+                n = n;
+#if 0                           /* NFY */
+                n = inst->askpkg_fn(pdef->virtname, avpkgs);
+                pkg = n_array_nth(avpkgs, n);
+#endif                
                     
                 if (pdef->pkg == NULL) {
                     logn(LOGWARN, _("%s: missing default package, using %s"),
@@ -912,12 +911,13 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                 n_array_free(avpkgs);
             
         } else if (pdef->tflags & PKGDEF_OPTIONAL) {
-            if (inst->ask_fn && inst->ask_fn(pdef->pkg->name, NULL))
-                if (!pkgset_mark_pkgdef_exact(ps, pdef, nodeps))
-                    nerr++;
-            
+#if 0                        /* NFY */
+            if ((inst->flags & INSTS_CONFIRM_INST) && inst->ask_fn &&
+                inst->ask_fn(0, "Install %s? [y/N]", pdef->pkg->name));
+#endif                
+            if (!pkgset_mark_pkgdef_exact(ps, pdef, nodeps))
+                nerr++;
         }
-        
     }
 
     if (npatterns)
