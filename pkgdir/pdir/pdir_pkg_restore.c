@@ -74,6 +74,7 @@ struct pkgtags_s {
     uint32_t   fsize;
     uint32_t   btime;
     uint32_t   groupid;
+    uint32_t   fmtime;
     tn_array   *caps;
     tn_array   *reqs;
     tn_array   *cnfls;
@@ -133,7 +134,6 @@ struct pkg *pdir_pkg_restore(tn_alloc *na, tn_stream *st, struct pkg *pkg,
                              struct pkg_offs *pkgo, const char *fn)
 {
     struct pkgtags_s   pkgt;
-    struct pkg         tmpkg;
     off_t              offs;
     char               linebuf[4096];
     int                nerr = 0, nread, with_pkg = 0;
@@ -158,7 +158,6 @@ struct pkg *pdir_pkg_restore(tn_alloc *na, tn_stream *st, struct pkg *pkg,
         with_pkg = 1;
     
     memset(&pkgt, 0, sizeof(pkgt));
-    memset(&tmpkg, 0, sizeof(tmpkg));
     
     while ((nread = n_stream_gets(st, linebuf, sizeof(linebuf))) > 0) {
         char *p, *val, *line;
@@ -169,15 +168,6 @@ struct pkg *pdir_pkg_restore(tn_alloc *na, tn_stream *st, struct pkg *pkg,
         if (*line == '\n') {        /* empty line -> end of record */
             //printf("\n\nEOR\n");
             pkg = pkg_ldtags(na, pkg, &pkgt, pkgo);
-            if ((pkgt.flags & PKGT_F_v017) == 0) {
-                pkg->size = tmpkg.size;
-                pkg->fsize = tmpkg.fsize;
-                pkg->btime = tmpkg.btime;
-                pkg->itime = tmpkg.itime;
-                pkg->groupid = tmpkg.groupid;
-                pkg->recno = tmpkg.recno;
-            }
-            
 			//if (pkg)
             //    printf("ld %s\n", pkg_snprintf_s(pkg));
             break;
@@ -212,6 +202,7 @@ struct pkg *pdir_pkg_restore(tn_alloc *na, tn_stream *st, struct pkg *pkg,
             case 'S':
             case 'T':
             case 'n':
+            case 't':
                 if (!add2pkgtags(&pkgt, *line, val, fn, offs)) {
                     nerr++;
                     goto l_end;
@@ -470,6 +461,11 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 pkgt->flags |= PKGT_HAS_FN;
             }
             break;
+
+        case 't':
+            if (sscanf(value, "%u", &pkgt->fmtime) != 1)
+                pkgt->fmtime = 0;
+            break;
             
         default:
             logn(LOGERR, "%s:%ld: unknown tag '%c'", pathname, offs, tag);
@@ -566,6 +562,7 @@ struct pkg *pkg_ldtags(tn_alloc *na, struct pkg *pkg,
 #endif        
     }
     
+    pkg->fmtime = pkgt->fmtime;
     pkg->groupid = pkgt->groupid;
 
     msg(10, " load  %s\n", pkg_snprintf_s(pkg));

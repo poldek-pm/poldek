@@ -131,6 +131,9 @@ int do_pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     if (pkg->fn)
         n_buf_printf(nbuf, "n: %s\n", pkg->fn);
 
+    if (pkg->fmtime)
+        n_buf_printf(nbuf, "t: %d\n", pkg->fmtime);
+    
     n_buf_printf(nbuf, "F:\n");
     store_pkg_fields_v0_17(nbuf, pkg->size, pkg->fsize, pkg->btime,
                            pkg->groupid);
@@ -142,7 +145,6 @@ int do_pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
         n_buf_puts(nbuf, "R:\n");
         capreq_arr_store(pkg->reqs, nbuf);
     }
-    
     
     if (pkg->cnfls && n_array_size(pkg->cnfls)) {
         n_buf_puts(nbuf, "C:\n");
