@@ -1,3 +1,14 @@
+0.15.9:
+ * shell:
+   - desc: added package file size display
+   - search: added Group search
+   - install: unhidden --mercy
+   - uninstall: fix: don't remove pkg from install list if --test is used
+   - added -h opt. to all commands
+* removed GCC's nested functions usage -- seems that it causes SIGSEVs on
+   some machines (Arkadiusz Patyk <areq@pld.org.pl>)
+* fix: don't include trailing whitespaces in config values
+
 0.15.8:
 * curl: disabled timeouts, cURL's timeout it's a time to transfer file 
 * curl: amount and total sizes are displayed in progress bar
