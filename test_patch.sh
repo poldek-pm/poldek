@@ -81,6 +81,7 @@ t2()
 	   exit 1;
     fi 
 
+    #up_skip=0
     if [ ${up_skip} = "0" ]; then
 	echo -e "\n**** UP ****\n"
 	./poldek -v -s $SRCURL --up
@@ -91,6 +92,7 @@ t2()
     fi	
 }
 
+rm -rf $SRCDIR/packages.*
 ./poldek -s $SRCDIR --mkidxz || exit 1
 ./poldek -s $SRCURL --upa || exit 1
 
