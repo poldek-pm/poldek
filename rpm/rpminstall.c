@@ -389,7 +389,7 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
                 continue;
             
             url_type = vf_url_type(pkg->pkgdir->path);
-            if ((url_type & (VFURL_PATH | VFURL_UNKNOWN | VFURL_CDROM)) == 0) {
+            if ((url_type & (VFURL_PATH | VFURL_UNKNOWN)) == 0) {
                 DBG("unlink %s\n", argv[n]); 
                 unlink(argv[n]);
             }
