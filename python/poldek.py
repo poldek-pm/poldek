@@ -30,9 +30,20 @@ class n_array_proxy:
         if r: r = self._itemClass(r)
         return r
 
-def n_array_proxy_func(prefix, func, classnam):
-    return eval('lambda self, *args: n_array_proxy(poldekmod.%s%s(self, *args), %s)' % (prefix, func, classnam));
+    def __str__(self):
+        return '[' + string.join(map(str, map(self._itemClass, self._arr)), ', ') + ']'
     
+    def __setitem__(self, i, val):
+        raise TypeError, "tn_array is immutable"
+
+def n_array_proxy_func(prefix, func, classnam):
+    return eval('lambda self, *args: n_array_proxy(poldekmod.%s%s(self, *args), %s)' %
+                (prefix, func, classnam));
+
+def n_array_proxy_method(prefix, func, classnam):
+    return eval('lambda self, *args: n_array_proxy(poldekmod.%s%s(self, *args), %s)' %
+                (module, prefix, func, classnam));
+
 
 def _complete_class(aclass, prefix, delprefix = None, nomethods = False,
                     verbose = 0):
@@ -63,7 +74,9 @@ def _complete_class(aclass, prefix, delprefix = None, nomethods = False,
 _complete_class(tn_array, 'n_array_')
 setattr(tn_array, '__getitem__', tn_array.nth)
 
-                
+_complete_class(capreq, 'capreq_')
+setattr(capreq, '__str__', eval('lambda self: poldekmod.capreq_snprintf_s(self)'))
+               
 _complete_class(poldek_ctx, 'poldek_')
 #setattr(poldek_ctx, 'get_avail_packages', _m_get_avail_packages)
 for fn in ['get_avail_packages', 'search_avail_packages']:
@@ -75,6 +88,12 @@ _complete_class(poldek_ts, 'poldek_op_', delprefix = 'poldek_',
 
 _complete_class(pkg, 'pkg_')
 setattr(pkg, '__str__', pkg.id)
+setattr(pkg, 'provides',
+        n_array_proxy_func('pkg.', 'get_provides', 'capreq'))
+
+setattr(pkg, 'requires',
+        n_array_proxy_func('pkg.', 'get_requires', 'capreq'))
+
 _complete_class(source, 'source_')
 _complete_class(pkgdir, 'pkgdir_')
 

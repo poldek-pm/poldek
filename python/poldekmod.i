@@ -4,6 +4,7 @@
 #include "local_stdint.h"
 #include "poldek.h"
 #include "trurl/narray.h"
+#include "capreq.h"    
 #include "pkg.h"
 #include "poldek.h"
 #include "poldek_ts.h"
@@ -20,9 +21,45 @@
 %include "pkgdir/source.h"
 %include "pkgdir/pkgdir.h"
 %include "cli/poclidek.h"
+%include "capreq.h"
+
+struct poldek_ctx {};
+struct poldek_ts {};
 
 struct poclidek_ctx {};
 struct poclidek_rcmd {};
+
+%extend capreq {
+    capreq(void *ptr) { return ptr; } /* conv constructor */
+    capreq(const char *name, int32_t epoch,
+           const char *version, const char *release,
+           int32_t relflags, int32_t flags)
+        {
+            return capreq_new(NULL, name, epoch, version, release,
+                              relflags, flags);
+        }
+
+    capreq(const char *name, const char *evr, 
+           int32_t relflags, int32_t flags)
+        {
+            int len = strlen(evr);
+            char *evr_ = alloca(len + 1);
+            memcpy(evr_, evr, len + 1);
+            return capreq_new_evr(name, evr_, relflags, flags);
+        }
+
+
+    const char *get_name() { return capreq_name(self); }
+    int32_t get_epoch() { return capreq_epoch(self); }
+    const char *get_ver() { return capreq_ver(self); }
+    const char *get_rel() { return capreq_rel(self); }
+    int get_versioned() { return capreq_versioned(self); }
+    
+    ~capreq() { capreq_free(self); }
+}
+
+            
+
 
 %extend poclidek_rcmd {
     poclidek_rcmd(struct poclidek_ctx *cctx, struct poldek_ts *ts) {
@@ -42,12 +79,6 @@ struct poclidek_rcmd {};
 
     ~poclidek_ctx() { poclidek_free(self); }
 };
-
-
-
-    
-
-extern int poldek_VERBOSE;
 
 %exception nth { 
     $function 
@@ -75,8 +106,6 @@ extern int poldek_VERBOSE;
 */
         
 }
-
-
 %extend source {
     source(const char *name, const char *type,
            const char *path, const char *pkg_prefix) {
@@ -97,6 +126,8 @@ extern int poldek_VERBOSE;
 
 %extend pkg {
     pkg(void *ptr) { return ptr; } /* conv constructor */
+    tn_array *_get_provides() { return self->caps; }
+    tn_array *_get_requires() { return self->reqs; }
     ~pkg() { pkg_free(self); }
 }
 
