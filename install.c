@@ -66,7 +66,7 @@ static int chk_params(struct inst_s *inst)
         exit(EXIT_FAILURE);
     }
 
-    if (inst->instflags & PKGINST_TEST) {
+    if (inst->flags & INSTS_RPMTEST) {
         if (verbose < 1)
             verbose += 1;
         
@@ -95,7 +95,7 @@ int install_dist(struct pkgset *ps, struct inst_s *inst)
     if (!chk_params(inst))
         return 0;
     
-    if ((inst->instflags & PKGINST_TEST)) 
+    if ((inst->flags & INSTS_RPMTEST)) 
         inst->db = pkgdb_open(inst->rootdir, NULL, O_RDONLY);
     else 
         inst->db = pkgdb_creat(inst->rootdir, NULL);

@@ -9,11 +9,11 @@
 #include "pkg.h"
 #include "rpm.h"
 
-#define PKGINST_NODEPS        (1 << 1)
-#define PKGINST_JUSTDB        (1 << 2)
-#define PKGINST_TEST          (1 << 3)
-#define PKGINST_FORCE         (1 << 6)    
-#define PKGINST_UPGRADE       (1 << 7) 
+#define PKGINST_NODEPS        (1 << 1) /* rpm --nodeps */
+#define PKGINST_JUSTDB        (1 << 2) /* rpm --justdb */
+#define PKGINST_TEST          (1 << 3) /* rpm --test */
+#define PKGINST_FORCE         (1 << 6) /* rpm --force */
+#define PKGINST_UPGRADE       (1 << 7) /* rpm -U  */
 
 struct pkgdb {
     void    *dbh;

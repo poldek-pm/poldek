@@ -42,32 +42,37 @@ struct pkgset {
 int packages_order(tn_array *pkgs, tn_array **ordered_pkgs);
 int pkgset_order(struct pkgset *ps);
 
+#define INSTS_INSTALL         (1 << 0) /* rpm -i */
+#define INSTS_UPGRADE         (1 << 1) /* rpm -U */
+#define INSTS_NODEPS          (1 << 3)  
+#define INSTS_FORCE           (1 << 4)
+#define INSTS_TEST            (1 << 5) /* poldek's test mode, not rpm's one */
+#define INSTS_RPMTEST         (1 << 6) /* rpm --test */
 
+#define INSTS_JUSTDB          (1 << 7)
+#define INSTS_JUSTFETCH       (1 << 8)
+#define INSTS_JUSTPRINT       (1 << 9)
+#define INSTS_JUSTPRINT_N     (1 << 10) /* names, not filenames */
 
-#define INSTS_JUSTFETCH    (1 << 0)
-#define INSTS_JUSTPRINT    (1 << 1)
-#define INSTS_JUSTPRINT_N  (1 << 2) /* names, not filenames */
-#define INSTS_JUSTPRINTS   (INSTS_JUSTPRINT | INSTS_JUSTPRINT_N)
-#define INSTS_TEST         (1 << 3) /* poldek's test mode, not rpm's one */
+#define INSTS_JUSTPRINTS      (INSTS_JUSTPRINT | INSTS_JUSTPRINT_N)
 
-#define INSTS_MKDBDIR         (1 << 5)  /* --mkdir */
-#define INSTS_FOLLOW          (1 << 6)  /* !--nofollow */
-#define INSTS_FRESHEN         (1 << 7)  /* --freshen */
-#define INSTS_USESUDO         (1 << 8)  /* use_sudo = yes  */
-#define INSTS_NOHOLD          (1 << 9)  /* --nohold  */
-#define INSTS_GREEDY          (1 << 10) /* --greedy */
-#define INSTS_KEEP_DOWNLOADS  (1 << 11) /* keep_downloads = yes */
-#define INSTS_PARTICLE        (1 << 12) /* particle_install = yes */
-#define INSTS_CHECKSIG        (1 << 13) /* not implemented yet */
-#define INSTS_CONFIRM_INST    (1 << 14) /* confirm_installs = yes  */
-#define INSTS_EQPKG_ASKUSER   (1 << 15) /* choose_equivalents_manually = yes */
+#define INSTS_MKDBDIR         (1 << 11)  /* --mkdir */
+#define INSTS_FOLLOW          (1 << 12)  /* !--nofollow */
+#define INSTS_FRESHEN         (1 << 13)  /* --freshen */
+#define INSTS_USESUDO         (1 << 14)  /* use_sudo = yes  */
+#define INSTS_NOHOLD          (1 << 15)  /* --nohold  */
+#define INSTS_GREEDY          (1 << 16) /* --greedy */
+#define INSTS_KEEP_DOWNLOADS  (1 << 17) /* keep_downloads = yes */
+#define INSTS_PARTICLE        (1 << 18) /* particle_install = yes */
+#define INSTS_CHECKSIG        (1 << 19) /* not implemented yet */
+#define INSTS_CONFIRM_INST    (1 << 20) /* confirm_installs = yes  */
+#define INSTS_EQPKG_ASKUSER   (1 << 21) /* choose_equivalents_manually = yes */
 
 #define INSTS_INTERACTIVE_ON  (INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER)
 
 struct inst_s {
     struct pkgdb   *db;
     unsigned       flags;          /* INSTS_* */
-    unsigned       instflags;      /* PKGINST_* from pkgdb.h */
     const char     *rootdir;       /* top level dir          */
     const char     *fetchdir;      /* dir to fetch files to  */
     const char     *cachedir;      /* cache directory        */

@@ -539,6 +539,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_SHELL;
             argsp->psflags |= PSMODE_UPGRADE;
+            argsp->inst.flags |= INSTS_UPGRADE;
             break;
 
         case OPT_SHELL_SKIPINSTALLED:
@@ -582,6 +583,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->mjrmode = MODE_INSTALLDIST;
             argsp->inst.rootdir = trimslash(arg);
             argsp->psflags |= PSMODE_INSTALL | PSMODE_INSTALL_DIST;
+            argsp->inst.flags |= INSTS_INSTALL;
             break;
             
         case OPT_INST_UPGRDIST:
@@ -593,6 +595,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 argsp->inst.rootdir = "/";
             
             argsp->psflags |= PSMODE_UPGRADE | PSMODE_UPGRADE_DIST;
+            argsp->inst.flags |= INSTS_UPGRADE;
             break;
 
         case OPT_INST_HOLD:
@@ -623,6 +626,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_INSTALL;
             argsp->psflags |= PSMODE_INSTALL;
+            argsp->inst.flags |= INSTS_INSTALL;
             break;
 
         case 'U':
@@ -630,6 +634,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UPGRADE;
             argsp->psflags |= PSMODE_UPGRADE;
+            argsp->inst.flags |= INSTS_UPGRADE;
             break;
 
         case 'r':
@@ -668,20 +673,20 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case OPT_INST_NODEPS:
-            argsp->inst.instflags  |= PKGINST_NODEPS;
+            argsp->inst.flags  |= INSTS_NODEPS;
             break;
 
         case OPT_INST_FORCE:
-            argsp->inst.instflags |= PKGINST_FORCE;
+            argsp->inst.flags |= INSTS_FORCE;
             break;
             
         case OPT_INST_JUSTDB:
-            argsp->inst.instflags |= PKGINST_JUSTDB;
+            argsp->inst.flags |= INSTS_JUSTDB;
             break;
 
         case 't':
             if (argsp->inst.flags & INSTS_TEST)
-                argsp->inst.instflags |= PKGINST_TEST;
+                argsp->inst.flags |= INSTS_RPMTEST;
             else
                 argsp->inst.flags |= INSTS_TEST;
             break;
@@ -1665,7 +1670,7 @@ int main(int argc, char **argv)
             
             else if ((rc = usrpkgset_size(args.ups))) {
                 rc = mark_usrset(ps, args.ups, &args.inst, args.mjrmode);
-                if (rc || (args.inst.instflags & PKGINST_FORCE)) 
+                if (rc || (args.inst.flags & INSTS_FORCE)) 
                     rc = install_dist(ps, &args.inst);
             }
             break;

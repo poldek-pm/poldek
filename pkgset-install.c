@@ -18,8 +18,6 @@
 # include "config.h"
 #endif
 
-
-
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
@@ -114,10 +112,10 @@ static inline int one_is_marked(struct pkg *pkgs[], int npkgs)
 static
 int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked) 
 {
-    int cmprc = 0, npkgs, install = 1, freshen;
+    int cmprc = 0, npkgs, install = 1, freshen = 0, force;
 
-    
     freshen = (inst->flags & INSTS_FRESHEN);
+    force = (inst->flags & INSTS_FORCE);
     npkgs = rpm_is_pkg_installed(inst->db->dbh, pkg, &cmprc, NULL);
     
     if (npkgs < 0) 
@@ -129,7 +127,7 @@ int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked)
         if (is_hand_marked && freshen)
             install = 0;
         
-    } else if (is_hand_marked && npkgs > 1) {
+    } else if (is_hand_marked && npkgs > 1 && (inst->flags & INSTS_UPGRADE) && force == 0) {
         logn(LOGERR, _("%s: multiple instances installed, give up"), pkg->name);
         install = -1;
         
@@ -139,7 +137,7 @@ int is_installable(struct pkg *pkg, struct inst_s *inst, int is_hand_marked)
                 pkg_snprintf_s(pkg));
             install = 0;
             
-        } else if (cmprc <= 0 && (inst->instflags & PKGINST_FORCE) == 0) {
+        } else if (cmprc <= 0 && force == 0 && (inst->flags & INSTS_UPGRADE)) {
             char *msg = "%s: %s version installed, %s";
             char *eqs = cmprc == 0 ? "equal" : "newer";
             char *skiped =  "skipped";
@@ -637,6 +635,9 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
 {
     int n, i;
     rpmdb dbh = upg->inst->db->dbh;
+    
+    if (upg->inst->flags & INSTS_INSTALL)
+        return;
     
     DBGMSG_F("%s\n", pkg_snprintf_s(pkg));
     
@@ -1591,7 +1592,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
                          "%d unresolved dependencies", upg->nerr_dep);
             
             
-            if (inst->instflags & (PKGINST_NODEPS | PKGINST_TEST))
+            if (inst->flags & (INSTS_NODEPS | INSTS_RPMTEST))
                 upg->nerr_dep = 0;
             else
                 nerr++;
@@ -1600,7 +1601,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         if (upg->nerr_cnfl) {
             n = snprintf(&errmsg[n], sizeof(errmsg) - n,
                          "%s%d conflicts", n ? ", ":"", upg->nerr_cnfl);
-            if (inst->instflags & (PKGINST_FORCE | PKGINST_TEST)) 
+            if (inst->flags & (INSTS_FORCE | INSTS_RPMTEST)) 
                 upg->nerr_cnfl = 0;
             else
                 nerr++;
@@ -1626,7 +1627,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
     }
 
     /* poldek's test only  */
-    if ((inst->flags & INSTS_TEST) && (inst->instflags & PKGINST_TEST) == 0)
+    if ((inst->flags & INSTS_TEST) && (inst->flags & INSTS_RPMTEST) == 0)
         return rc;
     
     if (inst->flags & INSTS_JUSTFETCH) {
@@ -1637,7 +1638,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         rc = packages_fetch(upg->install_pkgs, destdir, inst->fetchdir ? 1 : 0);
 
     } else if ((inst->flags & INSTS_NOHOLD) || (rc = check_holds(ps, upg))) {
-        int is_test = inst->instflags & PKGINST_TEST;
+        int is_test = inst->flags & INSTS_RPMTEST;
 
         if (!is_test && (inst->flags & INSTS_CONFIRM_INST) && inst->ask_fn) {
             if (!inst->ask_fn(1, _("Proceed? [Y/n]")))
@@ -1854,8 +1855,12 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
 {
     int i, is_upgrade = 0, nmarked = 0, nerr = 0, n, is_particle;
     struct upgrade_s upg;
-
-    is_upgrade = ps->flags & PSMODE_UPGRADE;
+    
+    n_assert(inst->flags & (INSTS_INSTALL | INSTS_UPGRADE));
+    if (inst->flags & INSTS_INSTALL)
+        n_assert((inst->flags & INSTS_UPGRADE) == 0);
+    
+    is_upgrade = inst->flags & INSTS_UPGRADE;
     
     mem_info(1, "ENTER pkgset_install:");
     init_upgrade_s(&upg, ps, inst);
@@ -1863,7 +1868,7 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
     is_particle = inst->flags & INSTS_PARTICLE;
     
     /* tests make sense on whole set only  */
-    if ((inst->flags & INSTS_TEST) || (inst->instflags & PKGINST_TEST))
+    if ((inst->flags & INSTS_TEST) || (inst->flags & INSTS_RPMTEST))
         inst->flags &= ~INSTS_PARTICLE;
 
     if (inst->flags & INSTS_JUSTPRINTS)

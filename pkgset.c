@@ -137,7 +137,6 @@ void inst_s_init(struct inst_s *inst)
     inst->flags = INSTS_FOLLOW;
     inst->db = NULL;
     
-    inst->instflags = 0;
     inst->rootdir = NULL;
     inst->fetchdir = NULL;
     inst->cachedir = setup_cachedir();
@@ -581,10 +580,10 @@ int mark_dependencies(struct pkgset *ps, unsigned instflags)
         }
     }
 
-    if (instflags & PKGINST_NODEPS)
+    if (instflags & INSTS_NODEPS)
         req_nerr = 0;
 
-    if (instflags & PKGINST_FORCE)
+    if (instflags & INSTS_FORCE)
         cnfl_nerr = 0;
     
     return (cnfl_nerr + req_nerr) == 0;
@@ -638,7 +637,29 @@ static void is_marked_mapfn(struct pkg *pkg, struct inf *inf)
         inf->nfbytes += pkg->fsize;
     }
 }
+
+unsigned insts_to_pkginst_flags(unsigned instflags) 
+{
+    unsigned flags = 0;
+
+    if (instflags & INSTS_NODEPS)
+        flags |= PKGINST_NODEPS;
+
+    if (instflags & INSTS_FORCE)
+        flags |= PKGINST_FORCE;
+
+    if (instflags & INSTS_TEST)
+        flags |= PKGINST_TEST;
+
+    if (instflags & INSTS_JUSTDB)
+        flags |= PKGINST_JUSTDB;
     
+    if (instflags & INSTS_UPGRADE)
+        flags |= PKGINST_UPGRADE;
+
+    return flags;
+}
+	
 
 int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
 {
@@ -663,7 +684,7 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
     rpm_define("tmppath", "/tmp");
     rpm_define("tmpdir", "/tmp");
     
-    if (!mark_dependencies(ps, inst->instflags))
+    if (!mark_dependencies(ps, inst->flags))
         return 0;
 
     
@@ -691,17 +712,16 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
                     msg(2, "%sInstall %s\n", p, pkgpath);
             }
 
-            if (inst->instflags & PKGINST_TEST)
+            if (inst->flags & (INSTS_TEST | INSTS_RPMTEST))
                 continue;
             
             if (pkgdb_install(inst->db, pkgpath,
-                              inst->instflags | PKGINST_NODEPS))
+                              insts_to_pkginst_flags(inst->flags | INSTS_NODEPS)))
 		logn(LOGWARN|LOGFILE, "INST-OK %s", pkg->name);
 	    else {
 		logn(LOGERR|LOGFILE, "INST-ERR %s", pkg->name);
                 nerr++;
 	    }
-
             
             ninstalled++;
             ninstalled_bytes += pkg->size;
@@ -899,12 +919,12 @@ int pkgset_mark_pkgdefs_patterns(struct pkgset *ps, tn_array *pkgdefs,
 int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                        struct inst_s *inst, int markflag)
 {
-    int i, nerr = 0, nodeps, npatterns = 0;
+    int i, nerr = 0, nodeps = 0, npatterns = 0;
 
     pkgset_mark(ps, PS_MARK_OFF_ALL);
 
     if (ps->flags & PSMODE_INSTALL_DIST)
-        nodeps = inst->instflags & PKGINST_NODEPS;
+        nodeps = inst->flags & INSTS_NODEPS;
     else
         nodeps = 1;
     
@@ -999,7 +1019,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
             msgn(1, _("Package set OK"));
         
         else {
-            if ((inst->instflags & PKGINST_FORCE) == 0)
+            if ((inst->flags & INSTS_FORCE) == 0)
                 pkgset_mark(ps, PS_MARK_OFF_ALL);
             logn(LOGERR, _("Buggy package set."));
         }

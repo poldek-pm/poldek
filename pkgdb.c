@@ -91,6 +91,7 @@ int pkgdb_install(struct pkgdb *db, const char *path, unsigned flags)
     unsigned instflags = 0, filterflags = 0, transflags = 0;
 
     n_assert(db->dbh);
+
     if (flags & PKGINST_NODEPS) 
         instflags |= INSTALL_NODEPS;
     
@@ -108,7 +109,7 @@ int pkgdb_install(struct pkgdb *db, const char *path, unsigned flags)
 
     filterflags |= RPMPROB_FILTER_DISKSPACE;
     instflags |= INSTALL_NOORDER | INSTALL_UPGRADE;
-    
+
     return rpm_install(db->dbh, db->rootdir, path,
                        filterflags, transflags, instflags);
 }
