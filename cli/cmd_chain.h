@@ -1,5 +1,5 @@
-#ifndef POCLIDEK_CMD_H
-#define POCLIDEK_CMD_H
+#ifndef POCLIDEK_CMDCHAIN_H
+#define POCLIDEK_CMDCHAIN_H
 
 #include <stdint.h>
 #include <trurl/narray.h>
@@ -17,5 +17,7 @@ struct cmd_chain_ent {
     struct cmd_chain_ent *prev_piped;
     struct cmd_pipe      *pipe_right;
 };
+
+tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line);
 
 #endif
