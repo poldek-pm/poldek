@@ -636,3 +636,20 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
 }
 
 
+void pkgfl_dump(tn_array *fl)
+{
+    int i, j;
+
+    if (fl == NULL)
+        return;
+    
+    for (i=0; i<n_array_size(fl); i++) {
+        struct pkgfl_ent *flent = n_array_nth(fl, i);
+        printf("DIR %s:", flent->dirname);
+        for (j=0; j<flent->items; j++) {
+            printf(" %s,", flent->files[j]->basename);
+        }
+        printf("\n");
+    }
+    return;
+}

@@ -13,22 +13,22 @@
 #define REL_LT	    (1 << 2)
 
 /* types */
-#define CAPREQ_PROV     (1 << 3)
-#define CAPREQ_REQ      (1 << 4)
-#define CAPREQ_CNFL     (1 << 5)
+#define CAPREQ_PROV     (1 << 0)
+#define CAPREQ_REQ      (1 << 1)
+#define CAPREQ_CNFL     (1 << 2)
 
 /* sub types */
-#define CAPREQ_PREREQ      (1 << 6)         /* '*' prefix */
-#define CAPREQ_PREREQ_UN   (1 << 7)         /* '^' prefix */
+#define CAPREQ_PREREQ      (1 << 3)         /* '*' prefix */
+#define CAPREQ_PREREQ_UN   (1 << 4)         /* '^' prefix */
 
 #define CAPREQ_OBCNFL      CAPREQ_PREREQ    /* alias, for obsolences */
 
-#define CAPREQ_RPMLIB      (1 << 8)   /* rpmlib(...) */
-#define CAPREQ_PLDEKBAST   (1 << 9)   /* capreq added by poldek during mkidx,
+#define CAPREQ_RPMLIB      (1 << 5)   /* rpmlib(...) */
+#define CAPREQ_PLDEKBAST   (1 << 6)   /* capreq added by poldek during mkidx,
                                          '!' prefix */
-
 struct capreq {
-    uint16_t cr_flags;
+    uint8_t  cr_flags;
+    uint8_t  cr_relflags;
 /*  uint8_t cr_name_ofs = 1, always */
     uint8_t  cr_ep_ofs;
     uint8_t  cr_ver_ofs;         /* 0 if capreq hasn't version */
@@ -61,14 +61,15 @@ struct capreq {
 //#define capreq_is_resolved(cr)   ((cr)->cr_flags & CAPREQ_RESOLVED)
 //#define capreq_mark_resolved(cr) ((cr)->cr_flags |= CAPREQ_RESOLVED)
 
-struct capreq *capreq_new_evr(const char *name, char *evr, int32_t flags);
+struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags,
+                              int32_t flags);
 struct capreq *capreq_new(const char *name, int32_t epoch,
                           const char *version, const char *release,
-                          int32_t flags);
+                          int32_t relflags, int32_t flags);
 
 void capreq_free(struct capreq *cr);
 
-int16_t capreq_sizeof(const struct capreq *cr);
+uint8_t capreq_sizeof(const struct capreq *cr);
 
 void capreq_store(struct capreq *cr, tn_buf *nbuf);
 struct capreq *capreq_restore(tn_buf_it *nbufi);
@@ -77,7 +78,9 @@ int capreq_cmp_name_evr(struct capreq *pr1, struct capreq *pr2);
 //#define capreq_eq(pr1, pr2) (capreq_evr_cmp(pr1, pr2) == 0)
 int capreq_cmp2name(struct capreq *pr1, const char *name);
 
-tn_array *capreq_arr_new(void);
+tn_array *capreq_arr_new(int size);
+int capreq_arr_store(tn_array *arr, FILE *stream, const char *prefix);
+tn_array *capreq_arr_restore(FILE *stream, int skip_bastards);
 
 #define CRTYPE_CAP  1
 #define CRTYPE_REQ  2

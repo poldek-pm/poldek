@@ -280,10 +280,10 @@ static int register_file_conflict(struct pkg *pkg1, struct pkg *pkg2,
     char c1 = '\0', c2 = '\0';
     
     if (pkg1->cnfls == NULL)
-        pkg1->cnfls = capreq_arr_new();
+        pkg1->cnfls = capreq_arr_new(0);
     
     if (pkg2->cnfls == NULL) 
-        pkg2->cnfls = capreq_arr_new();
+        pkg2->cnfls = capreq_arr_new(0);
     
     if (pkg_add_pkgcnfl(pkg1, pkg2, 1))
         c1 = '>';

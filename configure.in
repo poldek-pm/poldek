@@ -29,6 +29,7 @@ if test "${INTERACTIVE_MODE}." != "yes."; then
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, false)	
 else 
 	AC_CHECK_LIB(readline, readline,,AC_MSG_ERROR("readline not found"))
+	AC_CHECK_LIB(pcre, pcre_compile,,AC_MSG_ERROR("pcre not found"))
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, true)
 	AC_DEFINE(ENABLE_INTERACTIVE_MODE)
 	

@@ -46,7 +46,7 @@
 #include "pkg.h"
 
 
-static char *filefmt_version = "0.3.1";
+static char *filefmt_version = "0.4";
 static const char depdirs_tag[] = "DEPDIRS: ";
 
 
@@ -78,14 +78,8 @@ struct pkgtags_s {
 };
 
 static
-int parse_capreq_tag(char *str, tn_array *capreqs, int addbastards);
-
-static
-struct capreq *parse_capreq_token(char *token, int addbastard);
-
-static
 int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
-                const char *pathname, int nline, int addbastards);
+                const char *pathname, int nline);
 static
 void pkgtags_clean(struct pkgtags_s *pkgt);
 
@@ -180,7 +174,6 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     while ((nread = getline(&line, &line_size, vf->vf_stream)) > 0) {
         char *p;
 
-        
         nline++;
         if (*line != '#' && *line != '%')
             break;
@@ -258,9 +251,11 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     else 
         pkgdir->path = setup_pkgprefix(path);
     
+    pkgdir->idxpath = strdup(path);
     pkgdir->vf = vf;
     pkgdir->depdirs = depdirs;
     n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
+    n_array_sort(pkgdir->depdirs);
     pkgdir->flags = PKGDIR_LDFROM_IDX;
     pkgdir->pkgs = pkgs_array_new(1024);
 
@@ -283,6 +278,11 @@ void pkgdir_free(struct pkgdir *pkgdir)
         pkgdir->path = NULL;
     }
 
+    if (pkgdir->idxpath) {
+        free(pkgdir->idxpath);
+        pkgdir->idxpath = NULL;
+    }
+
     if (pkgdir->depdirs) {
         n_array_free(pkgdir->depdirs);
         pkgdir->depdirs = NULL;
@@ -296,31 +296,34 @@ void pkgdir_free(struct pkgdir *pkgdir)
     if (pkgdir->vf) {
         vfile_close(pkgdir->vf);
         pkgdir->vf = NULL;
-        //pkgdir->stream = NULL;
     }
 
     pkgdir->flags = 0;
-
     free(pkgdir);
 }
 
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 {
-    struct pkgtags_s   pkgtags;
+    struct pkgtags_s   pkgt;
     char               *line_bufs[2], *line;
     int                line_bufs_size[2], *line_size, last_value_len = 0;
     char               last_tag = '\0';
     char               *last_value = NULL, *last_value_endp = NULL;
     int                nerr = 0, n, nline, nread, i;
     struct             vfile *vf;
-    int                flag_addbastards = 1, flag_fullflist = 0;
+    int                flag_skip_bastards = 0, flag_fullflist = 0;
     int                flag_lddesc = 0;
     tn_array           *only_dirs;
-    
+
+#if 0    
+    for (i=0; i<n_array_size(depdirs); i++) {
+        printf("DEP %s\n", n_array_nth(depdirs, i));
+    }
+#endif    
 
     if (ldflags & PKGDIR_LD_SKIPBASTS) 
-        flag_addbastards = 0;
+        flag_skip_bastards = 1;
 
     if (ldflags & PKGDIR_LD_FULLFLIST)
         flag_fullflist = 1;
@@ -329,6 +332,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         flag_lddesc = 1;
 
     only_dirs = NULL;
+
     if (flag_fullflist == 0) {
         only_dirs = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
         for (i=0; i<n_array_size(depdirs); i++) {
@@ -341,7 +345,6 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
             }
         }
         
-    
         if (n_array_size(only_dirs) == 0) {
             n_array_free(only_dirs);
             only_dirs = NULL;
@@ -354,8 +357,8 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     nline = 0;
     last_value_endp = NULL;
 
-    memset(&pkgtags, 0, sizeof(pkgtags));
-    pkgtags.flags = 0;
+    memset(&pkgt, 0, sizeof(pkgt));
+    pkgt.flags = 0;
     
 
     line_bufs_size[0] = line_bufs_size[1] = 4*4096;
@@ -378,8 +381,8 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         if (*line == '\n') {        /* empty line -> end of record */
             struct pkg *pkg;
             if (last_value_endp) {
-                if (!add2pkgtags(&pkgtags, last_tag, last_value,
-                                 pkgdir->path, nline, flag_addbastards)) {
+                if (!add2pkgtags(&pkgt, last_tag, last_value,
+                                 pkgdir->path, nline)) {
                     nerr++;
                     goto l_end;
                 }
@@ -389,14 +392,14 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
             }
 
             DBGMSG("\n\nEOR\n");
-            pkg = pkg_new_from_tags(&pkgtags);
+            pkg = pkg_new_from_tags(&pkgt);
             if (pkg) {
                 pkg->pkgdir = pkgdir;
                 n_array_push(pkgdir->pkgs, pkg);
                 pkg = NULL;
             }
             
-            pkgtags_clean(&pkgtags);
+            pkgtags_clean(&pkgt);
             
         } else if (*line == ' ') {      /* continuation */
             int nleft;
@@ -430,34 +433,74 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 
             if (last_value_endp) {
                 DBGMSG("INSERT %c = %s\n", last_tag, last_value);
-                add2pkgtags(&pkgtags, last_tag, last_value, pkgdir->path,
-                            nline, flag_addbastards);
+                add2pkgtags(&pkgt, last_tag, last_value, pkgdir->path, nline);
             }
 
-            if (*line == 'L') { /* files */
-                pkgtags.pkgfl = pkgfl_restore_f(vf->vf_stream, NULL);
-                if (pkgtags.pkgfl)
-                    pkgtags.flags |= PKGT_HAS_FILES;
+            if (*line == 'P') {
+                if (pkgt.flags & PKGT_HAS_CAP) {
+                    log(LOGERR, "%s:%d: double cap tag\n", pkgdir->path, nline);
+                    break;
+                }
+                
+                pkgt.caps = capreq_arr_restore(vf->vf_stream,
+                                               flag_skip_bastards);
+                pkgt.flags |= PKGT_HAS_CAP;
+                last_value_endp = NULL;
+                continue;
+                
+                
+            } else if (*line ==  'R') {
+                if (pkgt.flags & PKGT_HAS_REQ) {
+                    log(LOGERR, "%s:%d: double req tag\n", pkgdir->path, nline);
+                    break;
+                }
+                
+                pkgt.reqs = capreq_arr_restore(vf->vf_stream,
+                                               flag_skip_bastards);
+                pkgt.flags |= PKGT_HAS_REQ;
+                last_value_endp = NULL;
+                continue;
+                
+            } else if (*line == 'C') {
+                if (pkgt.flags & PKGT_HAS_CNFL) {
+                    log(LOGERR, "%s:%d: double cnfl tag\n", pkgdir->path, nline);
+                    break;
+                }
+                
+                pkgt.cnfls = capreq_arr_restore(vf->vf_stream,
+                                                flag_skip_bastards);
+                pkgt.flags |= PKGT_HAS_CNFL;
+                last_value_endp = NULL;
+                continue;
+                
+            } else if (*line == 'L') { /* files */
+                pkgt.pkgfl = pkgfl_restore_f(vf->vf_stream, NULL);
+                n_assert(pkgt.pkgfl);
+                //printf("DUMP %p %d\n", pkgt.pkgfl, n_array_size(pkgt.pkgfl));
+                //pkgfl_dump(pkgt.pkgfl);
+                if (pkgt.pkgfl)
+                    pkgt.flags |= PKGT_HAS_FILES;
                 last_value_endp = NULL;
                 continue;
                 
             } else if (*line == 'l') {
-                pkgtags.other_files_offs = ftell(vf->vf_stream);
+                pkgt.other_files_offs = ftell(vf->vf_stream);
                 
                 if (flag_fullflist == 0 && only_dirs == NULL) {
                     pkgfl_skip_f(vf->vf_stream);
                     
                 } else {
                     tn_array *fl;
-
+                    
                     fl = pkgfl_restore_f(vf->vf_stream, only_dirs);
 
-                    if (pkgtags.pkgfl == NULL) {
-                        pkgtags.pkgfl = fl;
+                    if (pkgt.pkgfl == NULL) {
+                        pkgt.pkgfl = fl;
+                        pkgt.flags |= PKGT_HAS_FILES;
                         
                     } else {
                         while (n_array_size(fl)) 
-                            n_array_push(pkgtags.pkgfl, n_array_shift(fl));
+                            n_array_push(pkgt.pkgfl, n_array_shift(fl));
                             
                         n_array_free(fl);
                     }
@@ -469,10 +512,10 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
             } else if (*line == 'U') { /* pkguinf binary data */
 
                 if (flag_lddesc) {
-                    pkgtags.pkguinf = pkguinf_restore(vf->vf_stream, 0);
-                    pkgtags.pkguinf_offs = 0;
+                    pkgt.pkguinf = pkguinf_restore(vf->vf_stream, 0);
+                    pkgt.pkguinf_offs = 0;
                 } else {
-                    pkgtags.pkguinf_offs = ftell(vf->vf_stream);
+                    pkgt.pkguinf_offs = ftell(vf->vf_stream);
                     pkguinf_skip(vf->vf_stream);
                 }
                 	
@@ -497,7 +540,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     
  l_end:
     
-    pkgtags_clean(&pkgtags);
+    pkgtags_clean(&pkgt);
     free(line_bufs[0]);
     free(line_bufs[1]);
 
@@ -513,7 +556,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 #define sizeof_pkgt(memb) (sizeof((pkgt)->memb) - 1)
 static
 int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
-                const char *pathname, int nline, int addbastards) 
+                const char *pathname, int nline) 
 {
     int err = 0;
     
@@ -569,69 +612,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 pkgt->flags |= PKGT_HAS_BTIME;
             }
             break;
-
-
-        case 'P':
-            if (pkgt->flags & PKGT_HAS_CAP) {
-                log(LOGERR, "%s:%d: double cap tag\n", pathname, nline);
-                err++;
-                break;
-            }
             
-            pkgt->caps = capreq_arr_new();
-            parse_capreq_tag(value, pkgt->caps, addbastards);
-            if (n_array_size(pkgt->caps) == 0) {
-                n_array_free(pkgt->caps);
-                pkgt->caps = NULL;
-                log(LOGERR, "%s:%d: syntax error while parsing P tag\n",
-                    pathname, nline);
-                err++;
-            }
-            pkgt->flags |= PKGT_HAS_CAP;
-            break;
-
-        case 'R':
-            if (pkgt->flags & PKGT_HAS_REQ) {
-                log(LOGERR, "%s:%d: double req tag\n", pathname, nline);
-                err++;
-                break;
-            }
-
-            pkgt->reqs = capreq_arr_new();
-            parse_capreq_tag(value, pkgt->reqs, addbastards);
-            if (n_array_size(pkgt->reqs) == 0) {
-                n_array_free(pkgt->reqs);
-                pkgt->reqs = NULL;
-                log(LOGERR, "%s:%d: syntax error while parsing R tag\n",
-                    pathname, nline);
-                err++;
-            }
-            
-            pkgt->flags |= PKGT_HAS_REQ;
-            break;
-            
-        case 'C':
-            if (pkgt->flags & PKGT_HAS_CNFL) {
-                log(LOGERR, "%s:%d: double cnfl tag\n", pathname, nline);
-                err++;
-                break;
-            }
-
-            pkgt->cnfls = capreq_arr_new();
-            parse_capreq_tag(value, pkgt->cnfls, addbastards);
-            if (n_array_size(pkgt->cnfls) > 0) {
-                pkgt->flags |= PKGT_HAS_CNFL;
-            } else {
-                n_array_free(pkgt->cnfls);
-                pkgt->cnfls = NULL;
-                if (addbastards) {
-                    log(LOGERR, "%s:%d: syntax error while parsing C tag\n",
-                        pathname, nline);
-                    err++;
-                }
-            }
-            break;
-
         default:
             log(LOGERR, "%s:%d: unknown tag %c\n", pathname, nline, tag);
             n_assert(0);
@@ -727,6 +708,7 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
             pkgt->pkgfl = NULL;
         } else {
             pkg->fl = pkgt->pkgfl;
+            //pkgfl_dump(pkg->fl);
             pkgt->pkgfl = NULL;
         }
     }
@@ -744,138 +726,32 @@ struct pkg *pkg_new_from_tags(struct pkgtags_s *pkgt)
     return pkg;
 }
 
-/*
-  token := <name> ([LWS <rel> LWS <evr>]) 
-  rel   := ">=" | "<=" | "="
-  evr   := [<epoch>:]<version>[-<release>]
-*/
-static
-struct capreq *parse_capreq_token(char *token, int addbastard)
+int fprintf_pkg_caps(const struct pkg *pkg, FILE *stream) 
 {
-    char *name, *evr;
-    int32_t flags;
-    char *s, *rel;
+    tn_array *arr;
+    int i;
 
-    name = NULL;
-    evr = NULL;
-    flags = 0;
-    
-    DBGMSG("capreqtoken: %s -> ", token);
-
-    token = eatws(token);
-    
-    if (*token == '\0')
-        return NULL;
-
-    if ((s = strchr(token, ' ')) != NULL) /* looking space after name */
-        *s++ = '\0';
-    
-    name = token;
-    if (*name == '!') {          /* bastard */
-        if (!addbastard) 
-            return NULL;
-        
-        flags |= CAPREQ_PLDEKBAST;
-        name++;
-    }
-    
-    if (*name == '*') {          /* prereq */
-        flags |= CAPREQ_PREREQ;
-        name++;
+    arr = n_array_new(32, NULL, NULL);
+    for (i=0; i<n_array_size(pkg->caps); i++) {
+        struct capreq *cr = n_array_nth(pkg->caps, i);
+        if (pkg_eq_capreq(pkg, cr))
+            continue;
+        n_array_push(arr, cr);
     }
 
-    if (*name == '^') {          /* uninstall prereq */
-        flags |= CAPREQ_PREREQ_UN;
-        name++;
-    }
-
-    token = s;
-    if (token == NULL)
-        return capreq_new_evr(name, evr, flags);
-
-    token = eatws(token);
+    if (n_array_size(arr)) 
+        i = capreq_arr_store(arr, stream, "P:\n");
+    else
+        i = 1;
     
-    if (*token == '\0')
-        return capreq_new_evr(name, evr, flags);
-
-    if ((s = strchr(token, ' ')) == NULL) /* lookup space after relation */
-        goto l_inv_rel;
-    else {
-        *s++ = '\0';
-        rel = token;
-        token = s;
-
-        token = eatws(token);
-
-        if ((s = strchr(token, ' '))) 
-            *s = '\0';
-            
-        evr = token;
-
-        if (evr == NULL || *evr == '\0') {
-            DBGMSG("syntax error: evr missing\n");
-            return 0;
-        }
-    }
-    
-    if (*rel == '=') {                                  /*  =  */
-        if (*(rel+1) == '\0')               
-            flags |= REL_EQ;
-        else
-            goto l_inv_rel;
-        
-    } else if (*rel == '>' || *rel == '<') {             /* [<>]= */
-        flags |= (*rel == '<') ? REL_LT : REL_GT;
-        
-        rel++;
-        
-        if (*rel == '=' && *(rel+1) == '\0')
-            flags |= REL_EQ;
-        
-        else if (*rel != '\0')
-            goto l_inv_rel;
-        
-    } else {
- l_inv_rel:
-        log(LOGERR, "syntax error: invalid relation\n");
-        return NULL;
-    }
-
-    return capreq_new_evr(name, evr, flags);
+    n_array_free(arr);
+    return i;
 }
-
-
-static
-int parse_capreq_tag(char *str, tn_array *capreqs, int addbastards) 
-{
-    struct capreq *pr;
-    char *depstr, *p, *q;
-    int n = 0;
-    
-    p = str;
-    while (p) {
-        if ((q = strchr(p, ','))) 
-            *q++ = '\0';
-        
-        depstr = p;
-        p = q;
-        
-        DBGMSG("capreq = %p %s\n", depstr, depstr);
-        if ((pr = parse_capreq_token(depstr, addbastards))) {
-            n_array_push(capreqs, pr);
-            n++;
-        }
-    }
-    
-    return n;
-}
-
+	
 
 static
 int fprintf_pkg(const struct pkg *pkg, FILE *stream, tn_array *depdirs, int nodesc)
 {
-    int len;
-
     fprintf(stream, "N: %s\n", pkg->name);
     if (pkg->epoch)
         fprintf(stream, "V: %d:%s-%s\n", pkg->epoch, pkg->ver, pkg->rel);
@@ -885,68 +761,16 @@ int fprintf_pkg(const struct pkg *pkg, FILE *stream, tn_array *depdirs, int node
     fprintf(stream, "A: %s\n", pkg->arch);
     fprintf(stream, "S: %u\n", pkg->size);
     fprintf(stream, "T: %u\n", pkg->btime);
+
+    if (pkg->caps && n_array_size(pkg->caps))
+        fprintf_pkg_caps(pkg, stream);
     
-    if (pkg->caps && n_array_size(pkg->caps)) {
-        int i, tagprinted = 0;
-        
-        n_array_sort_ex(pkg->caps, (tn_fn_cmp)capreq_cmp_name_evr);
-        for (i=0; i<n_array_size(pkg->caps); i++) {
-            char prbuf[1024];
-            struct capreq *cap;
-
-            cap = n_array_nth(pkg->caps, i);
-            if (pkg_eq_capreq(pkg, cap))
-                continue;
-
-            if (!tagprinted) {
-                len += fprintf(stream, "P: ");
-                tagprinted = 1;
-            }
-            
-            capreq_snprintf(prbuf, sizeof(prbuf), cap);
-            prbuf[sizeof(prbuf) - 1] = '\0';
-            
-            fprintf(stream, prbuf);
-            if (i < n_array_size(pkg->caps) - 1)
-                fprintf(stream, ", ");
-        }
-        if (tagprinted)
-            fprintf(stream, "\n");
-    }
-
+    if (pkg->reqs && n_array_size(pkg->reqs)) 
+        capreq_arr_store(pkg->reqs, stream, "R:\n");
     
-    if (pkg->reqs && n_array_size(pkg->reqs)) {
-        int i;
-
-        n_array_sort_ex(pkg->reqs, (tn_fn_cmp)capreq_cmp_name_evr);
-        len += fprintf(stream, "R: ");
-        for (i=0; i<n_array_size(pkg->reqs); i++) {
-            char prbuf[1024*100];
-            capreq_snprintf(prbuf, sizeof(prbuf), n_array_nth(pkg->reqs, i));
-            prbuf[sizeof(prbuf) - 1] = '\0';
-            fprintf(stream, prbuf);
-            if (i < n_array_size(pkg->reqs) - 1)
-                fprintf(stream, ", ");
-        }
-        fprintf(stream, "\n");
-    }
-
-    if (pkg->cnfls && n_array_size(pkg->cnfls)) {
-        int i;
-        
-        n_array_sort_ex(pkg->cnfls, (tn_fn_cmp)capreq_cmp_name_evr);
-        len += fprintf(stream, "C: ");
-        for (i=0; i<n_array_size(pkg->cnfls); i++) {
-            char prbuf[1024*100];
-            capreq_snprintf(prbuf, sizeof(prbuf), n_array_nth(pkg->cnfls, i));
-            prbuf[sizeof(prbuf) - 1] = '\0';
-            fprintf(stream, prbuf);
-            if (i < n_array_size(pkg->cnfls) - 1)
-                fprintf(stream, ", ");
-        }
-        fprintf(stream, "\n");
-    }
-
+    if (pkg->cnfls && n_array_size(pkg->cnfls)) 
+        capreq_arr_store(pkg->cnfls, stream, "C:\n");
+    
     if (pkg->fl && n_array_size(pkg->fl)) {
         fprintf(stream, "L:\n");
         pkgfl_store_f(pkg->fl, stream, depdirs, PKGFL_DEPDIRS);
@@ -1037,18 +861,18 @@ static int check_digest(struct vfile *vf, const char *path)
     off_t           offs;
     
 
-    msg(1, "Checking %s mdsum...", path);
+    msg(1, "Verifying file %s...", path);
     
     offs = ftell(vf->vf_stream);
     if (fseek(vf->vf_stream, 0L, SEEK_SET) != 0) {
-        log(LOGERR, "fseek(0): %d %m\n", offs);
+        log(LOGERR, "%s: fseek(0): %d %m\n", path, offs);
         return 0;
     }
 
     mhexdigest(vf->vf_stream, md1, &md1_size);
 
     if (fseek(vf->vf_stream, offs, SEEK_SET) != 0) {
-        log(LOGERR, "check_digest: fseek(%ld): %m\n", offs);
+        log(LOGERR, "%s: fseek(%ld): %m\n", path, offs);
         return 0;
     }
     
@@ -1067,7 +891,7 @@ static int check_digest(struct vfile *vf, const char *path)
     close(fd);
     
     rc = md1_size == md2_size && strcmp(md1, md2) == 0;
-    msg(1, "_ %s\n", rc ? "OK":"BAD");
+    msg(1, "_ %s\n", rc ? "OK" : "BAD");
     return rc;
 }
 
@@ -1228,10 +1052,13 @@ int load_dir(const char *dirpath, tn_array *pkgs)
 static void is_depdir_req(const struct capreq *req, tn_array *depdirs) 
 {
     if (capreq_is_file(req)) {
-        char *p;
         const char *reqname;
-
+        char *p;
+        int reqlen;
+        
         reqname = capreq_name(req);
+        reqlen = strlen(reqname);
+        
         p = strrchr(reqname, '/');
         
         if (p != reqname) {
@@ -1243,7 +1070,17 @@ static void is_depdir_req(const struct capreq *req, tn_array *depdirs)
             memcpy(dirname, reqname, len);
             dirname[len] = '\0';
             p = dirname;
+
+            
+        } else if (*(p+1) != '\0') {
+            char *dirname;
+            dirname = alloca(reqlen + 1);
+            memcpy(dirname, reqname, reqlen + 1);
+            p = dirname;
         }
+
+        if (*(p+1) != '\0' && *p == '/')
+            p++;
         
         if (n_array_bsearch(depdirs, p) == NULL) {
             n_array_push(depdirs, strdup(p));

@@ -7,11 +7,11 @@
 #include <vfile/vfile.h>
 
 struct pkgdir {
-    char               *path;       /* path | URL */
-    tn_array           *depdirs;    /* char* []  */
-    tn_array           *pkgs;       /* struct *pkg[]    */
-    struct vfile       *vf;         /* Packages handle */
-/*    FILE               *stream; */    /* vf->stream */
+    char               *path;       /* path | URL        */
+    char               *idxpath;    /* path | URL        */
+    tn_array           *depdirs;    /* char *[]          */
+    tn_array           *pkgs;       /* struct *pkg[]     */
+    struct vfile       *vf;         /* Packages handle   */
     unsigned           flags;
 };
 

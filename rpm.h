@@ -12,7 +12,7 @@
 #define RPM_DBPATH  "/var/lib/rpm"
 
 int rpm_initlib(tn_array *macros);
-
+void rpm_define(const char *name, const char *val);
 rpmdb rpm_opendb(const char *dbpath, const char *rootdir, mode_t mode);
 void rpm_closedb(rpmdb db);
 

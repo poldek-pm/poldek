@@ -154,7 +154,7 @@ static tn_array *get_rpmlibcaps(void)
     if (n <= 0)
         return NULL;
 
-    caps = capreq_arr_new();
+    caps = capreq_arr_new(0);
     
     evr = alloca(128);
     
@@ -165,7 +165,7 @@ static tn_array *get_rpmlibcaps(void)
         n_assert(!(flags[i] & (RPMSENSE_LESS | RPMSENSE_GREATER)));
 
         n_strncpy(evr, versions[i], 128);
-        cr = capreq_new_evr(names[i], evr, REL_EQ);
+        cr = capreq_new_evr(names[i], evr, REL_EQ, 0);
         n_array_push(caps, cr);
     }
 
@@ -292,15 +292,18 @@ int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx)
 
     if (pkg->fl == NULL)
         return 1;
+    
     for (i=0; i<n_array_size(pkg->fl); i++) {
         struct pkgfl_ent *flent;
         void *fidx_dir;
-
+        
         flent = n_array_nth(pkg->fl, i);
         fidx_dir = file_index_add_dirname(fidx, flent->dirname);
-        for (j=0; j<flent->items; j++)
+        for (j=0; j<flent->items; j++) {
             file_index_add_basename(fidx, fidx_dir,
                                     flent->files[j], (struct pkg*)pkg);
+        }
+        	
     }
     return 1;
 }
@@ -399,9 +402,6 @@ int pkgset_setup(struct pkgset *ps)
     pkgset_index(ps);
     mem_info(1, "MEM after index");
 
-    if (ps->depdirs == NULL) 
-        ps->depdirs = capreq_idx_find_depdirs(&ps->req_idx);
-    
     if ((ps->flags & PSMODE_VERIFY)) {
         msg(1, "\nVerifying files conflicts...\n");
         file_index_find_conflicts(&ps->file_idx, strict);
@@ -548,16 +548,28 @@ static int setup_tmpdir(const char *rootdir)
 int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
 {
     int i, ninstalled, nerr;
+    char tmpdir[PATH_MAX];
     
     n_assert(inst->db->rootdir);
     if (!is_rwxdir(inst->db->rootdir)) {
         log(LOGERR, "access %s: %m\n", inst->db->rootdir);
         return 0;
     }
+    
+    unsetenv("TMPDIR");
+    unsetenv("TMP");
 
+    snprintf(tmpdir, sizeof(tmpdir), "%s/tmp", inst->db->rootdir);
+    mkdir(tmpdir, 0755);
+    rpm_define("_tmpdir", "/tmp");
+    rpm_define("_tmppath", "/tmp");
+    rpm_define("tmppath", "/tmp");
+    rpm_define("tmpdir", "/tmp");
+    
     if (!mark_dependencies(ps, inst->instflags))
         return 0;
 
+    
     nerr = 0;
     ninstalled = 0;
 

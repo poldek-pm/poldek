@@ -1,12 +1,9 @@
 # $Id$
 
 * mis 2001/05/18
-- check Packages MD5 sum
 - unistalled packages should be ordered using uninst prerequirements 
 - listing of packages contents
 - detection of fatal rpmlib errors during install-dist
-- shell: synchronization of available and installed package sets 
-  to avoid "reload" usage. 
 
 * mis  2000/09/20
 - check packages MD5 sums and PGP signatures

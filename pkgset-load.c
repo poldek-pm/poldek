@@ -134,7 +134,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         pkgdir = n_array_nth(ps->pkgdirs, i);
 
         if (pkgdir->flags & PKGDIR_LDFROM_IDX) {
-            msg(1, "Loading %s...\n", pkgdir->path);
+            msg(1, "Loading %s...\n", pkgdir->idxpath);
             pkgdir_load(pkgdir, ps->depdirs, ldflags);
         }
     }

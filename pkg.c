@@ -107,7 +107,7 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     pkg->caps = NULL;
     pkg->cnfls = NULL;
     pkg->fl = NULL;
-    pkg->reqpkgs = NULL;  
+    pkg->reqpkgs = NULL;
     pkg->revreqpkgs = NULL;
     pkg->cnflpkgs = NULL;
     pkg->other_files_offs = 0;
@@ -201,7 +201,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned ldflags)
     msg(3, "ld %s\n", pkg_snprintf_s(pkg));
     
     if (ldflags & PKG_LDCAPS) {
-        pkg->caps = capreq_arr_new();
+        pkg->caps = capreq_arr_new(0);
         get_pkg_caps(pkg->caps, h);
     
         if (n_array_size(pkg->caps)) 
@@ -213,7 +213,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned ldflags)
     }
     
     if (ldflags & PKG_LDREQS) {
-        pkg->reqs = capreq_arr_new();
+        pkg->reqs = capreq_arr_new(0);
         get_pkg_reqs(pkg->reqs, h);
 
         if (n_array_size(pkg->reqs) == 0) {
@@ -223,7 +223,7 @@ struct pkg *pkg_ldhdr(Header h, const char *fname, unsigned ldflags)
     }
 
     if (ldflags & PKG_LDCNFLS) {
-        pkg->cnfls = capreq_arr_new();
+        pkg->cnfls = capreq_arr_new(0);
         get_pkg_cnfls(pkg->cnfls, h);
         get_pkg_obsls(pkg->cnfls, h);
         
@@ -357,7 +357,7 @@ int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr)
         strcmp(pkg->ver, capreq_ver(cr)) == 0 &&
         strcmp(pkg->rel, capreq_rel(cr)) == 0 &&
         pkg->epoch == capreq_epoch(cr) &&
-        cr->cr_flags & REL_EQ;
+        cr->cr_relflags & REL_EQ;
 }
 
 
@@ -369,7 +369,7 @@ int pkg_add_selfcap(struct pkg *pkg)
         return 1;
     
     if (pkg->caps == NULL) {
-        pkg->caps = capreq_arr_new();
+        pkg->caps = capreq_arr_new(0);
         
     } else {
         int i;
@@ -416,11 +416,11 @@ __inline__ static
 int rel_match(int cmprc, const struct capreq *req) 
 {
     if (cmprc == 0)
-        cmprc = req->cr_flags & REL_EQ;
+        cmprc = req->cr_relflags & REL_EQ;
     else if (cmprc > 0)
-        cmprc = req->cr_flags & REL_GT;
+        cmprc = req->cr_relflags & REL_GT;
     else if (cmprc < 0)
-        cmprc = req->cr_flags & REL_LT;
+        cmprc = req->cr_relflags & REL_LT;
     else
         n_assert(0);
     
@@ -713,8 +713,8 @@ int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard)
     if (n_array_bsearch_ex(pkg->cnfls, cpkg->name,
                            (tn_fn_cmp)capreq_cmp2name) == NULL) {
         cnfl = capreq_new(cpkg->name, cpkg->epoch, cpkg->ver,
-                           cpkg->rel,
-                           REL_EQ | (isbastard ? CAPREQ_PLDEKBAST : 0));
+                          cpkg->rel, REL_EQ,
+                          (isbastard ? CAPREQ_PLDEKBAST : 0));
         
         n_array_push(pkg->cnfls, cnfl);
         n_array_sort(pkg->cnfls);
@@ -729,48 +729,7 @@ int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg)
                                              (tn_fn_cmp)capreq_cmp2name));
 }
 
-
-static
-int capreqs_store(tn_array *capreqs, tn_buf *nbuf) 
-{
-    int32_t size, nsize = 0;
-    
-    if (capreqs == NULL) 
-        n_buf_add(nbuf, &nsize, sizeof(nsize));
-    else {
-        size = n_array_size(capreqs);
-        nsize = hton32(size);
-        n_buf_add(nbuf, &nsize, sizeof(nsize));
-        n_array_map_arg(capreqs, (tn_fn_map2)capreq_store, nbuf);
-    }
-    
-    return 1;
-}
-
-static
-tn_array *capreqs_restore(tn_buf_it *nbufi) 
-{
-    tn_array *capreqs = NULL;
-    int32_t size;
-    char *p;
-    
-    
-    p = n_buf_it_get(nbufi, sizeof(size));
-    size = ntoh32(*(int32_t*)p);
-    if (size > 0) {
-        int i;
-        
-        capreqs = capreq_arr_new();
-        for (i=0; i<size; i++) {
-            struct capreq *cr = capreq_restore(nbufi);
-            n_array_push(capreqs, cr);
-        }
-    }
-    
-    return capreqs;
-}
-
-
+#if 0
 void pkg_store(const struct pkg *pkg, tn_buf *nbuf) 
 {
     uint32_t nflags, nsize; 
@@ -840,6 +799,7 @@ struct pkg *pkg_restore(tn_buf_it *nbufi)
     pkg->cnfls = capreqs_restore(nbufi);
     return pkg;
 }
+#endif /* 0 */
 
 struct pkguinf *pkg_info(const struct pkg *pkg) 
 {

@@ -88,6 +88,11 @@ int rpm_initlib(tn_array *macros)
     return 1;
 }
 
+void rpm_define(const char *name, const char *val) 
+{
+    addMacro(NULL, name, NULL, val, RMIL_DEFAULT);
+}
+
 
 rpmdb rpm_opendb(const char *dbpath, const char *rootdir, mode_t mode) 
 {
@@ -233,7 +238,7 @@ int header_cap_match_req(Header h, const struct capreq *req, int strict)
     int         rc;
 
     rc = 0;
-    pkg.caps = capreq_arr_new();
+    pkg.caps = capreq_arr_new(0);
     get_pkg_caps(pkg.caps, h);
     
     if (n_array_size(pkg.caps) > 0) {

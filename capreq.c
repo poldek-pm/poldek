@@ -81,8 +81,10 @@ int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2)
     if ((rc = strcmp(capreq_rel(cr1), capreq_rel(cr2))))
         return rc;
 
-    rc = cr1->cr_flags - cr2->cr_flags;
+    if ((rc = cr1->cr_relflags - cr2->cr_relflags))
+        return rc;
     
+    rc = cr1->cr_flags - cr2->cr_flags;
     return rc;
 }
 
@@ -94,12 +96,12 @@ int capreq_fprintf(FILE *stream, const struct capreq *cr)
     p = relstr;
     *p = '\0';
     
-    if (cr->cr_flags & REL_LT) 
+    if (cr->cr_relflags & REL_LT) 
         *p++ = '<';
-    else if (cr->cr_flags & REL_GT) 
+    else if (cr->cr_relflags & REL_GT) 
         *p++ = '>';
 
-    if (cr->cr_flags & REL_EQ) 
+    if (cr->cr_relflags & REL_EQ) 
         *p++ = '=';
 
     *p = '\0';
@@ -144,12 +146,12 @@ char *capreq_snprintf(char *str, size_t size, const struct capreq *cr)
     p = relstr;
     *p = '\0';
     
-    if (cr->cr_flags & REL_LT) 
+    if (cr->cr_relflags & REL_LT) 
         *p++ = '<';
-    else if (cr->cr_flags & REL_GT) 
+    else if (cr->cr_relflags & REL_GT) 
         *p++ = '>';
 
-    if (cr->cr_flags & REL_EQ) 
+    if (cr->cr_relflags & REL_EQ) 
         *p++ = '=';
 
     *p = '\0';
@@ -170,6 +172,7 @@ char *capreq_snprintf(char *str, size_t size, const struct capreq *cr)
     }
     
     if (p == relstr) {
+        
         n_assert(*capreq_ver(cr) == '\0');
         if (capreq_is_rpmlib(cr))
             nwritten = snprintf(s, size, "rpmlib(%s)", capreq_name(cr));
@@ -209,12 +212,11 @@ char *capreq_snprintf(char *str, size_t size, const struct capreq *cr)
     return str;
 }
 
-
-int16_t capreq_sizeof(const struct capreq *cr) 
+uint8_t capreq_sizeof(const struct capreq *cr) 
 {
     size_t size = sizeof(*cr);
     int max_ofs = 0;
-    
+
     if (cr->cr_ep_ofs > max_ofs)
         max_ofs = cr->cr_ep_ofs;
 
@@ -223,10 +225,16 @@ int16_t capreq_sizeof(const struct capreq *cr)
     
     if (cr->cr_rel_ofs > max_ofs)
         max_ofs = cr->cr_rel_ofs;
+
+    if (max_ofs == 0)
+        max_ofs = 1;
+
     
-    n_assert(max_ofs);
     size += max_ofs + strlen(&cr->_buf[max_ofs]) + 1;
-    n_assert (size < INT16_MAX);
+    //printf("sizeof %s = %d (5 + %d + (%s) + %d)\n", capreq_snprintf_s(cr),
+    //       size, max_ofs, &cr->_buf[max_ofs], strlen(&cr->_buf[max_ofs]));
+    
+    n_assert (size < UINT8_MAX);
     return size;
 }
 
@@ -248,7 +256,7 @@ char *capreq_snprintf_s0(const struct capreq *cr)
 
 struct capreq *capreq_new(const char *name, int32_t epoch,
                           const char *version, const char *release,
-                          int32_t flags) 
+                          int32_t relflags, int32_t flags) 
 {
     int name_len = 0, version_len = 0, release_len = 0;
     struct capreq *cr;
@@ -300,7 +308,8 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
     if ((cr = capreq_alloc_fn(sizeof(*cr) + len)) == NULL)
         return NULL;
 
-    cr->cr_ep_ofs = cr->cr_ver_ofs = cr->cr_rel_ofs = cr->cr_flags = 0;
+    cr->cr_flags = cr->cr_relflags = 0;
+    cr->cr_ep_ofs = cr->cr_ver_ofs = cr->cr_rel_ofs = 0;
         
     buf = cr->_buf;
     *buf++ = '\0';          /* set buf[0] to '\0' */
@@ -329,14 +338,16 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
         *buf++ = '\0';
     }
 
+    cr->cr_relflags = relflags;
     cr->cr_flags = flags;
     if (isrpmreq)
         cr->cr_flags |= CAPREQ_RPMLIB;
+
     return cr;
 }
 
 
-struct capreq *capreq_new_evr(const char *name, char *evr, int32_t flags)
+struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags, int32_t flags)
 {
     char *version = NULL, *release = NULL;
     int32_t epoch = 0;
@@ -344,14 +355,14 @@ struct capreq *capreq_new_evr(const char *name, char *evr, int32_t flags)
     if (evr && !parse_evr(evr, &epoch, &version, &release))
         return NULL;
     
-    return capreq_new(name, epoch, version, release, flags);
+    return capreq_new(name, epoch, version, release, relflags, flags);
 }
 
 
-tn_array *capreq_arr_new(void) 
+tn_array *capreq_arr_new(int size) 
 {
     tn_array *arr;
-    arr = n_array_new(2, capreq_free_fn, (tn_fn_cmp)capreq_cmp_name);
+    arr = n_array_new(size > 0 ? size : 2, capreq_free_fn, (tn_fn_cmp)capreq_cmp_name);
     n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
     return arr;
 }
@@ -551,13 +562,13 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
             register uint32_t flag = flags[i];
 
             if (flag & RPMSENSE_LESS) 
-                cr->cr_flags |= REL_LT;
+                cr->cr_relflags |= REL_LT;
             
             if (flag & RPMSENSE_GREATER) 
-                cr->cr_flags |= REL_GT;
+                cr->cr_relflags |= REL_GT;
             
             if (flag & RPMSENSE_EQUAL) 
-                cr->cr_flags |= REL_EQ;
+                cr->cr_relflags |= REL_EQ;
 
                 
 #ifndef HAVE_RPM_EXTDEPS
@@ -654,7 +665,7 @@ tn_array *capreq_pkg(tn_array *arr, int32_t epoch,
     buf += release_len ;
     *buf++ = '\0';
     
-    cr->cr_flags |= REL_EQ;
+    cr->cr_relflags |= REL_EQ;
 
     n_array_push(arr, cr);
     return arr;
@@ -664,10 +675,11 @@ tn_array *capreq_pkg(tn_array *arr, int32_t epoch,
 void capreq_store(struct capreq *cr, tn_buf *nbuf) 
 {
     int32_t epoch, nepoch;
-    int16_t size = hton16(capreq_sizeof(cr));
-    
+    uint8_t size;
 
-    n_buf_add(nbuf, &size, sizeof(size));
+    size = capreq_sizeof(cr) - 1; /* without '\0'; */
+    n_buf_add_int8(nbuf, size);
+    
     if (cr->cr_ep_ofs) {
         epoch = capreq_epoch(cr);
         nepoch = hton32(epoch);
@@ -675,34 +687,117 @@ void capreq_store(struct capreq *cr, tn_buf *nbuf)
     }
 
     n_buf_add(nbuf, cr, size);
-    memcpy(&cr->_buf[cr->cr_ep_ofs], &epoch, sizeof(epoch));
+    
+    if (cr->cr_ep_ofs) 
+        memcpy(&cr->_buf[cr->cr_ep_ofs], &epoch, sizeof(epoch)); /* restore epoch */
+        
 }
-
 
 struct capreq *capreq_restore(tn_buf_it *nbufi) 
 {
     struct capreq *cr;
-    int16_t size;
+    uint8_t size;
     char *p;
     
-    p = n_buf_it_get(nbufi, sizeof(size));
-    if (p == NULL)
-        return NULL;
-    
-    size = ntoh16(*(int16_t*)p);
+    n_buf_it_get_int8(nbufi, &size);
     p = n_buf_it_get(nbufi, size);
     if (p == NULL)
         return NULL;
     
-    if ((cr = capreq_alloc_fn(size)) == NULL)
+    if ((cr = capreq_alloc_fn(size + 1)) == NULL)
         return NULL;
-    
-    memcpy(cr, p, size);
 
+    ((char*)cr)[size] = '\0'; 
+    memcpy(cr, p, size);
+    
     if (cr->cr_ep_ofs) {
         int32_t epoch = ntoh32(capreq_epoch(cr));
         memcpy(&cr->_buf[cr->cr_ep_ofs], &epoch, sizeof(epoch));
     }
+
+    //printf("REST* %s %d -> %d\n", capreq_snprintf_s(cr),
+    //          strlen(capreq_snprintf_s(cr)), capreq_sizeof(cr));
     
     return cr;
+}
+
+
+int capreq_arr_store(tn_array *arr, FILE *stream, const char *prefix)
+{
+    tn_buf *nbuf;
+    int32_t size;
+    int16_t size16, arr_size;
+    int i, rc;
+
+    if ((arr_size = n_array_size(arr)) == 0)
+        return 1;
+    n_assert(n_array_size(arr) < INT16_MAX);
+    
+    nbuf = n_buf_new(64 * arr_size);
+    n_buf_add_int16(nbuf, arr_size);
+    
+    for (i=0; i<n_array_size(arr); i++) {
+        struct capreq *cr = n_array_nth(arr, i);
+        //printf("STORE %s %d -> %d\n", capreq_snprintf_s(cr),
+        //     strlen(capreq_snprintf_s(cr)), capreq_sizeof(cr));
+        capreq_store(cr, nbuf);
+    }
+
+    n_buf_add(nbuf, "\n", 1);
+    size = n_buf_size(nbuf);
+    n_assert(size < INT16_MAX);
+    size16 = size;
+    
+    size16 = hton16(size16);
+    
+    if (prefix)
+        fprintf(stream, "%s", prefix);
+    
+    fwrite(&size16, sizeof(size16), 1, stream);
+    rc = fwrite(n_buf_ptr(nbuf), n_buf_size(nbuf), 1, stream);
+    n_buf_free(nbuf);
+    return rc;
+}
+
+
+tn_array *capreq_arr_restore(FILE *stream, int skip_bastards) 
+{
+    struct capreq  *cr;
+    tn_array       *arr;
+    tn_buf         *nbuf;
+    tn_buf_it      nbufi;
+    int16_t        size, arr_size;
+    char           *buf;
+    int i;
+
+    if (fread(&size, sizeof(size), 1, stream) != 1)
+        return NULL;
+    
+    size = ntoh16(size);
+    n_assert(size);
+    
+    buf = alloca(size);
+    
+    if (fread(buf, size, 1, stream) != 1)
+        return NULL;
+    
+    nbuf = n_buf_new(0);
+    n_buf_init(nbuf, buf, size);
+    n_buf_it_init(&nbufi, nbuf);
+
+    n_buf_it_get_int16(&nbufi, &arr_size);
+
+    arr = capreq_arr_new(arr_size);
+    for (i=0; i<arr_size; i++) {
+        if ((cr = capreq_restore(&nbufi))) {
+//            printf("RESTORE %s %d -> %d\n", capreq_snprintf_s(cr),
+            //             strlen(capreq_snprintf_s(cr)), capreq_sizeof(cr));
+            
+            if (skip_bastards && capreq_is_bastard(cr))
+                continue;
+            n_array_push(arr, cr);
+        }
+    }
+
+    return arr;
 }

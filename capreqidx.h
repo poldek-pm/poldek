@@ -27,9 +27,7 @@ int capreq_idx_add(struct capreq_idx *idx,
                     struct pkg *pkg, int isprov);
 const
 struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
-                                           const char *prname);
-
-tn_array *capreq_idx_find_depdirs(struct capreq_idx *reqidx);
+                                         const char *prname);
 
 #endif /* POLDEK_CAPREQIDX_H */
     

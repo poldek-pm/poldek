@@ -107,9 +107,9 @@ int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs);
 
 int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst);
 int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst);
-int pkgset_install(struct pkgset *ps, struct inst_s *inst);
 
-
+int pkgset_install(struct pkgset *ps, struct inst_s *inst,
+                   tn_array *unistalled_pkgs);
 
 #include "pkgset-load.h"
 

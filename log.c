@@ -92,10 +92,12 @@ void vlog(int pri, int indent_size, const char *fmt, va_list args)
 void log_msg(const char *fmt, ...) 
 {
     va_list args;
+    if (verbose > -1) {
+        va_start(args, fmt);
+        vlog(LOGDEBUG, 0, fmt, args);
+        va_end(args);
+    }
     
-    va_start(args, fmt);
-    vlog(LOGDEBUG, 0, fmt, args);
-    va_end(args);
 }
 
 

@@ -59,6 +59,8 @@ tn_array *pkgfl_array_new(int size);
 
 int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname);
 
+
+void pkgfl_dump(tn_array *fl);
 #endif /* POLDEK_PKGFL_H */
 
 

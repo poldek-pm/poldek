@@ -680,6 +680,8 @@ void parse_options(int argc, char **argv)
 
     vfile_verbose = &verbose;
     vfile_configure(args.cachedir ? args.cachedir : tmpdir(), vfile_cnflags);
+    vfile_msg_fn = log_msg;
+    vfile_err_fn = log_msg;
 }
 
 
@@ -828,7 +830,8 @@ int check_args(void)
                 rc = prepare_given_packages();
             
         case MODE_MKIDX:
-            verbose = 1;
+            if (verbose != -1)
+                verbose = 1;
             break;
 
             
@@ -863,7 +866,7 @@ int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     int rc;
     int markflag = MARK_USET;
     
-    if (mjrmode == MODE_VERIFY && verbose < 2) 
+    if (mjrmode == MODE_VERIFY && verbose < 2 && verbose != -1) 
         verbose = 2;
 
     if (mjrmode == MODE_VERIFY || mjrmode == MODE_INSTALLDIST)
@@ -925,7 +928,7 @@ int main(int argc, char **argv)
     }
 
     if (args.mjrmode == MODE_UPDATEIDX) {
-        if (verbose < 1)
+        if (verbose < 1 && verbose != -1)
             verbose = 1;
         
         if (update_idx())
@@ -933,7 +936,8 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0 && verbose < 2)
+    if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0 &&
+        verbose < 2 && verbose != -1)
         verbose = 2;
 
     ldflags = 0;
@@ -982,7 +986,7 @@ int main(int argc, char **argv)
         case MODE_UPGRADE:
             if ((rc = usrpkgset_size(args.ups))) {
                 if ((rc = mark_usrset(ps, args.ups, &inst, args.mjrmode))) 
-                    rc = install_pkgs(ps, &inst);
+                    rc = install_pkgs(ps, &inst, NULL);
             }
             break;
             
