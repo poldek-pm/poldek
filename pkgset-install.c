@@ -1512,7 +1512,7 @@ static void print_install_summary(struct upgrade_s *upg)
         msg(1, _("_, %d to uninstall"), n_array_size(upg->uninst_set->dbpkgs));
     msg(1, "_:\n");
 
-    if (n_array_size(upg->install_pkgs) > 5) {
+    if (n_array_size(upg->install_pkgs) > 2) {
         n_array_sort(upg->install_pkgs);
         show_pkg_list("I", upg->install_pkgs, PKG_DIRMARK);
         show_pkg_list("D", upg->install_pkgs, PKG_INDIRMARK);
@@ -1819,7 +1819,7 @@ void mapfn_unmark_pkg(const char *key, void *pkgptr)
 int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst) 
 {
     struct upgrade_s upg;
-
+    int nmarked;
     
     init_upgrade_s(&upg, ps, inst);
     upg.db_pkgs = n_hash_new(103, NULL);
@@ -1833,15 +1833,14 @@ int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst)
         destroy_upgrade_s(&upg);
         return 0;
     }
-
+    nmarked = upg.nmarked;
     destroy_upgrade_s(&upg);
     
-    if (upg.nmarked > 0) {
-        msgn(0, _("Nothing to do"));
-        return 1;
-    } 
-    
-    return pkgset_install(ps, inst, NULL);
+    if (nmarked == 0)
+        msgn(1, _("Nothing to do"));
+    else
+        return pkgset_install(ps, inst, NULL);
+    return 1;
 }
 
 
