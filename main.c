@@ -209,7 +209,7 @@ static struct argp_option options[] = {
 {"sidx", OPT_SOURCETXT, "FILE", OPTION_HIDDEN,
  N_("Get packages info from package index file FILE"), 1 },
 
-{"sdir", OPT_SOURCEDIR, "DIR", 
+{"sdir", OPT_SOURCEDIR, "DIR", 0, 
  N_("Get packages info from directory DIR by scannig it"), 1 },
 
 {"shdrl", OPT_SOURCEHDL, "FILE", 0, /* RH's hdlist,  PLD's tocfile */
@@ -803,13 +803,36 @@ static void n_assert_hook(const char *expr, const char *file, int line)
     abort();
 }
 
+#undef POLDEK_MEM_DEBUG
+#if defined HAVE_MALLOC_H && defined POLDEK_MEM_DEBUG
+#include <malloc.h>
+
+void *old_malloc_hook = NULL;
+
+void *Fnn(size_t SIZE, const void *CALLER) 
+{
+    void *p, *v;
+    __malloc_hook = old_malloc_hook;
+    
+    v = malloc(SIZE);
+    //printf("malloc %d\n", SIZE);
+    __malloc_hook = Fnn;
+    return v;
+}
+#endif /* POLDEK_MEM_DEBUG */
      
 void poldek_init(void) 
 {
 #ifdef HAVE_MALLOPT
 # include <malloc.h>
-    //mallopt(M_MMAP_THRESHOLD, 1);
+
+#if defined HAVE_MALLOC_H && defined POLDEK_MEM_DEBUG
+    old_malloc_hook = __malloc_hook;
+    __malloc_hook = Fnn;
+#endif
+    mallopt(M_MMAP_THRESHOLD, 1024);
     //mallopt(M_MMAP_MAX, 0);
+    
 #endif /* HAVE_MALLOPT */
     
     n_assert_sethook(n_assert_hook);
@@ -824,6 +847,14 @@ void poldek_destroy(void)
     
     if (htcnf)
         n_hash_free(htcnf);
+}
+
+void poldek_reinit(void)
+{
+    pkgsetmodule_destroy();
+    pkgflmodule_destroy();
+
+    poldek_init();
 }
 
 
@@ -1152,6 +1183,22 @@ static void print_source_list(tn_array *sources)
     n_array_sort(sources);
 }
 
+void load_db_depdirs(const char *rootdir, int mjrmode, struct pkgset *ps) 
+{
+    int load = 0;
+    
+    if (args.mjrmode == MODE_INSTALL || args.mjrmode == MODE_UPGRADE
+        || args.mjrmode == MODE_UPGRADEDIST)
+        load = 1;
+
+#ifdef ENABLE_INTERACTIVE_MODE
+    if (args.mjrmode == MODE_SHELL)
+        load = 1;
+#endif
+    
+    if (rpm_get_dbdepdirs(rootdir, ps->depdirs) >= 0)
+        ps->flags |= PSDBDIRS_LOADED;
+}
 
 static struct pkgset *load_pkgset(int ldflags) 
 {
@@ -1160,10 +1207,7 @@ static struct pkgset *load_pkgset(int ldflags)
     if ((ps = pkgset_new(args.psflags)) == NULL)
         return NULL;
 
-    if (args.mjrmode == MODE_INSTALL || args.mjrmode == MODE_UPGRADE
-        || args.mjrmode == MODE_UPGRADEDIST)
-        
-        rpm_get_dbdepdirs(args.inst.rootdir, ps->depdirs);
+    
     
     if (!pkgset_load(ps, ldflags, args.sources)) {
         logn(LOGERR, _("no packages loaded"));
@@ -1216,7 +1260,7 @@ static int update_idx(void)
     
     if (args.update_op == OPT_UPDATEIDX_WHOLE)
         return update_whole_idx();
-    
+
     for (i=0; i < n_array_size(args.sources); i++) {
         struct source *src = n_array_nth(args.sources, i);
         struct pkgdir *pkgdir;
@@ -1230,10 +1274,10 @@ static int update_idx(void)
                  src->path);
             return 0;
         }
-
+        
         pkgdir = pkgdir_new(src->name, src->path,
                             src->pkg_prefix, PKGDIR_NEW_VERIFY);
-        
+
         if (pkgdir == NULL) {
             if (n_array_size(args.sources) > 1)
                 logn(LOGWARN, _("%s: load failed, skipped"), src->path);
@@ -1250,9 +1294,10 @@ static int update_idx(void)
         else if (npatches)
             if (!pkgdir_create_idx(pkgdir, NULL, args.pkgdir_creat_flags))
                 nerr++;
-        
+
         pkgdir_free(pkgdir);
     }
+
     return nerr == 0;
 }
 
@@ -1587,11 +1632,11 @@ int main(int argc, char **argv)
     textdomain(PACKAGE);
     translate_argp_options(options);
     
-    
     term_init();
     log_init(NULL, stdout, logprefix);
     parse_options(argc, argv);
 
+    
     if (args.log_path) {
         int i;
         
@@ -1612,19 +1657,21 @@ int main(int argc, char **argv)
 
     poldek_init();
     rpm_initlib(args.inst.rpmacros);
-    
+
     if (args.mnrmode & MODE_MNR_UPDATEIDX) {
         int v = verbose;
 
         if (verbose == 0) 
             verbose = 1;
-        
+
         if (!update_idx())
             exit(EXIT_FAILURE);
-        
+
         if (args.mjrmode == MODE_NULL)
             exit(EXIT_SUCCESS);
         verbose = v;
+
+        poldek_reinit();
     }
 
     if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0 && verbose != -1)
