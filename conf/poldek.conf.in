@@ -8,53 +8,65 @@ _distro  = pld
 # external downloaders
 #%include fetch.conf
 
+
 [global]
 
-# NOTE: baseneame of directory *must* exists; default is $HOME/.poldek-cache
+# NOTE: basename of the directory *must* exists; default is $HOME/.poldek-cache
 #cachedir = $HOME/.poldek-cache
 
-# permits using root privs for installation only; default "no"
+# Permits using root privs for installation only; default "no"
 #use sudo  = yes
 
-#
+
+###############################################################
 # Installation options
 #
 
-# install packages in small groups instead of doing all-or-nothing 
+# Install packages in small groups instead of doing all-or-nothing 
 # installations; default "yes"
 #particle install = no
 
-# automatically install packages required by installed ones; default "yes"
-#follow = no
-
-# greedy upgrades; defalut "no"
-#greedy = yes
-
-# "mercy" dependency checking; defalut "no"
-#mercy = yes
-
-# don't remove downloaded packages after successful installation; default "no"
+# Do not remove downloaded packages after successful installation; default "no"
 #keep downloads = yes
 
-# confirm each installation; default "no"
+# Uncomment this if you're using system with rpm < 4.2.1; defalut "no"
+#promoteepoch = yes
+
+# Confirm each installation; default "no"
 #confirm installation = yes
 
-# confirm each removal; default "yes"
+# Confirm each removal; default "yes"
 #confirm removal = no
 
-# let the user select package among equivalents 
+# Let the user select package among equivalents 
 #choose equivalents manually = yes
 
-# prevent kernel* and dev from being upgraded if they are already installed.
+# Prevent kernel* and dev from being upgraded if they are already installed.
 #hold   = kernel* dev
 
-# ignore *-smp-* packages 
+# Ignore *-smp-* packages 
 #ignore   = *-smp-*
 
-# Some rpm macros
+##############################################################
+# RPM specific options
+# macros
 #rpmdef        = _install_langs pl:pl_PL:lt:lt_LT
 
 # don't install any documentation
 #rpmdef        = _netsharedpath /usr/share/info:/usr/share/man
 #rpmdef	       = _excludedocs 1
+
+
+##############################################################
+# Subtle dependency processing settings, shouldn't be changed 
+# without a good reason. 
+
+# Automatically install packages required by installed ones; default "yes"
+#follow = no
+
+# Greedy upgrades; defalut "yes"
+#greedy = no
+
+# "mercy" dependency checking; defalut "no"
+#mercy = yes
 
