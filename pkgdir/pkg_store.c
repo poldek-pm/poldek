@@ -54,8 +54,8 @@ static struct pkg_store_tag pkg_store_tag_table[] = {
     { PKG_STORETAG_FL,    PKG_STORETAG_SIZE32, "file list" },
     { PKG_STORETAG_DEPFL, PKG_STORETAG_SIZE32, "depdirs file list" },
     { PKG_STORETAG_UINF,  PKG_STORETAG_SIZE32, "user-level-info" },
-    { '6', PKG_STORETAG_SIZE16, "fake16" }, 
-    { '2', PKG_STORETAG_SIZE32, "fake32" },
+//    { '6', PKG_STORETAG_SIZE16, "fake16" }, // for testing
+//    { '2', PKG_STORETAG_SIZE32, "fake32" },
     { 0, 0, 0 }, 
 };
 
@@ -159,9 +159,6 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
     if (n_array_size(arr)) {
         pkg_store_bintag(PKG_STORETAG_CAPS, nbuf);
         capreq_arr_store(arr, nbuf);
-        
-        pkg_store_bintag('6', nbuf);
-        capreq_arr_store(arr, nbuf);
     }
     
     n_array_free(arr);
@@ -202,9 +199,10 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg)
     size = (sizeof(int32_t) + 1) * n;
     n_assert(size < UINT8_MAX);
     size8t = size;
-    n_buf_write_uint8(nbuf, size8t);
     
+    n_buf_write_uint8(nbuf, size8t);
     n_buf_write_uint8(nbuf, n);
+    
     if (pkg->size) {
         n_buf_add_int8(nbuf, PKGFIELD_TAG_SIZE);
         n_buf_add_int32(nbuf, pkg->size);
@@ -227,6 +225,7 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg)
 
     if (pkg->groupid) {
         n_buf_add_int8(nbuf, PKGFIELD_TAG_GID);
+        //printf("STORE gid %d %s\n", pkg->groupid, pkg_snprintf_s(pkg));
         n_buf_add_int32(nbuf, pkg->groupid);
     }
 
@@ -314,9 +313,6 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs)
         pkgfl_store_buf(fl, nbuf, depdirs, PKGFL_NOTDEPDIRS);
     }
 
-    pkg_store_bintag('2', nbuf);
-    pkgfl_store_buf(fl, nbuf, depdirs, PKGFL_ALL);
-    
     pkg_info_free_fl(pkg, fl);
     pkgflmodule_allocator_pop_mark(flmark);
 }
@@ -341,12 +337,12 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     if ((flags & PKGSTORE_NOOS) == 0 && pkg->os)
         n_buf_printf(nbuf, "O: %s\n", pkg->os);
 
-    if (pkg->fn)
-        n_buf_printf(nbuf, "n: %s\n", pkg->fn);
+    if (pkg->fn) {
+        n_buf_printf(nbuf, "%c: %s\n", PKG_STORETAG_FN, pkg->fn);
+    }
     
     pkg_store_bintag(PKG_STORETAG_BINF, nbuf);
     pkg_store_fields(nbuf, pkg);
-    
     
     if (pkg->caps && n_array_size(pkg->caps))
         pkg_store_caps(pkg, nbuf);
