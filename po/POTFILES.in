@@ -37,7 +37,6 @@ rpmdb_it.c
 rpmhdr.c
 rpminstall.c
 rpmvercmp.c
-rpmwrap.c
 shell/desc.c
 shell/get.c
 shell/install.c
