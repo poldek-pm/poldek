@@ -286,7 +286,7 @@ int pkg_restore_fields(tn_stream *st, struct pkg *pkg)
                 n_stream_read_uint32(st, &pkg->fmtime);
                 break;
 
-            default:
+            default:            /* skip unknown tag */
                 n_stream_read_uint32(st, &tmp);
                 break;
         }

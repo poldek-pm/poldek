@@ -117,7 +117,7 @@ int pkgdirmodule_init(void)
 
     i = 0;
     while (mod_tab[i]) {
-        DBGF_F("%s\n", mod_tab[i]->name); 
+        DBGF("%s\n", mod_tab[i]->name); 
         pkgdir_mod_register(mod_tab[i]);
         i++;
     }
