@@ -7,7 +7,7 @@ source = ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
 #source = /home/zenek/rpm/RPMS/
 
 
-# NOTE: directory *must* exists 
+# NOTE: directory *must* exists; default $HOME/.poldek-cache
 #cachedir = /var/tmp/poldek
 
 # Downloaders configuration
@@ -45,6 +45,3 @@ source = ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
 # don't install any documentation
 #rpmdef        = "_netsharedpath /usr/share/info:/usr/share/man"
 #rpmdef	      = "_excludedocs 1"
-
-
-

@@ -1,7 +1,7 @@
 #! /bin/sh
 
 SRCDIR=/home/ftp/RPMSt
-SRCURL=http://localhost/RPMSt/
+SRCURL=ftp://localhost/RPMSt/
 
 DISTDIR=/mnt/PLD
 TMPDIR=/tmp
@@ -34,6 +34,7 @@ t1()
 
 t2() 
 {
+    up_skip=$(perl -e 'print int(rand(2))');
     toadd=$(perl -e 'print chr(65 + rand(50))');
     torm=$(perl -e 'print chr(65 + rand(50))');
     while [ "$toadd" == "$torm" ]; do
@@ -41,10 +42,24 @@ t2()
     done	
 
     echo "ADD $toadd, REMOVE $torm";
+
+
     rm -f $SRCDIR/${torm}*.rpm
-    
+
+    nremoved=0
+    for i in $SRCDIR/${torm}*.rpm; do
+        bn=$(basename $i);
+
+	if [ ! -f $i ]; then 
+	    continue
+	fi
+        rm -f $i
+        nremoved=$(expr $nremoved + 1)
+    done 
+	
+
+    nadded=0
     for i in $DISTDIR/${toadd}*.rpm; do
-	echo $i;
         bn=$(basename $i);
 
 	if [ ! -f $i ]; then 
@@ -54,19 +69,31 @@ t2()
 	if [ -f $SRCDIR/$bn ]; then 
 	    continue
 	fi    
-	echo "ADD $bn"
+	nadded=$(expr $n + 1)
+	#echo "ADD $bn"
         ln -sf $i $SRCDIR/$bn
     done
- 	
+
+    if [ "$nadded" = "0" -a "$nremoved" = "0" ]; then 
+	return 
+    fi
+    echo "Added $nadded and $nremoved removed"	
     ./poldek -v -s $SRCDIR --mkidxz
+    if [ $? -ne 0 ]; then
+	   echo "MKIDX ERRROR"
+	   exit 1;
+    fi 
     cp -a /tmp/ftp___localhost_RPMSt/pac* /tmp
 
-    echo "UP"
-    ./poldek -v -s $SRCURL --up
-    if [ $? -ne 0 ]; then
+    
+    if [ ${up_skip} != "0" ]; then
+	echo "UP"
+	./poldek -v -s $SRCURL --up
+	if [ $? -ne 0 ]; then
 	   echo "ERRROR"
 	   exit 1;
-    fi
+	fi
+    fi	
 }
 
 

@@ -1,7 +1,7 @@
 # $Id$
 # Sample poldek configuration
 
-source = [pld_main] ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
+source = ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
 #source = ftp://ftp.znienacka.com.pl/RPMS/
 #source = http://www.znienacka.com.pl/RPMS/
 #source = rsync://rsync.znienacka.com.pl/PLD/packages.dir

@@ -21,10 +21,10 @@
     basic features are similar to any package updater like <em>apt-get</em> 
     or <em>urpmi</em>.
 
-    Program takes information about packages form custom index file
+    Program takes information about packages from custom package index file
     (called <em>package.dir.gz</em> by default), and allows to package 
-    install, upgrade and removal. Package
-    dependencies are automatically handled, so if you try to install 
+    install, upgrade and removal. 
+    Package dependencies are automatically handled, so if you try to install 
     a package that needs others to be installed, it will download all
     needed packages and install them. 
 
@@ -93,46 +93,59 @@
     script for details. 
 
 
-    <item> Support for "patches" of poldek custom index 
+    <item> Support for "patches" of package index 
     <p>
     To save users time and bandwidth program supports "incremental indexes"
-    which is very useful with repositories which frequently change (PLD package 
+    which is very useful with repositories which frequently changed (PLD package 
     repository is changed few times a week). This feature consist in 
     creation "patches" of index which gives the users possibilty to update 
     his local index by download "patch" with information on changes only.
+
+    <item> Program is prepared to be run by ordinary user, installation 
+    of packages in that case can be done with <em>sudo</em>. 
+
     </itemize>
+
 
     <sect> Quick start 
     <p>
     <sect1> Prepare package repository to be usable to poldek
     <p>
-    This is extremaly simple:
+    This is simple:
     <tscreen><verb>
-    $ poldek -s PATH --mkidxz
+    $ poldek -s DIR --mkidxz
     </verb></tscreen>
 
-    For example:
+    As result several files will be created under DIR: 
+    <itemize>
+    <item> <em>packages.dir.gz</em>  with all needed package data 
+    <item> <em>packages.dir.mdd </em> with packages.dir.gz's digest
+    <item> <em>packages.dir.toc.gz </em> with list of packages 
+    </itemize>
+
+    Additionally if previous DIR/packages.dir.gz is presented and 
+    it is differ from currently created then index "diff" is 
+    created under DIR/packages.i/
+  
+    Example:
     <tscreen><verb>
     $ poldek -s /home/ftp/pub/PLD/i686/PLD/RPMS --mkidxz
     </verb></tscreen>
-
+    
     <sect1> Use package repository
     <p>
-    Created index may be used locally:
     <tscreen><verb>
-    $ poldek -s /home/ftp/pub/PLD/i686/PLD/RPMS --shell
-    </verb></tscreen>
-
-    or remotely:
-
-    <tscreen><verb>
-    $ poldek -s ftp://ftp.host.org/pub/PLD/i686/PLD/RPMS/ --shell
+    $ poldek -s /home/ftp/pub/PLD/i686/PLD/RPMS
+    $ poldek -s ftp://ftp.host.org/pub/PLD/i686/PLD/RPMS/
     </verb></tscreen> 
 
     To add URL to poldek sources list do: 
     <tscreen><verb>
     $ echo "source = ftp://ftp.host.org/pub/PLD/i686/PLD/RPMS/" >> $HOME/.poldekrc
     </verb></tscreen> 
+
+
+
      
     <sect> Documentation 
     <p>
@@ -146,7 +159,7 @@
 
     <sect> Availability
     <p>
-    The program is free software (GPL).
+    The program is free software (GPL version 2).
     See the file <url url="http://team.pld.org.pl/~mis/poldek/NEWS" name="NEWS"> 
     for a list of major changes in the current release.
 	
@@ -168,7 +181,7 @@
      name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.src.rpm">  
      </itemize>
 
-     <item> Binary rpm package (statically linked)
+     <item> Binary rpm package (statically linked, needs rpm 4.0.x)
 <url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm" 
      name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm">  
      <p>
@@ -196,7 +209,7 @@
     <sect> Build
     <p>
     Program depends on following packages/libraries: curl, glibc, ncurses, 
-    openssl, pcre, readline, rpm, zlib <p>
+    openssl, pcre, readline, rpm and zlib <p>
     
     <sect> Author
 	<p>

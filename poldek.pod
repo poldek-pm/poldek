@@ -428,7 +428,7 @@ Above command installs a "myset" package subset under
 
 =head2 Upgrade whole system:
 
-$ poldek -s ftp://ftp.tatry.pl/PLD/RPMS/packages.dir --upgrade-dist
+$ poldek -v -s ftp://ftp.tatry.pl/PLD/RPMS/ --upgrade-dist --log=~/tmp/poldek.log
 
 Only fetch packages marked for upgrade:
 

@@ -1,22 +1,29 @@
-0.17:
-* added support for package.dir's "patches" 
+0.17 (beta release):
+* added support for package.dir's "patches" (new option --update-whole)
 * improved dependecy processing:
+
   - package may be marked for install as a consequence of conflict
-  - dependency loops are noticed in human readable form
+
+  - dependency loops detected during installl time are noticed in human 
+    readable form
+
   - improved "greedy" selection - if foo-VER is upgraded, then eventual 
     "greedy" marks will mark foo-{devel,static,etc} in version VER too.
+
   - packages are splitted into groups before install and each group 
     is installed separately; this ensures that broken dependencies in 
     one of group doesn't affect the rest.
-  
+* added internal simple ftp client; it is used for FTP downloads
+  by default
 * added checks of packages.dir's data integrity before it is loading,
-  it prevent poldek SIGSEVs  
-* added log file suppport (--log opt)
-* changed default cache directory to $HOME/.poldek
+  it preventing program SIGSEVs on load indexes
+* added log file suppport (--log option)
+* changed default cache directory to $HOME/.poldek-cache
 * shell: db packages are cached what speeds up program start in shell mode
+* few (nice) improvements 
 * few major bugs fixed 
 
-0.16:
+0.16 (stable release):
 * fixed removable media support in non-install-dist modes
 * shell: uninstall: fix: don't remove pkg from install list if removal fails
 
@@ -39,7 +46,7 @@
        doesn't contain package descriptions at all
 * shell: fixed installed package list managment
 * curl: fixed progress bar if total file size is unknown 
-  (Micha³ Moskal <malekith@pld.org.pl>)
+  (Michal Moskal <malekith@pld.org.pl>)
 * "mercy" mode bugfix
 
 0.15.7:
