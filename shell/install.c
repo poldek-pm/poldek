@@ -234,7 +234,7 @@ static int install(struct cmdarg *cmdarg)
             memcpy(shpkg->nevr, nevr, len + 1);
             shpkg->pkg = pkg_link(pkg);
 
-            n_array_push(cmdarg->sh_s->instpkgs, shpkg_link(shpkg));
+            n_array_push(cmdarg->sh_s->instpkgs, shpkg);
         }
             
         n_array_sort(cmdarg->sh_s->instpkgs);
@@ -249,7 +249,7 @@ static int install(struct cmdarg *cmdarg)
         }
         
         n_array_sort(cmdarg->sh_s->instpkgs);
-        
+        //printf("s = %d\n", n_array_size(cmdarg->sh_s->instpkgs));
         if (n_array_size(iinf.installed_pkgs) + n_array_size(iinf.uninstalled_pkgs))
             cmdarg->sh_s->ts_instpkgs = time(0);
     }

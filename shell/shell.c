@@ -862,7 +862,7 @@ static void save_installed_pkgdir(struct pkgdir *pkgdir)
 }
 
 
-static void map_fn(void *pkg, void *shpkgs) 
+static void map_fn_2shpkg(void *pkg, void *shpkgs) 
 {
     struct shpkg      *shpkg;
     char              nevr[1024];
@@ -880,12 +880,25 @@ static void map_fn(void *pkg, void *shpkgs)
 
 static tn_array *pkgs_to_shpkgs(tn_array **shpkgsp, tn_array *pkgs) 
 {
-    tn_array *shpkgs = *shpkgsp;
-
     n_array_clean(*shpkgsp);
-    n_array_map_arg(pkgs, map_fn, shpkgs);
-    n_array_sort(shpkgs);
-    return shpkgs;
+    n_array_map_arg(pkgs, map_fn_2shpkg, *shpkgsp);
+    n_array_sort(*shpkgsp);
+    return *shpkgsp;
+}
+
+
+static void map_fn_2pkg(void *shpkg, void *pkgs) 
+{
+    struct shpkg *shp = shpkg;
+    n_array_push(pkgs, pkg_link(shp->pkg));
+}
+
+static tn_array *shpkgs_to_pkgs(tn_array **pkgsp, tn_array *shpkgs) 
+{
+    n_array_clean(*pkgsp);
+    n_array_map_arg(shpkgs, map_fn_2pkg, *pkgsp);
+    n_array_sort(*pkgsp);
+    return *pkgsp;
 }
 
 
@@ -905,7 +918,6 @@ static int load_installed_packages(struct shell_s *sh_s, int reload)
 
     return 1;
 }
-
 
 
 static 
@@ -1162,6 +1174,7 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
 
     if (shell_s.dbpkgdir) {
         printf("\n");
+        shpkgs_to_pkgs(&shell_s.dbpkgdir->pkgs, shell_s.instpkgs);
         save_installed_pkgdir(shell_s.dbpkgdir);
     }
     

@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
-"POT-Creation-Date: 2002-03-26 00:04+0100\n"
+"POT-Creation-Date: 2002-03-27 00:26+0100\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: \n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -1660,63 +1660,58 @@ msgstr "zrobione\n"
 msgid "write to socket %s: %m"
 msgstr ""
 
-#: vfile/vftp/ftp.c:194
+#: vfile/vftp/ftp.c:193 vfile/vftp/ftp.c:209
 #, c-format
 msgid "response parse error: %s"
 msgstr "b³±d interpretacji odpowiedzi: %s"
 
-#: vfile/vftp/ftp.c:234 vfile/vftp/ftp.c:245
+#: vfile/vftp/ftp.c:250 vfile/vftp/ftp.c:261
 #, c-format
 msgid "%s: response parse error"
 msgstr "%s: b³±d interpretacji odpowiedzi"
 
-#: vfile/vftp/ftp.c:335
+#: vfile/vftp/ftp.c:351
 msgid "response line too long"
 msgstr "zybt d³uga linia w odpowiedzi"
 
-#: vfile/vftp/ftp.c:345
+#: vfile/vftp/ftp.c:361
 msgid "connection canceled"
 msgstr "po³±czenie zosta³o przerwane"
 
-#: vfile/vftp/ftp.c:350
+#: vfile/vftp/ftp.c:366
 msgid "unexpected EOF"
 msgstr "niespodziewany EOF"
 
-#: vfile/vftp/ftp.c:500
+#: vfile/vftp/ftp.c:516
 #, c-format
 msgid "unable to connect to %s:%s: %s"
 msgstr "niemo¿no¶æ po³±czenia z %s:%s: %s"
 
-#: vfile/vftp/ftp.c:529
+#: vfile/vftp/ftp.c:545
 #, c-format
 msgid "unable to connect to %s:%s: %m"
 msgstr "niemo¿no¶æ po³±czenia z %s:%s: %m"
 
-#: vfile/vftp/ftp.c:592
+#: vfile/vftp/ftp.c:608
 #, c-format
 msgid "login failed: %s"
 msgstr "b³±d logowania: %s"
 
-#: vfile/vftp/ftp.c:593
+#: vfile/vftp/ftp.c:609
 msgid "unknown error"
 msgstr "b³±d nieokre¶lony"
 
-#: vfile/vftp/ftp.c:623
-#, c-format
-msgid "Connecting to %s:%d...\n"
-msgstr "£±czenie z %s:%d...\n"
-
-#: vfile/vftp/ftp.c:681
+#: vfile/vftp/ftp.c:694
 #, c-format
 msgid "%s: PASV response parse error"
 msgstr "%s: b³±d interpretacji odpowiedzi PASV"
 
-#: vfile/vftp/ftp.c:690
+#: vfile/vftp/ftp.c:703
 #, c-format
 msgid "%s: address too long"
 msgstr "%s: zbyt d³ugi adres"
 
-#: vfile/vftp/ftp.c:892
+#: vfile/vftp/ftp.c:905
 #, c-format
 msgid "%s: no such file (serv said: %s)"
 msgstr "%s: nie ma takiego pliku (odpowied¼ serwera: %s)"
@@ -1725,6 +1720,9 @@ msgstr "%s: nie ma takiego pliku (odpowied¼ serwera: %s)"
 #, c-format
 msgid "%s: URL parse error"
 msgstr "%s: b³±d interpretacji URLa"
+
+#~ msgid "Connecting to %s:%d...\n"
+#~ msgstr "£±czenie z %s:%d...\n"
 
 #~ msgid "Show package's requirements"
 #~ msgstr "Poka¿ wymagania pakietu"
