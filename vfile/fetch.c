@@ -416,8 +416,9 @@ struct ffetcher *find_fetcher(int urltype, int multi)
 int vfile_fetch_ext(const char *destdir, const char *url, int urltype) 
 {
     struct ffetcher *ftch;
-    
-    if (urltype < 0 || urltype == VFURL_UNKNOWN) 
+
+    n_assert(urltype > 0);
+    if (urltype == VFURL_UNKNOWN)
         urltype = vfile_url_type(url);
     
     if (nffetchers == 0) {
@@ -438,8 +439,9 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype)
 {
     struct ffetcher *ftch;
     int rc = 1;
-    
-    if (urltype < 0) 
+
+    n_assert(urltype > 0);
+    if (urltype == VFURL_UNKNOWN) 
         urltype = vfile_url_type(n_array_nth(urls, 0));
     
     if ((ftch = find_fetcher(urltype, 1))) {

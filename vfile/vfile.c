@@ -231,8 +231,9 @@ static int fetch_internal(int urltype)
 int vfile_fetcha(const char *destdir, tn_array *urls, int urltype) 
 {
     int rc = 1;
-    
-    if (urltype < 0) 
+
+    n_assert(urltype > 0);
+    if (urltype == VFURL_UNKNOWN) 
         urltype = vfile_url_type(n_array_nth(urls, 0));
 
     
@@ -258,6 +259,10 @@ int vfile_fetch(const char *destdir, const char *path, int urltype)
     int rc;
     
     mkdir(destdir, 0755);
+    
+    n_assert(urltype > 0);
+    if (urltype == VFURL_UNKNOWN) 
+        urltype = vfile_url_type(path);
 
     if (fetch_internal(urltype)) {
         rc = fetch_file_internal(destdir, path);

@@ -199,13 +199,13 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         line[i] = '\0';
         snprintf(format, sizeof(format), "%%-%ds %%5.1f%%%%", barwidth );
         snprintf(outline, sizeof(outline), format, line, percent );
-        vfile_msg_fn("\r%s", outline);
+        vfile_msg_fn("_\r%s", outline);
         
     }
     bar->prev = bar->point;
     
     if (total == bar->point && bar->anybfetched == 1)
-        vfile_msg_fn("\n");
+        vfile_msg_fn("_\n");
 
     return 0;
 }
