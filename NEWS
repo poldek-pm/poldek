@@ -1,9 +1,20 @@
+0.17.9 (bugfix/minor enhancements release; 2002/09/20)
+
+* Obsoletes tag is used during upgrades (if --greedy is set)
+* fixed dependency EVR matching
+* source priorities (new 'pri' source option) -- if the same package is available
+  in more than one source than program takes package from source with highest priority.
+  If priorities aren't set sources are prioritized in order they are appear in config file.
+* bugfix: -s URL works fine 
+
+
 0.17.8 (major bugfix release; 2002/08/18)
 
 * package installation is verified with rpm database if rpm reports failure
 * fixed obsoletes matching (Jakub Bogusz <qboosh@pld.org.pl>)
 * improved and fixed file based conflicts detection
 * fixed size units display (GoTaR <gotar@poczta.onet.pl>)
+
 
 0.17.7 (bugfix release; 2002/06/14)
 
