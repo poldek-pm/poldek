@@ -7,7 +7,10 @@ prepdist:
 	./getlib.sh trurlib copy
 	./getlib.sh tndb copy
 
-poldekdist: prepdist dist
+tarball: prepdist dist
+
+rpm-package: tarball
+	rpmbuild -tb $(distdir).tar.bz2
 
 mclean: 
 	@if [ -f Makefile ]; then         \
