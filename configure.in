@@ -130,8 +130,8 @@ fi
 AC_CHECK_LIB(rpm, rpmReadPackageInfo,,AC_MSG_ERROR("rpmlib not found"),
 	    -lpopt -ldb -lz -lbz2)
 
-dnl trullib 0.431 has n_buf_it_get() and n_buf_ptr()
-AC_CHECK_LIB(trurl, n_buf_it_get,,AC_MSG_ERROR("trurlib 0.431 not found"), 
+dnl trullib 0.43.1 has n_buf_it_get() and n_buf_ptr()
+AC_CHECK_LIB(trurl, n_buf_it_get,,AC_MSG_ERROR("trurlib 0.43.1 not found"), 
 	     $CONF_IN_LDFLAGS)
 AC_CHECK_FUNCS(n_buf_ptr,,AC_MSG_ERROR("trurlib 0.431 not found"), 
 	     $CONF_IN_LDFLAGS)
