@@ -38,12 +38,15 @@ void inst_s_init(struct inst_s *inst);
  *   while capability hasn't (RPM style)
  * - files with diffrent mode only not assumed as conflicts
  */
-#define PSVERIFY_MERCY  (1 << 0)
+#define PSVERIFY_MERCY       (1 << 0)
 
-#define PSMODE_VERIFY   (1 << 1)
-#define PSMODE_MKIDX    (1 << 2)
-#define PSMODE_INSTALL  (1 << 3)
-#define PSMODE_UPGRADE  (1 << 4)
+#define PSMODE_VERIFY        (1 << 1)
+#define PSMODE_MKIDX         (1 << 2)
+#define PSMODE_INSTALL       (1 << 3)
+#define PSMODE_INSTALL_DIST  (1 << 4)
+
+#define PSMODE_UPGRADE       (1 << 5)
+#define PSMODE_UPGRADE_DIST  (1 << 6)
 
 struct pkgset *pkgset_new(unsigned psoptflags);
 void pkgset_free(struct pkgset *ps);
@@ -66,8 +69,8 @@ tn_array *pkgset_getpkgs(const struct pkgset *ps);
 tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname);
 
 
-#define MARK_USET    0
-#define MARK_DEPS    1  
+#define MARK_USET    0          /* mark only given set */
+#define MARK_DEPS    1          /* follow dependencies */
 int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
                        struct inst_s *inst, int markflag);
 

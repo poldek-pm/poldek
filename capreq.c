@@ -160,13 +160,20 @@ char *capreq_snprintf(char *str, size_t size, const struct capreq *cr)
     
     if (p == relstr) {
         n_assert(*capreq_ver(cr) == '\0');
-        nwritten = snprintf(s, size, "%s", capreq_name(cr));
+        if (capreq_is_rpmlib(cr))
+            nwritten = snprintf(s, size, "rpmlib(%s)", capreq_name(cr));
+        else
+            nwritten = snprintf(s, size, "%s", capreq_name(cr));
+        
         size -= nwritten;
         s += nwritten;
         
     } else {
         n_assert(*capreq_ver(cr));
-        nwritten = snprintf(s, size, "%s %s ", capreq_name(cr), relstr);
+        if (capreq_is_rpmlib(cr))
+            nwritten = snprintf(s, size, "rpmlib(%s) %s ", capreq_name(cr), relstr);
+        else
+            nwritten = snprintf(s, size, "%s %s ", capreq_name(cr), relstr);
         s += nwritten;
         size -= nwritten;
         
@@ -227,10 +234,30 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
     int name_len = 0, version_len = 0, release_len = 0;
     struct capreq *cr;
     char *buf;
-    int len;
+    int len, isrpmreq = 0;
     
-    name_len = strlen(name);
-    len = 1 + name_len + 1;
+    if (*name == 'r' && strncmp(name, "rpmlib(", 7) == 0) {
+        char *p, *q, *nname;
+
+        p = (char*)name + 7;
+        if ((q = strchr(p, ')'))) {
+            name_len = q - p;
+            nname = alloca(name_len + 1);
+            memcpy(nname, p, name_len);
+            nname[name_len] = '\0';
+            name = nname;
+            
+            isrpmreq = 1;
+            
+        } else {
+            log(LOGERR, "%s: invalid rpmlib capreq\n", name);
+        }
+        
+    } else {
+        name_len = strlen(name);
+    }
+    
+        len = 1 + name_len + 1;
 
     if (epoch) {
         if (version == NULL)
@@ -284,6 +311,8 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
     }
 
     cr->cr_flags = flags;
+    if (isrpmreq)
+        cr->cr_flags |= CAPREQ_RPMLIB;
     return cr;
 }
 
@@ -566,7 +595,7 @@ tn_array *capreq_pkg(tn_array *arr, int32_t epoch,
     *buf++ = '\0';
     
     cr->cr_flags |= REL_EQ;
-            
+
     n_array_push(arr, cr);
     return arr;
 }

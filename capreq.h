@@ -21,15 +21,16 @@
 #define CAPREQ_PREREQ   (1 << 6)
 #define CAPREQ_OBCNFL   CAPREQ_PREREQ  /* alias, for obsolences */
 
-/* is added by poldek? */
-#define CAPREQ_PLDEKBAST (1 << 7)       
+
+#define CAPREQ_PLDEKBAST (1 << 7)   /* is added by poldek? */
+#define CAPREQ_RPMLIB    (1 << 8)   /* rpmlib(...) */
 
 struct capreq {
+    uint16_t cr_flags;
 /*  uint8_t cr_name_ofs = 1, always */
-    uint8_t cr_ep_ofs;
-    uint8_t cr_ver_ofs;         /* 0 if capreq hasn't version */
-    uint8_t cr_rel_ofs;         /* 0 if capreq hasn't release */
-    uint8_t cr_flags;
+    uint8_t  cr_ep_ofs;
+    uint8_t  cr_ver_ofs;         /* 0 if capreq hasn't version */
+    uint8_t  cr_rel_ofs;         /* 0 if capreq hasn't release */
     char    _buf[0];            /* alias cr_name, first byte is always '\0' */
 };
 
@@ -50,6 +51,8 @@ struct capreq {
 #define capreq_isnot_file(cr)   ((cr)->_buf[1] != '/')
 
 #define capreq_is_bastard(cr)   ((cr)->cr_flags & CAPREQ_PLDEKBAST)
+
+#define capreq_is_rpmlib(cr)   ((cr)->cr_flags & CAPREQ_RPMLIB)
 
 
 //#define capreq_is_resolved(cr)   ((cr)->cr_flags & CAPREQ_RESOLVED)

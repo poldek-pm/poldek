@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <obstack.h>
 
-#include <rpmlib.h>
+#include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>

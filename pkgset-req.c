@@ -16,7 +16,7 @@
 #include <errno.h>
 #include <obstack.h>
 
-#include <rpmlib.h>
+#include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
@@ -225,7 +225,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
 {
     const struct capreq_idx_ent *ent;
     char *reqname;
-    int matched, isrpmreq = 0;
+    int matched;
             
     reqname = capreq_name(req);
 
@@ -235,7 +235,6 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
     if ((ent = capreq_idx_lookup(&ps->cap_idx, reqname))) {
         *suspkgs = (struct pkg **)ent->pkgs;
         *npkgs = ent->items;
-        isrpmreq = (strncmp(reqname, "rpmlib(", 7) == 0);
         matched = 1;
         
     } else if (*reqname == '/') {
@@ -249,8 +248,11 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         }
     }
 
-    if (isrpmreq) {
+    if (capreq_is_rpmlib(req)) {
         struct capreq *cap;
+
+        *suspkgs = NULL;
+        *npkgs = 0;
         
         if (matched) {
             int i;
@@ -272,7 +274,8 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         
         if (!matched && (ps->flags & (PSMODE_VERIFY | PSMODE_MKIDX))) {
             matched = 1;
-            log(LOGWARN, "poldek needs to be linked with newer rpmlib\n");
+            log(LOGWARN, "%s: not found (poldek needs to be linked with newer"
+                " rpmlib)\n", capreq_snprintf_s(req));
         }
     }
     

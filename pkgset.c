@@ -16,7 +16,7 @@
 #include <errno.h>
 #include <obstack.h>
 
-#include <rpmlib.h>
+#include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
@@ -401,7 +401,7 @@ int pkgset_setup(struct pkgset *ps)
         msg(1, "$Verifying files conflicts...\n");
         file_index_find_conflicts(&ps->file_idx, strict);
     }
-    
+
     pkgset_verify_deps(ps, strict);
     mem_info(1, "MEM after verify deps");
 //    pkgset_free_indexes(ps);
@@ -766,7 +766,10 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     
     n_array_map(ps->pkgs, (tn_fn_map1)mapfn_unmark);
 
-    nodeps = inst->instflags & PKGINST_NODEPS;
+    if (ps->flags & PSMODE_INSTALL_DIST)
+        nodeps = inst->instflags & PKGINST_NODEPS;
+    else
+        nodeps = 1;
     
     for (i=0; i<n_array_size(ups->pkgdefs); i++) {
         struct pkgdef *pdef = n_array_nth(ups->pkgdefs, i);
