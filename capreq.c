@@ -28,7 +28,6 @@
 static void *(*capreq_alloc_fn)(size_t) = malloc;
 static void (*capreq_free_fn)(void*) = free;
 
-
 void set_capreq_allocfn(void *(*cr_allocfn)(size_t), void (*cr_freefn)(void*),
                          void **prev_alloc, void **prev_free)
 {
@@ -221,6 +220,13 @@ int16_t capreq_sizeof(const struct capreq *cr)
 
 
 char *capreq_snprintf_s(const struct capreq *cr) 
+{
+    static char str[256];
+    capreq_snprintf(str, sizeof(str), cr);
+    return str;
+}
+
+char *capreq_snprintf_s0(const struct capreq *cr) 
 {
     static char str[256];
     capreq_snprintf(str, sizeof(str), cr);
