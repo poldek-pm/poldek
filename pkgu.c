@@ -21,9 +21,21 @@
 #include "pkgu.h"
 #include "h2n.h"
 
-static void *sav = NULL;
-static int savsize = 0;
 
+static Header make_pkguinf_hdr(Header h, int *langs_cnt);
+
+
+#if 0
+/* headerLoad bug hunt func  */
+void check_hdr(char *s, struct pkguinf *pkgu) 
+{
+    void *p;
+
+    printf("%s\n", s);
+    p = headerUnload(pkgu->hdr);
+    //n_assert(memcmp(pkgu->hdr, sav, savsize) == 0);
+}
+#endif 
 
 void pkguinf_free(struct pkguinf *pkgu) 
 {
@@ -44,9 +56,7 @@ void pkguinf_free(struct pkguinf *pkgu)
     if (pkgu->hdr)
         headerFree(pkgu->hdr);
     
-    if (pkgu->rawhdr) 
-            free(pkgu->rawhdr);
-    
+    pkgu->hdr = NULL;
     free(pkgu);
 }
 
@@ -54,14 +64,9 @@ void pkguinf_free(struct pkguinf *pkgu)
 void *pkguinf_tag(struct pkguinf *pkgu, int32_t tag)
 {
     struct rpmhdr_ent ent;
-    
-    if (pkgu->hdr == NULL && pkgu->rawhdr != NULL) {
-        if ((pkgu->hdr = headerLoad(pkgu->rawhdr)) == NULL)
-            return 0;
-        free(pkgu->rawhdr);
-        pkgu->rawhdr = NULL;
-    }
 
+    n_assert(pkgu->hdr);
+    
     if (!rpmhdr_ent_get(&ent, pkgu->hdr, tag))
         ent.val = NULL;
 
@@ -80,29 +85,23 @@ int32_t pkguinf_int32_tag(struct pkguinf *pkgu, int32_t tag)
 int pkguinf_store(struct pkguinf *pkgu, FILE *stream) 
 {
     uint16_t nsize, nlangs;
-    void *rawhdr;
-    int rawhdr_size;
-    int rc, unloaded = 0;
+    Header   hdr;
+    void     *rawhdr;
+    int      rawhdr_size;
     
-    
-    if (pkgu->rawhdr) {
-        rawhdr = pkgu->rawhdr;
-        rawhdr_size = pkgu->rawhdr_size;
-    } else {
-        rawhdr_size = headerSizeof(pkgu->hdr, HEADER_MAGIC_NO);
-        
-        printf("hdr %p %d %d\n", pkgu->hdr, rawhdr_size, savsize);
-        printf("cmp %p %p %d %d  = %d\n", pkgu->hdr, sav, rawhdr_size, savsize, rc);
-        rc = memcmp(pkgu->hdr, sav, savsize);
-        printf("cmp %p %p %d %d  = %d\n", pkgu->hdr, sav, rawhdr_size, savsize, rc);
-        exit(0);
-        
-            
-        rawhdr = headerUnload(pkgu->hdr);
-        
-        unloaded = 1;
-    }
+    int rc;
 
+    /* headerUnload(pkgu->hdr) gives diffrent a bit raw header(!), so copy tags by hand */
+//    hdr = make_pkguinf_hdr(pkgu->hdr, NULL);
+    hdr = pkgu->hdr;
+    rawhdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
+    rawhdr = headerUnload(hdr);
+
+#if 0    
+    printf("> %ld\t%d\n", ftell(stream), headerSizeof(pkgu->hdr, HEADER_MAGIC_NO));
+    headerDump(pkgu->hdr, stdout, HEADER_DUMP_INLINE, rpmTagTable);
+#endif     
+    
     nsize = hton16(rawhdr_size);
     nlangs = hton16(pkgu->nlangs);
     
@@ -110,9 +109,8 @@ int pkguinf_store(struct pkguinf *pkgu, FILE *stream)
     fwrite(&nsize, sizeof(nsize), 1, stream);
     
     rc = fwrite(rawhdr, rawhdr_size, 1, stream);
-
-    if (unloaded)
-        free(rawhdr);
+    
+    free(rawhdr);
     
     return rc;
 }
@@ -147,27 +145,26 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
         log(LOGERR, "pkguinf_restore: read error at %ld\n", ftell(stream));
         return NULL;
     }
-    	
+
+    
     if ((hdr = headerLoad(rawhdr)) != NULL) {
         pkgu = malloc(sizeof(*pkgu));
-        pkgu->hdr = hdr;
-        printf("rhdr %p\n", pkgu->hdr);
-        {
-            sav = headerCopy(hdr);
-            savsize = headerSizeof(hdr, HEADER_MAGIC_NO);
-        }
+        pkgu->hdr = headerCopy(hdr); /* propably headerLoad() bug  */
+        headerFree(hdr);
         
-                
         pkgu->flags = 0;
         pkgu->nlangs = nlangs;
-        pkgu->rawhdr = NULL;
-        pkgu->rawhdr_size = 0;
         pkgu->license = NULL;
         pkgu->url = NULL;
         pkgu->summary = NULL;
         pkgu->description = NULL;
+        
+#if 0    
+        printf("< %ld\t%d\n", ftell(stream), headerSizeof(pkgu->hdr, HEADER_MAGIC_NO));
+        headerDump(pkgu->hdr, stdout, HEADER_DUMP_INLINE, rpmTagTable);
+#endif        
     }
-    
+
     return pkgu;
 }
 
@@ -187,16 +184,15 @@ int pkguinf_skip(FILE *stream)
     return nsize;
 }
 
-struct pkguinf *pkguinf_ldhdr(Header h) 
+
+static Header make_pkguinf_hdr(Header h, int *langs_cnt) 
 {
-    char       **langs, **summs, **groups, **descrs;
-    int        nsumms, ngroups, ndescrs;
-    struct rpmhdr_ent hdrent;
-    struct pkguinf *pkgu;
-    int        i, n, nlangs = 0;
-    Header     hdr;
-    void       *hdr_ptr;
-    unsigned   hdr_size;
+    struct rpmhdr_ent  hdrent;
+    char               **langs, **summs, **groups, **descrs;
+    int                nsumms, ngroups, ndescrs;
+    int                i, n, nlangs = 0;
+    Header             hdr;
+    unsigned           hdr_size;
     
     
     langs = headerGetLangs(h);
@@ -232,25 +228,39 @@ struct pkguinf *pkguinf_ldhdr(Header h)
     rpmhdr_ent_cp(&hdrent, h, RPMTAG_URL, hdr);
     rpmhdr_ent_cp(&hdrent, h, RPMTAG_DISTRIBUTION, hdr);
     
+    
     hdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
-    hdr_ptr = headerUnload(hdr);
-    headerFree(hdr);
-
+    
     if (hdr_size > UINT16_MAX) {
-        log(LOGERR, "hdr size too big: %d\n");
-        pkgu = NULL;
-    } else {
-        pkgu = malloc(sizeof(*pkgu));
-        pkgu->flags = 0;
-        pkgu->nlangs = nlangs;
-        pkgu->rawhdr = hdr_ptr;
-        pkgu->rawhdr_size = hdr_size;
-        pkgu->hdr = NULL;
-        pkgu->license = NULL;
-        pkgu->url = NULL;
-        pkgu->summary = NULL;
-        pkgu->description = NULL;
+        log(LOGERR, "hdr size too big: %d\n", hdr_size);
+        headerFree(hdr);
+        hdr = NULL;
     }
+
+    if (langs_cnt)
+        *langs_cnt = nlangs;
+
+    return hdr;
+}
+
+
+struct pkguinf *pkguinf_ldhdr(Header h) 
+{
+    struct pkguinf *pkgu = NULL;
+    int            nlangs = 0;
+    Header         hdr;
+
+    if ((hdr = make_pkguinf_hdr(h, &nlangs)) == NULL)
+        return NULL;
+    
+    pkgu = malloc(sizeof(*pkgu));
+    pkgu->hdr = hdr;
+    pkgu->flags = 0;
+    pkgu->nlangs = nlangs;
+    pkgu->license = NULL;
+    pkgu->url = NULL;
+    pkgu->summary = NULL;
+    pkgu->description = NULL;
     	
     return pkgu;
 }

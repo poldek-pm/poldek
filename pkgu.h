@@ -18,8 +18,6 @@ struct pkguinf {
     char              *summary;
     char              *description;
     Header            hdr; 
-    int16_t           rawhdr_size;
-    void              *rawhdr; 
 };
 
 int pkguinf_store(struct pkguinf *pkgu, FILE *stream);
