@@ -615,7 +615,7 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
 
     
 
-int poldek_load_config(struct poldek_ctx *ctx, const char *path)
+int poldek_load_config(struct poldek_ctx *ctx, const char *path, int up)
 {
     tn_hash           *htcnf = NULL;
     char              *v;
@@ -626,9 +626,9 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
         logn(LOGERR | LOGDIE, "load_config() called after setup()");
     
     if (path != NULL)
-        ctx->htconf = poldek_conf_load(path, 0);
+        ctx->htconf = poldek_conf_load(path, up ? POLDEK_LDCONF_UPDATE : 0);
     else 
-        ctx->htconf = poldek_conf_loadefault();
+        ctx->htconf = poldek_conf_loadefault(up ? POLDEK_LDCONF_UPDATE : 0);
     
     if (ctx->htconf == NULL)
         return 0;
@@ -770,8 +770,8 @@ void poldek_free(struct poldek_ctx *ctx)
 int poldek_configure(struct poldek_ctx *ctx, int param, ...) 
 {
     va_list ap;
-    int rc;
-    void     *vv;
+    void    *vv;
+    int rc = 1;
     
     va_start(ap, param);
     

@@ -33,7 +33,7 @@ void poldek_free(struct poldek_ctx *ctx);
 #define POLDEK_CONF_LOGTTY          21
 
 int poldek_configure(struct poldek_ctx *ctx, int param, ...);
-int poldek_load_config(struct poldek_ctx *ctx, const char *path);
+int poldek_load_config(struct poldek_ctx *ctx, const char *path, int doupdate);
 
 int poldek_setup_cachedir(struct poldek_ctx *ctx);
 int poldek_setup(struct poldek_ctx *ctx);
