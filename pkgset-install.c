@@ -1949,7 +1949,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         return 0;
     
     if ((inst->flags & (INSTS_JUSTPRINTS | INSTS_JUSTFETCH)) == 0)
-        if (!valid_arch_os(upg->install_pkgs)) 
+        if (!valid_arch_os(upg->inst, upg->install_pkgs)) 
             return 0;
 
 
