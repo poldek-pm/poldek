@@ -2,11 +2,16 @@
 
 PROJ_DIR=$(shell pwd)
 
+prepdist:
+	-rm -f tndb trurlib
+	./getlib.sh trurlib copy
+	./getlib.sh tndb copy
+
 mclean: 
 	@if [ -f Makefile ]; then         \
 		$(MAKE) maintainer-clean; \
 	fi
-	-rm -rf intl trurlib poldek-cvs????????*
+	-rm -rf intl trurlib tndb poldek-cvs????????*
 	-find . -name .#\*[0-9]  | xargs -r rm
 
 
