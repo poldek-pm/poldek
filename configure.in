@@ -48,6 +48,7 @@ else
 	fi
 fi
 
+AC_CHECK_LIB(tinfo, tigetstr,,AC_MSG_ERROR("tinfo not found"))
 
 AC_ARG_WITH(curl,
 [  --without-curl	compile without libcurl],
@@ -75,7 +76,7 @@ if test "${ENABLE_STATIC}." = "yes."; then
 	poldek_LDFLAGS="-static"
 
 	if test "${INTERACTIVE_MODE}." = "yes."; then
-		LIBS="$LIBS -lncurses -ltinfo"
+		LIBS="$LIBS -lncurses"
 	fi
 
 	if test "${ENABLE_VFILE_CURL}." = "yes."; then
