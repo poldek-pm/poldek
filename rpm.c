@@ -303,25 +303,32 @@ int rpm_dbmatch_req(rpmdb db, const struct capreq *req, int strict,
  */
 static void progress(const unsigned long amount, const unsigned long total) 
 {
-    static unsigned long prev_v = 0, vv = 0;
-    
-    if (amount && amount == total) { /* last notification */
-        msg(1, "_. (%ld kB)\n", total/1024);
-
-    } else if (amount == 0) {     /* first notification */
-        msg(1, "_.");
-        vv = 0;
-        prev_v = 0;
+    if (amount == 0) {     /* first notification */
+        msg(0, ".");
         
-    } else if (total == 0) {     /* impossible */
-        assert(0);
-
     } else {
-        unsigned long i;
-        unsigned long v = amount * 60 / total;
-        for (i=prev_v; i<v; i++)
-            msg(1, "_.");
-        prev_v = v;
+        char   line[256], outline[256], fmt[40];
+        float  frac, percent;
+        int    barwidth = 75, n;
+        
+
+        frac = (float) amount / (float) total;
+        percent = frac * 100.0f;
+        
+        barwidth -= 7;
+        n = (int) (((float)barwidth) * frac);
+        
+        memset(line, '.', n);
+        line[n] = '\0';
+        snprintf(fmt, sizeof(fmt), "%%-%ds %%5.1f%%%%", barwidth);
+        snprintf(outline, sizeof(outline), fmt, line, percent);
+        
+        if (amount && amount == total) { /* last notification */
+            msg(0, "\r%s\n", outline);
+            
+        } else {
+            msg(0, "\r%s", outline);
+        }
     }
 }
 
@@ -346,7 +353,7 @@ static void *install_cb(const void *h __attribute__((unused)),
             break;
 
         case RPMCALLBACK_INST_START:
-            msg(1, "Installing %s\n", n_basenam(pkgpath));
+            msg(0, "Installing %s\n", n_basenam(pkgpath));
             progress(amount, total);
             break;
 
@@ -372,7 +379,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
     int rc;
     Header h = NULL;
 
-
+    
     if (rootdir == NULL)
         rootdir = "";
 
