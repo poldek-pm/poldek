@@ -136,14 +136,19 @@ int capreq_fprintf(FILE *stream, const struct capreq *cr)
     return 1;
 }
 
-
-char *capreq_snprintf(char *str, size_t size, const struct capreq *cr) 
+static
+int capreq_snprintf_(char *str, size_t size, const struct capreq *cr,
+                     int with_char_marks) 
 {
-    int nwritten;
+    int n = 0;
     char relstr[64], *p, *s;
 
-    if (size < 32)
-        return NULL;
+    n_assert(size > 0);
+    if (size < 32) {
+        *str = '\0';
+        return 0;
+    }
+    
     
     s = str;
     p = relstr;
@@ -159,61 +164,55 @@ char *capreq_snprintf(char *str, size_t size, const struct capreq *cr)
 
     *p = '\0';
 
-    if (capreq_is_bastard(cr)) {
-        *s++ = '!';
-        size--;
-    }
-    
-    if (capreq_is_prereq(cr) || capreq_is_prereq_un(cr)) {
-        *s++ = '*';
-        size--;
+    if (with_char_marks) {
+        if (capreq_is_bastard(cr)) {
+            *s++ = '!';
+            n++;
+        }
+        
+        if (capreq_is_prereq(cr) || capreq_is_prereq_un(cr)) {
+            *s++ = '*';
+            n++;
+        }
+        
+        if (capreq_is_prereq_un(cr)) {
+            *s++ = '$';
+            n++;
+        }
     }
 
-#if 0
-    if (capreq_is_prereq_un(cr)) {
-        *s++ = '$';
-        size--;
-    }
-#endif
-    
     if (p == relstr) {
         n_assert(*capreq_ver(cr) == '\0');
         if (capreq_is_rpmlib(cr))
-            nwritten = snprintf(s, size, "rpmlib(%s)", capreq_name(cr));
+            n += snprintf(&s[n], size - n, "rpmlib(%s)", capreq_name(cr));
         else
-            nwritten = snprintf(s, size, "%s", capreq_name(cr));
-        
-        size -= nwritten;
-        s += nwritten;
+            n += snprintf(&s[n], size - n, "%s", capreq_name(cr));
         
     } else {
         n_assert(*capreq_ver(cr));
         if (capreq_is_rpmlib(cr))
-            nwritten = snprintf(s, size, "rpmlib(%s) %s ", capreq_name(cr), relstr);
+            n += snprintf(&s[n], size - n, "rpmlib(%s) %s ", capreq_name(cr), relstr);
         else
-            nwritten = snprintf(s, size, "%s %s ", capreq_name(cr), relstr);
-        s += nwritten;
-        size -= nwritten;
+            n += snprintf(&s[n], size - n, "%s %s ", capreq_name(cr), relstr);
         
-        if (capreq_has_epoch(cr)) {
-            nwritten = snprintf(s, size, "%d:", capreq_epoch(cr));
-            s += nwritten;
-            size -= nwritten;
-        }
-
-        if (capreq_has_ver(cr)) {
-            nwritten = snprintf(s, size, "%s", capreq_ver(cr));
-            s += nwritten;
-            size -= nwritten;
-        }
+        if (capreq_has_epoch(cr)) 
+            n += snprintf(&s[n], size - n, "%d:", capreq_epoch(cr));
+        
+        if (capreq_has_ver(cr)) 
+            n += snprintf(&s[n], size - n, "%s", capreq_ver(cr));
 
         if (capreq_has_rel(cr)) {
             n_assert(capreq_has_ver(cr));
-            snprintf(s, size, "-%s", capreq_rel(cr));
+            n += snprintf(&s[n], size - n, "-%s", capreq_rel(cr));
         }
     }
     
-    return str;
+    return n;
+}
+
+int capreq_snprintf(char *str, size_t size, const struct capreq *cr) 
+{
+    return capreq_snprintf_(str, size, cr, 0);
 }
 
 uint8_t capreq_bufsize(const struct capreq *cr) 
