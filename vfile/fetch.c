@@ -593,7 +593,7 @@ int vfile_mkdir(const char *path)
         return 1;
     
     if (mkdir(path, 0750) != 0) {
-        vfile_err_fn("%s: mkdir %m\n");
+        vfile_err_fn("%s: mkdir %m\n", path);
         return 0;
     }
     
