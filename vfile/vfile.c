@@ -500,29 +500,9 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
     struct vfile *vf = NULL;
     int n = 0;
 
-    
-    while (1) {
-        vfile_err_no = 0;
-        
-        if ((vf = do_vfile_open(path, vftype, vfmode))) {
-            vf->vf_path = strdup(path);
-            break;
-        }
-
-        if ((vfmode & VFM_STBRN) == 0)
-            break;
-
-        if (vfile_err_no == ENOENT)
-            break;
-
-        if (n > 100) {
-            vfile_msg_fn(_("Give up (#%d)...\n"), ++n);
-            break;
-        }
-        
-        vfile_msg_fn(_("Retrying %s (#%d)...\n"), _purl(path), ++n);
-        sleep(1);
-    }
+    vfile_err_no = 0;
+    if ((vf = do_vfile_open(path, vftype, vfmode)))
+        vf->vf_path = strdup(path);
     
     return vf;
 }
