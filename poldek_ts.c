@@ -36,6 +36,8 @@
 #include "log.h"
 #include "i18n.h"
 
+extern int poldek_conf_promote_epoch;
+
 #define bitvect_slot_itype  unsigned int
 #define bitvect_slot_size   sizeof(bitvect_slot_itype) * CHAR_BIT
 #define bitvect_mask(b)     (1 << ((b) % (bitvect_slot_size)))
