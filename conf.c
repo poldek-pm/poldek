@@ -99,7 +99,8 @@ static struct tag global_tags[] = {
     { "choose equivalents manually", TYPE_BOOL , { 0 } },
     { "particle install", TYPE_BOOL, { 0 } },
     { "unique package names", TYPE_BOOL, { 0 } },
-    { "ftp sysuser as anon passwd", TYPE_BOOL , { 0 } },
+    { "vfile ftp sysuser as anon passwd", TYPE_BOOL , { 0 } },
+    { "ftp sysuser as anon passwd", TYPE_BOOL | TYPE_F_ALIAS, { 0 } },
     { "vfile external compress", TYPE_BOOL , { 0 } },
     { "promoteepoch", TYPE_BOOL, { 0 } },
     { "default index type", TYPE_STR, { 0 } },
@@ -296,26 +297,29 @@ const struct section *find_section(const char *name)
 
 
 static
-const struct tag *find_tag(const char *sectname, const char *key) 
+int find_tag(const char *sectname, const char *key,
+             const struct section **sectp) 
 {
     int i = 0;
     struct tag   *tags = NULL;
     const struct section *sect;
 
+    *sectp = NULL;
     if ((sect = find_section(sectname)) == NULL)
-        return NULL;
+        return -1;
+    *sectp = sect;
     
     tags = sect->tags;
     i = 0;
     while (tags[i].name) {
         if (strcmp(tags[i].name, key) == 0)
-            return &tags[i];
+            return i;
         
         if (fnmatch(tags[i].name, key, 0) == 0) 
-            return &tags[i];
+            return i;
         i++;
     }
-    return NULL;
+    return -1;
 }
 
 static
@@ -409,27 +413,16 @@ static int verify_section(const struct section *sect, tn_hash *ht)
     tags = sect->tags;
     
     while (tags[i].name) {
-        if (tags[i].flags & TYPE_F_REQUIRED)
+        if (tags[i].flags & TYPE_F_REQUIRED) {
             if (n_hash_get(ht, tags[i].name) == NULL) {
-                struct copt *opt;
-                struct tag  *t = NULL;
-
-                if (tags[i + 1].name)
-                    t = &tags[i + 1];
-                
-                if (t && (t->flags & TYPE_F_ALIAS) &&
-                    (opt = n_hash_get(ht, t->name))) {
-                    
-                    n_hash_insert(ht, tags[i].name, copt_link(opt));
-                    
-                } else {
-                    logn(LOGERR, "%s: missing required '%s'", sect->name,
-                         tags[i].name);
-                    nerr++;
-                }
+                logn(LOGERR, "%s: missing required '%s'", sect->name,
+                     tags[i].name);
+                nerr++;
             }
+        }
         i++;
     }
+    
 
     return nerr == 0;
 }
@@ -530,8 +523,10 @@ static int add_param(tn_hash *ht_sect, const char *section,
                      const char *path, int nline)
 {
     char *val, expanded_val[PATH_MAX];
+    const struct section *sect;
     const struct tag *tag;
     struct copt *opt;
+    int tagindex;
 
     if (*name != '_') {          /* user defined macro */
         char *p = name + 1;
@@ -543,7 +538,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
     }
     
     
-    if ((tag = find_tag(section, name)) == NULL) {
+    if ((tagindex = find_tag(section, name, &sect)) == -1) {
         if (*name == '_')
             validate = 0;
         
@@ -557,7 +552,8 @@ static int add_param(tn_hash *ht_sect, const char *section,
             return 0;
         }
     }
-    
+
+    tag = &sect->tags[tagindex];
         
     msgn_i(3, 2, "%s::%s = %s", section, name, value);
     
@@ -589,10 +585,28 @@ static int add_param(tn_hash *ht_sect, const char *section,
             return 0;
         }
     }
-    
+
+    if (tag->flags & TYPE_F_ALIAS) {
+        int n = tagindex;
+        char *p = NULL;
+        while (n > 0) {
+            n--;
+            if ((sect->tags[n].flags & TYPE_F_ALIAS) == 0) {
+                msg(5, "alias %s -> %s\n", name, sect->tags[n].name); 
+                p = name = sect->tags[n].name;
+                break;
+            }
+        }
+        if (p == NULL) {
+            logn(LOGERR, "%s: wrong alias (internal error)", name);
+            n_assert(0);
+        }
+        
+    }
+
     if (n_hash_exists(ht_sect, name)) {
         opt = n_hash_get(ht_sect, name);
-            
+        
     } else {
         opt = copt_new(name);
         n_hash_insert(ht_sect, opt->name, opt);
