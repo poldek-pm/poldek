@@ -1,0 +1,6 @@
+# $Id$
+
+# Mandrake 8.2; package info is taken from (APT's?) pkglist.cooker.bz2 file
+source1 = mdk,noautoup,type=hdrl \
+    ftp://ftp.ps.pl/mirrors/mandrake/8.2/i586/Mandrake/base/pkglist.cooker.bz2
+prefix1 = ftp://ftp.ps.pl/mirrors/mandrake/8.2/i586/Mandrake/RPMS/

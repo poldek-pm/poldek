@@ -1,7 +1,7 @@
 # $Id$
 
 AUTOMAKE_OPTIONS = 
-SUBDIRS   = vfile shell po intl
+SUBDIRS   = vfile shell po intl conf
 
 CFLAGS    = @CFLAGS@
 INCLUDES  = @TRURL_INCLUDE@
@@ -85,9 +85,9 @@ test_match_LDADD    = $(poldek_LDADD)
 
 
 EXTRA_DIST = poldek.1 poldek.pod \
-	     Makefile.extra *sample* \
-	     poldek.spec* poldek-suse.spec* $(bin_SCRIPTS) \
-	     trurlib/
+	     Makefile.extra poldekrc *.sample \
+	     poldek.spec* poldek-suse.spec* $(bin_SCRIPTS) conf/ \
+	     trurlib/ 
 
 OMIT_DEPENDENCIES = narray.h tfn_types.h nassert nbuf.h nhash.h nlist.h nstr.h \
 		    nassert.h trurl.h
@@ -99,7 +99,7 @@ MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess config.status config.log aclocal.m4 \
 			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 *.html \
-			ABOUT-NLS po/*~ po/*.pot
+			ABOUT-NLS po/*~ po/*.pot conf/*~
 
 poldek.1: poldek.pod
 	$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@
@@ -138,7 +138,7 @@ dist-hook:
 	$(MAKE) -C $(distdir)/trurlib distclean
 
 clean-local:
-	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa*
+	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* conf/*~
 
 all-trurlib:
 	@echo "Building local trurlib...";                                \

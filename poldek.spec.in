@@ -2,6 +2,10 @@
 # 
 # spec is based on PLD's poldek.spec available at <http://cvs.pld.org.pl/SPECS/>
 #
+# To make config for particular distro as /etc/poldek.conf do:
+# rpm -bb ... --define 'distro {pld,rh,mdk}'
+#  
+
 Summary:	RPM packages management helper tool
 Name:		poldek
 Version:	@VERSION@
@@ -54,9 +58,13 @@ install -d $RPM_BUILD_ROOT%{_sysconfdir}
 %{__make} install DESTDIR=$RPM_BUILD_ROOT
 %{?_with_static:rm -f $RPM_BUILD_ROOT/%{_bindir}/rpmvercmp}
 
-sed "s/i686/%{_target_cpu}/g" < poldekrc.sample > $RPM_BUILD_ROOT/etc/%{name}.conf
+DISTRO="%{distro}"
+if [ -z "$DISTRO" ]; then  
+	DISTRO="pld"
+fi
 
-gzip -9nf README* *sample* NEWS TODO
+sed "s/i686/%{_target_cpu}/g" < conf/poldekrc.sample-${DISTRO} > $RPM_BUILD_ROOT/etc/%{name}.conf
+gzip -9nf README* *sample* conf/*sample* NEWS TODO 
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -66,7 +74,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(644,root,root) %config(noreplace) %verify(not md5 size mtime) %{_sysconfdir}/%{name}.conf
 %attr(755,root,root) %{_bindir}/*
 %{_mandir}/man1/%{name}*
-%doc *.gz
+%doc *.gz conf/*.gz
 
 %define date    %(echo `LC_ALL="C" date +"%a %b %d %Y"`)
 %changelog
@@ -74,6 +82,9 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.15  2002/04/10 17:02:31  mis
+- easier playing with configs
+
 Revision 1.14  2002/04/06 13:57:27  mis
 - added HTTP client; curl module not compiled by default
 

@@ -1,7 +1,9 @@
 # $Id$
 # Sample poldek configuration for removable media
+
 # Note that all indexes must be on the first CD 
-# Remember to configure vfjuggle (by enviroment or by $HOME/.vfjugglerc)
+# Remember to configure vfjuggle by enviroment varialbles setting
+# or by $ vi $HOME/.vfjugglerc.
 
 source1  = cdrom://cdrom_1/cd1/
 prefix1  = cdrom://cdrom_1/PLD/RPMS
@@ -14,6 +16,4 @@ prefix3 = cdrom://cdrom_3/PLD/RPMS
 
 
 cdrom_get = "/usr/bin/vfjuggle %d %Pn"
-
-
 

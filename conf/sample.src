@@ -1,0 +1,13 @@
+# $Id$
+
+source = signed,noauto,noautoup,gpg ftp://ftp.znienacka-gpg.com.pl/RPMS/
+source = pld,noauto,noautoup ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
+
+# If package index and packages stored under diffrent locations, 
+# then source and packages prefix must be numbered
+source1 = mycd,noauto,noautoup /tmp/packages.dir.gz
+prefix1 = /cdrom/RPMS
+
+source2 = pld-http,noauto,noautoup  http://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
+prefix2 = ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
+
