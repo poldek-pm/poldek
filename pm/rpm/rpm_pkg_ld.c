@@ -173,14 +173,23 @@ tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, int crtype)
                 n_assert(crtype == PMCAP_REQ);
                 cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
                 
-            } else if (isInstallPreReq(flag)) {
-                n_assert(crtype == PMCAP_REQ);
-                cr_flags |= CAPREQ_PREREQ;
+            } else {
+                if (isInstallPreReq(flag)) {
+                    n_assert(crtype == PMCAP_REQ);
+                    cr_flags |= CAPREQ_PREREQ;
+                }
                 
-            } else if (isErasePreReq(flag)) {
-                n_assert(crtype == PMCAP_REQ);
-                cr_flags |= CAPREQ_PREREQ_UN;
+                if (isErasePreReq(flag)) {
+                    n_assert(crtype == PMCAP_REQ);
+                    cr_flags |= CAPREQ_PREREQ_UN;
+                }
+                
+                DBGFIF(cr_flags & (CAPREQ_PREREQ | CAPREQ_PREREQ_UN),
+                       "%s (%s, %s)\n", name,
+                       cr_flags & CAPREQ_PREREQ ? "pre":"",
+                       cr_flags & CAPREQ_PREREQ_UN ? "postun":"");
             }
+            
 #endif /* HAVE_RPM_EXTDEPS */
         }
         
