@@ -3,15 +3,13 @@
 CURL_SRCS = vfcurl.c vfcurl.h
 
 if ENABLE_VFILE_CURL
-ADD_SRCS = $(CURL_SRCS)
-else
-ADD_SRCS =
+CURL_SRCS_ = $(CURL_SRCS)
 endif
 
 
 INCLUDES = @TRURL_INCLUDE@
 lib_LIBRARIES      = libvfile.a 
-libvfile_a_SOURCES = vfile.c fetch.c p_open.c $(ADD_SRCS)
+libvfile_a_SOURCES = vfile.c fetch.c p_open.c $(CURL_SRCS_)
 
 pkgincludedir = $(includedir)/vfile
 pkginclude_HEADERS = vfile.h p_open.h
@@ -19,6 +17,7 @@ pkginclude_HEADERS = vfile.h p_open.h
 noinst_PROGRAMS = sample
 sample_SOURCES  = sample.c
 sample_LDADD    = libvfile.a @TRURL_LDFLAG@ -lutil
+EXTRA_DIST      = $(CURL_SRCS) 
 
 dist-hook:
 	rm -rf $(distdir)/.deps

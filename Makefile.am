@@ -38,16 +38,14 @@ libpoldek_a_SOURCES = \
 	  dbpkg.c dbpkg.h		\
 	  rpmdb_it.c rpmdb_it.h
 
-iclientSRCS = shell.c sh_uninstall.c
+SHELL_SRCS = shell.c sh_uninstall.c
 
 if ENABLE_INTERACTIVE_MODE
-ICSRCS = $(iclientSRCS)
-else
-ICSRCS =
+SHELL_SRCS_ = $(SHELL_SRCS)
 endif
 
 bin_PROGRAMS        = poldek rpmvercmp
-poldek_SOURCES      = main.c $(ICSRCS)
+poldek_SOURCES      = main.c $(SHELL_SRCS_)
 poldek_LDADD        = vfile/libvfile.a libpoldek.a @TRURL_LDFLAG@ -lutil
 poldek_DEPENDENCIES = vfile/libvfile.a libpoldek.a
 
@@ -56,7 +54,7 @@ rpmvercmp_LDADD     =
 rpmvercmp_LIBS      = -lrpm
 rpmvercmp_LDFLAGS   = 
 
-EXTRA_DIST = $(iclientSRCS) \
+EXTRA_DIST = $(SHELL_SRCS) \
 	     poldek.1 poldek.pod \
 	     Makefile.extra *sample* \
 	     VERSION poldek.spec
@@ -71,7 +69,7 @@ dist-hook:
 	rm -rf $(distdir)/.deps
 
 clean-local:
-	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\#
+	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa*
 
 
 
