@@ -6,27 +6,25 @@
 # rpm -bb ... --define 'distro {pld,rh,mdk}'
 #  
 
-Summary:	RPM packages management helper tool
+Summary:	A full-featured frontend to RPM
 Name:		poldek
 Version:	@VERSION@
 Release:	1%{?_with_static:.static}
-License:	GPL
+License:	GPLv2
 Group:		Applications/System
 Source0:	http://team.pld.org.pl/~mis/poldek/download/%{name}-%{version}.tar.bz2
 URL:		http://team.pld.org.pl/~mis/poldek/
 Requires:	/bin/rpm
 BuildRequires:	bzip2-devel
-BuildRequires:	db3-devel >= 3.1.14-2
-#BuildRequires:	curl-devel >= 7.8
+#BuildRequires:	db3-devel >= 3.1.14-2
 BuildRequires:	rpm-devel >= 4.0
 #BuildRequires:	popt-static
 BuildRequires:	openssl-devel
 BuildRequires:	readline-devel
 BuildRequires:	zlib-devel
-BuildRequires:	/usr/bin/pod2man
+#BuildRequires:	/usr/bin/pod2man
 BuildRequires:	pcre-devel
 %{?_with_static:BuildRequires:	bzip2-static}
-%{?_with_static:BuildRequires:	curl-static}
 %{?_with_static:BuildRequires:	openssl-static}
 %{?_with_static:BuildRequires:	rpm-static}
 %{?_with_static:BuildRequires:	zlib-static}
@@ -44,6 +42,22 @@ similar to the shell mode of Perl's CPAN.
 
 %{?_with_static:This version is statically linked}
 
+%package devel
+Summary:	libpoldek headers and documentation
+Group:		Development/Libraries
+Requires:	%{name} = %{version}-%{release}
+
+%description devel
+poldek's libraries headers and documentation
+
+%package static
+Summary:	libpoldek static library
+Group:		Development/Libraries
+Requires:	%{name}-devel = %{version}-%{release}
+
+%description static
+poldek static libraries
+
 %prep 
 %setup -q
 
@@ -58,19 +72,43 @@ install -d $RPM_BUILD_ROOT%{_sysconfdir}
 %{__make} install DESTDIR=$RPM_BUILD_ROOT
 %{?_with_static:rm -f $RPM_BUILD_ROOT/%{_bindir}/rpmvercmp}
 
-DISTRO=%{?distro:%{distro}}%{!?distro:pld}
-sed "s/i686/%{_target_cpu}/g" < conf/poldekrc.sample-${DISTRO} > $RPM_BUILD_ROOT/etc/%{name}.conf
-gzip -9nf README* *sample* conf/poldekrc* NEWS TODO 
+#DISTRO=%{?distro:%{distro}}%{!?distro:pld}
+#sed "s/i686/%{_target_cpu}/g" < conf/poldekrc.sample-${DISTRO} > $RPM_BUILD_ROOT/etc/%{name}.conf
+
+gzip -9nf README* conf/*sample* NEWS TODO 
+
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
+%post   -p /sbin/ldconfig
+%postun -p /sbin/ldconfig
+
 %files
 %defattr(644,root,root,755)
-%attr(644,root,root) %config(noreplace) %verify(not md5 size mtime) %{_sysconfdir}/%{name}.conf
+%dir %{_sysconfdir}/%{name}
+%attr(644,root,root) %config(noreplace) %verify(not md5 size mtime) %{_sysconfdir}/%{name}/*.conf
+%attr(644,root,root) %{_sysconfdir}/%{name}/%{name}.alias
 %attr(755,root,root) %{_bindir}/*
+%attr(755,root,root) %{_libdir}/lib*.so.*.*
+%dir %{_libdir}/%{name}
+%attr(755,root,root) %{_libdir}/%{name}/*
 %{_mandir}/man1/%{name}*
 %doc *.gz conf/*.gz
+
+%files devel
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/*.so
+%{_libdir}/lib*.la
+%{_includedir}/%{name}
+%{_includedir}/tndb
+%{_includedir}/trurl
+%{_includedir}/vfile
+
+%files static
+%defattr(644,root,root,755)
+%{_libdir}/lib*.a
+
 
 %define date    %(echo `LC_ALL="C" date +"%a %b %d %Y"`)
 %changelog
@@ -78,6 +116,9 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.21  2004/09/23 20:28:08  mis
+- updated to 0.2x series (devel and static subpackage, etc)
+
 Revision 1.20  2002/11/07 17:41:07  mis
 - used tar.bz2 source
 
