@@ -79,7 +79,7 @@ struct pkgtags_s {
 
 static
 int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
-                const char *pathname, int nline);
+                const char *pathname, off_t offs);
 static
 void pkgtags_clean(struct pkgtags_s *pkgt);
 
@@ -189,8 +189,8 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     struct pkgdir     *pkgdir = NULL;
     struct vfile      *vf;
     char              *line, *linebuf;
-    int               line_size;
-    int               nerr = 0, n, nline, nread;
+    int               line_size, nline;
+    int               nerr = 0, nread;
     tn_array          *depdirs = NULL;
     char              idxpath[PATH_MAX];
     
@@ -199,11 +199,10 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     if (vf == NULL)
         return NULL;
     
-    n = 0;
-    nline = 0;
     line_size = 4096;
     line = linebuf = malloc(line_size);
-
+    nline = 0;
+    
     while ((nread = getline(&line, &line_size, vf->vf_stream)) > 0) {
         char *p;
 
@@ -352,12 +351,11 @@ void pkgdir_free(struct pkgdir *pkgdir)
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 {
     struct pkgtags_s   pkgt;
-    char               *line_bufs[2], *line;
-    int                line_bufs_size[2], *line_size, last_value_len = 0;
-    char               last_tag = '\0';
-    char               *last_value = NULL, *last_value_endp = NULL;
-    int                nerr = 0, n, nline, nread, i;
-    struct             vfile *vf;
+    off_t              offs;
+    char               *line;
+    int                line_size;
+    int                nerr = 0, nread, i;
+    struct vfile       *vf;
     int                flag_skip_bastards = 0, flag_fullflist = 0;
     int                flag_lddesc = 0;
     tn_array           *only_dirs;
@@ -399,44 +397,15 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     
     pkgdir->foreign_depdirs = only_dirs;
     vf = pkgdir->vf;
-    n = 0;
-    nline = 0;
-    last_value_endp = NULL;
-
     memset(&pkgt, 0, sizeof(pkgt));
-    pkgt.flags = 0;
-    
+    line_size = 4096;
+    line = malloc(line_size);
 
-    line_bufs_size[0] = line_bufs_size[1] = 4*4096;
-    line_bufs[0] = malloc(line_bufs_size[0]);
-    line_bufs[1] = malloc(line_bufs_size[1]);
-    line = line_bufs[0];
-    line_size = &line_bufs_size[0];
-
-
-    while ((nread = getline(&line_bufs[n], &line_bufs_size[n],
-                            vf->vf_stream)) > 0) {
-        char *p, *q;
-
-        line = line_bufs[n];
-        if (++n == 2)
-            n = 0;
-        
-        nline++;
+    while ((nread = getline(&line, &line_size, vf->vf_stream)) > 0) {
+        offs = ftell(vf->vf_stream);
         
         if (*line == '\n') {        /* empty line -> end of record */
             struct pkg *pkg;
-            if (last_value_endp) {
-                if (!add2pkgtags(&pkgt, last_tag, last_value,
-                                 pkgdir->path, nline)) {
-                    nerr++;
-                    goto l_end;
-                }
-                
-                DBGMSG("INSERT %c = %s\n", last_tag, last_value);
-                last_value_endp = NULL;
-            }
-
             DBGMSG("\n\nEOR\n");
             pkg = pkg_new_from_tags(&pkgt);
             if (pkg) {
@@ -444,151 +413,129 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                 n_array_push(pkgdir->pkgs, pkg);
                 pkg = NULL;
             }
-            
             pkgtags_clean(&pkgt);
             
         } else if (*line == ' ') {      /* continuation */
-            int nleft;
-            
-            log(LOGERR, "%s:%d: syntax error\n", pkgdir->path, nline);
+            log(LOGERR, "%s:%d: syntax error\n", pkgdir->path, offs);
             exit(EXIT_FAILURE);
-            n_assert(last_value_endp);
-            n_assert(last_value);
-            
-            nleft =  (last_value_endp - last_value);
-            if (nleft > 2) {
-                *last_value_endp++ = '\n';
-                nleft--;
-                strncat(last_value, line, nleft);
-                last_value_endp[nleft] = '\0';
-                last_value_endp += strlen(last_value_endp);
-                *last_value_endp = '\0';
-            }
-            
+
         } else {
+            char *p, *val;
+            
             while (nread && line[nread - 1] == '\n')
                 line[--nread] = '\0';
-            
-            q = line + 1;
 
-            if (*line == '\0' || *q != ':') {
-                log(LOGERR, "%s:%d(%s): ':' expected\n", pkgdir->path, nline, line);
+            p = val = line + 1;
+            if (*line == '\0' || *p != ':') {
+                log(LOGERR, "%s:%d(%s): ':' expected\n", pkgdir->path, offs, line);
                 nerr++;
                 goto l_end;
             }
-
-            if (last_value_endp) {
-                DBGMSG("INSERT %c = %s\n", last_tag, last_value);
-                add2pkgtags(&pkgt, last_tag, last_value, pkgdir->path, nline);
-            }
-
-            if (*line == 'P') {
-                if (pkgt.flags & PKGT_HAS_CAP) {
-                    log(LOGERR, "%s:%d: double cap tag\n", pkgdir->path, nline);
-                    break;
-                }
-                
-                pkgt.caps = capreq_arr_restore(vf->vf_stream,
-                                               flag_skip_bastards);
-                pkgt.flags |= PKGT_HAS_CAP;
-                last_value_endp = NULL;
-                continue;
-                
-                
-            } else if (*line ==  'R') {
-                if (pkgt.flags & PKGT_HAS_REQ) {
-                    log(LOGERR, "%s:%d: double req tag\n", pkgdir->path, nline);
-                    break;
-                }
-                
-                pkgt.reqs = capreq_arr_restore(vf->vf_stream,
-                                               flag_skip_bastards);
-                pkgt.flags |= PKGT_HAS_REQ;
-                last_value_endp = NULL;
-                continue;
-                
-            } else if (*line == 'C') {
-                if (pkgt.flags & PKGT_HAS_CNFL) {
-                    log(LOGERR, "%s:%d: double cnfl tag\n", pkgdir->path, nline);
-                    break;
-                }
-                
-                pkgt.cnfls = capreq_arr_restore(vf->vf_stream,
-                                                flag_skip_bastards);
-                pkgt.flags |= PKGT_HAS_CNFL;
-                last_value_endp = NULL;
-                continue;
-                
-            } else if (*line == 'L') { /* files */
-                pkgt.pkgfl = pkgfl_restore_f(vf->vf_stream, NULL, 0);
-                n_assert(pkgt.pkgfl);
-                //printf("DUMP %p %d\n", pkgt.pkgfl, n_array_size(pkgt.pkgfl));
-                //pkgfl_dump(pkgt.pkgfl);
-                if (pkgt.pkgfl)
-                    pkgt.flags |= PKGT_HAS_FILES;
-                last_value_endp = NULL;
-                continue;
-                
-            } else if (*line == 'l') {
-                pkgt.other_files_offs = ftell(vf->vf_stream);
-                
-                if (flag_fullflist == 0 && only_dirs == NULL) {
-                    pkgfl_skip_f(vf->vf_stream);
-                    
-                } else {
-                    tn_array *fl;
-                    
-                    fl = pkgfl_restore_f(vf->vf_stream, only_dirs, 1);
-
-                    if (pkgt.pkgfl == NULL) {
-                        pkgt.pkgfl = fl;
-                        pkgt.flags |= PKGT_HAS_FILES;
-                        
-                    } else {
-                        while (n_array_size(fl)) 
-                            n_array_push(pkgt.pkgfl, n_array_shift(fl));
-                            
-                        n_array_free(fl);
-                    }
-                }
-                
-                last_value_endp = NULL;
-                continue;
-                
-            } else if (*line == 'U') { /* pkguinf binary data */
-
-                if (flag_lddesc) {
-                    pkgt.pkguinf = pkguinf_restore(vf->vf_stream, 0);
-                    pkgt.pkguinf_offs = 0;
-                } else {
-                    pkgt.pkguinf_offs = ftell(vf->vf_stream);
-                    pkguinf_skip(vf->vf_stream);
-                }
-                	
-                last_value_endp = NULL;
-                continue;
-            } 
             
-            
-            p = q;
-            
-            *q++ = '\0';
-            q = eatws(q);
+            *val++ = '\0';
+            val = eatws(val);
             n_assert(*line && *(line + 1) == '\0');
 
-            last_tag = *line;
-            last_value = q;
-            last_value_len = nread - (q - line);
-            last_value_endp = last_value + last_value_len;
-            *last_value_endp = '\0';
+            switch (*line) {
+                case 'N':
+                case 'V':
+                case 'A':
+                case 'S':
+                case 'T':
+                    if (!add2pkgtags(&pkgt, *line, val, pkgdir->path, offs)) {
+                        nerr++;
+                        goto l_end;
+                    }
+                    break;
+
+                case 'P':
+                    if (pkgt.flags & PKGT_HAS_CAP) {
+                        log(LOGERR, "%s:%d: double cap tag\n", pkgdir->path, offs);
+                        break;
+                    }
+                
+                    pkgt.caps = capreq_arr_restore(vf->vf_stream,
+                                                   flag_skip_bastards);
+                    pkgt.flags |= PKGT_HAS_CAP;
+                    break;
+                    
+                case 'R':
+                    if (pkgt.flags & PKGT_HAS_REQ) {
+                        log(LOGERR, "%s:%d: double req tag\n", pkgdir->path, offs);
+                        break;
+                    }
+                    
+                    pkgt.reqs = capreq_arr_restore(vf->vf_stream,
+                                                   flag_skip_bastards);
+                    pkgt.flags |= PKGT_HAS_REQ;
+                    break;
+                    
+                case 'C':
+                    if (pkgt.flags & PKGT_HAS_CNFL) {
+                        log(LOGERR, "%s:%d: double cnfl tag\n", pkgdir->path, offs);
+                        break;
+                    }
+                
+                    pkgt.cnfls = capreq_arr_restore(vf->vf_stream,
+                                                    flag_skip_bastards);
+                    pkgt.flags |= PKGT_HAS_CNFL;
+                    break;
+
+                case 'L':
+                    pkgt.pkgfl = pkgfl_restore_f(vf->vf_stream, NULL, 0);
+                    n_assert(pkgt.pkgfl);
+                    //printf("DUMP %p %d\n", pkgt.pkgfl, n_array_size(pkgt.pkgfl));
+                    //pkgfl_dump(pkgt.pkgfl);
+                    if (pkgt.pkgfl)
+                        pkgt.flags |= PKGT_HAS_FILES;
+                    break;
+                    
+                case 'l':
+                    pkgt.other_files_offs = ftell(vf->vf_stream);
+                
+                    if (flag_fullflist == 0 && only_dirs == NULL) {
+                        pkgfl_skip_f(vf->vf_stream);
+                        
+                    } else {
+                        tn_array *fl;
+                        
+                        fl = pkgfl_restore_f(vf->vf_stream, only_dirs, 1);
+                        
+                        if (pkgt.pkgfl == NULL) {
+                            pkgt.pkgfl = fl;
+                            pkgt.flags |= PKGT_HAS_FILES;
+                            
+                        } else {
+                            while (n_array_size(fl)) 
+                            n_array_push(pkgt.pkgfl, n_array_shift(fl));
+                            
+                            n_array_free(fl);
+                        }
+                    }
+                    break;
+
+                case 'U':
+                    if (flag_lddesc) {
+                        pkgt.pkguinf = pkguinf_restore(vf->vf_stream, 0);
+                        pkgt.pkguinf_offs = 0;
+                    } else {
+                        pkgt.pkguinf_offs = ftell(vf->vf_stream);
+                        pkguinf_skip(vf->vf_stream);
+                    }
+                    break;
+
+                default:
+                    log(LOGERR, "%s:%d: unknown %c tag\n", pkgdir->path, offs, *line);
+                    nerr++;
+                    break;
+            }
         }
     }
     
  l_end:
     
     pkgtags_clean(&pkgt);
-    free(line_bufs[0]);
-    free(line_bufs[1]);
+    free(line);
 
     if (nerr == 0 && n_array_size(pkgdir->pkgs) == 0) {
         msg(2, "%s: empty(?)\n", pkgdir->path);
@@ -602,14 +549,14 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 #define sizeof_pkgt(memb) (sizeof((pkgt)->memb) - 1)
 static
 int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
-                const char *pathname, int nline) 
+                const char *pathname, off_t offs) 
 {
     int err = 0;
     
     switch (tag) {
         case 'N':
             if (pkgt->flags & PKGT_HAS_NAME) {
-                log(LOGERR, "%s:%d: double name tag\n", pathname, nline);
+                log(LOGERR, "%s:%d: double name tag\n", pathname, offs);
                 err++;
             } else {
                 memcpy(pkgt->name, value, sizeof(pkgt->name)-1);
@@ -619,7 +566,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             
         case 'V':
             if (pkgt->flags & PKGT_HAS_EVR) {
-                log(LOGERR, "%s:%d: double evr tag\n", pathname, nline);
+                log(LOGERR, "%s:%d: double evr tag\n", pathname, offs);
                 err++;
             } else {
                 memcpy(pkgt->evr, value, sizeof(pkgt->evr)-1);
@@ -630,7 +577,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             
         case 'A':
             if (pkgt->flags & PKGT_HAS_ARCH) {
-                log(LOGERR, "%s:%d: double arch tag\n", pathname, nline);
+                log(LOGERR, "%s:%d: double arch tag\n", pathname, offs);
                 err++;
             } else {
                 memcpy(pkgt->arch, value, sizeof(pkgt->arch)-1);
@@ -641,7 +588,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
 
         case 'S':
             if (pkgt->flags & PKGT_HAS_SIZE) {
-                log(LOGERR, "%s:%d: double size tag\n", pathname, nline);
+                log(LOGERR, "%s:%d: double size tag\n", pathname, offs);
                 err++;
             } else {
                 pkgt->size = atoi(value);
@@ -651,7 +598,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             
         case 'T':
             if (pkgt->flags & PKGT_HAS_BTIME) {
-                log(LOGERR, "%s:%d: double btime tag\n", pathname, nline);
+                log(LOGERR, "%s:%d: double btime tag\n", pathname, offs);
                 err++;
             } else {
                 pkgt->btime = atoi(value);
@@ -660,7 +607,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             break;
             
         default:
-            log(LOGERR, "%s:%d: unknown tag %c\n", pathname, nline, tag);
+            log(LOGERR, "%s:%d: unknown tag %c\n", pathname, offs, tag);
             n_assert(0);
     }
     
