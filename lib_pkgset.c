@@ -96,7 +96,7 @@ tn_array *poldek_get_avail_packages(struct poldek_ctx *ctx)
 }
 
 tn_array *poldek_search_avail_packages(struct poldek_ctx *ctx,
-                                       enum pkgset_search_tag tag,
+                                       enum poldek_search_tag tag,
                                        const char *value)
 {
     if (!poldek_load_sources(ctx))
