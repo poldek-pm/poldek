@@ -320,6 +320,13 @@ int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2)
     return strcmp(p1->name, p2->name);
 }
 
+
+int pkg_strncmp_name(const struct pkg *p1, const struct pkg *p2)
+{
+    return strncmp(p1->name, p2->name, strlen(p2->name));
+}
+
+
 int pkg_strcmp_ver(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc = 0;

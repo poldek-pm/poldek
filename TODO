@@ -1,7 +1,7 @@
 # $Id$
 
 * mis 2002/04/07
-- vhttp: support for HTTP redirects and auth
+- vhttp: support for HTTP auth
 - don't load full file list from db if "depdirs"
   is loaded from local db.
 

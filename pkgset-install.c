@@ -1818,12 +1818,14 @@ static void mark_namegroup(tn_array *pkgs, struct pkg *pkg, struct upgrade_s *up
         *p = '\0';
     
     tmpkg.name = prefix;
+
+    //*p = '-';
+    n = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_strncmp_name);
     
-    n = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
-    if (n < 0 && p) {
-        *p = '-';
-        n = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name);
-    }
+    
+    //if (n < 0 && p) {
+    //    n = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name);
+    // }
 
     if (n < 0)
         return;
