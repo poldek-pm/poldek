@@ -25,6 +25,9 @@ fi
 runcmd ./getlib.sh trurlib $getlib_mode
 runcmd ./getlib.sh tndb    $getlib_mode
 
+# generate po/POTFILES.in
+make -f Makefile.extra POTFILES_in
+
 runcmd libtoolize --force --automake
 runcmd aclocal
 runcmd autoheader
