@@ -178,13 +178,13 @@ int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2);
 /* strncmp(p1->name, p2->name, strlen(p2->name))*/
 int pkg_strncmp_name(const struct pkg *p1, const struct pkg *p2);
 
-
 /* with warn message */
 int pkg_cmp_uniq(const struct pkg *p1, const struct pkg *p2);
 
 int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
 int pkg_deepcmp_name_evr_rev_verify(const struct pkg *p1, const struct pkg *p2);
 
+int pkg_eq_name_prefix(const struct pkg *pkg1, const struct pkg *pkg2);
 
 int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr);
 

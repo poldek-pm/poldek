@@ -83,7 +83,7 @@ struct inst_s {
     tn_array       *rpmacros;      /* rpm macros to pass to cmdline (char *opts[]) */
     tn_array       *hold_pkgnames; 
     
-    int  (*askpkg_fn)(const char *, struct pkg **pkgs);
+    int  (*askpkg_fn)(const char *, struct pkg **pkgs, struct pkg *deflt);
     int  (*ask_fn)(int default_a, const char *, ...);
 };
 

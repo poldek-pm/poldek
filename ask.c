@@ -58,9 +58,9 @@ int ask_yn(int default_a, const char *fmt, ...)
 }
 
 
-int ask_pkg(const char *capname, struct pkg **pkgs)
+int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt)
 {
-    int i, a;
+    int i, a, default_i = 0;
     char *validchrs, *p;
 
     
@@ -76,10 +76,13 @@ int ask_pkg(const char *capname, struct pkg **pkgs)
     while(pkgs[i] != NULL && i < 24) {
         msgn(-1, "%c) %s", 'a' + i, pkg_snprintf_s(pkgs[i]));
         *p++ = 'a' + i;
+
+        if (deflt && deflt == pkgs[i])
+            default_i = i;
         i++;
     }
     
-    msg(-1, _("Which one do you want to install? [a]")); 
+    msg(-1, _("Which one do you want to install? [%c]"), 'a' + default_i); 
     a = askuser(STDIN_FILENO, validchrs, NULL);
     msg(-1, "_\n");
     

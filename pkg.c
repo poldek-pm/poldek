@@ -332,6 +332,26 @@ int pkg_strncmp_name(const struct pkg *p1, const struct pkg *p2)
     return strncmp(p1->name, p2->name, strlen(p2->name));
 }
 
+
+int pkg_eq_name_prefix(const struct pkg *pkg1, const struct pkg *pkg2) 
+{
+    char *p1, *p2;
+    int n;
+    
+    if ((p1 = strchr(pkg1->name, '-')) == NULL)
+        p1 = strchr(pkg1->name, '\0');
+
+    if ((p2 = strchr(pkg2->name, '-')) == NULL)
+        p2 = strchr(pkg2->name, '\0');
+
+    n = p1 - pkg1->name;
+    if (n - (p2 - pkg2->name) != 0)
+        return 0;
+
+    return strncmp(pkg1->name, pkg2->name, n) == 0;
+}
+
+
 static __inline__
 int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2);
 

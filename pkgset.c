@@ -47,7 +47,7 @@
 
 /* prototypes from ask.c */
 int ask_yn(int default_a, const char *fmt, ...);
-int ask_pkg(const char *virtual, struct pkg **pkgs);
+int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt);
 
 #define obstack_chunk_alloc n_malloc
 #define obstack_chunk_free  n_free
