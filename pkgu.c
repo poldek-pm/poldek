@@ -94,6 +94,7 @@ static int is_empty(const char *s)
             is_empty = 0;
             break;
         }
+        s++;
     }
     return is_empty;
 }
