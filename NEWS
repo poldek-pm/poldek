@@ -1,7 +1,18 @@
 0.17.3 (not released yet)
+* support for GPG/PGP signatures verification (new "gpg" and "pgp" 
+  source options)
+
+* vftp: URLs with user and password (ftp://user:passwd@host:port/path/ syntax) 
+  are supported (Andreas Piesk <a.piesk@gmx.net>)
+
+* vftp: new "ftp_sysuser_as_anon_passwd" option causes sending 
+  login@hostname as anonymous FTP password 
+
 * new "noautoup" source option
+
 * shell: added long listig format of file list
-* misc fixes to compile on SuSE
+
+* misc fixes to compile on SuSE (with rpm 3.x)
 
 
 0.17.2
@@ -107,8 +118,8 @@
 * added global config /etc/poldek.conf usage 
 * fixed prereq loop detection
 * added '@' to list of valid characters in package filename
-  (Rafa³ Kleger-Rudomin  <klakier@pld.org.pl>)
-* vfjuggle: sed is used instead of awk (Rafa³ Kleger-Rudomin  <klakier@pld.org.pl>)
+  (Rafal Kleger-Rudomin  <klakier@pld.org.pl>)
+* vfjuggle: sed is used instead of awk (Rafal Kleger-Rudomin  <klakier@pld.org.pl>)
 * shell: ls: fixed packages sorting 
 * minor bugfixes 
 

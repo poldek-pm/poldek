@@ -365,9 +365,15 @@ B<OPTIONS> describes source options; possible values are:
 
 =item * B<noautoup> - don't update this source by default
 
+=item * B<gpg> - verifiy package GPG signatures
+
+=item * B<pgp> - verifiy package PGP signatures
+
 =back
 
 Examples:
+
+source = pld,gpg,noautoup       ftp://zn/PLD/ra/RPMS
 
 source = pld-test,noauto       /mnt/PLD-test/RPMS
 

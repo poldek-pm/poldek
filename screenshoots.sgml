@@ -34,7 +34,7 @@ reload                                         Reload installed packages
 help                                           Display this help
 quit                                           Quit poldek
 
-For now "search" and "desc" commands doesn't work with installed packages.
+For now "search" and "desc" commands don't work with installed packages.
 
 Type COMMAND -? for details.
 poldek&gt;
