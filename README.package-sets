@@ -6,14 +6,13 @@ Each package is specified in one line:
 
 [!]NAME [EVR] | @VIRTUAL [DEFAULT_NAME [DEFAULT_EVR]]
 
-'~' ('~' obsolets '!') before means that poldek in interactive mode will ask 
-user before install it, in batch mode package will not be 
+'~' ('~' obsolets '!') before means that poldek in interactive mode
+will ask user before install it, in batch mode package will not be
 installed.
 
-'@' specifies virtual package, like '!', in interactive mode 
-poldek will ask user which one of available packages he want 
-to install, otherwise, in batch mode the default package will 
-be selected.
+'@' specifies virtual package, like '~', in interactive mode poldek
+will ask user which one of available packages he want to install,
+otherwise, in batch mode the default package will be selected.
 
 Hashed lines are treated as comments.
 
