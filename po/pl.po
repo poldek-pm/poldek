@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
-"POT-Creation-Date: 2002-03-25 20:52+0100\n"
+"POT-Creation-Date: 2002-03-26 00:04+0100\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: \n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -930,7 +930,7 @@ msgstr "Nie ma roboty"
 msgid "%s: %s unknown option"
 msgstr "%s: %s nieznana opcja"
 
-#: pkgset-load.c:259 shell/shell.c:808
+#: pkgset-load.c:259 shell/shell.c:807
 #, c-format
 msgid "%d package read"
 msgid_plural "%d packages read"
@@ -1440,38 +1440,38 @@ msgstr "Przeszukiwanie pakietów..."
 msgid "_done."
 msgstr "_zrobione."
 
-#: shell/shell.c:64
+#: shell/shell.c:63
 msgid "Quit poldek"
 msgstr ""
 
-#: shell/shell.c:71
+#: shell/shell.c:70
 msgid "Display this help"
 msgstr ""
 
-#: shell/shell.c:81
+#: shell/shell.c:80
 msgid "Reload installed packages"
 msgstr "Prze³aduj listê zainstalowanych pakietów"
 
-#: shell/shell.c:322
+#: shell/shell.c:321
 msgid "  Defined aliases:\n"
 msgstr "  Zdefiniowane aliasy:\n"
 
-#: shell/shell.c:455
+#: shell/shell.c:454
 #, c-format
 msgid "%s: no such command"
 msgstr "%s: nie ma takiej komendy"
 
-#: shell/shell.c:668
+#: shell/shell.c:667
 #, c-format
 msgid "%s: no such package"
 msgstr "%s: nie ma takiego pakietu"
 
-#: shell/shell.c:717
+#: shell/shell.c:716
 #, c-format
 msgid "[OPTION...] %s"
 msgstr "[OPCJA...] %s"
 
-#: shell/shell.c:722
+#: shell/shell.c:721
 msgid ""
 "\n"
 "For now \"search\" and \"desc\" commands doesn't work with installed "
@@ -1481,7 +1481,7 @@ msgstr ""
 "Jak dot±d komendy \"search\" i \"desc\" nie dzia³aj± z zainstalowanymi "
 "pakietami.\n"
 
-#: shell/shell.c:725
+#: shell/shell.c:724
 msgid ""
 "\n"
 "Type COMMAND -? for details.\n"
@@ -1489,34 +1489,34 @@ msgstr ""
 "\n"
 "Wpisz KOMENDA -? by otrzymaæ pomoc na temat danej komendy.\n"
 
-#: shell/shell.c:805
+#: shell/shell.c:804
 #, c-format
 msgid "Loading cache %s..."
 msgstr "Wczytywanie %s..."
 
-#: shell/shell.c:823
+#: shell/shell.c:822
 msgid "Load installed packages failed"
 msgstr "B³±d odczytu zainstalowanych pakietów"
 
-#: shell/shell.c:920
+#: shell/shell.c:919
 msgid "Just type \"reload\"\n"
 msgstr "Po prostu daj \"reload\"\n"
 
-#: shell/shell.c:993
+#: shell/shell.c:992
 #, c-format
 msgid "ambiguous command %s"
 msgstr "niejednoznaczna komenda %s"
 
-#: shell/shell.c:1004 shell/shell.c:1012
+#: shell/shell.c:1003 shell/shell.c:1011
 #, c-format
 msgid "ambiguous alias %s"
 msgstr "niejednoznaczny alias %s"
 
-#: shell/shell.c:1118
+#: shell/shell.c:1116
 msgid "not a tty"
 msgstr ""
 
-#: shell/shell.c:1139
+#: shell/shell.c:1137
 msgid ""
 "\n"
 "Welcome to the poldek shell mode. Type \"help\" for help with commands.\n"
@@ -1531,8 +1531,8 @@ msgid "Don't uninstall, but tell if it would work or not"
 msgstr "Nie deinstaluj, tylko sprawd¼ czy operacja przebiegnie pomy¶lnie"
 
 #: shell/uninstall.c:40
-msgid "%s: broken dependencies"
-msgstr "%s: niespe³nione zale¿no¶ci"
+msgid "Ignore broken dependencies"
+msgstr "Ignoruj niespe³nione zale¿no¶ci"
 
 #: shell/uninstall.c:50
 msgid "Uninstall packages"
