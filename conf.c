@@ -99,12 +99,14 @@ static struct tag fetcher_tags[] = {
     { "name",       TYPE_STR,  { 0 } },
     { "proto",      TYPE_STR | TYPE_F_REQUIRED, { 0 } },
     { "cmd",        TYPE_STR | TYPE_F_ENV | TYPE_F_REQUIRED, { 0 } },
+    {  NULL,           0, { 0 } }, 
 };
 
 static struct tag proxy_tags[] = {
     { "name",       TYPE_STR,  { 0 } },
     { "proto",      TYPE_STR, { 0 } },
     { "url",        TYPE_STR | TYPE_F_ENV, { 0 } },
+    {  NULL,           0, { 0 } }, 
 };
 
 
