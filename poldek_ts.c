@@ -675,7 +675,7 @@ static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf)
             verbose += 1;
         
     } else if (ts->getop_v(ts, POLDEK_OP_JUSTFETCH, POLDEK_OP_JUSTPRINT, 0)) {
-        if (!is_rwxdir(ts->rootdir)) {
+        if (!poldek_util_is_rwxdir(ts->rootdir)) {
             logn(LOGERR, "%s: %m", ts->rootdir);
             rc = 0;
         }

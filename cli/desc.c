@@ -172,7 +172,7 @@ static void show_caps(struct cmdctx *cmdctx, struct pkg *pkg)
     char *p, *colon = ", ";
     
 
-    term_width = term_get_width() - RMARGIN;
+    term_width = poldek_term_get_width() - RMARGIN;
     
     if (pkg->caps && n_array_size(pkg->caps)) {
         int ncaps, hdr_printed = 0;
@@ -225,7 +225,7 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
     if (pkg->reqs == NULL || n_array_size(pkg->reqs) == 0)
         return;
     
-    term_width = term_get_width() - RMARGIN;
+    term_width = poldek_term_get_width() - RMARGIN;
 
     for (i=0; i<n_array_size(pkg->reqs); i++) {
         struct capreq *cr = n_array_nth(pkg->reqs, i);
@@ -338,7 +338,7 @@ static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg)
     int i, term_width;
     
     
-    term_width = term_get_width() - RMARGIN;
+    term_width = poldek_term_get_width() - RMARGIN;
 
     if (pkg->reqpkgs && n_array_size(pkg->reqpkgs)) {
         int ncol = IDENT;
@@ -389,7 +389,7 @@ void show_revreqpkgs(struct cmdctx *cmdctx, struct pkg *pkg)
     int i, term_width;
     
     
-    term_width = term_get_width() - RMARGIN;
+    term_width = poldek_term_get_width() - RMARGIN;
 
     if (pkg->revreqpkgs && n_array_size(pkg->revreqpkgs)) {
         int ncol = IDENT;
@@ -423,7 +423,7 @@ static void show_cnfls(struct cmdctx *cmdctx, struct pkg *pkg)
     int i, ncol = 0;
     int term_width;
 
-    term_width = term_get_width() - RMARGIN;
+    term_width = poldek_term_get_width() - RMARGIN;
     if (pkg->cnfls && n_array_size(pkg->cnfls)) {
         int nobsls = 0;
         
@@ -623,7 +623,7 @@ static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt)
     if ((flist = pkg_info_get_flist(pkg)) == NULL)
         return;
 
-    term_width = term_get_width() - RMARGIN;
+    term_width = poldek_term_get_width() - RMARGIN;
     
     if (longfmt)
         list_files_long(cmdctx, flist->fl, 0);

@@ -16,7 +16,10 @@ AM_CFLAGS = @AM_CFLAGS@
 
 POD2MAN   = @POD2MAN@
 
+POLDEK_VERINFO   = 0:0:0
 lib_LTLIBRARIES = libpoldek.la
+libpoldek_la_LDFLAGS = -version-info $(POLDEK_VERINFO)
+#					   -export-symbols libpoldek.sym
 libpoldek_la_SOURCES =  \
 	  log.c log.h	   \
 	  poldek_term.c poldek_term.h	\
@@ -55,8 +58,12 @@ libpoldek_la_SOURCES =  \
 	  pkg_ver_cmp.h 
 
 pkgincludedir = $(includedir)/poldek
-nobase_pkginclude_HEADERS = poldek.h poldek_ts.h pkg.h \
-		            pkgdir/pkgdir.h pkgdir/source.h
+
+
+nobase_pkginclude_HEADERS = poldek.h poldek_ts.h pkg.h capreq.h pkgu.h \
+							pkgmisc.h arg_packages.h poldek_util.h \
+							poldek_term.h \
+							pm/pm.h pkgdir/pkgdir.h pkgdir/source.h 
 
 
 libpoldek_la_LIBADD = \
@@ -93,6 +100,7 @@ pkglib_SCRIPTS      = zlib-in-rpm.sh vfjuggle vfcompr vfsmb
 EXTRA_DIST = \
 		 $(pkglib_SCRIPTS) \
 	     Makefile.extra \
+		 libpoldek.sym \
 	     poldek.spec poldek-suse.spec \
 	     package-set.sample vfjugglerc.sample \
 	     m4/codeset.m4 m4/gettext.m4 m4/glibc21.m4 m4/iconv.m4 \

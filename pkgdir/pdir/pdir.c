@@ -825,7 +825,7 @@ static tn_array *parse_removed(char *str)
         const char   *name = NULL, *ver = NULL, *rel = NULL;
         int32_t      epoch = 0;
 
-        if (*p && parse_nevr(p, &name, &epoch, &ver, &rel)) {
+        if (*p && poldek_util_parse_nevr(p, &name, &epoch, &ver, &rel)) {
             struct pkg *pkg = pkg_new(name, epoch, ver, rel, NULL, NULL);
             n_array_push(pkgs, pkg);
         }

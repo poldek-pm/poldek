@@ -64,7 +64,7 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
     char              tmpdir[PATH_MAX];
     
     n_assert(ts->db->rootdir);
-    if (!is_rwxdir(ts->db->rootdir)) {
+    if (!poldek_util_is_rwxdir(ts->db->rootdir)) {
         logn(LOGERR, "access %s: %m", ts->db->rootdir);
         return 0;
     }
@@ -119,16 +119,16 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
         ninstalled++;
         ninstalled_bytes += pkg->size;
         inf.nfbytes -= pkg->fsize;
-        printf_c(PRCOLOR_YELLOW,
-                 _(" %d of %d (%.2f of %.2f MB) packages done"),
-                 ninstalled, inf.npackages,
-                 ninstalled_bytes/(1024*1000), 
-                 inf.nbytes/(1024*1000));
+        poldek_term_printf_c(PRCOLOR_YELLOW,
+                             _(" %d of %d (%.2f of %.2f MB) packages done"),
+                             ninstalled, inf.npackages,
+                             ninstalled_bytes/(1024*1000), 
+                             inf.nbytes/(1024*1000));
 
         if (is_remote)
-            printf_c(PRCOLOR_YELLOW, _("; %.2f MB to download"),
-                     inf.nfbytes/(1024*1000));
-        printf_c(PRCOLOR_YELLOW, "\n");
+            poldek_term_printf_c(PRCOLOR_YELLOW, _("; %.2f MB to download"),
+                                 inf.nfbytes/(1024*1000));
+        poldek_term_printf_c(PRCOLOR_YELLOW, "\n");
     }
     
     if (nerr) 

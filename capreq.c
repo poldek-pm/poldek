@@ -39,7 +39,6 @@
 static void capreq_store(struct capreq *cr, tn_buf *nbuf);
 static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi);
 
-
 #if 0
 static const char *get_rpm_capreq(const char *name) 
 {
@@ -366,7 +365,7 @@ struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags,
     const char *version = NULL, *release = NULL;
     int32_t epoch = 0;
 
-    if (evr && !parse_evr(evr, &epoch, &version, &release))
+    if (evr && !poldek_util_parse_evr(evr, &epoch, &version, &release))
         return NULL;
     
     return capreq_new(NULL, name, epoch, version, release, relflags, flags);

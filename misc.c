@@ -55,19 +55,6 @@
 //static
 //int valid_dir(const char *envname, const char *dir);
 
-
-void translate_argp_options(struct argp_option *arr) 
-{
-    int i = 0;
-
-    while (arr[i].doc) {
-        arr[i].doc = _(arr[i].doc);
-        if (arr[i].arg)
-            arr[i].arg = _(arr[i].arg);
-        i++;
-    }
-}
-
 int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size)
 {
     int i, n = 0, nn = 0;
@@ -148,7 +135,7 @@ char *setup_cachedir(const char *path)
 
 
     if (path) {
-        if (vf_valid_path(path) && is_rwxdir(path)) 
+        if (vf_valid_path(path) && poldek_util_is_rwxdir(path)) 
             return n_strdup(path);
         else 
             logn(LOGWARN, _("%s: invalid cachedir path, "
@@ -161,7 +148,7 @@ char *setup_cachedir(const char *path)
     if ((pw = getpwuid(getuid())) == NULL)
         return n_strdup(tmpdir());
 
-    if (!is_rwxdir(pw->pw_dir))
+    if (!poldek_util_is_rwxdir(pw->pw_dir))
         return n_strdup(tmpdir());
     
     if (vf_valid_path(pw->pw_dir) && mk_dir(pw->pw_dir, default_dn)) {
@@ -329,7 +316,7 @@ char *next_token(char **str, char delim, int *toklen)
     return token;
 }
 
-int is_rwxdir(const char *path)
+int poldek_util_is_rwxdir(const char *path)
 {
     struct stat st;
     
@@ -517,7 +504,7 @@ int mklock(const char *dir)
 }
 
 
-const char *ngettext_n_packages_fmt(int n) 
+const char *poldek_util_ngettext_n_packages_fmt(int n) 
 {
 #if ENABLE_NLS    
     return ngettext("%d package",
@@ -536,7 +523,7 @@ void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,
     char  *p, *colon = ", ";
     int   hdr_printed = 0;
 
-    term_width = term_get_width() - 5;
+    term_width = poldek_term_get_width() - 5;
     ncol = strlen(prefix) + 1;
     
     npkgs =  n_array_size(pkgs);
@@ -700,13 +687,13 @@ int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
     return n_snprintf(buf, bufsize, fmt, nb, unit);
 }
         
-const char *lc_messages_lang(void) 
+const char *poldek_util_lc_lang(const char *category)
 {
     const char *lang = NULL;
 
     if ((lang = getenv("LANGUAGE")) == NULL &&
         (lang = getenv("LC_ALL")) == NULL &&
-        (lang = getenv("LC_MESSAGES")) == NULL &&
+        (lang = getenv(category)) == NULL &&
         (lang = getenv("LANG")) == NULL)
         lang = "C";
     
@@ -719,6 +706,10 @@ const char *lc_messages_lang(void)
     return lang;
 }
 
+const char *lc_messages_lang(void)
+{
+    return poldek_util_lc_lang("LC_MESSAGES");
+}
 
 tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
 {
@@ -799,7 +790,7 @@ static void setup_gmt_off(void)
 #endif        
 }
 
-int get_gmt_offs(void)
+int poldek_util_get_gmt_offs(void)
 {
     if (gmt_off_flag == 0) {
         setup_gmt_off();

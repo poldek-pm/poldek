@@ -873,7 +873,7 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     bindtextdomain(PACKAGE, NULL);
     textdomain(PACKAGE);
 
-    term_init();
+    poldek_term_init();
     init_internal();
     pkgdirmodule_init();
     vfile_verbose = &verbose;

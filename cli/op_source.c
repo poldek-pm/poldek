@@ -352,25 +352,27 @@ static void print_source_type_list(void)
             char ns[32], ms[32];
             struct pkgdir_type_uinf *inf = n_array_nth(list, i);
             
-            snprintf_c(PRCOLOR_GREEN, ns, sizeof(ns), "%s", inf->name);
-            snprintf_c(PRCOLOR_CYAN, ms, sizeof(ms), "%s", inf->mode);
+            poldek_term_snprintf_c(PRCOLOR_GREEN, ns, sizeof(ns),
+                                   "%s", inf->name);
+            poldek_term_snprintf_c(PRCOLOR_CYAN, ms, sizeof(ms),
+                                   "%s", inf->mode);
             
             printf("%-20s%s", ns, ms);
             printf("  %s\n", inf->description);
             if (*inf->aliases) {
                 printf("%-10s   (aliases: ", "");
-                printf_c(PRCOLOR_GREEN, "%s", inf->aliases);
+                poldek_term_printf_c(PRCOLOR_GREEN, "%s", inf->aliases);
                 printf(")\n");
             }
         }
         n_array_free(list);
     }
     printf("Legend: ");
-    printf_c(PRCOLOR_CYAN, "r");
+    poldek_term_printf_c(PRCOLOR_CYAN, "r");
     printf(" - readable, ");
-    printf_c(PRCOLOR_CYAN, "w");
+    poldek_term_printf_c(PRCOLOR_CYAN, "w");
     printf(" - writeable, ");
-    printf_c(PRCOLOR_CYAN, "u");
+    poldek_term_printf_c(PRCOLOR_CYAN, "u");
     printf(" - updateable\n");
 }
 

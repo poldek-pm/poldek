@@ -2,7 +2,7 @@
   $Id$
 */
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@pld.org.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -22,8 +22,8 @@
 #include <string.h>
 #include <stdint.h>
 
-int parse_evr(char *evrstr,
-              int32_t *epoch, const char **version, const char **release)
+int poldek_util_parse_evr(char *evrstr, int32_t *epoch, const char **version,
+                          const char **release)
 {
     char *p;
 
@@ -58,8 +58,8 @@ int parse_evr(char *evrstr,
 }
 
 
-int parse_nevr(char *nevrstr, const char **name,
-               int32_t *epoch, const char **version, const char **release)
+int poldek_util_parse_nevr(char *nevrstr, const char **name, int32_t *epoch,
+                           const char **version, const char **release)
 {
     char *p, *q;
 
@@ -83,5 +83,5 @@ int parse_nevr(char *nevrstr, const char **name,
     p++;
     *name = nevrstr;
     
-    return parse_evr(p, epoch, version, release);
+    return poldek_util_parse_evr(p, epoch, version, release);
 }

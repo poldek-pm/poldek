@@ -314,7 +314,7 @@ int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ...)
     if (cmdctx->pipe_right)
         n = cmd_pipe_vprintf(cmdctx->pipe_right, fmt, args);
     else 
-        n = vprintf_c(color, fmt, args);
+        n = poldek_term_vprintf_c(color, fmt, args);
 
     return n;
 }
@@ -335,6 +335,18 @@ int command_cmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2)
 int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2)
 {
     return strncmp(c1->name, c2->name, strlen(c2->name));
+}
+
+static void translate_argp_options(struct argp_option *arr) 
+{
+    int i = 0;
+
+    while (arr[i].doc) {
+        arr[i].doc = _(arr[i].doc);
+        if (arr[i].arg)
+            arr[i].arg = _(arr[i].arg);
+        i++;
+    }
 }
 
 int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)

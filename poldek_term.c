@@ -84,7 +84,7 @@ static char *get_color(char *buf, int size, int color)
 }
 
 
-int vprintf_c(int color, const char *fmt, va_list args)
+int poldek_term_vprintf_c(int color, const char *fmt, va_list args)
 {
     int n, isbold = 0;
 
@@ -108,20 +108,20 @@ int vprintf_c(int color, const char *fmt, va_list args)
 }
     
 
-int printf_c(int color, const char *fmt, ...)
+int poldek_term_printf_c(int color, const char *fmt, ...)
 {
     va_list args;
     int n = 0;
     
     va_start(args, fmt);
-    n = vprintf_c(color, fmt, args);
+    n = poldek_term_vprintf_c(color, fmt, args);
     va_end(args);
     return n;
 }
 
 
-int vsnprintf_c(int color, char *str, size_t size, const char *fmt,
-                va_list args)
+int poldek_term_vsnprintf_c(int color, char *str, size_t size, const char *fmt,
+                            va_list args)
 {
     int n = 0, isbold = 0;
 
@@ -144,20 +144,21 @@ int vsnprintf_c(int color, char *str, size_t size, const char *fmt,
 }
 
 
-int snprintf_c(int color, char *str, size_t size, const char *fmt, ...)
+int poldek_term_snprintf_c(int color, char *str, size_t size,
+                           const char *fmt, ...)
 {
     va_list args;
     int n;
     
     va_start(args, fmt);
-    n = vsnprintf_c(color, str, size, fmt, args);
+    n = poldek_term_vsnprintf_c(color, str, size, fmt, args);
     va_end(args);
     return n;
 }
 
     
 
-int puts_c(int color, const char *s) 
+int poldek_term_puts_c(int color, const char *s) 
 {
     int isbold = 0;
     
@@ -177,7 +178,7 @@ static void sig_winch(int signo)
     signal(SIGWINCH, sig_winch);
 }
 
-int term_init(void) 
+int poldek_term_init(void) 
 {
     int i, rc, n;
     char *term, *s;
@@ -217,7 +218,7 @@ int term_init(void)
         snprintf(at_no_attr, sizeof(at_no_attr), "%s", s);
     
     winch_reached = 1;
-    term_get_width();
+    poldek_term_get_width();
     signal(SIGWINCH, sig_winch);
     return 1;
 }
@@ -243,13 +244,13 @@ static void update_term_width(void)
     }
 }
 
-int term_get_width(void)
+int poldek_term_get_width(void)
 {
     update_term_width();
     return term_width;
 }
 
-int term_get_height(void)
+int poldek_term_get_height(void)
 {
     update_term_width();
     return term_height;

@@ -22,22 +22,23 @@
 #  define __attribute__(x) /*nothing*/                                      
 #endif   
 
-int term_init(void);
-int term_get_width(void);
-int term_get_height(void);
+int poldek_term_init(void);
+int poldek_term_get_width(void);
+int poldek_term_get_height(void);
 
-int vprintf_c(int color, const char *fmt, va_list args);
+int poldek_term_vprintf_c(int color, const char *fmt, va_list args);
 
-int printf_c(int color, const char *fmt, ...)
-   __attribute__((format(printf,2,3)));
+int poldek_term_printf_c(int color, const char *fmt, ...)
+    __attribute__((format(printf,2,3)));
    
-int snprintf_c(int color, char *str, size_t size, const char *fmt, ...)
+int poldek_term_snprintf_c(int color, char *str, size_t size,
+                           const char *fmt, ...)
    __attribute__((format(printf,4,5)));
 
-int vsnprintf_c(int color, char *str, size_t size, const char *fmt,
-                va_list args);
+int poldek_term_vsnprintf_c(int color, char *str, size_t size,
+                            const char *fmt, va_list args);
 
-int puts_c(int color, const char *s);
+int poldek_term_puts_c(int color, const char *s);
 
 int poldek_term_ask(int fd, const char *validchrs, const char *msg);
 

@@ -113,7 +113,7 @@ char *prepare_pkgmask(const char *maskstr, const char *fpath, int nline)
          virtname, name, evrstr, tflags);
     
     if (evrstr) 
-        parse_evr((char*)evrstr, &epoch, &version, &release);
+        poldek_util_parse_evr((char*)evrstr, &epoch, &version, &release);
         
                 
     if (virtname) {

@@ -1817,7 +1817,7 @@ static void show_dbpkg_list(const char *prefix, tn_array *dbpkgs)
     char  *p, *colon = ", ";
 
     
-    term_width = term_get_width() - 5;
+    term_width = poldek_term_get_width() - 5;
     ncol = strlen(prefix) + 1;
     
     npkgs = n_array_size(dbpkgs);
@@ -2521,7 +2521,8 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
         if (ts->getop(ts, POLDEK_OP_PARTICLE)) {
             if (n > 1) {
                 if (verbose > 0) {
-                    printf_c(PRCOLOR_YELLOW, "Installing set #%d\n", n);
+                    poldek_term_printf_c(PRCOLOR_YELLOW,
+                                         "Installing set #%d\n", n);
                     fflush(stdout);
                 }
                 msgn_f(0, "** Installing set #%d\n", n);

@@ -1,16 +1,24 @@
 0.19.0 (major enhancements release; not released yet, not usable yet)
 
+New branch of poldek is 
+
 * new package index format ('pndir') with package descriptions
   moved to separate file. Based on tndb (cdb like) DBM library
 
 
-0.18.7 (bugfix release; 2004/0)
-* another stupid SIGSEGV killed
-* fix: disabled package Epoch's autopromotion while checking if 
-  it matches requirement
+
+                       ==== 0.19.x ====
+
+0.18.7 (major bugfix release; 2004/09/24)
+* another stupid SIGSEGV killed (happened occasionally while dependency 
+  processing)
+* vfile's progress bar improvements (Patryk Zawadzki <p zawadzki at vegaballs com>)
+* fix: disabled package Epoch's autopromotion while checking if it matches 
+  requirement
 * with rpm >= 4.1 packages with same provide are obsoleted, not just name
 * fixed processing dependencies of orphaned packages 
-* SIGSEGV killed while reading packages with dir/file names longer than 127 bytes
+* SIGSEGV killed while reading packages with dir/file names longer than 
+  127 bytes
 * fixed package ordering bug
 * with --caplookup packages may be installed by specifying its capabilities, 
   i.e: "poldek --caplookup -uv foo" will install package provides 

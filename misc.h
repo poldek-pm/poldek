@@ -13,9 +13,6 @@
 #include <vfile/p_open.h>
 #include <trurl/narray.h>
 
-const char *ngettext_n_packages_fmt(int n);
-void translate_argp_options(struct argp_option *arr);
-
 int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size);
 
 
@@ -43,7 +40,7 @@ void die(void);
 char *trimslash(char *path);
 char *strip(char *str);
 char *next_token(char **str, char delim, int *toklen);
-int is_rwxdir(const char *path);
+
 int is_dir(const char *path);
 int mk_dir(const char *path, const char *dn);
 int mk_dir_parents(const char *path, const char *dn);
@@ -64,11 +61,12 @@ void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,
 int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
                   int ndigits, int longunit);
 
-const char *lc_messages_lang(void);
 tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang);
+
 
 char *poldek__conf_path(char *s, char *v);
 
-int get_gmt_offs(void);
+#include "poldek_util.h"
+const char *lc_messages_lang(void);
 
 #endif /* POLDEK_MISC_H */

@@ -298,7 +298,7 @@ static void sigint_reached_fn(void)
 
 static int init_shell(struct poclidek_ctx *cctx) 
 {
-    term_init();
+    poldek_term_init();
     sh_ctx.completion_ctx = COMPLETITION_CTX_NONE;
     sh_ctx.cctx = cctx;
     return poclidek_add_command(cctx, &command_quit);

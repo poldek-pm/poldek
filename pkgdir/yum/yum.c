@@ -173,7 +173,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         epoch = (int32_t)strtol(ep, (char **)NULL, 10);
         //printf("nvr = %s, fn = %s, %d\n", nvr, fn, nread);
         
-        if (!parse_nevr(nvr, &name, &dummy, &ver, &rel)) {
+        if (!poldek_util_parse_nevr(nvr, &name, &dummy, &ver, &rel)) {
             logn(LOGERR, _("%s:%d syntax error"),
                  vf->vf_tmpath ? vf->vf_tmpath : path, nline);
             continue;

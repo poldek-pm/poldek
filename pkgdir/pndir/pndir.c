@@ -681,7 +681,7 @@ static tn_array *parse_removed(char *str)
             continue;
         
         if ((pkg = pndir_parse_pkgkey(p, strlen(p), NULL)) == NULL) {
-            if (parse_nevr(p, &name, &epoch, &ver, &rel)) {
+            if (poldek_util_parse_nevr(p, &name, &epoch, &ver, &rel)) {
                 pkg = pkg_new(name, epoch, ver, rel, NULL, NULL);
             }
         }

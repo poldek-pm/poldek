@@ -1,15 +1,10 @@
 /* $Id$ */
-
+/* Package file list module */
 #ifndef POLDEK_PKGFL_H
 #define POLDEK_PKGFL_H
 
 #include <stdint.h>
-
-#include <trurl/narray.h>
-#include <trurl/nstream.h>
-#include <trurl/nbuf.h>
-#include <trurl/ntuple.h>
-#include <trurl/nmalloc.h>
+#include <trurl/trurl.h>
 
 struct flfile {
     uint32_t  size;

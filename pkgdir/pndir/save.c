@@ -293,7 +293,7 @@ struct pkg *pndir_parse_pkgkey(char *key, int klen, struct pkg *pkg)
     }
     
     
-    if (!parse_evr(evr, &epoch, &ver, &rel))
+    if (!poldek_util_parse_evr(evr, &epoch, &ver, &rel))
         return 0;
     
     if (ver == NULL || rel == NULL) {

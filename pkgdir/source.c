@@ -622,27 +622,29 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
             continue;
 
         if ((opt->flag & PKGSRC_OPTION_SUBOPT) == 0) {
-            n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s", opt->name);
+            n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
+                                        "%s", opt->name);
             n += n_snprintf(&str[n], size - n, ",");
             // n += n_snprintf(&str[n], size - n, "%s,", opt->name);
 
         } else if ((opt->flag & PKGSOURCE_PRI)) {
             if (src->pri) {
-                n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s", opt->name);
+                n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
+                                            "%s", opt->name);
                 n += n_snprintf(&str[n], size - n, "=%d,", src->pri);
             }
 
         } else if ((opt->flag & PKGSOURCE_TYPE)) {
             if (src->type && !source_is_type(src, poldek_conf_PKGDIR_DEFAULT_TYPE)) {
-                n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s",
-                                opt->name);
+                n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
+                                            "%s", opt->name);
                 n += n_snprintf(&str[n], size - n, "=%s,", src->type);
             }
 
         } else if ((opt->flag & PKGSOURCE_DSCR)) {
             if (src->dscr) {
-                n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s",
-                                opt->name);
+                n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
+                                            "%s", opt->name);
                 n += n_snprintf(&str[n], size - n, "=%s,", src->dscr);
             }
 
@@ -657,8 +659,8 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
                     continue;
                     
                 if (src->subopt_flags & subopt->flag) {
-                    n += snprintf_c(PRCOLOR_GREEN, &str[n], size - n, "%s",
-                                    opt->name);
+                    n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n],
+                                                size - n, "%s", opt->name);
                     
                     n += n_snprintf(&str[n], size - n, "=%s,", subopt->name);
                     

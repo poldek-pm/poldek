@@ -39,6 +39,10 @@ static FILE      *l_stream = NULL, *l_fstream = NULL;
 
 static void vlog_tty(int pri, const char *fmt, va_list args);
 
+int poldek_verbose(void)
+{
+    return verbose;
+}
 
 void poldek_log(int pri, const char *fmt, ...)
 {
@@ -251,13 +255,16 @@ void vlog_tty(int pri, const char *fmt, va_list args)
     int n = 0;
     
     if (pri & LOGERR)
-        n = snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("error: "));
+        n = poldek_term_snprintf_c(PRCOLOR_RED | PRAT_BOLD,
+                                   buf, sizeof(buf), _("error: "));
     
     else if (pri & LOGWARN)
-        n = snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf), _("warn: "));
+        n = poldek_term_snprintf_c(PRCOLOR_RED | PRAT_BOLD,
+                                   buf, sizeof(buf), _("warn: "));
 
     else if (pri & LOGNOTICE)
-        n = snprintf_c(PRCOLOR_YELLOW | PRAT_BOLD, buf, sizeof(buf), _("notice: "));
+        n = poldek_term_snprintf_c(PRCOLOR_YELLOW | PRAT_BOLD,
+                                   buf, sizeof(buf), _("notice: "));
 
     if (n > 0)
         fprintf(l_stream, "%s", buf);

@@ -1464,7 +1464,7 @@ int pkg_nvr_strcmp_bday(struct pkg *p1, struct pkg *p2)
 {
     register int cmprc, gmt_off;
 
-    gmt_off = get_gmt_offs();
+    gmt_off = poldek_util_get_gmt_offs();
 
     cmprc = ((p1->btime + gmt_off) / 86400) - ((p2->btime + gmt_off) / 86400);
     

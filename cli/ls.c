@@ -335,7 +335,7 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
         return 0;
 
     flags = cmdctx->_flags;
-    term_width = term_get_width();
+    term_width = poldek_term_get_width();
     term_width_div2 = term_width/2;
 
     *hdr = '\0';
@@ -463,7 +463,7 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 
         n = 0;
         n += n_snprintf(&buf[n], sizeof(buf) - n,
-                        ngettext_n_packages_fmt(npkgs), npkgs);
+                        poldek_util_ngettext_n_packages_fmt(npkgs), npkgs);
         
         if (flags & OPT_LS_LONG) {
             char unit = 'K';

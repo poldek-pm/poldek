@@ -238,7 +238,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
             *p = '\0';
             p++;
 
-            if (parse_evr(p, &epoch, &ver, &rel))
+            if (poldek_util_parse_evr(p, &epoch, &ver, &rel))
                 cr = cr_evr = capreq_new(NULL, tmp, epoch, ver, rel, REL_EQ, 0);
         }
         

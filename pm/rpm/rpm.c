@@ -226,9 +226,6 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
         return NULL;
 
     lc_lang = lc_messages_lang();
-    if (lc_lang == NULL) 
-        lc_lang = "C";
-    
     dir = pkgdir_open_ext(rpmdb_path, NULL, "rpmdb", dbpath, NULL, 0, lc_lang);
     if (dir != NULL) {
         if (!pkgdir_load(dir, NULL, PKGDIR_LD_NOUNIQ)) {

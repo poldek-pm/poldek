@@ -584,7 +584,7 @@ static int search(struct cmdctx *cmdctx)
     if (display_bar) 
         msgn(0, _("_done."));
 
-    term_height = term_get_height();
+    term_height = poldek_term_get_height();
     if (n_array_size(matched_pkgs) == 0) 
         cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, "!No package matches '%s'\n",
                         pt->regexp);

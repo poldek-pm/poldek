@@ -520,7 +520,7 @@ struct pkg *pkg_ldtags(tn_alloc *na, struct pkg *pkg,
         if (*pkgt->name == '\0' || *pkgt->evr == '\0') 
             return NULL;
         
-        if (!parse_evr(pkgt->evr, &epoch, &ver, &rel))
+        if (!poldek_util_parse_evr(pkgt->evr, &epoch, &ver, &rel))
             return NULL;
         
         if (ver == NULL || rel == NULL) {

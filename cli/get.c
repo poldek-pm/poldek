@@ -55,7 +55,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     switch (key) {
         case 'd':
             if (arg) {
-                if (!is_rwxdir(arg)) {
+                if (!poldek_util_is_rwxdir(arg)) {
                     logn(LOGERR, _("%s: no such directory"), arg);
                     return EINVAL;
                 }
