@@ -95,13 +95,14 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     }
     
     if (!iserr) {
-        int32_t recno = 0;
+        if (!ps->_recno)
+            ps->_recno = 1;
         /* merge pkgdirs packages into ps->pkgs */
         for (i=0; i < n_array_size(ps->pkgdirs); i++) {
             struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
             for (j=0; j < n_array_size(pkgdir->pkgs); j++) {
                 struct pkg *pkg = n_array_nth(pkgdir->pkgs, j);
-                pkg->recno = ++recno;
+                pkg->recno = ps->_recno++;
                 n_array_push(ps->pkgs, pkg_link(pkg));
             }
         }
@@ -131,10 +132,13 @@ int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir)
 
     n_array_sort(ps->depdirs);
     n_array_uniq(ps->depdirs);
+
+    if (!ps->_recno)
+        ps->_recno = 1;
     
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
-        n_assert(pkg->name);
+        pkg->recno = ps->_recno++;
         n_array_push(ps->pkgs, pkg_link(pkg));
     }
 

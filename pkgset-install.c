@@ -54,6 +54,7 @@
 #include "dbdep.h"
 #include "poldek_term.h"
 #include "poldek.h"
+#include "poldek_intern.h"
 #include "pm/pm.h"
 
 #define DBPKG_ORPHANS_PROCESSED   (1 << 15) /* is its orphan processed ?*/
@@ -1626,6 +1627,9 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
 
     db = upg->ts->db;
 
+    if (upg->ts->getop(upg->ts, POLDEK_OP_NOCONFLICTS))
+        return 1;
+    
     /* conflicts in install set */
     if (pkg->cnflpkgs != NULL)
         for (i = 0; i < n_array_size(pkg->cnflpkgs); i++) {
@@ -2205,7 +2209,8 @@ void mapfn_mark_newer_pkg(const char *n, uint32_t e,
     if ((pkg = n_hash_get(upg->db_pkgs, tmpkg.name))) {
         if (pkg_is_marked(upg->ts->pms, pkg)) {
             upg->nmarked--;
-            logn(LOGWARN, _("%s: multiple instances installed, skipped"), tmpkg.name);
+            logn(LOGWARN, _("%s: multiple instances installed, skipped"),
+                 tmpkg.name);
             pkg_unmark(upg->ts->pms, pkg);        /* display above once */
         }
 

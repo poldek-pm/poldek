@@ -38,6 +38,7 @@
 #include "split.h"
 #include "poldek_term.h"
 #include "pm/pm.h"
+#include "pkgdir/pkgdir.h"
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -196,7 +197,8 @@ static int pkgset_index(struct pkgset *ps)
     msg(2, "Indexing...\n");
     add_self_cap(ps);
     n_array_map(ps->pkgs, (tn_fn_map1)sort_pkg_caps);
-    mem_info(-1, "MEM after index[selfcap]");
+    MEMINF("after index[selfcap]");
+    
     /* build indexes */
     capreq_idx_init(&ps->cap_idx,  CAPREQ_IDX_CAP, 4 * n_array_size(ps->pkgs));
     capreq_idx_init(&ps->req_idx,  CAPREQ_IDX_REQ, 4 * n_array_size(ps->pkgs));
@@ -234,7 +236,7 @@ static int pkgset_index(struct pkgset *ps)
 
         pkgfl2fidx(pkg, &ps->file_idx);
     }
-    mem_info(-1, "MEM after index");
+    MEMINF("after index");
     
 #if 0 
     capreq_idx_stats("cap", &ps->cap_idx);
@@ -247,27 +249,6 @@ static int pkgset_index(struct pkgset *ps)
     return 0;
 }
 
-tn_array *pkgset_get_packages_bynvr(const struct pkgset *ps) 
-{
-    tn_array *pkgs;
-    register int i;
-    
-    if (ps->pkgs == NULL)
-        return NULL;
-    
-    pkgs = n_array_new(n_array_size(ps->pkgs),
-                       (tn_fn_free)pkg_free, (tn_fn_cmp)pkg_nvr_strcmp);
-    
-    for (i=0; i < n_array_size(ps->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->pkgs, i);
-        n_array_push(pkgs, pkg_link(pkg));
-    }
-
-    n_array_ctl(pkgs, TN_ARRAY_AUTOSORTED);
-    n_array_sort(pkgs);
-    return pkgs;
-}
-
 
 int pkgset_setup(struct pkgset *ps, unsigned flags) 
 {
@@ -275,7 +256,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     int strict;
     int v = verbose;
 
-    mem_info(-1, "MEM before setup");
+    MEMINF("before setup");
     ps->flags |= flags;
     strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
 
@@ -300,10 +281,8 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
                  "Removed %d duplicate packages from available set", n), n);
     }
 
-    mem_info(-1, "MEM before index");
+    MEMINF("before index");
     pkgset_index(ps);
-    
-
     
     v = verbose;    
     if (flags & PSET_VERIFY_FILECNFLS) 
@@ -316,13 +295,13 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     verbose = v;
 
     pkgset_verify_deps(ps, strict);
-    mem_info(1, "MEM after verify deps");
+    MEMINF("after verify deps");
 
     pkgset_verify_conflicts(ps, strict);
     
-    mem_info(1, "MEM after order");
+    MEMINF("MEM after order");
     pkgset_order(ps, flags & PSET_VERIFY_ORDER);
-    mem_info(-1, "MEM after setup");
+    MEMINF("after setup[END]");
     return ps->nerrors == 0;
 }
 
@@ -408,25 +387,25 @@ struct pkg *pkgset_lookup_1package(struct pkgset *ps, const char *name)
 
 static
 tn_array *find_capreq(struct pkgset *ps, tn_array *pkgs,
-                      enum pkgset_lookup_tag tag,
+                      enum pkgset_search_tag tag,
                       const char *name)
 {
     const struct capreq_idx_ent *ent;
     
     switch (tag) {
-        case PS_LOOKUP_CAP:
+        case PS_SEARCH_CAP:
             ent = capreq_idx_lookup(&ps->cap_idx, name);
             break;
 
-        case PS_LOOKUP_REQ:
+        case PS_SEARCH_REQ:
             ent = capreq_idx_lookup(&ps->req_idx, name);
             break;
             
-        case PS_LOOKUP_OBSL:
+        case PS_SEARCH_OBSL:
             ent = capreq_idx_lookup(&ps->obs_idx, name);
             break;
             
-        case PS_LOOKUP_CNFL:
+        case PS_SEARCH_CNFL:
             ent = capreq_idx_lookup(&ps->cnfl_idx, name);
             break;
 
@@ -446,19 +425,17 @@ tn_array *find_capreq(struct pkgset *ps, tn_array *pkgs,
     return pkgs;
 }
 
-tn_array *pkgset_search(struct pkgset *ps, enum pkgset_lookup_tag tag,
+tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
                         const char *value)
 {
     tn_array *pkgs;
-    int32_t recno;
-    
     n_array_sort(ps->pkgs);
     
     pkgs = pkgs_array_new(4);
     n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
     
     switch (tag) {
-        case PS_LOOKUP_RECNO:
+        case PS_SEARCH_RECNO:
             n_assert(value == NULL); /* not implemented */
             //recno = *((int32_t*)value);
             //n_array_push(pkgs, pkg_link(n_array_nth(ps->pkgs, recno)));
@@ -467,7 +444,7 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_lookup_tag tag,
             n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
             break;
             
-        case PS_LOOKUP_PACKAGE:
+        case PS_SEARCH_NAME:
             if (value) 
                 find_package(ps, pkgs, value);
             else {
@@ -477,12 +454,12 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_lookup_tag tag,
             }
             break;
             
-        case PS_LOOKUP_PROVIDES:
+        case PS_SEARCH_PROVIDES:
             n_assert(value);
-            find_capreq(ps, pkgs, PS_LOOKUP_CAP, value);
+            find_capreq(ps, pkgs, PS_SEARCH_CAP, value);
                                 /* no break */
 
-        case PS_LOOKUP_FILE:
+        case PS_SEARCH_FILE:
             n_assert(value);
             if (*value != '/')
                 break;
@@ -515,5 +492,6 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_lookup_tag tag,
 
 tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname)
 {
-    return pkgset_search(ps, PS_LOOKUP_CAP, capname);
+    return pkgset_search(ps, PS_SEARCH_CAP, capname);
 }
+

@@ -451,7 +451,9 @@ int poclidek_load_packages(struct poclidek_ctx *cctx)
     if (!poldek_load_sources(ctx))
         return 0;
 
-    cctx->pkgs_available = poldek_get_avail_packages_bynvr(ctx);
+    cctx->pkgs_available = poldek_get_avail_packages(ctx);
+    n_array_ctl_set_cmpfn(cctx->pkgs_available, (tn_fn_cmp)pkg_nvr_strcmp);
+    n_array_sort(cctx->pkgs_available);
     poclidek_dent_init(cctx);
 
     if (cctx->flags & POLDEKCLI_SKIPINSTALLED)

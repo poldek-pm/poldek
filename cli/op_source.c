@@ -26,7 +26,7 @@
 #include "log.h"
 
 #include "pkgdir/source.h"
-
+#include "poldek_intern.h"
 #include "cli.h"
 #include "op.h"
 

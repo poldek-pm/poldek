@@ -328,7 +328,7 @@ static int resolve_bycap(struct arg_packages *aps, const char *mask)
         int i;
         
         msgn(2, "%s: %d package(s) found:", mask, n_array_size(pkgs));
-        for (i=0; i<n_array_size(pkgs); i++)
+        for (i=0; i < n_array_size(pkgs); i++)
             msgn(2, " - %s", pkg_snprintf_s(n_array_nth(pkgs, i)));
         
     }
@@ -425,12 +425,37 @@ int resolve_pkgs(tn_array *pkgs,
             n_array_push(pkgs, pkg_link(pkg));
         
         else if ((flags & ARG_PACKAGES_RESOLV_MISSINGOK) == 0) {
-            logn(LOGERR, _("%s: no such packageXX"), pkg_snprintf_s(spkg));
+            logn(LOGERR, _("%s: no such package"), pkg_snprintf_s(spkg));
             rc = 0;
         }
     }
     
     return rc;
+}
+
+
+static int verify_pakcage_caps(struct arg_packages *aps, tn_array *resolved_pkgs) 
+{
+    tn_array *keys;
+    int i, j;
+    
+    keys = n_hash_keys_cp(aps->package_caps);
+    n_array_sort(resolved_pkgs);
+    for (i=0; i < n_array_size(keys); i++) {
+        const char *cap = n_array_nth(keys, i);
+        tn_array *pkgs = n_hash_get(aps->package_caps, cap);
+        for (j=0; j < n_array_size(pkgs); j++) {
+            struct pkg *pkg = n_array_nth(pkgs, j);
+            if (n_array_bsearch(resolved_pkgs, pkg)) {
+                logn(LOGNOTICE, "%s: removed cap due to %s is marked",
+                     cap, pkg_snprintf_s0(pkg));
+                n_hash_remove(aps->package_caps, cap);
+                break;
+            }
+        }
+    }
+    n_array_free(keys);
+    return n_hash_size(aps->package_caps);
 }
 
 
@@ -444,8 +469,7 @@ tn_array *arg_packages_resolve(struct arg_packages *aps,
 
     nmasks = n_array_size(aps->package_masks);
     for (i=0; i < nmasks; i++) {
-        char  *mask = n_array_nth(aps->package_masks, i);
-        
+        char *mask = n_array_nth(aps->package_masks, i);
         if (*mask == '*' && *(mask + 1) == '\0')
             return n_ref(avpkgs);
     }
@@ -467,13 +491,15 @@ tn_array *arg_packages_resolve(struct arg_packages *aps,
         if (flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS)
             n_array_uniq_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_uniq);
     }
-    
+
     if (n_array_size(pkgs) == 0) {
         n_array_free(pkgs);
         pkgs = NULL;
     }
+
+    if (pkgs)
+        verify_pakcage_caps(aps, pkgs);
     
     DBGF("ret %d pkgs\n", pkgs ? n_array_size(pkgs) : 0);
     return pkgs;
 }
-

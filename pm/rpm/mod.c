@@ -29,7 +29,7 @@ struct pm_module pm_module_rpm = {
 //    pm_rpmhdr_free, 
     
     (struct pkg *(*)(tn_alloc *, void *, const char *, unsigned, unsigned))pm_rpm_ldhdr,
-    (int (*)(tn_array *, void *, int))pm_rpm_ldhdr_capreqs,
+    (tn_array *(*)(tn_array *, void *, int))pm_rpm_ldhdr_capreqs,
     pm_rpm_ldpkg,
     pm_rpm_machine_score,
 };

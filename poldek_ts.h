@@ -40,6 +40,7 @@ enum poldek_ts_opt {
     POLDEK_OP_AGGREEDY,
     POLDEK_OP_ALLOWDUPS, 
     POLDEK_OP_NODEPS,  /* rpm --nodeps */
+    POLDEK_OP_NOCONFLICTS,  /* ignore conflicts */
     POLDEK_OP_FORCE,  /* rpm --force  */
     POLDEK_OP_IGNOREARCH,  /* rpm --ignorearch */
     POLDEK_OP_IGNOREOS,    /* rpm --ignoreos   */

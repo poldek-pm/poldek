@@ -52,6 +52,7 @@
 #include "pkgmisc.h"
 #include "pkgset.h"
 #include "poldek.h"
+#include "poldek_intern.h"
 #include "misc.h"
 #include "pm_rpm.h"
 

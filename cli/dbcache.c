@@ -35,6 +35,7 @@
 #include "log.h"
 #include "cli.h"
 #include "pm/pm.h"
+#include "poldek_intern.h"
 
 static
 struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload);
@@ -109,6 +110,8 @@ char *mkrpmdb_path(char *path, size_t size, const char *root, const char *dbpath
 }
 
 #define RPMDBCACHE_PDIRTYPE "pndir"
+
+
 
 static
 struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload) 

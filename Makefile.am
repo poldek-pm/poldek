@@ -46,6 +46,7 @@ libpoldek_la_SOURCES =  \
 	  pkgmark.c             \
 	  i18n.h 		\
 	  ask.c                 \
+	  install-dist.c        \
 	  uninstall.c           \
 	  lib_init.c            \
 	  lib_pkgset.c          \

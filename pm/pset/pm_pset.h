@@ -35,4 +35,6 @@ int pm_psethdr_nevr(void *h, char **name,
 struct pkg *pm_pset_ldhdr(tn_alloc *na, void *hdr, const char *fname,
                           unsigned fsize, unsigned ldflags);
 
+tn_array *pm_pset_ldhdr_capreqs(tn_array *arr, void *hdr, int crtype);
+
 #endif

@@ -22,11 +22,11 @@
 
 #include <trurl/nmalloc.h>
 #include <trurl/nstr.h>
-#define POLDEK_INTERNAL
 #include "vfile/vfile.h"
 #include "pkgdir/source.h"
 #include "pm/pm.h"
 #include "poldek.h"
+#include "poldek_intern.h"
 #include "poldek_term.h"
 #include "pkgset.h"
 #include "pkgmisc.h"
@@ -48,7 +48,8 @@ extern int poldek_term_ask_yn(int default_a, const char *fmt, ...);
 extern int poldek_term_ask_pkg(const char *capname, struct pkg **pkgs,
                                struct pkg *deflt);
 
-
+extern
+int do_poldek_ts_install_dist(struct poldek_ts *ts);
 extern
 int do_poldek_ts_upgrade_dist(struct poldek_ts *ts);
 extern
@@ -526,111 +527,6 @@ int ts_mark_arg_packages(struct poldek_ts *ts, int withdeps)
 }
 
 
-/*
- * Dist Instalation
- */ 
-struct inf {
-    int       npackages;
-    double    nbytes;
-    double    nfbytes; 
-};
-
-
-static void is_marked_mapfn(struct pkg *pkg, struct inf *inf) 
-{
-#if 0
-    if (pkg_is_marked(pkg)) {
-        inf->npackages++;
-        inf->nbytes += pkg->size;
-        inf->nfbytes += pkg->fsize;
-    }
-#endif    
-}
-
-static
-int do_install_dist(struct poldek_ts *ts)
-{
-    int               i, ninstalled, nerr, is_remote = -1;
-    double            ninstalled_bytes; 
-    struct inf        inf;
-    char              tmpdir[PATH_MAX];
-    
-    n_assert(ts->db->rootdir);
-    if (!is_rwxdir(ts->db->rootdir)) {
-        logn(LOGERR, "access %s: %m", ts->db->rootdir);
-        return 0;
-    }
-    
-    unsetenv("TMPDIR");
-    unsetenv("TMP");
-
-    snprintf(tmpdir, sizeof(tmpdir), "%s/tmp", ts->db->rootdir);
-    mkdir(tmpdir, 0755);
-#if 0    
-    rpm_define("_tmpdir", "/tmp");
-    rpm_define("_tmppath", "/tmp");
-    rpm_define("tmppath", "/tmp");
-    rpm_define("tmpdir", "/tmp");
-#endif    
-    nerr = 0;
-    ninstalled = 0;
-    ninstalled_bytes = 0;
-    
-    memset(&inf, 0, sizeof(inf));
-    n_array_map_arg(ts->ctx->ps->pkgs, (tn_fn_map2)is_marked_mapfn, &inf);
-
-    for (i=0; i<n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
-        char *pkgpath;
-        
-        if (pkg_isnot_marked(ts->pms, pkg))
-            continue;
-        
-        pkgpath = pkg_path_s(pkg);
-        if (is_remote == -1)
-            is_remote = vf_url_type(pkgpath) & VFURL_REMOTE;
-        
-        if (verbose > 1) {
-            char *p = pkg_is_hand_marked(ts->pms, pkg) ? "" : "dep";
-            if (pkg_has_badreqs(pkg)) 
-                msg(2, "not%sInstall %s\n", p, pkg->name);
-            else
-                msg(2, "%sInstall %s\n", p, pkgpath);
-        }
-
-        if (ts->getop(ts, POLDEK_OP_TEST))
-            continue;
-            
-        if (pkgdb_install(ts->db, pkgpath, ts))
-            logn(LOGNOTICE | LOGFILE, "INST-OK %s", pkg->name);
-            
-        else {
-            logn(LOGERR | LOGFILE, "INST-ERR %s", pkg->name);
-            nerr++;
-        }
-            
-        ninstalled++;
-        ninstalled_bytes += pkg->size;
-        inf.nfbytes -= pkg->fsize;
-        printf_c(PRCOLOR_YELLOW,
-                 _(" %d of %d (%.2f of %.2f MB) packages done"),
-                 ninstalled, inf.npackages,
-                 ninstalled_bytes/(1024*1000), 
-                 inf.nbytes/(1024*1000));
-
-        if (is_remote)
-            printf_c(PRCOLOR_YELLOW, _("; %.2f MB to download"),
-                     inf.nfbytes/(1024*1000));
-        printf_c(PRCOLOR_YELLOW, "\n");
-    }
-    
-    if (nerr) 
-        logn(LOGERR, _("there were errors during install"));
-    
-    return nerr == 0;
-}
-
-
 static
 int mkdbdir(struct poldek_ts *ts) 
 {
@@ -686,7 +582,10 @@ static int ts_prerun(struct poldek_ts *ts, struct install_info *iinf)
 
     if (ts->_iflags & TS_CONFIG_LATER)
         poldek__apply_tsconfig(ts->ctx, ts);
-              
+    
+    if (ts->ctx->ts->getop(ts->ctx->ts, POLDEK_OP_NOCONFLICTS))
+        ts->setop(ts, POLDEK_OP_NOCONFLICTS, 1);
+    
     cp_str_ifnull(&ts->rootdir, ts->ctx->ts->rootdir);
     cp_str_ifnull(&ts->fetchdir, ts->ctx->ts->fetchdir);
     cp_str_ifnull(&ts->cachedir, ts->ctx->ts->cachedir);
@@ -744,8 +643,8 @@ int ts_run_install_dist(struct poldek_ts *ts)
     
     if (ts->db == NULL) 
         return 0;
-    
-    rc = do_install_dist(ts);
+
+    rc = do_poldek_ts_install_dist(ts);
     pkgdb_free(ts->db);
     ts->db = NULL;
     return rc;
@@ -784,7 +683,7 @@ int ts_run_install(struct poldek_ts *ts, struct install_info *iinf)
 
     if (poldek_ts_issetf_all(ts, POLDEK_TS_UPGRADEDIST))
         return ts_run_upgrade_dist(ts);
-
+    
     if (poldek_ts_issetf_all(ts, POLDEK_TS_INSTALLDIST))
         return ts_run_install_dist(ts);
 

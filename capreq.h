@@ -107,13 +107,15 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
 void capreq_free_na(tn_alloc *na, struct capreq *cr);
 void capreq_free(struct capreq *cr);
 
+struct capreq *capreq_clone(tn_alloc *na, const struct capreq *cr);
+
 uint8_t capreq_sizeof(const struct capreq *cr);
 
 #if 0
 void capreq_store(struct capreq *cr, tn_buf *nbuf);
 struct capreq *capreq_restore(tn_buf_it *nbufi);
-
 #endif
+
 int capreq_strcmp_evr(struct capreq *pr1, struct capreq *pr2);
 int capreq_strcmp_name_evr(struct capreq *pr1, struct capreq *pr2);
 

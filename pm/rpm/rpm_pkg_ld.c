@@ -61,7 +61,7 @@ tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, int crtype)
     };
     
     n_assert(arr);
-
+    
     switch (crtype) {
         case PMCAP_CAP:
             tags = prov_tags;

@@ -31,10 +31,10 @@ dbdep.c
 dbpkgset.c
 depdirs.c
 fileindex.c
+install-dist.c
 lib_init.c
 lib_pkgset.c
 log.c
-main.c
 minfo.c
 misc.c
 pkg.c
@@ -63,7 +63,6 @@ pkgdir/yum/yum.c
 pkgfetch.c
 pkgfl.c
 pkgmark.c
-pkgmark_set.c
 pkgmisc.c
 pkgroup.c
 pkgscore.c

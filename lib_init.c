@@ -35,8 +35,8 @@
 #include "log.h"
 #include "misc.h"
 #include "i18n.h"
-#define POLDEK_INTERNAL
 #include "poldek.h"
+#include "poldek_intern.h"
 #include "poldek_term.h"
 #include "pm/pm.h"
 
@@ -69,7 +69,8 @@ int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
 static
 int get_conf_opt_list(const tn_hash *htcnf, const char *name, tn_array *tolist);
 
-
+extern
+int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs);
 
 static struct {
     const char *name;
@@ -92,6 +93,10 @@ static struct {
     { NULL, 0, 0 }
 };
 
+int poldek__is_setup_done(struct poldek_ctx *ctx) 
+{
+    return (ctx->_iflags & SETUP_DONE) == SETUP_DONE;
+}
 
 
 static inline void check_if_setup_done(struct poldek_ctx *ctx) 
@@ -705,7 +710,7 @@ void init_internal(void)
     n_malloc_set_failhook(poldek_malloc_fault_hook);
 }
 
-
+static
 void poldek_destroy(struct poldek_ctx *ctx) 
 {
     ctx = ctx;
@@ -802,7 +807,7 @@ static void poldek_vf_vlog_cb(int pri, const char *fmt, va_list ap)
     vlog(logpri, 0, fmt, ap);
 }
 
-
+static
 int poldek_init(struct poldek_ctx *ctx, unsigned flags)
 {
     struct poldek_ts *ts;
@@ -901,50 +906,66 @@ int setup_sources(struct poldek_ctx *ctx)
     return 1;
 }
 
+static int setup_pm(struct poldek_ctx *ctx) 
+{
+    const char *pm = n_hash_get(ctx->_cnf, "pm");
+    n_assert(pm);
+
+    if (strcmp(pm, "rpm") == 0) {
+        ctx->pmctx = pm_new(pm, ctx->ts->rpmacros);
+        
+    } else if (strcmp(pm, "pset") == 0) {
+        struct source *dest = NULL;
+        
+        n_array_sort_ex(ctx->sources, (tn_fn_cmp)source_cmp_no);
+        if (n_array_size(ctx->sources) < 2) {
+            logn(LOGERR, "%s: missing destination source", pm);
+             
+        } else {
+            dest = n_array_nth(ctx->sources, n_array_size(ctx->sources) - 1);
+            n_assert(dest);
+            if (source_is_remote(dest)) {
+                logn(LOGERR, "%s: destination source could not by remote",
+                     source_idstr(dest));
+                
+            } else {
+                ctx->pmctx = pm_new(pm, dest);
+            }
+        }
+        
+        n_array_sort(ctx->sources);
+        if (ctx->pmctx)
+            ctx->ts->setop(ctx->ts, POLDEK_OP_NOCONFLICTS, 1);
+        
+    } else {
+        logn(LOGERR, "%s: unknown PM type", pm);
+        return 0;
+    }
+
+    if (ctx->pmctx == NULL)
+        logn(LOGERR, "%s: PM setup failed", pm);
+    
+    return ctx->pmctx != NULL;
+}
+
+
 int poldek_setup(struct poldek_ctx *ctx) 
 {
-    const char *pm;
+    int rc = 1;
     
     if ((ctx->_iflags & SETUP_DONE) == SETUP_DONE)
         return 1;
     
     poldek_setup_cachedir(ctx);
     
-    setup_sources(ctx);
+    rc = setup_sources(ctx);
+    
+    if (rc && !setup_pm(ctx))
+        rc = 0;
 
-    pm = n_hash_get(ctx->_cnf, "pm");
-    n_assert(pm);
-    if (strcmp(pm, "rpm") == 0)
-        ctx->pmctx = pm_new(pm, ctx->ts->rpmacros);
-    
-    else if (strcmp(pm, "pset") == 0) {
-        struct source *dest = NULL;
-        
-        n_array_sort_ex(ctx->sources, (tn_fn_cmp)source_cmp_no);
-        if (n_array_size(ctx->sources) > 1)
-            dest = n_array_pop(ctx->sources);
-        
-        if (dest)
-            ctx->pmctx = pm_new(pm, dest);
-        n_array_sort(ctx->sources);
-    }
-    
-    if (ctx->pmctx == NULL) {
-        logn(LOGERR, "%s: unknown PM type", pm);
-        return 0;
-    }
-        
     ctx->_iflags |= SETUP_DONE;
-    return 1;
+    return rc;
 }
-
-int poldek__is_setup_done(struct poldek_ctx *ctx) 
-{
-    return (ctx->_iflags & SETUP_DONE) == SETUP_DONE;
-}
-
-
-extern int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs);
 
 
 int poldek_is_sources_loaded(struct poldek_ctx *ctx) 
@@ -965,4 +986,12 @@ int poldek_load_sources(struct poldek_ctx *ctx)
     rc = poldek_load_sources__internal(ctx, 1);
     ctx->_iflags |= SOURCES_LOADED;
     return rc;
+}
+
+
+int poldek_is_interactive_on(const struct poldek_ctx *ctx)
+{
+    return ctx->ts->getop_v(ctx->ts, POLDEK_OP_CONFIRM_INST,
+                            POLDEK_OP_CONFIRM_UNINST,
+                            POLDEK_OP_EQPKG_ASKUSER, 0);
 }

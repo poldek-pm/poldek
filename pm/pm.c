@@ -9,8 +9,12 @@ struct pm_ctx *pm_new(const char *name, void *modarg)
 {
     struct pm_ctx *ctx;
     const struct pm_module *mod;
-
+    void *modh;
+    
     if ((mod = pm_module_find(name)) == NULL)
+        return NULL;
+
+    if ((modh = ctx->mod->init(modarg)) == NULL)
         return NULL;
     
     ctx = n_malloc(sizeof(*ctx));

@@ -62,7 +62,8 @@ int pkgdb_open(struct pkgdb *db, mode_t mode)
 
     if (mode == 0)
         mode = O_RDONLY;
-    
+
+    n_assert(db->_ctx->mod->dbopen);
     db->dbh = db->_ctx->mod->dbopen(db->_ctx->modh, db->rootdir,
                                     db->path, mode);
     if (db->dbh == NULL)
@@ -75,6 +76,7 @@ int pkgdb_open(struct pkgdb *db, mode_t mode)
 void pkgdb_close(struct pkgdb *db) 
 {
     if (db->dbh) {
+        n_assert(db->_ctx->mod->dbclose);
         db->_ctx->mod->dbclose(db->dbh);
         db->dbh = NULL;
     }
@@ -143,7 +145,7 @@ int pkgdb_map_nevr(struct pkgdb *db,
         struct pkg tmpkg;
         if (dbrec->hdr == NULL)
             continue;
-        
+        n_assert(db->_ctx->mod->hdr_nevr);
         if (db->_ctx->mod->hdr_nevr(dbrec->hdr, &tmpkg.name,
                                     &tmpkg.epoch, &tmpkg.ver, &tmpkg.rel)) {
             

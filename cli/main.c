@@ -31,6 +31,7 @@
 #include "cli.h"
 #include "op.h"
 #include "poclidek.h"
+#include "poldek_intern.h"
 
 #ifndef VERSION
 # error "undefined VERSION"
@@ -345,7 +346,7 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
     if (!poldek_setup(args.ctx))
         exit(EXIT_FAILURE);
 
-    if (poldek_ts_is_interactive_on(args.ctx->ts) && verbose == 0)
+    if (poldek_is_interactive_on(args.ctx) && verbose == 0)
         verbose = 1;
             
 #if 0
@@ -403,7 +404,7 @@ int do_run(void)
 
 int main(int argc, char **argv)
 {
-    struct poldek_ctx     ctx;
+    struct poldek_ctx    *ctx;
     struct poclidek_ctx  cctx;
     int  ec = 0, rrc, mode = MODE_POLDEK;
     
@@ -415,10 +416,10 @@ int main(int argc, char **argv)
         mode = MODE_APT;
     
     DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
-    poldek_init(&ctx, 0);
+    ctx = poldek_new(0);
 
     memset(&cctx, 0, sizeof(cctx));
-    poclidek_init(&cctx, &ctx);
+    poclidek_init(&cctx, ctx);
     
     parse_options(&cctx, argc, argv, mode);
     
@@ -459,6 +460,6 @@ int main(int argc, char **argv)
             ec = 1;
     }
     poclidek_destroy(&cctx);
-    poldek_destroy(&ctx);
+    poldek_free(ctx);
     return ec;
 }

@@ -33,6 +33,12 @@
 #include "log.h"
 #include "pm_rpm.h"
 
+int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
+{
+    return headerGetRawEntry(h, tag, 0, (void*)buf, cnt);
+}
+
+
 int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
 {
     int rc = 0;
@@ -83,7 +89,7 @@ int pm_rpmhdr_loadfile(const char *path, Header *hdr)
 
 char **pm_rpmhdr_langs(Header h)
 {
-    return headerGetLangs(h);
+    return (char**)headerGetLangs(h);
 }
 
 

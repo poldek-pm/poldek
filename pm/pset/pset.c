@@ -74,6 +74,9 @@ void *pm_pset_init(struct source *src)
     char path[PATH_MAX];
     struct pkgdir *dir;
     struct pkgset *ps;
+
+    if (source_is_remote(src))
+        return NULL;
     
 
     if ((dir = pkgdir_srcopen(src, 0)) == NULL)
@@ -97,7 +100,7 @@ void *pm_pset_init(struct source *src)
     pkgset_setup(ps, PSET_VRFY_MERCY);
     pm_pset = n_malloc(sizeof(*pm_pset));
     pm_pset->ps = ps;
-    if (poldek_lookup_external_command(path, sizeof(path), "poldek-pkg-cp.sh"))
+    if (poldek_lookup_external_command(path, sizeof(path), "packagecopy.sh"))
         pm_pset->installer_path = n_strdup(path);
     else
         pm_pset->installer_path = NULL;
@@ -107,11 +110,15 @@ void *pm_pset_init(struct source *src)
 void *pm_pset_opendb(void *pm_pset, const char *rootdir, const char *dbpath,
                      mode_t mode)
 {
+    rootdir = rootdir;
+    dbpath = dbpath;
+    mode = mode;
     return pm_pset;
 }
 
 void pm_pset_closedb(void *pm_pset) 
 {
+    pm_pset = pm_pset;
     return;
 }
 
@@ -136,31 +143,31 @@ int psetdb_it_init(struct pm_pset *pm_pset, struct psetdb_it *it,
     
     switch (tag) {
         case PMTAG_RECNO:
-            pstag = PS_LOOKUP_RECNO;
+            pstag = PS_SEARCH_RECNO;
             break;
             
         case PMTAG_NAME:
-            pstag = PS_LOOKUP_PACKAGE;
+            pstag = PS_SEARCH_NAME;
             break;
             
         case PMTAG_FILE:
-            pstag = PS_LOOKUP_FILE;
+            pstag = PS_SEARCH_FILE;
             break;
 
         case PMTAG_CAP:
-            pstag = PS_LOOKUP_CAP;
+            pstag = PS_SEARCH_CAP;
             break;
             
         case PMTAG_REQ:
-            pstag = PS_LOOKUP_REQ;
+            pstag = PS_SEARCH_REQ;
             break;
             
         case PMTAG_CNFL:
-            pstag = PS_LOOKUP_CNFL;
+            pstag = PS_SEARCH_CNFL;
             break;
             
         case PMTAG_OBSL:
-            pstag = PS_LOOKUP_OBSL;
+            pstag = PS_SEARCH_OBSL;
             break;
             
         default:
@@ -261,45 +268,104 @@ struct pkg *pm_pset_ldhdr(tn_alloc *na, void *hdr, const char *fname,
                           unsigned fsize, unsigned ldflags)
 {
     struct pkg *pkg = hdr;
+    na = na; fname = fname; fsize = fsize; ldflags = ldflags;
     return pkg_link(pkg);
 
 }
+
+tn_array *pm_pset_ldhdr_capreqs(tn_array *arr, void *hdr, int crtype) 
+{
+    tn_array *crs = NULL;
+    struct pkg *pkg = hdr;
+    int i;
+    
+    switch (crtype) {
+        case PMCAP_CAP:
+            crs = pkg->caps;
+            break;
+            
+        case PMCAP_REQ:
+            crs = pkg->reqs;
+            break;
+            
+        case PMCAP_CNFL:
+        case PMCAP_OBSL:
+            crs = pkg->cnfls;
+            break;
+            
+        default:
+            n_die("%d: unknown type (internal error)", crtype);
+    }
+
+    if (crs == NULL)
+        return NULL;
+
+    for (i=0; i < n_array_size(crs); i++) {
+        struct capreq *cr = n_array_nth(crs, i);
+        switch (crtype) {
+            case PMCAP_CAP:
+            case PMCAP_REQ:
+                n_array_push(arr, capreq_clone(NULL, cr));
+                break;
+
+            case PMCAP_CNFL:
+                if (!capreq_is_obsl(cr))
+                    n_array_push(arr, capreq_clone(NULL, cr));
+                break;
+
+            case PMCAP_OBSL:
+                if (capreq_is_obsl(cr))
+                    n_array_push(arr, capreq_clone(NULL, cr));
+                break;
+        }
+    }
+    
+    return arr;
+}
+
 
 
 int pm_pset_packages_install(void *pm_pset,
                              tn_array *pkgs, tn_array *pkgs_toremove,
                              struct poldek_ts *ts) 
 {
+    struct pkgdir *pkgdir;
     struct pm_pset *pm = pm_pset;
     char path[PATH_MAX];
-    char **argv;
-    char *cmd;
-    int i, n, nopts = 0, ec, nsignerr = 0;
-    int nv = verbose;
+    int i;
 
-    for (i=0; i<n_array_size(pkgs); i++) {
+    n_assert(pm->ps);
+    n_assert(pm->ps->pkgdirs);
+    n_assert(n_array_size(pm->ps->pkgdirs) == 1);
+    
+
+    for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
 
         if (pkg_localpath(pkg, path, sizeof(path), ts->cachedir))
-            printf("++%s\n", path);
-    }
-    
-    for (i=0; i<n_array_size(pkgs_toremove); i++) {
-        struct pkg *pkg = n_array_nth(pkgs_toremove, i);
-
-        if (pkg_localpath(pkg, path, sizeof(path), ts->cachedir))
-            printf("--%s\n", path);
+            msgn(0, "%%install %s %s", path, pkgdir->path);
     }
 
+    pm_pset_packages_uninstall(pm, pkgs_toremove, ts);
     return 1;
 }
 
-int pm_pset_packages_uninstall(void *pm_pset, tn_array *pkgs, struct poldek_ts *ts)
+
+int pm_pset_packages_uninstall(void *pm_pset, tn_array *pkgs,
+                               struct poldek_ts *ts)
 {
     struct pm_pset *pm = pm_pset;
-    char **argv;
-    char *cmd;
-    int i, n, nopts = 0;
+    char path[PATH_MAX];
+    int i;
+    
+    pm = pm;
+    ts = ts;
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
 
+        if (pkg_path(pkg, path, sizeof(path)))
+            msgn(0, "%%uninstall %s", path);
+    }
     return 1;
 }

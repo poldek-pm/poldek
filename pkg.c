@@ -438,11 +438,11 @@ int pkg_strcmp_name_evr(const struct pkg *p1, const struct pkg *p2)
 
     n_assert(p1->ver && p2->ver && p1->rel && p2->rel);
     
-    if ((rc = p1->epoch - p2->epoch))
+    if ((rc = p2->epoch - p1->epoch))
         return rc;
     
-    if ((rc = strcmp(p1->ver, p2->ver)) == 0)
-        rc = strcmp(p1->rel, p2->rel);
+    if ((rc = strcmp(p2->ver, p1->ver)) == 0)
+        rc = strcmp(p2->rel, p1->rel);
     
     return rc;
 }
@@ -1200,7 +1200,7 @@ char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
                     const char *cachedir)
 {
     int n = 0;
-    char *s, name[1024];
+    char name[1024];
     char *pkgpath;
 
     n_assert(pkg->pkgdir);
@@ -1214,7 +1214,7 @@ char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
         char buf[1024];
         
         vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
-        n = n_snprintf(path, sizeof(path), "%s/%s/%s", cachedir,
+        n = n_snprintf(path, size, "%s/%s/%s", cachedir,
                        buf, pkg_filename(pkg, name, sizeof(name)));
     }
 

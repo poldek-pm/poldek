@@ -274,9 +274,9 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
     if ((langs = pm_rpmhdr_langs(h))) {
         tn_array *avlangs, *sl_langs;
         char *sl_lang;
-        
-        headerGetRawEntry(h, RPMTAG_SUMMARY, 0, (void*)&summs, &nsumms);
-        headerGetRawEntry(h, RPMTAG_DESCRIPTION, 0, (void*)&descrs, &ndescrs);
+
+        pm_rpmhdr_get_raw_entry(h, RPMTAG_SUMMARY, (void*)&summs, &nsumms);
+        pm_rpmhdr_get_raw_entry(h, RPMTAG_DESCRIPTION, (void*)&descrs, &ndescrs);
         
         n = nsumms;
         if (n > ndescrs)

@@ -35,7 +35,7 @@
 #include <sigint/sigint.h>
 #include "i18n.h"
 #include "cli.h"
-
+#include "poclidek.h"
 
 
 static int cmd_quit(struct cmdctx *cmdctx);

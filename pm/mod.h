@@ -53,8 +53,8 @@ struct pm_module {
     struct pkg *(*hdr_ld)(tn_alloc *na, void *hdr,
                           const char *fname, unsigned fsize,
                           unsigned ldflags);
-
-    int (*hdr_ld_capreqs)(tn_array *caps, void *hdr, int captype);
+    
+    tn_array *(*hdr_ld_capreqs)(tn_array *caps, void *hdr, int captype);
 
     struct pkg *(*ldpkg)(void *modh, tn_alloc *na, const char *path, unsigned ldflags);
     int (*machine_score)(void *modh, int tag, const char *val);

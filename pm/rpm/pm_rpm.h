@@ -68,6 +68,7 @@ int pm_rpmhdr_loadfile(const char *path, Header *hdr);
 int pm_rpmhdr_nevr(void *h, char **name,
                    int32_t *epoch, char **version, char **release);
 char **pm_rpmhdr_langs(Header h);
+int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt);
 void pm_rpmhdr_free_entry(void *e, int type);
 
 int pm_rpmhdr_issource(Header h);

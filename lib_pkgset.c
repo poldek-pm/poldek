@@ -36,6 +36,7 @@
 #include "misc.h"
 #include "i18n.h"
 #include "poldek.h"
+#include "poldek_intern.h"
 #include "pm/pm.h"
 #include "split.h"
 
@@ -93,23 +94,26 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
 
 tn_array *poldek_get_avail_packages(struct poldek_ctx *ctx)
 {
-    if (!poldek_load_sources(ctx))
-        return NULL;
-
-    return n_ref(ctx->ps->pkgs);
-}
-
-tn_array *poldek_get_avail_packages_bynvr(struct poldek_ctx *ctx) 
-{
-    if (!poldek_load_sources(ctx))
-        return NULL;
-
-    return pkgset_get_packages_bynvr(ctx->ps);
+    return poldek_search_avail_packages(ctx, POLDEK_ST_RECNO, NULL);
 }
 
 tn_array *poldek_search_avail_packages(struct poldek_ctx *ctx,
-                                       enum pkgset_lookup_tag tag,
+                                       enum pkgset_search_tag tag,
                                        const char *value)
 {
+    if (!poldek_load_sources(ctx))
+        return NULL;
+    
     return pkgset_search(ctx->ps, tag, value);
+}
+
+
+tn_array *poldek_get_sources(struct poldek_ctx *ctx)
+{
+    return ctx->sources ? n_ref(ctx->sources) : NULL;
+}
+
+tn_array *poldek_get_pkgdirs(struct poldek_ctx *ctx)
+{
+    return ctx->pkgdirs ? n_ref(ctx->pkgdirs) : NULL;
 }

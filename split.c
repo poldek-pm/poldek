@@ -34,6 +34,7 @@
 #include "pkg.h"
 #include "misc.h"
 #include "poldek.h"
+#include "poldek_intern.h"
 
 struct chunk {
     int       no;
