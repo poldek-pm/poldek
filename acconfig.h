@@ -4,9 +4,11 @@
 #undef ENABLE_VFILE_CURL
 #undef ENABLE_TRACE
 #undef HAVE_RPM_4_0
+#undef HAVE_RPM_4_0_4
 #undef HAVE_RPM_EXTDEPS
 #undef HAVE_READLINE_4_2
 #undef HAVE_TM_GMTOFF
 #undef HAVE_TM___GMTOFF
-
+#undef HAVE_RPMLOG
+#undef HAVE_RPMCHECKSIG
 

@@ -99,10 +99,9 @@ void vfile_configure(const char *cachedir, int flags)
 }
 
 
-
+#define ZLIB_TRACE 0
 
 #ifdef HAVE_FOPENCOOKIE
-
 #if __GNUC_PREREQ (2,2)
 int gzfseek(void *stream, _IO_off64_t *offset, int whence)
 {
@@ -112,13 +111,12 @@ int gzfseek(void *stream, _IO_off64_t *offset, int whence)
     rc = gzseek(stream, off, whence);
     if (rc >= 0)
         rc = 0;
-
-    //printf("zfseek (%p, %ld, %lld, %d) = %d\n", stream, off, *offset, whence, rc);
+#if ZLIB_TRACE
+    printf("zfseek (%p, %ld, %lld, %d) = %d\n", stream, off, *offset, whence, rc);
+#endif    
     return rc;
 }
-
 #else
-
 int gzfseek(void *stream, _IO_off_t offset, int whence) 
 {
     int rc;
@@ -129,12 +127,24 @@ int gzfseek(void *stream, _IO_off_t offset, int whence)
 
     return rc;
 }
-
 #endif /* __GNUC_PREREQ */
 
+#if ZLIB_TRACE
+int gzread_wrap(void *stream, char *buf, size_t size)
+{
+    int rc;
+    rc = gzread(stream, buf, size);
+    printf("zread (%p, %d) = %d (%m)\n", stream, size, rc);
+    return rc;
+}
+#endif
 
 cookie_io_functions_t gzio_cookie = {
+#if ZLIB_TRACE    
+    (cookie_read_function_t*)gzread_wrap,
+#else
     (cookie_read_function_t*)gzread,
+#endif    
     (cookie_write_function_t*)gzwrite,
     gzfseek,
     (cookie_close_function_t*)gzclose

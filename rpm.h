@@ -2,7 +2,15 @@
 #ifndef POLDEK_RPM_H
 #define POLDEK_RPM_H
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <rpm/rpmlib.h>
+#ifdef HAVE_RPM_4_0_4
+# include <rpm/rpmcli.h>
+#endif
+
 #include <trurl/narray.h>
 
 #include "dbpkg.h"
@@ -10,6 +18,8 @@
 #include "rpmdb_it.h"
 
 #define RPM_DBPATH  "/var/lib/rpm"
+
+extern int rpmlib_verbose;      /* rpmlog() verbosity */
 
 int rpm_initlib(tn_array *macros);
 void rpm_define(const char *name, const char *val);
@@ -68,5 +78,7 @@ int rpm_get_obsoletedby_pkg(rpmdb db, tn_array *dbpkgs, const struct pkg *pkg,
 
 int rpm_install(rpmdb db, const char *rootdir, const char *path,
                 unsigned filterflags, unsigned transflags, unsigned instflags);
+
+int rpm_verify_signature(const char *path, unsigned flags);
 
 #endif

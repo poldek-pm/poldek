@@ -9,7 +9,7 @@
 * improved dependecy processing:
   - package may be marked for install as a consequence of conflict
 
-  - dependency loops detected during installl time are noticed in human 
+  - dependency loops detected during install time are noticed in human 
     readable form
 
   - improved "greedy" selection - if foo-VER is upgraded, then eventual 
@@ -34,6 +34,8 @@
   what prevents program SIGSEVs on load broken indexes
 
 * changed default cache directory to $HOME/.poldek-cache
+
+* package MD5 sums are verified before installl
 
 * few (nice) improvements and (not so nice) bug fixes 
 

@@ -9,6 +9,9 @@
 /*
   $Id$
 */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <ctype.h>
 #include <stdio.h>
@@ -22,6 +25,7 @@
 
 #include "i18n.h"
 #include "rpmhdr.h"
+#include "rpmadds.h"
 #include "log.h"
 #include "pkgu.h"
 #include "h2n.h"

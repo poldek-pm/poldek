@@ -44,6 +44,8 @@
 
 static int initialized = 0;
 
+int rpmlib_verbose = 0;
+
 static
 int header_evr_match_req(Header h, const struct capreq *req);
 static
@@ -56,7 +58,6 @@ int rpm_initlib(tn_array *macros)
             logn(LOGERR, "failed to read rpmlib configs");
             return 0;
         }
-    
 
     if (macros) {
         int i;
@@ -502,7 +503,11 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
         }
 
         if ((instflags & INSTALL_NODEPS) == 0) {
-            struct rpmDependencyConflict *conflicts;
+#ifdef HAVE_RPM_4_0_4
+            rpmDependencyConflict conflicts = NULL;
+#else
+            struct rpmDependencyConflict *conflicts = NULL;
+#endif
             int numConflicts = 0;
             
             if (rpmdepCheck(rpmts, &conflicts, &numConflicts) != 0) {
@@ -810,4 +815,72 @@ tn_array *rpm_get_provides_dbpkgs(rpmdb db, const struct capreq *cap,
     return dbpkgs;
 }
 
+#ifdef HAVE_RPMCHECKSIG
+int rpm_verify_signature(const char *path, unsigned flags) 
+{
+    const char *argv[2];
+
+    argv[0] = path;
+    argv[1] = NULL;
+
+    return rpmCheckSig(flags, argv) == 0;
+}
+#endif
+
+#ifdef HAVE_RPMLOG
+/* w/o:  rpmlib dumps messges to stdout only...  */
+void rpmlog(int prii, const char *fmt, ...) 
+{
+    va_list args;
+    int pri, mask;
+    int rpmlogMask, logpri = LOGERR, verbose_level = -1;
+
+    pri =  RPMLOG_PRI(prii);
+    mask = RPMLOG_MASK(pri);
+    rpmlogMask = rpmlogSetMask(0); /* get mask */
+        
+    if ((mask & rpmlogMask) == 0)
+	return;
+
+    if (pri <= RPMLOG_ERR)
+        logpri = LOGERR;
     
+    else if (pri == RPMLOG_WARNING)
+        logpri = LOGWARN;
+    
+    else {
+        logpri = LOGINFO;
+        verbose_level = 2;
+    }
+
+    if (verbose_level > verbose)
+        return;
+
+    if (verbose_level > rpmlib_verbose)
+        return;
+    
+    va_start(args, fmt);
+
+    if (logpri != LOGERR) 
+        vlog(logpri, 0, fmt, args);
+        
+    else {                  /* basename(path) */
+        char m[1024], *p, *q;
+        vsnprintf(m, sizeof(m), fmt, args);
+        p = m;
+        if (*p == '/') {
+            p++;
+            q = p;
+            while ((p = strchr(q, '/')))
+                q = p + 1;
+            p = q;
+        }
+        log(logpri, "%s", p);
+    }
+        
+    va_end(args);
+}
+
+#endif /* HAVE_RPMLOG */
+    
+        

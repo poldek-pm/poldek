@@ -1845,10 +1845,13 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
 
         if (!pkg_is_marked_i(pkg)) 
             continue;
-
+        
         if (inst->instflags & INSTS_PARTITIONED) {
-            printf_c(PRCOLOR_YELLOW, "Installing set #%d\n", n);
-            msgn_f(0, "** Installing set #%d\n", n);
+            if (n > 1) {
+                printf_c(PRCOLOR_YELLOW, "Installing set #%d\n", n);
+                msgn_f(0, "** Installing set #%d\n", n);
+            }
+            
             n++;
             pkgdb_reopendb(upg.inst->db);
         }

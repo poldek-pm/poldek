@@ -10,6 +10,10 @@
   $Id$
 */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
@@ -29,7 +33,29 @@
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"
+#include "rpm.h"
 
+#ifdef HAVE_RPMCHECKSIG     /* don't really know in RPM versions with rpmCheckSig() */
+
+int package_verify_sign(const char *path, unsigned flags) 
+{
+    unsigned rpmflags = 0;
+
+    if (access(path, R_OK) != 0) {
+        logn(LOGERR, "verify signature %s: %m", path);
+        return 0;
+    }
+    
+    if (flags & PKGVERIFY_PGPG)
+        rpmflags |= CHECKSIG_PGP | CHECKSIG_GPG;
+    
+    if (flags & PKGVERIFY_MD)
+        rpmflags |= CHECKSIG_MD5;
+
+    return rpm_verify_signature(path, flags);
+}
+
+#else  /* HAVE_RPMCHECKSIG */
 
 int package_verify_sign(const char *path, unsigned flags) 
 {
@@ -77,7 +103,7 @@ int package_verify_sign(const char *path, unsigned flags)
     return rpmr_exec(cmd, argv, 0, 4) == 0;
 }
 
-    
+#endif /* HAVE_RPMCHECKSIG */
 
 int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
 {
@@ -106,8 +132,11 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
         if (urltype == VFURL_CDROM)
             ncdroms++;
 
-        if (urltype & VFURL_LOCAL)
+        if (urltype == VFURL_PATH) {
+            if (!package_verify_sign(pkgpath, PKGVERIFY_MD))
+                nerr++;
             continue;
+        }
 
         pkg_basename = pkg_filename_s(pkg);
         if (nosubdirs) {
@@ -120,13 +149,21 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
             snprintf(path, sizeof(path), "%s/%s/%s", destdir, buf,
                      pkg_basename);
         }
-        
-        if (access(path, R_OK) == 0 && package_verify_sign(path, PKGVERIFY_MD))
-            continue;           /* already downloaded */
-             
-        else if (vfile_valid_path(path)) 
-            unlink(path);
 
+        if (access(path, R_OK) == 0) {
+            int v = rpmlib_verbose;
+            
+            rpmlib_verbose = -2; /* be quiet */
+            if (package_verify_sign(path, PKGVERIFY_MD)) {
+                rpmlib_verbose = v;
+                continue;           /* already downloaded */
+                
+            } else if (vfile_valid_path(path)) 
+                unlink(path);
+            
+            rpmlib_verbose = v;
+        }
+        
         if ((urls = n_hash_get(urls_h, pkgpath)) == NULL) {
             urls = n_array_new(n_array_size(pkgs), NULL, NULL);
             n_hash_insert(urls_h, pkgpath, urls);
@@ -170,68 +207,18 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
         
         if (!vfile_fetcha(real_destdir, urls, VFURL_UNKNOWN))
             nerr++;
-    }
-    
-    n_array_free(urls_arr);
-    n_hash_free(urls_h);
-    return nerr == 0;
-}
-
-
-int old_packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
-{
-    int       i, nerr, urltype;
-    tn_array  *urls = NULL;
-    tn_array  *urls_arr = NULL;
-    tn_hash   *urls_h = NULL;
-
-
-    urls_h = n_hash_new(21, (tn_fn_free)n_array_free);
-    urls_arr = n_array_new(n_array_size(pkgs), NULL, (tn_fn_cmp)strcmp);
-    
-    n_hash_ctl(urls_h, TN_HASH_NOCPKEY);
-    
-    for (i=0; i<n_array_size(pkgs); i++) {
-        struct pkg  *pkg = n_array_nth(pkgs, i);
-        char        *pkgpath = pkg->pkgdir->path;
-        char        path[PATH_MAX], *s;
-        int         len;
-
-        if ((urltype = vfile_url_type(pkgpath)) == VFURL_PATH)
-            continue;
-
-        if ((urls = n_hash_get(urls_h, pkgpath)) == NULL) {
-            urls = n_array_new(n_array_size(pkgs), NULL, NULL);
-            n_hash_insert(urls_h, pkgpath, urls);
-            n_array_push(urls_arr, pkgpath);
+        
+        else {
+            int j;
+                
+            for (j=0; j < n_array_size(urls); j++) {
+                char localpath[PATH_MAX];
+                snprintf(localpath, sizeof(localpath), "%s/%s", real_destdir,
+                         n_basenam(n_array_nth(urls, j)));
+                if (!package_verify_sign(localpath, PKGVERIFY_MD))
+                    nerr++;
+            }
         }
-        
-        len = snprintf(path, sizeof(path), "%s/%s", pkgpath,
-                       pkg_filename_s(pkg));
-        
-        s = alloca(len + 1);
-        memcpy(s, path, len);
-        s[len] = '\0';
-        n_array_push(urls, s);
-    }
-
-    nerr = 0;
-    for (i=0; i<n_array_size(urls_arr); i++) {
-        char path[PATH_MAX];
-        char *pkgpath = n_array_nth(urls_arr, i);
-
-        urls = n_hash_get(urls_h, pkgpath);
-
-        if (nosubdirs == 0) {
-            char buf[1024];
-            
-            vfile_url_as_dirpath(buf, sizeof(buf), pkgpath);
-            snprintf(path, sizeof(path), "%s/%s", destdir, buf);
-            destdir = path;
-        }
-        
-        if (!vfile_fetcha(destdir, urls, VFURL_UNKNOWN))
-            nerr++;
     }
     
     n_array_free(urls_arr);

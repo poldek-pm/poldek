@@ -20,6 +20,7 @@
 
 #include "i18n.h"
 #include "rpmhdr.h"
+#include "rpmadds.h"
 #include "log.h"
 #include "pkgu.h"
 #include "h2n.h"
@@ -175,7 +176,6 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
     void *rawhdr;
     Header hdr;
 
-    
     if (offset > 0)
         if (fseek(stream, offset, SEEK_SET) != 0) {
             logn(LOGERR, "pkguinf_restore: fseek %ld: %m", offset);
@@ -183,13 +183,13 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
         }
     
     if (fread(&nlangs, sizeof(nlangs), 1, stream) != 1) {
-        logn(LOGERR, "pkguinf_restore: read error (%m) at %ld", ftell(stream));
+        logn(LOGERR, "pkguinf_restore: read error nlangs (%m) at %ld %p", ftell(stream), stream);
         return NULL;
     }
     nlangs = ntoh16(nlangs);
     
     if (fread(&nsize, sizeof(nsize), 1, stream) != 1) {
-        logn(LOGERR, "pkguinf_restore: read error (%m) at %ld", ftell(stream));
+        logn(LOGERR, "pkguinf_restore: read error nsize (%m) at %ld", ftell(stream));
         return NULL;
     }
     
@@ -197,7 +197,7 @@ struct pkguinf *pkguinf_restore(FILE *stream, off_t offset)
     rawhdr = alloca(nsize);
     
     if (fread(rawhdr, nsize, 1, stream) != 1) {
-        logn(LOGERR, "pkguinf_restore: read error at %ld", ftell(stream));
+        logn(LOGERR, "pkguinf_restore: read %d error at %ld", nsize, ftell(stream));
         return NULL;
     }
 

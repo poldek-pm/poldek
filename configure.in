@@ -142,6 +142,7 @@ AC_EGREP_CPP(yes,
        yes
       #endif
      ], is_rpm4=yes, is_rpm4=no)
+
 if test ${is_rpm4}. = yes. ; then
 	AC_MSG_RESULT(yes)
 	AC_DEFINE(HAVE_RPM_4_0)
@@ -150,6 +151,19 @@ if test ${is_rpm4}. = yes. ; then
 		], is_rpm_extdeps=yes, is_rpm_extdeps=no)
 	if test ${is_rpm_extdeps}. = yes. ; then
 		AC_DEFINE(HAVE_RPM_EXTDEPS)
+	fi
+
+	AC_MSG_CHECKING(for rpm 4.0.4)
+	AC_EGREP_CPP(CHECKSIG_PGP,
+		[ #include <rpm/rpmcli.h>
+		], is_rpm_4_0_4=yes, is_rpm_4_0_4=no)
+
+	if test ${is_rpm_4_0_4}. = yes. ; then
+		AC_DEFINE(HAVE_RPM_4_0_4)
+		CFLAGS="$CFLAGS -D_REENTRANT"
+		AC_MSG_RESULT(yes)
+	else 
+	        AC_MSG_RESULT(no)
 	fi
 else
 	AC_MSG_RESULT(no)
@@ -186,8 +200,12 @@ else
 fi
 
 dnl Checks for libraries.
-AC_CHECK_LIB(z, gzopen)
-AC_CHECK_LIB(bz2, BZ2_bzCompress)
+# rpm 4.0.4 contains zlib
+if test ${is_rpm_4_0_4}. != yes. ; then
+	AC_CHECK_LIB(bz2, BZ2_bzCompress)
+	AC_CHECK_LIB(z, gzopen)
+fi
+
 DBLIB=""
 AC_CHECK_LIB(db-4.0, db_create,[DBLIB=-ldb-4.0],[
 	AC_CHECK_LIB(db, db_create, [DBLIB=-ldb],,[$LIBS])],
@@ -205,6 +223,11 @@ AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="$LIBS -lrpm $DBLIB"],
 	    [$DBLIB])
 
 AC_CHECK_FUNCS(rpmMachineScore,, AC_MSG_ERROR("rpmlib not found"))
+AC_CHECK_FUNCS(rpmlog, [AC_DEFINE(HAVE_RPMLOG)])
+AC_CHECK_FUNCS(rpmCheckSig, [AC_DEFINE(HAVE_RPMCHECKSIG)])
+
+
+AC_CHECK_FUNCS(gzopen)
 
 dnl trullib 0.43.4 has n_hash_size
 dnl test if linked with system copy only
@@ -219,8 +242,8 @@ AC_CHECK_FUNCS(getline,, AC_MSG_ERROR("getline\(\) is needed by $PACKAGE"),
 AC_CHECK_FUNCS(fopencookie,, AC_MSG_WARN("disabled gzipped files support"),
 	       $CONF_IN_LDFLAGS)
 
-AC_CHECK_FUNCS(openpty,, 
-	AC_CHECK_LIB(util, openpty, [AC_DEFINE(HAVE_OPENPTY)] [LIBS="$LIBS -lutil"]))
+AC_CHECK_FUNCS(openpty,,
+	       AC_CHECK_LIB(util, openpty, [AC_DEFINE(HAVE_OPENPTY)] [LIBS="$LIBS -lutil"]))
 
 AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
 AC_MSG_WARN("poldek will not work fine with rpmlib\(...\) capabilities"),
