@@ -1,3 +1,9 @@
+0.15.2:
+- added "hold" and "greedy" commands 
+- added FIRST_FREE_SPACE param to split option
+- fixed bug of dependency processing
+- minor fixes 
+
 0.15.1:
 * spliting: changed packages.chunk* format: full package filenames
   are printed and removed comments. 

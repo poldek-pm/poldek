@@ -9,6 +9,7 @@ poldek - rpm packages management helper tool
 =head1 SYNOPSIS
 
 poldek [--source=SOURCE ...] [OPTION...] [PACKAGE...]
+poldek [--source=SOURCE ...] --shell
 
 =head1 DESCRIPTION
 
