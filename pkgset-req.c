@@ -169,7 +169,11 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
         }
     }
 
-    mark_badreqs(ps);
+    if (nerrors)
+        mark_badreqs(ps);
+    else if (ps->flags & PSVERIFY_DEPS)
+        msgn(2, _("No unsatisfied dependencies detected -- OK"));
+
     if (nerrors && (ps->flags & PSVERIFY_DEPS)) 
         msgn(1, _("%d unsatisfied dependencies, %d packages cannot be installed"),
             nerrors, ps->nerrors);
