@@ -210,7 +210,9 @@ int vfile_fetcha(const char *destdir, tn_array *urls, int urltype)
 {
     const struct vf_module *mod = NULL;
     int rc = 1;
-    
+
+    if (!vf_mkdir(destdir))
+        return 0;
     
     n_assert(urltype > 0);
     if (urltype == VFURL_UNKNOWN) 
