@@ -72,7 +72,8 @@ int posthook_diff(struct pkgdir *pd1, struct pkgdir* pd2, struct pkgdir *diff);
 
 struct pkgdir_module pkgdir_module_pndir = {
     NULL, 
-    PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE, 
+    PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE |
+    PKGDIR_CAP_HANDLEIGNORE, 
     "pndir",
     NULL,
     "Native poldek's index format",
@@ -604,6 +605,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     struct pkg_data    *pkgd;
     struct tndb_it     it;
     tn_stream          *st;
+    tn_array           *ign_patterns = NULL;
     int                rc, klen, nerr = 0;
     char               key[TNDB_KEY_MAX + 1], path[PATH_MAX];
     size_t             vlen;
@@ -614,6 +616,13 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         return 0;
 
     vf_url_slim(path, sizeof(path), pkgdir->idxpath, 0);
+    
+    if ((ldflags & PKGDIR_LD_NOIGNORE) == 0 && pkgdir->src &&
+        n_array_size(pkgdir->src->ign_patterns)) {
+        ign_patterns = pkgdir->src->ign_patterns;
+    }
+
+    DBGF("ign_patterns %p\n", ign_patterns);
     
     st = tndb_it_stream(&it);
     while ((rc = tndb_it_get_begin(&it, key, &klen, &vlen)) > 0) {
@@ -628,6 +637,19 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             logn(LOGERR, "%s: parse error", key);
             nerr++;
             goto l_continue_loop;
+        }
+        
+        if (ign_patterns) {
+            char buf[512];
+            int i;
+            pkg_snprintf(buf, sizeof(buf), &kpkg);
+            for (i=0; i < n_array_size(ign_patterns); i++) {
+                char *p = n_array_nth(ign_patterns, i);
+                if (fnmatch(p, buf, 0) == 0) {
+                    DBGF("ignore %s (%s)\n", buf, p);
+                    goto l_continue_loop;
+                }
+            }
         }
 
         pkg = pkg_restore_st(st, pkgdir->na, &kpkg, pkgdir->foreign_depdirs,

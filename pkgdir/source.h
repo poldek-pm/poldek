@@ -34,6 +34,7 @@ struct source {
     char      *dscr;
     char      *lc_lang;
     tn_array  *exclude_path;
+    tn_array  *ign_patterns;    /* ignore package patterns */
     char      *original_type;   /* type of source repo for this source  */
     unsigned  subopt_flags;
     int       _refcnt;

@@ -29,6 +29,7 @@
 #include "sigint/sigint.h"
 
 #include "pkgdir/source.h"
+#include "pkgdir/pkgdir.h"
 #include "pkgset.h"
 #include "pkgmisc.h"
 #include "conf.h"
@@ -44,7 +45,7 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
 {
     struct pkgset *ps;
     struct poldek_ts *ts;
-    unsigned ps_flags = 0;
+    unsigned ps_flags = 0, ldflags = 0;
 
     n_assert(ctx->pmctx);
     n_assert(ctx->ps == NULL);
@@ -57,8 +58,10 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
     if (pm_get_dbdepdirs(ctx->pmctx, ctx->ts->rootdir, NULL, ps->depdirs) >= 0)
         ps->flags |= PSET_DBDIRS_LOADED;
     
-        
-    if (!pkgset_load(ps, 0, ctx->sources))
+    if (!ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE))
+        ldflags |= PKGDIR_LD_NOIGNORE;
+            
+    if (!pkgset_load(ps, ldflags, ctx->sources))
         logn(LOGWARN, _("no packages loaded"));
     
     MEMINF("after load");

@@ -46,6 +46,7 @@
 #include "pkg.h"
 #include "capreq.h"
 #include "pkgroup.h"
+#include "pkgmisc.h"
 
 tn_hash *pkgdir__avlangs_new(void)
 {
@@ -554,6 +555,14 @@ void pkgdir_free(struct pkgdir *pkgdir)
     free(pkgdir);
 }
 
+static void do_ignore(struct pkgdir *pkgdir) 
+{
+    if (pkgdir->mod->cap_flags & PKGDIR_CAP_HANDLEIGNORE)
+        return;
+
+    if (pkgdir->src && n_array_size(pkgdir->src->ign_patterns))
+        packages_score(pkgdir->pkgs, pkgdir->src->ign_patterns, PKG_IGNORED);
+}
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 {
@@ -603,6 +612,9 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
             pkg->pkgdir = pkgdir;
         }
+
+        if ((ldflags & PKGDIR_LD_NOIGNORE) == 0)
+            do_ignore(pkgdir);
         
         if ((ldflags & PKGDIR_LD_NOUNIQ) == 0)
             pkgdir__uniq(pkgdir);

@@ -32,8 +32,9 @@ const char *pkgdir_localidxpath(struct pkgdir *pkgdir);
 #include "pkg_store.h"
 
 /* internal module capabilities */
-#define PKGDIR_CAP_INTERNALTYPE   (1 << 8) /* do not show it outside  */
-#define PKGDIR_CAP_NOSAVAFTUP     (1 << 9) /* needn't saving after update() */
+#define PKGDIR_CAP_INTERNALTYPE  (1 << 8) /* do not show it outside  */
+#define PKGDIR_CAP_NOSAVAFTUP    (1 << 9) /* needn't saving after update() */
+#define PKGDIR_CAP_HANDLEIGNORE  (1 << 10) /* handles ign_patterns internally */
 
 
 /*  module methods */

@@ -283,11 +283,20 @@ struct source *source_new_htcnf(struct poldek_ctx *ctx,
         src->original_type = n_strdup(vs);
     
     get_conf_opt_list(htcnf, "exclude path", src->exclude_path);
-    
     if (n_array_size(src->exclude_path) == 0 && /* take global exclude path */
         n_array_size(ctx->ts->exclude_path) > 0) {
-        
+
+        n_array_free(src->exclude_path);
         src->exclude_path = n_array_dup(ctx->ts->exclude_path,
+                                        (tn_fn_dup)strdup);
+    }
+
+    get_conf_opt_list(htcnf, "ignore", src->ign_patterns);
+    if (n_array_size(src->ign_patterns) == 0 && /* take global  */
+        n_array_size(ctx->ts->ign_patterns) > 0) {
+        
+        n_array_free(src->ign_patterns);
+        src->ign_patterns = n_array_dup(ctx->ts->ign_patterns,
                                         (tn_fn_dup)strdup);
     }
     

@@ -214,7 +214,7 @@ struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *patch)
             pkg = n_array_nth(pkgdir->pkgs, i);
             pkg->groupid = pkgroup_idx_remap_groupid(patch->pkgroups,
                                                      pkgdir->pkgroups,
-                                                     pkg->groupid, 0);
+                                                     pkg->groupid, 1);
         }
         
         pkgroup_idx_free(pkgdir->pkgroups);

@@ -163,6 +163,7 @@ struct source *source_malloc(void)
     src->lc_lang = NULL;
     src->_refcnt = 0;
     src->exclude_path = n_array_new(4, free, (tn_fn_cmp)strcmp);
+    src->ign_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
     return src;
 }
 
@@ -198,6 +199,10 @@ static struct source *source_dup(const struct source *src)
 
     n_array_free(nsrc->exclude_path);
     nsrc->exclude_path = n_ref(src->exclude_path);
+
+    n_array_free(nsrc->ign_patterns);
+    nsrc->ign_patterns = n_ref(src->ign_patterns);
+    
     nsrc->subopt_flags = src->subopt_flags;
     return nsrc;
 }
@@ -221,6 +226,9 @@ void source_free(struct source *src)
 
     if (src->exclude_path)
         n_array_free(src->exclude_path);
+
+    if (src->ign_patterns)
+        n_array_free(src->ign_patterns);
 
     memset(src, 0, sizeof(*src));
     free(src);

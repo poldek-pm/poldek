@@ -105,6 +105,7 @@ struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
 #define PKGDIR_LD_FULLFLIST   (1 << 1) /* load full file list */
 #define PKGDIR_LD_DESC        (1 << 2) /* load pkg info to memory */
 #define PKGDIR_LD_NOUNIQ      (1 << 3) /* don't perform pkgdir_uniq() */
+#define PKGDIR_LD_NOIGNORE      (1 << 4) /* do not honour ign_patterns */
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 
