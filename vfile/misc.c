@@ -31,8 +31,8 @@
 
 #include <trurl/nstr.h>
 
-#define VFILE_INTERNAL
 #include "vfile.h"
+#include "vfile_intern.h"
 
 #if 0                           /* not nessecary  */
 void vf_cssleep(int cs) 

@@ -43,11 +43,8 @@
 
 #include "i18n.h"
 
-#include "sigint/sigint.h"
-
-#define VFILE_INTERNAL
 #include "vfile.h"
-
+#include "vfile_intern.h"
 
 #ifdef ENABLE_VFILE_CURL
 extern struct vf_module vf_mod_curl;
@@ -66,7 +63,7 @@ struct vf_module *vfmod_tab[] = {
 #define REQTYPE_FETCH 0
 #define REQTYPE_STAT  1
 
-void vfile_postconfigure_init(void) 
+void vfile_setup(void) 
 {
     int n;
 
@@ -144,7 +141,7 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
         end = 1000;
     
     while (end-- > 0) {
-        if (sigint_reached()) {
+        if (vfile_sigint_reached(0)) {
             vf_errno = EINTR;
             break;
         }

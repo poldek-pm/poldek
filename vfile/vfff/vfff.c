@@ -39,9 +39,9 @@
 #include <trurl/nstr.h>
 #include <trurl/nmalloc.h>
 
-#include "sigint/sigint.h"
 #include "i18n.h"
 #include "vfff.h"
+#include "vfile/vfile_intern.h"
 
 extern void vhttp_vcn_init(struct vcn *cn);
 extern void vftp_vcn_init(struct vcn *cn);
@@ -76,7 +76,7 @@ void vfff_set_err(int err_no, const char *fmt, ...)
 int vfff_sigint_reached(void)
 {
     int v;
-    if ((v = sigint_reached()) && vfff_errno == 0)
+    if ((v = vfile_sigint_reached(0)) && vfff_errno == 0)
         vfff_set_err(EINTR, _("connection cancelled"));
 
     return v;
@@ -150,7 +150,7 @@ int vfff_to_connect(const char *host, const char *service, int *af)
     vfff_errno = 0;
     
     do {
-        sigint_reset();
+        vfile_sigint_reached(1);      /* just reset */
         
         sockfd = socket(resp->ai_family, resp->ai_socktype, resp->ai_protocol);
         if (sockfd < 0)

@@ -29,8 +29,8 @@
 
 #include "i18n.h"
 
-#define VFILE_INTERNAL
 #include "vfile.h"
+#include "vfile_intern.h"
 #include "p_open.h"
 
 

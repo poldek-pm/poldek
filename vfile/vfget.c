@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     char *url, *destdir;
 
     vfile_configure(VFILE_CONF_VERBOSE, &verbose);
-    vfile_postconfigure_init();
+    vfile_setup();
     
     if (argc < 2) {
         printf("Usage: vfget URL [DESTDIR]\n");

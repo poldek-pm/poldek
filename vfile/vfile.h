@@ -1,4 +1,5 @@
-/* 
+/*
+  Not so transparent IO layer. 
   Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
 
   This program is free software; you can redistribute it and/or modify
@@ -35,7 +36,6 @@
 #define VFILE_LOG_ERR   (1 << 2)
 #define VFILE_LOG_TTY   (1 << 8)
 
-extern int *vfile_verbose;
 
 #define VFILE_CONF_CACHEDIR               (1 << 0) /*const char *path        */
 #define VFILE_CONF_DEFAULT_CLIENT         (1 << 1) /*const char *proto, *name */
@@ -49,11 +49,11 @@ extern int *vfile_verbose;
 #define VFILE_CONF_STUBBORN_RETR          (1 << 9)
 #define VFILE_CONF_EXTCOMPR               (1 << 10) /* use external script to
                                                        file (de)compression */
-
+#define VFILE_CONF_SIGINT_REACHED         (1 << 11)
 int vfile_configure(int param, ...);
 
 /* run it after configuration is done */
-void vfile_postconfigure_init(void);
+void vfile_setup(void);
 
 
 
@@ -154,22 +154,6 @@ int vf_fetch(const char *url, const char *destdir);
 int vf_fetcha_sl(tn_array *urls, const char *destdir, const char *site_label);
 int vf_fetcha(tn_array *urls, const char *destdir);
 
-#ifdef VFILE_INTERNAL
-/* only external handlers are used */
-int vf_fetch_ext(const char *url, const char *destdir);
-int vf_fetcha_ext(tn_array *urls, const char *destdir);
-#endif
-
-#if 0
-#ifndef VFILE_INTERNAL
-/* legacy */
-# define vfile_fetch(a, b) vf_fetch(a, b)
-# define vfile_fetcha(a, b) vf_fetcha(a, b)
-# define vfile_fetch_ext(a, b) vf_fetch_ext(a, b)
-# define vfile_fetcha_ext(a, b) vf_fetcha_ext(a, b)
-#endif
-#endif
-
 int vf_url_type(const char *url);
 char *vf_url_proto(char *proto, int size, const char *url);
 int vf_url_as_dirpath(char *buf, size_t size, const char *url);
@@ -203,65 +187,5 @@ int vf_cleanpath(char *buf, int size, const char *path);
 
 int vf_find_external_command(char *cmdpath, int size, const char *cmd,
                              const char *PATH);
-
-
-
-#ifdef VFILE_INTERNAL
-
-int vf_lockdir(const char *path);
-int vf_lock_mkdir(const char *path);
-void vf_lock_release(int fd);
-
-void vf_log(int pri, const char *fmt, ...);
-void vf_vlog(int pri, const char *fmt, va_list ap);
-
-#define vf_logerr(fmt, args...) \
-       vf_log(VFILE_LOG_ERR, fmt, ## args)
-
-#define vf_loginfo(fmt, args...) \
-       vf_log(VFILE_LOG_INFO, fmt, ## args)
-
-#include <trurl/n_snprintf.h>
-#include <trurl/nhash.h>
-
-struct vfile_configuration {
-    char       *cachedir;
-    unsigned   flags;
-    tn_hash    *default_clients_ht;
-    tn_hash    *proxies_ht;
-    int        *verbose;
-    char       *anon_passwd;
-    void       (*log)(unsigned flags, const char *fmt, ...);
-};
-
-extern struct vfile_configuration vfile_conf;
-
-void vfile_set_errno(const char *ctxname, int vf_errno);
-
-#include "vfreq.h"
-
-
-struct vf_module {
-    char       vfmod_name[32];
-    unsigned   vf_protocols;
-    
-    int        (*init)(void);
-    void       (*destroy)(void);
-    int        (*fetch)(struct vf_request *req);
-    int        (*stat)(struct vf_request *req);
-    int        _pri;            /* used by vfile only */
-};
-
-/* short alias for */
-#define CL_URL(url) vf_url_hidepasswd_s(url)
-#define PR_URL(url) vf_url_slim_s(url, 60)
-
-int vf_decompressable(const char *path, char *uncmpr_path, int size);
-int vf_extdecompress(const char *path, const char *destpath);
-int vf_extcompress(const char *path, const char *ext);
-
-void vf_sigint_cb(void);
-#endif /* VFILE_INTERNAL */
-
 #endif /* POLDEK_VFILE_H */
 

@@ -44,9 +44,9 @@
 #include "i18n.h"
 #include "log.h"                /* for DBGF */
 
-#define VFILE_INTERNAL
 #include "vopen3.h"
 #include "vfile.h"
+#include "vfile_intern.h"
 
 void vopen3_init(struct vopen3_st *st, const char *cmd, char *const argv[]) 
 {

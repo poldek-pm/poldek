@@ -29,10 +29,9 @@
 #include <trurl/nassert.h>
 #include <trurl/nlist.h>
 
-#define VFILE_INTERNAL
 #include "i18n.h"
 #include "vfile.h"
-
+#include "vfile_intern.h"
 #include "vfff/vfff.h"
 
 static int do_stat(struct vf_request *req);

@@ -31,11 +31,9 @@
 #include <trurl/nstr.h>
 
 #include "i18n.h"
-#include "sigint/sigint.h"
 
-#define VFILE_INTERNAL
 #include "vfile.h"
-
+#include "vfile_intern.h"
 
 static
 int vf_lockfile(const char *lockfile) 
@@ -101,7 +99,7 @@ int vf_lock_obtain(const char *path)
 
     i = 1;
     while (fd == 0) {
-        if (sigint_reached()) {
+        if (vfile_sigint_reached(0)) {
             fd = 0;
             break;
         }

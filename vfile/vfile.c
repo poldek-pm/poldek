@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -39,11 +39,8 @@
 
 #include "i18n.h"
 
-#include "sigint/sigint.h"
-
-#define VFILE_INTERNAL
 #include "vfile.h"
-
+#include "vfile_intern.h"
 
 static int          vfile_err_no = 0;
 static const char   *vfile_err_ctx = NULL;
@@ -56,7 +53,7 @@ static const char   default_anon_passwd[] = "poldek@znienacka.net";
 struct vfile_configuration vfile_conf = {
     "/tmp", VFILE_CONF_STUBBORN_RETR, NULL, NULL, &verbose, 
     (char*)default_anon_passwd,
-    NULL
+    NULL, NULL
 };
 
 static void set_anonpasswd(void)
@@ -98,9 +95,11 @@ int vfile_configure(int param, ...)
         case VFILE_CONF_VERBOSE:
             vp = va_arg(ap, int*);
             if (vp)
-                vfile_verbose = vp;
+                vfile_conf.verbose = vfile_verbose = vp;
+            
             else
-                vfile_verbose = &verbose;
+                vfile_conf.verbose = vfile_verbose = &verbose;
+            
             break;
             
                 
@@ -158,6 +157,10 @@ int vfile_configure(int param, ...)
             
             break;    
         }
+
+        case VFILE_CONF_SIGINT_REACHED:
+            vfile_conf.sigint_reached = va_arg(ap, int (*)(int));
+            break;
 
         default: {
             v = va_arg(ap, int);
@@ -268,7 +271,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
         
         default:
             vf_logerr("vfile_open %s: type %d not supported\n",
-                    CL_URL(path), vf->vf_type);
+                      CL_URL(path), vf->vf_type);
             n_assert(0);
             rc = 0;
     }
@@ -625,3 +628,11 @@ void vfile_set_errno(const char *ctxname, int vf_errno)
     vfile_err_no = vf_errno;
     vfile_err_ctx = ctxname;
 }
+
+int vfile_sigint_reached(int reset)
+{
+    if (vfile_conf.sigint_reached)
+        return vfile_conf.sigint_reached(reset);
+    return 0;
+}
+
