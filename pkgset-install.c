@@ -1853,18 +1853,54 @@ static void mark_namegroup(tn_array *pkgs, struct pkg *pkg, struct upgrade_s *up
     }
 }
 
+static
+int unmark_name_dups(tn_array *pkgs) 
+{
+    struct pkg *pkg, *pkg2;
+    int i, n;
+    
+    if (n_array_size(pkgs) < 2)
+        return 0;
+    
+    n_array_sort(pkgs);
+
+    i = n = 0;
+    while (i < n_array_size(pkgs) - 1) {
+        pkg = n_array_nth(pkgs, i);
+        i++;
+        
+        if (!pkg_is_marked(pkg))
+            continue;
+
+        DBGF("%s\n", pkg_snprintf_s(pkg));
+
+        
+        pkg2 = n_array_nth(pkgs, i);
+        while (pkg_cmp_name(pkg, pkg2) == 0) {
+            pkg_unmark(pkg2);
+            DBGF("unmark %s\n", pkg_snprintf_s(pkg2));
+
+            i++;
+            pkg2 = n_array_nth(pkgs, i);
+            n++;
+        }
+    }
+    
+    return n;
+}
+
 
 int pkgset_install(struct pkgset *ps, struct inst_s *inst,
                    struct install_info *iinf)
 {
-    int i, is_upgrade = 0, nmarked = 0, nerr = 0, n, is_particle;
+    int i, nmarked = 0, nerr = 0, n, is_particle;
     struct upgrade_s upg;
     
     n_assert(inst->flags & (INSTS_INSTALL | INSTS_UPGRADE));
     if (inst->flags & INSTS_INSTALL)
         n_assert((inst->flags & INSTS_UPGRADE) == 0);
-    
-    is_upgrade = inst->flags & INSTS_UPGRADE;
+
+    unmark_name_dups(ps->pkgs);
     
     mem_info(1, "ENTER pkgset_install:");
     init_upgrade_s(&upg, ps, inst);
