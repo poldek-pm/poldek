@@ -1820,40 +1820,6 @@ static int valid_arch_os(struct poldek_ts *ts, tn_array *pkgs)
     return nerr == 0;
 }
 
-
-static void show_dbpkg_list(const char *prefix, tn_array *dbpkgs)
-{
-    int   i, ncol = 2, npkgs = 0;
-    int   term_width;
-    char  *p, *colon = ", ";
-
-    
-    term_width = poldek_term_get_width() - 5;
-    ncol = strlen(prefix) + 1;
-    
-    npkgs = n_array_size(dbpkgs);
-    if (npkgs == 0)
-        return;
-    msg(1, "%s ", prefix);
-    
-    for (i=0; i < n_array_size(dbpkgs); i++) {
-        struct pkg *dbpkg = n_array_nth(dbpkgs, i);
-        p = pkg_snprintf_s(dbpkg);
-        if (ncol + (int)strlen(p) >= term_width) {
-            ncol = 3;
-            msg(1, "_\n%s ", prefix);
-        }
-        
-        if (--npkgs == 0)
-            colon = "";
-            
-        msg(1, "_%s%s", p, colon);
-        ncol += strlen(p) + strlen(colon);
-    }
-    msg(1, "_\n");
-}
-
-
 static void print_install_summary(struct upgrade_s *upg) 
 {
     int i, n;
@@ -1886,27 +1852,12 @@ static void print_install_summary(struct upgrade_s *upg)
     msg(1, "_:\n");
 
     
-    if (n_array_size(upg->install_pkgs) > 2) {
-        n_array_sort(upg->install_pkgs);
-        packages_iinf_display(1, "I", upg->install_pkgs, upg->ts->pms,
-                              PKGMARK_MARK);
-
-        packages_iinf_display(1, "D", upg->install_pkgs, upg->ts->pms,
-                              PKGMARK_DEP);
-        show_dbpkg_list("R", upg->uninst_set->dbpkgs);
+    n_array_sort(upg->install_pkgs);
+    packages_iinf_display(1, "I", upg->install_pkgs, upg->ts->pms,
+                          PKGMARK_MARK);
+    packages_iinf_display(1, "D", upg->install_pkgs, upg->ts->pms, PKGMARK_DEP);
+    packages_iinf_display(1, "R", upg->uninst_set->dbpkgs, NULL, 0);
         
-    } else {
-        for (i=0; i<n_array_size(upg->install_pkgs); i++) {
-            struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
-            msg(1, "%c %s\n", pkg_is_dep_marked(upg->ts->pms, pkg) ? 'D' : 'I',
-                pkg_snprintf_s(pkg));
-        }
-
-        for (i=0; i<n_array_size(upg->uninst_set->dbpkgs); i++) {
-            struct pkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
-            msg(1, "R %s\n", pkg_snprintf_s(dbpkg));
-        }
-    }
     if (upg->ts->fetchdir == NULL)
         packages_fetch_summary(upg->ts->pmctx, upg->install_pkgs,
                                upg->ts->cachedir, upg->ts->fetchdir ? 1 : 0);
