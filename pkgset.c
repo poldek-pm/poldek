@@ -248,7 +248,7 @@ void pkgset_free(struct pkgset *ps)
         n_array_free(ps->rpmcaps);
         ps->rpmcaps = NULL;
     }
-
+    
     n_array_free(ps->pkgs);
 }
 

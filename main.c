@@ -1438,7 +1438,7 @@ static int update_idx(void)
 }
 
 
-static int mkidx(struct pkgset *ps) 
+static int make_idx(struct pkgset *ps) 
 {
     struct source   *src;
     struct pkgdir   *pkgdir;
@@ -1505,6 +1505,7 @@ static int mkidx(struct pkgset *ps)
                 logn(LOGWARN, _("clock skew detected; create index with fake "
                                 "timestamp"));
             }
+            
             if (orig->ts >= pkgdir->ts) 
                 pkgdir->ts = orig->ts + 1;
             
@@ -1739,7 +1740,7 @@ void self_init(void)
 
 int main(int argc, char **argv)
 {
-    struct pkgset   *ps;
+    struct pkgset   *ps = NULL;
     char            *logprefix = "poldek";
     int             rc = 1, ldflags;
 
@@ -1796,18 +1797,17 @@ int main(int argc, char **argv)
         if (!update_idx())
             exit(EXIT_FAILURE);
 
-        if (args.mjrmode == MODE_NULL)
-            exit(EXIT_SUCCESS);
+        if (args.mjrmode == MODE_NULL) 
+            goto l_end;
         verbose = v;
 
         poldek_reinit();
     }
 
     if (args.mjrmode == MODE_UNINSTALL) {
-        if ((rc = usrpkgset_size(args.ups))) {
+        if ((rc = usrpkgset_size(args.ups)))
             rc = uninstall(args.ups, &args.inst);
-        }
-        exit(rc ? EXIT_SUCCESS:EXIT_FAILURE);
+        goto l_end;
     }
     
     if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0 && verbose != -1)
@@ -1851,7 +1851,7 @@ int main(int argc, char **argv)
             break;
             
         case MODE_MKIDX:
-            rc = mkidx(ps);
+            rc = make_idx(ps);
             break;
             
         case MODE_INSTALLDIST:
@@ -1891,7 +1891,9 @@ int main(int argc, char **argv)
             exit(EXIT_FAILURE);
     }
 
-    pkgset_free(ps);
+ l_end:
+    if (ps)
+        pkgset_free(ps);
     mem_info(1, "MEM at the end");
     poldek_destroy();
     mem_info(1, "MEM at the *real* end");

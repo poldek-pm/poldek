@@ -616,6 +616,7 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
             }
         }
         
+        msg(1, "_\n");
         snprintf(path, sizeof(path), "%s/%s/%s", dn, pdir_packages_incdir, linebuf);
         if ((diff = pkgdir_new("diff", path, NULL, 0)) == NULL) {
             nerr++;
@@ -624,14 +625,14 @@ int pkgdir_update(struct pkgdir *pkgdir, int *npatches)
         
         if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
             msgn(1, _("Loading %s..."), vf_url_slim_s(pkgdir->idxpath, 0));
-            if (!pkgdir_load(pkgdir, NULL, PKGDIR_LD_RAW)) {
+            if (!pkgdir_load(pkgdir, NULL, 0)) {
                 logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
                 nerr++;
                 break;
             }
         }
         msgn(1, _("Applying patch %s..."), n_basenam(diff->idxpath));
-        pkgdir_load(diff, NULL, PKGDIR_LD_RAW);
+        pkgdir_load(diff, NULL, 0);
         pkgdir_patch(pkgdir, diff);
         pkgdir_free(diff);
         
@@ -937,8 +938,14 @@ void pkgdir_free(struct pkgdir *pkgdir)
         pkgdir->foreign_depdirs = NULL;
     }
 
-
     if (pkgdir->pkgs) {
+        int i;
+        
+        for (i=0; i<n_array_size(pkgdir->pkgs); i++) {
+            struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+            pkg->pkgdir = NULL;
+        }
+
         n_array_free(pkgdir->pkgs);
         pkgdir->pkgs = NULL;
     }
@@ -1037,6 +1044,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
             pkg = pkg_new_from_tags(&pkgt);
             if (pkg) {
                 pkg->pkgdir = pkgdir;
+                pkg->vf = vfile_incref(pkgdir->vf);
                 n_array_push(pkgdir->pkgs, pkg);
                 pkg = NULL;
             }

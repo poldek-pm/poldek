@@ -132,6 +132,7 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     pkg->cnflpkgs = NULL;
     pkg->other_files_offs = 0;
     pkg->pkgdir = NULL;
+    pkg->vf = NULL;
     pkg->pkg_pkguinf_offs = 0;
     pkg->pri = 0;
     pkg->groupid = 0;
@@ -140,40 +141,67 @@ struct pkg *pkg_new(const char *name, int32_t epoch,
     return pkg;
 }
 
+
 void pkg_free(struct pkg *pkg) 
 {
+
+    //printf("free %s (%d) (%d)\n", pkg_snprintf_s(pkg), pkg->_refcnt,
+    //pkg->vf ? pkg->vf->_refcnt : -10);
+    
     if (pkg->_refcnt > 0) {
         pkg->_refcnt--;
         return;
     }
-        
-    if (pkg->caps)
+    
+    if (pkg->caps) {
         n_array_free(pkg->caps);
+        pkg->caps = NULL;
+    }
     
-    if (pkg->reqs)
+    
+    if (pkg->reqs) {
         n_array_free(pkg->reqs);
-
-    if (pkg->cnfls)
-        n_array_free(pkg->cnfls);
-
-    if (pkg->reqpkgs)
-        n_array_free(pkg->reqpkgs);
-
-    if (pkg->revreqpkgs)
-        n_array_free(pkg->revreqpkgs);
-
-    if (pkg->cnflpkgs)
-        n_array_free(pkg->cnflpkgs);
+        pkg->reqs = NULL;
+    }
+    	
     
-    if (pkg->fl) 
-        n_array_free(pkg->fl);
+    if (pkg->cnfls) {
+        n_array_free(pkg->cnfls);
+        pkg->cnfls = NULL;
+    }
+    
 
+    if (pkg->reqpkgs) {
+        n_array_free(pkg->reqpkgs);
+        pkg->reqpkgs = NULL;
+    }
+    
+    if (pkg->revreqpkgs) {
+        n_array_free(pkg->revreqpkgs);
+        pkg->revreqpkgs = NULL;
+    }
+    
+    if (pkg->cnflpkgs) {
+        n_array_free(pkg->cnflpkgs);
+        pkg->cnflpkgs = NULL;
+    }
+    
+    if (pkg->fl) {
+        n_array_free(pkg->fl);
+        pkg->fl = NULL;
+    }
+    
     if (pkg_has_ldpkguinf(pkg)) {
         if (pkg->pkg_pkguinf)
             pkguinf_free(pkg->pkg_pkguinf);
         pkg_clr_ldpkguinf(pkg);
     }
 
+    if (pkg->vf) {
+        vfile_close(pkg->vf);
+        pkg->vf = NULL;
+    }
+    
     pkg->free(pkg);
 }
 
@@ -181,6 +209,8 @@ void pkg_free(struct pkg *pkg)
 struct pkg *pkg_link(struct pkg *pkg) 
 {
     pkg->_refcnt++;
+    //if (pkg->vf && pkg->_refcnt == 1) 
+    //    pkg->vf = vfile_incref(pkg->vf);
     return pkg;
 }
 
@@ -888,33 +918,31 @@ int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg)
                                              (tn_fn_cmp)capreq_cmp2name));
 }
 
-
 struct pkguinf *pkg_info(const struct pkg *pkg) 
 {
     struct pkguinf *pkgu = NULL;
 
-    
     if (pkg_has_ldpkguinf(pkg)) 
         pkgu = pkguinf_link(pkg->pkg_pkguinf);
     
-    else if (pkg->pkgdir && pkg->pkg_pkguinf_offs > 0)
-        pkgu = pkguinf_restore(pkg->pkgdir->vf->vf_stream, pkg->pkg_pkguinf_offs);
+    else if (pkg->vf && pkg->pkg_pkguinf_offs > 0)
+        pkgu = pkguinf_restore(pkg->vf->vf_stream, pkg->pkg_pkguinf_offs);
     
     if (pkgu)
         pkgu = pkguinf_touser(pkgu);
 
     return pkgu;
-    
 }
 
 tn_array *pkg_other_fl(const struct pkg *pkg) 
 {
     tn_array *fl = NULL;
     
-    if (pkg->pkgdir && pkg->other_files_offs) {
-        fseek(pkg->pkgdir->vf->vf_stream, pkg->other_files_offs, SEEK_SET);
-        fl = pkgfl_restore_f(pkg->pkgdir->vf->vf_stream,
-                             pkg->pkgdir->foreign_depdirs, 0);
+    if (pkg->vf && pkg->other_files_offs) {
+        fseek(pkg->vf->vf_stream, pkg->other_files_offs, SEEK_SET);
+        fl = pkgfl_restore_f(pkg->vf->vf_stream,
+                             pkg->pkgdir ? pkg->pkgdir->foreign_depdirs : NULL,
+                             0);
     }
 
     return fl;
@@ -926,10 +954,11 @@ tn_array *pkg_info_get_fl(const struct pkg *pkg)
     tn_array *fl = NULL;
     
     
-    if (pkg->pkgdir && pkg->other_files_offs) {
-        fseek(pkg->pkgdir->vf->vf_stream, pkg->other_files_offs, SEEK_SET);
-        fl = pkgfl_restore_f(pkg->pkgdir->vf->vf_stream,
-                             pkg->pkgdir->foreign_depdirs, 0);
+    if (pkg->vf && pkg->other_files_offs) {
+        fseek(pkg->vf->vf_stream, pkg->other_files_offs, SEEK_SET);
+        fl = pkgfl_restore_f(pkg->vf->vf_stream,
+                             pkg->pkgdir ? pkg->pkgdir->foreign_depdirs : NULL,
+                             0);
     }
 
     if (fl == NULL) {
@@ -949,7 +978,7 @@ tn_array *pkg_info_get_fl(const struct pkg *pkg)
 
 void pkg_info_free_fl(const struct pkg *pkg, tn_array *fl) 
 {
-    if (pkg->pkgdir && pkg->other_files_offs)
+    if (pkg->vf && pkg->other_files_offs)
         n_array_free(fl);
 }
 

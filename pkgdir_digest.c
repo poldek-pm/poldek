@@ -478,7 +478,8 @@ int i_pkgdir_creat_digest(struct pkgdir *pkgdir, const char *pathname,
         pdigest_destroy(pkgdir->pdg);
         
     mkdigest_path(path, sizeof(path), pathname, pdigest_ext);
-    msgn(1, _("Writing digest %s..."), path);
+    msgn_tty(1, _("Writing digest %s..."), vf_url_slim_s(path, 0));
+    msgn_f(1, _("Writing digest %s..."), path);
 
     if (with_md && (pkgdir->flags & PKGDIR_DIFF) == 0)
         calcflags |= CALC_MD;

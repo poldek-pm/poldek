@@ -115,6 +115,42 @@ void store_pkg_fields(FILE *stream, uint32_t size, uint32_t fsize,
     fprintf(stream, "\n");
 }
 
+static void fprintf_pkg_fl(const struct pkg *pkg, FILE *stream, tn_array *depdirs) 
+{
+    tn_array *fl;
+    void     *flmark;
+
+    
+    flmark = pkgflmodule_allocator_push_mark();
+    fl = pkg_info_get_fl(pkg);
+
+    if (fl && n_array_size(fl) == 0) {
+        n_array_free(fl);
+        fl = NULL;
+    }
+    	
+    if (fl == NULL)
+        return;
+    
+    pkgfl_array_store_order(fl);
+        
+    if (depdirs == NULL) {
+        fprintf(stream, "l:\n");
+        pkgfl_store_f(fl, stream, depdirs, PKGFL_ALL);
+        
+    } else {
+        fprintf(stream, "L:\n");
+        pkgfl_store_f(fl, stream, depdirs, PKGFL_DEPDIRS);
+    
+        fprintf(stream, "l:\n");
+        pkgfl_store_f(fl, stream, depdirs, PKGFL_NOTDEPDIRS);
+    }
+    
+    pkg_info_free_fl(pkg, fl);
+    pkgflmodule_allocator_pop_mark(flmark);
+}
+
+
 static
 int fprintf_pkg(const struct pkg *pkg, FILE *stream, tn_array *depdirs, int nodesc)
 {
@@ -141,27 +177,21 @@ int fprintf_pkg(const struct pkg *pkg, FILE *stream, tn_array *depdirs, int node
     
     if (pkg->cnfls && n_array_size(pkg->cnfls)) 
         capreq_arr_store(pkg->cnfls, stream, "C:\n");
-    
-    if (pkg->fl && n_array_size(pkg->fl)) {
-        pkgfl_array_store_order(pkg->fl);
-        
-        if (depdirs == NULL) {
-            fprintf(stream, "l:\n");
-            pkgfl_store_f(pkg->fl, stream, depdirs, PKGFL_ALL);
-            
-        } else {
-            fprintf(stream, "L:\n");
-            pkgfl_store_f(pkg->fl, stream, depdirs, PKGFL_DEPDIRS);
-    
-            fprintf(stream, "l:\n");
-            pkgfl_store_f(pkg->fl, stream, depdirs, PKGFL_NOTDEPDIRS);
-        }
-    }
 
-    if (nodesc == 0 && pkg_has_ldpkguinf(pkg)) {
-        fprintf(stream, "U:\n");
-        pkguinf_store(pkg->pkg_pkguinf, stream);
-        fprintf(stream, "\n");
+    //mem_info(-10, "before fl");
+    fprintf_pkg_fl(pkg, stream, depdirs);
+    //mem_info(-10, "after fl");
+    if (nodesc == 0) {
+        struct pkguinf *pkgu;
+        
+        //mem_info(-10, "before uinf");
+        if ((pkgu = pkg_info(pkg))) {
+            fprintf(stream, "U:\n");
+            pkguinf_store(pkgu, stream);
+            fprintf(stream, "\n");
+            pkguinf_free(pkgu);
+            //mem_info(-10, "after uinf");
+        }
     }
     
     fprintf(stream, "\n");
@@ -194,6 +224,18 @@ void put_fheader(FILE *stream, const char *name, struct pkgdir *pkgdir)
 
     fprintf(stream, "\n");
 }
+
+
+static int do_unlink(const char *path) 
+{
+    struct stat st;
+    
+    if (stat(path, &st) == 0 && S_ISREG(st.st_mode))
+        return vf_localunlink(path);
+        
+    return 0;
+}
+
 
 int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
                       unsigned flags)
@@ -265,13 +307,16 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
         return 0;
     }
     
-    msgn(1, _("Writing %s..."), path);
+    msgn_tty(1, _("Writing %s..."), vf_url_slim_s(path, 0));
+    msgn_f(1, _("Writing %s..."), path);
     
     if (with_toc) {
         if ((vf_toc = vfile_open(tocpath, VFT_STDIO, VFM_RW)) == NULL)
             return 0;
         put_fheader(vf_toc->vf_stream, pdir_poldeksindex_toc, pkgdir);
     }
+
+    do_unlink(path);
 
     if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL) {
         if (vf_toc)
@@ -328,6 +373,12 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
                     flags & PKGDIR_CREAT_NODESC);
         if (with_toc)
             fprintf(vf_toc->vf_stream, "%s\n", pkg_snprintf_s(pkg));
+#if 0                           /* debug stuff */
+        if (i % 200 == 0) {
+            printf("%d. ", i);
+            mem_info(-10, "i");
+        }
+#endif        
     }
 
  l_end:

@@ -114,6 +114,7 @@ struct pkg {
     tn_array     *cnflpkgs;   /* conflict packages */
 
     struct pkgdir *pkgdir;    /* refrence to its own pkgdir */
+    struct vfile  *vf;        /* refrence to origin index  */
     
     union {
         off_t           pkg_pkguinf_offs;
@@ -124,7 +125,7 @@ struct pkg {
     int pri;                    /* used for split */
     int groupid;                /* package group id (see pkgroups.c) */
     /* private, don't touch */
-    uint16_t     _refcnt;
+    int16_t      _refcnt;
     void         (*free)(void*); /* self free()  */
 
     int32_t      _buf_size;

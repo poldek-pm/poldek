@@ -33,8 +33,9 @@ int rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag)
 
 void rpmhdr_ent_free(struct rpmhdr_ent *ent)
 {
-    if (ent->type == RPM_STRING_ARRAY_TYPE
-        || ent->type == RPM_I18NSTRING_TYPE) {
+    if (ent->type == RPM_STRING_ARRAY_TYPE ||
+        ent->type == RPM_I18NSTRING_TYPE) {
+        
         n_assert(ent->val);
         free(ent->val);
         memset(ent, 0, sizeof(*ent));
