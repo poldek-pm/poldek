@@ -171,7 +171,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (arg == NULL)
                 break;
             
-            printf("arg = %s\n", arg);
+            //printf("arg = %s\n", arg);
             
             if (n_array_size(cmdarg->pkgnames) == 0 && cmdarg->d == NULL) {
                 struct pattern   *pt;
@@ -550,8 +550,11 @@ static int search(struct cmdarg *cmdarg)
             bar_v = v;
         }
         
-        if (shSIGINT)
+        if (shSIGINT) {
+            msgn(0, _("_interrupted."));
             goto l_end;
+        }
+        
         
     }
     
