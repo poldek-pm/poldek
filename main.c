@@ -1651,7 +1651,7 @@ int main(int argc, char **argv)
             
             else if ((rc = usrpkgset_size(args.ups))) {
                 rc = mark_usrset(ps, args.ups, &args.inst, args.mjrmode);
-                if (rc) 
+                if (rc || (args.inst.instflags & PKGINST_FORCE)) 
                     rc = install_dist(ps, &args.inst);
             }
             break;

@@ -989,16 +989,16 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
         msgn(1, _("\nProcessing dependencies..."));
         if (!mark_dependencies(ps, nodeps))
             nerr++;
-        
-        if (nerr) {
-            pkgset_mark(ps, PS_MARK_OFF_ALL);
-            logn(LOGERR, _("Buggy package set."));
-            
-        } else {
-            msgn(1, _("Package set OK"));
-        }
     }
+
+    if (nerr == 0)
+        msgn(1, _("Package set OK"));
     
+    else {
+        if ((inst->instflags & PKGINST_FORCE) == 0)
+            pkgset_mark(ps, PS_MARK_OFF_ALL);
+        logn(LOGERR, _("Buggy package set."));
+    }
     
     return nerr == 0;
 }
