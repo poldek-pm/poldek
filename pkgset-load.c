@@ -43,7 +43,6 @@ int pkgset_load(struct pkgset *ps, int ldmethod, void *path,
     
     n_assert(ps->path == NULL);
 
-    //msg(1, "Scanning %d for packages...\n", dirpath);
     msg(1, "Reading package info from %s...\n", path);
     
     switch (ldmethod) {
@@ -51,7 +50,7 @@ int pkgset_load(struct pkgset *ps, int ldmethod, void *path,
             n = pkgset_load_dir(ps, path);
             if (n) {
                 int len;
-                ps->path = strdup(path);
+                ps->path = strdup((char*)path);
                 len = strlen(path) - 1;
                 if (ps->path[len] == '/')
                     ps->path[len] = '\0';

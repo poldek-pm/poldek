@@ -331,7 +331,8 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                     }
                 } 
             
-                if (pkgdb_match_req(upg->inst->db, req, strict, upg->install_rnos)) {
+                if (pkgdb_match_req(upg->inst->db, req, strict,
+                                    upg->install_rnos)) {
                     msg_i(2, nloop, " %s satisfied by db\n",
                           capreq_snprintf_s(req));
                     if (reqnover)
