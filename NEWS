@@ -1,3 +1,8 @@
+0.15.3:
+* another bugfix of dependency processing
+* splitted verify option to verify, verify-conflicts and verify-fileconflicts
+* more user friendly output on package set verification
+
 0.15.2:
 - added "hold" and "greedy" commands 
 - added FIRST_FREE_SPACE param to split option
