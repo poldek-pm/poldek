@@ -22,7 +22,7 @@ void p_st_init(struct p_open_st *pst);
 void p_st_destroy(struct p_open_st *pst);
 
 #define P_OPEN_KEEPSTDIN (1 << 0) /* don't close stdin */
-#define P_OPEN_OUTPTYS   (1 << 0) /* pass output through pseudo-tty */
+#define P_OPEN_OUTPTYS   (1 << 1) /* pass output through pseudo-tty */
 
 FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
              char *const argv[]);
