@@ -484,7 +484,7 @@ void resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgsp, 
         }
     }
 
-    matches = alloca(n_array_size(pkgnames));
+    matches = alloca(n_array_size(pkgnames) * sizeof(*matches));
     memset(matches, 0, n_array_size(pkgnames) * sizeof(*matches));
     
     pkgs = n_array_new(16, NULL, (tn_fn_cmp)shpkg_cmp);
