@@ -49,6 +49,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
+#include "pkgmisc.h"
 #include "pkgset.h"
 #include "poldek.h"
 #include "misc.h"
@@ -187,7 +188,7 @@ int rpmr_exec(const char *cmd, char *const argv[], int ontty, int verbose_level)
     
     if ((pid = fork()) == 0) {
         execv(cmd, argv);
-	exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
         
     } else if (pid < 0) {
         logn(LOGERR, _("%s: no such file"), cmd);
@@ -245,7 +246,7 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
         cmd = "/bin/rpm";
         argv[n++] = "rpm";
         
-    } else if (ts->getop(ts, POLDEK_OP_USESUDO)) {
+    } else if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0) {
         cmd = "/usr/bin/sudo";
         argv[n++] = "sudo";
         argv[n++] = "/bin/rpm";
@@ -259,7 +260,7 @@ int packages_rpminstall(tn_array *pkgs, struct poldek_ts *ts)
                          POLDEK_TS_DOWNGRADE))
         argv[n++] = "--upgrade";
         
-    else if (poldek_ts_issetf(ts,POLDEK_TS_INSTALL))
+    else if (ts->type == POLDEK_TSt_INSTALL)
         argv[n++] = "--install";
              
     else

@@ -30,7 +30,7 @@ void rpm_closedb(rpmdb db);
 /* rpmlib prototype */
 int rpmvercmp(const char * one, const char * two);
 
-char *rpm_get_dbpath(void);
+char *rpm_get_dbpath(char *path, size_t size);
 time_t rpm_dbmtime(const char *dbfull_path);
 
 int rpm_dbmap(rpmdb db,

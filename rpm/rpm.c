@@ -134,17 +134,21 @@ rpmdb rpm_opendb(const char *dbpath, const char *rootdir, mode_t mode)
     return db;
 }
 
-char *rpm_get_dbpath(void)
+char *rpm_get_dbpath(char *path, size_t size)
 {
     char *p;
 
     rpm_initlib(NULL);
     p = (char*)rpmGetPath("%{_dbpath}", NULL);
-    if (p == NULL || *p == '%') {
+    if (p == NULL || *p == '%')
+        n_snprintf(path, size, "%s", RPM_DBPATH);
+    else
+        n_snprintf(path, size, "%s", p);
+
+    if (p)
         free(p);
-        p = NULL;
-    }
-    return p;
+        
+    return path;
 }
 
 time_t rpm_dbmtime(const char *dbfull_path) 
@@ -364,11 +368,12 @@ int rpm_dbmatch_req(rpmdb db, const struct capreq *req, int strict,
     rc = lookup_cap(db, req, strict, unistallrnos);
     if (rc)
         return 1;
-    
+
     if (is_file && lookup_file(db, req, unistallrnos))
-        return 1;
+        rc = 1;
+
+    return rc;
     
-    return 0;
 }
 
 

@@ -71,7 +71,7 @@ int rpmdb_get_depdirs(const char *rootdir, tn_array *depdirs)
     DB        *db;
     DBT       dbt_k, dbt_d;
     char      buf[PATH_MAX], path[PATH_MAX], *depdir;
-    char      *index, *p, *dbpath;
+    char      *index, *p, dbpath_buf[PATH_MAX], *dbpath;
     tn_array  *tmp_depdirs;
     int       len;
 
@@ -86,8 +86,10 @@ int rpmdb_get_depdirs(const char *rootdir, tn_array *depdirs)
     
     if (rootdir == NULL)
         rootdir = "/";
-    dbpath = rpm_get_dbpath();
-    snprintf(path, sizeof(path), "%s%s/%s", *(rootdir + 1) == '\0' ? "" : rootdir,
+    
+    dbpath = rpm_get_dbpath(dbpath_buf, sizeof(dbpath_buf));
+    snprintf(path, sizeof(path),
+             "%s%s/%s", *(rootdir + 1) == '\0' ? "" : rootdir,
              dbpath != NULL ? dbpath : "", index);
     
     if ((db = __db185_open(path, O_RDONLY, 0, DB_HASH, NULL)) == NULL)
