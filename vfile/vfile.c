@@ -405,10 +405,8 @@ static int read_md(const char *path, char *md, int mdsize)
 {
     int fd, nread;
 
-    if ((fd = open(path, O_RDONLY)) < 0) {
-        vfile_err_fn("read_md %s: %m\n", path);
+    if ((fd = open(path, O_RDONLY)) < 0) 
         return 0;
-    }
     	
     nread = read(fd, md, mdsize);
     close(fd);
@@ -419,28 +417,32 @@ static int read_md(const char *path, char *md, int mdsize)
 /* -1 on err */
 static int is_uptodate(const char *mdpath, int urltype) 
 {
-    char tmpdir[PATH_MAX];
+    char tmpdir[PATH_MAX], l_mdpath[PATH_MAX];
     int len, is_uptod = -1;
+    char l_md[128], md[128];
+    int l_md_size, md_size;
 
-
-    len = snprintf(tmpdir, sizeof(tmpdir), "%s/%d", vfile_conf.cachedir, getpid());
+    len = snprintf(l_mdpath, sizeof(l_mdpath), "%s/", vfile_conf.cachedir);
+    vfile_url_as_path(&l_mdpath[len], sizeof(l_mdpath) - len, mdpath);
+    if ((l_md_size = read_md(l_mdpath, l_md, sizeof(l_md))) < 31) 
+        return 0;   /* no Packages.md in cache */
+    
+    
+    len = snprintf(tmpdir, sizeof(tmpdir), "%s/pdek%d", vfile_conf.cachedir, getpid());
     vfile_url_as_dirpath(&tmpdir[len], sizeof(tmpdir) - len, mdpath);
     
     if (!isdir(tmpdir))
         mkdir(tmpdir, 0755);
 
     if (vfile_fetch(tmpdir, mdpath, urltype)) {
-        char tmpath[PATH_MAX], md1[128], md2[128], md1_size, md2_size;
+        char tmpath[PATH_MAX];
 
         is_uptod = 0;
-        snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir, n_basenam(mdpath));
-        len = snprintf(tmpdir, sizeof(tmpdir), "%s/", vfile_conf.cachedir);
-        vfile_url_as_path(&tmpdir[len], sizeof(tmpdir) - len, mdpath);
         
-        md1_size = read_md(tmpdir, md1, sizeof(md1));
-        md2_size = read_md(tmpath, md2, sizeof(md2));
-
-        if (md1_size > 31 && md1_size == md2_size && strcmp(md1, md2) == 0)
+        snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir, n_basenam(mdpath));
+        md_size = read_md(tmpath, md, sizeof(md));
+        
+        if (md_size > 31 && md_size == l_md_size && strcmp(l_md, md) == 0)
             is_uptod = 1;
     }
     
