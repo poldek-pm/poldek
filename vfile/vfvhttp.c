@@ -103,7 +103,7 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
         if ((rc = vhttp_retr(stream, st.st_size, url, &bar)))
             break;
         
-        vf_errno = errno;
+        vf_errno = vhttp_errno;
         vfile_err_fn("%s: %s\n", vf_mod_vhttp.vfmod_name, vhttp_errmsg());
         
         switch (vhttp_errno) {

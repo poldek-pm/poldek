@@ -123,10 +123,10 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
         if ((rc = vftp_retr(stream, st.st_size, url, &bar)))
             break;
         
-        vf_errno = errno;
+        vf_errno = vftp_errno;
         vfile_err_fn("%s: %s\n", vf_mod_vftp.vfmod_name, vftp_errmsg());
         
-        switch (vf_errno) {
+        switch (vftp_errno) {
             case ENOENT:
             case EINTR:
             case ENOSPC:
