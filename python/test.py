@@ -10,9 +10,9 @@ def test_avail(ctx):
     arr = ctx.get_avail_packages()
     print "Loaded %d packages" % len(arr)
     n = 0
-#for ptr in arr:
-#    print n, ' ', ptr
-#    n += 1
+    for ptr in arr:
+        print n, ' ', ptr
+        n += 1
 
 
 def test_search(ctx):
@@ -36,6 +36,7 @@ def test_cli_ls(cctx):
     cmd = cctx.rcmd_new(None)
     if cmd.execline("ls poldek*"):
         pkgs = cmd.get_packages()
+        return
         print pkgs
         n = 0
         for p in pkgs:
@@ -49,14 +50,21 @@ def test_cli_ls(cctx):
         if not pkgs:    
             print cmd.get_str()
 
+poldek.poldeklib_init()
 
 poldctx = poldek.poldek_ctx()
 #poldek_set_verbose(1)
-src = poldek.source('tt2')
+src = poldek.source('ac-test')
 poldctx.configure(poldctx.CONF_SOURCE, src)
 poldctx.load_config()
-poldctx.setup()
-arr = poldctx.get_avail_packages()
+if not poldctx.setup():
+    raise Exception, "error"
+
+cctx = poldek.poclidek_ctx(poldctx);
+test_cli_ls(cctx)
+
+#test_cli_ls(poldctx)
+#arr = poldctx.get_avail_packages()
 sys.exit(0)
     
 
@@ -68,8 +76,7 @@ ctx.load_config()
 ctx.setup()
 
 test_search(ctx)
-cctx = poldek.poclidek_ctx(ctx);
-test_cli_ls(cctx)
+
 
 print "END"
 

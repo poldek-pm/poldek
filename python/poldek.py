@@ -61,6 +61,8 @@ def _complete_class(aclass, prefix, delprefix = None, nomethods = False,
                 if not hasattr(aclass, name):
                     fn = eval('lambda self, *args: poldekmod.%s(self, *args)' % k);
                     setattr(aclass, name, fn)
+                    if verbose:
+                        print "SET %s %s %s" % (aclass, name, type(fn))
                     #setattr(aclass, name, elem)
                  
                 
@@ -69,7 +71,7 @@ def _complete_class(aclass, prefix, delprefix = None, nomethods = False,
             if not hasattr(aclass, name):
                 setattr(aclass, name, elem)
                 if verbose:
-                    print "SET %s %s" % (name, type(elem))
+                    print "SET %s %s %s" % (aclass, name, type(elem))
 
 _complete_class(tn_array, 'n_array_')
 setattr(tn_array, '__getitem__', tn_array.nth)
@@ -86,13 +88,13 @@ _complete_class(poldek_ts, 'poldek_ts_')
 _complete_class(poldek_ts, 'poldek_op_', delprefix = 'poldek_',
                 nomethods = True, verbose = 0)
 
-_complete_class(pkg, 'pkg_')
+_complete_class(pkg, 'pkg_', verbose = 0)
 setattr(pkg, '__str__', pkg.id)
 setattr(pkg, 'provides',
-        n_array_proxy_func('pkg.', 'get_provides', 'capreq'))
+        n_array_proxy_func('pkg.', '_get_provides', 'capreq'))
 
 setattr(pkg, 'requires',
-        n_array_proxy_func('pkg.', 'get_requires', 'capreq'))
+        n_array_proxy_func('pkg.', '_get_requires', 'capreq'))
 
 _complete_class(source, 'source_')
 _complete_class(pkgdir, 'pkgdir_')
@@ -101,20 +103,3 @@ _complete_class(pkgdir, 'pkgdir_')
 _complete_class(poclidek_rcmd, 'poclidek_rcmd_')
 setattr(poclidek_rcmd, 'get_packages',
         n_array_proxy_func('poclidek_rcmd_', 'get_packages', 'pkg'))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
