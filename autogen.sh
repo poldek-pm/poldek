@@ -15,7 +15,15 @@ runcmd () {
 }
 
 CONFOPTS="--enable-maintainer-mode --enable-compile-warnings $@"
-runcmd ./getrurl.sh
+
+getlib_mode="link"
+if [ -n "$1" -a "$1" = "makedist" ]; then
+    rm -f trurlib tndb
+    getlib_mode="cp"
+fi
+
+runcmd ./getlib.sh trurlib $getlib_mode
+runcmd ./getlib.sh tndb    $getlib_mode
 
 runcmd aclocal
 runcmd autoheader
@@ -34,18 +42,6 @@ if [ ! -f depcomp ]; then
     runcmd automake --add-missing Makefile
     (cd vfile && ln -sf ../depcomp .)
     (cd shell && ln -sf ../depcomp .)
-fi
-
-if [ -x ./trurlib/autogen.sh ]; then
-	cd trurlib
-	runcmd ./autogen.sh $CONFOPTS
-	cd ..
-fi
-
-if [ -x ./tndb/autogen.sh ]; then
-	cd tndb
-	runcmd ./autogen.sh $CONFOPTS
-	cd ..
 fi
 
 runcmd ./configure $CONFOPTS
