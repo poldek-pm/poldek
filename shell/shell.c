@@ -338,7 +338,7 @@ int execute_line(char *line)
     
     tmpcmd.name = line;
     if ((cmd = n_array_bsearch(commands, &tmpcmd)) == NULL) {
-	fprintf(stderr, "%s: no such command\n", line);
+	log(LOGERR, "%s: no such command\n", line);
 	return 0;
     }
 
@@ -528,7 +528,7 @@ void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgs
     
     for (j=0; j<n_array_size(pkgnames); j++) {
         if (matches[j] == 0) {
-            printf("%s: no such package\n", (char*)n_array_nth(pkgnames, j));
+            log(LOGERR, "%s: no such package\n", (char*)n_array_nth(pkgnames, j));
             if (strict && n_array_size(pkgs))
                 n_array_clean(pkgs);
         }

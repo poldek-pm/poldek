@@ -186,7 +186,7 @@ int pattern_compile(struct pattern *pt, const char *pattern, int ntimes)
     if (ntimes > 10) {
         pt->pcre_extra = pcre_study(pt->pcre, PCRE_CASELESS, &pcre_err);
         if (pt->pcre_extra == NULL) {
-            printf("pattern study: %s: %s\n", pattern, pcre_err);
+            log(LOGERR, "search: pattern compile: %s: %s\n", pattern, pcre_err);
             return 0;
         }
     }
@@ -311,7 +311,7 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
         struct pkguinf *pkgu;
         
         if ((pkgu = pkg_info(pkg)) == NULL) {
-            printf("%s: load package info failed\n", pkg_snprintf_s(pkg));
+            log(LOGERR, "%s: load package info failed\n", pkg_snprintf_s(pkg));
             
         } else {
             if (flags & OPT_SEARCH_SUMM) {

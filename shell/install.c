@@ -130,17 +130,11 @@ static int install(struct cmdarg *cmdarg)
     
     sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->avpkgs, &shpkgs, 1);
     
-    if (shpkgs == NULL) {
+    if (shpkgs == NULL || n_array_size(shpkgs)) {
         rc = 0;
         goto l_end;
     }
-        
-    if (n_array_size(shpkgs) == 0) {
-        printf("install: specify what packages you want to install\n");
-        rc = 0;
-        goto l_end;
-    }
-    
+
     pkgset_unmark(cmdarg->sh_s->pkgset, PS_MARK_UNMARK_ALL);
     
     for (i=0; i<n_array_size(shpkgs); i++) {

@@ -7,7 +7,8 @@
 
 #include <argp.h>
 
-#include "../pkg.h"
+#include "pkg.h"
+#include "log.h"
 
 #include "term.h"
 

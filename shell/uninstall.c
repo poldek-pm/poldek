@@ -198,22 +198,19 @@ static int uninstall(struct cmdarg *cmdarg)
     int i, err = 0;
 
     if (cmdarg->sh_s->instpkgs == NULL) {
-        printf("uninstall: installed packages not loaded\n");
+        log(LOGERR, "uninstall: installed packages not loaded, "
+            "type \"reload\" to load them\n");
         return 0;
     }
     
     sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->instpkgs, &shpkgs, 1);
-    if (shpkgs == NULL)
-        return 0;
-
-    if (n_array_size(shpkgs) == 0) {
-        printf("uninstall: specify what packages you want to uninstall\n");
+    if (shpkgs == NULL || n_array_size(shpkgs) == 0) {
         err++;
         goto l_end;
     }
 
     if (shpkgs == cmdarg->sh_s->instpkgs) {
-        printf("uninstall: better do \"rm -rf /\"\n");
+        log(LOGERR, "uninstall: better do \"rm -rf /\"\n");
         return 0;
     }
     
@@ -238,6 +235,9 @@ static int uninstall(struct cmdarg *cmdarg)
  l_end:
     if (pkgnevrs != NULL)
         n_array_free(pkgnevrs);
+
+    if (shpkgs && shpkgs != cmdarg->sh_s->instpkgs) 
+        n_array_free(shpkgs);
     
     return err == 0;
 }

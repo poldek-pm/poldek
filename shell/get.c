@@ -89,7 +89,7 @@ static int get(struct cmdarg *cmdarg)
         return 0;
 
     if (n_array_size(shpkgs) == 0)
-        printf("get: specify what packages you want to download\n");
+        log(LOGERR, "get: specify what packages you want to download\n");
 
     /* build array if struct pkg */
     pkgs = n_array_new(n_array_size(shpkgs), NULL, NULL);
@@ -97,8 +97,8 @@ static int get(struct cmdarg *cmdarg)
         struct shpkg *shpkg = n_array_nth(shpkgs, i);
         n_assert(shpkg->pkg->pkgdir);
         if (!pkgdir_isremote(shpkg->pkg->pkgdir)) {
-            printf("get: %s: %s is not remote URL\n",
-                   pkg_snprintf_s(shpkg->pkg), shpkg->pkg->pkgdir->path);
+            log(LOGERR, "get: %s: %s is not remote URL\n",
+                pkg_snprintf_s(shpkg->pkg), shpkg->pkg->pkgdir->path);
             continue;
         }
         n_array_push(pkgs, shpkg->pkg);

@@ -12,6 +12,7 @@
 
 #include <string.h>
 #include <time.h>
+
 #include "shell.h"
 
 
@@ -62,14 +63,16 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             cmdarg->flags |= OPT_LS_UPGRADEABLE;
             
             if (cmdarg->sh_s->instpkgs == NULL) {
-                printf("Installed packages not loaded, type \"reload\" to load them\n");
+                log(LOGERR, "ls: installed packages not loaded, "
+                    "type \"reload\" to load them\n");
                 return EINVAL;
             }
             break;
 
         case 'I':
             if (cmdarg->sh_s->instpkgs == NULL) {
-                printf("Installed packages not loaded, type \"reload\" to load them\n");
+                log(LOGERR, "ls: installed packages not loaded, "
+                    "type \"reload\" to load them\n");
                 return EINVAL;
             }
             
