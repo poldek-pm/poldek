@@ -6,7 +6,7 @@ Each package is specified in one line:
 
 [!]NAME [EVR] | @VIRTUAL [DEFAULT_NAME [DEFAULT_EVR]]
 
-'!' before means that poldek in interactive mode will ask 
+'~' ('~' obsolets '!') before means that poldek in interactive mode will ask 
 user before install it, in batch mode package will not be 
 installed.
 
@@ -24,11 +24,7 @@ basesystem
 pdksh
 @bootloader lilo 2.1
 @smtpdaemon exim
-!dhcp-client
+~dhcp-client
 
 After every modification set should be verified by:
 $ poldek -s YOUR_SOURCE -V --pkgset=PKGSETFILE 
-
-NOTE: Interactive mode not implemented yet.
-
-Comments, suggestions, etc >> pld-installer@pld.org.pl
