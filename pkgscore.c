@@ -30,7 +30,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
-
+#include "pkgset.h"
 
 static
 tn_array *read_patterns(const char *fpath, tn_array *patterns, unsigned type)
@@ -108,9 +108,39 @@ static int pkg_cmp_ignored_(struct pkg *pkg, void *dummy)
 }
 
 
+
+void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg) 
+{
+    int n = 0;
+    
+    if (pkg->pkgdir)
+        n += n_snprintf(psc->pkgbuf, sizeof(psc->pkgbuf), "%s:", pkg->pkgdir->name);
+
+    psc->pkgname_off = n;
+    
+    pkg_snprintf(&psc->pkgbuf[n], sizeof(psc->pkgbuf) - n, pkg);
+    psc->pkg = pkg;
+}
+
+    
+
+int pkgscore_match(struct pkgscore_s *psc, const char *mask)
+{
+    if (fnmatch(mask, psc->pkg->name, 0) == 0)
+        return 1;
+
+    if (psc->pkgname_off && fnmatch(mask, &psc->pkgbuf[psc->pkgname_off], 0) == 0)
+        return 1;
+    
+    return fnmatch(mask, psc->pkgbuf, 0) == 0;
+}
+
+    
+
 void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag) 
 {
     int i, j;
+    
 
     n_assert(patterns);
     if (n_array_size(patterns) == 0) 
@@ -120,23 +150,19 @@ void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag)
         return;
 
     for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-        char  pkgbuf[1024];
-        int   n = 0;
+        struct pkgscore_s  psc;
+        struct pkg         *pkg;
 
-        if (pkg->pkgdir)
-                n += n_snprintf(pkgbuf, sizeof(pkgbuf), "%s:", pkg->pkgdir->name);
+        pkg = n_array_nth(pkgs, i);
+        pkgscore_match_init(&psc, pkg);
         
-        pkg_snprintf(&pkgbuf[n], sizeof(pkgbuf) - n, pkg);
-        
-        for (j=0; j<n_array_size(patterns); j++) {
+        for (j=0; j < n_array_size(patterns); j++) {
             const char *mask = n_array_nth(patterns, j);
-            
-            if (fnmatch(mask, &pkgbuf[n], 0) == 0 || (n && fnmatch(mask, pkgbuf, 0) == 0)) {
 
+            if (pkgscore_match(&psc, mask)) {
                 switch (scoreflag) {
                     case PKG_HELD:
-                        msgn(3, "held %s", pkg_snprintf_s(pkg));
+                        msgn(1, "held %s", pkg_snprintf_s(pkg));
                         DBGMSG_F("HELD %s\n", pkg_snprintf_s(pkg));
                         pkg_score(pkg, PKG_HELD);
                         break;

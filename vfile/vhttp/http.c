@@ -149,6 +149,16 @@ void vhttp_set_err(int err_no, const char *fmt, ...)
     vhttp_errno = err_no;
 }
 
+static int vhttp_sigint_reached(void)
+{
+    int v;
+    if ((v = sigint_reached()) && vhttp_errno == 0)
+        vhttp_set_err(EINTR, _("connection cancelled"));
+
+    return v;
+}
+
+
 static char *make_req_line(char *buf, int size, char *fmt, ...) 
 {
     va_list  args;
@@ -451,7 +461,7 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
         FD_SET(sockfd, &fdset);
         errno = 0;
         if ((rc = select(sockfd + 1, &fdset, NULL, NULL, &to)) < 0) {
-            if (sigint_reached()) {
+            if (vhttp_sigint_reached()) {
                 is_err = 1;
                 errno = EINTR;
                 break;
@@ -530,11 +540,9 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
                 break;
                 
             case EINTR:
-                if (sigint_reached()) {
-                    vhttp_set_err(vhttp_errno, _("connection canceled"));
+                if (vhttp_sigint_reached()) 
                     break;
-                }
-                
+
             default:
                 vhttp_set_err(vhttp_errno, "%s: %m", _("unexpected EOF"));
                 
@@ -642,7 +650,7 @@ struct http_resp *do_http_read_resp(int sock)
     while (1) {
         int n;
 
-        if (sigint_reached()) {
+        if (vhttp_sigint_reached()) {
             is_err = 1;
             break;
         }
@@ -790,9 +798,9 @@ static int to_connect(const char *host, const char *service)
         if (alarm_reached)
             vhttp_errno = errno = ETIMEDOUT;
 
-        else if (sigint_reached() && errno == EINTR)
-            vhttp_errno = EINTR;
-        
+        else if (vhttp_sigint_reached() && errno == EINTR)
+            break;
+
         uninstall_alarm();
         close(sockfd);
         sockfd = -1;
@@ -801,7 +809,8 @@ static int to_connect(const char *host, const char *service)
 
     if (sockfd == -1)
         vhttp_set_err(errno, _("unable to connect to %s:%s: %m"), host, service);
-    
+
+    uninstall_alarm();
     freeaddrinfo(res);
     return sockfd;
 }
@@ -957,7 +966,7 @@ int rcvfile(int out_fd, off_t out_fdoff, int in_fd, long total_size,
 	tv.tv_usec = 0;
         
         rc = select(in_fd + 1, &fdset, NULL, NULL, &tv);
-        if (sigint_reached()) {
+        if (vhttp_sigint_reached()) {
             is_err = 1;
             errno = EINTR;
             break;

@@ -86,6 +86,7 @@ const char *vftp_errmsg(void)
 {
     if (*errmsg == '\0')
         return NULL;
+    
     return errmsg;
 }
 
@@ -100,6 +101,14 @@ void vftp_set_err(int err_no, const char *fmt, ...)
     vftp_errno = err_no;
 }
 
+static int vftp_sigint_reached(void)
+{
+    int v;
+    if ((v = sigint_reached()) && vftp_errno == 0)
+        vftp_set_err(EINTR, _("connection cancelled"));
+    
+    return v;
+}
 
 
 static int do_ftp_cmd(int sock, char *fmt, va_list args)
@@ -107,7 +116,7 @@ static int do_ftp_cmd(int sock, char *fmt, va_list args)
     char     buf[1024], tmp_fmt[256];
     int      n;
 
-    if (sigint_reached())
+    if (vftp_sigint_reached())
         return 0;
 
     snprintf(tmp_fmt, sizeof(tmp_fmt), "%s\r\n", fmt);
@@ -289,7 +298,7 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
         FD_SET(sockfd, &fdset);
         errno = 0;
         if ((rc = select(sockfd + 1, &fdset, NULL, NULL, &to)) < 0) {
-            if (sigint_reached()) {
+            if (vftp_sigint_reached()) {
                 is_err = 1;
                 errno = EINTR;
                 break;
@@ -367,10 +376,8 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
                 break;
                 
             case EINTR:
-                if (sigint_reached()) {
-                    vftp_set_err(vftp_errno, _("connection canceled"));
+                if (vftp_sigint_reached()) 
                     break;
-                }
                 
             default:
                 vftp_set_err(vftp_errno, "%s: %m", _("unexpected EOF"));
@@ -389,7 +396,7 @@ static int do_ftp_resp(int sock, int *resp_code, char **resp_msg, int readln)
     int is_err = 0;
 
 
-    if (sigint_reached())
+    if (vftp_sigint_reached())
         return 0;
     
     ftp_response_init(&resp);
@@ -407,7 +414,7 @@ static int do_ftp_resp(int sock, int *resp_code, char **resp_msg, int readln)
             if (response_complete(&resp))
                 break;
 
-            if (sigint_reached()) {
+            if (vftp_sigint_reached()) {
                 is_err = 1;
                 break;
             }
@@ -518,7 +525,7 @@ static int to_connect(const char *host, const char *service, struct addrinfo *ad
     vftp_errno = 0;
     
     do {
-        sigint_reached();
+        sigint_reset();
         
         sockfd = socket(resp->ai_family, resp->ai_socktype, resp->ai_protocol);
         if (sockfd < 0)
@@ -531,6 +538,10 @@ static int to_connect(const char *host, const char *service, struct addrinfo *ad
         if (alarm_reached)
             vftp_errno = errno = ETIMEDOUT;
         
+        else if (vftp_sigint_reached()) {
+            errno = EINTR;
+            break;
+        }
         uninstall_alarm();
         close(sockfd);
         sockfd = -1;
@@ -546,6 +557,7 @@ static int to_connect(const char *host, const char *service, struct addrinfo *ad
         *addr->ai_addr = *resp->ai_addr;
     }
 
+    uninstall_alarm();
     freeaddrinfo(res);
     return sockfd;
 }
@@ -561,7 +573,7 @@ static int ftp_open(const char *host, int port, struct addrinfo *addr)
     if ((sockfd = to_connect(host, portstr, addr)) < 0)
         return 0;
     
-    if (sigint_reached())
+    if (vftp_sigint_reached())
         return 0;
     
     errno = 0;
@@ -859,7 +871,7 @@ int rcvfile(int out_fd,  off_t out_fdoff, int in_fd, long total_size,
 	tv.tv_usec = 0;
         
         rc = select(in_fd + 1, &fdset, NULL, NULL, &tv);
-        if (sigint_reached()) {
+        if (vftp_sigint_reached()) {
             is_err = 1;
             errno = EINTR;
             break;
@@ -939,13 +951,13 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
     if ((total_size = ftpcn_size(cn, path)) < 0)
         goto l_err;
 
-    if (sigint_reached())
+    if (vftp_sigint_reached())
         goto l_err;
     
     if ((sockfd = ftpcn_pasv(cn)) <= 0)
         goto l_err;
 
-    if (sigint_reached())
+    if (vftp_sigint_reached())
         goto l_err;
 
     if (out_fdoff < 0)

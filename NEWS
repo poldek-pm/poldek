@@ -1,3 +1,10 @@
+0.18.1 (minor bugfix release; 2002/11/??)
+
+* fixed vfile's progress bar 
+* fixed 'hold' and 'ignore' package patterns matching
+* fixed bug of interactive mode; after interrupted installation
+  selected packages are properly unmarked now. 
+
 0.18 (bugfix/minor enhancements release; 2002/11/07)
 
 * support for RPM 4.1 (with help of Artur Frysiak <wiget@pld.org.pl>)

@@ -209,7 +209,7 @@ static int install(struct cmdarg *cmdarg)
         goto l_end;
     }
 
-    pkgset_mark(cmdarg->sh_s->pkgset, PS_MARK_OFF_ALL);
+    packages_unmark_all(cmdarg->sh_s->pkgset->pkgs);
     
     for (i=0; i < n_array_size(shpkgs); i++) {
         struct shpkg *shpkg = n_array_nth(shpkgs, i);

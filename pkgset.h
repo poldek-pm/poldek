@@ -143,12 +143,14 @@ int pkg_match_pkgdef(const struct pkg *pkg, const struct pkgdef *pdef);
 /* uninstall.c */
 int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
                      struct install_info *iinf);
-
+#if 0
 #define PS_MARK_OFF_ALL      (1 << 0)
 #define PS_MARK_OFF_DEPS     (1 << 1)
 #define PS_MARK_ON_INTERNAL  (1 << 2) /* use with one of above PS_MARK_* */
 
 void pkgset_mark(struct pkgset *ps, unsigned markflags);
+#endif
+
 
 int pkgset_fetch_pkgs(const char *destdir, tn_array *pkgs, int nosubdirs);
 
@@ -166,7 +168,21 @@ int pkgset_dump_marked_pkgs(struct pkgset *ps, const char *dumpfile, int bn);
 
 int pkgset_rpmprovides(const struct pkgset *ps, const struct capreq *req);
 
+
+struct pkgscore_s {
+    char        pkgbuf[512];
+    int         pkgname_off;
+    struct pkg  *pkg;
+};
+
+void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg);
+int pkgscore_match(struct pkgscore_s *psc, const char *mask);
 void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag);
+
+void packages_mark(tn_array *pkgs, unsigned flags_on, unsigned flags_off);
+
+#define packages_unmark_all(pkgs) packages_mark(pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK)
+
 int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs);
 int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst);
 

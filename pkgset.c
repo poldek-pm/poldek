@@ -725,7 +725,7 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
     return nerr == 0;
 }
 
-
+#if 0
 static void mapfn_mark(struct pkg *pkg, unsigned *flags) 
 {
     n_assert(flags);
@@ -745,13 +745,42 @@ static void mapfn_mark(struct pkg *pkg, unsigned *flags)
     }
 }
 
-
 void pkgset_mark(struct pkgset *ps, unsigned flags) 
 {
     if (ps->pkgs) 
         n_array_map_arg(ps->pkgs, (tn_fn_map2) mapfn_mark, &flags);
     
 }
+#endif
+
+struct flags_s {
+    unsigned flags_on;
+    unsigned flags_off;
+};
+
+
+static void mapfn_mark2(struct pkg *pkg, struct flags_s *fs) 
+{
+    n_assert(fs);
+
+    if (fs->flags_on)
+        pkg->flags |= fs->flags_on;
+
+    if (fs->flags_off)
+        pkg->flags &= ~fs->flags_off;
+    
+}
+
+void packages_mark(tn_array *pkgs, unsigned flags_on, unsigned flags_off) 
+{
+    struct flags_s fs;
+
+    fs.flags_on = flags_on;
+    fs.flags_off = flags_off;
+    
+    n_array_map_arg(pkgs, (tn_fn_map2) mapfn_mark2, &fs);
+}
+
 
 
 inline static int mark_package(struct pkg *pkg, int nodeps)
@@ -900,7 +929,8 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
 {
     int i, nerr = 0, nodeps = 0, npatterns = 0;
 
-    pkgset_mark(ps, PS_MARK_OFF_ALL);
+    packages_mark(ps->pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
+    //pkgset_mark(ps, PS_MARK_OFF_ALL);
 
     if (ps->flags & PSMODE_INSTALL_DIST)
         nodeps = inst->flags & INSTS_NODEPS;
@@ -999,7 +1029,8 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
         
         else {
             if ((inst->flags & INSTS_FORCE) == 0)
-                pkgset_mark(ps, PS_MARK_OFF_ALL);
+                packages_mark(ps->pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
+            //pkgset_mark(ps, PS_MARK_OFF_ALL);
             logn(LOGERR, _("Buggy package set."));
         }
     }

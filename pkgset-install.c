@@ -1778,15 +1778,20 @@ static int check_holds(struct pkgset *ps, struct upgrade_s *upg)
         return 1;
 
     for (i=0; i < n_array_size(upg->uninst_set->dbpkgs); i++) {
-        struct dbpkg *dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
+        struct dbpkg *dbpkg; 
+        struct pkgscore_s psc;
 
+        dbpkg = n_array_nth(upg->uninst_set->dbpkgs, i);
+        pkgscore_match_init(&psc, dbpkg->pkg);
+        
         for (j=0; j < n_array_size(upg->inst->hold_patterns); j++) {
             const char *mask = n_array_nth(upg->inst->hold_patterns, j);
-
-            if (fnmatch(mask, dbpkg->pkg->name, 0) == 0) {
+            
+            if (pkgscore_match(&psc, mask) == 0) {
                 logn(LOGERR, _("%s: refusing to uninstall held package"),
-                    pkg_snprintf_s(dbpkg->pkg));
+                     pkg_snprintf_s(dbpkg->pkg));
                 rc = 0;
+                break;
             }
         }
     }
@@ -2228,6 +2233,9 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
     if (inst->flags & INSTS_INSTALL)
         n_assert((inst->flags & INSTS_UPGRADE) == 0);
 
+
+    packages_mark(ps->pkgs, 0, PKG_INTERNALMARK | PKG_INDIRMARK);
+
     unmark_name_dups(ps->pkgs);
     
     mem_info(1, "ENTER pkgset_install:");
@@ -2241,6 +2249,8 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
 
     if (inst->flags & INSTS_JUSTPRINTS)
         inst->flags &= ~INSTS_PARTICLE;
+
+    
     
     for (i = 0; i < n_array_size(ps->ordered_pkgs); i++) {
         struct pkg    *pkg = n_array_nth(ps->ordered_pkgs, i);
@@ -2270,8 +2280,15 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
         inst->flags &= ~INSTS_PARTICLE;
     
     n = 1;
-    pkgset_mark(ps, PS_MARK_OFF_ALL);
-    
+    packages_mark(ps->pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
+    //pkgset_mark(ps, PS_MARK_OFF_ALL);
+#if 0                           /* debug */
+    for (i = 0; i < n_array_size(ps->ordered_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
+        if (pkg_is_marked_i(pkg)) 
+            printf("MARKED %s\n", pkg_snprintf_s(pkg));
+    }
+#endif    
     for (i = 0; i < n_array_size(ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
 
@@ -2302,7 +2319,8 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
             if (!do_install(ps, &upg, iinf))
                 nerr++;
             
-            pkgset_mark(ps, PS_MARK_OFF_ALL);
+            packages_mark(ps->pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
+            //pkgset_mark(ps, PS_MARK_OFF_ALL);
             reset_upgrade_s(&upg);
         }
     }
@@ -2312,6 +2330,7 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
         nerr = !do_install(ps, &upg, iinf);
 
  l_end:
+    
     destroy_upgrade_s(&upg);
     mem_info(1, "RETURN pkgset_install:");
     if (is_particle)
