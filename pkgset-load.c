@@ -31,15 +31,21 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
 {
     struct source *src;
     struct stat st;
-    const char *path, *p, *sep = ",;:";
+    const char *path, *p;
     char *name, *q;
     int len;
 
+    
     p = pathspec;
-    while (*p && !isspace(*p) && strchr(sep, *p) == NULL)
+    
+    while (*p && *p != '|' && !isspace(*p))
         p++;
 
-    if (*p && (isspace(*p) || strchr(sep, *p))) {
+    if (*p == '\0') {           /* path only */
+        path = pathspec;
+        name = "gall";
+        
+    } else {
         path = p + 1;
         while (isspace(*path))
             path++;
@@ -56,11 +62,8 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
             *q = '\0';
         if (*name == '\0')
             name = "gall";
-        
-    } else {
-        path = pathspec;
-        name = "gall";
     }
+    
     
     
     src = malloc(sizeof(*src));
