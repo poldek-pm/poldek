@@ -6,11 +6,21 @@
 #include <trurl/nhash.h>
 
 
+#define POLDEK_TS_cmINSTALL     (1 << 0) /* rpm -i */
+#define POLDEK_TS_cmUPGRADE     POLDEK_TS_cmINSTALL | (1 << 1) /* rpm -U */
+#define POLDEK_TS_cmDOWNGRADE   POLDEK_TS_cmINSTALL | (1 << 2) /* rpm -U --oldpackage */
+#define POLDEK_TS_cmREINSTALL   POLDEK_TS_cmINSTALL | (1 << 3) /* rpm -U --replacefiles --replacepkgs */
+#define POLDEK_TS_cmDIST        (1 << 6) /* */
+#define POLDEK_TS_cmINSTALLDIST POLDEK_TS_cmINSTALL | POLDEK_TS_cmDIST
+#define POLDEK_TS_cmUPGRADEDIST POLDEK_TS_cmUPGRADE | POLDEK_TS_cmDIST
+#define POLDEK_TS_cmUNINSTALL   (1 << 5) /* rpm -e */
+
 #define POLDEK_TS_INSTALL         (1 << 0) /* rpm -i */
 #define POLDEK_TS_UPGRADE         (1 << 1) /* rpm -U */
 #define POLDEK_TS_DOWNGRADE       (1 << 3) /* rpm -U --oldpackage */
 #define POLDEK_TS_REINSTALL       (1 << 4) /* rpm -U --replacefiles --replacepkgs */
 #define POLDEK_TS_UNINSTALL       (1 << 5) /* rpm -e */
+
 
 #define POLDEK_TS_VRFYMERCY       (1 << 6)  /* --mercy */
 #define POLDEK_TS_PROMOTEPOCH     (1 << 7)  /* --promoteepoch */
@@ -51,7 +61,6 @@ struct poldek_ctx;
 struct arg_packages;
 
 struct poldek_ts {
-    int                type;
     struct poldek_ctx  *ctx;
     struct pkgdb       *db;
     uint32_t           flags;      /* POLDEK_TS_* */
@@ -82,9 +91,13 @@ void poldek_ts_free(struct poldek_ts *ts);
 int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx);
 void poldek_ts_destroy(struct poldek_ts *ts);
 
+void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag);
+void poldek_ts_clrf(struct poldek_ts *ts, uint32_t flag);
+uint32_t poldek_ts_issetf(struct poldek_ts *ts, uint32_t flag);
 #define poldek_ts_setf(ts, flag) (ts->flags |= (flag))
 #define poldek_ts_clrf(ts, flag) (ts->flags &= ~(flag))
 #define poldek_ts_issetf(ts, flag) (ts->flags & (flag))
+
 
 #define poldek_ts_istest(ts) (ts->flags & POLDEK_TS_TEST)
 #define poldek_ts_isrpmtest(ts) (ts->flags & POLDEK_TS_RPMTEST)
@@ -110,12 +123,10 @@ struct install_info {
 void install_info_init(struct install_info *iinf);
 void install_info_destroy(struct install_info *iinf);
 
+int poldek_ts_run(struct poldek_ts *ts, struct install_info *iinf);
 
 int poldek_ts_do_install_dist(struct poldek_ts *ts);
 int poldek_ts_do_install(struct poldek_ts *ts, struct install_info *iinf);
 int poldek_ts_do_uninstall(struct poldek_ts *ts, struct install_info *iinf);
-
-int poldekts_do(struct poldek_ts *ts);
-
 
 #endif

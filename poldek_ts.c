@@ -129,6 +129,25 @@ void poldek_ts_destroy(struct poldek_ts *ts)
 }
 
 
+#undef poldek_ts_setf
+#undef poldek_ts_clrf
+#undef poldek_ts_issetf
+
+void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag)
+{
+    ts->flags |= flag;
+}
+
+void poldek_ts_clrf(struct poldek_ts *ts, uint32_t flag)
+{
+    ts->flags &= ~flag;
+}
+
+uint32_t poldek_ts_issetf(struct poldek_ts *ts, uint32_t flag)
+{
+    return ts->flags & flag;
+}
+
 static char *prepare_path(char *pathname) 
 {
     if (pathname == NULL)
@@ -601,7 +620,7 @@ int poldek_ts_do_install(struct poldek_ts *ts, struct install_info *iinf)
     ts->db = pkgdb_open(ts->rootdir, NULL, O_RDONLY);
     if (ts->db == NULL)
         return 0;
-    printf("poldek_ts_do_install0 %d\n", poldek_ts_issetf(ts, POLDEK_TS_FOLLOW));
+    printf("poldek_ts_do_install0 %d\n", arg_packages_size(ts->aps));
     rc = do_poldek_ts_install(ts, iinf);
     pkgdb_free(ts->db);
     ts->db = NULL;
@@ -634,22 +653,16 @@ int poldek_ts_do_uninstall(struct poldek_ts *ts, struct install_info *iinf)
 }
 
 
-int poldek_ts_do(struct poldek_ts *ts, struct install_info *iinf)
+int poldek_ts_run(struct poldek_ts *ts, struct install_info *iinf)
 {
     int rc = 0;
 
-    if (iinf)
-        install_info_init(iinf);
-    
-    if (arg_packages_size(ts->aps) > 0) {
-        arg_packages_setup(ts->aps);
-        //if (ts->flags & POLDEK_TS_UNINSTALL)
-            //return uninstall_usrset(ts->aps, ts, iinf);
-    }
-
-    if (arg_packages_size(ts->aps) == 0)
+    if (!ts_prerun(ts, iinf))
         return 0;
 
+    if (poldek_ts_issetf(ts, POLDEK_TS_INSTALL)) {
+    }
+        
     return 0;
 }
 
