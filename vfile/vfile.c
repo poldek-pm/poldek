@@ -340,6 +340,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
     char buf[PATH_MAX];
     char *tmpdir, *p = NULL, *tmpath = NULL;
     const char *rpath, *opath;
+    enum vf_fetchrc ftrc;
     int len;
 
     
@@ -422,7 +423,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
     vf_url_as_dirpath(&buf[len], sizeof(buf) - len, tmpath);
     tmpdir = buf;
 
-    if (vf_fetch(path, tmpdir, 0, urlabel)) {
+    if (vfile__vf_fetch(path, tmpdir, 0, urlabel, &ftrc)) {
         char tmpath[PATH_MAX], upath[PATH_MAX];;
 
         snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
@@ -437,7 +438,8 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
         if (openvf(&vf, opath, VFM_RO)) {
             vf.vf_tmpath = n_strdup(rpath);
             opened = 1;
-            vf.vf_flags |= VF_FETCHED;
+            if (ftrc == VF_FETCHRC_FETCHED)
+                vf.vf_flags |= VF_FETCHED;
                     
         } else {
             if (*vfile_verbose > 1)

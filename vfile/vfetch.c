@@ -206,14 +206,17 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
 }
 
 
-int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
-             const char *urlabel)
+int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
+                    const char *urlabel, enum vf_fetchrc *ftrc)
 {
-    const struct vf_module *mod = NULL;
-    const char *destdir = NULL;
-    struct vflock *vflock = NULL;
-    int rc = 0;
-
+    const struct vf_module  *mod = NULL;
+    const char              *destdir = NULL;
+    struct vflock           *vflock = NULL;
+    struct vf_request       *req = NULL;
+    char                    destpath[PATH_MAX];
+    int                     rc = 0;
+    
+    *ftrc = VF_FETCHRC_NIL;
     if (dest_dir)
         destdir = dest_dir;
     
@@ -225,89 +228,97 @@ int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
     
     n_assert(destdir);
     
-    if ((mod = select_vf_module(url)) == NULL)
+    if ((mod = select_vf_module(url)) == NULL) { /* no internal module found */
         rc = vf_fetch_ext(url, destdir);
-    
-    else {
-        struct vf_request *req = NULL;
-        char destpath[PATH_MAX];
-
-        if ((vflock = vf_lock_mkdir(destdir)) == NULL)
-            return 0;
-        
-        snprintf(destpath, sizeof(destpath), "%s/%s", destdir, n_basenam(url));
-            
-        if ((req = vf_request_new(url, destpath)) == NULL)
-            goto l_end;
-        
-        if (req->proxy_url) {
-            if ((mod = select_vf_module(req->proxy_url)) == NULL) {
-                rc = vf_fetch_ext(url, destdir);
-                vf_request_free(req);
-                req = NULL;
-                goto l_end;
-            }
-        }
-        
-        if (req->dest_fdoff > 0) { /* non-empty local file  */
-            struct vf_stat vfst;
-
-            if ((rc = vf_stat(req->url, destdir, &vfst, urlabel)) && 
-                vfst.vf_size > 0 && vfst.vf_mtime > 0 &&
-                vfst.vf_size  == vfst.vf_local_size &&
-                vfst.vf_mtime == vfst.vf_local_mtime) {
-                
-                vf_request_free(req);
-                req = NULL;
-                goto l_end;
-                
-            } else {
-                if (*vfile_verbose > 1) {
-                    if (!rc || vfst.vf_size <= 0 || vfst.vf_mtime <= 0) {
-                        vf_loginfo("vf_fetch: %s: remove local copy because of"
-                                   " uncomplete status reached\n",
-                                   n_basenam(req->url));
-                    } else {
-                        vf_loginfo("vf_fetch: %s: remove uncomplete "
-                                   "local copy\n", n_basenam(req->url));
-                    }
-                }
-                
-                vf_unlink(req->destpath);
-                vf_request_close_destpath(req);
-                vf_request_open_destpath(req);
-            }
-        }
-
-        if ((flags & VF_FETCH_NOLABEL) == 0) {
-            if (urlabel)
-                vf_loginfo(_("Retrieving %s:%s...\n"), urlabel,
-                           n_basenam(req->url));
-            else
-                vf_loginfo(_("Retrieving %s...\n"), PR_URL(req->url));
-        }
-            
-        if ((rc = do_vfile_req(REQTYPE_FETCH, mod, req)) == 0) {
-            if ((req->flags & VF_REQ_INT_REDIRECTED) == 0) {
-                vfile_set_errno(mod->vfmod_name, req->req_errno);
-                
-            } else {            /* redirected */
-                char url[PATH_MAX];
-                
-                snprintf(url, sizeof(url), req->url);
-                vf_request_free(req);
-                req = NULL;
-                rc = vf_fetch(req->url, destdir, flags, NULL);
-            }
-        }
-        if (req)
-            vf_request_free(req);
+        goto l_end;
     }
+    
+    if ((vflock = vf_lock_mkdir(destdir)) == NULL)
+        return 0;
+        
+    snprintf(destpath, sizeof(destpath), "%s/%s", destdir, n_basenam(url));
+    if ((req = vf_request_new(url, destpath)) == NULL)
+        goto l_end;
+    
+    if (req->proxy_url) {
+        if ((mod = select_vf_module(req->proxy_url)) == NULL) {
+            rc = vf_fetch_ext(url, destdir);
+            vf_request_free(req);
+            req = NULL;
+            goto l_end;
+        }
+    }
+        
+    if (req->dest_fdoff > 0) { /* non-empty local file  */
+        struct vf_stat vfst;
+
+        if ((rc = vf_stat(req->url, destdir, &vfst, urlabel)) && 
+            vfst.vf_size > 0 && vfst.vf_mtime > 0 &&
+            vfst.vf_size  == vfst.vf_local_size &&
+            vfst.vf_mtime == vfst.vf_local_mtime) {
+                
+            vf_request_free(req);
+            req = NULL;
+            *ftrc = VF_FETCHRC_UPTODATE;
+            goto l_end;
+                
+        } else {
+            if (*vfile_verbose > 1) {
+                if (!rc || vfst.vf_size <= 0 || vfst.vf_mtime <= 0) {
+                    vf_loginfo("vf_fetch: %s: remove local copy because of"
+                               " uncomplete status reached\n",
+                               n_basenam(req->url));
+                } else {
+                    vf_loginfo("vf_fetch: %s: remove uncomplete "
+                               "local copy\n", n_basenam(req->url));
+                }
+            }
+                
+            vf_unlink(req->destpath);
+            vf_request_close_destpath(req);
+            vf_request_open_destpath(req);
+        }
+    }
+
+    if ((flags & VF_FETCH_NOLABEL) == 0) {
+        if (urlabel)
+            vf_loginfo(_("Retrieving %s:%s...\n"), urlabel,
+                       n_basenam(req->url));
+        else
+            vf_loginfo(_("Retrieving %s...\n"), PR_URL(req->url));
+    }
+            
+    if ((rc = do_vfile_req(REQTYPE_FETCH, mod, req)) == 0) {
+        if ((req->flags & VF_REQ_INT_REDIRECTED) == 0) {
+            vfile_set_errno(mod->vfmod_name, req->req_errno);
+                
+        } else {            /* redirected */
+            char url[PATH_MAX];
+                
+            snprintf(url, sizeof(url), req->url);
+            vf_request_free(req);
+            req = NULL;
+            rc = vf_fetch(req->url, destdir, flags, NULL);
+        }
+    }
+    if (req)
+        vf_request_free(req);
     
  l_end:
     if (vflock)
         vf_lock_release(vflock);
+    
+    if (rc && *ftrc == VF_FETCHRC_NIL)
+        *ftrc = VF_FETCHRC_FETCHED;
+
     return rc;
+}
+
+int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
+             const char *urlabel) 
+{
+    enum vf_fetchrc ftrc;
+    return vfile__vf_fetch(url, dest_dir, flags, urlabel, &ftrc);
 }
 
 int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,

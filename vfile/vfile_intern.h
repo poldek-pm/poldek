@@ -2,6 +2,16 @@
 #ifndef POLDEK_VFILE_INTERNAL
 #define POLDEK_VFILE_INTERNAL
 
+enum vf_fetchrc {
+    VF_FETCHRC_NIL = 0,
+    VF_FETCHRC_UPTODATE = 1,
+    VF_FETCHRC_FETCHED  = 2
+};
+
+
+int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
+                    const char *urlabel, enum vf_fetchrc *ftrc);
+
 /* only external handlers are used */
 int vf_fetch_ext(const char *url, const char *destdir);
 int vf_fetcha_ext(tn_array *urls, const char *destdir);
