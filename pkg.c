@@ -112,13 +112,14 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
     len += release_len + 1;
 
     if (fn && arch) {
-        fn = n_basenam(fn);
+        //fn = n_basenam(fn);
         n_snprintf(pkg_fn, sizeof(pkg_fn), "%s-%s-%s.%s.rpm", name,
                    version, release, arch);
         //printf("cmp %s %s\n", pkg_fn, fn);
         if (strcmp(pkg_fn, fn) == 0)
             fn = NULL;
         else {
+            printf("PKG_FN %s\n", fn);
             fn_len = strlen(fn);
             len += fn_len + 1;
         }
