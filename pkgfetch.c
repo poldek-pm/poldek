@@ -260,7 +260,6 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
     
     for (i=0; i < n_array_size(urls_arr); i++) {
         char path[PATH_MAX];
-        struct pkg *pkg;
         const char *real_destdir, *pkgdir_name;
         char *pkgpath = n_array_nth(urls_arr, i);
 

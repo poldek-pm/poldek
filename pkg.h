@@ -285,4 +285,7 @@ int pkg_nvr_strcmp_btime_rev(struct pkg *p1, struct pkg *p2);
 int pkg_nvr_strcmp_bday(struct pkg *p1, struct pkg *p2);
 int pkg_nvr_strcmp_bday_rev(struct pkg *p1, struct pkg *p2);
 
+char *pkg_strsize(char *buf, int size, const struct pkg *pkg);
+char *pkg_strbtime(char *buf, int size, const struct pkg *pkg);
+
 #endif /* POLDEK_PKG_H */

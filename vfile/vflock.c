@@ -72,6 +72,7 @@ int vf_lockfile(const char *lockfile)
     return fd;
 }
 
+#if 0
 static
 pid_t vf_readlockfile(const char *lockfile) 
 {
@@ -91,6 +92,7 @@ pid_t vf_readlockfile(const char *lockfile)
     
     return -1;
 }
+#endif
 
 static
 int vf_lock_obtain(const char *path) 

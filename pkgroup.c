@@ -454,7 +454,7 @@ int pkgroup_idx_update(struct pkgroup_idx *idx, Header h)
     int                i, ngroups, nlangs = 0;
     struct pkgroup     *gr = NULL;
 
-    if ((langs = headerGetLangs(h)) == NULL)
+    if ((langs = rpmhdr_langs(h)) == NULL)
         return 0;
 
     headerGetRawEntry(h, RPMTAG_GROUP, 0, (void*)&groups, &ngroups);

@@ -38,7 +38,7 @@ int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,
 
 
 struct pkgfl_ent {
-    char   *dirname;            /* dirname without leading '/' if strlen(dirname) > 1 */
+    char   *dirname; /* dirname without leading '/' if strlen(dirname) > 1 */
     int    items;
     struct flfile *files[0];
 };

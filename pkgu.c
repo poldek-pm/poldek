@@ -128,21 +128,6 @@ struct pkguinf *pkguinf_link(struct pkguinf *pkgu)
 }
 
 
-static int is_empty(const char *s) 
-{
-    int is_empty = 1;
-    
-    while (*s) {
-        if (!isspace(*s)) {
-            is_empty = 0;
-            break;
-        }
-        s++;
-    }
-    return is_empty;
-}
-
-
 int pkguinf_store_rpmhdr(struct pkguinf *pkgu, tn_buf *nbuf) 
 {
     Header   hdr = NULL;
