@@ -1,0 +1,718 @@
+=pod
+ $Id$
+=cut
+
+=head1 NAZWA
+
+poldek - program pomocniczy do zarz±dzania pakietami RPM
+
+=head1 STRESZCZENIE
+
+poldek [--source=¬RÓD£O ...] [OPCJA...] [PAKIET...]
+
+poldek [--source=¬RÓD£O ...]
+
+=head1 OPIS
+
+Poldek jest programem do zarz±dzania pakietami RPM. Jego podstawowe
+cechy s± podobne do ka¿dego wspó³czesnego programu do uaktualniania
+pakietów, jak I<apt-get> - program pobiera informacje o pakietach z
+indeksu (domy¶lnie I<packages.dir.gz>) i pozwala na ich instalacjê,
+uaktualnienie lub usuniêcie.
+
+Program pracuje w dwóch trybach: wsadowym (w u¿yciu podobny do I<apt-get>)
+oraz interaktywnym (I<interactive>). Tryb interaktywny stanowi interfejs
+readline z autouzupe³nianiem linii poleceñ oraz ich histori±, podobny do
+trybu pow³oki modu³u CPAN perla.
+
+Zdalne pliki s± pobierane przez samego poldka (wewnêtrzny klient FTP/HTTP)
+b±d¼ poprzez zewnêtrzne programy (domy¶lnie nieskonfigurowane, patrz
+L</PLIK KONFIGURACYJNY>).
+
+
+Podstawowe tryby pracy poldka to:
+
+=over
+
+=item * Buduj indeks pakietów
+
+=item * Uaktualniaj indeks pakietów
+
+=item * Weryfikuj zestaw pakietów
+
+=item * Instaluj system od zera
+
+=item * Uaktualniaj ca³y system
+
+=item * Instaluj lub uaktualniaj wybrane pakiety
+
+=item * Dziel zestaw pakietów w podzestawy o ustalonym rozmiarze
+
+=back
+
+
+=head2 Tryb Interaktywny
+
+Tryb interaktywny uzyskujemy uruchamiaj±c
+
+    poldek [OPCJA...] --shell [-f]
+
+co prze³±cza do interfejsu readline. Bêd±c w linii poleceñ wpisz
+'help', a reszta powinna wyja¶niæ siê sama.
+
+[ci±g dalszy nast±pi...]
+
+=head1 ¬RÓD£A PAKIETÓW
+
+¬ród³a pakietów mog± byæ okre¶lane w pliku konfiguracyjnym poprzez
+parametr B<source> (patrz L</PLIK KONFIGURACYJNY>), lub z linii
+poleceñ nastêpuj±cymi opcjami:
+
+B<-s, --source> B<¬RÓD£O>
+
+B<--sdir> B<KATALOG>
+
+B<--shdrl> B<¬RÓD£O>
+
+gdzie ¬RÓD£O jest lokaln± ¶cie¿k± b±d¼ URL-em. Z B<--source> u¿ywany
+jest natywny plik indeksu (packages.dir.gz); z B<--sdir> jest przegl±dany
+katalog docelowy, zamiast czytania pliku indeksu - wersja ta powinna byæ
+u¿ywana jedynie do katalogów lokalnych. Ostatnia B<--shdrl> mo¿e byæ u¿yta
+do pobrania informacji o pakiecie z pliku z czystymi nag³ówkami RPM
+(znanym jako hdlist).
+
+Typ ¼ród³a mo¿e byæ ustawiony równie¿ przez opcjê B<type>, patrz
+L</PLIK KONFIGURACYJNY>.
+
+Przyk³ady:
+
+=over
+
+=item $ poldek -s /katalog/z/RPMS/ [OPCJA...]
+
+=item $ poldek -s /katalog/z/RPMS/packages.dir [OPCJA...]
+
+=item $ poldek -s ftp://ftp.ala.ma.kota/RPMS/
+
+=item $ poldek --sdir=/ala/RPMS
+
+=item $ poldek -s rsync://rsync.ala-ma-kota.com/RPMS/
+
+=item $ poldek --shdrl=http://ziut/base/hdlist
+
+=back
+
+Je¶li indeks pakietów i pakiety s± przechowywane w innych lokalizacjach,
+wtedy powinna byæ u¿yta opcja:
+
+B<-P, --prefix> B<PREFIX>
+
+do wskazania lokalizacji pakietów, np.:
+
+$ poldek -s /tmp/packages.dir.gz --prefix=/cdrom/RPMS/ -s ... --prefix=...
+
+Je¶li ¼ród³o jest skonfigurowane z nazw± (patrz L</CONFIG FILE>), wtedy
+mo¿e byæ wybrane przez B<-n, --sn> B<NAZWA-¬RÓD£A>, np.:
+
+$ poldek --sn pld ...
+
+
+Aby uzyskaæ listê wszystkich skonfigurowanych ¼róde³ u¿yj opcji
+B<-l, --sl>, np.:
+
+$ poldek -l
+
+=over
+
+=item nest         ftp://ftp.pld.org.pl/dists/nest/PLD/i686/PLD/RPMS/  (noauto)
+
+=item nest-test    ftp://ftp.pld.org.pl/dists/nest/test/i686/  (noauto)
+
+=item pld          ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
+
+=item pld-test     ftp://ftp.pld.org.pl/dists/ra/test/i686/  (noauto)
+
+=back
+
+
+=head1 WYBIERANIE PAKIETÓW
+
+Pakiety mog± byæ wybierane na trzy sposoby:
+
+=over
+
+=item * jako pliki pakietów w argumentach
+
+$ poldek ...  ala-ma-kota-2.1-2.i386.rpm
+
+=item * jako maska nazw pakietów
+
+na przyk³ad:
+
+$ poldek ...  apache
+
+$ poldek ...  'apache*'
+
+Je¿eli musi byæ ustawione EVR, wpisz je po '#', np.:
+
+$ poldek ... apache#1.3.12
+
+$ poldek ... apache#1.3.20-1
+
+=item * jako zestaw pakietów zdefiniowany w PLIKU B<--pset=PLIK>,
+(patrz README.package-sets):
+
+$ poldek ... --pset ~/.package-sets/tiny-system
+
+=back
+
+Wszystkie powy¿sze opcje mog± byæ ³±czone. Zwróæ uwagê, ¿e wybrane
+pakiety powinny byæ obecne w ¬RÓDLE.
+
+=head1 PODSTAWOWE TRYBY
+
+Jeden z nastêpuj±cych trybów podstawowych musi byæ wybrany:
+
+=over 4
+
+=item B<--mkidx[z][=PLIK]>  B<[--nodiff]>
+
+Buduje indeks pakietów, domy¶lnie jest on przechowywany w SOURCE/packages.dir[.gz].
+Tworzone s± dwa inne pliki: packages.dir.mdd z obliczonym skrótem packages.dir
+oraz packages.dir.toc[.gz] z NAME-EVR pakietów po jednym w linii.
+
+Dodatkowo, je¶li poprzedni indeks pakietów jest ró¿ny od aktualnie
+utworzonego, wtedy tworzony jest indeks "patch" w katalogu SOURCE/packages.i/.
+Ka¿dy patch sk³ada siê z dwóch plików: packages.dir.diff.YYYY.MM.DD-HH.mm.SS.gz
+i packages.dir.diff.YYYY.MM.DD-HH.mm.SS.mdd.
+
+Przeterminowane patche s± automatycznie usuwane.
+
+Z B<--nodiff> patche nie s± tworzone.
+
+I<UWAGA>: W tym jest przyjmowana jako ¬RÓD£O tylko jedna i tylko ¶cie¿ka do katalogu.
+
+=item B<--up, --update>; B<--upa, --update-whole>
+
+Resynchronizuj indeks pakietów z jego ¼ród³a i zweryfikuj go.
+
+Z B<--update> program szuka "patche'y" do istniej±cego lokalnie
+indeks pakietów, a je¶li to zawodzi, pobiera ca³y indeks.
+
+Z B<--update-whole> program uaktualnia ca³y indeks pakietów.
+
+Dla ¼róde³ lokalnych program weryfikuje integralnosæ istniej±cego
+indeksu za pomoc± jego skrótu z packages.dir.mdd.
+
+=item B<-V|--verify>
+
+Opcja ta weryfikuje zale¿no¶ci zbiory pakietów.
+Je¶li nie okre¶lono pakietów sprawdza wszystkie dostêpne.
+
+=item B<--install-dist[=KATALOG]>
+
+Instaluje od zera system u¿ywaj±c KATALOGU jako katalogu g³ównego (/).
+Trzeba okre¶liæ pakiety.
+
+=item B<--upgrade-dist[=KATALOG]>
+
+Instaluje najnowsze wersje wszystkich ju¿ zainstalowanych pakietów
+w systemie korzystaj±c z okre¶lonego ¼ród³a (patrz L</¬RÓD£O>).
+
+=item B<-i, --install|-u, -U, --upgrade|--downgrade>
+
+Instaluje, uaktualnia b±d¼ instaluje starsz± wersjê pakietu.
+
+=item B<--reinstall>
+
+Przeinstalowuje podany pakiet.
+
+=item B<--shcmd=POLECENIE>
+
+Uruchamia w trybie interaktywnym POLECENIE i wychodzi.
+
+=item B<--shell>
+
+Uruchamia poldka w trybie interaktywnym. Wpisz "help" aby uzyskaæ listê dostêpnych poleceñ.
+Jest to domy¶lny tryb pracy poldka.
+
+=item B<--split=ROZMIAR[:PIERWSZY_WOLNY_OBSZAR]  [--split-conf=PLIK] [--split-out=PREFIX]>
+
+Dzieli zestaw pakietów na czê¶ci, ka¿da o rozmiarze ROZMIAR MB.
+Pierwsza czê¶æ bêdzie o PIERWSZY_WOLNY_OBSZAR MB mniejsza.
+
+Package priorities are taken from FILE given by --split-conf (see sample
+pkgsplit.conf from program distribution). By default packages have 0 priority.
+
+Each part is written as NAME-EVR.ARCH.rpm list to PREFIX.XX
+file, the default PREFIX is "packages.chunk"
+
+=back
+
+=head2 Options for install modes
+
+=over
+
+=item B<--dump[=FILE]>
+
+Just dump packages file names to FILE or stdout instead of install them.
+
+=item B<--dumpn[=FILE]>
+
+Just dump packages names to FILE or stdout instead of install them.
+
+=item B<--fetch[=DIR]>
+
+Like B<--dump> but packages are downloaded and stored in poldek's cache
+directory by default
+
+=item B<-F, --fresh>
+
+Upgrade packages, but only if an earlier version currently installed.
+I<Note> that equivalent of "rpm --freshen" is "poldek -u/-i --fresh --nofollow"
+
+=item B<-G, --greedy>
+
+Automatically upgrade packages which dependencies are broken
+by unistalled ones, for example if package foo is upgraded
+from version 1.0 to 1.2 and package foo-devel is already installed
+with requirement "foo = 1.0" than poldek upgrade foo-devel to version
+1.2 too.
+
+=item B<--hold=PACKAGE[,PACKAGE]...>
+
+Prevent packages listed from being upgraded if they are already installed.
+If option is not given then packages to hold are taken from B<hold> configuration
+option and additionally from $HOME/.poldek_hold. Held package won't be upgraded
+with exception if it will be pointed directly by the user.
+
+=item B<-m, --mercy>
+
+Be tolerant for unmatched versioned dependencies which RPM tolerates, e.g.
+package A requires capability foo >= 1.0 while package B provides "foo"
+without any version.
+
+=item B<--nodeps>; B<--justdb>; B<--force>; B<--root>;
+
+Have the same meanings like RPM ones. See next section.
+
+=item B<-N, --nofollow>
+
+Don't automatically install packages required by selected ones.
+
+=item B<--nohold>
+
+Don't take held packages from $HOME/.poldek_hold nor config's hold parameter.
+
+=item B<--rpmdef="NAME VALUE">
+
+Like rpm --define option.
+
+=item B<-t, --test>
+
+Do not install packages, but tell if it would work or not. Given once
+causes poldek's checks only, to perform full tests using rpm, option
+must be given twice.
+
+=back
+
+=head1 INNE OPCJE
+
+=over
+
+=item B<--cachedir=DIR>
+
+DIR points to directory where downloaded files will be stored.
+If option not set then $TMPDIR is used. If $TMPDIR isn't set
+then $HOME/.poldek-cache is created and used as cache directory.
+
+=item B<--log=FILE>
+
+Log all poldek messages to FILE
+
+=back
+
+=head1 WSPÓ£PRACA Z RPM
+
+Currently all installations except B<install-dist> are made
+by RPM binary, which is executed in background. Options passed to rpm:
+
+=over
+
+=item * --root
+
+=item * --force
+
+=item * --install
+
+=item * --justdb
+
+=item * --nodeps
+
+=item * --test (must be given twice, see above --test description)
+
+=item * --upgrade
+
+=item * --rpmdef (passed as --define)
+
+=back
+
+=head2
+
+
+Other rpm options may be passed as arguments like B<--rpm-RPM_LONG_OPTION>,
+e.g:
+
+$ poldek ... -- --rpm-noscripts --rpm-notriggers
+
+
+=head1 PLIK KONFIGURACYJNY
+
+Program tries to read configuration from F<$HOME/.poldekrc>; if it doesn't
+exists then F</etc/poldek.conf> is used. B<-c,--conf> option could points to
+other config location. With B<--noconf> poldek doesn't read any config.
+
+Config file consists of parameters of the form
+
+'nazwa = warto¶æ'
+
+The file is line-based - that is, each newline-terminated
+line represents a comment or a parameter.
+
+=head2 Parameters:
+
+=over
+
+=item * B<source> = [NAZWA[,OPCJE]] ¦CIE¯KA_¬RÓD£OWA
+
+Optional B<NAZWA> may be specified later from cmdline by
+B<-n, --sn> B<NAZWA-¬RÓD£A>; for example if you
+have sources configured as follows:
+
+source = pld-devel     /mnt/PLD-stable/RPMS
+
+source = pld-stable    ftp://zn/PLD/i686/PLD/RPMS
+
+source = misRPMS       ftp://zn/rpm/RPMS/
+
+then to use only ftp://zn/PLD/i686/PLD/RPMS do:
+
+$ poldek --sn pld-stable
+
+..and to use all pld-* do:
+
+$ poldek --sn pld-\*
+
+
+B<OPCJE> describes source options; possible values are:
+
+=over
+
+=item * B<noauto> - don't load this source by default
+
+=item * B<noautoup> - don't update this source by default
+
+=item * B<gpg> - verify package GPG signatures
+
+=item * B<pgp> - verify package PGP signatures
+
+=item * B<pri=NUMERICAL_VALUE>
+
+Source priority may be set by this option. If the same packages
+(identical name and EVR) are available in more than one source then
+packages from highest prioritized source are taken.
+
+If source priorities aren't set sources are prioritized in order
+they are appear in config file.
+
+
+=item * B<type=TYP_¬RÓD£A>
+
+Opcja ta pozwala na ustawienie typu ¼ród³a. Dostêpne warto¶ci to:
+
+=over 2
+
+=item * B<pidx> - natywny plik indeksu poldka (domy¶lny)
+
+=item * B<pdir> - lokalne katalogi; poldek przeszuka je zamiast
+                  czytaæ plik indeksu.
+
+=item * B<hdrl> - file with raw package headers in RPM format;
+ available in many RPM-based distributions (named hdlist in RH), however
+ this format isn't optimal for poldek (is not updateable for example).
+ See F<poldekrc.sample-rh> included in poldek distribution.
+
+=back
+
+=back
+
+Przyk³ady:
+
+# packages from 'pld' are preffered
+source = pld,gpg,noautoup,pri=-10   ftp://zn/PLD/ra/RPMS
+
+source = pld-test,noauto        /mnt/PLD-test/RPMS
+
+source = rare,noautoup          ftp://host/rare-RPMS
+
+source = build-area,type=dir    /home/zenek/rpm/RPMS
+
+
+source99 = rh,noauto,type=hdrl  ftp://redhat/os/i386/RedHat/base/hdlist
+
+prefix99 = ftp://redhat/os/i386/RedHat/RPMS
+
+=item * B<sourceXX> = ¬RÓD£O
+
+=item * B<prefixXX> = ¬RÓD£O
+
+If you want to configure source with prefix (see B<-P> option description),
+then it should be specified as suffixed source/prefix pair to distinguish
+that source from other ones, for example:
+
+source1 = ~/tmp/my-cd-indexes/
+
+prefix1 = /mnt/cdrom/RPMS/
+
+
+=item * B<cachedir>
+
+       See B<--cachedir> option description
+
+=item * B<confirm_installation = yes|no>
+
+        If "yes" program confirm all performed package installations (default: no)
+
+=item * B<confirm_removal = yes|no>
+
+        If "yes" program confirm all performed package removals (default: yes)
+
+=item * B<choose_equivalents_manually = yes|no>
+
+        If "yes" program let the user choose among equivalent packages (default: no)
+
+=item * B<follow = yes|no>
+
+       Automatically install|don't install packages required by
+       selected ones (default: yes)
+
+=item * B<ftp_sysuser_as_anon_passwd = yes|no>
+
+       If yes, login@hostname is send as anonymous FTP password (default: no)
+
+=item * B<greedy = yes|no>
+
+        See --greedy option description	(default: no)
+
+
+=item * B<hold = PACKAGE[ PACKAGE...]>
+
+        See --hold option description
+
+
+=item * B<mercy = yes|no>
+
+        See --mercy option description
+
+
+=item * B<keep_downloads = yes|no>
+
+        Program removes downloaded packages files after successful installation
+        by default. If option is set to "yes" then program will never remove
+        downloaded packages from cache directory.
+
+
+=item * B<particle_install = yes|no>
+
+        If "no" installations of multiple packages are performed as one
+        transaction (default: yes)
+
+
+=item * B<use_sudo = yes|no>
+
+      For r/w operations run rpm using sudo.
+      The default is "no", but it is recommended to change it to "yes"
+      and use the poldek as ordinary user.
+
+
+=back
+
+=head3 Zewnêtrzne programy pobieraj±ce
+
+Downloaders are configured by B<PROTOCOL_get="SPEC"> parameter.  The
+SPEC is a command formatted string, where at least 2 semi-macros of 4
+available should be used:
+
+=over
+
+=item B<%p[n]> - package file name, %pn means that %p may be repeated many times
+
+=item B<%P[n]> - package full path, %Pn -"-
+
+=item B<%d> - cache directory
+
+=item B<%D> - cache directory/package base name
+
+=back
+
+Currently four protocols are available: FTP, HTTP, HTTPS and RSYNC.  Special
+B<ftp_http> "protocol" could be used for describe downloader for both
+HTTP and FTP.
+
+Przyk³ady:
+
+ftp_http_get   = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
+
+ftp_get        = "/usr/bin/curl %P -o %D"
+
+ftp_get        = "/usr/bin/snarf %P %D"
+
+rsync_get      = "/usr/bin/rsync -v %P %d"
+
+Patrz równie¿: za³±czone przyk³adowe pliki konfiguracyjne.
+
+
+Additionally poldek supports CDROM URLs which could be used when package set
+is stored on removable media (several CDs, ZIPs, etc); as  CDROM "downloader"
+vfjuggle should be configured, see poldekrc.sample-cdrom for details.
+
+=head1 PRZYK£ADY
+
+=head2 Tworzenie indeksu pakietów:
+
+$ poldek -s /cdrom/PLD/RPMS --mkidxz=/tmp/packages.dir.gz
+
+$ poldek -s /ftp/pub/PLD/RPMS --mkidxz
+
+U¿ywaj±c skryptu mkpackagedir:
+
+$ mkpackagedir /ftp/pub/PLD/i686/RPMS /ftp/pub/PLD/sparc/RPMS
+
+=head2 Weryfikacja:
+
+$ poldek -s rsync://ala.ma.kota/PLD/RPMS/ -V
+
+$ poldek -s /dir/with/RPMS -V apache
+
+=head2 Instalacja od zera:
+
+$ poldek -s ftp://ftp.trurl.net/PLD/RPMS/
+  --install-dist=/mnt/dest --pset ftp://home.net/moje-podzestawy/mójzestaw
+
+Powy¿sze polecenie instaluje podzestaw pakietów "mójzestaw"
+w /mnt/dest jako root.
+
+=head2 Aktualizacja ca³ego systemu:
+
+$ poldek -v -s ftp://ftp.tatry.pl/PLD/RPMS/ --upgrade-dist --log=~/tmp/poldek.log
+
+Tylko pobierz pakiety zaznaczone do aktualizacji:
+
+$ poldek -s ftp://ftp.rankiem.net.pl/PLD/RPMS/
+  --upgrade-dist --fetch=/tmp/PLD-up/
+
+Stwórz listê nazw pakietów zaznaczonych do aktualizacji:
+
+$ poldek -s ftp://ftp.pld.org.pl/PLD/RPMS/
+ --upgrade-dist --dump=/tmp/PLD-up-`date +%Y.%m.%d`
+
+Tylko testuj:
+
+$ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/
+  --upgrade-dist --test
+
+=head2 Instalacja/aktualizacja wybranych pakietów:
+
+$ poldek -s ftp://ftp.znienacka.com/PLD/RPMS/
+-u apache --nevr "ala-ma-kota 1.2" smail-12-389.i386.rpm
+
+$ poldek -s ftp://ftp.dudy.net/RPMS/ -ti xteddy
+
+=head2 Dzielenie zestawu na 100 MB czê¶ci:
+
+$ poldek --split=100 --split-conf=zip-split.conf \
+   --split-out=/tmp/zipchunk
+
+=head2 Wykonanie polecenia pow³oki:
+
+$ poldek --shcmd='ls -lt' | less
+
+
+=head1 ¦RODOWISKO
+
+Plik konfiguracyjny pobierany jest z $HOME.
+
+$TMPDIR (je¶li ustawiony) jest u¿ywany jako katalog tymczasowy
+o ile nie jest okre¶lony cachedir.
+
+$PAGER (je¶li ustawiony) jest u¿ywany w trybie interaktywnym.
+
+=head1 PLIKI
+
+/etc/poldek.conf
+
+$HOME/.poldekrc
+
+$HOME/.poldek_hold
+
+$HOME/.poldek-cache/
+
+=head1 B£ÊDY
+
+=head2 Konflikty plików
+
+Konflikty s± wykrywane tylko przez porównanie rozmiarów plików i trybów,
+co oznacza, ¿e nie wszystkie konflikty mog± byæ wykryte, gdy¿ nie s±
+porównywane sumy kontrolne MD5 (zbyt bardzo zwiêkszy³oby to zu¿ycie pamiêci).
+
+=head2 Uaktualnianie i tag "Obsoletes"
+
+In PLD I<http://www.pld.org.pl>, which is primary development
+platform for poldek, Obsoletes tag is used in two different meanings:
+the first means B<A> I<obsoletes> B<B>, the second means B<A> I<is
+equivalent of> B<B>. Obviously it makes impossible to distinguish them
+and use during system upgrades (in Red Hat Linux the first mean is used only,
+so Red Hat Installer use this tag).
+
+=head2 Aktualizacja wiêcej ni¿ jednej instancji pakietu
+
+rpm nie obs³uguje takiego przypadku, wiêc poldek tak¿e.
+
+=head2 Przetwarzanie zale¿no¶ci
+
+Na tyle na ile przetestowa³em poldka, zupe³nie rozwi±zuje on zale¿no¶ci
+pakietów (nie konflikty plików) podczas instalacji i uaktualnienia. Proszê
+powiadomiæ mnie, je¶li zauwa¿ysz, ¿e rpm zg³asza niespe³nione zale¿no¶ci,
+podczas gdy poldek nie.
+
+=head2 Dokumentacja
+
+Ten manual powinien byæ ukoñczony i przet³umaczony na jêzyk angielski.
+
+=head1 UWAGA
+
+Program ten z pewno¶ci± zawiera b³êdy. Zrób kopiê bezpieczeñstwa swojej
+bazy danych RPM-a i b±d¼ uwazny. Pamiêtaj, ¿e I<NIE MA ¯ADNEJ GWARANCJI>
+i udajej zabawy.
+
+=head1 LICENCJA
+
+Program ten jest rozprowadzany na zasadach licencji GNU General Public
+License, wersja 2.
+
+=head1 AUTORZY
+
+Pawel A. Gajda <mis@pld.org.pl>
+
+=head1 KONTAKT
+
+=head2 Strona domowa: I<http://team.pld.org.pl/~mis/poldek/>
+
+=head2 Lista mailingowa I<poldek@pld-linux.org>
+
+Proszê przesy³aæ komentarze, raporty o b³êdach itp. do autora b±d¼
+na listê mailingow±.
+
+=head1 PATRZ RÓWNIE¯
+
+L<apt(1)> L<apt-get(8)>, L<curl(1)>, L<rpm(1)>, L<rsync(1)>, L<snarf(1)>, L<wget(1)>
