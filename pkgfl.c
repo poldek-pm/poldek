@@ -434,6 +434,7 @@ int pkgfl_store_f(tn_array *fl, FILE *stream, tn_array *depdirs, int which)
 {
     tn_buf *nbuf;
     uint32_t size;
+    int rc;
     
     nbuf = n_buf_new(4096);
     
@@ -441,10 +442,11 @@ int pkgfl_store_f(tn_array *fl, FILE *stream, tn_array *depdirs, int which)
     size = hton32(n_buf_size(nbuf));
     fwrite(&size, sizeof(size), 1, stream);
     
-    return fwrite(n_buf_ptr(nbuf), n_buf_size(nbuf), 1, stream) == 1 &&
+    rc = fwrite(n_buf_ptr(nbuf), n_buf_size(nbuf), 1, stream) == 1 &&
         fwrite("\n", 1, 1, stream) == 1;
 
-    return 1;
+    n_buf_free(nbuf);
+    return rc;
 }
 
 tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *dirs, int include)

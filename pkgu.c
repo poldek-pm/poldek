@@ -140,7 +140,7 @@ static int32_t pkguinf_int32_tag(struct pkguinf *pkgu, int32_t tag)
 int pkguinf_store(struct pkguinf *pkgu, FILE *stream) 
 {
     uint16_t nsize, nlangs;
-    Header   hdr;
+    Header   hdr = NULL;
     void     *rawhdr;
     int      rawhdr_size;
     
@@ -167,6 +167,7 @@ int pkguinf_store(struct pkguinf *pkgu, FILE *stream)
     rc = fwrite(rawhdr, rawhdr_size, 1, stream);
     
     free(rawhdr);
+    headerFree(hdr);
     
     return rc;
 }
@@ -284,6 +285,7 @@ static Header make_pkguinf_hdr(Header h, int *langs_cnt)
 
     if (hdr == NULL)
         hdr = headerNew();
+    
     rpmhdr_ent_cp(&hdrent, h, RPMTAG_VENDOR, hdr);
     rpmhdr_ent_cp(&hdrent, h, RPMTAG_COPYRIGHT, hdr);
     rpmhdr_ent_cp(&hdrent, h, RPMTAG_URL, hdr);

@@ -893,5 +893,7 @@ tn_array *capreq_arr_restore(FILE *stream, int skip_bastards)
         }
     }
 
+    n_buf_free(nbuf);
+    
     return arr;
 }
