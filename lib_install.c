@@ -60,10 +60,10 @@ int mkdbdir(const char *rootdir)
 
 static int chk_params(struct inst_s *inst) 
 {
-    if (inst->rootdir == NULL) {
-        n_assert(0);
-        exit(EXIT_FAILURE);
-    }
+
+    if (inst->rootdir == NULL)
+        inst->rootdir = n_strdup("/");
+    
 
     if (inst->flags & INSTS_RPMTEST) {
         if (verbose < 1)
@@ -90,6 +90,7 @@ int poldek_install_dist(struct poldek_ctx *ctx)
 {
     int rc;
 
+    n_assert(ctx->inst->flags & (INSTS_INSTALL | INSTS_UPGRADE));
     
     if (!chk_params(ctx->inst))
         return 0;
@@ -130,8 +131,8 @@ int poldek_install(struct poldek_ctx *ctx, struct install_info *iinf)
 {
     int rc;
     
-    if (ctx->inst->rootdir == NULL)
-        ctx->inst->rootdir = "/";
+
+    n_assert(ctx->inst->flags & (INSTS_INSTALL | INSTS_UPGRADE));
     
     if (!chk_params(ctx->inst))
         return 0;
