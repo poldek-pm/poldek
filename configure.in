@@ -1,0 +1,71 @@
+dnl Process this file with autoconf to produce a configure script.
+dnl $Id$
+
+AC_INIT(capreq.c)
+
+VERSION=`cat VERSION`
+PACKAGE=poldek
+
+AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
+AM_CONFIG_HEADER(config.h)
+
+CFLAGS="$CFLAGS -g -Wall -W"
+LDFLAGS="$LDFLAGS -Ltrurlib"
+AC_DEFINE(ENABLE_VFILE_RPMIO)
+
+dnl Process features.
+dnl Build interactive shell?
+#AC_ARG_WITH(shell,
+#[  --disable-shell          don't build poldek interactive client],
+#ENABLE_INTERACTIVE_CLIENT=$enableval, ENABLE_INTERACTIVE_CLIENT=yes)
+#test "${ENABLE_INTERACTIVE_CLIENT}." = yes. && AC_DEFINE(ENABLE_INTERACTIVE_CLIENT)
+
+AC_DEFINE(ENABLE_INTERACTIVE_CLIENT)
+
+dnl Checks for programs.
+AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_RANLIB
+AC_CHECK_PROG(POD2MAN, pod2man, pod2man)
+
+dnl Checks for libraries.
+AC_CHECK_LIB(bz2, BZ2_bzCompress)
+AC_CHECK_LIB(db, db_create)
+AC_CHECK_LIB(popt, poptReadConfigFile)
+AC_CHECK_LIB(readline, readline,,AC_MSG_ERROR("readline not found"))
+AC_CHECK_LIB(rpm, rpmReadPackageInfo,,AC_MSG_ERROR("rpmlib not found"))
+AC_CHECK_LIB(trurl, n_buf_it_get,,AC_MSG_ERROR("trurlib not found"))
+AC_CHECK_LIB(z, gzopen)
+
+dnl Checks for header files.
+AC_HEADER_DIRENT
+AC_HEADER_STDC
+AC_HEADER_SYS_WAIT
+AC_CHECK_HEADERS(fcntl.h limits.h malloc.h)
+AC_CHECK_HEADERS(sys/file.h sys/time.h syslog.h unistd.h)
+
+AC_CHECK_HEADER(stdint.h,,AC_MSG_ERROR("C9X compiler is needed by $PACKAGE"))
+AC_CHECK_HEADER(obstack.h,,AC_MSG_ERROR("obstacks are needed by $PACKAGE"))
+AC_CHECK_HEADER(argp.h,,AC_MSG_ERROR("missing required argp.h"))
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_C_INLINE
+AC_TYPE_MODE_T
+AC_TYPE_OFF_T
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_HEADER_TIME
+
+dnl Checks for library functions.
+AC_FUNC_ALLOCA
+AC_FUNC_FNMATCH
+AC_FUNC_STRFTIME
+AC_FUNC_VPRINTF
+AC_CHECK_FUNCS(gettimeofday mkdir strdup uname)
+AC_CHECK_FUNCS(strerror strstr strtol strtoul strsignal)
+AC_CHECK_FUNCS(fopencookie,, AC_MSG_WARN("disabled gzipped files support"))
+AC_CHECK_FUNCS(rpmGetRpmlibProvides,, AC_MSG_WARN("poldek will not work fine with rpmlib\(...\) capabilities"))
+
+AC_OUTPUT([vfile/Makefile
+	  Makefile])

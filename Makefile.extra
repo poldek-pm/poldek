@@ -1,0 +1,39 @@
+# $Id$
+
+PROJ_DIR=$(shell pwd)
+
+mclean: 
+	@if [ -f Makefile ]; then         \
+		$(MAKE) maintainer-clean; \
+	fi
+	rm -f mkinstalldirs install-sh missing poldek-*.tar.gz
+	rm -f config.h.in configure Makefile.in *.1
+
+
+backup:
+	@cd $(PROJ_DIR); \
+	ARCHDIR=`basename  $(PROJ_DIR)`-ARCH; \
+	ARCHNAME=`basename  $(PROJ_DIR)`-`date +%Y.%m.%d-%H.%M`; \
+	cd ..; \
+	mkdir $$ARCHDIR || true; \
+	cd $$ARCHDIR && mkdir $$ARCHNAME || exit 1; \
+	cd .. ;\
+	cp -a $(PROJ_DIR) $$ARCHDIR/$$ARCHNAME ;\
+	cd $$ARCHDIR ;\
+	tar cpzf $$ARCHNAME.tgz $$ARCHNAME ||  rm -rf $$ARCHNAME;   \
+	md5sum $$ARCHNAME.tgz > $$ARCHNAME.md5;                     \
+	if [ $(cparch)x = "1x" ]; then                              \
+	        mkdir $(backupdir)/copy || true;                    \
+		cp -v $$HOME/$$ARCHDIR/$$ARCHNAME.tgz $(backupdir); \
+		cp -v $$HOME/$$ARCHDIR/$$ARCHNAME.tgz $(backupdir)/copy; \
+		cd $(backupdir) || exit 1;                         \
+		md5sum --check $$HOME/$$ARCHDIR/$$ARCHNAME.md5;    \
+		cd copy || exit 1;                                 \
+		md5sum --check $$HOME/$$ARCHDIR/$$ARCHNAME.md5;    \
+	fi
+
+arch : mclean backup 
+
+misarch: mclean
+	$(MAKE) -C . backup cparch=1 backupdir=/z/
+
