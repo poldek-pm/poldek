@@ -522,9 +522,13 @@ static char *get_env(char *dest, int size, const char *name)
     struct passwd *pw;
     char *val;
     
-    if ((val = getenv(name)) != NULL)
-        return val;
-
+    if ((val = getenv(name)) != NULL) {
+        if (*val)
+            return val;
+        else
+            val = NULL;
+    }
+    
     if (strcmp(name, "HOME") == 0 && (pw = getpwuid(getuid()))) {
         snprintf(dest, size, pw->pw_dir);
         val = dest;
@@ -552,19 +556,20 @@ const char *expand_env_vars(char *dest, int size, const char *str)
     }
     
     while (*tl) {
-        const char *vv, *v, *var;
+        const char *p, *vv, *v, *var;
         char val[256], buf[PATH_MAX];
         int  v_len;
         
         
-        v = *tl;
+        p = v = *tl;
         DBGF("token: %s\n", *tl);
         tl++;
-        
-        if (*v == '{')
-            v++;
 
+        if (*vv == '{')
+            v++;
+        
         vv = v;
+        
         v_len = 0;
         while (isalnum(*vv)) {
             vv++;
@@ -581,7 +586,7 @@ const char *expand_env_vars(char *dest, int size, const char *str)
         DBGF("env %s\n", val);
         
         if ((var = get_env(buf, sizeof(buf), val)) == NULL) {
-            n += n_snprintf(&dest[n], size - n, "%s", v);
+            n += n_snprintf(&dest[n], size - n, "$%s", p);
             
         } else {
             n += n_snprintf(&dest[n], size - n, "%s", var);
