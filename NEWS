@@ -1,3 +1,18 @@
+0.17.7 (bugfix release; 2002/06/1?)
+
+* improved package conflicts resolving
+
+* split: SIGSEV killed 
+
+* fixed package removal  
+
+* shell: search: fixed default options processing
+
+* another "desynchronized index" bug is fixed
+
+* fixed Epoch matching 
+
+
 0.17.6 (minor bugfix release; 2002/06/03)
 
 * new "--ignore" option makes packages invisible to the poldek 
