@@ -1,3 +1,15 @@
+0.15.8:
+* curl: disabled timeouts, cURL's timeout it's a time to transfer file 
+* curl: amount and total sizes are displayed in progress bar
+* curl: increace timeouts values to 5 min 
+* fix: enabled --hold 
+* fix: SIGSEV killed when pkg description requested while pkg index
+       doesn't contain package descriptions at all
+* shell: fixed installed package list managment
+* curl: fixed progress bar if total file size is unknown 
+  (Micha³ Moskal <malekith@pld.org.pl>)
+* "mercy" mode bugfix
+
 0.15.7:
 * donwloaded packages are removed after successful installation by default
   (keep_downloads=yes in config can change to previous behavior)

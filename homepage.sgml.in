@@ -15,10 +15,6 @@
     try to install a package that needs others to be installed, it will download all needed 
     packages and install them.
 
-    Besides poldek can divide distribution packages into fixed size chunks for the purpose of 
-    placing package set on removable media like CDROM or ZIP.
-	
-
     Program can be used in batch (like <em>apt_get</em> from Debian's APT) or in interactive mode, 
     which puts you into a readline interface with command line with autocompletion and history,
     similar to shell mode of Perl CPAN module. 
