@@ -1415,8 +1415,14 @@ int verify_args(void)
 
             
         case MODE_INSTALLDIST:
+            if (getuid() != 0) {
+                logn(LOGERR, _("root priviliges are required in install-dist mode"));
+                exit(EXIT_FAILURE);
+            }
+                                /* no break */
         case MODE_INSTALL:
         case MODE_UPGRADE:
+            
             if (prepare_given_packages() > 0) {
                 rc = check_install_flags();
                 
