@@ -371,7 +371,7 @@ int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst)
         msgn(1, _("Executing%s..."), buf);
     }
     
-
+    
     ec = rpmr_exec(cmd, argv, 1, 1);
     
     if (ec == 0 && (inst->flags & INSTS_RPMTEST) == 0 &&

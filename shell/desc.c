@@ -810,7 +810,7 @@ static int desc(struct cmdarg *cmdarg)
             show_files(shpkg->pkg, cmdarg->flags & OPT_DESC_FL_LONGFMT);
         }
         
-        if (shSIGINT) 
+        if (sigint_reached()) 
             goto l_end;
     }
     

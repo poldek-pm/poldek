@@ -29,8 +29,9 @@
 
 #define CAPREQ_OBCNFL      CAPREQ_PREREQ    /* alias, for obsolences */
 
-#define CAPREQ_RPMLIB      (1 << 5)   /* rpmlib(...) */
-#define CAPREQ_PLDEKBAST   (1 << 6)   /* capreq added by poldek during mkidx,
+#define CAPREQ_RPMLIB            (1 << 5)   /* rpmlib(...) */
+#define CAPREQ_RPMLIB_SATISFIED  (1 << 6)   /* is rpmlib provides rpmlib(...)? */
+#define CAPREQ_PLDEKBAST   (1 << 7)   /* capreq added by poldek during mkidx,
                                          '!' prefix */
 struct capreq {
     uint8_t  cr_flags;
@@ -68,7 +69,9 @@ extern inline int32_t capreq_epoch_(const struct capreq *cr);
 
 #define capreq_is_bastard(cr)   ((cr)->cr_flags & CAPREQ_PLDEKBAST)
 
-#define capreq_is_rpmlib(cr)   ((cr)->cr_flags & CAPREQ_RPMLIB)
+#define capreq_is_rpmlib(cr)     ((cr)->cr_flags & CAPREQ_RPMLIB)
+#define capreq_set_satisfied(cr)  ((cr)->cr_flags |= CAPREQ_RPMLIB_SATISFIED)
+#define capreq_is_satisfied(cr)  ((cr)->cr_flags & CAPREQ_RPMLIB_SATISFIED)
 
 #define capreq_revrel(cr) ((cr)->cr_relflags = (cr)->cr_relflags ? \
                           (((uint8_t)~cnfl->cr_relflags) & REL_ALL) : (cr)->cr_relflags)

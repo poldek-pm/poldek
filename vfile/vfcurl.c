@@ -32,6 +32,8 @@
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>
 
+#include <sigint/sigint.h>
+
 #include "i18n.h"
 
 #define VFILE_INTERNAL
@@ -77,7 +79,6 @@ struct progress_bar {
 
 
 static CURL *curlh = NULL;
-static volatile sig_atomic_t interrupted = 0;
 
 
 static int vfile_curl_init(void) 
@@ -157,34 +158,6 @@ void vfile_curl_destroy(void)
         curlh = NULL;
     }
 }
-
-
-static void vf_sigint_handler(int sig) 
-{
-    interrupted = 1;
-    signal(sig, vf_sigint_handler);
-}
-
-static void *establish_sigint(void)
-{
-    void *vf_sigint_fn;
-
-    interrupted = 0;
-    vf_sigint_fn = signal(SIGINT, SIG_IGN);
-
-    if (vf_sigint_fn == NULL)      /* disable transfer interrupt */
-        signal(SIGINT, SIG_DFL);
-    else 
-        signal(SIGINT, vf_sigint_handler);
-    
-    return vf_sigint_fn;
-}
-
-static void restore_sigint(void *vf_sigint_fn)
-{
-    signal(SIGINT, vf_sigint_fn);
-}
-
 
 
 static int do_vfile_curl_fetch(const char *dest, const char *url)
@@ -268,12 +241,10 @@ int vfile_curl_fetch(const char *dest, const char *url, unsigned flags)
     int curl_rc = CURLE_OK,
         vf_errno = 0;
     int end = 1, ntry = 0;
-    void  *vf_sigint_fn;
     
     if (flags & VFMOD_INFINITE_RETR)
         end = 1000;
     
-    vf_sigint_fn = establish_sigint();
     while (end-- > 0) {
         vf_errno = 0;
         curl_rc = do_vfile_curl_fetch(dest, url);
@@ -286,7 +257,7 @@ int vfile_curl_fetch(const char *dest, const char *url, unsigned flags)
             curl_rc = do_vfile_curl_fetch(dest, url);
         }
 
-        if (interrupted)
+        if (sigint_reached())
             break;
         
         if (curl_rc != CURLE_OK)
@@ -312,7 +283,6 @@ int vfile_curl_fetch(const char *dest, const char *url, unsigned flags)
             vfile_msg_fn(_("Retrying...(#%d)\n"), ntry++);
     }
     
-    restore_sigint(vf_sigint_fn);
  l_endloop:
     
     if (vf_errno)
@@ -482,7 +452,7 @@ int progress (void *clientp, size_t dltotal, size_t dlnow,
         bar->state = PBAR_ST_TERMINATED;
     }
 
-    if (interrupted)
+    if (sigint_reached())
         return -1;  /* cURL aborts on non-zero result from callback fn */
     return 0;
 }

@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 #include <rpm/rpmlib.h>
-
+#include <trurl/narray.h>
 
 #ifdef HAVE_RPM_4_0_4           /* missing prototypes in public headers */
 int headerGetRawEntry(Header h, int_32 tag,
@@ -50,5 +50,7 @@ int rpmhdr_nevr(Header h, char **name,
                 uint32_t **epoch, char **version, char **release);
 
 char *rpmhdr_snprintf(char *buf, size_t size, Header h);
+
+tn_array *rpm_rpmlib_caps(void);
 
 #endif /* RPM_ADDS_H */

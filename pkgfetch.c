@@ -32,6 +32,8 @@
 
 #include <vfile/vfile.h>
 
+#include <sigint/sigint.h>
+
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
@@ -165,6 +167,9 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
         char        path[PATH_MAX], *s;
         const char  *pkg_basename;
         int         len;
+
+        if (sigint_reached())
+            break;
         
         urltype = vf_url_type(pkgpath);
         
@@ -233,7 +238,10 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
         s[len] = '\0';
         n_array_push(urls, s);
     }
-
+    
+    if (sigint_reached())
+        goto l_end;
+    
     /* files must be copied if they are taken from more than
        one removable media;
        
@@ -251,6 +259,10 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
         const char *real_destdir;
         char *pkgpath = n_array_nth(urls_arr, i);
 
+
+        if (sigint_reached())
+            break;
+        
         urls = n_hash_get(urls_h, pkgpath);
         real_destdir = destdir;
         if (nosubdirs == 0) {
@@ -279,7 +291,11 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
             }
         }
     }
-    
+
+ l_end:
+    if (sigint_reached())
+        nerr++;
+
     n_array_free(urls_arr);
     n_hash_free(urls_h);
     return nerr == 0;

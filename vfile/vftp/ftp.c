@@ -35,7 +35,7 @@
 # define IPPORT_FTP 21
 #endif
 
-#define TIMEOUT     40         
+#define TIMEOUT     30
 
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
@@ -57,8 +57,6 @@ extern void (*vftp_msg_fn)(const char *fmt, ...);
 
 void   (*ftp_progress_fn)(long total, long amount, void *data) = NULL;
 
-
-static volatile sig_atomic_t interrupted = 0;
 
 
 #define FTP_SUPPORTS_SIZE  (1 << 0)
@@ -108,6 +106,8 @@ static int do_ftp_cmd(int sock, char *fmt, va_list args)
     char     buf[1024], tmp_fmt[256];
     int      n;
 
+    if (sigint_reached())
+        return 0;
 
     snprintf(tmp_fmt, sizeof(tmp_fmt), "%s\r\n", fmt);
     n = n_vsnprintf(buf, sizeof(buf), tmp_fmt, args);
@@ -273,21 +273,22 @@ int response_complete(struct ftp_response *resp)
 
 static int readresp(int sockfd, struct ftp_response *resp, int readln) 
 {
-    int is_err = 0, buf_pos = 0;
+    int is_err = 0, buf_pos = 0, ttl;
     char buf[4096];
 
     vftp_errno = 0;
+    ttl = TIMEOUT;
     
     while (1) {
-        struct timeval to = { TIMEOUT, 0 };
+        struct timeval to = { 1, 0 };
         fd_set fdset;
         int rc;
-        
+
         FD_ZERO(&fdset);
         FD_SET(sockfd, &fdset);
         errno = 0;
         if ((rc = select(sockfd + 1, &fdset, NULL, NULL, &to)) < 0) {
-            if (interrupted) {
+            if (sigint_reached()) {
                 is_err = 1;
                 errno = EINTR;
                 break;
@@ -299,7 +300,7 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
             is_err = 1;
             break;
             
-        } else if (rc == 0) {
+        } else if (rc == 0 && ttl-- == 0) {
             errno = ETIMEDOUT;
             is_err = 1;
             break;
@@ -308,6 +309,7 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
             char c;
             int n;
 
+            ttl = TIMEOUT;
             if (readln) 
                 n = read(sockfd, &c, 1);
             else 
@@ -364,7 +366,7 @@ static int readresp(int sockfd, struct ftp_response *resp, int readln)
                 break;
                 
             case EINTR:
-                if (interrupted) {
+                if (sigint_reached()) {
                     vftp_set_err(vftp_errno, _("connection canceled"));
                     break;
                 }
@@ -384,9 +386,12 @@ static int do_ftp_resp(int sock, int *resp_code, char **resp_msg, int readln)
 {
     struct ftp_response resp;
     int is_err = 0;
+
+
+    if (sigint_reached())
+        return 0;
     
     ftp_response_init(&resp);
-    
 
     if (resp_msg)
         *resp_msg = NULL;
@@ -400,6 +405,12 @@ static int do_ftp_resp(int sock, int *resp_code, char **resp_msg, int readln)
         if ((n = readresp(sock, &resp, readln)) > 0) {
             if (response_complete(&resp))
                 break;
+
+            if (sigint_reached()) {
+                is_err = 1;
+                break;
+            }
+            
         } else {
             is_err = 1;
             break;
@@ -455,36 +466,12 @@ int ftpcn_resp_ext(struct ftpcn *cn, int readln)
 #define ftpcn_resp_readln(cn)    ftpcn_resp_ext(cn, 1)
 
 
-static void vf_sigint_handler(int sig) 
-{
-    interrupted = 1;
-    signal(sig, vf_sigint_handler);
-}
-
-static void *establish_sigint(void)
-{
-    void *vf_sigint_fn;
-
-    interrupted = 0;
-    vf_sigint_fn = signal(SIGINT, SIG_IGN);
-
-    //printf("vf_sigint_fn %p, %d\n", vf_sigint_fn, *vftp_verbose);
-    if (vf_sigint_fn == NULL)      /* disable transfer interrupt */
-        signal(SIGINT, SIG_DFL);
-    else 
-        signal(SIGINT, vf_sigint_handler);
-    
-    return vf_sigint_fn;
-}
-
-static void restore_sigint(void *vf_sigint_fn)
-{
-    signal(SIGINT, vf_sigint_fn);
-}
+static sig_atomic_t alarm_reached = 0;
 
 static void sigalarmfunc(int unused)
 {
     unused = unused;
+    alarm_reached = 1;
     //printf("receive alarm");
 }
 
@@ -492,7 +479,8 @@ static void sigalarmfunc(int unused)
 static void install_alarm(int sec)
 {
     struct sigaction act;
-    
+
+    alarm_reached = 0;
     sigaction(SIGALRM, NULL, &act);
     act.sa_flags &=  ~SA_RESTART;
     act.sa_handler =  sigalarmfunc;
@@ -529,7 +517,7 @@ static int to_connect(const char *host, const char *service, struct addrinfo *ad
     vftp_errno = 0;
     
     do {
-        interrupted = 0;
+        sigint_reached();
         
         sockfd = socket(resp->ai_family, resp->ai_socktype, resp->ai_protocol);
         if (sockfd < 0)
@@ -539,7 +527,7 @@ static int to_connect(const char *host, const char *service, struct addrinfo *ad
         if (connect(sockfd, resp->ai_addr, resp->ai_addrlen) == 0)
             break;
         
-        if (errno == EINTR && interrupted == 0)
+        if (alarm_reached)
             vftp_errno = errno = ETIMEDOUT;
         
         uninstall_alarm();
@@ -570,6 +558,9 @@ static int ftp_open(const char *host, int port, struct addrinfo *addr)
     
     snprintf(portstr, sizeof(portstr), "%d", port);
     if ((sockfd = to_connect(host, portstr, addr)) < 0)
+        return 0;
+    
+    if (sigint_reached())
         return 0;
     
     errno = 0;
@@ -867,7 +858,7 @@ int rcvfile(int out_fd,  off_t out_fdoff, int in_fd, long total_size,
 	tv.tv_usec = 0;
         
         rc = select(in_fd + 1, &fdset, NULL, NULL, &tv);
-        if (interrupted) {
+        if (sigint_reached()) {
             is_err = 1;
             errno = EINTR;
             break;
@@ -935,11 +926,9 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
 {
     int   sockfd = -1;
     long  total_size;
-    void  *vf_sigint_fn;
+
 
     vftp_errno = 0;
-    
-    vf_sigint_fn = establish_sigint();
     
     if ((lseek(out_fd, out_fdoff, SEEK_SET)) == (off_t)-1) {
         vftp_set_err(errno, "%s: lseek %ld: %m", path, out_fdoff);
@@ -948,8 +937,14 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
 
     if ((total_size = ftpcn_size(cn, path)) < 0)
         goto l_err;
+
+    if (sigint_reached())
+        goto l_err;
     
     if ((sockfd = ftpcn_pasv(cn)) <= 0)
+        goto l_err;
+
+    if (sigint_reached())
         goto l_err;
 
     if (out_fdoff < 0)
@@ -957,14 +952,14 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
     
     if (!ftpcn_cmd(cn, "REST %ld", out_fdoff))
         goto l_err;
-    
+
     if (!ftpcn_resp(cn))
         goto l_err;
-    
+
     ftpcn_cmd(cn, "RETR %s", path);
     if (!ftpcn_resp_readln(cn))
         goto l_err;
-    
+
     if (cn->last_respcode != 150) {
         vftp_set_err(ENOENT, _("%s: no such file (serv said: %s)"),
                      path, cn->last_respmsg);
@@ -993,11 +988,9 @@ int ftpcn_retr(struct ftpcn *cn, int out_fd, off_t out_fdoff,
     if (!ftpcn_resp(cn) || cn->last_respcode != 226)
         goto l_err;
 
-    restore_sigint(vf_sigint_fn);
     return 1;
     
  l_err:
-    restore_sigint(vf_sigint_fn);
     if (vftp_errno == 0)
         vftp_errno = EIO;
     

@@ -23,6 +23,7 @@
 #include <pcre.h>
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
+#include <sigint/sigint.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -569,7 +570,7 @@ static int search(struct cmdarg *cmdarg)
             bar_v = v;
         }
         
-        if (shSIGINT) {
+        if (sigint_reached()) {
             msgn(0, _("_interrupted."));
             goto l_end;
         }

@@ -9,8 +9,8 @@ else
 TRURL_DIR=
 endif
 
-SUBDIRS   = po $(TRURL_DIR) vfile shell conf
-DIST_SUBDIRS = po trurlib vfile shell conf 
+SUBDIRS   = po $(TRURL_DIR) sigint vfile shell conf 
+DIST_SUBDIRS = po trurlib sigint vfile shell conf 
 
 INCLUDES  = @TRURL_INCLUDE@
 POD2MAN   = @POD2MAN@
@@ -62,12 +62,12 @@ libpoldek_a_SOURCES = \
 	  rpminstall.c			\
 	  i18n.h 			\
 	  ask.c                         \
-	  uninstall.c                   \
-	  sigint.c sigint.h
+	  uninstall.c
 
 SHELL_MOD = shell/libshell.a
 
 poldek_DEPENDENCIES_ = libpoldek.a            \
+		       sigint/libsigint.a     \
 	               vfile/libvfile.a       \
 		       vfile/vftp/libvftp.a   \
 		       vfile/vhttp/libvhttp.a
@@ -85,7 +85,7 @@ LDADD_              = @INTLLIBS@
 bin_PROGRAMS        = poldek rpmvercmp
 dist_bin_SCRIPTS    = mkpackagedir vfjuggle vfuncompr
 poldek_SOURCES      = main.c
-poldek_LDADD        = libpoldek.a vfile/libvfile.a \
+poldek_LDADD        = libpoldek.a sigint/libsigint.a vfile/libvfile.a \
 		      vfile/vftp/libvftp.a vfile/vhttp/libvhttp.a \
 	              $(SHELL_MOD_) $(LDADD_)
 

@@ -104,9 +104,6 @@ extern void (*vhttp_msg_fn)(const char *fmt, ...);
 void   (*http_progress_fn)(long total, long amount, void *data) = NULL;
 
 
-static volatile sig_atomic_t interrupted = 0;
-
-
 #define HTTP_SUPPORTS_SIZE  (1 << 0)
 
 #define ST_RESP_TIMEOUT         -2
@@ -436,7 +433,7 @@ int response_complete(struct http_resp *resp)
 
 static int readresp(int sockfd, struct http_resp *resp, int readln) 
 {
-    int is_err = 0, buf_pos = 0;
+    int is_err = 0, buf_pos = 0, ttl = TIMEOUT;
     char buf[4096];
 
     vhttp_errno = 0;
@@ -445,7 +442,7 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
 
     
     while (1) {
-        struct timeval to = { TIMEOUT, 0 };
+        struct timeval to = { 1, 0 };
         fd_set fdset;
         int rc;
         
@@ -453,7 +450,7 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
         FD_SET(sockfd, &fdset);
         errno = 0;
         if ((rc = select(sockfd + 1, &fdset, NULL, NULL, &to)) < 0) {
-            if (interrupted) {
+            if (sigint_reached()) {
                 is_err = 1;
                 errno = EINTR;
                 break;
@@ -465,7 +462,7 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
             is_err = 1;
             break;
             
-        } else if (rc == 0) {
+        } else if (rc == 0 && ttl-- == 0) {
             errno = ETIMEDOUT;
             is_err = 1;
             break;
@@ -474,6 +471,8 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
             char c;
             int n;
 
+            ttl = TIMEOUT;
+            
             if (readln) 
                 n = read(sockfd, &c, 1);
             else 
@@ -530,7 +529,7 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
                 break;
                 
             case EINTR:
-                if (interrupted) {
+                if (sigint_reached()) {
                     vhttp_set_err(vhttp_errno, _("connection canceled"));
                     break;
                 }
@@ -646,6 +645,11 @@ struct http_resp *do_http_read_resp(int sock)
 
     while (1) {
         int n;
+
+        if (sigint_reached()) {
+            is_err = 1;
+            break;
+        }
         
         if ((n = readresp(sock, resp, 1)) > 0) {
             if (response_complete(resp))
@@ -726,36 +730,12 @@ int httpcn_get_resp(struct httpcn *cn)
     return rc;
 }
 
-static void vf_sigint_handler(int sig) 
-{
-    interrupted = 1;
-    signal(sig, vf_sigint_handler);
-}
-
-static void *establish_sigint(void)
-{
-    void *vf_sigint_fn;
-
-    interrupted = 0;
-    vf_sigint_fn = signal(SIGINT, SIG_IGN);
-
-    //printf("vf_sigint_fn %p, %d\n", vf_sigint_fn, *vhttp_verbose);
-    if (vf_sigint_fn == NULL)      /* disable transfer interrupt */
-        signal(SIGINT, SIG_DFL);
-    else 
-        signal(SIGINT, vf_sigint_handler);
-    
-    return vf_sigint_fn;
-}
-
-static void restore_sigint(void *vf_sigint_fn)
-{
-    signal(SIGINT, vf_sigint_fn);
-}
+static sig_atomic_t alarm_reached = 0;
 
 static void sigalarmfunc(int unused)
 {
     unused = unused;
+    alarm_reached = 1;
     //printf("receive alarm");
 }
 
@@ -763,7 +743,8 @@ static void sigalarmfunc(int unused)
 static void install_alarm(int sec)
 {
     struct sigaction act;
-    
+
+    alarm_reached = 0;
     sigaction(SIGALRM, NULL, &act);
     act.sa_flags &=  ~SA_RESTART;
     act.sa_handler =  sigalarmfunc;
@@ -800,7 +781,7 @@ static int to_connect(const char *host, const char *service)
     vhttp_errno = 0;
     
     do {
-        interrupted = 0;
+        sigint_reset();
         
         sockfd = socket(resp->ai_family, resp->ai_socktype, resp->ai_protocol);
         if (sockfd < 0)
@@ -809,9 +790,12 @@ static int to_connect(const char *host, const char *service)
 
         if (connect(sockfd, resp->ai_addr, resp->ai_addrlen) == 0)
             break;
-        
-        if (errno == EINTR && interrupted == 0)
+
+        if (alarm_reached)
             vhttp_errno = errno = ETIMEDOUT;
+
+        else if (sigint_reached() && errno == EINTR)
+            vhttp_errno = EINTR;
         
         uninstall_alarm();
         close(sockfd);
@@ -977,7 +961,7 @@ int rcvfile(int out_fd, off_t out_fdoff, int in_fd, long total_size,
 	tv.tv_usec = 0;
         
         rc = select(in_fd + 1, &fdset, NULL, NULL, &tv);
-        if (interrupted) {
+        if (sigint_reached()) {
             is_err = 1;
             errno = EINTR;
             break;
@@ -1048,16 +1032,13 @@ int httpcn_retr(struct httpcn *cn,
 {
     int   close_cn = 0, rc = 1;
     long  from = 0, to = 0, total = 0, amount = 0;
-    void  *vf_sigint_fn;
     char  req_line[PATH_MAX];
     const char *trenc;
     
     vhttp_errno = 0;
     
     //http_progress_fn = progress;
-
     
-    vf_sigint_fn = establish_sigint();
     if (redirect_to)
         *redirect_to = '\0';
     
@@ -1172,7 +1153,6 @@ int httpcn_retr(struct httpcn *cn,
 
     
  l_end:
-    restore_sigint(vf_sigint_fn);
     if (close_cn)
         httpcn_close(cn);
     

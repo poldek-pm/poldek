@@ -264,7 +264,7 @@ static int ls(struct cmdarg *cmdarg)
             n_array_push(evrs, p);
             n_array_push(shpkgs_tmp, shpkg);
 
-            if (shSIGINT)
+            if (sigint_reached())
                 break;
         }
         

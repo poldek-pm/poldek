@@ -48,7 +48,6 @@ int shOnTTY = 0;
 
 static volatile sig_atomic_t shDone   = 0;
 static volatile sig_atomic_t shInCmd  = 0;
-volatile sig_atomic_t shSIGINT = 0;
 
 static int gmt_off = 0;         /* TZ offset */
 
@@ -381,7 +380,6 @@ int docmd(struct command *cmd, int argc, const char **argv)
     
     parse_flags = argp_parse_flags;
 
-    shSIGINT = 0;
     shInCmd = 1;
     
     if ((cmd->flags & COMMAND_NOHELP) &&
@@ -1067,16 +1065,11 @@ int sh_printf_c(FILE *stream, int color, const char *fmt, ...)
     return n;
 }
 
-static void sigint_handler(int sig)
+
+static void sigint_cb(void)
 {
-    signal(sig, sigint_handler);
-    
-    if (shInCmd) {
-        shSIGINT = 1;
-        return;
-    }
-    
-    shDone = 1;
+    if (!shInCmd)
+        shDone = 1;
 }
 
 static void shell_end(int sig) 
@@ -1247,8 +1240,8 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         snprintf(histfile, len, "%s/.poldek_history", home);
         read_history(histfile);
     }
-    
-    signal(SIGINT,  sigint_handler);
+
+    sigint_push(sigint_cb);
     signal(SIGTERM, shell_end);
     signal(SIGQUIT, shell_end);
     
@@ -1257,6 +1250,7 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
 
     shDone = 0;
     while (!shDone) {
+        sigint_reset();
         if ((line = readline("poldek> ")) == NULL)
             break;
         
@@ -1269,8 +1263,6 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         }
         free(line);
 
-        /* reset handlers */
-        signal(SIGINT,  sigint_handler);
         signal(SIGTERM, shell_end);
         signal(SIGQUIT, shell_end);
     }
@@ -1283,6 +1275,7 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         shpkgs_to_pkgs(&shell_s.dbpkgdir->pkgs, shell_s.instpkgs);
         save_installed_pkgdir(shell_s.dbpkgdir);
     }
-    
+
+    sigint_pop();
     return 1;
 }

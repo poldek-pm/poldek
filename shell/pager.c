@@ -108,7 +108,7 @@ FILE *pager_cmd(struct pager *pg, const char *cmd)
     }
 
     signal(SIGPIPE, SIG_IGN);
-    signal(SIGINT, SIG_IGN);
+    //signal(SIGINT, SIG_IGN);
     signal(SIGTERM, SIG_IGN);
 
     if ((pid = fork()) == 0) {
@@ -199,7 +199,7 @@ int pager_close(struct pager *pg)
 
     
     signal(SIGPIPE, SIG_DFL);
-    signal(SIGINT, SIG_DFL);
+    //signal(SIGINT, SIG_DFL);
     signal(SIGTERM, SIG_DFL);
 
     if (rc == 0)

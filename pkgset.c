@@ -21,7 +21,6 @@
 #include <obstack.h>
 #include <fnmatch.h>
 
-#include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
 #include <trurl/narray.h>
@@ -153,52 +152,6 @@ void inst_s_init(struct inst_s *inst)
     inst->ign_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
 }
 
-
-
-
-static tn_array *get_rpmlibcaps(void) 
-{
-    char **names = NULL, **versions = NULL, *evr;
-    int *flags = NULL, n = 0, i;
-    tn_array *caps;
-    
-#if HAVE_RPMGETRPMLIBPROVIDES
-    n = rpmGetRpmlibProvides((const char ***)&names, &flags, (const char ***)&versions);
-#else
-    return capreq_arr_new(2);
-#endif    
-    if (n <= 0)
-        return NULL;
-
-    caps = capreq_arr_new(0);
-    
-    evr = alloca(128);
-    
-    for (i=0; i<n; i++) {
-        struct capreq *cr;
-
-        n_assert(flags[i] & RPMSENSE_EQUAL);
-        n_assert(!(flags[i] & (RPMSENSE_LESS | RPMSENSE_GREATER)));
-
-        n_strncpy(evr, versions[i], 128);
-        cr = capreq_new_evr(names[i], evr, REL_EQ, 0);
-        n_array_push(caps, cr);
-    }
-
-    if (names)
-        free(names);
-    
-    if (flags)
-        free(flags);
-
-    if (versions)
-        free(versions);
-    
-    n_array_sort(caps);
-    return caps;
-}
-
-
 struct pkgset *pkgset_new(unsigned optflags)
 {
     struct pkgset *ps;
@@ -215,10 +168,9 @@ struct pkgset *pkgset_new(unsigned optflags)
     
     ps->pkgdirs = n_array_new(4, (tn_fn_free)pkgdir_free, NULL);
     ps->flags = optflags;
-    ps->rpmcaps = get_rpmlibcaps();
+    ps->rpmcaps = rpm_rpmlib_caps();
     return ps;
 }
-
 
 void pkgset_free(struct pkgset *ps) 
 {
@@ -251,6 +203,23 @@ void pkgset_free(struct pkgset *ps)
     }
     
     n_array_free(ps->pkgs);
+}
+
+
+int pkgset_rpmprovides(const struct pkgset *ps, const struct capreq *req)
+{
+    struct capreq *cap;
+    
+    if (ps->rpmcaps == NULL)
+        return 1;               /* no caps -> assume yes */
+
+    cap = n_array_bsearch_ex(ps->rpmcaps, req,
+                             (tn_fn_cmp)capreq_cmp_name);
+    
+    if (cap && cap_match_req(cap, req, 1))
+        return 1;
+    
+    return 0;
 }
 
 

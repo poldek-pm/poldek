@@ -12,7 +12,7 @@ LDADD_              = @INTLLIBS@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 lib_LIBRARIES      = libvfile.a 
 libvfile_a_SOURCES = vfile.c vfprogress.c fetch.c misc.c \
-		     p_open.c uncompr.c sigint.c \
+		     p_open.c uncompr.c \
 		     $(VFCURL_SRCS_) vfvftp.c vfvhttp.c 
 
 pkgincludedir = $(includedir)/vfile
@@ -22,10 +22,10 @@ vlibs = vftp/libvftp.a vhttp/libvhttp.a
 
 noinst_PROGRAMS = sample ttest
 sample_SOURCES  = sample.c
-sample_LDADD    = libvfile.a $(vlibs) @TRURL_LDFLAG@ $(LDADD_)
+sample_LDADD    = libvfile.a $(vlibs) @TRURL_LDFLAG@ $(LDADD_) $(top_srcdir)/sigint/libsigint.a
 
 ttest_SOURCES  = ttest.c 
-ttest_LDADD    = libvfile.a $(vlibs) @TRURL_LDFLAG@ $(LDADD_)
+ttest_LDADD    = libvfile.a $(vlibs) @TRURL_LDFLAG@ $(LDADD_) $(top_srcdir)/sigint/libsigint.a
 EXTRA_DIST     = $(VFCURL_SRCS) \
 		 testcookie.c test_progress.c
 

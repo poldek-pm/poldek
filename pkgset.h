@@ -164,6 +164,8 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
 int pkgset_dump_marked_pkgs(struct pkgset *ps, const char *dumpfile, int bn);
 
 
+int pkgset_rpmprovides(const struct pkgset *ps, const struct capreq *req);
+
 void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag);
 int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs);
 int packages_rpminstall(tn_array *pkgs, struct pkgset *ps, struct inst_s *inst);

@@ -731,5 +731,9 @@ void vfile_set_errno(const char *ctxname, int vf_errno)
     vfile_err_ctx = ctxname;
 }
 
+void vf_sigint_cb(void) 
+{
+    //printf("VFSIGINT\n");
+}
 
 

@@ -37,6 +37,8 @@
 #include <vfile/vfile.h>
 #include <vfile/p_open.h>
 
+#include <sigint/sigint.h>
+
 #define ENABLE_TRACE 0
 #include "i18n.h"
 #include "log.h"
@@ -51,7 +53,7 @@
 #include "rpmdb_it.h"
 #include "dbdep.h"
 #include "poldek_term.h"
-#include "sigint.h"
+
 
 #define INST_INSTALL  1
 #define INST_UPGRADE  2
@@ -622,7 +624,9 @@ int process_pkg_orphans(struct pkg *pkg, struct pkgset *ps,
     int i, k, n = 0;
     rpmdb dbh;
 
-
+    if (sigint_reached())
+        return 0;
+    
     dbh = upg->inst->db->dbh;
     DBGF("%s\n", pkg_snprintf_s(pkg));
     mem_info(1, "process_pkg_orphans:");
@@ -812,6 +816,9 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
     
     if (upg->inst->flags & INSTS_INSTALL)
         return;
+
+    if (sigint_reached())
+        return;
     
     DBGMSG_F("%s\n", pkg_snprintf_s(pkg));
     
@@ -962,6 +969,9 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
 {
     int i;
 
+    if (sigint_reached())
+        return 0;
+
     if (upg->nerr_fatal)
         return 0;
 
@@ -978,9 +988,16 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
         char          *reqname;
         
         req = n_array_nth(pkg->reqs, i);
-
-        if (capreq_is_rpmlib(req)) 
+        
+        if (capreq_is_rpmlib(req)) {
+            if (process_as == PROCESS_AS_NEW && !capreq_is_satisfied(req)) {
+                logn(LOGERR, _("%s: rpmcap %s not found, upgrade rpm."),
+                     pkg_snprintf_s(pkg), capreq_snprintf_s(req));
+                pkg_set_badreqs(pkg);
+                upg->nerr_dep++;
+            }
             continue;
+        }
 
         /* obsoleted by greedy mark */
         if (process_as == PROCESS_AS_ORPHAN && marked_for_removal(pkg, upg)) {
@@ -1130,7 +1147,7 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
     
     n_assert(process_as == PROCESS_AS_NEW || process_as == PROCESS_AS_ORPHAN);
     
-    if (upg->nerr_fatal)
+    if (upg->nerr_fatal || sigint_reached())
         return 0;
 
     indent += 2;
@@ -1154,7 +1171,6 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
     }
     
 #endif    
-
 
     if (process_as == PROCESS_AS_NEW)
         n_array_push(upg->pkg_stack, pkg);
@@ -1868,6 +1884,9 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
         if (pkg_is_hand_marked(pkg)) 
             process_pkg_deps(-2, pkg, ps, upg, PROCESS_AS_NEW);
+        
+        if (sigint_reached())
+            break;
     }
 
     pkgs = n_array_new(64, NULL, NULL);
@@ -1877,7 +1896,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
             n_array_push(pkgs, pkg);
     }
     
-    if (upg->nerr_fatal)
+    if (upg->nerr_fatal || sigint_reached())
         return 0;
 
     print_install_summary(upg);

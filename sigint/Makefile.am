@@ -1,15 +1,13 @@
 # $Id$
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
-lib_LIBRARIES      = libvhttp.a 
-libvhttp_a_SOURCES  = vhttp.c http.c
+lib_LIBRARIES      = libsigint.a
+libsigint_a_SOURCES  = sigint.h sigint.c
 
-pkgincludedir = $(includedir)/vhttp
-pkginclude_HEADERS = vhttp.h http.h 
+#pkgincludedir = $(includedir)/vftp
+#pkginclude_HEADERS = vftp.h ftp.h 
 
-noinst_PROGRAMS    = test_vhttp
-test_vhttp_SOURCES  = test_vhttp.c
-test_vhttp_LDADD    = libvhttp.a @TRURL_LDFLAG@ $(top_srcdir)/sigint/libsigint.a
+noinst_PROGRAMS    = 
 
 dist-hook:
 	rm -rf $(distdir)/.deps
