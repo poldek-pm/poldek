@@ -139,7 +139,7 @@ void db_deps_remove_cap(tn_hash *db_deph, struct capreq *cap)
 static void remove_files(tn_hash *db_deph, struct pkg *pkg, int load_full_fl) 
 {
     tn_array  *fl;
-    void      *flmark;
+    void      *flmark = NULL;
     int       i, j;
 
     fl = pkg->fl;

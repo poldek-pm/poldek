@@ -37,6 +37,7 @@
 
 #include <vfile/vfile.h>
 
+#include "sigint/sigint.h"
 #include "i18n.h"
 #include "rpm.h"
 #include "rpmadds.h"

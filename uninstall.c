@@ -153,16 +153,6 @@ static void print_uninstall_summary(tn_array *pkgs, int ndep)
     
 }
 
-static void update_install_info_OLD(struct install_info *iinf, tn_array *pkgs)
-{
-    int i;
-        
-    for (i=0; i<n_array_size(pkgs); i++)
-        n_array_push(iinf->uninstalled_pkgs,
-                     pkg_link(n_array_nth(pkgs, i)));
-
-}
-
 static
 void update_install_info(struct install_info *iinf, tn_array *pkgs,
                          struct pkgdb *db, int vrfy)

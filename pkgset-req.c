@@ -273,8 +273,6 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
     */ 
     
     if (capreq_is_rpmlib(req)) {
-        struct capreq *cap;
-
         if (matched) {
             int i;
             

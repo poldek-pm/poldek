@@ -42,6 +42,7 @@
 #include <trurl/nmalloc.h>
 #include <trurl/n_snprintf.h>
 
+#include "sigint/sigint.h"
 #include "ftp.h"
 #include "i18n.h"
 

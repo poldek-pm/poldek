@@ -13,8 +13,8 @@
 #include <string.h>
 #include <time.h>
 
+#include "sigint/sigint.h"
 #include "i18n.h"
-
 #include "shell.h"
 #include "pager.h"
 

@@ -26,6 +26,8 @@
 #include "pkgset.h"
 #include "misc.h"
 #include "pkgset-req.h"
+#include "sigint/sigint.h"
+
 #include "shell.h"
 
 #define IDENT     16
@@ -371,7 +373,7 @@ static void show_reqpkgs(struct pkg *pkg)
                 }
             }
             if (i + 1 < n_array_size(pkg->reqpkgs))
-                ncol += printf(", ");
+                ncol += printf(" ");
         }
         printf("\n");
     }

@@ -208,7 +208,6 @@ struct pkg *select_supersede_pkg(const struct pkg *pkg, struct pkgset *ps)
 static
 int other_version_marked(struct pkg *pkg, tn_array *pkgs, struct capreq *req)
 {
-    struct pkg *tmp;
     int i;
     
     n_array_sort(pkgs);

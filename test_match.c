@@ -21,6 +21,7 @@
 #include <trurl/nmalloc.h>
 
 #include "i18n.h"
+#include "log.h"
 #include "pkg.h"
 #include "misc.h"
 #include "rpm.h"
@@ -86,6 +87,8 @@ int test_match_(int epoch, char *ver, char *rel, char *evr, int relation)
     printf("P %s[%d] match %s ? %s\n", pkg_snprintf_s(pkg),
            pkg->epoch, capreq_snprintf_s(req),
            rc1 ? "YES" : "NO");
+    
+    return 1;
 }
 
 
@@ -113,6 +116,7 @@ int test_match2(void)
     test_match_(1, "1.2", "1", "2:1.2", REL_EQ | REL_GT);
     test_match_(2, "1.2", "1", "2:1.2", REL_EQ | REL_GT);
     test_match_(3, "1.2", "1", "2:1.2", REL_EQ | REL_GT);
+    return 0;
 }
 
 

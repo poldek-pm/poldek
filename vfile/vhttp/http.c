@@ -35,7 +35,7 @@
 # define IPPORT_HTTP 80
 #endif
 
-#define TIMEOUT     40
+#define TIMEOUT     30
 
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
@@ -46,6 +46,7 @@
 
 #include "http.h"
 #include "i18n.h"
+#include "sigint/sigint.h"
 
 #ifndef VERSION
 # define VERSION "3.1415926535897931"

@@ -164,7 +164,8 @@ struct vf_progress_bar {
     int     width;
     int     state;
     int     is_tty;
-    long    prev_n;
+    int     prev_n;
+    int     prev_perc;
 };
 
 void vfile_progress_init(struct vf_progress_bar *bar);

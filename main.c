@@ -448,6 +448,8 @@ void check_mjrmode(struct args *argsp)
 }
 
 static void print_source_list(tn_array *sources);
+static 
+int get_conf_sources(tn_array *sources, tn_array *srcs_named, tn_hash *htcnf);
 
 /* buggy glibc argp... */
 static inline void chkarg(int key, char *arg) 
@@ -1059,9 +1061,7 @@ static
 int prepare_sources(tn_array *sources, tn_hash *htcnf)
 {
     struct source   *src;
-    int             i, rc;
-    int             *matches = NULL, is_multi = 0;
-    char            *v;
+    int             i, rc = 1;
     tn_array        *srcs_path, *srcs_named;
 
     
@@ -1097,7 +1097,7 @@ int prepare_sources(tn_array *sources, tn_hash *htcnf)
     return rc;
 }
 
- 
+static 
 int get_conf_sources(tn_array *sources, tn_array *srcs_named, tn_hash *htcnf)
 {
     struct source   *src;

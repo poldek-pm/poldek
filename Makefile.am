@@ -9,8 +9,8 @@ else
 TRURL_DIR=
 endif
 
-SUBDIRS   = po $(TRURL_DIR) sigint vfile shell conf 
-DIST_SUBDIRS = po trurlib sigint vfile shell conf 
+SUBDIRS   = po $(TRURL_DIR) sigint vfile shell conf doc
+DIST_SUBDIRS = $(SUBDIRS)
 
 INCLUDES  = @TRURL_INCLUDE@
 POD2MAN   = @POD2MAN@
@@ -99,19 +99,18 @@ test_match_SOURCES  = test_match.c
 test_match_LDADD    = $(poldek_LDADD) 
 
 
-EXTRA_DIST = poldek.1 poldek.pod \
+EXTRA_DIST = \
+	     poldek.1 poldek.pod \
 	     Makefile.extra poldekrc logo.png \
 	     poldek.spec poldek-suse.spec \
-	     package-set.sample  pkgsplit.conf.sample  vfjugglerc.sample \
+	     package-set.sample  pkgsplit.conf.sample vfjugglerc.sample \
 	     m4/codeset.m4 m4/gettext.m4 m4/glibc21.m4 m4/iconv.m4 \
 	     m4/intdiv0.m4 m4/inttypes_h.m4 m4/inttypes.m4 m4/inttypes-pri.m4 \
 	     m4/isc-posix.m4 m4/lcmessage.m4 m4/lib-ld.m4 m4/lib-link.m4 \
 	     m4/lib-prefix.m4 m4/progtest.m4 m4/stdint_h.m4 m4/uintmax_t.m4 \
 	     m4/ulonglong.m4
-	     
 
 man_MANS = poldek.1
-
 
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
@@ -119,8 +118,11 @@ MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 *.html \
 			ABOUT-NLS po/*~ po/*.pot conf/*~ m4/*~
 
-poldek.1: poldek.pod
+%.1: %.pod $@
 	$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@
+
+#poldek.1: poldek.pod
+#$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@
 
 poldek.html: poldek.pod
 	$(POD2HTML) $< > $@

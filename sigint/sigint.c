@@ -69,7 +69,7 @@ void sigint_reset(void)
 
 void sigint_init(void)
 {
-    orig_sighandler == NULL;
+    orig_sighandler = NULL;
     interrupted = 0;
     cnt = 0;
     orig_sighandler = signal(SIGINT, sigint_handler);
@@ -93,7 +93,7 @@ void sigint_push(void (*cb)(void))
 
 void *sigint_pop(void) 
 {
-    n_array_pop(cb_stack);
+    return n_array_pop(cb_stack);
 }
 
 

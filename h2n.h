@@ -17,6 +17,7 @@
 #define ntoh16(v)  ntohs(v)
 #define ntoh32(v)  ntohl(v)
 
+#ifndef n_buf_add_int8
 
 #define n_buf_add_int8(nbuf, v)  \
         n_buf_add(nbuf, &v, sizeof(v));
@@ -76,6 +77,6 @@ int n_buf_it_get_int32(tn_buf_it *nbufi, uint32_t *vp)
     *vp = ntoh32(*vp);
     return 1;
 }
-
+#endif
 
 #endif /* POLDEK_HTON_H */

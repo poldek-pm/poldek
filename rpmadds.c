@@ -27,6 +27,7 @@
 # include <rpm/rpmts.h>
 #endif
 #include <trurl/nassert.h>
+#include <trurl/nstr.h>
 
 #include "capreq.h"
 #include "i18n.h"
