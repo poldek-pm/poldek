@@ -42,6 +42,9 @@
 # include "vfcurl.h"
 #endif
 
+static int          vfile_err_no = 0;
+static const char   *vfile_err_ctx = NULL;
+
 static int verbose = 0; 
 int *vfile_verbose = &verbose;
 
@@ -424,13 +427,13 @@ static int read_md(const char *path, char *md, int mdsize)
 }
 
 /* -1 on err */
-static int is_uptodate(const char *mdpath, int urltype) 
+static int is_uptodate(const char *mdpath, int urltype, char *_md, int *_md_size) 
 {
     char tmpdir[PATH_MAX], l_mdpath[PATH_MAX];
     int len, is_uptod = -1;
     char l_md[128], md[128];
     int l_md_size, md_size;
-
+    
     len = snprintf(l_mdpath, sizeof(l_mdpath), "%s/", vfile_conf.cachedir);
     len += vfile_url_as_path(&l_mdpath[len], sizeof(l_mdpath) - len, mdpath);
     if ((l_md_size = read_md(l_mdpath, l_md, sizeof(l_md))) < 31) 
@@ -465,8 +468,18 @@ static int is_uptodate(const char *mdpath, int urltype)
         snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir, n_basenam(mdpath));
         md_size = read_md(tmpath, md, sizeof(md));
         
-        if (md_size > 31 && md_size == l_md_size && strcmp(l_md, md) == 0)
-            is_uptod = 1;
+        if (md_size < 31 || md_size != l_md_size)
+            is_uptod = -1;
+        
+        else {
+            if (_md && _md_size && md_size <= *_md_size) {
+                memcpy(_md, md, md_size);
+                *_md_size = md_size;
+            }
+        
+            if (memcmp(l_md, md, md_size) == 0) 
+                is_uptod = 1;
+        }
     }
     
     return is_uptod;
@@ -482,6 +495,22 @@ char *mkmdpath(char *mdpath, int size, const char *path)
     
     snprintf(p, sizeof(mdpath) - (p - mdpath), ".md");
     return mdpath;
+}
+
+
+int vfile_is_uptodate(const char *path, char *md, int *md_size) 
+{
+    char mdpath[PATH_MAX] = {'\0'};
+    int urltype, is_uptod;
+
+    urltype = vfile_url_type(path);
+    
+    if (urltype == VFURL_PATH)
+        return 1;
+
+    mkmdpath(mdpath, sizeof(mdpath), path);
+    is_uptod = is_uptodate(mdpath, urltype, md, md_size);
+    return is_uptod;
 }
 
 
@@ -533,7 +562,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
             int is_uptod = 1;
             
             if (vfmode & VFM_MDUP) {
-                if ((is_uptod = is_uptodate(mdpath, urltype)) < 0)
+                if ((is_uptod = is_uptodate(mdpath, urltype, NULL, NULL)) < 0)
                     return 0;
             }
             
@@ -585,7 +614,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
                 
                 if (!vfile_valid_path(tmpath))
                     nerr++;
-                else 
+                else if ((vfmode & VFM_NORMCACHE) == 0)
                     unlink(tmpath);
 
                 snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
@@ -593,7 +622,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
                 
                 if (!vfile_valid_path(tmpath))
                     nerr++;
-                else 
+                else if ((vfmode & VFM_NORMCACHE) == 0)
                     unlink(tmpath);
                 
                 if (nerr == 0) 
@@ -628,6 +657,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
     if (opened) {
         rvf = malloc(sizeof(*rvf));
         memcpy(rvf, &vf, sizeof(*rvf));
+        rvf->vf_urltype = urltype;
     }
     
     return rvf;
@@ -712,6 +742,28 @@ void vfile_close(struct vfile *vf)
     free(vf);
 }
 
+int vfile_unlink(struct vfile *vf) 
+{
+    int rc = 1;
+    
+    if (vf->vf_tmpath)  /* set for remote files only  */
+        if (vfile_valid_path(vf->vf_tmpath)) {
+            rc = (unlink(vf->vf_tmpath) == 0);
+            free(vf->vf_tmpath);
+            vf->vf_tmpath = NULL;
+        }
+
+    if (vf->vf_mdtmpath)
+        if (vfile_valid_path(vf->vf_mdtmpath)) {
+            rc = (unlink(vf->vf_mdtmpath) == 0);
+            free(vf->vf_mdtmpath);
+            vf->vf_mdtmpath = NULL;
+        }
+    
+    return rc;
+}
+
+
 static int vfmsg(const char *fmt, ...)
 {
     va_list args;
@@ -721,4 +773,11 @@ static int vfmsg(const char *fmt, ...)
     fflush(stdout);
     va_end(args);
     return 1;
+}
+
+
+void vfile_set_errno(const char *ctxname, int vf_errno) 
+{
+    vfile_err_no = vf_errno;
+    vfile_err_ctx = ctxname;
 }

@@ -38,31 +38,38 @@ void vfile_configure(const char *cachedir, int flags);
 #define VFT_GZIO   3             /* zlib: gzopen()            */ 
 #define VFT_RPMIO  4             /* rpmlib: Fopen()           */
 
-#define VFM_RO     (1 << 0)      /* RO, this is the default   */
-#define VFM_RW     (1 << 1)
-#define VFM_APPEND (1 << 3)      /* a+ */
+#define VFM_RO         (1 << 0)  /* RO, this is the default   */
+#define VFM_RW         (1 << 1)
+#define VFM_APPEND     (1 << 3)  /* a+ */
 
-#define VFM_NORM   (1 << 4)      /* (NoReMove) for remote files,
+#define VFM_NORM       (1 << 4)  /* (NoReMove) for remote files,
                                     remove tmp at close? */
 
-#define VFM_CACHE  (1 << 5)      /* for remote files, use cached file
+#define VFM_CACHE      (1 << 5)  /* for remote files, use cached file
                                     if it exists */
 
-#define VFM_MD     (1 << 6)      /* open FILE.md too */
+#define VFM_CACHE_ONLY (1 << 6)  /* for remote files, use cached file
+                                    if it not exists return NULL */
 
-#define VFM_MDUP   (1 << 7)      /* for remote files, use FILE.md file for checking
-                                    if new file exists
-                                  */
-#define VFM_STBRN  (1 << 8)      /* infinite retrying to open file  */
+#define VFM_NORMCACHE  (1 << 7)  /* for remote files, use cached file
+                                    if it exists */
+#define VFM_MD         (1 << 8)  /* open FILE.md too */
+#define VFM_MDUP       (1 << 9)  /* for remote files, use FILE.md file
+                                     for checking if newer file exists */
+
+#define VFM_STBRN      (1 << 10)  /* infinite retrying to open file  */
 
 
-#define VF_FETCHED  (1 << 9)    /* */
-#define VF_FRMCACHE (1 << 10)    /* */
+
+/* flags  */
+#define VF_FETCHED     (1 << 11) /* for remote files, file downloaded */
+#define VF_FRMCACHE    (1 << 12) /* file remote file, file taken form cache */
 
 struct vfile {
-    int       vf_type;                /* VFT_* */
-    unsigned  vf_mode;                /* VFM_* */
-    unsigned  vf_flags;               /* VF_*  */ 
+    int       vf_type;                /* VFT_*   */
+    unsigned  vf_urltype;             /* VFURL_* */
+    unsigned  vf_mode;                /* VFM_*   */
+    unsigned  vf_flags;               /* VF_*    */ 
     union {
         int    vfile_fd;
         FILE   *vfile_stream;
@@ -82,6 +89,11 @@ struct vfile {
 
 struct vfile *vfile_open(const char *path, int vftype, int vfmode);
 void vfile_close(struct vfile *vf);
+int vfile_unlink(struct vfile *vf);
+
+
+int vfile_is_uptodate(const char *path, char *md, int *md_size);
+
 
 #define VFURL_UNKNOWN (1 << 0)
 #define VFURL_PATH    (1 << 1)
@@ -90,6 +102,11 @@ void vfile_close(struct vfile *vf);
 #define VFURL_HTTPS   (1 << 4)
 #define VFURL_RSYNC   (1 << 5)
 #define VFURL_CDROM   (1 << 6)
+
+#define VFURL_REMOTE   (VFURL_FTP | VFURL_HTTP | VFURL_HTTPS | VFURL_RSYNC)
+
+
+#define vfile_is_remote(vf) ((vf)->vf_urltype & VFURL_REMOTE)
 
 int vfile_url_type(const char *url);
 int vfile_url_as_dirpath(char *buf, size_t size, const char *url);
@@ -106,5 +123,10 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype);
 
 int vfile_fetch(const char *destdir, const char *url, int urltype);
 int vfile_fetcha(const char *destdir, tn_array *urls, int urltype);
+
+
+#ifdef VFILE_INTERNAL
+void vfile_set_errno(const char *ctxname, int vf_errno);
+#endif
 
 #endif /* POLDEK_VFILE_H */
