@@ -13,7 +13,7 @@ cdid()
     URI=`echo $URI | awk '{ gsub(/^[a-zA-z0-9\-]+/,""); gsub(/^\//,""); print $0;}'`
     BN=`basename $URI`
     
-    echo "$1 -> uri $URI, id $CDID"
+    #echo "$1 -> uri $URI, id $CDID"
     if [ -z "$URI" -o -z "$CDID" ]; then
 	echo "$1: URL syntax error"
 	exit 1
@@ -41,7 +41,7 @@ mount_()
 	    "$VF_EJECT"
 	fi    
 
-	echo "Insert the $id disk into CDROM drive, and press ENTER"
+	echo "Insert the $id disk into drive you're using, and press ENTER"
 	read
 
 	echo "Mounting $VF_MNTDEV $VF_MNTPOINT..."
@@ -119,11 +119,11 @@ while  [ $# -gt 0 ]; do
     if [ "$BN" = "packages.dir" -o "$BN" = "packages.dir.gz" -o \
 	 "$BN" = "Packages" -o "$BN" = "Packages.gz" ]; then
 
-	 echo "cp $VF_MNTPOINT/$URI $DESTDIR/"
-	 cp $VF_MNTPOINT/$URI $DESTDIR/
+	 #echo "cp $VF_MNTPOINT/$URI $DESTDIR/"
+         cp $VF_MNTPOINT/$URI $DESTDIR/
     else 	 
-	echo ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$FILE"
-	ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$FILE"
+	 #echo ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$FILE"
+	 ln -sf "$VF_MNTPOINT/$URI" "$DESTDIR/$FILE"
     fi
 	
     if [ $? -ne 0 ]; then
