@@ -199,7 +199,7 @@ static int pkgset_index(struct pkgset *ps)
     msg(2, "Indexing...\n");
     add_self_cap(ps);
     n_array_map(ps->pkgs, (tn_fn_map1)sort_pkg_caps);
-    MEMINF_F("after index[selfcap]");
+    MEMINF("after index[selfcap]");
     
     /* build indexes */
     capreq_idx_init(&ps->cap_idx,  CAPREQ_IDX_CAP, 4 * n_array_size(ps->pkgs));
@@ -217,9 +217,9 @@ static int pkgset_index(struct pkgset *ps)
 
         do_pkgset_add_package(ps, pkg, 0);
     }
-    MEMINF_F("after index");
+    MEMINF("after index");
     
-#if 1
+#if 0
     capreq_idx_stats("cap", &ps->cap_idx);
     capreq_idx_stats("req", &ps->req_idx);
     capreq_idx_stats("obs", &ps->obs_idx);
@@ -257,7 +257,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     int strict;
     int v = verbose;
 
-    MEMINF_F("before setup");
+    MEMINF("before setup");
     ps->flags |= flags;
     strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
 
@@ -282,7 +282,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
                  "Removed %d duplicate packages from available set", n), n);
     }
 
-    MEMINF_F("before index");
+    MEMINF("before index");
     pkgset_index(ps);
     
     v = verbose;    
@@ -296,13 +296,13 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     verbose = v;
 
     pkgset_verify_deps(ps, strict);
-    MEMINF_F("after verify deps");
+    MEMINF("after verify deps");
 
     pkgset_verify_conflicts(ps, strict);
     
-    MEMINF_F("MEM after order");
+    MEMINF("MEM after order");
     pkgset_order(ps, flags & PSET_VERIFY_ORDER);
-    MEMINF_F("after setup[END]");
+    MEMINF("after setup[END]");
     return ps->nerrors == 0;
 }
 
