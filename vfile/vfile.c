@@ -292,10 +292,16 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
     switch (vf->vf_type) {
         case VFT_IO: {
             int flags = 0;
-            if (vfmode & VFM_RW)
+            
+            if (vfmode & VFM_RW) {
                 flags |= O_RDWR;
-            else
+                if (vfmode & VFM_APPEND)
+                    flags |= O_APPEND;
+                
+            } else {
                 flags |= O_RDONLY;
+            }
+            
             
             if ((vf->vf_fd = open(path, flags)) == -1) 
                 vfile_err_fn("open %s: %m\n", path);
@@ -305,14 +311,18 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
         break;
         
         case VFT_STDIO: {
-            char *p, mode[2];
+            char *p, *mode;
             gzFile gzstream;
 
-            if (vfmode & VFM_RW)
-                *mode = 'w';
+            if (vfmode & VFM_APPEND)
+                mode = "a+";
+            
+            else if (vfmode & VFM_RW)
+                mode = "w";
+            
             else
-                *mode = 'r';
-            *(mode+1) = '\0';
+                mode = "r";
+
 #ifdef HAVE_FOPENCOOKIE            
             if ((p = strrchr(path, '.')) && strcmp(p, ".gz") == 0) {
                 if ((gzstream = gzopen(path, mode)) == NULL) {

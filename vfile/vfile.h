@@ -39,21 +39,25 @@ void vfile_configure(const char *cachedir, int flags);
 #define VFT_RPMIO  4             /* rpmlib: Fopen()           */
 
 #define VFM_RO     (1 << 0)      /* RO, this is the default   */
-#define VFM_RW     (1 << 1)      
-#define VFM_NORM   (1 << 2)      /* (NoReMove) for remote files, remove tmp at close? */
-#define VFM_CACHE  (1 << 3)      /* for remote files, use cached file
+#define VFM_RW     (1 << 1)
+#define VFM_APPEND (1 << 3)      /* a+ */
+
+#define VFM_NORM   (1 << 4)      /* (NoReMove) for remote files,
+                                    remove tmp at close? */
+
+#define VFM_CACHE  (1 << 5)      /* for remote files, use cached file
                                     if it exists */
 
-#define VFM_MD     (1 << 4)      /* open FILE.md too */
+#define VFM_MD     (1 << 6)      /* open FILE.md too */
 
-#define VFM_MDUP   (1 << 5)      /* for remote files, use FILE.md file for checking
+#define VFM_MDUP   (1 << 7)      /* for remote files, use FILE.md file for checking
                                     if new file exists
                                   */
-#define VFM_STBRN  (1 << 6)      /* infinite retrying to open file  */
+#define VFM_STBRN  (1 << 8)      /* infinite retrying to open file  */
 
 
-#define VF_FETCHED  (1 << 8)    /* */
-#define VF_FRMCACHE (1 << 9)    /* */
+#define VF_FETCHED  (1 << 9)    /* */
+#define VF_FRMCACHE (1 << 10)    /* */
 
 struct vfile {
     int       vf_type;                /* VFT_* */
