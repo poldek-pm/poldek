@@ -273,7 +273,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
         n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)do_pkg_cmp_uniq_n);
             
     } else {
-        n_array_sort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
+        n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
         n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)do_pkg_cmp_uniq_nevr);
     }
         
@@ -527,7 +527,7 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
 
     
     n_array_sort(ps->pkgs);
-    pkgs = pkgs_array_new_ex(4, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    pkgs = pkgs_array_new_ex(4, pkg_cmp_name_evr_rev);
     
     switch (tag) {
         case PS_SEARCH_RECNO:

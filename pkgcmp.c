@@ -212,13 +212,17 @@ int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2)
         n_assert(s1 && s2);
         return s2 - s1;         /* lower score is better */
     }
+
+    return p1->_arch - p2->_arch; /*  */
     
+#if 0    
     if (p1->_arch && !p2->_arch)
         return 10;
     
     if (!p1->_arch && p2->_arch)
         return -10;
-
+#endif
+    
     n_assert(0);
     return 0;
 }

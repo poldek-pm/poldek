@@ -95,13 +95,13 @@ const char *pkg_arch(const struct pkg *pkg)
 
 int pkg_arch_score(const struct pkg *pkg)
 {
-    if (pkg->_arch) {
-        struct an_arch *a = n_array_nth(architecture_a, pkg->_arch - 1);
-        n_assert(a);
-        return a->score;
-    }
+    struct an_arch *a;
+        
+    if (!pkg->_arch)
+        return 0;
     
-    return 0;
+    a = n_array_nth(architecture_a, pkg->_arch - 1);
+    return a->score;
 }
 
 int pkg_set_arch(struct pkg *pkg, const char *arch)
