@@ -290,7 +290,7 @@ msgstr ""
 #: main.c:364 shell/install.c:45
 msgid "Upgrade packages, but only if an earlier version currently exists"
 msgstr ""
-"Aktualizuj pakiety tylko w przypadku gdy wcze¶nijesza ich wersja jest "
+"Aktualizuj pakiety tylko w przypadku gdy wcze¶niejsza ich wersja jest "
 "zainstalowana"
 
 #: main.c:367
