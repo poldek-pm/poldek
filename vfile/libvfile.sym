@@ -9,10 +9,10 @@ vf_extcompress
 vf_extdecompress
 vf_fetch
 vf_fetch_ext
-vf_fetch_sl
+vf_fetch
 vf_fetcha
 vf_fetcha_ext
-vf_fetcha_sl
+vf_fetcha
 vf_find_external_command
 vf_localdirpath
 vf_localpath
@@ -47,8 +47,7 @@ vfile_close
 vfile_configure
 vfile_incref
 vfile_is_configured_ext_handler
-vfile_open
-vfile_open_sl
+vfile_open_ul
 vfile_setup
 vfile_register_ext_handler
 vfile_set_errno

@@ -199,7 +199,6 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
                 flags |= O_RDONLY;
             }
             
-            
             if ((vf->vf_fd = open(path, flags)) == -1) 
                 vf_logerr("open %s: %m\n", CL_URL(path));
             else
@@ -333,12 +332,12 @@ static const char *vfdecompr(const char *path, char *dest, int size)
 
 static
 struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
-                            const char *site_label)
+                            const char *urlabel)
 {
     struct vfile vf, *rvf = NULL;
     int opened, urltype;
     char buf[PATH_MAX];
-    char *tmpdir;
+    char *tmpdir, *p = NULL, *tmpath = NULL;
     const char *rpath, *opath;
     int len;
 
@@ -386,7 +385,6 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
         char tmpath[PATH_MAX];
         
         opath = rpath = buf;
-        
         if ((vfmode & VFM_UNCOMPR)) {
             if ((opath = vfdecompr(buf, tmpath, sizeof(tmpath))) == NULL)
                 return 0;
@@ -399,54 +397,54 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
         }
     }
     
-    if (opened == 0) {      /* fetch */
-        char *p = NULL, *tmpath = NULL;
-
-        if ((vfmode & VFM_CACHE_NODEL) == 0)
-            vf_localunlink(buf);
+    if (opened) 
+        goto l_end;
         
-        if ((p = strrchr(path, '/')) == NULL) {
-            tmpath = (char*)path;
+    /* fetch */
+    p = NULL;
+    tmpath = NULL;
+
+    if ((vfmode & VFM_CACHE_NODEL) == 0) /* delete cached copy? */
+        vf_localunlink(buf);
+        
+    if ((p = strrchr(path, '/')) == NULL) {
+        tmpath = (char*)path;
                 
-        } else {
-            int len = p - path;
+    } else {
+        int len = p - path;
             
-            tmpath = alloca(len + 1);
-            memcpy(tmpath, path, len);
-            tmpath[len] = '\0';
-        } 
+        tmpath = alloca(len + 1);
+        memcpy(tmpath, path, len);
+        tmpath[len] = '\0';
+    } 
             
-        vf_url_as_dirpath(&buf[len], sizeof(buf) - len, tmpath);
-        tmpdir = buf;
+    vf_url_as_dirpath(&buf[len], sizeof(buf) - len, tmpath);
+    tmpdir = buf;
 
-        if (vf_fetch_sl(path, tmpdir, site_label)) {
-            char tmpath[PATH_MAX], upath[PATH_MAX];;
+    if (vf_fetch(path, tmpdir, 0, urlabel)) {
+        char tmpath[PATH_MAX], upath[PATH_MAX];;
 
-            snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
-                     n_basenam(path));
+        snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,
+                 n_basenam(path));
 
-            opath = rpath = tmpath;
+        opath = rpath = tmpath;
+        if ((vfmode & VFM_UNCOMPR)) {
+            if ((opath = vfdecompr(tmpath, upath, sizeof(upath))) == NULL)
+                return 0;
+        }
             
-            if ((vfmode & VFM_UNCOMPR)) {
-                if ((opath = vfdecompr(tmpath, upath, sizeof(upath))) == NULL)
-                    return 0;
-            }
-            
-            if (openvf(&vf, opath, VFM_RO)) {
-                vf.vf_tmpath = n_strdup(rpath);
-                opened = 1;
-                vf.vf_flags |= VF_FETCHED;
+        if (openvf(&vf, opath, VFM_RO)) {
+            vf.vf_tmpath = n_strdup(rpath);
+            opened = 1;
+            vf.vf_flags |= VF_FETCHED;
                     
-            } else {
-                if (*vfile_verbose > 1)
-                    vf_loginfo("vfile: rm -f %s\n", tmpath);
-                vf_localunlink(tmpath);
-                //wget && co sometimes badly returns non zero -> patch it!
-            }
+        } else {
+            if (*vfile_verbose > 1)
+                vf_loginfo("vfile: rm -f %s\n", tmpath);
+            vf_localunlink(tmpath);
+            //wget && co sometimes badly returns non zero -> patch it!
         }
     }
-    
-
 
 l_end:    
     if (opened) {
@@ -458,18 +456,13 @@ l_end:
     return rvf;
 }
 
-struct vfile *vfile_open(const char *path, int vftype, unsigned vfmode) 
-{
-    return vfile_open_sl(path, vftype, vfmode, NULL);
-}
-
-struct vfile *vfile_open_sl(const char *path, int vftype, unsigned vfmode,
-                            const char *site_label) 
+struct vfile *vfile_open_ul(const char *path, int vftype, unsigned vfmode,
+                            const char *urlabel) 
 {
     struct vfile *vf = NULL;
 
     vfile_err_no = 0;
-    if ((vf = do_vfile_open(path, vftype, vfmode, site_label))) {
+    if ((vf = do_vfile_open(path, vftype, vfmode, urlabel))) {
         vf->vf_path = n_strdup(path);
         vf->_refcnt = 0;
     }

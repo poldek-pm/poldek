@@ -21,7 +21,7 @@
 #endif
 
 #include <stdio.h>
-
+#include <stdint.h>
 #include <zlib.h>
 #include <trurl/narray.h>
 
@@ -56,27 +56,31 @@ int vfile_configure(int param, ...);
 void vfile_setup(void);
 
 
-
+/* vf_type */
 #define VFT_IO       1             /* open(2)                   */
 #define VFT_STDIO    2             /* fopen(3)                  */
 #define VFT_GZIO     3             /* zlib: gzopen()            */ 
 #define VFT_TRURLIO  5             /* trurlib's tn_stream       */
 
+/* vf_mode */
 #define VFM_RO          (1 << 0)  /* O_RDONLY, this is the default   */
 #define VFM_RW          (1 << 1)  /* O_RDWR */
 #define VFM_APPEND      (VFM_RW | (1 << 3))  /* O_RDWR | O_APPEND */
 #define VFM_NODEL       (1 << 4)  /* do not delete cached copy at close */
 #define VFM_NORM        VFM_NODEL /* legacy */
-#define VFM_CACHE       (1 << 5) /* use cached file if it exists, implies NODEL*/
-#define VFM_CACHE_ONLY  (1 << 6) /* use cached file or fail if it not exists   */
-#define VFM_CACHE_NODEL (1 << 7) /* don't delete cached file before downloading */
-#define VFM_STBRN       (1 << 8) /* infinite retrying to open file  */
-#define VFM_NOEMPTY     (1 << 9) /* treat empty files as non-existing ones */
+#define VFM_CACHE       (1 << 5)  /* use cached file if it exists, implies NODEL*/
+#define VFM_CACHE_ONLY  (1 << 6)  /* use cached file or fail if it not exists   */
+#define VFM_CACHE_NODEL (1 << 7)  /* don't delete cached file before downloading */
+#define VFM_STBRN       (1 << 8)  /* infinite retrying to open file  */
+#define VFM_NOEMPTY     (1 << 9)  /* treat empty files as non-existing ones */
 #define VFM_UNCOMPR     (1 << 10) /* uncompress file before open  */
+#define VFM_QUITERR     (1 << 11) /* do not log errors */
+#define VFM_RETR_NOPROGRESS (1 << 12) /* do not display progress */
+#define VFM_RETR_NOLABEL    (1 << 13) /* do not display "Retrieving..." */
 
-/* flags  */
-#define VF_FETCHED     (1 << 12) /* for remote files, file downloaded */
-#define VF_FRMCACHE    (1 << 13) /* file remote file, file taken form cache */
+/* vf_flags  */
+#define VF_FETCHED     (1 << 0) /* for remote files, file downloaded */
+#define VF_FRMCACHE    (1 << 1) /* file remote file, file taken form cache */
 
 struct vfile {
     int       vf_type;                /* VFT_*   */
@@ -105,9 +109,13 @@ struct vfile {
 
 #define vfile_localpath(vf)  ((vf)->vf_tmpath ? (vf)->vf_tmpath : (vf)->vf_path)
 
-struct vfile *vfile_open(const char *path, int vftype, unsigned vfmode);
-struct vfile *vfile_open_sl(const char *path, int vftype, unsigned vfmode,
-                            const char *site_label);
+struct vfile *vfile_open_ul(const char *path, int vftype, unsigned vfmode,
+                            const char *urlabel);
+
+#define vfile_open(path, vftype, vfmode) \
+    vfile_open_ul(path, vftype, vfmode, NULL)
+    
+
 void vfile_close(struct vfile *vf);
 struct vfile *vfile_incref(struct vfile *vf);
 
@@ -141,7 +149,8 @@ struct vf_stat {
     time_t  vf_local_mtime;
 };
 
-int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat);
+int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
+            const char *urlabel);
 
 #if 0                           /* NFY */
 #define VF_FETCH_DEFAULT  0
@@ -149,10 +158,14 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat);
 #define VF_FETCH_NOREST   (0 << 2) /* download file from scratch   */
 #endif
 
-int vf_fetch_sl(const char *url, const char *dest_dir, const char *site_label);
-int vf_fetch(const char *url, const char *destdir);
-int vf_fetcha_sl(tn_array *urls, const char *destdir, const char *site_label);
-int vf_fetcha(tn_array *urls, const char *destdir);
+#define VF_FETCH_NOLABEL     (1 << 3)
+#define VF_FETCH_NOPROGRESS  (1 << 4)
+
+int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
+             const char *urlabel);
+
+int vf_fetcha(tn_array *urls, const char *destdir, unsigned flags,
+              const char *urlabel);
 
 int vf_url_type(const char *url);
 char *vf_url_proto(char *proto, int size, const char *url);
