@@ -1,6 +1,6 @@
 # $Id$
 
-AUTOMAKE_OPTIONS = dist-bzip2
+AUTOMAKE_OPTIONS = 
 SUBDIRS   = vfile shell po intl
 
 CFLAGS    = @CFLAGS@
