@@ -152,7 +152,7 @@ int pkgmod_register_os(const char *os)
 const char *pkg_os(const struct pkg *pkg)
 {
     if (pkg->_os) {
-        struct an_os *o = n_array_nth(operatingsystem_a, pkg->_arch - 1);
+        struct an_os *o = n_array_nth(operatingsystem_a, pkg->_os - 1);
         n_assert(o);
         return o->os;
     }
