@@ -1341,6 +1341,7 @@ static void print_source_list(tn_array *sources)
     n_array_sort(sources);
 }
 
+static
 void load_db_depdirs(const char *rootdir, int mjrmode, struct pkgset *ps) 
 {
     switch (mjrmode) {
@@ -1352,7 +1353,7 @@ void load_db_depdirs(const char *rootdir, int mjrmode, struct pkgset *ps)
         case MODE_UNINSTALL:
         case MODE_UPGRADE:
         case MODE_UPGRADEDIST:
-            if (rpm_get_dbdepdirs(rootdir, ps->depdirs) >= 0)
+            if (rpmdb_get_depdirs(rootdir, ps->depdirs) >= 0)
                 ps->flags |= PSDBDIRS_LOADED;
             break;
             
@@ -1365,7 +1366,9 @@ static struct pkgset *load_pkgset(int ldflags)
     
     if ((ps = pkgset_new(args.psflags)) == NULL)
         return NULL;
-
+    
+    load_db_depdirs(args.inst.rootdir, args.mjrmode, ps);
+    
     if (!pkgset_load(ps, ldflags, args.sources)) {
         logn(LOGERR, _("no packages loaded"));
         pkgset_free(ps);
