@@ -264,28 +264,6 @@ char *trimslash(char *path)
     return path;
 }
 
-char *strip(char *str) 
-{
-    if (str) {
-        char *p = str;
-
-        while(isspace(*p))
-            p++;
-
-        str = p;
-        
-        p = strchr(str, '\0');
-        n_assert(p);
-        p--;
-        while (p != str && isspace(*p)) {
-            *p = '\0';
-            p--;
-        }
-    }
-    
-    return str;
-}
-
 
 char *next_token(char **str, char delim, int *toklen) 
 {
@@ -530,15 +508,15 @@ void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
         DBGF("%s %d %d\n", pkg_snprintf_s(pkg), flags,
-             pkgmark_isset(pms, pkg, flags));
-        if (flags && !pkgmark_isset(pms, pkg, flags))
+             pms ? pkgmark_isset(pms, pkg, flags) : -1);
+        if (flags && pms && !pkgmark_isset(pms, pkg, flags))
             npkgs--;
     }
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
 
-        if (flags && !pkgmark_isset(pms, pkg, flags))
+        if (flags && pms && !pkgmark_isset(pms, pkg, flags))
             continue;
 
         if (hdr_printed == 0) {
