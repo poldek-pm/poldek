@@ -370,6 +370,7 @@ int header_cap_match_req(struct pm_ctx *ctx, void *hdr,
     int         rc;
 
     rc = 0;
+    memset(&pkg, 0, sizeof(pkg));
     pkg.caps = capreq_arr_new(0);
     if (!ctx->mod->hdr_ld_capreqs(pkg.caps, hdr, PMCAP_CAP))
         return -1;
@@ -480,19 +481,34 @@ int pkgdb_get_pkgs_requires_capn(struct pkgdb *db, tn_array *dbpkgs, const char 
     return n;
 }
 
-int pkgdb_get_obsoletedby_cap(struct pkgdb *db, tn_array *dbpkgs, struct capreq *cap,
-                            unsigned ldflags)
+static
+int get_obsoletedby_cap(struct pkgdb *db, int tag, tn_array *dbpkgs,
+                        struct capreq *cap, unsigned ldflags)
 {
     struct pkgdb_it it;
     const struct pm_dbrec *dbrec;
     int n = 0;
     
-    pkgdb_it_init(db, &it, PMTAG_NAME, capreq_name(cap));
+    pkgdb_it_init(db, &it, tag, capreq_name(cap));
     while ((dbrec = pkgdb_it_get(&it)) != NULL) {
+        int add = 0;
         if (dbpkg_array_has(dbpkgs, dbrec->recno))
             continue;
-        
-        if (header_evr_match_req(db->_ctx, dbrec->hdr, cap)) {
+
+        switch (tag) {
+            case PMTAG_NAME:
+                add = header_evr_match_req(db->_ctx, dbrec->hdr, cap);
+                break;
+
+            case PMTAG_CAP:
+                add = header_cap_match_req(db->_ctx, dbrec->hdr, cap, 1);
+                break;
+
+            default:
+                n_assert(0);
+                break;
+        }
+        if (add) {
             struct pkg *pkg;
             if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
                 n_array_push(dbpkgs, pkg);
@@ -504,6 +520,13 @@ int pkgdb_get_obsoletedby_cap(struct pkgdb *db, tn_array *dbpkgs, struct capreq 
 
     pkgdb_it_destroy(&it);
     return n;
+}
+
+
+int pkgdb_get_obsoletedby_cap(struct pkgdb *db, tn_array *dbpkgs, struct capreq *cap,
+                              unsigned ldflags)
+{
+    return get_obsoletedby_cap(db, PMTAG_NAME, dbpkgs, cap, ldflags);
 }
 
 
@@ -528,7 +551,10 @@ int pkgdb_get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs, const struct p
         if (!capreq_is_obsl(cnfl))
             continue;
 
-        n += pkgdb_get_obsoletedby_cap(db, dbpkgs, cnfl, ldflags);
+        n += get_obsoletedby_cap(db, PMTAG_NAME, dbpkgs, cnfl, ldflags);
+#ifdef HAVE_RPM_4_1        
+        n += get_obsoletedby_cap(db, PMTAG_CAP, dbpkgs, cnfl, ldflags);
+#endif 
     }
     
     return n;
