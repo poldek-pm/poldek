@@ -82,6 +82,7 @@ struct vfile {
 
     char          *vf_path;
     char          *vf_tmpath;
+    int16_t       _refcnt;
 };
 
 #define	vf_fd        vfile_fdescriptor.vfile_fd
@@ -93,6 +94,8 @@ struct vfile {
 
 struct vfile *vfile_open(const char *path, int vftype, unsigned vfmode);
 void vfile_close(struct vfile *vf);
+struct vfile *vfile_incref(struct vfile *vf);
+
 int vfile_unlink(struct vfile *vf);
 
 #define VFURL_UNKNOWN (1 << 0)

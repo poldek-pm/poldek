@@ -590,15 +590,32 @@ struct vfile *vfile_open(const char *path, int vftype, unsigned vfmode)
     struct vfile *vf = NULL;
 
     vfile_err_no = 0;
-    if ((vf = do_vfile_open(path, vftype, vfmode)))
+    if ((vf = do_vfile_open(path, vftype, vfmode))) {
         vf->vf_path = n_strdup(path);
+        vf->_refcnt = 0;
+    }
     
     return vf;
 }
 
+struct vfile *vfile_incref(struct vfile *vf)
+{
+    vf->_refcnt++;
+    //printf("vfile_incref %p %s [%d]\n", vf, vf->vf_path ? vf->vf_path : NULL, vf->_refcnt);
+    return vf;
+}
 
 void vfile_close(struct vfile *vf) 
 {
+    //printf("vfile_close %p %s [%d]\n", vf, vf->vf_path ? vf->vf_path : NULL, vf->_refcnt);
+    
+    if (vf->_refcnt > 0) {
+        vf->_refcnt--;
+        return;
+    }
+
+    //printf("vfile_closeD %p %s [%d]\n", vf, vf->vf_path ? vf->vf_path : NULL, vf->_refcnt);
+
     switch (vf->vf_type) {
         case VFT_IO:
             close(vf->vf_fd);
@@ -640,7 +657,7 @@ void vfile_close(struct vfile *vf)
         free(vf->vf_tmpath);
         vf->vf_tmpath = NULL;
     }
-
+    memset(vf, 0, sizeof(*vf));
     free(vf);
 }
 
