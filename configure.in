@@ -204,11 +204,15 @@ AC_CHECK_LIB(bz2, BZ2_bzCompress)
 AC_CHECK_LIB(z, gzopen)
 
 DBLIB=""
-AC_CHECK_LIB(db-4.0, db_create,[DBLIB=-ldb-4.0],[
-	AC_CHECK_LIB(db, db_create, [DBLIB=-ldb],,[$LIBS])],
-	[$LIBS])
-AC_CHECK_LIB(popt, poptReadConfigFile)
+if test ${is_rpm_4_0_4}. = no. ; then
+	AC_CHECK_LIB(db, db_create, [DBLIB=-ldb],,[$LIBS])
+else
+	AC_CHECK_LIB(db-4.0, db_create,[DBLIB=-ldb-4.0],[
+		AC_CHECK_LIB(db, db_create, [DBLIB=-ldb],,[$LIBS])],
+		[$LIBS])
+fi
 
+AC_CHECK_LIB(popt, poptReadConfigFile)
 if test ${is_rpm4}. = yes. ; then
 	AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR("rpmio not found"))
 fi
