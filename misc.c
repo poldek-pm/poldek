@@ -808,26 +808,3 @@ int get_gmt_offs(void)
     return gmt_off;
 }
 
-int poldek_lookup_external_command(char *cmdpath, int size, const char *cmd)
-{
-    const char **tl, **tl_save;
-    char *path, buf[PATH_MAX];
-    int  found = 0;
-        
-    if ((path = getenv("PATH")) == NULL)
-        path = "/bin:/usr/bin";
-
-    n_snprintf(buf, sizeof(buf), "/usr/lib/poldek:%s", path);
-    
-    tl = tl_save = n_str_tokl(buf, ":");
-    while (*tl) {
-        snprintf(cmdpath, size, "%s/%s", *tl, cmd);
-        if (access(cmdpath, R_OK | X_OK) == 0) {
-            found = 1;
-            break;
-        }
-        tl++;
-    }
-    n_str_tokl_free(tl_save);
-    return found;
-}

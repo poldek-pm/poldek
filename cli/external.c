@@ -17,6 +17,7 @@
 
 
 #include "vfile/vopen3.h"
+#include "vfile/vfile.h"
 #include "sigint/sigint.h"
 #include "misc.h"
 #include "i18n.h"
@@ -79,7 +80,7 @@ static int external(struct cmdctx *cmdctx)
     }
     argv[i] = NULL;
 
-    if (!poldek_lookup_external_command(cmd, sizeof(cmd), argv[0])) {
+    if (!vf_find_external_command(cmd, sizeof(cmd), argv[0], NULL)) {
         logn(LOGERR, _("%s: external command not found"), argv[0]);
         return 0;
     }

@@ -210,8 +210,8 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         ts->ign_patterns = n_array_dup(ctx->ts->ign_patterns,
                                        (tn_fn_dup)strdup);
         
-        ts->mkidx_exclpath = n_array_dup(ctx->ts->mkidx_exclpath,
-                                         (tn_fn_dup)strdup);
+        ts->exclude_path = n_array_dup(ctx->ts->exclude_path,
+                                       (tn_fn_dup)strdup);
         
     } else {
         ts->rootdir = NULL;
@@ -224,7 +224,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         ts->rpmopts = n_array_new(4, free, (tn_fn_cmp)strcmp);
         ts->hold_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
         ts->ign_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
-        ts->mkidx_exclpath = n_array_new(4, free, (tn_fn_cmp)strcmp);
+        ts->exclude_path = n_array_new(4, free, (tn_fn_cmp)strcmp);
         
     }
     dbgf_("%p->%p, %p\n", ts, ts->hold_patterns, ctx);
@@ -266,8 +266,8 @@ void poldek_ts_destroy(struct poldek_ts *ts)
     if (ts->ign_patterns)
         n_array_free(ts->ign_patterns);
 
-    if (ts->mkidx_exclpath)
-        n_array_free(ts->mkidx_exclpath);
+    if (ts->exclude_path)
+        n_array_free(ts->exclude_path);
 
     ts->rpmopts = NULL;
     ts->rpmacros = NULL;

@@ -146,6 +146,7 @@ AC_CHECK_FUNCS(gettimeofday mkdir strdup uname mkdtemp)
 AC_CHECK_FUNCS(strerror strstr strtol strtoul strsignal)
 AC_CHECK_FUNCS(mallopt)
 AC_CHECK_FUNCS(ngettext setlocale)
+AC_CHECK_FUNCS(setenv)
 
 dnl Checks for header files.
 AC_HEADER_DIRENT
@@ -386,7 +387,7 @@ if test "${ENABLE_PYTHON}." = "yes."; then
     AC_CONFIG_SUBDIRS(python)
 fi
 
-CPPFLAGS="$CPPFLAGS -DPKGLIBDIR=\\\"\$(pkglibdir)\\\""
+CPPFLAGS="$CPPFLAGS -DPKGLIBDIR=\\\"\$(pkglibdir)\\\" -DSYSCONFDIR=\\\"\$(sysconfdir)\\\""
 
 
 AC_CONFIG_FILES([  

@@ -266,8 +266,12 @@ struct pkgfl_ent *pkgfl_ent_new(tn_alloc *na,
 static int strncmp_path(const char *p1, const char *p2)
 {
     int rc;
+    
+    if ((rc = *p1 - *p2))
+        return rc;
+
     rc = strncmp(p1, p2, strlen(p1));
-    printf("cmp %s %s = %d\n", p1, p2, rc);
+    //printf("cmp %s %s = %d\n", p1, p2, rc);
     return rc;
 }
 
@@ -318,7 +322,7 @@ int pkgfl_store_buf(tn_tuple *fl, tn_buf *nbuf, tn_array *exclpath,
             } else if (which == PKGFL_NOTDEPDIRS && !is_depdir) {
                 if (exclpath && n_array_bsearch_ex(exclpath, flent->dirname,
                                                    (tn_fn_cmp)strncmp_path)) {
-                    DBGF_F("%s skipped\n", flent->dirname);
+                    DBGF("%s skipped\n", flent->dirname);
                     skipped[i] = 1;
                     continue;
                 }

@@ -131,9 +131,10 @@ struct pkg {
     struct pkgdir    *pkgdir;    /* reference to its own pkgdir */
     void             *pkgdir_data;
     void             (*pkgdir_data_free)(tn_alloc *na, void*);
-    struct pkguinf   *(*load_pkguinf)(tn_alloc *na, const struct pkg *pkg, void*);
+    struct pkguinf   *(*load_pkguinf)(tn_alloc *na, const struct pkg *pkg,
+                                      void *pkgdir_data);
     tn_tuple         *(*load_nodep_fl)(tn_alloc *na, const struct pkg *pkg,
-                                       void*, tn_array*);
+                                       void *pkgdir_data, tn_array*);
 
     struct pkguinf *pkg_pkguinf; 
 

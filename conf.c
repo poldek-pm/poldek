@@ -142,6 +142,7 @@ static struct tag source_tags[] = {
     { "pri",         TYPE_STR , { 0 } },
     { "dscr",        TYPE_STR | TYPE_F_ENV, { 0 } },
     { "type",        TYPE_STR , { 0 } },
+    { "original type", TYPE_STR , { 0 } },
     { "noauto",      TYPE_BOOL, { 0 } },
     { "noautoup",    TYPE_BOOL, { 0 } },
     { "douniq",      TYPE_BOOL, { 0 } },
@@ -911,7 +912,6 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
         }
 
         name = p;
-        
         while (isalnum(*p) || *p == '_' || *p == '-' || isspace(*p))
             p++;
         
@@ -1044,8 +1044,14 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
 tn_hash *poldek_conf_loadefault(void)
 {
     char *homedir;
-    char *etcpath = "/etc/poldek.conf";
+    char *sysconfdir = "/etc";
+    char etcpath[PATH_MAX];
     
+#ifdef SYSCONFDIR
+    if (access(SYSCONFDIR, R_OK) == 0)
+        sysconfdir = SYSCONFDIR;
+#endif                                         \
+
     if ((homedir = getenv("HOME")) != NULL) {
         char path[PATH_MAX];
         
@@ -1053,7 +1059,12 @@ tn_hash *poldek_conf_loadefault(void)
         if (access(path, R_OK) == 0)
             return poldek_conf_load(path, 0);
     }
-    
+
+    n_snprintf(etcpath, sizeof(etcpath), "%s/poldek.conf", sysconfdir);
+    if (access(etcpath, R_OK) == 0)
+        return poldek_conf_load(etcpath, 0);
+
+    n_snprintf(etcpath, sizeof(etcpath), "%s/poldek/poldek.conf", sysconfdir);
     if (access(etcpath, R_OK) == 0)
         return poldek_conf_load(etcpath, 0);
 
@@ -1075,6 +1086,36 @@ tn_hash *poldek_conf_get_section_ht(const tn_hash *htconf, const char *name)
     return NULL;
 }
 
+static struct copt *do_conf_get(const tn_hash *htconf, const char *name)
+{
+    struct copt *opt;
+    char fc = '_', tc = ' ';
+    const char *name1;
+    
+    n_assert(htconf);
+
+    name1 = name + 1;           /* first '_' char is allowed */
+    if (strchr(name1, ' ')) {
+        fc = ' ';
+        tc = '_';
+    }
+    
+    if ((opt = n_hash_get(htconf, name)) == NULL && strchr(name1, fc)) {
+        char *s, *p;
+
+        n_strdupap(name, &s);
+        p = s + 1;              /* skip first char */
+        while (*p) {
+            if (*p == fc)
+                *p = tc;
+            p++;
+        }
+        opt = n_hash_get(htconf, s);
+        DBGF("[%s], [%s] %p\n", name, s, opt);
+    }
+    
+    return opt;
+}
 
 
 char *poldek_conf_get(const tn_hash *htconf, const char *name, int *is_multi)
@@ -1082,25 +1123,10 @@ char *poldek_conf_get(const tn_hash *htconf, const char *name, int *is_multi)
     struct copt *opt;
     char *v = NULL;
 
-    n_assert(htconf);
-
     if (is_multi)
         *is_multi = 0;
-    
-    if ((opt = n_hash_get(htconf, name)) == NULL && strchr(name, '_')) {
-        char *s, *p;
 
-        n_strdupap(name, &s);
-        p = s;
-        while (*p) {
-            if (*p == '_')
-                *p = ' ';
-            p++;
-        }
-        opt = n_hash_get(htconf, s);
-    }
-
-    if (opt) {
+    if ((opt = do_conf_get(htconf, name))) {
         v = opt->val;
         if (is_multi)
             *is_multi = (opt->flags & COPT_MULTIPLE);
@@ -1152,7 +1178,7 @@ tn_array *poldek_conf_get_multi(const tn_hash *htconf, const char *name)
     struct copt *opt;
     tn_array    *list = NULL;
 
-    if ((opt = n_hash_get(htconf, name)) == NULL)
+    if ((opt = do_conf_get(htconf, name)) == NULL)
         return NULL;
     
     if (opt->vals && n_array_size(opt->vals))

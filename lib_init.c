@@ -279,12 +279,23 @@ struct source *source_new_htcnf(struct poldek_ctx *ctx,
     vs = poldek_conf_get(htcnf, "prefix", NULL);
     
     src = source_new_pathspec(NULL, spec, vs);
-    get_conf_opt_list(htcnf, "exclude path", src->mkidx_exclpath);
-    if (n_array_size(src->mkidx_exclpath) == 0 &&
-        n_array_size(ctx->ts->mkidx_exclpath) > 0) {
+    src->original_type = poldek_conf_get(htcnf, "original type", NULL);
+    if (src->original_type && src->type &&
+        n_str_eq(src->type, src->original_type)) {
+        logn(LOGERR, "%s: original type and type must be differ",
+             source_idstr(src));
         
-        src->mkidx_exclpath = n_array_dup(ctx->ts->mkidx_exclpath,
-                                          (tn_fn_dup)strdup);
+        source_free(src);
+        return NULL;
+    }
+    
+    get_conf_opt_list(htcnf, "exclude path", src->exclude_path);
+    
+    if (n_array_size(src->exclude_path) == 0 && /* take global exclude path */
+        n_array_size(ctx->ts->exclude_path) > 0) {
+        
+        src->exclude_path = n_array_dup(ctx->ts->exclude_path,
+                                        (tn_fn_dup)strdup);
     }
     
     return src;
@@ -297,7 +308,7 @@ int get_conf_sources(struct poldek_ctx *ctx,
                      tn_hash *htcnf, tn_array *htcnf_sources)
 {
     struct source   *src;
-    int             i, nerr, getall = 0;
+    int             i, nerr = 0, getall = 0;
     int             *matches = NULL;
     tn_array        *list;
 
@@ -338,12 +349,13 @@ int get_conf_sources(struct poldek_ctx *ctx,
             tn_hash *ht = n_array_nth(htcnf_sources, i);
             
             src = source_new_htcnf(ctx, ht, n_array_size(sources));
-            if (!addsource(sources, src, getall, srcs_named, matches))
+            if (src == NULL)
+                nerr++;
+            else if (!addsource(sources, src, getall, srcs_named, matches))
                 source_free(src);
         }
     }
-
-    nerr = 0;
+    
     for (i=0; i < n_array_size(srcs_named); i++) {
         if (matches[i] == 0) {
             struct source *src = n_array_nth(srcs_named, i);
@@ -514,7 +526,7 @@ int set_default_vf_fetcher(int tag, const char *confvalue)
     tl = tl_save = n_str_tokl(val, ", \t");
     while (*tl) {
         vfile_configure(tag, *tl, name);
-        //printf("conf %d (%s) -> (%s)\n", tag, *tl, name);
+        DBGF("%d (%s) -> (%s)\n", tag, *tl, name);
         tl++;
     }
     
@@ -628,6 +640,7 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     register_vf_handlers(poldek_conf_get_section_arr(ctx->htconf, "fetcher"));
 
     if ((list = poldek_conf_get_multi(htcnf, "default_fetcher"))) {
+        DBGF("aaaa\n");
         int i;
         for (i=0; i < n_array_size(list); i++)
             set_default_vf_fetcher(VFILE_CONF_DEFAULT_CLIENT,
@@ -645,10 +658,10 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     get_conf_opt_list(htcnf, "rpmdef", ctx->ts->rpmacros);
     get_conf_opt_list(htcnf, "hold", ctx->ts->hold_patterns);
     get_conf_opt_list(htcnf, "ignore", ctx->ts->ign_patterns);
-    get_conf_opt_list(htcnf, "exclude path", ctx->ts->mkidx_exclpath);
+    get_conf_opt_list(htcnf, "exclude path", ctx->ts->exclude_path);
 
     if ((v = poldek_conf_get(htcnf, "cachedir", NULL)))
-        ctx->ts->cachedir = v;
+        ctx->ts->cachedir = n_strdup(v);
     
     if (poldek_conf_get_bool(htcnf, "vfile_ftp_sysuser_as_anon_passwd", 0))
         vfile_configure(VFILE_CONF_SYSUSER_AS_ANONPASSWD, 1);
@@ -870,6 +883,26 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     cachedir = setup_cachedir(NULL);
     vfile_configure(VFILE_CONF_CACHEDIR, cachedir);
     free(cachedir);
+
+#ifdef PKGLIBDIR
+    {
+        char *path, buf[PATH_MAX];
+        if ((path = getenv("PATH")) == NULL)
+            path = "/bin:/usr/bin:/usr/local/bin";
+        
+        n_snprintf(buf, sizeof(buf), "%s:%s", path, PKGLIBDIR);
+#ifdef HAVE_SETENV        
+        setenv("PATH", buf, 1);
+#else
+        {
+            int len = strlen("PATH") + strlen(path) + 3;
+            char *tmp = n_malloc(len);
+            n_snprintf(tmp, len, "%s=%s", PATH, path);
+            putenv(tmp);
+        }
+#endif
+    }
+#endif  /* PKGLIBDIR */
     return 1;
 }
 

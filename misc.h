@@ -71,6 +71,4 @@ char *poldek__conf_path(char *s, char *v);
 
 int get_gmt_offs(void);
 
-int poldek_lookup_external_command(char *cmdpath, int size, const char *cmd);
-
 #endif /* POLDEK_MISC_H */

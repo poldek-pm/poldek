@@ -84,8 +84,6 @@ int test_02(void)
     return 1;
 }
 
-
-
 int main(int argc, char *argv[]) 
 {
     setlocale(LC_MESSAGES, "");
