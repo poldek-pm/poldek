@@ -117,7 +117,8 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     src->source_path = strdup(clpath);
     if (pkg_prefix)
         src->pkg_prefix = strdup(clprefix);
-    
+    else
+        src->pkg_prefix = NULL;
     src->ldmethod = PKGSET_LD_NIL;
     
     
