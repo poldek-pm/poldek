@@ -14,7 +14,8 @@ poldek [--source=SOURCE] [OPTION...] [PACKAGE...]
 
 poldek is a cmdline tool which can be used to verify, install and
 upgrade given package sets. It was inspired by L<apt_get(8)> tool
-from Debian's APT.
+from Debian's APT, the shell mode was inspired by Perl CPAN module
+shell (perl -MCPAN -e shell). 
 
 In general poldek gets packages information from special package index
 file (called I<Packages>) and performs one of the following actions:
@@ -36,8 +37,8 @@ file (called I<Packages>) and performs one of the following actions:
 =back
 
 Packages and indexes can be retrieved from remote servers by poldek
-itself (by simple FTP and HTTP clients from rpmlib) or by external
-downloaders (not configured by default, see L</CONFIG FILE> for
+itself (by compiled in cURL client or by simple FTP/HTTP client from rpmlib) 
+or by external downloaders (not configured by default, see L</CONFIG FILE> for
 details). Currently four types of URLs are supported: FTP, HTTP, 
 HTTPS and RSYNC.
 
@@ -48,7 +49,7 @@ HTTPS and RSYNC.
 The source is specified by B<--source> option or B<source> parameter 
 in config file:
 
-B<--source,--stxt,--sdir,-s> B<SOURCE>
+B<--source,--sidx,--sdir,-s> B<SOURCE>
 
 where SOURCE can be a local path or URL. Only one SOURCE is supported
 (to be fixed later) 
@@ -123,7 +124,7 @@ One of the following basic modes must be selected:
 
 =item B<--mkidx[z][=FILE]>  
 
-Build package index, by default it's stored in SOURCE/Packages.[gz].
+Build package index, by default it's stored in SOURCE/Packages[.gz].
 The second file Packages-toc with packages NAME-EVR per line is created.
 I<NOTE>: SOURCE must be directory.
 
@@ -154,7 +155,7 @@ Install or upgrade given packages.
 
 =item B<--shell>
 
-Run poldek in interactive mode. Type help after running for available commands. 
+Run poldek in interactive mode. Type "help" after running for available commands. 
 
 
 =back 
@@ -177,7 +178,7 @@ same meanings like RPM ones. See next section.
 =head1 COOPERATING WITH RPM
 
 Currently all installations except B<install-dist> are made
-by RPM, which is executed in background. Options passed to rpm:
+by RPM binary, which is executed in background. Options passed to rpm:
 
 =over
 
@@ -282,7 +283,7 @@ $ poldek -s /ftp/pub/PLD/RPMS/ --mkidxz
 
 $ poldek -s rsync://ala.ma.kota/PLD/RPMS/Packages.gz -V
 
-$ poldek -s /dir/with/RPMS/Packages.gz -V -n "apache"
+$ poldek -s /dir/with/RPMS/Packages.gz -V apache
 
 =head2 Installation from scratch
 
@@ -291,9 +292,6 @@ $ poldek -s ftp://ftp.trurl.net/PLD/RPMS/Packages.gz
 
 Above command installs a "myset" package subset under 
 /mnt/dest as root. 
-
-I<NOTE>: mounted ROOT/proc is propably needed for 
-some package postinstall scripts.  
 
 =head2 Upgrade whole system:
 
@@ -318,7 +316,7 @@ $ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/Packages
 =head2 Install/upgrade custom packages:
 
 $ poldek -s ftp://ftp.znienacka.com/PLD/RPMS/Packages.gz 
--U -n apache -n "ala-ma-kota 1.2" smail-12-389.i386.rpm
+-U apache -n "ala-ma-kota 1.2" smail-12-389.i386.rpm
 
 $ poldek -s ftp://ftp.dudy.net/RPMS/Packages.gz -ti -n xteddy
 
@@ -352,7 +350,6 @@ rpm doesn't handle this case, so poldek does not handle it also.
 =head2 Documentation
 
 This manual should be finished and translated into English.
-
 
 =head1 CAUTION
 
