@@ -89,7 +89,7 @@ EXTRA_DIST = \
 		 $(pkglib_SCRIPTS) \
 	     Makefile.extra \
 		 libpoldek.sym \
-	     poldek.spec 
+	     poldek.spec \
 	     package-set.sample vfjugglerc.sample \
 	     m4/codeset.m4 m4/gettext.m4 m4/glibc21.m4 m4/iconv.m4 \
 	     m4/intdiv0.m4 m4/inttypes_h.m4 m4/inttypes.m4 m4/inttypes-pri.m4 \
