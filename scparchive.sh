@@ -13,5 +13,5 @@ DESTDIR="${ROOTDIR}/$2"
 
 scp -p $1 "${HOST}:${DESTDIR}" && \
 ssh $HOST \
-   "(cd $DESTDIR && md5sum *.*> md5sums && \
-    \$HOME/mkindexpage.pl *.* > index.html && chmod 644 * && ls -l)"
+"(cd $DESTDIR && find . -type f | xargs md5sum > md5sums && \
+    \$HOME/mkindexpage.pl *.* > index.html && find . -type f | xargs chmod 644 && ls -l)"
