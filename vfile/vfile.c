@@ -355,11 +355,11 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
                 tmpath = (char*)path;
                 
             } else {
-                int len = p - path + 1;
+                int len = p - path;
                 
                 tmpath = alloca(len + 1);
                 memcpy(tmpath, path, len);
-                tmpath[len] = '\0'; 
+                tmpath[len] = '\0';
             } 
             
             vfile_url_as_dirpath(&buf[len], sizeof(buf) - len, tmpath);
