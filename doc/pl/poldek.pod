@@ -29,7 +29,6 @@ Zdalne pliki s± pobierane przez samego poldka (wewnêtrzny klient FTP/HTTP)
 b±d¼ poprzez zewnêtrzne programy (domy¶lnie nieskonfigurowane, patrz
 L</PLIK KONFIGURACYJNY>).
 
-
 Podstawowe tryby pracy poldka to:
 
 =over
@@ -49,7 +48,6 @@ Podstawowe tryby pracy poldka to:
 =item * Dziel zestaw pakietów w podzestawy o ustalonym rozmiarze
 
 =back
-
 
 =head2 Tryb Interaktywny
 
@@ -105,17 +103,16 @@ Przyk³ady:
 Je¶li indeks pakietów i pakiety s± przechowywane w innych lokalizacjach,
 wtedy powinna byæ u¿yta opcja:
 
-B<-P, --prefix> B<PREFIX>
+B<-P, --prefix> B<PREFIKS>
 
 do wskazania lokalizacji pakietów, np.:
 
 $ poldek -s /tmp/packages.dir.gz --prefix=/cdrom/RPMS/ -s ... --prefix=...
 
-Je¶li ¼ród³o jest skonfigurowane z nazw± (patrz L</CONFIG FILE>), wtedy
-mo¿e byæ wybrane przez B<-n, --sn> B<NAZWA-¬RÓD£A>, np.:
+Je¶li ¼ród³o jest skonfigurowane z nazw± (patrz L</PLIK KONFIGURACYJNY>),
+wtedy mo¿e byæ wybrane przez B<-n, --sn> B<NAZWA-¬RÓD£A>, np.:
 
 $ poldek --sn pld ...
-
 
 Aby uzyskaæ listê wszystkich skonfigurowanych ¼róde³ u¿yj opcji
 B<-l, --sl>, np.:
@@ -133,7 +130,6 @@ $ poldek -l
 =item pld-test     ftp://ftp.pld.org.pl/dists/ra/test/i686/  (noauto)
 
 =back
-
 
 =head1 WYBIERANIE PAKIETÓW
 
@@ -236,7 +232,7 @@ Uruchamia w trybie interaktywnym POLECENIE i wychodzi.
 Uruchamia poldka w trybie interaktywnym. Wpisz "help" aby uzyskaæ listê dostêpnych poleceñ.
 Jest to domy¶lny tryb pracy poldka.
 
-=item B<--split=ROZMIAR[:PIERWSZY_WOLNY_OBSZAR]  [--split-conf=PLIK] [--split-out=PREFIX]>
+=item B<--split=ROZMIAR[:PIERWSZY_WOLNY_OBSZAR]  [--split-conf=PLIK] [--split-out=PREFIKS]>
 
 Dzieli zestaw pakietów na czê¶ci, ka¿da o rozmiarze ROZMIAR MB.
 Pierwsza czê¶æ bêdzie o PIERWSZY_WOLNY_OBSZAR MB mniejsza.
@@ -362,35 +358,33 @@ przez binarkê RPM, która jest uruchamiana w tle. Opcje przekazywane do rpma:
 
 =head2
 
-
-Inne opcje rpma mog± byæ przekazywane jako argumenty jak B<--rpm-RPM_LONG_OPTION>,
-np.:
+Inne opcje rpma mog± byæ przekazywane jako argumenty w postaci
+B<--rpm-RPM_LONG_OPTION>, np.:
 
 $ poldek ... -- --rpm-noscripts --rpm-notriggers
 
-
 =head1 PLIK KONFIGURACYJNY
 
-Program tries to read configuration from F<$HOME/.poldekrc>; if it doesn't
-exists then F</etc/poldek.conf> is used. B<-c,--conf> option could points to
-other config location. With B<--noconf> poldek doesn't read any config.
+Program próbuje przeczytaæ konfiguracjê z F<$HOME/.poldekrc>; je¶li plik ten nie
+istnieje, czyta F</etc/poldek.conf>. Opcja B<-c,--conf> mo¿e wskazywaæ na inn±
+lokalizacjê pliku konfiguracyjnego. Z B<--noconf> poldek nie czyta ¿adnej konfiguracji.
 
-Config file consists of parameters of the form
+Plik konfiguracyjny zawiera parametry w nastêpuj±cej postaci:
 
 'nazwa = warto¶æ'
 
-The file is line-based - that is, each newline-terminated
-line represents a comment or a parameter.
+Plik jest oparty na liniach, czyli ka¿da linia zakoñczona
+znakiem nowej linii reprezentuje komentarz b±d¼ parametr.
 
-=head2 Parameters:
+=head2 Parametry:
 
 =over
 
 =item * B<source> = [NAZWA[,OPCJE]] ¦CIE¯KA_¬RÓD£OWA
 
-Optional B<NAZWA> may be specified later from cmdline by
-B<-n, --sn> B<NAZWA-¬RÓD£A>; for example if you
-have sources configured as follows:
+Opcjonalna B<NAZWA> mo¿e byæ okre¶lona pó¼niej z linii poleceñ przez
+B<-n, --sn> B<NAZWA-¬RÓD£A>; na przyk³ad je¶li masz ¼ród³a skonfigurowane
+nastêpuj±co:
 
 source = pld-devel     /mnt/PLD-stable/RPMS
 
@@ -398,36 +392,34 @@ source = pld-stable    ftp://zn/PLD/i686/PLD/RPMS
 
 source = misRPMS       ftp://zn/rpm/RPMS/
 
-then to use only ftp://zn/PLD/i686/PLD/RPMS do:
+wtedy aby u¿yæ tylko ftp://zn/PLD/i686/PLD/RPMS wykonaj:
 
 $ poldek --sn pld-stable
 
-..i to use all pld-* do:
+...i aby u¿yæ wszystkich pld-*:
 
 $ poldek --sn pld-\*
 
-
-B<OPCJE> describes source options; possible values are:
+B<OPCJE> okre¶laj± opcje ¼róde³; dozwolone warto¶ci to:
 
 =over
 
-=item * B<noauto> - don't load this source by domy¶ln
+=item * B<noauto> - nie ³aduj domy¶lnie tych ¼róde³
 
-=item * B<noautoup> - don't update this source by domy¶ln
+=item * B<noautoup> - nie aktualizuj domy¶lnie tych ¼róde³
 
-=item * B<gpg> - verify pakiet GPG signatures
+=item * B<gpg> - weryfikuj sygnatury GPG pakietu
 
-=item * B<pgp> - verify pakiet PGP signatures
+=item * B<pgp> - weryfikuj sygnatury PGP pakietu
 
-=item * B<pri=NUMERICAL_VALUE>
+=item * B<pri=WARTO¦Æ_NUMERYCZNA>
 
-Source priority may be set by this option. If the same pakiets
-(identical nazwa i EVR) are available in more than one source then
-pakiets from highest prioritized source are taken.
+Opcj± t± mo¿na ustawiæ priorytet ¼ród³a. Je¶li te same pakiety
+(identyczna nazwa i EVR) s± dostêpne z wiêcej ni¿ jednego ¼ród³a,
+wtedy brane s± pakiety ze ¼ród³a o wy¿szym priorytecie.
 
-If source priorities aren't set sources are prioritized in order
-they are appear in config file.
-
+Je¶li priorytety ¼róde³ nie s± ustawione, ¼ród³a dostaj± priorytety
+zgodne z ich kolejno¶ci± w pliku konfiguracyjnym.
 
 =item * B<type=TYP_¬RÓD£A>
 
@@ -438,12 +430,12 @@ Opcja ta pozwala na ustawienie typu ¼ród³a. Dostêpne warto¶ci to:
 =item * B<pidx> - natywny plik indeksu poldka (domy¶lny)
 
 =item * B<pdir> - lokalne katalogi; poldek przeszuka je zamiast
-                  czytaæ plik indeksu.
+                  czytaæ plik indeksu
 
-=item * B<hdrl> - file with raw pakiet headers in RPM format;
- available in many RPM-based distributions (named hdlist in RH), however
- this format isn't optimal for poldek (is not updateable for example).
- See F<poldekrc.sample-rh> included in poldek distribution.
+=item * B<hdrl> - plik z surowymi nag³ówkami pakietów w formacie RPM;
+ dostêpny w wielu dystrybucjach opartych na RPM-ie (w RH nazywa siê hdlist),
+ jednak¿e ten format nie jest optymalny dla poldka (nie jest na przyk³ad
+ auktualizowalny). Patrz F<poldekrc.sample-rh> za³±czony w dystrybucji poldka.
 
 =back
 
@@ -451,7 +443,7 @@ Opcja ta pozwala na ustawienie typu ¼ród³a. Dostêpne warto¶ci to:
 
 Przyk³ady:
 
-# pakiets from 'pld' are preffered
+# pakiety z 'pld' s± preferowane
 source = pld,gpg,noautoup,pri=-10   ftp://zn/PLD/ra/RPMS
 
 source = pld-test,noauto        /mnt/PLD-test/RPMS
@@ -459,7 +451,6 @@ source = pld-test,noauto        /mnt/PLD-test/RPMS
 source = rare,noautoup          ftp://host/rare-RPMS
 
 source = build-area,type=dir    /home/zenek/rpm/RPMS
-
 
 source99 = rh,noauto,type=hdrl  ftp://redhat/os/i386/RedHat/base/hdlist
 
@@ -469,98 +460,95 @@ prefix99 = ftp://redhat/os/i386/RedHat/RPMS
 
 =item * B<prefixXX> = ¬RÓD£O
 
-If you want to configure source with prefix (patrz B<-P> option description),
-then it should be specified as suffixed source/prefix pair to distinguish
-that source from other ones, for example:
+Je¶li chcesz skonfigurowaæ ¼ród³o z prefiksem (patrz opis opcji B<-P>),
+wtedy powinno byæ okre¶lone jako zakoñczona sufiksem para ¼ród³o/prefiks,
+aby rozró¿niæ dane ¼ród³o od innych, na przyk³ad:
 
-source1 = ~/tmp/my-cd-indexes/
+source1 = ~/tmp/moje-indeksy-cd/
 
 prefix1 = /mnt/cdrom/RPMS/
 
-
 =item * B<cachedir>
 
-       See B<--cachedir> option description
+        Patrz opis opcji B<--cachedir>
 
 =item * B<confirm_installation = yes|no>
 
-        If "yes" program confirm all performed pakiet installations (domy¶ln: no)
+        Je¶li ustawione na "yes" program potwierdza wszystkie instalacje
+        pakietów (domy¶lnie: no)
 
 =item * B<confirm_removal = yes|no>
 
-        If "yes" program confirm all performed pakiet removals (domy¶ln: yes)
+        Je¶li ustawione na "yes" program potwierdza wszystkie deinstalacje
+        pakietów (domy¶lnie: yes)
 
 =item * B<choose_equivalents_manually = yes|no>
 
-        If "yes" program let the user choose among equivalent pakiets (domy¶ln: no)
+        Je¶li ustawione na "yes" program pozwala u¿ytkownikowi na wybór
+        spo¶ród równowa¿nych pakietów (domy¶lnie: no)
 
 =item * B<follow = yes|no>
 
-       Automatically install|don't install pakiets required by
-       selected ones (domy¶ln: yes)
+        Automatycznie instaluj|nie instaluj pakietów wymaganych przez
+        wybrane (domy¶lnie: yes)
 
 =item * B<ftp_sysuser_as_anon_passwd = yes|no>
 
-       If yes, login@hostname is send as anonymous FTP password (domy¶ln: no)
+        Je¶li ustawione na "yes" jako anonimowe has³o FTP wysy³ane jest
+        login@hostname (domy¶lnie: no)
 
 =item * B<greedy = yes|no>
 
-        See --greedy option description	(domy¶ln: no)
-
+        Patrz opis opcji --greedy (domy¶lnie: no)
 
 =item * B<hold = pakiet[ pakiet...]>
 
-        See --hold option description
-
+        Patrz opis opcji --hold
 
 =item * B<mercy = yes|no>
 
-        See --mercy option description
-
+        Patrz opis opcji --mercy
 
 =item * B<keep_downloads = yes|no>
 
-        Program removes downloaded pakiets files after successful installation
-        by domy¶ln. If option is set to "yes" then program will never remove
-        downloaded pakiets from cache directory.
-
+        Program domy¶lnie usuwa pobrane pliki pakietów po pomy¶lnej instalacji.
+        Je¶li opcja ustawiona jest na "yes", wtedy program nie usunie pobranych
+        pakietów z katalogu cache.
 
 =item * B<particle_install = yes|no>
 
-        If "no" installations of multiple pakiets are performed as one
-        transaction (domy¶ln: yes)
-
+        Je¶li ustawione na "no" instalacja wielu pakietów jest przeprowadzana
+        jako jedna transakcja (domy¶lnie: yes)
 
 =item * B<use_sudo = yes|no>
 
-      For r/w operations run rpm using sudo.
-      The domy¶ln is "no", but it is recommended to change it to "yes"
-      i use the poldek as ordinary user.
-
+        Dla operacji r/w uruchom rpma u¿ywaj±c sudo.
+        Domy¶ln± warto¶ci± jest "no", ale zalecana jest zmiana na "yes"
+        i u¿ywanie poldka jako zwyk³y u¿ytkownik.
 
 =back
 
 =head3 Zewnêtrzne programy pobieraj±ce
 
-Downloaders are configured by B<PROTOCOL_get="SPEC"> parameter.  The
-SPEC is a command formatted string, where at least 2 semi-macros of 4
-available should be used:
+Programy pobieraj±ce s± konfigurowane przez parametr B<PROTOCOL_get="SPEC">.
+SPEC jest poleceniem b±d¼ sformatowanym ³añcuchem, gdzie przynajmniej 2 z 4
+dostêpnych semi-makr powinny byæ u¿yte:
 
 =over
 
-=item B<%p[n]> - pakiet file nazwa, %pn means that %p may be repeated many times
+=item B<%p[n]> - nazwa pliku pakietu, %pn znaczy, ¿e %p mo¿e wyst±piæ wiele razy
 
-=item B<%P[n]> - pakiet full path, %Pn -"-
+=item B<%P[n]> - pe³na ¶cie¿ka do pakietu, %Pn -"-
 
-=item B<%d> - cache directory
+=item B<%d> - katalog cache
 
-=item B<%D> - cache directory/pakiet base nazwa
+=item B<%D> - katalog cache/nazwa pakietu
 
 =back
 
-Currently four protocols are available: FTP, HTTP, HTTPS i RSYNC.  Special
-B<ftp_http> "protocol" could be used for describe downloader for both
-HTTP i FTP.
+Obecnie dostêpne s± cztery protoko³y: FTP, HTTP, HTTPS i RSYNC.  Specjalny
+"protokó³" B<ftp_http> mo¿e byæ u¿yty do opisu programów pobieraj±cych z obu
+protoko³ów, HTTP i FTP.
 
 Przyk³ady:
 
@@ -573,7 +561,6 @@ ftp_get        = "/usr/bin/snarf %P %D"
 rsync_get      = "/usr/bin/rsync -v %P %d"
 
 Patrz równie¿: za³±czone przyk³adowe pliki konfiguracyjne.
-
 
 Dodatkowo poldek wspiera URL-e CDROM, które mog± byæ u¿ywane, gdy zestaw
 pakietów jest przechowywany na zmienialnych mediach (kilka CD, ZIP-ów, etc);
@@ -641,7 +628,6 @@ $ poldek --split=100 --split-conf=zip-split.conf \
 
 $ poldek --shcmd='ls -lt' | less
 
-
 =head1 ¦RODOWISKO
 
 Plik konfiguracyjny pobierany jest z $HOME.
@@ -671,12 +657,12 @@ porównywane sumy kontrolne MD5 (zbyt bardzo zwiêkszy³oby to zu¿ycie pamiêci).
 
 =head2 Uaktualnianie i tag "Obsoletes"
 
-In PLD I<http://www.pld.org.pl>, which is primary development
-platform for poldek, Obsoletes tag is used in two different meanings:
-the first means B<A> I<obsoletes> B<B>, the second means B<A> I<is
-equivalent of> B<B>. Obviously it makes impossible to distinguish them
-i use during system aktualizs (in Red Hat Linux the first mean is used only,
-so Red Hat Installer use this tag).
+W PLD I<http://www.pld.org.pl>, które jest podstawow± platform± rozwojow±
+dla poldka, tag "Obsoletes" jest u¿ywany w dwóch ró¿nych znaczeniach:
+pierwsze oznacza B<A> I<uniewa¿nia> B<B>, drugie za¶ B<A> I<jest równowa¿ne> B<B>.
+Oczywi¶cie jest niemo¿liwe, aby je rozró¿niæ i u¿yæ podczas aktualizacji systemu
+(w Red Hat Linux u¿yte jest jedynie pierwsze znaczenie, wiêc instalator Red Hata
+u¿ywa tego taga).
 
 =head2 Aktualizacja wiêcej ni¿ jednej instancji pakietu
 
