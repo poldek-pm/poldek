@@ -154,7 +154,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
             }
             
             nerrors++;
-            if (verbose > 2)
+            if (verbose > 3)
                 msg(4, " req %-35s --> NOT FOUND\n", capreq_snprintf_s(req));
             else if (ps_verify_mode(ps))
                 log(LOGERR, "%s: req %s not found\n", pkg_snprintf_s(pkg),
@@ -177,6 +177,8 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
         msg(1,"%d unsatisfied dependencies, %d packages cannot be installed\n",
             nerrors, ps->nerrors);
 
+    if (ps_verify_mode(ps))
+        msg(1, "$Verifying packages conflicts...\n");
     pkgset_verify_conflicts(ps, strict);
     return nerrors == 0;
 }

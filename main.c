@@ -857,8 +857,7 @@ int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     int markflag = MARK_USET;
     
     if (mjrmode == MODE_VERIFY && verbose < 2) 
-        if (verbose < 2) 
-            verbose += 2;
+        verbose = 2;
 
     if (mjrmode == MODE_VERIFY || mjrmode == MODE_INSTALLDIST)
         markflag = MARK_DEPS;
@@ -926,7 +925,7 @@ int main(int argc, char **argv)
     }
 
     if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0 && verbose < 2)
-        verbose += 2;
+        verbose = 2;
 
     ldflags = 0;
 
