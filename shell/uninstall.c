@@ -53,7 +53,7 @@ struct command command_uninstall = {
     
     options, parse_opt,
     
-    NULL, uninstall, NULL, NULL, NULL, NULL
+    NULL, uninstall, NULL, NULL, NULL
 };
 
 

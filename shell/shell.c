@@ -60,14 +60,14 @@ static int cmd_quit(struct cmdarg *cmdarg);
 struct command command_quit = {
     COMMAND_NOARGS | COMMAND_NOHELP | COMMAND_NOOPTS,
     "quit", NULL, N_("Quit poldek"), NULL, NULL, NULL, cmd_quit,
-    NULL, NULL, NULL, NULL
+    NULL, NULL, NULL
 };
 
 static int cmd_help(struct cmdarg *cmdarg);
 struct command command_help = {
     COMMAND_NOARGS | COMMAND_NOHELP | COMMAND_NOOPTS,
     "help", NULL, N_("Display this help"), NULL, NULL, NULL, cmd_help,
-    NULL, NULL, NULL, NULL
+    NULL, NULL, NULL
 };
 
 static 
@@ -77,7 +77,7 @@ int cmd_reload(struct cmdarg *cmdarg,
 struct command command_reload = {
     COMMAND_NOARGS | COMMAND_NOOPTS, "reload", NULL,
     N_("Reload installed packages"),
-    NULL, NULL, cmd_reload, NULL, NULL, NULL, NULL, NULL
+    NULL, NULL, cmd_reload, NULL, NULL, NULL, NULL
 };
 
 
@@ -143,6 +143,14 @@ static
 int command_alias_cmp(struct command_alias *a1, struct command_alias *a2)
 {
     return strcmp(a1->name, a2->name);
+}
+
+int command_alias_cmd_cmp(struct command_alias *p1, struct command_alias *p2)
+{
+	if(p1->cmd==p2->cmd)
+		return 0;
+	else 
+		return -1;
 }
 
 int cmd_ncmp(const char *name, const char *s) 
@@ -317,21 +325,30 @@ static char *help_filter(int key, const char *text, void *input)
     if (key == ARGP_KEY_HELP_EXTRA) {
         char *p, buf[4096];
         int n = 0;
+		struct command_alias alias;
 
         
         if (sh_cmdarg->cmd->extra_help) 
             n += n_snprintf(&buf[n], sizeof(buf) - n, "  %s\n",
                           sh_cmdarg->cmd->extra_help);
-            
-        if (sh_cmdarg->cmd->aliases) {
-            struct command_alias *aliases = sh_cmdarg->cmd->aliases;
-            int i = 0;
-            
+
+		alias.cmd=sh_cmdarg->cmd;
+
+        if (n_array_bsearch_ex(aliases, &alias,
+					(tn_fn_cmp)command_alias_cmd_cmp)) {
+           int i = 0;
+		   struct command_alias *alias;
+
             n += n_snprintf(&buf[n], sizeof(buf) - n, "%s", _("  Defined aliases:\n"));
-            while (aliases[i].name) {
-                n += n_snprintf(&buf[n], sizeof(buf) - n, "    %-16s  \"%s\"\n",
-                              aliases[i].name, aliases[i].cmdline);
-                i++;
+			
+            while (i<n_array_size(aliases)) {
+				alias=n_array_nth(aliases, i);
+				if (alias->cmd==sh_cmdarg->cmd) {
+	                n += n_snprintf(&buf[n], sizeof(buf) - n,
+							"    %-16s  \"%s\"\n",alias->name,
+							alias->cmdline);
+				}
+				i++;
             }
         }
         
@@ -438,6 +455,7 @@ static
 int execute_line(char *line)
 {
     struct command *cmd, tmpcmd;
+	struct command_alias *alias, tmpalias;
     char *p;
     const char **args;
     int rc = 0;
@@ -451,38 +469,35 @@ int execute_line(char *line)
     else
         p = NULL;
     
-    tmpcmd.name = line;
-    if ((cmd = n_array_bsearch(commands, &tmpcmd)) == NULL) {
-        struct command_alias *alias, tmpalias;
-        
-        
-        tmpalias.name = tmpcmd.name;
-        if ((alias = n_array_bsearch(aliases, &tmpalias)) == NULL) {
-            logn(LOGERR, _("%s: no such command"), line);
-            return 0;
-            
-        } else {
-            char *l;
-            int len = strlen(alias->cmdline) + 1;
-            
-            cmd = alias->cmd;
+	tmpcmd.name = line;
 
-            if (p == NULL) {    /* no args */
-                l = alloca(len);
-                memcpy(l, alias->cmdline, len);
-                
-            } else {
-                p++;
-                len += strlen(p) + len + 1;
-                l = alloca(len);
-                snprintf(l, len, "%s %s", alias->cmdline, p);
-                
-                p = NULL;
-            }
-            //printf("alias exp %s -> %s\n", line, l);
-            line = l;
-        }
-    }
+	tmpalias.name = tmpcmd.name;
+	if (alias = n_array_bsearch(aliases, &tmpalias)) {
+		char *l;
+		int len = strlen(alias->cmdline) + 1;
+		cmd = alias->cmd;
+
+		if (p == NULL) {    /* no args */
+			l = alloca(len);
+			memcpy(l, alias->cmdline, len);
+		} else {
+			p++;
+			len += strlen(p) + len + 1;
+			l = alloca(len);
+			snprintf(l, len, "%s %s", alias->cmdline, p);
+
+			p = NULL;
+		}
+		//printf("alias exp %s -> %s\n", line, l);
+		line = l;
+	}
+	else if (cmd = n_array_bsearch(commands, &tmpcmd)) { ; }
+	else
+	{
+		logn(LOGERR, _("%s: no such command"), line);
+		return 0;
+	}
+
 
     if (p)
         *p = ' ';
@@ -1091,16 +1106,139 @@ static void shell_end(int sig)
     }
 }
 
+int add_alias(char *aliasname, char *cmdline, char *errstring)
+{
+	int i;
+	char cmdname[32];
+	char *p=cmdline;
+	struct command *cmd;
+	struct command tmpcmd;
+	struct command_alias *tmpalias, tmpalias2;
+	struct command_alias *alias=malloc(sizeof(struct command_alias));
+
+	while(isalnum(*p))
+		p++;
+
+	strncpy(cmdname, cmdline, (int)p-(int)cmdline+1);
+	cmdname[(int)p-(int)cmdline]='\0';
+
+	tmpcmd.name=cmdname;
+
+	if(!(cmd=n_array_bsearch(commands, &tmpcmd))) {
+		sprintf(errstring, _("unknown command %s"), cmdname);
+		return 1;
+	}
+
+	alias->name=malloc(strlen(aliasname)+1);
+	alias->cmdline=malloc(strlen(cmdline)+1);
+
+	strcpy(alias->name, aliasname);
+	strcpy(alias->cmdline, cmdline);
+	alias->cmd=cmd;
+
+	tmpalias2.name=aliasname;
+	tmpcmd.name=aliasname;
+
+	if((i=n_array_bsearch_idx(aliases, &tmpalias2)) >= 0)
+	{
+		tmpalias=n_array_nth(aliases, i);
+		n_array_set_nth(aliases, i, alias);
+
+		i=n_array_bsearch_idx(all_commands, aliasname);
+		n_array_set_nth(all_commands, i, alias->name);
+
+		free(tmpalias->name);
+		free(tmpalias->cmdline);
+		free(tmpalias);
+	}
+	else
+	{
+		n_array_push(aliases, alias);
+		n_array_push(all_commands, alias->name);
+	}
+
+	n_array_sort(aliases);
+	n_array_sort(all_commands);
+
+	return 0;
+}
+
+
+void parse_aliases(char *path)
+{
+	FILE *stream;
+	int nline = 1;
+	char buf[1024];
+	char name[32];
+	char cmdline[512];
+	char *errstring;
+	
+
+	if ((stream = fopen(path, "r")) == NULL) {
+		return;
+	}
+
+	while (fgets(buf, sizeof(buf) - 1, stream))
+	{
+		char *p = buf;
+		char *start;
+		char errstring[96];
+
+		while (isspace(*p))
+			p++;
+
+		if (*p == '#' || *p == '\0') {
+			nline++;
+			continue;
+		}
+
+		start=p;
+
+		while(isalnum(*p) || *p=='-')
+			p++;
+
+		strncpy(name, start, (int)p-(int)start);
+		name[(int)p-(int)start]='\0';
+
+		while(isspace(*p))
+			p++;
+
+		if(*p!='=')
+			logn(LOGWARN, _("%s:%d incorrect definition of alias"), path, nline);
+
+		p++;
+		
+		while(isspace(*p))
+			p++;
+
+		start=p;
+		p+=strlen(p);
+
+		while(isspace(*p))
+			p--;
+
+		strncpy(cmdline, start, (int)p-(int)start);
+		cmdline[(int)p-(int)start-1]='\0';
+
+		if(add_alias(name, cmdline, errstring))
+			logn(LOGWARN, "%s:%d %s", path, nline, errstring);
+
+		nline++;
+	}
+}
 
 
 static void init_commands(void) 
 {
     int n = 0;
+	int i;
+	char *homedir;
     
     commands = n_array_new(16, NULL, (tn_fn_cmp)command_cmp);
     aliases  = n_array_new(16, NULL, (tn_fn_cmp)command_alias_cmp);
     all_commands = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
-    
+
+	
     while (commands_tab[n] != NULL) {
         struct command *cmd = commands_tab[n++];
         if (cmd->argp_opts)
@@ -1117,30 +1255,18 @@ static void init_commands(void)
         n_array_push(all_commands, cmd->name);
         n_array_sort(all_commands);
         
-        if (cmd->aliases) {
-            int i = 0;
-
-            while (cmd->aliases[i].name) {
-                if (n_array_bsearch(aliases, &cmd->aliases[i])) {
-                    logn(LOGERR, _("ambiguous alias %s"), cmd->aliases[i].name);
-                    exit(EXIT_FAILURE);
-                }
-                
-                n_array_push(aliases, &cmd->aliases[i]);
-                n_array_sort(aliases);
-                
-                if (n_array_bsearch(all_commands, cmd->aliases[i].name)) {
-                    logn(LOGERR, _("ambiguous alias %s"), cmd->aliases[i].name);
-                    exit(EXIT_FAILURE);
-                }
-                n_array_push(all_commands, cmd->aliases[i].name);
-                n_array_sort(all_commands);
-                i++;
-            }
-        }
     }
-    
-    n_array_sort(commands);
+
+	n_array_sort(commands);
+
+	parse_aliases("/etc/poldek.alias");
+
+	if ((homedir = getenv("HOME")) != NULL) {
+		char path[PATH_MAX];
+		snprintf(path, sizeof(path), "%s/.poldek.alias", homedir);	
+		parse_aliases(path);
+	}
+
 }
 
 

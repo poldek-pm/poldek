@@ -90,7 +90,6 @@ struct command {
     void* (*init_cmd_arg_d)(void);
     void  (*destroy_cmd_arg_d)(void*);
     
-    struct command_alias *aliases;
     char                 *extra_help;
 };
 

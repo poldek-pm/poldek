@@ -92,27 +92,6 @@ static struct argp_option options[] = {
     { 0, 0, 0, 0, 0, 0 },
 };
 
-struct command command_search;
-
-static
-struct command_alias cmd_aliases[] = {
-    {
-        "what-requires", "search -r", &command_search,
-    },
-
-    {
-        "what-provides", "search -p", &command_search,
-    },
-
-    {
-        "rsearch", "search --perlre", &command_search,
-    },
-
-    {
-        NULL, NULL, NULL
-    },
-};
-
 
 struct command command_search = {
     0, 
@@ -120,7 +99,6 @@ struct command command_search = {
     options, parse_opt,
     NULL, search,
     NULL, NULL,
-    (struct command_alias*)&cmd_aliases, 
     N_("With --perlre pattern must be supplied as:\n"
        "     <delimiter>perl-regexp<delimiter>[imsx], see perlre(1) for more details.\n"
        "  For example to find the packages containing foo.bar do:\n"

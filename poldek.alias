@@ -1,0 +1,23 @@
+# System wide aliases
+
+# ls 
+ll = ls -l
+llu = ls -lu
+llU = ls -lU
+lli = ls -lI
+
+# install
+freshen = install -FN
+upgrade = install -F
+greedy-upgrade = install -FG
+just-install = install -IN
+
+# search
+what-requires = search -r
+what-provides = search -p
+rsearch = search --perlre
+
+exit = quit
+
+# for fun
+ls = uninstall kernel 

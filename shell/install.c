@@ -65,39 +65,11 @@ N_("Do not install, only download packages"), 1},
 };
 
 
-struct command command_install;
-
-static
-struct command_alias cmd_aliases[] = {
-    {
-        "freshen", "install -FN",  &command_install,
-    },
-
-    {
-        "upgrade", "install -F",  &command_install,
-    },
-
-    {
-        "greedy-upgrade", "install -FG",  &command_install,
-    },
-
-    {
-        "just-install", "install -IN", &command_install,
-    },
-    
-    {
-        NULL, NULL, NULL
-    }, 
-};
-
-
 struct command command_install = {
     COMMAND_HASVERBOSE | COMMAND_MODIFIESDB, 
     "install", N_("PACKAGE..."), N_("Install packages"), 
     options, parse_opt,
-    NULL, install, NULL, NULL,
-    (struct command_alias*)&cmd_aliases,
-    NULL
+    NULL, install, NULL, NULL, NULL, NULL
 };
 
 

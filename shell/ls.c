@@ -59,41 +59,12 @@ static struct argp_option options[] = {
  { 0, 0, 0, 0, 0, 0 },
 };
 
-struct command command_ls;
-
-static
-struct command_alias cmd_aliases[] = {
-    {
-        "ll", "ls -l", &command_ls,
-    },
-
-    {
-        "llu", "ls -lu", &command_ls,
-    },
-
-    {
-        "llU", "ls -lU", &command_ls,
-    },
-
-    {
-        "lli", "ls -lI", &command_ls,
-    },
-
-    {
-        NULL, NULL, NULL
-    },
-};
-
-
-
 struct command command_ls = {
     COMMAND_EMPTYARGS, 
     "ls", N_("[PACKAGE...]"), N_("List packages"), 
     options, parse_opt, NULL, ls,
-    NULL, NULL,
-    (struct command_alias*)&cmd_aliases, NULL
+    NULL, NULL, NULL
 };
-
 
 
 static

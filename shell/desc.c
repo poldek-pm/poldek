@@ -93,7 +93,7 @@ struct command command_desc = {
     options, parse_opt,
     NULL, desc,
     NULL, NULL, 
-    NULL, NULL
+    NULL
 };
 
 static

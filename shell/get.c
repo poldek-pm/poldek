@@ -47,7 +47,7 @@ struct command command_get = {
     "get", N_("PACKAGE..."), N_("Download packages"), 
     options, parse_opt,
     NULL, get,
-    NULL, NULL, NULL, NULL
+    NULL, NULL, NULL
 };
 
 
