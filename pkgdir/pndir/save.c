@@ -485,7 +485,7 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
     pndir_mkidx_pathname(paths->path_dscr, psize, path, dscr_suffix);
     pndir_mkidx_pathname(paths->fmt_dscr, psize, path, dscr_suffix_fmt);
     
-#if 0
+#if ENABLE_TRACE
     printf("\nPATHS\n");
     printf("path_main  %s\n", paths->path_main);
     printf("path       %s\n", paths->path);
@@ -496,9 +496,15 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
     return 1;
 }
 
+struct db_dscr_ent {
+    char langp[32];
+    char data[0];
+};
+              
 
 struct db_dscr {
     struct tndb *db;
+    tn_array    *spool;
     int         npackages;
 };
 
@@ -509,6 +515,88 @@ void db_dscr_free(struct db_dscr *dbh)
     free(dbh);
 };
 
+static
+struct db_dscr *db_dscr_open(const char *pathtmpl, const char *lang) 
+{
+    struct db_dscr *dbh;
+    struct tndb *tmpdb;
+    char path[PATH_MAX], *dot = ".";
+    const char *langstr = lang;
+                    
+    if (lang == NULL || strcmp(lang, "C") == 0) {
+        langstr = "";
+        dot = "";
+    }
+
+    snprintf(path, sizeof(path), pathtmpl, dot, langstr);
+                    
+    tmpdb = tndb_creat(path, PNDIR_COMPRLEVEL, TNDB_SIGN_DIGEST);
+    if (tmpdb == NULL) {
+        logn(LOGERR, "%s: %m\n", path);
+        return 0;
+    }
+    dbh = n_malloc(sizeof(*dbh));
+    dbh->db = tmpdb;
+    dbh->npackages = 0;
+    return dbh;
+}
+
+static
+int pndir_save_pkginfo(int nth, struct pkguinf *pkgu, struct pkgdir *pkgdir,
+                       tn_hash *db_dscr_h, const char *key, int klen,
+                       tn_buf *nbuf, const char *pathtmpl)
+{
+    
+    tn_array *langs = pkguinf_langs(pkgu);
+    int i;
+
+    for (i=0; i < n_array_size(langs); i++) {
+        struct db_dscr *dbh;
+        char *lang = n_array_nth(langs, i);
+        
+        if (n_hash_size(pkgdir->avlangs_h) > 0 &&
+            !n_hash_exists(pkgdir->avlangs_h, lang)) {
+            continue;
+        }
+                
+        if ((dbh = n_hash_get(db_dscr_h, lang)) == NULL) {
+            dbh = db_dscr_open(pathtmpl, lang);
+            if (dbh == NULL)
+                return 0;
+            n_hash_insert(db_dscr_h, lang, dbh);
+        }
+                
+        n_buf_clean(nbuf);
+        if (dbh->db && pkguinf_store(pkgu, nbuf, lang)) {
+            char dkey[512];
+            const char *akey;
+            int  dklen;
+            
+            if (strcmp(lang, "C") == 0) {
+                akey = key;
+                dklen = klen;
+            }
+                    
+            tndb_put(dbh->db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
+            dbh->npackages++;
+            n_buf_clean(nbuf);
+            
+            if (nth > n_array_size(pkgdir->pkgs) / 2) {
+                double percent = (dbh->npackages * 100);
+                percent /=  n_array_size(pkgdir->pkgs);
+                if (percent < 10) {
+                    msgn(2, _(" Omiting '%s' descriptions "
+                              "(%d - %.1lf%% only)..."),
+                         lang, dbh->npackages, percent);
+                    tndb_unlink(dbh->db);
+                    tndb_close(dbh->db);
+                    dbh->db = NULL;
+                }
+            }
+        }
+    }
+    return 1;
+}
 
 
 int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
@@ -541,7 +629,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     msgn_f(1, _("Writing %s..."), vf_url_slim_s(paths.path, 0));
 
     do_unlink(paths.path);
-    db = tndb_creat(paths.path, TNDB_NOHASH | TNDB_SIGN_DIGEST);
+    db = tndb_creat(paths.path, PNDIR_COMPRLEVEL,
+                    TNDB_NOHASH | TNDB_SIGN_DIGEST);
     if (db == NULL) {
         logn(LOGERR, "%s: %m\n", paths.path);
 		nerr++;
@@ -580,66 +669,21 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         n_buf_clean(nbuf);
         if (pkg_store(pkg, nbuf, pkgdir->depdirs, pkg_st_flags))
             tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
-
+        
         if (i % 1000 == 0)
             mem_info(-1, "pndir_save");
-        
+
         if (save_descr && (pkgu = pkg_info(pkg))) {
-            tn_array *langs = pkguinf_langs(pkgu);
-            int j;
-
-            for (j=0; j < n_array_size(langs); j++) {
-                struct db_dscr *dbh;
-                char *lang;
-                
-                lang = n_array_nth(langs, j);
-                if (n_hash_size(pkgdir->avlangs_h) > 0 &&
-                    !n_hash_exists(pkgdir->avlangs_h, lang)) {
-                    continue;
-                }
-
-                if ((dbh = n_hash_get(db_dscr_h, lang)) == NULL) {
-                    struct tndb *tmpdb;
-                    char path[PATH_MAX];
-                    char *dot = ".";
-                    char *langstr = lang;
-                    
-                    if (strcmp(lang, "C") == 0) {
-                        langstr = "";
-                        dot = "";
-                    }
-
-                    snprintf(path, sizeof(path), paths.fmt_dscr, dot, langstr);
-                    
-                    tmpdb = tndb_creat(path, TNDB_SIGN_DIGEST);
-                    if (tmpdb == NULL) {
-                        logn(LOGERR, "%s: %m\n", path);
-                        nerr++;
-                        goto l_close;
-                    }
-                    dbh = n_malloc(sizeof(*dbh));
-                    dbh->db = tmpdb;
-                    dbh->npackages = 0;
-                    n_hash_insert(db_dscr_h, lang, dbh);
-                }
-                
-                n_buf_clean(nbuf);
-                if (pkguinf_store(pkgu, nbuf, lang)) {
-                    tndb_put(dbh->db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
-                    dbh->npackages++;
-                }
-                n_buf_clean(nbuf);
-            }
+            int v;
+            
+            v = pndir_save_pkginfo(i, pkgu, pkgdir, db_dscr_h, key, klen, nbuf,
+                                   paths.fmt_dscr);
             pkguinf_free(pkgu);
+            if (!v) {
+                nerr++;
+                goto l_close;
+            }
         }
-        
-        
-#if 0                           /* debug stuff */
-        if (i % 200 == 0) {
-            printf("%d. ", i);
-            mem_info(-10, "i");
-        }
-#endif        
     }
 
  l_close:
@@ -660,13 +704,20 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
                 continue;
             
             dbh = n_hash_get(db_dscr_h, lang);
+            if (dbh->db == NULL) /* closed earlier */
+                continue;
+            
             /* less than 20% of descriptions in language => don't save */
             if ((dbh->npackages * 100) / n_array_size(pkgdir->pkgs) < 20) {
+                msgn(2, _(" Skipping '%s' descriptions (%d - %.1lf%% only)..."),
+                     lang, dbh->npackages,
+                     (dbh->npackages * 100.0) / n_array_size(pkgdir->pkgs));
                 tndb_unlink(dbh->db);
                 
             } else {
                 const char *p = vf_url_slim_s(tndb_path(dbh->db), 0);
-                msgn(2, _(" Writing descriptions %s..."), p);
+                msgn(2, _(" Writing %d '%s' descriptions %s..."),
+                     dbh->npackages, lang, p);
             }
             tndb_close(dbh->db);
             dbh->db = NULL;

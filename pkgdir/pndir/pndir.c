@@ -234,7 +234,7 @@ int open_dscr(struct pndir *idx, time_t ts, const char *lang)
     if (!n_hash_exists(idx->db_dscr_h, lang)) {
         struct tndb *db;
         
-        msgn(0, _("Opening %s..."), vf_url_slim_s(tmpath, 0));
+        msgn(3, _("Opening %s..."), vf_url_slim_s(tmpath, 0));
         if ((db = do_dbopen(tmpath, idx->_vf->vf_mode, NULL))) {
             if (tndb_verify(db))
                 n_hash_insert(idx->db_dscr_h, lang, db);
@@ -339,7 +339,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     if ((flags & PKGDIR_OPEN_REFRESH) == 0) 
         vfmode |= VFM_CACHE;
 
-    printf("do_open %s\n", pkgdir->idxpath);
+    DBGF("do_open %s\n", pkgdir->idxpath);
     if (!pndir_open(&idx, pkgdir->idxpath, vfmode, flags))
         return 0;
     

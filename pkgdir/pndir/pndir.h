@@ -17,6 +17,8 @@
 /* packages.dir digest */
 #define TNIDX_DIGEST_SIZE DIGEST_SIZE_SHA1
 
+#define PNDIR_COMPRLEVEL 3
+
 struct pndir_digest {
     struct vfile  *vf;
     char          md[TNIDX_DIGEST_SIZE + 1];
