@@ -451,7 +451,7 @@ struct pkgroup_idx *pkgroup_idx_restore(tn_buf_it *it, unsigned flags)
 int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr) 
 {
     char               **langs, **groups;
-    int                i, ngroups, nlangs = 0;
+    int                i, ngroups = 0, nlangs = 0, rc;
     struct pkgroup     *gr = NULL;
     Header             h;
 
@@ -459,7 +459,7 @@ int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr)
     if ((langs = rpmhdr_langs(h)) == NULL)
         return 0;
 
-    headerGetRawEntry(h, RPMTAG_GROUP, 0, (void*)&groups, &ngroups);
+    rc = headerGetRawEntry(h, RPMTAG_GROUP, 0, (void*)&groups, &ngroups);
 
     i = 0;
     while (langs[i++] != NULL)
@@ -469,7 +469,9 @@ int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr)
 
     n_assert(nlangs >= ngroups);
 
+    DBGF("ngroups %d, %d, %d\n", ngroups, nlangs, rc);
     for (i=0; i < ngroups; i++) {
+        DBGF("   gr[%d of %d] %s\n", i, ngroups, groups[i]);
         if (langs[i] == NULL)
             break;
         
@@ -547,17 +549,24 @@ static const char *find_tr(const char *lang, const struct pkgroup *gr)
 const char *pkgroup(struct pkgroup_idx *idx, int groupid) 
 {
     struct pkgroup *gr, tmpgr;
-    const char *lang;
+    const char *lang, *group = NULL;
         
     tmpgr.id = groupid;
     if ((gr = n_array_bsearch(idx->arr, &tmpgr)) == NULL)
         return NULL;
 
     if (gr->trs == NULL)
-        return gr->name;
+        group = gr->name;
     
-    lang = lc_messages_lang();
-    return find_tr(lang, gr);
+    else {
+        lang = lc_messages_lang();
+        group = find_tr(lang, gr);
+    }
+
+    if (group)
+        return _(group);
+
+    return group;
 }
 
 static int pkgroupid(struct pkgroup_idx *idx, const char *name) 
