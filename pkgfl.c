@@ -30,7 +30,6 @@
 #include "pkg.h"
 #include "pkgfl.h"
 #include "depdirs.h"
-#include "h2n.h"
 
 #define obstack_chunk_alloc n_malloc
 #define obstack_chunk_free  n_free

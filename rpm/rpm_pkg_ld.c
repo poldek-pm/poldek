@@ -234,7 +234,6 @@ static int valid_fname(const char *fname, mode_t mode, const char *pkgname)
 
 
 /* -1 on error  */
-static
 int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
 {
     int t1, t2, t3, t4, c1, c2, c3, c4;

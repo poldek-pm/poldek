@@ -15,6 +15,8 @@ tn_array *rpm_capreqs_ldhdr(tn_array *arr, const Header h, int crtype);
 
 #endif
 
+int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname);
+
 struct pkg *pkg_ldrpmhdr(Header h, const char *fname, unsigned fsize,
                          unsigned ldflags);
 

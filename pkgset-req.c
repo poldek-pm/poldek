@@ -40,8 +40,6 @@ static
 int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
                    struct pkg *suspkgs[], int npkgs);
 
-int pkgset_verify_conflicts(struct pkgset *ps, int strict);
-
 
 struct reqpkg *reqpkg_new(struct pkg *pkg, uint8_t flags, int nadds)
 {
@@ -92,33 +90,34 @@ void visit_badreqs(struct pkg *pkg, int deep, int verb)
 }
 
 static 
-void mark_badreqs(struct pkgset *ps) 
+void mark_badreqs(struct pkgset *ps, int verb) 
 {
     int i, deep = 1;
 
-    if (ps->flags & PSVERIFY_DEPS)
+    if (verb)
         msg(2, "Packages with unsatisfied dependencies:\n");
+    
     for (i=0; i<n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         if (pkg_has_badreqs(pkg)) {
             ps->nerrors++;
             pkg_clr_badreqs(pkg);
-            visit_badreqs(pkg, deep, ps->flags & PSVERIFY_DEPS);
+            visit_badreqs(pkg, deep, verb);
         }
     }
 }
 
 
 
-int pkgset_verify_deps(struct pkgset *ps, int strict)
+int pkgset_verify_deps(struct pkgset *ps, int strict, int verb)
 {
     int i, j, nerrors = 0;
 
 
-    if (ps->flags & PSVERIFY_DEPS)
+    if (verb)
         msgn(1, _("\nVerifying dependencies..."));
     
-    for (i=0; i<n_array_size(ps->pkgs); i++) {
+    for (i=0; i < n_array_size(ps->pkgs); i++) {
         struct pkg *pkg;
 
         pkg = n_array_nth(ps->pkgs, i);
@@ -130,7 +129,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
                                    (tn_fn_cmp)reqpkg_cmp);
 
         msg(4, "%d. %s\n", i+1, pkg_snprintf_s(pkg));
-        for (j=0; j<n_array_size(pkg->reqs); j++) {
+        for (j=0; j < n_array_size(pkg->reqs); j++) {
             struct pkg *pkgsbuf[1024], **suspkgs;
             int nsuspkgs = 1024;
             struct capreq *req;
@@ -152,7 +151,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
             nerrors++;
             if (verbose > 3)
                 msg(4, " req %-35s --> NOT FOUND\n", capreq_snprintf_s(req));
-            else if (ps->flags & PSVERIFY_DEPS)
+            else if (verb)
                 logn(LOGERR, _("%s: req %s not found"), pkg_snprintf_s(pkg),
                     capreq_snprintf_s(req));
             pkg_set_badreqs(pkg);
@@ -160,7 +159,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
             
         l_err_match:
             nerrors++;
-            if (verbose < 3 && (ps->flags & PSVERIFY_DEPS))
+            if (verb && verbose < 3)
                 logn(LOGERR, _("%s: req %s not matched"), pkg_snprintf_s(pkg),
                     capreq_snprintf_s(req));
             
@@ -169,11 +168,11 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
     }
 
     if (nerrors)
-        mark_badreqs(ps);
-    else if (ps->flags & PSVERIFY_DEPS)
+        mark_badreqs(ps, verb);
+    else if (verb)
         msgn(2, _("No unsatisfied dependencies detected -- OK"));
 
-    if (nerrors && (ps->flags & PSVERIFY_DEPS)) 
+    if (nerrors && verb) 
         msgn(1, _("%d unsatisfied dependencies, %d packages cannot be installed"),
             nerrors, ps->nerrors);
 
@@ -289,12 +288,14 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
             capreq_set_satisfied(req);
             msg(4, " req %-35s --> RPMLIB_CAP\n", capreq_snprintf_s(req));
         }
-            
+#if 0
+DUPA        
         if (!matched && (ps->flags & (PSMODE_VERIFY | PSMODE_MKIDX))) {
             matched = 1;
             logn(LOGWARN, "%s: not found (poldek needs to be linked with newer"
                  " rpmlib)\n", capreq_snprintf_s(req));
         }
+#endif        
         
         *suspkgs = NULL;
         *npkgs = 0;
@@ -437,7 +438,7 @@ int cnflpkg_cmp(struct cnflpkg *p1, struct cnflpkg *p2)
 }
 
 
-int pkgset_verify_conflicts(struct pkgset *ps, int strict) 
+int pkgset_verify_conflicts(struct pkgset *ps, int strict, int verb) 
 {
     int i, j;
     
@@ -470,7 +471,7 @@ int pkgset_verify_conflicts(struct pkgset *ps, int strict)
         }
     }
 
-    if (verbose > 1 && (ps->flags & PSVERIFY_CNFLS)) {
+    if (verb && verbose > 1) {
         int j;
         for (i=0; i<n_array_size(ps->pkgs); i++) {
             struct pkg *pkg = n_array_nth(ps->pkgs, i);

@@ -39,7 +39,7 @@ struct pkgset {
 };
 
 int packages_order(tn_array *pkgs, tn_array **ordered_pkgs);
-int pkgset_order(struct pkgset *ps);
+int pkgset_order(struct pkgset *ps, int verbose);
 
 #define INSTS_INSTALL         (1 << 0) /* rpm -i */
 #define INSTS_UPGRADE         (1 << 1) /* rpm -U */
@@ -91,7 +91,6 @@ struct inst_s {
 };
 
 void inst_s_init(struct inst_s *inst);
-#define inst_iflags_set(inst, flags) ((inst)->instflags & flags)
 #define inst_flags_set(inst, flags) ((inst)->flags & flags)
 
 /* if set then:
@@ -100,32 +99,23 @@ void inst_s_init(struct inst_s *inst);
  * - files with diffrent mode only not assumed as conflicts
  */
 #define PSVERIFY_MERCY        (1 << 0)
-
-#define PSVERIFY_DEPS         (1 << 1)
-#define PSVERIFY_CNFLS        (1 << 2)
-#define PSVERIFY_FILECNFLS    (1 << 3)
-
-#define PSUNIQ_PACKAGE_NAME   (1 << 4)  
 #define PSDBDIRS_LOADED       (1 << 5)
-
-#define PSMODE_VERIFY        (1 << 11)
-#define PSMODE_MKIDX         (1 << 12)
-#define PSMODE_INSTALL       (1 << 13)
-#define PSMODE_INSTALL_DIST  (1 << 14)
-
-#define PSMODE_UPGRADE       (1 << 15)
-#define PSMODE_UPGRADE_DIST  (1 << 16)
 
 struct pkgset *pkgset_new(unsigned psoptflags);
 void pkgset_free(struct pkgset *ps);
 
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 
-int pkgset_setup(struct pkgset *ps, const char *pri_fpath);
+#define PSET_VERIFY_DEPS         (1 << 0)
+#define PSET_VERIFY_ORDER        (1 << 1)
+#define PSET_VERIFY_CNFLS        (1 << 2)
+#define PSET_VERIFY_FILECNFLS    (1 << 3)
+#define PSET_DO_UNIQ_PKGNAME     (1 << 4)  
+
+int pkgset_setup(struct pkgset *ps, unsigned flags, const char *pri_fpath);
 
 /* returns sorted list of packages, free it by n_array_free() */
 tn_array *pkgset_getpkgs(const struct pkgset *ps);
-
 
 tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname);
 struct pkg *pkgset_lookup_pkgn(struct pkgset *ps, const char *name);
@@ -155,7 +145,6 @@ int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst);
 int pkgset_install(struct pkgset *ps, struct inst_s *inst,
                    struct install_info *iinf);
 
-int pkgset_dump_marked_pkgs(struct pkgset *ps, const char *dumpfile, int bn);
 
 int pkgset_rpmprovides(const struct pkgset *ps, const struct capreq *req);
 
@@ -170,6 +159,8 @@ void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg);
 int pkgscore_match(struct pkgscore_s *psc, const char *mask);
 void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag);
 
+/* flags is INSTS_JUSTPRINT[_N] */
+int packages_dump(tn_array *pkgs, const char *path, unsigned flags);
 
 void packages_mark(tn_array *pkgs, unsigned flags_on, unsigned flags_off);
 #define packages_unmark_all(pkgs) packages_mark(pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK)

@@ -23,14 +23,12 @@
 #include <trurl/nstream.h>
 #include <trurl/nhash.h>
 
-#include <rpm/rpmlib.h>
 
 #include "i18n.h"
-#include "rpm/rpmhdr.h"
 #include "log.h"
 #include "pkgu.h"
-#include "h2n.h"
 #include "misc.h"
+#include "rpm/rpmhdr.h"
 
 struct pkguinf_i18n {
     char              *summary;

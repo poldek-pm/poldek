@@ -26,7 +26,6 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkgu.h"
-#include "h2n.h"
 #include "pkgroup.h"
 #include "misc.h"
 #include "rpm/rpmhdr.h"

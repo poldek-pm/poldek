@@ -48,7 +48,6 @@ libpoldek_a_SOURCES =  \
 	  usrset.c usrset.h		\
 	  install.c install.h	    	\
 	  conf.c conf.h	    		\
-	  h2n.h 			\
 	  dbpkg.c dbpkg.h		\
 	  dbpkgset.c dbpkgset.h         \
 	  split.c split.h		\

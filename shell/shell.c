@@ -796,7 +796,7 @@ int cmd_quit(struct cmdarg *cmdarg)
 static time_t mtime(const char *pathname) 
 {
     struct stat st;
-    printf("stat %s %d\n", pathname, stat(pathname, &st));
+    //printf("stat %s %d\n", pathname, stat(pathname, &st));
     if (stat(pathname, &st) != 0)
         return 0;
 
@@ -866,7 +866,8 @@ static struct pkgdir *load_installed_pkgdir(int reload)
         mtime_dbcache = mtime(dbcache_path);
         mtime_rpmdb = rpm_dbmtime(rpmdb_path);
         if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache)
-            dir = pkgdir_open(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE, "rpmdb");
+            dir = pkgdir_open_ext(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE, "rpmdb", 0,
+                                  lc_messages_lang());
     }
     
     if (dir == NULL)
@@ -926,8 +927,9 @@ static void save_installed_pkgdir(struct pkgdir *pkgdir)
     
     //printf("path = %s, %d, %d, %d\n", path, 
     //       mtime_rpmdb, pkgdir->ts, mtime_dbcache);
-    pkgdir_create_idx(pkgdir, RPMDBCACHE_PDIRTYPE, path,
-                      PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ);
+    pkgdir_save(pkgdir, RPMDBCACHE_PDIRTYPE, path,
+                PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
+                PKGDIR_CREAT_MINi18n);
 }
 
 

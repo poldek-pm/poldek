@@ -112,8 +112,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     arg = arg;
     switch (key) {
         case ARGP_KEY_INIT:
-            cmdarg->sh_s->pkgset->flags |= PSMODE_UPGRADE;
-            cmdarg->sh_s->pkgset->flags &= ~PSMODE_INSTALL;
+            //cmdarg->sh_s->pkgset->flags |= PSMODE_UPGRADE;
+            //cmdarg->sh_s->pkgset->flags &= ~PSMODE_INSTALL;
 
             cmdarg->sh_s->inst->flags &= ~(INSTS_UPGRADE | INSTS_INSTALL);
             cmdarg->sh_s->inst->flags |= INSTS_FOLLOW | INSTS_UPGRADE;
@@ -154,8 +154,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'I':
             cmdarg->sh_s->inst->flags |= INSTS_INSTALL;
             cmdarg->sh_s->inst->flags &= ~INSTS_UPGRADE;
-            cmdarg->sh_s->pkgset->flags |= PSMODE_INSTALL;
-            cmdarg->sh_s->pkgset->flags &= ~PSMODE_UPGRADE;
+            //cmdarg->sh_s->pkgset->flags |= PSMODE_INSTALL;
+            //cmdarg->sh_s->pkgset->flags &= ~PSMODE_UPGRADE;
             break;
 
 

@@ -52,8 +52,8 @@ int psreq_match_pkgs(const struct pkg *pkg, struct capreq *req, int strict,
 
 
 
-int pkgset_verify_deps(struct pkgset *ps, int strict);
-int pkgset_verify_conflicts(struct pkgset *ps, int strict);
+int pkgset_verify_deps(struct pkgset *ps, int strict, int verb);
+int pkgset_verify_conflicts(struct pkgset *ps, int strict, int verb);
 
 tn_array *pspkg_obsoletedby(struct pkgset *ps, struct pkg *pkg, int bymarked);
 #endif /* POLDEK_PSREQ_H */

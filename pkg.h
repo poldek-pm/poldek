@@ -11,10 +11,11 @@
 #include "pkgu.h"
 
 
-//#define PKG_HAS_CAPS        (1 << 1)
+#define PKG_NEVR_ALLOCATED    (1 << 1)
 //#define PKG_HAS_REQS        (1 << 2)
-#define PKG_HAS_CNFLS       (1 << 3)
-#define PKG_HAS_FL          (1 << 4)
+//#define PKG_HAS_CNFLS       (1 << 3)
+//#define PKG_HAS_FL          (1 << 4)
+
 #define PKG_HAS_PKGUINF     (1 << 5)
 
 #define PKG_HAS_SELFCAP     (1 << 6)
@@ -97,13 +98,17 @@ struct pkgdir;
 
 struct pkg {
     uint32_t     flags;
-    uint32_t     size;        /* installed size    */
+    uint32_t     size;        /* install size      */
     uint32_t     fsize;       /* package file size */
     uint32_t     btime;       /* build time        */
-    int32_t      epoch;
+    
+    
     char         *name;
+    int32_t      epoch; 
     char         *ver;
     char         *rel;
+
+    char         *nevr;
     char         *arch;
     char         *os;
     
@@ -139,7 +144,7 @@ struct pkg {
     void         (*free)(void*); /* self free()  */
 
     int32_t      _buf_size;
-    char         _buf[0];     /* private, store all string members */
+    char         _buf[0];  /* private, store all string members */
 };
 
 struct pkg *pkg_new_ext(const char *name, int32_t epoch,
@@ -170,7 +175,14 @@ struct pkg *pkg_link(struct pkg *pkg);
 /* add self name-evr to caps */
 int pkg_add_selfcap(struct pkg *pkg);
 
-int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
+//int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
+
+static inline int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2) 
+{
+    return strcmp(p1->name, p2->name);
+}
+
+
 int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2);

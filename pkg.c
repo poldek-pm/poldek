@@ -26,7 +26,6 @@
 #include "misc.h"
 #include "capreq.h"
 #include "pkg.h"
-#include "h2n.h"
 #include "pkgdir/pkgdir.h"
 #include "pkgroup.h"
 
@@ -212,12 +211,6 @@ struct pkg *pkg_link(struct pkg *pkg)
     //printf("link %s (%d)\n", pkg_snprintf_s(pkg), pkg->_refcnt);
     return pkg;
 }
-
-int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2) 
-{
-    return strcmp(p1->name, p2->name);
-}
-
 
 int pkg_strncmp_name(const struct pkg *p1, const struct pkg *p2)
 {
@@ -905,7 +898,7 @@ tn_array *pkg_other_fl(const struct pkg *pkg)
 {
     tn_array *fl = NULL;
     
-    if (pkg->load_nodep_fl && pkg->pkgdir_data)
+    if (pkg->load_nodep_fl)
         fl = pkg->load_nodep_fl(pkg, 
                                 pkg->pkgdir_data, 
                                 pkg->pkgdir ?

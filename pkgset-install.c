@@ -1762,11 +1762,12 @@ static void print_install_summary(struct upgrade_s *upg)
 }
 
 
-static int check_holds(struct pkgset *ps, struct upgrade_s *upg)
+static int verify_holds(struct upgrade_s *upg)
 {
     int i, j, rc = 1;
 
-    if ((ps->flags & (PSMODE_UPGRADE | PSMODE_UPGRADE_DIST)) == 0)
+
+    if ((upg->inst->flags & INSTS_UPGRADE) == 0)
         return 1;
 
     if (upg->inst->hold_patterns == NULL)
@@ -1946,8 +1947,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
 
 
     if (inst->flags & INSTS_JUSTPRINTS) {
-        rc = pkgset_dump_marked_pkgs(ps, inst->dumpfile,
-                                     inst->flags & INSTS_JUSTPRINT_N);
+        rc = packages_dump(ps->pkgs, inst->dumpfile, inst->flags);
         return rc;
     }
 
@@ -1962,7 +1962,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
 
         rc = packages_fetch(upg->install_pkgs, destdir, inst->fetchdir ? 1 : 0);
 
-    } else if ((inst->flags & INSTS_NOHOLD) || (rc = check_holds(ps, upg))) {
+    } else if ((inst->flags & INSTS_NOHOLD) || (rc = verify_holds(upg))) {
         int is_test = inst->flags & INSTS_RPMTEST;
 
         if (!is_test && (inst->flags & INSTS_CONFIRM_INST) && inst->ask_fn) {

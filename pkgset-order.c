@@ -30,7 +30,6 @@
 #include "pkgset-req.h"
 
 
-#define ps_verify_mode(ps) ((ps)->flags & PSMODE_VERIFY)
 
 static void mapfn_clean_pkg_color(struct pkg *pkg) 
 {
@@ -225,11 +224,12 @@ int packages_order(tn_array *pkgs, tn_array **ordered_pkgs)
     return vs.nerrors;
 }
 
-int pkgset_order(struct pkgset *ps) 
+
+int pkgset_order(struct pkgset *ps, int verb) 
 {
     int nloops;
                    
-    if (ps_verify_mode(ps))
+    if (verb)
         msgn(1, _("\nVerifying (pre)requirements..."));
 
     if (ps->ordered_pkgs != NULL)
@@ -244,12 +244,12 @@ int pkgset_order(struct pkgset *ps)
 						 "%d prerequirement loops detected",
 						 nloops), nloops);
 		
-    } else if (ps_verify_mode(ps)) {
+    } else if (verb) {
         msgn(1, _("No loops -- OK"));
     }
         	
     
-    if (verbose > 2 && ps_verify_mode(ps)) {
+    if (verb && verbose > 2) {
         int i;
             
         msg(2, "Installation order:\n");

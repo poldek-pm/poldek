@@ -646,7 +646,7 @@ tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
 {
     tn_array    *r_langs;
     const char  **langs, **p;
-
+    int         has_C = 0;
     
     if (lc_lang == NULL || n_array_size(avlangs) == 0)
         return NULL;
@@ -662,6 +662,8 @@ tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
         int    len;
 
         if (n_array_bsearch(avlangs, *p)) {
+            if (strcmp(*p, "C") == 0)
+                has_C = 1;
             n_array_push(r_langs, n_strdup(*p));
             p++;
             continue;
@@ -676,6 +678,8 @@ tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
                 *q = '\0';
                 
                 if (n_array_bsearch(avlangs, l)) {
+                    if (strcmp(*p, "C") == 0)
+                        has_C = 1;
                     n_array_push(r_langs, n_strdup(l));
                     continue;
                 }
@@ -687,6 +691,9 @@ tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
     }
 
     n_str_tokl_free(langs);
+
+    if (!has_C) 
+        n_array_push(r_langs, n_strdup("C"));
     
     if (n_array_size(r_langs) == 0) {
         n_array_free(r_langs);

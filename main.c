@@ -151,6 +151,7 @@ struct args {
     tn_array  *pkgdef_sets;     /* -p ftp://ftp.zenek.net/PLD/tiny */
     
     unsigned   psflags;
+    unsigned   ps_setup_flags;
     struct inst_s inst;
     
     struct usrpkgset  *ups;
@@ -634,29 +635,29 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
             
         case OPT_VERIFY_DEPS:
-            argsp->psflags |= PSVERIFY_DEPS;
+            argsp->ps_setup_flags |= PSET_VERIFY_DEPS;
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
             break;
 
         case OPT_VERIFY_CNFLS:
-            argsp->psflags |= PSVERIFY_CNFLS;
+            argsp->ps_setup_flags |= PSET_VERIFY_CNFLS;
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
             break;
 
         case OPT_VERIFY_FILECNFLS:
-            argsp->psflags |= PSVERIFY_FILECNFLS;
+            argsp->ps_setup_flags |= PSET_VERIFY_FILECNFLS;
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
             break;
 
         case OPT_VERIFY_ALL:
-            argsp->psflags |= PSVERIFY_DEPS | PSVERIFY_CNFLS |
-                PSVERIFY_FILECNFLS;
+            argsp->ps_setup_flags |= PSET_VERIFY_DEPS | PSET_VERIFY_CNFLS |
+                PSET_VERIFY_FILECNFLS;
             
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
@@ -668,7 +669,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (argsp->mjrmode != MODE_SHELL)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_SHELL;
-            argsp->psflags |= PSMODE_UPGRADE;
             argsp->inst.flags |= INSTS_UPGRADE;
             break;
 
@@ -688,7 +688,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_MKIDX:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_MKIDX;
-            argsp->psflags |= PSMODE_MKIDX;
             //argsp->idx_path = prepare_path(arg);
             if (arg)
                 argsp->src_mkidx = source_new(NULL, arg, NULL);
@@ -715,7 +714,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_INSTALLDIST;
             argsp->inst.rootdir = prepare_path(arg);
-            argsp->psflags |= PSMODE_INSTALL | PSMODE_INSTALL_DIST;
             argsp->inst.flags |= INSTS_INSTALL;
             break;
             
@@ -727,7 +725,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             else if (argsp->inst.rootdir == NULL)
                 argsp->inst.rootdir = "/";
             
-            argsp->psflags |= PSMODE_UPGRADE | PSMODE_UPGRADE_DIST;
             argsp->inst.flags |= INSTS_UPGRADE;
             break;
 
@@ -779,12 +776,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'i':
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_INSTALL;
-            argsp->psflags |= PSMODE_INSTALL;
             argsp->inst.flags |= INSTS_INSTALL;
             break;
 
         case OPT_INST_UNIQNAMES:
-            argsp->psflags |= PSUNIQ_PACKAGE_NAME;
+            argsp->ps_setup_flags |= PSET_DO_UNIQ_PKGNAME;
             break;
             
         case OPT_INST_DOWNGRADE:
@@ -799,7 +795,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'u':
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UPGRADE;
-            argsp->psflags |= PSMODE_UPGRADE;
             argsp->inst.flags |= INSTS_UPGRADE;
             break;
 
@@ -1283,7 +1278,7 @@ void parse_options(int argc, char **argv)
     }
     
     if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0)
-        args.psflags |= PSMODE_VERIFY;
+        args.ps_setup_flags |= PSET_VERIFY_DEPS | PSET_VERIFY_ORDER;
 
     args.has_pkgdef = n_array_size(args.pkgdef_sets) +
         n_array_size(args.pkgdef_defs) +
@@ -1343,9 +1338,9 @@ void parse_options(int argc, char **argv)
         }
     }
 
-    if ((args.psflags & PSUNIQ_PACKAGE_NAME) == 0)
+    if ((args.ps_setup_flags & PSET_DO_UNIQ_PKGNAME) == 0)
         if (conf_get_bool(htcnf, "unique_package_names", 0))
-            args.psflags |= PSUNIQ_PACKAGE_NAME;
+            args.psflags |= PSET_DO_UNIQ_PKGNAME;
     
     if ((v = conf_get(htcnf, "cachedir", NULL)))
         args.inst.cachedir = v;
@@ -1469,7 +1464,7 @@ static struct pkgset *load_pkgset(int ldflags)
     }
     
     //exit(0);    
-    pkgset_setup(ps, args.split_conf.conf);
+    pkgset_setup(ps, args.ps_setup_flags, args.split_conf.conf);
     
     return ps;
 }

@@ -2,10 +2,6 @@
 #ifndef  POLDEK_SHELL_H
 #define  POLDEK_SHELL_H
 
-#define SHPKG_INSTALL   (1 << 0)
-#define SHPKG_UNINSTALL (1 << 1)
-
-
 #include <argp.h>
 #include <time.h>
 #include <signal.h>
@@ -13,10 +9,6 @@
 #include "pkg.h"
 #include "log.h"
 #include "poldek_term.h"
-
-
-#define SHPKG_INSTALL   (1 << 0)
-#define SHPKG_UNINSTALL (1 << 1)
 
 struct shpkg {
     struct pkg  *pkg;

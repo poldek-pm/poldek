@@ -392,78 +392,59 @@ static void mapfn_clean_pkg_color(struct pkg *pkg)
 #endif
 
 
-static void set_priorities(tn_array *pkgs, const char *pri_fpath) 
-{
-    if (pri_fpath == NULL) {
-        pri_fpath = "/etc/poldek-pkgsplit.conf";
-        if (access(pri_fpath, R_OK) != 0) 
-            pri_fpath = "/etc/poldek-pri.conf";
-    }
-
-    if (access(pri_fpath, R_OK) == 0) 
-        packages_set_priorities(pkgs, pri_fpath);
-}
-
-
-int pkgset_setup(struct pkgset *ps, const char *pri_fpath) 
+int pkgset_setup(struct pkgset *ps, unsigned flags, const char *pri_fpath) 
 {
     int n;
     int strict;
+    int v = verbose;
+
     
     strict = ps->flags & PSVERIFY_MERCY ? 0 : 1;
 
     n = n_array_size(ps->pkgs);
     n_array_sort(ps->pkgs);
     
-    if ((ps->flags & PSMODE_MKIDX) == 0) {
-        if (ps->flags & PSUNIQ_PACKAGE_NAME) {
-            n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_srcpri);
-            n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_uniq);
+    if (flags & PSET_DO_UNIQ_PKGNAME) {
+        n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_srcpri);
+        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_uniq);
             
-        } else {
-            n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev_srcpri);
-            n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
-        }
-        
-        
-        if (n != n_array_size(ps->pkgs)) {
-            n -= n_array_size(ps->pkgs);
-            msgn(1, ngettext(
-                "Removed %d duplicate package from available set",
-                "Removed %d duplicate packages from available set", n), n);
-        }
+    } else {
+        n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev_srcpri);
+        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_uniq);
     }
-    
+        
+        
+    if (n != n_array_size(ps->pkgs)) {
+        n -= n_array_size(ps->pkgs);
+        msgn(1, ngettext(
+                 "Removed %d duplicate package from available set",
+                 "Removed %d duplicate packages from available set", n), n);
+    }
         
     pkgset_index(ps);
     mem_info(1, "MEM after index");
 
-    /*
-      don't incude pkg conflicts based on file conflicts ("bastards")
-      to created index because it's broke index diffs 
-    */
-    if ((ps->flags & PSMODE_MKIDX) == 0) {
-        int v = verbose;
-        
-        if (ps->flags & PSVERIFY_FILECNFLS) 
-            msgn(1, _("\nVerifying files conflicts..."));
-        else
-            verbose = -1;
-        
-        file_index_find_conflicts(&ps->file_idx, strict);
-
-        verbose = v;
-    }
-
-    pkgset_verify_deps(ps, strict);
+    
+    v = verbose;    
+    if (flags & PSET_VERIFY_FILECNFLS) 
+        msgn(1, _("\nVerifying files conflicts..."));
+    else
+        verbose = -1;
+    
+    file_index_find_conflicts(&ps->file_idx, strict);
+    verbose = v;
+    
+    pkgset_verify_deps(ps, strict, flags & PSET_VERIFY_DEPS);
     mem_info(1, "MEM after verify deps");
 
-    if (ps->flags & PSVERIFY_CNFLS)
+    if (flags & PSET_VERIFY_CNFLS)
         msgn(1, _("\nVerifying packages conflicts..."));
-    pkgset_verify_conflicts(ps, strict);
+    pkgset_verify_conflicts(ps, strict, flags & PSET_VERIFY_CNFLS);
 
-    set_priorities(ps->pkgs, pri_fpath);
-    pkgset_order(ps);
+    if (pri_fpath && access(pri_fpath, R_OK) == 0) 
+        packages_set_priorities(ps->pkgs, pri_fpath);
+
+    pkgset_order(ps, flags & PSET_VERIFY_ORDER);
     mem_info(1, "MEM after order");
 
     set_capreq_allocfn(n_malloc, n_free, NULL, NULL);
@@ -520,6 +501,7 @@ static void visit_mark_reqs(struct pkg *parent_pkg, struct pkg *pkg, int deep)
         }
     }
 }
+
 
 static 
 int mark_dependencies(struct pkgset *ps, unsigned instflags) 
@@ -723,33 +705,7 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
     return nerr == 0;
 }
 
-#if 0
-static void mapfn_mark(struct pkg *pkg, unsigned *flags) 
-{
-    n_assert(flags);
-    
-    if (*flags & PS_MARK_OFF_ALL) {
-        if ((*flags & PS_MARK_ON_INTERNAL) && pkg_is_marked(pkg))
-            pkg_mark_i(pkg);
-        pkg_unmark(pkg);
-        
-    } else if (*flags & PS_MARK_OFF_DEPS) {
-        if ((*flags & PS_MARK_ON_INTERNAL)) 
-            if (pkg_is_dep_marked(pkg))
-                pkg_mark_i(pkg);
 
-        if (pkg_is_dep_marked(pkg))
-            pkg_unmark(pkg);
-    }
-}
-
-void pkgset_mark(struct pkgset *ps, unsigned flags) 
-{
-    if (ps->pkgs) 
-        n_array_map_arg(ps->pkgs, (tn_fn_map2) mapfn_mark, &flags);
-    
-}
-#endif
 
 struct flags_s {
     unsigned flags_on;
@@ -928,14 +884,18 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     int i, nerr = 0, nodeps = 0, npatterns = 0;
 
     packages_mark(ps->pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK);
-    //pkgset_mark(ps, PS_MARK_OFF_ALL);
 
+#if 0
+    DUPA    
     if (ps->flags & PSMODE_INSTALL_DIST)
         nodeps = inst->flags & INSTS_NODEPS;
     else
         nodeps = 1;
-    
-    for (i=0; i<n_array_size(ups->pkgdefs); i++) {
+#endif
+ 
+    nodeps = inst->flags & INSTS_NODEPS; 
+ 
+    for (i=0; i < n_array_size(ups->pkgdefs); i++) {
         struct pkgdef *pdef = n_array_nth(ups->pkgdefs, i);
         if (pdef->tflags & (PKGDEF_REGNAME | PKGDEF_PKGFILE)) { 
             if (!pkgset_mark_pkgdef_exact(ps, pdef, nodeps))
@@ -1074,23 +1034,24 @@ tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname)
     return pkgs;
 }
 
-int pkgset_dump_marked_pkgs(struct pkgset *ps, const char *dumpfile, int bn)
+
+int packages_dump(tn_array *pkgs, const char *path, unsigned flags)
 {
     int i;
     FILE *stream = stdout;
 
-    if (dumpfile) {
-        if ((stream = fopen(dumpfile, "w")) == NULL) {
-            logn(LOGERR, "fopen %s: %m", dumpfile);
+    if (path) {
+        if ((stream = fopen(path, "w")) == NULL) {
+            logn(LOGERR, "fopen %s: %m", path);
             return 0;
         }
         fprintf(stream, "# Packages to install (in the right order)\n");
     }
     
-    for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
         if (pkg_is_marked(pkg)) {
-            if (bn)
+            if (flags & INSTS_JUSTPRINT_N)
                 fprintf(stream, "%s\n", pkg->name);
             else
                 fprintf(stream, "%s\n", pkg_filename_s(pkg));
@@ -1099,5 +1060,6 @@ int pkgset_dump_marked_pkgs(struct pkgset *ps, const char *dumpfile, int bn)
     
     if (stream != stdout)
         fclose(stream);
+    
     return 1;
 }
