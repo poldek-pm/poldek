@@ -109,7 +109,7 @@ static int do_ftp_cmd(int sock, char *fmt, va_list args)
 
 
     snprintf(tmp_fmt, sizeof(tmp_fmt), "%s\r\n", fmt);
-    n = vsnprintf(buf, sizeof(buf), tmp_fmt, args);
+    n = n_vsnprintf(buf, sizeof(buf), tmp_fmt, args);
 
     vftp_errno = 0;
     if (*vftp_verbose > 1)
