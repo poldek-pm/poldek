@@ -8,17 +8,16 @@
 #include "pkg.h"
 #include "log.h"
 #include "poldek_term.h"
-
 #include "dent.h"
 
 #define POCLIDEK_INSTALLEDDIR     "/installed"
 #define POCLIDEK_AVAILDIR         "/all-avail"
 
-#define POLDEKCLI_CONFIG_LOADED   (1 << 0)
-#define POLDEKCLI_PACKAGES_LOADED (1 << 1)
-#define POLDEKCLI_CMDL            (1 << 2)
+#define POLDEKCLI_SKIPINSTALLED   (1 << 0)
+#define POLDEKCLI_CONFIG_LOADED   (1 << 5)
+#define POLDEKCLI_PACKAGES_LOADED (1 << 6)
+#define POLDEKCLI_CMDL            (1 << 7)
 
-extern int shOnTTY;
 struct poclidek_ctx;
 struct poclidek_command;
 
@@ -29,7 +28,7 @@ struct poclidek_ctx {
     tn_array            *pkgs_installed;   /* array of installed pkgs  */
     
     time_t         ts_instpkgs; /* instpkgs timestamp */
-    struct pkgdir  *dbpkgdir;   /* db packages        */
+    struct pkgdir       *dbpkgdir;   /* db packages        */
 
     unsigned            flags;
 
@@ -44,7 +43,7 @@ struct poclidek_ctx {
 
 int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx);
 void poclidek_destroy(struct poclidek_ctx *cctx);
-int poclidek_load_packages(struct poclidek_ctx *cctx, int skip_installed);
+int poclidek_load_packages(struct poclidek_ctx *cctx);
 
 int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, 
                   int argc, const char **argv);
@@ -115,14 +114,13 @@ struct poclidek_cmd {
 };
 
 
-
+int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd);
 int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
 
 void poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path);
 
 struct install_info;
 void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct install_info *iinf);
-
 
 
 int poclidek_save_installedcache(struct poclidek_ctx *cctx,

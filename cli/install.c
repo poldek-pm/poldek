@@ -18,6 +18,7 @@
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nmalloc.h>
+#include "sigint/sigint.h"
 
 #include "i18n.h"
 #include "log.h"
@@ -55,7 +56,8 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_INST_NOIGNORE         (OPT_GID + 27)
 #define OPT_INST_GREEDY           'G'
 #define OPT_INST_UNIQNAMES        'Q'
-#define OPT_INST_PROMOTEEPOCH     (OPT_GID + 28)
+#define OPT_MERCY                  (OPT_GID + 28)
+#define OPT_PROMOTEEPOCH           (OPT_GID + 29)
 
 static struct argp_option options[] = {
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
@@ -75,6 +77,13 @@ static struct argp_option options[] = {
 
 {"nodeps", OPT_INST_NODEPS, 0, 0,
  N_("Install packages with broken dependencies"), OPT_GID },
+
+{"mercy", OPT_MERCY, 0, 0, N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
+
+{"promoteepoch", OPT_PROMOTEEPOCH, 0, 0,
+     N_("Promote non-existent requiremet's epoch to "
+        "package's one (rpm < 4.2.1 behaviour)"), OPT_GID }, 
+                                           
 
 {"dump", OPT_INST_DUMP, "FILE", OPTION_ARG_OPTIONAL,
 N_("Just dump install marked package filenames to FILE (default stdout)"), OPT_GID },
@@ -108,21 +117,17 @@ static struct argp_option cmdl_options[] = {
      N_("Reinstall all packages under DIR as root directory"), OPT_GID - 90 },
 
     {0,0,0,0, N_("Installation switches:"), OPT_GID },
-    {"mercy", 'm', 0, 0, N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
-    {"promoteepoch", OPT_INST_PROMOTEEPOCH, 0, 0,
-         N_("Be tolerant for bugs which RPM tolerates"), OPT_GID},
-
-    {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
-    N_("Prevent packages listed from being upgraded if they are already installed."),
+{"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
+ N_("Prevent packages listed from being upgraded if they are already installed."),
      OPT_GID },
 {"nohold", OPT_INST_NOHOLD, 0, 0,
-N_("Do not hold any packages"), OPT_GID },
+ N_("Do not hold any packages"), OPT_GID },
 
 {"ignore", OPT_INST_IGNORE, "PACKAGE[,PACKAGE]...", 0,
-N_("Make packages listed invisible."), OPT_GID },
+ N_("Make packages listed invisible."), OPT_GID },
     
 {"noignore", OPT_INST_NOIGNORE, NULL, 0,
-N_("Make invisibled packages visible."), OPT_GID },    
+ N_("Make invisibled packages visible."), OPT_GID },    
 
     { 0, 0, 0, 0, 0, 0 },
 };
@@ -201,7 +206,7 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
         case 'U':
         case 'u':
         case 'i':
-            poldek_ts_setf(ts, POLDEK_TS_INSTALL);
+            poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "install");
             
             if (key == 'u' || key == 'U')
                 poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
@@ -212,6 +217,25 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             else if (key == OPT_INST_REINSTALL)
                 poldek_ts_setf(ts, POLDEK_TS_REINSTALL);
             break;
+
+        case OPT_INST_INSTDIST:
+            poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "install-dist");
+            poldek_ts_setf(ts, POLDEK_TS_DIST);
+            break;
+
+        case OPT_INST_REINSTDIST:
+            poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "reinstall-dist");
+            poldek_ts_setf(ts, POLDEK_TS_DIST);
+            poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
+            poldek_ts_setf(ts, POLDEK_TS_REINSTALL);
+            break;
+
+        case OPT_INST_UPGRDIST:
+            poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "upgrade-dist");
+            poldek_ts_setf(ts, POLDEK_TS_DIST);
+            poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
+            break;
+
 
         case OPT_INST_HOLD:
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_HOLD, 1);
@@ -253,9 +277,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case ARGP_KEY_INIT:
             break;
             
-        case 'm':
-            //cmdctx->cctx->pkgset->flags |= PSVERIFY_MERCY;
+        case OPT_MERCY:
+            ts->setop(ts, POLDEK_OP_VRFYMERCY, 1);
             break;
+
+        case OPT_PROMOTEEPOCH:
+            ts->setop(ts, POLDEK_OP_PROMOTEPOCH, 1);
+            
 
         case OPT_INST_NODEPS:
             ts->setop(ts, POLDEK_OP_NODEPS, 1);
@@ -287,7 +315,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 'I':
             poldek_ts_clrf(ts, POLDEK_TS_UPGRADE);
-            poldek_ts_setf(ts, POLDEK_TS_INSTALL);
             break;
 
         case OPT_INST_REINSTALL:
@@ -342,12 +369,13 @@ static int install(struct cmdctx *cmdctx)
     cctx = cmdctx->cctx;
     ts = cmdctx->ts;
     
-    poldek_ts_setf(ts, POLDEK_TS_INSTALL | POLDEK_TS_UPGRADE);
+    poldek_ts_set_type(ts, POLDEK_TSt_INSTALL, "install-cmd");
+    poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
     is_test = ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0);
 
     rc = poldek_ts_run(ts, is_test ? NULL : &iinf);
     
-    if (rc == 0) 
+    if (rc == 0 && !sigint_reached())
         msgn(1, _("There were errors"));
     
     if (!is_test && cmdctx->cctx->pkgs_installed)
@@ -366,11 +394,16 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
     dbgf_("%p->%p, %p->%p\n", rt->ts, rt->ts->hold_patterns,
           rt->ts->ctx->ts, rt->ts->ctx->ts->hold_patterns);
     
-    if (!poldek_ts_issetf(rt->ts, POLDEK_TS_INSTALL))
-        return 0;
+    if (poldek_ts_type(rt->ts) != POLDEK_TSt_INSTALL)
+        return OPGROUP_RC_NIL;
 
-    if (!poldek_load_sources(rt->ctx))
-        return 0;
+    if (!poldek_ts_issetf_all(rt->ts, POLDEK_TS_UPGRADEDIST)) {
+        if (poldek_ts_get_arg_count(rt->ts) == 0) {
+            logn(LOGERR, _("no packages specified"));
+            return OPGROUP_RC_ERROR | OPGROUP_RC_FINI;
+        }
+    }
+    
 
     rc = poldek_ts_run(rt->ts, NULL);
     return rc ? OPGROUP_RC_FINI : OPGROUP_RC_ERROR | OPGROUP_RC_FINI;

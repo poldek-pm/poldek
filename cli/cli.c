@@ -40,10 +40,6 @@
 #include "arg_packages.h"
 
 
-int shOnTTY = 0;
-
-static volatile sig_atomic_t shInCmd  = 0;
-
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
 
 static int argv_is_help(int argc, const char **argv);
@@ -51,17 +47,19 @@ static int argv_is_help(int argc, const char **argv);
 extern struct poclidek_cmd command_ls;
 extern struct poclidek_cmd command_install;
 extern struct poclidek_cmd command_uninstall;
-//extern struct poclidek_cmd command_get;
+extern struct poclidek_cmd command_get;
 extern struct poclidek_cmd command_search;
 extern struct poclidek_cmd command_desc;
 extern struct poclidek_cmd command_cd;
 extern struct poclidek_cmd command_pwd;
 extern struct poclidek_cmd command_external;
 extern struct poclidek_cmd command_help;
+extern struct poclidek_cmd command_alias;
 
 static struct poclidek_cmd *commands_tab[] = {
     &command_ls,
     &command_search,
+    &command_get,
     &command_desc,
     &command_install, 
     &command_uninstall,
@@ -69,6 +67,7 @@ static struct poclidek_cmd *commands_tab[] = {
     &command_pwd,
     &command_external,
     &command_help,
+    &command_alias,
     NULL
 };
 
@@ -176,27 +175,6 @@ static char *help_filter(int key, const char *text, void *input)
             n += n_snprintf(&buf[n], sizeof(buf) - n, "  %s\n",
                           sh_cmdctx->cmd->extra_help);
         
-#if 0
-		alias.cmd = sh_cmdctx->cmd;
-
-        if (n_array_bsearch_ex(cctx->aliases, &alias,
-                               (tn_fn_cmp)command_alias_cmd_cmp)) {
-           int i = 0;
-		   struct poclidek_cmd_alias *alias;
-
-            n += n_snprintf(&buf[n], sizeof(buf) - n, "%s",
-                            _("  Defined aliases:\n"));
-			
-            while (i < n_array_size(cctx->aliases)) {
-				alias = n_array_nth(cctx->aliases, i);
-				if (alias->cmd == sh_cmdctx->cmd)
-	                n += n_snprintf(&buf[n], sizeof(buf) - n,
-                                    "    %-16s  \"%s\"\n",
-                                    alias->name, alias->cmdline);
-				i++;
-            }
-        }
-#endif        
         if (n > 0) {
             p = n_malloc(n + 1);
             return memcpy(p, buf, n + 1);
@@ -241,7 +219,6 @@ int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
     
     if ((cmd->flags & COMMAND_NOHELP) && (cmd->flags & COMMAND_NOARGS) &&
         (cmd->flags & COMMAND_NOOPTS)) {
-        printf("run do_cmd_fn, NOHELP, etc\n");
         rc = cmd->do_cmd_fn(cmdctx);
         goto l_end;
     }
@@ -269,8 +246,6 @@ int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
     rc = cmd->do_cmd_fn(cmdctx);
 
  l_end:
-    shInCmd = 0;
-    
     if (cmd->destroy_cmd_arg_d && cmdctx->_data)
         cmd->destroy_cmd_arg_d(cmdctx->_data);
 
@@ -366,6 +341,25 @@ int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2)
     return strncmp(c1->name, c2->name, strlen(c2->name));
 }
 
+int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
+{
+    cmd->_seqno = n_array_size(cctx->commands);
+    if (cmd->argp_opts)
+        translate_argp_options(cmd->argp_opts);
+    
+    cmd->arg = _(cmd->arg);
+    cmd->doc = _(cmd->doc);
+    
+    
+    if (n_array_bsearch(cctx->commands, cmd)) {
+        logn(LOGERR, _("ambiguous command %s"), cmd->name);
+        return 0;
+    }
+    n_array_push(cctx->commands, cmd);
+    n_array_sort(cctx->commands);
+    return 1;
+}
+
 
 static void init_commands(struct poclidek_ctx *cctx) 
 {
@@ -376,21 +370,7 @@ static void init_commands(struct poclidek_ctx *cctx)
     n_array_ctl(cctx->commands, TN_ARRAY_AUTOSORTED);
     while (commands_tab[n] != NULL) {
         struct poclidek_cmd *cmd = commands_tab[n++];
-        
-        cmd->_seqno = n;
-        if (cmd->argp_opts)
-            translate_argp_options(cmd->argp_opts);
-
-        cmd->arg = _(cmd->arg);
-        cmd->doc = _(cmd->doc);
-        
-        
-        if (n_array_bsearch(cctx->commands, cmd)) {
-            logn(LOGERR, _("ambiguous command %s"), cmd->name);
-            exit(EXIT_FAILURE);
-        }
-        n_array_push(cctx->commands, cmd);
-        n_array_sort(cctx->commands);
+        poclidek_add_command(cctx, cmd);
     }
 	n_array_sort(cctx->commands);
 
@@ -443,10 +423,9 @@ void poclidek_destroy(struct poclidek_ctx *cctx)
 }
 
 
-int poclidek_load_packages(struct poclidek_ctx *cctx, int skip_installed) 
+int poclidek_load_packages(struct poclidek_ctx *cctx) 
 {
     struct poldek_ctx *ctx;
-    
 
     if (cctx->flags & POLDEKCLI_PACKAGES_LOADED)
         return 1;
@@ -458,20 +437,13 @@ int poclidek_load_packages(struct poclidek_ctx *cctx, int skip_installed)
     if (!poldek_load_sources(ctx))
         return 0;
 
-    cctx->pkgs_available = poldek_get_avpkgs_bynvr(ctx);
+    cctx->pkgs_available = poldek_get_avail_packages_bynvr(ctx);
     poclidek_dent_init(cctx);
-    
-    poclidek_load_installed(cctx, 0); 
-    
-    cctx->pkgs_installed = NULL;
-    if (skip_installed == 0) {
-        
-        n_array_ctl(cctx->pkgs_installed, TN_ARRAY_AUTOSORTED);
-        //load_installed_packages(&shell_s, 0);
-    }
 
+    if (cctx->flags & POLDEKCLI_SKIPINSTALLED)
+        return 1;
     
-    return 1;
+    return poclidek_load_installed(cctx, 0); 
 }
 
 static char **a_argv_to_argv(tn_array *a_argv, char **argv) 
@@ -556,7 +528,7 @@ int poclidek_exec_line(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     tn_array            *cmd_chain;
     int                 nerr = 0, i;
 
-    DBGF("exec_line = %s\n", cmdline);
+    DBGF("%s\n", cmdline);
     
     cmd_chain = poclidek_prepare_cmdline(cctx, cmdline);
     if (cmd_chain == NULL)

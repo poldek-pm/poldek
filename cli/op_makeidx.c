@@ -91,7 +91,7 @@ struct argp_child poclidek_argp_child = {
 static int oprun(struct poclidek_opgroup_rt *);
 
 struct poclidek_opgroup poclidek_opgroup_makeidx = {
-    N_("Repository index creationX:"), 
+    N_(""), 
     &poclidek_argp, 
     &poclidek_argp_child,
     oprun,

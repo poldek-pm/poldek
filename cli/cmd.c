@@ -415,6 +415,3 @@ l_end:
     return cmd_chain;
 }
 
-    
-
-

@@ -16,6 +16,7 @@ libpolclidek_la_SOURCES  =  \
 			op_packages.c   \
 			op_makeidx.c    \
 			op_split.c      \
+			op_verify.c     \
 	        ls.c            \
 	        install.c       \
 	        uninstall.c     \
@@ -23,7 +24,8 @@ libpolclidek_la_SOURCES  =  \
 	        search.c        \
 			cd.c            \
 			help.c			\
-			external.c
+			external.c      \
+		    get.c      
 
 libpolclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
 bin_PROGRAMS      = poldek

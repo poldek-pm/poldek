@@ -36,26 +36,69 @@
 #include "i18n.h"
 #include "cli.h"
 
-//int shOnTTY = 0;
+
+
+static int cmd_quit(struct cmdctx *cmdctx);
+struct poclidek_cmd command_quit = {
+    COMMAND_NOARGS | COMMAND_NOOPTS, 
+    "quit", NULL, N_("Exit poldek"), 
+    NULL, NULL, NULL, cmd_quit,
+    NULL, NULL, NULL, NULL, 0
+};
 
 static volatile sig_atomic_t shDone   = 0;
 static volatile sig_atomic_t shInCmd  = 0;
-
-static unsigned argp_parse_flags = ARGP_NO_EXIT;
-
-static int argv_is_help(int argc, const char **argv);
 static char *histfile;
 
-
-#define CMPLT_CTX_AVPKGS       0
-#define CMPLT_CTX_AVPKGS_UPGR  1
-#define CMPLT_CTX_INSTPKGS     2
+#define COMPLETITION_CTX_NONE            0
+#define COMPLETITION_CTX_AVAILABLE       1
+#define COMPLETITION_CTX_UPGRADEABLE     2
+#define COMPLETITION_CTX_INSTALLED       3
 
 struct sh_ctx {
+    int completion_ctx;
     struct poclidek_ctx  *cctx;
 };
 
-static struct sh_ctx sh_ctx = { NULL };
+static struct sh_ctx sh_ctx = { COMPLETITION_CTX_NONE, NULL };
+
+
+static
+int is_pkg_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg)
+{
+    struct pkg *ipkg = NULL;
+    tn_array *dents;
+    char name[256];
+    int n;
+
+    dents = poclidek_get_dents(cctx, POCLIDEK_INSTALLEDDIR);
+    if (dents == NULL)
+        return 1;
+    
+    snprintf(name, sizeof(name), "%s-", pkg->name);
+    n = n_array_bsearch_idx_ex(dents, name, (tn_fn_cmp)pkg_dent_strncmp);
+
+    if (n == -1)
+        return 0;
+
+    while (n < n_array_size(dents)) {
+        struct pkg_dent *ent = n_array_nth(dents, n++);
+        if (pkg_dent_isdir(ent))
+            continue;
+        
+        ipkg = ent->pkg_dent_pkg;
+        if (strcmp(pkg->name, ipkg->name) != 0)
+            break;
+
+        if (pkg_cmp_evr(pkg, ipkg) > 0) 
+            return 1;
+        
+    }
+
+    return 0;
+}
+
+
 
 static
 char *command_generator(const char *text, int state)
@@ -92,11 +135,10 @@ char *arg_generator(const char *text, int state, int genpackages)
     char                 *name = NULL;
     tn_array             *ents;
 
-    
     ents = sh_ctx.cctx->currdir->pkg_dent_ents;
     if (!genpackages) {
         ents = sh_ctx.cctx->rootdir->pkg_dent_ents;
-        // completion through directory tree, DUPA
+        // completion through directory tree, NFY
         //const char *path = text ? n_dirname(n_strdup(text)) : n_strdup(".");
         //ents = poclidek_get_dents(sh_ctx.cctx, path);
         //ents = sh_ctx.cctx->rootdir->pkg_dent_ents;
@@ -122,6 +164,11 @@ char *arg_generator(const char *text, int state, int genpackages)
         if (genpackages) {
             if (pkg_dent_isdir(ent))
                 continue;
+            
+            if (sh_ctx.completion_ctx == COMPLETITION_CTX_UPGRADEABLE &&
+                !is_pkg_upgradeable(sh_ctx.cctx, ent->pkg_dent_pkg))
+                continue;
+            
             path = ent->name;
             
         } else {
@@ -185,28 +232,27 @@ char **poldek_completion(const char *text, int start, int end)
     while (isspace(*p))
         p++;
     
-#if 0
     if (*p) {
         if (strncmp(p, "un", 2) == 0) /* uninstall cmd */
-            switch_pkg_completion(CMPLT_CTX_INSTPKGS);
+            sh_ctx.completion_ctx = COMPLETITION_CTX_INSTALLED;
         
         else if (strncmp(p, "upgr", 4) == 0) /* upgrade cmd */
-            switch_pkg_completion(CMPLT_CTX_AVPKGS_UPGR);
+            sh_ctx.completion_ctx = COMPLETITION_CTX_UPGRADEABLE;
         
         else if (strncmp(p, "gree", 4) == 0) /* greedy-upgrade cmd */
-            switch_pkg_completion(CMPLT_CTX_AVPKGS_UPGR);
+            sh_ctx.completion_ctx = COMPLETITION_CTX_UPGRADEABLE;
         
         else 
-            switch_pkg_completion(CMPLT_CTX_AVPKGS);
+            sh_ctx.completion_ctx = COMPLETITION_CTX_AVAILABLE;
     }
-#endif
     
     if (start == 0 || strchr(p, ' ') == NULL) 
         matches = rl_completion_matches(text, command_generator);
+    
     else {
-        if (strncmp(p, "cd ", 3) == 0) {
+        if (strncmp(p, "cd ", 3) == 0)
             matches = rl_completion_matches(text, dirname_generator);
-        } else 
+        else 
             matches = rl_completion_matches(text, pkgname_generator);
     }
     
@@ -220,23 +266,6 @@ void initialize_readline(void)
     rl_readline_name = "poldek";
     rl_attempted_completion_function = poldek_completion;
     rl_completion_entry_function = command_generator;
-}
-
-
-/* argp workaround */
-static int argv_is_help(int argc, const char **argv)
-{
-    int i, is_help = 0;
-
-    for (i=0; i<argc; i++) {
-        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-?") == 0 ||
-            strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--usage") == 0) {
-            
-            is_help = 1;
-            break;
-        }
-    }
-    return is_help;
 }
 
 static
@@ -261,16 +290,19 @@ static void shell_end(int sig)
     }
 }
 
-
 static void sigint_reached_fn(void)
 {
-    logn(LOGNOTICE, "interrupt signal reached");
+    //logn(LOGNOTICE, "interrupt signal reached");
 }
 
-static void init_shell(struct poclidek_ctx *cctx) 
+static int init_shell(struct poclidek_ctx *cctx) 
 {
+    term_init();
+    sh_ctx.completion_ctx = COMPLETITION_CTX_NONE;
     sh_ctx.cctx = cctx;
+    return poclidek_add_command(cctx, &command_quit);
 }
+
 
 int poclidek_shell(struct poclidek_ctx *cctx)
 {
@@ -281,10 +313,10 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         logn(LOGERR, _("not a tty"));
         return 0;
     }
-    shOnTTY = 1;
 
-    init_shell(cctx);
-    term_init();
+    if (!init_shell(cctx))
+        exit(EXIT_FAILURE);
+    
     initialize_readline();
     histfile = NULL;
 
@@ -320,7 +352,9 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         if (*s) {
             add_history(s);
             //print_mem_info("BEFORE");
+            shInCmd = 1;
             poclidek_exec_line(cctx, NULL, s);
+            shInCmd = 0;
             //print_mem_info("AFTER ");
         }
         free(line);

@@ -33,7 +33,7 @@
 #include "log.h"
 #include "pkg.h"
 #include "pkgset.h"
-#include "pkgset.h"
+#include "capreq.h"
 #include "misc.h"
 #include "search.h"
 #include "pkgu.h"
@@ -72,7 +72,7 @@ static int search(struct cmdctx *cmdctx);
                             OPT_SEARCH_OBSL | OPT_SEARCH_SUMM | OPT_SEARCH_DESC | \
                             OPT_SEARCH_FL | OPT_SEARCH_GROUP)
 
-#define OPT_SEARCH_DEFAULT (OPT_SEARCH_SUMM | OPT_SEARCH_DESC)
+#define OPT_SEARCH_DEFAULT (OPT_SEARCH_CAP | OPT_SEARCH_SUMM | OPT_SEARCH_DESC)
 
 /* options which requires packages.dir processing */
 #define OPT_SEARCH_HDD     (OPT_SEARCH_SUMM | OPT_SEARCH_DESC | OPT_SEARCH_FL)

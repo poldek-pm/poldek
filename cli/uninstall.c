@@ -120,7 +120,7 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_UNINSTALL:
-            poldek_ts_setf(ts, POLDEK_TS_UNINSTALL);
+            poldek_ts_set_type(ts, POLDEK_TSt_UNINSTALL, "-e");
             break;
 
         default:
@@ -189,7 +189,8 @@ static int uninstall(struct cmdctx *cmdctx)
     }
     
 
-    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, cmdctx->ts, 1);
+    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx,
+                                     cmdctx->ts, 1);
     if (pkgs == NULL) {
         err++;
         goto l_end;
@@ -205,7 +206,7 @@ static int uninstall(struct cmdctx *cmdctx)
     else
         iinfp = &iinf;
 
-    poldek_ts_setf(ts, POLDEK_TS_UNINSTALL);
+    poldek_ts_set_type(ts, POLDEK_TSt_UNINSTALL, "uninstall");
     if (!poldek_ts_run(ts, iinfp))
         err++;
     
@@ -227,9 +228,9 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
 {
     int rc;
     
-    if (!poldek_ts_issetf(rt->ts, POLDEK_TS_UNINSTALL))
-        return 0;
+    if (poldek_ts_type(rt->ts) != POLDEK_TSt_UNINSTALL)
+        return OPGROUP_RC_NIL;
 
     rc = poldek_ts_run(rt->ts, NULL);
-    return rc ? 0 : OPGROUP_RC_ERROR;
+    return rc ? OPGROUP_RC_FINI : OPGROUP_RC_ERROR | OPGROUP_RC_FINI;
 }

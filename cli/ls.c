@@ -18,6 +18,7 @@
 #include "misc.h"
 #include "pkgu.h"
 #include "cli.h"
+#include "log.h"
 
 static int ls(struct cmdctx *cmdctx);
 static
@@ -152,22 +153,11 @@ static tn_fn_cmp select_cmpf(unsigned flags)
 {
     tn_fn_cmp cmpf = NULL;
 
-    if (flags & (OPT_LS_SORTBUILDTIME | OPT_LS_SORTBUILDAY)) {
-        cmpf = (tn_fn_cmp)pkg_nvr_strcmp_btime;
+    if (flags & OPT_LS_SORTBUILDTIME)
+        cmpf = (tn_fn_cmp)pkg_dent_cmp_btime;
         
-        if (flags & OPT_LS_SORTREV)
-            cmpf = (tn_fn_cmp)pkg_nvr_strcmp_btime_rev;
-        
-        if (flags & OPT_LS_SORTBUILDAY) {
-            cmpf = (tn_fn_cmp)pkg_nvr_strcmp_bday;
-            
-            if (flags & OPT_LS_SORTREV)
-                cmpf = (tn_fn_cmp)pkg_nvr_strcmp_bday_rev;
-        }
-        
-    } else if (flags & OPT_LS_SORTREV) {
-        cmpf = (tn_fn_cmp)pkg_nvr_strcmp_rev;
-    }
+    if (flags & OPT_LS_SORTBUILDAY)
+        cmpf = (tn_fn_cmp)pkg_dent_cmp_bday;
     
     return cmpf;
 }
@@ -212,25 +202,24 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
     return found;
 }
 
-static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents)
+static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
+                                tn_array *evrs)
 {
     int        found, compare_ver = 0, i;
-    tn_array   *ls_ents2, *cmpto_pkgs, *evrs;
+    tn_array   *ls_ents2, *cmpto_pkgs;
     char       *cmpto_path;
 
     n_assert(cmdctx->_flags & OPT_LS_UPGRADEABLE);
     
     compare_ver = cmdctx->_flags & OPT_LS_UPGRADEABLE_VER;
-    evrs = n_array_new(64, NULL, NULL);
 
-
-    cmpto_path = "/all-avail";
+    cmpto_path = POCLIDEK_INSTALLEDDIR;
     if (cmdctx->_flags & OPT_LS_INSTALLED)
-        cmpto_path = "/installed";
+        cmpto_path = POCLIDEK_AVAILDIR;
     
     cmpto_pkgs = poclidek_get_dent_packages(cmdctx->cctx, cmpto_path);
     ls_ents2 = n_array_clone(ls_ents);
-
+    
     for (i=0; i < n_array_size(ls_ents); i++) {
         struct pkg_dent *ent;
         char             evr[128], *p;
@@ -238,26 +227,28 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents)
         
         ent = n_array_nth(ls_ents, i);
 
-        if (pkg_dent_isdir(ent))
+        if (pkg_dent_isdir(ent)) 
             continue;
             
         found = pkg_cmp_lookup(ent->pkg_dent_pkg, cmpto_pkgs, compare_ver,
                                &cmprc, evr, sizeof(evr));
-        if (cmdctx->_flags & OPT_LS_INSTALLED)
+        
+        if ((cmdctx->_flags & OPT_LS_INSTALLED) == 0)
             cmprc = -cmprc;
         
         if (!found || cmprc >= 0)
             continue;
 
         n = strlen(evr) + 1;
-        p = alloca(n + 1);
+        p = n_malloc(n + 1);
         memcpy(p, evr, n);
         n_array_push(evrs, p);
-        n_array_push(ls_ents2, ent);
+        n_array_push(ls_ents2, pkg_dent_link(ent));
         
         if (sigint_reached())
             break;
     }
+    
     return ls_ents2;
 }
 
@@ -268,19 +259,39 @@ static int ls(struct cmdctx *cmdctx)
     tn_array             *ls_ents = NULL;
     tn_array             *evrs = NULL;
     int                  rc = 1;
-    const char           *path = NULL;
-    
+    char                 *path = NULL, pwd[PATH_MAX];
+
+
+    poclidek_pwd(cmdctx->cctx, pwd, sizeof(pwd));
     if (cmdctx->_flags & OPT_LS_INSTALLED)
-        path = "/installed";
+        path = POCLIDEK_INSTALLEDDIR;
 
     ls_ents = poclidek_resolve_dents(path, cmdctx->cctx, cmdctx->ts, 0);
-    if (ls_ents == NULL) {
+    if (ls_ents == NULL || n_array_size(ls_ents) == 0) {
         rc = 0;
         goto l_end;
     }
+
+    if (cmdctx->_flags & OPT_LS_UPGRADEABLE) {
+        tn_array *tmp;
+
+        if (strcmp(pwd, POCLIDEK_INSTALLEDDIR) == 0)
+            cmdctx->_flags |= OPT_LS_INSTALLED;
+
+        evrs = n_array_new(n_array_size(ls_ents), free, NULL);
+        tmp = do_upgradeable(cmdctx, ls_ents, evrs);
+        n_array_free(ls_ents);
+        ls_ents = tmp;
+    }
     
-    if (n_array_size(ls_ents))
+    if (n_array_size(ls_ents)) {
+        tn_fn_cmp cmpf;
+        if ((cmpf = select_cmpf(cmdctx->_flags)))
+            n_array_sort_ex(ls_ents, cmpf);
+        
         rc = do_ls(ls_ents, cmdctx, evrs);
+    }
+    
 
  l_end:
 
@@ -313,6 +324,7 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 {
     char                 hdr[256], fmt_hdr[256], fmt_pkg[256];
     int                  i, size, err = 0, npkgs = 0;
+    register int         incstep = 0;
     int                  term_width, term_width_div2;
     unsigned             flags;
 
@@ -369,40 +381,54 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
     hdr[sizeof(hdr) - 2] = '\n';
     
     size = 0;
-    for (i=0; i < n_array_size(ents); i++) {
+    i = 0;
+    incstep = 1;
+    if (cmdctx->_flags & OPT_LS_SORTREV) {
+        incstep = -1;
+        i = n_array_size(ents) - 1;
+    }
+    
+    while (i < n_array_size(ents) && i >= 0) {
         struct pkg_dent *ent = n_array_nth(ents, i);
         struct pkg      *pkg;
         char            *pkg_name;
 
-        
+        if (sigint_reached())
+            break;
+
         if (pkg_dent_isdir(ent)) {
             cmdctx_printf_c(cmdctx, PRCOLOR_GREEN, "!%s/\n", ent->name);
+            i += incstep;
             continue;
         }
 
         pkg = ent->pkg_dent_pkg;
         cmdctx_addtoresult(cmdctx, pkg);
-        
+
+        pkg_name = pkg->nvr;
         if (flags & OPT_LS_NAMES_ONLY) 
             pkg_name = pkg->name;
-        else
-            pkg_name = pkg->nvr;
         
         if (npkgs == 0)
             cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, "!%s", hdr);
+
         
-        if (flags & OPT_LS_LONG) {
+
+        if (flags & OPT_LS_GROUP) {
+            const char *group = pkg_group(pkg);
+            cmdctx_printf(cmdctx, fmt_pkg, pkg_name, group ? group : "(unset)");
+            
+        } else if ((flags & OPT_LS_LONG) == 0) {
+            cmdctx_printf(cmdctx, "%s\n", pkg_name);
+            
+        } else if (flags & OPT_LS_LONG) {                /* -l */
             char timbuf[30];
             char sizbuf[30];
-            char unit = 'K';
-            double pkgsize = pkg->size/1024;
-
-            if (pkgsize >= 1024) {
-                pkgsize /= 1024;
-                unit = 'M';
-            }
-
-            snprintf(sizbuf, sizeof(sizbuf), "%.1f %cB", pkgsize, unit);
+ 
+            if (pkg->size)
+                pkg_strsize(sizbuf, sizeof(sizbuf), pkg);
+            else
+                *sizbuf = '\0';
             
             if (pkg->btime)
                 pkg_strbtime(timbuf, sizeof(timbuf), pkg);
@@ -418,18 +444,15 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
             }
             size += pkg->size/1024;
             
-        } else if (flags & OPT_LS_GROUP) {
-            const char *group = pkg_group(pkg);
-            cmdctx_printf(cmdctx, fmt_pkg, pkg_name, group ? group : "(unset)");
-
         } else {
-            cmdctx_printf(cmdctx, "%s\n", pkg_name);
+            n_assert(0);
         }
-
+        
         if (flags & OPT_LS_SUMMARY)
             ls_summary(cmdctx, pkg);
         
         npkgs++;
+        i += incstep;
     }
     
     if (npkgs) {

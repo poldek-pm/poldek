@@ -24,7 +24,7 @@
 #include "pkg.h"
 #include "pkgu.h"
 #include "pkgset.h"
-#include "pkgset.h"
+#include "capreq.h"
 #include "misc.h"
 #include "pkgset-req.h"
 #include "sigint/sigint.h"

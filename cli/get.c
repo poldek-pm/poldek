@@ -15,17 +15,13 @@
 #include <string.h>
 #include <errno.h>
 
-#include <trurl/nassert.h>
-#include <trurl/narray.h>
+#include <trurl/trurl.h>
 
 #include "i18n.h"
 #include "log.h"
-#include "pkg.h"
-#include "pkgset.h"
-#include "pkgset.h"
-#include "misc.h"
 #include "cli.h"
-
+#include "pkgmisc.h"
+#include "misc.h"
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int get(struct cmdctx *cmdctx);
@@ -46,7 +42,7 @@ struct poclidek_cmd command_get = {
     0, 
     "get", N_("PACKAGE..."), N_("Download packages"), 
     options, parse_opt,
-    NULL, get, NULL, NULL, NULL, 0
+    NULL, get, NULL, NULL, NULL, 0, 5
 };
 
 
@@ -55,7 +51,6 @@ static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct cmdctx *cmdctx = state->input;
-    struct poclidek_ctx *cctx = cmdctx->cctx;
     
     switch (key) {
         case 'd':
@@ -64,8 +59,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                     logn(LOGERR, _("%s: no such directory"), arg);
                     return EINVAL;
                 }
-                
-                poldek_configure(cctx->ctx, POLDEK_CONF_FETCHDIR, arg);
+                cmdctx->_data = n_strdup(arg);
             }
             break;
 
@@ -80,47 +74,20 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 static int get(struct cmdctx *cmdctx)
 {
     struct poclidek_ctx  *cctx;
-    tn_array *pkgs = NULL, *get_pkgs;
+    tn_array *pkgs = NULL;
     char destdir[PATH_MAX], *destdirp;
-    int i, err = 0;
-
+    int err = 0;
     
     cctx = cmdctx->cctx;
 
-    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, cmdctx->ts, 1);
+    pkgs = poclidek_resolve_packages(NULL, cctx, cmdctx->ts, 0);
     if (pkgs == NULL) {
         err++;
         goto l_end;
     }
-    
-    poldek_ts_clean_arg_pkgmasks(ts);
-    for (i=0; i < n_array_size(pkgs); i++) {
-        poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
-    }
 
-    if (n_array_size(pkgs) == 0)
-        logn(LOGERR, _("get: specify what packages you want to download"));
-
-    /* build array if struct pkg */
-    get_pkgs = n_array_new(n_array_size(pkgs), NULL, NULL);
-    for (i=0; i<n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-        n_assert(pkg->pkgdir);
-        if (!pkgdir_isremote(pkg->pkgdir)) {
-            logn(LOGWARN, _("get: %s/%s skipped local path"),
-                 pkg->pkgdir->path, pkg_snprintf_s(pkg));
-            continue;
-        }
-        n_array_push(get_pkgs, pkg);
-    }
-    
-    if (n_array_size(get_pkgs) == 0)
-        goto l_end;
-    
-    if (cmdctx->cctx->inst->fetchdir != NULL) {
-        destdirp = (char*)cmdctx->cctx->inst->fetchdir;
-        
-    } else {
+    destdirp = cmdctx->_data;
+    if (destdirp == NULL) {
         if (getcwd(destdir, sizeof(destdir)) == NULL) {
             logn(LOGERR, "getcwd: %m");
             err = 1;
@@ -129,17 +96,13 @@ static int get(struct cmdctx *cmdctx)
         destdirp = destdir;
     }
     
-    if (!packages_fetch(get_pkgs, destdirp, 1))
+    if (!packages_fetch(pkgs, destdirp, 1))
         err++;
     
  l_end:
-    if (get_pkgs)
-        n_array_free(get_pkgs);
-
     if (pkgs)
         n_array_free(pkgs);
 
-    poldek_configure(cctx->ctx, POLDEK_CONF_FETCHDIR, NULL);
     return err == 0;
 }
 

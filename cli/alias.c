@@ -27,6 +27,29 @@
 #include "conf.h"
 
 
+static int alias(struct cmdctx *cmdctx);
+
+struct poclidek_cmd command_alias = {
+    COMMAND_NOARGS | COMMAND_NOOPTS, 
+    "alias", NULL, N_("Print defined command aliases"), 
+    NULL, NULL, NULL, alias,
+    NULL, NULL, NULL, NULL, 0
+};
+
+static int alias(struct cmdctx *cmdctx) 
+{
+    int i;
+
+    for (i=0; i < n_array_size(cmdctx->cctx->commands); i++) {
+        struct poclidek_cmd *cmd = n_array_nth(cmdctx->cctx->commands, i);
+        if (cmd->flags & COMMAND_IS_ALIAS)
+            cmdctx_printf(cmdctx, "%-18s = %s\n", cmd->name, cmd->cmdline);
+    }
+    return 1;
+}
+
+
+
 static
 struct poclidek_cmd *command_new_alias(const char *name, const char *cmdline) 
 {
@@ -102,4 +125,8 @@ void poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path)
     n_array_free(keys);
     n_hash_free(aliases_htcnf);
 }
+
+
+
+
 

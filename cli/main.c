@@ -47,17 +47,25 @@ static char args_doc[] = N_("[PACKAGE...]");
 #define OPT_NOCONF    1006
 #define OPT_BANNER    1007
 #define OPT_LOG       1008
+#define OPT_SKIPINSTALLED 1009
 
-#define POLDEKCLI_CMN_NOCONF (1 << 0)
-#define POLDEKCLI_CMN_NOASK  (1 << 1)
+#define POLDEKCLI_CMN_NOCONF         (1 << 0)
+#define POLDEKCLI_CMN_NOASK          (1 << 1)
+#define POLDEKCLI_CMN_SKIPINSTALLED  (1 << 2)
 
 /* The options we understand. */
 static struct argp_option common_options[] = {
 {0,0,0,0, N_("Other:"), 10500 },
+{"cachedir", OPT_CACHEDIR, "DIR", 0, N_("Store downloaded files & co. under DIR"), 10500 },
 {"cmd", 'C', 0, 0, N_("Run in cmd mode"), 10500 },
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
                           "let user choose among equivalent packages"), 10500 },
-{"noask", OPT_NOASK, 0, 0, N_("Don't ask about anything"), 10500 }, 
+{"noask", OPT_NOASK, 0, 0, N_("Don't ask about anything"), 10500 },
+
+{"skip-installed", OPT_SKIPINSTALLED, 0, 0,
+     N_("Don't load installed packages at startup"), 10500 },
+
+{"fast", 'f', 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, 10500 },    
 
 {"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), 10500 }, 
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 10500 }, 
@@ -96,7 +104,8 @@ static struct poclidek_opgroup *poclidek_opgroup_tab[] = {
     &poclidek_opgroup_install,
     &poclidek_opgroup_uninstall,
     &poclidek_opgroup_makeidx,
-    &poclidek_opgroup_split, 
+    &poclidek_opgroup_split,
+    &poclidek_opgroup_verify, 
     NULL
 };
 
@@ -150,6 +159,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_LOG:
             poldek_configure(ctx, POLDEK_CONF_LOGFILE, arg);
             break;
+
+        case OPT_CACHEDIR:
+            poldek_configure(ctx, POLDEK_CONF_CACHEDIR, arg);
+            break;
             
         case OPT_CONF:
             args.path_conf = n_strdup(arg);
@@ -181,11 +194,16 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_UNINST, 0);
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_EQPKG_ASKUSER, 0);
             break;
-    
-            
+
+        case 'f':
+            logn(LOGWARN, "-f is obsoleted, use --skip-installed instead");
+                                /* no break */
+        case OPT_SKIPINSTALLED:
+            argsp->cctx->flags |= POLDEKCLI_SKIPINSTALLED;
+            break;
 
         case OPT_BANNER:
-            printf("%s\n", poldek_BANNER);
+            msgn(-1, "%s", poldek_BANNER);
             exit(EXIT_SUCCESS);
             break;
 
@@ -260,9 +278,8 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
 {
     struct argp argp = { common_options, parse_opt,
                          args_doc, poldek_BANNER, 0, 0, 0};
+    int n, i, index;
     struct argp_child *child;
-    int n, i, index, exit_program = 0, ec = EXIT_SUCCESS;
-
 
     memset(&args, 0, sizeof(args));
     args.argc = 0;
@@ -308,7 +325,7 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
     if (!poldek_setup_sources(args.ctx))
         exit(EXIT_FAILURE);
 
-    if (poldek_ts_is_interactive_on(args.ctx->ts) && verbose < 1)
+    if (poldek_ts_is_interactive_on(args.ctx->ts) && verbose == 0)
         verbose = 1;
             
 #if 0
@@ -373,7 +390,8 @@ int main(int argc, char **argv)
     mem_info_verbose = -1;
     if (strcmp(n_basenam(argv[0]), "apoldek-get") == 0)
         mode = MODE_APT;
-    printf("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
+    
+    DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
     poldek_init(&ctx, 0);
 
     memset(&cctx, 0, sizeof(cctx));
@@ -385,19 +403,20 @@ int main(int argc, char **argv)
     if (rrc & OPGROUP_RC_FINI)
         exit((rc & OPGROUP_RC_ERROR) ? EXIT_FAILURE : EXIT_SUCCESS);
 
-    printf("run?\n");
     if (args.eat_args == 0) {
-        poclidek_load_packages(&cctx, 1);
+        poclidek_load_packages(&cctx);
         poclidek_shell(&cctx);
         
     } else {
-        dbgf_("exec[%d] ", args.argc);
+#define ENABLE_TRACE 0
+#if ENABLE_TRACE
+        printf("verbose %d\n", verbose);
+        printf("exec[%d] ", args.argc);
         i = 0;
-
         while (args.argv[i])
             printf(" %s", args.argv[i++]);
         printf("\n");
-        
+#endif        
         if (args.argc > 0) 
             rc = poclidek_exec(&cctx, args.ts, args.argc,
                                 (const char **)args.argv);
