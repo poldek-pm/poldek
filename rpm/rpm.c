@@ -191,12 +191,13 @@ tn_array *rpm_get_file_conflicted_dbpkgs(rpmdb db, const char *path,
     
     rpmdb_it_init(db, &it, RPMITER_FILE, path);
     while((dbrec = rpmdb_it_get(&it)) != NULL) {
-        if (dbpkg_array_has(unistdbpkgs, dbrec->recno) ||
-            dbpkg_array_has(cnfldbpkgs, dbrec->recno))
-	    continue;
+        if (unistdbpkgs && dbpkg_array_has(unistdbpkgs, dbrec->recno))
+            continue;
+        if (cnfldbpkgs && dbpkg_array_has(cnfldbpkgs, dbrec->recno))
+            continue;
         
         n_array_push(cnfldbpkgs, dbpkg_new(dbrec->recno, dbrec->h, ldflags));
-	break;	
+        break;	
     }
     rpmdb_it_destroy(&it);
     
@@ -219,13 +220,13 @@ int lookup_pkg(rpmdb db, const struct capreq *req, tn_array *unistdbpkgs)
 
     rpmdb_it_init(db, &it, RPMITER_NAME, capreq_name(req));
     while ((dbrec = rpmdb_it_get(&it)) != NULL) {
-        if (dbpkg_array_has(unistdbpkgs, dbrec->recno))
-	    continue;
+        if (unistdbpkgs && dbpkg_array_has(unistdbpkgs, dbrec->recno))
+            continue;
 
         if (header_evr_match_req(dbrec->h, req)) {
-	    rc = 1;
-	    break;
-	}
+            rc = 1;
+            break;
+        }
     }
     rpmdb_it_destroy(&it);
     
@@ -241,10 +242,10 @@ int lookup_file(rpmdb db, const struct capreq *req, tn_array *unistdbpkgs)
     
     rpmdb_it_init(db, &it, RPMITER_FILE, capreq_name(req));
     while ((dbrec = rpmdb_it_get(&it)) != NULL) {
-        if (dbpkg_array_has(unistdbpkgs, dbrec->recno))
-	    continue;
-   	finded = 1;
-	break;	
+        if (unistdbpkgs && dbpkg_array_has(unistdbpkgs, dbrec->recno))
+            continue;
+        finded = 1;
+        break;	
     }
     rpmdb_it_destroy(&it);
     return finded;
@@ -292,8 +293,9 @@ int header_evr_match_req(Header h, const struct capreq *req)
     else
         pkg.epoch = 0;
     
-    if (pkg_evr_match_req(&pkg, req)) {
-        DBGF("%s[%d] match %s!\n", pkg_snprintf_s(&pkg), pkg.epoch, capreq_snprintf_s0(req));
+    if (pkg_evr_match_req(&pkg, req, 0)) {
+        DBGF("%s match %s!\n", pkg_snprintf_epoch_s(&pkg), pkg.epoch,
+             capreq_snprintf_s0(req));
         return 1;
     }
     
@@ -370,8 +372,7 @@ int rpm_dbmatch_req(rpmdb db, const struct capreq *req, int strict,
 }
 
 
-int rpm_dbmap(rpmdb db,
-              void (*mapfn)(unsigned recno, void *header, void *arg),
+int rpm_dbmap(rpmdb db, void (*mapfn)(unsigned recno, void *header, void *arg),
               void *arg) 
 {
     int n = 0;
@@ -557,8 +558,8 @@ int rpm_is_pkg_installed(rpmdb db, const struct pkg *pkg, int *cmprc,
     if (count > 0 && (cmprc || dbrecp)) {
         if ((dbrec = rpmdb_it_get(&it)) == NULL) {
             logn(LOGWARN, "%s: rpmdb iterator returns NULL, "
-                 "possibly broken database", pkg->name);
-            
+                 "possibly corrupted database", pkg->name);
+            count = 0; /* assume that package isn't installed */
         } else {
             if (cmprc)
                 *cmprc = -hdr_pkg_cmp_evr(dbrec->h, pkg);

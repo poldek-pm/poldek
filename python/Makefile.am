@@ -34,3 +34,6 @@ local_stdint.h:
 
 wrap_%.c: %.i $(top_srcdir)/%.h
 	$(SWIG) $(SWIG_PYTHON_OPT) $(INCLUDES) -o $@ $<
+
+
+MAINTAINERCLEANFILES =	*~ *.py[co]

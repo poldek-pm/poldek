@@ -60,8 +60,8 @@ int mklock(const char *dir);
 void display_pkg_list(int verbose_l, const char *prefix,
                       tn_array *pkgs, unsigned flags);
 
-
-int snprintf_size(char *buf, int bufsize, unsigned long nbytes);
+int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
+                  int ndigits, int longunit);
 
 const char *lc_messages_lang(void);
 tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang);

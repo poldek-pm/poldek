@@ -13,6 +13,11 @@ struct vf_progress_bar {
     int     is_tty;
     int     prev_n;
     int     prev_perc;
+    time_t     time_base;
+    time_t     time_last;
+    float      transfer_rate;
+    float      eta; /* estimatet time of arrival */
+    int        maxlen;
 };
 
 void vf_progress_init(struct vf_progress_bar *bar);

@@ -55,6 +55,17 @@
 #include "rpm.h"
 #include "rpmdb_it.h"
 
+#ifdef HAVE_RPM_4_2
+/* from internal lib/signature.h, no public prototype (at least in 4.3 snaps) */
+typedef enum sigType_e {
+    RPMSIGTYPE_HEADERSIG= 5     /*!< Header style signature */
+} sigType;
+rpmRC rpmReadSignature(FD_t fd, Header *sighp, sigType sig_type, const char ** msg);
+/* lib/rpmlead.h */
+rpmRC readLead(FD_t fd, /*@out@*/ struct rpmlead *lead);
+#endif
+
+
 
 /* seems foolish, just beacuse historical reasons */
 static int rpm_read_signature(FD_t fd, Header *sighp, int sig_type)

@@ -105,7 +105,7 @@ int load_header_list(const char *path, tn_array *pkgs,
             continue;
         }
         
-        if ((pkg = pkg_ldrpmhdr(h, path, 0, PKG_LDWHOLE))) {
+        if ((pkg = pkg_ldrpmhdr(h, NULL, 0, PKG_LDWHOLE))) {
             if (ldflags & PKGDIR_LD_DESC) {
                 pkg->pkg_pkguinf = pkguinf_ldhdr(h);
                 pkg_set_ldpkguinf(pkg);

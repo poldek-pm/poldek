@@ -226,8 +226,8 @@ int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr);
 int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
                        int strict);
 
-int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req);
-
+int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req,
+                      int strict);
 
 int cap_match_req(const struct capreq *cap, const struct capreq *req,
                   int strict);
@@ -265,6 +265,7 @@ char *pkg_snprintf_s1(const struct pkg *pkg);
 
 int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg);
 char *pkg_evr_snprintf_s(const struct pkg *pkg);
+char *pkg_snprintf_epoch_s(const struct pkg *pkg);
 
 /* load and returns not loaded file list (l: tag in package index) */
 tn_array *pkg_other_fl(const struct pkg *pkg);
@@ -290,5 +291,6 @@ int pkg_nvr_strcmp_bday_rev(struct pkg *p1, struct pkg *p2);
 
 char *pkg_strsize(char *buf, int size, const struct pkg *pkg);
 char *pkg_strbtime(char *buf, int size, const struct pkg *pkg);
+
 
 #endif /* POLDEK_PKG_H */

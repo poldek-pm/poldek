@@ -248,7 +248,7 @@ AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="-lrpm $LIBS $DBLIB"],
 	AC_CHECK_LIB(rpm, rpmReadPackageHeader,
 		[LIBS="-lrpm -lrpmdb $DBLIB $LIBS"],
 		AC_CHECK_LIB(rpm, rpmReadPackageFile,
-			[LIBS="$LIBS -lrpm -lrpmdb $DBLIB"
+			[LIBS="$LIBS -lrpm -lrpmdb $DBLIB $LIBS"
 			 AC_DEFINE([HAVE_RPM_4_1],1,[])],
 			AC_MSG_ERROR(["rpmlib not found"]),
 			[$DBLIB -lrpmdb]),
@@ -270,7 +270,7 @@ AC_CHECK_FUNCS(__db185_open)
 dnl 4.0.4 has cross dependenecies(?)
 if test ${is_rpm4_0_4}. = yes. -a ${ENABLE_STATIC}. = yes. ; then
 	if ${have_beecrypt}. = yes. ; then
-		LIBS="$LIBS -lbz2 -lrpmio"
+		LIBS="$LIBS -lbz2 -lrpmio -lbeecrypt -lpthread"
 	fi
 	LIBS="$LIBS -lbz2 -lrpmio"
 fi
@@ -280,7 +280,7 @@ AC_CHECK_FUNCS(fopencookie,,, $CONF_IN_LDFLAGS)
 
 AC_CHECK_FUNCS(openpty,,
 	       AC_CHECK_LIB(util, openpty, 
-	[AC_DEFINE([HAVE_OPENPTY],1,[defined if openpty() is avialable])] [LIBS="$LIBS -lutil"]))
+	[AC_DEFINE([HAVE_OPENPTY],1,[defined if openpty() is avialable])] [LIBS="-lutil $LIBS"]))
 
 AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
 	[AC_MSG_WARN("[poldek will not work fine with rpmlib\(...\) capabilities"])],
@@ -316,7 +316,7 @@ if test -n "$TRURL_DIR"; then
 	TRURL_LDFLAG="-L\$(top_srcdir)/$TRURL_DIR/"
 	LDFLAGS="$LDFLAGS $TRURL_LDFLAG"
 	CPPFLAGS="$CPPFLAGS $TRURL_INCLUDE"
-	LIBS="$LIBS -ltrurl"
+	LIBS="-ltrurl $LIBS"
 else
 	AC_CHECK_HEADER(trurl/trurl.h,,AC_MSG_ERROR("trurl.h is missing"))
 	AC_CHECK_LIB(trurl, n_cfree)

@@ -46,13 +46,13 @@ n = 0
 #print "LoadedXX %d packages %d" % (len(arr), n)
     
 #    print ptr
-#for p in l:
-#    print p.snprintf_s()
+#for p in arr:
+#    print p
 
 ts = ctx.ts_new()
 ts.add_pkgmask("SysVinit")
 ts.setf(ts.INSTALL | ts.UPGRADE)
-ts.do_install(None)
+ts.run(None)
 
 
 

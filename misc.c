@@ -645,25 +645,29 @@ const char *abs_path(char *buf, int size, const char *path)
     return buf;
 }
 
-
-int snprintf_size(char *buf, int bufsize, unsigned long nbytes) 
+int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
+                  int ndigits, int longunit) 
 {
-    char unit = 'B';
+    char *unit = "B", fmt[32];
     double nb;
+    
 
     nb = nbytes;
     
     if (nb > 1024) {
         nb /= 1024;
-        unit = 'K';
+        unit = "KB";
     }
     
     if (nb > 1024) {
         nb /= 1024;
-        unit = 'M';
+        unit = "MB";
     }
-
-    return n_snprintf(buf, bufsize, "%.1f%c", nb, unit);
+    n_snprintf(fmt, sizeof(fmt), "%%.%df%%s", ndigits);
+    if (!longunit)
+        unit[1] = '\0';
+        
+    return n_snprintf(buf, bufsize, fmt, nb, unit);
 }
         
 const char *lc_messages_lang(void) 

@@ -119,7 +119,6 @@ struct pkg *pkg_new_ext(const char *name, int32_t epoch,
         if (strcmp(pkg_fn, fn) == 0)
             fn = NULL;
         else {
-            printf("PKG_FN %s\n", fn);
             fn_len = strlen(fn);
             len += fn_len + 1;
         }
@@ -702,7 +701,8 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
 }
 
 static inline 
-int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req)
+int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
+                       int promote_epoch)
 {
     register int cmprc = 0, evr = 0;
 
@@ -711,21 +711,33 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req)
 
     if (!capreq_versioned(req))
         return 1;
-    
-    if (capreq_has_epoch(req) && pkg->epoch) {    
-        cmprc = pkg->epoch - capreq_epoch(req);
-        if (cmprc != 0)
-            return rel_match(cmprc, req);
+
+    //if (promote_epoch == -1)
+    //promote_epoch = poldek_conf_promote_epoch; DUPA
+
+    if (pkg->epoch) {
+        if (!capreq_has_epoch(req) && promote_epoch) {
+            if (verbose > 1)
+                logn(LOGWARN, "req '%s' needs an epoch "
+                     "(assuming same epoch as %s)\n",
+                     capreq_snprintf_s(req), pkg_snprintf_epoch_s(pkg));
+            cmprc = 0;
+            
+        } else {
+            cmprc = pkg->epoch - capreq_epoch(req);
+            if (cmprc != 0)
+                return rel_match(cmprc, req);
+        }
         evr = 1;
         
-    } else if (capreq_epoch(req) > 0) {
+    } else if (capreq_epoch(req) > 0) { /* always promote package's epoch */
         cmprc = 0;
         evr = 1;
     }
     
     
     if (capreq_has_ver(req)) {
-        cmprc = pkg_version_compare(pkg->ver, capreq_ver(req));
+        cmprc = rpmvercmp(pkg->ver, capreq_ver(req));
         if (cmprc != 0)
             return rel_match(cmprc, req);
         evr = 1;
@@ -733,30 +745,40 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req)
         
     if (capreq_has_rel(req)) {
         n_assert(capreq_has_ver(req));
-        cmprc = pkg_version_compare(pkg->rel, capreq_rel(req));
+        cmprc = rpmvercmp(pkg->rel, capreq_rel(req));
         if (cmprc != 0)
             return rel_match(cmprc, req);
         evr = 1;
     }
-    
+
+#if 0    
+    if (strcmp(pkg->name, "nspr") == 0 && strcmp(pkg->name, capreq_name(req)) == 0) {
+        printf("   __MATCH %s %s %d %d-> %d\n", pkg_snprintf_epoch_s(pkg),
+               capreq_snprintf_s(req), cmprc, evr, rel_match(cmprc, req));
+    }
+#endif    
     return evr ? rel_match(cmprc, req) : 1;
 }
 
-
-int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req)
+int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
 {
-#if ENABLE_TRACE    
-    register int rc;
+    register int rc = 0;
+
+    if (strict)
+        rc = pkg_evr_match_req_(pkg, req, -1) ? 1 : 0;
     
-    rc = pkg_evr_match_req_(pkg, req) ? 1:0;
-    
-    DBGMSG_F("%s[:%d] match %s ? %s\n", pkg_snprintf_s(pkg),
-             pkg->epoch, capreq_snprintf_s(req), rc ? "YES" : "NO");
+    else {
+        rc = pkg_evr_match_req_(pkg, req, 0) ? 1 : 0;
+        if (!rc && pkg->epoch)
+            rc = pkg_evr_match_req_(pkg, req, 1) ? 1 : 0;
+    }
+
+    DBGMSG_F("%s match %s ? %s\n", pkg_snprintf_epoch_s(pkg),
+             capreq_snprintf_s(req), rc ? "YES" : "NO");
     return rc;
-#else
-    return pkg_evr_match_req_(pkg, req);
-#endif
 }
+
+
 
 
 
@@ -850,7 +872,8 @@ int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
 #if 0    
     /* package should not provide itself with different version */
 #endif    
-    if (strcmp(pkg->name, capreq_name(req)) == 0 && pkg_evr_match_req(pkg, req))
+    if (strcmp(pkg->name, capreq_name(req)) == 0 &&
+        pkg_evr_match_req(pkg, req, strict))
         return 1;
     
     return pkg_caps_match_req(pkg, req, strict);
@@ -1266,6 +1289,18 @@ char *pkg_strbtime(char *buf, int size, const struct pkg *pkg)
     
     buf[size-1] = '\0';
     return buf;
+}
+
+char *pkg_snprintf_epoch_s(const struct pkg *pkg)
+{
+    static char str[256];
+    char es[16] = {0};
+    
+    if (pkg->epoch)
+        snprintf(es, sizeof(es), "%d:", pkg->epoch);
+            
+    snprintf(str, sizeof(str), "%s-%s%s-%s", pkg->name, es, pkg->ver, pkg->rel);
+    return str;
 }
 
 

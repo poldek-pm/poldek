@@ -94,7 +94,7 @@ int load_dir(const char *dirpath, tn_array *pkgs, struct pkgroup_idx *pkgroups,
 
         //if (fnmatch("*.src.rpm", ent->d_name, 0) == 0) 
         //    continue;
-
+        
         snprintf(path, sizeof(path), "%s%s%s", dirpath, sepchr, ent->d_name);
         
         if (stat(path, &st) != 0) {

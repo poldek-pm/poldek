@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2004 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License version 2 as
@@ -49,8 +49,7 @@ static void db_dep_free_pkgs(struct db_dep *db_dep)
 }
 
 
-static
-void db_dep_free(struct db_dep *db_dep) 
+static void db_dep_free(struct db_dep *db_dep) 
 {
     
     db_dep_free_pkgs(db_dep);
@@ -74,6 +73,10 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
     int            found = 0;
     tn_list        *l = NULL;
 
+    
+    //if (strcmp(capreq_name(req), "libglade2-devel") == 0) {
+    //    printf("db_deps_add %s\n", capreq_snprintf_s(req));
+    //}
     
     DBGF("%s from %s stby %s [%s]\n", capreq_snprintf_s(req),
          pkg_snprintf_s(pkg), spkg ? pkg_snprintf_s0(spkg) : "NULL",
@@ -102,8 +105,11 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
                 break;
             }
         }
-        if (dep)
+        if (dep) {
+            n_array_sort(dep->pkgs);
+            n_array_uniq(dep->pkgs);
             found = 1;
+        }
     }
 
     if (!found) {
@@ -125,8 +131,8 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
     }
 }
 
-
-void db_deps_remove_cap(tn_hash *db_deph, struct capreq *cap)
+static
+void db_deps_remove_cap(tn_hash *db_deph, struct pkg *pkg, struct capreq *cap)
 {
     tn_list           *l;
     tn_list_iterator  it;
@@ -139,10 +145,26 @@ void db_deps_remove_cap(tn_hash *db_deph, struct capreq *cap)
     n_list_iterator_start(l, &it);
     while ((dep = n_list_iterator_get(&it))) {
         if (dep->req && cap_match_req(cap, dep->req, 1)) {
-            DBGF("rmcap %s (%s)\n", capreq_snprintf_s(cap),
-                 capreq_snprintf_s0(dep->req));
-            dep->req = NULL;
-            db_dep_free_pkgs(dep);
+            int i, i_del = -1;
+            
+            DBGF("rmcap %s (%s) %s?\n", capreq_snprintf_s(cap),
+                 capreq_snprintf_s0(dep->req), pkg_snprintf_s(pkg));
+            
+            for (i=0; i < n_array_size(dep->pkgs); i++) {
+                DBGF("  %s\n", pkg_snprintf_s(n_array_nth(dep->pkgs, i)));
+                if (pkg_cmp_name_evr(n_array_nth(dep->pkgs, i), pkg) == 0) {
+                    i_del = i;
+                }
+            }
+            if (i_del >= 0) {
+                DBGF("rmcap %s (%s) %s!\n", capreq_snprintf_s(cap),
+                     capreq_snprintf_s0(dep->req), pkg_snprintf_s(pkg));
+                n_array_remove_nth(dep->pkgs, i_del);
+                if (n_array_size(dep->pkgs) == 0) {
+                    dep->req = NULL;
+                    db_dep_free_pkgs(dep);
+                }
+            }
         }
     }
 }
@@ -232,7 +254,7 @@ void db_deps_remove_pkg(tn_hash *db_deph, struct pkg *pkg)
         return;
         
     for (i=0; i < n_array_size(pkg->reqs); i++)
-        db_deps_remove_cap(db_deph, n_array_nth(pkg->reqs, i));
+        db_deps_remove_cap(db_deph, pkg, n_array_nth(pkg->reqs, i));
 
 }
 
@@ -255,6 +277,9 @@ void db_deps_remove_pkg_caps(tn_hash *db_deph, struct pkg *pkg, int load_full_fl
 
         
         cap = n_array_nth(pkg->caps, i);
+        db_deps_remove_cap(db_deph, pkg, cap);
+        continue;
+        
         if ((l = n_hash_get(db_deph, capreq_name(cap))) == NULL)
             continue;
 
@@ -307,6 +332,14 @@ struct db_dep *provides_cap(tn_hash *db_deph, struct capreq *cap,
                 //matched = cap_match_req(dep->req, cap, 1);
                 DBGF("cap_match_req %s,  %s = %d\n", capreq_snprintf_s(dep->req),
                      capreq_snprintf_s0(cap), matched);
+                //if (strcmp(capreq_name(cap), "libglade2-devel") == 0) {
+                //    printf("cap_match_req %s %s = %d, %s\n", capreq_snprintf_s(dep->req),
+                //           capreq_snprintf_s0(cap), matched,
+                //           dep->spkg ? pkg_snprintf_s(dep->spkg) : "NULL");
+                //    matched = 0;
+                //}
+                
+                    
                 
             } else if (flags & DBDEP_PROVIDES_CONTAINS) {
                 matched = cap_match_req(cap, dep->req, 1);
