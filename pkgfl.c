@@ -51,7 +51,7 @@ int pkgflmodule_init(void)
     if (flalloct == NULL)
         return 0;
     
-    flalloct->dirns = n_hash_new(5003, NULL);
+    flalloct->dirns = n_hash_new(30001, NULL);
     if (flalloct->dirns == NULL)
        return 0;
     
@@ -328,7 +328,8 @@ struct pkgfl_ent *pkgfl_ent_new(char *dirname, int dirname_len, int nfiles)
     flent = pkgfl_alloc(sizeof(*flent)+(nfiles * sizeof(struct flfile*)));
                         
     dirname = prepare_dirname(dirname, &dirname_len);
-    
+
+    //printf("n_hash_size = %d\n", n_hash_size(flalloct->dirns));
     /* find directory */
     if ((dirnamep = n_hash_get(flalloct->dirns, dirname)) == NULL) {
         dirnamep = pkgfl_strdup(dirname, dirname_len);
