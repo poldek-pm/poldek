@@ -43,6 +43,7 @@ int file_index_lookup(struct file_index *fi,
                       struct pkg *pkgs[], int size);
 
 int file_index_find_conflicts(const struct file_index *fi, int strict);
+int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs);
 
 #endif /* POLDEK_FILEINDEX_H */
     

@@ -109,7 +109,7 @@ int packages_mark(struct pkgmark_set *pms, const tn_array *pkgs, int withdeps);
 /* check how many packages are required by pkg */
 int pkgmark_pkg_drags(struct pkg *pkg, struct pkgmark_set *pms, int deep);
 /* .. and then verify marked set  */
-int pkgmark_verify_set_conflicts(struct pkgmark_set *pms);
+int pkgmark_verify_package_conflicts(struct pkgmark_set *pms);
 
 struct pkgset;
 int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps);

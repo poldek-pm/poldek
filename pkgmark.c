@@ -308,8 +308,7 @@ void pkgmark_massset(struct pkgmark_set *pmark, int set, uint32_t flag)
     n_array_free(pmarks);
 }
 
-
-int pkgmark_verify_set_conflicts(struct pkgmark_set *pms)
+int pkgmark_verify_package_conflicts(struct pkgmark_set *pms)
 {
     tn_array *marked;
     int i, j, nerr = 0;
@@ -339,27 +338,3 @@ int pkgmark_verify_set_conflicts(struct pkgmark_set *pms)
     return nerr == 0;
 }
 
-
-int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps)
-{
-    int i, j, nerr = 0;
-    
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-        tn_array *errs;
-        
-        if ((errs = pkgset_get_unsatisfied_reqs(ps, pkg))) {
-            for (j=0; j < n_array_size(errs); j++) {
-                struct pkg_unreq *unreq = n_array_nth(errs, j);
-                logn(LOGERR, _("%s: req %s %s"),
-                     pkg_snprintf_s(pkg), unreq->req,
-                     unreq->mismatch ? _("version mismatch") : _("not found"));
-                nerr++;
-            }
-        }
-    }
-    
-    if (nerr)
-        msgn(0, _("%d unsatisfied dependencies"), nerr);
-    return nerr == 0;
-}

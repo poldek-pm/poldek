@@ -290,11 +290,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     pkgset_index(ps);
     
     v = poldek_VERBOSE;
-    if (flags & PSET_VERIFY_FILECNFLS) 
-        msgn(1, _("\nVerifying files conflicts..."));
-    else
-        poldek_VERBOSE = -1;
-
+    poldek_VERBOSE = -1;
     file_index_find_conflicts(&ps->file_idx, strict);
     poldek_VERBOSE = v;
 
@@ -598,3 +594,34 @@ tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname)
     return pkgset_search(ps, PS_SEARCH_CAP, capname);
 }
 
+void pkgset_report_fileconflicts(struct pkgset *ps, tn_array *pkgs)
+{
+    file_index_report_conflicts(&ps->file_idx, pkgs);
+}
+
+
+int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps)
+{
+    int i, j, nerr = 0;
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        tn_array *errs;
+        
+        if ((errs = pkgset_get_unsatisfied_reqs(ps, pkg))) {
+            for (j=0; j < n_array_size(errs); j++) {
+                struct pkg_unreq *unreq = n_array_nth(errs, j);
+                logn(LOGERR, _("%s: req %s %s"),
+                     pkg_snprintf_s(pkg), unreq->req,
+                     unreq->mismatch ? _("version mismatch") : _("not found"));
+                nerr++;
+            }
+        }
+    }
+    
+    if (nerr)
+        msgn(0, _("%d unsatisfied dependencies found"), nerr);
+    else
+        msgn(0, _("No unsatisfied dependencies found"));
+    return nerr == 0;
+}

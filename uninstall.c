@@ -439,10 +439,12 @@ static tn_array *reorder_packages(tn_array *pkgs)
     packages_order(ps->pkgs, &ordered_pkgs, PKGORDER_UNINSTALL);
 
     ordered_pkgs = n_array_reverse(ordered_pkgs);
+#if ENABLE_TRACE    
     for (i=0; i < n_array_size(ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ordered_pkgs, i);
         DBGF("%d. %s\n", i, pkg_snprintf_s(pkg));
     }
+#endif    
     pkgset_free(ps);
     
     return ordered_pkgs;

@@ -85,3 +85,4 @@ int poldek_util_parse_nevr(char *nevrstr, const char **name, int32_t *epoch,
     
     return poldek_util_parse_evr(p, epoch, version, release);
 }
+

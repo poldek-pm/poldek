@@ -60,6 +60,9 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
     
     if (!ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE))
         ldflags |= PKGDIR_LD_NOIGNORE;
+
+    if (ctx->ts->getop(ctx->ts, POLDEK_OP_VRFY_FILECNFLS))
+        ldflags |= PKGDIR_LD_FULLFLIST;
             
     if (!pkgset_load(ps, ldflags, ctx->sources))
         logn(LOGWARN, _("no packages loaded"));
@@ -80,9 +83,6 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
     if (ts->getop(ts, POLDEK_OP_UNIQN))
         ps_flags |= PSET_UNIQ_PKGNAME;
 
-    if (ts->getop(ts, POLDEK_OP_VRFY_FILECNFLS))
-        ps_flags |= PSET_VERIFY_FILECNFLS;
-        
     pkgset_setup(ps, ps_flags);
     
     if (ctx->ts->prifile) 

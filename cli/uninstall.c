@@ -137,7 +137,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     arg = arg;
     switch (key) {
         case 'm':
-            //cmdctx->cctx->pkgset->flags |= PSVERIFY_MERCY;
+            ts->setop(ts, POLDEK_OP_VRFYMERCY, 1);
             break;
 
         case OPT_INST_NODEPS:

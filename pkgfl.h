@@ -16,6 +16,7 @@ struct flfile *flfile_new(tn_alloc *na, uint32_t size, uint16_t mode,
                           const char *basename, int blen, 
                           const char *slinkto, int slen);
 
+struct flfile *flfile_clone(struct flfile *flfile);
 
 int flfile_cmp(const struct flfile *f1, const struct flfile *f2);
 int flfile_cmp_qsort(const struct flfile **f1, const struct flfile **f2);

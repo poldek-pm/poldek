@@ -117,6 +117,12 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
                 poldek_configure(ts->ctx, POLDEK_CONF_OPT, optv, on);
             break;
 
+        case POLDEK_OP_VRFY_FILECNFLS:
+            /* propagate it to ctx too - pkgset_load() must know that */
+            if (ts->ctx)
+                poldek_configure(ts->ctx, POLDEK_CONF_OPT, optv, on);
+            break;
+
         case POLDEK_OP_GREEDY:
             DBGF("set (%d) greedy %p (%p) %d %d\n", touch, ts,
                  ts->ctx, optv, on);
@@ -828,7 +834,7 @@ int ts_run_install_dist(struct poldek_ts *ts)
     if (!packages_verify_dependecies(pkgs, ts->ctx->ps))
         ndeperr++;
 
-    if (!pkgmark_verify_set_conflicts(ts->pms))
+    if (!pkgmark_verify_package_conflicts(ts->pms))
         ndeperr++;
     
     n_array_free(pkgs);
@@ -968,7 +974,6 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
     foo = foo;
     if (poldek_ts_get_arg_count(ts) == 0) {
         poldek_load_sources(ts->ctx);
-        pkgs = poldek_get_avail_packages(ts->ctx);
         
     } else {
         if (!ts_prerun(ts, NULL))
@@ -979,10 +984,14 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
         
         rc = ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_VERBOSE |
                                   TS_MARK_CAPSINLINE);
-        pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
     }
 
-    if (pkgs == NULL || n_array_size(pkgs) == 0)
+    if (poldek_ts_get_arg_count(ts) > 0)
+        pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
+    else
+        pkgs = n_ref(ts->ctx->ps->pkgs);
+
+    if (pkgs == NULL)
         return 0;
 
     if (ts->getop(ts, POLDEK_OP_VRFY_DEPS)) {
@@ -990,34 +999,34 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
         if (!packages_verify_dependecies(pkgs, ts->ctx->ps))
             nerr++;
     }
-    
+
     if (ts->getop(ts, POLDEK_OP_VRFY_CNFLS)) {
+        int i, j;
         msgn(0, _("Verifying conflicts..."));
-        if (poldek_ts_get_arg_count(ts) > 0) {
-            if (!pkgmark_verify_set_conflicts(ts->pms))
-                nerr++;
-            
-        } else { /* whole set, just report all conflicts  */
-            int i, j;
-            
-            for (i=0; i<n_array_size(ts->ctx->ps->pkgs); i++) {
-                struct pkg *pkg = n_array_nth(ts->ctx->ps->pkgs, i);
-                if (pkg->cnflpkgs == NULL) continue;
+
+        for (i=0; i < n_array_size(pkgs); i++) {
+            struct pkg *pkg = n_array_nth(pkgs, i);
+            if (pkg->cnflpkgs == NULL)
+                continue;
                 
-                msg(0, "%s -> ", pkg_snprintf_s(pkg)); 
-                for (j=0; j<n_array_size(pkg->cnflpkgs); j++) {
-                    struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
-                    msg(0, "_%s%s, ", cpkg->flags & REQPKG_OBSOLETE ? "*":"", 
-                        pkg_snprintf_s(cpkg->pkg));
-                }
-                msg(0, "_\n");
+            msg(0, "%s -> ", pkg_snprintf_s(pkg)); 
+            for (j=0; j < n_array_size(pkg->cnflpkgs); j++) {
+                struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
+                msg(0, "_%s%s, ", cpkg->flags & REQPKG_OBSOLETE ? "*":"", 
+                    pkg_snprintf_s(cpkg->pkg));
             }
+            msg(0, "_\n");
         }
     }
 
-    
-    if (nerr == 0)
-        msgn(0, _("Package set OK"));
+    ts->setop(ts, POLDEK_OP_VRFY_FILECNFLS, 1);
+    if (ts->getop(ts, POLDEK_OP_VRFY_FILECNFLS)) {
+        msgn(0, _("Verifying file conflicts..."));
+        file_index_report_conflicts(&ts->ctx->ps->file_idx,
+                                    poldek_ts_get_arg_count(ts) > 0 ? pkgs : NULL);
+    }
+
+    n_array_free(pkgs);
     return nerr == 0;
 }
 

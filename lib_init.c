@@ -579,7 +579,10 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
 {
     tn_hash           *htcnf = NULL;
     int               i;
-
+    
+    if (ctx->htconf == NULL)
+        return;
+    
     htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
     i = 0;
     DBGF("ts %p, tsctx %p\n", ts, ctx->ts);

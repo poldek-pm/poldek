@@ -91,6 +91,17 @@ struct flfile *flfile_new(tn_alloc *na, uint32_t size, uint16_t mode,
 }
 
 
+struct flfile *flfile_clone(struct flfile *flfile) 
+{
+    int bnl = strlen(flfile->basename);
+    
+    return flfile_new(NULL, flfile->size, flfile->mode,
+                      flfile->basename, bnl,
+                      S_ISLNK(flfile->mode) ? flfile->basename + bnl + 1 : NULL,
+                      S_ISLNK(flfile->mode) ? strlen(flfile->basename + bnl + 1) : 0);
+}
+
+
 int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,  
                  const char *slinkto, int strict)
 {

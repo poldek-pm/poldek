@@ -60,7 +60,6 @@ int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir);
 
 #define PSET_NOORDER             (1 << 6)
 #define PSET_VERIFY_ORDER        (1 << 7)
-#define PSET_VERIFY_FILECNFLS    (1 << 9)
 #define PSET_UNIQ_PKGNAME        (1 << 10)
 
 int pkgset_setup(struct pkgset *ps, unsigned flags);
@@ -89,7 +88,7 @@ tn_array *pkgset_get_packages_bynvr(const struct pkgset *ps);
 
 int pkgset_pmprovides(const struct pkgset *ps, const struct capreq *req);
 
-
+void pkgset_report_fileconflicts(struct pkgset *ps, tn_array *pkgs);
 
 int pkgset_add_package(struct pkgset *ps, struct pkg *pkg);
 int pkgset_remove_package(struct pkgset *ps, struct pkg *pkg);
