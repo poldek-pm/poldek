@@ -189,7 +189,7 @@ static void show_caps(struct pkg *pkg)
                 nlident(ncol);
             }
             
-            if (i + 1 == ncaps)
+            if (--ncaps == 0)
                 colon = "";
             
             ncol += printf("%s%s", p, colon);
