@@ -1,12 +1,13 @@
 0.17.3 (not released yet)
 
-* supported "hdlist" files as sources. These files contain raw RPM package
-  headers. They are used by APT-RPM as they are widely supported 
+* supported "hdlist" files (simple raw RPM package headers list) as 
+  sources. These files are used by APT-RPM as they are widely supported 
   by RPM based distributions. However this format isn't optimal, now 
   poldek is useable with almost every RPM based distro without poldek's 
   native indexes support.
 	
-  See poldekrc.sample-* for examples of RedHat and Mandrake configuration.
+  See poldekrc.sample-{rh,mdk} for examples of RedHat and Mandrake 
+  configuration.
 
 * new "type=[pidx|dir|hdrl]" source option lets define source type in
   configuration file. Needed to distinguish "hdlist" ('hdrl' type) from
@@ -46,13 +47,18 @@
 
 * fixed detection of file based conflicts between available packages. 
 
-* capabilities with the same name and different versions
-  are handled properly
+* packages with capabilities with the same name and different
+  versions are handled properly
 
 * misc fixes to compile and work with glibc2.1 (with 
   help of Andreas Piesk <a.piesk@gmx.net>) 
 
 * installation of multiple instances of package is allowed (by poldek -i)
+
+* fixes and improvements of dependency resolution:
+  - fixed greedy mode  
+  - fixed handling package conflicts added by poldek  
+  - faster dependency checking
 
 * German translation (Andreas Piesk <a.piesk@gmx.net>)
 
@@ -64,7 +70,6 @@
      are used instead
    - automake/autoconf fixes (Artur Frysiak <wiget@pld.org.pl>)
    - many minor fixes (thanks to Andreas Piesk <a.piesk@gmx.net>)
-
 
 0.17.2
 * "ported" to RedHat 7.2 (with rpm 4.0.4)
