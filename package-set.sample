@@ -7,12 +7,12 @@
 basesystem
 bdflush
 binutils
+bsp
 bzip2
 chkconfig
-console-data
-console-tools
 cracklib
 cracklib-dicts
+db3
 dev
 e2fsprogs
 ed
@@ -22,6 +22,8 @@ fileutils
 findutils
 fix-info-dir
 diffutils
+geninitrd
+genromfs
 gettext
 glibc
 grep
@@ -29,10 +31,11 @@ gzip
 iproute2
 iputils
 iputils-ping
+kbd
 kernel
 klogd
 less
-#@bootloader lilo
+@bootloader lilo
 localedb-src
 login
 logrotate
@@ -46,7 +49,6 @@ mount
 ncurses
 net-tools
 pam
-passwd
 pcre
 pdksh
 pinfo
@@ -58,7 +60,7 @@ sed
 setup
 shadow
 sh-utils
-#@syslogdaemon syslog
+@syslogdaemon syslog
 SysVinit
 tar
 terminfo
@@ -66,6 +68,6 @@ textutils
 tmpwatch
 utempter
 util-linux
-nvi
+vim-static
 which
 zlib
