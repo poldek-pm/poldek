@@ -60,11 +60,11 @@ void vlog(int pri, int indent_size, const char *fmt, va_list args)
     if (*fmt == '_') 
         fmt++;
     
-    else if (*fmt == '$') {
+    else if (*fmt == '\n') {
         fputs("\n", l_stream);
         fmt++;
         
-    } else if (*fmt != '\n') {
+    } else {
         if (pri & LOGDEBUG) 
             fputs("* ", l_stream);
         else 
