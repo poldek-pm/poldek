@@ -995,12 +995,12 @@ char *pkg_filename(const struct pkg *pkg, char *buf, size_t size)
     r_len = strlen(pkg->rel);
 
     if (pkg->arch) 
-        a_len = strlen(pkg->arch) + 1;
+        a_len = strlen(pkg->arch);
     else
         a_len = 0;
     
     len = n_len + 1 + v_len + 1 +
-        r_len + 1 + a_len/* '.' */ + 3/* "rpm" */ + 1;
+        r_len + 1 + a_len + 1/* '.' */ + 3/* "rpm" */ + 1;
 
     if (len >= size)
         return NULL;
