@@ -421,7 +421,9 @@ int vaccum_difflist(const char *idxpath, const char *difftoc_path)
         }
         
         *p = '\0';
-        snprintf(path, sizeof(path), "%s/%s", dn, l);
+        /*                         "- 1" to save space for ".mdd" (to unlink mdd too) */
+        snprintf(path, sizeof(path) - 1, "%s/%s", dn, l);
+
         *p = ' ';
         
         if (stat(path, &st) != 0) {
@@ -433,11 +435,17 @@ int vaccum_difflist(const char *idxpath, const char *difftoc_path)
         DBGF("path = %s %ld, %ld, %ld\n", path, st.st_size, diffs_size,
              st_idx.st_size);
         
-
         if (lineno) {
             if (vfile_valid_path(path)) {
+                char *p;
+                
                 msgn(1, _("Removing outdated %s"), n_basenam(path));
                 unlink(path);
+                if ((p = strrchr(path, '.')) && strcmp(p, ".gz") == 0) {
+                    strcpy(p, ".mdd");
+                    //msgn(1, _("Removing outdated MDD %s"), n_basenam(path));
+                    unlink(path);
+                }
             }
             
         } else {
