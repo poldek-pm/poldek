@@ -1,9 +1,15 @@
-0.18.1 (minor bugfix release; 2002/11/??)
+0.18.1 (major bugfix release; 2002/11/27)
 
+* ability of creation empty indexes
+* killed SIGSEV on '$ poldek -s /' (#443)
+* fixed presentation of dependency tree during unistallations; information 
+  about what package marks an others was completely broken 
+* killed SIGSEV during dependencies processing
 * fixed vfile's progress bar 
 * fixed 'hold' and 'ignore' package patterns matching
 * fixed bug of interactive mode; after interrupted installation
   selected packages are properly unmarked now. 
+
 
 0.18 (bugfix/minor enhancements release; 2002/11/07)
 

@@ -228,7 +228,7 @@ For example:
       Getting the module (no password is needed): 
       <tscreen><verb>
       cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot login
-      cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get -r @VERSION_CVSTAG@ installer/poldek
+      cvs -d :pserver:cvs@anoncvs.pld.org.pl:/cvsroot get -r @VERSION_CVSTAG@ poldek
       </verb></tscreen>            
       Particular files may be accessed via 
 	<url url="http://cvs.pld.org.pl/installer/poldek/" name="CVSWeb">
