@@ -15,6 +15,8 @@ void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag);
 int packages_dump(tn_array *pkgs, const char *path, int fqfn);
 
 struct pm_ctx;
+void packages_fetch_summary(struct pm_ctx *pmctx,
+                            tn_array *pkgs, const char *destdir, int nosubdirs);
 int packages_fetch(struct pm_ctx *pmctx,
                    tn_array *pkgs, const char *destdir, int nosubdirs);
 

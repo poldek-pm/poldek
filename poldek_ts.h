@@ -25,7 +25,7 @@ enum poldek_ts_flag {
 enum poldek_ts_opt {
     POLDEK_OP_NULL = 0,
 
-    POLDEK_OP_UNIQN = 5,          /* --uniqn */
+    POLDEK_OP_UNIQN,          /* --uniqn */
     POLDEK_OP_VRFY_DEPS,      /* -V */
     POLDEK_OP_VRFY_CNFLS,     /* --verify */
     POLDEK_OP_VRFY_FILECNFLS, /* --verify */
@@ -36,11 +36,12 @@ enum poldek_ts_opt {
     POLDEK_OP_FOLLOW,      /* !--nofollow */
     POLDEK_OP_FRESHEN,     /* --freshen */
     POLDEK_OP_GREEDY,   /* --greedy */
-    POLDEK_OP_OBSOLETES = POLDEK_OP_GREEDY,  /* the same */
+    POLDEK_OP_CONFLICTS,  /* honour conflicts */
+    POLDEK_OP_OBSOLETES,  /* honour obsoletes */
     POLDEK_OP_AGGREEDY,
     POLDEK_OP_ALLOWDUPS, 
     POLDEK_OP_NODEPS,  /* rpm --nodeps */
-    POLDEK_OP_NOCONFLICTS,  /* ignore conflicts */
+
     POLDEK_OP_CAPLOOKUP,
     POLDEK_OP_FORCE,  /* rpm --force  */
     POLDEK_OP_IGNOREARCH,  /* rpm --ignorearch */
@@ -64,7 +65,8 @@ enum poldek_ts_opt {
     POLDEK_OP_CONFIRM_INST,    /* confirm_installation = yes  */
     POLDEK_OP_CONFIRM_UNINST,  /* confirm_removal = yes  */
     POLDEK_OP_EQPKG_ASKUSER,   /* choose_equivalents_manually = yes */
-    POLDEK_OP_IS_INTERACTIVE_ON /* any of above */
+    POLDEK_OP_IS_INTERACTIVE_ON,  /* any of above */
+    POLDEK_OP___MAXOP,
 };
 
 
@@ -106,6 +108,7 @@ struct poldek_ts {
     uint32_t           _flags;      /* POLDEK_TS_* */
     uint32_t           _iflags;    /* internal flags */
     uint32_t           _opvect[4];
+    uint32_t           _opvect_setmark[4];
     int   (*getop)(const struct poldek_ts *, int op);
     int   (*getop_v)(const struct poldek_ts *, int op, ...);
     void  (*setop)(struct poldek_ts *, int op, int onoff);
@@ -126,7 +129,7 @@ void poldek_ts_clrf(struct poldek_ts *ts, uint32_t flag);
 uint32_t poldek_ts_issetf(struct poldek_ts *ts, uint32_t flag);
 int poldek_ts_issetf_all(struct poldek_ts *ts, uint32_t flag);
 
-
+int poldek_ts_op_touched(const struct poldek_ts *ts, int optv);
 int poldek_ts_is_interactive_on(const struct poldek_ts *ts);
 
 

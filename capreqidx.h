@@ -28,7 +28,8 @@ void capreq_idx_destroy(struct capreq_idx *idx);
 int capreq_idx_add(struct capreq_idx *idx, const char *capname,
                    struct pkg *pkg, int isprov);
 
-void capreq_idx_remove(struct capreq_idx *idx, const char *capname);
+void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
+                       struct pkg *pkg);
 
 const struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
                                                const char *capname);

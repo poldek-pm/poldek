@@ -59,6 +59,58 @@ unsigned pkg_get_verify_signflags(struct pkg *pkg)
     return verify_flags;
 }
 
+void packages_fetch_summary(struct pm_ctx *pmctx,
+                            tn_array *pkgs, const char *destdir, int nosubdirs)
+{
+    long bytesget = 0, bytesdownload = 0, bytesused = 0;
+    int i;
+
+    n_assert(nosubdirs == 0); /* not implemented */
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg  *pkg = n_array_nth(pkgs, i);
+        char        path[PATH_MAX];
+        
+        if (sigint_reached())
+            break;
+        
+        bytesget += pkg->fsize;
+        bytesused += pkg->size;
+        if (pkg->pkgdir && (vf_url_type(pkg->pkgdir->path) & VFURL_REMOTE)) {
+            if (pkg_localpath(pkg, path, sizeof(path), destdir)) {
+                if (access(path, R_OK) != 0) {
+                    bytesdownload += pkg->fsize;
+                    
+                } else {
+                    if (!pm_verify_signature(pmctx, path, PKGVERIFY_MD)) {
+                        vf_unlink(path);
+                        bytesdownload += pkg->fsize;
+                    }
+                }
+            }
+        }
+    }
+    if (bytesget) {
+        char buf[64];
+        n_assert(bytesget);
+        
+        snprintf_size(buf, sizeof(buf), bytesget, 0, 1);
+        msg(1, _("Need to get %s of archives"), buf);
+        if (bytesdownload == 0)
+            msg(1, _("_."));
+        else {
+            snprintf_size(buf, sizeof(buf), bytesdownload, 0, 1);
+            msg(1, _("_, %s of them need to be downloaded.\n"), buf);
+        }
+        
+        if (bytesused) {
+            char buf[64];
+            snprintf_size(buf, sizeof(buf), bytesused, 0, 1);
+            msg(1, _("After unpacking about %s will be used."), buf);
+        }
+    }
+    
+    msg(1, "_\n");
+}
 
 int packages_fetch(struct pm_ctx *pmctx,
                    tn_array *pkgs, const char *destdir, int nosubdirs)
@@ -69,7 +121,7 @@ int packages_fetch(struct pm_ctx *pmctx,
     tn_hash   *urls_h, *pkgs_h = NULL;
     tn_hash   *pkgdir_labels_h = NULL;
 
-
+    return 1;
     n_assert(destdir);
     urls_h = n_hash_new(21, (tn_fn_free)n_array_free);
     pkgs_h = n_hash_new(21, (tn_fn_free)n_array_free);

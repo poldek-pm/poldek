@@ -60,7 +60,7 @@ int pm_pminstall(struct pm_ctx *ctx, tn_array *pkgs, tn_array *pkgs_toremove,
             continue;
             
         if (pkg_localpath(pkg, path, sizeof(path), ts->cachedir)) {
-            DBG("unlink %s\n", path); 
+            DBGF("unlink %s\n", path); 
             unlink(path);
         }
     }

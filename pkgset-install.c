@@ -857,9 +857,13 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
         return;
     
     DBGMSG_F("%s\n", pkg_snprintf_s(pkg));
-    
-    n = pkgdb_get_obsoletedby_pkg(db, upg->uninst_set->dbpkgs, pkg,
-                                  PKG_LDWHOLE_FLDEPDIRS);
+
+    if ((upg->ts->getop(upg->ts, POLDEK_OP_OBSOLETES)))
+        n = pkgdb_get_obsoletedby_pkg(db, upg->uninst_set->dbpkgs, pkg,
+                                      PKG_LDWHOLE_FLDEPDIRS);
+    else
+        n = pkgdb_get_obsoletedby_pkg_nevr(db, upg->uninst_set->dbpkgs, pkg,
+                                           PKG_LDWHOLE_FLDEPDIRS);
     if (n == 0)
         return;
     DBGMSG_F("%s, n = %d\n", pkg_snprintf_s(pkg), n);
@@ -1624,7 +1628,7 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
 
     db = upg->ts->db;
 
-    if (upg->ts->getop(upg->ts, POLDEK_OP_NOCONFLICTS))
+    if (!upg->ts->getop(upg->ts, POLDEK_OP_CONFLICTS))
         return 1;
     
     /* conflicts in install set */
@@ -1892,19 +1896,9 @@ static void print_install_summary(struct upgrade_s *upg)
             msg(1, "R %s\n", pkg_snprintf_s(dbpkg));
         }
     }
-    
-    if (size_download) {
-        char buf[64];
-        snprintf_size(buf, sizeof(buf), size_download, 0, 1);
-        msg(1, _("Need to download about %s of archives. "), buf);
-    }
-    
-    if (size_install) {
-        char buf[64];
-        snprintf_size(buf, sizeof(buf), size_install, 0, 1);
-        msg(1, _("_After unpacking about %s will be used."), buf);
-    }
-    msg(1, "_\n");
+    if (upg->ts->fetchdir == NULL)
+        packages_fetch_summary(upg->ts->pmctx, upg->install_pkgs,
+                               upg->ts->cachedir, upg->ts->fetchdir ? 1 : 0);
 }
 
 static int verify_holds(struct upgrade_s *upg)

@@ -75,13 +75,21 @@ void *pm_pset_init(struct source *src)
     struct pkgdir *dir;
     struct pkgset *ps;
 
-    if (source_is_remote(src))
+    if (source_is_remote(src) && 0)
         return NULL;
     
 
-    if ((dir = pkgdir_srcopen(src, 0)) == NULL)
+    if ((dir = pkgdir_srcopen(src, 0)) == NULL) {
+        if (!source_is_type(src, "dir") && is_dir(src->path)) {
+            logn(LOGNOTICE, _("trying to scan directory %s..."), src->path);
+            source_set_type(src, "dir");
+            dir = pkgdir_srcopen(src, 0);
+        }
+    }
+    
+    if (dir == NULL)
         return NULL;
-            
+    
     if (!pkgdir_load(dir, 0, 0)) {
         pkgdir_free(dir);
         return NULL;
@@ -100,7 +108,7 @@ void *pm_pset_init(struct source *src)
     pkgset_setup(ps, PSET_VRFY_MERCY);
     pm_pset = n_malloc(sizeof(*pm_pset));
     pm_pset->ps = ps;
-    if (poldek_lookup_external_command(path, sizeof(path), "packagecopy.sh"))
+    if (poldek_lookup_external_command(path, sizeof(path), "pset-install.sh"))
         pm_pset->installer_path = n_strdup(path);
     else
         pm_pset->installer_path = NULL;
@@ -337,13 +345,15 @@ int pm_pset_packages_install(void *pm_pset,
     n_assert(pm->ps);
     n_assert(pm->ps->pkgdirs);
     n_assert(n_array_size(pm->ps->pkgdirs) == 1);
-    
+    pkgdir = n_array_nth(pm->ps->pkgdirs, 0);
 
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
 
-        if (pkg_localpath(pkg, path, sizeof(path), ts->cachedir))
+        if (pkg_localpath(pkg, path, sizeof(path), ts->cachedir)) {
+            pkgset_add_package(pm->ps, pkg);
             msgn(0, "%%install %s %s", path, pkgdir->path);
+        }
     }
 
     pm_pset_packages_uninstall(pm, pkgs_toremove, ts);
@@ -358,14 +368,15 @@ int pm_pset_packages_uninstall(void *pm_pset, tn_array *pkgs,
     char path[PATH_MAX];
     int i;
     
-    pm = pm;
     ts = ts;
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
 
-        if (pkg_path(pkg, path, sizeof(path)))
+        if (pkg_path(pkg, path, sizeof(path))) {
+            pkgset_remove_package(pm->ps, pkg);
             msgn(0, "%%uninstall %s", path);
+        }
     }
     return 1;
 }

@@ -50,6 +50,8 @@
 int ask_yn(int default_a, const char *fmt, ...);
 int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt);
 
+static
+int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt);
 
 struct pkgset *pkgset_new(struct pm_ctx *pmctx)
 {
@@ -167,8 +169,7 @@ static void add_self_cap(struct pkgset *ps)
     n_array_map(ps->pkgs, (tn_fn_map1)pkg_add_selfcap);
 }
 
-
-static int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx)
+static int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx, int setup)
 {
     int i, j;
 
@@ -184,7 +185,8 @@ static int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx)
             file_index_add_basename(fidx, fidx_dir,
                                     flent->files[j], (struct pkg*)pkg);
         }
-        	
+        if (setup)
+            file_index_setup_idxdir(fidx_dir);
     }
     return 1;
 }
@@ -192,7 +194,7 @@ static int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx)
 
 static int pkgset_index(struct pkgset *ps) 
 {
-    int i, j;
+    int i;
     
     msg(2, "Indexing...\n");
     add_self_cap(ps);
@@ -212,29 +214,8 @@ static int pkgset_index(struct pkgset *ps)
         
         if (i % 200 == 0) 
             msg(3, " %d..\n", i);
-        
-        if (pkg->caps)
-            for (j=0; j < n_array_size(pkg->caps); j++) {
-                struct capreq *cap = n_array_nth(pkg->caps, j);
-                capreq_idx_add(&ps->cap_idx, capreq_name(cap), pkg, 1);
-            }
 
-        if (pkg->reqs)
-            for (j=0; j < n_array_size(pkg->reqs); j++) {
-                struct capreq *req = n_array_nth(pkg->reqs, j);
-                capreq_idx_add(&ps->req_idx, capreq_name(req), pkg, 0);
-            }
-
-        if (pkg->cnfls)
-            for (j=0; j < n_array_size(pkg->cnfls); j++) {
-                struct capreq *cnfl = n_array_nth(pkg->cnfls, j);
-                if (capreq_is_obsl(cnfl))
-                    capreq_idx_add(&ps->obs_idx, capreq_name(cnfl), pkg, 0);
-                else
-                    capreq_idx_add(&ps->cnfl_idx, capreq_name(cnfl), pkg, 0);
-            }
-
-        pkgfl2fidx(pkg, &ps->file_idx);
+        do_pkgset_add_package(ps, pkg, 0);
     }
     MEMINF("after index");
     
@@ -304,6 +285,89 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     pkgset_order(ps, flags & PSET_VERIFY_ORDER);
     MEMINF("after setup[END]");
     return ps->nerrors == 0;
+}
+
+static
+int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt)
+{
+    int j;
+
+    if (rt) {
+        if (n_array_bsearch(ps->pkgs, pkg))
+            return 0;
+
+        n_array_push(ps->pkgs, pkg_link(pkg));
+    }
+    
+    
+    if (pkg->caps)
+        for (j=0; j < n_array_size(pkg->caps); j++) {
+            struct capreq *cap = n_array_nth(pkg->caps, j);
+            capreq_idx_add(&ps->cap_idx, capreq_name(cap), pkg, 1);
+        }
+    
+    if (pkg->reqs)
+        for (j=0; j < n_array_size(pkg->reqs); j++) {
+            struct capreq *req = n_array_nth(pkg->reqs, j);
+            capreq_idx_add(&ps->req_idx, capreq_name(req), pkg, 0);
+        }
+    
+    if (pkg->cnfls)
+        for (j=0; j < n_array_size(pkg->cnfls); j++) {
+            struct capreq *cnfl = n_array_nth(pkg->cnfls, j);
+            if (capreq_is_obsl(cnfl))
+                capreq_idx_add(&ps->obs_idx, capreq_name(cnfl), pkg, 0);
+            else
+                capreq_idx_add(&ps->cnfl_idx, capreq_name(cnfl), pkg, 0);
+        }
+    
+    pkgfl2fidx(pkg, &ps->file_idx, rt);
+    return 1;
+}
+
+int pkgset_add_package(struct pkgset *ps, struct pkg *pkg)
+{
+    return do_pkgset_add_package(ps, pkg, 1);
+}
+
+int pkgset_remove_package(struct pkgset *ps, struct pkg *pkg) 
+{
+    int i, j;
+    
+    if ((pkg = n_array_bsearch(ps->pkgs, pkg)) == NULL)
+        return 0;
+
+    if (pkg->caps)
+        for (j=0; j < n_array_size(pkg->caps); j++) {
+            struct capreq *cap = n_array_nth(pkg->caps, j);
+            capreq_idx_remove(&ps->cap_idx, capreq_name(cap), pkg);
+        }
+
+    if (pkg->reqs)
+        for (j=0; j < n_array_size(pkg->reqs); j++) {
+            struct capreq *req = n_array_nth(pkg->reqs, j);
+            capreq_idx_remove(&ps->req_idx, capreq_name(req), pkg);
+        }
+    
+    if (pkg->cnfls)
+        for (j=0; j < n_array_size(pkg->cnfls); j++) {
+            struct capreq *cnfl = n_array_nth(pkg->cnfls, j);
+            if (capreq_is_obsl(cnfl))
+                capreq_idx_remove(&ps->obs_idx, capreq_name(cnfl), pkg);
+            else
+                capreq_idx_remove(&ps->cnfl_idx, capreq_name(cnfl), pkg);
+        }
+    
+    if (pkg->fl)
+        for (i=0; i < n_tuple_size(pkg->fl); i++) {
+            struct pkgfl_ent *flent = n_tuple_nth(pkg->fl, i);
+            
+            for (j=0; j < flent->items; j++)
+                file_index_remove(&ps->file_idx, flent->dirname,
+                                  flent->files[j]->basename, pkg);
+        }
+    
+    return 1;
 }
 
 

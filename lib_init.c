@@ -84,6 +84,8 @@ static struct {
     { "choose_equivalents_manually", POLDEK_OP_EQPKG_ASKUSER, 0 },
     { "particle_install",     POLDEK_OP_PARTICLE, 1  },
     { "follow",               POLDEK_OP_FOLLOW, 1    },
+    { "obsoletes",            POLDEK_OP_OBSOLETES, 1 },
+    { "conflicts",            POLDEK_OP_CONFLICTS, 1 },
     { "mercy",                POLDEK_OP_VRFYMERCY, 1 },
     { "greedy",               POLDEK_OP_GREEDY, 1    },
     { "allow_duplicates",     POLDEK_OP_ALLOWDUPS, 1 },
@@ -560,6 +562,7 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
 
     htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
     i = 0;
+    DBGF("ts %p, tsctx %p\n", ts, ctx->ts);
     while (default_op_map[i].name) {
         int op = default_op_map[i].op;
         int v0 = ts->getop(ts, op);
@@ -568,8 +571,15 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
                                          default_op_map[i].name,
                                          default_op_map[i].defaultv);
             ts->setop(ts, op, v);
-        } else if (ts != ctx->ts) {
-            printf("apply_c %d %d\n", op, ctx->ts->getop(ctx->ts, op));
+        }
+
+        if (ts != ctx->ts &&
+            ts->getop(ts, op) != ctx->ts->getop(ctx->ts, op)) {
+            if (poldek_ts_op_touched(ts, op))
+                continue;
+            
+            DBGF("apply %s(%d) = %d\n", default_op_map[i].name,
+                   op, ctx->ts->getop(ctx->ts, op));
             ts->setop(ts, op, ctx->ts->getop(ctx->ts, op));
         }
         
@@ -931,18 +941,21 @@ static int setup_pm(struct poldek_ctx *ctx)
         } else {
             dest = n_array_nth(ctx->sources, n_array_size(ctx->sources) - 1);
             n_assert(dest);
-            if (source_is_remote(dest)) {
-                logn(LOGERR, "%s: destination source could not by remote",
+            if (source_is_remote(dest) && 0) {
+                logn(LOGERR, "%s: destination source could not be remote",
                      source_idstr(dest));
                 
             } else {
                 ctx->pmctx = pm_new(pm, dest);
+                n_array_pop(ctx->sources); /* remove dest */
             }
         }
         
         n_array_sort(ctx->sources);
-        if (ctx->pmctx)
-            ctx->ts->setop(ctx->ts, POLDEK_OP_NOCONFLICTS, 1);
+        if (ctx->pmctx) {
+            ctx->ts->setop(ctx->ts, POLDEK_OP_CONFLICTS, 0);
+            ctx->ts->setop(ctx->ts, POLDEK_OP_OBSOLETES, 0);
+        }
         
     } else {
         logn(LOGERR, "%s: unknown PM type", pm);

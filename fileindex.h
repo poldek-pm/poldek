@@ -19,9 +19,16 @@ void file_index_setup(struct file_index *fi);
 
 void *file_index_add_dirname(struct file_index *fi, const char *dirname);
 
+
 int file_index_add_basename(struct file_index *fi, void *fidx_dir,
                             struct flfile *flfile,
                             struct pkg *pkg);
+
+void file_index_setup_idxdir(void *fdn);
+
+int file_index_remove(struct file_index *fi, const char *dirname,
+                      const char *basename,
+                      struct pkg *pkg);
 
 int file_index_lookup(struct file_index *fi,
                       const char *apath, int apath_len, 

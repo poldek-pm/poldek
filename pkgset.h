@@ -84,4 +84,9 @@ tn_array *pkgset_get_packages_bynvr(const struct pkgset *ps);
 
 int pkgset_pmprovides(const struct pkgset *ps, const struct capreq *req);
 
+
+
+int pkgset_add_package(struct pkgset *ps, struct pkg *pkg);
+int pkgset_remove_package(struct pkgset *ps, struct pkg *pkg);
+
 #endif /* POLDEK_PKGSET_H */

@@ -529,19 +529,26 @@ int pkgdb_get_obsoletedby_cap(struct pkgdb *db, tn_array *dbpkgs, struct capreq 
     return get_obsoletedby_cap(db, PMTAG_NAME, dbpkgs, cap, ldflags);
 }
 
-
-int pkgdb_get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs, const struct pkg *pkg,
-                            unsigned ldflags)
+int pkgdb_get_obsoletedby_pkg_nevr(struct pkgdb *db, tn_array *dbpkgs,
+                                   const struct pkg *pkg, unsigned ldflags)
 {
     struct capreq *self_cap;
-    int i, n = 0;
+    int n;
     
-
     self_cap = capreq_new(NULL, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
                           REL_EQ | REL_LT, 0);
     n = pkgdb_get_obsoletedby_cap(db, dbpkgs, self_cap, ldflags);
     capreq_free(self_cap);
+    return n;
+}
+
+
+int pkgdb_get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
+                              const struct pkg *pkg, unsigned ldflags)
+{
+    int i, n;
     
+    n = pkgdb_get_obsoletedby_pkg_nevr(db, dbpkgs, pkg, ldflags);
     if (pkg->cnfls == NULL)
         return n;
     

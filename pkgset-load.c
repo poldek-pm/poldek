@@ -141,6 +141,6 @@ int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir)
         pkg->recno = ps->_recno++;
         n_array_push(ps->pkgs, pkg_link(pkg));
     }
-
+    n_array_push(ps->pkgdirs, pkgdir);
     return n_array_size(ps->pkgs);
 }

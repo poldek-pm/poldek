@@ -543,10 +543,12 @@ int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
 
+#if ENABLE_TRACE    
     if (pkg_cmp_name_evr_rev(p1, p2) == 0)
         logn(LOGNOTICE, "uniq %s: keep %s (score %d), removed %s (score %d)",
              pkg_snprintf_s(p1), p1->arch, pkg_archscore(p1),
              p2->arch, pkg_archscore(p2));
+#endif    
     
     if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && verbose > 1) {
         if (verbose > 2) {
@@ -1318,7 +1320,8 @@ char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
         char buf[1024];
         
         vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
-        n = n_snprintf(path, size, "%s/%s/%s", cachedir,
+        n = n_snprintf(path, size, "%s%s%s/%s", cachedir ? cachedir : "",
+                       cachedir ? "/" : "",
                        buf, pkg_filename(pkg, name, sizeof(name)));
     }
 

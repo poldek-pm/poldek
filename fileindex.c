@@ -112,6 +112,11 @@ void *file_index_add_dirname(struct file_index *fi, const char *dirname)
     return files;
 }
 
+void file_index_setup_idxdir(void *files) 
+{
+    n_array_sort(files);
+}
+
 
 int file_index_add_basename(struct file_index *fi, void *fidx_dir,
                             struct flfile *flfile,
@@ -164,6 +169,44 @@ int findfile(struct file_index *fi, const char *dirname, const char *basename,
     return i;
 }
 
+int file_index_remove(struct file_index *fi, const char *dirname,
+                      const char *basename,
+                      struct pkg *pkg) 
+{
+    tn_array *files;
+    struct file_ent *entp;
+    int n;
+    
+    if ((files = n_hash_get(fi->dirs, dirname)) == NULL)
+        return 0;
+    
+    if ((n = n_array_bsearch_idx_ex(files, basename, fent_cmp2str)) == -1)
+        return 0;
+
+    entp = n_array_nth(files, n);
+    if (pkg_cmp_name_evr(pkg, entp->pkg) == 0) {
+        DBGF("%s/%s: %s\n", dirname, basename, pkg_snprintf_s(pkg));
+        n_array_remove_nth(files, n);
+        return 1;
+    }
+    
+    n++;
+    while (n < n_array_size(files)) {
+        entp = n_array_nth(files, n);
+        if (strcmp(entp->flfile->basename, basename) != 0)
+            break;
+            
+        if (pkg_cmp_name_evr(pkg, entp->pkg) == 0) {
+            DBGF("%s/%s: %s\n", dirname, basename, pkg_snprintf_s(pkg));
+            n_array_remove_nth(files, n);
+            return 1;
+        }
+        
+        n++;
+    }
+    return 0;
+}
+
 
 int file_index_lookup(struct file_index *fi,
                       const char *apath, int apath_len, 
@@ -192,7 +235,6 @@ int file_index_lookup(struct file_index *fi,
 
     return findfile(fi, dirname, basename, pkgs, size);
 }
-
 
 static void sort_files(const char *key, void *data) 
 {

@@ -121,10 +121,30 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
     return 1;
 }
 
-void capreq_idx_remove(struct capreq_idx *idx, const char *capname) 
+void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
+                       struct pkg *pkg)
 {
-    n_hash_remove(idx->ht, capname);
+    struct capreq_idx_ent *ent;
+    void **p;
+    int i;
+            
+    if ((p = n_hash_get(idx->ht, capname)) == NULL)
+        return;
+    
+    ent = *p;
+    for (i=0; i < ent->items; i++) {
+        if (pkg_cmp_name_evr(pkg, ent->pkgs[i]) == 0) {
+            if (i == ent->items - 1) 
+                ent->pkgs[i] = NULL;
+            else 
+                memmove(&ent->pkgs[i], &ent->pkgs[i + 1],
+                        (ent->_size - 1 - i) * sizeof(*ent->pkgs));
+            ent->pkgs[ent->_size - 1] = NULL;
+            ent->items--;
+        }
+    }
 }
+
 
 void capreq_idx_stats(const char *prefix, struct capreq_idx *idx) 
 {
