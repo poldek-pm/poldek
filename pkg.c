@@ -713,8 +713,8 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
     return evr ? rel_match(cmprc, req) : 1;
 }
 
-
-int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req)
+static inline 
+int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req)
 {
     register int cmprc = 0, evr = 0;
 
@@ -724,12 +724,17 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req)
     if (!capreq_versioned(req))
         return 1;
     
-    if ((capreq_has_epoch(req) || pkg->epoch)) {
+    if (capreq_has_epoch(req) && pkg->epoch) {    
         cmprc = pkg->epoch - capreq_epoch(req);
         if (cmprc != 0)
             return rel_match(cmprc, req);
         evr = 1;
+        
+    } else if (capreq_epoch(req) > 0) {
+        cmprc = 0;
+        evr = 1;
     }
+    
     
     if (capreq_has_ver(req)) {
         cmprc = rpmvercmp(pkg->ver, capreq_ver(req));
@@ -748,6 +753,24 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req)
     
     return evr ? rel_match(cmprc, req) : 1;
 }
+
+
+int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req)
+{
+#if ENABLE_TRACE    
+    register int rc;
+    
+    rc = pkg_evr_match_req_(pkg, req) ? 1:0;
+    
+    DBGMSG_F("%s[:%d] match %s ? %s\n", pkg_snprintf_s(pkg),
+             pkg->epoch, capreq_snprintf_s(req), rc ? "YES" : "NO");
+    return rc;
+#else
+    return pkg_evr_match_req_(pkg, req);
+#endif
+}
+
+
 
 /* look up into package caps only */
 int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,

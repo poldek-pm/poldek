@@ -32,6 +32,8 @@ int test_match(int argc, char *argv[])
     int epoch = 0;
     unsigned rels[] = { REL_EQ, REL_EQ | REL_GT, REL_EQ | REL_LT,
                            REL_GT, REL_LT, 0};
+
+    
     char *versions[] = {"1.0", "1.1", NULL};
     char *relases[] = {"1", "2", NULL};
     int i, j, k;
@@ -49,12 +51,15 @@ int test_match(int argc, char *argv[])
                 k = 0;
                 while (rels[k] > 0) {
                     int rc1, rc2;
-                    
-                    req = capreq_new_evr("poldek", n_strdup("1.1"), rels[k++], 0);
+                    char evr[255];
+
+                    snprintf(evr, sizeof(evr), "1:1.1");
+                    req = capreq_new_evr("poldek", n_strdup(evr), rels[k++], 0);
 
                     rc1 = pkg_match_req(pkg, req, 1) ? 1:0;
                     rc2 = cap_match_req(cap, req, 1) ? 1:0;
-                    printf("P %s match %s -> %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(req),
+                    printf("P %s[%d] match %s -> %s\n", pkg_snprintf_s(pkg),
+                           pkg->epoch, capreq_snprintf_s(req),
                            rc1 ? "YES" : "NO");
 
                     printf("C %s match %s -> %s\n\n", capreq_snprintf_s(cap), capreq_snprintf_s0(req),
@@ -65,6 +70,49 @@ int test_match(int argc, char *argv[])
         }
     }
     return 0;
+}
+
+int test_match_(int epoch, char *ver, char *rel, char *evr, int relation) 
+{
+    struct pkg *pkg;
+    struct capreq *req;
+    int rc1;
+    
+    pkg = pkg_new("poldek", epoch, ver, rel,  NULL, NULL, 0, 0, 0);
+
+    req = capreq_new_evr("poldek", n_strdup(evr), relation, 0);
+
+    rc1 = pkg_match_req(pkg, req, 1) ? 1:0;
+    printf("P %s[%d] match %s ? %s\n", pkg_snprintf_s(pkg),
+           pkg->epoch, capreq_snprintf_s(req),
+           rc1 ? "YES" : "NO");
+}
+
+
+int test_match2(void) 
+{
+    printf("\n");
+    test_match_(0, "1.2", "1", "0:1.1", REL_GT);
+    test_match_(3, "1.2", "1", "0:1.1", REL_GT);
+    test_match_(0, "1.2", "1", "3:1.1", REL_GT);
+    printf("\n");
+    test_match_(0, "1.2", "1", "1:1.1", REL_GT);
+    test_match_(1, "1.2", "1", "0:1.1", REL_GT);
+
+    printf("\n");
+    test_match_(0, "1.2", "1", "0:1.2", REL_EQ);
+    test_match_(3, "1.2", "1", "0:1.2", REL_EQ);
+    test_match_(0, "1.2", "1", "3:1.2", REL_EQ);
+    printf("\n");
+    test_match_(0, "1.2", "1", "1:1.2", REL_EQ);
+    test_match_(1, "1.2", "1", "0:1.2", REL_EQ);
+
+    printf("\n");
+    test_match_(0, "1.2", "1", "1:2.2", REL_EQ | REL_GT);
+    test_match_(1, "1.2", "1", "1:1.2", REL_EQ | REL_GT);
+    test_match_(1, "1.2", "1", "2:1.2", REL_EQ | REL_GT);
+    test_match_(2, "1.2", "1", "2:1.2", REL_EQ | REL_GT);
+    test_match_(3, "1.2", "1", "2:1.2", REL_EQ | REL_GT);
 }
 
 
@@ -84,5 +132,6 @@ int test_expand_env(int argc, char *argv[])
 int main(int argc, char *argv[]) 
 {
     test_expand_env(argc, argv);
+    test_match2();
     return 0;
 }
