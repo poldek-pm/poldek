@@ -153,7 +153,7 @@ struct source *source_malloc(void)
     src = n_malloc(sizeof(*src));
     memset(src, '\0', sizeof(*src));
 
-    src->type = NULL;
+    src->type = src->original_type = NULL;
     src->flags = src->subopt_flags = 0;
     src->pri = 0;
     src->no = 0;
@@ -162,7 +162,7 @@ struct source *source_malloc(void)
     src->dscr = src->type = NULL;
     src->lc_lang = NULL;
     src->_refcnt = 0;
-    src->mkidx_exclpath = n_array_new(4, free, (tn_fn_cmp)strcmp);
+    src->exclude_path = n_array_new(4, free, (tn_fn_cmp)strcmp);
     return src;
 }
 
@@ -173,6 +173,34 @@ struct source *source_link(struct source *src)
     return src;
 }
 
+static void cp_str_ifnotnull(char **dst, const char *src)
+{
+    if (src)
+        *dst = n_strdup(src);
+}
+
+static struct source *source_dup(const struct source *src) 
+{
+    struct source *nsrc;
+    
+    nsrc = source_malloc();
+
+    nsrc->flags = src->flags;
+    cp_str_ifnotnull(&nsrc->type, src->type);
+    cp_str_ifnotnull(&nsrc->name, src->name);
+    cp_str_ifnotnull(&nsrc->path, src->path);
+    cp_str_ifnotnull(&nsrc->pkg_prefix, src->pkg_prefix);
+    cp_str_ifnotnull(&nsrc->compress, src->compress);
+
+    cp_str_ifnotnull(&nsrc->dscr, src->dscr);
+    cp_str_ifnotnull(&nsrc->lc_lang, src->lc_lang);
+    cp_str_ifnotnull(&nsrc->original_type, src->original_type);
+
+    n_array_free(nsrc->exclude_path);
+    nsrc->exclude_path = n_ref(src->exclude_path);
+    nsrc->subopt_flags = src->subopt_flags;
+    return nsrc;
+}
 
 void source_free(struct source *src)
 {
@@ -180,27 +208,19 @@ void source_free(struct source *src)
         src->_refcnt--;
         return;
     }
-    
-    if (src->path)    
-        free(src->path);
 
-    if (src->pkg_prefix)
-        free(src->pkg_prefix);
-    
-    if (src->name)
-        free(src->name);
+    n_cfree(&src->type);
+    n_cfree(&src->name);
+    n_cfree(&src->path);
+    n_cfree(&src->pkg_prefix);
 
-    if (src->type)
-        free(src->type);
+    n_cfree(&src->compress);
+    n_cfree(&src->dscr);
+    n_cfree(&src->lc_lang);
+    n_cfree(&src->original_type);
 
-    if (src->dscr)
-        free(src->dscr);
-
-    if (src->lc_lang)
-        free(src->lc_lang);
-
-    if (src->mkidx_exclpath)
-        n_array_free(src->mkidx_exclpath);
+    if (src->exclude_path)
+        n_array_free(src->exclude_path);
 
     memset(src, 0, sizeof(*src));
     free(src);
@@ -789,10 +809,10 @@ void sources_score(tn_array *sources)
     }
 }
 
-
-int source_make_idx(struct source *src,
-                    const char *type, const char *idxpath,
-                    unsigned cr_flags) 
+static 
+int do_source_make_idx(struct source *src,
+                       const char *type, const char *idxpath,
+                       unsigned cr_flags) 
 {
     struct pkgdir   *pkgdir;
     char            path[PATH_MAX];
@@ -806,26 +826,39 @@ int source_make_idx(struct source *src,
         return 0;
     }
 
-    if (idxpath == NULL)
-        idxpath = src->path;
+    if (idxpath == NULL) {
+        int len = strlen(src->path) + 1;
+        idxpath = alloca(len);
+        n_snprintf((char*)idxpath, len, src->path);
+    }
     
     if (is_dir(idxpath))
         idxpath = pkgdir_idxpath(path, sizeof(path), idxpath, type, 
                                  src->compress);
-
     n_assert(idxpath);
+    if (source_is_type(src, "dir") && !is_dir(src->path)) {
+        char *tmp, *dn;
+        n_strdupap(src->path, &tmp);
+        dn = n_dirname(tmp);
+        if (is_dir(dn))
+            source_set(&src->path, dn);
+    }
     
-    DBGF("mkidx[%s, %s] %s %d\n", src->type, type, src->path, cr_flags);
+    DBGF_F("mkidx[%s, %s] %s %d\n", src->type, type, src->path, cr_flags);
     pkgdir = pkgdir_srcopen(src, 0);
     if (pkgdir == NULL)
         return 0;
 
     if (source_is_type(src, "dir")) {
         struct pkgdir *pdir;
+        char orig_name[64];
+
+        n_snprintf(orig_name, sizeof(orig_name), "previous %s",
+                   vf_url_slim_s(idxpath, 0));
         ldflags |= PKGDIR_LD_DESC;
-        pdir = pkgdir_open_ext(src->path,
+        pdir = pkgdir_open_ext(idxpath,
                                src->pkg_prefix, type,
-                               "orig", NULL, 0, src->lc_lang);
+                               orig_name, NULL, 0, src->lc_lang);
         if (pdir && !pkgdir_load(pdir, NULL, ldflags)) {
             pkgdir_free(pdir);
             pdir = NULL;
@@ -845,4 +878,51 @@ int source_make_idx(struct source *src,
     
     return rc;
 }
+
+int source_make_idx(struct source *src, const char *stype, 
+                    const char *dtype, const char *idxpath,
+                    unsigned flags)
+{
+    struct source *ssrc;
+    int rc = 0;
+                         /* type not set */
+    if (stype == NULL && (src->flags & PKGSOURCE_TYPE) == 0 && is_dir(src->path))
+        stype = "dir";
+            
+    if (stype == NULL)
+        if ((stype = src->original_type) == NULL &&
+            (stype = src->type) == NULL) {
+            
+            if (strstr(src->path, "://")) /* remote */
+                stype = src->type ? src->type : poldek_conf_PKGDIR_DEFAULT_TYPE;
+            else
+                stype = "dir";
+        }
+    
+    if (src->type == NULL)
+        source_set_default_type(src);
+    n_assert(src->type);
+    
+    if (dtype == NULL)
+        dtype = src->type;
+    
+    ssrc = source_dup(src);
+    /* swap types */
+    source_set(&ssrc->type, stype);
+    source_set(&ssrc->name, "-");
+    ssrc->flags &= ~(PKGSOURCE_NAMED);
+
+    if (source_is_type(ssrc, dtype) && idxpath == NULL) { /* same type */
+        logn(LOGERR, "%s: could not make index of same type (%s)",
+             source_idstr(ssrc), dtype);
+        rc = 0;
+    } else {
+        rc = do_source_make_idx(ssrc, dtype, idxpath, flags);
+    }
+    
+    source_free(ssrc);
+    return rc;
+}
+
+
 

@@ -21,7 +21,7 @@
 struct source {
     unsigned  flags;
     
-    char      *type;
+    char      *type;            /* type (as pkgdir types) */
     char      *name;            /* source name */
     char      *path;            /* path to idx */
     char      *pkg_prefix;      /* packages prefix path */
@@ -31,7 +31,8 @@ struct source {
     int       no;
     char      *dscr;
     char      *lc_lang;
-    tn_array  *mkidx_exclpath;
+    tn_array  *exclude_path;
+    char      *original_type;   /* type of source repo for this source  */
     unsigned  subopt_flags;
     int       _refcnt;
 };
@@ -85,7 +86,8 @@ int sources_clean(tn_array *sources, unsigned flags);
 #define PKGSOURCE_MKIDX_COMPRESSED_GZ  (1 << 1)
 #define PKGSOURCE_MKIDX_COMPRESSED_BZ2 (1 << 2)
 
-int source_make_idx(struct source *src, const char *type, const char *idxpath,
+int source_make_idx(struct source *src, const char *stype, 
+                    const char *dtype, const char *idxpath,
                     unsigned flags);
 
 

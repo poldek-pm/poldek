@@ -34,11 +34,12 @@
 #define OPT_GID  1210
 
 #define OPT_MKIDX       (OPT_GID + 1)
-#define OPT_MKIDXZ      (OPT_GID + 2) /* legacy */
-#define OPT_NODESC      (OPT_GID + 3)
-#define OPT_COMPR       (OPT_GID + 4)
-#define OPT_TYPE        (OPT_GID + 5)
-#define OPT_NODIFF      (OPT_GID + 6)
+#define OPT_MAKEIDX     (OPT_GID + 2)
+#define OPT_MKIDXZ      (OPT_GID + 3) /* legacy */
+#define OPT_NODESC      (OPT_GID + 4)
+#define OPT_COMPR       (OPT_GID + 5)
+#define OPT_TYPE        (OPT_GID + 6)
+#define OPT_NODIFF      (OPT_GID + 7)
 
 /* The options we understand. */
 static struct argp_option options[] = {
@@ -46,6 +47,8 @@ static struct argp_option options[] = {
 
 {"mkidx", OPT_MKIDX, "FILE", OPTION_ARG_OPTIONAL,
  N_("Create package index (SOURCE-PATH/packages.dir by default)"), OPT_GID},
+
+{"makeidx", OPT_MAKEIDX, 0, OPTION_ALIAS, 0, OPT_GID }, 
 
 {"mkidx-type", OPT_TYPE, "TYPE", 0,
      N_("Sets the index type (use --stl to list available values)"),
@@ -151,8 +154,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 static tn_array *parse_types(const char *type) 
 {
-    tn_array *types = n_array_new(4, free, NULL);
-    
+    tn_array *types = n_array_new(4, free, (tn_fn_cmp)strcmp);
+
+    if (type == NULL)
+        return types;
+
     if (strchr(type, ',') == NULL) {
         n_array_push(types, n_strdup(type));
             
@@ -166,7 +172,8 @@ static tn_array *parse_types(const char *type)
         }
         n_str_tokl_free(tl_save);
     }
-    
+    n_array_sort(types);
+    n_array_uniq(types);
     return types;
 }
 
@@ -174,7 +181,7 @@ static tn_array *parse_types(const char *type)
 static int make_idx(struct arg_s *arg_s) 
 {
     struct source   *src;
-    const char      *type = NULL, *path = NULL;
+    const char      *path = NULL;
     tn_array        *types = NULL;
     int i, j, nerr = 0;
 
@@ -186,36 +193,27 @@ static int make_idx(struct arg_s *arg_s)
     if (arg_s->src_mkidx)
         path = arg_s->src_mkidx->path;
 
-    
-    if (arg_s->idx_type == NULL)
-        arg_s->idx_type = n_strdup(poldek_conf_PKGDIR_DEFAULT_TYPE);
-    types = parse_types(arg_s->idx_type);
-    
+    if (arg_s->idx_type)
+        types = parse_types(arg_s->idx_type);
     
     for (i=0; i < n_array_size(arg_s->ctx->sources); i++) {
-        const char *stype, *itype = type;
-        
         src = n_array_nth(arg_s->ctx->sources, i);
-        mem_info(-2, "MEM before mkidx");
+        MEMINF("before mkidx");
 
-        stype = src->type;
-            
-            /* type not specified */
-        if ((src->flags & PKGSOURCE_TYPE) == 0 || src->type == NULL) 
-            source_set_type(src, "dir");
-        
-        else if (itype && source_is_type(src, itype)) /* the same type */
-            source_set_type(src, "dir");
-
-        for (j = 0; j < n_array_size(types); j++) {
-            const char *t = n_array_nth(types, j);
-            msgn(0, "Making '%s' index of %s (type=%s)...", t,
-                 source_idstr(src), src->type);
-            MEMINF("before");
-            if (!source_make_idx(src, t, path, arg_s->crflags))
+        if (types == NULL) {     /* no types  */
+            if (!source_make_idx(src, NULL, NULL, path, arg_s->crflags))
                 nerr++;
-            MEMINF("after");
-        }
+            
+        } else
+            for (j = 0; j < n_array_size(types); j++) {
+                const char *dtype = n_array_nth(types, j);
+                msgn(0, "Making '%s' index of %s (type=%s)...", dtype,
+                     source_idstr(src), src->type);
+                MEMINF("before");
+                if (!source_make_idx(src, NULL, dtype, path, arg_s->crflags))
+                    nerr++;
+                MEMINF("after");
+            }
     }
 
     if (arg_s->src_mkidx) {
@@ -223,8 +221,9 @@ static int make_idx(struct arg_s *arg_s)
         arg_s->src_mkidx = NULL;
     }
 
-    if (arg_s->idx_type)
-        n_cfree(&arg_s->idx_type);
+    if (types)
+        n_array_free(types);
+    n_cfree(&arg_s->idx_type);
     
     return nerr == 0;
 }
