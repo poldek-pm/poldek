@@ -5,9 +5,8 @@ _distro  = pld
 
 %include %{_confdir}/%{_distro}-source.conf
 
-# external downloaders
+# External downloaders config
 #%include fetch.conf
-
 
 [global]
 
@@ -16,6 +15,13 @@ _distro  = pld
 
 # Permits using root privs for installation only; default "no"
 #use sudo  = yes
+
+# Downloaders config 
+#default fetcher = ftp,http:internal
+#default fetcher = https:wget
+# vfjuggle is cdrom getter supplied with poldek
+#default fetcher = cdrom:vfjuggle
+
 
 
 ###############################################################
