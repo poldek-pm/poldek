@@ -34,12 +34,14 @@
 #define INST_UPGRADE  2
 
 struct upgrade_s {
-    tn_array       *avpkgs;
-    tn_array       *install_pkgs;
-    tn_hash        *depcache;
-    tn_array       *install_rnos;     /* recnos of upgraded packages */
+    tn_array       *avpkgs;     
+    tn_array       *install_pkgs; /* pkgs to install */
+    tn_hash        *depcache;     /* cache of resolved  */
+    tn_array       *install_rnos; /* recnos of upgraded packages */
     
-    tn_array       *orphan_pkgs;  /* packages which requires upgraded ones */
+    tn_array       *orphan_pkgs;  /* packages which requires
+                                     uninstalled ones */
+    
     tn_array       *orphan_rnos;  /* recnos of above  */
     
     int            ndberrs;
@@ -52,6 +54,7 @@ struct upgrade_s {
 };
 
 
+/* anyone of pkgs is marked? */
 __inline__
 static int one_is_marked(struct pkg *pkgs[], int npkgs) 
 {
@@ -75,7 +78,7 @@ static int dump_pkgs_fqpns(struct pkgset *ps, struct upgrade_s *upg)
             log(LOGERR, "fopen %s: %m\n", upg->inst->dumpfile);
             return 0;
         }
-        fprintf(stream, "# Packages to install (in the right order, hope)\n");
+        fprintf(stream, "# Packages to install (in the right order)\n");
     }
     
     for (i=0; i<n_array_size(ps->ordered_pkgs); i++) {
@@ -100,7 +103,7 @@ static int fetch_pkgs(struct pkgset *ps, struct upgrade_s *upg)
     }
 
     if ((urltype = vfile_url_type(ps->path)) == VFURL_PATH) {
-        log(LOGERR, "Think! Packages path is not remote path\n");
+        log(LOGERR, "Think! Packages path is not remote URL\n");
         return 0;
     }
 
@@ -386,6 +389,34 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
     n_array_free(markarr[1]);
     return ndepadds;
 }
+
+/* add to orphans packages obsoleted by installed ones */
+static
+void add_obsoletes(struct pkgset *ps, struct upgrade_s *upg) 
+{
+    int i;
+    
+    for (i=0; i<n_array_size(upg->install_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
+        if (pkg_is_color(pkg, PKG_COLOR_GRAY)) {
+            pkg_set_color(pkg, PKG_COLOR_BLACK);
+            if (pkg->cnfls) {
+                int j;
+                for (j=0; j<n_array_size(pkg->cnfls); j++) {
+                    struct capreq *cnfl = n_array_nth(pkg->cnfls, j);
+                    if (cnfl_is_obsl(cnfl))
+                        rpm_get_pkgs_requires_obsl_pkg(upg->inst->db->dbh,
+                                                       cnfl,
+                                                       upg->install_rnos,
+                                                       upg->orphan_rnos,
+                                                       upg->orphan_pkgs);
+                    
+                }
+            }
+        }
+    }
+}
+
     
 /* process packages to install:
    - check dependencies
@@ -406,24 +437,8 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
     while (process_deps(ps, upg->install_pkgs, upg, PROCESS_DEPS) ||
            process_deps(ps, upg->orphan_pkgs, upg, PROCESS_ORPHANS)) {
 
-        for (i=0; i<n_array_size(upg->install_pkgs); i++) {
-            struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
-            if (pkg_is_color(pkg, PKG_COLOR_GRAY)) {
-                pkg_set_color(pkg, PKG_COLOR_BLACK);
-                if (pkg->cnfls) {
-                    int j;
-                    for (j=0; j<n_array_size(pkg->cnfls); j++) {
-                        struct capreq *cnfl = n_array_nth(pkg->cnfls, j);
-                        if (cnfl_is_obsl(cnfl))
-                            rpm_get_pkgs_requires_obsl_pkg(upg->inst->db->dbh, cnfl,
-                                                           upg->install_rnos,
-                                                           upg->orphan_rnos,
-                                                           upg->orphan_pkgs);
-                        
-                    }
-                }
-            }
-        }
+        add_obsoletes(ps, upg);
+        
     }
     
     msg(1, "$Verifying conflicts...\n");
@@ -550,6 +565,7 @@ static void init_upgrade_s(struct upgrade_s *upg, struct pkgset *ps,
     n_hash_ctl(upg->depcache, TN_HASH_NOCPKEY);
 }
 
+
 static void destroy_upgrade_s(struct upgrade_s *upg)
 {
     upg->avpkgs = NULL;
@@ -561,7 +577,6 @@ static void destroy_upgrade_s(struct upgrade_s *upg)
     n_hash_free(upg->depcache);
     memset(upg, 0, sizeof(*upg));
 }
-
 
 
 int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst) 

@@ -224,12 +224,14 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
 {
     const struct capreq_idx_ent *ent;
     char *reqname;
-    int matched;
+    int matched, isrpmreq;
             
     reqname = capreq_name(req);
 
     *npkgs = 0;
     matched = 0;
+
+    isrpmreq = (strncmp(reqname, "rpmlib(", 7) == 0);
     
     if ((ent = capreq_idx_lookup(&ps->cap_idx, reqname))) {
         *suspkgs = (struct pkg **)ent->pkgs;
@@ -246,15 +248,24 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
             *suspkgs = pkgsbuf;
         }
     }
-    
-#ifdef RPMLIB_VERDEP_CAP        /* proteza */
-    if (!matched &&
-        strcmp(capreq_name(req), "rpmlib(VersionedDependencies)") == 0) {
-        msg(4, " req %-35s --> RPMLIB_VERDEP_CAP\n");
-        matched = 1;
-    }
-#endif /* RPMLIB_VERDEP_CAP */
 
+    if (isrpmreq) {
+        struct capreq *cap;
+        
+        if (matched) {
+            log(LOGERR, "something provides %s\n", reqname);
+            matched = 0;
+            *npkgs = 0;
+            *suspkgs = NULL;
+        }
+        
+        if ((cap = n_array_bsearch(ps->rpmcaps, req)))
+            if (cap_match_req(cap, req, 1)) {
+                matched = 1;
+                msg(4, " req %-35s --> RPMLIB_CAP\n", capreq_snprintf_s(req));
+            }
+    }
+    
     return matched;
 }
 
@@ -292,14 +303,6 @@ int psreq_match_pkgs(struct pkg *pkg, struct capreq *req, int strict,
     if (n > 1) 
         isort_pkgs(matchedpkgs, n);
 
-#ifdef RPMLIB_VERDEP_CAP        /* proteza */
-    if (!nmatch &&
-        strcmp(capreq_name(req), "rpmlib(VersionedDependencies)") == 0) {
-        msg(4, "_RPMLIB_VERDEP_CAP");
-        nmatch++;
-    }
-#endif /* RPMLIB_VERDEP_CAP */
-        
     msg(4, nmatch ? "\n" : "_UNMATCHED\n");
     *nmatched = n;
     

@@ -6,6 +6,7 @@
 
 #include <rpm/rpmlib.h>
 #include <trurl/narray.h>
+#include <trurl/nbuf.h>
 
 #define REL_EQ	    (1 << 0)
 #define REL_GT	    (1 << 1)
@@ -59,6 +60,11 @@ struct capreq *capreq_new(const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t flags);
 
+int capreq_sizeof(const struct capreq *cr);
+
+void capreq_serialize(struct capreq *cr, tn_buf *nbuf);
+struct capreq *capreq_deserialize(tn_buf *nbuf);
+
 int capreq_cmp_name_evr(struct capreq *pr1, struct capreq *pr2);
 //#define capreq_eq(pr1, pr2) (capreq_evr_cmp(pr1, pr2) == 0)
 int capreq_cmp2name(struct capreq *pr1, const char *name);
@@ -79,9 +85,9 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int prtype);
 
 
 tn_array *capreq_pkg(tn_array *arr, int32_t epoch, 
-                      const char *name, int name_len, 
-                      const char *version, int version_len, 
-                      const char *release, int release_len);
+                     const char *name, int name_len, 
+                     const char *version, int version_len, 
+                     const char *release, int release_len);
 
 
 int capreq_fprintf(FILE *stream, const struct capreq *cr);

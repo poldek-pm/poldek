@@ -20,6 +20,7 @@
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
+#include <trurl/nstr.h>
 
 #include "log.h"
 #include "pkg.h"
@@ -141,6 +142,46 @@ static tn_array *pkgs_array_new(int size)
 }
 
 
+static tn_array *get_rpmlibcaps(void) 
+{
+    char **names = NULL, **versions = NULL, *evr;
+    int *flags = NULL, n, i;
+    tn_array *caps;
+
+    n = rpmGetRpmlibProvides(&names, &flags, &versions);
+
+    if (n <= 0)
+        return NULL;
+
+    caps = capreq_arr_new();
+
+    evr = alloca(128);
+    
+    for (i=0; i<n; i++) {
+        struct capreq *cr;
+
+        n_assert(flags[i] & RPMSENSE_EQUAL);
+        n_assert(!(flags[i] & (RPMSENSE_LESS | RPMSENSE_GREATER)));
+
+        n_strncpy(evr, versions[i], 128);
+        cr = capreq_new_evr(names[i], evr, REL_EQ);
+        n_array_push(caps, cr);
+    }
+
+    if (names)
+        free(names);
+    
+    if (flags)
+        free(flags);
+
+    if (versions)
+        free(versions);
+    
+    n_array_sort(caps);
+    return caps;
+}
+
+
 struct pkgset *pkgset_new(unsigned optflags)
 {
     struct pkgset *ps;
@@ -158,7 +199,7 @@ struct pkgset *pkgset_new(unsigned optflags)
         ps->flags |= PKGSET_READFULLTXTINDEX;
     }
     
-    
+    ps->rpmcaps = get_rpmlibcaps();
     return ps;
 }
 
@@ -169,7 +210,7 @@ void pkgset_free(struct pkgset *ps)
         capreq_idx_destroy(&ps->cap_idx);
         capreq_idx_destroy(&ps->req_idx);
         file_index_destroy(&ps->file_idx);
-        ps->flags &=  (unsigned)~PKGSET_INDEXES_INIT;
+        ps->flags &= (unsigned)~PKGSET_INDEXES_INIT;
     }
 
     if (ps->path) {
@@ -182,8 +223,14 @@ void pkgset_free(struct pkgset *ps)
         ps->depdirs = NULL;
     }
 
+    if (ps->rpmcaps) {
+        n_array_free(ps->rpmcaps);
+        ps->rpmcaps = NULL;
+    }
+
     n_array_free(ps->pkgs);
 }
+
 
 static void mapfn_free_pkgfl(struct pkg *pkg) 
 {

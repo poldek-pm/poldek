@@ -4,9 +4,6 @@
 * mis  2000/09/20
 - interactive mode (see README.package-sets)
 
-- rpm 4.x support (seems only rpm.c needs modifications), should 
-  be possible to select between 3.x and 4.x during compilation.
-
 - check packages MD5 sums and PGP signatures
 
 - support packages user level information (Summaries, Descriptions, etc).
@@ -27,16 +24,18 @@
   timestamping but fetches file list for every file. 
 
 - write as small as possible an unrpm tool for unpacking given files from
-  rpm package (use tools/*.c from rpm sources and cpio*.c from pldilib sources). 
+  rpm package (use tools/*.c from rpm sources and cpio*.c from pldilib 
+  sources). 
   It will be used on bootdisks for extract poldek.static from fetched 
-  say, "install-suit" rpm package.
+  say, "install-suite" rpm package.
 
 
 Long term:
 - Use external db for file list storage (custom binary format? modified cdb?). 
-  Currently PLD distribution (about 1800 packages) contains about 110.000 files.
+  Currently PLD distribution (about 1800 packages) contains about 110.000 
+  files.
 
-- Do a complete check (dependencies and conflicts) during upgrade/install. 
+- Do a complete check (dependencies and conflicts) during upgrade/install.
   It will make possible to use rpm only for install package (now is done 
   only for install-dist, where is no installed packages)
 

@@ -8,10 +8,7 @@ ifdef DESTDIR
 	INSTALL_ROOT = $(DESTDIR)
 endif
 
-# RPMLIB_VERDEP_CAP - support for RPM hack -- handle internally special 
-# "rpmlib(VersionedDependencies)" capability.
-
-DEFINES  = -DVFILE_RPMIO_SUPPORT -DRPMLIB_VERDEP_CAP
+DEFINES  = -DVFILE_RPMIO_SUPPORT
 INCLUDES = -Itrurlib
 CPPFLAGS = $(INCLUDES) $(DEFINES)
 override CFLAGS += -g -Wall -W $(CPPFLAGS)
@@ -48,12 +45,13 @@ LIBOBJS = log.o             \
 	  pkgset-rpmidx.o   \
 	  pkgset-txtidx.o   \
 	  rpm.o             \
+	  rpmhdr.o          \
 	  pkgdb.o           \
 	  usrset.o          \
 	  vfile.o  	    \
 	  install.o	    \
 	  fetch.o   	    \
-	  conf.o	
+	  conf.o	    
 
 OBJS = main.o test_rpm.o 
 

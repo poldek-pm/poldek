@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <netinet/in.h>
+
 #include <rpm/rpmlib.h>
 #include <rpm/misc.h>
 #include <trurl/nstr.h>
@@ -49,6 +51,7 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
     n_assert(name);
     n_assert(version);
     n_assert(release);
+    n_assert(arch);
     
     if (version == NULL || release == NULL)
         return NULL;
@@ -76,10 +79,11 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
     }
     
     pkg = pkg_alloc_fn(sizeof(*pkg) + len);
-
+    
     pkg->flags = PKG_COLOR_WHITE;
     pkg->epoch = epoch;
 
+    pkg->_buf_size = len;
     buf = pkg->_buf;
 
     if (fpath_len == 0) 
@@ -89,8 +93,8 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
         memcpy(buf, fpath, fpath_len);
         buf += fpath_len;
         *buf++ = '\0';
+        pkg->flags |= PKG_HAS_DN;
     }
-    
     
     pkg->name = buf;
     memcpy(buf, name, name_len);
@@ -107,12 +111,11 @@ struct pkg *pkg_new_udata(const char *name, int32_t epoch,
     buf += release_len;
     *buf++ = '\0';
 
-    if (arch_len) {
-        pkg->arch = buf;
-        memcpy(buf, arch, arch_len);
-        buf += arch_len;
-        *buf++ = '\0';
-    }
+    n_assert(arch_len);
+    pkg->arch = buf;
+    memcpy(buf, arch, arch_len);
+    buf += arch_len;
+    *buf++ = '\0';
     
     if (udata) {
         memcpy(buf, &udata, udsize);
@@ -376,8 +379,7 @@ int rel_match(int cmprc, const struct capreq *req)
 
 #define rel_not_match(cmprc, req) (rel_match(cmprc, req) == 0)
 
-
-static __inline__
+__inline__
 int cap_match_req(const struct capreq *cap, const struct capreq *req,
                   int strict)
 {
@@ -646,6 +648,102 @@ int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg)
     return pkg->cnfls && (n_array_bsearch_ex(pkg->cnfls, cpkg->name,
                                              (tn_fn_cmp)capreq_cmp2name));
 }
+
+
+static
+int capreqs_serialize(tn_array *capreqs, tn_buf *nbuf) 
+{
+    int32_t size, nsize = 0;
+    
+    if (capreqs == NULL) 
+        n_buf_add(nbuf, &nsize, sizeof(nsize));
+    else {
+        size = n_array_size(capreqs);
+        nsize = htonl(size);
+        n_buf_add(nbuf, &nsize, sizeof(nsize));
+        n_array_map_arg(capreqs, (tn_fn_map2)capreq_serialize, nbuf);
+    }
+    
+    return 1;
+}
+
+static
+tn_array *capreqs_deserialize(tn_buf *nbuf) 
+{
+    tn_array *capreqs = NULL;
+    int32_t size;
+    char *p;
+    
+    
+    p = n_buf_cutoff(nbuf, sizeof(size));
+    size = ntohl(*(int32_t*)p);
+    if (size > 0) {
+        int i;
+        
+        capreqs = capreq_arr_new();
+        for (i=0; i<size; i++) {
+            struct capreq *cr = capreq_deserialize(nbuf);
+            n_array_push(capreqs, cr);
+        }
+    }
+    
+    return capreqs;
+}
+
+
+
+void pkg_serialize(const struct pkg *pkg, tn_buf *nbuf) 
+{
+    uint32_t nflags; 
+    int32_t nepoch, nbuf_size;
+
+    nflags = htonl(pkg->flags);
+    nepoch = htonl(pkg->epoch);
+    nbuf_size = htonl(pkg->_buf_size);
+    
+    n_buf_add(nbuf, &nflags, sizeof(nflags));
+    n_buf_add(nbuf, &nepoch, sizeof(nepoch));
+    n_buf_add(nbuf, &nbuf_size, sizeof(nbuf_size));
+    n_buf_add(nbuf, pkg->_buf, pkg->_buf_size);
+    
+    capreqs_serialize(pkg->caps, nbuf);
+    capreqs_serialize(pkg->reqs, nbuf);
+    capreqs_serialize(pkg->cnfls, nbuf);
+}
+    
+
+struct pkg *pkg_deserialize(tn_buf *nbuf) 
+{
+    uint32_t flags; 
+    int32_t epoch, buf_size;
+    struct pkg *pkg;
+    char *p;
+    
+
+    p = n_buf_cutoff(nbuf, sizeof(flags));
+    flags = ntohl(*(uint32_t*)p);
+
+    p = n_buf_cutoff(nbuf, sizeof(epoch));
+    epoch = ntohl(*(int32_t*)p);
+
+    p = n_buf_cutoff(nbuf, sizeof(buf_size));
+    buf_size = ntohl(*(int32_t*)p);
+
+    pkg = pkg_alloc_fn(sizeof(*pkg) + buf_size);
+
+    pkg->flags = flags;
+    pkg->epoch = epoch;
+    pkg->_buf_size = buf_size;
+    
+    p = n_buf_cutoff(nbuf, buf_size);
+    memcpy(pkg->_buf, p, buf_size);
+    
+    pkg->caps = capreqs_deserialize(nbuf);
+    pkg->reqs = capreqs_deserialize(nbuf);
+    pkg->cnfls = capreqs_deserialize(nbuf);
+    return pkg;
+}
+    
 
 char *pkg_filename(const struct pkg *pkg, char *buf, size_t size) 
 {

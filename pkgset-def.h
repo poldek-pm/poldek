@@ -21,6 +21,8 @@ struct pkgset {
     tn_array           *depdirs;   /*  char* []  */
     int                nerrors;
 
+    tn_array           *rpmcaps;
+
     struct capreq_idx  cap_idx;    /* 'name'  => *pkg[]  */
     struct capreq_idx  req_idx;    /*  -"-               */
     struct capreq_idx  obs_idx;    /*  -"-               */     

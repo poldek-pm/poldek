@@ -10,7 +10,13 @@
 #include "capreq.h"
 #include "pkgfl.h"
 
-#define PKG_DIRMARK         (1 << 5) /* marked directly, ie. by the user*/
+#define PKG_HAS_DN          (1 << 0)
+#define PKG_HAS_CAPS        (1 << 1)
+#define PKG_HAS_REQS        (1 << 2)
+#define PKG_HAS_CNFLS       (1 << 3)
+#define PKG_HAS_FL          (1 << 4)
+
+#define PKG_DIRMARK         (1 << 5) /* marked directly, i.e. by the user*/
 #define PKG_INDIRMARK       (1 << 6) /* marked by poldek */
 
 #define PKG_BADREQS         (1 << 9) /* has unsatisfied dependencies? */
@@ -59,7 +65,7 @@ struct pkg {
     char         *ver;
     char         *rel;
     char         *arch;
-    char         *dn;           /* dirname */
+    char         *dn;         /* dirname */
 
     tn_array     *caps;       /* capabilities     */
     tn_array     *reqs;       /* requirements     */
@@ -71,8 +77,8 @@ struct pkg {
     tn_array     *revreqpkgs; /* packages which requires */
     tn_array     *cnflpkgs;   /* conflict packages */
     
-
     char         *udata;      /* for some additional, user level data */
+    int32_t      _buf_size;
     char         _buf[0];     /* private, store all string members */
 };
 
@@ -124,6 +130,9 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
 
 int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req);
 
+
+int cap_match_req(const struct capreq *cap, const struct capreq *req,
+                  int strict);
 /*  */
 int pkg_match_req(const struct pkg *pkg, const struct capreq *req,
                   int strict);

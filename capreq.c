@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <netinet/in.h>
+
 #include <rpm/rpmlib.h>
 #include <trurl/narray.h>
 #include <trurl/nassert.h>
@@ -188,6 +190,27 @@ char *capreq_snprintf(char *str, size_t size, const struct capreq *cr)
 }
 
 
+int capreq_sizeof(const struct capreq *cr) 
+{
+    size_t size = sizeof(*cr);
+    int max_ofs = 0;
+    
+    if (cr->cr_ep_ofs > max_ofs)
+        max_ofs = cr->cr_ep_ofs;
+
+    if (cr->cr_ver_ofs > max_ofs)
+        max_ofs = cr->cr_ver_ofs;
+    
+    if (cr->cr_rel_ofs > max_ofs)
+        max_ofs = cr->cr_rel_ofs;
+    
+    n_assert(max_ofs);
+    size += max_ofs + strlen(&cr->_buf[max_ofs]) + 1;
+    
+    return size;
+}
+
+
 char *capreq_snprintf_s(const struct capreq *cr) 
 {
     static char str[256];
@@ -342,7 +365,6 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
     if (!headerGetEntry(h, *tags, (void*)&t1, (void*)&names, &c1))
         return NULL;
     
-    n_assert(t1 == RPM_STRING_ARRAY_TYPE);
     n_assert(names);
 
     
@@ -497,9 +519,9 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
 
 
 tn_array *capreq_pkg(tn_array *arr, int32_t epoch, 
-                      const char *name, int name_len, 
-                      const char *version, int version_len, 
-                      const char *release, int release_len) 
+                     const char *name, int name_len, 
+                     const char *version, int version_len, 
+                     const char *release, int release_len) 
 {
     struct capreq *cr;
     unsigned int len = 1, epoch_len = 0;
@@ -547,3 +569,44 @@ tn_array *capreq_pkg(tn_array *arr, int32_t epoch,
     return arr;
 }
 
+
+void capreq_serialize(struct capreq *cr, tn_buf *nbuf) 
+{
+    int32_t epoch, nepoch;
+    int16_t size = htonl(capreq_sizeof(cr));
+    
+
+    n_buf_add(nbuf, &size, sizeof(size));
+    if (cr->cr_ep_ofs) {
+        epoch = capreq_epoch(cr);
+        nepoch = htonl(epoch);
+        memcpy(&cr->_buf[cr->cr_ep_ofs], &nepoch, sizeof(nepoch));
+    }
+
+    n_buf_add(nbuf, cr, size);
+    memcpy(&cr->_buf[cr->cr_ep_ofs], &epoch, sizeof(epoch));
+}
+
+
+struct capreq *capreq_deserialize(tn_buf *nbuf) 
+{
+    struct capreq *cr;
+    int16_t size;
+    char *p;
+    
+    p = n_buf_cutoff(nbuf, sizeof(size));
+    size = ntohl(*(int16_t*)p);
+
+    if ((cr = capreq_alloc_fn(size)) == NULL)
+        return NULL;
+    
+    p = n_buf_cutoff(nbuf, size);
+    memcpy(cr, p, size);
+
+    if (cr->cr_ep_ofs) {
+        int32_t epoch = ntohl(capreq_epoch(cr));
+        memcpy(&cr->_buf[cr->cr_ep_ofs], &epoch, sizeof(epoch));
+    }
+    
+    return cr;
+}
