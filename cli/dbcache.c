@@ -223,7 +223,7 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     msg(0, "\n");
     return pkgdir_save_as(pkgdir, RPMDBCACHE_PDIRTYPE, path,
                           PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
-                          PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NODESC);
+                          PKGDIR_CREAT_MINi18n);
     
 }
 
