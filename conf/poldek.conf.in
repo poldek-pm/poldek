@@ -117,8 +117,8 @@ auto zlib in rpm = yes
 #greedy = no
 
 # Be yet more greedy; if successor of orphaned package found, and this 
-# successor drags no packages then upgrade the package. Its value 
-# is implied by 'greedy' option by defalut.
+# successor drags no packages then upgrade the package instead of process
+# its dependencies. Option value is implied by 'greedy' one by defalut.
 #aggressive_greedy = no
 
 # "mercy" dependency checking; defalut "no". Use with care, it may cause
