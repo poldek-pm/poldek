@@ -9,15 +9,39 @@
     
     <sect> Introduction
     <p>
-    The poldek is an rpm package management tool which allows you to easily
-    perform package verification, installation (including system installation from scratch), 
-    upgrading and removal. Package dependencies are automatically handled, so if you 
-    try to install a package that needs others to be installed, it will download all needed 
-    packages and install them.
+    The poldek is a RPM packages management helper tool. 
 
-    Program can be used in batch (like <em>apt_get</em> from Debian's APT) or in interactive mode, 
-    which puts you into a readline interface with command line with autocompletion and history,
-    similar to shell mode of Perl CPAN module. 
+    Features include:
+    <itemize>	
+    <item> package installation, upgrade and removal. Package dependencies 
+           are automatically handled, so if you try to install a package 
+           that needs others to be installed, it will download all
+           needed packages and install them. 
+
+    <item> system installation from scratch 
+	(used by <url name="PLD Installer" url="http://team.pld.org.pl/~klakier/doc/pld-installer/en/index.html">)
+
+    <item> system upgrade by checking what packages are outdated,
+       verifying any eventual new dependencies and installing
+       everything;
+
+    <item> package set verification for unresolved dependencies 
+        unneeded conflicts and dependency loops. 
+
+    <item> packages download from through FTP, HTTP, HTTPS and RSYNC;
+	
+    <item> package set divide for the purpose of placing packages 
+      on removable media like CDROM or ZIP; 
+
+    <item> batch (like <em>apt_get</em> from Debian's APT) and an interactive mode, 
+    which puts you into a readline interface with command line with autocompletion 
+    and history, similar to shell mode of Perl's CPAN module. 
+    </itemize>
+     
+    <p>
+    Package dependencies, conflicts and ordering are handled by poldek
+    itself without rpmlib usage, so program is significatly faster and uses 
+    less memory than rpmlib-based tools.
     
     For more information see 
 	<url url="poldek.html" name="man page">, 
