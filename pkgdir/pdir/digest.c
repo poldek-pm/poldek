@@ -44,7 +44,8 @@ const char *pdir_digest_ext_v016 = ".md";
 static int pdir_digest_read(struct pdir_digest *pdg, struct vfile *vfmd);
 
 
-struct pdir_digest *pdir_digest_new(const char *path, int vfmode, int v016compat) 
+struct pdir_digest *pdir_digest_new(const char *path, int vfmode,
+                                    int v016compat, const char *pdir_name) 
 {
     struct pdir_digest  *pdg;
     struct vfile        *vf = NULL; 
@@ -65,7 +66,7 @@ struct pdir_digest *pdir_digest_new(const char *path, int vfmode, int v016compat
         
         n = pdir_mkdigest_path(mdpath, sizeof(mdpath), path, ext);
         vfmode |= VFM_NOEMPTY;
-        if ((vf = vfile_open(mdpath, VFT_IO, vfmode)) == NULL) 
+        if ((vf = vfile_open_sl(mdpath, VFT_IO, vfmode, pdir_name)) == NULL)
             return NULL;
     }
     
@@ -469,7 +470,7 @@ int pdir_digest_create(struct pkgdir *pkgdir, const char *pathname,
 	}
 
     if (idx->pdg == NULL)
-        idx->pdg = pdir_digest_new(NULL, 0, 0);
+        idx->pdg = pdir_digest_new(NULL, 0, 0, NULL);
     else 
         pdir_digest_destroy(idx->pdg);
         

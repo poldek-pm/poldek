@@ -1,0 +1,77 @@
+#! /bin/sh
+# $Id$
+
+PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+compr() {
+    typeset src=$1
+    typeset dest=$2
+
+    cmd="bzip2 --stdout ${src}"
+    if echo ${dest} | egrep ".gz" >/dev/null; then
+        cmd="gzip -9nf --stdout ${src}"
+    fi
+    echo "$cmd > $dest"
+    $cmd > $dest && rm -f $src
+}
+
+uncompr() {
+    typeset src=$1
+    typeset dest=$2
+
+    cmd="bunzip2 --keep --stdout ${src}"
+    if echo ${src} | egrep ".gz" >/dev/null; then
+        cmd="gunzip --stdout ${src}"
+    fi
+    echo "$cmd > $dest"
+    #echo -e "$cmd\n -> ${dest}"
+    $cmd > ${dest}
+}
+
+usage() {
+    echo "usage: `basename $0` FILE DESTFILE[.gz][.bz2]"
+    echo "       `basename $0` -d FILE DESTFILE[.gz][.bz2]"
+}
+
+if [ "$#" -lt 2 ]; then
+    usage
+    exit 0
+fi
+
+un=$1
+if [ "$un" == "-d" ]; then
+    src=$2
+    if [ "$#" -lt 3 ]; then
+        usage
+        exit 1
+    fi
+    dest=$3
+else 
+    src=$1
+    dest=$2
+    un=""
+fi
+
+
+#if [ ! -r $src -o ! -f $src ]; then
+#   echo "$src: no such file"
+#   exit 1
+#fi	
+
+if [ -r $dest ]; then
+    echo "$dest: file exists"
+    exit 1
+fi
+
+
+if [ $dest == $src ]; then
+    echo "dest and src are the same"
+    exit 1
+fi
+
+if [ -z "$un" ]; then
+    compr $src $dest
+else 
+    uncompr $src $dest
+fi
+

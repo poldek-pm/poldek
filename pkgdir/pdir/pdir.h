@@ -46,7 +46,8 @@ int pdir_mkdigest_path(char *path, int size, const char *pathname,
 
 #define PDIR_DIGEST_SIZEx2 (2 * PDIR_DIGEST_SIZE)
 
-struct pdir_digest *pdir_digest_new(const char *path, int vfmode, int v016compat);
+struct pdir_digest *pdir_digest_new(const char *path, int vfmode,
+                                    int v016compat, const char *pdir_name);
 void pdir_digest_free(struct pdir_digest *pdg);
 
 void pdir_digest_init(struct pdir_digest *pdg);

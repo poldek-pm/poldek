@@ -61,7 +61,7 @@ struct pkg_data {
 
 static tn_array *parse_removed(char *str);
 static int is_uptodate(const char *path, const struct pdir_digest *pdg_local,
-                       struct pdir_digest *pdg_remote);
+                       struct pdir_digest *pdg_remote, const char *pdir_name);
 
 static int do_open(struct pkgdir *pkgdir, unsigned flags);
 static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
@@ -154,11 +154,12 @@ void pdir_init(struct pdir *idx)
 }
 
 static
-int pdir_open(struct pdir *idx, const char *path, int vfmode)
+int pdir_open(struct pdir *idx, const char *path, int vfmode,
+              const char *pdir_name)
 {
 	pdir_init(idx);
-    if ((idx->pdg = pdir_digest_new(path, vfmode, pdir_v016compat))) {
-        idx->vf = vfile_open(path, VFT_TRURLIO, vfmode);
+    if ((idx->pdg = pdir_digest_new(path, vfmode, pdir_v016compat, pdir_name))) {
+        idx->vf = vfile_open_sl(path, VFT_TRURLIO, vfmode, pdir_name);
         if (idx->vf) 
             snprintf(idx->idxpath, sizeof(idx->idxpath), "%s", path);
         else {
@@ -195,7 +196,7 @@ void pdir_destroy(struct pdir *idx)
 }
 
 static
-int update_whole_idx(const char *path) 
+int update_whole_idx(const char *path, const char *pdir_name) 
 {
     struct vfile *vf;
     int rc, try = 2;
@@ -204,7 +205,7 @@ int update_whole_idx(const char *path)
     while (try > 0) {
         struct pdir idx;
         
-        if (!pdir_open(&idx, path, vf_flags))
+        if (!pdir_open(&idx, path, vf_flags, pdir_name))
             return 0;
         try--;
 
@@ -240,9 +241,9 @@ static int do_update_a(const struct source *src)
     unsigned int   vf_mode = VFM_RO | VFM_CACHE;
     struct pdir    idx;
     int            rc = 0;
-    
-    if (!pdir_open(&idx, src->path, vf_mode))
-        return update_whole_idx(src->path);
+
+    if (!pdir_open(&idx, src->path, vf_mode, src->name))
+        return update_whole_idx(src->path, src->name);
 
     if (idx.vf->vf_flags & VF_FETCHED) {
         rc = pdir_digest_verify(idx.pdg, idx.vf);
@@ -250,7 +251,7 @@ static int do_update_a(const struct source *src)
         return rc;
     }
     
-    switch (is_uptodate(idx.idxpath, idx.pdg, NULL)) {
+    switch (is_uptodate(idx.idxpath, idx.pdg, NULL, src->name)) {
         case 1: {
             rc = pdir_digest_verify(idx.pdg, idx.vf);
             pdir_close(&idx);
@@ -261,7 +262,7 @@ static int do_update_a(const struct source *src)
             
         case -1:
         case 0:
-            rc = update_whole_idx(src->path);
+            rc = update_whole_idx(src->path, src->name);
             break;
                 
         default:
@@ -289,7 +290,7 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
     char            idxpath[PATH_MAX], tmpath[PATH_MAX], path[PATH_MAX];
     char            *dn, *bn;
     struct vfile    *vf;
-    char            line[1024];
+    char            line[1024], diffname[256];
     int             nread, nerr = 0, rc;
     const char      *errmsg_broken_difftoc = _("%s: broken patch list");
     char            current_mdd[PDIR_DIGEST_SIZE + 1];
@@ -303,7 +304,7 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
         return 1;
     
     n_assert(pdir_v016compat == 0);
-    switch (is_uptodate(pkgdir->idxpath, idx->pdg, &pdg_current)) {
+    switch (is_uptodate(pkgdir->idxpath, idx->pdg, &pdg_current, pkgdir->name)) {
         case 1:
             rc = 1;
             if ((pkgdir->flags & PKGDIR_VERIFIED) == 0)
@@ -329,14 +330,15 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
     snprintf(path, sizeof(path), "%s/%s/%s%s", dn,
              pdir_packages_incdir, bn, pdir_difftoc_suffix);
     
-    if ((vf = vfile_open(path, VFT_TRURLIO, VFM_RO)) == NULL) 
+    if ((vf = vfile_open_sl(path, VFT_TRURLIO, VFM_RO, pkgdir->name)) == NULL) 
         return 0;
 
     *npatches = 0;
     n_assert(strlen(idx->pdg->mdd) == PDIR_DIGEST_SIZE);
     memcpy(current_mdd, idx->pdg->mdd, PDIR_DIGEST_SIZE + 1);
     first_patch_found = 0;
-    
+
+    n_snprintf(diffname, sizeof(diffname), "%s(diff)", pkgdir->name);
     while ((nread = n_stream_gets(vf->vf_tnstream, line, sizeof(line))) > 0) {
         struct pkgdir *diff;
         char *p, *mdd;
@@ -402,7 +404,8 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
                     logn(LOGERR, "md last %s", mdd);
                     logn(LOGERR, "md curr %s", current_mdd);
                 }
-                logn(LOGERR, _("%s: no patches available"), pkgdir_pr_idxpath(pkgdir));
+                logn(LOGERR, _("%s: no patches available"),
+                     pkgdir_pr_idxpath(pkgdir));
                 nerr++;
                 break;
             }
@@ -410,7 +413,8 @@ int do_update(struct pkgdir *pkgdir, int *npatches)
         
         msg(1, "_\n");
         snprintf(path, sizeof(path), "%s/%s/%s", dn, pdir_packages_incdir, line);
-        if ((diff = pkgdir_open(path, NULL, pkgdir->type, "diff")) == NULL) {
+
+        if ((diff = pkgdir_open(path, NULL, pkgdir->type, diffname)) == NULL) {
             nerr++;
             break;
         }
@@ -513,7 +517,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     
     flags = flags;              /* unused */
     
-    if (!pdir_open(&idx, pkgdir->idxpath, vfmode))
+    if (!pdir_open(&idx, pkgdir->idxpath, vfmode, pkgdir->name))
         return 0;
     
     vf = idx.vf;
@@ -806,7 +810,7 @@ static tn_array *parse_removed(char *str)
 
 
 static int is_uptodate(const char *path, const struct pdir_digest *pdg_local,
-                       struct pdir_digest *pdg_remote)
+                       struct pdir_digest *pdg_remote, const char *pdir_name)
 {
     char                   mdpath[PATH_MAX], mdtmpath[PATH_MAX];
     struct pdir_digest         remote_pdg;
@@ -838,7 +842,7 @@ static int is_uptodate(const char *path, const struct pdir_digest *pdg_local,
     unlink(mdtmpath);
     mdtmpath[n] = '\0';
 
-    if (!vf_fetch(mdpath, mdtmpath)) {
+    if (!vf_fetch_sl(mdpath, mdtmpath, pdir_name)) {
         rc = -1;
         goto l_end;
     }

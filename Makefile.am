@@ -93,7 +93,7 @@ noinst_PROGRAMS     = test_match
 test_match_SOURCES  = test_match.c
 test_match_LDADD    = libpoldek.la 
 
-vfscripts           = vfjuggle vfuncompr vfsmb
+vfscripts           = vfjuggle vfcompr vfsmb
 
 EXTRA_DIST = \
 	     $(vfscripts) \

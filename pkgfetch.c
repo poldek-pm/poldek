@@ -152,10 +152,11 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
     tn_array  *urls = NULL;
     tn_array  *urls_arr = NULL;
     tn_hash   *urls_h = NULL;
-
+    tn_hash   *pkgdir_labels_h = NULL;
 
     
     urls_h = n_hash_new(21, (tn_fn_free)n_array_free);
+    pkgdir_labels_h = n_hash_new(21, NULL);
     n_hash_ctl(urls_h, TN_HASH_NOCPKEY);
     urls_arr = n_array_new(n_array_size(pkgs), NULL, (tn_fn_cmp)strcmp);
     
@@ -220,7 +221,7 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
             pkg_ok = package_verify_sign(path, PKGVERIFY_MD);
             rpmlib_verbose = v;
             
-            if (pkg_ok)         /* already downloaded,  */
+            if (pkg_ok)         /* we got it  */
                 continue;
             else 
                 vf_unlink(path);
@@ -230,6 +231,8 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
             urls = n_array_new(n_array_size(pkgs), NULL, NULL);
             n_hash_insert(urls_h, pkgpath, urls);
             n_array_push(urls_arr, pkgpath);
+
+            n_hash_insert(pkgdir_labels_h, pkgpath, pkg->pkgdir->name);
         }
         
         len = n_snprintf(path, sizeof(path), "%s/%s", pkgpath, pkg_basename);
@@ -257,13 +260,13 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
     
     for (i=0; i < n_array_size(urls_arr); i++) {
         char path[PATH_MAX];
-        const char *real_destdir;
+        struct pkg *pkg;
+        const char *real_destdir, *pkgdir_name;
         char *pkgpath = n_array_nth(urls_arr, i);
-
 
         if (sigint_reached())
             break;
-        
+
         urls = n_hash_get(urls_h, pkgpath);
         real_destdir = destdir;
         if (nosubdirs == 0) {
@@ -273,8 +276,9 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
             snprintf(path, sizeof(path), "%s/%s", destdir, buf);
             real_destdir = path;
         }
-        
-        if (!vf_fetcha(urls, real_destdir))
+
+        pkgdir_name = n_hash_get(pkgdir_labels_h, pkgpath);
+        if (!vf_fetcha_sl(urls, real_destdir, pkgdir_name))
             nerr++;
         
         else {
