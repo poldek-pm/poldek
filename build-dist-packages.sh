@@ -20,12 +20,13 @@ for distro in pld rh; do
     fi
 
     rpm="$rpm --define 'distro ${distro}'"
-
-    if [ "${distro}" = "pld" ]; then
+    rm -f $ddir/$buildscript
+    if [ "$distro" = "pld" ]; then
+	echo "+ static"    
 	echo "su - mis -c \"$rpm $target_def -tb /tmp/$poldek --with static\"" >> $ddir/$buildscript
     fi
     
-    echo "su - mis -c \"$rpm $target_def -tb /tmp/$poldek\"" > $ddir/$buildscript
+    echo "su - mis -c \"$rpm $target_def -tb /tmp/$poldek\"" >> $ddir/$buildscript
 
     cp poldek-${ver}.tar.gz $ddir/tmp || exit 1
     /usr/sbin/chroot $ddir sh $buildscript || exit 1
