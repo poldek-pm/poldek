@@ -1,7 +1,13 @@
 0.15:
 
+* updated vfcurl progress bar handling (according to curl 7.8)
+* better index format version handling (minor.major ver schema), current
+  version is 1.0, older versions not supported...  
+* package's integer fields are stored in binary form, groups 
+  are stored as separate, global tag
+* remote indexes are verified after download
+* added checking of package architecture and OS
 * added support for removable media (vfjuggle script is added)
-* package's integer fields are stored in binary form (0.4.1 index format)
 * added package file size to index (for spliting)
 * added "nofollow" option to cmdline and "follow" one to config	
 * renamed "freshen" to "fresh" and changed its semanticts, now
@@ -12,13 +18,14 @@
 * added spliting (--split* options)
 * package-set file syntax: changed "maybe" mark to '~' ('!' still work, 
   but obsoleted)
-* improved shell: 
+* shell: 
    - added aliases for commands ("ll", "llu", "freshen", "what-requires", etc)
    - better completition context switching
    - extended "desc" and "search" commands -- almost all
      package fields could be specified
    - colorized output
-* bugfixes 
+* bugfixes (thanks to Rafal Kleger-Rudomin <klakier@pld.org.pl> and 
+	     Michal Moskal <malekith@pld.org.pl>)
 
 0.14:
 
@@ -32,6 +39,7 @@
 * shell: added "search" command
 * removed unused support for rpmidx (aka tocfile)
 * cleanup && bugfixes 
+
 
 0.13:
 
