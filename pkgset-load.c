@@ -43,8 +43,8 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         if (src->flags & PKGSOURCE_NOAUTO)
             continue;
 
-        if (src->type == NULL) 
-            src->type = n_strdup("pidx");
+        if (src->type == NULL)
+            source_set_type(src, PKGDIR_DEFAULT_TYPE);
 
         
         pkgdir = pkgdir_srcopen(src, 0);

@@ -189,11 +189,10 @@ void log_msg_i(int indent, const char *fmt, ...)
 }
 
 
-int log_init(const char *pathname, FILE *tty, char *prefix)
+int log_init(const char *pathname, FILE *tty, const char *prefix)
 {
     int is_not_stdstream = l_stream != stdout && l_stream != stderr;
 
-    
     if (l_stream != NULL && is_not_stdstream) 
         fclose(l_stream);
 

@@ -5,7 +5,6 @@
 #include <obstack.h>
 #include <trurl/narray.h>
 
-
 #include "pkg.h"
 #include "pkgdir/pkgdir.h"
 #include "pkgdb.h"
@@ -72,15 +71,20 @@ int pkgset_order(struct pkgset *ps, int verbose);
 #define INSTS_CONFIRM_UNINST  (1 << 29) /* confirm_removal = yes  */
 #define INSTS_EQPKG_ASKUSER   (1 << 30) /* choose_equivalents_manually = yes */
 
-#define INSTS_INTERACTIVE_ON  (INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER)
+#define INSTS_INTERACTIVE_ON  (INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER | INSTS_CONFIRM_UNINST)
 
 struct inst_s {
     struct pkgdb   *db;
     unsigned       flags;          /* INSTS_* */
-    const char     *rootdir;       /* top level dir          */
-    const char     *fetchdir;      /* dir to fetch files to  */
-    const char     *cachedir;      /* cache directory        */
-    const char     *dumpfile;      /* file to dump fqpns     */
+    
+    unsigned       ps_flags;
+    unsigned       ps_setup_flags;
+    
+    char           *rootdir;       /* top level dir          */
+    char           *fetchdir;      /* dir to fetch files to  */
+    char           *cachedir;      /* cache directory        */
+    char           *dumpfile;      /* file to dump fqpns     */
+    char           *prifile;       /* file with package priorities (split*) */
     tn_array       *rpmopts;       /* rpm cmdline opts (char *opts[]) */
     tn_array       *rpmacros;      /* rpm macros to pass to cmdline (char *opts[]) */
     tn_array       *hold_patterns;
@@ -96,7 +100,7 @@ void inst_s_init(struct inst_s *inst);
 /* if set then:
  * - requirements matched even if requirement has version
  *   while capability hasn't (RPM style)
- * - files with diffrent mode only not assumed as conflicts
+ * - files with different modes only are not assumed as conflicts
  */
 #define PSVERIFY_MERCY        (1 << 0)
 #define PSDBDIRS_LOADED       (1 << 5)
@@ -112,7 +116,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 #define PSET_VERIFY_FILECNFLS    (1 << 3)
 #define PSET_DO_UNIQ_PKGNAME     (1 << 4)  
 
-int pkgset_setup(struct pkgset *ps, unsigned flags, const char *pri_fpath);
+int pkgset_setup(struct pkgset *ps, unsigned flags);
 
 /* returns sorted list of packages, free it by n_array_free() */
 tn_array *pkgset_getpkgs(const struct pkgset *ps);
@@ -120,17 +124,21 @@ tn_array *pkgset_getpkgs(const struct pkgset *ps);
 tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname);
 struct pkg *pkgset_lookup_pkgn(struct pkgset *ps, const char *name);
 
+
+/* pkgset-mark.c */
+int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
+                       unsigned inst_s_flags, int withdeps);
+
+void packages_mark(tn_array *pkgs, unsigned flags_on, unsigned flags_off);
+#define packages_unmark_all(pkgs) packages_mark(pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK)
+
+
+
 struct install_info {
     tn_array *installed_pkgs;
     tn_array *uninstalled_pkgs;
 };
 
-#define MARK_USET    0          /* mark only given set */
-#define MARK_DEPS    1          /* follow dependencies */
-int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
-                       struct inst_s *inst, int markflag);
-
-int pkg_match_pkgdef(const struct pkg *pkg, const struct pkgdef *pdef);
 
 /* uninstall.c */
 int uninstall_usrset(struct usrpkgset *ups, struct inst_s *inst,
@@ -162,8 +170,6 @@ void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag);
 /* flags is INSTS_JUSTPRINT[_N] */
 int packages_dump(tn_array *pkgs, const char *path, unsigned flags);
 
-void packages_mark(tn_array *pkgs, unsigned flags_on, unsigned flags_off);
-#define packages_unmark_all(pkgs) packages_mark(pkgs, 0, PKG_INDIRMARK | PKG_DIRMARK)
 
 
 int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs);

@@ -29,8 +29,9 @@ int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type);
 /*
   Returns $TMPDIR or "/tmp" if $TMPDIR isn't set.
   Returned dir always begin with '/'
+
 */
-const char *setup_cachedir(void);
+char *setup_cachedir(const char *path);
 const char *tmpdir(void);
 
 const char *expand_env_vars(char *dest, int size, const char *str);

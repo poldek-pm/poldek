@@ -14,9 +14,9 @@
 #define PKGDEF_VIRTUAL  (1 << 5)
 
 struct pkgdef {
-    struct pkg *pkg;
-    uint8_t tflags;
-    char virtname[0];
+    struct pkg  *pkg;
+    uint8_t     tflags;
+    char        virtname[0];
 };
 
 struct usrpkgset {
@@ -25,14 +25,17 @@ struct usrpkgset {
 };
 
 #define usrpkgset_size(ups)  n_array_size((ups)->pkgdefs)
+
 struct usrpkgset *usrpkgset_new(void);
 void usrpkgset_free(struct usrpkgset *ups);
 
 int usrpkgset_add_str(struct usrpkgset *ups, char *def, int deflen);
 int usrpkgset_add_file(struct usrpkgset *ups, const char *pathname);
 int usrpkgset_add_list(struct usrpkgset *ups, const char *path);
-int usrpkgset_add_list(struct usrpkgset *ups, const char *path);
 int usrpkgset_add_pkg(struct usrpkgset *ups, struct pkg *pkg);
+
 int usrpkgset_setup(struct usrpkgset *ups);
+
+int pkgdef_match_pkg(const struct pkgdef *pdef, const struct pkg *pkg);
 
 #endif

@@ -253,7 +253,7 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
         putenv("POLDEK_VFJUGGLE_CPMODE=link");
 
     
-    for (i=0; i<n_array_size(urls_arr); i++) {
+    for (i=0; i < n_array_size(urls_arr); i++) {
         char path[PATH_MAX];
         const char *real_destdir;
         char *pkgpath = n_array_nth(urls_arr, i);
@@ -272,7 +272,7 @@ int packages_fetch(tn_array *pkgs, const char *destdir, int nosubdirs)
             real_destdir = path;
         }
         
-        if (!vfile_fetcha(real_destdir, urls, VFURL_UNKNOWN))
+        if (!vfile_fetcha(real_destdir, urls))
             nerr++;
         
         else {

@@ -28,6 +28,7 @@ AC_DEFINE([ENABLE_VFILE_TRURLIO],1,[defined if trurlio is used for vfile operati
 
 dnl Checks for programs.
 AC_PROG_CC()
+AC_PROG_CXX()
 AC_C_INLINE
 AC_PROG_INSTALL
 AC_PROG_RANLIB
@@ -37,6 +38,7 @@ AM_GNU_GETTEXT_VERSION(0.11.5)
 
 AM_CFLAGS="-Wall -W"
 AC_SUBST(AM_CFLAGS)
+
 
 dnl Process features.
 AC_CHECK_LIB(tinfo, tigetstr,,[

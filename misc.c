@@ -136,11 +136,20 @@ int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type)
 }
 
 
-const char *setup_cachedir(void) 
+char *setup_cachedir(const char *path) 
 {
     struct passwd *pw;
     char *dir, *default_dn = ".poldek-cache";
 
+
+    if (path) {
+        if (vf_valid_path(path) && is_rwxdir(path)) 
+            return n_strdup(path);
+        else 
+            logn(LOGWARN, _("%s: invalid cachedir path, "
+                            "fallback to default"), path);
+    }
+    
     if ((dir = getenv("TMPDIR")) && vf_valid_path(dir))
         return n_strdup(dir);
     
@@ -253,8 +262,10 @@ char *trimslash(char *path)
     
         if (p) {
             p--;
-            if (*p == '/')
+            while (p != path && *p == '/') {
                 *p = '\0';
+                p--;
+            }
         }
     }
     return path;
@@ -547,7 +558,7 @@ const char *expand_env_vars(char *dest, int size, const char *str)
         
         
         v = *tl;
-	DBGF("token: %s\n", *tl);
+        DBGF("token: %s\n", *tl);
         tl++;
         
         if (*v == '{')

@@ -39,11 +39,9 @@
 #include "pkgset.h"
 #include "usrset.h"
 #include "misc.h"
-#include "install.h"
 #include "conf.h"
 #include "split.h"
-#include "poldek_term.h"
-
+#include "poldek.h"
 
 #ifndef VERSION
 # error "undefined VERSION"
@@ -124,7 +122,6 @@ struct mjrmode_conf mjrmodes[] = {
 struct split_conf {
     int   size;
     int   first_free_space;
-    char  *conf;
     char  *prefix;
 };
 
@@ -138,26 +135,18 @@ struct args {
     
     char      *curr_src_path;
     char      *curr_src_type;
-    tn_array  *sources;         /* --source args */
-    tn_array  *sources_named;   /* --sn args */
 
     struct source *src_mkidx;
-    //int       idx_type;
-    //char      *idx_path;
-    
+
     int       has_pkgdef;
     tn_array  *pkgdef_files;    /* foo.rpm      */
     tn_array  *pkgdef_defs;     /* --nevr "foo 1.2" or "foo" or "foo*" */
     tn_array  *pkgdef_sets;     /* -p ftp://ftp.zenek.net/PLD/tiny */
-    
-    unsigned   psflags;
-    unsigned   ps_setup_flags;
-    struct inst_s inst;
-    
+
+    struct poldek_ctx *ctx;
     struct usrpkgset  *ups;
     
     char        *conf_path;
-    int         noconf;
     char        *log_path;
     
     unsigned    pkgdir_creat_flags; 
@@ -168,7 +157,7 @@ struct args {
     struct      split_conf split_conf;
 } args;
 
-tn_hash *htcnf = NULL;          /* config file values */
+static struct poldek_ctx poldek_ctx;
 
 #define OPT_VERIFY_MERCY      'm'
 #define OPT_VERIFY_DEPS       'V'
@@ -434,7 +423,7 @@ N_("Do sort | uniq on available package list"), 71 },
 
 {"version", OPT_BANNER, 0, 0, N_("Display program version information and exit"), 500 },    
 {"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), 500 },
-{"v016", OPT_V016, 0, 0, N_("Read indexes created by versions < 0.17"), 500 },
+//{"v016", OPT_V016, 0, 0, N_("Read indexes created by versions < 0.17"), 500 },
 {0,  'v', 0, 0, N_("Be verbose."), 500 },
 {0,  'q', 0, 0, N_("Do not produce any output."), 500 },
 { 0, 0, 0, 0, 0, 0 },
@@ -453,8 +442,6 @@ void check_mjrmode(struct args *argsp)
 }
 
 static void print_source_list(tn_array *sources);
-static 
-int get_conf_sources(tn_array *sources, tn_array *srcs_named, tn_hash *htcnf);
 
 /* buggy glibc argp... */
 static inline void chkarg(int key, char *arg) 
@@ -479,29 +466,12 @@ static inline void chkarg(int key, char *arg)
     }
 }
 
-static char *prepare_path(char *pathname) 
-{
-    if (pathname == NULL)
-        return pathname;
-
-    if (vf_url_type(pathname) & VFURL_LOCAL) {
-        char path[PATH_MAX];
-        const char *ppath;
-        
-        if ((ppath = abs_path(path, sizeof(path), pathname)))
-            return n_strdup(ppath);
-    }
-    
-    return pathname;
-}
-
-
 /* Parse a single option. */
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct args *argsp = state->input;
-    struct source *src = NULL;
+    static struct source *src = NULL;
     char *source_type = NULL;
     int source_type_isset = 0;
         
@@ -515,7 +485,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_LOG:
-            argsp->log_path = arg;
+            poldek_configure(argsp->ctx, POLDEK_CONF_LOGFILE, arg);
             break;
             
         case 'q':
@@ -549,7 +519,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             src = source_malloc();
             src->name = n_strdup(arg);
             src->flags |= PKGSOURCE_NAMED;
-            sources_add(argsp->sources, src);
+            poldek_configure(argsp->ctx, POLDEK_CONF_SOURCE, src);
             break;
             
         case OPT_SOURCETXT:     /* no break */
@@ -564,20 +534,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (source_type_isset == 0)
                 source_type = n_strdup("hdrl");
 
-        case 's': {
-			char *p;
+        case 's':
             argsp->curr_src_path = arg;
             argsp->curr_src_type = source_type;
             
             src = source_new(source_type, arg, NULL);
-			
-			p = prepare_path(src->path);
-			if (p != src->path) {
-				free(src->path);
-				src->path = p;
-			}
-            sources_add(argsp->sources, src);
-		}
+			poldek_configure(argsp->ctx, POLDEK_CONF_SOURCE, src);
             break;
 
         case 'P':
@@ -590,20 +552,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 exit(EXIT_FAILURE);
                 
             } else {
-                struct source *src;
-            
-                src = n_array_pop(argsp->sources);
                 if (src->flags & PKGSOURCE_NAMED)
                     logn(LOGERR | LOGDIE, _("poldek's panic"));
                 
                 if (!source_set_pkg_prefix(src, trimslash(arg)))
                     exit(EXIT_FAILURE);
                 
-                n_array_push(argsp->sources, src);
                 argsp->curr_src_path = NULL;
                 argsp->curr_src_type = NULL;
             }
-            
             break;
 
             
@@ -626,38 +583,42 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_SOURCECACHE:
-            argsp->inst.cachedir = trimslash(arg);
+            poldek_configure(argsp->ctx, POLDEK_CONF_CACHEDIR, arg);
             break;
 
         case OPT_VERIFY_MERCY:
-            argsp->psflags |= PSVERIFY_MERCY;
+            poldek_configure(argsp->ctx, POLDEK_CONF_PSFLAGS, PSVERIFY_MERCY);
             break;
 
             
         case OPT_VERIFY_DEPS:
-            argsp->ps_setup_flags |= PSET_VERIFY_DEPS;
+            poldek_configure(argsp->ctx, POLDEK_CONF_PS_SETUP_FLAGS,
+                             PSET_VERIFY_DEPS);
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
             break;
 
         case OPT_VERIFY_CNFLS:
-            argsp->ps_setup_flags |= PSET_VERIFY_CNFLS;
+            poldek_configure(argsp->ctx, POLDEK_CONF_PS_SETUP_FLAGS,
+                             PSET_VERIFY_CNFLS);
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
             break;
 
         case OPT_VERIFY_FILECNFLS:
-            argsp->ps_setup_flags |= PSET_VERIFY_FILECNFLS;
+            poldek_configure(argsp->ctx, POLDEK_CONF_PS_SETUP_FLAGS,
+                             PSET_VERIFY_FILECNFLS);
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_VERIFY;
             break;
 
         case OPT_VERIFY_ALL:
-            argsp->ps_setup_flags |= PSET_VERIFY_DEPS | PSET_VERIFY_CNFLS |
-                PSET_VERIFY_FILECNFLS;
+            poldek_configure(argsp->ctx, POLDEK_CONF_PS_SETUP_FLAGS,
+                             PSET_VERIFY_DEPS | PSET_VERIFY_CNFLS |
+                             PSET_VERIFY_FILECNFLS);
             
             if (argsp->mjrmode != MODE_VERIFY)
                 check_mjrmode(argsp);
@@ -669,7 +630,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (argsp->mjrmode != MODE_SHELL)
                 check_mjrmode(argsp);
             argsp->mjrmode = MODE_SHELL;
-            argsp->inst.flags |= INSTS_UPGRADE;
             break;
 
         case OPT_SHELL_SKIPINSTALLED:
@@ -713,161 +673,137 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_INSTDIST:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_INSTALLDIST;
-            argsp->inst.rootdir = prepare_path(arg);
-            argsp->inst.flags |= INSTS_INSTALL;
+            poldek_configure(argsp->ctx, POLDEK_CONF_ROOTDIR, arg);
+            poldek_configure_f(argsp->ctx, INSTS_INSTALL);
             break;
             
         case OPT_INST_UPGRDIST:
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UPGRADEDIST;
-            if (arg) 
-                argsp->inst.rootdir = prepare_path(arg);
-            else if (argsp->inst.rootdir == NULL)
-                argsp->inst.rootdir = "/";
-            
-            argsp->inst.flags |= INSTS_UPGRADE;
+            if (arg)
+                poldek_configure(argsp->ctx, POLDEK_CONF_ROOTDIR, arg);
+            poldek_configure_f(argsp->ctx, INSTS_UPGRADE);
             break;
 
         case OPT_INST_HOLD:
-            if (strchr(arg, ',') == NULL) {
-                n_array_push(argsp->inst.hold_patterns, n_strdup(arg));
-                
-            } else {
-                const char **pkgs, **p;
-            
-                p = pkgs = n_str_tokl(arg, ",");
-                while (*p) {
-                    n_array_push(argsp->inst.hold_patterns, n_strdup(*p));
-                    p++;
-                }
-                n_str_tokl_free(pkgs);
-            }
+            poldek_configure(argsp->ctx, POLDEK_CONF_HOLD, arg);
             break;
             
         case OPT_INST_NOHOLD:
-            argsp->inst.flags |= INSTS_NOHOLD;
+            poldek_configure_f(argsp->ctx, INSTS_NOHOLD);
             break;
 
 
         case OPT_INST_IGNORE:
-            if (strchr(arg, ',') == NULL) {
-                n_array_push(argsp->inst.ign_patterns, n_strdup(arg));
-                
-            } else {
-                const char **pkgs, **p;
-            
-                p = pkgs = n_str_tokl(arg, ",");
-                while (*p) {
-                    n_array_push(argsp->inst.ign_patterns, n_strdup(*p));
-                    p++;
-                }
-                n_str_tokl_free(pkgs);
-            }
+            poldek_configure(argsp->ctx, POLDEK_CONF_IGNORE, arg);
             break;
 
         case OPT_INST_NOIGNORE:
-            argsp->inst.flags |= INSTS_NOIGNORE;
+            poldek_configure_f(argsp->ctx, INSTS_NOIGNORE);
             break;
 
         case OPT_INST_GREEDY:
-            argsp->inst.flags |= INSTS_GREEDY;
+            poldek_configure_f(argsp->ctx, INSTS_GREEDY);
             break;
             
         case 'i':
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_INSTALL;
-            argsp->inst.flags |= INSTS_INSTALL;
+            poldek_configure_f(argsp->ctx, INSTS_INSTALL);
             break;
 
         case OPT_INST_UNIQNAMES:
-            argsp->ps_setup_flags |= PSET_DO_UNIQ_PKGNAME;
+            poldek_configure(argsp->ctx, POLDEK_CONF_PS_SETUP_FLAGS,
+                             PSET_DO_UNIQ_PKGNAME);
             break;
             
         case OPT_INST_DOWNGRADE:
-            argsp->inst.flags |= INSTS_DOWNGRADE;
-            /* no break */
-
         case OPT_INST_REINSTALL:
-            if ((argsp->inst.flags & INSTS_DOWNGRADE) == 0)
-                argsp->inst.flags |= INSTS_REINSTALL;
-            /* no break */
         case 'U':
         case 'u':
             check_mjrmode(argsp);
             argsp->mjrmode = MODE_UPGRADE;
-            argsp->inst.flags |= INSTS_UPGRADE;
+
+            poldek_configure_f(argsp->ctx, INSTS_UPGRADE);
+            
+            if (key == OPT_INST_DOWNGRADE)
+                poldek_configure_f(argsp->ctx, INSTS_DOWNGRADE);
+            else if (key == OPT_INST_REINSTALL)
+                poldek_configure_f(argsp->ctx, INSTS_REINSTALL);
             break;
 
         case 'r':
-            argsp->inst.rootdir = trimslash(arg);
+            poldek_configure(argsp->ctx, POLDEK_CONF_ROOTDIR, arg);
             break;
-            
+#if 0
+DUPA            
         case OPT_INST_RPMDEF:
             n_assert(argsp->inst.rpmacros);
             n_array_push(argsp->inst.rpmacros, arg);
             break;
-            
+#endif            
             
         case OPT_INST_FETCH:
             if (arg)
-                argsp->inst.fetchdir = trimslash(arg);
-            argsp->inst.flags |= INSTS_JUSTFETCH;
+                poldek_configure(argsp->ctx, POLDEK_CONF_FETCHDIR, arg);
+            poldek_configure_f(argsp->ctx, INSTS_JUSTFETCH);
             break;
 
         case OPT_INST_MKSCRIPT:
-            argsp->inst.flags |= INSTS_JUSTPRINT;
-            argsp->inst.dumpfile = trimslash(arg);
+            if (arg)
+                poldek_configure(argsp->ctx, POLDEK_CONF_DUMPFILE, arg);
+            poldek_configure_f(argsp->ctx, INSTS_JUSTPRINT);
             break;
 
         case OPT_INST_POLDEK_MKSCRIPT:
-            argsp->inst.flags |= INSTS_JUSTPRINT_N;
-            argsp->inst.dumpfile = trimslash(arg);
+            if (arg)
+                poldek_configure(argsp->ctx, POLDEK_CONF_DUMPFILE, arg);
+            poldek_configure_f(argsp->ctx, INSTS_JUSTPRINT_N);
             break;
 
         case OPT_INST_FRESHEN:
-            argsp->inst.flags |= INSTS_FRESHEN;
-            argsp->inst.dumpfile = trimslash(arg);
+            poldek_configure_f(argsp->ctx, INSTS_FRESHEN);
             break;
 
         case OPT_INST_NOFOLLOW:
-            argsp->inst.flags &= ~(INSTS_FOLLOW);
+            poldek_configure_f_clr(argsp->ctx, INSTS_FOLLOW);
             break;
             
         case OPT_INST_NODEPS:
-            argsp->inst.flags  |= INSTS_NODEPS;
+            poldek_configure_f(argsp->ctx, INSTS_NODEPS);
             break;
 
         case OPT_INST_FORCE:
-            argsp->inst.flags |= INSTS_FORCE;
+            poldek_configure_f(argsp->ctx, INSTS_FORCE);
             break;
             
         case OPT_INST_JUSTDB:
-            argsp->inst.flags |= INSTS_JUSTDB;
+            poldek_configure_f(argsp->ctx, INSTS_JUSTDB);
             break;
 
         case 't':
-            if (argsp->inst.flags & INSTS_TEST)
-                argsp->inst.flags |= INSTS_RPMTEST;
+            if (poldek_configure_f_isset(argsp->ctx, INSTS_TEST))
+                poldek_configure_f(argsp->ctx, INSTS_RPMTEST);
             else
-                argsp->inst.flags |= INSTS_TEST;
+                poldek_configure_f(argsp->ctx, INSTS_TEST);
             break;
 
         case OPT_INST_MKDBDIR:
-            argsp->inst.flags |= INSTS_MKDBDIR;
+            poldek_configure_f(argsp->ctx, INSTS_MKDBDIR);
             break;
 
         case OPT_ASK:
-            argsp->inst.flags |= (INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER);
+            poldek_configure_f(argsp->ctx, INSTS_CONFIRM_INST | INSTS_EQPKG_ASKUSER);
             break;
 
         case OPT_NOASK:
             argsp->switches |= OPT_SW_NOASK;
-            argsp->inst.flags &= ~(INSTS_CONFIRM_INST | INSTS_CONFIRM_UNINST |
-                                   INSTS_EQPKG_ASKUSER);
+            poldek_configure_f_clr(argsp->ctx, INSTS_CONFIRM_INST |
+                                   INSTS_CONFIRM_UNINST | INSTS_EQPKG_ASKUSER);
             break;
             
         case OPT_CONF:
-            argsp->conf_path = prepare_path(arg);
+            argsp->conf_path = arg;
             break;
             
         case OPT_NOCONF:
@@ -895,7 +831,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case OPT_SPLITCONF:
-            argsp->split_conf.conf = arg;
+            poldek_configure(argsp->ctx, POLDEK_CONF_PRIFILE, arg);
             break;
 
         case OPT_SPLITOUTPATH:
@@ -925,8 +861,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                      exit(EXIT_FAILURE);
                  }
                 
-                n_assert(argsp->inst.rpmopts != NULL);
-                n_array_push(argsp->inst.rpmopts, arg);
+                //n_assert(argsp->inst.rpmopts != NULL);
+                //n_array_push(argsp->inst.rpmopts, arg);
                 
             } else {
                 argp_usage (state);
@@ -945,264 +881,17 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
-static void n_malloc_fault(void) 
-{
-    printf("Something wrong, something not quite right...\n"
-           "Memory exhausted\n");
-    exit(EXIT_FAILURE);
-}
-
-
-static void n_assert_hook(const char *expr, const char *file, int line) 
-{
-    printf("Something wrong, something not quite right.\n"
-           "Assertion '%s' failed, %s:%d\n"
-           "Please report this bug to %s.\n\n",
-           expr, file, line, argp_program_bug_address);
-    abort();
-}
-
-#undef POLDEK_MEM_DEBUG
-#if defined HAVE_MALLOC_H && defined POLDEK_MEM_DEBUG
-#include <malloc.h>
-
-void *old_malloc_hook = NULL;
-
-void *Fnn(size_t SIZE, const void *CALLER) 
-{
-    void *p, *v;
-    __malloc_hook = old_malloc_hook;
-    
-    v = n_malloc(SIZE);
-    //printf("malloc %d\n", SIZE);
-    __malloc_hook = Fnn;
-    return v;
-}
-#endif /* POLDEK_MEM_DEBUG */
-
-
-void poldek_init(void) 
-{
-#ifdef HAVE_MALLOPT
-# include <malloc.h>
-
-#if defined HAVE_MALLOC_H && defined POLDEK_MEM_DEBUG
-    old_malloc_hook = __malloc_hook;
-    __malloc_hook = Fnn;
-#endif
-    mallopt(M_MMAP_THRESHOLD, 1024);
-    //mallopt(M_MMAP_MAX, 0);
-    
-#endif /* HAVE_MALLOPT */
-    
-    n_assert_sethook(n_assert_hook);
-    n_malloc_set_failhook(n_malloc_fault);
-    pkgflmodule_init();
-    pkgsetmodule_init();
-}
-
-void poldek_destroy(void) 
-{
-    pkgsetmodule_destroy();
-    pkgflmodule_destroy();
-    
-    if (htcnf)
-        n_hash_free(htcnf);
-    sigint_destroy();
-}
-
-void poldek_reinit(void)
-{
-    pkgsetmodule_destroy();
-    pkgflmodule_destroy();
-
-    poldek_init();
-}
-
-
-static
-int addsource(tn_array *sources, struct source *src,
-              int justaddit, tn_array *srcs_named, int *matches) 
-{
-    int rc = 0;
-    
-    if (n_array_size(srcs_named) == 0 || justaddit) {
-        sources_add(sources, src);
-        rc = 1;
-                
-    } else {
-        int i;
-        int added = 0;
-        
-        for (i=0; i < n_array_size(srcs_named); i++) {
-            struct source *s = n_array_nth(srcs_named, i);
-
-            if (fnmatch(s->name, src->name, 0) == 0) {
-                matches[i]++;
-                if (added)
-                    continue;
-                
-                /* given by name -> clear flags */
-                src->flags &= ~(PKGSOURCE_NOAUTO | PKGSOURCE_NOAUTOUP);
-
-                /* reproritize */
-                src->no = s->no + matches[i];
-                src->pri = 0;
-                
-                sources_add(sources, src);
-                added = 1;
-                rc = 1;
-            }
-        }
-    }
-    
-    return rc;
-}
-
-
-static
-int prepare_sources(tn_array *sources, tn_hash *htcnf)
-{
-    struct source   *src;
-    int             i, rc = 1;
-    tn_array        *srcs_path, *srcs_named;
-
-    
-    sources_score(sources);
-    
-    srcs_path = n_array_clone(sources);
-    srcs_named = n_array_clone(sources);
-    
-    for (i=0; i < n_array_size(sources); i++) {
-        src = n_array_nth(sources, i);
-        if (src->flags & PKGSOURCE_NAMED) /* supplied by -n */
-            n_array_push(srcs_named, source_link(src));
-        else
-            n_array_push(srcs_path, source_link(src));
-    }
-    if (n_array_size(srcs_named) > 0 || n_array_size(sources) == 0)
-        rc = get_conf_sources(srcs_path, srcs_named, htcnf);
-    
-    n_array_free(srcs_named);
-    n_array_clean(sources);
-
-    for (i=0; i < n_array_size(srcs_path); i++) {
-        struct source *src = n_array_nth(srcs_path, i);
-        n_array_push(sources, source_link(src));
-    }
-
-    n_array_free(srcs_path);
-    n_array_sort(sources);
-    n_array_uniq_ex(sources, (tn_fn_cmp)source_cmp_uniq);
-    
-    sources_score(sources);
-    
-    return rc;
-}
-
-static 
-int get_conf_sources(tn_array *sources, tn_array *srcs_named, tn_hash *htcnf)
-{
-    struct source   *src;
-    int             i, nerr, getall = 0;
-    int             *matches = NULL, is_multi = 0;
-    char            *v;
-
-
-    if (n_array_size(srcs_named) == 0 && n_array_size(sources) == 0)
-        getall = 1;
-    
-    else if (n_array_size(srcs_named) > 0) {
-        matches = alloca(n_array_size(srcs_named) * sizeof(int));
-        memset(matches, 0, n_array_size(srcs_named) * sizeof(int));
-    }
-
-    if ((v = conf_get(htcnf, "source", &is_multi))) {
-        if (is_multi == 0) {
-            src = source_new(NULL, v, NULL);
-            if (!addsource(sources, src, getall, srcs_named, matches))
-                source_free(src);
-            
-        } else {
-            tn_array *paths = NULL;
-            if ((paths = conf_get_multi(htcnf, "source"))) {
-                while (n_array_size(paths)) {
-                    src = source_new(NULL, n_array_shift(paths), NULL);
-                    if (!addsource(sources, src, getall, srcs_named, matches))
-                        source_free(src);
-                }
-            }
-        }
-    }
-    
-    /* source\d+, prefix\d+ pairs  */
-    for (i=0; i < 100; i++) {
-        char opt[64], *src_val;
-        
-        snprintf(opt, sizeof(opt), "source%d", i);
-        if ((src_val = conf_get(htcnf, opt, NULL))) {
-            snprintf(opt, sizeof(opt), "prefix%d", i);
-            src = source_new(NULL, src_val, conf_get(htcnf, opt, NULL));
-            
-            if (!addsource(sources, src, getall, srcs_named, matches))
-                source_free(src);
-        }
-    }
-
-
-    nerr = 0;
-    for (i=0; i < n_array_size(srcs_named); i++) {
-        if (matches[i] == 0) {
-            struct source *src = n_array_nth(srcs_named, i);
-            logn(LOGERR, _("%s: no such source"), src->name);
-            nerr++;
-        }
-    }
-
-    if (nerr == 0 && getall)
-        for (i=0; i < n_array_size(sources); i++) {
-            struct source *src = n_array_nth(sources, i);
-            src->no = i;
-        }
-
-
-    return nerr == 0;
-}
-    
-
-static void get_conf_opt_list(const char *name, tn_array *tolist) 
-{
-    int is_multi = 0;
-    char *v;
-    
-    if ((v = conf_get(htcnf, name, &is_multi))) {
-        tn_array *list = NULL;
-        
-        if (is_multi) {
-            list = conf_get_multi(htcnf, name);
-            while (n_array_size(list)) 
-                n_array_push(tolist, n_array_shift(list));
-            
-        } else {
-            n_array_push(tolist, v);
-        }
-    }
-}
-
 
 static
 void parse_options(int argc, char **argv) 
 {
     struct argp argp = { options, parse_opt, args_doc, poldek_banner, 0, 0, 0};
-    int vfile_cnflags = 0;
-    char *v;
-
 
     verbose = 0;
     
     memset(&args, 0, sizeof(args));
 
-    args.sources = n_array_new(4, (tn_fn_free)source_free, (tn_fn_cmp)source_cmp);
+    args.ctx = &poldek_ctx;
     args.curr_src_path = NULL;
     args.curr_src_type = NULL;
     args.src_mkidx = NULL;
@@ -1211,63 +900,21 @@ void parse_options(int argc, char **argv)
     args.pkgdef_sets  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.split_conf.size = 0;
     args.split_conf.first_free_space = 0;
-    args.split_conf.conf = NULL;
     args.split_conf.prefix = NULL;
     args.shcmd = NULL;
-    inst_s_init(&args.inst);
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
-    //pkgdir_v016compat = (args.switches & OPT_SW_V016);
-
-    
     if ((args.switches & OPT_SW_NOCONF) && args.conf_path) {
         logn(LOGERR, _("--noconf and --conf are exclusive, aren't they?"));
         exit(EXIT_FAILURE);
     }
 
-    if (args.conf_path != NULL)
-        htcnf = ldconf(args.conf_path);
-    else if (args.noconf == 0)
-        htcnf = ldconf_deafult();
+    if ((args.switches & OPT_SW_NOCONF) == 0) 
+        poldek_load_config(args.ctx, args.conf_path);
 
-    
-    if (!prepare_sources(args.sources, htcnf))
-        exit(EXIT_FAILURE);
-        
 
-    if (n_array_size(args.sources) == 0) {
-        logn(LOGERR, _("no source specified"));
-        exit(EXIT_FAILURE);
-    }
 
-    if (args.mjrmode == MODE_SRCLIST) {
-        print_source_list(args.sources);
-        exit(EXIT_SUCCESS);
-        
-    } else {
-        int i, nsources = 0;
-
-        n_array_sort(args.sources);
-        n_array_uniq(args.sources);
-        
-        for (i=0; i < n_array_size(args.sources); i++) {
-            struct source *src = n_array_nth(args.sources, i);
-            
-            if (args.mnrmode & MODE_MNR_UPDATEIDX) {
-                if ((src->flags & PKGSOURCE_NOAUTOUP) == 0)
-                    nsources++;
-                
-            } else if ((src->flags & PKGSOURCE_NOAUTO) == 0)
-                nsources++;
-        }
-        
-        if (nsources == 0) {
-            logn(LOGERR, _("nothing to do (no source selected?)"));
-            exit(EXIT_FAILURE);
-        }
-    }
-    
     if (args.mjrmode == MODE_NULL && args.mnrmode == MODE_NULL) {
 #ifdef ENABLE_INTERACTIVE_MODE
         args.mjrmode = MODE_SHELL;
@@ -1276,124 +923,17 @@ void parse_options(int argc, char **argv)
         exit(EXIT_FAILURE);
 #endif        
     }
-    
-    if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0)
-        args.ps_setup_flags |= PSET_VERIFY_DEPS | PSET_VERIFY_ORDER;
 
     args.has_pkgdef = n_array_size(args.pkgdef_sets) +
         n_array_size(args.pkgdef_defs) +
         n_array_size(args.pkgdef_files);
     
-
-    if (conf_get_bool(htcnf, "use_sudo", 0))
-        args.inst.flags |= INSTS_USESUDO;
-
-    if (conf_get_bool(htcnf, "mercy", 0))
-        args.psflags |= PSVERIFY_MERCY;
-
-    if (conf_get_bool(htcnf, "keep_downloads", 0))
-        args.inst.flags |= INSTS_KEEP_DOWNLOADS;
+    if (args.switches & OPT_SW_NOASK) 
+        poldek_configure_f_clr(args.ctx, INSTS_INTERACTIVE_ON);
     
-    if (conf_get_bool(htcnf, "confirm_installation", 0))
-        args.inst.flags |= INSTS_CONFIRM_INST;
-    /* backward compat */
-    if (conf_get_bool(htcnf, "confirm_installs", 0))
-        args.inst.flags |= INSTS_CONFIRM_INST;
-
-    if (conf_get_bool(htcnf, "confirm_removal", 1))
-        args.inst.flags |= INSTS_CONFIRM_UNINST;
-
-    if (conf_get_bool(htcnf, "choose_equivalents_manually", 0))
-        args.inst.flags |= INSTS_EQPKG_ASKUSER;
-
-    if (args.switches & OPT_SW_NOASK)
-        args.inst.flags &= ~(INSTS_CONFIRM_INST | INSTS_CONFIRM_UNINST |
-                             INSTS_EQPKG_ASKUSER);
-    
-    else if ((args.inst.flags & INSTS_CONFIRM_INST) && verbose < 1)
+    else if (poldek_configure_f_isset(args.ctx, INSTS_CONFIRM_INST) && verbose < 1)
         verbose = 1;
 
-    if (conf_get_bool(htcnf, "particle_install", 1))
-        args.inst.flags |= INSTS_PARTICLE;
-
-    
-    if ((args.inst.flags & INSTS_GREEDY) == 0) { /* no --greedy specified */
-        if (conf_get_bool(htcnf, "greedy", 0))
-            args.inst.flags |= INSTS_GREEDY;
-    }
-
-    if ((args.inst.flags & INSTS_GREEDY) &&
-        (args.inst.flags & INSTS_FOLLOW) == 0) {
-        logn(LOGERR, _("--greedy and --nofollow are exclusive"));
-        exit(EXIT_FAILURE);
-    }
-        
-    if (args.inst.flags & INSTS_FOLLOW) { /* no --nofollow specified */
-        if ((v = conf_get(htcnf, "follow", NULL)) && strcmp(v, "no") == 0) {
-            if (args.inst.flags & INSTS_GREEDY) 
-                logn(LOGWARN, _("ignore config's follow - greedy implies "
-                    "it to \"yes\""));
-            else 
-                args.inst.flags &= ~INSTS_FOLLOW;
-        }
-    }
-
-    if ((args.ps_setup_flags & PSET_DO_UNIQ_PKGNAME) == 0)
-        if (conf_get_bool(htcnf, "unique_package_names", 0))
-            args.psflags |= PSET_DO_UNIQ_PKGNAME;
-    
-    if ((v = conf_get(htcnf, "cachedir", NULL)))
-        args.inst.cachedir = v;
-    
-    if ((v = conf_get(htcnf, "ftp_http_get", NULL))) {
-        vfile_cnflags |= VFILE_USEXT_FTP | VFILE_USEXT_HTTP;
-        vfile_register_ext_handler(VFURL_FTP | VFURL_HTTP, v);
-    }
-    
-    if ((v = conf_get(htcnf, "ftp_get", NULL))) {
-        vfile_cnflags |= VFILE_USEXT_FTP;
-        vfile_register_ext_handler(VFURL_FTP, v);
-    }
-    
-    if ((v = conf_get(htcnf, "http_get", NULL))) {
-        vfile_cnflags |= VFILE_USEXT_HTTP;
-        vfile_register_ext_handler(VFURL_HTTP, v);
-    }
-    
-    if ((v = conf_get(htcnf, "https_get", NULL))) {
-        vfile_cnflags |= VFILE_USEXT_HTTPS;
-        vfile_register_ext_handler(VFURL_HTTPS, v);
-    }
-        
-    if ((v = conf_get(htcnf, "rsync_get", NULL))) 
-        vfile_register_ext_handler(VFURL_RSYNC, v);
-    
-    if ((v = conf_get(htcnf, "cdrom_get", NULL)))
-        vfile_register_ext_handler(VFURL_CDROM, v);
-    
-    get_conf_opt_list("rpmdef", args.inst.rpmacros);
-    get_conf_opt_list("hold", args.inst.hold_patterns);
-    get_conf_opt_list("ignore", args.inst.ign_patterns);
-    
-    vfile_verbose = &verbose;
-    n_assert(args.inst.cachedir);
-
-    if ((conf_get_bool(htcnf, "ftp_sysuser_as_anon_passwd", 0)))
-        vfile_cnflags |= VFILE_REALUSERHOST_AS_ANONPASSWD;
-    
-    vfile_configure(args.inst.cachedir, vfile_cnflags);
-    
-    if (args.inst.rootdir) {
-        char path[PATH_MAX];
-        const char *ppath;
-        
-        if ((ppath = abs_path(path, sizeof(path), args.inst.rootdir)))
-            args.inst.rootdir = n_strdup(ppath);
-    }
-    
-    vfile_msg_fn = log_msg;
-    vfile_msgtty_fn = log_tty;
-    vfile_err_fn = log_err;
 }
 
 
@@ -1407,68 +947,6 @@ static void print_source_list(tn_array *sources)
     n_array_sort(sources);
 }
 
-static
-void load_db_depdirs(const char *rootdir, int mjrmode, struct pkgset *ps) 
-{
-    switch (mjrmode) {
-#ifdef ENABLE_INTERACTIVE_MODE
-        case MODE_SHELL:
-#endif
-            
-        case MODE_INSTALL:
-        case MODE_UNINSTALL:
-        case MODE_UPGRADE:
-        case MODE_UPGRADEDIST:
-            if (rpmdb_get_depdirs(rootdir, ps->depdirs) >= 0)
-                ps->flags |= PSDBDIRS_LOADED;
-            break;
-            
-    }
-}
-
-static struct pkgset *load_pkgset(int ldflags) 
-{
-    struct pkgset *ps;
-    
-    if ((ps = pkgset_new(args.psflags)) == NULL)
-        return NULL;
-    
-    load_db_depdirs(args.inst.rootdir, args.mjrmode, ps);
-    
-    if (!pkgset_load(ps, ldflags, args.sources)) {
-        logn(LOGWARN, _("no packages loaded"));
-        //pkgset_free(ps);
-        //ps = NULL;
-    }
-    mem_info(1, "MEM after load");
-
-    if (ps == NULL)
-        return ps;
-
-    
-    if ((args.mjrmode & MODE_IS_NOSCORE) == 0) {
-        if ((args.inst.flags & INSTS_NOHOLD) == 0) {
-            packages_score(ps->pkgs, args.inst.hold_patterns, PKG_HELD);
-            
-            if (n_array_size(args.inst.hold_patterns) == 0) {
-                n_array_free(args.inst.hold_patterns);
-                args.inst.hold_patterns = NULL;
-            }
-        }
-
-        if ((args.inst.flags & INSTS_NOIGNORE) == 0) {
-            packages_score(ps->pkgs, args.inst.ign_patterns, PKG_IGNORED);
-            n_array_free(args.inst.ign_patterns);
-            args.inst.ign_patterns = NULL;
-        }
-    }
-    
-    //exit(0);    
-    pkgset_setup(ps, args.ps_setup_flags, args.split_conf.conf);
-    
-    return ps;
-}
-
 
 static int clean_idx(void)
 {
@@ -1477,7 +955,7 @@ static int clean_idx(void)
     if (args.clean_whole > 0)
         flags |= PKGSOURCE_CLEANA;
 
-    return sources_clean(args.sources, flags);
+    return sources_clean(args.ctx->sources, flags);
 }
 
 
@@ -1488,7 +966,7 @@ static int update_idx(void)
     if (args.update_op == OPT_UPDATEIDX_WHOLE)
         flags |= PKGSOURCE_UPA;
 
-    return sources_update(args.sources, flags);
+    return sources_update(args.ctx->sources, flags);
 }
 
 
@@ -1498,7 +976,7 @@ static int make_idx(void)
     const char      *type = NULL, *path = NULL;
     int i, nerr = 0;
 
-    if (n_array_size(args.sources) > 1 && args.src_mkidx) {
+    if (n_array_size(args.ctx->sources) > 1 && args.src_mkidx) {
         logn(LOGERR, _("multiple sources not allowed if index path is specified"));
         return 0;
     }
@@ -1511,8 +989,8 @@ static int make_idx(void)
     if (type == NULL)
         type = PKGDIR_DEFAULT_TYPE;
     
-    for (i=0; i < n_array_size(args.sources); i++) {
-        src = n_array_nth(args.sources, i);
+    for (i=0; i < n_array_size(args.ctx->sources); i++) {
+        src = n_array_nth(args.ctx->sources, i);
         if (src->type == NULL)
             source_set_type(src, "dir");
         msgn(0, "Preparing %s...", src->path);
@@ -1563,20 +1041,13 @@ int prepare_given_packages(void)
         char *path = n_array_nth(args.pkgdef_files, i);
 
         if (is_package_file(path)) 
-            rc = usrpkgset_add_file(args.ups, path);
+            rc = usrpkgset_add_pkgfile(args.ups, path);
         else
             rc = usrpkgset_add_str(args.ups, path, strlen(path));
     }
     
     usrpkgset_setup(args.ups);
     return usrpkgset_size(args.ups);
-}
-
-static int check_install_flags(void) 
-{
-    if ((args.inst.flags & INSTS_GREEDY))
-        args.inst.flags |= INSTS_FOLLOW;
-    return 1;
 }
 
 static
@@ -1616,19 +1087,15 @@ int verify_args(void)
                 args.switches &= ~OPT_SW_V016;
             }
 
-            n_assert(args.sources);
+            n_assert(args.ctx->sources);
 
 #if 0            
-            if (n_array_size(args.sources) > 1) {
+            if (n_array_size(args.ctx->sources) > 1) {
                 logn(LOGERR, _("multiple sources are not allowed "
                                "for mkidx option"));
                 exit(EXIT_FAILURE);
             }
 #endif            
-            //for (i=0; i < n_array_size(args.sources); i++) {
-            //    struct source *src = n_array_nth(args.sources, i);
-            //    source_set_type(src, "dir");
-            //}
             break;
 
             
@@ -1641,14 +1108,11 @@ int verify_args(void)
         case MODE_INSTALL:
         case MODE_UPGRADE:
         case MODE_UNINSTALL:
-            if (prepare_given_packages() > 0) {
-                rc = check_install_flags();
-                
-            } else {
+            if (prepare_given_packages() == 0) {
                 logn(LOGERR, _("no packages to install"));
                 rc = 0;
             }
-                
+            
             break;
             
         case MODE_UPGRADEDIST:
@@ -1656,7 +1120,7 @@ int verify_args(void)
                 logn(LOGERR, _("this option upgrades whole system, not given packages"));
                 exit(EXIT_FAILURE);
             }
-            rc = check_install_flags();
+            rc = 1;
             break;
 
         case MODE_SPLIT: 
@@ -1690,31 +1154,29 @@ int verify_args(void)
     return rc;
 }
 
-int mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
-                struct inst_s *inst, int mjrmode) 
+int mark_usrset(struct usrpkgset *ups, int mjrmode) 
 {
     int rc;
-    int markflag = MARK_USET;
+    int with_deps = 0;
     
     if (mjrmode == MODE_VERIFY && verbose < 2 && verbose != -1) 
         verbose = 1;
 
     if (mjrmode == MODE_VERIFY || mjrmode == MODE_INSTALLDIST)
-        markflag = MARK_DEPS;
+        with_deps = 1;
     
     if (n_array_size(ups->pkgdefs) == 0) {
         logn(LOGERR, _("no packages specified"));
         exit(EXIT_FAILURE);
     }
 
-    rc = pkgset_mark_usrset(ps, ups, inst, markflag);
-    usrpkgset_free(ups);
+    rc = poldek_mark_usrset(&poldek_ctx, ups, with_deps);
     return rc;
 }
 
 
 static
-int uninstall(struct usrpkgset *ups, struct inst_s *inst) 
+int uninstall(struct usrpkgset *ups) 
 {
     int rc;
 
@@ -1724,74 +1186,72 @@ int uninstall(struct usrpkgset *ups, struct inst_s *inst)
         exit(EXIT_FAILURE);
     }
     
-    rc = uninstall_usrset(ups, inst, NULL);
-    usrpkgset_free(ups);
+    rc = uninstall_usrset(ups, poldek_ctx.inst, NULL);
     return rc;
-}
-
-
-void self_init(void) 
-{
-    uid_t uid;
-
-    uid = getuid();
-    if (uid != geteuid() || getgid() != getegid()) {
-        logn(LOGERR, _("I'm set*id'ed, give up"));
-        exit(EXIT_FAILURE);
-    }
-#if 0
-    if (uid == 0) {
-        logn(LOGWARN, _("Running me as root is not a good habit"));
-        sleep(1);
-    }
-#endif    
 }
 
 
 int main(int argc, char **argv)
 {
-    struct pkgset   *ps = NULL;
-    char            *logprefix = "poldek";
-    int             rc = 1, ldflags;
-
+    int                i, rc = 1, load_dbdepdirs = 0;
+    struct poldek_ctx  *ctx;
 
     mem_info_verbose = -1;
 
-    log_init(NULL, stdout, logprefix);
-    self_init();
-
-    setlocale(LC_MESSAGES, "");
-    setlocale(LC_CTYPE, "");
-    bindtextdomain(PACKAGE, NULL);
-    textdomain(PACKAGE);
-    translate_argp_options(options);
+    poldek_init(&poldek_ctx, 0);
+    ctx = &poldek_ctx;
     
-    term_init();
-    log_init(NULL, stdout, logprefix);
+    translate_argp_options(options);
     parse_options(argc, argv);
 
+    msg_f(0, "\n");
+    msg_f(0, "Start (%s", argv[0]);
+    for (i = 1; i < argc; i++)
+        msg_f(0, "_ %s", argv[i]);
+    msg_f(0, "_)\n");
+
+    if (!poldek_setup(ctx))
+        exit(EXIT_FAILURE);
     
-    if (args.log_path) {
-        int i;
+    if (args.mjrmode == MODE_SRCLIST) {
+        print_source_list(ctx->sources);
+        exit(EXIT_SUCCESS);
         
-        log_init(args.log_path, stdout, logprefix);
+    } else {
+        unsigned srcflags_excl = 0;
         
-        msg_f(0, "\n");
-        msg_f(0, "Start (%s", argv[0]);
-        for (i=1; i < argc; i++)
-            msg_f(0, "_ %s", argv[i]);
-        msg_f(0, "_)\n");
+        if (args.mnrmode & MODE_MNR_UPDATEIDX) {
+            srcflags_excl = PKGSOURCE_NOAUTOUP;
+                
+        } else
+            srcflags_excl = PKGSOURCE_NOAUTO;
+        
+        if (poldek_selected_sources(args.ctx, srcflags_excl) == 0) {
+            logn(LOGERR, _("nothing to do (no source selected?)"));
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    
+    load_dbdepdirs = 0;
+    switch (args.mjrmode) {
+#ifdef ENABLE_INTERACTIVE_MODE
+        case MODE_SHELL:
+#endif
+        case MODE_INSTALL:
+        case MODE_UNINSTALL:
+        case MODE_UPGRADE:
+        case MODE_UPGRADEDIST:
+            load_dbdepdirs = 1;
+            break;
     }
     
-    if (!mklock(args.inst.cachedir))
-        exit(EXIT_FAILURE);
     
     if (!verify_args())
         exit(EXIT_FAILURE);
 
-    poldek_init();
-    rpm_initlib(args.inst.rpmacros);
-
+    
+    
     if (args.mnrmode & MODE_MNR_CLEANIDX) {
         rc = clean_idx();
         if (args.mjrmode == MODE_NULL)
@@ -1810,28 +1270,24 @@ int main(int argc, char **argv)
         if (args.mjrmode == MODE_NULL) 
             goto l_end;
         verbose = v;
-
-        poldek_reinit();
     }
 
     if (args.mjrmode == MODE_UNINSTALL) {
         if ((rc = usrpkgset_size(args.ups)))
-            rc = uninstall(args.ups, &args.inst);
+            rc = uninstall(args.ups);
         goto l_end;
     }
     
     if (args.mjrmode == MODE_VERIFY && args.has_pkgdef == 0 && verbose != -1)
         verbose += 2;
 
-    ldflags = 0;
     if (args.mjrmode == MODE_MKIDX) {
         rc = make_idx();
         goto l_end;
     }
     
-    if ((ps = load_pkgset(ldflags)) == NULL)
+    if (!poldek_load_sources(ctx, load_dbdepdirs))
         exit(EXIT_FAILURE);
-
     
     switch (args.mjrmode) {
         case MODE_NULL:
@@ -1844,10 +1300,10 @@ int main(int argc, char **argv)
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
             if (args.shcmd != NULL) 
-                rc = shell_exec(ps, &args.inst, args.shell_skip_installed,
+                rc = shell_exec(ctx->ps, ctx->inst, args.shell_skip_installed,
                                 args.shcmd);
             else
-                rc = shell_main(ps, &args.inst, args.shell_skip_installed);
+                rc = shell_main(ctx->ps, ctx->inst, args.shell_skip_installed);
             
             
             break;
@@ -1855,7 +1311,7 @@ int main(int argc, char **argv)
         case MODE_VERIFY:
             if (args.has_pkgdef)
                 if ((rc = usrpkgset_size(args.ups)))
-                    rc = mark_usrset(ps, args.ups, &args.inst, args.mjrmode);
+                    rc = mark_usrset(args.ups, args.mjrmode);
                     
             break;
             
@@ -1867,9 +1323,9 @@ int main(int argc, char **argv)
                 rc = 0;
             
             else if ((rc = usrpkgset_size(args.ups))) {
-                rc = mark_usrset(ps, args.ups, &args.inst, args.mjrmode);
-                if (rc || (args.inst.flags & INSTS_FORCE)) 
-                    rc = install_dist(ps, &args.inst);
+                rc = mark_usrset(args.ups, args.mjrmode);
+                if (rc || (poldek_configure_f_isset(ctx, INSTS_FORCE)))
+                    rc = poldek_install_dist(ctx);
             }
             break;
 
@@ -1877,20 +1333,20 @@ int main(int argc, char **argv)
         case MODE_INSTALL:
         case MODE_UPGRADE:
             if ((rc = usrpkgset_size(args.ups))) {
-                if ((rc = mark_usrset(ps, args.ups, &args.inst, args.mjrmode))) 
-                    rc = install_pkgs(ps, &args.inst, NULL);
+                if ((rc = mark_usrset(args.ups, args.mjrmode))) 
+                    rc = poldek_install(ctx, NULL);
             }
             break;
             
         case MODE_UPGRADEDIST:
-            rc = upgrade_dist(ps, &args.inst);
+            rc = poldek_upgrade_dist(ctx);
             break;
 
         case MODE_SPLIT:
-            rc = packages_split(ps->pkgs,
+            rc = packages_split(ctx->ps->pkgs,
                                 args.split_conf.size,
                                 args.split_conf.first_free_space, 
-                                args.split_conf.conf, args.split_conf.prefix);
+                                args.split_conf.prefix);
             break;
 
             
@@ -1901,10 +1357,8 @@ int main(int argc, char **argv)
 
  l_end:
     
-    if (ps)
-        pkgset_free(ps);
     mem_info(1, "MEM at the end");
-    poldek_destroy();
+    poldek_destroy(ctx);
     mem_info(1, "MEM at the *real* end");
     return rc ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -143,7 +143,7 @@ struct pkg {
     int16_t      _refcnt;
     void         (*free)(void*); /* self free()  */
 
-    int32_t      _buf_size;
+    int16_t      _buf_size;
     char         _buf[0];  /* private, store all string members */
 };
 

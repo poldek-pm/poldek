@@ -30,7 +30,7 @@
 #include "pkgset.h"
 #include "usrset.h"
 #include "misc.h"
-
+#include "poldek.h"
 
 static
 int mkdbdir(const char *rootdir) 
@@ -86,61 +86,62 @@ static int chk_params(struct inst_s *inst)
     return 1;
 }
 
-int install_dist(struct pkgset *ps, struct inst_s *inst) 
+int poldek_install_dist(struct poldek_ctx *ctx) 
 {
     int rc;
 
     
-    if (!chk_params(inst))
+    if (!chk_params(ctx->inst))
         return 0;
     
-    if ((inst->flags & INSTS_RPMTEST)) 
-        inst->db = pkgdb_open(inst->rootdir, NULL, O_RDONLY);
+    if ((ctx->inst->flags & INSTS_RPMTEST)) 
+        ctx->inst->db = pkgdb_open(ctx->inst->rootdir, NULL, O_RDONLY);
     else 
-        inst->db = pkgdb_creat(inst->rootdir, NULL);
+        ctx->inst->db = pkgdb_creat(ctx->inst->rootdir, NULL);
     
-    if (inst->db == NULL) 
+    if (ctx->inst->db == NULL) 
         return 0;
     
-    rc = pkgset_install_dist(ps, inst);
-    pkgdb_free(inst->db);
-    inst->db = NULL;
+    rc = pkgset_install_dist(ctx->ps, ctx->inst);
+    pkgdb_free(ctx->inst->db);
+    ctx->inst->db = NULL;
     return rc;
 }
 
-int upgrade_dist(struct pkgset *ps, struct inst_s *inst) 
+int poldek_upgrade_dist(struct poldek_ctx *ctx) 
 {
     int rc;
     
-    if (!chk_params(inst))
+    if (!chk_params(ctx->inst))
         return 0;
     
-    inst->db = pkgdb_open(inst->rootdir, NULL, O_RDONLY);
-    if (inst->db == NULL) 
+    ctx->inst->db = pkgdb_open(ctx->inst->rootdir, NULL, O_RDONLY);
+    if (ctx->inst->db == NULL) 
         return 0;
     
-    rc = pkgset_upgrade_dist(ps, inst);
-    pkgdb_free(inst->db);
-    inst->db = NULL;
+    rc = pkgset_upgrade_dist(ctx->ps, ctx->inst);
+    pkgdb_free(ctx->inst->db);
+    ctx->inst->db = NULL;
     return rc;
 }
 
-int install_pkgs(struct pkgset *ps, struct inst_s *inst, struct install_info *iinf) 
+
+int poldek_install(struct poldek_ctx *ctx, struct install_info *iinf) 
 {
     int rc;
     
-    if (inst->rootdir == NULL)
-        inst->rootdir = "/";
+    if (ctx->inst->rootdir == NULL)
+        ctx->inst->rootdir = "/";
     
-    if (!chk_params(inst))
+    if (!chk_params(ctx->inst))
         return 0;
 
-    inst->db = pkgdb_open(inst->rootdir, NULL, O_RDONLY);
-    if (inst->db == NULL) 
+    ctx->inst->db = pkgdb_open(ctx->inst->rootdir, NULL, O_RDONLY);
+    if (ctx->inst->db == NULL) 
         return 0;
     
-    rc = pkgset_install(ps, inst, iinf);
-    pkgdb_free(inst->db);
-    inst->db = NULL;
+    rc = pkgset_install(ctx->ps, ctx->inst, iinf);
+    pkgdb_free(ctx->inst->db);
+    ctx->inst->db = NULL;
     return rc;
 }

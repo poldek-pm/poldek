@@ -310,7 +310,7 @@ int usrpkgset_add_str(struct usrpkgset *ups, char *def, int deflen)
     return 0;
 }
 
-int usrpkgset_add_file(struct usrpkgset *ups, const char *path) 
+int usrpkgset_add_pkgfile(struct usrpkgset *ups, const char *path) 
 {
     struct pkgdef *pdef = NULL;
     
@@ -353,3 +353,25 @@ int usrpkgset_setup(struct usrpkgset *ups)
     return 1;
 }
 
+int pkgdef_match_pkg(const struct pkgdef *pdef, const struct pkg *pkg) 
+{
+    int rc = 1;
+    
+    if (pdef->pkg->epoch && pkg->epoch != pdef->pkg->epoch)
+        rc = 0;
+    
+    if (rc && *pdef->pkg->ver) 
+        if (strcmp(pdef->pkg->ver, pkg->ver) != 0) 
+            rc = 0;
+    
+    if (rc && *pdef->pkg->rel)
+        if (strcmp(pdef->pkg->rel, pkg->rel) != 0)
+            rc = 0;
+#if 0    
+    msgn(1, "MATCH %d e%d e%d %s %s", rc, 
+        pkg->epoch, pdef->pkg->epoch,
+        pkg_snprintf_s(pkg),
+        pkg_snprintf_s0(pdef->pkg));
+#endif    
+    return rc;
+}

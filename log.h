@@ -29,7 +29,7 @@
 
 extern int verbose;
 
-int log_init(const char *pathname, FILE *tty, char *prefix);
+int log_init(const char *pathname, FILE *tty, const char *prefix);
 void log_closelog(void);
 int log_enabled_filelog(void);
 

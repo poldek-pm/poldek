@@ -426,20 +426,12 @@ int packages_set_priorities(tn_array *pkgs, const char *splitconf_path)
 }
 
 
-int packages_split(tn_array *pkgs, unsigned split_size, unsigned first_free_space, 
-                   const char *splitconf_path, const char *outprefix)
+int packages_split(tn_array *pkgs, unsigned split_size,
+                   unsigned first_free_space, const char *outprefix)
 {
-    tn_array *defs = NULL, *packages = NULL, *ordered_pkgs = NULL;
-    int i, j, rc = 1;
+    tn_array *packages = NULL, *ordered_pkgs = NULL;
+    int i, rc = 1;
 
-    if (splitconf_path == NULL)
-        defs = n_array_new(2, NULL, NULL);
-    else 
-        defs = read_split_conf(splitconf_path);
-
-    if (defs == NULL)
-        return 0;
-    
     n_array_sort(pkgs);
     packages = n_array_new(n_array_size(pkgs), (tn_fn_free)pkg_free,
                            (tn_fn_cmp)pkg_cmp_pri);
@@ -447,35 +439,7 @@ int packages_split(tn_array *pkgs, unsigned split_size, unsigned first_free_spac
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
-        int mached = 0, pri = 0;
-
-        if (pkg->fsize == 0) {
-            logn(LOGERR, _("package index version >= 1.0 is required for spliting"));
-            rc = 0;
-            goto l_end;
-        }
-
-        if (defs) 
-            for (j=0; j < n_array_size(defs); j++) {
-                struct pridef *pd = n_array_nth(defs, j);
-                
-                if (fnmatch(pd->mask, pkg->name, 0) == 0) {
-                    mached = 1;
-                    pri = pd->pri;
-                    //msg(0, "mached %d %s %s\n", pri, pd->mask,
-                    //    pkg_snprintf_s(pkg));
-                    break;
-                }
-            }
-
-        if (pri != 0)
-            set_pri(0, pkg, pri);
         n_array_push(packages, pkg_link(pkg));
-    }
-    
-    if (defs) {
-        n_array_free(defs);
-        defs = NULL;
     }
     
     n_array_isort(packages);
@@ -498,10 +462,6 @@ int packages_split(tn_array *pkgs, unsigned split_size, unsigned first_free_spac
     rc = make_chunks(ordered_pkgs, split_size, first_free_space, outprefix);
 
     
- l_end:
-    if (defs)
-        n_array_free(defs);
-
     if (ordered_pkgs) 
         n_array_free(ordered_pkgs);
     

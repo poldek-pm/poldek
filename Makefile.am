@@ -41,28 +41,32 @@ libpoldek_a_SOURCES =  \
 	  pkgset-load.c      	        \
 	  pkgset.c pkgset.h		\
 	  pkgset-req.c pkgset-req.h	\
-	  pkgset-order.c    		\
+	  pkgset-order.c    	\
+	  pkgset-mark.c         \
 	  pkgset-install.c		\
 	  dbdep.c dbdep.h		\
 	  pkgdb.c pkgdb.h		\
 	  usrset.c usrset.h		\
-	  install.c install.h	    	\
-	  conf.c conf.h	    		\
+	  conf.c conf.h	    	\
 	  dbpkg.c dbpkg.h		\
-	  dbpkgset.c dbpkgset.h         \
+	  dbpkgset.c dbpkgset.h \
 	  split.c split.h		\
-	  pkgroup.c pkgroup.h		\
+	  pkgroup.c pkgroup.h	\
 	  pkgscore.c			\
-	  pkgfetch.c                    \
-	  i18n.h 			\
-	  ask.c                         \
-	  uninstall.c
+	  pkgfetch.c            \
+	  i18n.h 			    \
+	  ask.c                 \
+	  uninstall.c           \
+	  lib_init.c            \
+      lib_install.c  	    \
+	  lib_pkgset.c          \
+	  poldek.h
 
 SHELL_MOD = shell/libshell.a
 
 pkgdir_modules = pkgdir/dir/libpkgdir_dir.a      \
 		 pkgdir/hdrl/libpkgdir_hdrl.a    \
-	         pkgdir/rpmdb/libpkgdir_rpmdb.a  \
+	     pkgdir/rpmdb/libpkgdir_rpmdb.a  \
 		 pkgdir/pdir/libpkgdir_pdir.a 	 \
 		 pkgdir/pndir/libpkgdir_pndir.a
 
@@ -73,7 +77,7 @@ poldek_DEPENDENCIES_ = libpoldek.a            \
 		       $(pkgdir_modules)      \
 		       pkgdir/libpkgdir.a     \
 		       sigint/libsigint.a     \
-	               vfile/libvfile.a       \
+	           vfile/libvfile.a       \
 		       vfile/vftp/libvftp.a   \
 		       vfile/vhttp/libvhttp.a
 
@@ -88,14 +92,17 @@ endif
 LDADD_              = @INTLLIBS@
 
 bin_PROGRAMS        = poldek
-dist_bin_SCRIPTS    = mkpackagedir vfjuggle vfuncompr
 poldek_SOURCES      = main.c
 poldek_LDADD        = $(poldek_DEPENDENCIES) $(SHELL_MOD_) $(LDADD_)
+
+poldek_get_SOURCES  = main-get.c
+poldek_get_LDADD    = $(poldek_DEPENDENCIES) $(SHELL_MOD_) $(LDADD_)
 
 noinst_PROGRAMS     = test_match
 test_match_SOURCES  = test_match.c
 test_match_LDADD    = $(poldek_LDADD) 
 
+dist_bin_SCRIPTS    = mkpackagedir vfjuggle vfuncompr
 
 EXTRA_DIST = \
 	     poldek.1 poldek.pod \

@@ -188,12 +188,12 @@ int term_init(void)
     term = getenv("TERM");
     
     if (term == NULL || *term == '\0') {
-	logn(LOGERR, _("$TERM undefined"));
+        logn(LOGERR, _("$TERM undefined"));
         return 0;
     }
     
     if (setupterm(term, fileno(stdout), &rc) != OK && rc <= 0) {
-	logn(LOGERR, _("%s: unknown terminal"), term);
+        logn(LOGERR, _("%s: unknown terminal"), term);
         return 0;
     }
 
