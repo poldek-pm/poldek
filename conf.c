@@ -38,6 +38,8 @@ static struct tag valid_tags[] = {
     { "rsync_get",    0 },
     { "ssh_get",      0 },
     { "install_cmd",  0 },
+    { "ignore_req",   1 },
+    { "ignore_pkg",   1 },
     { "rpmdef",       1 }, 
     {  NULL,          0 }, 
 };
@@ -120,12 +122,28 @@ static char *getv(char *vstr, const char *path, int nline)
     return p;
 }
 
+static void validate_tag(const char *key, void *unused) 
+{
+    int i = 0, found = 0;
+    
+    unused = unused;
+    while (valid_tags[i].name)
+        if (strcmp(key, valid_tags[i++].name) == 0) {
+            found = 1;
+            break;
+        }
+
+    if (!found) {
+        log(LOGWARN, "%s: invalid option\n", key);
+        sleep(1);
+    }
+}
 
 
 tn_hash *ldconf(const char *path) 
 {
     FILE *stream;
-    int n, nline = 0;
+    int nline = 0;
     tn_hash *ht;
     char buf[1024];
     
@@ -176,7 +194,7 @@ tn_hash *ldconf(const char *path)
             continue;
         }
 
-        printf("%s -> %s\n", name, val);
+        //printf("%s -> %s\n", name, val);
         if (n_hash_exists(ht, name)) {
             opt = n_hash_get(ht, name);
         } else {
@@ -194,6 +212,7 @@ tn_hash *ldconf(const char *path)
         }
     }
 
+    n_hash_map(ht, validate_tag);
     return ht;
 }
 
@@ -217,26 +236,25 @@ tn_hash *ldconf_deafult(void)
 char *conf_get(tn_hash *htconf, const char *name, int *is_multi)
 {
     struct copt *opt;
-    const char *v = NULL;
+    char *v = NULL;
 
     if (is_multi)
         *is_multi = 0;
     
-    if ((opt = n_hash_get(htconf, name))) {
+    if (htconf && (opt = n_hash_get(htconf, name))) {
         v = opt->val;
         if (is_multi)
             *is_multi = (opt->flags & COPT_MULTIPLE);
     }
-
-    printf("get %s %s\n", name, v);
+    
     return v;
 }
 
 tn_array *conf_get_multi(tn_hash *htconf, const char *name)
 {
     struct copt *opt;
-    
-    if ((opt = n_hash_get(htconf, name)))
+
+    if (htconf && (opt = n_hash_get(htconf, name)))
         return opt->vals;
     
     return NULL;
