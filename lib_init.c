@@ -204,20 +204,17 @@ struct source *source_new_htcnf(const tn_hash *htcnf, int no)
 
     if ((v = poldek_conf_get_bool(htcnf, "signed", 0)))
         n += n_snprintf(&spec[n], sizeof(spec) - n, ",sign");
-
-    if ((v = poldek_conf_get_bool(htcnf, "pgp", 0)))
+    
+    else if ((v = poldek_conf_get_bool(htcnf, "sign", 0)))
         n += n_snprintf(&spec[n], sizeof(spec) - n, ",sign");
 
-    if ((v = poldek_conf_get_bool(htcnf, "gpg", 0)))
-        n += n_snprintf(&spec[n], sizeof(spec) - n, ",sign");
-
-    if ((v = poldek_conf_get_bool(htcnf, "gpg", 0)))
-        n += n_snprintf(&spec[n], sizeof(spec) - n, ",sign");
+    if ((vs = poldek_conf_get(htcnf, "dscr", NULL)))
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",dscr=%s", vs);
 
     vs = poldek_conf_get(htcnf, "path", NULL);
     if (vs == NULL)
         vs = poldek_conf_get(htcnf, "url", NULL);
-    printf("spec %d = %s\n", n_hash_size(htcnf), spec);
+    //printf("spec %d = %s\n", n_hash_size(htcnf), spec);
     n_assert(vs);
 
     n_snprintf(&spec[n], sizeof(spec) - n, " %s", vs);
@@ -467,7 +464,7 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path)
     inst = ctx->inst;
     
     if (path != NULL)
-        poldek_cnf = poldek_ldconf(path);
+        poldek_cnf = poldek_ldconf(path, 0);
     else 
         poldek_cnf = poldek_ldconf_default();
     
@@ -865,7 +862,6 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     pkgdirmodule_init();
     rpm_initlib(NULL);
 
-    
     vfile_verbose = &verbose;
     vfile_init();
     vfile_msg_fn = log_msg;

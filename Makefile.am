@@ -95,8 +95,8 @@ bin_PROGRAMS        = poldek
 poldek_SOURCES      = main.c
 poldek_LDADD        = $(poldek_DEPENDENCIES) $(SHELL_MOD_) $(LDADD_)
 
-poldek_get_SOURCES  = main-get.c
-poldek_get_LDADD    = $(poldek_DEPENDENCIES) $(SHELL_MOD_) $(LDADD_)
+#poldek_get_SOURCES  = main-get.c
+#poldek_get_LDADD    = $(poldek_DEPENDENCIES) $(SHELL_MOD_) $(LDADD_)
 
 noinst_PROGRAMS     = test_match
 test_match_SOURCES  = test_match.c

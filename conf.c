@@ -48,32 +48,40 @@ struct tag {
     char      *enums[8];
 };
 
+static struct tag unknown_tag = {
+    NULL, TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 },
+};
+
+    
+
 static struct tag global_tags[] = {
     { "source",        TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 } },
     { "source?*",      TYPE_STR | TYPE_W_ENV, { 0 } },
     { "prefix?*",      TYPE_STR | TYPE_W_ENV, { 0 } },
     { "cachedir",      TYPE_STR | TYPE_W_ENV, { 0 } },
-    { "ftp_http_get",  TYPE_STR , { 0 } },
-    { "ftp_get",       TYPE_STR , { 0 } },
-    { "http_get",      TYPE_STR , { 0 } },
-    { "https_get",     TYPE_STR , { 0 } },
-    { "rsync_get",     TYPE_STR , { 0 } },
-    { "cdrom_get",     TYPE_STR , { 0 } },
-    { "ssh_get",       TYPE_STR , { 0 } },
+    
+    { "ftp_http_get",  TYPE_STR , { 0 } }, /* obsolete */
+    { "ftp_get",       TYPE_STR , { 0 } }, /* obsolete */
+    { "http_get",      TYPE_STR , { 0 } }, /* obsolete */
+    { "https_get",     TYPE_STR , { 0 } }, /* obsolete */
+    { "rsync_get",     TYPE_STR , { 0 } }, /* obsolete */
+    { "cdrom_get",     TYPE_STR , { 0 } }, /* obsolete */
+
     { "ignore_req",    TYPE_STR | TYPE_MULTI , { 0 } },
     { "ignore_pkg",    TYPE_STR | TYPE_MULTI , { 0 } },
+
     { "rpmdef",        TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 } },
     { "rpm_install_opt",  TYPE_STR , { 0 } },
     { "rpm_uninstall_opt",  TYPE_STR , { 0 } },
+
     { "follow",         TYPE_BOOL , { 0 } },
     { "greedy",         TYPE_BOOL , { 0 } }, 
     { "use_sudo",       TYPE_BOOL , { 0 } },
     { "mercy",          TYPE_BOOL , { 0 } },
     { "default_fetcher", TYPE_STR | TYPE_MULTI , { 0 } },
-    { "proxy",   TYPE_STR | TYPE_MULTI, { 0 } },
+    { "proxy",          TYPE_STR | TYPE_MULTI, { 0 } },
     { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "ignore",         TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
-    { "downloader",     TYPE_STR | TYPE_MULTI | TYPE_W_ENV, { 0 } }, 
     { "keep_downloads", TYPE_BOOL , { 0 } },
     { "confirm_installs", TYPE_BOOL , { 0 } }, /* backward compat */
     { "confirm_installation", TYPE_BOOL , { 0 } },
@@ -103,6 +111,7 @@ static struct tag source_tags[] = {
     { "url",         TYPE_STR | TYPE_W_ENV, { 0 } },
     { "prefix",      TYPE_STR | TYPE_W_ENV, { 0 } },
     { "pri",         TYPE_STR , { 0 } },
+    { "dscr",        TYPE_STR | TYPE_W_ENV, { 0 } },
     { "type",        TYPE_STR , { 0 } },
     { "noauto",      TYPE_BOOL, { 0 } },
     { "noautoup",    TYPE_BOOL, { 0 } },
@@ -437,14 +446,17 @@ static void poldek_conf_expand_vars(tn_hash *ht)
     }
 }
 
-tn_hash *poldek_ldconf(const char *path) 
+tn_hash *poldek_ldconf(const char *path, unsigned flags) 
 {
     FILE     *stream, *main_stream;
     int      nline = 0;
     tn_hash  *ht, *ht_sect;
     tn_array *arr_sect;
     char     buf[1024], *section, *include = "%include";
-    
+    int      validate = 1;
+
+    if (flags & POLDEK_LDCONF_NOVRFY)
+        validate = 0;
     
     if ((stream = fopen(path, "r")) == NULL) {
         logn(LOGERR, "fopen %s: %m", path);
@@ -527,7 +539,7 @@ tn_hash *poldek_ldconf(const char *path)
             *p = '\0';
 
             
-            if ((sect = find_section(name)) == NULL) {
+            if (validate && (sect = find_section(name)) == NULL) {
                 logn(LOGERR, _("%s:%d: '%s': invalid section name"),
                      path, nline, name);
                 
@@ -567,11 +579,12 @@ tn_hash *poldek_ldconf(const char *path)
             continue;
         }
         
-        while (isalnum(*p) || *p == '_')
+        while (isalnum(*p) || *p == '_' || *p == '-')
             p++;
         
         if (*p != '=' && !isspace(*p)) {
-            logn(LOGERR, _("%s:%d: '%s': invalid parameter"), path, nline, name);
+            logn(LOGERR, _("%s:%d: '%s': invalid value name"), path, nline,
+                 name);
             continue;
         }
         
@@ -595,11 +608,18 @@ tn_hash *poldek_ldconf(const char *path)
         }
 
         if ((tag = find_tag(section, name)) == NULL) {
-            logn(LOGWARN, _("%s:%d unknown option '%s:%s'"), path, nline,
-                 section, name);
-            continue;
+            if (!validate) {
+                unknown_tag.name = name;
+                tag = &unknown_tag;
+                
+            } else {
+                logn(LOGWARN, _("%s:%d unknown option '%s:%s'"), path, nline,
+                     section, name);
+                
+                continue;
+            }
         }
-
+        
         //printf("name = %s, v = %s\n", name, p);
         
 
@@ -687,11 +707,11 @@ tn_hash *poldek_ldconf_default(void)
         
         snprintf(path, sizeof(path), "%s/.poldekrc", homedir);
         if (access(path, R_OK) == 0)
-            return poldek_ldconf(path);
+            return poldek_ldconf(path, 0);
     }
     
     if (access(etcpath, R_OK) == 0)
-        return poldek_ldconf(etcpath);
+        return poldek_ldconf(etcpath, 0);
 
     return NULL;
 }

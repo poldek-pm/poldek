@@ -1,11 +1,14 @@
 /* $Id$ */
-#ifndef POLDEK_CONF_H
-#define POLDEK_CONF_H
+#ifndef POLDEK_LDCONF_H
+#define POLDEK_LDCONF_H
 
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
-tn_hash *poldek_ldconf(const char *path);
+#define POLDEK_LDCONF_NOVRFY (1 << 0)
+
+
+tn_hash *poldek_ldconf(const char *path, unsigned flags);
 tn_hash *poldek_ldconf_default(void);
 
 tn_array *poldek_conf_get_section_arr(const tn_hash *htconf, const char *name);
