@@ -446,16 +446,25 @@ int pkgfl_store_st(tn_array *fl, tn_stream *st, tn_array *depdirs, int which)
 
 int pkgfl_store_buf(tn_array *fl, tn_buf *nbuf, tn_array *depdirs, int which) 
 {
-    tn_buf *buf;
-    int rc;
+    int sizeoffs, offs;
+    int32_t bsize;
     
-    buf = n_buf_new(4096);
-    
-    pkgfl_store(fl, buf, depdirs, which);
-    rc = n_buf_store_buf(buf, nbuf, TN_BUF_STORE_32B);
-    n_buf_free(buf);
+    sizeoffs = n_buf_tell(nbuf);
+    n_buf_seek(nbuf, sizeof(bsize), SEEK_CUR); /* place for buf size */
+
+    offs = n_buf_tell(nbuf);
+    pkgfl_store(fl, nbuf, depdirs, which);
+    bsize = n_buf_tell(nbuf) - offs;
+
+    n_assert(bsize > 0);
+
+    /* write buffer size  */
+    n_buf_seek(nbuf, sizeoffs, SEEK_SET);
+    n_buf_write_int32(nbuf, bsize);
+    n_buf_seek(nbuf, 0, SEEK_END);
 	n_buf_puts(nbuf, "\n");
-    return rc;
+
+    return bsize;
 }
 
 
