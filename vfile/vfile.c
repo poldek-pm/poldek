@@ -253,7 +253,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
 			else 
                 mode = "r";
 			
-				vf->vf_tnstream = n_stream_open(path, mode, TN_STREAM_UNKNOWN);
+            vf->vf_tnstream = n_stream_open(path, mode, TN_STREAM_UNKNOWN);
             if (vf->vf_tnstream != NULL)
                 rc = 1;
             else 
@@ -293,17 +293,21 @@ static const char *vfdecompr(const char *path, char *dest, int size)
         return path;
 
     len = strlen(vfile_conf.cachedir);
-    
-    if (strncmp(uncmpr_path, vfile_conf.cachedir, len) == 0) {
+
+
+       /* file under cachedir */
+    if (strncmp(uncmpr_path, vfile_conf.cachedir, len) == 0) { 
         char *bn;
         n_snprintf(destdir_buf, sizeof(destdir_buf), "%s", uncmpr_path);
         n_basedirnam(destdir_buf, &destdir, &bn);
         n_snprintf(dest, size, "%s", uncmpr_path);
         
     } else {
-        vf_localdirpath(destdir_buf, sizeof(destdir_buf), uncmpr_path);
-        destdir = destdir_buf;
+        char *s = n_strdup(uncmpr_path);
+        vf_localdirpath(destdir_buf, sizeof(destdir_buf), n_dirname(s));
+        free(s);
         
+        destdir = destdir_buf;
         vf_localpath(dest, size, uncmpr_path);
     }
     
@@ -330,6 +334,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
     const char *rpath;
     int len;
 
+    
     if (vfile_conf.flags & VFILE_CONF_EXTCOMPR)
         vfmode |= VFM_UNCOMPR;
     
