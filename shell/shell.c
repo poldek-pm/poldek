@@ -225,7 +225,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
             
         case ARGP_KEY_ARG:
             if (flags & COMMAND_NOARGS) {
-                printf("ARGP_KEY_ARG\n");
                 argp_usage (state);
                 sh_cmdarg->err = 1; 
                 return EINVAL;
