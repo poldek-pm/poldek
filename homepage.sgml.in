@@ -204,13 +204,13 @@ For example:
 	
 	<item> RedHat Linux packages (rpm 4.0.4)
 	<itemize>
-	<item> 7.2 
-	<url url="download/rh/7.2/poldek-@VERSION@-1.i386.rpm" 
-	     name="http://team.pld.org.pl/~mis/poldek/download/rh/7.2/poldek-@VERSION@-1.i386.rpm">  
-	
 	<item> 7.3
 	<url url="download/rh/7.3/poldek-@VERSION@-1.i386.rpm" 
 	     name="http://team.pld.org.pl/~mis/poldek/download/rh/7.3/poldek-@VERSION@-1.i386.rpm">  
+
+       	<item> 7.2 (< 0.15.8 versions only) 
+	<url url="download/rh/7.2/poldek-0.17.8-1.i386.rpm" 
+	     name="http://team.pld.org.pl/~mis/poldek/download/rh/7.2/poldek-0.17.8-1.i386.rpm">  
 	
 	</itemize>
         </itemize>	
@@ -256,6 +256,18 @@ For example:
         Rafal Kleger-Rudomin (klakier at pld.org.pl) and
 	Michal Moskal (malekith at pld.org.pl) for ideas, testing, 
         bug reports and patches. 
+ 
+        <p> update 2002/09/20: Full list of contributors is under construction, for now 
+        see <url url="NEWS" name="NEWS">
+	</p>
+		
+
+<!--	$LOGO_INFO_URL$ -->
+        <p>
+	Thanks to Karol Krenski (mimooh at sgsp.edu.pl) for nice poldek's logo. See
+        also other mimooh's works <url url="http://www.inf.sgsp.edu.pl/pub/MALUNKI/ROZNE/" name="1">,
+	<url url="http://www.inf.sgsp.edu.pl/pub/MALUNKI/PLD/" name="2">.
+   
     </sect>	
     
 </article>
