@@ -334,6 +334,8 @@ int select_best_pkg(const struct pkg *marker,
     return i_min;
 }
 
+#define FINDREQ_BESTSEL    0
+#define FINDREQ_NOBESTSEL  1
 /* lookup in pkgset */
 static
 int do_find_req(const struct pkg *pkg, struct capreq *req,
@@ -365,7 +367,7 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
             if (nmatches > 0 && !one_is_marked(matches, nmatches)) {
                 int best_i = 0;
 
-                if (nobest == 0)
+                if (nobest == 0 && nmatches > 1)
                     best_i = select_best_pkg(pkg, matches, nmatches, ps, upg);
                 *best_pkg = matches[best_i];
 
@@ -392,7 +394,7 @@ int find_req(const struct pkg *pkg, struct capreq *req,
              struct pkg **best_pkg, struct pkg ***candidates,
              struct pkgset *ps, struct upgrade_s *upg) 
 {
-    return do_find_req(pkg, req, best_pkg, candidates, ps, upg, 0);
+    return do_find_req(pkg, req, best_pkg, candidates, ps, upg, FINDREQ_BESTSEL);
 }
 
 
@@ -822,7 +824,6 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
         }
 }
 
-
 static
 int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
 {
@@ -835,29 +836,21 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
     DBGF("%s\n", pkg_snprintf_s(pkg));
     
     for (i=0; i < n_array_size(pkg->reqs); i++) {
-        struct capreq *req;
+        struct capreq *true_req, *req = NULL;
         struct pkg    *tomark = NULL;
-        char          *reqname;
         
-        req = n_array_nth(pkg->reqs, i);
-
-        if (capreq_is_rpmlib(req)) 
+        true_req = n_array_nth(pkg->reqs, i);
+        
+        if (capreq_is_rpmlib(true_req)) 
             continue;
 
-        reqname = capreq_name(req);
-        if (capreq_has_ver(req)) {
-            reqname = alloca(256);
-            capreq_snprintf(reqname, 256, req);
-        }
-
-        DBGF("req %s\n", capreq_snprintf_s(req));
-
-        if (do_find_req(pkg, req, &tomark, NULL, ps, upg, 1)) {
+        req = capreq_new_name_a(capreq_name(true_req));
+        
+        if (do_find_req(pkg, req, &tomark, NULL, ps, upg, FINDREQ_NOBESTSEL)) {
             if (tomark == NULL)
                 continue;
         }
-        
-        
+        DBGF("req %s %p\n", capreq_snprintf_s(true_req), tomark);
         /* cached */
         if (db_deps_provides(upg->db_deps, req, DBDEP_DBSATISFIED)) {
             DBGF("%s: satisfied by db [cached]\n", capreq_snprintf_s(req));
@@ -871,7 +864,7 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
             db_deps_add(upg->db_deps, req, pkg, tomark,
                         PROCESS_AS_NEW | DBDEP_DBSATISFIED);
             
-        } else if (tomark) {
+        } else if (tomark || tomark == NULL) { /* don't care found or not */
             ntoinstall++;
         }
     }
