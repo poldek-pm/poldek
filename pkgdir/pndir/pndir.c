@@ -142,6 +142,7 @@ inline static char *next_tokn(char **str, char delim, int *toklen)
 
 void pndir_init(struct pndir *idx) 
 {
+    memset(idx, 0, sizeof(*idx));
 	idx->db = NULL;
     idx->dg = NULL;
     idx->idxpath[0] = '\0';
@@ -300,7 +301,7 @@ void pndir_destroy(struct pndir *idx)
 }
 
 #if 0
-DUPA
+TODO
 static int valid_version(const char *ver, const char *path)
 {
     int major, minor;
@@ -372,7 +373,24 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             goto l_end;
         }
         
-        if (strcmp(key, pndir_tag_ts) == 0) {
+        if (strcmp(key, pndir_tag_opt) == 0) {
+            tn_array *opts = parse_depdirs(val);
+            int i;
+            
+            for (i=0; i<n_array_size(opts); i++) {
+                char *opt = n_array_nth(opts, i);
+                if (strcmp(opt, "nodesc") == 0)
+                    idx.crflags |= PKGDIR_CREAT_NODESC;
+                else if (strcmp(opt, "nofl") == 0)
+                    idx.crflags |= PKGDIR_CREAT_NOFL;
+                else if (strcmp(opt, "nouniq") == 0)
+                    idx.crflags |= PKGDIR_CREAT_NOUNIQ;
+                else if (verbose > 2) 
+                    logn(LOGWARN, _("%s:%s: unknown index opt"), path, opt);
+            }
+            n_array_free(opts);
+            
+        } else if (strcmp(key, pndir_tag_ts) == 0) {
             if (sscanf(val, "%lu", &ts) != 1) {
                 logn(LOGERR, errmsg_brokenidx, path, pndir_tag_ts);
                 nerr++;
@@ -410,8 +428,6 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         }
     }
     
-    
-    
     pkgdir->flags |= pkgdir_flags;
     pkgdir->pkgs = pkgs_array_new(1024);
     pkgdir->ts = ts;
@@ -420,7 +436,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         pkgdir->flags |= PKGDIR_DIFF;
     
     
-    if (avlangs) {
+    if (avlangs && (idx.crflags & PKGDIR_CREAT_NODESC) == 0) {
         int i;
 
         for (i=0; i < n_array_size(avlangs); i++)
@@ -441,7 +457,6 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     
 
  l_end:
-
     if (nerr == 0) {
         pkgdir->mod_data = n_malloc(sizeof(idx));
         memcpy(pkgdir->mod_data, &idx, sizeof(idx));

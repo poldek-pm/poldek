@@ -26,6 +26,7 @@ struct pndir_digest {
 
 struct pndir {
     struct vfile         *_vf;
+    unsigned             crflags;
     struct tndb          *db;
     tn_hash              *db_dscr_h;
     char                 idxpath[PATH_MAX];
@@ -79,6 +80,7 @@ extern const char *pndir_tag_pkgroups;
 extern const char *pndir_tag_langs;
 extern const char *pndir_tag_ts;
 extern const char *pndir_tag_ts_orig;
+extern const char *pndir_tag_opt;
 extern const char *pndir_tag_removed;
 extern const char *pndir_tag_endhdr;
 

@@ -132,14 +132,26 @@ static int do_unlink(const char *path)
     return 0;
 }
 
-static void put_pndir_header(struct tndb *db, struct pkgdir *pkgdir) 
+static
+void put_pndir_header(struct tndb *db, struct pkgdir *pkgdir, unsigned flags)
 {
     char    buf[4096];
+    tn_buf  *nbuf;
     int     n, i;
     
     n = fheader(buf, sizeof(buf), pndir_poldeksindex, pkgdir);
     tndb_put(db, pndir_tag_hdr, strlen(pndir_tag_hdr), buf, n);
 
+    
+    nbuf = n_buf_new(4096);
+    if (flags & PKGDIR_CREAT_NODESC) n_buf_printf(nbuf, "nodesc:");
+    if (flags & PKGDIR_CREAT_NOFL)   n_buf_printf(nbuf, "nofl:");
+    if (flags & PKGDIR_CREAT_NOUNIQ) n_buf_printf(nbuf, "nouniq:");
+    if (n_buf_size(nbuf) > 0)
+        tndb_put(db, pndir_tag_opt, strlen(pndir_tag_opt),
+                 n_buf_ptr(nbuf), n_buf_size(nbuf) - 1); /* eat last ':' */
+
+    
     n = n_snprintf(buf, sizeof(buf), "%lu", pkgdir->ts);
     tndb_put(db, pndir_tag_ts, strlen(pndir_tag_ts), buf, n);
 
@@ -149,10 +161,9 @@ static void put_pndir_header(struct tndb *db, struct pkgdir *pkgdir)
         
         if (pkgdir->removed_pkgs && n_array_size(pkgdir->removed_pkgs)) {
             char pkgkey[256];
-            tn_buf *nbuf;
             int n;
             
-            nbuf = n_buf_new(n_array_size(pkgdir->removed_pkgs) * 64);
+            n_buf_clean(nbuf);
             for (i=0; i < n_array_size(pkgdir->removed_pkgs); i++) {
                 struct pkg *pkg = n_array_nth(pkgdir->removed_pkgs, i);
                 n = pndir_make_pkgkey(pkgkey, sizeof(pkgkey), pkg);
@@ -163,49 +174,44 @@ static void put_pndir_header(struct tndb *db, struct pkgdir *pkgdir)
             
             tndb_put(db, pndir_tag_removed, strlen(pndir_tag_removed),
                      n_buf_ptr(nbuf), n_buf_size(nbuf));
-            n_buf_free(nbuf);
         }
     }
 
     if (pkgdir->depdirs && n_array_size(pkgdir->depdirs)) {
-        tn_buf *nbuf = n_buf_new(n_array_size(pkgdir->depdirs) * 16);
-        
+        n_buf_clean(nbuf);
         for (i=0; i<n_array_size(pkgdir->depdirs); i++) 
             n_buf_printf(nbuf, "%s:", (char*)n_array_nth(pkgdir->depdirs, i));
         
         tndb_put(db, pndir_tag_depdirs, strlen(pndir_tag_depdirs),
-                 n_buf_ptr(nbuf), n_buf_size(nbuf) - 1); /* -1 - eat last ':' */
-        
-        n_buf_free(nbuf);
+                 n_buf_ptr(nbuf), n_buf_size(nbuf) - 1); /* eat last ':' */
     }
 
     if (pkgdir->avlangs_h && n_hash_size(pkgdir->avlangs_h)) {
-        tn_buf *nbuf = n_buf_new(n_hash_size(pkgdir->avlangs_h) * 3);
         tn_array *avlangs;
 
+        n_buf_clean(nbuf);
         avlangs = n_hash_keys(pkgdir->avlangs_h);
         
         for (i=0; i < n_array_size(avlangs); i++) 
             n_buf_printf(nbuf, "%s:", (char*)n_array_nth(avlangs, i));
+
+        if (n_buf_size(nbuf) > 0)
+            tndb_put(db, pndir_tag_langs, strlen(pndir_tag_langs),
+                     n_buf_ptr(nbuf), n_buf_size(nbuf) - 1); /* eat last ':' */
         
-        tndb_put(db, pndir_tag_langs, strlen(pndir_tag_langs),
-                 n_buf_ptr(nbuf), n_buf_size(nbuf) - 1); /* -1 - eat last ':' */
-        
-        n_buf_free(nbuf);
     }
 
     if (pkgdir->pkgroups) {
-        tn_buf *nbuf = n_buf_new(8192);
+        n_buf_clean(nbuf);
         pkgroup_idx_store(pkgdir->pkgroups, nbuf);
-        tndb_put(db, pndir_tag_pkgroups, strlen(pndir_tag_pkgroups),
-                 n_buf_ptr(nbuf), n_buf_size(nbuf));
+        if (n_buf_size(nbuf) > 0)
+            tndb_put(db, pndir_tag_pkgroups, strlen(pndir_tag_pkgroups),
+                     n_buf_ptr(nbuf), n_buf_size(nbuf));
         
-        n_buf_free(nbuf);
     }
     
-
+    n_buf_free(nbuf);
     tndb_put(db, pndir_tag_endhdr, strlen(pndir_tag_endhdr), "\n", 1);
-
 }
 
 
@@ -609,7 +615,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     unsigned         pkg_st_flags = flags;
     tn_hash          *db_dscr_h = NULL;
     struct pndir_paths paths;
-    
+    tn_array         *exclpath = NULL;
 
     idx = pkgdir->mod_data;
     if (pkgdir->ts == 0) 
@@ -637,8 +643,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
 		goto l_end;
     }
     
-    put_pndir_header(db, pkgdir);
-
+    put_pndir_header(db, pkgdir, flags);
+    
     if (pkgdir->pkgs == NULL)
         goto l_close;
 
@@ -650,16 +656,23 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     pkg_st_flags |= PKGSTORE_NOEVR | PKGSTORE_NOARCH |
         PKGSTORE_NOOS | PKGSTORE_NODESC;
 
+    if (flags & PKGDIR_CREAT_NOFL)
+        pkg_st_flags |= PKGSTORE_NOANYFL;
+
     save_descr = 0;
     if (pkgdir->avlangs_h && (flags & PKGDIR_CREAT_NODESC) == 0)
         save_descr = 1;
     
     mem_info(-1, "pndir_save start");
+    if (pkgdir->src && pkgdir->src->mkidx_exclpath)
+        exclpath = pkgdir->src->mkidx_exclpath;
+
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg         *pkg;
         struct pkguinf     *pkgu;
         char               key[512];
         int                klen;
+        
 
         pkg = n_array_nth(pkgdir->pkgs, i);
 
@@ -667,7 +680,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         n_array_push(keys, n_strdupl(key, klen));
 
         n_buf_clean(nbuf);
-        if (pkg_store(pkg, nbuf, pkgdir->depdirs, pkg_st_flags))
+        if (pkg_store(pkg, nbuf, exclpath, pkgdir->depdirs, pkg_st_flags))
             tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
         
         if (i % 1000 == 0)
