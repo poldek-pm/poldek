@@ -131,7 +131,7 @@ void inst_s_init(struct inst_s *inst)
     inst->dumpfile = NULL;
     inst->rpmopts = NULL;
     inst->rpmacros = NULL;
-    
+    inst->hold_pkgnames = NULL;
     inst->selpkg_fn = NULL;
     inst->ask_fn = NULL;
     inst->inf_fn = NULL;

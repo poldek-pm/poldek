@@ -53,14 +53,15 @@ int pkgset_order(struct pkgset *ps);
 
 struct inst_s {
     struct pkgdb   *db;
-    unsigned       flags;       /* INSTS_* */
-    unsigned       instflags;   /* PKGINST_* from pkgdb.h */
-    const char     *rootdir;    /* top level dir          */
-    const char     *fetchdir;   /* dir to fetch files     */
-    const char     *cachedir;   /* place for downloaded packages */
-    const char     *dumpfile;   /* file to dump fqpns     */
-    tn_array       *rpmopts;    /* rpm cmdline opts (char *opts[]) */
-    tn_array       *rpmacros;   /* rpm macros to pass to cmdline (char *opts[]) */
+    unsigned       flags;          /* INSTS_* */
+    unsigned       instflags;      /* PKGINST_* from pkgdb.h */
+    const char     *rootdir;       /* top level dir          */
+    const char     *fetchdir;      /* dir to fetch files     */
+    const char     *cachedir;      /* place for downloaded packages */
+    const char     *dumpfile;      /* file to dump fqpns     */
+    tn_array       *rpmopts;       /* rpm cmdline opts (char *opts[]) */
+    tn_array       *rpmacros;      /* rpm macros to pass to cmdline (char *opts[]) */
+    tn_array       *hold_pkgnames; 
     
     int  (*selpkg_fn)(const char *, const tn_array *);
     int  (*ask_fn)(const char *, ...);

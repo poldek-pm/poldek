@@ -69,7 +69,7 @@ void do_vlog(int pri, int indent, const char *fmt, va_list args)
         fmt++;
     
     else if (*fmt == '\n') {
-        fputs("\n", l_stream);
+        fputc('\n', l_stream);
         fmt++;
         
     } else {
@@ -92,7 +92,8 @@ void do_vlog(int pri, int indent, const char *fmt, va_list args)
         }
     }
     
-    vfprintf(l_stream, fmt, args);
+    if (*fmt) 
+        vfprintf(l_stream, fmt, args);
     fflush(l_stream);
 }
 

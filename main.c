@@ -825,6 +825,7 @@ void parse_options(int argc, char **argv)
     vfile_configure(args.cachedir, vfile_cnflags);
     
     vfile_msg_fn = log_msg;
+
     vfile_err_fn = log_msg;
 }
 
@@ -1123,7 +1124,8 @@ int main(int argc, char **argv)
     inst.flags     = args.inst_sflags;
     inst.rpmopts   = args.rpmopts;
     inst.rpmacros  = args.rpmacros;
-
+    inst.hold_pkgnames = args.hold_pkgnames;
+    
     rpm_initlib(inst.rpmacros);
 
     if (args.mjrmode == MODE_UPDATEIDX) {

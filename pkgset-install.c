@@ -18,7 +18,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-
+#include <fnmatch.h>
 
 #include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
@@ -191,7 +191,6 @@ static void reaper (int sig)
     
     signal (SIGCHLD, reaper);
 }
-
 
 
 static int runrpm(struct pkgset *ps, struct upgrade_s *upg) 
@@ -530,7 +529,7 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                             ndepadds = 0;
                             goto l_end;
                         }
-
+#if 0
                         if (pkg_is_hold(tomark)) {
                             log(LOGERR, "%s: refusing to install held package\n",
                                 pkg_snprintf_s(tomark));
@@ -538,7 +537,7 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                             ndepadds = 0;
                             goto l_end;
                         }
-
+#endif
                         pkg_dep_mark(tomark);
                         n_array_push(markarr[nmarkarr], tomark);
                         nmarked++;
@@ -998,7 +997,65 @@ static int valid_arch_os(tn_array *pkgs)
     return nerr == 0;
 }
 
+
+static void print_install_summary(struct upgrade_s *upg) 
+{
+    int i;
     
+    msg(1, "There are %d package%s to install", upg->ninstall,
+        upg->ninstall > 1 ? "s":"");
+
+    
+    if (upg->ndep) 
+        msg(1, ", %d marked by dependencies", upg->ndep);
+
+    if (n_array_size(upg->uninst_dbpkgs))
+        msg(1, ", %d to uninstall", n_array_size(upg->uninst_dbpkgs));
+    msg(1, ":\n");
+    
+    
+    for (i=0; i<n_array_size(upg->install_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
+        msg(1, "%c %s\n", pkg_is_dep_marked(pkg) ? 'D' : 'I',
+            pkg_snprintf_s(pkg));
+    }
+
+    for (i=0; i<n_array_size(upg->uninst_dbpkgs); i++) {
+        struct dbpkg *dbpkg = n_array_nth(upg->uninst_dbpkgs, i);
+        msg(1, "R %s\n", pkg_snprintf_s(dbpkg->pkg));
+    }
+    
+}
+
+
+static int check_holds(struct pkgset *ps, struct upgrade_s *upg)
+{
+    int i, j, rc = 1;
+
+    if ((ps->flags & (PSMODE_UPGRADE | PSMODE_UPGRADE_DIST)) == 0)
+        return 1;
+    
+    if (upg->inst->hold_pkgnames == NULL)
+        return 1;
+
+    for (i=0; i < n_array_size(upg->uninst_dbpkgs); i++) {
+        struct dbpkg *dbpkg = n_array_nth(upg->uninst_dbpkgs, i);
+
+        for (j=0; j<n_array_size(upg->inst->hold_pkgnames); j++) {
+            const char *mask = n_array_nth(upg->inst->hold_pkgnames, j);
+
+            if (fnmatch(mask, dbpkg->pkg->name, 0) == 0) {
+                log(LOGERR, "%s: refusing to uninstall held package\n",
+                    pkg_snprintf_s(dbpkg->pkg));
+                rc = 0;
+            }
+        }
+    }
+    
+    return rc;
+}
+
+
 /* process packages to install:
    - check dependencies
    - mark unresolved dependencies finded in pkgset
@@ -1007,7 +1064,7 @@ static int valid_arch_os(tn_array *pkgs)
 static
 int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
 {
-    int i, ncnfl = 0, ndbcnfl = 0, rc;
+    int ncnfl = 0, ndbcnfl = 0, rc;
     
     msg(1, "Processing dependencies...\n");
 
@@ -1016,20 +1073,7 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
     if (upg->nfatal_err)
         return 0;
 
-    if (upg->ndep == 0)
-        msg(1, "There are %d package%s to install:\n", upg->ninstall,
-            upg->ninstall > 1 ? "s":"");
-    else 
-        msg(1, "There are %d package%s to install, "
-            "%d marked by dependencies:\n", upg->ninstall,
-            upg->ninstall > 1 ? "s":"", upg->ndep);
-        
-    for (i=0; i<n_array_size(upg->install_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(upg->install_pkgs, i);
-        msg(1, "_%c %s\n", pkg_is_dep_marked(pkg) ? 'D' : 'I', 
-            pkg_snprintf_s(pkg));
-    }
-    
+    print_install_summary(upg);
     msg(1, "Verifying conflicts...\n");
     ncnfl = find_conflicts(upg, &ndbcnfl);
     
@@ -1076,7 +1120,7 @@ int pkgset_do_install(struct pkgset *ps, struct upgrade_s *upg)
         n_assert(upg->inst->fetchdir);
         rc = pkgset_fetch_pkgs(upg->inst->fetchdir, upg->install_pkgs, 1);
         
-    } else {
+    } else if ((rc = check_holds(ps, upg))) {
         rc = runrpm(ps, upg);
     }
     
@@ -1124,7 +1168,6 @@ void mapfn_check_newer_pkg(unsigned recno, void *h, void *upgptr)
         
         if (cmprc > 0) {
             if (pkg_is_hold(pkg)) {
-                
                 msg(0, "%s: skip held package\n", pkg_snprintf_s(pkg));
                 
             } else {
@@ -1174,9 +1217,10 @@ int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst)
 {
     int rc = 1;
     struct upgrade_s upg;
+    
 
     init_upgrade_s(&upg, ps, inst);
-    
+
     msg(1, "Looking up packages for upgrade...\n");
     
     //set_capreq_allocfn(malloc, free, &capreq_alloc_fn, &capreq_free_fn);
@@ -1189,10 +1233,10 @@ int pkgset_upgrade_dist(struct pkgset *ps, struct inst_s *inst)
 
     if (upg.ndberrs) {
         log(LOGERR, "There are database errors (?), give up\n");
-        n_array_free(upg.install_pkgs);
+        destroy_upgrade_s(&upg);
         return 0;
     }
-    
+
     if (n_array_size(upg.install_pkgs) == 0) {
         msg(1, "All packages are up to date, nothing to do\n");
         
