@@ -217,7 +217,7 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname,
         pkgdir->ts = time(0);
 
     if (pathname == NULL && pkgdir->vf) 
-        pathname = vf_localpath(pkgdir->vf);
+        pathname = vfile_localpath(pkgdir->vf);
 
     if (pathname == NULL && pkgdir->idxpath)
         pathname = pkgdir->idxpath;
@@ -436,7 +436,7 @@ int vaccum_difflist(const char *idxpath, const char *difftoc_path)
              st_idx.st_size);
         
         if (lineno) {
-            if (vfile_valid_path(path)) {
+            if (vf_valid_path(path)) {
                 char *p;
                 
                 msgn(1, _("Removing outdated %s"), n_basenam(path));

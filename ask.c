@@ -27,7 +27,7 @@
 #include <trurl/nassert.h>
 #include "i18n.h"
 #include "log.h"
-#include "term.h"
+#include "poldek_term.h"
 #include "pkg.h"
 
 

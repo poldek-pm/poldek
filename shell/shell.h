@@ -12,8 +12,7 @@
 
 #include "pkg.h"
 #include "log.h"
-
-#include "term.h"
+#include "poldek_term.h"
 
 
 #define SHPKG_INSTALL   (1 << 0)

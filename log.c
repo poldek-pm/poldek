@@ -21,7 +21,7 @@
 
 #include <trurl/nstr.h>
 #include "i18n.h"
-#include "term.h"
+#include "poldek_term.h"
 #include "log.h"
 
 int verbose;

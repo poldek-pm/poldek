@@ -45,11 +45,10 @@
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
-#include "term.h"
 #include "pkg.h"
 
-static
-int valid_dir(const char *envname, const char *dir);
+//static
+//int valid_dir(const char *envname, const char *dir);
 
 
 void translate_argp_options(struct argp_option *arr) 
@@ -141,7 +140,7 @@ const char *setup_cachedir(void)
     struct passwd *pw;
     char *dir, *default_dn = ".poldek-cache";
 
-    if ((dir = getenv("TMPDIR")) && vfile_valid_path(dir))
+    if ((dir = getenv("TMPDIR")) && vf_valid_path(dir))
         return strdup(dir);
     
     if ((pw = getpwuid(getuid())) == NULL)
@@ -150,7 +149,7 @@ const char *setup_cachedir(void)
     if (!is_rwxdir(pw->pw_dir))
         return strdup(tmpdir());
     
-    if (vfile_valid_path(pw->pw_dir) && mk_dir(pw->pw_dir, default_dn)) {
+    if (vf_valid_path(pw->pw_dir) && mk_dir(pw->pw_dir, default_dn)) {
         char path[PATH_MAX];
         snprintf(path, sizeof(path), "%s/%s", pw->pw_dir, default_dn);
         return strdup(path);
@@ -392,7 +391,7 @@ int mk_dir(const char *path, const char *dn)
     struct stat st;
     char fpath[PATH_MAX];
 
-    if (!vfile_valid_path(path))
+    if (!vf_valid_path(path))
         return 0;
     
     if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode)) {

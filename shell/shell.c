@@ -43,7 +43,6 @@
 #include "rpm.h"
 #include "log.h"
 #include "shell.h"
-#include "term.h"
 
 int shOnTTY = 0;
 
@@ -718,7 +717,7 @@ int cmd_help(struct cmdarg *cmdarg)
         }
         printf("%-9s %-36s %s\n", cmd->name, p, cmd->doc);
     }
-    printf(_("\nFor now \"search\" and \"desc\" commands doesn't work with "
+    printf(_("\nFor now \"search\" and \"desc\" commands don't work with "
              "installed packages.\n"));
     
     printf(_("\nType COMMAND -? for details.\n"));

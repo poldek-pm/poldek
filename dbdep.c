@@ -30,7 +30,6 @@
 #define ENABLE_TRACE 0
 #include "i18n.h"
 #include "log.h"
-#include "term.h"
 #include "pkg.h"
 #include "misc.h"
 #include "dbdep.h"

@@ -647,7 +647,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
         if (!valid_fname(dirs[i], 0, pkgname))
             nerr++;
 
-        
+#if 0                           /* NIY */
         if (which != PKGFL_ALL) {
             int is_depdir;
 
@@ -666,7 +666,7 @@ int pkgfl_ldhdr(tn_array *fl, Header h, int which, const char *pkgname)
                 continue;
             }
         }
-        
+#endif        
         skipdirs[i] = dirs[i];
         for (j=0; j<c1; j++)
             if (diridxs[j] == i)

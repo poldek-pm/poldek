@@ -37,7 +37,7 @@
 #include "rpmadds.h"
 #include "pkgset-req.h"
 #include "split.h"
-#include "term.h"
+#include "poldek_term.h"
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -676,7 +676,7 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
             char *pkgpath = pkg_path_s(pkg);
 
             if (is_remote == -1)
-                is_remote = vfile_url_type(pkgpath) & VFURL_REMOTE;
+                is_remote = vf_url_type(pkgpath) & VFURL_REMOTE;
             
             if (verbose > 1) {
                 char *p = pkg_is_hand_marked(pkg) ? "" : "dep";

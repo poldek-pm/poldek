@@ -14,7 +14,7 @@ TRURLIB_VERSION=@TRURLIB_VERSION@
 noinst_LIBRARIES = libpoldek.a
 libpoldek_a_SOURCES = \
 	  log.c log.h			\
-	  term.c term.h			\
+	  poldek_term.c poldek_term.h	\
 	  minfo.c			\
 	  misc.c misc.h			\
 	  rpmadds.c rpmadds.h		\
@@ -106,6 +106,9 @@ poldek.1: poldek.pod
 poldek.html: poldek.pod
 	$(POD2HTML) $< > $@
 
+homepage.html:	homepage.sgml
+	sgml2html -s 0 $< && mv $@ $@- && ./mkhtmltoc.pl $@- > $@
+
 %.html:	%.sgml
 	sgml2html -s 0 $<
 
@@ -119,8 +122,10 @@ website-whole-up: website dist website-up
 	'(cd public_html/poldek/download && md5sum *.gz *.rpm > md5sums && \
 	~/mkindexpage.pl * > index.html && chmod 644 * && ls -l)'
 
-website-up: website 
+homepage-up: website
 	scp -p homepage.html team.pld.org.pl:public_html/poldek/index.html
+
+website-up: website homepage-up
 	scp -p screenshoots.html poldek.html NEWS team.pld.org.pl:public_html/poldek/
 
 mkpackagedir:

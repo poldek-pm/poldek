@@ -42,7 +42,6 @@
 #define ENABLE_TRACE 0
 #include "i18n.h"
 #include "log.h"
-#include "term.h"
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"
@@ -53,6 +52,7 @@
 #include "dbpkgset.h"
 #include "rpmdb_it.h"
 #include "dbdep.h"
+#include "poldek_term.h"
 
 #define INST_INSTALL  1
 #define INST_UPGRADE  2

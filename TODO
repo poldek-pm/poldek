@@ -12,8 +12,7 @@
 
 
 * mis  2000/09/20
-- check PGP signatures; this should be per source configureable
-   
+
 - patch wget, rsync and snarf to support syntax like:
   $ downloader --destdir=DIR --prefix=URLPREFIX [BASENAME...]
   

@@ -6,7 +6,7 @@ mclean:
 	@if [ -f Makefile ]; then         \
 		$(MAKE) maintainer-clean; \
 	fi
-	-rm -rf intl trurlib
+	-rm -rf intl trurlib poldek-cvs????????*
 
 
 backup:
@@ -41,8 +41,9 @@ misarch: mclean
 	$(MAKE) -C . backup cparch=1 backupdir=/z
 
 snap: dist
-	dts=`date +%Y%m%d` && tar xpzf $(distdir).tar.gz && \
-	echo "$$dts" > $(distdir)/0THIS_IS_SNAPSHOT && \
+	@dts=`date +%Y%m%d` && rm -rf $(PACKAGE)-cvs$$dts* && \
+	tar xpzf $(distdir).tar.gz && \
+	echo "$$dts" > $(distdir)/0_THIS_IS_SNAPSHOT && \
 	mv -f $(distdir) $(PACKAGE)-cvs$$dts && \
 	tar cvpzf $(PACKAGE)-cvs$$dts.tar.gz $(PACKAGE)-cvs$$dts && \
 	echo "$(PACKAGE)-cvs$$dts.tar.gz"
