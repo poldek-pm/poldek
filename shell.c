@@ -398,10 +398,9 @@ char *command_generator(const char *text, int state)
 	list_index++;
 
 	if (strncmp(name, text, len) == 0) {
-            if (strcmp(name, "uninstall") == 0) {
-                //printf("switch to uninstall\n");
+            if (strcmp(name, "uninstall") == 0) 
                 switch_pkg_completion(COMPL_CTX_INST_PKGS);
-            } else
+            else 
                 switch_pkg_completion(COMPL_CTX_AV_PKGS);
             
 	    return strdup(name);
@@ -417,6 +416,7 @@ char *pkgname_generator(const char *text, int state)
 {
     static int i, len;
     char *name = NULL;
+
     
     if (state == 0) {
         len = strlen(text);
@@ -447,6 +447,11 @@ char **poldek_completion(const char *text, int start, int end)
     
     end = end;
     matches = NULL;
+
+    if (strncmp(rl_line_buffer, "un", 2) == 0) /* uninstall cmd */
+        switch_pkg_completion(COMPL_CTX_INST_PKGS);
+    else 
+        switch_pkg_completion(COMPL_CTX_AV_PKGS);
     
     if (start == 0)
 	matches = rl_completion_matches(text, command_generator);
@@ -522,7 +527,7 @@ void resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgsp, 
 static int find_pkg(struct shell_pkg *lshpkg, tn_array *shpkgs, int compare_ver, 
                     int *cmprc, char *evr, size_t size) 
 {
-    struct shell_pkg *shpkg;
+    struct shell_pkg *shpkg = NULL;
     char name[256];
     int n, finded = 0;
 
@@ -652,6 +657,7 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
     get_term_width();
     term_width_div2 = term_width/2;
 
+    *hdr = '\0';
     if (cmdst.flags & OPT_LS_LONG) {
         if ((cmdst.flags & OPT_LS_UPGRADEABLE) == 0) {
             snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds%%%ds\n",
@@ -724,7 +730,7 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
                 unit = 'M';
             }
 
-            snprintf(sizbuf, sizeof(sizbuf), "%.1g%c", pkgsize, unit);
+            snprintf(sizbuf, sizeof(sizbuf), "%.1f%c", pkgsize, unit);
             
             if (pkg->btime) 
                 strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
@@ -988,8 +994,10 @@ static int cmd_uninstall(int argc, const char **argv, struct argp *argp)
         goto l_end;
     
     pkgnevrs = n_array_new(n_array_size(shpkgs), NULL, (tn_fn_cmp)strcmp);
+    
     for (i=0; i<n_array_size(shpkgs); i++) {
         struct shell_pkg *shpkg = n_array_nth(shpkgs, i);
+        
         shpkg->flags |= SHPKG_UNINSTALL;
         n_array_push(pkgnevrs, shpkg->nevr);
     }
