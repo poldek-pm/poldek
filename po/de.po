@@ -947,7 +947,7 @@ msgstr "%s: Standardpaket nicht vorhanden, verwende '%s'"
 #: pkgset.c:986
 #, c-format
 msgid "%s: default package %s not found, using %s"
-msgstr "%s: Standardpaket nicht gefunden, verwende '%s'"
+msgstr "%s: Standardpaket %s nicht gefunden, verwende '%s'"
 
 #: pkgset.c:1016
 msgid ""

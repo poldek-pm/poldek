@@ -930,7 +930,7 @@ msgstr "%s: brak domy¶lnego pakietu, przyjêto %s"
 #: pkgset.c:986
 #, c-format
 msgid "%s: default package %s not found, using %s"
-msgstr "%s: brak domy¶lnego pakietu, przyjêto %s"
+msgstr "%s: brak domy¶lnego pakietu %s, przyjêto %s"
 
 #: pkgset.c:1016
 msgid ""
