@@ -6,8 +6,8 @@
 #source = http://www.znienacka.com.pl/RPMS/Packages.gz
 #source = https://www.znienacka.com.pl/RPMS/Packages.gz
 #source = rsync://rsync.znienacka.com.pl/PLD/Packages.gz
-#source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/Packages.gz
-source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/tocfile
+source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/Packages.gz
+#source = rsync://ftp.task.gda.pl/ftp/mirror/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/tocfile
 
 
 cachedir = /var/tmp/poldek-cache/
@@ -35,7 +35,6 @@ rpmdef        = "_install_langs pl:lt"
 rpmdef        = "_netsharedpath /usr/share/info:/usr/share/man"
 rpmdef	      = "_excludedocs 1"
 
-# we needs root privs for installation only 
-install_cmd   = "/usr/bin/sudo /bin/rpm --ignoresize"
-
+# permits using root privs for installation only 
+use_sudo  = yes
 
