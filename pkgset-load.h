@@ -7,7 +7,10 @@
 #define PKGSET_LD_DIR      1    /* scan directory          */
 #define PKGSET_LD_IDX      2    /* read index file         */
 
+#define PKGSOURCE_NOAUTO    (1 << 0)
+#define PKGSOURCE_VERSIGN   (1 << 1)
 struct source {
+    unsigned  flags;
     char      *source_name;
     char      *source_path;
     char      *pkg_prefix;
@@ -19,6 +22,9 @@ void source_free(struct source *src);
 int source_cmp(struct source *s1, struct source *s2);
 int source_cmp_name(struct source *s1, struct source *s2);
 int source_update(struct source *src);
+int source_snprintf_flags(char *str, int size, struct source *src);
+
+
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 
 #endif

@@ -5,7 +5,8 @@
 # $ egrep -v "^(#)source" poldekrc.sample >> poldekrc.sample-pld
 #
 
-source = [pld] ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
-#source = [pld-test] ftp://ftp.pld.org.pl/dists/ra/test/i686/
-#source = /home/zenek/rpm/RPMS/
+source = pld  ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
+
+source = pld-test,noauto   ftp://ftp.pld.org.pl/dists/ra/test/i686/
+source = zenek,noauto      /home/zenek/rpm/RPMS/
 

@@ -99,7 +99,7 @@ struct args {
     char      *curr_src_path;
     int       curr_src_ldmethod;
     tn_array  *sources;
-    char      *source_name;
+    tn_array  *source_names;
     
     int       idx_type;
     char      *idx_path;
@@ -434,7 +434,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'n':
-            argsp->source_name = arg;
+            n_array_push(argsp->source_names, arg);
             break;
 
         case 'l':
@@ -807,11 +807,103 @@ void poldek_destroy(void)
         n_hash_free(htcnf);
 }
 
+
+static
+int addsource(tn_array *sources, struct source *src,
+              tn_array *src_names, int *matches) 
+{
+    int rc = 0;
+    
+    if (n_array_size(src_names == 0)) {
+        n_array_push(sources, src);
+        rc = 1;
+                
+    } else {
+        int i;
+        
+        for (i=0; i<n_array_size(src_names); i++) {
+            char *sn = n_array_nth(src_names, i);
+            
+            if (fnmatch(sn, src->source_name, 0) == 0) {
+                src->flags &= ~PKGSOURCE_NOAUTO;
+                
+                n_array_push(sources, src);
+                matches[i]++;
+                rc = 1;
+                break;
+            }
+        }
+    }
+    
+    return rc;
+}
+
+        
+static
+int get_conf_sources(tn_array *sources, tn_array *src_names, tn_hash *htcnf)
+{
+    struct source   *src;
+    int             i, nerr;
+    int             *matches = NULL, is_multi = 0;
+    char            *v;
+    
+
+    if (n_array_size(src_names) > 0) {
+        matches = alloca(n_array_size(src_names) * sizeof(int));
+        memset(matches, 0, n_array_size(src_names) * sizeof(int));
+    }
+    
+    if ((v = conf_get(htcnf, "source", &is_multi))) {
+        if (is_multi == 0) {
+            src = source_new(v, NULL);
+            if (!addsource(sources, src, src_names, matches))
+                source_free(src);
+            
+        } else {
+            tn_array *paths = NULL;
+            if ((paths = conf_get_multi(htcnf, "source"))) {
+                while (n_array_size(paths)) {
+                    src = source_new(n_array_shift(paths), NULL);
+                    if (!addsource(sources, src, src_names, matches))
+                        source_free(src);
+                }
+            }
+        }
+    }
+    
+    /* source\d+, prefix\d+ pairs  */
+    for (i=0; i < 100; i++) {
+        char opt[64], *src_val;
+        
+        snprintf(opt, sizeof(opt), "source%d", i);
+        if ((src_val = conf_get(htcnf, opt, NULL))) {
+            snprintf(opt, sizeof(opt), "prefix%d", i);
+            src = source_new(src_val, conf_get(htcnf, opt, NULL));
+            
+            if (!addsource(sources, src, src_names, matches))
+                source_free(src);
+        }
+    }
+
+
+    nerr = 0;
+    for (i=0; i < n_array_size(src_names); i++) {
+        if (matches[i] == 0) {
+            logn(LOGERR, _("%s: no such source"),
+                 (char*)n_array_nth(src_names, i));
+            nerr++;
+        }
+    }
+
+    return nerr == 0;
+}
+
+
 static
 void parse_options(int argc, char **argv) 
 {
     struct argp argp = { options, parse_opt, args_doc, poldek_banner, 0, 0, 0};
-    int vfile_cnflags = 0, is_multi, nsources;
+    int vfile_cnflags = 0, is_multi;
     char *v;
 
 
@@ -820,6 +912,7 @@ void parse_options(int argc, char **argv)
     memset(&args, 0, sizeof(args));
 
     args.sources = n_array_new(4, (tn_fn_free)source_free, (tn_fn_cmp)source_cmp);
+    args.source_names = n_array_new(4, NULL, (tn_fn_cmp)strcmp);
     args.curr_src_path = NULL;
     args.curr_src_ldmethod = PKGSET_LD_NIL;
     args.idx_path = NULL;
@@ -849,7 +942,7 @@ void parse_options(int argc, char **argv)
         n_array_push(args.sources, src);
     }
 
-    if (n_array_size(args.sources) && args.source_name) {
+    if (n_array_size(args.sources) && n_array_size(args.source_names)) {
         logn(LOGERR, _("--source and --sn are exclusive"));
         exit(EXIT_FAILURE);
     }
@@ -859,71 +952,43 @@ void parse_options(int argc, char **argv)
     else if (args.noconf == 0)
         htcnf = ldconf_deafult();
 
-    nsources = n_array_size(args.sources);
+    
     if (args.mjrmode == MODE_SRCLIST)
-        args.source_name = NULL;
+        n_array_clean(args.source_names);
+    else {
+        n_array_sort(args.source_names);
+        n_array_uniq(args.source_names);
+    }
+
     
     if (n_array_size(args.sources) == 0) {
-        struct source *src;
-        const char *sn;
-        int i;
-
-        sn = args.source_name;
-        
-        if ((v = conf_get(htcnf, "source", &is_multi))) {
-            if (is_multi == 0) {
-                src = source_new(v, NULL);
-                if ((sn == NULL) || (sn && fnmatch(sn, src->source_name, 0) == 0)) {
-                    n_array_push(args.sources, src);
-                    nsources++;
-                    
-                } else
-                    source_free(src);
-                    
-            } else {
-                tn_array *paths = NULL;
-                if ((paths = conf_get_multi(htcnf, "source"))) {
-                    while (n_array_size(paths)) {
-                        src = source_new(n_array_shift(paths), NULL);
-                        if ((!sn) || (sn && fnmatch(sn, src->source_name, 0) == 0)) {
-                            n_array_push(args.sources, src);
-                            nsources++;
-                        } else
-                            source_free(src);
-                    }
-                }
-            }
-        }
-        
-        /* source\d+, prefix\d+ pairs  */
-        for (i=0; i<100; i++) {
-            char opt[64], *src_val;
-            
-            snprintf(opt, sizeof(opt), "source%d", i);
-            if ((src_val = conf_get(htcnf, opt, NULL))) {
-                snprintf(opt, sizeof(opt), "prefix%d", i);
-
-                src = source_new(src_val, conf_get(htcnf, opt, NULL));
-                if ((sn == NULL) || (sn && fnmatch(sn, src->source_name, 0) == 0)) {
-                    nsources++;
-                    n_array_push(args.sources, src);
-                } else
-                    source_free(src);
-            }
-        }
+        if (!get_conf_sources(args.sources, args.source_names, htcnf))
+            exit(EXIT_FAILURE);
     }
+    
 
-    if (nsources == 0) {
-        if (args.source_name)
-            logn(LOGERR, _("%s: no such source"), args.source_name);
-        else
-            logn(LOGERR, _("no source specified"));
+    if (n_array_size(args.sources) == 0) {
+        logn(LOGERR, _("no source specified"));
         exit(EXIT_FAILURE);
     }
-
+    
     if (args.mjrmode == MODE_SRCLIST) {
         print_source_list(args.sources);
         exit(EXIT_SUCCESS);
+        
+    } else {
+        int i, nsources = 0;
+        
+        for (i=0; i<n_array_size(args.sources); i++) {
+            struct source *src = n_array_nth(args.sources, i);
+            if ((src->flags & PKGSOURCE_NOAUTO) == 0)
+                nsources++;
+        }
+        
+        if (nsources == 0) {
+            logn(LOGERR, _("no source specified"));
+            exit(EXIT_FAILURE);
+        }
     }
     
     if (args.mjrmode == 0 && args.mnrmode == 0) {
@@ -1059,13 +1124,17 @@ static void print_source_list(tn_array *sources)
     int i;
 
     for (i=0; i<n_array_size(sources); i++) {
-        struct source *src = n_array_nth(sources, i);
-        printf("%-12s %s%s%s%s\n",
-               strcmp(src->source_name, "anon") == 0 ? "-" : src->source_name, 
+        char           optstr[256];
+        struct source  *src = n_array_nth(sources, i);
+
+        source_snprintf_flags(optstr, sizeof(optstr), src);
+        printf("%-12s %s%s%s%s%s%s%s\n",
+               strcmp(src->source_name, "anon") == 0 ? "-" : src->source_name,
                src->source_path,
-               src->pkg_prefix ? " (prefix " : "",
+               src->pkg_prefix ? " [prefix " : "",
                src->pkg_prefix ? src->pkg_prefix : "",
-               src->pkg_prefix ? ")":"");
+               src->pkg_prefix ? "]":"", 
+               *optstr ? " (" : "", optstr, *optstr ? ")" : "");
     }
 }
 

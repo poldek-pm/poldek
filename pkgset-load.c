@@ -65,8 +65,8 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     }
     
     
-    
     src = malloc(sizeof(*src));
+    src->flags = 0;
     src->source_path = NULL;
     
     
@@ -92,6 +92,31 @@ struct source *source_new(const char *pathspec, const char *pkg_prefix)
     if (pkg_prefix)
         src->pkg_prefix = strdup(pkg_prefix);
     src->ldmethod = PKGSET_LD_NIL;
+
+    
+    
+    if ((q = strchr(name, ','))) {
+        const char **tl, **t;
+
+        *q++ = '\0';
+        tl = t = n_str_tokl(q, ",");
+        n_assert(tl);
+        
+        while (*t) {
+            if (strcmp(*t, "noauto") == 0)
+                src->flags |= PKGSOURCE_NOAUTO;
+                
+            else if (strcmp(*t, "gpg") == 0)
+                src->flags |= PKGSOURCE_VERSIGN;
+                
+            else
+                logn(LOGWARN, _("%s: %s unknown option"), name, *t);
+            
+            t++;
+        }
+        n_str_tokl_free(tl);
+    }
+
     src->source_name = strdup(name);
     DBGF("source_new %s -> %s\n", name, src->source_path);
     return src;
@@ -119,6 +144,30 @@ int source_cmp_name(struct source *s1, struct source *s2)
 }
 
 
+int source_snprintf_flags(char *str, int size, struct source *src) 
+{
+    int n;
+
+    n_assert(size > 0);
+    
+    *str = '\0';
+    n = 0;
+    
+    if (src->flags & PKGSOURCE_NOAUTO)
+        n = snprintf(str, size - n, "noauto");
+
+    if (src->flags & PKGSOURCE_VERSIGN) {
+        if (n && size - n > 2) {
+            str[n++] = ',';
+            str[n] = '\0';
+        }
+        n += snprintf(&str[n], size - n, "gpg");
+    }
+    
+    return n;
+}
+
+
 int source_update(struct source *src)
 {
     return update_whole_pkgdir(src->source_path);
@@ -132,6 +181,9 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 
     for (i=0; i < n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
+
+        if (src->flags & PKGSOURCE_NOAUTO)
+            continue;
 
         if (src->ldmethod == PKGSET_LD_NIL) 
             src->ldmethod = PKGSET_LD_IDX;

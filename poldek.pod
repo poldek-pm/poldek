@@ -149,7 +149,7 @@ With B<--nodiff> patches are not created.
 
 I<NOTE>: In this mode only one and only directory path as SOURCE is accepted.
 
-=item B<--update>; B<--update-whole>   
+=item B<--up, --update>; B<--upa, --update-whole>   
 
 Resynchronize the package index from its source and verify it. 
 
@@ -224,7 +224,7 @@ directory by default
 Upgrade packages, but only if an earlier version currently installed.
 I<Note> that equivalent of "rpm --freshen" is "poldek -u/-i --fresh --nofollow"
 
-=item B<--greedy> 
+=item B<-G, --greedy> 
 
 Automatically upgrade packages which dependencies are broken
 by unistalled ones, for example if package foo is upgraded 
@@ -321,9 +321,9 @@ $ poldek ... -- --rpm-noscripts --rpm-notriggers
 
 =head1 CONFIG FILE
 
-Program tries to read configuration from F</etc/poldek.conf> by default,
-F<$HOME/.poldekrc> is used instead if it exists. B<-c,--conf> option could points to 
-other location of config. With B<--noconf> poldek don't read any config. 
+Program tries to read configuration from F<$HOME/.poldekrc>; if it doesn't
+exists then F</etc/poldek.conf> is used. B<-c,--conf> option could points to 
+other config location. With B<--noconf> poldek doesn't read any config. 
 
 Config file consists of parameters of the form
 
@@ -336,11 +336,10 @@ line represents a comment or a parameter.
 
 =over
 
-=item * B<source> = [NAME] SOURCE
+=item * B<source> = [NAME[,OPTIONS]] SOURCE_PATH
 
-
-Optional NAME may be specified later from cmdline by
-B<-n, --sn> B<SOURCE-NAME> option; for example if you 
+Optional B<NAME> may be specified later from cmdline by
+B<-n, --sn> B<SOURCE-NAME>; for example if you 
 have sources configured as follows:
 
 source = pld-devel     /mnt/PLD-stable/RPMS
@@ -348,7 +347,6 @@ source = pld-devel     /mnt/PLD-stable/RPMS
 source = pld-stable    ftp://zn/PLD/i686/PLD/RPMS
 
 source = misRPMS       ftp://zn/rpm/RPMS/
-
 
 then to use only ftp://zn/PLD/i686/PLD/RPMS do:
 
@@ -358,6 +356,11 @@ $ poldek --sn pld-stable
 
 $ poldek --sn pld-\*
 
+
+B<OPTIONS> describe source options, for now only 
+'noauto' (don't load this source by default) is accepted, e.g.
+
+source = pld-test,noauto     /mnt/PLD-test/RPMS
 
 
 =item * B<sourceXX> = SOURCE
@@ -372,38 +375,64 @@ source = ~/tmp/my-cd-indexes/
 
 prefix = /mnt/cdrom/RPMS/
 
-=item * B<cachedir> - see B<--cachedir> option description
 
-=item * B<use_sudo = yes|no> - for r/w operations poldek will 
-        run rpm using sudo. The default is "no", but it is recommended
-        to change it to "yes" and use the poldek as ordinary user.
+=item * B<cachedir> 
 
-=item * B<follow = yes|no> - automatically install|don't install 
-         packages required by selected ones (default: yes)
+       See B<--cachedir> option description
 
-=item * B<greedy = yes|no> - see --greedy option description
-	(default: no)
+=item * B<use_sudo = yes|no> 
 
-=item * B<hold = PACKAGE[ PACKAGE...]> - see --hold option description
+      For r/w operations run rpm using sudo. 
+      The default is "no", but it is recommended to change it to "yes" 
+      and use the poldek as ordinary user.
 
-=item * B<mercy = yes|no> - see --mercy option description
 
-=item * B<keep_downloads = yes|no> - by default poldek removes downloaded
-        packages files after successfull installation; if option is set to 
-        "yes" then program will never remove downloaded packages from cache 
-        directory.
+=item * B<follow = yes|no> 
 
-=item * B<confirm_installs = yes|no> - if "yes" program confirm all
-        performed package installations (default: no)
+       Automatically install|don't install packages required by 
+       selected ones (default: yes)
 
-=item * B<choose_equivalents_manually = yes|no> - if "yes" program let the user
-        choose among equivalent packages (default: no)
+
+=item * B<greedy = yes|no> 
+       
+        See --greedy option description	(default: no)
+
+
+=item * B<hold = PACKAGE[ PACKAGE...]> 
+
+        See --hold option description
+
+
+=item * B<mercy = yes|no> 
+
+        See --mercy option description
+
+
+=item * B<keep_downloads = yes|no> 
+
+        Program removes downloaded packages files after successfull installation
+        by default. If option is set to "yes" then program will never remove 
+        downloaded packages from cache directory.
+
+
+=item * B<confirm_installs = yes|no>
+
+        If "yes" program confirm all performed package installations (default: no)
+
+
+=item * B<choose_equivalents_manually = yes|no> 
+
+        If "yes" program let the user choose among equivalent packages (default: no)
         
-=item * B<particle_install = yes|no> - if "no" installations of multiple packages 
-        are performed as one transaction (default: yes)
+
+=item * B<particle_install = yes|no>
+
+        If "no" installations of multiple packages are performed as one 
+        transaction (default: yes)
+
 =back
 
-=head1
+=head3 External "downloaders"
 
 Downloaders are configured by B<PROTOCOL_get="SPEC"> parameter.  The
 SPEC is a command formatted string, where at least 2 semi-macros of 4
@@ -411,7 +440,7 @@ available should be used:
 
 =over 
 
-=item B<%p[n]> - package file name, %pn means that may be repeated many times 
+=item B<%p[n]> - package file name, %pn means that %p may be repeated many times 
 
 =item B<%P[n]> - package full path, %Pn -"-
 
@@ -420,8 +449,6 @@ available should be used:
 =item B<%D> - cache directory/package basename
 
 =back
-
-=head1
 
 Currently four protocols are available: FTP, HTTP, HTTPS and RSYNC.  Special
 B<ftp_http> "protocol" could be used for describe downloader for both
@@ -576,6 +603,6 @@ Please send comments, bug reports, etc to the author.
 
 =head1 SEE ALSO
 
-L<curl(1)>, L<rpm(1)>, L<rsync(1)>, L<snarf(1)>, L<wget(1)>
+L<apt(1)> <apt-get(8)>, L<curl(1)>, L<rpm(1)>, L<rsync(1)>, L<snarf(1)>, L<wget(1)>
 
 =cut
