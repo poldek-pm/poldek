@@ -60,11 +60,8 @@ static struct argp_option options[] = {
 
 struct command command_install = {
     0, 
-
     "install", "[PACKAGE...]", "Install packages", 
-    
     options, parse_opt,
-    
     NULL, install, NULL, NULL, 
 };
 
@@ -130,7 +127,7 @@ static int install(struct cmdarg *cmdarg)
     
     sh_resolve_packages(cmdarg->pkgnames, cmdarg->sh_s->avpkgs, &shpkgs, 1);
     
-    if (shpkgs == NULL || n_array_size(shpkgs)) {
+    if (shpkgs == NULL || n_array_size(shpkgs) == 0) {
         rc = 0;
         goto l_end;
     }
