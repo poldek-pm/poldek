@@ -525,12 +525,12 @@ int i_pkgdir_creat_md5(const char *pathname)
     fclose(stream);
     
     if (md_size) {
-        struct vfile *vf;
+        FILE *f;
         
-        if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
+        if ((f = fopen(path, "w")) == NULL)
             return 0;
-        fprintf(vf->vf_stream, "%s", md);
-        vfile_close(vf);
+        fprintf(f, "%s", md);
+        fclose(f);
     }
 
     return md_size;
