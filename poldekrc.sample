@@ -1,7 +1,7 @@
 # $Id$
 # Sample poldek configuration
 
-source = pld ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
+source = pld ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
 
 source = pld-test,noauto ftp://ftp.pld.org.pl/dists/ra/test/i686/
 source = mysrc,noauto ftp://ftp.znienacka.com.pl/RPMS/
@@ -11,8 +11,8 @@ source = mysrc,noauto ftp://ftp.znienacka.com.pl/RPMS/
 source1 = mycd,noauto /tmp/packages.dir.gz
 prefix1 = /cdrom/RPMS
 
-source2 = [pld-http,noauto]  http://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
-prefix2 = ftp://ftp.pld.org.pl/dists/ra/PLD/i386/PLD/RPMS/
+source2 = [pld-http,noauto]  http://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
+prefix2 = ftp://ftp.pld.org.pl/dists/ra/PLD/i686/PLD/RPMS/
 
 # NOTE: directory *must* exists; default is ~/.poldek-cache
 #cachedir = /var/tmp/poldek-cache
