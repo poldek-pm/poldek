@@ -29,12 +29,12 @@
 #include <trurl/nmalloc.h>
 #include <trurl/n_snprintf.h>
 #include <trurl/nstream.h>
+#include <trurl/n2h.h>
 
 #include "i18n.h"
 #include "capreq.h"
 #include "log.h"
 #include "misc.h"
-#include "h2n.h"
 #include "pkgmisc.h"
 
 static void *(*capreq_alloc_fn)(size_t) = n_malloc;
@@ -376,14 +376,24 @@ int32_t capreq_epoch_(const struct capreq *cr)
 }
 
 
-tn_array *capreq_arr_new(int size) 
+
+tn_array *capreq_arr_new_ex(int size, void **data) 
 {
     tn_array *arr;
-    arr = n_array_new(size > 0 ? size : 2, capreq_free_fn,
-                      (tn_fn_cmp)capreq_cmp_name_evr);
+    arr = n_array_new_ex(size > 0 ? size : 2,
+                         capreq_free_fn,
+                         (tn_fn_cmp)capreq_cmp_name_evr,
+                         data);
     n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
     return arr;
 }
+
+tn_array *capreq_arr_new(int size)
+{
+    return capreq_arr_new_ex(size, NULL);
+}
+
+
 
 __inline__
 int capreq_arr_find(tn_array *capreqs, const char *name)
@@ -470,7 +480,7 @@ void capreq_store(struct capreq *cr, tn_buf *nbuf)
 
     if (cr->cr_ep_ofs) {
         epoch = capreq_epoch(cr);
-        nepoch = hton32(epoch);
+        nepoch = n_hton32(epoch);
         memcpy(&cr->_buf[cr->cr_ep_ofs], &nepoch, sizeof(nepoch));
     }
 
@@ -507,14 +517,12 @@ struct capreq *capreq_restore(tn_buf_it *nbufi)
     cr->cr_ver_ofs  = cr_bufp[3];
     cr->cr_rel_ofs  = cr_bufp[4];
 
-	
-
     cr->_buf[size] = '\0';
     cr_bufp = n_buf_it_get(nbufi, size);
     memcpy(cr->_buf, cr_bufp, size);
 
     if (cr->cr_ep_ofs) {
-        int32_t epoch = ntoh32(capreq_epoch(cr));
+        int32_t epoch = n_ntoh32(capreq_epoch(cr));
         memcpy(&cr->_buf[cr->cr_ep_ofs], &epoch, sizeof(epoch));
     }
 	//printf("cr %s: %d, %d, %d, %d, %d\n", capreq_snprintf_s(cr), 
@@ -532,24 +540,34 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf)
     int16_t arr_size;
     int i, off;
 
-    if ((arr_size = n_array_size(arr)) == 0)
+    n_assert(n_array_size(arr) < INT16_MAX);
+    
+    arr_size = 0;
+    for (i=0; i < n_array_size(arr); i++) {
+        struct capreq *cr = n_array_nth(arr, i);
+        if (!capreq_is_bastard(cr))
+            arr_size++;
+    }
+    
+    if (arr_size == 0)
         return NULL;
     
-    n_assert(n_array_size(arr) < INT16_MAX);
     n_array_isort_ex(arr, (tn_fn_cmp)capreq_strcmp_name_evr);
 
     if (nbuf == NULL)
         nbuf = n_buf_new(16 * arr_size);
-
+    
     off = n_buf_tell(nbuf);
     n_buf_add_int16(nbuf, 0);   /* fake size */
     n_buf_add_int16(nbuf, arr_size);
     
     for (i=0; i < n_array_size(arr); i++) {
         struct capreq *cr = n_array_nth(arr, i);
-        //printf("STORE %s %d -> %d\n", capreq_snprintf_s(cr),
-        //     strlen(capreq_snprintf_s(cr)), capreq_sizeof(cr));
-        capreq_store(cr, nbuf);
+        if (!capreq_is_bastard(cr)) {
+            capreq_store(cr, nbuf);
+            //printf("STORE %s %d -> %d\n", capreq_snprintf_s(cr),
+            //     strlen(capreq_snprintf_s(cr)), capreq_sizeof(cr));
+        }
     }
 
     n_buf_puts(nbuf, "\n");
@@ -591,21 +609,25 @@ tn_array *capreq_arr_restore(tn_buf *nbuf)
     tn_array       *arr;
     tn_buf_it      nbufi;
     int16_t        arr_size;
-    int i;
+    void           **cr_buf;
+    register int   i, n;
 
     n_buf_it_init(&nbufi, nbuf);
     n_buf_it_get_int16(&nbufi, &arr_size);
 
     DBGF("%d, arr_size = %d\n", n_buf_size(nbuf), arr_size);
-
-    arr = capreq_arr_new(arr_size);
+    
+    cr_buf = alloca(arr_size * sizeof(void*));
+    n = 0;
     for (i=0; i < arr_size; i++) {
         if ((cr = capreq_restore(&nbufi))) {
             if (capreq_is_bastard(cr))
                 continue;
-            n_array_push(arr, cr);
+            cr_buf[n++] = cr;
         }
     }
+    
+    arr = capreq_arr_new_ex(n, n_memdup(cr_buf, n * sizeof(void*)));
     
     return arr;
 }
