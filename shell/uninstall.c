@@ -103,6 +103,11 @@ int uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst)
     if (inst->instflags & PKGINST_NODEPS)
         argv[n++] = "--nodeps";
 
+    if (inst->rootdir) {
+    	argv[n++] = "--root";
+	argv[n++] = (char*)inst->rootdir;
+    }
+
 #if 0    
     if (inst->rpmacros) 
         for (i=0; i<n_array_size(inst->rpmacros); i++) {
