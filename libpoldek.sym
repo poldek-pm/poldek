@@ -91,8 +91,9 @@ pkg_snprintf_epoch_s
 pkg_snprintf_s
 pkg_snprintf_s0
 pkg_snprintf_s1
-pkg_statisfies_req
+pkg_satisfies_req
 pkg_strbtime
+pkg_stritime
 pkg_strcmp_name_evr
 pkg_ncmp_name
 pkg_strsize

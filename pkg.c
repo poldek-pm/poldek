@@ -309,7 +309,6 @@ void pkg_free(struct pkg *pkg)
         pkg->caps = NULL;
     }
     
-    
     if (pkg->reqs) {
         n_array_free(pkg->reqs);
         pkg->reqs = NULL;
@@ -320,7 +319,6 @@ void pkg_free(struct pkg *pkg)
         n_array_free(pkg->cnfls);
         pkg->cnfls = NULL;
     }
-    
 
     if (pkg->reqpkgs) {
         n_array_free(pkg->reqpkgs);
@@ -734,8 +732,8 @@ int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
 }
 
 
-int pkg_statisfies_req(const struct pkg *pkg, const struct capreq *req,
-                       int strict) 
+int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
+                      int strict) 
 {
     if (!capreq_is_file(req))
         return pkg_match_req(pkg, req, strict);
@@ -1199,17 +1197,29 @@ char *pkg_strsize(char *buf, int size, const struct pkg *pkg)
     return buf;
 }
 
-char *pkg_strbtime(char *buf, int size, const struct pkg *pkg) 
+static
+char *do_strtime(char *buf, int size, uint32_t time) 
 {
-    time_t t = pkg->btime;
+    time_t t = time;
     
-    if (pkg->btime)
+    if (time)
         strftime(buf, size, "%Y/%m/%d %H:%M", localtime(&t));
     else
         *buf = '\0';
     
     buf[size-1] = '\0';
     return buf;
+}
+
+
+char *pkg_strbtime(char *buf, int size, const struct pkg *pkg) 
+{
+    return do_strtime(buf, size, pkg->btime);
+}
+
+char *pkg_stritime(char *buf, int size, const struct pkg *pkg) 
+{
+    return do_strtime(buf, size, pkg->itime);
 }
 
 void *pkg_na_malloc(struct pkg *pkg, size_t size)

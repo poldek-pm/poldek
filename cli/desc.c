@@ -655,7 +655,7 @@ static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags)
 static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags) 
 {
     struct pkguinf  *pkgu;
-    char            timbuf[30], fnbuf[PATH_MAX], *fn;
+    char            fnbuf[PATH_MAX], *fn;
     char            unit = 'K';
     const char      *group, *s;
     double          pkgsize;
@@ -665,12 +665,6 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
                        "info loaded?)\n"), pkg_snprintf_s(pkg));
     }
     
-    
-    if (pkg->btime)
-        pkg_strbtime(timbuf, sizeof(timbuf), pkg);
-    else
-        *timbuf = '\0';
-
     if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_SUMMARY))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Summary:");
         cmdctx_printf(cmdctx, "%s\n", s);
@@ -710,14 +704,31 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
         cmdctx_printf(cmdctx, "%s\n", s);
     }
         	
+    if (pkg->btime) {
+        char timbuf[30];
         
-    if (*timbuf) {
-        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Built:");
-        cmdctx_printf(cmdctx, "%s", timbuf);
-        if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_BUILDHOST))) 
-            cmdctx_printf(cmdctx, " at %s", s);
-        cmdctx_printf(cmdctx, "\n");
+        pkg_strbtime(timbuf, sizeof(timbuf), pkg);
+        
+        if (*timbuf) {
+            cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Built:");
+            cmdctx_printf(cmdctx, "%s", timbuf);
+            if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_BUILDHOST))) 
+                cmdctx_printf(cmdctx, " at %s", s);
+            cmdctx_printf(cmdctx, "\n");
+        }
     }
+
+    if (pkg->itime) {
+        char timbuf[30];
+        
+        pkg_stritime(timbuf, sizeof(timbuf), pkg);
+        
+        if (*timbuf) {
+            cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Installed:");
+            cmdctx_printf(cmdctx, "%s\n", timbuf);
+        }
+    }
+    
 
     pkgsize = pkg->size/1024;
     if (pkgsize >= 1024) {

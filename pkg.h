@@ -178,7 +178,7 @@ int pkg_has_path(const struct pkg *pkg,
                  const char *dirname, const char *basename);
 
 /* match with caps && files */
-int pkg_statisfies_req(const struct pkg *pkg, const struct capreq *req,
+int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
                        int strict);
 
 int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg);
@@ -234,7 +234,7 @@ tn_array *pkgs_array_new_ex(int size,
 
 char *pkg_strsize(char *buf, int size, const struct pkg *pkg);
 char *pkg_strbtime(char *buf, int size, const struct pkg *pkg);
-
+char *pkg_stritime(char *buf, int size, const struct pkg *pkg);
 /* add self name-evr to caps */
 int pkg_add_selfcap(struct pkg *pkg);
 
