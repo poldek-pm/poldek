@@ -10,24 +10,24 @@ poldek - rpm packages management helper tool
 
 poldek [--source=SOURCE ...] [OPTION...] [PACKAGE...]
 
-poldek [--source=SOURCE ...] 
+poldek [--source=SOURCE ...]
 
 =head1 DESCRIPTION
 
 The poldek is the RPM package management tool. Its
-basic features are similar to every modern package updater like 
-I<apt-get> -- program takes information about packages from 
-package index file (I<packages.dir.gz> by default) and allows 
-to package install, upgrade and removal. 
+basic features are similar to every modern package updater like
+I<apt-get> -- program takes information about packages from
+package index file (I<packages.dir.gz> by default) and allows
+to package install, upgrade and removal.
 
 Program supports two modes: a batch mode (in use similar
-to I<apt-get> one) and I<interactive> one. The interactive 
-mode puts the user into a readline interface with command line 
+to I<apt-get> one) and I<interactive> one. The interactive
+mode puts the user into a readline interface with command line
 auto-completion and history, similar to shell mode of Perl's CPAN module.
 
 Remote files are retrieved from remote servers by poldek
-itself (internal FTP/HTTP client) or by external downloaders 
-(not configured by default, see L</CONFIG FILE>). 
+itself (internal FTP/HTTP client) or by external downloaders
+(not configured by default, see L</CONFIG FILE>).
 
 
 The poldek basic modes are:
@@ -44,9 +44,9 @@ The poldek basic modes are:
 
 =item * Upgrade whole system
 
-=item * Install or upgrade desired packages 
+=item * Install or upgrade desired packages
 
-=item * Split package set into fixed size package sets 
+=item * Split package set into fixed size package sets
 
 =back
 
@@ -57,15 +57,15 @@ The interactive mode is entered by running
 
     poldek [OPTION...] --shell [-f]
 
-which puts you into a readline interface. Once you are on the command 
+which puts you into a readline interface. Once you are on the command
 line, type 'help' and the rest should be self-explanatory.
 
 [to be continued...]
 
 =head1 PACKAGE SOURCES
 
-Package sources may be specified in config file by B<source> parameter 
-(see L</CONFIG FILE>), or from cmdline by following options: 
+Package sources may be specified in config file by B<source> parameter
+(see L</CONFIG FILE>), or from cmdline by following options:
 
 B<-s, --source> B<SOURCE>
 
@@ -74,13 +74,13 @@ B<--sdir> B<DIR>
 B<--shdrl> B<SOURCE>
 
 where SOURCE is a local path or URL. With B<--source> native package
-index file (packages.dir.gz) is used; with B<--sdir> desired directory 
-is scanned instead of reading index file, should be used for local 
-directories only. The last one B<--shdrl> can be used for taking package 
-information from file with raw package RPM headers (aka hdlist). 
+index file (packages.dir.gz) is used; with B<--sdir> desired directory
+is scanned instead of reading index file, should be used for local
+directories only. The last one B<--shdrl> can be used for taking package
+information from file with raw package RPM headers (aka hdlist).
 
-Type of the source can be set by B<type> source option also, 
-see L</CONFIG FILE>. 
+Type of the source can be set by B<type> source option also,
+see L</CONFIG FILE>.
 
 Examples:
 
@@ -109,7 +109,7 @@ could be used to point packages location, e.g:
 
 $ poldek -s /tmp/packages.dir.gz --prefix=/cdrom/RPMS/ -s ... --prefix=...
 
-If source is configured with the name (see L</CONFIG FILE>) then it 
+If source is configured with the name (see L</CONFIG FILE>) then it
 could be specified by B<-n, --sn> B<SOURCE-NAME>, e.g:
 
 $ poldek --sn pld ...
@@ -164,7 +164,7 @@ $ poldek ... --pset ~/.package-sets/tiny-system
 =back
 
 All above options could be combined. Note that specified packages
-should be present in SOURCE. 
+should be present in SOURCE.
 
 =head1 BASIC MODES
 
@@ -175,32 +175,32 @@ One of the following basic modes must be selected:
 =item B<--mkidx[z][=FILE]>  B<[--nodiff]>
 
 Build package index, by default it's stored in SOURCE/packages.dir[.gz].
-The other two files are created: packages.dir.mdd with computed packages.dir's 
+The other two files are created: packages.dir.mdd with computed packages.dir's
 digest and packages.dir.toc[.gz] with packages NAME-EVR per line.
 
-Additionally if previous package index is different from 
-currently created one then index "patch" is created 
-under SOURCE/packages.i/ directory. Every patch consist of two 
-files: packages.dir.diff.YYYY.MM.DD-HH.mm.SS.gz and 
-packages.dir.diff.YYYY.MM.DD-HH.mm.SS.mdd. 
+Additionally if previous package index is different from
+currently created one then index "patch" is created
+under SOURCE/packages.i/ directory. Every patch consist of two
+files: packages.dir.diff.YYYY.MM.DD-HH.mm.SS.gz and
+packages.dir.diff.YYYY.MM.DD-HH.mm.SS.mdd.
 
-Outdated patches are automatically removed. 
+Outdated patches are automatically removed.
 
 With B<--nodiff> patches are not created.
 
 I<NOTE>: In this mode only one and only directory path as SOURCE is accepted.
 
-=item B<--up, --update>; B<--upa, --update-whole>   
+=item B<--up, --update>; B<--upa, --update-whole>
 
-Re-synchronize the package index from its source and verify it. 
+Re-synchronize the package index from its source and verify it.
 
 With B<--update> program looking up "patches" for existing local
 package index, if it fails, then whole index is downloaded.
 
-With B<--update-whole> program updates whole package index
+With B<--update-whole> program updates whole package index.
 
-For local sources program verifies existing index 
-integrity using its digest from packages.dir.mdd. 
+For local sources program verifies existing index
+integrity using its digest from packages.dir.mdd.
 
 =item B<-V|--verify>
 
@@ -214,7 +214,7 @@ Needs packages to be specified.
 
 =item B<--upgrade-dist[=DIR]>
 
-Install the newest versions of all packages currently installed 
+Install the newest versions of all packages currently installed
 on the system from the specified source (see L</SOURCE>).
 
 =item B<-i, --install|-u, -U, --upgrade|--downgrade>
@@ -223,7 +223,7 @@ Install, upgrade and downgrade given packages.
 
 =item B<--reinstall>
 
-Reinstall given packages
+Reinstall given packages.
 
 =item B<--shcmd=COMMAND>
 
@@ -231,57 +231,57 @@ Run interactive mode command COMMAND and exit.
 
 =item B<--shell>
 
-Run poldek in interactive mode. Type "help" after running for available commands. 
-This is the default poldek's mode. 
+Run poldek in interactive mode. Type "help" after running for available commands.
+This is the default poldek's mode.
 
 =item B<--split=SIZE[:FIRST_FREE_SPACE]  [--split-conf=FILE] [--split-out=PREFIX]>
 
 Split package set into parts, each SIZE MB size. The first part will
-be FIRST_FREE_SPACE MB smaller. 
+be FIRST_FREE_SPACE MB smaller.
 
-Package priorities are taken from FILE given by --split-conf (see sample 
+Package priorities are taken from FILE given by --split-conf (see sample
 pkgsplit.conf from program distribution). By default packages have 0 priority.
 
-Each part is written as NAME-EVR.ARCH.rpm list to PREFIX.XX 
-file, the default PREFIX is "packages.chunk"
+Each part is written as NAME-EVR.ARCH.rpm list to PREFIX.XX
+file, the default PREFIX is "packages.chunk".
 
-=back 
+=back
 
 =head2 Options for install modes
 
 =over
 
-=item B<--dump[=FILE]> 
+=item B<--dump[=FILE]>
 
 Just dump packages file names to FILE or stdout instead of install them.
 
-=item B<--dumpn[=FILE]> 
+=item B<--dumpn[=FILE]>
 
 Just dump packages names to FILE or stdout instead of install them.
 
-=item B<--fetch[=DIR]> 
+=item B<--fetch[=DIR]>
 
 Like B<--dump> but packages are downloaded and stored in poldek's cache
-directory by default
+directory by default.
 
-=item B<-F, --fresh> 
+=item B<-F, --fresh>
 
 Upgrade packages, but only if an earlier version currently installed.
 I<Note> that equivalent of "rpm --freshen" is "poldek -u/-i --fresh --nofollow"
 
-=item B<-G, --greedy> 
+=item B<-G, --greedy>
 
 Automatically upgrade packages which dependencies are broken
-by unistalled ones, for example if package foo is upgraded 
-from version 1.0 to 1.2 and package foo-devel is already installed 
-with requirement "foo = 1.0" than poldek upgrade foo-devel to version 
+by unistalled ones, for example if package foo is upgraded
+from version 1.0 to 1.2 and package foo-devel is already installed
+with requirement "foo = 1.0" than poldek upgrade foo-devel to version
 1.2 too.
 
 =item B<--hold=PACKAGE[,PACKAGE]...>
 
 Prevent packages listed from being upgraded if they are already installed.
-If option is not given then packages to hold are taken from B<hold> configuration 
-option and additionally from $HOME/.poldek_hold. Held package won't be upgraded 
+If option is not given then packages to hold are taken from B<hold> configuration
+option and additionally from $HOME/.poldek_hold. Held package won't be upgraded
 with exception if it will be pointed directly by the user.
 
 =item B<-m, --mercy>
@@ -294,21 +294,21 @@ without any version.
 
 Have the same meanings like RPM ones. See next section.
 
-=item B<-N, --nofollow> 
+=item B<-N, --nofollow>
 
 Don't automatically install packages required by selected ones.
 
-=item B<--nohold> 
+=item B<--nohold>
 
 Don't take held packages from $HOME/.poldek_hold nor config's hold parameter.
 
-=item B<--rpmdef="NAME VALUE"> 
+=item B<--rpmdef="NAME VALUE">
 
 Like rpm --define option.
 
 =item B<-t, --test>
 
-Do not install packages, but tell if it would work or not. Given once 
+Do not install packages, but tell if it would work or not. Given once
 causes poldek's checks only, to perform full tests using rpm, option
 must be given twice.
 
@@ -337,9 +337,9 @@ by RPM binary, which is executed in background. Options passed to rpm:
 
 =over
 
-=item * --root 
+=item * --root
 
-=item * --force 
+=item * --force
 
 =item * --install
 
@@ -349,7 +349,7 @@ by RPM binary, which is executed in background. Options passed to rpm:
 
 =item * --test (must be given twice, see above --test description)
 
-=item * --upgrade 
+=item * --upgrade
 
 =item * --rpmdef (passed as --define)
 
@@ -367,8 +367,8 @@ $ poldek ... -- --rpm-noscripts --rpm-notriggers
 =head1 CONFIG FILE
 
 Program tries to read configuration from F<$HOME/.poldekrc>; if it doesn't
-exists then F</etc/poldek.conf> is used. B<-c,--conf> option could points to 
-other config location. With B<--noconf> poldek doesn't read any config. 
+exists then F</etc/poldek.conf> is used. B<-c,--conf> option could points to
+other config location. With B<--noconf> poldek doesn't read any config.
 
 Config file consists of parameters of the form
 
@@ -384,7 +384,7 @@ line represents a comment or a parameter.
 =item * B<source> = [NAME[,OPTIONS]] SOURCE_PATH
 
 Optional B<NAME> may be specified later from cmdline by
-B<-n, --sn> B<SOURCE-NAME>; for example if you 
+B<-n, --sn> B<SOURCE-NAME>; for example if you
 have sources configured as follows:
 
 source = pld-devel     /mnt/PLD-stable/RPMS
@@ -395,7 +395,7 @@ source = misRPMS       ftp://zn/rpm/RPMS/
 
 then to use only ftp://zn/PLD/i686/PLD/RPMS do:
 
-$ poldek --sn pld-stable 
+$ poldek --sn pld-stable
 
 ..and to use all pld-* do:
 
@@ -414,11 +414,11 @@ B<OPTIONS> describes source options; possible values are:
 
 =item * B<pgp> - verify package PGP signatures
 
-=item * B<pri=NUMERICAL_VALUE> 
+=item * B<pri=NUMERICAL_VALUE>
 
-Source priority may be set by this option. If the same packages 
-(identical name and EVR) are available in more than one source then 
-packages from highest prioritized source are taken. 
+Source priority may be set by this option. If the same packages
+(identical name and EVR) are available in more than one source then
+packages from highest prioritized source are taken.
 
 If source priorities aren't set sources are prioritized in order
 they are appear in config file.
@@ -434,26 +434,26 @@ Source type may be set by this option. Possible values are:
 
 =item * B<pdir> - for local directories, with it poldek
                   scans entire directory instead of reading index file.
-		  
+
 =item * B<hdrl> - file with raw package headers in RPM format;
- available in many RPM-based distributions (named hdlist in RH), however 
- this format isn't optimal for poldek (is not updateable for example). 
+ available in many RPM-based distributions (named hdlist in RH), however
+ this format isn't optimal for poldek (is not updateable for example).
  See F<poldekrc.sample-rh> included in poldek distribution.
 
-=back 	
+=back
 
 =back
 
 Examples:
 
 # packages from 'pld' are preffered
-source = pld,gpg,noautoup,pri=-10   ftp://zn/PLD/ra/RPMS 
+source = pld,gpg,noautoup,pri=-10   ftp://zn/PLD/ra/RPMS
 
 source = pld-test,noauto        /mnt/PLD-test/RPMS
 
 source = rare,noautoup          ftp://host/rare-RPMS
 
-source = build-area,type=dir    /home/zenek/rpm/RPMS 
+source = build-area,type=dir    /home/zenek/rpm/RPMS
 
 
 source99 = rh,noauto,type=hdrl  ftp://redhat/os/i386/RedHat/base/hdlist
@@ -464,8 +464,8 @@ prefix99 = ftp://redhat/os/i386/RedHat/RPMS
 
 =item * B<prefixXX> = SOURCE
 
-If you want to configure source with prefix (see B<-P> option description), 
-then it should be specified as suffixed source/prefix pair to distinguish 
+If you want to configure source with prefix (see B<-P> option description),
+then it should be specified as suffixed source/prefix pair to distinguish
 that source from other ones, for example:
 
 source1 = ~/tmp/my-cd-indexes/
@@ -473,7 +473,7 @@ source1 = ~/tmp/my-cd-indexes/
 prefix1 = /mnt/cdrom/RPMS/
 
 
-=item * B<cachedir> 
+=item * B<cachedir>
 
        See B<--cachedir> option description
 
@@ -485,51 +485,51 @@ prefix1 = /mnt/cdrom/RPMS/
 
         If "yes" program confirm all performed package removals (default: yes)
 
-=item * B<choose_equivalents_manually = yes|no> 
+=item * B<choose_equivalents_manually = yes|no>
 
         If "yes" program let the user choose among equivalent packages (default: no)
 
-=item * B<follow = yes|no> 
+=item * B<follow = yes|no>
 
-       Automatically install|don't install packages required by 
+       Automatically install|don't install packages required by
        selected ones (default: yes)
 
-=item * B<ftp_sysuser_as_anon_passwd = yes|no> 
-       
+=item * B<ftp_sysuser_as_anon_passwd = yes|no>
+
        If yes, login@hostname is send as anonymous FTP password (default: no)
 
-=item * B<greedy = yes|no> 
-       
+=item * B<greedy = yes|no>
+
         See --greedy option description	(default: no)
 
 
-=item * B<hold = PACKAGE[ PACKAGE...]> 
+=item * B<hold = PACKAGE[ PACKAGE...]>
 
         See --hold option description
 
 
-=item * B<mercy = yes|no> 
+=item * B<mercy = yes|no>
 
         See --mercy option description
 
 
-=item * B<keep_downloads = yes|no> 
+=item * B<keep_downloads = yes|no>
 
         Program removes downloaded packages files after successful installation
-        by default. If option is set to "yes" then program will never remove 
+        by default. If option is set to "yes" then program will never remove
         downloaded packages from cache directory.
 
 
 =item * B<particle_install = yes|no>
 
-        If "no" installations of multiple packages are performed as one 
+        If "no" installations of multiple packages are performed as one
         transaction (default: yes)
 
 
-=item * B<use_sudo = yes|no> 
+=item * B<use_sudo = yes|no>
 
-      For r/w operations run rpm using sudo. 
-      The default is "no", but it is recommended to change it to "yes" 
+      For r/w operations run rpm using sudo.
+      The default is "no", but it is recommended to change it to "yes"
       and use the poldek as ordinary user.
 
 
@@ -541,9 +541,9 @@ Downloaders are configured by B<PROTOCOL_get="SPEC"> parameter.  The
 SPEC is a command formatted string, where at least 2 semi-macros of 4
 available should be used:
 
-=over 
+=over
 
-=item B<%p[n]> - package file name, %pn means that %p may be repeated many times 
+=item B<%p[n]> - package file name, %pn means that %p may be repeated many times
 
 =item B<%P[n]> - package full path, %Pn -"-
 
@@ -555,7 +555,7 @@ available should be used:
 
 Currently four protocols are available: FTP, HTTP, HTTPS and RSYNC.  Special
 B<ftp_http> "protocol" could be used for describe downloader for both
-HTTP and FTP. 
+HTTP and FTP.
 
 Examples:
 
@@ -570,13 +570,13 @@ rsync_get      = "/usr/bin/rsync -v %P %d"
 See also sample configs included in distribution.
 
 
-Additionally poldek supports CDROM URLs which could be used when package set 
+Additionally poldek supports CDROM URLs which could be used when package set
 is stored on removable media (several CDs, ZIPs, etc); as  CDROM "downloader"
 vfjuggle should be configured, see poldekrc.sample-cdrom for details.
 
 =head1 EXAMPLES
 
-=head2 Package index creation
+=head2 Package index creation:
 
 $ poldek -s /cdrom/PLD/RPMS --mkidxz=/tmp/packages.dir.gz
 
@@ -586,19 +586,19 @@ Using mkpackagedir script:
 
 $ mkpackagedir /ftp/pub/PLD/i686/RPMS /ftp/pub/PLD/sparc/RPMS
 
-=head2 Verification
+=head2 Verification:
 
 $ poldek -s rsync://ala.ma.kota/PLD/RPMS/ -V
 
 $ poldek -s /dir/with/RPMS -V apache
 
-=head2 Installation from scratch
+=head2 Installation from scratch:
 
-$ poldek -s ftp://ftp.trurl.net/PLD/RPMS/ 
+$ poldek -s ftp://ftp.trurl.net/PLD/RPMS/
   --install-dist=/mnt/dest --pset ftp://home.net/my-pkgsets/myset
 
-Above command installs a "myset" package subset under 
-/mnt/dest as root. 
+Above command installs a "myset" package subset under
+/mnt/dest as root.
 
 =head2 Upgrade whole system:
 
@@ -611,7 +611,7 @@ $ poldek -s ftp://ftp.rankiem.net.pl/PLD/RPMS/
 
 Dump packages filenames marked for upgrade:
 
-$ poldek -s ftp://ftp.pld.org.pl/PLD/RPMS/ 
+$ poldek -s ftp://ftp.pld.org.pl/PLD/RPMS/
  --upgrade-dist --dump=/tmp/PLD-up-`date +%Y.%m.%d`
 
 Test only:
@@ -640,14 +640,14 @@ $ poldek --shcmd='ls -lt' | less
 
 $HOME is used to read config file.
 
-$TMPDIR (if set) is used as temporary directory if no cachedir 
+$TMPDIR (if set) is used as temporary directory if no cachedir
 specified.
 
-$PAGER (if set) is used in interactive mode
+$PAGER (if set) is used in interactive mode.
 
 =head1 FILES
 
-/etc/poldek.conf 
+/etc/poldek.conf
 
 $HOME/.poldekrc
 
@@ -677,12 +677,12 @@ so Red Hat Installer use this tag).
 
 rpm doesn't handle this case, so poldek does not handle it also.
 
-=head2 Dependencies processing 
+=head2 Dependencies processing
 
 As far as I test poldek, it completely resolves package dependencies
-(not file conflicts) during installs and upgrades. Please let me know 
-if you'll notice that rpm shows unsatisfied dependencies while poldek 
-not. 
+(not file conflicts) during installs and upgrades. Please let me know
+if you'll notice that rpm shows unsatisfied dependencies while poldek
+not.
 
 =head2 Documentation
 
@@ -690,12 +690,12 @@ This manual should be finished and translated into English.
 
 =head1 CAUTION
 
-The program surely contains the bugs. Backup your RPM database and be 
+The program surely contains the bugs. Backup your RPM database and be
 watchful. Remember, that there is I<NO WARRANTY OF ANY KIND> and enjoy.
 
 =head1 LICENSE
 
-This program is distributed under the terms of GNU General Public 
+This program is distributed under the terms of GNU General Public
 License, version 2.
 
 =head1 AUTHOR
@@ -714,4 +714,4 @@ Please send comments, bug reports, etc to the author or mailing list
 
 L<apt(1)> L<apt-get(8)>, L<curl(1)>, L<rpm(1)>, L<rsync(1)>, L<snarf(1)>, L<wget(1)>
 
- 
+
