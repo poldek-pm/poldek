@@ -19,7 +19,7 @@ BuildRoot:	/tmp/%{name}-%{version}-root-%(id -u -n)
 
 %description 
 poldek is a cmdline tool which can be used to verify, install and
-upgrade given package sets.
+upgrade given package sets. Program co
  
 
 %prep 
@@ -52,6 +52,14 @@ rm -rf $RPM_BUILD_ROOT
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.5  2001/06/15 15:02:47  mis
+- added "follow" option
+- added "freshen" to cmdline
+- modularized shell
+- shell: extended "desc" and "search" commands (almost all
+  package fields could be specified)
+- shell: colorized output
+
 Revision 1.4  2001/06/12 18:06:45  mis
 - released as 0.14
 

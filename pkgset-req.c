@@ -146,7 +146,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
                 if (nsuspkgs == 0) /* self match */
                     continue;
                 
-                if (setup_req_pkgs(pkg, req, strict, suspkgs, nsuspkgs))
+                if (setup_req_pkgs(pkg, req, strict, suspkgs, nsuspkgs)) 
                     continue;
                 else 
                     goto l_err_match;
@@ -400,7 +400,7 @@ int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
             if (dpkg->revreqpkgs == NULL)
                 dpkg->revreqpkgs = n_array_new(2, NULL, NULL);
             n_array_push(dpkg->revreqpkgs, pkg);
-            
+
             for (i=1; i<nmatched; i++) {
                 dpkg = matches[i];
                 

@@ -29,6 +29,13 @@ http_get      = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
 https_get     = "/usr/bin/curl %P -o %D"
 rsync_get     = "/usr/bin/rsync -v %P %d"
 
+# permits using root privs for installation only 
+use_sudo  = yes
+
+# automatically install packages required by installed ones (default "yes") 
+#follow = yes
+
+
 # Some rpm macros
 rpmdef        = "_install_langs pl:lt"
 
@@ -36,6 +43,4 @@ rpmdef        = "_install_langs pl:lt"
 rpmdef        = "_netsharedpath /usr/share/info:/usr/share/man"
 rpmdef	      = "_excludedocs 1"
 
-# permits using root privs for installation only 
-use_sudo  = yes
 

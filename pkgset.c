@@ -409,9 +409,9 @@ int pkgset_setup(struct pkgset *ps)
 
     pkgset_verify_deps(ps, strict);
     mem_info(1, "MEM after verify deps");
+
     pkgset_order(ps);
     mem_info(1, "MEM after order");
-
 
     set_pkg_allocfn(malloc, free);
     set_capreq_allocfn(malloc, free, NULL, NULL);

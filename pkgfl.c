@@ -95,6 +95,7 @@ void pkgflmodule_allocator_pop_mark(void *ptr)
     obstack_free(&flalloct->ob, ptr);
 }
 #endif
+
 __inline__
 static void *pkgfl_alloc(size_t size) 
 {
@@ -343,13 +344,16 @@ int pkgfl_store_f(tn_array *fl, FILE *stream, tn_array *depdirs, int which)
     return 1;
 }
 
-tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *only_dirs)
+tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *dirs, int include)
 {
     tn_array *fl = NULL;
     int32_t ndirs = 0;
-    int j;
-    
+    int j, default_loadir;
 
+    default_loadir = 1;
+    if (dirs) 
+        default_loadir = include ? 0 : 1;
+    
     if (!n_buf_it_get_int32(nbufi, &ndirs))
         return NULL;
     
@@ -360,25 +364,25 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *only_dirs)
         char              *dn = NULL;
         int8_t            dnl = 0;
         int32_t           nfiles = 0;
-        int               skipdir;
+        int               loadir;
         
         
         n_buf_it_get_int8(nbufi, &dnl);
         dn = n_buf_it_get(nbufi, dnl);
 
-        skipdir = 0;
-        if (only_dirs && n_array_bsearch(only_dirs, dn) == NULL)
-            skipdir = 1;
-
-#if 0        
-        if (only_dirs && skipdir == 0)
-            DBGMSG_F("NOT skipdir %s\n", dn);
+        loadir = default_loadir;            
+        if (dirs && n_array_bsearch(dirs, dn))
+            loadir = include;
+        
+#if 0
+        if (loadir)
+            printf("LOAD (%d) %s\n", include, dn);
 #endif        
         
         dnl--;
         n_buf_it_get_int32(nbufi, &nfiles);
 
-        if (skipdir == 0)
+        if (loadir)
             flent = pkgfl_ent_new(dn, dnl, nfiles);
         
         for (j=0; j < nfiles; j++) {
@@ -400,14 +404,14 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *only_dirs)
                 linkto = n_buf_it_get(nbufi, slen);
             }
             
-            if (skipdir == 0) {
+            if (loadir) {
                 file = flfile_new(size, mode, bn, bnl, linkto, slen);
                 flent->files[flent->items++] = file;
             }
             
         }
         
-        if (skipdir == 0)
+        if (loadir)
             n_array_push(fl, flent);
     }
     
@@ -415,7 +419,7 @@ tn_array *pkgfl_restore(tn_buf_it *nbufi, tn_array *only_dirs)
 }
 
 
-tn_array *pkgfl_restore_f(FILE *stream, tn_array *only_dirs) 
+tn_array *pkgfl_restore_f(FILE *stream, tn_array *dirs, int include) 
 {
     tn_array *fl;
     tn_buf *nbuf;
@@ -436,13 +440,14 @@ tn_array *pkgfl_restore_f(FILE *stream, tn_array *only_dirs)
     nbuf = n_buf_new(0);
     n_buf_init(nbuf, buf, size);
     n_buf_it_init(&nbufi, nbuf);
-    fl = pkgfl_restore(&nbufi, only_dirs);
+    fl = pkgfl_restore(&nbufi, dirs, include);
     n_buf_free(nbuf);
     
     fseek(stream, 1, SEEK_CUR); /* skip final '\n' */
 
     return fl;
 }
+
 
 int pkgfl_skip_f(FILE *stream) 
 {
@@ -455,7 +460,6 @@ int pkgfl_skip_f(FILE *stream)
     fseek(stream, size + 1, SEEK_CUR);
     return 1;
 }
-
 
 
 __inline__ 

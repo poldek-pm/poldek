@@ -1,6 +1,6 @@
 # $Id$
 
-SUBDIRS   = vfile
+SUBDIRS   = vfile shell
 
 CFLAGS    = @CFLAGS@
 INCLUDES  = @TRURL_INCLUDE@
@@ -36,17 +36,18 @@ libpoldek_a_SOURCES = \
 	  dbpkg.c dbpkg.h		\
 	  rpmdb_it.c rpmdb_it.h
 
-SHELL_SRCS = shell.c sh_uninstall.c
+SHELL_MOD = shell/shell.a
 
 if ENABLE_INTERACTIVE_MODE
-SHELL_SRCS_ = $(SHELL_SRCS)
+SHELL_MOD_ = $(SHELL_MOD)
 endif
 
 bin_PROGRAMS        = poldek rpmvercmp
 bin_SCRIPTS         = mkrpmdir
-poldek_SOURCES      = main.c $(SHELL_SRCS_)
-poldek_LDADD        = vfile/libvfile.a libpoldek.a @TRURL_LDFLAG@ -lutil
-poldek_DEPENDENCIES = vfile/libvfile.a libpoldek.a
+poldek_SOURCES      = main.c
+poldek_LDADD        = vfile/libvfile.a libpoldek.a $(SHELL_MOD_) \
+	              @TRURL_LDFLAG@ -lutil
+poldek_DEPENDENCIES = vfile/libvfile.a libpoldek.a $(SHELL_MOD_)
 
 
 rpmvercmp_SOURCES   = rpmvercmp.c
@@ -54,8 +55,7 @@ rpmvercmp_LDADD     =
 rpmvercmp_LIBS      = -lrpm
 rpmvercmp_LDFLAGS   = 
 
-EXTRA_DIST = $(SHELL_SRCS) \
-	     poldek.1 poldek.pod \
+EXTRA_DIST = poldek.1 poldek.pod \
 	     Makefile.extra *sample* \
 	     poldek.spec
 

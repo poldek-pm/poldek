@@ -142,6 +142,9 @@ char *capreq_snprintf(char *str, size_t size, const struct capreq *cr)
     int nwritten;
     char relstr[64], *p, *s;
 
+    if (size < 32)
+        return NULL;
+    
     s = str;
     p = relstr;
     *p = '\0';
@@ -161,18 +164,19 @@ char *capreq_snprintf(char *str, size_t size, const struct capreq *cr)
         size--;
     }
     
-    if (capreq_is_prereq(cr)) {
+    if (capreq_is_prereq(cr) || capreq_is_prereq_un(cr)) {
         *s++ = '*';
         size--;
     }
 
+#if 0
     if (capreq_is_prereq_un(cr)) {
-        *s++ = '^';
+        *s++ = '$';
         size--;
     }
+#endif
     
     if (p == relstr) {
-        
         n_assert(*capreq_ver(cr) == '\0');
         if (capreq_is_rpmlib(cr))
             nwritten = snprintf(s, size, "rpmlib(%s)", capreq_name(cr));

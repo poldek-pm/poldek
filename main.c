@@ -97,7 +97,7 @@ struct args {
     int         noconf;
     const char  *cachedir;
     
-    int         nodesc;		/* don't put descriptions in Packges */
+    int         nodesc;		/* don't put descriptions in Packages */
     int         shell_skip_installed;  
 } args;
 
@@ -121,18 +121,20 @@ tn_hash *htcnf = NULL;          /* config file values */
 # define OPT_SHELL_SKIPINSTALLED   'f'
 #endif
 
-#define OPT_INST_INSTDIST  1041
-#define OPT_INST_UPGRDIST  1042
-#define OPT_INST_NODEPS    1043
-#define OPT_INST_FORCE     1044
-#define OPT_INST_JUSTDB    1045
-#define OPT_INST_TEST      1046
-#define OPT_INST_MKDBDIR   1047
-#define OPT_INST_KILLDB    1048
-#define OPT_INST_RPMDEF    1049
-#define OPT_INST_FETCH     1050
-#define OPT_INST_MKSCRIPT  1051
-
+#define OPT_INST_INSTDIST         1041
+#define OPT_INST_UPGRDIST         1042
+#define OPT_INST_NODEPS           1043
+#define OPT_INST_FORCE            1044
+#define OPT_INST_JUSTDB           1045
+#define OPT_INST_TEST             1046
+#define OPT_INST_MKDBDIR          1047
+#define OPT_INST_KILLDB           1048
+#define OPT_INST_RPMDEF           1049
+#define OPT_INST_FETCH            1050
+#define OPT_INST_MKSCRIPT         1051
+#define OPT_INST_POLDEK_MKSCRIPT  1052
+#define OPT_INST_NOFOLLOW         'N'
+#define OPT_INST_FRESHEN          'F'
 
 /* The options we understand. */
 static struct argp_option options[] = {
@@ -187,8 +189,17 @@ static struct argp_option options[] = {
 {"root", 'r', "DIR", 0, "Set top directory to DIR", 70 },
     
 {"dump", OPT_INST_MKSCRIPT, "FILE", OPTION_ARG_OPTIONAL,
-     "Just dump install packages to FILE (default stdout)", 70 }, 
+     "Just dump install marked package filenames to FILE (default stdout)", 70 },
 
+{"dumpn", OPT_INST_POLDEK_MKSCRIPT, "FILE", OPTION_ARG_OPTIONAL,
+     "Just dump install marked package ames to FILE (default stdout)", 70 },
+
+{"freshen", OPT_INST_FRESHEN, 0, 0, 
+     "Upgrade packages, but only if an earlier version currently exists", 70 },
+
+{"nofollow", OPT_INST_NOFOLLOW, 0, 0, 
+     "Don't automatically install packages required by installed ones", 70 },    
+    
 {"fetch", OPT_INST_FETCH, "DIR", 0,
      "Do not install, only fetch packages", 70}, 
     
@@ -270,7 +281,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     struct source *src = NULL;
     int ldmethod = PKGSET_LD_NIL;
 
-    
     if (arg)
         chkarg(key, arg);
     
@@ -313,7 +323,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 's':
             if (argsp->curr_src_path) { /* no prefix for curr_src_path */
                 src = source_new(argsp->curr_src_path, NULL);
-                //printf("new src %s %d\n", arg, ldmethod);
                 src->ldmethod = argsp->curr_src_ldmethod;
                 n_array_push(argsp->sources, src);
             }
@@ -333,8 +342,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 exit(EXIT_FAILURE);
             }
             
-            //printf("new src %s prefix %s, ld %d\n", argsp->curr_src_path, arg,
-            //                                        argsp->curr_src_ldmethod);
             src = source_new(argsp->curr_src_path, trimslash(arg));
             src->ldmethod = argsp->curr_src_ldmethod;
             n_array_push(argsp->sources, src);
@@ -439,6 +446,20 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_MKSCRIPT:
             argsp->inst_sflags |= INSTS_JUSTPRINT;
             argsp->dumpfile = trimslash(arg);
+            break;
+
+        case OPT_INST_POLDEK_MKSCRIPT:
+            argsp->inst_sflags |= INSTS_JUSTPRINT_N;
+            argsp->dumpfile = trimslash(arg);
+            break;
+
+        case OPT_INST_FRESHEN:
+            argsp->inst_sflags |= INSTS_FRESHEN;
+            argsp->dumpfile = trimslash(arg);
+            break;
+
+        case OPT_INST_NOFOLLOW:
+            argsp->inst_sflags &= ~(INSTS_FOLLOW);
             break;
             
         case OPT_INST_NODEPS:
@@ -565,14 +586,14 @@ void parse_options(int argc, char **argv)
     args.fetchdir = NULL;
     args.install_root = NULL;
     args.cachedir = tmpdir();
-    
+    args.inst_sflags = INSTS_FOLLOW;
     args.pkgdef_files = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_defs  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_sets  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     
     
     argp_parse(&argp, argc, argv, 0, 0, &args);
-    
+
     if (args.noconf && args.conf_path) {
         log(LOGERR, "--noconf and --conf are exclusive, aren't they?\n");
         exit(EXIT_FAILURE);
@@ -624,10 +645,6 @@ void parse_options(int argc, char **argv)
         log(LOGERR, "No source specified\n");
         exit(EXIT_FAILURE);
     }
-    
-
-    if ((p = conf_get(htcnf, "use_sudo", NULL)) != NULL && strcmp(p, "yes") == 0)
-        args.inst_sflags |= INSTS_USESUDO;
 
     if (args.mjrmode == 0) {
         log(LOGERR, "so what?\n");
@@ -640,10 +657,28 @@ void parse_options(int argc, char **argv)
     args.has_pkgdef = n_array_size(args.pkgdef_sets) +
         n_array_size(args.pkgdef_defs) +
         n_array_size(args.pkgdef_files);
+    
+    
+    
+    if ((p = conf_get(htcnf, "use_sudo", NULL)) != NULL &&
+        strcmp(p, "yes") == 0)
+        args.inst_sflags |= INSTS_USESUDO;
+
+    
 
     if (htcnf) {
         char *v;
         int is_multi;
+
+        if ((v = conf_get(htcnf, "use_sudo", NULL)) != NULL &&
+            strcmp(v, "yes") == 0)
+            args.inst_sflags |= INSTS_USESUDO;
+
+        if (args.inst_sflags & INSTS_FOLLOW) { /* no --nofollow specified */
+            if ((v = conf_get(htcnf, "follow", NULL)) != NULL &&
+                strcmp(v, "no") == 0)
+                args.inst_sflags &= ~(INSTS_FOLLOW);
+        }
         
 	if ((v = conf_get(htcnf, "cachedir", NULL)))
 	    args.cachedir = v;
@@ -696,6 +731,7 @@ void parse_options(int argc, char **argv)
             }
         }
     }
+    
 
     vfile_verbose = &verbose;
     vfile_configure(args.cachedir ? args.cachedir : tmpdir(), vfile_cnflags);
@@ -978,7 +1014,6 @@ int main(int argc, char **argv)
 #ifdef ENABLE_INTERACTIVE_MODE
         case MODE_SHELL:
             verbose = 1;
-            log_sopenlog(stdout, 0, "ERR");
             rc = shell_main(ps, &inst, args.shell_skip_installed);
             break;
 #endif            

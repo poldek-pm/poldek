@@ -819,6 +819,45 @@ struct pkguinf *pkg_info(const struct pkg *pkg)
     
 }
 
+tn_array *pkg_other_fl(const struct pkg *pkg) 
+{
+    tn_array *fl = NULL;
+    
+    if (pkg->pkgdir && pkg->other_files_offs) {
+        fseek(pkg->pkgdir->vf->vf_stream, pkg->other_files_offs, SEEK_SET);
+        fl = pkgfl_restore_f(pkg->pkgdir->vf->vf_stream,
+                             pkg->pkgdir->foreign_depdirs, 0);
+    }
+
+    return fl;
+}
+
+
+tn_array *pkg_info_files(const struct pkg *pkg) 
+{
+    tn_array *fl = NULL;
+    
+    
+    if (pkg->pkgdir && pkg->other_files_offs) {
+        fseek(pkg->pkgdir->vf->vf_stream, pkg->other_files_offs, SEEK_SET);
+        fl = pkgfl_restore_f(pkg->pkgdir->vf->vf_stream,
+                             pkg->pkgdir->foreign_depdirs, 0);
+    }
+
+    if (fl == NULL) {
+        fl = pkg->fl;
+        
+    } else if (pkg->fl) {
+        int i;
+        for (i=0; i<n_array_size(pkg->fl); i++)
+            n_array_push(fl, n_array_nth(pkg->fl, i));
+    }
+    
+    if (fl)
+        n_array_sort(fl);
+    
+    return fl;
+}
 
 char *pkg_filename(const struct pkg *pkg, char *buf, size_t size) 
 {

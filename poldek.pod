@@ -12,10 +12,11 @@ poldek [--source=SOURCE ...] [OPTION...] [PACKAGE...]
 
 =head1 DESCRIPTION
 
-poldek is a cmdline tool which can be used to verify, install and
-upgrade given package sets. It was inspired by L<apt_get(8)> tool
-from Debian's APT, the shell mode was inspired by Perl CPAN module
-shell (perl -MCPAN -e shell). 
+The poldek is designed to automate the verify, install and upgrade 
+of rpm packages. It can be used in two ways: as cmdline or as 
+interactive tool. It was inspired by L<apt_get(8)> tool from Debian's 
+APT, the interactive mode was inspired by shell mode of Perl CPAN module
+(perl -MCPAN -e shell). 
 
 In general poldek gets packages information from special package index
 file (called I<Packages>) and performs one of the following actions:
@@ -41,6 +42,15 @@ itself (by compiled in cURL client or by simple FTP/HTTP client from rpmlib)
 or by external downloaders (not configured by default, see L</CONFIG FILE> for
 details). Currently four types of URLs are supported: FTP, HTTP, 
 HTTPS and RSYNC.
+
+=head2 Interactive Mode
+
+The interactive mode is entered by running
+
+    poldek [OPTION...] --shell [-f]
+
+which puts you into a readline interface. Once you are on the command 
+line, type 'help' and the rest should be self-explanatory.
 
 [to be continued...]
 

@@ -29,6 +29,13 @@ static FILE       *l_stream = NULL;
 static unsigned   l_mask = (unsigned)~0;
 static int (*l_vprintf)(const char *format, va_list args);
 
+static void (*vlog_fn)(int pri, int indent, const char *fmt, va_list) = NULL;
+
+void log_set_vlogfn(void (*vlogfn)(int, int, const char*, va_list)) 
+{
+    vlog_fn = vlogfn;
+}
+
 
 /*
  */
@@ -44,9 +51,10 @@ void log(int pri, const char *fmt, ...)
     va_end(args);
 }
 
+
 /*
  */
-void vlog(int pri, int indent_size, const char *fmt, va_list args)
+void do_vlog(int pri, int indent, const char *fmt, va_list args)
 {
     if (l_stream == NULL) {
         char path[256];
@@ -55,8 +63,8 @@ void vlog(int pri, int indent_size, const char *fmt, va_list args)
         if (l_stream == NULL)
             return;
     }
-    
 
+    
     if (*fmt == '_') 
         fmt++;
     
@@ -71,15 +79,15 @@ void vlog(int pri, int indent_size, const char *fmt, va_list args)
             fputs(l_prefix, l_stream);
     }
 
-    if (indent_size > 0) {
-        if (indent_size < 10) {
+    if (indent > 0) {
+        if (indent < 10) {
             int i;
-            for (i=0; i<indent_size; i++) 
+            for (i=0; i<indent; i++) 
                 fputc(' ', l_stream);
         } else {
-            char buf[indent_size + 1];
-            memset(buf, ' ', indent_size);
-            buf[indent_size] = '\0';
+            char buf[indent + 1];
+            memset(buf, ' ', indent);
+            buf[indent] = '\0';
             fputs(buf, l_stream);
         }
     }
@@ -88,6 +96,13 @@ void vlog(int pri, int indent_size, const char *fmt, va_list args)
     fflush(l_stream);
 }
 
+void vlog(int pri, int indent, const char *fmt, va_list args) 
+{
+    if (vlog_fn)
+        vlog_fn(pri, indent, fmt, args);
+    else
+        do_vlog(pri, indent, fmt, args);
+}
 
 void log_msg(const char *fmt, ...) 
 {
@@ -101,12 +116,12 @@ void log_msg(const char *fmt, ...)
 }
 
 
-void log_msg_i(int indent_size, const char *fmt, ...) 
+void log_msg_i(int indent, const char *fmt, ...) 
 {
     va_list args;
     
     va_start(args, fmt);
-    vlog(LOGDEBUG, indent_size, fmt, args);
+    vlog(LOGDEBUG, indent, fmt, args);
     va_end(args);
 }
 

@@ -7,11 +7,14 @@
 #include <vfile/vfile.h>
 
 struct pkgdir {
-    char               *path;       /* path | URL        */
-    char               *idxpath;    /* path | URL        */
-    tn_array           *depdirs;    /* char *[]          */
-    tn_array           *pkgs;       /* struct *pkg[]     */
-    struct vfile       *vf;         /* Packages handle   */
+    char               *path;            /* path | URL        */
+    char               *idxpath;         /* path | URL        */
+    tn_array           *pkgs;            /* struct *pkg[]     */
+    
+    tn_array           *depdirs;         /* char *[]          */
+    tn_array           *foreign_depdirs; /* depdirs not presented in depdirs,
+                                            but presented in other pkgdirs */
+    struct vfile       *vf;              /* Packages handle   */
     unsigned           flags;
 };
 
@@ -45,5 +48,6 @@ int pkgdir_create_idx(struct pkgdir *pkgdir, const char *pathname, int nodesc);
 
 int update_pkgdir_idx(const char *path);
 
+int pkgdir_isremote(struct pkgdir *pkgdir);
 
 #endif /* POLDEK_PKGDIR_H*/

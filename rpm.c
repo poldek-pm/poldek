@@ -397,7 +397,7 @@ int rpm_install(rpmdb db, const char *rootdir, const char *path,
         
     } else {
         if (issrc) {
-            log(LOGERR, "%s: pakietów ¼ród³owych nie prowadzimy\n", path);
+            log(LOGERR, "%s: source packages not supported\n", path);
             goto l_err;
         }
         

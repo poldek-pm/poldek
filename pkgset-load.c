@@ -32,6 +32,7 @@ struct source *source_new(const char *path, const char *pkg_prefix)
 
     src = malloc(sizeof(*src));
     src->source_path = strdup(path);
+    src->pkg_prefix = NULL;
     if (pkg_prefix)
         src->pkg_prefix = strdup(pkg_prefix);
     src->ldmethod = PKGSET_LD_NIL;
@@ -90,7 +91,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     for (i=0; i<n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
 
-        if (src->ldmethod == PKGSET_LD_NIL)
+        if (src->ldmethod == PKGSET_LD_NIL) 
             src->ldmethod = select_ldmethod(src->source_path);
         
         if (src->ldmethod == PKGSET_LD_NIL) {

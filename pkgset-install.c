@@ -51,10 +51,6 @@ struct upgrade_s {
     tn_hash        *capcache;         /* cache of resolved uninst packages caps */
     tn_array       *orphan_dbpkgs;    /* array of uninst_pkg* */
     
-    tn_array       *orphan_pkgs;  /* packages which requires
-                                     uninstalled ones */
-    tn_array       *orphan_rnos;  /* recnos of above  */
-
     int            strict;
     int            ndberrs;
     int            ndep;
@@ -490,7 +486,6 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                         continue;
 
                     matches = alloca(sizeof(*matches) * nsuspkgs);
-                    
                     if (psreq_match_pkgs(pkg, req, upg->strict, suspkgs,
                                          nsuspkgs, matches, &nmatched)) {
                         
@@ -503,8 +498,10 @@ static int process_deps(struct pkgset *ps, tn_array *pkgs,
                             continue;
                             
                         } else if ((upg->inst->flags & INSTS_FRESHEN) == 0) {
-                            /* save candidate */
-                            tomark = matches[0];
+                            if (upg->inst->flags & INSTS_FOLLOW) {
+                                /* save candidate */
+                                tomark = matches[0];
+                            }
                         }
                     }
                 } 
@@ -1212,9 +1209,10 @@ int pkgset_install(struct pkgset *ps, struct inst_s *inst,
             rc = 0;
         }
 
-        if (!install)
+        if (!install) {
             pkg_unmark(pkg);
-        else {
+            
+        } else {
             n_array_push(upg.install_pkgs, pkg);
             if (npkgs == 1) {
                 n_array_push(upg.uninst_dbpkgs, dbpkg_new(dbrec.recno,

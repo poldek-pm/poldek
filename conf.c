@@ -47,7 +47,6 @@ static struct tag valid_tags[] = {
     { "ignore_pkg",   1, TYPE_STR },
     { "rpmdef",       1, TYPE_STR },
     { "rpm_install_opt", 0, TYPE_STR },
-    { "rpm_upgrade_opt", 0, TYPE_STR },
     { "rpm_uninstall_opt", 0, TYPE_STR },
     { "follow",       0, TYPE_BOOL },
     { "use_sudo",     0, TYPE_BOOL },

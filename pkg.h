@@ -82,7 +82,7 @@ struct pkg {
     off_t        other_files_offs;  /* no dep files offset in Packges */
     
     tn_array     *reqpkgs;    /* require packages  */
-    tn_array     *revreqpkgs; /* packages which requires */
+    tn_array     *revreqpkgs; /* packages which requires me */
     tn_array     *cnflpkgs;   /* conflict packages */
 
     struct pkgdir *pkgdir;
@@ -170,8 +170,11 @@ char *pkg_snprintf_s(const struct pkg *pkg);
 char *pkg_snprintf_s0(const struct pkg *pkg);
 char *pkg_snprintf_s1(const struct pkg *pkg);
 
-struct pkguinf *pkg_info(const struct pkg *pkg);
+/* load and returns not loaded file list (l: tag in Packages) */
+tn_array *pkg_other_fl(const struct pkg *pkg);
 
+struct pkguinf *pkg_info(const struct pkg *pkg);
+tn_array *pkg_info_files(const struct pkg *pkg);
 
 void set_pkg_allocfn(void *(*pkg_allocfn)(size_t), void (*pkg_freefn)(void*));
 

@@ -44,10 +44,11 @@ int pkgset_order(struct pkgset *ps);
 
 #define INSTS_JUSTFETCH    (1 << 0)
 #define INSTS_JUSTPRINT    (1 << 1)
-#define INSTS_MKDBDIR      (1 << 2)
-#define INSTS_FOLLOW       (1 << 3)
-#define INSTS_FRESHEN      (1 << 4)
-#define INSTS_USESUDO      (1 << 5)
+#define INSTS_JUSTPRINT_N  (1 << 2) /* names, not filenames */
+#define INSTS_MKDBDIR      (1 << 3)
+#define INSTS_FOLLOW       (1 << 4)
+#define INSTS_FRESHEN      (1 << 5)
+#define INSTS_USESUDO      (1 << 6)
 
 struct inst_s {
     struct pkgdb   *db;

@@ -295,6 +295,7 @@ struct pkgdir *pkgdir_new(const char *path, const char *pkg_prefix)
     pkgdir->depdirs = depdirs;
     n_array_ctl(pkgdir->depdirs, TN_ARRAY_AUTOSORTED);
     n_array_sort(pkgdir->depdirs);
+    pkgdir->foreign_depdirs = NULL;
     pkgdir->flags = PKGDIR_LDFROM_IDX;
     pkgdir->pkgs = pkgs_array_new(1024);
 
@@ -327,6 +328,12 @@ void pkgdir_free(struct pkgdir *pkgdir)
         pkgdir->depdirs = NULL;
     }
 
+    if (pkgdir->foreign_depdirs) {
+        n_array_free(pkgdir->foreign_depdirs);
+        pkgdir->foreign_depdirs = NULL;
+    }
+
+
     if (pkgdir->pkgs) {
         n_array_free(pkgdir->pkgs);
         pkgdir->pkgs = NULL;
@@ -355,7 +362,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     int                flag_lddesc = 0;
     tn_array           *only_dirs;
 
-#if 0    
+#if 0
     for (i=0; i<n_array_size(depdirs); i++) {
         printf("DEP %s\n", n_array_nth(depdirs, i));
     }
@@ -390,7 +397,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         }
     }
     
-
+    pkgdir->foreign_depdirs = only_dirs;
     vf = pkgdir->vf;
     n = 0;
     nline = 0;
@@ -513,7 +520,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                 continue;
                 
             } else if (*line == 'L') { /* files */
-                pkgt.pkgfl = pkgfl_restore_f(vf->vf_stream, NULL);
+                pkgt.pkgfl = pkgfl_restore_f(vf->vf_stream, NULL, 0);
                 n_assert(pkgt.pkgfl);
                 //printf("DUMP %p %d\n", pkgt.pkgfl, n_array_size(pkgt.pkgfl));
                 //pkgfl_dump(pkgt.pkgfl);
@@ -531,7 +538,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                 } else {
                     tn_array *fl;
                     
-                    fl = pkgfl_restore_f(vf->vf_stream, only_dirs);
+                    fl = pkgfl_restore_f(vf->vf_stream, only_dirs, 1);
 
                     if (pkgt.pkgfl == NULL) {
                         pkgt.pkgfl = fl;
@@ -1161,6 +1168,7 @@ struct pkgdir *pkgdir_load_dir(const char *path)
         pkgdir->path = strdup(path);
         pkgdir->idxpath = NULL;
         pkgdir->depdirs = NULL;
+        pkgdir->foreign_depdirs = NULL;
         pkgdir->pkgs = pkgs;
         pkgdir->flags = PKGDIR_LDFROM_DIR;
         pkgdir->vf = NULL;

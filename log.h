@@ -44,14 +44,18 @@ void msg(int verbose_level, const char *fmt, ...);
       log_msg(fmt, ## args);                         \
   } while(0)
 
+void do_vlog(int pri, int indent, const char *fmt, va_list args);
 
+/* wrapper around vlog_do */
 void vlog(int pri, int indent, const char *fmt, va_list args);
 void log(int pri, const char *fmt, ...);
 
 #define log_debug(fmt, args...) \
   log(LOG_DEBUG, "%s: " fmt, __FUNCTION__ , ## args)
 
-void log_set_vprintf(int (*vprintffn)(const char *format, va_list args));
+void log_set_vprintf(int (*vprintffn)(const char *, va_list));
+
+void log_set_vlogfn(void (*vlogfn)(int, int, const char*, va_list));
 
 #ifdef ENABLE_TRACE
 # define DBGMSG_F(fmt, args...) fprintf(stderr, "%s: " fmt, __FUNCTION__ , ## args)
