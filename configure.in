@@ -50,7 +50,7 @@ fi
 
 
 AC_ARG_WITH(curl,
-[  --without-curl                compile without libcurl],
+[  --without-curl	compile without libcurl],
 ENABLE_VFILE_CURL=$enableval, ENABLE_VFILE_CURL=yes)
 if test "${ENABLE_VFILE_CURL}." != "yes."; then
 	AM_CONDITIONAL(ENABLE_VFILE_CURL, false)
@@ -62,7 +62,7 @@ fi
 
 
 AC_ARG_WITH(sys-trurlib,
-[  --with-sys-trurlib              compile and link with system installed trurlib],
+[  --with-sys-trurlib	compile and link with system installed trurlib],
 ENABLE_SYS_TRURL=$enableval, ENABLE_SYS_TRURL=no)
 
 
@@ -71,8 +71,8 @@ AC_ARG_ENABLE(static,
 ENABLE_STATIC=$enableval, ENABLE_STATIC=no)
 
 if test "${ENABLE_STATIC}." = "yes."; then
+	AC_DEFINE(ENABLE_STATIC)
 	poldek_LDFLAGS="-static"
-	LIBS="$LIBS -ldb1"
 
 	if test "${INTERACTIVE_MODE}." = "yes."; then
 		LIBS="$LIBS -lncurses -ltinfo"
@@ -87,7 +87,7 @@ AC_SUBST(poldek_LDFLAGS)
 
 
 AC_ARG_ENABLE(trace,
-[  --enable-trace    turn on trace messages],
+[  --enable-trace		turn on trace messages],
 ENABLE_TRACE=$enableval, ENABLE_TRACE=no)
 
 if test "${ENABLE_TRACE}." = "yes."; then
@@ -186,16 +186,17 @@ if test -n "$TRURL_DIR"; then
 	AC_MSG_CHECKING(for local trurlib copy in $TRURL_DIR)
 	AC_MSG_RESULT([yes])
 	TRURL_INCLUDE="-I\$(top_srcdir)/$TRURL_DIR"
-	TRURL_LDFLAG="-L\$(top_srcdir)/$TRURL_DIR/ -ltrurl"
+	TRURL_LDFLAG="-L\$(top_srcdir)/$TRURL_DIR"
+	TRURL_LDFLAG="$TRURL_LDFLAG -L\$(top_srcdir)/$TRURL_DIR/.libs"
 	AC_SUBST(TRURL_DIR)
 	AC_SUBST(TRURL_INCLUDE)
 	AC_SUBST(TRURL_LDFLAG)
-	LDFLAGS="$LDFLAGS -L$TRURL_DIR"
+	LDFLAGS="$LDFLAGS -L\$(top_srcdir)/$TRURL_DIR -L\$(top_srcdir)/$TRURL_DIR/.libs"
 	TRURLIB_VERSION=$(egrep 'T_AUTOMAKE\(trurlib, ' $TRURL_DIR/configure.in | cut -d ' ' -f 2 | sed 's|)||')
 	AC_SUBST(TRURLIB_VERSION)
 else
 	AC_CHECK_HEADER(trurl/trurl.h,,AC_MSG_ERROR("trurl.h is missing"))
-	TRURLIB_VERSION=0.43.3
+	TRURLIB_VERSION=0.43.4
 	AC_SUBST(TRURLIB_VERSION)
 fi
 
@@ -203,16 +204,30 @@ dnl Checks for libraries.
 AC_CHECK_LIB(bz2, BZ2_bzCompress)
 AC_CHECK_LIB(z, gzopen)
 
+
 DBLIB=""
 if test ${is_rpm_4_0_4}. = no. ; then
-	AC_CHECK_LIB(db, db_create, [DBLIB=-ldb],,[$LIBS])
+	dnl tocheck: -ldb-3.1 causes link with static lib from /usr/lib
+	dnl instead shared one from /lib
+	#AC_CHECK_LIB(db-3.1, db_create, [DBLIB="-ldb-3.1"],
+	#  AC_CHECK_LIB(db-3.0, db_create, [DBLIB="-ldb-3.0"],
+	#    AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"])
+	#  )
+	#)
+
+	AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"],,[$LIBS])
+	# assume that librpm complied with --enable-db1
+	if test "${ENABLE_STATIC}." = "yes."; then 
+		DBLIB="$DBLIB -ldb1"
+	fi
 else
-	AC_CHECK_LIB(db-4.0, db_create,[DBLIB=-ldb-4.0],[
-		AC_CHECK_LIB(db, db_create, [DBLIB=-ldb],,[$LIBS])],
-		[$LIBS])
+	AC_CHECK_LIB(db-4.0, db_create, [DBLIB="-ldb-4.0"], 
+		     [AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"],,[$LIBS])], 
+		     [$LIBS])
 fi
 
 AC_CHECK_LIB(popt, poptReadConfigFile)
+
 if test ${is_rpm4}. = yes. ; then
 	AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR("rpmio not found"))
 fi
@@ -227,16 +242,18 @@ AC_CHECK_FUNCS(rpmMachineScore,, AC_MSG_ERROR("rpmlib not found"))
 AC_CHECK_FUNCS(rpmlog, [AC_DEFINE(HAVE_RPMLOG)])
 AC_CHECK_FUNCS(rpmCheckSig, [AC_DEFINE(HAVE_RPMCHECKSIG)])
 
-
 AC_CHECK_HEADERS(db_185.h)
-AC_CHECK_FUNCS(dbopen)
+AC_CHECK_FUNCS(__db185_open)
 
-dnl trullib 0.43.4 has n_hash_size
+dnl trullib 0.43.5 has n_hash_size
 dnl test if linked with system copy only
 if test -z "$TRURL_DIR"; then
-	AC_CHECK_LIB(trurl, n_hash_size,,AC_MSG_ERROR("trurlib >= 0.43.4 not found"),
+	AC_CHECK_LIB(trurl, n_hash_size,,AC_MSG_ERROR("trurlib >= 0.43.5 not found"),
 		     $CONF_IN_LDFLAGS)
+else
+	LIBS="$LIBS -ltrurl"
 fi
+
 
 AC_CHECK_FUNCS(getline,, AC_MSG_ERROR("getline\(\) is needed by $PACKAGE"),
 	       $CONF_IN_LDFLAGS)

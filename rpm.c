@@ -165,7 +165,7 @@ int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs)
     tn_array  *tmp_depdirs;
     int       len;
 
-#if !defined HAVE_DB_185_H || !defined HAVE_DBOPEN
+#if !defined HAVE_DB_185_H || !defined HAVE___DB185_OPEN
     return 0;
 #endif    
     
@@ -180,7 +180,7 @@ int rpm_get_dbdepdirs(const char *rootdir, tn_array *depdirs)
     snprintf(path, sizeof(path), "%s%s/%s", *(rootdir + 1) == '\0' ? "" : rootdir,
              dbpath != NULL ? dbpath : "", index);
     
-    if ((db = dbopen(path, O_RDONLY, 0, DB_HASH, NULL)) == NULL)
+    if ((db = __db185_open(path, O_RDONLY, 0, DB_HASH, NULL)) == NULL)
         return 0;
     
     if (db->seq(db, &dbt_k, &dbt_d, R_FIRST) != 0) {
@@ -918,8 +918,9 @@ int rpm_verify_signature(const char *path, unsigned flags)
 }
 #endif
 
-#ifdef HAVE_RPMLOG
-/* w/o:  rpmlib dumps messges to stdout only...  */
+
+#if defined HAVE_RPMLOG && !defined ENABLE_STATIC
+/* hack: rpmlib dumps messges to stdout only... (AFAIK)  */
 void rpmlog(int prii, const char *fmt, ...) 
 {
     va_list args;
