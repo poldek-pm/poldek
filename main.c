@@ -623,7 +623,7 @@ void parse_options(int argc, char **argv)
         
     }
 
-    vfile_verbose = verbose;
+    *vfile_verbose = verbose;
     vfile_configure(args.cachedir ? args.cachedir : "/tmp",
                     VFILE_USEXT_FTP | VFILE_USEXT_HTTP);
 }
