@@ -4,6 +4,7 @@
 #undef ENABLE_TRACE
 #undef HAVE_RPM_4_0
 #undef HAVE_RPM_EXTDEPS
+#undef HAVE_READLINE_4_2
 
 
 

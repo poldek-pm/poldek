@@ -31,6 +31,12 @@ else
 	AC_CHECK_LIB(readline, readline,,AC_MSG_ERROR("readline not found"))
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, true)
 	AC_DEFINE(ENABLE_INTERACTIVE_MODE)
+	
+	AC_CHECK_FUNCS(rl_completion_matches, have_rl_4_2=yes, have_rl_4_2=no, 
+		     $CONF_IN_LDFLAGS)
+	if test "${have_rl_4_2}." = "yes."; then
+		AC_DEFINE(HAVE_READLINE_4_2)
+	fi
 fi
 
 
@@ -151,9 +157,9 @@ AC_CHECK_LIB(rpm, rpmReadPackageInfo,,AC_MSG_ERROR("rpmlib not found"),
 	    -lpopt -ldb -lz -lbz2)
 
 dnl trullib 0.43.1 has n_buf_it_get() and n_buf_ptr()
-AC_CHECK_LIB(trurl, n_buf_it_get,,AC_MSG_ERROR("trurlib 0.43.1 not found"), 
+AC_CHECK_LIB(trurl, n_buf_it_get,,AC_MSG_ERROR("trurlib >= 0.43.1 not found"), 
 	     $CONF_IN_LDFLAGS)
-AC_CHECK_FUNCS(n_buf_ptr,,AC_MSG_ERROR("trurlib 0.431 not found"), 
+AC_CHECK_FUNCS(n_buf_ptr,,AC_MSG_ERROR("trurlib >= 0.43.1 not found"), 
 	     $CONF_IN_LDFLAGS)
 
 AC_CHECK_FUNCS(getline,, AC_MSG_ERROR("getline\(\) is needed by $PACKAGE"),

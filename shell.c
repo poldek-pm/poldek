@@ -10,6 +10,10 @@
   $Id$
 */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -266,12 +270,6 @@ int shpkg_cmp_rm_uninstalled(struct shell_pkg *p1, struct shell_pkg *p2)
 }
 
 static
-int shpkg_cmp_str(struct shell_pkg *pkg, const char *name) 
-{
-    return strcmp(pkg->nevr, name);
-}
-
-static
 int shpkg_ncmp_str(struct shell_pkg *pkg, const char *name) 
 {
     return strncmp(pkg->nevr, name, strlen(name));
@@ -386,7 +384,7 @@ static void switch_pkg_completion(int ctx)
 }
 
 static
-char *command_generator(char *text, int state)
+char *command_generator(const char *text, int state)
 {
     static int list_index, len;
     char *name;
@@ -415,7 +413,7 @@ char *command_generator(char *text, int state)
 }
 
 static
-char *pkgname_generator(char *text, int state)
+char *pkgname_generator(const char *text, int state)
 {
     static int i, len;
     char *name = NULL;
@@ -438,9 +436,12 @@ char *pkgname_generator(char *text, int state)
     return name;
 }
 
+#ifndef HAVE_READLINE_4_2
+# define rl_completion_matches(a, b) completion_matches(a, b)
+#endif
 
 static
-char **poldek_completion(char *text, int start, int end)
+char **poldek_completion(const char *text, int start, int end)
 {
     char **matches;
     
@@ -448,9 +449,9 @@ char **poldek_completion(char *text, int start, int end)
     matches = NULL;
     
     if (start == 0)
-	matches = completion_matches(text, command_generator);
+	matches = rl_completion_matches(text, command_generator);
     else
-        matches = completion_matches(text, pkgname_generator);
+        matches = rl_completion_matches(text, pkgname_generator);
     
     return matches;
 }
@@ -460,8 +461,8 @@ static
 void initialize_readline(void)
 {
     rl_readline_name = "poldek";
-    rl_attempted_completion_function = (CPPFunction *) poldek_completion;
-    rl_completion_entry_function = (Function *) pkgname_generator;
+    rl_attempted_completion_function = poldek_completion;
+    rl_completion_entry_function = pkgname_generator;
 }
 
 

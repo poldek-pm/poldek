@@ -11,7 +11,7 @@ mclean:
 
 
 backup:
-	cd $(PROJ_DIR);                                             \
+	@cd $(PROJ_DIR);                                            \
 	NAME=`basename  $(PROJ_DIR)`;                               \
 	ARCHDIR=$$NAME-ARCH;                                        \
 	ARCHNAME=$$NAME-`date +%Y.%m.%d-%H.%M`;                     \
@@ -30,7 +30,8 @@ backup:
 		md5sum --check $$ARCHIVE_MD5;                       \
 		cd copy || exit 1;                                  \
 		md5sum --check $$ARCHIVE_MD5;                       \
-	fi
+	fi;                                                         \
+	md5sum --check $$ARCHIVE_MD5
 
 arch : mclean backup 
 
