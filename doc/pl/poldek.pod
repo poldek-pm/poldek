@@ -241,78 +241,80 @@ Jest to domy¶lny tryb pracy poldka.
 Dzieli zestaw pakietów na czê¶ci, ka¿da o rozmiarze ROZMIAR MB.
 Pierwsza czê¶æ bêdzie o PIERWSZY_WOLNY_OBSZAR MB mniejsza.
 
-Package priorities are taken from FILE given by --split-conf (see sample
-pkgsplit.conf from program distribution). By default packages have 0 priority.
+Priorytety pakietów s± brane z PLIKU podanego przez --split-conf (patrz przyk³adowy
+pkgsplit.conf z dystrybucji programu). Domy¶lnie pakiety maj± priorytet 0.
 
-Each part is written as NAME-EVR.ARCH.rpm list to PREFIX.XX
-file, the default PREFIX is "packages.chunk"
+Ka¿da czê¶æ jest zapisywana jako lista NAME-EVR.ARCH.rpm do pliku
+PREFIX.XX, domy¶lnie PREFIX stanowi "packages.chunk".
 
 =back
 
-=head2 Options for install modes
+=head2 Opcje instalacji
 
 =over
 
-=item B<--dump[=FILE]>
+=item B<--dump[=PLIK]>
 
-Just dump packages file names to FILE or stdout instead of install them.
+Wypisz nazwy plików pakietów do PLIKU b±d¼ na standardowe wyj¶cie, zamias instalowaæ je.
 
-=item B<--dumpn[=FILE]>
+=item B<--dumpn[=PLIK]>
 
-Just dump packages names to FILE or stdout instead of install them.
+Wypisz nazwy pakietów do PLIKU b±d¼ na standardowe wyj¶cie, zamiast instalowaæ je.
 
-=item B<--fetch[=DIR]>
+=item B<--fetch[=KATALOG]>
 
-Like B<--dump> but packages are downloaded and stored in poldek's cache
-directory by default
+Jak B<--dump>, ale pakiety s± pobierane i sk³adowane domy¶lnie
+w katalogu stanowi±cym cache poldka.
 
 =item B<-F, --fresh>
 
-Upgrade packages, but only if an earlier version currently installed.
-I<Note> that equivalent of "rpm --freshen" is "poldek -u/-i --fresh --nofollow"
+Aktualizuj pakiety, ale tylko je¶li wcze¶niejsza wersja jest aktualnie zainstalowana.
+I<Uwaga:> odpowiednikiem "rpm --freshen" jest "poldek -u/-i --fresh --nofollow"
 
 =item B<-G, --greedy>
 
-Automatically upgrade packages which dependencies are broken
-by unistalled ones, for example if package foo is upgraded
-from version 1.0 to 1.2 and package foo-devel is already installed
-with requirement "foo = 1.0" than poldek upgrade foo-devel to version
-1.2 too.
+Automatycznie aktualizuj pakiety, których zale¿no¶ci s± ³amane poprzez
+zainstalowane pakiety, na przyk³ad je¶li pakiet foo jest aktualizowany
+z wersji 1.0 do 1.2, a pakiet foo-devel jest ju¿ zainstalowany z
+zale¿no¶ci± "foo = 1.0", wtedy poldek aktualizuje tak¿e foo-devel do
+wersji 1.2.
 
-=item B<--hold=PACKAGE[,PACKAGE]...>
+=item B<--hold=PAKIET[,PAKIET]...>
 
-Prevent packages listed from being upgraded if they are already installed.
-If option is not given then packages to hold are taken from B<hold> configuration
-option and additionally from $HOME/.poldek_hold. Held package won't be upgraded
-with exception if it will be pointed directly by the user.
+Zapobiega aktualizacji podanych pakietów, je¶li s± ju¿ zainstalowane.
+Je¶li opcja nie jest podana, wtedy lista pakietów do zatrzymania jest brana
+z opcji konfiguracyjnej B<hold> i dodatkowo z $HOME/.poldek_hold.
+Wstrzymakie pakiety nie bêd± aktualizowane za wyj±tkiem sytuacji, gdy bêd±
+bezpo¶rednio wskazane przez u¿ytkownika.
 
 =item B<-m, --mercy>
 
-Be tolerant for unmatched versioned dependencies which RPM tolerates, e.g.
-package A requires capability foo >= 1.0 while package B provides "foo"
-without any version.
+B±d¼ tolerancyjny w stosunku do zale¿no¶ci od wersji, które toleruje RPM, np.:
+pakiet A wymaga foo >= 1.0, podczas gdy pakiet B dostarcza "foo" be¿ ¿adnej
+wersji.
 
 =item B<--nodeps>; B<--justdb>; B<--force>; B<--root>;
 
-Have the same meanings like RPM ones. See next section.
+Ma takie znaczenie jak w przypadku RPM. Patrz nastêpna sekcja.
 
 =item B<-N, --nofollow>
 
-Don't automatically install packages required by selected ones.
+Nie instaluj automatycznie pakietów wymaganych przez wybrane.
 
 =item B<--nohold>
 
-Don't take held packages from $HOME/.poldek_hold nor config's hold parameter.
+Nie bierz listy wstrzymiwanych pakietów z $HOME/.poldek_hold ani parametru
+konfiguracyjnego hold.
 
-=item B<--rpmdef="NAME VALUE">
+=item B<--rpmdef="NAZWA WARTO¦Æ">
 
-Like rpm --define option.
+Jak opcja rpm --define.
 
 =item B<-t, --test>
 
-Do not install packages, but tell if it would work or not. Given once
-causes poldek's checks only, to perform full tests using rpm, option
-must be given twice.
+Ñie instaluj pakietów, ale sprawd¼, czy zadzia³a czy nie. Podane raz
+powoduje tylko test z u¿yciem poldka, ¿eby przeprowadziæ pe³ny test
+z u¿yciem rpma podaj dwukrotnie.
 
 =back
 
@@ -320,22 +322,23 @@ must be given twice.
 
 =over
 
-=item B<--cachedir=DIR>
+=item B<--cachedir=KATALOG>
 
-DIR points to directory where downloaded files will be stored.
-If option not set then $TMPDIR is used. If $TMPDIR isn't set
-then $HOME/.poldek-cache is created and used as cache directory.
+KATALOG wskazuje miejsce, gdzie pobrane pliki maj± byæ przechowywane.
+Je¶li opcja nie jest ustawiona, u¿yty jest $TMPDIR. Je¶li $TMPDIR nie
+jest ustawiony, wtedy tworzony jest $HOME/.poldek-cache i u¿ywany jako
+katalog cache.
 
-=item B<--log=FILE>
+=item B<--log=PLIK>
 
-Log all poldek messages to FILE
+Loguj wszysztkie komunikaty poldka do PLIKU.
 
 =back
 
 =head1 WSPÓ£PRACA Z RPM
 
-Currently all installations except B<install-dist> are made
-by RPM binary, which is executed in background. Options passed to rpm:
+Obecnie wszystkie instalacje za wyj±tkiem B<install-dist> s± robione
+przez binarkê RPM, która jest uruchamiana w tle. Opcje przekazywane do rpma:
 
 =over
 
@@ -349,19 +352,19 @@ by RPM binary, which is executed in background. Options passed to rpm:
 
 =item * --nodeps
 
-=item * --test (must be given twice, see above --test description)
+=item * --test (musi byæ podane dwukrotnie, patrz wy¿ej opis --test)
 
 =item * --upgrade
 
-=item * --rpmdef (passed as --define)
+=item * --rpmdef (przekazywane jako --define)
 
 =back
 
 =head2
 
 
-Other rpm options may be passed as arguments like B<--rpm-RPM_LONG_OPTION>,
-e.g:
+Inne opcje rpma mog± byæ przekazywane jako argumenty jak B<--rpm-RPM_LONG_OPTION>,
+np.:
 
 $ poldek ... -- --rpm-noscripts --rpm-notriggers
 
@@ -399,7 +402,7 @@ then to use only ftp://zn/PLD/i686/PLD/RPMS do:
 
 $ poldek --sn pld-stable
 
-..and to use all pld-* do:
+..i to use all pld-* do:
 
 $ poldek --sn pld-\*
 
@@ -408,19 +411,19 @@ B<OPCJE> describes source options; possible values are:
 
 =over
 
-=item * B<noauto> - don't load this source by default
+=item * B<noauto> - don't load this source by domy¶ln
 
-=item * B<noautoup> - don't update this source by default
+=item * B<noautoup> - don't update this source by domy¶ln
 
-=item * B<gpg> - verify package GPG signatures
+=item * B<gpg> - verify pakiet GPG signatures
 
-=item * B<pgp> - verify package PGP signatures
+=item * B<pgp> - verify pakiet PGP signatures
 
 =item * B<pri=NUMERICAL_VALUE>
 
-Source priority may be set by this option. If the same packages
-(identical name and EVR) are available in more than one source then
-packages from highest prioritized source are taken.
+Source priority may be set by this option. If the same pakiets
+(identical nazwa i EVR) are available in more than one source then
+pakiets from highest prioritized source are taken.
 
 If source priorities aren't set sources are prioritized in order
 they are appear in config file.
@@ -437,7 +440,7 @@ Opcja ta pozwala na ustawienie typu ¼ród³a. Dostêpne warto¶ci to:
 =item * B<pdir> - lokalne katalogi; poldek przeszuka je zamiast
                   czytaæ plik indeksu.
 
-=item * B<hdrl> - file with raw package headers in RPM format;
+=item * B<hdrl> - file with raw pakiet headers in RPM format;
  available in many RPM-based distributions (named hdlist in RH), however
  this format isn't optimal for poldek (is not updateable for example).
  See F<poldekrc.sample-rh> included in poldek distribution.
@@ -448,7 +451,7 @@ Opcja ta pozwala na ustawienie typu ¼ród³a. Dostêpne warto¶ci to:
 
 Przyk³ady:
 
-# packages from 'pld' are preffered
+# pakiets from 'pld' are preffered
 source = pld,gpg,noautoup,pri=-10   ftp://zn/PLD/ra/RPMS
 
 source = pld-test,noauto        /mnt/PLD-test/RPMS
@@ -466,7 +469,7 @@ prefix99 = ftp://redhat/os/i386/RedHat/RPMS
 
 =item * B<prefixXX> = ¬RÓD£O
 
-If you want to configure source with prefix (see B<-P> option description),
+If you want to configure source with prefix (patrz B<-P> option description),
 then it should be specified as suffixed source/prefix pair to distinguish
 that source from other ones, for example:
 
@@ -481,31 +484,31 @@ prefix1 = /mnt/cdrom/RPMS/
 
 =item * B<confirm_installation = yes|no>
 
-        If "yes" program confirm all performed package installations (default: no)
+        If "yes" program confirm all performed pakiet installations (domy¶ln: no)
 
 =item * B<confirm_removal = yes|no>
 
-        If "yes" program confirm all performed package removals (default: yes)
+        If "yes" program confirm all performed pakiet removals (domy¶ln: yes)
 
 =item * B<choose_equivalents_manually = yes|no>
 
-        If "yes" program let the user choose among equivalent packages (default: no)
+        If "yes" program let the user choose among equivalent pakiets (domy¶ln: no)
 
 =item * B<follow = yes|no>
 
-       Automatically install|don't install packages required by
-       selected ones (default: yes)
+       Automatically install|don't install pakiets required by
+       selected ones (domy¶ln: yes)
 
 =item * B<ftp_sysuser_as_anon_passwd = yes|no>
 
-       If yes, login@hostname is send as anonymous FTP password (default: no)
+       If yes, login@hostname is send as anonymous FTP password (domy¶ln: no)
 
 =item * B<greedy = yes|no>
 
-        See --greedy option description	(default: no)
+        See --greedy option description	(domy¶ln: no)
 
 
-=item * B<hold = PACKAGE[ PACKAGE...]>
+=item * B<hold = pakiet[ pakiet...]>
 
         See --hold option description
 
@@ -517,22 +520,22 @@ prefix1 = /mnt/cdrom/RPMS/
 
 =item * B<keep_downloads = yes|no>
 
-        Program removes downloaded packages files after successful installation
-        by default. If option is set to "yes" then program will never remove
-        downloaded packages from cache directory.
+        Program removes downloaded pakiets files after successful installation
+        by domy¶ln. If option is set to "yes" then program will never remove
+        downloaded pakiets from cache directory.
 
 
 =item * B<particle_install = yes|no>
 
-        If "no" installations of multiple packages are performed as one
-        transaction (default: yes)
+        If "no" installations of multiple pakiets are performed as one
+        transaction (domy¶ln: yes)
 
 
 =item * B<use_sudo = yes|no>
 
       For r/w operations run rpm using sudo.
-      The default is "no", but it is recommended to change it to "yes"
-      and use the poldek as ordinary user.
+      The domy¶ln is "no", but it is recommended to change it to "yes"
+      i use the poldek as ordinary user.
 
 
 =back
@@ -545,19 +548,19 @@ available should be used:
 
 =over
 
-=item B<%p[n]> - package file name, %pn means that %p may be repeated many times
+=item B<%p[n]> - pakiet file nazwa, %pn means that %p may be repeated many times
 
-=item B<%P[n]> - package full path, %Pn -"-
+=item B<%P[n]> - pakiet full path, %Pn -"-
 
 =item B<%d> - cache directory
 
-=item B<%D> - cache directory/package base name
+=item B<%D> - cache directory/pakiet base nazwa
 
 =back
 
-Currently four protocols are available: FTP, HTTP, HTTPS and RSYNC.  Special
+Currently four protocols are available: FTP, HTTP, HTTPS i RSYNC.  Special
 B<ftp_http> "protocol" could be used for describe downloader for both
-HTTP and FTP.
+HTTP i FTP.
 
 Przyk³ady:
 
@@ -572,9 +575,10 @@ rsync_get      = "/usr/bin/rsync -v %P %d"
 Patrz równie¿: za³±czone przyk³adowe pliki konfiguracyjne.
 
 
-Additionally poldek supports CDROM URLs which could be used when package set
-is stored on removable media (several CDs, ZIPs, etc); as  CDROM "downloader"
-vfjuggle should be configured, see poldekrc.sample-cdrom for details.
+Dodatkowo poldek wspiera URL-e CDROM, które mog± byæ u¿ywane, gdy zestaw
+pakietów jest przechowywany na zmienialnych mediach (kilka CD, ZIP-ów, etc);
+jako CDROM "downloader" powinien byæ skonfigurowany vfjuggle, po szczegó³y
+patrz poldekrc.sample-cdrom.
 
 =head1 PRZYK£ADY
 
@@ -671,7 +675,7 @@ In PLD I<http://www.pld.org.pl>, which is primary development
 platform for poldek, Obsoletes tag is used in two different meanings:
 the first means B<A> I<obsoletes> B<B>, the second means B<A> I<is
 equivalent of> B<B>. Obviously it makes impossible to distinguish them
-and use during system upgrades (in Red Hat Linux the first mean is used only,
+i use during system aktualizs (in Red Hat Linux the first mean is used only,
 so Red Hat Installer use this tag).
 
 =head2 Aktualizacja wiêcej ni¿ jednej instancji pakietu
