@@ -703,7 +703,7 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
         default:
             if (errno == 0)
                 errno = EINVAL;
-            vhttp_set_err(EINVAL, _("%s: %m (%s)"), path, msg);
+            vhttp_set_err(EINVAL, "%s: %m (%s)", path, msg);
             break;
     }
 
