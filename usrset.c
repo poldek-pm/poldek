@@ -263,7 +263,7 @@ int usrpkgset_add_list(struct usrpkgset *ups, const char *fpath)
                 
             default:
                 n_assert(0);
-                abort();
+                die();
         }
         
         if (rc == 0)

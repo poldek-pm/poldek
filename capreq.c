@@ -22,6 +22,7 @@
 #include "rpmadds.h"
 #include "capreq.h"
 #include "log.h"
+#include "misc.h"
 #include "h2n.h"
 
 static void *(*capreq_alloc_fn)(size_t) = malloc;
@@ -359,7 +360,7 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
             
         default:
             n_assert(0);
-            abort();
+            die();
     }
 
     names = NULL;

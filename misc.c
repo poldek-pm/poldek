@@ -95,9 +95,9 @@ int is_rwxdir(const char *path)
         S_ISDIR(st.st_mode) && (st.st_mode & S_IRWXU);
 }
 
-void die(const char *msg) 
+void die(void) 
 {
-    log(LOGERR, "%s, die\n", msg);
+    printf("Something wrong, something not quite right, die\n");
     abort();
 }
 

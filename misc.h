@@ -9,6 +9,8 @@
 
 #include <vfile/p_open.h>
 
+void die(void);
+
 char *architecture(void);
 
 char *trimslash(char *path);

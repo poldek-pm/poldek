@@ -611,7 +611,7 @@ void pkgset_unmark(struct pkgset *ps, unsigned flags)
             n_array_map(ps->pkgs, (tn_fn_map1) mapfn_unmark_dep_marked);
         else {
             n_assert(0);
-            abort();
+            die();
         }
     }
 }
