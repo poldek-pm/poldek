@@ -693,7 +693,7 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
                      inf.nbytes/(1024*1000));
 
             if (is_remote)
-                printf_c(PRCOLOR_YELLOW, _("; (%.2f MB left to download)"),
+                printf_c(PRCOLOR_YELLOW, _("; %.2f MB to download"),
                          inf.nfbytes/(1024*1000));
             printf_c(PRCOLOR_YELLOW, "\n");
         }
