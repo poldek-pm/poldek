@@ -1,3 +1,15 @@
+/* 
+  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
+ 
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License published by
+  the Free Software Foundation (see file COPYING for details).
+*/
+
+/*
+  $Id$
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -24,7 +36,6 @@
 #include "log.h"
 
 
-#ifdef ENABLE_INTERACTIVE_MODE
 extern int shell_uninstall_pkgs(tn_array *pkgnevrs, struct inst_s *inst);
 
 static unsigned argp_parse_flags = ARGP_NO_EXIT;
@@ -830,7 +841,11 @@ static int cmd_install(int argc, const char **argv, struct argp *argp)
         for (i=0; i<n_array_size(shpkgs); i++)
             n_array_push(shell_s.instpkgs, shpkg_link(n_array_nth(shpkgs, i)));
         n_array_sort(shell_s.instpkgs);
-    } 
+        
+    } else {
+        printf("Installation failed\n");
+    }
+    
     
  l_end:
 
@@ -1355,5 +1370,3 @@ int shell_main(struct pkgset *ps, struct inst_s *inst)
     shell_s.pkgset = NULL;
     return 1;
 }
-
-#endif /* ENABLE_INTERACTIVE_MODE */
