@@ -225,18 +225,17 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
 {
     const struct capreq_idx_ent *ent;
     char *reqname;
-    int matched, isrpmreq;
+    int matched, isrpmreq = 0;
             
     reqname = capreq_name(req);
 
     *npkgs = 0;
     matched = 0;
 
-    isrpmreq = (strncmp(reqname, "rpmlib(", 7) == 0);
-    
     if ((ent = capreq_idx_lookup(&ps->cap_idx, reqname))) {
         *suspkgs = (struct pkg **)ent->pkgs;
         *npkgs = ent->items;
+        isrpmreq = (strncmp(reqname, "rpmlib(", 7) == 0);
         matched = 1;
         
     } else if (*reqname == '/') {
@@ -262,16 +261,18 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
                         pkg_snprintf_s((*suspkgs)[i]), reqname);
             }
             matched = 0;
-            *npkgs = 0;
-            *suspkgs = NULL;
         }
-
-        if (!(ps->flags & (PSMODE_VERIFY | PSMODE_MKIDX))) {
-            if ((cap = n_array_bsearch(ps->rpmcaps, req)))
-                if (cap_match_req(cap, req, 1)) {
-                    matched = 1;
-                    msg(4, " req %-35s --> RPMLIB_CAP\n", capreq_snprintf_s(req));
-                }
+        
+        if ((cap = n_array_bsearch(ps->rpmcaps, req))) {
+            if (cap_match_req(cap, req, 1)) {
+                matched = 1;
+                msg(4, " req %-35s --> RPMLIB_CAP\n", capreq_snprintf_s(req));
+            }
+        }
+        
+        if (!matched && (ps->flags & (PSMODE_VERIFY | PSMODE_MKIDX))) {
+            matched = 1;
+            log(LOGWARN, "poldek needs to be linked with newer rpmlib\n");
         }
     }
     
