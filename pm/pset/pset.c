@@ -488,7 +488,23 @@ int pm_pset_packages_install(struct pkgdb *pdb,
 
     if (ts->getop(ts, POLDEK_OP_RPMTEST))
         return 1;
-
+    
+#if 0    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        if (pkg->recno == 0) {
+            pkg->recno = db->_recno++;
+            
+        } else {
+            struct pkg *tmp = n_array_bsearch(pkgdir->pkgs, pkg);
+            if (tmp == NULL || tmp != pkg) { /* not the same one? */
+                logn(LOGERR, "%s: recno is set, should not happen",
+                     pkg_snprintf_s(pkg));
+                pkg->recno = db->_recno++;
+            }
+        }
+    }
+#endif
     pm_pset_packages_uninstall(pdb, pkgs_toremove, ts);
 
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
@@ -498,10 +514,23 @@ int pm_pset_packages_install(struct pkgdb *pdb,
         struct pkg *pkg = n_array_nth(pkgs, i);
 
         if (pkg_localpath(pkg, path, sizeof(path), ts->cachedir)) {
+            struct pkg *pkg = n_array_nth(pkgs, i);
+            struct pkg *tmp = n_array_bsearch(pkgdir->pkgs, pkg);
+            
+            DBGF("in %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
+            if (pkg->recno > 0)
+                logn(LOGERR, "%s: recno is set, should not happen",
+                     pkg_snprintf_s(pkg));
+
+            
+
             pkgset_add_package(db->ps, pkg);
-            pkgdir_add_package(pkgdir, pkg);
-            n_assert(pkg->recno == 0);
+            pkgdir_add_package(pkgdir, pkg);    
             pkg->recno = db->_recno++;
+
+            tmp = n_array_bsearch(pkgdir->pkgs, pkg);
+            DBGF("after in %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
+            
             if (ts->getop(ts, POLDEK_OP_JUSTDB))
                 continue;
             
@@ -534,8 +563,19 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb,
         struct pkg *pkg = n_array_nth(pkgs, i);
         
         if (pkg_path(pkg, path, sizeof(path))) {
-            pkgset_remove_package(db->ps, pkg);
-            pkgdir_remove_package(pkgdir, pkg);
+            struct pkg *tmp = n_array_bsearch(pkgdir->pkgs, pkg);
+
+            if (tmp == NULL) {
+                logn(LOGERR, "%s: not found, should not happen",
+                     pkg_snprintf_s(pkg));
+                continue;
+            }
+                
+            tmp->recno = 0;
+            pkgset_remove_package(db->ps, tmp);
+            pkgdir_remove_package(pkgdir, tmp);
+
+            DBGF("un %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
             if (ts->getop(ts, POLDEK_OP_JUSTDB))
                 continue;
             n_array_push(db->paths_removed, n_strdup(path));
