@@ -50,6 +50,7 @@
 #include "log.h"
 #include "pkg.h"
 #include "pkgmisc.h"
+#include "pkgdir/pkgdir.h"
 #include "pkgset.h"
 #include "poldek.h"
 #include "poldek_intern.h"

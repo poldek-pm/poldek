@@ -41,6 +41,7 @@
 #include "log.h"
 #include "pkg.h"
 #include "capreq.h"
+#include "pkgdir/pkgdir.h"
 #include "pm_pset.h"
 #include "pkgset.h"
 

@@ -1,9 +1,29 @@
+/*
+  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@k2.net.pl>
 
-#include "mod.h"
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
+/*
+  $Id$
+*/
+
+#include <trurl/nassert.h>
+#include <trurl/nmalloc.h>
+
+#include "vfile/vfile.h"
+#include "i18n.h"
+#include "capreq.h"
+#include "poldek_ts.h"
 #include "pm.h"
-
-#include "log.h"
 #include "mod.h"
+#include "log.h"
 
 struct pm_ctx *pm_new(const char *name)
 {
@@ -55,7 +75,7 @@ int pm_pminstall(struct pkgdb *db, tn_array *pkgs, tn_array *pkgs_toremove,
         struct pkg *pkg = n_array_nth(pkgs, i);
         int url_type;
         
-        url_type = vf_url_type(pkg->pkgdir->path);
+        url_type = pkg_file_url_type(pkg);
         if ((url_type & (VFURL_PATH | VFURL_UNKNOWN)))
             continue;
             

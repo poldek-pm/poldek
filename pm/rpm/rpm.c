@@ -49,6 +49,7 @@
 #include "log.h"
 #include "pkg.h"
 #include "capreq.h"
+#include "pkgdir/pkgdir.h"
 #include "pm_rpm.h"
 
 static int initialized = 0;
@@ -268,10 +269,14 @@ void rpmlog(int prii, const char *fmt, ...)
     if (pri <= RPMLOG_ERR)
         logpri = LOGERR;
     
-    else if (pri == RPMLOG_WARNING || pri == RPMLOG_NOTICE)
+    else if (pri == RPMLOG_WARNING)
         logpri = LOGWARN;
     
-    else {
+    else if (pri == RPMLOG_NOTICE) {
+        logpri = LOGNOTICE;
+        verbose_level = 2;
+        
+    } else {
         logpri = LOGINFO;
         verbose_level = 2;
     }

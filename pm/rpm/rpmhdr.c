@@ -33,11 +33,18 @@
 #include "log.h"
 #include "pm_rpm.h"
 
+#ifdef HAVE_RPM_4_0_4           /* missing prototypes in public headers */
+int headerGetRawEntry(Header h, int_32 tag,
+                      /*@null@*/ /*@out@*/ hTYP_t type,
+                      /*@null@*/ /*@out@*/ hPTR_t * p, 
+                      /*@null@*/ /*@out@*/ hCNT_t c);
+char ** headerGetLangs(Header h);
+#endif
+
 int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
 {
     return headerGetRawEntry(h, tag, 0, (void*)buf, cnt);
 }
-
 
 int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
 {
