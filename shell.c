@@ -310,7 +310,7 @@ int execute_line(char *line)
     struct command *cmd, tmpcmd;
     char *p;
     const char **args;
-    int rc;
+    int rc = 0;
 
     p = line;
     while (*p && !isspace(*p))
@@ -724,7 +724,7 @@ static int cmd_ls(int argc, const char **argv, struct argp *argp)
                 unit = 'M';
             }
 
-            snprintf(sizbuf, sizeof(sizbuf), "%.1lf%c", pkgsize, unit);
+            snprintf(sizbuf, sizeof(sizbuf), "%.1g%c", pkgsize, unit);
             
             if (pkg->btime) 
                 strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
