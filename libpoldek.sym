@@ -253,6 +253,7 @@ poldek_util_lc_lang
 poldek_util_ngettext_n_packages_fmt
 poldek_util_parse_evr
 poldek_util_parse_nevr
+poldek_util_parse_bool
 poldek_verbose
 poldek_vlog
 sigint_destroy

@@ -101,18 +101,25 @@ void poldek_ts_free(struct poldek_ts *ts)
 }
 
 
-void poldek_ts_setop(struct poldek_ts *ts, int optv, int on)
+void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
 {
     n_assert(bitvect_slot(optv) < sizeof(ts->_opvect)/sizeof(bitvect_slot_itype));
     switch (optv) {
         case POLDEK_OP_PROMOTEPOCH:
             poldek_conf_PROMOTE_EPOCH = on;
             DBGF("set %p (%p) %d %d\n", ts, ts->ctx, optv, on);
-            /* propagate it to ctx too */
+            /* propagate it to ctx too, it is unfortunately global variable */
             if (ts->ctx)
                 poldek_configure(ts->ctx, POLDEK_CONF_OPT, optv, on);
             break;
 
+        case POLDEK_OP_GREEDY:
+            DBGF("set (%d) greedy %p (%p) %d %d\n", touch, ts,
+                 ts->ctx, optv, on);
+            if (on)
+                poldek_ts_xsetop(ts, POLDEK_OP_FOLLOW, 1, touch);
+            break;
+            
         case POLDEK_OP_CONFLICTS:
         case POLDEK_OP_OBSOLETES:
             DBGF("set %d %d\n", optv, on);
@@ -120,7 +127,7 @@ void poldek_ts_setop(struct poldek_ts *ts, int optv, int on)
 
         case POLDEK_OP_FOLLOW:
             if (!on)
-                poldek_ts_setop(ts, POLDEK_OP_GREEDY, 0);
+                poldek_ts_xsetop(ts, POLDEK_OP_GREEDY, 0, touch);
             break;
             
         default:
@@ -132,9 +139,15 @@ void poldek_ts_setop(struct poldek_ts *ts, int optv, int on)
     else
         bitvect_clr(ts->_opvect, optv);
     
-    bitvect_set(ts->_opvect_setmark, optv); /* touched */
-    //printf("setop %d TO %d\n", optv, on_off);
+    if (touch)
+        bitvect_set(ts->_opvect_setmark, optv); /* touched */
 }
+
+void poldek_ts_setop(struct poldek_ts *ts, int optv, int on)
+{
+    poldek_ts_xsetop(ts, optv, on, 1);
+}
+
 
 int poldek_ts_getop(const struct poldek_ts *ts, int optv)
 {

@@ -36,6 +36,7 @@
 #include "log.h"
 #include "conf.h"
 #include "misc.h"
+#include "poldek_util.h"
 
 #define POLDEK_LDCONF_APTSOURCES  (1 << 15) 
 
@@ -1202,23 +1203,17 @@ int poldek_conf_get_int(const tn_hash *htconf, const char *name, int default_v)
 int poldek_conf_get_bool(const tn_hash *htconf, const char *name, int default_v)
 {
     const char *v;
+    int bool;
     
     if ((v = poldek_conf_get(htconf, name, NULL)) == NULL)
         return default_v;
 
-    if (strcasecmp(v, "yes") == 0 || strcasecmp(v, "y") == 0 ||
-        strcasecmp(v, "true") == 0 || strcasecmp(v, "t") == 0 ||
-        strcasecmp(v, "on") == 0 || strcasecmp(v, "enabled") == 0)
-        return 1;
+    if ((bool = poldek_util_parse_bool(v)) < 0) {
+        logn(LOGERR, _("invalid value ('%s') of option '%s'"), v, name);
+        bool = default_v;
+    }
 
-    if (strcasecmp(v, "no") == 0 || strcasecmp(v, "n") == 0 ||
-        strcasecmp(v, "false") == 0 || strcasecmp(v, "f") == 0 ||
-        strcasecmp(v, "off") == 0 || strcasecmp(v, "disabled") == 0)
-        return 0;
-    
-    logn(LOGERR, _("invalid value ('%s') of option '%s'"), v, name);
-
-    return default_v;
+    return bool;
 }
 
 

@@ -805,3 +805,22 @@ int poldek_util_get_gmt_offs(void)
     return gmt_off;
 }
 
+
+int poldek_util_parse_bool(const char *v)
+{
+    if (strcasecmp(v, "yes") == 0 || strcasecmp(v, "y") == 0 ||
+        strcasecmp(v, "1") == 0 || 
+        strcasecmp(v, "true") == 0 || strcasecmp(v, "t") == 0 ||
+        strcasecmp(v, "on") == 0 || strcasecmp(v, "enabled") == 0)
+        return 1;
+
+    if (strcasecmp(v, "no") == 0 || strcasecmp(v, "n") == 0 ||
+        strcasecmp(v, "0") == 0 || 
+        strcasecmp(v, "false") == 0 || strcasecmp(v, "f") == 0 ||
+        strcasecmp(v, "off") == 0 || strcasecmp(v, "disabled") == 0)
+        return 0;
+
+    return -1;
+}
+
+    

@@ -46,6 +46,7 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_INST_DUMP             (OPT_GID + 20)
 #define OPT_INST_DUMPN            (OPT_GID + 21)
 #define OPT_INST_NOFOLLOW         'N'
+#define OPT_INST_FOLLOW           (OPT_GID + 22) /* bool opt */
 #define OPT_INST_FRESHEN          'F'
 #define OPT_INST_HOLD             (OPT_GID + 24)
 #define OPT_INST_NOHOLD           (OPT_GID + 25)
@@ -73,8 +74,13 @@ static struct argp_option options[] = {
                         "currently exists"), OPT_GID },
 {"nofollow", 'N', 0, 0, N_("Don't install packages required by "
                            "selected ones"), OPT_GID },
-{"greedy", 'G', 0, 0, N_("Automatically upgrade packages which dependencies "
-                         "are broken by unistalled ones"), OPT_GID }, 
+
+{"follow", OPT_INST_FOLLOW, "[on|off]", OPTION_ARG_OPTIONAL,
+     N_("Install packages required by selected ones"), OPT_GID },
+    
+{"greedy", 'G', "[on|off]", OPTION_ARG_OPTIONAL,
+      N_("Automatically upgrade packages which dependencies "
+         "are broken by unistalled ones"), OPT_GID }, 
 {"fetch", OPT_INST_FETCH, "DIR", OPTION_ARG_OPTIONAL,
      N_("Do not install, only download packages"), OPT_GID },
 
@@ -352,8 +358,34 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             ts->setop(ts, POLDEK_OP_FOLLOW, 0);
             break;
 
+        case OPT_INST_FOLLOW:
+            if (!arg) {
+                ts->setop(ts, POLDEK_OP_FOLLOW, 1);
+                
+            } else {
+                int bool = poldek_util_parse_bool(arg);
+                if (bool == -1) {
+                    logn(LOGERR, _("invalid value ('%s') of option 'follow'"),
+                         arg);
+                    return EINVAL;
+                }
+                ts->setop(ts, POLDEK_OP_FOLLOW, bool);
+            }
+            break;
+
         case 'G':
-            ts->setop(ts, POLDEK_OP_GREEDY, 1);
+            if (!arg) {
+                ts->setop(ts, POLDEK_OP_GREEDY, 1);
+                
+            } else {
+                int bool = poldek_util_parse_bool(arg);
+                if (bool == -1) {
+                    logn(LOGERR, _("invalid value ('%s') of option 'greedy'"),
+                         arg);
+                    return EINVAL;
+                }
+                ts->setop(ts, POLDEK_OP_GREEDY, bool);
+            }
             break;
             
         case 'I':
