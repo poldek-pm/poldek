@@ -738,7 +738,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
         return 1;
     }
 
-    if (db_dep->spkg && installset_provides(db_dep->spkg, req, ps, upg)) {
+    if (db_dep->spkg && installset_provides(NULL, req, ps, upg)) {
         if (verbose > 1)
             logn(LOGWARN, "cap %s satisfied by install set, shouldn't happen",
                  capreq_snprintf_s(req));
@@ -845,8 +845,10 @@ static
 void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                       struct upgrade_s *upg)
 {
-    int n, i;
+    tn_array *orphans;
     struct pkgdb *db = upg->ts->db;
+    int n, i;
+    
     
     if (!poldek_ts_issetf(upg->ts, POLDEK_TS_UPGRADE))
         return;
@@ -920,28 +922,24 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
         }
         n += process_pkg_orphans(dbpkg, ps, upg);
     }
-    
-    if (n) 
-        for (i=0; i<n_array_size(upg->orphan_dbpkgs); i++) {
-            struct pkg *dbpkg = n_array_nth(upg->orphan_dbpkgs, i);
-            int process_as;
 
-            if (pkgmark_isset(upg->dbpms, dbpkg, DBPKG_DEPS_PROCESSED))
+    if (n == 0)
+        return;
+
+    orphans = pkgs_array_new(n_array_size(upg->orphan_dbpkgs));
+    for (i=0; i<n_array_size(upg->orphan_dbpkgs); i++) {
+        struct pkg *dbpkg = n_array_nth(upg->orphan_dbpkgs, i);
+        if (pkgmark_isset(upg->dbpms, dbpkg, DBPKG_DEPS_PROCESSED))
                 continue;
-            pkgmark_set(upg->dbpms, dbpkg, 1, DBPKG_DEPS_PROCESSED);
-#if 0
-            if ((pkg = is_pkg_obsoletedby_installset(ps, dbpkg->pkg))) {
-                process_as = PROCESS_AS_NEW;
-                
-            } else
-#endif                
-             {
-                pkg = dbpkg;
-                process_as = PROCESS_AS_ORPHAN;
-             }
-            
-            process_pkg_deps(indent, pkg, ps, upg, process_as);
-        }
+        pkgmark_set(upg->dbpms, dbpkg, 1, DBPKG_DEPS_PROCESSED);
+        n_array_push(orphans, pkg_link(dbpkg));
+    }
+
+    for (i=0; i<n_array_size(orphans); i++) {
+        struct pkg *pkg = n_array_nth(orphans, i);
+        process_pkg_deps(indent, pkg, ps, upg, PROCESS_AS_ORPHAN);
+    }
+    n_array_free(orphans);
 }
 
 static
