@@ -14,23 +14,31 @@
 #include <time.h>
 
 #include "i18n.h"
+
 #include "shell.h"
+#include "pager.h"
 
 
 static int ls(struct cmdarg *cmdarg);
-static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg);
+static
+int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg, const tn_array *evrs);
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 
-#define OPT_LS_LONG            (1 << 0) /* cmd_state->flags */
-#define OPT_LS_UPGRADEABLE     (1 << 1) /* cmd_state->flags */
-#define OPT_LS_UPGRADEABLE_VER (1 << 2) /* cmd_state->flags */
-#define OPT_LS_INSTALLED       (1 << 3) /* cmd_state->flags */
-#define OPT_LS_SORTBUILDTIME   (1 << 4) /* cmd_state->flags */
-#define OPT_LS_SORTBUILDAY     (1 << 5) /* cmd_state->flags */
-#define OPT_LS_SORTREV         (1 << 6) /* cmd_state->flags */
+/* cmd_state->flags */
+#define OPT_LS_LONG            (1 << 0)
+#define OPT_LS_UPGRADEABLE     (1 << 1) 
+#define OPT_LS_UPGRADEABLE_VER (1 << 2)
+#define OPT_LS_INSTALLED       (1 << 3)
+#define OPT_LS_SORTBUILDTIME   (1 << 4)
+#define OPT_LS_SORTBUILDAY     (1 << 5)
+#define OPT_LS_SORTREV         (1 << 6)
 
-#define OPT_LS_NAMES_ONLY      (1 << 10) /* cmd_state->flags */
+#define OPT_LS_GROUP           (1 << 9)
+#define OPT_LS_SUMMARY         (1 << 10)
+#define OPT_LS_NAMES_ONLY      (1 << 11)
+
+
 #define OPT_LS_ERR             (1 << 16);
 
 static struct argp_option options[] = {
@@ -44,6 +52,8 @@ static struct argp_option options[] = {
  { NULL, 'h', 0, OPTION_HIDDEN, "", 1 }, 
  { "reverse", 'r', 0, 0, N_("Reverse order while sorting"), 1},
  { NULL, 'n', 0, 0, N_("Print only package's names"), 1},
+ { NULL, 'G', 0, 0, N_("Print package's group"), 1},
+ { NULL, 'O', 0, 0, N_("Print package's summary"), 1},
 // { NULL, 'i', 0, OPTION_ALIAS, 0, 1 }, 
  { 0, 0, 0, 0, 0, 0 },
 };
@@ -89,14 +99,32 @@ static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct cmdarg *cmdarg = state->input;
-
+    const char *errmsg_excl = _("ls: -l and -G are exclusive");
     arg = arg;
     
     switch (key) {
         case 'l':
+            if (cmdarg->flags & OPT_LS_GROUP) {
+                logn(LOGERR, errmsg_excl);
+                return EINVAL;
+            }
+            
             cmdarg->flags |= OPT_LS_LONG;
             break;
 
+        case 'O':
+            cmdarg->flags |= OPT_LS_SUMMARY;
+            break;
+
+        case 'G':
+            if (cmdarg->flags & OPT_LS_LONG) {
+                logn(LOGERR, errmsg_excl);
+                return EINVAL;
+            }
+
+            cmdarg->flags |= OPT_LS_GROUP;
+            break;
+            
         case 't':
             cmdarg->flags |= OPT_LS_SORTBUILDTIME;
             break;
@@ -182,12 +210,41 @@ static int find_pkg(struct shpkg *lshpkg, tn_array *shpkgs, int compare_ver,
     return finded;
 }
 
+static tn_fn_cmp select_cmpf(unsigned flags) 
+{
+    tn_fn_cmp cmpf = NULL;
+
+    if (flags & (OPT_LS_SORTBUILDTIME | OPT_LS_SORTBUILDAY)) {
+        cmpf = (tn_fn_cmp)shpkg_cmp_btime;
+        
+        if (flags & OPT_LS_SORTREV)
+            cmpf = (tn_fn_cmp)shpkg_cmp_btime_rev;
+        
+        if (flags & OPT_LS_SORTBUILDAY) {
+            cmpf = (tn_fn_cmp)shpkg_cmp_bday;
+            
+            if (flags & OPT_LS_SORTREV)
+                cmpf = (tn_fn_cmp)shpkg_cmp_bday_rev;
+        }
+        
+    } else if (flags & OPT_LS_SORTREV) {
+        cmpf = (tn_fn_cmp)shpkg_cmp_rev;
+    }
+    
+    return cmpf;
+}
+
+
 
 static int ls(struct cmdarg *cmdarg) 
 {
-    tn_array             *shpkgs = NULL, *av_shpkgs;
-    int                  rc;
+    tn_array             *ls_shpkgs = NULL, *av_shpkgs;
+    tn_array             *evrs = NULL;
+    int                  rc = 1, ls_all;
+    tn_fn_cmp            cmpf;
+
     
+    ls_all = 0;
     
     if (cmdarg->flags & OPT_LS_INSTALLED && cmdarg->sh_s->instpkgs) 
         av_shpkgs = cmdarg->sh_s->instpkgs;
@@ -195,34 +252,98 @@ static int ls(struct cmdarg *cmdarg)
         av_shpkgs = cmdarg->sh_s->avpkgs;
     
     if (n_array_size(cmdarg->pkgnames)) 
-        sh_resolve_packages(cmdarg->pkgnames, av_shpkgs, &shpkgs, 0);
-    else 
-        shpkgs = av_shpkgs;
-
+        sh_resolve_packages(cmdarg->pkgnames, av_shpkgs, &ls_shpkgs, 0);
+    else {
+        ls_all = 1;
+        ls_shpkgs = av_shpkgs;
+    }
+    
     n_array_free(cmdarg->pkgnames);
     cmdarg->pkgnames = NULL;
+
+
+    if ((cmpf = select_cmpf(cmdarg->flags)))
+        n_array_sort_ex(ls_shpkgs, cmpf);
+
+
+    if (cmdarg->flags & OPT_LS_UPGRADEABLE && cmdarg->sh_s->instpkgs) {
+        int        finded, compare_ver = 0, i;
+        tn_array   *shpkgs_tmp;
+
+        compare_ver = cmdarg->flags & OPT_LS_UPGRADEABLE_VER;
+        shpkgs_tmp = n_array_new(64, NULL, (tn_fn_cmp)shpkg_cmp);
+        evrs = n_array_new(64, NULL, NULL);
+        
+        for (i=0; i < n_array_size(ls_shpkgs); i++) {
+            struct shpkg  *shpkg;
+            char          evr[128], *p;
+            int           cmprc = 0, n;
+
+            shpkg = n_array_nth(ls_shpkgs, i);
+            
+            if (cmdarg->flags & OPT_LS_INSTALLED) {
+                finded = find_pkg(shpkg, cmdarg->sh_s->avpkgs, compare_ver, 
+                                  &cmprc, evr, sizeof(evr));
+                
+            } else {
+                finded = find_pkg(shpkg, cmdarg->sh_s->instpkgs, compare_ver,
+                                  &cmprc, evr, sizeof(evr));
+                cmprc = -cmprc;
+            }
+            
+            if (!finded || cmprc >= 0)
+                continue;
+
+            n = strlen(evr) + 1;
+            p = alloca(n + 1);
+            memcpy(p, evr, n);
+            n_array_push(evrs, p);
+            n_array_push(shpkgs_tmp, shpkg);
+        }
+        
+        if (ls_shpkgs != av_shpkgs)
+            n_array_free(ls_shpkgs);
+        ls_shpkgs = shpkgs_tmp;
+    }
+
+    if (n_array_size(ls_shpkgs))
+        rc = do_ls(ls_shpkgs, cmdarg, evrs);
     
-    rc = do_ls(shpkgs, cmdarg);
+    if (ls_shpkgs && ls_shpkgs != av_shpkgs)
+        n_array_free(ls_shpkgs);
+
+    if (evrs)
+        n_array_free(evrs);
     
-    if (shpkgs && shpkgs != av_shpkgs)
-        n_array_free(shpkgs);
-    
-    if (av_shpkgs == cmdarg->sh_s->avpkgs)
+    if (ls_all && cmpf)
         n_array_sort(av_shpkgs);
     
     return rc;
 }
 
 
-static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
+static void ls_summary(FILE *stream, struct pkg *pkg)
+{
+    struct pkguinf  *pkgu;
+    
+    if ((pkgu = pkg_info(pkg)) && pkgu->summary)
+        fprintf(stream, "    %s\n", pkgu->summary);
+
+    if (pkgu)
+        pkguinf_free(pkgu);
+}
+
+
+static
+int do_ls(const tn_array *shpkgs, struct cmdarg *cmdarg, const tn_array *evrs)
 {
     char                 hdr[256], fmt_hdr[256], fmt_pkg[256];
     int                  i, size, err = 0, npkgs = 0;
-    int                  compare_ver = 0;
     int                  term_width, term_width_div2;
     unsigned             flags;
-    tn_fn_cmp            cmpf = NULL;
-
+    struct pager         pg = { NULL, 0 };
+    FILE                 *out_stream = stdout;
+    
     if (n_array_size(shpkgs) == 0) 
         return 0;
     
@@ -231,16 +352,27 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
     term_width_div2 = term_width/2;
 
     *hdr = '\0';
-    if (flags & OPT_LS_LONG) {
-        if ((flags & OPT_LS_UPGRADEABLE) == 0) {
-            snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds%%%ds\n",
-                     term_width_div2 + term_width_div2/10, (term_width/7), 15);
 
-            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%%ds%%%ds\n",
+    if (flags & OPT_LS_GROUP) {
+        snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds\n",
+                 term_width_div2 + term_width_div2/10, (term_width/7));
+
+        snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%-%ds\n",
+                 term_width_div2 + term_width_div2/10, (term_width/7));
+        
+        snprintf(hdr, sizeof(hdr), fmt_hdr, _("package"), _("group"));
+
+    } else if (flags & OPT_LS_LONG) {
+        if ((flags & OPT_LS_UPGRADEABLE) == 0) {
+            snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds %%%ds\n",
+                     term_width_div2 + term_width_div2/10, (term_width/7),
+                     (term_width/8) + 2);
+            
+            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%%ds %%%ds\n",
                      term_width_div2 + term_width_div2/10, (term_width/7),
                      (term_width/8));
-       
-            snprintf(hdr, sizeof(hdr), fmt_hdr, "package", "build date", "size");
+            snprintf(hdr, sizeof(hdr), fmt_hdr,
+                     _("package"), _("build date"), _("size"));
 
             
         } else {
@@ -253,68 +385,34 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
                      (term_width/6) - 1, (term_width/6) - 1);
             
             if (flags & OPT_LS_INSTALLED) 
-                snprintf(hdr, sizeof(hdr), fmt_hdr, "installed",
-                         "available", "build date", "size");
+                snprintf(hdr, sizeof(hdr), fmt_hdr, _("installed"),
+                         _("available"), _("build date"), _("size"));
             else
-                snprintf(hdr, sizeof(hdr), fmt_hdr, "available",
-                         "installed", "build date", "size");
+                snprintf(hdr, sizeof(hdr), fmt_hdr, _("available"),
+                         _("installed"), _("build date"), _("size"));
         }
     }
     
     hdr[sizeof(hdr) - 2] = '\n';
-    compare_ver = flags & OPT_LS_UPGRADEABLE_VER;
     
-    if (flags & (OPT_LS_SORTBUILDTIME | OPT_LS_SORTBUILDAY)) {
-        cmpf = (tn_fn_cmp)shpkg_cmp_btime;
-        
-        if (flags & OPT_LS_SORTREV)
-            cmpf = (tn_fn_cmp)shpkg_cmp_btime_rev;
-        
-        if (flags & OPT_LS_SORTBUILDAY) {
-            cmpf = (tn_fn_cmp)shpkg_cmp_bday;
-
-            if (flags & OPT_LS_SORTREV)
-                cmpf = (tn_fn_cmp)shpkg_cmp_bday_rev;
-        }
-        
-    } else if (flags & OPT_LS_SORTREV) {
-        cmpf = (tn_fn_cmp)shpkg_cmp_rev;
+    if (shOnTTY && term_get_height() < n_array_size(shpkgs)) {
+        if ((out_stream = pager(&pg)) == NULL)
+            out_stream = stdout;
     }
-
-    if (cmpf) 
-        n_array_sort_ex(shpkgs, cmpf);
     
     size = 0;
-    for (i=0; i<n_array_size(shpkgs); i++) {
-        struct shpkg *shpkg = n_array_nth(shpkgs, i);
-        struct pkg *pkg = shpkg->pkg;
-        char evr[128], *pkg_name;
-        int cmprc = 0;
-
+    for (i=0; i < n_array_size(shpkgs); i++) {
+        struct shpkg   *shpkg = n_array_nth(shpkgs, i);
+        struct pkg     *pkg = shpkg->pkg;
+        char           *pkg_name;
+        
         if (flags & OPT_LS_NAMES_ONLY) 
             pkg_name = pkg->name;
         else
             pkg_name = shpkg->nevr;
         
-        if (flags & OPT_LS_UPGRADEABLE && cmdarg->sh_s->instpkgs) {
-            int finded;
-            
-            if (flags & OPT_LS_INSTALLED) {
-                finded = find_pkg(shpkg, cmdarg->sh_s->avpkgs, compare_ver, 
-                                  &cmprc, evr, sizeof(evr));
-                
-            } else {
-                finded = find_pkg(shpkg, cmdarg->sh_s->instpkgs, compare_ver,
-                                  &cmprc, evr, sizeof(evr));
-                cmprc = -cmprc;
-            }
-            
-            if (!finded || cmprc >= 0)
-                continue;
-        }
-        
         if (npkgs == 0)
-            printf_c(PRCOLOR_YELLOW, "%s", hdr);
+            sh_printf_c(out_stream, PRCOLOR_YELLOW, "%s", hdr);
         
         if (flags & OPT_LS_LONG) {
             char timbuf[30];
@@ -336,53 +434,51 @@ static int do_ls(tn_array *shpkgs, struct cmdarg *cmdarg)
                 *timbuf = '\0';
             
             if ((flags & OPT_LS_UPGRADEABLE) == 0) {
-                printf(fmt_pkg, pkg_name, timbuf, sizbuf);
+                fprintf(out_stream, fmt_pkg, pkg_name, timbuf, sizbuf);
                 
-            } else {
-#if 0                
-                char buf[255];
-                int n;
-                
-                n = snprintf(buf, sizeof(buf), "%s-", shpkg->pkg->name);
-                
-                n += snprintf_c(PRCOLOR_YELLOW, &buf[n], sizeof(buf) - n, "%s",
-                           shpkg->pkg->ver, shpkg->pkg->rel);
-
-                n += snprintf(&buf[n], sizeof(buf) - n, "-");
-
-                n += snprintf_c(PRCOLOR_CYAN, &buf[n], sizeof(buf) - n, "%s",
-                           shpkg->pkg->rel);
-#endif
-                
-                printf(fmt_pkg, pkg_name, evr, timbuf, sizbuf);
+            } else if (evrs) {
+                const char *evr = n_array_nth(evrs, i);
+                fprintf(out_stream, fmt_pkg, pkg_name, evr, timbuf, sizbuf);
             }
             size += pkg->size/1024;
             
+        } else if (flags & OPT_LS_GROUP) {
+            const char *group = pkg_group(pkg);
+            fprintf(out_stream, fmt_pkg, pkg_name, group ? group : "(unset)");
+
         } else {
-            printf("%s\n", pkg_name);
+            fprintf(out_stream, "%s\n", pkg_name);
         }
+
+        if (flags & OPT_LS_SUMMARY)
+            ls_summary(out_stream, pkg);
+        
         npkgs++;
     }
     
-
-    if (flags & OPT_LS_LONG && n_array_size(shpkgs)) {
-        char *unit;
-        int val;
+    if (npkgs) {
+        if ((flags & OPT_LS_LONG) == 0 && out_stream != stdout) {
+            sh_printf_c(out_stream, PRCOLOR_YELLOW, _("%d packages\n"), npkgs);
+            
+        } else if (flags & OPT_LS_LONG) {
+            char *unit;
+            int val;
         
-        if (size > 1000) {
-            unit = "MB";
-            val = size/1000;
-        } else {
-            unit = "kB";
-            val = size;
+            if (size > 1000) {
+                unit = "MB";
+                val = size/1000;
+            } else {
+                unit = "kB";
+                val = size;
+            }
+            
+            sh_printf_c(out_stream, PRCOLOR_YELLOW,
+                        _("%d packages, %d %s\n"), npkgs, val, unit);
         }
-
-        if (npkgs > 1)
-            printf_c(PRCOLOR_YELLOW, "%d packages, %d %s\n", npkgs, val, unit);
     }
 
-    if (flags & (OPT_LS_SORTBUILDTIME | OPT_LS_SORTBUILDAY))
-        n_array_sort(shpkgs);
+    if (out_stream != stdout)
+        pager_close(&pg);
     
     return err == 0;
 }

@@ -8,7 +8,8 @@ libshell_a_SOURCES  = shell.c shell.h \
 		   uninstall.c     \
 		   get.c           \
 		   desc.c          \
-		   search.c 
+		   search.c        \
+		   pager.c pager.h
 
 dist-hook:
 	rm -rf $(distdir)/.deps

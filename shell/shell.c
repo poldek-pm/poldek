@@ -46,6 +46,7 @@
 #include "shell.h"
 #include "term.h"
 
+int shOnTTY = 0;
 
 static volatile sig_atomic_t shDone = 0;
 
@@ -624,7 +625,8 @@ void initialize_readline(void)
 }
 
 
-void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgsp, int strict)
+void sh_resolve_packages(tn_array *pkgnames, tn_array *avshpkgs, tn_array **pkgsp,
+                         int strict)
 {
     tn_array *pkgs = NULL;
     int i, j;
@@ -930,6 +932,23 @@ int cmd_reload(struct cmdarg *cmdarg,
 }
 
 
+int sh_printf_c(FILE *stream, int color, const char *fmt, ...)
+{
+    va_list args;
+    int n = 0;
+
+    va_start(args, fmt);
+    if (stream == stdout)
+        n = vprintf_c(color, fmt, args);
+    else
+        n = vfprintf(stream, fmt, args);
+    
+    va_end(args);
+    return n;
+}
+
+
+
 
 static void shell_end(int sig) 
 {
@@ -1083,6 +1102,7 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
         logn(LOGERR, _("not a tty"));
         return 0;
     }
+    shOnTTY = 1;
 
     init_shell_data(ps, inst, skip_installed);
     term_init();
@@ -1116,6 +1136,11 @@ int shell_main(struct pkgset *ps, struct inst_s *inst, int skip_installed)
             //print_mem_info("AFTER ");
         }
         free(line);
+
+        /* reset handlers */
+        signal(SIGINT,  shell_end);
+        signal(SIGTERM, shell_end);
+        signal(SIGQUIT, shell_end);
     }
 
     if (histfile) 

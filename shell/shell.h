@@ -97,4 +97,8 @@ struct command {
 };
 
 
+int sh_printf_c(FILE *stream, int color, const char *fmt, ...);
+
+extern int shOnTTY;
+
 #endif 
