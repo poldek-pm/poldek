@@ -633,6 +633,11 @@ struct vfile *vfile_open(const char *path, int vftype, int vfmode)
         if ((vfmode & VFM_STBRN) == 0)
             break;
 
+        if (n > 1000) {
+            vfile_msg_fn("Give up (#%d)...\n", ++n);
+            break;
+        }
+        
         vfile_msg_fn("Retrying %s (#%d)...\n", path, ++n);
         sleep(1);
     }
