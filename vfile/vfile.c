@@ -407,6 +407,14 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
     return rc;
 }
 
+static int file_ok(const char *path, int vfmode) 
+{
+    struct stat st;
+    
+    return access(path, R_OK) == 0 && stat(path, &st) == 0 &&
+        ((vfmode & VFM_NOEMPTY)? st.st_size > 0 : 1);
+}
+
 
 struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
 {
@@ -439,10 +447,12 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode)
     }
 
     len = snprintf(buf, sizeof(buf), "%s/", vfile_conf.cachedir);
-
+    
     
     vfile_url_as_path(&buf[len], sizeof(buf) - len, path);
-    if ((vfmode & VFM_CACHE) && access(buf, R_OK) == 0 && openvf(&vf, buf, vfmode)) {
+    if ((vfmode & VFM_CACHE) && file_ok(buf, vfmode) &&
+        openvf(&vf, buf, vfmode)) {
+        
         vf.vf_tmpath = strdup(buf);
         opened = 1;
         vf.vf_flags |= VF_FRMCACHE;

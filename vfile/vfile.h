@@ -57,10 +57,11 @@ void vfile_configure(const char *cachedir, int flags);
 #define VFM_STBRN      (1 << 10)  /* infinite retrying to open file  */
 
 
+#define VFM_NOEMPTY    (1 << 11)  /* treat empty files as non-existing ones */
 
 /* flags  */
-#define VF_FETCHED     (1 << 11) /* for remote files, file downloaded */
-#define VF_FRMCACHE    (1 << 12) /* file remote file, file taken form cache */
+#define VF_FETCHED     (1 << 15) /* for remote files, file downloaded */
+#define VF_FRMCACHE    (1 << 16) /* file remote file, file taken form cache */
 
 struct vfile {
     int       vf_type;                /* VFT_*   */

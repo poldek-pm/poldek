@@ -71,7 +71,8 @@ struct pdigest *pdigest_new(const char *path, int vfmode, int v016compat)
         }
         
         n = mkdigest_path(mdpath, sizeof(mdpath), path, ext);
-        if ((vf = vfile_open(mdpath, VFT_IO, vfmode)) == NULL)
+        vfmode |= VFM_NOEMPTY;
+        if ((vf = vfile_open(mdpath, VFT_IO, vfmode)) == NULL) 
             return NULL;
     }
     
@@ -90,7 +91,6 @@ struct pdigest *pdigest_new(const char *path, int vfmode, int v016compat)
     
     return pdg;
 }
-
 
 
 int pdigest_fill(struct pdigest *pdg, char *mdbuf, int size) 
