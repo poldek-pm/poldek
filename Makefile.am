@@ -29,7 +29,8 @@ libpoldek_la_SOURCES = \
 	  misc.c misc.h			\
 	  pkgmisc.c pkgmisc.h			\
 	  depdirs.c depdirs.h   \
-	  pkg.c 			\
+	  pkg.c pkg.h			\
+	  pkgcmp.c pkgcmp.h		\
 	  pkgu.c pkgu.h        	\
 	  pkgfl.c pkgfl.h		\
 	  fileindex.c fileindex.h	\
@@ -63,7 +64,7 @@ libpoldek_allsyms_la_SOURCES = $(libpoldek_la_SOURCES)
 pkgincludedir = $(includedir)/poldek
 
 # one line to easy get then by external script 
-libHEADERS = poldek.h poldek_ts.h pkg.h capreq.h pkgu.h pkgmisc.h arg_packages.h poldek_util.h poldek_term.h log.h pm/pm.h pkgdir/pkgdir.h pkgdir/source.h sigint/sigint.h conf.h pkgfl.h
+libHEADERS = poldek.h poldek_ts.h pkg.h pkgcmp.h capreq.h pkgu.h pkgmisc.h arg_packages.h poldek_util.h poldek_term.h log.h pm/pm.h pkgdir/pkgdir.h pkgdir/source.h sigint/sigint.h conf.h pkgfl.h
 
 nobase_pkginclude_HEADERS = $(libHEADERS)
 

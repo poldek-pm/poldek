@@ -193,8 +193,7 @@ struct pkg *select_supersede_pkg(const struct pkg *pkg, struct pkgset *ps,
 {
     const struct capreq_idx_ent *ent;
     struct pkg *bypkg = NULL;
-
-
+    
     if ((ent = capreq_idx_lookup(&ps->obs_idx, pkg->name))) {
         int i, best_i;
         struct pkg **ent_pkgs = (struct pkg**)ent->crent_pkgs;
@@ -216,7 +215,7 @@ struct pkg *select_supersede_pkg(const struct pkg *pkg, struct pkgset *ps,
             }
         }
     }
-    
+    DBGF("%s -> %s\n", pkg_snprintf_s(pkg), bypkg ? pkg_snprintf_s(bypkg) : "NONE");
     return bypkg;
 }
 
@@ -262,7 +261,8 @@ struct pkg *select_pkg(const char *name, tn_array *pkgs,
     tmpkg.name = (char*)name;
 
     n_array_sort(pkgs);
-    i = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
+    i = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name);
+    DBGF("%s -> %d\n", name, i);
     if (i < 0)
         return NULL;
 
@@ -379,7 +379,8 @@ int select_best_pkg(const struct pkg *marker,
         nmarks = alloca(npkgs * sizeof(*nmarks));
         
         for (i=0; i < npkgs; i++) {
-            if (other_version_marked(upg->ts->pms, candidates[i], ps->pkgs, NULL)) {
+            if (other_version_marked(upg->ts->pms, candidates[i],
+                                     upg->avpkgs, NULL)) {
                 DBGF("%d. %s other version is already marked, skipped\n",
                      i, pkg_snprintf_s(candidates[i]));
                 continue;
@@ -424,12 +425,11 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
         
     if (found && nsuspkgs) {
         struct pkg **matches;
-        int nmatches = 0, strict;
+        int nmatches = 0;
 
         found = 0;
         matches = alloca(sizeof(*matches) * nsuspkgs);
-        strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
-        if (psreq_match_pkgs(pkg, req, strict, suspkgs,
+        if (psreq_match_pkgs(pkg, req, upg->strict, suspkgs,
                              nsuspkgs, matches, &nmatches)) {
             found = 1;
             
@@ -960,7 +960,7 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
     if (upg->nerr_fatal || pkg->reqs == NULL)
         return ntoinstall;
     
-    DBGF("%s\n", pkg_snprintf_s(pkg));
+    DBGF("start %s\n", pkg_snprintf_s(pkg));
     
     for (i=0; i < n_array_size(pkg->reqs); i++) {
         struct capreq *true_req, *req = NULL;
@@ -996,7 +996,7 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
             ntoinstall++;
         }
     }
-    
+    DBGF("end %s -> %d\n", pkg_snprintf_s(pkg), ntoinstall);
     return ntoinstall;
 }
 
@@ -1033,7 +1033,8 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
     if (pkg->reqs == NULL)
         return 1;
 
-    DBGF("%s\n", pkg_snprintf_s(pkg));
+    DBGF("%s, greedy %d\n", pkg_snprintf_s(pkg),
+         upg->ts->getop(upg->ts, POLDEK_OP_GREEDY));
 
     obspkg = NULL;
     obspkg_by_obsoletes = 0;
@@ -2132,7 +2133,7 @@ static void init_upgrade_s(struct upgrade_s *upg, struct poldek_ts *ts)
     upg->uninst_set = dbpkg_set_new();
     upg->orphan_dbpkgs = pkgs_array_new_ex(128, pkg_cmp_recno);
 
-    upg->strict = ts->ctx->ps->flags & PSET_VRFY_MERCY ? 0 : 1;
+    upg->strict = ts->getop(ts, POLDEK_OP_VRFYMERCY);
     upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
     upg->ts = ts; 
@@ -2283,7 +2284,7 @@ static void mark_namegroup(tn_array *pkgs, struct pkg *pkg, struct upgrade_s *up
     tmpkg.name = prefix;
 
     //*p = '-';
-    n = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_strncmp_name);
+    n = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_ncmp_name);
     
     
     //if (n < 0 && p) {

@@ -49,15 +49,12 @@ pkg_add_selfcap
 pkg_arch
 pkg_caps_match_req
 pkg_caps_obsoletes_pkg_caps
-pkg_cmp_btime
-pkg_cmp_btime_rev
 pkg_cmp_evr
 pkg_cmp_name
 pkg_cmp_name_evr
 pkg_cmp_name_evr_arch_rev_srcpri
 pkg_cmp_name_evr_rev
 pkg_cmp_name_srcpri
-pkg_cmp_name_ver
 pkg_cmp_pri
 pkg_cmp_recno
 pkg_cmp_uniq_name
@@ -65,7 +62,6 @@ pkg_cmp_uniq_name_evr
 pkg_cmp_uniq_name_evr_arch
 pkg_cmp_ver
 pkg_deepcmp_name_evr_rev
-pkg_deepcmp_name_evr_rev_verify
 pkg_deepstrcmp_name_evr
 pkg_eq_capreq
 pkg_eq_name_prefix
@@ -112,7 +108,7 @@ pkg_snprintf_s1
 pkg_statisfies_req
 pkg_strbtime
 pkg_strcmp_name_evr
-pkg_strncmp_name
+pkg_ncmp_name
 pkg_strsize
 pkgdb_close
 pkgdb_free

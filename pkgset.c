@@ -60,6 +60,8 @@ struct pkgset *pkgset_new(struct pm_ctx *pmctx)
     ps = n_malloc(sizeof(*ps));
     memset(ps, 0, sizeof(*ps));
     ps->pkgs = pkgs_array_new(2048);
+    ps->_pm_nevr_pkgs = NULL;
+    ps->_pm_nevr_pkgs = NULL;
     ps->ordered_pkgs = NULL;
     
     /* just merge pkgdirs->depdirs */
@@ -303,6 +305,14 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     MEMINF("MEM after order");
     pkgset_order(ps, flags & PSET_VERIFY_ORDER);
     MEMINF("after setup[END]");
+
+    if (n_array_size(ps->pkgs) > 10) { /* sanity check */
+        int i = n_array_size(ps->pkgs) / 2;
+        struct pkg *pkg = n_array_nth(ps->pkgs, i);
+        n = n_array_bsearch_idx_ex(ps->pkgs, pkg, (tn_fn_cmp)pkg_cmp_name);
+        n_assert(n >= 0);
+    }
+
     return ps->nerrors == 0;
 }
 
@@ -514,10 +524,10 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
                         const char *value)
 {
     tn_array *pkgs;
-    n_array_sort(ps->pkgs);
+
     
-    pkgs = pkgs_array_new(4);
-    n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    n_array_sort(ps->pkgs);
+    pkgs = pkgs_array_new_ex(4, (tn_fn_cmp)pkg_cmp_name_evr_rev);
     
     switch (tag) {
         case PS_SEARCH_RECNO:

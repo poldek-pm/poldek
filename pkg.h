@@ -8,6 +8,8 @@
 #include <trurl/nmalloc.h>
 #include <trurl/ntuple.h>
 
+#include "pkgcmp.h"             /* compares functions */
+
 struct capreq;                  /* defined in capreq.h */
 struct pkguinf;                 /* defined in pkgu.h   */
 struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
@@ -137,50 +139,15 @@ void pkg_free(struct pkg *pkg);
 #endif
 
 extern__inline struct pkg *pkg_link(struct pkg *pkg);
-extern__inline int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
+
 extern__inline const char *pkg_id(const struct pkg *p);
 
 int pkg_set_arch(struct pkg *pkg, const char *arch);
 const char *pkg_arch(const struct pkg *pkg);
+int pkg_arch_score(const struct pkg *pkg);
 
 const char *pkg_os(const struct pkg *pkg);
 int pkg_set_os(struct pkg *pkg, const char *os);
-
-int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2);
-int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2);
-int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2);
-int pkg_cmp_name_ver(const struct pkg *p1, const struct pkg *p2);
-int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
-
-int pkg_cmp_name_srcpri(const struct pkg *p1, const struct pkg *p2);
-//int pkg_cmp_name_evr_rev_srcpri(const struct pkg *p1, const struct pkg *p2);
-int pkg_cmp_name_evr_arch_rev_srcpri(const struct pkg *p1, const struct pkg *p2);
-
-int pkg_cmp_pri(struct pkg *p1, struct pkg *p2);
-
-int pkg_cmp_btime(struct pkg *p1, struct pkg *p2);
-int pkg_cmp_btime_rev(struct pkg *p1, struct pkg *p2);
-
-int pkg_cmp_recno(const struct pkg *p1, const struct pkg *p2);
-
-int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2);
-
-/* strncmp(p1->name, p2->name, strlen(p2->name))*/
-int pkg_strncmp_name(const struct pkg *p1, const struct pkg *p2);
-
-int pkg_strcmp_name_evr(const struct pkg *p1, const struct pkg *p2);
-
-/* with warn message */
-int pkg_cmp_uniq_name(const struct pkg *p1, const struct pkg *p2);
-int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2);
-int pkg_cmp_uniq_name_evr_arch(const struct pkg *p1, const struct pkg *p2);
-
-int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
-int pkg_deepcmp_name_evr_rev_verify(const struct pkg *p1, const struct pkg *p2);
-
-int pkg_eq_name_prefix(const struct pkg *pkg1, const struct pkg *pkg2);
-
-int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr);
 
 /* look up into package caps only */
 int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
@@ -219,7 +186,6 @@ char *pkg_path_s(const struct pkg *pkg);
 
 char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
                     const char *cachedir);
-
 const char *pkg_pkgdirpath(const struct pkg *pkg);
 unsigned pkg_file_url_type(const struct pkg *pkg);
 
@@ -254,14 +220,6 @@ tn_array *pkgs_array_new(int size);
 tn_array *pkgs_array_new_ex(int size,
                             int (*cmpfn)(const struct pkg *p1,
                                          const struct pkg *p2));
-
-int pkg_nvr_strcmp(struct pkg *p1, struct pkg *p2);
-int pkg_nvr_strcmp_rev(struct pkg *p1, struct pkg *p2);
-int pkg_nvr_strncmp(struct pkg *pkg, const char *name);
-int pkg_nvr_strcmp_btime(struct pkg *p1, struct pkg *p2);
-int pkg_nvr_strcmp_btime_rev(struct pkg *p1, struct pkg *p2);
-int pkg_nvr_strcmp_bday(struct pkg *p1, struct pkg *p2);
-int pkg_nvr_strcmp_bday_rev(struct pkg *p1, struct pkg *p2);
 
 char *pkg_strsize(char *buf, int size, const struct pkg *pkg);
 char *pkg_strbtime(char *buf, int size, const struct pkg *pkg);

@@ -13,7 +13,9 @@ struct pkgset {
     unsigned           flags;
     
     tn_array           *pkgs;           /*  pkg* []    */
-    tn_array           *ordered_pkgs;   /*  pkg* []    */
+    tn_array           *_pkgs;
+    tn_array           *_pm_nevr_pkgs;
+    tn_array           *ordered_pkgs;   /* in install order pkg* []    */
     
     tn_array           *pkgdirs;        /*  pkgdir* [] */
  

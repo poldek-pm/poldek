@@ -588,6 +588,20 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     return rc;
 }
 
+static
+int deepcmp_nevr_rev_verify(const struct pkg *p1, const struct pkg *p2)
+{
+    register int rc;
+
+    if ((rc = pkg_deepcmp_name_evr_rev(p1, p2)) == 0) {
+        logn(LOGERR | LOGDIE, "packages %s and %s are equal to me, give up",
+             pkg_snprintf_s(p1), pkg_snprintf_s0(p2));
+    }
+    
+    return rc;
+}
+
+
 int pkgdir__uniq(struct pkgdir *pkgdir) 
 {
     int n = 0;
@@ -597,7 +611,7 @@ int pkgdir__uniq(struct pkgdir *pkgdir)
     if (pkgdir->pkgs == NULL || n_array_size(pkgdir->pkgs) == 0)
         return 0;
     n = n_array_size(pkgdir->pkgs);
-    n_array_sort_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_deepcmp_name_evr_rev_verify);
+    n_array_sort_ex(pkgdir->pkgs, (tn_fn_cmp)deepcmp_nevr_rev_verify);
     n_array_uniq_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_cmp_uniq_name_evr_arch);
     n -= n_array_size(pkgdir->pkgs);
     

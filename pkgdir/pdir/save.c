@@ -159,7 +159,7 @@ int pdir_pkg_cmp(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
 
-    if ((rc = pkg_cmp_name(p1, p2)))
+    if ((rc = strcmp(p1->name, p2->name)))
         return rc;
 
     if ((rc = p1->epoch - p2->epoch))
