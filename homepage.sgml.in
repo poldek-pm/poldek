@@ -21,9 +21,6 @@
     a package that needs others to be installed, it will download all
     needed packages and install them. 
 
-    Program supports various sources of packages: filesystem, removable media 
-    (like CDROM), FTP, HTTP(S), RSYNC.
- 
     The main poldek's advantages are:
     <itemize>
 
@@ -34,12 +31,12 @@
     less memory than rpmlib-based tools.
 
 
-    <item> Smart install or upgrade of a big package sets 
+    <item> "Smart" installation of a big package sets 
     <p> 
-    Before packages installation they are divided into small groups,
+    Before installation packages are divided into small groups,
     usually 2 - 10 items (depends on their reciprocal dependencies).
-    Each group is installed separately in the manner that ensures 
-    that broken packages dependencies in one of group doesn't affect 
+    Each group is installed separately in the manner which ensures 
+    that broken packages dependencies in one of group don't affect 
     the rest i.e. it is allowed to upgrade as many as possible packages. 
 
     Another profit is that upgrade/install huge set of packages (e.g. upgrade 
@@ -66,8 +63,8 @@
 
     <item> Quick package set verification for unresolved dependencies 
     unneeded conflicts and dependency loops. <p>
-    Feature is is useful for distribution maintainers; see sample
-    <url name="report" url="screenshoots.html#verify-report">).
+    Feature is useful for distribution maintainers; see sample
+    <url name="report" url="screenshoots.html#verify-report">.
 
     <item> Division package set for the purpose of placing it
       on removable media (like CDROM or ZIP).
@@ -86,9 +83,8 @@
     <item> Support for "patches" of package index 
     <p>
     To save users time and bandwidth program supports "incremental indexes"
-    which is very useful with repositories which frequently changes (PLD package 
-    repository changes few times a week). This feature consist in 
-    creation "patches" of index which gives the users possibilty to update 
+    which is very useful with repositories which frequently change. This feature 
+    consist in creation "patches" of index which gives the users possibilty to update 
     his local index by download "patch" with information of changes only.
 
     <item> Program is prepared to be run by ordinary user, installation 
@@ -138,7 +134,7 @@
 For example:
     <tscreen><verb>
     $ poldek -s /home/ftp/pub/PLD/RPMS -uv foo
-    $ poldek -s /home/ftp/pub/PLD/RPMS -V
+    $ poldek -s ftp://localhost/ftp/pub/PLD/RPMS -V
     </verb></tscreen>
      
     See also <url name="sample interactive mode session" url="screenshoots.html">.
@@ -165,10 +161,12 @@ For example:
     <itemize> 
     <item> Homepage 
       <url url="http://team.pld.org.pl/~mis/poldek/" 
-           name="http://team.pld.org.pl/~mis/poldek/"> 
+           name="http://team.pld.org.pl/~mis/poldek/">
+	<p> 
     </item>
 
-    <item> Source tarballs and rpm source packages. 
+    <item> Source tarballs and rpm source packages
+      <p>	
       <itemize>
       <item> 
 <url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@.tar.gz" 
@@ -179,16 +177,28 @@ For example:
      name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.src.rpm">  
      </itemize>
 
-     <item> Binary rpm package (statically linked, needs rpm 4.0.x)
-<url url="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm" 
-     name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm">  
+     Older versions are available 
+	<url url="http://team.pld.org.pl/~mis/poldek/download/" name="here">
+
+     <item> Binary rpm packages
+	<p>
+	<itemize>
+	<item> 
+	<url url="download/poldek-@VERSION@-1.i386.rpm" 
+	     name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.i386.rpm">  
+	
+	<item> Statically linked with rpm-4.0.2 (with db3 backend)
+	    <url url="download/poldek-@VERSION@-1.static.src.rpm" 
+	      name="http://team.pld.org.pl/~mis/poldek/download/poldek-@VERSION@-1.static.src.rpm">  
+	</itemize>
+<!-- 
      <p>
      Non static rpm packages, for several architectures can be downloaded from
      <url url="http://www.pld.org.pl/" name="PLD"> ftp site
      <url url="ftp://ftp.pld.org.pl/" name="ftp://ftp.pld.org.pl/"> (directory
 	/dists/ra/PLD/<em>ARCH</em>/PLD/RPMS/)
-         
-     </item>
+
+-->         
 
     <item> Anonymous CVS
     <p>
