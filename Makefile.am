@@ -111,8 +111,8 @@ poldek.html: poldek.pod
 
 website: homepage.html screenshoots.html poldek.html
 
-website-whole-up: website dist-bzip2 dist website-up
-	rpm -ts poldek-@VERSION@.tar.bz2
+website-whole-up: website dist website-up
+	rpm -ts poldek-@VERSION@.tar.gz
 	scp -p $$HOME/rpm/SRPMS/poldek-@VERSION@-1.src.rpm poldek-@VERSION@.tar.* \
 	   team.pld.org.pl:public_html/poldek/download
 	ssh team.pld.org.pl \
