@@ -27,6 +27,10 @@
 #include "pkgset-req.h"
 #include "shell.h"
 
+#define IDENT     16
+#define SUBIDENT  4
+#define RMARGIN   2
+
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int desc(struct cmdarg *cmdarg);
@@ -137,8 +141,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 
-#define IDENT 16
-#define SUBIDENT 4
+static int nlident(int width) 
+{
+    char fmt[64];
+
+    snprintf(fmt, sizeof(fmt), "\n%%%dc", width);
+    return printf(fmt, ' ');
+}
+
 
 static void show_caps(struct pkg *pkg)
 {
@@ -147,29 +157,39 @@ static void show_caps(struct pkg *pkg)
     char *p, *colon = ", ";
     
 
-    term_width = get_term_width() - 5;
-
+    term_width = get_term_width() - RMARGIN;
+    
     if (pkg->caps && n_array_size(pkg->caps)) {
-        int hdr_printed = 0;
+        int ncaps, hdr_printed = 0;
         
         ncol = IDENT;
-        for (i=0; i<n_array_size(pkg->caps); i++) {
+        ncaps = n_array_size(pkg->caps);
+        
+        for (i=0; i < n_array_size(pkg->caps); i++) {
             struct capreq *cr = n_array_nth(pkg->caps, i);
+
+            if (pkg_eq_capreq(pkg, cr))
+                ncaps--;
+        }
+        
+        for (i=0; i < n_array_size(pkg->caps); i++) {
+            struct capreq *cr = n_array_nth(pkg->caps, i);
+
             if (pkg_eq_capreq(pkg, cr))
                 continue;
             
             if (hdr_printed == 0) {
-                printf_c(PRCOLOR_CYAN, "Provides:\t");
+                printf_c(PRCOLOR_CYAN, "%-16s", "Provides:");
                 hdr_printed = 1;
             }
             	
             p = capreq_snprintf_s(cr);
             if (ncol + (int)strlen(p) >= term_width) {
-                printf("\n    ");
                 ncol = SUBIDENT;
+                nlident(ncol);
             }
             
-            if (i + 1 == n_array_size(pkg->caps))
+            if (i + 1 == ncaps)
                 colon = "";
             
             ncol += printf("%s%s", p, colon);
@@ -190,7 +210,7 @@ static void show_reqs(struct pkg *pkg)
     if (pkg->reqs == NULL || n_array_size(pkg->reqs) == 0)
         return;
     
-    term_width = get_term_width() - 5;
+    term_width = get_term_width() - RMARGIN;
 
     for (i=0; i<n_array_size(pkg->reqs); i++) {
         struct capreq *cr = n_array_nth(pkg->reqs, i);
@@ -212,7 +232,7 @@ static void show_reqs(struct pkg *pkg)
         int n = 0;
 
         ncol = IDENT;
-        printf_c(PRCOLOR_CYAN, "Prereqs:\t");
+        printf_c(PRCOLOR_CYAN, "%-16s", "Prereqs:");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
                 
@@ -230,8 +250,8 @@ static void show_reqs(struct pkg *pkg)
                 
             p = capreq_snprintf_s(cr);
             if (ncol + (int)strlen(p) >= term_width) {
-                printf("\n    ");
                 ncol = SUBIDENT;
+                nlident(ncol);
             }
             ncol += printf("%s%s", p, colon);
         }
@@ -244,7 +264,7 @@ static void show_reqs(struct pkg *pkg)
         int n = 0;
 
         ncol = IDENT;
-        printf_c(PRCOLOR_CYAN, "Requires:\t");
+        printf_c(PRCOLOR_CYAN, "%-16s", "Requires:");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
                 
@@ -262,8 +282,8 @@ static void show_reqs(struct pkg *pkg)
                 
             p = capreq_snprintf_s(cr);
             if (ncol + (int)strlen(p) >= term_width) {
-                printf("\n    ");
                 ncol = SUBIDENT;
+                nlident(ncol);
             }
             ncol += printf("%s%s", p, colon);
         }
@@ -276,7 +296,7 @@ static void show_reqs(struct pkg *pkg)
         int n = 0;
 
         ncol = IDENT;
-        printf_c(PRCOLOR_CYAN, "RPMReqs:\t");
+        printf_c(PRCOLOR_CYAN, "%-16s", "RPMReqs:");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
 
@@ -288,8 +308,8 @@ static void show_reqs(struct pkg *pkg)
                 
             p = capreq_snprintf_s(cr);
             if (ncol + (int)strlen(p) >= term_width) {
-                printf("\n    ");
                 ncol = SUBIDENT;
+                nlident(ncol);
             }
             ncol += printf("%s%s", p, colon);
         }
@@ -303,12 +323,12 @@ static void show_reqpkgs(struct pkg *pkg)
     int i, term_width;
     
     
-    term_width = get_term_width() - 4;
+    term_width = get_term_width() - RMARGIN;
 
     if (pkg->reqpkgs && n_array_size(pkg->reqpkgs)) {
         int ncol = IDENT;
         
-        printf_c(PRCOLOR_CYAN, "Reqpkgs:\t");
+        printf_c(PRCOLOR_CYAN, "%-16s", "Reqpkgs:");
 
         for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
             struct reqpkg *rp;	
@@ -319,8 +339,8 @@ static void show_reqpkgs(struct pkg *pkg)
 
             p = rp->pkg->name;
             if (ncol + (int)strlen(p) >= term_width) {
-                printf("\n    ");
                 ncol = SUBIDENT;
+                nlident(ncol);
             }
             ncol += printf("%s", p);
             
@@ -332,8 +352,8 @@ static void show_reqpkgs(struct pkg *pkg)
                 while (rp->adds[n]) {
                     char *p = rp->adds[n++]->pkg->name;
                     if (ncol + (int)strlen(p) >= term_width) {
-                        printf("\n    ");
                         ncol = SUBIDENT;
+                        nlident(ncol);
                     }
                     ncol += printf("%s", p);
                     if (rp->adds[n] != NULL) {
@@ -354,12 +374,12 @@ void show_revreqpkgs(struct pkg *pkg)
     int i, term_width;
     
     
-    term_width = get_term_width() - 4;
+    term_width = get_term_width() - RMARGIN;
 
     if (pkg->revreqpkgs && n_array_size(pkg->revreqpkgs)) {
         int ncol = IDENT;
         
-        printf_c(PRCOLOR_CYAN, "RequiredBy:\t");
+        printf_c(PRCOLOR_CYAN, "%-16s", "RequiredBy:");
 
         for (i=0; i<n_array_size(pkg->revreqpkgs); i++) {
             struct pkg *tmpkg;	
@@ -370,8 +390,8 @@ void show_revreqpkgs(struct pkg *pkg)
             
             p = tmpkg->name;
             if (ncol + (int)strlen(p) + 2 >= term_width) {
-                printf("\n    ");
                 ncol = SUBIDENT;
+                nlident(ncol);
             }
             if (i + 1 == n_array_size(pkg->revreqpkgs))
                 colon = "";
@@ -388,7 +408,7 @@ static void show_cnfls(struct pkg *pkg)
     int i, ncol = 0;
     int term_width;
 
-    term_width = get_term_width() - 5;
+    term_width = get_term_width() - RMARGIN;
     if (pkg->cnfls && n_array_size(pkg->cnfls)) {
         int nobsls = 0;
         
@@ -401,7 +421,7 @@ static void show_cnfls(struct pkg *pkg)
         if (nobsls != n_array_size(pkg->cnfls)) {
             int n = 0;
             
-            ncol = printf_c(PRCOLOR_CYAN, "Conflicts:\t");
+            ncol = printf_c(PRCOLOR_CYAN, "%-16s", "Conflicts:");
             for (i=0; i<n_array_size(pkg->cnfls); i++) {
                 struct capreq *cr = n_array_nth(pkg->cnfls, i);
                 
@@ -413,8 +433,8 @@ static void show_cnfls(struct pkg *pkg)
                     ncol += printf(", ");
 
                 if (ncol >= term_width) {
-                    printf("\n    ");
                     ncol = SUBIDENT;
+                    nlident(ncol);
                 }
             }
             printf("\n");
@@ -423,21 +443,24 @@ static void show_cnfls(struct pkg *pkg)
         if (nobsls) {
             int n = 0;
             
-            ncol = printf_c(PRCOLOR_CYAN, "Obsoletes:\t");
+            ncol = printf_c(PRCOLOR_CYAN, "%-16s", "Obsoletes:");
             for (i=0; i<n_array_size(pkg->cnfls); i++) {
                 struct capreq *cr = n_array_nth(pkg->cnfls, i);
-
+                char s[255], slen;
+                
                 if (!cnfl_is_obsl(cr))
                     continue;
                 n++;
-                
-                ncol += printf(capreq_snprintf_s(cr));
-                if (n < nobsls)
-                    ncol += printf(", ");
-                if (ncol >= term_width) {
-                    printf("\n\t\t");
-                    ncol = 0;
+
+                slen = capreq_snprintf(s, sizeof(s), cr);
+                //printf("[%d] %d; %d, %d, %s\n", term_width,
+                //       ncol, n, strlen(name), name);
+                //continue;
+                if (ncol + slen + 2 >= term_width) {
+                    ncol = SUBIDENT;
+                    nlident(ncol);
                 }
+                ncol += printf("%s%s", s, n < nobsls ? ", " : "");
             }
             printf("\n");
         }
@@ -456,7 +479,7 @@ static void show_files(struct pkg *pkg)
         return;
 
     flmark = pkgflmodule_allocator_push_mark();
-    term_width = get_term_width() - 2;
+    term_width = get_term_width() - RMARGIN;
     
     printf_c(PRCOLOR_CYAN, "Files:\n");
     
@@ -500,8 +523,8 @@ static void show_files(struct pkg *pkg)
                               f->basename + strlen(f->basename) + 1);
             
             if (ncol + n >= term_width) {
-                ncol = printf("\n    ");
                 ncol = SUBIDENT;
+                nlident(ncol);
             }
             
             ncol += printf("%s%s", buf, j + 1 < flent->items ? ", " : "");
@@ -542,37 +565,62 @@ static void show_description(struct pkg *pkg, unsigned flags)
     if ((pkgu = pkg_info(pkg))) {
         char timbuf[30];
         char *unit = "kB";
+        const char *group;
         double pkgsize;
-            
+
         if (pkg->btime) 
             strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
                      localtime((time_t*)&pkg->btime));
         else
             *timbuf = '\0';
-        
+
         if (pkgu->summary) {
-            printf_c(PRCOLOR_CYAN, "Summary:\t");
+            printf_c(PRCOLOR_CYAN, "%-16s", "Summary:");
             printf("%s\n", pkgu->summary);
         }
-        	
-        
+
+	if ((group = pkg_group(pkg))) {
+            printf_c(PRCOLOR_CYAN, "%-16s", "Group:");
+            printf("%s\n", group);
+        }
+
+        if (pkgu->vendor) {
+            printf_c(PRCOLOR_CYAN, "%-16s", "Vendor:");
+            printf("%s\n", pkgu->vendor);
+        }
+
         if (pkgu->license) {
-            printf_c(PRCOLOR_CYAN, "License:\t");
+            printf_c(PRCOLOR_CYAN, "%-16s", "License:");
             printf("%s\n", pkgu->license);
+        }
+
+        if (pkg->arch) {
+            char *p = "Arch:";
+            if (pkg->os) 
+                p = "Arch/OS:";
+
+            printf_c(PRCOLOR_CYAN, "%-16s", p);
+            printf("%s", pkg->arch);
+            
+            if (pkg->os) 
+                printf("/%s", pkg->os);
+            printf("\n");
         }
         
         
         if (pkgu->url) {
-            printf_c(PRCOLOR_CYAN, "URL:\t\t");
+            printf_c(PRCOLOR_CYAN, "%-16s", "URL:");
             printf("%s\n", pkgu->url);
         }
         	
         
         if (*timbuf) {
-            printf_c(PRCOLOR_CYAN, "Built:\t\t");
-            printf("%s\n", timbuf);
+            printf_c(PRCOLOR_CYAN, "%-16s", "Built:");
+            printf("%s", timbuf);
+            if (pkgu->buildhost) 
+                printf(" at %s", pkgu->buildhost);
+            printf("\n");
         }
-        	
 
         pkgsize = pkg->size/1024;
         if (pkgsize > 1000) {
@@ -580,12 +628,17 @@ static void show_description(struct pkg *pkg, unsigned flags)
             unit = "MB";
         }
 
-        printf_c(PRCOLOR_CYAN, "Size:\t\t");
+        printf_c(PRCOLOR_CYAN, "%-16s", "Size:");
         printf("%.1f %s (%d B)\n", pkgsize, unit, pkg->size);
 
         if (pkg->pkgdir && pkg->pkgdir->path) {
-            printf_c(PRCOLOR_CYAN, "Path:\t\t");
+            printf_c(PRCOLOR_CYAN, "%-16s", "Path:");
             printf("%s\n", pkg->pkgdir->path);
+        }
+        
+        if (pkg->epoch) {
+            printf_c(PRCOLOR_CYAN, "%-16s", "Epoch:");
+            printf("%d\n", pkg->epoch);
         }
 
         show_pkg(pkg, flags);
@@ -615,7 +668,7 @@ static int desc(struct cmdarg *cmdarg)
         err++;
         goto l_end;
     }
-    
+
     if (cmdarg->flags == 0) 
         cmdarg->flags = OPT_DESC_DESCR;
     
@@ -625,7 +678,7 @@ static int desc(struct cmdarg *cmdarg)
         shpkg = n_array_nth(shpkgs, i);
 
         if (n_array_size(shpkgs) > 1) {
-            printf_c(PRCOLOR_YELLOW, "\nPackage:\t");
+            printf_c(PRCOLOR_YELLOW, "%-16s", "\nPackage:");
             printf("%s\n", pkg_snprintf_s(shpkg->pkg));
         }
         
