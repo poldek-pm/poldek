@@ -19,7 +19,7 @@
 
 #define	LOGERR	        (1 << 5)	/* error conditions */
 #define	LOGWARN	        (1 << 6)	/* warning conditions */
-#define	LOGINFO	        (1 << 7)	/* informational */
+#define	LOGINFO         (1 << 7)	/* informational */
 #define	LOGNOTICE       (1 << 8)	/* informational */
 #define	LOGDEBUG	(1 << 9)	/* debug-level messages */
 
