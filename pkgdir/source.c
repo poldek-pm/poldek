@@ -829,7 +829,7 @@ void sources_score(tn_array *sources)
 static 
 int do_source_make_idx(struct source *src,
                        const char *type, const char *idxpath,
-                       unsigned cr_flags) 
+                       unsigned cr_flags, tn_hash *kw) 
 {
     struct pkgdir   *pkgdir;
     char            path[PATH_MAX];
@@ -844,9 +844,15 @@ int do_source_make_idx(struct source *src,
         n_snprintf((char*)idxpath, len, src->path);
     }
     
-    if (is_dir(idxpath))
+    if (is_dir(idxpath)) {
+        char *compress = kw ? n_hash_get(kw, "compress") : src->compress;
+        if (compress == NULL)
+            compress = src->compress;
+        
         idxpath = pkgdir__make_idxpath(path, sizeof(path), idxpath, type,
-                                       src->compress);
+                                       compress);
+    }
+    
     n_assert(idxpath);
     if (source_is_type(src, "dir") && !is_dir(src->path)) {
         char *tmp, *dn;
@@ -918,7 +924,7 @@ static const char *determine_stype(struct source *src, const char *idxpath)
 
 int source_make_idx(struct source *src, const char *stype, 
                     const char *dtype, const char *idxpath,
-                    unsigned flags)
+                    unsigned flags, tn_hash *kw)
 {
     struct source *ssrc;
     int typcaps;
@@ -938,7 +944,7 @@ int source_make_idx(struct source *src, const char *stype,
     /* swap types */
     source_set(&ssrc->type, stype);
     ssrc->flags &= ~(PKGSOURCE_NAMED);
-
+    
     rc = 1;
     if ((typcaps = pkgdir_type_info(dtype)) < 0)
         rc = 0;
@@ -962,7 +968,7 @@ int source_make_idx(struct source *src, const char *stype,
     }
 
     if (rc)
-        rc = do_source_make_idx(ssrc, dtype, idxpath, flags);
+        rc = do_source_make_idx(ssrc, dtype, idxpath, flags, kw);
     
     source_free(ssrc);
     return rc;

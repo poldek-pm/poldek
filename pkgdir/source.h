@@ -3,6 +3,7 @@
 #define POLDEK_SOURCE_H
 
 #include <trurl/narray.h>
+#include <trurl/nhash.h>
 
 /* source options */
 #define PKGSOURCE_NOAUTO     (1 << 0)
@@ -93,8 +94,7 @@ int sources_clean(tn_array *sources, unsigned flags);
 
 int source_make_idx(struct source *src, const char *stype, 
                     const char *dtype, const char *idxpath,
-                    unsigned flags);
-
+                    unsigned flags, tn_hash *kw);
 
 int sources_add(tn_array *sources, struct source *src);
 void sources_score(tn_array *sources);
