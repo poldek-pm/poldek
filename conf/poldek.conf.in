@@ -21,8 +21,21 @@ _distro  = pld
 # config ($HOME/.poldekrc) is used
 #load apt sources list = yes
 
+# Handle gzipped indexes externally (needed on RH9 and Fedora <= c2).
+# This option is a workaround for broken zlib linked into librpm;
+# with enabled 'auto zlib in rpm' poldek tries to detect such 
+# case and then enables external *.gz handling automatically.
+#vfile external compress = yes
+
+# Auto detection of zlib linked into librpm; off by default
+auto zlib in rpm = yes
+
 
 ### File downloaders configuration
+
+# Send ${USER}@${HOSTNAME} as anonymous FTP password (by default 
+# 'poldek@znienacka.net' is sent)
+#vfile ftp sysuser as anon passwd = yes
 
 # HTTP and FTP files poldek uses its internal client (what is recommended),
 # but it can be changed using "default_fetcher". The syntax is:
