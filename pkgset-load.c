@@ -84,7 +84,7 @@ static int select_ldmethod(const char *path)
 
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 {
-    int i, j;
+    int i, j, iserr = 0;
     struct pkgdir *pkgdir = NULL;
 
 
@@ -141,18 +141,22 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 
         if (pkgdir->flags & PKGDIR_LDFROM_IDX) {
             msg(1, "Loading %s...\n", pkgdir->idxpath);
-            pkgdir_load(pkgdir, ps->depdirs, ldflags);
+            if (!pkgdir_load(pkgdir, ps->depdirs, ldflags)) {
+                log(LOGERR, "%s: load failed\n", pkgdir->idxpath);
+                iserr = 1;
+            }
         }
     }
-
-
-    /* merge pkgdirs packages into ps->pkgs */
-    for (i=0; i<n_array_size(ps->pkgdirs); i++) {
-        pkgdir = n_array_nth(ps->pkgdirs, i);
-        for (j=0; j<n_array_size(pkgdir->pkgs); j++)
-            n_array_push(ps->pkgs, pkg_link(n_array_nth(pkgdir->pkgs, j)));
+    
+    if (!iserr) {
+        /* merge pkgdirs packages into ps->pkgs */
+        for (i=0; i<n_array_size(ps->pkgdirs); i++) {
+            pkgdir = n_array_nth(ps->pkgdirs, i);
+            for (j=0; j<n_array_size(pkgdir->pkgs); j++)
+                n_array_push(ps->pkgs, pkg_link(n_array_nth(pkgdir->pkgs, j)));
+        }
     }
-
+    
     if (n_array_size(ps->pkgs))
         msg(1, "%d packages read\n", n_array_size(ps->pkgs));
 

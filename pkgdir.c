@@ -402,6 +402,8 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     line = malloc(line_size);
 
     while ((nread = getline(&line, &line_size, vf->vf_stream)) > 0) {
+        char *p, *val;
+        
         offs = ftell(vf->vf_stream);
         
         if (*line == '\n') {        /* empty line -> end of record */
@@ -414,124 +416,161 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                 pkg = NULL;
             }
             pkgtags_clean(&pkgt);
-            
-        } else if (*line == ' ') {      /* continuation */
+            continue;
+        }
+
+        if (*line == ' ') {      /* continuation */
             log(LOGERR, "%s:%d: syntax error\n", pkgdir->path, offs);
-            exit(EXIT_FAILURE);
+            nerr++;
+            goto l_end;
+        }
 
-        } else {
-            char *p, *val;
+        
             
-            while (nread && line[nread - 1] == '\n')
-                line[--nread] = '\0';
-
-            p = val = line + 1;
-            if (*line == '\0' || *p != ':') {
-                log(LOGERR, "%s:%d(%s): ':' expected\n", pkgdir->path, offs, line);
-                nerr++;
-                goto l_end;
-            }
+        while (nread && line[nread - 1] == '\n')
+            line[--nread] = '\0';
+        
+        p = val = line + 1;
+        if (*line == '\0' || *p != ':') {
+            log(LOGERR, "%s:%d(%s): ':' expected\n", pkgdir->path, offs, line);
+            nerr++;
+            goto l_end;
+        }
             
-            *val++ = '\0';
-            val = eatws(val);
-            n_assert(*line && *(line + 1) == '\0');
+        *val++ = '\0';
+        val = eatws(val);
+        n_assert(*line && *(line + 1) == '\0');
 
-            switch (*line) {
-                case 'N':
-                case 'V':
-                case 'A':
-                case 'S':
-                case 'T':
-                    if (!add2pkgtags(&pkgt, *line, val, pkgdir->path, offs)) {
+        switch (*line) {
+            case 'N':
+            case 'V':
+            case 'A':
+            case 'S':
+            case 'T':
+                if (!add2pkgtags(&pkgt, *line, val, pkgdir->path, offs)) {
+                    nerr++;
+                    goto l_end;
+                }
+                break;
+
+            case 'P':
+                if (pkgt.flags & PKGT_HAS_CAP) {
+                    log(LOGERR, "%s:%d: double 'P' tag\n", pkgdir->path, offs);
+                    nerr++;
+                    goto l_end;
+                }
+                    
+                pkgt.caps = capreq_arr_restore(vf->vf_stream,
+                                               flag_skip_bastards);
+                pkgt.flags |= PKGT_HAS_CAP;
+                break;
+                    
+            case 'R':
+                if (pkgt.flags & PKGT_HAS_REQ) {
+                    log(LOGERR, "%s:%d: double 'R' tag\n", pkgdir->path, offs);
+                    nerr++;
+                    goto l_end;
+                }
+                    
+                pkgt.reqs = capreq_arr_restore(vf->vf_stream,
+                                               flag_skip_bastards);
+                if (pkgt.reqs == NULL) {
+                    log(LOGERR, "%s:%d: load 'R' tag error\n", pkgdir->path,
+                        offs);
+                    nerr++;
+                    goto l_end;
+                }
+                pkgt.flags |= PKGT_HAS_REQ;
+                break;
+                    
+            case 'C':
+                if (pkgt.flags & PKGT_HAS_CNFL) {
+                    log(LOGERR, "%s:%d: double 'C' tag\n", pkgdir->path, offs);
+                    nerr++;
+                    goto l_end;
+                }
+                    
+                pkgt.cnfls = capreq_arr_restore(vf->vf_stream,
+                                                flag_skip_bastards);
+
+                if (pkgt.cnfls == NULL) {
+                    log(LOGERR, "%s:%d: load 'C' tag error\n", pkgdir->path,
+                        offs);
+                    nerr++;
+                    goto l_end;
+                }
+                pkgt.flags |= PKGT_HAS_CNFL;
+                break;
+
+            case 'L':
+                pkgt.pkgfl = pkgfl_restore_f(vf->vf_stream, NULL, 0);
+                if (pkgt.pkgfl == NULL) {
+                    log(LOGERR, "%s:%d: load 'L' tag error\n", pkgdir->path,
+                        offs);
+                    nerr++;
+                    goto l_end;
+                }
+                n_assert(pkgt.pkgfl);
+                //printf("DUMP %p %d\n", pkgt.pkgfl, n_array_size(pkgt.pkgfl));
+                //pkgfl_dump(pkgt.pkgfl);
+                pkgt.flags |= PKGT_HAS_FILES;
+                break;
+                    
+            case 'l':
+                pkgt.other_files_offs = ftell(vf->vf_stream);
+                
+                if (flag_fullflist == 0 && only_dirs == NULL) {
+                    pkgfl_skip_f(vf->vf_stream);
+                        
+                } else {
+                    tn_array *fl;
+                        
+                    fl = pkgfl_restore_f(vf->vf_stream, only_dirs, 1);
+                    if (fl == NULL) {
+                        log(LOGERR, "%s:%d: load 'l' tag error\n", pkgdir->path,
+                            offs);
                         nerr++;
                         goto l_end;
                     }
-                    break;
-
-                case 'P':
-                    if (pkgt.flags & PKGT_HAS_CAP) {
-                        log(LOGERR, "%s:%d: double cap tag\n", pkgdir->path, offs);
-                        break;
-                    }
-                
-                    pkgt.caps = capreq_arr_restore(vf->vf_stream,
-                                                   flag_skip_bastards);
-                    pkgt.flags |= PKGT_HAS_CAP;
-                    break;
                     
-                case 'R':
-                    if (pkgt.flags & PKGT_HAS_REQ) {
-                        log(LOGERR, "%s:%d: double req tag\n", pkgdir->path, offs);
-                        break;
-                    }
-                    
-                    pkgt.reqs = capreq_arr_restore(vf->vf_stream,
-                                                   flag_skip_bastards);
-                    pkgt.flags |= PKGT_HAS_REQ;
-                    break;
-                    
-                case 'C':
-                    if (pkgt.flags & PKGT_HAS_CNFL) {
-                        log(LOGERR, "%s:%d: double cnfl tag\n", pkgdir->path, offs);
-                        break;
-                    }
-                
-                    pkgt.cnfls = capreq_arr_restore(vf->vf_stream,
-                                                    flag_skip_bastards);
-                    pkgt.flags |= PKGT_HAS_CNFL;
-                    break;
-
-                case 'L':
-                    pkgt.pkgfl = pkgfl_restore_f(vf->vf_stream, NULL, 0);
-                    n_assert(pkgt.pkgfl);
-                    //printf("DUMP %p %d\n", pkgt.pkgfl, n_array_size(pkgt.pkgfl));
-                    //pkgfl_dump(pkgt.pkgfl);
-                    if (pkgt.pkgfl)
+                    if (pkgt.pkgfl == NULL) {
+                        pkgt.pkgfl = fl;
                         pkgt.flags |= PKGT_HAS_FILES;
-                    break;
-                    
-                case 'l':
-                    pkgt.other_files_offs = ftell(vf->vf_stream);
-                
-                    if (flag_fullflist == 0 && only_dirs == NULL) {
-                        pkgfl_skip_f(vf->vf_stream);
-                        
-                    } else {
-                        tn_array *fl;
-                        
-                        fl = pkgfl_restore_f(vf->vf_stream, only_dirs, 1);
-                        
-                        if (pkgt.pkgfl == NULL) {
-                            pkgt.pkgfl = fl;
-                            pkgt.flags |= PKGT_HAS_FILES;
                             
-                        } else {
-                            while (n_array_size(fl)) 
+                    } else {
+                        while (n_array_size(fl)) 
                             n_array_push(pkgt.pkgfl, n_array_shift(fl));
-                            
-                            n_array_free(fl);
-                        }
-                    }
-                    break;
 
-                case 'U':
-                    if (flag_lddesc) {
-                        pkgt.pkguinf = pkguinf_restore(vf->vf_stream, 0);
-                        pkgt.pkguinf_offs = 0;
-                    } else {
-                        pkgt.pkguinf_offs = ftell(vf->vf_stream);
-                        pkguinf_skip(vf->vf_stream);
+                        n_array_free(fl);
                     }
-                    break;
+                }
+                break;
 
-                default:
-                    log(LOGERR, "%s:%d: unknown %c tag\n", pkgdir->path, offs, *line);
-                    nerr++;
-                    break;
-            }
+            case 'U':
+                if (flag_lddesc) {
+                    pkgt.pkguinf = pkguinf_restore(vf->vf_stream, 0);
+                    if (pkgt.pkguinf == NULL) {
+                        log(LOGERR, "%s:%d: load 'U' tag error\n", pkgdir->path,
+                            offs);
+                        nerr++;
+                        goto l_end;
+                    }
+                    pkgt.pkguinf_offs = 0;
+                    
+                } else {
+                    pkgt.pkguinf_offs = ftell(vf->vf_stream);
+                    pkguinf_skip(vf->vf_stream);
+                }
+                break;
+
+            default:
+                log(LOGERR, "%s:%d: unknown %c tag\n", pkgdir->path, offs, *line);
+                nerr++;
+                goto l_end;
         }
     }
     
+
  l_end:
     
     pkgtags_clean(&pkgt);
