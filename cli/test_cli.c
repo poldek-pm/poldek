@@ -53,14 +53,15 @@ int test_02(void)
     
     cmd = poclidek_rcmd_new(cctx, NULL);
     if (poclidek_rcmd_execline(cmd, "ls xmms*")) {
+        tn_buf  *buf;
         tn_buf_it it;
         char *p, line[1024];
         int len, n = 0;
 
-        n_buf_it_init(&it, cmd->rbuf);
+        buf = poclidek_rcmd_get_buf(cmd);
+        n_buf_it_init(&it, buf);
         n = 0;
-        printf("pkgs %d\n", n_array_size(cmd->rpkgs));
-        printf("buf %d\n", n_buf_size(cmd->rbuf));
+        printf("buf %d\n", n_buf_size(buf));
         while ((p = n_buf_it_gets(&it, &len))) {
             if (len > 1024)
                 len = 1023;
@@ -78,42 +79,6 @@ int test_02(void)
     poldek_free(ctx);
     return 1;
 }
-
-
-
-int test_03(void)
-{
-    struct poclidek_rcmd  *cmd;
-    init();
-    
-    cmd = poclidek_rcmd_new(cctx, NULL);
-    if (poclidek_rcmd_execline(cmd, "ls xmms*")) {
-        tn_buf_it it;
-        char *p, line[1024];
-        int len, n = 0;
-
-        n_buf_it_init(&it, cmd->rbuf);
-        n = 0;
-        printf("pkgs %d\n", n_array_size(cmd->rpkgs));
-        printf("buf %d\n", n_buf_size(cmd->rbuf));
-        while ((p = n_buf_it_gets(&it, &len))) {
-            if (len > 1024)
-                len = 1023;
-            memcpy(line, p, len);
-            line[len] = '\0';
-            printf("%d: %s\n", n++, line);
-        }
-        
-    }
-    
-    poclidek_rcmd_free(cmd);
-    
-    
-    poclidek_free(cctx);
-    poldek_free(ctx);
-    return 1;
-}
-
 
 
 int main(int argc, char *argv[]) 

@@ -31,6 +31,9 @@ poclidek_rcmd_exec
 poclidek_rcmd_execline
 poclidek_rcmd_free
 poclidek_rcmd_new
+poclidek_rcmd_get_packages
+poclidek_rcmd_get_buf
+poclidek_rcmd_get_str
 poclidek_resolve_dents
 poclidek_resolve_packages
 poclidek_opgroup_install

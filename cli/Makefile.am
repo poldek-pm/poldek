@@ -36,7 +36,8 @@ libpoclidek_la_SOURCES  =  \
 			help.c		    \
 			external.c      \
 		    get.c           \
-			cmd.h
+			cmd.h           \
+			rcmd.c
 
 libpoclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
 libpoclidek_allsyms_la_SOURCES = $(libpoclidek_la_SOURCES)

@@ -21,21 +21,16 @@ int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 int poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                       const char *cmdline);
 
-struct poclidek_rcmd {
-    struct poclidek_ctx *_cctx;
-    struct poldek_ts *_ts;
-    
-    tn_array *rpkgs;
-    tn_buf   *rbuf;
-    int      rc;
-};
-
 struct poclidek_rcmd *poclidek_rcmd_new(struct poclidek_ctx *cctx,
                                         struct poldek_ts *ts);
 
 void poclidek_rcmd_free(struct poclidek_rcmd *rcmd);
 int poclidek_rcmd_exec(struct poclidek_rcmd *rcmd, int argc, const char **argv);
 int poclidek_rcmd_execline(struct poclidek_rcmd *rcmd, const char *cmdline);
+
+tn_array *poclidek_rcmd_get_packages(struct poclidek_rcmd *rcmd);
+tn_buf *poclidek_rcmd_get_buf(struct poclidek_rcmd *rcmd);
+const char *poclidek_rcmd_get_str(struct poclidek_rcmd *rcmd);
 
 /* library internals */
 #include "dent.h"

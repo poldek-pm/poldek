@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 - 2004 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@pld.org.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -25,7 +29,6 @@
 #include <signal.h>
 #include <time.h>
 #include <argp.h>
-#include <time.h>
 
 #include <trurl/trurl.h>
 
@@ -611,7 +614,6 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     return rc;
 }
 
-static 
 int do_poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                          const char *cmdline, struct cmd_pipe *cmd_pipe) 
 {
@@ -650,7 +652,6 @@ int poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 }
 
 
-static
 int do_poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, int argc,
                      const char **argv, struct cmd_pipe *pipe)
 {
@@ -675,54 +676,6 @@ int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, int argc,
 {
     return do_poclidek_exec(cctx, ts, argc, argv, NULL);
 }
-
-
-struct poclidek_rcmd *poclidek_rcmd_new(struct poclidek_ctx *cctx,
-                                        struct poldek_ts *ts)
-{
-    struct poclidek_rcmd *rcmd = n_malloc(sizeof(*rcmd));
-    rcmd->_cctx = cctx;
-    rcmd->_ts = ts;
-    rcmd->rpkgs = NULL;
-    rcmd->rbuf = NULL;
-    rcmd->rc = -1;
-    return rcmd;
-}
-
-void poclidek_rcmd_free(struct poclidek_rcmd *rcmd)
-{
-    if (rcmd->rpkgs)
-        n_array_free(rcmd->rpkgs);
-
-    if (rcmd->rbuf)
-        n_buf_free(rcmd->rbuf);
-
-    memset(rcmd, 0, sizeof(*rcmd));
-    free(rcmd);
-}
-
-
-int poclidek_rcmd_exec(struct poclidek_rcmd *rcmd, int argc, const char **argv)
-{
-    struct cmd_pipe *pipe = cmd_pipe_new();
-    rcmd->rc = do_poclidek_exec(rcmd->_cctx, rcmd->_ts, argc, argv, pipe);
-    rcmd->rpkgs = n_ref(pipe->pkgs);
-    rcmd->rbuf = n_ref(pipe->nbuf);
-    cmd_pipe_free(pipe);
-    return rcmd->rc;
-}
-
-int poclidek_rcmd_execline(struct poclidek_rcmd *rcmd, const char *cmdline)
-{
-    struct cmd_pipe *pipe = cmd_pipe_new();
-    rcmd->rc = do_poclidek_execline(rcmd->_cctx, rcmd->_ts, cmdline, pipe);
-    rcmd->rpkgs = n_ref(pipe->pkgs);
-    rcmd->rbuf = n_ref(pipe->nbuf);
-    cmd_pipe_free(pipe);
-    return rcmd->rc;
-}
-
-
 
 void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf)
 {
