@@ -47,10 +47,11 @@ static int search(struct cmdarg *cmdarg);
 #define OPT_SEARCH_SUMM    (1 << 4)
 #define OPT_SEARCH_DESC    (1 << 5)
 #define OPT_SEARCH_FL      (1 << 6)
+#define OPT_SEARCH_GROUP   (1 << 7)
 
 #define OPT_SEARCH_ALL     (OPT_SEARCH_CAP  | OPT_SEARCH_REQ | OPT_SEARCH_CNFL |  \
                             OPT_SEARCH_OBSL | OPT_SEARCH_SUMM | OPT_SEARCH_DESC | \
-                            OPT_SEARCH_FL)
+                            OPT_SEARCH_FL | OPT_SEARCH_GROUP)
 
 #define OPT_SEARCH_DEFAULT (OPT_SEARCH_SUMM | OPT_SEARCH_DESC)
 
@@ -64,10 +65,13 @@ static struct argp_option options[] = {
     { "obsoletes", 'o', 0, 0, "Search package obsolences", 1},
     { "summary",   's', 0, 0, "Search summaries, urls and license", 1},
     { "description",   'd', 0, 0, "Search packages descriptions", 1},
-    { "files",     'l', 0,  0, "Search package file list", 1},
+    { "group",     'g', 0, 0, "Search packages groups", 1 }, 
+    { "files",     'f', 0,  0, "Search package file list", 1},
+    { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},
     { "all",       'a', 0, 0,
       "Search all described fields, the defaults are: -sd", 1
-    }, 
+    },
+    {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
     { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -114,7 +118,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'l':
+        case 'f':
             cmdarg->flags |= OPT_SEARCH_FL;
+            break;
+
+        case 'g':
+            cmdarg->flags |= OPT_SEARCH_GROUP;
             break;
             
         case 'o':
@@ -147,11 +156,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 
                 p = arg;
                 delim = *arg;
+#if 0                           /* allow any delimiter */
                 if (delim != '/' && delim != '|') {
                     argp_usage(state);
                     return EINVAL;
                 }
-                
+#endif                
                 len = strlen(p) - 1;
                 lastp = p + len;
                 
@@ -382,6 +392,11 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
                 if ((match = pattern_match(pt, p, strlen(p))))
                     goto l_end;
         }
+
+    if ((flags & OPT_SEARCH_GROUP) && (p = (char*)pkg_group(pkg))) {
+        if ((match = pattern_match(pt, p, strlen(p))))
+            goto l_end;
+    }
     
 
     if (flags & (OPT_SEARCH_SUMM | OPT_SEARCH_DESC)) {
@@ -484,7 +499,7 @@ static int search(struct cmdarg *cmdarg)
 
     term_height = get_term_height();
     if (n_array_size(matched_pkgs) == 0) 
-        printf_c(PRCOLOR_YELLOW, "No one package matches /%s/\n", pt->regexp);
+        printf_c(PRCOLOR_YELLOW, "No one package matches '%s'\n", pt->regexp);
     
     else if (n_array_size(matched_pkgs) < term_height)
         printf_c(PRCOLOR_YELLOW, "%d package(s) found:\n",

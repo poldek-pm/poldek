@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
@@ -227,9 +227,14 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     struct sh_cmdarg *sh_cmdarg = state->input;
     unsigned flags = sh_cmdarg->cmdflags;
     int rc;
-    
+
+
     state->input = sh_cmdarg->cmdarg;
-    rc = sh_cmdarg->parse_opt_fn(key, arg, state);
+    
+    if (sh_cmdarg->parse_opt_fn)
+        rc = sh_cmdarg->parse_opt_fn(key, arg, state);
+    else
+        rc = ARGP_ERR_UNKNOWN;
     state->input = sh_cmdarg;
     
     if (rc == EINVAL) 
@@ -276,6 +281,11 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
             n_array_push(sh_cmdarg->cmdarg->pkgnames, arg);
             break;
             
+        case 'h':
+            argp_state_help(state, stdout, ARGP_HELP_LONG | ARGP_HELP_DOC |
+                            ARGP_HELP_USAGE);
+            return EINVAL;
+            break;
             
         case ARGP_KEY_NO_ARGS:
             if (sh_cmdarg->cmdarg->is_help)
@@ -690,7 +700,7 @@ static int argv_is_help(int argc, const char **argv)
 
     for (i=0; i<argc; i++) {
         if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-?") == 0 ||
-            strcmp(argv[i], "--usage") == 0) {
+            strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--usage") == 0) {
             
             is_help = 1;
             break;
@@ -705,8 +715,6 @@ int cmd_help(struct cmdarg *cmdarg)
 {
     int i = 0;
 
-    cmdarg = cmdarg;
-    
     while (commands_tab[i]) {
         struct command *cmd = commands_tab[i++];
         char buf[256], *p;

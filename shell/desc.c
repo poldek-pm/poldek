@@ -73,7 +73,9 @@ static struct argp_option options[] = {
     
     { "descr", 'd', 0, 0, "Show package description (the default)", 1},
     
-    { "files", 'l', 0, 0, "Show package files", 1},
+    { "files", 'f', 0, 0, "Show package files", 1},
+    { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},
+    {NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
     { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -124,7 +126,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             cmdarg->flags |= OPT_DESC_REVREQPKGS;
             break;
 
-            
+        case 'f':
         case 'l':
             cmdarg->flags |= OPT_DESC_FL;
             break;
@@ -628,6 +630,7 @@ static void show_description(struct pkg *pkg, unsigned flags)
         printf("\n");
     }
 
+    unit = "kB";
     pkgsize = pkg->size/1024;
     if (pkgsize > 1000) {
         pkgsize /= 1024;
@@ -637,6 +640,17 @@ static void show_description(struct pkg *pkg, unsigned flags)
     printf_c(PRCOLOR_CYAN, "%-16s", "Size:");
     printf("%.1f %s (%d B)\n", pkgsize, unit, pkg->size);
 
+    unit = "kB";
+    if (pkg->fsize > 0) {
+        pkgsize = pkg->fsize/1024;
+        if (pkgsize > 1000) {
+            pkgsize /= 1024;
+            unit = "MB";
+        }
+        printf_c(PRCOLOR_CYAN, "%-16s", "Package size:");
+        printf("%.1f %s (%d B)\n", pkgsize, unit, pkg->fsize);
+    }
+    
     if (pkg->pkgdir && pkg->pkgdir->path) {
         printf_c(PRCOLOR_CYAN, "%-16s", "Path:");
         printf("%s\n", pkg->pkgdir->path);

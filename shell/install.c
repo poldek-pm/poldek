@@ -36,7 +36,7 @@ static int install(struct cmdarg *cmdarg);
 #define OPT_INST_INSTALL  1
 
 static struct argp_option options[] = {
-{"mercy", 'm', 0, OPTION_HIDDEN, "Be tolerant for bugs which RPM tolerates", 1},
+{"mercy", 'm', 0, 0, "Be tolerant for bugs which RPM tolerates", 1},
 {"force", OPT_INST_FORCE, 0, 0, "Be unconcerned", 1 },
 {"test", 't', 0, 0, "Don't install, but tell if it would work or not", 1 },
 {"fresh", 'F', 0, 0, "Upgrade packages, but only if an earlier version "
@@ -58,6 +58,7 @@ static struct argp_option options[] = {
 
 
 {0,  'v', "v...", OPTION_ARG_OPTIONAL, "Be more (and more) verbose.", 1 },
+{NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
 { 0, 0, 0, 0, 0, 0 },
 };
 

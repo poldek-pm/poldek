@@ -38,6 +38,7 @@ static struct argp_option options[] = {
 {"nodeps", OPT_UNINST_NODEPS, 0, 0,
  "Ignore broken dependencies", 1 },
 {0,  'v', "v...", OPTION_ARG_OPTIONAL, "Be more (and more) verbose.", 1 },
+{NULL, 'h', 0, OPTION_HIDDEN, "", 1 },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -237,14 +238,16 @@ static int uninstall(struct cmdarg *cmdarg)
         shpkg->flags |= SHPKG_UNINSTALL;
         n_array_push(pkgnevrs, shpkg->nevr);
     }
-    
-    if (uninstall_pkgs(pkgnevrs, cmdarg->sh_s->inst)) {
-        n_array_remove_ex(cmdarg->sh_s->instpkgs, NULL,
-                          (tn_fn_cmp)shpkg_cmp_rm_uninstalled);
-     } else {
-         n_array_map(shpkgs, (tn_fn_map1)shpkg_clean_uninstall_flag);
-         err = 1;
-     }
+
+    err = uninstall_pkgs(pkgnevrs, cmdarg->sh_s->inst) > 0;
+
+    if (err || cmdarg->sh_s->inst->instflags & PKGINST_TEST) {
+        n_array_map(shpkgs, (tn_fn_map1)shpkg_clean_uninstall_flag);
+        
+    } else {
+         n_array_remove_ex(cmdarg->sh_s->instpkgs, NULL,
+                           (tn_fn_cmp)shpkg_cmp_rm_uninstalled);
+    }
     
     
  l_end:
