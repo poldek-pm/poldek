@@ -38,6 +38,7 @@ static void vftp_msg(const char *fmt, ...);
 void (*vftp_msg_fn)(const char *fmt, ...) = vftp_msg;
 
 static tn_list *vftp_cnl = NULL;               /* connections */
+const char *vftp_anonpasswd = "vftp@mis";
 
 int vftp_init(int *verbose, 
               void (*progress_fn)(long total, long amount, void *data)) 
@@ -81,7 +82,7 @@ int vftp_retr(FILE *stream, long offset, const char *url,
     struct ftpcn       *cn;
     char               buf[PATH_MAX];
     char               *p, *q, *host, *path;
-    char               *login = "anonymous", *passwd = "poldek@znienacka.net";
+    const char         *login = "anonymous", *passwd = NULL;
     int                port = 0, rc;
     char               *err_msg = _("%s: URL parse error");
 
@@ -118,6 +119,11 @@ int vftp_retr(FILE *stream, long offset, const char *url,
         passwd = p + 1;
     }
 
+    if (passwd == NULL)
+        if ((passwd = vftp_anonpasswd) == NULL)
+            passwd  = "mis@mis";
+    
+    
     if (port <= 0)
         port = IPPORT_FTP;
     

@@ -83,6 +83,7 @@ static volatile sig_atomic_t interrupted = 0;
 static int vfile_curl_init(void) 
 {
     char *errmsg = "curl_easy_setopt failed\n";
+    char user_passwd[256];
     
     if ((curlh = curl_easy_init()) == NULL)
         return 0;
@@ -127,8 +128,8 @@ static int vfile_curl_init(void)
         return 0;
     }
 
-    if (curl_easy_setopt(curlh, CURLOPT_USERPWD,
-                         "anonymous:poldek@znienacka.net") != 0) {
+    snprintf(user_passwd, sizeof(user_passwd), "anonymous:%s", vfile_anonftp_passwd);
+    if (curl_easy_setopt(curlh, CURLOPT_USERPWD, user_passwd) != 0) {
         vfile_err_fn(errmsg);
         return 0;
     }
@@ -281,9 +282,7 @@ int vfile_curl_fetch(const char *dest, const char *url, unsigned flags)
             curl_rc == CURLE_FTP_COULDNT_USE_REST ||
             curl_rc == CURLE_HTTP_RANGE_ERROR) {
 
-            if (vfile_valid_path(dest))
-                unlink(dest);
-            
+            vf_localunlink(dest);
             curl_rc = do_vfile_curl_fetch(dest, url);
         }
 
@@ -308,7 +307,7 @@ int vfile_curl_fetch(const char *dest, const char *url, unsigned flags)
                 ;
         }
         
-        vfile_cssleep(90);
+        vf_cssleep(90);
         if (flags & VFMOD_INFINITE_RETR) 
             vfile_msg_fn(_("Retrying...(#%d)\n"), ntry++);
     }

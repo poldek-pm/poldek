@@ -14,6 +14,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +28,7 @@
 #include <trurl/nstr.h>
 
 #include "i18n.h"
+#define VFILE_INTERNAL
 #include "vfile.h"
 #include "p_open.h"
 
@@ -121,12 +123,12 @@ struct ffetcher *ffetcher_new(unsigned urltypes, char *fmt)
         return NULL;
     
     if (*path != '/') {
-        vfile_err_fn("%s: cmd must be precedenced by '/'\n", path);
+        vfile_err_fn("%s: cmd must be precedenced by '/'\n", _purl(path));
         return NULL;
     }
 
     if (access(path, X_OK) != 0) {
-        vfile_err_fn("%s: %m\n", path);
+        vfile_err_fn("%s: %m\n", _purl(path));
         return NULL;
     }
     
@@ -298,7 +300,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     unsigned          p_open_flags = 0;
 
 
-    if (!vfile_mkdir(destdir))
+    if (!vf_mkdir(destdir))
         return 0;
 
     if (url)
@@ -380,7 +382,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
         *s = '\0';
         
         for (i=0; i < n-1; i++) {
-            p = n_strncpy(p, argv[i], len);
+            p = n_strncpy(p, _purl(argv[i]), len);
             len -= strlen(argv[i]);
             p = n_strncpy(p, " ", len);
             len--;
@@ -465,15 +467,15 @@ int vfile_fetch_ext(const char *destdir, const char *url, int urltype)
 
     n_assert(urltype > 0);
     if (urltype == VFURL_UNKNOWN)
-        urltype = vfile_url_type(url);
+        urltype = vf_url_type(url);
     
     if (nffetchers == 0) {
-        vfile_err_fn("vfile_fetch: %s: no handlers configured\n", url);
+        vfile_err_fn("vfile_fetch: %s: no handlers configured\n", _purl(url));
         return 0;
     }
     
     if ((ftch = find_fetcher(urltype, 0)) == NULL) {
-        vfile_err_fn("vfile_fetch: %s: no handler for this URL\n", url);
+        vfile_err_fn("vfile_fetch: %s: no handler for this URL\n", _purl(url));
         return 0;
     }
 
@@ -488,7 +490,7 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype)
     
     n_assert(urltype > 0);
     if (urltype == VFURL_UNKNOWN) 
-        urltype = vfile_url_type(n_array_nth(urls, 0));
+        urltype = vf_url_type(n_array_nth(urls, 0));
     
     if ((ftch = find_fetcher(urltype, 1))) {
         rc = ffetch_file(ftch, destdir, NULL, urls);
@@ -503,7 +505,7 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype)
         rc = nerrs == 0;
         
     } else {
-        vfile_err_fn("URL %s not supported\n", n_array_nth(urls, 0));
+        vfile_err_fn("URL %s not supported\n", _purl(n_array_nth(urls, 0)));
         rc = 0;
     }
 
@@ -514,11 +516,13 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype)
 static 
 int url_to_path(char *buf, int size, const char *url, int isdir) 
 {
-    char *sl, *p, c, *bufp;
+    char *sl, *p, c, *bufp, url_buf[PATH_MAX];
     int n;
 
     *buf = '\0';
     n = 0;
+
+    url = vf_url_hidepasswd(url_buf, sizeof(url_buf), url);
     
     if ((p = strstr(url, "://")) == NULL) {
         n = 0;
@@ -563,19 +567,19 @@ int url_to_path(char *buf, int size, const char *url, int isdir)
 }
 
 
-int vfile_url_as_dirpath(char *buf, size_t size, const char *url) 
+int vf_url_as_dirpath(char *buf, size_t size, const char *url) 
 {
     return url_to_path(buf, size, url, 1);
 }
 
 
-int vfile_url_as_path(char *buf, size_t size, const char *url) 
+int vf_url_as_path(char *buf, size_t size, const char *url) 
 {
     return url_to_path(buf, size, url, 0);
 }
 
 
-int vfile_url_type(const char *url)  
+int vf_url_type(const char *url)  
 {
     if (*url == '/')
         return VFURL_PATH;
@@ -599,71 +603,36 @@ int vfile_url_type(const char *url)
 }
 
 
-int vfile_valid_path(const char *path) 
+const char *vf_url_hidepasswd(char *buf, int size, const char *url)  
 {
-    const char *p;
-    int  ndots;
-    
+    char *p, *q, *u;
+    int  i;
 
-    if (*path != '/') {
-        vfile_err_fn("%s: path must must begin with a /\n", path);
-        return 0;
-    }
     
-    p = path;
-    p++;
-    ndots = 0;
-    
-    while (*p) {
-        switch (*p) {
-            case '/':
-                if (ndots == 2) {
-                    vfile_err_fn("%s: relative paths not allowed\n", path);
-                    return 0;
-                }
-                ndots = 0;
-                break;
+    if (*url == '/' || (u = strstr(url, "://")) == NULL)
+        return url;
 
-            case '.':
-                ndots++;
-                break;
-
-            default:
-                ndots = 0;
-                
-                if (!isalnum(*p) && strchr("-+/._@", *p) == NULL) {
-                    vfile_err_fn("%s:%c non alphanumeric characters not allowed\n",
-                                 path, *p);
-                    return 0;
-                }
-                
-                if (isspace(*p)) {
-                    vfile_err_fn("%s: whitespaces not allowed\n", path);
-                    return 0;
-                }
-        }
-        p++;
-    }
+    u += 3;
     
-    return 1;
+    if ((p = strrchr(u, '@')) == NULL)
+        return url;
+    
+    if ((q = strchr(u, ':')) == NULL || q > p)
+        return url;
+    
+    i = q - url;
+    strncpy(buf, url, size)[size - 1] = '\0';
+    n_assert(buf[i] == ':');
+    p = &buf[i + 1];
+    while (*p && *p != '@')
+        *p++ = 'x';
+    
+    return buf;
 }
 
 
-int vfile_mkdir(const char *path) 
+const char *vf_url_hidepasswd_s(const char *url) 
 {
-    struct stat st;
-    
-    if (!vfile_valid_path(path))
-        return 0;
-
-    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode) && (st.st_mode & S_IRWXU))
-        return 1;
-    
-    if (mkdir(path, 0750) != 0) {
-        vfile_err_fn("%s: mkdir %m\n", path);
-        return 0;
-    }
-    
-    return 1;
+    static char buf[PATH_MAX];
+    return vf_url_hidepasswd(buf, sizeof(buf), url);
 }
-

@@ -21,6 +21,7 @@
 #include <trurl/narray.h>
 
 extern int *vfile_verbose;
+extern const char *vfile_anonftp_passwd;
 extern void (*vfile_msg_fn)(const char *fmt, ...);
 extern void (*vfile_msgtty_fn)(const char *fmt, ...);
 extern void (*vfile_err_fn)(const char *fmt, ...);
@@ -28,6 +29,8 @@ extern void (*vfile_err_fn)(const char *fmt, ...);
 #define VFILE_USEXT_FTP    (1 << 0)
 #define VFILE_USEXT_HTTP   (1 << 1)
 #define VFILE_USEXT_HTTPS  (1 << 2)
+
+#define VFILE_REALUSERHOST_AS_ANONPASSWD (1 << 5)
 
 /* if any of args is not NULL or -1 then set up it */
 void vfile_configure(const char *cachedir, int flags);
@@ -84,7 +87,7 @@ struct vfile {
 #define	vf_gzstream  vfile_fdescriptor.vfile_gzstream
 #define	vf_fdt       vfile_fdescriptor.vfile_fdt
 
-#define vf_localpath(vf)  ((vf)->vf_tmpath ? (vf)->vf_tmpath : (vf)->vf_path)
+#define vfile_localpath(vf)  ((vf)->vf_tmpath ? (vf)->vf_tmpath : (vf)->vf_path)
 
 struct vfile *vfile_open(const char *path, int vftype, int vfmode);
 void vfile_close(struct vfile *vf);
@@ -104,17 +107,6 @@ int vfile_unlink(struct vfile *vf);
 
 #define vfile_is_remote(vf) ((vf)->vf_urltype & VFURL_REMOTE)
 
-int vfile_url_type(const char *url);
-int vfile_url_as_dirpath(char *buf, size_t size, const char *url);
-int vfile_url_as_path(char *buf, size_t size, const char *url);
-int vfile_valid_path(const char *path);
-int vfile_mkdir(const char *path);
-
-/* mkdir under cachedir */
-int vfile_mksubdir(char *path, int size, const char *dirpath);
-
-int vfile_localpath(char *path, size_t size, const char *url);
-
 /* external downloaders */
 int vfile_register_ext_handler(unsigned urltypes, const char *fmt);
 int vfile_configured_handlers(void);
@@ -124,6 +116,33 @@ int vfile_fetcha_ext(const char *destdir, tn_array *urls, int urltype);
 
 int vfile_fetch(const char *destdir, const char *url, int urltype);
 int vfile_fetcha(const char *destdir, tn_array *urls, int urltype);
+
+
+int vf_url_type(const char *url);
+int vf_url_as_dirpath(char *buf, size_t size, const char *url);
+int vf_url_as_path(char *buf, size_t size, const char *url);
+
+/* replace password with "x" * len(password) */
+const char *vf_url_hidepasswd(char *buf, int size, const char *url);
+const char *vf_url_hidepasswd_s(const char *url);
+
+int vf_valid_path(const char *path);
+int vf_mkdir(const char *path);
+int vf_unlink(const char *path);
+
+/* mkdir under cachedir */
+int vf_mksubdir(char *path, int size, const char *dirpath);
+
+/* url to local path */
+int vf_localpath(char *path, size_t size, const char *url);
+
+/* unlink local copy */
+int vf_localunlink(const char *path);
+
+
+int vf_userathost(char *buf, int size);
+void vf_cssleep(int cs);
+
 
 
 #ifdef VFILE_INTERNAL
@@ -144,7 +163,9 @@ void vfile_progress(long total, long amount, void *data);
 
 void vfile_set_errno(const char *ctxname, int vf_errno);
 
-#define VFMOD_INFINITE_RETR (1 << 0)
+#define VFMOD_INFINITE_RETR       (1 << 0) /* retry download */
+#define VFMOD_USER_AS_ANONPASSWD  (1 << 1) /* send login@host as FTP password  */
+
 struct vf_module {
     char       vfmod_name[32];
     unsigned   vf_protocols;
@@ -155,7 +176,14 @@ struct vf_module {
     int        _pri;            /* used by vfile only */
 };
 
-void vfile_cssleep(int cs);
+
+/* short alias for */
+#define _purl(url) vf_url_hidepasswd_s(url)
+
 #endif /* VFILE_INTERNAL */
 
+
+
+
 #endif /* POLDEK_VFILE_H */
+

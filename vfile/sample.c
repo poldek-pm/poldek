@@ -39,7 +39,7 @@ void fetch_ext(const char *url)
 
 void fetch(const char *url)
 {
-    if (vfile_fetch("/tmp", url, vfile_url_type(url)))
+    if (vfile_fetch("/tmp", url, vf_url_type(url)))
         puts("OK\n");
     else
         puts("FAIL\n");

@@ -52,6 +52,7 @@ static int vfile_vftp_init(void)
 {
     vftp_msg_fn = vfile_msg_fn;
     //printf("VERBOSE = %d\n", *vfile_verbose);
+    vftp_anonpasswd = vfile_anonftp_passwd;
     return vftp_init(vfile_verbose, vfile_progress);
 }
 
@@ -62,6 +63,20 @@ static void vfile_vftp_destroy(void)
 }
 
 
+static void set_vftp_anonpasswd(void)
+{
+    static int isset = 0;
+    
+    if (isset == 0) {
+        char buf[256];
+
+        if (vf_userathost(buf, sizeof(buf)) > 0) 
+            vftp_anonpasswd = strdup(buf);
+        isset = 1;
+    }
+}
+
+    
 static int do_fetch(const char *dest, const char *url, unsigned flags)
 {
     struct stat             st;
@@ -81,6 +96,9 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
         fclose(stream);
         return 0;
     }
+
+    if (flags & VFMOD_USER_AS_ANONPASSWD)
+        set_vftp_anonpasswd();
 
     if (flags & VFMOD_INFINITE_RETR)
         end = 1000;
@@ -118,7 +136,7 @@ static int do_fetch(const char *dest, const char *url, unsigned flags)
             break;
         }
         
-        vfile_cssleep(90);
+        vf_cssleep(90);
     }
 
  l_endloop:
@@ -134,7 +152,7 @@ int vfile_vftp_fetch(const char *dest, const char *url, unsigned flags)
 {
     if (!do_fetch(dest, url, flags)) {
         vfile_set_errno(vf_mod_vftp.vfmod_name, errno);
-        if (vfile_valid_path(dest))
+        if (vf_valid_path(dest))
             unlink(dest);
         return 0;
     }

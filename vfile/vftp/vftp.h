@@ -4,6 +4,7 @@
 
 extern int *vftp_verbose;
 extern int vftp_errno;
+extern const char *vftp_anonpasswd;
 
 extern void (*vftp_msg_fn)(const char *fmt, ...);
 extern void (*vftp_err_fn)(const char *fmt, ...);
