@@ -219,7 +219,7 @@ int vf_fetch_sl(const char *url, const char *dest_dir, const char *site_label)
 {
     const struct vf_module *mod = NULL;
     const char *destdir = NULL;
-    int rc;
+    int rc, lockfd = 0;
 
     if (dest_dir)
         destdir = dest_dir;
@@ -231,20 +231,21 @@ int vf_fetch_sl(const char *url, const char *dest_dir, const char *site_label)
     }
     
     n_assert(destdir);
-    if (!vf_mkdir(destdir))
-        return 0;
-
+    
     if ((mod = select_vf_module(url)) == NULL)
         rc = vf_fetch_ext(url, destdir);
     
     else {
         struct vf_request *req = NULL;
         char destpath[PATH_MAX];
+
+        if (!(lockfd = vf_lock_mkdir(destdir)))
+            return 0;
         
         snprintf(destpath, sizeof(destpath), "%s/%s", destdir, n_basenam(url));
             
         if ((req = vf_request_new(url, destpath)) == NULL)
-            return 0;
+            goto l_end;
         
         if (req->proxy_url) {
             if ((mod = select_vf_module(req->proxy_url)) == NULL) {
@@ -308,7 +309,8 @@ int vf_fetch_sl(const char *url, const char *dest_dir, const char *site_label)
     }
     
  l_end:
-    
+    if (lockfd)
+        vf_lock_release(lockfd);
     return rc;
 }
 
@@ -385,10 +387,6 @@ int vf_fetcha_sl(tn_array *urls, const char *destdir, const char *site_label)
 {
     const struct vf_module *mod = NULL;
     int rc = 1;
-
-    n_assert(destdir);
-    if (!vf_mkdir(destdir))
-        return 0;
 
     if ((mod = select_vf_module(n_array_nth(urls, 0))) == NULL) {
         rc = vf_fetcha_ext(urls, destdir);

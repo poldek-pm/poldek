@@ -74,6 +74,7 @@ static void set_anonpasswd(void)
     }
 }
 
+
 int vfile_configure(int param, ...) 
 {
     va_list  ap;
@@ -284,7 +285,7 @@ static int file_ok(const char *path, int vfmode)
 static const char *vfdecompr(const char *path, char *dest, int size) 
 {
     char *destdir, destdir_buf[PATH_MAX], uncmpr_path[PATH_MAX];
-    int  len;
+    int  len, lockfd, rc;
     
     
     *dest = '\0';
@@ -300,30 +301,31 @@ static const char *vfdecompr(const char *path, char *dest, int size)
         char *bn;
         n_snprintf(destdir_buf, sizeof(destdir_buf), "%s", uncmpr_path);
         n_basedirnam(destdir_buf, &destdir, &bn);
+        
         n_snprintf(dest, size, "%s", uncmpr_path);
         
     } else {
         char *s = n_strdup(uncmpr_path);
         vf_localdirpath(destdir_buf, sizeof(destdir_buf), n_dirname(s));
         free(s);
-        
         destdir = destdir_buf;
+        
         vf_localpath(dest, size, uncmpr_path);
     }
     
         
     //printf("DEST %s = %s\n", path, dest);
     n_assert(destdir);
-    if (!vf_mkdir(destdir))
+    if (!(lockfd = vf_lock_mkdir(destdir)))
         return NULL;
     
-    if (vf_extdecompress(path, dest))
-        return dest;
-    
-    return NULL;
+    rc = vf_extdecompress(path, dest);
+
+    vf_lock_release(lockfd);
+    return rc ? dest : NULL;
 }
 
-
+static
 struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
                             const char *site_label)
 {
@@ -410,9 +412,6 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
             
         vf_url_as_dirpath(&buf[len], sizeof(buf) - len, tmpath);
         tmpdir = buf;
-
-        if (!vf_mkdir(tmpdir))
-            return 0;
 
         if (vf_fetch_sl(path, tmpdir, site_label)) {
             char tmpath[PATH_MAX], upath[PATH_MAX];;
@@ -565,9 +564,8 @@ int vf_mksubdir(char *path, int size, const char *dirpath)
     int n;
 
     n = n_snprintf(path, size, "%s/%s", vfile_conf.cachedir, dirpath);
-    if (vf_mkdir(path))
-        return n;
-    return 0;
+    vf_mkdir(path);
+    return n;
 }
 
 int vf_localpath(char *path, size_t size, const char *url) 

@@ -339,11 +339,11 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
 {
     char              *bn = NULL, **argv;
     struct p_open_st  pst;
-    int               i, n, ec, verbose;
+    int               i, n, ec, verbose, lockfd;
     unsigned          p_open_flags = 0;
 
 
-    if (!vf_mkdir(destdir))
+    if (!(lockfd = vf_lock_mkdir(destdir)))
         return 0;
 
     if (url)
@@ -407,6 +407,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
             default:
                 vf_logerr("vf_fetch*: internal error\n");
                 n_assert(0);
+                n_die(0);
                 return 0;
         }
     }
@@ -448,19 +449,22 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
 
     if (p_open(&pst, p_open_flags, fftch->path, argv) == NULL) {
         vf_logerr("p_open: %s\n", pst.errmsg);
-        return 0;
+        ec = -1;
+        
+    } else {
+        process_output(&pst,
+                       ((struct fetcharg*) n_array_nth(fftch->args, 0))->arg);
+        
+        if ((ec = p_close(&pst)) != 0)
+            vf_logerr("%s\n", pst.errmsg ? pst.errmsg :
+                      _("program exited with non-zero value"));
+    
+        p_st_destroy(&pst);
     }
     
-    process_output(&pst,
-                   ((struct fetcharg*) n_array_nth(fftch->args, 0))->arg);
-        
-    if ((ec = p_close(&pst)) != 0)
-        vf_logerr("%s\n", pst.errmsg ? pst.errmsg :
-                   _("program exited with non-zero value"));
-    
-    p_st_destroy(&pst);
     *vfile_verbose = verbose;
-    
+    if (lockfd)
+        vf_lock_release(lockfd);
     return ec == 0;
 }
 

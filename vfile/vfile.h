@@ -202,6 +202,10 @@ int vf_cleanpath(char *buf, int size, const char *path);
 
 #ifdef VFILE_INTERNAL
 
+int vf_lockdir(const char *path);
+int vf_lock_mkdir(const char *path);
+void vf_lock_release(int fd);
+
 void vf_log(int pri, const char *fmt, ...);
 void vf_vlog(int pri, const char *fmt, va_list ap);
 
