@@ -78,7 +78,7 @@ int rpmhdr_fl_ld(struct rpmhdr_fl *hdrfl, Header h, const char *pkgname)
     int32_t   *diridxs;
     uint32_t  *sizes;
     uint16_t  *modes;
-    int       i, j, nerr = 0;
+    int       nerr = 0;
 
     hdrfl->bnames = NULL;
     hdrfl->dnames = NULL;

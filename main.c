@@ -93,11 +93,11 @@ struct args {
     tn_array  *rpmopts;
     tn_array  *rpmacros;
 
-    char      *conf_path;
-    int       noconf;
-    char      *cachedir;
+    char        *conf_path;
+    int         noconf;
+    const char  *cachedir;
     
-    int       nodesc;		/* don't put descriptions in Packges */
+    int         nodesc;		/* don't put descriptions in Packges */
 } args;
 
 tn_hash *htcnf = NULL;          /* config file values */

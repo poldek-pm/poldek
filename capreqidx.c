@@ -82,6 +82,7 @@ int capreq_idx_add(struct capreq_idx *idx, const char *prname,
                 }
         }
 #else
+        i = i;
         isprov = isprov;        /* avoid gcc's warn */
 #endif        
         

@@ -29,6 +29,7 @@
 #include "log.h"
 #include "misc.h"
 #include "h2n.h"
+#include "misc.h"
 
 static void *(*capreq_alloc_fn)(size_t) = malloc;
 static void (*capreq_free_fn)(void*) = free;
@@ -404,6 +405,8 @@ tn_array *capreqs_get(tn_array *arr, const Header h, int crtype)
             break;
             
         default:
+            tags = NULL;
+            label = NULL;
             n_assert(0);
             die();
     }

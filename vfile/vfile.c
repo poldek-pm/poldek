@@ -123,7 +123,7 @@ static void *fetch_cb(const unsigned long amount, const unsigned long total)
 }
 
 
-static void *fetch_cb_wrapper(const Header h __attribute__((unused)), 
+static void *fetch_cb_wrapper(const void *h __attribute__((unused)), 
                               const rpmCallbackType t __attribute__((unused)), 
                               const unsigned long amount, 
                               const unsigned long total,
