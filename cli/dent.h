@@ -31,8 +31,8 @@ struct pkg_dent *pkg_dent_link(struct pkg_dent *ent);
 
 void pkg_dent_free(struct pkg_dent *ent);
 
-struct pkg_dent *pkg_dent_adddir(struct poclidek_ctx *cctx,
-                                 struct pkg_dent *dent, const char *name);
+struct pkg_dent *pkg_dent_add_dir(struct poclidek_ctx *cctx,
+                                  struct pkg_dent *parent, const char *name);
 
 int pkg_dent_add_pkgs(struct poclidek_ctx *cctx,
                       struct pkg_dent *dent, tn_array *pkgs);
@@ -61,7 +61,8 @@ tn_array *poclidek_get_dent_ents(struct poclidek_ctx *cctx, const char *dir);
 tn_array *poclidek_get_dent_packages(struct poclidek_ctx *cctx, const char *dir);
 
 struct pkg_dent *poclidek_dent_setup(struct poclidek_ctx *cctx,
-                                     const char *path, tn_array *pkgs);
+                                     const char *path, tn_array *pkgs,
+                                     int force);
 
 struct pkg_dent *poclidek_dent_root(struct poclidek_ctx *cctx);
 struct pkg_dent *poclidek_dent_find(struct poclidek_ctx *cctx, const char *path);

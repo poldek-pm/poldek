@@ -62,6 +62,8 @@ static int cd(struct cmdctx *cmdctx)
     int rc;
 
     path = cmdctx->_data;
+
+    poclidek_load_packages(cmdctx->cctx, POCLIDEK_LOAD_ALL);
     if (path == NULL) {
         if (cmdctx->cctx->homedir)
             path = cmdctx->cctx->homedir->name;
@@ -69,7 +71,7 @@ static int cd(struct cmdctx *cmdctx)
             path = POCLIDEK_AVAILDIR;
     }
     
-    if (!(rc = poclidek_chdir(cmdctx->cctx, path))) {
+    if (!(rc = poclidek_chdir(cmdctx->cctx, path)) && path) {
         n_snprintf(path_buf, sizeof(path_buf), "/%s", path);
         rc = poclidek_chdir(cmdctx->cctx, path_buf);
     }

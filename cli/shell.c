@@ -42,6 +42,14 @@
 #define POCLIDEK_ITSELF
 #include "poclidek.h"
 
+static int cmd_reload(struct cmdctx *cmdctx);
+struct poclidek_cmd command_reload = {
+    COMMAND_NOARGS | COMMAND_NOOPTS, 
+    "reload", NULL, N_("Reload installed packages"), 
+    NULL, NULL, NULL, cmd_reload,
+    NULL, NULL, NULL, NULL, 0, 0
+};
+
 
 static int cmd_quit(struct cmdctx *cmdctx);
 struct poclidek_cmd command_quit = {
@@ -66,6 +74,12 @@ struct sh_ctx {
 };
 
 static struct sh_ctx sh_ctx = { COMPLETITION_CTX_NONE, NULL };
+
+static int cmd_reload(struct cmdctx *cmdctx) 
+{
+    unsigned ldflags = POCLIDEK_LOAD_INSTALLED|POCLIDEK_LOAD_RELOAD;
+    return poclidek_load_packages(cmdctx->cctx, ldflags);
+}
 
 
 static
@@ -301,6 +315,7 @@ static int init_shell(struct poclidek_ctx *cctx)
     poldek_term_init();
     sh_ctx.completion_ctx = COMPLETITION_CTX_NONE;
     sh_ctx.cctx = cctx;
+    poclidek_add_command(cctx, &command_reload);
     return poclidek_add_command(cctx, &command_quit);
 }
 

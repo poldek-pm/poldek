@@ -67,10 +67,10 @@ static char args_doc[] = N_("[PACKAGE...]");
 #define OPT_SHELL_CMD 1025
 
 
-#define POLDEKCLI_CMN_NOCONF         (1 << 0)
-#define POLDEKCLI_CMN_NOASK          (1 << 1)
-#define POLDEKCLI_CMN_SKIPINSTALLED  (1 << 2)
-#define POLDEKCLI_CMN_CONFUP         (1 << 3)
+#define OPT_CMN_NOCONF         (1 << 0)
+#define OPT_CMN_NOASK          (1 << 1)
+#define OPT_CMN_SKIPINSTALLED  (1 << 2)
+#define OPT_CMN_CONFUP         (1 << 3)
 
 /* The options we understand. */
 static struct argp_option common_options[] = {
@@ -154,7 +154,6 @@ struct args {
     
     unsigned    pkgdir_creat_flags; 
     
-    int         shell_skip_installed;
     char        *shcmd;
 
     tn_array    *opgroup_rts;
@@ -201,7 +200,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_CONFUP:
-            argsp->cnflags |= POLDEKCLI_CMN_CONFUP;
+            argsp->cnflags |= OPT_CMN_CONFUP;
             break;
             
         case 'q':
@@ -217,7 +216,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_NOCONF:
-            argsp->cnflags |= POLDEKCLI_CMN_NOCONF;
+            argsp->cnflags |= OPT_CMN_NOCONF;
 
         case OPT_ASK:
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_INST, 1);
@@ -225,7 +224,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_NOASK:
-            argsp->cnflags |= POLDEKCLI_CMN_NOASK;
+            argsp->cnflags |= OPT_CMN_NOASK;
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_INST, 0);
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_UNINST, 0);
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_EQPKG_ASKUSER, 0);
@@ -244,7 +243,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             logn(LOGWARN, "-f is obsoleted, use --skip-installed instead");
                                 /* no break */
         case OPT_SKIPINSTALLED:
-            argsp->cctx->_flags |= POLDEKCLI_SKIPINSTALLED;
+            argsp->cnflags |= OPT_CMN_SKIPINSTALLED;
             break;
 
         case OPT_KEEPDOWNLOADS:
@@ -369,9 +368,9 @@ void parse_options(struct poclidek_ctx *cctx, int argc, char **argv, int mode)
     index = 0;
     argp_parse(&argp, argc, argv, ARGP_IN_ORDER, &index, &args);
 
-    if ((args.cnflags & POLDEKCLI_CMN_NOCONF) == 0) 
+    if ((args.cnflags & OPT_CMN_NOCONF) == 0) 
         if (!poldek_load_config(args.ctx, args.path_conf,
-                                (args.cnflags & POLDEKCLI_CMN_CONFUP) ? 1 : 0))
+                                (args.cnflags & OPT_CMN_CONFUP) ? 1 : 0))
             exit(EXIT_FAILURE);
 
     if (!poldek_setup(args.ctx))
@@ -459,7 +458,11 @@ int main(int argc, char **argv)
         exit((rrc & OPGROUP_RC_ERROR) ? EXIT_FAILURE : EXIT_SUCCESS);
 
     if (args.mode == RUNMODE_POLDEK) {
-        if (!poclidek_load_packages(cctx, POCLIDEK_LOAD_ALL)) {
+        unsigned ldflags = POCLIDEK_LOAD_AVAILABLE;
+        if ((args.cnflags & OPT_CMN_SKIPINSTALLED) == 0)
+            ldflags |= POCLIDEK_LOAD_INSTALLED;
+        
+        if (!poclidek_load_packages(cctx, ldflags)) {
             logn(LOGERR, "packages load failed");
             ec = 1;
             

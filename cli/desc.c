@@ -769,12 +769,11 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
 
 static int desc(struct cmdctx *cmdctx)
 {
-    struct poclidek_ctx    *cctx;
     tn_array               *pkgs = NULL;
     int                    i, err = 0;
 
-    cctx = cmdctx->cctx;
-    pkgs = poclidek_resolve_packages(NULL, cctx, cmdctx->ts, 0);
+    poclidek_load_packages(cmdctx->cctx, POCLIDEK_LOAD_ALL);
+    pkgs = poclidek_resolve_packages(NULL, cmdctx->cctx, cmdctx->ts, 0);
     if (pkgs == NULL) {
         err++;
         goto l_end;

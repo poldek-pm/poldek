@@ -549,7 +549,8 @@ static int search(struct cmdctx *cmdctx)
         err++;
         goto l_end;
     }
-    
+
+    poclidek_load_packages(cmdctx->cctx, POCLIDEK_LOAD_ALL);
     if (poldek_ts_get_arg_count(cmdctx->ts) == 0) {
         pkgs = poclidek_get_dent_packages(cctx, NULL);
         

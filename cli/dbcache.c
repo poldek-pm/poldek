@@ -44,13 +44,21 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload);
 int poclidek_load_installed(struct poclidek_ctx *cctx, int reload) 
 {
     struct pkgdir *pkgdir;
-    DBGF_F("%d\n", reload);
+    DBGF("%d\n", reload);
+
 /* TODO: reload */
     if ((pkgdir = load_installed_pkgdir(cctx, reload)) == NULL)
         return 0;
 
-    if ((poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR)) == NULL)
-        poclidek_dent_setup(cctx, POCLIDEK_INSTALLEDDIR, pkgdir->pkgs);
+    if ((poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR)) == NULL || reload)
+        poclidek_dent_setup(cctx, POCLIDEK_INSTALLEDDIR, pkgdir->pkgs, reload);
+
+
+    if (cctx->pkgs_installed)
+        n_array_free(cctx->pkgs_installed);
+    
+    if (cctx->dbpkgdir)
+        pkgdir_free(cctx->dbpkgdir);
 
     cctx->pkgs_installed = n_ref(pkgdir->pkgs);
     n_array_ctl(cctx->pkgs_installed, TN_ARRAY_AUTOSORTED);
@@ -122,7 +130,8 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     struct pm_ctx   *pmctx;
 
     pmctx = poldek_get_pmctx(cctx->ctx);
-    
+
+    DBGF("reload %d\n", reload);
     if (!pm_dbpath(pmctx, dbpath, sizeof(dbpath)))
         return poldek_load_destination_pkgdir(cctx->ctx);
     
@@ -154,15 +163,17 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
         }
     }
     
-    if (dir == NULL)
+    if (dir == NULL) {
+        DBGF("lddb\n");
         dir = poldek_load_destination_pkgdir(cctx->ctx);
-
+    }
+    
     if (dir == NULL)
         logn(LOGERR, _("Load installed packages failed"));
     
     else {
         int n = n_array_size(dir->pkgs);
-        msgn(2, ngettext("%d package loaded",
+        msgn(1, ngettext("%d package loaded",
                          "%d packages loaded", n), n);
     } 
     
