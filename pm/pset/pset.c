@@ -48,6 +48,7 @@ struct pm_psetdb {
     struct source *src;
     struct pkgset *ps;
     char *tsdir;
+    tn_array *pkgs_added;
     tn_array *paths_added;
     tn_array *paths_removed;
     int _recno;
@@ -162,6 +163,7 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
     db = n_malloc(sizeof(*db));
     db->src = src;
     db->ps = ps;
+    db->pkgs_added = pkgs_array_new(32);
     db->paths_added = n_array_new(32, free, NULL);
     db->paths_removed = n_array_new(32, free, NULL);
     db->tsdir = NULL;
@@ -184,8 +186,17 @@ void pm_pset_freedb(void *dbh)
     
     if (db->ps)
         pkgset_free(db->ps);
+
+    if (db->pkgs_added) {       /* clean our recno's */
+        int i;
+        for (i=0; i < n_array_size(db->pkgs_added); i++) {
+            struct pkg *pkg = n_array_nth(db->pkgs_added, i);
+            pkg->recno = 0;
+        }
+        n_array_free(db->pkgs_added);
+    }
     
-    if (db->tsdir) {
+    if (db->tsdir) {     /* remove transaction directory */
         int i;
         for (i=0; i < n_array_size(db->paths_added); i++) {
             char *path = n_array_nth(db->paths_added, i);
@@ -476,7 +487,19 @@ static int do_pkgtslink(struct pm_psetdb *db, const char *cachedir,
     return 1;
 }
 
-
+#if 0
+static void dumpdir(struct pkgdir *pkgdir)
+{
+    int i;
+    DBGF_F("dump:\n");
+    for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+        if (strcmp(pkg->name, "fix-info-dir") == 0)
+            DBGF_F("  %p %s\n", pkg, pkg->name);
+    }
+}
+#endif
+    
 int pm_pset_packages_install(struct pkgdb *pdb,
                              tn_array *pkgs, tn_array *pkgs_toremove,
                              struct poldek_ts *ts) 
@@ -505,11 +528,15 @@ int pm_pset_packages_install(struct pkgdb *pdb,
         }
     }
 #endif
+    pkgdir = n_array_nth(db->ps->pkgdirs, 0);
+    //dumpdir(pkgdir);
+    
     pm_pset_packages_uninstall(pdb, pkgs_toremove, ts);
 
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
     pkgdir = n_array_nth(db->ps->pkgdirs, 0);
-
+    //dumpdir(pkgdir);
+    
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
 
@@ -521,12 +548,11 @@ int pm_pset_packages_install(struct pkgdb *pdb,
             if (pkg->recno > 0)
                 logn(LOGERR, "%s: recno is set, should not happen",
                      pkg_snprintf_s(pkg));
-
             
-
             pkgset_add_package(db->ps, pkg);
             pkgdir_add_package(pkgdir, pkg);    
             pkg->recno = db->_recno++;
+            n_array_push(db->pkgs_added, pkg_link(pkg));
 
             tmp = n_array_bsearch(pkgdir->pkgs, pkg);
             DBGF("after in %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
@@ -539,7 +565,7 @@ int pm_pset_packages_install(struct pkgdb *pdb,
             msgn(3, "%%install %s %s", path, pkgdir->path);
         }
     }
-
+    //dumpdir(pkgdir);
     return 1;
 }
 
