@@ -837,7 +837,8 @@ int main(int argc, char **argv)
         args.mjrmode = MODE_SHELL;
         logprefix = NULL;
     }
-#endif    
+#endif
+    
     log_sopenlog(stdout, 0, logprefix);
     parse_options(argc, argv);
 
@@ -882,6 +883,7 @@ int main(int argc, char **argv)
     switch (args.mjrmode) {
 #ifdef ENABLE_INTERACTIVE_CLIENT        
         case MODE_SHELL:
+            log_sopenlog(stdout, 0, NULL);
             if (shell_main(ps, &inst))
                 exit(EXIT_SUCCESS);
             else

@@ -32,18 +32,23 @@ static int cmd_fetch();
 static int cmd_install();
 static
 error_t parse_install_opt(int key, char *arg, struct argp_state *state);
+static
+error_t parse_ls_opt(int key, char *arg, struct argp_state *state);
 
 
-static struct argp_option ls_options[] = {
+
+#define OPT_LS_LONG   (1 << 10)
+
+static struct argp_option options_ls[] = {
 {0,0,0,0, "ls [OPTION...] [PACKAGE...]", 1 },
 {"long", 'l', 0, 0, "use a long listing format", 1},
 };
 
-#define OPT_INST_FETCH   100
-#define OPT_INST_NODEPS  101
-#define OPT_INST_FORCE   102
+#define OPT_INST_FETCH   (1 << 10)
+#define OPT_INST_NODEPS  (1 << 11)
+#define OPT_INST_FORCE   (1 << 12)
 
-static struct argp_option install_options[] = {
+static struct argp_option options_install[] = {
 {0,0,0,0, "install [OPTION...] PACKAGE...", 1 },
 
 {"mercy",   'm', 0, 0, "Be tolerant for bugs which RPM tolerates", 1},
@@ -66,7 +71,7 @@ struct command {
     char *arg;
     struct argp_option *argp_opts;
     error_t (*parse_opt_fn)(int, char*, struct argp_state*);
-    int (*fn)(const char **argv, struct command*);
+    int (*fn)(int argc, const char **argv, struct argp*);
     char *doc;
 };
 
@@ -78,7 +83,8 @@ struct command {
 #define CMD_HELP     6
 
 struct command commands_tab[] = {
-{1, "ls", "[FILE...]", ls_options, NULL, cmd_ls, "list directory contents"},
+{1, "ls", "[FILE...]", options_ls, parse_ls_opt, cmd_ls,
+ "list directory contents"},
 
 {2, "info", "[FILE...]", NULL, NULL, cmd_ls, "display package(s) info"},
     
@@ -86,7 +92,7 @@ struct command commands_tab[] = {
     
 {3,
      "install", "[FILE...]",
-     install_options, parse_install_opt,  cmd_install,
+     options_install, parse_install_opt,  cmd_install,
      "install package(s)"
 },
     
@@ -153,31 +159,41 @@ void shpkg_clean_flags(struct shell_pkg *shpkg)
 static
 int execute_line(char *line)
 {
-    struct command *command, tmpcmd;
+    struct command *cmd, tmpcmd;
     char *p;
     const char **args;
     int rc;
-    
-    
+
     p = line;
     while (*p && !isspace(*p))
 	p++;
     
     if (*p)
-        *p++ = '\0';
-
+        *p = '\0';
+    else
+        p = NULL;
+    
     tmpcmd.name = line;
-    if ((command = n_array_bsearch(shell_s.commands, &tmpcmd)) == NULL) {
-	fprintf(stderr, "%s: no such command.\n", line);
+    if ((cmd = n_array_bsearch(shell_s.commands, &tmpcmd)) == NULL) {
+	fprintf(stderr, "%s: no such command\n", line);
 	return 0;
     }
+
+    if (p)
+        *p = ' ';
     
-    while (isspace(*p))
-	p++;
+    if ((args = n_str_tokl(line, " \t"))) {
+        struct argp argp = { cmd->argp_opts, cmd->parse_opt_fn,
+                             NULL, cmd->doc, 0, 0, 0};
+        int argc = 0;
+
+        while (args[argc])
+            argc++;
+        
+        rc = cmd->fn(argc, args, &argp);
+        n_str_tokl_free(args);
+    }
     
-    args = n_str_tokl(p, " \t");
-    rc = command->fn(args, command);
-    n_str_tokl_free(args);
     return rc;
 }
 
@@ -412,76 +428,91 @@ void prepare_argv(char **argv, tn_array **optsp, tn_array **pkgsp)
     *pkgsp = pkgs;
 }
 
+struct cmd_state {
+    unsigned flags;
+    tn_array *pkgnames;
+};
 
 
-#define LSFMT_BRIEF 0
-#define LSFMT_LONG  1
-
-static int cmd_ls(char **argv)
+/*----------------------------------------------------------------------*/
+/* ls                                                                   */
+/*----------------------------------------------------------------------*/
+static
+error_t parse_ls_opt(int key, char *arg, struct argp_state *state)
 {
-    tn_array *pkgs = NULL, *opts = NULL;
-    int lsfmt = LSFMT_BRIEF;
+    struct cmd_state *cmdst = state->input;
+    
+/*    if (arg)
+      chkarg(key, arg);*/
+    
+    switch (key) {
+        case 'l':
+            cmdst->flags |= OPT_LS_LONG;
+            break;
+
+        case ARGP_KEY_ARG:
+            n_array_push(cmdst->pkgnames, strdup(arg));
+
+        case ARGP_KEY_END:
+            //argp_usage (state);
+            break;
+
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+    
+    return 0;
+}
+
+
+static int cmd_ls(int argc, const char **argv, struct argp *argp)
+{
+    struct cmd_state cmdst = { 0, NULL};
+    tn_array *shpkgs = NULL;
     int i, size, err = 0;
     
     if (argv == NULL)
         return 0;
 
-    prepare_argv(argv, &opts, &pkgs);
-
-    if (pkgs == NULL) 
-        return 0;
-
-    if (n_array_size(pkgs) == 0) {
-        n_array_free(pkgs);
-        pkgs = shell_s.avpkgs;
-    }
-
-    lsfmt = LSFMT_BRIEF;
+    cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
+    argp_parse(argp, argc, argv, argp_parse_flags, 0, (void*)&cmdst);
+    if (n_array_size(cmdst.pkgnames)) 
+        resolve_packages(cmdst.pkgnames, &shpkgs);
+    else
+        shpkgs = shell_s.avpkgs;
+        
+    n_array_free(cmdst.pkgnames);
     
-    for (i=0; i<n_array_size(opts); i++) {
-        char *opt = n_array_nth(opts, i); 
-        if (strcmp(opt, "-l") == 0) {
-            lsfmt = LSFMT_LONG;
-            printf("%-42s%-12s%16s\n", "package", "build date", "size (kB)");
 
-        } else {
-            printf("ls: %s: unknown option\n", opt);
-            err++;
-        }
+    if (n_array_size(shpkgs) == 0) {
+        n_array_free(shpkgs);
+        shpkgs = shell_s.avpkgs;
     }
 
-    if (err) 
-        goto l_end;
+    if (cmdst.flags & OPT_LS_LONG) 
+        printf("%-42s%-12s%16s\n", "package", "build date", "size (kB)");
     
     size = 0;
-    for (i=0; i<n_array_size(pkgs); i++) {
-        struct shell_pkg *shpkg = n_array_nth(pkgs, i);
+    for (i=0; i<n_array_size(shpkgs); i++) {
+        struct shell_pkg *shpkg = n_array_nth(shpkgs, i);
         struct pkg *pkg = shpkg->pkg;
 
-        switch (lsfmt) {
-            case LSFMT_BRIEF:
-                printf("%s\n", shpkg->nevr);
-                break;
-                
-            case LSFMT_LONG: {
-                char timbuf[30];
-                if (pkg->btime) 
-                    strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
-                             localtime((time_t*)&pkg->btime));
-                else
-                    *timbuf = '\0';
-                printf("%-42s%12s%8d\n", shpkg->nevr,
-                       timbuf, pkg->size/1024);
-                size += pkg->size/1024;
-            }
-            break;
+        if (cmdst.flags & OPT_LS_LONG) {
+            char timbuf[30];
+            if (pkg->btime) 
+                strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M",
+                         localtime((time_t*)&pkg->btime));
+            else
+                *timbuf = '\0';
+            printf("%-42s%12s%8d\n", shpkg->nevr, timbuf, pkg->size/1024);
+            size += pkg->size/1024;
             
-            default:
-                n_assert(0);
+        } else {
+            printf("%s\n", shpkg->nevr);
         }
     }
 
-    if (lsfmt != LSFMT_BRIEF && n_array_size(pkgs)) {
+    if (cmdst.flags & OPT_LS_LONG && n_array_size(shpkgs)) {
         char *unit;
         int val;
         
@@ -493,25 +524,23 @@ static int cmd_ls(char **argv)
             val = size;
         }
         
-        printf("%d package%s, %d %s\n", n_array_size(pkgs),
-               n_array_size(pkgs) > 1 ? "s":"", val, unit);
+        printf("%d package%s, %d %s\n", n_array_size(shpkgs),
+               n_array_size(shpkgs) > 1 ? "s":"", val, unit);
     }
 
- l_end:
-    if (opts)
-        n_array_free(opts);
-    
-    if (pkgs != shell_s.avpkgs)
-        n_array_free(pkgs);
+    if (shpkgs != shell_s.avpkgs)
+        n_array_free(shpkgs);
     
     return err == 0;
 }
 
-/* Parse a single option. */
+/*----------------------------------------------------------------------*/
+/* install                                                              */
+/*----------------------------------------------------------------------*/
 static
 error_t parse_install_opt(int key, char *arg, struct argp_state *state)
 {
-    tn_array *pkgnames = state->input;
+    struct cmd_state *cmdst = state->input;
     
 /*    if (arg)
       chkarg(key, arg);*/
@@ -558,8 +587,8 @@ error_t parse_install_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case ARGP_KEY_ARG:
-            n_array_push(pkgnames, strdup(arg));
-
+            n_array_push(cmdst->pkgnames, arg);
+            
         case ARGP_KEY_END:
             //argp_usage (state);
             break;
@@ -574,51 +603,22 @@ error_t parse_install_opt(int key, char *arg, struct argp_state *state)
 }
 
 
-static
-void parse_options(int argc, char **argv, struct command *cmd) 
+static int cmd_install(int argc, const char **argv, struct argp *argp)
 {
-    struct argp argp = { cmd->argp_opts, cmd->parse_opt_fn, 
-                         NULL, cmd->doc, 0, 0, 0};
-    verbose = 1;
-    
-    argp_parse(&argp, argc, argv, 0, 0, 0);
-}
-
-
-
-static int cmd_install(char **argv, struct command *cmd)
-{
-    tn_array *shpkgs = NULL, *pkgnames;
-    int i, n, err = 0, argc = 0;
-    char **args;
-    
-    
-    struct argp argp = {
-        cmd->argp_opts, cmd->parse_opt_fn, NULL, cmd->doc, 0, 0, 0
-     };
-
+    struct cmd_state cmdst = { 0, NULL};
+    tn_array *shpkgs = NULL;
+    int i, err = 0;
     
     shell_s.inst->instflags = 0;
     shell_s.inst->instflags |= PKGINST_UPGRADE;
-    pkgnames = n_array_new(16, free, (tn_fn_cmp)strcmp);
 
-    argc = 0;
-    while (argv[argc] != NULL)
-        argc++;
-    argc++;
+    cmdst.pkgnames = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     
-    args = malloc(argc * sizeof(*args));
-    for (i=1; i<argc; i++) {
-        args[i] = strdup(argv[i-1]);
-    }
-    args[0] = "install";
+    argp_parse(argp, argc, argv, argp_parse_flags, 0, &cmdst);
+    resolve_packages(cmdst.pkgnames, &shpkgs);
+    n_array_free(cmdst.pkgnames);
     
-
-    argp_parse(&argp, argc, args, argp_parse_flags, 0, pkgnames);
-    resolve_packages(pkgnames, &shpkgs);
-    n_array_free(pkgnames);
-    
-    if (shpkgs == NULL) 
+    if (shpkgs == NULL)
         return 0;
 
     if (n_array_size(shpkgs) == 0) {
@@ -712,7 +712,6 @@ void shell_end(int sig)
         write_history(shell_s.histfile);
     }
 }
-
 
 
 int shell_main(struct pkgset *ps, struct inst_s *inst)
