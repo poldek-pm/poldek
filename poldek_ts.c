@@ -79,7 +79,7 @@ void poldek_ts_setop(struct poldek_ts *ts, int optv, int on_off)
     else
         bitvect_clr(ts->_opvect, optv);
 
-    printf("setop %d TO %d\n", optv, on_off);
+    //printf("setop %d TO %d\n", optv, on_off);
 }
 
 int poldek_ts_getop(const struct poldek_ts *ts, int optv)

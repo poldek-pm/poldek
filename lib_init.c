@@ -705,6 +705,13 @@ void poldek_destroy(struct poldek_ctx *ctx)
     sigint_destroy();
 }
 
+void poldek_free(struct poldek_ctx *ctx)
+{
+    poldek_destroy(ctx);
+    free(ctx);
+}
+
+
 void poldek_reinit(void)
 {
     destroy_modules();
@@ -820,6 +827,17 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     return 1;
 }
 
+struct poldek_ctx *poldek_new(unsigned flags)
+{
+    struct poldek_ctx *ctx;
+    
+    ctx = n_malloc(sizeof(*ctx));
+    if (poldek_init(ctx, flags))
+        return ctx;
+    
+    free(ctx);
+    return NULL;
+}
 
 int poldek_setup_cachedir(struct poldek_ctx *ctx)
 {

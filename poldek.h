@@ -42,6 +42,9 @@ struct poldek_ctx {
     unsigned       _iflags;     /* internal flags */
 };
 
+struct poldek_ctx *poldek_new(unsigned flags);
+void poldek_free(struct poldek_ctx *ctx);
+
 int poldek_init(struct poldek_ctx *ctx, unsigned flags);
 void poldek_destroy(struct poldek_ctx *ctx);
 
