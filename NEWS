@@ -1,3 +1,9 @@
+0.17.3 (not released yet)
+* new "noautoup" source option
+* shell: added long listig format of file list
+* misc fixes to compile on SuSE
+
+
 0.17.2
 * "ported" to RedHat 7.2 (with rpm 4.0.4)
 * install-dist: --force forces installation of broken package sets
