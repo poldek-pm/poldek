@@ -139,8 +139,8 @@ static struct argp_option options[] = {
 {0,0,0,0, "Source options:", 1 },    
 {"source", 's', "SOURCE", 0, "Get packages info from SOURCE (guess type)", 1 },
     
-{"stxt", OPT_SOURCETXT, "FILE", 0,
- "Get packages info from text index FILE", 1 },
+{"sidx", OPT_SOURCETXT, "FILE", 0,
+ "Get packages info from package index file FILE", 1 },
 
 {"sdir", OPT_SOURCEDIR, "DIR", 0,
  "Get packages info from directory DIR", 1 },
@@ -155,7 +155,7 @@ static struct argp_option options[] = {
  "Update package index (for remote indexes)", 1 },
 
 {"cachedir", OPT_SOURCECACHE, "DIR", 0, 
- "Store fetched packages and indexes under DIR [/tmp]", 1 },    
+ "Store fetched packages and indexes under DIR (default is /tmp or if set, $TMPDIR)", 1 },    
   
 {0,0,0,0, "Verify options:", 50 },        
 {"verify",  'V', 0, 0, "Verify package set", 50 },
@@ -164,7 +164,7 @@ static struct argp_option options[] = {
 
 {0,0,0,0, "Indexes creation:", 60},
 {"mkidx", OPT_MKTXTINDEX, "FILE", OPTION_ARG_OPTIONAL,
- "Create text index, SOURCE/Packages by default", 60},
+ "Create package index, SOURCE/Packages by default", 60},
 
 {"mkidxz", OPT_MKTXTINDEXZ, "FILE", OPTION_ARG_OPTIONAL,
  "Like above, but gzipped file is created", 60},
@@ -173,7 +173,7 @@ static struct argp_option options[] = {
  "Create header index, SOURCE/Packages-hdrs by default", 60},
     
 {"nodesc", OPT_NODESC, 0, 0,
- "Don't put Description and Summary field in resulting index.", 60 },
+ "Don't put packages user-level information (like Summary or Description) in created index.", 60 },
     
 
 {0,0,0,0, "Installation:", 70},
@@ -545,7 +545,7 @@ void parse_options(int argc, char **argv)
     args.idx_path = NULL;
     args.fetchdir = NULL;
     args.install_root = NULL;
-    args.cachedir = "/tmp";
+    args.cachedir = tmpdir();
     
     args.pkgdef_files = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
     args.pkgdef_defs  = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
@@ -644,7 +644,7 @@ void parse_options(int argc, char **argv)
     }
 
     vfile_verbose = &verbose;
-    vfile_configure(args.cachedir ? args.cachedir : "/tmp", vfile_cnflags);
+    vfile_configure(args.cachedir ? args.cachedir : tmpdir(), vfile_cnflags);
 }
 
 
@@ -919,6 +919,9 @@ int main(int argc, char **argv)
     }
 
     if (args.mjrmode == MODE_UPDATEIDX) {
+        if (verbose < 1)
+            verbose = 1;
+        
         if (update_idx())
             exit(EXIT_SUCCESS);
         exit(EXIT_FAILURE);

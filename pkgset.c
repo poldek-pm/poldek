@@ -413,7 +413,7 @@ int pkgset_setup(struct pkgset *ps)
         ps->depdirs = capreq_idx_find_depdirs(&ps->req_idx);
     
     if ((ps->flags & PSMODE_VERIFY)) {
-        msg(1, "$Verifying files conflicts...\n");
+        msg(1, "\nVerifying files conflicts...\n");
         file_index_find_conflicts(&ps->file_idx, strict);
     }
 
@@ -522,7 +522,10 @@ int mark_dependencies(struct pkgset *ps, unsigned instflags)
     return (cnfl_nerr + req_nerr) == 0;
 }
 
-
+/*
+  function prepares directory where downloaded packages will be stored,
+  used only for install-dist
+ */
 static int setup_tmpdir(const char *rootdir) 
 {
     char path[PATH_MAX];
@@ -532,7 +535,9 @@ static int setup_tmpdir(const char *rootdir)
         return 0;
     }
 
-    snprintf(path, sizeof(path), "%s/tmp", rootdir);
+    snprintf(path, sizeof(path), "%s%s", rootdir, tmpdir());
+
+    n_assert (*path != '\0');
 
     if (mkdir(path, 0755) != 0 && errno != EEXIST) {
         log(LOGERR, "mkdir %s: %m\n", path);
@@ -558,9 +563,6 @@ int pkgset_install_dist(struct pkgset *ps, struct inst_s *inst)
 
     nerr = 0;
     ninstalled = 0;
-
-    if (inst->instflags & PKGINST_TEST)
-        n_assert(inst->db == NULL);
 
     n_assert(inst->db->rootdir);
 
@@ -861,7 +863,7 @@ int pkgset_mark_usrset(struct pkgset *ps, struct usrpkgset *ups,
     
     
     if (markflag == MARK_DEPS) {
-        msg(1, "$Processing dependencies...\n");
+        msg(1, "\nProcessing dependencies...\n");
         if (!mark_dependencies(ps, nodeps))
             nerr++;
     
