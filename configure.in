@@ -386,6 +386,8 @@ if test "${ENABLE_PYTHON}." = "yes."; then
     AC_CONFIG_SUBDIRS(python)
 fi
 
+CPPFLAGS="$CPPFLAGS -DPKGLIBDIR=\\\"\$(pkglibdir)\\\""
+
 
 AC_CONFIG_FILES([  
 		po/Makefile.in

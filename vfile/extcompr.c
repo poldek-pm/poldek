@@ -44,8 +44,8 @@ struct uncompr {
 };
 
 struct uncompr uncompr_tab[] = {
-    {  COMPRESST_BZIP2, "/usr/bin/vfcompr", "bz2" },
-    {  COMPRESST_GZIP, "/usr/bin/vfcompr", "gz"   },
+    {  COMPRESST_BZIP2, PKGLIBDIR "vfcompr", "bz2" },
+    {  COMPRESST_GZIP,  PKGLIBDIR "vfcompr", "gz"   },
     {  0, NULL, NULL }
 };
 
