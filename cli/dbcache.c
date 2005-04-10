@@ -231,7 +231,7 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     DBGF("%s %s, %d %d\n", cctx->ctx->ts->cachedir, path,
          mtime_rpmdb, cctx->ts_dbpkgdir);
 
-    /* assure new packages haven't recno and clean it if yes;
+    /* assure new packages haven't recno and clean it if they have;
        playing with recno is messy and should be fixed. 
      */
     for (i=0; i<n_array_size(cctx->dbpkgdir_added); i++) {

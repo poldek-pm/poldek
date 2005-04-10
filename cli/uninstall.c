@@ -38,14 +38,14 @@ static struct argp_option options[] = {
 {"test", 't', 0, 0, N_("Don't uninstall, but tell if "
                        "it would work or not"), OPT_GID },
 {"nofollow", 'N', 0, 0, N_("Don't remove packages orphaned by "
-                           "selected ones"), OPT_GID },    
+                           "selected ones"), OPT_GID },
 {"nodeps", OPT_INST_NODEPS, 0, 0, N_("Ignore broken dependencies"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
 
 static struct argp_option cmdl_options[] = {
-    {0,0,0,0, N_("Package deinstallation:"), OPT_GID - 100 },
-    {"erase", OPT_UNINSTALL, 0, 0, N_("Uninstall given packages"), OPT_GID - 100 },
+    {0,0,0,0, N_("Package deinstallation:"), OPT_GID - 10 },
+    {"erase", OPT_UNINSTALL, 0, 0, N_("Uninstall given packages"), OPT_GID - 10 },
     {"uninstall", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, 11 }, 
     { 0, 0, 0, 0, 0, 0 },
 };
@@ -136,9 +136,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     
     arg = arg;
     switch (key) {
-        case 'm':
-            ts->setop(ts, POLDEK_OP_VRFYMERCY, 1);
-            break;
+        //case 'm':
+        //ts->setop(ts, POLDEK_OP_VRFYMERCY, 1);
+        //    break;
 
         case OPT_INST_NODEPS:
             ts->setop(ts, POLDEK_OP_NODEPS, 1);

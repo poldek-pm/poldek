@@ -57,7 +57,7 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_INST_UNIQNAMES        'Q'
 #define OPT_INST_UNIQNAMES_ALIAS  (OPT_GID + 30)
 #define OPT_INST_ROOTDIR          'r' 
-#define OPT_MERCY                  (OPT_GID + 31)
+#define OPT_MERCY                 'm'
 #define OPT_PROMOTEEPOCH           (OPT_GID + 32)
 #define OPT_PMONLY_NODEPS         (OPT_GID + 33)
 #define OPT_PMONLY_FORCE          (OPT_GID + 34)
@@ -134,25 +134,25 @@ N_("Be unconcerned (applied to PM only)"), OPT_GID },
 
 
 static struct argp_option cmdl_options[] = {
-    {0,0,0,0, N_("Package installation:"), OPT_GID - 100 },
-    {"install", 'i', 0, 0, N_("Install given packages"), OPT_GID - 100 },
+    {0,0,0,0, N_("Package installation:"), OPT_GID - 10 },
+    {"install", 'i', 0, 0, N_("Install given packages"), OPT_GID - 10 },
     {"reinstall", OPT_INST_REINSTALL, 0, 0, N_("Reinstall given packages"),
-         OPT_GID - 100},
-    {"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade"), OPT_GID - 100 },     
-    {"upgrade", 'u', 0, 0, N_("Upgrade given packages"), OPT_GID - 100 },
-    { NULL, 'U', 0, OPTION_ALIAS, 0, OPT_GID - 100 }, 
+         OPT_GID - 10},
+    {"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade"), OPT_GID - 10 },     
+    {"upgrade", 'u', 0, 0, N_("Upgrade given packages"), OPT_GID - 10 },
+    { NULL, 'U', 0, OPTION_ALIAS, 0, OPT_GID - 10 }, 
         
-    {NULL, 'h', 0, OPTION_HIDDEN, "", OPT_GID - 100 }, /* for compat with -Uvh */
+    {NULL, 'h', 0, OPTION_HIDDEN, "", OPT_GID - 10 }, /* for compat with -Uvh */
     
-    {0,0,0,0, N_("Distribution installation/upgrade:"), OPT_GID - 90 },
+    {0,0,0,0, N_("Distribution installation/upgrade:"), OPT_GID - 9 },
     {"install-dist", OPT_INST_INSTDIST, "DIR", 0,
-    N_("Install package set under DIR as root directory"), OPT_GID - 90 },
+    N_("Install package set under DIR as root directory"), OPT_GID - 9 },
 
     {"upgrade-dist", OPT_INST_UPGRDIST, "DIR", OPTION_ARG_OPTIONAL,
-     N_("Upgrade all packages needs upgrade"), OPT_GID - 90 },
+     N_("Upgrade all packages needs upgrade"), OPT_GID - 9 },
 
     {"reinstall-dist", OPT_INST_REINSTDIST, "DIR", OPTION_ARG_OPTIONAL,
-     N_("Reinstall all packages under DIR as root directory"), OPT_GID - 90 },
+     N_("Reinstall all packages under DIR as root directory"), OPT_GID - 9 },
 
     {0,0,0,0, N_("Installation switches:"), OPT_GID },
 {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,

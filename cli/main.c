@@ -51,21 +51,22 @@ static const char *argp_program_version = poldek_VERSION_BANNER;
 const char *argp_program_bug_address = poldek_BUG_MAILADDR;
 static char args_doc[] = N_("[PACKAGE...]");
 
+#define OPT_GID       1000
 
-#define OPT_CACHEDIR  1002
-#define OPT_ASK       1003
-#define OPT_NOASK     1004
-#define OPT_CONF      1005
-#define OPT_CONFUP    1006
-#define OPT_NOCONF    1007
-#define OPT_BANNER    1008
-#define OPT_LOG       1009
-#define OPT_SKIPINSTALLED 1010
-#define OPT_KEEPDOWNLOADS 1013
-#define OPT_PM 1015
-#define OPT_SHELL  1020
-#define OPT_SHELL_CMD 1025
-#define OPT_RUNAS 1026
+#define OPT_CACHEDIR  (OPT_GID + 2)
+#define OPT_ASK       (OPT_GID + 3)
+#define OPT_NOASK     (OPT_GID + 4)
+#define OPT_CONF      (OPT_GID + 5)
+#define OPT_CONFUP    (OPT_GID + 6)
+#define OPT_NOCONF    (OPT_GID + 7)
+#define OPT_BANNER    (OPT_GID + 8)
+#define OPT_LOG       (OPT_GID + 9)
+#define OPT_SKIPINSTALLED (OPT_GID + 10)
+#define OPT_KEEPDOWNLOADS (OPT_GID + 13)
+#define OPT_PM (OPT_GID + 15)
+#define OPT_SHELL  (OPT_GID + 20)
+#define OPT_SHELL_CMD (OPT_GID + 25)
+#define OPT_RUNAS (OPT_GID + 26)
 
 
 #define OPT_CMN_NOCONF         (1 << 0)
@@ -75,39 +76,39 @@ static char args_doc[] = N_("[PACKAGE...]");
 
 /* The options we understand. */
 static struct argp_option common_options[] = {
-{0,0,0,0, N_("Other:"), 10500 },
-{"pm", OPT_PM, "PM", OPTION_HIDDEN, 0, 10500 },
+{0,0,0,0, N_("Other:"), OPT_GID },
+{"pm", OPT_PM, "PM", OPTION_HIDDEN, 0, OPT_GID },
 {"cachedir", OPT_CACHEDIR, "DIR", 0,
-     N_("Store downloaded files & co. under DIR"), 10500 },
-{"cmd", 'C', 0, 0, N_("Run in cmd mode"), 10500 },
+     N_("Store downloaded files & co. under DIR"), OPT_GID },
+{"cmd", 'C', 0, 0, N_("Run in cmd mode"), OPT_GID },
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
-                          "let user choose among equivalent packages"), 10500 },
-{"noask", OPT_NOASK, 0, 0, N_("Don't ask about anything"), 10500 },
+                          "let user choose among equivalent packages"), OPT_GID },
+{"noask", OPT_NOASK, 0, 0, N_("Don't ask about anything"), OPT_GID },
 
-{"shell", OPT_SHELL, 0, 0, N_("Run in interactive mode (default)"), 10500 },
+{"shell", OPT_SHELL, 0, 0, N_("Run in interactive mode (default)"), OPT_GID },
 
 {"shcmd", OPT_SHELL_CMD, "COMMAND", OPTION_HIDDEN,
-                 N_("Run poldek shell COMMAND and exit"), 10500 },    
+                 N_("Run poldek shell COMMAND and exit"), OPT_GID },    
 
 {"skip-installed", OPT_SKIPINSTALLED, 0, 0,
-     N_("Don't load installed packages at startup"), 10500 },
-{"fast", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, 10500 },
-{ 0, 'f', 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, 10500 },
+     N_("Don't load installed packages at startup"), OPT_GID },
+{"fast", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, OPT_GID },
+{ 0, 'f', 0, OPTION_ALIAS | OPTION_HIDDEN, NULL, OPT_GID },
 
-{"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), 10500 },
-{"_conf", 'c', "FILE", OPTION_HIDDEN, N_("Read configuration from FILE"), 10500 }, 
-{"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), 10500 },
-{"upconf", OPT_CONFUP, 0, 0, N_("Update remote configuration files (if any)"), 10500 },
+{"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), OPT_GID },
+{"_conf", 'c', "FILE", OPTION_HIDDEN, N_("Read configuration from FILE"), OPT_GID }, 
+{"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), OPT_GID },
+{"upconf", OPT_CONFUP, 0, 0, N_("Update remote configuration files (if any)"), OPT_GID },
 
 {"keep-downloads", OPT_KEEPDOWNLOADS, 0, 0,
-N_("Do not remove downloaded packages just after their installation"), 10500 },
+N_("Do not remove downloaded packages just after their installation"), OPT_GID },
 {"version", OPT_BANNER, 0, 0, N_("Display program version information and exit"),
-     10500 },    
-{"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), 10500 },
-{"runas", OPT_RUNAS, "USER", 0, N_("Run program as user USER"), 10500 },    
+     OPT_GID },    
+{"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), OPT_GID },
+{"runas", OPT_RUNAS, "USER", 0, N_("Run program as user USER"), OPT_GID },    
 //{"v016", OPT_V016, 0, 0, N_("Read indexes created by versions < 0.17"), 500 },
-{0,  'v', 0, 0, N_("Be verbose."), 10500 },
-{0,  'q', 0, 0, N_("Do not produce any output."), 10500 },
+{0,  'v', 0, 0, N_("Be verbose."), OPT_GID },
+{0,  'q', 0, 0, N_("Do not produce any output."), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
 
