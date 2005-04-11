@@ -376,13 +376,14 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
 
     vlen = sizeof(val);
     if (!tndb_it_get(&it, key, &klen, val, &vlen)) {
-        logn(LOGERR, _("%s: not a poldek index file"), path);
+        logn(LOGERR, _("%s: not a poldek index file"), pkgdir->idxpath);
         nerr++;
         goto l_end;
     }
     
     if (strcmp(key, pndir_tag_hdr) != 0) {
-        logn(LOGERR, _("%s: not a poldek index file, %s"), path, val);
+        logn(LOGERR, _("%s: not a poldek index file, %s"),
+             pkgdir->idxpath, val);
         nerr++;
         goto l_end;
     }
@@ -391,7 +392,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     while (strcmp(key, pndir_tag_endhdr) != 0) {
         vlen = sizeof(val);
         if (!tndb_it_get(&it, key, &klen, val, &vlen)) {
-            logn(LOGERR, _("%s: not a poldek index file"), path);
+            logn(LOGERR, _("%s: not a poldek index file"), pkgdir->idxpath);
             nerr++;
             goto l_end;
         }
@@ -409,7 +410,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
                 else if (strcmp(opt, "nouniq") == 0)
                     idx.crflags |= PKGDIR_CREAT_NOUNIQ;
                 else if (poldek_VERBOSE > 2) 
-                    logn(LOGWARN, _("%s:%s: unknown index opt"), path, opt);
+                    logn(LOGWARN, _("%s:%s: unknown index opt"), pkgdir->idxpath, opt);
             }
             n_array_free(opts);
             
