@@ -182,6 +182,7 @@ struct pkguinf *pndir_load_pkguinf(tn_alloc *na, tn_hash *db_dscr_h,
         }
     }
     
-    n_buf_free(nbuf);
+    if (nbuf)
+        n_buf_free(nbuf);
     return pkgu;
 }
