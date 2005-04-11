@@ -876,6 +876,7 @@ int do_source_make_idx(struct source *src,
     if (pkgdir == NULL)
         return 0;
 
+    /* load previous index if it exists */
     if (source_is_type(src, "dir") && access(idxpath, R_OK) == 0) {
         struct pkgdir *pdir;
         char orig_name[64];
