@@ -166,7 +166,9 @@ int vfile_configure(int param, ...)
             break;
             
         case VFILE_CONF_SIGINT_REACHED:
-            vfile_conf.sigint_reached = va_arg(ap, int (*)(int));
+            // fails on gcc 2.95 
+            // vfile_conf.sigint_reached = va_arg(ap, int (*)(int));
+            vfile_conf.sigint_reached = va_arg(ap, void*);
             break;
 
         default: {
