@@ -74,12 +74,12 @@ static struct argp_option options[] = {
 {"fresh", 'F', 0, 0, N_("Upgrade packages, but only if an earlier version "
                         "currently exists"), OPT_GID },
 {"nofollow", OPT_INST_NOFOLLOW, 0, 0, N_("Don't install packages required by "
-                           "selected ones"), OPT_GID },
+                                         "selected ones"), OPT_GID },
 
-{"follow", OPT_INST_FOLLOW, "[on|off]", OPTION_ARG_OPTIONAL,
+{"follow", OPT_INST_FOLLOW, "[yes|no]", OPTION_ARG_OPTIONAL,
      N_("Install packages required by selected ones"), OPT_GID },
     
-{"greedy", OPT_INST_GREEDY, "[on|off]", OPTION_ARG_OPTIONAL,
+{"greedy", OPT_INST_GREEDY, "[yes|no]", OPTION_ARG_OPTIONAL,
         N_("Automatically upgrade packages which dependencies "
            "are broken by unistalled ones"), OPT_GID },
 
@@ -89,7 +89,8 @@ static struct argp_option options[] = {
            "are broken by unistalled ones"), OPT_GID },
                                            
 {"fetch", OPT_INST_FETCH, "DIR", OPTION_ARG_OPTIONAL,
-     N_("Do not install, only download packages"), OPT_GID },
+     N_("Download packages to DIR (poldek's cache directory by default)"
+        "instead of install them"), OPT_GID },
 
 {"root", OPT_INST_ROOTDIR, "DIR", 0, N_("Set top directory to DIR"), OPT_GID },    
 
@@ -105,10 +106,11 @@ static struct argp_option options[] = {
                                            
 
 {"dump", OPT_INST_DUMP, "FILE", OPTION_ARG_OPTIONAL,
-N_("Just dump install marked package filenames to FILE (default stdout)"), OPT_GID },
+N_("Print packages file names to FILE (stdout by default) instead of install them"),
+         OPT_GID },
 
 {"dumpn", OPT_INST_DUMPN, "FILE", OPTION_ARG_OPTIONAL,
-N_("Just dump install marked package names to FILE (default stdout)"), OPT_GID },
+N_("Print packages names to FILE (stdout by default) instead of install them"), OPT_GID },
 
 {"justdb", OPT_INST_JUSTDB, 0, 0, N_("Modify only the database"), OPT_GID },
                                            
@@ -136,6 +138,9 @@ N_("Be unconcerned (applied to PM only)"), OPT_GID },
 static struct argp_option cmdl_options[] = {
     {0,0,0,0, N_("Package installation:"), OPT_GID - 10 },
     {"install", 'i', 0, 0, N_("Install given packages"), OPT_GID - 10 },
+    /* shadow cli 'I' */
+    {0, 'I', 0, OPTION_HIDDEN | OPTION_ALIAS, 0, OPT_GID - 10 },
+    
     {"reinstall", OPT_INST_REINSTALL, 0, 0, N_("Reinstall given packages"),
          OPT_GID - 10},
     {"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade"), OPT_GID - 10 },     
@@ -168,10 +173,10 @@ static struct argp_option cmdl_options[] = {
  N_("Make invisibled packages visible."), OPT_GID },
 
 {"uniq", OPT_INST_UNIQNAMES, 0, 0, 
-N_("Do sort | uniq on available package list"), OPT_GID },
+N_("Remove package duplicates from available package list"), OPT_GID },
 
 {"unique-pkg-names", OPT_INST_UNIQNAMES_ALIAS, 0, OPTION_ALIAS | OPTION_HIDDEN,
-     0, OPT_GID },     
+        0, OPT_GID },     
 
     { 0, 0, 0, 0, 0, 0 },
 };
@@ -316,7 +321,9 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_UNIQNAMES_ALIAS:
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_UNIQN, 1);
             break;
-    
+
+        case 'I':               /* silently ignore */
+            break;
 
         default:
             return ARGP_ERR_UNKNOWN;
@@ -354,7 +361,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_FORCE:
             ts->setop(ts, POLDEK_OP_FORCE, 1);
             break;
-            
+
         case 't':
             if (ts->getop(ts, POLDEK_OP_TEST))
                 ts->setop(ts, POLDEK_OP_RPMTEST, 1);
