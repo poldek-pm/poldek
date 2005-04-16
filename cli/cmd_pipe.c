@@ -1,9 +1,13 @@
 /* 
-  Copyright (C) 2000 - 2004 Pawel A. Gajda (mis@k2.net.pl)
- 
+  Copyright (C) 2000 - 2005 Pawel A. Gajda (mis@k2.net.pl)
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -138,27 +142,45 @@ int cmd_pipe_writeout_fd(struct cmd_pipe *p, int fd)
     return write(fd, n_buf_ptr(p->nbuf), n) == n;
 }
 
+static int xargs_packages(struct cmd_pipe *p, tn_array *args) 
+{
+    int i;
+    for (i=0; i < n_array_size(p->pkgs); i++) {
+        struct pkg *pkg = n_array_nth(p->pkgs, i);
+        n_array_push(args, n_strdup(pkg_snprintf_s(pkg)));
+    }
+    return n_array_size(p->pkgs);
+}
 
+static int xargs_stdout(struct cmd_pipe *p, tn_array *args) 
+{
+    char *line, c;
+    int  len, i = 0;
+        
+    while ((line = n_buf_it_gets(&p->nbuf_it, &len)) && len > 0) {
+        c = line[len];
+        line[len] = '\0';
+        n_array_push(args, n_strdup(line));
+        line[len] = c;
+        i++;
+    }
+    
+    return i;
+}
 
 tn_array *cmd_pipe_xargs(struct cmd_pipe *p, int pctx)
 {
     tn_array *args = n_array_new(64, free, NULL);
 
     if (pctx == CMD_PIPE_CTX_PACKAGES) {
-        int i;
-        for (i=0; i < n_array_size(p->pkgs); i++)
-            n_array_push(args, n_strdup(pkg_snprintf_s(n_array_nth(p->pkgs, i))));
+        if (xargs_packages(p, args) == 0)
+            xargs_stdout(p, args);
         
-    } else {
-        char *line;
-        int  len;
-        
-        while ((line = n_buf_it_gets(&p->nbuf_it, &len)) && len > 0) {
-            line[len] = '\0';
-            n_array_push(args, n_strdup(line));
-            line[len] = '\n';
-        }
+    } else if (pctx == CMD_PIPE_CTX_ASCII) {
+        if (xargs_stdout(p, args) == 0)
+            xargs_packages(p, args);
     }
+    
     return args;
 }
 
