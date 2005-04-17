@@ -44,13 +44,14 @@
 #define OPT_SRCUPDATE   (OPT_SRC_GID + 6)
 #define OPT_SRCUPDATE_A (OPT_SRC_GID + 7)
 
-#define OPT_SRCCLEAN    (OPT_SRC_GID + 8)
-#define OPT_SRCCLEAN_A  (OPT_SRC_GID + 9)
+#define OPT_SRCCLEAN     (OPT_SRC_GID + 8)
+#define OPT_SRCCLEAN_PKG (OPT_SRC_GID + 9)
+#define OPT_SRCCLEAN_ALL (OPT_SRC_GID + 10)
 
-#define OPT_SRCTYPE_LS  (OPT_SRC_GID + 10)
+#define OPT_SRCTYPE_LS  (OPT_SRC_GID + 11)
 
-#define OPT_DEST        (OPT_SRC_GID + 11)
-#define OPT_DEST_NAME   (OPT_SRC_GID + 12)
+#define OPT_DEST        (OPT_SRC_GID + 12)
+#define OPT_DEST_NAME   (OPT_SRC_GID + 13)
 
 /* The options we understand. */
 static struct argp_option source_options[] = {
@@ -102,10 +103,13 @@ static struct argp_option source_options[] = {
 {"clean", OPT_SRCCLEAN, 0, 0, 
  N_("Remove source index files from cache directory"), OPT_SRC_GID + 1 },
 
-{"clean-whole", OPT_SRCCLEAN_A, 0, 0, 
+{"clean-pkg", OPT_SRCCLEAN_PKG, 0, 0, 
+ N_("Remove cached packages of the source"), OPT_SRC_GID + 1 },
+
+{"clean-whole", OPT_SRCCLEAN_ALL, 0, 0, 
  N_("Remove all files belongs to source from cache directory"), OPT_SRC_GID + 1 },
 
-{"cleana", OPT_SRCCLEAN_A, 0, OPTION_ALIAS, 0, OPT_SRC_GID + 1 },
+{"cleana", OPT_SRCCLEAN_ALL, 0, OPTION_ALIAS, 0, OPT_SRC_GID + 1 },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -115,7 +119,7 @@ static struct argp_option source_options[] = {
 #define POLDEKCLI_SRC_UPDATEA      (1 << 3)
 #define POLDEKCLI_SRC_UPDATE_AUTOA (1 << 4)
 #define POLDEKCLI_SRC_CLEAN        (1 << 5)
-#define POLDEKCLI_SRC_CLEANA       (1 << 6)
+#define POLDEKCLI_SRC_CLEAN_PKG    (1 << 6)
 
 
 int poclidek_op_source_nodesc = 0;
@@ -314,9 +318,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             arg_s->cnflags |= POLDEKCLI_SRC_CLEAN;
             break;
 
-        case OPT_SRCCLEAN_A:
-            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN;
-            arg_s->cnflags |= POLDEKCLI_SRC_CLEANA;
+        case OPT_SRCCLEAN_PKG:
+            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN_PKG;
+            break;
+
+        case OPT_SRCCLEAN_ALL:
+            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN | POLDEKCLI_SRC_CLEAN_PKG;
             break;
 
         case ARGP_KEY_END:
@@ -401,10 +408,18 @@ static int oprun(struct poclidek_opgroup_rt *rt)
     }
     poclidek_op_source_nodesc = 0;
     
-    if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN) {
-        unsigned flags = PKGSOURCE_CLEAN;
-        if (arg_s->cnflags & POLDEKCLI_SRC_CLEANA)
-            flags |= PKGSOURCE_CLEANA;
+    if (arg_s->cnflags & (POLDEKCLI_SRC_CLEAN | POLDEKCLI_SRC_CLEAN_PKG)) {
+        unsigned flags = 0;
+
+        if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN)
+            flags |= PKGSOURCE_CLEAN;
+        
+        if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN_PKG)
+            flags |= PKGSOURCE_CLEANPKG;
+
+        if (rt->ts->getop(rt->ts, POLDEK_OP_TEST))
+            flags |= PKGSOURCE_CLEAN_TEST;
+            
         sources_clean(sources, flags);
         rc |= OPGROUP_RC_OK;
     }
@@ -441,4 +456,5 @@ static int oprun(struct poclidek_opgroup_rt *rt)
     DBGF("op_source %d\n", rc);
     return rc;
 }
+    
 

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -45,8 +45,9 @@
 
 static int do_unlink(const char *path) 
 {
-    msgn(2, _("Removing %s"), path);
-    return vf_localunlink(path);
+    msgn(1, _(" Removing %s"), n_basenam(path));
+    //return vf_localunlink(path);
+    return 1;
 }
 
 
@@ -56,19 +57,35 @@ int pkgdir__rmf(const char *dirpath, const char *mask)
     DIR            *dir;
     struct stat    st;
     char           *sepchr = "/";
-    int            msg_displayed = 0;
-
+    int            msg_displayed = 0, rc = 1;
+    struct vflock  *vflock = NULL;
 
     msgn(3, "rm -f %s/%s", dirpath, mask ? mask : "*");
-    
+
     if (mask && n_str_eq(mask, "*"))
         mask = NULL;
     
     if (stat(dirpath, &st) != 0)
         return 0;
+
+    if ((vflock = vf_lockdir(dirpath)) == NULL) 
+        return 0;
     
-    if (S_ISREG(st.st_mode) && mask == NULL) 
-        return do_unlink(dirpath);
+    if (S_ISREG(st.st_mode) && mask == NULL) {
+        char *tmp, *dn;
+        struct vflock *tmp_vflock;
+            
+        n_strdupap(dirpath, &tmp);
+        dn = n_dirname(tmp);
+        rc = 0;
+        
+        if ((tmp_vflock = vf_lockdir(dn))) {
+            msgn(1, _("Cleaning up %s..."), dn);
+            rc = do_unlink(dirpath);
+            vf_lock_release(tmp_vflock);
+        }
+        return rc;
+    }
     
     if ((dir = opendir(dirpath)) == NULL) {
         if (poldek_VERBOSE > 2)
@@ -94,6 +111,12 @@ int pkgdir__rmf(const char *dirpath, const char *mask)
         if (mask && fnmatch(mask, ent->d_name, 0) != 0)
             continue;
 
+        /* do not remove locks */
+        if (strcmp(ent->d_name, n_basenam(vflock->path)) == 0) {
+            DBGF("skip %s\n", vflock->path);
+            continue;
+        }
+
         if (msg_displayed == 0) {
             msgn(1, _("Cleaning up %s..."), dirpath);
             msg_displayed = 1;
@@ -103,12 +126,14 @@ int pkgdir__rmf(const char *dirpath, const char *mask)
         if (stat(path, &st) == 0) {
             if (S_ISREG(st.st_mode))
                 do_unlink(path);
-                
+
             else if (S_ISDIR(st.st_mode))
                 pkgdir__rmf(path, mask);
         }
     }
     
+    if (vflock)
+        vf_lock_release(vflock);
     closedir(dir);
     return 1;
 }
@@ -121,51 +146,9 @@ int pkgdir__cache_clean(const char *path, const char *mask)
     if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath))
         pkgdir__rmf(tmpath, mask);
 
-    /* DUPA */
     n_snprintf(path_i, sizeof(path_i), "%s/%s", path, "packages.i");
     if (vf_localdirpath(tmpath, sizeof(tmpath), path_i) < (int)sizeof(tmpath))
         pkgdir__rmf(tmpath, mask);
     
     return 1;
 }
-
-#if 0
-int pkgdir_clean_cache_XXX(const char *type, const char *path, unsigned flags)
-{
-    const struct pkgdir_module  *mod;
-    char                        url[PATH_MAX], *p;
-    int                         urltype;
-
-
-    n_assert(type);
-    if ((urltype = vf_url_type(path)) == VFURL_UNKNOWN)
-        return 1;
-    
-    if (urltype & VFURL_LOCAL)
-        return 1;
-    
-    if ((mod = pkgdir_mod_find(type)) == NULL) {
-        logn(LOGERR, _("%s: unknown index type"), type);
-        return 0;
-    }
-
-    if ((p = strrchr(url, '/'))) {
-        char mask[1024], *q;
-        
-        *p = '\0';
-        p++;
-        
-        if ((q = strrchr(n_basenam(p), '.')) != NULL) {
-            q++;
-            if (strcmp(q, "gz") == 0 || strcmp(q, "bz2"))
-                *q = '\0';
-        }
-        
-        n_snprintf(mask, sizeof(mask), "%s*", p);
-        unlink_vf_dir(url, mask);
-    }
-    
-    return 1;
-}
-
-#endif

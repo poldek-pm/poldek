@@ -746,45 +746,66 @@ int sources_update(tn_array *sources, unsigned flags)
     return nerr == 0;
 }
 
-
-int source_clean(struct source *src, unsigned flags)
+static
+int do_source_clean(struct source *src, const char *idxdir,
+                    const char *idxbn, unsigned flags)
 {
-    char  *p, idxpath[PATH_MAX];
     int   urltype;
 
-
     n_assert(src->type);
-    if ((urltype = vf_url_type(src->path)) == VFURL_UNKNOWN)
+    if ((urltype = vf_url_type(idxdir)) == VFURL_UNKNOWN)
         return 1;
 
-    if (pkgdir__make_idxpath(idxpath, sizeof(idxpath), src->path,
-                             src->type, "none") == NULL)
-        return 0;
+    DBGF("%s: %s, %s\n", src->path, idxdir, idxbn);
 
-    
-    if (urltype & VFURL_LOCAL) {
+    /* clean-pkg makes no sense for local repositories */
+    if ((urltype & VFURL_LOCAL) && (flags & PKGSOURCE_CLEAN)) { 
         char path[PATH_MAX];
-        vf_localdirpath(path, sizeof(path), n_dirname(idxpath));
-        //printf("%s, %s, %s\n", src->path, idxpath, path);
+        vf_localdirpath(path, sizeof(path), idxdir);
         pkgdir__cache_clean(path, "*");
         
-    } else if ((p = strrchr(idxpath, '/'))) {
-        char amask[1024], *mask;
+    } else {
+        char amask[1024], *mask = NULL;
         
-        *p = '\0';
-
-        if (flags & PKGSOURCE_CLEANA)
+        if ((flags & PKGSOURCE_CLEANA) == PKGSOURCE_CLEANA) {
             mask = "*";
-        else {
-            n_snprintf(amask, sizeof(amask), "%s.*", p + 1);
+            
+        } else if (flags & PKGSOURCE_CLEAN) {
+            n_assert(idxbn);
+            n_snprintf(amask, sizeof(amask), "%s.*", idxbn);
+            mask = amask;
+            
+        } else { // (flags & PKGSOURCE_CLEANPKG -- default
+            n_snprintf(amask, sizeof(amask), "*.rpm");
             mask = amask;
         }
-        pkgdir__cache_clean(idxpath, mask);
+        
+        n_assert(mask);
+        pkgdir__cache_clean(idxdir, mask);
     }
     
     return 1;
 }
 
+int source_clean(struct source *src, unsigned flags)
+{
+    char path[PATH_MAX], *dn, *bn;
+    int rc = 0;
+
+    n_assert(src->type);
+    if (pkgdir__make_idxpath(path, sizeof(path), src->path,
+                             src->type, "none") != NULL) {
+        
+        n_basedirnam(path, &dn, &bn);
+        rc = do_source_clean(src, dn, bn, flags);
+    }
+
+    if (src->pkg_prefix && (flags & PKGSOURCE_CLEANPKG)) 
+        rc = do_source_clean(src, src->pkg_prefix, NULL, flags);
+
+    /* in fact we don't really care about the result */
+    return rc;
+}
 
 int sources_clean(tn_array *sources, unsigned flags) 
 {
