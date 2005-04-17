@@ -201,5 +201,16 @@ int vf_cleanpath(char *buf, int size, const char *path);
 
 int vf_find_external_command(char *cmdpath, int size, const char *cmd,
                              const char *PATH);
+
+/* dirctory locking */
+struct vflock {
+    int fd;
+    char path[0];
+};
+
+struct vflock *vf_lockdir(const char *path);
+void vf_lock_release(struct vflock *vflock);
+struct vflock *vf_lock_mkdir(const char *path);
+
 #endif /* POLDEK_VFILE_H */
 

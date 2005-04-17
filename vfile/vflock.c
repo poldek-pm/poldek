@@ -43,8 +43,8 @@ int vf_lockfile(const char *lockfile)
     
     DBGF("%s\n", lockfile);
     if ((fd = open(lockfile, O_RDWR | O_CREAT, 0644)) < 0) {
-        vf_logerr("open %s: %m", lockfile);
-        return 0;
+        vf_logerr("open %s: %m\n", lockfile);
+        return -1;
     }
 
     fl.l_type = F_WRLCK;

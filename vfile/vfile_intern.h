@@ -16,16 +16,6 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
 int vf_fetch_ext(const char *url, const char *destdir);
 int vf_fetcha_ext(tn_array *urls, const char *destdir);
 
-struct vflock {
-    int fd;
-    char path[0];
-};
-
-struct vflock *vf_lockdir(const char *path);
-void vf_lock_release(struct vflock *vflock);
-struct vflock *vf_lock_mkdir(const char *path);
-
-
 #ifndef VFILE_LOG_INFO
 #define VFILE_LOG_INFO  (1 << 0)
 #define VFILE_LOG_WARN  (1 << 1)

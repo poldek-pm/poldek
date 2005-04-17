@@ -282,7 +282,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
 
     if ((flags & VF_FETCH_NOLABEL) == 0) {
         if (urlabel)
-            vf_loginfo(_("Retrieving %s:%s...\n"), urlabel,
+            vf_loginfo(_("Retrieving %s::%s...\n"), urlabel,
                        n_basenam(req->url));
         else
             vf_loginfo(_("Retrieving %s...\n"), PR_URL(req->url));
