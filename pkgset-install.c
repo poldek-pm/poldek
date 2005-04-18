@@ -2287,7 +2287,7 @@ int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs)
     n_array_sort(pkgs);
 
     i = n = 0;
-    while (i < n_array_size(pkgs) - 1) {
+    while (i < n_array_size(pkgs)) {
         pkg = n_array_nth(pkgs, i);
         i++;
         
@@ -2296,6 +2296,9 @@ int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs)
         
         nmarked++;
         DBGF("%s\n", pkg_snprintf_s(pkg));
+        
+        if (i == n_array_size(pkgs))
+            break;
         
         pkg2 = n_array_nth(pkgs, i);
         while (pkg_cmp_name(pkg, pkg2) == 0) {
