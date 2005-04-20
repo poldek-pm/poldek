@@ -1019,7 +1019,6 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
         }
     }
 
-    ts->setop(ts, POLDEK_OP_VRFY_FILECNFLS, 1);
     if (ts->getop(ts, POLDEK_OP_VRFY_FILECNFLS)) {
         msgn(0, _("Verifying file conflicts..."));
         file_index_report_conflicts(&ts->ctx->ps->file_idx,
