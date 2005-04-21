@@ -127,7 +127,7 @@ V) General
   --mkidxz                 => --mkidx           (compression is on by default)
   --sidx, --sdir, --shdrl  =>                   (use --st=TYPE -s instead)
   --unique-pkg-names       => --uniq
-  --shcmd                  =>                   (use -C or run apoldek-get)
+  --shcmd                  =>                   (use -C or run ipoldek)
 
 
                             ==== 0.18.x ====

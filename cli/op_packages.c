@@ -43,7 +43,7 @@ static struct argp_option options[] = {
     
 {"pkgnevr", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0,  OPT_GID }, /* backward compat */
 {"caplookup", OPT_CAPLOOKUP, 0, 0,
-N_("Look into package capabilities & files to resolve packages"), OPT_GID },
+N_("Look into package capabilities and files to resolve packages"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
 

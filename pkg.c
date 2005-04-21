@@ -341,7 +341,6 @@ struct pkg *pkg_clone(tn_alloc *na, struct pkg *pkg, unsigned flags)
 
 void pkg_free(struct pkg *pkg) 
 {
-    
 #if ENABLE_TRACE   
     if (strcmp(pkg->name, "poldek") == 0) {
         DBGF_F("%p %s (pdir %s, na->refcnt=%d), refcnt=%d (%p)\n",
@@ -355,38 +354,13 @@ void pkg_free(struct pkg *pkg)
         pkg->_refcnt--;
         return;
     }
+    n_array_cfree(&pkg->caps);
+    n_array_cfree(&pkg->reqs);
+    n_array_cfree(&pkg->cnfls);
+    n_array_cfree(&pkg->reqpkgs);
+    n_array_cfree(&pkg->revreqpkgs);
+    n_array_cfree(&pkg->cnflpkgs);
 
-    if (pkg->caps) {
-        n_array_free(pkg->caps);
-        pkg->caps = NULL;
-    }
-    
-    if (pkg->reqs) {
-        n_array_free(pkg->reqs);
-        pkg->reqs = NULL;
-    }
-    	
-    
-    if (pkg->cnfls) {
-        n_array_free(pkg->cnfls);
-        pkg->cnfls = NULL;
-    }
-
-    if (pkg->reqpkgs) {
-        n_array_free(pkg->reqpkgs);
-        pkg->reqpkgs = NULL;
-    }
-    
-    if (pkg->revreqpkgs) {
-        n_array_free(pkg->revreqpkgs);
-        pkg->revreqpkgs = NULL;
-    }
-    
-    if (pkg->cnflpkgs) {
-        n_array_free(pkg->cnflpkgs);
-        pkg->cnflpkgs = NULL;
-    }
-    
     if (pkg->fl) {
         n_tuple_free(pkg->na, pkg->fl);
         pkg->fl = NULL;
@@ -582,19 +556,11 @@ int cap_xmatch_req(const struct capreq *cap, const struct capreq *req,
     return evr ? rel_match(cmprc, req) : 1;
 }
 
-#if 0                           /* TODO: strict => ma_flags  */
-int cap_match_req(const struct capreq *cap, const struct capreq *req)
-{
-    return cap_match_reqX(cap, req, 0);
-}
-#endif
-
 int cap_match_req(const struct capreq *cap, const struct capreq *req,
                   int strict)
 {
     return cap_xmatch_req(cap, req, strict ? 0 : POLDEK_MA_PROMOTE_VERSION);
 }
-
 
 static inline 
 int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
@@ -668,11 +634,11 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
 }
 
 
-int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
+int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req, unsigned flags)
 {
     register int rc = 0;
 
-    if (strict)
+    if ((flags & (POLDEK_MA_PROMOTE_VERSION | POLDEK_MA_PROMOTE_EPOCH)) == 0)
         rc = pkg_evr_match_req_(pkg, req, -1) ? 1 : 0;
     
     else {
@@ -686,9 +652,10 @@ int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req, int stric
     return rc;
 }
 
+
 /* look up into package caps only */
 int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
-                       int strict)
+                       unsigned flags)
 {
     int n;
         
@@ -706,9 +673,9 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
         int i;
 
         cap = n_array_nth(pkg->caps, n);
-        if (cap_match_req(cap, req, strict)) {
-            DBGF("chk%d (%s-%s-%s) -> match (%d)\n", n, capreq_name(cap),
-                 capreq_ver(cap), capreq_rel(cap), strict);
+        if (cap_xmatch_req(cap, req, flags)) {
+            DBGF("chk%d (%s-%s-%s) -> match (flags=%d)\n", n, capreq_name(cap),
+                 capreq_ver(cap), capreq_rel(cap), flags);
             return 1;
         }
         n++;
@@ -725,7 +692,7 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
             }
                 
                 
-            if (cap_match_req(cap, req, strict)) {
+            if (cap_xmatch_req(cap, req, flags)) {
                 DBGMSG("chk %s-%s-%s -> match\n", capreq_name(cap),
                        capreq_ver(cap), capreq_rel(cap));
                 return 1;
@@ -772,16 +739,29 @@ int pkg_has_path(const struct pkg *pkg,
     return rc;
 }
 
+int pkg_xmatch_req(const struct pkg *pkg, const struct capreq *req, unsigned flags)
+{
+#if 0    
+    /* package should not provide itself with different version */
+#endif    
+    if (strcmp(pkg->name, capreq_name(req)) == 0 &&
+        pkg_evr_match_req(pkg, req, flags))
+        return 1;
+    
+    return pkg_caps_match_req(pkg, req, flags);
+}
+
+
 int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
 {
 #if 0    
     /* package should not provide itself with different version */
 #endif    
     if (strcmp(pkg->name, capreq_name(req)) == 0 &&
-        pkg_evr_match_req(pkg, req, strict))
+        pkg_evr_match_req(pkg, req, strict ? 0 : POLDEK_MA_PROMOTE_VERSION))
         return 1;
     
-    return pkg_caps_match_req(pkg, req, strict);
+    return pkg_caps_match_req(pkg, req, strict ? 0 : POLDEK_MA_PROMOTE_VERSION);
 }
 
 
@@ -1019,14 +999,12 @@ void pkg_info_free_flist(struct pkgflist *flist)
         n_free(flist);
 }
 
-
 const char *pkg_group(const struct pkg *pkg) 
 {
     if (pkg->pkgdir && pkg->pkgdir->pkgroups)
         return pkgroup(pkg->pkgdir->pkgroups, pkg->groupid);
     return NULL;
 }
-
 
 char *pkg_filename(const struct pkg *pkg, char *buf, size_t size) 
 {
@@ -1105,7 +1083,6 @@ char *pkg_path(const struct pkg *pkg, char *buf, size_t size)
     return buf;
 }
 
-
 char *pkg_path_s(const struct pkg *pkg) 
 {
     static char buf[PATH_MAX];
@@ -1156,13 +1133,11 @@ char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
     return NULL;
 }
 
-
 int pkg_printf(const struct pkg *pkg, const char *str) 
 {
     return printf("%s-%s-%s%s", pkg->name, pkg->ver, pkg->rel,
            str ? str : "");
 }
-
 
 int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg)
 {

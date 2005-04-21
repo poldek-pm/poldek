@@ -45,7 +45,10 @@ int poldek_util_parse_nevr(char *nevrstr, const char **name,
 
 /*  === pkgmark_set ===  */
 struct pkgmark_set;
-struct pkgmark_set *pkgmark_set_new(int size);
+#define PKGMARK_SET_IDNEVR (1 << 0) /* id = pkg->nevr */
+#define PKGMARK_SET_IDPTR  (1 << 1) /* id = printf("%p", pkg); */
+
+struct pkgmark_set *pkgmark_set_new(int size, unsigned flags);
 void pkgmark_set_free(struct pkgmark_set *pms);
 int pkgmark_set(struct pkgmark_set *pms, struct pkg *pkg, int set,
                 uint32_t flag);
@@ -54,7 +57,7 @@ int pkgmark_isset(struct pkgmark_set *pms, struct pkg *pkg, uint32_t flag);
 
 tn_array *pkgmark_get_packages(struct pkgmark_set *pmark, uint32_t flag);
 
-// pkg_set_mARKfLAG
+// pkg_set_MarkFlag
 #define pkg_set_mf(pms, pkg, flag) pkgmark_set(pms, pkg, 1, flag)
 #define pkg_clr_mf(pms, pkg, flag) pkgmark_set(pms, pkg, 0, flag)
 #define pkg_isset_mf(pms, pkg, flag) pkgmark_isset(pms, pkg, flag)

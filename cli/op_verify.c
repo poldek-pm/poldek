@@ -100,13 +100,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_DEPS:
             arg_s->verify = 1;
             ts->setop(ts, POLDEK_OP_VRFY_DEPS, 1);
-            //poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_VRFY_DEPS, 1);
             break;
 
         case OPT_CNFLS:
             arg_s->verify = 1;
             ts->setop(ts, POLDEK_OP_VRFY_CNFLS, 1);
-            //poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_VRFY_CNFLS, 1);
             break;
 
         case OPT_FILECNFLS:

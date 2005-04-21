@@ -259,7 +259,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
     dbgf_("%p->%p, %p\n", ts, ts->hold_patterns, ctx);
     ts->askpkg_fn = poldek_term_ask_pkg;
     ts->ask_fn = poldek_term_ask_yn;
-    ts->pms = pkgmark_set_new(1024);
+    ts->pms = pkgmark_set_new(1024, 0);
     return 1;
 }
 

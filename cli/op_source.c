@@ -55,17 +55,20 @@
 
 /* The options we understand. */
 static struct argp_option source_options[] = {
-{0,0,0,0, N_("Source repository selection:"), OPT_SRC_GID },
+{0,0,0,0, N_("Repository selection:"), OPT_SRC_GID },
 {"source", 's', "PATH", 0, N_("Get packages info from repository under PATH"),
      OPT_SRC_GID },
 {"sn", 'n', "SOURCE-NAME", 0,
      N_("Get packages info from repository named SOURCE-NAME"), OPT_SRC_GID },
 
-{"install-dest", OPT_DEST, "PM:SOURCESPEC", 0, 
+{"destination", OPT_DEST, "PM:SOURCESPEC", 0, 
     N_("Install to specified destination"), OPT_SRC_GID },
 
-{"install-dest-dn", OPT_DEST_NAME, "SOURCE-NAME", 0,
-    N_("Install to source SOURCE-NAME instead to system"), OPT_SRC_GID },
+{"install-dest", 0, 0, OPTION_HIDDEN | OPTION_ALIAS, 
+    N_("Install to specified destination"), OPT_SRC_GID },
+
+{"dn", OPT_DEST_NAME, "SOURCE-NAME", 0,
+    N_("Install to source SOURCE-NAME instead to the system"), OPT_SRC_GID },
 
 {"sidx", OPT_SRC, "FILE", OPTION_HIDDEN, /* legacy */
  N_("Get packages info from package index file FILE"), OPT_SRC_GID },
@@ -327,7 +330,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case ARGP_KEY_END:
-            if (arg_s->srcdst) {    /* configure as last source */
+            if (arg_s->srcdst) {    /* configure as last source, obscure a bit... XXX */
                 poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->srcdst);
                 poldek_configure(arg_s->ctx, POLDEK_CONF_PM, "pset");
             }

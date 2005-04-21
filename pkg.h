@@ -154,22 +154,26 @@ int pkg_set_os(struct pkg *pkg, const char *os);
 
 /* look up into package caps only */
 int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
-                       int strict);
+                       unsigned flags);
 
 int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req,
-                      int strict);
+                      unsigned flags);
 
 
 int cap_xmatch_req(const struct capreq *cap, const struct capreq *req,
                    unsigned ma_flags);
 
+/* obsoleted */
 int cap_match_req(const struct capreq *cap, const struct capreq *req,
                   int strict);
 
 
 /* CAUTION: looks into NEVR and caps only */
-int pkg_match_req(const struct pkg *pkg, const struct capreq *req,
-                  int strict);
+int pkg_xmatch_req(const struct pkg *pkg, const struct capreq *req,
+                   unsigned flags);
+
+/* obsoleted */
+int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict);
 
 int pkg_has_path(const struct pkg *pkg,
                  const char *dirname, const char *basename);

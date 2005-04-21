@@ -43,7 +43,7 @@ static struct argp_option options[] = {
      N_("Split packages to SIZE MB size chunks, the first chunk will "
            "be FIRST_FREE_SPACE MB smaller"), OPT_GID },
     
-{"split-conf", OPT_SPLITCONF, "FILE", 0,
+{"split-conf", OPT_SPLITCONF, "FILE", OPTION_HIDDEN,
      N_("Take package priorities from FILE"), OPT_GID },
     
 {"priconf", OPT_SPLITCONF, "FILE", 0,

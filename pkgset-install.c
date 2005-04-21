@@ -73,7 +73,8 @@ struct upgrade_s {
 
     struct dbpkg_set *uninst_set;
     struct pkgmark_set *dbpms;
-    struct pkgmark_set *unmetpms;     /* to mark pkgs with unmet dependencies */
+    struct pkgmark_set *unmetpms;   /* to mark pkgs with unmet dependencies */
+    struct pkgmark_set *deppms;     /* to mark pkg processing path */
     
     tn_array       *orphan_dbpkgs;    /* array of orphaned dbpkg*s */
     
@@ -337,7 +338,7 @@ int select_best_pkg(const struct pkg *marker,
 
         DBGF("%d. %s %s (color white %d, marked %d, %p)\n", i, 
              marker ? pkg_snprintf_s(marker) : "(nil)", pkg_snprintf_s0(pkg),
-             pkg_is_color(pkg, PKG_COLOR_WHITE),
+             -1, //pkg_is_color(pkg, PKG_COLOR_WHITE), 
              pkg_is_marked(upg->ts->pms, pkg), pkg);
 
         if (marker && pkg_eq_name_prefix(marker, pkg)) {
@@ -886,7 +887,8 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                                 (ps->flags & PSET_DBDIRS_LOADED) == 0);
 
         pkgmark_set(upg->dbpms, dbpkg, 1, DBPKG_TOUCHED);
-	DBGF("verifyuninstalled %s caps\n", pkg_snprintf_s(dbpkg));
+        
+        DBGF("verifyuninstalled %s caps\n", pkg_snprintf_s(dbpkg));
         if (dbpkg->caps) {
             int j;
             for (j=0; j < n_array_size(dbpkg->caps); j++) {
@@ -894,8 +896,9 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
                 verify_unistalled_cap(indent, cap, dbpkg, ps, upg);
             }
         }
-	DBGF("verifyuninstalled %s files? => %s \n", pkg_snprintf_s(dbpkg), 
-		dbpkg->fl ? "YES" : "NO");
+        DBGF("verifyuninstalled %s files? => %s \n", pkg_snprintf_s(dbpkg), 
+             dbpkg->fl ? "YES" : "NO");
+
         if (dbpkg->fl) {
             struct capreq *cap;
             int j, k;
@@ -941,7 +944,7 @@ void process_pkg_obsl(int indent, struct pkg *pkg, struct pkgset *ps,
     for (i=0; i<n_array_size(upg->orphan_dbpkgs); i++) {
         struct pkg *dbpkg = n_array_nth(upg->orphan_dbpkgs, i);
         if (pkgmark_isset(upg->dbpms, dbpkg, DBPKG_DEPS_PROCESSED))
-                continue;
+            continue;
         pkgmark_set(upg->dbpms, dbpkg, 1, DBPKG_DEPS_PROCESSED);
         n_array_push(orphans, pkg_link(dbpkg));
     }
@@ -1252,7 +1255,7 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
         return 0;
 
     indent += 2;
-    if (!pkg_is_color(pkg, PKG_COLOR_WHITE)) { /* processed */
+    if (pkg_isset_mf(upg->deppms, pkg, PKGMARK_GRAY)) { /* processed */
         //msg_i(1, indent, "CHECKED%s%s dependencies...\n",
         //      process_as == PROCESS_AS_ORPHAN ? " orphaned ":" ",
         //      pkg_snprintf_s(pkg));
@@ -1282,7 +1285,7 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
           process_as == PROCESS_AS_ORPHAN ? " orphaned ":" ",
           pkg_snprintf_s(pkg));
 
-    pkg_set_color(pkg, PKG_COLOR_GRAY); /* dep processed */
+    pkg_set_mf(upg->deppms, pkg, PKGMARK_GRAY); /* dep processed */
 
     if (process_as == PROCESS_AS_NEW) 
         process_pkg_obsl(indent, pkg, ps, upg);
@@ -1896,12 +1899,6 @@ static int verify_holds(struct upgrade_s *upg)
     return rc;
 }
 
-static void mapfn_clean_pkg_flags(struct pkg *pkg) 
-{
-    pkg_set_color(pkg, PKG_COLOR_WHITE);
-}
-
-
 static
 void update_poldek_iinf(struct poldek_iinf *iinf, struct upgrade_s *upg,
                         int vrfy)
@@ -1969,8 +1966,6 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
     ts = upg->ts;
 
     msgn(1, _("Processing dependencies..."));
-    n_array_map(ps->pkgs, (tn_fn_map1)mapfn_clean_pkg_flags);
-
     for (i = n_array_size(ps->ordered_pkgs) - 1; i > -1; i--) {
         struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
         if (pkg_is_hand_marked(upg->ts->pms, pkg)) 
@@ -2095,8 +2090,9 @@ static void init_upgrade_s(struct upgrade_s *upg, struct poldek_ts *ts)
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
     upg->ts = ts; 
     upg->pkg_stack = n_array_new(32, NULL, NULL);
-    upg->dbpms = pkgmark_set_new(0);
-    upg->unmetpms = pkgmark_set_new(0);
+    upg->dbpms = pkgmark_set_new(0, 0);
+    upg->unmetpms = pkgmark_set_new(0, 0);
+    upg->deppms = pkgmark_set_new(0, PKGMARK_SET_IDPTR);
 }
 
 
@@ -2110,6 +2106,7 @@ static void destroy_upgrade_s(struct upgrade_s *upg)
     upg->ts = NULL;
     pkgmark_set_free(upg->dbpms);
     pkgmark_set_free(upg->unmetpms);
+    pkgmark_set_free(upg->deppms);
     memset(upg, 0, sizeof(*upg));
 }
 
@@ -2125,10 +2122,13 @@ static void reset_upgrade_s(struct upgrade_s *upg)
     n_array_clean(upg->orphan_dbpkgs);
 
     pkgmark_set_free(upg->dbpms);
-    upg->dbpms = pkgmark_set_new(0);
+    upg->dbpms = pkgmark_set_new(0, 0);
 
     pkgmark_set_free(upg->unmetpms);
-    upg->unmetpms = pkgmark_set_new(0);
+    upg->unmetpms = pkgmark_set_new(0, 0);
+    
+    pkgmark_set_free(upg->deppms);
+    upg->deppms = pkgmark_set_new(0, PKGMARK_SET_IDPTR);
     
     upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;

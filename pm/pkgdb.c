@@ -457,7 +457,7 @@ int header_evr_match_req(struct pm_ctx *ctx, void *hdr,
     DBGF("%s match %s?\n", pkg_evr_snprintf_s(&pkg), 
          capreq_snprintf_s0(req));
     
-    if (pkg_evr_match_req(&pkg, req, 0)) {
+    if (pkg_evr_match_req(&pkg, req, POLDEK_MA_PROMOTE_VERSION)) {
         DBGF("%s match %s!\n", pkg_evr_snprintf_s(&pkg), 
              capreq_snprintf_s0(req));
         return 1;
@@ -482,7 +482,7 @@ int header_cap_match_req(struct pm_ctx *ctx, void *hdr,
     
     if (n_array_size(pkg.caps) > 0) {
         n_array_sort(pkg.caps);
-        rc = pkg_caps_match_req(&pkg, req, strict);
+        rc = pkg_caps_match_req(&pkg, req, strict ? 0 : POLDEK_MA_PROMOTE_VERSION);
     }
 
     n_array_free(pkg.caps);

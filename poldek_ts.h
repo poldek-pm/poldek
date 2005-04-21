@@ -88,7 +88,7 @@ struct poldek_ts {
     struct poldek_ctx  *ctx;
     struct pkgdb       *db;
     struct pm_ctx      *pmctx;
-    struct source      *pm_pdirsrc; /* for 'pdir' PM */
+    struct source      *pm_pdirsrc; /* for 'pset' PM */
     tn_array           *pkgs;
     
     struct arg_packages  *aps;

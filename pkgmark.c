@@ -1,8 +1,5 @@
 /*
-  $Id$
-*/
-/*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@pld.org.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -14,6 +11,7 @@
 */
 
 /*
+  
   $Id$
 */
 
@@ -35,6 +33,7 @@
 #include "log.h"
 
 struct pkgmark_set {
+    unsigned flags;
     tn_hash *ht;
     tn_alloc *na;
 };
@@ -44,22 +43,38 @@ struct pkg_mark {
     uint32_t flags;
 };
 
+static inline
+char *package_id(char *buf, int size, struct pkgmark_set *pmark, struct pkg *pkg)
+{
+    if (pmark->flags & PKGMARK_SET_IDNEVR)
+        return pkg->nvr;
+    n_snprintf(buf, size, "%p", pkg);
+    return buf;
+}
+
+        
 static void pkg_mark_free(struct pkg_mark *m)
 {
     pkg_free(m->pkg);
 }
 
 
-struct pkgmark_set *pkgmark_set_new(int size) 
+struct pkgmark_set *pkgmark_set_new(int size, unsigned flags) 
 {
     struct pkgmark_set *pmark;
     tn_alloc *na;
+
+    if (flags == 0)
+        flags |= PKGMARK_SET_IDNEVR; /* default */
     
     na = n_alloc_new(8, TN_ALLOC_OBSTACK);
     pmark = na->na_malloc(na, sizeof(*na));
+    
+    pmark->flags = flags;
     pmark->ht = n_hash_new_na(na, size > 256 ? size : 256,
                               (tn_fn_free)pkg_mark_free);
     pmark->na = na;
+    
     return pmark;
 }
 
@@ -100,8 +115,10 @@ int pkgmark_set(struct pkgmark_set *pmark, struct pkg *pkg,
                 int set, uint32_t flag)
 {
     struct pkg_mark *pkg_mark;
-
-    pkg_mark = n_hash_get(pmark->ht, pkg->nvr);
+    char idbuf[512], *id;
+    
+    id = package_id(idbuf, sizeof(idbuf), pmark, pkg);
+    pkg_mark = n_hash_get(pmark->ht, id);
     if (pkg_mark == NULL) {
         if (!set)
             return 1;
@@ -109,7 +126,7 @@ int pkgmark_set(struct pkgmark_set *pmark, struct pkg *pkg,
         pkg_mark = pmark->na->na_malloc(pmark->na, sizeof(*pkg_mark));
         pkg_mark->pkg = pkg_link(pkg);
         pkg_mark->flags = 0;
-        n_hash_insert(pmark->ht, pkg->nvr, pkg_mark);
+        n_hash_insert(pmark->ht, id, pkg_mark);
     }
     
     if (set)
@@ -123,8 +140,11 @@ int pkgmark_set(struct pkgmark_set *pmark, struct pkg *pkg,
 int pkgmark_isset(struct pkgmark_set *pmark, struct pkg *pkg, uint32_t flag)
 {
     struct pkg_mark *pkg_mark;
+    char idbuf[512], *id;
+    
+    id = package_id(idbuf, sizeof(idbuf), pmark, pkg);
 
-    if ((pkg_mark = n_hash_get(pmark->ht, pkg->nvr)))
+    if ((pkg_mark = n_hash_get(pmark->ht, id)))
         return pkg_mark->flags & flag;
 
     return 0;
