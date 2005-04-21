@@ -1,0 +1,38 @@
+
+<itemizedlist> <title> Supported repositories </title>
+  <listitem>
+     <para><emphasis>pndir</emphasis> (read, write, update, incremental update)</para>
+     <para> Native &poldek; index format since version 0.20. Based on
+     tndb (cdb-like) DBM library. Consist of 3 database files: first,
+     <emphasis>packages.ndir</emphasis> with
+     basic package informations, second <emphasis>packages.ndir.dscr</emphasis> with  
+     with common (BuildHost, Distribution, etc) and "C" package descriptions and 
+     third, <emphasis>packages.ndir.dscr.i18n</emphasis> with all non-English 
+     descriptions (if any)</para>
+  </listitem>
+  <listitem>
+     <para><emphasis>hdrl</emphasis> (read, update)</para>
+     <para> Native &apt-get; and other tools (<application>urpmi</application> AFAIK) 
+     index format. Consist of one file (<emphasis>pkglist.%{repository}.bz2</emphasis>)
+     with raw, often cut down, RPM package headers.  </para>
+  </listitem>
+  <listitem>
+    <para><emphasis>yum</emphasis> (read, update)</para>
+    <para> Native &yum; index format.
+       Consist of one file with list of packages IDs and directory of *.hdr files
+      with raw RPM package headers. 
+    </para>
+  </listitem>
+  <listitem>
+    <para><emphasis>pdir</emphasis> (read, write, update, incremental update)</para>
+    <para>Native &poldek; index format prior to 0.20 version. Based on custom 
+    binary format. Consist of one database file (<emphasis>packages.dir</emphasis>) with 
+    all needed package header data. </para>
+  </listitem>
+
+  <listitem>
+  <para><emphasis>dir</emphasis> (read)</para>
+  <para> Dynamic index built by scanning directory for packages. </para>
+  </listitem> 
+
+</itemizedlist>
