@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
@@ -212,6 +213,74 @@ void pm_pset_freedb(void *dbh)
     free(db);
 }
 
+static void process_output(struct p_open_st *st, int verbose_level) 
+{
+    int endl = 1, nlines = 0;
+    
+    while (1) {
+        struct timeval to = { 0, 200000 };
+        fd_set fdset;
+        int rc;
+        
+        if (p_wait(st)) {
+            int yes = 1;
+            ioctl(st->fd, FIONBIO, &yes);
+        }
+        
+        FD_ZERO(&fdset);
+        FD_SET(st->fd, &fdset);
+        if ((rc = select(st->fd + 1, &fdset, NULL, NULL, &to)) < 0) {
+            if (errno == EAGAIN || errno == EINTR)
+                continue;
+            break;
+            
+        } else if (rc == 0) {
+            if (p_wait(st))
+                break;
+
+        } else if (rc > 0) {
+            char  buf[4096], *fmt = "_%s";
+            int   n, i;
+
+            if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0)
+                break;
+            
+            buf[n] = '\0';
+            if (buf[n - 1] == '\n') {
+                buf[n - 1] = '\0'; /* deal with last_endlined -> move '\n' to fmt */
+                fmt = "_%s\n";
+            }
+            
+            msg_tty(verbose_level, fmt, buf);
+            if (!poldek_log_enabled_filelog())
+                continue;
+                
+            for (i=0; i < n; i++) {
+                int c = buf[i];
+                
+                if (c == '\r')
+                    continue;
+                
+                if (c == '\n')
+                    endl = 1;
+                    
+                if (endl) {
+                    endl = 0;
+                    //if (nlines) 
+                    //    msg_f(0, "_\n");
+                    nlines++;
+                    msg_f(0, "cp: %c", c);
+                    continue;
+                }
+                msg_f(0, "_%c", c);
+            }
+        }
+    }
+    
+    return;
+}
+
+
 static int do_cp(const char *src, const char *dst)
 {
     struct p_open_st pst;
@@ -223,7 +292,7 @@ static int do_cp(const char *src, const char *dst)
 
     n = 0;
     argv[n++] = "cp";
-    argv[n++] = "-v";
+//    argv[n++] = "-v";
     argv[n++] = (char*)src;
     argv[n++] = (char*)dst;
     argv[n++] = NULL;
@@ -235,9 +304,9 @@ static int do_cp(const char *src, const char *dst)
         }
     }
 
-    //process_output(&pst, verbose_level);
-    if ((ec = p_close(&pst) != 0) && pst.errmsg != NULL)
-        logn(LOGERR, "cp %s: %s", pst.errmsg, src);
+    process_output(&pst, 1);
+    if ((ec = p_close(&pst) != 0))
+        logn(LOGERR, "cp %s: %s", src, pst.errmsg ? pst.errmsg : "copying failed");
 
     p_st_destroy(&pst);
     return ec == 0;
@@ -611,6 +680,7 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb,
     return 1;
 }
 
+/* TODO: transaction like behaviour */
 int pm_pset_commitdb(void *dbh) 
 {
     struct pm_psetdb *db = dbh;
@@ -629,25 +699,32 @@ int pm_pset_commitdb(void *dbh)
     for (i=0; i < n_array_size(db->paths_removed); i++) {
         const char *path = n_array_nth(db->paths_removed, i);
         msgn_f(0, "%%rm %s\n", path);
-        msgn_tty(2, "rm %s\n", path);
-        unlink(path);
-        nchanges++;
-    }
-
-    for (i=0; i < n_array_size(db->paths_added); i++) {
-        const char *path = n_array_nth(db->paths_added, i);
-        n_snprintf(dstpath, sizeof(dstpath), "%s/%s", pkgdir->path,
-                   n_basenam(path));
-        msgn_f(0, "%%cp %s %s\n", path, dstpath);
-        msgn_tty(2, "cp %s %s\n", n_basenam(path), dstpath);
-        if (!do_cp(path, dstpath)) {
+        msgn_tty(1, "rm %s\n", path);
+        if (unlink(path) == 0) {
+            nchanges++;
+            
+        } else {
+            logn(LOGERR, "%s: unlink failed: %m", path);
             rc = 0;
             break;
         }
-        unlink(path);
-        nchanges++;
     }
-    
+
+    if (rc) {
+        for (i=0; i < n_array_size(db->paths_added); i++) {
+            const char *path = n_array_nth(db->paths_added, i);
+            n_snprintf(dstpath, sizeof(dstpath), "%s/%s", pkgdir->path,
+                       n_basenam(path));
+            msgn_f(0, "%%cp %s %s\n", path, dstpath);
+            msgn_tty(1, "cp %s %s\n", n_basenam(path), dstpath);
+            if (!do_cp(path, dstpath)) {
+                rc = 0;
+                break;
+            }
+            unlink(path);
+            nchanges++;
+        }
+    }
     
     if (nchanges && rc && pkgdir_type_info(pkgdir->type) & PKGDIR_CAP_SAVEABLE)
         rc = pkgdir_save(pkgdir, 0);
@@ -674,13 +751,13 @@ struct pkgdir *pm_pset_db_to_pkgdir(void *pm_pset, const char *rootdir,
              _("Could not open 'pset' database: missing source parameter"));
         return NULL;
     }
-
+    
     if (source_is_remote(src)) {
         logn(LOGERR, _("%s: source could not be remote one"),
              source_idstr(src)); 
         return NULL;
     }
-    
+
     if ((dir = pkgdir_srcopen(src, 0)) == NULL) {
         if (!source_is_type(src, "dir") && is_dir(src->path)) {
             logn(LOGNOTICE, _("trying to scan directory %s..."), src->path);
