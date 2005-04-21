@@ -87,8 +87,6 @@ int prepare_file_pkgmask(struct arg_packages *aps,
     int32_t            epoch = 0;
     int                is_virtual;
     
-
-    
     n_strdupap(maskstr, &buf);
     s[0] = NULL;
     p = n_str_strip_ws(buf);
@@ -100,8 +98,9 @@ int prepare_file_pkgmask(struct arg_packages *aps,
     while (*p && !isalnum(*p)) {
         switch (*p) {
             case '!':           /* for backward compatybility */
-                if (poldek_VERBOSE > 2)
-                    logn(LOGNOTICE, "%s: skipped optional item", p);
+            case '~':
+                if (poldek_VERBOSE > 1)
+                    logn(LOGNOTICE, "%s: skipped optional item", p + 1);
                 return 0;
                 break;
                 
@@ -408,17 +407,29 @@ static
 tn_array *resolve_bycap(struct arg_packages *aps, struct pkgset *ps,
                         const char *mask)
 {
-    tn_array *pkgs;
+    tn_array *pkgscaps, *pkgsfiles, *pkgs;
 
     if ((pkgs = n_hash_get(aps->resolved_caps, mask)))
         return pkgs;
     
-    pkgs = pkgset_lookup_cap(ps, mask);
-    if (pkgs == NULL || n_array_size(pkgs) == 0) {
-        if (pkgs)
-            n_array_free(pkgs);
+    pkgscaps = pkgset_lookup_cap(ps, mask);
+    pkgsfiles = pkgset_search(ps, PS_SEARCH_FILE, mask);
+    
+    if (pkgscaps == NULL && pkgsfiles == NULL)
         return NULL;
-    }
+
+    pkgs = n_array_clone(pkgscaps ? pkgscaps : pkgsfiles);
+    while (pkgscaps && n_array_size(pkgscaps))
+        n_array_push(pkgs, n_array_shift(pkgscaps));
+    
+    while (pkgsfiles && n_array_size(pkgsfiles))
+        n_array_push(pkgs, n_array_shift(pkgsfiles));
+
+    if (pkgscaps) n_array_free(pkgscaps);
+    if (pkgsfiles) n_array_free(pkgsfiles);
+    
+    n_array_sort(pkgs);
+    n_array_uniq(pkgs);
     
     if (poldek_VERBOSE > 1) {
         int i;
