@@ -59,10 +59,10 @@ static int process_pkg_deps(int indent, struct uninstall_ctx *uctx,
                             struct pkg *pkg);
 
 struct uninstall_ctx {
-    //tn_hash           *db_deps;
-    struct pkgdb      *db;
-    struct poldek_ts  *ts;
-    struct dbpkg_set  *uninst_set;
+    struct pkgdb       *db;
+    struct poldek_ts   *ts;
+    struct dbpkg_set   *uninst_set;
+    struct pkgmark_set *pms;
     tn_array           *__orphans;    /* orphans, unused */
     
     int               strict;
@@ -236,13 +236,13 @@ int process_pkg_deps(int indent, struct uninstall_ctx *uctx, struct pkg *pkg)
     tn_array *orphans, *pkgorphans;
     int i, n = 0;
     
-    if (!pkg_is_color(pkg, PKG_COLOR_WHITE)) /* was there */
+    if (pkg_isset_mf(uctx->pms, pkg, PKGMARK_GRAY)) /* was there */
         return 0;
 
     MEMINF("START");
     DBGF("PROCESSING [%d] %s\n", indent, pkg_snprintf_s(pkg));
-    
-    pkg_set_color(pkg, PKG_COLOR_GRAY); /* is there */
+
+    pkg_set_mf(uctx->pms, pkg, PKGMARK_GRAY); /* is there */
         
     pkgorphans = get_pkg_orphans(uctx, pkg);
     if (pkgorphans == NULL)
@@ -275,8 +275,8 @@ int process_pkg_deps(int indent, struct uninstall_ctx *uctx, struct pkg *pkg)
     n_array_free(orphans);
     DBGF("END PROCESSING [%d] %s\n", indent, pkg_snprintf_s(pkg));
     MEMINF("END");
-    
-    pkg_set_color(pkg, PKG_COLOR_BLACK); /* done */
+
+    pkg_set_mf(uctx->pms, pkg, PKGMARK_BLACK); /* done */
     return n;
 }
 
@@ -289,6 +289,7 @@ struct uninstall_ctx *uninstall_ctx_new(struct poldek_ts *ts)
     uctx->db = ts->db;
     uctx->ts = ts;
     uctx->uninst_set = dbpkg_set_new();
+    uctx->pms = pkgmark_set_new(0, 0);
     uctx->__orphans = pkgs_array_new_ex(128, pkg_cmp_recno);
     uctx->strict = 1;
     return uctx;
@@ -310,7 +311,8 @@ static void uninstall_ctx_free(struct uninstall_ctx *uctx)
         struct pkg *dbpkg = n_array_nth(uctx->__orphans, i);
         msgn(1, "freedoo %d %s", dbpkg->_refcnt, pkg_snprintf_s(dbpkg));
     }
-#endif    
+#endif
+    pkgmark_set_free(uctx->pms);
     n_array_free(uctx->__orphans);
     free(uctx);
 };
@@ -379,7 +381,7 @@ static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
             if (poldek_util_parse_evr(p, &epoch, &ver, &rel))
                 cr = cr_evr = capreq_new(NULL, tmp, epoch, ver, rel, REL_EQ, 0);
         }
-        
+        DBGF("get_provides %s\n", capreq_snprintf_s(cr));
         dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cr, NULL, uninst_LDFLAGS);
         DBGF("mask %s (%s) -> %d package(s)\n", mask, capreq_snprintf_s(cr), 
                dbpkgs ? n_array_size(dbpkgs) : 0);
@@ -391,12 +393,27 @@ static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
                 struct pkg *dbpkg = n_array_nth(dbpkgs, j);
                 int matched = 0;
 
-                DBGF("  - %s (%p)\n", pkg_snprintf_s(dbpkg), dbpkg->reqs);
+                DBGF("  - %s (%s?)\n", pkg_snprintf_s(dbpkg),
+                     capreq_snprintf_s(cr_evr ? cr_evr : cr));
                 
-                if (cr_evr && pkg_match_req(dbpkg, cr_evr, 1)) {
-                    nmatches++;
-                    matched = 1;
-                    
+                if (cr_evr) {
+                    if (ts->getop(ts, POLDEK_OP_CAPLOOKUP)) {
+                        if (pkg_xmatch_req(dbpkg, cr_evr, POLDEK_MA_PROMOTE_REQEPOCH))
+                            matched = 1;
+                    } else {
+                        if (strcmp(dbpkg->name, capreq_name(cr_evr)) == 0) {
+                            DBGF("n (%s, %s) %d\n", dbpkg->name, capreq_name(cr_evr),
+                                 pkg_evr_match_req(dbpkg, cr_evr, POLDEK_MA_PROMOTE_REQEPOCH));
+                            
+                        }
+                        
+                        if (strcmp(dbpkg->name, capreq_name(cr_evr)) == 0 &&
+                            pkg_evr_match_req(dbpkg, cr_evr, POLDEK_MA_PROMOTE_REQEPOCH))
+                            matched = 1;
+                    }
+                    if (matched)
+                        nmatches++;
+
                 } else if (cr_evr == NULL && strcmp(mask, dbpkg->name) == 0) {
                     nmatches++;
                     matched = 1;
