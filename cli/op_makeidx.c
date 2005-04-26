@@ -234,7 +234,8 @@ static int make_idx(struct arg_s *arg_s)
 
     if (arg_s->idx_type)
         types = parse_types(arg_s->idx_type);
-    
+
+    arg_s->crflags |= PKGDIR_CREAT_IFORIGCHANGED;
     for (i=0; i < n_array_size(sources); i++) {
         src = n_array_nth(sources, i);
         MEMINF("before mkidx");

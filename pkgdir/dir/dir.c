@@ -209,7 +209,7 @@ int load_dir(struct pkgdir *pkgdir,
         }
             
         
-        if (pkg == NULL) {      /* not found */
+        if (pkg == NULL) {      /* not in previous index */
             nnew++;
             n_assert(h);
             msgn(3, "%s: loading header...", n_basenam(path));

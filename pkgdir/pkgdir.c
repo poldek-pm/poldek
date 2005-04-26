@@ -871,7 +871,6 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
     tn_hash                     *avlangs_h, *avlangs_h_tmp;
     int                         nerr = 0;
 
-
     n_assert(pkgdir->idxpath);
     mod = pkgdir->mod;
     if (type) {
@@ -917,20 +916,37 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
     
 
     n_assert(nerr == 0);
-    if (!do_create(pkgdir, type, path, flags))
-        nerr++;
     
-    if (nerr == 0 && orig) {
+    if (orig == NULL) {
+        if (!do_create(pkgdir, type, path, flags))
+            nerr++;
+        
+    } else {
+        int create = 1;
+
         if (orig->ts > pkgdir->ts) {
             logn(LOGWARN, _("clock skew detected; create index with fake "
                             "timestamp %lu %lu"), orig->ts, pkgdir->ts);
+            pkgdir->ts = orig->ts + 1;
+        }
+
+        create = 1;
+        if ((diff = pkgdir_diff(orig, pkgdir)))
+            diff->ts = pkgdir->ts;
+        else if ((flags & PKGDIR_CREAT_IFORIGCHANGED))
+            create = 0;         /* not a difference -> do not create */
+
+        
+        if (create) {           /* save index */
+            if (!do_create(pkgdir, type, path, flags))
+                nerr++;
+
+        } else {
+            msgn(1, _("%s: index not changed, not saved"),
+                 vf_url_slim_s(orig->idxpath, 0));
         }
         
-        if (orig->ts >= pkgdir->ts) 
-            pkgdir->ts = orig->ts + 1;
-        
-        if ((diff = pkgdir_diff(orig, pkgdir))) {
-            diff->ts = pkgdir->ts;
+        if (diff && (flags & PKGDIR_CREAT_NOPATCH) == 0) { /* save diff? */
             if (!do_create(diff, type, NULL, flags))
                 nerr++;
         }

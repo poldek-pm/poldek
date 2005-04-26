@@ -23,8 +23,6 @@
 
 #define PKGDIR_VRFYSIGN            (PKGDIR_VRFY_GPG | PKGDIR_VRFY_PGP)
 
-#define PKGDIR_NODESC              (1 << 12)
-
 struct pkgdir_module;
 struct pm_ctx;
 
@@ -41,8 +39,8 @@ struct pkgdir {
     int                  pri;              /* pri of pkgdir source */
     
     tn_array             *depdirs;         /* char *[]          */
-    tn_array             *foreign_depdirs; /* depdirs not presented in depdirs,
-                                            but presented in other pkgdirs */
+    tn_array             *foreign_depdirs; /* depdirs not in depdirs[],
+                                              but presented in other pkgdirs */
     struct pkgroup_idx  *pkgroups;
     unsigned            flags;            /* PKGDIR_* */
     time_t              ts;               /* timestamp */
@@ -117,6 +115,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 #define PKGDIR_CREAT_NOCOMPR    (1 << 6) /* create uncompressed index (NFY) */
 #define PKGDIR_CREAT_wRECNO     (1 << 7) /* store packages recno if it exists;
                                             honored by pndir only */
+#define PKGDIR_CREAT_IFORIGCHANGED  (1 << 8)
 
 int pkgdir_save(struct pkgdir *pkgdir, unsigned flags);
 
