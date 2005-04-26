@@ -6,7 +6,7 @@ POD2HTML  = pod2html
 
 man_MANS  = poldek.1
 
-EXTRA_DIST = poldek.pod poldek.1 guide.html
+EXTRA_DIST = poldek.pod poldek.1 
 
 manual_index: manual.xml
 	./mkindex $< > manual/index.xml

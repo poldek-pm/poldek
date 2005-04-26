@@ -157,6 +157,28 @@ To use only particular repository only, <option>-n</option> should be used:
 &prompt; ipoldek -n rpms -uv foo-3.1-2
 </screen>
 
+Help is available: for &poldek; use <option>--help</option> option; for &ipoldek;
+use <option>help</option> command:
+<screen>
+&prompt; poldek --help
+&prompt; ipoldek help
+</screen>
+
+&poldek; has shell like mode with puts you into a readline interface. To enter it, run program without 
+any command, example:
+<screen id="screen.shell-start">
+&prompt; poldek -n ac
+Loading [pdir]ac...
+10998 packages read
+Loading [rpmdbcache]/var/lib/rpm...
+1751 packages loaded
+
+Welcome to the poldek shell mode. Type "help" for help with commands.
+
+<prompt>poldek:/all-avail></prompt>
+</screen>
+Once you are on &poldek;'s command line, type 'help' and the rest should be, more or less, 
+self-explanatory.
 </para>
 </sect2>     
 </sect1>
@@ -490,8 +512,11 @@ Examples:
 <para>
 &poldek; operates in two basic modes - the first one is more generic 
 and compliant with &rpm; (&poldek; command) and second <emphasis>interactive</emphasis> 
-mode with simplified and more intuitive command set.  The interactive is available from both
+mode with simplified and more intuitive command set. </para><para>Interactive mode is available from both
 command line (&ipoldek; command) and shell like interface with auto-completion and history.
+Program executed without "command" options (install, erase, etc) puts the user in this shell interface
+(see <link linkend="screen.shell-start">"screenshot"</link>).
+
 </para>
 
 <sect2 id="pkgmanaging.spec"> <title>Specifying packages</title>
@@ -678,11 +703,15 @@ option. Syntax is:
 <screen>
 &prompt; poldek --install-dist=DIR [PACKAGE...]
 </screen>
-For example, command installs system under <filename>/mnt/dest</filename> might looks like:
+All unmet dependencies will be satisfied by marking additionall packages. In this type of installation 
+packages are installed one by one - it significantly reduces used memory amout and CPU utilization what permit 
+to install the system on older machines.
+</para>
+<para>
+As example, command which installs system under <filename>/mnt/dest</filename> might looks like:
 <screen>
 &prompt; poldek -s ftp://foo.bar/RPMS --install-dist=/mnt/dest --pset ftp://foo-bar/package-sets/myset.txt
 </screen>
-See XXX
 </para>
 </sect2>
 
@@ -959,23 +988,36 @@ Examples:
 
 <sect2 id="pkgmanaging.desc"> <title>Obtaining information about packages</title>
 <para>
-Package repositories may be easily searched in different criteria:
-<screen>
-&prompt; ipoldek search --help
-Usage: search [OPTION...] PATTERN [PACKAGE...]
+Package details, both about installed and available ones could be easily accessed
+through interactive mode commands: <command>ls</command>, <command>search</command>
+and <command>desc</command>. 
+</para>
 
-  -a, --all                  Search all described fields, the defaults are: -sd
-  -c, --conflicts            Search conflicts
-  -d, --description          Search descriptions
-  -f, -l, --files            Search file list
-  -g, --group                Search groups
-  -o, --obsoletes            Search obsolences
-  -p, --provides             Search capabilities
-      --perlre               Threat PATTERN as Perl regular expression
-  -r, --requires             Search requirements
-  -s, --summary              Search summaries, urls and license
-
+<sect3> <title>ls - package listing</title>
+<para>
+<command>ls</command> like system ls list packages in different ways.
+Type <literal>"ls --help"</literal> to see all available options.
+Output example:
+<screen> 
+<prompt>poldek:/installed></prompt> ls -O *gimp*
+gimp-2.0.0-1
+    The GNU Image Manipulation Program
+gimp-print-lib-4.2.6-1
+    gimp-print library
 </screen>
+</para>
+</sect3>
+
+<sect3> <title>search - search packages</title>
+<para>
+Package repositories may be easily searched by many criteria like package
+description, summary, group, requirements, etc. Type <literal>"search --help"</literal> 
+to see all available options.
+Syntax of command is:
+<screen>
+search [OPTION...] PATTERN [PACKAGE...]
+</screen>
+Where PATTERN is a glob or, with <option>--perlre</option>, Perl regular expression.
 Examples:
 <screen>
 &prompt; ipoldek search -l /usr/sbin/ab
@@ -989,12 +1031,16 @@ ecawave-0.6.1-3
 piave-0.2.4-2
 rezound-0.11.1-0.beta.2
 </screen>
-
 </para>
+</sect3>
+
+<sect3><title>desc - show package details</title>
 <para>
-Package details can be viewed by <command>desc</command> of interactive mode
+Command gives access to all package information: package description and summary,
+group, vendor, build time,requirements, capabilities and conflicts, full file list, etc.
+Type <literal>"desc --help"</literal> to see all available options. Example:
 <screen>
-&prompt; ipoldek desc apache-2.0.53-2
+<prompt>poldek:/all-avail></prompt> desc apache
 Package:        apache-2.0.53-4
 Summary:        The most widely used Web server on the Internet
 Group:          Networking/Daemons
@@ -1011,11 +1057,8 @@ Description:
 Apache is a powerful, full-featured, efficient and freely-available
 Web server. Apache is also the most popular Web server on the Internet.
 </screen>
-To view all <command>desc</command> options type:
-<screen>
-&prompt; ipoldek desc --help
-</screen>
 </para>
+</sect3>
 </sect2>
 </sect1>
 
