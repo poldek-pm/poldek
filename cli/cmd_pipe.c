@@ -115,12 +115,12 @@ int cmd_pipe_vprintf(struct cmd_pipe *p, const char *fmt, va_list args)
 
 char *cmd_pipe_getline(struct cmd_pipe *p, char *line, int size)
 {
-    int len = 0;
+    size_t len = 0;
     char *ptr;
     
     if (n_buf_size(p->nbuf) > 0) {
         ptr = n_buf_it_gets(&p->nbuf_it, &len);
-        if (size < len)
+        if ((unsigned)size < len)
             len = size - 1;
         memcpy(line, ptr, len);
         line[len] = '\0';
@@ -154,8 +154,8 @@ static int xargs_packages(struct cmd_pipe *p, tn_array *args)
 
 static int xargs_stdout(struct cmd_pipe *p, tn_array *args) 
 {
-    char *line, c;
-    int  len, i = 0;
+    char   *line, c;
+    size_t len, i = 0;
         
     while ((line = n_buf_it_gets(&p->nbuf_it, &len)) && len > 0) {
         c = line[len];

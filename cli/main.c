@@ -339,6 +339,7 @@ void argp_prepare_child_options(const struct argp *argp, int hide_child_opts)
     }
 }
 
+#if GENDOCBOOK
 static void docbook_opt(FILE **st,
                         struct argp_option *opt, tn_array *aliases)
 {
@@ -465,7 +466,8 @@ void argp_as_docbook(struct argp *argp)
         fclose(stream);
     }
 }
-    
+#endif  /* GENDOCBOOK */
+
 static
 void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                    int argc, char **argv, int mode) 
@@ -509,12 +511,14 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 
     index = 0;
     argp_parse(&argp, argc, argv, ARGP_IN_ORDER, &index, &args);
-
+    
+#if GENDOCBOOK
     if (args.cnflags & OPT_AS_FLAG(OPT_DOCB)) {
         argp_as_docbook(&argp);
         exit(EXIT_SUCCESS);
     }
-
+#endif
+    
     if ((args.cnflags & OPT_AS_FLAG(OPT_NOCONF)) == 0) 
         if (!poldek_load_config(args.ctx, args.path_conf,
                                 (args.cnflags & OPT_AS_FLAG(OPT_CONFUP)) ? 1 : 0))
@@ -677,6 +681,20 @@ static int do_su(int argc, char **argv)
     return rc;
 }
 
+static int load_packages(struct poclidek_ctx *cctx, unsigned cnflags)
+{
+    unsigned ldflags = POCLIDEK_LOAD_AVAILABLE;
+    
+    if ((cnflags & OPT_AS_FLAG(OPT_SKIPINSTALLED)) == 0)
+        ldflags |= POCLIDEK_LOAD_INSTALLED;
+        
+    if (!poclidek_load_packages(cctx, ldflags)) {
+        logn(LOGERR, "packages load failed");
+        return 0;
+    }
+    return 1;
+}
+
 int main(int argc, char **argv)
 {
     struct poldek_ctx    *ctx;
@@ -711,12 +729,7 @@ int main(int argc, char **argv)
         exit((rrc & OPGROUP_RC_ERROR) ? EXIT_FAILURE : EXIT_SUCCESS);
     
     if (args.mode == RUNMODE_POLDEK) {
-        unsigned ldflags = POCLIDEK_LOAD_AVAILABLE;
-        if ((args.cnflags & OPT_AS_FLAG(OPT_SKIPINSTALLED)) == 0)
-            ldflags |= POCLIDEK_LOAD_INSTALLED;
-        
-        if (!poclidek_load_packages(cctx, ldflags)) {
-            logn(LOGERR, "packages load failed");
+        if (!load_packages(cctx, args.cnflags)) {
             ec = 1;
             
         } else {
@@ -736,13 +749,22 @@ int main(int argc, char **argv)
         while (args.argv[i])
             printf(" %s", args.argv[i++]);
         printf("\n");
-#endif        
+#endif
+        
         if (args.argc > 0)
             rc = poclidek_exec(cctx, args.ts, args.argc,
                                (const char **)args.argv);
-        else {
-            msgn(0, _("Give me something to do."));
-            rc = 0;
+        else {                  /* lonely ipoldek -> run shell as well */
+            //msgn(0, _("Give me something to do."));
+            //rc = 0;
+            
+            if (!load_packages(cctx, args.cnflags))  {
+                logn(LOGERR, "packages load failed");
+                rc = 0;
+                
+            } else {
+                ec = poclidek_shell(cctx);
+            }
         }
         
         if (!rc)

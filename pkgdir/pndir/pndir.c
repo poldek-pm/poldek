@@ -607,10 +607,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     struct tndb_it     it;
     tn_stream          *st;
     tn_array           *ign_patterns = NULL;
-    int                rc, klen, nerr = 0;
+    int                rc, klen, vlen, nerr = 0;
     char               key[TNDB_KEY_MAX + 1], path[PATH_MAX];
-    size_t             vlen;
-
 
     idx = pkgdir->mod_data;
     if (!tndb_it_start(idx->db, &it))
