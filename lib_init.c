@@ -638,7 +638,8 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
 
     
 
-int poldek_load_config(struct poldek_ctx *ctx, const char *path, int up)
+int poldek_load_config(struct poldek_ctx *ctx, const char *path,
+                       tn_array *addon_cnflines, unsigned flags)
 {
     tn_hash           *htcnf = NULL;
     const char        *vs;
@@ -650,11 +651,23 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path, int up)
         logn(LOGERR | LOGDIE, "load_config() called after setup()");
 
     do_poldek_setup_cachedir(ctx);
-    
-    if (path != NULL)
-        ctx->htconf = poldek_conf_load(path, up ? POLDEK_LDCONF_UPDATE : 0);
-    else 
-        ctx->htconf = poldek_conf_loadefault(up ? POLDEK_LDCONF_UPDATE : 0);
+    n_assert(ctx->htconf == NULL);
+        
+    if ((flags & POLDEK_LOADCONF_NOCONF) == 0) {
+        unsigned ldflags = 0;
+        
+        if (flags & POLDEK_LOADCONF_UPCONF)
+            ldflags |= POLDEK_LDCONF_UPDATE;
+                
+        if (path != NULL)
+            ctx->htconf = poldek_conf_load(path, ldflags);
+        else 
+            ctx->htconf = poldek_conf_loadefault(ldflags);
+    }
+
+    if (addon_cnflines)
+        ctx->htconf = poldek_conf_addlines(ctx->htconf, "global",
+                                           addon_cnflines);
     
     if (ctx->htconf == NULL)
         return 0;

@@ -67,6 +67,7 @@ static char args_doc[] = N_("[PACKAGE...]");
 #define OPT_SHELL  (OPT_GID + 12)
 #define OPT_SHELL_CMD (OPT_GID + 13)
 #define OPT_RUNAS (OPT_GID + 14)
+#define OPT_OPTION 'O'
 #define OPT_DOCB   (OPT_GID + 15)
 
 #define OPT_AS_FLAG(OPT)       (1 << (OPT - OPT_GID))
@@ -103,6 +104,7 @@ N_("Do not remove downloaded packages just after their installation"), OPT_GID }
      OPT_GID },    
 {"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), OPT_GID },
 {"runas", OPT_RUNAS, "USER", 0, N_("Run program as user USER"), OPT_GID },
+{NULL, OPT_OPTION, "OPTION=VALUE", 0, N_("Set configuration option"), OPT_GID },
 {"docbook", OPT_DOCB, 0, OPTION_HIDDEN,
         N_("Dump options in docbook format"), OPT_GID },
 //{"v016", OPT_V016, 0, 0, N_("Read indexes created by versions < 0.17"), 500 },
@@ -151,13 +153,14 @@ struct args {
 
     unsigned  cnflags;
 
+    tn_array    *addon_cnflines;
     char        *path_conf;
     char        *path_log;
     
     unsigned    pkgdir_creat_flags; 
     
     char        *shcmd;
-
+    
     tn_array    *opgroup_rts;
 
     int         argc;
@@ -263,6 +266,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_BANNER:
             msgn(-1, "%s", poldek_BANNER);
             exit(EXIT_SUCCESS);
+            break;
+
+        case OPT_OPTION:
+            if (argsp->addon_cnflines == NULL)
+                argsp->addon_cnflines = n_array_new(8, free, NULL);
+            n_array_push(argsp->addon_cnflines, n_strdup(arg));
             break;
 
         case OPT_DOCB:
@@ -468,6 +477,24 @@ void argp_as_docbook(struct argp *argp)
 }
 #endif  /* GENDOCBOOK */
 
+static int load_conf(struct args *argsp) 
+{
+    unsigned flags = 0;
+
+    if (argsp->cnflags & OPT_AS_FLAG(OPT_NOCONF))
+        flags |= POLDEK_LOADCONF_NOCONF;
+
+    else if (argsp->cnflags & OPT_AS_FLAG(OPT_CONFUP))
+        flags |= POLDEK_LOADCONF_UPCONF;
+
+    if ((flags & POLDEK_LOADCONF_NOCONF) && argsp->addon_cnflines == NULL)
+        return 1;
+    
+    return poldek_load_config(argsp->ctx, argsp->path_conf,
+                              argsp->addon_cnflines, flags);
+}
+
+
 static
 void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                    int argc, char **argv, int mode) 
@@ -518,11 +545,9 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
         exit(EXIT_SUCCESS);
     }
 #endif
-    
-    if ((args.cnflags & OPT_AS_FLAG(OPT_NOCONF)) == 0) 
-        if (!poldek_load_config(args.ctx, args.path_conf,
-                                (args.cnflags & OPT_AS_FLAG(OPT_CONFUP)) ? 1 : 0))
-            exit(EXIT_FAILURE);
+
+    if (!load_conf(&args))
+        exit(EXIT_FAILURE);
 
     if (!poldek_setup(args.ctx))
         exit(EXIT_FAILURE);

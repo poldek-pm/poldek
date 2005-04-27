@@ -8,11 +8,13 @@
 
 #define POLDEK_LDCONF_FOREIGN   (1 << 0) /* not a poldek file */
 #define POLDEK_LDCONF_NOVRFY    POLDEK_LDCONF_FOREIGN /* legacy */
-#define POLDEK_LDCONF_UPDATE    (1 << 1)
+#define POLDEK_LDCONF_UPDATE    (1 << 1) /* resync with remote config */
 #define POLDEK_LDCONF_NOINCLUDE (1 << 2) /* ignore %include directives */
 
 tn_hash *poldek_conf_load(const char *path, unsigned flags);
 tn_hash *poldek_conf_loadefault(unsigned flags);
+tn_hash *poldek_conf_addlines(tn_hash *htconf, const char *sectnam,
+                              tn_array *lines);
 
 tn_array *poldek_conf_get_section_arr(const tn_hash *htconf, const char *name);
 tn_hash *poldek_conf_get_section_ht(const tn_hash *htconf, const char *name);

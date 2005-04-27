@@ -31,7 +31,7 @@ struct poclidek_ctx  *cctx;
 int init(void) 
 {
     ctx = poldek_new(0);
-    poldek_load_config(ctx, "test_cli.rc", 0);
+    poldek_load_config(ctx, "test_cli.rc", NULL, 0);
     poldek_setup(ctx);
     cctx = poclidek_new(ctx);
     return  poclidek_load_packages(cctx, 1);

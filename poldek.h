@@ -36,7 +36,11 @@ struct poldek_ctx *poldek_link(struct poldek_ctx *ctx);
 #define POLDEK_CONF_LOGTTY          21
 
 int poldek_configure(struct poldek_ctx *ctx, int param, ...);
-int poldek_load_config(struct poldek_ctx *ctx, const char *path, int doupdate);
+
+#define POLDEK_LOADCONF_NOCONF (1 << 0) /* do not load configuration from file */
+#define POLDEK_LOADCONF_UPCONF (1 << 1) /* do update of remote config files    */
+int poldek_load_config(struct poldek_ctx *ctx, const char *path,
+                       tn_array *addon_cnflines, unsigned flags);
 
 int poldek_setup_cachedir(struct poldek_ctx *ctx);
 int poldek_setup(struct poldek_ctx *ctx);

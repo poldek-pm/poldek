@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -50,10 +50,10 @@
 #define TYPE_MULTI_EXCL (1 << 6)
 #define TYPE_ENUM       (1 << 7)
 
-#define TYPE_F_ENV      (1 << 10)
-#define TYPE_F_REQUIRED (1 << 11)
-#define TYPE_F_ALIAS    (1 << 12)
-#define TYPE_F_UNIQUE   (1 << 13)
+#define TYPE_F_ENV       (1 << 10)
+#define TYPE_F_REQUIRED  (1 << 11)
+#define TYPE_F_ALIAS     (1 << 12)
+#define TYPE_F_OBSL      (1 << 14)
 
 static const char *global_tag = "global";
 static const char *include_tag = "%include";
@@ -69,20 +69,20 @@ static struct tag unknown_tag = {
 };
 
 static struct tag global_tags[] = {
-    { "source",        TYPE_STR | TYPE_MULTI | TYPE_F_ENV, { 0 } },
-    { "source?*",      TYPE_STR | TYPE_F_ENV, { 0 } },
-    { "prefix?*",      TYPE_STR | TYPE_F_ENV, { 0 } },
+    { "source",        TYPE_STR | TYPE_MULTI | TYPE_F_ENV | TYPE_F_OBSL, {0} },
+    { "source?*",      TYPE_STR | TYPE_F_ENV | TYPE_F_OBSL, { 0 } },
+    { "prefix?*",      TYPE_STR | TYPE_F_ENV | TYPE_F_OBSL, { 0 } },
     { "cachedir",      TYPE_STR | TYPE_F_ENV, { 0 } },
     
-    { "ftp http_get",  TYPE_STR , { 0 } }, /* obsolete */
-    { "ftp get",       TYPE_STR , { 0 } }, /* obsolete */
-    { "http get",      TYPE_STR , { 0 } }, /* obsolete */
-    { "https get",     TYPE_STR , { 0 } }, /* obsolete */
-    { "rsync get",     TYPE_STR , { 0 } }, /* obsolete */
-    { "cdrom get",     TYPE_STR , { 0 } }, /* obsolete */
+    { "ftp http_get",  TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
+    { "ftp get",       TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
+    { "http get",      TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
+    { "https get",     TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
+    { "rsync get",     TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
+    { "cdrom get",     TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
 
-    { "ignore req",    TYPE_STR | TYPE_MULTI , { 0 } },
-    { "ignore pkg",    TYPE_STR | TYPE_MULTI , { 0 } },
+    { "ignore req",    TYPE_STR | TYPE_MULTI, { 0 } },
+    { "ignore pkg",    TYPE_STR | TYPE_MULTI, { 0 } },
 
     { "rpm",           TYPE_STR | TYPE_F_ENV, { 0 } },
     { "sudo",          TYPE_STR | TYPE_F_ENV, { 0 } },
@@ -136,14 +136,6 @@ static struct tag alias_tags[] = {
     {  NULL,        0, { 0 } }, 
 };
 
-static struct tag proxy_tags[] = {
-    { "name",       TYPE_STR,  { 0 } },
-    { "proto",      TYPE_STR, { 0 } },
-    { "url",        TYPE_STR | TYPE_F_ENV, { 0 } },
-    {  NULL,           0, { 0 } }, 
-};
-
-
 static struct tag source_tags[] = {
     { "name",        TYPE_STR, { 0 } },
     { "url",         TYPE_STR | TYPE_F_ENV | TYPE_F_REQUIRED, { 0 } },
@@ -176,7 +168,6 @@ struct section sections[] = {
     { "global",  global_tags,  0 },
     { "source",  source_tags,  1 },
     { "fetcher", fetcher_tags, 1 },
-    { "proxy",   proxy_tags,   1 },
     { "alias",   alias_tags,   1 },
     {  NULL,  NULL, 0 },
 };
@@ -562,10 +553,10 @@ static int poldek_conf_postsetup(tn_hash *ht)
 
 static int add_param(tn_hash *ht_sect, const char *section,
                      char *name, char *value,
-                     int validate, 
+                     int validate, int overwrite, 
                      const char *path, int nline)
 {
-    char *val, expanded_val[PATH_MAX];
+    char *val, expanded_val[PATH_MAX], filemark[512];
     const struct section *sect;
     const struct tag *tag;
     struct copt *opt;
@@ -580,7 +571,12 @@ static int add_param(tn_hash *ht_sect, const char *section,
             p++;
         }
     }
-    
+
+    if (path)
+        n_snprintf(filemark, sizeof(filemark), "%s:%d:", path, nline);
+    else
+        n_snprintf(filemark, sizeof(filemark), "config:");
+               
     if ((tagindex = find_tag(section, name, &sect)) == -1) {
         if (*name == '_')
             validate = 0;
@@ -590,7 +586,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
             tag = &unknown_tag;
                 
         } else {
-            logn(LOGWARN, _("%s:%d unknown option '%s::%s'"), path, nline,
+            logn(LOGWARN, _("%s unknown option '%s::%s'"), filemark,
                  section, name);
             return 0;
         }
@@ -611,7 +607,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
     //printf("Aname = %s, v = %s\n", name, val);
     
     if (val == NULL) {
-        logn(LOGERR, _("%s:%d: invalid value of '%s::%s'"), path, nline,
+        logn(LOGERR, _("%s invalid value of '%s::%s'"), filemark, 
              section, name);
         return 0;
     }
@@ -626,8 +622,8 @@ static int add_param(tn_hash *ht_sect, const char *section,
         }
 
         if (!valid) {
-            logn(LOGWARN, _("%s:%d invalid value '%s' of '%s::%s'"),
-                 path, nline, val, section, name);
+            logn(LOGWARN, _("%s invalid value '%s' of '%s::%s'"), filemark,
+                 val, section, name);
             return 0;
         }
     }
@@ -665,13 +661,14 @@ static int add_param(tn_hash *ht_sect, const char *section,
         opt->val = n_strdup(val);
         DBGF("ADD %p %s -> %s\n", ht_sect, name, val);
 
-    } else if (tag->flags & TYPE_MULTI_EXCL) {
-        logn(LOGWARN, _("%s:%d: %s::%s redefined"), path, nline, section, name);
+    } else if (overwrite || (tag->flags & TYPE_MULTI_EXCL)) {
+        if (!overwrite || poldek_VERBOSE > 1)
+            logn(LOGWARN, _("%s %s::%s redefined"), filemark, section, name);
         free(opt->val);
         opt->val = n_strdup(val);
         
     } else if ((tag->flags & TYPE_MULTI) == 0) {
-        logn(LOGWARN, _("%s:%d multiple '%s' not allowed"), path, nline, name);
+        logn(LOGWARN, _("%s: multiple '%s' not allowed"), filemark, name);
         return 0;
             
     } else if (opt->vals != NULL) {
@@ -833,6 +830,70 @@ tn_hash *open_section_ht(tn_hash *htconf, const struct section *sect,
     return ht_sect;
 }
 
+static tn_hash *new_htconf(const char *sectnam, tn_hash **ht_sect_ptr)
+{
+    tn_hash   *ht, *ht_sect;
+    tn_array  *arr_sect;
+    
+    if (!sectnam)
+        sectnam = global_tag;
+
+    ht = n_hash_new(24, (tn_fn_free)n_array_free);
+    
+    arr_sect = n_array_new(4, (tn_fn_free)n_hash_free, NULL);
+    
+    ht_sect = n_hash_new(12, (tn_fn_free)copt_free);
+    n_array_push(arr_sect, ht_sect);
+    
+    n_hash_insert(ht, sectnam, arr_sect);
+    if (ht_sect_ptr)
+        *ht_sect_ptr = ht_sect;
+    return ht;
+}
+
+static int split_option_line(char *line, char **name, char **value,
+                             const char *path, int nline) 
+{
+    char *p, *q;
+
+    p = line;
+    while (isspace(*p))
+        p++;
+        
+    if (*p == '#' || *p == '\0')
+        return 0;
+    
+    *name = p;
+    while (isalnum(*p) || *p == '_' || *p == '-' || isspace(*p))
+        p++;
+        
+    if (p == *name || *p != '=') {
+        if (path)
+            logn(LOGERR, _("%s:%d: missing '='"), path, nline);
+        else
+            logn(LOGERR, _("%s: missing '='"), line);
+        return 0;
+    }
+    
+    q = p - 1;
+    while (isspace(*q))         /* eat end spaces of name */
+        *q-- = '\0';
+
+    *p++ = '\0';
+    while (isspace(*p))         /* eat head spaces of value */
+        p++;
+
+    if (*p != '\0') {
+        char *q = strchr(p, '\0') - 1;
+        while (isspace(*q))
+            *q-- = '\0';
+    }
+    *value = p;
+    return 1;
+}
+
+
+
 static
 tn_hash *do_ldconf(tn_hash *af_htconf,
                    const char *path, const char *parent_path,
@@ -841,7 +902,6 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     struct    afile *af;
     int       nline = 0, is_err = 0;
     tn_hash   *ht, *ht_sect;
-    tn_array  *arr_sect;
     char      buf[1024], *sectnam;
     int       validate = 1, update = 0;
     
@@ -858,15 +918,8 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     }
 
     sectnam = (char*)global_tag;
-
-    ht = n_hash_new(23, (tn_fn_free)n_array_free);
-    arr_sect = n_array_new(4, (tn_fn_free)n_hash_free, NULL);
+    ht = new_htconf(global_tag, &ht_sect);
     
-    ht_sect = n_hash_new(11, (tn_fn_free)copt_free);
-    n_array_push(arr_sect, ht_sect);
-    
-    n_hash_insert(ht, sectnam, arr_sect);
-
     af = afile_open(path, parent_path, sectnam_inc, update);
     if (af == NULL) {
         is_err = 1;
@@ -874,9 +927,8 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     }
 
     n_hash_insert(af_htconf, af->path, NULL);
-    
     while (n_stream_gets(af->vf->vf_tnstream, buf, sizeof(buf) - 1)) {
-        char *name, *p;
+        char *name, *value, *p;
         
         p = buf;
         while (isspace(*p))
@@ -961,34 +1013,12 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
             continue;
         }
 
-        name = p;
-        while (isalnum(*p) || *p == '_' || *p == '-' || isspace(*p))
-            p++;
-        
-        if (p == name || *p != '=') {
-            logn(LOGERR, _("%s:%d: missing '='"), af->path, nline);
-            //printf("%s\n", buf);
-            is_err++;
+        if (!split_option_line(p, &name, &value, af->path, nline))
             goto l_end;
-            
-        } else {
-            char *q = p - 1;
-            while (isspace(*q))
-                *q-- = '\0';
-        }
-
-        *p++ = '\0';
-        while (isspace(*p))
-            p++;
-
-        if (*p != '\0') {
-            char *q = strchr(p, '\0') - 1;
-            while (isspace(*q))
-                *q-- = '\0';
-        }
         
         if (ht_sect)
-            add_param(ht_sect, sectnam, name, p, validate, af->path, nline);
+            add_param(ht_sect, sectnam, name, value, validate, 0,
+                      af->path, nline);
         else
             msgn(1, "%s: skipped %s::%s", af->path, sectnam, name);
     }
@@ -1051,6 +1081,44 @@ static void merge_htconf(tn_hash *htconf, tn_hash *ht)
     n_array_free(keys);
 }
 
+tn_hash *poldek_conf_addlines(tn_hash *htconf, const char *sectnam,
+                              tn_array *lines)
+{
+    tn_hash *ht_sect = NULL;
+    int i, nerr = 0, htconfown = 0;
+
+    if (sectnam == NULL)
+        sectnam = global_tag;
+    
+    if (htconf == NULL) {
+        htconfown = 1;
+        htconf = new_htconf(sectnam, &ht_sect);
+    
+    } else {
+        ht_sect = poldek_conf_get_section_ht(htconf, sectnam);
+        if (ht_sect == NULL) {
+            logn(LOGERR, "%s: no such configuration section", sectnam);
+            return NULL;
+        }
+    }
+
+    for (i=0; i < n_array_size(lines); i++) {
+        const char *line = n_array_nth(lines, i);
+        char *tmp, *name, *value;
+
+        n_strdupap(line, &tmp);
+        
+        if (split_option_line(tmp, &name, &value, NULL, 0)) {
+            if (!add_param(ht_sect, sectnam, name, value, 1, 1, NULL, 0))
+                nerr++;
+        }
+    }
+    
+    return htconf;
+}
+
+    
+        
 
 tn_hash *poldek_conf_load(const char *path, unsigned flags) 
 {
@@ -1089,7 +1157,7 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
         
         if ((flags & POLDEK_LDCONF_NOINCLUDE) == 0) {
             tn_hash *global;
-        
+            
             global = poldek_conf_get_section_ht(htconf, "global");
             
             if (poldek_conf_get_bool(global, "load apt sources list", 0))
@@ -1128,7 +1196,7 @@ tn_hash *poldek_conf_loadefault(unsigned flags)
     if ((flags & POLDEK_LDCONF_NOINCLUDE) == 0)
         flags |= POLDEK_LDCONF_APTSOURCES;
     DBGF("%s\n", sysconfdir);
-    
+
     n_snprintf(confpath, sizeof(confpath), "%s/poldek.conf", sysconfdir);
     confpath_exists = (access(confpath, R_OK) == 0);
 
@@ -1341,10 +1409,11 @@ static void load_apt_sources_list(tn_hash *htconf, const char *path)
                 }
                 
                 ht_sect = open_section_ht(htconf, sect, sectnam);
-                add_param(ht_sect, sectnam, "type", "apt", 1, path, nline);
-                add_param(ht_sect, sectnam, "name", name, 1, path, nline);
-                add_param(ht_sect, sectnam, "url", url, 1, path, nline);
-                add_param(ht_sect, sectnam, "prefix", pkg_prefix, 1, path, nline);
+                add_param(ht_sect, sectnam, "type", "apt", 1, 0, path, nline);
+                add_param(ht_sect, sectnam, "name", name, 1, 0, path, nline);
+                add_param(ht_sect, sectnam, "url", url, 1, 0, path, nline);
+                add_param(ht_sect, sectnam, "prefix", pkg_prefix, 1, 0,
+                          path, nline);
             }
             n_str_tokl_free(tl_save);
         }
@@ -1352,3 +1421,90 @@ static void load_apt_sources_list(tn_hash *htconf, const char *path)
     
     fclose(stream);
 }
+
+#define XML 0
+#if XML
+static const char *strtype(unsigned flags) 
+{
+    if (flags & TYPE_PATHLIST)
+        return "str-list";
+    
+    if (flags & TYPE_STR)
+        return "str";
+    
+    if (flags & TYPE_BOOL)
+        return "bool";
+
+    if (flags & TYPE_INT)
+        return "int";
+
+
+    if (flags & TYPE_ENUM)
+        return "enum";
+
+    n_assert(0);
+    return NULL;
+}
+
+
+static void dump_section(struct section *sect) 
+{
+    struct tag tag;
+    int i = 0;
+    
+    printf("<section name=\"%s\">\n", sect->name);
+    
+    while (1) {
+        tag = sect->tags[i++];
+        if (tag.name == NULL)
+            break;
+
+        if (tag.flags & TYPE_F_OBSL)
+            continue;
+        
+        printf("  <option name=\"%s\" type=\"%s%s\"", tag.name,
+               strtype(tag.flags),
+               (tag.flags & TYPE_LIST) ? "-list" : "");
+        printf(" default=\"\"");
+        if (tag.flags & TYPE_MULTI_EXCL)
+            printf(" redefinable=\"yes\"");
+
+        if (tag.flags & TYPE_MULTI)
+            printf(" multiple=\"yes\"");
+
+        if (tag.flags & TYPE_F_ENV)
+            printf(" env=\"yes\"");
+
+        if (tag.flags & TYPE_F_ALIAS)
+            printf(" alias=\"yes\"");
+
+        if (tag.flags & TYPE_F_REQUIRED)
+            printf(" required=\"yes\"");
+
+        printf(">\n");
+        
+        if (tag.flags & TYPE_ENUM) {
+            int n = 0;
+            printf("    <values>\n");
+            while (tag.enums[n]) 
+                printf("      <enum>%s</enum>\n", tag.enums[n++]);
+            printf("    </values>\n");
+        }
+        printf("    <descripion>\n");
+        printf("    </descripion>\n");
+
+        printf("  </option>\n\n");
+    }
+    printf("</section> <!-- end of \"%s\" -->\n", sect->name);
+}
+
+static
+void dump_sections(const char *name) 
+{
+    int i = 0;
+    while (sections[i].name) {
+        dump_section(&sections[i]);
+        i++;
+    }
+}
+#endif /* xml */
