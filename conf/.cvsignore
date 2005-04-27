@@ -1,5 +1,3 @@
-Cellar
-trurlib
 aclocal.m4
 Makefile.in
 Makefile
@@ -18,14 +16,7 @@ install-sh
 stamp-h
 stamp-h.in
 .deps
-poldek*
-rpmvercmp
-ccmalloc-log
 depcomp
-test_match
 *.html
 homepage.sgml
 intl
-*.lo
-.libs
-*.la
