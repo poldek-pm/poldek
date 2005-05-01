@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
 <!ENTITY poldek "<application>poldek</application>">
+<!ENTITY poldekcmd "<command>poldek</command>">
 <!ENTITY ipoldek "<application>ipoldek</application>">
+<!ENTITY ipoldekcmd "<command>ipoldek</command>">
 <!ENTITY rpm "<application>rpm</application>">
 <!ENTITY prompt "<prompt>$</prompt>">
 <!ENTITY apt-get "<application>apt-get</application>">
@@ -118,10 +120,10 @@ path = /home/pub/RPMS
 
 <sect2> <title>Step #2 - Create repository index</title>
   <para>
-  FC3 index is ready, but for your local directory creation of the index is a must.
+  FC3 index is ready, but an index must be created for your local directory.
 
   <screen>
-  &prompt; poldek -n rpms --makeidx 
+  &prompt; <command>poldek -n <replaceable>rpms</replaceable> --makeidx</command>
   </screen>
 
   As result several files with package data will be created under /home/pub/RPMS.
@@ -196,11 +198,11 @@ itself. Program supports various types of repositories, including &apt-get; and
 &supported-repositories;
 
 <para>
-Native &poldek; repositories pndir and pdir have <quote>incremental updates</quote> 
-feature consist in creation of package index delta files with changes only, which
-allows to update local indexes. This gives possibility to update local index by download 
-by download data with changes only. It significantly reduces amout of data need to be downloaded 
-when repository changes a bit.
+Native &poldek; repositories 'pndir' and 'pdir' have <quote>incremental updates</quote> 
+feature consist in creation of package index delta files with changes to last created
+index. This gives possibility to update local index by download data with changes only,
+what significantly reduces amout of data need to be downloaded when repository changes 
+a bit.
 </para>
 
 <sect2 id="repositories.configuration"> <title>Configuration</title>
