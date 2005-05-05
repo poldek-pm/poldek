@@ -584,7 +584,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
     if (*name != '_') {          /* user defined macro */
         char *p = name + 1;
         while (*p) {                /* backward compat */
-            if (*p == '_')
+            if (*p == '_' || *p == '-')
                 *p = ' ';
             p++;
         }
