@@ -142,7 +142,8 @@ static struct tag source_tags[] = {
     { "path",        TYPE_STR | TYPE_F_ENV | TYPE_F_ALIAS, { 0 } }, /* alias for url */
     { "prefix",      TYPE_STR | TYPE_F_ENV, { 0 } },
     { "pri",         TYPE_STR , { 0 } },
-    { "dscr",        TYPE_STR | TYPE_F_ENV, { 0 } },
+    { "lang",        TYPE_STR | TYPE_F_ENV, { 0 } },
+    { "dscr",        TYPE_STR | TYPE_F_ENV | TYPE_F_ALIAS, { 0 } },
     { "type",        TYPE_STR , { 0 } },
     { "original type", TYPE_STR , { 0 } },
     { "noauto",      TYPE_BOOL, { 0 } },
@@ -155,6 +156,7 @@ static struct tag source_tags[] = {
     { "hold",        TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "ignore",      TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "exclude path", TYPE_STR | TYPE_PATHLIST | TYPE_MULTI , { 0 } },
+    { "sources"     , TYPE_STR | TYPE_LIST | TYPE_MULTI, { 0 }, },
     {  NULL,         0, { 0 } }, 
 };
 
@@ -438,14 +440,30 @@ static int verify_section(const struct section *sect, tn_hash *ht)
 {
     int i = 0, nerr = 0;
     struct tag *tags;
+    struct copt *fl;
 
+    fl = n_hash_get(ht, "__file__line");
     tags = sect->tags;
     
     while (tags[i].name) {
-        if (tags[i].flags & TYPE_F_REQUIRED) {
-            if (n_hash_get(ht, tags[i].name) == NULL) {
-                logn(LOGERR, "%s: missing required '%s'", sect->name,
-                     tags[i].name);
+        if ((tags[i].flags & TYPE_F_REQUIRED) && !n_hash_exists(ht, tags[i].name)) {
+            const char *missing_tag = tags[i].name;
+
+            if (n_str_eq(sect->name, "source") &&
+                n_str_eq(tags[i].name, "url")) {
+                const char *t = poldek_conf_get(ht, "type", NULL);
+                
+                if (t && n_str_eq(t, "group")) { /* source group */
+                    missing_tag = NULL;
+                    if (!n_hash_exists(ht, "sources"))
+                        missing_tag = "sources";
+                }
+            }
+            
+            if (missing_tag) {
+                struct copt *opt = n_hash_get(ht, "__file__line");
+                logn(LOGERR, "%s%s[%s]: missing required '%s'", opt ? opt->val : "",
+                     opt ? ": " : "",  sect->name, missing_tag);
                 nerr++;
             }
         }
@@ -800,11 +818,12 @@ char *include_path(char *path, size_t size,
 
 static
 tn_hash *open_section_ht(tn_hash *htconf, const struct section *sect, 
-                         const char *sectnam)
+                         const char *sectnam, const char *path, int nline)
 {
     tn_array *arr_sect;
     tn_hash  *ht_sect = NULL;
     
+
     arr_sect = n_hash_get(htconf, sectnam);
     msgn(3, " [%s]", sectnam);
 
@@ -827,7 +846,54 @@ tn_hash *open_section_ht(tn_hash *htconf, const struct section *sect,
         n_hash_insert(htconf, sectnam, arr_sect);
     }
 
+    if (ht_sect && path && !n_hash_exists(ht_sect, "__file__line")) {
+        char filemark[PATH_MAX];
+        struct copt *opt;
+
+        n_snprintf(filemark, sizeof(filemark), "%s:%d:", path, nline);
+        opt = copt_new("__file__line");
+        opt->val = n_strdup(filemark);
+        n_hash_insert(ht_sect, opt->name, opt);
+    }
+
+    if (!n_hash_exists(ht_sect, "__section_name")) { 
+        struct copt *opt = copt_new("__section_name");
+        opt->val = n_strdup(sectnam);
+        n_hash_insert(ht_sect, opt->name, opt);
+    }
+
     return ht_sect;
+}
+
+void *poldek_conf_add_section(tn_hash *htconf, const char *name)
+{
+    const struct section *sect = NULL;
+    tn_hash              *ht_sect = NULL;
+    
+    if ((sect = find_section(name)) == NULL) {
+        logn(LOGERR, _("'%s': invalid section name"), name);
+        return NULL;
+    }
+
+    ht_sect = open_section_ht(htconf, sect, name, NULL, -1);
+    return ht_sect;
+}
+
+int poldek_conf_add_to_section(void *sect, const char *akey, const char *aval) 
+{
+    const char *name;
+    char *key, *val;
+    tn_hash  *ht_sect = sect;
+
+    n_strdupap(akey, &key);
+    n_strdupap(aval, &val);
+    name = poldek_conf_get(ht_sect, "__section_name", NULL);
+    return add_param(ht_sect, name, key, val, 1, 0, NULL, -1);
+}
+
+int poldek_conf_set(tn_hash *ht_sect, const char *akey, const char *aval)
+{
+    return poldek_conf_add_to_section(ht_sect, akey, aval);
 }
 
 static tn_hash *new_htconf(const char *sectnam, tn_hash **ht_sect_ptr)
@@ -1007,7 +1073,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
             memcpy(sectnam, name, len);
             
             if (af->sectnam_inc == NULL || strcmp(af->sectnam_inc, sectnam) == 0)
-                ht_sect = open_section_ht(ht, sect, sectnam);
+                ht_sect = open_section_ht(ht, sect, sectnam, af->path, nline);
             else
                 ht_sect = NULL;
             continue;
@@ -1408,7 +1474,7 @@ static void load_apt_sources_list(tn_hash *htconf, const char *path)
                     p++;
                 }
                 
-                ht_sect = open_section_ht(htconf, sect, sectnam);
+                ht_sect = open_section_ht(htconf, sect, sectnam, path, -1);
                 add_param(ht_sect, sectnam, "type", "apt", 1, 0, path, nline);
                 add_param(ht_sect, sectnam, "name", name, 1, 0, path, nline);
                 add_param(ht_sect, sectnam, "url", url, 1, 0, path, nline);

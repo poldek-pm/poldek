@@ -5,6 +5,9 @@
 #include "pkg.h"
 #include "poldek_ts.h"
 
+#include <trurl/narray.h>
+#include <trurl/nhash.h>
+
 /* constans  */
 extern const char poldek_BUG_MAILADDR[];
 extern const char poldek_VERSION_BANNER[];
@@ -30,7 +33,6 @@ struct poldek_ctx *poldek_link(struct poldek_ctx *ctx);
 #define POLDEK_CONF_HOLD            11
 #define POLDEK_CONF_IGNORE          12
 #define POLDEK_CONF_PM              13
-#define POLDEK_CONF_PM_PDIRSRC      14
 
 #define POLDEK_CONF_LOGFILE         20
 #define POLDEK_CONF_LOGTTY          21
@@ -56,6 +58,7 @@ tn_array *poldek_get_pkgdirs(struct poldek_ctx *ctx);
 struct pm_ctx;
 struct pm_ctx *poldek_get_pmctx(struct poldek_ctx *ctx);
 
+tn_hash *poldek_get_config(struct poldek_ctx *ctx);
 
 enum poldek_search_tag {
     POLDEK_ST_RECNO = 1,

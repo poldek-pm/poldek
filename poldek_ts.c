@@ -401,7 +401,6 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
 {
     int      rc;
     char     *vs;
-    void     *vv;
     unsigned uv, uv_val;
 
     
@@ -438,6 +437,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
             }
             break;
 
+#if 0                           /* XXX - NFY, to rethink */
         case POLDEK_CONF_PM_PDIRSRC:
             vv = va_arg(ap, void*);
             if (vv) {
@@ -446,6 +446,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
                     src->path = poldek__conf_path(src->path, NULL);
                 ts->pm_pdirsrc = src;
             }
+#endif            
 
         case POLDEK_CONF_DUMPFILE:
             if ((vs = va_arg(ap, char*))) {

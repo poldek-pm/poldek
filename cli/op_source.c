@@ -20,6 +20,7 @@
 #include <argp.h>
 
 #include <trurl/nmalloc.h>
+#include <trurl/nstr.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -27,6 +28,7 @@
 #include "poldek.h"
 #include "pkgdir/source.h"
 #include "pkgdir/pkgdir.h"
+#include "conf.h"
 #include "cli.h"
 #include "op.h"
 
@@ -123,7 +125,7 @@ static struct argp_option source_options[] = {
 #define POLDEKCLI_SRC_UPDATE_AUTOA (1 << 4)
 #define POLDEKCLI_SRC_CLEAN        (1 << 5)
 #define POLDEKCLI_SRC_CLEAN_PKG    (1 << 6)
-
+#define POLDEKCLI_SRC_SPECIFIED    (1 << 10) /* -s | -n ? */
 
 int poclidek_op_source_nodesc = 0;
 
@@ -229,6 +231,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'n':
             arg_s->src = source_new(arg, NULL, NULL, NULL);
             poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->src);
+            arg_s->cnflags |= POLDEKCLI_SRC_SPECIFIED;
             //arg_s->src = NULL;
             break;
 
@@ -268,6 +271,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
             arg_s->src = source_new_pathspec(arg_s->curr_src_type, arg, NULL);
 			poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->src);
+            arg_s->cnflags |= POLDEKCLI_SRC_SPECIFIED;
             break;
 
         case OPT_DEST:
@@ -344,14 +348,37 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
-static void print_source_list(tn_array *sources) 
+static void print_source_list(struct poldek_ctx *ctx, tn_array *sources, int aliases) 
 {
     int i;
+    tn_hash *htcnf;
 
+    
     n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_name);
     for (i=0; i < n_array_size(sources); i++)
         source_printf(n_array_nth(sources, i));
     n_array_sort(sources);
+    
+    if (aliases == 0)
+        return;
+    
+    if ((htcnf = poldek_get_config(ctx))) {
+        tn_array *htcnf_sources = poldek_conf_get_section_arr(htcnf, "source");
+        
+        for (i=0; i < n_array_size(htcnf_sources); i++) {
+            const char *type;
+            tn_hash *ht = n_array_nth(htcnf_sources, i);
+            
+            type = poldek_conf_get(ht, "type", NULL);
+            if (type && n_str_eq(type, source_TYPE_GROUP)) {
+                struct source *src = source_new_htcnf(ht);
+                if (src == NULL)
+                    continue;
+                source_printf(src);
+                source_free(src);
+            }
+        }
+    }
 }
 
 
@@ -434,7 +461,9 @@ static int oprun(struct poclidek_opgroup_rt *rt)
 
     if (arg_s->cnflags & POLDEKCLI_SRC_SRCLS) {
         rc |= OPGROUP_RC_FINI;
-        print_source_list(sources);
+        print_source_list(rt->ctx, sources,
+                          (arg_s->cnflags & POLDEKCLI_SRC_SPECIFIED) == 0);
+                          /* print aliases if no -n or -s */
     }
 
     if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE) {

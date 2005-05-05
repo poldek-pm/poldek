@@ -37,9 +37,12 @@
 #include "log.h"
 #include "poldek_term.h"
 #include "i18n.h"
+#include "conf.h"
 
 #define SOURCE_DEFAULT_PRI 0
 
+
+const char source_TYPE_GROUP[] = "group";
 const char *poldek_conf_PKGDIR_DEFAULT_TYPE = "pndir";
 
 struct subopt {
@@ -68,7 +71,7 @@ static struct src_option source_options[] = {
     { "sign",     0, PKGSOURCE_VRFY_SIGN,   NULL},
     { "type",     0, PKGSOURCE_TYPE |
                      PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
-    { "dscr",     0, PKGSOURCE_DSCR |
+    { "lang",     0, PKGSOURCE_DSCR |
                      PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
     { "pri",      0, PKGSOURCE_PRI | PKGSRC_OPTION_SUBOPT, NULL},
     { "compress", 0, PKGSOURCE_COMPRESS |
@@ -265,13 +268,11 @@ char *source_set(char **member, const char *value)
     return *member;
 }
 
-
 struct source *source_set_type(struct source *src, const char *type)
 {
     source_set(&src->type, type);
     return src;
 }
-
 
 struct source *source_set_default_type(struct source *src)
 {
@@ -279,7 +280,6 @@ struct source *source_set_default_type(struct source *src)
         source_set(&src->type, poldek_conf_PKGDIR_DEFAULT_TYPE);
     return src;
 }
-
 
 static char *parse_cmdl_pathspec(const char *pathspec, const char **path)
 {
@@ -459,7 +459,7 @@ struct source *source_new_pathspec(const char *type, const char *pathspec,
         if (*name == '\0')
             name = NULL;
     }
-
+    
     src = source_new(name, type ? type : spec_type, path, pkg_prefix);
     if (src == NULL)
         return NULL;
@@ -512,9 +512,123 @@ struct source *source_new_v0_18(const char *pathspec, const char *pkg_prefix)
 {
     struct source *src = source_new_pathspec(NULL, pathspec, pkg_prefix);
     if ((src->flags & PKGSOURCE_TYPE) == 0)
-        source_set_type(src, "pdir"); /* default in v0.18.x */
+        source_set_type(src, "pdir"); /* default for v0.18.x */
     return src;
 }
+
+static
+int get_conf_opt_list(const tn_hash *htcnf, const char *name,
+                      tn_array *tolist)
+{
+    tn_array *list;
+    int i = 0;
+
+    if (n_array_size(tolist) > 0)
+        return 0;
+    
+    if ((list = poldek_conf_get_multi(htcnf, name))) {
+        for (i=0; i < n_array_size(list); i++)
+            n_array_push(tolist, n_strdup(n_array_nth(list, i)));
+        
+        n_array_free(list);
+    }
+    
+    n_array_sort(tolist);
+    n_array_uniq(tolist);
+    return i;
+}
+
+struct source *source_new_htcnf(const tn_hash *htcnf) 
+{
+    char spec[PATH_MAX];
+    struct source *src;
+    const char *vs, *type, *srcnam;
+    int  n = 0;
+    int  v;
+    
+    vs = poldek_conf_get(htcnf, "name", NULL);
+    if (vs == NULL)
+        vs = "anon";
+    srcnam = vs;
+    
+    n += n_snprintf(&spec[n], sizeof(spec) - n, "%s", vs);
+
+    if ((vs = poldek_conf_get(htcnf, "type", NULL)))
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",type=%s", vs);
+    type = vs;
+    
+    if ((v = poldek_conf_get_int(htcnf, "pri", 0)))
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",pri=%d", v);
+    
+    if ((v = poldek_conf_get_bool(htcnf, "noauto", 0)))
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",noauto");
+    
+    else if ((v = poldek_conf_get_bool(htcnf, "auto", 1)) == 0)
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",noauto");
+
+    if ((v = poldek_conf_get_bool(htcnf, "noautoup", 0)))
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",noautoup");
+    
+    else if ((v = poldek_conf_get_bool(htcnf, "autoup", 1)) == 0)
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",noautoup");
+
+    if ((v = poldek_conf_get_bool(htcnf, "signed", 0)))
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",sign");
+    
+    else if ((v = poldek_conf_get_bool(htcnf, "sign", 0)))
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",sign");
+
+    if ((vs = poldek_conf_get(htcnf, "lang", NULL)))
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",lang=%s", vs);
+
+    vs = poldek_conf_get(htcnf, "path", NULL);
+    if (vs == NULL)
+        vs = poldek_conf_get(htcnf, "url", NULL);
+    
+    if (vs == NULL && type && n_str_ne(type, source_TYPE_GROUP)) {
+        logn(LOGERR, "source: %s: missing required 'path'", srcnam);
+        return NULL;
+    }
+    
+    if (type && n_str_eq(type, source_TYPE_GROUP)) {
+        char tmp[PATH_MAX], *p;
+        int i, n = 0;
+        
+        tn_array *arr = poldek_conf_get_multi(htcnf, "sources");
+        n_array_sort(arr); 
+        for (i=0; i<n_array_size(arr); i++) 
+            n += n_snprintf(&tmp[n], sizeof(tmp) - n, "%s%s", n_array_nth(arr, i),
+                            i < n_array_size(arr) - 1 ? ", " : "");
+        n_array_free(arr);
+        n_strdupap((char*)tmp, &p);
+        vs = p;
+    }
+
+    //printf("spec %d = %s\n", n_hash_size(htcnf), spec);
+    //n_assert(vs);
+    
+    n_snprintf(&spec[n], sizeof(spec) - n, " %s", vs);
+    
+    vs = poldek_conf_get(htcnf, "prefix", NULL);
+    
+    src = source_new_pathspec(NULL, spec, vs);
+    
+    vs = poldek_conf_get(htcnf, "original type", NULL);
+    if (vs && src->type && n_str_eq(src->type, vs)) {
+        logn(LOGERR, "%s: original type and type must be differ",
+             source_idstr(src));
+        
+        source_free(src);
+        return NULL;
+    }
+    if (vs)
+        src->original_type = n_strdup(vs);
+    
+    get_conf_opt_list(htcnf, "exclude path", src->exclude_path);
+    get_conf_opt_list(htcnf, "ignore", src->ign_patterns);
+    return src;
+}
+
 
 int source_cmp(const struct source *s1, const struct source *s2)
 {
@@ -523,7 +637,6 @@ int source_cmp(const struct source *s1, const struct source *s2)
     
     return strcmp(s1->path, s2->path);
 }
-
 
 int source_cmp_uniq(const struct source *s1, const struct source *s2)
 {
@@ -545,12 +658,10 @@ int source_cmp_uniq(const struct source *s1, const struct source *s2)
     return rc;
 }
 
-
 int source_cmp_pri(const struct source *s1, const struct source *s2)
 {
     return s1->pri - s2->pri;
 }
-
 
 int source_cmp_name(const struct source *s1, const struct source *s2)
 {
@@ -559,7 +670,6 @@ int source_cmp_name(const struct source *s1, const struct source *s2)
     n2 = s2->name ? s2->name : "";
     return strcmp(n1, n2);
 }
-
 
 int source_cmp_pri_name(const struct source *s1, const struct source *s2)
 {
@@ -587,7 +697,6 @@ static int source_update_a(struct source *src)
     
     return pkgdir_update_a(src);
 }
-
 
 int source_update(struct source *src, unsigned flags)
 {
@@ -628,7 +737,6 @@ int source_update(struct source *src, unsigned flags)
 	
 	return rc;
 }
-
 
 static
 int source_snprintf_flags(char *str, int size, const struct source *src)
@@ -706,7 +814,6 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
     
     return n;
 }
-
 
 void source_printf(const struct source *src) 
 {
@@ -820,11 +927,10 @@ int sources_clean(tn_array *sources, unsigned flags)
     return nerr == 0;
 }
 
-
 int sources_add(tn_array *sources, struct source *src) 
 {
     if (src->no == 0)
-        src->no = n_array_size(sources) * 10;
+        src->no = n_array_size(sources) * 60;
     
     DBGF("%p %s (%d) %s\n", sources, src->name ? src->name: "-", src->no,
          src->path ? src->path:"null");
@@ -832,7 +938,6 @@ int sources_add(tn_array *sources, struct source *src)
     n_array_push(sources, src);
     return n_array_size(sources);
 }
-
 
 void sources_score(tn_array *sources) 
 {
@@ -948,9 +1053,6 @@ static const char *determine_stype(struct source *src, const char *idxpath)
     }
     return poldek_conf_PKGDIR_DEFAULT_TYPE;
 }
-
-    
-    
 
 int source_make_idx(struct source *src, const char *stype, 
                     const char *dtype, const char *idxpath,

@@ -19,6 +19,8 @@ struct poldek_ctx {
     tn_array       *sources;    /* struct source *[]  */
     tn_array       *pkgdirs;    /* struct pkgdir *[]  */
 
+    tn_array       *dest_sources; /* for "pset" PM, struct source *[]  */
+
     struct poldek_ts *ts;       /* main, internal ts */
 
     unsigned         ps_flags;

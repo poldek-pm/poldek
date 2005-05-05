@@ -195,6 +195,7 @@ poldek_get_avail_packages
 poldek_get_pkgdirs
 poldek_get_pmctx
 poldek_get_sources
+poldek_get_config
 poldek_iinf_destroy
 poldek_iinf_init
 poldek_is_interactive_on
@@ -281,12 +282,14 @@ source_link
 source_make_idx
 source_malloc
 source_new
+source_new_htcnf
 source_new_pathspec
 source_printf
 source_set_default_type
 source_set_pkg_prefix
 source_set_type
 source_update
+source_TYPE_GROUP
 sources_add
 sources_clean
 sources_score

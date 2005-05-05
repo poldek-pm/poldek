@@ -24,5 +24,11 @@ int poldek_conf_get_bool(const tn_hash *htconf, const char *name, int default_v)
 int poldek_conf_get_int(const tn_hash *htconf, const char *name, int default_v);
 tn_array *poldek_conf_get_multi(const tn_hash *htconf, const char *name);
 
+
+void *poldek_conf_add_section(tn_hash *htconf, const char *name);
+int poldek_conf_add_to_section(void *sect, const char *key, const char *val);
+
+int poldek_conf_set(tn_hash *ht_sect, const char *akey, const char *aval);
+
 #endif
 

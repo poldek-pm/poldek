@@ -49,6 +49,7 @@ static int poldeklib_init_called = 0;
 #define SOURCES_LOADED      (1 << 3)
 #define SETUP_DONE          (1 << 4)  
 
+
 const char poldek_BUG_MAILADDR[] = "<mis@pld.org.pl>";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
 const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
@@ -69,10 +70,12 @@ void (*poldek_die_hook)(const char *msg) = NULL;
 static void register_vf_handlers_compat(const tn_hash *htcnf);
 static void register_vf_handlers(const tn_array *fetchers);
 
+static int setup_legacy_sources(tn_hash *htcnf);
+
 static
 int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
                      tn_array *srcs_named,
-                     tn_hash *htcnf, tn_array *htcnf_sources);
+                     tn_array *htcnf_sources);
 
 static
 int get_conf_opt_list(const tn_hash *htcnf, const char *name, tn_array *tolist);
@@ -138,12 +141,12 @@ int addsource(tn_array *sources, struct source *src,
         
         for (i=0; i < n_array_size(srcs_named); i++) {
             struct source *s = n_array_nth(srcs_named, i);
-
+            
             if (fnmatch(s->name, src->name, 0) == 0) {
                 matches[i]++;
                 if (added)
                     continue;
-                
+
                 /* given by name -> clear flags */
                 src->flags &= ~(PKGSOURCE_NOAUTO | PKGSOURCE_NOAUTOUP);
 
@@ -190,16 +193,14 @@ int prepare_sources(struct poldek_ctx *ctx,
         }
     }
 
-    if (poldek_cnf && (n_array_size(srcs_named) > 0 ||
+    if (poldek_cnf && (n_array_size(srcs_named) > 0 || /* load configured sources? */
                        n_array_size(sources) == 0)) {
         
-        tn_hash *htcnf;
         tn_array *htcnf_sources;
 
-        htcnf = poldek_conf_get_section_ht(poldek_cnf, "global");
+        setup_legacy_sources(poldek_cnf);
         htcnf_sources = poldek_conf_get_section_arr(poldek_cnf, "source");
-
-        rc = get_conf_sources(ctx, srcs_path, srcs_named, htcnf, htcnf_sources);
+        rc = get_conf_sources(ctx, srcs_path, srcs_named, htcnf_sources);
     }
     
     
@@ -221,74 +222,22 @@ int prepare_sources(struct poldek_ctx *ctx,
 }
 
 static
-struct source *source_new_htcnf(struct poldek_ctx *ctx,
-                                const tn_hash *htcnf, int no) 
+struct source *do_source_new_htcnf(struct poldek_ctx *ctx,
+                                   tn_hash *htcnf, int no) 
 {
-    char spec[PATH_MAX], name[20];
     struct source *src;
     const char *vs;
-    int  n = 0;
-    int  v;
     
-    vs = poldek_conf_get(htcnf, "name", NULL);
-    if (vs == NULL) {
+    if ((vs = poldek_conf_get(htcnf, "name", NULL)) == NULL) {
+        char name[32];
         n_snprintf(name, sizeof(name), "src%.2d", no);
-        vs = name;
+        poldek_conf_set(htcnf, "name", name);
     }
-    
-    n += n_snprintf(&spec[n], sizeof(spec) - n, "%s", vs);
 
-    if ((vs = poldek_conf_get(htcnf, "type", NULL)))
-        n += n_snprintf(&spec[n], sizeof(spec) - n, ",type=%s", vs);
-
-    if ((v = poldek_conf_get_int(htcnf, "pri", 0)))
-        n += n_snprintf(&spec[n], sizeof(spec) - n, ",pri=%d", v);
-    
-    if ((v = poldek_conf_get_bool(htcnf, "noauto", 0)))
-        n += n_snprintf(&spec[n], sizeof(spec) - n, ",noauto");
-    
-    else if ((v = poldek_conf_get_bool(htcnf, "auto", 1)) == 0)
-        n += n_snprintf(&spec[n], sizeof(spec) - n, ",noauto");
-
-    if ((v = poldek_conf_get_bool(htcnf, "noautoup", 0)))
-        n += n_snprintf(&spec[n], sizeof(spec) - n, ",noautoup");
-    
-    else if ((v = poldek_conf_get_bool(htcnf, "autoup", 1)) == 0)
-        n += n_snprintf(&spec[n], sizeof(spec) - n, ",noautoup");
-
-    if ((v = poldek_conf_get_bool(htcnf, "signed", 0)))
-        n += n_snprintf(&spec[n], sizeof(spec) - n, ",sign");
-    
-    else if ((v = poldek_conf_get_bool(htcnf, "sign", 0)))
-        n += n_snprintf(&spec[n], sizeof(spec) - n, ",sign");
-
-    if ((vs = poldek_conf_get(htcnf, "dscr", NULL)))
-        n += n_snprintf(&spec[n], sizeof(spec) - n, ",dscr=%s", vs);
-
-    vs = poldek_conf_get(htcnf, "path", NULL);
-    if (vs == NULL)
-        vs = poldek_conf_get(htcnf, "url", NULL);
-    //printf("spec %d = %s\n", n_hash_size(htcnf), spec);
-    n_assert(vs);
-
-    n_snprintf(&spec[n], sizeof(spec) - n, " %s", vs);
-    
-    vs = poldek_conf_get(htcnf, "prefix", NULL);
-    
-    src = source_new_pathspec(NULL, spec, vs);
-    
-    vs = poldek_conf_get(htcnf, "original type", NULL);
-    if (vs && src->type && n_str_eq(src->type, vs)) {
-        logn(LOGERR, "%s: original type and type must be differ",
-             source_idstr(src));
-        
-        source_free(src);
+    src = source_new_htcnf(htcnf);
+    if (src == NULL)
         return NULL;
-    }
-    if (vs)
-        src->original_type = n_strdup(vs);
     
-    get_conf_opt_list(htcnf, "exclude path", src->exclude_path);
     if (n_array_size(src->exclude_path) == 0 && /* take global exclude path */
         n_array_size(ctx->ts->exclude_path) > 0) {
 
@@ -297,7 +246,6 @@ struct source *source_new_htcnf(struct poldek_ctx *ctx,
                                         (tn_fn_dup)strdup);
     }
 
-    get_conf_opt_list(htcnf, "ignore", src->ign_patterns);
     if (n_array_size(src->ign_patterns) == 0 && /* take global  */
         n_array_size(ctx->ts->ign_patterns) > 0) {
         
@@ -309,30 +257,135 @@ struct source *source_new_htcnf(struct poldek_ctx *ctx,
     return src;
     
 }
-    
-static 
-int get_conf_sources(struct poldek_ctx *ctx,
-                     tn_array *sources, tn_array *srcs_named,
-                     tn_hash *htcnf, tn_array *htcnf_sources)
-{
-    struct source   *src;
-    int             i, nerr = 0, getall = 0;
-    int             *matches = NULL;
-    tn_array        *list;
 
-    if (n_array_size(srcs_named) == 0 && n_array_size(sources) == 0)
-        getall = 1;
-    
-    else if (n_array_size(srcs_named) > 0) {
-        matches = alloca(n_array_size(srcs_named) * sizeof(int));
-        memset(matches, 0, n_array_size(srcs_named) * sizeof(int));
+static
+tn_array *expand_sources_group(tn_array *srcs_named, tn_array *htcnf_sources,
+                               tn_hash *expanded_h)
+{
+    int             i, j, *htcnf_matches, *isgroup_matches;
+    tn_array        *sources;
+
+    htcnf_matches = alloca(n_array_size(htcnf_sources) * sizeof(int));
+    memset(htcnf_matches, 0, n_array_size(htcnf_sources) * sizeof(int));
+
+    isgroup_matches = alloca(n_array_size(htcnf_sources) * sizeof(int));
+    memset(isgroup_matches, 0, n_array_size(htcnf_sources) * sizeof(int));
+
+    sources = n_array_clone(srcs_named);
+
+    for (i=0; i < n_array_size(srcs_named); i++) {
+        struct source *s = n_array_nth(srcs_named, i);
+
+        for (j=0; j < n_array_size(htcnf_sources); j++) {
+            const char *name, *type;
+            tn_hash *ht;
+
+            ht = n_array_nth(htcnf_sources, j);
+
+            if (isgroup_matches[j]) /* just for efficiency */
+                continue;
+            
+            type = poldek_conf_get(ht, "type", NULL);
+            /* skip not "group" */
+            if (type == NULL || n_str_ne(type, source_TYPE_GROUP)) { 
+                isgroup_matches[j] = 1;
+                continue;
+            }
+
+            name = poldek_conf_get(ht, "name", NULL);
+            n_assert(name);
+
+            if (htcnf_matches[j] == 0 && fnmatch(s->name, name, 0) == 0) {
+                tn_array *names;
+                int ii;
+                
+                names = poldek_conf_get_multi(ht, "sources");
+                n_assert(names);
+                
+                for (ii=0; ii < n_array_size(names); ii++) {
+                    DBGF("%s -> %s\n", s->name, n_array_nth(names, ii));
+                    struct source *src = source_new(n_array_nth(names, ii), NULL, NULL, NULL);
+                    src->no = s->no + 1 + ii; /* XXX: hope we fit (see sources_add()) */
+                    n_array_push(sources, src);
+                }
+                n_hash_replace(expanded_h, s->name, NULL);
+                htcnf_matches[j] = 1;
+            }
+        }
+        
+        n_array_push(sources, source_link(s));
     }
-    /* legacy source = ...  */
+#if ENABLE_TRACE
+    for (i=0; i < n_array_size(sources); i++) {
+        struct source *s = n_array_nth(sources, i);
+        DBG_F("%d %s\n", i, s->name);
+    }
+#endif    
+    return sources;
+}
+
+static int source_to_htconf(struct source *src, int no, tn_hash *htcnf)
+{
+    void *sect;
+    char buf[64], *name, *path_param = "path";
+
+    if (src->path == NULL)
+        return 0;
+    
+    sect = poldek_conf_add_section(htcnf, "source");
+
+    name = src->name;
+    if (name == NULL) {
+        n_snprintf(buf, sizeof(buf), "lsrc%.2d", no);
+        name = buf;
+    }
+    
+    poldek_conf_add_to_section(sect, "name", name);
+    
+    if (src->type) {
+        poldek_conf_add_to_section(sect, "type", src->type);
+        if (n_str_eq(src->type, source_TYPE_GROUP))
+            path_param = "sources";
+    }
+    
+    if (src->path)
+        poldek_conf_add_to_section(sect, path_param, src->path);
+    
+    if (src->pkg_prefix)
+        poldek_conf_add_to_section(sect, "prefix", src->pkg_prefix);
+    
+    if (src->flags & PKGSOURCE_NOAUTO)
+        poldek_conf_add_to_section(sect, "auto", "no");
+    
+    if (src->flags & PKGSOURCE_NOAUTOUP)
+        poldek_conf_add_to_section(sect, "autoup", "no");
+    
+    if (src->flags & PKGSOURCE_VRFY_SIGN)
+        poldek_conf_add_to_section(sect, "signed", "yes");
+
+    if (src->flags & PKGSOURCE_COMPRESS)
+        poldek_conf_add_to_section(sect, "compress", "yes");
+
+    if (src->dscr)
+        poldek_conf_add_to_section(sect, "lang", src->dscr);
+
+    return 1;
+}
+
+static int setup_legacy_sources(tn_hash *poldek_cnf) 
+{
+    struct source *src;
+    tn_array *list;
+    tn_hash *htcnf;
+    int i, no = 0;
+    
+    htcnf = poldek_conf_get_section_ht(poldek_cnf, "global");
+    
     if ((list = poldek_conf_get_multi(htcnf, "source"))) {
         for (i=0; i < n_array_size(list); i++) {
             src = source_new_v0_18(n_array_nth(list, i), NULL);
-            if (!addsource(sources, src, getall, srcs_named, matches))
-                source_free(src);
+            source_to_htconf(src, no++, poldek_cnf);
+            source_free(src);
         }
         n_array_free(list);
     }
@@ -346,17 +399,46 @@ int get_conf_sources(struct poldek_ctx *ctx,
         if ((src_val = poldek_conf_get(htcnf, opt, NULL))) {
             snprintf(opt, sizeof(opt), "prefix%d", i);
             src = source_new_v0_18(src_val, poldek_conf_get(htcnf, opt, NULL));
-            
-            if (!addsource(sources, src, getall, srcs_named, matches))
-                source_free(src);
+            source_to_htconf(src, no++, poldek_cnf);
+            source_free(src);
         }
     }
+    
+    return no;
+}
 
+static 
+int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources, tn_array *srcs_named,
+                     tn_array *htcnf_sources)
+{
+    struct source   *src;
+    int             i, nerr = 0, getall = 0;
+    int             *matches = NULL;
+    tn_array        *expanded_srcs_named = NULL;
+    tn_hash         *expanded_h  = NULL;
+
+    if (n_array_size(srcs_named) == 0 && n_array_size(sources) == 0)
+        getall = 1;
+    
+    else if (n_array_size(srcs_named) > 0) {
+        expanded_h = n_hash_new(16, NULL);
+        expanded_srcs_named = expand_sources_group(srcs_named, htcnf_sources, expanded_h);
+
+        srcs_named = expanded_srcs_named;
+        matches = alloca(n_array_size(srcs_named) * sizeof(int));
+        memset(matches, 0, n_array_size(srcs_named) * sizeof(int));
+    }
+    
     if (htcnf_sources) {
         for (i=0; i < n_array_size(htcnf_sources); i++) {
+            const char *type;
             tn_hash *ht = n_array_nth(htcnf_sources, i);
             
-            src = source_new_htcnf(ctx, ht, n_array_size(sources));
+            type = poldek_conf_get(ht, "type", NULL);
+            if (type && n_str_eq(type, source_TYPE_GROUP)) /* skip "group" */
+                continue;
+            
+            src = do_source_new_htcnf(ctx, ht, n_array_size(sources));
             if (src == NULL)
                 nerr++;
             else if (!addsource(sources, src, getall, srcs_named, matches))
@@ -365,8 +447,8 @@ int get_conf_sources(struct poldek_ctx *ctx,
     }
     
     for (i=0; i < n_array_size(srcs_named); i++) {
-        if (matches[i] == 0) {
-            struct source *src = n_array_nth(srcs_named, i);
+        struct source *src = n_array_nth(srcs_named, i);
+        if (matches[i] == 0 && !n_hash_exists(expanded_h, src->name)) {
             logn(LOGERR, _("%s: no such source"), src->name);
             nerr++;
         }
@@ -378,7 +460,9 @@ int get_conf_sources(struct poldek_ctx *ctx,
             src->no = i;
         }
 
-
+    n_array_cfree(&expanded_srcs_named);
+    if (expanded_h)
+        n_hash_free(expanded_h);
     return nerr == 0;
 }
 
@@ -1166,10 +1250,7 @@ int poldek_load_sources(struct poldek_ctx *ctx)
 
 struct pkgdir *poldek_load_destination_pkgdir(struct poldek_ctx *ctx)
 {
-    return pkgdb_to_pkgdir(ctx->pmctx, ctx->ts->rootdir, NULL,
-                           ctx->ts->pm_pdirsrc ? "source" : NULL,
-                           ctx->ts->pm_pdirsrc ? ctx->ts->pm_pdirsrc : NULL,
-                           NULL);
+    return pkgdb_to_pkgdir(ctx->pmctx, ctx->ts->rootdir, NULL, NULL);
 }
 
 int poldek_is_interactive_on(const struct poldek_ctx *ctx)
@@ -1182,6 +1263,11 @@ int poldek_is_interactive_on(const struct poldek_ctx *ctx)
 struct pm_ctx *poldek_get_pmctx(struct poldek_ctx *ctx)
 {
     return ctx->pmctx;
+}
+
+tn_hash *poldek_get_config(struct poldek_ctx *ctx)
+{
+    return ctx->htconf;
 }
 
 

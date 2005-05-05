@@ -5,6 +5,8 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
+extern const char source_TYPE_GROUP[]; /* "group" */
+
 /* source options */
 #define PKGSOURCE_NOAUTO     (1 << 0)
 #define PKGSOURCE_NOAUTOUP   (1 << 1)
@@ -17,8 +19,9 @@
 #define PKGSOURCE_NAMED      (1 << 10)
 #define PKGSOURCE_COMPRESS   (1 << 11)
 #define PKGSOURCE_NODESC     (1 << 12)
-#define PKGSOURCE_AUTOUPA    (1 << 13) /* do --upa if --up returns
-                                          "desynchronized" index */
+#define PKGSOURCE_AUTOUPA    (1 << 13) /* do --upa if --up said "desynchronized"
+                                          index */
+#define PKGSOURCE_ISGROUP    (1 << 15) /* an alias for one or more sources */
 
 struct source {
     unsigned  flags;
@@ -46,6 +49,8 @@ struct source *source_new(const char *name, const char *type,
                           const char *path, const char *pkg_prefix);
 struct source *source_new_pathspec(const char *type, const char *pathspec,
                                    const char *pkg_prefix);
+struct source *source_new_htcnf(const tn_hash *htcnf);
+
 #ifndef SWIG
 /* sets type to v0.18.x default */
 struct source *source_new_v0_18(const char *pathspec, const char *pkg_prefix);
