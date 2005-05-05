@@ -1,0 +1,117 @@
+--- poldek-0.18.8/pkgset-install.c.orig	2004-12-30 13:03:52.000000000 +0100
++++ poldek-0.18.8/pkgset-install.c	2005-04-01 22:12:08.298359584 +0200
+@@ -969,7 +969,7 @@
+             DBGF("%s: satisfied by db [cached]\n", capreq_snprintf_s(req));
+ 
+         } else if (tomark && marked_for_removal(tomark, upg)) {
+-            DBGF_F("%s: marked for removal\n", pkg_snprintf_s(tomark));
++            DBGF("%s: marked for removal\n", pkg_snprintf_s(tomark));
+             
+         } else if (pkgdb_match_req(upg->inst->db, req, 1,
+                                    upg->uninst_set->dbpkgs)) {
+@@ -1145,12 +1145,18 @@
+             }
+             
+             if (marked_for_removal_by_req(real_tomark, req, upg)) {
+-                logn(LOGERR, _("%s (cap %s) is required by %s%s"),
+-                     pkg_snprintf_s(real_tomark), capreq_snprintf_s(req),
+-                     pkg_is_installed(pkg) ? "" : _("already marked "), 
+-                     pkg_snprintf_s0(pkg));
+-                upg->nerr_dep++;
+-                
++                struct pkg *p;
++                p = select_successor(pkg, ps, upg, &obspkg_by_obsoletes);
++                if (p && pkg_cmp_evr(p, pkg) > 0 && upg->inst->flags & INSTS_GREEDY) {
++                    n_assert(!pkg_is_marked(p));
++                    do_greedymark(indent, p, pkg, req, ps, upg);
++                } else {
++                  logn(LOGERR, _("%s (cap %s) is required by %s%s"),
++                       pkg_snprintf_s(real_tomark), capreq_snprintf_s(req),
++                       pkg_is_installed(pkg) ? "installed " : _("already marked "), 
++                       pkg_snprintf_s0(pkg));
++                  upg->nerr_dep++;
++                }                
+             } else {
+                 //printf("DEPM %s\n", pkg_snprintf_s0(tomark));
+                 message_depmark(indent, pkg, real_tomark, req, process_as);
+@@ -1329,6 +1335,8 @@
+                      struct dbpkg *dbpkg, struct pkgset *ps,
+                      struct upgrade_s *upg) 
+ {
++    struct pkg    **tomark_candidates = NULL;
++    struct pkg    ***tomark_candidates_ptr = NULL;
+     struct pkg *tomark = NULL;
+     struct capreq *req = (struct capreq*)cnfl;
+     int found = 0, by_replacement = 0;
+@@ -1349,9 +1357,26 @@
+     DBGF("find_req %s %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(req));
+     capreq_revrel(req);
+     DBGF("find_req %s %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(req));
++
++    if ((upg->inst->flags & INSTS_EQPKG_ASKUSER) && upg->inst->askpkg_fn)
++        tomark_candidates_ptr = &tomark_candidates;
++
+     
+-    found = find_req(pkg, req, &tomark, NULL, ps, upg);
++    found = find_req(pkg, req, &tomark, tomark_candidates_ptr, ps, upg);
+     capreq_revrel(req);
++
++    if(found) {
++        struct pkg *real_tomark = tomark;
++        if (tomark_candidates) {
++            int n;
++            n = upg->inst->askpkg_fn(capreq_snprintf_s(req),
++                                     tomark_candidates, tomark);
++            real_tomark = tomark_candidates[n];
++            free(tomark_candidates);
++            tomark_candidates = NULL;
++        }
++        tomark=real_tomark;
++    }
+     
+     if (!found) {
+         found = find_replacement(ps, dbpkg->pkg, &tomark);
+@@ -1390,6 +1415,25 @@
+     return found;
+ }
+ 
++static
++int resolve_conflict_new(int indent,
++                     struct pkg *pkg, const struct capreq *cnfl,
++                     struct dbpkg *dbpkg, struct pkgset *ps,
++                     struct upgrade_s *upg) 
++{
++  int found=resolve_conflict(indent,pkg,cnfl,dbpkg,ps,upg);
++  if(!found) {
++      struct pkg *p;
++      int obspkg_by_obsoletes=0;
++      p = select_successor(dbpkg->pkg, ps, upg, &obspkg_by_obsoletes);
++      if (p && pkg_cmp_evr(p, dbpkg->pkg) > 0 && upg->inst->flags & INSTS_GREEDY) {
++          n_assert(!pkg_is_marked(p));
++          found=do_greedymark(indent, p, dbpkg->pkg, cnfl, ps, upg);
++      }    
++    
++  }
++  return found;
++}
+ /* rpmlib() detects conflicts internally, header*() API usage is too slow */
+ #undef ENABLE_FILES_CONFLICTS
+ //#define ENABLE_FILES_CONFLICTS
+@@ -1565,7 +1612,7 @@
+             continue;
+         
+         if (pkg_match_req(dbpkg->pkg, cnfl, 1)) {
+-            if (!resolve_conflict(indent, pkg, cnfl, dbpkg, ps, upg)) {
++            if (!resolve_conflict_new(indent, pkg, cnfl, dbpkg, ps, upg)) {
+                 logn(LOGERR, _("%s (cnfl %s) conflicts with installed %s"),
+                     pkg_snprintf_s(pkg), capreq_snprintf_s(cnfl),
+                     pkg_snprintf_s0(dbpkg->pkg));
+@@ -1598,7 +1645,7 @@
+         for (j = 0; j < n_array_size(dbpkg->pkg->cnfls); j++) {
+             struct capreq *cnfl = n_array_nth(dbpkg->pkg->cnfls, j);
+             if (cap_match_req(cap, cnfl, 1)) {
+-                if (!resolve_conflict(indent, pkg, cnfl, dbpkg, ps, upg)) {
++                if (!resolve_conflict_new(indent, pkg, cnfl, dbpkg, ps, upg)) {
+                     logn(LOGERR, _("%s (cap %s) conflicts with installed %s (%s)"),
+                         pkg_snprintf_s(pkg), capreq_snprintf_s(cap), 
+                         pkg_snprintf_s0(dbpkg->pkg), capreq_snprintf_s0(cnfl));
