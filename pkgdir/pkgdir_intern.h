@@ -19,13 +19,13 @@ void pkgdir__setup_depdirs(struct pkgdir *pkgdir);
 char *pkgdir__setup_pkgprefix(const char *path);
 
 int  pkgdir__uniq(struct pkgdir *pkgdir);
-int pkgdir__rmf(const char *dirpath, const char *mask);
-//int pkgdir_make_idxpath(char *dpath, int size, const char *type,
-//                        const char *path, const char *fn, const char *ext);
+
 char *pkgdir__make_idxpath(char *dpath, int dsize,
                      const char *path, const char *type, const char *compress);
 
-int pkgdir__cache_clean(const char *path, const char *mask);
+
+int pkgdir__rmf(const char *dirpath, const char *mask, int test);
+int pkgdir__cache_clean(const char *path, const char *mask, int test);
 
 const char *pkgdir_localidxpath(struct pkgdir *pkgdir);
 

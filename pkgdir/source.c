@@ -869,7 +869,7 @@ int do_source_clean(struct source *src, const char *idxdir,
     if ((urltype & VFURL_LOCAL) && (flags & PKGSOURCE_CLEAN)) { 
         char path[PATH_MAX];
         vf_localdirpath(path, sizeof(path), idxdir);
-        pkgdir__cache_clean(path, "*");
+        pkgdir__cache_clean(path, "*", flags & PKGSOURCE_CLEAN_TEST);
         
     } else {
         char amask[1024], *mask = NULL;
@@ -888,7 +888,7 @@ int do_source_clean(struct source *src, const char *idxdir,
         }
         
         n_assert(mask);
-        pkgdir__cache_clean(idxdir, mask);
+        pkgdir__cache_clean(idxdir, mask, flags & PKGSOURCE_CLEAN_TEST);
     }
     
     return 1;

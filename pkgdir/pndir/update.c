@@ -367,7 +367,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
         snprintf(path, sizeof(path), "%s/%s", dn, pndir_packages_incdir);
         if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath)) {
             int v = poldek_set_verbose(-1);
-            pkgdir__rmf(tmpath, NULL);
+            pkgdir__rmf(tmpath, NULL, 0);
             poldek_set_verbose(v);
         }
         msg(1, "_\n");

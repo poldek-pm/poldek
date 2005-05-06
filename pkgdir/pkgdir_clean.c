@@ -43,15 +43,16 @@
 #include "pkgdir.h"
 #include "pkgdir_intern.h"
 
-static int do_unlink(const char *path) 
+static int do_unlink(const char *path, int test) 
 {
-    msgn(1, _(" Removing %s"), n_basenam(path));
-    //return vf_localunlink(path);
+    msgn(2, _(" Removing %s"), n_basenam(path));
+    if (!test)
+        return vf_localunlink(path);
     return 1;
 }
 
 
-int pkgdir__rmf(const char *dirpath, const char *mask) 
+int pkgdir__rmf(const char *dirpath, const char *mask, int test) 
 {
     struct dirent  *ent;
     DIR            *dir;
@@ -81,7 +82,7 @@ int pkgdir__rmf(const char *dirpath, const char *mask)
         
         if ((tmp_vflock = vf_lockdir(dn))) {
             msgn(1, _("Cleaning up %s..."), dn);
-            rc = do_unlink(dirpath);
+            rc = do_unlink(dirpath, test);
             vf_lock_release(tmp_vflock);
         }
         return rc;
@@ -125,10 +126,10 @@ int pkgdir__rmf(const char *dirpath, const char *mask)
         snprintf(path, sizeof(path), "%s%s%s", dirpath, sepchr, ent->d_name);
         if (stat(path, &st) == 0) {
             if (S_ISREG(st.st_mode))
-                do_unlink(path);
-
+                do_unlink(path, test);
+            
             else if (S_ISDIR(st.st_mode))
-                pkgdir__rmf(path, mask);
+                pkgdir__rmf(path, mask, test);
         }
     }
     
@@ -139,16 +140,16 @@ int pkgdir__rmf(const char *dirpath, const char *mask)
 }
 
 
-int pkgdir__cache_clean(const char *path, const char *mask)
+int pkgdir__cache_clean(const char *path, const char *mask, int test)
 {
     char tmpath[PATH_MAX], path_i[PATH_MAX];
 
     if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath))
-        pkgdir__rmf(tmpath, mask);
+        pkgdir__rmf(tmpath, mask, test);
 
     n_snprintf(path_i, sizeof(path_i), "%s/%s", path, "packages.i");
     if (vf_localdirpath(tmpath, sizeof(tmpath), path_i) < (int)sizeof(tmpath))
-        pkgdir__rmf(tmpath, mask);
+        pkgdir__rmf(tmpath, mask, test);
     
     return 1;
 }
