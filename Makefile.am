@@ -18,7 +18,7 @@ POD2MAN   = @POD2MAN@
 
 libVERINFO         = 0:0:0
 lib_LTLIBRARIES    = libpoldek.la
-noinst_LTLIBRARIES = libpoldek_allsyms.la
+#noinst_LTLIBRARIES = libpoldek_allsyms.la
 
 libpoldek_la_LDFLAGS = -version-info $(libVERINFO) \
 					   -export-symbols libpoldek.sym
@@ -60,7 +60,7 @@ libpoldek_la_SOURCES = \
 	  poldek_intern.h \
 	  pkg_ver_cmp.h 
 
-libpoldek_allsyms_la_SOURCES = $(libpoldek_la_SOURCES)
+#libpoldek_allsyms_la_SOURCES = $(libpoldek_la_SOURCES)
 pkgincludedir = $(includedir)/poldek
 
 # one line to easy get then by external script 
@@ -75,7 +75,7 @@ libpoldek_la_LIBADD = \
 			pm/libpm.la    \
 			vfile/libvfile.la
 
-libpoldek_allsyms_la_LIBADD = $(libpoldek_la_LIBADD)
+#libpoldek_allsyms_la_LIBADD = $(libpoldek_la_LIBADD)
 
 LDADD_              = @INTLLIBS@
 

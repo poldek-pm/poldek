@@ -9,7 +9,7 @@ SHELL_MOD = shell.c
 
 libVERINFO         = 0:0:0
 lib_LTLIBRARIES    = libpoclidek.la
-noinst_LTLIBRARIES = libpoclidek_allsyms.la
+#noinst_LTLIBRARIES = libpoclidek_allsyms.la
 
 libpoclidek_la_LDFLAGS = -version-info $(libVERINFO) \
 						 -export-symbols libpoclidek.sym
@@ -40,8 +40,8 @@ libpoclidek_la_SOURCES  =  \
 			rcmd.c
 
 libpoclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
-libpoclidek_allsyms_la_SOURCES = $(libpoclidek_la_SOURCES)
-libpoclidek_allsyms_la_LIBADD = $(libpoclidek_la_LIBADD)
+#libpoclidek_allsyms_la_SOURCES = $(libpoclidek_la_SOURCES)
+#libpoclidek_allsyms_la_LIBADD = $(libpoclidek_la_LIBADD)
 
 libHEADERS = poclidek.h cmd.h dent.h op.h
 pkginclude_HEADERS = $(libHEADERS)
