@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 - 2003 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@pld.org.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -288,7 +292,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
 
     if (arg_s->cnflags & DO_MAKEIDX) {
         rc = make_idx(arg_s); 
-        rc = rc ? OPGROUP_RC_FINI : OPGROUP_RC_ERROR;
+        rc = rc ? OPGROUP_RC_OK : OPGROUP_RC_ERROR;
     }
 
     return rc;

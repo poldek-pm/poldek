@@ -37,6 +37,9 @@ poclidek_rcmd_get_buf
 poclidek_rcmd_get_str
 poclidek_resolve_dents
 poclidek_resolve_packages
+poclidek_op_ctx_new
+poclidek_op_ctx_free
+poclidek_op_ctx_verify_major_mode
 poclidek_opgroup_install
 poclidek_opgroup_makeidx
 poclidek_opgroup_packages

@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2001 Pawel A. Gajda (mis@k2.net.pl)
-  
+/*
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@pld.org.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -118,6 +122,7 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_UNINSTALL:
             poldek_ts_set_type(ts, POLDEK_TS_UNINSTALL, "-e");
+            rt->set_major_mode(rt, "erase", NULL);
             break;
 
         default:
@@ -233,5 +238,5 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
         return OPGROUP_RC_NIL;
 
     rc = poldek_ts_run(rt->ts, NULL);
-    return rc ? OPGROUP_RC_FINI : OPGROUP_RC_ERROR | OPGROUP_RC_FINI;
+    return rc ? OPGROUP_RC_OK : OPGROUP_RC_ERROR;
 }

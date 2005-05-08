@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 - 2003 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@pld.org.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -125,8 +129,9 @@ static struct argp_option source_options[] = {
 #define POLDEKCLI_SRC_UPDATE_AUTOA (1 << 4)
 #define POLDEKCLI_SRC_CLEAN        (1 << 5)
 #define POLDEKCLI_SRC_CLEAN_PKG    (1 << 6)
-#define POLDEKCLI_SRC_SPECIFIED    (1 << 10) /* -s | -n ? */
+#define POLDEKCLI_SRC_SPECIFIED    (1 << 10) /* any -s or -n */
 
+/* TODO: there is no way to get other group parameters */
 int poclidek_op_source_nodesc = 0;
 
 struct arg_s {
@@ -423,7 +428,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
     struct arg_s *arg_s;
     tn_array *sources;
     int rc = OPGROUP_RC_NIL;
-
+    
     arg_s = rt->_opdata;
     n_assert(arg_s);
 
@@ -451,16 +456,16 @@ static int oprun(struct poclidek_opgroup_rt *rt)
             flags |= PKGSOURCE_CLEAN_TEST;
             
         sources_clean(sources, flags);
-        rc |= OPGROUP_RC_OK;
+        rc = OPGROUP_RC_OK;
     }
 
     if (arg_s->cnflags & POLDEKCLI_SRC_SRCTYPE_LS) {
-        rc |= OPGROUP_RC_FINI;
+        rc = OPGROUP_RC_OK;
         print_source_type_list();
     }
 
     if (arg_s->cnflags & POLDEKCLI_SRC_SRCLS) {
-        rc |= OPGROUP_RC_FINI;
+        rc = OPGROUP_RC_OK;
         print_source_list(rt->ctx, sources,
                           (arg_s->cnflags & POLDEKCLI_SRC_SPECIFIED) == 0);
                           /* print aliases if no -n or -s */
@@ -475,11 +480,10 @@ static int oprun(struct poclidek_opgroup_rt *rt)
         if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE_AUTOA)
             flags |= PKGSOURCE_UPAUTOA;
 
-        if (!sources_update(sources, flags)) {
-            rc |= OPGROUP_RC_ERROR | OPGROUP_RC_IFINI;
-        }
-
-        rc |= OPGROUP_RC_FINI;
+        if (sources_update(sources, flags))
+            rc = OPGROUP_RC_ERROR;
+        else
+            rc = OPGROUP_RC_OK;
     }
 
     if (sources)

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@pld.org.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -57,12 +57,11 @@ static char args_doc[] = N_("[PACKAGE...]");
 #define OPT_ASK       (OPT_GID + 2)
 #define OPT_NOASK     (OPT_GID + 3)
 #define OPT_CONF      (OPT_GID + 4)
-#define OPT_CONFUP    (OPT_GID + 5)
+#define OPT_UPCONF    (OPT_GID + 5)
 #define OPT_NOCONF    (OPT_GID + 6)
 #define OPT_BANNER    (OPT_GID + 7)
 #define OPT_LOG       (OPT_GID + 8)
 #define OPT_SKIPINSTALLED (OPT_GID + 9)
-#define OPT_KEEPDOWNLOADS (OPT_GID + 10)
 #define OPT_PM (OPT_GID + 11)
 #define OPT_SHELL  (OPT_GID + 12)
 #define OPT_SHELL_CMD (OPT_GID + 13)
@@ -96,10 +95,8 @@ static struct argp_option common_options[] = {
 {"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), OPT_GID },
 {"_conf", 'c', "FILE", OPTION_HIDDEN, N_("Read configuration from FILE"), OPT_GID }, 
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), OPT_GID },
-{"upconf", OPT_CONFUP, 0, 0, N_("Update remote configuration files (if any)"), OPT_GID },
+{"upconf", OPT_UPCONF, 0, 0, N_("Update remote configuration files (if any)"), OPT_GID },
 
-{"keep-downloads", OPT_KEEPDOWNLOADS, 0, 0,
-N_("Do not remove downloaded packages just after their installation"), OPT_GID },
 {"version", OPT_BANNER, 0, 0, N_("Display program version information and exit"),
      OPT_GID },    
 {"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), OPT_GID },
@@ -147,6 +144,8 @@ struct args {
     struct poclidek_ctx *cctx;
     struct poldek_ts     *ts;
 
+    struct poclidek_op_ctx *opctx;
+
     int       mode;
     int       mjrmode;
     unsigned  mnrmode;
@@ -157,17 +156,14 @@ struct args {
     char        *path_conf;
     char        *path_log;
     
-    unsigned    pkgdir_creat_flags; 
-    
     char        *shcmd;
-    
+
     tn_array    *opgroup_rts;
 
     int         argc;
     char        **argv;
 
 } args;
-
 
 
 /* Parse a single option. */
@@ -204,8 +200,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             args.path_conf = n_strdup(arg);
             break;
 
-        case OPT_CONFUP:
-            argsp->cnflags |= OPT_AS_FLAG(OPT_CONFUP);
+        case OPT_UPCONF:
+            argsp->cnflags |= OPT_AS_FLAG(OPT_UPCONF);
             break;
             
         case 'q':
@@ -240,11 +236,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_SHELL:         /* default */
             argsp->mjrmode = MODE_SHELL;
+            argsp->cnflags |= OPT_AS_FLAG(OPT_SHELL);
             break;
             
         case OPT_SHELL_CMD:
             argsp->shcmd = arg;
             argsp->mjrmode = MODE_SHELL;
+            argsp->cnflags |= OPT_AS_FLAG(OPT_SHELL);
             break;
 
         case 'f':
@@ -253,10 +251,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_SKIPINSTALLED:
             argsp->cnflags |= OPT_AS_FLAG(OPT_SKIPINSTALLED);
             argsp->cctx->flags |= POCLIDEK_SKIP_INSTALLED;
-            break;
-
-        case OPT_KEEPDOWNLOADS:
-            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_KEEP_DOWNLOADS, 1);
             break;
 
         case OPT_PM:
@@ -347,6 +341,333 @@ void argp_prepare_child_options(const struct argp *argp, int hide_child_opts)
         argp_prepare_child_options(child, hide_child_opts);
     }
 }
+
+
+static int load_conf(struct args *argsp) 
+{
+    unsigned flags = 0;
+
+    if (argsp->cnflags & OPT_AS_FLAG(OPT_NOCONF))
+        flags |= POLDEK_LOADCONF_NOCONF;
+
+    else if (argsp->cnflags & OPT_AS_FLAG(OPT_UPCONF))
+        flags |= POLDEK_LOADCONF_UPCONF;
+
+    if ((flags & POLDEK_LOADCONF_NOCONF) && argsp->addon_cnflines == NULL)
+        return 1;
+    
+    return poldek_load_config(argsp->ctx, argsp->path_conf,
+                              argsp->addon_cnflines, flags);
+}
+
+static void args_init(struct poclidek_ctx *cctx, struct poldek_ts *ts,
+                      int argc, char **argv, int mode) 
+{
+    memset(&args, 0, sizeof(args));
+        
+    args.ctx = cctx->ctx;
+    args.cctx = cctx;
+    
+    args.argc = 0;
+    args.argv = n_malloc(sizeof(*argv) * argc);
+    args.argv[0] = NULL;
+
+    args.mode = mode;
+    args.ts = ts;
+    args.opctx = poclidek_op_ctx_new();
+}
+
+
+static
+void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
+                   int argc, char **argv, int mode) 
+{
+    struct argp argp = { common_options, parse_opt,
+                         args_doc, poldek_BANNER, 0, 0, 0};
+    int n, i, index, hide_child_opts = 0;
+    struct argp_child *child;
+
+    args_init(cctx, ts, argc, argv, mode);
+
+    n = 0;
+    while (poclidek_opgroup_tab[n])
+        n++;
+
+    child = alloca((n + 2) * sizeof(*child));
+    args.opgroup_rts = n_array_new(n, NULL, NULL);
+    
+    for (i=0; i < n; i++) {
+        struct poclidek_opgroup_rt *rt;
+        child[i] = *(poclidek_opgroup_tab[i]->argp_child);
+        rt = poclidek_opgroup_rt_new(args.ts, args.opctx);
+        rt->run = poclidek_opgroup_tab[i]->run;
+        n_array_push(args.opgroup_rts, rt);
+    }
+    child[i].argp = NULL;
+    argp.children = child;
+    
+    if (poclidek_argv_is_help(argc, (const char **)argv))
+        hide_child_opts = 1;
+    
+    argp_prepare_child_options(&argp, hide_child_opts);
+    
+    poldek_set_verbose(0);
+
+    index = 0;
+    argp_parse(&argp, argc, argv, ARGP_IN_ORDER, &index, &args);
+
+    if (!poclidek_op_ctx_verify_major_mode(args.opctx))
+        exit(EXIT_FAILURE);
+    
+#if GENDOCBOOK
+    if (args.cnflags & OPT_AS_FLAG(OPT_DOCB)) {
+        argp_as_docbook(&argp);
+        exit(EXIT_SUCCESS);
+    }
+#endif
+
+    if (!load_conf(&args))
+        exit(EXIT_FAILURE);
+
+    if (!poldek_setup(args.ctx))
+        exit(EXIT_FAILURE);
+
+    if (poldek_is_interactive_on(args.ctx) && poldek_VERBOSE == 0)
+        poldek_VERBOSE = 1;
+            
+    return;
+}
+
+
+int do_run(void) 
+{
+    int i, all_rc = OPGROUP_RC_NIL;
+    
+    n_assert(args.opgroup_rts);
+    
+    for (i=0; i < n_array_size(args.opgroup_rts); i++) {
+        struct poclidek_opgroup_rt *rt = n_array_nth(args.opgroup_rts, i);
+        int rc;
+
+        if (rt->run == NULL)
+            continue;
+        
+        rc = rt->run(rt);
+        all_rc |= rc;
+        
+        if (rc & OPGROUP_RC_ERROR)
+            break;
+    }
+
+    n_array_free(args.opgroup_rts);
+    args.opgroup_rts = NULL;
+    
+    return all_rc;
+}
+
+extern int poldek_su(const char *user);
+
+static int do_su(int argc, char **argv) 
+{
+    const char *oprunas = "--runas";
+    char *user = NULL;
+    int rc, i, n, is_runas = 0, oprunas_len, verbose = 0, noautosu = 0;
+    char *nosu_opts[] = { "--mkidx", "--makeidx", NULL };
+    int  nosu_opts_len[] = { 0, 0, 0 };
+
+    n = 0;
+    while (nosu_opts[n]) {
+        nosu_opts_len[n] = strlen(nosu_opts[n]);
+        n++;
+    }
+    
+    
+    oprunas_len = strlen(oprunas);
+    for (i=1; i < argc; i++) {
+        n = 0;
+        while (noautosu == 0 && nosu_opts[n]) {
+            if (strncmp(argv[i], nosu_opts[n], nosu_opts_len[n]) == 0)
+                noautosu = 1;
+            n++;
+        }
+        
+        if (strncmp(argv[i], "-v", 2) == 0) {
+            char *p = argv[i] + 1;
+            while (*p) {
+                if (*p == 'v')
+                    verbose++;
+                else if (*p) {  /* non-'v' => is is not -v[v...] option */
+                    verbose = 0;
+                    break;
+                }
+                p++;
+            }
+        } 
+            
+        if (!is_runas && strncmp(argv[i], oprunas, oprunas_len) == 0) {
+            char *p = argv[i] + oprunas_len;
+            if (*p == '=') {
+                p++;
+                user = n_strdup(p);
+                
+            } else {            /* next arg? */
+                if (i < argc - 1)
+                    user = n_strdup(argv[i + 1]);
+            }
+            is_runas = 1;
+        }
+    }
+    
+    
+    if (is_runas) {
+        if (user == NULL) {
+            logn(LOGERR, _("%s: option '%s' requires an argument\n"),
+                 n_basenam(argv[0]), oprunas);
+            return 0;
+        } else if (getuid() != 0) {
+            logn(LOGERR, _("%s: option '%s' gives no effect if program executed"
+                           " by ordinary user"),
+                 n_basenam(argv[0]), oprunas);
+            return 0;
+        }
+            
+    } else if (noautosu == 0 && getuid() == 0) {  /* check config's runas */
+        tn_hash *cnf;
+        
+        cnf = poldek_conf_loadefault(POLDEK_LDCONF_NOINCLUDE |
+                                     POLDEK_LDCONF_FOREIGN);
+        if (cnf) {
+            tn_hash *global;
+            const char *u;
+            
+            global = poldek_conf_get_section_ht(cnf, "global");
+            if (global && (u = poldek_conf_get(global, "run_as", NULL))) {
+                user = n_strdup(u);
+                is_runas = 1;
+            }
+            n_hash_free(cnf);
+        }
+    }
+    
+    if (!is_runas)
+        return 1;
+    
+    n_assert(user);
+    if (*user == '\0' || strcmp(user, "none") == 0) /* empty or 'none' => ret */
+        return 1;
+    
+    verbose = poldek_set_verbose(verbose);
+    rc = poldek_su(user);
+    free(user);
+    poldek_set_verbose(verbose);
+    return rc;
+}
+
+static int load_packages(struct poclidek_ctx *cctx, unsigned cnflags)
+{
+    unsigned ldflags = POCLIDEK_LOAD_AVAILABLE;
+    
+    if ((cnflags & OPT_AS_FLAG(OPT_SKIPINSTALLED)) == 0)
+        ldflags |= POCLIDEK_LOAD_INSTALLED;
+        
+    if (!poclidek_load_packages(cctx, ldflags)) {
+        logn(LOGERR, "packages load failed");
+        return 0;
+    }
+    return 1;
+}
+
+static int run_poldek(struct poclidek_ctx *cctx)
+{
+    int rc;
+
+    if (!load_packages(cctx, args.cnflags))
+        return 0;
+            
+    if (args.shcmd) 
+        rc = poclidek_execline(cctx, args.ts, args.shcmd);
+    else
+        rc = poclidek_shell(cctx);
+    
+    return rc;
+}
+
+static int run_ipoldek(struct poclidek_ctx *cctx)
+{
+    int rc = 1;
+#if ENABLE_TRACE
+    i = 0;
+    DBGF("verbose %d, argc = %d\n", verbose, args.argc);
+    while (args.argv[i])
+        printf(" %s", args.argv[i++]);
+    printf("\n");
+#endif
+        
+    if (args.argc > 0)
+        rc = poclidek_exec(cctx, args.ts, args.argc,
+                           (const char **)args.argv);
+    else /* lonely ipoldek -> run shell as poldek does */
+        rc = run_poldek(cctx);
+    
+    return rc;
+}
+
+
+int main(int argc, char **argv)
+{
+    struct poldek_ctx    *ctx;
+    struct poclidek_ctx  *cctx;
+    struct poldek_ts     *ts;
+    int  rc, rrc, mode = RUNMODE_POLDEK;
+    const char *bn;
+
+    if (!poldeklib_init())
+        return 1;
+
+    if (!do_su(argc, argv))
+        return 1;
+    
+    setlocale(LC_MESSAGES, "");
+    setlocale(LC_CTYPE, "");
+
+    bn = n_basenam(argv[0]);
+    if (strcmp(bn, "apoldek") == 0 || strcmp(bn, "ipoldek") == 0)
+        mode = RUNMODE_APT;
+    
+    DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
+
+    ctx = poldek_new(0);
+    ts = poldek_ts_new(ctx, 0);
+    cctx = poclidek_new(ctx);
+    
+    parse_options(cctx, ts, argc, argv, mode);
+
+    rrc = do_run();
+    if (rrc & OPGROUP_RC_ERROR)
+        exit(EXIT_FAILURE);
+
+    if ((args.cnflags & OPT_AS_FLAG(OPT_SHELL)) == 0) { /*no explicit --shell*/
+        if (rrc & OPGROUP_RC_OK) /* something minor cmd was executed  */
+            exit(EXIT_SUCCESS);
+
+        if (args.cnflags & OPT_AS_FLAG(OPT_UPCONF))
+            exit(EXIT_SUCCESS);
+    }
+    
+    if (args.mode == RUNMODE_POLDEK)
+        rc = run_poldek(cctx);
+
+    else if (args.mode == RUNMODE_APT)
+        rc = run_ipoldek(cctx);
+
+    poldek_ts_free(ts);
+    poclidek_free(cctx);
+    poldek_free(ctx);
+    poldeklib_destroy();
+    
+    return rc ? 0 : -1;
+}
+
 
 #if GENDOCBOOK
 static void docbook_opt(FILE **st,
@@ -476,328 +797,3 @@ void argp_as_docbook(struct argp *argp)
     }
 }
 #endif  /* GENDOCBOOK */
-
-static int load_conf(struct args *argsp) 
-{
-    unsigned flags = 0;
-
-    if (argsp->cnflags & OPT_AS_FLAG(OPT_NOCONF))
-        flags |= POLDEK_LOADCONF_NOCONF;
-
-    else if (argsp->cnflags & OPT_AS_FLAG(OPT_CONFUP))
-        flags |= POLDEK_LOADCONF_UPCONF;
-
-    if ((flags & POLDEK_LOADCONF_NOCONF) && argsp->addon_cnflines == NULL)
-        return 1;
-    
-    return poldek_load_config(argsp->ctx, argsp->path_conf,
-                              argsp->addon_cnflines, flags);
-}
-
-
-static
-void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
-                   int argc, char **argv, int mode) 
-{
-    struct argp argp = { common_options, parse_opt,
-                         args_doc, poldek_BANNER, 0, 0, 0};
-    int n, i, index, hide_child_opts = 0;
-    struct argp_child *child;
-
-    memset(&args, 0, sizeof(args));
-    args.argc = 0;
-    args.argv = n_malloc(sizeof(*argv) * argc);
-    args.argv[0] = NULL;
-
-    args.mode = mode;
-    args.ts = ts;
-    n = 0;
-    while (poclidek_opgroup_tab[n])
-        n++;
-
-    child = alloca((n + 2) * sizeof(*child));
-    args.opgroup_rts = n_array_new(n, NULL, NULL);
-    
-    for (i=0; i < n; i++) {
-        struct poclidek_opgroup_rt *rt;
-        child[i] = *(poclidek_opgroup_tab[i]->argp_child);
-        rt = poclidek_opgroup_rt_new(args.ts);
-        rt->run = poclidek_opgroup_tab[i]->run;
-        n_array_push(args.opgroup_rts, rt);
-    }
-    child[i].argp = NULL;
-    argp.children = child;
-    if (poclidek_argv_is_help(argc, (const char **)argv))
-        hide_child_opts = 1;
-    argp_prepare_child_options(&argp, hide_child_opts);
-    
-    poldek_set_verbose(0);
-    
-    args.ctx = cctx->ctx;
-    args.cctx = cctx;
-
-    index = 0;
-    argp_parse(&argp, argc, argv, ARGP_IN_ORDER, &index, &args);
-    
-#if GENDOCBOOK
-    if (args.cnflags & OPT_AS_FLAG(OPT_DOCB)) {
-        argp_as_docbook(&argp);
-        exit(EXIT_SUCCESS);
-    }
-#endif
-
-    if (!load_conf(&args))
-        exit(EXIT_FAILURE);
-
-    if (!poldek_setup(args.ctx))
-        exit(EXIT_FAILURE);
-
-    if (poldek_is_interactive_on(args.ctx) && poldek_VERBOSE == 0)
-        poldek_VERBOSE = 1;
-            
-#if 0
-
-    if (args.mjrmode == MODE_NULL && args.mnrmode == MODE_NULL) {
-#ifdef ENABLE_INTERACTIVE_MODE
-        args.mjrmode = MODE_SHELL;
-#else         
-        logn(LOGERR, _("so what?"));
-        exit(EXIT_FAILURE);
-#endif        
-    }
-#endif
-    return;
-}
-
-
-int do_run(void) 
-{
-    int i, all_rc = 0, ec = EXIT_SUCCESS, exit_program = 0;
-    n_assert(args.opgroup_rts);
-    
-    for (i=0; i < n_array_size(args.opgroup_rts); i++) {
-        struct poclidek_opgroup_rt *rt = n_array_nth(args.opgroup_rts, i);
-        int rc;
-
-        if (rt->run == NULL)
-            continue;
-        
-        rc = rt->run(rt);
-
-        if (rc != OPGROUP_RC_NIL)
-            all_rc |= OPGROUP_RC_FINI;
-
-        if (rc & OPGROUP_RC_ERROR) {
-            ec = EXIT_FAILURE;
-            exit_program = 1;
-        }
-        
-        if (rc & OPGROUP_RC_IFINI)
-            exit(ec);
-            
-        if (rc & OPGROUP_RC_FINI)
-            exit_program = 1;
-    }
-
-    n_array_free(args.opgroup_rts);
-    args.opgroup_rts = NULL;
-    
-    if (exit_program)
-        exit(ec);
-    
-    return all_rc;
-}
-
-extern int poldek_su(const char *user);
-
-static int do_su(int argc, char **argv) 
-{
-    const char *oprunas = "--runas";
-    char *user = NULL;
-    int rc, i, n, is_runas = 0, oprunas_len, verbose = 0, noautosu = 0;
-    char *nosu_opts[] = { "--mkidx", "--makeidx", NULL };
-    int  nosu_opts_len[] = { 0, 0, 0 };
-
-    n = 0;
-    while (nosu_opts[n]) {
-        nosu_opts_len[n] = strlen(nosu_opts[n]);
-        n++;
-    }
-    
-    
-    oprunas_len = strlen(oprunas);
-    for (i=1; i < argc; i++) {
-        n = 0;
-        while (noautosu == 0 && nosu_opts[n]) {
-            if (strncmp(argv[i], nosu_opts[n], nosu_opts_len[n]) == 0)
-                noautosu = 1;
-            n++;
-        }
-        
-        if (strncmp(argv[i], "-v", 2) == 0) {
-            char *p = argv[i] + 1;
-            while (*p) {
-                if (*p == 'v')
-                    verbose++;
-                else if (*p) {  /* non-'v' => is is not -v[v...] option */
-                    verbose = 0;
-                    break;
-                }
-                p++;
-            }
-        } 
-            
-        if (!is_runas && strncmp(argv[i], oprunas, oprunas_len) == 0) {
-            char *p = argv[i] + oprunas_len;
-            if (*p == '=') {
-                p++;
-                user = n_strdup(p);
-                
-            } else {            /* next arg? */
-                if (i < argc - 1)
-                    user = n_strdup(argv[i + 1]);
-            }
-            is_runas = 1;
-        }
-    }
-    
-    
-    if (is_runas) {
-        if (user == NULL) {
-            logn(LOGERR, _("%s: option '%s' requires an argument\n"),
-                 n_basenam(argv[0]), oprunas);
-            return 0;
-        } else if (getuid() != 0) {
-            logn(LOGERR, _("%s: option '%s' gives no effect if program executed"
-                           " by ordinary user"),
-                 n_basenam(argv[0]), oprunas);
-            return 0;
-        }
-            
-    } else if (noautosu == 0 && getuid() == 0) {  /* check config's runas */
-        tn_hash *cnf;
-        
-        cnf = poldek_conf_loadefault(POLDEK_LDCONF_NOINCLUDE |
-                                     POLDEK_LDCONF_FOREIGN);
-        if (cnf) {
-            tn_hash *global;
-            const char *u;
-            
-            global = poldek_conf_get_section_ht(cnf, "global");
-            if (global && (u = poldek_conf_get(global, "run_as", NULL))) {
-                user = n_strdup(u);
-                is_runas = 1;
-            }
-            n_hash_free(cnf);
-        }
-    }
-    
-    if (!is_runas)
-        return 1;
-    
-    n_assert(user);
-    if (*user == '\0' || strcmp(user, "none") == 0) /* empty or 'none' => ret */
-        return 1;
-    
-    verbose = poldek_set_verbose(verbose);
-    rc = poldek_su(user);
-    free(user);
-    poldek_set_verbose(verbose);
-    return rc;
-}
-
-static int load_packages(struct poclidek_ctx *cctx, unsigned cnflags)
-{
-    unsigned ldflags = POCLIDEK_LOAD_AVAILABLE;
-    
-    if ((cnflags & OPT_AS_FLAG(OPT_SKIPINSTALLED)) == 0)
-        ldflags |= POCLIDEK_LOAD_INSTALLED;
-        
-    if (!poclidek_load_packages(cctx, ldflags)) {
-        logn(LOGERR, "packages load failed");
-        return 0;
-    }
-    return 1;
-}
-
-int main(int argc, char **argv)
-{
-    struct poldek_ctx    *ctx;
-    struct poclidek_ctx  *cctx;
-    struct poldek_ts     *ts;
-    int  ec = 0, rrc, mode = RUNMODE_POLDEK;
-    const char *bn;
-
-    if (!poldeklib_init())
-        return 1;
-
-    if (!do_su(argc, argv))
-        return 1;
-    
-    setlocale(LC_MESSAGES, "");
-    setlocale(LC_CTYPE, "");
-
-    bn = n_basenam(argv[0]);
-
-    if (strcmp(bn, "apoldek") == 0 || strcmp(bn, "ipoldek") == 0)
-        mode = RUNMODE_APT;
-    
-    DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
-
-    ctx = poldek_new(0);
-    ts = poldek_ts_new(ctx, 0);
-    cctx = poclidek_new(ctx);
-    parse_options(cctx, ts, argc, argv, mode);
-    
-    rrc = do_run();
-    if (rrc & OPGROUP_RC_FINI)
-        exit((rrc & OPGROUP_RC_ERROR) ? EXIT_FAILURE : EXIT_SUCCESS);
-    
-    if (args.mode == RUNMODE_POLDEK) {
-        if (!load_packages(cctx, args.cnflags)) {
-            ec = 1;
-            
-        } else {
-            if (args.shcmd) 
-                ec = poclidek_execline(cctx, args.ts, args.shcmd);
-            else
-                ec = poclidek_shell(cctx);
-
-            ec = !ec;
-        }
-        
-    } else {                    /* RUNMODE_APT */
-        int rc = 1;
-#if ENABLE_TRACE
-        i = 0;
-        DBGF("verbose %d, argc = %d\n", verbose, args.argc);
-        while (args.argv[i])
-            printf(" %s", args.argv[i++]);
-        printf("\n");
-#endif
-        
-        if (args.argc > 0)
-            rc = poclidek_exec(cctx, args.ts, args.argc,
-                               (const char **)args.argv);
-        else {                  /* lonely ipoldek -> run shell as well */
-            //msgn(0, _("Give me something to do."));
-            //rc = 0;
-            
-            if (!load_packages(cctx, args.cnflags))  {
-                logn(LOGERR, "packages load failed");
-                rc = 0;
-                
-            } else {
-                ec = poclidek_shell(cctx);
-            }
-        }
-        
-        if (!rc)
-            ec = 1;
-    }
-    poldek_ts_free(ts);
-    poclidek_free(cctx);
-    poldek_free(ctx);
-    poldeklib_destroy();
-    return ec;
-}
