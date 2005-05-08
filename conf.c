@@ -118,7 +118,8 @@ static struct tag global_tags[] = {
     { "autoupa", TYPE_BOOL, { 0 } },
     { "load apt sources list", TYPE_BOOL, { 0 } },
     { "exclude path", TYPE_STR | TYPE_PATHLIST | TYPE_MULTI , { 0 } },
-    { "allow duplicates", TYPE_BOOL , { 0 } }, 
+    { "allow duplicates", TYPE_BOOL , { 0 } },
+    { "__dirname", TYPE_STR, { 0 } }, 
     {  NULL,           0, { 0 } }, 
 };
 
@@ -855,7 +856,7 @@ tn_hash *open_section_ht(tn_hash *htconf, const struct section *sect,
         opt->val = n_strdup(filemark);
         n_hash_insert(ht_sect, opt->name, opt);
     }
-
+    
     if (!n_hash_exists(ht_sect, "__section_name")) { 
         struct copt *opt = copt_new("__section_name");
         opt->val = n_strdup(sectnam);
@@ -888,6 +889,9 @@ int poldek_conf_add_to_section(void *sect, const char *akey, const char *aval)
     n_strdupap(akey, &key);
     n_strdupap(aval, &val);
     name = poldek_conf_get(ht_sect, "__section_name", NULL);
+    if (name == NULL)
+        name = global_tag;
+    
     return add_param(ht_sect, name, key, val, 1, 0, NULL, -1);
 }
 
@@ -968,7 +972,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     struct    afile *af;
     int       nline = 0, is_err = 0;
     tn_hash   *ht, *ht_sect;
-    char      buf[1024], *sectnam;
+    char      buf[PATH_MAX], *sectnam, *dn;
     int       validate = 1, update = 0;
     
     
@@ -985,6 +989,12 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
 
     sectnam = (char*)global_tag;
     ht = new_htconf(global_tag, &ht_sect);
+
+    // set __dirname
+    n_snprintf(buf, sizeof(buf), "%s", path);
+    dn = n_dirname(buf);
+    if (dn)
+        poldek_conf_set(ht_sect, "__dirname", dn);
     
     af = afile_open(path, parent_path, sectnam_inc, update);
     if (af == NULL) {
