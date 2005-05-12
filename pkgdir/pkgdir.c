@@ -813,7 +813,7 @@ int do_create(struct pkgdir *pkgdir, const char *type,
         return 0;
     }
 
-    if ((pkgdir->flags & PKGDIR_PATCHED) == 0 || pkgdir->ts == 0)
+    if (pkgdir->ts == 0)
         pkgdir->ts = time(NULL);
     
     rc = pkgdir->mod->create(pkgdir, path, flags);
