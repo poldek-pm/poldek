@@ -802,3 +802,14 @@ int poldek_util_parse_bool(const char *v)
 }
 
     
+char *strtime_(time_t t) 
+{
+    char buf[128];
+    if (t)
+        strftime(buf, sizeof(buf), "%H:%M:%S", gmtime(&t));
+    else
+        buf[0] = '\0';
+    
+    buf[sizeof(buf)-1] = '\0';
+    return n_strdup(buf);
+}

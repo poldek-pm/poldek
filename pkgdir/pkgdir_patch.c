@@ -176,6 +176,8 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
     idxpath = pkgdir_localidxpath(pkgdir);
     diff->orig_idxpath = idxpath ? n_strdup(idxpath) : NULL;
     diff->ts = time(NULL);
+    DBGF("diff: orig_ts=%s, ts=%s; pdir=%s\n", strtime_(diff->orig_ts), strtime_(diff->ts),
+           strtime_(pkgdir2->ts));
     n_assert(diff->orig_idxpath);
 
     if (diff->pkgs)
@@ -198,6 +200,8 @@ struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *patch)
     
     n_assert(patch->flags & PKGDIR_DIFF);
     n_assert(patch->ts > pkgdir->ts);
+    DBGF("orig=%s, ts=%s, pdir=%s\n", strtime_(patch->orig_ts), strtime_(patch->ts),
+           strtime_(pkgdir->ts));
     n_assert(patch->orig_ts >= pkgdir->ts);
 
     pkgdir->ts = patch->ts;
