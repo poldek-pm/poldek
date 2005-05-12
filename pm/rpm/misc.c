@@ -58,7 +58,8 @@ tn_array *pm_rpm_rpmlib_caps(void)
 
         n_strncpy(evr, versions[i], 128);
         cr = capreq_new_evr(names[i], evr, REL_EQ, 0);
-        n_array_push(caps, cr);
+        if (cr)
+            n_array_push(caps, cr);
     }
 
     if (names)
