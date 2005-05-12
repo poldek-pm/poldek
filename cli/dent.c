@@ -372,8 +372,6 @@ struct pkg_dent *poclidek_dent_setup(struct poclidek_ctx *cctx,
                 n_hash_insert(dent_ht, id, dent);
             }
             
-            if (curr_ent)
-                n_array_sort(curr_ent->pkg_dent_ents);
             curr_ent = dent;
         }
         n_array_push(curr_ent->pkg_dent_ents, pkg_dent_new_pkg(cctx, pkg));
