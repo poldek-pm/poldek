@@ -1,6 +1,10 @@
 #! /bin/sh
 
-inhome=1
+POLDEK="./poldek"
+s=$1
+ST=${s:-"pdir"}
+
+inhome=
 if [ -n "$inhome" ]; then
     SRCDIR=/home/ftp/RPMSt
     SRCURL=ftp://localhost/RPMSt/
@@ -11,7 +15,7 @@ else
     SRCDIR=/home/httpd/html/RPMSt
     SRCURL=http://localhost/RPMSt/
 
-    DISTDIR=/mnt/i686/
+    DISTDIR=/var/www/common-html/fedora/Fedora/RPMS/
 fi
 
 TMPDIR=/tmp
@@ -29,10 +33,10 @@ t1()
 	echo "ADD $bn"
         ln -sf $i $SRCDIR/$bn
  	
-	./poldek -s $SRCDIR --mkidxz
+	$POLDEK -s $SRCDIR --st dir --mkidx --mkidx-type $ST
 
 	echo "UP"
-	./poldek -s $SRCURL --up
+	$POLDEK --st $ST -s $SRCURL --up
 	if [ $? -ne 0 ]; then
 	    echo "ERRROR"
 	    exit 1;
@@ -49,7 +53,7 @@ t2()
     while [ "$toadd" == "$torm" ]; do
 	torm=$(perl -e 'print chr(65 + rand(56))');
     done	
-
+    
     echo "ADD $toadd, REMOVE $torm";
 
 
@@ -84,8 +88,10 @@ t2()
     if [ "$nadded" = "0" -a "$nremoved" = "0" ]; then 
 	return 
     fi
+
+    echo -e "\n**** MAKE ****\n"
     echo "Added $nadded and $nremoved removed"	
-    ./poldek -s $SRCDIR --mkidxz
+    $POLDEK -s $SRCDIR --mkidx --mkidx-type $ST
     if [ $? -ne 0 ]; then
 	   echo "MKIDX ERRROR"
 	   exit 1;
@@ -94,7 +100,7 @@ t2()
     #up_skip=0
     if [ ${up_skip} = "0" ]; then
 	echo -e "\n**** UP ****\n"
-	./poldek -v -s $SRCURL --up
+	$POLDEK -v --st $ST -s $SRCURL --up -Oautoupa=n
 	if [ $? -ne 0 ]; then
 	   echo "ERRROR"
 	   exit 1;
@@ -102,11 +108,13 @@ t2()
     fi	
 }
 
-rm -rf $SRCDIR/packages.*
-./poldek -s $SRCDIR --mkidxz || exit 1
-./poldek -s $SRCURL --upa || exit 1
+rm -f $SRCDIR/packages.$ST.*
+rm -f $SRCDIR/packages.i/packages.$ST.*
+$POLDEK -s $SRCDIR --mkidx --mkidx-type $ST || exit 1
+$POLDEK --st $ST -s $SRCURL --upa || exit 1
 
-for n in $(seq 1 220); do
+for n in $(seq 1 22000); do
     t2
+    sleep 1
 done
 
