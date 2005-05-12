@@ -481,9 +481,9 @@ static int oprun(struct poclidek_opgroup_rt *rt)
             flags |= PKGSOURCE_UPAUTOA;
 
         if (sources_update(sources, flags))
-            rc = OPGROUP_RC_ERROR;
-        else
             rc = OPGROUP_RC_OK;
+        else
+            rc = OPGROUP_RC_ERROR;
     }
 
     if (sources)
