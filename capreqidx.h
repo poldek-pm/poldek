@@ -20,7 +20,7 @@ struct capreq_idx {
 struct pkg;
 struct capreq_idx_ent {
     int16_t items;
-    int16_t _size;
+    int32_t _size;
     union {
         struct pkg *pkg;
 //    struct pkg *pkgs[0];       /* pkgs list */
