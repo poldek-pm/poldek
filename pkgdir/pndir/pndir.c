@@ -351,7 +351,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     unsigned             vfmode = VFM_RO | VFM_NOEMPTY;
     unsigned             pkgdir_flags = 0;
     char                 *path = pkgdir->path;
-    char                 key[TNDB_KEY_MAX + 1], val[4096];
+    char                 key[TNDB_KEY_MAX + 1], val[65536]; /* XXX - assume max val size = 65K */
     int                  nerr = 0, klen, vlen;
     
     if ((flags & PKGDIR_OPEN_REFRESH) == 0) 
@@ -462,21 +462,24 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     {
         pkgdir__setup_langs(pkgdir);
         if (pkgdir->langs) {
-            int loadC = 0, loadi18n = 0;
-            if (flags & PKGDIR_OPEN_ALLDESC)
-                loadC = loadi18n = 1;
-            else {
-                int i;
-                for (i=0; i < n_array_size(pkgdir->langs); i++) {
-                    const char *lang = n_array_nth(pkgdir->langs, i);
-                    DBGF("lang %s\n", lang);
-                    if (strcmp(lang, "C") == 0)
-                        loadC = 1;
-                    else
-                        loadi18n = 1;
-                }
-            }
+            int i, loadC = 0, loadi18n = 0;
+            tn_array *langs;
+
             
+            if (flags & PKGDIR_OPEN_ALLDESC)
+                langs = n_hash_keys(pkgdir->avlangs_h);
+            else
+                langs = n_ref(pkgdir->langs);
+
+            for (i=0; i < n_array_size(langs); i++) {
+                const char *lang = n_array_nth(langs, i);
+                DBGF("lang %s\n", lang);
+                if (strcmp(lang, "C") == 0)
+                    loadC = 1;
+                else
+                    loadi18n = 1;
+            }
+            n_array_free(langs);
             n_assert(loadC);
             
             if (loadC)
