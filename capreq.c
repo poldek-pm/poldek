@@ -256,6 +256,9 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
     if (*name == 'r' && strncmp(name, "rpmlib(", 7) == 0) {
         char *p, *q, *nname;
 
+#if XXX_IGNORE_RPMLIB_DEPS      /* experiment, won't work */
+        return NULL;
+#endif        
         p = (char*)name + 7;
         if ((q = strchr(p, ')'))) {
             name_len = q - p;
@@ -470,7 +473,12 @@ struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi)
         return NULL;
 
     size -= sizeof(cr_buf);
-
+#if XXX_IGNORE_RPMLIB_DEPS
+    if (cr_bufp[1] & CAPREQ_RPMLIB) {
+        n_buf_it_get(nbufi, size);
+        return NULL;
+    }
+#endif
     if (na)
         cr = na->na_malloc(na, sizeof(*cr) + size + 1);
     else
