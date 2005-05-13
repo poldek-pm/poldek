@@ -27,6 +27,10 @@
 #include <unistd.h>
 #include <signal.h>
 
+#if HAVE_NETINET_IN_SYSTM_H
+# include <netinet/in_systm.h>
+#endif
+
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>

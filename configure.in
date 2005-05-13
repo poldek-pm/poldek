@@ -175,6 +175,10 @@ AC_CHECK_HEADERS(sys/file.h sys/time.h syslog.h unistd.h)
 AC_CHECK_HEADER(stdint.h,,AC_MSG_ERROR(["C9X compiler is needed by $PACKAGE"]))
 AC_CHECK_HEADER(argp.h,,AC_MSG_ERROR(["missing required argp.h"]))
 
+dnl FreeBSD bug - netinet/in.h depends on in_systm.h
+AC_CHECK_HEADER(netinet/in_systm.h)
+
+
 dnl RH rpm needs this
 CPPFLAGS="-I/usr/include/rpm $CPPFLAGS"
 AC_CHECK_HEADER(rpm/rpmlib.h,,AC_MSG_ERROR(["missing required rpmlib.h"]))

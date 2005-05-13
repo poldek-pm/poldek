@@ -28,7 +28,6 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include <netinet/in.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
@@ -88,9 +87,10 @@
 
 #define HTTP_STATUS_IS_SERVER_ERROR(code) (code >= 500 && code % 500 < 100)
 
-#ifndef HAVE_ISBLANK
+#if !defined(HAVE_ISBLANK) && !defined(isblank)
 # define isblank(c) ((c) == ' ' || (c) == '\t')
 #endif
+
 #undef is_endl
 #define is_endl(c) ((c) == '\n' || (c) == '\r')
 

@@ -25,14 +25,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <netinet/in.h>
-#include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <time.h>
-
-#ifndef IPPORT_FTP
-# define IPPORT_FTP 21
-#endif
 
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
