@@ -351,8 +351,8 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     unsigned             vfmode = VFM_RO | VFM_NOEMPTY;
     unsigned             pkgdir_flags = 0;
     char                 *path = pkgdir->path;
-    char                 key[TNDB_KEY_MAX + 1], val[65536]; /* XXX - assume max val size = 65K */
-    int                  nerr = 0, klen, vlen;
+    char                 key[TNDB_KEY_MAX + 1], *val = NULL;
+    int                  nerr = 0, klen, vlen, vlen_max;
     
     if ((flags & PKGDIR_OPEN_REFRESH) == 0) 
         vfmode |= VFM_CACHE;
@@ -373,14 +373,17 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         nerr++;
         goto l_end;
     }
-
-    vlen = sizeof(val);
-    if (!tndb_it_get(&it, key, &klen, val, &vlen)) {
+    
+    vlen = 8192;
+    vlen = 256;
+    vlen_max = vlen;
+    val = n_malloc(vlen);
+    if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
         logn(LOGERR, _("%s: not a poldek index file"), pkgdir->idxpath);
         nerr++;
         goto l_end;
     }
-    
+
     if (strcmp(key, pndir_tag_hdr) != 0) {
         logn(LOGERR, _("%s: not a poldek index file, %s"),
              pkgdir->idxpath, val);
@@ -390,8 +393,12 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     
     
     while (strcmp(key, pndir_tag_endhdr) != 0) {
-        vlen = sizeof(val);
-        if (!tndb_it_get(&it, key, &klen, val, &vlen)) {
+        if (vlen < vlen_max)   /* to avoid needless tndb_it_rget()'s reallocs */
+            vlen = vlen_max;
+        else
+            vlen_max = vlen;
+        
+        if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
             logn(LOGERR, _("%s: not a poldek index file"), pkgdir->idxpath);
             nerr++;
             goto l_end;
@@ -516,6 +523,9 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     } else {
         pndir_close(&idx);
     }
+
+    if (val)
+        free(val);
     
     return nerr == 0;
 }
