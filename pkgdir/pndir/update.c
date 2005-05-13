@@ -353,7 +353,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
         
         *uprc = PKGDIR_UPRC_UPDATED;
         pndir_digest_calc_pkgs(&dg, pkgdir->pkgs);
-        DBGF_F("XX%s\n%s\n", dg_remote.md, dg.md);
+        DBGF("md.remote  %s\nmd.local  %s\n", dg_remote.md, dg.md);
         if (memcmp(dg.md, dg_remote.md, sizeof(dg.md)) != 0) {
             logn(LOGWARN, _("%s: desynchronized index, try --upa"),
                  pkgdir_pr_idxpath(pkgdir));

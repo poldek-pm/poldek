@@ -135,7 +135,7 @@ struct pkguinf *pndir_load_pkguinf(tn_alloc *na, tn_hash *db_dscr_h,
     struct pkguinf   *pkgu = NULL;
     struct tndb      *dbC;
     tn_buf           *nbuf = NULL;
-    char             key[TNDB_KEY_MAX], val[4096];
+    char             key[TNDB_KEY_MAX], val[8192];
     int              klen, vlen;
     
     if ((dbC = pndir_db_dscr_h_get(db_dscr_h, "C")) == NULL) 

@@ -7,7 +7,7 @@ LIBS = -ltrurl -ltndb
 
 noinst_LTLIBRARIES = libpkgdir_pndir.la
 libpkgdir_pndir_la_SOURCES = pndir.c pndir.h \
-	  						 digest.c update.c save.c tags.c description.c
+			 digest.c update.c save.c tags.c description.c
 
 dist-hook:
 	rm -rf $(distdir)/.deps
