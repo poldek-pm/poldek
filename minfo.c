@@ -1,4 +1,12 @@
-#include <malloc.h>
+/* $Id$ */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#ifdef HAVE_MALLOPT
+# include <malloc.h>
+#endif
+
 #include "i18n.h"
 #include "log.h"
 
@@ -25,7 +33,7 @@ static char *nbytes2str(char *buf, int bufsize, unsigned long nbytes)
     return buf;
 }
 
-
+#ifdef HAVE_MALLOPT
 static
 void print_mem_info(const char *fmt, va_list args) 
 {
@@ -51,3 +59,4 @@ void poldek_meminf(int vlevel, const char *fmt, ...)
         va_end(args);
     }
 }
+#endif /* HAVE_MALLOPT */
