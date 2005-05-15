@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <sys/ioctl.h>
 
 #include <trurl/nassert.h>

@@ -3,6 +3,7 @@
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
+LIBS=
 noinst_LTLIBRARIES = libpm_pset.la
 libpm_pset_la_SOURCES = mod.c pset.c pm_pset.h
 

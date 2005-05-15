@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <time.h>               /* for time_t */
+#include <sys/types.h>          /* for mode_t */
 
 #include <trurl/trurl.h>
 #include <trurl/nmalloc.h>

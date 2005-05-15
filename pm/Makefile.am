@@ -4,6 +4,7 @@ SUBDIRS = rpm pset
 INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
+LIBS=
 noinst_LTLIBRARIES = libpm.la
 libpm_la_SOURCES  = \
 		pm.c pm.h \

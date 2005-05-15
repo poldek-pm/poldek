@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -60,7 +61,7 @@
 int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath, 
                      tn_array *depdirs)
 {
-    path = path; depdirs = depdirs;
+    pm_rpm = pm_rpm; rootdir = rootdir; dbpath = dbpath; depdirs = depdirs;
     return -1;
 }
 
