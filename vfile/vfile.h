@@ -1,6 +1,6 @@
 /*
   Not so transparent IO layer. 
-  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2005 Pawel A. Gajda (mis@k2.net.pl)
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License version 2 as published
@@ -142,6 +142,7 @@ int vfile_register_ext_handler(const char *name, tn_array *protocols,
                                const char *cmd);
 int vfile_is_configured_ext_handler(const char *url);
 
+#include <unistd.h>             /* for off_t */
 struct vf_stat {
     off_t   vf_size;
     time_t  vf_mtime;
