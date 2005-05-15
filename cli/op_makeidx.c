@@ -42,7 +42,8 @@
 #define OPT_COMPR       (OPT_GID + 5)
 #define OPT_NOCOMPR     (OPT_GID + 6)
 #define OPT_TYPE        (OPT_GID + 7)
-#define OPT_NODIFF      (OPT_GID + 8)
+#define OPT_TYPE_ALIAS  (OPT_GID + 11) /* XXX argp bug? with +8 this doesn't work... */
+#define OPT_NODIFF      (OPT_GID + 9)
 
 /* The options we understand. */
 static struct argp_option options[] = {
@@ -53,9 +54,11 @@ static struct argp_option options[] = {
 
 {"makeidx", OPT_MAKEIDX, 0, OPTION_ALIAS, 0, OPT_GID }, 
 
-{"mkidx-type", OPT_TYPE, "TYPE[,TYPE]", 0,
-     N_("Sets the index type (use --stl to list available values)"),
+{"mt", OPT_TYPE, "TYPE[,TYPE]", 0,
+     N_("Set created index type (use --stl to list available values)"),
      OPT_GID },
+
+{"mkidx-type", OPT_TYPE_ALIAS, 0, OPTION_ALIAS, 0, 0 },
 
 {"mkidxz", OPT_MKIDXZ, "PATH", OPTION_ARG_OPTIONAL | OPTION_HIDDEN,
  N_("Likewise, but gzipped file is created"), OPT_GID},
@@ -150,6 +153,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     DBGF("key %d\n", key);
     
     switch (key) {
+        case OPT_TYPE_ALIAS:
         case OPT_TYPE:
             arg_s->idx_type = n_strdup(arg);
             break;
