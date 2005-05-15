@@ -34,9 +34,15 @@
 #include <fcntl.h>
 
 #if HAVE_OPENPTY
-# include <pty.h>
+# if HAVE_PTY_H
+#  include <pty.h>
+# elif HAVE_LIBUTIL_H           /* FreeBSD */
+#  include <libutil.h>
+# elif HAVE_UTIL_H
+#  include <util.h>
+# endif
 # include <termios.h>
-#endif
+#endif /* HAVE_OPENPTY */
 
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>

@@ -297,17 +297,23 @@ if test ${is_rpm4_0_4}. = yes. -a ${ENABLE_STATIC}. = yes. ; then
 	LIBS="$LIBS -lbz2 -lrpmio"
 fi
 
-AC_CHECK_FUNCS(getline,,, $CONF_IN_LDFLAGS)
-AC_CHECK_FUNCS(fopencookie,,, $CONF_IN_LDFLAGS)
-
-AC_CHECK_FUNCS(openpty,,
-	       AC_CHECK_LIB(util, openpty, 
-	[AC_DEFINE([HAVE_OPENPTY],1,[defined if openpty() is avialable])] [LIBS="-lutil $LIBS"]))
-
 AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
 	[AC_MSG_WARN("[poldek will not work fine with rpmlib\(...\) capabilities"])],
 	[$CONF_IN_LDFLAGS])
 
+
+dnl openpty() might be declared in:
+dnl - pty.h (Tru64 or Linux)
+dnl - libutil.h (FreeBSD)
+dnl - util.h (NetBSD)
+AC_CHECK_FUNC(openpty, have_openpty=yes, [
+  AC_CHECK_LIB(util, openpty, have_openpty=yes need_libutil=yes)])
+
+if test "$have_openpty" = "yes"; then
+  AC_DEFINE([HAVE_OPENPTY],1,[defined if openpty() is avialable])
+  AC_CHECK_HEADERS(pty.h libutil.h util.h, break)
+  test "$need_libutil" = "yes" && LIBS="-lutil $LIBS"
+fi
 
 AC_CHECK_FUNCS(EVP_DigestInit,,
 	[AC_CHECK_LIB(crypto, EVP_DigestInit,,
