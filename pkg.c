@@ -25,7 +25,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <netinet/in.h>
+#include <sys/param.h>
+
 
 #include <trurl/nstr.h>
 #include <trurl/nassert.h>

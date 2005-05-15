@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@pld.org.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -17,8 +17,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <sys/stat.h>
 #include <sys/types.h>
+
 
 #include <trurl/nmalloc.h>
 #include <trurl/nstr.h>

@@ -2,9 +2,8 @@
 #ifndef POLDEK_PKGUINF_H
 #define POLDEK_PKGUINF_H
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <sys/types.h>          /* for off_t */
+
 #include <trurl/trurl.h>
 #include <trurl/nstream.h>
 

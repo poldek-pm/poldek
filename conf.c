@@ -21,6 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fnmatch.h>
+#include <sys/param.h>          /* for PATH_MAX */
 
 #include <trurl/nhash.h>
 #include <trurl/narray.h>

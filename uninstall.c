@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000-2004 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -19,8 +19,9 @@
 #include <string.h>
 
 #include <fnmatch.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
-#include <sys/stat.h> 
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <trurl/narray.h>
