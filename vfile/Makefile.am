@@ -3,13 +3,11 @@
 VFCURL_SRCS = vfcurl.c			# obsoleted
 SUBDIRS   = vfff
 
-LIBS = -ltrurl -lz
+LIBS = -ltrurl -lz @INTLLIBS@
 
 #if ENABLE_VFILE_CURL
 #VFCURL_SRCS_ = $(VFCURL_SRCS)
 #endif
-
-LDADD_  = @INTLLIBS@
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
