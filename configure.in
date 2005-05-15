@@ -175,8 +175,12 @@ AC_CHECK_HEADERS(sys/file.h sys/time.h syslog.h unistd.h)
 AC_CHECK_HEADER(stdint.h,,AC_MSG_ERROR(["C9X compiler is needed by $PACKAGE"]))
 AC_CHECK_HEADER(argp.h,,AC_MSG_ERROR(["missing required argp.h"]))
 
-dnl FreeBSD bug - netinet/in.h depends on in_systm.h
+dnl FreeBSD (bug?) - netinet/in.h depends on in_systm.h
 AC_CHECK_HEADER(netinet/in_systm.h)
+dnl FreeBSD; FIONBIO definition 
+AC_CHECK_HEADER(sys/filio.h)
+dnl FreeBSD have separated libintl
+AC_CHECK_LIB(intl, textdomain, [LIBS="-lintl $LIBS"])
 
 
 dnl RH rpm needs this
@@ -324,7 +328,6 @@ AC_CHECK_FUNCS(EVP_DigestInit,,
 if test -f /etc/redhat-release; then
         LIBS="$LIBS -ldl" # rh's crypto needs this 
 fi
-
 
 dnl use local ../trurlib copy if it exists
 CONF_IN_LDFLAGS=
