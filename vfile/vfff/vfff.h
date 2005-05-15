@@ -15,6 +15,7 @@
 #define VFFF_VCN_H
 
 #include <stdarg.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <netinet/in.h>
 #include <time.h>
 

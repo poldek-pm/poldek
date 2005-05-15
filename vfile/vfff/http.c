@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License version 2 as
@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
