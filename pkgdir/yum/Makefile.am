@@ -2,6 +2,7 @@
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
 
+LIBS=
 noinst_LTLIBRARIES = libpkgdir_yum.la
 libpkgdir_yum_la_SOURCES = yum.c
 

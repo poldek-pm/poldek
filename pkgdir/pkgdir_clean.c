@@ -27,6 +27,7 @@
 #include <time.h>
 #include <fnmatch.h>
 #include <dirent.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

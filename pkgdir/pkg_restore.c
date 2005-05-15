@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -26,6 +26,7 @@
 #include <string.h>
 #include <time.h>
 #include <fnmatch.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -144,11 +145,12 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
     struct pkgtags_s     pkgt;
     struct pkg           tmpkg;
     off_t                offs;
+    unsigned long        ul_offs;
     char                 linebuf[4096];
     int                  nerr = 0, nread, pkg_loaded = 0;
     int                  tag, tag_binsize = PKG_STORETAG_SIZENIL;
-    const  char          *errmg_double_tag = "%s:%ld: double '%c' tag";
-    const  char          *errmg_ldtag = "%s:%ld: load '%c' tag error";
+    const  char          *errmg_double_tag = "%s:%lu: double '%c' tag";
+    const  char          *errmg_ldtag = "%s:%lu: load '%c' tag error";
 
 #if 0
     printf("FULL %d\n", (ldflags & PKGDIR_LD_FULLFLIST));
@@ -169,6 +171,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
         char *p, *val, *line;
         
         offs = n_stream_tell(st);
+        ul_offs = offs;         /* to satisfy printf() */
         line = linebuf;
         
         //printf("line[%ld] = (%s)\n", offs, line);
@@ -189,7 +192,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
         }
 
         if (*line == ' ') {      /* continuation */
-            logn(LOGERR, _("%s:%ld: syntax error"), fn, offs);
+            logn(LOGERR, _("%s:%lu: syntax error"), fn, ul_offs);
             nerr++;
             goto l_end;
         }
@@ -200,7 +203,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
         
         p = val = line + 1;
         if (*line == '\0' || *p != ':') {
-            logn(LOGERR, "%s:%ld[%s]: ':' expected", fn, offs,
+            logn(LOGERR, "%s:%lu[%s]: ':' expected", fn, ul_offs,
                  to_printable(linebuf, nread));
             nerr++;
             goto l_end;
@@ -224,7 +227,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
             case PKG_STORETAG_OS:
             case PKG_STORETAG_FN:
                 if (tag_binsize != PKG_STORETAG_SIZENIL) {
-                    logn(LOGERR, errmg_ldtag, fn, offs, tag);
+                    logn(LOGERR, errmg_ldtag, fn, ul_offs, tag);
                     nerr++;
                     goto l_end;
                 }
@@ -237,7 +240,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
 
             case PKG_STORETAG_BINF:
                 if (pkgt.flags & PKGT_HAS_SIZE) {
-                    logn(LOGERR, _("%s:%ld: syntax error"), fn, offs);
+                    logn(LOGERR, _("%s:%lu: syntax error"), fn, ul_offs);
                     nerr++;
                     goto l_end;
                 }
@@ -251,7 +254,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
 
             case PKG_STORETAG_CAPS:
                 if (pkgt.flags & PKGT_HAS_CAP) {
-                    logn(LOGERR, errmg_double_tag, fn, offs, *line);
+                    logn(LOGERR, errmg_double_tag, fn, ul_offs, *line);
                     nerr++;
                     goto l_end;
                 }
@@ -262,14 +265,14 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                     
             case PKG_STORETAG_REQS:
                 if (pkgt.flags & PKGT_HAS_REQ) {
-                    logn(LOGERR, errmg_double_tag, fn, offs, *line);
+                    logn(LOGERR, errmg_double_tag, fn, ul_offs, *line);
                     nerr++;
                     goto l_end;
                 }
                     
                 pkgt.reqs = capreq_arr_restore_st(na, st);
                 if (pkgt.reqs == NULL) {
-                    logn(LOGERR, errmg_ldtag, fn, offs, *line);
+                    logn(LOGERR, errmg_ldtag, fn, ul_offs, *line);
                     nerr++;
                     goto l_end;
                 }
@@ -278,7 +281,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                     
             case PKG_STORETAG_CNFLS:
                 if (pkgt.flags & PKGT_HAS_CNFL) {
-                    logn(LOGERR, _(errmg_double_tag), fn, offs, *line);
+                    logn(LOGERR, _(errmg_double_tag), fn, ul_offs, *line);
                     nerr++;
                     goto l_end;
                 }
@@ -286,7 +289,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                 pkgt.cnfls = capreq_arr_restore_st(na, st);
                 
                 if (pkgt.cnfls == NULL) {
-                    logn(LOGERR, errmg_ldtag, fn, offs, *line);
+                    logn(LOGERR, errmg_ldtag, fn, ul_offs, *line);
                     nerr++;
                     goto l_end;
                     
@@ -301,7 +304,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
 
             case PKG_STORETAG_DEPFL:
                 if (pkgfl_restore_st(na, &pkgt.pkgfl, st, NULL, 0) < 0) {
-                    logn(LOGERR, errmg_ldtag, fn, offs, *line);
+                    logn(LOGERR, errmg_ldtag, fn, ul_offs, *line);
                     nerr++;
                     goto l_end;
                 }
@@ -318,7 +321,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                 } else {
                     tn_tuple *fl;
                     if (pkgfl_restore_st(na, &fl, st, depdirs, 1) < 0) {
-                        logn(LOGERR, errmg_ldtag, fn, offs, *line);
+                        logn(LOGERR, errmg_ldtag, fn, ul_offs, *line);
                         nerr++;
                         goto l_end;
                     }
@@ -357,7 +360,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                 } else {
                     pkgt.pkguinf = pkguinf_restore_rpmhdr_st(na, st, 0);
                     if (pkgt.pkguinf == NULL) {
-                        logn(LOGERR, errmg_ldtag, fn, offs, *line);
+                        logn(LOGERR, errmg_ldtag, fn, ul_offs, *line);
                         nerr++;
                         goto l_end;
                     }
@@ -368,11 +371,13 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
 
             default:
                 if (poldek_VERBOSE > 1) 
-                    logn(LOGWARN, "%s:%ld: skipped unknown tag '%c'", fn, offs, tag);
+                    logn(LOGWARN, "%s:%lu: skipped unknown tag '%c'", fn,
+                         ul_offs, tag);
                 
                 if (!pkg_store_skiptag(tag, tag_binsize, st)) {
-                    logn(LOGERR, "%s:%ld: %c: unknown tag binsize (%c)",
-                         fn, offs, tag, isascii(tag_binsize) ? tag_binsize : '-');
+                    logn(LOGERR, "%s:%lu: %c: unknown tag binsize (%c)",
+                         fn, offs, tag,
+                         isascii(tag_binsize) ? tag_binsize : '-');
                     nerr++;
                     goto l_end;
                 }
@@ -399,12 +404,13 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 const char *pathname, off_t offs) 
 {
     int err = 0;
-    const char *errmg_double_tag = "%s:%d: double '%c' tag";
+    const char *errmg_double_tag = "%s:%lu: double '%c' tag";
+    unsigned long ul_offs = offs;
     
     switch (tag) {
         case PKG_STORETAG_NAME:
             if (pkgt->flags & PKGT_HAS_NAME) {
-                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
+                logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
                 memcpy(pkgt->name, value, sizeof(pkgt->name)-1);
@@ -414,7 +420,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
 
         case PKG_STORETAG_EVR:
             if (pkgt->flags & PKGT_HAS_EVR) {
-                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
+                logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
                 memcpy(pkgt->evr, value, sizeof(pkgt->evr)-1);
@@ -425,7 +431,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             
         case PKG_STORETAG_ARCH:
             if (pkgt->flags & PKGT_HAS_ARCH) {
-                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
+                logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
                 memcpy(pkgt->arch, value, sizeof(pkgt->arch)-1);
@@ -436,7 +442,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
 
         case PKG_STORETAG_OS:
             if (pkgt->flags & PKGT_HAS_OS) {
-                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
+                logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
                 memcpy(pkgt->os, value, sizeof(pkgt->os) - 1);
@@ -447,7 +453,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             
         case PKG_STORETAG_FN:
             if (pkgt->flags & PKGT_HAS_FN) {
-                logn(LOGERR, errmg_double_tag, pathname, offs, tag);
+                logn(LOGERR, errmg_double_tag, pathname, ul_offs, tag);
                 err++;
             } else {
                 memcpy(pkgt->fn, value, sizeof(pkgt->fn)-1);
@@ -456,7 +462,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             break;
             
         default:
-            logn(LOGERR, "%s:%ld: unknown tag '%c'", pathname, offs, tag);
+            logn(LOGERR, "%s:%lu: unknown tag '%c'", pathname, ul_offs, tag);
             n_assert(0);
     }
     

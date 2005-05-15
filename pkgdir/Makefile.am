@@ -4,6 +4,7 @@ SUBDIRS = dir pdir hdrl rpmdb pndir yum
 INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
+LIBS=
 noinst_LTLIBRARIES = libpkgdir.la
 
 libpkgdir_la_SOURCES  = \

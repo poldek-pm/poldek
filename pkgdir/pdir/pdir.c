@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -26,6 +26,7 @@
 #include <string.h>
 #include <time.h>
 #include <fnmatch.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -376,7 +377,7 @@ int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     while ((nread = n_stream_gets(vf->vf_tnstream, line, sizeof(line))) > 0) {
         struct pkgdir *diff;
         char *p, *mdd;
-        time_t ts;
+        unsigned long ts;
 		
         p = line;
         while (*p && isspace(*p))
@@ -400,7 +401,7 @@ int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
             break;
         }
 
-        if (ts <= pkgdir->ts)
+        if (ts <= (unsigned long)pkgdir->ts)
             continue;
         
         if ((p = strchr(p, ' ')) == NULL) {
@@ -431,7 +432,7 @@ int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
                 first_patch_found = 1;
             else {
                 if (poldek_VERBOSE > 2) {
-                    logn(LOGERR, "ts = %ld, %ld", pkgdir->ts, ts);
+                    logn(LOGERR, "ts = %ld, %ld", (long)pkgdir->ts, (long)ts);
                     logn(LOGERR, "md dir  %s", idx->pdg->mdd);
                     logn(LOGERR, "md last %s", mdd);
                     logn(LOGERR, "md curr %s", current_mdd);
@@ -580,7 +581,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     int                  nline;
     int                  nerr = 0, nread;
     struct pkgroup_idx   *pkgroups = NULL;
-    time_t               ts = 0, ts_orig = 0;
+    unsigned long        ts = 0, ts_orig = 0;
     tn_array             *depdirs = NULL;
     tn_array             *removed_pkgs = NULL;
     const char           *errmsg_brokenidx = _("%s: broken index (empty %s tag)");

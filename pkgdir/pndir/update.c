@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -21,6 +25,7 @@
 #include <string.h>
 #include <time.h>
 #include <fnmatch.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -177,7 +182,7 @@ int pndir_m_update_a(const struct source *src, const char *idxpath,
 static int parse_toc_line(char *line, time_t *tsp, char **mdp) 
 {
     char *p, *md;
-    time_t ts;
+    unsigned long ts;
     
     p = line;
 
@@ -297,10 +302,10 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
                 first_patch_found = 1;
             else {
                 msgn(2, "Check diff (ts = %ld, %ld) %s (searching %s)\n",
-                     pkgdir->ts, ts, md, current_md);
+                     (long)pkgdir->ts, (long)ts, md, current_md);
 
                 if (poldek_verbose() > 2) {
-                    DBGF_F("ts = %ld, %ld", pkgdir->ts, ts);
+                    DBGF_F("ts = %ld, %ld", (long)pkgdir->ts, (long)ts);
                     DBGF_F("md dir  %s", idx->dg->md);
                     DBGF_F("md last %s", md);
                     DBGF_F("md curr %s", current_md);

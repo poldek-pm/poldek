@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -26,6 +26,7 @@
 #include <string.h>
 #include <time.h>
 #include <fnmatch.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -173,7 +174,7 @@ struct pkg *pdir_pkg_restore(tn_alloc *na, tn_stream *st, struct pkg *pkg,
         }
 
         if (*line == ' ') {      /* continuation */
-            logn(LOGERR, _("%s:%ld: syntax error"), fn, offs);
+            logn(LOGERR, _("%s:%ld: syntax error"), fn, (long)offs);
             nerr++;
             goto l_end;
         }
@@ -184,7 +185,7 @@ struct pkg *pdir_pkg_restore(tn_alloc *na, tn_stream *st, struct pkg *pkg,
         
         p = val = line + 1;
         if (*line == '\0' || *p != ':') {
-            logn(LOGERR, _("%s:%ld:%s ':' expected"), fn, offs, line);
+            logn(LOGERR, _("%s:%ld:%s ':' expected"), fn, (long)offs, line);
             nerr++;
             goto l_end;
         }
@@ -210,7 +211,7 @@ struct pkg *pdir_pkg_restore(tn_alloc *na, tn_stream *st, struct pkg *pkg,
 
             case 'F':
                 if (pkgt.flags & PKGT_HAS_SIZE) {
-                    logn(LOGERR, _("%s:%ld: syntax error"), fn, offs);
+                    logn(LOGERR, _("%s:%ld: syntax error"), fn, (long)offs);
                     nerr++;
                     goto l_end;
                 }
@@ -351,7 +352,8 @@ struct pkg *pdir_pkg_restore(tn_alloc *na, tn_stream *st, struct pkg *pkg,
 
             default:
                 if (poldek_VERBOSE > 4) 
-                    logn(LOGWARN, "%s:%ld: unknown tag '%c'", fn, offs, *line);
+                    logn(LOGWARN, "%s:%ld: unknown tag '%c'", fn, (long)offs, 
+				  *line);
                 break;
         }
     }
@@ -467,7 +469,7 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
             break;
             
         default:
-            logn(LOGERR, "%s:%ld: unknown tag '%c'", pathname, offs, tag);
+            logn(LOGERR, "%s:%ld: unknown tag '%c'", pathname, (long)offs, tag);
             n_assert(0);
     }
     

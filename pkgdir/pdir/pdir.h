@@ -2,6 +2,8 @@
 #ifndef  POLDEK_PKGDIR_PDIR_H
 #define  POLDEK_PKGDIR_PDIR_H
 
+#include <sys/param.h>          /* for PATH_MAX */
+
 #include <trurl/narray.h>
 #include <trurl/nmalloc.h>
 #include <vfile/vfile.h>

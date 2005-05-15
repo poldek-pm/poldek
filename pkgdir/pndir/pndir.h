@@ -2,6 +2,8 @@
 #ifndef  POLDEK_PKGDIR_TNDB_H
 #define  POLDEK_PKGDIR_TNDB_H
 
+#include <sys/param.h>          /* for PATH_MAX */
+
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 #include <tndb/tndb.h>

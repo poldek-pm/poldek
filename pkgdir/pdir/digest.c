@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -22,6 +26,7 @@
 #include <time.h>
 #include <fnmatch.h>
 #include <fcntl.h>
+#include <sys/param.h>          /* for PATH_MAX */
 
 #include <openssl/evp.h>
 #include <trurl/nassert.h>
@@ -416,7 +421,7 @@ int pdir_digest_verify(struct pdir_digest *pdg, struct vfile *vf)
 
     offs = n_stream_tell(vf->vf_tnstream);
     if (n_stream_seek(vf->vf_tnstream, 0L, SEEK_SET) != 0) {
-        logn(LOGERR, "%s: fseek(0): %ld -> 0: %m", vf->vf_path, offs);
+        logn(LOGERR, "%s: fseek(%ld -> 0): %m", vf->vf_path, (long int)offs);
         return 0;
     }
 

@@ -2,6 +2,7 @@
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
 
+LIBS=
 noinst_LTLIBRARIES = libpkgdir_hdrl.la
 libpkgdir_hdrl_la_SOURCES = hdrl.c
 
