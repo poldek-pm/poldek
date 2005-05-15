@@ -185,7 +185,7 @@ struct pkguinf *pkguinf_restore_rpmhdr_st(tn_alloc *na,
 
     if (offset > 0)
         if (n_stream_seek(st, offset, SEEK_SET) != 0) {
-            logn(LOGERR, "pkguinf_restore: fseek %ld: %m", offset);
+            logn(LOGERR, "pkguinf_restore: fseek %ld: %m", (long int)offset);
             return NULL;
         }
 
