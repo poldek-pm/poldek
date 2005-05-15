@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -18,13 +18,23 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/param.h> 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define _GNU_SOURCE 1
+#define _GNU_SOURCE 1           /* for FNM_CASEFOLD (Linux, glibc) */
+#ifndef __BSD_VISIBLE           /* for FNM_CASEFOLD (FreeBSD) */
+# define POLDEK__BSD_VISIBLE 1
+# define __BSD_VISIBLE 1         
+#endif
+
 #include <fnmatch.h>
+
 #undef _GNU_SOURCE
+#ifdef POLDEK__BSD_VISIBLE
+# undef __BSD_VISIBLE
+#endif
 
 #include <pcre.h>
 #include <trurl/nassert.h>

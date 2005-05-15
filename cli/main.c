@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <sys/param.h>
 
 #include <argp.h>
 #include <sys/types.h>

@@ -3,6 +3,8 @@
 #define  POCLIDEK_CMD_H
 
 #include <argp.h>
+#include <time.h>
+
 #include <trurl/narray.h>
 #include <trurl/nbuf.h>
 

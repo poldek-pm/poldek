@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <fnmatch.h>
+#include <sys/param.h>
 
 #include <trurl/trurl.h>
 

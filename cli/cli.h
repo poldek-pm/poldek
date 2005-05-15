@@ -2,14 +2,13 @@
 #ifndef  POCLIDEK_CLI_H
 #define  POCLIDEK_CLI_H
 
-#include <argp.h>
-#include <trurl/narray.h>
 #include "poldek.h"
 #include "pkg.h"
 #include "log.h"
 #include "poldek_term.h"
 
 #define POCLIDEK_ITSELF 
+
 #include "poclidek.h"
 #include "dent.h"
 #include "cmd.h"
