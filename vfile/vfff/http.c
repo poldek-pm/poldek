@@ -28,7 +28,6 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -861,7 +860,7 @@ int is_redirected_connection(struct http_resp *resp, struct vfff_req *rreq)
 static
 off_t http_resp_get_content_length(struct http_resp *resp) 
 {
-    off_t size;
+    long int size;
     
     if (!http_resp_get_hdr_long(resp, "content-length", &size)) {
         vfff_set_err(EINVAL, _("Content-Length parse error (%s)"),
@@ -869,7 +868,7 @@ off_t http_resp_get_content_length(struct http_resp *resp)
         size = -1;
     }
 
-    return size;
+    return (off_t)size;
 }
 
 static
