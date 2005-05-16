@@ -175,6 +175,12 @@ AC_CHECK_HEADERS(sys/file.h sys/time.h syslog.h unistd.h)
 AC_CHECK_HEADER(stdint.h,,AC_MSG_ERROR(["C9X compiler is needed by $PACKAGE"]))
 AC_CHECK_HEADER(argp.h,,AC_MSG_ERROR(["missing required argp.h"]))
 
+AC_CHECK_FUNCS(argp_usage, , 
+        [AC_CHECK_LIB(argp, argp_usage, [LIBS="$LIBS -largp"], 
+                      [AC_MSG_ERROR(["argp is required"])])
+        ])
+
+
 #dnl FreeBSD (bug?) - netinet/in.h depends on in_systm.h
 #AC_CHECK_HEADERS(netinet/in_systm.h)
 
