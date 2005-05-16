@@ -619,7 +619,7 @@ int main(int argc, char **argv)
     struct poldek_ctx    *ctx;
     struct poclidek_ctx  *cctx;
     struct poldek_ts     *ts;
-    int  rc, rrc, mode = RUNMODE_POLDEK;
+    int  rc = 1, rrc, mode = RUNMODE_POLDEK;
     const char *bn;
 
     if (!poldeklib_init())

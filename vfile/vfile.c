@@ -124,7 +124,7 @@ int vfile_configure(int param, ...)
             break;
             
         case VFILE_CONF_DEFAULT_CLIENT: {
-            char *proto, *client;
+            char *proto, *client = NULL;
 
             proto = va_arg(ap, char *);
             if (proto)
