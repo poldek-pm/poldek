@@ -242,7 +242,7 @@ int pkg_hdr_cmp_evr(struct pm_ctx *ctx, void *hdr, const struct pkg *pkg,
 int do_search_package(struct pkgdb *db, const struct pkg *pkg, int *cmprcptr,
                       struct pm_dbrec *todbrec)
 {
-    int count = 0, n, cmprc = 0;
+    int count = 0, n = 0, cmprc = 0;
     struct pkgdb_it it;
     const struct pm_dbrec *dbrec;
 
