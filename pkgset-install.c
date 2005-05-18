@@ -1826,7 +1826,7 @@ static int valid_arch_os(struct poldek_ts *ts, tn_array *pkgs)
 
 static void print_install_summary(struct upgrade_s *upg) 
 {
-    int i, n;
+    int i, n, simple;
     long int size_download = 0, size_install = 0;
     
     for (i=0; i < n_array_size(upg->install_pkgs); i++) {
@@ -1855,12 +1855,13 @@ static void print_install_summary(struct upgrade_s *upg)
         msg(1, _("_, %d to uninstall"), n_array_size(upg->uninst_set->dbpkgs));
     msg(1, "_:\n");
 
-    
+    simple = upg->ts->getop(upg->ts, POLDEK_OP_PARSABLETS);
     n_array_sort(upg->install_pkgs);
-    packages_iinf_display(1, "I", upg->install_pkgs, upg->ts->pms,
-                          PKGMARK_MARK);
-    packages_iinf_display(1, "D", upg->install_pkgs, upg->ts->pms, PKGMARK_DEP);
-    packages_iinf_display(1, "R", upg->uninst_set->dbpkgs, NULL, 0);
+    packages_iinf_display(1, "I", upg->install_pkgs, upg->ts->pms, PKGMARK_MARK,
+                          simple);
+    packages_iinf_display(1, "D", upg->install_pkgs, upg->ts->pms, PKGMARK_DEP,
+                          simple);
+    packages_iinf_display(1, "R", upg->uninst_set->dbpkgs, NULL, 0, simple);
         
     if (upg->ts->fetchdir == NULL)
         packages_fetch_summary(upg->ts->pmctx, upg->install_pkgs,
@@ -2433,6 +2434,7 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     MEMINF("START");
     init_upgrade_s(&upg, ts);
 
+    /* preserve option value */
     is_particle = ts->getop(ts, POLDEK_OP_PARTICLE);
     
     /* tests make sense on whole set only  */

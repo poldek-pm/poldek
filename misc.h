@@ -55,7 +55,7 @@ int mklock(const char *dir);
 
 struct pkgmark_set;
 void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,
-                           struct pkgmark_set *pms, unsigned flags);
+                           struct pkgmark_set *pms, unsigned pmsflags, int simple);
 
 int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
                   int ndigits, int longunit);

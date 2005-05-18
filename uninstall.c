@@ -51,8 +51,8 @@
 
 
 
-static void print_uninstall_summary(tn_array *pkgs, struct pkgmark_set *pms,
-                                    int ndep);
+static void print_summary(tn_array *pkgs, struct pkgmark_set *pms, int ndep,
+                          int simple);
 static void update_poldek_iinf(struct poldek_iinf *iinf, tn_array *pkgs,
                                struct pkgdb *db, int vrfy);
 struct uninstall_ctx *uctx;
@@ -495,7 +495,8 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
         goto l_end;
     
     ordered_pkgs = reorder_packages(pkgs);
-    print_uninstall_summary(pkgs, ts->pms, uctx->ndep);
+    print_summary(pkgs, ts->pms, uctx->ndep,
+                  ts->getop(ts, POLDEK_OP_PARSABLETS));
 
     if (uctx->nerr_dep) {
         char errmsg[256];
@@ -549,7 +550,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
 
 
 static
-void print_uninstall_summary(tn_array *pkgs, struct pkgmark_set *pms, int ndep)
+void print_summary(tn_array *pkgs, struct pkgmark_set *pms, int ndep, int simple)
 {
     int n = n_array_size(pkgs);
     
@@ -568,8 +569,8 @@ void print_uninstall_summary(tn_array *pkgs, struct pkgmark_set *pms, int ndep)
 #endif    
     msg(0, "_:\n");
     
-    packages_iinf_display(0, "R", pkgs, pms, PKGMARK_MARK);
-    packages_iinf_display(0, "D", pkgs, pms, PKGMARK_DEP);
+    packages_iinf_display(0, "R", pkgs, pms, PKGMARK_MARK, simple);
+    packages_iinf_display(0, "D", pkgs, pms, PKGMARK_DEP, simple);
 }
 
 

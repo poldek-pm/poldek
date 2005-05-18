@@ -499,51 +499,63 @@ const char *poldek_util_ngettext_n_packages_fmt(int n)
 
 
 void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,
-                           struct pkgmark_set *pms, unsigned flags)
+                           struct pkgmark_set *pms, unsigned pmsflags, int simple)
 {
-    int   i, ncol = 2, npkgs = 0;
-    int   term_width;
-    char  *p, *colon = ", ";
-    int   hdr_printed = 0;
-
-    term_width = poldek_term_get_width() - 5;
-    ncol = strlen(prefix) + 1;
+    int   i, npkgs = 0;
     
     npkgs =  n_array_size(pkgs);
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
         DBGF("%s %d %d\n", pkg_snprintf_s(pkg), flags,
-             pms ? pkgmark_isset(pms, pkg, flags) : -1);
-        if (flags && pms && !pkgmark_isset(pms, pkg, flags))
+             pms ? pkgmark_isset(pms, pkg, pmsflags) : -1);
+        if (pmsflags && pms && !pkgmark_isset(pms, pkg, pmsflags))
             npkgs--;
     }
-    
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
 
-        if (flags && pms && !pkgmark_isset(pms, pkg, flags))
-            continue;
-
-        if (hdr_printed == 0) {
-            msg(verbose_l, "%s ", prefix);
-            hdr_printed = 1;
-        }
-            	
-        p = pkg_snprintf_s(pkg);
-        if (ncol + (int)strlen(p) >= term_width) {
-            ncol = 3;
-            msg(verbose_l, "_\n%s ", prefix);
+    if (simple) {
+        for (i=0; i < n_array_size(pkgs); i++) {
+            struct pkg *pkg = n_array_nth(pkgs, i);
+            
+            if (pmsflags && pms && !pkgmark_isset(pms, pkg, pmsflags))
+                continue;
+            msgn(verbose_l, "%%%s %s", prefix, pkg_snprintf_s(pkg));
         }
         
-        if (--npkgs == 0)
-            colon = "";
-            
-        msg(verbose_l, "_%s%s", p, colon);
-        ncol += strlen(p) + strlen(colon);
-    }
+    } else {
+        int ncol = 2, term_width, hdr_printed = 0;
+        char  *p, *colon = ", ";
 
-    if (hdr_printed)
-        msg(verbose_l, "_\n");
+        term_width = poldek_term_get_width() - 5;
+        ncol = strlen(prefix) + 1;
+
+        for (i=0; i < n_array_size(pkgs); i++) {
+            struct pkg *pkg = n_array_nth(pkgs, i);
+
+            if (pmsflags && pms && !pkgmark_isset(pms, pkg, pmsflags))
+                continue;
+
+            if (hdr_printed == 0) {
+                msg(verbose_l, "%s ", prefix);
+                hdr_printed = 1;
+            }
+            	
+            p = pkg_snprintf_s(pkg);
+            if (ncol + (int)strlen(p) >= term_width) {
+                ncol = 3;
+                msg(verbose_l, "_\n%s ", prefix);
+            }
+        
+            if (--npkgs == 0)
+                colon = "";
+            
+            msg(verbose_l, "_%s%s", p, colon);
+            ncol += strlen(p) + strlen(colon);
+        }
+
+        if (hdr_printed)
+            msg(verbose_l, "_\n");
+    }
+    
 }
 
 static char *get_env(char *dest, int size, const char *name) 

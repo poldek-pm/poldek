@@ -70,6 +70,8 @@ enum poldek_ts_opt {
     POLDEK_OP_IS_INTERACTIVE_ON,  /* any of above */
 
     POLDEK_OP_NOFETCH,        /* usable for debugging */
+    POLDEK_OP_PARSABLETS,     /* print transaction (install/remove) summary in
+                                 parseable form */
     POLDEK_OP___MAXOP,
 };
 

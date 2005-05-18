@@ -63,6 +63,7 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_PMONLY_FORCE          (OPT_GID + 34)
 #define OPT_PM                    (OPT_GID + 35)
 #define OPT_INST_NOFETCH          (OPT_GID + 36)
+#define OPT_INST_PARSABLETS       (OPT_GID + 37)
 
 static struct argp_option options[] = {
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
@@ -128,7 +129,8 @@ N_("Be unconcerned (applied to PM only)"), OPT_GID },
  N_("pass option OPTION to PM binary"), OPT_GID },
 {"rpm", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
 
-{"nofetch", OPT_INST_NOFETCH, 0, OPTION_HIDDEN,
+/* hidden, for debugging/testing purposes */
+{"nofetch", OPT_INST_NOFETCH, 0, OPTION_HIDDEN, 
      N_("Do not download packages"), OPT_GID },    
 
 { 0, 0, 0, 0, 0, 0 },
@@ -176,8 +178,11 @@ static struct argp_option cmdl_options[] = {
 N_("Remove package duplicates from available package list"), OPT_GID },
 
 {"unique-pkg-names", OPT_INST_UNIQNAMES_ALIAS, 0, OPTION_ALIAS | OPTION_HIDDEN,
-        0, OPT_GID },     
+        0, OPT_GID },
 
+{"parsable-tr-summary", OPT_INST_PARSABLETS, 0, OPTION_HIDDEN, /* hidden, experimental */
+     N_("Print installation summary in parseable form"), OPT_GID },
+                                                
     { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -330,6 +335,10 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_UNIQNAMES:
         case OPT_INST_UNIQNAMES_ALIAS:
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_UNIQN, 1);
+            break;
+
+        case OPT_INST_PARSABLETS:
+            ts->setop(ts, POLDEK_OP_PARSABLETS, 1);
             break;
 
         case 'I':               /* silently ignore */

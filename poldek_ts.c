@@ -504,7 +504,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
                 int i;
                 for (i=0; i < n_array_size(ts->hold_patterns); i++) {
                     char *mask = n_array_nth(ts->hold_patterns, i);
-                    DBGF_F("hold %s\n", mask);
+                    DBGF("hold %s\n", mask);
                 }
             }
 #endif            
@@ -756,7 +756,7 @@ static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf)
         
         for (i=0; i < n_array_size(ts->hold_patterns); i++) {
             char *mask = n_array_nth(ts->hold_patterns, i);
-            DBGF_F("hold %s\n", mask);
+            DBGF("hold %s\n", mask);
         }
     }
 #endif
@@ -812,12 +812,12 @@ static void install_dist_summary(struct poldek_ts *ts)
 #endif
     msg(1, "_:\n");
     n_array_sort(pkgs);
-    packages_iinf_display(1, "I", pkgs, ts->pms, PKGMARK_MARK);
+    packages_iinf_display(1, "I", pkgs, ts->pms, PKGMARK_MARK, 0);
     n_array_free(pkgs);
     
     if (depkgs) {
         n_array_sort(depkgs);
-        packages_iinf_display(1, "D", depkgs, ts->pms, PKGMARK_DEP);
+        packages_iinf_display(1, "D", depkgs, ts->pms, PKGMARK_DEP, 0);
         n_array_free(depkgs);
     }
 }
