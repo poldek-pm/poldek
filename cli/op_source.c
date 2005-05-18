@@ -166,7 +166,7 @@ struct poclidek_opgroup poclidek_opgroup_source = {
 };
 
 
-#if 0
+#if 0                           /* NFY */
 /* PM[:SOURCE|PATH] */
 static int parse_destspec(char *spec, struct arg_s *arg_s)
 {
@@ -241,11 +241,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_DEST_NAME:
-            if (arg_s->srcdst != NULL) {
-                logn(LOGERR, _("destination repository is already set"));
-                exit(EXIT_FAILURE);
-            }
             arg_s->srcdst = source_new(arg, NULL, NULL, NULL);
+            poldek_configure(arg_s->ctx, POLDEK_CONF_DESTINATION, arg_s->srcdst);
+            poldek_configure(arg_s->ctx, POLDEK_CONF_PM, "pset");
+            arg_s->srcdst = NULL;
             break;
 
         case OPT_SRCTYPE:
@@ -279,7 +278,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             arg_s->cnflags |= POLDEKCLI_SRC_SPECIFIED;
             break;
 
-        case OPT_DEST:
+        case OPT_DEST:          /* NFY */
+            n_die("NFY");
             if (arg_s->destpm[0] != '\0') {
                 logn(LOGERR, _("destination is already set"));
                 exit(EXIT_FAILURE);
@@ -339,10 +339,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case ARGP_KEY_END:
-            if (arg_s->srcdst) {    /* configure as last source, obscure a bit... XXX */
-                poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->srcdst);
-                poldek_configure(arg_s->ctx, POLDEK_CONF_PM, "pset");
-            }
             //argp_usage (state);
             break;
            

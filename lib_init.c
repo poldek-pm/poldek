@@ -423,7 +423,8 @@ int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources, tn_array *srcs_n
     
     else if (n_array_size(srcs_named) > 0) {
         expanded_h = n_hash_new(16, NULL);
-        expanded_srcs_named = expand_sources_group(srcs_named, htcnf_sources, expanded_h);
+        expanded_srcs_named = expand_sources_group(srcs_named, htcnf_sources,
+                                                   expanded_h);
 
         srcs_named = expanded_srcs_named;
         matches = alloca(n_array_size(srcs_named) * sizeof(int));
@@ -935,6 +936,16 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
                 sources_add(ctx->sources, src);
             }
             break;
+
+        case POLDEK_CONF_DESTINATION:
+            vv = va_arg(ap, void*);
+            if (vv) {
+                struct source *src = (struct source*)vv;
+                if (src->path)
+                    src->path = poldek__conf_path(src->path, NULL);
+                sources_add(ctx->dest_sources, src);
+            }
+            break;
             
         case POLDEK_CONF_PM:
             vv = va_arg(ap, void*);
@@ -1059,6 +1070,9 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     memset(ctx, 0, sizeof(*ctx));
     ctx->sources = n_array_new(4, (tn_fn_free)source_free,
                                (tn_fn_cmp)source_cmp);
+
+    ctx->dest_sources = n_array_new(4, (tn_fn_free)source_free,
+                                    (tn_fn_cmp)source_cmp);
     ctx->ps = NULL;
     ctx->_cnf = n_hash_new(16, free);
     n_hash_insert(ctx->_cnf, "pm", n_strdup("rpm")); /* default pm */
@@ -1143,6 +1157,11 @@ int setup_sources(struct poldek_ctx *ctx)
     if (!prepare_sources(ctx, ctx->htconf, ctx->sources))
         return 0;
 
+    if (n_array_size(ctx->dest_sources) > 0) {
+        if (!prepare_sources(ctx, ctx->htconf, ctx->dest_sources))
+            return 0;
+    }
+
     if (ctx->htconf) {
         htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
         autoupa = poldek_conf_get_bool(htcnf, "autoupa", 1);
@@ -1160,6 +1179,7 @@ int setup_sources(struct poldek_ctx *ctx)
 }
 
 
+/*  */
 static int setup_pm(struct poldek_ctx *ctx) 
 {
     const char *pm = n_hash_get(ctx->_cnf, "pm");
@@ -1170,28 +1190,26 @@ static int setup_pm(struct poldek_ctx *ctx)
         pm_configure(ctx->pmctx, "macros", ctx->ts->rpmacros);
         
     } else if (strcmp(pm, "pset") == 0) {
-        struct source *dest = NULL;
-        
-        n_array_sort_ex(ctx->sources, (tn_fn_cmp)source_cmp_no);
-        if (n_array_size(ctx->sources) < 2) {
+        n_array_sort_ex(ctx->dest_sources, (tn_fn_cmp)source_cmp_no);
+        if (n_array_size(ctx->dest_sources) == 0) {
             logn(LOGERR, "%s: missing destination source", pm);
-             
-        } else {
-            dest = n_array_nth(ctx->sources, n_array_size(ctx->sources) - 1);
-            n_assert(dest);
             
-            if (source_is_remote(dest) && 0) {
-                logn(LOGERR, "%s: destination source could not be remote",
-                     source_idstr(dest));
-                
-            } else {
-                ctx->pmctx = pm_new(pm);
+        } else {
+            int i;
+            
+            ctx->pmctx = pm_new(pm);
+            
+            for (i=0; i < n_array_size(ctx->dest_sources); i++) {
+                struct source *dest = n_array_nth(ctx->dest_sources, i);
+                if (source_is_remote(dest) && 0) {
+                    logn(LOGERR, "%s: destination source could not be remote",
+                         source_idstr(dest));
+                    continue;
+                }
                 pm_configure(ctx->pmctx, "source", dest);
-                n_array_pop(ctx->sources); /* remove dest */
             }
         }
-        
-        n_array_sort(ctx->sources);
+
         if (ctx->pmctx) {
             ctx->ts->setop(ctx->ts, POLDEK_OP_CONFLICTS, 0);
             ctx->ts->setop(ctx->ts, POLDEK_OP_OBSOLETES, 0);

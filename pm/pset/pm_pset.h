@@ -6,10 +6,7 @@
 #include "poldek.h"
 #include "pm/pm.h"
 
-struct pm_pset {
-    char *installer_path;
-    tn_hash *cnf;
-};
+struct pm_pset;
 
 void *pm_pset_init(void);
 void pm_pset_destroy(void *pm_pset);

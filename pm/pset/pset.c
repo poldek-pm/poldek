@@ -43,17 +43,29 @@
 #include "pkg.h"
 #include "capreq.h"
 #include "pkgdir/pkgdir.h"
+#include "pkgdir/source.h"
 #include "pm_pset.h"
 #include "pkgset.h"
 
+#define IMMUTABLE_REMOTESRC (1 << 0)
+#define IMMUTABLE_MULTISRC  (1 << 1)
+
+struct pm_pset {
+    char      *installer_path;
+    tn_hash   *cnf;
+    tn_array  *sources;
+    unsigned  immutable;
+};
+
+
 struct pm_psetdb {
-    struct source *src;
-    struct pkgset *ps;
-    char *tsdir;
-    tn_array *pkgs_added;
-    tn_array *paths_added;
-    tn_array *paths_removed;
-    int _recno;
+    struct pkgset  *ps;
+    char           *tsdir;       /* transaction temp directory */
+    tn_array       *pkgs_added;
+    tn_array       *paths_added;
+    tn_array       *paths_removed;
+    int            _recno;
+    struct pm_pset *pm;
 };
 
 void *pm_pset_init(void) 
@@ -69,19 +81,18 @@ void *pm_pset_init(void)
         pm->installer_path = NULL;
     
     pm->cnf = n_hash_new(16, NULL);
+    pm->sources = n_array_new(4, (tn_fn_free)source_free,
+                              (tn_fn_cmp)source_cmp);
     return pm;
 }
 
 void pm_pset_destroy(void *pm_pset) 
 {
     struct pm_pset *pm = pm_pset;
-    struct source *src;
-    
+
     n_cfree(&pm->installer_path);
-    src = n_hash_get(pm->cnf, "source");
-    if (src)
-        source_free(src);
     n_hash_free(pm->cnf);
+    n_array_free(pm->sources);
     
     memset(pm, 0, sizeof(*pm));
     free(pm);
@@ -92,41 +103,23 @@ int pm_pset_configure(void *pm_pset, const char *key, void *val)
 {
     struct pm_pset *pm = pm_pset;
     
-    if (n_str_eq(key, "source"))
-        n_hash_insert(pm->cnf, key, val);
+    if (n_str_eq(key, "source")) {
+        struct source *src = val;
+        n_array_push(pm->sources, val);
+        if (n_array_size(pm->sources) > 1)
+            pm->immutable |= IMMUTABLE_MULTISRC;
+        
+        if (source_is_remote(src))
+            pm->immutable |= IMMUTABLE_REMOTESRC;
+    }
     
     return 1;
 }
 
-void *pm_pset_opendb(void *pm_pset, void *dbh,
-                     const char *rootdir, const char *dbpath,
-                     mode_t mode, tn_hash *kw)
+static
+int setup_source(struct pkgset *ps, struct source *src)
 {
-    struct pm_pset *pm = pm_pset;
-    struct pm_psetdb *db = dbh;
-    struct source *src;
     struct pkgdir *dir;
-    struct pkgset *ps;
-    int i, recno;
-    
-    rootdir = rootdir; dbpath = dbpath; mode = mode;
-    
-    if (db)
-        return db;
-
-    src = n_hash_get(kw, "source");
-    if (src == NULL) {
-        src = n_hash_get(pm->cnf, "source"); /* default */
-    }
-    
-    if (!src) {
-        logn(LOGERR,
-             _("Could not open 'pset' database: missing source parameter"));
-        return NULL;
-    }
-
-    if (source_is_remote(src) && 0 /* for testing */)
-        return NULL;
 
     if ((dir = pkgdir_srcopen(src, 0)) == NULL) {
         if (!source_is_type(src, "dir") && is_dir(src->path)) {
@@ -137,20 +130,56 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
     }
     
     if (dir == NULL)
-        return NULL;
+        return 0;
     
     if (!pkgdir_load(dir, 0, 0)) {
         pkgdir_free(dir);
-        return NULL;
+        return 0;
     }
     
+    if (!pkgset_add_pkgdir(ps, dir)) {
+        logn(LOGERR, _("%s: failed to add to pkgset..."), source_idstr(src));
+        pkgdir_free(dir);
+        return 0;
+    }
+    return 1;
+}
+
+
+void *pm_pset_opendb(void *pm_pset, void *dbh,
+                     const char *rootdir, const char *dbpath,
+                     mode_t mode, tn_hash *kw)
+{
+    struct pm_pset *pm = pm_pset;
+    struct pm_psetdb *db = dbh;
+    struct pkgset *ps;
+    int i, iserr = 0, recno;
+    
+    rootdir = rootdir; dbpath = dbpath; mode = mode;
+    
+    if (db)
+        return db;
+
+    n_assert(n_hash_exists(kw, "source") == 0);      /* use pm_configure() */
+
+    if (n_array_size(pm->sources) == 0) {
+        logn(LOGERR,
+             _("Could not open 'pset' database: missing source parameter"));
+        return NULL;
+    }
+
     if ((ps = pkgset_new(NULL)) == NULL)
         return NULL;
-        
-    if (!pkgset_add_pkgdir(ps, dir)) {
+
+    for (i=0; i < n_array_size(pm->sources); i++) {
+        struct source *src = n_array_nth(pm->sources, i);
+        if (!setup_source(ps, src))
+            iserr = 1;
+    }
+    
+    if (iserr) {
         logn(LOGERR, _("no packages loaded"));
         pkgset_free(ps);
-        pkgdir_free(dir);
         return NULL;
     }
 
@@ -163,13 +192,13 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
 
     pkgset_setup(ps, PSET_VRFY_MERCY);
     db = n_malloc(sizeof(*db));
-    db->src = src;
     db->ps = ps;
     db->pkgs_added = pkgs_array_new(32);
     db->paths_added = n_array_new(32, free, NULL);
     db->paths_removed = n_array_new(32, free, NULL);
     db->tsdir = NULL;
     db->_recno = recno;
+    db->pm = pm;
     return db;
 }
 
@@ -557,7 +586,7 @@ static int do_pkgtslink(struct pm_psetdb *db, const char *cachedir,
     return 1;
 }
 
-#if 0
+#if ENABLE_TRACE
 static void dumpdir(struct pkgdir *pkgdir)
 {
     int i;
@@ -569,7 +598,27 @@ static void dumpdir(struct pkgdir *pkgdir)
     }
 }
 #endif
+
+static int is_immutable(unsigned immutable, const char *oplabel) 
+{
+    char reason[64];
+    int n = 0;
     
+    if (immutable == 0)
+        return 0;
+
+    if (immutable & IMMUTABLE_REMOTESRC)
+        n += n_snprintf(&reason[n], sizeof(reason) - n, "remote source");
+
+    if (immutable & IMMUTABLE_MULTISRC)
+        n += n_snprintf(&reason[n], sizeof(reason) - n, "%smultiple sources",
+                        n > 0 ? ", " : "");
+    
+    logn(LOGERR, "'pset' database is immutable (%s), %s refused",
+         reason, oplabel);
+    return 1;
+}
+
 int pm_pset_packages_install(struct pkgdb *pdb,
                              tn_array *pkgs, tn_array *pkgs_toremove,
                              struct poldek_ts *ts) 
@@ -581,8 +630,12 @@ int pm_pset_packages_install(struct pkgdb *pdb,
 
     if (ts->getop(ts, POLDEK_OP_RPMTEST))
         return 1;
+
+    n_assert(ts->getop(ts, POLDEK_OP_TEST) == 0);
+    if (is_immutable(db->pm->immutable, "installation"))
+        return 0;
     
-#if 0    
+#if 0   /* playing with recno -- a mess... */
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
         if (pkg->recno == 0) {
@@ -598,42 +651,47 @@ int pm_pset_packages_install(struct pkgdb *pdb,
         }
     }
 #endif
-    pkgdir = n_array_nth(db->ps->pkgdirs, 0);
+    //debug
+    //pkgdir = n_array_nth(db->ps->pkgdirs, 0);
     //dumpdir(pkgdir);
     
     pm_pset_packages_uninstall(pdb, pkgs_toremove, ts);
 
+    //debug
+    //pkgdir = n_array_nth(db->ps->pkgdirs, 0);
+    //dumpdir(pkgdir);
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
     pkgdir = n_array_nth(db->ps->pkgdirs, 0);
     //dumpdir(pkgdir);
     
     for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
+        struct pkg *tmp, *pkg = n_array_nth(pkgs, i);
+        
+        if (!pkg_localpath(pkg, path, sizeof(path), ts->cachedir))
+            continue;
+        
+        tmp = n_array_bsearch(pkgdir->pkgs, pkg);
+            
+        DBGF("in %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
+        if (pkg->recno > 0)
+            logn(LOGERR, "%s: recno is set, should not happen",
+                 pkg_snprintf_s(pkg));
+        
+        pkgset_add_package(db->ps, pkg);
+        pkgdir_add_package(pkgdir, pkg);    
+        pkg->recno = db->_recno++;
+        n_array_push(db->pkgs_added, pkg_link(pkg));
 
-        if (pkg_localpath(pkg, path, sizeof(path), ts->cachedir)) {
-            struct pkg *pkg = n_array_nth(pkgs, i);
-            struct pkg *tmp = n_array_bsearch(pkgdir->pkgs, pkg);
+        tmp = n_array_bsearch(pkgdir->pkgs, pkg);
+        DBGF("after in %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
             
-            DBGF("in %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
-            if (pkg->recno > 0)
-                logn(LOGERR, "%s: recno is set, should not happen",
-                     pkg_snprintf_s(pkg));
-            
-            pkgset_add_package(db->ps, pkg);
-            pkgdir_add_package(pkgdir, pkg);    
-            pkg->recno = db->_recno++;
-            n_array_push(db->pkgs_added, pkg_link(pkg));
-
-            tmp = n_array_bsearch(pkgdir->pkgs, pkg);
-            DBGF("after in %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
-            
-            if (ts->getop(ts, POLDEK_OP_JUSTDB))
-                continue;
-            
-            if (!do_pkgtslink(db, ts->cachedir, pkg, path))
-                return 0;
-            msgn(3, "%%install %s %s", path, pkgdir->path);
-        }
+        if (ts->getop(ts, POLDEK_OP_JUSTDB))
+            continue;
+        
+        if (!do_pkgtslink(db, ts->cachedir, pkg, path))
+            return 0;
+        
+        msgn(2, "Copying %s to %s", path, pkgdir->path);
     }
     //dumpdir(pkgdir);
     return 1;
@@ -647,10 +705,14 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb,
     struct pkgdir *pkgdir;
     char path[PATH_MAX];
     int i;
-
+    
     if (ts->getop(ts, POLDEK_OP_RPMTEST))
         return 1;
 
+    n_assert(ts->getop(ts, POLDEK_OP_TEST) == 0);
+    if (is_immutable(db->pm->immutable, "removal"))
+        return 0;
+    
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
     pkgdir = n_array_nth(db->ps->pkgdirs, 0);
     ts = ts;
@@ -664,7 +726,7 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb,
             if (tmp == NULL) {
                 logn(LOGERR, "%s: not found, should not happen",
                      pkg_snprintf_s(pkg));
-                continue;
+                n_assert(0);
             }
                 
             tmp->recno = 0;
@@ -675,7 +737,8 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb,
             if (ts->getop(ts, POLDEK_OP_JUSTDB))
                 continue;
             n_array_push(db->paths_removed, n_strdup(path));
-            msgn(3, "%%uninstall %s", path);
+            
+            msgn(2, "Removing %s", path);
         }
     }
     return 1;
@@ -742,22 +805,21 @@ struct pkgdir *pm_pset_db_to_pkgdir(void *pm_pset, const char *rootdir,
     struct pkgdir *dir;
     
     rootdir = rootdir; dbpath = dbpath; 
+
+    n_assert(n_hash_exists(kw, "source") == 0); /* use pm_configure() */
     
-    src = n_hash_get(kw, "source");
-    if (src == NULL)
-        src = n_hash_get(pm->cnf, "source"); /* default */
-    
-    if (!src) {
+    if (n_array_size(pm->sources) == 0) {
         logn(LOGERR,
-             _("Could not open 'pset' database: missing source parameter"));
+             _("Could not open 'pset' database: missing source"));
         return NULL;
+    }
+
+    if (n_array_size(pm->sources) > 1) {
+        logn(LOGNOTICE, "Could not make pkgdir from multiple sources, "
+             "making only from the first one");
     }
     
-    if (source_is_remote(src)) {
-        logn(LOGERR, _("%s: source could not be remote one"),
-             source_idstr(src)); 
-        return NULL;
-    }
+    src = n_array_nth(pm->sources, 0);
 
     if ((dir = pkgdir_srcopen(src, 0)) == NULL) {
         if (!source_is_type(src, "dir") && is_dir(src->path)) {
@@ -777,6 +839,3 @@ struct pkgdir *pm_pset_db_to_pkgdir(void *pm_pset, const char *rootdir,
     
     return dir;
 }
-
-
-
