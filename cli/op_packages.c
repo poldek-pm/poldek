@@ -27,7 +27,7 @@
 #include "cli.h"
 #include "op.h"
 
-#define OPT_GID             1800
+#define OPT_GID             OPT_GID_OP_PACKAGES
 #define OPT_PKGSET          (OPT_GID + 1)
 #define OPT_NEVR            (OPT_GID + 2)
 #define OPT_CAPLOOKUP       (OPT_GID + 3)

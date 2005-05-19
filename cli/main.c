@@ -52,7 +52,11 @@ const char *argp_program_version = poldek_VERSION_BANNER;
 const char *argp_program_bug_address = poldek_BUG_MAILADDR;
 static char args_doc[] = N_("[PACKAGE...]");
 
-#define OPT_GID       1000
+#if GENDOCBOOK
+static void argp_as_docbook(struct argp *argp);
+#endif
+
+#define OPT_GID       OPT_GID_OP_OTHER
 
 #define OPT_CACHEDIR  (OPT_GID + 1)
 #define OPT_ASK       (OPT_GID + 2)
@@ -77,7 +81,7 @@ static struct argp_option common_options[] = {
 {0,0,0,0, N_("Other:"), OPT_GID },
 {"pm", OPT_PM, "PM", OPTION_HIDDEN, 0, OPT_GID },
 {"cachedir", OPT_CACHEDIR, "DIR", 0,
-     N_("Store downloaded files & co. under DIR"), OPT_GID },
+     N_("Store downloaded files and co. under DIR"), OPT_GID },
 {"cmd", 'C', 0, 0, N_("Run in cmd mode"), OPT_GID },
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
                           "let user choose among equivalent packages"), OPT_GID },
@@ -296,8 +300,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
+/* hides duplicate options as interactive and cmdl opt set may contain
+   same options TODO: !O(n^2) */
 static
-// TODO: !O(n^2)
 void hide_child_options(const struct argp *parent, const struct argp *child) 
 {
     int i = 0;
@@ -308,7 +313,10 @@ void hide_child_options(const struct argp *parent, const struct argp *child)
         if (opt->name == NULL && opt->key == 0 && opt->doc == NULL)
             break;
         DBGF("%d) %d %s\n", i + 1, opt->key, opt->name);
-
+        
+        if (opt->key == 0)
+            continue;
+        
         key = opt->key;
         j = 0;
         while (1) {
@@ -318,7 +326,7 @@ void hide_child_options(const struct argp *parent, const struct argp *child)
 
             DBGF("  %d. %d %s\n", j + 1, opt->key, opt->name);
             if (key && key == opt->key) {
-                DBGF("Hide %d %s (%s)\n", opt->key, opt->name, opt->doc);
+                DBGF_F("Hide %d %s (%s)\n", opt->key, opt->name, opt->doc);
                 opt->flags |= OPTION_HIDDEN;
             }
             
@@ -410,6 +418,11 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     if (poclidek_argv_is_help(argc, (const char **)argv))
         hide_child_opts = 1;
     
+
+#if GENDOCBOOK    
+        hide_child_opts = 1;
+#endif        
+    
     argp_prepare_child_options(&argp, hide_child_opts);
     
     poldek_set_verbose(0);
@@ -419,7 +432,7 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 
     if (!poclidek_op_ctx_verify_major_mode(args.opctx))
         exit(EXIT_FAILURE);
-    
+
 #if GENDOCBOOK
     if (args.cnflags & OPT_AS_FLAG(OPT_DOCB)) {
         argp_as_docbook(&argp);
@@ -671,19 +684,20 @@ int main(int argc, char **argv)
 
 
 #if GENDOCBOOK
-static void docbook_opt(FILE **st,
+static void docbook_opt(tn_hash *idh, FILE **st,
                         struct argp_option *opt, tn_array *aliases)
 {
     FILE *stream = *st;
-    char *id = NULL;
+    char *id = NULL, docfile[PATH_MAX], *doc;
     int c;
     
     if (opt->doc && opt->name == NULL && opt->key == 0) { /* group */
-        char *name, *p, path[PATH_MAX];
+        char *name, *p, path[PATH_MAX], doc[PATH_MAX];
+        int n;
         
         if (stream) {
-            fprintf(stream, "</itemizedlist>\n");
-            printf("->CLOSE\n");
+            fprintf(stream, "</variablelist>\n");
+            //printf("->CLOSE\n");
             fclose(stream);
         }
         
@@ -698,30 +712,41 @@ static void docbook_opt(FILE **st,
             
         }
         
-        n_snprintf(path, sizeof(path), "ref-%s.xml", name);
+        n_snprintf(path, sizeof(path), "manual/ref%.4d-%s.xml", opt->group, name);
         stream = fopen(path, "w");
-        printf("->OPEN %s\n", path);
+        //printf("->OPEN %s\n", path);
         if (stream == NULL) {
-            printf("->OPEN %s\n", path);
+            //printf("->OPEN %s\n", path);
             n_assert(stream);
         }
         
         *st = stream;
-        fprintf(stream, "<itemizedlist><title>%s</title>\n", opt->doc);
+        n = n_snprintf(doc, sizeof(doc), "%s", opt->doc);
+        if (doc[n - 1] == ':')
+            doc[n - 1] = '\0';
+        fprintf(stream, "<variablelist><title>%s</title>\n", doc);
         return;
     }
     n_assert(stream);
-    fprintf(stream, "<listitem> <para><option");
-    id = opt->name;
-    if (id == NULL) {
-        id = alloca(256);
+    fprintf(stream, "<varlistentry><term><option");
+    id = alloca(256);
+    if (opt->name)
+        strcpy(id, opt->name);
+    else {
         c = opt->key;
         n_assert (c > 0 && c < 255 && isascii(c));
         n_snprintf(id, 256, "%c", c);
     }
-    printf("id = %s\n", id);
+    //printf("id = %s\n", id);
+    if (!n_hash_exists(idh, id))
+        n_hash_insert(idh, id, NULL);
+    else {
+       /* suffix with id_group, not so nice  */
+        n_snprintf(&id[strlen(id)], 200, "%d", opt->group);
+        n_hash_insert(idh, id, NULL);
+    }
     
-    fprintf(stream, " id=\"ref.%s\"", id);
+    fprintf(stream, " id=\"ref.cmdl.%s\"", id);
     fprintf(stream, ">");
     c = opt->key;
     if (c > 0 && c < 255 && isascii(c))
@@ -735,16 +760,29 @@ static void docbook_opt(FILE **st,
                 opt->arg ? "=" : "", opt->arg ? opt->arg : "",
                 (opt->flags & OPTION_ARG_OPTIONAL) ? "]" : "");
     
-    fprintf(stream, " </option></para>\n");
-    fprintf(stream, "  <para>\n    %s\n", opt->doc ? opt->doc : "NODOC");
-    fprintf(stream, "  </para>\n");
-    fprintf(stream, "</listitem>\n");
+    fprintf(stream, " </option></term>\n");
+    fprintf(stream, "  <listitem>\n");
+    n_snprintf(docfile, sizeof(docfile), "manual/ref.cmdl.%s.xml", id);
+    doc = opt->doc ? (char*)opt->doc : "-";
+    
+    if (access(docfile, R_OK) != 0) {
+        fprintf(stream, "   <para>\n      %s\n", doc);
+        fprintf(stream, "   </para>\n");
+        
+    } else {
+        fprintf(stream, "<xi:include  href=\"%s\" "
+                "xmlns:xi=\"http://www.w3.org/2001/XInclude\" />", docfile);
+    }
+    
+
+    fprintf(stream, "  </listitem>\n");
+    fprintf(stream, "</varlistentry>\n");
 }
 
 static
-void do_argp_as_docbook(struct argp *argp, FILE **stream) 
+void do_argp_as_docbook(struct argp *argp, FILE **stream, tn_hash *idh) 
 {
-    const struct argp *child;
+    struct argp *child;
     tn_array *aliases = n_array_new(16, NULL, NULL);
     int i;
     
@@ -761,19 +799,19 @@ void do_argp_as_docbook(struct argp *argp, FILE **stream)
             printf(" skip %s\n", opt->name);
             continue;
         }
-        printf("do %d) %d %s %s\n", i + 1, opt->key, opt->name, opt->doc);
+        //printf("do %d) %d %s %s\n", i + 1, opt->key, opt->name, opt->doc);
         
         next = &argp->options[i];
         while (next->flags & OPTION_ALIAS) {
-            printf("  %d) %d %s\n", i + 1, next->key, next->name);
+            //printf("  %d) %d %s\n", i + 1, next->key, next->name);
             if ((next->flags & OPTION_HIDDEN) == 0)
                 n_array_push(aliases, (void*)next);
             next = &argp->options[++i];
             if (next->name == NULL && next->key == 0 && next->doc == NULL)
                 break;
         }
-        printf("stream %p\n", stream);
-        docbook_opt(stream, opt, aliases);
+        //printf("stream %p\n", stream);
+        docbook_opt(idh, stream, opt, aliases);
         
     }
 
@@ -782,18 +820,19 @@ void do_argp_as_docbook(struct argp *argp, FILE **stream)
     
     i = 0;
     while ((child = argp->children[i++].argp))
-        do_argp_as_docbook(child, stream);
+        do_argp_as_docbook(child, stream, idh);
 
     n_array_free(aliases);
 }
 
-static
-void argp_as_docbook(struct argp *argp) 
+/* we must be in doc/ subdir */
+static void argp_as_docbook(struct argp *argp) 
 {
     FILE *stream = NULL;
-    do_argp_as_docbook(argp, &stream);
+    tn_hash *idh = n_hash_new(256, free);
+    do_argp_as_docbook(argp, &stream, idh);
     if (stream) {
-        fprintf(stream, "</itemizedlist>\n");
+        fprintf(stream, "</variablelist>\n");
         fclose(stream);
     }
 }

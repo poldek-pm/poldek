@@ -33,7 +33,7 @@
 #include "cli.h"
 #include "op.h"
 
-#define OPT_GID  1700
+#define OPT_GID  OPT_GID_OP_MAKEIDX
 
 #define OPT_MKIDX       (OPT_GID + 1)
 #define OPT_MAKEIDX     (OPT_GID + 2)

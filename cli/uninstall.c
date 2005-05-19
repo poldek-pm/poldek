@@ -32,13 +32,13 @@
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int uninstall(struct cmdctx *cmdctx);
 
-#define OPT_GID             1300
+#define OPT_GID             OPT_GID_OP_UNINSTALL
 #define OPT_UNINSTALL       'e'
 #define OPT_INST_NODEPS     (OPT_GID + 2)
 #define OPT_INST_FORCE      (OPT_GID + 3)
 
 static struct argp_option options[] = {
-{"force", OPT_INST_FORCE, 0, 0, N_("Be unconcerned"), OPT_GID },
+{"force", OPT_INST_FORCE, 0, 0, N_("Remove packages ignoring broken dependencies"), OPT_GID },
 {"test", 't', 0, 0, N_("Don't uninstall, but tell if "
                        "it would work or not"), OPT_GID },
 {"nofollow", 'N', 0, 0, N_("Don't remove packages orphaned by "

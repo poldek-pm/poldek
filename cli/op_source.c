@@ -36,89 +36,89 @@
 #include "cli.h"
 #include "op.h"
 
-#define OPT_SRC_GID  1110
+#define OPT_GID  OPT_GID_OP_SOURCE
 
 #define OPT_SRC         's'
-#define OPT_SRCTXT      (OPT_SRC_GID + 1) /* legacy */
-#define OPT_SRCDIR      (OPT_SRC_GID + 2) /* legacy */
-#define OPT_SRCHDL      (OPT_SRC_GID + 3) /* legacy */
+#define OPT_SRCTXT      (OPT_GID + 1) /* legacy */
+#define OPT_SRCDIR      (OPT_GID + 2) /* legacy */
+#define OPT_SRCHDL      (OPT_GID + 3) /* legacy */
 
-#define OPT_PKGPREFIX   (OPT_SRC_GID + 4)
-#define OPT_SRCTYPE     (OPT_SRC_GID + 5)
+#define OPT_PKGPREFIX   (OPT_GID + 4)
+#define OPT_SRCTYPE     (OPT_GID + 5)
 
 
-#define OPT_SRCUPDATE   (OPT_SRC_GID + 6)
-#define OPT_SRCUPDATE_A (OPT_SRC_GID + 7)
+#define OPT_SRCUPDATE   (OPT_GID + 6)
+#define OPT_SRCUPDATE_A (OPT_GID + 7)
 
-#define OPT_SRCCLEAN     (OPT_SRC_GID + 8)
-#define OPT_SRCCLEAN_PKG (OPT_SRC_GID + 9)
-#define OPT_SRCCLEAN_ALL (OPT_SRC_GID + 10)
+#define OPT_SRCCLEAN     (OPT_GID + 8)
+#define OPT_SRCCLEAN_PKG (OPT_GID + 9)
+#define OPT_SRCCLEAN_ALL (OPT_GID + 10)
 
-#define OPT_SRCTYPE_LS  (OPT_SRC_GID + 11)
+#define OPT_SRCTYPE_LS  (OPT_GID + 11)
 
-#define OPT_DEST        (OPT_SRC_GID + 12)
-#define OPT_DEST_NAME   (OPT_SRC_GID + 13)
+#define OPT_DEST        (OPT_GID + 12)
+#define OPT_DEST_NAME   (OPT_GID + 13)
 
 /* The options we understand. */
 static struct argp_option source_options[] = {
-{0,0,0,0, N_("Repository selection:"), OPT_SRC_GID },
+{0,0,0,0, N_("Repository selection:"), OPT_GID },
 {"source", 's', "PATH", 0, N_("Get packages info from repository under PATH"),
-     OPT_SRC_GID },
+     OPT_GID },
 {"sn", 'n', "SOURCE-NAME", 0,
-     N_("Get packages info from repository named SOURCE-NAME"), OPT_SRC_GID },
+     N_("Get packages info from repository named SOURCE-NAME"), OPT_GID },
 
-{"destination", OPT_DEST, "PM:SOURCESPEC", 0, 
-    N_("Install to specified destination"), OPT_SRC_GID },
+{"destination", OPT_DEST, "PM:SOURCESPEC", OPTION_HIDDEN, /* NFY */
+    N_("Install to specified destination"), OPT_GID },
 
 {"install-dest", 0, 0, OPTION_HIDDEN | OPTION_ALIAS, 
-    N_("Install to specified destination"), OPT_SRC_GID },
+    N_("Install to specified destination"), OPT_GID },
 
 {"dn", OPT_DEST_NAME, "SOURCE-NAME", 0,
-    N_("Install to source SOURCE-NAME instead to the system"), OPT_SRC_GID },
+    N_("Install to source SOURCE-NAME instead to the system"), OPT_GID },
 
 {"sidx", OPT_SRC, "FILE", OPTION_HIDDEN, /* legacy */
- N_("Get packages info from package index file FILE"), OPT_SRC_GID },
+ N_("Get packages info from package index file FILE"), OPT_GID },
 
 {"sdir", OPT_SRCDIR, "DIR", OPTION_HIDDEN, 
- N_("Get packages info from directory DIR by scanning it"), OPT_SRC_GID },
+ N_("Get packages info from directory DIR by scanning it"), OPT_GID },
 
 {"shdrl", OPT_SRCHDL, "FILE", OPTION_HIDDEN, 
      N_("Get packages info from package header list file (aka hdlist)"),
-     OPT_SRC_GID },
+     OPT_GID },
 
 {"st", OPT_SRCTYPE, "SOURCE-TYPE", 0,
        N_("Set the source type (use --stl to list available values)"),
-       OPT_SRC_GID },
+       OPT_GID },
 
 {"prefix", 'P', "PREFIX", 0,
-        N_("Get packages from PREFIX instead of SOURCE"), OPT_SRC_GID },
+        N_("Get packages from PREFIX instead of SOURCE"), OPT_GID },
 
-{0,0,0,0, N_("Source related actions:"), OPT_SRC_GID + 1 },
+{0,0,0,0, N_("Repository related actions:"), OPT_GID + 1 },
 {"stl", OPT_SRCTYPE_LS, 0, 0, N_("List available source types"),
-     OPT_SRC_GID + 1},
+     OPT_GID + 1},
 
-{"sl", 'l', 0, 0, N_("List configured sources"), OPT_SRC_GID + 1 },            
+{"sl", 'l', 0, 0, N_("List configured sources"), OPT_GID + 1 },            
 
 {"update", OPT_SRCUPDATE, 0, 0, 
- N_("Update the source and verify it"), OPT_SRC_GID + 1 },
+ N_("Update the source and verify it"), OPT_GID + 1 },
 
-{"up", OPT_SRCUPDATE, 0, OPTION_ALIAS, 0, OPT_SRC_GID + 1 }, 
+{"up", OPT_SRCUPDATE, 0, OPTION_ALIAS, 0, OPT_GID + 1 }, 
 
 {"update-whole", OPT_SRCUPDATE_A, 0, 0, 
- N_("Update whole index of source"), OPT_SRC_GID + 1 },
+ N_("Update whole index of source"), OPT_GID + 1 },
 
-{"upa", OPT_SRCUPDATE_A, 0, OPTION_ALIAS, 0, OPT_SRC_GID + 1 },
+{"upa", OPT_SRCUPDATE_A, 0, OPTION_ALIAS, 0, OPT_GID + 1 },
 
 {"clean", OPT_SRCCLEAN, 0, 0, 
- N_("Remove source index files from cache directory"), OPT_SRC_GID + 1 },
+ N_("Remove source index files from cache directory"), OPT_GID + 1 },
 
 {"clean-pkg", OPT_SRCCLEAN_PKG, 0, 0, 
- N_("Remove cached packages of the source"), OPT_SRC_GID + 1 },
+ N_("Remove cached packages of the source"), OPT_GID + 1 },
 
 {"clean-whole", OPT_SRCCLEAN_ALL, 0, 0, 
- N_("Remove all files belongs to source from cache directory"), OPT_SRC_GID + 1 },
+ N_("Remove all files belongs to source from cache directory"), OPT_GID + 1 },
 
-{"cleana", OPT_SRCCLEAN_ALL, 0, OPTION_ALIAS, 0, OPT_SRC_GID + 1 },
+{"cleana", OPT_SRCCLEAN_ALL, 0, OPTION_ALIAS, 0, OPT_GID + 1 },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -153,7 +153,7 @@ static struct argp poclidek_source_argp = {
 
 static 
 struct argp_child poclidek_source_argp_child = {
-    &poclidek_source_argp, 0, NULL, OPT_SRC_GID,
+    &poclidek_source_argp, 0, NULL, OPT_GID,
 };
 
 static int oprun(struct poclidek_opgroup_rt *);

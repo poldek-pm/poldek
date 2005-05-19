@@ -29,7 +29,7 @@
 #include "cli.h"
 #include "op.h"
 
-#define OPT_GID  2100
+#define OPT_GID  OPT_GID_OP_SPLIT
 
 #define OPT_SPLITSIZE    (OPT_GID + 2) /* legacy */
 #define OPT_SPLITCONF    (OPT_GID + 3)
@@ -38,7 +38,7 @@
 
 /* The options we understand. */
 static struct argp_option options[] = {
-{0,0,0,0, N_("Splitting:"), OPT_GID},
+{0,0,0,0, N_("Splitting options:"), OPT_GID},
 {"split", OPT_SPLITSIZE, "SIZE[:FIRST_FREE_SPACE]", 0,
      N_("Split packages to SIZE MB size chunks, the first chunk will "
            "be FIRST_FREE_SPACE MB smaller"), OPT_GID },
@@ -47,10 +47,10 @@ static struct argp_option options[] = {
      N_("Take package priorities from FILE"), OPT_GID },
     
 {"priconf", OPT_SPLITCONF, "FILE", 0,
-     N_("Take package priorities from FILE"), 1500 },
+     N_("Take package priorities from FILE"), OPT_GID },
     
 {"split-out", OPT_SPLITPREFIX, "PREFIX", 0,
-     N_("Write chunks to PREFIX.XX, default PREFIX is packages.chunk"), OPT_GID },    
+     N_("Write chunks to PREFIX.XX, default PREFIX is 'packages.chunk'"), OPT_GID },    
 { 0, 0, 0, 0, 0, 0 },
 };
 

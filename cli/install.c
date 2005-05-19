@@ -29,7 +29,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state);
 static int install(struct cmdctx *cmdctx);
 
-#define OPT_GID             1500
+#define OPT_GID             OPT_GID_OP_INSTALL
 #define OPT_INST_NODEPS     (OPT_GID + 1)
 #define OPT_INST_FORCE      (OPT_GID + 2)
 #define OPT_INST_REINSTALL  (OPT_GID + 3)
@@ -69,7 +69,8 @@ static struct argp_option options[] = {
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
 {"reinstall", OPT_INST_REINSTALL, 0, 0, N_("Reinstall"), OPT_GID }, 
 {"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade"), OPT_GID },
-{"force", OPT_INST_FORCE, 0, 0, N_("Be unconcerned"), OPT_GID },
+{"force", OPT_INST_FORCE, 0, 0,
+     N_("Install packages ignoring broken dependencies"), OPT_GID },
 {"test", 't', 0, 0, N_("Don't install, but tell if it would work or not"),
      OPT_GID },
 {"fresh", 'F', 0, 0, N_("Upgrade packages, but only if an earlier version "
@@ -103,7 +104,7 @@ static struct argp_option options[] = {
 
 {"promoteepoch", OPT_PROMOTEEPOCH, 0, 0,
      N_("Promote non-existent requirement's epoch to "
-        "package's one (rpm < 4.2.1 behaviour)"), OPT_GID },
+        "package's one (rpm prior to 4.2.1 behaviour)"), OPT_GID },
                                            
 
 {"dump", OPT_INST_DUMP, "FILE", OPTION_ARG_OPTIONAL,
@@ -116,12 +117,12 @@ N_("Print packages names to FILE (stdout by default) instead of install them"), 
 {"justdb", OPT_INST_JUSTDB, 0, 0, N_("Modify only the database"), OPT_GID },
                                            
 {"pm-nodeps", OPT_PMONLY_NODEPS, 0, 0, 
-N_("Install packages with broken dependencies (applied to PM only)"), OPT_GID },
+N_("Same as --nodeps but applied to PM (rpm) only"), OPT_GID },
 
 {"rpm-nodeps", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
 
 {"pm-force", OPT_PMONLY_FORCE, 0, 0,
-N_("Be unconcerned (applied to PM only)"), OPT_GID },
+N_("Same as --force but applied to PM (rpm) only)"), OPT_GID },
 
 {"rpm-force", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
     
@@ -140,7 +141,7 @@ N_("Be unconcerned (applied to PM only)"), OPT_GID },
 static struct argp_option cmdl_options[] = {
     {0,0,0,0, N_("Package installation:"), OPT_GID - 10 },
     {"install", 'i', 0, 0, N_("Install given packages"), OPT_GID - 10 },
-    /* shadow cli 'I' */
+    /* shadow cli 'I' to hide_child_options() could hide it, messss */
     {0, 'I', 0, OPTION_HIDDEN | OPTION_ALIAS, 0, OPT_GID - 10 },
     
     {"reinstall", OPT_INST_REINSTALL, 0, 0, N_("Reinstall given packages"),
@@ -166,13 +167,13 @@ static struct argp_option cmdl_options[] = {
  N_("Prevent packages listed from being upgraded if they are already installed."),
      OPT_GID },
 {"nohold", OPT_INST_NOHOLD, 0, 0,
- N_("Do not hold any packages"), OPT_GID },
+ N_("Do not hold any packages. Disables --hold settings."), OPT_GID },
                                                 
 {"ignore", OPT_INST_IGNORE, "PACKAGE[,PACKAGE]...", 0,
  N_("Make packages listed invisible."), OPT_GID },
 
 {"noignore", OPT_INST_NOIGNORE, NULL, 0,
- N_("Make invisibled packages visible."), OPT_GID },
+ N_("Make invisibled packages visible. Disables --ignore settings."), OPT_GID },
 
 {"uniq", OPT_INST_UNIQNAMES, 0, 0, 
 N_("Remove package duplicates from available package list"), OPT_GID },
@@ -180,7 +181,7 @@ N_("Remove package duplicates from available package list"), OPT_GID },
 {"unique-pkg-names", OPT_INST_UNIQNAMES_ALIAS, 0, OPTION_ALIAS | OPTION_HIDDEN,
         0, OPT_GID },
 
-{"parsable-tr-summary", OPT_INST_PARSABLETS, 0, OPTION_HIDDEN, /* hidden, experimental */
+{"parsable-tr-summary", OPT_INST_PARSABLETS, 0, 0,
      N_("Print installation summary in parseable form"), OPT_GID },
                                                 
     { 0, 0, 0, 0, 0, 0 },

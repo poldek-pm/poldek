@@ -35,7 +35,7 @@
 #include "op.h"
 
 
-#define OPT_GID  2300
+#define OPT_GID  OPT_GID_OP_VERIFY
 
 #define OPT_DEPS       'V'
 #define OPT_CNFLS      (OPT_GID + 1)
