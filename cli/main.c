@@ -326,7 +326,7 @@ void hide_child_options(const struct argp *parent, const struct argp *child)
 
             DBGF("  %d. %d %s\n", j + 1, opt->key, opt->name);
             if (key && key == opt->key) {
-                DBGF_F("Hide %d %s (%s)\n", opt->key, opt->name, opt->doc);
+                DBGF("Hide %d %s (%s)\n", opt->key, opt->name, opt->doc);
                 opt->flags |= OPTION_HIDDEN;
             }
             
