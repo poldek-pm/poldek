@@ -3,9 +3,11 @@
 # spec is based on PLD's poldek.spec available at <http://cvs.pld.org.pl/SPECS/>
 #
 # To build with configuration for particular distro define %{distro}:
-# $ rpmbuild -bb ... --define 'distro {pld,fedora,rh}'
+# $ rpmbuild -bb ... --define 'distro {pld,fedora,rh}' [--define snap SNAP]
 #  
 #%define _with_poldekuser 1
+%define _unpackaged_files_terminate_build  %{nil}
+#%define snap @SNAP@
 
 Summary:	A full-featured frontend to RPM
 Name:		poldek
@@ -108,7 +110,11 @@ fi
 %dir %{_sysconfdir}/%{name}
 %attr(644,root,root) %config(noreplace) %verify(not md5 size mtime) %{_sysconfdir}/%{name}/*.conf
 %attr(755,root,root) %{_bindir}/*
+%ifos freebsd
+%attr(755,root,root) %{_libdir}/lib*.so.*
+%else # linux 
 %attr(755,root,root) %{_libdir}/lib*.so.*.*
+%endif 
 %dir %{_libdir}/%{name}
 %attr(755,root,root) %{_libdir}/%{name}/*
 %{_mandir}/man1/%{name}*
@@ -135,6 +141,9 @@ fi
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.30  2005/05/22 13:46:58  mis
+- FreeBSD issues
+
 Revision 1.29  2004/10/18 19:58:51  mis
 - removed 'cvs' from snapshot package release
 
