@@ -20,3 +20,6 @@ depcomp
 *.html
 homepage.sgml
 intl
+poldek.conf
+fetch.conf
+source.conf
