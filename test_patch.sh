@@ -1,25 +1,37 @@
 #! /bin/sh
 
 POLDEK="./poldek"
-s=$1
-ST=${s:-"pdir"}
+POLDEKUP="./poldek"
 
-inhome=
-if [ -n "$inhome" ]; then
-    SRCDIR=/home/ftp/RPMSt
-    SRCURL=ftp://localhost/RPMSt/
+while  [ $# -gt 0 ]; do
+    case "$1" in
+	-t )
+	    shift; ST=$1; shift ;;
 
-    DISTDIR=/mnt/PLD
-else
+        --distdir )
+    	    shift; DISTDIR="$1"; shift;;
 
-    SRCDIR=/home/httpd/html/RPMSt
-    SRCURL=http://localhost/RPMSt/
+        --sdir )
+    	    shift; SRCDIR="$1"; shift;;
 
-    DISTDIR=/var/www/common-html/fedora/Fedora/RPMS/
+        --surl )
+    	    shift; SRCURL="$1"; shift;;
+
+	--poldek )
+	    shift; POLDEK="$1"; shift;;
+
+	--poldekup )
+            shift; POLDEKUP="$1"; shift;;
+    esac
+done
+ST=${ST:-"pdir"}
+
+if [ -z "$DISTDIR" -o -z "$SRCDIR" -o -z "$SRCURL" ]; then
+    echo "usage $(basename $0): -t INDEXTYPE --distdir DISTDIR --sdir $SRCDIR --surl $SRCURL"
+    exit 1;
 fi
 
-TMPDIR=/tmp
-
+TMPDIR=${TMPDIR:-"/tmp"}
 
 t1() 
 {
@@ -33,7 +45,7 @@ t1()
 	echo "ADD $bn"
         ln -sf $i $SRCDIR/$bn
  	
-	$POLDEK -s $SRCDIR --st dir --mkidx --mkidx-type $ST
+	$POLDEK -s $SRCDIR --st dir --mkidx --mt $ST
 
 	echo "UP"
 	$POLDEK --st $ST -s $SRCURL --up
@@ -91,7 +103,7 @@ t2()
 
     echo -e "\n**** MAKE ****\n"
     echo "Added $nadded and $nremoved removed"	
-    $POLDEK -s $SRCDIR --mkidx --mkidx-type $ST
+    $POLDEK -s $SRCDIR --mkidx --mt $ST
     if [ $? -ne 0 ]; then
 	   echo "MKIDX ERRROR"
 	   exit 1;
@@ -100,7 +112,8 @@ t2()
     #up_skip=0
     if [ ${up_skip} = "0" ]; then
 	echo -e "\n**** UP ****\n"
-	$POLDEK -v --st $ST -s $SRCURL --up -Oautoupa=n
+	#$POLDEKUP -v --st $ST -s $SRCURL --up -Oautoupa=n
+	$POLDEKUP --noconf -v -s $SRCURL --up
 	if [ $? -ne 0 ]; then
 	   echo "ERRROR"
 	   exit 1;
@@ -110,7 +123,7 @@ t2()
 
 rm -f $SRCDIR/packages.$ST.*
 rm -f $SRCDIR/packages.i/packages.$ST.*
-$POLDEK -s $SRCDIR --mkidx --mkidx-type $ST || exit 1
+$POLDEK -s $SRCDIR --mkidx --mt $ST || exit 1
 $POLDEK --st $ST -s $SRCURL --upa || exit 1
 
 for n in $(seq 1 22000); do
