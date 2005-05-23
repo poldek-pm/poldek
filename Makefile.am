@@ -118,6 +118,7 @@ vfjuggle:
 
 dist-hook: 
 	-rm -rf $(distdir)/.deps
+	-rm -rf `find $(distdir)/doc/ -name CVS`
 
 #install-exec-local:
 #	$(install_sh) -m 0755 -d $(DESTDIR)$(libexecdir)/$(PACKAGE)
@@ -129,7 +130,7 @@ install-exec-hook:
 		laf="$(DESTDIR)$(libdir)/lib$$p.la";                    \
 		test -f $$laf && perl -pi -e 's|\s\-L[/\w\-\.]+||g;' $$laf; \
 	done; \
-	$(LN_S) $(PACKAGE) $(DESTDIR)$(bindir)/a$(PACKAGE) 
+	$(LN_S) $(PACKAGE) $(DESTDIR)$(bindir)/i$(PACKAGE) 
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* conf/*~
