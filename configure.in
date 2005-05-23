@@ -464,7 +464,6 @@ AC_CONFIG_FILES([
         vfile/vfff/Makefile
         python/Makefile
         conf/Makefile
-		conf/poldek.conf
 		doc/Makefile
 		doc/homepage/Makefile
 		doc/homepage/index.sgml
