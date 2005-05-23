@@ -1,6 +1,6 @@
 # $Id$
 
-SUBDIRS = pl homepage manual
+SUBDIRS = pl homepage
 
 # xml configuration description & co.
 CONFXMLS  = poldek.conf.xml conf-xml2.sh \
@@ -13,7 +13,7 @@ MANUALS   = manual.xml manual.css
 man_MANS  = poldek.1 poldek.conf.1
 GEN       = $(man_MANS) manual.html m_index.xml m_config.xml poldek.info
 
-EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN)
+EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN) manual
 
 doc: $(GEN)
 
@@ -39,6 +39,9 @@ poldek.conf.1: $(CONFXMLS)
 
 %.1: %.1.xml
 	xmlto man $<
+
+install-exec-hook:
+        $(INSTALL_DATA) poldek.info $(infodir)
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#* *\# poldek.html *.tmp
