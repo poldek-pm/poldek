@@ -85,7 +85,7 @@ perl -pi -e "s|^_distro\s*=\s*\w+\s*|_distro = $DISTRO\n|" $CONFIG
 # set PLD architecture
 perl -pi -e 's|_pld_arch\s*=\s*i686|_pld_arch = %{_target_cpu}|' $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/pld-*.conf
 
-gzip -9nf README* conf/*sample* NEWS TODO 
+gzip -9nf README* conf/*sample* NEWS
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -117,9 +117,10 @@ fi
 %endif 
 %dir %{_libdir}/%{name}
 %attr(755,root,root) %{_libdir}/%{name}/*
+%{_infodir}/%{name}*
 %{_mandir}/man1/%{name}*
 %dir %attr(755,poldek,poldek) %{_var}/cache/%{name}
-%doc *.gz conf/*.gz
+%doc *.gz conf/*.gz doc/manual.css doc/manual.html
 
 %files devel
 %defattr(644,root,root,755)
@@ -141,6 +142,9 @@ fi
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.31  2005/05/23 20:00:49  mis
+- updates
+
 Revision 1.30  2005/05/22 13:46:58  mis
 - FreeBSD issues
 
