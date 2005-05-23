@@ -1,0 +1,30 @@
+<variablelist><title>Package installation</title>
+<varlistentry><term><option id="ref.cmdl.install">-i, --install </option></term>
+  <listitem>
+   <para>
+      Install given packages
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.reinstall">--reinstall </option></term>
+  <listitem>
+   <para>
+      Reinstall given packages
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.downgrade">--downgrade </option></term>
+  <listitem>
+   <para>
+      Downgrade
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.upgrade">-u, --upgrade </option></term>
+  <listitem>
+   <para>
+      Upgrade given packages
+   </para>
+  </listitem>
+</varlistentry>
+</variablelist>

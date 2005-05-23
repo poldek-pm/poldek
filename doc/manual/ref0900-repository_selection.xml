@@ -1,0 +1,37 @@
+<variablelist><title>Repository selection</title>
+<varlistentry><term><option id="ref.cmdl.source">-s, --source=PATH </option></term>
+  <listitem>
+   <para>
+      Get packages info from repository under PATH
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.sn">-n, --sn=SOURCE-NAME </option></term>
+  <listitem>
+   <para>
+      Get packages info from repository named SOURCE-NAME
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.dn">--dn=SOURCE-NAME </option></term>
+  <listitem>
+   <para>
+      Install to source SOURCE-NAME instead to the system
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.st">--st=SOURCE-TYPE </option></term>
+  <listitem>
+   <para>
+      Set the source type (use --stl to list available values)
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.prefix">-P, --prefix=PREFIX </option></term>
+  <listitem>
+   <para>
+      Get packages from PREFIX instead of SOURCE
+   </para>
+  </listitem>
+</varlistentry>
+</variablelist>

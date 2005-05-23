@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+"http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+<!ENTITY ref-repository_index_creation SYSTEM "manual/ref0700-repository_index_creation.xml">
+<!ENTITY ref-repository_selection SYSTEM "manual/ref0900-repository_selection.xml">
+<!ENTITY ref-repository_related_actions SYSTEM "manual/ref0901-repository_related_actions.xml">
+<!ENTITY ref-package_related_options SYSTEM "manual/ref1100-package_related_options.xml">
+<!ENTITY ref-package_installation SYSTEM "manual/ref1290-package_installation.xml">
+<!ENTITY ref-distribution_installation-upgrade SYSTEM "manual/ref1291-distribution_installation-upgrade.xml">
+<!ENTITY ref-installation_switches SYSTEM "manual/ref1300-installation_switches.xml">
+<!ENTITY ref-package_deinstallation SYSTEM "manual/ref1490-package_deinstallation.xml">
+<!ENTITY ref-verification_options-switches SYSTEM "manual/ref1700-verification_options-switches.xml">
+<!ENTITY ref-splitting_options SYSTEM "manual/ref1900-splitting_options.xml">
+<!ENTITY ref-other SYSTEM "manual/ref2100-other.xml"> 
+]>
+
+<refentry id="poldek">
+  <refmeta>
+    <refentrytitle>poldek</refentrytitle>
+    <manvolnum>1</manvolnum>
+  </refmeta>
+  <refnamediv>
+    <refname>poldek</refname>
+    <refpurpose>package management helper tool</refpurpose>
+  </refnamediv>
+  <refsect1><title>Synopsis</title>
+<para>
+<programlisting>
+<command>poldek </command> [OPTION...] [PACKAGE...]
+<command>ipoldek </command> [OPTION...] [COMMAND...] [COMMAND_OPTION...] [PACKAGE...]
+</programlisting>
+</para>
+  </refsect1>
+
+  <refsect1><title>Description</title>
+<para>
+<application>poldek</application> is a full-featured packages management utility,
+basically designed to work with rpm packages. Basic features are similar to every 
+modern package updater like apt-get. Program takes information about packages 
+from package repositories (aka <emphasis>sources</emphasis>) and do package management 
+tasks like installation, upgrading or removal.
+</para>
+
+<para>
+This manual page contains only option reference, the full documentation for poldek 
+is available as a Texinfo manual. Do <command>info poldek</command> to get it.
+</para>
+  </refsect1>
+
+<refsect1><title>Invoking</title>
+<para>&ref-repository_index_creation;</para>
+<para>&ref-repository_selection;</para>
+<para>&ref-repository_related_actions;</para>
+<para>&ref-package_related_options;</para>
+<para>&ref-package_installation;</para>
+<para>&ref-distribution_installation-upgrade;</para>
+<para>&ref-installation_switches;</para>
+<para>&ref-package_deinstallation;</para>
+<para>&ref-verification_options-switches;</para>
+<para>&ref-splitting_options;</para>
+<para>&ref-other;</para>
+</refsect1>
+
+</refentry>

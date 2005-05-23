@@ -1,38 +1,51 @@
 # $Id$
 
-SUBDIRS = pl homepage
+SUBDIRS = pl homepage manual
 
-POD2HTML  = pod2html
+# xml configuration description & co.
+CONFXMLS  = poldek.conf.xml conf-xml2.sh \
+			conf-xml2conf.xsl conf-xml2refentry.xsl conf-xml2docb.xsl
 
-man_MANS  = poldek.1
+# manual sources 
+MANUALS   = manual.xml manual.css 
 
-EXTRA_DIST = poldek.pod poldek.1 
+# generated files 
+man_MANS  = poldek.1 poldek.conf.1
+GEN       = $(man_MANS) manual.html m_index.xml m_config.xml poldek.info
 
-manual_index: manual.xml
-	./mkindex $< > manual/index.xml
+EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN)
 
-poldek.info: manual.xml $@ manual_index
-	docbook2texi $< || true 
-	perl -pi -e 's|\@emph\{|\@samp\{|g' poldek_manual.texi
-	makeinfo --no-split --force poldek_manual.texi -o $@
-	rm -f poldek_manual.texi
+doc: $(GEN)
 
-%.html: %.xml $@ manual_index
+m_index.xml: manual.xml
+	./mkindex.pl $< > $@
+
+m_config.xml: $(CONFXMLS)
+	./conf-xml2.sh docb poldek.conf.xml > $@
+
+poldek.info: manual.xml m_index.xml m_config.xml
+	docbook2texi --xinclude $< || true 
+	perl -pi -e 's|\@emph\{|\@samp\{|g' poldek.texi
+	makeinfo --no-split --force poldek.texi -o $@
+	perl -pi -e 's/^\* poldek manual: \(poldek\)(.+)$$/* poldek: (poldek)$$1/' $@
+	rm -f *.texi
+
+manual.html: manual.xml m_index.xml m_config.xml
 	xmlto xhtml-nochunks $< 
-	perl -pi -e 's|<head>|<head><link href="style.css" rel="stylesheet" rev="stylesheet" type="text/css">|' $@
+	perl -pi -e 's|<head>|<head><link href="manual.css" rel="stylesheet" rev="stylesheet" type="text/css">|' $@
 
-%.1: %.pod $@
-	$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@
+poldek.conf.1: $(CONFXMLS)
+	./conf-xml2.sh man poldek.conf.xml
 
-%.html: %.pod
-	$(POD2HTML) $< > $@
+%.1: %.1.xml
+	xmlto man $<
 
 clean-local:
-	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#* *\# poldek.html
+	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#* *\# poldek.html *.tmp
 
 
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 *.texi *.html m_*.xml
 

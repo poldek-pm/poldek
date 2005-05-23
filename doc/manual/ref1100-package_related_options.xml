@@ -1,0 +1,16 @@
+<variablelist><title>Package related options</title>
+<varlistentry><term><option id="ref.cmdl.pset">--pset=FILE </option></term>
+  <listitem>
+   <para>
+      Take package set definition from FILE
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.caplookup">--caplookup </option></term>
+  <listitem>
+   <para>
+      Look into package capabilities and files to resolve packages
+   </para>
+  </listitem>
+</varlistentry>
+</variablelist>

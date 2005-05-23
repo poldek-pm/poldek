@@ -1,0 +1,11 @@
+<para>
+  <para>
+   Be tolerant for unmatched versioned dependencies which <application>rpm</application>; tolerates, e.g.
+   package A requires capability foo &gt;= 1.0 while package B provides "foo"
+   without any version. Use with care.
+  </para>
+
+  <para>
+    Configuration option: <option id="ref.conf.mercy">mercy = [yes|no]</option>
+  </para>
+</para>

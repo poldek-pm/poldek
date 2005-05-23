@@ -1,0 +1,5 @@
+  <para>
+   Do not install packages, but tell if it would work or not. Given once
+   causes poldek's checks only, to perform full tests using 
+   <application>rpm</application>;, option must be given twice.
+  </para>

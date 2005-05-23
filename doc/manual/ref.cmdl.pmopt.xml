@@ -1,0 +1,6 @@
+<para>
+   Pass option to package manager (rpm) binary. Example:
+   <screen>
+    <prompt>$</prompt> <command>poldek</command> --pmopt=ignoreos
+   </screen>
+</para>

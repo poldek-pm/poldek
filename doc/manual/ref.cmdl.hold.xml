@@ -1,0 +1,21 @@
+<para>
+<para>
+Prevent packages listed from being upgraded if they are already installed.
+If option is not set then packages to hold are taken from <option>hold</option> 
+configuration option. Held package won't be upgraded with exception if it will 
+be pointed directly by the user.
+</para>
+
+<para>
+Example:
+<screen>
+   <prompt>$</prompt> <command>poldek</command> --hold=kernel\*,dev ...
+</screen>
+</para>
+
+<para>
+Configuration option: <option>hold = PACKAGE[,PACKAGE]...</option>
+</para>
+
+</para>
+

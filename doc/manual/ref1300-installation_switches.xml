@@ -1,0 +1,142 @@
+<variablelist><title>Installation switches</title>
+<varlistentry><term><option id="ref.cmdl.hold">--hold=PACKAGE[,PACKAGE]... </option></term>
+  <listitem>
+<xi:include  href="manual/ref.cmdl.hold.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.nohold">--nohold </option></term>
+  <listitem>
+   <para>
+      Do not hold any packages. Disables --hold settings.
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.ignore">--ignore=PACKAGE[,PACKAGE]... </option></term>
+  <listitem>
+<xi:include  href="manual/ref.cmdl.ignore.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.noignore">--noignore </option></term>
+  <listitem>
+   <para>
+      Make invisibled packages visible. Disables --ignore settings.
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.uniq">-Q, --uniq </option></term>
+  <listitem>
+   <para>
+      Remove package duplicates from available package list
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.parsable-tr-summary">--parsable-tr-summary </option></term>
+  <listitem>
+   <para>
+      Print installation summary in parseable form
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.force">--force </option></term>
+  <listitem>
+   <para>
+      Install packages ignoring broken dependencies
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.test">-t, --test </option></term>
+  <listitem>
+<xi:include  href="manual/ref.cmdl.test.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.fresh">-F, --fresh </option></term>
+  <listitem>
+   <para>
+      Upgrade packages, but only if an earlier version currently exists
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.nofollow">-N, --nofollow </option></term>
+  <listitem>
+   <para>
+      Don't install packages required by selected ones
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.follow">--follow[=[yes|no]] </option></term>
+  <listitem>
+   <para>
+      Install packages required by selected ones
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.greedy">--greedy[=[yes|no]] </option></term>
+  <listitem>
+<xi:include  href="manual/ref.cmdl.greedy.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.fetch">--fetch[=DIR] </option></term>
+  <listitem>
+   <para>
+      Download packages to DIR (poldek's cache directory by default)instead of install them
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.root">-r, --root=DIR </option></term>
+  <listitem>
+   <para>
+      Set top directory to DIR
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.nodeps">--nodeps </option></term>
+  <listitem>
+   <para>
+      Install packages with broken dependencies
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.mercy">-m, --mercy </option></term>
+  <listitem>
+<xi:include  href="manual/ref.cmdl.mercy.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.promoteepoch">--promoteepoch </option></term>
+  <listitem>
+<xi:include  href="manual/ref.cmdl.promoteepoch.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.dump">--dump[=FILE] </option></term>
+  <listitem>
+   <para>
+      Print packages file names to FILE (stdout by default) instead of install them
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.dumpn">--dumpn[=FILE] </option></term>
+  <listitem>
+   <para>
+      Print packages names to FILE (stdout by default) instead of install them
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.justdb">--justdb </option></term>
+  <listitem>
+   <para>
+      Modify only the database
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.pm-nodeps">--pm-nodeps </option></term>
+  <listitem>
+   <para>
+      Same as --nodeps but applied to PM (rpm) only
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.pm-force">--pm-force </option></term>
+  <listitem>
+   <para>
+      Same as --force but applied to PM (rpm) only)
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.pmopt">--pmopt=OPTION </option></term>
+  <listitem>
+<xi:include  href="manual/ref.cmdl.pmopt.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
+</varlistentry>
+</variablelist>

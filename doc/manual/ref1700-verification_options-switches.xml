@@ -1,0 +1,30 @@
+<variablelist><title>Verification options/switches</title>
+<varlistentry><term><option id="ref.cmdl.verify">-V, --verify </option></term>
+  <listitem>
+   <para>
+      Verify dependencies
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.verify-conflicts">--verify-conflicts </option></term>
+  <listitem>
+   <para>
+      Verify conflicts
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.verify-fileconflicts">--verify-fileconflicts </option></term>
+  <listitem>
+   <para>
+      Verify file conflicts
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.verify-all">--verify-all </option></term>
+  <listitem>
+   <para>
+      Verify dependencies, conflicts and file conflicts
+   </para>
+  </listitem>
+</varlistentry>
+</variablelist>

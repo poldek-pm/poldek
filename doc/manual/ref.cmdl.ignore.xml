@@ -1,0 +1,18 @@
+<para>
+
+<para>
+   Make packages listed invisible to the program. If option is not set then 
+   packages to ignore are taken from <option>ignore</option> configuration option.
+  </para>
+<para>
+Example:
+<screen>
+  <prompt>$ </prompt> <command>poldek</command> --ignore=kernel\*-smp\*,foo
+</screen>
+</para>
+
+<para>
+Configuration option: <option>ignore = PACKAGE[,PACKAGE]...</option></para>
+
+</para>
+

@@ -1,0 +1,5 @@
+<para>
+    Promote non-existent requirement's epoch to package's one (rpm; &lt; 4.2.1 behaviour).
+<para>
+Configuration option: <option>promoteepoch = [yes|no]</option></para>
+</para>

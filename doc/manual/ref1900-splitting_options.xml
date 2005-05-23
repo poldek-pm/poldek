@@ -1,0 +1,23 @@
+<variablelist><title>Splitting options</title>
+<varlistentry><term><option id="ref.cmdl.split">--split=SIZE[:FIRST_FREE_SPACE] </option></term>
+  <listitem>
+   <para>
+      Split packages to SIZE MB size chunks, the first chunk will be FIRST_FREE_SPACE MB smaller
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.priconf">--priconf=FILE </option></term>
+  <listitem>
+   <para>
+      Take package priorities from FILE
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.split-out">--split-out=PREFIX </option></term>
+  <listitem>
+   <para>
+      Write chunks to PREFIX.XX, default PREFIX is 'packages.chunk'
+   </para>
+  </listitem>
+</varlistentry>
+</variablelist>

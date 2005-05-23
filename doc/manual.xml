@@ -6,19 +6,45 @@
 <!ENTITY ipoldekcmd "<command>ipoldek</command>">
 <!ENTITY rpm "<application>rpm</application>">
 <!ENTITY prompt "<prompt>$</prompt>">
+<!ENTITY poldek-prompt "<prompt>$</prompt> <command>poldek</command>">
+<!ENTITY ipoldek-prompt "<prompt>$</prompt> <command>ipoldek</command>">
 <!ENTITY apt-get "<application>apt-get</application>">
 <!ENTITY yum "<application>yum</application>">
 <!ENTITY supported-repositories SYSTEM "manual/supported-repositories.xml">
-<!ENTITY manualindex SYSTEM "manual/index.xml">
-<!ENTITY file_sample-source-conf SYSTEM "../conf/sample-source.conf">
-<!ENTITY file_poldek-conf SYSTEM "../conf/poldek.conf">
-<!ENTITY file_fetch-conf SYSTEM "../conf/fetch.conf">
 <!ENTITY file_poldek-pri-sample-conf SYSTEM "../conf/poldek-pri-sample.conf">
+
+<!ENTITY ref-repository_index_creation SYSTEM "manual/ref0700-repository_index_creation.xml">
+<!ENTITY ref-repository_selection SYSTEM "manual/ref0900-repository_selection.xml">
+<!ENTITY ref-repository_related_actions SYSTEM "manual/ref0901-repository_related_actions.xml">
+<!ENTITY ref-package_related_options SYSTEM "manual/ref1100-package_related_options.xml">
+<!ENTITY ref-package_installation SYSTEM "manual/ref1290-package_installation.xml">
+<!ENTITY ref-distribution_installation-upgrade SYSTEM "manual/ref1291-distribution_installation-upgrade.xml">
+<!ENTITY ref-installation_switches SYSTEM "manual/ref1300-installation_switches.xml">
+<!ENTITY ref-package_deinstallation SYSTEM "manual/ref1490-package_deinstallation.xml">
+<!ENTITY ref-verification_options-switches SYSTEM "manual/ref1700-verification_options-switches.xml">
+<!ENTITY ref-splitting_options SYSTEM "manual/ref1900-splitting_options.xml">
+<!ENTITY ref-other SYSTEM "manual/ref2100-other.xml">
+
+<!ENTITY manual_index SYSTEM "m_index.xml">
+<!ENTITY section_configuration SYSTEM "m_config.xml">
 ]>
 
 <article lang="en">
 <articleinfo>
 <title>&poldek; manual</title>
+
+<!-- satisfy docbook2X -->
+<title role="texinfo-node">poldek</title>
+<titleabbrev role="texinfo-node">poldek</titleabbrev>
+<abstract role="texinfo-node">
+ <para>
+   Full-featured packages management utility.
+ </para>
+</abstract>
+
+<subjectset scheme="texinfo-directory">
+   <subject><subjectterm>Miscellaneous</subjectterm></subject>
+</subjectset>
 
 <authorgroup>
 <author>
@@ -67,7 +93,8 @@ Main features of &poldek; are:
 
 <itemizedlist>
   <listitem>
-    <para></para><para> 
+    <para>Relatively fast dependency processing</para><para> 
+
     Package dependencies, conflicts and setting in order are handled by poldek
     itself without using <application>rpmlib</application>, so the program 
     is significantly faster and using less memory than rpmlib-based tools.
@@ -95,7 +122,7 @@ Main features of &poldek; are:
 Suppose you want to prepare local directory /pub/RPMS with packages
 to be available to poldek. 
 </para>
-<sect2> <title>Step #1 - Configure repositories</title>
+<sect2 id="quickstart.configure"> <title>Step #1 - Configure repositories</title>
 <para>
 Put source configuration in <filename id="file.poldekrc">$HOME/.poldekrc</filename> or
 in <filename id="file.source-conf">/etc/poldek/source.conf</filename> minimal configuration
@@ -118,7 +145,7 @@ path = /home/pub/RPMS
 </para>
 </sect2>
 
-<sect2> <title>Step #2 - Create repository index</title>
+<sect2 id="quickstart.create"> <title>Step #2 - Create repository index</title>
   <para>
   FC3 index is ready, but an index must be created for your local directory.
 
@@ -128,7 +155,7 @@ path = /home/pub/RPMS
 
   As result several files with package data will be created under /home/pub/RPMS.
   <screen>    
-  &prompt; poldek -n rpms --makeidx
+  &poldek-prompt; -n rpms --makeidx
   Creating pndir index of /home/pub/RPMS (type=dir)...
   Loading [dir]rpms...
   200..400..600..800..1000..1200..1400..1600..1652
@@ -138,38 +165,38 @@ path = /home/pub/RPMS
   </para>
 </sect2>
 
-<sect2> <title>Step #3 - Use the program</title>
+<sect2 id="quickstart.use"> <title>Step #3 - Use the program</title>
 <para>
 Syntax:
 <screen>
-&prompt; poldek [OPTION...] [PACKAGE...]
-&prompt; ipoldek [OPTION...] [COMMAND] [COMMAND_OPTION...] [PACKAGE...]
+&poldek-prompt; [OPTION...] [PACKAGE...]
+&ipoldek-prompt; [OPTION...] [COMMAND] [COMMAND_OPTION...] [PACKAGE...]
 </screen>
 
 For example to install (or upgrade) apache HTTP server:
 <screen>
-&prompt; poldek -uv apache 
-&prompt; ipoldek install apache
+&poldek-prompt; -uv apache 
+&ipoldek-prompt; install apache
 </screen>     
  <!-- See also <url name="sample interactive mode session" url="screenshoots.html">. -->
 
 To use only particular repository only, <option>-n</option> should be used:
 <screen>
-&prompt; ipoldek -n fc3 ls 
-&prompt; ipoldek -n rpms -uv foo-3.1-2
+&ipoldek-prompt; -n fc3 ls 
+&ipoldek-prompt; -n rpms -uv foo-3.1-2
 </screen>
 
 Help is available: for &poldek; use <option>--help</option> option; for &ipoldek;
 use <option>help</option> command:
 <screen>
-&prompt; poldek --help
-&prompt; ipoldek help
+&poldek-prompt; --help
+&ipoldek-prompt; help
 </screen>
 
 &poldek; has shell like mode with puts you into a readline interface. To enter it, run program without 
 any command, example:
 <screen id="screen.shell-start">
-&prompt; poldek -n ac
+&poldek-prompt; -n ac
 Loading [pdir]ac...
 10998 packages read
 Loading [rpmdbcache]/var/lib/rpm...
@@ -205,7 +232,7 @@ what significantly reduces amout of data need to be downloaded when repository c
 a bit.
 </para>
 
-<sect2 id="repositories.configuration"> <title>Configuration</title>
+<sect2 id="repositories.configuration"> <title>Repositories configuration</title>
 <para>
 Although repositories can be specified directly at command line,
 they are usually specified in configuration file. Every repository has it's 
@@ -234,8 +261,8 @@ auto = no                                            # load on demand only
 The <option>type</option> is not obligatory, if not set then is taken from
 <option>default index type</option> value. For all possible source configuration 
 and extensible description
-options see <link linkend="appendix.sample-source.conf"><filename>sample-source.conf</filename></link>
-(file is supplied with &poldek;).
+options see <link linkend="configuration">Configuration</link> section
+and <filename>*source.conf</filename> files supplied with &poldek;.
 </para>
 
 <para>
@@ -257,13 +284,13 @@ to use subset of them or use they with disabled <option>auto</option>,
 use <option>--sn</option> (<option>-n</option>) option. For example, to use 
 only <emphasis>my-rpms</emphasis> repository, do:
 <screen>
-&prompt; poldek -n my-rpms
+&poldek-prompt; -n my-rpms
 </screen>
 
 Repository name can be also a glob, to use all with <quote>distro</quote>
 prefix, do:
 <screen>
-&prompt; poldek -n distro\*
+&poldek-prompt; -n distro\*
 </screen>
 </para>
 
@@ -273,7 +300,7 @@ using <option>--source</option> (<option>-s</option>) option.
 The syntax is: 
 
 <screen>
-&prompt; poldek [--st=TYPE] --source=SOURCEPATH [--prefix=PATH]
+&poldek-prompt; [--st=TYPE] --source=SOURCEPATH [--prefix=PATH]
 </screen>
 
 where TYPE is one of index supported types, and SOURCEPATH is
@@ -282,10 +309,10 @@ are in different locations then <option>--prefix</option> can
 be used to point packages location. Examples:
 
 <screen>
-&prompt; poldek -s ~/rpm/RPMS
-&prompt; poldek --st pdir -s ftp://foo.bar.org/RPMS/
-&prompt; poldek -s ftp://foo.bar.org/RPMS.index/ --prefix ftp://foo.bar.org/RPMS/
-&prompt; poldek -s /tmp/packages.ndir.gz --prefix /media/cdrom
+&poldek-prompt; -s ~/rpm/RPMS
+&poldek-prompt; --st pdir -s ftp://foo.bar.org/RPMS/
+&poldek-prompt; -s ftp://foo.bar.org/RPMS.index/ --prefix ftp://foo.bar.org/RPMS/
+&poldek-prompt; -s /tmp/packages.ndir.gz --prefix /media/cdrom
 </screen>
 </para>
 
@@ -296,8 +323,8 @@ be used to point packages location. Examples:
  <option>--update-whole</option> (<option>--upa</option>):
 
 <screen>
-&prompt; poldek [-s PATH] [-n NAME] --update
-&prompt; poldek [-s PATH] [-n NAME] --update-whole
+&poldek-prompt; [-s PATH] [-n NAME] --update
+&poldek-prompt; [-s PATH] [-n NAME] --update-whole
 </screen>
 
 </para>
@@ -312,9 +339,9 @@ For local repositories program verifies its integrity only.
 <para> 
 Examples:
 <screen>
-&prompt; poldek --st pdir -s ftp://foo.bar.org/RPMS/ --up 
-&prompt; poldek -s ftp://foo.bar.org/RPMS.index/ --prefix ftp://foo.bar.org/RPMS/ --upa
-&prompt; poldek -n my-rpms --up
+&poldek-prompt; --st pdir -s ftp://foo.bar.org/RPMS/ --up 
+&poldek-prompt; -s ftp://foo.bar.org/RPMS.index/ --prefix ftp://foo.bar.org/RPMS/ --upa
+&poldek-prompt; -n my-rpms --up
 </screen>
 </para>
 </sect3>
@@ -323,7 +350,7 @@ Examples:
 <para> To list all configured repositories use 
 <option>--sl</option> (<option>-l</option>):
 <screen>
-&prompt; poldek -l
+&poldek-prompt; -l
 distro          http://my-favourite-distro.org/1.0/RPMS/    (sign,type=pndir)
 distro-updates  http://my-favourite-distro.org/1.0/updates/ (sign,type=pndir)
 my-rpms         /home/me/rpm/RPMS/  (noauto,type=dir)
@@ -334,7 +361,7 @@ my-rpms         /home/me/rpm/RPMS/  (noauto,type=dir)
 <sect3 id="repositories.using.listype"> <title>Listing available repository types</title>
 <para> To list all available repository types, use <option>--stl</option>:
 <screen>
-&prompt; poldek -stl
+&poldek-prompt; -stl
 dir    r--  Dynamic index built by scanning directory for packages
              (aliases: rpmdir)
 hdrl   r-u  File with raw RPM package headers; used by apt-rpm
@@ -355,8 +382,8 @@ Legend: r - readable, w - writeable, u - updateable
 Creation of &poldek;'s repositories is quite simple, the syntax is:
 
 <screen>
-&prompt; poldek -s PATH --mkidx[=PATH] [--mkidx-type=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
-&prompt; poldek -n NAME --mkidx[=PATH] [--mkidx-type=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
+&poldek-prompt; -s PATH --mkidx[=PATH] [--mkidx-type=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
+&poldek-prompt; -n NAME --mkidx[=PATH] [--mkidx-type=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
 </screen>
 </para>
 <para>
@@ -379,10 +406,10 @@ With <option>--nodesc</option> package descriptions are omitted; with <option>--
 <para>
 Examples:
 <screen>
-&prompt; poldek -s ~/rpm/RPMS --mkidx --nodiff
-&prompt; poldek -s /cdrom/RPMS --mkidx=/tmp
-&prompt; poldek -n my-rpms --mkidx 
-&prompt; poldek -n pld --mkidx --mkidx-type=pdir,pndir
+&poldek-prompt; -s ~/rpm/RPMS --mkidx --nodiff
+&poldek-prompt; -s /cdrom/RPMS --mkidx=/tmp
+&poldek-prompt; -n my-rpms --mkidx 
+&poldek-prompt; -n pld --mkidx --mkidx-type=pdir,pndir
 </screen>
 </para>
 </sect2>
@@ -402,110 +429,17 @@ Cached files can be removed by three options:
 
 Examples:
 <screen>
-&prompt; poldek -s http://foo.bar/RPMS --clean
-&prompt; poldek -n foo --clean-whole
-&prompt; poldek --clean-pkg
+&poldek-prompt; -s http://foo.bar/RPMS --clean
+&poldek-prompt; -n foo --clean-whole
+&poldek-prompt; --clean-pkg
 </screen>
 </para>
 </sect2>
 
-<sect2> <title>Repository related options reference</title>
-<sect3><title>Repository index creation</title>
-<para>
-<itemizedlist>
-<listitem> <para><option id="ref.mkidx">--mkidx[=PATH]</option></para>
-  <para>
-    Create package index (under PATH by default)
-  </para>
-</listitem>
-<listitem> <para><option id="ref.mkidx-type">--mkidx-type=TYPE[,TYPE]</option></para>
-  <para>
-    Sets the index type (use --stl to list available values)
-  </para>
-</listitem>
-<listitem> <para><option id="ref.nodesc">--nodesc</option></para>
-  <para>
-    Do not put package user-level information (like Summary or Description) into created index.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.nodiff">--nodiff</option></para>
-  <para>
-    Do not create index delta files.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.nocompress">--nocompress</option></para>
-  <para>
-    Create uncompressed index.
-  </para>
-</listitem>
-</itemizedlist>
-</para>
-</sect3>
-
-<sect3><title>Repository selection</title>
-<para>
-<itemizedlist>
-<listitem> <para><option id="ref.source">-s, --source=PATH</option></para>
-  <para>
-    Get packages info from repository under PATH. Option may be multiplied.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.sn">-n, --sn=SOURCE-NAME</option></para>
-  <para>
-    Use repository named SOURCE-NAME. Option may be multiplied.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.st">--st=SOURCE-TYPE</option></para>
-  <para>
-    Set the source type (use --stl to list available values)
-  </para>
-</listitem>
-<listitem> <para><option id="ref.prefix">-P, --prefix=PATH</option></para>
-  <para>
-    Get packages from PATH instead of from repository index path.
-  </para>
-</listitem>
-</itemizedlist>
-</para>
-</sect3>
-
-<sect3> <title>Repository related actions</title>
-<para>
-<itemizedlist>
-<listitem> <para><option id="ref.stl">--stl</option></para>
-  <para>
-    List available repository types.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.sl">-l, --sl</option></para>
-  <para>
-    List configured repositories.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.update">--up, --update</option></para>
-  <para>
-    Update the repository index and verify it.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.update-whole">--upa, --update-whole</option></para>
-  <para>
-    Update whole index of source.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.clean">--clean</option></para>
-  <para>
-    Remove source index files from cache directory.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.clean-whole">--clean-whole</option></para>
-  <para>
-    Remove all files belongs to source from cache directory.
-  </para>
-</listitem>
-</itemizedlist>
-</para>
-</sect3>
-
+<sect2 id="repositories.ref"> <title>Repository related options reference</title>
+&ref-repository_index_creation;
+&ref-repository_selection;
+&ref-repository_related_actions;
 </sect2>
 
 </sect1>
@@ -587,35 +521,23 @@ Packages could be specified in five ways:
   </listitem>
 </itemizedlist>
 </para>
-<para>
-<itemizedlist><title>Reference</title>
-<listitem> <para><option id="ref.pset">--pset=FILE</option></para>
-  <para>
-    Take package set definition from FILE
-  </para>
-</listitem>
-<listitem> <para><option id="ref.caplookup">--caplookup</option></para>
-  <para>
-    Look into package capabilities and files to resolve packages
-  </para>
-</listitem>
-</itemizedlist>
-</para>
-
+<sect3><title>Package related options reference</title>
+&ref-package_related_options;
+</sect3>
 </sect2>
 
 <sect2 id="pkgmanaging.install"> <title>Installing packages</title>
 <para>
 To install packages in &rpm; sense, i.e. do not upgrade even if older version is already installed:
 <screen>
-&prompt; poldek  [OPTION..] --install                 (&rpm; mode)
-&prompt; ipoldek [OPTION..] install -IN               (interactive mode)
+&poldek-prompt;  [OPTION..] --install                 (&rpm; mode)
+&ipoldek-prompt; [OPTION..] install -IN               (interactive mode)
 </screen>
 
 It is useful when installation of multiple instance of package is needed (kernel for example).
 Example:
 <screen>
-&prompt; poldek -iv kernel-2.6.11 
+&poldek-prompt; -iv kernel-2.6.11 
 Processing dependencies...
 There are 1 package to install:
 I kernel-2.6.11-2
@@ -632,8 +554,8 @@ Preparing...                ########################################### [100%]
 <para>
 To install package or upgrade it if older version is already installed:
 <screen>
-&prompt; poldek  [OPTION..] --upgrade                 (&rpm; mode)
-&prompt; ipoldek [OPTION..] install                   (interactive mode)
+&poldek-prompt;  [OPTION..] --upgrade                 (&rpm; mode)
+&ipoldek-prompt; [OPTION..] install                   (interactive mode)
 </screen>
 This is most used installation type. Example:
 <screen>
@@ -676,14 +598,14 @@ Preparing...                ########################################### [100%]
 <para>
 To upgrade packages, i.e. install only if older version is already installed:
 <screen>
-&prompt; poldek  [OPTION..] --upgrade --fresh         (&rpm; mode)
-&prompt; ipoldek [OPTION..] upgrade                   (interactive mode)
+&poldek-prompt;  [OPTION..] --upgrade --fresh         (&rpm; mode)
+&ipoldek-prompt; [OPTION..] upgrade                   (interactive mode)
 </screen>
 </para>
 <para>
 Example:
 <screen>
-&prompt; poldek -uvF 'apache*'
+&poldek-prompt; -uvF 'apache*'
 </screen>
 </para>
 <para>
@@ -692,8 +614,8 @@ To upgrade all packages need upgrade <option>--upgrade-dist</option> can be used
 or, in, interactive mode '*' may be specified as package mask.
 Examples:
 <screen>
-&prompt; poldek -v --upgrade-dist
-&prompt; ipoldek -v upgrade '*'
+&poldek-prompt; -v --upgrade-dist
+&ipoldek-prompt; -v upgrade '*'
 </screen>
 </para>
 </sect2>
@@ -703,7 +625,7 @@ Examples:
 &poldek; can be used as system installer too. To install system from scratch use <option>--install-dist</option>
 option. Syntax is:
 <screen>
-&prompt; poldek --install-dist=DIR [PACKAGE...]
+&poldek-prompt; --install-dist=DIR [PACKAGE...]
 </screen>
 All unmet dependencies will be satisfied by marking additionall packages. In this type of installation 
 packages are installed one by one - it significantly reduces used memory amout and CPU utilization what permit 
@@ -712,230 +634,15 @@ to install the system on older machines.
 <para>
 As example, command which installs system under <filename>/mnt/dest</filename> might looks like:
 <screen>
-&prompt; poldek -s ftp://foo.bar/RPMS --install-dist=/mnt/dest --pset ftp://foo-bar/package-sets/myset.txt
+&poldek-prompt; -s ftp://foo.bar/RPMS --install-dist=/mnt/dest --pset ftp://foo-bar/package-sets/myset.txt
 </screen>
 </para>
 </sect2>
 
-<sect2> <title id="ref.install-ref"> Install options reference</title>
-
-<sect3> <title>Package installation</title>
-<itemizedlist>
-<listitem> <para><option id="ref.install">-i, --install</option></para>
-  <para>
-    Install  packages
-  </para>
-</listitem>
-<listitem> <para><option id="ref.reinstall">--reinstall</option></para>
-  <para>
-    Reinstall  packages
-  </para>
-</listitem>
-<listitem> <para><option id="ref.downgrade">--downgrade</option></para>
-  <para>
-    Downgrade  packages
-  </para>
-</listitem>
-<listitem> <para><option id="ref.upgrade">-u, --upgrade</option></para>
-  <para>
-    Upgrade  packages
-  </para>
-</listitem>
-</itemizedlist>
-</sect3>
-
-<sect3><title>Distribution installation/upgrade</title>
-<itemizedlist>
-<listitem> <para><option id="ref.install-dist">--install-dist=DIR</option></para>
-  <para>
-    Install package set under DIR as root directory
-  </para>
-</listitem>
-<listitem> <para><option id="ref.upgrade-dist">--upgrade-dist[=DIR]</option></para>
-  <para>
-    Upgrade all packages needs upgrade
-  </para>
-</listitem>
-<listitem> <para><option id="ref.reinstall-dist">--reinstall-dist[=DIR]</option></para>
-  <para>
-    Reinstall all packages under DIR as root directory
-  </para>
-</listitem>
-</itemizedlist>
-</sect3>
-
-<sect3><title>Installation switches</title>
-<itemizedlist>
-<listitem> <para><option id="ref.dump">--dump[=FILE]</option></para>
-  <para>
-    Print packages file names to FILE (stdout by default) instead of install them.
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.dumpn">--dumpn[=FILE]</option></para>
-  <para>
-    Print packages names to FILE (stdout by default) instead of install them.
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.fetch">--fetch[=DIR]</option></para>
-  <para>
-    Download packages to DIR (poldek's cache directory by default)instead of install them.
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.follow">--follow[=[yes|no]]</option></para>
-  <para>
-    Install packages required by selected ones. If unset packages required by selected 
-    ones are not installed, i.e. &poldek; runs like raw rpm. 
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.nofollow">-N, --nofollow</option></para>
-  <para>
-    Negation of <option>--follow</option>.
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.force">--force</option></para>
-  <para>
-    Have the same meaning like &rpm;. Install the packages even if 1) they replace files from other,
-    already installed, packages, 2) some of them are already installed on this system.
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.fresh">-F, --fresh</option></para>
-  <para>
-    Upgrade packages, but only if an earlier version currently exists.
-    <note><title></title><remark> 
-    Note that equivalent of "rpm --freshen" is "poldek [-u|-i] --fresh --nofollow"
-    </remark>
-    </note>
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.greedy">--greedy[=[yes|no]]</option></para>
-  <para>Configuration option: <option id="ref.conf.greedy">greedy = [yes|no]</option></para>
-  <para>
-    Automatically upgrade packages which dependencies are broken
-    by uninstalled ones, for example if package foo is upgraded
-    from version 1.0 to 1.2 and package foo-devel is already installed
-    with requirement "foo = 1.0" then foo-devel will be upgraded 
-    to version 1.2 too.
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.hold">--hold=PACKAGE[,PACKAGE]...</option></para>
-  <para>Configuration option: <option id="ref.conf.hold">hold = PACKAGE[,PACKAGE]...</option></para>
-  <para>
-   Prevent packages listed from being upgraded if they are already installed.
-   If option is not set then packages to hold are taken from <option>hold</option> 
-   configuration option. Held package won't be upgraded with exception if it will 
-   be pointed directly by the user.
-  </para>
-  <para>
-  Example:
-  <screen>
-    &prompt; poldek --hold=kernel\*,dev ...
-  </screen>
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.ignore">--ignore=PACKAGE[,PACKAGE]...</option></para>
-  <para>Configuration option: <option id="ref.conf.ignore">ignore = PACKAGE[,PACKAGE]...</option></para>
-  <para>
-   Make packages listed invisible to the program. If option is not set then 
-   packages to ignore are taken from <option>ignore</option> 
-   configuration option.
-  </para>
-<para>
-Example:
-<screen>
-  &prompt; poldek --ignore=kernel\*-smp\*,foo
-</screen>
-</para>
-</listitem>
-
-<listitem> <para><option id="ref.justdb">--justdb</option></para>
-  <para>
-    Modify only the database.
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.mercy">-m, --mercy</option></para>
-  <para>Configuration option: <option id="ref.conf.mercy">mercy = [yes|no]</option></para>
-  <para>
-   Be tolerant for unmatched versioned dependencies which &rpm; tolerates, e.g.
-   package A requires capability foo >= 1.0 while package B provides "foo"
-   without any version. Use with care.
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.nodeps">--nodeps</option></para>
-  <para>
-    Install/remove packages ignoring broken dependencies. 
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.nohold">--nohold</option></para>
-  <para>
-   Unhold packages held by <link linkend="ref.hold">hold</link> parameter.
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.noignore">--noignore</option></para>
-  <para>
-    Make invisibled packages visible. Disables <option>ignore</option> option.
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.pm-nodeps">--pm-nodeps</option></para>
-  <para>
-    Same as <xref linkend="ref.nodeps" endterm="ref.nodeps"/> but option is applied to package manager (&rpm; etc) only.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.pm-force">--pm-force</option></para>
-  <para>        
-   Same as <xref linkend="ref.force" endterm="ref.force"/>, but option is applied to package manager (&rpm; etc) only.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.pmopt">--pmopt=OPTION</option></para>
-  <para>
-   Pass option to package manager binary. Example:
-   <screen>
-    &prompt; poldek --pmopt=ignoreos
-   </screen>
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.promoteepoch">--promoteepoch</option></para>
-<para>Configuration option: <option id="ref.conf.promoteepoch">promoteepoch = [yes|no]</option></para>
-  <para>
-    Promote non-existent requirement's epoch to package's one (&rpm; &lt; 4.2.1 behaviour).
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.root">-r, --root=DIR</option></para>
-  <para>
-    Set top directory to DIR
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.test">-t, --test</option></para>
-  <para>
-   Do not install packages, but tell if it would work or not. Given once
-   causes poldek's checks only, to perform full tests using &rpm;, option
-   must be given twice.
-  </para>
-</listitem>
-
-<listitem> <para><option id="ref.uniq">-Q, --uniq</option></para>
-  <para>
-    Remove package duplicates from available package list. 
-  </para>
-</listitem>
-</itemizedlist>
-</sect3>
+<sect2> <title id="pkgmanaging.install-ref"> Install options reference</title>
+&ref-package_installation;
+&ref-distribution_installation-upgrade;
+&ref-installation_switches;
 </sect2>
 
 <sect2 id="pkgmanaging.removal"> <title>Removing packages</title>
@@ -946,45 +653,24 @@ properly according <emphasis>Requires(un)</emphasis> &rpm; requirements.
 <para>
 To remove installed packages:
 <screen>
-&prompt; poldek  [OPTION..] --erase                     (&rpm; mode)
-&prompt; ipoldek [OPTION..] uninstall                   (interactive mode)
+&poldek-prompt;  [OPTION..] --erase                     (&rpm; mode)
+&ipoldek-prompt; [OPTION..] uninstall                   (interactive mode)
 </screen>
 </para>
 <para>
 Examples:
 <screen>
-&prompt; poldek -e apache 
-&prompt; poldek -e kernel-2.6.11.5-3
-&prompt; poldek -e kernel-3:2.6.11.5-3
-&prompt; ipoldek uninstall kernel-2.6.11.5-3
+&poldek-prompt; -e apache 
+&poldek-prompt; -e kernel-2.6.11.5-3
+&poldek-prompt; -e kernel-3:2.6.11.5-3
+&ipoldek-prompt; uninstall kernel-2.6.11.5-3
 </screen>
 </para>
 </sect2>
 
-<sect2> <title id="ref.removal-ref">Package removal option reference</title>
+<sect2> <title id="pkgmanaging.remove-ref">Package removal option reference</title>
 <para>
-<itemizedlist>
-<listitem> <para><option id="ref.erase">-e, --erase</option></para>
-  <para>
-    Uninstall packages.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.removal-test">-t, --test</option></para>
-  <para>
-    Do not uninstall, but tell if it would work or not.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.removal-nofollow">-N, --nofollow</option></para>
-  <para>
-    Do not remove packages orphaned by selected ones.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.removal-nodeps">--nodeps</option></para>
-  <para>
-    Ignore broken dependencies.
-  </para>
-</listitem>
-</itemizedlist>
+&ref-package_deinstallation;
 </para>
 </sect2>
 
@@ -1022,12 +708,12 @@ search [OPTION...] PATTERN [PACKAGE...]
 Where PATTERN is a glob or, with <option>--perlre</option>, Perl regular expression.
 Examples:
 <screen>
-&prompt; ipoldek search -l /usr/sbin/ab
+&ipoldek-prompt; search -l /usr/sbin/ab
 2 package(s) found:
 apache-2.0.53-4
 apache1-tools-1.3.33-4
 
-&prompt; ipoldek search --perlre /audio.+editor/
+&ipoldek-prompt; search --perlre /audio.+editor/
 3 package(s) found:
 ecawave-0.6.1-3
 piave-0.2.4-2
@@ -1064,8 +750,8 @@ Web server. Apache is also the most popular Web server on the Internet.
 </sect2>
 </sect1>
 
-<sect1 id="maintain"> <title id="maintain.title">As a utility for distribution developers / maintainers</title>
-<sect2> <title>Verification of package set quality</title>
+<sect1 id="maintain"> <title id="maintain.title">poldek as utility for distribution developers / maintainers</title>
+<sect2 id="maintain.verify"> <title>Verification of package set quality</title>
 <para>
 &poldek; can be used as quality asset tool. It allows to verify package sets 
 for unresolved dependencies, dependency loops and unneeded or missing conflicts.
@@ -1091,22 +777,23 @@ for unresolved dependencies, dependency loops and unneeded or missing conflicts.
 <listitem> <para><option id="ref.verify-conflicts">--verify-conflicts</option></para>
   <para>
     With this option program reports all package conflicts and obsoletes. This report let
-    to verify if all conflicts are needed, what are redundant, etc. Sample report (Obsoletes are 
-    reported with asterisk '*'):
+    to verify if all conflicts are needed, what are redundant, etc. Sample 
+    report (Obsoletes are reported with asterisk '*'):
     <screen>
     Verifying conflicts...
-    bind-9.2.5-2 -> *maradns-1.1.30-1, *dnsmasq-2.19-1, *pdns-2.9.17-5, *pdnsd-1.1.8b1-0.par8.2, 
-    maradns-1.1.30-1 -> *bind-9.2.5-2, *pdns-2.9.17-5, 
-    login-2.12-15 -> *heimdal-login-0.6.3-2, 
-    pdnsd-1.1.8b1-0.par8.2 -> *maradns-1.1.30-1, *maradns-zoneserver-1.1.30-1, *bind-9.2.5-2, 
-    shadow-4.0.4.1-3 -> pwdutils-2.6.90-3, 
+    bind-9.2.5-2 -> *maradns-1.1.30-1, *dnsmasq-2.19-1, *pdnsd-1.1.8b1-0.par8.2
+    maradns-1.1.30-1 -> *bind-9.2.5-2 
+    login-2.12-15 -> *heimdal-login-0.6.3-2
+    pdnsd-1.1.8b1-0.par8.2 -> *maradns-1.1.30-1, *maradns-zoneserver-1.1.30-1 
+    shadow-4.0.4.1-3 -> pwdutils-2.6.90-3
     </screen>
   </para>
 </listitem>
 <listitem> <para><option id="ref.verify-fileconflicts">--verify-fileconflicts</option></para>
   <para>
-    Like <option>--verify-conflicts</option>, but conflicts on the file level are reported.
-    Report is quite useful to detect unneeded or missing conflicts, file sharing, etc. Sample report:
+    Like <option>--verify-conflicts</option>, but conflicts on the file level are 
+    reported. Report is quite useful to detect unneeded or missing conflicts or
+    file sharing. Sample report:
     <screen>
     Path: /usr/lib/perl5/vendor_perl/5.8.0/i686-pld-linux-thread-multi/Image
      shr   perl-base-5.8.6-3(D m40755 s4096)  -  ImageMagick-perl-6.1.8.9-1(D m40755 s4096)
@@ -1122,14 +809,15 @@ for unresolved dependencies, dependency loops and unneeded or missing conflicts.
 </listitem>
 <listitem> <para><option id="ref.verify-all">--verify-all</option></para>
   <para>
-    Verify dependencies, conflicts and file conflicts -- show three above reports at once.
+    Verify dependencies, conflicts and file conflicts -- show three above 
+    reports at once.
   </para>
 </listitem>
 </itemizedlist>
 </para>
 </sect2>
 
-<sect2> <title>Preparation of distribution disks</title>
+<sect2 id="maintain.split"> <title>Preparation of distribution disks</title>
 
 <para>
 &poldek; supports preparation of packages repository for the purpose of placing it on removable media 
@@ -1157,40 +845,25 @@ supplied with &poldek;.
 Each chunk is written as <filename>NAME-EVR.ARCH.rpm</filename> list to PREFIX.XX file, the default 
 PREFIX is "packages.chunk".
 </para>
-
-<sect3> <title>Split options reference</title>
-<para>
-<itemizedlist>
-<listitem><para><option id="ref.split">--split=SIZE[:FIRST_FREE_SPACE]</option></para>
-  <para>
-    Split packages to SIZE MB size chunks, the first chunk will be FIRST_FREE_SPACE MB smaller
-  </para>
-</listitem>
-<listitem> <para><option id="ref.priconf">--priconf=FILE</option></para>
-  <para>
-    Take package priorities from FILE
-  </para>
-</listitem>
-<listitem> <para><option id="ref.split-out">--split-out=PREFIX</option></para>
-  <para>
-    Write chunks to PREFIX.XX, default PREFIX is packages.chunk
-  </para>
-</listitem>
-</itemizedlist>
-</para>
-</sect3>
 </sect2>
 
-<sect2> <title>Maintaining package repositories</title>
+<sect2 id="maintain.manage"> <title>Maintaining package repositories</title>
 <para>
-&poldek; can perform 'to repository' installation, i.e. packages are copied from source to destination 
-repository with full dependency checking. This feature is useful if you want to move subtree of packages
-from one repository to another without a risk of break some dependencies. Say that one repository
-is a place for untested packages and they periodically, when found to be tested enough, are moved 
-to the stable repository, for example:
+&poldek; can perform 'to repository' installation, i.e. packages are
+copied from source to destination repository with full dependency
+checking. This feature is useful if you want to move subtree of
+packages from one repository to another without a risk of break some
+dependencies. Say that one repository is a place for untested packages
+and they periodically, when found to be tested enough, are moved to
+the stable repository. Syntax is:
 
 <screen>
-&prompt; poldek -n ac-test --dn ac -uv libselinux
+&poldek-prompt; ... --dn SOURCE_NAME [--dn SOURCE_NAME] ...
+</screen>
+Where SOURCE_NAME is a name of repository we want to move packages to,
+for example:
+<screen>
+&poldek-prompt; -n ac-test --dn ac -uv libselinux
 Loading [pdir]ac-test...
 1161 packages read
 Loading [pdir]ac...
@@ -1219,7 +892,7 @@ cp libselinux-1.22-1.i686.rpm /tmp/RPMS/libselinux-1.22-1.i686.rpm
 
 Removing packages from repositories in the safe manner is also possible:
 <screen>
-&prompt; poldek --dn ac -e poldek
+&poldek-prompt; --dn ac -e poldek
 mark poldek-0.18.8-3
 Processing dependencies...
 poldek-0.18.8-3 marks libpi-0.1.1-1 (req poldek)
@@ -1231,32 +904,28 @@ R poldek-0.18.8-3
 D libpi-0.1.1-1, libpi-devel-0.1.1-1, pacman-0.1-3, poldex-0.17.4-1
 Proceed? [y/N]
 </screen>
-</para>
 
-<sect3><title>Reference</title>
-<itemizedlist>
-<listitem> <para><option id="ref.destination">--destination=PM:SOURCESPEC</option></para>
-  <para>
-    Install to specified destination. XXX
-  </para>
-</listitem>
-<listitem> <para><option id="ref.dn">--dn=SOURCE-NAME</option></para>
-  <para>
-    Install to source SOURCE-NAME instead to system.
-  </para>
-</listitem>
-</itemizedlist>
-</sect3>
+If it is not desirable to let poldek to move packages itself, then
+with <option>--test</option> and <option>--parsable-tr-summary</option>
+easy to parse output will be produces, what allows to handle move 
+operation by external scripts. Example:
+<screen>
+&poldek-prompt; --dn ac -et poldek --parsable-tr-summary
+[cut]
+%R poldek-0.18.8-3
+%D libpi-0.1.1-1
+%D libpi-devel-0.1.1-1
+%D pacman-0.1-3
+%D poldex-0.17.4-1
+</screen>
+</para>
 </sect2>
 </sect1>
 
-<appendix id="appendix.sample-source.conf"><title>Repositories configuration sample</title>
-<para>
-<screen>
-&file_sample-source-conf;
-</screen>
-</para>
-</appendix>
+
+<sect1 id="configuration"><title>Configuration</title>
+&section_configuration;
+</sect1>
 
 <appendix id="appendix.sample-pri.conf"><title>Package priorities configuration sample</title>
 <para>
@@ -1267,6 +936,6 @@ Proceed? [y/N]
 </appendix>
 
 <index>
-&manualindex;
+&manual_index;
 </index>
 </article>

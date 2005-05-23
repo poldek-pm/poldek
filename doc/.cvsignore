@@ -18,7 +18,6 @@ install-sh
 stamp-h
 stamp-h.in
 .deps
-poldek*
 rpmvercmp
 ccmalloc-log
 depcomp
@@ -34,3 +33,6 @@ autom4te.cache
 .libs
 *.la
 *.texi
+*.info
+*.1
+m_*.xml

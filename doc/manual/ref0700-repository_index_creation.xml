@@ -1,0 +1,37 @@
+<variablelist><title>Repository index creation</title>
+<varlistentry><term><option id="ref.cmdl.mkidx">--mkidx[=PATH] </option></term>
+  <listitem>
+   <para>
+      Create package index (under SOURCE-PATH by default)
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.mt">--mt=TYPE[,TYPE] </option></term>
+  <listitem>
+   <para>
+      Set created index type (use --stl to list available values)
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.nodesc">--nodesc </option></term>
+  <listitem>
+   <para>
+      Don't put package user-level information (like Summary or Description) into created index.
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.nodiff">--nodiff </option></term>
+  <listitem>
+   <para>
+      Don't create index delta files
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.nocompress">--nocompress </option></term>
+  <listitem>
+   <para>
+      Create uncompressed index
+   </para>
+  </listitem>
+</varlistentry>
+</variablelist>

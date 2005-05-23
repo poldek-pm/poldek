@@ -1,0 +1,37 @@
+<variablelist><title>Package deinstallation</title>
+<varlistentry><term><option id="ref.cmdl.erase">-e, --erase </option></term>
+  <listitem>
+   <para>
+      Uninstall given packages
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.force1500">--force </option></term>
+  <listitem>
+   <para>
+      Remove packages ignoring broken dependencies
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.test1500">-t, --test </option></term>
+  <listitem>
+   <para>
+      Don't uninstall, but tell if it would work or not
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.nofollow1500">-N, --nofollow </option></term>
+  <listitem>
+   <para>
+      Don't remove packages orphaned by selected ones
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.nodeps1500">--nodeps </option></term>
+  <listitem>
+   <para>
+      Ignore broken dependencies
+   </para>
+  </listitem>
+</varlistentry>
+</variablelist>

@@ -1,0 +1,107 @@
+<variablelist><title>Other</title>
+<varlistentry><term><option id="ref.cmdl.cachedir">--cachedir=DIR </option></term>
+  <listitem>
+   <para>
+      Store downloaded files and co. under DIR
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.cmd">-C, --cmd </option></term>
+  <listitem>
+   <para>
+      Run in cmd mode
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.ask">--ask </option></term>
+  <listitem>
+   <para>
+      Confirm packages installation and let user choose among equivalent packages
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.noask">--noask </option></term>
+  <listitem>
+   <para>
+      Don't ask about anything
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.shell">--shell </option></term>
+  <listitem>
+   <para>
+      Run in interactive mode (default)
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.skip-installed">--skip-installed </option></term>
+  <listitem>
+   <para>
+      Don't load installed packages at startup
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.conf">--conf=FILE </option></term>
+  <listitem>
+   <para>
+      Read configuration from FILE
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.noconf">--noconf </option></term>
+  <listitem>
+   <para>
+      Do not read configuration
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.upconf">--upconf </option></term>
+  <listitem>
+   <para>
+      Update remote configuration files (if any)
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.version">--version </option></term>
+  <listitem>
+   <para>
+      Display program version information and exit
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.log">--log=FILE </option></term>
+  <listitem>
+   <para>
+      Log program messages to FILE
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.runas">--runas=USER </option></term>
+  <listitem>
+   <para>
+      Run program as user USER
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.O">-O </option></term>
+  <listitem>
+   <para>
+      Set configuration option
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.v">-v </option></term>
+  <listitem>
+   <para>
+      Be verbose.
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.q">-q </option></term>
+  <listitem>
+   <para>
+      Do not produce any output.
+   </para>
+  </listitem>
+</varlistentry>
+</variablelist>

@@ -1,0 +1,51 @@
+<variablelist><title>Repository related actions</title>
+<varlistentry><term><option id="ref.cmdl.stl">--stl </option></term>
+  <listitem>
+   <para>
+      List available source types
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.sl">-l, --sl </option></term>
+  <listitem>
+   <para>
+      List configured sources
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.update">--update </option></term>
+  <listitem>
+   <para>
+      Update the source and verify it
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.update-whole">--update-whole </option></term>
+  <listitem>
+   <para>
+      Update whole index of source
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.clean">--clean </option></term>
+  <listitem>
+   <para>
+      Remove source index files from cache directory
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.clean-pkg">--clean-pkg </option></term>
+  <listitem>
+   <para>
+      Remove cached packages of the source
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.clean-whole">--clean-whole </option></term>
+  <listitem>
+   <para>
+      Remove all files belongs to source from cache directory
+   </para>
+  </listitem>
+</varlistentry>
+</variablelist>
