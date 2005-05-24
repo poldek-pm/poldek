@@ -85,12 +85,23 @@ void *pm_rpm_init(void)
 
 int pm_rpm_configure(void *pm_rpm, const char *key, void *val)
 {
-    pm_rpm = pm_rpm;
+    struct pm_rpm *pm = pm_rpm;
     
     if (*key == '%') {           /* macro */
         key++;
         msg(4, "addMacro %s %s\n", key, (char*)val);
         addMacro(NULL, key, NULL, val, RMIL_DEFAULT);
+        
+    } else if (n_str_eq(key, "pmcmd")) {
+        n_cfree(&pm->rpm);
+        if (val)
+            pm->rpm = n_strdup(val);
+        DBGF("%s %s\n", key, val);
+
+    } else if (n_str_eq(key, "sudocmd")) {
+        n_cfree(&pm->sudo);
+        if (val)
+            pm->sudo = n_strdup(val);
         
     } else if (n_str_eq(key, "macros")) {
         tn_array *macros = val;

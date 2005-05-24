@@ -195,7 +195,7 @@ int do_verify_signature(const char *path, unsigned flags)
         presented_signs = 0;
         
         if (!rpm_signatures(path, &presented_signs, NULL)) {
-            logn(LOGERR, "dupa\n");
+            logn(LOGERR, "unknown error");
             return 0;
         }
         	
@@ -325,16 +325,16 @@ int do_pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags)
     char **argv;
     char *cmd;
     int i, n, nopts = 0;
-    
+
+    pm_rpm_setup_commands(pm);
     
     n = 32;
-    
     argv = alloca((n + 1) * sizeof(*argv));
     argv[n] = NULL;
     n = 0;
     
     cmd = pm->rpm;
-    argv[n++] = "rpm";
+    argv[n++] = n_basenam(pm->rpm);
     argv[n++] = "-K";
 
     nopts = n;

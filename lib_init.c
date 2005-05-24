@@ -952,7 +952,6 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
             if (vv)
                 n_hash_replace(ctx->_cnf, "pm", n_strdup(vv));
             break;
-            
 
         case POLDEK_CONF_LOGFILE:
             vv = va_arg(ap, void*);
@@ -1185,10 +1184,11 @@ static int setup_pm(struct poldek_ctx *ctx)
     const char *pm = n_hash_get(ctx->_cnf, "pm");
     n_assert(pm);
 
+
     if (strcmp(pm, "rpm") == 0) {
         ctx->pmctx = pm_new(pm);
         pm_configure(ctx->pmctx, "macros", ctx->ts->rpmacros);
-        
+                         
     } else if (strcmp(pm, "pset") == 0) {
         n_array_sort_ex(ctx->dest_sources, (tn_fn_cmp)source_cmp_no);
         if (n_array_size(ctx->dest_sources) == 0) {
@@ -1220,8 +1220,22 @@ static int setup_pm(struct poldek_ctx *ctx)
         return 0;
     }
 
-    if (ctx->pmctx == NULL)
+    if (ctx->pmctx == NULL) {
         logn(LOGERR, "%s: PM setup failed", pm);
+        return 0;
+    }
+    
+    if (ctx->htconf) {
+        const char *op;
+        tn_hash *htcnf;
+
+        htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+        if ((op = poldek_conf_get(htcnf, "pm command", NULL)))
+            pm_configure(ctx->pmctx, "pmcmd", (void*)op);
+
+        if ((op = poldek_conf_get(htcnf, "sudo command", NULL)))
+            pm_configure(ctx->pmctx, "sudocmd", (void*)op);
+    }
     
     return ctx->pmctx != NULL;
 }

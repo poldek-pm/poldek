@@ -58,21 +58,24 @@ static void argp_as_docbook(struct argp *argp);
 
 #define OPT_GID       OPT_GID_OP_OTHER
 
-#define OPT_CACHEDIR  (OPT_GID + 1)
-#define OPT_ASK       (OPT_GID + 2)
-#define OPT_NOASK     (OPT_GID + 3)
-#define OPT_CONF      (OPT_GID + 4)
-#define OPT_UPCONF    (OPT_GID + 5)
-#define OPT_NOCONF    (OPT_GID + 6)
-#define OPT_BANNER    (OPT_GID + 7)
-#define OPT_LOG       (OPT_GID + 8)
-#define OPT_SKIPINSTALLED (OPT_GID + 9)
-#define OPT_PM (OPT_GID + 11)
-#define OPT_SHELL  (OPT_GID + 12)
-#define OPT_SHELL_CMD (OPT_GID + 13)
-#define OPT_RUNAS (OPT_GID + 14)
+#define OPT_CACHEDIR          (OPT_GID + 1)
+#define OPT_ASK               (OPT_GID + 2)
+#define OPT_NOASK             (OPT_GID + 3)
+#define OPT_CONF              (OPT_GID + 4)
+#define OPT_UPCONF            (OPT_GID + 5)
+#define OPT_NOCONF            (OPT_GID + 6)
+#define OPT_BANNER            (OPT_GID + 7)
+#define OPT_LOG               (OPT_GID + 8)
+#define OPT_SKIPINSTALLED     (OPT_GID + 9)
+#define OPT_PM                (OPT_GID + 11)
+#define OPT_PMCMD             (OPT_GID + 12)
+#define OPT_PMCMD_ALIAS       (OPT_GID + 13)
+#define OPT_SUDOCMD           (OPT_GID + 15)
+#define OPT_SHELL             (OPT_GID + 16)
+#define OPT_SHELL_CMD         (OPT_GID + 17)
+#define OPT_RUNAS             (OPT_GID + 18)
 #define OPT_OPTION 'O'
-#define OPT_DOCB   (OPT_GID + 15)
+#define OPT_DOCB              (OPT_GID + 19)
 
 #define OPT_AS_FLAG(OPT)       (1 << (OPT - OPT_GID))
 
@@ -80,6 +83,10 @@ static void argp_as_docbook(struct argp *argp);
 static struct argp_option common_options[] = {
 {0,0,0,0, N_("Other:"), OPT_GID },
 {"pm", OPT_PM, "PM", OPTION_HIDDEN, 0, OPT_GID },
+{"pmcmd", OPT_PMCMD, "FILE", 0, N_("Use FILE as PM(rpm) binary"), OPT_GID },
+{"rpmcmd", OPT_PMCMD_ALIAS, "FILE", OPTION_HIDDEN, 0, OPT_GID },
+{"sudocmd", OPT_SUDOCMD, "FILE", 0, N_("Use FILE as sudo binary"), OPT_GID },
+
 {"cachedir", OPT_CACHEDIR, "DIR", 0,
      N_("Store downloaded files and co. under DIR"), OPT_GID },
 {"cmd", 'C', 0, 0, N_("Run in cmd mode"), OPT_GID },
@@ -170,6 +177,17 @@ struct args {
 
 } args;
 
+static
+void set_config_option(struct args *argsp, const char *op, const char *val)
+{
+    char tmp[1024];
+    
+    if (argsp->addon_cnflines == NULL)
+        argsp->addon_cnflines = n_array_new(8, free, NULL);
+    
+    n_snprintf(tmp, sizeof(tmp), "%s = %s", op, val);
+    n_array_push(argsp->addon_cnflines, n_strdup(tmp));
+}
 
 /* Parse a single option. */
 static
@@ -261,6 +279,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_PM:
             poldek_configure(ctx, POLDEK_CONF_PM, arg);
             break;            
+
+        case OPT_PMCMD_ALIAS:
+        case OPT_PMCMD:
+            set_config_option(argsp, "pm command", arg);
+            break;
+
+        case OPT_SUDOCMD:
+            set_config_option(argsp, "sudo command", arg);
+            break;
 
         case OPT_BANNER:
             msgn(-1, "%s", poldek_BANNER);
@@ -429,26 +456,19 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 
     index = 0;
     argp_parse(&argp, argc, argv, ARGP_IN_ORDER, &index, &args);
-
+    
     if (!poclidek_op_ctx_verify_major_mode(args.opctx))
         exit(EXIT_FAILURE);
-
+    
+    if (!load_conf(&args))
+        exit(EXIT_FAILURE);
+    
 #if GENDOCBOOK
     if (args.cnflags & OPT_AS_FLAG(OPT_DOCB)) {
         argp_as_docbook(&argp);
         exit(EXIT_SUCCESS);
     }
 #endif
-
-    if (!load_conf(&args))
-        exit(EXIT_FAILURE);
-
-    if (!poldek_setup(args.ctx))
-        exit(EXIT_FAILURE);
-
-    if (poldek_is_interactive_on(args.ctx) && poldek_VERBOSE == 0)
-        poldek_VERBOSE = 1;
-            
     return;
 }
 
@@ -655,6 +675,12 @@ int main(int argc, char **argv)
     cctx = poclidek_new(ctx);
     
     parse_options(cctx, ts, argc, argv, mode);
+
+    if (!poldek_setup(ctx))
+        exit(EXIT_FAILURE);
+
+    if (poldek_is_interactive_on(ctx) && poldek_VERBOSE == 0)
+        poldek_VERBOSE = 1;
 
     rrc = do_run();
     if (rrc & OPGROUP_RC_ERROR)

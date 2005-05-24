@@ -14,7 +14,9 @@
 #include "poldek.h"
 #include "pm/pm.h"
 
+#define PM_RPM_CMDSETUP_DONE (1 << 0)
 struct pm_rpm {
+    unsigned flags;
     char *rpm;
     char *sudo;
 };
@@ -118,5 +120,8 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
 
 int pm_rpm_arch_score(const char *arch);
 int pm_rpm_vercmp(const char *one, const char *two);
+
+
+void pm_rpm_setup_commands(struct pm_rpm *pm);
 
 #endif

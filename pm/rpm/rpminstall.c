@@ -136,7 +136,8 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
     
     if (p_open(&pst, p_open_flags, cmd, argv) == NULL) {
         if (pst.errmsg) {
-            logn(LOGERR, "%s", pst.errmsg);
+            if (ontty == 0)     /* if not try without P_OPEN_OUTPTYS */
+                logn(LOGERR, "%s", pst.errmsg);
             p_st_destroy(&pst);
         }
 
@@ -152,7 +153,6 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
             return 0;
         }
     }
-    
     
     n = 0;
     if (poldek_VERBOSE == 0) {
@@ -191,6 +191,8 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
     }
     
     if ((pid = fork()) == 0) {
+        printf("fork\n");
+        
         execv(cmd, argv);
         exit(EXIT_FAILURE);
         
@@ -229,18 +231,34 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
 
 #endif /* HAVE_FORKPTY */
 
-static void find_commands(struct pm_rpm *pm)
+static void setup_command(char **cmdp, const char *defaultcmd) 
 {
     char path[PATH_MAX];
     
-    if (!pm->rpm)
-        if (vf_find_external_command(path, sizeof(path), "rpm", NULL))
-            pm->rpm = n_strdup(path);
-
-    if (!pm->sudo)
-        if (vf_find_external_command(path, sizeof(path), "sudo", NULL))
-            pm->sudo = n_strdup(path);
+    if (*cmdp == NULL) {
+        if (vf_find_external_command(path, sizeof(path), defaultcmd, NULL))
+            *cmdp = n_strdup(path);
+        
+    } else if (access(*cmdp, R_OK) != 0 && **cmdp != '/') {
+        if (vf_find_external_command(path, sizeof(path), *cmdp, NULL)) {
+            n_cfree(cmdp);
+            *cmdp = n_strdup(path);
+        } /* try to run *cmdp anyway */
+    }
 }
+    
+
+void pm_rpm_setup_commands(struct pm_rpm *pm)
+{
+    if (pm->flags & PM_RPM_CMDSETUP_DONE)
+        return;
+    
+    setup_command(&pm->rpm, "rpm");
+    setup_command(&pm->sudo, "sudo");
+
+    pm->flags |= PM_RPM_CMDSETUP_DONE;
+}
+
 
 int pm_rpm_packages_install(struct pkgdb *db,
                             tn_array *pkgs, tn_array *pkgs_toremove,
@@ -254,12 +272,13 @@ int pm_rpm_packages_install(struct pkgdb *db,
 
     pkgs_toremove = pkgs_toremove;
 
-    find_commands(pm);
-    if (!pm->rpm) {
-        logn(LOGWARN, _("%s: command not found"), "rpm");
+    pm_rpm_setup_commands(pm);
+    if (pm->rpm == NULL) {
+        logn(LOGERR, _("%s: command not found"), "rpm");
         return 0;
     }
     
+    DBGF("rpm = %s\n", pm->rpm);
     n = 128 + n_array_size(pkgs);
     argv = alloca((n + 1) * sizeof(*argv));
     argv[n] = NULL;
@@ -267,21 +286,21 @@ int pm_rpm_packages_install(struct pkgdb *db,
     
     if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
         cmd = pm->rpm;
-        argv[n++] = "rpm";
+        argv[n++] = n_basenam(pm->rpm);
         
     } else if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0) {
         if (!pm->sudo) {
-            logn(LOGWARN, _("%s: command not found"), "sudo");
+            logn(LOGERR, _("%s: command not found"), "sudo");
             return 0;
         }
 
         cmd = pm->sudo;
-        argv[n++] = "sudo";
+        argv[n++] = n_basenam(pm->sudo);
         argv[n++] = pm->rpm;
         
     } else {
         cmd = pm->rpm;
-        argv[n++] = "rpm";
+        argv[n++] = n_basenam(pm->rpm);
     }
     
     if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE | POLDEK_TS_REINSTALL |
@@ -442,9 +461,9 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
     char *cmd;
     int i, n, nopts = 0;
 
-    find_commands(pm);
+    pm_rpm_setup_commands(pm);
     if (!pm->rpm) {
-        logn(LOGWARN, _("%s: command not found"), "rpm");
+        logn(LOGERR, _("%s: command not found"), n_basenam(pm->rpm));
         return 0;
     }
     
@@ -456,7 +475,7 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
     
     if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
         cmd = pm->rpm;
-        argv[n++] = "rpm";
+        argv[n++] = n_basenam(pm->rpm);
         
     } else if (ts->getop(ts, POLDEK_OP_USESUDO)) {
         if (!pm->sudo) {
@@ -464,12 +483,12 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
             return 0;
         }
         cmd = pm->sudo;
-        argv[n++] = "sudo";
+        argv[n++] = n_basenam(pm->sudo);
         argv[n++] = pm->rpm;
         
     } else {
         cmd = pm->rpm;
-        argv[n++] = "rpm";
+        argv[n++] = n_basenam(pm->rpm);
     }
     
     argv[n++] = "--erase";
