@@ -41,7 +41,7 @@ poldek.conf.1: $(CONFXMLS)
 	xmlto man $<
 
 install-exec-hook:
-        $(INSTALL_DATA) poldek.info $(infodir)
+	$(INSTALL_DATA) poldek.info $(infodir)
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#* *\# poldek.html *.tmp
