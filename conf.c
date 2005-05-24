@@ -85,8 +85,8 @@ static struct tag global_tags[] = {
     { "ignore req",    TYPE_STR | TYPE_MULTI, { 0 } },
     { "ignore pkg",    TYPE_STR | TYPE_MULTI, { 0 } },
 
-    { "rpm",           TYPE_STR | TYPE_F_ENV, { 0 } },
-    { "sudo",          TYPE_STR | TYPE_F_ENV, { 0 } },
+    { "pm command",           TYPE_STR | TYPE_F_ENV, { 0 } },
+    { "sudo command",         TYPE_STR | TYPE_F_ENV, { 0 } },
     { "rpmdef",        TYPE_STR | TYPE_MULTI | TYPE_F_ENV, { 0 } },
     { "rpm install opt",  TYPE_STR , { 0 } },
     { "rpm uninstall opt",  TYPE_STR , { 0 } },
@@ -570,27 +570,33 @@ static int poldek_conf_postsetup(tn_hash *ht)
     return nerr == 0;
 }
 
+#define ADD_PARAM_VALIDATE  (1 << 0)
+#define ADD_PARAM_OVERWRITE (1 << 1)
+#define ADD_PARAM_FOREIGN   (1 << 2)
 
 static int add_param(tn_hash *ht_sect, const char *section,
-                     char *name, char *value,
-                     int validate, int overwrite, 
+                     char *name, char *value, unsigned flags,
                      const char *path, int nline)
 {
     char *val, expanded_val[PATH_MAX], filemark[512];
     const struct section *sect;
     const struct tag *tag;
     struct copt *opt;
-    int tagindex;
+    int tagindex, validate, overwrite;
 
     tag = NULL;
-    if (*name != '_') {          /* user defined macro */
-        char *p = name + 1;
-        while (*p) {                /* backward compat */
-            if (*p == '_' || *p == '-')
-                *p = ' ';
-            p++;
+    if ((flags & ADD_PARAM_FOREIGN) == 0) /* replace '_' and '-' with ' ' */
+        if (*name != '_') {          /* user defined macro */
+            char *p = name + 1;
+            while (*p) {                /* backward compat */
+                if (*p == '_' || *p == '-')
+                    *p = ' ';
+                p++;
+            }
         }
-    }
+
+    overwrite = (flags & ADD_PARAM_OVERWRITE);
+    validate = (flags & ADD_PARAM_VALIDATE);
 
     if (path)
         n_snprintf(filemark, sizeof(filemark), "%s:%d:", path, nline);
@@ -893,7 +899,7 @@ int poldek_conf_add_to_section(void *sect, const char *akey, const char *aval)
     if (name == NULL)
         name = global_tag;
     
-    return add_param(ht_sect, name, key, val, 1, 0, NULL, -1);
+    return add_param(ht_sect, name, key, val, ADD_PARAM_VALIDATE, NULL, -1);
 }
 
 int poldek_conf_set(tn_hash *ht_sect, const char *akey, const char *aval)
@@ -974,11 +980,13 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     int       nline = 0, is_err = 0;
     tn_hash   *ht, *ht_sect;
     char      buf[PATH_MAX], *sectnam, *dn;
-    int       validate = 1, update = 0;
+    int       validate = 0, update = 0;
+    unsigned  addparam_flags = 0;
     
-    
-    if (flags & POLDEK_LDCONF_FOREIGN)
+    if (flags & POLDEK_LDCONF_FOREIGN) {
         validate = 0;
+        addparam_flags |= ADD_PARAM_FOREIGN;
+    }
 
     if (flags & POLDEK_LDCONF_UPDATE)
         update = 1;
@@ -1093,10 +1101,11 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
         if (!split_option_line(p, &name, &value, af->path, nline))
             goto l_end;
         
-        if (ht_sect)
-            add_param(ht_sect, sectnam, name, value, validate, 0,
+        if (ht_sect) {
+            addparam_flags |= (validate ? ADD_PARAM_VALIDATE : 0);
+            add_param(ht_sect, sectnam, name, value, addparam_flags,
                       af->path, nline);
-        else
+        } else 
             msgn(1, "%s: skipped %s::%s", af->path, sectnam, name);
     }
     
@@ -1108,6 +1117,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
         if (!poldek_conf_postsetup(ht)) {
             DBGF("ERR %s\n", af->path);
             is_err = 1;
+            
         } else {
             n_hash_replace(af_htconf, af->path, ht);
             DBGF("Loaded %s %p\n", af->path, n_hash_get(af_htconf, af->path));
@@ -1186,7 +1196,8 @@ tn_hash *poldek_conf_addlines(tn_hash *htconf, const char *sectnam,
         n_strdupap(line, &tmp);
         
         if (split_option_line(tmp, &name, &value, NULL, 0)) {
-            if (!add_param(ht_sect, sectnam, name, value, 1, 1, NULL, 0))
+            if (!add_param(ht_sect, sectnam, name, value,
+                           ADD_PARAM_VALIDATE | ADD_PARAM_OVERWRITE, NULL, 0))
                 nerr++;
         }
     }
@@ -1311,12 +1322,12 @@ tn_hash *poldek_conf_get_section_ht(const tn_hash *htconf, const char *name)
 static struct copt *do_conf_get(const tn_hash *htconf, const char *name)
 {
     struct copt *opt;
-    char fc = '_', tc = ' ';
+    char fc = '_', tc = ' ';    /* from char, to char */
     const char *name1;
     
     n_assert(htconf);
 
-    name1 = name + 1;           /* first '_' char is allowed */
+    name1 = name + 1;           /* first '_' is allowed */
     if (strchr(name1, ' ')) {
         fc = ' ';
         tc = '_';
@@ -1486,10 +1497,10 @@ static void load_apt_sources_list(tn_hash *htconf, const char *path)
                 }
                 
                 ht_sect = open_section_ht(htconf, sect, sectnam, path, -1);
-                add_param(ht_sect, sectnam, "type", "apt", 1, 0, path, nline);
-                add_param(ht_sect, sectnam, "name", name, 1, 0, path, nline);
-                add_param(ht_sect, sectnam, "url", url, 1, 0, path, nline);
-                add_param(ht_sect, sectnam, "prefix", pkg_prefix, 1, 0,
+                add_param(ht_sect, sectnam, "type", "apt", ADD_PARAM_VALIDATE, path, nline);
+                add_param(ht_sect, sectnam, "name", name, ADD_PARAM_VALIDATE, path, nline);
+                add_param(ht_sect, sectnam, "url", url, ADD_PARAM_VALIDATE, path, nline);
+                add_param(ht_sect, sectnam, "prefix", pkg_prefix, ADD_PARAM_VALIDATE,
                           path, nline);
             }
             n_str_tokl_free(tl_save);
