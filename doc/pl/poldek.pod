@@ -12,6 +12,15 @@ poldek [--source=¬RÓD£O ...] [OPCJA...] [PAKIET...]
 
 poldek [--source=¬RÓD£O ...]
 
+=head1 UWAGA
+
+Ten dokument dotyczy serii 0.18.x i jest w du¿ej czê¶ci zdezaktualizowany, 
+aczkolwiek nadal mo¿e byæ przdatny dla u¿ytkowników nie znaj±cych angielskiego. 
+
+Aktualna dokumentacja jest dostêpna w jêzyku angielskim, w postaci stron 
+podrêcznika systemowego man ('poldek' oraz 'poldek.conf') oraz w postaci 
+podrêcznika w formacie Info oraz HTML.
+
 =head1 OPIS
 
 Poldek jest programem do zarz±dzania pakietami RPM. Jego podstawowe

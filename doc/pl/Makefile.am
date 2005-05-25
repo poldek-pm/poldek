@@ -6,7 +6,7 @@ mandir    = @mandir@/pl
 EXTRA_DIST = poldek.pod poldek.1 
 
 %.1: %.pod $@
-	$(POD2MAN) -s 1 -r "poldek" --center "poldek @VERSION@" $< > $@
+	$(POD2MAN) -s 1 -r "poldek" --center "poldek 0.18.x" $< > $@
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#* *\#
