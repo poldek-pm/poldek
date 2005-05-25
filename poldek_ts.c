@@ -221,7 +221,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         if (!poldek__is_setup_done(ctx))
             ts->_iflags |= TS_CONFIG_LATER;
         
-        ts->aps = arg_packages_new(ctx->pmctx);
+        ts->aps = arg_packages_new();
         ts->pmctx = ctx->pmctx;
     }
     ts->_na = n_alloc_new(4, TN_ALLOC_OBSTACK);
@@ -604,7 +604,7 @@ int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags)
     int rc = 0;
     unsigned apsflags = 0;
     
-    arg_packages_setup(ts->aps);
+    arg_packages_setup(ts->aps, ts->pmctx);
     if (arg_packages_size(ts->aps) == 0) {
         logn(LOGERR, _("Nothing to do"));
         return 0;
@@ -776,7 +776,7 @@ static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf)
     }
     
     if (rc) {
-        rc = arg_packages_setup(ts->aps);
+        rc = arg_packages_setup(ts->aps, ts->pmctx);
         if (rc && iinf)
             poldek_iinf_init(iinf);
     }

@@ -10,7 +10,7 @@ struct arg_packages;
 struct pkgset;
 struct pm_ctx;
 
-struct arg_packages *arg_packages_new(struct pm_ctx *ctx);
+struct arg_packages *arg_packages_new(void);
 void arg_packages_free(struct arg_packages *aps);
 
 void arg_packages_clean(struct arg_packages *aps);
@@ -24,7 +24,7 @@ int arg_packages_add_pkglist(struct arg_packages *aps, const char *path);
 int arg_packages_add_pkg(struct arg_packages *aps, struct pkg *pkg);
 int arg_packages_add_pkga(struct arg_packages *aps, tn_array *pkgs);
 
-int arg_packages_setup(struct arg_packages *aps);
+int arg_packages_setup(struct arg_packages *aps, struct pm_ctx *ctx);
 
 #define ARG_PACKAGES_RESOLV_EXACT       (1 << 0)/* no fnmatch() */
 #define ARG_PACKAGES_RESOLV_MISSINGOK   (1 << 1)/* be quiet if nothing matches*/

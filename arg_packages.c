@@ -54,10 +54,10 @@ struct pset_virtual_ent {
 
 struct arg_packages {
     unsigned  flags;
-    struct pm_ctx *pmctx;
-    tn_array  *packages;        /*  */
+    tn_array  *packages;        /* struct *pkg[] */
     tn_array  *package_masks;   /* [@]foo(#|-)[VERSION[-RELEASE]] || foo.rpm   */
     tn_array  *package_lists;   /* --pset FILE */
+    tn_array  *package_files;   /* list of *.rpm */
     tn_hash   *pset_virtuals;   /* @virt name */
     tn_hash   *resolved_caps;
     tn_array  *resolved_pkgs;
@@ -181,16 +181,16 @@ int prepare_file_pkgmask(struct arg_packages *aps,
 }
 
 
-struct arg_packages *arg_packages_new(struct pm_ctx *ctx) 
+struct arg_packages *arg_packages_new(void) 
 {
     struct arg_packages *aps;
 
     aps = n_malloc(sizeof(*aps));
     memset(aps, 0, sizeof(*aps));
-    aps->pmctx = ctx;
     aps->packages = pkgs_array_new(64);
     aps->package_masks = n_array_new(64, free, (tn_fn_cmp)strcmp);
     aps->package_lists = n_array_new(64, free, (tn_fn_cmp)strcmp);
+    aps->package_files = n_array_new(4, free, (tn_fn_cmp)strcmp); 
     aps->resolved_caps = n_hash_new(21, (tn_fn_free)n_array_free);
     aps->resolved_pkgs = pkgs_array_new_ex(128, pkg_cmp_name_evr_rev);
     return aps;
@@ -201,6 +201,7 @@ void arg_packages_free(struct arg_packages *aps)
     n_array_free(aps->packages);
     n_array_free(aps->package_masks);
     n_array_free(aps->package_lists);
+    n_array_free(aps->package_files);
     n_hash_free(aps->resolved_caps);
     n_array_free(aps->resolved_pkgs);
     if (aps->na)
@@ -222,7 +223,7 @@ void arg_packages_clean(struct arg_packages *aps)
 int arg_packages_size(struct arg_packages *aps) 
 {
     return n_array_size(aps->package_masks) + n_array_size(aps->packages)
-        + n_array_size(aps->package_lists);
+        + n_array_size(aps->package_lists) + n_array_size(aps->package_files);
 //        n_hash_size(aps->resolved_caps);
 }
 
@@ -324,26 +325,40 @@ int is_package_file(const char *path)
     return (stat(path, &st) == 0 && S_ISREG(st.st_mode));
 }
 
-int arg_packages_add_pkgfile(struct arg_packages *aps, const char *path)
+static int load_pkgfiles(struct arg_packages *aps, struct pm_ctx *pmctx)
 {
-    int rc = 1;
-    
-    if (!is_package_file(path))  
-        rc = arg_packages_add_pkgmask(aps, path);
-    
-    else {
-        struct pkg *pkg;
+    struct pkg *pkg;
+    int i, nerr = 0;
+
+    DBGF("%d\n", n_array_size(aps->package_files));
+    for (i=0; i < n_array_size(aps->package_files); i++) {
+        const char *path = n_array_nth(aps->package_files, i);
         
         if (aps->na == NULL)
             aps->na = n_alloc_new(4, TN_ALLOC_OBSTACK);
-        
-        pkg = pm_load_package(aps->pmctx, aps->na, path, PKG_LDNEVR);
-        if (pkg == NULL)
-            return 0;
-
-        arg_packages_add_pkg(aps, pkg);
-        pkg_free(pkg);
+    
+        if ((pkg = pm_load_package(pmctx, aps->na, path, PKG_LDNEVR))) {
+            arg_packages_add_pkg(aps, pkg);
+            pkg_free(pkg);
+            
+        } else {
+            nerr++;
+        }
     }
+        
+    return nerr == 0;
+}
+
+int arg_packages_add_pkgfile(struct arg_packages *aps, const char *path)
+{
+    int rc = 1;
+
+    DBGF("%s\n", path);
+    
+    if (!is_package_file(path))  
+        rc = arg_packages_add_pkgmask(aps, path);
+    else 
+        n_array_push(aps->package_files, n_strdup(path));
     
     return rc;
 }
@@ -374,12 +389,15 @@ int arg_packages_load_list(struct arg_packages *aps, const char *fpath)
     return rc;
 }
 
-int arg_packages_setup(struct arg_packages *aps)
+int arg_packages_setup(struct arg_packages *aps, struct pm_ctx *ctx)
 {
     int i, rc = 1, n, nremoved;
 
     if (aps->flags & ARG_PACKAGES_SETUPDONE)
         return 1;
+
+    if (!load_pkgfiles(aps, ctx)) 
+        rc = 0;
         
     for (i=0; i < n_array_size(aps->package_lists); i++) {
         char *path = n_array_nth(aps->package_lists, i);
