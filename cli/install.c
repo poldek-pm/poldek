@@ -234,7 +234,6 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
     struct poclidek_opgroup_rt  *rt;
     struct poldek_ts            *ts;
     struct cmdl_arg_s           *arg_s;
-    int                         set_major_mode_flag = 0;
 
     rt = state->input;
     ts = rt->ts;
@@ -262,17 +261,14 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             poldek_ts_setf(ts, POLDEK_TS_INSTALL);
             rt->set_major_mode(rt, "install", NULL);
             break;
-            
+
         case OPT_INST_DOWNGRADE:
-            rt->set_major_mode(rt, "downgrade", NULL);
-            set_major_mode_flag = 1;
-            
         case OPT_INST_REINSTALL:
-            if (!set_major_mode_flag) rt->set_major_mode(rt, "reinstall", NULL);
-            
         case 'U':
         case 'u':
-            if (!set_major_mode_flag) rt->set_major_mode(rt, "upgrade", NULL);
+            rt->set_major_mode(rt, "upgrade", key == OPT_INST_DOWNGRADE ? "downgrade" :
+                               key == OPT_INST_REINSTALL ? "reinstall" : NULL);
+            
             poldek_ts_set_type(ts, POLDEK_TS_INSTALL, "install");
             poldek_ts_setf(ts, POLDEK_TS_UPGRADE);
             
@@ -283,7 +279,7 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
                 poldek_ts_setf(ts, POLDEK_TS_REINSTALL);
             break;
 
-        case 'h':          /* common rpm's users brain hardcode -Uvh  */
+        case 'h':          /* common rpm's users brain hardcoded -Uvh  */
             break;
             
 
