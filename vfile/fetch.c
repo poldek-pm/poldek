@@ -533,7 +533,7 @@ struct ffetcher *find_fetcher(const char *proto, int multi)
             ftch = n_hash_get(ffetchers, clname);
 
         if (ftch == NULL) {
-            vf_logerr("vfile: %s: no such ext. fetcher found\n", clname);
+            vf_logerr("vfile: %s: no such external fetcher found\n", clname);
             return NULL;
         }
         
@@ -569,7 +569,7 @@ int vf_fetch_ext(const char *url, const char *destdir)
     vf_url_proto(proto, sizeof(proto), url);
     
     if ((ftch = find_fetcher(proto, 0)) == NULL) {
-        vf_logerr("vfile: %s://...: no ext. fetcher for this type "
+        vf_logerr("vfile: %s://...: no external fetcher for this type "
                    "of url found\n", proto);
         return 0;
     }
@@ -599,7 +599,7 @@ int vf_fetcha_ext(tn_array *urls, const char *destdir)
         rc = nerrs == 0;
         
     } else {
-        vf_logerr("vfile: %s://...: no ext. fetcher "
+        vf_logerr("vfile: %s://...: no external fetcher "
                    "for this type of url found\n", proto);
         rc = 0;
     }
