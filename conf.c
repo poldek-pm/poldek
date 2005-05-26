@@ -186,6 +186,15 @@ struct copt {
     char     name[0];
 };
 
+/* configuration file */
+struct afile {
+    struct vfile  *vf;
+    char          *sectnam_inc; /* load only sections named sectnam_inc,
+                                   experimental */
+    char          path[0];
+};
+
+
 static void load_apt_sources_list(tn_hash *htconf, const char *path);
 
 
@@ -554,7 +563,7 @@ static int poldek_conf_postsetup(tn_hash *ht)
 
     i = 0;
     while (sections[i].name) {
-        if (strcmp(sections[i].name, global_tag)  != 0) {
+        if (n_str_ne(sections[i].name, global_tag)) {
             tn_array *list = poldek_conf_get_section_arr(ht, sections[i].name);
             if (list)
                 for (j=0; j < n_array_size(list); j++) {
@@ -698,9 +707,11 @@ static int add_param(tn_hash *ht_sect, const char *section,
         return 0;
             
     } else if (opt->vals != NULL) {
+        DBGF("ADD %p %s -> %s\n", ht_sect, name, val);
         n_array_push(opt->vals, n_strdup(val));
             
     } else if (opt->vals == NULL) {
+        DBGF("ADD %p %s -> %s\n", ht_sect, name, val);
         opt->vals = n_array_new(2, free, (tn_fn_cmp)strcmp);
         /* put ALL opts to opt->vals */
         n_array_push(opt->vals, n_strdup(opt->val)); 
@@ -711,12 +722,6 @@ static int add_param(tn_hash *ht_sect, const char *section,
     return 1;
 }
 
-
-struct afile {
-    struct vfile  *vf;
-    char          *sectnam_inc;
-    char          path[0];
-};
 
 static 
 struct afile *afile_new(struct vfile *vf, const char *path,
@@ -742,10 +747,7 @@ void afile_close(struct afile *af)
 {
     vfile_close(af->vf);
     af->vf = NULL;
-    
-    if (af->sectnam_inc)
-        n_cfree(&af->sectnam_inc);
-    
+    n_cfree(&af->sectnam_inc);
     *af->path = '\0';
     free(af);
 }
@@ -833,6 +835,8 @@ tn_hash *open_section_ht(tn_hash *htconf, const struct section *sect,
     
 
     arr_sect = n_hash_get(htconf, sectnam);
+    DBGF("[%s] sect=%p, is_multi=%d\n", sectnam, sect,
+         sect ? sect->is_multi : -1);
     msgn(3, " [%s]", sectnam);
 
     if (arr_sect) {
@@ -969,7 +973,35 @@ static int split_option_line(char *line, char **name, char **value,
     return 1;
 }
 
+static
+void read_continuation(struct afile *af, char *buf, int size, int *nline) 
+{
+    while (1) {
+        char *q;
+        int sizeleft;
+        
+        q = strrchr(buf, '\0'); /* eat trailing ws */
+        n_assert(q);
+        q--;
+        while (isspace(*q))
+            *q-- = '\0';
+            
+        if (*q != '\\')     /* not continuation? */
+            break;
+            
+        *q = '\0';
 
+        sizeleft = size - (q - buf) - 1;
+        if (sizeleft > 0) {
+            if (!n_stream_gets(af->vf->vf_tnstream, q, sizeleft))
+                break;
+        } else {
+            break;
+        }
+        
+        (*nline)++;
+    }
+}
 
 static
 tn_hash *do_ldconf(tn_hash *af_htconf,
@@ -980,7 +1012,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     int       nline = 0, is_err = 0;
     tn_hash   *ht, *ht_sect;
     char      buf[PATH_MAX], *sectnam, *dn;
-    int       validate = 0, update = 0;
+    int       validate = 1, update = 0;
     unsigned  addparam_flags = 0;
     
     if (flags & POLDEK_LDCONF_FOREIGN) {
@@ -1015,14 +1047,10 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     while (n_stream_gets(af->vf->vf_tnstream, buf, sizeof(buf) - 1)) {
         char *name, *value, *p;
         
-        p = buf;
-        while (isspace(*p))
-            p++;
-        
-        if (*p == '#' || *p == '\0') {
-            nline++;
+        nline++;
+        p = eat_wws(buf);
+        if (*p == '#' || *p == '\0')
             continue;
-        }
         
         if (strncmp(p, include_tag, strlen(include_tag)) == 0) {
             tn_hash *inc_ht;
@@ -1048,36 +1076,18 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
             continue;
         }
         
-        while (1) {
-            char *q;
-            
-            nline++;
-            q = strrchr(buf, '\0'); /* eat trailing ws */
-            n_assert(q);
-            q--;
-            while (isspace(*q))
-                *q-- = '\0';
-            
-            if (*q != '\\')     /* not continuation? */
-                break;
-            
-            *q = '\0';
-            n_stream_gets(af->vf->vf_tnstream, q, sizeof(buf) - (q - buf) - 1);
-        }
+        read_continuation(af, buf, sizeof(buf), &nline);
 
-
-        if (*p == '%')
+        if (*p == '%')          /* unknown directive */
             continue;
 
-        if (*p == '[') {
+        if (*p == '[') {        /* section */
             const struct section *sect = NULL;
-            int  len;
             
             p++;
             name = p;
             
-            while (isalnum(*p) || *p == '-')
-                p++;
+            while (isalnum(*p) || *p == '-') p++;
             *p = '\0';
 
             if (validate && (sect = find_section(name)) == NULL) {
@@ -1086,12 +1096,9 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
                 is_err++;
                 goto l_end;
             }
-            
-            len = strlen(name) + 1;
-            sectnam = alloca(len);
-            memcpy(sectnam, name, len);
-            
-            if (af->sectnam_inc == NULL || strcmp(af->sectnam_inc, sectnam) == 0)
+
+            n_strdupap(name, &sectnam);
+            if (af->sectnam_inc == NULL || n_str_eq(af->sectnam_inc, sectnam))
                 ht_sect = open_section_ht(ht, sect, sectnam, af->path, nline);
             else
                 ht_sect = NULL;
@@ -1117,11 +1124,11 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
         if (!poldek_conf_postsetup(ht)) {
             DBGF("ERR %s\n", af->path);
             is_err = 1;
-            
-        } else {
-            n_hash_replace(af_htconf, af->path, ht);
-            DBGF("Loaded %s %p\n", af->path, n_hash_get(af_htconf, af->path));
+            goto l_end;
         }
+
+        n_hash_replace(af_htconf, af->path, ht);
+        DBGF("Loaded %s %p\n", af->path, n_hash_get(af_htconf, af->path));
     }
     
  l_end:
@@ -1214,36 +1221,41 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
 
     af_htconf = n_hash_new(23, (tn_fn_free)n_hash_free);
 
-    if (do_ldconf(af_htconf, path, NULL, NULL, flags) != NULL) {
-        htconf = n_hash_get(af_htconf, path);
-        
-        if ((flags & POLDEK_LDCONF_NOINCLUDE) == 0) {
-            tn_array *paths;
-            int i;
-            
-            paths = n_hash_keys(af_htconf);
-            DBGF("htconf %s %p\n", path, htconf);
-
-            for (i=0; i < n_array_size(paths); i++) {
-                char *apath = n_array_nth(paths, i);
-                tn_hash  *ht;
-
-                if (strcmp(path, apath) == 0) /* skip main config */
-                    continue;
-                
-                if ((ht = n_hash_get(af_htconf, apath)))
-                    merge_htconf(htconf, ht);
-            }
-
-            n_array_free(paths);
-        }
+    if (do_ldconf(af_htconf, path, NULL, NULL, flags) == NULL) {
+        n_hash_free(af_htconf);
+        return NULL;
     }
+    
+    htconf = n_hash_get(af_htconf, path);
+
+    /* move non "global" sections from included files to main htconf */
+    if ((flags & POLDEK_LDCONF_NOINCLUDE) == 0) {
+        tn_array *paths;
+        int i;
+            
+        paths = n_hash_keys(af_htconf);
+        DBGF("htconf %s %p\n", path, htconf);
+
+        for (i=0; i < n_array_size(paths); i++) {
+            char *apath = n_array_nth(paths, i);
+            tn_hash  *ht;
+
+            if (strcmp(path, apath) == 0) /* skip main config */
+                continue;
+                
+            if ((ht = n_hash_get(af_htconf, apath)))
+                merge_htconf(htconf, ht);
+        }
+
+        n_array_free(paths);
+    }
+
 
     DBGF("ret htconf %s %p\n", path, htconf);
     if (htconf) {
         htconf = n_ref(htconf);
         
-        if ((flags & POLDEK_LDCONF_NOINCLUDE) == 0) {
+        if ((flags & (POLDEK_LDCONF_NOINCLUDE | POLDEK_LDCONF_FOREIGN)) == 0) {
             tn_hash *global;
             
             global = poldek_conf_get_section_ht(htconf, "global");
@@ -1497,11 +1509,14 @@ static void load_apt_sources_list(tn_hash *htconf, const char *path)
                 }
                 
                 ht_sect = open_section_ht(htconf, sect, sectnam, path, -1);
-                add_param(ht_sect, sectnam, "type", "apt", ADD_PARAM_VALIDATE, path, nline);
-                add_param(ht_sect, sectnam, "name", name, ADD_PARAM_VALIDATE, path, nline);
-                add_param(ht_sect, sectnam, "url", url, ADD_PARAM_VALIDATE, path, nline);
-                add_param(ht_sect, sectnam, "prefix", pkg_prefix, ADD_PARAM_VALIDATE,
+                add_param(ht_sect, sectnam, "type", "apt", ADD_PARAM_VALIDATE,
                           path, nline);
+                add_param(ht_sect, sectnam, "name", name, ADD_PARAM_VALIDATE,
+                          path, nline);
+                add_param(ht_sect, sectnam, "url", url, ADD_PARAM_VALIDATE,
+                          path, nline);
+                add_param(ht_sect, sectnam, "prefix", pkg_prefix,
+                          ADD_PARAM_VALIDATE, path, nline);
             }
             n_str_tokl_free(tl_save);
         }
