@@ -193,7 +193,6 @@ static int parse_destspec(char *spec, struct arg_s *arg_s)
     }
     n_snprintf(arg_s->destpm, sizeof(arg_s->destpm), "%s", spec);
     
-    if (strchr(spec, 
 }
 #endif
 
@@ -349,35 +348,39 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
-static void print_source_list(struct poldek_ctx *ctx, tn_array *sources, int aliases) 
+static
+void print_source_list(struct poldek_ctx *ctx, tn_array *sources,
+                       int print_groups)
 {
     int i;
     tn_hash *htcnf;
-
+    tn_array *htcnf_sources;
     
     n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_name);
     for (i=0; i < n_array_size(sources); i++)
         source_printf(n_array_nth(sources, i));
     n_array_sort(sources);
     
-    if (aliases == 0)
+    if (print_groups == 0)
         return;
     
-    if ((htcnf = poldek_get_config(ctx))) {
-        tn_array *htcnf_sources = poldek_conf_get_section_arr(htcnf, "source");
+    if ((htcnf = poldek_get_config(ctx)) == NULL)
+        return;
         
-        for (i=0; i < n_array_size(htcnf_sources); i++) {
-            const char *type;
-            tn_hash *ht = n_array_nth(htcnf_sources, i);
-            
-            type = poldek_conf_get(ht, "type", NULL);
-            if (type && n_str_eq(type, source_TYPE_GROUP)) {
-                struct source *src = source_new_htcnf(ht);
-                if (src == NULL)
-                    continue;
-                source_printf(src);
-                source_free(src);
-            }
+    if ((htcnf_sources = poldek_conf_get_section_arr(htcnf, "source")) == NULL)
+        return;
+    
+    for (i=0; i < n_array_size(htcnf_sources); i++) {
+        tn_hash *ht = n_array_nth(htcnf_sources, i);
+        const char *type;
+        
+        type = poldek_conf_get(ht, "type", NULL);
+        if (type && n_str_eq(type, source_TYPE_GROUP)) {
+            struct source *src = source_new_htcnf(ht);
+            if (src == NULL)
+                continue;
+            source_printf(src);
+            source_free(src);
         }
     }
 }
@@ -464,7 +467,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
         rc = OPGROUP_RC_OK;
         print_source_list(rt->ctx, sources,
                           (arg_s->cnflags & POLDEKCLI_SRC_SPECIFIED) == 0);
-                          /* print aliases if no -n or -s */
+                          /* print source groups if no -n or -s */
     }
 
     if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE) {
