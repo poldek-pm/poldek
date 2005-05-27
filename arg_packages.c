@@ -435,7 +435,7 @@ tn_array *resolve_bycap(struct arg_packages *aps, struct pkgset *ps,
     if ((pkgs = n_hash_get(aps->resolved_caps, mask)))
         return pkgs;
     
-    pkgscaps = pkgset_lookup_cap(ps, mask);
+    pkgscaps =  pkgset_search(ps, PS_SEARCH_CAP, mask);
     pkgsfiles = pkgset_search(ps, PS_SEARCH_FILE, mask);
     
     if (pkgscaps == NULL && pkgsfiles == NULL)
@@ -448,8 +448,8 @@ tn_array *resolve_bycap(struct arg_packages *aps, struct pkgset *ps,
     while (pkgsfiles && n_array_size(pkgsfiles))
         n_array_push(pkgs, n_array_shift(pkgsfiles));
 
-    if (pkgscaps) n_array_free(pkgscaps);
-    if (pkgsfiles) n_array_free(pkgsfiles);
+    n_array_cfree(&pkgscaps);
+    n_array_cfree(&pkgsfiles);
     
     n_array_sort(pkgs);
     n_array_uniq(pkgs);

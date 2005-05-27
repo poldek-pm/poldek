@@ -293,7 +293,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     poldek_VERBOSE = -1;
     file_index_find_conflicts(&ps->file_idx, strict);
     poldek_VERBOSE = v;
-
+ 
     pkgset_verify_deps(ps, strict);
     MEMINF("after verify deps");
 
@@ -556,7 +556,7 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
         case PS_SEARCH_PROVIDES:
             n_assert(value);
             find_capreq(ps, pkgs, PS_SEARCH_CAP, value);
-                                /* no break */
+                                /* no break => we lookup into files too */
 
         case PS_SEARCH_FILE:
             n_assert(value);
@@ -586,12 +586,6 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
     }
     
     return pkgs;
-}
-
-
-tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname)
-{
-    return pkgset_search(ps, PS_SEARCH_CAP, capname);
 }
 
 void pkgset_report_fileconflicts(struct pkgset *ps, tn_array *pkgs)

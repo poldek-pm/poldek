@@ -79,7 +79,6 @@ enum pkgset_search_tag {
 tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
                         const char *value);
 
-tn_array *pkgset_lookup_cap(struct pkgset *ps, const char *capname);
 struct pkg *pkgset_lookup_1package(struct pkgset *ps, const char *name);
 
 tn_array *pkgset_get_unsatisfied_reqs(struct pkgset *ps, struct pkg *pkg);
