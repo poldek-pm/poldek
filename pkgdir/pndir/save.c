@@ -587,6 +587,7 @@ int pndir_save_pkginfo(int nth, struct pkguinf *pkgu, struct pkgdir *pkgdir,
     tn_array *langs = pkguinf_langs(pkgu);
     int i;
 
+    nth = nth;
     DBGF("langs = %d\n", n_array_size(langs));
     for (i=0; i < n_array_size(langs); i++) {
         char *lang = n_array_nth(langs, i);

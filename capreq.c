@@ -49,7 +49,7 @@ void capreq_free_na(tn_alloc *na, struct capreq *cr)
 void capreq_free(struct capreq *cr) 
 {
     if ((cr->cr_relflags & __NAALLOC) == 0)
-        n_free(cr);
+        free(cr);
 }
 
 

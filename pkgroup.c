@@ -582,7 +582,7 @@ static int pkgroupid(struct pkgroup_idx *idx, const char *name)
     return -1;
 }
 
-
+#if ENABLE_TRACE
 static void dumpidx(struct pkgroup_idx *idx, const char *prefix)
 {
     struct pkgroup *gr;
@@ -593,7 +593,7 @@ static void dumpidx(struct pkgroup_idx *idx, const char *prefix)
         printf("%s: %d %s\n", prefix, gr->id, gr->name);
     }
 }
-
+#endif
 
 
 int pkgroup_idx_remap_groupid(struct pkgroup_idx *idx_to,
