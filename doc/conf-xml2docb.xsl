@@ -26,7 +26,10 @@
         <variablelist><title></title>
         <xsl:for-each select="option">
           <xsl:if test="string-length(description) > 0">
-            <varlistentry><term><option><xsl:value-of select="@name"/></option></term>
+            <xsl:variable name="id_option">
+              <xsl:value-of select="translate(@name, ' ', '_')"/>
+            </xsl:variable>
+            <varlistentry><term><option id="configuration.{../../@name}.{$id_option}"><xsl:value-of select="@name"/></option></term>
             <listitem>
               <para>
                 <xsl:value-of select="description" disable-output-escaping="yes" />

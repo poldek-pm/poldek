@@ -13,7 +13,7 @@
 <tbody>
 <row>
   <entry>pndir</entry> <entry>read, write, update, incremental update</entry>
-  <entry>Native &poldek; index format since version 0.20. <para> Based on tndb (cdb-like) DBM library. 
+  <entry>Native <application>poldek</application> index format since version 0.20. <para> Based on tndb (cdb-like) DBM library. 
   Consist of 3 database files: first, <emphasis>packages.ndir</emphasis> with 
   basic package informations, second <emphasis>packages.ndir.dscr</emphasis> with  
   with common (BuildHost, Distribution, etc) and "C" package descriptions and 
@@ -23,7 +23,7 @@
 
 <row>
   <entry>hdrl</entry> <entry>read, update</entry>
-  <entry> Native &apt-get; and other tools (<application>urpmi</application> AFAIK) index format. 
+  <entry> Native <application>apt-get</application> and other tools (<application>urpmi</application> AFAIK) index format. 
   <para>
    Consist of one file (<emphasis>pkglist.%{repository}.bz2</emphasis>) with raw, often cut down, 
    RPM package headers. 
@@ -32,7 +32,7 @@
 
 <row>
   <entry>yum</entry> <entry>read, update</entry>
-  <entry> Native &yum; index format 
+  <entry> Native <application>yum</application> index format 
   <para> 
    Consist of one file with list of packages IDs and directory of *.hdr files
    with raw RPM package headers. 
@@ -41,7 +41,7 @@
 
 <row>
   <entry>pdir</entry> <entry>read, write, update, incremental update</entry>
-  <entry>Native &poldek; index format prior to 0.20 version <para> Based on custom 
+  <entry>Native <application>poldek</application> index format prior to 0.20 version <para> Based on custom 
   binary format. Consist of one database file (<emphasis>packages.dir</emphasis>) with 
   all needed package header data. </para></entry>
 </row>

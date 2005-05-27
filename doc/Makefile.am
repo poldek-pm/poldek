@@ -17,8 +17,8 @@ EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN) manual
 
 doc: $(GEN)
 
-m_index.xml: manual.xml
-	./mkindex.pl $< > $@
+m_index.xml: manual.xml m_config.xml manual/*.xml
+	./mkindex.pl manual.xml m_config.xml manual/*.xml > $@
 
 m_config.xml: $(CONFXMLS)
 	./conf-xml2.sh docb poldek.conf.xml > $@

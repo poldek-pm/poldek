@@ -4,21 +4,22 @@ require XML::Simple;
 use Data::Dumper;
 use vars qw($file $xs $ref $xml);
 
-foreach (@ARGV) {
-    if (!defined $file && $_ !~ /^\-/) {
-        $file = $_;
-        last;
-    }
+my %out = ();
+foreach my $file (@ARGV) {
+    #print STDERR "FILE $file\n";
+    $xs = new XML::Simple();
 
+    open(F, "<$file") || die;
+    my @lines = <F>;
+    close(F);
+    if ($lines[0] !~ /\<\?xml\s/) {
+        unshift @lines, "<xml>";
+        push @lines, "</xml>";
+    }
+    $ref = $xs->XMLin(join('', @lines), keeproot => 1, keyattr => [], forcecontent => 1);
+    traverse($ref->{xml}, \%out);
 }
 
-die "no file!" if !$file;
-$xs = new XML::Simple();
-$ref = $xs->XMLin($file, keeproot => 1, keyattr => [], forcecontent => 1);
-$xml = $ref->{article};
-my %out = ();
-traverse($xml, \%out);
-#print Dumper($xml);
 sub traverse {
     my $xml = shift;
     my $outhref = shift || die;
@@ -28,7 +29,8 @@ sub traverse {
                 if (ref $xml->{$_} eq 'HASH') {
                     my $id = $xml->{$_}->{id} || '';
                     my $content = $xml->{$_}->{content};
-
+                    $content =~ s/^\s+//;
+                    $content =~ s/\s+$//;
                     print qq{<indexterm zone="$id"><primary>$content</primary></indexterm>\n}
                       if $id;
 
