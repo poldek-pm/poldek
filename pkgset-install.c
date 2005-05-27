@@ -108,12 +108,20 @@ int process_pkg_deps(int indent, struct pkg *pkg,
                      struct pkgset *ps, struct upgrade_s *upg, int process_as);
 
 static
-int select_best_pkg(const struct pkg *marker,
-                    struct pkg **candidates, int npkgs,
+int do_select_best_pkg(const struct pkg *marker,
+                       struct pkg **candidates, int npkgs,
+                       struct pkgset *ps, struct upgrade_s *upg);
+
+static
+int select_best_pkg(const struct pkg *marker, tn_array *candidates,
                     struct pkgset *ps, struct upgrade_s *upg);
+
 
 static
 int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg);
+
+static int marked_for_removal(struct pkg *pkg, struct upgrade_s *upg);
+
 
 /* anyone of pkgs is marked? */
 static inline int one_is_marked(struct pkgmark_set *pms, struct pkg *pkgs[],
@@ -189,35 +197,40 @@ int is_installable(struct pkg *pkg, struct poldek_ts *ts, int is_hand_marked)
     return install;
 }
 
+
+/* looks into Obsoletes only */
 static
 struct pkg *select_supersede_pkg(const struct pkg *pkg, struct pkgset *ps,
                                  struct upgrade_s *upg) 
 {
-    const struct capreq_idx_ent *ent;
+    tn_array *pkgs;
     struct pkg *bypkg = NULL;
     
-    if ((ent = capreq_idx_lookup(&ps->obs_idx, pkg->name))) {
+    if ((pkgs = pkgset_search(ps, PS_SEARCH_CAP, pkg->name))) {
         int i, best_i;
-        struct pkg **ent_pkgs = (struct pkg**)ent->crent_pkgs;
-        best_i = select_best_pkg(pkg, ent_pkgs, ent->items, ps, upg);
+        best_i = select_best_pkg(pkg, pkgs, ps, upg);
 
-        for (i=best_i; i < ent->items; i++) {
-            if (strcmp(pkg->name, ent_pkgs[i]->name) == 0)
-                continue;
-            DBGF("found %s <- %s, %d, %d\n", pkg_snprintf_s(pkg),
-                 pkg_snprintf_s0(ent_pkgs[i]),
-                 pkg_caps_obsoletes_pkg_caps(ent_pkgs[i], pkg), 
-                 pkg_caps_obsoletes_pkg_caps(pkg, ent_pkgs[i]));
+        for (i=best_i; i < n_array_size(pkgs); i++) {
+            struct pkg *p = n_array_nth(pkgs, i);
             
-            if (pkg_caps_obsoletes_pkg_caps(ent_pkgs[i], pkg) &&
-                !pkg_caps_obsoletes_pkg_caps(pkg, ent_pkgs[i])) {
+            if (strcmp(pkg->name, p->name) == 0)
+                continue;
+            
+            DBGF("found %s <- %s, %d, %d\n", pkg_snprintf_s(pkg),
+                 pkg_snprintf_s0(p),
+                 pkg_caps_obsoletes_pkg_caps(p, pkg), 
+                 pkg_caps_obsoletes_pkg_caps(pkg, p));
+            
+            if (pkg_caps_obsoletes_pkg_caps(p, pkg) &&
+                !pkg_caps_obsoletes_pkg_caps(pkg, p)) {
                 
-                bypkg = ent_pkgs[i];
+                bypkg = p;
                 break;
             }
         }
     }
     DBGF("%s -> %s\n", pkg_snprintf_s(pkg), bypkg ? pkg_snprintf_s(bypkg) : "NONE");
+    n_array_free(pkgs);
     return bypkg;
 }
 
@@ -316,11 +329,29 @@ struct pkg *select_pkg(const char *name, tn_array *pkgs,
     return selected_pkg;
 }
 
+static
+int select_best_pkg(const struct pkg *marker, tn_array *candidates, 
+                    struct pkgset *ps, struct upgrade_s *upg)
+{
+    struct pkg **candidates_buf;
+    int i, npkgs;
+    
+    npkgs = n_array_size(candidates);
+    candidates_buf = alloca(sizeof(*candidates_buf) * (npkgs + 1));
+    for (i=0; i < n_array_size(candidates); i++) {
+        candidates_buf[i] = n_array_nth(candidates, i);
+        i++;
+    }
+    candidates_buf[i] = NULL;
+
+    return do_select_best_pkg(marker, candidates_buf, npkgs, ps, upg);
+}
+
 
 static
-int select_best_pkg(const struct pkg *marker,
-                    struct pkg **candidates, int npkgs,
-                    struct pkgset *ps, struct upgrade_s *upg)
+int do_select_best_pkg(const struct pkg *marker,
+                       struct pkg **candidates, int npkgs,
+                       struct pkgset *ps, struct upgrade_s *upg)
 {
     int *ncnfls, i, j, i_best, cnfl_min;
     int i_ver_eq = -1, i_evr_eq = -1;
@@ -426,10 +457,27 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
     found = psreq_lookup(ps, req, &suspkgs, (struct pkg **)pkgsbuf, &nsuspkgs);
         
     if (found && nsuspkgs) {
-        struct pkg **matches;
-        int nmatches = 0;
+        struct pkg **matches, **new_suspkgs;
+        int n, i, nmatches = 0;
 
+        /* remove marked for removal items from suspected packages */
+        new_suspkgs = alloca(sizeof(*new_suspkgs) * nsuspkgs);
+        n = 0;
+        for (i=0; i < nsuspkgs; i++) {
+            if (marked_for_removal(suspkgs[i], upg)) {
+                DBGF("%s: removed marked for removal\n", pkg_snprintf_s(suspkgs[i]));
+                continue;
+            }
+            new_suspkgs[n++] = suspkgs[i];
+        }
+        
+        suspkgs = new_suspkgs;
+        nsuspkgs = n;
         found = 0;
+
+        if (n == 0)             /* all packages are marked for removal */
+            goto l_end;
+        
         matches = alloca(sizeof(*matches) * nsuspkgs);
         if (psreq_match_pkgs(pkg, req, upg->strict, suspkgs,
                              nsuspkgs, matches, &nmatches)) {
@@ -441,7 +489,7 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
                 int best_i = 0;
 
                 if (nobest == 0 && nmatches > 1)
-                    best_i = select_best_pkg(pkg, matches, nmatches, ps, upg);
+                    best_i = do_select_best_pkg(pkg, matches, nmatches, ps, upg);
                 *best_pkg = matches[best_i];
 
                 if (other_version_marked(upg->ts->pms, *best_pkg, ps->pkgs,
@@ -464,7 +512,7 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
         }
     }
     
-
+l_end:
     return found;
 }
 
@@ -1030,9 +1078,15 @@ static
 int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                      struct upgrade_s *upg, int process_as) 
 {
-    struct pkg *obspkg;
-    int i, obspkg_by_obsoletes, obspkg_checked = 0;
-
+    int i;
+    struct successor {
+        struct pkg *realpkg; /* not null if found */
+        struct pkg *pkg;     /* not null if found and qualified as successor */
+        int by_obsoletes;    /* true if found using Obsoletes */
+        int ndragged;        /* number of packages dragged by */
+        int searched;        /* true if successor have been searched */
+    } successor;
+    
     if (sigint_reached())
         return 0;
 
@@ -1045,24 +1099,38 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
     DBGF("%s, greedy %d\n", pkg_snprintf_s(pkg),
          upg->ts->getop(upg->ts, POLDEK_OP_GREEDY));
 
-    obspkg = NULL;
-    obspkg_by_obsoletes = 0;
+    memset(&successor, 0, sizeof(successor));
     if (process_as == PROCESS_AS_ORPHAN &&
         upg->ts->getop(upg->ts, POLDEK_OP_AGGREEDY)) {
-        struct pkg *p;
-        int ndragged = 0;
-
         if (pkg_drags(pkg, ps, upg) == 0) {
-            p = select_successor(pkg, ps, upg, &obspkg_by_obsoletes);
-            if (p && (ndragged = pkg_drags(p, ps, upg)) > 0) {
+            struct pkg *p;
+            int is_marked = 0, ndragged = 0, by_obsoletes = 0;
+
+            p = select_successor(pkg, ps, upg, &by_obsoletes);
+            if (p && (pkg_is_marked(upg->ts->pms, p) ||
+                      pkg_is_marked_i(upg->ts->pms, p)))
+                is_marked = 1;
+
+            successor.realpkg = p;
+            successor.by_obsoletes = by_obsoletes;
+            
+            /* do not follow successor if package drags something and
+              is not marked */
+            if (p && (ndragged = pkg_drags(p, ps, upg)) > 0 && is_marked == 0) {
                 DBGF("OMIT select_successor %s -> %s (%d)\n",
                      pkg_snprintf_s(pkg), pkg_snprintf_s0(p), ndragged);
                 p = NULL;
                 /* it is possible that select_successor() gives equal package version */
             } else if (p == NULL || pkg_cmp_evr(p, pkg) > 0) {
-                obspkg = p;
-                obspkg_checked = 1; 
+                successor.pkg = p;
             }
+            
+            successor.searched = 1;
+            successor.ndragged = ndragged;
+            DBGF("successor of %s is %s, ndragged=%d, marked=%d\n",
+                 pkg_snprintf_s(pkg),
+                 successor.realpkg != NULL ? pkg_snprintf_s0(successor.realpkg) : "(null)",
+                 ndragged, is_marked);
         }
     }
     
@@ -1125,7 +1193,6 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                 goto l_end_loop;
             }
 #endif
-            /* obspkg !=  NULL => do aggresive upgrade */
             if (!dbpkg_set_provides(upg->uninst_set, req)) {
                 msg_i(3, indent, "%s: %s skipped foreign req\n",
                      pkg_snprintf_s(pkg), reqname);
@@ -1136,13 +1203,13 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
             }
         }
         
-        /* cached */
+        /* cached? */
         if (db_deps_provides(upg->db_deps, req, DBDEP_DBSATISFIED)) {
             msg_i(3, indent, "%s: satisfied by db [cached]\n",
                   capreq_snprintf_s(req));
             DBGF("%s: satisfied by db [cached]\n", capreq_snprintf_s(req));
             
-            
+        /* satisfied by db? */
         } else if (pkgdb_match_req(upg->ts->db, req, upg->strict,
                                    upg->uninst_set->dbpkgs)) {
 
@@ -1152,13 +1219,14 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
             db_deps_add(upg->db_deps, req, pkg, tomark,
                         process_as | DBDEP_DBSATISFIED);
             
-        } else if (obspkg == NULL && tomark &&
+        /* no successor selected and to mark candidates */
+        } else if (successor.pkg == NULL && tomark &&
                    upg->ts->getop(upg->ts, POLDEK_OP_FOLLOW)) {
             struct pkg *real_tomark = tomark;
             if (tomark_candidates) {
                 int n;
                 n = upg->ts->askpkg_fn(capreq_snprintf_s(req),
-                                         tomark_candidates, tomark);
+                                       tomark_candidates, tomark);
                 real_tomark = tomark_candidates[n];
                 free(tomark_candidates);
                 tomark_candidates = NULL;
@@ -1178,7 +1246,8 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                     process_pkg_deps(indent, real_tomark, ps, upg, PROCESS_AS_NEW);
             }
             
-        } else {
+        /* unresolved req */    
+        } else { 
             if (process_as == PROCESS_AS_NEW) {
                 logn(LOGERR, _("%s: req %s not found"),
                     pkg_snprintf_s(pkg), capreq_snprintf_s(req));
@@ -1190,12 +1259,13 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                 int not_found = 1, by_obsoletes = 0;
                 struct pkg *p;
                 
-                if (obspkg_checked) {
-                    if (obspkg)
+                if (successor.searched) {
+                    if (successor.realpkg)
                         msg_i(3, indent, "aggresive upgrade %s to %s\n",
-                              pkg_snprintf_s(pkg), pkg_snprintf_s0(obspkg));
-                    p = obspkg;
-                    by_obsoletes = obspkg_by_obsoletes;
+                              pkg_snprintf_s(pkg), pkg_snprintf_s0(successor.realpkg));
+                    p = successor.realpkg;
+                    by_obsoletes = successor.by_obsoletes;
+                    
                 } else {
                     p = select_successor(pkg, ps, upg, &by_obsoletes);
                 }
@@ -1311,29 +1381,30 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
 static
 int find_replacement(struct upgrade_s *upg, struct pkg *pkg, struct pkg **rpkg)
 {
-    const struct capreq_idx_ent *ent;
+    tn_array *pkgs;
     struct pkg *bypkg = NULL;
 
 
     *rpkg = NULL;
-    
-    if ((bypkg = pkgset_lookup_1package(upg->ts->ctx->ps, pkg->name)) &&
+
+    /* simply higest version */
+    if ((bypkg = pkgset_lookup_1package(upg->ts->ctx->ps, pkg->name)) && 
         pkg_cmp_name_evr(bypkg, pkg) > 0) {
         
         *rpkg = bypkg;
         
-    } else if ((ent = capreq_idx_lookup(&upg->ts->ctx->ps->obs_idx,
-                                        pkg->name))) {
+    } else if ((pkgs = pkgset_search(upg->ts->ctx->ps, PS_SEARCH_OBSL, pkg->name))) {
         int i;
         
-        for (i=0; i < ent->items; i++) {
-            if (pkg_caps_obsoletes_pkg_caps(ent->crent_pkgs[i], pkg) &&
-                pkg_cmp_name_evr(ent->crent_pkgs[i], pkg) > 0) {
-                
-                *rpkg = ent->crent_pkgs[i];
+        for (i=0; i < n_array_size(pkgs); i++) {
+            struct pkg *p = n_array_nth(pkgs, i);
+            if (pkg_caps_obsoletes_pkg_caps(p, pkg) &&
+                pkg_cmp_name_evr(p, pkg) > 0) {
+                *rpkg = p;
                 break;
             }
         }
+        n_array_free(pkgs);
     }
 
     if (*rpkg && pkg_is_marked(upg->ts->pms, *rpkg)) {
@@ -1351,15 +1422,19 @@ int resolve_conflict(int indent,
                      struct pkg *dbpkg, struct pkgset *ps,
                      struct upgrade_s *upg) 
 {
+    struct capreq *req = NULL;
     struct pkg *tomark = NULL;
-    struct capreq *req = (struct capreq*)cnfl;
+    struct pkg **tomark_candidates = NULL, ***tomark_candidates_ptr = NULL;
     int found = 0, by_replacement = 0;
 
     if (!upg->ts->getop(upg->ts, POLDEK_OP_FOLLOW))
         return 0;
 
-    if (!capreq_versioned(req))
+    if (!capreq_versioned(cnfl))
         return 0;
+    
+    req = capreq_clone(NULL, cnfl);
+    
 #if 0    
     printf("B %s -> ", capreq_snprintf_s(req));
     capreq_revrel(req);
@@ -1371,9 +1446,24 @@ int resolve_conflict(int indent,
     DBGF("find_req %s %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(req));
     capreq_revrel(req);
     DBGF("find_req %s %s\n", pkg_snprintf_s(pkg), capreq_snprintf_s(req));
+
     
-    found = find_req(pkg, req, &tomark, NULL, ps, upg);
+    if (upg->ts->getop(upg->ts, POLDEK_OP_EQPKG_ASKUSER) && upg->ts->askpkg_fn)
+        tomark_candidates_ptr = &tomark_candidates;
+
+    found = find_req(pkg, req, &tomark, tomark_candidates_ptr, ps, upg);
     capreq_revrel(req);
+    
+    if (found) {
+        struct pkg *real_tomark = tomark;
+        if (tomark_candidates) {
+            int n;
+            n = upg->ts->askpkg_fn(capreq_snprintf_s(req), tomark_candidates, tomark);
+            real_tomark = tomark_candidates[n];
+            n_cfree(&tomark_candidates);
+        }
+        tomark = real_tomark;
+    }
     
     if (!found) {
         found = find_replacement(upg, dbpkg, &tomark);
@@ -1381,13 +1471,12 @@ int resolve_conflict(int indent,
     }
     	
     if (!found)
-        return 0;
+        goto l_end;
         
     if (tomark == NULL)         /* already in install set */
-        return found;
-
-    found = 0;
+        goto l_end;
     
+    found = 0;
     if (by_replacement || pkg_obsoletes_pkg(tomark, dbpkg)) {
         if (pkg_is_marked_i(upg->ts->pms, tomark)) {
             //msg_i(1, indent, "%s 'MARX' => %s (cnfl %s)\n",
@@ -1408,6 +1497,8 @@ int resolve_conflict(int indent,
             process_pkg_deps(indent, tomark, ps, upg, PROCESS_AS_NEW);
     }
     
+l_end:
+    capreq_free(req);
     return found;
 }
 
