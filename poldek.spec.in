@@ -7,7 +7,7 @@
 #  
 #%define _with_poldekuser 1
 %define _unpackaged_files_terminate_build  %{nil}
-#%define snap @SNAP@
+##define snap @SNAP@
 
 Summary:	A full-featured frontend to RPM
 Name:		poldek
@@ -142,6 +142,9 @@ fi
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.32  2005/05/27 15:27:20  mis
+- commented out %define is still defined? rpm bug?
+
 Revision 1.31  2005/05/23 20:00:49  mis
 - updates
 
