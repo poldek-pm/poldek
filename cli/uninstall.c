@@ -35,14 +35,13 @@ static int uninstall(struct cmdctx *cmdctx);
 #define OPT_GID             OPT_GID_OP_UNINSTALL
 #define OPT_UNINSTALL       'e'
 #define OPT_INST_NODEPS     (OPT_GID + 2)
-#define OPT_INST_FORCE      (OPT_GID + 3)
 
 static struct argp_option options[] = {
-{"force", OPT_INST_FORCE, 0, 0, N_("Remove packages ignoring broken dependencies"), OPT_GID },
-{"test", 't', 0, 0, N_("Don't uninstall, but tell if "
-                       "it would work or not"), OPT_GID },
-{"nofollow", 'N', 0, 0, N_("Don't remove packages orphaned by "
-                           "selected ones"), OPT_GID },
+{"test", 't', 0, 0,
+ N_("Do not remove, but tell if it would work or not"), OPT_GID },
+
+{"nofollow", 'N', 0, 0, N_("Remove only selected packages"), OPT_GID },
+
 {"nodeps", OPT_INST_NODEPS, 0, 0, N_("Ignore broken dependencies"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
@@ -149,10 +148,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             ts->setop(ts, POLDEK_OP_NODEPS, 1);
             break;
             
-        case OPT_INST_FORCE:
-            ts->setop(ts, POLDEK_OP_FORCE, 1);
-            break;
-
         case 't':
             if (ts->getop(ts, POLDEK_OP_TEST))
                 ts->setop(ts, POLDEK_OP_RPMTEST, 1);
