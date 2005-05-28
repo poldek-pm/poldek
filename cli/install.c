@@ -70,7 +70,7 @@ static struct argp_option options[] = {
 {"reinstall", OPT_INST_REINSTALL, 0, 0, N_("Reinstall"), OPT_GID }, 
 {"downgrade", OPT_INST_DOWNGRADE, 0, 0, N_("Downgrade"), OPT_GID },
 {"force", OPT_INST_FORCE, 0, 0,
-     N_("Install packages ignoring broken dependencies"), OPT_GID },
+N_("Install packages ignoring broken dependencies, conflicts, etc"), OPT_GID },
 {"test", 't', 0, 0, N_("Don't install, but tell if it would work or not"),
      OPT_GID },
 {"fresh", 'F', 0, 0, N_("Upgrade packages, but only if an earlier version "
