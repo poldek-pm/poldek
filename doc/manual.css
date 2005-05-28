@@ -2,3 +2,6 @@
 .filename { color: #444444; font-weight: bold; }
 .screen { background-color: #EEEEEE; 
           font-family: courier; }
+.application { font-style: oblique; }
+
+h1 { font-size: 18px; }

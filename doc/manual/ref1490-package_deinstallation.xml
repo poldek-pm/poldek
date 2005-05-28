@@ -6,24 +6,17 @@
    </para>
   </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.force1500">--force </option></term>
-  <listitem>
-   <para>
-      Remove packages ignoring broken dependencies
-   </para>
-  </listitem>
-</varlistentry>
 <varlistentry><term><option id="ref.cmdl.test1500">-t, --test </option></term>
   <listitem>
    <para>
-      Don't uninstall, but tell if it would work or not
+      Do not remove, but tell if it would work or not
    </para>
   </listitem>
 </varlistentry>
 <varlistentry><term><option id="ref.cmdl.nofollow1500">-N, --nofollow </option></term>
   <listitem>
    <para>
-      Don't remove packages orphaned by selected ones
+      Remove only selected packages
    </para>
   </listitem>
 </varlistentry>

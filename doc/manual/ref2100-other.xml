@@ -1,4 +1,18 @@
 <variablelist><title>Other</title>
+<varlistentry><term><option id="ref.cmdl.pmcmd">--pmcmd=FILE </option></term>
+  <listitem>
+   <para>
+      Use FILE as PM(rpm) binary
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.sudocmd">--sudocmd=FILE </option></term>
+  <listitem>
+   <para>
+      Use FILE as sudo binary
+   </para>
+  </listitem>
+</varlistentry>
 <varlistentry><term><option id="ref.cmdl.cachedir">--cachedir=DIR </option></term>
   <listitem>
    <para>
@@ -9,7 +23,7 @@
 <varlistentry><term><option id="ref.cmdl.cmd">-C, --cmd </option></term>
   <listitem>
    <para>
-      Run in cmd mode
+      Run in command mode (like ipoldek does by default)
    </para>
   </listitem>
 </varlistentry>

@@ -38,7 +38,7 @@
 <varlistentry><term><option id="ref.cmdl.force">--force </option></term>
   <listitem>
    <para>
-      Install packages ignoring broken dependencies
+      Install packages ignoring broken dependencies, conflicts, etc
    </para>
   </listitem>
 </varlistentry>

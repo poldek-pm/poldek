@@ -32,9 +32,16 @@ In most string paramameters values environment variables are expanded:
 [screen]
 path = $HOME/foo
 [/screen]
-[/para][para]
-File could be combined from multiple configuration files with '%include'
-directive. This directive could include either local and remote HTTP/FTP
+[/para]
+</description>
+</section>
+
+<section id="macros" target="manual">
+<title>Special directives and macros</title>
+<description>
+[para]
+File can be combined from multiple configuration files with [option]%include[/option]
+directive. This directive can include either local and remote HTTP/FTP
 files, examples:
 [screen]
 %include /etc/foo.conf            # simply include /etc/foo.conf
@@ -42,15 +49,17 @@ files, examples:
 %include http://bar.org/foo.conf  # include foo.conf from remote location
 [/screen]
 Any "[ global ]" sections from included files are simply ignored.
-Files taken from remote locations could be updated using --upconf poldek's 
-option.
-[/para][para]
+Files taken from remote locations can be updated using <option>--upconf</option> 
+switch.
+[/para]
+
+[para]
 Simple macros are supported. Macros are declared as paramameter with
 underscore ('_') at beginning:
 [screen]
 _foo = /bar 
 [/screen]
-and could be expanded in any following value in %{NAME} form:
+and can be expanded in any following value in %{NAME} form:
 [screen]
 path = %{_foo}/dir    # path will be '/bar/dir'
 [/screen]
@@ -268,6 +277,14 @@ _distro  = pld
     </description>
   </option>
 
+  <option name="unique package names" type="boolean" default="no">
+    <description>
+    Controls visibility of multiple package instances with different EVR.
+    If on, only one, highest version will be visible.
+    </description>
+  </option>
+
+
   <option name="promoteepoch" type="boolean" default="no">
     <description>
     Epoch autopromotion during dependency comparision. RPM specific.
@@ -372,11 +389,6 @@ _distro  = pld
      Be tolerant for unmatched versioned dependencies which rpm tolerates, e.g.
      package A requires capability foo >= 1.0 while package B provides "foo"
      without any version. Use with care, it may cause weird dependency errors.
-    </description>
-  </option>
-
-  <option name="unique package names" type="boolean" default="no" hide="yes">
-    <description>
     </description>
   </option>
 
@@ -577,7 +589,7 @@ Each section describes one fetcher.
 
   <option name="proto" type="string-list" value="foo,bar">
     <description>
-    Protocol or protocols supported by fetcher. Name of the protocol could be 
+    Protocol or protocols supported by fetcher. Name of the protocol can be 
     completely arbitrary, i.e. if you can handle protocol "foo" by writing
     a script which takes URLs in form 'foo://'. 
     </description>
@@ -593,7 +605,7 @@ Each section describes one fetcher.
     Where COMMAND is the name or full path of command, OPTION is command specific 
     options. Macro '%d' is replaced with cache directory, '%D' is replaced with 
     'cache directory/file basename', and '%p' with file basename, %P with file full 
-    path (URL).  Optional suffix 'n' with %p and %P means that command could be 
+    path (URL).  Optional suffix 'n' with %p and %P means that command can be 
     invoked with multiple files at once.
     </description>
   </option>

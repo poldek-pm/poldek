@@ -24,15 +24,21 @@ m_config.xml: $(CONFXMLS)
 	./conf-xml2.sh docb poldek.conf.xml > $@
 
 poldek.info: manual.xml m_index.xml m_config.xml
-	docbook2texi --xinclude $< || true 
+	xmlif output=texi $< | docbook2texi --xinclude $< || true 
 	perl -pi -e 's|\@emph\{|\@samp\{|g' poldek.texi
 	makeinfo --no-split --force poldek.texi -o $@
 	perl -pi -e 's/^\* poldek manual: \(poldek\)(.+)$$/* poldek: (poldek)$$1/' $@
 	rm -f *.texi
 
 manual.html: manual.xml m_index.xml m_config.xml
-	xmlto xhtml-nochunks $< 
+	m4 -DPOLDEK_VERSION=@VERSION@ manual.xml | xmlif output=xhtml > manual.xml.tmp 
+	xmlto xhtml-nochunks manual.xml.tmp && mv manual.xml.html $@
 	perl -pi -e 's|<head>|<head><link href="manual.css" rel="stylesheet" rev="stylesheet" type="text/css">|' $@
+
+reference: 
+	touch ../cli/main.c
+	../make.sh  CFLAGS+="-DGENDOCBOOK=1"
+	../cli/poldek --docb
 
 poldek.conf.1: $(CONFXMLS)
 	./conf-xml2.sh man poldek.conf.xml

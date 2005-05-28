@@ -1,27 +1,27 @@
 
-<variablelist><title>Supported repositories</title>
-<varlistentry><term>pndir (read, write, update, incremental update)</term>
+<variablelist id="repositories.types"><title>Supported repositories</title>
+<varlistentry><term>pndir (features: read, write, update, incremental update)</term>
   <listitem>
-     <para> Native <application>poldek</application> index format since version 0.20. Based on
-     tndb (cdb-like) DBM library. Consist of 3 database files: first,
-     <filename>packages.ndir</filename> with
-     basic package informations, second <filename>packages.ndir.dscr</filename> with  
-     with common (BuildHost, Distribution, etc) and "C" package descriptions and 
-     third, <filename>packages.ndir.dscr.i18n</filename> with all non-English 
-     descriptions (if any)</para>
+     <para> Native <application>poldek</application> index format since 0.20 version. 
+     Based on tndb (cdb-like) DBM library. Consist of 3 database files: first,
+     <filename>packages.ndir</filename> with essentiall package meta-data, 
+     second <filename>packages.ndir.dscr</filename> with with common (BuildHost, 
+     Distribution, etc) and "C" package descriptions and third, 
+     <filename>packages.ndir.dscr.i18n</filename> with all non-English descriptions 
+     (if any)</para>
   </listitem>
 </varlistentry>
 
-<varlistentry><term>hdrl (read, update)</term>
+<varlistentry><term>hdrl (features: read, update)</term>
   <listitem>
-     <para> Native <application>apt-get</application> and other tools (<application>urpmi</application> AFAIK) 
-     index format. Consist of one file (<emphasis>pkglist.%{repository}.bz2</emphasis>)
-     with raw, often cut down, RPM package headers.  </para>
-     <para> Aliases: apt </para>
+     <para> Native <application>apt-get</application> and other tools 
+     (<application>urpmi</application> AFAIK) index format. Consist of one 
+     file (<emphasis>pkglist.%{repository}.bz2</emphasis>, hdlist) with raw, 
+     often cut down, RPM package headers.  </para> <para> Aliases: apt </para>
   </listitem>
 </varlistentry>
 
-<varlistentry><term>yum (read, update)</term>
+<varlistentry><term>yum (features: read, update)</term>
   <listitem>
     <para> Native <application>yum</application> index format.
        Consist of one file with list of packages IDs and directory of *.hdr files
@@ -30,7 +30,7 @@
   </listitem>
 </varlistentry>
 
-<varlistentry><term>pdir (read, write, update, incremental update)</term>
+<varlistentry><term>pdir (features: read, write, update, incremental update)</term>
   <listitem>
     <para>Native <application>poldek</application> index format prior to 0.20 version. Based on custom 
     binary format. Consist of one database file (<emphasis>packages.dir</emphasis>) with 
@@ -38,9 +38,11 @@
   </listitem>
 </varlistentry>
 
-<varlistentry><term>dir (read)</term>
+<varlistentry><term>dir (features: read)</term>
   <listitem>
-  <para> Dynamic index built by scanning directory for packages. </para>
+  <para> Dynamic index built by scanning with a bunch of packages in it, 
+         no indexing required.
+  </para>
   </listitem> 
 </varlistentry>
 </variablelist>

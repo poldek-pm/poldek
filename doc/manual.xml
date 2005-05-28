@@ -10,7 +10,7 @@
 <!ENTITY ipoldek-prompt "<prompt>$</prompt> <command>ipoldek</command>">
 <!ENTITY apt-get "<application>apt-get</application>">
 <!ENTITY yum "<application>yum</application>">
-<!ENTITY supported-repositories SYSTEM "manual/supported-repositories.xml">
+
 <!ENTITY file_poldek-pri-sample-conf SYSTEM "../conf/poldek-pri-sample.conf">
 
 <!ENTITY ref-repository_index_creation SYSTEM "manual/ref0700-repository_index_creation.xml">
@@ -24,27 +24,34 @@
 <!ENTITY ref-verification_options-switches SYSTEM "manual/ref1700-verification_options-switches.xml">
 <!ENTITY ref-splitting_options SYSTEM "manual/ref1900-splitting_options.xml">
 <!ENTITY ref-other SYSTEM "manual/ref2100-other.xml">
-
 <!ENTITY manual_index SYSTEM "m_index.xml">
 <!ENTITY section_configuration SYSTEM "m_config.xml">
 ]>
 
 <article lang="en">
 <articleinfo>
-<title>&poldek; manual</title>
+<title>poldek manual</title>
 
+<?xmlif if output='texi'?>
 <!-- satisfy docbook2X -->
-<title role="texinfo-node">poldek</title>
-<titleabbrev role="texinfo-node">poldek</titleabbrev>
-<abstract role="texinfo-node">
- <para>
-   Full-featured packages management utility.
- </para>
-</abstract>
+ <title role="texinfo-node">poldek</title>
+ <titleabbrev role="texinfo-node">poldek</titleabbrev>
+ <abstract role="texinfo-node">
+  <para>
+    Full-featured packages management utility.
+  </para>
+ </abstract>
 
-<subjectset scheme="texinfo-directory">
+ <subjectset scheme="texinfo-directory">
    <subject><subjectterm>Miscellaneous</subjectterm></subject>
-</subjectset>
+ </subjectset>
+<?xmlif elif output='html|xhtml' ?>
+ <abstract role="texinfo-node">
+  <para>
+   This paper documents poldek meta-package manager POLDEK_VERSION.
+  </para>
+ </abstract>
+<?xmlif if ?>
 
 <authorgroup>
 <author>
@@ -54,7 +61,7 @@
 </authorgroup>
 
 <date>$Date$</date>
-<releaseinfo>$Revision$</releaseinfo>
+<releaseinfo>$Id$</releaseinfo>
 
 <keywordset>
 <keyword>package management</keyword>
@@ -65,138 +72,216 @@
 <keyword>poldek</keyword>
 <keyword>PLD</keyword>
 </keywordset>
-
 </articleinfo>
 
 <sect1 id="overview"> <title id="overview.title">Overview</title>
 <para>
-The &poldek; is a full-featured packages management utility. Basically 
-designed to work with &rpm; packages, but could be adapted to others package
-managers (PM) with a little effort.
-</para>
-
-<para>
-Basic &poldek;'s features are similar to every modern package updater 
-like &apt-get;. Program takes information about packages 
+&poldek; is a full-featured meta-package manager, basically designed 
+to run over &rpm;. Its basic features are similar to every 
+modern package updater like &apt-get;. Program gets packages meta-information 
 from package repositories (aka <emphasis>sources</emphasis>) 
-and do package management tasks like installation, upgrading or removal.
+and do package management tasks like installation, upgrading or removal
+with automatic dependency handling.
 </para>
 
 <para>
-Package dependencies are automatically handled, so if you need to install a package 
-which requires other packages to be installed, poldek downloads and  installs all 
-the required packages by itself. 
-</para>
-
-<para>
-Main features of &poldek; are:
-
-<itemizedlist>
+<variablelist id="overview.features"><title>Features</title>
+<varlistentry><term>Easy to use</term>
   <listitem>
-    <para>Relatively fast dependency processing</para><para> 
-
-    Package dependencies, conflicts and setting in order are handled by poldek
-    itself without using <application>rpmlib</application>, so the program 
-    is significantly faster and using less memory than rpmlib-based tools.
+    <para> 
+    Basic command line options are similar in use to &rpm; ones, 
+    thus it is easy to learn for users familiar with &rpm;. Besides basic 
+    command line mode, &poldek; has shell-like interface 
+    with quite intuitive command set, auto-completion and history.
     </para>
   </listitem>
+</varlistentry>
 
+<varlistentry><term>Relatively fast and scalable</term>
   <listitem>
-    <para> Flexible installation of a big package sets 
-    
+    <para>
+    &poldek; is designed with efficiency and scalability in mind. 
+    Native package repository index format is optimized for storage size 
+    and loading speed. Package dependencies, conflicts and setting 
+    in order are handled without using <application>rpmlib</application>, 
+    so the program is significantly faster and needs less memory than 
+    rpmlib-based tools. On typical machine &poldek; can handle 20K packages 
+    without noticable speed degradation.
+    </para>
+  </listitem>
+</varlistentry>
+
+<varlistentry><term>Incremental repository updates</term>
+  <listitem>
+    <para> 
+    Feature consist in creation of repository index delta files with changes to 
+    last created index. This gives possibility to update local copy of the repository 
+    index by download only deltas, what drastically reduces amout of data need to 
+    be retrieved when remote repository was changed a bit and/or it is huge.
+    </para>
+  </listitem>
+</varlistentry>
+
+<varlistentry><term>Support for multiple repository types</term>
+  <listitem>
+    <para> 
+    &poldek; supports various types of package repositories including
+    &apt-get; and &yum; ones, see <link linkend="repositories.types">list</link> of
+    supported repository types for details. Other types may be easily added as
+    plugins.
+    </para>
+  </listitem>
+</varlistentry>
+
+<varlistentry><term>Flexible installation of a big package sets</term>
+  <listitem>
+    <para>
     Before their installation packages are divided into small groups,
-    usually from 2 to 10 items (depending on their reciprocal dependencies).
-    Each group is installed separately, which ensures that unsucessful installation
-    of one of the groups doesn't influence other groups. 
+    usually 2-10 items (depending on their reciprocal dependencies).
+    Each group is installed separately, what ensures that unsucessful installation
+    of one of the groups does not influence other groups. 
     Another benefit of this separate installation is that it requires
     less memory and disk space than the usual one.
-</para>
-</listitem>
-</itemizedlist>
+   </para>
+  </listitem>
+</varlistentry>
+
+<varlistentry><term>Flexible downloading</term>
+  <listitem>
+    <para>
+    Out of the box program supports FTP, HTTP, HTTPS, RSYNC and SMB and 
+    may be easily extended to others protocols by external scripts. FTP and
+    HTTP are handled by built-in client designed to retrieve files over slow 
+    or unstable network connections -- if a download fails due to a network 
+    problem, it will keep trying until the whole file will be downloaded.
+    Download resuming, timestamp checking, proxy support are implemented as well.
+    </para>
+  </listitem>
+</varlistentry>
+
+
+<varlistentry><term>Repository management</term>
+  <listitem>
+    <para>
+     Besides typical package management tasks &poldek; can do 
+     tasks which helps to manage distro repository. Features include:
+     <itemizedlist>
+     <listitem><para> Detail reports about dependency loops, unmet dependencies,
+     package conflicts and obsolences and file sharing/conflicts.</para></listitem>
+     
+     <listitem><para> Division package set to chunks to be placed on removable media
+     with ordering according dependency tree and with priority handling.</para></listitem>
+     <listitem><para> Moving packages from one repository to another with full 
+     dependency checking. </para></listitem>
+     </itemizedlist>
+    </para>
+  </listitem>
+</varlistentry>
+
+
+</variablelist>
 
 </para>
 </sect1>
 
 <sect1 id="quickstart"> <title>Quick start</title>
 <para> 
-Suppose you want to prepare local directory /pub/RPMS with packages
-to be available to poldek. 
+Suppose you want to: a) use remote &apt-get; repository of Fedora Core 3, 
+b) prepare your local directory <filename>$HOME/rpm/RPMS</filename> with 
+packages to be available to poldek. 
 </para>
+
 <sect2 id="quickstart.configure"> <title>Step #1 - Configure repositories</title>
 <para>
-Put source configuration in <filename id="file.poldekrc">$HOME/.poldekrc</filename> or
-in <filename id="file.source-conf">/etc/poldek/source.conf</filename> minimal configuration
-of repositories you want to use. Say, you want to use remote existing repository of Fedora Core 3 
-and your local directory <filename>/home/pub/RPMS</filename> contains packages
-you want to use. Configuration for both might looks like:
+Source configuration may be placed in your local 
+<filename id="file.poldekrc">$HOME/.poldekrc</filename> or global <filename id="file.source-conf">/etc/poldek/source.conf</filename>. Whatever you choose, put there 
+something like:
 <screen>
 
 [source]
-name   = fc3 
-type   = apt                                                   # use apt repository index
-_fcurl = http://download.fedora.us/fedora/fedora/3/i386        # macro, just for short
-path   = %{_fcurl}/base/pkglist.os.bz2                    # location of the index
-prefix = %{_fcurl}/RPMS.os	                               # location of the packages
+_fcurl = http://download.fedora.us/fedora/fedora/3/i386 # macro, just for short
 
+name   = fc3                              # name 
+type   = apt                              # use apt repository index
+path   = %{_fcurl}/base/pkglist.os.bz2    # location of the index
+prefix = %{_fcurl}/RPMS.os                # location of the packages cause 
+                                          #  in apt repositories index and packages 
+                                          #  are in separate locations
 [source]
-name = rpms
-path = /home/pub/RPMS
+name = home
+path = $HOME/rpm/RPMS
 </screen>
 </para>
 </sect2>
 
 <sect2 id="quickstart.create"> <title>Step #2 - Create repository index</title>
   <para>
-  FC3 index is ready, but an index must be created for your local directory.
+  Fedora Core 3 &apt-get; index is ready, we must create one for <filename>$HOME/rpm/RPMS</filename>:
 
   <screen>
-  &prompt; <command>poldek -n <replaceable>rpms</replaceable> --makeidx</command>
+  &prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx</command>
   </screen>
 
-  As result several files with package data will be created under /home/pub/RPMS.
+  As result several files with package data will be created under 
+  <filename>$HOME/rpm/RPMS</filename>.
   <screen>    
-  &poldek-prompt; -n rpms --makeidx
-  Creating pndir index of /home/pub/RPMS (type=dir)...
-  Loading [dir]rpms...
+  &prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx</command>
+  Creating pndir index of /home/me/rpm/RPMS (type=dir)...
+  Loading [dir]home...
   200..400..600..800..1000..1200..1400..1600..1652
-  Writing /pub/RPMS/packages.ndir.gz...
+  Writing /home/me/rpm/RPMS/packages.ndir.gz...
   </screen>
-  Remember to call this command after every change of /home/pub/RPMS content.
+  Remember to call this command after every change of 
+  <filename>$HOME/rpm/RPMS</filename>'s content.
   </para>
 </sect2>
 
 <sect2 id="quickstart.use"> <title>Step #3 - Use the program</title>
 <para>
-Syntax:
+&poldek; brings two commands: &poldekcmd; with basic command line interface
+and &ipoldekcmd; with interactive mode command interface. Invoking syntax is:
 <screen>
 &poldek-prompt; [OPTION...] [PACKAGE...]
 &ipoldek-prompt; [OPTION...] [COMMAND] [COMMAND_OPTION...] [PACKAGE...]
 </screen>
 
-For example to install (or upgrade) apache HTTP server:
+For example to install or upgrade apache HTTP server:
 <screen>
 &poldek-prompt; -uv apache 
 &ipoldek-prompt; install apache
 </screen>     
  <!-- See also <url name="sample interactive mode session" url="screenshoots.html">. -->
 
-To use only particular repository only, <option>-n</option> should be used:
+Selection of particular repositories may be done by <option>-n</option> option:
 <screen>
-&ipoldek-prompt; -n fc3 ls 
-&ipoldek-prompt; -n rpms -uv foo-3.1-2
+&ipoldek-prompt; -n fc3 ls foo\*
+&poldek-prompt; -n home -uv foo-3.1-2
+&ipoldek-prompt; -n home -s http://foo.bar/RPMS/ install foo-3.1\*
 </screen>
 
-Help is available: for &poldek; use <option>--help</option> option; for &ipoldek;
-use <option>help</option> command:
+Most used &poldek; command options are compliant with &rpm;: 
+<option>--install</option> (<option>-i</option>), 
+<option>--upgrade</option> (<option>-u</option>,<option>-U</option>),
+<option>--erase</option> (<option>-e</option>), etc. Their &ipoldek; equivalents
+are: <option>install -IN</option> (--install), <option>install</option> (--upgrade) 
+and <option>uninstall</option> (--erase). Notice that &ipoldek; <option>install</option>
+command it more general -- equivalent of <option>--install</option> is 
+<option>install -IN</option>.
+</para>
+<para>
+
+Extensive help is available for all commands, for &poldekcmd; by using the <option>--help</option> switch, for &ipoldekcmd; by using the <option>help</option> command and 
+<option>--help</option> switch for individual commands:
 <screen>
 &poldek-prompt; --help
 &ipoldek-prompt; help
+&ipoldek-prompt; install --help
 </screen>
 
-&poldek; has shell like mode with puts you into a readline interface. To enter it, run program without 
-any command, example:
+Moreover &ipoldek; works in comfortable shell-like mode which puts you into 
+a readline interface. To enter it, run the program without any command:
 <screen id="screen.shell-start">
-&poldek-prompt; -n ac
+&ipoldek-prompt; -n ac
 Loading [pdir]ac...
 10998 packages read
 Loading [rpmdbcache]/var/lib/rpm...
@@ -206,8 +291,8 @@ Welcome to the poldek shell mode. Type "help" for help with commands.
 
 <prompt>poldek:/all-avail></prompt>
 </screen>
-Once you are on &poldek;'s command line, type 'help' and the rest should be, more or less, 
-self-explanatory.
+Once you are on &poldek;'s command line, type 'help' and the rest should be, more 
+or less, self-explanatory.
 </para>
 </sect2>     
 </sect1>
@@ -215,28 +300,32 @@ self-explanatory.
 <sect1 id="repositories"> <title>Package repositories</title>
 <para>
 Like other packages management tools &poldek; uses package repositories
-(<emphasis>sources</emphasis>) to obtain an information about available packages.
-Repository consist of database (<emphasis>package index</emphasis>) contains
-package data (dependencies, files, description, etc) and, of course packages 
-itself. Program supports various types of repositories, including &apt-get; and 
+(<emphasis>sources</emphasis>) to obtain meta-information about available 
+packages.
+
+Repository consist of database (<emphasis>package index</emphasis>) of
+package meta-data (dependencies, files, description, etc) and, of course packages 
+itself. Various types of repositories are supported including &apt-get; and 
 &yum; ones. 
 </para>
 
-&supported-repositories;
+include(manual/supported-repositories.xml)
 
 <para>
 Native &poldek; repositories 'pndir' and 'pdir' have <quote>incremental updates</quote> 
 feature consist in creation of package index delta files with changes to last created
-index. This gives possibility to update local index by download data with changes only,
-what significantly reduces amout of data need to be downloaded when repository changes 
-a bit.
+index. Deltas are used later to perform update of local indexes what noticeably
+reduces amout of data downloaded during repository update. In the other words,
+when repository contains 2000 packages and it was changed by adding 20 items,
+only information about that 20 packages will be retrieved on update (see
+<link linkend="repositories.using.update">Update</link> subsection).
 </para>
 
 <sect2 id="repositories.configuration"> <title>Repositories configuration</title>
 <para>
 Although repositories can be specified directly at command line,
-they are usually specified in configuration file. Every repository has it's 
-own section called <quote>source</quote>, for example:
+they are usually configured. Every repository has its own configuration 
+section <quote>[source]</quote>, for example:
 
 <screen>
 [source]
@@ -253,15 +342,15 @@ signed = yes
 
 [source]
 type = dir
-name = my-rpms
+name = home
 path = ${HOME}/rpm/RPMS
 auto = no                                            # load on demand only
 </screen>
  
-The <option>type</option> is not obligatory, if not set then is taken from
-<option>default index type</option> value. For all possible source configuration 
-and extensible description
-options see <link linkend="configuration">Configuration</link> section
+The <option>type</option> option is not obligatory - if not set then type is 
+taken from <option>default index type</option> configuration option value. 
+For all possible source configuration and extensible option description
+see <link linkend="configuration">Configuration</link> and 
 and <filename>*source.conf</filename> files supplied with &poldek;.
 </para>
 
@@ -275,19 +364,21 @@ Moreover &poldek; is able to read &apt-get;'s
 
 </sect2>
 
-<sect2 id="repositories.using"> <title>Using</title>
+<sect2 id="repositories.using"> <title>Using repositories</title>
 
-<para> If &poldek; is executed without options specifying 
-what repositories you want to use, then all configured sources are loaded 
-except they have <option>auto</option> turned off. If you want 
-to use subset of them or use they with disabled <option>auto</option>, 
-use <option>--sn</option> (<option>-n</option>) option. For example, to use 
-only <emphasis>my-rpms</emphasis> repository, do:
+<sect3 id="repositories.using.select"> <title>Selection</title>
+<para> Executed without repository selection options &poldek; 
+loads all configured repositories at startup, except they which have 
+<option>auto</option> turned off. 
+
+To use particular repositories use <option>--sn</option> 
+(<option>-n</option>) option, for example, to use only <emphasis>home</emphasis> 
+source, do:
 <screen>
-&poldek-prompt; -n my-rpms
+&poldek-prompt; -n home
 </screen>
 
-Repository name can be also a glob, to use all with <quote>distro</quote>
+Repository name can be also a glob, to use all sources with <quote>distro</quote>
 prefix, do:
 <screen>
 &poldek-prompt; -n distro\*
@@ -295,17 +386,17 @@ prefix, do:
 </para>
 
 <para>
-Non configured repositories can be specified directly from command line too
-using <option>--source</option> (<option>-s</option>) option. 
+Non configured repositories can be specified directly at command line
+by <option>--source</option> (<option>-s</option>) option. 
 The syntax is: 
 
 <screen>
 &poldek-prompt; [--st=TYPE] --source=SOURCEPATH [--prefix=PATH]
 </screen>
 
-where TYPE is one of index supported types, and SOURCEPATH is
+where <emphasis>TYPE</emphasis> is one of index supported types, and SOURCEPATH is
 the path or URL of repository. If package index and packages 
-are in different locations then <option>--prefix</option> can
+are located in different paths/URLs then <option>--prefix</option> can
 be used to point packages location. Examples:
 
 <screen>
@@ -315,6 +406,7 @@ be used to point packages location. Examples:
 &poldek-prompt; -s /tmp/packages.ndir.gz --prefix /media/cdrom
 </screen>
 </para>
+</sect3>
 
 <sect3 id="repositories.using.update"> <title>Updating</title>
 <para> 
@@ -333,7 +425,7 @@ With <option>--update</option> program looks for delta files for existing local 
 With <option>--update-whole</option> program updates whole package index if it is outdated. It is a good idea to run do updates regularly to keep indexes up to date.
 </para>
 <para>
-For local repositories program verifies its integrity only.
+Update requested for local repositories causes verification integrity of indexes.
 </para>
 
 <para> 
@@ -341,7 +433,7 @@ Examples:
 <screen>
 &poldek-prompt; --st pdir -s ftp://foo.bar.org/RPMS/ --up 
 &poldek-prompt; -s ftp://foo.bar.org/RPMS.index/ --prefix ftp://foo.bar.org/RPMS/ --upa
-&poldek-prompt; -n my-rpms --up
+&poldek-prompt; -n home --up
 </screen>
 </para>
 </sect3>
@@ -353,7 +445,7 @@ Examples:
 &poldek-prompt; -l
 distro          http://my-favourite-distro.org/1.0/RPMS/    (sign,type=pndir)
 distro-updates  http://my-favourite-distro.org/1.0/updates/ (sign,type=pndir)
-my-rpms         /home/me/rpm/RPMS/  (noauto,type=dir)
+home            /home/me/rpm/RPMS/  (noauto,type=dir)
 </screen>
 </para>
 </sect3>
@@ -361,7 +453,7 @@ my-rpms         /home/me/rpm/RPMS/  (noauto,type=dir)
 <sect3 id="repositories.using.listype"> <title>Listing available repository types</title>
 <para> To list all available repository types, use <option>--stl</option>:
 <screen>
-&poldek-prompt; -stl
+&poldek-prompt; --stl
 dir    r--  Dynamic index built by scanning directory for packages
              (aliases: rpmdir)
 hdrl   r-u  File with raw RPM package headers; used by apt-rpm
@@ -382,25 +474,26 @@ Legend: r - readable, w - writeable, u - updateable
 Creation of &poldek;'s repositories is quite simple, the syntax is:
 
 <screen>
-&poldek-prompt; -s PATH --mkidx[=PATH] [--mkidx-type=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
-&poldek-prompt; -n NAME --mkidx[=PATH] [--mkidx-type=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
+&poldek-prompt; -s PATH --mkidx[=PATH] [--mt=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
+&poldek-prompt; -n NAME --mkidx[=PATH] [--mt=TYPE[,TYPE]...] [--nodesc] [--nocompress] [--nodiff]
 </screen>
 </para>
 <para>
 what creates package index of repository specified by <option>-n</option> or <option>-s</option> and saves it under directory specified by <option>--mkidx</option>
 (a package directory by default). Type of created index is the same
-as specified by <option>default index type</option>, to make index of other type or many
-indexes of different types at once, <option>--mkidx-type</option> could be used. 
+as specified by <option>default index type</option> configuration option. 
+To make index of the other type or make many indexes of different types at once, use 
+<option>--mt</option> option.
 </para>
 
 <para>
-If previous repository index is different from currently created one then 
-index delta files are created under packages.i/ subdirectory. Outdated 
-deltas are automatically removed.
+For 'pndir' and 'pdir' indexes delta files are created if previous repository index 
+is different from currently created one. Outdated deltas are automatically removed.
+To skip deltas creation use <option>--nodiff</option> option.
 </para>
 
 <para>
-With <option>--nodesc</option> package descriptions are omitted; with <option>--nocompres</option> index will be uncompressed; with <option>--nodiff</option> delta files will not be created.
+Other related options are: <option>--nodesc</option> with that package descriptions are not saved to repository index and <option>--nocompres</option> means that uncompressed index will be created.
 </para>
 
 <para>
@@ -408,26 +501,26 @@ Examples:
 <screen>
 &poldek-prompt; -s ~/rpm/RPMS --mkidx --nodiff
 &poldek-prompt; -s /cdrom/RPMS --mkidx=/tmp
-&poldek-prompt; -n my-rpms --mkidx 
-&poldek-prompt; -n pld --mkidx --mkidx-type=pdir,pndir
+&poldek-prompt; -n home --mkidx 
+&poldek-prompt; -n pld --mkidx --mt=pdir,pndir
 </screen>
 </para>
 </sect2>
 
 <sect2 id="repositories.cache"> <title>Cache</title>
 <para>
-Program caches package index files only, packages are not cached unless <option>keep-download</option> 
-configuration option or command line switch is set. Default cache directory is 
-<filename id="file.home-poldek">$HOME/.poldek</filename>,
-it can be set to different location by <option>cachedir</option> configuration option.
-Cached files can be removed by three options:
+Program caches package index files only by default. To cache packages too, i.e. keep 
+them even after successful installation, set <option>keep download</option> 
+configuration option. Default cache directory is <filename id="file.home-poldek">$HOME/.poldek</filename>, it can be set to different location by <option>cachedir</option> 
+configuration option. Cached files can be removed by three options:
 <itemizedlist>
 <listitem> <para><option>--clean</option> remove source index files</para> </listitem>
-<listitem> <para><option>--clean-pkg</option> removes cached packages. </para></listitem>
+<listitem> <para><option>--clean-pkg</option> remove cached packages. </para></listitem>
 <listitem> <para><option>--clean-whole</option> remove all files from cache directory </para> </listitem>
 </itemizedlist>
 
-Examples:
+In conjunction with <option>-n</option> or <option>-s</option> cleannig 
+may be limited to files belongs to specified repositories only. Examples:
 <screen>
 &poldek-prompt; -s http://foo.bar/RPMS --clean
 &poldek-prompt; -n foo --clean-whole
@@ -457,39 +550,39 @@ Program executed without "command" options (install, erase, etc) puts the user i
 
 <sect2 id="pkgmanaging.spec"> <title>Specifying packages</title>
 <para>
-Packages could be specified in five ways:
+Packages can be specified in five ways:
 <itemizedlist>
   <listitem>
-     <para>as package Name-[Epoch:]Version-Release mask, e.g.
+     <para>as package Name[-[Epoch:]Version-Release] mask, e.g.
      <screen>
-     &prompt; &poldek; ... apache
-     &prompt; &poldek; ... apache-1.3.31-2
-     &prompt; &poldek; ... apache-2:1.3.31-2
-     &prompt; &poldek; ... 'apache-1.3*'
-     &prompt; &poldek; ... 'apache-mod_*pam*'
+     &poldek-prompt; ... apache
+     &poldek-prompt; ... apache-1.3.31-2
+     &poldek-prompt; ... apache-2:1.3.31-2
+     &poldek-prompt; ... 'apache-1.3*'
+     &poldek-prompt; ... 'apache-mod_*pam*'
      </screen>
      </para>
   </listitem>
   <listitem> 
      <para>as packages files, e.g:
      <screen>
-     &prompt; &poldek; ... apache-1.3.31-1.i386.rpm
+     &poldek-prompt; ... apache-1.3.31-1.i386.rpm
      </screen>
      </para>    
   </listitem> 
   <listitem> 
      <para> as Name#Version[-Release] string, e.g.:
      <screen>
-     &prompt; &poldek; ... apache#1.3.31
-     &prompt; &poldek; ... apache#1.3.31-1
+     &poldek-prompt; ... apache#1.3.31
+     &poldek-prompt; ... apache#1.3.31-1
      </screen>
      </para> 
   </listitem>
   <listitem> 
      <para> by package capability (Provides):
      <screen>
-     &prompt; &poldek; ... --caplookup webserver
-     &prompt; &poldek; ... --caplookup smtpdaemon
+     &poldek-prompt; ... --caplookup webserver
+     &poldek-prompt; ... --caplookup smtpdaemon
      </screen>
      <option>--caplookup</option> is available in command line mode only.
      </para> 
@@ -497,8 +590,8 @@ Packages could be specified in five ways:
   <listitem>
    <para> as list read from file, e.g.:
      <screen>
-     &prompt; &poldek; ... --pset ~/.package-sets/tiny-system
-     &prompt; &poldek; ... --pset http://foo.bar.com/package-sets/tiny-system.txt
+     &poldek-prompt; ... --pset ~/.package-sets/tiny-system
+     &poldek-prompt; ... --pset http://foo.bar.com/package-sets/tiny-system.txt
      </screen>
 
      Syntax of file passed as <option>--pset</option> argument is very simple.
@@ -521,9 +614,12 @@ Packages could be specified in five ways:
   </listitem>
 </itemizedlist>
 </para>
+
+<!-- to short 
 <sect3><title>Package related options reference</title>
 &ref-package_related_options;
 </sect3>
+-->
 </sect2>
 
 <sect2 id="pkgmanaging.install"> <title>Installing packages</title>
@@ -611,25 +707,24 @@ Example:
 <para>
 
 To upgrade all packages need upgrade <option>--upgrade-dist</option> can be used,
-or, in, interactive mode '*' may be specified as package mask.
+or, in interactive mode '*' may be specified as package mask.
 Examples:
 <screen>
 &poldek-prompt; -v --upgrade-dist
-&ipoldek-prompt; -v upgrade '*'
+&ipoldek-prompt; -v install -F '*'
 </screen>
 </para>
 </sect2>
 
 <sect2 id="pkgmanaging.distinstall"> <title>Installation system from scratch</title>
 <para>
-&poldek; can be used as system installer too. To install system from scratch use <option>--install-dist</option>
-option. Syntax is:
+&poldek; can be used as system installer, to install system from scratch use 
+<option>--install-dist</option> option. The syntax is:
 <screen>
 &poldek-prompt; --install-dist=DIR [PACKAGE...]
 </screen>
 All unmet dependencies will be satisfied by marking additionall packages. In this type of installation 
-packages are installed one by one - it significantly reduces used memory amout and CPU utilization what permit 
-to install the system on older machines.
+packages are installed one by one what, because of reduction of memory consumption and utilization of CPU, permits to install the system on older machines.
 </para>
 <para>
 As example, command which installs system under <filename>/mnt/dest</filename> might looks like:
@@ -647,8 +742,9 @@ As example, command which installs system under <filename>/mnt/dest</filename> m
 
 <sect2 id="pkgmanaging.removal"> <title>Removing packages</title>
 <para>
-&poldek; removes packages with its reverse-dependent ones. Packages are sorted 
-properly according <emphasis>Requires(un)</emphasis> &rpm; requirements.
+&poldek; removes packages with its reverse-dependent ones and in the right
+order - packages are sorted properly according <emphasis>Requires(un)</emphasis> 
+&rpm; requirements.
 </para>
 <para>
 To remove installed packages:
@@ -676,7 +772,7 @@ Examples:
 
 <sect2 id="pkgmanaging.desc"> <title>Obtaining information about packages</title>
 <para>
-Package details, both about installed and available ones could be easily accessed
+Package details, both about installed and available ones can be easily accessed
 through interactive mode commands: <command>ls</command>, <command>search</command>
 and <command>desc</command>. 
 </para>
@@ -705,7 +801,8 @@ Syntax of command is:
 <screen>
 search [OPTION...] PATTERN [PACKAGE...]
 </screen>
-Where PATTERN is a glob or, with <option>--perlre</option>, Perl regular expression.
+Where <emphasis>PATTERN</emphasis> is a glob or, with <option>--perlre</option>, 
+Perl regular expression.
 Examples:
 <screen>
 &ipoldek-prompt; search -l /usr/sbin/ab
@@ -750,17 +847,65 @@ Web server. Apache is also the most popular Web server on the Internet.
 </sect2>
 </sect1>
 
-<sect1 id="maintain"> <title id="maintain.title">poldek as utility for distribution developers / maintainers</title>
+<sect1 id="security"> <title id="security.title">Security issues</title>
+<para>
+Agreeing with opinion that risk should be minimized it is strongly recommended 
+using poldek as ordinary user and use the root privileges for installation
+and removal only. It is possible in two ways with help of 
+<application>sudo</application>.
+</para>
+
+<sect2 id="security.sudo"> <title>Using sudo</title>
+<para>
+Setting on <option>use sudo</option> configuration opinion causes 
+execution of rpm binary through sudo for real read-write operations. 
+The rest is of the operations may work without super user privileges.
+</para><para>
+Of course it is necessary to configure <application>sudo</application>
+to allow the user to run rpm binary. 
+</para>
+</sect2>
+
+<sect2 id="security.runas"> <title>Automatic switching to ordinary user</title>
+<para>
+More automated using of sudo is also possible, when configured by
+<option>runas</option> poldek will automatically switch to ordinary user
+if detects beeing executed by root. To setup this scenario, set 
+<option>runas</option> option:
+<screen>
+runas = poldek
+</screen>
+and configure <quote>poldek</quote> user account. There is 
+<filename>poldekuser-setup.sh</filename> script automated this task
+supplied with poldek;
+</para>
+</sect2>
+
+</sect1>
+
+<sect1 id="maintain"> <title id="maintain.title">Repository management</title>
+<para>
+Program can be useful for distribution developers and maintainers 
+by make detailed reports about package set consistency, automating move 
+packages from one repository to another and helping with generation 
+of CD/DVD ISO images.
+</para>
+
 <sect2 id="maintain.verify"> <title>Verification of package set quality</title>
 <para>
-&poldek; can be used as quality asset tool. It allows to verify package sets 
-for unresolved dependencies, dependency loops and unneeded or missing conflicts.
+&poldek; can make reports about package set consistency: loops, unmet dependencies
+and conflicts.
 
-<itemizedlist><title>Verification options/switches:</title>
-<listitem> <para><option id="ref.verify">-V, --verify</option></para>
-  <para>
-    With this option unsatisfied dependencies and dependency loops are reported. Sample report:
+<variablelist><title>Avaialble reports:</title>
+
+<varlistentry><term>Dependency loops and unmet dependencies</term>
+  <listitem><para>
+   This report allows to verify if package set contain any unsatisfied dependencies
+   and requirements (<emphasis>PreReq</emphasis>s) loops (loop makes impossible to 
+   install packages in the right order). Report is accessible through 
+   <option>--verify</option>(<option>-V</option>). Example:
     <screen>
+    &poldek-prompt; -n home --verify
     Verifying dependency loops...
     error: PreReq loop: pam &lt;- coreutils &lt;- pam &lt;- SysVinit
     error: PreReq loop: xinitrc &lt;- XFree86 &lt;- xinitrc
@@ -772,14 +917,18 @@ for unresolved dependencies, dependency loops and unneeded or missing conflicts.
     error: ruby-gnome2-0.11.0-2: req ruby-rbogl not found
     3 unsatisfied dependencies found
     </screen>
-  </para>
-</listitem>
-<listitem> <para><option id="ref.verify-conflicts">--verify-conflicts</option></para>
-  <para>
-    With this option program reports all package conflicts and obsoletes. This report let
-    to verify if all conflicts are needed, what are redundant, etc. Sample 
-    report (Obsoletes are reported with asterisk '*'):
+   </para>
+   </listitem>
+</varlistentry>
+
+<varlistentry><term>Package conflicts</term>
+  <listitem><para>
+    Report prints all package pairs beeing in conflict or beeing obsoleted one another.
+    It lets to verify if all conflicts are needed, what are redundant, etc. Report is 
+    accessible through <option>--verify-conflicts</option>. Example (Obsoletes 
+    are printed with asterisk '*'):
     <screen>
+    &poldek-prompt; -n foo --verify-conflicts
     Verifying conflicts...
     bind-9.2.5-2 -> *maradns-1.1.30-1, *dnsmasq-2.19-1, *pdnsd-1.1.8b1-0.par8.2
     maradns-1.1.30-1 -> *bind-9.2.5-2 
@@ -788,13 +937,17 @@ for unresolved dependencies, dependency loops and unneeded or missing conflicts.
     shadow-4.0.4.1-3 -> pwdutils-2.6.90-3
     </screen>
   </para>
-</listitem>
-<listitem> <para><option id="ref.verify-fileconflicts">--verify-fileconflicts</option></para>
-  <para>
-    Like <option>--verify-conflicts</option>, but conflicts on the file level are 
-    reported. Report is quite useful to detect unneeded or missing conflicts or
-    file sharing. Sample report:
+ </listitem>
+</varlistentry>
+
+<varlistentry><term>File conflicts</term>
+  <listitem><para>
+    Report prints all package pairs beeing in conflict on file level and that pairs 
+    which share the same file. It lets to verify if all conflicts are needed, what 
+    are redundant, etc. Report is accessible through 
+    <option id="ref.verify-fileconflicts">--verify-fileconflicts</option>. Example:
     <screen>
+    &poldek-prompt; -n foo --verify-conflicts
     Path: /usr/lib/perl5/vendor_perl/5.8.0/i686-pld-linux-thread-multi/Image
      shr   perl-base-5.8.6-3(D m40755 s4096)  -  ImageMagick-perl-6.1.8.9-1(D m40755 s4096)
 
@@ -805,63 +958,64 @@ for unresolved dependencies, dependency loops and unneeded or missing conflicts.
      cnfl  perl-XML-Filter-Digest-0.06-1(F m100755 s1418) &lt;-&gt; nss-tools-3.9.4-1(F m100755 s32964)
     </screen>
     '&lt;' and '&gt;' mean missing explicit conflict between packages.
-  </para>
-</listitem>
-<listitem> <para><option id="ref.verify-all">--verify-all</option></para>
-  <para>
-    Verify dependencies, conflicts and file conflicts -- show three above 
-    reports at once.
-  </para>
-</listitem>
-</itemizedlist>
+   </para>
+  </listitem>
+</varlistentry>
+</variablelist>
 </para>
+<sect3><title>Verification options reference</title>
+&ref-verification_options-switches;
+</sect3>
 </sect2>
 
 <sect2 id="maintain.split"> <title>Preparation of distribution disks</title>
 
 <para>
-&poldek; supports preparation of packages repository for the purpose of placing it on removable media 
-like DVD or CD. Program divide packages in the way that minimize needs of disk changes; for example 
-if distribution fits on 3 CDs, then only 2 changes of CD disk are necessary during installation system 
-from scratch. Syntax is:
+&poldek; can partition package set for the purpose of placing it on removable media 
+like DVD or CD. Program divide packages in the way that minimize needs of disk changes; 
+for example if distribution fits on 3 CDs, then only 2 changes of CD disk are necessary
+during installation system from scratch. The invoking syntax is:
 <screen>
-&prompt; &poldek; --split=SIZE[:FIRST_FREE_SPACE] [--priconf=FILE] [--split-out=PREFIX]
+&poldek-prompt; --split=SIZE[:FIRST_FREE_SPACE] [--priconf=FILE] [--split-out=PREFIX]
 </screen>
-Where SIZE is size of the chunk in megabytes. If FIRST_FREE_SPACE is set, then first chunk 
-will be FIRST_FREE_SPACE megabytes smaller. 
+Where <emphasis>SIZE</emphasis> is size of the chunk in megabytes and the first chunk 
+will be  <emphasis>FIRST_FREE_SPACE</emphasis> MB smaller. 
 </para>
 
 <para>
 Packages are placed in successive chunks in order of their
-installation. To reorder packages, ex. move some higher or lower,
-especially on first / last chunk, priorities may be assigned to
-them. Package priorities are taken from FILE given by
-<option>--priconf</option>. Format of this file is quite simple, see
-sample <link linkend="appendix.sample-pri.conf"><filename>poldek-pri-sample.conf</filename></link>
-supplied with &poldek;.
+installation. To reorder packages, i.e. move some to higher or lower chunk,
+especially on first / last one, priorities may be assigned to
+them. Package priorities are taken from file given by <option>--priconf</option>. 
+Format of this file is quite simple, see sample 
+<link linkend="appendix.sample-pri.conf"><filename>poldek-pri-sample.conf</filename></link> supplied with &poldek;.
 </para>
 
 <para>
-Each chunk is written as <filename>NAME-EVR.ARCH.rpm</filename> list to PREFIX.XX file, the default 
-PREFIX is "packages.chunk".
+Each chunk is written as <filename>NAME-EVR.ARCH.rpm</filename> list to 
+<emphasis>PREFIX.XX</emphasis> file, the default <emphasis>PREFIX</emphasis> 
+is <quote>packages.chunk</quote>.
 </para>
 </sect2>
 
-<sect2 id="maintain.manage"> <title>Maintaining package repositories</title>
+<sect2 id="maintain.manage"> <title>Managing repository packages</title>
 <para>
-&poldek; can perform 'to repository' installation, i.e. packages are
-copied from source to destination repository with full dependency
-checking. This feature is useful if you want to move subtree of
-packages from one repository to another without a risk of break some
-dependencies. Say that one repository is a place for untested packages
-and they periodically, when found to be tested enough, are moved to
-the stable repository. Syntax is:
+A typical scenario during distribution development looks like there is repository 
+for untested packages from where they periodically, when found to be tested enough, 
+are moved to the another repository marked as stable branch. 
+</para><para>
+&poldek; can help with movig packages between repositories through
+<quote>to repository</quote> installation, i.e. packages 
+are copied from source to destination repository with full dependency
+checking. Thus this feature allows to move subtree of
+packages from one repository to another without a risk of break
+dependencies. The syntax is:
 
 <screen>
 &poldek-prompt; ... --dn SOURCE_NAME [--dn SOURCE_NAME] ...
 </screen>
-Where SOURCE_NAME is a name of repository we want to move packages to,
-for example:
+Where <emphasis>SOURCE_NAME</emphasis> is a name of repository we want to move 
+packages to, for example:
 <screen>
 &poldek-prompt; -n ac-test --dn ac -uv libselinux
 Loading [pdir]ac-test...
@@ -890,7 +1044,7 @@ cp libselinux-devel-1.22-1.i686.rpm /tmp/RPMS/libselinux-devel-1.22-1.i686.rpm
 cp libselinux-1.22-1.i686.rpm /tmp/RPMS/libselinux-1.22-1.i686.rpm
 </screen>
 
-Removing packages from repositories in the safe manner is also possible:
+Removing packages from repositories in that safe manner is also possible:
 <screen>
 &poldek-prompt; --dn ac -e poldek
 mark poldek-0.18.8-3
@@ -905,9 +1059,9 @@ D libpi-0.1.1-1, libpi-devel-0.1.1-1, pacman-0.1-3, poldex-0.17.4-1
 Proceed? [y/N]
 </screen>
 
-If it is not desirable to let poldek to move packages itself, then
-with <option>--test</option> and <option>--parsable-tr-summary</option>
-easy to parse output will be produces, what allows to handle move 
+Sometimes it is not desirable to let poldek to move packages itself, then
+<option>--test</option> and <option>--parsable-tr-summary</option> switches
+may be used to produce easy to parse output, what allows to handle move 
 operation by external scripts. Example:
 <screen>
 &poldek-prompt; --dn ac -et poldek --parsable-tr-summary
@@ -924,7 +1078,7 @@ operation by external scripts. Example:
 
 
 <sect1 id="configuration"><title>Configuration</title>
-&section_configuration;
+include(m_config.xml)
 </sect1>
 
 <appendix id="appendix.sample-pri.conf"><title>Package priorities configuration sample</title>
