@@ -49,7 +49,7 @@ files, examples:
 %include http://bar.org/foo.conf  # include foo.conf from remote location
 [/screen]
 Any "[ global ]" sections from included files are simply ignored.
-Files taken from remote locations can be updated using <option>--upconf</option> 
+Files taken from remote locations can be updated using [option]--upconf[/option]
 switch.
 [/para]
 
@@ -333,7 +333,7 @@ _distro  = pld
     <description>
     Conflicts with already installed packages are treated as resolved 
     if at least one of multiple-installed package satisfies conflict. 
-    rpm doesn't support such cases, so --pm-nodeps is needed (use with
+    rpm doesn't support such cases, so [option]--pm-nodeps[/option] is needed (use with
     care).
     </description>
   </option>
@@ -433,7 +433,7 @@ Every repository is configured in its own [ source ] section.
   <option name="type" type="string" value="pndir">
     <description>
     Type of repository index. Permitted values are 'pndir', 'pdir', 'apt', 'yum' 
-    and 'dir' as listed by $ poldek --stl.
+    and 'dir' as listed by [option]--stl[/option] switch.
     </description>
   </option>
 
@@ -480,7 +480,7 @@ Every repository is configured in its own [ source ] section.
     <description>
     Controling if repository index will be implicit loaded. Set it off if 
     the index should be loaded on demand only, i.e. if specified directly 
-    by --sn option.
+    by [option]--sn[/option] option.
     </description>
   </option>
 
@@ -488,7 +488,7 @@ Every repository is configured in its own [ source ] section.
     <description>
     Controls if repository index will be implicit updated. Set it off if 
     the index should be updated on demand only, i.e. if specified directly 
-    by --sn option.
+    by [option]--sn[/option] option.
     </description>
   </option>
 
