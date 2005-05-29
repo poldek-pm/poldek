@@ -45,13 +45,13 @@
  <subjectset scheme="texinfo-directory">
    <subject><subjectterm>Miscellaneous</subjectterm></subject>
  </subjectset>
-<?xmlif elif output='html|xhtml' ?>
+<?xmlif elif output='html|xhtml'?>
  <abstract role="texinfo-node">
   <para>
    This paper documents poldek meta-package manager POLDEK_VERSION.
   </para>
  </abstract>
-<?xmlif if ?>
+<?xmlif fi?>
 
 <authorgroup>
 <author>
@@ -76,7 +76,7 @@
 
 <sect1 id="overview"> <title id="overview.title">Overview</title>
 <para>
-&poldek; is a full-featured meta-package manager, basically designed 
+poldek is a full-featured meta-package manager, basically designed 
 to run over &rpm;. Its basic features are similar to every 
 modern package updater like &apt-get;. Program gets packages meta-information 
 from package repositories (aka <emphasis>sources</emphasis>) 
@@ -91,7 +91,7 @@ with automatic dependency handling.
     <para> 
     Basic command line options are similar in use to &rpm; ones, 
     thus it is easy to learn for users familiar with &rpm;. Besides basic 
-    command line mode, &poldek; has shell-like interface 
+    command line mode, poldek has shell-like interface 
     with quite intuitive command set, auto-completion and history.
     </para>
   </listitem>
@@ -510,8 +510,10 @@ Examples:
 <sect2 id="repositories.cache"> <title>Cache</title>
 <para>
 Program caches package index files only by default. To cache packages too, i.e. keep 
-them even after successful installation, set <option>keep download</option> 
-configuration option. Default cache directory is <filename id="file.home-poldek">$HOME/.poldek</filename>, it can be set to different location by <option>cachedir</option> 
+them even after successful installation, set <option>keep downloads</option> 
+configuration option. Default cache directory is 
+<filename id="file.home-poldek-cache">$HOME/.poldek-cache</filename>, 
+it can be set to different location by <option>cachedir</option>
 configuration option. Cached files can be removed by three options:
 <itemizedlist>
 <listitem> <para><option>--clean</option> remove source index files</para> </listitem>
@@ -719,7 +721,7 @@ Examples:
 <sect2 id="pkgmanaging.distinstall"> <title>Installation system from scratch</title>
 <para>
 &poldek; can be used as system installer, to install system from scratch use 
-<option>--install-dist</option> option. The syntax is:
+<option>--install-dist</option>option. The syntax is:
 <screen>
 &poldek-prompt; --install-dist=DIR [PACKAGE...]
 </screen>
@@ -876,8 +878,8 @@ if detects beeing executed by root. To setup this scenario, set
 runas = poldek
 </screen>
 and configure <quote>poldek</quote> user account. There is 
-<filename>poldekuser-setup.sh</filename> script automated this task
-supplied with poldek;
+<filename id="file.poldekuser-setup">poldekuser-setup.sh</filename> script 
+automated this task supplied with poldek.
 </para>
 </sect2>
 
@@ -1089,7 +1091,7 @@ include(m_config.xml)
 </para>
 </appendix>
 
-<index>
+<index><title>Index</title>
 &manual_index;
 </index>
 </article>

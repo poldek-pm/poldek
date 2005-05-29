@@ -1,7 +1,62 @@
-.option { font-weight: bold; }
-.filename { color: #444444; font-weight: bold; }
-.screen { background-color: #EEEEEE; 
-          font-family: courier; }
+/* $Id$ */
+/* Partially stolen from http://www.pld-linux.org/htdocs/pldtheme/css/common.css */
+
+body {
+  background-color: white;
+  color: #111111;
+  font-family: Verdana, Tahoma, Arial, Lucida Grande, sans-serif;
+  font-size: 11pt;
+  line-height: 1.25em;
+}
+
+h1 {
+  font-size: 1.5em;
+  line-height: 1.2em;
+}
+
+hr {
+	height: 1px;
+	background-color: #c0c0c0;
+	border: none;
+}
+
+a       { color: #e03636; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.option   { font-weight: bold; }
+.filename { color: #444444; font-size: 1em; font-weight: bold; }
 .application { font-style: oblique; }
 
-h1 { font-size: 18px; }
+.prompt { font-family: courier, monospace; }
+
+.screen { 
+  background-color: #EEEEEE; 
+  font-family: courier, monospace; 
+  
+  padding: 0.5em;
+  border: 1pt solid #DDDDDD;
+  /* background: #fff8eb; */
+  white-space: pre;
+  /* begin css 3 or browser specific rules - do not remove!
+     see: http://forums.techguy.org/archive/index.php/t-249849.html */
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  white-space: -moz-pre-wrap;
+  white-space: -pre-wrap;
+  white-space: -o-pre-wrap;
+  moz-border-radius: 10px;
+  /* end css 3 or browser specific rules */
+}
+
+div.toc a { 
+  color: #000000;  
+  text-decoration: none;
+}
+
+div.toc a:visited { 
+  color: #000000;  
+  text-decoration: none;
+}
+
+
+div.toc a:hover { text-decoration: underline; }

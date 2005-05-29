@@ -37,3 +37,4 @@ autom4te.cache
 *.1
 m_*.xml
 *.tmp
+manual-xhtml
