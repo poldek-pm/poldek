@@ -203,34 +203,35 @@ static
 struct pkg *select_supersede_pkg(const struct pkg *pkg, struct pkgset *ps,
                                  struct upgrade_s *upg) 
 {
-    tn_array *pkgs;
     struct pkg *bypkg = NULL;
-    
-    if ((pkgs = pkgset_search(ps, PS_SEARCH_CAP, pkg->name))) {
-        int i, best_i;
-        best_i = select_best_pkg(pkg, pkgs, ps, upg);
+    tn_array *pkgs;
+    int i, best_i;
 
-        for (i=best_i; i < n_array_size(pkgs); i++) {
-            struct pkg *p = n_array_nth(pkgs, i);
+    if ((pkgs = pkgset_search(ps, PS_SEARCH_CAP, pkg->name)) == NULL)
+        return NULL;
+    
+    best_i = select_best_pkg(pkg, pkgs, ps, upg);
+    for (i=best_i; i < n_array_size(pkgs); i++) {
+        struct pkg *p = n_array_nth(pkgs, i);
             
-            if (strcmp(pkg->name, p->name) == 0)
-                continue;
+        if (strcmp(pkg->name, p->name) == 0)
+            continue;
             
-            DBGF("found %s <- %s, %d, %d\n", pkg_snprintf_s(pkg),
-                 pkg_snprintf_s0(p),
-                 pkg_caps_obsoletes_pkg_caps(p, pkg), 
-                 pkg_caps_obsoletes_pkg_caps(pkg, p));
+        DBGF("found %s <- %s, %d, %d\n", pkg_snprintf_s(pkg),
+             pkg_snprintf_s0(p),
+             pkg_caps_obsoletes_pkg_caps(p, pkg), 
+             pkg_caps_obsoletes_pkg_caps(pkg, p));
+        
+        if (pkg_caps_obsoletes_pkg_caps(p, pkg) &&
+            !pkg_caps_obsoletes_pkg_caps(pkg, p)) {
             
-            if (pkg_caps_obsoletes_pkg_caps(p, pkg) &&
-                !pkg_caps_obsoletes_pkg_caps(pkg, p)) {
-                
-                bypkg = p;
-                break;
-            }
+            bypkg = p;
+            break;
         }
     }
+    n_array_free(pkg);
+    
     DBGF("%s -> %s\n", pkg_snprintf_s(pkg), bypkg ? pkg_snprintf_s(bypkg) : "NONE");
-    n_array_free(pkgs);
     return bypkg;
 }
 
@@ -335,15 +336,16 @@ int select_best_pkg(const struct pkg *marker, tn_array *candidates,
 {
     struct pkg **candidates_buf;
     int i, npkgs;
-    
+
+    DBGF("marker=%s, ncandiates=%d\n", pkg_snprintf_s(marker), n_array_size(candidates));
     npkgs = n_array_size(candidates);
     candidates_buf = alloca(sizeof(*candidates_buf) * (npkgs + 1));
     for (i=0; i < n_array_size(candidates); i++) {
         candidates_buf[i] = n_array_nth(candidates, i);
-        i++;
+        DBGF("cand[%d of %d] %p %s\n", i, n_array_size(candidates),
+               candidates_buf[i], pkg_snprintf_s(candidates_buf[i]));
     }
     candidates_buf[i] = NULL;
-
     return do_select_best_pkg(marker, candidates_buf, npkgs, ps, upg);
 }
 
@@ -356,7 +358,7 @@ int do_select_best_pkg(const struct pkg *marker,
     int *ncnfls, i, j, i_best, cnfl_min;
     int i_ver_eq = -1, i_evr_eq = -1;
 
-    DBGF("marker=%s (%d)\n", marker ? pkg_snprintf_s(marker) : "(nil)", npkgs);
+    DBGF("marker=%s (ncandiates%d)\n", marker ? pkg_snprintf_s(marker) : "(nil)", npkgs);
     n_assert(npkgs > 0);
     if (npkgs == 1)
         return 0;
@@ -364,10 +366,10 @@ int do_select_best_pkg(const struct pkg *marker,
     ncnfls = alloca(npkgs * sizeof(*ncnfls));
     for (i=0; i < npkgs; i++)
         ncnfls[i] = 0;
-        
+
     for (i=0; i < npkgs; i++) {
         struct pkg *pkg = candidates[i];
-
+        
         DBGF("%d. %s %s (color white %d, marked %d, %p)\n", i, 
              marker ? pkg_snprintf_s(marker) : "(nil)", pkg_snprintf_s0(pkg),
              -1, //pkg_is_color(pkg, PKG_COLOR_WHITE), 
