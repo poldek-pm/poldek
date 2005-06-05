@@ -9,6 +9,7 @@
 <!ENTITY poldek-prompt "<prompt>$</prompt> <command>poldek</command>">
 <!ENTITY ipoldek-prompt "<prompt>$</prompt> <command>ipoldek</command>">
 <!ENTITY apt-get "<application>apt-get</application>">
+<!ENTITY apt-rpm "<application>apt-get</application>">
 <!ENTITY yum "<application>yum</application>">
 
 <!ENTITY file_poldek-pri-sample-conf SYSTEM "../conf/poldek-pri-sample.conf">
@@ -38,7 +39,7 @@
  <titleabbrev role="texinfo-node">poldek</titleabbrev>
  <abstract role="texinfo-node">
   <para>
-    Full-featured packages management utility.
+    full-featured frontend for RPM.
   </para>
  </abstract>
 
@@ -68,6 +69,7 @@
 <keyword>RPM</keyword>
 <keyword>APT</keyword>
 <keyword>apt-get</keyword>
+<keyword>apt-rpm</keyword>
 <keyword>yum</keyword>
 <keyword>poldek</keyword>
 <keyword>PLD</keyword>
@@ -76,12 +78,10 @@
 
 <sect1 id="overview"> <title id="overview.title">Overview</title>
 <para>
-poldek is a full-featured meta-package manager, basically designed 
-to run over &rpm;. Its basic features are similar to every 
-modern package updater like &apt-get;. Program gets packages meta-information 
-from package repositories (aka <emphasis>sources</emphasis>) 
-and do package management tasks like installation, upgrading or removal
-with automatic dependency handling.
+poldek is a full-featured frontend for RPM package manager. Its core features
+are similar to every modern package updater like &apt-get;. Features include
+package installation, upgrading and removal with automatic dependency handling,
+querying and search the package database and more.
 </para>
 
 <para>
@@ -89,10 +89,11 @@ with automatic dependency handling.
 <varlistentry><term>Easy to use</term>
   <listitem>
     <para> 
-    Basic command line options are similar in use to &rpm; ones, 
-    thus it is easy to learn for users familiar with &rpm;. Besides basic 
-    command line mode, poldek has shell-like interface 
-    with quite intuitive command set, auto-completion and history.
+    Basic command line options and switches are similar in use to &rpm;
+    so poldek is easy to learn for users familiar with &rpm;. Apart from 
+    rpm-like command line option set poldek provides quite intuitive command 
+    set ("install", "upgrade", etc) for those who knows &apt-get;. Shell-like 
+    interface is available with auto-completion and history.
     </para>
   </listitem>
 </varlistentry>
@@ -100,7 +101,7 @@ with automatic dependency handling.
 <varlistentry><term>Relatively fast and scalable</term>
   <listitem>
     <para>
-    &poldek; is designed with efficiency and scalability in mind. 
+    &poldek; has been designed with efficiency and scalability in mind. 
     Native package repository index format is optimized for storage size 
     and loading speed. Package dependencies, conflicts and setting 
     in order are handled without using <application>rpmlib</application>, 
@@ -113,11 +114,10 @@ with automatic dependency handling.
 
 <varlistentry><term>Incremental repository updates</term>
   <listitem>
-    <para> 
-    Feature consist in creation of repository index delta files with changes to 
-    last created index. This gives possibility to update local copy of the repository 
-    index by download only deltas, what drastically reduces amout of data need to 
-    be retrieved when remote repository was changed a bit and/or it is huge.
+    <para>
+    &poldek;'s repositories are updateable by downloading a changes 
+    of remote repository only, what drastically reduces amout of data 
+    need to be retrieved when remote repository was changed a bit. 
     </para>
   </listitem>
 </varlistentry>
@@ -126,9 +126,8 @@ with automatic dependency handling.
   <listitem>
     <para> 
     &poldek; supports various types of package repositories including
-    &apt-get; and &yum; ones, see <link linkend="repositories.types">list</link> of
-    supported repository types for details. Other types may be easily added as
-    plugins.
+    &apt-rpm; and &yum; ones, see <link linkend="repositories.types">list</link> of
+    supported repository types for details. Support for other types may be easily added.
     </para>
   </listitem>
 </varlistentry>
@@ -139,7 +138,7 @@ with automatic dependency handling.
     Before their installation packages are divided into small groups,
     usually 2-10 items (depending on their reciprocal dependencies).
     Each group is installed separately, what ensures that unsucessful installation
-    of one of the groups does not influence other groups. 
+    of one of the groups does not influence other ones. 
     Another benefit of this separate installation is that it requires
     less memory and disk space than the usual one.
    </para>
@@ -163,8 +162,8 @@ with automatic dependency handling.
 <varlistentry><term>Repository management</term>
   <listitem>
     <para>
-     Besides typical package management tasks &poldek; can do 
-     tasks which helps to manage distro repository. Features include:
+     &poldek; provides functionality which helps to manage distribution repositories. 
+     Features include:
      <itemizedlist>
      <listitem><para> Detail reports about dependency loops, unmet dependencies,
      package conflicts and obsolences and file sharing/conflicts.</para></listitem>
@@ -201,12 +200,12 @@ something like:
 [source]
 _fcurl = http://download.fedora.us/fedora/fedora/3/i386 # macro, just for short
 
-name   = fc3                              # name 
-type   = apt                              # use apt repository index
-path   = %{_fcurl}/base/pkglist.os.bz2    # location of the index
-prefix = %{_fcurl}/RPMS.os                # location of the packages cause 
-                                          #  in apt repositories index and packages 
-                                          #  are in separate locations
+name   = fc3                           # name 
+type   = apt                           # use apt repository index
+path   = %{_fcurl}/base/pkglist.os.bz2 # location of the index
+prefix = %{_fcurl}/RPMS.os             # location of the packages -
+                                       #  package index and packages 
+                                       #  are placed in separate locations
 [source]
 name = home
 path = $HOME/rpm/RPMS
@@ -238,7 +237,7 @@ path = $HOME/rpm/RPMS
 
 <sect2 id="quickstart.use"> <title>Step #3 - Use the program</title>
 <para>
-&poldek; brings two commands: &poldekcmd; with basic command line interface
+&poldek; brings two commands: &poldekcmd; with rpm-like command line interface
 and &ipoldekcmd; with interactive mode command interface. Invoking syntax is:
 <screen>
 &poldek-prompt; [OPTION...] [PACKAGE...]
@@ -278,7 +277,7 @@ Extensive help is available for all commands, for &poldekcmd; by using the <opti
 &ipoldek-prompt; install --help
 </screen>
 
-Moreover &ipoldek; works in comfortable shell-like mode which puts you into 
+&ipoldek; provides comfortable shell-like mode which puts you into 
 a readline interface. To enter it, run the program without any command:
 <screen id="screen.shell-start">
 &ipoldek-prompt; -n ac
@@ -294,6 +293,25 @@ Welcome to the poldek shell mode. Type "help" for help with commands.
 Once you are on &poldek;'s command line, type 'help' and the rest should be, more 
 or less, self-explanatory.
 </para>
+<screen id="screen.shell-help">
+<prompt>poldek:/all-avail></prompt>help
+
+ls        [OPTION...] [PACKAGE...]             List packages
+search    [OPTION...] PATTERN [PACKAGE...]     Search packages
+get       [OPTION...] PACKAGE...               Download packages
+desc      [OPTION...] PACKAGE...               Display packages info
+install   [OPTION...] PACKAGE...               Install packages
+uninstall [OPTION...] PACKAGE...               Uninstall packages
+cd        [PATH]                               Change current package directory
+pwd                                            Print name of current directory
+help                                           Display this help
+alias                                          Print defined command aliases
+reload                                         Reload installed packages
+quit                                           Exit poldek
+
+Type COMMAND -? for details.
+<prompt>poldek:/all-avail></prompt>
+</screen>
 </sect2>     
 </sect1>
 
@@ -305,7 +323,7 @@ packages.
 
 Repository consist of database (<emphasis>package index</emphasis>) of
 package meta-data (dependencies, files, description, etc) and, of course packages 
-itself. Various types of repositories are supported including &apt-get; and 
+itself. Various types of repositories are supported including &apt-rpm; and 
 &yum; ones. 
 </para>
 
@@ -313,12 +331,12 @@ include(manual/supported-repositories.xml)
 
 <para>
 Native &poldek; repositories 'pndir' and 'pdir' have <quote>incremental updates</quote> 
-feature consist in creation of package index delta files with changes to last created
-index. Deltas are used later to perform update of local indexes what noticeably
-reduces amout of data downloaded during repository update. In the other words,
-when repository contains 2000 packages and it was changed by adding 20 items,
-only information about that 20 packages will be retrieved on update (see
-<link linkend="repositories.using.update">Update</link> subsection).
+feature consist in creation of package index delta files with differences between
+already created and previous package index. Deltas are used later to perform update 
+of local indexes what noticeably reduces amout of data downloaded. In the other words, 
+when repository was changed by adding a few packages, only information about those few 
+packages will be retrieved on update 
+(see <link linkend="repositories.using.update">Update</link> subsection).
 </para>
 
 <sect2 id="repositories.configuration"> <title>Repositories configuration</title>
@@ -347,7 +365,7 @@ path = ${HOME}/rpm/RPMS
 auto = no                                            # load on demand only
 </screen>
  
-The <option>type</option> option is not obligatory - if not set then type is 
+<option>type</option> is not obligatory - if not set, then type is 
 taken from <option>default index type</option> configuration option value. 
 For all possible source configuration and extensible option description
 see <link linkend="configuration">Configuration</link> and 
@@ -355,9 +373,10 @@ and <filename>*source.conf</filename> files supplied with &poldek;.
 </para>
 
 <para>
-Moreover &poldek; is able to read &apt-get;'s 
-<filename id="file.sources-list">/etc/apt/sources.list</filename>, just set
-<option>load apt sources list</option> putting to configuration file:
+&poldek; is can read &apt-rpm;'s 
+<filename id="file.sources-list">/etc/apt/sources.list</filename> directly.
+It is controlled by <option>load apt sources list</option>, to load apt's
+sources do:
 <screen>load apt sources list = yes</screen> 
 </para>
 
@@ -367,7 +386,9 @@ Moreover &poldek; is able to read &apt-get;'s
 <sect2 id="repositories.using"> <title>Using repositories</title>
 
 <sect3 id="repositories.using.select"> <title>Selection</title>
-<para> Executed without repository selection options &poldek; 
+<para> 
+poldek loads all configured repositories at startup  
+Executed without repository selection options &poldek; 
 loads all configured repositories at startup, except they which have 
 <option>auto</option> turned off. 
 
@@ -721,7 +742,7 @@ Examples:
 <sect2 id="pkgmanaging.distinstall"> <title>Installation system from scratch</title>
 <para>
 &poldek; can be used as system installer, to install system from scratch use 
-<option>--install-dist</option>option. The syntax is:
+<option>--install-dist</option> option. The syntax is:
 <screen>
 &poldek-prompt; --install-dist=DIR [PACKAGE...]
 </screen>
@@ -804,14 +825,18 @@ Syntax of command is:
 search [OPTION...] PATTERN [PACKAGE...]
 </screen>
 Where <emphasis>PATTERN</emphasis> is a glob or, with <option>--perlre</option>, 
-Perl regular expression.
-Examples:
+Perl regular expression.  
+
+For instance to find the packages that contains <filename>/usr/sbin/ab</filename> file:
 <screen>
 &ipoldek-prompt; search -l /usr/sbin/ab
 2 package(s) found:
 apache-2.0.53-4
 apache1-tools-1.3.33-4
+</screen>
 
+Try to find something for audio files manipulation:
+<screen>
 &ipoldek-prompt; search --perlre /audio.+editor/
 3 package(s) found:
 ecawave-0.6.1-3
@@ -852,15 +877,15 @@ Web server. Apache is also the most popular Web server on the Internet.
 <sect1 id="security"> <title id="security.title">Security issues</title>
 <para>
 Agreeing with opinion that risk should be minimized it is strongly recommended 
-using poldek as ordinary user and use the root privileges for installation
-and removal only. It is possible in two ways with help of 
-<application>sudo</application>.
+using poldek as an ordinary user and use the root privileges for package 
+installation and removal only. It is possible in two ways with help of 
+<command>sudo</command> command.
 </para>
 
 <sect2 id="security.sudo"> <title>Using sudo</title>
 <para>
 Setting on <option>use sudo</option> configuration opinion causes 
-execution of rpm binary through sudo for real read-write operations. 
+execution of rpm binary through sudo for read-write operations. 
 The rest is of the operations may work without super user privileges.
 </para><para>
 Of course it is necessary to configure <application>sudo</application>
@@ -868,18 +893,17 @@ to allow the user to run rpm binary.
 </para>
 </sect2>
 
-<sect2 id="security.runas"> <title>Automatic switching to ordinary user</title>
+<sect2 id="security.runas"> <title>Automatic switching to an ordinary user</title>
 <para>
-More automated using of sudo is also possible, when configured by
-<option>runas</option> poldek will automatically switch to ordinary user
-if detects beeing executed by root. To setup this scenario, set 
-<option>runas</option> option:
+More automated using of sudo is also possible. Configured by <option>runas</option> 
+option poldek will automatically switch to an ordinary user if detects beeing 
+executed by root. To setup this scenario, set <option>runas</option> option:
 <screen>
 runas = poldek
 </screen>
 and configure <quote>poldek</quote> user account. There is 
 <filename id="file.poldekuser-setup">poldekuser-setup.sh</filename> script 
-automated this task supplied with poldek.
+which automates user account configuration supplied with poldek.
 </para>
 </sect2>
 
@@ -1082,6 +1106,11 @@ operation by external scripts. Example:
 <sect1 id="configuration"><title>Configuration</title>
 include(m_config.xml)
 </sect1>
+
+<!-- <sect1 id="misc"><title>Miscellaneous</title>
+<sect2 id="misc.logging"><title>Logging</title> </sect2>
+</sect1>
+-->
 
 <appendix id="appendix.sample-pri.conf"><title>Package priorities configuration sample</title>
 <para>

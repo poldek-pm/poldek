@@ -61,4 +61,13 @@ is available as a Texinfo manual. Do <command>info poldek</command> to get it.
 <para>&ref-other;</para>
 </refsect1>
 
+<refsect1><title>See also</title>
+<para>
+  <citerefentry>
+   <refentrytitle>poldek.conf</refentrytitle>
+   <manvolnum>1</manvolnum>
+  </citerefentry>
+</para>
+</refsect1>
+
 </refentry>
