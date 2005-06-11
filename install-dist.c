@@ -143,7 +143,10 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
         
         if (inf.ninstalled < inf.npackages)
             display_iinf_progress(&inf);
-
+        
+        ts->setop(ts, POLDEK_OP_NODEPS, 1); /* install dist is performed one
+                                               by one, and we trust ourselves
+                                            */
         
         if (pkgdb_install(ts->db, pkgpath, ts)) /* message for external scripts */
             logn(LOGNOTICE | LOGFILE, "INST-OK %s", pkg->name);
