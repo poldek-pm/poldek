@@ -193,20 +193,25 @@ int file_index_add_basename(struct file_index *fi, void *fidx_dir,
 }
 
 static 
-int findfile(struct file_index *fi, const char *dirname, const char *basename,
+int findfile(const struct file_index *fi,
+             const char *dirname, const char *basename,
              struct pkg *pkgs[], int size) 
 {
     tn_array *files;
     struct file_ent *entp;
     int i = 1, n;
     
-    if ((files = n_hash_get(fi->dirs, dirname)) == NULL)
+    if ((files = n_hash_get(fi->dirs, dirname)) == NULL) {
+        DBGF("%s: directory not found\n", dirname);
         return 0;
+    }
+        
     
-    if ((n = n_array_bsearch_idx_ex(files, basename, fent_cmp2str)) == -1)
+    if ((n = n_array_bsearch_idx_ex(files, basename, fent_cmp2str)) == -1) {
+        DBGF("%s/%s: file not found\n", dirname, basename);
         return 0;
+    }
     
-
     entp = n_array_nth(files, n);
     pkgs[0] = entp->pkg;
     i = 1;
@@ -264,7 +269,7 @@ int file_index_remove(struct file_index *fi, const char *dirname,
 }
 
 
-int file_index_lookup(struct file_index *fi,
+int file_index_lookup(const struct file_index *fi,
                       const char *apath, int apath_len, 
                       struct pkg *pkgs[], int size)
 {
@@ -275,16 +280,18 @@ int file_index_lookup(struct file_index *fi,
 
     if (apath_len == 0)
         apath_len = strlen(apath);
+    
     apath_len++;
     path = alloca(apath_len);
     memcpy(path, apath, apath_len);
-    
-    path++;
+
+    if (*path == '/')
+        path++;          /* skip '/' */
     dirname = buf;
     
     n_basedirnam(path, &tmpdirname, &basename);
     
-    if (tmpdirname && tmpdirname != '\0')
+    if (tmpdirname && *tmpdirname != '\0')
         dirname = tmpdirname;
     else 
         *dirname = '/';
@@ -523,3 +530,79 @@ int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs)
     msgn(0, "%d file conflicts found", nconflicts);
     return nconflicts;
 }
+
+int file_index_report_orphans(const struct file_index *fi, tn_array *pkgs)
+{
+    struct pkg *result[2048];
+    tn_array   *paths;
+    tn_hash    *orph, *nonorph;
+    int        i, j, norphans = 0;
+    
+    orph = n_hash_new(64, (tn_fn_free)n_hash_free);
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        
+        //if (i % (n_array_size(pkgs) / 10) == 0)
+        //    msg(1, "%s%d", i > 0 ? ".." : "", i);
+        
+        if (pkg->fl == NULL)
+            continue;
+        
+        
+        for (j=0; j < n_tuple_size(pkg->fl); j++) {
+            struct pkgfl_ent *flent = n_tuple_nth(pkg->fl, j);
+            char tmpbuf[PATH_MAX], *p, *q;
+
+            if (*flent->dirname == '/') /* / */
+                continue;
+            
+            n_snprintf(tmpbuf, sizeof(tmpbuf), "/%s", flent->dirname);
+            q = tmpbuf;
+            while ((p = strrchr(tmpbuf, '/')) && p != tmpbuf) {
+                *p = '\0';
+
+                if (n_hash_exists(orph, tmpbuf)) {
+                    tn_hash *opkgh = n_hash_get(orph, tmpbuf);
+                    n_hash_replace(opkgh, pkg_snprintf_s0(pkg), pkg);
+                    continue;
+                }
+                
+                if (!file_index_lookup(fi, tmpbuf, strlen(tmpbuf), 
+                                       result, 2048)) {
+                    DBGF("%s not found\n", tmpbuf);
+                    tn_hash *opkgh = n_hash_new(128, NULL);
+                    n_hash_insert(opkgh, pkg_snprintf_s0(pkg), pkg);
+                    n_hash_insert(orph, tmpbuf, opkgh);
+                }
+            }
+        }
+    }
+    //msgn(1, "..%d", n_array_size(pkgs));
+    paths = n_hash_keys(orph);
+    n_array_sort(paths);
+    
+    for (i=0; i < n_array_size(paths); i++) {
+        char *path = n_array_nth(paths, i);
+        tn_hash *opkgh = n_hash_get(orph, path);
+        tn_array *opkgs = n_hash_keys(opkgh);
+
+        msg_tty(0, "\n");
+        msg(0, "Path: %s\n", path);
+        n_array_sort(opkgs);
+        
+        for (j=0; j < n_array_size(opkgs) && j < 5; j++) 
+            msg(0, "%s%s", (char*)n_array_nth(opkgs, j),
+                j < n_array_size(opkgs) - 1 ? ", " : "\n");
+        
+        if (n_array_size(opkgs) > 5)
+            msgn(0, "[%d packages left]", n_array_size(opkgs) - 5);
+    }
+
+    norphans = n_array_size(paths);
+    msgn(0, "%d orphaned directories found", norphans);
+    
+    n_array_free(paths);
+    n_hash_free(orph);
+    return norphans;
+}
+

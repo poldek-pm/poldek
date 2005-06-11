@@ -38,13 +38,13 @@ int file_index_remove(struct file_index *fi, const char *dirname,
                       const char *basename,
                       struct pkg *pkg);
 
-int file_index_lookup(struct file_index *fi,
+int file_index_lookup(const struct file_index *fi,
                       const char *apath, int apath_len, 
                       struct pkg *pkgs[], int size);
 
 int file_index_find_conflicts(const struct file_index *fi, int strict);
 int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs);
-
+int file_index_report_orphans(const struct file_index *fi, tn_array *pkgs);
 #endif /* POLDEK_FILEINDEX_H */
     
     

@@ -37,10 +37,11 @@
 
 #define OPT_GID  OPT_GID_OP_VERIFY
 
-#define OPT_DEPS       'V'
-#define OPT_CNFLS      (OPT_GID + 1)
-#define OPT_FILECNFLS  (OPT_GID + 2)
-#define OPT_ALL        (OPT_GID + 3)
+#define OPT_DEPS        'V'
+#define OPT_CNFLS       (OPT_GID + 1)
+#define OPT_FILECNFLS   (OPT_GID + 2)
+#define OPT_FILEORPHANS (OPT_GID + 3)
+#define OPT_ALL         (OPT_GID + 4)
 
 /* The options we understand. */
 static struct argp_option options[] = {
@@ -49,8 +50,13 @@ static struct argp_option options[] = {
 {"verify-conflicts",  OPT_CNFLS, 0, 0, N_("Verify conflicts"), OPT_GID },
 {"verify-fileconflicts",  OPT_FILECNFLS, 0, 0,
      N_("Verify file conflicts"),OPT_GID },
+
+{"verify-fileorphans",  OPT_FILEORPHANS, 0, 0,
+     N_("Find orphaned directories"),OPT_GID },
+    
 {"verify-all",  OPT_ALL, 0, 0,
-     N_("Verify dependencies, conflicts and file conflicts"), OPT_GID },
+N_("Verify dependencies, conflicts, file conflicts and orphaned directories"),
+     OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -118,12 +124,19 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             ts->setop(ts, POLDEK_OP_VRFY_FILECNFLS, 1);
             rt->set_major_mode(rt, mode, "verify-fileconflicts");
             break;
+            
+        case OPT_FILEORPHANS:
+            arg_s->verify = 1;
+            ts->setop(ts, POLDEK_OP_VRFY_FILEORPHANS, 1);
+            rt->set_major_mode(rt, mode, "verify-fileorphans");
+            break;
 
         case OPT_ALL:
             arg_s->verify = 1;
             ts->setop(ts, POLDEK_OP_VRFY_DEPS, 1);
             ts->setop(ts, POLDEK_OP_VRFY_CNFLS, 1);
             ts->setop(ts, POLDEK_OP_VRFY_FILECNFLS, 1);
+            ts->setop(ts, POLDEK_OP_VRFY_FILEORPHANS, 1);
             rt->set_major_mode(rt, mode, "verify-all");
             break;
 

@@ -120,6 +120,7 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
             break;
 
         case POLDEK_OP_VRFY_FILECNFLS:
+        case POLDEK_OP_VRFY_FILEORPHANS:
             /* propagate it to ctx too - pkgset_load() must know that */
             if (ts->ctx)
                 poldek_configure(ts->ctx, POLDEK_CONF_OPT, optv, on);
@@ -1026,6 +1027,11 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
         msgn(0, _("Verifying file conflicts..."));
         file_index_report_conflicts(&ts->ctx->ps->file_idx,
                                     poldek_ts_get_arg_count(ts) > 0 ? pkgs : NULL);
+    }
+
+    if (ts->getop(ts, POLDEK_OP_VRFY_FILEORPHANS)) {
+        msgn(0, _("Verifying file orphans..."));
+        file_index_report_orphans(&ts->ctx->ps->file_idx, pkgs);
     }
 
     n_array_free(pkgs);
