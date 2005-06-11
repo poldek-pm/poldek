@@ -229,7 +229,7 @@ struct pkg *select_supersede_pkg(const struct pkg *pkg, struct pkgset *ps,
             break;
         }
     }
-    n_array_free(pkg);
+    n_array_free(pkgs);
     
     DBGF("%s -> %s\n", pkg_snprintf_s(pkg), bypkg ? pkg_snprintf_s(bypkg) : "NONE");
     return bypkg;
