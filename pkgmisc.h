@@ -45,7 +45,7 @@ int poldek_util_parse_nevr(char *nevrstr, const char **name,
 
 /*  === pkgmark_set ===  */
 struct pkgmark_set;
-#define PKGMARK_SET_IDNEVR (1 << 0) /* id = pkg->nevr */
+#define PKGMARK_SET_IDNEVR (1 << 0) /* id = pkg_id() */
 #define PKGMARK_SET_IDPTR  (1 << 1) /* id = printf("%p", pkg); */
 
 struct pkgmark_set *pkgmark_set_new(int size, unsigned flags);

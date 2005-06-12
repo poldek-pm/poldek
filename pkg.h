@@ -64,7 +64,7 @@ struct pkg {
 
     char         *fn;         /* package filename */
     uint32_t     fmtime;      /* package file mtime */
-    char         *nvr;        /* NAME-VERSION-RELEASE */
+    char         *_nvr;        /* NAME-VERSION-RELEASE */
 
     uint16_t      _arch;
     uint16_t      _os;

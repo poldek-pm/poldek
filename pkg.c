@@ -180,7 +180,7 @@ struct pkg *pkg_new_ext(tn_alloc *na,
                         uint32_t btime)
 {
     struct pkg *pkg;
-    int name_len = 0, version_len = 0, release_len = 0, fn_len = 0;
+    int name_len = 0, version_len = 0, release_len = 0, fn_len = 0,arch_len = 0;
     char *buf, pkg_fn[PATH_MAX];
     int len;
 
@@ -212,9 +212,16 @@ struct pkg *pkg_new_ext(tn_alloc *na,
             len += fn_len + 1;
         }
     }
-    
-    len += len + 1;             /* for nvr */
 
+    len += len + 1;             /* for id (nvr) */
+    
+#if MULTILIB_XXX
+    if (arch) {
+        arch_len = strlen(arch); 
+        len += arch_len + 1;
+    }
+#endif
+        
     len += 1;
     if (na == NULL) {
         pkg = n_calloc(1, sizeof(*pkg) + len);
@@ -262,7 +269,7 @@ struct pkg *pkg_new_ext(tn_alloc *na,
     if (os) 
         pkg->_os = pkgmod_register_os(os);
 
-    pkg->nvr = buf;
+    pkg->_nvr = buf;
     memcpy(buf, name, name_len);
     buf += name_len;
     *buf++ = '-';
@@ -273,9 +280,16 @@ struct pkg *pkg_new_ext(tn_alloc *na,
     
     memcpy(buf, release, release_len);
     buf += release_len;
-    *buf++ = '\0';
 
-    
+#if MULTILIB_XXX
+    if (arch) {
+        *buf++ = '.';
+        memcpy(buf, arch, arch_len);
+        buf += arch_len;
+    }
+#endif
+
+    *buf++ = '\0';
     pkg->reqs = NULL;
     pkg->caps = NULL;
     pkg->cnfls = NULL;
@@ -1278,5 +1292,5 @@ struct pkg *pkg_link(struct pkg *pkg)
 
 const char *pkg_id(const struct pkg *p) 
 {
-    return p->nvr;
+    return p->_nvr;
 }

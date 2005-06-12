@@ -507,7 +507,7 @@ int resolve_masks(tn_array *pkgs,
                 matches_bycmp[j]++;
                 matches[j]++;
                 
-            } else if (fnmatch(mask, pkg->nvr, 0) == 0) {
+            } else if (fnmatch(mask, pkg_id(pkg), 0) == 0) {
                 n_array_push(pkgs, pkg_link(pkg));
                 matches[j]++;
                 
@@ -636,7 +636,7 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
             for (j=0; j < n_array_size(pkgs); j++) {
                 struct pkg *p = n_array_nth(pkgs, j);
                 if (strcmp(p->name, ent->mask) == 0 ||
-                    fnmatch(p->nvr, ent->mask, 0) == 0) {
+                    fnmatch(pkg_id(p), ent->mask, 0) == 0) {
                     pkg = n_array_nth(pkgs, j);
                     break;
                 }

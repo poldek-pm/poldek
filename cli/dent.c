@@ -77,7 +77,7 @@ struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
         n_array_ctl(ent->pkg_dent_ents, TN_ARRAY_AUTOSORTED);
 
     } else {
-        ent->name = pkg->nvr;
+        ent->name = pkg_id(pkg);
         ent->pkg_dent_pkg = pkg_link(pkg);
     }
     
@@ -187,7 +187,7 @@ void pkg_dent_remove_pkg(struct pkg_dent *dent, struct pkg *pkg)
     struct pkg_dent tmp;
 
     n_array_sort(dent->pkg_dent_ents);
-    tmp.name = pkg->nvr;
+    tmp.name = pkg_id(pkg);
     n_array_remove(dent->pkg_dent_ents, &tmp);
 }
 
@@ -236,7 +236,7 @@ int pkg_dent_replace_pkgs(struct poclidek_ctx *cctx, struct pkg_dent *dent,
         ent = n_array_nth(ents, n);
         n++;
 
-        ent->name = pkg->nvr;
+        ent->name = pkg_id(pkg);
         pkg_free(ent->pkg_dent_pkg);
         ent->pkg_dent_pkg = pkg_link(pkg);
         n_array_push(dent->pkg_dent_ents, pkg_dent_link(ent));

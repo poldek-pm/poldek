@@ -44,10 +44,11 @@ struct pkg_mark {
 };
 
 static inline
-char *package_id(char *buf, int size, struct pkgmark_set *pmark, struct pkg *pkg)
+const char *package_id(char *buf, int size, struct pkgmark_set *pmark,
+                       struct pkg *pkg)
 {
     if (pmark->flags & PKGMARK_SET_IDNEVR)
-        return pkg->nvr;
+        return pkg_id(pkg);
     n_snprintf(buf, size, "%p", pkg);
     return buf;
 }
@@ -89,7 +90,6 @@ tn_array *pkgmark_get_packages(struct pkgmark_set *pmark, uint32_t flag)
     tn_array *pmarks, *pkgs;
     int i;
 
-    
     if (n_hash_size(pmark->ht) == 0)
         return NULL;
 
@@ -115,7 +115,8 @@ int pkgmark_set(struct pkgmark_set *pmark, struct pkg *pkg,
                 int set, uint32_t flag)
 {
     struct pkg_mark *pkg_mark;
-    char idbuf[512], *id;
+    char idbuf[512];
+    const char *id;
     
     id = package_id(idbuf, sizeof(idbuf), pmark, pkg);
     pkg_mark = n_hash_get(pmark->ht, id);
@@ -140,7 +141,8 @@ int pkgmark_set(struct pkgmark_set *pmark, struct pkg *pkg,
 int pkgmark_isset(struct pkgmark_set *pmark, struct pkg *pkg, uint32_t flag)
 {
     struct pkg_mark *pkg_mark;
-    char idbuf[512], *id;
+    char idbuf[512];
+    const char *id;
     
     id = package_id(idbuf, sizeof(idbuf), pmark, pkg);
 
@@ -305,8 +307,6 @@ int packages_mark(struct pkgmark_set *pms, const tn_array *pkgs, int withdeps)
 {
     return depmark_packages(pms, pkgs, withdeps);
 }
-
-
 
 void pkgmark_massset(struct pkgmark_set *pmark, int set, uint32_t flag)
 {

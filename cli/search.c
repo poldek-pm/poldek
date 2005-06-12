@@ -450,10 +450,13 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
     const char *p;
 
     if (flags & OPT_SEARCH_CAP) {
+        const char *pkgid;
+        
         if ((match = pattern_match(pt, pkg->name, strlen(pkg->name))))
             goto l_end;
 
-        if ((match = pattern_match(pt, pkg->nvr, strlen(pkg->nvr))))
+        pkgid = pkg_id(pkg);
+        if ((match = pattern_match(pt, pkgid, strlen(pkgid))))
             goto l_end;
         
         if (pkg->caps)
@@ -626,7 +629,7 @@ static int search(struct cmdctx *cmdctx)
 
         pkg = n_array_nth(matched_pkgs, i);
         cmdctx_addtoresult(cmdctx, pkg);
-        cmdctx_printf(cmdctx, "%s\n", pkg->nvr);
+        cmdctx_printf(cmdctx, "%s\n", pkg_id(pkg));
     }
 
     if (n_array_size(matched_pkgs) >= term_height)

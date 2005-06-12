@@ -356,17 +356,17 @@ int pkg_cmp_recno(const struct pkg *p1, const struct pkg *p2)
 
 int pkg_nvr_strcmp(struct pkg *p1, struct pkg *p2) 
 {
-    return strcmp(p1->nvr, p2->nvr);
+    return strcmp(p1->_nvr, p2->_nvr);
 }
 
 int pkg_nvr_strcmp_rev(struct pkg *p1, struct pkg *p2) 
 {
-    return -strcmp(p1->nvr, p2->nvr);
+    return -strcmp(p1->_nvr, p2->_nvr);
 }
 
 int pkg_nvr_strncmp(struct pkg *pkg, const char *name) 
 {
-    return strncmp(pkg->nvr, name, strlen(name));
+    return strncmp(pkg->_nvr, name, strlen(name));
 }
 
 int pkg_nvr_strcmp_btime(struct pkg *p1, struct pkg *p2)

@@ -410,7 +410,7 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
     while (i < n_array_size(ents) && i >= 0) {
         struct pkg_dent *ent = n_array_nth(ents, i);
         struct pkg      *pkg;
-        char            *pkg_name;
+        const char      *pkg_name;
 
         if (sigint_reached())
             break;
@@ -424,7 +424,7 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
         pkg = ent->pkg_dent_pkg;
         cmdctx_addtoresult(cmdctx, pkg);
 
-        pkg_name = pkg->nvr;
+        pkg_name = pkg_id(pkg);
         if (flags & OPT_LS_NAMES_ONLY) 
             pkg_name = pkg->name;
         
