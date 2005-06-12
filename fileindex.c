@@ -30,6 +30,7 @@
 #include "pkg.h"
 #include "capreq.h"
 #include "fileindex.h"
+#include "pkgset-req.h"
 
 struct file_ent {
     struct flfile *flfile;
@@ -666,23 +667,23 @@ int is_path_to(tn_hash *is_path_to_cache,
         return 0;
 
     for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
-        struct pkg *rpkg = n_array_nth(pkg->reqpkgs, i);
+        struct reqpkg *rpkg = n_array_nth(pkg->reqpkgs, i);
         char key[PATH_MAX];
         int yes;
         
-        if (rpkg == dest)
+        if (rpkg->pkg == dest)
             return 1;
 
-        if (rpkg->reqpkgs == NULL)
+        if (rpkg->pkg->reqpkgs == NULL)
             continue;
 
-        n_snprintf(key, sizeof(key), "%s -> %s", pkg_id(rpkg), pkg_id(dest));
+        n_snprintf(key, sizeof(key), "%s -> %s", pkg_id(rpkg->pkg), pkg_id(dest));
         if (n_hash_exists(is_path_to_cache, key)) {
             DBGF("cached2 %s\n", key);
             return n_hash_get(is_path_to_cache, key) != NULL;
         }
         
-        yes = is_path_to(is_path_to_cache, pms, dest, rpkg, deep);
+        yes = is_path_to(is_path_to_cache, pms, dest, rpkg->pkg, deep);
 #if 0       /* faster, but needs a lot of memory */
         n_hash_replace(is_path_to_cache, key, yes ? pkg : NULL);
 #endif        
