@@ -60,7 +60,7 @@ struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
         memcpy(ent->_buf, name, len);
         ent->name = ent->_buf;
         
-        p = ent->name;
+        p = ent->_buf;
         if (strchr(p, '/'))
             p = n_dirname(p);
         
@@ -281,7 +281,7 @@ char *poclidek_dent_dirpath(char *path, int size, const struct pkg_dent *dent)
     
     stack = n_array_new(4, NULL, NULL);
     while (dent->parent) {
-        n_array_push(stack, dent->name);
+        n_array_push(stack, (char*)dent->name);
         dent = dent->parent;
     }
 

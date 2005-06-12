@@ -18,7 +18,7 @@ struct pkg_dent {
         struct pkg      *pkg;
     } ent;
     
-    char      *name;
+    const char *name;
     char      _buf[0];
 };
 

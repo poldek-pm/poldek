@@ -61,7 +61,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 static int cd(struct cmdctx *cmdctx) 
 {
-    char *path, path_buf[PATH_MAX];
+    const char *path;
+    char path_buf[PATH_MAX];
     int rc;
 
     path = cmdctx->_data;
