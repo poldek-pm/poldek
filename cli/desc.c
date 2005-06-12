@@ -636,9 +636,10 @@ static void list_files(struct cmdctx *cmdctx, tn_tuple *fl, int term_width)
             }
             
             if (!dn_printed) {
-                ncol = cmdctx_printf_c(cmdctx, PRCOLOR_BLUE | PRAT_BOLD, "%s%s:  ",
-                                *flent->dirname == '/' ? "":"/",
-                                flent->dirname);
+                ncol = cmdctx_printf_c(cmdctx, PRCOLOR_BLUE | PRAT_BOLD,
+                                       "%s%s:  ",
+                                       *flent->dirname == '/' ? "":"/",
+                                       flent->dirname);
                 dn_printed = 1;
             }
             
