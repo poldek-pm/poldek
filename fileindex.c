@@ -678,9 +678,9 @@ int is_path_to(tn_hash *is_path_to_cache,
             continue;
 
         n_snprintf(key, sizeof(key), "%s -> %s", pkg_id(rpkg->pkg), pkg_id(dest));
-        if (n_hash_exists(is_path_to_cache, key)) {
+        if (n_hash_get(is_path_to_cache, key)) {
             DBGF("cached2 %s\n", key);
-            return n_hash_get(is_path_to_cache, key) != NULL;
+            return 1;
         }
         
         yes = is_path_to(is_path_to_cache, pms, dest, rpkg->pkg, deep);
