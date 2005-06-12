@@ -46,15 +46,18 @@
 /* The options we understand. */
 static struct argp_option options[] = {
 {0,0,0,0, N_("Verification options/switches:"), OPT_GID},
-{"verify",  OPT_DEPS, 0, 0, N_("Verify dependencies"), OPT_GID },
-{"verify-conflicts",  OPT_CNFLS, 0, 0, N_("Verify conflicts"), OPT_GID },
-{"verify-fileconflicts",  OPT_FILECNFLS, 0, 0,
+{"verify",  OPT_DEPS, "REPORT-TYPE...", OPTION_ARG_OPTIONAL,
+     N_("Verify package set, available reports are: 'deps', 'conflicts', "
+        "'file-conflicts', 'file-orphans' and 'file-missing-deps'. "
+        "Default is 'deps'."), OPT_GID },
+{"verify-conflicts",  OPT_CNFLS, 0, OPTION_HIDDEN, N_("Verify conflicts"), OPT_GID },
+{"verify-fileconflicts",  OPT_FILECNFLS, 0, OPTION_HIDDEN,
      N_("Verify file conflicts"),OPT_GID },
 
-{"verify-fileorphans",  OPT_FILEORPHANS, 0, 0,
+{"verify-fileorphans",  OPT_FILEORPHANS, 0, OPTION_HIDDEN,
      N_("Find orphaned directories"),OPT_GID },
     
-{"verify-all",  OPT_ALL, 0, 0,
+{"verify-all",  OPT_ALL, 0, OPTION_HIDDEN,
 N_("Verify dependencies, conflicts, file conflicts and orphaned directories"),
      OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
@@ -62,6 +65,18 @@ N_("Verify dependencies, conflicts, file conflicts and orphaned directories"),
 
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state);
+
+static struct verify_op {
+    const char *name;
+    int op;
+} verify_options[] = {
+    { "deps", POLDEK_OP_VRFY_DEPS },
+    { "conflicts", POLDEK_OP_VRFY_CNFLS }, 
+    { "file-conflicts", POLDEK_OP_VRFY_FILECNFLS },
+    { "file-orphans", POLDEK_OP_VRFY_FILEORPHANS },
+    { "file-missing-deps", POLDEK_OP_VRFY_FILEMISSDEPS },
+    { NULL, 0 }, 
+};
 
 static struct argp poclidek_argp = {
     options, parse_opt, 0, 0, 0, 0, 0
@@ -83,7 +98,51 @@ struct poclidek_opgroup poclidek_opgroup_verify = {
 
 struct arg_s {
     int verify;
+    int error;
 };
+
+static int arg_to_ts_option(char *arg, struct poldek_ts *ts)
+{
+    const char **tl_save, **tl;
+    int nerr = 0;
+    
+    tl = tl_save = n_str_tokl(arg, ",");
+    while (*tl) {
+        int i = 0, found = 0, setall = 0;
+        
+        if (n_str_eq(*tl, "all")) {
+            setall = 1;
+            found = 1;
+        }
+        
+        while (verify_options[i].name != NULL) {
+            if (setall) {
+                ts->setop(ts, verify_options[i].op, 1);
+                i++;
+                continue;
+            }
+            
+            if (n_str_eq(verify_options[i].name, *tl)) {
+                ts->setop(ts, verify_options[i].op, 1);
+                found = 1;
+                break;
+            }
+            i++;
+        }
+
+        if (!found) {
+            logn(LOGERR, "%s: unknown verify parameter", *tl);
+            nerr++;
+        }
+        
+        tl++;
+    }
+    n_str_tokl_free(tl_save);
+    
+    return nerr == 0;
+}
+
+    
 
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -102,6 +161,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     } else {
         arg_s = n_malloc(sizeof(*arg_s));
         arg_s->verify = 0;
+        arg_s->error = 0;
         rt->_opdata = arg_s;
         rt->_opdata_free = free;
         rt->run = oprun;
@@ -109,7 +169,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     switch (key) {
         case OPT_DEPS:
             arg_s->verify = 1;
-            ts->setop(ts, POLDEK_OP_VRFY_DEPS, 1);
+
+            if (arg == NULL) 
+                ts->setop(ts, POLDEK_OP_VRFY_DEPS, 1);
+
+            else if (!arg_to_ts_option(arg, ts)) {
+                arg_s->error = 1;
+                return EINVAL;
+            }
+            
             rt->set_major_mode(rt, mode, "verify");
             break;
 
@@ -154,6 +222,9 @@ static int oprun(struct poclidek_opgroup_rt *rt)
 
     arg_s = rt->_opdata;
     n_assert(arg_s);
+
+    if (arg_s->error)
+        return OPGROUP_RC_ERROR;
 
     if (arg_s->verify == 0)
         return OPGROUP_RC_NIL;

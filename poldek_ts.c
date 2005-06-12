@@ -121,9 +121,15 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
 
         case POLDEK_OP_VRFY_FILECNFLS:
         case POLDEK_OP_VRFY_FILEORPHANS:
-            /* propagate it to ctx too - pkgset_load() must know that */
-            if (ts->ctx)
+        case POLDEK_OP_VRFY_FILEMISSDEPS:
+            /* propagate it to ctx too - pkgset_load() must know that
+               to load whole file database */
+            if (ts->ctx) {
                 poldek_configure(ts->ctx, POLDEK_CONF_OPT, optv, on);
+                poldek_configure(ts->ctx, POLDEK_CONF_OPT,
+                                 POLDEK_OP_LDFULLFILELIST, on);
+            }
+            
             break;
 
         case POLDEK_OP_GREEDY:
@@ -993,7 +999,7 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
     if (poldek_ts_get_arg_count(ts) > 0)
         pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
     else
-        pkgs = n_ref(ts->ctx->ps->pkgs);
+        pkgs = n_ref(ts->ctx->ps->ordered_pkgs);
 
     if (pkgs == NULL)
         return 0;
@@ -1025,13 +1031,17 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
 
     if (ts->getop(ts, POLDEK_OP_VRFY_FILECNFLS)) {
         msgn(0, _("Verifying file conflicts..."));
-        file_index_report_conflicts(&ts->ctx->ps->file_idx,
-                                    poldek_ts_get_arg_count(ts) > 0 ? pkgs : NULL);
+        file_index_report_conflicts(&ts->ctx->ps->file_idx, pkgs);
     }
 
     if (ts->getop(ts, POLDEK_OP_VRFY_FILEORPHANS)) {
         msgn(0, _("Verifying file orphans..."));
         file_index_report_orphans(&ts->ctx->ps->file_idx, pkgs);
+    }
+
+    if (ts->getop(ts, POLDEK_OP_VRFY_FILEMISSDEPS)) {
+        msgn(0, _("Verifying file semi-orphans (missing dependencies)..."));
+        file_index_report_semiorphans(&ts->ctx->ps->file_idx, pkgs);
     }
 
     n_array_free(pkgs);

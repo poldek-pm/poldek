@@ -61,13 +61,9 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
     if (!ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE))
         ldflags |= PKGDIR_LD_NOIGNORE;
 
-    if (ctx->ts->getop(ctx->ts, POLDEK_OP_VRFY_FILECNFLS) ||
-        ctx->ts->getop(ctx->ts, POLDEK_OP_VRFY_FILEORPHANS))
-    {
+    if (ctx->ts->getop(ctx->ts, POLDEK_OP_LDFULLFILELIST))
         ldflags |= PKGDIR_LD_FULLFLIST;
-    }
-        
-    
+
     if (strcmp(pm_get_name(ctx->pmctx), "pset") == 0)
         ldflags |= PKGDIR_LD_FULLFLIST;
     

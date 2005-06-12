@@ -29,9 +29,12 @@ enum poldek_ts_opt {
 
     POLDEK_OP_UNIQN,            /* --uniqn */
     POLDEK_OP_VRFY_DEPS,        /* -V */
-    POLDEK_OP_VRFY_CNFLS,       /* --verify-conflicts */
-    POLDEK_OP_VRFY_FILECNFLS,   /* --verify-fileconflicts */
-    POLDEK_OP_VRFY_FILEORPHANS, /* --verify-fileorphans */
+    POLDEK_OP_VRFY_CNFLS,        /* --verify=conflicts */
+    POLDEK_OP_VRFY_FILECNFLS,    /* --verify=file-conflicts */
+    POLDEK_OP_VRFY_FILEORPHANS,  /* --verify=file-orphans */
+    POLDEK_OP_VRFY_FILEMISSDEPS, /* --verify=file-missing-deps */
+
+    POLDEK_OP_LDFULLFILELIST,    /* internal, load whole file database */
     
     POLDEK_OP_VRFYMERCY,   /* --mercy */
     POLDEK_OP_PROMOTEPOCH, /* --promoteepoch */

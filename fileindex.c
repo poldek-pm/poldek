@@ -26,6 +26,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "pkgfl.h"
+#include "pkgmisc.h"
 #include "pkg.h"
 #include "capreq.h"
 #include "fileindex.h"
@@ -531,78 +532,317 @@ int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs)
     return nconflicts;
 }
 
+static tn_array *get_pkg_dirs(struct pkg *pkg) 
+{
+    tn_hash *dirh;
+    tn_array *dirs;
+    int i;
+        
+    dirh = n_hash_new(3 * n_tuple_size(pkg->fl), NULL);
+    for (i=0; i < n_tuple_size(pkg->fl); i++) {
+        struct pkgfl_ent *flent = n_tuple_nth(pkg->fl, i);
+        char tmpbuf[PATH_MAX], *p, *q;
+
+        if (*flent->dirname == '/') /* / */
+            continue;
+
+        n_snprintf(tmpbuf, sizeof(tmpbuf), "/%s/", flent->dirname);
+        q = tmpbuf;
+        while ((p = strrchr(tmpbuf, '/')) && p != tmpbuf) {
+            *p = '\0';
+            if (!n_hash_exists(dirh, tmpbuf))
+                n_hash_insert(dirh, tmpbuf, NULL);
+        }
+    }
+    
+    dirs = n_hash_keys_cp(dirh);
+    n_hash_free(dirh);
+    return dirs;
+}
+
+
 int file_index_report_orphans(const struct file_index *fi, tn_array *pkgs)
 {
     struct pkg *result[2048];
     tn_array   *paths;
-    tn_hash    *orph, *nonorph;
-    int        i, j, norphans = 0;
+    tn_hash    *orphanh, *missreqh, *is_path_to_cache;
+    int        i, j, norphans = 0, modv = 0;
     
-    orph = n_hash_new(64, (tn_fn_free)n_hash_free);
+    orphanh  = n_hash_new(n_array_size(pkgs)/100, (tn_fn_free)n_hash_free);
+    missreqh = n_hash_new(n_array_size(pkgs), (tn_fn_free)n_array_free);
+    is_path_to_cache = n_hash_new(n_array_size(pkgs)/100, NULL);
+
+    if (n_array_size(pkgs) > 100) {
+        modv = n_array_size(pkgs) / 100.0;
+        modv = modv > 0 ? modv : 1;
+    }
+    
     for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
+        struct pkg *pkg;
+        tn_array *dirs;
         
-        //if (i % (n_array_size(pkgs) / 10) == 0)
-        //    msg(1, "%s%d", i > 0 ? ".." : "", i);
+        pkg = n_array_nth(pkgs, i);
+
+        if (modv && i % modv == 0)
+            msg_tty(1, "\r%.1lf%% done",
+                    ((float)i / n_array_size(pkgs)) * 100.0);
+
+        if (pkg->fl == NULL)
+            continue;
+
+        dirs = get_pkg_dirs(pkg);
+        n_array_sort(dirs);
+        
+        for (j=0; j < n_array_size(dirs); j++) {
+            char *dir = n_array_nth(dirs, j);
+            int nfound;
+            
+            if (n_hash_exists(orphanh, dir)) {
+                tn_hash *opkgh = n_hash_get(orphanh, dir);
+                n_hash_replace(opkgh, pkg_snprintf_s0(pkg), pkg);
+                continue;
+            }
+                
+            nfound = file_index_lookup(fi, dir, strlen(dir), result, 2048);
+            if (nfound == 0) {
+                DBGF("%s not found\n", tmpbuf);
+                tn_hash *opkgh = n_hash_new(128, NULL);
+                n_hash_insert(opkgh, pkg_id(pkg), pkg);
+                n_hash_insert(orphanh, dir, opkgh);
+            }
+        }
+        n_array_free(dirs);
+    }
+    if (modv)
+        msg_tty(1, "\r          \r");
+    
+    paths = n_hash_keys(orphanh);
+    n_array_sort(paths);
+
+    for (i=0; i < n_array_size(paths); i++) {
+        char *path = n_array_nth(paths, i);
+        char pkgstr[PATH_MAX];
+        tn_array *opkgs;
+        int n = 0;
+            
+        opkgs = n_hash_keys(n_hash_get(orphanh, path));
+        n_array_sort(opkgs);
+        
+        for (j=0; j < n_array_size(opkgs) && j < 5; j++)
+            n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n,
+                            "%s%s", (char*)n_array_nth(opkgs, j),
+                            j < n_array_size(opkgs) - 1 ? ", " : "");
+        
+        if (n_array_size(opkgs) > 5)
+            n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n,
+                            "[%d packages left]", n_array_size(opkgs) - 5);
+        logn(LOGERR, "%s: orphaned directory from %s", path, pkgstr);
+    }
+    norphans = n_array_size(paths);
+    msgn(0, "%d orphaned directories found", norphans);
+    n_array_free(paths);
+    n_hash_free(orphanh);
+
+    return norphans;
+}
+
+
+static
+int is_path_to(tn_hash *is_path_to_cache, 
+               struct pkgmark_set *pms,
+               struct pkg *dest, struct pkg *pkg,
+               int deep)
+{
+    int i;
+
+    if (pkg_isset_mf(pms, pkg, PKGMARK_BLACK)) /* was there? */
+        return 0;
+    
+    msgn_i(2, deep, "%s", pkg_id(pkg));
+    deep += 2;
+
+    pkg_set_mf(pms, pkg, PKGMARK_BLACK); /* was there */
+    if (pkg->reqpkgs == NULL)
+        return 0;
+
+    for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
+        struct pkg *rpkg = n_array_nth(pkg->reqpkgs, i);
+        char key[PATH_MAX];
+        int yes;
+        
+        if (rpkg == dest)
+            return 1;
+
+        if (rpkg->reqpkgs == NULL)
+            continue;
+
+        n_snprintf(key, sizeof(key), "%s -> %s", pkg_id(rpkg), pkg_id(dest));
+        if (n_hash_exists(is_path_to_cache, key)) {
+            DBGF("cached2 %s\n", key);
+            return n_hash_get(is_path_to_cache, key) != NULL;
+        }
+        
+        yes = is_path_to(is_path_to_cache, pms, dest, rpkg, deep);
+#if 0       /* faster, but needs a lot of memory */
+        n_hash_replace(is_path_to_cache, key, yes ? pkg : NULL);
+#endif        
+        if (yes)
+            return 1;
+    }
+    
+    return 0;
+}
+
+/* is any from ptab[] is required by pkg? */
+static int is_required(tn_hash *is_path_to_cache, 
+                       struct pkg *pkg, const char *path,
+                       struct pkg *ptab[], int size) 
+{
+    struct pkgmark_set *pms;
+    int i, yes = 0;
+    
+    for (i=0; i < size; i++) {
+        if (ptab[i] == pkg) 
+            return 1;
+    }
+    
+    if (pkg->reqpkgs == NULL)
+        return 0;
+
+    pms = pkgmark_set_new(0, PKGMARK_SET_IDPTR);
+    for (i=0; i < size; i++) {
+        char key[PATH_MAX];
+        
+        msgn(2, "Looking for path %s -> %s (%s)", pkg_id(pkg), pkg_id(ptab[i]),
+             path);
+
+        n_snprintf(key, sizeof(key), "%s -> %s", pkg_id(pkg), pkg_id(ptab[i]));
+        
+        if (n_hash_exists(is_path_to_cache, key)) {
+            yes = n_hash_get(is_path_to_cache, key) != NULL;
+            break;
+        }
+        
+        pkgmark_massset(pms, 0, PKGMARK_BLACK);
+        yes = is_path_to(is_path_to_cache, pms, ptab[i], pkg, 0);
+        n_hash_replace(is_path_to_cache, key, yes ? pkg : NULL);
+        
+        if (yes)
+            break;
+    }
+    
+    pkgmark_set_free(pms);
+    return yes;
+}
+
+struct missing_req {
+    char   path[PATH_MAX];
+    int    ncandidates;
+    struct pkg *candidates[0];
+};
+
+static
+struct missing_req *missing_req_new(const char *path,
+                                    struct pkg *ptab[], int size)
+{
+    struct missing_req *mreq;
+
+    mreq = n_malloc(sizeof(*mreq) + size * sizeof(struct pkg*));
+    n_snprintf(mreq->path, sizeof(mreq->path), "%s", path);
+    mreq->ncandidates = size;
+    memcpy(mreq->candidates, ptab, size * sizeof(struct pkg*));
+    return mreq;
+}
+
+int file_index_report_semiorphans(const struct file_index *fi, tn_array *pkgs)
+{
+    struct pkg *result[2048];
+    tn_array   *pkgids;
+    tn_hash    *missreqh, *is_path_to_cache;
+    int        i, j, norphans = 0, modv = 0;
+    
+    missreqh = n_hash_new(n_array_size(pkgs), (tn_fn_free)n_array_free);
+    is_path_to_cache = n_hash_new(n_array_size(pkgs)/100, NULL);
+
+    if (n_array_size(pkgs) > 50) {
+        modv = n_array_size(pkgs) / 200.0;
+        modv = modv > 0 ? modv : 1;
+    }
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg;
+        tn_array *dirs;
+        
+        pkg = n_array_nth(pkgs, i);
+        if (modv && i % modv == 0)
+            msg_tty(1, "\r%.1lf%% done",
+                    ((float)i / n_array_size(pkgs)) * 100.0);
+#if ENABLE_TRACE
+        if (i % 100 == 0)
+            DBGF("size = %d\n", n_hash_size(is_path_to_cache));
+#endif        
         
         if (pkg->fl == NULL)
             continue;
-        
-        
-        for (j=0; j < n_tuple_size(pkg->fl); j++) {
-            struct pkgfl_ent *flent = n_tuple_nth(pkg->fl, j);
-            char tmpbuf[PATH_MAX], *p, *q;
 
-            if (*flent->dirname == '/') /* / */
+        dirs = get_pkg_dirs(pkg);
+        n_array_sort(dirs);
+        
+        DBGF("dirs %d\n", n_array_size(dirs));
+        for (j=0; j < n_array_size(dirs); j++) {
+            char *dir = n_array_nth(dirs, j);
+            int nfound;
+            
+            nfound = file_index_lookup(fi, dir, strlen(dir), result, 2048);
+            if (nfound == 0)    /* orphaned */
                 continue;
             
-            n_snprintf(tmpbuf, sizeof(tmpbuf), "/%s/", flent->dirname);
-            q = tmpbuf;
-            while ((p = strrchr(tmpbuf, '/')) && p != tmpbuf) {
-                *p = '\0';
-
-                if (n_hash_exists(orph, tmpbuf)) {
-                    tn_hash *opkgh = n_hash_get(orph, tmpbuf);
-                    n_hash_replace(opkgh, pkg_snprintf_s0(pkg), pkg);
-                    continue;
+            if (!is_required(is_path_to_cache, pkg, dir, result, nfound)) {
+                tn_array *mreqarr;
+                if ((mreqarr = n_hash_get(missreqh, pkg_id(pkg))) == NULL) {
+                    mreqarr = n_array_new(128, free, NULL);
+                    n_hash_insert(missreqh, pkg_id(pkg), mreqarr);
                 }
-                
-                if (!file_index_lookup(fi, tmpbuf, strlen(tmpbuf), 
-                                       result, 2048)) {
-                    DBGF("%s not found\n", tmpbuf);
-                    tn_hash *opkgh = n_hash_new(128, NULL);
-                    n_hash_insert(opkgh, pkg_snprintf_s0(pkg), pkg);
-                    n_hash_insert(orph, tmpbuf, opkgh);
-                }
+                n_array_push(mreqarr, missing_req_new(dir, result, nfound));
             }
         }
+        n_array_free(dirs);
     }
-    //msgn(1, "..%d", n_array_size(pkgs));
-    paths = n_hash_keys(orph);
-    n_array_sort(paths);
+    n_hash_free(is_path_to_cache);
     
-    for (i=0; i < n_array_size(paths); i++) {
-        char *path = n_array_nth(paths, i);
-        tn_hash *opkgh = n_hash_get(orph, path);
-        tn_array *opkgs = n_hash_keys(opkgh);
+    if (modv)
+        msg_tty(1, "\r          \r");
+    
+    norphans = 0;
+    pkgids = n_hash_keys(missreqh);
 
-        msg_tty(0, "\n");
-        msg(0, "Path: %s\n", path);
-        n_array_sort(opkgs);
+    n_array_sort(pkgids);
+    for (i=0; i < n_array_size(pkgids); i++) {
+        char *id = n_array_nth(pkgids, i);
+        tn_array *mreqarr = n_hash_get(missreqh, id);
+
+        for (j=0; j < n_array_size(mreqarr); j++) {
+            struct missing_req *mreq = n_array_nth(mreqarr, j);
+            char pkgstr[PATH_MAX];
+            int k, n = 0;
+            
+            for (k=0; k < mreq->ncandidates && k < 3; k++)
+                n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n,
+                                "%s%s", mreq->candidates[k]->name,
+                                k < mreq->ncandidates - 1 ? "/" : "");
         
-        for (j=0; j < n_array_size(opkgs) && j < 5; j++) 
-            msg(0, "%s%s", (char*)n_array_nth(opkgs, j),
-                j < n_array_size(opkgs) - 1 ? ", " : "\n");
+            if (mreq->ncandidates > 3)
+                n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n,
+                                "...", mreq->ncandidates - 3);
         
-        if (n_array_size(opkgs) > 5)
-            msgn(0, "[%d packages left]", n_array_size(opkgs) - 5);
+            logn(LOGERR, "%s: %s: directory not in required packages "
+                 "(missing Requires: %s?)", id, mreq->path, pkgstr);
+            norphans++;
+        }
     }
-
-    norphans = n_array_size(paths);
-    msgn(0, "%d orphaned directories found", norphans);
-    
-    n_array_free(paths);
-    n_hash_free(orph);
+    msgn(0, "%d semi-orphaned directories found", norphans);
+    n_array_free(pkgids);
+    n_hash_free(missreqh);
     return norphans;
 }
 
