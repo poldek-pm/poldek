@@ -556,7 +556,7 @@ int file_index_report_orphans(const struct file_index *fi, tn_array *pkgs)
             if (*flent->dirname == '/') /* / */
                 continue;
             
-            n_snprintf(tmpbuf, sizeof(tmpbuf), "/%s", flent->dirname);
+            n_snprintf(tmpbuf, sizeof(tmpbuf), "/%s/", flent->dirname);
             q = tmpbuf;
             while ((p = strrchr(tmpbuf, '/')) && p != tmpbuf) {
                 *p = '\0';
