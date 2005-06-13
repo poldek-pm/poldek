@@ -1,6 +1,5 @@
-#! /bin/sh
-
-#! /bin/sh
+#!/bin/sh
+# $Id$
 
 do_configure() 
 {
@@ -22,7 +21,12 @@ name=$1
 mode=$2
 
 [ -n "$name" ] || exit 1
-[ -d ../$name ] || exit 1
+
+# no ../$name => we are propably in distribution tree
+if [ ! -d ../$name -a -d $name ]; then 
+   do_configure $name;
+   exit;
+fi
 
 if [ "$mode" = "link" ]; then
         if [ -h $name ]; then do_configure $name; exit 0; fi

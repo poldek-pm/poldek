@@ -28,17 +28,19 @@ runcmd ./getlib.sh tndb    $getlib_mode
 
 # generate po/POTFILES.in
 make -f Makefile.extra POTFILES_in
-
+runcmd autopoint
 runcmd libtoolize --force --automake
 runcmd aclocal -I m4
 runcmd autoheader
 runcmd autoconf
 
-if which -- autopoint >/dev/null 2>&1 ; then
-    runcmd autopoint --force
-else
-    runcmd gettextize -f
-fi
+# outdated (propably
+#if which -- autopoint >/dev/null 2>&1 ; then
+#    runcmd autopoint --force
+#else
+#    runcmd gettextize -f
+#fi
+
 runcmd automake --add-missing -a -c -f --foreign
 
 # w/o

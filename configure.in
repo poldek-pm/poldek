@@ -419,6 +419,9 @@ ENABLE_PYTHON=$enableval, ENABLE_PYTHON=no)
 if test "${ENABLE_PYTHON}." = "yes."; then
     AM_PATH_PYTHON
     AC_CONFIG_SUBDIRS(python)
+    AM_CONDITIONAL(ENABLE_PYTHON, true)
+else
+    AM_CONDITIONAL(ENABLE_PYTHON, false)
 fi
 
 #CPPFLAGS="$CPPFLAGS -DPKGLIBDIR=\\\"\$(pkglibdir)\\\" -DSYSCONFDIR=\\\"\$(sysconfdir)\\\""
