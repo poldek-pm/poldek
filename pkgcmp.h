@@ -41,7 +41,7 @@ int pkg_cmp_recno(const struct pkg *p1, const struct pkg *p2);
 /* like pkg_cmp_name_evr() but VR is compared by strcmp() */
 int pkg_strcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
 
-/* with warn message */
+/* with warn message, for n_array_uniq() only */
 int pkg_cmp_uniq_name(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_uniq_name_evr_arch(const struct pkg *p1, const struct pkg *p2);
