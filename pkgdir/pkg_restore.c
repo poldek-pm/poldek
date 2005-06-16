@@ -375,7 +375,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                          ul_offs, tag);
                 
                 if (!pkg_store_skiptag(tag, tag_binsize, st)) {
-                    logn(LOGERR, "%s:%lu: %c: unknown tag binsize (%c)",
+                    logn(LOGERR, "%s:%lu: %c: unknown binsize of tag (%c)",
                          fn, ul_offs, tag,
                          tag_binsize > 0 && tag_binsize < INT8_MAX &&
                          isascii(tag_binsize) ? tag_binsize : '-');
