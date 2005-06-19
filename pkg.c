@@ -44,6 +44,7 @@
 #include "pkg_ver_cmp.h"
 
 int poldek_conf_PROMOTE_EPOCH = 0;
+int poldek_conf_MULTILIB = 0;
 
 static tn_hash *architecture_h = NULL;
 static tn_array *architecture_a = NULL;
@@ -215,12 +216,11 @@ struct pkg *pkg_new_ext(tn_alloc *na,
 
     len += len + 1;             /* for id (nvr) */
     
-#if MULTILIB_XXX
-    if (arch) {
+    
+    if (poldek_conf_MULTILIB && arch) {
         arch_len = strlen(arch); 
         len += arch_len + 1;
     }
-#endif
         
     len += 1;
     if (na == NULL) {
@@ -281,13 +281,12 @@ struct pkg *pkg_new_ext(tn_alloc *na,
     memcpy(buf, release, release_len);
     buf += release_len;
 
-#if MULTILIB_XXX
-    if (arch) {
+
+    if (poldek_conf_MULTILIB && arch) {
         *buf++ = '.';
         memcpy(buf, arch, arch_len);
         buf += arch_len;
     }
-#endif
 
     *buf++ = '\0';
     pkg->reqs = NULL;
@@ -1293,4 +1292,15 @@ struct pkg *pkg_link(struct pkg *pkg)
 const char *pkg_id(const struct pkg *p) 
 {
     return p->_nvr;
+}
+
+int pkg_id_snprintf(char *str, size_t size, const struct pkg *pkg)
+{
+    return n_snprintf(str, size, "%s", pkg_id(pkg));
+}
+
+int pkg_idevr_snprintf(char *str, size_t size, const struct pkg *pkg)
+{
+    return n_snprintf(str, size, "%s-%s.%s", pkg->ver, pkg->rel,
+                      pkg_arch(pkg));
 }

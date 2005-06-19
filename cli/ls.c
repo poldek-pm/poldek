@@ -122,21 +122,9 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                                 /* no break */
         case 'u':
             cmdctx->_flags |= OPT_LS_UPGRADEABLE;
-            
-            //if (cmdctx->cctx->instpkgs == NULL) {
-            //    log(LOGERR, _("ls: installed packages not loaded, "
-            //                  "type \"reload\" to load them\n"));
-            //    return EINVAL;
-            //}
             break;
             
         case 'I':
-            //if (cmdctx->cctx->instpkgs == NULL) {
-            //    log(LOGERR, _("ls: installed packages not loaded, "
-            //                 "type \"reload\" to load them\n"));
-            //    return EINVAL;
-            //}
-            
             cmdctx->_flags |= OPT_LS_INSTALLED;
             break;
 
@@ -183,7 +171,7 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
     while (n < n_array_size(pkgs)) {
         pkg = n_array_nth(pkgs, n++);
 
-        if (strcmp(pkg->name, lpkg->name) == 0) {
+        if (pkg_is_kind_of(pkg, lpkg)) {
             found = 1;
             break;
         }
@@ -199,9 +187,8 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
         *cmprc = pkg_cmp_evr(lpkg, pkg);
     else 
         *cmprc = pkg_cmp_ver(lpkg, pkg);
-    
-    snprintf(evr, size, "%s-%s", pkg->ver, pkg->rel);
-    
+
+    pkg_idevr_snprintf(evr, size, pkg);
     return found;
 }
 
@@ -368,11 +355,11 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 
     } else if (flags & OPT_LS_LONG) {
         if ((flags & OPT_LS_UPGRADEABLE) == 0) {
-            snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds %%%ds\n",
+            snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds %%-%ds%%%ds\n",
                      term_width_div2 + term_width_div2/10, (term_width/7),
                      (term_width/8) + 2);
             
-            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%%ds %%%ds\n",
+            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds %%%ds %%%ds\n",
                      term_width_div2 + term_width_div2/10, (term_width/7),
                      (term_width/8));
             snprintf(hdr, sizeof(hdr), fmt_hdr,
@@ -380,11 +367,11 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 
             
         } else {
-            snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds%%-%ds%%%ds\n",
+            snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds %%-%ds%%%ds\n",
                      (term_width/2) - 1, (term_width/6) - 1,
                      (term_width/6) - 1, (term_width/5) - 1);
 
-            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%-%ds%%-%ds%%%ds\n",
+            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%-%ds %%-%ds %%%ds\n",
                      (term_width/2) - 1, (term_width/6) - 1,
                      (term_width/6) - 1, (term_width/6) - 1);
             

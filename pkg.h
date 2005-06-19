@@ -138,8 +138,6 @@ void pkg_free(struct pkg *pkg);
 
 extern__inline struct pkg *pkg_link(struct pkg *pkg);
 
-extern__inline const char *pkg_id(const struct pkg *p);
-
 int pkg_set_arch(struct pkg *pkg, const char *arch);
 const char *pkg_arch(const struct pkg *pkg);
 int pkg_arch_score(const struct pkg *pkg);
@@ -200,6 +198,11 @@ char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
                     const char *cachedir);
 const char *pkg_pkgdirpath(const struct pkg *pkg);
 unsigned pkg_file_url_type(const struct pkg *pkg);
+
+
+extern__inline const char *pkg_id(const struct pkg *p);
+int pkg_id_snprintf(char *str, size_t size, const struct pkg *pkg);
+int pkg_idevr_snprintf(char *str, size_t size, const struct pkg *pkg);
 
 
 int pkg_printf(const struct pkg *pkg, const char *str);

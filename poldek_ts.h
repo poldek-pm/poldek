@@ -49,6 +49,7 @@ enum poldek_ts_opt {
     POLDEK_OP_NODEPS,  /* rpm --nodeps */
 
     POLDEK_OP_CAPLOOKUP,
+    POLDEK_OP_MULTILIB,
     POLDEK_OP_FORCE,  /* rpm --force  */
     POLDEK_OP_IGNOREARCH,  /* rpm --ignorearch */
     POLDEK_OP_IGNOREOS,    /* rpm --ignoreos   */

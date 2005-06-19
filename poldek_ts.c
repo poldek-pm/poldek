@@ -40,6 +40,7 @@
 #include "i18n.h"
 
 extern int poldek_conf_PROMOTE_EPOCH;
+extern int poldek_conf_MULTILIB;
 
 #define bitvect_slot_itype  uint32_t
 #define bitvect_slot_size   sizeof(bitvect_slot_itype) * CHAR_BIT
@@ -114,7 +115,15 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
         case POLDEK_OP_PROMOTEPOCH:
             poldek_conf_PROMOTE_EPOCH = on;
             DBGF("set %p (%p) %d %d\n", ts, ts->ctx, optv, on);
-            /* propagate it to ctx too, it is unfortunately global variable */
+            /* propagate it to ctx too, it is (unfortunately) global variable */
+            if (ts->ctx)
+                poldek_configure(ts->ctx, POLDEK_CONF_OPT, optv, on);
+            break;
+            
+        case POLDEK_OP_MULTILIB:
+            poldek_conf_MULTILIB = on;
+            DBGF("set %p (%p) %d %d\n", ts, ts->ctx, optv, on);
+            /* propagate it to ctx too, it is (unfortunately) global variable */
             if (ts->ctx)
                 poldek_configure(ts->ctx, POLDEK_CONF_OPT, optv, on);
             break;

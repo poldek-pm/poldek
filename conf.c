@@ -120,6 +120,7 @@ static struct tag global_tags[] = {
     { "load apt sources list", TYPE_BOOL, { 0 } },
     { "exclude path", TYPE_STR | TYPE_PATHLIST | TYPE_MULTI , { 0 } },
     { "allow duplicates", TYPE_BOOL , { 0 } },
+    { "multilib", TYPE_BOOL, { 0 } }, 
     { "__dirname", TYPE_STR, { 0 } }, 
     {  NULL,           0, { 0 } }, 
 };

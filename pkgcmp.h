@@ -11,6 +11,8 @@ struct capreq;
 # define extern__inline extern inline
 #endif
 
+int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg);
+
 /* strncmp(p1->name, p2->name, strlen(p2->name)) */
 extern__inline int pkg_ncmp_name(const struct pkg *p1, const struct pkg *p2);
 
@@ -21,6 +23,10 @@ extern__inline int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
 int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2);
 /* EVR only */
 int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2);
+/* ARCH only */
+int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2);
+
+
 /* Name-EVR */
 int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2);
 /* Like above, but reversed EVR */

@@ -107,6 +107,7 @@ static struct {
     { "allow_duplicates",     POLDEK_OP_ALLOWDUPS, 1 },
     { "unique_package_names", POLDEK_OP_UNIQN, 0  },
     { "promoteepoch", POLDEK_OP_PROMOTEPOCH, 0  },
+    { "multilib", POLDEK_OP_MULTILIB, 0  },
     { NULL, POLDEK_OP_HOLD,   1  },
     { NULL, POLDEK_OP_IGNORE, 1  }, 
     { NULL, 0, 0 }

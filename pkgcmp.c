@@ -36,7 +36,22 @@
 #include "pkgcmp.h"
 #include "poldek_util.h"
 
-static int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2);
+extern int poldek_conf_MULTILIB;
+
+int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg)
+{
+    register int rc = strcmp(pkg->name, candidate->name);
+    
+    if (rc == 0 && poldek_conf_MULTILIB) {
+        rc = pkg_cmp_arch(pkg, candidate);
+#if ENABLE_TRACE        
+        if (rc == 0)
+            DBGF("%s, %s => YES\n", pkg_id(candidate), pkg_id(pkg));
+#endif        
+    }
+    
+    return rc == 0;
+}
 
 int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr) 
 {
@@ -64,7 +79,6 @@ int pkg_eq_name_prefix(const struct pkg *pkg1, const struct pkg *pkg2)
 
     return strncmp(pkg1->name, pkg2->name, n) == 0;
 }
-
 
 int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2) 
 {
@@ -202,7 +216,6 @@ int pkg_strcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 }
 
 
-static
 int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2) 
 {
     if (p1->_arch && p2->_arch) {
@@ -274,7 +287,7 @@ int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
     return -pkg_deepcmp_(p1, p2);
 }
 
-
+/* u */
 int pkg_cmp_uniq_name(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc;
@@ -296,8 +309,12 @@ int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2)
              pkg_snprintf_s(p1), pkg_arch(p1), pkg_arch_score(p1),
              pkg_arch(p2), pkg_archscore(p2));
 #endif    
+    rc = pkg_cmp_name_evr_rev(p1, p2);
     
-    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && poldek_VERBOSE > 1) {
+    if (rc == 0 && poldek_conf_MULTILIB)
+        rc = p1->_arch - p2->_arch;
+
+    if (rc == 0 && poldek_VERBOSE > 1) {
         if (poldek_VERBOSE > 2) {
             logn(LOGNOTICE, "uniq %s: keep %s (score %d), removed %s (score %d)",
                  pkg_snprintf_s(p1), pkg_arch(p1), pkg_arch_score(p1),
@@ -312,6 +329,7 @@ int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2)
     return rc;
 }
 
+/* used by pkgdir module */
 int pkg_cmp_uniq_name_evr_arch(const struct pkg *p1, const struct pkg *p2) 
 {
     register int rc;
