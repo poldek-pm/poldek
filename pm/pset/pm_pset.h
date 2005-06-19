@@ -30,8 +30,8 @@ int pm_pset_commitdb(void *dbh);
 
 int pm_pset_db_it_init(struct pkgdb_it *it, int tag, const char *arg);
 
-int pm_pset_hdr_nevr(void *h, char **name,
-                     int32_t *epoch, char **version, char **release);
+int pm_pset_hdr_nevr(void *h, char **name, int32_t *epoch,
+                     char **ver, char **rel, char **arch);
 
 void *pm_pset_hdr_link(void *h);
 void pm_pset_hdr_free(void *h);

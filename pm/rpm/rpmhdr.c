@@ -97,7 +97,7 @@ char **pm_rpmhdr_langs(Header h)
 
 
 int pm_rpmhdr_nevr(void *h, char **name,
-                   int32_t *epoch, char **version, char **release)
+                   int32_t *epoch, char **version, char **release, char **arch)
 {
     int type;
     int32_t *anepoch;
@@ -109,6 +109,11 @@ int pm_rpmhdr_nevr(void *h, char **name,
     
     if (headerGetEntry(h, RPMTAG_EPOCH, &type, (void *)&anepoch, NULL))
         *epoch = *anepoch;
+    
+    if (arch) {
+        *arch = NULL;
+        headerGetEntry(h, RPMTAG_ARCH, &type, (void *)arch, NULL);
+    }
     
     return 1;
 }

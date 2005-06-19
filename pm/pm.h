@@ -34,6 +34,9 @@ int pm_pmuninstall(struct pkgdb *db, tn_array *pkgs, struct poldek_ts *ts);
 
 int pm_verify_signature(struct pm_ctx *ctx, const char *path, unsigned flags);
 
+struct pm_dbrec *dbrec;
+typedef int (*pkgdb_filter_fn) (struct pkgdb *db,
+                                const struct pm_dbrec *dbrec, void *arg);
 
 struct pkgdb {
     void     *dbh;
@@ -43,6 +46,11 @@ struct pkgdb {
     tn_hash  *kw;
     int16_t  _opened;
     uint16_t _txcnt;
+
+    /* user filter fn */
+    pkgdb_filter_fn _filter;
+    void            *_filter_arg;
+    
     struct pm_ctx *_ctx;
 };
 
@@ -53,6 +61,10 @@ struct pkgdb *pkgdb_open(struct pm_ctx *ctx, const char *rootdir,
     pkgdb_open(ctx, rootdir, path, O_RDWR | O_CREAT | O_EXCL, key, ##args)
 
 int pkgdb_reopen(struct pkgdb *db, mode_t mode);
+
+pkgdb_filter_fn pkgdb_set_filter(struct pkgdb *db,
+                                 pkgdb_filter_fn filter,
+                                 void *filter_arg);
 
 void pkgdb_close(struct pkgdb *db);
 void pkgdb_free(struct pkgdb *db);
@@ -85,6 +97,10 @@ struct pm_dbrec {
     struct pm_ctx *_ctx;
 };
 
+int pm_dbrec_nevr(const struct pm_dbrec *dbrec, char **name, int32_t *epoch,
+                  char **ver, char **rel, char **arch);
+
+                  
 int pkgdb_is_pkg_installed(struct pkgdb *db, const struct pkg *pkg, int *cmprc);
 int pkgdb_get_package_hdr(struct pkgdb *db, const struct pkg *pkg,
                           struct pm_dbrec *dbrec);
@@ -111,6 +127,12 @@ enum pkgdb_it_tag {
 struct pkgdb_it {
     struct pkgdb   *_db;
     void           *_it;
+    struct pkg     *pkg;
+    
+    /* user filter fn */
+    pkgdb_filter_fn _filter;
+    void            *_filter_arg;
+    
     const struct pm_dbrec* (*_get)(struct pkgdb_it *it);
     int           (*_get_count)(struct pkgdb_it *it);
     void          (*_destroy)(struct pkgdb_it *it);
@@ -118,9 +140,24 @@ struct pkgdb_it {
 
 int pkgdb_it_init(struct pkgdb *db, struct pkgdb_it *it,
                   int tag, const char *arg);
+
+pkgdb_filter_fn pkgdb_it_set_filter(struct pkgdb_it *it,
+                                    pkgdb_filter_fn filter,
+                                    void *filter_arg);
+
 void pkgdb_it_destroy(struct pkgdb_it *it);
 const struct pm_dbrec *pkgdb_it_get(struct pkgdb_it *it);
 int pkgdb_it_get_count(struct pkgdb_it *it);
+
+
+/* Search database for value of a tag ignoring packages
+   in dbpkgs_skiplist. Found packages are added to dbpkgs
+   array (created if NULL), returns number of packages found */
+int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
+                 enum pkgdb_it_tag tag, const char *value,
+                 tn_array *dbpkgs_skiplist, unsigned ldflags);
+
+
 
 int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                           const struct capreq *cap,
@@ -131,10 +168,10 @@ int pkgdb_get_pkgs_requires_capn(struct pkgdb *db,
                                  tn_array *dbpkgs, const char *capname,
                                  tn_array *unistdbpkgs, unsigned ldflags);
 
+
 #define PKGDB_GETF_OBSOLETEDBY_NEVR (1 << 0)  /* by NEVR only  */
 #define PKGDB_GETF_OBSOLETEDBY_OBSL (1 << 1)  /* by Obsoletes  */
 #define PKGDB_GETF_OBSOLETEDBY_REV  (1 << 10) /* reverse match */
-
 /*
   adds to dbpkgs packages obsoleted by pkg
 */

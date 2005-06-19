@@ -466,15 +466,18 @@ int pm_pset_db_it_init(struct pkgdb_it *it, int tag, const char *arg)
 
 
 
-int pm_pset_hdr_nevr(void *h, char **name,
-                    int32_t *epoch, char **version, char **release)
+int pm_pset_hdr_nevr(void *h, char **name, int32_t *epoch,
+                     char **ver, char **rel, char **arch)
 {
     struct pkg *pkg = h;
     
     *name = pkg->name;
     *epoch = pkg->epoch;
-    *version = pkg->ver;
-    *release = pkg->rel;
+    *ver = pkg->ver;
+    *rel = pkg->rel;
+    if (arch)
+        *arch = (char*)pkg_arch(pkg);
+    
     return 1;
 }
 
