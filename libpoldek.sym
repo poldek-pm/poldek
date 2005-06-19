@@ -64,11 +64,14 @@ pkg_group
 pkg_has_path
 pkg_has_pkgcnfl
 pkg_id
+pkg_id_snprintf
+pkg_idevr_snprintf
 pkg_info
 pkg_info_ex
 pkg_info_free_flist
 pkg_info_get_flist
 pkg_info_get_nodep_flist
+pkg_is_kind_of
 pkg_link
 pkg_localpath
 pkg_match_req
