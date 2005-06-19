@@ -160,7 +160,7 @@ static
 char *arg_generator(const char *text, int state, int genpackages)
 {
     static int           i, len;
-    char                 *name = NULL;
+    const char           *name = NULL;
     tn_array             *ents;
 
     if (genpackages) {
@@ -195,7 +195,8 @@ char *arg_generator(const char *text, int state, int genpackages)
 
     while (i > -1 && i < n_array_size(ents)) {
         struct pkg_dent *ent = n_array_nth(ents, i++);
-        char ent_path[PATH_MAX], *path;
+        char ent_path[PATH_MAX];
+        const char *path;
         
         if (genpackages) {
             if (pkg_dent_isdir(ent))
@@ -228,11 +229,10 @@ char *arg_generator(const char *text, int state, int genpackages)
             break;
         }
     }
-    
+
     if (name)
-        name = n_strdup(name);
-    
-    return name;
+        return n_strdup(name);
+    return NULL;
 }
 
 static
