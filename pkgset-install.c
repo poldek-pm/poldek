@@ -147,7 +147,7 @@ int is_pkg_installed(struct pkgdb *db, struct pkg *pkg, int *cmprc)
 
     n_assert(n >= 0);
     if (n == 0) {
-        n_assert(dbpkgs = NULL);
+        n_assert(dbpkgs == NULL);
         return 0;
     }
 
