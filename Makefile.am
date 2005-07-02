@@ -9,7 +9,7 @@ TNDB_DIR = @TNDB_DIR@
 CLI=cli
 SUBDIRS   = po doc $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir \
             pm . $(CLI) 
-DIST_SUBDIRS = $(SUBDIRS) python
+DIST_SUBDIRS = $(SUBDIRS) python tests
 
 INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@
 AM_CFLAGS = @AM_CFLAGS@
@@ -18,7 +18,7 @@ POD2MAN   = @POD2MAN@
 
 libVERINFO         = 0:0:0
 lib_LTLIBRARIES    = libpoldek.la
-#noinst_LTLIBRARIES = libpoldek_allsyms.la
+noinst_LTLIBRARIES = libpoldek_allsym.la
 
 libpoldek_la_LDFLAGS = -version-info $(libVERINFO) \
 					   -export-symbols libpoldek.sym
@@ -53,6 +53,7 @@ libpoldek_la_SOURCES = \
 	  i18n.h 		\
 	  ask.c                 \
 	  install-dist.c        \
+	  upgrade-dist.c        \
 	  uninstall.c           \
 	  lib_init.c            \
 	  lib_pkgset.c          \
@@ -60,7 +61,7 @@ libpoldek_la_SOURCES = \
 	  poldek_intern.h \
 	  pkg_ver_cmp.h 
 
-#libpoldek_allsyms_la_SOURCES = $(libpoldek_la_SOURCES)
+libpoldek_allsym_la_SOURCES = $(libpoldek_la_SOURCES)
 pkgincludedir = $(includedir)/poldek
 
 # one line to easy get them by external script 
@@ -75,13 +76,13 @@ libpoldek_la_LIBADD = \
 			pm/libpm.la    \
 			vfile/libvfile.la
 
-#libpoldek_allsyms_la_LIBADD = $(libpoldek_la_LIBADD)
+libpoldek_allsym_la_LIBADD = $(libpoldek_la_LIBADD)
 
 LDADD_              = @INTLLIBS@
 
 noinst_PROGRAMS     = test_match
 test_match_SOURCES  = test_match.c
-test_match_LDADD    = libpoldek.la 
+test_match_LDADD    = libpoldek_allsym.la 
 
 pkglib_SCRIPTS      = zlib-in-rpm.sh vfjuggle vfcompr vfsmb poldekuser-setup.sh
 

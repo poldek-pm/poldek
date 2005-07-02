@@ -92,9 +92,6 @@ struct upgrade_s {
     
     struct poldek_ts  *ts;
 
-    tn_hash        *db_pkgs;    /* used by mapfn_mark_newer_pkg() */
-    int             nmarked;
-
     tn_array       *pkg_stack;  /* stack for current processed packages  */
 };
 
@@ -2185,7 +2182,7 @@ static void init_upgrade_s(struct upgrade_s *upg, struct poldek_ts *ts)
     upg->orphan_dbpkgs = pkgs_array_new_ex(128, pkg_cmp_recno);
 
     upg->strict = ts->getop(ts, POLDEK_OP_VRFYMERCY);
-    upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
+    upg->ndberrs = upg->ndep = upg->ninstall = 0;
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
     upg->ts = ts; 
     upg->pkg_stack = n_array_new(32, NULL, NULL);
@@ -2229,102 +2226,9 @@ static void reset_upgrade_s(struct upgrade_s *upg)
     pkgmark_set_free(upg->deppms);
     upg->deppms = pkgmark_set_new(0, PKGMARK_SET_IDPTR);
     
-    upg->ndberrs = upg->ndep = upg->ninstall = upg->nmarked = 0;
+    upg->ndberrs = upg->ndep = upg->ninstall = 0;
     upg->nerr_dep = upg->nerr_cnfl = upg->nerr_dbcnfl = upg->nerr_fatal = 0;
 }
-
-
-static 
-void mapfn_mark_newer_pkg(const char *n, uint32_t e,
-                          const char *v, const char *r, void *upgptr) 
-{
-    struct upgrade_s  *upg = upgptr;
-    struct pkg        *pkg, tmpkg;
-    int               i, cmprc;
-
-    memset(&tmpkg, 0, sizeof(tmpkg));
-    tmpkg.name = (char*)n;
-    tmpkg.epoch = e;
-    tmpkg.ver = (char*)v;
-    tmpkg.rel = (char*)r;
-    
-    i = n_array_bsearch_idx_ex(upg->avpkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
-    if (i < 0) {
-        msg(3, "%-32s not found in repository\n", pkg_snprintf_s(&tmpkg));
-        return;
-    }
-    
-    pkg = n_array_nth(upg->avpkgs, i);
-    cmprc = pkg_cmp_evr(pkg, &tmpkg);
-    if (poldek_VERBOSE) {
-        if (cmprc == 0) 
-            msg(3, "%-32s up to date\n", pkg_snprintf_s(&tmpkg));
-        
-        else if (cmprc < 0)
-            msg(3, "%-32s newer than repository one\n", pkg_snprintf_s(&tmpkg));
-        
-        else 
-            msg(2, "%-32s -> %-30s\n", pkg_snprintf_s(&tmpkg),
-                pkg_id(pkg));
-    }
-
-    if ((pkg = n_hash_get(upg->db_pkgs, tmpkg.name))) {
-        if (pkg_is_marked(upg->ts->pms, pkg)) {
-            upg->nmarked--;
-            logn(LOGWARN, _("%s: multiple instances installed, skipped"),
-                 tmpkg.name);
-            pkg_unmark(upg->ts->pms, pkg);        /* display above once */
-        }
-
-        return;
-    }
-
-    pkg = n_array_nth(upg->avpkgs, i);
-    if (cmprc > 0) {
-        if (pkg_is_scored(pkg, PKG_HELD) &&
-            upg->ts->getop(upg->ts, POLDEK_OP_HOLD)) {
-            msgn(1, _("%s: skip held package"), pkg_id(pkg));
-            
-        } else {
-            n_hash_insert(upg->db_pkgs, tmpkg.name, pkg);
-            pkg_hand_mark(upg->ts->pms, pkg);
-            upg->nmarked++;
-        }
-    }
-    
-}
-
-
-int do_poldek_ts_upgrade_dist(struct poldek_ts *ts) 
-{
-    struct upgrade_s upg;
-    int nmarked;
-    
-    init_upgrade_s(&upg, ts);
-    upg.db_pkgs = n_hash_new(103, NULL);
-    
-    msgn(1, _("Looking up packages for upgrade..."));
-    pkgdb_map_nevr(ts->db, mapfn_mark_newer_pkg, &upg);
-    n_hash_free(upg.db_pkgs);
-
-    if (upg.ndberrs) {
-        logn(LOGERR, _("There are database errors (?), give up"));
-        destroy_upgrade_s(&upg);
-        return 0;
-    }
-    
-    nmarked = upg.nmarked;
-    destroy_upgrade_s(&upg);
-
-    if (sigint_reached()) 
-        return 0;
-    else if (nmarked == 0)
-        msgn(1, _("Nothing to do"));
-    else
-        return do_poldek_ts_install(ts, NULL);
-    return 1;
-}
-
 
 static void mark_namegroup(tn_array *pkgs, struct pkg *pkg, struct upgrade_s *upg) 
 {
