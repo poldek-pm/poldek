@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <trurl/narray.h>
 
+struct pkg;
+struct capreq;
+
 struct dbpkg_set {
     tn_array     *dbpkgs;                /* array of dbpkg* */
     tn_hash      *capcache;              /* cache of resolved packages caps */

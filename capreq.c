@@ -116,8 +116,8 @@ int capreq_strcmp_name_evr(struct capreq *cr1, struct capreq *cr2)
 
 
 static
-int capreq_snprintf_(char *str, size_t size, const struct capreq *cr,
-                     int with_char_marks) 
+int do_capreq_snprintf(char *str, size_t size, const struct capreq *cr,
+                       int with_char_marks) 
 {
     int n = 0;
     char relstr[64], *p, *s;
@@ -127,7 +127,6 @@ int capreq_snprintf_(char *str, size_t size, const struct capreq *cr,
         *str = '\0';
         return 0;
     }
-    
     
     s = str;
     p = relstr;
@@ -160,7 +159,7 @@ int capreq_snprintf_(char *str, size_t size, const struct capreq *cr,
         }
     }
 
-    if (p == relstr) {
+    if (p == relstr) {          /* no relflags */
         n_assert(*capreq_ver(cr) == '\0');
         if (capreq_is_rpmlib(cr))
             n += n_snprintf(&s[n], size - n, "rpmlib(%s)", capreq_name(cr));
@@ -191,7 +190,7 @@ int capreq_snprintf_(char *str, size_t size, const struct capreq *cr,
 
 int capreq_snprintf(char *str, size_t size, const struct capreq *cr) 
 {
-    return capreq_snprintf_(str, size, cr, 0);
+    return do_capreq_snprintf(str, size, cr, 0);
 }
 
 uint8_t capreq_bufsize(const struct capreq *cr) 
@@ -287,6 +286,7 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
         
     if (version) {
         version_len = strlen(version);
+        n_assert(relflags != 0);
         len += version_len + 1;
     }
         
@@ -332,7 +332,7 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
         buf += release_len ;
         *buf++ = '\0';
     }
-
+    
     cr->cr_relflags = relflags;
     cr->cr_flags = flags;
     if (isrpmreq)

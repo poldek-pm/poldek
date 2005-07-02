@@ -576,9 +576,10 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
     return cap_xmatch_req(cap, req, strict ? 0 : POLDEK_MA_PROMOTE_VERSION);
 }
 
+#if 0
 static inline 
-int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
-                       int promote_epoch)
+int OLDdo_pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req,
+                         int promote_epoch)
 {
     register int cmprc = 0, evr = 0;
 
@@ -638,29 +639,49 @@ int pkg_evr_match_req_(const struct pkg *pkg, const struct capreq *req,
         evr = 1;
     }
 
-#if 0    
-    if (strcmp(pkg->name, "nspr") == 0 && strcmp(pkg->name, capreq_name(req)) == 0) {
-        printf("   __MATCH %s %s %d %d-> %d\n", pkg_evr_snprintf_s(pkg),
-               capreq_snprintf_s(req), cmprc, evr, rel_match(cmprc, req));
-    }
-#endif    
     return evr ? rel_match(cmprc, req) : 1;
 }
+#endif
 
+static inline 
+int do_pkg_evr_match_req(const struct capreq *pkgcap, const struct capreq *req,
+                         int promote_epoch)
+{
+    unsigned ma_flags = 0;
+    
+    if (promote_epoch == -1)
+        promote_epoch = poldek_conf_PROMOTE_EPOCH;
+
+    if (promote_epoch)     /* rpm promotes Requires epoch only */
+        ma_flags |= POLDEK_MA_PROMOTE_REQEPOCH;
+    
+    return cap_xmatch_req(pkgcap, req, ma_flags);
+}
 
 int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req, unsigned flags)
 {
+    struct capreq *cap;
     register int rc = 0;
-
-    if ((flags & (POLDEK_MA_PROMOTE_VERSION | POLDEK_MA_PROMOTE_EPOCH)) == 0)
-        rc = pkg_evr_match_req_(pkg, req, -1) ? 1 : 0;
     
-    else {
-        rc = pkg_evr_match_req_(pkg, req, 0) ? 1 : 0;
-        if (!rc && pkg->epoch)
-            rc = pkg_evr_match_req_(pkg, req, 1) ? 1 : 0;
+    n_assert(strcmp(pkg->name, capreq_name(req)) == 0);
+
+    if (!capreq_versioned(req))
+        return 1;
+
+    cap = capreq_new(NULL, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
+                     REL_EQ, 0);
+    
+    if (flags & (POLDEK_MA_PROMOTE_VERSION | POLDEK_MA_PROMOTE_EPOCH)) {
+        rc = do_pkg_evr_match_req(cap, req, 0) ? 1 : 0;
+        if (!rc && pkg->epoch)  /* promote the epoch */
+            rc = do_pkg_evr_match_req(cap, req, 1) ? 1 : 0;
+        
+    } else {
+        rc = do_pkg_evr_match_req(cap, req, -1) ? 1 : 0;
     }
 
+    capreq_free(cap);
+    
     DBGF("%s match %s ? %s\n", pkg_evr_snprintf_s(pkg),
          capreq_snprintf_s(req), rc ? "YES" : "NO");
     return rc;
@@ -755,12 +776,10 @@ int pkg_has_path(const struct pkg *pkg,
 
 int pkg_xmatch_req(const struct pkg *pkg, const struct capreq *req, unsigned flags)
 {
-#if 0    
-    /* package should not provide itself with different version */
-#endif    
-    if (strcmp(pkg->name, capreq_name(req)) == 0 &&
-        pkg_evr_match_req(pkg, req, flags))
-        return 1;
+    if (n_str_eq(pkg->name, capreq_name(req))) {
+        if (pkg_evr_match_req(pkg, req, flags))
+            return 1;
+    }
     
     return pkg_caps_match_req(pkg, req, flags);
 }
@@ -768,9 +787,6 @@ int pkg_xmatch_req(const struct pkg *pkg, const struct capreq *req, unsigned fla
 
 int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict)
 {
-#if 0    
-    /* package should not provide itself with different version */
-#endif    
     if (strcmp(pkg->name, capreq_name(req)) == 0 &&
         pkg_evr_match_req(pkg, req, strict ? 0 : POLDEK_MA_PROMOTE_VERSION))
         return 1;

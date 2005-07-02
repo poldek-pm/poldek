@@ -37,7 +37,10 @@ int poldek_util_parse_evr(char *evrstr, int32_t *epoch, const char **version,
         *epoch = 0;
     else {
         *p = '\0';
-        *epoch = (int32_t)strtol(evrstr, (char **)NULL, 10);
+        if (*evrstr)
+            *epoch = (int32_t)strtol(evrstr, (char **)NULL, 10);
+        else
+            *epoch = 0;
         evrstr = p+1;
     }
 
