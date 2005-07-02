@@ -244,7 +244,7 @@ int pm_dbrec_nevr(const struct pm_dbrec *dbrec, char **name, int32_t *epoch,
 }
 
 int pkgdb_map_nevr(struct pkgdb *db,
-                   void (*mapfn)(const char *name, uint32_t epoch,
+                   int (*mapfn)(const char *name, uint32_t epoch,
                                  const char *ver, const char *rel, void *arg),
                    void *arg) 
 {
@@ -264,7 +264,8 @@ int pkgdb_map_nevr(struct pkgdb *db,
         if (db->_ctx->mod->hdr_nevr(dbrec->hdr, &tmpkg.name, &tmpkg.epoch,
                                     &tmpkg.ver, &tmpkg.rel, &arch)) {
             
-            mapfn(tmpkg.name, tmpkg.epoch, tmpkg.ver, tmpkg.rel, arg);
+            if (mapfn(tmpkg.name, tmpkg.epoch, tmpkg.ver, tmpkg.rel, arg) < 0)
+                break;
             n++;
         }
         

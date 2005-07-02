@@ -86,8 +86,8 @@ int pkgdb_map(struct pkgdb *db,
 
 
 int pkgdb_map_nevr(struct pkgdb *db,
-                   void (*mapfn)(const char *name, uint32_t epoch,
-                                 const char *ver, const char *rel, void *arg),
+                   int (*mapfn)(const char *name, uint32_t epoch,
+                                const char *ver, const char *rel, void *arg),
                    void *arg);
 
 
