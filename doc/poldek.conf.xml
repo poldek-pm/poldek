@@ -202,7 +202,25 @@ _distro  = pld
     Do not save given paths into created indexes. This option may significantly
     reduce index size. Example (notice missing starting '/'):
     [screen]
-    exclude path = usr/share/doc:usr/share/man:usr/src
+exclude path = usr/share/doc:usr/share/man:usr/src
+    [/screen]
+    </description>
+  </option>
+
+  <option name="pm command" type="string" default="/bin/rpm" multiple="no" hide="no">
+    <description>
+    Full path name to a PM (rpm for now) binary. 
+    [screen]
+pm command = /usr/bin/my-rpm-wrapper.sh
+    [/screen]
+    </description>
+  </option>
+
+  <option name="sudo command" type="string" default="/usr/bin/sudo" multiple="no" hide="no">
+    <description>
+    Full path name to sudo binary. 
+    [screen]
+pm command = /usr/bin/my-sudo-wrapper.sh
     [/screen]
     </description>
   </option>
@@ -225,15 +243,15 @@ _distro  = pld
      recommended), although it can be changedby this option. Others protocols handled 
      by external utilities can be configured also. The syntax is:
      [screen]
-     default fetcher = PROTOCOL[,PROTOCOL...]:FETCHER_NAME
+default fetcher = PROTOCOL[,PROTOCOL...]:FETCHER_NAME
      [/screen]
      where FETCHER_NAME is a name of one of the fetcher preconfigured in [ fetch ]
      sections (placed in [filename]fetch.conf[/filename] in default configuration).
      Examples:
      [screen]
-     default fetcher = ftp,http:internal
-     default fetcher = https:wget
-     default fetcher = cdrom:vfjuggle
+default fetcher = ftp,http:internal
+default fetcher = https:wget
+default fetcher = cdrom:vfjuggle
      [/screen]
      [filename]vfjuggle[/filename] is a cdrom getter supplied with poldek.
     </description>
@@ -245,11 +263,11 @@ _distro  = pld
     way, by environment variables ftp_proxy and http_proxy, or by this option.
     Its syntax is similar to "default fetcher" one:
     [screen]
-    proxy = PROTOCOL[,PROTOCOL...]:PROXY_URL
+proxy = PROTOCOL[,PROTOCOL...]:PROXY_URL
     [/screen]
     Example:
     [screen]
-    proxy = http: http://w3cache.foo.org:8080
+proxy = http: http://w3cache.foo.org:8080
     [/screen]
     </description>
   </option>
@@ -315,7 +333,7 @@ _distro  = pld
     <description>
     Prevent package listed from being upgraded if they are already installed.
     [screen]
-    hold = kernel* dev
+hold = kernel* dev
     [/screen]
     </description>
   </option>
@@ -324,7 +342,7 @@ _distro  = pld
     <description>
     Ignore package list - packages fits given mask will be invisible.
     [screen]
-    ignore   = *-smp-* foo*
+ignore   = *-smp-* foo*
     [/screen]
     </description>
   </option>
@@ -345,12 +363,12 @@ _distro  = pld
     <description>
     rpm macros can be set by this option. Examples:
     [screen]
-    rpmdef   = _install_langs pl:pl_PL:lt:lt_LT
+rpmdef   = _install_langs pl:pl_PL:lt:lt_LT
     [/screen]
     Do not install any documentation:
     [screen]
-    rpmdef  = _netsharedpath /usr/share/info:/usr/share/man
-    rpmdef  = _excludedocs 1
+rpmdef  = _netsharedpath /usr/share/info:/usr/share/man
+rpmdef  = _excludedocs 1
     [/screen]
     </description>
   </option>
@@ -503,7 +521,7 @@ Every repository is configured in its own [ source ] section.
     <description>
     Have the same meaning as [ global ] parameter. Example:
     [screen]
-    hold = kernel* dev
+hold = kernel* dev
     [/screen]
     </description>
   </option>
@@ -512,7 +530,7 @@ Every repository is configured in its own [ source ] section.
     <description>
     Have the same meaning as [ global ] parameter. Example:
     [screen]
-    ignore = kernel*smp* dev
+ignore = kernel*smp* dev
     [/screen]
     </description>
   </option>
@@ -521,7 +539,7 @@ Every repository is configured in its own [ source ] section.
     <description>
     Parameter have the same meaning as [ global ] parameter.
     [screen]
-    exclude path = usr/share/doc:usr/share/man:usr/src
+exclude path = usr/share/doc:usr/share/man:usr/src
     [/screen]
     </description>
   </option>
@@ -531,7 +549,7 @@ Every repository is configured in its own [ source ] section.
     Preferred language of package descriptions. If not set, taken from locale 
     settings. Example:
     [screen]
-    lang = pl_PL:lt_LT
+lang = pl_PL:lt_LT
     [/screen]
     </description>
   </option>
@@ -600,7 +618,7 @@ Each section describes one fetcher.
     Parameter specifies an external command and its invoking syntax.
     The syntax of "cmd" is:
     [screen]
-    cmd = COMMAND [ OPTION... ] {%d,%D}  {%p,%P}[ n ]
+cmd = COMMAND [ OPTION... ] {%d,%D}  {%p,%P}[ n ]
     [/screen]
     Where COMMAND is the name or full path of command, OPTION is command specific 
     options. Macro '%d' is replaced with cache directory, '%D' is replaced with 

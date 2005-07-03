@@ -25,15 +25,15 @@ a:hover { text-decoration: underline; }
 
 .option   { font-weight: bold; }
 .filename { color: #444444; font-size: 1em; font-weight: bold; }
-.application { font-style: oblique; }
+#.application { }
 
 .prompt { font-family: courier, monospace; }
 
 .screen { 
   background-color: #EEEEEE; 
   font-family: courier, monospace; 
-  
-  padding: 0.5em;
+  padding: 2px;
+  padding-left: 5px;
   border: 1pt solid #DDDDDD;
   /* background: #fff8eb; */
   white-space: pre;
