@@ -268,7 +268,7 @@ char **poldek_completion(const char *text, int start, int end)
     while (isspace(*p))
         p++;
     
-    if (*p) {  /* alias context should be configurable, TODO */
+    if (*p) {  /* XXX: alias context should be configurable, TODO */
         if (strncmp(p, "un", 2) == 0) /* uninstall cmd */
             sh_ctx.completion_ctx = COMPLETITION_CTX_INSTALLED;
         
@@ -403,7 +403,7 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         if (shQuit)
             shDone = 1;
     }
-
+    
     if (histfile) 
         write_history(histfile);
     
