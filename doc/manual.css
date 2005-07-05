@@ -48,6 +48,13 @@ a:hover { text-decoration: underline; }
   /* end css 3 or browser specific rules */
 }
 
+.replaceable { 
+  font-weight: normal; 
+  font-family: courier, monospace;
+  font-style: normal;
+}
+
+
 div.toc a { 
   color: #000000;  
   text-decoration: none;

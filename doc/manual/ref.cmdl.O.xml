@@ -1,0 +1,10 @@
+<para>
+Can be used to give options in the format used in the configuration file.  
+This is useful  for  specifying  options  for  which there is no separate 
+command-line flag. Whitespaces in option names may be replaced 
+with underscore '_' or dash '-' there, for example:
+<screen>
+<prompt>$</prompt> <command>poldek</command> -O keep-downloads=yes
+</screen>
+</para>
+

@@ -24,7 +24,7 @@
 <!ENTITY ref-package_deinstallation SYSTEM "manual/ref1490-package_deinstallation.xml">
 <!ENTITY ref-verification_options-switches SYSTEM "manual/ref1700-verification_options-switches.xml">
 <!ENTITY ref-splitting_options SYSTEM "manual/ref1900-splitting_options.xml">
-<!ENTITY ref-other SYSTEM "manual/ref2100-other.xml">
+<!ENTITY ref-miscellaneous_options SYSTEM "manual/ref2100-miscellaneous_options.xml">
 <!ENTITY manual_index SYSTEM "m_index.xml">
 <!ENTITY section_configuration SYSTEM "m_config.xml">
 ]>
@@ -39,7 +39,7 @@
  <titleabbrev role="texinfo-node">poldek</titleabbrev>
  <abstract role="texinfo-node">
   <para>
-    full-featured frontend for RPM.
+    full-featured frontend to RPM.
   </para>
  </abstract>
 
@@ -78,10 +78,10 @@
 
 <sect1 id="overview"> <title id="overview.title">Overview</title>
 <para>
-&poldek; is a full-featured frontend for RPM package manager. Its core features
+&poldek; is a full-featured frontend to RPM package manager. Its core features
 are similar to every modern package updater like &apt-get;. Features include
 package installation, upgrading and removal with automatic dependency handling,
-querying and search the package database and more.
+querying/ search the package database and more.
 </para>
 
 <para>
@@ -91,8 +91,8 @@ querying and search the package database and more.
     <para> 
     Basic command line options and switches are similar in use to &rpm;
     so &poldek; is easy to learn for users familiar with it. Apart from 
-    rpm-like command line switches, &poldek; provides quite intuitive command 
-    set ("install", "upgrade", "ls", etc), especially for those who knows &apt-get;. 
+    rpm-like command line switches, &poldek; provides higher level command 
+    set ("install", "upgrade", "ls", etc) quite intuitive for those who knows &apt-get;. 
     Shell-like interface with auto-completion and history is also provided.
     </para>
   </listitem>
@@ -148,9 +148,9 @@ querying and search the package database and more.
 <varlistentry><term>Flexible downloading</term>
   <listitem>
     <para>
-    Out of the box FTP, HTTP, HTTPS, RSYNC and SMB are supported and
-    the list may be easily extended to others protocols by external scripts. 
-
+    Out of the box FTP, HTTP, HTTPS, RSYNC and SMB are supported. This list
+    may be easily extended to other protocols by external scripts. 
+    </para><para>
     FTP and HTTP are handled by built-in client designed to retrieve
     files over slow or unstable network connections -- if a download
     fails due to a network problem, it will keep trying until the
@@ -169,7 +169,8 @@ querying and search the package database and more.
      Features include:
      <itemizedlist>
      <listitem><para> Detail reports about dependency loops, unmet dependencies,
-     package conflicts and obsolences and file sharing/conflicts.</para></listitem>
+     package conflicts, file sharing/conflicts, orphaned directories and missing dependencies.
+     </para></listitem>
      
      <listitem><para> Division package set to chunks to be placed on removable media
      with ordering according dependency tree and with priority handling.</para></listitem>
@@ -189,8 +190,8 @@ querying and search the package database and more.
 <sect1 id="quickstart"> <title>Quick start</title>
 <para> 
 Suppose you want to: a) use remote &apt-get; repository of Fedora Core 3, 
-b) prepare your local directory <filename>$HOME/rpm/RPMS</filename> with 
-packages to be available to poldek. 
+b) prepare your local package directory <filename>$HOME/rpm/RPMS</filename> to be available 
+to poldek. 
 </para>
 
 <sect2 id="quickstart.configure"> <title>Step #1 - Configure repositories</title>
@@ -560,12 +561,11 @@ may be limited to files belongs to specified repositories only. Examples:
 </para>
 </sect2>
 
-<sect2 id="repositories.ref"> <title>Repository related options reference</title>
-&ref-repository_index_creation;
-&ref-repository_selection;
-&ref-repository_related_actions;
-</sect2>
-
+<!-- 
+<para>
+See also repository related command line options <link linkend="ref.cmdl.repository_index_creation">reference</link>.
+</para>
+-->
 </sect1>
 
 <sect1 id="pkgmanaging"> <title>Managing packages</title>
@@ -647,12 +647,6 @@ Packages can be specified in five ways:
   </listitem>
 </itemizedlist>
 </para>
-
-<!-- to short 
-<sect3><title>Package related options reference</title>
-&ref-package_related_options;
-</sect3>
--->
 </sect2>
 
 <sect2 id="pkgmanaging.install"> <title>Installing packages</title>
@@ -767,12 +761,12 @@ As example, command which installs system under <filename>/mnt/dest</filename> m
 &poldek-prompt; -s ftp://foo.bar/RPMS --install-dist=/mnt/dest --pset ftp://foo-bar/package-sets/myset.txt
 </screen>
 </para>
-</sect2>
 
-<sect2> <title id="pkgmanaging.install-ref"> Install options reference</title>
-&ref-package_installation;
-&ref-distribution_installation-upgrade;
-&ref-installation_switches;
+<!--
+<para>
+See also install command line options <link linkend="ref.cmdl.package_installation">reference</link>.
+</para>
+-->
 </sect2>
 
 <sect2 id="pkgmanaging.removal"> <title>Removing packages</title>
@@ -797,12 +791,12 @@ Examples:
 &ipoldek-prompt; uninstall kernel-2.6.11.5-3
 </screen>
 </para>
-</sect2>
 
-<sect2> <title id="pkgmanaging.remove-ref">Package removal option reference</title>
+<!--
 <para>
-&ref-package_deinstallation;
+See also package removal command line options <link linkend="ref.cmdl.package_deinstallation">reference</link>.
 </para>
+-->
 </sect2>
 
 <sect2 id="pkgmanaging.desc"> <title>Obtaining information about packages</title>
@@ -981,7 +975,7 @@ shadow-4.0.4.1-3 -> pwdutils-2.6.90-3
 
 <varlistentry><term>File conflicts</term>
   <listitem><para>
-    Report prints all package pairs beeing in conflict on file level and that pairs 
+    Report prints all package pairs beeing in conflict on file level and pairs 
     which share the same file. It lets to verify if all file conflicts are wanted.
     Report is called <emphasis>file-conflicts</emphasis>:
     <screen>
@@ -1020,9 +1014,9 @@ error: /var/games/phantasia: orphaned directory from bsd-games-2.16-2
 
 <varlistentry><term>Missing dependencies</term>
   <listitem><para>
-    Report helps to avoid rather subtle packaging bug when package contains
-    files in directories which does not own and owner of such directories
-    is not requied by package.
+    Report helps to avoid rather subtle packaging bugs when one package has
+    files in directories owned by other package which is not requied by the 
+    first one.
     </para><para>
     Report is called <emphasis>file-missing-deps</emphasis>:
     <screen>
@@ -1053,12 +1047,6 @@ repository, just give to poldek package list you want to verify:
 &poldek-prompt; -n foo --verify=deps glibc poldek
 </screen>
 </para>
-
-<!--
-<sect3><title>Verification options reference</title>
-&ref-verification_options-switches;
-</sect3>
--->
 </sect2>
 
 <sect2 id="maintain.split"> <title>Preparation of distribution disks</title>
@@ -1078,8 +1066,8 @@ useful to save space for installer for example.
 
 <para>
 Packages are placed in successive chunks in order of their
-installation. To reorder packages, i.e. move some to higher or lower chunk,
-especially on first / last one, priorities may be assigned to
+installation. To reorder packages moving some to higher or lower chunk,
+especially on first/ last one, priorities may be assigned to
 them. Package priorities are taken from file given by <option>--priconf</option>. 
 Format of this file is quite simple, see sample 
 <link linkend="appendix.sample-pri.conf"><filename>poldek-pri-sample.conf</filename></link> supplied with &poldek;.
@@ -1170,15 +1158,122 @@ external scripts. Example:
 </sect2>
 </sect1>
 
+<sect1 id="ref"><title>Command line options reference</title>
+&ref-repository_index_creation;
+&ref-repository_selection;
+&ref-repository_related_actions;
+&ref-package_related_options;
+&ref-package_installation;
+&ref-distribution_installation-upgrade;
+&ref-installation_switches;
+&ref-package_deinstallation;
+&ref-verification_options-switches;
+&ref-splitting_options;
+&ref-miscellaneous_options;
+</sect1>
 
 <sect1 id="configuration"><title>Configuration</title>
 include(m_config.xml)
 </sect1>
 
-<!-- <sect1 id="misc"><title>Miscellaneous</title>
-<sect2 id="misc.logging"><title>Logging</title> </sect2>
+<sect1 id="cookbook"><title>Cookbook</title>
+<sect2 id="cookbook.makeidx"><title>Repository index creation</title>
+<para>
+Create an index of ~/rpm/RPMS, its type is taken from <option>default index type</option>
+configuration option:
+<screen>
+&prompt; <command>poldek -s <replaceable>~/rpm/RPMS</replaceable> --makeidx</command> 
+</screen>
+
+Create an index of configured repository <emphasis>home</emphasis>, its type is 
+defined in configuration:
+<screen>
+&prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx</command>
+</screen>
+
+Indexes may be created for multiple repositories at once:
+<screen>
+&prompt; <command>poldek -n <replaceable>fedora-c2</replaceable> -n <replaceable>fedora-c2-up</replaceable> --makeidx</command>
+</screen>
+
+Multiple indexes may be created at once to. Use <option>--mt</option> switch 
+to create indexes of multiple types:
+<screen>
+&prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx --mt=<replaceable>pndir,pdir</replaceable></command>
+</screen>
+</para>
+</sect2>
+
+<sect2 id="cookbook.install-dist"><title>Installation system from a scratch</title>
+<para>
+Install from <emphasis>fedora-c3</emphasis> repository apache and all its dependencies 
+under <filename>/mnt/chroot</filename> as root directory:
+<screen>
+&prompt; <command>poldek -n <replaceable>fedora-c3</replaceable> --install-dist=<replaceable>/mnt/dest</replaceable> -v <replaceable>apache</replaceable></command> 
+</screen>
+
+As above but packages listed in <filename>minicd.txt</filename> is installed:
+<screen>
+&prompt; <command>poldek -n <replaceable>fedora-c3</replaceable> --install-dist=<replaceable>/mnt/dest</replaceable> -v --pset=<replaceable>minicd.txt</replaceable></command> 
+</screen>
+
+Do not install, only download packages to <filename>/tmp</filename> directory:
+<screen>
+&prompt; <command>poldek -n <replaceable>fedora-c3</replaceable> --install-dist=<replaceable>/mnt/dest</replaceable> -v --pset=<replaceable>minicd.txt</replaceable> --fetch=<replaceable>/tmp</replaceable></command> 
+</screen>
+</para>
+</sect2>
+
+<sect2 id="cookbook.pkgmanaging"><title>Managing packages</title>
+<para>
+Download all packages needs upgrade to <filename>/var/tmp</filename> directory:
+<screen>
+&prompt; <command>poldek -n <replaceable>pld-updates</replaceable> --upgrade-dist -v --fetch=<replaceable>/var/tmp</replaceable></command>
+</screen>
+
+Dump filenames of packages needs upgrade to <filename>/tmp/uplist.txt</filename> file:
+<screen>
+&prompt; <command>poldek -n <replaceable>pld-updates</replaceable> --upgrade-dist -v --dump=<replaceable>/tmp/uplist.txt</replaceable></command>
+</screen>
+
+Upgrade all packages needs upgrade with logging details to <filename>/tmp/poldek.log</filename> file:
+<screen>
+&prompt; <command>poldek -n <replaceable>pld-updates</replaceable> --upgrade-dist -v --log=<replaceable>/tmp/uplist.txt</replaceable></command>
+</screen>
+
+</para>
+</sect2>
+
+<sect2 id="cookbook.misc"><title>Miscellaneous</title>
+<para>
+Divide repository packages into 650 MB chunks, first chunk will be 100 MB smaller.
+Files with lists of packages placed in chunks will be named <filename>cd.XX</filename>:
+<screen>
+&prompt; <command>poldek -n <replaceable>pld</replaceable> --split=<replaceable>650:100</replaceable> --split-out=<replaceable>/tmp/cd</replaceable></command>
+Loading [pdir]pld...
+11600 packages read
+Writing /tmp/cd.00 ( 876 packages, 547.93M, pri min, max = 0, 0)
+Writing /tmp/cd.01 (1084 packages, 647.46M, pri min, max = 0, 0)
+Writing /tmp/cd.02 ( 979 packages, 649.92M, pri min, max = 0, 0)
+Writing /tmp/cd.03 (1454 packages, 648.44M, pri min, max = 0, 0)
+[cut]
+</screen>
+
+Above with assigned package priorities taken from <link linkend="appendix.sample-pri.conf"><filename>poldek-pri-sample.conf</filename></link>.
+<screen>
+&prompt; <command>poldek -n <replaceable>pld</replaceable> --split=<replaceable>650:100</replaceable> --split-out=<replaceable>/tmp/cd</replaceable> --priconf=<replaceable>poldek-pri-sample.conf</replaceable></command>
+Loading [pdir]pld...
+11600 packages read
+Writing /tmp/cd.00 ( 928 packages, 549.12M, pri min, max = -100, 0)
+Writing /tmp/cd.01 (1012 packages, 649.36M, pri min, max = 0, 0)
+Writing /tmp/cd.02 (1283 packages, 646.22M, pri min, max = 0, 0)
+Writing /tmp/cd.03 ( 650 packages, 563.60M, pri min, max = 0, 0)
+[cut]
+</screen>
+</para>
+</sect2>
+
 </sect1>
--->
 
 <appendix id="appendix.sample-pri.conf"><title>Package priorities configuration sample</title>
 <para>
@@ -1188,7 +1283,7 @@ include(m_config.xml)
 </para>
 </appendix>
 
-<index><title>Index</title>
+<!-- <index><title>Index</title>
 &manual_index;
-</index>
+</index> -->
 </article>

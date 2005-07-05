@@ -1,0 +1,6 @@
+<para>
+DIR points to directory where all downloaded files will be stored.  If
+not set then $TMPDIR is used. If $TMPDIR is not set then
+$HOME/.poldek-cache is created and used as cache directory
+</para>
+

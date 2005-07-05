@@ -66,6 +66,13 @@ reference:
 poldek.conf.1: $(CONFXMLS)
 	./conf-xml2.sh man poldek.conf.xml
 
+poldek.1: poldek.1.xml
+	for i in manual/ref[0-9]???-*.xml; do                 \
+        perl -pe 's/sect2/refsect2/g' < $$i > $$i.tmpman; \
+    done;                                                 \
+    xmlto man $<;                                         \
+    rm -f manual/*.tmpman
+
 %.1: %.1.xml
 	xmlto man $<
 
