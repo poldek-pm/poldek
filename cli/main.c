@@ -699,7 +699,7 @@ int main(int argc, char **argv)
         if (rrc & OPGROUP_RC_OK) /* something minor cmd was executed  */
             exit(EXIT_SUCCESS);
 
-        if (args.cnflags & OPT_AS_FLAG(OPT_UPCONF))
+        if (args.cnflags & OPT_AS_FLAG(OPT_UPCONF)) /*UPCONF is major mode*/
             exit(EXIT_SUCCESS);
     }
     

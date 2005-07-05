@@ -235,8 +235,9 @@ int packages_order(tn_array *pkgs, tn_array **ordered_pkgs, int ordertype)
     int nloops, verbose;
     unsigned reqpkg_flag = 0;
     
-    /* assuming that pkgs are presorted by pkg_cmp_pri_name_evr_rev */
     n_assert(n_array_ctl_get_cmpfn(pkgs) == (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    /* insertion sort - assuming pkgs are already sorted
+       by pkg_cmp_pri_name_evr_rev() */
     n_array_isort_ex(pkgs, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
     
     verbose = poldek_set_verbose(-10);
