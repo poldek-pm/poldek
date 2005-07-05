@@ -78,7 +78,7 @@ struct argp_child poclidek_argp_child = {
 static int oprun(struct poclidek_opgroup_rt *);
 
 struct poclidek_opgroup poclidek_opgroup_split = {
-    N_("Repository index creationX:"), 
+    N_("Repository index creation:"), 
     &poclidek_argp, 
     &poclidek_argp_child,
     oprun,
@@ -168,8 +168,8 @@ static int do_split(struct poldek_ctx *ctx, struct arg_s *arg_s)
         return 0;
     }
 
-    arg_s->size *= 1024 * 1000;
-    arg_s->first_free_space *= 1024 * 1000;
+    arg_s->size *= 1024 * 1024;
+    arg_s->first_free_space *= 1024 * 1024;
 
     return poldek_split(ctx, arg_s->size, arg_s->first_free_space,
                         arg_s->prefix);
@@ -179,7 +179,7 @@ static int do_split(struct poldek_ctx *ctx, struct arg_s *arg_s)
 static int oprun(struct poclidek_opgroup_rt *rt)
 {
     struct arg_s *arg_s;
-    int rc = 1;
+    int rc = OPGROUP_RC_NIL;
     
     arg_s = rt->_opdata;
     n_assert(arg_s);
@@ -189,8 +189,10 @@ static int oprun(struct poclidek_opgroup_rt *rt)
             rc = do_split(rt->ctx, arg_s);
         else
             rc = 0;
+        
+        rc = rc ? OPGROUP_RC_OK : OPGROUP_RC_ERROR; 
     }
     
-    return rc ? OPGROUP_RC_NIL : OPGROUP_RC_ERROR;
+    return rc;
 }
 

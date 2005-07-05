@@ -157,15 +157,14 @@ tn_array *load_pri_conf(const char *fpath)
     int               nline, rc = 1;
     tn_array          *defs;
     
-    if ((vf = vfile_open(fpath, VFT_STDIO, VFM_RO)) == NULL) 
+    if ((vf = vfile_open(fpath, VFT_TRURLIO, VFM_RO)) == NULL) 
         return 0;
 
     nline = 0;
     defs = n_array_new(64, free, (tn_fn_cmp)pridef_cmp_pri);
-    
-    while (fgets(buf, sizeof(buf), vf->vf_stream)) {
+
+    while (n_stream_gets(vf->vf_tnstream, buf, sizeof(buf) - 1)) {
         struct pridef *pd = NULL;
-        
         nline++;
 
         if (read_pridef(buf, strlen(buf), &pd, fpath, nline) == -1) {
@@ -358,7 +357,7 @@ int make_chunks(tn_array *pkgs, unsigned split_size, unsigned first_free_space,
     
     for (i=0; i < n_array_size(chunks); i++) {
         struct vfile   *vf;
-        char           path[PATH_MAX];
+        char           path[PATH_MAX], strsize[128];
         struct chunk   *chunk;
         struct pkg     *pkg;
         int            pri_max, pri_min;
@@ -373,11 +372,11 @@ int make_chunks(tn_array *pkgs, unsigned split_size, unsigned first_free_space,
         pkg = n_array_nth(chunk->pkgs, n_array_size(chunk->pkgs) - 1);
         pri_max = pkg->pri;
         
-        snprintf(path, sizeof(path), "%s.%d", outprefix, chunk->no);
-        
-        msgn(0, _("Writing %s (%4d packages, % 10d bytes, "
+        snprintf(path, sizeof(path), "%s.%.2d", outprefix, chunk->no);
+        snprintf_size(strsize, sizeof(strsize), chunk->size, 2, 0);
+        msgn(0, _("Writing %s (%4d packages, %s, "
                   "pri min, max = %d, %d)"),
-             path, chunk->items, chunk->size, pri_min, pri_max);
+             path, chunk->items, strsize, pri_min, pri_max);
         
         
         if ((vf = vfile_open(path, VFT_STDIO, VFM_RW)) == NULL)
@@ -400,10 +399,16 @@ int make_chunks(tn_array *pkgs, unsigned split_size, unsigned first_free_space,
 int packages_set_priorities(tn_array *pkgs, const char *priconf_path)
 {
     tn_array *defs = NULL;
-    int i, j;
+    int i, j, nmached = 0;
 
     if ((defs = load_pri_conf(priconf_path)) == NULL)
         return 0;
+
+    if (n_array_size(defs) == 0) {
+        logn(LOGWARN, _("%s: no priorities loaded"), priconf_path);
+        n_array_free(defs);
+        return 1;               /* not an error in fact */
+    }
 
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
@@ -420,8 +425,9 @@ int packages_set_priorities(tn_array *pkgs, const char *priconf_path)
             
             if (fnmatch(pd->mask, pkg->name, 0) == 0) {
                 pri = pd->pri;
-                //msg(0, "matched %d %s %s\n", pri, pd->mask,
-                //    pkg_snprintf_s(pkg));
+                msgn(2, "split: assign %d pri to %s (mask %s)", pri,
+                     pkg_id(pkg), pd->mask);
+                nmached++;
                 break;
             }
         }
@@ -429,6 +435,9 @@ int packages_set_priorities(tn_array *pkgs, const char *priconf_path)
         if (pri != 0)
             set_pri(0, pkg, pri);
     }
+    
+    if (nmached == 0)
+        logn(LOGNOTICE, "split: %s",  _("no maching priorities"));
     
     n_array_free(defs);
     return 1;
@@ -443,8 +452,9 @@ int packages_split(const tn_array *pkgs, unsigned split_size,
 
     
     packages = n_array_dup(pkgs, (tn_fn_dup)pkg_link);
-    n_array_ctl_set_cmpfn(packages, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
-    n_array_sort(packages);
+    // pre-sort packages with pkg_cmp_pri_name_evr_rev()
+    n_array_sort_ex(packages, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
+    n_array_ctl_set_cmpfn(packages, (tn_fn_cmp)pkg_cmp_name_evr_rev);
 
     msg(2, "\nPackages ordered by priority:\n");
     for (i=0; i < n_array_size(packages); i++) {
@@ -477,5 +487,11 @@ int poldek_split(const struct poldek_ctx *ctx, unsigned size,
 {
     if (outprefix == NULL)
         outprefix = "packages.chunk";
+    
+    if (n_array_size(ctx->ps->pkgs) == 0) {
+        logn(LOGERR, "split: %s", _("no available packages found"));
+        return 0;
+    }
+
     return packages_split(ctx->ps->pkgs, size, first_free_space, outprefix);
 }
