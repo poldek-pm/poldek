@@ -75,13 +75,14 @@ static void argp_as_docbook(struct argp *argp);
 #define OPT_SHELL_CMD         (OPT_GID + 17)
 #define OPT_RUNAS             (OPT_GID + 18)
 #define OPT_OPTION 'O'
-#define OPT_DOCB              (OPT_GID + 19)
+#define OPT_SHCMD             (OPT_GID + 19)
+#define OPT_DOCB              (OPT_GID + 24)
 
 #define OPT_AS_FLAG(OPT)       (1 << (OPT - OPT_GID))
 
 /* The options we understand. */
 static struct argp_option common_options[] = {
-{0,0,0,0, N_("Other:"), OPT_GID },
+{0,0,0,0, N_("Miscellaneous options:"), OPT_GID },
 {"pm", OPT_PM, "PM", OPTION_HIDDEN, 0, OPT_GID },
 {"pmcmd", OPT_PMCMD, "FILE", 0, N_("Use FILE as PM(rpm) binary"), OPT_GID },
 {"rpmcmd", OPT_PMCMD_ALIAS, "FILE", OPTION_HIDDEN, 0, OPT_GID },
@@ -90,7 +91,7 @@ static struct argp_option common_options[] = {
 {"cachedir", OPT_CACHEDIR, "DIR", 0,
      N_("Store downloaded files and co. under DIR"), OPT_GID },
     
-{"cmd", 'C', 0, 0,
+{"cmd", OPT_SHCMD, 0, 0,
      N_("Run in command mode (like ipoldek does by default)"), OPT_GID },
     
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
@@ -238,7 +239,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             poldek_set_verbose(-1);
             break;
 
-        case 'C':
+        case OPT_SHCMD:
             DBGF("cmd\n");
             argsp->mode = RUNMODE_APT;
             break;
@@ -719,6 +720,7 @@ int main(int argc, char **argv)
 
 
 #if GENDOCBOOK
+#define GENDOCBOOK_SECT  1        /* gen <sect2> */
 static void docbook_opt(tn_hash *idh, FILE **st,
                         struct argp_option *opt, tn_array *aliases)
 {
@@ -727,11 +729,14 @@ static void docbook_opt(tn_hash *idh, FILE **st,
     int c;
     
     if (opt->doc && opt->name == NULL && opt->key == 0) { /* group */
-        char *name, *p, path[PATH_MAX], doc[PATH_MAX];
+        char *name, *p, path[PATH_MAX], doc[PATH_MAX], idsect[256];
         int n;
         
         if (stream) {
             fprintf(stream, "</variablelist>\n");
+#if GENDOCBOOK_SECT
+            fprintf(stream, "</sect2>\n");
+#endif    
             //printf("->CLOSE\n");
             fclose(stream);
         }
@@ -746,7 +751,7 @@ static void docbook_opt(tn_hash *idh, FILE **st,
             p++;
             
         }
-        
+        n_snprintf(idsect, sizeof(idsect), "ref.cmdl.%s", name);
         n_snprintf(path, sizeof(path), "manual/ref%.4d-%s.xml", opt->group, name);
         stream = fopen(path, "w");
         //printf("->OPEN %s\n", path);
@@ -759,7 +764,13 @@ static void docbook_opt(tn_hash *idh, FILE **st,
         n = n_snprintf(doc, sizeof(doc), "%s", opt->doc);
         if (doc[n - 1] == ':')
             doc[n - 1] = '\0';
+#if GENDOCBOOK_SECT
+        fprintf(stream, "<sect2 id=\"%s\"><title>%s</title>\n", idsect, doc);
+        fprintf(stream, "<variablelist><title></title>\n", doc);
+#else        
         fprintf(stream, "<variablelist><title>%s</title>\n", doc);
+#endif        
+        
         return;
     }
     n_assert(stream);
@@ -790,10 +801,12 @@ static void docbook_opt(tn_hash *idh, FILE **st,
         c = 0;
 
     if (opt->name)
-        fprintf(stream, "%s--%s%s%s%s%s", c ? ", " : "", opt->name,
-                (opt->flags & OPTION_ARG_OPTIONAL) ? "[" : "",
-                opt->arg ? "=" : "", opt->arg ? opt->arg : "",
-                (opt->flags & OPTION_ARG_OPTIONAL) ? "]" : "");
+        fprintf(stream, "%s--%s", c ? ", " : "", opt->name);
+
+    fprintf(stream, "%s%s%s%s",
+            (opt->flags & OPTION_ARG_OPTIONAL) ? "[" : "",
+            opt->arg ? "=" : "", opt->arg ? opt->arg : "",
+            (opt->flags & OPTION_ARG_OPTIONAL) ? "]" : "");
     
     fprintf(stream, " </option></term>\n");
     fprintf(stream, "  <listitem>\n");
@@ -868,6 +881,9 @@ static void argp_as_docbook(struct argp *argp)
     do_argp_as_docbook(argp, &stream, idh);
     if (stream) {
         fprintf(stream, "</variablelist>\n");
+#if GENDOCBOOK_SECT
+        fprintf(stream, "</sect2>\n");
+#endif    
         fclose(stream);
     }
 }
