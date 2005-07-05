@@ -800,6 +800,38 @@ static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf)
     return rc;
 }
 
+/* --fetch, --dump */
+static int ts_fetch_or_dump_packages(struct poldek_ts *ts) 
+{
+    int i, rc;
+    tn_array *pkgs = n_array_new(512, NULL, NULL);
+
+    /* dump/fetch packages in install order */
+    for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
+
+        if (pkg_isnot_marked(ts->pms, pkg))
+            continue;
+        n_array_push(pkgs, pkg);
+    }
+    
+    if (ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N, 0)) {
+        rc = packages_dump(pkgs, ts->dumpfile,
+                           ts->getop(ts, POLDEK_OP_JUSTPRINT_N) == 0);
+        
+    } else if (ts->getop(ts, POLDEK_OP_JUSTFETCH)) {
+        const char *destdir = ts->fetchdir;
+        if (destdir == NULL)
+            destdir = ts->cachedir;
+        
+        rc = packages_fetch(ts->pmctx, pkgs, destdir, ts->fetchdir ? 1 : 0);
+    }
+    
+    n_array_free(pkgs);
+    return rc;
+}
+
+        
 static void install_dist_summary(struct poldek_ts *ts)
 {
     int n = 0, ndep = 0;
@@ -842,24 +874,27 @@ static void install_dist_summary(struct poldek_ts *ts)
 static
 int ts_run_install_dist(struct poldek_ts *ts) 
 {
-    int rc, ndeperr = 0;
+    int rc, nerr = 0, ignorer;
     tn_array *pkgs = NULL;
-
+    
     if (!ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_CAPSINLINE))
         return 0;
 
     rc = 1;
     pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
-    if (!packages_verify_dependecies(pkgs, ts->ctx->ps))
-        ndeperr++;
 
-    if (!pkgmark_verify_package_conflicts(ts->pms))
-        ndeperr++;
+    ignorer = ts->getop(ts, POLDEK_OP_NODEPS);
+    if (!packages_verify_dependecies(pkgs, ts->ctx->ps) && !ignorer)
+        nerr++;
     
     n_array_free(pkgs);
     pkgs = NULL;
 
-    if (ndeperr && !ts->getop_v(ts, POLDEK_OP_NODEPS, POLDEK_OP_FORCE, 0)) {
+    ignorer = ts->getop(ts, POLDEK_OP_FORCE);
+    if (!pkgmark_verify_package_conflicts(ts->pms) && !ignorer)
+        nerr++;
+    
+    if (nerr) {
         logn(LOGERR, _("Buggy package set"));
         rc = 0;
         goto l_end;
@@ -870,6 +905,13 @@ int ts_run_install_dist(struct poldek_ts *ts)
     if (ts->getop(ts, POLDEK_OP_TEST))
         goto l_end;
 
+    if (ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N,
+                    POLDEK_OP_JUSTFETCH, 0)) {
+        
+        rc = ts_fetch_or_dump_packages(ts);
+        goto l_end;
+    }
+    
     if (ts->getop(ts, POLDEK_OP_MKDBDIR)) {
         if (!mkdbdir(ts)) {
             rc = 0;
@@ -895,6 +937,9 @@ int ts_run_install_dist(struct poldek_ts *ts)
     ts->db = NULL;
     
  l_end:
+
+    if (pkgs)
+        n_array_free(pkgs);
     return rc;
 }
 
