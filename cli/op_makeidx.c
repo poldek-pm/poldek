@@ -44,6 +44,7 @@
 #define OPT_TYPE        (OPT_GID + 7)
 #define OPT_TYPE_ALIAS  (OPT_GID + 11) /* XXX argp bug? with +8 this doesn't work... */
 #define OPT_NODIFF      (OPT_GID + 9)
+#define OPT_MOPT        (OPT_GID + 10)
 
 /* The options we understand. */
 static struct argp_option options[] = {
@@ -75,6 +76,9 @@ static struct argp_option options[] = {
 
 {"compress", OPT_COMPR, "type", OPTION_HIDDEN, /* not finished yet */
  N_("Sets compression type (none, bz2, gz)"), OPT_GID },
+
+{"mo", OPT_MOPT, "OPTION[,OPTION]", OPTION_HIDDEN, /* not finished yet */
+     N_("index type specific options"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 
 
