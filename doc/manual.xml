@@ -200,7 +200,6 @@ Source configuration may be placed in your local
 <filename id="file.poldekrc">$HOME/.poldekrc</filename> or global <filename id="file.source-conf">/etc/poldek/source.conf</filename>. Whatever you choose, put there 
 something like:
 <screen>
-
 [source]
 _fcurl = http://download.fedora.us/fedora/fedora/3/i386 # macro, just for short
 
@@ -222,18 +221,19 @@ path = $HOME/rpm/RPMS
   Fedora Core 3 &apt-get; index is ready, we must create one for <filename>$HOME/rpm/RPMS</filename>:
 
   <screen>
-  &prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx</command>
+&prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx</command>
   </screen>
 
   As result several files with package data will be created under 
   <filename>$HOME/rpm/RPMS</filename>.
-  <screen>    
-  &prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx</command>
-  Creating pndir index of /home/me/rpm/RPMS (type=dir)...
-  Loading [dir]home...
-  200..400..600..800..1000..1200..1400..1600..1652
-  Writing /home/me/rpm/RPMS/packages.ndir.gz...
+  <screen> 
+&prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx</command>
+Creating pndir index of /home/me/rpm/RPMS (type=dir)...
+Loading [dir]home...
+200..400..600..800..1000..1200..1400..1600..1652
+Writing /home/me/rpm/RPMS/packages.ndir.gz...
   </screen>
+
   Remember to call this command after every change of 
   <filename>$HOME/rpm/RPMS</filename>'s content.
   </para>
@@ -241,7 +241,7 @@ path = $HOME/rpm/RPMS
 
 <sect2 id="quickstart.use"> <title>Step #3 - Use the program</title>
 <para>
-&poldek; brings two commands: &poldekcmd; with rpm-like command line interface
+&poldek; provides two commands: &poldekcmd; with rpm-like command line interface
 and &ipoldekcmd; with interactive mode command interface. Invoking syntax is:
 <screen>
 &poldek-prompt; [OPTION...] [PACKAGE...]
@@ -281,8 +281,8 @@ Extensive help is available for all commands, for &poldekcmd; by using the <opti
 &ipoldek-prompt; install --help
 </screen>
 
-&ipoldek; provides comfortable shell-like mode which puts you into 
-a readline interface. To enter it, execute &ipoldek; without any command:
+&ipoldekcmd; provides comfortable shell-like mode which puts you into 
+a readline interface. To enter it, execute &ipoldekcmd; without any command:
 <screen id="screen.shell-start">
 &ipoldek-prompt; -n ac
 Loading [pdir]ac...
@@ -588,34 +588,34 @@ Packages can be specified in five ways:
   <listitem>
      <para>as package Name[-[Epoch:]Version-Release] mask, e.g.
      <screen>
-     &poldek-prompt; ... apache
-     &poldek-prompt; ... apache-1.3.31-2
-     &poldek-prompt; ... apache-2:1.3.31-2
-     &poldek-prompt; ... 'apache-1.3*'
-     &poldek-prompt; ... 'apache-mod_*pam*'
+&poldek-prompt; ... apache
+&poldek-prompt; ... apache-1.3.31-2
+&poldek-prompt; ... apache-2:1.3.31-2
+&poldek-prompt; ... 'apache-1.3*'
+&poldek-prompt; ... 'apache-mod_*pam*'
      </screen>
      </para>
   </listitem>
   <listitem> 
      <para>as packages files, e.g:
      <screen>
-     &poldek-prompt; ... apache-1.3.31-1.i386.rpm
+&poldek-prompt; ... apache-1.3.31-1.i386.rpm
      </screen>
      </para>    
   </listitem> 
   <listitem> 
      <para> as Name#Version[-Release] string, e.g.:
      <screen>
-     &poldek-prompt; ... apache#1.3.31
-     &poldek-prompt; ... apache#1.3.31-1
+&poldek-prompt; ... apache#1.3.31
+&poldek-prompt; ... apache#1.3.31-1
      </screen>
      </para> 
   </listitem>
   <listitem> 
      <para> by package capability (Provides):
      <screen>
-     &poldek-prompt; ... --caplookup webserver
-     &poldek-prompt; ... --caplookup smtpdaemon
+&poldek-prompt; ... --caplookup webserver
+&poldek-prompt; ... --caplookup smtpdaemon
      </screen>
      <option>--caplookup</option> is available in command line mode only.
      </para> 
@@ -623,8 +623,8 @@ Packages can be specified in five ways:
   <listitem>
    <para> as list read from file, e.g.:
      <screen>
-     &poldek-prompt; ... --pset ~/.package-sets/tiny-system
-     &poldek-prompt; ... --pset http://foo.bar.com/package-sets/tiny-system.txt
+&poldek-prompt; ... --pset ~/.package-sets/tiny-system
+&poldek-prompt; ... --pset http://foo.bar.com/package-sets/tiny-system.txt
      </screen>
 
      Syntax of file passed as <option>--pset</option> argument is very simple.
@@ -636,11 +636,11 @@ Packages can be specified in five ways:
 
      Example:
      <screen>
-     FHS 2.1 
-     basesystem
-     pdksh
-     @bootloader lilo 2.1
-     @smtpdaemon exim
+FHS 2.1 
+basesystem
+pdksh
+@bootloader lilo 2.1
+@smtpdaemon exim
      </screen>
      <option>--pset</option> is available in command line mode only.
      </para> 
@@ -771,8 +771,8 @@ See also install command line options <link linkend="ref.cmdl.package_installati
 
 <sect2 id="pkgmanaging.removal"> <title>Removing packages</title>
 <para>
-&poldek; removes packages with its reverse-dependent ones by default. Additionally
-packages are removed in the right order following <emphasis>Requires(un)</emphasis> 
+&poldek; removes packages with its reverse-dependent ones by default. Packages are 
+removed in the right order following <emphasis>Requires(un)</emphasis> 
 &rpm; requirements.
 </para>
 <para>

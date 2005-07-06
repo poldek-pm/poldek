@@ -45,7 +45,7 @@ poldek.info: manual.xml.texi.tmp
 manual.html: manual.xml.xhtml.tmp
 	xmlto -m manual.xsl xhtml-nochunks $< && mv manual.xml.xhtml.html $@
 # add the stylesheet and removed empty indexterm's (I'm docbook novice)
-	perl -pi -e 's|<head>|<head><link href="manual.css" rel="stylesheet" rev="stylesheet" type="text/css"/>|' $@
+#	perl -pi -e 's|<head>|<head><link href="manual.css" rel="stylesheet" rev="stylesheet" type="text/css"/>|' $@
 	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $@
 
 

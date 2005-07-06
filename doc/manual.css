@@ -5,7 +5,7 @@ body {
   background-color: white;
   color: #111111;
   font-family: Verdana, Tahoma, Arial, Lucida Grande, sans-serif;
-  font-size: 11pt;
+  font-size: 12px;
   line-height: 1.25em;
 }
 
@@ -24,7 +24,7 @@ a       { color: #e03636; text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 .option   { font-weight: bold; }
-.filename { color: #444444; font-size: 1em; font-weight: bold; }
+.filename { color: #444444; font-weight: bold; }
 #.application { }
 
 .prompt { font-family: courier, monospace; }
@@ -32,6 +32,7 @@ a:hover { text-decoration: underline; }
 .screen { 
   background-color: #EEEEEE; 
   font-family: courier, monospace; 
+  font-size: 13px;
   padding: 2px;
   padding-left: 5px;
   border: 1pt solid #DDDDDD;
