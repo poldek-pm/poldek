@@ -66,6 +66,16 @@ tn_array *pkgfl_array_new(int size);
 
 void pkgfl_dump(tn_tuple *fl);
 
+/* iterator */
+struct pkgfl_it {
+    tn_tuple *fl;
+    struct pkgfl_ent *flent;
+    int i, j;
+    char path[PATH_MAX], *endp;
+};
+
+void pkgfl_it_init(struct pkgfl_it *it, tn_tuple *fl);
+const char *pkgfl_it_get_next(struct pkgfl_it *it, struct flfile **flfile);
 
 #endif /* POLDEK_PKGFL_H */
 

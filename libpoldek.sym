@@ -149,6 +149,8 @@ pkgfl_array_pdir_sort
 pkgfl_dump
 pkgfl_ent_cmp
 pkgfl_ent_new
+pkgfl_it_init
+pkgfl_it_get_next
 pkgfl_restore
 pkgfl_restore_st
 pkgfl_skip_st

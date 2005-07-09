@@ -556,3 +556,53 @@ void pkgfl_dump(tn_tuple *fl)
     }
     return;
 }
+
+void pkgfl_it_init(struct pkgfl_it *it, tn_tuple *fl)
+{
+    it->fl = fl;
+    it->flent = NULL;
+    it->i = it->j = 0;
+    it->endp = NULL;
+    it->path[0] = '\0';
+        
+    if (fl)
+        it->flent = n_tuple_nth(fl, it->i++);
+}
+
+const char *pkgfl_it_get_next(struct pkgfl_it *it, struct flfile **flfile)
+{
+    struct flfile *file;
+    int path_left_size;
+            
+    if (it->flent == NULL)
+        return NULL;
+    
+    if (it->j == it->flent->items) {
+        if (it->i == n_tuple_size(it->fl))
+            return NULL;
+        
+        it->flent = n_tuple_nth(it->fl, it->i++);
+        it->j = 0;
+        it->endp = NULL;
+    }
+
+    if (it->endp == NULL) {
+        it->endp = it->path;
+        if (*it->flent->dirname != '/')
+            *it->endp++ = '/';
+        
+        it->endp = n_strncpy(it->endp, it->flent->dirname,
+                             sizeof(it->path) - 2);
+        
+        if (*(it->endp - 1) != '/')
+            *it->endp++ = '/';
+    }
+    file = it->flent->files[it->j++];
+    path_left_size = sizeof(it->path) - (it->endp - it->path);
+    n_strncpy(it->endp, file->basename, path_left_size);
+
+    if (flfile)
+        *flfile = file;
+    
+    return it->path;
+}
