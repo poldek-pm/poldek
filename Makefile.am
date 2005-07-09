@@ -8,7 +8,7 @@ TNDB_DIR = @TNDB_DIR@
 
 CLI=cli
 SUBDIRS   = po doc $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir \
-            pm . $(CLI) 
+            pm install . $(CLI) 
 DIST_SUBDIRS = $(SUBDIRS) python tests
 
 INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@
