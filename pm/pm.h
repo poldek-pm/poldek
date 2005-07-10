@@ -163,6 +163,9 @@ int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                           const struct capreq *cap,
                           tn_array *blacklist, unsigned ldflags);
 
+int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
+                        tn_array *skiplist);
+
 
 int pkgdb_get_pkgs_requires_capn(struct pkgdb *db,
                                  tn_array *dbpkgs, const char *capname,

@@ -701,13 +701,17 @@ int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
             continue;
 #if ENABLE_TRACE        
         DBGF("%s <- %s ??\n", capreq_name(cap), pkg_snprintf_s(pkg));
-#endif        
+#endif
         if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
+            DBGF("%s <- %s ? %d\n", capreq_name(cap), pkg_snprintf_s(pkg),
+                 pkg_satisfies_req(pkg, cap, 1));
+            
             if (pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
                 pkg_free(pkg);
                 
             } else {
                 n_array_push(dbpkgs, pkg);
+                n++; 
 #if ENABLE_TRACE
                 {
                     int i;
@@ -721,7 +725,39 @@ int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                 }
 #endif                
             }
-            n++;
+        }
+    }
+    pkgdb_it_destroy(&it);
+    return n;
+}
+
+
+int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
+                        tn_array *skiplist)
+{
+    struct pkgdb_it it;
+    const struct pm_dbrec *dbrec;
+    unsigned ldflags = PKG_LDNEVR | PKG_LDCAPS;
+    int n = 0;
+
+    if (*capreq_name(cap) == '/')
+        ldflags |= PKG_LDFL_DEPDIRS;
+    
+    pkgdb_it_init(db, &it, PMTAG_REQ, capreq_name(cap));
+    while ((dbrec = pkgdb_it_get(&it)) != NULL) {
+        struct pkg *pkg;
+        
+        if (skiplist && dbpkg_array_has(skiplist, dbrec->recno))
+            continue;
+
+        if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
+            if (pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
+                pkg_free(pkg);
+                
+            } else {
+                n++;
+                break;
+            }
         }
     }
     pkgdb_it_destroy(&it);
