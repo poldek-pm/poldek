@@ -65,6 +65,29 @@ int capreq_cmp2name(struct capreq *cr1, const char *name)
     return strcmp(capreq_name(cr1), name);
 }
 
+__inline__ static
+int capreq_cmp_evr(struct capreq *cr1, struct capreq *cr2) 
+{
+    register int rc;
+    
+    if (capreq_versioned(cr1) && !capreq_versioned(cr2))
+        return 1;
+
+    if (!capreq_versioned(cr1) && capreq_versioned(cr2))
+        return -1;
+
+    if ((rc = (capreq_epoch(cr1) - capreq_epoch(cr2))))
+        return rc;
+
+    if ((rc = pkg_version_compare(capreq_ver(cr1), capreq_ver(cr2))))
+        return rc;
+    
+    if ((rc = pkg_version_compare(capreq_rel(cr1), capreq_rel(cr2))))
+        return rc;
+    
+    return cr1->cr_relflags - cr2->cr_relflags;
+}
+
 __inline__
 int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2) 
 {
@@ -73,16 +96,7 @@ int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2)
     if ((rc = strcmp(capreq_name(cr1), capreq_name(cr2))))
         return rc;
 
-    if ((rc = (capreq_epoch(cr1) - capreq_epoch(cr2))))
-        return rc;
-    
-    if ((rc = (capreq_ver(cr1) - capreq_ver(cr2))))
-        return rc;
-    
-    if ((rc = pkg_version_compare(capreq_rel(cr1), capreq_rel(cr2))))
-        return rc;
-    
-    return cr1->cr_relflags - cr2->cr_relflags;
+    return capreq_cmp_evr(cr1, cr2);
 }
 
 __inline__
@@ -386,8 +400,6 @@ int32_t capreq_epoch_(const struct capreq *cr)
     return epoch;
 }
 
-
-
 tn_array *capreq_arr_new_ex(int size, void **data) 
 {
     tn_array *arr;
@@ -522,6 +534,8 @@ int capreq_arr_store_n(tn_array *arr)
     return n;
 }
 
+/* XXX: Caution: every change of this function may broke pdir
+   index format compatibility */
 tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
 {
     int32_t size;
@@ -555,8 +569,8 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
         struct capreq *cr = n_array_nth(arr, i);
         if (!capreq_is_bastard(cr)) {
             capreq_store(cr, nbuf);
-            //printf("STORE %s %d -> %d\n", capreq_snprintf_s(cr),
-            //     strlen(capreq_snprintf_s(cr)), capreq_sizeof(cr));
+            DBGF("store %s (len=%d, sizeof=%d)\n", capreq_snprintf_s(cr),
+                 strlen(capreq_snprintf_s(cr)), capreq_sizeof(cr));
         }
     }
 
@@ -576,25 +590,9 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
     return nbuf;
 }
 
-#if 0                           /* ununsed */
-int capreq_arr_store_st(tn_array *arr, const char *prefix, tn_stream *st)
-{
-    tn_buf *nbuf;
-    int rc = 0;
-    
-    if ((nbuf = capreq_arr_store(arr, NULL))) {
-		n_stream_printf(st, "%s", prefix);
-        rc = (n_stream_write(st, n_buf_ptr(nbuf), n_buf_size(nbuf)) ==
-              n_buf_size(nbuf));
-        n_buf_free(nbuf);
-	}
-    
-    return rc;
-}
-#endif
-
 tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf) 
 {
+    tn_array       *arr;
     struct capreq  *cr;
     tn_buf_it      nbufi;
     int16_t        arr_size;
@@ -622,8 +620,8 @@ tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf)
         return NULL;
     }
     
-    //arr = capreq_arr_new_ex(n, n_memdup(cr_buf, n * sizeof(void*)));
-    return capreq_arr_new_ex(n, cr_buf);
+    arr = capreq_arr_new_ex(n, cr_buf);
+    return arr;
 }
 
 struct restore_struct {
@@ -650,3 +648,51 @@ tn_array *capreq_arr_restore_st(tn_alloc *na, tn_stream *st)
     
     return rs.arr;
 }
+
+static
+int cmp_uniq(struct capreq *cr1, struct capreq *cr2) 
+{
+    register int rc;
+    if ((rc = capreq_cmp_name(cr1, cr2)) == 0)
+        rc = capreq_versioned(cr2);
+
+    if (rc == 0)
+        logn(LOGNOTICE, "uniq: keep %s, removed %s %d",
+             capreq_snprintf_s(cr1), capreq_snprintf_s0(cr2),
+             capreq_versioned(cr2));
+    
+    return rc;
+}
+
+static
+int capreq_cmp_name_evr_rev(struct capreq *cr1, struct capreq *cr2) 
+{
+    register int rc;
+    
+    if ((rc = strcmp(capreq_name(cr1), capreq_name(cr2))))
+        return rc;
+
+    rc = -capreq_cmp_evr(cr1, cr2);
+    DBGF("cmp %s %s = %d\n", capreq_snprintf_s(cr1), capreq_snprintf_s0(cr2), rc);
+    return rc;
+}
+
+tn_array *capreq_arr_remove_redundant(tn_array *arr) 
+{
+    n_array_sort_ex(arr, (tn_fn_cmp)capreq_cmp_name_evr_rev);
+    
+#if ENABLE_TRACE
+    {
+        int i;
+        DBGF("start\n");
+        for (i=0; i<n_array_size(arr); i++) {
+            struct capreq *cr = n_array_nth(arr, i);
+            DBGF(" %s\n", capreq_snprintf_s(cr));
+        }
+    }
+#endif
+    
+    n_array_uniq_ex(arr, (tn_fn_cmp)cmp_uniq);
+    return arr;
+}
+
