@@ -470,8 +470,8 @@ AC_CONFIG_FILES([
         conf/Makefile
 		doc/Makefile
 		doc/homepage/Makefile
-		doc/homepage/index.sgml
 		doc/pl/Makefile
+	    install/Makefile
 		Makefile
 		poldek.spec
 		poldek-suse.spec
