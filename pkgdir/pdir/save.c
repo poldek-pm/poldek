@@ -308,6 +308,9 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
 
     if (flags & PKGDIR_CREAT_NODESC)
         st_flags |= PKGSTORE_NODESC;
+
+    if (flags & PKGDIR_CREAT_v018x)
+        st_flags |= PKGSTORE_NOTIMESTAMP;
     //flags |= PKGDIR_CREAT_PKG_Fv017;
     //n_array_sort(pkgdir->pkgs);
     n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)pdir_pkg_cmp);

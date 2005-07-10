@@ -107,15 +107,20 @@ struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 
-#define PKGDIR_CREAT_NODESC     (1 << 0) /* don't save pkg's user level info */
-#define PKGDIR_CREAT_NOFL       (1 << 1) /* don't save pkg's file list       */
-#define PKGDIR_CREAT_MINi18n    (1 << 2) /* */
-#define PKGDIR_CREAT_NOUNIQ     (1 << 4) /* don't remove duplicates (same NEVR-A)*/
-#define PKGDIR_CREAT_NOPATCH    (1 << 5) /* don't create diff */
-#define PKGDIR_CREAT_NOCOMPR    (1 << 6) /* create uncompressed index (NFY) */
-#define PKGDIR_CREAT_wRECNO     (1 << 7) /* store packages recno if it exists;
-                                            honored by pndir only */
-#define PKGDIR_CREAT_IFORIGCHANGED  (1 << 8)
+#define PKGDIR_CREAT_NODESC   (1 << 0) /* don't save pkg's user level info */
+#define PKGDIR_CREAT_NOFL     (1 << 1) /* don't save pkg's file list       */
+#define PKGDIR_CREAT_MINi18n  (1 << 2) /* strip i18n info to C and $LANG */
+#define PKGDIR_CREAT_NOUNIQ   (1 << 4) /* don't remove duplicates (same NEVR-A)*/
+#define PKGDIR_CREAT_NOPATCH  (1 << 5) /* don't create diff */
+#define PKGDIR_CREAT_NOCOMPR  (1 << 6) /* create uncompressed index (NFY) */
+#define PKGDIR_CREAT_wRECNO   (1 << 7) /* store packages recno if it exists;
+                                          honored by pndir only */
+#define PKGDIR_CREAT_IFORIGCHANGED  (1 << 8) /* do not recreate if previous
+                                                index is up to date */
+
+#define PKGDIR_CREAT_v018x    (1 << 9) /* pdir: do not store package timestamps
+                                          cause it brokes inremental updates
+                                          by 0.18.x */
 
 int pkgdir_save(struct pkgdir *pkgdir, unsigned flags);
 
