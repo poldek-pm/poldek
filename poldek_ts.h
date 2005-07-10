@@ -125,6 +125,8 @@ struct poldek_ts {
     int   (*getop)(const struct poldek_ts *, int op);
     int   (*getop_v)(const struct poldek_ts *, int op, ...);
     void  (*setop)(struct poldek_ts *, int op, int onoff);
+
+    int                 uninstall_greedy_deep;
     
 };
 #endif

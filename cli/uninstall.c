@@ -26,6 +26,7 @@
 #include "log.h"
 #include "pkg.h"
 #include "cli.h"
+#include "poldek_util.h"
 #include "op.h"
 
 
@@ -35,6 +36,7 @@ static int uninstall(struct cmdctx *cmdctx);
 #define OPT_GID             OPT_GID_OP_UNINSTALL
 #define OPT_UNINSTALL       'e'
 #define OPT_INST_NODEPS     (OPT_GID + 2)
+#define OPT_INST_GREEDY     (OPT_GID + 3)
 
 static struct argp_option options[] = {
 {"test", 't', 0, 0,
@@ -43,6 +45,9 @@ static struct argp_option options[] = {
 {"nofollow", 'N', 0, 0, N_("Remove only selected packages"), OPT_GID },
 
 {"nodeps", OPT_INST_NODEPS, 0, 0, N_("Ignore broken dependencies"), OPT_GID },
+
+{"greedy", OPT_INST_GREEDY, "[yes|no]", OPTION_ARG_OPTIONAL,
+     N_("Remove packages required by selected ones if possible"), OPT_GID },    
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -147,6 +152,25 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_NODEPS:
             ts->setop(ts, POLDEK_OP_NODEPS, 1);
             break;
+
+        case OPT_INST_GREEDY:
+            if (!arg) {
+                ts->setop(ts, POLDEK_OP_GREEDY, 1);
+                
+            } else {
+                int v, bool;
+                    
+                if (sscanf(arg, "%u", &v) == 1) {
+                    bool = v;
+                    
+                } else if ((bool = poldek_util_parse_bool(arg)) == -1) {
+                    logn(LOGERR, _("invalid value ('%s') of option 'greedy'"),
+                         arg);
+                    return EINVAL;
+                }
+                
+                ts->setop(ts, POLDEK_OP_GREEDY, bool);
+            }
             
         case 't':
             if (ts->getop(ts, POLDEK_OP_TEST))

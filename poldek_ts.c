@@ -146,6 +146,8 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
                  ts->ctx, optv, on);
             if (on)
                 poldek_ts_xsetop(ts, POLDEK_OP_FOLLOW, 1, touch);
+
+            ts->uninstall_greedy_deep = on;
             break;
             
         case POLDEK_OP_CONFLICTS:
@@ -964,7 +966,7 @@ int ts_run_upgrade_dist(struct poldek_ts *ts)
     return rc;
 }
 
-
+extern int in_do_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
 
 static        
 int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf) 
@@ -993,8 +995,15 @@ int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     
     pkgdb_tx_begin(ts->db);
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
-    rc = do_poldek_ts_install(ts, iinf);
+
+    if (getenv("POLDEK2")) {
+        msgn(0, "Running poldek2 dependency engine...");
+        rc = do_poldek_ts_install(ts, iinf);
+    } else {
+        rc = do_poldek_ts_install(ts, iinf);
+    }
     
+
     if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
         pkgdb_tx_commit(ts->db);
     pkgdb_free(ts->db);
