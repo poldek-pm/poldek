@@ -38,9 +38,9 @@
 
 /* The options we understand. */
 static struct argp_option options[] = {
-{0,0,0,0, N_("Splitting options:"), OPT_GID},
+{0,0,0,0, N_("Splitting:"), OPT_GID},
 {"split", OPT_SPLITSIZE, "SIZE[:FIRST_FREE_SPACE]", 0,
-     N_("Split packages to SIZE MB size chunks, the first chunk will "
+     N_("Split package set to SIZE MB size chunks, the first chunk will "
            "be FIRST_FREE_SPACE MB smaller"), OPT_GID },
     
 {"split-conf", OPT_SPLITCONF, "FILE", OPTION_HIDDEN,

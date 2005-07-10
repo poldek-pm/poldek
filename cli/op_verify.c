@@ -45,7 +45,7 @@
 
 /* The options we understand. */
 static struct argp_option options[] = {
-{0,0,0,0, N_("Verification options/switches:"), OPT_GID},
+{0,0,0,0, N_("Package set verification:"), OPT_GID},
 {"verify",  OPT_DEPS, "REPORT-TYPE...", OPTION_ARG_OPTIONAL,
      N_("Verify package set, available reports are: 'deps', 'conflicts', "
         "'file-conflicts', 'file-orphans' and 'file-missing-deps'. "
