@@ -94,6 +94,8 @@ struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx, unsigned flags)
     ts = n_malloc(sizeof(*ts));
     poldek_ts_init(ts, ctx);
     poldek_ts_setf(ts, flags);
+    /* not greedy by default  */
+    
     return ts;
 }
 
@@ -333,14 +335,19 @@ void poldek_ts_destroy(struct poldek_ts *ts)
 
 void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag)
 {
+    int type = 0;
+    
     if (flag & POLDEK_TS_INSTALL)
-        ts->type = POLDEK_TS_INSTALL;
+        type = POLDEK_TS_INSTALL;
 
     else if (flag & POLDEK_TS_UNINSTALL)
-        ts->type = POLDEK_TS_UNINSTALL;
+        type = POLDEK_TS_UNINSTALL;
 
     else if (flag & POLDEK_TS_VERIFY)
-        ts->type = POLDEK_TS_VERIFY;
+        type = POLDEK_TS_VERIFY;
+
+    if (type)
+        poldek_ts_set_type(ts, type, "uninstall");
 
     ts->_flags |= flag;
 }
@@ -696,11 +703,16 @@ int poldek_ts_set_type(struct poldek_ts *ts, uint32_t type, const char *typenam)
     
     switch (type) {
         case POLDEK_TS_INSTALL:
-        case POLDEK_TS_UNINSTALL:
         case POLDEK_TS_VERIFY:
             ts->type = type;
             break;
 
+        case POLDEK_TS_UNINSTALL:
+            n_assert(!poldek_ts_op_touched(ts, POLDEK_OP_GREEDY));
+            poldek_ts_setop(ts, POLDEK_OP_GREEDY, 0);
+            ts->type = type;
+            break;
+            
         default:
             n_die("%d: unknown ts type", type);
             n_assert(0);
@@ -1033,6 +1045,7 @@ int ts_run_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
     pkgdb_free(ts->db);
     ts->db = NULL;
     MEMINF("END");
+
     return rc;
 }
 
