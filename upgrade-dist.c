@@ -72,7 +72,7 @@ int mapfn_mark_newer_pkg(const char *n, uint32_t e,
     i = n_array_bsearch_idx_ex(map_s->avpkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
     if (i < 0) {
         msg(3, "%-32s not found in repository\n", pkg_snprintf_s(&tmpkg));
-        return;
+        return 1;
     }
     
     pkg = n_array_nth(map_s->avpkgs, i);
