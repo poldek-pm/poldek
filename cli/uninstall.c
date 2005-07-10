@@ -46,8 +46,8 @@ static struct argp_option options[] = {
 
 {"nodeps", OPT_INST_NODEPS, 0, 0, N_("Ignore broken dependencies"), OPT_GID },
 
-{"greedy", OPT_INST_GREEDY, "[yes|no]", OPTION_ARG_OPTIONAL,
-     N_("Remove packages required by selected ones if possible"), OPT_GID },    
+{"greedy", OPT_INST_GREEDY, "[LEVEL]", OPTION_ARG_OPTIONAL,
+     N_("Remove packages required by selected ones if possible."), OPT_GID },    
 { 0, 0, 0, 0, 0, 0 },
 };
 
