@@ -381,6 +381,50 @@ int psreq_match_pkgs(const struct pkg *pkg, struct capreq *req, int strict,
     return nmatch;
 }
 
+
+int psreq_find_match_packages(struct pkgset *ps,
+                              const struct pkg *pkg, struct capreq *req,
+                              struct pkg ***packages, int *npackages,
+                              int strict)
+{
+    struct pkg **suspkgs, pkgsbuf[1024];
+    int nsuspkgs = 0, found = 0;
+    
+    
+    if (packages)
+        *packages = NULL;
+    
+    found = psreq_lookup(ps, req, &suspkgs, (struct pkg **)pkgsbuf, &nsuspkgs);
+        
+    if (found && nsuspkgs) {
+        struct pkg **matches;
+        int nmatches = 0;
+        
+        found = 0;
+        matches = alloca(sizeof(*matches) * nsuspkgs);
+        if (psreq_match_pkgs(pkg, req, strict, suspkgs, nsuspkgs, matches, &nmatches)) {
+            found = 1;
+            
+            if (nmatches && packages) {
+                struct pkg **pkgs;
+                int i;
+                
+                pkgs = n_malloc(sizeof(*pkgs) * (nmatches + 1));
+                for (i=0; i < nmatches; i++)
+                    pkgs[i] = matches[i];
+                
+                pkgs[nmatches] = NULL;
+                *packages = pkgs;
+                *npackages = nmatches;
+            }
+        }
+    }
+    
+    return found;
+}
+
+
+
 static
 int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict, 
                    struct pkg *suspkgs[], int npkgs)
@@ -555,4 +599,3 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
     
     return nmatch;
 }
-

@@ -41,6 +41,12 @@ int psreq_match_pkgs(const struct pkg *pkg, struct capreq *req, int strict,
                      struct pkg *suspkgs[], int npkgs,
                      struct pkg **matches, int *nmatched);
 
+/* conjunction of _lookup() and _match_pkgs() */
+int psreq_find_match_packages(struct pkgset *ps,
+                              const struct pkg *pkg, struct capreq *req,
+                              struct pkg ***packages, int *npackages,
+                              int strict);
+
 int pkgset_verify_deps(struct pkgset *ps, int strict);
 int pkgset_verify_conflicts(struct pkgset *ps, int strict);
 
