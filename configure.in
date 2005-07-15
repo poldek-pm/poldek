@@ -457,25 +457,26 @@ AC_CONFIG_FILES([
 		pkgdir/dir/Makefile
 		pkgdir/hdrl/Makefile
 		pkgdir/pdir/Makefile
-    	pkgdir/pndir/Makefile
+            	pkgdir/pndir/Makefile
 		pkgdir/rpmdb/Makefile
-        pkgdir/yum/Makefile
-        pm/Makefile
-        pm/rpm/Makefile
-        pm/pset/Makefile
-        sigint/Makefile
-        vfile/Makefile
-        vfile/vfff/Makefile
-        python/Makefile
-        conf/Makefile
+                pkgdir/yum/Makefile
+                pkgdir/metadata/Makefile
+                pm/Makefile
+                pm/rpm/Makefile
+                pm/pset/Makefile
+                sigint/Makefile
+                vfile/Makefile
+                vfile/vfff/Makefile
+                python/Makefile
+                conf/Makefile
 		doc/Makefile
 		doc/homepage/Makefile
 		doc/pl/Makefile
-	    install/Makefile
+	        install/Makefile
 		Makefile
 		poldek.spec
 		poldek-suse.spec
-        tests/Makefile
+                tests/Makefile
 		cli/Makefile
 	])
 AC_OUTPUT
