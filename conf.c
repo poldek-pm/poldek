@@ -641,6 +641,8 @@ static int add_param(tn_hash *ht_sect, const char *section,
         
     val = getv(value, path, nline);
     //printf("Aname = %s, v = %s\n", name, val);
+    if (val == NULL && *name == '_')           /* a macro */
+        val = "";
     
     if (val == NULL) {
         logn(LOGERR, _("%s invalid value of '%s::%s'"), filemark, 
