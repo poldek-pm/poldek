@@ -402,7 +402,7 @@ static void print_source_type_list(void)
             poldek_term_snprintf_c(PRCOLOR_CYAN, ms, sizeof(ms),
                                    "%s", inf->mode);
             
-            printf("%-20s%s", ns, ms);
+            printf("%-22s%s", ns, ms);
             printf("  %s\n", inf->description);
             if (*inf->aliases) {
                 printf("%-10s   (aliases: ", "");
