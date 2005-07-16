@@ -42,8 +42,11 @@ extern struct pkgdir_module pkgdir_module_dir;
 extern struct pkgdir_module pkgdir_module_hdrl;
 extern struct pkgdir_module pkgdir_module_rpmdb;
 extern struct pkgdir_module pkgdir_module_yum;
-extern struct pkgdir_module pkgdir_module_metadata;
 extern struct pkgdir_module pkgdir_module_rpmdbcache;
+
+#if WITH_METADATA_REPOSITORY
+extern struct pkgdir_module pkgdir_module_metadata;
+#endif
 
 static struct pkgdir_module *mod_tab[] = {
     &pkgdir_module_pndir,
@@ -52,7 +55,9 @@ static struct pkgdir_module *mod_tab[] = {
     &pkgdir_module_dir,
     &pkgdir_module_hdrl,
     &pkgdir_module_yum,
+#if WITH_METADATA_REPOSITORY    
     &pkgdir_module_metadata,
+#endif    
     &pkgdir_module_rpmdbcache,
     NULL
 };
