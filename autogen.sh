@@ -28,7 +28,7 @@ runcmd ./getlib.sh tndb    $getlib_mode
 
 # generate po/POTFILES.in
 make -f Makefile.extra POTFILES_in
-runcmd autopoint
+runcmd autopoint --force
 runcmd libtoolize --force --automake
 runcmd aclocal -I m4
 runcmd autoheader
