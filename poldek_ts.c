@@ -144,8 +144,8 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
             break;
 
         case POLDEK_OP_GREEDY:
-            DBGF("set (%d) greedy %p (%p) %d %d\n", touch, ts,
-                 ts->ctx, optv, on);
+            DBGF("set (touch=%d) greedy ts=%p (ctx=%p) greedy=%d val=%d\n",
+                 touch, ts, ts->ctx, optv, on);
             if (on)
                 poldek_ts_xsetop(ts, POLDEK_OP_FOLLOW, 1, touch);
 
@@ -708,8 +708,11 @@ int poldek_ts_set_type(struct poldek_ts *ts, uint32_t type, const char *typenam)
             break;
 
         case POLDEK_TS_UNINSTALL:
-            n_assert(!poldek_ts_op_touched(ts, POLDEK_OP_GREEDY));
-            poldek_ts_setop(ts, POLDEK_OP_GREEDY, 0);
+            /* set to default 0 if not touched before,
+               opt propagation is messy a bit */
+            if (!poldek_ts_op_touched(ts, POLDEK_OP_GREEDY)) {
+                poldek_ts_setop(ts, POLDEK_OP_GREEDY, 0);
+            }
             ts->type = type;
             break;
             
