@@ -316,23 +316,17 @@ AC_ARG_WITH(metadata-repository,
 [  --without-metadata-repository   build without metadata repository support],
 METADATA=$enableval, METADATA=yes)
 
-LIBXML2_LIB=
 LIBXML2_INCLUDE=
 if test "${METADATA}." == "yes."; then
- 	AC_CHECK_LIB(xml2, xmlReadFile, [ LIBXML2_LIB="-ldb-3.1" ],
-                 [ AC_MSG_ERROR(["libxml2 not found"]) ])
+ 	AC_CHECK_LIB(xml2, xmlReadFile,, [ AC_MSG_ERROR(["libxml2 not found"]) ])
 
     AC_CHECK_FILE([/usr/include/libxml2/libxml/xmlversion.h],
         [ LIBXML2_INCLUDE="-I/usr/include/libxml2" ],
         [ AC_MSG_ERROR(["/usr/include/libxml2/libxml/xmlversion.h not found"])])
-    METADATA_DIR="metadata"
-    METADATA_LIB="metadata/libpkgdir_metadata.la"
     AC_DEFINE([WITH_METADATA_REPOSITORY],1,[defined if metadata is enabled])
+    AM_CONDITIONAL(WITH_METADATA_REPOSITORY, true)
 fi
-AC_SUBST(LIBXML2_LIB)
 AC_SUBST(LIBXML2_INCLUDE)
-AC_SUBST(METADATA_DIR)
-AC_SUBST(METADATA_LIB)
 
 
 dnl Stolen from xemacs configure.in

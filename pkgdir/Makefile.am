@@ -1,6 +1,10 @@
 # $Id$
 
-SUBDIRS = dir pdir hdrl rpmdb pndir yum @METADATA_DIR@
+SUBDIRS = dir pdir hdrl rpmdb pndir yum 
+if WITH_METADATA_REPOSITORY
+ SUBDIRS += metadata
+endif
+
 INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
@@ -20,8 +24,11 @@ pkgdir_modules = dir/libpkgdir_dir.la  \
 		 rpmdb/libpkgdir_rpmdb.la  \
 		 pdir/libpkgdir_pdir.la    \
 		 pndir/libpkgdir_pndir.la  \
-		 yum/libpkgdir_yum.la @METADATA_LIB@
+		 yum/libpkgdir_yum.la
 
+if WITH_METADATA_REPOSITORY
+pkgdir_modules += metadata/libpkgdir_metadata.la
+endif
 
 libpkgdir_la_LIBADD  = $(pkgdir_modules)
 
