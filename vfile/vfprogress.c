@@ -76,12 +76,15 @@ static int eta2str(char *buf, int bufsize, struct vf_progress_bar *bar)
 
 static void calculate_tt(long total, long amount, struct vf_progress_bar *bar)
 {
-    time_t		    current_time;
+    time_t current_time;
 
     current_time = time(NULL);
-    if (current_time == bar->time_last)
+    if (current_time == bar->time_last) {
+	bar->freq++;    
         return;
+    }
     
+    bar->freq = 0;
     bar->time_last = current_time;
     bar->transfer_rate = (float)amount / (current_time - bar->time_base);
     if (bar->transfer_rate > 0)
@@ -120,6 +123,7 @@ void vf_progress(long total, long amount, void *data)
         bar->time_base = bar->time_last = time(NULL);
         bar->state = VF_PROGRESS_RUNNING;
         bar->maxlen = 0;
+	bar->freq = 0;
     }
     
 #define HASH_SIZE 8192
@@ -135,14 +139,18 @@ void vf_progress(long total, long amount, void *data)
     percent = frac * 100.0f;
     
     n = (int) (((float)bar->width) * frac);
+    calculate_tt(total, amount, bar);
 
-    if (amount > 0 && amount != total && (10 * percent) - bar->prev_perc < 4) {
+    /* Skip refresh if progress less than 0.4% or 
+        refresh frequency is greater than 3Hz  */
+    if (amount > 0 && amount != total && 
+       ((10 * percent) - bar->prev_perc < 4 || bar->freq > 3)) {
         //printf("v %ld, %d  %ld, %f -> %f\n", n, bar->prev_perc,
         //       bar->prev_n, 10 * percent,
         //(10 * percent) - (float)bar->prev_perc);
         return;
     }
-    calculate_tt(total, amount, bar);
+
     n_assert(bar->prev_n < 100);
     if (!bar->is_tty) {
         int k;
