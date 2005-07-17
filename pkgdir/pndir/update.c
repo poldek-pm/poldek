@@ -141,7 +141,7 @@ int pndir_m_update_a(const struct source *src, const char *idxpath,
     pkgdir = pkgdir_srcopen(src, 0);
 
     *uprc = PKGDIR_UPRC_NIL;
-    if (pkgdir == NULL) {
+    if (pkgdir == NULL) {       /* broken cached copy */
         rc = update_whole_idx(src);
         if (rc)
             *uprc = PKGDIR_UPRC_UPDATED;
