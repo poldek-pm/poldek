@@ -119,12 +119,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                      exit(EXIT_FAILURE);
                 }
                 
-                if (strcmp(optname, "ignorearch") == 0)
-                    rt->ts->setop(rt->ts, POLDEK_OP_IGNOREARCH, 1);
-                else if (strcmp(optname, "ignoreos") == 0)
-                    rt->ts->setop(rt->ts, POLDEK_OP_IGNOREOS, 1);
-                else
-                    poldek_ts_configure(rt->ts, POLDEK_CONF_RPMOPTS, arg);
+                poldek_ts_configure(rt->ts, POLDEK_CONF_RPMOPTS, arg);
             }
             break;
     

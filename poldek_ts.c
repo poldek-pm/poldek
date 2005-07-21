@@ -495,8 +495,14 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
             break;
 
         case POLDEK_CONF_RPMOPTS:
-            if ((vs = va_arg(ap, char*)))
+            if ((vs = va_arg(ap, char*))) {
+                if (n_str_eq(vs, "--ignorearch"))
+                    ts->setop(ts, POLDEK_OP_IGNOREARCH, 1);
+                else if (n_str_eq(vs, "--ignoreos"))
+                    ts->setop(ts, POLDEK_OP_IGNOREOS, 1);
+                
                 n_array_push(ts->rpmopts, n_strdup(vs));
+            }
             break;
 
         case POLDEK_CONF_HOLD:
