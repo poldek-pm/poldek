@@ -689,9 +689,7 @@ int pkgdir__uniq(struct pkgdir *pkgdir)
         snprintf(m, sizeof(m), ngettext("removed %d duplicate package",
                                         "removed %d duplicate packages", n), n);
         
-        name = pkgdir->idxpath ? pkgdir->idxpath :
-            pkgdir->path ? pkgdir->idxpath : pkgdir->name;
-        
+        name = pkgdir_idstr(pkgdir);
         if (name)
             logn(LOGWARN, "%s: %s", name, m);
         else 
