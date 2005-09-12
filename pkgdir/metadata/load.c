@@ -1,4 +1,3 @@
-
 /* $Id$ */
 
 #include <stdio.h>
@@ -11,19 +10,25 @@
 #include "pkg.h"
 #include "capreq.h"
 #include "log.h"
-
+#include "vfile/vfile.h"
 #include "load.h"
+
 
 #define x_node_eq(node, node_name) (strcmp(node->name, node_name) == 0)
 
-//const char *content_tags[] = {
-//    "name", "arch", "checksum", "summary", "description", "packager", "url",
-//    "license", "vendor", "group", "buildhost", "sourcerpm", "file", NULL,
-//};
+static void repomd_ent_free(struct repomd_ent *ent)
+{
+    if (ent->vf) {
+        vfile_close(ent->vf);
+        ent->vf = NULL;
+    }
+    free(ent);
+}
 
 static struct repomd_ent *load_repomd_ent(xmlNode *node)
 {
-    char *location = NULL, *type = NULL;
+    const char *location = NULL, *type = NULL;
+    const char *checksum = NULL, *checksum_type = NULL;
     struct repomd_ent *ent;
     time_t ts = 0;
     int len;
@@ -34,6 +39,10 @@ static struct repomd_ent *load_repomd_ent(xmlNode *node)
         if (x_node_eq(node, "location")) {
             location = xmlGetProp(node, "href");
             
+        } else if (x_node_eq(node, "checksum")) {
+            checksum_type = xmlGetProp(node, "type");
+            checksum = xmlNodeGetContent(node);
+                
         } else if (x_node_eq(node, "timestamp")) {
             char *s = xmlNodeGetContent(node);
             unsigned int t;
@@ -44,14 +53,20 @@ static struct repomd_ent *load_repomd_ent(xmlNode *node)
         }
     }
     
-    if (type == NULL || location == NULL || ts == 0)
+    if (type == NULL || location == NULL || ts == 0 || checksum == NULL ||
+        checksum_type == NULL)
         return NULL;
 
     len = strlen(location);
     ent = malloc(sizeof(*ent) + len + 1);
     ent->ts = ts;
-    snprintf(ent->type, sizeof(ent->type), "%s", type);
-    snprintf(ent->location, len + 1, "%s", location);
+    n_snprintf(ent->checksum, sizeof(ent->checksum), "%s", checksum);
+    n_snprintf(ent->checksum_type, sizeof(ent->checksum_type), "%s",
+               checksum_type);
+    
+    n_snprintf(ent->type, sizeof(ent->type), "%s", type);
+    n_snprintf(ent->location, len + 1, "%s", location);
+    ent->vf = NULL;
     return ent;
 }
 
@@ -59,7 +74,7 @@ static tn_hash *do_load_repomd(xmlNode *node)
 {
     tn_hash *repomd;
 
-    repomd = n_hash_new(16, free);
+    repomd = n_hash_new(16, (tn_fn_free)repomd_ent_free);
     n_hash_ctl(repomd, TN_HASH_NOCPKEY);
     
     for (; node; node = node->next) {
@@ -88,8 +103,9 @@ tn_hash *metadata_load_repomd(const char *path)
     xmlDocPtr doc;
     xmlNode   *root = NULL;
     tn_hash   *repomd = NULL;
-    
-    doc = xmlReadFile(path, NULL, XML_PARSE_NONET);
+
+    doc = xmlReadFile(path, NULL, XML_PARSE_NONET | XML_PARSE_NOERROR |
+                      XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS);
     if (doc == NULL) {
         logn(LOGERR, "%s: xml parser error", path);
         return NULL;

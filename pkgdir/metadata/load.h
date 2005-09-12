@@ -1,15 +1,19 @@
+/* $Id$ */
 #ifndef PKGDIR_METADATA_LOAD_H
 #define PKGDIR_METADATA_LOAD_H
+
 
 void metadata_loadmod_init(void);
 void metadata_loadmod_destroy(void);
 
+struct vfile;
 
 struct repomd_ent {
     char type[32];
-    //char checksum[64];
-    //char checksum_type[8];
+    char checksum[64];
+    char checksum_type[8];
     time_t ts;
+    struct vfile *vf;
     char location[0];
 };
 
