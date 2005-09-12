@@ -17,24 +17,23 @@
 
 #define REL_ALL     (REL_EQ | REL_GT | REL_LT)
 
-#if 0
+#if 0  /* unused */
 /* types */
 #define CAPREQ_PROV     (1 << 0)
 #define CAPREQ_REQ      (1 << 1)
-#endif
+#endif /* end unused */
 #define CAPREQ_CNFL     (1 << 2)
 
 /* sub types */
-#define CAPREQ_PREREQ      (1 << 3)         /* '*' prefix */
-#define CAPREQ_PREREQ_UN   (1 << 4)         /* '^' prefix */
+#define CAPREQ_PREREQ      (1 << 3)        /* '*' prefix */
+#define CAPREQ_PREREQ_UN   (1 << 4)        /* '^' prefix */
 
-#define CAPREQ_OBCNFL      CAPREQ_PREREQ    /* alias, for obsolences */
+#define CAPREQ_OBCNFL      CAPREQ_PREREQ   /* alias, for obsolences */
 
-#define CAPREQ_RPMLIB            (1 << 5)   /* rpmlib(...) */
+#define CAPREQ_RPMLIB            (1 << 5)  /* rpmlib(...) */
 
-#define CAPREQ_RPMLIB_SATISFIED  (1 << 6)   /* is rpmlib provides rpmlib(...)? */
-#define CAPREQ_BASTARD   (1 << 7)   /* capreq added by poldek during mkidx,
-                                        '!' prefix */
+#define CAPREQ_RPMLIB_SATISFIED  (1 << 6)  /* is rpmlib provides rpmlib(...)? */
+#define CAPREQ_BASTARD           (1 << 7)  /* capreq added by poldek */
 
 /* 'runtime' i.e. not storable flags  */
 #define CAPREQ_RT_FLAGS    (CAPREQ_RPMLIB_SATISFIED | CAPREQ_BASTARD)
