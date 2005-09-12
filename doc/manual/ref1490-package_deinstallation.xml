@@ -30,5 +30,12 @@
    </para>
   </listitem>
 </varlistentry>
+<varlistentry><term><option id="ref.cmdl.greedy1500">--greedy[=[yes|no]] </option></term>
+  <listitem>
+   <para>
+      Remove packages required by selected ones if possible
+   </para>
+  </listitem>
+</varlistentry>
 </variablelist>
 </sect2>
