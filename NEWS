@@ -59,7 +59,7 @@ III) Interactive mode
   one can execute interactive commands from command-line:
   
   $ poldek -C ls 
-  $ apoldek install libfoo-0.1-1
+  $ ipoldek install libfoo-0.1-1
 
 * aliases are defined in external configuration file 
   (Mariusz Mazur <mmazur a kernel pl>)
@@ -108,7 +108,7 @@ IV) Configuration file
 
 * %include macro has been added, included file may be remote too, ex:
 
-   _pld_prefix = ftp://ftp.pld.org.pl/dists/ra
+  _pld_prefix = ftp://ftp.pld.org.pl/dists/ra
   %include %{_pld_prefix}/source.conf
 
   Included remote files once downloaded are stored in cache directory, 
@@ -127,7 +127,7 @@ V) General
   --mkidxz                 => --mkidx           (compression is on by default)
   --sidx, --sdir, --shdrl  =>                   (use --st=TYPE -s instead)
   --unique-pkg-names       => --uniq
-  --shcmd                  =>                   (use -C or run ipoldek)
+  --shcmd                  =>                   (use --cmd or run ipoldek)
 
 
                             ==== 0.18.x ====
