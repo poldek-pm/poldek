@@ -262,7 +262,7 @@ int do_install(struct install_ctx *ictx, struct poldek_iinf *iinf)
 
 
     if (ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N, 0)) {
-        rc = packages_dump(ictx->ps->pkgs, ts->dumpfile,
+        rc = packages_dump(ictx->install_pkgs, ts->dumpfile,
                            ts->getop(ts, POLDEK_OP_JUSTPRINT_N) == 0);
         return rc;
     }

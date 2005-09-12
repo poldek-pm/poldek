@@ -2131,7 +2131,7 @@ int do_install(struct pkgset *ps, struct upgrade_s *upg,
 
 
     if (ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N, 0)) {
-        rc = packages_dump(ps->pkgs, ts->dumpfile,
+        rc = packages_dump(upg->install_pkgs, ts->dumpfile,
                            ts->getop(ts, POLDEK_OP_JUSTPRINT_N) == 0);
         return rc;
     }
