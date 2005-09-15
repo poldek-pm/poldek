@@ -346,8 +346,7 @@ int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs)
     return nmarked;
 }
 
-
-int in_do_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
+int in_do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
 {
     int i, nmarked = 0, nerr = 0, n, is_particle;
     struct install_ctx ictx;
