@@ -243,7 +243,7 @@ void idx_close(struct idx *idx)
 static
 int do_open(struct pkgdir *pkgdir, unsigned flags)
 {
-    struct pkgroup_idx   *pkgroups = NULL;
+    //struct pkgroup_idx   *pkgroups = NULL;
     struct idx           idx;
     unsigned             vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
 
@@ -301,6 +301,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     unsigned           vfmode = VFM_RO | VFM_CACHE | VFM_NOEMPTY;
     struct vfile       *vf;
 
+    ldflags = ldflags;
     idx = pkgdir->mod_data;
 
     vf = open_metadata_file(idx->repomd, pkgdir->path, "primary",
@@ -331,52 +332,50 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     return n_array_size(pkgdir->pkgs);
 }
 
-static
-int metadata_update(const char *path, int vfmode, const char *sl,
-                    enum pkgdir_uprc *uprc)
-{
-    tn_hash         *repomd;
-    int             rc = 1;
-    
-    *uprc = PKGDIR_UPRC_NIL;
-    repomd = open_repomd(path, vfmode, sl, uprc);
-    if (repomd == NULL)
-        return 0;
-
-    if (*uprc == PKGDIR_UPRC_UPDATED) {
-        struct vfile    *vf;
-        
-        vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
-        if ((vf = open_metadata_file(repomd, path, "primary", vfmode, sl, 0)))
-            vfile_close(vf);
-        else
-            rc = 0;
-    }
-    
-    
-    n_hash_free(repomd);
-    return rc;
-}
-
 
 static
-int do_update_aXX(const struct source *src, const char *path,
-                enum pkgdir_uprc *uprc)
+int metadata_update(const struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 {
+    struct idx *idxptr, idx;
     int vfmode;
 
-    DBGF_F("metadata_update_a %s\n", path);
+    *uprc = PKGDIR_UPRC_NIL;
+
+    idxptr = pkgdir->mod_data;
+    if (idxptr->repomd_vf->vf_flags & VF_FETCHED) { /* already downloaded */
+        *uprc = PKGDIR_UPRC_UPDATED;
+        return 1;
+    }
+
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
-    return metadata_update(path, vfmode, src->name, uprc);
+    /* if (!force) - force not implemented yet */
+    vfmode |= VFM_CACHE_NODEL;
+    
+    if (!open_repomd(&idx, pkgdir->path, vfmode, pkgdir->name)) {
+        *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
+        return 0;
+    }
+    
+    *uprc = PKGDIR_UPRC_UPTODATE;
+    
+    if ((idx.repomd_vf->vf_flags & VF_FETCHED)) {
+        struct pkgdir *tmp;
+        *uprc = PKGDIR_UPRC_UPDATED;
+    
+        if ((tmp = pkgdir_srcopen(pkgdir->src, PKGDIR_OPEN_REFRESH)))
+            pkgdir_free(tmp);
+        else
+            *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
+    }
+    
+    return 1;
 }
+
 
 static 
 int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc) 
 {
-    int vfmode;
-    DBGF_F("metadata_update\n");
-    vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL | VFM_CACHE_NODEL;
-    return metadata_update(pkgdir->idxpath, vfmode, pkgdir->name, uprc);
+    return metadata_update(pkgdir, uprc);
 }
 
 static
@@ -421,8 +420,13 @@ int do_update_a(const struct source *src, const char *path,
     *uprc = PKGDIR_UPRC_UPTODATE;
     
     if ((idx.repomd_vf->vf_flags & VF_FETCHED)) {
+        struct pkgdir *tmp;
         *uprc = PKGDIR_UPRC_UPDATED;
-        vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL | VFM_CACHE;
+    
+        if ((tmp = pkgdir_srcopen(src, PKGDIR_OPEN_REFRESH)))
+            pkgdir_free(tmp);
+        else
+            *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
     }
     
     return 1;
