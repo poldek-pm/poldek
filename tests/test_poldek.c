@@ -5,20 +5,26 @@
 
 #include "test_env.c"
 #include "test_match.c"
+#include "test_pmdb.c"
 
 Suite *poldek_suite(void)
 {
   Suite *s = suite_create("poldek");
-  TCase *tc_misc, *tc_match;
+  TCase *tc;
 
-  tc_misc = tcase_create("misc");
-  tcase_add_test(tc_misc, test_env);
+  tc = tcase_create("misc");
+  tcase_add_test(tc, test_env);
+  suite_add_tcase (s, tc);
+
   
-  tc_match = tcase_create("match");
-  tcase_add_test(tc_misc, test_match);
+  tc = tcase_create("match");
+  tcase_add_test(tc, test_match);
+  suite_add_tcase (s, tc);
+
+  tc = tcase_create("pmdb");
+  tcase_add_test(tc, test_pmdb);
+  suite_add_tcase (s, tc);
   
-  suite_add_tcase (s, tc_misc);
-  suite_add_tcase (s, tc_match);
   return s;
 }
 
