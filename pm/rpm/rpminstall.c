@@ -331,7 +331,7 @@ int pm_rpm_packages_install(struct pkgdb *db,
     
     if (ts->getop(ts, POLDEK_OP_RPMTEST))
         argv[n++] = "--test";
-    
+
     if (ts->getop(ts, POLDEK_OP_JUSTDB))
         argv[n++] = "--justdb";
         
@@ -498,6 +498,9 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
 
     if (ts->getop(ts, POLDEK_OP_RPMTEST))
         argv[n++] = "--test";
+
+    if (ts->getop(ts, POLDEK_OP_JUSTDB))
+        argv[n++] = "--justdb";
     
     if (ts->getop(ts, POLDEK_OP_FORCE))
         argv[n++] = "--force";
