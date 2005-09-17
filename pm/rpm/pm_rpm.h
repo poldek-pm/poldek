@@ -19,6 +19,7 @@ struct pm_rpm {
     unsigned flags;
     char *rpm;
     char *sudo;
+    char *default_dbpath;
 };
 
 void *pm_rpm_init(void);

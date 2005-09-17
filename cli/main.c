@@ -614,10 +614,8 @@ static int load_packages(struct poclidek_ctx *cctx, unsigned cnflags)
     if ((cnflags & OPT_AS_FLAG(OPT_SKIPINSTALLED)) == 0)
         ldflags |= POCLIDEK_LOAD_INSTALLED;
         
-    if (!poclidek_load_packages(cctx, ldflags)) {
-        logn(LOGERR, "packages load failed");
+    if (!poclidek_load_packages(cctx, ldflags))
         return 0;
-    }
     return 1;
 }
 

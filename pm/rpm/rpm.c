@@ -61,13 +61,17 @@ void pm_rpm_destroy(void *pm_rpm)
     
     n_cfree(&pm->rpm);
     n_cfree(&pm->sudo);
+    n_cfree(&pm->default_dbpath);
     free(pm);
 }
+
+#define RPM_DEFAULT_DBPATH "/var/lib/rpm"
 
 void *pm_rpm_init(void) 
 {
     struct pm_rpm *pm_rpm;
-
+    char *p;
+    
     if (initialized == 0) {
         if (rpmReadConfigFiles(NULL, NULL) != 0) {
             logn(LOGERR, "failed to read rpmlib configs");
@@ -75,10 +79,17 @@ void *pm_rpm_init(void)
         }
         initialized = 1;
     }
-    
+
     pm_rpm = n_malloc(sizeof(*pm_rpm));
     pm_rpm->rpm = NULL;
     pm_rpm->sudo = NULL;
+
+    p = (char*)rpmGetPath("%{_dbpath}", NULL);
+    if (p == NULL || *p == '%')
+        p = RPM_DEFAULT_DBPATH;
+    
+    pm_rpm->default_dbpath = n_strdup(p);
+    
     return pm_rpm;
 }
 
@@ -134,24 +145,61 @@ int pm_rpm_configure(void *pm_rpm, const char *key, void *val)
     return 1;
 }
 
-#define RPM_DBPATH "/var/lib/rpm"
+
+
+static int db_exists(void *pm_rpm, const char *rootdir, const char *dbpath)
+{
+    char            rpmdb_path[PATH_MAX], tmp[PATH_MAX];
+
+    if (!dbpath) 
+        dbpath = pm_rpm_dbpath(pm_rpm, tmp, sizeof(tmp));
+    
+    if (!dbpath)
+        return 0;
+    
+    *rpmdb_path = '\0';
+    n_snprintf(rpmdb_path, sizeof(rpmdb_path), "%s%s",
+               rootdir ? (*(rootdir + 1) == '\0' ? "" : rootdir) : "",
+               dbpath != NULL ? dbpath : "");
+    
+    if (*rpmdb_path == '\0')
+        return 0;
+
+    if (access(rpmdb_path, R_OK) != 0)
+        return 0;
+
+    if (pm_rpm_dbmtime(pm_rpm, rpmdb_path) == 0)
+        return 0;
+
+    return 1;
+}
+
 rpmdb pm_rpm_opendb(void *pm_rpm, void *dbh,
                     const char *rootdir, const char *dbpath,
                     mode_t mode, tn_hash *kw)
 {
+    struct pm_rpm *pm = pm_rpm;
     rpmdb db = NULL;
-
-    pm_rpm = pm_rpm;
-    dbh = dbh; kw = kw;
+    int rc = 1;
     
+    dbh = dbh; kw = kw;
     
     if (dbpath)
         addMacro(NULL, "_dbpath", NULL, dbpath, RMIL_DEFAULT);
     
-    if (rpmdbOpen(rootdir ? rootdir : "/", &db, mode, 0) != 0) {
-        db = NULL;
+    DBGF("root %s, dir %s, mode %d\n", rootdir, dbpath, mode);
+        
+    /* a workaround, rpmdbOpen succeeds even if database does not exists */
+    if (mode == O_RDONLY && !db_exists(pm_rpm, rootdir, dbpath)) {
+        logn(LOGERR, _("%s%s: rpm database does not exists"),
+             rootdir ? rootdir:"", dbpath ? dbpath : pm->default_dbpath);
+        rc = 0;
+    }
+
+    if (rc && rpmdbOpen(rootdir ? rootdir : "/", &db, mode, 0) != 0) {
         logn(LOGERR, _("%s%s: open rpm database failed"),
-             rootdir ? rootdir:"", dbpath ? dbpath : RPM_DBPATH);
+             rootdir ? rootdir:"", dbpath ? dbpath : pm->default_dbpath);
+        rc = 0;
     }
     
 #if ENABLE_TRACE    
@@ -159,6 +207,13 @@ rpmdb pm_rpm_opendb(void *pm_rpm, void *dbh,
     system("ls -l /proc/$(echo `ps aux | grep poldek | grep -v grep` | awk '{print $2}')/fd/ | grep rpm");
     sleep(3);
 #endif
+    
+    if (rc == 0)
+        db = NULL;
+
+    /* restore non-default dbpath */
+    if (dbpath && strcmp(dbpath, pm->default_dbpath) != 0)
+        addMacro(NULL, "_dbpath", NULL, pm->default_dbpath, RMIL_DEFAULT);
     
     return db;
 }
@@ -171,7 +226,7 @@ char *pm_rpm_dbpath(void *pm_rpm, char *path, size_t size)
     n_assert(initialized);
     p = (char*)rpmGetPath("%{_dbpath}", NULL);
     if (p == NULL || *p == '%')
-        n_snprintf(path, size, "%s", RPM_DBPATH);
+        n_snprintf(path, size, "%s", RPM_DEFAULT_DBPATH);
     else
         n_snprintf(path, size, "%s", p);
 

@@ -41,6 +41,7 @@
 #include "pm/pm.h"
 #include "pkgroup.h"
 
+static int do_open(struct pkgdir *pkgdir, unsigned flags);
 static void do_free(struct pkgdir *pkgdir);
 static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 
@@ -52,7 +53,7 @@ struct pkgdir_module pkgdir_module_rpmdb = {
     "RPM package database",
     NULL,
     NULL, 
-    NULL,
+    do_open,
     do_load,
     NULL,
     NULL,
@@ -215,23 +216,35 @@ int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
     return n_array_size(pkgs);
 }
 
-#if 0
-static int do_open() 
+/* just check if database exists */
+static
+int do_open(struct pkgdir *pkgdir, unsigned flags)
 {
-    mtime_rpmdb = rpm_dbmtime(dbfull_path);
+    struct pm_ctx *pmctx;
+    struct pkgdb  *db;
+
+
+    flags = flags;          /* unused */
+    
+    n_assert(pkgdir->mod_data == NULL);
+    pkgdir->mod_data = pmctx = pm_new("rpm");
+    
+    if ((db = pkgdb_open(pmctx, "/", pkgdir->idxpath, O_RDONLY, NULL)) == NULL)
+        return 0;
+
+    pkgdb_free(db);
+    return 1;
 }
-#endif
 
 
 static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     int i;
-    struct pm_ctx *pmctx;
-    
-    n_assert(pkgdir->mod_data == NULL);
-    pkgdir->mod_data = pmctx = pm_new("rpm");
+    struct pm_ctx *pmctx = pkgdir->mod_data;
 
+    n_assert(pmctx);
+    
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
     
