@@ -94,8 +94,6 @@ N_("Install packages ignoring broken dependencies, conflicts, etc"), OPT_GID },
      N_("Download packages to DIR (poldek's cache directory by default)"
         "instead of install them"), OPT_GID },
 
-{"root", OPT_INST_ROOTDIR, "DIR", 0, N_("Set top directory to DIR"), OPT_GID },    
-
 {"nodeps", OPT_INST_NODEPS, 0, 0,
  N_("Install packages with broken dependencies"), OPT_GID },
 
@@ -161,6 +159,8 @@ static struct argp_option cmdl_options[] = {
 
     {"reinstall-dist", OPT_INST_REINSTDIST, "DIR", OPTION_ARG_OPTIONAL,
      N_("Reinstall all packages under DIR as root directory"), OPT_GID - 9 },
+
+    {"root", OPT_INST_ROOTDIR, "DIR", 0, N_("Set top directory to DIR"), OPT_GID - 9 },
 
     {0,0,0,0, N_("Installation switches:"), OPT_GID },
 {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
@@ -310,6 +310,11 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             rt->set_major_mode(rt, "upgrade-dist", NULL);
             break;
 
+        case OPT_INST_ROOTDIR:
+            poldek_configure(ts->ctx, POLDEK_CONF_ROOTDIR, arg);
+            break;
+
+
         case OPT_INST_HOLD:
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_HOLD, 1);
             poldek_configure(ts->ctx, POLDEK_CONF_HOLD, arg);
@@ -454,11 +459,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_NOHOLD:
             ts->setop(ts, POLDEK_OP_HOLD, 0);
             break;
-
-        case OPT_INST_ROOTDIR:
-            poldek_ts_configure(ts, POLDEK_CONF_ROOTDIR, arg);
-            break;
-
+            
         case OPT_INST_JUSTDB:
             ts->setop(ts, POLDEK_OP_JUSTDB, 1);
             break;
