@@ -67,7 +67,7 @@ struct pkgdir_module pkgdir_module_metadata = {
     NULL, 
     PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE | PKGDIR_CAP_NOSAVAFTUP,
     "metadata", NULL,
-    "package metadata format",
+    "XML Package Metadata format",
     NULL, 
     NULL,      /* metadata location is predefined as repodata/repomd.xml */
     do_open,
