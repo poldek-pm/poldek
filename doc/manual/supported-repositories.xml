@@ -12,6 +12,13 @@
   </listitem>
 </varlistentry>
 
+<varlistentry><term>metadata (features: read, update)</term>
+  <listitem>
+     <para> XML Package Metadata format <!-- (<link linkend="http://linux.duke.edu/projects/metadata/">project homepage</link>) -->
+     </para>
+  </listitem>
+</varlistentry>
+
 <varlistentry><term>hdrl (features: read, update)</term>
   <listitem>
      <para> Native <application>apt-get</application> and other tools 

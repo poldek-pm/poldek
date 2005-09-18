@@ -29,7 +29,7 @@ m_index.xml: manual.xml m_config.xml manual/*.xml mkindex.pl
 m_config.xml: $(CONFXMLS)
 	./conf-xml2.sh docb poldek.conf.xml > $@
 
-manual.xml.xhtml.tmp: manual.xml m_index.xml m_config.xml manual.xsl
+manual.xml.xhtml.tmp: manual.xml m_config.xml manual.xsl #m_index.xml
 	m4 -DPOLDEK_VERSION=@VERSION@ manual.xml | xmlif output=xhtml > $@
 
 manual.xml.texi.tmp: manual.xml m_index.xml m_config.xml manual.xsl
@@ -53,7 +53,6 @@ $(MANUAL_XHTMLDIR): manual.xml.xhtml.tmp
 	rm -f $(MANUAL_XHTMLDIR)/*.*
 	xmlto -m manual.xsl -o $(MANUAL_XHTMLDIR) xhtml $<
 # add the stylesheet and removed empty indexterm's (I'm docbook novice)
-	perl -pi -e 's|<head>|<head><link href="manual.css" rel="stylesheet" rev="stylesheet" type="text/css"/>|' $(MANUAL_XHTMLDIR)/*.html
 	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $(MANUAL_XHTMLDIR)/ix??.html
 	cp manual.css $(MANUAL_XHTMLDIR)
 

@@ -1,0 +1,95 @@
+<sect2 id="cookbook.makeidx"><title>Repository index creation</title>
+<para>
+Create an index of ~/rpm/RPMS, its type is taken from <option>default index type</option>
+configuration option:
+<screen>
+&prompt; <command>poldek -s <replaceable>~/rpm/RPMS</replaceable> --makeidx</command> 
+</screen>
+
+Create an index of configured repository <emphasis>home</emphasis>, its type is 
+defined in configuration:
+<screen>
+&prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx</command>
+</screen>
+
+Indexes may be created for multiple repositories at once:
+<screen>
+&prompt; <command>poldek -n <replaceable>fedora-c2</replaceable> -n <replaceable>fedora-c2-up</replaceable> --makeidx</command>
+</screen>
+
+Multiple indexes may be created at once to. Use <option>--mt</option> switch 
+to create indexes of multiple types:
+<screen>
+&prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx --mt=<replaceable>pndir,pdir</replaceable></command>
+</screen>
+</para>
+</sect2>
+
+<sect2 id="cookbook.install-dist"><title>Installation system from a scratch</title>
+<para>
+Install from <emphasis>fedora-c3</emphasis> repository apache and all its dependencies 
+under <filename>/mnt/chroot</filename> as root directory:
+<screen>
+&prompt; <command>poldek -n <replaceable>fedora-c3</replaceable> --install-dist=<replaceable>/mnt/dest</replaceable> -v <replaceable>apache</replaceable></command> 
+</screen>
+
+As above but packages listed in <filename>minicd.txt</filename> is installed:
+<screen>
+&prompt; <command>poldek -n <replaceable>fedora-c3</replaceable> --install-dist=<replaceable>/mnt/dest</replaceable> -v --pset=<replaceable>minicd.txt</replaceable></command> 
+</screen>
+
+Do not install, only download packages to <filename>/tmp</filename> directory:
+<screen>
+&prompt; <command>poldek -n <replaceable>fedora-c3</replaceable> --install-dist=<replaceable>/mnt/dest</replaceable> -v --pset=<replaceable>minicd.txt</replaceable> --fetch=<replaceable>/tmp</replaceable></command> 
+</screen>
+</para>
+</sect2>
+
+<sect2 id="cookbook.pkgmanaging"><title>Managing packages</title>
+<para>
+Download all packages needs upgrade to <filename>/var/tmp</filename> directory:
+<screen>
+&prompt; <command>poldek -n <replaceable>pld-updates</replaceable> --upgrade-dist -v --fetch=<replaceable>/var/tmp</replaceable></command>
+</screen>
+
+Dump filenames of packages needs upgrade to <filename>/tmp/uplist.txt</filename> file:
+<screen>
+&prompt; <command>poldek -n <replaceable>pld-updates</replaceable> --upgrade-dist -v --dump=<replaceable>/tmp/uplist.txt</replaceable></command>
+</screen>
+
+Upgrade all packages needs upgrade with logging details to <filename>/tmp/poldek.log</filename> file:
+<screen>
+&prompt; <command>poldek -n <replaceable>pld-updates</replaceable> --upgrade-dist -v --log=<replaceable>/tmp/uplist.txt</replaceable></command>
+</screen>
+
+</para>
+</sect2>
+
+<sect2 id="cookbook.misc"><title>Miscellaneous</title>
+<para>
+Divide repository packages into 650 MB chunks, first chunk will be 100 MB smaller.
+Files with lists of packages placed in chunks will be named <filename>cd.XX</filename>:
+<screen>
+&prompt; <command>poldek -n <replaceable>pld</replaceable> --split=<replaceable>650:100</replaceable> --split-out=<replaceable>/tmp/cd</replaceable></command>
+Loading [pdir]pld...
+11600 packages read
+Writing /tmp/cd.00 ( 876 packages, 547.93M, pri min, max = 0, 0)
+Writing /tmp/cd.01 (1084 packages, 647.46M, pri min, max = 0, 0)
+Writing /tmp/cd.02 ( 979 packages, 649.92M, pri min, max = 0, 0)
+Writing /tmp/cd.03 (1454 packages, 648.44M, pri min, max = 0, 0)
+[cut]
+</screen>
+
+Above with assigned package priorities taken from <link linkend="appendix.sample-pri.conf"><filename>poldek-pri-sample.conf</filename></link>.
+<screen>
+&prompt; <command>poldek -n <replaceable>pld</replaceable> --split=<replaceable>650:100</replaceable> --split-out=<replaceable>/tmp/cd</replaceable> --priconf=<replaceable>poldek-pri-sample.conf</replaceable></command>
+Loading [pdir]pld...
+11600 packages read
+Writing /tmp/cd.00 ( 928 packages, 549.12M, pri min, max = -100, 0)
+Writing /tmp/cd.01 (1012 packages, 649.36M, pri min, max = 0, 0)
+Writing /tmp/cd.02 (1283 packages, 646.22M, pri min, max = 0, 0)
+Writing /tmp/cd.03 ( 650 packages, 563.60M, pri min, max = 0, 0)
+[cut]
+</screen>
+</para>
+</sect2>

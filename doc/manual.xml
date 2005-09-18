@@ -25,8 +25,10 @@
 <!ENTITY ref-verification_options-switches SYSTEM "manual/ref1700-verification_options-switches.xml">
 <!ENTITY ref-splitting_options SYSTEM "manual/ref1900-splitting_options.xml">
 <!ENTITY ref-miscellaneous_options SYSTEM "manual/ref2100-miscellaneous_options.xml">
-<!ENTITY manual_index SYSTEM "m_index.xml">
-<!ENTITY section_configuration SYSTEM "m_config.xml">
+<!ENTITY manual-index SYSTEM "m_index.xml">
+<!ENTITY section-configuration SYSTEM "m_config.xml">
+<!ENTITY section-cookbook SYSTEM "manual/cookbook.xml">
+<!ENTITY supported-repositories SYSTEM "manual/supported-repositories.xml">
 ]>
 
 <article lang="en">
@@ -189,7 +191,7 @@ querying/ search the package database and more.
 
 <sect1 id="quickstart"> <title>Quick start</title>
 <para> 
-Suppose you want to: a) use remote &apt-get; repository of Fedora Core 3, 
+Suppose you want to: a) use remote repository of Fedora Core 4, 
 b) prepare your local package directory <filename>$HOME/rpm/RPMS</filename> to be available 
 to poldek. 
 </para>
@@ -201,14 +203,11 @@ Source configuration may be placed in your local
 something like:
 <screen>
 [source]
-_fcurl = http://download.fedora.us/fedora/fedora/3/i386 # macro, just for short
+_fcurl = http://download.fedora.redhat.com # macro, just for short
+name   = fc4                               # name 
+type   = metadata                          # use xml metadata indexes
+url    = %{_fcurl}/pub/fedora/linux/core/4/i386/os/
 
-name   = fc3                           # name 
-type   = apt                           # use apt repository index
-path   = %{_fcurl}/base/pkglist.os.bz2 # location of the index
-prefix = %{_fcurl}/RPMS.os             # location of the packages -
-                                       #  package index and packages 
-                                       #  are placed in separate locations
 [source]
 name = home
 path = $HOME/rpm/RPMS
@@ -218,7 +217,7 @@ path = $HOME/rpm/RPMS
 
 <sect2 id="quickstart.create"> <title>Step #2 - Create repository index</title>
   <para>
-  Fedora Core 3 &apt-get; index is ready, we must create one for <filename>$HOME/rpm/RPMS</filename>:
+  Fedora Core 4 index is ready, we must create one for <filename>$HOME/rpm/RPMS</filename>:
 
   <screen>
 &prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx</command>
@@ -257,7 +256,7 @@ For example to install or upgrade apache HTTP server:
 
 Selection of particular repositories may be done by <option>-n</option> option:
 <screen>
-&ipoldek-prompt; -n fc3 ls foo\*
+&ipoldek-prompt; -n fc4 ls foo\*
 &poldek-prompt; -n home -uv foo-3.1-2
 &ipoldek-prompt; -n home -s http://foo.bar/RPMS/ install foo-3.1\*
 </screen>
@@ -331,6 +330,13 @@ itself. Various types of repositories are supported including &apt-rpm; and
 &yum; ones. 
 </para>
 
+<!-- WTF?
+&supported-repositories; - 'IDREF attribute linkend references an unknown ID "repositories.types"'
+
+<xi:include href="manual/supported-repositories.xml" xmlns:xi="http://www.w3.org/2001/XInclude" /> - 'variablelist: validity error : No declaration for attribute base of element variablelist'
+
+So, lets old good m4:
+-->
 include(manual/supported-repositories.xml)
 
 <para>
@@ -1173,106 +1179,11 @@ external scripts. Example:
 </sect1>
 
 <sect1 id="configuration"><title>Configuration</title>
-include(m_config.xml)
+&section-configuration;
 </sect1>
 
 <sect1 id="cookbook"><title>Cookbook</title>
-<sect2 id="cookbook.makeidx"><title>Repository index creation</title>
-<para>
-Create an index of ~/rpm/RPMS, its type is taken from <option>default index type</option>
-configuration option:
-<screen>
-&prompt; <command>poldek -s <replaceable>~/rpm/RPMS</replaceable> --makeidx</command> 
-</screen>
-
-Create an index of configured repository <emphasis>home</emphasis>, its type is 
-defined in configuration:
-<screen>
-&prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx</command>
-</screen>
-
-Indexes may be created for multiple repositories at once:
-<screen>
-&prompt; <command>poldek -n <replaceable>fedora-c2</replaceable> -n <replaceable>fedora-c2-up</replaceable> --makeidx</command>
-</screen>
-
-Multiple indexes may be created at once to. Use <option>--mt</option> switch 
-to create indexes of multiple types:
-<screen>
-&prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx --mt=<replaceable>pndir,pdir</replaceable></command>
-</screen>
-</para>
-</sect2>
-
-<sect2 id="cookbook.install-dist"><title>Installation system from a scratch</title>
-<para>
-Install from <emphasis>fedora-c3</emphasis> repository apache and all its dependencies 
-under <filename>/mnt/chroot</filename> as root directory:
-<screen>
-&prompt; <command>poldek -n <replaceable>fedora-c3</replaceable> --install-dist=<replaceable>/mnt/dest</replaceable> -v <replaceable>apache</replaceable></command> 
-</screen>
-
-As above but packages listed in <filename>minicd.txt</filename> is installed:
-<screen>
-&prompt; <command>poldek -n <replaceable>fedora-c3</replaceable> --install-dist=<replaceable>/mnt/dest</replaceable> -v --pset=<replaceable>minicd.txt</replaceable></command> 
-</screen>
-
-Do not install, only download packages to <filename>/tmp</filename> directory:
-<screen>
-&prompt; <command>poldek -n <replaceable>fedora-c3</replaceable> --install-dist=<replaceable>/mnt/dest</replaceable> -v --pset=<replaceable>minicd.txt</replaceable> --fetch=<replaceable>/tmp</replaceable></command> 
-</screen>
-</para>
-</sect2>
-
-<sect2 id="cookbook.pkgmanaging"><title>Managing packages</title>
-<para>
-Download all packages needs upgrade to <filename>/var/tmp</filename> directory:
-<screen>
-&prompt; <command>poldek -n <replaceable>pld-updates</replaceable> --upgrade-dist -v --fetch=<replaceable>/var/tmp</replaceable></command>
-</screen>
-
-Dump filenames of packages needs upgrade to <filename>/tmp/uplist.txt</filename> file:
-<screen>
-&prompt; <command>poldek -n <replaceable>pld-updates</replaceable> --upgrade-dist -v --dump=<replaceable>/tmp/uplist.txt</replaceable></command>
-</screen>
-
-Upgrade all packages needs upgrade with logging details to <filename>/tmp/poldek.log</filename> file:
-<screen>
-&prompt; <command>poldek -n <replaceable>pld-updates</replaceable> --upgrade-dist -v --log=<replaceable>/tmp/uplist.txt</replaceable></command>
-</screen>
-
-</para>
-</sect2>
-
-<sect2 id="cookbook.misc"><title>Miscellaneous</title>
-<para>
-Divide repository packages into 650 MB chunks, first chunk will be 100 MB smaller.
-Files with lists of packages placed in chunks will be named <filename>cd.XX</filename>:
-<screen>
-&prompt; <command>poldek -n <replaceable>pld</replaceable> --split=<replaceable>650:100</replaceable> --split-out=<replaceable>/tmp/cd</replaceable></command>
-Loading [pdir]pld...
-11600 packages read
-Writing /tmp/cd.00 ( 876 packages, 547.93M, pri min, max = 0, 0)
-Writing /tmp/cd.01 (1084 packages, 647.46M, pri min, max = 0, 0)
-Writing /tmp/cd.02 ( 979 packages, 649.92M, pri min, max = 0, 0)
-Writing /tmp/cd.03 (1454 packages, 648.44M, pri min, max = 0, 0)
-[cut]
-</screen>
-
-Above with assigned package priorities taken from <link linkend="appendix.sample-pri.conf"><filename>poldek-pri-sample.conf</filename></link>.
-<screen>
-&prompt; <command>poldek -n <replaceable>pld</replaceable> --split=<replaceable>650:100</replaceable> --split-out=<replaceable>/tmp/cd</replaceable> --priconf=<replaceable>poldek-pri-sample.conf</replaceable></command>
-Loading [pdir]pld...
-11600 packages read
-Writing /tmp/cd.00 ( 928 packages, 549.12M, pri min, max = -100, 0)
-Writing /tmp/cd.01 (1012 packages, 649.36M, pri min, max = 0, 0)
-Writing /tmp/cd.02 (1283 packages, 646.22M, pri min, max = 0, 0)
-Writing /tmp/cd.03 ( 650 packages, 563.60M, pri min, max = 0, 0)
-[cut]
-</screen>
-</para>
-</sect2>
-
+&section-cookbook;
 </sect1>
 
 <appendix id="appendix.sample-pri.conf"><title>Package priorities configuration sample</title>
@@ -1284,6 +1195,6 @@ Writing /tmp/cd.03 ( 650 packages, 563.60M, pri min, max = 0, 0)
 </appendix>
 
 <!-- <index><title>Index</title>
-&manual_index;
+&manual-index;
 </index> -->
 </article>
