@@ -30,13 +30,18 @@
 
 #include "pm_rpm.h"
 
-#define get_pkg_caps(arr, h, p)   pm_rpm_ldhdr_capreqs(arr, h, p, PMCAP_CAP)
-#define get_pkg_reqs(arr, h, p)   pm_rpm_ldhdr_capreqs(arr, h, p, PMCAP_REQ)
-#define get_pkg_cnfls(arr, h, p)  pm_rpm_ldhdr_capreqs(arr, h, p, PMCAP_CNFL)
-#define get_pkg_obsls(arr, h, p)  pm_rpm_ldhdr_capreqs (arr, h, p, PMCAP_OBSL)
+static
+tn_array *do_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
+                           int crtype);
 
-tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
-                               int crtype) 
+#define get_pkg_caps(arr, h, p)   do_ldhdr_capreqs(arr, h, p, PMCAP_CAP)
+#define get_pkg_reqs(arr, h, p)   do_ldhdr_capreqs(arr, h, p, PMCAP_REQ)
+#define get_pkg_cnfls(arr, h, p)  do_ldhdr_capreqs(arr, h, p, PMCAP_CNFL)
+#define get_pkg_obsls(arr, h, p)  do_ldhdr_capreqs (arr, h, p, PMCAP_OBSL)
+
+static
+tn_array *do_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
+                           int crtype) 
 {
     struct capreq *cr;
     int t1, t2, t3, c1 = 0, c2 = 0, c3 = 0;
@@ -193,7 +198,8 @@ tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
 
         if ((cr = capreq_new_evr(name, evr, cr_relflags, cr_flags)) == NULL) {
             logn(LOGERR, "%s: '%s %s%s%s %s': invalid capability",
-                 pkg_snprintf_s(pkg), name, (cr_relflags & REL_LT) ? "<" : "",
+                 pkg ? pkg_snprintf_s(pkg) : "(null)", name, 
+                 (cr_relflags & REL_LT) ? "<" : "",
                  (cr_relflags & REL_GT) ? ">" : "",
                  (cr_relflags & REL_EQ) ? "=":"", evr);
             goto l_err_endfunc;
@@ -219,6 +225,12 @@ tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
     pm_rpmhdr_free_entry(flags, t3);
     return NULL;
 }
+
+tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, int crtype) 
+{
+    return do_ldhdr_capreqs(arr, h, NULL, crtype);
+}
+
 
 __inline__ 
 static int valid_fname(const char *fname, mode_t mode, const char *pkgname) 
