@@ -112,7 +112,8 @@ struct pkg *pm_rpm_ldpkg(void *pm_rpm,
 int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
                     Header h, int which, const char *pkgname);
 
-tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, int crtype);
+tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
+                               int crtype);
 int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val);
 
 struct pkgdir;

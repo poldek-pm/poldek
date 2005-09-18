@@ -30,12 +30,13 @@
 
 #include "pm_rpm.h"
 
-#define get_pkg_caps(arr, h)   pm_rpm_ldhdr_capreqs(arr, h, PMCAP_CAP)
-#define get_pkg_reqs(arr, h)   pm_rpm_ldhdr_capreqs(arr, h, PMCAP_REQ)
-#define get_pkg_cnfls(arr, h)  pm_rpm_ldhdr_capreqs(arr, h, PMCAP_CNFL)
-#define get_pkg_obsls(arr, h)  pm_rpm_ldhdr_capreqs (arr, h, PMCAP_OBSL)
+#define get_pkg_caps(arr, h, p)   pm_rpm_ldhdr_capreqs(arr, h, p, PMCAP_CAP)
+#define get_pkg_reqs(arr, h, p)   pm_rpm_ldhdr_capreqs(arr, h, p, PMCAP_REQ)
+#define get_pkg_cnfls(arr, h, p)  pm_rpm_ldhdr_capreqs(arr, h, p, PMCAP_CNFL)
+#define get_pkg_obsls(arr, h, p)  pm_rpm_ldhdr_capreqs (arr, h, p, PMCAP_OBSL)
 
-tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, int crtype) 
+tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
+                               int crtype) 
 {
     struct capreq *cr;
     int t1, t2, t3, c1 = 0, c2 = 0, c3 = 0;
@@ -190,7 +191,14 @@ tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, int crtype)
         if (crtype == PMCAP_OBSL) 
             cr_flags |= CAPREQ_OBCNFL;
 
-        if ((cr = capreq_new_evr(name, evr, cr_relflags, cr_flags))) {
+        if ((cr = capreq_new_evr(name, evr, cr_relflags, cr_flags)) == NULL) {
+            logn(LOGERR, "%s: '%s %s%s%s %s': invalid capability",
+                 pkg_snprintf_s(pkg), name, (cr_relflags & REL_LT) ? "<" : "",
+                 (cr_relflags & REL_GT) ? ">" : "",
+                 (cr_relflags & REL_EQ) ? "=":"", evr);
+            goto l_err_endfunc;
+            
+        } else {
             msg(4, "%s%s: %s\n",
                 cr->cr_flags & CAPREQ_PREREQ ?
                 (crtype == PMCAP_OBSL ? "obsl" : "pre" ):"", 
@@ -478,7 +486,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
     
     if (ldflags & PKG_LDCAPS) {
         pkg->caps = capreq_arr_new(0);
-        get_pkg_caps(pkg->caps, h);
+        get_pkg_caps(pkg->caps, h, pkg);
     
         if (n_array_size(pkg->caps)) 
             n_array_sort(pkg->caps);
@@ -490,7 +498,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
     
     if (ldflags & PKG_LDREQS) {
         pkg->reqs = capreq_arr_new(0);
-        get_pkg_reqs(pkg->reqs, h);
+        get_pkg_reqs(pkg->reqs, h, pkg);
 
         if (n_array_size(pkg->reqs) == 0) {
             n_array_free(pkg->reqs);
@@ -500,8 +508,8 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
 
     if (ldflags & PKG_LDCNFLS) {
         pkg->cnfls = capreq_arr_new(0);
-        get_pkg_cnfls(pkg->cnfls, h);
-        get_pkg_obsls(pkg->cnfls, h);
+        get_pkg_cnfls(pkg->cnfls, h, pkg);
+        get_pkg_obsls(pkg->cnfls, h, pkg);
         
         if (n_array_size(pkg->cnfls) > 0) {
             n_array_sort(pkg->cnfls);

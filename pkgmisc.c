@@ -33,15 +33,24 @@ int poldek_util_parse_evr(char *evrstr, int32_t *epoch, const char **version,
     if (*evrstr == '\0')
         return 0;
     
-    if ((p = strchr(evrstr, ':')) == NULL) 
+    if ((p = strchr(evrstr, ':')) == NULL) {
         *epoch = 0;
-    else {
+        
+    } else {
         *p = '\0';
-        if (*evrstr)
-            *epoch = (int32_t)strtol(evrstr, (char **)NULL, 10);
-        else
+        
+        if (*evrstr == '\0') {
             *epoch = 0;
+            
+        } else {
+            *epoch = (int32_t)strtol(evrstr, (char **)NULL, 10);
+            if (*epoch == 0 && (*evrstr != '0' || *(evrstr + 1) != '\0'))
+                return 0;
+        }
+
         evrstr = p+1;
+        if (*evrstr == '\0')   /* empty version strig */
+            return 0;
     }
 
     if ((p = strchr(evrstr, '-')) == NULL) {
