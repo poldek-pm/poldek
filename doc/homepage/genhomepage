@@ -1,0 +1,105 @@
+#!/usr/bin/perl -w
+use strict;
+use Text::Template;
+use Getopt::Long;
+use vars qw(@menu $tmpl %config);
+
+@menu = (
+         { name => 'index', label => 'Home' },
+         { name => 'overview', label => 'Feature overview', fromanual => 1, },
+         { name => 'quickstart', label => 'Quick start', fromanual => 1, },
+         { name => 'documentation', label => 'Documentation',
+           href => 'manual/index.html', title => 'Full poldek manual' },
+         { name => 'download', label => 'Download' },
+         { name => 'repo', label => 'Repositories' },
+         { name => 'support', label => 'Mailing list' },
+         { name => 'devel', label => 'Development' },
+        );
+
+%config = ();
+GetOptions(\%config, 'clean', 'destdir=s') || die;
+$config{destdir} ||= '.';
+
+$tmpl = new Text::Template(TYPE => 'FILE',
+                           SOURCE => 'page-template.html') || die;
+foreach my $page (@menu) {
+    next if $page->{href};
+
+    if ($config{clean}) {
+        unlink("$page->{name}.html");
+
+    } else {
+        gen_page($page, $tmpl, \@menu);
+    }
+}
+
+sub gen_page {
+    my $page = shift;
+    my $tmpl = shift;
+    my $menu_aref = shift;
+
+    my $name = $page->{name} || die;
+
+    my $menu_content = '';
+    foreach (@$menu_aref) {
+        if ($_->{name} eq $name) {
+            $menu_content .= qq{<li><a class="current">$_->{label}</a></li>};
+            next;
+        }
+        my $href = "$_->{name}.html";
+        $href = $_->{href} if $_->{href};
+        my $title = qq{ title="$_->{title}"} if $_->{title};
+        $title ||= '';
+        $menu_content .= qq{<li><a href="$href"$title>$_->{label}</a></li>};
+    }
+
+    my $content;
+    if ($page->{fromanual}) {
+        $content = extract_from_manual($name) || die;
+    } else {
+        open(F, "< $name-body.html") || die "open $name: $!";
+        my @lines = <F>;
+        close(F);
+        $content = join('', @lines);
+    }
+
+    my %param = (
+                 page => $name,
+                 menu => $menu_content,
+                 content => $content,
+                );
+    open(OUT, "> $config{destdir}/$name.html") || die "open $!";
+    $tmpl->fill_in(HASH => \%param, OUTPUT => \*OUT) || die $Text::Template::ERROR;
+    close(OUT);
+}
+
+sub extract_from_manual {
+    my $section = shift;
+
+    my $path = "../manual-xhtml/$section.html";
+    open(IN, "< $path") || die "open $path: $!";
+
+    my $content = '';
+    my $in;
+    while (<IN>) {
+        s/ style="[^"]+"//g;
+
+        if (/id=\"$section\"/) {
+            s/.+?(\<div\s+class="sect\d".+)/$1/;
+            $in = 1;
+        }
+        if ($in && /(.+?)<div class="navfooter"/) {
+            $content .= $1;
+            last;
+        }
+
+        s/href=\"(\w+)/href=\"manual\/$1/g;
+
+        # remove section numbers
+        #<h3 class="title"><a id="\w+"></a>2.1. Step #1 - Configure repositories</h3>
+        s|(<h\d+\s+class="title"\s*>.+?</a>)[\d\.]+\W+([^\<]+)|$1$2|;
+        $content .= $_ if $in;
+    }
+    close(IN);
+    return $content;
+}

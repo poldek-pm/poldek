@@ -1,0 +1,142 @@
+html {
+  background: white;
+  margin: 0;
+  padding: 1em 1em;
+}
+
+body {
+  background: white;
+  color: black;
+  margin: 0;
+  padding: 0;
+  font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+  font-size: small;
+  line-height: 1.5;
+}
+
+a {
+  font-weight: bold;
+}
+
+a img {
+  border: none;
+}
+
+a, a:link, a:visited {
+  text-decoration: none;
+  color: #577c9b;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+a.current {
+  text-decoration: none;
+  color: #555555;
+}
+
+acronym, abbr {
+  cursor: help;
+}
+
+h1 {
+  font-size: 1.3em;
+  color: #577c9b;
+}
+
+h2, h3, h4 {
+  font-size: 1.1em;
+  color: #577c9b;
+}
+
+.term { 
+  color: #577c9b;
+  font-weight: bold;
+}
+
+#head {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  //border: 1px solid #ccc;
+}
+
+#head h1 {
+  margin-left: 10px;
+  display: inline;
+  font-size: 16px;
+  color: #555555;
+}
+
+#head img {
+  vertical-align: middle;
+}
+
+#nav {
+  #position: absolute;
+  #left: 0;
+  float: left;
+  
+  margin: 0;
+  padding: 5px;
+  background-color: #EEEEEE;
+  border: 1px dashed #ccc;
+  margin-top: 5px;
+  text-align: left;
+  width: 150px;
+}
+
+#nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#nav li {
+  padding: 0;
+  margin: 0;
+}
+
+#content {
+  padding: 0 1em;
+  margin: 0;
+  margin-top: 5px;
+  margin-left: 165px;
+  //border: 1px solid #ccc;
+}
+
+/* from manual.css */
+.option, .filename   { font-weight: bold; font-size: 12px; }
+#.application { }
+
+.prompt { font-family: courier, monospace; }
+
+.screen { 
+  background-color: #EEEEEE; 
+  font-family: courier, monospace; 
+  font-size: 13px;
+  padding: 2px;
+  padding-left: 5px;
+  padding-top: 0;
+  border: 1pt solid #DDDDDD;
+  /* background: #fff8eb; */
+  white-space: pre;
+  /* begin css 3 or browser specific rules - do not remove!
+     see: http://forums.techguy.org/archive/index.php/t-249849.html */
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  white-space: -moz-pre-wrap;
+  white-space: -pre-wrap;
+  white-space: -o-pre-wrap;
+  moz-border-radius: 10px;
+  /* end css 3 or browser specific rules */
+}
+
+.replaceable { 
+  font-weight: normal; 
+  font-family: courier, monospace;
+  font-style: normal;
+}
+
+
