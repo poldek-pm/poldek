@@ -1317,6 +1317,9 @@ int pkg_id_snprintf(char *str, size_t size, const struct pkg *pkg)
 
 int pkg_idevr_snprintf(char *str, size_t size, const struct pkg *pkg)
 {
+    if (poldek_conf_MULTILIB == 0)
+        return n_snprintf(str, size, "%s-%s", pkg->ver, pkg->rel);
+    
     return n_snprintf(str, size, "%s-%s.%s", pkg->ver, pkg->rel,
                       pkg_arch(pkg));
 }
