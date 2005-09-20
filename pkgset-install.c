@@ -572,9 +572,11 @@ int installset_provides(const struct pkg *pkg, struct capreq *cap,
     struct pkg *tomark = NULL;
 
     if (find_req(pkg, cap, &tomark, NULL, ps, upg) && tomark == NULL) {
-        //printf("cap satisfied %s\n", capreq_snprintf_s(cap));
+        DBGF("%s => YES \n", capreq_snprintf_s(cap));
         return 1;
     }
+    DBGF("%s => NO (tomark=%s)\n", capreq_snprintf_s(cap),
+         tomark ? pkg_id(tomark) : "null");
     return 0;
 }
 
@@ -661,6 +663,9 @@ int marked_for_removal_by_req(struct pkg *pkg, const struct capreq *req,
     const struct pkg *ppkg;
     int rc;
 
+    if (pkg_is_marked(upg->ts->pms, pkg)) 
+        return 0;
+
     if (pkg_is_rm_marked(upg->ts->pms, pkg))
         return 1;
     
@@ -677,6 +682,10 @@ int marked_for_removal_by_req(struct pkg *pkg, const struct capreq *req,
 static
 int marked_for_removal(struct pkg *pkg, struct upgrade_s *upg)
 {
+    /* XXX: todo separate PTR-pms for removed packages */
+    if (pkg_is_marked(upg->ts->pms, pkg)) 
+        return 0;
+    
     if (pkg_is_rm_marked(upg->ts->pms, pkg))
         return 1;
 
