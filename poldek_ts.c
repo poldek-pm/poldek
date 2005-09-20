@@ -1017,9 +1017,9 @@ int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     pkgdb_tx_begin(ts->db);
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
 
-    if (getenv("POLDEK2")) {
+    if (getenv("POLDEK2")) {    /* early alpha */
         msgn(0, "Running poldek2 dependency engine...");
-        rc = do_poldek_ts_install(ts, iinf);
+        rc = in_do_poldek_ts_install(ts, iinf);
     } else {
         rc = do_poldek_ts_install(ts, iinf);
     }

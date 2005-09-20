@@ -73,6 +73,7 @@ nobase_pkginclude_HEADERS = $(libHEADERS)
 libpoldek_la_LIBADD = \
 			sigint/libsigint.la  \
 			pkgdir/libpkgdir.la  \
+			install/libinstall.la \
 			pm/libpm.la    \
 			vfile/libvfile.la
 
