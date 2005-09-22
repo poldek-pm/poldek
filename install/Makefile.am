@@ -6,7 +6,7 @@ AM_CFLAGS = @AM_CFLAGS@
 LIBS=
 noinst_LTLIBRARIES = libinstall.la
 libinstall_la_SOURCES = install.h install.c  \
-                        ictx.c mark.c misc.c \
+                        ictx.c ictx.h mark.c misc.c \
                         conflicts.c icaps.c  \
 	  	        obsoletes.c requirements.c \
                         process.c
