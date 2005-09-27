@@ -105,46 +105,57 @@ static struct vcn *vcn_pool_do_connect(struct vf_request *req)
     login = req->login;
     passwd = req->passwd;
 
-    
-    if (strcmp(req->proto, "http") == 0) {
-        if (req->proxy_host) {
-            host = req->proxy_host;
-            port = req->proxy_port;
-        }
-        if (port <= 0)
-            port = IPPORT_HTTP;
-
+    if (strcmp(req->proto, "http") == 0)
         vcn_proto = VCN_PROTO_HTTP;
-        
-    } else if (strcmp(req->proto, "ftp") == 0) {
-        if (login == NULL)
-            login = "anonymous";
-        
-        if (passwd == NULL)
-            passwd = vfile_conf.anon_passwd;
-
-        n_assert(passwd);
-        
-        if (req->proxy_host) {
-            int len;
-            char *s;
-            
-            len = strlen(login) + 1 + strlen(req->host) + 1;
-            s = alloca(len);
-            snprintf(s, len, "%s@%s", login, req->host);
-            
-            login = s;
-            host = req->proxy_host;
-            port = req->proxy_port;
-        }
-
-        if (port <= 0)
-            port = IPPORT_FTP;
-        
+    
+    else if (req->proxy_proto && strcmp(req->proxy_proto, "http") == 0)
+        vcn_proto = VCN_PROTO_HTTP;
+    
+    else if (strcmp(req->proto, "ftp") == 0)
         vcn_proto = VCN_PROTO_FTP;
-        
-    } else
+    
+    else
         n_assert(0);
+
+    switch (vcn_proto) {
+        case VCN_PROTO_HTTP:
+            if (req->proxy_host) {
+                host = req->proxy_host;
+                port = req->proxy_port;
+            }
+            if (port <= 0)
+                port = IPPORT_HTTP;
+            break;
+            
+        case VCN_PROTO_FTP:
+            if (login == NULL)
+                login = "anonymous";
+        
+            if (passwd == NULL)
+                passwd = vfile_conf.anon_passwd;
+
+            n_assert(passwd);
+        
+            if (req->proxy_host) {
+                int len;
+                char *s;
+                
+                len = strlen(login) + 1 + strlen(req->host) + 1;
+                s = alloca(len);
+                snprintf(s, len, "%s@%s", login, req->host);
+                
+                login = s;
+                host = req->proxy_host;
+                port = req->proxy_port;
+            }
+
+            if (port <= 0)
+                port = IPPORT_FTP;
+            break;
+            
+        default:
+            n_assert(0);
+    }
 
     if (vcn_pool == NULL)
         do_init();
