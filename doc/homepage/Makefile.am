@@ -1,13 +1,12 @@
 # $Id$
 
-WWW_PAGES  = screenshoots.html index.html
+WWW_PAGES  = 
 WWW_BINS   = logo.png logo90.png
 
 WWW_FILES   = $(WWW_PAGES) $(WWW_BINS) ../poldek.html $(top_srcdir)/NEWS
 WWW_ROOTDIR = team.pld.org.pl:public_html/poldek/new/
 
-EXTRA_DIST = index.sgml.in screenshoots.sgml mkhtmltoc.pl \
-			 $(WWW_PAGES) $(WWW_BINS)
+EXTRA_DIST = $(WWW_PAGES) $(WWW_BINS)
 
 siteonly: 
 	mkdir -p site || exit 1; \
