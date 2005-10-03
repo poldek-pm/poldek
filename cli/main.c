@@ -203,6 +203,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct args *argsp = state->input;
     struct poldek_ctx *ctx = argsp->ctx;
+    struct poldek_ts *ts = argsp->ts;
 //    if (key && arg)
 //        chkarg(key, arg);
 
@@ -252,15 +253,16 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->cnflags |= OPT_AS_FLAG(OPT_NOCONF);
 
         case OPT_ASK:
-            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_INST, 1);
-            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_UNINST, 1);
+            ts->setop(ts, POLDEK_OP_CONFIRM_INST, 1);
+            ts->setop(ts, POLDEK_OP_CONFIRM_UNINST, 1);
+            ts->setop(ts, POLDEK_OP_EQPKG_ASKUSER, 1);
             break;
 
         case OPT_NOASK:
             argsp->cnflags |= OPT_AS_FLAG(OPT_NOASK);
-            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_INST, 0);
-            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_UNINST, 0);
-            poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_EQPKG_ASKUSER, 0);
+            ts->setop(ts, POLDEK_OP_CONFIRM_INST, 0);
+            ts->setop(ts, POLDEK_OP_CONFIRM_UNINST, 0);
+            ts->setop(ts, POLDEK_OP_EQPKG_ASKUSER, 0);
             break;
 
         case OPT_RUNAS:         /* ignored, catched at startup */
