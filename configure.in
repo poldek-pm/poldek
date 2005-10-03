@@ -325,6 +325,8 @@ if test "${METADATA}." == "yes."; then
         [ AC_MSG_ERROR(["/usr/include/libxml2/libxml/xmlversion.h not found"])])
     AC_DEFINE([WITH_METADATA_REPOSITORY],1,[defined if metadata is enabled])
     AM_CONDITIONAL(WITH_METADATA_REPOSITORY, true)
+else
+	AM_CONDITIONAL(WITH_METADATA_REPOSITORY, false)
 fi
 AC_SUBST(LIBXML2_INCLUDE)
 
