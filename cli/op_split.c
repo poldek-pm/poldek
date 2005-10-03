@@ -168,9 +168,6 @@ static int do_split(struct poldek_ctx *ctx, struct arg_s *arg_s)
         return 0;
     }
 
-    arg_s->size *= 1024 * 1024;
-    arg_s->first_free_space *= 1024 * 1024;
-
     return poldek_split(ctx, arg_s->size, arg_s->first_free_space,
                         arg_s->prefix);
 }
