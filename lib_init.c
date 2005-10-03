@@ -721,6 +721,11 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
         ts->setop(ts, POLDEK_OP_AGGREEDY, v);
         ts->setop(ts, POLDEK_OP_FOLLOW, 1);
     }
+    
+    
+    DBGF("ts   hold(%d) = %d\n", POLDEK_OP_HOLD, ts->getop(ts, POLDEK_OP_HOLD));
+    if (ctx->ts != ts)
+        DBGF("ctx   hold(%d) = %d\n", POLDEK_OP_HOLD, ctx->ts->getop(ctx->ts, POLDEK_OP_HOLD));
 }
 
     
