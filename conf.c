@@ -1296,8 +1296,6 @@ tn_hash *poldek_conf_loadefault(unsigned flags)
             return poldek_conf_load(path, flags);
     }
     
-    if ((flags & POLDEK_LDCONF_NOINCLUDE) == 0)
-        flags |= POLDEK_LDCONF_APTSOURCES;
     DBGF("%s\n", sysconfdir);
 
     n_snprintf(confpath, sizeof(confpath), "%s/poldek.conf", sysconfdir);

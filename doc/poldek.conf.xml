@@ -162,8 +162,7 @@ _distro  = pld
 
   <option name="load apt sources list" type="boolean" default="no">
     <description>
-    Load [filename]/etc/apt/sources.list[/filename]. The default is "yes" if system wide configuration
-    file is used, "no" if user config ([filename]$HOME/.poldekrc[/filename]) is used.
+    Load [filename]/etc/apt/sources.list[/filename]. 
     </description>
   </option>
 
