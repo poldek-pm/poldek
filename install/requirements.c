@@ -92,7 +92,7 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
                     int process_as) 
 {
     struct pkg    *tomark = NULL;
-    struct pkg    **tomark_candidates, ***tomark_candidates_ptr = NULL;
+    struct pkg    **tomark_candidates = NULL, ***tomark_candidates_ptr = NULL;
     char          *reqname;
         
     reqname = capreq_name(req);

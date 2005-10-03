@@ -26,7 +26,6 @@
 #include <trurl/trurl.h>
 #include <sigint/sigint.h>
 
-#define ENABLE_TRACE 0
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"
@@ -42,6 +41,7 @@
 
 #include "dbpkgset.h"
 #include "dbdep.h"
+
 
 void install_ctx_init(struct install_ctx *ictx, struct poldek_ts *ts)
 {

@@ -388,8 +388,10 @@ int in_find_req(struct install_ctx *ictx,
         memcpy(suspkgs, tmpkgs, n *  sizeof(*tmpkgs));
         nsuspkgs = n;
         
-        if (nsuspkgs == 0)
+        if (nsuspkgs == 0) {
+            found = 0;
             goto l_end;
+        }
 
         /* already not marked for upgrade */
         if (nsuspkgs > 0 && !one_is_marked(ictx->ts->pms, suspkgs, nsuspkgs)) {

@@ -143,6 +143,7 @@ int verify_unistalled_cap(int indent, struct install_ctx *ictx,
                                  PROCESS_AS_ORPHAN);
         if (!rc)
             return 0;
+        
         return in_process_package(indent, ictx, db_dep->spkg, PROCESS_AS_NEW);
     }
     
@@ -202,7 +203,7 @@ int verify_unistalled_cap(int indent, struct install_ctx *ictx,
                         
                 } else if (ictx->ts->getop(ictx->ts, POLDEK_OP_GREEDY)) {
                     if (in_greedy_mark_package(indent, ictx, p, opkg, req)) {
-                        in_process_package(indent, ictx, pkg, PROCESS_AS_NEW);
+                        in_process_package(indent, ictx, p, PROCESS_AS_NEW);
                         not_found = 0;
                     }
                 }
@@ -331,7 +332,7 @@ int in_process_pkg_obsoletes(int indent, struct install_ctx *ictx,
             while ((path = pkgfl_it_get_next(&it, NULL))) {
                 int len = strlen(path);
                 if (len < PATH_MAX - 2) {
-                    memcpy(&cap->_buf[1], path, len); /* XXX: hacky */
+                    memcpy(&cap->_buf[1], path, len + 1); /* XXX: hacky */
                     verify_unistalled_cap(indent, ictx, cap, dbpkg);
                 }
             }

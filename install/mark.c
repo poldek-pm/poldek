@@ -49,9 +49,13 @@ int in_is_other_version_marked(struct install_ctx *ictx, struct pkg *pkg,
 
 int in_is_marked_for_removal(struct install_ctx *ictx, struct pkg *pkg)
 {
+    /* XXX: todo separate PTR-pms for removed packages */
+    if (pkg_is_marked(ictx->ts->pms, pkg)) 
+        return 0;
+    
     if (pkg_is_rm_marked(ictx->ts->pms, pkg))
         return 1;
-
+    
     if (dbpkg_set_has_pkg(ictx->uninst_set, pkg)) {
         pkg_rm_mark(ictx->ts->pms, pkg);
         return 1;
