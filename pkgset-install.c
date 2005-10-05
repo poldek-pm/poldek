@@ -314,6 +314,10 @@ struct pkg *select_pkg(const char *name, tn_array *pkgs,
     
     tmpkg.name = (char*)name;
 
+    //if (strcmp(name, "python-rpm") == 0) {
+    //    printf("dupa\n");
+    //}
+
     n_array_sort(pkgs);
     i = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name);
     DBGF("%s -> %d\n", name, i);
@@ -336,8 +340,25 @@ struct pkg *select_pkg(const char *name, tn_array *pkgs,
     DBGF("current pkg %s, name = %s, p1, p2 = %s, %s\n", pkg_id(curr_pkg), name,
            prefix1, prefix2);
     
-    if (strcmp(prefix1, prefix2) != 0)
-        return pkg;
+    if (strcmp(prefix1, prefix2) != 0) { /* return marked package if any */
+        struct pkg *p = NULL;
+        for (; i < n_array_size(pkgs); i++) {
+            p = n_array_nth(pkgs, i);
+            
+            if (strcmp(p->name, name) != 0) {
+                p = NULL;
+                break;
+            }
+            if (pkg_is_marked_i(upg->ts->pms, p) ||
+                pkg_is_marked(upg->ts->pms, p))
+                break;
+            
+            p = NULL;
+        }
+            
+        return p ? p : pkg;
+    }
+    
     
     for (; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
@@ -508,6 +529,7 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
                 DBGF("%s: removed marked for removal\n", pkg_id(suspkgs[i]));
                 continue;
             }
+	    DBGF("%s -> %s suspected\n", capreq_snprintf_s(req), pkg_id(suspkgs[i]));
             new_suspkgs[n++] = suspkgs[i];
         }
         
@@ -894,7 +916,6 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
         
 
         for (i=0; i < n_array_size(pkgs); i++) {
-            //for (i=0; db_dep->pkgs && i < n_array_size(db_dep->pkgs); i++) {
             struct pkg *opkg = n_array_nth(pkgs, i);
             struct pkg *p;
             int not_found = 1;
@@ -904,9 +925,7 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
                 continue;
                 
             if ((p = select_pkg(opkg->name, ps->pkgs, upg))) {
-                //if (strcmp(p->name, "kdegames") == 0) {
-                //    printf("DUPA\n");
-                //}
+                DBGF("select_pkg %s => %s\n", pkg_snprintf_s(opkg), pkg_id(p));
                 
                 if (pkg_is_marked_i(upg->ts->pms, p))
                     mark_package(p, upg);
@@ -920,6 +939,11 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
                         not_found = 0;
                 }
             }
+            
+            if (p == NULL) {
+                DBGF("select_pkg %s => NULL\n", pkg_snprintf_s(opkg));
+            }
+            
             
             if (not_found) {
                 logn(LOGERR, _("%s (cap %s) is required by %s"),
@@ -1111,8 +1135,8 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
         if (capreq_is_rpmlib(true_req)) 
             continue;
 
-        capreq_new_name_a(capreq_name(true_req), req);
-        //req = capreq_new(capreq_name(true_req), 0, 0, 0, 0, 0);
+        //capreq_new_name_a(capreq_name(true_req), req);
+        req = true_req;
         
         if (do_find_req(pkg, req, &tomark, NULL, ps, upg, FINDREQ_NOBESTSEL)) {
             if (tomark == NULL) /* satisfied by already being installed set */
@@ -1122,20 +1146,21 @@ int pkg_drags(struct pkg *pkg, struct pkgset *ps, struct upgrade_s *upg)
              tomark ? pkg_id(tomark) : "NONE");
         /* cached */
         if (db_deps_provides(upg->db_deps, req, DBDEP_DBSATISFIED)) {
-            DBGF("%s: satisfied by db [cached]\n", capreq_snprintf_s(req));
+            DBGF("  %s: satisfied by db [cached]\n", capreq_snprintf_s(req));
             
         } else if (tomark && marked_for_removal(tomark, upg)) {
-            DBGF("%s: marked for removal\n", pkg_id(tomark));
+            DBGF("  %s: marked for removal\n", pkg_id(tomark));
             
         } else if (pkgdb_match_req(upg->ts->db, req, 1,
                                    upg->uninst_set->dbpkgs)) {
 
-            DBGF("%s: satisfied by dbX\n", capreq_snprintf_s(req));
+            DBGF("  %s: satisfied by db\n", capreq_snprintf_s(req));
             //dbpkg_set_dump(upg->uninst_set);
             //db_deps_add(upg->db_deps, true_req, pkg, tomark,
             //            PROCESS_AS_NEW | DBDEP_DBSATISFIED);
             
         } else if (tomark || tomark == NULL) { /* don't care found or not */
+            DBGF("  %s: drags (%d)\n", capreq_snprintf_s(req), ntoinstall + 1);
             ntoinstall++;
         }
     }

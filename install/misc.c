@@ -135,8 +135,9 @@ int in_pkg_drags(struct install_ctx *ictx, struct pkg *pkg)
         if (capreq_is_rpmlib(true_req)) 
             continue;
 
-        capreq_new_name_a(capreq_name(true_req), req);
-
+        //capreq_new_name_a(capreq_name(true_req), req);
+        req = true_req;
+        
         if (in_find_req(ictx, pkg, req, &tomark, NULL, IN_FIND_REQ_NIL)) {
             if (tomark == NULL) /* satisfied by already being installed set */
                 continue;
@@ -309,9 +310,25 @@ struct pkg *in_select_pkg(struct install_ctx *ictx, const char *name,
 
     DBGF("current pkg %s, name = %s, p1, p2 = %s, %s\n", pkg_id(curr_pkg), name,
            prefix1, prefix2);
-    
-    if (strcmp(prefix1, prefix2) != 0)
-        return pkg;
+
+    if (strcmp(prefix1, prefix2) != 0) { /* return marked package if any */
+        struct pkg *p = NULL;
+        for (; i < n_array_size(pkgs); i++) {
+            p = n_array_nth(pkgs, i);
+            
+            if (strcmp(p->name, name) != 0) {
+                p = NULL;
+                break;
+            }
+            if (pkg_is_marked_i(ictx->ts->pms, p) ||
+                pkg_is_marked(ictx->ts->pms, p))
+                break;
+            
+            p = NULL;
+        }
+            
+        return p ? p : pkg;
+    }
     
     for (; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
