@@ -298,17 +298,17 @@ int pkg_hdr_cmp_evr(struct pm_ctx *ctx, void *hdr, const struct pkg *pkg,
 int do_search_package(struct pkgdb *db, const struct pkg *pkg, int *cmprcptr,
                       struct pm_dbrec *todbrec)
 {
-    int count = 0, n = 0, cmprc = 0;
-    struct pkgdb_it it;
     const struct pm_dbrec *dbrec;
+    struct pkgdb_it it;
+    int n = 0, cmprc = 0;
 
     pkgdb_it_init(db, &it, PMTAG_NAME, pkg->name);
     while ((dbrec = pkgdb_it_get(&it)) != NULL) {
-        n++;
         if (!pkg_hdr_cmp_evr(db->_ctx, dbrec->hdr, pkg, &cmprc)) 
             continue; /* fail */
         
         if (cmprc == 0) {
+            n++;
             if (todbrec) {
                 todbrec->hdr = db->_ctx->mod->hdr_link(dbrec->hdr);
                 todbrec->recno = dbrec->recno;
@@ -317,18 +317,10 @@ int do_search_package(struct pkgdb *db, const struct pkg *pkg, int *cmprcptr,
             break;
         }
     }
-#if 0  /* avoid pkgdb_it_get_count() usage => MULTILIB */
-    if (count > 0 && n == 0) {
-        logn(LOGWARN, "%s: pkgdb iterator returns NULL, "
-             "possibly corrupted %s database", pkg->name,
-             db->_ctx->mod->name);
-        count = 0; /* assume package isn't installed */
-    }
-#endif    
     pkgdb_it_destroy(&it);
     if (cmprcptr)
         *cmprcptr = cmprc;
-    return count;
+    return n;
 }
 
 int pkgdb_is_pkg_installed(struct pkgdb *db, const struct pkg *pkg, int *cmprc)
@@ -336,12 +328,16 @@ int pkgdb_is_pkg_installed(struct pkgdb *db, const struct pkg *pkg, int *cmprc)
     return do_search_package(db, pkg, cmprc, NULL);
 }
 
+
 int pkgdb_get_package_hdr(struct pkgdb *db, const struct pkg *pkg,
                           struct pm_dbrec *dbrec)
 {
     n_assert(dbrec);
+    dbrec->hdr = NULL;
+    
     if (!do_search_package(db, pkg, NULL, dbrec))
         return 0;
+    
     n_assert(dbrec->hdr);
     return 1;
 }
