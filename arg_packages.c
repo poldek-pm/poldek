@@ -227,6 +227,7 @@ int arg_packages_size(struct arg_packages *aps)
 //        n_hash_size(aps->resolved_caps);
 }
 
+#if 0  /* XXX: disabled, #5702  */
 /* tries to convert N-[E:]V-R to N#[E:]V-R */
 static char *mask2evrhashedmask(const char *mask) 
 {
@@ -254,6 +255,7 @@ static char *mask2evrhashedmask(const char *mask)
     n = n_snprintf(nmask, sizeof(nmask), "%s#%s%s-%s", name, e, ver, rel);
     return n_strdupl(nmask, n);
 }
+#endif
 
 tn_array *arg_packages_get_masks(struct arg_packages *aps, int hashed)
 {
@@ -266,10 +268,11 @@ tn_array *arg_packages_get_masks(struct arg_packages *aps, int hashed)
 
         mask = n_array_nth(aps->package_masks, i);
         if (hashed && strchr(mask, '-') && strchr(mask, '*') == NULL) {
+#if 0  /* XXX: disabled so smart NEVR parsing, #5702  */
             char *nmask;
-
             if ((nmask = mask2evrhashedmask(mask)))
                 mask = nmask;
+#endif            
         }
         n_array_push(masks, n_strdup(mask));
     }
@@ -501,7 +504,7 @@ int resolve_masks(tn_array *pkgs,
                     break;
             }
             
-            
+            DBGF_F("%s cmp %s or %s\n", mask, pkg->name, pkg_id(pkg));
             if (strcmp(mask, pkg->name) == 0) {
                 n_array_push(pkgs, pkg_link(pkg));
                 matches_bycmp[j]++;
