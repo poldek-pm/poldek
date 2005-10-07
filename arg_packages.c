@@ -504,7 +504,7 @@ int resolve_masks(tn_array *pkgs,
                     break;
             }
             
-            DBGF_F("%s cmp %s or %s\n", mask, pkg->name, pkg_id(pkg));
+            DBGF("%s cmp %s or %s\n", mask, pkg->name, pkg_id(pkg));
             if (strcmp(mask, pkg->name) == 0) {
                 n_array_push(pkgs, pkg_link(pkg));
                 matches_bycmp[j]++;
