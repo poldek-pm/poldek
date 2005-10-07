@@ -183,6 +183,8 @@ int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
 int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg);
 int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg);
 
+int pkg_requires_versioned_cap(const struct pkg *pkg, const struct capreq *cap);
+
 int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard);
 int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg);
 

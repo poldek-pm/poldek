@@ -46,8 +46,7 @@ int is_iset_provides_capn(struct install_ctx *ictx,
 
 
 /* add to ictx->orphan_dbpkgs packages required by pkg */
-static
-int process_pkg_orphans(struct install_ctx *ictx, struct pkg *pkg)
+static int process_pkg_orphans(struct install_ctx *ictx, struct pkg *pkg)
 {
     unsigned ldflags = PKG_LDNEVR | PKG_LDREQS;
     int i, n = 0;
@@ -67,14 +66,18 @@ int process_pkg_orphans(struct install_ctx *ictx, struct pkg *pkg)
     if (pkg->caps)
         for (i=0; i < n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
-
+            int strict = 0;
+            
             if (is_iset_provides(ictx, pkg, cap)) 
                 continue;
+
+            if (capreq_versioned(cap) &&
+                is_iset_provides_capn(ictx, pkg, capreq_name(cap)))
+                strict = 1;
             
-            n += pkgdb_get_pkgs_requires_capn(db, ictx->orphan_dbpkgs,
-                                              capreq_name(cap),
-                                              ictx->uninst_set->dbpkgs, ldflags);
-            //printf("cap %s\n", capreq_snprintf_s(cap));
+            n += pkgdb_q_what_requires(db, ictx->orphan_dbpkgs, cap,
+                                       ictx->uninst_set->dbpkgs,
+                                       ldflags, strict);
         }
     
     if (pkg->fl) {

@@ -787,14 +787,19 @@ int process_pkg_orphans(struct pkg *pkg, struct pkgset *ps,
     if (pkg->caps)
         for (i=0; i < n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
+            int strict = 0;
 
             if (installset_provides(pkg, cap, ps, upg)) 
                 continue;
+
+            if (capreq_versioned(cap) &&
+                installset_provides_capn(pkg, capreq_name(cap), ps, upg))
+                strict = 1;
             
-            n += pkgdb_get_pkgs_requires_capn(db, upg->orphan_dbpkgs,
-                                              capreq_name(cap),
-                                              upg->uninst_set->dbpkgs, ldflags);
-            //printf("cap %s\n", capreq_snprintf_s(cap));
+            n += pkgdb_q_what_requires(db, upg->orphan_dbpkgs, cap,
+                                       upg->uninst_set->dbpkgs,
+                                       ldflags, strict);
+            //DBGF("cap %s, %d\n", capreq_snprintf_s(cap), n);
         }
     
     if (pkg->fl == NULL)
@@ -821,7 +826,7 @@ int process_pkg_orphans(struct pkg *pkg, struct pkgset *ps,
             path_left_size = sizeof(path) - (endp - path);
             n_strncpy(endp, file->basename, path_left_size);
 
-            if (!installset_provides_capn(pkg, path, ps, upg)) 
+            if (!installset_provides_capn(pkg, path, ps, upg))
                 n += pkgdb_get_pkgs_requires_capn(db, upg->orphan_dbpkgs, path,
                                                   upg->uninst_set->dbpkgs,
                                                   ldflags);

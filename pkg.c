@@ -818,6 +818,38 @@ int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
     return 1;
 }
 
+int pkg_requires_versioned_cap(const struct pkg *pkg, const struct capreq *cap)
+{
+    int i, rc = 0;
+    
+    if (pkg->reqs == NULL)
+        return 0;
+    
+    i = n_array_bsearch_idx_ex(pkg->reqs, cap, (tn_fn_cmp)capreq_cmp_name);
+    if (i == -1)
+        return 0;
+
+    while (i < n_array_size(pkg->reqs)) {
+        struct capreq *req = n_array_nth(pkg->reqs, i);
+        i++;
+
+        if (strcmp(capreq_name(req), capreq_name(cap)) != 0)
+            break;
+        
+        if (!capreq_versioned(req))
+            continue;
+
+        DBGF("cap_match_req %s %s\n", capreq_snprintf_s(cap), capreq_snprintf_s0(req));
+        if (cap_match_req(cap, req, 1)) {
+            rc = 1;
+            break;
+        }
+    }
+    
+    return rc;
+}
+
+
 
 int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg) 
 {

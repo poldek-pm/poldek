@@ -158,10 +158,9 @@ int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
                  tn_array *dbpkgs_skiplist, unsigned ldflags);
 
 
-
 int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                           const struct capreq *cap,
-                          tn_array *blacklist, unsigned ldflags);
+                          tn_array *skiplist, unsigned ldflags, int strict);
 
 int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
                         tn_array *skiplist);

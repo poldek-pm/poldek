@@ -85,13 +85,13 @@ tn_array *get_orphanedby_pkg(struct uninstall_ctx *uctx, struct pkg *pkg)
 
     capreq_new_name_a(pkg->name, selfcap);
     n += pkgdb_q_what_requires(uctx->db, orphans, selfcap,
-                               uctx->uninst_set->dbpkgs, ldflags);
+                               uctx->uninst_set->dbpkgs, ldflags, 0);
 
     if (pkg->caps)
         for (i=0; i < n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
             n += pkgdb_q_what_requires(uctx->db, orphans, cap,
-                                       uctx->uninst_set->dbpkgs, ldflags);
+                                       uctx->uninst_set->dbpkgs, ldflags, 0);
         }
     
     if (pkg->fl) {
@@ -103,8 +103,7 @@ tn_array *get_orphanedby_pkg(struct uninstall_ctx *uctx, struct pkg *pkg)
             struct capreq *cap;
             capreq_new_name_a(path, cap);
             n += pkgdb_q_what_requires(uctx->db, orphans, cap, 
-                                       uctx->uninst_set->dbpkgs,
-                                       ldflags);
+                                       uctx->uninst_set->dbpkgs, ldflags, 0);
         }
     }
     

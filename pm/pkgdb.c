@@ -675,9 +675,10 @@ struct pkgdir *pkgdb_to_pkgdir(struct pm_ctx *ctx, const char *rootdir,
 }
 
 
+
 int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                           const struct capreq *cap,
-                          tn_array *skiplist, unsigned ldflags)
+                          tn_array *skiplist, unsigned ldflags, int strict)
 {
     struct pkgdb_it it;
     const struct pm_dbrec *dbrec;
@@ -695,14 +696,19 @@ int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
 #endif        
         if (dbpkg_array_has(dbpkgs, dbrec->recno))
             continue;
-#if ENABLE_TRACE        
+
         DBGF("%s <- %s ??\n", capreq_name(cap), pkg_snprintf_s(pkg));
-#endif
+
         if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
             DBGF("%s <- %s ? %d\n", capreq_name(cap), pkg_snprintf_s(pkg),
                  pkg_satisfies_req(pkg, cap, 1));
             
             if (pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
+                pkg_free(pkg);
+                
+            } else if (strict && capreq_versioned(cap) &&
+                       !pkg_requires_versioned_cap(pkg, cap)) {
+                DBGF("skip %s (%s)\n", pkg_snprintf_s(pkg), capreq_snprintf_s(cap));
                 pkg_free(pkg);
                 
             } else {
