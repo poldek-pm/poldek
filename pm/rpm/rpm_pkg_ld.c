@@ -176,10 +176,13 @@ tn_array *do_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
                 }
 #else
                 
+#  if RPMSENSE_PREREQ != RPMSENSE_ANY /* rpm 4.4 drops legacy PreReq support */
                 if (isLegacyPreReq(flag)) /* prepared by rpm < 4.0.2  */
                     cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
-                    
-                else if (isInstallPreReq(flag))
+                
+                else
+#  endif
+		if (isInstallPreReq(flag))
                     cr_flags |= CAPREQ_PREREQ;
 
                 if (isErasePreReq(flag))
@@ -192,6 +195,7 @@ tn_array *do_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
 #endif /* HAVE_RPM_EXTDEPS */                
             }
         }
+        
 
         if (crtype == PMCAP_OBSL) 
             cr_flags |= CAPREQ_OBCNFL;
