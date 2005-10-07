@@ -4,6 +4,7 @@
 #define POLDEK_PKGFL_H
 
 #include <stdint.h>
+#include <sys/param.h>          /* for PATH_MAX */
 #include <trurl/trurl.h>
 
 struct flfile {
