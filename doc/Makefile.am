@@ -23,13 +23,13 @@ MANUAL_XHTMLDIR = manual-xhtml
 
 doc: $(GEN) $(MANUAL_XHTMLDIR)
 
-m_index.xml: manual.xml m_config.xml manual/*.xml mkindex.pl
-	./mkindex.pl manual.xml m_config.xml manual/*.xml > $@
+m_index.xml: manual.xml m_config.xml manual/ref*.xml mkindex.pl
+	./mkindex.pl manual.xml m_config.xml manual/ref*.xml > $@
 
 m_config.xml: $(CONFXMLS)
 	./conf-xml2.sh docb poldek.conf.xml > $@
 
-manual.xml.xhtml.tmp: manual.xml m_config.xml manual.xsl #m_index.xml
+manual.xml.xhtml.tmp: manual.xml m_config.xml manual.xsl m_index.xml
 	m4 -DPOLDEK_VERSION=@VERSION@ manual.xml | xmlif output=xhtml > $@
 
 manual.xml.texi.tmp: manual.xml m_index.xml m_config.xml manual.xsl
