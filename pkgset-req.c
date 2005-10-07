@@ -251,18 +251,37 @@ void isort_pkgs(struct pkg *pkgs[], size_t size)
 {
     register size_t i, j;
 
-    for (i = 1; i < size; i++) {
-	register void *tmp = pkgs[i];
-
-	j = i;
-
-	while (j > 0 && pkg_cmp_name_evr(tmp, pkgs[j - 1]) < 0) {
-	    pkgs[j] = pkgs[j - 1];
-	    j--;
-	}
-        
-	pkgs[j] = tmp;
+#if ENABLE_TRACE
+    printf("before isort(): ");
+    for (i = 0; i < size; i++) {
+        register struct pkg *p = pkgs[i];
+        printf("%s, ", pkg_id(p)); 
     }
+    printf("\n");
+#endif    
+		   
+    for (i = 1; i < size; i++) {
+        register void *tmp = pkgs[i];
+
+        j = i;
+
+        while (j > 0 && pkg_cmp_name_evr_rev(tmp, pkgs[j - 1]) < 0) {
+            DBGF(" %s < %s\n", pkg_id(tmp), pkg_id(pkgs[j - 1]));	
+            pkgs[j] = pkgs[j - 1];
+            j--;
+        }
+        
+        pkgs[j] = tmp;
+    }
+
+#if ENABLE_TRACE
+    printf("after isort(): ");
+    for (i = 0; i < size; i++) {
+        register struct pkg *p = pkgs[i];
+        printf("%s, ", pkg_id(p)); 
+    }
+    printf("\n");
+#endif    
 }
 
 /*
@@ -270,7 +289,8 @@ void isort_pkgs(struct pkg *pkgs[], size_t size)
   If found returns true and
   - if req is rpmlib() requirement set npkgs to zero
   - otherwise suspkgs is pointed to array of "suspect" packages,  
-    in npkgs suspkgs size is stored
+    in npkgs suspkgs size is stored. Suspected packages are sorted
+    descending by name and EVR.
   
 */   
 int psreq_lookup(struct pkgset *ps, struct capreq *req,
