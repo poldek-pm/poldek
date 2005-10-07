@@ -401,6 +401,99 @@ static int do_process(struct uninstall_ctx *uctx)
     return n;
 }
 
+static
+int do_resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
+                 const char *mask, const struct capreq *cr)
+{
+    tn_array *dbpkgs;
+    int i, nmatches = 0;
+
+    
+    DBGF("get_provides %s\n", capreq_snprintf_s(cr));
+    dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cr, NULL, uninst_LDFLAGS);
+
+    mask = mask;
+    DBGF("mask %s (%s) -> %d package(s)\n", mask, capreq_snprintf_s(cr), 
+         dbpkgs ? n_array_size(dbpkgs) : 0);
+        
+    if (dbpkgs == NULL)
+        return 0;
+    
+    for (i=0; i < n_array_size(dbpkgs); i++) {
+        struct pkg *dbpkg = n_array_nth(dbpkgs, i);
+        int matched = 0;
+
+        DBGF("  - %s (%s?)\n", pkg_id(dbpkg), capreq_snprintf_s(cr));
+                
+        if (!capreq_versioned(cr)) {
+            if (strcmp(dbpkg->name, capreq_name(cr)) == 0)
+                matched = 1;
+            
+        } else {                /* with version */
+            if (ts->getop(ts, POLDEK_OP_CAPLOOKUP)) {
+                if (pkg_xmatch_req(dbpkg, cr, POLDEK_MA_PROMOTE_REQEPOCH))
+                            matched = 1;
+            } else {
+                if (strcmp(dbpkg->name, capreq_name(cr)) == 0) {
+                    DBGF("n (%s, %s) %d\n", dbpkg->name,
+                         capreq_name(cr), 
+                         pkg_evr_match_req(dbpkg, cr,
+                                           POLDEK_MA_PROMOTE_REQEPOCH));
+                    
+                }
+                        
+                if (strcmp(dbpkg->name, capreq_name(cr)) == 0 &&
+                    pkg_evr_match_req(dbpkg, cr, POLDEK_MA_PROMOTE_REQEPOCH))
+                    matched = 1;
+            }
+        }
+
+        if (matched) {
+            nmatches++;
+            dbpkg_set_add(uctx->uninst_set, pkg_link(dbpkg));
+        }
+    }
+    
+    n_array_free(dbpkgs);
+    return nmatches;
+}
+
+static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts, const char *mask)
+{
+    char           *p;
+    struct capreq  *cr, *cr_evr;
+    int            resolved = 0;
+    
+    cr = NULL; cr_evr = NULL;
+    
+    if ((p = strchr(mask, '#')) == NULL) {
+        capreq_new_name_a(mask, cr);
+            
+    } else {
+        const char *ver, *rel;
+        char *tmp;
+        uint32_t epoch;
+        
+        n_strdupap(mask, &tmp);
+        p = strchr(tmp, '#');
+        n_assert(p);
+        *p = '\0';
+        p++;
+
+        if (poldek_util_parse_evr(p, &epoch, &ver, &rel))
+            cr = cr_evr = capreq_new(NULL, tmp, epoch, ver, rel, REL_EQ, 0);
+    }
+    
+    if (do_resolve_package(uctx, ts, mask, cr))
+        resolved = 1;
+
+    if (cr_evr)
+        capreq_free(cr_evr);
+    
+    return resolved;
+}
+
+
 static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
 {
     int               i, nerr = 0;
@@ -409,99 +502,60 @@ static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
     masks = poldek_ts_get_args_asmasks(ts, 1);
     
     for (i=0; i < n_array_size(masks); i++) {
-        char           *mask, *p;
-        tn_array       *dbpkgs;
-        struct capreq  *cr, *cr_evr;
-        int            nmatches = 0;
+        char            *mask = n_array_nth(masks, i);
+        int             matched = 0;
 
-        
-        mask = n_array_nth(masks, i);
-#if 0 //DUPA        
-        if ((pdef->tflags & PKGDEF_REGNAME) == 0) {
-            logn(LOGERR, _("'%s': only exact selection is supported"),
-                 pdef->virtname);
-            nerr++;
-            continue;
-        }
-#endif
-        cr = NULL; cr_evr = NULL;
-        if ((p = strchr(mask, '#')) == NULL) {
-            capreq_new_name_a(mask, cr);
+        msgn(2, "Trying %s\n", mask);
+        if (resolve_package(uctx, ts, mask)) {
+            matched = 1;
             
         } else {
-            const char *ver, *rel;
-            char *tmp;
-            uint32_t epoch;
-
-            n_strdupap(mask, &tmp);
-            p = strchr(tmp, '#');
-            n_assert(p);
-            *p = '\0';
-            p++;
-
-            if (poldek_util_parse_evr(p, &epoch, &ver, &rel))
-                cr = cr_evr = capreq_new(NULL, tmp, epoch, ver, rel, REL_EQ, 0);
-        }
-        DBGF("get_provides %s\n", capreq_snprintf_s(cr));
-        dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cr, NULL, uninst_LDFLAGS);
-        DBGF("mask %s (%s) -> %d package(s)\n", mask, capreq_snprintf_s(cr), 
-               dbpkgs ? n_array_size(dbpkgs) : 0);
-        
-        if (dbpkgs) {
-            int j;
+            char *p;
             
-            for (j=0; j < n_array_size(dbpkgs); j++) {
-                struct pkg *dbpkg = n_array_nth(dbpkgs, j);
-                int matched = 0;
-
-                DBGF("  - %s (%s?)\n", pkg_id(dbpkg),
-                     capreq_snprintf_s(cr_evr ? cr_evr : cr));
+            if ((p = strchr(mask, '-'))) { /* try N-[E:]V */
+                char *tmp;
+                n_strdupap(mask, &tmp);
                 
-                if (cr_evr) {
-                    if (ts->getop(ts, POLDEK_OP_CAPLOOKUP)) {
-                        if (pkg_xmatch_req(dbpkg, cr_evr, POLDEK_MA_PROMOTE_REQEPOCH))
-                            matched = 1;
-                    } else {
-                        if (strcmp(dbpkg->name, capreq_name(cr_evr)) == 0) {
-                            DBGF("n (%s, %s) %d\n", dbpkg->name,
-                                 capreq_name(cr_evr), 
-                                 pkg_evr_match_req(dbpkg, cr_evr,
-                                                   POLDEK_MA_PROMOTE_REQEPOCH));
-                            
-                        }
-                        
-                        if (strcmp(dbpkg->name, capreq_name(cr_evr)) == 0 &&
-                            pkg_evr_match_req(dbpkg, cr_evr,
-                                              POLDEK_MA_PROMOTE_REQEPOCH))
-                            matched = 1;
-                    }
-                    if (matched)
-                        nmatches++;
+                p = strrchr(tmp, '-');
+                *p = '#';
 
-                } else if (cr_evr == NULL && strcmp(mask, dbpkg->name) == 0) {
-                    nmatches++;
+                msgn(2, "  Trying %s\n", tmp);
+                
+                if (resolve_package(uctx, ts, tmp)) {
                     matched = 1;
-                }
-                
-                if (matched)
-                    dbpkg_set_add(uctx->uninst_set, pkg_link(dbpkg));
-            }
-            n_array_free(dbpkgs);
-        }
-        
-        
-        if (nmatches == 0) {
-            logn(LOGERR, _("%s: no such package"), mask);
-            nerr++;
-        }
+                    
+                } else {        /* try N-[E:]V-R */
+                    const char *n, *v, *r;
+                    char nmask[256];
+                    int32_t e = 0;
 
-        if (cr_evr)
-            capreq_free(cr_evr);
+                    n_strdupap(mask, &tmp);
+                    
+                    if (poldek_util_parse_nevr(tmp, &n, &e, &v, &r)) {
+                        if (e)
+                            n_snprintf(nmask, sizeof(nmask), "%s#%d:%s-%s", n, e, v, r);
+                        else
+                            n_snprintf(nmask, sizeof(nmask), "%s#%s-%s", n, v, r);
+
+                        msgn(2, "    Trying %s\n", nmask);
+                        DBGF("try %s => %s (%s, %s, %s)\n", mask, nmask, n, v, r);
+                        matched = resolve_package(uctx, ts, tmp);
+                    }
+                }
+            }
+            
+            if (!matched) {
+                logn(LOGERR, _("%s: no such package"), mask);
+                nerr++;
+            }
+        }
     }
+    
 
     n_array_free(masks);
     return nerr == 0;
 }
+
 
 static tn_array *reorder_packages(tn_array *pkgs)
 {
