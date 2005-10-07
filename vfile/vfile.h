@@ -39,18 +39,19 @@
 
 #define VFILE_CONF_CACHEDIR               (1 << 0) /*const char *path        */
 #define VFILE_CONF_DEFAULT_CLIENT         (1 << 1) /*const char *proto, *name */
-#define VFILE_CONF_SYSUSER_AS_ANONPASSWD  (1 << 2)  /*int 0/non zero          */
+#define VFILE_CONF_SYSUSER_AS_ANONPASSWD  (1 << 2) /*int 0/non zero          */
 #define VFILE_CONF_VERBOSE                (1 << 3) /*int &verbose_level      */
 #define VFILE_CONF_PROXY                  (1 << 4) /*const char *proto, *url */
-#define VFILE_CONF_ANONFTP_PASSWD         (1 << 5) /*const char *passwd      */
-#define VFILE_CONF_LOGCB                  (1 << 6) /*vf_vlog() like fn     */
-#define VFILE_CONF_PROGRESSCB             (1 << 7)
-#define VFILE_CONF_PROGRESSDATA           (1 << 8)
-#define VFILE_CONF_STUBBORN_RETR          (1 << 9)
-#define VFILE_CONF_STUBBORN_NRETRIES      (1 << 10) /* how many retries */
-#define VFILE_CONF_EXTCOMPR               (1 << 11) /* use external script to
+#define VFILE_CONF_NOPROXY                (1 << 5) /*const char *hostmask    */
+#define VFILE_CONF_ANONFTP_PASSWD         (1 << 6) /*const char *passwd      */
+#define VFILE_CONF_LOGCB                  (1 << 7) /*vf_vlog() like fn       */
+#define VFILE_CONF_PROGRESSCB             (1 << 8)
+#define VFILE_CONF_PROGRESSDATA           (1 << 9)
+#define VFILE_CONF_STUBBORN_RETR          (1 << 10)
+#define VFILE_CONF_STUBBORN_NRETRIES      (1 << 11) /* how many retries */
+#define VFILE_CONF_EXTCOMPR               (1 << 12) /* use external script to
                                                        file (de)compression */
-#define VFILE_CONF_SIGINT_REACHED         (1 << 12)
+#define VFILE_CONF_SIGINT_REACHED         (1 << 15)
 int vfile_configure(int param, ...);
 
 /* run it after configuration is done */

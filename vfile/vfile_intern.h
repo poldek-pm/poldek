@@ -42,6 +42,7 @@ struct vfile_configuration {
     int        nretries;       /* how many retries in stubborn mode */
     tn_hash    *default_clients_ht;
     tn_hash    *proxies_ht;
+    tn_array   *noproxy;
     int        *verbose;
     char       *anon_passwd;
     void       (*log)(unsigned flags, const char *fmt, ...);

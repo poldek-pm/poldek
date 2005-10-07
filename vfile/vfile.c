@@ -53,7 +53,8 @@ static const char   default_anon_passwd[] = "poldek@znienacka.net";
 
 struct vfile_configuration vfile_conf = {
     "/tmp", VFILE_CONF_STUBBORN_RETR, 1000 /* nretries */,
-    NULL, NULL, &verbose, 
+    NULL, NULL, NULL,
+    &verbose, 
     (char*)default_anon_passwd,
     NULL, NULL
 };
@@ -84,7 +85,9 @@ int vfile_configure(int param, ...)
         vfile_conf.default_clients_ht = n_hash_new(7, free);
         vfile_conf.proxies_ht = n_hash_new(7, free);
     }
-    
+
+    if (vfile_conf.noproxy == NULL)
+        vfile_conf.noproxy = n_array_new(16, free, NULL);
         
     rc = 1;
     va_start(ap, param);
@@ -155,6 +158,16 @@ int vfile_configure(int param, ...)
                 else 
                     n_hash_replace(vfile_conf.proxies_ht, proto, n_strdup(url));
             }
+            
+            break;    
+        }
+            
+        case VFILE_CONF_NOPROXY: {
+            char *mask;
+            
+            mask = va_arg(ap, char *);
+            if (mask && *mask)
+                n_array_push(vfile_conf.noproxy, mask);
             
             break;    
         }

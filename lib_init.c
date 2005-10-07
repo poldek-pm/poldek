@@ -784,6 +784,13 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path,
             set_default_vf_fetcher(VFILE_CONF_PROXY, n_array_nth(list, i));
         n_array_free(list);
     }
+
+    if ((list = poldek_conf_get_multi(htcnf, "noproxy"))) {
+        int i;
+        for (i=0; i < n_array_size(list); i++)
+            vfile_configure(VFILE_CONF_NOPROXY, n_array_nth(list, i));
+        n_array_free(list);
+    }
     
     get_conf_opt_list(htcnf, "rpmdef", ctx->ts->rpmacros);
     get_conf_opt_list(htcnf, "hold", ctx->ts->hold_patterns);

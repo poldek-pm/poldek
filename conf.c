@@ -100,6 +100,8 @@ static struct tag global_tags[] = {
     { "mercy",          TYPE_BOOL , { 0 } },
     { "default fetcher", TYPE_STR | TYPE_MULTI , { 0 } },
     { "proxy",          TYPE_STR | TYPE_MULTI, { 0 } },
+    { "noproxy",        TYPE_STR | TYPE_LIST | TYPE_MULTI, { 0 } },
+    { "no proxy",       TYPE_STR | TYPE_LIST | TYPE_MULTI | TYPE_F_ALIAS, { 0 } },
     { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "ignore",         TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
     { "keep downloads", TYPE_BOOL , { 0 } },
@@ -632,7 +634,24 @@ static int add_param(tn_hash *ht_sect, const char *section,
         tag = &sect->tags[tagindex];
         
     msgn_i(3, 2, "%s::%s = %s", section, name, value);
-    
+
+    if (tag->flags & TYPE_F_ALIAS) {
+        int n = tagindex;
+        char *p = NULL;
+        while (n > 0) {
+            n--;
+            if ((sect->tags[n].flags & TYPE_F_ALIAS) == 0) {
+                msg(5, "alias %s -> %s\n", name, sect->tags[n].name);
+                p = name = sect->tags[n].name;
+                break;
+            }
+        }
+        if (p == NULL) {
+            logn(LOGERR, "%s: wrong alias (internal error)", name);
+            n_assert(0);
+        }
+        
+    }
     
     if (tag->flags & (TYPE_LIST | TYPE_PATHLIST)) 
         return getvlist(ht_sect, name, value, 
@@ -664,24 +683,6 @@ static int add_param(tn_hash *ht_sect, const char *section,
                  val, section, name);
             return 0;
         }
-    }
-
-    if (tag->flags & TYPE_F_ALIAS) {
-        int n = tagindex;
-        char *p = NULL;
-        while (n > 0) {
-            n--;
-            if ((sect->tags[n].flags & TYPE_F_ALIAS) == 0) {
-                msg(5, "alias %s -> %s\n", name, sect->tags[n].name); 
-                p = name = sect->tags[n].name;
-                break;
-            }
-        }
-        if (p == NULL) {
-            logn(LOGERR, "%s: wrong alias (internal error)", name);
-            n_assert(0);
-        }
-        
     }
 
     if (n_hash_exists(ht_sect, name)) {

@@ -266,6 +266,17 @@ _distro  = pld
     </description>
   </option>
 
+  <option name="noproxy" type="string" default="" multiple="yes">
+    <description>
+    Comma separated list of hosts or domains which will not be accessed via proxy.
+    Option overrides no_proxy environment variable.
+    Example:
+    [screen]
+ noproxy = localhost, .pl, ftp.foo.bar.org
+    [/screen]
+    </description>
+  </option>
+
   <option name="vfile retries" type="integer" default="128">
     <description>
     Internal HTTP and FTP client is stubborn, it retries to retrive 

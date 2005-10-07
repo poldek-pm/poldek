@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fnmatch.h>
 #include <errno.h>
 #include <sys/param.h>          /* for PATH_MAX */
 #include <sys/types.h>
@@ -95,14 +96,77 @@ int vf_parse_url(char *url, struct vf_request *req)
     return 1;
 }
 
-static const char *get_proxy(const char *proto)
+static tn_array *get_noproxy(void)
+{
+    const char **tl, **tl_save, *v;
+    tn_array *noproxy;
+    
+    if ((v = getenv("no_proxy")) == NULL || *v == 0)
+        return NULL;
+
+    tl = tl_save = n_str_tokl(v, ", \t");
+    
+    noproxy = n_array_new(16, free, NULL);
+    while (*tl) {
+        n_array_push(noproxy, n_strdup(*tl));
+        tl++;
+    }
+    
+    n_str_tokl_free(tl_save);
+    return noproxy;
+}
+
+static int is_proxable(struct vf_request *req) 
+{
+    tn_array *noproxy = vfile_conf.noproxy;
+    int i;
+
+    
+    if (n_array_size(vfile_conf.noproxy) == 0) {
+        noproxy = get_noproxy();
+        if (noproxy == NULL)
+            return 1;
+    }
+    
+    for (i=0; i < n_array_size(noproxy); i++) {
+        const char *mask = n_array_nth(noproxy, i);
+        if (*mask == '.') {
+            int  size = strlen(mask) + 2;
+            char *tmp = alloca(size);
+            n_snprintf(tmp, size, "*%s", mask);
+            mask = tmp;
+        }
+
+        if (fnmatch(mask, req->host, 0) == 0) {
+            if (*vfile_verbose > 1)
+                vf_loginfo("Non proxable %s (match %s)\n", req->host, mask);
+            return 0;
+        }
+    }
+    
+    /* no configured noproxy, env is set */
+    if (noproxy && noproxy != vfile_conf.noproxy) { 
+        while (n_array_size(noproxy))
+            n_array_push(vfile_conf.noproxy, n_array_shift(noproxy));
+        
+        n_array_free(noproxy);
+    }
+    
+    return 1;
+}
+
+
+static const char *get_proxy(struct vf_request *req)
 {
     char *url = NULL, buf[256];
 
-    if ((url = n_hash_get(vfile_conf.proxies_ht, proto)))
+    if (!is_proxable(req))
+        return NULL;
+
+    if ((url = n_hash_get(vfile_conf.proxies_ht, req->proto)))
         return url;
     
-    snprintf(buf, sizeof(buf), "%s_proxy", proto);
+    snprintf(buf, sizeof(buf), "%s_proxy", req->proto);
 
     if ((url = getenv(buf)) == NULL || *url == 0) {
         char *p;
@@ -116,13 +180,13 @@ static const char *get_proxy(const char *proto)
         url = getenv(buf);
     }
 
-    if (url) {
+    if (url) {                  /* save it in proxies_ht */
         if (*url == '\0')
             url = NULL;
 
         else {
             url = n_strdup(url);
-            n_hash_insert(vfile_conf.proxies_ht, proto, url);
+            n_hash_insert(vfile_conf.proxies_ht, req->proto, url);
         }
     } 
 
@@ -178,7 +242,7 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
         return NULL;
     }
     
-    if ((proxy = get_proxy(rreq.proto))) {
+    if ((proxy = get_proxy(&rreq))) {
         char pbuf[PATH_MAX];
 
         snprintf(pbuf, sizeof(pbuf), "%s", proxy);
