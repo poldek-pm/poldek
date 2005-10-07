@@ -684,7 +684,8 @@ int pkgdir__uniq(struct pkgdir *pkgdir)
     n -= n_array_size(pkgdir->pkgs);
     
     if (n) {
-        char m[1024], *name;
+        char m[1024];
+        const char *name;
         
         snprintf(m, sizeof(m), ngettext("removed %d duplicate package",
                                         "removed %d duplicate packages", n), n);
