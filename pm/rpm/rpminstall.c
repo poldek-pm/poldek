@@ -463,7 +463,7 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
 
     pm_rpm_setup_commands(pm);
     if (!pm->rpm) {
-        logn(LOGERR, _("%s: command not found"), n_basenam(pm->rpm));
+        logn(LOGERR, _("%s: command not found"), "rpm");
         return 0;
     }
     

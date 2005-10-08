@@ -81,6 +81,7 @@ void *pm_rpm_init(void)
     }
 
     pm_rpm = n_malloc(sizeof(*pm_rpm));
+    memset(pm_rpm, 0, sizeof(*pm_rpm));
     pm_rpm->rpm = NULL;
     pm_rpm->sudo = NULL;
 
