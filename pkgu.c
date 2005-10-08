@@ -303,12 +303,13 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
         if (sl_langs == NULL)
             sl_lang = "C";
         else
-            sl_lang = n_array_nth(sl_langs, n_array_size(sl_langs) - 1); 
+            sl_lang = n_array_nth(sl_langs, 0); 
 
         if (sl_lang) {
             struct pkguinf_i18n *inf;
             
             inf = n_hash_get(pkgu->_ht, sl_lang);
+            n_assert(inf);
             pkgu->summary = inf->summary;
             pkgu->description = inf->description;
         }
