@@ -160,7 +160,9 @@ struct pkguinf *pndir_load_pkguinf(tn_alloc *na, tn_hash *db_dscr_h,
 
     if (pkgu && langs) {
         int i;
-                
+
+        /* start from the end => the last loaded one will be set as
+           pkguinf default (see pkguinf_restore_i18n()) */
         for (i = n_array_size(langs) - 1; i >= 0; i--) {
             struct tndb *db;
             const char *lang;
@@ -170,13 +172,13 @@ struct pkguinf *pndir_load_pkguinf(tn_alloc *na, tn_hash *db_dscr_h,
             lang = n_array_nth(langs, i);
             if (strcmp(lang, "C") == 0)
                 continue;
-                
+
             if ((db = pndir_db_dscr_h_get(db_dscr_h, lang)) == NULL)
                 continue;
 
             dklen = n_snprintf(dkey, sizeof(dkey), "%s%s", key, lang);
             vlen = tndb_get(db, dkey, dklen, val, sizeof(val));
-            //printf("ld %s: %s (%d)\n", pkg_snprintf_s(pkg), lang, vlen);
+            DBGF("ld %s: %s (%d)\n", pkg_snprintf_s(pkg), lang, vlen);
             if (vlen > 0) {
                 tn_buf_it it;
                 n_buf_clean(nbuf);

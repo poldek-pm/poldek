@@ -39,6 +39,7 @@
 
 #include <vfile/vfile.h>
 
+#define ENABLE_TRACE 0
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
@@ -56,9 +57,7 @@ tn_hash *pkgdir__avlangs_new(void)
     return avlh;
 }
 
-
-static
-tn_hash *pkgdir__strip_langs(struct pkgdir *pkgdir)
+static tn_hash *pkgdir__strip_langs(struct pkgdir *pkgdir)
 {
     int      i;
     tn_hash  *avlh = NULL;
@@ -92,7 +91,8 @@ void pkgdir__update_avlangs(struct pkgdir *pkgdir, const char *lang, int count)
         n_hash_insert(pkgdir->avlangs_h, avl->lang, avl);
     }
 }
-    
+
+/* fills pkgdir->langs with preferred languages, more preferred lang first */
 void pkgdir__setup_langs(struct pkgdir *pkgdir)
 {
     tn_array *avlangs;
@@ -115,19 +115,18 @@ void pkgdir__setup_langs(struct pkgdir *pkgdir)
     {
         int i;
         for (i=0;  i<n_array_size(avlangs); i++) {
-            printf("av_lang %s\n", n_array_nth(avlangs, i));
+            DBGF("av_lang %s\n", n_array_nth(avlangs, i));
         }
         
         if (pkgdir->langs)
             for (i=0;  i<n_array_size(pkgdir->langs); i++) {
-                printf("lang %s\n", n_array_nth(pkgdir->langs, i));
+                DBGF("lang %s\n", n_array_nth(pkgdir->langs, i));
             }
     }
 #endif
 
     n_array_free(avlangs);
 }
-
 
 char *pkgdir_setup_pkgprefix(const char *path) 
 {

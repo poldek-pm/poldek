@@ -168,7 +168,7 @@ static tn_hash *put_avlangs(struct tndb *db, struct pkgdir *pkgdir,
         n_assert(avl);
         DBGF("lang? %s\n", lang);
         percent = (avl->count * 100) / n_array_size(pkgdir->pkgs);
-        if (percent < 20) {
+        if (percent < 10) {  /* less than 10% translations -> omit them */
             msgn(2, _(" Omiting '%s' descriptions (%d - %d%% only)..."),
                  lang, avl->count, percent);
             continue;
@@ -579,7 +579,7 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
 
 
 static
-int pndir_save_pkginfo(int nth, struct pkguinf *pkgu, struct pkgdir *pkgdir,
+int pndir_save_pkginfo(int nth, struct pkguinf *pkgu, tn_hash *langstosave_h,
                        tn_hash *db_dscr_h, const char *key, int klen,
                        tn_buf *nbuf, const char *pathtmpl)
 {
@@ -593,13 +593,13 @@ int pndir_save_pkginfo(int nth, struct pkguinf *pkgu, struct pkgdir *pkgdir,
         char *lang = n_array_nth(langs, i);
         struct tndb *db;
         
-        DBGF("Saving %s\n", lang);
-        if (n_hash_size(pkgdir->avlangs_h) > 0 &&
-            !n_hash_exists(pkgdir->avlangs_h, lang)) {
-            DBGF("skip0 %s\n", lang);
+        
+        if (langstosave_h && !n_hash_exists(langstosave_h, lang)) {
+            DBGF("Skipping %s translation\n", lang);
             continue;
         }
-        
+        DBGF("Saving %s translation\n", lang);
+            
         if ((db = pndir_db_dscr_h_dbcreat(db_dscr_h, pathtmpl, lang)) == NULL)
             return 0;
                 
@@ -724,8 +724,8 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         if ((pkgu = pkg_info_ex(pkg, langstosave))) {
             int v;
             
-            v = pndir_save_pkginfo(i, pkgu, pkgdir, db_dscr_h, key, klen, nbuf,
-                                   paths.fmt_dscr);
+            v = pndir_save_pkginfo(i, pkgu, langstosave_h, db_dscr_h, key, klen,
+                                   nbuf, paths.fmt_dscr);
             pkguinf_free(pkgu);
             if (!v) {
                 nerr++;
