@@ -311,7 +311,7 @@ int pattern_compile(struct pattern *pt, int ntimes)
 
     if (pt->type != PATTERN_PCRE)
         return 1;
-    
+
     pt->pcre = pcre_compile(pt->regexp, pt->pcre_flags, &pcre_err,
                             &pcre_err_off, pcre_chartable);
     
@@ -322,9 +322,11 @@ int pattern_compile(struct pattern *pt, int ntimes)
     }
 
     if (ntimes > 10) {
-        pt->pcre_extra = pcre_study(pt->pcre, PCRE_CASELESS, &pcre_err);
-        if (pt->pcre_extra == NULL) {
-            logn(LOGERR, _("search: pattern: %s: %s"), pt->regexp, pcre_err);
+        pcre_err = NULL;
+        pt->pcre_extra = pcre_study(pt->pcre, 0, &pcre_err);
+        if (pt->pcre_extra == NULL && pcre_err) {
+            logn(LOGERR, _("search: pattern study: %s: %s"), pt->regexp,
+                 pcre_err);
             return 0;
         }
     }
