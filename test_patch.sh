@@ -1,8 +1,5 @@
 #! /bin/sh
 
-POLDEK="./poldek"
-POLDEKUP="./poldek"
-
 while  [ $# -gt 0 ]; do
     case "$1" in
 	-t )
@@ -32,32 +29,42 @@ if [ -z "$DISTDIR" -o -z "$SRCDIR" -o -z "$SRCURL" ]; then
 fi
 
 TMPDIR=${TMPDIR:-"/tmp"}
+POLDEK=${POLDEK:-"poldek"}
+POLDEKUP=${POLDEKUP:-"poldek"}
 
-t1() 
+echo "$POLDEK, $POLDEKUP"
+
+POLDEK018=
+if $POLDEK --noconf --version | grep -q 0.18; then
+      POLDEK018="1"
+fi
+
+POLDEKUP018=
+if $POLDEKUP --noconf --version | grep -q 0.18; then
+      POLDEKUP018="1"
+fi
+
+
+create_index() 
 {
-    for i in $DISTDIR/*.rpm; do
-        bn=$(basename $i);
-
-	if [ -f $SRCDIR/$bn ]; then 
-	    continue
-	fi    
-	echo ""
-	echo "ADD $bn"
-        ln -sf $i $SRCDIR/$bn
- 	
-	$POLDEK -s $SRCDIR --st dir --mkidx --mt $ST
-
-	echo "UP"
-	$POLDEK --st $ST -s $SRCURL --up
-	if [ $? -ne 0 ]; then
-	    echo "ERRROR"
-	    exit 1;
-	fi
-	sleep 1
-    done
+  if [ -n "$POLDEK018" ]; then
+      $POLDEK --noconf -s $SRCDIR --mkidxz 
+  else 
+      $POLDEK --noconf -s $SRCDIR --mkidx --mt $ST
+  fi
 }
 
-t2() 
+update_index() 
+{
+  if [ -n "$POLDEKUP018" ]; then
+     $POLDEKUP --noconf -s $SRCURL --up
+  else 
+     $POLDEKUP --noconf --st $ST -s $SRCURL --up -Oautoupa=n
+  fi
+}
+
+
+test_loop() 
 {
     up_skip=$(perl -e 'print int(rand(2))');
     toadd=$(perl -e 'print chr(65 + rand(50))');
@@ -102,8 +109,9 @@ t2()
     fi
 
     echo -e "\n**** MAKE ****\n"
-    echo "Added $nadded and $nremoved removed"	
-    $POLDEK -s $SRCDIR --mkidx --mt $ST
+    echo "Added $nadded and $nremoved removed"
+    create_index
+
     if [ $? -ne 0 ]; then
 	   echo "MKIDX ERRROR"
 	   exit 1;
@@ -112,8 +120,8 @@ t2()
     #up_skip=0
     if [ ${up_skip} = "0" ]; then
 	echo -e "\n**** UP ****\n"
-	#$POLDEKUP -v --st $ST -s $SRCURL --up -Oautoupa=n
-	$POLDEKUP --noconf -v -s $SRCURL --up
+    update_index
+
 	if [ $? -ne 0 ]; then
 	   echo "ERRROR"
 	   exit 1;
@@ -123,11 +131,16 @@ t2()
 
 rm -f $SRCDIR/packages.$ST.*
 rm -f $SRCDIR/packages.i/packages.$ST.*
-$POLDEK -s $SRCDIR --mkidx --mt $ST || exit 1
-$POLDEK --st $ST -s $SRCURL --upa || exit 1
+create_index || exit 1
+
+if [ -n "$POLDEKUP018" ]; then
+  $POLDEKUP --noconf -s $SRCURL --upa
+else 
+  $POLDEKUP --noconf --st $ST -s $SRCURL --upa -Oautoupa=n
+fi
 
 for n in $(seq 1 22000); do
-    t2
+    test_loop
     sleep 1
 done
 
