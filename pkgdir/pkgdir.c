@@ -860,6 +860,7 @@ struct pkgdir *load_orig_pkgdir(struct pkgdir *pkgdir, const char *path,
 }
 
     
+extern pdir_pkgdir_uniq(struct pkgdir *pkgdir);
 
 int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
                    const char *path, unsigned flags)
@@ -915,6 +916,11 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
     
 
     n_assert(nerr == 0);
+
+    /* XXX pdir must be uniqued by N-EVR, if not will break
+       backward compat with 0.18.x series. */
+    if (n_str_eq(type, "pdir"))
+        pdir_pkgdir_uniq(pkgdir);
     
     if (orig == NULL) {
         if (!do_create(pkgdir, type, path, flags))
