@@ -181,6 +181,70 @@ int pdir_pkg_cmp(const struct pkg *p1, const struct pkg *p2)
     return do_pkg_deepcmp(p1, p2);
 }
 
+
+static
+int pdir_pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2) 
+{
+    register int rc;
+
+#if ENABLE_TRACE    
+    if (pkg_cmp_name_evr_rev(p1, p2) == 0)
+        logn(LOGNOTICE, "pdir: uniq %s: keep %s (score %d), removed %s (score %d)",
+             pkg_snprintf_s(p1), pkg_arch(p1), pkg_arch_score(p1),
+             pkg_arch(p2), pkg_archscore(p2));
+#endif    
+    rc = pkg_cmp_name_evr_rev(p1, p2);
+    
+    if (rc == 0 && poldek_VERBOSE > 1) {
+        if (poldek_VERBOSE > 2) {
+            logn(LOGNOTICE, "pdir: uniq %s: keep %s (score %d), removed %s (score %d)",
+                 pkg_snprintf_s(p1), pkg_arch(p1), pkg_arch_score(p1),
+                 pkg_arch(p2), pkg_arch_score(p2));
+        } else {
+            logn(LOGWARN, _("pdir: %s%s%s: removed duplicate package"),
+                 pkg_snprintf_s(p2), p2->_arch ? ".": "",
+                 p2->_arch ? pkg_arch(p2): "");
+        }
+    }
+
+    return rc;
+}
+
+
+
+int pdir_pkgdir_uniq(struct pkgdir *pkgdir) 
+{
+    int n = 0;
+
+    pkgdir->flags |= PKGDIR_UNIQED;
+    
+    if (pkgdir->pkgs == NULL || n_array_size(pkgdir->pkgs) == 0)
+        return 0;
+
+    n = n_array_size(pkgdir->pkgs);
+    n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)pkg_deepcmp_name_evr_rev);
+    n_array_uniq_ex(pkgdir->pkgs, (tn_fn_cmp)pdir_pkg_cmp_uniq_name_evr);
+    n -= n_array_size(pkgdir->pkgs);
+
+    if (n) {
+        char m[1024];
+        const char *name;
+        
+        snprintf(m, sizeof(m), ngettext("removed %d duplicate package",
+                                        "removed %d duplicate packages", n), n);
+        
+        name = pkgdir_idstr(pkgdir);
+        if (name)
+            logn(LOGWARN, "pdir: %s: %s", name, m);
+        else 
+            logn(LOGWARN, "pdir: %s", m);
+    }
+
+    
+    return n;
+}
+
+
 int pdir_create(struct pkgdir *pkgdir, const char *pathname,
                 unsigned flags)
 {
@@ -190,15 +254,16 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     const char       *orig_pathname;
     int              i, nerr = 0;
     struct pdir      *idx;
-    unsigned         st_flags = 0; 
-    
+    unsigned         st_flags = 0;
+
+#if 0                           /* XXX: disabled cause to pdir_pkgdir_uniq() usage */
     if ((pkgdir->flags & PKGDIR_DIFF) && (pkgdir->flags & PKGDIR_UNIQED) == 0) {
         n_assert((flags & PKGDIR_CREAT_NOUNIQ) == 0);
         pkgdir__uniq(pkgdir);
     }
-
+#endif
+    
     idx = pkgdir->mod_data;
-    //printf("idx0 = %p\n", idx);
     if (pkgdir->ts == 0) 
         pkgdir->ts = time(0);
 
@@ -298,7 +363,6 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
         n_stream_write(vf->vf_tnstream, n_buf_ptr(nbuf), n_buf_size(nbuf));
         n_stream_printf(vf->vf_tnstream, "\n");
         n_buf_free(nbuf);
-        //pkgroup_idx_store_st(pkgdir->pkgroups, vf->vf_tnstream);
     }
         
     n_stream_printf(vf->vf_tnstream, "%%%s\n", pdir_tag_endhdr);
@@ -316,6 +380,7 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
     n_array_isort_ex(pkgdir->pkgs, (tn_fn_cmp)pdir_pkg_cmp);
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+
         pdir_pkg_store(pkg, vf->vf_tnstream, pkgdir->depdirs, st_flags);
 #if 0                           /* debug stuff */
         if (i % 200 == 0) {
@@ -324,6 +389,7 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
         }
 #endif        
     }
+    
 
  l_close:
 	if (vf) {
