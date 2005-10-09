@@ -172,7 +172,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             
         case OPT_NODESC:
             arg_s->crflags |= PKGDIR_CREAT_NODESC;
-            /* hack, no way to pass option between argps (?)*/
+            /* XXX hack, no way to pass option between argps (?)*/
             poclidek_op_source_nodesc = 1;
             break;
 
@@ -221,6 +221,14 @@ static tn_array *parse_types(const char *type)
 }
 
 
+/*
+  Index creation use cases:
+  a) -s /foo                  =>  dir  -> default type
+  b) --st type -s /foo        =>  type -> default type
+  c) -s /foo --mt dtype       =>  dir  -> dtype
+  d) --st type /foo --mt type =>  type -> dtype
+  e) -n foo                   =>  dir (or original type) -> foo's type
+*/
 static int make_idx(struct arg_s *arg_s) 
 {
     struct source   *src;
@@ -236,7 +244,8 @@ static int make_idx(struct arg_s *arg_s)
     }
     
     if (n_array_size(sources) > 1 && arg_s->src_mkidx) {
-        logn(LOGERR, _("multiple sources not allowed if index path is specified"));
+        logn(LOGERR,
+             _("multiple sources not allowed if index path is specified"));
         nerr++;
         goto l_end;
     }
@@ -250,6 +259,7 @@ static int make_idx(struct arg_s *arg_s)
     arg_s->crflags |= PKGDIR_CREAT_IFORIGCHANGED;
     for (i=0; i < n_array_size(sources); i++) {
         src = n_array_nth(sources, i);
+        DBGF("src %s type=%s\n", src->path, src->type);
         MEMINF("before mkidx");
 
         if (types == NULL) {     /* no types  */

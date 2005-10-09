@@ -334,8 +334,11 @@ void setup_langs(struct source *src)
     n = 0;
     p = langs_tokl;
     while (*p) {
-        if (n_hash_exists(langs, *p))
+        if (n_hash_exists(langs, *p)) {
+            p++;
             continue;
+        }
+
         n += n_snprintf(&lc_lang[n], sizeof(lc_lang) - n, "%s:", *p);
         n_hash_insert(langs, *p, *p);
         p++;
@@ -1048,6 +1051,10 @@ static const char *determine_stype(struct source *src, const char *idxpath)
         if ((src->flags & PKGSOURCE_TYPE) == 0) /* no type */
             return DEFAULT_STYPE;
         
+        else if ((src->flags & PKGSOURCE_NAMED) == 0) /* with type and not named
+                                                         i.e not from config */
+            return src->type;
+                
         if (idxpath == NULL)
             return DEFAULT_STYPE;
         
@@ -1062,7 +1069,8 @@ int source_make_idx(struct source *src, const char *stype,
     struct source *ssrc;
     int typcaps;
     int rc = 0;
-                         
+
+    DBGF("%s(src=%s) => %s\n", stype, src->type ? src->type : "null", dtype);
     if (stype == NULL)
         stype = determine_stype(src, idxpath);
     
@@ -1070,8 +1078,13 @@ int source_make_idx(struct source *src, const char *stype,
         source_set_default_type(src);
     n_assert(src->type);
     
-    if (dtype == NULL)
-        dtype = src->type;
+    if (dtype == NULL) {
+           /* if not from config */
+        if (n_str_eq(src->type, "dir") && (src->flags & PKGSOURCE_NAMED) == 0)
+            dtype = poldek_conf_PKGDIR_DEFAULT_TYPE;
+        else
+            dtype = src->type;
+    }
     
     ssrc = source_dup(src);
     /* swap types */
@@ -1094,14 +1107,21 @@ int source_make_idx(struct source *src, const char *stype,
             rc = 0;
             
         } else if (source_is_type(ssrc, dtype)) { /* same type */
-            logn(LOGERR, _("%s: refusing to overwrite index"),
-                 source_idstr(ssrc));
-            rc = 0;
+            struct stat st;
+
+            if (stat(ssrc->path, &st) == 0) {
+                logn(LOGERR, _("%s: refusing to overwrite index"),
+                     source_idstr(ssrc));
+                rc = 0;
+            }
+            /* if not exists,  let do_source_make_idx() to shout */
         }
     }
 
-    if (rc)
+    if (rc) {
+        DBGF("do %s(%s) => %s\n", stype, src->type ? src->type : "null", dtype);
         rc = do_source_make_idx(ssrc, dtype, idxpath, flags, kw);
+    }
     
     source_free(ssrc);
     return rc;
