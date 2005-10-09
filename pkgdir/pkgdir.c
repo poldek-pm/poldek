@@ -917,7 +917,7 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
 
     n_assert(nerr == 0);
 
-    /* XXX pdir must be uniqued by N-EVR, if not will break
+    /* XXX pdir must be uniqued by NEVR (is not MULTILIB-able), if not, it will break
        backward compat with 0.18.x series. */
     if (n_str_eq(type, "pdir"))
         pdir_pkgdir_uniq(pkgdir);
