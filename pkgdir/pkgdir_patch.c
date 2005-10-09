@@ -116,7 +116,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
         
         pkg = n_array_nth(pkgdir2->pkgs, i);
         if ((plus_pkg = search_for_diff(pkgdir, pkg)) == NULL) {
-            n_array_push(plus_pkgs, pkg);
+            n_array_push(plus_pkgs, pkg_link(pkg));
             msg(2, "++ %s\n", pkg_snprintf_s(pkg));
         }
     }
@@ -128,7 +128,7 @@ struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2)
         pkg = n_array_nth(pkgdir->pkgs, i);
 
         if ((minus_pkg = search_for_diff(pkgdir2, pkg)) == NULL) {
-            n_array_push(minus_pkgs, pkg);
+            n_array_push(minus_pkgs, pkg_link(pkg));
             msg(2, "-- %s\n", pkg_snprintf_s(pkg));
         }
     }
