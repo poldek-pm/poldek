@@ -11,7 +11,7 @@ EXTRA_DIST = $(WWW_PAGES) $(WWW_BINS)
 siteonly: 
 	mkdir -p site || exit 1; \
 	./genhomepage --clean --destdir site; \
-	genhomepage --destdir site; \
+	./genhomepage --destdir site; \
 	cp style.css logo90.png site;
 
 site: siteonly

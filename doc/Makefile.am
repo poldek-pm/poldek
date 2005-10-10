@@ -53,7 +53,7 @@ $(MANUAL_XHTMLDIR): manual.xml.xhtml.tmp
 	rm -f $(MANUAL_XHTMLDIR)/*.*
 	xmlto -m manual.xsl -o $(MANUAL_XHTMLDIR) xhtml $<
 # add the stylesheet and removed empty indexterm's (I'm docbook novice)
-	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $(MANUAL_XHTMLDIR)/ix??.html
+	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $(MANUAL_XHTMLDIR)/ix??.html || true
 	cp manual.css $(MANUAL_XHTMLDIR)
 
 reference: 
