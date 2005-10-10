@@ -1,7 +1,10 @@
 SWIG = swig -python -shadow
+if ENABLE_PYTHON
 py_ver     = $(shell python -c "import sys; print sys.version[:3]")
 py_prefix  = $(shell python -c "import sys; print sys.prefix")
 py_incdir  = $(py_prefix)/include/python$(py_ver)
+endif
+
 #py_sitedir = $(py_libdir)/site-packages
 #$py_dyndir      %{py_libdir}/lib-dynload
 
