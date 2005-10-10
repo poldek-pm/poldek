@@ -11,7 +11,10 @@ CLEANFILES = wrap_* poldekmod.py local_stdint.h
 INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir) -I$(py_incdir) -I.
 
 #pythondir = $(prefix)$(libdir)/python
-python_PYTHON = poldekmod.py poldek.py
+python_PYTHON = poldek.py
+if ENABLE_PYTHON
+python_PYTHON += poldekmod.py
+endif
 
 lib_LTLIBRARIES = _poldekmod.la
 
@@ -40,4 +43,4 @@ wrap_%.c: %.i
 	$(SWIG) $(SWIG_PYTHON_OPT) $(INCLUDES) -o $@ $<
 
 
-MAINTAINERCLEANFILES =	*~ *.py[co]
+MAINTAINERCLEANFILES =	*~ *.pyc *.pyo
