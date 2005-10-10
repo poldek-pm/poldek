@@ -2,9 +2,9 @@
 <variablelist id="repositories.types"><title>Supported repositories</title>
 <varlistentry><term>pndir (features: read, write, update, incremental update)</term>
   <listitem>
-     <para> Native <application>poldek</application> index format since 0.20 version. 
+     <para> Native <application>poldek</application> index format. 
      Based on tndb (cdb-like) DBM library. Consist of 3 database files: first,
-     <filename>packages.ndir</filename> with essentiall package meta-data, 
+     <filename>packages.ndir</filename> with essential package meta-data, 
      second <filename>packages.ndir.dscr</filename> with with common (BuildHost, 
      Distribution, etc) and "C" package descriptions and third, 
      <filename>packages.ndir.dscr.i18n</filename> with all non-English descriptions 

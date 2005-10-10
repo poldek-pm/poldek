@@ -139,4 +139,9 @@ h2, h3, h4 {
   font-style: normal;
 }
 
+.nodot ul {
+  list-style: none;
+}
+
+
 

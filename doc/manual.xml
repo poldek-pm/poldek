@@ -64,7 +64,7 @@
 </authorgroup>
 
 <date>$Date$</date>
-<releaseinfo>$Id$</releaseinfo>
+<releaseinfo>$Revision$</releaseinfo>
 
 <keywordset>
 <keyword>package management</keyword>

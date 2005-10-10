@@ -8,17 +8,22 @@ use vars qw(@menu $tmpl %config);
          { name => 'index', label => 'Home' },
          { name => 'overview', label => 'Feature overview', fromanual => 1, },
          { name => 'quickstart', label => 'Quick start', fromanual => 1, },
-         { name => 'documentation', label => 'Documentation',
+         { name => 'manual', label => 'Manual',
            href => 'manual/index.html', title => 'Full poldek manual' },
-         { name => 'download', label => 'Download' },
-         { name => 'repo', label => 'Repositories' },
-         { name => 'support', label => 'Mailing list' },
+
+         { name => 'download', label => 'Download', m4 => 1 },
+#         { name => 'repo', label => 'Repositories' },
+         { name => 'support', label => 'Support' },
          { name => 'devel', label => 'Development' },
+         { name => 'related', label => 'Related' },
         );
 
 %config = ();
-GetOptions(\%config, 'clean', 'destdir=s') || die;
+GetOptions(\%config, 'clean', 'destdir=s', 'VERSION=s') || die;
 $config{destdir} ||= '.';
+
+$config{VERSION} ||= poldek_version();
+die "missing --VERSION" if !$config{VERSION};
 
 $tmpl = new Text::Template(TYPE => 'FILE',
                            SOURCE => 'page-template.html') || die;
@@ -57,7 +62,13 @@ sub gen_page {
     if ($page->{fromanual}) {
         $content = extract_from_manual($name) || die;
     } else {
-        open(F, "< $name-body.html") || die "open $name: $!";
+        if ($page->{m4}) {
+            open(F, "m4 -DPOLDEK_VERSION=\"$config{VERSION}\" $name-body.html|")
+              || die "fork m4 $name: $!";
+
+        } else {
+            open(F, "< $name-body.html") || die "open $name: $!";
+        }
         my @lines = <F>;
         close(F);
         $content = join('', @lines);
@@ -67,6 +78,7 @@ sub gen_page {
                  page => $name,
                  menu => $menu_content,
                  content => $content,
+                 page_title => $page->{label},
                 );
     open(OUT, "> $config{destdir}/$name.html") || die "open $!";
     $tmpl->fill_in(HASH => \%param, OUTPUT => \*OUT) || die $Text::Template::ERROR;
@@ -86,6 +98,8 @@ sub extract_from_manual {
 
         if (/id=\"$section\"/) {
             s/.+?(\<div\s+class="sect\d".+)/$1/;
+            s/\<h2/<h1/g;
+            s/\<\/h2/<\/h1/g;
             $in = 1;
         }
         if ($in && /(.+?)<div class="navfooter"/) {
@@ -102,4 +116,18 @@ sub extract_from_manual {
     }
     close(IN);
     return $content;
+}
+
+sub poldek_version {
+    open(F, "< ../../configure.in") || die "open: $!";
+
+    my $v = undef;
+    while (<F>) {
+        if (/^VERSION=(\S+)$/) {
+            $v = $1;
+            last;
+        }
+    }
+    close(F);
+    return $v;
 }
