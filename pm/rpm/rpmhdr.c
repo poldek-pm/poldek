@@ -43,7 +43,23 @@ char ** headerGetLangs(Header h);
 
 int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
 {
-    return headerGetRawEntry(h, tag, 0, (void*)buf, cnt);
+    int type = 0;
+    if (!headerGetRawEntry(h, tag, &type, (void*)buf, cnt)) {
+        buf = NULL;
+        *cnt = 0;
+        return 0;
+    }
+    
+    if (tag == RPMTAG_GROUP && type == RPM_STRING_TYPE) { /* build by old rpm */
+        n_assert(*cnt == 1);
+        char **g = n_malloc(sizeof(*g) * 2);
+        g[0] = *(char **)buf;
+        g[1] = NULL;
+        *(char ***)buf = g;
+    }
+    
+    DBGF("%d type=%d, cnt=%d\n", tag, type, *cnt);
+    return 1;
 }
 
 int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
