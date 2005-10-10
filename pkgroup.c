@@ -459,7 +459,11 @@ int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr)
     if ((langs = pm_rpmhdr_langs(h)) == NULL)
         return 0;
 
-    rc = pm_rpmhdr_get_raw_entry(h, RPMTAG_GROUP, (void*)&groups, &ngroups);
+    if (!pm_rpmhdr_get_raw_entry(h, RPMTAG_GROUP, (void*)&groups, &ngroups)) {
+        free(langs);
+        return 0;
+    }
+            
 
     i = 0;
     while (langs[i++] != NULL)
