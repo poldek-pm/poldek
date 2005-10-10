@@ -516,7 +516,9 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
         pkg->reqs = capreq_arr_new(0);
         get_pkg_reqs(pkg->reqs, h, pkg);
 
-        if (n_array_size(pkg->reqs) == 0) {
+        if (n_array_size(pkg->reqs)) 
+            n_array_sort(pkg->reqs);
+        else {
             n_array_free(pkg->reqs);
             pkg->reqs = NULL;
         }

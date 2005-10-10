@@ -821,14 +821,18 @@ int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
 int pkg_requires_versioned_cap(const struct pkg *pkg, const struct capreq *cap)
 {
     int i, rc = 0;
+
+    DBGF("%s requires %s (reqs=%p, size=%d)?\n", pkg_id(pkg), capreq_snprintf_s(cap), pkg->reqs,
+           pkg->reqs ? n_array_size(pkg->reqs) : 0);
     
     if (pkg->reqs == NULL)
         return 0;
-    
+
+    n_array_sort(pkg->reqs);
     i = n_array_bsearch_idx_ex(pkg->reqs, cap, (tn_fn_cmp)capreq_cmp_name);
     if (i == -1)
         return 0;
-
+    
     while (i < n_array_size(pkg->reqs)) {
         struct capreq *req = n_array_nth(pkg->reqs, i);
         i++;
@@ -839,11 +843,10 @@ int pkg_requires_versioned_cap(const struct pkg *pkg, const struct capreq *cap)
         if (!capreq_versioned(req))
             continue;
 
-        DBGF("cap_match_req %s %s\n", capreq_snprintf_s(cap), capreq_snprintf_s0(req));
-        if (cap_match_req(cap, req, 1)) {
-            rc = 1;
+        rc = cap_match_req(cap, req, 1);
+        DBGF("  cap_match_req %s %s => %d\n", capreq_snprintf_s(cap), capreq_snprintf_s0(req), rc);
+        if (rc)
             break;
-        }
     }
     
     return rc;
