@@ -148,7 +148,11 @@ struct poclidek_rcmd {};
     
     ~poldek_ctx() { poldek_free(self); }
     int load_config(const char *path = NULL) { poldek_load_config(self, path, 0, 0); }
-    int configure(int param, void *val) { poldek_configure(self, param, val); }
+    int configure(int param, void *val) {
+        if (param == POLDEK_CONF_SOURCE)
+            val = source_link(val);
+        poldek_configure(self, param, val);
+    }
     int configure(int param, unsigned val) { poldek_configure(self, param, val); }
     int configure(int param, char *val) { poldek_configure(self, param, val); }
     struct poldek_ts *ts_new(unsigned flags) { return poldek_ts_new(self, flags); }
