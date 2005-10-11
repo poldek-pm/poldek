@@ -1,12 +1,12 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl $Id$
 
-AC_INIT(poldek,0.19.0)
+AC_INIT(poldek,0.20.0)
 AC_CONFIG_SRCDIR([capreq.c])
 
 PACKAGE_BUGREPORT="mis@pld.org.pl"
 VERSION_STATUS="devel"
-VERSION=0.19.0
+VERSION=0.20.0
 VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
 VERSION_CVSTAG="v$VERSION_TAG"
 PACKAGE_VERSION_SERIES="2"
@@ -53,10 +53,17 @@ AC_PROG_LN_S
 AC_CHECK_PROG(POD2MAN, pod2man, pod2man)
 AM_GNU_GETTEXT([external])
 AM_GNU_GETTEXT_VERSION(0.11.5)
-AM_PATH_CHECK()
 
 AM_CFLAGS="-Wall -W"
 AC_SUBST(AM_CFLAGS)
+
+AC_ARG_ENABLE(check-tests,
+[  --enable-check-tests               build tests/ ],
+ENABLE_CHECK=$enableval, ENABLE_CHECK=no)
+
+if test "${ENABLE_CHECK}." == "yes."; then
+   AM_PATH_CHECK()
+fi
 
 
 dnl Process features.
@@ -106,7 +113,7 @@ dnl curl module is obsoleted
 
 AC_ARG_WITH(sys-trurlib,
 [  --with-sys-trurlib	compile and link with system installed trurlib],
-ENABLE_SYS_TRURL=$enableval, ENABLE_SYS_TRURL=no)
+ENABLE_SYS_TRURL=$withval, ENABLE_SYS_TRURL=no)
 
 
 AC_ARG_ENABLE(static,
@@ -314,8 +321,7 @@ AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
 dnl metadata & xml2
 AC_ARG_WITH(metadata-repository,
 [  --without-metadata-repository   build without metadata repository support],
-METADATA=$enableval, METADATA=yes)
-
+METADATA=$withval, METADATA=yes)
 LIBXML2_INCLUDE=
 if test "${METADATA}." == "yes."; then
  	AC_CHECK_LIB(xml2, xmlReadFile,, [ AC_MSG_ERROR(["libxml2 not found"]) ])
@@ -326,7 +332,7 @@ if test "${METADATA}." == "yes."; then
     AC_DEFINE([WITH_METADATA_REPOSITORY],1,[defined if metadata is enabled])
     AM_CONDITIONAL(WITH_METADATA_REPOSITORY, true)
 else
-	AM_CONDITIONAL(WITH_METADATA_REPOSITORY, false)
+    AM_CONDITIONAL(WITH_METADATA_REPOSITORY, false)
 fi
 AC_SUBST(LIBXML2_INCLUDE)
 
@@ -436,7 +442,7 @@ dnl python stuff
 
 AC_ARG_WITH(python,
 [  --with-python	build python interface (unusable)],
-ENABLE_PYTHON=$enableval, ENABLE_PYTHON=no)
+ENABLE_PYTHON=$withval, ENABLE_PYTHON=no)
 if test "${ENABLE_PYTHON}." = "yes."; then
     AM_PATH_PYTHON
     AC_CONFIG_SUBDIRS(python)
