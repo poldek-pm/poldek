@@ -1,11 +1,16 @@
 #!/usr/bin/python
+# $Id$
 
 import os
 import re
 import string
 from types import *
 import poldekmod
-from poldekmod import *
+from poldekmod import tn_array, poldek_ctx, poldek_ts, pkg, capreq, pkguinf, \
+    source, pkgdir, poclidek_ctx, poclidek_rcmd
+
+def lib_init():
+    poldekmod.poldeklib_init()
 
 class n_array_proxy:
     def __init__(self, arr, itemClass):
@@ -80,7 +85,6 @@ _complete_class(capreq, 'capreq_')
 setattr(capreq, '__str__', eval('lambda self: poldekmod.capreq_snprintf_s(self)'))
                
 _complete_class(poldek_ctx, 'poldek_')
-#setattr(poldek_ctx, 'get_avail_packages', _m_get_avail_packages)
 for fn in ['get_avail_packages', 'search_avail_packages']:
     setattr(poldek_ctx, fn, n_array_proxy_func('poldek_', fn, 'pkg'))
     
@@ -95,6 +99,8 @@ setattr(pkg, 'provides',
 
 setattr(pkg, 'requires',
         n_array_proxy_func('pkg.', '_get_requires', 'capreq'))
+
+_complete_class(pkguinf, 'pkguinf_', verbose = 0)
 
 _complete_class(source, 'source_')
 _complete_class(pkgdir, 'pkgdir_')

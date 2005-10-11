@@ -6,6 +6,7 @@
 #include "trurl/narray.h"
 #include "capreq.h"    
 #include "pkg.h"
+#include "pkgu.h"
 #include "poldek.h"
 #include "poldek_ts.h"
 #include "pkgdir/source.h"
@@ -16,6 +17,7 @@
 %include "local_stdint.h"
 %include "trurl/narray.h"
 %include "pkg.h"
+%include "pkgu.h"
 %include "poldek.h"
 %include "poldek_ts.h"
 %include "pkgdir/source.h"
@@ -23,8 +25,10 @@
 %include "cli/poclidek.h"
 %include "capreq.h"
 
+
 struct poldek_ctx {};
 struct poldek_ts {};
+struct pkguinf {};
 
 struct poclidek_ctx {};
 struct poclidek_rcmd {};
@@ -53,7 +57,7 @@ struct poclidek_rcmd {};
     int32_t get_epoch() { return capreq_epoch(self); }
     const char *get_ver() { return capreq_ver(self); }
     const char *get_rel() { return capreq_rel(self); }
-    int get_versioned() { return capreq_versioned(self); }
+    int is_versioned() { return capreq_versioned(self); }
     
     ~capreq() { capreq_free(self); }
 }
@@ -128,7 +132,14 @@ struct poclidek_rcmd {};
     pkg(void *ptr) { return ptr; } /* conv constructor */
     tn_array *_get_provides() { return self->caps; }
     tn_array *_get_requires() { return self->reqs; }
+    struct pkguinf *pkguinf() { return pkg_info(self); }
     ~pkg() { pkg_free(self); }
+}
+
+%extend pkguinf {
+    pkguinf(void *ptr) { return ptr; } /* conv constructor */
+    const char *get(char tag) { return pkguinf_getstr(self, tag); }
+    ~pkguinf() { pkguinf_free(self); }
 }
 
 

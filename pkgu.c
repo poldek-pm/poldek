@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@pld.org.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -597,7 +597,8 @@ const char *pkguinf_getstr(const struct pkguinf *pkgu, int tag)
             return pkgu->description;
 
         default:
-            n_assert(0);
+            if (poldek_VERBOSE > 2)
+                logn(LOGERR, "%d: unknown tag", tag); 
             break;
     }
 

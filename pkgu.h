@@ -22,8 +22,9 @@ const char *pkguinf_getstr(const struct pkguinf *pkgu, int tag);
 struct pkguinf *pkguinf_link(struct pkguinf *pkgu);
 void pkguinf_free(struct pkguinf *pkgu);
 
-
 tn_array *pkguinf_langs(struct pkguinf *pkgu);
+
+#ifndef SWIG
 
 int pkguinf_store_rpmhdr(struct pkguinf *pkgu, tn_buf *nbuf);
 int pkguinf_store_rpmhdr_st(struct pkguinf *pkgu, tn_stream *st);
@@ -38,6 +39,7 @@ tn_buf *pkguinf_store(const struct pkguinf *pkgu, tn_buf *nbuf,
 struct pkguinf *pkguinf_restore(tn_alloc *na, tn_buf_it *it, const char *lang);
 int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang);
 
+#endif /* ndef SWIG */
 
 #endif
         

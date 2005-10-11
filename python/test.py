@@ -6,6 +6,21 @@ import string
 from types import *
 import poldek
 
+def test_pkguinf(ctx):
+    arr = ctx.get_avail_packages()
+    print "Loaded %d packages" % len(arr)
+    if len(arr) == 0:
+        return 
+        
+    pkg = arr[0]
+    inf = pkg.pkguinf()
+    print "Package: ", pkg
+    print "Summary: ", inf.get(inf.SUMMARY)
+    print "License: ", inf.get(inf.LICENSE)
+    print "URL:     ", inf.get(inf.URL)
+    print "Description:\n", inf.get(inf.DESCRIPTION)
+
+
 def test_avail(ctx):
     arr = ctx.get_avail_packages()
     print "Loaded %d packages" % len(arr)
@@ -50,18 +65,24 @@ def test_cli_ls(cctx):
         if not pkgs:    
             print cmd.get_str()
 
-poldek.poldeklib_init()
+poldek.lib_init()
 
-poldctx = poldek.poldek_ctx()
+ctx = poldek.poldek_ctx()
 #poldek_set_verbose(1)
 src = poldek.source('ac-test')
-poldctx.configure(poldctx.CONF_SOURCE, src)
-poldctx.load_config()
-if not poldctx.setup():
+ctx.configure(ctx.CONF_SOURCE, src)
+ctx.load_config()
+if not ctx.setup():
     raise Exception, "error"
 
-cctx = poldek.poclidek_ctx(poldctx);
+
+cctx = poldek.poclidek_ctx(ctx);
 test_cli_ls(cctx)
+
+
+test_pkguinf(ctx)
+
+
 
 #test_cli_ls(poldctx)
 #arr = poldctx.get_avail_packages()
@@ -71,7 +92,7 @@ sys.exit(0)
 ctx = poldek.poldek_ctx()
 #poldek_set_verbose(1)
 src = poldek.source('tt2')
-ctx.configure(ctx.CONF_SOURCE, src)
+ctx.configure(ctx.CONF_SOURCE, poldek.source('tt2'))
 ctx.load_config()
 ctx.setup()
 
@@ -79,12 +100,5 @@ test_search(ctx)
 
 
 print "END"
-
-
-
-
-
-
-
 
 
