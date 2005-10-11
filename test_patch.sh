@@ -1,5 +1,8 @@
 #! /bin/sh
 
+POLDEK_TESTING=1
+export POLDEK_TESTING
+
 while  [ $# -gt 0 ]; do
     case "$1" in
 	-t )
