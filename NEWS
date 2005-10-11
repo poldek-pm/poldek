@@ -1,21 +1,9 @@
-0.19.0 (major enhancements release; not released yet, not usable yet)
+0.20.0 (major enhancements release)
 
 I) Source repositories
 * repositories code has been totally rewritten in the modular, 
   plugin-like way, so is is quite easy to add support for new 
   formats. 
-
-  Currently supported formats:
-
-  name   caps description
-  -----------------------
-  pndir  rwu  Native poldek's index format (NEW)
-  pdir   rwu  Native poldek's index format prior to 0.20 version
-  dir    r--  Dynamic index built by scanning directory for packages
-  hdrl   r-u  File with raw RPM package headers; used by apt-rpm
-  rpmdb  r--  RPM package database (NEW)
-  yum    r-u  Yum index format (NEW)
-  ('rwu' stands for if index is able to read, write and update)
 
 * new 'pndir' is the default format now. It is based on tndb (cdb 
   like) DBM library. To save bandwidth package descriptions 
@@ -26,24 +14,25 @@ I) Source repositories
 
 * 'hdrl' aka 'apt' format are update-able now. 
 
-* repository indexes could be created in many formats at once
-  (using --mkidx-type=TYPE[,TYPE]), ex:
+* support for Yum and Metadata XML formats. 
 
-  $ poldek -s /foo/bar --mkdix --mkidx-type=pdir,pndir
+* repository indexes could be created in many formats at once
+  (using --mt=TYPE[,TYPE]), ex:
+
+  $ poldek -s /foo/bar --mkdix --mt=pdir,pndir
 
 * indexes may be created from any index format, i.e conversion to
   to another format is supported, ex:
-  $ poldek --st apt -s /foo/bar --mkidx=/ala/ma --mkidx-type=pdir
+  $ poldek --st apt -s /foo/bar --mkidx=/ala/ma --mt=pdir
 
 * (re)creation of native poldek's indexes (pdir, pndir) is much faster now 
   -- package headers are not loaded at all if package's file modification 
   time is the same as saved one in existing index.
 
-
 II) Installation related
 
 * uninstallation code has been rewritten, --erase and 
-  'uninstall' command work as expected now
+  'uninstall' command works properly now.
 
 * poldek can perform 'to repository' installation, i.e packages
   are copied from source to destination repository with full
@@ -58,7 +47,7 @@ III) Interactive mode
 * mode's commands are available without mode itself, i.e
   one can execute interactive commands from command-line:
   
-  $ poldek -C ls 
+  $ poldek --cmd ls 
   $ ipoldek install libfoo-0.1-1
 
 * aliases are defined in external configuration file 
@@ -66,18 +55,9 @@ III) Interactive mode
 
 * commands may be piped, ex:
   poldek> rsearch /poldek/ | ls -l
-  package                                build date        size
-  poldek-0.18.6-19                       2004/09/15 21:22  421.0 KB
-  poldex-0.17.4-1                        2004/08/17 22:12   47.0 KB
-  2 packages, 468.0 KB
 
 * external commands are supported too:
   poldek> rsearch /pol/ | grep ^pol
-  polcnv-2.2-3
-  poldek-0.18.6-19
-  poldex-0.17.4-1
-  policy-1.6-2
-
 
 IV) Configuration file 
 
@@ -100,7 +80,6 @@ IV) Configuration file
  _pld_prefix = ftp://ftp.pld.org.pl/dists/ra
  _ra_idxtype = pdir
 
- # PLD 1.0 (Ra)
  [source]
  type  = %{_ra_idxtype}
  name  = ra 
@@ -111,13 +90,11 @@ IV) Configuration file
   _pld_prefix = ftp://ftp.pld.org.pl/dists/ra
   %include %{_pld_prefix}/source.conf
 
-  Included remote files once downloaded are stored in cache directory, 
+  Included remote files once downloaded, are stored in cache directory, 
   to resynchronize them with it's remote copy use --upconf option. 
 
-* support for APT sources configuration has been added; by default
-  /etc/apt/sources.list is loaded if user configuration ($HOME/.poldekrc) 
-  doesn't exist. To load it with personal config too, put 
-  "load apt sources list = yes" to config.
+* support for APT sources configuration has been added ("load apt sources list"
+  option.
 
 V) General 
 
@@ -129,8 +106,40 @@ V) General
   --unique-pkg-names       => --uniq
   --shcmd                  =>                   (use --cmd or run ipoldek)
 
+* manual have been rewritten and enhanced.
 
-                            ==== 0.18.x ====
+
+
+                            ==== 0.18.x series ====
+
+0.18.9 (bugfix release; 2005/07/03)
+This is the (hope) last release of 0.18.x branch.
+* handle package file 'mtime' tag ('t' tag) to be compatible with devel branch.
+* fixes related to glibc 2.3.5 by Jakub Bogusz (<qboosh att pld-linux org>) and 
+  Arkadiusz Miskiewicz (<arekm att pld-linux org>):
+  - fixed cookie seek functions
+  - setvbuf() with small buffer to avoid reverse gzseeks on small forward fseeks
+  - do fread() instead of small forward fseeks
+* fixed compilation with gcc 4.x (PLD's poldek-gcc4.patch)
+* dependency resolving issues (Mariusz Krynski <mrk att sed pl>):
+  - packages marked for removal are not treated as candidates to upgrade
+  - user can choose among equivalents during conflict resolving.
+* new --pmcmd to set rpm binary in place of default /bin/rpm
+  (Jan Rekorajski <baggins att sith.mimuw.edu.pl>)
+
+0.18.8 (bugfix release; 2004/12/30)
+* fixed checking file-based dependencies of packages being removed
+* fixed another dependency processing bug (hard to explain)
+* 'ls' output fixes to be parsable by external scripts (Patryk Zawadzki 
+  <patrys at pld-dc org>)
+* removed usage of superfluous n_free() (Tomasz Wittner <twittner at o2 pl>)
+* vfile's progress bar: fixed displaying total transfer and rate 
+  (Lukasz Masko at ipipan waw pl)
+* support for RPM 4.4 
+* fixed build under Owl (rpm 4.0.2 without libelf)
+* workaround for "group not found" bug 
+* pl and de translation fixes (PLD Team)
+
 
 0.18.7 (major bugfix release; 2004/09/24)
 * another stupid SIGSEGV killed (happened occasionally while dependency 
