@@ -56,6 +56,7 @@ extern struct poclidek_cmd command_pwd;
 extern struct poclidek_cmd command_external;
 extern struct poclidek_cmd command_help;
 extern struct poclidek_cmd command_alias;
+extern struct poclidek_cmd command_reload;
 
 static struct poclidek_cmd *commands_tab[] = {
     &command_ls,
@@ -69,6 +70,7 @@ static struct poclidek_cmd *commands_tab[] = {
     &command_external,
     &command_help,
     &command_alias,
+    &command_reload,
     NULL
 };
 

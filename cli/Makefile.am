@@ -32,6 +32,7 @@ libpoclidek_la_SOURCES  =  \
 			uninstall.c     \
 	        desc.c          \
 		    search.c        \
+			reload.c		\
 			cd.c            \
 			help.c		    \
 			external.c      \
