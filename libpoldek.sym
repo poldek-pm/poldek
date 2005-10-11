@@ -89,6 +89,7 @@ pkg_path
 pkg_path_s
 pkg_pkgdirpath
 pkg_printf
+pkg_requires_versioned_cap
 pkg_set_arch
 pkg_set_os
 pkg_snprintf
@@ -102,6 +103,7 @@ pkg_stritime
 pkg_strcmp_name_evr
 pkg_ncmp_name
 pkg_strsize
+pkg_xmatch_req
 pkgdb_close
 pkgdb_free
 pkgdb_get_conflicted_dbpkgs
