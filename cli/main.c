@@ -314,6 +314,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_DOCB:
             argsp->cnflags |= OPT_AS_FLAG(OPT_DOCB);
             break;
+            
+        case 'G':               /* XXX have no idea why this case from install.c
+                                   does not work */
+            ts->setop(ts, POLDEK_OP_GREEDY, 1);
+            break;
+
 
         case ARGP_KEY_ARG:
             DBGF("main.arg %s, mode = %d\n", arg, argsp->mode);
