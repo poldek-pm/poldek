@@ -128,11 +128,57 @@ struct poclidek_rcmd {};
     ~pkgdir() { pkgdir_free(self); }
 }
 
+
+/**
+   opaque redeclaration of fl iterator 
+
+**/
+struct pkgfl_it {};
+struct tn_tuple {};
+
+%{
+
+struct pkgfl_it *pkgfl_it_new(tn_tuple *fl);
+const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile);
+
+struct pkgfl_it {};
+struct tn_tuple {};
+
+%}
+
+struct pkgfl_it *pkgfl_it_new(tn_tuple *fl);
+const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile);
+
+%extend pkgfl_it {
+    pkgfl_it(struct pkgfl_it *ptr) { return ptr; } /* conv constructor */
+    pkgfl_it(tn_tuple *fl) { return pkgfl_it_new(fl); }
+    const char *next() { return pkgfl_it_get(self, NULL); }
+    PyObject *next_tuple() { 
+        int32_t size;
+        uint16_t mode;
+        const char *bn, *path;
+        PyObject *tuple = NULL;
+
+        if ((path = pkgfl_it_get_rawargs(self, &size, &mode, &bn)) == NULL) {
+             Py_INCREF(Py_None); 
+             return Py_None;
+        }
+        
+        tuple = PyTuple_New(4);
+        PyTuple_SET_ITEM(tuple, 0, Py_BuildValue("s", path));
+        PyTuple_SET_ITEM(tuple, 1, PyInt_FromLong(size));
+        PyTuple_SET_ITEM(tuple, 2, PyInt_FromLong(mode));
+        PyTuple_SET_ITEM(tuple, 3, Py_BuildValue("s", bn));
+        return tuple;
+    }
+    ~pkg_fl(self) { free(self); }
+}
+
 %extend pkg {
     pkg(void *ptr) { return ptr; } /* conv constructor */
     tn_array *_get_provides() { return self->caps; }
     tn_array *_get_requires() { return self->reqs; }
-    struct pkguinf *pkguinf() { return pkg_info(self); }
+    struct pkgfl_it *filelist_it() { return pkgfl_it_new(self->fl); }
     ~pkg() { pkg_free(self); }
 }
 

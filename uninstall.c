@@ -99,7 +99,7 @@ tn_array *get_orphanedby_pkg(struct uninstall_ctx *uctx, struct pkg *pkg)
         const char *path;
 
         pkgfl_it_init(&it, pkg->fl);
-        while ((path = pkgfl_it_get_next(&it, NULL))) {
+        while ((path = pkgfl_it_get(&it, NULL))) {
             struct capreq *cap;
             capreq_new_name_a(path, cap);
             n += pkgdb_q_what_requires(uctx->db, orphans, cap, 
@@ -139,7 +139,7 @@ int pkg_leave_orphans(struct uninstall_ctx *uctx, struct pkg *pkg)
         const char *path;
 
         pkgfl_it_init(&it, pkg->fl);
-        while ((path = pkgfl_it_get_next(&it, NULL))) {
+        while ((path = pkgfl_it_get(&it, NULL))) {
             struct capreq *cap;
             capreq_new_name_a(path, cap);
             if (pkgdb_q_is_required(uctx->db, cap, uctx->uninst_set->dbpkgs))

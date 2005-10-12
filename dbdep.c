@@ -195,7 +195,7 @@ static void remove_files(tn_hash *db_deph, struct pkg *pkg, int load_full_fl)
 
     fl = pkg->fl;
     if (load_full_fl) {
-        if ((flist = pkg_info_get_flist(pkg)) == NULL ||
+        if ((flist = pkg_get_flist(pkg)) == NULL ||
             n_tuple_size(flist->fl) == 0)
             return;
 
@@ -252,7 +252,7 @@ static void remove_files(tn_hash *db_deph, struct pkg *pkg, int load_full_fl)
     }
     
     if (flist)
-        pkg_info_free_flist(flist);
+        pkg_free_flist(flist);
 }
 
 

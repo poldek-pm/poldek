@@ -75,8 +75,13 @@ struct pkgfl_it {
     char path[PATH_MAX], *endp;
 };
 
+struct pkgfl_it *pkgfl_it_new(tn_tuple *fl);
 void pkgfl_it_init(struct pkgfl_it *it, tn_tuple *fl);
-const char *pkgfl_it_get_next(struct pkgfl_it *it, struct flfile **flfile);
+const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile);
+
+/* to simplify python wrapper */
+const char *pkgfl_it_get_rawargs(struct pkgfl_it *it, uint32_t *size, uint16_t *mode,
+                                 const char **basename);
 
 #endif /* POLDEK_PKGFL_H */
 

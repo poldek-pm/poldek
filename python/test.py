@@ -12,13 +12,20 @@ def test_pkguinf(ctx):
     if len(arr) == 0:
         return 
         
-    pkg = arr[0]
-    inf = pkg.pkguinf()
+    pkg = arr[50]
+    inf = pkg.uinf()
     print "Package: ", pkg
     print "Summary: ", inf.get(inf.SUMMARY)
     print "License: ", inf.get(inf.LICENSE)
     print "URL:     ", inf.get(inf.URL)
     print "Description:\n", inf.get(inf.DESCRIPTION)
+
+    it = pkg.filelist_it()
+    print it
+    f = it.next_tuple()
+    while f:
+        print f
+        f = it.next_tuple()
 
 
 def test_avail(ctx):

@@ -435,9 +435,9 @@ static int search_pkg_files(struct pkg *pkg, struct pattern *pt)
     if (pkg->fl && fl_match(pkg->fl, pt))
         return 1;
 
-    if ((flist = pkg_info_get_nodep_flist(pkg)) != NULL) {
+    if ((flist = pkg_get_nodep_flist(pkg)) != NULL) {
         match = fl_match(flist->fl, pt);
-        pkg_info_free_flist(flist);
+        pkg_free_flist(flist);
     }
     
     return match;
@@ -511,7 +511,7 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
         struct pkguinf *pkgu;
         const char *s;
         
-        if ((pkgu = pkg_info(pkg)) == NULL) {
+        if ((pkgu = pkg_uinf(pkg)) == NULL) {
             logn(LOGERR, _("%s: load package info failed"), pkg_snprintf_s(pkg));
             
         } else {

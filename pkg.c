@@ -171,7 +171,6 @@ int pkg_set_os(struct pkg *pkg, const char *os)
 }
 
 
-
 /* always store fields in order: path, name, version, release, arch */
 struct pkg *pkg_new_ext(tn_alloc *na, 
                         const char *name, int32_t epoch,
@@ -941,7 +940,7 @@ int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg)
                                              (tn_fn_cmp)capreq_cmp2name));
 }
 
-struct pkguinf *pkg_info_ex(const struct pkg *pkg, tn_array *langs) 
+struct pkguinf *pkg_xuinf(const struct pkg *pkg, tn_array *langs) 
 {
     struct pkguinf *pkgu = NULL;
 
@@ -954,7 +953,7 @@ struct pkguinf *pkg_info_ex(const struct pkg *pkg, tn_array *langs)
     return pkgu;
 }
 
-struct pkguinf *pkg_info(const struct pkg *pkg) 
+struct pkguinf *pkg_uinf(const struct pkg *pkg) 
 {
     struct pkguinf *pkgu = NULL;
     if (pkg_has_ldpkguinf(pkg)) 
@@ -981,7 +980,7 @@ tn_tuple *do_pkg_other_fl(tn_alloc *na, const struct pkg *pkg)
     return fl;
 }
 
-struct pkgflist *pkg_info_get_nodep_flist(const struct pkg *pkg) 
+struct pkgflist *pkg_get_nodep_flist(const struct pkg *pkg) 
 {
     struct pkgflist *flist = NULL;
     tn_tuple *fl = NULL;
@@ -1000,7 +999,7 @@ struct pkgflist *pkg_info_get_nodep_flist(const struct pkg *pkg)
 }
 
 
-struct pkgflist *pkg_info_get_flist(const struct pkg *pkg) 
+struct pkgflist *pkg_get_flist(const struct pkg *pkg) 
 {
     struct pkgflist *flist = NULL;
     tn_tuple *fl = NULL;
@@ -1053,7 +1052,7 @@ struct pkgflist *pkg_info_get_flist(const struct pkg *pkg)
     return flist;
 }
 
-void pkg_info_free_flist(struct pkgflist *flist)
+void pkg_free_flist(struct pkgflist *flist)
 {
     DBGF("FRE %p, fl = %p, na = %p\n", flist, flist ? flist->fl : NULL,
            flist ? flist->_na : NULL);

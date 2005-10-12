@@ -311,7 +311,7 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf,
 
     DBGF("%s\n", pkg_snprintf_s(pkg));
     
-    flist = pkg_info_get_flist(pkg);
+    flist = pkg_get_flist(pkg);
     DBGF("flist = %p\n", flist);
     if (flist == NULL)
         return;
@@ -335,7 +335,7 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf,
         }
     }
     DBGF("END %s\n", pkg_snprintf_s(pkg));
-    pkg_info_free_flist(flist);
+    pkg_free_flist(flist);
 }
 
 
@@ -385,7 +385,7 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
         struct pkguinf *pkgu;
         
         //mem_info(-10, "before uinf");
-        if ((pkgu = pkg_info(pkg))) {
+        if ((pkgu = pkg_uinf(pkg))) {
             pkg_store_bintag(PKG_STORETAG_UINF, nbuf);
             pkguinf_store(pkgu, nbuf, "C");
             n_buf_printf(nbuf, "\n");

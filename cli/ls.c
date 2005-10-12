@@ -316,7 +316,7 @@ static void ls_summary(struct cmdctx *cmdctx, struct pkg *pkg)
     const char *s;
     
     
-    if ((pkgu = pkg_info(pkg)) == NULL)
+    if ((pkgu = pkg_uinf(pkg)) == NULL)
         return;
     
     if ((s = pkguinf_getstr(pkgu, PKGUINF_SUMMARY)))

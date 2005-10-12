@@ -217,8 +217,8 @@ char *pkg_evr_snprintf_s(const struct pkg *pkg);
 
 
 /* must be free()d by pkguinf_free(); see pkgu.h */
-struct pkguinf *pkg_info(const struct pkg *pkg);
-struct pkguinf *pkg_info_ex(const struct pkg *pkg, tn_array *langs);
+struct pkguinf *pkg_uinf(const struct pkg *pkg);
+struct pkguinf *pkg_xuinf(const struct pkg *pkg, tn_array *langs);
 
 struct pkgflist {
     tn_tuple *fl;
@@ -226,9 +226,15 @@ struct pkgflist {
 };
 
 /* load and returns not loaded file list (l: tag in package index) */
-struct pkgflist *pkg_info_get_nodep_flist(const struct pkg *pkg);
-struct pkgflist *pkg_info_get_flist(const struct pkg *pkg);
-void pkg_info_free_flist(struct pkgflist *flist);
+struct pkgflist *pkg_get_nodep_flist(const struct pkg *pkg);
+
+/* returns whole file list, (L: + l:) */
+struct pkgflist *pkg_get_flist(const struct pkg *pkg);
+
+void pkg_free_flist(struct pkgflist *flist);
+
+//struct pkgfl_it;
+//struct pkgfl_it *pkg_file_it(const struct pkg *pkg);
 
 
 const char *pkg_group(const struct pkg *pkg);

@@ -860,7 +860,7 @@ struct pkgdir *load_orig_pkgdir(struct pkgdir *pkgdir, const char *path,
 }
 
     
-extern pdir_pkgdir_uniq(struct pkgdir *pkgdir);
+extern int pdir_pkgdir_uniq(struct pkgdir *pkgdir);
 
 int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
                    const char *path, unsigned flags)

@@ -557,8 +557,19 @@ void pkgfl_dump(tn_tuple *fl)
     return;
 }
 
+struct pkgfl_it *pkgfl_it_new(tn_tuple *fl) 
+{
+    struct pkgfl_it *it;
+
+    it = n_malloc(sizeof(*it));
+    pkgfl_it_init(it, fl);
+    return it;
+}
+
 void pkgfl_it_init(struct pkgfl_it *it, tn_tuple *fl)
 {
+    memset(it, 0, sizeof(*it));
+    
     it->fl = fl;
     it->flent = NULL;
     it->i = it->j = 0;
@@ -569,7 +580,8 @@ void pkgfl_it_init(struct pkgfl_it *it, tn_tuple *fl)
         it->flent = n_tuple_nth(fl, it->i++);
 }
 
-const char *pkgfl_it_get_next(struct pkgfl_it *it, struct flfile **flfile)
+
+const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile)
 {
     struct flfile *file;
     int path_left_size;
@@ -606,3 +618,23 @@ const char *pkgfl_it_get_next(struct pkgfl_it *it, struct flfile **flfile)
     
     return it->path;
 }
+
+
+/* to simplify python wrapper, i.e do not map flfile struct in it */
+const char *pkgfl_it_get_rawargs(struct pkgfl_it *it, uint32_t *size, uint16_t *mode,
+                                 const char **basename)
+{
+    const char *path;
+    struct flfile *file;
+
+    if ((path = pkgfl_it_get(it, &file))) {
+        *size = file->size;
+        *mode = file->mode;
+        *basename = file->basename;
+    }
+    
+    return path;
+}
+
+
+                             

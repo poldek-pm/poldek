@@ -85,7 +85,7 @@ static int process_pkg_orphans(struct install_ctx *ictx, struct pkg *pkg)
         const char *path;
 
         pkgfl_it_init(&it, pkg->fl);
-        while ((path = pkgfl_it_get_next(&it, NULL))) {
+        while ((path = pkgfl_it_get(&it, NULL))) {
             if (!is_iset_provides_capn(ictx, pkg, path)) 
                 n += pkgdb_get_pkgs_requires_capn(db, ictx->orphan_dbpkgs, path,
                                                   ictx->uninst_set->dbpkgs,
@@ -332,7 +332,7 @@ int in_process_pkg_obsoletes(int indent, struct install_ctx *ictx,
             cap->_buf[0] = '\0';
 
             pkgfl_it_init(&it, dbpkg->fl);
-            while ((path = pkgfl_it_get_next(&it, NULL))) {
+            while ((path = pkgfl_it_get(&it, NULL))) {
                 int len = strlen(path);
                 if (len < PATH_MAX - 2) {
                     memcpy(&cap->_buf[1], path, len + 1); /* XXX: hacky */

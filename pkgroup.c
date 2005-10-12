@@ -451,7 +451,7 @@ struct pkgroup_idx *pkgroup_idx_restore(tn_buf_it *it, unsigned flags)
 int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr) 
 {
     char               **langs, **groups;
-    int                i, ngroups = 0, nlangs = 0, rc;
+    int                i, ngroups = 0, nlangs = 0;
     struct pkgroup     *gr = NULL;
     Header             h;
 

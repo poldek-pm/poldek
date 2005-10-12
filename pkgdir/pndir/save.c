@@ -724,7 +724,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         if (!save_descr)
             continue;
         
-        if ((pkgu = pkg_info_ex(pkg, langstosave))) {
+        if ((pkgu = pkg_xuinf(pkg, langstosave))) {
             int v;
             
             v = pndir_save_pkginfo(i, pkgu, langstosave_h, db_dscr_h, key, klen,

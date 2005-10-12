@@ -101,6 +101,7 @@ setattr(pkg, 'requires',
         n_array_proxy_func('pkg.', '_get_requires', 'capreq'))
 
 _complete_class(pkguinf, 'pkguinf_', verbose = 0)
+#_complete_class(pkguinf, 'pkgfl_it_', verbose = 0)
 
 _complete_class(source, 'source_')
 _complete_class(pkgdir, 'pkgdir_')

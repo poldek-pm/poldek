@@ -86,10 +86,10 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs)
 {
     struct pkgflist *flist;
 
-    flist = pkg_info_get_flist(pkg);
+    flist = pkg_get_flist(pkg);
     if (flist == NULL || n_tuple_size(flist->fl) == 0) {
         if (flist)
-            pkg_info_free_flist(flist);
+            pkg_free_flist(flist);
         return;
     }
 
@@ -107,7 +107,7 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs)
         pkgfl_store(flist->fl, nbuf, NULL, depdirs, PKGFL_NOTDEPDIRS);
     }
     
-    pkg_info_free_flist(flist);
+    pkg_free_flist(flist);
 }
 
 static
@@ -161,7 +161,7 @@ int do_pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
         struct pkguinf *pkgu;
         
         //mem_info(-10, "before uinf");
-        if ((pkgu = pkg_info(pkg))) {
+        if ((pkgu = pkg_uinf(pkg))) {
             n_buf_printf(nbuf, "U:\n");
             pkguinf_store_rpmhdr(pkgu, nbuf);
             n_buf_printf(nbuf, "\n");

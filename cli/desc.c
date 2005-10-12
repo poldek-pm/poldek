@@ -669,7 +669,7 @@ static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt)
     struct pkgflist *flist;
     int term_width;
     
-    if ((flist = pkg_info_get_flist(pkg)) == NULL)
+    if ((flist = pkg_get_flist(pkg)) == NULL)
         return;
 
     term_width = poldek_term_get_width() - RMARGIN;
@@ -679,7 +679,7 @@ static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt)
     else
         list_files(cmdctx, flist->fl, term_width);
 
-    pkg_info_free_flist(flist);
+    pkg_free_flist(flist);
 }
 
 static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags)
@@ -710,7 +710,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
     const char      *group, *s;
     double          pkgsize;
     
-    if ((pkgu = pkg_info(pkg)) == NULL && poldek_verbose() > 1) {
+    if ((pkgu = pkg_uinf(pkg)) == NULL && poldek_verbose() > 1) {
         log(LOGWARN, _("%s: full description unavailable (index without "
                        "packages info loaded?)\n"), pkg_snprintf_s(pkg));
     }
