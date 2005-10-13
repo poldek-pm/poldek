@@ -89,7 +89,7 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs)
     flist = pkg_get_flist(pkg);
     if (flist == NULL || n_tuple_size(flist->fl) == 0) {
         if (flist)
-            pkg_free_flist(flist);
+            pkgflist_free(flist);
         return;
     }
 
@@ -106,8 +106,8 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs)
         n_buf_printf(nbuf, "l:\n");
         pkgfl_store(flist->fl, nbuf, NULL, depdirs, PKGFL_NOTDEPDIRS);
     }
-    
-    pkg_free_flist(flist);
+
+    pkgflist_free(flist);
 }
 
 static

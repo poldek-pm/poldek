@@ -437,7 +437,7 @@ static int search_pkg_files(struct pkg *pkg, struct pattern *pt)
 
     if ((flist = pkg_get_nodep_flist(pkg)) != NULL) {
         match = fl_match(flist->fl, pt);
-        pkg_free_flist(flist);
+        pkgflist_free(flist);
     }
     
     return match;

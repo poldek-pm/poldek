@@ -231,10 +231,19 @@ struct pkgflist *pkg_get_nodep_flist(const struct pkg *pkg);
 /* returns whole file list, (L: + l:) */
 struct pkgflist *pkg_get_flist(const struct pkg *pkg);
 
-void pkg_free_flist(struct pkgflist *flist);
+void pkgflist_free(struct pkgflist *flist);
 
-//struct pkgfl_it;
-//struct pkgfl_it *pkg_file_it(const struct pkg *pkg);
+
+/* whole file list as iterator */
+struct pkgflist_it;
+struct pkgflist_it *pkg_get_flist_it(const struct pkg *pkg);
+
+struct flfile;
+const char *pkgflist_it_get(struct pkgflist_it *it, struct flfile **flfile);
+  /* to simplify python wrapper */
+const char *pkgflist_it_get_rawargs(struct pkgflist_it *it, uint32_t *size,
+                                    uint16_t *mode, const char **basename);
+void pkgflist_it_free(struct pkgflist_it *it);
 
 
 const char *pkg_group(const struct pkg *pkg);

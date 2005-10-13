@@ -59,8 +59,8 @@ pkg_file_url_type
 pkg_filename
 pkg_filename_s
 pkg_free
-pkg_free_flist
 pkg_get_flist
+pkg_get_flist_it
 pkg_get_nodep_flist
 pkg_get_verify_signflags
 pkg_group
@@ -159,6 +159,10 @@ pkgfl_restore
 pkgfl_restore_st
 pkgfl_skip_st
 pkgfl_store
+pkgflist_free
+pkgflist_it_get
+pkgflist_it_get_rawargs
+pkgflist_it_free
 pkgmark_get_packages
 pkgmark_isset
 pkgmark_massset

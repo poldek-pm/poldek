@@ -335,7 +335,7 @@ void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf,
         }
     }
     DBGF("END %s\n", pkg_snprintf_s(pkg));
-    pkg_free_flist(flist);
+    pkgflist_free(flist);
 }
 
 

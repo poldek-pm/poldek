@@ -1052,7 +1052,7 @@ struct pkgflist *pkg_get_flist(const struct pkg *pkg)
     return flist;
 }
 
-void pkg_free_flist(struct pkgflist *flist)
+void pkgflist_free(struct pkgflist *flist)
 {
     DBGF("FRE %p, fl = %p, na = %p\n", flist, flist ? flist->fl : NULL,
            flist ? flist->_na : NULL);
@@ -1060,7 +1060,46 @@ void pkg_free_flist(struct pkgflist *flist)
     if (flist->_na)
         n_alloc_free(flist->_na);
     else
-        n_free(flist);
+        free(flist);
+}
+
+struct pkgflist_it {
+    struct pkgflist *flist;
+    struct pkgfl_it *_it;
+};
+
+static struct pkgflist_it *pkgflist_it_new(struct pkgflist *flist)
+{
+    struct pkgflist_it *it = n_malloc(sizeof(*it));
+    it->flist = flist;
+    it->_it = pkgfl_it_new(flist->fl);
+    return it;
+}
+
+void pkgflist_it_free(struct pkgflist_it *it)
+{
+    pkgflist_free(it->flist);
+    free(it->_it);
+    free(it);
+}
+
+const char *pkgflist_it_get(struct pkgflist_it *it, struct flfile **flfile)
+{
+    return pkgfl_it_get(it->_it, flfile);
+}
+
+const char *pkgflist_it_get_rawargs(struct pkgflist_it *it, uint32_t *size,
+                                    uint16_t *mode, const char **basename)
+{
+    return pkgfl_it_get_rawargs(it->_it, size, mode, basename);
+}
+
+struct pkgflist_it *pkg_get_flist_it(const struct pkg *pkg) 
+{
+    struct pkgflist *flist = pkg_get_flist(pkg);
+    if (flist)
+        return pkgflist_it_new(flist);
+    return NULL;
 }
 
 const char *pkg_group(const struct pkg *pkg) 

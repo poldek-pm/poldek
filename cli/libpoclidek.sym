@@ -1,6 +1,7 @@
 cmdctx_addtoresult
 cmdctx_printf
 cmdctx_printf_c
+pkg_dent_add_dir
 pkg_dent_add_pkg
 pkg_dent_add_pkgs
 pkg_dent_adddir
@@ -17,6 +18,7 @@ poclidek_chdir
 poclidek_cmd_ncmp
 poclidek_dent_dirpath
 poclidek_dent_find
+poclidek_dent_ldfind
 poclidek_dent_root
 poclidek_exec
 poclidek_execline

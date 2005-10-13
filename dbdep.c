@@ -252,7 +252,7 @@ static void remove_files(tn_hash *db_deph, struct pkg *pkg, int load_full_fl)
     }
     
     if (flist)
-        pkg_free_flist(flist);
+        pkgflist_free(flist);
 }
 
 

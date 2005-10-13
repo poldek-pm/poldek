@@ -101,12 +101,18 @@ void pkg_dent_free(struct pkg_dent *ent)
         ent->_refcnt--;
         return;
     }
-    
-    if (ent->flags & PKG_DENT_DIR)
-        n_array_free(ent->pkg_dent_ents);
-    else
-        pkg_free(ent->pkg_dent_pkg);
 
+    if (ent->flags & PKG_DENT_DIR) {
+        n_assert(ent->pkg_dent_ents);
+        n_array_free(ent->pkg_dent_ents);
+        ent->pkg_dent_ents = NULL;
+        
+    } else {
+        pkg_free(ent->pkg_dent_pkg);
+        ent->pkg_dent_pkg = NULL;
+    }
+    
+    
     ent->flags |= PKG_DENT_DELETED;
     //free(ent); - obstacked 
 }

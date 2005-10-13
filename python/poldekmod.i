@@ -12,10 +12,12 @@
 #include "pkgdir/source.h"
 #include "pkgdir/pkgdir.h"
 #include "cli/poclidek.h"
+#include "cli/dent.h"
 %}
 %include exception.i
 %include "local_stdint.h"
 %include "trurl/narray.h"
+%include "capreq.h"
 %include "pkg.h"
 %include "pkgu.h"
 %include "poldek.h"
@@ -23,12 +25,13 @@
 %include "pkgdir/source.h"
 %include "pkgdir/pkgdir.h"
 %include "cli/poclidek.h"
-%include "capreq.h"
+%include "cli/dent.h"
 
 
 struct poldek_ctx {};
 struct poldek_ts {};
 struct pkguinf {};
+struct pkgflist_it {};
 
 struct poclidek_ctx {};
 struct poclidek_rcmd {};
@@ -62,7 +65,13 @@ struct poclidek_rcmd {};
     ~capreq() { capreq_free(self); }
 }
 
-            
+%extend pkg_dent {
+    pkg_dent(void *dent) { return dent; };
+    ~pkg_dent() { pkg_dent_free(self); }
+    
+    #struct pkg *pkg() { if (self->flags & PKG_DENT_DIR) return NULL; return self->ent->pkg; }
+        #    tn_array *ENTS() { if (self->flags & PKG_DENT_DIR) return self->ent->ents; return NULL  }
+}            
 
 
 %extend poclidek_rcmd {
@@ -95,7 +104,7 @@ struct poclidek_rcmd {};
 
 %extend tn_array {
     tn_array(int size) { return n_array_new_ex(size, NULL, NULL, NULL); };
-    tn_array(void *arr) { return arr; };
+    tn_array(void *arr) { return n_ref(arr); };
     int __len__() { return n_array_size(self); }
     void *nth(int i) {
         if (i < n_array_size(self))
@@ -153,7 +162,7 @@ const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile);
     pkgfl_it(struct pkgfl_it *ptr) { return ptr; } /* conv constructor */
     pkgfl_it(tn_tuple *fl) { return pkgfl_it_new(fl); }
     const char *next() { return pkgfl_it_get(self, NULL); }
-    PyObject *next_tuple() { 
+    PyObject *get_tuple() { 
         int32_t size;
         uint16_t mode;
         const char *bn, *path;
@@ -171,8 +180,32 @@ const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile);
         PyTuple_SET_ITEM(tuple, 3, Py_BuildValue("s", bn));
         return tuple;
     }
-    ~pkg_fl(self) { free(self); }
+    ~pkgfl_it(self) { free(self); }
 }
+
+
+%extend pkgflist_it {
+    pkgflist_it(struct pkgflist_it *ptr) { return ptr; } /* conv constructor */
+    PyObject *get_tuple() { 
+        int32_t size;
+        uint16_t mode;
+        const char *bn, *path;
+        PyObject *tuple = NULL;
+
+        if ((path = pkgflist_it_get_rawargs(self, &size, &mode, &bn)) == NULL) {
+             Py_INCREF(Py_None); 
+             return Py_None;
+        }
+        
+        tuple = PyTuple_New(3);
+        PyTuple_SET_ITEM(tuple, 0, Py_BuildValue("s", path));
+        PyTuple_SET_ITEM(tuple, 1, PyInt_FromLong(size));
+        PyTuple_SET_ITEM(tuple, 2, PyInt_FromLong(mode));
+        return tuple;
+    }
+    ~pkgflist_it(self) { pkgflist_it_free(self); }
+}
+
 
 %extend pkg {
     pkg(void *ptr) { return ptr; } /* conv constructor */

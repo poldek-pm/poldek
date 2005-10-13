@@ -7,7 +7,7 @@ import string
 from types import *
 import poldekmod
 from poldekmod import tn_array, poldek_ctx, poldek_ts, pkg, capreq, pkguinf, \
-    source, pkgdir, poclidek_ctx, poclidek_rcmd
+    pkgflist_it, source, pkgdir, poclidek_ctx, poclidek_rcmd, pkg_dent
 
 def lib_init():
     poldekmod.poldeklib_init()
@@ -51,9 +51,14 @@ def n_array_proxy_method(prefix, func, classnam):
 
 
 def _complete_class(aclass, prefix, delprefix = None, nomethods = False,
-                    verbose = 0):
+                    verbose = 0, exclude = None):
+    exclude_regexp = None
     regexp = re.compile('^%s' % prefix)
     regexp_up = re.compile('^%s' % string.upper(prefix))
+
+    if exclude:
+        exclude_regexp = re.compile('^%s' % exclude)
+        
     if delprefix:
         l = len(delprefix)
     else:
@@ -61,6 +66,11 @@ def _complete_class(aclass, prefix, delprefix = None, nomethods = False,
     for k, elem in poldekmod.__dict__.items():
         #elem = poldekmod.__dict__[k]
         if not nomethods:
+            if exclude_regexp and exclude_regexp.match(k):
+                if verbose:
+                    print "Exclude %s %s" % (aclass, k)
+                continue
+            
             if regexp.match(k) and type(elem) == BuiltinFunctionType:
                 name = k[l:]
                 if not hasattr(aclass, name):
@@ -101,7 +111,9 @@ setattr(pkg, 'requires',
         n_array_proxy_func('pkg.', '_get_requires', 'capreq'))
 
 _complete_class(pkguinf, 'pkguinf_', verbose = 0)
-#_complete_class(pkguinf, 'pkgfl_it_', verbose = 0)
+
+_complete_class(pkgflist_it, 'pkgflist_it_', verbose = 0)
+setattr(pkgflist_it, 'get', eval('lambda self, *args: poldekmod.pkgflist_it_get(self, None)'));
 
 _complete_class(source, 'source_')
 _complete_class(pkgdir, 'pkgdir_')
@@ -110,3 +122,27 @@ _complete_class(pkgdir, 'pkgdir_')
 _complete_class(poclidek_rcmd, 'poclidek_rcmd_')
 setattr(poclidek_rcmd, 'get_packages',
         n_array_proxy_func('poclidek_rcmd_', 'get_packages', 'pkg'))
+
+_complete_class(poclidek_ctx, 'poclidek_', verbose = 1, exclude = 'poclidek_rcmd_')
+
+_complete_class(pkg_dent, 'pkg_dent_');
+
+
+def dent_get_pkg(self):
+    if self.flags & self.DIR:
+        return None
+    return self.ent.pkg
+
+
+def dent_get_ents(self):
+    if self.flags & self.DIR:
+        self.ent.ents
+        return self.ent.ents 
+    return NULL
+
+n_array_proxy_func('poldek_', fn, 'pkg')
+setattr(pkg_dent, 'ents', eval('lambda self, *args: n_array_proxy(dent_get_ents(self), pkg_dent)'))
+setattr(pkg_dent, 'pkg', dent_get_pkg)
+
+
+

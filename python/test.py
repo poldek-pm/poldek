@@ -20,12 +20,12 @@ def test_pkguinf(ctx):
     print "URL:     ", inf.get(inf.URL)
     print "Description:\n", inf.get(inf.DESCRIPTION)
 
-    it = pkg.filelist_it()
+    it = pkg.get_flist_it()
     print it
-    f = it.next_tuple()
+    f = it.get()
     while f:
         print f
-        f = it.next_tuple()
+        f = it.get_tuple()
 
 
 def test_avail(ctx):
@@ -84,10 +84,15 @@ if not ctx.setup():
 
 
 cctx = poldek.poclidek_ctx(ctx);
-test_cli_ls(cctx)
+cctx.load_packages(cctx.LOAD_ALL)
+dent = cctx.dent_root()
+
+print dent.ents()
+
+#test_cli_ls(cctx)
 
 
-test_pkguinf(ctx)
+#test_pkguinf(ctx)
 
 
 

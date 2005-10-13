@@ -679,7 +679,7 @@ static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt)
     else
         list_files(cmdctx, flist->fl, term_width);
 
-    pkg_free_flist(flist);
+    pkgflist_free(flist);
 }
 
 static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags)
