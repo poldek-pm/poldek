@@ -128,6 +128,9 @@ N_("Same as --force but applied to PM (rpm) only)"), OPT_GID },
  N_("pass option OPTION to PM binary"), OPT_GID },
 {"rpm", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
 
+{"nohold", OPT_INST_NOHOLD, 0, 0,
+ N_("Do not hold any packages. Disables --hold settings."), OPT_GID },    
+
 /* hidden, for debugging/testing purposes */
 {"nofetch", OPT_INST_NOFETCH, 0, OPTION_HIDDEN, 
      N_("Do not download packages"), OPT_GID },    
@@ -166,8 +169,6 @@ static struct argp_option cmdl_options[] = {
 {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
  N_("Prevent packages listed from being upgraded if they are already installed."),
      OPT_GID },
-{"nohold", OPT_INST_NOHOLD, 0, 0,
- N_("Do not hold any packages. Disables --hold settings."), OPT_GID },
                                                 
 {"ignore", OPT_INST_IGNORE, "PACKAGE[,PACKAGE]...", 0,
  N_("Make packages listed invisible."), OPT_GID },
@@ -320,10 +321,6 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             poldek_configure(ts->ctx, POLDEK_CONF_HOLD, arg);
             break;
             
-        case OPT_INST_NOHOLD:
-            poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_HOLD, 0);
-            break;
-
         case OPT_INST_IGNORE:
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_IGNORE, 1);
             poldek_configure(ts->ctx, POLDEK_CONF_IGNORE, arg);
@@ -451,11 +448,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             poldek_ts_setf(ts, POLDEK_TS_DOWNGRADE);
             break;
 
-        case OPT_INST_HOLD:
-            ts->setop(ts, POLDEK_OP_HOLD, 1);
-            poldek_ts_configure(ts, POLDEK_CONF_HOLD, arg);
-            break;
-            
         case OPT_INST_NOHOLD:
             ts->setop(ts, POLDEK_OP_HOLD, 0);
             break;
