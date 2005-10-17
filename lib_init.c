@@ -320,7 +320,7 @@ tn_array *expand_sources_group(tn_array *srcs_named, tn_array *htcnf_sources,
 #if ENABLE_TRACE
     for (i=0; i < n_array_size(sources); i++) {
         struct source *s = n_array_nth(sources, i);
-        DBG_F("%d %s\n", i, s->name);
+        DBGF("%d %s\n", i, s->name);
     }
 #endif    
     return sources;
@@ -667,8 +667,8 @@ static void zlib_in_rpm(struct poldek_ctx *ctx)
     p_st_destroy(&pst);
 }
 
-
-void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
+static
+void poldek__ts_apply_config(struct poldek_ctx *ctx, struct poldek_ts *ts)
 {
     tn_hash           *htcnf = NULL;
     int               i;
@@ -690,26 +690,7 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
             DBGF("ldconfig %s(%d) = %d\n", default_op_map[i].name, op, v);
             ts->setop(ts, op, v);
         }
-
-        if (ts != ctx->ts &&    /* child, non internal ts */
-            ts->getop(ts, op) != ctx->ts->getop(ctx->ts, op)) {
-            if (poldek_ts_op_touched(ts, op)) {
-                DBGF("NOT apply %s(%d) = %d\n", default_op_map[i].name,
-                     op, ts->getop(ts, op));
-                goto l_continue_loop;
-            }
-            
-            
-            DBGF("apply %s(%d) = %d\n", default_op_map[i].name,
-                 op, ctx->ts->getop(ctx->ts, op));
-            ts->setop(ts, op, ctx->ts->getop(ctx->ts, op));
-        }
-    l_continue_loop:        
-        DBGF("ts   %s(%d) = %d\n", default_op_map[i].name, op, ts->getop(ts, op));
-        if (ctx->ts != ts)
-            DBGF(" ctx %s(%d) = %d\n", default_op_map[i].name, op,
-                 ctx->ts->getop(ctx->ts, op));
-
+        
         i++;
     }
     
@@ -721,14 +702,43 @@ void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts)
         ts->setop(ts, POLDEK_OP_AGGREEDY, v);
         ts->setop(ts, POLDEK_OP_FOLLOW, 1);
     }
-    
-    
-    DBGF("ts   hold(%d) = %d\n", POLDEK_OP_HOLD, ts->getop(ts, POLDEK_OP_HOLD));
-    if (ctx->ts != ts)
-        DBGF("ctx   hold(%d) = %d\n", POLDEK_OP_HOLD, ctx->ts->getop(ctx->ts, POLDEK_OP_HOLD));
 }
 
+static
+void poldek__ts_apply_poldek_settings(struct poldek_ctx *ctx,
+                                      struct poldek_ts *ts)
+{
+    int i = 0;
     
+    DBGF("ts %p, tsctx %p\n", ts, ctx->ts);
+    while (default_op_map[i].op) {
+        int op = default_op_map[i++].op;
+        
+        if (poldek_ts_op_touched(ts, op))  /* modified by cmdl opts */
+            continue;
+
+        if (poldek_ts_op_touched(ctx->ts, op) &&
+            ctx->ts->getop(ctx->ts, op) != ts->getop(ts, op)) {
+            
+            DBGF("apply %s(%d) = %d\n", default_op_map[i - 1].name,
+                   op, ctx->ts->getop(ctx->ts, op));
+            ts->setop(ts, op, ctx->ts->getop(ctx->ts, op));
+        }
+    }
+    
+    if (ts->getop(ts, POLDEK_OP_CONFIRM_INST) && poldek_VERBOSE < 1)
+        poldek_VERBOSE = 1;
+    
+    if (ts->getop(ts, POLDEK_OP_GREEDY))
+        ts->setop(ts, POLDEK_OP_FOLLOW, 1);
+}
+
+void poldek__ts_postconf(struct poldek_ctx *ctx, struct poldek_ts *ts)
+{
+    poldek__ts_apply_config(ctx, ts);
+    poldek__ts_apply_poldek_settings(ctx, ts);
+}
+
 
 int poldek_load_config(struct poldek_ctx *ctx, const char *path,
                        tn_array *addon_cnflines, unsigned flags)
@@ -764,7 +774,7 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path,
     if (ctx->htconf == NULL)
         return 0;
     
-    poldek__apply_tsconfig(ctx, ctx->ts);
+    poldek__ts_apply_config(ctx, ctx->ts);
 
     htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
     register_vf_handlers_compat(htcnf);

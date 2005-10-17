@@ -38,7 +38,7 @@ struct poldek_ctx {
 };
 
 int poldek__is_setup_done(struct poldek_ctx *ctx);
-void poldek__apply_tsconfig(struct poldek_ctx *ctx, struct poldek_ts *ts);
+void poldek__ts_postconf(struct poldek_ctx *ctx, struct poldek_ts *ts);
 
 struct pkgdb;
 struct pkgdb *poldek_ts_dbopen(struct poldek_ts *ts, mode_t mode);

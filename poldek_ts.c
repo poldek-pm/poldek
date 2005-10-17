@@ -747,7 +747,7 @@ static int ts_prerun0(struct poldek_ts *ts)
     n_assert(ts->pmctx);
 
     if (ts->_iflags & TS_CONFIG_LATER)
-        poldek__apply_tsconfig(ts->ctx, ts);
+        poldek__ts_postconf(ts->ctx, ts);
     
 #if 0 /* preserve && restore global confs or propagate it to ctx? */
     int op, v;
@@ -1149,14 +1149,14 @@ int poldek_ts_run(struct poldek_ts *ts, struct poldek_iinf *iinf)
         }
         i++;
     }
+
+    if (!ts_prerun0(ts))
+        return 0;
     
     n_assert(ts_run);
     if (ts_run->flags & TS_RUN_NEEDAVSET)
         poldek_load_sources(ts->ctx);
 
-    if (!ts_prerun0(ts))
-        return 0;
-    
     if ((ts_run->flags & TS_RUN_NOPRERUN) == 0)
         if (!ts_prerun(ts, iinf))
             return 0;
