@@ -513,6 +513,41 @@ int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr)
 }
 
 
+int pkgroup_idx_add(struct pkgroup_idx *idx, const char *group) 
+{
+    struct pkgroup     *gr = NULL;
+
+    if ((gr = n_hash_get(idx->ht, group)) == NULL) {
+        gr = pkgroup_new(n_array_size(idx->arr) + 1, group);
+        n_array_push(idx->arr, gr);
+        n_hash_insert(idx->ht, gr->name, gr);
+    }
+
+    if (gr)
+        DBGF("gr_add %d %s\n", gr->id, gr->name);
+    
+    if (gr)
+        return gr->id;
+    return 0;
+}
+
+int pkgroup_idx_add_i18n(struct pkgroup_idx *idx, int groupid,
+                         const char *group, const char *lang)
+{
+    struct pkgroup *gr, tmpgr;
+
+    n_assert(lang);
+    n_assert(strcmp(lang, "C") != 0);
+    
+    tmpgr.id = groupid;
+    if ((gr = n_array_bsearch(idx->arr, &tmpgr)) == NULL)
+        return 0;
+
+    pkgroup_add(gr, lang, group);
+    return gr->id;
+}
+
+
 static const char *find_tr(const char *lang, const struct pkgroup *gr)
 {
     struct tr *tr;

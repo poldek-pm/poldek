@@ -15,6 +15,11 @@ int pkgroup_idx_store(struct pkgroup_idx *idx, tn_buf *nbuf);
 struct pkgroup_idx *pkgroup_idx_restore(tn_buf_it *it, unsigned flags);
 struct pkgroup_idx *pkgroup_idx_restore_st(tn_stream *st, unsigned flags);
 
+
+int pkgroup_idx_add(struct pkgroup_idx *idx, const char *group);
+int pkgroup_idx_add_i18n(struct pkgroup_idx *idx, int groupid,
+                         const char *group, const char *lang);
+
 int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr);
 const char *pkgroup(struct pkgroup_idx *idx, int groupid);
 

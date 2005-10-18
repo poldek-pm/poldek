@@ -309,7 +309,12 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     if (vf == NULL)
         return 0;
 
-    pkgs = metadata_load_primary(pkgdir->na, vfile_localpath(vf));
+    if (pkgdir->pkgroups == NULL)
+        pkgdir->pkgroups = pkgroup_idx_new();
+
+    metadata_loadmod_init();
+
+    pkgs = metadata_load_primary(pkgdir, vfile_localpath(vf));
     vfile_close(vf);
 
     if (pkgs) {
@@ -329,6 +334,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         n_array_free(pkgs);
     }
 
+    metadata_loadmod_destroy();
+    
     return n_array_size(pkgdir->pkgs);
 }
 

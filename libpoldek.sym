@@ -175,9 +175,11 @@ pkgs_array_new_ex
 pkgscore_match
 pkgscore_match_init
 pkguinf_free
-pkguinf_getstr
+pkguinf_get
 pkguinf_langs
 pkguinf_link
+pkguinf_new
+pkguinf_set
 pm_configure
 pm_dbmtime
 pm_dbpath

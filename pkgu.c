@@ -66,6 +66,12 @@ struct pkguinf_i18n *pkguinf_i18n_new(tn_alloc *na, const char *summary,
     int s_len, d_len;
     struct pkguinf_i18n *inf;
     
+    if (summary == NULL)
+        summary = "";
+    
+    if (description == NULL)
+        description = "";
+    
     s_len = strlen(summary) + 1;
     d_len = strlen(description) + 1;
     inf = na->na_malloc(na, sizeof(*inf) + s_len + d_len);
@@ -77,8 +83,7 @@ struct pkguinf_i18n *pkguinf_i18n_new(tn_alloc *na, const char *summary,
     return inf;
 }
 
-static
-struct pkguinf *pkguinf_malloc(tn_alloc *na)
+struct pkguinf *pkguinf_new(tn_alloc *na)
 {
     struct pkguinf *pkgu;
     tn_alloc *_na = NULL;
@@ -106,7 +111,6 @@ struct pkguinf *pkguinf_malloc(tn_alloc *na)
 
     return pkgu;
 }
-
 
 void pkguinf_free(struct pkguinf *pkgu)
 {
@@ -243,6 +247,15 @@ void set_member(struct pkguinf *pkgu, char **m, const char *v, int len)
     *m = mm;
 }
 
+static char *na_strdup(tn_alloc *na, const char *v, int len)
+{
+    char *mm;
+
+    mm = na->na_malloc(na, len + 1);
+    memcpy(mm, v, len + 1);
+    return mm;
+}
+
 
 static char *cp_tag(tn_alloc *na, Header h, int rpmtag)
 {
@@ -268,7 +281,7 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
     struct pkguinf     *pkgu;
     Header             h = hdr;
     
-    pkgu = pkguinf_malloc(na);
+    pkgu = pkguinf_new(na);
     pkgu->_ht = n_hash_new(3, NULL);
     
     if ((langs = pm_rpmhdr_langs(h))) {
@@ -493,7 +506,7 @@ struct pkguinf *pkguinf_restore(tn_alloc *na, tn_buf_it *it, const char *lang)
     char *key = NULL, *val;
     size_t len = 0;
 
-    pkgu = pkguinf_malloc(na);
+    pkgu = pkguinf_new(na);
     
     if (lang && strcmp(lang, "C") == 0) {
         while ((key = n_buf_it_getz(it, &len))) {
@@ -572,7 +585,7 @@ int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang)
 }
 
 
-const char *pkguinf_getstr(const struct pkguinf *pkgu, int tag)
+const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
 {
     switch (tag) {
         case PKGUINF_LICENSE:
@@ -605,5 +618,66 @@ const char *pkguinf_getstr(const struct pkguinf *pkgu, int tag)
     return NULL;
 }
 
+int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
+                   const char *lang)
+{
+    int len;
+    
+    len = strlen(val);
+    
+    switch (tag) {
+        case PKGUINF_LICENSE:
+            set_member(pkgu, &pkgu->license, val, len);
+            break;
+            
+        case PKGUINF_URL:
+            set_member(pkgu, &pkgu->url, val, len);
+            break;
+                
+        case PKGUINF_VENDOR:
+            set_member(pkgu, &pkgu->vendor, val, len);
+            break;
+                
+        case PKGUINF_BUILDHOST:
+            set_member(pkgu, &pkgu->buildhost, val, len);
+            break;
 
+        case PKGUINF_DISTRO:
+            set_member(pkgu, &pkgu->distro, val, len);
+            break;
 
+        case PKGUINF_SUMMARY:
+        case PKGUINF_DESCRIPTION: 
+        {
+            struct pkguinf_i18n *inf;
+            
+            if (pkgu->_ht == NULL)
+                pkgu->_ht = n_hash_new(3, NULL);
+
+            if (lang == NULL)
+                lang = "C";
+            
+            if ((inf = n_hash_get(pkgu->_ht, lang)) == NULL) {
+                inf = pkguinf_i18n_new(pkgu->_na, NULL, NULL);
+                n_hash_insert(pkgu->_ht, lang, inf);
+            }
+
+            if (tag == PKGUINF_SUMMARY) {
+                inf->summary = na_strdup(pkgu->_na, val, len);
+                pkgu->summary = inf->summary;
+                
+            } else {
+                inf->description = na_strdup(pkgu->_na, val, len);
+                pkgu->description = inf->description;
+            }
+        }
+        
+        default:
+            if (poldek_VERBOSE > 2)
+                logn(LOGERR, "%d: unknown tag", tag);
+            return 0;
+            break;
+    }
+    
+    return 1;
+}

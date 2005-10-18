@@ -19,7 +19,7 @@ struct repomd_ent {
 
 /* name => repomd_ent */
 tn_hash *metadata_load_repomd(const char *path);
-tn_array *metadata_load_primary(tn_alloc *na, const char *path);
+tn_array *metadata_load_primary(struct pkgdir *pkgdir, const char *path);
 
 
 

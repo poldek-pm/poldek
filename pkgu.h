@@ -17,10 +17,15 @@
 
 struct pkguinf;
 
-const char *pkguinf_getstr(const struct pkguinf *pkgu, int tag);
-
+struct pkguinf *pkguinf_new(tn_alloc *na);
 struct pkguinf *pkguinf_link(struct pkguinf *pkgu);
 void pkguinf_free(struct pkguinf *pkgu);
+
+
+const char *pkguinf_get(const struct pkguinf *pkgu, int tag);
+int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
+                const char *lang);
+
 
 tn_array *pkguinf_langs(struct pkguinf *pkgu);
 
