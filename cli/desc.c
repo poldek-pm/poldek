@@ -715,7 +715,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
                        "packages info loaded?)\n"), pkg_snprintf_s(pkg));
     }
     
-    if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_SUMMARY))) {
+    if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_SUMMARY))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Summary:");
         cmdctx_printf(cmdctx, "%s\n", s);
     }
@@ -725,12 +725,12 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
         cmdctx_printf(cmdctx, "%s\n", group);
     }
 
-    if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_VENDOR))) {
+    if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_VENDOR))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Vendor:");
         cmdctx_printf(cmdctx, "%s\n", s);
     }
 
-    if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_LICENSE))) {
+    if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_LICENSE))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "License:");
         cmdctx_printf(cmdctx, "%s\n", s);
     }
@@ -749,7 +749,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
         cmdctx_printf(cmdctx, "\n");
     }
         
-    if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_URL))) {
+    if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_URL))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "URL:");
         cmdctx_printf(cmdctx, "%s\n", s);
     }
@@ -762,7 +762,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
         if (*timbuf) {
             cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Built:");
             cmdctx_printf(cmdctx, "%s", timbuf);
-            if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_BUILDHOST))) 
+            if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_BUILDHOST))) 
                 cmdctx_printf(cmdctx, " at %s", s);
             cmdctx_printf(cmdctx, "\n");
         }
@@ -817,7 +817,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
 
     show_pkg(cmdctx, pkg, flags);
         
-    if (pkgu && (s = pkguinf_getstr(pkgu, PKGUINF_DESCRIPTION))) {
+    if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_DESCRIPTION))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "Description:\n");
         cmdctx_printf(cmdctx, "%s\n", s);
     }

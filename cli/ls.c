@@ -319,7 +319,7 @@ static void ls_summary(struct cmdctx *cmdctx, struct pkg *pkg)
     if ((pkgu = pkg_uinf(pkg)) == NULL)
         return;
     
-    if ((s = pkguinf_getstr(pkgu, PKGUINF_SUMMARY)))
+    if ((s = pkguinf_get(pkgu, PKGUINF_SUMMARY)))
         cmdctx_printf(cmdctx, "    %s\n", s);
     pkguinf_free(pkgu);
 }

@@ -516,18 +516,18 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
             
         } else {
             if (flags & OPT_SEARCH_SUMM) {
-                if ((s = pkguinf_getstr(pkgu, PKGUINF_SUMMARY)))
+                if ((s = pkguinf_get(pkgu, PKGUINF_SUMMARY)))
                     match = pattern_match(pt, s, strlen(s));
 
-                if (!match && (s = pkguinf_getstr(pkgu, PKGUINF_LICENSE)))
+                if (!match && (s = pkguinf_get(pkgu, PKGUINF_LICENSE)))
                     match = pattern_match(pt, s, strlen(s));
 
-                if (!match && (s = pkguinf_getstr(pkgu, PKGUINF_URL)))
+                if (!match && (s = pkguinf_get(pkgu, PKGUINF_URL)))
                     match = pattern_match(pt, s, strlen(s));
             }
             
             if (!match && ((flags & OPT_SEARCH_DESC))) {
-                s = pkguinf_getstr(pkgu, PKGUINF_DESCRIPTION);
+                s = pkguinf_get(pkgu, PKGUINF_DESCRIPTION);
                 if (s)
                     match = pattern_match(pt, s, strlen(s));
             }
