@@ -1047,18 +1047,22 @@ static const char *determine_stype(struct source *src, const char *idxpath)
     if (src->original_type)
         return src->original_type;
 
+    /* with type and not named i.e not from config */
+    if ((src->flags & PKGSOURCE_NAMED) == 0)
+        return src->type;
+    
     if (is_dir(src->path)) {
         if ((src->flags & PKGSOURCE_TYPE) == 0) /* no type */
-            return DEFAULT_STYPE;
+            return "dir";
         
-        else if ((src->flags & PKGSOURCE_NAMED) == 0) /* with type and not named
-                                                         i.e not from config */
-            return src->type;
-                
         if (idxpath == NULL)
-            return DEFAULT_STYPE;
+            return "dir";
         
+    } else if (src->type) {   /* not a dir, an URL */
+        return src->type;
+
     }
+
     return poldek_conf_PKGDIR_DEFAULT_TYPE;
 }
 
