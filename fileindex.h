@@ -18,6 +18,9 @@ struct file_index {
     tn_hash   *dirs;             /* dirname => tn_array *files */
     tn_hash   *cnflh;
     tn_alloc  *na;
+
+    tn_array  *_last_files;     /* add_dirname()'s temporary var */
+    const char *_last_dirname;
 };
 
 int  file_index_init(struct file_index *fi, int nelem);

@@ -121,12 +121,16 @@ static int fent_cmp2str(const void *a,  const void *b)
 
 int file_index_init(struct file_index *fi, int nelem)  
 {
+    memset(fi, 0, sizeof(*fi));
+    
     fi->dirs = n_hash_new_na(NULL, nelem, (tn_fn_free)n_array_free);
     if (fi->dirs == NULL)
        return 0;
     fi->cnflh = NULL;
     n_hash_ctl(fi->dirs, TN_HASH_NOCPKEY);
     fi->na = n_alloc_new(128, TN_ALLOC_OBSTACK);
+    fi->_last_files = NULL;
+    fi->_last_dirname = NULL;
     return 1;
 }
 
@@ -142,14 +146,11 @@ void file_index_destroy(struct file_index *fi)
 
 void *file_index_add_dirname(struct file_index *fi, const char *dirname)
 {
-    static tn_array *last_files = NULL;
-    static const char *last_dirname = NULL;
-    
     tn_array *files;
     DBGF("%s\n", dirname);
-    if (last_files != NULL && strcmp(dirname, last_dirname) == 0) {
-        DBGF("HIT dirname = %s %s\n", dirname, last_dirname);
-        files = last_files;
+    if (fi->_last_files != NULL && strcmp(dirname, fi->_last_dirname) == 0) {
+        DBGF("HIT dirname = %s %s\n", dirname, fi->last_dirname);
+        files = fi->_last_files;
         
     } else {
         /* find directory */
@@ -159,12 +160,15 @@ void *file_index_add_dirname(struct file_index *fi, const char *dirname)
         }
 #if ENABLE_TRACE        
         if ((n_hash_size(fi->dirs) % 10) == 0) {
-            printf("dupa: ");
+            DBGF_F("stats\n");
             n_hash_stats(fi->dirs);
         }
+#endif
+#if 0                           /* XXX - cache */
+        fi->_last_files = files;
+        n_cfree(&fi->_last_dirname);
+        fi->_last_dirname = n_strdup(dirname);
 #endif        
-        last_files = files;
-        last_dirname = dirname;
     }
     
     return files;
