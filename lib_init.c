@@ -203,8 +203,15 @@ int prepare_sources(struct poldek_ctx *ctx,
         setup_legacy_sources(poldek_cnf);
         htcnf_sources = poldek_conf_get_section_arr(poldek_cnf, "source");
         rc = get_conf_sources(ctx, srcs_path, srcs_named, htcnf_sources);
+        
+    } else if (n_array_size(srcs_named)) {
+        for (i=0; i < n_array_size(srcs_named); i++) {
+            struct source *src = n_array_nth(srcs_named, i);
+            logn(LOGERR, _("%s: no such source"), src->name);
+        }
+        
+        rc = 0;
     }
-    
     
     n_array_free(srcs_named);
     n_array_clean(sources);
@@ -422,7 +429,7 @@ int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources, tn_array *srcs_n
     if (n_array_size(srcs_named) == 0 && n_array_size(sources) == 0)
         getall = 1;
     
-    else if (n_array_size(srcs_named) > 0) {
+    else if (n_array_size(srcs_named) > 0 && htcnf_sources) {
         expanded_h = n_hash_new(16, NULL);
         expanded_srcs_named = expand_sources_group(srcs_named, htcnf_sources,
                                                    expanded_h);
@@ -451,7 +458,8 @@ int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources, tn_array *srcs_n
     
     for (i=0; i < n_array_size(srcs_named); i++) {
         struct source *src = n_array_nth(srcs_named, i);
-        if (matches[i] == 0 && !n_hash_exists(expanded_h, src->name)) {
+        if (matches == NULL ||
+            (matches[i] == 0 && !n_hash_exists(expanded_h, src->name))) {
             logn(LOGERR, _("%s: no such source"), src->name);
             nerr++;
         }
@@ -714,14 +722,17 @@ void poldek__ts_apply_poldek_settings(struct poldek_ctx *ctx,
     while (default_op_map[i].op) {
         int op = default_op_map[i++].op;
         
-        if (poldek_ts_op_touched(ts, op))  /* modified by cmdl opts */
+        if (poldek_ts_op_touched(ts, op)) { /* modified by cmdl opts */
+            DBGF("skiptouched %s(%d) = %d\n", default_op_map[i - 1].name,
+                   op, ctx->ts->getop(ctx->ts, op));
             continue;
-
+        }
+        
         if (poldek_ts_op_touched(ctx->ts, op) &&
             ctx->ts->getop(ctx->ts, op) != ts->getop(ts, op)) {
             
             DBGF("apply %s(%d) = %d\n", default_op_map[i - 1].name,
-                   op, ctx->ts->getop(ctx->ts, op));
+                 op, ctx->ts->getop(ctx->ts, op));
             ts->setop(ts, op, ctx->ts->getop(ctx->ts, op));
         }
     }
@@ -735,8 +746,8 @@ void poldek__ts_apply_poldek_settings(struct poldek_ctx *ctx,
 
 void poldek__ts_postconf(struct poldek_ctx *ctx, struct poldek_ts *ts)
 {
-    poldek__ts_apply_config(ctx, ts);
     poldek__ts_apply_poldek_settings(ctx, ts);
+    poldek__ts_apply_config(ctx, ts);
 }
 
 
