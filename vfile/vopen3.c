@@ -460,6 +460,7 @@ void vopen3_process(struct vopen3_st *st, int verbose_level)
     struct vopen3_st *head_st = st;
     int yes = 1;
 
+    verbose_level = verbose_level; /* kill gcc warn */
     
     while (st->next) /* get the last proccess from chain */
         st = st->next;
