@@ -57,7 +57,7 @@ void poldek_log_msg_i(int indent, const char *fmt, ...)
 void poldek_log_tty(const char *fmt, ...)  
   __attribute__((format(printf,1,2)));
 
-#ifndef POLDEK_LOG_H_INTERNAL  
+#ifndef POLDEK_LOG_H_INTERNAL
 
 #define log(pri, fmt, args...) \
        poldek_log(pri, fmt, ## args)
@@ -135,6 +135,15 @@ void poldek_log_tty(const char *fmt, ...)
       poldek_log(LOGTTY|LOGINFO|LOGOPT_N, fmt, ## args);     \
   } while(0)
 
+
+#define poldek_die(fmt, args...) \
+       poldek_log(LOGERR | LOGOPT_N | LOGDIE, fmt, ## args)
+
+#define poldek_die_if(expr, fmt, args...)   \
+  ((void) ((expr) ? poldek_log(LOGERR | LOGOPT_N | LOGDIE, fmt, ## args) : 0))
+
+#define poldek_die_ifnot(expr, fmt, args...)   \
+  ((void) ((expr) ? 0 : poldek_log(LOGERR | LOGOPT_N | LOGDIE, fmt, ## args)))
 
 void poldek_meminf(int vlevel, const char *fmt, ...);
 

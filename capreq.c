@@ -226,8 +226,10 @@ uint8_t capreq_bufsize(const struct capreq *cr)
     max_ofs += strlen(&cr->_buf[max_ofs]) + 1;
     //printf("sizeof %s = %d (5 + %d + (%s) + %d)\n", capreq_snprintf_s(cr),
     //       size, max_ofs, &cr->_buf[max_ofs], strlen(&cr->_buf[max_ofs]));
+
+    poldek_die_ifnot(max_ofs < UINT8_MAX, "%s: exceeds %db limit (%d)",
+                     capreq_snprintf_s(cr), UINT8_MAX, max_ofs);
     
-    n_assert (max_ofs < UINT8_MAX);
     return max_ofs;
 }
 
@@ -237,7 +239,9 @@ uint8_t capreq_sizeof(const struct capreq *cr)
     size_t size;
 
     size = sizeof(*cr) + capreq_bufsize(cr);
-    n_assert (size < UINT8_MAX);
+    
+    poldek_die_ifnot(size < UINT8_MAX, "%s: exceeds %db limit (%d)",
+                     capreq_snprintf_s(cr), UINT8_MAX, size);
     return size;
 }
 
@@ -542,7 +546,8 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
     int16_t arr_size;
     int i, off;
 
-    n_assert(n_array_size(arr) < INT16_MAX);
+    poldek_die_ifnot(n_array_size(arr) < INT16_MAX,
+                     "too many capabilities per package (max=%d)", INT16_MAX);
     
     arr_size = n;
     if (n == 0) {
@@ -578,7 +583,8 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
     //printf("tells %d\n", n_buf_tell(nbuf));
     
     size = n_buf_tell(nbuf) - off - sizeof(uint16_t);
-    n_assert(size < UINT16_MAX);
+
+    poldek_die_ifnot(size < UINT16_MAX, "capabilities size exceeds 64K limit");
     
     n_buf_seek(nbuf, off, SEEK_SET);
     n_buf_add_int16(nbuf, size);
