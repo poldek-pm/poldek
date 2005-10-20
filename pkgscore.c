@@ -104,16 +104,6 @@ tn_array *read_patterns(const char *fpath, tn_array *patterns, unsigned type)
     return patterns;
 }
 
-static int pkg_cmp_ignored_(struct pkg *pkg, void *dummy) 
-{
-    dummy = dummy;
-    if (pkg_is_scored(pkg, PKG_IGNORED))
-        return 0;
-    
-    return 1;
-}
-
-
 
 void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg) 
 {
@@ -192,8 +182,24 @@ void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag)
             }
         }
     }
+}
 
-    if (scoreflag == PKG_IGNORED)
-        n_array_remove_ex(pkgs, NULL, (tn_fn_cmp)pkg_cmp_ignored_);
+static int cmp_isignored(struct pkg *pkg, void *dummy) 
+{
+    dummy = dummy;
+    if (pkg_is_scored(pkg, PKG_IGNORED))
+        return 0;
     
+    return 1;
+}
+
+int packages_score_ignore(tn_array *pkgs, tn_array *patterns, int remove)
+{
+    int n = n_array_size(pkgs);
+    
+    packages_score(pkgs, patterns, PKG_IGNORED);
+    if (remove)
+        n_array_remove_ex(pkgs, NULL, (tn_fn_cmp)cmp_isignored);
+        
+    return n - n_array_size(pkgs);
 }

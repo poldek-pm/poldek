@@ -14,6 +14,9 @@ void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg);
 int pkgscore_match(struct pkgscore_s *psc, const char *mask);
 void packages_score(tn_array *pkgs, tn_array *patterns, unsigned scoreflag);
 
+/* mark matches by PKG_IGNORED and remove them if remove is set */
+int packages_score_ignore(tn_array *pkgs, tn_array *patterns, int remove);
+
 /*  === utils ===  */
 int packages_dump(tn_array *pkgs, const char *path, int fqfn);
 
