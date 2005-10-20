@@ -11,7 +11,11 @@ START_TEST (test_pmdb) {
     pmctx = pm_new("rpm");
     fail_if(pmctx == NULL);
 
-    db = pkgdb_open(pmctx, "/tmp/r", NULL, O_RDONLY, NULL);
+    db = pkgdb_open(pmctx, "/tmp/dupa/blada", NULL, O_RDONLY, NULL);
+    fail_if(db != NULL);
+    return;
+
+    db = pkgdb_open(pmctx, "/", NULL, O_RDONLY, NULL);
     fail_if(db == NULL);
 
     capreq_new_name_a("/bin/sh", req);

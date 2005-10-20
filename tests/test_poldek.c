@@ -6,6 +6,7 @@
 #include "test_env.c"
 #include "test_match.c"
 #include "test_pmdb.c"
+#include "test_op.c"
 
 Suite *poldek_suite(void)
 {
@@ -21,8 +22,8 @@ Suite *poldek_suite(void)
   tcase_add_test(tc, test_match);
   suite_add_tcase (s, tc);
 
-  tc = tcase_create("pmdb");
-  tcase_add_test(tc, test_pmdb);
+  tc = tcase_create("op_ts_postconf");
+  tcase_add_test(tc, test_op_ts_postconf);
   suite_add_tcase (s, tc);
   
   return s;
