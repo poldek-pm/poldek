@@ -172,6 +172,7 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
 #define PKGFIELD_TAG_GID     'g'
 #define PKGFIELD_TAG_RECNO   'r'
 #define PKGFIELD_TAG_FMTIME  't'
+#define PKGFIELD_TAG_COLOR   'C'
 
 static
 void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg, unsigned flags) 
@@ -198,6 +199,9 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg, unsigned flags)
         n++;
 
     if (pkg->fmtime) 
+        n++;
+
+    if (pkg->color) 
         n++;
 
     size = (sizeof(int32_t) + 1) * n;
@@ -242,6 +246,11 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg, unsigned flags)
         n_buf_add_int8(nbuf, PKGFIELD_TAG_FMTIME);
         n_buf_add_int32(nbuf, pkg->fmtime);
     }
+
+    if (pkg->color) {
+        n_buf_add_int8(nbuf, PKGFIELD_TAG_COLOR);
+        n_buf_add_int32(nbuf, pkg->color);
+    }
     
     n_buf_printf(nbuf, "\n");
 }
@@ -284,6 +293,10 @@ int pkg_restore_fields(tn_stream *st, struct pkg *pkg)
 
             case PKGFIELD_TAG_FMTIME:
                 n_stream_read_uint32(st, &pkg->fmtime);
+                break;
+
+            case PKGFIELD_TAG_COLOR:
+                n_stream_read_uint32(st, &pkg->color);
                 break;
 
             default:            /* skip unknown tag */
