@@ -69,6 +69,7 @@ pkg_has_pkgcnfl
 pkg_id
 pkg_id_snprintf
 pkg_idevr_snprintf
+pkg_is_colored_like
 pkg_is_kind_of
 pkg_link
 pkg_localpath
