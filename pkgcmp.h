@@ -11,6 +11,10 @@ struct capreq;
 # define extern__inline extern inline
 #endif
 
+/* candidate in pkg's rainbow */
+int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg);
+
+/* same name && pkg_is_colored_like(candidate, pkg) */
 int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg);
 
 /* strncmp(p1->name, p2->name, strlen(p2->name)) */

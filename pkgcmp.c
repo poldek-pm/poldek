@@ -53,6 +53,26 @@ int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg)
     return rc == 0;
 }
 
+int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
+{
+    int rc = 0;
+
+    if (pkg->color && candidate->color)
+        rc = pkg->color & candidate->color;
+    else
+        rc = 1;                 /* rpm assumes this */
+    
+    if (rc && pkg_cmp_arch(pkg, candidate) == 0) {
+        rc = 1;
+#if ENABLE_TRACE        
+        DBGF("%s(c=%d), %s(c=%d) => YES\n", pkg_id(candidate),
+             candidate->color, pkg_id(pkg), pkg->color);
+#endif
+    }
+    return rc;
+}
+
+
 int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr) 
 {
     return strcmp(pkg->name, capreq_name(cr)) == 0 &&
