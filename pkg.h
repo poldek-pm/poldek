@@ -55,7 +55,7 @@ struct pkg {
     uint32_t     size;        /* install size      */
     uint32_t     fsize;       /* package file size */
     uint32_t     btime;       /* build time        */
-    
+    uint32_t     color;       /* rpm's pkg color   */
     
     char         *name;
     int32_t      epoch;
@@ -64,7 +64,7 @@ struct pkg {
 
     char         *fn;         /* package filename */
     uint32_t     fmtime;      /* package file mtime */
-    char         *_nvr;        /* NAME-VERSION-RELEASE */
+    char         *_nvr;       /* NAME-VERSION-RELEASE */
 
     uint16_t      _arch;
     uint16_t      _os;

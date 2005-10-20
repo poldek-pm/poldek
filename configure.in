@@ -5,7 +5,7 @@ AC_INIT(poldek,0.20.0)
 AC_CONFIG_SRCDIR([capreq.c])
 
 PACKAGE_BUGREPORT="mis@pld.org.pl"
-VERSION_STATUS="devel"
+VERSION_STATUS="beta"
 VERSION=0.20.0
 VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
 VERSION_CVSTAG="v$VERSION_TAG"
@@ -15,6 +15,7 @@ AH_TEMPLATE([HAVE_RPM_4_0_4],[])
 AH_TEMPLATE([HAVE_RPM_4_1],[])
 AH_TEMPLATE([HAVE_RPM_4_2],[])
 AH_TEMPLATE([HAVE_RPM_EXTDEPS],[])
+AH_TEMPLATE([HAVE_RPM_HGETCOLOR],[])
 AH_TEMPLATE([HAVE_TM_GMTOFF],[])
 AH_TEMPLATE([HAVE_TM___GMTOFF],[])
 
@@ -299,7 +300,7 @@ AC_CHECK_FUNCS(rpmlog rpmCheckSig rpmVerifySignature)
 dnl rpm 4.2?
 AC_CHECK_FUNCS(rpmtsColor, [LIBS="$LIBS -lpthread"
                             AC_DEFINE([HAVE_RPM_4_2],1,[])])
-
+AC_CHECK_FUNCS(hGetColor, AC_DEFINE([HAVE_RPM_HGETCOLOR],1,[]))
 
 AC_CHECK_HEADERS([db_185.h],,[ 
 	AC_MSG_WARN(["disabled synchronization with db file-dependencies"]) ])

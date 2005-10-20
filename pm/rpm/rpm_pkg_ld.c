@@ -497,7 +497,11 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
     
     if (itime) 
         pkg->itime = *itime;
-        
+
+#ifdef HAVE_RPM_HGETCOLOR
+    pkg->color = hGetColor(h);
+#endif
+
     msg(4, "ld %s\n", pkg_snprintf_s(pkg));
     
     if (ldflags & PKG_LDCAPS) {
