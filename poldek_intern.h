@@ -45,4 +45,6 @@ struct pkgdb *poldek_ts_dbopen(struct poldek_ts *ts, mode_t mode);
 
 void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch);
 
+void poldek__ts_dump_settings(struct poldek_ctx *ctx, struct poldek_ts *ts);
+
 #endif
