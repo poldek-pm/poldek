@@ -557,11 +557,12 @@ void pkgdir_free(struct pkgdir *pkgdir)
 
 static void do_ignore(struct pkgdir *pkgdir) 
 {
+    /* module handles "ignore" itself  */
     if (pkgdir->mod->cap_flags & PKGDIR_CAP_HANDLEIGNORE)
         return;
 
     if (pkgdir->src && n_array_size(pkgdir->src->ign_patterns))
-        packages_score(pkgdir->pkgs, pkgdir->src->ign_patterns, PKG_IGNORED);
+        packages_score_ignore(pkgdir->pkgs, pkgdir->src->ign_patterns, 1);
 }
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
@@ -592,7 +593,10 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     
     pkgdir->foreign_depdirs = foreign_depdirs;
 
-    if ((pkgdir->flags & PKGDIR_DIFF) == 0) {
+    if (pkgdir->flags & PKGDIR_DIFF) {
+        n_assert((ldflags & PKGDIR_LD_DOIGNORE) == 0);
+        
+    } else {
         if (poldek_VERBOSE < 2)
             msgn(1, _("Loading [%s]%s..."), pkgdir->type, pkgdir_idstr(pkgdir));
         else
@@ -613,7 +617,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
             pkg->pkgdir = pkgdir;
         }
 
-        if ((ldflags & PKGDIR_LD_NOIGNORE) == 0)
+        if (ldflags & PKGDIR_LD_DOIGNORE)
             do_ignore(pkgdir);
         
         if ((ldflags & PKGDIR_LD_NOUNIQ) == 0)
@@ -631,6 +635,8 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     
     if (pkgdir->ts == 0)
 		pkgdir->ts = time(0);
+    
+    pkgdir->_ldflags = ldflags;
     
     return rc;
 }

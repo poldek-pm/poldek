@@ -1022,7 +1022,8 @@ int do_source_make_idx(struct source *src,
             pkgdir_free(pdir);
             pdir = NULL;
         }
-
+        
+        n_assert((pdir->_ldflags & PKGDIR_LD_DOIGNORE) == 0);
         pkgdir->prev_pkgdir = pdir;
     }
 
@@ -1031,7 +1032,7 @@ int do_source_make_idx(struct source *src,
     
     rc = 0;
     if (pkgdir_load(pkgdir, NULL, ldflags)) {
-        //int n = n_array_size(pkgdir->pkgs);
+        n_assert((pkgdir->_ldflags & PKGDIR_LD_DOIGNORE) == 0);
         rc = pkgdir_save_as(pkgdir, type, idxpath, cr_flags);
     }
     

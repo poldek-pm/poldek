@@ -32,7 +32,7 @@ struct pkgdir {
     char                 *path;            /* path | URL        */
     char                 *idxpath;         /* path | URL        */
     char                 *compress;        /* compresion */
-    tn_array             *pkgs;            /* struct *pkg[]     */
+    tn_array             *pkgs;           /* struct *pkg[]     */
 
     int                  _idx_version;     /* internal, handled by particular
                                               modules */
@@ -56,6 +56,7 @@ struct pkgdir {
     struct pkgdir       *prev_pkgdir;
 
     struct source       *src;            /* reference to its source (if any) */
+    unsigned            _ldflags;        /* internal, to remember ldflags    */
     tn_alloc            *na;
     const struct pkgdir_module  *mod;
     void                        *mod_data;
@@ -103,7 +104,7 @@ struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
 #define PKGDIR_LD_FULLFLIST   (1 << 1) /* load full file list */
 #define PKGDIR_LD_DESC        (1 << 2) /* load pkg info to memory */
 #define PKGDIR_LD_NOUNIQ      (1 << 3) /* don't perform pkgdir_uniq() */
-#define PKGDIR_LD_NOIGNORE      (1 << 4) /* do not honour ign_patterns */
+#define PKGDIR_LD_DOIGNORE    (1 << 4) /* honour src->ign_patterns */
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 

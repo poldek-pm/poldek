@@ -98,9 +98,13 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         /* merge pkgdirs packages into ps->pkgs */
         for (i=0; i < n_array_size(ps->pkgdirs); i++) {
             struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
+            
             for (j=0; j < n_array_size(pkgdir->pkgs); j++) {
                 struct pkg *pkg = n_array_nth(pkgdir->pkgs, j);
+                
                 //pkg->recno = ps->_recno++; TOFIX another field is needed
+                if (pkg_is_scored(pkg, PKG_IGNORED))
+                    continue;
                 n_array_push(ps->pkgs, pkg_link(pkg));
             }
         }

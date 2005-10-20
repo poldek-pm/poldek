@@ -58,8 +58,8 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
     if (pm_get_dbdepdirs(ctx->pmctx, ctx->ts->rootdir, NULL, ps->depdirs) >= 0)
         ps->flags |= PSET_DBDIRS_LOADED;
     
-    if (!ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE))
-        ldflags |= PKGDIR_LD_NOIGNORE;
+    if (ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE))
+        ldflags |= PKGDIR_LD_DOIGNORE;
 
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_LDFULLFILELIST))
         ldflags |= PKGDIR_LD_FULLFLIST;
@@ -79,7 +79,7 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
         packages_score(ps->pkgs, ctx->ts->hold_patterns, PKG_HELD);
 
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE))
-        packages_score(ps->pkgs, ctx->ts->ign_patterns, PKG_IGNORED);
+        packages_score_ignore(ps->pkgs, ctx->ts->ign_patterns, 1);
     
     ctx->pkgdirs = n_ref(ps->pkgdirs);
 
@@ -129,5 +129,3 @@ struct pkgdb *poldek_open_installeddb(struct poldek_ctx *ctx)
 }
 
 
-
-    

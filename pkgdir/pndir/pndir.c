@@ -629,7 +629,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 
     vf_url_slim(path, sizeof(path), pkgdir->idxpath, 0);
     
-    if ((ldflags & PKGDIR_LD_NOIGNORE) == 0 && pkgdir->src &&
+    if ((ldflags & PKGDIR_LD_DOIGNORE) && pkgdir->src &&
         n_array_size(pkgdir->src->ign_patterns)) {
         ign_patterns = pkgdir->src->ign_patterns;
     }
@@ -658,7 +658,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             for (i=0; i < n_array_size(ign_patterns); i++) {
                 char *p = n_array_nth(ign_patterns, i);
                 if (fnmatch(p, buf, 0) == 0) {
-                    DBGF("ignore %s (%s)\n", buf, p);
+                    msgn(3, "pndir: ignored %s", pkg_snprintf_s(pkg));
                     goto l_continue_loop;
                 }
             }
