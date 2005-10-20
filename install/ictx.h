@@ -101,9 +101,8 @@ int in_is_pkg_installed(struct install_ctx *ictx, struct pkg *pkg, int *cmprc);
 int in_is_pkg_installable(struct install_ctx *ictx, struct pkg *pkg,
                           int is_hand_marked);
 
-struct pkg *in_select_pkg(struct install_ctx *ictx, const char *name,
+struct pkg *in_select_pkg(struct install_ctx *ictx, const struct pkg *apkg,
                           tn_array *pkgs);
-
 
 int in_select_best_pkg(struct install_ctx *ictx, const struct pkg *marker,
                        tn_array *candidates);

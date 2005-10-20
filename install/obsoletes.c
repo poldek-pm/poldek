@@ -196,7 +196,7 @@ int verify_unistalled_cap(int indent, struct install_ctx *ictx,
             if (pkg_cmp_name_evr(opkg, pkg) == 0) /* packages orphanes itself */
                 continue;
                 
-            if ((p = in_select_pkg(ictx, opkg->name, ictx->ps->pkgs))) {
+            if ((p = in_select_pkg(ictx, opkg, ictx->ps->pkgs))) {
                 if (pkg_is_marked_i(ictx->ts->pms, p))
                     in_mark_package(ictx, p);
 

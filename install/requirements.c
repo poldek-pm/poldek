@@ -18,8 +18,7 @@
 
 /* looks into Obsoletes only */
 static
-struct pkg *find_supersede_pkg(struct install_ctx *ictx,
-                               const struct pkg *pkg)
+struct pkg *find_supersede_pkg(struct install_ctx *ictx, const struct pkg *pkg)
 {
     struct pkg *bypkg = NULL;
     tn_array *pkgs;
@@ -34,6 +33,11 @@ struct pkg *find_supersede_pkg(struct install_ctx *ictx,
             
         if (strcmp(pkg->name, p->name) == 0)
             continue;
+
+        if (poldek_conf_MULTILIB) {
+            if (!pkg_is_colored_like(p, pkg))
+                continue;
+        }
             
         DBGF("found %s <- %s, %d, %d\n", pkg_id(pkg),
              pkg_id(p),
@@ -62,7 +66,7 @@ struct pkg *select_successor(struct install_ctx *ictx, const struct pkg *pkg,
     struct pkg *p = NULL;
 
     *by_obsoletes = 0;
-    p = in_select_pkg(ictx, pkg->name, ictx->ps->pkgs);
+    p = in_select_pkg(ictx, pkg, ictx->ps->pkgs);
     if (!ictx->ts->getop(ictx->ts, POLDEK_OP_OBSOLETES))
         return p;
 
