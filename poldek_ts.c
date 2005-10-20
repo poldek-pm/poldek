@@ -94,8 +94,7 @@ struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx, unsigned flags)
     ts = n_malloc(sizeof(*ts));
     poldek_ts_init(ts, ctx);
     poldek_ts_setf(ts, flags);
-    /* not greedy by default  */
-    
+
     return ts;
 }
 
@@ -153,13 +152,20 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
             break;
             
         case POLDEK_OP_CONFLICTS:
-        case POLDEK_OP_OBSOLETES:
-            DBGF("set %d %d\n", optv, on);
+            DBGF("%p set conflicts %d (t=%d)\n", ts, on, touch);
             break;
-
+            
+        case POLDEK_OP_OBSOLETES:
+            DBGF("%p set obsoletes %d (t=%d)\n", ts, on, touch);
+            break;
+            
         case POLDEK_OP_FOLLOW:
             if (!on)
                 poldek_ts_xsetop(ts, POLDEK_OP_GREEDY, 0, touch);
+            break;
+
+        case POLDEK_OP_USESUDO:
+            DBGF("%p set use_sudo %d\n", ts, on);
             break;
             
         default:
@@ -514,7 +520,10 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
             else if (param == POLDEK_CONF_IGNORE)
                 patterns = ts->ign_patterns;
 
-            if ((vs = va_arg(ap, char*))) {
+            if ((vs = va_arg(ap, char*)) == NULL) { /* reset */
+                n_array_clean(patterns);
+                
+            } else {
                 if (strchr(vs, ',') == NULL) {
                     n_array_push(patterns, n_strdup(vs));
                 
@@ -1017,13 +1026,12 @@ int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     pkgdb_tx_begin(ts->db);
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
 
-    if (getenv("POLDEK2")) {    /* early alpha */
-        msgn(0, "Running poldek2 dependency engine...");
+    if (poldek_conf_MULTILIB || getenv("POLDEK2")) {    /* early alpha */
+        msgn(2, "Running poldek2 dependency engine...");
         rc = in_do_poldek_ts_install(ts, iinf);
     } else {
         rc = do_poldek_ts_install(ts, iinf);
     }
-    
 
     if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
         pkgdb_tx_commit(ts->db);
