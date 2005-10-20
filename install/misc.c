@@ -83,7 +83,9 @@ int in_is_pkg_installable(struct install_ctx *ictx, struct pkg *pkg,
         installable = -1;
         
     } else {
-        if (pkg_is_scored(pkg, PKG_HELD) && ts->getop(ts, POLDEK_OP_HOLD)) {
+            /* upgrade flag is set for downgrade and reinstall too */
+        if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE) && 
+            pkg_is_scored(pkg, PKG_HELD) && ts->getop(ts, POLDEK_OP_HOLD)) {
             logn(LOGERR, _("%s: refusing to upgrade held package"),
                  pkg_id(pkg));
             installable = 0;
@@ -263,31 +265,36 @@ int in_select_best_pkg(struct install_ctx *ictx, const struct pkg *marker,
                        tn_array *candidates)
 {
     struct pkg **candidates_buf;
-    int i, npkgs;
+    int i, j, npkgs;
 
     DBGF("marker=%s, ncandiates=%d\n", pkg_id(marker), n_array_size(candidates));
     npkgs = n_array_size(candidates);
     candidates_buf = alloca(sizeof(*candidates_buf) * (npkgs + 1));
-    
+
+    j = 0;
     for (i=0; i < n_array_size(candidates); i++) {
-        candidates_buf[i] = n_array_nth(candidates, i);
-        DBGF("cand[%d of %d] %p %s\n", i, n_array_size(candidates),
-               candidates_buf[i], pkg_id(candidates_buf[i]));
+        struct pkg *cand = n_array_nth(candidates, i);
+
+        if (pkg_is_colored_like(cand, marker)) {
+            candidates_buf[j++] = cand;
+            DBGF("cand[%d of %d] %p %s\n", j, n_array_size(candidates), cand,
+                 pkg_id(cand));
+        }
     }
 
-    candidates_buf[i] = NULL;
-    return do_select_best_pkg(ictx, marker, candidates_buf, npkgs);
+    candidates_buf[j] = NULL;
+    return do_select_best_pkg(ictx, marker, candidates_buf, j);
 }
 
 
-struct pkg *in_select_pkg(struct install_ctx *ictx, const char *name,
+struct pkg *in_select_pkg(struct install_ctx *ictx, const struct pkg *apkg,
                           tn_array *pkgs)
 {
     struct pkg tmpkg, *curr_pkg, *pkg, *selected_pkg;
     char prefix1[128], prefix2[128], *p;
     int i;
     
-    tmpkg.name = (char*)name;
+    tmpkg.name = (char*)apkg->name;
 
     n_array_sort(pkgs);
     i = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name);
@@ -300,26 +307,27 @@ struct pkg *in_select_pkg(struct install_ctx *ictx, const char *name,
     curr_pkg = n_array_nth(ictx->pkg_stack, n_array_size(ictx->pkg_stack) - 1);
     
 
-    snprintf(prefix1, sizeof(prefix1), "%s", name);
+    n_snprintf(prefix1, sizeof(prefix1), "%s", apkg->name);
     if ((p = strchr(prefix1, '-')))
         *p = '\0';
 
-    snprintf(prefix2, sizeof(prefix2), "%s", curr_pkg->name);
+    n_snprintf(prefix2, sizeof(prefix2), "%s", curr_pkg->name);
     if ((p = strchr(prefix2, '-')))
         *p = '\0';
 
-    DBGF("current pkg %s, name = %s, p1, p2 = %s, %s\n", pkg_id(curr_pkg), name,
-           prefix1, prefix2);
+    DBGF("current pkg %s, name = %s, p1, p2 = %s, %s\n", pkg_id(curr_pkg), apkg->name,
+         prefix1, prefix2);
 
     if (strcmp(prefix1, prefix2) != 0) { /* return marked package if any */
         struct pkg *p = NULL;
         for (; i < n_array_size(pkgs); i++) {
             p = n_array_nth(pkgs, i);
-            
-            if (strcmp(p->name, name) != 0) {
+
+            if (!pkg_is_kind_of(p, apkg)) {
                 p = NULL;
                 break;
             }
+            
             if (pkg_is_marked_i(ictx->ts->pms, p) ||
                 pkg_is_marked(ictx->ts->pms, p))
                 break;
@@ -332,8 +340,11 @@ struct pkg *in_select_pkg(struct install_ctx *ictx, const char *name,
     
     for (; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
-        if (strcmp(p->name, name) != 0)
+
+        if (!pkg_is_kind_of(p, apkg)) {
+            p = NULL;
             break;
+        }
         
         if (pkg_cmp_evr(p, curr_pkg) == 0) {
             if (selected_pkg && pkg_cmp_evr(selected_pkg, curr_pkg) > 0)
