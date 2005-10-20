@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@pld.org.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -25,6 +29,8 @@
 #include "pkgmisc.h"
 #include "capreq.h"
 #include "pkgset-req.h"
+
+extern int poldek_conf_MULTILIB;
 
 void *pkg_na_malloc(struct pkg *pkg, size_t size);
 
@@ -407,36 +413,57 @@ int psreq_find_match_packages(struct pkgset *ps,
                               struct pkg ***packages, int *npackages,
                               int strict)
 {
-    struct pkg **suspkgs, pkgsbuf[1024];
-    int nsuspkgs = 0, found = 0;
+    struct pkg **suspkgs, pkgsbuf[1024], **matches;
+    int nsuspkgs = 0, nmatches = 0, found = 0;
     
     
     if (packages)
         *packages = NULL;
     
     found = psreq_lookup(ps, req, &suspkgs, (struct pkg **)pkgsbuf, &nsuspkgs);
+
+    if (!found)
+        return found;
+
+    if (nsuspkgs == 0)          /* rpmlib() */
+        return found;
+    
         
-    if (found && nsuspkgs) {
-        struct pkg **matches;
-        int nmatches = 0;
-        
-        found = 0;
-        matches = alloca(sizeof(*matches) * nsuspkgs);
-        if (psreq_match_pkgs(pkg, req, strict, suspkgs, nsuspkgs, matches, &nmatches)) {
-            found = 1;
+    found = 0;
+
+    if (poldek_conf_MULTILIB) {
+        struct pkg **tmp = alloca(sizeof(*tmp) * nsuspkgs);
+        int i, j = 0;
+
+        for (i=0; i < nsuspkgs; i++) {
+            if (pkg_is_colored_like(suspkgs[i], pkg))
+                tmp[j++] = suspkgs[i];
+        }
+
+        if (j != nsuspkgs) {
+            suspkgs = tmp;
+            nsuspkgs = j;
+        }
+
+        if (nsuspkgs == 0)
+            return 0;
+    }
+    
+    matches = alloca(sizeof(*matches) * nsuspkgs);
+    if (psreq_match_pkgs(pkg, req, strict, suspkgs, nsuspkgs, matches, &nmatches)) {
+        found = 1;
             
-            if (nmatches && packages) {
-                struct pkg **pkgs;
-                int i;
-                
-                pkgs = n_malloc(sizeof(*pkgs) * (nmatches + 1));
-                for (i=0; i < nmatches; i++)
-                    pkgs[i] = matches[i];
-                
-                pkgs[nmatches] = NULL;
-                *packages = pkgs;
-                *npackages = nmatches;
-            }
+        if (nmatches && packages) {
+            struct pkg **pkgs;
+            int i;
+            
+            pkgs = n_malloc(sizeof(*pkgs) * (nmatches + 1));
+            for (i=0; i < nmatches; i++)
+                pkgs[i] = matches[i];
+            
+            pkgs[nmatches] = NULL;
+            *packages = pkgs;
+            *npackages = nmatches;
         }
     }
     
