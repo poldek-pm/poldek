@@ -201,7 +201,9 @@ int is_installable(struct pkg *pkg, struct poldek_ts *ts, int is_hand_marked)
         install = -1;
         
     } else {
-        if (pkg_is_scored(pkg, PKG_HELD) && ts->getop(ts, POLDEK_OP_HOLD)) {
+            /* upgrade flag is set for downgrade and reinstall too */
+        if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE) && 
+            pkg_is_scored(pkg, PKG_HELD) && ts->getop(ts, POLDEK_OP_HOLD)) {
             logn(LOGERR, _("%s: refusing to upgrade held package"),
                  pkg_id(pkg));
             install = 0;
