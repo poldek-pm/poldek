@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -54,12 +54,15 @@ int vf_lockfile(const char *lockfile)
     fl.l_len = 0;
     
     if (fcntl(fd, F_SETLK, &fl) == -1) {
+        int an_errno = errno;
         if (errno != EAGAIN || errno != EACCES)
             if (*vfile_verbose > 1)
                 vf_logerr("fcntl %s: %m\n", lockfile);
-        
+	
         close(fd);
         fd = 0;
+        if (an_errno == ENOLCK)
+            fd = -1;
         
     } else {
         char buf[64];
@@ -141,7 +144,7 @@ struct vflock *vf_lockdir(const char *path)
     n = n_snprintf(lockpath, sizeof(lockpath), "%s/.vflock_%s", path, lockfile);
     n_assert(n > 10 && n < (int)sizeof(lockpath) - 5);
     if (!(fd = vf_lock_obtain(lockpath))) {
-        vf_loginfo(_("Unable to obtain lock %s...\n"), lockpath);
+        vf_logerr(_("%s: unable to obtain lock\n"), path);
         return NULL;
     }
     vflock = n_malloc(sizeof(*vflock) + n + 1);
