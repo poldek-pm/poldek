@@ -153,7 +153,6 @@ inline static char *next_tokn(char **str, char delim, int *toklen)
     return token;
 }
 
-
 void pndir_init(struct pndir *idx) 
 {
     memset(idx, 0, sizeof(*idx));
@@ -266,8 +265,6 @@ int open_dscr(struct pndir *idx, time_t ts, const char *lang)
     return pndir_db_dscr_h_get(idx->db_dscr_h, lang) != NULL;
 }
 
-
-
 int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags,
                const char *srcnam)
 {
@@ -293,6 +290,34 @@ int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags,
     return 0;
 }
 
+static
+int pndir_open_verify(struct pndir *idx, const char *path, int vfmode, unsigned flags,
+                      const char *srcnam)
+{
+    int rc;
+    
+    DBGF("%s [%s]\n", path);
+    if (!pndir_open(idx, path, vfmode, flags, srcnam))
+        return 0;
+    
+    rc = 1;
+    if (!tndb_verify(idx->db)) {
+        logn(LOGERR, "%s: broken file", vf_url_slim_s(idx->_vf->vf_path, 0));
+        rc = 0;
+        
+        if (idx->_vf->vf_flags & VF_FRMCACHE) { /* not fully downloaded? */
+            n_assert(vfmode & VFM_CACHE);
+            vfmode &= ~VFM_CACHE;
+            vfmode |= VFM_NODEL;
+            pndir_close(idx);
+            return pndir_open_verify(idx, path, vfmode, flags, srcnam);
+        }
+        
+        pndir_close(idx);
+    }
+    return rc;
+}
+
 void pndir_close(struct pndir *idx) 
 {
     if (idx->db)
@@ -311,7 +336,6 @@ void pndir_close(struct pndir *idx)
     idx->dg = NULL;
     idx->idxpath[0] = '\0';
 }
-
 
 void pndir_destroy(struct pndir *idx)
 {
@@ -358,7 +382,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         vfmode |= VFM_CACHE;
 
     DBGF("do_open %s [%s]\n", pkgdir->idxpath, pkgdir->name);
-    if (!pndir_open(&idx, pkgdir->idxpath, vfmode, flags, pkgdir->name))
+    if (!pndir_open_verify(&idx, pkgdir->idxpath, vfmode, flags, pkgdir->name))
         return 0;
     
     nerr = 0;
