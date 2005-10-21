@@ -612,6 +612,10 @@ tn_array *do_resolve(struct arg_packages *aps,
     ments = n_array_clone(ents);
     for (i=0; i < n_array_size(ents); i++) {
         struct pkg_dent *ent = n_array_nth(ents, i);
+        struct pkg *pkg = NULL;
+
+        if (!pkg_dent_isdir(ent))
+            pkg = ent->pkg_dent_pkg;
         
         for (j=0; j < nmasks; j++) {
             char *mask = n_array_nth(masks, j);
@@ -627,13 +631,19 @@ tn_array *do_resolve(struct arg_packages *aps,
                     mask++;
                     break;
             }
-            
 
-            if (fnmatch(mask, ent->name, 0) == 0) {
+            if (pkg && strcmp(mask, pkg->name) == 0) {
                 n_array_push(ments, pkg_dent_link(ent));
                 matches_bycmp[j]++;
                 matches[j]++;
-            }
+                continue;
+                
+            } /* else */
+            
+            if (fnmatch(mask, ent->name, 0) == 0) {
+                n_array_push(ments, pkg_dent_link(ent));
+                matches[j]++;
+            } 
         }
     }
     
