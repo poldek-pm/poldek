@@ -271,13 +271,17 @@ static
 tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
                           const char *line)
 {
-    tn_array  *arr, *tl;
+    tn_array  *arr = NULL, *tl = NULL;
     int       i, is_err = 0;
 
     if ((tl = n_str_etokl_ext(line, "\t ", ";|", "\"'", '\\')) == NULL) {
         logn(LOGERR, _("%s: parse error"), line);
         return NULL;
     }
+    
+    if (n_array_size(tl) == 0)  /* empty token list */
+        goto l_end;
+    
     
 #if ENABLE_TRACE
     printf("line = (%s)\n", line);
@@ -286,6 +290,8 @@ tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
 #endif
     
     arr = a_argv_split(tl, ";|");
+    n_assert(arr);
+    
     for (i=0; i < n_array_size(arr); i++) {
         struct a_argv_ent *ent = n_array_nth(arr, i);
         struct cmd_chain_ent *cent = NULL;
@@ -326,8 +332,9 @@ tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
     }
 
 l_end:
-    n_array_free(arr);
-    n_array_free(tl);
+    
+    n_array_cfree(&arr);
+    n_array_cfree(&tl);
     return is_err ? NULL : cmd_chain;
 }
 
