@@ -61,6 +61,13 @@ START_TEST (test_op_ts_postconf) {
 }
 END_TEST
     
+struct test_suite test_suite_op = {
+    "playing with option", 
+    {
+        { "ts_postconf", test_op_ts_postconf },
+        { NULL, NULL }
+    }
+};
 
     
 

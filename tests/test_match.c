@@ -1,4 +1,6 @@
-const char *maflags_snprintf_s(unsigned maflags) 
+#include "test.h"
+
+static const char *maflags_snprintf_s(unsigned maflags) 
 {
     static char buf[128];
     int n = 0, nsave;
@@ -25,7 +27,7 @@ const char *maflags_snprintf_s(unsigned maflags)
     return buf;
 }
 
-const char *rel_snprintf_s(unsigned rel) 
+static const char *rel_snprintf_s(unsigned rel) 
 {
     static char buf[128];
     int n = 0;
@@ -48,8 +50,7 @@ const char *rel_snprintf_s(unsigned rel)
     return buf;
 }
 
-
-int do_test_pkgmatch(char *capevr, char *evr, int relation, unsigned maflags,
+static int do_test_pkgmatch(char *capevr, char *evr, int relation, unsigned maflags,
                      int expected) 
 {
     struct pkg *pkg;
@@ -77,6 +78,7 @@ int do_test_pkgmatch(char *capevr, char *evr, int relation, unsigned maflags,
     return rc;
 }
 
+static 
 int do_test_capmatch(char *capevr, char *evr, int relation, unsigned maflags, 
                      int expected) 
 {
@@ -104,9 +106,7 @@ int do_test_capmatch(char *capevr, char *evr, int relation, unsigned maflags,
     return rc;
 }
 
-
-int test_pkg_match(void)
-{
+START_TEST (test_pkg_match) {
     int i, e, v, r = 0;
     int reltab[] = { REL_GT, REL_GT | REL_EQ, REL_EQ, REL_LT | REL_EQ, REL_LT, 0 };
     char *prev_evr = NULL;
@@ -190,11 +190,13 @@ int test_pkg_match(void)
             }
         }
     }
-    return 0;
 }
+END_TEST
+     
 
-int test_cap_match(void)
-{
+
+
+START_TEST (test_cap_match) {
     int i;
     struct pair {
         char *capevr;
@@ -238,11 +240,30 @@ int test_cap_match(void)
         struct pair *p = &pairs[i++];
         do_test_capmatch(p->capevr, p->evr, p->rel, p->maflags, p->expected);
     }
-    return 0;
 }
+END_TEST 
 
-START_TEST (test_match) {
-    test_pkg_match();
-    test_cap_match();
-}
-END_TEST
+
+
+ 
+struct test_suite test_suite_match = {
+    "EVR match", 
+    {
+        { "pkg", test_pkg_match },
+        { "cap", test_cap_match },
+        { NULL, NULL }
+    }
+};
+
+
+ 
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        

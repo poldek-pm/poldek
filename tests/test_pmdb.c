@@ -1,5 +1,6 @@
 #include "test.h"
-START_TEST (test_pmdb) {
+
+START_TEST (test_pmdb_rpm) {
     char buf[PATH_MAX], tmp[PATH_MAX];
     struct pm_ctx *pmctx;
     struct pkgdb *db;
@@ -11,9 +12,8 @@ START_TEST (test_pmdb) {
     pmctx = pm_new("rpm");
     fail_if(pmctx == NULL);
 
-    db = pkgdb_open(pmctx, "/tmp/dupa/blada", NULL, O_RDONLY, NULL);
+    db = pkgdb_open(pmctx, "/tmp/foo/dupa/blada", NULL, O_RDONLY, NULL);
     fail_if(db != NULL);
-    return;
 
     db = pkgdb_open(pmctx, "/", NULL, O_RDONLY, NULL);
     fail_if(db == NULL);
@@ -28,3 +28,12 @@ START_TEST (test_pmdb) {
     
 }
 END_TEST
+
+
+struct test_suite test_suite_pmdb = {
+    "PM database", 
+    {
+        { "pm_rpm", test_pmdb_rpm },
+        { NULL, NULL }
+    }
+};

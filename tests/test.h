@@ -22,4 +22,16 @@
 #include "pm/rpm/pm_rpm.h"
 #include "pkgmisc.h"
 
+#define fail_ifnot fail_unless
+
+struct test_case {
+    const char *name;
+    void (*test_fn)(void);
+};
+
+struct test_suite {
+    const char *name;
+    struct test_case cases[];
+};
+
 #endif

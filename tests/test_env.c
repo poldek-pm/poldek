@@ -12,3 +12,8 @@ START_TEST (test_env) {
     
 }
 END_TEST
+
+
+struct test_case test_case_misc_env = {
+    "env vars expanding", test_env
+};
