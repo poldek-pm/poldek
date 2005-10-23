@@ -57,7 +57,9 @@
 #define OPT_SRCTYPE_LS  (OPT_GID + 11)
 
 #define OPT_DEST        (OPT_GID + 12)
-#define OPT_DEST_NAME   (OPT_GID + 13)
+#define OPT_DEST_TYPE   (OPT_GID + 13)
+
+#define OPT_DEST_NAME   (OPT_GID + 14)
 
 /* The options we understand. */
 static struct argp_option source_options[] = {
@@ -67,11 +69,17 @@ static struct argp_option source_options[] = {
 {"sn", 'n', "SOURCE-NAME", 0,
      N_("Get packages info from repository named SOURCE-NAME"), OPT_GID },
 
-{"destination", OPT_DEST, "PM:SOURCESPEC", OPTION_HIDDEN, /* NFY */
+                                                  
+{"dt", OPT_DEST_TYPE, "SOURCE-TYPE", 0,
+       N_("Set the type of index specified by --destination option"),
+       OPT_GID },                                                  
+                                                  
+{"destination", OPT_DEST, "PATH", OPTION_HIDDEN, /* NFY */
     N_("Install to specified destination"), OPT_GID },
 
 {"install-dest", 0, 0, OPTION_HIDDEN | OPTION_ALIAS, 
-    N_("Install to specified destination"), OPT_GID },
+    N_("Install to specified destination"), OPT_GID },                                                  
+
 
 {"dn", OPT_DEST_NAME, "SOURCE-NAME", 0,
     N_("Install to source SOURCE-NAME instead to the system"), OPT_GID },
@@ -138,8 +146,12 @@ struct arg_s {
     unsigned            cnflags;
     struct poldek_ctx   *ctx;
     struct source       *src;
-    struct source       *srcdst;
-    char                destpm[32];
+    
+    struct source       *srcdst; /* temporary --dn arg */
+
+    struct source       *destination; /* --destination */
+    char                *dt;          /* --dt */
+    
     char                *curr_src_path;
     char                *curr_src_type;
 };
@@ -166,36 +178,6 @@ struct poclidek_opgroup poclidek_opgroup_source = {
 };
 
 
-#if 0                           /* NFY */
-/* PM[:SOURCE|PATH] */
-static int parse_destspec(char *spec, struct arg_s *arg_s)
-{
-    char *p, *q;
-
-    if ((p = strchr(spec, ':')) == NULL) {
-        logn(LOGERR, _("%s: invalid destination specified"), spec);
-        return 0;
-    }
-    *p = '\0';
-
-    if (strlen(spec) > sizeof(arg_s->destpm) - 1) {
-        logn(LOGERR, _("%s: unknown PM specified"), spec);
-        return 0;
-    }
-    
-    q = spec;
-    while (*q) {
-        if (!isalnum(*q)) {
-            logn(LOGERR, _("%s: unknown PM specified"), spec);
-            return 0;
-        }
-        q++;
-    }
-    n_snprintf(arg_s->destpm, sizeof(arg_s->destpm), "%s", spec);
-    
-}
-#endif
-
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
@@ -210,10 +192,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         
     } else {
         arg_s = n_malloc(sizeof(*arg_s));
+        memset(arg_s, 0, sizeof(*arg_s));
+        
         arg_s->cnflags = 0;
         arg_s->src = NULL;
         arg_s->srcdst = NULL;
-        arg_s->destpm[0] = '\0';
+        arg_s->destination = NULL;
+        arg_s->dt = NULL;
         arg_s->curr_src_type = arg_s->curr_src_path = NULL;
         arg_s->ctx = rt->ctx;
         rt->_opdata = arg_s;
@@ -277,18 +262,24 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             arg_s->cnflags |= POLDEKCLI_SRC_SPECIFIED;
             break;
 
-        case OPT_DEST:          /* NFY */
-            n_die("NFY");
-            if (arg_s->destpm[0] != '\0') {
-                logn(LOGERR, _("destination is already set"));
+        case OPT_DEST_TYPE:
+            if (arg_s->destination) {
+                logn(LOGERR, _("--dt: destination is already set, "
+                               "use me before --destination"));
+                exit(EXIT_FAILURE);
+            }
+            arg_s->dt = arg;
+            break;
+            
+        case OPT_DEST:
+            if (arg_s->destination) {
+                logn(LOGERR, _("--destination: destination is already set"));
                 exit(EXIT_FAILURE);
             }
             
-            arg_s->curr_src_path = arg;
-            if (arg_s->curr_src_type == NULL)
-                arg_s->curr_src_type = source_type;
-            
-            arg_s->srcdst = source_new_pathspec(arg_s->curr_src_type, arg, NULL);
+            arg_s->destination = source_new_pathspec(arg_s->dt, arg, NULL);
+            poldek_configure(arg_s->ctx, POLDEK_CONF_DESTINATION, arg_s->destination);
+            poldek_configure(arg_s->ctx, POLDEK_CONF_PM, "pset");
             break;
             
         case 'P':
