@@ -303,8 +303,12 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
     }
         
     if (version) {
-        version_len = strlen(version);
+        if (relflags == 0)  /* no relation and version is presented, invalid */
+            return NULL;
+
         n_assert(relflags != 0);
+        
+        version_len = strlen(version);
         len += version_len + 1;
     }
         
