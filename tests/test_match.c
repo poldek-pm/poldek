@@ -27,6 +27,7 @@ static const char *maflags_snprintf_s(unsigned maflags)
     return buf;
 }
 
+#if 0                           /* unused */
 static const char *rel_snprintf_s(unsigned rel) 
 {
     static char buf[128];
@@ -49,6 +50,7 @@ static const char *rel_snprintf_s(unsigned rel)
     
     return buf;
 }
+#endif
 
 static int do_test_pkgmatch(char *capevr, char *evr, int relation, unsigned maflags,
                      int expected) 
