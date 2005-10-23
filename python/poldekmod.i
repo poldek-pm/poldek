@@ -12,7 +12,7 @@
 #include "pkgdir/source.h"
 #include "pkgdir/pkgdir.h"
 #include "cli/poclidek.h"
-#include "cli/dent.h"
+//#include "cli/dent.h" disabled, not useful in fact
 %}
 %include exception.i
 %include "local_stdint.h"
@@ -25,7 +25,7 @@
 %include "pkgdir/source.h"
 %include "pkgdir/pkgdir.h"
 %include "cli/poclidek.h"
-%include "cli/dent.h"
+//%include "cli/dent.h"
 
 
 struct poldek_ctx {};
@@ -61,10 +61,15 @@ struct poclidek_rcmd {};
     const char *get_ver() { return capreq_ver(self); }
     const char *get_rel() { return capreq_rel(self); }
     int is_versioned() { return capreq_versioned(self); }
-    
+    int _is_cnfl() { return capreq_is_cnfl(self); }
+    int _is_prereq() { return capreq_is_prereq(self); }
+    int _is_prereq_un() { return capreq_is_prereq_un(self); }
+    int _is_file() { return capreq_is_file(self); }
+    int _is_obsl() { return capreq_is_obsl(self); }
     ~capreq() { capreq_free(self); }
 }
 
+/* not so useful
 %extend pkg_dent {
     pkg_dent(void *dent) { return dent; };
     ~pkg_dent() { pkg_dent_free(self); }
@@ -72,7 +77,7 @@ struct poclidek_rcmd {};
     #struct pkg *pkg() { if (self->flags & PKG_DENT_DIR) return NULL; return self->ent->pkg; }
         #    tn_array *ENTS() { if (self->flags & PKG_DENT_DIR) return self->ent->ents; return NULL  }
 }            
-
+*/
 
 %extend poclidek_rcmd {
     poclidek_rcmd(struct poclidek_ctx *cctx, struct poldek_ts *ts) {
@@ -138,53 +143,8 @@ struct poclidek_rcmd {};
 }
 
 
-/**
-   opaque redeclaration of fl iterator 
-
-**/
-struct pkgfl_it {};
-struct tn_tuple {};
-
-%{
-
-struct pkgfl_it *pkgfl_it_new(tn_tuple *fl);
-const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile);
-
-struct pkgfl_it {};
-struct tn_tuple {};
-
-%}
-
-struct pkgfl_it *pkgfl_it_new(tn_tuple *fl);
-const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile);
-
-%extend pkgfl_it {
-    pkgfl_it(struct pkgfl_it *ptr) { return ptr; } /* conv constructor */
-    pkgfl_it(tn_tuple *fl) { return pkgfl_it_new(fl); }
-    const char *next() { return pkgfl_it_get(self, NULL); }
-    PyObject *get_tuple() { 
-        int32_t size;
-        uint16_t mode;
-        const char *bn, *path;
-        PyObject *tuple = NULL;
-
-        if ((path = pkgfl_it_get_rawargs(self, &size, &mode, &bn)) == NULL) {
-             Py_INCREF(Py_None); 
-             return Py_None;
-        }
-        
-        tuple = PyTuple_New(4);
-        PyTuple_SET_ITEM(tuple, 0, Py_BuildValue("s", path));
-        PyTuple_SET_ITEM(tuple, 1, PyInt_FromLong(size));
-        PyTuple_SET_ITEM(tuple, 2, PyInt_FromLong(mode));
-        PyTuple_SET_ITEM(tuple, 3, Py_BuildValue("s", bn));
-        return tuple;
-    }
-    ~pkgfl_it(self) { free(self); }
-}
-
-
 %extend pkgflist_it {
+    pkgflist_it() { return NULL; }
     pkgflist_it(struct pkgflist_it *ptr) { return ptr; } /* conv constructor */
     PyObject *get_tuple() { 
         int32_t size;
@@ -211,13 +171,12 @@ const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile);
     pkg(void *ptr) { return ptr; } /* conv constructor */
     tn_array *_get_provides() { return self->caps; }
     tn_array *_get_requires() { return self->reqs; }
-    struct pkgfl_it *filelist_it() { return pkgfl_it_new(self->fl); }
+    tn_array *_get_conflicts() { return self->cnfls; }
     ~pkg() { pkg_free(self); }
 }
 
 %extend pkguinf {
     pkguinf(void *ptr) { return ptr; } /* conv constructor */
-    const char *get(char tag) { return pkguinf_getstr(self, tag); }
     ~pkguinf() { pkguinf_free(self); }
 }
 

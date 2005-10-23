@@ -12,7 +12,7 @@ def test_pkguinf(ctx):
     if len(arr) == 0:
         return 
         
-    pkg = arr[50]
+    pkg = arr[0]
     inf = pkg.uinf()
     print "Package: ", pkg
     print "Summary: ", inf.get(inf.SUMMARY)
@@ -21,8 +21,7 @@ def test_pkguinf(ctx):
     print "Description:\n", inf.get(inf.DESCRIPTION)
 
     it = pkg.get_flist_it()
-    print it
-    f = it.get()
+    f = it.get_tuple()
     while f:
         print f
         f = it.get_tuple()
@@ -85,17 +84,10 @@ if not ctx.setup():
 
 cctx = poldek.poclidek_ctx(ctx);
 cctx.load_packages(cctx.LOAD_ALL)
-dent = cctx.dent_root()
-
-print dent.ents()
-
 #test_cli_ls(cctx)
 
 
-#test_pkguinf(ctx)
-
-
-
+test_pkguinf(ctx)
 #test_cli_ls(poldctx)
 #arr = poldctx.get_avail_packages()
 sys.exit(0)
