@@ -1,23 +1,24 @@
-0.20.0 (major enhancements release)
+0.20.0 (major enhancements release 2005/10/??)
+
+This release introduces new series of poldek. Significant changes:
 
 I) Source repositories
-* repositories code has been totally rewritten in the modular, 
-  plugin-like way, so is is quite easy to add support for new 
-  formats. 
 
-* new 'pndir' is the default format now. It is based on tndb (cdb 
-  like) DBM library. To save bandwidth package descriptions 
-  (Description, Summary, etc) are stored in 2 separate files:
-  first named packages.ndir.dscr with common (BuildHost, Distribution, 
-  etc) and "C" descriptions and second with all i18n 
-  .dscr file per available language). 
+* repositories code has been totally rewritten in the modular, plugin-like way, 
+  so is is quite easy to add support for new formats. 
+
+* new 'pndir' is the default format now. It is based on tndb (cdb like) DBM 
+  library. To save bandwidth package descriptions (Description, Summary, etc) 
+  are stored in 2 separate files: first named packages.ndir.dscr with common 
+  (BuildHost, Distribution, etc) and "C" descriptions and second with all 
+  non-C descriptions). 
 
 * 'hdrl' aka 'apt' format are update-able now. 
 
-* support for Yum and Metadata XML formats. 
+* support for Yum and Metadata XML repositories. 
 
 * repository indexes could be created in many formats at once
-  (using --mt=TYPE[,TYPE]), ex:
+  using --mt=TYPE[,TYPE], ex:
 
   $ poldek -s /foo/bar --mkdix --mt=pdir,pndir
 
@@ -31,32 +32,31 @@ I) Source repositories
 
 II) Installation related
 
-* uninstallation code has been rewritten, --erase and 
-  'uninstall' command works properly now.
+* uninstallation code has been rewritten and improved. Packages are removed 
+  with its reverse dependencies and in the right order, according to 
+  {pre,post}un requirements.
 
 * poldek can perform 'to repository' installation, i.e packages
   are copied from source to destination repository with full
   dependency checking, ex:
 
-  $ poldek -n ...  --install-dest /var/foo/rpms-repo --upgrade-dist -v
-  $ poldek -n ...  --install-dest-dn name --upgrade-dist -v
+  $ poldek -n ...  --dt pdir --destination /foo/bar/RPMS --upgrade-dist -v
+  $ poldek -n ...  --dn name --upgrade-dist -v
 
 
 III) Interactive mode
 
-* mode's commands are available without mode itself, i.e
-  one can execute interactive commands from command-line:
-  
+* interactive mode commands are available directly from command line too:
   $ poldek --cmd ls 
   $ ipoldek install libfoo-0.1-1
 
-* aliases are defined in external configuration file 
+* command aliases are defined in external configuration file 
   (Mariusz Mazur <mmazur a kernel pl>)
 
-* commands may be piped, ex:
+* command output may be piped, ex:
   poldek> rsearch /poldek/ | ls -l
 
-* external commands are supported too:
+* external commands are supported:
   poldek> rsearch /pol/ | grep ^pol
 
 IV) Configuration file 
@@ -93,7 +93,7 @@ IV) Configuration file
   Included remote files once downloaded, are stored in cache directory, 
   to resynchronize them with it's remote copy use --upconf option. 
 
-* support for APT sources configuration has been added ("load apt sources list"
+* support for APT sources configuration has been added - "load apt sources list"
   option.
 
 V) General 
@@ -111,6 +111,14 @@ V) General
 
 
                             ==== 0.18.x series ====
+
+0.18.9.1 (bugfix release; 2005/10/17)
+* fixed writing diff list file (packages.diff.toc)
+* update to rpm 4.4 (dropped legacy PreReq support) 
+  (Jakub Bogusz (<qboosh att pld-linux org>)
+* renamed trurlib's nstream members to avoid conflicts with stdio macros 
+  (Olivier Thauvin (olivier.thauvin att aerov jussieu fr)
+* fixed package version selection on greedy upgrade
 
 0.18.9 (bugfix release; 2005/07/03)
 This is the (hope) last release of 0.18.x branch.
