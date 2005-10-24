@@ -54,7 +54,7 @@ static int poldeklib_init_called = 0;
 const char poldek_BUG_MAILADDR[] = "<mis@pld.org.pl>";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
 const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
-"Copyright (C) 2000-2004 Pawel A. Gajda <mis@pld.org.pl>\n"
+"Copyright (C) 2000-2005 Pawel A. Gajda <mis@pld.org.pl>\n"
 "This program may be freely redistributed under the terms of the GNU GPL v2";
 
 static const char *poldek_logprefix = "poldek";
@@ -1023,7 +1023,7 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
         case POLDEK_CONF_LOGTTY:
             vv = va_arg(ap, void*);
             if (vv)
-                poldek_log_init(vv, stdout, poldek_logprefix);
+                poldek_log_init(NULL, vv, poldek_logprefix);
             break;
 
 
@@ -1112,7 +1112,7 @@ int poldeklib_init(void)
             n_snprintf(tmp, len, "%s=%s", PATH, path);
             putenv(tmp);
         }
-#endif
+#endif  /* HAVE_SETENV */
     }
 #endif  /* PKGLIBDIR */
     return 1;
