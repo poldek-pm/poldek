@@ -1,6 +1,9 @@
 # $Id$
 
-WWW_PAGES  = 
+WWW_PAGES  = page-template.html \
+	     devel-body.html download-body.html index-body.html related-body.html \
+             repo-body.html support-body.html
+
 WWW_BINS   = logo.png logo90.png
 
 WWW_FILES   = $(WWW_PAGES) $(WWW_BINS) ../poldek.html $(top_srcdir)/NEWS
@@ -11,8 +14,8 @@ EXTRA_DIST = $(WWW_PAGES) $(WWW_BINS)
 siteonly: 
 	mkdir -p site || exit 1; \
 	./genhomepage --clean --destdir site; \
-	./genhomepage --destdir site; \
-	cp style.css logo90.png site;
+	./genhomepage --destdir site || exit 1; \
+	cp ../../NEWS style.css logo90.png site;
 
 site: siteonly
 	$(MAKE) -C .. manual-xhtml && cp -a ../manual-xhtml site/manual	

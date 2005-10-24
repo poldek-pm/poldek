@@ -5,7 +5,7 @@ use Getopt::Long;
 use vars qw(@menu $tmpl %config);
 
 @menu = (
-         { name => 'index', label => 'Home' },
+         { name => 'index', label => 'Home', m4 => 1 },
          { name => 'overview', label => 'Feature overview', fromanual => 1, },
          { name => 'quickstart', label => 'Quick start', fromanual => 1, },
          { name => 'manual', label => 'Manual',
@@ -19,11 +19,14 @@ use vars qw(@menu $tmpl %config);
         );
 
 %config = ();
-GetOptions(\%config, 'clean', 'destdir=s', 'VERSION=s') || die;
+GetOptions(\%config, 'clean', 'destdir=s', 'VERSION=s', 'DATE=s') || die;
 $config{destdir} ||= '.';
 
 $config{VERSION} ||= poldek_version();
 die "missing --VERSION" if !$config{VERSION};
+
+$config{DATE} = poldek_version_date($config{VERSION});
+die "missing --DATE" if !$config{DATE};
 
 $tmpl = new Text::Template(TYPE => 'FILE',
                            SOURCE => 'page-template.html') || die;
@@ -63,7 +66,7 @@ sub gen_page {
         $content = extract_from_manual($name) || die;
     } else {
         if ($page->{m4}) {
-            open(F, "m4 -DPOLDEK_VERSION=\"$config{VERSION}\" $name-body.html|")
+            open(F, "m4 -DPOLDEK_VERSION=\"$config{VERSION}\" -DPOLDEK_DATE=\"$config{DATE}\" $name-body.html|")
               || die "fork m4 $name: $!";
 
         } else {
@@ -107,7 +110,7 @@ sub extract_from_manual {
             last;
         }
 
-        s/href=\"(\w+)/href=\"manual\/$1/g;
+        s/href=\"(\w+)/href=\"manual\/$1/g if !m|http://|;
 
         # remove section numbers
         #<h3 class="title"><a id="\w+"></a>2.1. Step #1 - Configure repositories</h3>
@@ -130,4 +133,21 @@ sub poldek_version {
     }
     close(F);
     return $v;
+}
+
+sub poldek_version_date {
+    my $version = shift || die;
+
+    open(F, "< ../../NEWS") || die "open: $!";
+
+    my $dt = undef;
+    while (<F>) {
+        if (/^$version/) {
+            ($dt) = ($_ =~ m|(200\d[/\.]\d{2}[/\.]\d{2})|);
+            last;
+        }
+    }
+    close(F);
+    $dt =~ s|/|.|g if $dt;
+    return $dt;
 }

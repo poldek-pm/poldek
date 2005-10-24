@@ -29,6 +29,9 @@
 <!ENTITY section-configuration SYSTEM "m_config.xml">
 <!ENTITY section-cookbook SYSTEM "manual/cookbook.xml">
 <!ENTITY supported-repositories SYSTEM "manual/supported-repositories.xml">
+<!ENTITY yum_link "<ulink url='http://linux.duke.edu/projects/yum/'>yum</ulink>">
+<!ENTITY apt_link "<ulink url='http://moin.conectiva.com.br/AptRpm'>&apt-rpm;</ulink>">
+<!ENTITY xmlmetadata_link "<ulink url='http://linux.duke.edu/projects/metadata/'>XML Package Metadata</ulink>">
 ]>
 
 <article lang="en">
@@ -128,7 +131,8 @@ querying/ search the package database and more.
   <listitem>
     <para> 
     &poldek; supports various types of package repositories including
-    &apt-rpm; and &yum; ones, see <link linkend="repositories.types">list</link> of
+    &apt_link;, &yum_link; and &xmlmetadata_link;. 
+    See the <link linkend="repositories.types">list</link> of
     supported repository types for details. Support for other types may be easily added.
     </para>
   </listitem>
