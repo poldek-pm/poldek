@@ -240,10 +240,13 @@ static int obs_filter(struct pkgdb *db, const struct pm_dbrec *dbrec,
         return 0;
     
     if (!pm_dbrec_nevr(dbrec, &dbpkg.name, &dbpkg.epoch,
-                       &dbpkg.ver, &dbpkg.rel, &arch))
+                       &dbpkg.ver, &dbpkg.rel, &arch, &dbpkg.color))
         return 0;
-        
-    if (arch && n_str_eq(arch, pkg_arch(pkg)))
+
+    if (arch) 
+        pkg_set_arch(&dbpkg, arch);
+
+    if (pkg_is_colored_like(&dbpkg, pkg))
         return 1;
     
     return 0;
