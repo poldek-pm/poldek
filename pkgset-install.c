@@ -58,7 +58,6 @@
 #include "poldek_intern.h"
 #include "pm/pm.h"
 
-extern int poldek_conf_MULTILIB;
 
 #define DBPKG_ORPHANS_PROCESSED   (1 << 15) /* is its orphan processed ?*/
 #define DBPKG_DEPS_PROCESSED      (1 << 16) /* is its deps processed? */
@@ -146,22 +145,6 @@ int is_pkg_installed(struct pkgdb *db, struct pkg *pkg, int *cmprc)
     if (n == 0) {
         n_assert(dbpkgs == NULL);
         return 0;
-    }
-
-    if (poldek_conf_MULTILIB) {
-        int i;
-        tn_array *arr = n_array_clone(dbpkgs);
-        
-        for (i=0; i < n_array_size(dbpkgs); i++) {
-            struct pkg *dbpkg = n_array_nth(dbpkgs, i);
-            
-            if (pkg_is_kind_of(pkg, dbpkg))
-                n_array_push(arr, pkg_link(dbpkg));
-        }
-
-        n_array_cfree(&dbpkgs);
-        dbpkgs = arr;
-        n = n_array_size(arr);
     }
 
     if (n) {
@@ -970,41 +953,12 @@ int verify_unistalled_cap(int indent, struct capreq *cap, struct pkg *pkg,
     return 1;
 }
 
-static int obs_filter(struct pkgdb *db, const struct pm_dbrec *dbrec,
-                      void *apkg) 
-{
-    struct pkg dbpkg, *pkg = apkg;
-    char *arch;
-
-    db = db;
-    if (dbrec->hdr == NULL)
-        return 0;
-    
-    if (!pm_dbrec_nevr(dbrec, &dbpkg.name, &dbpkg.epoch,
-                       &dbpkg.ver, &dbpkg.rel, &arch))
-        return 0;
-        
-    if (arch && n_str_eq(arch, pkg_arch(pkg)))
-        return 1;
-    
-    return 0;
-}
 
 static
 int get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs, struct pkg *pkg,
                         unsigned getflags, unsigned ldflags) 
 {
-    int n;
-    
-    if (poldek_conf_MULTILIB)
-        pkgdb_set_filter(db, obs_filter, pkg);
-    
-    n = pkgdb_get_obsoletedby_pkg(db, dbpkgs, pkg, getflags, ldflags);
-    
-    if (poldek_conf_MULTILIB)
-        pkgdb_set_filter(db, NULL, NULL);
-    
-    return n;
+    return pkgdb_get_obsoletedby_pkg(db, dbpkgs, pkg, getflags, ldflags);
 }
 
 
@@ -1938,8 +1892,7 @@ static int valid_arch_os(struct poldek_ts *ts, tn_array *pkgs)
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
         
-        if (!poldek_conf_MULTILIB &&
-            !ts->getop(ts, POLDEK_OP_IGNOREARCH) && pkg->_arch &&
+        if (!ts->getop(ts, POLDEK_OP_IGNOREARCH) && pkg->_arch &&
             !pm_machine_score(ts->pmctx, PMMSTAG_ARCH, pkg_arch(pkg)))
          {
             logn(LOGERR, _("%s: package is for a different architecture (%s)"),
