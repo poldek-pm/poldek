@@ -237,10 +237,11 @@ int pkgdb_map(struct pkgdb *db,
 }
 
 int pm_dbrec_nevr(const struct pm_dbrec *dbrec, char **name, int32_t *epoch,
-                  char **ver, char **rel, char **arch)
+                  char **ver, char **rel, char **arch, int *color)
 {
     n_assert(dbrec->_ctx->mod->hdr_nevr);
-    return dbrec->_ctx->mod->hdr_nevr(dbrec->hdr, name, epoch, ver, rel, arch);
+    return dbrec->_ctx->mod->hdr_nevr(dbrec->hdr, name, epoch, ver, rel,
+                                      arch, color);
 }
 
 int pkgdb_map_nevr(struct pkgdb *db,
@@ -262,7 +263,7 @@ int pkgdb_map_nevr(struct pkgdb *db,
         
         n_assert(db->_ctx->mod->hdr_nevr);
         if (db->_ctx->mod->hdr_nevr(dbrec->hdr, &tmpkg.name, &tmpkg.epoch,
-                                    &tmpkg.ver, &tmpkg.rel, &arch)) {
+                                    &tmpkg.ver, &tmpkg.rel, &arch, &tmpkg.color)) {
             
             if (mapfn(tmpkg.name, tmpkg.epoch, tmpkg.ver, tmpkg.rel, arg) < 0)
                 break;
@@ -288,7 +289,7 @@ int pkg_hdr_cmp_evr(struct pm_ctx *ctx, void *hdr, const struct pkg *pkg,
     char *arch;
     
     if (!ctx->mod->hdr_nevr(hdr, &tmpkg.name, &tmpkg.epoch,
-                            &tmpkg.ver, &tmpkg.rel, &arch))
+                            &tmpkg.ver, &tmpkg.rel, &arch, NULL))
         return 0;
     
     *cmprc = pkg_cmp_evr(pkg, &tmpkg);
@@ -472,7 +473,7 @@ int header_evr_match_req(struct pm_ctx *ctx, void *hdr,
     struct pkg pkg;
 
     if (!ctx->mod->hdr_nevr(hdr, &pkg.name, &pkg.epoch, &pkg.ver, &pkg.rel,
-                            NULL))
+                            NULL, NULL))
         return -1;
 
     DBGF("%s match %s?\n", pkg_evr_snprintf_s(&pkg), 

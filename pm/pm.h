@@ -98,7 +98,7 @@ struct pm_dbrec {
 };
 
 int pm_dbrec_nevr(const struct pm_dbrec *dbrec, char **name, int32_t *epoch,
-                  char **ver, char **rel, char **arch);
+                  char **ver, char **rel, char **arch, int *color);
 
                   
 int pkgdb_is_pkg_installed(struct pkgdb *db, const struct pkg *pkg, int *cmprc);

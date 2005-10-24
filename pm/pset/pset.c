@@ -467,7 +467,7 @@ int pm_pset_db_it_init(struct pkgdb_it *it, int tag, const char *arg)
 
 
 int pm_pset_hdr_nevr(void *h, char **name, int32_t *epoch,
-                     char **ver, char **rel, char **arch)
+                     char **ver, char **rel, char **arch, int *color)
 {
     struct pkg *pkg = h;
     
@@ -475,8 +475,12 @@ int pm_pset_hdr_nevr(void *h, char **name, int32_t *epoch,
     *epoch = pkg->epoch;
     *ver = pkg->ver;
     *rel = pkg->rel;
+    
     if (arch)
         *arch = (char*)pkg_arch(pkg);
+    
+    if (color) 
+        *color = pkg->color;
     
     return 1;
 }

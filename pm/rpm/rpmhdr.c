@@ -112,8 +112,8 @@ char **pm_rpmhdr_langs(Header h)
 }
 
 
-int pm_rpmhdr_nevr(void *h, char **name,
-                   int32_t *epoch, char **version, char **release, char **arch)
+int pm_rpmhdr_nevr(void *h, char **name, int32_t *epoch, char **version,
+                   char **release, char **arch, int *color)
 {
     int type;
     int32_t *anepoch;
@@ -129,6 +129,13 @@ int pm_rpmhdr_nevr(void *h, char **name,
     if (arch) {
         *arch = NULL;
         headerGetEntry(h, RPMTAG_ARCH, &type, (void *)arch, NULL);
+    }
+
+    if (color) {
+        *color = 0;
+#ifdef HAVE_RPM_HGETCOLOR
+        *color = hGetColor(h);
+#endif
     }
     
     return 1;
