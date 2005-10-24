@@ -38,6 +38,7 @@
 #include "misc.h"
 #include "log.h"
 #include "i18n.h"
+#include "install/install.h"
 
 extern int poldek_conf_PROMOTE_EPOCH;
 extern int poldek_conf_MULTILIB;
