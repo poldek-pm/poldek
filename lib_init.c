@@ -905,10 +905,10 @@ static void n_assert_hook(const char *expr, const char *file, int line)
 
 static void n_die_hook(const char *msg) 
 {
-    char msg[1024];
-    n_snprintf(msg, sizeof(msg),
+    char buf[1024];
+    n_snprintf(buf, sizeof(buf),
                "Something wrong, something not quite right.\ndie: %s\n", msg);
-    poldek_say_goodbye(msg);
+    poldek_say_goodbye(buf);
     abort();
 }
 
