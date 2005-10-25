@@ -27,8 +27,8 @@ CPPFLAGS += -DSWIG -DPOCLIDEK_ITSELF
 
 poldekmod.i: local_stdint.h
 
-install-exec-hook:
-	$(mkinstalldirs) "$(DESTDIR)$(py_sitedir)"
+#install-exec-hook:
+#	$(mkinstalldirs) "$(DESTDIR)$(py_sitedir)"
 
 %.py: wrap_%.c
 
