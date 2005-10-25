@@ -1,8 +1,9 @@
-0.20.0 (major enhancements release 2005/10/??)
+0.20.0 (major enhancements release 2005/10/2?)
 
-This release introduces new series of poldek. Significant changes:
+This release introduces new series of poldek. 
+Significant changes and differences from 0.18.x series:
 
-I) Source repositories
+I) Package repositories
 
 * repositories code has been totally rewritten in the modular, plugin-like way, 
   so is is quite easy to add support for new formats. 
@@ -18,7 +19,7 @@ I) Source repositories
 * support for Yum and Metadata XML repositories. 
 
 * repository indexes could be created in many formats at once
-  using --mt=TYPE[,TYPE], ex:
+  using --mt switch, ex:
 
   $ poldek -s /foo/bar --mkdix --mt=pdir,pndir
 
@@ -26,7 +27,7 @@ I) Source repositories
   to another format is supported, ex:
   $ poldek --st apt -s /foo/bar --mkidx=/ala/ma --mt=pdir
 
-* (re)creation of native poldek's indexes (pdir, pndir) is much faster now 
+* (re)creation of native poldek's indexes (pdir, pndir) is much faster now
   -- package headers are not loaded at all if package's file modification 
   time is the same as saved one in existing index.
 
@@ -46,18 +47,18 @@ II) Installation related
 
 III) Interactive mode
 
-* interactive mode commands are available directly from command line too:
-  $ poldek --cmd ls 
-  $ ipoldek install libfoo-0.1-1
+* interactive mode commands are available directly from command line:
+   $ poldek --cmd ls foo
+   $ ipoldek ls foo
 
 * command aliases are defined in external configuration file 
   (Mariusz Mazur <mmazur a kernel pl>)
 
-* command output may be piped, ex:
-  poldek> rsearch /poldek/ | ls -l
+* commands output may be piped, ex:
+   poldek> rsearch /poldek/ | ls -l
 
 * external commands are supported:
-  poldek> rsearch /pol/ | grep ^pol
+   poldek> rsearch /pol/ | !grep ^pol
 
 IV) Configuration file 
 
@@ -71,40 +72,53 @@ IV) Configuration file
   external file getters should be configured in its own sections "source" and 
   "fetcher", see sample configs. Old configuration format is still supported.
 
-* environment variables in config files are expanded (ex: cachedir = $HOME/.cache)
+* environment variables in config files are expanded:
 
-* macro like expansion has been added to make configuration easier to read,
-  ex: 
+  cachedir = $HOME/.cache)
 
- _pld_arch   = i686
- _pld_prefix = ftp://ftp.pld.org.pl/dists/ra
- _ra_idxtype = pdir
+* support for simple macros has been added to make configuration easier to write 
+  and read, for example: 
 
- [source]
- type  = %{_ra_idxtype}
- name  = ra 
- path  = %{_pld_prefix}/PLD/%{_pld_arch}/PLD/RPMS/
+   _arch   = i686
+   _prefix = ftp://ftp.pld.org.pl/dists
 
-* %include macro has been added, included file may be remote too, ex:
+   [source]
+   type  = pdir
+   name  = pld-ra 
+   path  = %{_prefix}/ra/PLD/%{_arch}/PLD/RPMS/
 
-  _pld_prefix = ftp://ftp.pld.org.pl/dists/ra
-  %include %{_pld_prefix}/source.conf
+   [source]
+   type  = pdir
+   name  = pld-ra-updates 
+   path  = %{_prefix}/ra/updates/general/%{_arch}/
 
-  Included remote files once downloaded, are stored in cache directory, 
-  to resynchronize them with it's remote copy use --upconf option. 
+* %include directive has been added, it can include remote files as well:
 
-* support for APT sources configuration has been added - "load apt sources list"
-  option.
+   %include source.conf
+   %include ftp://ftp.pld.org.pl/dists/ra/source.conf
+
+  Files once downloaded are stored in cache directory, to resynchronize them 
+  with it's remote copy use --upconf option. 
+
+* support for APT sources configuration has been added - new 
+  "load apt sources list" configuration option.
 
 V) General 
 
-* removed and changed options and switches; all obsoleted opts are still 
-  supported *except* "-f" (not important IMO). Changes:
-  -f, --fast               => --skip-installed
-  --mkidxz                 => --mkidx           (compression is on by default)
-  --sidx, --sdir, --shdrl  =>                   (use --st=TYPE -s instead)
-  --unique-pkg-names       => --uniq
-  --shcmd                  =>                   (use --cmd or run ipoldek)
+* Some command line switches are changed, but all obsoleted switches are still 
+  supported *except* "-f" (not important IMO). 
+  Changes:
+
+   -f, --fast               => --skip-installed
+   --mkidxz                 => --mkidx           (compression is on by default)
+   --sidx, --sdir, --shdrl  =>                   (use --st=TYPE -s instead)
+   --unique-pkg-names       => --uniq
+   --shcmd                  =>                   (use --cmd or run ipoldek)
+
+* configuration options may be set from command line by -O switch, for
+  example:
+
+   $ poldek -Ovfile_external_compress=yes  
 
 * manual have been rewritten and enhanced.
 
