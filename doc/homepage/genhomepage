@@ -83,6 +83,7 @@ sub gen_page {
                  content => $content,
                  page_title => $page->{label},
                 );
+    print "Generating $config{destdir}/$name.html...\n";
     open(OUT, "> $config{destdir}/$name.html") || die "open $!";
     $tmpl->fill_in(HASH => \%param, OUTPUT => \*OUT) || die $Text::Template::ERROR;
     close(OUT);

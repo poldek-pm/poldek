@@ -16,8 +16,8 @@ foreach my $file (@ARGV) {
         unshift @lines, "<xml>";
         push @lines, "</xml>";
     }
-    $ref = $xs->XMLin(join('', @lines), keeproot => 1, keyattr => []);
-    #print STDERR Dumper($ref);
+    $ref = $xs->XMLin(join('', @lines), keeproot => 1, keyattr => [], forcecontent => 1);
+    #print Dumper($ref);
     traverse(undef, $ref, \%out);
 }
 
@@ -32,7 +32,7 @@ sub traverse {
     my $xml = shift;
     my $outhref = shift || die;
 
-    #print STDERR "traverse $key, $xml\n";
+    #print STDERR "traverse $key, $xml\n" if $key eq 'filename';
     if (ref $xml eq 'HASH') {
         $current_id = '' if exists $xml->{sect1} ||
           exists $xml->{sect2} || exists $xml->{sect3};
@@ -47,7 +47,8 @@ sub traverse {
 
     if (ref $xml eq 'ARRAY') {
         foreach my $elem (@{$xml}) {
-            next if !ref $elem && $key eq 'file'; # index <file>s with ids only
+            next if !ref $elem && $key eq 'filename'; # index <file>s with ids only
+            next if !$key eq 'filename' && exists $elem->{id};
             traverse($key, $elem, $outhref);
         }
 
@@ -58,9 +59,11 @@ sub traverse {
                 #index all <option>s
                 $akey = $key if $key eq 'option';
                 # and <file>s with ids
-                $akey = $key if $key eq 'filename' && exists $xml->{id};
+                if ($key eq 'filename' && exists $xml->{id}) {
+                    $akey = $key;
+                    #print STDERR " DO $akey $xml->{id} $xml->{content}\n";
+                }
             }
-            #print STDERR " run traverse (key=$key) ($akey, $xml->{$_})\n";
             traverse($akey, $xml->{$_}, $outhref);
         }
     }
@@ -76,8 +79,9 @@ sub traverse {
     $outhref->{$content} ||= [];
 
     push @{$outhref->{$content}}, $current_id;
-    print STDERR "do $content\n";
+    #print STDERR "  do $content $current_id\n";
 
+    return;
     if ($content =~ /\-\-/) {
         my ($opt) = ($content =~ /\-\-([\w\-]+)/);
         if ($opt) {

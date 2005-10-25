@@ -1199,10 +1199,8 @@ external scripts. Example:
 </para>
 </appendix>
 
-<?xmlif if output='html|xhtml'?>
 <index><title>Index</title>
 &manual-index;
 </index>
-<?xmlif fi?>
 
 </article>
