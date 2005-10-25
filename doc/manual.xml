@@ -67,7 +67,7 @@
 </authorgroup>
 
 <date>$Date$</date>
-<releaseinfo>$Revision$</releaseinfo>
+<releaseinfo>$Revision$ $Date$</releaseinfo>
 
 <keywordset>
 <keyword>package management</keyword>
@@ -78,6 +78,7 @@
 <keyword>yum</keyword>
 <keyword>poldek</keyword>
 <keyword>PLD</keyword>
+<keyword>smart package manager</keyword>
 </keywordset>
 </articleinfo>
 
@@ -533,7 +534,7 @@ To skip deltas creation use <option>--nodiff</option> option.
 </para>
 
 <para>
-Other related options are: <option>--nodesc</option> with that package descriptions are not saved to repository index and <option>--nocompres</option> means that uncompressed index will be created.
+Other related options are: <option>--nodesc</option> with that package descriptions are not saved to repository index and <option>--nocompress</option> means that uncompressed index will be created.
 </para>
 
 <para>
@@ -1198,7 +1199,10 @@ external scripts. Example:
 </para>
 </appendix>
 
-<!-- <index><title>Index</title>
+<?xmlif if output='html|xhtml'?>
+<index><title>Index</title>
 &manual-index;
-</index> -->
+</index>
+<?xmlif fi?>
+
 </article>

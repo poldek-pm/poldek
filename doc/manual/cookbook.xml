@@ -17,8 +17,8 @@ Indexes may be created for multiple repositories at once:
 &prompt; <command>poldek -n <replaceable>fedora-c2</replaceable> -n <replaceable>fedora-c2-up</replaceable> --makeidx</command>
 </screen>
 
-Multiple indexes may be created at once to. Use <option>--mt</option> switch 
-to create indexes of multiple types:
+Multiple indexes of different types may be created at once using 
+<option>--mt</option> switch:
 <screen>
 &prompt; <command>poldek -n <replaceable>home</replaceable> --makeidx --mt=<replaceable>pndir,pdir</replaceable></command>
 </screen>
