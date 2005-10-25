@@ -42,6 +42,8 @@
 #include "poldek_term.h"
 #include "pm/pm.h"
 
+extern void (*poldek_log_say_goodbye)(const char *msg); /* log.c */
+
 static int poldeklib_init_called = 0;
 
 /* _iflags */
@@ -49,7 +51,6 @@ static int poldeklib_init_called = 0;
 #define CACHEDIR_SETUPDONE  (1 << 2)
 #define SOURCES_LOADED      (1 << 3)
 #define SETUP_DONE          (1 << 4)  
-
 
 const char poldek_BUG_MAILADDR[] = "<mis@pld.org.pl>";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
@@ -59,6 +60,9 @@ const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
 
 static const char *poldek_logprefix = "poldek";
 
+static void say_goodbye(const char *msg);
+void (*poldek_say_goodbye)(const char *msg) = say_goodbye;
+
 static
 void (*poldek_assert_hook)(const char *expr, const char *file, int line) = NULL;
 
@@ -67,6 +71,8 @@ void (*poldek_malloc_fault_hook)(void) = NULL;
 
 static
 void (*poldek_die_hook)(const char *msg) = NULL;
+
+
 
 static void register_vf_handlers_compat(const tn_hash *htcnf);
 static void register_vf_handlers(const tn_array *fetchers);
@@ -867,33 +873,42 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path,
     else if (poldek_conf_get_bool(htcnf, "auto_zlib_in_rpm", 0))
         zlib_in_rpm(ctx);
 
-    if ((v = poldek_conf_get_int(htcnf, "vfile_retries", 1000)) > 0)
+    if ((v = poldek_conf_get_int(htcnf, "vfile_retries", 100)) > 0)
         vfile_configure(VFILE_CONF_STUBBORN_NRETRIES, v);
 
     return 1;
 }
 
+static void say_goodbye(const char *msg) 
+{
+    printf("%s", msg);
+}
 
 static void n_malloc_fault(void) 
 {
-    printf("Something wrong, something not quite right...\n"
-           "Memory exhausted\n");
+    poldek_say_goodbye("Something wrong, something not quite right...\n"
+                       "Memory exhausted\n");
     exit(EXIT_FAILURE);
 }
 
 
 static void n_assert_hook(const char *expr, const char *file, int line) 
 {
-    printf("Something wrong, something not quite right.\n"
-           "Assertion '%s' failed, %s:%d\n"
-           "Please report this bug to %s.\n\n",
-           expr, file, line, poldek_BUG_MAILADDR);
+    char msg[1024];
+    n_snprintf(msg, sizeof(msg), "Something wrong, something not quite right.\n"
+               "Assertion '%s' failed, %s:%d\n"
+               "Please report this bug to %s.\n\n",
+               expr, file, line, poldek_BUG_MAILADDR);
+    poldek_say_goodbye(msg);
     abort();
 }
 
 static void n_die_hook(const char *msg) 
 {
-    printf("Something wrong, something not quite right.\ndie: %s\n", msg);
+    char msg[1024];
+    n_snprintf(msg, sizeof(msg),
+               "Something wrong, something not quite right.\ndie: %s\n", msg);
+    poldek_say_goodbye(msg);
     abort();
 }
 
@@ -1026,7 +1041,13 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
                 poldek_log_init(NULL, vv, poldek_logprefix);
             break;
 
-
+        case POLDEK_CONF_GOODBYE_CB:
+            vv = va_arg(ap, void*);
+            if (vv) {
+                poldek_say_goodbye = vv;
+                poldek_log_say_goodbye = vv;
+            }
+                
         default:
             rc = poldek_ts_vconfigure(ctx->ts, param, ap);
             break;

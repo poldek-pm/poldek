@@ -30,12 +30,21 @@
 #define POLDEK_LOG_H_INTERNAL
 #include "log.h"
 
-int poldek_VERBOSE = 0;
-static char       l_prefix[64];
-static FILE       *l_stream, *l_fstream = NULL;
+int  poldek_VERBOSE = 0;
 
+static void say_goodbye(const char *msg);
+void (*poldek_log_say_goodbye)(const char *msg) = say_goodbye;
+
+static char l_prefix[64];
+static FILE *l_stream, *l_fstream = NULL;
 
 static void vlog_tty(int pri, const char *fmt, va_list args);
+
+static void say_goodbye(const char *msg)
+{
+    /* do nothing, msg is logged before dyeing */
+    return;
+}
 
 int poldek_verbose(void)
 {
@@ -156,8 +165,12 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
         }
     }
     
-    if (pri & LOGDIE)
+    if (pri & LOGDIE) {
+        char msg[1024];
+        n_snprintf(msg, sizeof(msg), fmt, args);
+        say_goodbye(msg);
         abort();
+    }
 }
 
 
