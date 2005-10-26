@@ -1042,27 +1042,22 @@ int do_source_make_idx(struct source *src,
     return rc;
 }
 
-#define DEFAULT_STYPE "dir"
 static const char *determine_stype(struct source *src, const char *idxpath)
 {
     if (src->original_type)
         return src->original_type;
 
-    /* with type and not named i.e not from config */
-    if ((src->flags & PKGSOURCE_NAMED) == 0)
+    idxpath = idxpath;
+    
+    /* with type and not named i.e --st TYPE -s PATH */
+    if ((src->flags & PKGSOURCE_TYPE) && (src->flags & PKGSOURCE_NAMED) == 0)
         return src->type;
     
-    if (is_dir(src->path)) {
-        if ((src->flags & PKGSOURCE_TYPE) == 0) /* no type */
-            return "dir";
-        
-        if (idxpath == NULL)
-            return "dir";
-        
-    } else if (src->type) {   /* not a dir, an URL */
+    if (is_dir(src->path))
+        return "dir";
+    
+    else if (src->type)  /* not a dir, an URL */
         return src->type;
-
-    }
 
     return poldek_conf_PKGDIR_DEFAULT_TYPE;
 }
@@ -1085,9 +1080,15 @@ int source_make_idx(struct source *src, const char *stype,
     
     if (dtype == NULL) {
            /* if not from config */
-        if (n_str_eq(src->type, "dir") && (src->flags & PKGSOURCE_NAMED) == 0)
-            dtype = poldek_conf_PKGDIR_DEFAULT_TYPE;
-        else
+        if ((src->flags & PKGSOURCE_NAMED) == 0) {
+            if (n_str_eq(src->type, "dir"))
+                dtype = poldek_conf_PKGDIR_DEFAULT_TYPE;
+            /* stype not default one, so guess destination type is default */
+            else if (n_str_ne(stype, poldek_conf_PKGDIR_DEFAULT_TYPE))
+                dtype = poldek_conf_PKGDIR_DEFAULT_TYPE;
+        }
+        
+        if (dtype == NULL)
             dtype = src->type;
     }
     
@@ -1119,7 +1120,7 @@ int source_make_idx(struct source *src, const char *stype,
                      source_idstr(ssrc));
                 rc = 0;
             }
-            /* if not exists,  let do_source_make_idx() to shout */
+            /* if not exists, let do_source_make_idx() to shout */
         }
     }
 
