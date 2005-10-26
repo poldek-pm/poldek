@@ -1022,8 +1022,9 @@ int do_source_make_idx(struct source *src,
             pkgdir_free(pdir);
             pdir = NULL;
         }
-        
-        n_assert((pdir->_ldflags & PKGDIR_LD_DOIGNORE) == 0);
+        if (pdir) {
+            n_assert((pdir->_ldflags & PKGDIR_LD_DOIGNORE) == 0);
+        }
         pkgdir->prev_pkgdir = pdir;
     }
 
