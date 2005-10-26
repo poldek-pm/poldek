@@ -1,12 +1,12 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl $Id$
 
-AC_INIT(poldek,0.20.0)
+AC_INIT(poldek,0.19.0)
 AC_CONFIG_SRCDIR([capreq.c])
 
 PACKAGE_BUGREPORT="mis@pld.org.pl"
 VERSION_STATUS="beta"
-VERSION=0.20.0
+VERSION=0.19.0
 VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
 VERSION_CVSTAG="v$VERSION_TAG"
 PACKAGE_VERSION_SERIES="2"
@@ -95,19 +95,6 @@ else
 	fi
 fi
 
-dnl curl module is obsoleted 
-# AC_ARG_WITH(curl,
-# [  --with-curl	compile with libcurl],
-# ENABLE_VFILE_CURL=$enableval, ENABLE_VFILE_CURL=no)
-# if test "${ENABLE_VFILE_CURL}." != "yes."; then
-#	AM_CONDITIONAL(ENABLE_VFILE_CURL, false)
-# else
-#	AC_CHECK_LIB(curl, curl_easy_init,,AC_MSG_ERROR(["libcurl not found"]))
-#	AM_CONDITIONAL(ENABLE_VFILE_CURL, true)
-#	AC_DEFINE([ENABLE_VFILE_CURL],1,[defined if curl support is requested])
-# fi
-
-
 AC_ARG_WITH(sys-trurlib,
 [  --with-sys-trurlib	compile and link with system installed trurlib],
 ENABLE_SYS_TRURL=$withval, ENABLE_SYS_TRURL=no)
@@ -124,10 +111,6 @@ if test "${ENABLE_STATIC}." = "yes."; then
 	if test "${INTERACTIVE_MODE}." = "yes."; then
 		LIBS="$LIBS -lncurses"
 	fi
-
-#	if test "${ENABLE_VFILE_CURL}." = "yes."; then
-#		LIBS="$LIBS $(curl-config --libs)"
-#	fi
 fi
 
 AC_SUBST(poldek_LDFLAGS)
@@ -205,13 +188,13 @@ AC_EGREP_CPP(yes,
       #endif
      ], is_rpm4=yes, is_rpm4=no)
 
-if test ${is_rpm4}. = yes. ; then
+if test "${is_rpm4}." = "yes." ; then
 	AC_MSG_RESULT(yes)
 	AC_DEFINE([HAVE_RPM_4_0],1,[defined if rpm 4.x is installed])
 	AC_EGREP_CPP(RPMSENSE_SCRIPT_PRE,
 		[ #include <rpm/rpmlib.h>
 		], is_rpm_extdeps=yes, is_rpm_extdeps=no)
-	if test ${is_rpm_extdeps}. = yes. ; then
+	if test "${is_rpm_extdeps}." = "yes." ; then
 		AC_DEFINE([HAVE_RPM_EXTDEPS])
 	fi
 
@@ -220,7 +203,7 @@ if test ${is_rpm4}. = yes. ; then
 		[ #include <rpm/rpmcli.h>
 		], is_rpm4_0_4=yes, is_rpm4_0_4=no)
 
-	if test ${is_rpm4_0_4}. = yes. ; then
+	if test "${is_rpm4_0_4}." = "yes." ; then
 		AC_DEFINE([HAVE_RPM_4_0_4],1,[])
 		CFLAGS="$CFLAGS -D_REENTRANT"
 		AC_MSG_RESULT(yes)
@@ -236,7 +219,7 @@ AC_CHECK_LIB(bz2, BZ2_bzCompress)
 AC_CHECK_LIB(z, gzopen)
 
 DBLIB=""
-if test ${is_rpm4_0_4}. = no. ; then
+if test "${is_rpm4_0_4}." = "no." ; then
 	dnl tocheck: -ldb-3.1 causes link with static lib from /usr/lib
 	dnl instead shared one from /lib
 	#AC_CHECK_LIB(db-3.1, db_create, [DBLIB="-ldb-3.1"],
@@ -268,12 +251,12 @@ fi
 
 AC_CHECK_LIB(popt, poptReadConfigFile)
 
-if test ${is_rpm4_0_4}. = yes. ; then	
+if test "${is_rpm4_0_4}." = "yes." ; then	
 	AC_CHECK_LIB(beecrypt, dhaes_pContextInitEncrypt, 
 	have_beecrypt=yes, have_beecrypt=no)
 fi
 
-if test ${is_rpm4}. = yes. ; then
+if test "${is_rpm4}." = "yes." ; then
 	AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR(["rpmio not found"]))
 fi
 
@@ -303,8 +286,8 @@ AC_CHECK_HEADERS([db_185.h],,[
 AC_CHECK_FUNCS(__db185_open)
 
 dnl 4.0.4 has cross dependenecies(?)
-if test ${is_rpm4_0_4}. = yes. -a ${ENABLE_STATIC}. = yes. ; then
-	if ${have_beecrypt}. = yes. ; then
+if test "${is_rpm4_0_4}." = "yes." -a "${ENABLE_STATIC}." = "yes." ; then
+	if "${have_beecrypt}." = "yes." ; then
 		LIBS="$LIBS -lbz2 -lrpmio -lbeecrypt -lpthread"
 	fi
 	LIBS="$LIBS -lbz2 -lrpmio"
@@ -316,8 +299,8 @@ AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
 
 
 dnl metadata & xml2
-AC_ARG_WITH(metadata-repository,
-[  --without-metadata-repository   build without metadata repository support],
+AC_ARG_WITH(xml-metadata,
+[  --without-xml-metadata   build without XML metadata repository support],
 METADATA=$withval, METADATA=yes)
 LIBXML2_INCLUDE=
 if test "${METADATA}." == "yes."; then
@@ -342,7 +325,7 @@ dnl - util.h (NetBSD)
 AC_CHECK_FUNC(openpty, have_openpty=yes, [
   AC_CHECK_LIB(util, openpty, have_openpty=yes need_libutil=yes)])
 
-if test "$have_openpty" = "yes"; then
+if test "${have_openpty}." = "yes."; then
   AC_DEFINE([HAVE_OPENPTY],1,[defined if openpty() is avialable])
   AC_CHECK_HEADERS([pty.h libutil.h util.h], break)
   test "$need_libutil" = "yes" && LIBS="-lutil $LIBS"
@@ -403,7 +386,7 @@ AC_EGREP_CPP(yes,
         #endif
        ], is_valid_trurlib_ver=yes, is_valid_trurlib_ver=no)
 
-if test ${is_valid_trurlib_ver}. = no. ; then
+if test "${is_valid_trurlib_ver}." = "no." ; then
 	AC_MSG_RESULT(no)		
    	AC_MSG_ERROR(["trurlib >= 0.44.0 not found"])
 else
