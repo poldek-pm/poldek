@@ -1,4 +1,4 @@
-0.20.0 (major enhancements release 2005/10/2?)
+0.20 (major enhancements release 2005/10/2?)
 
 This release introduces new series of poldek. 
 Significant changes and differences from 0.18.x series:
@@ -129,16 +129,16 @@ V) General
 0.18.9.1 (bugfix release; 2005/10/17)
 * fixed writing diff list file (packages.diff.toc)
 * update to rpm 4.4 (dropped legacy PreReq support) 
-  (Jakub Bogusz (<qboosh att pld-linux org>)
+  (Jakub Bogusz <qboosh att pld-linux org>)
 * renamed trurlib's nstream members to avoid conflicts with stdio macros 
-  (Olivier Thauvin (olivier.thauvin att aerov jussieu fr)
+  (Olivier Thauvin <olivier.thauvin att aerov jussieu fr>)
 * fixed package version selection on greedy upgrade
 
 0.18.9 (bugfix release; 2005/07/03)
 This is the (hope) last release of 0.18.x branch.
 * handle package file 'mtime' tag ('t' tag) to be compatible with devel branch.
-* fixes related to glibc 2.3.5 by Jakub Bogusz (<qboosh att pld-linux org>) and 
-  Arkadiusz Miskiewicz (<arekm att pld-linux org>):
+* fixes related to glibc 2.3.5 by Jakub Bogusz <qboosh att pld-linux org> and 
+  Arkadiusz Miskiewicz <arekm att pld-linux org>:
   - fixed cookie seek functions
   - setvbuf() with small buffer to avoid reverse gzseeks on small forward fseeks
   - do fread() instead of small forward fseeks
@@ -153,10 +153,10 @@ This is the (hope) last release of 0.18.x branch.
 * fixed checking file-based dependencies of packages being removed
 * fixed another dependency processing bug (hard to explain)
 * 'ls' output fixes to be parsable by external scripts (Patryk Zawadzki 
-  <patrys at pld-dc org>)
-* removed usage of superfluous n_free() (Tomasz Wittner <twittner at o2 pl>)
+  <patrys att pld-dc org>)
+* removed usage of superfluous n_free() (Tomasz Wittner <twittner att o2 pl>)
 * vfile's progress bar: fixed displaying total transfer and rate 
-  (Lukasz Masko at ipipan waw pl)
+  (Lukasz Masko att ipipan waw pl)
 * support for RPM 4.4 
 * fixed build under Owl (rpm 4.0.2 without libelf)
 * workaround for "group not found" bug 
@@ -166,7 +166,7 @@ This is the (hope) last release of 0.18.x branch.
 0.18.7 (major bugfix release; 2004/09/24)
 * another stupid SIGSEGV killed (happened occasionally while dependency 
   processing)
-* vfile's progress bar improvements (Patryk Zawadzki <p zawadzki at vegaballs com>)
+* vfile's progress bar improvements (Patryk Zawadzki <p zawadzki att vegaballs com>)
 * fix: disabled package Epoch's autopromotion while checking if it matches 
   requirement
 * with rpm >= 4.1 packages with same provide are obsoleted, not just name
@@ -191,11 +191,11 @@ This is the (hope) last release of 0.18.x branch.
 0.18.4 (bugfix && minor improvements release; 2004/05/10)
 
 * package filenames in "non-standard" form (N-V.R.ARCH.rpm) are supported
-* killed SIGSEGVs on 64bit architecture (Jakub Bogusz <qboosh at pld-linux org>)
+* killed SIGSEGVs on 64bit architecture (Jakub Bogusz <qboosh att pld-linux org>)
 * fixed Epoch comparison bug while checking uninstalled capabilities
 * vfile: progress bar shows remaining time and transfer rate
-  (Patryk Zawadzki <p zawadzki at vegaballs com>)
-* fixed setting cache directory bug (Andreas Piesk <a piesk at gmx net>)
+  (Patryk Zawadzki <p zawadzki att vegaballs com>)
+* fixed setting cache directory bug (Andreas Piesk <a piesk att gmx net>)
 * fixed serious bug of checking unversioned dependencies 
 * --ignore{arch,os} rpm options are honored
 * rpm options could be passed as --rpm=OPTION too, i.e. 
@@ -220,18 +220,18 @@ This is the (hope) last release of 0.18.x branch.
 0.18.3 (bugfix && improvements release; 2004/01/10)
 
 * internal HTTP client does not prevent proxy caching 
-  (Arkadiusz Miskiewicz <arekm at pld-linux org>)
+  (Arkadiusz Miskiewicz <arekm att pld-linux org>)
 * fixed bug on getting package capabilities having EVR with empty Epoch
   like "foo = :1.0-1"
 * do not die if rpmdb iterator returns NULL (possibly broken rpm database).
-  (Arkadiusz Miskiewicz <arekm at pld-linux org>)
+  (Arkadiusz Miskiewicz <arekm att pld-linux org>)
 * vfile_external_compress=yes in config allows gzipped indexes 
   to be used on systems with broken zlib linked in rpmio library
   (rpm 4.2 from RedHat 9, Fedora) 
 * kill unaligned traps on Alpha, time_t is not 32bit long 
-  (Jakub Bogusz <qboosh at pld-linux org>)
+  (Jakub Bogusz <qboosh att pld-linux org>)
 * new "promoteepoch" config and cmdline option switches Epoch comparision
-  by rpm prior to 4.2.1 (thanks to Jakub Bogusz <qboosh at pld-linux org>).     
+  by rpm prior to 4.2.1 (thanks to Jakub Bogusz <qboosh att pld-linux org>).     
 * support for RPM 4.2/4.3
 * dependency processing fixes
 * RPM 4.1 related fixes 
@@ -251,7 +251,7 @@ This is the (hope) last release of 0.18.x branch.
 
 0.18 (bugfix/minor enhancements release; 2002/11/07)
 
-* support for RPM 4.1 (with help of Artur Frysiak <wiget at pld-linux org>)
+* support for RPM 4.1 (with help of Artur Frysiak <wiget att pld-linux org>)
 
 * few dependency processing improvements:
   - greedy upgrades are performed instead of marking different versions 
@@ -272,10 +272,10 @@ This is the (hope) last release of 0.18.x branch.
 
 * fixed available package list management in interactive mode 
 
-* AM/AC stuff cleanup and adaptation to their new versions (automake 1.7 and autoconf 2.54)
-  (Artur Frysiak <wiget at pld-linux org>)
+* AM/AC stuff cleanup and adaptation to their new versions (automake 1.7 and 
+  autoconf 2.54) (Artur Frysiak <wiget att pld-linux org>)
 
-* Polish translation of manual page (GoTaR <gotar at pld-linux org>)
+* Polish translation of manual page (GoTaR <gotar att pld-linux org>)
 
 * fix: progress bar isn't refreshed so frequently (#367)
 
@@ -293,9 +293,9 @@ This is the (hope) last release of 0.18.x branch.
 0.17.8 (major bugfix release; 2002/08/18)
 
 * package installation is verified with rpm database if rpm reports failure
-* fixed obsoletes matching (Jakub Bogusz <qboosh at pld-linux org>)
+* fixed obsoletes matching (Jakub Bogusz <qboosh att pld-linux org>)
 * improved and fixed file based conflicts detection
-* fixed size units display (GoTaR <gotar at poczta.onet.pl>)
+* fixed size units display (GoTaR <gotar att poczta.onet.pl>)
 
 
 0.17.7 (bugfix release; 2002/06/14)
@@ -332,12 +332,12 @@ This is the (hope) last release of 0.18.x branch.
 * improved package auto-selection among equivalents: package which marks
   less packages to install is preferred
 * vftp: fixed logging in when server doesn't ask for password 
-  (Przemyslaw Frasunek <venglin at freebsd.lublin.pl>)
+  (Przemyslaw Frasunek <venglin att freebsd.lublin.pl>)
 * bugfix: root directory (--rootdir) is always passed to rpm as absolute path  
 * shell: desc: file mode is displayed in human readable form
 * fixed vfjuggle: packages.dir.md* are copied to hdd too
 * few SIGSEVs killed on "search" command when APT's pkglist file 
-  is used as package index (thanks to Gustavo Niemeyer <niemeyer at conectiva.com>)
+  is used as package index (thanks to Gustavo Niemeyer <niemeyer att conectiva.com>)
 
 
 0.17.4 (bugfix/minor enhancements release; 2002/05/06)
@@ -383,7 +383,7 @@ This is the (hope) last release of 0.18.x branch.
   cleanup
 
 * URLs with user and password (ftp://user:passwd at host:port/path/ syntax) 
-  are supported (Andreas Piesk <a.piesk at gmx.net>)
+  are supported (Andreas Piesk <a.piesk att gmx.net>)
 
 * new "ftp_sysuser_as_anon_passwd" option causes sending 
   login at hostname as anonymous FTP password 
@@ -395,11 +395,11 @@ This is the (hope) last release of 0.18.x branch.
 
 * misc fixes to compile on SuSE
 
-* fixed rpm 3.x support (with help of Roger Luethi <rl at hellgate.ch>)
+* fixed rpm 3.x support (with help of Roger Luethi <rl att hellgate.ch>)
 
 * fixed and improved handling of bool configuration options, 
   added on/off and enable/disable to the list of valid choices
-  (Andreas Piesk <a.piesk at gmx.net>)
+  (Andreas Piesk <a.piesk att gmx.net>)
 
 * fixed detection of file based conflicts between available packages. 
 
@@ -407,7 +407,7 @@ This is the (hope) last release of 0.18.x branch.
   versions are handled properly
 
 * misc fixes to compile and work with glibc2.1 (with 
-  help of Andreas Piesk <a.piesk at gmx.net>) 
+  help of Andreas Piesk <a.piesk att gmx.net>) 
 
 * installation of multiple instances of package is allowed (by poldek -i)
 
@@ -416,24 +416,24 @@ This is the (hope) last release of 0.18.x branch.
   - fixed handling package conflicts added by poldek  
   - faster dependency checking
 
-* German translation (Andreas Piesk <a.piesk at gmx.net>)
+* German translation (Andreas Piesk <a.piesk att gmx.net>)
 
 * various bugs are fixed:
    - double '/' in paths handling
    - huge mem leak on --update 
-   - ambiguous p_open() flags (Michal Moskal <malekith at pld-linux org>)
+   - ambiguous p_open() flags (Michal Moskal <malekith att pld-linux org>)
    - removed [v]snprintf() (wrong) usage; trurlib's n_[v]snprintf() 
      are used instead
-   - automake/autoconf fixes (Artur Frysiak <wiget at pld-linux org>)
-   - many minor fixes (thanks to Andreas Piesk <a.piesk at gmx.net>)
+   - automake/autoconf fixes (Artur Frysiak <wiget att pld-linux org>)
+   - many minor fixes (thanks to Andreas Piesk <a.piesk att gmx.net>)
 
 0.17.2
 * "ported" to RedHat 7.2 (with rpm 4.0.4)
 * install-dist: --force forces installation of broken package sets
 * corrected package installation progress bar 
-	(Michal Moskal <malekith at pld-linux org>)
+	(Michal Moskal <malekith att pld-linux org>)
 * install-dist: log INST-{OK,ERR} for PLD Installer
-	(Michal Moskal <malekith at pld-linux org>)
+	(Michal Moskal <malekith att pld-linux org>)
 * --dump* works properly
 * vftp: fixed error handling
 
@@ -498,7 +498,7 @@ This is the (hope) last release of 0.18.x branch.
    - uninstall: fix: don't remove pkg from install list if --test is used
    - added -h opt. to all commands
 * removed GCC's nested functions usage -- seems that it causes SIGSEVs on
-   some machines (Arkadiusz Patyk <areq at pld-linux org>)
+   some machines (Arkadiusz Patyk <areq att pld-linux org>)
 * fix: don't include trailing whitespaces in config values
 
 0.15.8:
@@ -509,7 +509,7 @@ This is the (hope) last release of 0.18.x branch.
        doesn't contain package descriptions at all
 * shell: fixed installed package list management
 * curl: fixed progress bar if total file size is unknown 
-  (Michal Moskal <malekith at pld-linux org>)
+  (Michal Moskal <malekith att pld-linux org>)
 * "mercy" mode bugfix
 
 0.15.7:
@@ -530,8 +530,9 @@ This is the (hope) last release of 0.18.x branch.
 * added global config /etc/poldek.conf usage 
 * fixed prereq loop detection
 * added '@' to list of valid characters in package filename
-  (Rafal Kleger-Rudomin  <klakier at pld-linux org>)
-* vfjuggle: sed is used instead of awk (Rafal Kleger-Rudomin  <klakier at pld-linux org>)
+  (Rafal Kleger-Rudomin  <klakier att pld-linux org>)
+* vfjuggle: sed is used instead of awk 
+   (Rafal Kleger-Rudomin  <klakier att pld-linux org>)
 * shell: ls: fixed packages sorting 
 * minor bugfixes 
 
@@ -589,8 +590,8 @@ This is the (hope) last release of 0.18.x branch.
    - extended "desc" and "search" commands -- almost all
      package fields could be specified
    - colorized output
-* bugfixes (thanks to Rafal Kleger-Rudomin <klakier at pld-linux org> and 
-	     Michal Moskal <malekith at pld-linux org>)
+* bugfixes (thanks to Rafal Kleger-Rudomin <klakier att pld-linux org> and 
+	     Michal Moskal <malekith att pld-linux org>)
 
 0.14:
 
@@ -611,10 +612,10 @@ This is the (hope) last release of 0.18.x branch.
 * support for rpm 4.0.2 pre/post requirements
 * readline 4.2 updates
 * vfile: added curl backend (curl >= 7.7.4-pre1 is needed)
-* added --nodesc option for index creation (Michal Moskal <malekith at pld-linux org>)
+* added --nodesc option for index creation (Michal Moskal <malekith att pld-linux org>)
 * rpmvercmp returns 2 instead of -1
 * file names are stored without trailing '\0' (saves about 100 kB disk space)
 * temporary dir may be set by $TMPDIR
 * fixed checking dependencies of unistalled packages
 * shell: added "desc" command
-* fixed a lot of bugs (with help of Michal Moskal <malekith at pld-linux org>)
+* fixed a lot of bugs (with help of Michal Moskal <malekith att pld-linux org>)
