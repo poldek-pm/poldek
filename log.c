@@ -42,7 +42,8 @@ static void vlog_tty(int pri, const char *fmt, va_list args);
 
 static void say_goodbye(const char *msg)
 {
-    /* do nothing, msg is logged before dyeing */
+    msg = msg;
+    /* do nothing, msg is logged before die */
     return;
 }
 
