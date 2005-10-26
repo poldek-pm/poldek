@@ -14,9 +14,9 @@ Name:		poldek
 Version:	@VERSION@
 Release:	%{?snap:0.%{snap}.}1%{?_with_static:.static}
 License:	GPLv2
-Group:	    Applications/System
+Group:	        Applications/System
 Source0:	http://team.pld.org.pl/~mis/poldek/download/%{name}-%{version}%{?snap:-cvs%{snap}}.tar.bz2
-URL:	    http://team.pld.org.pl/~mis/poldek/
+URL:	        http://team.pld.org.pl/~mis/poldek/
 Requires:	rpm
 %{?_with_poldekuser:Requires: sudo}
 BuildRequires:	bzip2-devel
@@ -24,8 +24,8 @@ BuildRequires:	rpm-devel >= 4.0
 BuildRequires:	openssl-devel
 BuildRequires:	readline-devel
 BuildRequires:	zlib-devel
-#BuildRequires:	/usr/bin/pod2man
 BuildRequires:	pcre-devel
+%{!?_without_xml_metadata:BuildRequires: libxml2-devel}
 %{?_with_static:BuildRequires:	bzip2-static}
 %{?_with_static:BuildRequires:	openssl-static}
 %{?_with_static:BuildRequires:	rpm-static}
@@ -64,7 +64,7 @@ poldek static libraries
 %setup -q -n %{name}-%{version}%{?snap:-cvs%{snap}}
 
 %build
-%configure %{?_with_static:--enable-static}
+%configure %{?_with_static:--enable-static} %{?_without_xml_metadata:--without-xml-metadata}
 %{__make} 
 
 %install
@@ -142,8 +142,11 @@ fi
 All persons listed below can be reached at <cvs_login>@pld.org.pl
 
 $Log$
+Revision 1.33  2005/10/26 22:50:13  mis
+- xml metadata bcond
+
 Revision 1.32  2005/05/27 15:27:20  mis
-- commented out %define is still defined? rpm bug?
+- commented out %%define is still defined? rpm bug?
 
 Revision 1.31  2005/05/23 20:00:49  mis
 - updates
