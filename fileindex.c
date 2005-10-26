@@ -610,7 +610,6 @@ int file_index_report_orphans(const struct file_index *fi, tn_array *pkgs)
                 
             nfound = file_index_lookup(fi, dir, strlen(dir), result, 2048);
             if (nfound == 0) {
-                DBGF("%s not found\n", tmpbuf);
                 tn_hash *opkgh = n_hash_new(128, NULL);
                 n_hash_insert(opkgh, pkg_id(pkg), pkg);
                 n_hash_insert(orphanh, dir, opkgh);

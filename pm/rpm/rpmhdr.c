@@ -51,8 +51,11 @@ int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
     }
     
     if (tag == RPMTAG_GROUP && type == RPM_STRING_TYPE) { /* build by old rpm */
+        char **g;
+	
         n_assert(*cnt == 1);
-        char **g = n_malloc(sizeof(*g) * 2);
+
+        g = n_malloc(sizeof(*g) * 2);
         g[0] = *(char **)buf;
         g[1] = NULL;
         *(char ***)buf = g;

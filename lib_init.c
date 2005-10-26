@@ -320,8 +320,8 @@ tn_array *expand_sources_group(tn_array *srcs_named, tn_array *htcnf_sources,
                 n_assert(names);
                 
                 for (ii=0; ii < n_array_size(names); ii++) {
-                    DBGF("%s -> %s\n", s->name, n_array_nth(names, ii));
                     struct source *src = source_new(n_array_nth(names, ii), NULL, NULL, NULL);
+                    DBGF("%s -> %s\n", s->name, n_array_nth(names, ii));
                     src->no = s->no + 1 + ii; /* XXX: hope we fit (see sources_add()) */
                     n_array_push(sources, src);
                 }
