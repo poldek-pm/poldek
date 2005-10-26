@@ -251,7 +251,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_NOCONF:
             argsp->cnflags |= OPT_AS_FLAG(OPT_NOCONF);
-
+            break;
+            
         case OPT_ASK:
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_INST, 1);
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_UNINST, 1);
