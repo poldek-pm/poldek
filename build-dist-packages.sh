@@ -3,57 +3,67 @@
 
 PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 
-#rm -f *.tar.gz
-#make dist
-
 ver=$(perl -ne "print \$1 if /^PACKAGE_VERSION='([\d\.]+)'$/" configure)
 poldek=poldek-${ver}.tar.bz2
 
+distros=$@
+
 if [ -z "$1" ]; then 
-	echo "usage $(basename $0): [pld rh]"
-	exit 1
+        distros="fedora#c3 fedora#c4 pld#ra"
+        echo "usage $(basename $0): no distro#ver specified, build for $distros"
+	#echo "usage $(basename $0): [distro#ver]"
+	#exit 1
 fi	
 
-for distro in $@; do 
-    echo "Distro: $distro"
-    ddir=/var/${distro}-sys
+echo "Build $poldek..."
+for distrospec in $distros; do 
+    distro=$(echo $distrospec | awk -F '#' '{ print $1 }');	
+    distro_ver=$(echo $distrospec | awk -F '#' '{ print $2 }');
+    
+    echo "Distro: $distro - $distro_ver"
+    sleep 1;
+    ddir=/var/${distro}-sys-${distro_ver}
     buildscript=/tmp/build-${poldek}.sh 
 
     rpm="rpm"
+    bcond=""
     #target_def="--define '_target i386'"
 
     case "$distro" in
+        pld)
+            if [ "${distro_ver}." == "ra." ]; then 
+                bcond="--without xml_metadata"; 
+            fi
+            ;;
 	rh)
-	    distro_def="rh"
 	    rpm="rpmbuild"
+            bcond="--without xml_metadata"
 	    ;;
 	fedora)
-    	    distro_def="fedora"
             rpm="rpmbuild"
 	    ;;
-	rh8)
-	    distro_def="rh"
-	    rpm="rpm"
-	    ;;    
 	*)
             distro_def="$distro"
     esac
-    
 
-    rpmopt="--define 'distro $distro_def' --target i386"
+    if [ -z "$distro_def" ]; then echo "DUPA"; distro_def="$distro"; fi
+
+    rpmopt="--define 'distro $distro_def'  $bcond --target i386"
     
     rm -f $ddir/$buildscript
-    if [ "$distro" = "pld" ]; then
-	echo "+ static"    
-	echo "su - mis -c \"$rpm -tb --with static $rpmopt /tmp/$poldek\"" >> $ddir/$buildscript
-    fi
-    
+#   if [ "$distro" = "pld" ]; then
+#	echo "+ static"    
+#	echo "su - mis -c \"$rpm -tb --with static $rpmopt /tmp/$poldek\"" >> $ddir/$buildscript
+#   fi
+
+    echo "su - mis -c \"$rpm -ta $rpmopt /tmp/$poldek\""
     echo "su - mis -c \"$rpm -ta $rpmopt /tmp/$poldek\"" >> $ddir/$buildscript
+    
 
     cp ${poldek} $ddir/tmp || exit 1
     /usr/sbin/chroot $ddir sh $buildscript || exit 1
-    destdir=/tmp/poldek-$ver/${distro}
-    mkdir -p $destdir || true
+    destdir=/tmp/poldek-$ver/download/${distro}/${distro_ver}
+    mkdir -p $destdir
 
     rpmd=$ddir/home/mis/rpm/RPMS	
     if [ -d $rpmd/i386 ]; then
@@ -61,8 +71,7 @@ for distro in $@; do
     fi
     
     cp -v $rpmd/poldek-$ver*.rpm $destdir
-    #cp -v $rpmd/home/mis/rpm/SRPMS/poldek-$ver*.rpm $destdir
-    chmod 644 $destdir/*.rpm
-
+    chmod 644 $destdir/*.rpm || true
 done
-
+chown -R mis /tmp/poldek-$ver
+#rsync -vrt --rsh=ssh . team.pld.org.pl:public_html/poldek/download
