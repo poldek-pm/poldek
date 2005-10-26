@@ -243,7 +243,8 @@ struct source *do_source_new_htcnf(struct poldek_ctx *ctx,
 {
     struct source *src;
     const char *vs;
-    
+
+    /* set the name if missing; all sources loaded from config must be named */
     if ((vs = poldek_conf_get(htcnf, "name", NULL)) == NULL) {
         char name[32];
         n_snprintf(name, sizeof(name), "src%.2d", no);
