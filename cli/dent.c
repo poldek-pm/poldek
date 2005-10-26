@@ -164,10 +164,10 @@ int pkg_dent_cmp_bday(struct pkg_dent *ent1, struct pkg_dent *ent2)
     btime1 = (ent1->flags & PKG_DENT_DIR) ? 0 : ent1->pkg_dent_pkg->btime;
     btime2 = (ent2->flags & PKG_DENT_DIR) ? 0 : ent2->pkg_dent_pkg->btime;
 
+    gmt_off = poldek_util_get_gmt_offs();
+    
     cmprc = ((btime1 + gmt_off) / 86400) - ((btime2 + gmt_off) / 86400);
     cmprc = btime1 - btime2;
-    
-    gmt_off = poldek_util_get_gmt_offs();
     
     if (cmprc)
         return cmprc;

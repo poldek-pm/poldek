@@ -836,7 +836,7 @@ static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf)
 /* --fetch, --dump */
 static int ts_fetch_or_dump_packages(struct poldek_ts *ts) 
 {
-    int i, rc;
+    int i, rc = 0;
     tn_array *pkgs = n_array_new(512, NULL, NULL);
 
     /* dump/fetch packages in install order */
