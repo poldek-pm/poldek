@@ -106,6 +106,9 @@ MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 *.html \
 			ABOUT-NLS po/*~ po/*.pot conf/*~ m4/*~
 
+NEWS: 
+	$(MAKE) -C doc NEWS
+	cp doc/NEWS .
 
 website-whole-up: dist 
 	$(MAKE) -C doc/homepage website-up
