@@ -12,7 +12,7 @@ lib_LTLIBRARIES    = libpoclidek.la
 #noinst_LTLIBRARIES = libpoclidek_allsyms.la
 
 libpoclidek_la_LDFLAGS = -version-info $(libVERINFO) \
-						 -export-symbols libpoclidek.sym
+			 -export-symbols libpoclidek.sym
 
 libpoclidek_la_SOURCES  =  \
 			cli.c cli.h     \
@@ -27,16 +27,16 @@ libpoclidek_la_SOURCES  =  \
 			op_makeidx.c    \
 			op_split.c      \
 			op_verify.c     \
-	        ls.c            \
-	        install.c       \
+		        ls.c            \
+		        install.c       \
 			uninstall.c     \
-	        desc.c          \
-		    search.c        \
-			reload.c		\
+	        	desc.c          \
+		    	search.c        \
+			reload.c	\
 			cd.c            \
-			help.c		    \
+			help.c		\
 			external.c      \
-		    get.c           \
+		    	get.c           \
 			cmd.h           \
 			rcmd.c
 
