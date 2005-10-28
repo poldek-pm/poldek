@@ -110,15 +110,6 @@ NEWS:
 	$(MAKE) -C doc NEWS
 	cp doc/NEWS .
 
-website-whole-up: dist 
-	$(MAKE) -C doc/homepage website-up
-	rpm -ts poldek-@VERSION@.tar.gz
-	scp -p $$HOME/rpm/SRPMS/poldek-@VERSION@-1.src.rpm poldek-@VERSION@.tar.* \
-	   team.pld.org.pl:public_html/poldek/download
-	ssh team.pld.org.pl \
-	'(cd public_html/poldek/download && md5sum *.gz *.rpm > md5sums && \
-	~/mkindexpage.pl * > index.html && chmod 644 * && ls -l)'
-
 vfjuggle: 
 
 dist-hook: 
