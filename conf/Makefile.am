@@ -11,8 +11,14 @@ EXTRA_DIST = $(CONFIGS) \
              sample-cdrom-source.conf \
              poldek-pri-sample.conf
 
-%.conf: ../doc/poldek.conf.xml ../doc/*.xsl
-	../doc/conf-xml2.sh conf ../doc/poldek.conf.xml $*
+fetch.conf: ../doc/poldek.conf.xml ../doc/*.xsl
+	        ../doc/conf-xml2.sh conf ../doc/poldek.conf.xml $*
+
+source.conf: ../doc/poldek.conf.xml ../doc/*.xsl
+	         ../doc/conf-xml2.sh conf ../doc/poldek.conf.xml $*
+
+poldek.conf: ../doc/poldek.conf.xml ../doc/*.xsl
+	         ../doc/conf-xml2.sh conf ../doc/poldek.conf.xml $*
 
 install-data-local: $(GENCONFIGS)
 	     $(mkdir_p) $(DESTDIR)$(sysconfdir)/$(PACKAGE)
