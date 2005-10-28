@@ -12,13 +12,13 @@ EXTRA_DIST = $(CONFIGS) \
              poldek-pri-sample.conf
 
 fetch.conf: ../doc/poldek.conf.xml ../doc/*.xsl
-	        ../doc/conf-xml2.sh conf ../doc/poldek.conf.xml $*
+	        ../doc/conf-xml2.sh conf ../doc/poldek.conf.xml fetch
 
 source.conf: ../doc/poldek.conf.xml ../doc/*.xsl
-	         ../doc/conf-xml2.sh conf ../doc/poldek.conf.xml $*
+	         ../doc/conf-xml2.sh conf ../doc/poldek.conf.xml source
 
 poldek.conf: ../doc/poldek.conf.xml ../doc/*.xsl
-	         ../doc/conf-xml2.sh conf ../doc/poldek.conf.xml $*
+	         ../doc/conf-xml2.sh conf ../doc/poldek.conf.xml poldek
 
 install-data-local: $(GENCONFIGS)
 	     $(mkdir_p) $(DESTDIR)$(sysconfdir)/$(PACKAGE)

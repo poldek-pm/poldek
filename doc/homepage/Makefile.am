@@ -11,16 +11,20 @@ WWW_ROOTDIR = team.pld.org.pl:public_html/poldek/new/
 
 EXTRA_DIST = $(WWW_PAGES) $(WWWBINS)
 
+
 site:  $(WWW_PAGES)
 	$(MAKE) -C .. manual-web; \
 	$(MAKE) -C ../.. NEWS; \
-	$(MAKE) -C .. CREDITS-body.html NEWS.html; \
-    cp ../CREDITS-body.html credits-body.html; \
 	mkdir -p site || exit 1; \
 	./genhomepage --clean --destdir site; \
 	./genhomepage --destdir site || exit 1; \
 	cp ../NEWS.html ../manual.css style.css logo90.png site; \
 	rm -rf site/manual && cp -a ../manual-web site/manual
+
+credits-body.html:
+	$(MAKE) -C .. CREDITS-body.html NEWS.html
+	cp ../CREDITS-body.html credits-body.html
+
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#* *\#
