@@ -217,6 +217,14 @@ Significant changes and differences from 0.18.x series
     $ poldek -Ovfile_external_compress=yes  
    </para>
   </entry>
+
+  <entry> 
+   <para> 
+   PLD-FreeBSD port (ftp://beliar.pld-freebsd.org/dists/1.0/ready/i386/RPMS/)
+   </para>
+   <author id="trojan" email="tomek att uninet com pl">Tomasz Trojanowski</author>
+  </entry>
+
   <entry> 
    <para>manual have been rewritten and enhanced</para>
   </entry>
