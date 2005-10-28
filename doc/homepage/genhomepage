@@ -15,6 +15,7 @@ use vars qw(@menu $tmpl %config);
 #         { name => 'repo', label => 'Repositories' },
          { name => 'support', label => 'Support' },
          { name => 'devel', label => 'Development' },
+         { name => 'credits', label => 'Credits' },
          { name => 'related', label => 'Related' },
         );
 
@@ -139,7 +140,7 @@ sub poldek_version {
 sub poldek_version_date {
     my $version = shift || die;
 
-    open(F, "< ../../NEWS") || die "open: $!";
+    open(F, "< ../../NEWS") || die "open ../../NEWS: $!";
 
     my $dt = undef;
     while (<F>) {

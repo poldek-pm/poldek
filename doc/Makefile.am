@@ -17,11 +17,11 @@ MANUALS   = manual.xml manual.css manual.xsl
 man_MANS  = poldek.1 poldek.conf.1
 GEN       = $(man_MANS) manual.html m_index.xml m_config.xml poldek.info
 
-EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN) manual 
+EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN) manual CREDITS
 
 MANUAL_XHTMLDIR = manual-xhtml
 
-doc: $(GEN) $(MANUAL_XHTMLDIR)
+doc: $(GEN) $(MANUAL_XHTMLDIR) CREDITS
 
 m_index.xml: manual.xml m_config.xml manual/ref*.xml mkindex.pl
 	./mkindex.pl manual.xml m_config.xml manual/ref*.xml > $@
@@ -47,14 +47,41 @@ manual.html: manual.xml.xhtml.tmp
 # remove empty indexterm's (I'm docbook novice)
 	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $@
 
+CREDITS.docb.tmp: NEWS.xml NEWSto
+	./NEWSto CREDITS.docb > $@
+
+CREDITS: CREDITS.docb.tmp
+	 xmlto -m NEWS.xsl txt CREDITS.docb.tmp && mv CREDITS.docb.tmp $@
+
+CREDITS-body.html:
+	 ./NEWSto CREDITS.html_body > $@
+
+NEWS.docb.tmp: NEWS.xml NEWSdocb.xsl NEWSto
+	./NEWSto NEWS.docb > $@
+
+NEWS: NEWS.docb.tmp NEWS.xsl
+	xmlto -m NEWS.xsl txt NEWS.docb.tmp && mv NEWS.docb.txt NEWS
+
+NEWS.html: NEWS.docb.tmp NEWS.xsl
+	xmlto -m NEWS.xsl -m manual-web.xsl xhtml-nochunks NEWS.docb.tmp && mv NEWS.docb.html NEWS.html
 
 $(MANUAL_XHTMLDIR): manual.xml.xhtml.tmp
 	$(mkdir_p) $(MANUAL_XHTMLDIR)
 	rm -f $(MANUAL_XHTMLDIR)/*.*
 	xmlto -m manual.xsl -o $(MANUAL_XHTMLDIR) xhtml $<
-# add the stylesheet and removed empty indexterm's (I'm docbook novice)
-	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $(MANUAL_XHTMLDIR)/ix??.html || true
+# remove empty indexterm's (I'm docbook novice)
+	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $(MANUAL_XHTMLDIR)/manualindex.html || true
 	cp manual.css $(MANUAL_XHTMLDIR)
+
+# as above but with manual-web.xsl
+manual-web: manual.xml.xhtml.tmp
+	$(mkdir_p) manual-web
+	rm -f manual-web/*.*
+	xmlto -m manual.xsl -m manual-web.xsl -o manual-web xhtml $<
+# remove empty indexterm's (I'm docbook novice)
+	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' manual-web/manualindex.html || true
+	cp manual.css manual-web
+
 
 reference: 
 	touch ../cli/main.c

@@ -38,3 +38,6 @@ autom4te.cache
 m_*.xml
 *.tmp
 manual-xhtml
+manual-web
+NEWS.html
+NEWS

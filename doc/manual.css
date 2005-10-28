@@ -14,6 +14,10 @@ h1 {
   line-height: 1.2em;
 }
 
+/* for NEWS.html */
+div.titlepage h2 { font-size: 1.2em; }
+div.titlepage h3 { font-size: 1.0em; }
+
 hr {
 	height: 1px;
 	background-color: #c0c0c0;

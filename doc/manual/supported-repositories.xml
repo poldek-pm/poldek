@@ -47,7 +47,7 @@
 
 <varlistentry><term>dir (features: read)</term>
   <listitem>
-  <para> Dynamic index built by scanning with a bunch of packages in it, 
+  <para> Dynamic index built by scanning directory with a bunch of packages in it, 
          no indexing required.
   </para>
   </listitem> 

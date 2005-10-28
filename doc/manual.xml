@@ -67,7 +67,7 @@
 </authorgroup>
 
 <date>$Date$</date>
-<releaseinfo>$Revision$ $Date$</releaseinfo>
+<releaseinfo>$Id$</releaseinfo>
 
 <keywordset>
 <keyword>package management</keyword>
@@ -252,7 +252,7 @@ and &ipoldekcmd; with interactive mode command interface. Invoking syntax is:
 &ipoldek-prompt; [OPTION...] [COMMAND] [COMMAND_OPTION...] [PACKAGE...]
 </screen>
 
-For example to install or upgrade apache HTTP server:
+For example to install or upgrade Apache HTTP server:
 <screen>
 &poldek-prompt; -uv apache 
 &ipoldek-prompt; install apache
@@ -1199,7 +1199,7 @@ external scripts. Example:
 </para>
 </appendix>
 
-<index><title>Index</title>
+<index id="manualindex"><title>Index</title>
 &manual-index;
 </index>
 

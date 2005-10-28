@@ -1,0 +1,125 @@
+#!/usr/bin/perl -w
+# $Id$
+use strict;
+require XML::Simple;
+#use Data::Dumper;
+use vars qw($xs $xml $PREABLE %op);
+#xsltproc NEWSdocb.xsl NEWS.xml > $@
+
+%op = ('NEWS.docb'         => \&to_NEWS_docb,
+       'CREDITS.docb'      => \&to_CREDITS_docb,
+       'CREDITS.html_body' => \&to_CREDITS_html_body);
+
+$PREABLE = q{
+<para>
+This project has been alive for several years. Many people have provided
+feedback that have improved poldek, especially
+<ulink url="http://pld-linux.org">PLD Linux</ulink> Team people. Thanks!</para>
+<para> Here follows a list of people that have
+contributed (in alphabetical order). <emphasis>Please</emphasis> let me
+know if somebody is missing.
+</para>
+};
+
+die "Usage: $0 {" . join('|', sort keys %op) . "}\n"
+  if @ARGV == 0 || !exists $op{$ARGV[0]};
+
+$xs = new XML::Simple();
+$xml = $xs->XMLin('NEWS.xml', keeproot => 1,
+                  keyattr => [], forcecontent => 1) || die "XML::Simple error";
+
+&{$op{$ARGV[0]}}($xml);
+
+sub to_NEWS_docb {
+    system("xsltproc NEWSdocb.xsl NEWS.xml") == 0 ||
+      die "xsltproc failed: $?";
+}
+
+sub to_CREDITS_html_body {
+    my $ref = shift;
+    my $credits = get_credits($ref);
+    my $preable = $PREABLE;
+    $preable =~ s/(\W)para>/${1}p>/g;
+    $preable =~ s/(\W)emphasis>/${1}em>/g;
+    $preable =~ s/(\W)ulink([\s>])/$1a$2/g;
+    $preable =~ s/url=/href=/g;
+    print qq{<h1>Credits</h1>$preable};
+    print q{<ul class="plain">};
+
+    foreach (@$credits) {
+        print qq{<li>$_->{name} &lt;<em>$_->{email}</em>&gt;</li>\n};
+    }
+    print q{</ul>};
+}
+
+sub to_CREDITS_docb {
+    my $ref = shift;
+    my $credits = get_credits($ref);
+
+    print q{<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+<article lang="en"><articleinfo><title>Credits</title></articleinfo>
+<sect1 id="credits"><title></title>};
+
+    print $PREABLE;
+
+    print q{
+<itemizedlist id="creditslist">
+           };
+
+    foreach (@$credits) {
+        print qq{
+  <listitem id="$_->{id}"><para>
+     $_->{name} &lt;<emphasis>$_->{email}</emphasis>&gt;
+   </para></listitem>
+                };
+    }
+    print q{
+</itemizedlist>
+</sect1>
+</article>
+           };
+}
+
+sub get_credits {
+    my $ref = shift;
+
+    my %credits = ();
+
+    foreach my $rel (@{$ref->{news}->{release}}) {
+        $rel->{entry} = [ $rel->{entry} ] if ref $rel->{entry} eq 'HASH';
+        foreach my $e (@{$rel->{entry}}) {
+            next if !$e->{author};
+            $e->{author} = [ $e->{author} ] if ref $e->{author} eq 'HASH';
+
+            foreach my $au (@{$e->{author}}) {
+                next if $au->{part};
+                next if exists $credits{$au->{id}};
+                my $name = $au->{content};
+                $name =~ s/^\s+//;
+                $name =~ s/\s+$//;
+                $name =~ s/\s+/ /;
+
+                my $orderby = $name;
+                if ($name =~ /\s/) {
+                    my ($n, $ln) = ($name =~ /(\S+)\s(\S+)/);
+                    $orderby = $ln if $ln;
+                }
+
+                $credits{$au->{id}} = {
+                                       id => $au->{id},
+                                       name => $name,
+                                       orderby => $orderby,
+                                       email => $au->{email},
+                                      };
+            }
+        }
+    }
+
+    my @credits = ();
+    foreach my $au (sort { $credits{$a}->{orderby} cmp $credits{$b}->{orderby} } keys %credits) {
+        push @credits, $credits{$au};
+    }
+    return \@credits;
+}
+
