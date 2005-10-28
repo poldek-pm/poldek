@@ -51,7 +51,7 @@ CREDITS.docb.tmp: NEWS.xml NEWSto
 	./NEWSto CREDITS.docb > $@
 
 CREDITS: CREDITS.docb.tmp
-	 xmlto -m NEWS.xsl txt CREDITS.docb.tmp && mv CREDITS.docb.tmp $@
+	 xmlto -m NEWS.xsl txt CREDITS.docb.tmp && mv CREDITS.docb.txt $@
 
 CREDITS-body.html:
 	 ./NEWSto CREDITS.html_body > $@

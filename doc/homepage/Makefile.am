@@ -13,15 +13,16 @@ EXTRA_DIST = $(WWW_PAGES) $(WWWBINS)
 
 
 site:  $(WWW_PAGES)
-	$(MAKE) -C .. manual-web; \
-	$(MAKE) -C ../.. NEWS; \
-	mkdir -p site || exit 1; \
-	./genhomepage --clean --destdir site; \
-	./genhomepage --destdir site || exit 1; \
-	cp ../NEWS.html ../manual.css style.css logo90.png site; \
+	$(MAKE) -C .. manual-web
+	$(MAKE) -C ../.. NEWS
+	$(MAKE) -C .. NEWS.html
+	mkdir -p site || exit 1
+	./genhomepage --clean --destdir site
+	./genhomepage --destdir site || exit 1
+	cp ../NEWS.html ../manual.css style.css logo90.png site
 	rm -rf site/manual && cp -a ../manual-web site/manual
 
-credits-body.html:
+credits-body.html: ../NEWS.xml
 	$(MAKE) -C .. CREDITS-body.html NEWS.html
 	cp ../CREDITS-body.html credits-body.html
 
