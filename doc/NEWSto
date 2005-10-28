@@ -4,7 +4,6 @@ use strict;
 require XML::Simple;
 #use Data::Dumper;
 use vars qw($xs $xml $PREABLE %op);
-#xsltproc NEWSdocb.xsl NEWS.xml > $@
 
 %op = ('NEWS.docb'         => \&to_NEWS_docb,
        'CREDITS.docb'      => \&to_CREDITS_docb,
@@ -47,6 +46,7 @@ sub to_CREDITS_html_body {
     print q{<ul class="plain">};
 
     foreach (@$credits) {
+        #print STDERR "$_->{name}\n";
         print qq{<li>$_->{name} &lt;<em>$_->{email}</em>&gt;</li>\n};
     }
     print q{</ul>};
@@ -88,34 +88,17 @@ sub get_credits {
 
     foreach my $rel (@{$ref->{news}->{release}}) {
         $rel->{entry} = [ $rel->{entry} ] if ref $rel->{entry} eq 'HASH';
-        foreach my $e (@{$rel->{entry}}) {
-            next if !$e->{author};
-            $e->{author} = [ $e->{author} ] if ref $e->{author} eq 'HASH';
+        process_entry($rel->{entry}, \%credits);
 
-            foreach my $au (@{$e->{author}}) {
-                next if $au->{part};
-                next if exists $credits{$au->{id}};
-                my $name = $au->{content};
-                $name =~ s/^\s+//;
-                $name =~ s/\s+$//;
-                $name =~ s/\s+/ /;
-
-                my $orderby = $name;
-                if ($name =~ /\s/) {
-                    my ($n, $ln) = ($name =~ /(\S+)\s(\S+)/);
-                    $orderby = $ln if $ln;
-                }
-
-                $credits{$au->{id}} = {
-                                       id => $au->{id},
-                                       name => $name,
-                                       orderby => $orderby,
-                                       email => $au->{email},
-                                      };
+        if ($rel->{section}) {
+            $rel->{section} = [ $rel->{section} ] if ref $rel->{section} eq 'HASH';
+            foreach my $s (@{$rel->{section}}) {
+                die if !$s->{entry};
+                $s->{entry} = [ $s->{entry} ] if ref $s->{entry} eq 'HASH';
+                process_entry($s->{entry}, \%credits);
             }
         }
     }
-
     my @credits = ();
     foreach my $au (sort { $credits{$a}->{orderby} cmp $credits{$b}->{orderby} } keys %credits) {
         push @credits, $credits{$au};
@@ -123,3 +106,34 @@ sub get_credits {
     return \@credits;
 }
 
+sub process_entry {
+    my $aref = shift;
+    my $credits = shift;
+
+    foreach my $e (@{$aref}) {
+        next if !$e->{author};
+        $e->{author} = [ $e->{author} ] if ref $e->{author} eq 'HASH';
+
+        foreach my $au (@{$e->{author}}) {
+            next if $au->{part};
+            next if exists $credits->{$au->{id}};
+            my $name = $au->{content};
+            $name =~ s/^\s+//;
+            $name =~ s/\s+$//;
+            $name =~ s/\s+/ /;
+
+            my $orderby = $name;
+            if ($name =~ /\s/) {
+                my ($n, $ln) = ($name =~ /(\S+)\s(\S+)/);
+                $orderby = $ln if $ln;
+            }
+
+            $credits->{$au->{id}} = {
+                                     id => $au->{id},
+                                     name => $name,
+                                     orderby => $orderby,
+                                     email => $au->{email},
+                                    };
+        }
+    }
+}
