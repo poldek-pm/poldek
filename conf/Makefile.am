@@ -4,10 +4,11 @@
 GENCONFIGS = fetch.conf source.conf poldek.conf
 
 CONFIGS   = $(GENCONFIGS) aliases.conf \
-			pld-source.conf rh-source.conf fedora-source.conf
+            pld-source.conf rh-source.conf \
+	    fedora-source.conf centos-source.conf
 
 EXTRA_DIST = $(CONFIGS) \
-			 sample-source-remoteconf.conf \
+	     sample-source-remoteconf.conf \
              sample-cdrom-source.conf \
              poldek-pri-sample.conf
 
