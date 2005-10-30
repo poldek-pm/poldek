@@ -11,6 +11,9 @@ WWW_ROOTDIR = team.pld.org.pl:public_html/poldek/new/
 
 EXTRA_DIST = $(WWW_PAGES) $(WWWBINS)
 
+site-only:
+	./genhomepage --clean --destdir site
+	./genhomepage --destdir site || exit 1
 
 site:  $(WWW_PAGES)
 	$(MAKE) -C .. manual-web
