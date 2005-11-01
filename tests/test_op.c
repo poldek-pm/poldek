@@ -30,6 +30,8 @@ static int do_test_op(struct poldek_ctx *ctx, struct poldek_ts *ts,
 
     fail_unless(is_op(ts, op, !defaultv),
                 "%s not propagated to ts", opname);
+    return 1;
+    
 }
 
 START_TEST (test_op_ts_postconf) {

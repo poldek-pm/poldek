@@ -3,16 +3,17 @@
 */
 #include <check.h>
 #include "test.h"
-//#include "test_env.c"
 
 extern struct test_suite test_suite_match;
 extern struct test_suite test_suite_pmdb;
 extern struct test_suite test_suite_op;
+extern struct test_suite test_suite_config;
 
 struct test_suite *suites[] = {
     &test_suite_match,
     &test_suite_pmdb,
     &test_suite_op,
+    &test_suite_config,
     NULL,
 };
 
@@ -66,15 +67,6 @@ int main(int argc, char *argv[])
     if (argc > 1 && n_str_eq(argv[1], "-v"))
         poldek_VERBOSE = 1;
 
-    while (suites[i]) {
-        Suite *s = make_suite(suites[i]);
-        SRunner *sr = srunner_create(s);
-        srunner_run_all(sr, CK_NORMAL);
-        nerr += srunner_ntests_failed(sr);
-        srunner_free(sr);
-        i++;
-    }
-    
     if (misc_cases[0]) {
         Suite *s = make_themisc_suite();
         SRunner *sr = srunner_create(s);
@@ -82,6 +74,18 @@ int main(int argc, char *argv[])
         nerr += srunner_ntests_failed(sr);
         srunner_free(sr);
     }
+
+    while (suites[i]) {
+        Suite *s = make_suite(suites[i]);
+        SRunner *sr = srunner_create(s);
+        printf("\n");
+        srunner_run_all(sr, CK_NORMAL);
+        nerr += srunner_ntests_failed(sr);
+        srunner_free(sr);
+        i++;
+    }
+    
+    
 
     return (nerr == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

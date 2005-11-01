@@ -3,3 +3,5 @@ Makefile
 .deps
 .libs
 test_poldek
+*.tmp
+poldek_test_conf.conf
