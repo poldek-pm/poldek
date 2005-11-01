@@ -85,7 +85,7 @@
 <sect1 id="overview"> <title id="overview.title">Overview</title>
 <para>
 &poldek; is a full-featured frontend to RPM package manager. Its core features
-are similar to every modern package updater like &apt-get;. Features include
+are similar to every modern package updater like &apt-get;. The features include
 package installation, upgrading and removal with automatic dependency handling,
 querying/ search the package database and more.
 </para>
@@ -95,11 +95,12 @@ querying/ search the package database and more.
 <varlistentry><term>Easy to use</term>
   <listitem>
     <para> 
-    Basic command line options and switches are similar in use to &rpm;
-    so &poldek; is easy to learn for users familiar with it. Apart from 
-    rpm-like command line switches, &poldek; provides higher level command 
+    &poldek; is easy to learn for users familiar with &rpm; because the
+    basic command line options and switches are similar in use.
+    
+    Apart from rpm-like command line switches, &poldek; provides higher level command 
     set ("install", "upgrade", "ls", etc) quite intuitive for those who knows &apt-get;. 
-    Shell-like interface with auto-completion and history is also provided.
+    A very handy shell-like interface with auto-completion and history is also provided.
     </para>
   </listitem>
 </varlistentry>
@@ -108,12 +109,11 @@ querying/ search the package database and more.
   <listitem>
     <para>
     &poldek; has been designed with efficiency and scalability in mind. 
-    Native package repository index format is optimized for storage size 
-    and loading speed. Package dependencies, conflicts and setting 
-    in order are handled without using <application>rpmlib</application>, 
-    so the program is significantly faster and needs less memory than 
-    rpmlib-based tools. On typical machine &poldek; can handle 20K packages 
-    without noticable speed degradation.
+    The native package repository index format is optimized for storage size 
+    and loading speed. Dependency processing (dependencies, conflicts, package
+    ordering) is significantly faster and needs less memory than rpmlib-based 
+    tools. &poldek; can handle 20K packages without noticable 
+    speed degradation on typical machine.
     </para>
   </listitem>
 </varlistentry>
@@ -121,9 +121,11 @@ querying/ search the package database and more.
 <varlistentry><term>Incremental repository updates</term>
   <listitem>
     <para>
-    &poldek;'s repositories are updateable by downloading a changes 
-    of remote repository only, what drastically reduces amout of data 
-    need to be retrieved when remote repository was changed a bit. 
+    &poldek;'s native repositories are able to update incrementally.
+    During the update only the incremental files are transferred 
+    instead of the complete index. Such files are certainly much smaller,
+    what drastically reduces amout of data need to be retrieved
+    when remote repository was changed a bit. 
     </para>
   </listitem>
 </varlistentry>
