@@ -1,12 +1,14 @@
 Build requirements: $ grep ^BuildReq poldek.spec
+To build without libxml2, use --without-xml-metadata option as follows:
 
-Build
+$ ./configure [--without-xml-metadata] && make 
 
-$ ./configure && make 
 
-or better 
+or better build rpm package:
 
-$ rpm -tb poldek-<VERSION>.tar.gz --define 'distro <distro>' 
-Possible distro values: pld, rh or mdk.
+$ rpmbuild -tb poldek-${version}.tar.gz --define 'distro <distro>' \
+  [--without xml_metadata]
+
+Possible distro values: pld, rh, fedora and centos
 
 

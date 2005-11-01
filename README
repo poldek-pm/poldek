@@ -1,6 +1,6 @@
 # $Id$ 
 
-See man page for user documentation. 
+See man and info pages for user documentation. 
 
 Project homepage: <http://team.pld.org.pl/~mis/poldek/>.  
 
@@ -9,7 +9,7 @@ program mailing list <poldek@pld-linux.org>. To subscribe send empty
 mail to <poldek-subscribe@pld-linux.org>
 
 
-Copyright (C) 2000 - 2002 Pawel A. Gajda
+Copyright (C) 2000 - 2002 Pawel A. Gajda <mis @ pld.org.pl>
 The poldek is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License, version 2 as
 published by the Free Software Foundation (see file COPYING for details).

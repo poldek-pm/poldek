@@ -1,5 +1,8 @@
 #! /bin/sh
 # $Id$
+# 
+# File (de)compression helper script. Used by vfile library when external 
+# (de)compression requested ("vfile external compress" config option).
 
 PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 

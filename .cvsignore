@@ -40,3 +40,5 @@ libtool
 config.guess
 config.sub
 py-compile
+conf_sections.c
+NEWS
