@@ -134,7 +134,8 @@ tn_hash *metadata_load_repomd(const char *path)
 }
 
 //<rpm:entry name="glibc-devel" flags="LT" epoch="0" ver="2.2.3", rel="foo" pri="1" />
-static tn_array *load_caps(tn_alloc *na, tn_array *arr, xmlNode *node, unsigned cr_flags)
+static tn_array *load_caps(tn_alloc *na, tn_array *arr, xmlNode *node,
+                           unsigned cr_flags)
 {
     if (arr == NULL)
         arr = capreq_arr_new(0);
@@ -192,7 +193,8 @@ static tn_array *load_caps(tn_alloc *na, tn_array *arr, xmlNode *node, unsigned 
     return arr;
 }
 
-static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups, xmlNode *node)
+static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
+                                xmlNode *node)
 {
     struct pkg pkg, *rpkg = NULL;
     char *arch;
@@ -269,7 +271,8 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups, xmlN
                 
                 else if (x_node_eq(n, "file")) {
                     char *path = xmlNodeGetContent(n);
-                    struct capreq *cr = capreq_new(na, path, 0, NULL, NULL, 0, 0);
+                    struct capreq *cr = capreq_new(na, path, 0, NULL,
+                                                   NULL, 0, 0);
                     if (pkg.caps == NULL)
                         pkg.caps = capreq_arr_new(0);
                     n_array_push(pkg.caps, cr);
