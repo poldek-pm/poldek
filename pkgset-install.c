@@ -1174,7 +1174,9 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
     memset(&successor, 0, sizeof(successor));
     if (process_as == PROCESS_AS_ORPHAN &&
         upg->ts->getop(upg->ts, POLDEK_OP_AGGREEDY)) {
-        if (pkg_drags(pkg, ps, upg) == 0) {
+	int ndrags = pkg_drags(pkg, ps, upg);
+	DBGF("%s, ndrags %d\n", pkg_id(pkg), ndrags);
+        if (ndrags == 0 || 1) { /* XXX cond temporary disabled - needs test */
             struct pkg *p;
             int is_marked = 0, ndragged = 0, by_obsoletes = 0;
 
@@ -1186,9 +1188,10 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
             successor.realpkg = p;
             successor.by_obsoletes = by_obsoletes;
             
-            /* do not follow successor if package drags something and
-              is not marked */
-            if (p && (ndragged = pkg_drags(p, ps, upg)) > 0 && is_marked == 0) {
+            /* do not follow successor if it drags more packages than orphaned one
+	     * and successor is not marked */
+	    
+            if (p && (ndragged = pkg_drags(p, ps, upg)) > ndrags && is_marked == 0) {
                 DBGF("OMIT select_successor %s -> %s (%d)\n",
                      pkg_id(pkg), pkg_id(p), ndragged);
                 p = NULL;
