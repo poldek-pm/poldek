@@ -818,6 +818,18 @@ int poldek_util_parse_bool(const char *v)
     return -1;
 }
 
+int poldek_util_parse_bool3(const char *v)
+{
+    int rv = -1;
+    
+    if ((rv = poldek_util_parse_bool(v)) == -1) {
+        if (strcasecmp(v, "auto") == 0 || strcasecmp(v, "a"))
+            rv = 2;
+    }
+    
+    return rv;
+}
+
     
 char *strtime_(time_t t) 
 {

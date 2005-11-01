@@ -38,146 +38,29 @@
 #include "conf.h"
 #include "misc.h"
 #include "poldek_util.h"
+#include "conf_intern.h"
 
 #define POLDEK_LDCONF_APTSOURCES  (1 << 15) 
-
-#define TYPE_STR        (1 << 0)
-#define TYPE_BOOL       (1 << 1)
-#define TYPE_INT        (1 << 2)
-#define TYPE_LIST       (1 << 3)
-#define TYPE_PATHLIST   (1 << 4)
-
-#define TYPE_MULTI      (1 << 5)
-#define TYPE_MULTI_EXCL (1 << 6)
-#define TYPE_ENUM       (1 << 7)
-
-#define TYPE_F_ENV       (1 << 10)
-#define TYPE_F_REQUIRED  (1 << 11)
-#define TYPE_F_ALIAS     (1 << 12)
-#define TYPE_F_OBSL      (1 << 14)
 
 static const char *global_tag = "global";
 static const char *include_tag = "%include";
 
-struct tag {
-    char      *name;
-    unsigned  flags;
-    char      *enums[8];
+static struct poldek_conf_tag unknown_tag = {
+    NULL, CONF_TYPE_STRING | CONF_TYPE_F_ENV | CONF_TYPE_F_MULTI_EXCL,
+    NULL, 0, { 0 },
 };
 
-static struct tag unknown_tag = {
-    NULL, TYPE_STR | TYPE_F_ENV | TYPE_MULTI_EXCL, { 0 },
-};
-
-static struct tag global_tags[] = {
-    { "source",        TYPE_STR | TYPE_MULTI | TYPE_F_ENV | TYPE_F_OBSL, {0} },
-    { "source?*",      TYPE_STR | TYPE_F_ENV | TYPE_F_OBSL, { 0 } },
-    { "prefix?*",      TYPE_STR | TYPE_F_ENV | TYPE_F_OBSL, { 0 } },
-    { "cachedir",      TYPE_STR | TYPE_F_ENV, { 0 } },
-    
-    { "ftp http_get",  TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
-    { "ftp get",       TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
-    { "http get",      TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
-    { "https get",     TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
-    { "rsync get",     TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
-    { "cdrom get",     TYPE_STR | TYPE_F_OBSL, { 0 } }, /* obsolete */
-
-    { "ignore req",    TYPE_STR | TYPE_MULTI, { 0 } },
-    { "ignore pkg",    TYPE_STR | TYPE_MULTI, { 0 } },
-
-    { "pm command",           TYPE_STR | TYPE_F_ENV, { 0 } },
-    { "sudo command",         TYPE_STR | TYPE_F_ENV, { 0 } },
-    { "rpmdef",        TYPE_STR | TYPE_MULTI | TYPE_F_ENV, { 0 } },
-    { "rpm install opt",  TYPE_STR , { 0 } },
-    { "rpm uninstall opt",  TYPE_STR , { 0 } },
-
-    { "follow",            TYPE_BOOL , { 0 } },
-    { "greedy",            TYPE_BOOL , { 0 } },
-    { "aggressive greedy", TYPE_BOOL , { 0 } },
-    { "use sudo",          TYPE_BOOL , { 0 } },
-    { "run as",            TYPE_STR, { 0 } },
-    { "runas",             TYPE_STR | TYPE_F_ALIAS, { 0 } },
-    { "mercy",          TYPE_BOOL , { 0 } },
-    { "default fetcher", TYPE_STR | TYPE_MULTI , { 0 } },
-    { "proxy",          TYPE_STR | TYPE_MULTI, { 0 } },
-    { "noproxy",        TYPE_STR | TYPE_LIST | TYPE_MULTI, { 0 } },
-    { "no proxy",       TYPE_STR | TYPE_LIST | TYPE_MULTI | TYPE_F_ALIAS, { 0 } },
-    { "hold",           TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
-    { "ignore",         TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
-    { "keep downloads", TYPE_BOOL , { 0 } },
-    { "confirm installation", TYPE_BOOL , { 0 } },
-    { "confirm installs", TYPE_BOOL | TYPE_F_ALIAS , { 0 } }, /* backward compat */
-    { "confirm removal", TYPE_BOOL , { 0 } },
-    { "choose equivalents manually", TYPE_BOOL , { 0 } },
-    { "particle install", TYPE_BOOL, { 0 } },
-    { "unique package names", TYPE_BOOL, { 0 } },
-    { "vfile ftp sysuser as anon passwd", TYPE_BOOL , { 0 } },
-    { "ftp sysuser as anon passwd", TYPE_BOOL | TYPE_F_ALIAS, { 0 } },
-    { "vfile external compress", TYPE_BOOL , { 0 } },
-    { "vfile retries", TYPE_INT, { 0 } },
-    { "auto zlib in rpm", TYPE_BOOL , { 0 } },
-    { "promoteepoch", TYPE_BOOL, { 0 } },
-    { "default index type", TYPE_STR, { 0 } },
-    { "autoupa", TYPE_BOOL, { 0 } },
-    { "load apt sources list", TYPE_BOOL, { 0 } },
-    { "exclude path", TYPE_STR | TYPE_PATHLIST | TYPE_MULTI , { 0 } },
-    { "allow duplicates", TYPE_BOOL , { 0 } },
-    { "multilib", TYPE_BOOL, { 0 } }, 
-    { "__dirname", TYPE_STR, { 0 } }, 
-    {  NULL,           0, { 0 } }, 
-};
-
-static struct tag fetcher_tags[] = {
-    { "name",       TYPE_STR,  { 0 } },
-    { "proto",      TYPE_STR | TYPE_F_REQUIRED, { 0 } },
-    { "cmd",        TYPE_STR | TYPE_F_ENV | TYPE_F_REQUIRED, { 0 } },
-    {  NULL,           0, { 0 } }, 
-};
-
-static struct tag alias_tags[] = {
-    { "name",       TYPE_STR | TYPE_F_REQUIRED,  { 0 } },
-    { "cmd",        TYPE_STR | TYPE_F_REQUIRED, { 0 } },
-    { "ctx",        TYPE_ENUM, { "none", "installed", "available", "upgradeable", NULL } },
+/* XXX: aliases are not implemented yet
+static struct poldek_conf_tag alias_tags[] = {
+    { "name",       CONF_TYPE_STRING | CONF_TYPE_F_REQUIRED,  { 0 } },
+    { "cmd",        CONF_TYPE_STRING | CONF_TYPE_F_REQUIRED, { 0 } },
+    { "ctx",        CONF_TYPE_ENUM, { "none", "installed", "available", "upgradeable", NULL } },
     {  NULL,        0, { 0 } }, 
 };
+    { "pri",         CONF_TYPE_STRING , { 0 } },
+*/
 
-static struct tag source_tags[] = {
-    { "name",        TYPE_STR, { 0 } },
-    { "url",         TYPE_STR | TYPE_F_ENV | TYPE_F_REQUIRED, { 0 } },
-    { "path",        TYPE_STR | TYPE_F_ENV | TYPE_F_ALIAS, { 0 } }, /* alias for url */
-    { "prefix",      TYPE_STR | TYPE_F_ENV, { 0 } },
-    { "pri",         TYPE_STR , { 0 } },
-    { "lang",        TYPE_STR | TYPE_F_ENV, { 0 } },
-    { "dscr",        TYPE_STR | TYPE_F_ENV | TYPE_F_ALIAS, { 0 } },
-    { "type",        TYPE_STR , { 0 } },
-    { "original type", TYPE_STR , { 0 } },
-    { "noauto",      TYPE_BOOL, { 0 } },
-    { "noautoup",    TYPE_BOOL, { 0 } },
-    { "auto",        TYPE_BOOL, { 0 } },
-    { "autoup",      TYPE_BOOL, { 0 } },
-    { "douniq",      TYPE_BOOL, { 0 } },
-    { "unique package names", TYPE_BOOL | TYPE_F_ALIAS, { 0 } },
-    { "signed",      TYPE_BOOL, { 0 } },
-    { "hold",        TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
-    { "ignore",      TYPE_STR | TYPE_LIST | TYPE_MULTI , { 0 } },
-    { "exclude path", TYPE_STR | TYPE_PATHLIST | TYPE_MULTI , { 0 } },
-    { "sources"     , TYPE_STR | TYPE_LIST | TYPE_MULTI, { 0 }, },
-    {  NULL,         0, { 0 } }, 
-};
-
-struct section {
-    char        *name;
-    struct tag  *tags;
-    int         is_multi;
-};
-
-struct section sections[] = {
-    { "global",  global_tags,  0 },
-    { "source",  source_tags,  1 },
-    { "fetcher", fetcher_tags, 1 },
-    { "alias",   alias_tags,   1 },
-    {  NULL,  NULL, 0 },
-};
+struct poldek_conf_section *sections = poldek_conf_sections; /* just for short */
 
 #define COPT_MULTIPLE (1 << 0)
 struct copt {
@@ -327,7 +210,7 @@ static char *getv(char *vstr, const char *path, int nline)
 }
 
 static
-const struct section *find_section(const char *name) 
+const struct poldek_conf_section *find_section(const char *name) 
 {
     int i = 0;
 
@@ -343,11 +226,11 @@ const struct section *find_section(const char *name)
 
 static
 int find_tag(const char *sectname, const char *key,
-             const struct section **sectp) 
+             const struct poldek_conf_section **sectp) 
 {
     int i = 0;
-    struct tag   *tags = NULL;
-    const struct section *sect;
+    struct poldek_conf_tag *tags = NULL;
+    const struct poldek_conf_section *sect;
 
     *sectp = NULL;
     if ((sect = find_section(sectname)) == NULL)
@@ -450,17 +333,17 @@ static char *eat_wws(char *s)
 }
 
 
-static int verify_section(const struct section *sect, tn_hash *ht) 
+static int verify_section(const struct poldek_conf_section *sect, tn_hash *ht)
 {
     int i = 0, nerr = 0;
-    struct tag *tags;
+    struct poldek_conf_tag *tags;
     struct copt *fl;
 
     fl = n_hash_get(ht, "__file__line");
     tags = sect->tags;
     
     while (tags[i].name) {
-        if ((tags[i].flags & TYPE_F_REQUIRED) && !n_hash_exists(ht, tags[i].name)) {
+        if ((tags[i].flags & CONF_TYPE_F_REQUIRED) && !n_hash_exists(ht, tags[i].name)) {
             const char *missing_tag = tags[i].name;
 
             if (n_str_eq(sect->name, "source") &&
@@ -586,13 +469,43 @@ static int poldek_conf_postsetup(tn_hash *ht)
 #define ADD_PARAM_OVERWRITE (1 << 1)
 #define ADD_PARAM_FOREIGN   (1 << 2)
 
+static int verify_param_presence(tn_hash *ht_sect, const char *section,
+                                 const char *name, 
+                                 const struct poldek_conf_tag *tag,
+                                 unsigned flags,
+                                 const char *filemark)
+ 
+{
+    int gotit = 0, overwrite = (flags & ADD_PARAM_OVERWRITE), rc = 1;
+
+    if (n_hash_exists(ht_sect, name)) {
+        struct copt *opt = n_hash_get(ht_sect, name);
+        gotit = (opt->val != NULL);
+    }
+        
+    if (!gotit)
+        return rc;
+    
+    if (overwrite || (tag->flags & CONF_TYPE_F_MULTI_EXCL)) {
+        if (!overwrite || poldek_VERBOSE > 1)
+            logn(LOGWARN, _("%s %s::%s redefined"), filemark, section, name);
+        n_hash_remove(ht_sect, name);
+        
+    } else if ((tag->flags & CONF_TYPE_F_MULTI) == 0) {
+        logn(LOGWARN, _("%s: multiple '%s' not allowed"), filemark, name);
+        rc = 0;
+    }
+    
+    return rc;
+}
+
 static int add_param(tn_hash *ht_sect, const char *section,
                      char *name, char *value, unsigned flags,
                      const char *path, int nline)
 {
     char *val, expanded_val[PATH_MAX], filemark[512];
-    const struct section *sect;
-    const struct tag *tag;
+    const struct poldek_conf_section *sect;
+    const struct poldek_conf_tag *tag;
     struct copt *opt;
     int tagindex, validate, overwrite;
 
@@ -635,14 +548,15 @@ static int add_param(tn_hash *ht_sect, const char *section,
         
     msgn_i(3, 2, "%s::%s = %s", section, name, value);
 
-    if (tag->flags & TYPE_F_ALIAS) {
+    if (tag->flags & CONF_TYPE_F_ALIAS) {
         int n = tagindex;
         char *p = NULL;
         while (n > 0) {
             n--;
-            if ((sect->tags[n].flags & TYPE_F_ALIAS) == 0) {
+            if ((sect->tags[n].flags & CONF_TYPE_F_ALIAS) == 0) {
                 msg(5, "alias %s -> %s\n", name, sect->tags[n].name);
                 p = name = sect->tags[n].name;
+                tag = &sect->tags[n];
                 break;
             }
         }
@@ -652,10 +566,13 @@ static int add_param(tn_hash *ht_sect, const char *section,
         }
         
     }
+
+    if (!verify_param_presence(ht_sect, section, name, tag, flags, filemark))
+        return 0;
     
-    if (tag->flags & (TYPE_LIST | TYPE_PATHLIST)) 
+    if (tag->flags & CONF_TYPE_F_LIST)
         return getvlist(ht_sect, name, value, 
-                        (tag->flags & TYPE_PATHLIST) ? " \t,:" : " \t,",
+                        (tag->flags & CONF_TYPE_F_PATH) ? " \t,:" : " \t,",
                         path, nline);
         
     val = getv(value, path, nline);
@@ -669,7 +586,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
         return 0;
     }
 
-    if ((tag->flags & TYPE_ENUM)) {
+    if ((tag->flags & CONF_TYPE_ENUM)) {
         int n = 0, valid = 0;
         while (tag->enums[n]) {
             if (strcmp(tag->enums[n++], val) == 0) {
@@ -693,21 +610,21 @@ static int add_param(tn_hash *ht_sect, const char *section,
         n_hash_insert(ht_sect, opt->name, opt);
     }
 
-    if (tag->flags & TYPE_F_ENV)
+    if (tag->flags & CONF_TYPE_F_ENV)
         val = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), val);
     
     if (opt->val == NULL) {
         opt->val = n_strdup(val);
         DBGF("ADD %p %s -> %s\n", ht_sect, name, val);
 
-    } else if (overwrite || (tag->flags & TYPE_MULTI_EXCL)) {
-        if (!overwrite || poldek_VERBOSE > 1)
-            logn(LOGWARN, _("%s %s::%s redefined"), filemark, section, name);
+    } else if (overwrite || (tag->flags & CONF_TYPE_F_MULTI_EXCL)) {
+        n_assert(0);  /* verify_param_presence() should catch this */
         free(opt->val);
         opt->val = n_strdup(val);
         
-    } else if ((tag->flags & TYPE_MULTI) == 0) {
-        logn(LOGWARN, _("%s: multiple '%s' not allowed"), filemark, name);
+    } else if ((tag->flags & CONF_TYPE_F_MULTI) == 0) {
+        n_assert(0);  /* verify_param_presence() should catch this */
+        //logn(LOGWARN, _("%s: multiple '%s' not allowed"), filemark, name);
         return 0;
             
     } else if (opt->vals != NULL) {
@@ -831,7 +748,8 @@ char *include_path(char *path, size_t size,
 }
 
 static
-tn_hash *open_section_ht(tn_hash *htconf, const struct section *sect, 
+tn_hash *open_section_ht(tn_hash *htconf,
+                         const struct poldek_conf_section *sect,
                          const char *sectnam, const char *path, int nline)
 {
     tn_array *arr_sect;
@@ -883,8 +801,8 @@ tn_hash *open_section_ht(tn_hash *htconf, const struct section *sect,
 
 void *poldek_conf_add_section(tn_hash *htconf, const char *name)
 {
-    const struct section *sect = NULL;
-    tn_hash              *ht_sect = NULL;
+    const struct poldek_conf_section *sect = NULL;
+    tn_hash                          *ht_sect = NULL;
     
     if ((sect = find_section(name)) == NULL) {
         logn(LOGERR, _("'%s': invalid section name"), name);
@@ -1086,7 +1004,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
             continue;
 
         if (*p == '[') {        /* section */
-            const struct section *sect = NULL;
+            const struct poldek_conf_section *sect = NULL;
             
             p++;
             name = p;
@@ -1416,6 +1334,22 @@ int poldek_conf_get_bool(const tn_hash *htconf, const char *name, int default_v)
     return bool;
 }
 
+int poldek_conf_get_bool3(const tn_hash *htconf, const char *name, int default_v)
+{
+    const char *v;
+    int bool;
+    
+    if ((v = poldek_conf_get(htconf, name, NULL)) == NULL)
+        return default_v;
+
+    if ((bool = poldek_util_parse_bool3(v)) < 0) {
+        logn(LOGERR, _("invalid value ('%s') of option '%s'"), v, name);
+        bool = default_v;
+    }
+
+    return bool;
+}
+
 
 tn_array *poldek_conf_get_multi(const tn_hash *htconf, const char *name)
 {
@@ -1438,7 +1372,7 @@ tn_array *poldek_conf_get_multi(const tn_hash *htconf, const char *name)
 
 static void load_apt_sources_list(tn_hash *htconf, const char *path) 
 {
-    const struct section *sect = NULL;
+    const struct poldek_conf_section *sect = NULL;
     const char **tl, **tl_save, *sectnam;
     char buf[1024];
     FILE *stream;
@@ -1527,89 +1461,3 @@ static void load_apt_sources_list(tn_hash *htconf, const char *path)
     fclose(stream);
 }
 
-#define XML 0
-#if XML
-static const char *strtype(unsigned flags) 
-{
-    if (flags & TYPE_PATHLIST)
-        return "str-list";
-    
-    if (flags & TYPE_STR)
-        return "str";
-    
-    if (flags & TYPE_BOOL)
-        return "bool";
-
-    if (flags & TYPE_INT)
-        return "int";
-
-
-    if (flags & TYPE_ENUM)
-        return "enum";
-
-    n_assert(0);
-    return NULL;
-}
-
-
-static void dump_section(struct section *sect) 
-{
-    struct tag tag;
-    int i = 0;
-    
-    printf("<section name=\"%s\">\n", sect->name);
-    
-    while (1) {
-        tag = sect->tags[i++];
-        if (tag.name == NULL)
-            break;
-
-        if (tag.flags & TYPE_F_OBSL)
-            continue;
-        
-        printf("  <option name=\"%s\" type=\"%s%s\"", tag.name,
-               strtype(tag.flags),
-               (tag.flags & TYPE_LIST) ? "-list" : "");
-        printf(" default=\"\"");
-        if (tag.flags & TYPE_MULTI_EXCL)
-            printf(" redefinable=\"yes\"");
-
-        if (tag.flags & TYPE_MULTI)
-            printf(" multiple=\"yes\"");
-
-        if (tag.flags & TYPE_F_ENV)
-            printf(" env=\"yes\"");
-
-        if (tag.flags & TYPE_F_ALIAS)
-            printf(" alias=\"yes\"");
-
-        if (tag.flags & TYPE_F_REQUIRED)
-            printf(" required=\"yes\"");
-
-        printf(">\n");
-        
-        if (tag.flags & TYPE_ENUM) {
-            int n = 0;
-            printf("    <values>\n");
-            while (tag.enums[n]) 
-                printf("      <enum>%s</enum>\n", tag.enums[n++]);
-            printf("    </values>\n");
-        }
-        printf("    <descripion>\n");
-        printf("    </descripion>\n");
-
-        printf("  </option>\n\n");
-    }
-    printf("</section> <!-- end of \"%s\" -->\n", sect->name);
-}
-
-static
-void dump_sections(const char *name) 
-{
-    int i = 0;
-    while (sections[i].name) {
-        dump_section(&sections[i]);
-        i++;
-    }
-}
-#endif /* xml */

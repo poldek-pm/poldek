@@ -43,7 +43,7 @@ libpoldek_la_SOURCES = \
 	  pkgset-install.c		\
 	  dbdep.c dbdep.h		\
 	  arg_packages.c arg_packages.h		\
-	  conf.c conf.h	    	\
+	  conf.c conf.h	conf_intern.h conf_sections.c \
 	  dbpkgset.c dbpkgset.h \
 	  split.c split.h		\
 	  pkgroup.c pkgroup.h	\
@@ -109,6 +109,9 @@ MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 NEWS: 
 	$(MAKE) -C doc NEWS
 	cp doc/NEWS .
+
+conf_sections.c: doc/poldek.conf.xml doc/*.xsl
+	         	 doc/conf-xml2.sh c doc/poldek.conf.xml > $@
 
 vfjuggle: 
 
