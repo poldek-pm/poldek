@@ -32,19 +32,18 @@
 
 int  poldek_VERBOSE = 0;
 
-static void say_goodbye(const char *msg);
-void (*poldek_log_say_goodbye)(const char *msg) = say_goodbye;
+static int say_goodbye(const char *msg);
+int (*poldek_log_say_goodbye)(const char *msg) = say_goodbye;
 
 static char l_prefix[64];
-static FILE *l_stream, *l_fstream = NULL;
+static FILE *l_stream = NULL, *l_filestream = NULL;
 
 static void vlog_tty(int pri, const char *fmt, va_list args);
 
-static void say_goodbye(const char *msg)
+static int say_goodbye(const char *msg)
 {
-    msg = msg;
-    /* do nothing, msg is logged before die */
-    return;
+    msg = msg; /* do nothing, msg is logged before die */
+    return 1;
 }
 
 int poldek_verbose(void)
@@ -83,11 +82,11 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
 {
     static int last_endlined = 1;
     char buf[1024], tmp_fmt[1024];
-    int n = 0, flags, is_cont = 0, is_endlined = 0;
+    int n = 0, flags, is_continuation = 0, is_endlined = 0;
     
     if (*fmt == '_') {
         fmt++;
-        is_cont = 1;
+        is_continuation = 1;
         
     } else if (*fmt == '\n') {
         buf[n++] = '\n';
@@ -112,18 +111,18 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
         }
     }
 
-    if (last_endlined == 0 && !is_cont && (pri & (LOGERR|LOGWARN)))
+    if (last_endlined == 0 && !is_continuation && (pri & (LOGERR|LOGWARN)))
         buf[n++] = '\n';        
     last_endlined = is_endlined;
         
-    if (indent > 0) {
+    if (indent > 0 && indent < 256) { /* have buf[1024] */
         memset(&buf[n], ' ', indent);
         n += indent;
     }
 
     buf[n] = '\0';
 
-    /* revert LOG[TTY|FLAGS]  */
+    /* revert LOG[TTY|FILE]  */
     flags = LOGTTY | LOGFILE;
     if (pri & LOGTTY)
         flags &= ~LOGFILE;
@@ -140,12 +139,12 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
         fflush(l_stream);
     }
 
-    if ((flags & LOGFILE) && l_fstream) {
+    if ((flags & LOGFILE) && l_filestream) { /* logging to file */
         if (*fmt == '\0') {
-            fprintf(l_fstream, "%s", buf);
+            fprintf(l_filestream, "%s", buf);
             
         } else {
-            if (!is_cont) {
+            if (!is_continuation) {
                 char timbuf[64];
                 time_t t;
             
@@ -153,24 +152,24 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
                 strftime(timbuf, sizeof(timbuf), "%Y/%m/%d %H:%M:%S ",
                          localtime(&t));
 
-                fprintf(l_fstream, "%s", timbuf);
+                fprintf(l_filestream, "%s", timbuf);
             }
             if (pri & LOGERR)
-                fprintf(l_fstream, "%s", _("error: "));
+                fprintf(l_filestream, "%s", _("error: "));
             else if (pri & LOGWARN)
-                fprintf(l_fstream, "%s", _("warn: "));
+                fprintf(l_filestream, "%s", _("warn: "));
             
-            fprintf(l_fstream, "%s", buf);
-            vfprintf(l_fstream, fmt, args);
-            fflush(l_fstream);
+            fprintf(l_filestream, "%s", buf);
+            vfprintf(l_filestream, fmt, args);
+            fflush(l_filestream);
         }
     }
     
     if (pri & LOGDIE) {
         char msg[1024];
         n_snprintf(msg, sizeof(msg), fmt, args);
-        say_goodbye(msg);
-        abort();
+        if (poldek_log_say_goodbye(msg))
+            abort();
     }
 }
 
@@ -222,19 +221,20 @@ int poldek_log_init(const char *pathname, FILE *tty, const char *prefix)
     if (l_stream != NULL && is_not_stdstream) 
         fclose(l_stream);
 
-    if (l_fstream)
-        fclose(l_fstream);
+    if (l_filestream)
+        fclose(l_filestream);
     
     l_stream = tty;
+    
     if (pathname)
-        l_fstream = fopen(pathname, "a");
+        l_filestream = fopen(pathname, "a");
 
     l_prefix[0] = '\0';
     if (prefix)
         snprintf(l_prefix, sizeof(l_prefix), "%s:", prefix);
     
     if (pathname)
-        return l_fstream != NULL;
+        return l_filestream != NULL;
     return 1;
 }
 
@@ -246,9 +246,9 @@ void poldek_log_closelog(void)
     
     l_stream = NULL;
 
-    if (l_fstream) {
-        fclose(l_fstream);
-        l_fstream = NULL;
+    if (l_filestream) {
+        fclose(l_filestream);
+        l_filestream = NULL;
     }
 }
 
@@ -261,12 +261,12 @@ FILE *poldek_log_stream(void)
 
 FILE *poldek_log_file_stream(void) 
 {
-    return l_fstream;
+    return l_filestream;
 }
 
 int poldek_log_enabled_filelog(void)
 {
-    return l_fstream != NULL;
+    return l_filestream != NULL;
 }
 
 static
@@ -294,27 +294,3 @@ void vlog_tty(int pri, const char *fmt, va_list args)
     fflush(l_stream);
 }
 
-#if 0
-static char *text_wrap(char *dest, int size, const char *text, int tolen) 
-{
-    char *p, *q;
-    int n = 0;
-    
-        
-    p = dest;
-    while (*p) {
-        n++;
-        if (isspace(*p)) 
-            q = p;
-        
-        if (len > tolen) {
-            if (isspace(*p))
-                dest = '\n';
-            else
-                dest
-            
-        
-
-}
-#endif
-        
