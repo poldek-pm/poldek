@@ -1,4 +1,23 @@
 <?xml version='1.0'?>
+
+<!--  
+option syntax
+<option name="NAME" type="{string,boolean,boolean3,integer}" 
+  default="DEFAULT VALUE" 
+  list="yes"      # if an option is a list of values
+  path="yes"      # if path list (':' separator) in conjunction with list,
+  multiple="yes"  # if an option may be set multiple times 
+  env="yes"       # if an option value may contain environment variables
+  obsoleted="yes" # if an option is obsoleted
+  hidden="yes"    # not to show it to the user. XXX need to be implemented
+                  # in *conf-xml2*.xsls, currently just length of the 
+                  # description is tested.
+>
+<description> OPTION DESCRIPTION </description>
+<alias name="ALIAS NAME" obsoleted="{yes,no}" /> an option alias
+</option>
+-->
+
 <config name="poldek.conf">
 
 <section id="synopsis" target="manual">
@@ -133,6 +152,18 @@ _distro  = pld
 
 <confsection name="global" id="section.global" config="poldek.conf">
 <optiongroup id="ogroup.general">
+   <!-- legacy options  -->
+   <option name="source" type="string" multiple="yes" env="yes" obsoleted="yes" />
+   <option name="source?*" type="string" env="yes" obsoleted="yes" />
+   <option name="prefix?*" type="string" env="yes" obsoleted="yes" />
+   <option name="ftp http get" type="string" obsoleted="yes" />
+   <option name="ftp get" type="string" obsoleted="yes" />
+   <option name="http get" type="string" obsoleted="yes" />
+   <option name="https get" type="string" obsoleted="yes" />
+   <option name="rsync get" type="string" obsoleted="yes" />
+   <option name="cdrom get" type="string" obsoleted="yes" />
+
+
   <option name="default index type" type="string" default="pndir">
     <description>
     This parameter allows to configure the default repository index type.
@@ -141,7 +172,7 @@ _distro  = pld
 
   <option name="cachedir" type="string" default="$HOME/.poldek-cache" env="yes">
     <description>
-     Cache directory for downloaded files. NOTE: that parent directory of cachedir 
+     Cache directory for downloaded files. NOTE that parent directory of cachedir 
      must exists.
     </description>
   </option>
@@ -153,10 +184,10 @@ _distro  = pld
     <alias name="run as" />
   </option>
 
-  <option name="use sudo" type="boolean" default="no">
+  <option name="use sudo" type="boolean3" default="auto" op="USESUDO">
     <description>
-    Permits using root privileges for installation only. Automatically turned
-    on when poldek executed as ordinary user.
+    Permits using root privileges for installation only. If set to "auto" then 
+    automatically turned on when poldek executed as ordinary user.
     </description>
   </option>
 
@@ -182,21 +213,13 @@ _distro  = pld
     </description>
   </option>
 
-  <option name="rpm" type="string" default="" env="yes" hide="yes">
-    <description></description>
-  </option>
-
-  <option name="sudo" type="string" default="" env="yes" hide="yes">
-    <description></description>
-  </option>
-
-  <option name="autoupa" type="boolean" default="yes" hide="yes">
+  <option name="autoupa" type="boolean" default="yes">
     <description>
     Automatically download whole index if incremental update fails.
     </description>
   </option>
 
-  <option name="exclude path" type="path-list" default="" multiple="yes" hide="yes">
+  <option name="exclude path" type="string" list="yes" path="yes" multiple="yes">
     <description>
     Do not save given paths into created indexes. This option may significantly
     reduce index size. Example (notice missing starting '/'):
@@ -206,13 +229,14 @@ _distro  = pld
     </description>
   </option>
 
-  <option name="pm command" type="string" default="/bin/rpm" multiple="no" hide="no">
+  <option name="pm command" type="string" default="/bin/rpm" multiple="no">
     <description>
     Full path name to a PM (rpm for now) binary. 
     </description>
+    <alias name="rpm command" obsoleted="yes" />
   </option>
 
-  <option name="sudo command" type="string" default="/usr/bin/sudo" multiple="no" hide="no">
+  <option name="sudo command" type="string" default="/usr/bin/sudo" multiple="no">
     <description>
     Full path name to sudo binary. 
     </description>
@@ -226,7 +250,7 @@ _distro  = pld
     Send ${USER}@${HOSTNAME} as anonymous FTP password (by default 
     [literal]'poldek@znienacka.net'[/literal] is sent) 
     </description>
-    <alias name="ftp sysuser as anon passwd" /> <!-- legacy -->
+    <alias name="ftp sysuser as anon passwd" obsoleted="yes" /> <!-- legacy -->
   </option>
 
   <option name="default fetcher" type="string" default="http,ftp: internal" multiple="yes">
@@ -266,7 +290,7 @@ _distro  = pld
     </description>
   </option>
 
-  <option name="noproxy" type="string" default="" multiple="yes">
+  <option name="noproxy" type="string" list="yes" default="" multiple="yes">
     <description>
     Comma separated list of hosts or domains which will not be accessed via proxy.
     Option overrides no_proxy environment variable.
@@ -275,6 +299,7 @@ _distro  = pld
  noproxy = localhost, .pl, ftp.foo.bar.org
     [/screen]
     </description>
+    <alias name="no proxy" />
   </option>
 
   <option name="vfile retries" type="integer" default="128">
@@ -287,20 +312,20 @@ _distro  = pld
 </optiongroup>
 
 <optiongroup id="ogroup.installation"><title>Installation options</title>
-  <option name="particle install" type="boolean" default="yes">
+  <option name="particle install" type="boolean" default="yes" op="PARTICLE">
     <description>
      Install packages in small groups instead of doing all-or-nothing 
      installations.
     </description>
   </option>
 
-  <option name="keep downloads" type="boolean" default="no">
+  <option name="keep downloads" type="boolean" default="no" op="KEEP_DOWNLOADS">
     <description>
     Do not remove downloaded packages after its successful installation.
     </description>
   </option>
 
-  <option name="unique package names" type="boolean" default="no">
+  <option name="unique package names" type="boolean" default="no" op="UNIQN">
     <description>
     Controls visibility of multiple package instances with different EVR.
     If on, only one, highest version will be visible.
@@ -308,42 +333,43 @@ _distro  = pld
   </option>
 
 
-  <option name="promoteepoch" type="boolean" default="no">
+  <option name="promoteepoch" type="boolean" default="no" op="PROMOTEPOCH">
     <description>
     Epoch autopromotion during dependency comparision. RPM specific.
     Set it up if you are using system with rpm prior to 4.2.1 version.
     </description>
   </option>
 
-  <option name="confirm installation" type="boolean" default="no">
+  <option name="confirm installation" type="boolean" default="no" op="CONFIRM_INST">
     <description>
     Confirm packages installation.
     </description>
-    <alias name="confirm installs" legacy="yes"/> 
+    <alias name="confirm installs" obsoleted="yes"/> 
   </option>
 
-  <option name="confirm removal" type="boolean" default="yes">
+  <option name="confirm removal" type="boolean" default="yes" op="CONFIRM_UNINST">
     <description>
     Confirm packages removal.
     </description>
   </option>
 
-  <option name="choose equivalents manually" type="boolean" default="no">
+  <option name="choose equivalents manually" type="boolean" default="no" op="EQPKG_ASKUSER">
     <description>
     Let the user select package among equivalents.
     </description>
   </option>
 
-  <option name="hold" type="string-list" default="" multiple="yes">
+  <option name="hold" type="string" list="yes" default="" multiple="yes">
     <description>
     Prevent package listed from being upgraded if they are already installed.
     [screen]
  hold = kernel* dev
     [/screen]
     </description>
+    <alias name="a hold alias for testing purposes" obsoleted="yes" />
   </option>
 
-  <option name="ignore" type="string-list" default="" multiple="yes">
+  <option name="ignore" type="string" list="yes" default="" multiple="yes">
     <description>
     Ignore package list - packages fits given mask will be invisible.
     [screen]
@@ -352,7 +378,7 @@ _distro  = pld
     </description>
   </option>
 
-  <option name="allow duplicates" type="boolean" default="yes">
+  <option name="allow duplicates" type="boolean" default="yes" op="ALLOWDUPS">
     <description>
     Conflicts with already installed packages are treated as resolved 
     if at least one of multiple-installed package satisfies conflict. 
@@ -385,21 +411,22 @@ _distro  = pld
  Subtle dependency processing options, they should not be changed 
  unless you know what you are doing
 </description>
+  <option name="multilib" type="boolean3" default="auto" hidden="yes" op="MULTILIB"/>
 
-  <option name="follow" type="boolean" default="yes">
+  <option name="follow" type="boolean" default="yes" op="FOLLOW">
     <description>
     Automatically install packages required by installed ones.
     </description>
   </option>
 
-  <option name="greedy" type="boolean" default="yes">
+  <option name="greedy" type="boolean" default="yes" op="GREEDY">
     <description>
     Greedy upgrades, i.e. upgrade packages which dependencies are broken
     by being uninstalled ones.
     </description>
   </option>
 
-  <option name="aggressive greedy" type="boolean" default="yes">
+  <option name="aggressive greedy" type="boolean" default="yes" op="AGGREEDY">
     <description>
     Be yet more greedy; if successor of orphaned package found, and this 
     successor drags no packages then upgrade the package instead of process
@@ -407,7 +434,7 @@ _distro  = pld
     </description>
   </option>
 
-  <option name="mercy" type="boolean" default="no">
+  <option name="mercy" type="boolean" default="no" op="VRFYMERCY">
     <description>
      Be tolerant for unmatched versioned dependencies which rpm tolerates, e.g.
      package A requires capability foo >= 1.0 while package B provides "foo"
@@ -415,17 +442,21 @@ _distro  = pld
     </description>
   </option>
 
-  <option name="obsoletes" type="boolean" default="yes">
+  <option name="obsoletes" type="boolean" default="yes" op="OBSOLETES">
     <description>
     Taking into account package Obsoletes.
     </description>
   </option>
 
-  <option name="conflicts" type="boolean" default="yes">
+  <option name="conflicts" type="boolean" default="yes" op="CONFLICTS">
     <description>
     Taking into account package Conflicts.
     </description>
   </option>
+
+  <!-- internal tag -->
+  <!-- <option name="__dirname" type="string" hidden="yes" /> -->
+
 </optiongroup>
 </confsection> <!-- end of "global" -->
 
@@ -439,7 +470,7 @@ _distro  = pld
 </description>
 </section>
 
-<confsection name="source" id="section.source" config="source.conf">
+<confsection name="source" id="section.source" config="source.conf" multiple="yes">
 <description>
 This section contains poldek's repository configuration. 
 Every repository is configured in its own [ source ] section.
@@ -453,7 +484,7 @@ Every repository is configured in its own [ source ] section.
     </description>
   </option>  
 
-  <option name="type" type="string" value="pndir">
+  <option name="type" type="string" required="yes" value="pndir">
     <description>
     Type of repository index. Permitted values are 'pndir', 'pdir', 'apt', 'yum' 
     and 'dir' as listed by [option]--stl[/option] switch.
@@ -468,7 +499,7 @@ Every repository is configured in its own [ source ] section.
     </description>
   </option>
 
-  <option name="path" type="string" env="yes" value="/some/url/or/dir">
+  <option name="path" type="string" env="yes" required="yes" value="/some/url/or/dir">
     <description>
     Unique name of the repository. May be either path or URL.
     </description>
@@ -487,6 +518,7 @@ Every repository is configured in its own [ source ] section.
     Controls visibility of multiple package instances with different EVR.
     If on, only one, highest version will be visible.
     </description>
+    <alias name="unique package names" /> 
   </option>
 
   <option name="pri" type="integer" default="0">
@@ -515,6 +547,9 @@ Every repository is configured in its own [ source ] section.
     </description>
   </option>
 
+  <option name="noauto" type="boolean" default="no" obsoleted="yes" />
+  <option name="noautoup" type="boolean" default="no" obsoleted="yes"/>
+
   <option name="signed" type="boolean" default="no">
     <description>
     Packages PGP/GPG signatures (if any) will be verified before their 
@@ -522,7 +557,7 @@ Every repository is configured in its own [ source ] section.
     </description>
   </option>
 
-  <option name="hold" type="string-list" default="" multiple="yes">
+  <option name="hold" type="string" list="yes" default="" multiple="yes">
     <description>
     Have the same meaning as [ global ] parameter. Example:
     [screen]
@@ -531,7 +566,7 @@ Every repository is configured in its own [ source ] section.
     </description>
   </option>
 
-  <option name="ignore" type="string-list" default="" multiple="yes">
+  <option name="ignore" type="string" list="yes" default="" multiple="yes">
     <description>
     Have the same meaning as [ global ] parameter. Example:
     [screen]
@@ -540,7 +575,7 @@ Every repository is configured in its own [ source ] section.
     </description>
   </option>
 
-  <option name="exclude path" type="path-list" default="" multiple="yes">
+  <option name="exclude path" type="string" list="yes" path="yes" default="" multiple="yes">
     <description>
     Parameter have the same meaning as [ global ] parameter.
     [screen]
@@ -557,6 +592,13 @@ Every repository is configured in its own [ source ] section.
  lang = pl_PL:lt_LT
     [/screen]
     </description>
+    <alias name="dscr" obsoleted="yes" />
+  </option>
+
+  <option name="sources" type="string" list="yes" value="foo foo-updates">
+    <description>  
+    Make sense for 'group' source type only. A list of names of sources.
+    </description> 
   </option>
   <footer target="config">
 
@@ -596,7 +638,7 @@ autoup = no
 </description>
 </section>
 
-<confsection name="fetcher" id="section.fetcher" config="fetch.conf">
+<confsection name="fetcher" id="section.fetcher" config="fetch.conf" multiple="yes">
 <description>
 This section contains external downloaders configuration. 
 Each section describes one fetcher.
@@ -610,7 +652,7 @@ Each section describes one fetcher.
     </description>
   </option>  
 
-  <option name="proto" type="string-list" value="foo,bar">
+  <option name="proto" type="string" value="foo,bar" required="yes">
     <description>
     Protocol or protocols supported by fetcher. Name of the protocol can be 
     completely arbitrary, i.e. if you can handle protocol "foo" by writing
@@ -618,7 +660,7 @@ Each section describes one fetcher.
     </description>
   </option>  
 
-  <option name="cmd" type="string" env="yes" value="foogetter.sh -N %D %Pn">
+  <option name="cmd" type="string" env="yes" required="yes" value="foogetter.sh -N %D %Pn">
     <description>
     Parameter specifies an external command and its invoking syntax.
     The syntax of "cmd" is:

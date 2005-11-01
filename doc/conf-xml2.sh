@@ -22,6 +22,10 @@ to_docb() {
 }
 
 
+to_c() {
+    xsltproc $DN/conf-xml2c.xsl $FILE
+}
+
 to_conf() {
     tmp=$FILE.tmp
     # - replace [screen] to '=remove' (removed at end)
@@ -54,6 +58,9 @@ if [ "$TO" = "man" ]; then
 
 elif [ "$TO" = "docb" ]; then
    to_docb
+
+elif [ "$TO" = "c" ]; then
+   to_c
 
 elif [ "$TO" = "conf" ]; then
    NAME=$3

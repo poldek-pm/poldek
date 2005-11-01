@@ -10,7 +10,7 @@
 <xsl:param name="html.stylesheet.type">text/css</xsl:param>
 <xsl:param name="html.stylesheet" select="'manual.css'"></xsl:param>
 
-
+<xsl:param name="css.decoration" select="0"/>
 <xsl:param name="draft.mode" select="'no'"></xsl:param>
 
 </xsl:stylesheet>

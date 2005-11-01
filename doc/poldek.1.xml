@@ -42,8 +42,8 @@ tasks like installation, upgrading or removal.
 </para>
 
 <para>
-This manual page contains only option reference, the full documentation for poldek 
-is available as a Texinfo manual. Do <command>info poldek</command> to get it.
+This manual page contains only command line option reference, the full documentation 
+for poldek is available as a Texinfo manual. Do <command>info poldek</command> to get it.
 </para>
   </refsect1>
 
@@ -59,6 +59,15 @@ is available as a Texinfo manual. Do <command>info poldek</command> to get it.
 &ref-verification_options-switches;
 &ref-splitting_options;
 &ref-miscellaneous_options;
+</refsect1>
+
+<refsect1><title>AUTHOR</title>
+<para>
+Pawel A. Gajda &lt;mis at pld.org.pl&gt;
+</para>
+<para>
+See CREDITS file for a list of contributors.
+</para>
 </refsect1>
 
 <refsect1><title>See also</title>
