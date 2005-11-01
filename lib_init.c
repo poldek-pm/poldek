@@ -41,8 +41,9 @@
 #include "poldek_intern.h"
 #include "poldek_term.h"
 #include "pm/pm.h"
+#include "conf_intern.h"
 
-extern void (*poldek_log_say_goodbye)(const char *msg); /* log.c */
+extern int (*poldek_log_say_goodbye)(const char *msg); /* log.c */
 
 static int poldeklib_init_called = 0;
 
@@ -60,8 +61,8 @@ const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
 
 static const char *poldek_logprefix = "poldek";
 
-static void say_goodbye(const char *msg);
-void (*poldek_say_goodbye)(const char *msg) = say_goodbye;
+static int say_goodbye(const char *msg);
+int (*poldek_say_goodbye)(const char *msg) = say_goodbye;
 
 static
 void (*poldek_assert_hook)(const char *expr, const char *file, int line) = NULL;
@@ -71,8 +72,6 @@ void (*poldek_malloc_fault_hook)(void) = NULL;
 
 static
 void (*poldek_die_hook)(const char *msg) = NULL;
-
-
 
 static void register_vf_handlers_compat(const tn_hash *htcnf);
 static void register_vf_handlers(const tn_array *fetchers);
@@ -93,38 +92,20 @@ int do_poldek_setup_cachedir(struct poldek_ctx *ctx);
 extern
 int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs);
 
-
-static struct {
-    int config;
-    const char *name;
+struct default_op_map_ent {
+    int config;                 /* configuration var? */
+    char *name;
     int op;
+    int _defaultv;
     int defaultv;
-} default_op_map[] = {
-    { 1, "use_sudo",             POLDEK_OP_USESUDO, 0        },
-    { 1, "confirm_installation", POLDEK_OP_CONFIRM_INST, 0   },
-    { 1, "confirm_removal",      POLDEK_OP_CONFIRM_UNINST, 1 },
-    { 1, "keep_downloads",       POLDEK_OP_KEEP_DOWNLOADS, 0 },
-    { 1, "choose_equivalents_manually", POLDEK_OP_EQPKG_ASKUSER, 0 },
-    { 1, "particle_install",     POLDEK_OP_PARTICLE, 1  },
-    { 1, "follow",               POLDEK_OP_FOLLOW, 1    },
-    { 1, "obsoletes",            POLDEK_OP_OBSOLETES, 1 },
-    { 1, "conflicts",            POLDEK_OP_CONFLICTS, 1 },
-    { 1, "mercy",                POLDEK_OP_VRFYMERCY, 1 },
-    { 1, "greedy",               POLDEK_OP_GREEDY, 1    },
-    { 1, "allow_duplicates",     POLDEK_OP_ALLOWDUPS, 1 },
-    { 1, "unique_package_names", POLDEK_OP_UNIQN, 0  },
-    { 1, "promoteepoch", POLDEK_OP_PROMOTEPOCH, 0  },
-    { 1, "multilib", POLDEK_OP_MULTILIB, 0  },
-    { 0, "(!no)hold", POLDEK_OP_HOLD,   1  },
-    { 0, "(!no)ingore", POLDEK_OP_IGNORE, 1  }, 
-    { 0, NULL, 0, 0 }
 };
+
+static tn_array *default_op_map = NULL; /* see build_default_op_map() */
 
 int poldek__is_setup_done(struct poldek_ctx *ctx) 
 {
     return (ctx->_iflags & SETUP_DONE) == SETUP_DONE;
 }
-
 
 static inline void check_if_setup_done(struct poldek_ctx *ctx) 
 {
@@ -684,11 +665,86 @@ static void zlib_in_rpm(struct poldek_ctx *ctx)
     p_st_destroy(&pst);
 }
 
+static tn_array *build_default_op_map(void)
+{
+    struct poldek_conf_tag *tags = NULL;
+    tn_array *op_map;
+    int i = 0;
+    struct default_op_map_ent *ent, addon[] = {
+        { 0, "(!no)hold", POLDEK_OP_HOLD,   1,  1  },
+        { 0, "(!no)ingore", POLDEK_OP_IGNORE, 1, 1  }, 
+        { 0, NULL, 0, 0, 0 }
+    };
+    
+    op_map = n_array_new(32, free, NULL);
+    
+    while (poldek_conf_sections[i].name) {
+        if (n_str_eq(poldek_conf_sections[i].name, "global")) {
+            tags = poldek_conf_sections[i].tags;
+            break;
+        }
+        i++;
+    }
+    n_assert(tags);
+
+    i = 0;
+    while (tags[i].name) {
+        if (tags[i]._op_no == 0) {
+            i++;
+            continue;
+        }
+        
+        ent = n_malloc(sizeof(*ent));
+        n_assert(tags[i].flags & (CONF_TYPE_BOOLEAN | CONF_TYPE_BOOLEAN3));
+        ent->config = 1;
+        ent->name = tags[i].name;
+        ent->op = tags[i]._op_no;
+        
+        if (tags[i].flags & CONF_TYPE_BOOLEAN) {
+            ent->_defaultv = poldek_util_parse_bool(tags[i].defaultv);
+            ent->defaultv = ent->_defaultv;
+            n_assert(ent->defaultv == 0 || ent->defaultv == 1);
+            
+        } else if (tags[i].flags & CONF_TYPE_BOOLEAN3) {
+            ent->_defaultv = poldek_util_parse_bool3(tags[i].defaultv);
+            n_assert(ent->_defaultv == 0 || ent->_defaultv == 1 ||
+                     ent->_defaultv == 2);
+            ent->defaultv = -1;
+            
+        } else {
+            n_assert(0);
+        }
+        
+        n_array_push(op_map, ent);
+        i++;
+    }
+    
+    i = 0;
+    while (addon[i].name) {
+        ent = n_malloc(sizeof(*ent));
+        ent->config = 0;
+        ent->name = addon[i].name;
+        ent->op = addon[i].op;
+        ent->_defaultv = ent->defaultv = addon[i].defaultv;
+        n_array_push(op_map, ent);
+        i++;
+    }
+#if ENABLE_TRACE
+    for (i=0; i<n_array_size(op_map); i++) {
+        struct default_op_map_ent *ent = n_array_nth(op_map, i);
+        DBGF("%s %d\n", ent->name, ent->_defaultv);
+    }
+#endif    
+    return op_map;
+}
+
 static
 void poldek__ts_apply_config(struct poldek_ctx *ctx, struct poldek_ts *ts)
 {
     tn_hash           *htcnf = NULL;
     int               i;
+
+    n_assert(default_op_map);
     
     if (ctx->htconf == NULL)
         return;
@@ -696,19 +752,25 @@ void poldek__ts_apply_config(struct poldek_ctx *ctx, struct poldek_ts *ts)
     htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
     i = 0;
     DBGF("ts %p, tsctx %p\n", ts, ctx->ts);
-    while (default_op_map[i].name && default_op_map[i].config) {
-        const char *name = default_op_map[i].name; 
-        int op = default_op_map[i].op;
+
+    for (i=0; i<n_array_size(default_op_map); i++) {
+        struct default_op_map_ent *ent = n_array_nth(default_op_map, i);
         
-        if (poldek_ts_op_touched(ts, op)) { /* modified by cmdl opts */
-            DBGF("  - ldconfig %s(%d) = %d\n", name, op, ts->getop(ts, op));
+        if (ent->config == 0)   /* omit non-config options */
+            continue;
+
+        n_assert(ent->defaultv >= 0);
+        
+        if (poldek_ts_op_touched(ts, ent->op)) { /* modified by cmdl opts */
+            DBGF("  - ldconfig %s(%d) = %d\n", ent->name, ent->op,
+                 ts->getop(ts, ent->op));
             
         } else {
-            int v = poldek_conf_get_bool(htcnf, name, 
-                                         default_op_map[i].defaultv);
             
-            DBGF("  + ldconfig %s(%d) = %d\n", name, op, v);
-            poldek_ts_xsetop(ts, op, v, 0);
+            int v = poldek_conf_get_bool(htcnf, ent->name, ent->defaultv);
+            
+            DBGF("  + ldconfig %s(%d) = %d\n", ent->name, ent->op, v);
+            poldek_ts_xsetop(ts, ent->op, v, 0);
         }
         
         i++;
@@ -726,15 +788,17 @@ void poldek__ts_apply_config(struct poldek_ctx *ctx, struct poldek_ts *ts)
 
 void poldek__ts_dump_settings(struct poldek_ctx *ctx, struct poldek_ts *ts)
 {
-    int i = 0;
-    
-    DBGF_F("ts %p, tsctx %p\n", ts, ctx->ts);
-    while (default_op_map[i].op) {
-        const char *name = default_op_map[i].name;
-        int op = default_op_map[i++].op;
+    int i;
 
-        DBGF_F("%% %s=%s (ctx=%s)\n", name, ts->getop(ts, op) ? "y" : "n",
-               ctx->ts->getop(ctx->ts, op) ? "y" : "n");
+    n_assert(default_op_map);
+    DBGF_F("ts %p, tsctx %p\n", ts, ctx->ts);
+
+    for (i=0; i<n_array_size(default_op_map); i++) {
+        struct default_op_map_ent *ent = n_array_nth(default_op_map, i);
+
+        DBGF_F("%% %s=%s (ctx=%s)\n", ent->name,
+               ts->getop(ts, ent->op) ? "y" : "n",
+               ctx->ts->getop(ctx->ts, ent->op) ? "y" : "n");
     }
 }
 
@@ -744,29 +808,29 @@ void poldek__ts_apply_poldek_settings(struct poldek_ctx *ctx,
                                       struct poldek_ts *ts)
 {
     int i = 0;
-    
-    DBGF("ts %p, tsctx %p\n", ts, ctx->ts);
-    while (default_op_map[i].op) {
-        const char *name = default_op_map[i].name;
-        int op = default_op_map[i++].op;
 
-        name = name;            /* compiler warn */
-        if (poldek_ts_op_touched(ts, op)) { /* modified by cmdl opts */
-            DBGF("  - skip touched %s(%d) = %d, ctxv %d\n", name, op,
-                   ts->getop(ts, op), ctx->ts->getop(ctx->ts, op));
+    n_assert(default_op_map);
+    DBGF("ts %p, tsctx %p\n", ts, ctx->ts);
+    
+    for (i=0; i<n_array_size(default_op_map); i++) {
+        struct default_op_map_ent *ent = n_array_nth(default_op_map, i);
+
+        if (poldek_ts_op_touched(ts, ent->op)) { /* modified by cmdl opts */
+            DBGF("  - skip touched %s(%d) = %d, ctxv %d\n", ent->name, ent->op,
+                   ts->getop(ts, ent->op), ctx->ts->getop(ctx->ts, ent->op));
             continue;
         }
         
-        if (poldek_ts_op_touched(ctx->ts, op)) {
-            DBGF("  + apply %s(%d) = %d (was %d)\n", name, op,
-                   ctx->ts->getop(ctx->ts, op), ts->getop(ts, op));
+        if (poldek_ts_op_touched(ctx->ts, ent->op)) {
+            DBGF("  + apply %s(%d) = %d (was %d)\n", ent->name, ent->op,
+                   ctx->ts->getop(ctx->ts, ent->op), ts->getop(ts, ent->op));
             
-            ts->setop(ts, op, ctx->ts->getop(ctx->ts, op));
+            ts->setop(ts, ent->op, ctx->ts->getop(ctx->ts, ent->op));
             
         } else {
-            DBGF("  - NOT apply %s(%d) = %d (touched=%d)\n", name,
-                   op, ctx->ts->getop(ctx->ts, op),
-                   poldek_ts_op_touched(ctx->ts, op));
+            DBGF("  - NOT apply %s(%d) = %d (touched=%d)\n", ent->name,
+                 ent->op, ctx->ts->getop(ctx->ts, ent->op),
+                 poldek_ts_op_touched(ctx->ts, ent->op));
         }
         
     }
@@ -880,16 +944,17 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path,
     return 1;
 }
 
-static void say_goodbye(const char *msg) 
+static int say_goodbye(const char *msg) 
 {
     printf("%s", msg);
+    return 1;                   /* let the caller die() itself */
 }
 
 static void n_malloc_fault(void) 
 {
-    poldek_say_goodbye("Something wrong, something not quite right...\n"
-                       "Memory exhausted\n");
-    exit(EXIT_FAILURE);
+    if (poldek_say_goodbye("Something wrong, something not quite right...\n"
+                           "Memory exhausted\n"))
+        exit(EXIT_FAILURE);
 }
 
 
@@ -900,8 +965,8 @@ static void n_assert_hook(const char *expr, const char *file, int line)
                "Assertion '%s' failed, %s:%d\n"
                "Please report this bug to %s.\n\n",
                expr, file, line, poldek_BUG_MAILADDR);
-    poldek_say_goodbye(msg);
-    abort();
+    if (poldek_say_goodbye(msg))
+        abort();
 }
 
 static void n_die_hook(const char *msg) 
@@ -909,11 +974,12 @@ static void n_die_hook(const char *msg)
     char buf[1024];
     n_snprintf(buf, sizeof(buf),
                "Something wrong, something not quite right.\ndie: %s\n", msg);
-    poldek_say_goodbye(buf);
-    abort();
+    
+    if (poldek_say_goodbye(buf))
+        abort();
 }
 
-static void self_init(void) 
+static void verify_setuid(void) 
 {
     uid_t uid;
 
@@ -1084,6 +1150,12 @@ static void poldek_vf_vlog_cb(int pri, const char *fmt, va_list ap)
 
 void poldeklib_destroy(void)
 {
+    if (poldeklib_init_called == 0)
+        return;
+    
+    n_array_free(default_op_map);
+    default_op_map = NULL;
+    
 }
 
 int poldeklib_init(void)
@@ -1097,7 +1169,10 @@ int poldeklib_init(void)
     pmmodule_init();
     poldek_set_verbose(0);
     poldek_log_init(NULL, stdout, poldek_logprefix);
-    self_init();
+    verify_setuid();
+
+    default_op_map = build_default_op_map();
+    n_assert(default_op_map);
 
     bindtextdomain(PACKAGE, NULL);
     textdomain(PACKAGE);
@@ -1163,16 +1238,32 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     
     ctx->ts = poldek_ts_new(NULL, 0);
     ts = ctx->ts;
-    
-    i = 0;
-    while (default_op_map[i].op) {
-        poldek_ts_xsetop(ts, default_op_map[i].op,
-                         default_op_map[i].defaultv, 0);
-        i++;
-    }
 
-    if (getuid() != 0)
-        poldek_ts_setop(ts, POLDEK_OP_USESUDO, 1);
+    /* set default option values without "touching" them in ts */
+    for (i=0; i < n_array_size(default_op_map); i++) {
+        struct default_op_map_ent *ent = n_array_nth(default_op_map, i);
+        int v = ent->_defaultv;
+        
+        if (v == 2) {      /* "auto" */
+            switch (ent->op) {
+                case POLDEK_OP_USESUDO:
+                    v = 0;
+                    if (getuid() != 0)
+                        v = 1;
+                    break;
+
+                case POLDEK_OP_MULTILIB: /* NFY */
+                    v = 0;
+                    break;
+                    
+                default:
+                    n_assert(0);
+            }
+            ent->defaultv = v;
+        }
+        
+        poldek_ts_xsetop(ts, ent->op, v, 0);
+    }
     
     return 1;
 }
@@ -1180,7 +1271,7 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
 struct poldek_ctx *poldek_new(unsigned flags)
 {
     struct poldek_ctx *ctx;
-
+    
     if (!poldeklib_init_called) {
         logn(LOGERR | LOGDIE, "poldeklib_init() call is a must...");
         return 0;
