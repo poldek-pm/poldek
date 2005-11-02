@@ -58,7 +58,7 @@ int vf_valid_path(const char *path)
     
     p = path;
     p++;
-    ndots = 0;
+    ndots = -1;
     
     while (*p) {
         switch (*p) {
@@ -71,11 +71,12 @@ int vf_valid_path(const char *path)
                 break;
 
             case '.':
-                ndots++;
+                if (ndots >= 0)
+                    ndots++;
                 break;
 
             default:
-                ndots = 0;
+                ndots = -1;
                 
                 if (!isalnum(*p) && strchr("-+/._@!~", *p) == NULL) {
                     vf_logerr("%s:%c non alphanumeric characters not allowed\n",
