@@ -171,12 +171,12 @@ int vfile_configure(int param, ...)
             
             break;    
         }
-            
 
         case VFILE_CONF_STUBBORN_NRETRIES:
             v = va_arg(ap, int);
-            if (v > 0)
-                vfile_conf.nretries = v;
+            if (v == 0)
+                v = 1;
+            vfile_conf.nretries = v;
             break;
             
         case VFILE_CONF_SIGINT_REACHED:

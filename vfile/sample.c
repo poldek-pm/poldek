@@ -59,9 +59,6 @@ int main(int argc, char *argv[])
     vfile_verbose = &verbose;
     vfile_configure(VFILE_CONF_CACHEDIR, "/tmp");
     
-    
-    
-    
     while (1) {
         printf("verbose = %d\n", *vfile_verbose);
         fetch("ftp://localhost/bigg");

@@ -440,16 +440,12 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
         }
         vf_loginfo(_("Running %s\n"), s);
     }
-    
-    
-
 
     verbose = *vfile_verbose;
     if (fftch->urltypes & VFURL_CDROM) {
         p_open_flags |= P_OPEN_KEEPSTDIN;
         if (*vfile_verbose < 1) 
             *vfile_verbose = 1;
-        
     }
 
     p_st_init(&pst);
