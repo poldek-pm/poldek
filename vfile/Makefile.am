@@ -27,7 +27,7 @@ libvfile_la_LIBADD = vfff/libvfff.la
 pkgincludedir = $(includedir)/vfile
 pkginclude_HEADERS = vfile.h p_open.h vopen3.h
 
-noinst_PROGRAMS = vfget test_vopen3 test_vfile
+noinst_PROGRAMS = vfget test_vopen3 
 TEST_LDADDS    = libvfile.la -lutil
 
 vfget_SOURCES  = vfget.c 
@@ -35,11 +35,9 @@ vfget_LDADD    = $(TEST_LDADDS)
 
 test_vopen3_SOURCES  = test_vopen3.c 
 test_vopen3_LDADD    = $(TEST_LDADDS)
-test_vfile_SOURCES   = test_vfile.c 
-test_vfile_LDADD     = $(TEST_LDADDS)
 
 EXTRA_DIST     = libvfile.sym $(VFCURL_SRCS) \
-				 testcookie.c test_progress.c test_vfile.c
+				 testcookie.c test_progress.c
 
 
 
