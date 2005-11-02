@@ -22,7 +22,7 @@ uncompr() {
     typeset src=$1
     typeset dest=$2
 
-    md5file="${src}-vfcompr.md5"
+    md5file="${dest}-vfcompr.md5"
     #echo "$md5file"
     if [ -f $dest -a -f "$md5file" ]; then
         #echo md5sum --check "$md5file"
