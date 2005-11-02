@@ -1,13 +1,8 @@
 # $Id$
 
-VFCURL_SRCS = vfcurl.c			# obsoleted
 SUBDIRS   = vfff
 
 LIBS = -ltrurl -lz @INTLLIBS@
-
-#if ENABLE_VFILE_CURL
-#VFCURL_SRCS_ = $(VFCURL_SRCS)
-#endif
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
@@ -18,8 +13,7 @@ libvfile_la_LDFLAGS = -version-info $(LIBVERSION) -export-symbols libvfile.sym
 
 libvfile_la_SOURCES = vfile.c fetch.c vfetch.c vfprogress.c misc.c \
 				      p_open.c extcompr.c vfreq.c vfreq.h \
-					  vflock.c \
-				      vfffmod.c $(VFCURL_SRCS_) \
+					  vflock.c vfffmod.c \
 					  vopen3.c vopen3.h vfile_intern.h
 
 libvfile_la_LIBADD = vfff/libvfff.la
@@ -36,10 +30,7 @@ vfget_LDADD    = $(TEST_LDADDS)
 test_vopen3_SOURCES  = test_vopen3.c 
 test_vopen3_LDADD    = $(TEST_LDADDS)
 
-EXTRA_DIST     = libvfile.sym $(VFCURL_SRCS) \
-				 testcookie.c test_progress.c
-
-
+EXTRA_DIST     = libvfile.sym testcookie.c test_progress.c
 
 dist-hook:
 	rm -rf $(distdir)/.deps
