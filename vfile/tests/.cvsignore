@@ -1,0 +1,10 @@
+Cellar
+aclocal.m4
+Makefile.in
+Makefile
+*.lo
+.libs
+*.la
+tmp.*
+.deps
+test_vfile
