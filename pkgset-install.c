@@ -14,6 +14,12 @@
   $Id$
 */
 
+/*
+  Dependency resolver module.
+  This file is going to be obsoleted soon, the same code splitted and
+  partially redesigned was moved to install/ subdir
+*/
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -1243,7 +1249,8 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
 
         DBGF("req %s\n", capreq_snprintf_s(req));
 
-        if (upg->ts->getop(upg->ts, POLDEK_OP_EQPKG_ASKUSER) && upg->ts->askpkg_fn)
+        if (upg->ts->getop(upg->ts, POLDEK_OP_EQPKG_ASKUSER) &&
+            upg->ts->askpkg_fn)
             tomark_candidates_ptr = &tomark_candidates;
         
         if (find_req(pkg, req, &tomark, tomark_candidates_ptr, ps, upg)) {
@@ -1301,6 +1308,14 @@ int process_pkg_reqs(int indent, struct pkg *pkg, struct pkgset *ps,
                 int n;
                 n = upg->ts->askpkg_fn(capreq_snprintf_s(req),
                                        tomark_candidates, tomark);
+                
+                if (n == -1) {  /* user abort */
+                    free(tomark_candidates);
+                    tomark_candidates = NULL;
+                    upg->nerr_fatal++;
+                    return 0;
+                }
+                
                 real_tomark = tomark_candidates[n];
                 free(tomark_candidates);
                 tomark_candidates = NULL;
@@ -1437,11 +1452,14 @@ int process_pkg_deps(int indent, struct pkg *pkg, struct pkgset *ps,
 
     if (pkg->reqs)
         process_pkg_reqs(indent, pkg, ps, upg, process_as);
-
+        
     if (process_as == PROCESS_AS_NEW) {
         process_pkg_conflicts(indent, pkg, ps, upg);
         //process_pkg_obsl(pkg, ps, upg, indent);
     }
+
+    if (upg->nerr_fatal || sigint_reached())
+        return 0;
 
     DBGF("END PROCESSING [%d] %s as %s\n", indent, pkg_id(pkg),
          process_as == PROCESS_AS_NEW ? "NEW" : "ORPHAN");
@@ -1532,7 +1550,14 @@ int resolve_conflict(int indent,
         struct pkg *real_tomark = tomark;
         if (tomark_candidates) {
             int n;
-            n = upg->ts->askpkg_fn(capreq_snprintf_s(req), tomark_candidates, tomark);
+            n = upg->ts->askpkg_fn(capreq_snprintf_s(req), tomark_candidates,
+                                   tomark);
+            if (n == -1) {
+                n_cfree(&tomark_candidates);
+                upg->nerr_fatal++;
+                goto l_end;
+            }
+            
             real_tomark = tomark_candidates[n];
             n_cfree(&tomark_candidates);
         }
@@ -1808,6 +1833,9 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
 
     db = upg->ts->db;
 
+    if (upg->nerr_fatal || sigint_reached())
+        return 0;
+
     if (!upg->ts->getop(upg->ts, POLDEK_OP_CONFLICTS))
         return 1;
     
@@ -1850,7 +1878,9 @@ int process_pkg_conflicts(int indent, struct pkg *pkg, struct pkgset *ps,
         if (n)
             pkg_set_unmetdeps(upg->unmetpms, pkg);
     }
-        
+
+    if (upg->nerr_fatal || sigint_reached())
+        return 0;
         
     if (pkg->cnfls != NULL)
         for (i = 0; i < n_array_size(pkg->cnfls); i++) {
@@ -2317,103 +2347,8 @@ int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs)
     return nmarked;
 }
 
-static
-int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs) 
-{
-    int i, found = 0;
-    tn_array *dbpkgs;
-    struct capreq *cap;
-
-    capreq_new_name_a(capname, cap);
-    dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cap, NULL, 0);
-    if (dbpkgs == NULL) {
-        struct pkg *pkg;
-        if (ts->getop(ts, POLDEK_OP_FRESHEN))
-            return 0;
-
-        n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
-        pkg = n_array_nth(pkgs, 0);
-        pkg_hand_mark(ts->pms, pkg);
-        return 1;
-    }
-    
-    n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
-    for (i=0; i < n_array_size(dbpkgs); i++) {
-        struct pkg *dbpkg = n_array_nth(dbpkgs, i);
-        int n = n_array_bsearch_idx_ex(pkgs, dbpkg,
-                                       (tn_fn_cmp)pkg_cmp_name);
-
-        DBGF("%s: %s\n", capname, pkg_id(dbpkg));
-        
-        if (n < 0)
-            continue;
-    
-        for (; n < n_array_size(pkgs); n++) {
-            struct pkg *pkg = n_array_nth(pkgs, n);
-            int cmprc, mark = 0;
-
-            DBGF("%s: %s cmp %s\n", capname, pkg_id(pkg),
-                 pkg_id(dbpkg));
-            if (pkg_cmp_name(pkg, dbpkg) != 0)
-                break;
-            
-            cmprc = pkg_cmp_name_evr(pkg, dbpkg);
-            if (cmprc > 0)
-                mark = 1;
-                
-            else if (cmprc == 0 && poldek_ts_issetf(ts, POLDEK_TS_REINSTALL))
-                mark = 1;
-                
-            else if (cmprc < 0 && poldek_ts_issetf(ts, POLDEK_TS_DOWNGRADE))
-                mark = 1;
-
-            if (mark) {
-                found = 1;
-                msgn(1, _("%s: marked as %s's provider"), pkg_id(pkg),
-                     capname);
-                
-                pkg_hand_mark(ts->pms, pkg);
-                goto l_end;
-                
-            } else if (cmprc <= 0) {
-                char *eqs = cmprc == 0 ? "equal" : "newer";
-                msgn(1, _("%s: %s version of %s is installed (%s), skipped"),
-                     capname, eqs, pkg_id(dbpkg),
-                     pkg_id(pkg));
-                
-            } else {
-                n_assert(0);
-                
-            }
-        }
-    }
-l_end:
-    if (dbpkgs)
-        n_array_free(dbpkgs);
-    
-    return found;
-}
-
-static
-int prepare_icaps(struct poldek_ts *ts) 
-{
-    tn_array *keys;
-    tn_hash *icaps;
-    int i;
-
-    icaps = arg_packages_get_resolved_caps(ts->aps);
-    keys = n_hash_keys_cp(icaps);
-    for (i=0; i < n_array_size(keys); i++) {
-        const char *cap = n_array_nth(keys, i);
-        tn_array *pkgs = n_hash_get(icaps, cap);
-        prepare_icap(ts, cap, pkgs);
-    }
-    n_array_free(keys);
-    n_hash_free(icaps);
-    return 1;
-}
-
-
+/* use install/ in_prepare_icaps() */
+extern int in_prepare_icaps(struct poldek_ts *ts);
 
 int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
 {
@@ -2424,7 +2359,9 @@ int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     
     n_assert(ts->type == POLDEK_TS_INSTALL);
 
-    prepare_icaps(ts);
+    if (in_prepare_icaps(ts) == -1) /* user abort */
+        return 1;
+    
     if (unmark_name_dups(ts->pms, ps->pkgs) == 0) {
         msgn(1, _("Nothing to do"));
         return 1;
