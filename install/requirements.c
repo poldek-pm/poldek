@@ -268,7 +268,10 @@ int in_process_pkg_requirements(int indent, struct install_ctx *ictx,
     memset(&successor, 0, sizeof(successor));
     if (process_as == PROCESS_AS_ORPHAN &&
         ictx->ts->getop(ictx->ts, POLDEK_OP_AGGREEDY)) {
-        if (in_pkg_drags(ictx, pkg) == 0) {
+        int pkg_ndragged;
+	
+        pkg_ndragged = in_pkg_drags(ictx, pkg);
+        if (pkg_ndragged == 0 || 1) { /* XXX: see note in pkgset-install.c */
             struct pkg *p;
             int is_marked = 0, ndragged = 0, by_obsoletes = 0;
 
@@ -280,9 +283,9 @@ int in_process_pkg_requirements(int indent, struct install_ctx *ictx,
             successor.realpkg = p;
             successor.by_obsoletes = by_obsoletes;
             
-            /* do not follow successor if package drags something and
-              is not marked */
-            if (p && (ndragged = in_pkg_drags(ictx, p)) > 0 && is_marked == 0) {
+            /* do not follow successor if it drags more than its predecessor 
+               and successor itself is not marked */
+            if (p && (ndragged = in_pkg_drags(ictx, p)) > pkg_ndragged && is_marked == 0) {
                 DBGF("OMIT select_successor %s -> %s (%d)\n",
                      pkg_id(pkg), pkg_id(p), ndragged);
                 p = NULL;
