@@ -92,13 +92,18 @@ int poldek_term_ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *defl
         *p++ = 'a' + i;
         i++;
     }
+    *p++ = 'Q';
     
-    msg(-1, _("Which one do you want to install? [%c]"), 'a' + default_i); 
+    msg(-1, _("Which one do you want to install ('Q' to abort)? [%c]"),
+        'a' + default_i); 
     a = poldek_term_ask(STDIN_FILENO, validchrs, NULL);
     msg(-1, "_\n");
     
     if (a == '\n')
         return default_i;
+
+    if (a == 'Q')
+        return -1;
     
     a -= 'a';
     //printf("Selected %d\n", a);
