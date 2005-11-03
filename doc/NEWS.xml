@@ -2,6 +2,46 @@
 <news>
 <cvsid>$Id$</cvsid>
 
+<!--
+<release version="0.20.1" date="2005/" focus="bugfix release">
+  <entry><para>
+   let a user to choose equivalents selected by --caplookup option
+  </para></entry>
+
+  <entry><para>
+   choosing equivalents prompt are interrupt-able now.
+  </para></entry>
+
+  <entry><para>
+    added 0.18.x's --mkdir to be bacward compatible
+  </para></entry> 
+
+  <entry><para>
+    fixed path validation ("/foo../" is not a relative path)
+  </para></entry>
+
+  <entry><para> 
+    vfcompr: temporary *vfcompr.md5 files moved from source to destination 
+    (a cache) directory
+  </para></entry> 
+
+  <entry><para> 
+    orphaned package are upgraded if its successor drags more new packages 
+    than orphaned one
+  </para></entry>
+ 
+  <entry><para> 
+    "use sudo" default value is explicit set to "auto" (new 3var boolean-like 
+     type is added).
+  </para></entry>
+
+  <entry><para> 
+     configuration for CentOS has been added.
+    <author id="areq" email="areq att areq eu org">Arkadiusz Patyk</author>
+  </para></entry>
+</release>
+-->
+
 <release version="0.20" date="2005/10/28" focus="major enhancements release">
 <para>
 This release introduces new series of poldek. 
