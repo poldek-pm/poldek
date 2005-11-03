@@ -64,6 +64,7 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_PM                    (OPT_GID + 35)
 #define OPT_INST_NOFETCH          (OPT_GID + 36)
 #define OPT_INST_PARSABLETS       (OPT_GID + 37)
+#define OPT_INST_MKDIR            (OPT_GID + 38)
 
 static struct argp_option options[] = {
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
@@ -184,8 +185,11 @@ N_("Remove package duplicates from available package list"), OPT_GID },
 
 {"parsable-tr-summary", OPT_INST_PARSABLETS, 0, 0,
      N_("Print installation summary in parseable form"), OPT_GID },
-                                                
-    { 0, 0, 0, 0, 0, 0 },
+
+{"mkdir", OPT_INST_MKDIR, 0, OPTION_HIDDEN, /* legacy */
+     "make %{_dbpath} directory if not exists", OPT_GID },
+    
+{ 0, 0, 0, 0, 0, 0 },
 };
 
 
@@ -340,6 +344,9 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             ts->setop(ts, POLDEK_OP_PARSABLETS, 1);
             break;
 
+        case OPT_INST_MKDIR:
+            break;              /* ignored, directory is created by default */
+            
         case 'I':               /* silently ignore */
             break;
 
