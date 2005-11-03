@@ -138,4 +138,7 @@ int in_process_pkg_requirements(int indent, struct install_ctx *ictx,
 int in_process_package(int indent, struct install_ctx *ictx,
                        struct pkg *pkg, int process_as);
 
+
+struct pkg *in_choose_equiv(struct poldek_ts *ts, struct capreq *cap,
+                            struct pkg **candidates, struct pkg *defaultpkg);
 #endif

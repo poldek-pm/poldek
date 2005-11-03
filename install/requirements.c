@@ -165,12 +165,15 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
         
         struct pkg *real_tomark = tomark;
         if (tomark_candidates) {
-            int n;
-            n = ictx->ts->askpkg_fn(capreq_snprintf_s(req),
-                                    tomark_candidates, tomark);
-            real_tomark = tomark_candidates[n];
+            real_tomark = in_choose_equiv(ictx->ts, req, tomark_candidates,
+                                          tomark);
             free(tomark_candidates);
             tomark_candidates = NULL;
+            
+            if (real_tomark == NULL) { /* user abort */
+                ictx->nerr_fatal++;
+                return 0;
+            }
         }
             
         if (in_is_marked_for_removal_by_req(ictx, real_tomark, req)) {

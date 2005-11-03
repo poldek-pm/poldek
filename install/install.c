@@ -352,7 +352,9 @@ int in_do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     struct install_ctx ictx;
     n_assert(ts->type == POLDEK_TS_INSTALL);
 
-    in_prepare_icaps(ts);
+    if (in_prepare_icaps(ts) < 0) /* user aborts, no error */
+        return 1;
+    
     if (unmark_name_dups(ts->pms, ts->ctx->ps->pkgs) == 0) {
         msgn(1, _("Nothing to do"));
         return 1;

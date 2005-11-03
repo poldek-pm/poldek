@@ -25,13 +25,32 @@ int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
 
     capreq_new_name_a(capname, cap);
     dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cap, NULL, 0);
+
     if (dbpkgs == NULL) {
-        struct pkg *pkg;
+        struct pkg *pkg = NULL;
+        
         if (ts->getop(ts, POLDEK_OP_FRESHEN))
             return 0;
 
         n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
-        pkg = n_array_nth(pkgs, 0);
+
+        if (ts->getop(ts, POLDEK_OP_EQPKG_ASKUSER) && ts->askpkg_fn) {
+            struct pkg **candidates = alloca(sizeof(struct pkg *) *
+                                             (n_array_size(pkgs) + 1));
+            for (i=0; i < n_array_size(pkgs); i++)
+                candidates[i] = n_array_nth(pkgs, i);
+            candidates[i] = NULL;
+
+            pkg = in_choose_equiv(ts, cap, candidates, NULL);
+            if (pkg == NULL) {    /* user aborts */
+                found = -1;
+                goto l_end;
+            }
+        }
+        
+        if (pkg == NULL)
+            pkg = n_array_nth(pkgs, 0);
+        
         pkg_hand_mark(ts->pms, pkg);
         return 1;
     }
@@ -65,7 +84,7 @@ int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
                 
             else if (cmprc < 0 && poldek_ts_issetf(ts, POLDEK_TS_DOWNGRADE))
                 mark = 1;
-
+            
             if (mark) {
                 found = 1;
                 msgn(1, _("%s: marked as %s's provider"), pkg_id(pkg),
@@ -82,10 +101,10 @@ int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
                 
             } else {
                 n_assert(0);
-                
             }
         }
     }
+    
 l_end:
     if (dbpkgs)
         n_array_free(dbpkgs);
@@ -93,20 +112,26 @@ l_end:
     return found;
 }
 
+/* handles  --caplookup */
 int in_prepare_icaps(struct poldek_ts *ts) 
 {
     tn_array *keys;
     tn_hash *icaps;
-    int i;
-
+    int i, rc = 1;
+    
     icaps = arg_packages_get_resolved_caps(ts->aps);
     keys = n_hash_keys_cp(icaps);
     for (i=0; i < n_array_size(keys); i++) {
         const char *cap = n_array_nth(keys, i);
         tn_array *pkgs = n_hash_get(icaps, cap);
-        prepare_icap(ts, cap, pkgs);
+        
+        if (prepare_icap(ts, cap, pkgs) == -1) {
+            rc = -1;
+            break;
+        }
     }
+    
     n_array_free(keys);
     n_hash_free(icaps);
-    return 1;
+    return rc;
 }

@@ -96,10 +96,13 @@ int in_resolve_conflict(int indent, struct install_ctx *ictx,
     if (found) {
         struct pkg *real_tomark = tomark;
         if (tomark_candidates) {
-            int n;
-            n = ictx->ts->askpkg_fn(capreq_snprintf_s(req), tomark_candidates, tomark);
-            real_tomark = tomark_candidates[n];
+            real_tomark = in_choose_equiv(ictx->ts, req, tomark_candidates,
+                                          tomark);
             n_cfree(&tomark_candidates);
+            if (real_tomark == NULL) { /* user aborts */
+                ictx->nerr_fatal++;
+                found = 0;
+            }
         }
         tomark = real_tomark;
         
