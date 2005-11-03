@@ -439,7 +439,7 @@ int in_find_req(struct install_ctx *ictx,
     
  l_end:
     
-    if (candidates && nsuspkgs) {
+    if (candidates && nsuspkgs > 1) {
         n_assert(suspkgs);
         *candidates = suspkgs;
         
@@ -460,3 +460,16 @@ int in_pkgdb_match_req(struct install_ctx *ictx, struct capreq *req)
                            ictx->uninst_set->dbpkgs);
 }
 
+struct pkg *in_choose_equiv(struct poldek_ts *ts, struct capreq *cap,
+                            struct pkg **candidates, struct pkg *defaultpkg)
+{
+    int n;
+
+    if (defaultpkg == NULL)
+        defaultpkg = candidates[0];
+    
+    n = ts->askpkg_fn(capreq_snprintf_s(cap), candidates, defaultpkg);
+    if (n == -1)
+        return NULL;
+    return candidates[n];
+}
