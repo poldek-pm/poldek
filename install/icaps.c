@@ -34,7 +34,9 @@ int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
 
         n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
 
-        if (ts->getop(ts, POLDEK_OP_EQPKG_ASKUSER) && ts->askpkg_fn) {
+        if (ts->getop(ts, POLDEK_OP_EQPKG_ASKUSER) && ts->askpkg_fn &&
+            n_array_size(pkgs) > 1) {
+            
             struct pkg **candidates = alloca(sizeof(struct pkg *) *
                                              (n_array_size(pkgs) + 1));
             for (i=0; i < n_array_size(pkgs); i++)
