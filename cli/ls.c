@@ -294,6 +294,10 @@ static int ls(struct cmdctx *cmdctx)
             n_array_sort_ex(ls_ents, cmpf);
         
         rc = do_ls(ls_ents, cmdctx, evrs);
+        
+        if (cmpf)
+            n_array_sort(ls_ents);  /* sort them back, ls_ents could be reference
+                                       to global packages array */
     }
     
 
