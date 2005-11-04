@@ -473,6 +473,7 @@ AC_CONFIG_FILES([
         sigint/Makefile
         vfile/Makefile
         vfile/vfff/Makefile
+        vfile/tests/Makefile
         python/Makefile
         conf/Makefile
         doc/Makefile
