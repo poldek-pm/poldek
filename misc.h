@@ -33,7 +33,6 @@ int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type);
 char *setup_cachedir(const char *path);
 const char *tmpdir(void);
 
-const char *expand_env_vars(char *dest, int size, const char *str);
 
 void die(void);
 

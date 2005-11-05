@@ -611,7 +611,8 @@ static int add_param(tn_hash *ht_sect, const char *section,
     }
 
     if (tag->flags & CONF_TYPE_F_ENV)
-        val = (char*)expand_env_vars(expanded_val, sizeof(expanded_val), val);
+        val = (char*)poldek_util_expand_env_vars(expanded_val,
+                                                 sizeof(expanded_val), val);
     
     if (opt->val == NULL) {
         opt->val = n_strdup(val);
@@ -741,7 +742,8 @@ char *include_path(char *path, size_t size,
         p = (char*)do_expand_value(expval, sizeof(expval), p, ht, ht_global);
     
     if (strchr(p, '$'))
-        p = (char*)expand_env_vars(expenv_val, sizeof(expenv_val), p);
+        p = (char*)poldek_util_expand_env_vars(expenv_val, sizeof(expenv_val),
+                                               p);
 
     n_snprintf(path, size, "%s", p);
     return path;

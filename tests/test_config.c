@@ -8,7 +8,7 @@ const char *expand_env_var(const char *v)
     char tmp[PATH_MAX];
     const char *s;
     
-    s = expand_env_vars(tmp, sizeof(tmp), v);
+    s = poldek_util_expand_env_vars(tmp, sizeof(tmp), v);
     fail_if(s == NULL);
     return n_strdup(s);
 }

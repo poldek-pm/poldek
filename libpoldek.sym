@@ -272,6 +272,8 @@ poldek_ts_setf
 poldek_ts_setop
 poldek_ts_type
 poldek_ts_vconfigure
+poldek_util_expand_vars
+poldek_util_expand_env_vars
 poldek_util_get_gmt_offs
 poldek_util_is_rwxdir
 poldek_util_lc_lang

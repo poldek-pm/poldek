@@ -17,9 +17,12 @@ struct test_suite *suites[] = {
     NULL,
 };
 
-extern struct test_case test_case_misc_env;
+extern struct test_case test_case_misc_env0;
+extern struct test_case test_case_misc_env1;
+
 struct test_case *misc_cases[] = {
-    &test_case_misc_env,
+    &test_case_misc_env0,
+    &test_case_misc_env1,
     NULL,
 };
 

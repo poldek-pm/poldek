@@ -578,20 +578,25 @@ static char *get_env(char *dest, int size, const char *name)
     return val;
 }
 
-
-const char *expand_env_vars(char *dest, int size, const char *str) 
+const char *poldek_util_expand_vars(char *dest, int size, const char *src,
+                                    char varmark, tn_hash *varh)
 {
     const char **tl, **tl_save;
+    char smark[16];
     int n = 0;
 
+    if (varmark == '\0')
+        varmark = '$';
+
+    n_snprintf(smark, sizeof(smark), "%c", varmark);
     
-    tl = tl_save = n_str_tokl(str, "$");
-    if (*str != '$' && tl[1] == NULL) {
+    tl = tl_save = n_str_tokl(src, smark);
+    if (*src != varmark && tl[1] == NULL) {
         n_str_tokl_free(tl);
-        return str;
+        return src;
     }
     
-    if (*str != '$') {
+    if (*src != varmark) {
         n = n_snprintf(dest, size, *tl);
         tl++;
     }
@@ -621,13 +626,20 @@ const char *expand_env_vars(char *dest, int size, const char *str)
             vv++;
         
         if (v_len + 1 > (int)sizeof(val))
-            return str;
+            return src;
         
         n_snprintf(val, v_len + 1, v);
-        DBGF("env %s\n", val);
+        DBGF("var %c{%s}\n", varmark, val);
+
+        var = NULL;
+        if (varh && varmark != '$')
+            var = n_hash_get(varh, val);
         
-        if ((var = get_env(buf, sizeof(buf), val)) == NULL) {
-            n += n_snprintf(&dest[n], size - n, "$%s", p);
+        else if (varmark == '$')
+            var = get_env(buf, sizeof(buf), val);
+
+        if (var == NULL) {
+            n += n_snprintf(&dest[n], size - n, "%c%s", varmark, p);
             
         } else {
             n += n_snprintf(&dest[n], size - n, "%s", var);
@@ -637,6 +649,13 @@ const char *expand_env_vars(char *dest, int size, const char *str)
     
     n_str_tokl_free(tl_save);
     return dest;
+}
+
+
+
+const char *poldek_util_expand_env_vars(char *dest, int size, const char *str)
+{
+    return poldek_util_expand_vars(dest, size, str, '$', NULL);
 }
 
 const char *abs_path(char *buf, int size, const char *path) 
