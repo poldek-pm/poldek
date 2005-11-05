@@ -1,3 +1,55 @@
+2005-11-05  Pawe³ Gajda  <mis@pld.org.pl>
+
+	* cli/uninstall.c: - missing break (--greedy was triggered -t)
+
+2005-11-04  Pawe³ Gajda  <mis@pld.org.pl>
+
+	* install/icaps.c: - do not give a choice between one package...
+
+	* configure.in: - missing Makefile
+
+	* cli/ls.c: - fix: sort packages back (#5726)
+
+2005-11-03  Pawe³ Gajda  <mis@pld.org.pl>
+
+	* install/requirements.c: - synced with pkgset-install.c
+
+	* doc/NEWS.xml: - updates
+
+	* install/conflicts.c, install/icaps.c, install/ictx.h, install/install.c, install/requirements.c:
+	- let to choose equivs with --caplookup
+	- askpkg_fn() may return nothing now
+
+	* pkgset-install.c: - let to choose equivs with --caplookup
+	- askpkg_fn() may return nothing now
+	- use in_prepare_icaps()
+
+	* install/misc.c:
+	- in_find_pkg(): fill candidates if more than 1 candidate found; new choose() func
+
+	* ask.c: - 'Q' aborts choosing equivs
+
+	* cli/install.c: - added missing 0.18.x's --mkdir
+
+2005-11-02  Pawe³ Gajda  <mis@pld.org.pl>
+
+	* vfile/fetch.c, vfile/sample.c, vfile/vfile.c: - cleanups
+
+	* vfcompr:
+	- create temporary file *vfcompr.md5 in dest dir, not in the source one
+
+	* vfile/extcompr.c: - bugfix: negative verbose, stupid
+
+	* vfile/Attic/vfcurl.c, vfile/Makefile.am: - curl module is out
+
+	* vfile/Attic/test_vfile.c, vfile/Makefile.am:
+	- test_vfile.c moved to unit tests
+
+	* vfile/tests/.cvsignore, vfile/tests/Makefile.am, vfile/tests/httpd.py, vfile/tests/test.h, vfile/tests/test_file.c, vfile/tests/test_misc.c, vfile/tests/test_vfile.c:
+	- vfile's unit tests
+
+	* vfile/misc.c: - bugfix: foo../ is not relative path
+
 2005-11-01  Pawe³ Gajda  <mis@pld.org.pl>
 
 	* doc/manual.xml: - polishing
@@ -1598,7 +1650,7 @@
 	* cli/Attic/cmd.c, cli/cmd.h, cli/cmd_chain.c, cli/cmd_chain.h:
 	- renamed
 
-	* vfile/vfff/vfff.c, vfile/vfile.c, vfile/vfile.h, vfile/vfile_intern.h, vfile/vflock.c, vfile/vfprogress.c, vfile/vfreq.c, vfile/vopen3.c, vfile/Makefile.am, vfile/extcompr.c, vfile/fetch.c, vfile/libvfile.sym, vfile/misc.c, vfile/vfcurl.c, vfile/vfetch.c, vfile/vfffmod.c, vfile/vfget.c:
+	* vfile/vfff/vfff.c, vfile/vfile.c, vfile/vfile.h, vfile/vfile_intern.h, vfile/vflock.c, vfile/vfprogress.c, vfile/vfreq.c, vfile/vopen3.c, vfile/Attic/vfcurl.c, vfile/Makefile.am, vfile/extcompr.c, vfile/fetch.c, vfile/libvfile.sym, vfile/misc.c, vfile/vfetch.c, vfile/vfffmod.c, vfile/vfget.c:
 	- removed sigint dependecy (VFILE_CONF_SIGINT_REACHED callback instead)
 	- defined symbols to export
 
@@ -1637,7 +1689,7 @@
 
 	* pm/pset/pset.c: - do uninstall before install or reinstallation fails
 
-	* vfile/.cvsignore, vfile/Makefile.am, vfile/test_vfile.c, vfile/vfile.h:
+	* vfile/.cvsignore, vfile/Attic/test_vfile.c, vfile/Makefile.am, vfile/vfile.h:
 	- new test_vfile.c && cleanups
 
 	* vfile/vfile.c: - fixed broken openig in APPEND mode
@@ -2626,7 +2678,7 @@
 	* sigint/.cvsignore, po/POTFILES.in, po/de.po, po/pl.po, Attic/source.c, pkgset-order.c:
 	 - i18n stuff
 
-	* vfile/vftp/Attic/Makefile.am, vfile/vftp/Attic/ftp.c, vfile/vhttp/Attic/Makefile.am, vfile/vhttp/Attic/http.c, sigint/Makefile.am, sigint/sigint.c, sigint/sigint.h, vfile/Attic/sigint.c, vfile/Attic/vfvftp.c, vfile/Attic/vfvhttp.c, vfile/Makefile.am, vfile/vfcurl.c, vfile/vfile.c, vfile/vfile.h, shell/Attic/desc.c, shell/Attic/ls.c, shell/Attic/pager.c, shell/Attic/search.c, shell/Attic/shell.c, Attic/main.c, Attic/rpmadds.c, Attic/rpmadds.h, Attic/rpminstall.c, Attic/sigint.c, Attic/sigint.h, Makefile.am, capreq.h, configure.in, pkgfetch.c, pkgset-install.c, pkgset-req.c, pkgset.c, pkgset.h:
+	* vfile/vftp/Attic/Makefile.am, vfile/vftp/Attic/ftp.c, vfile/vhttp/Attic/Makefile.am, vfile/vhttp/Attic/http.c, sigint/Makefile.am, sigint/sigint.c, sigint/sigint.h, vfile/Attic/sigint.c, vfile/Attic/vfcurl.c, vfile/Attic/vfvftp.c, vfile/Attic/vfvhttp.c, vfile/Makefile.am, vfile/vfile.c, vfile/vfile.h, shell/Attic/desc.c, shell/Attic/ls.c, shell/Attic/pager.c, shell/Attic/search.c, shell/Attic/shell.c, Attic/main.c, Attic/rpmadds.c, Attic/rpmadds.h, Attic/rpminstall.c, Attic/sigint.c, Attic/sigint.h, Makefile.am, capreq.h, configure.in, pkgfetch.c, pkgset-install.c, pkgset-req.c, pkgset.c, pkgset.h:
 	- SIGINT handling cleanup; rpmlib() reqs are verified properly
 
 2002-10-23  Pawe³ Gajda  <mis@pld.org.pl>
@@ -2634,7 +2686,7 @@
 	* Attic/main.c, Attic/rpm.c, Attic/sigint.c, Attic/sigint.h, Makefile.am:
 	- C-c support (NFY)
 
-	* vfile/vhttp/Attic/http.c, vfile/vftp/Attic/ftp.c, vfile/Attic/sigint.c, vfile/Attic/vfvftp.c, vfile/Attic/vfvhttp.c, vfile/vfcurl.c, vfile/vfile.h:
+	* vfile/vhttp/Attic/http.c, vfile/vftp/Attic/ftp.c, vfile/Attic/sigint.c, vfile/Attic/vfcurl.c, vfile/Attic/vfvftp.c, vfile/Attic/vfvhttp.c, vfile/vfile.h:
 	- sigint_*() renamed to vf_sigint_*()
 
 	* dbdep.c, dbdep.h, pkgset-install.c:
@@ -3359,7 +3411,7 @@
 
 	* vfile/vftp/Attic/ftp.c: - vsnprintf() -> n_vsnprintf()
 
-	* vfile/vftp/Attic/ftp.c, vfile/fetch.c, vfile/misc.c, vfile/vfcurl.c, vfile/vfile.c, vfile/vfile.h, vfile/vfprogress.c:
+	* vfile/vftp/Attic/ftp.c, vfile/Attic/vfcurl.c, vfile/fetch.c, vfile/misc.c, vfile/vfile.c, vfile/vfile.h, vfile/vfprogress.c:
 	- fixed handling double '/' in url_to_path()
 	- new fn vf_cleanpath()
 	- snprintf() -> n_snprintf()
@@ -3438,7 +3490,7 @@
 
 	* Attic/main.c, conf.c: - new ftp_sysuser_as_anon_passwd option
 
-	* vfile/vftp/Attic/vftp.c, vfile/vftp/Attic/vftp.h, vfile/Attic/vfvftp.c, vfile/Makefile.am, vfile/fetch.c, vfile/misc.c, vfile/sample.c, vfile/vfcurl.c, vfile/vfile.c, vfile/vfile.h:
+	* vfile/vftp/Attic/vftp.c, vfile/vftp/Attic/vftp.h, vfile/Attic/vfcurl.c, vfile/Attic/vfvftp.c, vfile/Makefile.am, vfile/fetch.c, vfile/misc.c, vfile/sample.c, vfile/vfile.c, vfile/vfile.h:
 	support for optional login@host sending as anon FTP password
 
 	* Attic/term.c, Attic/term.h, poldek_term.c, poldek_term.h:
@@ -3558,7 +3610,7 @@
 
 	* misc.c: - commented out valid_dir()
 
-	* vfile/Attic/vfvftp.c, vfile/sample.c, vfile/vfcurl.c, vfile/vfile.c, vfile/vfile.h:
+	* vfile/Attic/vfcurl.c, vfile/Attic/vfvftp.c, vfile/sample.c, vfile/vfile.c, vfile/vfile.h:
 	- "retry" loop moved to modules (vfcurl.c, vfvftp.c)
 	- bugfixes && cleanups
 
@@ -3615,7 +3667,7 @@
 
 	* Attic/NEWS, Attic/poldek.pod: - updates
 
-	* vfile/vftp/Attic/ftp.c, vfile/Attic/vfvftp.c, vfile/Makefile.am, vfile/sample.c, vfile/vfcurl.c, vfile/vfile.c, vfile/vfile.h, vfile/vfprogress.c:
+	* vfile/vftp/Attic/ftp.c, vfile/Attic/vfcurl.c, vfile/Attic/vfvftp.c, vfile/Makefile.am, vfile/sample.c, vfile/vfile.c, vfile/vfile.h, vfile/vfprogress.c:
 	- retry to download file if non-critical errors occured
 
 	* Attic/acconfig.h, Attic/rpm.c, Makefile.am, configure.in:
@@ -3652,7 +3704,7 @@
 
 	* Attic/rpminstall.c: - rpm output display bugfix
 
-	* vfile/vfcurl.c, vfile/vfile.c, vfile/vfile.h, vfile/vfprogress.c, Attic/main.c, log.c, log.h:
+	* vfile/Attic/vfcurl.c, vfile/vfile.c, vfile/vfile.h, vfile/vfprogress.c, Attic/main.c, log.c, log.h:
 	- don't write progress bars output to log (added vfile_msgtty_fn(), log_tty())
 
 	* shell/Attic/pager.c: - close the  pipe before wait()
@@ -3749,7 +3801,7 @@
 
 	* vfjuggle: - die if read from stdin fails
 
-	* Attic/rpminstall.c, vfile/fetch.c, vfile/p_open.c, vfile/p_open.h, vfile/vfcurl.c:
+	* Attic/rpminstall.c, vfile/Attic/vfcurl.c, vfile/fetch.c, vfile/p_open.c, vfile/p_open.h:
 	- sudo is executed with proper stdin
 	- added few missings "\n" to error msgs
 
@@ -3847,7 +3899,7 @@
 
 	* vfile/vftp/Attic/ftp.c: - fixed "C-c" routines
 
-	* vfile/vfcurl.c, vfile/vfprogress.c: - fixed progress bar
+	* vfile/Attic/vfcurl.c, vfile/vfprogress.c: - fixed progress bar
 
 	* Attic/main.c, Attic/pkgdir.c, Attic/pkgdir.h, Attic/pkgdir_digest.c, Attic/pkgdir_patch.c:
 	- added backward compatibility mode (--v016 opt)
@@ -3874,7 +3926,7 @@
 	- i18n work
 	- doc's updates
 
-	* vfile/Attic/vfcurl.h, vfile/Attic/vfvftp.c, vfile/Makefile.am, vfile/fetch.c, vfile/p_open.c, vfile/vfcurl.c, vfile/vfile.c, vfile/vfile.h, vfile/vfprogress.c:
+	* vfile/Attic/vfcurl.c, vfile/Attic/vfcurl.h, vfile/Attic/vfvftp.c, vfile/Makefile.am, vfile/fetch.c, vfile/p_open.c, vfile/vfile.c, vfile/vfile.h, vfile/vfprogress.c:
 	- vfcurl: transfer is able to be interrupted by SIGINT
 	- added vfvftp module
 	- removed rpmio (it's useless)
@@ -3906,7 +3958,7 @@
 	- db packages are cached -- in many cases this cache is used and
 	  shell mode starting faster
 
-	* vfile/Makefile.am, vfile/fetch.c, vfile/p_open.c, vfile/sample.c, vfile/ttest.c, vfile/vfcurl.c, vfile/vfile.c, vfile/vfile.h:
+	* vfile/Attic/vfcurl.c, vfile/Makefile.am, vfile/fetch.c, vfile/p_open.c, vfile/sample.c, vfile/ttest.c, vfile/vfile.c, vfile/vfile.h:
 	- simplified: removed all *_MD code
 
 2002-02-08  Pawe³ Gajda  <mis@pld.org.pl>
@@ -3915,7 +3967,7 @@
 	- added pkgfl_array_store_order() to ensure the same, unique order of
 	  pkgfl* entries
 
-	* vfile/vfcurl.c, vfile/vfile.c, vfile/vfile.h:
+	* vfile/Attic/vfcurl.c, vfile/vfile.c, vfile/vfile.h:
 	- few functions added (in connection with pkg index "patches" support)
 	- vfcurl: return some curl's error codes to the caller; improved REST
 	  support, improved progress bar
@@ -3946,7 +3998,7 @@
 
 2002-01-30  Pawe³ Gajda  <mis@pld.org.pl>
 
-	* vfile/vfile.c, vfile/vfile.h, vfile/fetch.c, vfile/test_progress.c, vfile/vfcurl.c, shell/Attic/shell.h, shell/Attic/term.c, shell/Attic/term.h, shell/Attic/uninstall.c, shell/Attic/ls.c, shell/Attic/search.c, shell/Attic/shell.c, shell/Attic/Makefile.am, shell/Attic/desc.c, shell/Attic/get.c, shell/Attic/install.c, Attic/term.h, Attic/usrset.c, Attic/usrset.h, Attic/rpm.h, Attic/rpmdb_it.c, Attic/rpminstall.c, Attic/term.c, Attic/poldekrc.sample, Attic/poldekrc.sample-pld, Attic/rpm.c, Attic/pkgsplit.conf.sample, Attic/poldek.pod, pkgset.c, pkgset.h, Attic/pkgset-load.h, pkgset-load.c, pkgset-order.c, pkgset-req.c, pkgset-req.h, pkgroup.c, pkgset-install.c, Attic/pkgdb.c, Attic/pkgdb.h, Attic/pkgdir.c, Attic/pkgdir.h, pkg.c, pkg.h, pkgfetch.c, pkgfl.c, Attic/main.c, misc.c, misc.h, Attic/dbpkg.c, Attic/dbpkg.h, Attic/install.c, dbpkgset.c, dbpkgset.h, depdirs.c, log.c, log.h, capreq.h, capreqidx.c, capreqidx.h, conf.c, configure.in, Attic/NEWS, capreq.c, Makefile.am:
+	* vfile/vfile.c, vfile/vfile.h, vfile/Attic/vfcurl.c, vfile/fetch.c, vfile/test_progress.c, shell/Attic/shell.h, shell/Attic/term.c, shell/Attic/term.h, shell/Attic/uninstall.c, shell/Attic/ls.c, shell/Attic/search.c, shell/Attic/shell.c, shell/Attic/Makefile.am, shell/Attic/desc.c, shell/Attic/get.c, shell/Attic/install.c, Attic/term.h, Attic/usrset.c, Attic/usrset.h, Attic/rpm.h, Attic/rpmdb_it.c, Attic/rpminstall.c, Attic/term.c, Attic/poldekrc.sample, Attic/poldekrc.sample-pld, Attic/rpm.c, Attic/pkgsplit.conf.sample, Attic/poldek.pod, pkgset.c, pkgset.h, Attic/pkgset-load.h, pkgset-load.c, pkgset-order.c, pkgset-req.c, pkgset-req.h, pkgroup.c, pkgset-install.c, Attic/pkgdb.c, Attic/pkgdb.h, Attic/pkgdir.c, Attic/pkgdir.h, pkg.c, pkg.h, pkgfetch.c, pkgfl.c, Attic/main.c, misc.c, misc.h, Attic/dbpkg.c, Attic/dbpkg.h, Attic/install.c, dbpkgset.c, dbpkgset.h, depdirs.c, log.c, log.h, capreq.h, capreqidx.c, capreqidx.h, conf.c, configure.in, Attic/NEWS, capreq.c, Makefile.am:
 	- improved dependencies processing (with upgrade-dist poldek
 	  upgrades as much as possible)
 	- added logging to a file (--log)
@@ -4012,12 +4064,12 @@
 	* Attic/NEWS, Attic/homepage.sgml.in, configure.in:
 	- released as 0.15.8
 
-	* vfile/vfcurl.c:
+	* vfile/Attic/vfcurl.c:
 	- disabled cURL's timeouts setting, its timeout it's a time to transfer file.
 
 2001-10-27  Pawe³ Gajda  <mis@pld.org.pl>
 
-	* vfile/vfcurl.c: - increace timeouts values to 5 min
+	* vfile/Attic/vfcurl.c: - increace timeouts values to 5 min
 	- amount and total sizes are displayed in progress bar
 
 2001-10-25  Pawe³ Gajda  <mis@pld.org.pl>
@@ -4049,7 +4101,7 @@
 
 2001-10-17  Micha³ Moskal  <malekith@pld.org.pl>
 
-	* vfile/vfcurl.c: - fix progress bar if total size is unknown
+	* vfile/Attic/vfcurl.c: - fix progress bar if total size is unknown
 
 2001-10-15  Pawe³ Gajda  <mis@pld.org.pl>
 
@@ -4087,9 +4139,9 @@
 
 2001-10-01  Pawe³ Gajda  <mis@pld.org.pl>
 
-	* vfile/vfcurl.c: - set the cURL's timeouts to 2 min.
+	* vfile/Attic/vfcurl.c: - set the cURL's timeouts to 2 min.
 
-	* vfile/vfcurl.c:
+	* vfile/Attic/vfcurl.c:
 	- added workarounds and traps for (propably) curl's bugs
 
 	* Attic/main.c:
@@ -4149,7 +4201,7 @@
 
 	* Attic/NEWS, Attic/poldek.pod, configure.in: - released as 0.15.5
 
-	* vfile/vfcurl.c: - tee-friendly progress bar
+	* vfile/Attic/vfcurl.c: - tee-friendly progress bar
 	- setup user password to poldek's one.
 
 	* vfile/vfile.c: - VFM_STBRN - give up after 1000 tries
@@ -4229,7 +4281,7 @@
 
 2001-07-04  Pawe³ Gajda  <mis@pld.org.pl>
 
-	* vfile/vfcurl.c: - fix progress()
+	* vfile/Attic/vfcurl.c: - fix progress()
 
 2001-07-03  Pawe³ Gajda  <mis@pld.org.pl>
 
@@ -4243,7 +4295,7 @@
 	* shell/Attic/ls.c:
 	- fixed listing header size (thanks to Artur Frysiak <wiget@pld.org.pl>)
 
-	* vfile/vfcurl.c: - progress fix
+	* vfile/Attic/vfcurl.c: - progress fix
 
 2001-07-02  Pawe³ Gajda  <mis@pld.org.pl>
 
@@ -4290,7 +4342,7 @@
 	- added locking of cachedir
 	- -s DIR/ and -s DIR are not distinguished
 
-	* vfile/vfcurl.c: - fixed displaying curl's error
+	* vfile/Attic/vfcurl.c: - fixed displaying curl's error
 
 	* Attic/pkgsplit.conf.sample: - renamed poldek-split.conf.sample
 
@@ -4328,7 +4380,7 @@
 
 	* shell/Attic/search.c: - typo
 
-	* vfile/Makefile.am, vfile/fetch.c, vfile/ttest.c, vfile/vfcurl.c, vfile/vfile.c, vfile/vfile.h:
+	* vfile/Attic/vfcurl.c, vfile/Makefile.am, vfile/fetch.c, vfile/ttest.c, vfile/vfile.c, vfile/vfile.h:
 	- added vf_flags to vfile to let user to know if file was taken from cache
 	- updated vfcurl progress bar handling (according to curl 7.8)
 	- some cleanups
@@ -4456,7 +4508,7 @@
 
 	* capreq.c: - more portable way of capreq storage
 
-	* vfile/vfcurl.c: - curl's error message w/o
+	* vfile/Attic/vfcurl.c: - curl's error message w/o
 
 	* vfile/vfile.c: - minor fixes
 
@@ -4478,12 +4530,12 @@
 	- fixed help displays
 	- minor fixes
 
-	* vfile/fetch.c, vfile/vfcurl.c, vfile/vfile.c:
+	* vfile/Attic/vfcurl.c, vfile/fetch.c, vfile/vfile.c:
 	- fixed urltype detection
 
 	* pkgu.c: - bugfix (infinite loop)
 
-	* vfile/vfcurl.c: - display curl errors
+	* vfile/Attic/vfcurl.c: - display curl errors
 
 2001-06-08  Pawe³ Gajda  <mis@pld.org.pl>
 
@@ -4506,7 +4558,7 @@
 	- added "digest mode" - detection of need to donwload is based on file
 	  digest taken from FILE.md
 
-	* vfile/vfcurl.c: - sprintf -> snprintf
+	* vfile/Attic/vfcurl.c: - sprintf -> snprintf
 
 2001-06-06  Pawe³ Gajda  <mis@pld.org.pl>
 
@@ -4582,7 +4634,7 @@
 
 2001-05-15  Pawe³ Gajda  <mis@pld.org.pl>
 
-	* vfile/vfcurl.c:
+	* vfile/Attic/vfcurl.c:
 	- removed test for CURLE_ALREADY_COMPLETE (not present in curl 7.7.4)
 
 2001-05-14  Pawe³ Gajda  <mis@pld.org.pl>
@@ -4660,7 +4712,7 @@
 	- removed ENABLE_INTERACTIVE_MODE #ifdefs - whole file is built condionally
 	  (see Makefile.am)
 
-	* vfile/Attic/vfcurl.h, vfile/Makefile.am, vfile/fetch.c, vfile/vfcurl.c, vfile/vfile.c, vfile/vfile.h:
+	* vfile/Attic/vfcurl.c, vfile/Attic/vfcurl.h, vfile/Makefile.am, vfile/fetch.c, vfile/vfile.c, vfile/vfile.h:
 	- libcurl support added
 	- vfile_fetch*() use internal methods as well
 
