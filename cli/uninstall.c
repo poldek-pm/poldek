@@ -171,6 +171,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 
                 ts->setop(ts, POLDEK_OP_GREEDY, bool);
             }
+            break;
             
         case 't':
             if (ts->getop(ts, POLDEK_OP_TEST))
