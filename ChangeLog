@@ -1,5 +1,8 @@
 2005-11-05  Pawe³ Gajda  <mis@pld.org.pl>
 
+	* Makefile.am, conf.c, libpoldek.sym, misc.c, misc.h, poldek_util.h, tests/test_config.c, tests/test_env.c, tests/test_poldek.c:
+	- poldek_util_expand_vars()
+
 	* cli/uninstall.c: - missing break (--greedy was triggered -t)
 
 2005-11-04  Pawe³ Gajda  <mis@pld.org.pl>
