@@ -12,6 +12,7 @@ START_TEST (test_valid_path) {
         "/ala/ma/kota",
         "/dupa/..blada",
         "/ala../foo",
+	"/home/foo/.poldek-cache/_www.rpm.xx.redhat-7.3../.vflock__home.foo..poldek-cache..www.rpm.xx.redhat-7.3..",
         NULL
     };
     int i;
