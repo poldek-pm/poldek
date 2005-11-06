@@ -1,5 +1,14 @@
 2005-11-06  Pawe³ Gajda  <mis@pld.org.pl>
 
+	* doc/Makefile.am, doc/homepage/Makefile.am: - missing deps
+
+	* doc/NEWSto: - missing mail
+
+	* doc/NEWS.xml, doc/NEWSdocb.xsl:
+	- omit releases w/o date instead commented them out
+
+	* doc/manual.xml: - cleanups
+
 	* vfile/tests/test_misc.c: - update
 
 	* build-dist-packages.sh: - with no args build src.rpm too
