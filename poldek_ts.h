@@ -126,8 +126,9 @@ struct poldek_ts {
     int   (*getop_v)(const struct poldek_ts *, int op, ...);
     void  (*setop)(struct poldek_ts *, int op, int onoff);
 
-    int                 uninstall_greedy_deep;
-    
+    int   uninstall_greedy_deep; /* greediness of uninstall, is set
+                                    by ts->setop(POLDEK_OP_GREEDY, v)
+                                  */
 };
 #endif
 struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx, unsigned flags);
