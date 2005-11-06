@@ -16,6 +16,7 @@
 
 #include <string.h>
 #include <sys/param.h>
+#include <time.h>
 
 #include "sigint/sigint.h"
 #include "poldek_util.h"
@@ -31,7 +32,7 @@ struct poclidek_cmd command_reload = {
     COMMAND_NOARGS | COMMAND_NOOPTS, 
     "reload", NULL, N_("Reload installed packages"), 
     NULL, NULL, NULL, reload,
-    NULL, NULL, NULL, NULL, 0, 0
+    NULL, NULL, NULL, NULL, NULL, 0, 0
 };
 
 static int reload(struct cmdctx *cmdctx) 

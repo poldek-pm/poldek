@@ -99,7 +99,7 @@ struct poclidek_cmd command_desc = {
     "desc", N_("PACKAGE..."), N_("Display packages info"), 
     options, parse_opt,
     NULL, desc,
-    NULL, NULL, NULL, NULL, 0, 0
+    NULL, NULL, NULL, NULL, NULL, 0, 0
 };
 
 static

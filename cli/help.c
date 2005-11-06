@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -15,7 +15,6 @@
 */
 
 #include <string.h>
-#include <time.h>
 
 #include <trurl/trurl.h>
 
@@ -28,7 +27,7 @@ struct poclidek_cmd command_help = {
     COMMAND_NOOPTS | COMMAND_NOHELP | COMMAND_NOARGS, 
     "help", NULL, N_("Display this help"), 
     NULL, NULL, NULL, cmd_help,
-    NULL, NULL, NULL, NULL, 0, 0
+    NULL, NULL, NULL, NULL, NULL, 0, 0
 };
 
 static

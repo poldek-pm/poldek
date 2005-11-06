@@ -10,10 +10,10 @@
   $Id$
 */
 
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
-#include <errno.h>
 #include <unistd.h>
 
 #include <trurl/nassert.h>
@@ -24,6 +24,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "cli.h"
+#include "cmd_chain.h"
 #include "conf.h"
 
 
@@ -33,7 +34,7 @@ struct poclidek_cmd command_alias = {
     COMMAND_NOARGS | COMMAND_NOOPTS, 
     "alias", NULL, N_("Print defined command aliases"), 
     NULL, NULL, NULL, alias,
-    NULL, NULL, NULL, NULL, 0, 0
+    NULL, NULL, NULL, NULL, NULL, 0, 0
 };
 
 static int alias(struct cmdctx *cmdctx) 
@@ -53,6 +54,7 @@ static void free_alias(struct poclidek_cmd *cmd)
     if (cmd->flags & COMMAND_IS_ALIAS) {
         n_cfree(&cmd->cmdline);
         n_cfree(&cmd->name);
+        n_cfree(&cmd->aliasto);
         memset(cmd, 0, sizeof(*cmd));
     }
 }
@@ -68,7 +70,10 @@ struct poclidek_cmd *command_new_alias(const char *name, const char *cmdline)
     alias->flags = COMMAND_IS_ALIAS | COMMAND__MALLOCED;
     alias->name = n_strdup(name);
     alias->cmdline = n_strdup(cmdline);
+    alias->aliasto = NULL;
     alias->_free = free_alias;
+    if (strchr(alias->cmdline, '%'))
+        alias->flags |= COMMAND_PARAMETERIZED;
     return alias;
 }
 
@@ -77,17 +82,18 @@ static
 int add_alias(struct poclidek_ctx *cctx,
               const char *aliasname, const char *cmdline)
 {
-	struct poclidek_cmd          *cmd;
-    struct poclidek_cmd          tmpcmd;
-
+    struct poclidek_cmd *cmd, tmpcmd;
+    int rc = 1;
     
 	tmpcmd.name = (char*)aliasname;
-	if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd)) == NULL) {
-        n_array_push(cctx->commands, command_new_alias(aliasname, cmdline));
+    if ((cmd = n_array_bsearch(cctx->commands, &tmpcmd)) == NULL) {
+        cmd = command_new_alias(aliasname, cmdline);
+        n_array_push(cctx->commands, cmd);
         
     } else {
         if ((cmd->flags & COMMAND_IS_ALIAS) == 0) {
             logn(LOGWARN, _("%s: alias could not shadow a command"), aliasname);
+            rc = 0;
             
         } else {
             if (poldek_verbose() > 1)
@@ -102,15 +108,61 @@ int add_alias(struct poclidek_ctx *cctx,
 	}
     
 	n_array_sort(cctx->commands);
-	return 1;
+	return rc;
 }
 
+/* determine to what command alias is aliased */
+static char *alias_to(struct poclidek_ctx *cctx, const char *cmdline) 
+{
+    tn_array *ents;
+    char *p, *cmd = NULL;
+
+    if (strchr(cmdline, '|') == NULL) {
+        cmd = n_strdup(cmdline);
+        
+    } else if ((ents = poclidek_prepare_cmdline(cctx, cmdline))) {
+        struct cmd_chain_ent *ent = n_array_nth(ents, 0);
+        while (ent->next_piped)
+            ent = ent->next_piped;
+        
+        cmd = n_strdup(ent->cmd->name);
+        n_array_free(ents);
+    }
+
+    if (cmd == NULL)
+        return NULL;
+
+    if ((p = strchr(cmd, ' ')))
+        *p = '\0';
+
+    return cmd;
+}
+
+static void find_aliased_commands(struct poclidek_ctx *cctx) 
+{
+    struct poclidek_cmd *cmd;
+    int i;
+    
+    for (i=0; i < n_array_size(cctx->commands); i++) {
+        cmd = n_array_nth(cctx->commands, i);
+        
+        if ((cmd->flags & COMMAND_IS_ALIAS) == 0)
+            continue;
+
+        cmd->aliasto = alias_to(cctx, cmd->cmdline);
+        if (cmd->aliasto == NULL)
+            logn(LOGWARN, _("%s: could not determine aliased command"),
+                 cmd->name);
+        else
+            msgn(3, "%s => aliased %s", cmd->name, cmd->aliasto);
+    }
+}
 
 int poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path) 
 {
     tn_hash *aliases_htcnf, *ht;
     tn_array *keys;
-    int i;
+    int i, n = 0;
     
     if (access(path, R_OK) != 0)
         return 0;
@@ -126,16 +178,22 @@ int poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path)
         const char *name, *cmdline;
 
         name = n_array_nth(keys, i);
+        if (*name == '_')       /* config macro */
+            continue;
+        
         if ((cmdline = poldek_conf_get(ht, name, NULL)))
-            add_alias(cctx, name, cmdline);
+            if (add_alias(cctx, name, cmdline))
+                n++;
     }
     
     n_array_free(keys);
     n_hash_free(aliases_htcnf);
+    
+    if (n)
+        find_aliased_commands(cctx);
+        
     return 1;
 }
-
-
 
 
 

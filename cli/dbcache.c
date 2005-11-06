@@ -30,7 +30,6 @@
 #include <signal.h>
 #include <time.h>
 #include <argp.h>
-#include <time.h>
 
 #include <trurl/trurl.h>
 #include <sigint/sigint.h>

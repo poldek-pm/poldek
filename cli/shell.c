@@ -28,10 +28,8 @@
 #include <sys/errno.h>
 #include <sys/param.h>
 #include <signal.h>
-#include <time.h>
 #include <argp.h>
 #include <fnmatch.h>
-#include <time.h>
 #include <unistd.h>
 
 #include <readline/readline.h>
@@ -52,7 +50,7 @@ struct poclidek_cmd command_quit = {
     COMMAND_NOARGS | COMMAND_NOOPTS, 
     "quit", NULL, N_("Exit poldek"), 
     NULL, NULL, NULL, cmd_quit,
-    NULL, NULL, NULL, NULL, 0, 0
+    NULL, NULL, NULL, NULL, NULL, 0, 0
 };
 
 static volatile sig_atomic_t shDone   = 0;

@@ -37,18 +37,17 @@ static int get(struct cmdctx *cmdctx);
 #define OPT_GET_DIR          (1 << 1) /* cmd_state->flags */
 
 static struct argp_option options[] = {
- { "dir", 'd', "DIR", 0, N_("Download to directory DIR instead to current one"), 1},
+ { "dir", 'd', "DIR", 0,
+   N_("Download to directory DIR instead to current one"), 1},
  { 0, 0, 0, 0, 0, 0 },
 };
-
 
 struct poclidek_cmd command_get = {
     0, 
     "get", N_("PACKAGE..."), N_("Download packages"), 
     options, parse_opt,
-    NULL, get, NULL, NULL, NULL, 0, 5, 0
+    NULL, get, NULL, NULL, NULL, NULL, 0, 5, 0
 };
-
 
 
 static

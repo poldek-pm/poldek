@@ -1,9 +1,13 @@
-/* 
-  Copyright (C) 2000 - 2004 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -14,19 +18,20 @@
 # include "config.h"
 #endif
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
-#include <sys/types.h>
+#include <sys/errno.h>
 #include <sys/file.h>
 #include <sys/stat.h>
-#include <sys/errno.h>
+#include <sys/types.h>
 
 #include <trurl/trurl.h>
 #include <sigint/sigint.h>
 
 #include "i18n.h"
+#include "poldek_util.h"
 #define ENABLE_TRACE 0
 #include "log.h"
 #include "cli.h"
@@ -39,7 +44,8 @@ tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
 
 static
 struct cmd_chain_ent *cmd_chain_ent_new(unsigned flags,
-                                        struct poclidek_cmd *cmd, tn_array *a_argv)
+                                        struct poclidek_cmd *cmd,
+                                        tn_array *a_argv)
 {
     struct cmd_chain_ent *ent;
     ent = n_malloc(sizeof(*ent));
@@ -207,6 +213,58 @@ struct poclidek_cmd *find_command(struct poclidek_ctx *cctx, const char *name)
     return cmd;
 }
 
+static const char *apply_params(const char *cmdline, tn_array *a_argv)
+{
+    tn_hash *vars;
+    tn_array *new_a_argv = NULL;
+    char newline[1024];
+    int i;
+
+    n_assert(n_array_size(a_argv) > 0);
+
+    vars = n_hash_new(n_array_size(a_argv) < 16 ? 16:n_array_size(a_argv) * 2,
+                      NULL);
+
+    for (i=0; i < n_array_size(a_argv); i++) {
+        char no[64];
+        n_snprintf(no, sizeof(no), "%d", i);
+        
+        n_hash_insert(vars, no, n_array_nth(a_argv, i));
+    }
+    
+    cmdline = poldek_util_expand_vars(newline, sizeof(newline),
+                                      cmdline, '%', vars,
+                                      POLDEK_UTIL_EXPANDVARS_RMUSED);
+    
+    if (strchr(cmdline, '%')) {/* still unexpanded vars */
+        cmdline = NULL;
+        goto l_end;
+    }
+    
+    /* remove used args from a_argv  */
+    new_a_argv = n_array_clone(a_argv);
+    n_assert(n_array_ctl_get_freefn(a_argv) == free);
+
+    i = 0;
+    while (n_array_size(a_argv) > 0) {
+        char no[64], *arg = n_array_shift(a_argv);
+
+        n_snprintf(no, sizeof(no), "%d", i++);
+        if (n_hash_exists(vars, no))
+            n_array_push(new_a_argv, arg);
+        else
+            free(arg);
+    }
+    n_assert(n_array_size(a_argv) == 0);
+    while (n_array_size(new_a_argv) > 0)
+        n_array_push(a_argv, n_array_shift(new_a_argv));
+    n_array_free(new_a_argv);
+
+    
+ l_end:
+    n_hash_free(vars);
+    return cmdline;
+}
 
 static
 tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain, 
@@ -234,11 +292,26 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
         ent = cmd_chain_ent_new(CMD_CHAIN_ENT_CMD, cmd, a_argv);
         n_array_push(cmd_chain, ent);
     
-    } else {
+    } else {                    /* alias */
         const char *cmdline;
 
         n_assert(cmd->cmdline);
         cmdline = cmd->cmdline;
+
+        if (cmd->flags & COMMAND_PARAMETERIZED) {
+            if (n_array_size(a_argv) == 0) {
+                logn(LOGERR, _("%s: alias needs an arguments"), acmd);
+                return NULL;
+            }
+            
+            if ((cmdline = apply_params(cmdline, a_argv)) == NULL) {
+                logn(LOGERR,
+                     _("%s: apply arguments failed (not enough arguments?)"),
+                     acmd);
+                return NULL;
+            }
+        }
+        msgn(2, "%s => %s\n", acmd, cmdline); 
         
         if (n_array_size(a_argv) > 1) { /* any arguments? -> pass them */
             char *line;
@@ -247,7 +320,7 @@ tn_array *prepare_a_argv(struct poclidek_ctx *cctx, tn_array *cmd_chain,
             len = strlen(cmd->cmdline) + 1;
             /* from 1 -- skip alias */
             for (i=1; i < n_array_size(a_argv); i++)
-                       /* + quotes + space */
+                /* + quotes + space */
                 len += strlen((char*)n_array_nth(a_argv, i)) + 2 + 1; 
             len++;
         

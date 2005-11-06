@@ -121,7 +121,7 @@ struct poclidek_cmd command_search = {
        "     <delimiter>perl-regexp<delimiter>[imsx]\n"
        "  For example to find the packages containing foo.bar do:\n"
        "     search --perlre /foo\\.bar/\n"
-       "  See perlre(1) for more details.\n"), NULL, 0, 0
+       "  See perlre(1) for more details.\n"), NULL, NULL, 0, 0
 };
 
 static struct pattern *build_pattern(struct cmdctx *cmdctx, char *arg)

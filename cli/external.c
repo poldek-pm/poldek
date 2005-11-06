@@ -34,7 +34,7 @@ struct poclidek_cmd command_external = {
     COMMAND_SELFARGS | COMMAND_PIPEABLE | COMMAND_HIDDEN, 
     "!", N_("COMMAND"), N_("Execute external command"), 
     NULL, parse_opt, NULL, external,
-    NULL, NULL, NULL, NULL, 0, 0
+    NULL, NULL, NULL, NULL, NULL, 0, 0
 };
 
 

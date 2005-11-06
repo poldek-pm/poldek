@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -18,16 +18,16 @@
 # include "config.h"
 #endif
 
+#include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
-#include <sys/param.h>
-#include <sys/types.h>
-#include <sys/file.h>
-#include <sys/stat.h>
 #include <sys/errno.h>
-#include <signal.h>
+#include <sys/file.h>
+#include <sys/param.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <time.h>
 #include <argp.h>
 
@@ -161,14 +161,22 @@ static tn_array *find_command_aliases(struct poclidek_cmd *cmd,
     
     if (cmd->flags & COMMAND_IS_ALIAS)
         return NULL;
-    
+
     n = n_snprintf(nam, sizeof(nam), "%s ", cmd->name);
     for (i=0; i < n_array_size(cctx->commands); i++) {
         struct poclidek_cmd *cm = n_array_nth(cctx->commands, i);
+        int found = 0;
+        
         if ((cm->flags & COMMAND_IS_ALIAS) == 0)
             continue;
+        
+        if (cm->aliasto && n_str_eq(cmd->name, cm->aliasto))
+            found = 1;
+        
+        else if (strncmp(nam, cm->cmdline, n) == 0)
+            found = 1;
 
-        if (strncmp(nam, cm->cmdline, n) == 0) {
+        if (found) {
             if (aliases == NULL)
                 aliases = n_array_new(4, NULL, (tn_fn_cmp)command_cmp);
             n_array_push(aliases, cm);
@@ -316,45 +324,50 @@ static int cmdctx_isctrlmsg(const char *fmt)
     return *fmt == '!';
 }
 
-int cmdctx_printf(struct cmdctx *cmdctx, const char *fmt, ...)
+static
+int do_cmdctx_printf(struct cmdctx *cmdctx, int color, const char *fmt,
+                     va_list args)
 {
-    va_list args;
-    int n = 0;
+    int is_ctrl, n = 0;
     
-    if (cmdctx_isctrlmsg(fmt)) {
+    if ((is_ctrl = cmdctx_isctrlmsg(fmt))) {
         if (cmdctx->rtflags & CMDCTX_NOCTRLMSGS)
             return 1;
         fmt++;
     }
 
-    va_start(args, fmt);
-    if (cmdctx->pipe_right)
+    if (cmdctx->pipe_right == NULL || is_ctrl) {
+        n = color ? poldek_term_vprintf_c(color, fmt, args) :
+            vfprintf(stdout, fmt, args);
+        
+    } else {
         n = cmd_pipe_vprintf(cmdctx->pipe_right, fmt, args);
-    else 
-        n = vfprintf(stdout, fmt, args);
+    }
 
-    va_end(args);
     return n;
+}
+
+int cmdctx_printf(struct cmdctx *cmdctx, const char *fmt, ...)
+{
+    va_list args;
+    int n;
     
+    va_start(args, fmt);
+    n = do_cmdctx_printf(cmdctx, 0, fmt, args);
+    va_end(args);
+    
+    return n;
 }
 
 int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ...)
 {
     va_list args;
-    int n = 0;
-
-    if (cmdctx_isctrlmsg(fmt)) {
-        if (cmdctx->rtflags & CMDCTX_NOCTRLMSGS)
-            return 1;
-        fmt++;
-    }
-
+    int n;
+    
     va_start(args, fmt);
-    if (cmdctx->pipe_right)
-        n = cmd_pipe_vprintf(cmdctx->pipe_right, fmt, args);
-    else 
-        n = poldek_term_vprintf_c(color, fmt, args);
-
+    n = do_cmdctx_printf(cmdctx, color, fmt, args);
+    va_end(args);
+    
     return n;
 }
 
@@ -577,25 +590,22 @@ static char **a_argv_to_argv(tn_array *a_argv, char **argv)
     return argv;
 }
 
-tn_array *poclidek_prepare_cmdline(struct poclidek_ctx *cctx, const char *line);
-
-
+/* executes command chain (a pipeline) */
 static
 int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                           struct cmd_chain_ent *ent, struct cmd_pipe *cmd_pipe)
 {
     struct cmdctx  cmdctx;
     char **argv;
-    int rc = 0;
+    int rc = 0, runit = 1;
     
     DBGF("ent %s, %d, %p\n", ent->cmd->name, n_array_size(ent->a_argv),
          ent->next_piped);
-
-    
     
     memset(&cmdctx, 0, sizeof(cmdctx));
     cmdctx.cmd = ent->cmd;
     cmdctx.cctx = cctx;
+
     if ((cmdctx.ts = ts) == NULL)
         cmdctx.ts = poldek_ts_new(cctx->ctx, 0);
 
@@ -609,7 +619,7 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
         cmdctx.pipe_right = ent->pipe_right;
     }
 
-    if (ent->prev_piped) {
+    if (ent->prev_piped) {      /* | cmd */
         struct cmd_pipe *pipe;
         tn_array *pipe_args = NULL;
 
@@ -624,9 +634,15 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
             else
                 pipe_args = cmd_pipe_xargs(pipe, CMD_PIPE_CTX_ASCII);
             
-            if (pipe_args) {
+            if (pipe_args == NULL) {
+                runit = 0;      /* do not execute command if pipe is empty */
+                rc = 0;
+                goto l_end;
+                
+            } else {
                 while (n_array_size(pipe_args))
                     n_array_push(ent->a_argv, n_array_shift(pipe_args));
+                n_array_free(pipe_args);
             }
         }
     }
@@ -636,11 +652,12 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     a_argv_to_argv(ent->a_argv, argv);
 
     rc = do_exec_cmd_ent(&cmdctx, n_array_size(ent->a_argv), argv);
-    
+
+ l_end:
     if (ts == NULL) 
         poldek_ts_free(cmdctx.ts);
 
-    if (ent->next_piped)
+    if (runit && ent->next_piped)
         return poclidek_exec_cmd_ent(cctx, ts, ent->next_piped, cmd_pipe);
     
     return rc;

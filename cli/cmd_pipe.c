@@ -181,6 +181,9 @@ tn_array *cmd_pipe_xargs(struct cmd_pipe *p, int pctx)
             xargs_packages(p, args);
     }
     
+    if (n_array_size(args) == 0)
+        n_array_cfree(&args);
+    
     return args;
 }
 

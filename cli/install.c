@@ -198,7 +198,7 @@ struct poclidek_cmd command_install = {
     COMMAND_PIPEABLE_LEFT | COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES, 
     "install", N_("PACKAGE..."), N_("Install packages"), 
     options, parse_opt,
-    NULL, install, NULL, NULL, NULL, NULL, 0, 0
+    NULL, install, NULL, NULL, NULL, NULL, NULL, 0, 0
 };
 
 static struct argp cmd_argp = {
