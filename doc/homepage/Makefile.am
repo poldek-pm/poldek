@@ -15,7 +15,7 @@ site-only:
 	./genhomepage --clean --destdir site
 	./genhomepage --destdir site || exit 1
 
-site:  $(WWW_PAGES)
+site:  $(WWW_PAGES) ../manual.xml ../NEWS.xml ../NEWSto
 	$(MAKE) -C .. manual-web
 	$(MAKE) -C ../.. NEWS
 	$(MAKE) -C .. NEWS.html
@@ -25,7 +25,7 @@ site:  $(WWW_PAGES)
 	cp ../NEWS.html ../manual.css style.css logo90.png site
 	rm -rf site/manual && cp -a ../manual-web site/manual
 
-credits-body.html: ../NEWS.xml
+credits-body.html: ../NEWS.xml ../NEWSto
 	$(MAKE) -C .. CREDITS-body.html NEWS.html
 	cp ../CREDITS-body.html credits-body.html
 
