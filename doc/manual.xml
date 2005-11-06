@@ -584,12 +584,13 @@ See also repository related command line options <link linkend="ref.cmdl.reposit
 <sect1 id="pkgmanaging"> <title>Managing packages</title>
 <para>
 &poldek; operates in two basic modes - the first one is more generic 
-and compliant with &rpm; (&poldek; command) and second <emphasis>interactive</emphasis> 
-mode with simplified and more intuitive command set. </para>
+and compliant with &rpm; (&poldek; command) and the second, 
+called <emphasis>interactive</emphasis> mode with simplified and 
+intuitive command set. </para>
 
 <para>
-Interactive mode is available from both command line (&ipoldek; command) and shell 
-like interface with auto-completion and history. To enter shell interface
+Interactive mode commands is available from both command line (&ipoldek; command) 
+and shell like interface with auto-completion and history. To enter shell interface
 execute &ipoldek; without any "command" options like "install", "erase", etc. 
 See also an <link linkend="screen.shell-start">example</link>.
 </para>
@@ -666,7 +667,7 @@ pdksh
 <para>
 To install packages in &rpm; sense, i.e. do not upgrade even if older version is already installed:
 <screen>
-&poldek-prompt;  [OPTION..] --install                 (&rpm; mode)
+&poldek-prompt;  [OPTION..] --install                 (command line mode)
 &ipoldek-prompt; [OPTION..] install -IN               (interactive mode)
 </screen>
 
@@ -688,9 +689,9 @@ Preparing...                ########################################### [100%]
 </para>
 
 <para>
-To install package or upgrade it if older version is already installed:
+To install or upgrade package if older version is already installed:
 <screen>
-&poldek-prompt;  [OPTION..] --upgrade                 (&rpm; mode)
+&poldek-prompt;  [OPTION..] --upgrade                 (command line mode)
 &ipoldek-prompt; [OPTION..] install                   (interactive mode)
 </screen>
 This is most used installation type. Example:
@@ -734,7 +735,7 @@ Preparing...                ########################################### [100%]
 <para>
 To upgrade packages, i.e. install only if older version is already installed:
 <screen>
-&poldek-prompt;  [OPTION..] --upgrade --fresh         (&rpm; mode)
+&poldek-prompt;  [OPTION..] --upgrade --fresh         (command line mode)
 &ipoldek-prompt; [OPTION..] upgrade                   (interactive mode)
 </screen>
 </para>
@@ -765,8 +766,9 @@ Examples:
 <screen>
 &poldek-prompt; --install-dist=DIR [PACKAGE...]
 </screen>
-All unmet dependencies will be satisfied by marking additionall packages. In this type of installation 
-packages are installed one by one what, because of reduction of memory consumption and utilization of CPU, permits to install the system on older machines.
+All unmet dependencies will be satisfied by marking additionall packages. 
+Packages are installed one by one what reduces memory consumption and CPU 
+utilization of CPU and permits to install the system on older machines.
 </para>
 <para>
 As example, command which installs system under <filename>/mnt/dest</filename> might looks like:
@@ -791,7 +793,7 @@ removed in the right order following <emphasis>Requires(un)</emphasis>
 <para>
 To remove installed packages:
 <screen>
-&poldek-prompt;  [OPTION..] --erase                      (&rpm; mode)
+&poldek-prompt;  [OPTION..] --erase                      (command line mode)
 &ipoldek-prompt; [OPTION..] uninstall [ERASE_OPTION...]  (interactive mode)
 </screen>
 </para>
@@ -804,6 +806,7 @@ Examples:
 &ipoldek-prompt; uninstall kernel-2.6.11.5-3
 </screen>
 </para>
+
 
 <!--
 <para>
@@ -902,19 +905,26 @@ installation and removal only. It is possible in two ways with help of
 
 <sect2 id="security.sudo"> <title>Using sudo</title>
 <para>
-Setting on <option>use sudo</option> configuration opinion causes 
+<option>use sudo</option> configuration opinion causes 
 execution of &rpm; binary through sudo for read-write operations. 
-The rest is of the operations may work without super user privileges.
+The rest works without super user privileges. 
+
 </para><para>
 Of course it is necessary to configure <application>sudo</application>
 to allow the user to run <command>rpm</command> binary. 
+</para>
+
+<para>
+<option>use sudo</option> is set to "auto" by default, means that 
+<command>rpm</command> is executed through <command>sudo</command>
+when poldek is run by an ordinary user.
 </para>
 </sect2>
 
 <sect2 id="security.runas"> <title>Automatic switching to an ordinary user</title>
 <para>
 There is more automated way of using sudo. Configured by <option>runas</option> 
-option &poldek; will automatically switch to an ordinary user if detects beeing 
+option &poldek; will automatically switch to an ordinary user if detects being 
 executed by root. To setup this scenario, set <option>runas</option> option:
 <screen>
 runas = poldek
@@ -969,7 +979,7 @@ error: ruby-gnome2-0.11.0-2: req ruby-rbogl not found
 
 <varlistentry><term>Package conflicts</term>
   <listitem><para>
-    Report prints all package pairs beeing in conflict or beeing obsoleted one another.
+    Report prints all package pairs being in conflict or being obsoleted one another.
     It lets to verify if all conflicts are needed, what are redundant, and so on. Report is 
     called <emphasis>conflicts</emphasis>. Output example (Obsoletes 
     are printed with asterisk '*'):
@@ -988,7 +998,7 @@ shadow-4.0.4.1-3 -> pwdutils-2.6.90-3
 
 <varlistentry><term>File conflicts</term>
   <listitem><para>
-    Report prints all package pairs beeing in conflict on file level and pairs 
+    Report prints all package pairs being in conflict on file level and pairs 
     which share the same file. It lets to verify if all file conflicts are wanted.
     Report is called <emphasis>file-conflicts</emphasis>:
     <screen>
