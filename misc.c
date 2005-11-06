@@ -579,9 +579,10 @@ static char *get_env(char *dest, int size, const char *name)
 }
 
 const char *poldek_util_expand_vars(char *dest, int size, const char *src,
-                                    char varmark, tn_hash *varh)
+                                    char varmark, tn_hash *varh, unsigned flags)
 {
     const char **tl, **tl_save;
+    tn_array *usedvars = NULL;
     char smark[16];
     int n = 0;
 
@@ -595,6 +596,9 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
         n_str_tokl_free(tl);
         return src;
     }
+
+    if (flags & POLDEK_UTIL_EXPANDVARS_RMUSED)
+        usedvars = n_array_new(16, free, (tn_fn_cmp)strcmp);
     
     if (*src != varmark) {
         n = n_snprintf(dest, size, *tl);
@@ -632,12 +636,16 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
         DBGF("var %c{%s}\n", varmark, val);
 
         var = NULL;
-        if (varh && varmark != '$')
+        if (varh && varmark != '$') {
             var = n_hash_get(varh, val);
+            if (usedvars)
+                n_array_push(usedvars, n_strdup(val));
         
-        else if (varmark == '$')
+        } else if (varmark == '$') {
             var = get_env(buf, sizeof(buf), val);
-
+            
+        }
+        
         if (var == NULL) {
             n += n_snprintf(&dest[n], size - n, "%c%s", varmark, p);
             
@@ -648,6 +656,16 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
     }
     
     n_str_tokl_free(tl_save);
+    
+    if (usedvars) {             /* RMUSED is requested */
+        int i;
+            
+        n_array_sort(usedvars);
+        n_array_uniq(usedvars);
+        for (i=0; i < n_array_size(usedvars); i++)
+            n_hash_remove(varh, n_array_nth(usedvars, i));
+    }
+
     return dest;
 }
 
@@ -655,7 +673,7 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
 
 const char *poldek_util_expand_env_vars(char *dest, int size, const char *str)
 {
-    return poldek_util_expand_vars(dest, size, str, '$', NULL);
+    return poldek_util_expand_vars(dest, size, str, '$', NULL, 0);
 }
 
 const char *abs_path(char *buf, int size, const char *path) 
