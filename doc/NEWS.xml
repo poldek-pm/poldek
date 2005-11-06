@@ -2,8 +2,7 @@
 <news>
 <cvsid>$Id$</cvsid>
 
-<!--
-<release version="0.20.1" date="2005/" focus="bugfix release">
+<release version="0.20.1" date="" focus="bugfix release">
   <entry><para>
    let a user to choose equivalents selected by --caplookup option
   </para></entry>
@@ -40,7 +39,6 @@
     <author id="areq" email="areq att areq eu org">Arkadiusz Patyk</author>
   </para></entry>
 </release>
--->
 
 <release version="0.20" date="2005/10/28" focus="major enhancements release">
 <para>

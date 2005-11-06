@@ -21,7 +21,7 @@
 </xsl:template>
 
 <xsl:template match="news">
- <xsl:for-each select="release">
+<xsl:for-each select="release[string-length(@date) > 0]">
   <xsl:text>  
   </xsl:text>
 
