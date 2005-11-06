@@ -5,14 +5,15 @@ PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 
 ver=$(perl -ne "print \$1 if /^PACKAGE_VERSION='([\d\.]+)'$/" configure)
 poldek=poldek-${ver}.tar.bz2
-
+noargs=
 distros=$@
 
 if [ -z "$1" ]; then 
-        distros="fedora#c3 fedora#c4 pld#ra"
+        distros="fedora#c3 fedora#c4 pld#ra rh#9.0"
         echo "usage $(basename $0): no distro#ver specified, build for $distros"
 	#echo "usage $(basename $0): [distro#ver]"
 	#exit 1
+        noargs="1"
 fi	
 
 echo "Build $poldek..."
@@ -46,11 +47,12 @@ for distrospec in $distros; do
             distro_def="$distro"
     esac
 
-    if [ -z "$distro_def" ]; then echo "DUPA"; distro_def="$distro"; fi
+    if [ -z "$distro_def" ]; then distro_def="$distro"; fi
 
     rpmopt="--define 'distro $distro_def'  $bcond --target i386"
     
     rm -f $ddir/$buildscript
+#   disabled
 #   if [ "$distro" = "pld" ]; then
 #	echo "+ static"    
 #	echo "su - mis -c \"$rpm -tb --with static $rpmopt /tmp/$poldek\"" >> $ddir/$buildscript
@@ -74,4 +76,10 @@ for distrospec in $distros; do
     chmod 644 $destdir/*.rpm || true
 done
 chown -R mis /tmp/poldek-$ver
-#rsync -vrt --rsh=ssh . team.pld.org.pl:public_html/poldek/download
+
+
+if [ "$noargs" == "1" ]; then       # no script arguments - build everything
+    cp $poldek /tmp/poldek-$ver
+    rpm -ts $poldek && cp ~/rpm/SRPMS/poldek-$ver*.src.rpm /tmp/poldek-$ver
+fi
+#rsync -vrt --rsh=ssh /tmp/poldek-$ver/download/ team.pld.org.pl:public_html/poldek/download
