@@ -1,3 +1,23 @@
+2005-11-06  Pawe³ Gajda  <mis@pld.org.pl>
+
+	* vfile/tests/test_misc.c: - update
+
+	* build-dist-packages.sh: - with no args build src.rpm too
+
+	* misc.c, poldek_util.h:
+	- additional POLDEK_UTIL_EXPANDVARS_RMUSED flag to
+	  poldek_util_expand_env_vars() causes removal of used variables
+
+	* poldek_ts.h: - comment
+
+	* cli/alias.c, cli/cd.c, cli/cli.c, cli/cmd.h, cli/cmd_chain.c, cli/cmd_pipe.c, cli/dbcache.c, cli/desc.c, cli/external.c, cli/get.c, cli/help.c, cli/install.c, cli/ls.c, cli/main.c, cli/reload.c, cli/search.c, cli/shell.c, cli/uninstall.c:
+	- aliases may be parameterized, ex: "file-install = search %1 | install"
+	- command "control" messages ('not packages found', etc) are not passed
+	  to pipe anymore
+	- left piped command is not executed if pipe is empty, i.e. in command
+	  "search foo | install", install will not be executed if search fails
+	- few cleanups
+
 2005-11-05  Pawe³ Gajda  <mis@pld.org.pl>
 
 	* Makefile.am, conf.c, libpoldek.sym, misc.c, misc.h, poldek_util.h, tests/test_config.c, tests/test_env.c, tests/test_poldek.c:
