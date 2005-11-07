@@ -542,17 +542,15 @@ tn_array *poclidek_get_dent_packages(struct poclidek_ctx *cctx, const char *dir)
 
     if ((ents = poclidek_get_dent_ents(cctx, dir)) == NULL)
         return NULL;
-    
-    pkgs = n_array_new(n_array_size(ents), (tn_fn_free)pkg_free,
-                       (tn_fn_cmp)pkg_nvr_strcmp);
-    
+
+    pkgs = pkgs_array_new_ex(n_array_size(ents), pkg_cmp_name_evr_rev);
+
     for (i=0; i < n_array_size(ents); i++) {
         struct pkg *pkg;
 
         if ((pkg = pkg_dent_getpkg(n_array_nth(ents, i))))
             n_array_push(pkgs, pkg_link(pkg));
     }
-    n_array_ctl(pkgs, TN_ARRAY_AUTOSORTED);
     n_array_sort(pkgs);
     return pkgs;
 }

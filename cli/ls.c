@@ -19,6 +19,7 @@
 
 #include "sigint/sigint.h"
 #include "poldek_util.h"
+#include "pkgcmp.h"
 #include "i18n.h"
 #include "pkgu.h"
 #include "cli.h"
@@ -159,11 +160,9 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
                    char *evr, size_t size) 
 {
     struct pkg *pkg = NULL;
-    char name[256];
     int n, found = 0;
 
-    snprintf(name, sizeof(name), "%s-", lpkg->name);
-    n = n_array_bsearch_idx_ex(pkgs, name, (tn_fn_cmp)pkg_nvr_strncmp);
+    n = n_array_bsearch_idx_ex(pkgs, lpkg, (tn_fn_cmp)pkg_ncmp_name);
 
     if (n == -1)
         return 0;
@@ -213,6 +212,9 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
         return NULL;
     }
 
+    n_assert(n_array_ctl_get_cmpfn(cmpto_pkgs) ==
+             (tn_fn_cmp)pkg_cmp_name_evr_rev);
+
     ls_ents2 = n_array_clone(ls_ents);
     
     for (i=0; i < n_array_size(ls_ents); i++) {
@@ -243,6 +245,9 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
         if (sigint_reached())
             break;
     }
+
+    if (cmpto_pkgs)
+        n_array_free(cmpto_pkgs);
     
     return ls_ents2;
 }
