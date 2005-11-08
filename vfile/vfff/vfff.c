@@ -146,8 +146,6 @@ int vfff_to_connect(const char *host, const char *service, int *af)
     vfff_errno = 0;
     
     do {
-        vfile_sigint_reached(1);      /* just reset */
-        
         sockfd = socket(resp->ai_family, resp->ai_socktype, resp->ai_protocol);
         if (sockfd < 0)
             continue;
@@ -173,6 +171,8 @@ int vfff_to_connect(const char *host, const char *service, int *af)
     
     else if (af)
         *af = resp->ai_family;
+
+    //DBGF("sigint reached %d, errno %m\n", vfff_sigint_reached());
     
     uninstall_alarm();
     freeaddrinfo(res);
@@ -330,7 +330,7 @@ int vcn_is_alive(struct vcn *cn)
     }
 
     cn->ts_is_alive = time(0);
-    cn->m_is_alive(cn);
+    return cn->m_is_alive(cn);
 }
 
 int vcn_retr(struct vcn *cn, struct vfff_req *req) 
