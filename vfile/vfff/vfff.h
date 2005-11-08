@@ -82,6 +82,8 @@ struct vcn {
 
     void      (*m_free)(void *resp);
     void      *resp;
+
+    time_t    ts_is_alive;
 };
 
 struct vcn *vcn_new(int proto, const char *host, int port,

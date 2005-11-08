@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2002 - 2005 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License version 2 as
@@ -12,22 +12,22 @@
 
 /* $Id$ */
 
+#include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
-#include <signal.h>
 
-#include <arpa/inet.h>
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
 #include <trurl/nhash.h>
@@ -39,10 +39,10 @@
 #include "vfff.h"
 #include "vfile/vfile_intern.h"
 
+#define  VCN_ALIVE_TTL  10
+
 extern void vhttp_vcn_init(struct vcn *cn);
 extern void vftp_vcn_init(struct vcn *cn);
-
-
 
 static char errmsg[512] = { '\0' };
 static int verbose = 0;
@@ -321,7 +321,16 @@ void vcn_free(struct vcn *cn)
 int vcn_is_alive(struct vcn *cn) 
 {
     vfff_errno = 0;
-    return cn->m_is_alive(cn);
+    
+    if (cn->ts_is_alive > 0) {
+        time_t ts = time(0);
+    
+        if (ts - cn->ts_is_alive < VCN_ALIVE_TTL)
+            return 1;
+    }
+
+    cn->ts_is_alive = time(0);
+    cn->m_is_alive(cn);
 }
 
 int vcn_retr(struct vcn *cn, struct vfff_req *req) 
