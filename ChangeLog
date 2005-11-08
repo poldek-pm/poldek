@@ -1,3 +1,10 @@
+2005-11-08  Pawe³ Gajda  <mis@pld.org.pl>
+
+	* vfile/vfff/vfff.c: - fix: be SIGINT friendly; fixed cn_is_alive()
+
+	* vfile/vfff/vfff.h, vfile/vfff/vfff.c:
+	- assume connection is alive for 10s and do not check if is alive on every reuse
+
 2005-11-07  Pawe³ Gajda  <mis@pld.org.pl>
 
 	* cli/dent.c, cli/ls.c:
