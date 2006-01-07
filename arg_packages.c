@@ -532,7 +532,7 @@ int resolve_masks(tn_array *pkgs,
         if (matches[j] == 0 && (flags & ARG_PACKAGES_RESOLV_MISSINGOK) == 0) {
             logn(LOGERR, _("%s: no such package"), mask);
             rc = 0;
-        }
+        } 
 
         if ((flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS) == 0 && matches_bycmp[j] > 1) {
             int pri = (flags & ARG_PACKAGES_RESOLV_EXACT) ? LOGERR : LOGWARN;
@@ -675,7 +675,7 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
 int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
                          struct pkgset *ps, unsigned flags)
 {
-    int i, j, nmasks, rc = 0;
+    int i, j, nmasks, rc = 1;
 
     n_hash_clean(aps->resolved_caps);
     n_array_clean(aps->resolved_pkgs);
@@ -697,12 +697,16 @@ int arg_packages_resolve(struct arg_packages *aps, tn_array *avpkgs,
         }
     }
     
-    rc = resolve_pkgs(aps->resolved_pkgs, aps, avpkgs, flags);
-    if (rc)                     /* continue with masks */
-        rc = resolve_masks(aps->resolved_pkgs, aps, avpkgs, ps, flags);
+    if (!resolve_pkgs(aps->resolved_pkgs, aps, avpkgs, flags))
+        rc = 0;
+
+    if (!resolve_masks(aps->resolved_pkgs, aps, avpkgs, ps, flags))
+        rc = 0;
     
-    if (rc && ps && aps->pset_virtuals)
-        rc = resolve_pset_virtuals(aps, ps, flags);
+    if (ps && aps->pset_virtuals) {
+        if (!resolve_pset_virtuals(aps, ps, flags))
+            rc = 0;
+    }
 
     if (!rc) {
         n_array_clean(aps->resolved_pkgs);
