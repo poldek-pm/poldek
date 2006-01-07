@@ -76,13 +76,13 @@ int is_pkg_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg)
     struct pkg *ipkg = NULL;
     tn_array *dents;
     char name[256];
-    int n;
+    int n, name_len;
 
     dents = poclidek_get_dent_ents(cctx, POCLIDEK_INSTALLEDDIR);
     if (dents == NULL)
         return 1;
     
-    snprintf(name, sizeof(name), "%s-", pkg->name);
+    name_len = snprintf(name, sizeof(name), "%s-", pkg->name);
     n = n_array_bsearch_idx_ex(dents, name, (tn_fn_cmp)pkg_dent_strncmp);
 
     if (n == -1)
@@ -90,14 +90,15 @@ int is_pkg_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg)
 
     while (n < n_array_size(dents)) {
         struct pkg_dent *ent = n_array_nth(dents, n++);
+
         if (pkg_dent_isdir(ent))
             continue;
+
+        if (strncmp(name, ent->name, name_len) != 0) 
+            break;
         
         ipkg = ent->pkg_dent_pkg;
-        if (strcmp(pkg->name, ipkg->name) != 0)
-            break;
-
-        if (pkg_cmp_evr(pkg, ipkg) > 0) 
+        if (strcmp(pkg->name, ipkg->name) == 0 && pkg_cmp_evr(pkg, ipkg) > 0)
             return 1;
         
     }
