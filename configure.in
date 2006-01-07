@@ -293,9 +293,10 @@ if test "${is_rpm4_0_4}." = "yes." -a "${ENABLE_STATIC}." = "yes." ; then
 	LIBS="$LIBS -lbz2 -lrpmio"
 fi
 
-AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
-	[AC_MSG_WARN("[poldek will not work fine with rpmlib\(...\) capabilities"])],
-	[$CONF_IN_LDFLAGS])
+AC_CHECK_FUNCS(rpmdsRpmlib,,
+               [ AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
+          	 [AC_MSG_WARN(["poldek will not work fine with rpmlib\(...\) capabilities"])],
+          	 [$CONF_IN_LDFLAGS])], [$CONF_IN_LDFLAGS])
 
 
 dnl metadata & xml2

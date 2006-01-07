@@ -23,6 +23,9 @@
 #include <string.h>
 
 #include <rpm/rpmlib.h>
+#if HAVE_RPMDSRPMLIB
+# include <rpm/rpmds.h>
+#endif
 
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
@@ -33,21 +36,49 @@
 #include "log.h"
 #include "pm/pm.h"
 
-tn_array *pm_rpm_rpmlib_caps(void) 
+#if HAVE_RPMDSRPMLIB            /* rpmdsRpmlib() => rpm >= 4.4.3 */
+static int get_rpmlib_caps(tn_array *caps)
+{
+    rpmds ds = NULL;
+    
+    if (rpmdsRpmlib(&ds, NULL) != 0)
+        return 0;
+    
+    ds = rpmdsInit(ds);
+    while (rpmdsNext(ds) >= 0) {
+        const char *name, *evr;
+        char tmp[256];
+        struct capreq *cr;
+        uint32_t flags;
+
+        name = rpmdsN(ds);
+        evr = rpmdsEVR(ds);
+        flags = rpmdsFlags(ds);
+        
+        n_assert(flags & RPMSENSE_EQUAL);
+        n_assert((flags & (RPMSENSE_LESS | RPMSENSE_GREATER)) == 0);
+
+        n_strncpy(tmp, evr, 128);
+        cr = capreq_new_evr(name, tmp, REL_EQ, 0);
+        if (cr) 
+            n_array_push(caps, cr);
+    }
+    ds = rpmdsFree(ds);
+    return n_array_size(caps);
+}
+#endif  /* HAVE_RPMDSRPMLIB */
+
+#if HAVE_RPMGETRPMLIBPROVIDES   /* rpmGetRpmlibProvides() => rpm < 4.4.3 */
+static int get_rpmlib_caps_rpm_lt_4_4_3(tn_array *caps) 
 {
     char **names = NULL, **versions = NULL, *evr;
     int *flags = NULL, n = 0, i;
-    tn_array *caps;
-    
-#if HAVE_RPMGETRPMLIBPROVIDES
+
     n = rpmGetRpmlibProvides((const char ***)&names, &flags, (const char ***)&versions);
-#endif
-    
     if (n <= 0)
-        return NULL;
+        return 0;
 
     caps = capreq_arr_new(0);
-    
     evr = alloca(128);
     
     for (i=0; i<n; i++) {
@@ -62,18 +93,38 @@ tn_array *pm_rpm_rpmlib_caps(void)
             n_array_push(caps, cr);
     }
 
-    if (names)
-        free(names);
-    
-    if (flags)
-        free(flags);
+    n_cfree(&names);
+    n_cfree(&flags);
+    n_cfree(&versions);
+    return 1;
+}
+#endif
 
-    if (versions)
-        free(versions);
+tn_array *pm_rpm_rpmlib_caps(void) 
+{
+    tn_array *caps;
+    int rc = 0;
     
-    n_array_sort(caps);
+    caps = capreq_arr_new(0);
+    
+#if HAVE_RPMDSRPMLIB            /* rpm >= 4.4.3 */
+    rc = get_rpmlib_caps(caps);
+#else
+# if HAVE_RPMGETRPMLIBPROVIDES
+    rc = get_rpmlib_caps_rpm_lt_4_4_3(caps);
+# endif
+#endif
+    
+    if (rc) {
+        n_array_sort(caps);
+        
+    } else {
+        n_array_free(caps);
+        caps = NULL;
+    }
     return caps;
 }
+
 
 const char *pm_rpm_get_arch(void *pm_rpm) 
 {

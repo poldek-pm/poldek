@@ -10,6 +10,14 @@
 # include <rpm/rpmts.h>
 #endif
 
+/* RPMTAG_COPYRIGHT disappears in 4.4.3 but don't know from
+   when RPMTAG_LICENSE starts */
+#ifdef RPMTAG_COPYRIGHT         
+# define PM_RPMTAG_LICENSE RPMTAG_COPYRIGHT
+#else
+# define PM_RPMTAG_LICENSE RPMTAG_LICENSE
+#endif
+
 #include <trurl/trurl.h>
 #include "poldek.h"
 #include "pm/pm.h"

@@ -337,7 +337,7 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
     }
 
     pkgu->vendor = cp_tag(pkgu->_na, h, RPMTAG_VENDOR);
-    pkgu->license = cp_tag(pkgu->_na, h, RPMTAG_COPYRIGHT);
+    pkgu->license = cp_tag(pkgu->_na, h, PM_RPMTAG_LICENSE);
     pkgu->url = cp_tag(pkgu->_na, h, RPMTAG_URL);
     pkgu->distro = cp_tag(pkgu->_na, h, RPMTAG_DISTRIBUTION);
     pkgu->buildhost = cp_tag(pkgu->_na, h, RPMTAG_BUILDHOST);
@@ -370,7 +370,7 @@ static Header make_pkguinf_hdr(struct pkguinf *pkgu, int *langs_cnt)
         headerAddEntry(hdr, RPMTAG_VENDOR, RPM_STRING_TYPE, pkgu->vendor, 1);
     
     if (pkgu->license)
-        headerAddEntry(hdr, RPMTAG_COPYRIGHT, RPM_STRING_TYPE, pkgu->license, 1);
+        headerAddEntry(hdr, PM_RPMTAG_LICENSE, RPM_STRING_TYPE, pkgu->license, 1);
     
     if (pkgu->url)
         headerAddEntry(hdr, RPMTAG_URL, RPM_STRING_TYPE, pkgu->url, 1);
