@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2006 Pawel A. Gajda (mis@k2.net.pl)
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -694,8 +694,8 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
     int n;
         
     DBGF("\npkg_caps_match_req %s %s\n", pkg_snprintf_s(pkg), 
-         capreq_snprintf_s(req));
-        
+           capreq_snprintf_s(req));
+    
     if (pkg->caps == NULL || n_array_size(pkg->caps) == 0)
         return 0;     /* not match */
     
@@ -703,40 +703,25 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
         return 0;
             
     } else {
-        struct capreq *cap;
         int i;
+        for (i = n; i < n_array_size(pkg->caps); i++) {
+            struct capreq *cap = n_array_nth(pkg->caps, i);
 
-        cap = n_array_nth(pkg->caps, n);
-        if (cap_xmatch_req(cap, req, flags)) {
-            DBGF("chk%d (%s-%s-%s) -> match (flags=%d)\n", n, capreq_name(cap),
-                 capreq_ver(cap), capreq_rel(cap), flags);
-            return 1;
-        }
-        n++;
-            
-        for (i = n; i<n_array_size(pkg->caps); i++) {
-            struct capreq *cap;
-
-            cap = n_array_nth(pkg->caps, n);
-            if (strcmp(capreq_name(cap), capreq_name(req)) != 0) {
-                DBGF("chk%d %s-%s-%s -> NOT match IRET\n", i,
-                     capreq_name(cap), capreq_ver(cap),
-                     capreq_rel(cap));
+            /* names not equal -> return with false;
+               eq test omitting for first cap */
+            if (i > n && n_str_ne(capreq_name(cap), capreq_name(req))) {
+                DBGF("  cap[%d] %s -> NOT match, IRET\n", i,
+                       capreq_snprintf_s(cap));
                 return 0;
             }
-                
-                
+            
             if (cap_xmatch_req(cap, req, flags)) {
-                DBGMSG("chk %s-%s-%s -> match\n", capreq_name(cap),
-                       capreq_ver(cap), capreq_rel(cap));
+                DBGF("  cap[%d] %s -> match\n", i, capreq_snprintf_s(cap));
                 return 1;
-            } else {
-                DBGMSG("chk%d %s-%s-%s -> NOT match\n", i,
-                       capreq_name(cap), capreq_ver(cap),
-                       capreq_rel(cap));
             }
+            
+            DBGF("  cap[%d] %s -> NOT match\n", i, capreq_snprintf_s(cap));
         }
-        DBGMSG("NONE\n");
     }
     
     return 0;
