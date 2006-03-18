@@ -115,8 +115,8 @@ static struct argp_option common_options[] = {
 {"upconf", OPT_UPCONF, 0, 0, N_("Update remote configuration files (if any)"),
      OPT_GID },
 
-{"version", OPT_BANNER, 0, 0, N_("Display program version information and exit"),
-     OPT_GID },
+{"version", OPT_BANNER, 0, OPTION_HIDDEN,
+     N_("Display program version information and exit"), OPT_GID },
     
 {"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), OPT_GID },
 {"runas", OPT_RUNAS, "USER", 0, N_("Run program as user USER"), OPT_GID },
