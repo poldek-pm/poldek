@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2006 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -137,8 +137,14 @@ int getvlist(tn_hash *ht, char *name, char *vstr, const char *sep,
         sep = " \t,";
     
     p = v = n_str_tokl(vstr, sep);
-    if (v == NULL)
+
+    if (v == NULL)              /* n_str_tokl error */
         return 0;
+
+    if (*v == NULL) {             /* empty option value */
+        n_str_tokl_free(v);
+        return 1;
+    }
 
     if (n_hash_exists(ht, name)) {
         opt = n_hash_get(ht, name);
@@ -166,6 +172,7 @@ int getvlist(tn_hash *ht, char *name, char *vstr, const char *sep,
         }
         p++;
     }
+
     n_str_tokl_free(v);
     return 1;
 }
