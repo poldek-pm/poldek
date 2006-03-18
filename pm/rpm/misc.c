@@ -74,13 +74,13 @@ static int get_rpmlib_caps_rpm_lt_4_4_3(tn_array *caps)
     char **names = NULL, **versions = NULL, *evr;
     int *flags = NULL, n = 0, i;
 
+    n_assert(caps);
     n = rpmGetRpmlibProvides((const char ***)&names, &flags, (const char ***)&versions);
     if (n <= 0)
         return 0;
 
-    caps = capreq_arr_new(0);
     evr = alloca(128);
-    
+
     for (i=0; i<n; i++) {
         struct capreq *cr;
 
