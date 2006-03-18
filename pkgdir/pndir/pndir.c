@@ -198,13 +198,14 @@ static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf,
 
 
 static
-int open_dscr(struct pndir *idx, time_t ts, const char *lang)
+struct tndb *do_open_dscr(struct pndir *idx, int vfmode, struct vfile **vf,
+                          time_t ts, const char *lang)
 {
     char        buf[128], tmpath[PATH_MAX], tss[32];
     const char  *suffix;
     char        *idxpath;
     const char  *dbid, *langid;
-
+    
     pndir_db_dscr_idstr(lang, &dbid, &langid);
     
     idxpath = idx->idxpath;
@@ -244,24 +245,48 @@ int open_dscr(struct pndir *idx, time_t ts, const char *lang)
 
     DBGF("mk %s, %s\n", idxpath, suffix);
     pndir_mkidx_pathname(tmpath, sizeof(tmpath), idxpath, suffix);
-    
+        
+    msgn(3, _("Opening %s..."), vf_url_slim_s(tmpath, 0));
+    return do_dbopen(tmpath, vfmode, vf, idx->srcnam);
+}
+
+
+static
+int open_dscr(struct pndir *idx, int vfmode, time_t ts, const char *lang)
+{
+    struct tndb  *db = NULL;
+    struct vfile *vf = NULL;
+
     if (idx->db_dscr_h == NULL)
         idx->db_dscr_h = pndir_db_dscr_h_new();
 
-    if (!pndir_db_dscr_h_get(idx->db_dscr_h, lang)) {
-        struct tndb *db;
-        
-        msgn(3, _("Opening %s..."), vf_url_slim_s(tmpath, 0));
-        if ((db = do_dbopen(tmpath, idx->_vf->vf_mode, NULL, idx->srcnam))) {
-            if (tndb_verify(db))
-                pndir_db_dscr_h_insert(idx->db_dscr_h, lang, db);
-            else {
-                tndb_close(db);
-                logn(LOGERR, "%s: broken file", vf_url_slim_s(tmpath, 0));
-            }
-        }
-    }
+    if (pndir_db_dscr_h_get(idx->db_dscr_h, lang))
+        return 1;
+    
+    if ((db = do_open_dscr(idx, vfmode, &vf, ts, lang)) == NULL)
+        return 0;
 
+    if (tndb_verify(db)) {
+        pndir_db_dscr_h_insert(idx->db_dscr_h, lang, db);
+        
+    } else {
+        logn(LOGERR, "%s: broken file", vf_url_slim_s(tndb_path(db), 0));
+
+        if (vf->vf_flags & VF_FRMCACHE) { /* not fully downloaded? */
+            n_assert(vfmode & VFM_CACHE);
+            vfmode &= ~VFM_CACHE;
+            vfmode |= VFM_NODEL;
+            
+            tndb_close(db);
+            vfile_close(vf);
+            
+            return open_dscr(idx, vfmode, ts, lang);
+        }
+        tndb_close(db);
+    }
+    
+    if (vf)
+        vfile_close(vf);
     return pndir_db_dscr_h_get(idx->db_dscr_h, lang) != NULL;
 }
 
@@ -291,8 +316,8 @@ int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags,
 }
 
 static
-int pndir_open_verify(struct pndir *idx, const char *path, int vfmode, unsigned flags,
-                      const char *srcnam)
+int pndir_open_verify(struct pndir *idx, const char *path, int vfmode,
+                      unsigned flags, const char *srcnam)
 {
     int rc;
     
@@ -514,12 +539,12 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             n_assert(loadC);
             
             if (loadC)
-                if (!open_dscr(&idx, pkgdir->orig_ts, "C"))
+                if (!open_dscr(&idx, vfmode, pkgdir->orig_ts, "C"))
                     nerr++;
 
             if (nerr == 0 && loadi18n) {
                 n_assert(loadC);
-                if (!open_dscr(&idx, pkgdir->orig_ts, "i18n"))
+                if (!open_dscr(&idx, vfmode, pkgdir->orig_ts, "i18n"))
                     nerr++;
             }
         }
