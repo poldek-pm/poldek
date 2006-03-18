@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2006 Pawel A. Gajda <mis@k2.net.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -431,7 +431,8 @@ int do_resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
         } else {                /* with version */
             if (ts->getop(ts, POLDEK_OP_CAPLOOKUP)) {
                 if (pkg_xmatch_req(dbpkg, cr, POLDEK_MA_PROMOTE_REQEPOCH))
-                            matched = 1;
+                    matched = 1;
+                
             } else {
                 if (strcmp(dbpkg->name, capreq_name(cr)) == 0) {
                     DBGF("n (%s, %s) %d\n", dbpkg->name,
@@ -457,7 +458,8 @@ int do_resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
     return nmatches;
 }
 
-static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts, const char *mask)
+static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
+                           const char *mask)
 {
     char           *p;
     struct capreq  *cr, *cr_evr;
@@ -465,6 +467,7 @@ static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts, con
     
     cr = NULL; cr_evr = NULL;
 
+    DBGF("mask=%s\n", mask); 
     /* No EVR mask or empty EVR (last char '#') */
     if ((p = strchr(mask, '#')) == NULL || *(p + 1) == '\0') {
         if (p)
@@ -482,8 +485,10 @@ static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts, con
         *p = '\0';
         p++;
 
-        if (poldek_util_parse_evr(p, &epoch, &ver, &rel))
+        if (poldek_util_parse_evr(p, &epoch, &ver, &rel)) {
             cr = cr_evr = capreq_new(NULL, tmp, epoch, ver, rel, REL_EQ, 0);
+            DBGF("cap=%s\n", capreq_snprintf_s(cr)); 
+        }
     }
     
     if (do_resolve_package(uctx, ts, mask, cr))
@@ -532,7 +537,6 @@ static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
                     int32_t e = 0;
 
                     n_strdupap(mask, &tmp);
-                    
                     if (poldek_util_parse_nevr(tmp, &n, &e, &v, &r)) {
                         if (e)
                             n_snprintf(nmask, sizeof(nmask), "%s#%d:%s-%s", n, e, v, r);
@@ -541,7 +545,7 @@ static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
 
                         msgn(2, "    Trying %s\n", nmask);
                         DBGF("try %s => %s (%s, %s, %s)\n", mask, nmask, n, v, r);
-                        matched = resolve_package(uctx, ts, tmp);
+                        matched = resolve_package(uctx, ts, nmask);
                     }
                 }
             }
