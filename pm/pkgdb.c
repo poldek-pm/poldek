@@ -440,6 +440,9 @@ tn_array *pkgdb_get_provides_dbpkgs(struct pkgdb *db, const struct capreq *cap,
                                     tn_array *unistdbpkgs, unsigned ldflags)
 {
     tn_array *dbpkgs = NULL;
+
+    n_assert(db);
+    n_assert(cap);
     pkgdb_search(db, &dbpkgs, PMTAG_CAP, capreq_name(cap),
                  unistdbpkgs, ldflags);
     return dbpkgs;

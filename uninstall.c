@@ -407,7 +407,7 @@ int do_resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
     tn_array *dbpkgs;
     int i, nmatches = 0;
 
-    
+    n_assert(cr);
     DBGF("get_provides %s\n", capreq_snprintf_s(cr));
     dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cr, NULL, uninst_LDFLAGS);
 
@@ -464,8 +464,11 @@ static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts, con
     int            resolved = 0;
     
     cr = NULL; cr_evr = NULL;
-    
-    if ((p = strchr(mask, '#')) == NULL) {
+
+    /* No EVR mask or empty EVR (last char '#') */
+    if ((p = strchr(mask, '#')) == NULL || *(p + 1) == '\0') {
+        if (p)
+            *p = '\0';
         capreq_new_name_a(mask, cr);
             
     } else {
