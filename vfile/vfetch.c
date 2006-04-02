@@ -299,7 +299,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
             snprintf(url, sizeof(url), req->url);
             vf_request_free(req);
             req = NULL;
-            rc = vf_fetch(req->url, destdir, flags, NULL);
+            rc = vf_fetch(url, destdir, flags, NULL);
         }
     }
     if (req)
