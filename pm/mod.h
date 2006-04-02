@@ -22,6 +22,7 @@ struct pm_module {
     void *(*init)(void);
     void (*destroy)(void *modh);
     int  (*configure)(void *modh, const char *key, void *val);
+    int  (*conf_get)(void *modh, const char *key, char *value, int vsize);
 
     tn_array *(*pm_caps)(void *modh);
     char *(*dbpath)(void *modh, char *path, size_t size);

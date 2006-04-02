@@ -161,4 +161,13 @@ int pm_configure(struct pm_ctx *ctx, const char *key, void *val)
     return 0;
 }
 
+int pm_conf_get(struct pm_ctx *ctx, const char *key, char *val, int vsize)
+{
+    if (ctx->mod->conf_get)
+        return ctx->mod->conf_get(ctx->modh, key, val, vsize);
+    
+    return 0;
+}
+
+
 

@@ -21,6 +21,8 @@ struct pm_ctx *pm_new(const char *name);
 void pm_free(struct pm_ctx *ctx);
 
 int pm_configure(struct pm_ctx *ctx, const char *key, void *val);
+int pm_conf_get(struct pm_ctx *ctx, const char *key, char *value, int vsize);
+
 const char *pm_get_name(struct pm_ctx *ctx);
 
 

@@ -146,6 +146,26 @@ int pm_rpm_configure(void *pm_rpm, const char *key, void *val)
     return 1;
 }
 
+int pm_rpm_conf_get(void *pm_rpm, const char *key, char *value, int vsize)
+{
+    int n = 0;
+
+    pm_rpm = pm_rpm;
+    
+    if (*key == '%') {
+        char *v = rpmExpand(key, NULL);
+        
+        if (v == NULL)
+            return 0;
+
+        if (strlen(v))          /* rpmExpand returns empty strings */
+            n = n_snprintf(value, vsize, "%s", v);
+
+        free(v);
+    }
+    
+    return n;
+}
 
 
 static int db_exists(void *pm_rpm, const char *rootdir, const char *dbpath)
