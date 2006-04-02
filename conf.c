@@ -1319,7 +1319,7 @@ int poldek_conf_get_int(const tn_hash *htconf, const char *name, int default_v)
         return default_v;
 
     if (sscanf(vs, "%d", &v) != 1) {
-        logn(LOGERR, _("invalid value ('%s') of option '%s'"), vs, name);
+        logn(LOGERR, _("invalid value ('%s') of integer option '%s'"), vs, name);
         v = default_v;
     }
     
@@ -1336,7 +1336,7 @@ int poldek_conf_get_bool(const tn_hash *htconf, const char *name, int default_v)
         return default_v;
 
     if ((bool = poldek_util_parse_bool(v)) < 0) {
-        logn(LOGERR, _("invalid value ('%s') of option '%s'"), v, name);
+        logn(LOGERR, _("invalid value ('%s') of boolean option '%s'"), v, name);
         bool = default_v;
     }
 

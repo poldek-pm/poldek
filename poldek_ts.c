@@ -1036,6 +1036,7 @@ int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
 
     if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
         pkgdb_tx_commit(ts->db);
+
     pkgdb_free(ts->db);
     ts->db = NULL;
     return rc;

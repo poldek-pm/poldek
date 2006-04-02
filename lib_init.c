@@ -98,6 +98,7 @@ struct default_op_map_ent {
     int op;
     int _defaultv;
     int defaultv;
+    int optype;
 };
 
 static tn_array *default_op_map = NULL; /* see build_default_op_map() */
@@ -665,18 +666,25 @@ static void zlib_in_rpm(struct poldek_ctx *ctx)
     p_st_destroy(&pst);
 }
 
+int default_op_map_ent_cmp(struct default_op_map_ent *e1,
+                           struct default_op_map_ent *e2)
+{
+    return strcmp(e1->name, e2->name);
+}
+
 static tn_array *build_default_op_map(void)
 {
     struct poldek_conf_tag *tags = NULL;
     tn_array *op_map;
     int i = 0;
-    struct default_op_map_ent *ent, addon[] = {
-        { 0, "(!no)hold", POLDEK_OP_HOLD,   1,  1  },
-        { 0, "(!no)ingore", POLDEK_OP_IGNORE, 1, 1  }, 
-        { 0, NULL, 0, 0, 0 }
+    struct default_op_map_ent *ent;
+    struct default_op_map_ent addon[] = {
+        { 0, "(!no)hold", POLDEK_OP_HOLD,   1,  1, CONF_TYPE_BOOLEAN  },
+        { 0, "(!no)ingore", POLDEK_OP_IGNORE, 1, 1, CONF_TYPE_BOOLEAN  }, 
+        { 0, NULL, 0, 0, 0, 0 }
     };
     
-    op_map = n_array_new(32, free, NULL);
+    op_map = n_array_new(32, free, (tn_fn_cmp)default_op_map_ent_cmp);
     
     while (poldek_conf_sections[i].name) {
         if (n_str_eq(poldek_conf_sections[i].name, "global")) {
@@ -704,13 +712,16 @@ static tn_array *build_default_op_map(void)
             ent->_defaultv = poldek_util_parse_bool(tags[i].defaultv);
             ent->defaultv = ent->_defaultv;
             n_assert(ent->defaultv == 0 || ent->defaultv == 1);
+            ent->optype = CONF_TYPE_BOOLEAN;
             
         } else if (tags[i].flags & CONF_TYPE_BOOLEAN3) {
             ent->_defaultv = poldek_util_parse_bool3(tags[i].defaultv);
             n_assert(ent->_defaultv == 0 || ent->_defaultv == 1 ||
                      ent->_defaultv == 2);
-            ent->defaultv = -1;
             
+            ent->defaultv = ent->_defaultv;
+            ent->optype = CONF_TYPE_BOOLEAN3;
+
         } else {
             n_assert(0);
         }
@@ -726,6 +737,7 @@ static tn_array *build_default_op_map(void)
         ent->name = addon[i].name;
         ent->op = addon[i].op;
         ent->_defaultv = ent->defaultv = addon[i].defaultv;
+        ent->optype = addon[i].optype;
         n_array_push(op_map, ent);
         i++;
     }
@@ -734,7 +746,8 @@ static tn_array *build_default_op_map(void)
         struct default_op_map_ent *ent = n_array_nth(op_map, i);
         DBGF("%s %d\n", ent->name, ent->_defaultv);
     }
-#endif    
+#endif
+    n_array_sort(op_map);
     return op_map;
 }
 
@@ -750,30 +763,45 @@ void poldek__ts_apply_config(struct poldek_ctx *ctx, struct poldek_ts *ts)
         return;
     
     htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
-    i = 0;
-    DBGF("ts %p, tsctx %p\n", ts, ctx->ts);
 
-    for (i=0; i<n_array_size(default_op_map); i++) {
+    DBGF("ts %p, tsctx %p\n", ts, ctx->ts);
+    DBGF("default_op_map size = %d\n", n_array_size(default_op_map));
+
+    for (i=0; i < n_array_size(default_op_map); i++) {
         struct default_op_map_ent *ent = n_array_nth(default_op_map, i);
+
+        DBGF("op[%d] %s (config %d)\n", i, ent->name,  ent->config);
         
         if (ent->config == 0)   /* omit non-config options */
             continue;
+        
 
         n_assert(ent->defaultv >= 0);
         
         if (poldek_ts_op_touched(ts, ent->op)) { /* modified by cmdl opts */
-            DBGF("  - ldconfig %s(%d) = %d\n", ent->name, ent->op,
+            DBGF(" %d. - ldconfig %s(%d) = %d\n", i, ent->name, ent->op,
                  ts->getop(ts, ent->op));
             
         } else {
+            int v;
+            if (ent->optype == CONF_TYPE_BOOLEAN)
+                v = poldek_conf_get_bool(htcnf, ent->name, ent->defaultv);
             
-            int v = poldek_conf_get_bool(htcnf, ent->name, ent->defaultv);
+            else if (ent->optype == CONF_TYPE_BOOLEAN3)
+                v = poldek_conf_get_bool3(htcnf, ent->name, ent->defaultv);
+            else
+                n_assert(0);
             
-            DBGF("  + ldconfig %s(%d) = %d\n", ent->name, ent->op, v);
+            if (ent->optype == CONF_TYPE_BOOLEAN3 && v == 2) { /* auto */
+                if (ent->defaultv != 0 && ent->defaultv != 1)  
+                    continue;
+                v = ent->defaultv;
+            }
+                    
+            n_assert(v == 0 || v == 1);
+            DBGF(" %d. + ldconfig %s(%d) = %d\n", i, ent->name, ent->op, v);
             poldek_ts_xsetop(ts, ent->op, v, 0);
         }
-        
-        i++;
     }
     
     if (ts->getop(ts, POLDEK_OP_CONFIRM_INST) && poldek_VERBOSE < 1)
@@ -1252,19 +1280,21 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
                         v = 1;
                     break;
 
-                case POLDEK_OP_MULTILIB: /* NFY */
-                    v = 0;
+                case POLDEK_OP_MULTILIB: /* do not touch, will
+                                            be determined later */
                     break;
                     
                 default:
                     n_assert(0);
             }
+            DBGF("auto %s  = %d\n",  ent->name,  v);
             ent->defaultv = v;
         }
         
-        poldek_ts_xsetop(ts, ent->op, v, 0);
+        if (v != 2)  
+            poldek_ts_xsetop(ts, ent->op, v, 0);
     }
-    
+    DBGF("default_op_map size = %d\n", n_array_size(default_op_map));
     return 1;
 }
 
@@ -1351,6 +1381,54 @@ int setup_sources(struct poldek_ctx *ctx)
     return 1;
 }
 
+static void __setup_multilib(struct poldek_ctx *ctx)
+{
+    struct default_op_map_ent *ent, tmp;
+    char     scolor[64];
+    int      color, multilib = 2;
+    
+    
+    if (!pm_conf_get(ctx->pmctx, "%{_transaction_color}", scolor, sizeof(scolor)))
+        return;
+    
+    if (sscanf(scolor, "%u", &color) != 1) 
+        return;
+
+    if (ctx->htconf) {
+        tn_hash *htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+        multilib = poldek_conf_get_bool3(htcnf, "multilib", 2);
+    }
+    
+    if (color && multilib == 0) {
+        logn(LOGWARN, _("RPM works in multilib mode, while poldek not"));
+        return;
+        
+    } else if (!color && multilib == 1) {
+        logn(LOGWARN, _("poldek works in multilib mode, while rpm not"));
+        return;
+    }
+
+    if (multilib == 2) {        /* auto */
+        ctx->_rpm_tscolor = color;
+    
+        tmp.name = "multilib";
+        ent = n_array_bsearch(default_op_map, &tmp);
+        n_assert(ent);
+        
+        ent->defaultv = 0;
+        if (color)
+            ent->defaultv = 1;
+
+        if (color)
+            msgn(2, "Enabling multilib mode, rpm's transaction color = %d",
+                 color);
+        
+        DBGF("multilib(auto) = %d\n", ent->defaultv);
+        poldek_ts_xsetop(ctx->ts, ent->op, ent->defaultv, 0);
+    }
+}
+
+
 
 /*  */
 static int setup_pm(struct poldek_ctx *ctx) 
@@ -1362,7 +1440,8 @@ static int setup_pm(struct poldek_ctx *ctx)
     if (strcmp(pm, "rpm") == 0) {
         ctx->pmctx = pm_new(pm);
         pm_configure(ctx->pmctx, "macros", ctx->ts->rpmacros);
-                         
+        __setup_multilib(ctx);
+        
     } else if (strcmp(pm, "pset") == 0) {
         n_array_sort_ex(ctx->dest_sources, (tn_fn_cmp)source_cmp_no);
         if (n_array_size(ctx->dest_sources) == 0) {

@@ -227,6 +227,7 @@ int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
     MEMINF("START");
     DBGF("%s\n", pkg_id(pkg));
 
+    msg_i(3, indent, "%s\n", pkg_id(pkg));
     for (i=0; i < n_array_size(pkg->reqs); i++) {
         struct capreq *req = n_array_nth(pkg->reqs, i);
         
@@ -235,7 +236,7 @@ int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
 
         DBGF("req %s\n", capreq_snprintf_s(req));
 
-        if (pkg_satisfies_req(pkg, req, 1)) { /* self match, should be handled
+        if (pkg_satisfies_req(pkg, req, 1)) { /* XXX: self match, should be handled
                                                  at lower level; TOFIX */
             DBGF("%s: satisfied by itself\n", capreq_snprintf_s(req));
 
@@ -243,7 +244,7 @@ int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
                                    uctx->uninst_set->dbpkgs)) {
 
             DBGF("%s: satisfied by db\n", capreq_snprintf_s(req));
-            msg_i(3, indent, "%s: satisfied by db\n", capreq_snprintf_s(req));
+            msg_i(3, indent, "  %s: satisfied by db\n", capreq_snprintf_s(req));
             
         } else if (!uctx->ts->getop(uctx->ts, POLDEK_OP_FOLLOW)) {
             logn(LOGERR, _("%s (cap %s) is required by %s"),
@@ -402,7 +403,8 @@ static int do_process(struct uninstall_ctx *uctx)
 
 static
 int do_resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
-                 const char *mask, const struct capreq *cr)
+                       const char *mask, const struct capreq *cr,
+                       const char *arch)
 {
     tn_array *dbpkgs;
     int i, nmatches = 0;
@@ -446,6 +448,12 @@ int do_resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
                     pkg_evr_match_req(dbpkg, cr, POLDEK_MA_PROMOTE_REQEPOCH))
                     matched = 1;
             }
+            
+            if (matched && arch) {
+                const char *dbarch = pkg_arch(dbpkg);
+                matched = n_str_eq(arch, dbarch ? dbarch : "none");
+            }
+            
         }
 
         if (matched) {
@@ -459,7 +467,7 @@ int do_resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
 }
 
 static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
-                           const char *mask)
+                           const char *mask, const char *arch)
 {
     char           *p;
     struct capreq  *cr, *cr_evr;
@@ -491,7 +499,7 @@ static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
         }
     }
     
-    if (do_resolve_package(uctx, ts, mask, cr))
+    if (do_resolve_package(uctx, ts, mask, cr, arch))
         resolved = 1;
 
     if (cr_evr)
@@ -500,6 +508,58 @@ static int resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
     return resolved;
 }
 
+static int resolve_mask(struct uninstall_ctx *uctx, struct poldek_ts *ts,
+                        const char *mask)
+{
+    char *p, *tmp;
+    const char *n, *v, *r;
+    char nmask[256];
+    int32_t e = 0;
+    int matched = 0;
+    
+    msgn(2, "Trying %s\n", mask);
+    if (resolve_package(uctx, ts, mask, NULL))
+        return 1;
+            
+    if ((p = strchr(mask, '-')) == NULL) /* try N-[E:]V */
+        return 0;
+
+    /* try N-[E:]V-R */
+    n_strdupap(mask, &tmp);
+    p = strrchr(tmp, '-');
+    *p = '#';
+        
+    msgn(2, "  Trying %s\n", tmp);
+                
+    if (resolve_package(uctx, ts, tmp, NULL))
+        return 1;
+    
+    n_strdupap(mask, &tmp);
+    if (poldek_util_parse_nevr(tmp, &n, &e, &v, &r)) {
+        if (e)
+            n_snprintf(nmask, sizeof(nmask), "%s#%d:%s-%s", n, e, v, r);
+        else
+            n_snprintf(nmask, sizeof(nmask), "%s#%s-%s", n, v, r);
+
+        msgn(2, "    Trying %s\n", nmask);
+        DBGF("try %s => %s (%s, %s, %s)\n", mask, nmask, n, v, r);
+        matched = resolve_package(uctx, ts, nmask, NULL);
+        
+        if (!matched && (p = strchr(r, '.'))) { /* try N-[E:]-V-R.ARCH */
+            *p = '\0';
+            p++;
+            
+            if (e)
+                n_snprintf(nmask, sizeof(nmask), "%s#%d:%s-%s", n, e, v, r);
+            else
+                n_snprintf(nmask, sizeof(nmask), "%s#%s-%s", n, v, r);
+            msgn(2, "      Trying %s (arch=%s)\n", nmask, p);
+            matched = resolve_package(uctx, ts, nmask, p);
+        }
+    }
+
+    return matched;
+}
 
 static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
 {
@@ -509,51 +569,11 @@ static int resolve_packages(struct uninstall_ctx *uctx, struct poldek_ts *ts)
     masks = poldek_ts_get_args_asmasks(ts, 1);
     
     for (i=0; i < n_array_size(masks); i++) {
-        char            *mask = n_array_nth(masks, i);
-        int             matched = 0;
+        char *mask = n_array_nth(masks, i);
 
-        msgn(2, "Trying %s\n", mask);
-        if (resolve_package(uctx, ts, mask)) {
-            matched = 1;
-            
-        } else {
-            char *p;
-            
-            if ((p = strchr(mask, '-'))) { /* try N-[E:]V */
-                char *tmp;
-                n_strdupap(mask, &tmp);
-                
-                p = strrchr(tmp, '-');
-                *p = '#';
-
-                msgn(2, "  Trying %s\n", tmp);
-                
-                if (resolve_package(uctx, ts, tmp)) {
-                    matched = 1;
-                    
-                } else {        /* try N-[E:]V-R */
-                    const char *n, *v, *r;
-                    char nmask[256];
-                    int32_t e = 0;
-
-                    n_strdupap(mask, &tmp);
-                    if (poldek_util_parse_nevr(tmp, &n, &e, &v, &r)) {
-                        if (e)
-                            n_snprintf(nmask, sizeof(nmask), "%s#%d:%s-%s", n, e, v, r);
-                        else
-                            n_snprintf(nmask, sizeof(nmask), "%s#%s-%s", n, v, r);
-
-                        msgn(2, "    Trying %s\n", nmask);
-                        DBGF("try %s => %s (%s, %s, %s)\n", mask, nmask, n, v, r);
-                        matched = resolve_package(uctx, ts, nmask);
-                    }
-                }
-            }
-            
-            if (!matched) {
-                logn(LOGERR, _("%s: no such package"), mask);
-                nerr++;
-            }
+        if (!resolve_mask(uctx, ts, mask)) {
+            logn(LOGERR, _("%s: no such package"), mask);
+            nerr++;
         }
     }
     

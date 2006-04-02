@@ -42,6 +42,8 @@
 #include "pkgset.h"
 #include "pm/pm.h"
 
+extern int poldek_conf_MULTILIB;
+
 #define ARG_PACKAGES_SETUPDONE    (1 << 0)
 
 /* @VIRTUAL [DEFAULT_MASK [EVR]] */
@@ -227,36 +229,6 @@ int arg_packages_size(struct arg_packages *aps)
 //        n_hash_size(aps->resolved_caps);
 }
 
-#if 0  /* XXX: disabled, #5702  */
-/* tries to convert N-[E:]V-R to N#[E:]V-R */
-static char *mask2evrhashedmask(const char *mask) 
-{
-    const char *name, *ver, *rel, *p;
-    char nmask[1024], e[32] = "", *tmp;
-    int32_t epoch = 0;
-    int n;
-    
-    n_strdupap(mask, &tmp);
-    if (!poldek_util_parse_nevr(tmp, &name, &epoch, &ver, &rel))
-        return NULL;
-    
-    p = ver;          /* check if it is really version */
-    while (*p) {
-        if (isdigit(*p))
-            break;
-        p++;
-    }
-    
-    if (*p == '\0')    /* no digits => part of name propably */
-        return NULL;
-            
-    if (epoch)
-        snprintf(e, sizeof(e), "%d:", epoch);
-    n = n_snprintf(nmask, sizeof(nmask), "%s#%s%s-%s", name, e, ver, rel);
-    return n_strdupl(nmask, n);
-}
-#endif
-
 tn_array *arg_packages_get_masks(struct arg_packages *aps, int hashed)
 {
     tn_array *masks;
@@ -264,19 +236,11 @@ tn_array *arg_packages_get_masks(struct arg_packages *aps, int hashed)
 
     masks = n_array_clone(aps->package_masks);
     for (i=0; i < n_array_size(aps->package_masks); i++) {
-        const char *mask;
-
-        mask = n_array_nth(aps->package_masks, i);
-        if (hashed && strchr(mask, '-') && strchr(mask, '*') == NULL) {
-#if 0  /* XXX: disabled so smart NEVR parsing, #5702  */
-            char *nmask;
-            if ((nmask = mask2evrhashedmask(mask)))
-                mask = nmask;
-#endif            
-        }
+        const char *mask = n_array_nth(aps->package_masks, i);
         n_array_push(masks, n_strdup(mask));
     }
-    
+
+    hashed = 0;                 /* disabled for a while */
     for (i=0; i < n_array_size(aps->packages); i++) {
         struct pkg *pkg = n_array_nth(aps->packages, i);
         char mask[1024], e[32] = "";
@@ -284,9 +248,13 @@ tn_array *arg_packages_get_masks(struct arg_packages *aps, int hashed)
         
         if (pkg->epoch)
             snprintf(e, sizeof(e), "%d:", pkg->epoch);
-        
+
         n = n_snprintf(mask, sizeof(mask), "%s%s%s%s-%s", pkg->name,
-                   hashed ? "#" : "-", e, pkg->ver, pkg->rel);
+                       hashed ? "#" : "-", e, pkg->ver, pkg->rel);
+
+        if (0 && poldek_conf_MULTILIB && pkg_arch(pkg))
+            n += n_snprintf(&mask[n], sizeof(mask) - n, ".%s", pkg_arch(pkg));
+        
         n_array_push(masks, n_strdupl(mask, n));
     }
                    

@@ -27,7 +27,7 @@ struct poldek_ctx {
     unsigned         ps_setup_flags;
     struct pkgset    *ps;
     struct pm_ctx    *pmctx;
-
+    int              _rpm_tscolor; /* rpm transaction color */
 //    tn_array       *inst_pkgs;  /* array of installed packages  */
 //    time_t         ts_instpkgs; /* inst_pkgs timestamp */
     

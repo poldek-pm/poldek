@@ -15,6 +15,7 @@ void arg_packages_free(struct arg_packages *aps);
 
 void arg_packages_clean(struct arg_packages *aps);
 int arg_packages_size(struct arg_packages *aps);
+
 tn_array *arg_packages_get_masks(struct arg_packages *aps, int hashed);
 
 int arg_packages_add_pkgmask(struct arg_packages *aps, const char *mask);

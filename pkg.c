@@ -215,7 +215,6 @@ struct pkg *pkg_new_ext(tn_alloc *na,
 
     len += len + 1;             /* for id (nvr) */
     
-    
     if (poldek_conf_MULTILIB && arch) {
         arch_len = strlen(arch); 
         len += arch_len + 1;
@@ -356,7 +355,7 @@ void pkg_free(struct pkg *pkg)
 {
 #if ENABLE_TRACE   
     if (strcmp(pkg->name, "poldek") == 0) {
-        DBGF_F("%p %s (pdir %s, na->refcnt=%d), refcnt=%d (%p)\n",
+        DBGF("%p %s (pdir %s, na->refcnt=%d), refcnt=%d (%p)\n",
                pkg, pkg_snprintf_s(pkg),
                pkg->pkgdir ? pkgdir_idstr(pkg->pkgdir) : "<none>",
                pkg->na ? pkg->na->_refcnt : -1,
