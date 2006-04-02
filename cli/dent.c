@@ -140,6 +140,12 @@ int pkg_dent_strcmp(struct pkg_dent *ent, const char *name)
     return strcmp(ent->name, name);
 }
 
+static 
+int pkg_dent_cmp_ptr(struct pkg_dent *e1, struct pkg_dent *e2)
+{
+    return e1 != e2;
+}
+
 
 int pkg_dent_cmp_btime(struct pkg_dent *ent1, struct pkg_dent *ent2)
 {
@@ -639,6 +645,7 @@ tn_array *do_resolve(struct arg_packages *aps,
             } /* else */
             
             if (fnmatch(mask, ent->name, 0) == 0) {
+                DBGF("fnmatch %s %s\n", mask, ent->name);
                 n_array_push(ments, pkg_dent_link(ent));
                 matches[j]++;
             } 
@@ -664,7 +671,7 @@ tn_array *do_resolve(struct arg_packages *aps,
 
     
     n_array_sort(ments);
-    n_array_uniq(ments);
+    n_array_uniq_ex(ments, (tn_fn_cmp)pkg_dent_cmp_ptr);
     n_array_free(masks);
     
     //if (flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS)
