@@ -118,11 +118,9 @@ vfile/misc.c
 vfile/p_open.c
 vfile/sample.c
 vfile/test_progress.c
-vfile/test_vfile.c
 vfile/test_vopen3.c
 vfile/testcookie.c
 vfile/ttest.c
-vfile/vfcurl.c
 vfile/vfetch.c
 vfile/vfff/base64.c
 vfile/vfff/ftp.c
