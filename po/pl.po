@@ -86,7 +86,7 @@ msgstr "Zmieñ aktualny katalog pakietów"
 
 #: cli/cd.c:38
 msgid "Print name of current directory"
-msgstr "Wydrukuj nazwe aktualnego katalogu"
+msgstr "Podaj nazwê aktualnego katalogu"
 
 #: cli/cli.c:210
 msgid "  Defined aliases:\n"
