@@ -82,11 +82,11 @@ msgstr ""
 
 #: cli/cd.c:31
 msgid "Change current package directory"
-msgstr ""
+msgstr "Zmieñ aktualny katalog pakietów"
 
 #: cli/cd.c:38
 msgid "Print name of current directory"
-msgstr ""
+msgstr "Wydrukuj nazwe aktualnego katalogu"
 
 #: cli/cli.c:210
 msgid "  Defined aliases:\n"
@@ -98,11 +98,11 @@ msgstr "B±d¼ gadatliwy"
 
 #: cli/cli.c:230
 msgid "Be quiet"
-msgstr ""
+msgstr "B±d¼ cichy"
 
 #: cli/cli.c:231
 msgid "Help"
-msgstr ""
+msgstr "Pomoc"
 
 #: cli/cli.c:421
 #, c-format
@@ -235,7 +235,7 @@ msgstr ""
 
 #: cli/external.c:35
 msgid "Execute external command"
-msgstr ""
+msgstr "Wykonaj zewnêtrzn± komende"
 
 #: cli/external.c:89
 #, fuzzy, c-format
@@ -441,7 +441,7 @@ msgstr "Usuniêto %d zduplikowanych pakietów z listy dostêpnych"
 
 #: cli/install.c:187
 msgid "Print installation summary in parseable form"
-msgstr ""
+msgstr "Wy¶wietl podsumowanie instalacji w sformatowanej postaci"
 
 #: cli/install.c:199
 msgid "Install packages"
@@ -544,7 +544,7 @@ msgstr "dostêpny"
 
 #: cli/main.c:84
 msgid "Miscellaneous options:"
-msgstr ""
+msgstr "Ró¿norodne opcjie"
 
 #: cli/main.c:86
 msgid "Use FILE as PM(rpm) binary"
@@ -609,7 +609,7 @@ msgstr "Rejestruj wszystkie komunikaty w pliku FILE"
 
 #: cli/main.c:122
 msgid "Run program as user USER"
-msgstr ""
+msgstr "Uruchom program jako u¿ytkownik USER"
 
 #: cli/main.c:123
 #, fuzzy
@@ -618,7 +618,7 @@ msgstr "Czytaj konfiguracjê z pliku FILE"
 
 #: cli/main.c:125
 msgid "Dump options in docbook format"
-msgstr ""
+msgstr "Zrzuæ opcje w formacje docbooka"
 
 #: cli/main.c:128
 msgid "Do not produce any output."
@@ -640,7 +640,7 @@ msgstr ""
 
 #: cli/op.c:69 cli/op.c:73
 msgid " and "
-msgstr ""
+msgstr " i "
 
 #: cli/op.c:80
 #, fuzzy, c-format
@@ -679,11 +679,11 @@ msgstr ""
 
 #: cli/op_makeidx.c:75
 msgid "Create uncompressed index"
-msgstr ""
+msgstr "Stwórz nieskompresowany indeks"
 
 #: cli/op_makeidx.c:78
 msgid "Sets compression type (none, bz2, gz)"
-msgstr ""
+msgstr "Ustaw typ kompresji (none, bz2, gz)"
 
 #: cli/op_makeidx.c:81
 msgid "index type specific options"
