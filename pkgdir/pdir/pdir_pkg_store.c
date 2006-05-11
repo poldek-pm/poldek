@@ -132,7 +132,7 @@ int do_pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     if (pkg->fn)
         n_buf_printf(nbuf, "n: %s\n", pkg->fn);
 
-    if (pkg->fmtime)
+    if (pkg->fmtime && (flags & PKGSTORE_NOTIMESTAMP) == 0)
         n_buf_printf(nbuf, "t: %u\n", pkg->fmtime);
     
     n_buf_printf(nbuf, "F:\n");

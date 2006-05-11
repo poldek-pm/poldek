@@ -96,10 +96,7 @@ int source_clean(struct source *src, unsigned flags);
 
 int sources_clean(tn_array *sources, unsigned flags);
 
-#define PKGSOURCE_MKIDX_NODIFF         (1 << 0)
-#define PKGSOURCE_MKIDX_COMPRESSED_GZ  (1 << 1)
-#define PKGSOURCE_MKIDX_COMPRESSED_BZ2 (1 << 2)
-
+/* flags = PKGDIR_CREAT_* */
 int source_make_idx(struct source *src, const char *stype, 
                     const char *dtype, const char *idxpath,
                     unsigned flags, tn_hash *kw);

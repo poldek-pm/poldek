@@ -74,15 +74,26 @@ static struct argp_option options[] = {
 {"nocompress", OPT_NOCOMPR, NULL, 0, 
  N_("Create uncompressed index"), OPT_GID },
 
-{"compress", OPT_COMPR, "type", OPTION_HIDDEN, /* not finished yet */
- N_("Sets compression type (none, bz2, gz)"), OPT_GID },
-
 {"mo", OPT_MOPT, "OPTION[,OPTION]", OPTION_HIDDEN, /* not finished yet */
      N_("index type specific options"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 
 
 { 0, 0, 0, 0, 0, 0 },    
+};
+
+struct mopt {
+    char *name;
+    unsigned flag;
+};
+
+static struct mopt valid_mopts[] = {
+    { "nodesc", PKGDIR_CREAT_NODESC },
+    { "nodiff", PKGDIR_CREAT_NOPATCH },
+    { "v018x", PKGDIR_CREAT_v018x },  /* pdir without pkg files timestamps */
+    { "nocompress", 0 },
+    { "compress", 0 }, /* compress=[gz,bz2,none] - a compression type, NFY */
+    { NULL, 0 },
 };
 
 struct arg_s {
@@ -94,6 +105,9 @@ struct arg_s {
     tn_hash             *opts;
 };
 #define DO_MAKEIDX (1 << 0)
+
+
+static int parse_mopts(struct arg_s *arg_s, char *opstr);
 
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state);
@@ -171,29 +185,103 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case OPT_NODESC:
-            arg_s->crflags |= PKGDIR_CREAT_NODESC;
+            parse_mopts(arg_s, "nodesc");
             /* XXX hack, no way to pass option between argps (?)*/
             poclidek_op_source_nodesc = 1;
             break;
 
         case OPT_NODIFF:
-            arg_s->crflags |= PKGDIR_CREAT_NOPATCH;
+            parse_mopts(arg_s, "nodiff");
             break;
             
-        case OPT_COMPR:
-            n_hash_replace(arg_s->opts, "compress", n_strdup(arg));
+        case OPT_COMPR: {
+            char tmp[128];
+            n_snprintf(tmp, sizeof(tmp), "compress=%s", arg);
+            parse_mopts(arg_s, tmp);
             break;
+        }
 
         case OPT_NOCOMPR:
-            n_hash_replace(arg_s->opts, "compress", n_strdup("none"));
+            parse_mopts(arg_s, "nocompress");
             break;
-           
+
+        case OPT_MOPT:
+            parse_mopts(arg_s, arg);
+            break;
+            
         default:
             return ARGP_ERR_UNKNOWN;
     }
     
     return 0;
 }
+
+
+static int parse_mopt(struct arg_s *arg_s, const char *opstr)
+{
+    char *p, *tmp;
+    int i, valid;
+    
+    n_strdupap(opstr, &tmp);
+    
+    if ((p = strchr(tmp, '='))) {
+        *p = 0;
+        p++;
+        p = n_str_strip_ws(p);
+        tmp = n_str_strip_ws(tmp);
+    }
+
+    n_hash_replace(arg_s->opts, tmp, p ? n_strdup(p) : NULL);
+    
+    i = 0;
+    valid = 0;
+    while (valid_mopts[i].name) {
+        if (n_str_eq(tmp, valid_mopts[i].name)) {
+            arg_s->crflags |= valid_mopts[i].flag;
+            valid = 1;
+            break;
+        }
+        i++;
+    }
+    
+    if (!valid) {
+        logn(LOGERR, _("%s: unknown option"), tmp);
+    
+    } else {
+        if (n_str_eq(tmp, "nocompress"))
+            n_hash_replace(arg_s->opts, "compress", n_strdup("none"));
+        else 
+            n_hash_replace(arg_s->opts, tmp, p ? n_strdup(p) : NULL);
+    }
+    
+    return valid;
+}
+
+
+static int parse_mopts(struct arg_s *arg_s, char *opstr) 
+{
+    opstr = n_str_strip_ws(opstr);
+
+    if (opstr == NULL || *opstr == '\0')
+        return 1;
+    
+    if (strchr(opstr, ',') == NULL) {
+        parse_mopt(arg_s, opstr);
+        
+    } else {
+        const char **tl_save, **tl;
+        
+        tl = tl_save = n_str_tokl(opstr, ",");
+        while (*tl) {
+            parse_mopt(arg_s, *tl);
+            tl++;
+        }
+        n_str_tokl_free(tl_save);
+    }
+    
+    return 1;
+}
+
 
 static tn_array *parse_types(const char *type) 
 {

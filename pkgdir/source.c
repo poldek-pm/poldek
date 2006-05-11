@@ -1034,6 +1034,10 @@ int do_source_make_idx(struct source *src,
     rc = 0;
     if (pkgdir_load(pkgdir, NULL, ldflags)) {
         n_assert((pkgdir->_ldflags & PKGDIR_LD_DOIGNORE) == 0);
+        
+        if (kw && n_hash_exists(kw, "v018x"))
+            cr_flags |= PKGDIR_CREAT_v018x;
+        
         rc = pkgdir_save_as(pkgdir, type, idxpath, cr_flags);
     }
     
