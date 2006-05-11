@@ -356,22 +356,34 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         snprintf(prompt, sizeof(prompt), "poldek:%s%s> ",
                  currdir == NULL ? "/" : *currdir->name == '/' ? "" : "/",
                  currdir == NULL ? "" : currdir->name);
+
         if ((line = readline(prompt)) == NULL)
             break;
 
+        /* add to history? */
+        s = line;
+        while (isspace(*s))
+            s++;
+        
+        if (*s)
+            add_history(line);
+                
         s = n_str_strip_ws(line);
         if (*s) {
             int _verbose = poldek_verbose();
-            add_history(s);
-            //print_mem_info("BEFORE");
+            
             shInCmd = 1;
             DBGF("(%s)\n", s);
+
+            MEMINF("BEFORE %s\n", s);
             poclidek_execline(cctx, NULL, s);
+            MEMINF("AFTER  %s\n", s);
+            
             sigint_reset();
             shDone = 0;
             shInCmd = 0;
+
             poldek_set_verbose(_verbose);
-            //print_mem_info("AFTER ");
         }
         free(line);
         
