@@ -28,10 +28,6 @@
 #include <time.h>
 
 #include <zlib.h>
-#include <rpm/rpmlib.h>
-#include <rpm/rpmio.h>
-#include <rpm/rpmurl.h>
-#include <rpm/rpmmacro.h>
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 #include <trurl/nhash.h>
