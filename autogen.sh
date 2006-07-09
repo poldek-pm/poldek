@@ -50,4 +50,4 @@ if [ ! -f depcomp ]; then
     (cd shell && ln -sf ../depcomp .)
 fi
 
-runcmd ./configure $CONFOPTS
+runcmd ./configure --sysconfdir=/etc $CONFOPTS
