@@ -636,5 +636,65 @@ const char *pkgfl_it_get_rawargs(struct pkgfl_it *it, uint32_t *size, uint16_t *
     return path;
 }
 
+/* returns list of directories not belong to filelist itself */
+int pkgfl_owned_and_required_dirs(tn_tuple *fl, tn_array **owned,
+                                  tn_array **required)
+{
+    const char *dn = NULL;
+    int i, dnlen, r;
+    tn_array *od = NULL, *rd = NULL;
+
+    if (owned)
+        od = n_array_new(n_tuple_size(fl), NULL, (tn_fn_cmp)strcmp);
+    
+    if (required)
+        rd = n_array_new(n_tuple_size(fl), NULL, (tn_fn_cmp)strcmp);
+    
+    for (i=0; i < n_tuple_size(fl); i++) {
+        struct pkgfl_ent *flent = n_tuple_nth(fl, i);
+
+        if (dn && strncmp(dn, flent->dirname, dnlen) == 0) {
+            if (od)
+                n_array_push(od, flent->dirname);
+            continue;
+        }
+        
+        dn = flent->dirname;
+        if (*dn == '/' && *(dn + 1) == '\0') {
+            dn = "";
+            dnlen = 0;
+            continue;
+        }
+        
+        dnlen = strlen(dn);
+        if (rd)
+            n_array_push(rd, dn);
+    }
+
+    r = 0;
+    if (od) {
+        *owned = od;
+        for (i = 0; i < n_array_size(od); i++)            
+            printf("O %s\n", n_array_nth(od, i));
+        r += i;
+    }
+    
+    if (rd) {
+        *required = rd;
+        for (i = 0; i < n_array_size(rd); i++)            
+            printf("R %s\n", n_array_nth(rd, i));
+        r += i;
+    }
+    return r;
+}
+
+tn_array *pkgfl_required_directories(tn_tuple *fl) 
+{
+    tn_array *required = NULL;
+
+    pkgfl_owned_and_required_dirs(fl, NULL, &required);
+
+    return required;
+}
 
                              
