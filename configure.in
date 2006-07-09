@@ -298,6 +298,12 @@ AC_CHECK_FUNCS(rpmdsRpmlib,,
           	 [AC_MSG_WARN(["poldek will not work fine with rpmlib\(...\) capabilities"])],
           	 [$CONF_IN_LDFLAGS])], [$CONF_IN_LDFLAGS])
 
+AC_CHECK_FUNCS(rpmdsUname)
+AC_CHECK_FUNCS(rpmdsSysinfo)
+AC_CHECK_FUNCS(rpmdsGetconf)
+AC_CHECK_FUNCS(rpmdsCpuinfo)
+
+
 
 dnl metadata & xml2
 AC_ARG_WITH(xml-metadata,

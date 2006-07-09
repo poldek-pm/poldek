@@ -37,35 +37,72 @@
 #include "pm/pm.h"
 
 #if HAVE_RPMDSRPMLIB            /* rpmdsRpmlib() => rpm >= 4.4.3 */
-static int get_rpmlib_caps(tn_array *caps)
+
+static int extract_rpmds(tn_array *caps, rpmds ds)
 {
-    rpmds ds = NULL;
-    
-    if (rpmdsRpmlib(&ds, NULL) != 0)
-        return 0;
-    
     ds = rpmdsInit(ds);
     while (rpmdsNext(ds) >= 0) {
         const char *name, *evr;
-        char tmp[256];
+        char tmp[256], *tmpptr;
         struct capreq *cr;
-        uint32_t flags;
+        uint32_t flags, crflags;
 
         name = rpmdsN(ds);
         evr = rpmdsEVR(ds);
         flags = rpmdsFlags(ds);
         
-        n_assert(flags & RPMSENSE_EQUAL);
-        n_assert((flags & (RPMSENSE_LESS | RPMSENSE_GREATER)) == 0);
-
-        n_strncpy(tmp, evr, 128);
-        cr = capreq_new_evr(name, tmp, REL_EQ, 0);
-        if (cr) 
+        if ((flags & RPMSENSE_EQUAL)) {
+            n_strncpy(tmp, evr, 128);
+            tmpptr = tmp;
+            crflags = REL_EQ;
+            
+        } else {                /* cap without version */
+            tmpptr = NULL;
+            crflags = 0;
+        }
+        
+        cr = capreq_new_evr(name, tmpptr, crflags, 0);
+        if (cr) {
+            msgn(3, "  - %s", capreq_snprintf_s(cr));
             n_array_push(caps, cr);
+        }
     }
     ds = rpmdsFree(ds);
     return n_array_size(caps);
 }
+
+typedef int (*rpmcap_fn)(rpmds *ds, void *);
+
+static int get_rpmlib_caps(tn_array *caps)
+{
+    rpmds     ds = NULL;
+    int       i;
+    rpmcap_fn functions[] = {
+        rpmdsRpmlib,
+#ifdef HAVE_RPMDSCPUINFO
+        (rpmcap_fn)rpmdsCpuinfo,
+#endif
+#ifdef HAVE_RPMDSGETCONF
+        (rpmcap_fn)rpmdsGetconf,
+#endif
+#ifdef HAVE_RPMDSSYSINFO
+        (rpmcap_fn)rpmdsSysinfo,
+#endif        
+#ifdef HAVE_RPMDSUNAME
+        (rpmcap_fn)rpmdsUname,
+#endif        
+        NULL,
+    };
+
+    i = 0;
+    msgn(3, "Loading internal capabilities");
+    while (functions[i]) {
+        functions[i++](&ds, NULL);
+    }
+    
+    return extract_rpmds(caps, ds);
+}
+
 #endif  /* HAVE_RPMDSRPMLIB */
 
 #if HAVE_RPMGETRPMLIBPROVIDES   /* rpmGetRpmlibProvides() => rpm < 4.4.3 */

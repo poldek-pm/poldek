@@ -136,9 +136,13 @@ void pkgset_free(struct pkgset *ps)
 int pkgset_pmprovides(const struct pkgset *ps, const struct capreq *req)
 {
     struct capreq *cap;
-    
+
     if (ps->rpmcaps == NULL)
-        return 1;               /* no caps -> assume yes */
+        return 0;               /* no caps -> assume NO */
+
+    /* internal caps have names like name(feature) */
+    if (!capreq_is_rpmlib(req) && strstr(capreq_name(req), "(") == NULL)
+        return 0;
 
     cap = n_array_bsearch_ex(ps->rpmcaps, req,
                              (tn_fn_cmp)capreq_cmp_name);

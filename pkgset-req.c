@@ -332,32 +332,25 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
          n_assert(0);
     */ 
     
-    if (capreq_is_rpmlib(req)) {
-        if (matched) {
-            int i;
+    if (capreq_is_rpmlib(req) && matched) {
+        int i;
             
-            for (i=0; i<*npkgs; i++) {
-                if (strcmp((*suspkgs)[i]->name, "rpm") != 0) {
-                    logn(LOGERR, _("%s: provides rpmlib cap \"%s\""),
-                        pkg_snprintf_s((*suspkgs)[i]), reqname);
-                    matched = 0;
-                }
+        for (i=0; i<*npkgs; i++) {
+            if (strcmp((*suspkgs)[i]->name, "rpm") != 0) {
+                logn(LOGERR, _("%s: provides rpmlib cap \"%s\""),
+                     pkg_snprintf_s((*suspkgs)[i]), reqname);
+                matched = 0;
             }
         }
+        
+        *suspkgs = NULL;
+        *npkgs = 0;
+    }
 
-        if (pkgset_pmprovides(ps, req)) {
-            matched = 1;
-            capreq_set_satisfied(req);
-            msg(4, " req %-35s --> PM_CAP\n", capreq_snprintf_s(req));
-        }
-#if 0
-DUPA        
-        if (!matched && (ps->flags & (PSMODE_VERIFY | PSMODE_MKIDX))) {
-            matched = 1;
-            logn(LOGWARN, "%s: not found (poldek needs to be linked with newer"
-                 " rpmlib)\n", capreq_snprintf_s(req));
-        }
-#endif        
+    if (!matched && pkgset_pmprovides(ps, req)) {
+        matched = 1;
+        capreq_set_satisfied(req);
+        msg(4, " req %-35s --> PM_CAP\n", capreq_snprintf_s(req));
         
         *suspkgs = NULL;
         *npkgs = 0;
