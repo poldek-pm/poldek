@@ -64,36 +64,36 @@ static struct argp_option options[] = {
 {"mkidxz", OPT_MKIDXZ, "PATH", OPTION_ARG_OPTIONAL | OPTION_HIDDEN,
  N_("Likewise, but gzipped file is created"), OPT_GID},
 
-{"nodesc", OPT_NODESC, 0, 0,
- N_("Don't put package user-level information (like Summary or Description)"
-     " into created index."), OPT_GID },
+{"nodesc", OPT_NODESC, 0, OPTION_HIDDEN, "", OPT_GID },
+{"nodiff", OPT_NODIFF, 0, OPTION_HIDDEN, "", OPT_GID },
+{"nocompress", OPT_NOCOMPR, NULL, OPTION_HIDDEN, "", OPT_GID },
 
-{"nodiff", OPT_NODIFF, 0, 0,
- N_("Don't create index delta files"), OPT_GID },
-
-{"nocompress", OPT_NOCOMPR, NULL, 0, 
- N_("Create uncompressed index"), OPT_GID },
-
-{"mo", OPT_MOPT, "OPTION[,OPTION]", OPTION_HIDDEN, /* not finished yet */
-     N_("index type specific options"), OPT_GID },
+{"mo", OPT_MOPT, "OPTION[,OPTION]", 0, 
+     N_("Create options (type --mo=help for help)"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
-
-
-{ 0, 0, 0, 0, 0, 0 },    
 };
 
 struct mopt {
     char *name;
     unsigned flag;
+    char *doc;
 };
 
 static struct mopt valid_mopts[] = {
-    { "nodesc", PKGDIR_CREAT_NODESC },
-    { "nodiff", PKGDIR_CREAT_NOPATCH },
-    { "v018x", PKGDIR_CREAT_v018x },  /* pdir without pkg files timestamps */
-    { "nocompress", 0 },
-    { "compress", 0 }, /* compress=[gz,bz2,none] - a compression type, NFY */
-    { NULL, 0 },
+    {
+        "nodesc", PKGDIR_CREAT_NODESC, 
+        N_("Omit package user-level information (like Summary or Description)")
+    },
+    
+    { "nodiff", PKGDIR_CREAT_NOPATCH, N_("Don't create index delta files") },
+    
+    { "v018x", PKGDIR_CREAT_v018x, /* pdir without pkg files timestamps */
+      N_("Create pdir compatibile with versions prior 0.18.9")},
+    
+    { "nocompress", 0, N_("Create uncompressed index") },
+    { "compress", 0, NULL }, /* compress=[gz,bz2,none] - a compression type, NFY */
+    { "help", 0, NULL},
+    { NULL, 0, 0 },
 };
 
 struct arg_s {
@@ -146,6 +146,11 @@ static void arg_s_free(void *a)
 
 extern int poclidek_op_source_nodesc;
 
+static void log_modeprecated(const char *opname)
+{
+    logn(LOGNOTICE, _("--%s is deprecated, use --mo=%s"), opname, opname);
+}
+
 static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
@@ -185,28 +190,33 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
             
         case OPT_NODESC:
+            log_modeprecated("nodesc");
             parse_mopts(arg_s, "nodesc");
             /* XXX hack, no way to pass option between argps (?)*/
             poclidek_op_source_nodesc = 1;
             break;
 
         case OPT_NODIFF:
+            log_modeprecated("nodiff");
             parse_mopts(arg_s, "nodiff");
             break;
             
         case OPT_COMPR: {
             char tmp[128];
+            log_modeprecated("compress");
             n_snprintf(tmp, sizeof(tmp), "compress=%s", arg);
             parse_mopts(arg_s, tmp);
             break;
         }
 
         case OPT_NOCOMPR:
+            log_modeprecated("nocompress");
             parse_mopts(arg_s, "nocompress");
             break;
 
         case OPT_MOPT:
-            parse_mopts(arg_s, arg);
+            if (!parse_mopts(arg_s, arg))
+                return ARGP_ERR_UNKNOWN;
             break;
             
         default:
@@ -230,9 +240,9 @@ static int parse_mopt(struct arg_s *arg_s, const char *opstr)
         p = n_str_strip_ws(p);
         tmp = n_str_strip_ws(tmp);
     }
-
-    n_hash_replace(arg_s->opts, tmp, p ? n_strdup(p) : NULL);
     
+    n_hash_replace(arg_s->opts, tmp, p ? n_strdup(p) : NULL);
+        
     i = 0;
     valid = 0;
     while (valid_mopts[i].name) {
@@ -280,6 +290,17 @@ static int parse_mopts(struct arg_s *arg_s, char *opstr)
     }
     
     return 1;
+}
+
+void help_mopts(void)
+{
+    int i = 0;
+    printf(_("Index create options are:\n"));
+    while (valid_mopts[i].doc) {
+        printf("  %-12s", valid_mopts[i].name);
+        printf("%s\n", valid_mopts[i].doc);
+        i++;
+    }
 }
 
 
@@ -395,6 +416,11 @@ static int oprun(struct poclidek_opgroup_rt *rt)
     
     arg_s = rt->_opdata;
     n_assert(arg_s);
+
+    if (n_hash_exists(arg_s->opts, "help")) { /* --mo=help */
+        help_mopts();
+        rc = OPGROUP_RC_OK;
+    }
 
     if (arg_s->cnflags & DO_MAKEIDX) {
         rc = make_idx(arg_s); 
