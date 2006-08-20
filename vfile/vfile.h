@@ -195,8 +195,8 @@ int vf_mksubdir(char *path, int size, const char *dirpath);
 int vf_localpath(char *path, size_t size, const char *url);
 int vf_localdirpath(char *path, size_t size, const char *url);
 
-/* ofpath to path under cache dirctory  */
-int vf_cachepath(char *path, size_t size, const char *ofpath);
+/* ofdirpath to path under cache dirctory  */
+int vf_cachepath(char *path, size_t size, const char *ofdirpath);
 
 /* unlink local copy */
 int vf_localunlink(const char *path);

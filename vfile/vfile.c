@@ -608,20 +608,20 @@ int vf_localdirpath(char *path, size_t size, const char *url)
 }
 
 
-int vf_cachepath(char *path, size_t size, const char *ofpath)
+int vf_cachepath(char *path, size_t size, const char *ofdirpath)
 {
     int n, len;
     
     len = strlen(vfile_conf.cachedir);
 
-    n_assert(strlen(ofpath) > 0);
-    n_assert(ofpath[strlen(ofpath) - 1] != '/'); /* not a dir */
+    n_assert(strlen(ofdirpath) > 0);
+    n_assert(ofdirpath[strlen(ofdirpath) - 1] != '/'); /* not a dir */
                            
-    if (strncmp(ofpath, vfile_conf.cachedir, len) == 0) { 
-        n = n_snprintf(path, size, "%s", ofpath);
+    if (strncmp(ofdirpath, vfile_conf.cachedir, len) == 0) { 
+        n = n_snprintf(path, size, "%s", ofdirpath);
         
     } else {
-        n = vf_localpath(path, size, ofpath);
+        n = vf_localdirpath(path, size, ofdirpath);
     }
 
     return n;
