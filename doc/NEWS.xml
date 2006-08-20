@@ -2,7 +2,12 @@
 <news>
 <cvsid>$Id$</cvsid>
 
-<release version="0.20.1" date="" focus="bugfix release">
+<release version="0.20.1" date="not released yet" focus="bugfix release">
+  <entry><para>
+   support for RPM 4.4.6: new internal sysinfo(),getconf(),uname() and cpuinfo()
+   capabilities and auto-dependecies based on package directories
+  </para></entry>
+  
   <entry><para>
    let a user to choose equivalents selected by --caplookup option
   </para></entry>
@@ -12,7 +17,12 @@
   </para></entry>
 
   <entry><para>
-    added 0.18.x's --mkdir to be bacward compatible
+    new --mo=OPTION[,OPTION...] replaces --no{compress,desc,diff} index creation 
+    options,
+  </para></entry>
+
+  <entry><para>        
+    with --mo=v018x created 'pdir' index is compatibile with versions prior 0.18.9
   </para></entry> 
 
   <entry><para>

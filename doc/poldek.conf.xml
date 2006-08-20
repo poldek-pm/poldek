@@ -411,8 +411,13 @@ _distro  = pld
  Subtle dependency processing options, they should not be changed 
  unless you know what you are doing
 </description>
-  <option name="multilib" type="boolean3" default="auto" hidden="yes" op="MULTILIB"/>
-
+  <option name="dependency engine version" type="integer" default="2" hidden="yes">
+  </option>
+ 
+  <option name="auto directory dependencies" type="boolean3" default="auto" op="AUTODIRDEP">
+  RPM 4.4.6 introduces auto dependencies based on package directories. Option controls this feature.
+  </option>
+  
   <option name="follow" type="boolean" default="yes" op="FOLLOW">
     <description>
     Automatically install packages required by installed ones.
@@ -441,6 +446,11 @@ _distro  = pld
      without any version. Use with care, it may cause weird dependency errors.
     </description>
   </option>
+
+  <option name="multilib" type="boolean3" default="auto" op="MULTILIB"/>
+   <description>
+    Multilib mode. This feature is not finished yet.
+  </description>
 
   <option name="obsoletes" type="boolean" default="yes" op="OBSOLETES">
     <description>
