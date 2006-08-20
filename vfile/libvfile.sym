@@ -3,6 +3,7 @@ p_open
 p_st_destroy
 p_st_init
 p_wait
+vf_cachepath
 vf_cleanpath
 vf_decompressable
 vf_extcompress

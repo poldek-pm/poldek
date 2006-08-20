@@ -596,7 +596,7 @@ int vf_localpath(char *path, size_t size, const char *url)
     int n;
     
     n = n_snprintf(path, size, "%s/", vfile_conf.cachedir);
-    return vf_url_as_path(&path[n], size - n, url);
+    return n + vf_url_as_path(&path[n], size - n, url);
 }
 
 int vf_localdirpath(char *path, size_t size, const char *url) 
@@ -604,9 +604,28 @@ int vf_localdirpath(char *path, size_t size, const char *url)
     int n;
     
     n = n_snprintf(path, size, "%s/", vfile_conf.cachedir);
-    return vf_url_as_dirpath(&path[n], size - n, url);
+    return n + vf_url_as_dirpath(&path[n], size - n, url);
 }
 
+
+int vf_cachepath(char *path, size_t size, const char *ofpath)
+{
+    int n, len;
+    
+    len = strlen(vfile_conf.cachedir);
+
+    n_assert(strlen(ofpath) > 0);
+    n_assert(ofpath[strlen(ofpath) - 1] != '/'); /* not a dir */
+                           
+    if (strncmp(ofpath, vfile_conf.cachedir, len) == 0) { 
+        n = n_snprintf(path, size, "%s", ofpath);
+        
+    } else {
+        n = vf_localpath(path, size, ofpath);
+    }
+
+    return n;
+}
 
 int vf_localunlink(const char *path) 
 {

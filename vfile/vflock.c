@@ -168,8 +168,6 @@ struct vflock *vf_lock_mkdir(const char *path)
         return vf_lockdir(path);
 
     DBGF("** vf_lock_mkdir %s\n", path);
-    if (strcmp(path, "/home/mis") == 0)
-        n_assert(0);
     
     n_snprintf(tmp, sizeof(tmp), "%s", path);
     n_basedirnam(tmp, &dn, &bn);

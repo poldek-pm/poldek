@@ -188,12 +188,15 @@ int vf_valid_path(const char *path);
 int vf_mkdir(const char *path);
 int vf_unlink(const char *path);
 
-/* mkdir under cachedir */
+/* mkdir under cache dirctory */
 int vf_mksubdir(char *path, int size, const char *dirpath);
 
 /* url to local path */
 int vf_localpath(char *path, size_t size, const char *url);
 int vf_localdirpath(char *path, size_t size, const char *url);
+
+/* ofpath to path under cache dirctory  */
+int vf_cachepath(char *path, size_t size, const char *ofpath);
 
 /* unlink local copy */
 int vf_localunlink(const char *path);
@@ -212,6 +215,8 @@ struct vflock {
 
 struct vflock *vf_lockdir(const char *path);
 void vf_lock_release(struct vflock *vflock);
+
+/* create directory and lock it */
 struct vflock *vf_lock_mkdir(const char *path);
 
 #endif /* POLDEK_VFILE_H */
