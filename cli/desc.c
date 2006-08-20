@@ -49,13 +49,15 @@ static int desc(struct cmdctx *cmdctx);
 
 #define OPT_DESC_CAPS         (1 << 0)
 #define OPT_DESC_REQS         (1 << 1)
-#define OPT_DESC_REQPKGS      (1 << 2)
-#define OPT_DESC_REVREQPKGS   (1 << 3)
-#define OPT_DESC_CNFLS        (1 << 4)
-#define OPT_DESC_DESCR        (1 << 5)
-#define OPT_DESC_FL           (1 << 6)
-#define OPT_DESC_FL_LONGFMT   (1 << 10)
-#define OPT_DESC_ALL          (OPT_DESC_CAPS | OPT_DESC_REQS |          \
+#define OPT_DESC_REQDIRS      (1 << 2)
+#define OPT_DESC_REQPKGS      (1 << 3)
+#define OPT_DESC_REVREQPKGS   (1 << 4)
+#define OPT_DESC_CNFLS        (1 << 5)
+#define OPT_DESC_DESCR        (1 << 6)
+#define OPT_DESC_FL           (1 << 7)
+#define OPT_DESC_FL_LONGFMT   (1 << 8)
+#define OPT_DESC_ALL          (OPT_DESC_CAPS | OPT_DESC_REQS | \
+                               OPT_DESC_REQDIRS |                       \
                                OPT_DESC_REQPKGS | OPT_DESC_REVREQPKGS | \
                                OPT_DESC_CNFLS |                         \
                                OPT_DESC_DESCR |                         \
@@ -75,7 +77,7 @@ static struct argp_option options[] = {
 
     { "requires",  'r', 0, 0,
       N_("Show requirements"), 1},
-    
+
     { "reqpkgs",  'R', 0, 0,
       N_("Show required packages"), 1},
 
@@ -129,6 +131,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 'r':
             cmdctx->_flags |= OPT_DESC_REQS;
+            cmdctx->_flags |= OPT_DESC_REQDIRS;
             break;
             
         case 'R':
@@ -236,6 +239,9 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
         
         if (pkg_eq_capreq(pkg, cr))
             continue;
+
+        if (capreq_is_bastard(cr))
+            continue;
         
         if (capreq_is_rpmlib(cr)) {
             nrpmreqs++;
@@ -263,13 +269,16 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
         int n = 0;
 
         ncol = IDENT;
-        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "PreReqs:");
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Requires(pre):");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
                 
             if (pkg_eq_capreq(pkg, cr))
                 continue;
-                
+
+            if (capreq_is_bastard(cr))
+                continue;
+            
             if (capreq_is_rpmlib(cr))
                 continue;
 
@@ -303,6 +312,9 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
                 continue;
                 
             if (capreq_is_rpmlib(cr))
+                continue;
+
+            if (capreq_is_bastard(cr))
                 continue;
 
             if (capreq_is_prereq(cr))
@@ -359,7 +371,7 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
         int n = 0;
 
         ncol = IDENT;
-        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "RPMReqs:");
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Requires(rpm):");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
 
@@ -380,6 +392,48 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
     }
 
 }
+
+static void show_reqdirs(struct cmdctx *cmdctx, struct pkg *pkg)
+{
+    int i, ncol = IDENT;
+    int term_width;
+    char *colon = ", ";
+    tn_array *dirs;
+    
+    
+    term_width = poldek_term_get_width() - RMARGIN;
+    dirs = pkg_required_dirs(pkg);
+    
+    if (dirs && n_array_size(dirs)) {
+        int n, hdr_printed = 0;
+        
+        ncol = IDENT;
+        n = n_array_size(dirs);
+        
+        for (i=0; i < n_array_size(dirs); i++) {
+            const char *dir = n_array_nth(dirs, i);
+            
+            if (hdr_printed == 0) {
+                cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Requires(dir):");
+                hdr_printed = 1;
+            }
+            	
+            if (ncol + (int)strlen(dir) >= term_width) {
+                ncol = SUBIDENT;
+                nlident(ncol);
+            }
+            
+            if (--n == 0)
+                colon = "";
+            
+            ncol += cmdctx_printf(cmdctx, "%s%s", dir, colon);
+        }
+        
+        if (hdr_printed)
+            cmdctx_printf(cmdctx, "\n");
+    }
+}
+
 
 static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg)
 {
@@ -689,7 +743,10 @@ static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags)
 
     if (flags & OPT_DESC_REQS)
         show_reqs(cmdctx, pkg);
-            
+
+    if (flags & OPT_DESC_REQDIRS)
+        show_reqdirs(cmdctx, pkg);
+    
     if (flags & OPT_DESC_REQPKGS) 
         show_reqpkgs(cmdctx, pkg);
 
