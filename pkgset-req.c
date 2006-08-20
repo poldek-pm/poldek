@@ -431,7 +431,8 @@ int psreq_find_match_packages(struct pkgset *ps,
     
     if (packages)
         *packages = NULL;
-    
+
+    nsuspkgs = 1024;            /* size of pkgsbuf */
     found = psreq_lookup(ps, req, &suspkgs, (struct pkg **)pkgsbuf, &nsuspkgs);
 
     if (!found)

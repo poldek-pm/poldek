@@ -505,7 +505,8 @@ int do_find_req(const struct pkg *pkg, struct capreq *req,
     *best_pkg = NULL;
     if (candidates)
         *candidates = NULL;
-    
+
+    nsuspkgs = 1024;            /* size of pkgsbuf */
     found = psreq_lookup(ps, req, &suspkgs, (struct pkg **)pkgsbuf, &nsuspkgs);
         
     if (found && nsuspkgs) {
