@@ -5,10 +5,11 @@
 #include <stdint.h>
 #include <trurl/narray.h>
 
-#include "fileindex.h"
 #include "capreqidx.h"
 
+struct file_index;
 struct pkgdir;
+
 struct pkgset {
     unsigned           flags;
     
@@ -31,7 +32,7 @@ struct pkgset {
     struct capreq_idx  req_idx;    /*  -"-               */
     struct capreq_idx  obs_idx;    /*  -"-               */
     struct capreq_idx  cnfl_idx;    /*  -"-               */
-    struct file_index  file_idx;   /* 'file'  => *pkg[]  */
+    struct file_index  *file_idx;   /* 'file'  => *pkg[]  */
 };
 
 #define PKGORDER_INSTALL     1

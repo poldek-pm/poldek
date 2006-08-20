@@ -23,8 +23,8 @@ struct file_index {
     const char *_last_dirname;
 };
 
-int  file_index_init(struct file_index *fi, int nelem);
-void file_index_destroy(struct file_index *fi);
+struct file_index *file_index_new(int nelem);
+void file_index_free(struct file_index *fi);
 
 void file_index_setup(struct file_index *fi); 
 

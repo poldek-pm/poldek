@@ -71,7 +71,8 @@ struct pm_module {
                          unsigned ldflags);
 
     struct pkgdir *(*db_to_pkgdir)(void *pm_rpm, const char *rootdir,
-                                   const char *dbpath, tn_hash *kw);
+                                   const char *dbpath, unsigned pkgdir_ldflags,
+                                   tn_hash *kw);
     int (*machine_score)(void *modh, int tag, const char *val);
 };
 

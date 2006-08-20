@@ -119,28 +119,34 @@ static int fent_cmp2str(const void *a,  const void *b)
 }
 
 
-int file_index_init(struct file_index *fi, int nelem)  
+struct file_index *file_index_new(int nelem)  
 {
+    tn_alloc *na;
+    struct file_index *fi;
+
+    na = n_alloc_new(32, TN_ALLOC_OBSTACK);
+
+    fi = na->na_malloc(na, sizeof(*fi));
     memset(fi, 0, sizeof(*fi));
     
-    fi->dirs = n_hash_new_na(NULL, nelem, (tn_fn_free)n_array_free);
-    if (fi->dirs == NULL)
-       return 0;
-    fi->cnflh = NULL;
+    fi->dirs = n_hash_new_na(na, nelem, (tn_fn_free)n_array_free);
     n_hash_ctl(fi->dirs, TN_HASH_NOCPKEY);
-    fi->na = n_alloc_new(128, TN_ALLOC_OBSTACK);
+    
+    fi->cnflh = NULL;
+    fi->na = na;
     fi->_last_files = NULL;
     fi->_last_dirname = NULL;
-    return 1;
+    return fi;
 }
 
 
-void file_index_destroy(struct file_index *fi) 
+void file_index_free(struct file_index *fi) 
 {
     n_hash_free(fi->dirs);
     fi->dirs = NULL;
+    if (fi->cnflh)
+        n_hash_free(fi->cnflh);
     n_alloc_free(fi->na);
-    memset(fi, 0, sizeof(*fi));
 }
 
 
@@ -206,6 +212,8 @@ int findfile(const struct file_index *fi,
     tn_array *files;
     struct file_ent *entp;
     int i = 1, n;
+
+    n_assert(size > 0);
     
     if ((files = n_hash_get(fi->dirs, dirname)) == NULL) {
         DBGF("%s: directory not found\n", dirname);

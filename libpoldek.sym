@@ -89,6 +89,7 @@ pkg_path
 pkg_path_s
 pkg_pkgdirpath
 pkg_printf
+pkg_required_dirs
 pkg_requires_versioned_cap
 pkg_satisfies_req
 pkg_set_arch

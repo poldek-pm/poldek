@@ -39,6 +39,7 @@
 #include "poldek_term.h"
 #include "pm/pm.h"
 #include "pkgdir/pkgdir.h"
+#include "fileindex.h"
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -92,7 +93,7 @@ void pkgset_free(struct pkgset *ps)
         capreq_idx_destroy(&ps->req_idx);
         capreq_idx_destroy(&ps->obs_idx);
         capreq_idx_destroy(&ps->cnfl_idx);
-        file_index_destroy(&ps->file_idx);
+        file_index_free(ps->file_idx);
         ps->flags &= (unsigned)~_PKGSET_INDEXES_INIT;
     }
     
@@ -214,7 +215,7 @@ static int pkgset_index(struct pkgset *ps)
     capreq_idx_init(&ps->req_idx,  CAPREQ_IDX_REQ, 4 * n_array_size(ps->pkgs));
     capreq_idx_init(&ps->obs_idx,  CAPREQ_IDX_REQ, n_array_size(ps->pkgs)/5 + 4);
     capreq_idx_init(&ps->cnfl_idx, CAPREQ_IDX_REQ, n_array_size(ps->pkgs)/5 + 4);
-    file_index_init(&ps->file_idx, 512);
+    ps->file_idx = file_index_new(512);
     ps->flags |= _PKGSET_INDEXES_INIT;
 
     for (i=0; i < n_array_size(ps->pkgs); i++) {
@@ -232,7 +233,7 @@ static int pkgset_index(struct pkgset *ps)
     capreq_idx_stats("req", &ps->req_idx);
     capreq_idx_stats("obs", &ps->obs_idx);
 #endif    
-    file_index_setup(&ps->file_idx);
+    file_index_setup(ps->file_idx);
     msg(3, " ..%d done\n", i);
     
     return 0;
@@ -295,7 +296,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     MEMINF("after index");
     v = poldek_VERBOSE;
     poldek_VERBOSE = -1;
-    file_index_find_conflicts(&ps->file_idx, strict);
+    file_index_find_conflicts(ps->file_idx, strict);
     poldek_VERBOSE = v;
  
     pkgset_verify_deps(ps, strict);
@@ -353,7 +354,7 @@ int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt)
                 capreq_idx_add(&ps->cnfl_idx, capreq_name(cnfl), pkg);
         }
     
-    pkgfl2fidx(pkg, &ps->file_idx, rt);
+    pkgfl2fidx(pkg, ps->file_idx, rt);
     return 1;
 }
 
@@ -399,7 +400,7 @@ int pkgset_remove_package(struct pkgset *ps, struct pkg *pkg)
             struct pkgfl_ent *flent = n_tuple_nth(pkg->fl, i);
             
             for (j=0; j < flent->items; j++)
-                file_index_remove(&ps->file_idx, flent->dirname,
+                file_index_remove(ps->file_idx, flent->dirname,
                                   flent->files[j]->basename, pkg);
         }
 
@@ -527,6 +528,35 @@ tn_array *find_capreq(struct pkgset *ps, tn_array *pkgs,
     return pkgs;
 }
 
+tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
+                               const char *dir)
+{
+    tn_array *tmp = pkgs_array_new(32);
+    int i;
+    
+        
+    for (i=0; i < n_array_size(ps->pkgdirs); i++) {
+        struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
+        
+        if (pkgdir->dirindex == NULL)
+            continue;
+
+        pkgdir_dirindex_get(pkgdir->dirindex, tmp, dir);
+    }
+
+    if (pkgs == NULL)
+        pkgs = n_array_clone(tmp);
+
+    for (i=0; i < n_array_size(tmp); i++) {
+        struct pkg *pkg = n_array_nth(tmp, i);
+        if (n_array_bsearch(ps->pkgs, pkg))
+            n_array_push(pkgs, pkg_link(pkg));
+    }
+    n_array_free(tmp);
+    return pkgs;
+}
+
+
 tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
                         const char *value)
 {
@@ -571,10 +601,15 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
             else {
                 struct pkg *buf[1024];
                 int i, n;
-                n = file_index_lookup(&ps->file_idx, value, 0, buf, 1024);
-                if (n > 0) {
+                n = file_index_lookup(ps->file_idx, value, 0, buf, 1024);
+                n_assert(n >= 0);
+                
+                if (n) {
                     for (i=0; i < n; i++)
                         n_array_push(pkgs, pkg_link(buf[i]));
+
+                } else {
+                    pkgset_search_reqdir(ps, pkgs, value);
                 }
             }
             break;
@@ -594,11 +629,11 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
     return pkgs;
 }
 
+
 void pkgset_report_fileconflicts(struct pkgset *ps, tn_array *pkgs)
 {
-    file_index_report_conflicts(&ps->file_idx, pkgs);
+    file_index_report_conflicts(ps->file_idx, pkgs);
 }
-
 
 int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps)
 {

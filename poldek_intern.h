@@ -28,10 +28,8 @@ struct poldek_ctx {
     struct pkgset    *ps;
     struct pm_ctx    *pmctx;
     int              _rpm_tscolor; /* rpm transaction color */
-//    tn_array       *inst_pkgs;  /* array of installed packages  */
-//    time_t         ts_instpkgs; /* inst_pkgs timestamp */
+    int              _depengine;
     
-//    struct pkgdir  *dbpkgdir;   /* db packages        */
     tn_hash        *_cnf;       /* runtime config */
     unsigned       _iflags;     /* internal flags */
     int            _refcnt;

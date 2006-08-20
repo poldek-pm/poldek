@@ -259,9 +259,12 @@ int load_dir(struct pkgdir *pkgdir,
 
     if (n && n > 200)
         msg(1, "_%d\n", n);
+    
     closedir(dir);
     if (mtime_index)
         n_hash_free(mtime_index);
+
+    pkgdir->ts = poldek_util_mtime(dirpath);
     return n;
 }
 

@@ -29,8 +29,11 @@
 #include "pkgmisc.h"
 #include "capreq.h"
 #include "pkgset-req.h"
+#include "fileindex.h"
 
 extern int poldek_conf_MULTILIB;
+extern tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
+                                      const char *dir);
 
 void *pkg_na_malloc(struct pkg *pkg, size_t size);
 
@@ -304,10 +307,10 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
 {
     const struct capreq_idx_ent *ent;
     char *reqname;
-    int matched;
-
+    int matched, pkgsbuf_size;
 
     reqname = capreq_name(req);
+    pkgsbuf_size = *npkgs;
     *npkgs = 0;
     matched = 0;
 
@@ -316,14 +319,30 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         *npkgs = ent->items;
         matched = 1;
         
-    } else if (*reqname == '/') {
+    } else if (capreq_is_file(req)) {
         int n;
         
-        n = file_index_lookup(&ps->file_idx, reqname, 0, pkgsbuf, *npkgs);
-        if (n > 0) {
+        n = file_index_lookup(ps->file_idx, reqname, 0, pkgsbuf, pkgsbuf_size);
+        n_assert(n >= 0);
+        if (n) {
             *npkgs = n;
             matched = 1;
             *suspkgs = pkgsbuf;
+            
+        } else {                /* n is 0 */
+            tn_array *pkgs;
+            if ((pkgs = pkgset_search_reqdir(ps, NULL, reqname))) {
+                while (n_array_size(pkgs)) {
+                    pkgsbuf[n++] = n_array_shift(pkgs);
+                    if (n == pkgsbuf_size)
+                        break;
+                }
+                
+                *npkgs = n;
+                matched = 1;
+                *suspkgs = pkgsbuf;
+                n_array_free(pkgs);
+            }
         }
     }
 

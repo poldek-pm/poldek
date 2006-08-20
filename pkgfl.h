@@ -83,6 +83,10 @@ const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile);
 const char *pkgfl_it_get_rawargs(struct pkgfl_it *it, uint32_t *size, uint16_t *mode,
                                  const char **basename);
 
+/* extract owned and required directories */
+int pkgfl_owned_and_required_dirs(tn_tuple *fl, tn_array **owned,
+                                  tn_array **required);
+
 #endif /* POLDEK_PKGFL_H */
 
 

@@ -63,7 +63,7 @@
 #include "poldek.h"
 #include "poldek_intern.h"
 #include "pm/pm.h"
-
+#include "pkgfl.h"
 
 #define DBPKG_ORPHANS_PROCESSED   (1 << 15) /* is its orphan processed ?*/
 #define DBPKG_DEPS_PROCESSED      (1 << 16) /* is its deps processed? */

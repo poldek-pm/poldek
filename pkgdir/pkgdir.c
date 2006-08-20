@@ -49,6 +49,7 @@
 #include "capreq.h"
 #include "pkgroup.h"
 #include "pkgmisc.h"
+#include "pkgdir_dirindex.h"
 
 tn_hash *pkgdir__avlangs_new(void)
 {
@@ -254,6 +255,7 @@ struct pkgdir *pkgdir_malloc(void)
     pkgdir->lc_lang = NULL;
     pkgdir->mod = pkgdir->mod_data = NULL;
     pkgdir->na = n_alloc_new(128, TN_ALLOC_OBSTACK);
+    pkgdir->dirindex = NULL;
     return pkgdir;
 }
 
@@ -550,6 +552,9 @@ void pkgdir_free(struct pkgdir *pkgdir)
 
     if (pkgdir->prev_pkgdir)
         pkgdir_free(pkgdir->prev_pkgdir);
+
+    if (pkgdir->dirindex)
+        pkgdir_dirindex_close(pkgdir->dirindex);
     
     memset(pkgdir, 0, sizeof(*pkgdir));
     free(pkgdir);
@@ -611,6 +616,9 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         rc = 1;
         pkgdir->flags |= PKGDIR_LOADED;
 
+        if (ldflags & PKGDIR_LD_DIRINDEX)
+            pkgdir_dirindex_create(pkgdir);
+        
         n_array_sort(pkgdir->pkgs);
         for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
@@ -632,12 +640,16 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     msgn(3, ngettext("%d package loaded",
                      "%d packages loaded", n_array_size(pkgdir->pkgs)),
          n_array_size(pkgdir->pkgs));
-    
+
+    n_assert(pkgdir->ts);       /* ts must be set by backend */
     if (pkgdir->ts == 0)
 		pkgdir->ts = time(0);
     
     pkgdir->_ldflags = ldflags;
     
+    if (ldflags & PKGDIR_LD_DIRINDEX)
+        pkgdir->dirindex = pkgdir_dirindex_open(pkgdir);
+
     return rc;
 }
 

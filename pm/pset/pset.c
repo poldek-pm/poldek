@@ -805,7 +805,8 @@ int pm_pset_commitdb(void *dbh)
 
 
 struct pkgdir *pm_pset_db_to_pkgdir(void *pm_pset, const char *rootdir,
-                                    const char *dbpath, tn_hash *kw)
+                                    const char *dbpath, unsigned pkgdir_ldflags,
+                                    tn_hash *kw)
 {
     struct pm_pset *pm = pm_pset;
     struct source *src;
@@ -839,7 +840,7 @@ struct pkgdir *pm_pset_db_to_pkgdir(void *pm_pset, const char *rootdir,
     if (dir == NULL)
         return NULL;
     
-    if (!pkgdir_load(dir, 0, 0)) {
+    if (!pkgdir_load(dir, NULL, pkgdir_ldflags)) {
         pkgdir_free(dir);
         return NULL;
     }

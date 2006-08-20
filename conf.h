@@ -16,10 +16,9 @@ tn_hash *poldek_conf_loadefault(unsigned flags);
 
 
 /*
-  Adds to htconf parameters discovered from lines. If htconf is NULL
-  then it is created. Caution: parameters from lines overwrite
-  previously discovered ones, i.e. if lines = [ 'foo = a', 'foo = b' ]
-  then 'foo' value will be 'b'
+  Adds to htconf parameters discovered from lines; htconf is created if NULL.
+  Caution: parameters from lines overwrite previously discovered ones, i.e.
+  if lines = [ 'foo = a', 'foo = b' ] then 'foo' value will be 'b'
 */
 tn_hash *poldek_conf_addlines(tn_hash *htconf, const char *sectnam,
                               tn_array *lines);

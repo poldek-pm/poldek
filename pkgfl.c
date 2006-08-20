@@ -636,65 +636,65 @@ const char *pkgfl_it_get_rawargs(struct pkgfl_it *it, uint32_t *size, uint16_t *
     return path;
 }
 
-/* returns list of directories not belong to filelist itself */
 int pkgfl_owned_and_required_dirs(tn_tuple *fl, tn_array **owned,
                                   tn_array **required)
 {
-    const char *dn = NULL;
-    int i, dnlen, r;
+    int i, j, n;
     tn_array *od = NULL, *rd = NULL;
+    tn_hash *oh = n_hash_new(n_tuple_size(fl), free);
 
-    if (owned)
-        od = n_array_new(n_tuple_size(fl), NULL, (tn_fn_cmp)strcmp);
-    
-    if (required)
-        rd = n_array_new(n_tuple_size(fl), NULL, (tn_fn_cmp)strcmp);
+    n_assert(owned);
     
     for (i=0; i < n_tuple_size(fl); i++) {
         struct pkgfl_ent *flent = n_tuple_nth(fl, i);
 
-        if (dn && strncmp(dn, flent->dirname, dnlen) == 0) {
-            if (od)
-                n_array_push(od, flent->dirname);
-            continue;
+        for (j=0; j < flent->items; j++) {
+            struct flfile     *f = flent->files[j];
+            char              dir[PATH_MAX];
+            
+            if (S_ISDIR(f->mode)) {
+                n_snprintf(dir, sizeof(dir), "%s/%s", flent->dirname, f->basename);
+                n_hash_insert(oh, dir, NULL);
+            }
         }
-        
-        dn = flent->dirname;
-        if (*dn == '/' && *(dn + 1) == '\0') {
-            dn = "";
-            dnlen = 0;
-            continue;
-        }
-        
-        dnlen = strlen(dn);
-        if (rd)
-            n_array_push(rd, dn);
     }
+    
+    n = 0;
+    od = n_hash_keys_cp(oh);
+    
+    if (required) {
+        rd = n_array_clone(od);
+        
+        for (i=0; i < n_tuple_size(fl); i++) {
+            struct pkgfl_ent *flent = n_tuple_nth(fl, i);
+            if (!n_hash_exists(oh, flent->dirname))
+                n_array_push(rd, n_strdup(flent->dirname));
+        }
+        
+        if (n_array_size(rd) == 0)
+            n_array_cfree(&rd);
+        else
+            n += n_array_size(rd);
+        
+        *required = rd;
+    }
+    n_hash_free(oh);
 
-    r = 0;
+    if (n_array_size(od) == 0)
+        n_array_cfree(&od);
+    else
+        n += n_array_size(od);
+
+    
     if (od) {
-        *owned = od;
-        for (i = 0; i < n_array_size(od); i++)            
-            printf("O %s\n", n_array_nth(od, i));
-        r += i;
+        //for (i = 0; i < n_array_size(od); i++)            
+        //    printf("O %s\n", n_array_nth(od, i));
     }
     
     if (rd) {
-        *required = rd;
-        for (i = 0; i < n_array_size(rd); i++)            
-            printf("R %s\n", n_array_nth(rd, i));
-        r += i;
+        //for (i = 0; i < n_array_size(rd); i++)            
+        //    printf("R %s\n", n_array_nth(rd, i));
     }
-    return r;
+    return n;
 }
 
-tn_array *pkgfl_required_directories(tn_tuple *fl) 
-{
-    tn_array *required = NULL;
-
-    pkgfl_owned_and_required_dirs(fl, NULL, &required);
-
-    return required;
-}
-
-                             

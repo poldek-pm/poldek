@@ -53,10 +53,10 @@ static int poldeklib_init_called = 0;
 #define SOURCES_LOADED      (1 << 3)
 #define SETUP_DONE          (1 << 4)  
 
-const char poldek_BUG_MAILADDR[] = "<mis@pld.org.pl>";
+const char poldek_BUG_MAILADDR[] = "<mis@pld-linux.org>";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
 const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
-"Copyright (C) 2000-2005 Pawel A. Gajda <mis@pld.org.pl>\n"
+"Copyright (C) 2000-2006 Pawel A. Gajda <mis@pld-linux.org>\n"
 "This program may be freely redistributed under the terms of the GNU GPL v2";
 
 static const char *poldek_logprefix = "poldek";
@@ -1283,8 +1283,16 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
                 case POLDEK_OP_MULTILIB: /* do not touch, will
                                             be determined later */
                     break;
+
+                case POLDEK_OP_AUTODIRDEP:
+                    v = 0;
+#ifdef HAVE_RPMDSUNAME          /* rpmdsUname - rpm 4.4.6  */
+                    v = 1;
+#endif
+                    break;
                     
                 default:
+                    logn(LOGERR, "unhandled %s", ent->name);
                     n_assert(0);
             }
             DBGF("auto %s  = %d\n",  ent->name,  v);
@@ -1509,6 +1517,14 @@ int poldek_setup(struct poldek_ctx *ctx)
         rc = 0;
 
     vfile_setup();
+
+    ctx->_depengine = 2; /* XXX: should be extracted from conf_sections.c */
+    if (ctx->htconf) {
+        tn_hash *htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+        ctx->_depengine = poldek_conf_get_int(htcnf, "dependency engine version",
+                                              ctx->_depengine);
+    }
+
     ctx->_iflags |= SETUP_DONE;
     return rc;
 }
@@ -1534,9 +1550,10 @@ int poldek_load_sources(struct poldek_ctx *ctx)
     return rc;
 }
 
-struct pkgdir *poldek_load_destination_pkgdir(struct poldek_ctx *ctx)
+struct pkgdir *poldek_load_destination_pkgdir(struct poldek_ctx *ctx,
+                                              unsigned ldflags)
 {
-    return pkgdb_to_pkgdir(ctx->pmctx, ctx->ts->rootdir, NULL, NULL);
+    return pkgdb_to_pkgdir(ctx->pmctx, ctx->ts->rootdir, NULL, ldflags, NULL);
 }
 
 int poldek_is_interactive_on(const struct poldek_ctx *ctx)

@@ -26,7 +26,7 @@
 #include "dbdep.h"
 #include "pm/pm.h"
 #include "poldek_term.h"
-
+#include "pkgfl.h"
 
 struct poldek_ts;
 struct pkgmark_set;

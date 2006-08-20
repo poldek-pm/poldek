@@ -215,6 +215,7 @@ struct pkg *pm_load_package(struct pm_ctx *ctx,
                             tn_alloc *na, const char *path, unsigned ldflags);
 struct pkgdir;
 struct pkgdir *pkgdb_to_pkgdir(struct pm_ctx *ctx, const char *rootdir,
-                               const char *path, const char *key, ...);
+                               const char *path, unsigned pkgdir_ldflags,
+                               const char *key, ...);
 
 #endif

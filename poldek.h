@@ -81,7 +81,8 @@ tn_array *poldek_search_avail_packages(struct poldek_ctx *ctx,
 tn_array *poldek_get_avail_packages(struct poldek_ctx *ctx);
 
 
-struct pkgdir *poldek_load_destination_pkgdir(struct poldek_ctx *ctx);
+struct pkgdir *poldek_load_destination_pkgdir(struct poldek_ctx *ctx, 
+                                              unsigned ldflags);
 
 int poldek_split(const struct poldek_ctx *ctx, unsigned size_mb,
                  unsigned first_free_space_mb, const char *outprefix);

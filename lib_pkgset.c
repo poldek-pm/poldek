@@ -66,6 +66,9 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
 
     if (strcmp(pm_get_name(ctx->pmctx), "pset") == 0)
         ldflags |= PKGDIR_LD_FULLFLIST;
+
+    if (ctx->ts->getop(ctx->ts, POLDEK_OP_AUTODIRDEP))
+        ldflags |= PKGDIR_LD_DIRINDEX;
     
     if (!pkgset_load(ps, ldflags, ctx->sources))
         logn(LOGWARN, _("no packages loaded"));

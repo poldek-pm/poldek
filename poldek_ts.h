@@ -47,7 +47,8 @@ enum poldek_ts_opt {
     POLDEK_OP_AGGREEDY,
     POLDEK_OP_ALLOWDUPS, 
     POLDEK_OP_NODEPS,  /* rpm --nodeps */
-
+    POLDEK_OP_AUTODIRDEP, /* auto directory deps from rpm 4.4.6 */
+    
     POLDEK_OP_CAPLOOKUP,
     POLDEK_OP_MULTILIB,
     POLDEK_OP_FORCE,  /* rpm --force  */

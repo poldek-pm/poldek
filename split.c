@@ -25,6 +25,7 @@
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nmalloc.h>
+#include <trurl/n_snprintf.h>
 
 #include <vfile/vfile.h>
 

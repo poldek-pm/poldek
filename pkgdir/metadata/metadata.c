@@ -212,12 +212,12 @@ int idx_open(struct idx *idx, struct pkgdir *pkgdir, int vfmode)
     
     if (!open_repomd(idx, pkgdir->path, vfmode, pdir_name))
         return 0;
-    
+   
     vf = open_metadata_file(idx->repomd, pkgdir->path, "primary", vfmode,
                             pdir_name, 0);
     
     if (vf) {
-        vfile_close(vf);
+        vfile_close(vf); /* just download primary.xml */
         
     } else {
         n_hash_free(idx->repomd);
@@ -253,6 +253,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     if (!idx_open(&idx, pkgdir, vfmode))
         return 0;
     
+    pkgdir->ts = poldek_util_mtime(vfile_localpath(idx.repomd_vf));
     pkgdir->mod_data = n_malloc(sizeof(idx));
     memcpy(pkgdir->mod_data, &idx, sizeof(idx));
     pkgdir->pkgroups = NULL;

@@ -220,6 +220,9 @@ char *pkg_evr_snprintf_s(const struct pkg *pkg);
 struct pkguinf *pkg_uinf(const struct pkg *pkg);
 struct pkguinf *pkg_xuinf(const struct pkg *pkg, tn_array *langs);
 
+/* directories required by package */
+tn_array *pkg_required_dirs(const struct pkg *pkg);
+
 struct pkgflist {
     tn_tuple *fl;
     tn_alloc *_na;

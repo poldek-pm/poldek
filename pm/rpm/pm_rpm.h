@@ -129,7 +129,8 @@ int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val);
 
 struct pkgdir;
 struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
-                                   const char *dbpath, tn_hash *kw);
+                                   const char *dbpath, unsigned pkgdir_ldflags,
+                                   tn_hash *kw);
 
 int pm_rpm_arch_score(const char *arch);
 int pm_rpm_vercmp(const char *one, const char *two);

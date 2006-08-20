@@ -197,11 +197,12 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     pkgdir->mod_data = n_malloc(sizeof(idx));
     memcpy(pkgdir->mod_data, &idx, sizeof(idx));
     pkgdir->pkgroups = pkgroups;
-
+    pkgdir->ts = poldek_util_mtime(vfile_localpath(idx.vf));
+    
     DBGF("%d entries\n", n_array_size(idx.ents));
     if (nerr)
         idx_close(&idx);
-    
+        
     return nerr == 0;
 }
 

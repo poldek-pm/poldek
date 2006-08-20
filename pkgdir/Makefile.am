@@ -14,10 +14,11 @@ noinst_LTLIBRARIES = libpkgdir.la
 libpkgdir_la_SOURCES  = \
 			source.c source.h \
 			pkgdir.c pkgdir.h pkgdir_intern.h \
+			pkgdir_dirindex.c pkgdir_dirindex.h \
 			pkgdir_patch.c    \
 			pkgdir_clean.c    \
 			mod.c             \
-			pkg_store.c pkg_restore.c pkg_store.h 
+			pkg_store.c pkg_restore.c pkg_store.h
 
 pkgdir_modules = dir/libpkgdir_dir.la  \
 		 hdrl/libpkgdir_hdrl.la    \

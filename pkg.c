@@ -949,6 +949,12 @@ struct pkguinf *pkg_uinf(const struct pkg *pkg)
     return pkgu;
 }
 
+tn_array *pkg_required_dirs(const struct pkg *pkg) 
+{
+    if (pkg->pkgdir && pkg->pkgdir->dirindex)
+        return pkgdir_dirindex_get_reqdirs(pkg->pkgdir->dirindex, pkg);
+    return NULL;
+}
 
 static
 tn_tuple *do_pkg_other_fl(tn_alloc *na, const struct pkg *pkg) 

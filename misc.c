@@ -669,7 +669,15 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
     return dest;
 }
 
+time_t poldek_util_mtime(const char *path)
+{
+    struct stat st;
+    
+    if (stat(path, &st) != 0)
+        return 0;
 
+    return st.st_mtime;
+}
 
 const char *poldek_util_expand_env_vars(char *dest, int size, const char *str)
 {

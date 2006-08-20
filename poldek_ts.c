@@ -39,6 +39,7 @@
 #include "log.h"
 #include "i18n.h"
 #include "install/install.h"
+#include "fileindex.h"
 
 extern int poldek_conf_PROMOTE_EPOCH;
 extern int poldek_conf_MULTILIB;
@@ -1027,10 +1028,12 @@ int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     pkgdb_tx_begin(ts->db);
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
 
-    if (poldek_conf_MULTILIB || getenv("POLDEK2")) {    /* early alpha */
-        msgn(2, "Running poldek2 dependency engine...");
+    if (poldek_conf_MULTILIB || ts->ctx->_depengine == 2) {
+        msgn(5, "Running poldek2 dependency engine...");
         rc = in_do_poldek_ts_install(ts, iinf);
+        
     } else {
+        msgn(5, "Running poldek1 dependency engine...");
         rc = do_poldek_ts_install(ts, iinf);
     }
 
@@ -1126,17 +1129,17 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
 
     if (ts->getop(ts, POLDEK_OP_VRFY_FILECNFLS)) {
         msgn(0, _("Verifying file conflicts..."));
-        file_index_report_conflicts(&ts->ctx->ps->file_idx, pkgs);
+        file_index_report_conflicts(ts->ctx->ps->file_idx, pkgs);
     }
 
     if (ts->getop(ts, POLDEK_OP_VRFY_FILEORPHANS)) {
         msgn(0, _("Verifying file orphans..."));
-        file_index_report_orphans(&ts->ctx->ps->file_idx, pkgs);
+        file_index_report_orphans(ts->ctx->ps->file_idx, pkgs);
     }
 
     if (ts->getop(ts, POLDEK_OP_VRFY_FILEMISSDEPS)) {
         msgn(0, _("Verifying file semi-orphans (missing dependencies)..."));
-        file_index_report_semiorphans(&ts->ctx->ps->file_idx, pkgs);
+        file_index_report_semiorphans(ts->ctx->ps->file_idx, pkgs);
     }
 
     n_array_free(pkgs);

@@ -42,6 +42,7 @@ struct pkg *pm_pset_ldhdr(tn_alloc *na, void *hdr, const char *fname,
 tn_array *pm_pset_ldhdr_capreqs(tn_array *arr, void *hdr, int crtype);
 
 struct pkgdir *pm_pset_db_to_pkgdir(void *pm_pset, const char *rootdir,
-                                    const char *dbpath, tn_hash *kw);
+                                    const char *dbpath, unsigned pkgdir_ldflags,
+                                    tn_hash *kw);
 
 #endif

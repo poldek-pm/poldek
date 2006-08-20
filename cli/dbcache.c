@@ -141,12 +141,16 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     const char      *lc_lang;
     struct pkgdir   *dir = NULL;
     struct pm_ctx   *pmctx;
+    unsigned        ldflags = PKGDIR_LD_NOUNIQ;
+
+    if (cctx->ctx->ts->getop(cctx->ctx->ts, POLDEK_OP_AUTODIRDEP))
+        ldflags |= PKGDIR_LD_DIRINDEX;
 
     pmctx = poldek_get_pmctx(cctx->ctx);
 
     DBGF("reload %d\n", reload);
     if (!pm_dbpath(pmctx, dbpath, sizeof(dbpath)))
-        return poldek_load_destination_pkgdir(cctx->ctx);
+        return poldek_load_destination_pkgdir(cctx->ctx, ldflags);
     
     if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
                      cctx->ctx->ts->rootdir, dbpath) == NULL)
@@ -160,6 +164,9 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     lc_lang = poldek_util_lc_lang("LC_MESSAGES");
     if (lc_lang == NULL) 
         lc_lang = "C";
+
+    if (cctx->ctx->ts->getop(cctx->ctx->ts, POLDEK_OP_AUTODIRDEP))
+        ldflags |= PKGDIR_LD_DIRINDEX;
     
     if (!reload) {              /* use cache */
         time_t mtime_rpmdb, mtime_dbcache;
@@ -169,7 +176,7 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
             dir = pkgdir_open_ext(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE,
                                   dbpath, NULL, 0, lc_lang);
             if (dir)
-                if (!pkgdir_load(dir, NULL, PKGDIR_LD_NOUNIQ)) {
+                if (!pkgdir_load(dir, NULL, ldflags)) {
                     pkgdir_free(dir);
                     dir = NULL;
                 }
@@ -178,7 +185,7 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     
     if (dir == NULL) {
         DBGF("lddb\n");
-        dir = poldek_load_destination_pkgdir(cctx->ctx);
+        dir = poldek_load_destination_pkgdir(cctx->ctx, ldflags);
     }
     
     if (dir == NULL)

@@ -23,9 +23,21 @@
 
 #define PKGDIR_VRFYSIGN            (PKGDIR_VRFY_GPG | PKGDIR_VRFY_PGP)
 
+struct pkgdir_dirindex;
+struct pkg;
+
+/* prototypes from pkgdir_dirindex.h */
+extern tn_array *pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
+                                     tn_array *pkgs, const char *path);
+
+extern tn_array *pkgdir_dirindex_get_reqdirs(
+    const struct pkgdir_dirindex *dirindex,
+    const struct pkg *pkg);
+
+
 struct pkgdir_module;
 struct pm_ctx;
-
+                                              
 struct pkgdir {
     char                 *type;
     char                 *name;            /* name  */
@@ -53,6 +65,7 @@ struct pkgdir {
     tn_hash             *avlangs_h; 
     tn_array            *langs;           /* used languages      */
 
+    struct pkgdir_dirindex *dirindex;
     struct pkgdir       *prev_pkgdir;
 
     struct source       *src;            /* reference to its source (if any) */
@@ -105,6 +118,7 @@ struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
 #define PKGDIR_LD_DESC        (1 << 2) /* load pkg info to memory */
 #define PKGDIR_LD_NOUNIQ      (1 << 3) /* don't perform pkgdir_uniq() */
 #define PKGDIR_LD_DOIGNORE    (1 << 4) /* honour src->ign_patterns */
+#define PKGDIR_LD_DIRINDEX    (1 << 5) /* handle rpm 4.4.6 auto deps */
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 

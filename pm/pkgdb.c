@@ -659,7 +659,8 @@ int pkgdb_get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
 }
 
 struct pkgdir *pkgdb_to_pkgdir(struct pm_ctx *ctx, const char *rootdir,
-                               const char *path, const char *key, ...)
+                               const char *path, unsigned pkgdir_ldflags,
+                               const char *key, ...)
 {
     struct pkgdb *db;
     struct pkgdir *pkgdir;
@@ -673,7 +674,7 @@ struct pkgdir *pkgdb_to_pkgdir(struct pm_ctx *ctx, const char *rootdir,
     va_end(ap);
 
     pkgdir = ctx->mod->db_to_pkgdir(ctx->modh, db->rootdir,
-                                    db->path, db->kw);
+                                    db->path, pkgdir_ldflags, db->kw);
     pkgdb_free(db);
     return pkgdir;
 }
