@@ -298,13 +298,13 @@ static int dirindex_path(char *path, int size, struct pkgdir *pkgdir)
 
     n_snprintf(tmp2, sizeof(tmp2), "%s/dirindex-of-%s.tndb", ofpath, pkgdir->type);
     n_snprintf(tmp2, sizeof(tmp2), "%s", ofpath);
-    DBGF_F("path = %s\n", ofpath);
+    DBGF("path = %s\n", ofpath);
     n = vf_cachepath(path, size, ofpath);
-    DBGF_F("cache path = %s\n", path);
+    DBGF("cache path = %s\n", path);
 
     n_assert(n > 0);
     n += n_snprintf(&path[n], size - n, "/dirindex-of-%s.tndb", pkgdir->type);
-    DBGF_F("result = %s\n", path);
+    DBGF("result = %s\n", path);
 
     return n;
 }
