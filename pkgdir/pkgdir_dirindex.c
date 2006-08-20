@@ -171,16 +171,16 @@ void index_package(uint32_t nth, struct pkg *pkg, struct tndb *db,
     //   return;
     
     if (pkgfl_owned_and_required_dirs(flist->fl, &owned, &required) == 0) {
+        DBGF("%s: NULL\n", pkg_id(pkg));
         pkgflist_free(flist);
         return;
     }
-
+    DBGF("%s: %d %d\n", pkg_id(pkg), owned ? n_array_size(owned): -1,
+         required ? n_array_size(required): -1);
+    
     if (owned) {
         for (i=0; i < n_array_size(owned); i++) {
             const char *dir = n_array_nth(owned, i);
-            if (strcmp(dir, "usr/bin") == 0)
-                printf("BIN %s\n", pkg_id(pkg));
-            
             add_to_hash(index, dir, nth);
         }
         n_array_free(owned);
@@ -222,7 +222,9 @@ int do_pkgdir_dirindex_create(struct pkgdir *pkgdir, const char *path)
 
     n_strdupap(path, &tmp);
     dir = n_dirname(tmp);
-    printf("mkdir %s %s\n", path, dir);
+
+    DBGF("mkdir %s %s\n", path, dir);
+    
     if ((lock = vf_lock_mkdir(dir)) == NULL)
         return 0;
 
@@ -263,6 +265,7 @@ int do_pkgdir_dirindex_create(struct pkgdir *pkgdir, const char *path)
 
         n_buf_clean(nbuf);
         nbuf = dirarray_join(nbuf, ids, ":");
+        DBGF("%s %s\n", path,  n_buf_ptr(nbuf));
         
         tndb_put(db, path, strlen(path), n_buf_ptr(nbuf), n_buf_size(nbuf));
     }
@@ -530,12 +533,16 @@ tn_array *pkgdir_dirindex_get_reqdirs(const struct pkgdir_dirindex *dirindex,
     return dirs;
 }
 
-tn_array *pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
-                              tn_array *pkgs, const char *path)
+static
+int do_pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
+                           tn_array **pkgs_ptr, const struct pkg *pkg,
+                           const char *path)
 {
     const char  **tl, **tl_save;
+    tn_array    *pkgs = NULL;
     char        val[8192];
-    int         n, pkgs_passed = 0;
+    int         n, found;
+    
 #if DEVEL    
     static int  xx = 0;
 #endif    
@@ -543,21 +550,23 @@ tn_array *pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
     if (*path == '/')
         path++;
     
-    if (!tndb_get_str(dirindex->db, path, val, sizeof(val)))
-        return NULL;
-    
-    if (pkgs)
-        pkgs_passed = 1;
+    if (!tndb_get_str(dirindex->db, path, val, sizeof(val))) {
+        return 0;
+    }
+    DBGF("%s: FOUND\n", path);
     
     tl = tl_save = n_str_tokl_n(val, ":", &n);
     
     if (n) {
-        //if (pkgs == NULL)
-        pkgs = pkgs_array_new(n);
+        if (pkgs_ptr)
+            pkgs = *pkgs_ptr;
+        
+        if (pkgs == NULL)
+            pkgs = pkgs_array_new(n);
 
         while (*tl) {
             const char *id = *tl;
-            struct pkg *pkg;
+            struct pkg *p;
         
             tl++;
 
@@ -565,12 +574,19 @@ tn_array *pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
                 continue;
         
             id += 2;            /* skipping _KEY_PKGID */
-            pkg = n_hash_get(dirindex->idmap, id);
-            if (pkg)
-                n_array_push(pkgs, pkg);
+            if ((p = n_hash_get(dirindex->idmap, id)) == NULL)
+                continue;
+            
+            if (pkgs) 
+                n_array_push(pkgs, pkg_link(p));
+                
+            else if (p == pkg) {
+                found = 1;
+                break;
+            }
         }
 #if DEVEL        
-        if (0)
+        if (pkgs)
         {
             int i;
             xx++;
@@ -584,9 +600,38 @@ tn_array *pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
     }
 
     n_str_tokl_free(tl_save);
+
+    if (pkgs_ptr) {
+        *pkgs_ptr = pkgs;
+        found = 1;
+        n_assert(pkgs);
+        n_assert(n_array_size(pkgs));
+    }
     
-    if (!pkgs_passed && pkgs && n_array_size(pkgs) == 0)
+    return found;
+}
+
+tn_array *pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
+                              tn_array *pkgs, const char *path)
+{
+    int pkgs_passsed = 1;
+    
+    if (pkgs == NULL) {
+        pkgs = pkgs_array_new(4);
+        pkgs_passsed = 0;
+    }
+    
+    if (!do_pkgdir_dirindex_get(dirindex, &pkgs, NULL, path) && !pkgs_passsed)
         n_array_cfree(&pkgs);
     
-    return pkgs ? (n_array_size(pkgs) ? pkgs : NULL) : NULL;
+    DBGF("ret %p %d\n", pkgs, pkgs ? n_array_size(pkgs): -1);
+    
+    return pkgs ? (n_array_size(pkgs) ? pkgs : NULL) : NULL;  
+}
+
+int pkgdir_dirindex_pkg_has_path(const struct pkgdir_dirindex *dirindex,
+                                 const struct pkg *pkg, const char *path)
+{
+    DBGF("%s %s\n", pkg_id(pkg), path);
+    return do_pkgdir_dirindex_get(dirindex, NULL, pkg, path);
 }

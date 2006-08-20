@@ -17,6 +17,9 @@ int pkgdir_dirindex_create(struct pkgdir *pkgdir);
 /* returns packages having path */
 tn_array *pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
                               tn_array *pkgs, const char *path);
+/* path belongs to pkg? */
+int pkgdir_dirindex_pkg_has_path(const struct pkgdir_dirindex *dirindex,
+                                 const struct pkg *pkg, const char *path);
 
 /* returns directories required by package */
 tn_array *pkgdir_dirindex_get_reqdirs(const struct pkgdir_dirindex *dirindex,

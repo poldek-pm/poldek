@@ -34,6 +34,10 @@ extern tn_array *pkgdir_dirindex_get_reqdirs(
     const struct pkgdir_dirindex *dirindex,
     const struct pkg *pkg);
 
+extern int pkgdir_dirindex_pkg_has_path(const struct pkgdir_dirindex *dirindex,
+                                        const struct pkg *pkg,
+                                        const char *path);
+
 
 struct pkgdir_module;
 struct pm_ctx;

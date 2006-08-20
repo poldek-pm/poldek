@@ -106,6 +106,13 @@ const struct pkg *dbpkg_set_provides(struct dbpkg_set *dbpkg_set,
         path[PATH_MAX - 1] = '\0';
         n_basedirnam(path, &dirname, &basename);
         n_assert(dirname);
+        
+        if (*dirname == '\0') { /* path = "/foo" */
+            char *tmp;
+            n_strdupap("/", &tmp);
+            dirname = tmp;
+        }
+        
         n_assert(*dirname);
         if (*dirname == '/' && *(dirname + 1) != '\0')
             dirname++;

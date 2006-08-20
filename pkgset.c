@@ -532,7 +532,7 @@ tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
                                const char *dir)
 {
     tn_array *tmp = pkgs_array_new(32);
-    int i;
+    int i, pkgs_passsed = 1;
     
         
     for (i=0; i < n_array_size(ps->pkgdirs); i++) {
@@ -544,15 +544,21 @@ tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
         pkgdir_dirindex_get(pkgdir->dirindex, tmp, dir);
     }
 
-    if (pkgs == NULL)
+    if (pkgs == NULL) {
         pkgs = n_array_clone(tmp);
-
+        pkgs_passsed = 0;
+    }
+    
     for (i=0; i < n_array_size(tmp); i++) {
         struct pkg *pkg = n_array_nth(tmp, i);
         if (n_array_bsearch(ps->pkgs, pkg))
             n_array_push(pkgs, pkg_link(pkg));
     }
     n_array_free(tmp);
+
+    if (pkgs_passsed && n_array_size(pkgs) == 0)
+        n_array_cfree(&pkgs);
+    
     return pkgs;
 }
 

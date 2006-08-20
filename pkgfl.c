@@ -653,7 +653,17 @@ int pkgfl_owned_and_required_dirs(tn_tuple *fl, tn_array **owned,
             char              dir[PATH_MAX];
             
             if (S_ISDIR(f->mode)) {
-                n_snprintf(dir, sizeof(dir), "%s/%s", flent->dirname, f->basename);
+                if (*flent->dirname != '/')
+                    n_snprintf(dir, sizeof(dir), "%s/%s", flent->dirname,
+                               f->basename);
+                
+                else if (*f->basename == '\0')
+                    n_snprintf(dir, sizeof(dir), "%s", flent->dirname);
+                
+                else
+                    n_snprintf(dir, sizeof(dir), "%s", f->basename);
+
+                DBGF("dir (%s) (%s) -> %s\n", flent->dirname, f->basename, dir);
                 n_hash_insert(oh, dir, NULL);
             }
         }
@@ -661,7 +671,7 @@ int pkgfl_owned_and_required_dirs(tn_tuple *fl, tn_array **owned,
     
     n = 0;
     od = n_hash_keys_cp(oh);
-    
+
     if (required) {
         rd = n_array_clone(od);
         
@@ -684,17 +694,21 @@ int pkgfl_owned_and_required_dirs(tn_tuple *fl, tn_array **owned,
         n_array_cfree(&od);
     else
         n += n_array_size(od);
-
+           
+    *owned = od;
     
+#if DEVEL    
     if (od) {
-        //for (i = 0; i < n_array_size(od); i++)            
-        //    printf("O %s\n", n_array_nth(od, i));
+        for (i = 0; i < n_array_size(od); i++)            
+            printf("O %s\n", n_array_nth(od, i));
     }
     
     if (rd) {
-        //for (i = 0; i < n_array_size(rd); i++)            
-        //    printf("R %s\n", n_array_nth(rd, i));
+        for (i = 0; i < n_array_size(rd); i++)            
+            printf("R %s\n", n_array_nth(rd, i));
     }
+#endif
+    
     return n;
 }
 

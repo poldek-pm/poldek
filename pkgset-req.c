@@ -332,6 +332,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         } else {                /* n is 0 */
             tn_array *pkgs;
             if ((pkgs = pkgset_search_reqdir(ps, NULL, reqname))) {
+                n = 0;
                 while (n_array_size(pkgs)) {
                     pkgsbuf[n++] = n_array_shift(pkgs);
                     if (n == pkgsbuf_size)
@@ -339,8 +340,10 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
                 }
                 
                 *npkgs = n;
-                matched = 1;
-                *suspkgs = pkgsbuf;
+                if (n) {
+                    matched = 1;
+                    *suspkgs = pkgsbuf;
+                }
                 n_array_free(pkgs);
             }
         }

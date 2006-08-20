@@ -727,6 +727,20 @@ int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
 }
 
 
+static int pkg_has_path_dirindex(const struct pkg *pkg,
+                                 const char *dirname, const char *basename)
+{
+    char path[PATH_MAX];
+
+    if (pkg->pkgdir == NULL || pkg->pkgdir->dirindex == NULL)
+        return 0;
+    
+    n_snprintf(path, sizeof(path), "%s%s/%s", *dirname != '/' ? "/" : "",
+               dirname, basename);
+    
+    return pkgdir_dirindex_pkg_has_path(pkg->pkgdir->dirindex, pkg, path);
+}
+    
 int pkg_has_path(const struct pkg *pkg,
                  const char *dirname, const char *basename)
 {
@@ -734,8 +748,8 @@ int pkg_has_path(const struct pkg *pkg,
     int rc = 0;
     
     if (pkg->fl == NULL || n_tuple_size(pkg->fl) == 0)
-        return 0;
-
+        return pkg_has_path_dirindex(pkg, dirname, basename);
+    
     if (*dirname == '/' && *(dirname + 1) != '\0')
         dirname++;
 
@@ -753,7 +767,10 @@ int pkg_has_path(const struct pkg *pkg,
             }
         }
     }
-
+    
+    if (rc == 0)
+        rc = pkg_has_path_dirindex(pkg, dirname, basename);
+    
     return rc;
 }
 
