@@ -30,6 +30,7 @@ cli/su.c
 cli/test_cli.c
 cli/uninstall.c
 conf.c
+conf_sections.c
 dbdep.c
 dbpkgset.c
 depdirs.c
@@ -66,6 +67,7 @@ pkgdir/pkg_restore.c
 pkgdir/pkg_store.c
 pkgdir/pkgdir.c
 pkgdir/pkgdir_clean.c
+pkgdir/pkgdir_dirindex.c
 pkgdir/pkgdir_patch.c
 pkgdir/pndir/description.c
 pkgdir/pndir/digest.c
