@@ -106,7 +106,7 @@ ENABLE_STATIC=$enableval, ENABLE_STATIC=no)
 
 if test "${ENABLE_STATIC}." = "yes."; then
 	AC_DEFINE([ENABLE_STATIC],1, [defined if static linking is requested])
-	poldek_LDFLAGS="-static"
+	poldek_LDFLAGS="-all-static"
 
 	if test "${INTERACTIVE_MODE}." = "yes."; then
 		LIBS="$LIBS -lncurses"
