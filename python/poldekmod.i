@@ -65,6 +65,8 @@ struct poclidek_rcmd {};
     int _is_prereq() { return capreq_is_prereq(self); }
     int _is_prereq_un() { return capreq_is_prereq_un(self); }
     int _is_file() { return capreq_is_file(self); }
+    int _is_bastard() { return capreq_is_bastard(self); }
+    int _is_autodirreq() { return capreq_is_autodirreq(self); }
     int _is_obsl() { return capreq_is_obsl(self); }
     ~capreq() { capreq_free(self); }
 }
