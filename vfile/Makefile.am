@@ -1,6 +1,7 @@
 # $Id$
 
 SUBDIRS   = vfff
+DIST_SUBDIRS = $(SUBDIRS) tests
 
 LIBS = -ltrurl -lz @INTLLIBS@
 
