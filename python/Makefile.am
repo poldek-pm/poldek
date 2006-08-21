@@ -30,7 +30,7 @@ poldekmod.i: local_stdint.h
 #install-exec-hook:
 #	$(mkinstalldirs) "$(DESTDIR)$(py_sitedir)"
 
-%.py: wrap_%.c
+poldekmod.py: wrap_poldekmod.c
 
 local_stdint.h: 
 	$(CPP) local_stdint.c > local_stdint.h
