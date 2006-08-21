@@ -58,9 +58,13 @@ class MainWindow(mainWindow):
                 type = ''
                 if c.is_prereq():
                     type += 'pre'
+
                 if c.is_prereq_un():
                     if len(type): type += ', '
                     type += 'preun'
+
+                if c.is_autodirreq():
+                    type = 'dir'
                     
                 item = qt.QListViewItem(self.ReqsListView, str(c), type)
 
