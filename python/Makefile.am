@@ -5,7 +5,7 @@ if ENABLE_PYTHON
   py_incdir  = $(py_prefix)/include/python$(py_ver)
 endif
 
-EXTRA_DIST = poldekmod.i local_stdint.h
+EXTRA_DIST = poldekmod.i local_stdint.c test.py run.sh
 CLEANFILES = wrap_* poldekmod.py local_stdint.h
 
 INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir) -I$(py_incdir) -I.
