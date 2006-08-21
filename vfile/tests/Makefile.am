@@ -4,8 +4,6 @@ TESTS = test_vfile
 noinst_PROGRAMS = test_vfile
 test_vfile_SOURCES = test_vfile.c test_misc.c test_file.c
 
-EXTRA_DIST = utest_mkidx.sh
-
 test_vfile_INCLUDES= @CHECK_CFLAGS@
 test_vfile_LDADD = @CHECK_LIBS@ ../libvfile.la  
 
