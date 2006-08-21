@@ -197,7 +197,8 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
                                 xmlNode *node)
 {
     struct pkg pkg, *rpkg = NULL;
-    char *arch;
+    char *arch = NULL;
+    
     struct uinfo {
         char *summary;
         char *description;

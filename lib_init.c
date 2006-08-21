@@ -783,7 +783,8 @@ void poldek__ts_apply_config(struct poldek_ctx *ctx, struct poldek_ts *ts)
                  ts->getop(ts, ent->op));
             
         } else {
-            int v;
+            int v = -1;
+            
             if (ent->optype == CONF_TYPE_BOOLEAN)
                 v = poldek_conf_get_bool(htcnf, ent->name, ent->defaultv);
             

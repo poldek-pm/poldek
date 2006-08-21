@@ -86,7 +86,7 @@ static char *get_color(char *buf, int size, int color)
 
 int poldek_term_vprintf_c(int color, const char *fmt, va_list args)
 {
-    int n, isbold = 0;
+    int n = 0, isbold = 0;
 
     if (color & PRAT_BOLD) {
         n += printf("%s", at_bold);

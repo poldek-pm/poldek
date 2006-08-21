@@ -663,7 +663,7 @@ static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     struct pndir       *idx;
-    struct pkg         *pkg;
+    struct pkg         *pkg = NULL;
     struct pkg_offs    pkgo;
     struct pkg_data    *pkgd;
     struct tndb_it     it;

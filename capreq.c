@@ -483,7 +483,7 @@ static
 struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi) 
 {
     struct capreq *cr;
-    uint8_t size, *cr_bufp;
+    uint8_t size = 0, *cr_bufp;
     uint8_t cr_buf[5];          /* placeholder,  for sizeof */
     
     

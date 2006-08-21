@@ -258,7 +258,7 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg, unsigned flags)
 
 int pkg_restore_fields(tn_stream *st, struct pkg *pkg) 
 {
-    uint8_t n = 0, nsize, tag;
+    uint8_t n = 0, nsize, tag = 0;
     uint32_t tmp;
     
     n_stream_read_uint8(st, &nsize);
