@@ -370,7 +370,7 @@ static tn_hash *load_ids(struct tndb *db, int npackages)
         id = na->na_malloc(na, klen);
         memcpy(id, key + 2, klen); /* key + 2 => skipping _KEY_PKGID */
         
-        n_hash_insert(keymap, val, id);
+        n_hash_replace(keymap, val, id);
 
         if (vlen < vlen_max)   /* to avoid needless tndb_it_rget()'s reallocs */
             vlen = vlen_max;
@@ -407,7 +407,6 @@ struct pkgdir_dirindex *pkgdir_dirindex_open(struct pkgdir *pkgdir)
     int             i;
     tn_alloc        *na;
     tn_hash         *idmap, *keymap;
-    tn_array        *reqdirs;
     struct pkgdir_dirindex *dirindex = NULL;
 
     
@@ -450,18 +449,21 @@ struct pkgdir_dirindex *pkgdir_dirindex_open(struct pkgdir *pkgdir)
         id = n_hash_get(keymap, &key[2]);
 
         if (id)
-            n_hash_insert(idmap, id, pkg_link(pkg));
+            n_hash_replace(idmap, id, pkg_link(pkg));
 
         key[0] = '_';
         key[1] = KEY_REQDIR;
 
         tl = tl_save = get_req_directories(db, key, klen + 2,
                                            val, sizeof(val), &n);
-        if (tl == NULL || n == 0)
+        if (tl == NULL || n == 0) {
+            if (tl)
+                n_str_tokl_free(tl);
             continue;
+        }
         
         if (!pkg->reqs)
-            pkg->reqs = capreq_arr_new(n_array_size(reqdirs));
+            pkg->reqs = capreq_arr_new(n);
         
         while (*tl) {
             const char *dir = *tl;
