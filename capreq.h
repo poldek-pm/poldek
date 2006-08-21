@@ -78,7 +78,8 @@ extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_is_file(cr)      ((cr)->_buf[1] == '/')
 #define capreq_isnot_file(cr)   ((cr)->_buf[1] != '/')
 
-#define capreq_is_bastard(cr)   ((cr)->cr_flags & CAPREQ_BASTARD)
+#define capreq_is_bastard(cr)     ((cr)->cr_flags & CAPREQ_BASTARD)
+#define capreq_is_autodirreq(cr)  (capreq_is_bastard(cr) && capreq_is_file(cr))
 
 #define capreq_is_rpmlib(cr)     ((cr)->cr_flags & CAPREQ_RPMLIB)
 #define capreq_set_satisfied(cr)  ((cr)->cr_flags |= CAPREQ_RPMLIB_SATISFIED)
