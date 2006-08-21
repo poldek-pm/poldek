@@ -153,7 +153,9 @@ int poldek_ts_op_touched(const struct poldek_ts *ts, int optv);
 int poldek_ts_is_interactive_on(const struct poldek_ts *ts);
 
 #include <stdarg.h>
+#ifndef SWIG
 int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap);
+#endif
 int poldek_ts_configure(struct poldek_ts *ts, int param, ...);
 
 
