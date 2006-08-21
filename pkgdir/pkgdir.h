@@ -27,6 +27,7 @@ struct pkgdir_dirindex;
 struct pkg;
 
 /* prototypes from pkgdir_dirindex.h */
+#ifndef SWIG
 extern tn_array *pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
                                      tn_array *pkgs, const char *path);
 
@@ -37,7 +38,7 @@ extern tn_array *pkgdir_dirindex_get_reqdirs(
 extern int pkgdir_dirindex_pkg_has_path(const struct pkgdir_dirindex *dirindex,
                                         const struct pkg *pkg,
                                         const char *path);
-
+#endif
 
 struct pkgdir_module;
 struct pm_ctx;
