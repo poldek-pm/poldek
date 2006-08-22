@@ -244,21 +244,21 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     struct pm_ctx *pmctx = pkgdir->mod_data;
 
     n_assert(pmctx);
-    
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
+
+    pkgdir->ts = pm_dbmtime(pmctx, pkgdir->idxpath);
     
     if (!load_db_packages(pkgdir->mod_data, pkgdir, pkgdir->pkgs, "/",
                           pkgdir->idxpath, pkgdir->pkgroups, ldflags,
                           pkgdir->na))
         return 0;
-
+    
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
         pkg->pkgdir = pkgdir;
     }
 
-    pkgdir->ts = pm_dbmtime(pmctx, pkgdir->idxpath);
     return n_array_size(pkgdir->pkgs);
 }
 
