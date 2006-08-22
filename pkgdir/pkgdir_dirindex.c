@@ -215,6 +215,9 @@ int do_pkgdir_dirindex_create(struct pkgdir *pkgdir, const char *path)
     struct vflock *lock;
     int           i;
     char          *tmp, *dir;
+
+    if (n_array_size(pkgdir->pkgs) == 0)
+        return 1;
     
     MEMINF("START");
 
@@ -342,7 +345,7 @@ static tn_hash *load_ids(struct tndb *db, int npackages)
 {
     struct tndb_it  it;
     char            key[TNDB_KEY_MAX + 1], *val = NULL;
-    int             nerr = 0, klen, vlen, vlen_max;
+    unsigned        nerr = 0, klen, vlen, vlen_max;
     tn_alloc        *na;
     tn_hash         *keymap;
 
@@ -409,13 +412,15 @@ struct pkgdir_dirindex *pkgdir_dirindex_open(struct pkgdir *pkgdir)
     tn_hash         *idmap, *keymap;
     struct pkgdir_dirindex *dirindex = NULL;
 
+    if (n_array_size(pkgdir->pkgs) == 0)
+        return NULL;
     
     dirindex_path(path, sizeof(path), pkgdir);
     msgn(2, "Opening directory index of %s", pkgdir_idstr(pkgdir));
     MEMINF("start");
     
     if ((db = tndb_open(path)) == NULL) {
-        logn(LOGERR, "%s: tndb create failed", path);
+        logn(LOGERR, "%s: open failed", path);
         return NULL;
     }
 
@@ -540,10 +545,10 @@ int do_pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
                            tn_array **pkgs_ptr, const struct pkg *pkg,
                            const char *path)
 {
-    const char  **tl, **tl_save;
-    tn_array    *pkgs = NULL;
-    char        val[8192];
-    int         n, found;
+    const char    **tl, **tl_save;
+    tn_array      *pkgs = NULL;
+    unsigned char val[8192];
+    int           n, found;
     
 #if DEVEL    
     static int  xx = 0;
