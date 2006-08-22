@@ -45,4 +45,5 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch);
 
 void poldek__ts_dump_settings(struct poldek_ctx *ctx, struct poldek_ts *ts);
 
+tn_array *ts__packages_in_install_order(const struct poldek_ts *ts);
 #endif

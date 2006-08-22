@@ -214,8 +214,8 @@ int show_errors(struct install_ctx *ictx)
 static
 int do_install(struct install_ctx *ictx, struct poldek_iinf *iinf)
 {
-    int rc, nerr = 0, any_err = 0;
-    tn_array *pkgs;
+    int rc = 1, nerr = 0, any_err = 0;
+    tn_array *pkgs = NULL;
     struct poldek_ts *ts;
     int i;
 
@@ -231,16 +231,9 @@ int do_install(struct install_ctx *ictx, struct poldek_iinf *iinf)
             break;
     }
 
-    pkgs = n_array_new(64, NULL, NULL);
-    for (i = n_array_size(ictx->ps->ordered_pkgs) - 1; i > -1; i--) {
-        struct pkg *pkg = n_array_nth(ictx->ps->ordered_pkgs, i);
-        if (pkg_is_marked(ictx->ts->pms, pkg))
-            n_array_push(pkgs, pkg);
-    }
-    
     if (ictx->nerr_fatal || sigint_reached())
         return 0;
-
+    
     n_array_sort(ictx->install_pkgs);
     print_install_summary(ictx);
     pkgdb_close(ts->db); /* release db as soon as possible */
@@ -253,44 +246,52 @@ int do_install(struct install_ctx *ictx, struct poldek_iinf *iinf)
 
     rc = (any_err == 0);
     if (nerr)
-        return 0;
-    
-    if ((ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N,
-                     POLDEK_OP_JUSTFETCH, 0)) == 0)
-        if (!valid_arch_os(ictx->ts, ictx->install_pkgs)) 
-            return 0;
+        goto l_end;
 
+    pkgs = ts__packages_in_install_order(ictx->ts);
+    n_assert(n_array_size(pkgs) == n_array_size(ictx->install_pkgs));
 
     if (ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N, 0)) {
-        rc = packages_dump(ictx->install_pkgs, ts->dumpfile,
+        rc = packages_dump(pkgs, ts->dumpfile,
                            ts->getop(ts, POLDEK_OP_JUSTPRINT_N) == 0);
-        return rc;
+        goto l_end;
+    }
+
+    if ((ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N,
+                     POLDEK_OP_JUSTFETCH, 0)) == 0) {
+        if (!valid_arch_os(ictx->ts, ictx->install_pkgs)) {
+            rc = 0;
+            goto l_end;
+        }
     }
 
     /* poldek's test only  */
     if (ts->getop(ts, POLDEK_OP_TEST) && !ts->getop(ts, POLDEK_OP_RPMTEST))
-        return rc;
+        goto l_end;
     
     if (ts->getop(ts, POLDEK_OP_JUSTFETCH)) {
         const char *destdir = ts->fetchdir;
         if (destdir == NULL)
             destdir = ts->cachedir;
 
-        rc = packages_fetch(ts->pmctx, ictx->install_pkgs, destdir,
-                            ts->fetchdir ? 1 : 0);
+        rc = packages_fetch(ts->pmctx, pkgs, destdir, ts->fetchdir ? 1 : 0);
 
     } else if (!ts->getop(ts, POLDEK_OP_HOLD) || (rc = verify_holds(ictx))) {
         int is_test = ts->getop(ts, POLDEK_OP_RPMTEST);
 
         if (!is_test && ts->getop(ts, POLDEK_OP_CONFIRM_INST) && ts->ask_fn) {
-            if (!ts->ask_fn(1, _("Proceed? [Y/n]")))
-                return 1;
+            if (!ts->ask_fn(1, _("Proceed? [Y/n]"))) {
+                rc = 1;
+                goto l_end;
+            }
         }
         
         if (!ts->getop(ts, POLDEK_OP_NOFETCH))
-            if (!packages_fetch(ts->pmctx, pkgs, ts->cachedir, 0))
-                return 0;
-
+            if (!packages_fetch(ts->pmctx, pkgs, ts->cachedir, 0)) {
+                rc = 0;
+                goto l_end;
+            }
+        
         rc = pm_pminstall(ts->db, pkgs, ictx->uninst_set->dbpkgs, ts);
         
         if (!is_test && iinf)
@@ -300,6 +301,10 @@ int do_install(struct install_ctx *ictx, struct poldek_iinf *iinf)
                                POLDEK_OP_NOFETCH, 0))
             packages_fetch_remove(pkgs, ts->cachedir);
     }
+
+l_end:
+    if (pkgs)
+        n_array_free(pkgs);
     
     return rc;
 }
@@ -403,10 +408,10 @@ int in_do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
         ts->setop(ts, POLDEK_OP_PARTICLE, 0);
     
     n = 1;
-#if 0                           /* debug */
-    for (i = 0; i < n_array_size(ps->ordered_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
-        if (pkg_is_marked_i(pkg)) 
+#if DEVEL                        /* debug */
+    for (i = 0; i < n_array_size(ictx.ps->ordered_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(ictx.ps->ordered_pkgs, i);
+        if (pkg_is_marked_i(ts->pms, pkg)) 
             printf("MARKED %s\n", pkg_id(pkg));
     }
 #endif    

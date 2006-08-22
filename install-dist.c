@@ -95,6 +95,7 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
     int               i, nerr;
     struct inf        inf;
     char              tmpdir[PATH_MAX];
+    tn_array          *pkgs = NULL;
     
     n_assert(ts->db->rootdir);
     if (!poldek_util_is_rwxdir(ts->db->rootdir)) {
@@ -118,13 +119,13 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
     n_array_map_arg(ts->ctx->ps->pkgs, (tn_fn_map2)is_marked_mapfn, &inf);
     
     display_iinf_start(&inf);
-    for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
+    pkgs = ts__packages_in_install_order(ts);
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
         char *pkgpath;
         
-        if (pkg_isnot_marked(ts->pms, pkg))
-            continue;
-        
+        n_assert(pkg_is_marked(ts->pms, pkg));
         pkgpath = pkg_path_s(pkg);
         
         if (poldek_VERBOSE > 1) {
@@ -165,6 +166,7 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
                          inf.ninstalled);
     if (nerr) 
         logn(LOGERR, _("There were errors during install"));
-    
+
+    n_array_cfree(&pkgs);
     return nerr == 0;
 }

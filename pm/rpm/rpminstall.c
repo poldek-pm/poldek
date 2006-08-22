@@ -361,41 +361,41 @@ int pm_rpm_packages_install(struct pkgdb *db,
     
     nsignerr = 0;
     nopts = n;
-    for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
-        if (pkg_is_marked(ts->pms, pkg)) {
-            char path[PATH_MAX], *s, name[1024];
-            char *pkgpath = pkg->pkgdir->path;
-            unsigned vrfyflags;
-            int len;
-            
-            
-            pkg_filename(pkg, name, sizeof(name));
-            if (vf_url_type(pkgpath) == VFURL_PATH) {
-                len = n_snprintf(path, sizeof(path), "%s/%s", pkgpath, name);
-            
-            } else {
-                char buf[1024];
-                
-                vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
-                len = n_snprintf(path, sizeof(path), "%s/%s/%s", ts->cachedir,
-                                 buf, n_basenam(name));
-            }
+    for (i=0; i < n_array_size(pkgs); i++) {
+        char path[PATH_MAX], *s, name[1024], *pkgpath;
+        unsigned vrfyflags;
+        struct pkg *pkg;
+        int len;
 
-            if ((vrfyflags = pkg_get_verify_signflags(pkg))) {
-                if (!pm_rpm_verify_signature(pm, path, vrfyflags)) {
-                    logn(LOGERR, _("%s: signature verification failed"),
-                         pkg_snprintf_s(pkg));
-                    nsignerr++;
-                }
-            }
+        pkg = n_array_nth(pkgs, i);
+        char *pkgpath = pkg->pkgdir->path;
+        
+        n_assert(pkg_is_marked(ts->pms, pkg));
             
+        pkg_filename(pkg, name, sizeof(name));
+        if (vf_url_type(pkgpath) == VFURL_PATH) {
+            len = n_snprintf(path, sizeof(path), "%s/%s", pkgpath, name);
             
-            s = alloca(len + 1);
-            memcpy(s, path, len);
-            s[len] = '\0';
-            argv[n++] = s;
+        } else {
+            char buf[1024];
+                
+            vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
+            len = n_snprintf(path, sizeof(path), "%s/%s/%s", ts->cachedir,
+                             buf, n_basenam(name));
         }
+
+        if ((vrfyflags = pkg_get_verify_signflags(pkg))) {
+            if (!pm_rpm_verify_signature(pm, path, vrfyflags)) {
+                logn(LOGERR, _("%s: signature verification failed"),
+                     pkg_snprintf_s(pkg));
+                nsignerr++;
+            }
+        }
+
+        s = alloca(len + 1);
+        memcpy(s, path, len);
+        s[len] = '\0';
+        argv[n++] = s;
     }
 
     if (nsignerr) {
@@ -421,31 +421,16 @@ int pm_rpm_packages_install(struct pkgdb *db,
             p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
         *p = '\0';
         msgn(1, _("Executing%s..."), buf);
-    }
-    
-    
-    ec = pm_rpm_execrpm(cmd, argv, 1, 1);
-#if 0                           /* moved to packages_fetch_remove() */
-    if (ec == 0 && !ts->getop(ts, POLDEK_OP_RPMTEST) &&
-        !ts->getop(ts, POLDEK_OP_KEEP_DOWNLOADS)) {
-        
-        n = nopts;
-        for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
-            struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
-            int url_type;
-            
-            if (!pkg_is_marked(ts->pms, pkg))
-                continue;
-            
-            url_type = vf_url_type(pkg->pkgdir->path);
-            if ((url_type & (VFURL_PATH | VFURL_UNKNOWN)) == 0) {
-                DBG("unlink %s\n", argv[n]); 
-                unlink(argv[n]);
+        if (poldek_VERBOSE > 2) {
+            for (i = 0; i < n_array_size(pkgs); i++) {
+                struct pkg *pkg = n_array_nth(pkgs, i);
+                msgn("  %s", pkg_id(pkg));
             }
-            n++;
         }
     }
-#endif
+    
+    ec = pm_rpm_execrpm(cmd, argv, 1, 1);
+
     return ec == 0;
     
  l_err_end:

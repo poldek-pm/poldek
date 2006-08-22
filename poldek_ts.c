@@ -834,20 +834,31 @@ static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf)
     return rc;
 }
 
-/* --fetch, --dump */
-static int ts_fetch_or_dump_packages(struct poldek_ts *ts) 
+tn_array *ts__packages_in_install_order(const struct poldek_ts *ts)
 {
-    int i, rc = 0;
-    tn_array *pkgs = n_array_new(512, NULL, NULL);
-
-    /* dump/fetch packages in install order */
+    tn_array *pkgs = n_array_new(512, (tn_fn_free)pkg_free, NULL);
+    int i;
+    
     for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
 
-        if (pkg_isnot_marked(ts->pms, pkg))
-            continue;
-        n_array_push(pkgs, pkg);
+        if (pkg_is_marked(ts->pms, pkg))
+            n_array_push(pkgs, pkg_link(pkg));
     }
+
+    return pkgs;
+}
+
+
+/* --fetch, --dump, packages in install order; used by install_dist()
+   only - install/ calls directly packages_{dump,fetch}()
+*/
+static int ts_fetch_or_dump_packages(struct poldek_ts *ts) 
+{
+    tn_array *pkgs;
+    int rc = 0;
+    
+    pkgs = ts__packages_in_install_order(ts);
     
     if (ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N, 0)) {
         rc = packages_dump(pkgs, ts->dumpfile,
