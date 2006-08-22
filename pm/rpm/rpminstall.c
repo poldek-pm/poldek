@@ -368,7 +368,7 @@ int pm_rpm_packages_install(struct pkgdb *db,
         int len;
 
         pkg = n_array_nth(pkgs, i);
-        char *pkgpath = pkg->pkgdir->path;
+        pkgpath = pkg->pkgdir->path;
         
         n_assert(pkg_is_marked(ts->pms, pkg));
             
@@ -424,7 +424,7 @@ int pm_rpm_packages_install(struct pkgdb *db,
         if (poldek_VERBOSE > 2) {
             for (i = 0; i < n_array_size(pkgs); i++) {
                 struct pkg *pkg = n_array_nth(pkgs, i);
-                msgn("  %s", pkg_id(pkg));
+                msgn(2, "  %s", pkg_id(pkg));
             }
         }
     }
