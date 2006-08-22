@@ -112,7 +112,7 @@ static void *install_cb(const void *h __attribute__((unused)),
                 if (oldfl >= 0) {
                     oldfl |= FD_CLOEXEC; /* scripts shouldn't inherit
                                             rpm file descriptor */
-                    Fcntl(fd, F_SETFD, (void*)oldfl); /* what for is void*? */
+                    fcntl(Fileno(fd), F_SETFD, oldfl);
                 }
             }
             return fd;
