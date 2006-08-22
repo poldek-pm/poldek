@@ -3,7 +3,7 @@
 SUBDIRS   = vfff
 DIST_SUBDIRS = $(SUBDIRS) tests
 
-LIBS = -ltrurl -lz @INTLLIBS@
+#LIBS = -ltrurl -lz @LIBS@ @INTLLIBS@
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
