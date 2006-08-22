@@ -550,8 +550,12 @@ tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
     }
     
     for (i=0; i < n_array_size(tmp); i++) {
-        struct pkg *pkg = n_array_nth(tmp, i);
-        if (n_array_bsearch(ps->pkgs, pkg))
+        struct pkg *tmpkg, *pkg = n_array_nth(tmp, i);
+        
+        if (pkg_is_scored(pkg, (PKG_IGNORED | PKG_IGNORED_UNIQ)))
+            continue;
+        
+        if ((tmpkg = n_array_bsearch(ps->pkgs, pkg)) && tmpkg == pkg)
             n_array_push(pkgs, pkg_link(pkg));
     }
     n_array_free(tmp);
