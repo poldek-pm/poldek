@@ -313,7 +313,8 @@ static int dirindex_path(char *path, int size, struct pkgdir *pkgdir)
     n_assert(n > 0);
     n += n_snprintf(&path[n], size - n, "/dirindex-of-%s.tndb", pkgdir->type);
     DBGF("result = %s\n", path);
-
+    n_assert(n > 0);
+    
     return n;
 }
 
@@ -414,37 +415,34 @@ struct pkgdir_dirindex *pkgdir_dirindex_open(struct pkgdir *pkgdir)
 {
     struct tndb     *db;
     char            path[PATH_MAX];
-    int             i;
-    tn_alloc        *na;
-    tn_hash         *idmap, *keymap;
+    int             i, rc = 0;
+    tn_alloc        *na = NULL;
+    tn_hash         *idmap = NULL, *keymap = NULL;
     struct pkgdir_dirindex *dirindex = NULL;
 
-    if (n_array_size(pkgdir->pkgs) == 0)
-        return NULL;
-    
+    n_assert(n_array_size(pkgdir->pkgs)); /* XXX: tndb w/o */
+             
     dirindex_path(path, sizeof(path), pkgdir);
+    
     msgn(2, "Opening directory index of %s...", pkgdir_idstr(pkgdir));
     MEMINF("start");
-    
+
+    rc = 0;
     if ((db = tndb_open(path)) == NULL) {
         logn(LOGERR, "%s: open failed", path);
-        return NULL;
+        goto l_end;
     }
 
     if (!tndb_verify(db)) {
         logn(LOGERR, _("%s: broken directory index"), path);
-        tndb_unlink(db);
-        tndb_close(db);
-        return NULL;
+        goto l_end;
     }
 
     MEMINF("opened");
     
-    if ((keymap = load_ids(db, n_array_size(pkgdir->pkgs))) == NULL) {
-        tndb_unlink(db);
-        tndb_close(db);
-        return NULL;
-    }
+    if ((keymap = load_ids(db, n_array_size(pkgdir->pkgs))) == NULL)
+        goto l_end;
+    
 
     MEMINF("keymap");
     
@@ -462,7 +460,11 @@ struct pkgdir_dirindex *pkgdir_dirindex_open(struct pkgdir *pkgdir)
 
         if (id)
             n_hash_replace(idmap, id, pkg_link(pkg));
-
+        else {
+            logn(LOGERR, _("%s: outdated directory index"), path);
+            goto l_end;
+        }
+        
         key[0] = '_';
         key[1] = KEY_REQDIR;
 
@@ -492,12 +494,32 @@ struct pkgdir_dirindex *pkgdir_dirindex_open(struct pkgdir *pkgdir)
         n_str_tokl_free(tl_save);
     }
     
-    n_hash_free(keymap);
+    rc = 1;                     /* success */
+l_end:
+    if (keymap)
+        n_hash_free(keymap);
 
-    dirindex = na->na_malloc(na, sizeof(*dirindex));
-    dirindex->db = db;
-    dirindex->na = na;
-    dirindex->idmap = idmap;
+    if (rc) {                   /* OK */
+        dirindex = na->na_malloc(na, sizeof(*dirindex));
+        dirindex->db = db;
+        dirindex->na = na;
+        dirindex->idmap = idmap;
+        
+    } else {                    /* ERR */
+        if (db == NULL) {
+            vf_unlink(path);
+        } else {
+            tndb_unlink(db);
+            tndb_close(db);
+        }
+        
+        if (idmap)
+            n_hash_free(idmap);
+        
+        if (na)
+            n_alloc_free(na);
+    }
+
     MEMINF("end");
     
     return dirindex;
