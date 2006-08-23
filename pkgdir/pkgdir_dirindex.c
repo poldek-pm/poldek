@@ -27,6 +27,8 @@
 #include <fnmatch.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <utime.h>
 
 #include <tndb/tndb.h>
 #include <trurl/nassert.h>
@@ -221,7 +223,7 @@ int do_pkgdir_dirindex_create(struct pkgdir *pkgdir, const char *path)
     
     MEMINF("START");
 
-    msgn(2, "Creating directory index of %s", pkgdir_idstr(pkgdir));
+    msgn(2, "Creating directory index of %s...", pkgdir_idstr(pkgdir));
 
     n_strdupap(path, &tmp);
     dir = n_dirname(tmp);
@@ -326,8 +328,13 @@ int pkgdir_dirindex_create(struct pkgdir *pkgdir)
     mtime = poldek_util_mtime(path);
     n_assert(pkgdir->ts);
     
-    if (mtime == 0 || mtime < pkgdir->ts)
-        return do_pkgdir_dirindex_create(pkgdir, path);
+    if (mtime == 0 || mtime < pkgdir->ts) {
+        if (do_pkgdir_dirindex_create(pkgdir, path)) {
+            struct utimbuf ut;
+            ut.actime = ut.modtime = pkgdir->ts;
+            utime(path, &ut);
+        }
+    }
     
     return 1;
 }
@@ -416,7 +423,7 @@ struct pkgdir_dirindex *pkgdir_dirindex_open(struct pkgdir *pkgdir)
         return NULL;
     
     dirindex_path(path, sizeof(path), pkgdir);
-    msgn(2, "Opening directory index of %s", pkgdir_idstr(pkgdir));
+    msgn(2, "Opening directory index of %s...", pkgdir_idstr(pkgdir));
     MEMINF("start");
     
     if ((db = tndb_open(path)) == NULL) {
@@ -560,9 +567,10 @@ int do_pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
     if (!tndb_get_str(dirindex->db, path, val, sizeof(val))) {
         return 0;
     }
-    DBGF("%s: FOUND\n", path);
     
     tl = tl_save = n_str_tokl_n(val, ":", &n);
+
+    DBGF("%s: FOUND %d %p\n", path, n, pkgs_ptr ? *pkgs_ptr : NULL);
     
     if (n) {
         if (pkgs_ptr)
