@@ -501,9 +501,26 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_PM: {
-            char opt[256];
-            n_snprintf(opt, sizeof(opt), "--%s", arg);
-            poldek_ts_configure(ts, POLDEK_CONF_RPMOPTS, opt);
+            tn_array *tl = NULL;
+            int i;
+            
+            if ((tl = n_str_etokl_ext(arg, "\t ", "", "\"'", '\\')) == NULL) {
+                logn(LOGERR, _("%s: parse error"), arg);
+                return ARGP_ERR_UNKNOWN;
+            }
+
+            for (i=0; i < n_array_size(tl); i++) {
+                char *a, opt[256], *dash = "--";
+
+                a = n_array_nth(tl, i);
+                if (*a == '-')
+                    dash = "";
+            
+                n_snprintf(opt, sizeof(opt), "%s%s", dash, a);
+                poldek_ts_configure(ts, POLDEK_CONF_RPMOPTS, opt);
+            }
+
+            n_array_cfree(&tl);
         }
             break;
             
