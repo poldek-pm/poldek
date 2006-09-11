@@ -145,6 +145,7 @@ int pkgmark_isset(struct pkgmark_set *pmark, struct pkg *pkg, uint32_t flag)
     const char *id;
     
     id = package_id(idbuf, sizeof(idbuf), pmark, pkg);
+    n_assert(id);
 
     if ((pkg_mark = n_hash_get(pmark->ht, id)))
         return pkg_mark->flags & flag;

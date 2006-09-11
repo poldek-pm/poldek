@@ -332,13 +332,24 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         } else {                /* n is 0 */
             tn_array *pkgs;
             if ((pkgs = pkgset_search_reqdir(ps, NULL, reqname))) {
+                int i;
                 n = 0;
+
+                for (i=0; i < n_array_size(pkgs); i++) {
+                    pkgsbuf[n++] = n_array_nth(pkgs, i);
+                    if (n == pkgsbuf_size)
+                        break;
+                }
+
+/* XXX: TOFIX: pkgsbuf is not free()d by caller, so pkg _refcnts must
+   be decreased here */
+#if 0  
                 while (n_array_size(pkgs)) {
                     pkgsbuf[n++] = n_array_shift(pkgs);
                     if (n == pkgsbuf_size)
                         break;
                 }
-                
+#endif                
                 *npkgs = n;
                 if (n) {
                     matched = 1;

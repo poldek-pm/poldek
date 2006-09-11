@@ -1380,7 +1380,8 @@ struct pkg *pkg_link(struct pkg *pkg)
              pkg->na ? pkg->na->_refcnt : -1,
              pkg->_refcnt, &pkg->_refcnt);
     }
-#endif    
+#endif
+    n_assert(pkg->_refcnt < INT16_MAX - 1);
     pkg->_refcnt++;
     return pkg;
 }
