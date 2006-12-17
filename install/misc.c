@@ -298,7 +298,7 @@ struct pkg *in_select_pkg(struct install_ctx *ictx, const struct pkg *apkg,
 
     n_array_sort(pkgs);
     i = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name);
-    DBGF("%s -> %d\n", name, i);
+    DBGF("%s -> %d\n", tmpkg.name, i);
     if (i < 0)
         return NULL;
 
