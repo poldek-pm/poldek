@@ -27,8 +27,9 @@ enum poldek_ts_type {
 enum poldek_ts_opt {
     POLDEK_OP_NULL = 0,
 
-    POLDEK_OP_UNIQN,            /* --uniqn */
-    POLDEK_OP_VRFY_DEPS,        /* -V */
+    POLDEK_OP_UNIQN,             /* --uniqn */
+    POLDEK_OP_VRFY_DEPS,         /* -V */
+    POLDEK_OP_VRFY_ORDER,        /* --verify=order */
     POLDEK_OP_VRFY_CNFLS,        /* --verify=conflicts */
     POLDEK_OP_VRFY_FILECNFLS,    /* --verify=file-conflicts */
     POLDEK_OP_VRFY_FILEORPHANS,  /* --verify=file-orphans */
