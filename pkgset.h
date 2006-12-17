@@ -38,14 +38,12 @@ struct pkgset {
 #define PKGORDER_INSTALL     1
 #define PKGORDER_UNINSTALL   2
 int packages_order(tn_array *pkgs, tn_array **ordered_pkgs, int ordertype);
-//int packages_order(tn_array *pkgs, tn_array **ordered_pkgs);
+
+int packages_order_and_verify(tn_array *pkgs, tn_array **ordered_pkgs,
+                              int ordertype, int verbose_level);
+
 int pkgset_order(struct pkgset *ps, int verbose);
 
-/* if set then:
- * - requirements matched even if requirement has version
- *   while capability hasn't (RPM style)
- * - files with different modes only are not assumed as conflicts
- */
 
 struct pm_ctx;
 struct pkgset *pkgset_new(struct pm_ctx *ctx);
@@ -54,6 +52,12 @@ void pkgset_free(struct pkgset *ps);
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources);
 int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir);
 
+
+/* VRFY_MERCY - if set then:
+ * - requirements matched even if requirement has version
+ *   while capability hasn't (RPM style)
+ * - files with different modes only are not assumed as conflicts
+ */
 #define PSET_VRFY_MERCY          (1 << 0)
 #define PSET_VRFY_PROMOTEPOCH    (1 << 1)
 

@@ -1119,6 +1119,12 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
             nerr++;
     }
 
+    if (ts->getop(ts, POLDEK_OP_VRFY_ORDER)) {
+        tn_array *ordered = NULL;
+        if (!packages_order_and_verify(pkgs, &ordered, PKGORDER_INSTALL, 1))
+            nerr++;
+    }
+
     if (ts->getop(ts, POLDEK_OP_VRFY_CNFLS)) {
         int i, j;
         msgn(0, _("Verifying conflicts..."));

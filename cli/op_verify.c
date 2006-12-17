@@ -47,7 +47,7 @@
 static struct argp_option options[] = {
 {0,0,0,0, N_("Package set verification:"), OPT_GID},
 {"verify",  OPT_DEPS, "REPORT-TYPE...", OPTION_ARG_OPTIONAL,
-     N_("Verify package set, available reports are: 'deps', 'conflicts', "
+     N_("Verify package set, available reports are: 'deps', 'order', 'conflicts', "
         "'file-conflicts', 'file-orphans' and 'file-missing-deps'. "
         "Default is 'deps'."), OPT_GID },
 {"verify-conflicts",  OPT_CNFLS, 0, OPTION_HIDDEN, N_("Verify conflicts"), OPT_GID },
@@ -71,6 +71,7 @@ static struct verify_op {
     int op;
 } verify_options[] = {
     { "deps", POLDEK_OP_VRFY_DEPS },
+    { "order", POLDEK_OP_VRFY_ORDER },
     { "conflicts", POLDEK_OP_VRFY_CNFLS }, 
     { "file-conflicts", POLDEK_OP_VRFY_FILECNFLS },
     { "file-orphans", POLDEK_OP_VRFY_FILEORPHANS },
