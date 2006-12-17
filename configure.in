@@ -273,7 +273,6 @@ AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="-lrpm $DBLIB $LIBS"],
 		[$DBLIB -lrpmdb]),
 	    [$DBLIB])
 
-AC_CHECK_FUNCS(rpmMachineScore,,[ AC_MSG_ERROR(["rpmlib not found"])])
 AC_CHECK_FUNCS(rpmlog rpmCheckSig rpmVerifySignature)
 
 dnl rpm 4.2?
@@ -297,11 +296,18 @@ AC_CHECK_FUNCS(rpmdsRpmlib,,
                [ AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
           	 [AC_MSG_WARN(["poldek will not work fine with rpmlib\(...\) capabilities"])],
           	 [$CONF_IN_LDFLAGS])], [$CONF_IN_LDFLAGS])
-
+dnl rpm 4.4.6
 AC_CHECK_FUNCS(rpmdsUname)
 AC_CHECK_FUNCS(rpmdsSysinfo)
 AC_CHECK_FUNCS(rpmdsGetconf)
 AC_CHECK_FUNCS(rpmdsCpuinfo)
+
+dnl rpm 4.4.7
+dnl  - killed rpmMachineScore and rpmGetVar
+AC_CHECK_FUNCS(rpmMachineScore)
+AC_CHECK_FUNCS(rpmGetVar)
+dnl  - new _rpmvercmp()
+AC_CHECK_FUNCS(_rpmvercmp)
 
 
 

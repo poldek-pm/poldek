@@ -35,6 +35,7 @@
 #include "misc.h"
 #include "log.h"
 #include "pm/pm.h"
+#include "pm_rpm.h"
 
 #if HAVE_RPMDSRPMLIB            /* rpmdsRpmlib() => rpm >= 4.4.3 */
 
@@ -137,11 +138,12 @@ static int get_rpmlib_caps_rpm_lt_4_4_3(tn_array *caps)
 }
 #endif
 
-tn_array *pm_rpm_rpmlib_caps(void) 
+tn_array *pm_rpm_rpmlib_caps(void *pm_rpm) 
 {
     tn_array *caps;
     int rc = 0;
-    
+
+    pm_rpm = pm_rpm;
     caps = capreq_arr_new(0);
     
 #if HAVE_RPMDSRPMLIB            /* rpm >= 4.4.3 */
@@ -162,18 +164,11 @@ tn_array *pm_rpm_rpmlib_caps(void)
     return caps;
 }
 
-
-const char *pm_rpm_get_arch(void *pm_rpm) 
+#ifdef HAVE_RPMMACHINESCORE
+static int machine_score(int tag, const char *val)
 {
-    pm_rpm = pm_rpm;
-    return rpmGetVar(RPM_MACHTABLE_INSTARCH);
-}
-
-int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val)
-{
-    int rpmtag = 0;
+    int rpmtag = 0, rc;
     
-    pm_rpm = pm_rpm;
     switch (tag) {
         case PMMSTAG_ARCH:
             rpmtag = RPM_MACHTABLE_INSTARCH;
@@ -187,16 +182,71 @@ int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val)
             n_assert(0);
             break;
     }
-    
+
+    n_assert(rpmtag);
     return rpmMachineScore(rpmtag, val);
 }
+#else  /* killed rpmMachineScore() (since 4.4.7) */
+static int machine_score(int tag, const char *val)
+{
+    int rc = 0;
+    
+    switch (tag) {
+        case PMMSTAG_ARCH:
+            rc = pm_rpm_arch_score(val);
+            break;
+            
+        case PMMSTAG_OS: {
+            char *host_val = rpmExpand("%{_host_os}", NULL);
 
+            rc = 9;
+            if (host_val) {
+                if (strcasecmp(host_val, val) == 0)
+                    rc = 1;                 /* exact fit */
+                free(host_val);
+            }
+            break;
 
+        default:
+            n_assert(0);
+            break;
+        }
+    }
+    return rc;
+}
+#endif  /* HAVE_RPMMACHINESCORE */
+
+int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val)
+{
+    pm_rpm = pm_rpm;
+    return machine_score(tag, val);
+}
+
+/* XXX: function used directly in pkg.c */
 int pm_rpm_arch_score(const char *arch)
 {
+    char *host_arch;
+    int rc;
+    
     if (arch == NULL)
         return 0;
     
-    return rpmMachineScore(RPM_MACHTABLE_INSTARCH, arch);
-}
+#ifdef HAVE_RPMMACHINESCORE    
+    rc = rpmMachineScore(RPM_MACHTABLE_INSTARCH, arch);
+#else
+    rc = 9;
+    if (strcasecmp(arch, "noarch") == 0) {
+        rc = 1;
+        
+    } else {
+        host_arch = rpmExpand("%{_host_cpu}", NULL);
+        if (host_arch) {
+            if (strcasecmp(host_arch, arch) == 0)
+                rc = 1;                 /* exact fit */
+            free(host_arch);
+        }
+    }
 
+    return rc;
+}
+#endif

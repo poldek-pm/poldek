@@ -201,7 +201,7 @@ enum pm_machine_score_tag {
     PMMSTAG_ARCH = 1,
     PMMSTAG_OS = 2
 };
-
+/* RET 0 - different arch/os */
 int pm_machine_score(struct pm_ctx *ctx,
                      enum pm_machine_score_tag tag, const char *val);
 

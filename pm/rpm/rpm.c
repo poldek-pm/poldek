@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -328,7 +328,7 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
 
 
 #if defined HAVE_RPMLOG && !defined ENABLE_STATIC
-/* hack: rpmlib dumps messges to stdout only... (AFAIK)  */
+/* XXX hack: rpmlib dumps messges to stdout only... (AFAIK)  */
 void rpmlog(int prii, const char *fmt, ...) 
 {
     va_list args;
@@ -401,8 +401,11 @@ void rpmlog(int prii, const char *fmt, ...)
 
 #endif /* HAVE_RPMLOG */
     
-        
+
+#ifndef HAVE__RPMVERCMP /* _rpmvercmp - new in rpm 4.4.7 */       
 extern int rpmvercmp(const char *one, const char *two);
+#endif
+
 int pm_rpm_vercmp(const char *one, const char *two)
 {
     return rpmvercmp(one, two);

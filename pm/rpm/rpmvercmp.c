@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,7 +9,9 @@
 
 #include "i18n.h"
 
-extern int rpmvercmp(const char * one, const char * two);
+#ifndef HAVE__RPMVERCMP /* _rpmvercmp - new in rpm 4.4.7 */
+extern int rpmvercmp(const char *one,  const char *two);
+#endif 
 
 
 int main(int argc, char *argv[])

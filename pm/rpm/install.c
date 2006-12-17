@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -87,6 +87,7 @@ static void progress(const unsigned long amount, const unsigned long total)
 }
 
 #ifdef HAVE_RPM_4_1
+
 static void *install_cb(const void *h __attribute__((unused)),
                         const rpmCallbackType op, 
                         const unsigned long amount, 
@@ -96,9 +97,12 @@ static void *install_cb(const void *h __attribute__((unused)),
 {
     void *r = NULL;
     static FD_t fd = NULL;
- 
+
     switch (op) {
         case RPMCALLBACK_INST_OPEN_FILE:
+            if (pkgpath == NULL || *(char*)pkgpath == '\0')
+                return NULL;
+            
             fd = Fopen(pkgpath, "r.ufdio");
             if (fd == NULL || Ferror(fd)) {
                 logn(LOGERR, "%s: %s", (const char*)pkgpath, Fstrerror(fd));
@@ -126,7 +130,6 @@ static void *install_cb(const void *h __attribute__((unused)),
             break;
 
         case RPMCALLBACK_INST_START:
-            msgn(0, _("Installing %s"), n_basenam(pkgpath));
             progress(amount, total);
             break;
 
@@ -160,7 +163,6 @@ static void *install_cb(const void *h __attribute__((unused)),
             break;
 
         case RPMCALLBACK_INST_START:
-            msgn(0, _("Installing %s"), n_basenam(pkgpath));
             progress(amount, total);
             break;
 
@@ -306,16 +308,22 @@ int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
             goto l_err;
         }
     }
-
+    
+    msgn(0, _("Installing %s..."), n_basenam(path));
 #ifdef HAVE_RPM_4_1
     rpmtsSetFlags(ts, transflags);
+#   ifdef HAVE_RPMDSUNAME /* seems rpm >= 4.4.6 rely on rpmShowProgress(!?) */
+    rpmtsSetNotifyCallback(ts, rpmShowProgress, NULL);
+#   else
     rpmtsSetNotifyCallback(ts, install_cb, NULL);
+#   endif  /* HAVE_RPMDSUNAME (since rpm 4.4.6) */
+    
 	rc = rpmtsRun(ts, NULL, (rpmprobFilterFlags) filterflags);
-#else
+#else  /* rpm < 4.1 */
 	rc = rpmRunTransactions(ts, install_cb,
                             (void *) ((long)instflags), 
                             NULL, &probs, transflags, filterflags);
-#endif
+#endif  /* HAVE_RPM_4_1 */
 
     if (rc != 0) {
         if (rc > 0) {
@@ -330,7 +338,7 @@ int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
             goto l_err;
             
         } else {
-            logn(LOGERR, _("%s: installation failed (hgw why)"), path);
+            logn(LOGERR, _("%s: installation failed (retcode=%d)"), path, rc);
         }
     }
     

@@ -36,7 +36,6 @@ int pm_rpm_configure(void *modh, const char *key, void *val);
 int pm_rpm_conf_get(void *pm_rpm, const char *key, char *value, int vsize);
 
 tn_array *pm_rpm_rpmlib_caps(void *pm_rpm);
-const char *pm_rpm_get_arch(void *pm_rpm);
 
 char *pm_rpm_dbpath(void *pm_rpm, char *path, size_t size);
 time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbfull_path);
