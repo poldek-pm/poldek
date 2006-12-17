@@ -23,7 +23,7 @@ site:  $(WWW_PAGES) ../manual.xml ../NEWS.xml ../NEWSto
 	./genhomepage --clean --destdir site
 	./genhomepage --destdir site || exit 1
 	cp ../NEWS.html ../manual.css style.css logo90.png site
-	rm -rf site/manual && cp -a ../manual-web site/manual
+	rm -rf site/Manual && cp -a ../manual-web site/Manual
 
 credits-body.html: ../NEWS.xml ../NEWSto
 	$(MAKE) -C .. CREDITS-body.html NEWS.html

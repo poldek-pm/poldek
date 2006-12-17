@@ -8,7 +8,7 @@ use vars qw(@menu $tmpl %config);
          { name => 'index', label => 'Home', m4 => 1 },
          { name => 'overview', label => 'Feature overview', fromanual => 1, },
          { name => 'quickstart', label => 'Quick start', fromanual => 1, },
-         { name => 'manual', label => 'Manual',
+         { name => 'Manual', label => 'Manual',
            href => 'manual/index.html', title => 'Full poldek manual' },
 
          { name => 'download', label => 'Download', m4 => 1 },
@@ -26,7 +26,7 @@ $config{destdir} ||= '.';
 $config{VERSION} ||= poldek_version();
 die "missing --VERSION" if !$config{VERSION};
 
-$config{DATE} = poldek_version_date($config{VERSION});
+$config{DATE} ||= poldek_version_date($config{VERSION});
 die "missing --DATE" if !$config{DATE};
 
 $tmpl = new Text::Template(TYPE => 'FILE',
@@ -93,7 +93,7 @@ sub gen_page {
 sub extract_from_manual {
     my $section = shift;
 
-    my $path = "../manual-xhtml/$section.html";
+    my $path = "../manual-web/$section.html";
     open(IN, "< $path") || die "open $path: $!";
 
     my $content = '';
