@@ -73,7 +73,8 @@ struct pkgset *pkgset_new(struct pm_ctx *pmctx)
     ps->flags = 0;
     
     if (pmctx) {
-        ps->rpmcaps = pm_get_pmcaps(pmctx);
+        ps->pmcaps = pm_get_pmcaps(pmctx);
+        ps->pmctx = pmctx;
     }
     return ps;
 }
@@ -102,54 +103,47 @@ void pkgset_free(struct pkgset *ps)
         ps->_vrfy_unreqs = NULL;
     }
 
-    if (ps->_vrfy_file_conflicts) {
-        n_array_free(ps->_vrfy_file_conflicts);
-        ps->_vrfy_file_conflicts = NULL;
-    }
+    if (ps->_vrfy_file_conflicts)
+        n_array_cfree(&ps->_vrfy_file_conflicts);
     
-    
-    n_array_free(ps->pkgs);
+    n_array_cfree(&ps->pkgs);
 
-    if (ps->ordered_pkgs) {
-        n_array_free(ps->ordered_pkgs);
-        ps->ordered_pkgs = NULL;
-    }
+    if (ps->ordered_pkgs)
+        n_array_cfree(&ps->ordered_pkgs);
     
-    if (ps->depdirs) {
-        n_array_free(ps->depdirs);
-        ps->depdirs = NULL;
-    }
+    if (ps->depdirs)
+        n_array_cfree(&ps->depdirs);
     
-    if (ps->pkgdirs) {
-        n_array_free(ps->pkgdirs);
-        ps->pkgdirs = NULL;
-    }
+    if (ps->pkgdirs)
+        n_array_cfree(&ps->pkgdirs);
 
-    if (ps->rpmcaps) {
-        n_array_free(ps->rpmcaps);
-        ps->rpmcaps = NULL;
-    }
+    if (ps->pmcaps)
+        n_array_cfree(&ps->pmcaps);
+    
     memset(ps, 0, sizeof(*ps));
     free(ps);
 }
 
 
-int pkgset_pmprovides(const struct pkgset *ps, const struct capreq *req)
+int pkgset_pm_satisfies(const struct pkgset *ps, const struct capreq *req)
 {
     struct capreq *cap;
 
-    if (ps->rpmcaps == NULL)
+    if (ps->pmcaps == NULL)
         return 0;               /* no caps -> assume NO */
 
     /* internal caps have names like name(feature) */
     if (!capreq_is_rpmlib(req) && strstr(capreq_name(req), "(") == NULL)
         return 0;
 
-    cap = n_array_bsearch_ex(ps->rpmcaps, req,
+    cap = n_array_bsearch_ex(ps->pmcaps, req,
                              (tn_fn_cmp)capreq_cmp_name);
     
     if (cap && cap_match_req(cap, req, 1))
         return 1;
+
+    if (ps->pmctx)
+        return pm_satisfies(ps->pmctx, req);
     
     return 0;
 }

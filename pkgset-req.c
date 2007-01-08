@@ -380,7 +380,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         *npkgs = 0;
     }
 
-    if (!matched && pkgset_pmprovides(ps, req)) {
+    if (!matched && pkgset_pm_satisfies(ps, req)) {
         matched = 1;
         capreq_set_satisfied(req);
         msg(4, " req %-35s --> PM_CAP\n", capreq_snprintf_s(req));

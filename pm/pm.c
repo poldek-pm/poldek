@@ -132,6 +132,13 @@ tn_array *pm_get_pmcaps(struct pm_ctx *ctx)
     return NULL;
 }
 
+int pm_satisfies(struct pm_ctx *ctx, const struct capreq *req)
+{
+    if (ctx->mod->pm_satisfies)
+        return ctx->mod->pm_satisfies(ctx->modh, req);
+    return 0;
+}
+
 struct pkg *pm_load_package(struct pm_ctx *ctx,
                             tn_alloc *na, const char *path, unsigned ldflags)
 {

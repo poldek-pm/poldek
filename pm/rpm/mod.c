@@ -9,6 +9,7 @@ struct pm_module pm_module_rpm = {
     pm_rpm_conf_get,
 
     pm_rpm_rpmlib_caps, /* XXX: TODO replace with pm_rpm_conf_get() */
+    pm_rpm_satisfies,
     pm_rpm_dbpath, 
     pm_rpm_dbmtime,
     pm_rpm_dbdepdirs,

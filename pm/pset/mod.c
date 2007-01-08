@@ -8,6 +8,7 @@ struct pm_module pm_module_pset = {
     pm_pset_configure, 
     NULL, 
     NULL,
+    NULL,
 
 //    pm_pset_dbpath, 
 //    pm_pset_dbmtime,

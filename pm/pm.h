@@ -206,6 +206,7 @@ int pm_machine_score(struct pm_ctx *ctx,
                      enum pm_machine_score_tag tag, const char *val);
 
 tn_array *pm_get_pmcaps(struct pm_ctx *ctx);
+int pm_satisfies(struct pm_ctx *ctx, const struct capreq *req);
 
 int pm_get_dbdepdirs(struct pm_ctx *ctx,
                      const char *rootdir, const char *dbpath,

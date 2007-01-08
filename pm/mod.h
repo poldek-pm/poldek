@@ -10,6 +10,7 @@
 #include <trurl/nmalloc.h>
 
 struct pkgdir;
+struct capreq;
 struct pkgdb;
 struct poldek_ts; 
 struct pkgdb_it;
@@ -23,8 +24,10 @@ struct pm_module {
     void (*destroy)(void *modh);
     int  (*configure)(void *modh, const char *key, void *val);
     int  (*conf_get)(void *modh, const char *key, char *value, int vsize);
-
+    
     tn_array *(*pm_caps)(void *modh);
+    int (*pm_satisfies)(void *modh, const struct capreq *req);
+    
     char *(*dbpath)(void *modh, char *path, size_t size);
     time_t (*dbmtime)(void *modh, const char *path);
     int (*dbdepdirs)(void *modh, const char *rootdir, const char *dbpath, 

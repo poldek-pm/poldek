@@ -23,8 +23,9 @@ struct pkgset {
     tn_array           *depdirs;        /*  char* []   */
     int                nerrors;
     
-    tn_array           *rpmcaps;        /*  capreq* [] */
-
+    tn_array           *pmcaps;        /*  capreq* [] */
+    struct pm_ctx      *pmctx;
+    
     tn_hash            *_vrfy_unreqs;
     tn_array           *_vrfy_file_conflicts;
     
@@ -90,7 +91,7 @@ tn_array *pkgset_get_unsatisfied_reqs(struct pkgset *ps, struct pkg *pkg);
 
 tn_array *pkgset_get_packages_bynvr(const struct pkgset *ps);
 
-int pkgset_pmprovides(const struct pkgset *ps, const struct capreq *req);
+int pkgset_pm_satisfies(const struct pkgset *ps, const struct capreq *req);
 
 void pkgset_report_fileconflicts(struct pkgset *ps, tn_array *pkgs);
 

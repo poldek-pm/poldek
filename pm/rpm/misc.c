@@ -38,7 +38,6 @@
 #include "pm_rpm.h"
 
 #if HAVE_RPMDSRPMLIB            /* rpmdsRpmlib() => rpm >= 4.4.3 */
-
 static int extract_rpmds(tn_array *caps, rpmds ds)
 {
     ds = rpmdsInit(ds);
@@ -103,8 +102,8 @@ static int get_rpmlib_caps(tn_array *caps)
     
     return extract_rpmds(caps, ds);
 }
-
 #endif  /* HAVE_RPMDSRPMLIB */
+
 
 #if HAVE_RPMGETRPMLIBPROVIDES   /* rpmGetRpmlibProvides() => rpm < 4.4.3 */
 static int get_rpmlib_caps_rpm_lt_4_4_3(tn_array *caps) 
@@ -164,6 +163,7 @@ tn_array *pm_rpm_rpmlib_caps(void *pm_rpm)
     return caps;
 }
 
+
 #ifdef HAVE_RPMMACHINESCORE
 static int machine_score(int tag, const char *val)
 {
@@ -186,7 +186,7 @@ static int machine_score(int tag, const char *val)
     n_assert(rpmtag);
     return rpmMachineScore(rpmtag, val);
 }
-#else  /* killed rpmMachineScore() (since 4.4.7) */
+#else  /* !HAVE_RPMMACHINESCORE; killed rpmMachineScore() (since 4.4.7) */
 static int machine_score(int tag, const char *val)
 {
     int rc = 0;
@@ -222,6 +222,7 @@ int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val)
     return machine_score(tag, val);
 }
 
+
 /* XXX: function used directly in pkg.c */
 int pm_rpm_arch_score(const char *arch)
 {
@@ -246,7 +247,36 @@ int pm_rpm_arch_score(const char *arch)
             free(host_arch);
         }
     }
-
+#endif
     return rc;
 }
-#endif
+
+
+int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
+{
+    int n, rc = 0;
+    const char *name;
+
+    pm_rpm = pm_rpm;
+    if (capreq_versioned(req))
+        return 0;
+
+    name = capreq_name(req);
+    n = strlen(name);
+    
+    /* code copied from lib/depends.c:563 */
+    if (n > 5 && name[n - 1] == ')' &&
+        ((strchr("Rr_", name[0]) != NULL && 
+          strchr("Ww_", name[1]) != NULL && 
+          strchr("Xx_", name[2]) != NULL &&
+          name[3] == '(') ||	!strncmp(name, "exists(", sizeof("exists(")-1)
+         ||	!strncmp(name, "executable(", sizeof("executable(")-1)
+         ||	!strncmp(name, "readable(", sizeof("readable(")-1)
+         ||	!strncmp(name, "writable(", sizeof("writable(")-1)
+         )) {
+        
+        rc = (rpmioAccess(name, NULL, X_OK) == 0);
+    }
+    
+    return rc;
+}
