@@ -251,13 +251,14 @@ int pm_rpm_arch_score(const char *arch)
     return rc;
 }
 
-
 int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
 {
-    int n, rc = 0;
-    const char *name;
+    int n = 0, rc = 0;
+    const char *name = NULL;
 
     pm_rpm = pm_rpm;
+
+#if HAVE_RPMIOACCESS
     if (capreq_versioned(req))
         return 0;
 
@@ -277,6 +278,6 @@ int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
         
         rc = (rpmioAccess(name, NULL, X_OK) == 0);
     }
-    
+#endif  /* HAVE_RPMIOACCESS */
     return rc;
 }

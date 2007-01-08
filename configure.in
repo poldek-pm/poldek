@@ -306,6 +306,7 @@ dnl rpm 4.4.7
 dnl  - killed rpmMachineScore and rpmGetVar
 AC_CHECK_FUNCS(rpmMachineScore)
 AC_CHECK_FUNCS(rpmGetVar)
+AC_CHECK_FUNCS(rpmioAccess)
 dnl  - new _rpmvercmp()
 AC_CHECK_FUNCS(_rpmvercmp)
 
