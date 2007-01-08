@@ -355,15 +355,14 @@ tn_array *prepare_cmdline(struct poclidek_ctx *cctx, tn_array *cmd_chain,
     if (n_array_size(tl) == 0)  /* empty token list */
         goto l_end;
     
-    
 #if ENABLE_TRACE
     printf("line = (%s)\n", line);
     for (i=0; i<n_array_size(tl); i++)
         printf("tl[%d] = %s\n", i, (char*)n_array_nth(tl, i));
 #endif
     
-    arr = a_argv_split(tl, ";|");
-    n_assert(arr);
+    if ((arr = a_argv_split(tl, ";|")) == NULL)
+        return NULL;
     
     for (i=0; i < n_array_size(arr); i++) {
         struct a_argv_ent *ent = n_array_nth(arr, i);
