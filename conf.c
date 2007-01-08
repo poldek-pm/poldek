@@ -354,7 +354,8 @@ static int verify_section(const struct poldek_conf_section *sect, tn_hash *ht)
             const char *missing_tag = tags[i].name;
 
             if (n_str_eq(sect->name, "source") &&
-                n_str_eq(tags[i].name, "url")) {
+                (n_str_eq(tags[i].name, "path") || n_str_eq(tags[i].name, "url"))) {
+                    
                 const char *t = poldek_conf_get(ht, "type", NULL);
                 
                 if (t && n_str_eq(t, "group")) { /* source group */
