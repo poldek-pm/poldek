@@ -58,9 +58,12 @@ bin_PROGRAMS      = poldek
 poldek_SOURCES    = $(SHELL_MOD_) main.c su.c
 poldek_LDADD      = libpoclidek.la   
 
-noinst_PROGRAMS   = test_cli
+noinst_PROGRAMS   = test_cli poclidek_demo
 test_cli_SOURCES  = test_cli.c
 test_cli_LDADD    = libpoclidek.la
+
+poclidek_demo_SOURCES = poclidek_demo.c
+poclidek_demo_LDADD = libpoclidek.la
 
 EXTRA_DIST = libpoclidek.sym
 
