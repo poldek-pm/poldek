@@ -261,6 +261,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         cp_str(&ts->cachedir, ctx->ts->cachedir);
         cp_str(&ts->dumpfile, ctx->ts->dumpfile);
         cp_str(&ts->prifile, ctx->ts->prifile);
+        cp_str(&ts->depgraphfile, ctx->ts->depgraphfile);
         
         ts->rpmacros = n_array_dup(ctx->ts->rpmacros, (tn_fn_dup)strdup);
         ts->rpmopts = n_array_dup(ctx->ts->rpmopts, (tn_fn_dup)strdup);
@@ -494,6 +495,13 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
             if ((vs = va_arg(ap, char*))) {
                 DBGF("prifile %s\n", vs);
                 ts->prifile = poldek__conf_path(ts->prifile, vs);
+            }
+            break;
+
+        case POLDEK_CONF_DEPGRAPHFILE:
+            if ((vs = va_arg(ap, char*))) {
+                DBGF("dotfile %s\n", vs);
+                ts->depgraphfile = poldek__conf_path(ts->depgraphfile, vs);
             }
             break;
         
@@ -1116,6 +1124,12 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
     if (ts->getop(ts, POLDEK_OP_VRFY_DEPS)) {
         msgn(0, _("Verifying dependencies..."));
         if (!packages_verify_dependecies(pkgs, ts->ctx->ps))
+            nerr++;
+    }
+
+    if (ts->getop(ts, POLDEK_OP_DEPGRAPH)) {
+        msgn(0, _("Dotting dependency graph..."));
+        if (!packages_dot_dependency_graph(pkgs, ts->ctx->ps, ts->depgraphfile))
             nerr++;
     }
 

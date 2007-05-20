@@ -42,6 +42,7 @@
 #define OPT_FILECNFLS   (OPT_GID + 2)
 #define OPT_FILEORPHANS (OPT_GID + 3)
 #define OPT_ALL         (OPT_GID + 4)
+#define OPT_DEPGRAPH    (OPT_GID + 5)
 
 /* The options we understand. */
 static struct argp_option options[] = {
@@ -59,7 +60,8 @@ static struct argp_option options[] = {
     
 {"verify-all",  OPT_ALL, 0, OPTION_HIDDEN,
 N_("Verify dependencies, conflicts, file conflicts and orphaned directories"),
-     OPT_GID },
+        OPT_GID },
+{"dependency-graph", OPT_DEPGRAPH, "FILE", 0, N_("Print dot dependency graph into FILE"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -207,6 +209,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             ts->setop(ts, POLDEK_OP_VRFY_FILECNFLS, 1);
             ts->setop(ts, POLDEK_OP_VRFY_FILEORPHANS, 1);
             rt->set_major_mode(rt, mode, "verify-all");
+            break;
+
+        case OPT_DEPGRAPH:
+            arg_s->verify = 1;
+            ts->setop(ts, POLDEK_OP_DEPGRAPH, 1);
+            rt->set_major_mode(rt, mode, "depgraph");
+            poldek_ts_configure(ts, POLDEK_CONF_DEPGRAPHFILE, arg);
             break;
 
         default:

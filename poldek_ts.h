@@ -34,6 +34,7 @@ enum poldek_ts_opt {
     POLDEK_OP_VRFY_FILECNFLS,    /* --verify=file-conflicts */
     POLDEK_OP_VRFY_FILEORPHANS,  /* --verify=file-orphans */
     POLDEK_OP_VRFY_FILEMISSDEPS, /* --verify=file-missing-deps */
+    POLDEK_OP_DEPGRAPH,          /* --dependency-graph */
 
     POLDEK_OP_LDFULLFILELIST,    /* internal, load whole file database */
     
@@ -109,6 +110,7 @@ struct poldek_ts {
     char               *cachedir;      /* cache directory        */
     char               *dumpfile;      /* file to dump fqpns     */
     char               *prifile;       /* file with package priorities (split*) */
+    char               *depgraphfile;  /* dot file path for graphviz depgraph */
     tn_array           *rpmopts;       /* rpm cmdline opts (char *opts[]) */
     tn_array           *rpmacros;      /* rpm macros to pass to cmdline (char *opts[]) */
     tn_array           *hold_patterns;

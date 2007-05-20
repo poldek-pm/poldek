@@ -664,3 +664,79 @@ int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps)
         msgn(0, _("No unsatisfied dependencies found"));
     return nerr == 0;
 }
+
+int packages_dot_dependency_graph(tn_array *pkgs, struct pkgset *ps,
+                                  const char *dotfile)
+{
+    int i, j, n_unmet = 0;
+    tn_buf *nbuf;
+    tn_array *errs;
+    FILE *stream;
+
+    nbuf = n_buf_new(1024 * 8);
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+
+        if ((errs = pkgset_get_unsatisfied_reqs(ps, pkg))) {
+            for (j=0; j < n_array_size(errs); j++) {
+                struct pkg_unreq *unreq = n_array_nth(errs, j);
+                n_buf_printf(nbuf, "\"%s\" -> \"UNMET\" [ label = \"%s\" ];\n",
+                             pkg_id(pkg), unreq->req);
+                n_unmet++;
+            }
+        }
+        
+        if (pkg->reqpkgs == NULL || n_array_size(pkg->reqpkgs) == 0) {
+            n_buf_printf(nbuf, "\"%s\";\n", pkg_id(pkg));
+            continue;
+        }
+        
+        for (j=0; j < n_array_size(pkg->reqpkgs); j++) {
+            struct reqpkg *rp = n_array_nth(pkg->reqpkgs, j);
+
+            n_buf_printf(nbuf, "\"%s\" -> \"%s\" [ label = \"%s\" ];\n",
+                         pkg_id(pkg), pkg_id(rp->pkg), capreq_snprintf_s(rp->req));
+            
+            if (rp->flags & REQPKG_MULTI) {
+                int n = 0;
+                while (rp->adds[n]) {
+                    n_buf_printf(nbuf, "\"%s\" -> \"%s\" [ label = \"%s\" ];\n",
+                                 pkg_id(pkg), pkg_id(rp->adds[n]->pkg),
+                                 capreq_snprintf_s(rp->req));
+                    n++;
+                }
+            }
+        }
+        
+        
+    }
+
+    if ((stream = fopen(dotfile, "w")) == NULL) {
+        logn(LOGERR, _("%s: open failed: %m"), dotfile);
+        n_buf_free(nbuf);
+        return 0;
+    }
+
+    fprintf(stream, "digraph repo {\n"
+            "rankdir=LR;\n"
+            "ordering=out\n"
+            "mclimit=2.0\n"
+            "charset=\"utf-8\"\n"
+            "graph [fontsize=10];\n"
+            "edge  [fontsize=8,color=\"gray\"]\n"
+            "node  [fontsize=10];\n"
+            "node [shape = ellipse];\n");
+
+    if (n_unmet > 0) 
+        fprintf(stream, "node [shape = box] UNMET;\nnode [shape = ellipse];\n");
+
+    fprintf(stream, "%s", (char*)n_buf_ptr(nbuf));
+    fprintf(stream, "\n}\n");
+    fclose(stream);
+    n_buf_free(nbuf);
+    msgn(0, "Graph saved as %s\n", dotfile);
+    return 1;
+}
+
+
