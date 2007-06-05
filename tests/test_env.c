@@ -39,7 +39,7 @@ START_TEST (test_var) {
     n_hash_insert(vars, "1", "pol");
     n_hash_insert(vars, "2", "dek");
     
-    s = poldek_util_expand_vars(tmp, sizeof(tmp), buf, '%', vars);
+    s = poldek_util_expand_vars(tmp, sizeof(tmp), buf, '%', vars, 0);
     fail_if(s == NULL, "expand_vars failed");
     
     fail_if(n_str_ne(s, "poldek"),
@@ -50,7 +50,7 @@ START_TEST (test_var) {
 
     
     n_snprintf(buf, sizeof(buf), "foobar");
-    s = poldek_util_expand_vars(tmp, sizeof(tmp), buf, '%', vars);
+    s = poldek_util_expand_vars(tmp, sizeof(tmp), buf, '%', vars, 0);
 
     fail_if(s == NULL, "expand_vars failed");
     fail_if(n_str_ne(s, buf),
