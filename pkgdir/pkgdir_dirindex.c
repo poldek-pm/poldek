@@ -461,7 +461,7 @@ struct pkgdir_dirindex *pkgdir_dirindex_open(struct pkgdir *pkgdir)
         if (id)
             n_hash_replace(idmap, id, pkg_link(pkg));
         else {
-            logn(LOGERR, _("%s: outdated directory index"), path);
+            logn(LOGWARN, _("%s: outdated directory index"), path);
             goto l_end;
         }
         
