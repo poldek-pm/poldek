@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -19,8 +19,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <trurl/nassert.h>
-#include <trurl/narray.h>
+#include <trurl/trurl.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -37,6 +36,7 @@ static int uninstall(struct cmdctx *cmdctx);
 #define OPT_UNINSTALL       'e'
 #define OPT_INST_NODEPS     (OPT_GID + 2)
 #define OPT_INST_GREEDY     (OPT_GID + 3)
+#define OPT_PM              (OPT_GID + 4)
 
 static struct argp_option options[] = {
 {"test", 't', 0, 0,
@@ -47,7 +47,13 @@ static struct argp_option options[] = {
 {"nodeps", OPT_INST_NODEPS, 0, 0, N_("Ignore broken dependencies"), OPT_GID },
 
 {"greedy", OPT_INST_GREEDY, "LEVEL", OPTION_ARG_OPTIONAL,
-     N_("Remove packages required by selected ones if possible."), OPT_GID },    
+     N_("Remove packages required by selected ones if possible."), OPT_GID },
+
+{"pmop", OPT_PM, "OPTION", 0, 
+ N_("pass option OPTION to PM binary (ex. --pm noscripts)"), OPT_GID },
+{"rpm", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
+{"pmopt", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },                                           
+                                           
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -183,6 +189,31 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'N':
             ts->setop(ts, POLDEK_OP_FOLLOW, 0);
             break;
+
+        case OPT_PM: {
+            tn_array *tl = NULL;
+            int i;
+            
+            if ((tl = n_str_etokl_ext(arg, "\t ", "", "\"'", '\\')) == NULL) {
+                logn(LOGERR, _("%s: parse error"), arg);
+                return ARGP_ERR_UNKNOWN;
+            }
+
+            for (i=0; i < n_array_size(tl); i++) {
+                char *a, opt[256], *dash = "--";
+
+                a = n_array_nth(tl, i);
+                if (*a == '-')
+                    dash = "";
+            
+                n_snprintf(opt, sizeof(opt), "%s%s", dash, a);
+                poldek_ts_configure(ts, POLDEK_CONF_RPMOPTS, opt);
+            }
+
+            n_array_cfree(&tl);
+        }
+            break;
+            
         
         default:
             return ARGP_ERR_UNKNOWN;
@@ -196,10 +227,8 @@ static int uninstall(struct cmdctx *cmdctx)
 {
     struct poclidek_ctx  *cctx;
     struct poldek_ts     *ts;
-    tn_array             *pkgs = NULL;
-    struct poldek_iinf  iinf, *iinfp;
-    int                  i, err = 0;
-    
+    struct poldek_iinf   iinf, *iinfp;
+    int                  err = 0;
     
     cctx = cmdctx->cctx;
     ts = cmdctx->ts;
@@ -213,18 +242,6 @@ static int uninstall(struct cmdctx *cmdctx)
                  cmdctx->cmd->name);
         
         return 0;
-    }
-    
-
-    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, ts, 1);
-    if (pkgs == NULL) {
-        err++;
-        goto l_end;
-    }
-
-    poldek_ts_clean_args(ts);
-    for (i=0; i < n_array_size(pkgs); i++) {
-        poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
     }
 
     if (ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0))
@@ -240,11 +257,6 @@ static int uninstall(struct cmdctx *cmdctx)
         poclidek_apply_iinf(cmdctx->cctx, iinfp);
         poldek_iinf_destroy(iinfp);
     }
-    
-    
- l_end:
-    if (pkgs) 
-        n_array_free(pkgs);
     
     return err == 0;
 }
