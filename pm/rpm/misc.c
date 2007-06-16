@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#define _RPMPRCO_INTERNAL 1 /* see pm_rpmdsSysinfo */
 #include <rpm/rpmlib.h>
 #if HAVE_RPMDSRPMLIB
 # include <rpm/rpmds.h>
@@ -47,7 +48,7 @@ static int extract_rpmds(tn_array *caps, rpmds ds)
         struct capreq *cr;
         uint32_t flags, crflags;
 
-        name = rpmdsN(ds);
+        name = rpmdsDNEVR(ds)+2;
         evr = rpmdsEVR(ds);
         flags = rpmdsFlags(ds);
         
@@ -73,6 +74,25 @@ static int extract_rpmds(tn_array *caps, rpmds ds)
 
 typedef int (*rpmcap_fn)(rpmds *ds, void *);
 
+
+#ifdef HAVE_RPMDSSYSINFO
+static int pm_rpmdsSysinfo(rpmds * dsp, const char * fn) {
+	int ret;
+    
+# ifndef HAVE_RPM_VERSION_GE_4_4_8
+    ret = rpmdsSysinfo(dsp, fn);
+    
+# else    
+	rpmPRCO PRCO = rpmdsNewPRCO(NULL);
+	PRCO->Pdsp = dsp;
+	ret = rpmdsSysinfo(PRCO, fn);
+	PRCO->Pdsp = NULL;
+	rpmdsFreePRCO(PRCO);
+# endif
+	return ret;
+}
+#endif
+
 static int get_rpmlib_caps(tn_array *caps)
 {
     rpmds     ds = NULL;
@@ -86,7 +106,7 @@ static int get_rpmlib_caps(tn_array *caps)
         (rpmcap_fn)rpmdsGetconf,
 #endif
 #ifdef HAVE_RPMDSSYSINFO
-        (rpmcap_fn)rpmdsSysinfo,
+        (rpmcap_fn)pm_rpmdsSysinfo,
 #endif        
 #ifdef HAVE_RPMDSUNAME
         (rpmcap_fn)rpmdsUname,
@@ -163,8 +183,44 @@ tn_array *pm_rpm_rpmlib_caps(void *pm_rpm)
     return caps;
 }
 
+#ifdef HAVE_RPMPLATFORMSCORE    /* rpm 4.4.9 */
+static int machine_score(int tag, const char *val) {
+    char *cpu, *vendor, *os;
+    int rc;
 
-#ifdef HAVE_RPMMACHINESCORE
+    cpu = rpmExpand("%{_host_cpu}", NULL);
+    vendor = rpmExpand("%{_host_vendor}", NULL);
+    os = rpmExpand("%{_host_os}", NULL);
+
+    if (! (cpu && vendor && os) ) {
+        rc = rpmPlatformScore(val, platpat, nplatpat);
+        
+    } else {
+	    int size = strlen(cpu) + strlen(vendor) + strlen(os) + 3;
+	    char *p = alloca(size);
+	    switch (tag) {
+		    case PMMSTAG_ARCH:
+			    n_snprintf(p, size, "%s-%s-%s", val, vendor, os);
+			    break;
+		    case PMMSTAG_OS:
+			    n_snprintf(p, size, "%s-%s-%s", cpu, vendor, val);
+			    break;
+		    default:
+			    n_snprintf(p, size, "%s", val);
+			    break;
+	    }
+
+        rc = rpmPlatformScore(p, platpat, nplatpat);
+    }
+    
+    n_cfree(&cpu);
+    n_cfree(&vendor);
+    n_cfree(&os);
+    
+    return rc;
+}
+
+#elif defined(HAVE_RPMMACHINESCORE)
 static int machine_score(int tag, const char *val)
 {
     int rpmtag = 0, rc;
@@ -186,7 +242,8 @@ static int machine_score(int tag, const char *val)
     n_assert(rpmtag);
     return rpmMachineScore(rpmtag, val);
 }
-#else  /* !HAVE_RPMMACHINESCORE; killed rpmMachineScore() (since 4.4.7) */
+#else  /* !HAVE_RPMPLATFORMSCORE && !HAVE_RPMMACHINESCORE;
+          killed rpmMachineScore() (since 4.4.7) */
 static int machine_score(int tag, const char *val)
 {
     int rc = 0;
@@ -231,8 +288,10 @@ int pm_rpm_arch_score(const char *arch)
     
     if (arch == NULL)
         return 0;
-    
-#ifdef HAVE_RPMMACHINESCORE    
+
+#ifdef HAVE_RPMPLATFORMSCORE
+    rc = rpmPlatformScore(arch, platpat, nplatpat);
+#elif defined(HAVE_RPMMACHINESCORE)
     rc = rpmMachineScore(RPM_MACHTABLE_INSTARCH, arch);
 #else
     rc = 9;

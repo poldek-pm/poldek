@@ -9,11 +9,6 @@
 
 #include "i18n.h"
 
-#ifndef HAVE__RPMVERCMP /* _rpmvercmp - new in rpm 4.4.7 */
-extern int rpmvercmp(const char *one,  const char *two);
-#endif 
-
-
 int main(int argc, char *argv[])
 {
     int cmprc, is_test = 0;

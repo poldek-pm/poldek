@@ -305,11 +305,14 @@ AC_CHECK_FUNCS(rpmdsCpuinfo)
 dnl rpm 4.4.7
 dnl  - killed rpmMachineScore and rpmGetVar
 AC_CHECK_FUNCS(rpmMachineScore)
+AC_CHECK_FUNCS(rpmPlatformScore)
 AC_CHECK_FUNCS(rpmGetVar)
 AC_CHECK_FUNCS(rpmioAccess)
 dnl  - new _rpmvercmp()
 AC_CHECK_FUNCS(_rpmvercmp)
 
+dnl rpm 4.4.9
+AC_CHECK_HEADERS([rpm/rpmevr.h])
 
 
 dnl metadata & xml2
@@ -493,7 +496,7 @@ AC_CONFIG_FILES([
         doc/Makefile
         doc/homepage/Makefile
         doc/pl/Makefile
-	    install/Makefile
+	install/Makefile
         Makefile
         poldek.spec
         poldek-suse.spec

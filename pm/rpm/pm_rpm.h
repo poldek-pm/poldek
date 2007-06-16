@@ -2,6 +2,11 @@
 #define POLDEK_PM_RPM_MODULE_H
 
 #include <rpm/rpmlib.h>
+
+#ifdef HAVE_RPMEVR_H
+# include <rpm/rpmevr.h>
+#endif
+
 #ifdef HAVE_RPM_4_0_4
 # include <rpm/rpmcli.h>
 #endif
@@ -9,6 +14,14 @@
 #ifdef HAVE_RPM_4_1
 # include <rpm/rpmts.h>
 #endif
+
+#ifdef RPM_MAJOR_VERSION
+# define PM_RPMVER(a,b,c) ((a)*65536+(b)*256+(c))
+# if PM_RPMVER(RPM_FORMAT_VERSION,RPM_MAJOR_VERSION,RPM_MINOR_VERSION) >= PM_RPMVER(4,4,8)
+#  define HAVE_RPM_VERSION_GE_4_4_8 1
+# endif
+#endif 
+
 
 /* RPMTAG_COPYRIGHT disappears in 4.4.3 but don't know from
    when RPMTAG_LICENSE starts */

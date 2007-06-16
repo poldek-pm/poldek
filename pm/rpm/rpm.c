@@ -400,11 +400,6 @@ void rpmlog(int prii, const char *fmt, ...)
 }
 
 #endif /* HAVE_RPMLOG */
-    
-
-#ifndef HAVE__RPMVERCMP /* _rpmvercmp - new in rpm 4.4.7 */       
-extern int rpmvercmp(const char *one, const char *two);
-#endif
 
 int pm_rpm_vercmp(const char *one, const char *two)
 {
