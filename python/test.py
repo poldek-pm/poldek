@@ -18,8 +18,8 @@ def test_pkguinf(ctx):
     print "Summary: ", inf.get(inf.SUMMARY)
     print "License: ", inf.get(inf.LICENSE)
     print "URL:     ", inf.get(inf.URL)
+    print "Group:   ", pkg.group()
     print "Description:\n", inf.get(inf.DESCRIPTION)
-
     it = pkg.get_flist_it()
     f = it.get_tuple()
     while f:
@@ -75,7 +75,7 @@ poldek.lib_init()
 
 ctx = poldek.poldek_ctx()
 #poldek_set_verbose(1)
-src = poldek.source('ac-test')
+src = poldek.source('ac')
 ctx.configure(ctx.CONF_SOURCE, src)
 ctx.load_config()
 if not ctx.setup():
