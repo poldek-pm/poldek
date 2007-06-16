@@ -3,7 +3,7 @@
 
 #include <rpm/rpmlib.h>
 
-#ifdef HAVE_RPMEVR_H
+#ifdef HAVE_RPM_RPMEVR_H
 # include <rpm/rpmevr.h>
 #endif
 
