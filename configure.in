@@ -58,7 +58,10 @@ AM_GNU_GETTEXT_VERSION(0.11.5)
 AM_CFLAGS="-Wall -W"
 AC_SUBST(AM_CFLAGS)
 
-PKG_CHECK_MODULES(CHECK, check >= 0.9.4, have_check=yes, have_check=no)
+AM_PATH_CHECK(,[have_check="yes"],
+               [AC_MSG_WARN([check library not found; cannot run unit tests]) 
+              have_check="no"])
+
 
 dnl Process features.
 AC_CHECK_LIB(tinfo, tigetstr,,[
