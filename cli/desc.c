@@ -793,16 +793,27 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, unsigned fl
     }
 
     if (pkg->_arch) {
-        char *p = "Arch:";
+        char label[256];
+        int n;
         
-        if (pkg->_os) 
-            p = "Arch/OS:";
-        
-        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", p);
+        n = n_snprintf(label, sizeof(label), "Arch");
+            
+        if (pkg->_os)
+            n += n_snprintf(&label[n], sizeof(label) - n, "/OS");
+                
+        if (pkg->color)
+            n += n_snprintf(&label[n], sizeof(label) - n, "/Color");
+
+        n += n_snprintf(&label[n], sizeof(label) - n, ":");
+
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", label);
         cmdctx_printf(cmdctx, "%s", pkg_arch(pkg));
             
         if (pkg->_os) 
             cmdctx_printf(cmdctx, "/%s", pkg_os(pkg));
+
+        if (pkg->color)
+            cmdctx_printf(cmdctx, "/%d", pkg->color);
         cmdctx_printf(cmdctx, "\n");
     }
         
@@ -907,7 +918,7 @@ static int desc(struct cmdctx *cmdctx)
 
         cmdctx_printf(cmdctx, "\n");
         cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, "%-16s", "Package:");
-        cmdctx_printf(cmdctx, "%s\n", pkg_evr_snprintf_s(pkg));
+        cmdctx_printf(cmdctx, "%s\n", pkg_id(pkg));
         
         if (cmdctx->_flags & OPT_DESC_DESCR) 
             show_description(cmdctx, pkg, cmdctx->_flags);
