@@ -269,6 +269,9 @@ int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2)
     if ((rc = pkg_cmp_arch(p1, p2)))
         return rc;
     
+    if ((rc = p1->color - p2->color))
+        return rc;
+    
     if ((rc = p1->btime - p2->btime))
         return rc;
 

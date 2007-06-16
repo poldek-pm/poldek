@@ -119,6 +119,7 @@ int pkgmark_verify_package_conflicts(struct pkgmark_set *pms);
 
 struct pkgset;
 int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps);
-
+int packages_dot_dependency_graph(tn_array *pkgs, struct pkgset *ps,
+                                  const char *dotfile);
 #endif
 

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -44,9 +44,7 @@
 #include "poldek.h"
 #include "poldek_intern.h"
 #include "pm/pm.h"
-
-extern
-int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
+#include "install/install.h"
 
 struct map_s {
     tn_array *avpkgs;
@@ -141,6 +139,6 @@ int do_poldek_ts_upgrade_dist(struct poldek_ts *ts)
 
     else if (map_s.nmarked == 0)
         msgn(1, _("Nothing to do"));
-    
-    return do_poldek_ts_install(ts, NULL);
+
+    return in_do_poldek_ts_install(ts, NULL);
 }

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -189,7 +189,10 @@ int find_db_conflicts_cnfl_with_db(int indent, struct install_ctx *ictx,
         
         if (ht && n_hash_exists(ht, dbpkg->name))
             continue;
-        
+
+        if (poldek_conf_MULTILIB && !pkg_is_colored_like(pkg, dbpkg))
+            continue;
+                
         if (pkg_match_req(dbpkg, cnfl, 1)) {
             if (!in_resolve_conflict(indent, ictx, pkg, cnfl, dbpkg)) {
                 logn(LOGERR, _("%s (cnfl %s) conflicts with installed %s"),

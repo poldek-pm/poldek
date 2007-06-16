@@ -40,7 +40,6 @@ libpoldek_la_SOURCES = \
 	  pkgset.c pkgset.h 		\
 	  pkgset-req.c pkgset-req.h	\
 	  pkgset-order.c    	\
-	  pkgset-install.c		\
 	  dbdep.c dbdep.h		\
 	  arg_packages.c arg_packages.h		\
 	  conf.c conf.h	conf_intern.h conf_sections.c \

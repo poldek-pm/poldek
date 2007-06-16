@@ -22,6 +22,7 @@ cli/op_packages.c
 cli/op_source.c
 cli/op_split.c
 cli/op_verify.c
+cli/poclidek_demo.c
 cli/rcmd.c
 cli/reload.c
 cli/search.c
@@ -85,7 +86,6 @@ pkgmark.c
 pkgmisc.c
 pkgroup.c
 pkgscore.c
-pkgset-install.c
 pkgset-load.c
 pkgset-order.c
 pkgset-req.c

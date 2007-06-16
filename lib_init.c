@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -56,7 +56,7 @@ static int poldeklib_init_called = 0;
 const char poldek_BUG_MAILADDR[] = "<mis@pld-linux.org>";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
 const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
-"Copyright (C) 2000-2006 Pawel A. Gajda <mis@pld-linux.org>\n"
+"Copyright (C) 2000-2007 Pawel A. Gajda <mis@pld-linux.org>\n"
 "This program may be freely redistributed under the terms of the GNU GPL v2";
 
 static const char *poldek_logprefix = "poldek";
@@ -1394,7 +1394,8 @@ static void __setup_multilib(struct poldek_ctx *ctx)
 {
     struct default_op_map_ent *ent, tmp;
     char     scolor[64];
-    int      color, multilib = 2;
+    int      color;
+    int      multilib = 2; /* 'auto' */
     
     
     if (!pm_conf_get(ctx->pmctx, "%{_transaction_color}", scolor, sizeof(scolor)))
@@ -1429,14 +1430,12 @@ static void __setup_multilib(struct poldek_ctx *ctx)
             ent->defaultv = 1;
 
         if (color)
-            msgn(2, "Enabling multilib mode, rpm's transaction color = %d",
-                 color);
+            msgn(2, "Enabling multilib mode, transaction color = %d", color);
         
         DBGF("multilib(auto) = %d\n", ent->defaultv);
         poldek_ts_xsetop(ctx->ts, ent->op, ent->defaultv, 0);
     }
 }
-
 
 
 /*  */

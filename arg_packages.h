@@ -37,7 +37,7 @@ int arg_packages_setup(struct arg_packages *aps, struct pm_ctx *ctx);
 
 int arg_packages_resolve(struct arg_packages *aps,
                          tn_array *avpkgs,
-                         struct pkgset *ps,
+                         struct pkgset *ps,/* =NULL, needed by RESOLV_CAPS only */
                          unsigned flags);
 
 tn_hash *arg_packages_get_resolved_caps(struct arg_packages *aps);

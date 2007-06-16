@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -60,8 +60,6 @@ extern
 int do_poldek_ts_install_dist(struct poldek_ts *ts);
 extern
 int do_poldek_ts_upgrade_dist(struct poldek_ts *ts);
-extern
-int do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
 extern
 int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf);
 
@@ -617,16 +615,19 @@ int poldek_ts_add_pkgs(struct poldek_ts *ts, tn_array *pkgs)
 
 int poldek_ts_add_pkgmask(struct poldek_ts *ts, const char *mask)
 {
+    DBGF("%s\n", mask);
     return arg_packages_add_pkgmask(ts->aps, mask);
 }
 
 int poldek_ts_add_pkglist(struct poldek_ts *ts, const char *path)
 {
+    DBGF("%s\n", path);
     return arg_packages_add_pkglist(ts->aps, path);
 }
 
 int poldek_ts_add_pkgfile(struct poldek_ts *ts, const char *path)
 {
+    DBGF("%s\n", path);
     return arg_packages_add_pkgfile(ts->aps, path);
 }
 
@@ -767,29 +768,9 @@ static int ts_prerun0(struct poldek_ts *ts)
 
     if (ts->_iflags & TS_CONFIG_LATER)
         poldek__ts_postconf(ts->ctx, ts);
-    
-#if 0 /* preserve && restore global confs or propagate it to ctx? */
-    int op, v;
-    /* poldek_conf_PROMOTE_EPOCH tricks */
-    op = POLDEK_OP_PROMOTEPOCH;
-    /* preserve value */
-    if (poldek_conf_PROMOTE_EPOCH)
-        bitvect_set(ts->_opvect_preserve, op);
-    else
-        bitvect_clr(ts->_opvect_preserve, op);
 
-    /* re-set (setop sets poldek_conf_PROMOTE_EPOCH) */
-    ts->setop(ts, op, ts->getop(ts, op));
-#endif    
     return 1;
 }
-
-#if 0
-static int ts_postrun0(struct poldek_ts *ts) 
-{
-    return 1;
-}
-#endif
 
 static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf) 
 {
@@ -1047,13 +1028,13 @@ int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     pkgdb_tx_begin(ts->db);
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
 
-    if (poldek_conf_MULTILIB || ts->ctx->_depengine == 2) {
-        msgn(5, "Running poldek2 dependency engine...");
-        rc = in_do_poldek_ts_install(ts, iinf);
-        
+    if (ts->ctx->_depengine == 3) { /* hope, soon */
+        msgn(5, "Running poldek3 dependency engine...");
+        //rc = in_do_poldek_ts_install(ts, iinf);
+        n_die("Not implemented yet");
+
     } else {
-        msgn(5, "Running poldek1 dependency engine...");
-        rc = do_poldek_ts_install(ts, iinf);
+        rc = in_do_poldek_ts_install(ts, iinf);
     }
 
     if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
@@ -1196,7 +1177,7 @@ int poldek_ts_run(struct poldek_ts *ts, struct poldek_iinf *iinf)
 
     if (!ts_prerun0(ts))
         return 0;
-    
+
     n_assert(ts_run);
     if (ts_run->flags & TS_RUN_NEEDAVSET)
         poldek_load_sources(ts->ctx);

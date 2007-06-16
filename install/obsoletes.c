@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -245,7 +245,11 @@ static int obs_filter(struct pkgdb *db, const struct pm_dbrec *dbrec,
 
     if (arch) 
         pkg_set_arch(&dbpkg, arch);
-
+    
+    DBGF("%s.%s:%d colored like %s:%d => %d\n", pkg_evr_snprintf_s(&dbpkg),
+         arch, dbpkg.color,
+         pkg_id(pkg), pkg->color, pkg_is_colored_like(&dbpkg, pkg));
+        
     if (pkg_is_colored_like(&dbpkg, pkg))
         return 1;
     
