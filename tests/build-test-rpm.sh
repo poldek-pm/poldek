@@ -10,7 +10,7 @@ provides=
 files=
 
 usage_and_exit() {
-    echo "Usage $0 -n NAME -v VERSION-[RELEASE [-p PROVIDES] [-r REQUIRES] [-f file] "
+    echo "Usage $0 -n NAME -v [EPOCH:]VERSION-[RELEASE] [-p PROVIDES] [-r REQUIRES] [-f file] "
     exit 1
 }
 
@@ -44,12 +44,21 @@ if echo $version | grep -q '-'; then
     [ -n "$version" -a -n "$release" ] || exit 1;
 fi
 
+if echo $version | grep -q ':'; then
+    epoch=$(echo $version | cut -f 1 -d :)
+    version=$(echo $version | cut -f 2 -d :)
+    [ -n "$version" -a -n "$epoch" ] || exit 1;
+fi
+
+
+
 SPEC="/tmp/$name.spec"
 > $SPEC
 echo "Building $name $version-$release"
 echo "Name: $name" >> $SPEC
 echo "Version: $version" >> $SPEC
 echo "Release: $release" >> $SPEC
+if [ -n "$epoch" ]; then echo "Epoch: $epoch" >> $SPEC; fi
 echo "Summary: $name" >> $SPEC
 echo "Group: System" >> $SPEC
 echo "License: foo" >> $SPEC
