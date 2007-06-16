@@ -1,9 +1,13 @@
 /* 
-  Copyright (C) 2000, 2001 Pawel A. Gajda (mis@k2.net.pl)
- 
+  Copyright (C) 2000 - 2007 Pawel A. Gajda (mis@pld-linux.org)
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
@@ -99,7 +103,7 @@ N_("Install packages ignoring broken dependencies, conflicts, etc"), OPT_GID },
  N_("Install packages with broken dependencies"), OPT_GID },
 
 {"mercy", OPT_MERCY, 0, 0, N_("Treat requirements with EVR as satisfied by "
-                              "capabilities without it (old RPM behaviour)"), OPT_GID},
+                              "unversioned capabilities (old RPM behaviour)"), OPT_GID},
 
 {"promoteepoch", OPT_PROMOTEEPOCH, 0, 0,
      N_("Promote non-existent requirement's epoch to "
@@ -122,12 +126,12 @@ N_("Same as --nodeps but applied to PM (rpm) only"), OPT_GID },
 
 {"pm-force", OPT_PMONLY_FORCE, 0, 0,
 N_("Same as --force but applied to PM (rpm) only)"), OPT_GID },
-
 {"rpm-force", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
     
-{"pmopt", OPT_PM, "OPTION", 0, 
+{"pmop", OPT_PM, "OPTION", 0, 
  N_("pass option OPTION to PM binary"), OPT_GID },
 {"rpm", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
+{"pmopt", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },                                           
 
 {"nohold", OPT_INST_NOHOLD, 0, 0,
  N_("Do not hold any packages. Disables --hold settings."), OPT_GID },    
@@ -386,7 +390,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_FORCE:
             ts->setop(ts, POLDEK_OP_FORCE, 1);
             break;
-
+            
         case 't':
             if (ts->getop(ts, POLDEK_OP_TEST))
                 ts->setop(ts, POLDEK_OP_RPMTEST, 1);
