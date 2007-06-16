@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -100,7 +100,7 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
 }
 
 #else  /* HAVE_RPM_4_0 */
-
+/* Ancient rpm3 */
 static
 int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg) 
 {

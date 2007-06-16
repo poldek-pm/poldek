@@ -259,6 +259,32 @@ void pm_rpm_setup_commands(struct pm_rpm *pm)
     pm->flags |= PM_RPM_CMDSETUP_DONE;
 }
 
+/* colors equal? there are repository types without color info, so catch them */
+static int colors_eq(const struct pkg *pkg, const char *path)
+{
+    Header h;
+    int color = -1;
+    
+    if (pm_rpmhdr_loadfile(path, &h)) {
+#ifdef HAVE_RPM_HGETCOLOR
+        color = hGetColor(h);
+#endif
+        headerFree(h);
+    }
+    
+    if (color > 0 && (unsigned)color == pkg->color)
+        return 1;
+
+    if (color == -1 && pkg->color > 0)
+        logn(LOGERR, "%s: package has color (%d), "
+             "but rpm without multilib support is used", pkg_id(pkg), pkg->color);
+    
+    else if (pkg->color != (unsigned)color && color + pkg->color > 0)
+        logn(LOGERR, "%s package color (%d) is not equal to %s's one (%d)",
+             pkg_id(pkg), pkg->color, n_basenam(path), color);
+    return 0;
+}
+
 
 int pm_rpm_packages_install(struct pkgdb *db,
                             tn_array *pkgs, tn_array *pkgs_toremove,
@@ -267,8 +293,8 @@ int pm_rpm_packages_install(struct pkgdb *db,
     struct pm_rpm *pm = db->_ctx->modh;
     char **argv;
     char *cmd;
-    int i, n, nopts = 0, ec, nsignerr = 0;
-    int nv = poldek_VERBOSE;
+    int i, nargs, nopts = 0, ec, nsignerr = 0, ncolorerr = 0;
+    int nverbose = poldek_VERBOSE;
 
     pkgs_toremove = pkgs_toremove;
 
@@ -279,14 +305,14 @@ int pm_rpm_packages_install(struct pkgdb *db,
     }
     
     DBGF("rpm = %s\n", pm->rpm);
-    n = 128 + n_array_size(pkgs);
-    argv = alloca((n + 1) * sizeof(*argv));
-    argv[n] = NULL;
-    n = 0;
+    nargs = 128 + n_array_size(pkgs);
+    argv = alloca((nargs + 1) * sizeof(*argv));
+    argv[nargs] = NULL;
+    nargs = 0;
     
     if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
         cmd = pm->rpm;
-        argv[n++] = n_basenam(pm->rpm);
+        argv[nargs++] = n_basenam(pm->rpm);
         
     } else if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0) {
         if (!pm->sudo) {
@@ -295,72 +321,72 @@ int pm_rpm_packages_install(struct pkgdb *db,
         }
 
         cmd = pm->sudo;
-        argv[n++] = n_basenam(pm->sudo);
-        argv[n++] = pm->rpm;
+        argv[nargs++] = n_basenam(pm->sudo);
+        argv[nargs++] = pm->rpm;
         
     } else {
         cmd = pm->rpm;
-        argv[n++] = n_basenam(pm->rpm);
+        argv[nargs++] = n_basenam(pm->rpm);
     }
     
     if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE | POLDEK_TS_REINSTALL |
                          POLDEK_TS_DOWNGRADE))
-        argv[n++] = "--upgrade";
+        argv[nargs++] = "--upgrade";
     else
-        argv[n++] = "--install";
+        argv[nargs++] = "--install";
     
     if (poldek_ts_issetf(ts, POLDEK_TS_REINSTALL)) {
-        argv[n++] = "--replacefiles";
-        argv[n++] = "--replacepkgs";
+        argv[nargs++] = "--replacefiles";
+        argv[nargs++] = "--replacepkgs";
     }
         
     if (poldek_ts_issetf(ts, POLDEK_TS_DOWNGRADE)) {
-        argv[n++] = "--oldpackage";
+        argv[nargs++] = "--oldpackage";
     }
         
-    if (nv > 0) {
-        argv[n++] = "-vh";
-        nv--;
+    if (nverbose > 0) {
+        argv[nargs++] = "-vh";
+        nverbose--;
     }
 
-    if (nv > 0)
-        nv--;
+    if (nverbose > 0)
+        nverbose--;
     
-    while (nv-- > 0) 
-        argv[n++] = "-v";
+    while (nverbose-- > 0) 
+        argv[nargs++] = "-v";
     
     if (ts->getop(ts, POLDEK_OP_RPMTEST))
-        argv[n++] = "--test";
+        argv[nargs++] = "--test";
 
     if (ts->getop(ts, POLDEK_OP_JUSTDB))
-        argv[n++] = "--justdb";
+        argv[nargs++] = "--justdb";
         
     if (ts->getop(ts, POLDEK_OP_FORCE))
-        argv[n++] = "--force";
+        argv[nargs++] = "--force";
     
     if (ts->getop(ts, POLDEK_OP_NODEPS))
-        argv[n++] = "--nodeps";
+        argv[nargs++] = "--nodeps";
 	
     if (ts->rootdir) {
-    	argv[n++] = "--root";
-        argv[n++] = (char*)ts->rootdir;
+    	argv[nargs++] = "--root";
+        argv[nargs++] = (char*)ts->rootdir;
     }
 
-    argv[n++] = "--noorder";    /* packages always ordered by me */
+    argv[nargs++] = "--noorder";    /* packages always ordered by me */
 
     if (ts->rpmacros) 
         for (i=0; i<n_array_size(ts->rpmacros); i++) {
-            argv[n++] = "--define";
-            argv[n++] = n_array_nth(ts->rpmacros, i);
+            argv[nargs++] = "--define";
+            argv[nargs++] = n_array_nth(ts->rpmacros, i);
         }
     
     if (ts->rpmopts) 
         for (i=0; i < n_array_size(ts->rpmopts); i++)
-            argv[n++] = n_array_nth(ts->rpmopts, i);
+            argv[nargs++] = n_array_nth(ts->rpmopts, i);
     
     
     nsignerr = 0;
-    nopts = n;
+    nopts = nargs;
     for (i=0; i < n_array_size(pkgs); i++) {
         char path[PATH_MAX], *s, name[1024], *pkgpath;
         unsigned vrfyflags;
@@ -392,49 +418,55 @@ int pm_rpm_packages_install(struct pkgdb *db,
             }
         }
 
+        if (ts->getop(ts, POLDEK_OP_MULTILIB) && !colors_eq(pkg, path))
+            ncolorerr++;
+        
         s = alloca(len + 1);
         memcpy(s, path, len);
         s[len] = '\0';
-        argv[n++] = s;
+        argv[nargs++] = s;
     }
 
-    if (nsignerr) {
-        if (poldek_ts_is_interactive_on(ts) && ts->ask_fn) {
-            if (!ts->ask_fn(0,
-                              _("There were signature verification errors. "
-                                "Proceed? [y/N]")))
+    
+    if (!ts->getop(ts, POLDEK_OP_RPMTEST) && (nsignerr || ncolorerr)) {
+        int can_ask = (poldek_ts_is_interactive_on(ts) && ts->ask_fn);
+
+        if (nsignerr)
+            if (!can_ask || !ts->ask_fn(0,
+                                        _("There were signature verification errors. "
+                                          "Proceed? [y/N]")))
                 goto l_err_end;
-            
-        } else {
-            goto l_err_end;
-        }
+
+        if (ncolorerr)
+            if (!can_ask || !ts->ask_fn(0,
+                                        _("There were package coloring mismatches. "
+                                          "Proceed? [y/N]")))
+                goto l_err_end;
     }
         
-    n_assert(n > nopts); 
-    argv[n++] = NULL;
+    n_assert(nargs > nopts); 
+    argv[nargs] = NULL;
 
     if (poldek_VERBOSE) {
-        char buf[1024], *p;
+        char buf[8192], *p;
         p = buf;
         
         for (i=0; i < nopts; i++) 
             p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
+
+        if (poldek_VERBOSE > 1) {
+            for (i=nopts; i < nargs; i++) 
+                p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", n_basenam(argv[i]));
+        }
+
         *p = '\0';
         msgn(1, _("Executing%s..."), buf);
-        if (poldek_VERBOSE > 2) {
-            for (i = 0; i < n_array_size(pkgs); i++) {
-                struct pkg *pkg = n_array_nth(pkgs, i);
-                msgn(2, "  %s", pkg_id(pkg));
-            }
-        }
     }
     
     ec = pm_rpm_execrpm(cmd, argv, 1, 1);
-
     return ec == 0;
     
  l_err_end:
-    
     return 0;
 }
 
@@ -444,7 +476,7 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
     struct pm_rpm *pm = db->_ctx->modh;
     char **argv;
     char *cmd;
-    int i, n, nopts = 0;
+    int i, nargs, nopts = 0;
 
     pm_rpm_setup_commands(pm);
     if (!pm->rpm) {
@@ -452,15 +484,15 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
         return 0;
     }
     
-    n = 128 + n_array_size(pkgs);
-    argv = alloca((n + 1) * sizeof(*argv));
-    argv[n] = NULL;
+    nargs = 128 + n_array_size(pkgs);
+    argv = alloca((nargs + 1) * sizeof(*argv));
+    argv[nargs] = NULL;
     
-    n = 0;
+    nargs = 0;
     
     if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
         cmd = pm->rpm;
-        argv[n++] = n_basenam(pm->rpm);
+        argv[nargs++] = n_basenam(pm->rpm);
         
     } else if (ts->getop(ts, POLDEK_OP_USESUDO)) {
         if (!pm->sudo) {
@@ -468,67 +500,74 @@ int pm_rpm_packages_uninstall(struct pkgdb *db,
             return 0;
         }
         cmd = pm->sudo;
-        argv[n++] = n_basenam(pm->sudo);
-        argv[n++] = pm->rpm;
+        argv[nargs++] = n_basenam(pm->sudo);
+        argv[nargs++] = pm->rpm;
         
     } else {
         cmd = pm->rpm;
-        argv[n++] = n_basenam(pm->rpm);
+        argv[nargs++] = n_basenam(pm->rpm);
     }
     
-    argv[n++] = "--erase";
+    argv[nargs++] = "--erase";
 
     for (i=1; i < poldek_VERBOSE; i++)
-        argv[n++] = "-v";
+        argv[nargs++] = "-v";
 
     if (ts->getop(ts, POLDEK_OP_RPMTEST))
-        argv[n++] = "--test";
+        argv[nargs++] = "--test";
 
     if (ts->getop(ts, POLDEK_OP_JUSTDB))
-        argv[n++] = "--justdb";
+        argv[nargs++] = "--justdb";
     
     if (ts->getop(ts, POLDEK_OP_FORCE))
-        argv[n++] = "--force";
+        argv[nargs++] = "--force";
     
     if (ts->getop(ts, POLDEK_OP_NODEPS))
-        argv[n++] = "--nodeps";
+        argv[nargs++] = "--nodeps";
 
     if (ts->rootdir) {
-    	argv[n++] = "--root";
-        argv[n++] = (char*)ts->rootdir;
+    	argv[nargs++] = "--root";
+        argv[nargs++] = (char*)ts->rootdir;
     }
     
-    argv[n++] = "--noorder";
+    argv[nargs++] = "--noorder";
     
     if (ts->rpmopts) 
         for (i=0; i<n_array_size(ts->rpmopts); i++)
-            argv[n++] = n_array_nth(ts->rpmopts, i);
+            argv[nargs++] = n_array_nth(ts->rpmopts, i);
     
-    nopts = n;
+    nopts = nargs;
     
     /* rpm -e removes packages in reverse order  */
     for (i = n_array_size(pkgs) - 1; i >= 0; i--) {
-        char nevr[256];
-        int len;
+        const char *id;
+        int idlen;
+
+        id = pkg_id(n_array_nth(pkgs, i));
+        idlen = strlen(id);
         
-        len = pkg_snprintf(nevr, sizeof(nevr), n_array_nth(pkgs, i));
-        argv[n] = alloca(len + 1);
-        memcpy(argv[n], nevr, len + 1);
-        n++;
+        argv[nargs] = alloca(idlen + 1);
+        memcpy(argv[nargs], id, idlen + 1);
+        nargs++;
     }
     
-    n_assert(n > nopts); 
-    argv[n++] = NULL;
+    n_assert(nargs > nopts); 
+    argv[nargs] = NULL;
     
     if (poldek_VERBOSE > 0) {
-        char buf[1024], *p;
+        char buf[8192], *p;
         p = buf;
         
         for (i=0; i < nopts; i++) 
             p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
+
+        if (poldek_VERBOSE > 1) {
+            for (i=nopts; i < nargs; i++) 
+                p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
+        }
+
         *p = '\0';
         msgn(1, _("Running%s..."), buf);
-        
     }
 
     return pm_rpm_execrpm(cmd, argv, 0, 0) == 0;
