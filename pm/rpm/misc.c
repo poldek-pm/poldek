@@ -43,14 +43,20 @@ static int extract_rpmds(tn_array *caps, rpmds ds)
 {
     ds = rpmdsInit(ds);
     while (rpmdsNext(ds) >= 0) {
-        const char *name, *evr;
-        char tmp[256], *tmpptr;
+        const char *evr, *p;
+        char *name, tmp[256], *tmpptr;
         struct capreq *cr;
         uint32_t flags, crflags;
 
-        name = rpmdsDNEVR(ds)+2;
+        p = rpmdsDNEVR(ds)+2;
+        n_strdupap(p, &name);
+        if ((p = strchr(name, ' '))) /* cut afer name */
+            *(char*)p = '\0';
+
         evr = rpmdsEVR(ds);
         flags = rpmdsFlags(ds);
+
+        DBGF("%s, %s\n", name, evr);
         
         if ((flags & RPMSENSE_EQUAL)) {
             n_strncpy(tmp, evr, 128);
