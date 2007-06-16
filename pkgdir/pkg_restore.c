@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -185,9 +185,9 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
             pkg->groupid = tmpkg.groupid;
             pkg->recno = tmpkg.recno;
             pkg->fmtime = tmpkg.fmtime;
+            pkg->color  = tmpkg.color;
             pkg_loaded = 1;
-			//if (pkg)
-            //    printf("ld %s\n", pkg_snprintf_s(pkg));
+            DBGF("Loaded %s, color=%d\n", pkg_id(pkg), pkg->color);
             break;
         }
 
