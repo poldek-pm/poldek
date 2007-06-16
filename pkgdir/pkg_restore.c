@@ -187,7 +187,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
             pkg->fmtime = tmpkg.fmtime;
             pkg->color  = tmpkg.color;
             pkg_loaded = 1;
-            DBGF("Loaded %s, color=%d\n", pkg_id(pkg), pkg->color);
+            msgn(3, "Loaded %s, color=%d", pkg_id(pkg), pkg->color);
             break;
         }
 
