@@ -231,9 +231,9 @@ if test "${is_rpm4_0_4}." = "no." ; then
 	
 	AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"],,[$LIBS])
 	# assume that librpm complied with --enable-db1
-	if test "${ENABLE_STATIC}." = "yes."; then 
-		DBLIB="$DBLIB -ldb1"
-	fi
+	#if test "${ENABLE_STATIC}." = "yes."; then 
+	#	DBLIB="$DBLIB -ldb1"
+	#fi
 else
     AC_CHECK_LIB(db4, db_create, [DBLIB="-ldb4"],
         [AC_CHECK_LIB(db-4.1, db_create, [DBLIB="-ldb-4.1"],
