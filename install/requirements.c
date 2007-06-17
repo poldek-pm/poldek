@@ -28,22 +28,22 @@ struct pkg *find_supersede_pkg(struct install_ctx *ictx, const struct pkg *pkg)
         return NULL;
     
     best_i = in_select_best_pkg(ictx, pkg, pkgs);
-    if (best_i == -1) {           /* possible in multilib mode */
+    if (best_i == -1) {           /* can happens in multilib mode */
         n_array_free(pkgs);
         return NULL;
     }
-    
+
     for (i=best_i; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
             
         if (strcmp(pkg->name, p->name) == 0)
             continue;
-
-        if (poldek_conf_MULTILIB && 0) {
+#if 0                           /* needless here */
+        if (poldek_conf_MULTILIB) {
             if (!pkg_is_colored_like(p, pkg))
                 continue;
         }
-            
+#end            
         DBGF("found %s <- %s, %d, %d\n", pkg_id(pkg),
              pkg_id(p),
              pkg_caps_obsoletes_pkg_caps(p, pkg), 

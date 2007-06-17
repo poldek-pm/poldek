@@ -115,7 +115,7 @@ int verify_unistalled_cap(int indent, struct install_ctx *ictx,
         return 1;
     }
     
-    DBG("spkg %s\n", db_dep->spkg ? pkg_id(db_dep->spkg) : "NO");
+    DBG("  spkg %s\n", db_dep->spkg ? pkg_id(db_dep->spkg) : "NO");
     req = db_dep->req;
 
     // still satisfied by db? 
