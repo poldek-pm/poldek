@@ -1,16 +1,19 @@
-/* 
-  Copyright (C) 2000 - 2002 Pawel A. Gajda (mis@k2.net.pl)
- 
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License version 2 as
-  published by the Free Software Foundation (see file COPYING for
-  details).
+/*
+  Copyright (C) 2000 - 2007 Pawel A. Gajda (mis@pld-linux.org)
 
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
   $Id$
-  Module used in pkgset-install.c only
+  Module to track dependencies during resolving them; used
+  by install/ subsys only
 */
 
 #ifdef HAVE_CONFIG_H
@@ -42,6 +45,8 @@
 #include "misc.h"
 #include "dbdep.h"
 #include "pkgfl.h"
+
+extern int poldek_conf_MULTILIB;
 
 static void db_dep_free_pkgs(struct db_dep *db_dep) 
 {
@@ -83,7 +88,7 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
     //}
     
     DBGF("%s requiredby=%s satisfiedby=%s [type=%s]\n", capreq_snprintf_s(req),
-         pkg_snprintf_s(pkg), spkg ? pkg_snprintf_s0(spkg) : "NONE",
+         pkg_id(pkg), spkg ? pkg_id(spkg) : "NONE",
          (flags & DBDEP_FOREIGN) ? "foreign" :
          (flags & DBDEP_DBSATISFIED) ? "db" : "UNKNOWN");
 
@@ -122,7 +127,7 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
         new_dep = n_malloc(sizeof(*new_dep));
         new_dep->req = req;
         new_dep->spkg = spkg;
-        new_dep->pkgs = n_array_new(4, NULL, (tn_fn_cmp)pkg_cmp_name_evr);
+        new_dep->pkgs = n_array_new(4, NULL, (tn_fn_cmp)pkg_cmp_id);
         n_array_push(new_dep->pkgs, pkg);
         new_dep->flags = flags;
 
@@ -133,7 +138,45 @@ void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
         
         n_list_push(l, new_dep);
     }
+    
+#if ENABLE_TRACE    
+    db_deps_dump(db_deph);
+#endif    
 }
+
+void db_deps_dump(const tn_hash *db_deph)
+{
+    tn_array *keys;
+    int i;
+
+    msgn(0, "db_deps DUMP");
+    keys = n_hash_keys(db_deph);
+    n_array_sort(keys);
+    
+    for (i=0; i<n_array_size(keys); i++) {
+        const char *key = n_array_nth(keys, i);
+        tn_list *l;
+
+        msgn_i(0, 2, "cap %s", key);
+        if ((l = n_hash_get(db_deph, key))) {
+            struct db_dep     *dep;
+            tn_list_iterator  it;
+            
+            n_list_iterator_start(l, &it);
+            while ((dep = n_list_iterator_get(&it))) {
+                int j;
+                
+                msgn_i(0, 4, "* %s, satisfiedby=%s",
+                       dep->req ? capreq_snprintf_s(dep->req) : "NULL",
+                       dep->spkg ? pkg_id(dep->spkg) : "NONE");
+                if (dep->pkgs)
+                    for (j=0; j<n_array_size(dep->pkgs); j++)
+                        msgn_i(0, 5, "- %s", pkg_id(n_array_nth(dep->pkgs, j)));
+            }
+        }
+    }
+}
+
 
 static
 void db_deps_remove_cap(tn_hash *db_deph, struct pkg *pkg,
@@ -150,36 +193,47 @@ void db_deps_remove_cap(tn_hash *db_deph, struct pkg *pkg,
     n_list_iterator_start(l, &it);
     while ((dep = n_list_iterator_get(&it))) {
         DBGF("- %s (req=%s, pkg=%s)\n", capreq_snprintf_s(cap),
-             dep->req ? capreq_snprintf_s0(dep->req) : "none", pkg_snprintf_s(pkg));
+             dep->req ? capreq_snprintf_s0(dep->req) : "none", pkg_id(pkg));
         
         if (dep->req && cap_match_req(cap, dep->req, 1)) {
             int i, i_del = -1;
 
             if (!requiredonly) {
                 DBGF("rmcap %s (%s) %s!\n", capreq_snprintf_s(cap),
-                     capreq_snprintf_s0(dep->req), pkg_snprintf_s(pkg));
+                     capreq_snprintf_s0(dep->req), pkg_id(pkg));
                 dep->req = NULL;
                 db_dep_free_pkgs(dep);
                 continue;
             }
             
             DBGF("rmcap %s (%s) %s?\n", capreq_snprintf_s(cap),
-                 capreq_snprintf_s0(dep->req), pkg_snprintf_s(pkg));
+                 capreq_snprintf_s0(dep->req), pkg_id(pkg));
+#if ENABLE_TRACE            
+            pkgs_array_dump(dep->pkgs, "packages");
+#endif            
             
             for (i=0; i < n_array_size(dep->pkgs); i++) {
-                DBGF("  %s cmp %s\n", pkg_snprintf_s(n_array_nth(dep->pkgs, i)),
-                     pkg_snprintf_s0(pkg));
-                if (pkg_cmp_name_evr(n_array_nth(dep->pkgs, i), pkg) == 0) {
+                DBGF("  %s cmp %s\n", pkg_id(n_array_nth(dep->pkgs, i)),
+                     pkg_id(pkg));
+
+
+                if (pkg_cmp_id(n_array_nth(dep->pkgs, i), pkg) == 0) {
+                    n_assert(i_del == -1);
                     i_del = i;
+                    if (poldek_conf_MULTILIB &&
+                        !pkg_is_colored_like(n_array_nth(dep->pkgs, i), pkg))
+                        i_del = -1;
                 }
             }
             if (i_del >= 0) {
-                DBGF("rmcap %s (%s) %s!\n", capreq_snprintf_s(cap),
-                     capreq_snprintf_s0(dep->req), pkg_snprintf_s(pkg));
+                DBGF("  --> YES, rmcap %s (%s) %s!\n", capreq_snprintf_s(cap),
+                     capreq_snprintf_s0(dep->req), pkg_id(pkg));
                 n_array_remove_nth(dep->pkgs, i_del);
                 if (n_array_size(dep->pkgs) == 0) {
+                    DBGF(" cap %s COMPLETELY REMOVED\n", capreq_snprintf_s0(dep->req));
                     dep->req = NULL;
                     db_dep_free_pkgs(dep);
+
                 }
             }
         }
@@ -260,7 +314,7 @@ void db_deps_remove_pkg(tn_hash *db_deph, struct pkg *pkg)
 {
     int i;
 
-    DBGF("%s\n", pkg_snprintf_s(pkg));
+    DBGF("%s\n", pkg_id(pkg));
     
     if (pkg->reqs == NULL)
         return;
@@ -275,35 +329,15 @@ void db_deps_remove_pkg_caps(tn_hash *db_deph, struct pkg *pkg, int load_full_fl
 {
     int i;
 
-    DBGF("%s\n", pkg_snprintf_s(pkg));
+    DBGF("%s\n", pkg_id(pkg));
     remove_files(db_deph, pkg, load_full_fl);
     
     if (pkg->caps == NULL)
         return;
     
     for (i=0; i < n_array_size(pkg->caps); i++) {
-        struct capreq     *cap;
-        tn_list           *l;
-        tn_list_iterator  it;
-        struct db_dep     *dep;
-
-        
-        cap = n_array_nth(pkg->caps, i);
+        struct capreq     *cap = n_array_nth(pkg->caps, i);
         db_deps_remove_cap(db_deph, pkg, cap, 0);
-        continue;
-        
-        if ((l = n_hash_get(db_deph, capreq_name(cap))) == NULL)
-            continue;
-
-        n_list_iterator_start(l, &it);
-        while ((dep = n_list_iterator_get(&it))) {
-            if (dep->req && cap_match_req(cap, dep->req, 1)) {
-                DBGF("rmcap %s (%s)\n", capreq_snprintf_s(cap),
-                     capreq_snprintf_s0(dep->req));
-                dep->req = NULL;
-                db_dep_free_pkgs(dep);
-            }
-        }
     }
 }
 

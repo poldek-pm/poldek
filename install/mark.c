@@ -27,22 +27,23 @@ int in_is_other_version_marked(struct install_ctx *ictx, struct pkg *pkg,
     if (i < 0)
         return 0;
 
-    DBGF("%s %d\n", pkg_id(pkg), i);
+    DBGF("%s, found (req is %s)\n", pkg_id(pkg), req ? capreq_snprintf_s(req) : "null");
     for (; i < n_array_size(ictx->avpkgs); i++) {
         struct pkg *p = n_array_nth(ictx->avpkgs, i);
 
-        if (strcmp(p->name, pkg->name) != 0)
+        if (pkg_cmp_name(p, pkg) != 0)
             break;
         
         if (p != pkg && pkg_is_marked(ictx->ts->pms, p)) {
             if (req == NULL || pkg_satisfies_req(p, req, 0)) {
-                DBGF("%s -> yes, %s\n", pkg_id(pkg),
-                     pkg_id(p));
+                DBGF("%s -> YES, %s%s%s\n", pkg_id(pkg), pkg_id(p),
+                     req ? " and satisfies " : "",
+                     req ? capreq_snprintf_s(req) : "null");
                 return 1;
             }
         }
     }
-
+    DBGF("NO\n");
     return 0;
 }
 
@@ -191,8 +192,10 @@ int in_greedy_mark_package(int indent, struct install_ctx *ictx,
     if (pkg_cmp_evr(pkg, oldpkg) <= 0)
         return 0;
     
-    msgn_i(1, indent, _("greedy upgrade %s to %s-%s (unresolved %s)"),
+    msgn_i(1, indent, _("greedy upgrade %s to %s-%s%s%s (unresolved %s)"),
            pkg_id(oldpkg), pkg->ver, pkg->rel,
+           poldek_conf_MULTILIB ? "." : "",
+           poldek_conf_MULTILIB ? pkg_arch(pkg) : "",
            capreq_snprintf_s(unresolved_req));
 
     return do_dep_mark_package(ictx, pkg, NULL, unresolved_req);

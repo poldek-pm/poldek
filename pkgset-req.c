@@ -100,7 +100,7 @@ void visit_badreqs(struct pkgmark_set *pms, struct pkg *pkg, int deep)
         return;
 
     pkg_set_unmetdeps(pms, pkg);
-    msg_i(4, deep, " %s\n", pkg_snprintf_s(pkg));
+    msg_i(4, deep, " %s\n", pkg_id(pkg));
     deep += 2;
     
     if (pkg->revreqpkgs) {
@@ -175,7 +175,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
         pkg->reqpkgs = n_array_new(n_array_size(pkg->reqs)/2+2, NULL,
                                    (tn_fn_cmp)reqpkg_cmp);
 
-        msg(4, "%d. %s\n", i+1, pkg_snprintf_s(pkg));
+        msg(4, "%d. %s\n", i+1, pkg_id(pkg));
         for (j=0; j < n_array_size(pkg->reqs); j++) {
             struct pkg *pkgsbuf[1024], **suspkgs;
             int nsuspkgs = 1024;
@@ -371,7 +371,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
         for (i=0; i<*npkgs; i++) {
             if (strcmp((*suspkgs)[i]->name, "rpm") != 0) {
                 logn(LOGERR, _("%s: provides rpmlib cap \"%s\""),
-                     pkg_snprintf_s((*suspkgs)[i]), reqname);
+                     pkg_id((*suspkgs)[i]), reqname);
                 matched = 0;
             }
         }
@@ -411,7 +411,7 @@ int psreq_match_pkgs(const struct pkg *pkg, struct capreq *req, int strict,
             if (!pkg_match_req(spkg, req, strict)) 
                 continue;
 
-        msg(4, "_%s, ", pkg_snprintf_s(spkg));
+        msg(4, "_%s, ", pkg_id(spkg));
         nmatch++;
         
         if (spkg != pkg) { /* do not add itself */
@@ -420,7 +420,7 @@ int psreq_match_pkgs(const struct pkg *pkg, struct capreq *req, int strict,
         } else {
             n = 0;
             break;
-            //log(LOGERR, "%s: requires itself\n", pkg_snprintf_s(pkg));
+            //log(LOGERR, "%s: requires itself\n", pkg_id(pkg));
         }
     }
 
@@ -440,7 +440,7 @@ int psreq_find_match_packages(struct pkgset *ps,
                               int strict)
 {
     struct pkg **suspkgs, pkgsbuf[1024], **matches;
-    int nsuspkgs = 0, nmatches = 0, found = 0;
+    int i = 0, nsuspkgs = 0, nmatches = 0, found = 0;
     
     
     if (packages)
@@ -452,12 +452,19 @@ int psreq_find_match_packages(struct pkgset *ps,
     if (!found)
         return found;
 
-    if (nsuspkgs == 0)          /* rpmlib() */
+    if (nsuspkgs == 0)          /* rpmlib() or other internal caps */
         return found;
-    
-        
-    found = 0;
 
+#if ENABLE_TRACE   
+    DBGF("%s: found %d suspected packages: ", capreq_snprintf_s(req), nsuspkgs);
+    for (i=0; i < nsuspkgs; i++)
+        msg(0, "%s, ", pkg_id(suspkgs[i]));
+    msg("\n");
+#endif
+    
+    found = 0;
+    
+#if 0 /* XXX - disabled, color-selection has to be done later  */
     if (poldek_conf_MULTILIB && pkg) {
         struct pkg **tmp = alloca(sizeof(*tmp) * nsuspkgs);
         int i, j = 0;
@@ -475,6 +482,7 @@ int psreq_find_match_packages(struct pkgset *ps,
         if (nsuspkgs == 0)
             return 0;
     }
+#endif
     
     matches = alloca(sizeof(*matches) * nsuspkgs);
     if (psreq_match_pkgs(pkg, req, strict, suspkgs, nsuspkgs, matches, &nmatches)) {
@@ -589,7 +597,7 @@ int pkgset_verify_conflicts(struct pkgset *ps, int strict)
             continue;
         
         n_assert(n_array_size(pkg->cnfls));
-        msg(4, "%d. %s\n", i, pkg_snprintf_s(pkg));
+        msg(4, "%d. %s\n", i, pkg_id(pkg));
         for (j=0; j < n_array_size(pkg->cnfls); j++) {
             const struct capreq_idx_ent *ent;
             struct capreq *cnfl;
@@ -639,8 +647,12 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
         /* do not conflict with myself */
         if (spkg == pkg) 
             continue;
+
+        /* multilib */
+        if (pkg_cmp_name_evr(spkg, pkg) == 0 && pkg_cmp_arch(spkg, pkg) != 0)
+            continue;
         
-        msg(4, "_%s, ", pkg_snprintf_s(spkg));
+        msg(4, "_%s, ", pkg_id(spkg));
 
         cnflpkg = NULL;
         if (pkg->cnflpkgs) {
@@ -661,6 +673,9 @@ int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
             if (capreq_is_obsl(cnfl))
                 cnflpkg->flags |= REQPKG_OBSOLETE;
             n_array_push(pkg->cnflpkgs, cnflpkg);
+            //msg("add conflict between %s and %s based on %s\n", pkg_id(pkg),
+            //       pkg_id(spkg), capreq_snprintf_s(cnfl));
+            
             n_array_sort(pkg->cnflpkgs);
         }
         nmatch++;

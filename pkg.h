@@ -255,6 +255,8 @@ tn_array *pkgs_array_new(int size);
 tn_array *pkgs_array_new_ex(int size,
                             int (*cmpfn)(const struct pkg *p1,
                                          const struct pkg *p2));
+void pkgs_array_dump(tn_array *pkgs, const char *prefix); /* for debugging */
+
 
 char *pkg_strsize(char *buf, int size, const struct pkg *pkg);
 char *pkg_strbtime(char *buf, int size, const struct pkg *pkg);

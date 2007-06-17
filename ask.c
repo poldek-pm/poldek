@@ -88,7 +88,7 @@ int poldek_term_ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *defl
 
     i = 0;
     while(pkgs[i] != NULL && i < 24) {
-        msgn(-1, "%c) %s", 'a' + i, pkg_snprintf_s(pkgs[i]));
+        msgn(-1, "%c) %s", 'a' + i, pkg_id(pkgs[i]));
         *p++ = 'a' + i;
         i++;
     }

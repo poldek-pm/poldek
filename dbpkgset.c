@@ -34,6 +34,8 @@
 
 #define DBPKGSET_CHANGED (1 << 0)
 
+extern int poldek_conf_MULTILIB;
+
 struct dbpkg_set *dbpkg_set_new(void) 
 {
     struct dbpkg_set *dbpkg_set; 
@@ -71,8 +73,12 @@ int dbpkg_set_has_pkg(struct dbpkg_set *dbpkg_set, const struct pkg *pkg)
 
     for (i=0; i<n_array_size(dbpkg_set->dbpkgs); i++) {
         struct pkg *dbpkg = n_array_nth(dbpkg_set->dbpkgs, i);
-        if (pkg_cmp_name_evr(dbpkg, pkg) == 0)
-            return 1;
+        if (pkg_cmp_name_evr(dbpkg, pkg) == 0) {
+            if (poldek_conf_MULTILIB)
+                return pkg_is_colored_like(dbpkg, pkg);
+            else
+                return 1;
+        }
     }
     return 0;
 }

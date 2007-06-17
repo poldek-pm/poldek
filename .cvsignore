@@ -19,8 +19,6 @@ install-sh
 stamp-h
 stamp-h.in
 .deps
-poldek-*
-poldek
 rpmvercmp
 ccmalloc-log
 depcomp
@@ -35,6 +33,8 @@ autom4te.cache
 *.lo
 .libs
 *.la
+*.o
+*~
 *.spec
 libtool
 config.guess
@@ -42,3 +42,10 @@ config.sub
 py-compile
 conf_sections.c
 NEWS
+core
+cli/poldek
+cli/poclidek_demo
+cli/test_cli
+vfile/test_vopen
+vfile/vfget
+vfile/test_vopen3

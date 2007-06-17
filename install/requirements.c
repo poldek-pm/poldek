@@ -28,13 +28,18 @@ struct pkg *find_supersede_pkg(struct install_ctx *ictx, const struct pkg *pkg)
         return NULL;
     
     best_i = in_select_best_pkg(ictx, pkg, pkgs);
+    if (best_i == -1) {           /* possible in multilib mode */
+        n_array_free(pkgs);
+        return NULL;
+    }
+    
     for (i=best_i; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
             
         if (strcmp(pkg->name, p->name) == 0)
             continue;
 
-        if (poldek_conf_MULTILIB) {
+        if (poldek_conf_MULTILIB && 0) {
             if (!pkg_is_colored_like(p, pkg))
                 continue;
         }
@@ -57,8 +62,6 @@ struct pkg *find_supersede_pkg(struct install_ctx *ictx, const struct pkg *pkg)
     return bypkg;
 }
 
-
-
 static
 struct pkg *select_successor(struct install_ctx *ictx, const struct pkg *pkg,
                              int *by_obsoletes)
@@ -67,9 +70,9 @@ struct pkg *select_successor(struct install_ctx *ictx, const struct pkg *pkg,
 
     *by_obsoletes = 0;
     p = in_select_pkg(ictx, pkg, ictx->ps->pkgs);
+    
     if (!ictx->ts->getop(ictx->ts, POLDEK_OP_OBSOLETES))
         return p;
-
     
     if ((p == NULL || pkg_cmp_evr(p, pkg) == 0)) {
         p = find_supersede_pkg(ictx, pkg);
@@ -96,7 +99,7 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
                     int process_as) 
 {
     struct pkg    *tomark = NULL;
-    struct pkg    **tomark_candidates = NULL, ***tomark_candidates_ptr = NULL;
+    tn_array      *candidates = NULL;
     char          *reqname;
         
     reqname = capreq_name(req);
@@ -105,22 +108,19 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
         capreq_snprintf(reqname, 256, req);
     }
 
-    DBGF("req %s\n", capreq_snprintf_s(req));
+    DBGF("[%s] req %s\n", pkg_id(pkg), capreq_snprintf_s(req));
 
-    if (ictx->ts->getop(ictx->ts, POLDEK_OP_EQPKG_ASKUSER) && ictx->ts->askpkg_fn)
-        tomark_candidates_ptr = &tomark_candidates;
-        
-    if (in_find_req(ictx, pkg, req, &tomark, tomark_candidates_ptr,
-                    IN_FIND_REQ_BEST)) {
-        
+    if (in_is_user_askable(ictx->ts))
+        candidates = pkgs_array_new(8);
+    
+    if (in_find_req(ictx, pkg, req, &tomark, candidates, IN_FIND_REQ_BEST)) {
         if (tomark == NULL) {
             msg_i(3, indent, "%s: satisfied by already installed set\n",
                   capreq_snprintf_s(req));
-            
             goto l_end;
         }
     }
-
+    
     DBGF("%s: TOMARK %s\n", pkg_id(pkg), tomark ? pkg_id(tomark) : "NULL");
 
     /* don't check foreign dependencies */
@@ -143,8 +143,8 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
         }
     }
         
-    /* cached? */
-    if (db_deps_provides(ictx->db_deps, req, DBDEP_DBSATISFIED)) {
+    /* cached?, TOFIX something is wrong with cache in multilib mode */
+    if (poldek_conf_MULTILIB && db_deps_provides(ictx->db_deps, req, DBDEP_DBSATISFIED)) {
         msg_i(3, indent, "%s: satisfied by db [cached]\n",
               capreq_snprintf_s(req));
         DBGF("%s: satisfied by db [cached]\n", capreq_snprintf_s(req));
@@ -153,6 +153,7 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
     } else if (pkgdb_match_req(ictx->ts->db, req, ictx->strict,
                                ictx->uninst_set->dbpkgs)) {
 
+        //pkgs_array_dump(ictx->uninst_set->dbpkgs, "UNINST");
         DBGF("%s: satisfied by dbY\n", capreq_snprintf_s(req));
         msg_i(3, indent, "%s: satisfied by db\n", capreq_snprintf_s(req));
         //dbpkg_set_dump(ictx->uninst_set);
@@ -164,11 +165,9 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
                ictx->ts->getop(ictx->ts, POLDEK_OP_FOLLOW)) {
         
         struct pkg *real_tomark = tomark;
-        if (tomark_candidates) {
-            real_tomark = in_choose_equiv(ictx->ts, req, tomark_candidates,
-                                          tomark);
-            free(tomark_candidates);
-            tomark_candidates = NULL;
+        if (candidates && n_array_size(candidates) > 1) {
+            real_tomark = in_choose_equiv(ictx->ts, req, candidates, tomark);
+            n_array_cfree(&candidates);
             
             if (real_tomark == NULL) { /* user abort */
                 ictx->nerr_fatal++;
@@ -239,8 +238,7 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
         }
     }
  l_end:
-    if (tomark_candidates)
-        free(tomark_candidates);
+    n_array_cfree(&candidates);
 
     return 1;
 }

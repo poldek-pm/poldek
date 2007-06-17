@@ -32,19 +32,9 @@ int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
         if (ts->getop(ts, POLDEK_OP_FRESHEN))
             return 0;
 
-        n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
-
-        if (ts->getop(ts, POLDEK_OP_EQPKG_ASKUSER) && ts->askpkg_fn &&
-            n_array_size(pkgs) > 1) {
-            
-            struct pkg **candidates = alloca(sizeof(struct pkg *) *
-                                             (n_array_size(pkgs) + 1));
-            for (i=0; i < n_array_size(pkgs); i++)
-                candidates[i] = n_array_nth(pkgs, i);
-            candidates[i] = NULL;
-
-            pkg = in_choose_equiv(ts, cap, candidates, NULL);
-            if (pkg == NULL) {    /* user aborts */
+        if (in_is_user_askable(ts) && n_array_size(pkgs) > 1) {
+            pkg = in_choose_equiv(ts, cap, pkgs, NULL);
+            if (pkg == NULL) { /* user aborts */
                 found = -1;
                 goto l_end;
             }

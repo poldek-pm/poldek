@@ -60,7 +60,7 @@ struct pkgset *pkgset_new(struct pm_ctx *pmctx)
     
     ps = n_malloc(sizeof(*ps));
     memset(ps, 0, sizeof(*ps));
-    ps->pkgs = pkgs_array_new(2048);
+    ps->pkgs = pkgs_array_new(4096);
     ps->_pm_nevr_pkgs = NULL;
     ps->_pm_nevr_pkgs = NULL;
     ps->ordered_pkgs = NULL;
@@ -545,6 +545,7 @@ tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
     
     for (i=0; i < n_array_size(tmp); i++) {
         struct pkg *tmpkg, *pkg = n_array_nth(tmp, i);
+        DBGF("  - considering %s\n", pkg_id(pkg));
         
         if (pkg_is_scored(pkg, (PKG_IGNORED | PKG_IGNORED_UNIQ)))
             continue;
@@ -557,6 +558,12 @@ tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
     if (pkgs_passsed && n_array_size(pkgs) == 0)
         n_array_cfree(&pkgs);
     
+#if ENABLE_TRACE
+    if (pkgs) {
+        DBGF("%s ", dir);
+        pkgs_array_dump(pkgs, "packages");
+    }
+#endif    
     return pkgs;
 }
 

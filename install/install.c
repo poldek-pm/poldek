@@ -233,7 +233,7 @@ int do_install(struct install_ctx *ictx, struct poldek_iinf *iinf)
 
     if (ictx->nerr_fatal || sigint_reached())
         return 0;
-    
+
     n_array_sort(ictx->install_pkgs);
     print_install_summary(ictx);
     pkgdb_close(ts->db); /* release db as soon as possible */

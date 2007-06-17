@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2006 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2007 Pawel A. Gajda (mis@pld-linux.org)
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -868,8 +868,7 @@ int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
 {
     int n;
         
-    DBGMSG("\npkg_obs_match_pkg %s %s\n", pkg_snprintf_s(pkg),
-           pkg_snprintf_s0(opkg));
+    DBG("\npkg_obs_match_pkg %s %s\n", pkg_id(pkg), pkg_id(opkg));
     
     if (pkg->cnfls == NULL || n_array_size(pkg->cnfls) == 0)
         return 0;     /* not match */
@@ -884,8 +883,7 @@ int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
         cnfl = n_array_nth(pkg->cnfls, n);
         
         if (capreq_is_obsl(cnfl) && pkg_match_req(opkg, cnfl, 1)) {
-            DBGMSG("chk%d (%s-%s-%s) -> match\n", n,
-                   capreq_snprintf_s(cnfl));
+            DBG("chk%d (%s-%s-%s) -> match\n", n, capreq_snprintf_s(cnfl));
             return 1;
         }
         n++;
@@ -898,21 +896,19 @@ int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
                 continue;
             
             if (strcmp(capreq_name(cnfl), pkg->name) != 0) {
-                DBGMSG("chk%d %s -> NOT match IRET\n", i,
-                       capreq_snprintf_s(cnfl));
+                DBG("chk%d %s -> NOT match IRET\n", i, capreq_snprintf_s(cnfl));
                 return 0;
             }
                 
                 
             if (pkg_match_req(opkg, cnfl, 1)) {
-                DBGMSG("chk %s -> match\n", capreq_snprintf_s(cnfl));
+                DBG("chk %s -> match\n", capreq_snprintf_s(cnfl));
                 return 1;
             } else {
-                DBGMSG("chk%d %s -> NOT match\n", i,
-                       capreq_snprintf_s(cnfl));
+                DBG("chk%d %s -> NOT match\n", i, capreq_snprintf_s(cnfl));
             }
         }
-        DBGMSG("NONE\n");
+        DBG("NONE\n");
     }
     
     return 0;
@@ -921,7 +917,8 @@ int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg)
 int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard)
 {
     struct capreq *cnfl = NULL;
-    
+
+    DBGF_F("%s %s%s", pkg_id(pkg), pkg_id(cpkg), isbastard ? " (bastard)" : "");
     if (n_array_bsearch_ex(pkg->cnfls, cpkg->name,
                            (tn_fn_cmp)capreq_cmp2name) == NULL) {
         cnfl = capreq_new(pkg->na, cpkg->name, cpkg->epoch, cpkg->ver,
@@ -1310,13 +1307,27 @@ tn_array *pkgs_array_new_ex(int size,
 {
     tn_array *arr;
 
-    if (cmpfn == NULL)
+    if (cmpfn == NULL) 
         cmpfn = pkg_cmp_name_evr_rev;
     
     arr = n_array_new(size, (tn_fn_free)pkg_free, (tn_fn_cmp)cmpfn);
     n_array_ctl(arr, TN_ARRAY_AUTOSORTED);
     return arr;
 }
+
+void pkgs_array_dump(tn_array *pkgs, const char *prefix) 
+{
+    int i;
+    
+    if (prefix == NULL)
+        prefix = "array";
+    
+    msg(0, "%s = [", prefix);
+    for (i=0; i<n_array_size(pkgs); i++)
+        msg(0, "%s, ", pkg_id(n_array_nth(pkgs, i)));
+    msgn(0, "]");
+}
+
 
 tn_array *pkgs_array_new(int size) 
 {

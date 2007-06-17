@@ -114,7 +114,7 @@ int in_pkg_drags(struct install_ctx *ictx, struct pkg *pkg);
 #define IN_FIND_REQ_BEST    1
 int in_find_req(struct install_ctx *ictx,
                 const struct pkg *pkg, struct capreq *req,
-                struct pkg **best_pkg, struct pkg ***candidates, int flag);
+                struct pkg **best_pkg, tn_array *candidates, int flag);
 
 /* conflicts.c */
 int in_resolve_conflict(int indent, struct install_ctx *ictx,
@@ -138,7 +138,9 @@ int in_process_pkg_requirements(int indent, struct install_ctx *ictx,
 int in_process_package(int indent, struct install_ctx *ictx,
                        struct pkg *pkg, int process_as);
 
-
 struct pkg *in_choose_equiv(struct poldek_ts *ts, struct capreq *cap,
-                            struct pkg **candidates, struct pkg *defaultpkg);
+                            tn_array *pkgs, struct pkg *hint);
+
+int in_is_user_askable(struct poldek_ts *ts);
+
 #endif

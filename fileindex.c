@@ -32,6 +32,8 @@
 #include "fileindex.h"
 #include "pkgset-req.h"
 
+extern int poldek_conf_MULTILIB;
+
 struct file_ent {
     struct flfile *flfile;
     struct pkg *pkg;
@@ -374,8 +376,15 @@ void process_dup(const char *path,
         
     } else {
         int rc, added1 = 0, added2 = 0;
+        DBGF("add conflict between %s and %s based on %s\n",
+             pkg_id(ent1->pkg), pkg_id(ent2->pkg), path);
+
+        /* do not add conflicts in multilib mode, file colors are used (seems to) */
+        if (poldek_conf_MULTILIB) 
+            rc = 1;
+        else
+            rc = register_file_conflict(ent1->pkg, ent2->pkg, &added1, &added2);
         
-        rc = register_file_conflict(ent1->pkg, ent2->pkg, &added1, &added2);
         if (rc && (added1 || added2)) {
             cnfl = file_conflict_new(path, FILE_CONFLICT_CNFL);
 

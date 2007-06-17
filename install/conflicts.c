@@ -62,7 +62,7 @@ int in_resolve_conflict(int indent, struct install_ctx *ictx,
 {
     struct capreq *req = NULL;
     struct pkg *tomark = NULL;
-    struct pkg **tomark_candidates = NULL, ***tomark_candidates_ptr = NULL;
+    tn_array   *candidates = NULL;
     int found = 0, by_replacement = 0;
 
     if (!ictx->ts->getop(ictx->ts, POLDEK_OP_FOLLOW))
@@ -85,20 +85,17 @@ int in_resolve_conflict(int indent, struct install_ctx *ictx,
     capreq_revrel(req);
     DBGF("find_req %s %s\n", pkg_id(pkg), capreq_snprintf_s(req));
 
-    
-    if (ictx->ts->getop(ictx->ts, POLDEK_OP_EQPKG_ASKUSER) && ictx->ts->askpkg_fn)
-        tomark_candidates_ptr = &tomark_candidates;
+    if (in_is_user_askable(ictx->ts))
+        candidates = pkgs_array_new(8);
 
-    found = in_find_req(ictx, pkg, req, &tomark, tomark_candidates_ptr,
-                        IN_FIND_REQ_BEST);
+    found = in_find_req(ictx, pkg, req, &tomark, candidates, IN_FIND_REQ_BEST);
     capreq_revrel(req);
     
     if (found) {
         struct pkg *real_tomark = tomark;
-        if (tomark_candidates) {
-            real_tomark = in_choose_equiv(ictx->ts, req, tomark_candidates,
-                                          tomark);
-            n_cfree(&tomark_candidates);
+        if (candidates && n_array_size(candidates) > 1) {
+            real_tomark = in_choose_equiv(ictx->ts, req, candidates, tomark);
+            n_array_cfree(&candidates);
             if (real_tomark == NULL) { /* user aborts */
                 ictx->nerr_fatal++;
                 found = 0;
@@ -139,6 +136,7 @@ int in_resolve_conflict(int indent, struct install_ctx *ictx,
     }
     
 l_end:
+    n_array_cfree(&candidates);
     capreq_free(req);
     return found;
 }
@@ -262,8 +260,11 @@ int in_process_pkg_conflicts(int indent, struct install_ctx *ictx,
         for (i = 0; i < n_array_size(pkg->cnflpkgs); i++) {
             struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, i);
 
+            if ((cpkg->flags & REQPKG_CONFLICT) == 0)
+                continue;
+            
             if (pkg_is_marked(ictx->ts->pms, cpkg->pkg)) {
-                logn(LOGERR, _("%s conflicts with %s"), pkg_id(pkg),
+                logn(LOGERR, _("%s conflicts withx %s"), pkg_id(pkg),
                      pkg_id(cpkg->pkg));
                 ictx->nerr_cnfl++;
                 ncnfl++;

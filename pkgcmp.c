@@ -44,10 +44,8 @@ int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg)
     
     if (rc == 0 && poldek_conf_MULTILIB) {
         rc = pkg_cmp_arch(pkg, candidate);
-#if ENABLE_TRACE        
-        if (rc == 0)
-            DBGF("%s, %s => YES\n", pkg_id(candidate), pkg_id(pkg));
-#endif        
+        //if (rc == 0)
+        //    DBGF_F("%s, %s => YES\n", pkg_id(candidate), pkg_id(pkg));
     }
     
     return rc == 0;
@@ -98,7 +96,7 @@ int pkg_eq_name_prefix(const struct pkg *pkg1, const struct pkg *pkg2)
     if ((p2 = strchr(pkg2->name, '-')) == NULL)
         p2 = strchr(pkg2->name, '\0');
 
-    n = p1 - pkg1->name;
+n = p1 - pkg1->name;
     if (n - (p2 - pkg2->name) != 0)
         return 0;
 
@@ -114,6 +112,12 @@ int pkg_ncmp_name(const struct pkg *p1, const struct pkg *p2)
 {
     return strncmp(p1->name, p2->name, strlen(p2->name));
 }
+
+int pkg_cmp_id(const struct pkg *p1, const struct pkg *p2)
+{
+    return strcmp(pkg_id(p1), pkg_id(p2));
+}
+
 
 int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2) 
 {
@@ -160,7 +164,11 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
     if ((rc = pkg_cmp_name(p1, p2)))
         return rc;
     
-    rc = -pkg_cmp_evr(p1, p2);
+    if ((rc = -pkg_cmp_evr(p1, p2)))
+        return rc;
+
+    if (poldek_conf_MULTILIB)
+        rc = -pkg_cmp_arch(p1, p2);
 
     //printf("cmp %s %s -> %d\n", pkg_snprintf_s(p1), pkg_snprintf_s0(p2), rc);
     return rc;
@@ -170,11 +178,12 @@ int pkg_cmp_name_evr_arch_rev_srcpri(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
 
-    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0 && p1->pkgdir != p2->pkgdir)
-        rc = p1->pkgdir->pri - p2->pkgdir->pri;
-    
-    if (rc == 0)
+    if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0)
         rc = -pkg_cmp_arch(p1, p2);
+    
+    if (rc == 0 && p1->pkgdir != p2->pkgdir)
+        rc = p1->pkgdir->pri - p2->pkgdir->pri;
+    //rc = -pkg_cmp_arch(p1, p2);
     return rc;
 }
 
@@ -243,6 +252,11 @@ int pkg_strcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 
 int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2) 
 {
+    /* just compare */
+    return p1->_arch - p2->_arch; /* same as strcmp(arch1, arch2),
+                                     _arch is an arch index */
+    
+    /* XXX: never reached, machine_score() disappeared since rpm4.4.7 */
     if (p1->_arch && p2->_arch) {
         int s1, s2;
         s1 = pkg_arch_score(p1);
@@ -252,17 +266,6 @@ int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2)
     }
 
     return p1->_arch - p2->_arch; /*  */
-    
-#if 0    
-    if (p1->_arch && !p2->_arch)
-        return 10;
-    
-    if (!p1->_arch && p2->_arch)
-        return -10;
-#endif
-    
-    n_assert(0);
-    return 0;
 }
 
 

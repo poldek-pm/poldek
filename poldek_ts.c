@@ -285,7 +285,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         ts->exclude_path = n_array_new(4, free, (tn_fn_cmp)strcmp);
         
     }
-    dbgf_("%p->%p, %p\n", ts, ts->hold_patterns, ctx);
+    DBGF("%p->%p, %p\n", ts, ts->hold_patterns, ctx);
     ts->askpkg_fn = poldek_term_ask_pkg;
     ts->ask_fn = poldek_term_ask_yn;
     ts->pms = pkgmark_set_new(1024, 0);
@@ -784,7 +784,7 @@ static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf)
 
     cp_arr_ifnull(&ts->rpmacros, ts->ctx->ts->rpmacros);
     cp_arr_ifnull(&ts->rpmopts, ts->ctx->ts->rpmopts);
-    dbgf_("%p->%p, %p->%p\n", ts, ts->hold_patterns, ts->ctx->ts,
+    DBGF("%p->%p, %p->%p\n", ts, ts->hold_patterns, ts->ctx->ts,
           ts->ctx->ts->hold_patterns);
     cp_arr_ifnull(&ts->hold_patterns, ts->ctx->ts->hold_patterns);
     cp_arr_ifnull(&ts->ign_patterns, ts->ctx->ts->ign_patterns);

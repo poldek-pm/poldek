@@ -148,8 +148,8 @@ void poldek_log_tty(const char *fmt, ...)
 void poldek_meminf(int vlevel, const char *fmt, ...);
 
 #if ENABLE_TRACE
-# define DBGF(fmt, args...)  fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
-# define DBG(fmt, args...)   fprintf(stdout, fmt, ## args)
+# define DBGF(fmt, args...)  fprintf(stdout, "dbg:%-18s: " fmt, __FUNCTION__ , ## args)
+# define DBG(fmt, args...)   fprintf(stdout, "dbg:" fmt, ## args)
 # define MEMINF(fmt, args...) poldek_meminf(-5, "%-18s: " fmt, __FUNCTION__ , ## args)
 # define DBGFIF(cond, fmt, args...) do { if (cond) { fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args); } } while (0)
 #else 
@@ -159,16 +159,11 @@ void poldek_meminf(int vlevel, const char *fmt, ...);
 # define DBGFIF(cond, fmt, args...)  ((void) 0)
 #endif
 
-#define DBGMSG_F DBGF
-#define DBGMSG   DBG
-
 #define DBGF_NULL(fmt, args...) ((void) 0)
-#define DBGF_F(fmt, args...) fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
+#define DBGF_F(fmt, args...) fprintf(stdout, "dbg:%-18s: " fmt, __FUNCTION__ , ## args)
+#define DBG_F(fmt, args...)   fprintf(stdout, "dbg:" fmt, ## args)
 #define MEMINF_F(fmt, args...) poldek_meminf(-5, "%-18s: " fmt, __FUNCTION__ , ## args)
 #define DBGFIF_F(cond, fmt, args...) do { if (cond) { fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args); } } while (0)
-
-#define dbgf(fmt, args...)  fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args)
-#define dbgf_(fmt, args...) ((void) 0)
 
 #endif /* POLDEK_LOG_H_INTERNAL */
 

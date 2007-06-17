@@ -32,4 +32,6 @@ struct db_dep *db_deps_provides(tn_hash *db_deph, struct capreq *cap,
 struct db_dep *db_deps_contains(tn_hash *db_deph, struct capreq *cap,
                                 unsigned flags);
 
+void db_deps_dump(const tn_hash *db_deph);
+
 #endif
