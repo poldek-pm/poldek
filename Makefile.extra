@@ -88,3 +88,7 @@ ann-send: ann
 	@echo "Sending announce to $(ann_to)..."
 	nc -v localhost 25 < ann.1
 
+oncrame:
+	@rsync -avt --exclude python --exclude-from ~/poldek/.cvsignore ~/poldek carme.pld-linux.org:poldek/
+	@ssh carme.pld-linux.org "cd poldek/poldek && CC=ccache ./make.sh -j3"
+
