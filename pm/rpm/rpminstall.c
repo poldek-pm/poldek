@@ -275,13 +275,17 @@ static int colors_eq(const struct pkg *pkg, const char *path)
     if (color > 0 && (unsigned)color == pkg->color)
         return 1;
 
+    if (color == 0 && pkg->color == 0)
+        return 1;
+    
     if (color == -1 && pkg->color > 0)
         logn(LOGERR, "%s: package has color (%d), "
              "but rpm without multilib support is used", pkg_id(pkg), pkg->color);
     
-    else if (pkg->color != (unsigned)color && color + pkg->color > 0)
+    else if (pkg->color != (unsigned)color)
         logn(LOGERR, "%s package color (%d) is not equal to %s's one (%d)",
              pkg_id(pkg), pkg->color, n_basenam(path), color);
+
     return 0;
 }
 
@@ -431,19 +435,22 @@ int pm_rpm_packages_install(struct pkgdb *db,
     if (!ts->getop(ts, POLDEK_OP_RPMTEST) && (nsignerr || ncolorerr)) {
         int can_ask = (poldek_ts_is_interactive_on(ts) && ts->ask_fn);
 
-        if (nsignerr)
+        if (nsignerr) {
             if (!can_ask || !ts->ask_fn(0,
                                         _("There were signature verification errors. "
                                           "Proceed? [y/N]")))
                 goto l_err_end;
+        }
+        
 
-        if (ncolorerr)
+        if (ncolorerr) {
             if (!can_ask || !ts->ask_fn(0,
                                         _("There were package coloring mismatches. "
                                           "Proceed? [y/N]")))
                 goto l_err_end;
+        }
     }
-        
+    
     n_assert(nargs > nopts); 
     argv[nargs] = NULL;
 
