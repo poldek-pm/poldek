@@ -43,7 +43,7 @@ struct pkg *find_supersede_pkg(struct install_ctx *ictx, const struct pkg *pkg)
             if (!pkg_is_colored_like(p, pkg))
                 continue;
         }
-#end            
+#endif            
         DBGF("found %s <- %s, %d, %d\n", pkg_id(pkg),
              pkg_id(p),
              pkg_caps_obsoletes_pkg_caps(p, pkg), 
