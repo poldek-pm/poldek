@@ -58,7 +58,7 @@ AM_GNU_GETTEXT_VERSION(0.11.5)
 AM_CFLAGS="-Wall -W"
 AC_SUBST(AM_CFLAGS)
 
-PKG_CHECK_MODULES(CHECK, check >= 0.9.5, have_check=yes, have_check=no)
+PKG_CHECK_MODULES(CHECK, check >= 0.9.4, have_check=yes, have_check=no)
  
 dnl Process features.
 AC_CHECK_LIB(tinfo, tigetstr,,[
