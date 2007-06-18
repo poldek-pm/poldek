@@ -677,7 +677,7 @@ int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags)
             int i;
             for (i=0; i < n_array_size(pkgs); i++) {
                 struct pkg *pkg = n_array_nth(pkgs, i);
-                msgn(1, _("mark %s"), pkg_snprintf_s(pkg));
+                msgn(1, _("mark %s"), pkg_id(pkg));
             }
         }
         
@@ -1129,11 +1129,11 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
             if (pkg->cnflpkgs == NULL)
                 continue;
                 
-            msg(0, "%s -> ", pkg_snprintf_s(pkg)); 
+            msg(0, "%s -> ", pkg_id(pkg)); 
             for (j=0; j < n_array_size(pkg->cnflpkgs); j++) {
                 struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
                 msg(0, "_%s%s, ", cpkg->flags & REQPKG_OBSOLETE ? "*":"", 
-                    pkg_snprintf_s(cpkg->pkg));
+                    pkg_id(cpkg->pkg));
             }
             msg(0, "_\n");
         }
