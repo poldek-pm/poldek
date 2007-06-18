@@ -144,7 +144,7 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
     }
         
     /* cached?, TOFIX something is wrong with cache in multilib mode */
-    if (poldek_conf_MULTILIB && db_deps_provides(ictx->db_deps, req, DBDEP_DBSATISFIED)) {
+    if (!poldek_conf_MULTILIB && db_deps_provides(ictx->db_deps, req, DBDEP_DBSATISFIED)) {
         msg_i(3, indent, "%s: satisfied by db [cached]\n",
               capreq_snprintf_s(req));
         DBGF("%s: satisfied by db [cached]\n", capreq_snprintf_s(req));
