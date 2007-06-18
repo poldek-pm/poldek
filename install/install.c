@@ -315,7 +315,8 @@ int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs)
 {
     struct pkg *pkg, *pkg2;
     int i, n, nmarked = 0;
-    
+    int multilib = poldek_conf_MULTILIB; /* just for short */
+
     if (n_array_size(pkgs) < 2)
         return n_array_size(pkgs);
     
@@ -334,14 +335,16 @@ int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs)
         
         if (i == n_array_size(pkgs))
             break;
-        
+
         pkg2 = n_array_nth(pkgs, i);
         while (pkg_cmp_name(pkg, pkg2) == 0) {
-            pkg_unmark(pms, pkg2);
-            DBGF("unmark %s\n", pkg_id(pkg2));
-
+            if (!multilib || (multilib && pkg_cmp_arch(pkg, pkg2) == 0)) {
+                pkg_unmark(pms, pkg2);
+                DBGF("unmark %s\n", pkg_id(pkg2));
+                n++;
+            }
+            
             i++;
-            n++;
             if (i == n_array_size(pkgs))
                 break;
             pkg2 = n_array_nth(pkgs, i);
