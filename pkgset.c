@@ -466,22 +466,6 @@ tn_array *find_package(struct pkgset *ps, tn_array *pkgs, const char *name)
     return pkgs;
 }
 
-struct pkg *pkgset_lookup_1package(struct pkgset *ps, const char *name) 
-{
-    struct pkg tmpkg;
-    int i;
-    
-    tmpkg.name = (char*)name;
-
-    n_array_sort(ps->pkgs);
-    i = n_array_bsearch_idx_ex(ps->pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
-    if (i < 0)
-        return NULL;
-
-    return n_array_nth(ps->pkgs, i);
-}
-
-
 static
 tn_array *find_capreq(struct pkgset *ps, tn_array *pkgs,
                       enum pkgset_search_tag tag,
