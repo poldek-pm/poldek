@@ -189,7 +189,8 @@ tn_array *pm_rpm_rpmlib_caps(void *pm_rpm)
     return caps;
 }
 
-static void get_host_cpu_vendor_os(char **acpu, char **avendor, char **aos) 
+static void get_host_cpu_vendor_os(const char **acpu, const char **avendor,
+                                   const char **aos) 
 {
     static char *cpu = NULL, *vendor = NULL, *os = NULL; /* XXX static variable */
     
@@ -210,12 +211,9 @@ static void get_host_cpu_vendor_os(char **acpu, char **avendor, char **aos)
 }
 
 
-            
-
-
-#ifdef HAVE_RPMPLATFORMSCORE    /* rpm 4.4.9 */
+#ifdef HAVE_RPMPLATFORMSCORE    /* rpm >= 4.4.9 */
 static int machine_score(int tag, const char *val) {
-    char *cpu = NULL, *vendor = NULL, *os = NULL; /* XXX static variable */
+    const char *cpu = NULL, *vendor = NULL, *os = NULL;
     int rc;
 
     get_host_cpu_vendor_os(&cpu, &vendor, &os);
@@ -286,13 +284,23 @@ static int machine_score(int tag, const char *val)
     
     switch (tag) {
         case PMMSTAG_ARCH:
-            rc = pm_rpm_arch_score(val);
+            if (strcasecmp(val, "noarch") == 0) {
+                rc = 1;
+        
+            } else {
+                const char *host_arch = NULL;
+                get_host_cpu_vendor_os(&host_arch, NULL, NULL);
+                if (host_arch) {
+                    if (strcasecmp(host_arch, val) == 0)
+                        rc = 1;                 /* exact fit */
+                }
+            }
             break;
             
         case PMMSTAG_OS: {
-            char *host_os = NULL;
+            const char *host_os = NULL;
             get_host_cpu_vendor_os(NULL, NULL, &host_os);
-
+            
             rc = 9;
             if (host_os && strcasecmp(host_os, val) == 0)
                 rc = 1;                 /* exact fit */
@@ -317,31 +325,10 @@ int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val)
 /* XXX: function used directly in pkg.c */
 int pm_rpm_arch_score(const char *arch)
 {
-    int rc;
-    
     if (arch == NULL)
         return 0;
 
-#ifdef HAVE_RPMPLATFORMSCORE
-    rc = rpmPlatformScore(arch, platpat, nplatpat);
-#elif defined(HAVE_RPMMACHINESCORE)
-    rc = rpmMachineScore(RPM_MACHTABLE_INSTARCH, arch);
-#else
-    rc = 9;
-    if (strcasecmp(arch, "noarch") == 0) {
-        rc = 1;
-        
-    } else {
-        char *host_arch = NULL;
-        get_host_cpu_vendor_os(&host_arch, NULL, NULL);
-        if (host_arch) {
-            if (strcasecmp(host_arch, arch) == 0)
-                rc = 1;                 /* exact fit */
-            free(host_arch);
-        }
-    }
-#endif
-    return rc;
+    return machine_score(PMMSTAG_ARCH, arch);
 }
 
 int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
