@@ -317,6 +317,10 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
     lc_lang = lc_messages_lang();
     dir = pkgdir_open_ext(rpmdb_path, NULL, "rpmdb", dbpath, NULL, 0, lc_lang);
     if (dir != NULL) {
+        struct pkgdir *prev_pkgdir = NULL;
+        if (kw && (prev_pkgdir = n_hash_get(kw, "prev_pkgdir")))
+            dir->prev_pkgdir = prev_pkgdir;
+        
         if (!pkgdir_load(dir, NULL, pkgdir_ldflags | PKGDIR_LD_NOUNIQ)) {
             pkgdir_free(dir);
             dir = NULL;
