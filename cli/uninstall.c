@@ -254,7 +254,7 @@ static int uninstall(struct cmdctx *cmdctx)
     
     poldek_ts_clean_args(ts);
     for (i=0; i < n_array_size(pkgs); i++) {
-        DBGF_F("%s\n", pkg_id(n_array_nth(pkgs, i)));
+        DBGF("%s\n", pkg_id(n_array_nth(pkgs, i)));
         poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
     }
     n_array_free(pkgs);
