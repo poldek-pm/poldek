@@ -203,13 +203,16 @@ int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
             if (load_package(dbrec->recno, dbrec->hdr, pkgdir))
                 n++;
         }
-        msg(1, "_.");
+
+        if (n % 100 == 0)
+            msg(3, "_.");
+        
         if (sigint_reached()) {
             n = 0;
             break;
         }
     }
-    msgn(1, "_done");
+    msgn(3, "_done");
     
     pkgdb_it_destroy(&it);
     pkgdb_free(db);
