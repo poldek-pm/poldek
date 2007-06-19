@@ -546,7 +546,7 @@ static int resolve_mask(struct uninstall_ctx *uctx, struct poldek_ts *ts,
         DBGF("try %s => %s (%s, %s, %s)\n", mask, nmask, n, v, r);
         matched = resolve_package(uctx, ts, nmask, NULL);
         
-        if (!matched && (p = strchr(r, '.'))) { /* try N-[E:]-V-R.ARCH */
+        if (!matched && (p = strrchr(r, '.'))) { /* try N-[E:]-V-R.ARCH */
             *p = '\0';
             p++;
             
