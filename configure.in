@@ -185,7 +185,9 @@ AC_EGREP_CPP(yes,
       #endif
      ], is_rpm4=yes, is_rpm4=no)
 
-if test "${is_rpm4}." = "yes." ; then
+if test "${is_rpm4}." = "no." ; then
+	AC_MSG_RESULT(no)
+else
 	AC_MSG_RESULT(yes)
 	AC_DEFINE([HAVE_RPM_4_0],1,[defined if rpm 4.x is installed])
 	AC_EGREP_CPP(RPMSENSE_SCRIPT_PRE,
@@ -207,8 +209,14 @@ if test "${is_rpm4}." = "yes." ; then
 	else 
 	        AC_MSG_RESULT(no)
 	fi
-else
-	AC_MSG_RESULT(no)
+
+	AC_EGREP_CPP(RPMTAG_PUBKEYS,
+		[ #include <rpm/rpmlib.h>
+		], have_tag_pubkeys=yes, have_tag_pubkeys=no)
+
+	if test "${have_tag_pubkeys}." = "yes." ; then
+		AC_DEFINE([HAVE_RPMTAG_PUBKEYS],1,["RPMTAG_PUBKEYS exists"])
+	fi
 fi
 
 dnl Checks for libraries.
@@ -293,6 +301,10 @@ AC_CHECK_FUNCS(rpmdsRpmlib,,
                [ AC_CHECK_FUNCS(rpmGetRpmlibProvides,,
           	 [AC_MSG_WARN(["poldek will not work fine with rpmlib\(...\) capabilities"])],
           	 [$CONF_IN_LDFLAGS])], [$CONF_IN_LDFLAGS])
+
+dnl FIXME: it is inline function, how to detect it without AC_EGREP_CPP?
+AC_CHECK_FUNCS(headerFreeData)
+
 dnl rpm 4.4.6
 AC_CHECK_FUNCS(rpmdsUname)
 AC_CHECK_FUNCS(rpmdsSysinfo)

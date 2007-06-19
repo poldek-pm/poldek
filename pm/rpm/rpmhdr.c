@@ -146,8 +146,13 @@ int pm_rpmhdr_nevr(void *h, char **name, int32_t *epoch, char **version,
 
 void pm_rpmhdr_free_entry(void *e, int type) 
 {
+#if HAVE_HEADERFREEDATA
+    if (e)
+        headerFreeData(e, type);
+#else
     if (e && (type == RPM_STRING_ARRAY_TYPE || type == RPM_I18NSTRING_TYPE))
         free(e);
+#endif
 }
 
 

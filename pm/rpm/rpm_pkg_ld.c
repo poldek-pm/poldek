@@ -441,6 +441,21 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     return nerr ? -1 : 1;
 }
 
+static int is_pubkey(Header h) 
+{
+#if HAVE_RPMTAG_PUBKEYS
+    void *pubkeys;
+    int type;
+
+    if (headerGetEntry(h, RPMTAG_PUBKEYS, &type, &pubkeys, NULL)) {
+        pm_rpmhdr_free_entry(pubkeys, type);
+        return 1;
+    }
+#endif
+    return 0;
+}
+
+
 struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsize,
                          unsigned ldflags)
 {
@@ -463,14 +478,14 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
         
     } else {
         if (!headerGetEntry(h, RPMTAG_ARCH, &type, (void *)&arch, NULL)) {
-            logn(LOGERR, _("%s: read architecture tag failed"), fname);
+            if (!is_pubkey(h))
+                logn(LOGERR, _("%s: read architecture tag failed"), fname);
             return NULL;
         }
 
         if (type != RPM_STRING_TYPE)
             arch = NULL;
     }
-    
     
     if (!headerGetEntry(h, RPMTAG_OS, &type, (void *)&os, NULL)) {
         if (poldek_VERBOSE > 1)
