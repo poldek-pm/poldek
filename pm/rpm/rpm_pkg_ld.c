@@ -202,7 +202,7 @@ tn_array *do_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
 
         if ((cr = capreq_new_evr(name, evr, cr_relflags, cr_flags)) == NULL) {
             logn(LOGERR, "%s: '%s %s%s%s %s': invalid capability",
-                 pkg ? pkg_snprintf_s(pkg) : "(null)", name, 
+                 pkg ? pkg_id(pkg) : "(null)", name, 
                  (cr_relflags & REL_LT) ? "<" : "",
                  (cr_relflags & REL_GT) ? ">" : "",
                  (cr_relflags & REL_EQ) ? "=":"", evr);
@@ -502,7 +502,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
     pkg->color = hGetColor(h);
 #endif
 
-    msg(4, "ld %s\n", pkg_snprintf_s(pkg));
+    msg(4, "ld %s\n", pkg_id(pkg));
     
     if (ldflags & PKG_LDCAPS) {
         pkg->caps = capreq_arr_new(0);
@@ -549,8 +549,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
         else
             flldflags = PKGFL_DEPDIRS;
         
-        if (pm_rpm_ldhdr_fl(na, &pkg->fl, h, flldflags,
-                            pkg_snprintf_s(pkg)) == -1) {
+        if (pm_rpm_ldhdr_fl(na, &pkg->fl, h, flldflags, pkg_id(pkg)) == -1) {
             pkg_free(pkg);
             pkg = NULL;
         

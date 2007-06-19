@@ -189,15 +189,37 @@ tn_array *pm_rpm_rpmlib_caps(void *pm_rpm)
     return caps;
 }
 
+static void get_host_cpu_vendor_os(char **acpu, char **avendor, char **aos) 
+{
+    static char *cpu = NULL, *vendor = NULL, *os = NULL; /* XXX static variable */
+    
+    if (cpu == NULL) {
+        cpu = rpmExpand("%{_host_cpu}", NULL);
+        vendor = rpmExpand("%{_host_vendor}", NULL);
+        os = rpmExpand("%{_host_os}", NULL);
+    }
+    
+    if (acpu)
+        *acpu = cpu;
+
+    if (avendor)
+        *avendor = vendor;
+
+    if (aos)
+        *aos = os;
+}
+
+
+            
+
+
 #ifdef HAVE_RPMPLATFORMSCORE    /* rpm 4.4.9 */
 static int machine_score(int tag, const char *val) {
-    char *cpu, *vendor, *os;
+    char *cpu = NULL, *vendor = NULL, *os = NULL; /* XXX static variable */
     int rc;
 
-    cpu = rpmExpand("%{_host_cpu}", NULL);
-    vendor = rpmExpand("%{_host_vendor}", NULL);
-    os = rpmExpand("%{_host_os}", NULL);
-
+    get_host_cpu_vendor_os(&cpu, &vendor, &os);
+    
     if (! (cpu && vendor && os) ) {
         rc = rpmPlatformScore(val, platpat, nplatpat);
         
@@ -207,21 +229,29 @@ static int machine_score(int tag, const char *val) {
 	    switch (tag) {
 		    case PMMSTAG_ARCH:
 			    n_snprintf(p, size, "%s-%s-%s", val, vendor, os);
+                DBGF("ARCH %s\n", p);
 			    break;
+                
 		    case PMMSTAG_OS:
-			    n_snprintf(p, size, "%s-%s-%s", cpu, vendor, val);
+                n_snprintf(p, size, "%s-%s-%s", cpu, vendor, val);
+                DBGF("OS %s\n", p);
 			    break;
+                
 		    default:
-			    n_snprintf(p, size, "%s", val);
+                n_assert(0);
 			    break;
 	    }
-
+        
         rc = rpmPlatformScore(p, platpat, nplatpat);
+
+        /* do not trust PlatformScore() to much and just strcmp -> OS never used
+           for scoring */
+        if (rc == 0 && tag == PMMSTAG_OS) {
+            rc = (strcasecmp(os, val) == 0); 
+            DBGF("cmp %s, %s => %d\n", os, val, rc);
+        }
+        
     }
-    
-    n_cfree(&cpu);
-    n_cfree(&vendor);
-    n_cfree(&os);
     
     return rc;
 }
@@ -260,14 +290,12 @@ static int machine_score(int tag, const char *val)
             break;
             
         case PMMSTAG_OS: {
-            char *host_val = rpmExpand("%{_host_os}", NULL);
+            const char *host_os;
+            get_host_cpu_vendor_os(NULL, NULL, &host_os);
 
             rc = 9;
-            if (host_val) {
-                if (strcasecmp(host_val, val) == 0)
-                    rc = 1;                 /* exact fit */
-                free(host_val);
-            }
+            if (host_os && strcasecmp(host_val, val) == 0)
+                rc = 1;                 /* exact fit */
             break;
 
         default:
@@ -289,7 +317,6 @@ int pm_rpm_machine_score(void *pm_rpm, int tag, const char *val)
 /* XXX: function used directly in pkg.c */
 int pm_rpm_arch_score(const char *arch)
 {
-    char *host_arch;
     int rc;
     
     if (arch == NULL)
@@ -305,7 +332,7 @@ int pm_rpm_arch_score(const char *arch)
         rc = 1;
         
     } else {
-        host_arch = rpmExpand("%{_host_cpu}", NULL);
+        host_arch = get_host_cpu_vendor_os(&cpu, NULL, NULL);
         if (host_arch) {
             if (strcasecmp(host_arch, arch) == 0)
                 rc = 1;                 /* exact fit */
