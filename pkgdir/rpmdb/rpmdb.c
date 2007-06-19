@@ -27,8 +27,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-
 #include <trurl/trurl.h>
+#include <sigint/sigint.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -139,81 +139,85 @@ tn_tuple *load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
     return fl;
 }
 
-
-struct map_struct {
-    tn_array  *pkgs;
-    struct pkgdir *pkgdir;
-    struct pkgroup_idx *pkgroups;
-    tn_alloc  *na;
-};
-
+/* load package from header and add it to pkgdir */
 static
-void db_map_fn(unsigned int recno, void *header, void *ptr) 
+int load_package(unsigned int recno, void *header, struct pkgdir *pkgdir) 
 {
-    struct pkg        *pkg;
-    struct map_struct *ms = ptr;
+    struct pkg  *pkg;
+    char        **langs;
+        
+    pkg = pm_rpm_ldhdr(pkgdir->na, header, NULL, 0, PKG_LDCAPREQS);
+    
+    if (pkg == NULL)
+        return 0;
+    
+    pkg->recno = recno;
+    pkg->load_pkguinf = load_pkguinf;
+    pkg->load_nodep_fl = load_nodep_fl;
+    
+    if (poldek_VERBOSE > 3)
+        msgn(4, "rpmdb: ld %s", pkg_id(pkg));
+    
+#if 0                           /* hope outdated  */
+    if (strcmp(pkg->name, "quake2") != 0) /* broken rpmdb... */
+        pkg->groupid = pkgroup_idx_update_rpmhdr(pkgdir->pkgroups, header);
+#endif
+    n_array_push(pkgdir->pkgs, pkg);
 
-    if ((pkg = pm_rpm_ldhdr(ms->na, header, NULL, 0, PKG_LDCAPREQS))) {
-        char **hdr_langs;
-        
-        pkg->recno = recno;
-        pkg->load_pkguinf = load_pkguinf;
-        pkg->load_nodep_fl = load_nodep_fl;
-        
-        if (poldek_VERBOSE > 3)
-            msgn(4, "rpmdb: ld %s", pkg_snprintf_s(pkg));
-        
-        if (strcmp(pkg->name, "quake2") != 0) /* broken rpmdb... */
-            pkg->groupid = pkgroup_idx_update_rpmhdr(ms->pkgroups, header);
-        n_array_push(ms->pkgs, pkg);
-
-        hdr_langs = pm_rpmhdr_langs(header);
-        
-        if (hdr_langs) {
-            int i = 0;
-            while (hdr_langs[i]) {
-                pkgdir__update_avlangs(ms->pkgdir, hdr_langs[i], 1);
-                i++;
-            }
-            free(hdr_langs);
-        }
-        
-        if (n_array_size(ms->pkgs) % 100 == 0)
-            msg(3, "_.");
+    if ((langs = pm_rpmhdr_langs(header))) {
+        int i = 0;
+        while (langs[i])
+            pkgdir__update_avlangs(pkgdir, langs[i++], 1);
+        free(langs);
     }
+    
+    return 1;
 }
 
 static
 int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
-                     tn_array *pkgs, const char *rootdir, const char *path,
-                     struct pkgroup_idx *pkgroups,
-                     unsigned ldflags, tn_alloc *na) 
+                     const char *rootdir) 
 {
-    char dbfull_path[PATH_MAX];
     struct pkgdb       *db;
-    struct map_struct  ms;
-    
-    ldflags = ldflags;          /* unused */
+    struct pkgdb_it    it;
+    const struct pm_dbrec *dbrec;
+    char               dbfull_path[PATH_MAX];    
+    int                n;
     
     snprintf(dbfull_path, sizeof(dbfull_path), "%s%s",
-             *(rootdir + 1) == '\0' ? "" : rootdir, path != NULL ? path : "");
+             *(rootdir + 1) == '\0' ? "" : rootdir,
+             pkgdir->idxpath != NULL ? pkgdir->idxpath : "");
 
-    
-    if ((db = pkgdb_open(pmctx, rootdir, path, O_RDONLY, NULL)) == NULL)
+    db = pkgdb_open(pmctx, rootdir, pkgdir->idxpath, O_RDONLY, NULL);
+    if (db == NULL)
         return 0;
 
     msg(3, _("Loading db packages%s%s%s..."), *dbfull_path ? " [":"",
         dbfull_path, *dbfull_path ? "]":"");
 
-    ms.pkgs = pkgs;
-    ms.pkgdir = pkgdir;
-    ms.pkgroups = pkgroups;
-    ms.na = na;
+    pkgdb_it_init(db, &it, PMTAG_RECNO, NULL);
 
-    pkgdb_map(db, db_map_fn, &ms);
+    n = 0;
+    while ((dbrec = pkgdb_it_get(&it))) {
+        if (dbrec->hdr) {
+            if (load_package(dbrec->recno, dbrec->hdr, pkgdir))
+                n++;
+        }
+        msg(1, "_.");
+        if (sigint_reached()) {
+            n = 0;
+            break;
+        }
+    }
+    msgn(1, "_done");
+    
+    pkgdb_it_destroy(&it);
     pkgdb_free(db);
-    msgn(3, _("_done"));
-    return n_array_size(pkgs);
+
+    if (n == 0)
+        n_array_clean(pkgdir->pkgs);
+    
+    return n_array_size(pkgdir->pkgs);
 }
 
 /* just check if database exists */
@@ -243,15 +247,17 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     int i;
     struct pm_ctx *pmctx = pkgdir->mod_data;
 
+    ldflags = ldflags;          /* unused */
+
     n_assert(pmctx);
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
 
     pkgdir->ts = pm_dbmtime(pmctx, pkgdir->idxpath);
+
+    DBGF("prev_dir %p\n", pkgdir->prev_pkgdir);
     
-    if (!load_db_packages(pkgdir->mod_data, pkgdir, pkgdir->pkgs, "/",
-                          pkgdir->idxpath, pkgdir->pkgroups, ldflags,
-                          pkgdir->na))
+    if (!load_db_packages(pkgdir->mod_data, pkgdir, "/"))
         return 0;
     
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
