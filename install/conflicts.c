@@ -21,21 +21,27 @@ int find_replacement(struct install_ctx *ictx, struct pkg *pkg,
                      struct pkg **rpkg)
 {
     tn_array *pkgs;
-    struct pkg *bypkg = NULL;
     struct pkgset *ps;
-
+    int i;
+    
     ps = ictx->ts->ctx->ps;
     *rpkg = NULL;
 
     /* simply higest version */
-    if ((bypkg = pkgset_lookup_1package(ps, pkg->name)) && 
-        pkg_cmp_name_evr(bypkg, pkg) > 0) {
-        
-        *rpkg = bypkg;
-        
-    } else if ((pkgs = pkgset_search(ps, PS_SEARCH_OBSL, pkg->name))) {
-        int i;
-        
+    if ((pkgs = pkgset_search(ps, PS_SEARCH_NAME, pkg->name))) {
+        for (i=0; i < n_array_size(pkgs); i++) {
+            struct pkg *p = n_array_nth(pkgs, i);
+            if (!pkg_is_kind_of(p, pkg))
+                continue;
+            
+            if (pkg_cmp_evr(p, pkg) > 0) {
+                *rpkg = p;
+                break;
+            }
+        }
+    }
+
+    if (*rpkg == NULL && (pkgs = pkgset_search(ps, PS_SEARCH_OBSL, pkg->name))) {
         for (i=0; i < n_array_size(pkgs); i++) {
             struct pkg *p = n_array_nth(pkgs, i);
             if (pkg_caps_obsoletes_pkg_caps(p, pkg) &&

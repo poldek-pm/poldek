@@ -309,13 +309,22 @@ l_end:
     return rc;
 }
 
+static int package_is_duplicate(const struct pkg *pkg, const struct pkg *pkg2)
+{
+    if (pkg_cmp_name(pkg, pkg2) != 0)
+        return 0;
+
+    if (poldek_conf_MULTILIB && pkg_cmp_arch(pkg, pkg2) != 0)
+        return 0;
+
+    return 1;
+}
 
 static
-int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs) 
+int unmark_name_duplicates(struct pkgmark_set *pms, tn_array *pkgs) 
 {
     struct pkg *pkg, *pkg2;
     int i, n, nmarked = 0;
-    int multilib = poldek_conf_MULTILIB; /* just for short */
 
     if (n_array_size(pkgs) < 2)
         return n_array_size(pkgs);
@@ -337,13 +346,10 @@ int unmark_name_dups(struct pkgmark_set *pms, tn_array *pkgs)
             break;
 
         pkg2 = n_array_nth(pkgs, i);
-        while (pkg_cmp_name(pkg, pkg2) == 0) {
-            if (!multilib || (multilib && pkg_cmp_arch(pkg, pkg2) == 0)) {
-                pkg_unmark(pms, pkg2);
-                DBGF("unmark %s\n", pkg_id(pkg2));
-                n++;
-            }
-            
+        while (package_is_duplicate(pkg, pkg2)) {
+            pkg_unmark(pms, pkg2);
+            DBGF("  unmark %s\n", pkg_id(pkg2));
+            n++;
             i++;
             if (i == n_array_size(pkgs))
                 break;
@@ -363,7 +369,7 @@ int in_do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     if (in_prepare_icaps(ts) < 0) /* user aborts, no error */
         return 1;
     
-    if (unmark_name_dups(ts->pms, ts->ctx->ps->pkgs) == 0) {
+    if (unmark_name_duplicates(ts->pms, ts->ctx->ps->pkgs) == 0) {
         msgn(1, _("Nothing to do"));
         return 1;
     }
