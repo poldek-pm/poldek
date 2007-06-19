@@ -252,7 +252,7 @@ tn_array *arg_packages_get_masks(struct arg_packages *aps, int hashed)
         n = n_snprintf(mask, sizeof(mask), "%s%s%s%s-%s", pkg->name,
                        hashed ? "#" : "-", e, pkg->ver, pkg->rel);
 
-        if (0 && poldek_conf_MULTILIB && pkg_arch(pkg))
+        if (poldek_conf_MULTILIB && pkg_arch(pkg))
             n += n_snprintf(&mask[n], sizeof(mask) - n, ".%s", pkg_arch(pkg));
         
         n_array_push(masks, n_strdupl(mask, n));
