@@ -88,7 +88,10 @@ ann-send: ann
 	@echo "Sending announce to $(ann_to)..."
 	nc -v localhost 25 < ann.1
 
-oncrame:
+oncarme:
 	@rsync -avt --exclude python --exclude-from ~/poldek/.cvsignore ~/poldek carme.pld-linux.org:poldek/
 	@ssh carme.pld-linux.org "cd poldek/poldek && CC=ccache ./make.sh -j3"
 
+scpsnap: 
+	@snap=`ls poldek-*-cvs20* | sort | tail -1`; \
+	[ -n "$$snap" ] && chmod 644 $$snap && scp $$snap ep09.pld-linux.org:www/poldek/download/snapshots/
