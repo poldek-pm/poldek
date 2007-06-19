@@ -228,7 +228,8 @@ static int uninstall(struct cmdctx *cmdctx)
     struct poclidek_ctx  *cctx;
     struct poldek_ts     *ts;
     struct poldek_iinf   iinf, *iinfp;
-    int                  err = 0;
+    tn_array             *pkgs;
+    int                  i, err = 0;
     
     cctx = cmdctx->cctx;
     ts = cmdctx->ts;
@@ -244,6 +245,20 @@ static int uninstall(struct cmdctx *cmdctx)
         return 0;
     }
 
+    /* must be resolved here to allow globbing, RPM doesn't support globs AFAIK */
+    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, ts, 1);
+    if (pkgs == NULL) {
+        err++;
+        goto l_end;
+    }
+    
+    poldek_ts_clean_args(ts);
+    for (i=0; i < n_array_size(pkgs); i++) {
+        DBGF_F("%s\n", pkg_id(n_array_nth(pkgs, i)));
+        poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
+    }
+    n_array_free(pkgs);
+
     if (ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0))
         iinfp = NULL;
     else
@@ -258,6 +273,7 @@ static int uninstall(struct cmdctx *cmdctx)
         poldek_iinf_destroy(iinfp);
     }
     
+l_end:
     return err == 0;
 }
 
