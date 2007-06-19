@@ -46,98 +46,124 @@
 #include "pm/pm.h"
 #include "install/install.h"
 
-struct map_s {
-    tn_array *avpkgs;
-    tn_hash *marked_h;
-    struct poldek_ts *ts;
-    int nmarked;
-};
-
-static
-int mapfn_mark_newer_pkg(const char *n, uint32_t e,
-                         const char *v, const char *r, void *_map_s) 
+int process_pkg(const struct pkg *dbpkg, struct poldek_ts *ts,
+                tn_hash *marked_h, int *nmarked)
 {
-    struct map_s *map_s = _map_s;
-    struct pkg  *pkg, tmpkg;
+    struct pkg *pkg, *tmpkg;
+    char pkgkey[256];
     int i, cmprc;
 
-    memset(&tmpkg, 0, sizeof(tmpkg));
-    tmpkg.name = (char*)n;
-    tmpkg.epoch = e;
-    tmpkg.ver = (char*)v;
-    tmpkg.rel = (char*)r;
-    
-    i = n_array_bsearch_idx_ex(map_s->avpkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name); 
+    i = n_array_bsearch_idx_ex(ts->ctx->ps->pkgs, dbpkg, (tn_fn_cmp)pkg_cmp_name); 
     if (i < 0) {
-        msg(3, "%-32s not found in repository\n", pkg_snprintf_s(&tmpkg));
+        msgn(3, "%-32s not found in repository", pkg_id(dbpkg));
+        return 1;
+    }
+
+    while (i < n_array_size(ts->ctx->ps->pkgs)) {
+        pkg = n_array_nth(ts->ctx->ps->pkgs, i);
+        
+        if (!ts->getop(ts, POLDEK_OP_MULTILIB))
+            break;
+            
+        if (pkg_is_kind_of(pkg, dbpkg))
+            break;
+
+        i++;
+        pkg = NULL;
+    }
+    
+    if (pkg == NULL) {
+        msgn(3, "%-32s not found in repository", pkg_id(dbpkg));
         return 1;
     }
     
-    pkg = n_array_nth(map_s->avpkgs, i);
-    cmprc = pkg_cmp_evr(pkg, &tmpkg);
-    if (poldek_VERBOSE) {
+    cmprc = pkg_cmp_evr(pkg, dbpkg);
+    if (poldek_VERBOSE > 1) {
         if (cmprc == 0) 
-            msg(3, "%-32s up to date\n", pkg_snprintf_s(&tmpkg));
+            msg(3, "%-32s up to date\n", pkg_id(dbpkg));
         
         else if (cmprc < 0)
-            msg(3, "%-32s newer than repository one\n", pkg_snprintf_s(&tmpkg));
+            msg(3, "%-32s newer than repository one\n", pkg_id(dbpkg));
         
         else 
-            msg(2, "%-32s -> %-30s\n", pkg_snprintf_s(&tmpkg),
-                pkg_id(pkg));
+            msg(2, "%-32s -> %-30s\n", pkg_id(dbpkg), pkg_id(pkg));
     }
 
-    if ((pkg = n_hash_get(map_s->marked_h, tmpkg.name))) {
-        if (pkg_is_marked(map_s->ts->pms, pkg)) {
+    if (ts->getop(ts, POLDEK_OP_MULTILIB))
+        n_snprintf(pkgkey, 250, "%s.%s", dbpkg->name, pkg_arch(dbpkg));
+    else
+        n_snprintf(pkgkey, sizeof(pkgkey), "%s", dbpkg->name);
+
+        
+    if ((tmpkg = n_hash_get(marked_h, pkgkey))) {
+        if (pkg_is_marked(ts->pms, tmpkg)) {
             logn(LOGWARN, _("%s: multiple instances installed, skipped"),
-                 tmpkg.name);
-            pkg_unmark(map_s->ts->pms, pkg);        /* display above once */
-            map_s->nmarked--;
+                 pkg_id(dbpkg));
+            pkg_unmark(ts->pms, tmpkg);        /* display above once */
+            (*nmarked)--;
         }
         return 0;
     }
 
-    pkg = n_array_nth(map_s->avpkgs, i);
     if (cmprc > 0) {
-        if (pkg_is_scored(pkg, PKG_HELD) &&
-            map_s->ts->getop(map_s->ts, POLDEK_OP_HOLD)) {
+        if (pkg_is_scored(pkg, PKG_HELD) && ts->getop(ts, POLDEK_OP_HOLD)) {
             msgn(1, _("%s: skip held package"), pkg_id(pkg));
             
         } else {
-            n_hash_insert(map_s->marked_h, tmpkg.name, pkg);
-            pkg_hand_mark(map_s->ts->pms, pkg);
-            map_s->nmarked++;
+            n_hash_insert(marked_h, pkgkey, pkg);
+            pkg_hand_mark(ts->pms, pkg);
+            (*nmarked)++;
         }
     }
+    
     return 1;
 }
 
 
 int do_poldek_ts_upgrade_dist(struct poldek_ts *ts) 
 {
-    struct map_s map_s;
-
-    map_s.ts = ts;
-    map_s.avpkgs = ts->ctx->ps->pkgs;
-    map_s.marked_h = n_hash_new(512, NULL);
-    map_s.nmarked = 0;
+    //map_s.avpkgs = ts->ctx->ps->pkgs;
+    struct pkgdb_it       it;
+    const struct pm_dbrec *dbrec;
+    tn_hash               *marked_h;
+    int                   nmarked = 0;
     
+    marked_h = n_hash_new(1024, NULL);
     msgn(1, _("Looking up packages for upgrade..."));
-    pkgdb_map_nevr(ts->db, mapfn_mark_newer_pkg, &map_s);
-    n_hash_free(map_s.marked_h);
-    
-#if 0
-    if (upg.ndberrs) {
-        logn(LOGERR, _("There are database errors (?), give up"));
-        destroy_upgrade_s(&upg);
-        return 0;
-    }
-#endif
-    
-    if (sigint_reached()) 
-        return 0;
 
-    else if (map_s.nmarked == 0)
+    pkgdb_it_init(ts->db, &it, PMTAG_RECNO, NULL);
+    while ((dbrec = pkgdb_it_get(&it))) {
+        struct pkg t;
+        char *arch;
+        
+        if (dbrec->hdr == NULL)
+            continue;
+        
+        if (pm_dbrec_nevr(dbrec, &t.name, &t.epoch,
+                          &t.ver, &t.rel, &arch, &t.color)) {
+            struct pkg *pkg;
+            
+            pkg = pkg_new(t.name, t.epoch, t.ver, t.rel, arch, NULL);
+            pkg->color = t.color;
+                                      
+            if (process_pkg(pkg, ts, marked_h, &nmarked) < 0) {
+                pkg_free(pkg);
+                break;
+            }
+            
+            pkg_free(pkg);
+        }
+        
+        if (sigint_reached()) {
+            nmarked = 0;
+            break;
+        }
+    }
+    
+    pkgdb_it_destroy(&it);
+    n_hash_free(marked_h);
+
+    if (nmarked == 0)
         msgn(1, _("Nothing to do"));
 
     return in_do_poldek_ts_install(ts, NULL);

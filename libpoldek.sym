@@ -120,8 +120,6 @@ pkgdb_it_destroy
 pkgdb_it_get
 pkgdb_it_get_count
 pkgdb_it_init
-pkgdb_map
-pkgdb_map_nevr
 pkgdb_match_req
 pkgdb_open
 pkgdb_reopen

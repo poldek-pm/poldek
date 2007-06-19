@@ -81,18 +81,6 @@ int pkgdb_install(struct pkgdb *db, const char *path,
 int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, int strict,
                     tn_array *excloffs);
 
-int pkgdb_map(struct pkgdb *db,
-              void (*mapfn)(unsigned recno, void *header, void *arg),
-              void *arg);
-
-
-
-int pkgdb_map_nevr(struct pkgdb *db,
-                   int (*mapfn)(const char *name, uint32_t epoch,
-                                const char *ver, const char *rel, void *arg),
-                   void *arg);
-
-
 struct pm_dbrec {
     unsigned  recno;
     void      *hdr;

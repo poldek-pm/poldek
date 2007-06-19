@@ -49,7 +49,10 @@ struct pkgdb *pkgdb_malloc(struct pm_ctx *ctx, const char *rootdir,
     db->kw = n_hash_new(16, NULL);
     while (key != NULL) {
         void *val = va_arg(ap, void*);
-        n_hash_insert(db->kw, key, val); /* pm module should free val */
+        DBGF("%s %p\n", key, val);
+        
+        if (val)
+            n_hash_insert(db->kw, key, val); /* pm module should free() val */
         key = va_arg(ap, const char*);
     }
     db->_ctx = ctx;
@@ -211,31 +214,6 @@ int pkgdb_it_get_count(struct pkgdb_it *it)
     return it->_get_count(it);
 }
 
-int pkgdb_map(struct pkgdb *db,
-              void (*mapfn)(unsigned recno, void *header, void *arg),
-              void *arg) 
-{
-    int n = 0;
-    struct pkgdb_it it;
-    const struct pm_dbrec *dbrec;
-
-    pkgdb_it_init(db, &it, PMTAG_RECNO, NULL);
-    while ((dbrec = pkgdb_it_get(&it))) {
-        if (dbrec->hdr) {
-            mapfn(dbrec->recno, dbrec->hdr, arg);
-            n++;
-        }
-
-        if (sigint_reached()) {
-            n = 0;
-            break;
-        }
-    }
-    
-    pkgdb_it_destroy(&it);
-    return n;
-}
-
 int pm_dbrec_nevr(const struct pm_dbrec *dbrec, char **name, int32_t *epoch,
                   char **ver, char **rel, char **arch, int *color)
 {
@@ -244,41 +222,6 @@ int pm_dbrec_nevr(const struct pm_dbrec *dbrec, char **name, int32_t *epoch,
                                       arch, color);
 }
 
-int pkgdb_map_nevr(struct pkgdb *db,
-                   int (*mapfn)(const char *name, uint32_t epoch,
-                                 const char *ver, const char *rel, void *arg),
-                   void *arg) 
-{
-    int n = 0;
-    struct pkgdb_it it;
-    const struct pm_dbrec *dbrec;
-
-    pkgdb_it_init(db, &it, PMTAG_RECNO, NULL);
-    while ((dbrec = pkgdb_it_get(&it))) {
-        struct pkg tmpkg;
-        char *arch;
-        
-        if (dbrec->hdr == NULL)
-            continue;
-        
-        n_assert(db->_ctx->mod->hdr_nevr);
-        if (db->_ctx->mod->hdr_nevr(dbrec->hdr, &tmpkg.name, &tmpkg.epoch,
-                                    &tmpkg.ver, &tmpkg.rel, &arch, &tmpkg.color)) {
-            
-            if (mapfn(tmpkg.name, tmpkg.epoch, tmpkg.ver, tmpkg.rel, arg) < 0)
-                break;
-            n++;
-        }
-        
-        if (sigint_reached()) {
-            n = 0;
-            break;
-        }
-    }
-    
-    pkgdb_it_destroy(&it);
-    return n;
-}
 
 /* NOTICE: function doing pkg cmp hdr */
 static 
