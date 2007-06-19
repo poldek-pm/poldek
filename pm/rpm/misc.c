@@ -290,11 +290,11 @@ static int machine_score(int tag, const char *val)
             break;
             
         case PMMSTAG_OS: {
-            const char *host_os;
+            char *host_os = NULL;
             get_host_cpu_vendor_os(NULL, NULL, &host_os);
 
             rc = 9;
-            if (host_os && strcasecmp(host_val, val) == 0)
+            if (host_os && strcasecmp(host_os, val) == 0)
                 rc = 1;                 /* exact fit */
             break;
 
@@ -332,7 +332,8 @@ int pm_rpm_arch_score(const char *arch)
         rc = 1;
         
     } else {
-        host_arch = get_host_cpu_vendor_os(&cpu, NULL, NULL);
+        char *host_arch = NULL;
+        get_host_cpu_vendor_os(&host_arch, NULL, NULL);
         if (host_arch) {
             if (strcasecmp(host_arch, arch) == 0)
                 rc = 1;                 /* exact fit */
