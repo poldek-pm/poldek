@@ -440,7 +440,7 @@ int psreq_find_match_packages(struct pkgset *ps,
                               int strict)
 {
     struct pkg **suspkgs, pkgsbuf[1024], **matches;
-    int i = 0, nsuspkgs = 0, nmatches = 0, found = 0;
+    int nsuspkgs = 0, nmatches = 0, found = 0;
     
     
     if (packages)
@@ -455,11 +455,14 @@ int psreq_find_match_packages(struct pkgset *ps,
     if (nsuspkgs == 0)          /* rpmlib() or other internal caps */
         return found;
 
-#if ENABLE_TRACE   
-    DBGF("%s: found %d suspected packages: ", capreq_snprintf_s(req), nsuspkgs);
-    for (i=0; i < nsuspkgs; i++)
-        msg(0, "%s, ", pkg_id(suspkgs[i]));
-    msg("\n");
+#if ENABLE_TRACE
+    do {
+        int i;
+        DBGF("%s: found %d suspected packages: ", capreq_snprintf_s(req), nsuspkgs);
+        for (i=0; i < nsuspkgs; i++)
+            msg(0, "%s, ", pkg_id(suspkgs[i]));
+        msg("\n");
+    } while(0);
 #endif
     
     found = 0;
