@@ -918,7 +918,7 @@ int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard)
 {
     struct capreq *cnfl = NULL;
 
-    DBGF_F("%s %s%s", pkg_id(pkg), pkg_id(cpkg), isbastard ? " (bastard)" : "");
+    DBGF("%s %s%s", pkg_id(pkg), pkg_id(cpkg), isbastard ? " (bastard)" : "");
     if (n_array_bsearch_ex(pkg->cnfls, cpkg->name,
                            (tn_fn_cmp)capreq_cmp2name) == NULL) {
         cnfl = capreq_new(pkg->na, cpkg->name, cpkg->epoch, cpkg->ver,
@@ -1225,15 +1225,15 @@ char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
         
     } else {
         char buf[1024];
-        //DBGF_F("pkgpath = %s\n", pkgpath);
+        //DBGF("pkgpath = %s\n", pkgpath);
         vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
-        //DBGF_F("pkgpath_dir = %s\n", buf);
+        //DBGF("pkgpath_dir = %s\n", buf);
         
         n = n_snprintf(path, size, "%s%s%s/%s", cachedir ? cachedir : "",
                        cachedir ? "/" : "", buf, n_basenam(fn));
     }
 
-    //DBGF_F("%s\n", path);
+    DBGF("RET %s\n", path);
     if (size - n > 2)
         return path;
 

@@ -820,14 +820,14 @@ void poldek__ts_dump_settings(struct poldek_ctx *ctx, struct poldek_ts *ts)
     int i;
 
     n_assert(default_op_map);
-    DBGF_F("ts %p, tsctx %p\n", ts, ctx->ts);
+    DBGF("ts %p, tsctx %p\n", ts, ctx->ts);
 
     for (i=0; i<n_array_size(default_op_map); i++) {
         struct default_op_map_ent *ent = n_array_nth(default_op_map, i);
 
-        DBGF_F("%% %s=%s (ctx=%s)\n", ent->name,
-               ts->getop(ts, ent->op) ? "y" : "n",
-               ctx->ts->getop(ctx->ts, ent->op) ? "y" : "n");
+        DBGF("%% %s=%s (ctx=%s)\n", ent->name,
+             ts->getop(ts, ent->op) ? "y" : "n",
+             ctx->ts->getop(ctx->ts, ent->op) ? "y" : "n");
     }
 }
 

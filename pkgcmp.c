@@ -45,7 +45,7 @@ int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg)
     if (rc == 0 && poldek_conf_MULTILIB) {
         rc = pkg_cmp_arch(pkg, candidate);
         //if (rc == 0)
-        //    DBGF_F("%s, %s => YES\n", pkg_id(candidate), pkg_id(pkg));
+        //    DBGF("%s, %s => YES\n", pkg_id(candidate), pkg_id(pkg));
     }
     
     return rc == 0;

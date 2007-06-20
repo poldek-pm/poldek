@@ -168,7 +168,7 @@ void *file_index_add_dirname(struct file_index *fi, const char *dirname)
         }
 #if ENABLE_TRACE        
         if ((n_hash_size(fi->dirs) % 10) == 0) {
-            DBGF_F("stats\n");
+            DBGF("stats\n");
             n_hash_stats(fi->dirs);
         }
 #endif
