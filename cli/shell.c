@@ -98,7 +98,7 @@ int is_pkg_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg)
             break;
         
         ipkg = ent->pkg_dent_pkg;
-        if (strcmp(pkg->name, ipkg->name) == 0 && pkg_cmp_evr(pkg, ipkg) > 0)
+        if (pkg_is_kind_of(ipkg, pkg) && pkg_cmp_evr(pkg, ipkg) > 0)
             return 1;
         
     }
