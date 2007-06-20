@@ -273,7 +273,6 @@ static int machine_score(int tag, const char *val)
             break;
     }
 
-    n_assert(rpmtag);
     return rpmMachineScore(rpmtag, val);
 }
 #else  /* !HAVE_RPMPLATFORMSCORE && !HAVE_RPMMACHINESCORE;
