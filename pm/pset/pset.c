@@ -597,11 +597,11 @@ static int do_pkgtslink(struct pm_psetdb *db, const char *cachedir,
 static void dumpdir(struct pkgdir *pkgdir)
 {
     int i;
-    DBGF_F("dump:\n");
+    DBGF("dump:\n");
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
         if (strcmp(pkg->name, "fix-info-dir") == 0)
-            DBGF_F("  %p %s\n", pkg, pkg->name);
+            DBGF("  %p %s\n", pkg, pkg->name);
     }
 }
 #endif

@@ -446,7 +446,7 @@ static
  int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc) 
  {
      int vfmode;
-     DBGF_F("metadata_update\n");
+     DBGF("metadata_update\n");
      vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL | VFM_CACHE_NODEL;
 +
 +    idx = pkgdir->mod_data;

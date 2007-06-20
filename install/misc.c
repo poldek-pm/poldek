@@ -611,7 +611,7 @@ struct pkg *in_choose_equiv(struct poldek_ts *ts, struct capreq *cap,
         
         /* ops, same packages, different arch -> no choice */
         if (n_array_size(pkgs) != size) {
-            //DBGF_F("no choice ");
+            //DBGF("no choice ");
             //pkgs_array_dump(pkgs, "AFTER");
             return hint;
         }
