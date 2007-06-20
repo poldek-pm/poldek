@@ -110,12 +110,11 @@ struct poclidek_ctx {
     unsigned            flags;
     struct poldek_ctx   *ctx;
     tn_array            *commands;
-    tn_array            *pkgs_available;   /* array of available pkgs  */
-    tn_array            *pkgs_installed;   /* array of installed pkgs  */
+    const tn_array      *pkgs_available;   /* array of available pkgs  */
+    const tn_array      *pkgs_installed;   /* array of installed pkgs  */
 
     
     struct pkgdir       *dbpkgdir;   /* db packages */
-    tn_array            *dbpkgdir_added; /* packages which was installed */
     time_t              ts_dbpkgdir; /* timestamp */
 
     unsigned            _flags;

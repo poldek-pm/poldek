@@ -498,8 +498,7 @@ void poclidek_destroy(struct poclidek_ctx *cctx)
     if (cctx->pkgs_available)
         n_array_free(cctx->pkgs_available);
     
-    if (cctx->pkgs_installed)
-        n_array_free(cctx->pkgs_installed);
+    cctx->pkgs_installed = NULL;
 
     if (cctx->rootdir)
         pkg_dent_free(cctx->rootdir);
@@ -736,12 +735,11 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf)
     
     if (cctx->rootdir)
         ent = poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR);
-        
-    n_array_sort(cctx->pkgs_installed);
-    
+
     for (i=0; i < n_array_size(iinf->uninstalled_pkgs); i++) {
         struct pkg *pkg = n_array_nth(iinf->uninstalled_pkgs, i);
-        n_array_remove(cctx->pkgs_installed, pkg);
+
+        pkgdir_remove_package(cctx->dbpkgdir, pkg);
         if (ent)
             pkg_dent_remove_pkg(ent, pkg);
         
@@ -751,14 +749,22 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf)
 
     for (i=0; i < n_array_size(iinf->installed_pkgs); i++) {
         struct pkg *pkg = n_array_nth(iinf->installed_pkgs, i);
-        n_array_push(cctx->pkgs_installed, pkg_link(pkg));
-        n_array_push(cctx->dbpkgdir_added, pkg_link(pkg));
+
+        /*
+          assure new packages haven't recno and clean it if they have;
+          playing with recno is messy and should be fixed. 
+        */
+        if (pkg->recno) {
+            logn(LOGERR, "%s: recno is set, should not happen", pkg_id(pkg));
+            pkg->recno = 0;
+        } 
+        
+        pkgdir_add_package(cctx->dbpkgdir, pkg);
         if (ent)
             pkg_dent_add_pkg(cctx, ent, pkg);
         DBGF("+ %s\n", pkg_id(pkg));
         n++;
     }
-    
     n_array_sort(cctx->pkgs_installed);
         
     if (n)

@@ -62,23 +62,12 @@ int poclidek_load_installed(struct poclidek_ctx *cctx, int reload)
         poclidek_dent_setup(cctx, POCLIDEK_INSTALLEDDIR, pkgdir->pkgs, reload);
 
 
-    if (cctx->pkgs_installed)
-        n_array_free(cctx->pkgs_installed);
-    
     if (cctx->dbpkgdir)
         pkgdir_free(cctx->dbpkgdir);
 
-    cctx->pkgs_installed = n_ref(pkgdir->pkgs);
-    n_array_ctl(cctx->pkgs_installed, TN_ARRAY_AUTOSORTED);
+    cctx->pkgs_installed = pkgdir->pkgs; /* "weak" ref */
     cctx->dbpkgdir = pkgdir;
     cctx->ts_dbpkgdir = pkgdir->ts;
-    
-    if (cctx->dbpkgdir_added == NULL)
-        cctx->dbpkgdir_added = pkgs_array_new(32);
-
-    else if (n_array_size(cctx->dbpkgdir_added))
-        n_array_clean(cctx->dbpkgdir_added);
-    
     return 1;
 }
 
@@ -137,41 +126,44 @@ char *mkrpmdb_path(char *path, size_t size, const char *root, const char *dbpath
 static
 struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload) 
 {
-    char            rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
-    const char      *lc_lang;
-    struct pkgdir   *dir = NULL;
-    struct pm_ctx   *pmctx;
-    unsigned        ldflags = PKGDIR_LD_NOUNIQ;
+    char             rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
+    const char       *lc_lang;
+    struct pkgdir    *dir = NULL, *prev_dir = NULL;
+    struct pm_ctx    *pmctx;
+    struct poldek_ts *ts = cctx->ctx->ts; /* for short */
+    unsigned         ldflags = PKGDIR_LD_NOUNIQ;
 
-    if (cctx->ctx->ts->getop(cctx->ctx->ts, POLDEK_OP_AUTODIRDEP))
+    
+    if (ts->getop(ts, POLDEK_OP_AUTODIRDEP))
         ldflags |= PKGDIR_LD_DIRINDEX;
-
+    
     pmctx = poldek_get_pmctx(cctx->ctx);
 
     DBGF("reload %d\n", reload);
-    if (!pm_dbpath(pmctx, dbpath, sizeof(dbpath)))
+
+    /* not dbpath based pm? */
+    if (!pm_dbpath(pmctx, dbpath, sizeof(dbpath))) 
         return poldek_load_destination_pkgdir(cctx->ctx, ldflags);
-    
-    if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
-                     cctx->ctx->ts->rootdir, dbpath) == NULL)
-        return NULL;
 
     
-    if (mkdbcache_path(dbcache_path, sizeof(dbcache_path),
-                       cctx->ctx->ts->cachedir, rpmdb_path) == NULL)
+    if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path), ts->rootdir,
+                     dbpath) == NULL)
+        return NULL;
+    
+    if (mkdbcache_path(dbcache_path, sizeof(dbcache_path), ts->cachedir,
+                       rpmdb_path) == NULL)
         return NULL;
 
     lc_lang = poldek_util_lc_lang("LC_MESSAGES");
     if (lc_lang == NULL) 
         lc_lang = "C";
 
-    if (cctx->ctx->ts->getop(cctx->ctx->ts, POLDEK_OP_AUTODIRDEP))
-        ldflags |= PKGDIR_LD_DIRINDEX;
-    
+    ldflags |= PKGDIR_LD_DIRINDEX;
     if (!reload) {              /* use cache */
         time_t mtime_rpmdb, mtime_dbcache;
         mtime_dbcache = mtime(dbcache_path);
         mtime_rpmdb = pm_dbmtime(pmctx, rpmdb_path);
+
         if (mtime_rpmdb && mtime_dbcache && mtime_rpmdb < mtime_dbcache) {
             dir = pkgdir_open_ext(dbcache_path, NULL, RPMDBCACHE_PDIRTYPE,
                                   dbpath, NULL, 0, lc_lang);
@@ -181,11 +173,18 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
                     dir = NULL;
                 }
         }
+        DBGF("%ld > %ld\n", mtime_rpmdb, mtime_dbcache);
+        
+        if (0 && mtime_rpmdb > mtime_dbcache) { /* outdated cache */
+            prev_dir = dir;
+            dir = NULL;
+        }
     }
     
-    if (dir == NULL) {
-        DBGF("lddb\n");
-        dir = poldek_load_destination_pkgdir(cctx->ctx, ldflags);
+    if (dir == NULL) {          /* load database */
+        DBGF("loading rpmdb %p\n", prev_dir);
+        dir = pkgdb_to_pkgdir(cctx->ctx->pmctx, ts->rootdir, NULL, ldflags,
+                              "prev_pkgdir", prev_dir, NULL);
     }
     
     if (dir == NULL)
@@ -207,13 +206,14 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     time_t       mtime_rpmdb, mtime_dbcache;
     char         rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
     const char   *path;
+    struct poldek_ts *ts = cctx->ctx->ts; /* for short */
     int          i;
 
     if (!pm_dbpath(cctx->ctx->pmctx, dbpath, sizeof(dbpath)))
         return 1;
 
     if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path),
-                     cctx->ctx->ts->rootdir, dbpath) == NULL)
+                     ts->rootdir, dbpath) == NULL)
         return 1;
 
     mtime_rpmdb = pm_dbmtime(cctx->ctx->pmctx, rpmdb_path);
@@ -224,7 +224,7 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
         path = pkgdir->idxpath;
     else 
         path = mkdbcache_path(dbcache_path, sizeof(dbcache_path),
-                              cctx->ctx->ts->cachedir, pkgdir->idxpath);
+                              ts->cachedir, pkgdir->idxpath);
     
     if (path == NULL)
         return 0;
@@ -239,22 +239,9 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
          mtime_rpmdb, pkgdir->ts, mtime_dbcache);
     n_assert(*path != '\0');
     n_assert(strlen(path) > 10);
-    DBGF("%s %s, %d %d\n", cctx->ctx->ts->cachedir, path,
+    DBGF("%s %s, %d %d\n", ts->cachedir, path,
          mtime_rpmdb, cctx->ts_dbpkgdir);
 
-    /* assure new packages haven't recno and clean it if they have;
-       playing with recno is messy and should be fixed. 
-     */
-    for (i=0; i<n_array_size(cctx->dbpkgdir_added); i++) {
-        struct pkg *pkg = n_array_nth(cctx->dbpkgdir_added, i);
-        if (pkg->recno) {
-            logn(LOGERR, "%s: recno is set, should not happen",
-                 pkg_snprintf_s(pkg));
-            pkg->recno = 0;
-        }
-    }
-    n_array_clean(cctx->dbpkgdir_added);
-    
     return pkgdir_save_as(pkgdir, RPMDBCACHE_PDIRTYPE, path,
                           PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |
                           PKGDIR_CREAT_MINi18n | PKGDIR_CREAT_NOFL);
