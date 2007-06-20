@@ -1153,7 +1153,7 @@ msgstr "niedozwolona warto¶æ ('%s') dla opcji '%s'"
 #: install-dist.c:69
 #, c-format
 msgid "Need to get about %s of archives."
-msgstr "Potrzeba pobraæ oko³o %s archiw."
+msgstr "Potrzeba pobraæ oko³o %s archiwów."
 
 #: install-dist.c:73
 #, c-format
