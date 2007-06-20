@@ -71,7 +71,7 @@ static int do_update_a(const struct source *src, const char *idxpath,
 //static int do_unlink(const char *path, unsigned flags);
 static void do_free(struct pkgdir *pkgdir);
 
-const char *pdir_localidxpath(struct pkgdir *pkgdir);
+const char *pdir_localidxpath(const struct pkgdir *pkgdir);
 
 static
 int posthook_diff(struct pkgdir *pd1, struct pkgdir* pd2, struct pkgdir *diff);
@@ -99,7 +99,7 @@ struct pkgdir_module pkgdir_module_pdir = {
     posthook_diff, 
 };
 
-const char *pdir_localidxpath(struct pkgdir *pkgdir)
+const char *pdir_localidxpath(const struct pkgdir *pkgdir)
 {
     struct pdir *idx = pkgdir->mod_data;
     

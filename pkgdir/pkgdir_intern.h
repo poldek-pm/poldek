@@ -27,7 +27,7 @@ char *pkgdir__make_idxpath(char *dpath, int dsize,
 int pkgdir__rmf(const char *dirpath, const char *mask, int test);
 int pkgdir__cache_clean(const char *path, const char *mask, int test);
 
-const char *pkgdir_localidxpath(struct pkgdir *pkgdir);
+const char *pkgdir_localidxpath(const struct pkgdir *pkgdir);
 
 #include "pkg_store.h"
 
@@ -61,7 +61,7 @@ typedef int (*pkgdir_fn_update_a)(const struct source *src,
 typedef int (*pkgdir_fn_unlink)(const char *path, int allfiles);
 typedef void (*pkgdir_fn_free)(struct pkgdir *pkgdir);
 
-typedef const char *(*pkgdir_fn_localidxpath)(struct pkgdir *pkgdir);
+typedef const char *(*pkgdir_fn_localidxpath)(const struct pkgdir *pkgdir);
 typedef int (*pkgdir_fn_setpaths)(struct pkgdir *pkgdir,
                                   const char *path, const char *pkg_prefix);
 

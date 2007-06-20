@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -577,13 +577,6 @@ static void do_open_dirindex(struct pkgdir *pkgdir)
         return;
     
     pkgdir->dirindex = pkgdir_dirindex_open(pkgdir);
-    
-    /* broken or outdated dirindex, shouldn't happen, but...  */
-    if (pkgdir->dirindex == NULL) {
-        msgn(1, "Rebuilding %s's directory index...", pkgdir_idstr(pkgdir));
-        pkgdir_dirindex_create(pkgdir); /* rebuild, open removes index on fail*/
-        pkgdir->dirindex = pkgdir_dirindex_open(pkgdir);
-    }
 }
 
 
@@ -633,9 +626,6 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         rc = 1;
         pkgdir->flags |= PKGDIR_LOADED;
 
-        if (ldflags & PKGDIR_LD_DIRINDEX)
-            pkgdir_dirindex_create(pkgdir);
-        
         n_array_sort(pkgdir->pkgs);
         for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
@@ -806,7 +796,7 @@ void pkgdir__setup_depdirs(struct pkgdir *pkgdir)
     }
 }
 
-const char *pkgdir_localidxpath(struct pkgdir *pkgdir)
+const char *pkgdir_localidxpath(const struct pkgdir *pkgdir)
 {
     if (pkgdir->mod->localidxpath)
         return pkgdir->mod->localidxpath(pkgdir);
@@ -1002,7 +992,7 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
         pkgdir->avlangs_h = avlangs_h_tmp;
         n_hash_free(avlangs_h);
     }
-    
+
     return nerr == 0;
 }
 
@@ -1011,6 +1001,8 @@ int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg)
 {
     if (n_array_bsearch(pkgdir->pkgs, pkg))
         return 0;
+
+    pkg->recno = 0;             /* local to pkgdir */
     n_array_push(pkgdir->pkgs, pkg_link(pkg));
     pkgdir->flags |= PKGDIR_CHANGED;
     return 1;
@@ -1019,10 +1011,10 @@ int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg)
 int pkgdir_remove_package(struct pkgdir *pkgdir, struct pkg *pkg)
 {
     int n;
-    
+
     if ((n = n_array_bsearch_idx(pkgdir->pkgs, pkg)) < 0)
         return 0;
-    
+
     n_array_remove_nth(pkgdir->pkgs, n);
     pkgdir->flags |= PKGDIR_CHANGED;
     return 1;

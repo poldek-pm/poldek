@@ -99,6 +99,6 @@ int pdir_pkg_store(const struct pkg *pkg, tn_stream *st, tn_array *depdirs,
 extern const char *pdir_pkgstore_DEFAULT_ARCH;
 extern const char *pdir_pkgstore_DEFAULT_OS;
 
-const char *pdir_localidxpath(struct pkgdir *pkgdir);
+const char *pdir_localidxpath(const struct pkgdir *pkgdir);
 
 #endif /* POLDEK_PKGDIR_H*/
