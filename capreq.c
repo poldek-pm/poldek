@@ -367,8 +367,8 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
 }
 
 
-struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags,
-                              int32_t flags)
+struct capreq *capreq_new_evr(tn_alloc *na, const char *name, char *evr,
+                              int32_t relflags, int32_t flags)
 {
     const char *version = NULL, *release = NULL;
     int32_t epoch = 0;
@@ -376,7 +376,7 @@ struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags,
     if (evr && !poldek_util_parse_evr(evr, &epoch, &version, &release))
         return NULL;
     
-    return capreq_new(NULL, name, epoch, version, release, relflags, flags);
+    return capreq_new(na, name, epoch, version, release, relflags, flags);
 }
 
 struct capreq *capreq_clone(tn_alloc *na, const struct capreq *cr) 
@@ -430,6 +430,24 @@ int capreq_arr_find(tn_array *capreqs, const char *name)
     return n_array_bsearch_idx_ex(capreqs, name,
                                   (tn_fn_cmp)capreq_cmp2name);
 }
+
+tn_buf *capreq_arr_join(tn_array *capreqs, tn_buf *nbuf, const char *sep)
+{
+    int i, size = n_array_size(capreqs);
+
+    if (sep == NULL)
+        sep = ", ";
+    
+    if (nbuf == NULL)
+        nbuf = n_buf_new(32 * n_array_size(capreqs));
+    
+    for (i=0; i < size; i++) {
+        n_buf_printf(nbuf, "%s%s", capreq_snprintf_s(n_array_nth(capreqs, i)),
+                     i < size - 1 ? sep  : "");
+    }
+    return nbuf;
+}
+
 
 static
 void capreq_store(struct capreq *cr, tn_buf *nbuf) 

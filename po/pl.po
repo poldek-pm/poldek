@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-06-16 17:24+0200\n"
+"POT-Creation-Date: 2007-06-20 10:47+0200\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: mis@pld.org.pl\n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -1056,14 +1056,14 @@ msgstr "Usuñ podane pakiety"
 msgid "Uninstall packages"
 msgstr "Deinstaluj pakiety"
 
-#: cli/uninstall.c:238
+#: cli/uninstall.c:239
 #, fuzzy, c-format
 msgid "%s: installed packages are not loaded, type \"reload\" to load them"
 msgstr ""
 "ls: zainstalowane pakiety nie s± za³adowane, wpisz \"reload\" by je "
 "za³adowaæ\n"
 
-#: cli/uninstall.c:241
+#: cli/uninstall.c:242
 #, c-format
 msgid "%s: installed packages are not loaded"
 msgstr "%s: zainstalowane pakiety nie s± za³adowane"
@@ -1178,27 +1178,27 @@ msgstr "Zrobione, zainstalowano %d pakietów.\n"
 msgid "There were errors during install"
 msgstr "Wyst±pi³y b³êdy podczas instalacji"
 
-#: install/conflicts.c:198
+#: install/conflicts.c:202
 #, c-format
 msgid "%s (cnfl %s) conflicts with installed %s"
 msgstr "%s (cnfl %s) jest w konflicie z zainstalowanm %s"
 
-#: install/conflicts.c:237
+#: install/conflicts.c:241
 #, c-format
 msgid "%s (cap %s) conflicts with installed %s (%s)"
 msgstr "%s (w³. %s) jest w konflicie z zainstalowanm %s (%s)"
 
-#: install/conflicts.c:266
-#, c-format
-msgid "%s conflicts with %s"
+#: install/conflicts.c:273
+#, fuzzy, c-format
+msgid "%s conflicts withx %s"
 msgstr "%s jest w konflicie z %s"
 
-#: install/icaps.c:92
+#: install/icaps.c:82
 #, c-format
 msgid "%s: marked as %s's provider"
 msgstr ""
 
-#: install/icaps.c:100
+#: install/icaps.c:90
 #, fuzzy, c-format
 msgid "%s: %s version of %s is installed (%s), skipped"
 msgstr "%s: wielokrotnie zainstalowany, zosta³ pominiêty"
@@ -1256,49 +1256,49 @@ msgstr "Przetwarzanie zale¿no¶ci..."
 msgid "Proceed? [Y/n]"
 msgstr "Kontynuowaæ? [Y/n]"
 
-#: install/install.c:364 install/install.c:403 poldek_ts.c:660
-#: upgrade-dist.c:141
+#: install/install.c:373 install/install.c:412 poldek_ts.c:660
+#: upgrade-dist.c:167
 msgid "Nothing to do"
 msgstr "Nie ma roboty"
 
-#: install/mark.c:137
+#: install/mark.c:138
 msgid "cap"
 msgstr "w³."
 
-#: install/mark.c:142
+#: install/mark.c:143
 msgid "orphaned "
 msgstr "'osierocony' "
 
-#: install/mark.c:145
+#: install/mark.c:146
 msgid "cnfl"
 msgstr "konfl."
 
-#: install/mark.c:147
+#: install/mark.c:148
 #, c-format
 msgid "%s%s marks %s (%s %s)"
 msgstr "%s%s zaznaczy³ %s (%s %s)"
 
-#: install/mark.c:157
+#: install/mark.c:158
 #, c-format
 msgid "%s: skip follow %s cause it's dependency errors"
 msgstr "%s: pominiêty %s z powodu niespe³nionych zale¿no¶ci"
 
-#: install/mark.c:166
+#: install/mark.c:167
 #, c-format
 msgid "%s: dependency loop - package already marked for removal"
 msgstr "%s: zapêtlenie zale¿no¶ci -- pakiet jest ju¿ zaznaczony do usuniêcia"
 
-#: install/mark.c:194
-#, c-format
-msgid "greedy upgrade %s to %s-%s (unresolved %s)"
+#: install/mark.c:195
+#, fuzzy, c-format
+msgid "greedy upgrade %s to %s-%s%s%s (unresolved %s)"
 msgstr "zach³anna aktualizacja %s do %s-%s (niespe³nione %s)"
 
-#: install/misc.c:82
+#: install/misc.c:87
 #, c-format
 msgid "%s: multiple instances installed, give up"
 msgstr "%s: wielokrotnie zainstalowany, poddajê siê"
 
-#: install/misc.c:89
+#: install/misc.c:94
 #, c-format
 msgid "%s: refusing to upgrade held package"
 msgstr "%s: odmawiam aktualizacji wstrzymanego (hold) pakietu"
@@ -1318,22 +1318,22 @@ msgstr "%s (w³. %s) jest wymagany przez %s"
 msgid "%s obsoleted by %s"
 msgstr "%s zostanie zast±piony przez %s"
 
-#: install/requirements.c:180
+#: install/requirements.c:179
 #, c-format
 msgid "%s (cap %s) is required by %s%s"
 msgstr "%s (w³. %s) jest wymagany przez %s%s"
 
-#: install/requirements.c:194
+#: install/requirements.c:193
 #, c-format
 msgid "%s: req %s not found"
 msgstr "%s: nie znaleziono wymaganego %s"
 
-#: install/requirements.c:234
+#: install/requirements.c:233
 #, c-format
 msgid "%s is required by %s"
 msgstr "%s jest wymagany przez %s"
 
-#: install/requirements.c:309
+#: install/requirements.c:307
 #, c-format
 msgid "%s: rpmcap %s not found, upgrade rpm."
 msgstr "%s: brak w³. RPM-a %s, zaktualizuj rpm-a."
@@ -1433,12 +1433,12 @@ msgstr[0] "%d pakiet"
 msgstr[1] "%d pakiety"
 msgstr[2] "%d pakietów"
 
-#: pkgcmp.c:319
+#: pkgcmp.c:327
 #, c-format
 msgid "duplicated name %s"
 msgstr "zdublowana nazwa %s"
 
-#: pkgcmp.c:346 pkgcmp.c:366
+#: pkgcmp.c:354 pkgcmp.c:374
 #, c-format
 msgid "%s%s%s: removed duplicate package"
 msgstr "%s%s%s: usuniêto zdublowany pakiet"
@@ -1700,14 +1700,10 @@ msgstr "Zapisywanie sumy kontrolnej %s..."
 msgid "%s: no patches available(fake)"
 msgstr "%s: nie odnaleziono ³at"
 
-#: pkgdir/rpmdb/rpmdb.c:205
+#: pkgdir/rpmdb/rpmdb.c:195
 #, c-format
 msgid "Loading db packages%s%s%s..."
 msgstr "£adowanie pakietów z bazy%s%s%s..."
-
-#: pkgdir/rpmdb/rpmdb.c:215
-msgid "_done"
-msgstr "_zrobione"
 
 #: pkgdir/source.c:111 pkgdir/source.c:505
 #, c-format
@@ -1866,29 +1862,29 @@ msgstr ""
 "\n"
 "Sprawdzanie \"pre\" wymagañ..."
 
-#: pkgset.c:653
+#: pkgset.c:644
 #, c-format
 msgid "%s: req %s %s"
 msgstr "%s: req %s %s"
 
-#: pkgset.c:655
+#: pkgset.c:646
 msgid "version mismatch"
 msgstr ""
 
-#: pkgset.c:655
+#: pkgset.c:646
 msgid "not found"
 msgstr "nie znaleziono"
 
-#: pkgset.c:662
+#: pkgset.c:653
 #, c-format
 msgid "%d unsatisfied dependencies found"
 msgstr "%d niespe³nionych zale¿no¶ci znaleziono"
 
-#: pkgset.c:664
+#: pkgset.c:655
 msgid "No unsatisfied dependencies found"
 msgstr "Nie znaleziono niespe³nionych zale¿no¶ci"
 
-#: pkgset.c:716
+#: pkgset.c:707
 #, fuzzy, c-format
 msgid "%s: open failed: %m"
 msgstr "%s: odczyt siê nie powiód³"
@@ -1992,17 +1988,17 @@ msgstr "tagi FILEMODES oraz FILESIZES"
 msgid "%s: missing %s in some packages"
 msgstr "%s: brak '%s' w niektórych pakietach"
 
-#: pm/rpm/rpm_pkg_ld.c:454
+#: pm/rpm/rpm_pkg_ld.c:469
 #, c-format
 msgid "%s: read name/version/release failed"
 msgstr "%s: odczyt nazwy/wersji/release nie uda³ siê"
 
-#: pm/rpm/rpm_pkg_ld.c:466
+#: pm/rpm/rpm_pkg_ld.c:482
 #, c-format
 msgid "%s: read architecture tag failed"
 msgstr "%s: odczyt tagu architektury nie uda³ siê"
 
-#: pm/rpm/rpm_pkg_ld.c:477
+#: pm/rpm/rpm_pkg_ld.c:492
 #, c-format
 msgid "%s: missing OS tag"
 msgstr "%s: brak tagu OS"
@@ -2039,32 +2035,32 @@ msgstr "%s usieczon za spraw± sygna³u %d"
 msgid "%s died under inscrutable circumstances"
 msgstr "%s zgin±³ w podejrzanych okoliczno¶ciach"
 
-#: pm/rpm/rpminstall.c:303 pm/rpm/rpminstall.c:319 pm/rpm/rpminstall.c:483
-#: pm/rpm/rpminstall.c:499
+#: pm/rpm/rpminstall.c:307 pm/rpm/rpminstall.c:323 pm/rpm/rpminstall.c:490
+#: pm/rpm/rpminstall.c:506
 #, c-format
 msgid "%s: command not found"
 msgstr "%s: polecenie nie znalezione"
 
-#: pm/rpm/rpminstall.c:415
+#: pm/rpm/rpminstall.c:419
 #, c-format
 msgid "%s: signature verification failed"
 msgstr "%s: weryfikacja podpisu nie powiod³a siê"
 
-#: pm/rpm/rpminstall.c:436
+#: pm/rpm/rpminstall.c:440
 msgid "There were signature verification errors. Proceed? [y/N]"
 msgstr "Wyst±pi³y b³êdy weryfikacji podpisu. Kontynuowaæ? [y/N]"
 
-#: pm/rpm/rpminstall.c:442
+#: pm/rpm/rpminstall.c:448
 #, fuzzy
 msgid "There were package coloring mismatches. Proceed? [y/N]"
 msgstr "Wyst±pi³y b³êdy weryfikacji podpisu. Kontynuowaæ? [y/N]"
 
-#: pm/rpm/rpminstall.c:463 pm/rpm/signature.c:365
+#: pm/rpm/rpminstall.c:470 pm/rpm/signature.c:365
 #, c-format
 msgid "Executing%s..."
 msgstr "Uruchamianie%s..."
 
-#: pm/rpm/rpminstall.c:570
+#: pm/rpm/rpminstall.c:577
 #, c-format
 msgid "Running%s..."
 msgstr "Uruchamianie%s..."
@@ -2172,23 +2168,19 @@ msgstr[0] "Zaznaczono %d pakiet do usuniêcia"
 msgstr[1] "Zaznaczono %d pakiety do usuniêcia"
 msgstr[2] "Zaznaczono %d pakietów do usuniêcia"
 
-#: upgrade-dist.c:92
+#: upgrade-dist.c:100
 #, c-format
 msgid "%s: multiple instances installed, skipped"
 msgstr "%s: wielokrotnie zainstalowany, zosta³ pominiêty"
 
-#: upgrade-dist.c:104
+#: upgrade-dist.c:110
 #, c-format
 msgid "%s: skip held package"
 msgstr "%s: pomijam wstrzymany (hold) pakiet"
 
-#: upgrade-dist.c:125
+#: upgrade-dist.c:132
 msgid "Looking up packages for upgrade..."
 msgstr "Szukam pakietów do aktualizacji..."
-
-#: upgrade-dist.c:131
-msgid "There are database errors (?), give up"
-msgstr "Wyst±pi³y b³êdy rpmowej bazy (?), wymiêkam"
 
 #: vfile/extcompr.c:139 vfile/fetch.c:463
 msgid "program exited with non-zero value"
@@ -2354,6 +2346,12 @@ msgstr "%s: b³±d interpretacji URL-a\n"
 #, c-format
 msgid "%s terminated by signal %d (%s)"
 msgstr "%s usieczon za spraw± sygna³u %d (%s)"
+
+#~ msgid "_done"
+#~ msgstr "_zrobione"
+
+#~ msgid "There are database errors (?), give up"
+#~ msgstr "Wyst±pi³y b³êdy rpmowej bazy (?), wymiêkam"
 
 #~ msgid "%s: /%s/%s%s: conflicts with %s's one"
 #~ msgstr "%s: /%s/%s%s: jest w konflicie z tym samym plikem z %s"

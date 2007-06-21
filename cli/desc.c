@@ -390,8 +390,36 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg)
         }
         cmdctx_printf(cmdctx, "\n");
     }
-
 }
+
+
+static void show_suggests(struct cmdctx *cmdctx, struct pkg *pkg)
+{
+    char *p, *colon = ", ";
+    int i, ncol, term_width;
+    
+    if (pkg->sugs == NULL)
+        return;
+
+    term_width = poldek_term_get_width() - RMARGIN;
+    ncol = IDENT;
+    cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Suggests:");
+    for (i=0; i<n_array_size(pkg->sugs); i++) {
+        struct capreq *cr = n_array_nth(pkg->sugs, i);
+                
+        if (i == (n_array_size(pkg->sugs) - 1))
+            colon = "";
+                
+        p = capreq_snprintf_s(cr);
+        if (ncol + (int)strlen(p) >= term_width) {
+            ncol = SUBIDENT;
+            nlident(ncol);
+        }
+        ncol += cmdctx_printf(cmdctx, "%s%s", p, colon);
+    }
+    cmdctx_printf(cmdctx, "\n");
+}
+
 
 static void show_reqdirs(struct cmdctx *cmdctx, struct pkg *pkg)
 {
@@ -741,8 +769,10 @@ static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags)
     if (flags & OPT_DESC_CAPS)
         show_caps(cmdctx, pkg);
 
-    if (flags & OPT_DESC_REQS)
+    if (flags & OPT_DESC_REQS) {
         show_reqs(cmdctx, pkg);
+        show_suggests(cmdctx, pkg);
+    }
 
     if (flags & OPT_DESC_REQDIRS)
         show_reqdirs(cmdctx, pkg);

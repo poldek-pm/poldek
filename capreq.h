@@ -89,8 +89,8 @@ extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_revrel(cr) ((cr)->cr_relflags = (cr)->cr_relflags ? \
                           (((uint8_t)~cnfl->cr_relflags) & REL_ALL) : (cr)->cr_relflags)
 
-struct capreq *capreq_new_evr(const char *name, char *evr, int32_t relflags,
-                              int32_t flags);
+struct capreq *capreq_new_evr(tn_alloc *na, const char *name, char *evr,
+                              int32_t relflags, int32_t flags);
 
 struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
                           const char *version, const char *release,
@@ -122,6 +122,7 @@ int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2);
 
 tn_array *capreq_arr_new(int size);
 int capreq_arr_find(tn_array *capreqs, const char *name);
+tn_buf *capreq_arr_join(tn_array *capreqs, tn_buf *nbuf, const char *sep);
 
 int capreq_arr_store_n(tn_array *arr);
 tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n);

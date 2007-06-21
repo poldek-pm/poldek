@@ -92,7 +92,7 @@ struct pkgdir_module pkgdir_module_pndir = {
 };
 
 
-const char *pndir_localidxpath(struct pkgdir *pkgdir)
+const char *pndir_localidxpath(const struct pkgdir *pkgdir)
 {
     struct pndir *idx = pkgdir->mod_data;
     

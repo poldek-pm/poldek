@@ -495,9 +495,7 @@ struct poclidek_ctx *poclidek_new(struct poldek_ctx *ctx)
 static
 void poclidek_destroy(struct poclidek_ctx *cctx) 
 {
-    if (cctx->pkgs_available)
-        n_array_free(cctx->pkgs_available);
-    
+    cctx->pkgs_available = NULL;
     cctx->pkgs_installed = NULL;
 
     if (cctx->rootdir)
@@ -765,7 +763,6 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf)
         DBGF("+ %s\n", pkg_id(pkg));
         n++;
     }
-    n_array_sort(cctx->pkgs_installed);
         
     if (n)
         cctx->ts_dbpkgdir = time(0);

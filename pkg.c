@@ -290,6 +290,7 @@ struct pkg *pkg_new_ext(tn_alloc *na,
     pkg->reqs = NULL;
     pkg->caps = NULL;
     pkg->cnfls = NULL;
+    pkg->sugs = NULL;
     pkg->fl = NULL;
     pkg->reqpkgs = NULL;
     pkg->revreqpkgs = NULL;
@@ -1328,6 +1329,22 @@ void pkgs_array_dump(tn_array *pkgs, const char *prefix)
     msgn(0, "]");
 }
 
+tn_buf *pkgs_array_join(tn_array *arr, tn_buf *nbuf, const char *sep) 
+{
+    int i, size = n_array_size(arr);
+
+    if (sep == NULL)
+        sep = ", ";
+    
+    if (nbuf == NULL)
+        nbuf = n_buf_new(64 * n_array_size(arr));
+    
+    for (i=0; i < size; i++) {
+        n_buf_printf(nbuf, "%s%s", pkg_id(n_array_nth(arr, i)),
+                     i < size - 1 ? sep  : "");
+    }
+    return nbuf;
+}
 
 tn_array *pkgs_array_new(int size) 
 {

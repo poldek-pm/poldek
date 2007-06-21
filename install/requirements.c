@@ -243,12 +243,54 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
     return 1;
 }
 
+/* just append sugs to reqs if user wants to */
+static tn_array *process_suggets(struct pkg *pkg, struct poldek_ts *ts) 
+{
+    tn_array *reqs;
+    tn_buf *nbuf;
+    char message[2048], *confirmation;
+    
+    reqs = pkg->reqs;
+    
+    if (pkg->sugs == NULL || !in_is_user_askable(ts))
+        return reqs;
+    
+    if (!ts->getop(ts, POLDEK_OP_SUGGESTS))
+        return reqs;
+    
+    nbuf = capreq_arr_join(pkg->sugs, NULL, NULL);
+
+    n_snprintf(message, sizeof(message), _("%s suggests installation of: %s"),
+               pkg_id(pkg), n_buf_ptr(nbuf));
+    n_buf_free(nbuf);
+        
+    confirmation = ngettext("Try to install it? [N/y]",
+                            "Try to install them? [N/y]",
+                            n_array_size(pkg->sugs));
+            
+    if (ts->ask_fn(0, "%s\n%s", message, confirmation)) {
+        int i;
+        
+        reqs = capreq_arr_new(n_array_size(pkg->reqs) + n_array_size(pkg->sugs));
+            
+        for (i=0; i < n_array_size(pkg->reqs); i++)
+            n_array_push(reqs, n_array_nth(pkg->reqs, i));
+        
+        for (i=0; i < n_array_size(pkg->sugs); i++)
+            n_array_push(reqs, n_array_nth(pkg->sugs, i));
+
+        n_array_ctl_set_freefn(reqs, NULL);
+    }
+
+    return reqs;
+}
 
 
 int in_process_pkg_requirements(int indent, struct install_ctx *ictx,
                                 struct pkg *pkg, int process_as)
 {
     struct successor successor;
+    tn_array *reqs;
     int i;
 
     if (sigint_reached())
@@ -298,9 +340,13 @@ int in_process_pkg_requirements(int indent, struct install_ctx *ictx,
                  ndragged, is_marked);
         }
     }
+
+    reqs = pkg->reqs;
+    if (process_as == PROCESS_AS_NEW)
+        reqs = process_suggets(pkg, ictx->ts);
     
-    for (i=0; i < n_array_size(pkg->reqs); i++) {
-        struct capreq *req = n_array_nth(pkg->reqs, i);
+    for (i=0; i < n_array_size(reqs); i++) {
+        struct capreq *req = n_array_nth(reqs, i);
 
         if (capreq_is_rpmlib(req)) {
             if (process_as == PROCESS_AS_NEW && !capreq_is_satisfied(req)) {
@@ -323,6 +369,9 @@ int in_process_pkg_requirements(int indent, struct install_ctx *ictx,
 
         process_pkg_req(indent, ictx, pkg, req, &successor, process_as);
     }
-
+    
+    if (reqs != pkg->reqs)      /* suggests was processed */
+        n_array_free(reqs);
+    
     return 1;
 }

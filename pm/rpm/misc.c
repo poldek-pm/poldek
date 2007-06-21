@@ -68,7 +68,7 @@ static int extract_rpmds(tn_array *caps, rpmds ds)
             crflags = 0;
         }
         
-        cr = capreq_new_evr(name, tmpptr, crflags, 0);
+        cr = capreq_new_evr(NULL, name, tmpptr, crflags, 0);
         if (cr) {
             msgn(3, "  - %s", capreq_snprintf_s(cr));
             n_array_push(caps, cr);

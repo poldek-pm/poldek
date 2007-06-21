@@ -452,6 +452,13 @@ _distro  = pld
     Multilib mode. This feature is not finished yet.
   </description>
 
+  <option name="suggests" type="boolean" default="yes" op="SUGGESTS">
+    <description>
+    Taking into account package Suggests.
+    </description>
+  </option>
+
+
   <option name="obsoletes" type="boolean" default="yes" op="OBSOLETES">
     <description>
     Taking into account package Obsoletes.

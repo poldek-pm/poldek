@@ -815,6 +815,7 @@ void poldek__ts_apply_config(struct poldek_ctx *ctx, struct poldek_ts *ts)
     }
 }
 
+#if ENABLE_TRACE
 void poldek__ts_dump_settings(struct poldek_ctx *ctx, struct poldek_ts *ts)
 {
     int i;
@@ -830,7 +831,7 @@ void poldek__ts_dump_settings(struct poldek_ctx *ctx, struct poldek_ts *ts)
              ctx->ts->getop(ctx->ts, ent->op) ? "y" : "n");
     }
 }
-
+#endif
 
 static
 void poldek__ts_apply_poldek_settings(struct poldek_ctx *ctx,

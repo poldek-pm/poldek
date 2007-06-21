@@ -61,7 +61,7 @@ int test_match(int argc, char *argv[])
                     char evr[255];
 
                     snprintf(evr, sizeof(evr), "1:1.1");
-                    req = capreq_new_evr("poldek", n_strdup(evr), rels[k++], 0);
+                    req = capreq_new_evr(NULL, "poldek", n_strdup(evr), rels[k++], 0);
 
                     rc1 = pkg_match_req(pkg, req, 1) ? 1:0;
                     rc2 = cap_match_req(cap, req, 1) ? 1:0;
@@ -88,7 +88,7 @@ int test_match_(int epoch, char *ver, char *rel, char *evr, int relation)
     
     pkg = pkg_new("poldek", epoch, ver, rel,  NULL, NULL);
 
-    req = capreq_new_evr("poldek", n_strdup(evr), relation, 0);
+    req = capreq_new_evr(NULL, "poldek", n_strdup(evr), relation, 0);
 
     rc1 = pkg_match_req(pkg, req, 1) ? 1:0;
     printf("P %s[%d] match %s ? %s\n", pkg_snprintf_s(pkg),

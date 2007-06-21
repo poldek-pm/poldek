@@ -1,3 +1,4 @@
+
 dnl Process this file with autoconf to produce a configure script.
 dnl $Id$
 
@@ -215,7 +216,15 @@ else
 		], have_tag_pubkeys=yes, have_tag_pubkeys=no)
 
 	if test "${have_tag_pubkeys}." = "yes." ; then
-		AC_DEFINE([HAVE_RPMTAG_PUBKEYS],1,["RPMTAG_PUBKEYS exists"])
+		AC_DEFINE([HAVE_RPMTAG_PUBKEYS],1,["rpm with RPMTAG_PUBKEYS"])
+	fi
+
+        AC_EGREP_CPP(RPMTAG_SUGGESTS,
+		[ #include <rpm/rpmlib.h>
+		], have_tag_suggests=yes, have_tag_suggests=no)
+
+	if test "${have_tag_suggests}." = "yes." ; then
+		AC_DEFINE([HAVE_RPMTAG_SUGGESTS],1,["rpm with RPMTAG_SUGGESTS support"])
 	fi
 fi
 

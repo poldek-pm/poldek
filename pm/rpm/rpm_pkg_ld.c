@@ -17,8 +17,12 @@
 #include <string.h>
 
 #include <netinet/in.h>
-
 #include <trurl/trurl.h>
+
+#ifdef HAVE_RPM_RPMEVR_H
+# define _RPMEVR_INTERNAL 1
+# include <rpm/rpmevr.h>
+#endif
 
 #include "i18n.h"
 #include "log.h"
@@ -30,131 +34,150 @@
 
 #include "pm_rpm.h"
 
-static
-tn_array *do_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
-                           int crtype);
+struct rpm_cap_tagset {
+    int pmtag;
+    char *label;
+    int name_tag;
+    int version_tag;
+    int flags_tag;
+};
 
-#define get_pkg_caps(arr, h, p)   do_ldhdr_capreqs(arr, h, p, PMCAP_CAP)
-#define get_pkg_reqs(arr, h, p)   do_ldhdr_capreqs(arr, h, p, PMCAP_REQ)
-#define get_pkg_cnfls(arr, h, p)  do_ldhdr_capreqs(arr, h, p, PMCAP_CNFL)
-#define get_pkg_obsls(arr, h, p)  do_ldhdr_capreqs (arr, h, p, PMCAP_OBSL)
+static struct rpm_cap_tagset rpm_cap_tags_tab[] = {
 
-static
-tn_array *do_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
-                           int crtype) 
+    { PMCAP_REQ,  "req",  RPMTAG_REQUIRENAME, RPMTAG_REQUIREVERSION, RPMTAG_REQUIREFLAGS },
+    { PMCAP_CAP,  "cap",  RPMTAG_PROVIDENAME, RPMTAG_PROVIDEVERSION, RPMTAG_PROVIDEFLAGS },
+    { PMCAP_CNFL, "cnfl", RPMTAG_CONFLICTNAME, RPMTAG_CONFLICTVERSION, RPMTAG_CONFLICTFLAGS },
+    { PMCAP_OBSL, "obsl", RPMTAG_OBSOLETENAME, RPMTAG_OBSOLETEVERSION, RPMTAG_OBSOLETEFLAGS },
+#if HAVE_RPMTAG_SUGGESTS
+    /*  RPMTAG_SUGGESTS* doesn't work */
+    /* { PMCAP_SUG,  "sugg", RPMTAG_SUGGESTSNAME, RPMTAG_SUGGESTSVERSION, RPMTAG_SUGGESTSFLAGS }, */
+    { PMCAP_SUG,  "sug",  RPMTAG_REQUIRENAME, RPMTAG_REQUIREVERSION, RPMTAG_REQUIREFLAGS },
+#endif    
+    { 0, 0, 0, 0, 0 },
+};
+
+static unsigned setup_reqflags(unsigned rpmflags, unsigned rflags)
 {
+    
+#ifndef HAVE_RPM_EXTDEPS
+    if (rpmflags & RPMSENSE_PREREQ)
+        rflags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
+#else
+                
+#  if RPMSENSE_PREREQ != RPMSENSE_ANY /* rpm 4.4 drops legacy PreReq support */
+    if (isLegacyPreReq(flag)) /* prepared by rpm < 4.0.2  */
+        rflags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
+    
+    else
+#  endif
+		if (isInstallPreReq(flag))
+            rflags |= CAPREQ_PREREQ;
+    
+    if (isErasePreReq(flag))
+        rflags |= CAPREQ_PREREQ_UN;
+    
+    DBGFIF(rflags & (CAPREQ_PREREQ | CAPREQ_PREREQ_UN),
+           "%s (%s, %s)\n", name,
+           rflags & CAPREQ_PREREQ ? "pre":"",
+           rflags & CAPREQ_PREREQ_UN ? "postun":"");
+#endif /* HAVE_RPM_EXTDEPS */
+
+    return rflags;
+}
+
+static int is_suggestion(unsigned flag) 
+{
+#if HAVE_RPMTAG_SUGGESTS        /* skipping suggests */
+    return (flag & RPMSENSE_MISSINGOK);
+#endif
+    return 0;
+}
+
+
+static
+tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h, struct pkg *pkg, int pmcap_tag) 
+{
+    struct rpm_cap_tagset *tgs = NULL;
     struct capreq *cr;
     int t1, t2, t3, c1 = 0, c2 = 0, c3 = 0;
-    char **names, **versions, *label;
-    int  *flags, *tags;
-    int  i;
+    char **names = NULL, **versions = NULL;
+    int  *flags = NULL;
+    int  i, rc = 0, ownedarr = 0;
+
+    if (arr == NULL) {
+        arr = capreq_arr_new(0);
+        ownedarr = 1;
+    }
     
-
-    int req_tags[3] = {
-        RPMTAG_REQUIRENAME, RPMTAG_REQUIREVERSION, RPMTAG_REQUIREFLAGS
-    };
-
-    int prov_tags[3] = {
-        RPMTAG_PROVIDENAME, RPMTAG_PROVIDEVERSION, RPMTAG_PROVIDEFLAGS
-    };
-
-    int cnfl_tags[3] = {
-        RPMTAG_CONFLICTNAME, RPMTAG_CONFLICTVERSION, RPMTAG_CONFLICTFLAGS
-    };
-
-    int obsl_tags[3] = {
-        RPMTAG_OBSOLETENAME, RPMTAG_OBSOLETEVERSION, RPMTAG_OBSOLETEFLAGS
-    };
-    
-    n_assert(arr);
-    
-    switch (crtype) {
-        case PMCAP_CAP:
-            tags = prov_tags;
-            label = "prov";
+    i = 0;
+    while (rpm_cap_tags_tab[i].pmtag > 0) {
+        if (rpm_cap_tags_tab[i].pmtag == pmcap_tag) {
+            tgs = &rpm_cap_tags_tab[i];
             break;
-            
-        case PMCAP_REQ:
-            tags = req_tags;
-            label = "req";
-            break;
-            
-        case PMCAP_CNFL:
-            tags = cnfl_tags;
-            label = "cnfl";
-            break;
-
-        case PMCAP_OBSL:
-            tags = obsl_tags;
-            label = "cnfl";
-            break;
-            
-        default:
-            tags = NULL;
-            label = NULL;
-            n_die("%d: unknown type (internal error)", crtype);
+        }
+        i++;
     }
 
-    names = NULL;
-    if (!headerGetEntry(h, *tags, (void*)&t1, (void*)&names, &c1))
-        return NULL;
-    
-    n_assert(names);
+    if (tgs == NULL) {
+        if (pmcap_tag == PMCAP_SUG)
+            return NULL;
+            
+        n_die("%d: unknown captag (internal error)", pmcap_tag);
+    }
 
     
-    tags++;
-    versions = NULL;
-    if (headerGetEntry(h, *tags, (void*)&t2, (void*)&versions, &c2)) {
+    if (!headerGetEntry(h, tgs->name_tag, (void*)&t1, (void*)&names, &c1))
+        return NULL;
+    n_assert(names);
+
+    if (headerGetEntry(h, tgs->version_tag, (void*)&t2, (void*)&versions, &c2)) {
         n_assert(t2 == RPM_STRING_ARRAY_TYPE);
         n_assert(versions);
         n_assert(c2);
         
-    } else if (crtype == PMCAP_REQ) { /* reqs should have version tag */
+    } else if (pmcap_tag == PMCAP_REQ) { /* reqs should have version tag */
         pm_rpmhdr_free_entry(names, t1);
         return 0;
     }
     
-    
-    tags++;
-    flags = NULL;
-    if (headerGetEntry(h, *tags, (void*)&t3, (void*)&flags, &c3)) {
+
+    if (headerGetEntry(h, tgs->flags_tag, (void*)&t3, (void*)&flags, &c3)) {
         n_assert(t3 == RPM_INT32_TYPE);
         n_assert(flags);
         n_assert(c3);
         
-    } else if (crtype == PMCAP_REQ) {  /* reqs should have flags */
+    } else if (pmcap_tag == PMCAP_REQ) {  /* reqs should have version too */
         pm_rpmhdr_free_entry(names, t1);
         pm_rpmhdr_free_entry(versions, t2);
         return 0;
     }
 
-    if (c2) 
-        if (c1 != c2) {
-            logn(LOGERR, "read %s: nnames (%d) != nversions (%d), broken rpm",
-                 label, c1, c2);
+    if (c2 && (c1 != c2)) {
+        logn(LOGERR, "read %s: nnames (%d) != nversions (%d), broken rpm",
+             tgs->label, c1, c2);
 #if 0
-            for (i=0; i<c1; i++) 
-                printf("n %s\n", names[i]);
-            for (i=0; i<c2; i++) 
-                printf("v %s\n", versions[i]);
+        for (i=0; i<c1; i++) 
+            printf("n %s\n", names[i]);
+        for (i=0; i<c2; i++) 
+            printf("v %s\n", versions[i]);
 #endif            
-            goto l_err_endfunc;
-        }
+        goto l_end;
+    }
         
     if (c2 != c3) {
-        logn(LOGERR, "read %s: nversions %d != nflags %d, broken rpm", label,
-            c2, c3);
-        goto l_err_endfunc;
+        logn(LOGERR, "read %s: nversions %d != nflags %d, broken rpm",
+             tgs->label, c2, c3);
+        goto l_end;
     }
 
-    for (i=0; i < c1 ; i++) {
+
+    for (i=0; i < c1; i++) {
         char *name, *evr = NULL;
         unsigned cr_relflags = 0, cr_flags = 0;
             
         name = names[i];
         if (c2 && *versions[i])
             evr = versions[i];
-        
         
         if (c3) {               /* translate flags to poldek one */
             register uint32_t flag = flags[i];
@@ -168,53 +191,44 @@ tn_array *do_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
             if (flag & RPMSENSE_EQUAL) 
                 cr_relflags |= REL_EQ;
             
-            if (crtype == PMCAP_REQ) {
-#ifndef HAVE_RPM_EXTDEPS
-                if (flag & RPMSENSE_PREREQ) {
-                    n_assert(crtype == PMCAP_REQ);
-                    cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
-                }
-#else
-                
-#  if RPMSENSE_PREREQ != RPMSENSE_ANY /* rpm 4.4 drops legacy PreReq support */
-                if (isLegacyPreReq(flag)) /* prepared by rpm < 4.0.2  */
-                    cr_flags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
-                
-                else
-#  endif
-		if (isInstallPreReq(flag))
-                    cr_flags |= CAPREQ_PREREQ;
-
-                if (isErasePreReq(flag))
-                    cr_flags |= CAPREQ_PREREQ_UN;
-                
-                DBGFIF(cr_flags & (CAPREQ_PREREQ | CAPREQ_PREREQ_UN),
-                       "%s (%s, %s)\n", name,
-                       cr_flags & CAPREQ_PREREQ ? "pre":"",
-                       cr_flags & CAPREQ_PREREQ_UN ? "postun":"");
-#endif /* HAVE_RPM_EXTDEPS */                
+            if (pmcap_tag == PMCAP_REQ) {
+                if (is_suggestion(flag))
+                    continue;
+                cr_flags = setup_reqflags(flag, cr_flags);
             }
+
+            if (pmcap_tag == PMCAP_SUG && !is_suggestion(flag))
+                continue;
         }
         
-
-        if (crtype == PMCAP_OBSL) 
+        if (pmcap_tag == PMCAP_OBSL) 
             cr_flags |= CAPREQ_OBCNFL;
 
-        if ((cr = capreq_new_evr(name, evr, cr_relflags, cr_flags)) == NULL) {
+        if ((cr = capreq_new_evr(na, name, evr, cr_relflags, cr_flags)) == NULL) {
             logn(LOGERR, "%s: '%s %s%s%s %s': invalid capability",
                  pkg ? pkg_id(pkg) : "(null)", name, 
                  (cr_relflags & REL_LT) ? "<" : "",
                  (cr_relflags & REL_GT) ? ">" : "",
                  (cr_relflags & REL_EQ) ? "=":"", evr);
-            goto l_err_endfunc;
+            goto l_end;
             
         } else {
             msg(4, "%s%s: %s\n",
                 cr->cr_flags & CAPREQ_PREREQ ?
-                (crtype == PMCAP_OBSL ? "obsl" : "pre" ):"", 
-                label, capreq_snprintf_s(cr));
+                (pmcap_tag == PMCAP_OBSL ? "obsl" : "pre" ):"", 
+                tgs->label, capreq_snprintf_s(cr));
             n_array_push(arr, cr);
         }
+    }
+    rc = 1;                     /* OK */
+    
+l_end:
+    if (rc) {
+        if (ownedarr && n_array_size(arr) == 0)
+            n_array_cfree(&arr);
+        
+    } else if (ownedarr) {      /* error */
+        n_array_cfree(&arr);
     }
     
     pm_rpmhdr_free_entry(names, t1);
@@ -222,17 +236,12 @@ tn_array *do_ldhdr_capreqs(tn_array *arr, const Header h, struct pkg *pkg,
     pm_rpmhdr_free_entry(flags, t3);
 
     return arr;
-    
- l_err_endfunc:
-    pm_rpmhdr_free_entry(names, t1);
-    pm_rpmhdr_free_entry(versions, t2);
-    pm_rpmhdr_free_entry(flags, t3);
-    return NULL;
 }
+
 
 tn_array *pm_rpm_ldhdr_capreqs(tn_array *arr, const Header h, int crtype) 
 {
-    return do_ldhdr_capreqs(arr, h, NULL, crtype);
+    return load_capreqs(NULL, arr, h, NULL, crtype);
 }
 
 
@@ -519,34 +528,18 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
 
     msg(4, "ld %s\n", pkg_id(pkg));
     
-    if (ldflags & PKG_LDCAPS) {
-        pkg->caps = capreq_arr_new(0);
-        get_pkg_caps(pkg->caps, h, pkg);
-    
-        if (n_array_size(pkg->caps)) 
-            n_array_sort(pkg->caps);
-        else {
-            n_array_free(pkg->caps);
-            pkg->caps = NULL;
-        }
-    }
+    if (ldflags & PKG_LDCAPS)
+        pkg->caps = load_capreqs(na, NULL, h, pkg, PMCAP_CAP);
     
     if (ldflags & PKG_LDREQS) {
-        pkg->reqs = capreq_arr_new(0);
-        get_pkg_reqs(pkg->reqs, h, pkg);
-
-        if (n_array_size(pkg->reqs)) 
-            n_array_sort(pkg->reqs);
-        else {
-            n_array_free(pkg->reqs);
-            pkg->reqs = NULL;
-        }
+        pkg->reqs = load_capreqs(na, NULL, h, pkg, PMCAP_REQ);
+        pkg->sugs = load_capreqs(na, NULL, h, pkg, PMCAP_SUG);
     }
 
     if (ldflags & PKG_LDCNFLS) {
         pkg->cnfls = capreq_arr_new(0);
-        get_pkg_cnfls(pkg->cnfls, h, pkg);
-        get_pkg_obsls(pkg->cnfls, h, pkg);
+        load_capreqs(na, pkg->cnfls, h, pkg, PMCAP_CNFL);
+        load_capreqs(na, pkg->cnfls, h, pkg, PMCAP_OBSL);
         
         if (n_array_size(pkg->cnfls) > 0) {
             n_array_sort(pkg->cnfls);

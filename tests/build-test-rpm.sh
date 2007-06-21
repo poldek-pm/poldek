@@ -7,10 +7,11 @@ version=
 release="1"
 requires=
 provides=
+suggests=
 files=
 
 usage_and_exit() {
-    echo "Usage $0 -n NAME -v [EPOCH:]VERSION-[RELEASE] [-p PROVIDES] [-r REQUIRES] [-f file] "
+    echo "Usage $0 -n NAME -v [EPOCH:]VERSION-[RELEASE] [-p PROVIDES] [-r REQUIRES] [-s SUGGESTS] [-f file] "
     exit 1
 }
 
@@ -27,6 +28,9 @@ while test $# -gt 0 ; do
 
         -r)
             shift; requires="$requires ${1},"; shift ;;
+
+        -s)
+            shift; suggests="$suggests ${1},"; shift ;;
 
         -f)
             shift; files="$files ${1} "; shift ;;
@@ -66,6 +70,7 @@ echo "BuildArch: noarch" >> $SPEC
 echo "BuildRoot: /tmp/%{name}-%{version}-root-%(id -u -n)" >> $SPEC
 [ -n "$provides" ] &&  echo "Provides: $provides" >> $SPEC
 [ -n "$requires" ] && echo "Requires: $requires" >> $SPEC
+[ -n "$suggests" ] && echo "Suggests: $suggests" >> $SPEC
 
 echo -e "%description\n$name" >> $SPEC
 echo -e "%prep\n%pre\n" >> $SPEC

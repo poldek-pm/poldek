@@ -14,6 +14,7 @@
 #define PKG_STORETAG_BINF  'f'
 #define PKG_STORETAG_CAPS  'P'
 #define PKG_STORETAG_REQS  'R'
+#define PKG_STORETAG_SUGS  'S'
 #define PKG_STORETAG_CNFLS 'C'
 #define PKG_STORETAG_FL    'l'
 #define PKG_STORETAG_DEPFL 'L'

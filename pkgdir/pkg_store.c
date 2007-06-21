@@ -49,6 +49,7 @@ static struct pkg_store_tag pkg_store_tag_table[] = {
     { PKG_STORETAG_BINF,  PKG_STORETAG_SIZE8,  "pkg's int32 fields" }, 
     { PKG_STORETAG_CAPS,  PKG_STORETAG_SIZE16, "caps"  },
     { PKG_STORETAG_REQS,  PKG_STORETAG_SIZE16, "reqs"  },
+    { PKG_STORETAG_SUGS,  PKG_STORETAG_SIZE16, "sugs"  },
     { PKG_STORETAG_CNFLS, PKG_STORETAG_SIZE16, "cnfls" },
     { PKG_STORETAG_FL,    PKG_STORETAG_SIZE32, "file list" },
     { PKG_STORETAG_DEPFL, PKG_STORETAG_SIZE32, "depdirs file list" },
@@ -384,6 +385,12 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
         pkg_store_bintag(PKG_STORETAG_REQS, nbuf); 
         capreq_arr_store(pkg->reqs, nbuf, ncaps);
     }
+
+    if (pkg->sugs && (ncaps = capreq_arr_store_n(pkg->sugs))) {
+        pkg_store_bintag(PKG_STORETAG_SUGS, nbuf); 
+        capreq_arr_store(pkg->sugs, nbuf, ncaps);
+    }
+
     
     if (pkg->cnfls && (ncaps = capreq_arr_store_n(pkg->cnfls))) {
         pkg_store_bintag(PKG_STORETAG_CNFLS, nbuf);

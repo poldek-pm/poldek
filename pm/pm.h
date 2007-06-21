@@ -100,7 +100,8 @@ enum capreq_type {
     PMCAP_CAP  = 1, 
     PMCAP_REQ  = 2, 
     PMCAP_CNFL = 3,
-    PMCAP_OBSL = 4
+    PMCAP_OBSL = 4,
+    PMCAP_SUG  = 5
 };
 
 /* pkgdb_it */

@@ -77,6 +77,7 @@ struct pkgtags_s {
     uint32_t   groupid;
     tn_array   *caps;
     tn_array   *reqs;
+    tn_array   *sugs;
     tn_array   *cnfls;
     tn_tuple   *pkgfl;
     off_t      nodep_files_offs; /* non dep files tag off_t */
@@ -278,6 +279,16 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                 }
                 pkgt.flags |= PKGT_HAS_REQ;
                 break;
+
+            case PKG_STORETAG_SUGS:
+                pkgt.sugs = capreq_arr_restore_st(na, st);
+                if (pkgt.sugs == NULL) {
+                    logn(LOGERR, errmg_ldtag, fn, ul_offs, *line);
+                    nerr++;
+                    goto l_end;
+                }
+                break;
+
                     
             case PKG_STORETAG_CNFLS:
                 if (pkgt.flags & PKGT_HAS_CNFL) {
@@ -537,6 +548,13 @@ struct pkg *pkg_ldtags(tn_alloc *na, struct pkg *pkg,
         pkg->reqs = pkgt->reqs;
         pkgt->reqs = NULL;
     }
+
+    if (pkgt->sugs) {
+        n_assert(n_array_size(pkgt->sugs));
+        pkg->sugs = pkgt->sugs;
+        pkgt->sugs = NULL;
+    }
+    
 
     if (pkgt->flags & PKGT_HAS_CNFL) {
         n_assert(pkgt->cnfls && n_array_size(pkgt->cnfls));

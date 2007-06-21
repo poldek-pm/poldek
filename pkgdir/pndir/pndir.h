@@ -105,7 +105,7 @@ int pndir_m_update_a(const struct source *src, const char *idxpath,
                      enum pkgdir_uprc *uprc);
 int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc);
 
-const char *pndir_localidxpath(struct pkgdir *pkgdir);
+const char *pndir_localidxpath(const struct pkgdir *pkgdir);
 
 
 /* description.c */

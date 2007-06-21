@@ -46,6 +46,7 @@ enum poldek_ts_opt {
     POLDEK_OP_GREEDY,   /* --greedy */
     POLDEK_OP_CONFLICTS,  /* honour conflicts */
     POLDEK_OP_OBSOLETES,  /* honour obsoletes */
+    POLDEK_OP_SUGGESTS,   /* honour suggests */
     POLDEK_OP_AGGREEDY,
     POLDEK_OP_ALLOWDUPS, 
     POLDEK_OP_NODEPS,  /* rpm --nodeps */

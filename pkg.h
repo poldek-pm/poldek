@@ -7,6 +7,7 @@
 #include <trurl/narray.h>
 #include <trurl/nmalloc.h>
 #include <trurl/ntuple.h>
+#include <trurl/nbuf.h>
 
 #include "pkgcmp.h"             /* compares functions */
 
@@ -72,6 +73,7 @@ struct pkg {
     tn_array     *caps;       /* capabilities     */
     tn_array     *reqs;       /* requirements     */
     tn_array     *cnfls;      /* conflicts (with obsoletes)  */
+    tn_array     *sugs;       /* suggests */
     
     tn_tuple     *fl;         /* file list, see pkgfl.h  */
     
@@ -257,6 +259,7 @@ tn_array *pkgs_array_new_ex(int size,
                                          const struct pkg *p2));
 void pkgs_array_dump(tn_array *pkgs, const char *prefix); /* for debugging */
 
+tn_buf *pkgs_array_join(tn_array *pkgs, tn_buf *nbuf, const char *sep);
 
 char *pkg_strsize(char *buf, int size, const struct pkg *pkg);
 char *pkg_strbtime(char *buf, int size, const struct pkg *pkg);

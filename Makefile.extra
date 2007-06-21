@@ -89,7 +89,7 @@ ann-send: ann
 	nc -v localhost 25 < ann.1
 
 oncarme:
-	@rsync -avt --exclude python --exclude-from ~/poldek/.cvsignore ~/poldek carme.pld-linux.org:poldek/
+	@rsync -avt --exclude ".#*" --exclude "*.tar.*"  --exclude python --exclude-from ~/poldek/.cvsignore ~/poldek carme.pld-linux.org:poldek/
 	@ssh carme.pld-linux.org "cd poldek/poldek && CC=ccache ./make.sh -j3"
 
 scpsnap: 

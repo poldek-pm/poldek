@@ -4,7 +4,20 @@
 
 <release version="0.20.1" date="not released yet" focus="bugfix release">
   <entry><para>
-   support for RPM 4.4.6: new internal sysinfo(),getconf(),uname() and cpuinfo()
+  Basic support for package Suggests capabilities
+  </para></entry>
+
+  <entry><para>
+  Improved a lot RPM's multilib support
+  </para></entry>
+
+  <entry><para>
+  <author id="arekm" email="arekm att pld-linux org">Arkadiusz Miskiewicz</author>
+   RPM up to 4.4.9 is supported
+  </para></entry>
+
+  <entry><para>
+   support for RPM 4.4.6's new internal sysinfo(),getconf(),uname() and cpuinfo()
    capabilities and auto-dependecies based on package directories
   </para></entry>
   
