@@ -247,7 +247,7 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     struct tndb   *db;
     tn_buf        *nbuf;
     tn_hash       *path_index;
-    tn_array      *paths;
+    tn_array      *directories;
     tn_alloc      *na;
     struct vflock *lock;
     int           i;
@@ -297,22 +297,22 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     }
 
     /* store { path => packages_no[] } pairs */
-    paths = n_hash_keys(path_index);
-    msgn_i(3, 3, "Saving %d paths\n", n_array_size(paths));
+    directories = n_hash_keys(path_index);
+    msgn_i(3, 3, "Saving %d directories\n", n_array_size(directories));
      
-    for (i=0; i < n_array_size(paths); i++) {
-        const char *path = n_array_nth(paths, i);
+    for (i=0; i < n_array_size(directories); i++) {
+        const char *path = n_array_nth(directories, i);
         tn_array *ids = n_hash_get(path_index, path);
 
         n_buf_clean(nbuf);
         nbuf = dirarray_join(nbuf, ids, ":");
         
-        DBGF("%s %s\n", path,  n_buf_ptr(nbuf));
+        DBGF("%s %s\n", path, n_buf_ptr(nbuf));
         
         tndb_put(db, path, strlen(path), n_buf_ptr(nbuf), n_buf_size(nbuf));
     }
 
-    n_array_free(paths);
+    n_array_free(directories);
     n_buf_free(nbuf);
     n_hash_free(path_index);
     n_alloc_free(na);
@@ -378,6 +378,7 @@ static tn_hash *load_keymap(struct tndb *db, int npackages)
     if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
         logn(LOGERR, _("%s: invalid directory index"), tndb_path(db));
         nerr++;
+        //msgn_i(2, 4, "%s: empty directory index", tndb_path(db));
         goto l_end;
     }
 
@@ -401,8 +402,7 @@ static tn_hash *load_keymap(struct tndb *db, int npackages)
             vlen_max = vlen;
         
         if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
-            logn(LOGERR, _("%s: invalid directory index"), tndb_path(db));
-            nerr++;
+            /* EOF is possible - packages without files */
             goto l_end;
         }
     }
