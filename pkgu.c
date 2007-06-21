@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -56,8 +56,6 @@ struct pkguinf_i18n {
     char              *description;
     char              _buf[0];
 };
-
-static Header make_pkguinf_hdr(struct pkguinf *pkgu, int *langs_cnt);
 
 static
 struct pkguinf_i18n *pkguinf_i18n_new(tn_alloc *na, const char *summary,
@@ -146,95 +144,6 @@ struct pkguinf *pkguinf_link(struct pkguinf *pkgu)
 {
     pkgu->_refcnt++;
     return pkgu;
-}
-
-
-int pkguinf_store_rpmhdr(struct pkguinf *pkgu, tn_buf *nbuf) 
-{
-    Header   hdr = NULL;
-    void     *rawhdr;
-    int      rawhdr_size;
-    
-    int rc;
-
-
-    hdr = make_pkguinf_hdr(pkgu, NULL);
-    rawhdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
-    rawhdr = headerUnload(hdr);
-
-#if 0    
-    printf("> %ld\t%d\n", ftell(stream), headerSizeof(pkgu->_hdr, HEADER_MAGIC_NO));
-    headerDump(pkgu->_hdr, stdout, HEADER_DUMP_INLINE, rpmTagTable);
-#endif     
-
-	n_buf_write_int16(nbuf, n_hash_size(pkgu->_ht));
-    n_buf_write_int16(nbuf, rawhdr_size);
-
-    
-    rc = (n_buf_write(nbuf, rawhdr, rawhdr_size) == rawhdr_size);
-    
-    free(rawhdr);
-    headerFree(hdr);
-    
-    return rc;
-}
-
-struct pkguinf *pkguinf_restore_rpmhdr_st(tn_alloc *na,
-                                          tn_stream *st, off_t offset)
-{
-    uint16_t nsize, nlangs;
-    struct pkguinf *pkgu = NULL;
-    void *rawhdr;
-    Header hdr;
-
-    if (offset > 0)
-        if (n_stream_seek(st, offset, SEEK_SET) != 0) {
-            logn(LOGERR, "pkguinf_restore: fseek %ld: %m", (long int)offset);
-            return NULL;
-        }
-
-    
-    if (!n_stream_read_uint16(st, &nlangs)) {
-        logn(LOGERR, "pkguinf_restore: read error nlangs (%m) at %ld %p",
-             n_stream_tell(st), st);
-        return NULL;
-    }
-    
-    if (!n_stream_read_uint16(st, &nsize)) {
-        logn(LOGERR, "pkguinf_restore: read error nsize (%m) at %ld",
-             n_stream_tell(st));
-        return NULL;
-    }
-    
-    rawhdr = alloca(nsize);
-    
-    if (n_stream_read(st, rawhdr, nsize) != nsize) {
-        logn(LOGERR, "pkguinf_restore: read %d error at %ld", nsize,
-             n_stream_tell(st));
-        return NULL;
-    }
-    
-    if ((hdr = headerLoad(rawhdr)) != NULL) {
-        pkgu = pkguinf_ldrpmhdr(na, hdr);
-        headerFree(hdr); //rpm's memleak
-    }
-
-    return pkgu;
-}
-
-
-int pkguinf_skip_rpmhdr(tn_stream *st) 
-{
-    uint16_t nsize, nlangs;
-
-    n_stream_seek(st, sizeof(nlangs), SEEK_CUR);
-    
-    if (!n_stream_read_uint16(st, &nsize))
-        nsize = 0;
-	else
-        n_stream_seek(st, nsize, SEEK_CUR);
-    
-    return nsize;
 }
 
 static inline
@@ -345,56 +254,6 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
     return pkgu;
 }
 
-
-static Header make_pkguinf_hdr(struct pkguinf *pkgu, int *langs_cnt) 
-{
-    int                i, nlangs = 0;
-    Header             hdr = NULL;
-    unsigned           hdr_size;
-    tn_array           *langs;
-    
-
-    hdr = headerNew();
-    if ((langs = pkgu->_langs_rpmhdr) == NULL)
-        langs = pkguinf_langs(pkgu);
-    
-    for (i=0; i < n_array_size(langs); i++) {
-        const char *lang = n_array_nth(langs, i);
-        struct pkguinf_i18n *inf = n_hash_get(pkgu->_ht, lang);
-        
-        headerAddI18NString(hdr, RPMTAG_SUMMARY, inf->summary, lang);
-        headerAddI18NString(hdr, RPMTAG_DESCRIPTION, inf->description, lang);
-    }
-
-    if (pkgu->vendor)
-        headerAddEntry(hdr, RPMTAG_VENDOR, RPM_STRING_TYPE, pkgu->vendor, 1);
-    
-    if (pkgu->license)
-        headerAddEntry(hdr, PM_RPMTAG_LICENSE, RPM_STRING_TYPE, pkgu->license, 1);
-    
-    if (pkgu->url)
-        headerAddEntry(hdr, RPMTAG_URL, RPM_STRING_TYPE, pkgu->url, 1);
-    
-    if (pkgu->distro)
-        headerAddEntry(hdr, RPMTAG_DISTRIBUTION, RPM_STRING_TYPE, pkgu->distro, 1);
-    
-    if (pkgu->buildhost)
-        headerAddEntry(hdr, RPMTAG_BUILDHOST, RPM_STRING_TYPE, pkgu->buildhost, 1);
-
-    hdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
-    
-    if (hdr_size > UINT16_MAX) {
-        logn(LOGERR, "internal: header size too large: %d", hdr_size);
-        headerFree(hdr);
-        hdr = NULL;
-    }
-
-    if (langs_cnt)
-        *langs_cnt = nlangs;
-
-    return hdr;
-}
-
 tn_array *pkguinf_langs(struct pkguinf *pkgu)
 {
     if (pkgu->_langs == NULL) 
@@ -498,8 +357,6 @@ tn_buf *pkguinf_store(const struct pkguinf *pkgu, tn_buf *nbuf,
     return nbuf;
 }
 
-
-
 struct pkguinf *pkguinf_restore(tn_alloc *na, tn_buf_it *it, const char *lang)
 {
     struct pkguinf *pkgu;
@@ -550,7 +407,6 @@ struct pkguinf *pkguinf_restore(tn_alloc *na, tn_buf_it *it, const char *lang)
     return pkgu;
 }
 
-
 int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang)
 {
     struct pkguinf_i18n *inf;
@@ -583,7 +439,6 @@ int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang)
     
     return 1;
 }
-
 
 const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
 {
@@ -680,4 +535,145 @@ int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
     }
     
     return 1;
+}
+
+/*
+ * DEPRECIATED, LEGACY 
+ * pkguinf store/restore as rpm header; functions used by old-poor pdir index
+ * format
+ */
+static Header make_pkguinf_hdr(struct pkguinf *pkgu, int *langs_cnt) 
+{
+    int                i, nlangs = 0;
+    Header             hdr = NULL;
+    unsigned           hdr_size;
+    tn_array           *langs;
+    
+
+    hdr = headerNew();
+    if ((langs = pkgu->_langs_rpmhdr) == NULL)
+        langs = pkguinf_langs(pkgu);
+    
+    for (i=0; i < n_array_size(langs); i++) {
+        const char *lang = n_array_nth(langs, i);
+        struct pkguinf_i18n *inf = n_hash_get(pkgu->_ht, lang);
+        
+        headerAddI18NString(hdr, RPMTAG_SUMMARY, inf->summary, lang);
+        headerAddI18NString(hdr, RPMTAG_DESCRIPTION, inf->description, lang);
+    }
+
+    if (pkgu->vendor)
+        headerAddEntry(hdr, RPMTAG_VENDOR, RPM_STRING_TYPE, pkgu->vendor, 1);
+    
+    if (pkgu->license)
+        headerAddEntry(hdr, PM_RPMTAG_LICENSE, RPM_STRING_TYPE, pkgu->license, 1);
+    
+    if (pkgu->url)
+        headerAddEntry(hdr, RPMTAG_URL, RPM_STRING_TYPE, pkgu->url, 1);
+    
+    if (pkgu->distro)
+        headerAddEntry(hdr, RPMTAG_DISTRIBUTION, RPM_STRING_TYPE, pkgu->distro, 1);
+    
+    if (pkgu->buildhost)
+        headerAddEntry(hdr, RPMTAG_BUILDHOST, RPM_STRING_TYPE, pkgu->buildhost, 1);
+
+    hdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
+    
+    if (hdr_size > UINT16_MAX) {
+        logn(LOGERR, "internal: header size too large: %d", hdr_size);
+        headerFree(hdr);
+        hdr = NULL;
+    }
+
+    if (langs_cnt)
+        *langs_cnt = nlangs;
+
+    return hdr;
+}
+
+int pkguinf_store_rpmhdr(struct pkguinf *pkgu, tn_buf *nbuf) 
+{
+    Header   hdr = NULL;
+    void     *rawhdr;
+    int      rawhdr_size;
+    
+    int rc;
+
+
+    hdr = make_pkguinf_hdr(pkgu, NULL);
+    rawhdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
+    rawhdr = headerUnload(hdr);
+
+#if 0    
+    printf("> %ld\t%d\n", ftell(stream), headerSizeof(pkgu->_hdr, HEADER_MAGIC_NO));
+    headerDump(pkgu->_hdr, stdout, HEADER_DUMP_INLINE, rpmTagTable);
+#endif     
+
+	n_buf_write_int16(nbuf, n_hash_size(pkgu->_ht));
+    n_buf_write_int16(nbuf, rawhdr_size);
+
+    
+    rc = (n_buf_write(nbuf, rawhdr, rawhdr_size) == rawhdr_size);
+    
+    free(rawhdr);
+    headerFree(hdr);
+    
+    return rc;
+}
+
+struct pkguinf *pkguinf_restore_rpmhdr_st(tn_alloc *na,
+                                          tn_stream *st, off_t offset)
+{
+    uint16_t nsize, nlangs;
+    struct pkguinf *pkgu = NULL;
+    void *rawhdr;
+    Header hdr;
+
+    if (offset > 0)
+        if (n_stream_seek(st, offset, SEEK_SET) != 0) {
+            logn(LOGERR, "pkguinf_restore: fseek %ld: %m", (long int)offset);
+            return NULL;
+        }
+
+    
+    if (!n_stream_read_uint16(st, &nlangs)) {
+        logn(LOGERR, "pkguinf_restore: read error nlangs (%m) at %ld %p",
+             n_stream_tell(st), st);
+        return NULL;
+    }
+    
+    if (!n_stream_read_uint16(st, &nsize)) {
+        logn(LOGERR, "pkguinf_restore: read error nsize (%m) at %ld",
+             n_stream_tell(st));
+        return NULL;
+    }
+    
+    rawhdr = alloca(nsize);
+    
+    if (n_stream_read(st, rawhdr, nsize) != nsize) {
+        logn(LOGERR, "pkguinf_restore: read %d error at %ld", nsize,
+             n_stream_tell(st));
+        return NULL;
+    }
+    
+    if ((hdr = headerLoad(rawhdr)) != NULL) {
+        pkgu = pkguinf_ldrpmhdr(na, hdr);
+        headerFree(hdr); //rpm's memleak
+    }
+
+    return pkgu;
+}
+
+int pkguinf_skip_rpmhdr(tn_stream *st) 
+{
+    uint16_t nsize, nlangs;
+
+    n_stream_seek(st, sizeof(nlangs), SEEK_CUR);
+    
+    if (!n_stream_read_uint16(st, &nsize))
+        nsize = 0;
+	else
+        n_stream_seek(st, nsize, SEEK_CUR);
+    
+    return nsize;
 }

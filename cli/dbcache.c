@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -207,7 +207,6 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
     char         rpmdb_path[PATH_MAX], dbcache_path[PATH_MAX], dbpath[PATH_MAX];
     const char   *path;
     struct poldek_ts *ts = cctx->ctx->ts; /* for short */
-    int          i;
 
     if (!pm_dbpath(cctx->ctx->pmctx, dbpath, sizeof(dbpath)))
         return 1;
@@ -239,8 +238,7 @@ int poclidek_save_installedcache(struct poclidek_ctx *cctx,
          mtime_rpmdb, pkgdir->ts, mtime_dbcache);
     n_assert(*path != '\0');
     n_assert(strlen(path) > 10);
-    DBGF("%s %s, %d %d\n", ts->cachedir, path,
-         mtime_rpmdb, cctx->ts_dbpkgdir);
+    DBGF("%s %s, %d %d\n", ts->cachedir, path, mtime_rpmdb, cctx->ts_dbpkgdir);
 
     return pkgdir_save_as(pkgdir, RPMDBCACHE_PDIRTYPE, path,
                           PKGDIR_CREAT_NOPATCH | PKGDIR_CREAT_NOUNIQ |

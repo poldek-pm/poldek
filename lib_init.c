@@ -1215,14 +1215,14 @@ int poldeklib_init(void)
     vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
     vfile_configure(VFILE_CONF_LOGCB, poldek_vf_vlog_cb);
 
-    /* Kind of egg and chicken problem with cachedir;
+    /* Kind of egg and chicken problem (remote configs) with cachedir;
        on start set it to $TMPDIR. */
-
     path = setup_cachedir(NULL);
     n_assert(path);
     vfile_configure(VFILE_CONF_CACHEDIR, path);
     free(path);
 
+    /* add libdir/poldek to PATH */
 #ifdef PKGLIBDIR
     {
         char *path, buf[PATH_MAX];
@@ -1230,16 +1230,16 @@ int poldeklib_init(void)
             path = "/bin:/usr/bin:/usr/local/bin";
         
         n_snprintf(buf, sizeof(buf), "%s:%s", path, PKGLIBDIR);
-#ifdef HAVE_SETENV        
+# ifdef HAVE_SETENV        
         setenv("PATH", buf, 1);
-#else
+# else
         {
             int len = strlen("PATH") + strlen(path) + 3;
             char *tmp = n_malloc(len);
             n_snprintf(tmp, len, "%s=%s", PATH, path);
             putenv(tmp);
         }
-#endif  /* HAVE_SETENV */
+# endif  /* HAVE_SETENV */
     }
 #endif  /* PKGLIBDIR */
     return 1;
