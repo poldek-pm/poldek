@@ -52,7 +52,7 @@ struct poclidek_rcmd {};
             int len = strlen(evr);
             char *evr_ = alloca(len + 1);
             memcpy(evr_, evr, len + 1);
-            return capreq_new_evr(name, evr_, relflags, flags);
+            return capreq_new_evr(NULL, name, evr_, relflags, flags);
         }
 
 

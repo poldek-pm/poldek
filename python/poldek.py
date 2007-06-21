@@ -29,6 +29,10 @@ class n_array_proxy:
     def __len__(self):
         if self._arr: return len(self._arr)
         return 0
+
+    def length(self):
+        if self._arr: return len(self._arr)
+        return 0
         
     def __getitem__(self, i):
         r = self._arr[i]
@@ -131,6 +135,7 @@ setattr(poclidek_rcmd, 'get_packages',
         n_array_proxy_func('poclidek_rcmd_', 'get_packages', 'pkg'))
 
 _complete_class(poclidek_ctx, 'poclidek_', verbose = 0, exclude = 'poclidek_rcmd_')
+
 
 
 
