@@ -253,6 +253,14 @@ void pkgflist_it_free(struct pkgflist_it *it);
 
 const char *pkg_group(const struct pkg *pkg);
 
+
+char *pkg_strsize(char *buf, int size, const struct pkg *pkg);
+char *pkg_strbtime(char *buf, int size, const struct pkg *pkg);
+char *pkg_stritime(char *buf, int size, const struct pkg *pkg);
+/* add self name-evr to caps */
+int pkg_add_selfcap(struct pkg *pkg);
+
+#ifndef SWIG
 tn_array *pkgs_array_new(int size);
 tn_array *pkgs_array_new_ex(int size,
                             int (*cmpfn)(const struct pkg *p1,
@@ -260,11 +268,6 @@ tn_array *pkgs_array_new_ex(int size,
 void pkgs_array_dump(tn_array *pkgs, const char *prefix); /* for debugging */
 
 tn_buf *pkgs_array_join(tn_array *pkgs, tn_buf *nbuf, const char *sep);
-
-char *pkg_strsize(char *buf, int size, const struct pkg *pkg);
-char *pkg_strbtime(char *buf, int size, const struct pkg *pkg);
-char *pkg_stritime(char *buf, int size, const struct pkg *pkg);
-/* add self name-evr to caps */
-int pkg_add_selfcap(struct pkg *pkg);
+#endif
 
 #endif /* POLDEK_PKG_H */
