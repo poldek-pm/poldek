@@ -1,6 +1,6 @@
 /* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
- 
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org> 
+
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
   the Free Software Foundation (see file COPYING for details).
@@ -65,15 +65,15 @@ static unsigned setup_reqflags(unsigned rpmflags, unsigned rflags)
 #else
                 
 #  if RPMSENSE_PREREQ != RPMSENSE_ANY /* rpm 4.4 drops legacy PreReq support */
-    if (isLegacyPreReq(flag)) /* prepared by rpm < 4.0.2  */
+    if (isLegacyPreReq(rpmflags)) /* prepared by rpm < 4.0.2  */
         rflags |= CAPREQ_PREREQ | CAPREQ_PREREQ_UN;
     
     else
 #  endif
-		if (isInstallPreReq(flag))
+		if (isInstallPreReq(rpmflags))
             rflags |= CAPREQ_PREREQ;
     
-    if (isErasePreReq(flag))
+    if (isErasePreReq(rpmflags))
         rflags |= CAPREQ_PREREQ_UN;
     
     DBGFIF(rflags & (CAPREQ_PREREQ | CAPREQ_PREREQ_UN),
