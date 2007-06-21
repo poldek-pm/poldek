@@ -197,7 +197,6 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
             nerr++;
             goto l_end;
         }
-		
             
         while (nread && line[nread - 1] == '\n')
             line[--nread] = '\0';
@@ -364,20 +363,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                 break;
 
             case PKG_STORETAG_UINF:
-                pkgt.pkguinf_offs = n_stream_tell(st);
-                if ((ldflags & PKGDIR_LD_DESC) == 0) {
-                    pkguinf_skip_rpmhdr(st);
-					
-                } else {
-                    pkgt.pkguinf = pkguinf_restore_rpmhdr_st(na, st, 0);
-                    if (pkgt.pkguinf == NULL) {
-                        logn(LOGERR, errmg_ldtag, fn, ul_offs, *line);
-                        nerr++;
-                        goto l_end;
-                    }
-                }
-				
-				n_stream_seek(st, 1, SEEK_CUR);	/* eat '\n' */
+                n_assert(0);
                 break;
 
             default:

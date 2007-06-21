@@ -53,7 +53,6 @@ static struct pkg_store_tag pkg_store_tag_table[] = {
     { PKG_STORETAG_CNFLS, PKG_STORETAG_SIZE16, "cnfls" },
     { PKG_STORETAG_FL,    PKG_STORETAG_SIZE32, "file list" },
     { PKG_STORETAG_DEPFL, PKG_STORETAG_SIZE32, "depdirs file list" },
-    { PKG_STORETAG_UINF,  PKG_STORETAG_SIZE32, "user-level-info" },
 //    { '6', PKG_STORETAG_SIZE16, "fake16" }, // for testing
 //    { '2', PKG_STORETAG_SIZE32, "fake32" },
     { 0, 0, 0 }, 
@@ -401,18 +400,10 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     pkg_store_fl(pkg, nbuf, depdirs, exclpath, flags);
     //mem_info(-10, "after fl");
 
-    if ((flags & PKGSTORE_NODESC) == 0) {
-        struct pkguinf *pkgu;
-        
-        //mem_info(-10, "before uinf");
-        if ((pkgu = pkg_uinf(pkg))) {
-            pkg_store_bintag(PKG_STORETAG_UINF, nbuf);
-            pkguinf_store(pkgu, nbuf, "C");
-            n_buf_printf(nbuf, "\n");
-            pkguinf_free(pkgu);
-            //mem_info(-10, "after uinf");
-        }
-    }
+    /* removed support for uinfo in main index,
+       assert nobody try this */
+    n_assert(flags & PKGSTORE_NODESC);
+    
     n_buf_printf(nbuf, "\n");
     
     return n_buf_size(nbuf);

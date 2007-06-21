@@ -67,7 +67,7 @@ struct pkgdir {
     char                *orig_idxpath;
 
     char                *lc_lang;         /* configured languages ($LC_LANG format) */
-    tn_hash             *avlangs_h; 
+    tn_hash             *avlangs_h;       /* all available languages */
     tn_array            *langs;           /* used languages      */
 
     struct pkgdir_dirindex *dirindex;

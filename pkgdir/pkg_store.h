@@ -18,7 +18,8 @@
 #define PKG_STORETAG_CNFLS 'C'
 #define PKG_STORETAG_FL    'l'
 #define PKG_STORETAG_DEPFL 'L'
-#define PKG_STORETAG_UINF  'U'
+
+#define PKG_STORETAG_UINF  'U'  /* depreciated */
 
 
 #define PKG_STORETAG_SIZENIL  0 /* ascii tag */
