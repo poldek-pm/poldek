@@ -129,6 +129,54 @@ void remap_groupid(struct pkg *pkg, struct pkgroup_idx *pkgroups,
     }
 }
 
+static int is_rpmfile(const char *path, struct stat *fst) 
+{
+    struct stat st;
+    
+    if (stat(path, &st) != 0) {
+        logn(LOGERR, "stat %s: %m", path);
+        return 0;
+    }
+
+    if (!S_ISREG(st.st_mode)) {
+        logn(LOGERR, "%s: not a file", path);
+        return 0;
+    }
+
+    if (fst)
+        *fst = st;
+
+    return 1;
+}
+
+
+static 
+struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
+                             void *ptr, tn_array *langs)
+{
+    struct pkguinf *pkgu = NULL;
+    char path[PATH_MAX];
+    Header h;
+
+    ptr = ptr;     /* unused pkgdir_data */
+    langs = langs; /* ignored, selective retrieving no supported */
+
+    snprintf(path, sizeof(path), "%s/%s", pkg->pkgdir->idxpath,
+             pkg_filename_s(pkg));
+
+    if (!is_rpmfile(path, NULL))
+        return NULL;
+    
+    if (!pm_rpmhdr_loadfile(path, &h)) {
+        logn(LOGWARN, "%s: read header failed", n_basenam(path));
+        return NULL;
+    }
+    
+    pkgu = pkguinf_ldrpmhdr(na, h);
+    
+    pm_rpmhdr_free(h);
+    return pkgu;
+}
 
 static
 int load_dir(struct pkgdir *pkgdir,
@@ -158,9 +206,7 @@ int load_dir(struct pkgdir *pkgdir,
     while ((ent = readdir(dir))) {
         char path[PATH_MAX];
         struct pkg *pkg = NULL;
-        tn_array *pkg_langs;
         Header h = NULL;
-
         
         if (fnmatch("*.rpm", ent->d_name, 0) != 0) 
             continue;
@@ -169,13 +215,8 @@ int load_dir(struct pkgdir *pkgdir,
         //    continue;
         
         snprintf(path, sizeof(path), "%s%s%s", dirpath, sepchr, ent->d_name);
-        
-        if (stat(path, &st) != 0) {
-            logn(LOGERR, "stat %s: %m", path);
-            continue;
-        }
-        
-        if (!S_ISREG(st.st_mode))
+
+        if (!is_rpmfile(path, &st))
             continue;
 
         if (mtime_index) {
@@ -187,9 +228,8 @@ int load_dir(struct pkgdir *pkgdir,
                 remap_groupid(pkg, pkgroups, prev_pkgdir);
             }
         }
-        
 
-        if (pkg == NULL) {
+        if (pkg == NULL) {  /* mtime changed, but try compare content */
             if (!pm_rpmhdr_loadfile(path, &h)) {
                 logn(LOGWARN, "%s: read header failed, skipped", path);
                 continue;
@@ -197,7 +237,7 @@ int load_dir(struct pkgdir *pkgdir,
             
             //if (rpmhdr_issource(h)) /* omit src.rpms */
             //    continue;
-
+            
             if (prev_pkgdir) {
                 pkg = search_in_prev(prev_pkgdir, h, ent->d_name, &st);
                 if (pkg) {
@@ -208,31 +248,45 @@ int load_dir(struct pkgdir *pkgdir,
                 }
             }
         }
+
+        if (pkg == NULL) {  /* not exists in previous index */
+            char **langs;
             
-        
-        if (pkg == NULL) {      /* not in previous index */
             nnew++;
-            n_assert(h);
+            n_assert(h);        /* loaded in previous if block */
             msgn(3, "%s: loading header...", n_basenam(path));
-            pkg = pm_rpm_ldhdr(na, h, n_basenam(path), st.st_size,
-                               PKG_LDWHOLE);
-                
-            if (ldflags & PKGDIR_LD_DESC) {
-                pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
-                pkg_set_ldpkguinf(pkg);
-                if ((pkg_langs = pkguinf_langs(pkg->pkg_pkguinf))) {
-                    int i;
-                        
-                    for (i=0; i < n_array_size(pkg_langs); i++)
-                        pkgdir__update_avlangs(pkgdir,
-                                               n_array_nth(pkg_langs, i), 1);
-                }
+            pkg = pm_rpm_ldhdr(na, h, n_basenam(path), st.st_size, PKG_LDWHOLE);
+            n_assert(pkg);
+            
+            pkg->load_pkguinf = load_pkguinf;
+
+            if ((langs = pm_rpmhdr_langs(h))) {
+                int i = 0;
+                while (langs[i])
+                    pkgdir__update_avlangs(pkgdir, langs[i++], 1);
+                free(langs);
             }
             pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
+            
+            n_assert((ldflags & PKGDIR_LD_DESC) == 0);
+            
+            if (ldflags & PKGDIR_LD_DESC) {
+                tn_array *langs;
+                
+                pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
+                pkg_set_ldpkguinf(pkg);
+                if ((langs = pkguinf_langs(pkg->pkg_pkguinf))) {
+                    int i;
+                        
+                    for (i=0; i < n_array_size(langs); i++)
+                        pkgdir__update_avlangs(pkgdir,
+                                               n_array_nth(langs, i), 1);
+                }
+            }
         }
 
         if (h)
-            headerFree(h);
+            pm_rpmhdr_free(h);
             
         if (pkg) {
             pkg->fmtime = st.st_mtime;
@@ -244,7 +298,7 @@ int load_dir(struct pkgdir *pkgdir,
             msg(1, "_%d..", n);
     }
 
-    /* if there are ones from prev_pkgdir then assume that
+    /* if there are packages from prev_pkgdir then assume that
        they provide all avlangs */
     
     if (prev_pkgdir && n_array_size(pkgs) - nnew > 0) { 
