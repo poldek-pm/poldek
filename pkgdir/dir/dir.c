@@ -268,20 +268,9 @@ int load_dir(struct pkgdir *pkgdir,
             }
             pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
             
-            n_assert((ldflags & PKGDIR_LD_DESC) == 0);
-            
             if (ldflags & PKGDIR_LD_DESC) {
-                tn_array *langs;
-                
                 pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
                 pkg_set_ldpkguinf(pkg);
-                if ((langs = pkguinf_langs(pkg->pkg_pkguinf))) {
-                    int i;
-                        
-                    for (i=0; i < n_array_size(langs); i++)
-                        pkgdir__update_avlangs(pkgdir,
-                                               n_array_nth(langs, i), 1);
-                }
             }
         }
 
@@ -329,6 +318,10 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
+
+    if (pkgdir->prev_pkgdir) /* make sense for mkidx only */
+        ldflags |= PKGDIR_LD_DESC; /* load descriptions now, it's faster
+                                      although consumes about 15% more memory */
     
     n = load_dir(pkgdir,
                  pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups,
