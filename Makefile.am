@@ -80,10 +80,6 @@ libpoldek_allsym_la_LIBADD = $(libpoldek_la_LIBADD)
 
 LDADD_              = @INTLLIBS@
 
-noinst_PROGRAMS     = test_match
-test_match_SOURCES  = test_match.c
-test_match_LDADD    = libpoldek_allsym.la 
-
 pkglib_SCRIPTS      = zlib-in-rpm.sh vfjuggle vfcompr vfsmb poldekuser-setup.sh
 
 EXTRA_DIST = \
