@@ -65,7 +65,7 @@ static int do_test_pkgmatch(char *capevr, char *evr, int relation, unsigned mafl
         return -1;
     
     pkg = pkg_new("poo", epoch, ver, rel,  NULL, NULL);
-    req = capreq_new_evr("poo", n_strdup(evr), relation, 0);
+    req = capreq_new_evr(NULL, "poo", n_strdup(evr), relation, 0);
 
     rc = pkg_xmatch_req(pkg, req, maflags) ? 1 : 0;
     msgn_i(1, 2, "%s match%s %s => %s", pkg_evr_snprintf_s(pkg),
@@ -88,11 +88,11 @@ int do_test_capmatch(char *capevr, char *evr, int relation, unsigned maflags,
     int rc;
 
     if (capevr)
-        cap = capreq_new_evr("coo", n_strdup(capevr), REL_EQ, 0);
+        cap = capreq_new_evr(NULL, "coo", n_strdup(capevr), REL_EQ, 0);
     else
         cap = capreq_new(NULL, "coo", 0, NULL, NULL, 0, 0);
 
-    req = capreq_new_evr("coo", n_strdup(evr), relation, 0);
+    req = capreq_new_evr(NULL, "coo", n_strdup(evr), relation, 0);
     
     rc = cap_xmatch_req(cap, req, maflags) ? 1 : 0;
     msgn_i(1, 2, "%s match%s %s => %s", capreq_snprintf_s(cap),

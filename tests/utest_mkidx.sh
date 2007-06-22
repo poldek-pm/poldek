@@ -184,7 +184,7 @@ test_g()
         exit1 "test_g6: mkidx failed"
 
     # run httpd
-    ./httpd.py >/dev/null 2>/dev/null &
+    python httpd.py >/dev/null 2>/dev/null &
     
     POLDEK_NOCONF="$POLDEK_NOCONF -Ovfile_retries=1"
     $POLDEK_NOCONF --st pndir -s http://localhost:10000/repo/ --mkidx=$TMP
