@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -91,6 +91,7 @@ struct tndb *do_db_dscr_get(tn_hash *db_dscr_h, const char *pathtmpl,
     const char *idstr, *langstr;
     struct tndb *db;
 
+    DBGF("lang %s\n", lang);
     
     pndir_db_dscr_idstr(lang, &idstr, &langstr);    
     if (*langstr == '\0')
@@ -164,8 +165,9 @@ struct pkguinf *pndir_load_pkguinf(tn_alloc *na, tn_hash *db_dscr_h,
         /* start from the end => the last loaded one will be set as
            pkguinf default (see pkguinf_restore_i18n()) */
         for (i = n_array_size(langs) - 1; i >= 0; i--) {
+            const char *lang, *loaded_lang = NULL;
             struct tndb *db;
-            const char *lang;
+            char lang_utf8[32];
             char dkey[512];
             int  dklen;
 
@@ -176,15 +178,26 @@ struct pkguinf *pndir_load_pkguinf(tn_alloc *na, tn_hash *db_dscr_h,
             if ((db = pndir_db_dscr_h_get(db_dscr_h, lang)) == NULL)
                 continue;
 
-            dklen = n_snprintf(dkey, sizeof(dkey), "%s%s", key, lang);
+            n_snprintf(lang_utf8, sizeof(lang_utf8), "%s.UTF-8", lang);
+            loaded_lang = lang_utf8;
+
+            dklen = n_snprintf(dkey, sizeof(dkey), "%s%s", key, lang_utf8);
             vlen = tndb_get(db, dkey, dklen, val, sizeof(val));
-            DBGF("ld %s: %s (%d)\n", pkg_snprintf_s(pkg), lang, vlen);
+            
+            if (vlen == 0) {     /* not exists */
+                dklen = n_snprintf(dkey, sizeof(dkey), "%s%s", key, lang);
+                vlen = tndb_get(db, dkey, dklen, val, sizeof(val));
+                loaded_lang = lang;
+            }
+                
+            DBGF("ld %s: %s (%d)\n", pkg_id(pkg), loaded_lang ? loaded_lang : lang, vlen);
+            
             if (vlen > 0) {
                 tn_buf_it it;
                 n_buf_clean(nbuf);
                 n_buf_init(nbuf, val, vlen);
                 n_buf_it_init(&it, nbuf);
-                pkguinf_restore_i18n(pkgu, &it, lang);
+                pkguinf_restore_i18n(pkgu, &it, loaded_lang);
             }
         }
     }
