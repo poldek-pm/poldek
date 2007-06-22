@@ -23,6 +23,8 @@
 #include <trurl/nstream.h>
 #include <trurl/nhash.h>
 
+#include <iconv.h>
+#include <langinfo.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -30,14 +32,18 @@
 #include "misc.h"
 #include "pm/rpm/pm_rpm.h"
 
-#define NA_OWNED (1 << 0)
-
+#define NA_OWNED             (1 << 0)
+#define RECODE_SUMMMARY      (1 << 1) /* needs to be recoded */
+#define RECODE_DESCRIPTION   (1 << 2)
+#define RECODED_SUMMMARY     (1 << 3) /* already recoded     */
+#define RECODED_DESCRIPTION  (1 << 4)
 
 struct pkguinf {
     char              *license;
     char              *url;
-    char              *summary;
-    char              *description;
+    char              *_summary;
+    char              *_description;
+    const char        *_encoding; /* for iconv, NFY */
     char              *vendor;
     char              *buildhost;
     char              *distro;
@@ -56,6 +62,7 @@ struct pkguinf_i18n {
     char              *description;
     char              _buf[0];
 };
+
 
 static
 struct pkguinf_i18n *pkguinf_i18n_new(tn_alloc *na, const char *summary,
@@ -98,8 +105,8 @@ struct pkguinf *pkguinf_new(tn_alloc *na)
 
     pkgu->license = NULL;
     pkgu->url = NULL;
-    pkgu->summary = NULL;
-    pkgu->description = NULL;
+    pkgu->_summary = NULL;
+    pkgu->_description = NULL;
     pkgu->vendor = NULL;
     pkgu->buildhost = NULL;
 
@@ -117,11 +124,17 @@ void pkguinf_free(struct pkguinf *pkgu)
         return;
     }
     
-    if (pkgu->summary)
-        pkgu->summary = NULL;
-        
-    if (pkgu->description)
-        pkgu->description = NULL;
+    if (pkgu->_summary) {
+        if (pkgu->_flags & RECODED_SUMMMARY)
+            free(pkgu->_summary);
+        pkgu->_summary = NULL;
+    }
+
+    if (pkgu->_description) {
+        if (pkgu->_flags & RECODED_DESCRIPTION)
+            free(pkgu->_description);
+        pkgu->_description = NULL;
+    }
     
     if (pkgu->_langs)
         n_array_free(pkgu->_langs);
@@ -138,6 +151,82 @@ void pkguinf_free(struct pkguinf *pkgu)
     
     if (pkgu->_flags & NA_OWNED)
         n_alloc_free(pkgu->_na);
+}
+
+/*
+  Set recodable pkgu member, set _flags accordinggly to trigger
+  recoding in pkguinf_get()
+ */
+static void pkgu_set_recodable(struct pkguinf *pkgu, int tag, char *val,
+                               const char *lang)
+{
+    char **member = NULL;
+    unsigned flag = 0, needflag = 0;
+    char *usrencoding = NULL;
+
+    switch (tag) {
+        case PKGUINF_SUMMARY:
+            member = &pkgu->_summary;
+            flag = RECODED_SUMMMARY;
+            needflag = RECODE_SUMMMARY;
+            break;
+
+        case PKGUINF_DESCRIPTION:
+            member = &pkgu->_description;
+            flag = RECODED_DESCRIPTION;
+            needflag = RECODE_SUMMMARY;
+            break;
+            
+        default:
+            n_assert(0);
+            break;
+    }
+
+    if (*member && (pkgu->_flags & flag)) {
+        free((char*)*member);
+        *member = NULL;
+    }
+
+    *member = val;
+    pkgu->_flags &= ~needflag;
+    
+    if (strstr(lang, "UTF-8") == NULL) {
+        *member = val;
+        return;
+    }
+
+    usrencoding = nl_langinfo(CODESET);
+    DBGF("CODE %s\n", usrencoding);
+
+    if (usrencoding && n_str_ne(usrencoding, "UTF-8"))
+        pkgu->_flags |= needflag;
+}
+
+
+static char *recode(const char *val, const char *valencoding) 
+{
+    char *p, *val_utf8, *usrencoding;
+    size_t vlen, u_vlen;
+    iconv_t cd;
+
+    usrencoding = nl_langinfo(CODESET);
+    if (usrencoding == NULL)
+        return (char*)val;
+
+    valencoding = "UTF-8";   /* XXX, support for others needed? */
+
+    u_vlen = vlen = strlen(val);
+    p = val_utf8 = n_malloc(u_vlen + 1);
+
+    cd = iconv_open(usrencoding, valencoding);
+    if (iconv(cd, (char**)&val, &vlen, &p, &u_vlen) == (size_t)-1) {
+        iconv_close(cd);
+        free(val_utf8);
+        return (char*)val;
+    }
+    iconv_close(cd);
+    *p = '\0';
+    return val_utf8;
 }
 
 struct pkguinf *pkguinf_link(struct pkguinf *pkgu)
@@ -232,8 +321,8 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
             
             inf = n_hash_get(pkgu->_ht, sl_lang);
             n_assert(inf);
-            pkgu->summary = inf->summary;
-            pkgu->description = inf->description;
+            pkgu_set_recodable(pkgu, PKGUINF_SUMMARY, inf->summary, sl_lang);
+            pkgu_set_recodable(pkgu, PKGUINF_DESCRIPTION, inf->description, sl_lang);
         }
 
         n_array_free(avlangs);
@@ -357,6 +446,8 @@ tn_buf *pkguinf_store(const struct pkguinf *pkgu, tn_buf *nbuf,
     return nbuf;
 }
 
+
+
 struct pkguinf *pkguinf_restore(tn_alloc *na, tn_buf_it *it, const char *lang)
 {
     struct pkguinf *pkgu;
@@ -407,6 +498,7 @@ struct pkguinf *pkguinf_restore(tn_alloc *na, tn_buf_it *it, const char *lang)
     return pkgu;
 }
 
+
 int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang)
 {
     struct pkguinf_i18n *inf;
@@ -433,15 +525,17 @@ int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang)
 
     inf = pkguinf_i18n_new(pkgu->_na, summary, description);
     n_hash_insert(pkgu->_ht, lang, inf);
-    
-    pkgu->summary = inf->summary;
-    pkgu->description = inf->description;
-    
+
+    pkgu_set_recodable(pkgu, PKGUINF_SUMMARY, summary, lang);
+    pkgu_set_recodable(pkgu, PKGUINF_DESCRIPTION, description, lang);
     return 1;
 }
 
 const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
 {
+    char **val = NULL;     /* for summary, description recoding */
+    unsigned flag = 0, needflag = 0;
+    
     switch (tag) {
         case PKGUINF_LICENSE:
             return pkgu->license;
@@ -457,24 +551,47 @@ const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
 
         case PKGUINF_DISTRO:
             return pkgu->distro;
-
+            
         case PKGUINF_SUMMARY:
-            return pkgu->summary;
+            val = (char**)&pkgu->_summary;
+            flag = RECODED_SUMMMARY;
+            needflag = RECODE_SUMMMARY;
+            break;
 
         case PKGUINF_DESCRIPTION:
-            return pkgu->description;
-
+            val = (char**)&pkgu->_description;
+            flag = RECODED_DESCRIPTION;
+            needflag = RECODE_DESCRIPTION;
+            break;
+            
         default:
             if (poldek_VERBOSE > 2)
                 logn(LOGERR, "%d: unknown tag", tag); 
             break;
     }
 
+    if (val) { /* something to recode? */
+        char *recoded = NULL;
+
+        /* already recoded or no recoding needed */
+        if ((pkgu->_flags & needflag) == 0) 
+            return *val;
+
+        recoded = recode(*val, NULL);
+        if (recoded && recoded != *val) {
+            ((struct pkguinf *)(pkgu))->_flags &= ~needflag; /* XXX ugly */
+            ((struct pkguinf *)(pkgu))->_flags |= ~flag;
+            *val = recoded;
+        }
+        
+        return *val;
+    }
+
     return NULL;
 }
 
 int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
-                   const char *lang)
+                const char *lang)
 {
     int len;
     
@@ -519,11 +636,12 @@ int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
 
             if (tag == PKGUINF_SUMMARY) {
                 inf->summary = na_strdup(pkgu->_na, val, len);
-                pkgu->summary = inf->summary;
+                pkgu_set_recodable(pkgu, PKGUINF_SUMMARY, inf->summary, lang);
                 
             } else {
                 inf->description = na_strdup(pkgu->_na, val, len);
-                pkgu->description = inf->description;
+                pkgu_set_recodable(pkgu, PKGUINF_DESCRIPTION, inf->description,
+                                   lang);
             }
         }
         
