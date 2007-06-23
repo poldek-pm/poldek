@@ -18,7 +18,12 @@ if [ ! -f $src ]; then
     exit 1
 fi
 
-cp $src $dest
+# Symlink packages, copy other files
+if echo $src | grep -qE '.rpm$'; then
+    ln -sf $src $dest
+else
+    cp $src $dest
+fi
 
-
+# display toc 
 #if echo $src | grep -q toc; then zcat $src; fi
