@@ -1,0 +1,12 @@
+# 
+# 
+
+[ -z "$QUIET" ] && QUIET="-q"
+
+msg() {
+    [ "$QUIET" != "-q" ] && echo -e $@
+}
+
+msgn() {
+    msg "\n## $@"
+}
