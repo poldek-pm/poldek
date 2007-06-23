@@ -648,9 +648,7 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                      "%d packages loaded", n_array_size(pkgdir->pkgs)),
          n_array_size(pkgdir->pkgs));
 
-    n_assert(pkgdir->ts);       /* ts must be set by backend */
-    if (pkgdir->ts == 0)
-		pkgdir->ts = time(0);
+    n_assert(pkgdir->ts > 0);       /* ts must be set by backend */
     
     pkgdir->_ldflags = ldflags;
     
@@ -954,10 +952,14 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
     } else {
         int create = 1;
 
-        if (orig->ts > pkgdir->ts) {
-            logn(LOGWARN, _("clock skew detected; create index with fake "
-                            "timestamp %lu %lu"), (unsigned long)orig->ts,
-                 (unsigned long)pkgdir->ts);
+        if (orig->ts >= pkgdir->ts) {
+            if (orig->ts == pkgdir->ts)
+                logn(LOGNOTICE, "slow down, unable to handle so "
+                     "frequent index changes");
+            else
+                logn(LOGWARN, _("clock skew detected; create index with fake "
+                                "timestamp %lu >= %lu"), (unsigned long)orig->ts,
+                     (unsigned long)pkgdir->ts);
             pkgdir->ts = orig->ts + 1;
         }
 
@@ -965,7 +967,7 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
         if ((diff = pkgdir_diff(orig, pkgdir)))
             diff->ts = pkgdir->ts;
         else if ((flags & PKGDIR_CREAT_IFORIGCHANGED))
-            create = 0;         /* not a difference -> do not create */
+            create = 0;         /* no difference -> do not create */
 
         
         if (create) {           /* save index */
