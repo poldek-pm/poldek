@@ -1,0 +1,70 @@
+#!/bin/sh
+# $Id$
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+
+mkidx() {
+   $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+}
+
+up() {
+   $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
+}
+
+testUpdate() 
+{
+    rm -rf $REPO/*.rpm
+    # Create repo and generate some diffs
+    msg "\n## Creating empty index"
+    indexfile="$REPO/packages.ndir.gz"
+    mkidx
+    die_if_invalid_index $indexfile 0
+    
+    msg "\n## up"
+    up
+
+    msg "\n## Changing repo #1"    
+    sleep 1
+    add_package_to_repo
+    mkidx
+    die_if_invalid_index $indexfile 1
+    die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc.gz" 1
+
+    msg "\n## up"
+    up
+
+    msg "\n## Changing repo #2"
+    sleep 1
+    remove_package_from_repo
+    mkidx
+    die_if_invalid_index $indexfile 0
+    die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc.gz" 2
+    
+    msg "\n## up"
+    up
+
+    msg "\n## Changing repo #3"
+    sleep 1
+    add_package_to_repo
+    add_package_to_repo
+    mkidx 
+    die_if_invalid_index $indexfile 2
+    die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc.gz" 3
+
+    msg "\n## up"
+    up
+
+    # <glen att pld-linux.org> report: <https://bugs.pld-linux.org/show_bug.cgi?id=28>
+    msg "\n## Reset repo"
+    sleep 1
+    rm -rf $REPO/packages.*
+    add_package_to_repo
+    mkidx
+    msg "\n## up"
+    up
+
+    
+}
+
+. ./sh/lib/shunit2

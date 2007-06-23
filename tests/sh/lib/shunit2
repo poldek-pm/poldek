@@ -698,6 +698,7 @@ _shunit_execSuite()
   echo '#'
   echo '# Performing tests'
   echo '#'
+
   for _su_func in ${__shunit_suite}; do
     # disable skipping
     endSkipping
@@ -870,7 +871,6 @@ fi
 
 # execute the tests
 _shunit_execSuite
-
 # execute the oneTimeTearDown function (if it exists)
 oneTimeTearDown
 
@@ -884,6 +884,10 @@ for _shunit_shellFlag in ${__SHUNIT_SHELL_FLAGS}; do
 done
 unset _shunit_shellFlag
 
+ec=0
+[ "${__shunit_testsFailed}" -gt 0 ] && ec=1
+
+exit $ec
 #/**
 # </s:shelldoc>
 #*/

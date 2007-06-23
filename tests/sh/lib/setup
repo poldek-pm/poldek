@@ -1,7 +1,5 @@
+#!/bin/sh
 # 
-# 
-
-[ -z "$QUIET" ] && QUIET="-q"
 
 msg() {
     [ "$QUIET" != "-q" ] && echo -e $@
@@ -10,3 +8,36 @@ msg() {
 msgn() {
     msg "\n## $@"
 }
+
+QUIET=${QUIET:-"-q"}
+POLDEK_TESTING=1 # prevent diff.toc vacuuming
+export POLDEK_TESTING
+
+MAXLOOP=60
+VERBOSE=""
+
+while test $# -gt 0 ; do
+    case "${1}" in
+        --source-repo)
+            shift; SOURCE_REPO="${1}"; shift ;;
+
+        -v)
+            shift; VERBOSE="$VERBOSE -v";;
+            
+        -n) shift; MAXLOOP="${1}"; shift ;;
+
+        -h)
+            echo "Usage: $(basename $0) [--source-repo REPO] [-v] [-n NUM]"
+            echo '    --source-repo  - source (read-only) repository for *-repo tests'
+            echo "    -v             - be verbose"
+            echo '    -n NUM         - do NUM iteration in *-loop tests'
+            exit 0; shift ;;
+
+        *)
+            echo "unknown option ${1}; try -h"; exit 1;
+    esac
+done
+[ -n "$VERBOSE" ] && QUIET="$VERBOSE"
+
+
+

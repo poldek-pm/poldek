@@ -5,7 +5,8 @@ noinst_PROGRAMS = test_poldek
 test_poldek_SOURCES = test_poldek.c test_match.c test_env.c \
 	   	              test_pmdb.c test_op.c test_config.c test.h 	
 
-EXTRA_DIST = utest_mkidx.sh httpd.py test_patch.sh
+EXTRA_DIST = poldek_test_conf.conf sh repo
+
 
 test_poldek_INCLUDES= @CHECK_CFLAGS@
 test_poldek_LDADD = @CHECK_LIBS@ ../libpoldek_allsym.la ../vfile/libvfile.la  
@@ -15,25 +16,27 @@ poldek_test_conf.conf: ../doc/conf-xml2testconf.xsl ../doc/poldek.conf.xml
 
 clean-local:
 	-rm -f *.tmp core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* 
+	-find sh -name \*~ | xargs -r rm
 
+check: poldek_test_conf.conf
+	$(MAKE) check-am
 
-runtests: poldek_test_conf.conf
-	$(MAKE) check
-	@echo; echo "Running *.sh tests"; \
-	n=0; nfails=0;                   \
-	for i in utest_*.sh; do          \
-	    [ -f $$i ] || continue;      \
-	    n=$$(expr $$n + 1);          \
-	    echo "  running $$i";        \
-	    sh $$i;                      \
-        if [ $$? -ne 0 ]; then       \
-          nfails=$$(expr $$nfails + 1); \
-          echo "    $$i FAILED";     \
-        else                         \
-          echo "    $$i PASSED";     \
-        fi;                          \
-   done;                             \
-   echo "====================================="; \
-   echo "$$n tests passed / $$nfails failed";    \
-   echo "====================================="
+sheck:
+	@echo; echo "Running *.sh tests";  \
+	find sh -name \*~ | xargs -r rm;   \
+	n=0; nok=0;                        \
+	for i in sh/[0-9][0-9]*; do        \
+	  [ -f $$i ] || continue;          \
+	  n=$$(expr $$n + 1);              \
+	  sh $$i -n 10; 		   \
+          if [ $$? -eq 0 ]; then           \
+            nok=$$(expr $$nok + 1);     \
+            echo "  ## $$i PASSED";     \
+          else                          \
+            echo "  ## $$i FAILED";     \
+          fi;                           \
+	done;                           \
+	echo "====================================="; \
+	echo " Passed $$nok tests of total $$n";      \
+	echo "====================================="
 

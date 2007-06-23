@@ -1,0 +1,49 @@
+#!/bin/sh
+# $Id$
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+
+mkidx() {
+   $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+}
+
+up() {
+   $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up
+}
+
+testUpLoop() 
+{
+    rm -rf $REPO/*.rpm
+    # Create repo and generate some diffs
+    msg "\n## Creating empty index"
+    indexfile="$REPO/packages.ndir.gz"
+    mkidx
+    die_if_invalid_index $indexfile 0
+    
+    msg "\n## up"
+    up
+    
+    nloop=0
+    maxloop=${MAXLOOP:-"60"}
+
+    while [ $nloop -lt $maxloop ]; do
+        msg "\n#### Iteration #${nloop}"    
+        sleep 1    
+        random_change_repo
+
+        npackages=$(ls $REPO/*.rpm 2>/dev/null | wc -l)
+        echo "#${nloop} repository contains $npackages package(s)"
+        mkidx
+
+        msgn "  up"
+        up 
+        if [ $? -ne 0 ]; then 
+           fail "up #${nloop} failed"
+           nloop=$maxloop
+        fi
+        nloop=$(expr $nloop + 1)
+    done
+}
+
+. ./sh/lib/shunit2

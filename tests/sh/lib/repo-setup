@@ -1,3 +1,4 @@
+#!/bin/sh
 
 tearDown() {
     [ -n "$REPO" ] && rm -rf $REPO/packages.*
@@ -13,10 +14,10 @@ oneTimeSetUp() {
     POLDEK="$PWD/../cli/poldek $QUIET"
     POLDEK_NOCONF="$POLDEK --noconf -Ovfile_retries=1"
 
-    [ ! -d "repo" ] && fail "repo: no such directory"
-    SOURCE_REPO="${PWD}/repo"
+    SOURCE_REPO=${SOURCE_REPO:-"${PWD}/repo"}
+    [ ! -d "$SOURCE_REPO" ] && fail "$SOURCE_REPO: no such directory"
 
-    [ -z "$TMP" ] && TMP="${TMPDIR}"
+    TMP=${TMP:-"$TMPDIR"}
     [ -z "$TMP" ] && TMP="${PWD}"
     TMP="${TMP}/poldekTests"
     TMPDIR="$TMP"
@@ -40,14 +41,22 @@ oneTimeSetUp() {
 
 oneTimeTearDown() {
    if echo $TMPDIR | grep -q poldekTest; then rm -rf $TMPDIR; fi
+   tmpdir=$(dirname $TMPDIR)
+   TMP="$tmpdir"
+   TMPDIR="$tmpdir"
 }
+
+die_if_empty_index() {
+    die_if_invalid_index $1 ""
+}    
 
 die_if_invalid_index() {
     anindex=$1
+    expected_packages=$2
 
     [ -f $anindex ] || fail "$anindex not created"
     if echo $anindex | grep -q "diff.toc"; then
-       expected_lines=$2
+       expected_lines="$expected_packages"
 
        lines=$(zcat $anindex | wc -l)
        if [ "$lines" != "$expected_lines" ]; then
@@ -69,10 +78,15 @@ die_if_invalid_index() {
     fi
 
     if zgrep -q 'Contains 0 packages' $anindex; then
-        expected_packages=$2
         if [ "$expected_packages" != "0" ]; then
             fail "empty $anindex"
         fi
+    fi
+
+    if [ -n "$expected_packages" ]; then 
+       if ! zgrep -q "Contains $expected_packages packages" $anindex; then
+            fail "$anindex: number of packages mismatch"
+       fi
     fi
 }
 
@@ -83,7 +97,7 @@ add_package_to_repo() {
         package=$(basename $p)
 
         if [ ! -f "$REPO/$package" ]; then
-            cp $p $REPO
+            ln -sf $p $REPO/$package
             msg "Added $package"
             return 0
         fi
@@ -97,3 +111,43 @@ remove_package_from_repo() {
     msg "Removed $(basename $package)"
 }
 
+
+random_change_repo() {
+    to_add=$(perl -e '@s=(a..z, A..Z, 0..9); print $s[rand(@s)]')
+    to_del=$(perl -e '@s=(a..z, A..Z, 0..9); print $s[rand(@s)]')
+
+    while [ "$to_add" == "$to_del" ]; do
+       to_del=$(perl -e '@s=(a..z, A..Z, 0..9); print $s[rand(@s)]')
+    done
+
+    #echo "- adding $to_add\*, removing $to_del\*";
+
+    nadded=0
+    nremoved=0
+
+    for i in $SOURCE_REPO/${to_add}*.rpm; do
+        bn=$(basename $i);
+          
+        [ ! -f $i ] && continue;
+        [ -f $REPO/$bn ] && continue;
+
+        nadded=$(expr $nadded + 1)
+        msg "    - add $bn"
+        ln -sf $i $REPO/$bn
+    done
+
+    for i in $REPO/${to_del}*.rpm; do
+        bn=$(basename $i);
+          
+        [ ! -f $i ] && continue
+        msg "   - rm $bn"
+        rm -f $i
+        nremoved=$(expr $nremoved + 1)
+    done 
+	
+
+    nchanges=$(expr $nadded + $nremoved)
+    [ "$nchanges" = "0" ] && random_change_repo
+
+    #msg "Added $nadded and $nremoved removed"
+}

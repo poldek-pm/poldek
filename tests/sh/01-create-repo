@@ -1,0 +1,161 @@
+#!/bin/sh
+# $Id$
+
+# --mkidx tests 
+
+#  Index creation use cases:
+Case_a="-s /foo                   =>  dir  -> default type"
+Case_b="--st type -s /foo         =>  type -> default type"
+Case_c="--st type /foo --mt type  =>  type -> dtype"
+Case_d="-s /foo --mt dtype        =>  dir  -> dtype"
+Case_e="-s /foo --mt dtype,dtype2 =>  dir  -> dtype"
+Case_f="-n foo                    =>  dir (or original type) -> foo's type"
+Case_g="-s /foo --mkidx=/tmp/bar.gz"
+Case_h="-n foo --mkidx=/tmp/bar.gz"
+
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+
+testCreateDefaultType() 
+{
+    msgn $Case_a
+    $POLDEK_NOCONF -s $REPO --mkidx || fail "mkidx #1 failed"
+    die_if_empty_index "$REPO/packages.ndir.gz"
+
+    $POLDEK_NOCONF -s $REPO --mkidx=$TMPDIR || fail "mkidx #2 failed"
+    die_if_empty_index "$TMPDIR/packages.ndir.gz"
+    if ! diff -u $REPO/packages.ndir.md $TMPDIR/packages.ndir.md; then
+        fail "differ md's!"
+    fi    
+}
+
+#  b) --st type -s /foo         =>  type -> default type
+#  c) --st type /foo --mt type  =>  type -> dtype
+testConvertRepos() 
+{
+    $POLDEK_NOCONF -s $REPO --mkidx || fail "mkidx failed"
+    die_if_empty_index "$REPO/packages.ndir.gz"
+
+    rm -rf $TMPDIR/packages.*
+    cp $REPO/packages.ndir.* $TMPDIR || fail "cp failed"
+
+    
+    # c) --st type /foo --mt type =>  type -> dtype
+    msgn "$Case_c"
+    $POLDEK_NOCONF --st pndir -s $TMPDIR --mkidx --mt=pdir || fail "$Case_c failed"
+    die_if_empty_index "$TMPDIR/packages.dir.gz" 
+
+    # b) --st type -s /foo
+    msgn "$Case_b"
+    rm -f $TMPDIR/packages.ndir*
+    $POLDEK_NOCONF --st pdir -s $TMPDIR --mkidx || fail "$Case_b failed"
+    die_if_empty_index "$TMPDIR/packages.ndir.gz"
+}
+
+#  d) -s /foo --mt dtype        =>  dir  -> dtype
+#  e) -s /foo --mt dtype,dtype2 =>  dir  -> dtype
+testSelectType() 
+{
+    msgn "$Case_d"
+    $POLDEK_NOCONF -s $REPO --mkidx --mt pdir || fail "mkidx failed"
+    die_if_empty_index "$REPO/packages.dir.gz"
+
+    rm -rf $REPO/packages.*
+    $POLDEK_NOCONF -s $REPO --st dir --mkidx --mt pdir || fail "mkidx failed"
+    die_if_empty_index "$REPO/packages.dir.gz"
+
+    setUp
+
+    msgn "$Case_e"
+    $POLDEK_NOCONF -s $REPO --mkidx --mt pdir,pndir || fail "mkidx failed"
+    die_if_empty_index "$REPO/packages.ndir.gz"
+    die_if_empty_index "$REPO/packages.dir.gz"
+}
+
+poldek_n() {
+    $POLDEK_NOCONF -Osource1="repo-pndir,type=pndir $REPO" -Osource2="repo-pdir,type=pdir $REPO" $@
+}
+
+#  f) -n foo                    =>  dir (or original type) -> foo's type
+testCreateByName() 
+{
+    msgn "$Case_f"
+    poldek_n -n repo-pndir --mkidx || fail "mkidx failed"
+    die_if_empty_index "$REPO/packages.ndir.gz"
+
+    poldek_n -n repo-pdir --mkidx || fail "mkidx failed"
+    die_if_empty_index "$REPO/packages.dir.gz"
+
+    setUp
+
+    poldek_n -n repo-pndir -n repo-pdir --mkidx || fail "-n 1 -n 2 --mkidx failed"
+    die_if_empty_index "$REPO/packages.ndir.gz"
+    die_if_empty_index "$REPO/packages.dir.gz"
+}
+
+#  g) -s /foo --mkidx=/tmp/bar.gz 
+testNonDefaultName() 
+{
+    msgn "$Case_g"
+    poldek="$POLDEK_NOCONF"
+
+    $poldek -s $REPO --mkidx=$TMPDIR || fail "mkidx #1 failed"
+    die_if_empty_index "$TMPDIR/packages.ndir.gz"
+
+    $poldek -s $REPO --mkidx=$TMPDIR/packages.foo.ndir.gz || fail "mkidx #2 failed"
+    die_if_empty_index "$TMPDIR/packages.foo.ndir.gz"
+
+    $poldek -s $REPO --mkidx=$TMP --mt pdir || fail "mkidx #4 failed"
+    die_if_empty_index "$TMP/packages.dir.gz"
+    
+    $poldek -s $REPO --mkidx=$TMP/packages.bar.dir.gz --mt pdir || fail "mkidx #5 failed"
+    die_if_empty_index "$TMP/packages.bar.dir.gz"
+    
+    $poldek --st pdir -s $TMPDIR/packages.bar.dir.gz \
+            --mkidx=$TMPDIR/packages.foo2.ndir.gz --mt pndir || fail "mkidx #6 failed"
+
+    die_if_empty_index "$TMP/packages.foo2.ndir.gz"
+
+    $poldek --st pndir -s $TMP/packages.foo2.ndir.gz \
+            --mkidx=$TMP/packages.foo3.ndir.gz --mt pndir || fail "mkidx #7 failed"
+    die_if_empty_index "$TMP/packages.foo3.ndir.gz"
+
+    setUp
+    $poldek -s $REPO --mkidx --mt pndir,pdir || fail "mkidx #8 failed"
+
+
+    poldek="$POLDEK_UP -Ovfile_retries=1"
+    $poldek --st pndir -s $REPOURL --mkidx=$TMPDIR fail "mkidx #9 failed"
+    die_if_empty_index "$TMPDIR/packages.ndir.gz"
+
+    $poldek --st pndir -s $REPOURL --mkidx=$TMPDIR --mt pdir || fail "mkidx #10 failed"
+    die_if_empty_index "$TMPDIR/packages.dir.gz"
+
+    $poldek --st pndir -s $REPOURL --mkidx=$TMPDIR/packages.foo.ndir.gz || fail "mkidx #11 failed"
+    die_if_empty_index "$TMPDIR/packages.foo.ndir.gz"
+
+    $poldek --st pndir -s $REPOURL --mkidx=$TMP/packages.bar.dir.gz --mt pdir || fail "mkidx #12 failed"
+    die_if_empty_index "$TMPDIR/packages.bar.dir.gz"
+}
+
+#  h) -n foo --mkidx=/tmp/bar.gz 
+testCreateFromRemoteRepos() 
+{
+    
+    msgn "$Case_h"
+    poldek_n -n repo-pdir --mkidx=$TMPDIR/packages.foo.ndir.gz --mt pndir || 
+        fail "mkidx #1 failed"
+    die_if_empty_index "$TMPDIR/packages.foo.ndir.gz"
+
+    poldek_n -n repo-pndir --mkidx=$TMPDIR/packages.foo2.ndir.gz --mt pndir || 
+        fail "mkidx #2 failed"
+
+    die_if_empty_index "$TMPDIR/packages.foo2.ndir.gz"
+
+    poldek_n -n repo-pdir --mkidx=$TMPDIR/packages.bar.dir.gz || 
+        fail "mkidx #3 failed"
+    die_if_empty_index "$TMPDIR/packages.bar.dir.gz"
+}
+
+. ./sh/lib/shunit2
