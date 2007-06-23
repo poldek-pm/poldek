@@ -512,6 +512,7 @@ struct source *source_new_pathspec(const char *type, const char *pathspec,
     return src;
 }
 
+/* source = [NAME[,OPTIONS]] PATH */
 struct source *source_new_v0_18(const char *pathspec, const char *pkg_prefix)
 {
     struct source *src = source_new_pathspec(NULL, pathspec, pkg_prefix);
