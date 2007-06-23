@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -147,10 +147,14 @@ static tn_hash *put_avlangs(struct tndb *db, struct pkgdir *pkgdir,
     tn_array *avlangs;
     tn_hash *langs_h = NULL;
     int i;
-    
+
     n_assert(pkgdir->avlangs_h);
+    n_assert(pkgdir->pkgs);
     
     if (n_hash_size(pkgdir->avlangs_h) == 0)
+        return NULL;
+
+    if (n_array_size(pkgdir->pkgs) == 0) /* division by zero (FPE) */
         return NULL;
 
     langs_h = n_hash_new(32, NULL);
@@ -644,8 +648,7 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     tn_array         *exclpath = NULL;
 
     idx = pkgdir->mod_data;
-    if (pkgdir->ts == 0) 
-        pkgdir->ts = time(0);
+    n_assert(pkgdir->ts > 0);   /* must be set by the caller */
 
     if (pathname == NULL) {
         if (pkgdir->flags & PKGDIR_DIFF)
@@ -653,7 +656,9 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
         else
             pathname = pndir_localidxpath(pkgdir);
     }
-
+    
+    DBGF("Saving %s ts=%ld (%s)\n", pathname, pkgdir->ts, strtime_(pkgdir->ts));
+    
     n_assert(pathname);
     mk_paths(&paths, pathname, pkgdir);
     
