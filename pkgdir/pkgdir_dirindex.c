@@ -68,7 +68,7 @@ struct pkgdir_dirindex {
 
 static
 const char **get_package_directories(struct tndb *db, const char *key, int klen,
-                                     char *val, int vsize, int *ndirs);
+                                     char *val, int *vsize, int *ndirs);
 
 
 /* package_no as db key */
@@ -135,7 +135,7 @@ static int store_from_previous(uint32_t package_no, struct pkg *pkg, struct tndb
                                tn_hash *path_index, struct pkgdir_dirindex *dirindex)
 {
     const char **tl, **tl_save;
-    char key[512], val[16 * 1024];
+    char key[512], val[32 * 1024];
     int klen, vlen, found = 0, ndirs;
 
     n_assert(dirindex);
@@ -143,26 +143,30 @@ static int store_from_previous(uint32_t package_no, struct pkg *pkg, struct tndb
     klen = package_key(key, sizeof(key), pkg, PREFIX_PKGKEY_REQDIR);
 
     if (n_hash_exists(dirindex->keymap, &key[2])) { /* got it */
-        DBGF("HIT %s\n", pkg_id(pkg));
+        DBGF("HIT %s %s\n", pkg_id(pkg), key);
         found = 1;
     }
-    
+  
+    /* requires any directories? */
     if ((vlen = tndb_get(dirindex->db, key, klen, val, sizeof(val))) > 0)
         tndb_put(db, key, klen, val, vlen);
 
     key[1] = PREFIX_PKGKEY_OWNDIR;
 
 
-    tl = tl_save = get_package_directories(dirindex->db, key, klen, val, sizeof(val),
-                                           &ndirs);
+    vlen = sizeof(val);
+    tl = tl_save = get_package_directories(dirindex->db, key, klen, val, &vlen, 
+		                           &ndirs);
 
-    if (tl == NULL)
+    if (tl == NULL) /* without owned directories */
         return found;
-    
+
+    n_assert(vlen > 0); 
     tndb_put(db, key, klen, val, vlen);
-        
+
     while (*tl) {
         const char *dir = *tl;
+        dir = dir + 1; /* skip '/' */
         add_to_path_index(path_index, dir, package_no);
         tl++;
     }
@@ -268,7 +272,7 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     
     if ((lock = vf_lock_mkdir(dir)) == NULL)
         return 0;
-
+    
     db = tndb_creat(path, 0, TNDB_SIGN_DIGEST);
 
     if (db == NULL) {
@@ -421,16 +425,17 @@ l_end:
 
 static
 const char **get_package_directories(struct tndb *db, const char *key, int klen,
-                                      char *val, int vsize, int *ndirs)
+                                      char *val, int *vsize, int *ndirs)
 {
     const char **tl;
     int vlen;
     
-    if ((vlen = tndb_get(db, key, klen, val, vsize)) == 0)
+    if ((vlen = tndb_get(db, key, klen, val, *vsize)) == 0)
         return NULL;
 
     n_assert(vlen < vsize);
     val[vlen] = '\0';
+    *vsize = vlen;
 
     *ndirs = 0;
     tl = n_str_tokl_n(val, ":", ndirs);
@@ -496,10 +501,11 @@ static int update_pkdir_pkg(struct pkg *pkg, struct tndb *db,
 {
     const char **tl, **tl_save;
     char val[16 * 1024];
-    int  n = 0, nadded = 0;
+    int  vlen, n = 0, nadded = 0;
 
     n_assert(key[1] == PREFIX_PKGKEY_REQDIR);
-    tl = tl_save = get_package_directories(db, key, klen, val, sizeof(val), &n);
+    vlen = sizeof(val);
+    tl = tl_save = get_package_directories(db, key, klen, val, &vlen, &n);
     if (tl == NULL)
         return 0;
     
@@ -562,7 +568,7 @@ struct pkgdir_dirindex *load_dirindex(const struct pkgdir *pkgdir,
             n_hash_replace(idmap, pkg_no, pkg_link(pkg));
             
         } else if (flags & UPDATE_IFNEEDED) {
-            msgn_i(3, 4, "directory index outdated, trying to update...");
+            msgn_i(3, 4, "%s: missing package", pkg_id(pkg));
             index_outdated = 1;
             
         } else {
@@ -681,12 +687,12 @@ tn_array *pkgdir_dirindex_get_reqdirs(const struct pkgdir_dirindex *dirindex,
 {
     const char  **tl, **tl_save;
     char        key[512], val[1024 * 4];
-    int         klen, n = 0;
+    int         klen, vlen, n = 0;
     tn_array    *dirs;
     
-    
+    vlen = sizeof(val);
     klen = package_key(key, sizeof(key), pkg, PREFIX_PKGKEY_REQDIR);
-    tl = tl_save = get_package_directories(dirindex->db, key, klen, val, sizeof(val), &n);
+    tl = tl_save = get_package_directories(dirindex->db, key, klen, val, &vlen, &n);
     if (tl == NULL)
         return NULL;
         
