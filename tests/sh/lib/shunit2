@@ -708,6 +708,11 @@ _shunit_execSuite()
     # execute the test
     echo "${_su_func}"
     eval ${_su_func}
+    if [ $? -eq 0 ]; then 
+        _shunit_testPassed
+    else
+        _shunit_testFailed
+    fi     
 
     # execute the per-test tear-down function
     tearDown
