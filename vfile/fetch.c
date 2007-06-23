@@ -420,7 +420,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     }
     argv[n++] = NULL;
 
-    if (*vfile_verbose) {
+    if (*vfile_verbose > 1) {
         int i, len = 0;
         char *s, *p;
 

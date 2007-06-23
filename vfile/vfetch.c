@@ -226,6 +226,14 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
     n_assert(destdir);
     
     if ((mod = select_vf_module(url)) == NULL) { /* no internal module found */
+        if (*vfile_verbose >= 0 && (flags & VF_FETCH_NOLABEL) == 0) {
+            if (urlabel)
+                vf_loginfo(_("Retrieving %s::%s...\n"), urlabel,
+                           n_basenam(url));
+            else
+                vf_loginfo(_("Retrieving %s...\n"), PR_URL(url));
+        }
+
         rc = vf_fetch_ext(url, destdir);
         goto l_end;
     }
@@ -277,7 +285,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
         }
     }
 
-    if ((flags & VF_FETCH_NOLABEL) == 0) {
+    if (*vfile_verbose >= 0 && (flags & VF_FETCH_NOLABEL) == 0) {
         if (urlabel)
             vf_loginfo(_("Retrieving %s::%s...\n"), urlabel,
                        n_basenam(req->url));
