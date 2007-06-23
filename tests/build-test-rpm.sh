@@ -10,6 +10,8 @@ provides=
 suggests=
 files=
 
+COMMAND="$0 $@"
+
 usage_and_exit() {
     echo "Usage $0 -n NAME -v [EPOCH:]VERSION-[RELEASE] [-p PROVIDES] [-r REQUIRES] [-s SUGGESTS] [-f file] "
     exit 1
@@ -64,6 +66,8 @@ echo "Version: $version" >> $SPEC
 echo "Release: $release" >> $SPEC
 if [ -n "$epoch" ]; then echo "Epoch: $epoch" >> $SPEC; fi
 echo "Summary: $name" >> $SPEC
+echo "Summary(pl): pl $name" >> $SPEC
+echo "Summary(de): de $name" >> $SPEC
 echo "Group: System" >> $SPEC
 echo "License: foo" >> $SPEC
 echo "BuildArch: noarch" >> $SPEC
@@ -72,7 +76,12 @@ echo "BuildRoot: /tmp/%{name}-%{version}-root-%(id -u -n)" >> $SPEC
 [ -n "$requires" ] && echo "Requires: $requires" >> $SPEC
 [ -n "$suggests" ] && echo "Suggests: $suggests" >> $SPEC
 
-echo -e "%description\n$name" >> $SPEC
+echo -e "%description\nPackage build by $COMMAND\n" >> $SPEC
+
+echo -e "%description -l pl\n(pl)Package build by $COMMAND\n" >> $SPEC
+
+echo -e "%description -l de\n(de)Package build by $COMMAND\n" >> $SPEC
+
 echo -e "%prep\n%pre\n" >> $SPEC
 
 if [ -n "$files" ]; then
