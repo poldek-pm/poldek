@@ -254,7 +254,7 @@ void put_pndir_header(struct tndb *db, struct pkgdir *pkgdir, unsigned flags,
     DBGF("avlangs_h %p %d\n", pkgdir->avlangs_h,
            pkgdir->avlangs_h ? n_hash_size(pkgdir->avlangs_h) : 0);
 
-    if ((flags & PKGDIR_CREAT_NODESC) == 0)
+    if (pkgdir->pkgs && (flags & PKGDIR_CREAT_NODESC) == 0)
         *langstosave_h = put_avlangs(db, pkgdir, nbuf);
     
 
