@@ -22,8 +22,11 @@
 
 #define PNDIR_COMPRLEVEL 3
 
+#define PNDIGEST_BRANDNEW (1 << 0) /* no diffs for index */
 struct pndir_digest {
     struct vfile  *vf;
+    unsigned      flags;
+    char          type[16];     /* sha1 so far */
     char          md[TNIDX_DIGEST_SIZE + 1];
 };
 
@@ -64,15 +67,13 @@ void pndir_digest_free(struct pndir_digest *pdg);
 void pndir_digest_init(struct pndir_digest *pdg);
 void pndir_digest_destroy(struct pndir_digest *pdg);
 
-int pndir_digest_fill(struct pndir_digest *pdg, char *mdbuf, int size);
-
 int pndir_digest_readfd(struct pndir_digest *pdg, int fd, const char *path);
 //int pndir_digest_verify(struct pndir_digest *pdg, struct vfile *vf);
 
 int pndir_digest_calc(struct pndir_digest *pdg, tn_array *keys);
 int pndir_digest_calc_pkgs(struct pndir_digest *pdg, tn_array *pkgs);
 int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
-                      const char *srcnam);
+                      const struct pkgdir *pkgdir);
 
 extern const char *pndir_packages_incdir;
 extern const char *pndir_difftoc_suffix;

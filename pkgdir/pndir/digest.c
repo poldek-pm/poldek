@@ -42,8 +42,8 @@
 #include "log.h"
 #include "pndir.h"
 
-
 const char *pndir_digest_ext = ".md";
+static const char *option_brandnew = "brand-new";
 
 static int pndir_digest_read(struct pndir_digest *pdg, struct vfile *vfmd);
 
@@ -79,8 +79,29 @@ struct pndir_digest *pndir_digest_new(const char *path, int vfmode,
     return pdg;
 }
 
+void pndir_digest_init(struct pndir_digest *pdg) 
+{
+    memset(pdg, 0, sizeof(*pdg));
+    pdg->vf = NULL;
+}
 
-int pndir_digest_fill(struct pndir_digest *pdg, char *mdbuf, int size) 
+    
+void pndir_digest_destroy(struct pndir_digest *pdg) 
+{
+    if (pdg->vf) {
+        vfile_close(pdg->vf);
+        pdg->vf = NULL;
+    }
+}
+
+void pndir_digest_free(struct pndir_digest *pdg) 
+{
+    pndir_digest_destroy(pdg);
+    memset(pdg, 0, sizeof(*pdg));
+    free(pdg);
+}
+
+static int fill_digest(struct pndir_digest *pdg, char *mdbuf, int size)
 {
     int req_size;
 
@@ -97,51 +118,36 @@ int pndir_digest_fill(struct pndir_digest *pdg, char *mdbuf, int size)
     return 1;
 }
 
-void pndir_digest_init(struct pndir_digest *pdg) 
-{
-    memset(pdg, 0, sizeof(*pdg));
-    pdg->vf = NULL;
-}
-
-    
-void pndir_digest_destroy(struct pndir_digest *pdg) 
-{
-    if (pdg->vf) {
-        vfile_close(pdg->vf);
-        pdg->vf = NULL;
-    }
-}
-
-
-
-void pndir_digest_free(struct pndir_digest *pdg) 
-{
-    pndir_digest_destroy(pdg);
-    memset(pdg, 0, sizeof(*pdg));
-    free(pdg);
-}
-
 
 int pndir_digest_readfd(struct pndir_digest *pdg, int fd, const char *path) 
 {
-    char buf[TNIDX_DIGEST_SIZE];
-    int md_size, req_size;
+    char buf[2 * TNIDX_DIGEST_SIZE]; /* +40bytes for params  */
+    int nread, req_size;
     
     if (lseek(fd, 0L, SEEK_SET) != 0) {
         logn(LOGERR, "%s: lseek(0): %m", path);
         return 0;
     }
-    
-    md_size = read(fd, buf, sizeof(buf));
 
+    memset(buf, 0, sizeof(buf));
+    nread = read(fd, buf, sizeof(buf));
     req_size = TNIDX_DIGEST_SIZE;
     
-    if (md_size < req_size) {
-        logn(LOGERR, _("%s: broken digest file (%d)"), path, md_size);
+    if (nread < req_size) {
+        logn(LOGERR, _("%s: broken digest file (%d)"), path, nread);
         return 0;
     }
+
+    if (!fill_digest(pdg, buf, nread))
+        return 0;
+
+    buf[nread] = '\0';
+    DBGF("read %s\n", buf);
     
-    return pndir_digest_fill(pdg, buf, md_size);
+    if (strstr(&buf[TNIDX_DIGEST_SIZE], option_brandnew))
+        pdg->flags |= PNDIGEST_BRANDNEW;
+    
+    return 1;
 }
 
 
@@ -184,12 +190,16 @@ int pndir_mkdigest_path(char *path, int size, const char *pathname,
 
 
 int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
-                      const char *srcnam) 
+                      const struct pkgdir *pkgdir)
 {
     char            path[PATH_MAX];
     struct vfile    *vf;
-    int             n;
-    
+    int             n, brandnew = 0;
+
+    /* no patch was generated based on this pkgdir nor patch
+       applied to (client side) */
+    if ((pkgdir->flags & (PKGDIR_DIFFED | PKGDIR_PATCHED)) == 0)
+        brandnew = 1;
 
     n = pndir_mkdigest_path(path, sizeof(path), pathname, pndir_digest_ext);
     if (n <= 4) {
@@ -197,10 +207,14 @@ int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
         return 0;
     }
     
-    if ((vf = vfile_open_ul(path, VFT_STDIO, VFM_RW, srcnam)) == NULL)
+    if ((vf = vfile_open_ul(path, VFT_STDIO, VFM_RW, pkgdir->name)) == NULL)
         return 0;
     
+    DBGF("brandnew %s %d\n", pkgdir_idstr(pkgdir), brandnew);
+    
     fprintf(vf->vf_stream, "%s", pdg->md);
+    if (brandnew)
+       fprintf(vf->vf_stream, " %s", option_brandnew);
     vfile_close(vf);
     return 1;
 }

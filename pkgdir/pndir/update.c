@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -58,65 +58,64 @@ static char *eat_zlib_ext(char *path)
 }
 
 
+/*
+  fetch digest and compare it with local one
+  RET: 0 - outdated, 1 - up to date, -1 on error
+*/
 static
 int is_uptodate(const char *path, const struct pndir_digest *dg_local,
-                struct pndir_digest *dg_remote, const char *pdir_name)
+                struct pndir_digest *dg, const char *pdir_name)
 {
     char                   mdpath[PATH_MAX], mdtmpath[PATH_MAX];
-    struct pndir_digest    remote_dg;
-    int                    fd, n, rc = 0;
+    struct pndir_digest    dg_remote;
+    int                    fd = 0, n, rc = 0;
     const char             *ext = pndir_digest_ext;
-
     
-    if (dg_remote)
-        pndir_digest_init(dg_remote);
+    if (dg)              /* caller wants digest */
+        pndir_digest_init(dg);
     
-    pndir_digest_init(&remote_dg);
+    pndir_digest_init(&dg_remote);
     
     if (vf_url_type(path) & VFURL_LOCAL)
         return 1;
-    
-    if (!(n = vf_mksubdir(mdtmpath, sizeof(mdtmpath), "tmpmd"))) {
-        rc = -1;
-        goto l_end;
-    }
 
+    rc = -1;
+    if (!(n = vf_mksubdir(mdtmpath, sizeof(mdtmpath), "tmpmd")))
+        goto l_end;
+    
     pndir_mkdigest_path(mdpath, sizeof(mdpath), path, ext);
     
     snprintf(&mdtmpath[n], sizeof(mdtmpath) - n, "/%s", n_basenam(mdpath));
     unlink(mdtmpath);
     mdtmpath[n] = '\0';
 
-    if (!vf_fetch(mdpath, mdtmpath, 0, pdir_name)) {
-        rc = -1;
+    if (!vf_fetch(mdpath, mdtmpath, 0, pdir_name))
         goto l_end;
-    }
     
     mdtmpath[n] = '/';
-    
-    if ((fd = open(mdtmpath, O_RDONLY)) < 0 ||
-        !pndir_digest_readfd(&remote_dg, fd, mdtmpath)) {
-        
-        close(fd);
-        rc = -1;
+    if ((fd = open(mdtmpath, O_RDONLY)) < 0)
         goto l_end;
-    }
-    close(fd);
+        
+    if (!pndir_digest_readfd(&dg_remote, fd, mdtmpath))
+        goto l_end;
 
-    rc = (memcmp(dg_local->md, &remote_dg.md, sizeof(remote_dg.md)) == 0);
+    close(fd);
+    fd = 0;
     
-    if (!rc && dg_remote)
-        memcpy(dg_remote, &remote_dg, sizeof(remote_dg));
+    rc = (memcmp(dg_local->md, &dg_remote.md, sizeof(dg_remote.md)) == 0);
+    
+    if (rc == 0 && dg)
+        memcpy(dg, &dg_remote, sizeof(dg_remote));
     
  l_end:
-    pndir_digest_destroy(&remote_dg);
+    pndir_digest_destroy(&dg_remote);
+    if (fd > 0)
+        close(fd);
+    
     return rc;
 }
 
-
-
-static
-int update_whole_idx(const struct source *src) 
+static int update_whole_idx(const struct source *src) 
 {
     struct pkgdir *pkgdir;
     int rc = 0;
@@ -255,7 +254,11 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
             *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
             return 0;
             
-        case 0:
+        case 0:                 /* diff updateable? */
+            if (dg_remote.flags & PNDIGEST_BRANDNEW) { /* nope */
+                *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
+                return 0;
+            }
             break;
 
         default:

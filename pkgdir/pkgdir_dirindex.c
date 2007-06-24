@@ -433,7 +433,7 @@ const char **get_package_directories(struct tndb *db, const char *key, int klen,
     if ((vlen = tndb_get(db, key, klen, val, *vsize)) == 0)
         return NULL;
 
-    n_assert(vlen < vsize);
+    n_assert(vlen < *vsize);
     val[vlen] = '\0';
     *vsize = vlen;
 
@@ -647,7 +647,7 @@ struct pkgdir_dirindex *pkgdir_dirindex_open(struct pkgdir *pkgdir)
     dirindex_path(path, sizeof(path), pkgdir);
     
     mtime = poldek_util_mtime(path);
-    n_assert(pkgdir->ts);
+    n_assert(pkgdir->ts > 0);
     
     if (mtime == 0)             /* not exists */
         if (dirindex_create(pkgdir, path, NULL)) {

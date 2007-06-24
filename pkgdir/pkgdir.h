@@ -17,6 +17,7 @@
 #define PKGDIR_PATCHED            (1 << 4) /* patched  */
 #define PKGDIR_UNIQED             (1 << 5) /* passed through pkgdir_uniq() */
 #define PKGDIR_CHANGED            (1 << 6) /* added/removed packages */
+#define PKGDIR_DIFFED             (1 << 7) /*  */
 
 #define PKGDIR_VRFY_GPG            (1 << 10) /* verify package GPG signatures */
 #define PKGDIR_VRFY_PGP            (1 << 11) /* verify package PGP signatures */

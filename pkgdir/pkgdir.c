@@ -322,7 +322,7 @@ int pkgdir_update(struct pkgdir *pkgdir)
             
     } else if (!rc && uprc == PKGDIR_UPRC_ERR_DESYNCHRONIZED) {
         if (pkgdir->src && (pkgdir->src->flags & PKGSOURCE_AUTOUPA)) {
-            msgn(0, _("%s: update failed, trying to update whole index..."),
+            msgn(0, _("%s: desynchronized index, trying to update whole index..."),
                  pkgdir_idstr(pkgdir));
             rc = pkgdir_update_a(pkgdir->src);
         } else {
@@ -940,8 +940,8 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
 
     n_assert(nerr == 0);
 
-    /* XXX pdir must be uniqued by NEVR (is not MULTILIB-able), if not, it will break
-       backward compat with 0.18.x series. */
+    /* XXX pdir must be uniqued by NEVR (is not MULTILIB-able), it will break
+       backward compat with 0.18.x series otherwise */
     if (n_str_eq(type, "pdir"))
         pdir_pkgdir_uniq(pkgdir);
     
@@ -964,11 +964,14 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
         }
 
         create = 1;
-        if ((diff = pkgdir_diff(orig, pkgdir)))
+        if ((diff = pkgdir_diff(orig, pkgdir))) {
             diff->ts = pkgdir->ts;
-        else if ((flags & PKGDIR_CREAT_IFORIGCHANGED))
+            pkgdir->flags |= PKGDIR_DIFFED;
+            
+        } else if ((flags & PKGDIR_CREAT_IFORIGCHANGED)) {
             create = 0;         /* no difference -> do not create */
-
+        }
+        
         
         if (create) {           /* save index */
             if (!do_create(pkgdir, type, path, flags))
