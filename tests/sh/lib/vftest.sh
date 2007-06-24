@@ -26,6 +26,15 @@ for f in $POLDEK_TESTING_DENIED_FILES; do
     fi
 done
 
+POLDEK_TESTING_DENIED_DEST=${POLDEK_TESTING_DENIED_DEST:-""}
+for f in $POLDEK_TESTING_DENIED_DEST; do 
+    if echo $dest | grep -qE "$f"; then
+       echo "DENIED DEST $f reqested"
+       exit 1 
+    fi
+done
+
+
 #echo $src $dest
 # Symlink packages, copy other files
 if echo $src | grep -qE '.rpm$'; then
