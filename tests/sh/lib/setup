@@ -13,6 +13,10 @@ QUIET=${QUIET:-"-q"}
 POLDEK_TESTING=1 # prevent diff.toc vacuuming
 export POLDEK_TESTING
 
+# vtest.sh denies them to fetch
+POLDEK_TESTING_DENIED_FILES=
+export POLDEK_TESTING_DENIED_FILES
+
 MAXLOOP=60
 VERBOSE=""
 

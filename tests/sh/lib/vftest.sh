@@ -1,8 +1,8 @@
 #! /bin/sh
 # $Id$
 
-# support smb://[login[:passwd]@]host/service/[path/]file
-# requires: basename, grep, sed, smbclient
+# test://path schema
+# requires: sed, grep
 
 if [ "$#" != "2" ]; then
     echo "usage: `basename $0` test://path/FILE DESTFILE"
@@ -17,6 +17,14 @@ if [ ! -f $src ]; then
     echo "$src: no such file"
     exit 1
 fi
+
+POLDEK_TESTING_DENIED_FILES=${POLDEK_TESTING_DENIED_FILES:-""}
+for f in $POLDEK_TESTING_DENIED_FILES; do 
+    if echo $src | grep -qE "$f"; then
+       echo "DENIED FILE $f reqested"
+       exit 1 
+    fi
+done
 
 # Symlink packages, copy other files
 if echo $src | grep -qE '.rpm$'; then

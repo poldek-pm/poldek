@@ -1,6 +1,7 @@
 #!/bin/sh
 
 tearDown() {
+    POLDEK_TESTING_DENIED_FILES=""
     [ -n "$REPO" ] && rm -rf $REPO/packages.*
     [ -n "$TMPDIR" ] && rm -rf $TMPDIR/*.*
 }
