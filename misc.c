@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -57,8 +57,6 @@
 #include "pkg.h"
 #include "poldek_term.h"
 #include "pkgmisc.h"
-//static
-//int valid_dir(const char *envname, const char *dir);
 
 int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size)
 {
@@ -75,31 +73,7 @@ int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size)
     return nn;
 }
 
-
-int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size, int digest_type)
-{
-    unsigned char md[128];
-    int  md_size = sizeof(md);
-
-    
-    if (mdigest(stream, md, &md_size, digest_type)) {
-        int i, n = 0, nn = 0;
-        
-        for (i=0; i < md_size; i++) {
-            n = n_snprintf(mdhex + nn, *mdhex_size - nn, "%02x", md[i]);
-            nn += n;
-        }
-        *mdhex_size = nn;
-        
-    } else {
-        *mdhex = '\0';
-        *mdhex_size = 0;
-    }
-
-    return *mdhex_size;
-}
-
-
+static
 int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type)
 {
     unsigned char buf[8*1024];
@@ -132,39 +106,30 @@ int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type)
     return *md_size;
 }
 
-
-char *setup_cachedir(const char *path) 
+int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size, int digest_type)
 {
-    struct passwd *pw;
-    char *dir, *default_dn = ".poldek-cache";
+    unsigned char md[128];
+    int  md_size = sizeof(md);
 
-    if (path) {
-        if (vf_valid_path(path) && poldek_util_is_rwxdir(path)) 
-            return n_strdup(path);
-        else 
-            logn(LOGWARN, _("%s: invalid cachedir path, "
-                            "fallback to default"), path);
-    }
     
-    if ((dir = getenv("TMPDIR")) && vf_valid_path(dir))
-        return n_strdup(dir);
-    
-    if ((pw = getpwuid(getuid())) == NULL)
-        return n_strdup(tmpdir());
-
-    if (!poldek_util_is_rwxdir(pw->pw_dir))
-        return n_strdup(tmpdir());
-    
-    if (vf_valid_path(pw->pw_dir) && mk_dir(pw->pw_dir, default_dn)) {
-        char path[PATH_MAX];
-        snprintf(path, sizeof(path), "%s/%s", pw->pw_dir, default_dn);
-        return n_strdup(path);
+    if (mdigest(stream, md, &md_size, digest_type)) {
+        int i, n = 0, nn = 0;
+        
+        for (i=0; i < md_size; i++) {
+            n = n_snprintf(mdhex + nn, *mdhex_size - nn, "%02x", md[i]);
+            nn += n;
+        }
+        *mdhex_size = nn;
+        
+    } else {
+        *mdhex = '\0';
+        *mdhex_size = 0;
     }
 
-    return n_strdup(tmpdir());
+    return *mdhex_size;
 }
 
-const char *tmpdir(void) 
+static const char *tmpdir(void) 
 {
     struct stat st;
     static char *tmpdir = NULL;
@@ -213,45 +178,37 @@ const char *tmpdir(void)
     return tmpdir;
 }
 
-#if 0                           /* not used */
-static
-int valid_dir(const char *envname, const char *dir) 
+
+char *setup_cachedir(const char *path) 
 {
-    struct stat st;
-    const char *p;
-    int rc = 1;
+    struct passwd *pw;
+    char *dir, *default_dn = ".poldek-cache";
 
-    
-    p = dir + 1;
-    while (*p) {
-        if (!isalnum(*p) && *p != '/' && *p != '-') {
-            logn(LOGWARN,
-                 _("%s (%s) contains non alphanumeric characters"),
-                 envname, dir);
-            rc = 0;
-            break;
-        }
-        p++;
-    }
-    
-    if (rc) {
-        rc = 0;
-        if (stat(dir, &st) != 0)
-            logn(LOGERR, _("%s (%s): %m, using /tmp"), envname, dir);
-            
-        else if (!S_ISDIR(st.st_mode))
-            logn(LOGERR, _("%s (%s): not a directory"), envname, dir);
-            
-        else if ((st.st_mode & S_IRWXU) != S_IRWXU)
-            logn(LOGERR, _("%s (%s): permission denied"), envname, dir);
-            
+    if (path) {
+        if (vf_valid_path(path) && poldek_util_is_rwxdir(path)) 
+            return n_strdup(path);
         else 
-            rc = 1;
+            logn(LOGWARN, _("%s: invalid cachedir path, "
+                            "fallback to default"), path);
+    }
+    
+    if ((dir = getenv("TMPDIR")) && vf_valid_path(dir))
+        return n_strdup(dir);
+    
+    if ((pw = getpwuid(getuid())) == NULL)
+        return n_strdup(tmpdir());
+
+    if (!poldek_util_is_rwxdir(pw->pw_dir))
+        return n_strdup(tmpdir());
+    
+    if (vf_valid_path(pw->pw_dir) && mk_dir(pw->pw_dir, default_dn)) {
+        char path[PATH_MAX];
+        snprintf(path, sizeof(path), "%s/%s", pw->pw_dir, default_dn);
+        return n_strdup(path);
     }
 
-    return rc;
+    return n_strdup(tmpdir());
 }
-#endif
 
 char *trimslash(char *path) 
 {
@@ -320,89 +277,6 @@ int is_dir(const char *path)
     return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
 }
 
-
-void die(void) 
-{
-    printf("Something wrong, something not quite right, die\n");
-    abort();
-}
-
-void process_cmd_output(struct p_open_st *st, const char *prefix) 
-{
-    int c, endl = 1, cnt = 0;
-    
-    if (prefix == NULL)
-        prefix = st->cmd;
-
-    setvbuf(st->stream, NULL, _IONBF, 0);
-    while ((c = fgetc(st->stream)) != EOF) {
-        
-        if (endl) {
-            msg(1, "_%s: ", prefix);
-            endl = 0;
-        }
-
-        msg(1, "_%c", c);
-        if (c == '\n' && cnt > 0)
-            endl = 1;
-        
-        cnt++;
-    }
-}
-
-int lockfile(const char *lockfile) 
-{
-    struct flock fl;
-    int    fd;
-    
-    
-    if ((fd = open(lockfile, O_RDWR | O_CREAT, 0644)) < 0) {
-        logn(LOGERR, "open %s: %m", lockfile);
-        return -1;
-    }
-
-    fl.l_type = F_WRLCK;
-    fl.l_whence = SEEK_SET;
-    fl.l_start = 0;
-    fl.l_len = 0;
-    
-    if (fcntl(fd, F_SETLK, &fl) == -1) {
-        if (errno == EAGAIN || errno == EACCES)
-            fd = 0;
-        else
-            logn(LOGERR, "fcntl %s: %m", lockfile);
-        
-    } else {
-        char buf[64];
-        
-        ftruncate(fd, 0);
-        snprintf(buf, sizeof(buf), "%d", getpid());
-        write(fd, buf, strlen(buf));
-    }
-    
-    return fd;
-}
-
-pid_t readlockfile(const char *lockfile) 
-{
-    char buf[256];
-    int fd, nread;
-    pid_t pid;
-    
-    fd = open(lockfile, O_RDONLY, 0444);
-    if(fd < 0) 
-        return -1;
-    
-    nread = read(fd, buf, sizeof(buf));
-    close(fd);
-
-    if (sscanf(buf, "%d", &pid) == 1)
-        return pid;
-    
-    return -1;
-}
-
-
 int mk_dir(const char *path, const char *dn) 
 {
     struct stat st;
@@ -460,32 +334,6 @@ int mk_dir_parents(const char *path, const char *dn)
     n_str_tokl_free(tl_save);
     return nerr == 0;
 }
-
-
-int mklock(const char *dir) 
-{
-    char path[PATH_MAX];
-    int rc;
-    
-    snprintf(path, sizeof(path), "%s/poldek..lck", dir);
-
-    rc = lockfile(path);
-    
-    if (rc == 0) {
-        char buf[64];
-        pid_t pid = readlockfile(path);
-        
-        if (pid > 0) 
-            snprintf(buf, sizeof(buf), " (%d)", pid);
-        else
-            *buf = '\0';
-            
-        logn(LOGERR, _("There seems another poldek%s uses %s"), buf, dir);
-    }
-
-    return rc > 0; 
-}
-
 
 const char *poldek_util_ngettext_n_packages_fmt(int n) 
 {

@@ -88,7 +88,8 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
             break;
             
         default:
-            die();
+            n_assert(0);
+            break;
     }
     
     
@@ -121,7 +122,7 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
             if (recno == 0)
                 return 0;
             if (recno < 0)
-                die();
+                n_die("%d: invalid recno", recno);
             break;
             
         case PMTAG_NAME:
@@ -145,16 +146,15 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
             break;
             
         case PMTAG_OBSL:
-            die();
+            n_die("missing feature"); /* don't remember in fact */
             rc = rpmdbFindByConflicts(db, arg, &it->matches);
             break;
             
         default:
-            die();
+            n_assert(0);
     }
-    
     if (rc < 0)
-        die();
+        n_die("rpm database error");
     
     else if (rc != 0) {
         n = 0;
@@ -226,7 +226,7 @@ const struct pm_dbrec *rpmdb_it_get(struct rpmdb_it *it)
     }
 
     if (it->i > it->matches.count)
-        die();
+        n_die("rpm database error?");
 
     if (it->dbrec.hdr != NULL)
         headerFree(it->dbrec.hdr);
@@ -236,7 +236,8 @@ const struct pm_dbrec *rpmdb_it_get(struct rpmdb_it *it)
     it->i++;
     
     if (it->dbrec.hdr == NULL)
-        die();
+        n_die("rpm database error?");
+    
 #endif /* HAVE_RPM_4_0 */
 
     return &it->dbrec;

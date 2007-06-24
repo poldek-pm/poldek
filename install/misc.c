@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -57,9 +57,6 @@ int in_is_pkg_installed(struct install_ctx *ictx, struct pkg *pkg, int *cmprc)
     return n;
 }
 
-
-
-
 /* RET: 0 - not installable,  1 - installable,  -1 - something wrong */
 int in_is_pkg_installable(struct install_ctx *ictx, struct pkg *pkg,
                           int is_hand_marked)
@@ -71,9 +68,6 @@ int in_is_pkg_installable(struct install_ctx *ictx, struct pkg *pkg,
     force = ts->getop(ts, POLDEK_OP_FORCE);
     npkgs = in_is_pkg_installed(ictx, pkg, &cmprc);
     
-    if (npkgs < 0) 
-        die();
-
     n_assert(npkgs >= 0);
 
     installable = 1;

@@ -22,8 +22,7 @@ int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size);
 #define DIGEST_SIZE_MD5  32
 #define DIGEST_SIZE_SHA1 40
 
-int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size, int digest_type);
-int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type); 
+int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size, int type);
 
 /*
   Returns $TMPDIR or "/tmp" if $TMPDIR isn't set.
@@ -31,10 +30,6 @@ int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type);
 
 */
 char *setup_cachedir(const char *path);
-const char *tmpdir(void);
-
-
-void die(void);
 
 char *trimslash(char *path);
 char *next_token(char **str, char delim, int *toklen);
@@ -44,13 +39,6 @@ int mk_dir(const char *path, const char *dn);
 int mk_dir_parents(const char *path, const char *dn);
 
 const char *abs_path(char *buf, int size, const char *path);
-
-void process_cmd_output(struct p_open_st *st, const char *prefix);
-int lockfile(const char *lockfile);
-pid_t readlockfile(const char *lockfile);
-
-int mklock(const char *dir);
-
 
 struct pkgmark_set;
 void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,

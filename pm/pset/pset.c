@@ -387,7 +387,7 @@ int psetdb_it_init(struct pm_psetdb *db, struct psetdb_it *it,
             break;
             
         default:
-            die();
+            n_assert(0);
     }
     
     it->i = 0;
