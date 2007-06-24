@@ -414,7 +414,6 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
             default:
                 vf_logerr("vf_fetch*: internal error\n");
                 n_assert(0);
-                n_die(0);
                 return 0;
         }
     }

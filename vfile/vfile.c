@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -48,12 +48,21 @@ int                 *vfile_verbose = &verbose;
 static const char   default_anon_passwd[] = "poldek@znienacka.net";
 
 struct vfile_configuration vfile_conf = {
-    "/tmp", VFILE_CONF_STUBBORN_RETR, 1000 /* nretries */,
+    NULL, VFILE_CONF_STUBBORN_RETR, 1000 /* nretries */,
     NULL, NULL, NULL,
     &verbose, 
     (char*)default_anon_passwd,
     NULL, NULL
 };
+
+static inline const char *vfile_cachedir(void)
+{
+    if (vfile_conf._cachedir == NULL)
+        n_die("vfile: cachedir must be configured");
+    n_assert(vfile_conf._cachedir);
+    n_assert(*vfile_conf._cachedir);
+    return vfile_conf._cachedir;
+}
 
 static void set_anonpasswd(void)
 {
@@ -106,10 +115,10 @@ int vfile_configure(int param, ...)
         case VFILE_CONF_CACHEDIR:
             vs = va_arg(ap, char*);
             if (vs) {
-                vfile_conf.cachedir = n_strdup(vs);
-                v = strlen(vfile_conf.cachedir);
-                if (vfile_conf.cachedir[v - 1] == '/')
-                    vfile_conf.cachedir[v - 1] = '\0';
+                vfile_conf._cachedir = n_strdup(vs);
+                v = strlen(vfile_conf._cachedir);
+                if (vfile_conf._cachedir[v - 1] == '/')
+                    vfile_conf._cachedir[v - 1] = '\0';
             }
             break;
             
@@ -309,6 +318,7 @@ static int file_ok(const char *path, int vfmode)
 static const char *vfdecompr(const char *path, char *dest, int size) 
 {
     char *destdir, destdir_buf[PATH_MAX], uncmpr_path[PATH_MAX];
+    const char *cachedir = NULL;
     struct vflock *vflock;
     int  len, rc;
     
@@ -318,11 +328,12 @@ static const char *vfdecompr(const char *path, char *dest, int size)
     if (!vf_decompressable(path, uncmpr_path, sizeof(uncmpr_path)))
         return path;
 
-    len = strlen(vfile_conf.cachedir);
-
-
+    cachedir = vfile_cachedir();
+    
+    len = strlen(cachedir);
+    
        /* file under cachedir */
-    if (strncmp(uncmpr_path, vfile_conf.cachedir, len) == 0) { 
+    if (strncmp(uncmpr_path, cachedir, len) == 0) { 
         char *bn;
         n_snprintf(destdir_buf, sizeof(destdir_buf), "%s", uncmpr_path);
         n_basedirnam(destdir_buf, &destdir, &bn);
@@ -399,7 +410,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
         return 0;
     }
     
-    len = n_snprintf(buf, sizeof(buf), "%s/", vfile_conf.cachedir);
+    len = n_snprintf(buf, sizeof(buf), "%s/", vfile_cachedir());
     vf_url_as_path(&buf[len], sizeof(buf) - len, path);
     
     if ((vfmode & VFM_CACHE) && file_ok(buf, vfmode)) {
@@ -586,7 +597,7 @@ int vf_mksubdir(char *path, int size, const char *dirpath)
 {
     int n;
 
-    n = n_snprintf(path, size, "%s/%s", vfile_conf.cachedir, dirpath);
+    n = n_snprintf(path, size, "%s/%s", vfile_cachedir(), dirpath);
     vf_mkdir(path);
     return n;
 }
@@ -595,7 +606,7 @@ int vf_localpath(char *path, size_t size, const char *url)
 {
     int n;
     
-    n = n_snprintf(path, size, "%s/", vfile_conf.cachedir);
+    n = n_snprintf(path, size, "%s/", vfile_cachedir());
     return n + vf_url_as_path(&path[n], size - n, url);
 }
 
@@ -603,21 +614,22 @@ int vf_localdirpath(char *path, size_t size, const char *url)
 {
     int n;
     
-    n = n_snprintf(path, size, "%s/", vfile_conf.cachedir);
+    n = n_snprintf(path, size, "%s/", vfile_cachedir());
     return n + vf_url_as_dirpath(&path[n], size - n, url);
 }
 
 
 int vf_cachepath(char *path, size_t size, const char *ofdirpath)
 {
+    const char *cachedir = vfile_cachedir();
     int n, len;
     
-    len = strlen(vfile_conf.cachedir);
+    len = strlen(cachedir);
 
     n_assert(strlen(ofdirpath) > 0);
     n_assert(ofdirpath[strlen(ofdirpath) - 1] != '/'); /* not a dir */
                            
-    if (strncmp(ofdirpath, vfile_conf.cachedir, len) == 0) { 
+    if (strncmp(ofdirpath, cachedir, len) == 0) { 
         n = n_snprintf(path, size, "%s", ofdirpath);
         
     } else {
@@ -629,7 +641,7 @@ int vf_cachepath(char *path, size_t size, const char *ofdirpath)
 
 int vf_localunlink(const char *path) 
 {
-    if (strncmp(path, vfile_conf.cachedir, strlen(vfile_conf.cachedir)) == 0 &&
+    if (strncmp(path, vfile_cachedir(), strlen(vfile_cachedir())) == 0 &&
         vf_valid_path(path))
         return unlink(path) == 0;
     

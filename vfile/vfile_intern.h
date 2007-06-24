@@ -37,7 +37,7 @@ void vf_vlog(int pri, const char *fmt, va_list ap);
 
 extern int *vfile_verbose;
 struct vfile_configuration {
-    char       *cachedir;
+    char       *_cachedir;
     unsigned   flags;
     int        nretries;       /* how many retries in stubborn mode */
     tn_hash    *default_clients_ht;
@@ -50,6 +50,7 @@ struct vfile_configuration {
 };
 
 extern struct vfile_configuration vfile_conf;
+
 void vfile_set_errno(const char *ctxname, int vf_errno);
 int vfile_sigint_reached(int reset);
 
