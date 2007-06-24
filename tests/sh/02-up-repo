@@ -67,7 +67,10 @@ testUpdate()
     msg "\n## up"
 
     POLDEK_TESTING_DENIED_FILES="packages.ndir.diff.toc"
-    $POLDEK_UP -Oautoupa=yes -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
+    $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up >/dev/null
+    [ $? -eq 0 ] && fail "up ok" # should fail
+
+    $POLDEK_UP -Oautoupa=y -Osource="test,type=pndir $REPOURL" --up || fail "up(a) failed"
     POLDEK_TESTING_DENIED_FILES=""
 
     # upa
@@ -80,7 +83,9 @@ testUpdate()
     POLDEK_TESTING_DENIED_FILES="packages.ndir.gz"
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
 
-    POLDEK_TESTING_DENIED_FILES=""
+    POLDEK_TESTING_DENIED_FILES=".gz" # should be up to date
+    $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
+    $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --upa || fail "up failed"
 }
 
 . ./sh/lib/shunit2

@@ -1,0 +1,62 @@
+#!/bin/sh
+# $Id$
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+
+mkidx() {
+   $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+}
+
+up() {
+   poldek_up -Oautoupa=n --up || fail "up failed"
+}
+
+testCleanLocalCache() 
+{
+    POLDEK_TESTING_DENIED_FILES="packages.ndir.diff.toc"
+
+    msgn "Creating repo"
+    indexfile="$REPO/packages.ndir.gz"
+    mkidx
+    die_if_empty_index $indexfile
+    
+    msgn "up"
+    up
+
+    msgn "Fetching package"
+    package=$(poldek_up --skip-installed -q --cmd 'ls -q | !head -1')
+    [ -n "$package" ] || fail "no available packages??"
+
+    msg "  - $package"
+    poldek_up --skip-installed --cmd "get -d $CACHEDIR $package"
+    downloaded=$(find $CACHEDIR -name $package\*.rpm | wc -l)
+    assertEquals "$package not downloaded?" "1" $downloaded
+
+    # no simply way to fetch packages to local repo cache1
+    index=$(find $CACHEDIR -name packages.ndir.gz)
+    mv -f $CACHEDIR/$package*.rpm $(dirname $index)
+    #find $CACHEDIR
+
+    msgn "clean"
+    poldek_up --clean 
+    files=$(find $CACHEDIR -type f | grep -vE '\.rpm$')
+    n=$(find $CACHEDIR -type f | grep -vE '\.rpm$' | wc -l)
+    assertEquals "cachedir still contains non rpm files ($files)" "0" "$n"
+    
+    n=$(find $CACHEDIR | grep "$package" | wc -l) # no -f its 
+    assertEquals "cachedir: missing $package" "1" "$n"
+    
+    msgn "up"
+    up
+
+    msgn "cleana aka clean-whole"
+    poldek_up --cleana
+    n=$(find $CACHEDIR -type f | wc -l)
+    assertEquals "cachedir still contains files" "0" "$n"
+    
+    n=$(find $CACHEDIR -type l | wc -l)
+    assertEquals "cachedir still contains files" "0" "$n"
+}
+
+. ./sh/lib/shunit2

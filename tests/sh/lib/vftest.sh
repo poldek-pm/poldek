@@ -26,6 +26,7 @@ for f in $POLDEK_TESTING_DENIED_FILES; do
     fi
 done
 
+#echo $src $dest
 # Symlink packages, copy other files
 if echo $src | grep -qE '.rpm$'; then
     ln -sf $src $dest
