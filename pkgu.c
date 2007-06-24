@@ -35,8 +35,8 @@
 #define NA_OWNED             (1 << 0)
 #define RECODE_SUMMMARY      (1 << 1) /* needs to be recoded */
 #define RECODE_DESCRIPTION   (1 << 2)
-#define RECODED_SUMMMARY     (1 << 3) /* already recoded     */
-#define RECODED_DESCRIPTION  (1 << 4)
+#define SUMMARY_RECODED     (1 << 3) /* already recoded     */
+#define DESCRITPION_RECODED  (1 << 4)
 
 struct pkguinf {
     char              *license;
@@ -125,13 +125,13 @@ void pkguinf_free(struct pkguinf *pkgu)
     }
     
     if (pkgu->_summary) {
-        if (pkgu->_flags & RECODED_SUMMMARY)
+        if (pkgu->_flags & SUMMARY_RECODED)
             free(pkgu->_summary);
         pkgu->_summary = NULL;
     }
 
     if (pkgu->_description) {
-        if (pkgu->_flags & RECODED_DESCRIPTION)
+        if (pkgu->_flags & DESCRITPION_RECODED)
             free(pkgu->_description);
         pkgu->_description = NULL;
     }
@@ -161,19 +161,19 @@ static void pkgu_set_recodable(struct pkguinf *pkgu, int tag, char *val,
                                const char *lang)
 {
     char **member = NULL;
-    unsigned flag = 0, needflag = 0;
+    unsigned doneflag = 0, needflag = 0;
     char *usrencoding = NULL;
 
     switch (tag) {
         case PKGUINF_SUMMARY:
             member = &pkgu->_summary;
-            flag = RECODED_SUMMMARY;
+            doneflag = SUMMARY_RECODED;
             needflag = RECODE_SUMMMARY;
             break;
 
         case PKGUINF_DESCRIPTION:
             member = &pkgu->_description;
-            flag = RECODED_DESCRIPTION;
+            doneflag = DESCRITPION_RECODED;
             needflag = RECODE_SUMMMARY;
             break;
             
@@ -182,7 +182,7 @@ static void pkgu_set_recodable(struct pkguinf *pkgu, int tag, char *val,
             break;
     }
 
-    if (*member && (pkgu->_flags & flag)) {
+    if (*member && (pkgu->_flags & doneflag)) {
         free((char*)*member);
         *member = NULL;
     }
@@ -205,8 +205,8 @@ static void pkgu_set_recodable(struct pkguinf *pkgu, int tag, char *val,
 
 static char *recode(const char *val, const char *valencoding) 
 {
-    char *p, *val_utf8, *usrencoding;
-    size_t vlen, u_vlen;
+    char *p, *val_utf8, *usrencoding, *tmpval;
+    size_t vlen, u_vlen, tmpvlen;
     iconv_t cd;
 
     usrencoding = nl_langinfo(CODESET);
@@ -215,16 +215,20 @@ static char *recode(const char *val, const char *valencoding)
 
     valencoding = "UTF-8";   /* XXX, support for others needed? */
 
-    u_vlen = vlen = strlen(val);
+    vlen = u_vlen = tmpvlen = strlen(val);
     p = val_utf8 = n_malloc(u_vlen + 1);
 
+    /* FIXME: iconv leave val content untouched */ 
+    tmpval = (char*) val; 
+    
     cd = iconv_open(usrencoding, valencoding);
-    if (iconv(cd, (char**)&val, &vlen, &p, &u_vlen) == (size_t)-1) {
+    if (iconv(cd, &tmpval, &tmpvlen, &p, &u_vlen) == (size_t)-1) {
         iconv_close(cd);
         free(val_utf8);
         return (char*)val;
     }
     iconv_close(cd);
+    n_assert(p <= val_utf8 + vlen);
     *p = '\0';
     return val_utf8;
 }
@@ -534,7 +538,7 @@ int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang)
 const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
 {
     char **val = NULL;     /* for summary, description recoding */
-    unsigned flag = 0, needflag = 0;
+    unsigned doneflag = 0, needflag = 0;
     
     switch (tag) {
         case PKGUINF_LICENSE:
@@ -554,13 +558,13 @@ const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
             
         case PKGUINF_SUMMARY:
             val = (char**)&pkgu->_summary;
-            flag = RECODED_SUMMMARY;
+            doneflag = SUMMARY_RECODED;
             needflag = RECODE_SUMMMARY;
             break;
 
         case PKGUINF_DESCRIPTION:
             val = (char**)&pkgu->_description;
-            flag = RECODED_DESCRIPTION;
+            doneflag = DESCRITPION_RECODED;
             needflag = RECODE_DESCRIPTION;
             break;
             
@@ -571,7 +575,9 @@ const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
     }
 
     if (val) { /* something to recode? */
+        struct pkguinf *uinf = (struct pkguinf *)pkgu;/* disable const, ugly */
         char *recoded = NULL;
+        
 
         /* already recoded or no recoding needed */
         if ((pkgu->_flags & needflag) == 0) 
@@ -579,11 +585,11 @@ const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
 
         recoded = recode(*val, NULL);
         if (recoded && recoded != *val) {
-            ((struct pkguinf *)(pkgu))->_flags &= ~needflag; /* XXX ugly */
-            ((struct pkguinf *)(pkgu))->_flags |= ~flag;
+            uinf->_flags |= doneflag; /* free() needed */
             *val = recoded;
         }
         
+        uinf->_flags &= ~needflag; /* do not try anymore */
         return *val;
     }
 
