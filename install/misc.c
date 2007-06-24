@@ -183,7 +183,8 @@ int do_select_best_pkg(struct install_ctx *ictx, const struct pkg *marker,
                        struct pkg **candidates, int npkgs)
 {
     int *conflicts, min_nconflicts, j, i_best, *scores, max_score, i;
-
+    int same_packages_different_arch = 0;
+    
     DBGF("marker=%s (ncandiates = %d)\n", marker ? pkg_id(marker) : "(nil)", npkgs);
     n_assert(npkgs > 0);
     
@@ -216,11 +217,26 @@ int do_select_best_pkg(struct install_ctx *ictx, const struct pkg *marker,
             
             else if (pkg_cmp_ver(marker, pkg) == 0)
                 scores[i] += 1;
-
-            if (poldek_conf_MULTILIB && pkg_is_colored_like(pkg, marker))
-                scores[i] += 2;
         }
-
+        
+        if (poldek_conf_MULTILIB) {
+            if (pkg_is_colored_like(pkg, marker))
+                scores[i] += 2;
+            else if (pkg_cmp_arch(pkg, marker) == 0)
+                scores[i] += 1;
+        }
+        
+        if (i > 0) {
+            if (pkg_cmp_name_evr(pkg, candidates[i - 1]) == 0)
+                same_packages_different_arch++;
+            else
+                same_packages_different_arch--;
+            
+            DBGF("cmp %s %s -> %d, %d\n", pkg_id(pkg),
+                 pkg_id(candidates[i - 1]),
+                 pkg_cmp_name_evr(pkg, candidates[i - 1]),
+                 same_packages_different_arch);
+        }
         
         if (in_is_pkg_installed(ictx, pkg, &cmprc) && cmprc > 0) 
             scores[i] += 5; /* already installed and upgradeable - sweet */
@@ -247,7 +263,7 @@ int do_select_best_pkg(struct install_ctx *ictx, const struct pkg *marker,
     max_score = scores[0];
     i_best = 0;
 
-    for (i=0; i<npkgs; i++) {
+    for (i=0; i < npkgs; i++) {
         DBGF("%d. %s -> score %d, conflicts %d\n", i, pkg_id(candidates[i]),
              scores[i], conflicts[i]);
 
@@ -256,8 +272,11 @@ int do_select_best_pkg(struct install_ctx *ictx, const struct pkg *marker,
             i_best = i;
         }
     }
-
+    
     DBGF("[after #1 phase] i_best = %d\n", i_best);
+    if (same_packages_different_arch == npkgs - 1) /* choose now then */
+        goto l_end;
+    
     if (max_score < 5 && min_nconflicts == 0) {
         int n = INT_MAX, *nmarks;
         
@@ -280,6 +299,7 @@ int do_select_best_pkg(struct install_ctx *ictx, const struct pkg *marker,
     if (i_best == -1) 
         i_best = 0;
     
+l_end:
     DBGF("RET %d. %s\n", i_best, pkg_id(candidates[i_best]));
     return i_best;
 }
