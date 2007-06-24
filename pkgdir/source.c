@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -40,8 +40,9 @@
 #include "i18n.h"
 #include "conf.h"
 
-#define SOURCE_DEFAULT_PRI 0
+extern const char *pkgdir_dirindex_basename;
 
+#define SOURCE_DEFAULT_PRI 0
 
 const char source_TYPE_GROUP[] = "group";
 const char *poldek_conf_PKGDIR_DEFAULT_TYPE = "pndir";
@@ -862,11 +863,9 @@ static
 int do_source_clean(struct source *src, const char *idxdir,
                     const char *idxbn, unsigned flags)
 {
-    int   urltype;
+    int urltype = vf_url_type(idxdir);
 
     n_assert(src->type);
-    if ((urltype = vf_url_type(idxdir)) == VFURL_UNKNOWN)
-        return 1;
 
     DBGF("%s: %s, %s\n", src->path, idxdir, idxbn);
 
@@ -910,12 +909,15 @@ int source_clean(struct source *src, unsigned flags)
         
         n_basedirnam(path, &dn, &bn);
         rc = do_source_clean(src, dn, bn, flags);
+        /* should be able to pass multiple masks at once, TODO */
+        rc = do_source_clean(src, dn, pkgdir_dirindex_basename, flags);
+        
     }
 
     if (src->pkg_prefix && (flags & PKGSOURCE_CLEANPKG)) 
         rc = do_source_clean(src, src->pkg_prefix, NULL, flags);
 
-    /* in fact we don't really care about the result */
+    /* we don't really care about the result */
     return rc;
 }
 

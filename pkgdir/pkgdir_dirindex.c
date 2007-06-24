@@ -59,6 +59,8 @@
 
 #define PREFIXLEN 2
 
+const char *pkgdir_dirindex_basename = "dirindex";
+
 struct pkgdir_dirindex {
     struct tndb *db;
     tn_alloc *na;
@@ -346,14 +348,16 @@ static int dirindex_path(char *path, int size, const struct pkgdir *pkgdir)
         ofpath = dn;
     }
 
-    n_snprintf(tmp2, sizeof(tmp2), "%s/dirindex.%s.tndb", ofpath, pkgdir->type);
+    n_snprintf(tmp2, sizeof(tmp2), "%s/%s.%s.tndb", pkgdir_dirindex_basename,
+               ofpath, pkgdir->type);
     n_snprintf(tmp2, sizeof(tmp2), "%s", ofpath);
     DBGF("path = %s\n", ofpath);
     n = vf_cachepath(path, size, ofpath);
     DBGF("cache path = %s\n", path);
 
     n_assert(n > 0);
-    n += n_snprintf(&path[n], size - n, "/dirindex.%s.tndb", pkgdir->type);
+    n += n_snprintf(&path[n], size - n, "/%s.%s.tndb", pkgdir_dirindex_basename,
+                    pkgdir->type);
     DBGF("result = %s\n", path);
     n_assert(n > 0);
     

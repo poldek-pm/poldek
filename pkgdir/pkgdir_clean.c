@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -82,7 +82,7 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
         rc = 0;
         
         if ((tmp_vflock = vf_lockdir(dn))) {
-            msgn(1, _("Cleaning up %s..."), dn);
+            msgn(2, _("Cleaning up %s..."), dn);
             rc = do_unlink(dirpath, test);
             vf_lock_release(tmp_vflock);
         }
@@ -120,7 +120,7 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
         }
 
         if (msg_displayed == 0) {
-            msgn(1, _("Cleaning up %s..."), dirpath);
+            msgn(2, _("Cleaning up %s..."), dirpath);
             msg_displayed = 1;
         }
 
