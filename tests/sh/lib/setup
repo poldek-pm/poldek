@@ -5,6 +5,10 @@ msg() {
     [ "$QUIET" != "-q" ] && echo -e $@
 }
 
+is_verbose_mode() {
+   test "$QUIET" != "-q"
+}
+
 msgn() {
     msg "\n## $@"
 }

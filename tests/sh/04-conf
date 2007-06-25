@@ -1,0 +1,155 @@
+#!/bin/sh
+# $Id$
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+
+create_local_conf() {
+echo "
+_name_prefix = test
+
+[source]
+name = %{_name_prefix}1
+type = pndir
+path = ${REPOURL}1
+
+[source]
+name = %{_name_prefix}2
+type = pdir
+path = ${REPOURL}2
+" > $TMPDIR/poldek.conf
+}
+
+testConf() 
+{
+    #cat $TMPDIR/poldek.conf
+    create_local_conf
+    n=$($POLDEK --conf $TMPDIR/poldek.conf -q  -l | grep -vE '^dbg:' | wc -l)
+    assertEquals "2 sources expected" "$n" "2"
+
+    #$POLDEK --conf $TMPDIR/poldek.conf -q  -l | grep -E '^test[12] '
+    n=$($POLDEK --conf $TMPDIR/poldek.conf -q  -l | grep -E '^test[12] ' | wc -l)
+    assertEquals "2 sources expected, but not those" "$n" "2"
+    #sources=$($POLDEK --conf $TMPDIR/poldek.conf -q  -l | grep -E ^test[12]
+}
+
+testRemoteConfAndMacros() {
+
+    create_local_conf
+
+    POLDEK_TESTING_PRELOAD_CONF="$SHLIBDIR/vftest-fetch.conf"
+    export POLDEK_TESTING_PRELOAD_CONF
+
+    echo "
+[global]
+%include ${REPOURL}remote.conf
+
+[source]
+name = %{_name_prefix}3
+type = pndir
+path = ${REPOURL}3
+
+[source]
+name = %{_name_prefix}4
+type = pndir
+path = ${REPOURL}4
+" >> $TMPDIR/poldek.conf
+
+    echo " 
+_name_prefix = xtest
+[source]
+name = %{_name_prefix}1
+type = pndir
+path = ${REPOURL}x1
+
+[source]
+name = %{_name_prefix}2
+type = pdir
+path = ${REPOURL}x2
+" > $REPO/remote.conf
+
+
+    poldek_l="$POLDEK --conf $TMPDIR/poldek.conf -q -l"
+    poldek_l_cdir="$poldek_l --cachedir $CACHEDIR"
+
+    n=$($poldek_l --noconf | grep -vE '^dbg:' | wc -l)
+    assertEquals "--noconf failed" "$n" "0"
+
+    #$POLDEK --conf $TMPDIR/poldek.conf  -l --cachedir $CACHEDIR
+
+    n=$($poldek_l_cdir | grep 'type=' | wc -l)
+    assertEquals "6 sources expected, got $n" "$n" "6"
+
+    is_verbose_mode && $poldek_l_cdir
+
+    n=$($poldek_l_cdir | grep -E '^test[1234] ' | wc -l)
+    assertEquals "4 sources expected, but not those" "$n" "4"
+
+    n=$($poldek_l_cdir  -l | grep -E '^xtest[1234] ' | wc -l)
+    assertEquals "2 xtest* sources expected, but not those $n" "$n" "2"
+
+    msgn "upconf"
+
+    echo "
+[source]
+name = %{_name_prefix}3
+type = pndir
+path = ${REPOURL}x3
+
+[source]
+name = %{_name_prefix}4
+type = pdir
+path = ${REPOURL}x4
+" >> $REPO/remote.conf
+
+    POLDEK_TESTING_DENIED_FILES="remote.conf"
+    #cat $TMPDIR/poldek.conf
+    is_verbose_mode && $poldek_l_cdir
+
+    n=$($poldek_l_cdir | grep -vE '^dbg:' | wc -l)
+    assertEquals "6 sources expected" "$n" "6"
+
+    #$POLDEK --conf $TMPDIR/poldek.conf -q  -l | grep -E '^test[12] '
+    n=$($poldek_l_cdir | grep -E '^test[1234] ' | wc -l)
+    assertEquals "4 sources expected, but not those" "$n" "4"
+
+    POLDEK_TESTING_DENIED_FILES=""
+    $POLDEK --conf $TMPDIR/poldek.conf --upconf --cachedir $CACHEDIR
+
+    POLDEK_TESTING_DENIED_FILES="remote.conf"
+    n=$($poldek_l_cdir | grep '(type=' | wc -l)
+    assertEquals "8 sources exepected, got $n" "$n" "8"
+
+    n=$($poldek_l_cdir | grep -E '^test[1234] ' | wc -l)
+    assertEquals "4 sources expected, but not those" "$n" "4"
+
+    n=$($poldek_l_cdir | grep -E '^xtest[1234] ' | wc -l)
+    assertEquals "4 sources expected, but not those" "$n" "4"
+
+    n=$(find $CACHEDIR -name \*.conf | wc -l)
+    assertEquals "Expected cachedir/remote.conf only" "$n" "1"
+
+    #find $CACHEDIR
+    POLDEK_TESTING_DENIED_FILES="remote.conf"
+
+    msgn "whole conf remote"
+    $POLDEK --conf test://$TMPDIR/poldek.conf --cachedir $CACHEDIR -q -l >/dev/null
+    is_verbose_mode && $poldek_l_cdir    
+
+    n=$($poldek_l_cdir | grep '(type=' | wc -l)
+    assertEquals "8 sources exepected, got $n" "$n" "8"
+
+    n=$($poldek_l_cdir | grep -E '^test[1234] ' | wc -l)
+    assertEquals "4 sources expected, but not those" "$n" "4"
+
+    n=$($poldek_l_cdir | grep -E '^xtest[1234] ' | wc -l)
+    assertEquals "4 sources expected, but not those" "$n" "4"
+
+    n=$(find $CACHEDIR -name remote.conf | wc -l)
+    assertEquals "Where is remote.conf cached copy??" "$n" "1"
+
+    n=$(find $CACHEDIR -name poldek.conf | wc -l)
+    assertEquals "Where is poldek.conf cached copy??" "$n" "1"
+}
+
+. ./sh/lib/shunit2
