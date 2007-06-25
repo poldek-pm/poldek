@@ -151,7 +151,7 @@ static int get_rpmlib_caps_rpm_lt_4_4_3(tn_array *caps)
         n_assert(!(flags[i] & (RPMSENSE_LESS | RPMSENSE_GREATER)));
 
         n_strncpy(evr, versions[i], 128);
-        cr = capreq_new_evr(names[i], evr, REL_EQ, 0);
+        cr = capreq_new_evr(NULL, names[i], evr, REL_EQ, 0);
         if (cr)
             n_array_push(caps, cr);
     }
