@@ -670,7 +670,7 @@ static struct afile *afile_open(const char *path, const char *parent_path,
     
     is_local = (vf_url_type(path) == VFURL_PATH);
     if (ppath)
-        is_parent_remote = (vf_url_type(ppath) == VFURL_PATH);
+        is_parent_remote = (vf_url_type(ppath) != VFURL_PATH);
 
     if (ppath) {
         int prepend = 0;
