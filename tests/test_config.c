@@ -22,7 +22,7 @@ START_TEST (test_config) {
     cnf = poldek_conf_load("poldek_test_conf.conf", 0);
     fail_if(cnf == NULL, "load config failed");
 
-    s = poldek_conf_get_section_ht(cnf, "global");
+    s = poldek_conf_get_section(cnf, "global");
     fail_if(s == NULL, "no global section?");
     
     i = 0;
@@ -30,7 +30,7 @@ START_TEST (test_config) {
         const char *sname = poldek_conf_sections[i].name;
         tags = poldek_conf_sections[i++].tags;
 
-        s = poldek_conf_get_section_ht(cnf, sname);
+        s = poldek_conf_get_section(cnf, sname);
         fail_if(s == NULL, "no %s section?", s);
 
         j = 0;
@@ -135,7 +135,7 @@ void make_conf_file(const char *name, tn_array *lines)
     f = fopen(name, "w");
     fail_if(f == NULL, "file open failed");
     for (i=0; i<n_array_size(lines); i++) 
-        fprintf(f, "%s\n", n_array_nth(lines, i));
+        fprintf(f, "%s\n", (char*) n_array_nth(lines, i));
     fclose(f);
 }
 
@@ -147,7 +147,6 @@ START_TEST (test_config_lists) {
     tn_hash *cnf, *s;
     tn_array *lines, *list;
     int i, maxno = 0;
-    FILE *f;
     
     lines = n_array_new(16, 0, 0);
     
@@ -169,7 +168,7 @@ START_TEST (test_config_lists) {
     cnf = poldek_conf_load("poldek_test_conf.tmp", 0);
     fail_if(cnf == NULL, "load config failed");
 
-    s = poldek_conf_get_section_ht(cnf, "global");
+    s = poldek_conf_get_section(cnf, "global");
     fail_if(s == NULL, "no global section?");
 
     i = 0;
@@ -204,7 +203,7 @@ START_TEST (test_config_lists_excl) {
     cnf = poldek_conf_addlines(NULL, "source", lines);
     fail_if(cnf == NULL, "load config failed");
 
-    s = poldek_conf_get_section_ht(cnf, "source");
+    s = poldek_conf_get_section(cnf, "source");
     fail_if(s == NULL, "no source section?");
 
     i = 0;
