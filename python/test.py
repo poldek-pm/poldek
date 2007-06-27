@@ -1,9 +1,4 @@
 #!/usr/bin/python
-import os
-import re
-import sys
-import string
-from types import *
 import poldek
 
 def package_inspect(pkg):
@@ -46,9 +41,9 @@ def package_inspect(pkg):
                 type = 'dir'
                 
             if len(type) > 0:
-                print "  - requirement(%s): %s" % (type, r)
+                print "  - req(%s): %s" % (type, r)
             else:
-                print "  - requirement: %s" % r
+                print "  - req: %s" % r
 
 
     print "Files: "
@@ -98,14 +93,18 @@ def demo_poldeklib(source_name = None):
             s.set_enabled(False)
         print " -", s
 
-    if src is None:
+    if src is None and ctx.sources:
         src = ctx.sources[0]
         src.set_enabled(True)    # load first source
 
+    if src is None:
+        raise "No sources loaded"
+    
     print "Loading %s..." % src
     if ctx.load_sources():
         print "  loaded %d packages" % ctx.packages.length()
-        package_inspect(ctx.packages[0])
+        if ctx.packages:
+            package_inspect(ctx.packages[0])
         
 
 def demo_poclideklib(source_name = None):
@@ -116,10 +115,14 @@ def demo_poclideklib(source_name = None):
             s.set_enabled(False)
         print " -", s
 
-    if src is None:
+    if src is None and ctx.sources:
         src = ctx.sources[0]
         src.set_enabled(True)    # load first source
 
+    if src is None:
+        raise "No sources loaded"
+    
+    print "Loading %s..." % src
     cctx = poldek.poclidek_ctx(ctx);
     cctx.load_packages(cctx.LOAD_ALL)   # see poclidek.h
     cli_command(cctx, "ls poldek*");
@@ -129,5 +132,5 @@ def demo_poclideklib(source_name = None):
 poldek.lib_init()
 
 demo_poclideklib()
-
+#demo_poldeklib()
 

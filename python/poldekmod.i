@@ -82,9 +82,9 @@ struct poclidek_rcmd {};
 */
 
 %extend poclidek_rcmd {
-    /*poclidek_rcmd(struct poclidek_ctx *cctx, struct poldek_ts *ts) {
+    poclidek_rcmd(struct poclidek_ctx *cctx, struct poldek_ts *ts) {
         return poclidek_rcmd_new(cctx, ts);
-    }*/
+    }
 
     poclidek_rcmd(struct poclidek_ctx *cctx) {
         return poclidek_rcmd_new(cctx, NULL);
@@ -108,9 +108,6 @@ struct poclidek_rcmd {};
     poclidek_ctx(struct poldek_ctx *ctx) {
         return poclidek_new(ctx);
     }
-
-    struct poclidek_rcmd *rcmd_new(struct poldek_ts *ts) {
-        return poclidek_rcmd_new(self, ts); }
 
     ~poclidek_ctx() { poclidek_free(self); }
 };
