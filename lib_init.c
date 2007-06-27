@@ -190,7 +190,7 @@ int prepare_sources(struct poldek_ctx *ctx,
         tn_array *htcnf_sources;
 
         setup_legacy_sources(poldek_cnf);
-        htcnf_sources = poldek_conf_get_section_arr(poldek_cnf, "source");
+        htcnf_sources = poldek_conf_get_sections(poldek_cnf, "source");
         rc = get_conf_sources(ctx, srcs_path, srcs_named, htcnf_sources);
         
     } else if (n_array_size(srcs_named)) {
@@ -323,6 +323,7 @@ tn_array *expand_sources_group(tn_array *srcs_named, tn_array *htcnf_sources,
     return sources;
 }
 
+/* legacy: put source to configuration to load it later in std. way */
 static int source_to_htconf(struct source *src, int no, tn_hash *htcnf)
 {
     void *sect;
@@ -378,7 +379,7 @@ static int setup_legacy_sources(tn_hash *poldek_cnf)
     tn_hash *htcnf;
     int i, no = 0;
     
-    htcnf = poldek_conf_get_section_ht(poldek_cnf, "global");
+    htcnf = poldek_conf_get_section(poldek_cnf, "global");
     
     if ((list = poldek_conf_get_multi(htcnf, "source"))) {
         for (i=0; i < n_array_size(list); i++) {
@@ -406,9 +407,8 @@ static int setup_legacy_sources(tn_hash *poldek_cnf)
     return no;
 }
 
-static 
-int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources, tn_array *srcs_named,
-                     tn_array *htcnf_sources)
+static int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
+                            tn_array *srcs_named, tn_array *htcnf_sources)
 {
     struct source   *src;
     int             i, nerr = 0, getall = 0;
@@ -468,9 +468,8 @@ int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources, tn_array *srcs_n
 }
 
 
-static
-int get_conf_opt_list(const tn_hash *htcnf, const char *name,
-                      tn_array *tolist)
+static int get_conf_opt_list(const tn_hash *htcnf, const char *name,
+                             tn_array *tolist)
 {
     tn_array *list;
     int i = 0;
@@ -642,7 +641,7 @@ static void zlib_in_rpm(struct poldek_ctx *ctx)
     int               ec;
 
 
-    htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+    htcnf = poldek_conf_get_section(ctx->htconf, "global");
     libdir = poldek_conf_get(htcnf, "_libdir", NULL);
     if (libdir == NULL)
         libdir = "/usr/lib";
@@ -762,7 +761,7 @@ void poldek__ts_apply_config(struct poldek_ctx *ctx, struct poldek_ts *ts)
     if (ctx->htconf == NULL)
         return;
     
-    htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+    htcnf = poldek_conf_get_section(ctx->htconf, "global");
 
     DBGF("ts %p, tsctx %p\n", ts, ctx->ts);
     DBGF("default_op_map size = %d\n", n_array_size(default_op_map));
@@ -878,6 +877,76 @@ void poldek__ts_postconf(struct poldek_ctx *ctx, struct poldek_ts *ts)
     poldek__ts_apply_config(ctx, ts);
 }
 
+/* for testing purposes only - test:// fetcher is needed to test
+   remote config access */
+static int preload_conf(const char *path) 
+{
+    tn_hash *htconf = NULL;
+    
+    if ((htconf = poldek_conf_load(path, POLDEK_LDCONF_NOINCLUDE)) == NULL)
+        return 0;
+    
+    register_vf_handlers(poldek_conf_get_sections(htconf, "fetcher"));
+    n_hash_free(htconf);
+    return 1;
+}
+
+static
+tn_hash *do_load_conf(struct poldek_ctx *ctx, const char *path, unsigned flags)
+{
+    unsigned ldflags = 0;
+    tn_hash *htconf = NULL;
+    
+    n_assert((flags & POLDEK_LOADCONF_NOCONF) == 0);
+    
+    /* setup cachedir if not set */
+    if ((ctx->_iflags & CACHEDIR_SETUPDONE) == 0) {
+        int succeed = 0;
+        n_assert(ctx->ts->cachedir == NULL);
+
+        /* remote config -> setup any cachedir */
+        if (path && vf_url_type(path) != VFURL_PATH) { 
+            succeed = do_poldek_setup_cachedir(ctx);
+            
+        } else {  /* remote files may be included, get cachedir first */
+            tn_hash *cnf, *globalcnf;
+            const char *dir;
+            
+            cnf = poldek_conf_load(path, POLDEK_LDCONF_GLOBALONLY);
+            if (cnf == NULL)
+                return NULL;
+
+            globalcnf = poldek_conf_get_section(cnf, "global");
+            n_assert(globalcnf);
+
+            if ((dir = poldek_conf_get(globalcnf, "cachedir", NULL))) {
+                poldek_configure(ctx, POLDEK_CONF_CACHEDIR, dir);
+                succeed = poldek_setup_cachedir(ctx);
+                
+            } else {
+                succeed = do_poldek_setup_cachedir(ctx);
+            }
+
+            n_hash_free(cnf);
+        }
+    
+        if (!succeed)
+            return NULL;
+    }
+    
+    
+    if (flags & POLDEK_LOADCONF_UPCONF)
+        ldflags |= POLDEK_LDCONF_UPDATE;
+    
+    if (path != NULL)
+        htconf = poldek_conf_load(path, ldflags);
+    else 
+        htconf = poldek_conf_load_default(ldflags);
+    
+    return htconf;
+}
+
+    
 
 int poldek_load_config(struct poldek_ctx *ctx, const char *path,
                        tn_array *addon_cnflines, unsigned flags)
@@ -887,27 +956,13 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path,
     int               v;
     tn_array          *list;
     
-        
     if (poldek__is_setup_done(ctx))
         logn(LOGERR | LOGDIE, "load_config() called after setup()");
 
     n_assert(ctx->htconf == NULL);
         
-    if ((flags & POLDEK_LOADCONF_NOCONF) == 0) {
-        unsigned ldflags = 0;
-
-        /* setup temporary cachedir if remote config */
-        if (path && vf_url_type(path) != VFURL_PATH)
-            do_poldek_setup_cachedir(ctx); 
-        
-        if (flags & POLDEK_LOADCONF_UPCONF)
-            ldflags |= POLDEK_LDCONF_UPDATE;
-                
-        if (path != NULL)
-            ctx->htconf = poldek_conf_load(path, ldflags);
-        else 
-            ctx->htconf = poldek_conf_loadefault(ldflags);
-    }
+    if ((flags & POLDEK_LOADCONF_NOCONF) == 0)
+        ctx->htconf = do_load_conf(ctx, path, flags);
 
     if (addon_cnflines)
         ctx->htconf = poldek_conf_addlines(ctx->htconf, "global",
@@ -918,9 +973,9 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path,
     
     poldek__ts_apply_config(ctx, ctx->ts);
 
-    htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+    htcnf = poldek_conf_get_section(ctx->htconf, "global");
     register_vf_handlers_compat(htcnf);
-    register_vf_handlers(poldek_conf_get_section_arr(ctx->htconf, "fetcher"));
+    register_vf_handlers(poldek_conf_get_sections(ctx->htconf, "fetcher"));
 
     if ((list = poldek_conf_get_multi(htcnf, "default_fetcher"))) {
         int i;
@@ -1190,10 +1245,9 @@ void poldeklib_destroy(void)
 
 int poldeklib_init(void)
 {
-    char *path;
-    
     if (poldeklib_init_called)
         return 1;
+
     poldeklib_init_called = 1;
     
     pmmodule_init();
@@ -1215,13 +1269,12 @@ int poldeklib_init(void)
     vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
     vfile_configure(VFILE_CONF_LOGCB, poldek_vf_vlog_cb);
 
-    /* Kind of egg and chicken problem (remote configs) with cachedir;
-       on start set it to $TMPDIR. */
-    path = setup_cachedir(NULL);
-    n_assert(path);
-    vfile_configure(VFILE_CONF_CACHEDIR, path);
-    free(path);
-
+    if (getenv("POLDEK_TESTING")) {
+        const char *path = getenv("POLDEK_TESTING_PRELOAD_CONF");
+        if (path && !preload_conf(path))
+            n_die("%s: not preloaded", path);
+    }
+    
     /* add libdir/poldek to PATH */
 #ifdef PKGLIBDIR
     {
@@ -1336,7 +1389,9 @@ int poldek_setup_cachedir(struct poldek_ctx *ctx)
 {
     if (ctx->_iflags & CACHEDIR_SETUPDONE)
         return 1;
-    do_poldek_setup_cachedir(ctx);
+    
+    if (!do_poldek_setup_cachedir(ctx))
+        return 0;
     
     ctx->_iflags |= CACHEDIR_SETUPDONE;
     return 1;
@@ -1346,14 +1401,33 @@ static
 int do_poldek_setup_cachedir(struct poldek_ctx *ctx)
 {
     char *path;
-    
+
     path = setup_cachedir(ctx->ts->cachedir);
-    DBGF("%s -> %s\n", ctx->ts->cachedir, path);
+    
+    if (poldek_VERBOSE > 0 && getenv("POLDEK_TESTING")) {
+        if (ctx->ts->cachedir && path && n_str_eq(ctx->ts->cachedir, path))
+            msgn(1, "cachedir: %s", path);
+        else
+            msgn(1, "cachedir: %s -> %s", ctx->ts->cachedir, path);
+    }
+    
+    if (path == NULL) {
+        n_cfree(&ctx->ts->cachedir);
+        return 0;
+    }
+    
     n_assert(path);
-    if (ctx->ts->cachedir)
-        free(ctx->ts->cachedir);
+
+    if (poldek_VERBOSE > 1) {
+        if (ctx->ts->cachedir == NULL) /* not configured */
+            msgn(2, "Setting temporary cache directory path to %s", path);
+        else
+            msgn(2, "Setting cache directory path to %s", path);
+    }
+    n_cfree(&ctx->ts->cachedir);
     ctx->ts->cachedir = path;
     vfile_configure(VFILE_CONF_CACHEDIR, path);
+
     return 1;
 }
 
@@ -1376,7 +1450,7 @@ int setup_sources(struct poldek_ctx *ctx)
     }
 
     if (ctx->htconf) {
-        htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+        htcnf = poldek_conf_get_section(ctx->htconf, "global");
         autoupa = poldek_conf_get_bool(htcnf, "autoupa", 1);
     }
     
@@ -1406,7 +1480,7 @@ static void __setup_multilib(struct poldek_ctx *ctx)
         return;
 
     if (ctx->htconf) {
-        tn_hash *htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+        tn_hash *htcnf = poldek_conf_get_section(ctx->htconf, "global");
         multilib = poldek_conf_get_bool3(htcnf, "multilib", 2);
     }
     
@@ -1491,7 +1565,7 @@ static int setup_pm(struct poldek_ctx *ctx)
         const char *op;
         tn_hash *htcnf;
 
-        htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+        htcnf = poldek_conf_get_section(ctx->htconf, "global");
         if ((op = poldek_conf_get(htcnf, "pm command", NULL)))
             pm_configure(ctx->pmctx, "pmcmd", (void*)op);
 
@@ -1510,7 +1584,8 @@ int poldek_setup(struct poldek_ctx *ctx)
     if ((ctx->_iflags & SETUP_DONE) == SETUP_DONE)
         return 1;
     
-    poldek_setup_cachedir(ctx);
+    if (!poldek_setup_cachedir(ctx))
+        return 0;
     
     rc = setup_sources(ctx);
     
@@ -1521,7 +1596,7 @@ int poldek_setup(struct poldek_ctx *ctx)
 
     ctx->_depengine = 2; /* XXX: should be extracted from conf_sections.c */
     if (ctx->htconf) {
-        tn_hash *htcnf = poldek_conf_get_section_ht(ctx->htconf, "global");
+        tn_hash *htcnf = poldek_conf_get_section(ctx->htconf, "global");
         ctx->_depengine = poldek_conf_get_int(htcnf, "dependency engine version",
                                               ctx->_depengine);
     }

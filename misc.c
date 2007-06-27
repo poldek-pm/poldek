@@ -129,86 +129,89 @@ int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size, int digest_t
     return *mdhex_size;
 }
 
-static const char *tmpdir(void) 
+static char *setup_default_cachedir(void) 
 {
-    struct stat st;
-    static char *tmpdir = NULL;
-    char *dir;
+    char *dir, path[PATH_MAX], inhome_path[PATH_MAX], *tmp_cachedir = NULL;
+    const char *cachedn = ".poldek-cache";
+    struct passwd *pw = NULL;
 
-    if (tmpdir != NULL)
-        return tmpdir;
-    
-    if ((dir = getenv("TMPDIR")) == NULL)
-        tmpdir = "/tmp";
-    
-    else if (*dir != '/' || strlen(dir) < 4)
-        dir = "/tmp";
-    
-    else {
-        char *p;
-            
-        p = dir + 1;
-        while (*p) {
-            if (!isalnum(*p) && *p != '/' && *p != '-') {
-                tmpdir = "/tmp";
-                logn(LOGWARN,
-                     _("$TMPDIR (%s) contains non alnum characters, "
-                       "using /tmp"), dir);
-                break;
-            }
-            p++;
-        }
-
-        if (tmpdir == NULL) {
-            if (stat(dir, &st) != 0) {
-                logn(LOGERR, _("$TMPDIR (%s): %m, using /tmp"), dir);
-                tmpdir = "/tmp";
-                
-            } else if (!S_ISDIR(st.st_mode)) {
-                logn(LOGERR, _("$TMPDIR (%s): not a directory, "
-                               "using /tmp"), dir);
-                tmpdir = "/tmp";
+    if ((pw = getpwuid(getuid()))) { /* use $HOME/.poldek-cache if exists */
+        char *d = pw->pw_dir;
+        if (getenv("POLDEK_TESTING"))
+            d = getenv("HOME");
+        
+        if (d) {
+            n_snprintf(inhome_path, sizeof(inhome_path), "%s/%s", d, cachedn);
+            if (poldek_util_is_rwxdir(inhome_path)) {
+                tmp_cachedir = inhome_path;
+                goto l_end;
             }
         }
     }
+    
+    n_assert(tmp_cachedir == NULL);
+    dir = getenv("TMPDIR");        /* try env $TMP* */
+    if (dir == NULL || *dir == '\0')
+        dir = getenv("TMP");
 
-    if (tmpdir == NULL)
-        tmpdir = dir;
+    if (dir && *dir && poldek_util_is_rwxdir(dir)) {
+        const char *dn = cachedn + 1; /* in $TMP -> unhide */
+        char suffix[32];
+        
+        if ((pw = getpwuid(getuid())) && pw->pw_name && *pw->pw_name)
+            n_snprintf(suffix, sizeof(suffix), "%s", pw->pw_name);
+        else
+            n_snprintf(suffix, sizeof(suffix), "%.4ld", getuid());
+        
+        n_snprintf(path, sizeof(path), "%s/%s-%s", dir, dn, suffix);
+        if (!is_dir(path))
+            mkdir(path, 0700);
+            
+        if (poldek_util_is_rwxdir(path)) {
+            tmp_cachedir = path;
+            goto l_end;
+        }
+    }
+    n_assert(tmp_cachedir == NULL);
+    
+    if (pw) {                     /* try $HOME */
+        char *d = pw->pw_dir;
+        if (getenv("POLDEK_TESTING"))
+            d = getenv("HOME");
+            
+        if (d && poldek_util_is_rwxdir(d) && mk_dir(d, cachedn)) {
+            n_snprintf(path, sizeof(path), "%s/%s", d, cachedn);
+            tmp_cachedir = path;
+        }
+    }
 
-    return tmpdir;
+    if (tmp_cachedir == NULL)   /* weird */
+        tmp_cachedir = "/tmp";
+    
+l_end:
+    return n_strdup(tmp_cachedir);
 }
-
 
 char *setup_cachedir(const char *path) 
 {
-    struct passwd *pw;
-    char *dir, *default_dn = ".poldek-cache";
+    if (path == NULL)
+        return setup_default_cachedir();
 
-    if (path) {
-        if (vf_valid_path(path) && poldek_util_is_rwxdir(path)) 
-            return n_strdup(path);
-        else 
-            logn(LOGWARN, _("%s: invalid cachedir path, "
-                            "fallback to default"), path);
-    }
-    
-    if ((dir = getenv("TMPDIR")) && vf_valid_path(dir))
-        return n_strdup(dir);
-    
-    if ((pw = getpwuid(getuid())) == NULL)
-        return n_strdup(tmpdir());
-
-    if (!poldek_util_is_rwxdir(pw->pw_dir))
-        return n_strdup(tmpdir());
-    
-    if (vf_valid_path(pw->pw_dir) && mk_dir(pw->pw_dir, default_dn)) {
-        char path[PATH_MAX];
-        snprintf(path, sizeof(path), "%s/%s", pw->pw_dir, default_dn);
-        return n_strdup(path);
+    if (!poldek_util_is_rwxdir(path)) {
+        struct stat st;
+            
+        if (stat(path, &st) != 0 && errno == ENOENT)
+            mkdir(path, 0755);
     }
 
-    return n_strdup(tmpdir());
+    if (!poldek_util_is_rwxdir(path)) {
+        logn(LOGERR, "%s: invalid cache directory (%m)", path);
+        return NULL;
+    }
+    
+    return n_strdup(path);
 }
+
 
 char *trimslash(char *path) 
 {
@@ -532,24 +535,19 @@ const char *poldek_util_expand_env_vars(char *dest, int size, const char *str)
     return poldek_util_expand_vars(dest, size, str, '$', NULL, 0);
 }
 
-const char *abs_path(char *buf, int size, const char *path) 
+char *abs_path(const char *path) 
 {
+    if (strstr(path, "./") == NULL)
+        return NULL;
     
-    if (*path == '/')
-        return path;
-
-    if (getcwd(buf, size) == NULL)
-        return path;
-    
-    if (strcmp(path, ".") != 0) {
-        int n = strlen(buf);
-        n = snprintf(&buf[n], size - n, "/%s", path);
-        if (n < (int)strlen(path) + 1)
-            return path;
-    }
-
-    return buf;
+#ifdef HAVE_CANONICALIZE_FILE_NAME /* have safe GNU ext? */
+    return realpath(path, NULL);
+#else
+# error "missing safe realpath()"
+#endif
+    return NULL;
 }
+
 
 int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
                   int ndigits, int longunit) 

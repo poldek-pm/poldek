@@ -202,10 +202,9 @@ poldek_conf_get
 poldek_conf_get_bool
 poldek_conf_get_int
 poldek_conf_get_multi
-poldek_conf_get_section_arr
-poldek_conf_get_section_ht
+poldek_conf_get_section
+poldek_conf_get_sections
 poldek_conf_load
-poldek_conf_loadefault
 poldek_configure
 poldek_free
 poldek_get_avail_packages

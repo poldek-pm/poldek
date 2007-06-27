@@ -221,7 +221,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_CACHEDIR:
             poldek_configure(ctx, POLDEK_CONF_CACHEDIR, arg);
-            poldek_setup_cachedir(argsp->ctx);
+            if (!poldek_setup_cachedir(argsp->ctx)) /* set up immediately */
+                exit(EXIT_FAILURE);
             break;
 
         case 'c':
@@ -586,13 +587,12 @@ static int do_su(int argc, char **argv)
     } else if (noautosu == 0 && getuid() == 0) {  /* check config's runas */
         tn_hash *cnf;
         
-        cnf = poldek_conf_loadefault(POLDEK_LDCONF_NOINCLUDE |
-                                     POLDEK_LDCONF_FOREIGN);
+        cnf = poldek_conf_load_default(POLDEK_LDCONF_NOINCLUDE | POLDEK_LDCONF_FOREIGN);
         if (cnf) {
             tn_hash *global;
             const char *u;
             
-            global = poldek_conf_get_section_ht(cnf, "global");
+            global = poldek_conf_get_section(cnf, "global");
             if (global && (u = poldek_conf_get(global, "run_as", NULL))) {
                 user = n_strdup(u);
                 is_runas = 1;

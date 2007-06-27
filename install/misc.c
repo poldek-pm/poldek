@@ -410,6 +410,7 @@ struct pkg *in_select_pkg(struct install_ctx *ictx, const struct pkg *apkg,
     return selected_pkg;
 }
 
+#if 0
 static
 struct pkg *in_select_pkg_OLD(struct install_ctx *ictx, const struct pkg *apkg,
                           tn_array *pkgs)
@@ -504,6 +505,7 @@ struct pkg *in_select_pkg_OLD(struct install_ctx *ictx, const struct pkg *apkg,
     
     return selected_pkg;
 }
+#endif
 
 /* any of pkgs is marked? */
 static inline int one_is_marked(struct pkgmark_set *pms, struct pkg *pkgs[],

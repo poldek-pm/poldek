@@ -381,18 +381,16 @@ int poldek_ts_issetf_all(struct poldek_ts *ts, uint32_t flag)
     return (ts->_flags & flag) == flag;
 }
 
-
 static char *prepare_path(char *pathname) 
 {
     if (pathname == NULL)
         return pathname;
 
     if (vf_url_type(pathname) & VFURL_LOCAL) {
-        char path[PATH_MAX];
-        const char *ppath;
+        char *ppath;
         
-        if ((ppath = abs_path(path, sizeof(path), pathname)))
-            return n_strdup(ppath);
+        if ((ppath = abs_path(pathname)))
+            return ppath;       /* malloced by abs_path */
     }
     
     return pathname;
@@ -417,7 +415,6 @@ char *poldek__conf_path(char *s, char *v)
     
     return s;
 }
-
 
 int poldek_ts_configure(struct poldek_ts *ts, int param, ...) 
 {

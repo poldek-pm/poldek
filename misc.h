@@ -29,6 +29,7 @@ int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size, int type);
   Returned dir always begin with '/'
 
 */
+
 char *setup_cachedir(const char *path);
 
 char *trimslash(char *path);
@@ -38,7 +39,7 @@ int is_dir(const char *path);
 int mk_dir(const char *path, const char *dn);
 int mk_dir_parents(const char *path, const char *dn);
 
-const char *abs_path(char *buf, int size, const char *path);
+char *abs_path(const char *path);
 
 struct pkgmark_set;
 void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,

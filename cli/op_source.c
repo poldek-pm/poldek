@@ -358,7 +358,7 @@ void print_source_list(struct poldek_ctx *ctx, tn_array *sources,
     if ((htcnf = poldek_get_config(ctx)) == NULL)
         return;
         
-    if ((htcnf_sources = poldek_conf_get_section_arr(htcnf, "source")) == NULL)
+    if ((htcnf_sources = poldek_conf_get_sections(htcnf, "source")) == NULL)
         return;
     
     for (i=0; i < n_array_size(htcnf_sources); i++) {

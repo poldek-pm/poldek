@@ -167,11 +167,11 @@ int poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path)
     if (access(path, R_OK) != 0)
         return 0;
     
-    aliases_htcnf = poldek_conf_load(path, POLDEK_LDCONF_NOVRFY);
+    aliases_htcnf = poldek_conf_load(path, POLDEK_LDCONF_FOREIGN);
     if (aliases_htcnf == NULL)
         return 0;
     
-    ht = poldek_conf_get_section_ht(aliases_htcnf, "global");
+    ht = poldek_conf_get_section(aliases_htcnf, "global");
     keys = n_hash_keys(ht);
 
     for (i=0; i < n_array_size(keys); i++) {

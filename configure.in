@@ -145,7 +145,7 @@ AC_FUNC_ALLOCA
 AC_FUNC_FNMATCH
 AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS(gettimeofday mkdir strdup uname mkdtemp)
+AC_CHECK_FUNCS(gettimeofday mkdir strdup uname mkdtemp canonicalize_file_name)
 AC_CHECK_FUNCS(strerror strstr strtol strtoul strsignal)
 AC_CHECK_FUNCS(mallopt)
 AC_CHECK_FUNCS(setenv clearenv)
