@@ -4,16 +4,27 @@
 
 <release version="0.20.1" date="not released yet" focus="bugfix release">
   <entry><para>
-  Basic support for package Suggests capabilities
+  improved a lot multilib support
   </para></entry>
 
   <entry><para>
-  Improved a lot RPM's multilib support
-  </para></entry>
-
-  <entry><para>
-  <author id="arekm" email="arekm att pld-linux org">Arkadiusz Miskiewicz</author>
    RPM up to 4.4.9 is supported
+  </para>
+  <author id="arekm" email="arekm att pld-linux org">Arkadiusz Miskiewicz</author>
+  </entry>
+
+  <entry><para>
+   UTF-8 encoded package summaries and descriptions are supprted
+  </para>
+  <author id="witekfl" email="witekfl att pld-linux org">Witold Filipczyk</author>
+  </entry>
+
+  <entry><para>
+  basic support for package Suggests capabilities
+  </para></entry>
+
+  <entry><para>
+  pythonized Python module
   </para></entry>
 
   <entry><para>
@@ -36,6 +47,7 @@
 
   <entry><para>        
     with --mo=v018x created 'pdir' index is compatibile with versions prior 0.18.9
+    (without package files mtime included)    
   </para></entry> 
 
   <entry><para>
@@ -44,7 +56,7 @@
 
   <entry><para> 
     vfcompr: temporary *vfcompr.md5 files moved from source to destination 
-    (a cache) directory
+    (cache) directory
   </para></entry> 
 
   <entry><para> 
@@ -59,8 +71,9 @@
 
   <entry><para> 
      configuration for CentOS has been added.
-    <author id="areq" email="areq att areq eu org">Arkadiusz Patyk</author>
-  </para></entry>
+  </para>
+  <author id="areq" email="areq att areq eu org">Arkadiusz Patyk</author>
+  </entry>
 </release>
 
 <release version="0.20" date="2005/10/28" focus="major enhancements release">
