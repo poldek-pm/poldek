@@ -257,7 +257,7 @@ static int machine_score(int tag, const char *val) {
 #elif defined(HAVE_RPMMACHINESCORE)
 static int machine_score(int tag, const char *val)
 {
-    int rpmtag = 0, rc;
+    int rpmtag = 0;
     
     switch (tag) {
         case PMMSTAG_ARCH:
