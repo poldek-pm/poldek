@@ -82,9 +82,24 @@ struct poclidek_rcmd {};
 */
 
 %extend poclidek_rcmd {
-    poclidek_rcmd(struct poclidek_ctx *cctx, struct poldek_ts *ts) {
+    /*poclidek_rcmd(struct poclidek_ctx *cctx, struct poldek_ts *ts) {
         return poclidek_rcmd_new(cctx, ts);
+    }*/
+
+    poclidek_rcmd(struct poclidek_ctx *cctx) {
+        return poclidek_rcmd_new(cctx, NULL);
     }
+
+    int execute(const char *cmdline) {
+        return poclidek_rcmd_execline(self, cmdline);
+    }
+
+    char *to_s() {
+        const char *s = poclidek_rcmd_get_str(self);
+        if (s) 
+           return n_strdup(s);
+        return NULL;
+    }    
 
     ~poclidek_rcmd() { poclidek_rcmd_free(self); }
 };
@@ -134,6 +149,35 @@ struct poclidek_rcmd {};
     
     source(const char *name) {
         return source_new(name, NULL, NULL, NULL); }
+
+    source(void *src) { return source_link(src); };        
+
+    char *__str__() { 
+        char *id = NULL;
+        if (self->flags & PKGSOURCE_NAMED)
+           id = self->name;
+        else {  
+           char path[PATH_MAX];
+           vf_url_slim(path, sizeof(path), self->path, 0);
+           id = path;
+        }
+        return n_strdup(id);
+    }
+
+    int get_enabled() {
+        //printf("get_enabled %d\n", (self->flags & PKGSOURCE_NOAUTO) == 0);
+        return (self->flags & PKGSOURCE_NOAUTO) == 0;
+    }       
+
+    void set_enabled(int v) {
+        if (v)
+           self->flags &= ~PKGSOURCE_NOAUTO;
+        else
+           self->flags |= PKGSOURCE_NOAUTO;
+
+        //printf("%s enabled=%d\n", self->name, (self->flags & PKGSOURCE_NOAUTO) == 0);
+    }   
+
     ~source() { source_free(self); }
 }
 
@@ -141,6 +185,8 @@ struct poclidek_rcmd {};
     pkgdir(struct source *src, unsigned flags) {
         return pkgdir_srcopen(src, flags);
     }
+    tn_array *get_packages() { return self->pkgs; }    
+
     ~pkgdir() { pkgdir_free(self); }
 }
 
@@ -174,6 +220,7 @@ struct poclidek_rcmd {};
     tn_array *_get_provides() { return self->caps; }
     tn_array *_get_requires() { return self->reqs; }
     tn_array *_get_conflicts() { return self->cnfls; }
+    tn_array *_get_suggests() { return self->sugs; }
     ~pkg() { pkg_free(self); }
 }
 

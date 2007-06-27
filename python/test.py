@@ -6,43 +6,55 @@ import string
 from types import *
 import poldek
 
-def test_pkguinf(ctx):
-    arr = ctx.get_avail_packages()
-    print "Loaded %d packages" % len(arr)
-    if len(arr) == 0:
-        return 
+def package_inspect(pkg):
+    print "Package:  ", pkg
+
+    inf = pkg.uinf()            # loaded on demand
+    if inf:                     # index w/o uinf?
+        print "== uinf == "
+        print "Summary:  ", inf.summary
+        print "License:  ", inf.license
+        print "URL:      ", inf.url
+        print "Vendor:   ", inf.vendor
+        print "Buildhost:", inf.buildhost
+        print "Distro:   ", inf.distro
+        print "Group:    ", pkg.group
+        print "Description:\n", inf.description
+
+    print "== properties =="
+    if pkg.provides:
+        print "Provides:", pkg.provides.join()
+
+    if pkg.conflicts:
+        print "Conflicts:", pkg.conflicts.join()
+
+    if pkg.suggests:
+        print "Suggests:", pkg.suggests
         
-    pkg = arr[0]
-    inf = pkg.uinf()
-    print "Package: ", pkg
-    print "Summary: ", inf.get(inf.SUMMARY)
-    print "License: ", inf.get(inf.LICENSE)
-    print "URL:     ", inf.get(inf.URL)
-    print "Group:   ", pkg.group()
-    print "Description:\n", inf.get(inf.DESCRIPTION)
-    it = pkg.get_flist_it()
-    f = it.get_tuple()
-    while f:
-        print f
-        f = it.get_tuple()
+    if pkg.requires:
+        print "Requires:", pkg.requires.join()
+        for r in pkg.requires:
+            type = ''
+            if r.is_prereq():
+                type += 'pre'
+
+            if r.is_prereq_un():
+                if len(type): type += ', '
+                type += 'preun'
+
+            if r.is_autodirreq():
+                type = 'dir'
+                
+            if len(type) > 0:
+                print "  - requirement(%s): %s" % (type, r)
+            else:
+                print "  - requirement: %s" % r
 
 
-def test_avail(ctx):
-    arr = ctx.get_avail_packages()
-    print "Loaded %d packages" % len(arr)
-    n = 0
-    for ptr in arr:
-        print n, ' ', ptr
-        n += 1
+    print "Files: "
+    for (name, size, mode_t) in pkg.files:
+        print " ", name
 
-
-def test_search(ctx):
-    arr = ctx.get_avail_packages()
-    print "Found %d package(s)" % len(arr)
-    n = 0
-    for ptr in arr:
-        print n, ' ', ptr
-        n += 1
 
 def test_install(ctx):
     ts = ctx.ts_new(poldek.poldek_ts.INSTALL | poldek.poldek_ts.UPGRADE)
@@ -52,57 +64,70 @@ def test_install(ctx):
     ts.run(None)
 
 
+def cli_command(cctx, command):
+    cmd = cctx.rcmd()
+    if cmd.execute(command):
+        for p in cmd.packages:
+            package_inspect(p)
 
-def test_cli_ls(cctx):
-    cmd = cctx.rcmd_new(None)
-    if cmd.execline("ls poldek*"):
-        pkgs = cmd.get_packages()
-        return
-        print pkgs
-        n = 0
-        for p in pkgs:
-            print n, ' ', p
-            caps = p.requires()
-            print caps
-            for cap in caps:
-                print "   R:  %s" % cap
-            n += 1
 
-        if not pkgs:    
-            print cmd.get_str()
+def init_poldek_ctx(source_name = None):
+    ctx = poldek.poldek_ctx()
+    #ctx.set_verbose(1)
+
+    src = None
+    if source_name: # -n source_name ?
+        print "configure %s" % source_name
+        src = poldek.source(source_name)
+        ctx.configure(ctx.CONF_SOURCE, src)
+    ctx.load_config()
+
+    if not ctx.setup():
+        raise Exception, "error"
+
+    return (ctx, src)
+
+    
+
+def demo_poldeklib(source_name = None):
+    (ctx, src) = init_poldek_ctx(source_name)
+
+    print "Sources: "
+    for s in ctx.sources:
+        if not src:
+            s.set_enabled(False)
+        print " -", s
+
+    if src is None:
+        src = ctx.sources[0]
+        src.set_enabled(True)    # load first source
+
+    print "Loading %s..." % src
+    if ctx.load_sources():
+        print "  loaded %d packages" % ctx.packages.length()
+        package_inspect(ctx.packages[0])
+        
+
+def demo_poclideklib(source_name = None):
+    (ctx, src) = init_poldek_ctx(source_name)
+
+    for s in ctx.sources:
+        if not src:
+            s.set_enabled(False)
+        print " -", s
+
+    if src is None:
+        src = ctx.sources[0]
+        src.set_enabled(True)    # load first source
+
+    cctx = poldek.poclidek_ctx(ctx);
+    cctx.load_packages(cctx.LOAD_ALL)   # see poclidek.h
+    cli_command(cctx, "ls poldek*");
+
+
 
 poldek.lib_init()
 
-ctx = poldek.poldek_ctx()
-#poldek_set_verbose(1)
-src = poldek.source('ac')
-ctx.configure(ctx.CONF_SOURCE, src)
-ctx.load_config()
-if not ctx.setup():
-    raise Exception, "error"
-
-
-cctx = poldek.poclidek_ctx(ctx);
-cctx.load_packages(cctx.LOAD_ALL)
-#test_cli_ls(cctx)
-
-
-test_pkguinf(ctx)
-#test_cli_ls(poldctx)
-#arr = poldctx.get_avail_packages()
-sys.exit(0)
-    
-
-ctx = poldek.poldek_ctx()
-#poldek_set_verbose(1)
-src = poldek.source('tt2')
-ctx.configure(ctx.CONF_SOURCE, poldek.source('tt2'))
-ctx.load_config()
-ctx.setup()
-
-test_search(ctx)
-
-
-print "END"
+demo_poclideklib()
 
 
