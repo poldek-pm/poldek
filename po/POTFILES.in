@@ -111,7 +111,6 @@ poldek_term.c
 poldek_ts.c
 sigint/sigint.c
 split.c
-test_match.c
 uninstall.c
 upgrade-dist.c
 vfile/extcompr.c
