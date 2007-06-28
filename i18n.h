@@ -20,6 +20,9 @@
 # if !HAVE_NGETTEXT
 #  define ngettext(foo, foo_plural, n) (foo_plural)
 # endif
+# if defined(N_)                /* popt.h defines N_... */
+#   undef N_
+# endif
 # define N_(foo) (foo)
 # define F_(foo) gettext(foo)
 #else
