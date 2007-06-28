@@ -172,8 +172,8 @@ _distro  = pld
 
   <option name="cachedir" type="string" default="$HOME/.poldek-cache" env="yes">
     <description>
-     Cache directory for downloaded files. NOTE that parent directory of cachedir 
-     must exists.
+     Cache directory for downloaded files. NOTE that parent directory of cachedir
+     must exist.
     </description>
   </option>
 
