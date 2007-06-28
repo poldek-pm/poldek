@@ -240,6 +240,6 @@ static int oprun(struct poclidek_opgroup_rt *rt)
         return OPGROUP_RC_NIL;
 
     poldek_ts_set_type(rt->ts, POLDEK_TS_VERIFY, "verify");
-    return poldek_ts_run(rt->ts, NULL) ? OPGROUP_RC_OK : OPGROUP_RC_ERROR;
+    return poldek_ts_run(rt->ts, 0) ? OPGROUP_RC_OK : OPGROUP_RC_ERROR;
 }
 

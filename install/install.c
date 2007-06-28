@@ -125,14 +125,14 @@ static void print_install_summary(struct install_ctx *ictx)
 }
 
 static
-void update_iinf(struct install_ctx *ictx, struct poldek_iinf *iinf, int vrfy)
+void update_iinf(struct install_ctx *ictx, int vrfy)
 {
     int i, is_installed = 1;
     
     if (vrfy)
         pkgdb_reopen(ictx->ts->db, O_RDONLY);
     
-    for (i=0; i<n_array_size(ictx->install_pkgs); i++) {
+    for (i=0; i < n_array_size(ictx->install_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ictx->install_pkgs, i);
         
         if (vrfy) {
@@ -144,7 +144,7 @@ void update_iinf(struct install_ctx *ictx, struct poldek_iinf *iinf, int vrfy)
         }
         
         if (is_installed)
-            n_array_push(iinf->installed_pkgs, pkg_link(pkg));
+            n_array_push(ictx->ts->pkgs_installed, pkg_link(pkg));
     }
     
     if (vrfy == 0)
@@ -164,7 +164,7 @@ void update_iinf(struct install_ctx *ictx, struct poldek_iinf *iinf, int vrfy)
         }
 
         if (is_installed == 0)
-            n_array_push(iinf->uninstalled_pkgs, pkg_link(pkg));
+            n_array_push(ictx->ts->pkgs_removed, pkg_link(pkg));
     }
 
     if (vrfy) 
@@ -212,7 +212,7 @@ int show_errors(struct install_ctx *ictx)
     
 
 static
-int do_install(struct install_ctx *ictx, struct poldek_iinf *iinf)
+int do_install(struct install_ctx *ictx)
 {
     int rc = 1, nerr = 0, any_err = 0;
     tn_array *pkgs = NULL;
@@ -294,8 +294,8 @@ int do_install(struct install_ctx *ictx, struct poldek_iinf *iinf)
         
         rc = pm_pminstall(ts->db, pkgs, ictx->uninst_set->dbpkgs, ts);
         
-        if (!is_test && iinf)
-            update_iinf(ictx, iinf, rc <= 0);
+        if (!is_test && poldek_ts_issetf(ictx->ts, POLDEK_TS_TRACK))
+            update_iinf(ictx, rc <= 0);
 
         if (rc && !ts->getop_v(ts, POLDEK_OP_RPMTEST, POLDEK_OP_KEEP_DOWNLOADS,
                                POLDEK_OP_NOFETCH, 0))
@@ -360,7 +360,7 @@ int unmark_name_duplicates(struct pkgmark_set *pms, tn_array *pkgs)
     return nmarked;
 }
 
-int in_do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
+int in_do_poldek_ts_install(struct poldek_ts *ts)
 {
     int i, nmarked = 0, nerr = 0, n, is_particle;
     struct install_ctx ictx;
@@ -452,7 +452,7 @@ int in_do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
         if (ts->getop(ts, POLDEK_OP_PARTICLE)) {
             in_mark_namegroup(&ictx, pkg, pkg->pkgdir->pkgs);
                 
-            if (!do_install(&ictx, iinf))
+            if (!do_install(&ictx))
                 nerr++;
 
             pkgmark_massset(ts->pms, 0, PKGMARK_MARK | PKGMARK_DEP);
@@ -461,7 +461,7 @@ int in_do_poldek_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
     }
 
     if (!ts->getop(ts, POLDEK_OP_PARTICLE))
-        nerr = !do_install(&ictx, iinf);
+        nerr = !do_install(&ictx);
 
  l_end:
     

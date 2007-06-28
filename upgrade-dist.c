@@ -49,7 +49,7 @@
 int process_pkg(const struct pkg *dbpkg, struct poldek_ts *ts,
                 tn_hash *marked_h, int *nmarked)
 {
-    struct pkg *pkg, *tmpkg;
+    struct pkg *pkg = NULL, *tmpkg;
     char pkgkey[256];
     int i, cmprc;
 
@@ -166,5 +166,5 @@ int do_poldek_ts_upgrade_dist(struct poldek_ts *ts)
     if (nmarked == 0)
         msgn(1, _("Nothing to do"));
 
-    return in_do_poldek_ts_install(ts, NULL);
+    return in_do_poldek_ts_install(ts);
 }

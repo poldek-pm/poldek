@@ -227,9 +227,9 @@ static int uninstall(struct cmdctx *cmdctx)
 {
     struct poclidek_ctx  *cctx;
     struct poldek_ts     *ts;
-    struct poldek_iinf   iinf, *iinfp;
     tn_array             *pkgs;
     int                  i, err = 0;
+    unsigned             ts_flags = 0;
     
     cctx = cmdctx->cctx;
     ts = cmdctx->ts;
@@ -258,20 +258,16 @@ static int uninstall(struct cmdctx *cmdctx)
         poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
     }
     n_array_free(pkgs);
-
-    if (ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0))
-        iinfp = NULL;
-    else
-        iinfp = &iinf;
+    
+    if (!ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0))
+        ts_flags |= POLDEK_TS_TRACK;
 
     poldek_ts_set_type(ts, POLDEK_TS_UNINSTALL, "uninstall");
-    if (!poldek_ts_run(ts, iinfp))
+    if (!poldek_ts_run(ts, ts_flags))
         err++;
-    
-    if (iinfp) {
-        poclidek_apply_iinf(cmdctx->cctx, iinfp);
-        poldek_iinf_destroy(iinfp);
-    }
+
+    if (ts_flags)
+        poclidek_apply_iinf(cmdctx->cctx, ts);
     
 l_end:
     return err == 0;
@@ -285,6 +281,6 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
     if (poldek_ts_type(rt->ts) != POLDEK_TS_UNINSTALL)
         return OPGROUP_RC_NIL;
 
-    rc = poldek_ts_run(rt->ts, NULL);
+    rc = poldek_ts_run(rt->ts, 0);
     return rc ? OPGROUP_RC_OK : OPGROUP_RC_ERROR;
 }

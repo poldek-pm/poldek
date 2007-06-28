@@ -23,11 +23,9 @@
 #define OPT_GID_OP_SPLIT      (1400 + OPT_GID_BASE)
 #define OPT_GID_OP_OTHER      (1600 + OPT_GID_BASE)
 
-
 int poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path);
 
-struct poldek_iinf;
-void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf);
+void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts);
 
 int poclidek_save_installedcache(struct poclidek_ctx *cctx,
                                  struct pkgdir *pkgdir);

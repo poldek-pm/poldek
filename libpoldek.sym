@@ -253,12 +253,10 @@ poldek_ts_add_pkgmask
 poldek_ts_clean_args
 poldek_ts_clrf
 poldek_ts_configure
-poldek_ts_destroy
 poldek_ts_free
 poldek_ts_get_arg_count
 poldek_ts_get_args_asmasks
 poldek_ts_getop
-poldek_ts_init
 poldek_ts_is_interactive_on
 poldek_ts_issetf
 poldek_ts_issetf_all

@@ -61,14 +61,15 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts);
 extern
 int do_poldek_ts_upgrade_dist(struct poldek_ts *ts);
 extern
-int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf);
+int do_poldek_ts_uninstall(struct poldek_ts *ts);
 
 
-static int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
-static int ts_run_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf);
-static int ts_run_verify(struct poldek_ts *ts, void *);
+static int ts_run_install(struct poldek_ts *ts);
+static int ts_run_uninstall(struct poldek_ts *ts);
+static int ts_run_verify(struct poldek_ts *ts);
 
-typedef int (*ts_run_fn)(struct poldek_ts *, void *);
+typedef int (*ts_run_fn)(struct poldek_ts *);
+
 struct ts_run {
     int        type;
     ts_run_fn  run;
@@ -86,6 +87,10 @@ struct ts_run ts_run_tbl[] = {
 
 
 #define TS_CONFIG_LATER (1 << 0)
+
+static int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx);
+static void poldek_ts_destroy(struct poldek_ts *ts);
+
 
 struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx, unsigned flags)
 {
@@ -178,7 +183,7 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
         bitvect_clr(ts->_opvect, optv);
     
     if (touch)
-        bitvect_set(ts->_opvect_setmark, optv); /* touched */
+        bitvect_set(ts->_opvect_touched, optv); /* touched */
 }
 
 void poldek_ts_setop(struct poldek_ts *ts, int optv, int on)
@@ -196,7 +201,7 @@ int poldek_ts_getop(const struct poldek_ts *ts, int optv)
 int poldek_ts_op_touched(const struct poldek_ts *ts, int optv)
 {
     n_assert(bitvect_slot(optv) < sizeof(ts->_opvect)/sizeof(bitvect_slot_itype));
-    return bitvect_isset(ts->_opvect_setmark, optv) > 0;
+    return bitvect_isset(ts->_opvect_touched, optv) > 0;
 }
 
 int poldek_ts_getop_v(const struct poldek_ts *ts, int optv, ...)
@@ -231,7 +236,7 @@ static void cp_str(char **dst, const char *src)
         *dst = NULL;
 }
 
-int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
+static int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
 {
     memset(ts, 0, sizeof(*ts));
     ts->setop = poldek_ts_setop;
@@ -253,7 +258,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
     ts->_na = n_alloc_new(4, TN_ALLOC_OBSTACK);
     ts->db = NULL;
 
-    if (ctx) {
+    if (ctx) {  /* copy configuration from ctx's ts */
         cp_str(&ts->rootdir, ctx->ts->rootdir);
         cp_str(&ts->fetchdir, ctx->ts->fetchdir);
         cp_str(&ts->cachedir, ctx->ts->cachedir);
@@ -271,7 +276,7 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         ts->exclude_path = n_array_dup(ctx->ts->exclude_path,
                                        (tn_fn_dup)strdup);
         
-    } else {
+    } else {                    /* no ctx? -> it's ctx internal ts */
         ts->rootdir = NULL;
         ts->fetchdir = NULL;
         ts->cachedir = NULL;
@@ -289,11 +294,13 @@ int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
     ts->askpkg_fn = poldek_term_ask_pkg;
     ts->ask_fn = poldek_term_ask_yn;
     ts->pms = pkgmark_set_new(1024, 0);
+
+    ts->pkgs_installed = pkgs_array_new(16);
+    ts->pkgs_removed   = pkgs_array_new(16);
     return 1;
 }
 
-
-void poldek_ts_destroy(struct poldek_ts *ts)
+static void poldek_ts_destroy(struct poldek_ts *ts)
 {
     ts->_flags = 0;
     ts->ctx = NULL;
@@ -312,30 +319,20 @@ void poldek_ts_destroy(struct poldek_ts *ts)
     n_cfree(&ts->dumpfile);
     n_cfree(&ts->prifile);
     
-    if (ts->rpmopts)
-        n_array_free(ts->rpmopts);
+    n_array_cfree(&ts->rpmopts);
+    n_array_cfree(&ts->rpmacros);
+    n_array_cfree(&ts->hold_patterns);
+    n_array_cfree(&ts->ign_patterns);
+    n_array_cfree(&ts->exclude_path);
 
-    if (ts->rpmacros)
-        n_array_free(ts->rpmacros);
-
-    if (ts->hold_patterns)
-        n_array_free(ts->hold_patterns);
-
-    if (ts->ign_patterns)
-        n_array_free(ts->ign_patterns);
-
-    if (ts->exclude_path)
-        n_array_free(ts->exclude_path);
-
-    ts->rpmopts = NULL;
-    ts->rpmacros = NULL;
-    ts->hold_patterns = ts->ign_patterns = NULL;
     if (ts->pm_pdirsrc)
         source_free(ts->pm_pdirsrc);
 
     if (ts->pms)
         pkgmark_set_free(ts->pms);
-    
+
+    n_array_cfree(&ts->pkgs_installed);
+    n_array_cfree(&ts->pkgs_removed);
     n_alloc_free(ts->_na);
 }
 
@@ -575,26 +572,6 @@ struct pkgdb *poldek_ts_dbopen(struct poldek_ts *ts, mode_t mode)
                       ts->pm_pdirsrc ? ts->pm_pdirsrc : NULL, NULL);
 }
 
-void poldek_iinf_init(struct poldek_iinf *iinf) 
-{
-    iinf->installed_pkgs = pkgs_array_new(16);
-    iinf->uninstalled_pkgs = pkgs_array_new(16);
-}
-
-void poldek_iinf_destroy(struct poldek_iinf *iinf) 
-{
-    if (iinf->installed_pkgs) {
-        n_array_free(iinf->installed_pkgs);
-        iinf->installed_pkgs = NULL;
-    }
-    
-    if (iinf->uninstalled_pkgs) {
-        n_array_free(iinf->uninstalled_pkgs);
-        iinf->uninstalled_pkgs = NULL;
-    }
-}
-
-
 int poldek_ts_add_pkg(struct poldek_ts *ts, struct pkg *pkg)
 {
     return arg_packages_add_pkg(ts->aps, pkg);
@@ -769,7 +746,7 @@ static int ts_prerun0(struct poldek_ts *ts)
     return 1;
 }
 
-static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf) 
+static int ts_prerun(struct poldek_ts *ts) 
 {
     int rc = 1;
 
@@ -813,8 +790,8 @@ static int ts_prerun(struct poldek_ts *ts, struct poldek_iinf *iinf)
     
     if (rc) {
         rc = arg_packages_setup(ts->aps, ts->pmctx);
-        if (rc && iinf)
-            poldek_iinf_init(iinf);
+        n_array_clean(ts->pkgs_installed);
+        n_array_clean(ts->pkgs_removed);
     }
 
     return rc;
@@ -995,10 +972,9 @@ int ts_run_upgrade_dist(struct poldek_ts *ts)
     return rc;
 }
 
-extern int in_do_ts_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
+extern int in_do_ts_install(struct poldek_ts *ts);
 
-static        
-int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf) 
+static int ts_run_install(struct poldek_ts *ts) 
 {
     int rc;
     
@@ -1027,11 +1003,10 @@ int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
 
     if (ts->ctx->_depengine == 3) { /* hope, soon */
         msgn(5, "Running poldek3 dependency engine...");
-        //rc = in_do_poldek_ts_install(ts, iinf);
         n_die("Not implemented yet");
 
     } else {
-        rc = in_do_poldek_ts_install(ts, iinf);
+        rc = in_do_poldek_ts_install(ts);
     }
 
     if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
@@ -1044,7 +1019,7 @@ int ts_run_install(struct poldek_ts *ts, struct poldek_iinf *iinf)
 
 
 static
-int ts_run_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf) 
+int ts_run_uninstall(struct poldek_ts *ts) 
 {
     int rc;
 
@@ -1055,7 +1030,7 @@ int ts_run_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
         return 0;
     pkgdb_tx_commit(ts->db);
     
-    rc = do_poldek_ts_uninstall(ts, iinf);
+    rc = do_poldek_ts_uninstall(ts);
     
     if (rc && !ts->getop(ts, POLDEK_OP_TEST))
         pkgdb_tx_commit(ts->db);
@@ -1069,19 +1044,19 @@ int ts_run_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
 }
 
 static
-int ts_run_verify(struct poldek_ts *ts, void *foo) 
+int ts_run_verify(struct poldek_ts *ts) 
 {
     tn_array *pkgs = NULL;
     int nerr = 0, rc = 1;
 
     DBGF("%p\n", ts);
     //n_assert(poldek_ts_issetf(ts, POLDEK_TS_VERIFY));
-    foo = foo;
+
     if (poldek_ts_get_arg_count(ts) == 0) {
         poldek_load_sources(ts->ctx);
         
     } else {
-        if (!ts_prerun(ts, NULL))
+        if (!ts_prerun(ts))
             return 0;
     
         if (!poldek_load_sources(ts->ctx))
@@ -1157,12 +1132,15 @@ int ts_run_verify(struct poldek_ts *ts, void *foo)
 
 
 
-int poldek_ts_run(struct poldek_ts *ts, struct poldek_iinf *iinf)
+int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
 {
     struct ts_run *ts_run = NULL;
     int i = 0;
 
+    poldek_ts_setf(ts, flags);
     n_assert(ts->type);
+
+    
     DBGF("%d(%s)\n", ts->type, ts->typenam);
     while (ts_run_tbl[i].type) {
         if (ts_run_tbl[i].type == ts->type) {
@@ -1180,9 +1158,9 @@ int poldek_ts_run(struct poldek_ts *ts, struct poldek_iinf *iinf)
         poldek_load_sources(ts->ctx);
 
     if ((ts_run->flags & TS_RUN_NOPRERUN) == 0)
-        if (!ts_prerun(ts, iinf))
+        if (!ts_prerun(ts))
             return 0;
         
-    return ts_run->run(ts, iinf);
+    return ts_run->run(ts);
 }
 

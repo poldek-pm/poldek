@@ -539,9 +539,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 static int install(struct cmdctx *cmdctx)
 {
-    struct poldek_iinf   iinf;
     struct poclidek_ctx  *cctx;
-    struct poldek_ts      *ts;
+    struct poldek_ts     *ts;
     int rc = 1, is_test;
     
     cctx = cmdctx->cctx;
@@ -552,16 +551,13 @@ static int install(struct cmdctx *cmdctx)
         poldek_ts_setf(ts, POLDEK_TS_UPGRADE); /* the default */
     is_test = ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0);
 
-    rc = poldek_ts_run(ts, is_test ? NULL : &iinf);
+    rc = poldek_ts_run(ts, is_test ? 0 : POLDEK_TS_TRACK);
     
     if (rc == 0 && !sigint_reached())
         msgn(1, _("There were errors"));
     
     if (!is_test && cmdctx->cctx->pkgs_installed)
-        poclidek_apply_iinf(cmdctx->cctx, &iinf);
-    
-    if (!is_test)
-        poldek_iinf_destroy(&iinf);
+        poclidek_apply_iinf(cmdctx->cctx, ts);
     
     return rc;
 }
@@ -583,6 +579,6 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
         }
     }
 
-    rc = poldek_ts_run(rt->ts, NULL);
+    rc = poldek_ts_run(rt->ts, 0);
     return rc ? OPGROUP_RC_OK : OPGROUP_RC_ERROR;
 }

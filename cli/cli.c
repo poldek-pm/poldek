@@ -723,19 +723,16 @@ int poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, int argc,
     return do_poclidek_exec(cctx, ts, argc, argv, NULL);
 }
 
-void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf)
+void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts)
 {
     int i, n = 0;
     struct pkg_dent *ent = NULL;
     
-    if (iinf == NULL || cctx->pkgs_installed == NULL)
-        return;
-    
     if (cctx->rootdir)
         ent = poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR);
 
-    for (i=0; i < n_array_size(iinf->uninstalled_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(iinf->uninstalled_pkgs, i);
+    for (i=0; i < n_array_size(ts->pkgs_removed); i++) {
+        struct pkg *pkg = n_array_nth(ts->pkgs_removed, i);
 
         pkgdir_remove_package(cctx->dbpkgdir, pkg);
         if (ent)
@@ -745,8 +742,8 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_iinf *iinf)
         DBGF("- %s\n", pkg_id(pkg));
     }
 
-    for (i=0; i < n_array_size(iinf->installed_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(iinf->installed_pkgs, i);
+    for (i=0; i < n_array_size(ts->pkgs_installed); i++) {
+        struct pkg *pkg = n_array_nth(ts->pkgs_installed, i);
 
         /*
           assure new packages haven't recno and clean it if they have;

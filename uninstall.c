@@ -51,7 +51,8 @@
 
 static void print_summary(tn_array *pkgs, struct pkgmark_set *pms, int ndep,
                           int simple);
-static void update_poldek_iinf(struct poldek_iinf *iinf, tn_array *pkgs,
+
+static void update_iinf(struct poldek_ts *ts, tn_array *pkgs,
                                struct pkgdb *db, int vrfy);
 struct uninstall_ctx *uctx;
 static int process_package(int indent, struct uninstall_ctx *uctx,
@@ -613,7 +614,7 @@ static tn_array *reorder_packages(tn_array *pkgs)
 }
 
 
-int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
+int do_poldek_ts_uninstall(struct poldek_ts *ts)
 {
     int               nerr = 0, run_uninstall = 0;
     tn_array          *pkgs = NULL, *ordered_pkgs = NULL;
@@ -678,8 +679,8 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf)
             vrfy = 1;
         }
             
-        if (iinf)
-            update_poldek_iinf(iinf, pkgs, ts->db, vrfy);
+        if (poldek_ts_issetf(ts, POLDEK_TS_TRACK))
+            update_iinf(ts, pkgs, ts->db, vrfy);
     }
 
  l_end:
@@ -717,8 +718,8 @@ void print_summary(tn_array *pkgs, struct pkgmark_set *pms, int ndep, int simple
 
 
 static
-void update_poldek_iinf(struct poldek_iinf *iinf, tn_array *pkgs,
-                        struct pkgdb *db, int vrfy)
+void update_iinf(struct poldek_ts *ts, tn_array *pkgs, struct pkgdb *db,
+                 int vrfy)
 {
     int i, is_installed = 0;
     
@@ -734,7 +735,7 @@ void update_poldek_iinf(struct poldek_iinf *iinf, tn_array *pkgs,
             is_installed = pkgdb_is_pkg_installed(db, pkg, NULL);
         
         if (!is_installed)
-            n_array_push(iinf->uninstalled_pkgs, pkg_link(pkg));
+            n_array_push(ts->pkgs_removed, pkg_link(pkg));
     }
     
     if (vrfy) 

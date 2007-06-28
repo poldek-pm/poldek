@@ -16,6 +16,10 @@ enum poldek_ts_flag {
 
     POLDEK_TS_UPGRADEDIST  = POLDEK_TS_UPGRADE | POLDEK_TS_DIST,
     POLDEK_TS_INSTALLDIST  = POLDEK_TS_DIST,
+
+    POLDEK_TS_TRACK        = (1 << 10) /* track changes made by ts
+                                          (pkgs_{installed, removed})
+                                       */
 };
 
 enum poldek_ts_type {
@@ -117,16 +121,19 @@ struct poldek_ts {
     tn_array           *hold_patterns;
     tn_array           *ign_patterns; 
     tn_array           *exclude_path;
+
+    tn_array            *pkgs_installed; /* packages installed by transaction */
+    tn_array            *pkgs_removed;   /* packages removed by transaction */
     
     int  (*askpkg_fn)(const char *, struct pkg **pkgs, struct pkg *deflt);
     int  (*ask_fn)(int default_a, const char *, ...);
 
     tn_alloc           *_na;
     uint32_t           _flags;      /* POLDEK_TS_* */
-    uint32_t           _iflags;    /* internal flags */
-    uint32_t           _opvect[4];
-    uint32_t           _opvect_setmark[4];
-    uint32_t           _opvect_preserve[4];
+    uint32_t           _iflags;     /* internal flags */
+    uint32_t           _opvect[4];  /* options POLDEK_OP* */
+    uint32_t           _opvect_touched[4];
+    
     int   (*getop)(const struct poldek_ts *, int op);
     int   (*getop_v)(const struct poldek_ts *, int op, ...);
     void  (*setop)(struct poldek_ts *, int op, int onoff);
@@ -138,9 +145,6 @@ struct poldek_ts {
 #endif
 struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx, unsigned flags);
 void poldek_ts_free(struct poldek_ts *ts);
-
-int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx);
-void poldek_ts_destroy(struct poldek_ts *ts);
 
 int poldek_ts_type(struct poldek_ts *ts);
 int poldek_ts_set_type(struct poldek_ts *ts, enum poldek_ts_type type,
@@ -173,20 +177,6 @@ void poldek_ts_clean_args(struct poldek_ts *ts);
 tn_array* poldek_ts_get_args_asmasks(struct poldek_ts *ts, int hashed);
 int poldek_ts_get_arg_count(struct poldek_ts *ts);
 
-struct poldek_iinf {            /* install info struct */
-    tn_array *installed_pkgs;
-    tn_array *uninstalled_pkgs;
-};
-
-void poldek_iinf_init(struct poldek_iinf *iinf);
-void poldek_iinf_destroy(struct poldek_iinf *iinf);
-
-int poldek_ts_run(struct poldek_ts *ts, struct poldek_iinf *iinf);
-
-//struct pkgdir;
-//struct pkgdir *poldek_ts_load_dest_pkgdir(struct poldek_ts *ts);
-//int poldek_ts_do_install_dist(struct poldek_ts *ts);
-//int poldek_ts_do_install(struct poldek_ts *ts, struct poldek_iinf *iinf);
-//int poldek_ts_do_uninstall(struct poldek_ts *ts, struct poldek_iinf *iinf);
+int poldek_ts_run(struct poldek_ts *ts, unsigned flags);
 
 #endif
