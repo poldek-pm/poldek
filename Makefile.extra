@@ -56,13 +56,11 @@ POTFILES_in:
 misarch: mclean
 	$(MAKE) -C . backup cparch=1 backupdir=/z
 
-#perl -pi -e "s/VERSION_STATUS=\"devel\"/VERSION_STATUS=\"devel $$dts\"/g" \
-#$(distdir)/configure* 
-
 snap: tarball-bz2
 	@dts=`date +%Y%m%d.%H` && rm -rf $(PACKAGE)-cvs$$dts* && \
 	tar xpjf $(distdir).tar.bz2 && \
 	echo "$$dts" > $(distdir)/0_THIS_IS_SNAPSHOT && \
+        perl -pi -e "s/VERSION_STATUS=.+$$/VERSION_STATUS=\"snap$$dts\"/" $(distdir)/configure $(distdir)/configure.in; \
 	mv -f $(distdir) $(PACKAGE)-$(VERSION)-cvs$$dts && \
 	tar cpjf $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2 $(PACKAGE)-$(VERSION)-cvs$$dts && \
 	rm -rf $(PACKAGE)-$(VERSION)-cvs$$dts && \
@@ -72,15 +70,15 @@ snap-rpm-package: snap
 		dts=`date +%Y%m%d.%H` && echo $$dts && ls -l $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2 &&\
 	        rpmbuild -tb --with poldekuser --define "snap $$dts" $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2
 
-ann_from = mis@pld.org.pl
+ann_from = mis@pld-linux.org
 ann_to   = poldek@pld-linux.org
-ann_from_ = mis@k2.net.pl
+ann_from_ = mis@pld-linux.org
 ann:
 	@echo -ne "MAIL FROM: $(ann_from_)\r\n"        >  ann.1; \
 	echo -ne "RCPT TO: $(ann_to)\r\nDATA\r\n"     >> ann.1; \
 	echo -ne "From: Pawel A. Gajda <$(ann_from)>\nTo: $(ann_to)\n" >> ann.1; \
 	perl -ne 'BEGIN { $$n = 0; }; if (/^(\d+\.\d+.*?)\s/) { exit if $$n; print "Subject: [ANN] poldek $$1\n\n"; $$n++; next; } print if $$n;' NEWS >> ann.1; \
-	echo -ne "-- \nmis@pld.org.pl\nhttp://team.pld.org.pl/~mis/poldek/" >> ann.1; \
+	echo -ne "-- \nmis@pld-linux.org\nhttp://poldek.pld.linux.org/" >> ann.1; \
 	echo -ne "\r\n.\r\n" >> ann.1; \
 	echo "Saved ann.1"
 
