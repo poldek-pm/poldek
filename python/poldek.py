@@ -170,7 +170,7 @@ setattr(pkg, 'group', property(eval("lambda self: poldekmod.pkg_group(self)")))
 for c in ['provides', 'requires', 'conflicts', 'suggests']:
     setattr(pkg, c, property(n_array_proxy_func('pkg.', '_get_%s' % c, 'capreq')))
 
-setattr(pkg, 'files', property(eval("lambda self: poldekmod.pkg_get_flist_it(self)")));
+setattr(pkg, 'files', property(lambda self: poldekmod.pkg_get_flist_it(self)));
 
 tags = _modsymbols('pkguinf_', with_methods = False)
 for k, v in tags.iteritems():
