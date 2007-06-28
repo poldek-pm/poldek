@@ -944,6 +944,9 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
         addparam_flags |= ADD_PARAM_FOREIGN;
     }
 
+    if (flags & POLDEK_LDCONF_NOVALIDATE)
+        validate = 0;
+
     if (flags & POLDEK_LDCONF_UPDATE)
         update = 1;
 

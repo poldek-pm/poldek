@@ -28,12 +28,43 @@ testConf()
 
     is_verbose_mode && $poldek_l
 
-    n=$($poldek_l | grep -vE '^dbg:' | wc -l)
+    n=$($poldek_l | grep 'test://' | wc -l)
     assertEquals "2 sources expected" "$n" "2"
 
     n=$($poldek_l | grep -E '^test[12] ' | wc -l)
     assertEquals "2 sources expected, but not those" "$n" "2"
 }
+
+testConfAsRoot() 
+{
+    create_local_conf
+    msgn "--conf"
+    poldek_l="$POLDEK --conf $TMPDIR/poldek.conf -q  -l"
+
+    is_verbose_mode && $poldek_l
+
+    n=$(fakeroot $poldek_l | grep 'test://' | wc -l)
+    assertEquals "2 sources expected" "$n" "2"
+
+    n=$(fakeroot $poldek_l | grep -E '^test[12] ' | wc -l)
+    assertEquals "2 sources expected, but not those" "$n" "2"
+
+    msgn "default conf"
+    mkdir $TMPDIR/home || fail "mkdir"
+    mv -f $TMPDIR/poldek.conf $TMPDIR/home/.poldekrc
+    HOME=$TMPDIR/home
+    export HOME
+
+    poldek_l="$POLDEK -q -l"
+    is_verbose_mode && $poldek_l
+
+    n=$(fakeroot $poldek_l | grep 'test://' | wc -l)
+    assertEquals "2 sources expected" "$n" "2"
+
+    n=$(fakeroot $poldek_l | grep -E '^test[12] ' | wc -l)
+    assertEquals "2 sources expected, but not those" "$n" "2"
+}
+
 
 testConfInclude() 
 {

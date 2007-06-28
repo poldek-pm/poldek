@@ -6,10 +6,11 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
-#define POLDEK_LDCONF_FOREIGN     (1 << 0) /* not a poldek file */
-#define POLDEK_LDCONF_UPDATE      (1 << 1) /* resync with remote config */
-#define POLDEK_LDCONF_NOINCLUDE   (1 << 2) /* ignore %include directives */
-#define POLDEK_LDCONF_GLOBALONLY  (1 << 9) /* for early cachedir setup */
+#define POLDEK_LDCONF_FOREIGN     (1 << 0) /* not a poldek config file */
+#define POLDEK_LDCONF_NOVALIDATE  (1 << 1) /* do not validate config variables */
+#define POLDEK_LDCONF_UPDATE      (1 << 2) /* resync with remote config */
+#define POLDEK_LDCONF_NOINCLUDE   (1 << 3) /* ignore %include directives */
+#define POLDEK_LDCONF_GLOBALONLY  (1 << 4) /* for early cachedir setup */
 
 /* default localization is used if path is NULL */
 tn_hash *poldek_conf_load(const char *path, unsigned flags);

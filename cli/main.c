@@ -587,7 +587,8 @@ static int do_su(int argc, char **argv)
     } else if (noautosu == 0 && getuid() == 0) {  /* check config's runas */
         tn_hash *cnf;
         
-        cnf = poldek_conf_load_default(POLDEK_LDCONF_NOINCLUDE | POLDEK_LDCONF_FOREIGN);
+        cnf = poldek_conf_load_default(POLDEK_LDCONF_GLOBALONLY |
+                                       POLDEK_LDCONF_NOVALIDATE);
         if (cnf) {
             tn_hash *global;
             const char *u;
