@@ -117,12 +117,12 @@ int capreq_strcmp_evr(struct capreq *pr1, struct capreq *pr2);
 int capreq_strcmp_name_evr(struct capreq *pr1, struct capreq *pr2);
 
 int capreq_cmp_name(struct capreq *cr1, struct capreq *cr2);
-int capreq_cmp2name(struct capreq *pr1, const char *name);
 int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2);
 
 #ifndef SWIG
 tn_array *capreq_arr_new(int size);
-int capreq_arr_find(tn_array *capreqs, const char *name);
+int capreq_arr_find(tn_array *capreqs, const char *name); /* returns index */
+int capreq_arr_contains(tn_array *capreqs, const char *name); /* returns bool */
 tn_buf *capreq_arr_join(tn_array *capreqs, tn_buf *nbuf, const char *sep);
 
 int capreq_arr_store_n(tn_array *arr);

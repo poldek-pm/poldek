@@ -59,7 +59,7 @@ int capreq_cmp_name(struct capreq *cr1, struct capreq *cr2)
     return strcmp(capreq_name(cr1), capreq_name(cr2));
 }
 
-__inline__
+__inline__ static
 int capreq_cmp2name(struct capreq *cr1, const char *name)
 {
     return strcmp(capreq_name(cr1), name);
@@ -427,9 +427,24 @@ tn_array *capreq_arr_new(int size)
 __inline__
 int capreq_arr_find(tn_array *capreqs, const char *name)
 {
+    /* capreq_cmp2name is compilant with capreq_cmp_name_evr */
+    if (!n_array_is_sorted(capreqs))
+        n_array_sort(capreqs);  
+    
     return n_array_bsearch_idx_ex(capreqs, name,
                                   (tn_fn_cmp)capreq_cmp2name);
 }
+
+__inline__
+int capreq_arr_contains(tn_array *capreqs, const char *name)
+{
+    if (!n_array_is_sorted(capreqs))
+        n_array_sort(capreqs);  /* capreq_cmp2name */
+    
+    return n_array_bsearch_idx_ex(capreqs, name,
+                                  (tn_fn_cmp)capreq_cmp2name) > -1;
+}
+
 
 tn_buf *capreq_arr_join(tn_array *capreqs, tn_buf *nbuf, const char *sep)
 {

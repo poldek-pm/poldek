@@ -920,8 +920,7 @@ int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard)
     struct capreq *cnfl = NULL;
 
     DBGF("%s %s%s", pkg_id(pkg), pkg_id(cpkg), isbastard ? " (bastard)" : "");
-    if (n_array_bsearch_ex(pkg->cnfls, cpkg->name,
-                           (tn_fn_cmp)capreq_cmp2name) == NULL) {
+    if (!capreq_arr_contains(pkg->cnfls, cpkg->name)) {
         cnfl = capreq_new(pkg->na, cpkg->name, cpkg->epoch, cpkg->ver,
                           cpkg->rel, REL_EQ,
                           (isbastard ? CAPREQ_BASTARD : 0));
@@ -935,8 +934,7 @@ int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard)
 
 int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg)
 {
-    return pkg->cnfls && (n_array_bsearch_ex(pkg->cnfls, cpkg->name,
-                                             (tn_fn_cmp)capreq_cmp2name));
+    return pkg->cnfls && capreq_arr_contains(pkg->cnfls, cpkg->name);
 }
 
 struct pkguinf *pkg_xuinf(const struct pkg *pkg, tn_array *langs) 

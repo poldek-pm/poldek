@@ -505,7 +505,7 @@ static int update_pkdir_pkg(struct pkg *pkg, struct tndb *db,
 {
     const char **tl, **tl_save;
     char val[16 * 1024];
-    int  vlen, n = 0, nadded = 0;
+    int  vlen, n = 0, nadded = 0, created_here = 0;
 
     n_assert(key[1] == PREFIX_PKGKEY_REQDIR);
     vlen = sizeof(val);
@@ -513,15 +513,15 @@ static int update_pkdir_pkg(struct pkg *pkg, struct tndb *db,
     if (tl == NULL)
         return 0;
     
-    if (!pkg->reqs)
+    if (!pkg->reqs) {
         pkg->reqs = capreq_arr_new(n);
-        
+        created_here = 1;
+    }
+    
     while (*tl) {
         const char *dir = *tl;
         
-        if (*dir && !n_array_bsearch_ex(pkg->reqs, dir,
-                                        (tn_fn_cmp)capreq_cmp2name)) {
-            
+        if (*dir && (created_here || !capreq_arr_contains(pkg->reqs, dir))) {
             struct capreq *req = capreq_new(pkg->na, dir, 0, NULL, NULL, 0,
                                             CAPREQ_BASTARD);
             n_array_push(pkg->reqs, req);

@@ -20,7 +20,6 @@ capreq_arr_restore_st
 capreq_arr_store
 capreq_arr_store_n
 capreq_clone
-capreq_cmp2name
 capreq_cmp_name
 capreq_cmp_name_evr
 capreq_epoch_
