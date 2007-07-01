@@ -707,7 +707,7 @@ _shunit_execSuite()
     setUp
 
     # execute the test
-    echo "${_su_func}"
+    echo "# ${_su_func}"
     eval ${_su_func}
     if [ $? -eq 0 ]; then 
         _shunit_testPassed
