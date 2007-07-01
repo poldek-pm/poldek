@@ -245,8 +245,8 @@ def get_options():
 (options, args) = get_options()
 
 poldek.lib_init()
-#if not options.v == 0:
-#    options.v = 1
+if not options.v :
+    options.v = 0
     
 pyl = Pyldek(options.n, verbose = options.v)
 
