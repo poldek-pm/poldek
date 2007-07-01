@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -50,7 +50,9 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         pkgdir = pkgdir_srcopen(src, 0);
 
         /* trying dir */
-        if (pkgdir == NULL && !source_is_type(src, "dir") && is_dir(src->path)) {
+        if (pkgdir == NULL && !source_is_type(src, "dir") &&
+            util__isdir(src->path)) {
+            
             logn(LOGNOTICE, _("trying to scan directory %s..."), src->path);
             
             source_set_type(src, "dir");

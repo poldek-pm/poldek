@@ -298,12 +298,8 @@ int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
 #endif
                 
         if (numConflicts) {
-            FILE *fstream;
-            
             logn(LOGERR, _("%s: failed dependencies:"), n_basenam(path));
-            printdepProblems(poldek_log_stream(), conflicts, numConflicts);
-            if ((fstream = poldek_log_file_stream()))
-                printdepProblems(fstream, conflicts, numConflicts);
+            printdepProblems(stderr, conflicts, numConflicts);
             freeConflicts(conflicts, numConflicts);
             goto l_err;
         }
@@ -327,14 +323,11 @@ int do_dbinstall(rpmdb db, const char *rootdir, const char *path,
 
     if (rc != 0) {
         if (rc > 0) {
-            FILE *fstream;
 #ifdef HAVE_RPM_4_1
             probs = rpmtsProblems(ts);
 #endif
             logn(LOGERR, _("%s: installation failed:"), path);
-            printProblems(poldek_log_stream(), probs);
-            if ((fstream = poldek_log_file_stream()))
-                printProblems(fstream, probs);
+            printProblems(stderr, probs); /* XXX: rpm logging API... */
             goto l_err;
             
         } else {

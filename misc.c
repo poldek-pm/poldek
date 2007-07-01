@@ -153,7 +153,6 @@ static char *setup_default_cachedir(void)
     dir = getenv("TMPDIR");        /* try env $TMP* */
     if (dir == NULL || *dir == '\0')
         dir = getenv("TMP");
-
     if (dir && *dir && poldek_util_is_rwxdir(dir)) {
         const char *dn = cachedn + 1; /* in $TMP -> unhide */
         char suffix[32];
@@ -164,7 +163,7 @@ static char *setup_default_cachedir(void)
             n_snprintf(suffix, sizeof(suffix), "%.4ld", getuid());
         
         n_snprintf(path, sizeof(path), "%s/%s-%s", dir, dn, suffix);
-        if (!is_dir(path))
+        if (!util__isdir(path))
             mkdir(path, 0700);
             
         if (poldek_util_is_rwxdir(path)) {
@@ -179,7 +178,7 @@ static char *setup_default_cachedir(void)
         if (getenv("POLDEK_TESTING"))
             d = getenv("HOME");
             
-        if (d && poldek_util_is_rwxdir(d) && mk_dir(d, cachedn)) {
+        if (d && poldek_util_is_rwxdir(d) && util__mksubdir(d, cachedn)) {
             n_snprintf(path, sizeof(path), "%s/%s", d, cachedn);
             tmp_cachedir = path;
         }
@@ -192,7 +191,7 @@ l_end:
     return n_strdup(tmp_cachedir);
 }
 
-char *setup_cachedir(const char *path) 
+char *util__setup_cachedir(const char *path) 
 {
     if (path == NULL)
         return setup_default_cachedir();
@@ -228,7 +227,6 @@ char *trimslash(char *path)
     }
     return path;
 }
-
 
 char *next_token(char **str, char delim, int *toklen) 
 {
@@ -274,13 +272,13 @@ int poldek_util_is_rwxdir(const char *path)
     return errno == 0;
 }
 
-int is_dir(const char *path)
+int util__isdir(const char *path)
 {
     struct stat st;
     return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
 }
 
-int mk_dir(const char *path, const char *dn) 
+int util__mksubdir(const char *path, const char *dn) 
 {
     struct stat st;
     char fpath[PATH_MAX];
@@ -299,7 +297,7 @@ int mk_dir(const char *path, const char *dn)
     }
     
     snprintf(fpath, sizeof(fpath), "%s/%s", path, dn);
-    if (!is_dir(fpath)) {
+    if (!util__isdir(fpath)) {
         if (mkdir(fpath, 0755) != 0) {
             logn(LOGERR, "%s: mkdir: %m", fpath);
             return 0;
@@ -310,7 +308,7 @@ int mk_dir(const char *path, const char *dn)
 }
 
 
-int mk_dir_parents(const char *path, const char *dn) 
+int util__mkdir_p(const char *path, const char *dn) 
 {
     const char **tl, **tl_save;
     char dpath[PATH_MAX];
@@ -326,7 +324,7 @@ int mk_dir_parents(const char *path, const char *dn)
             continue;
         
         n += n_snprintf(&dpath[n], sizeof(dpath) - n, "/%s", d);
-        if (!is_dir(dpath)) {
+        if (!util__isdir(dpath)) {
             if (mkdir(dpath, 0755) != 0) {
                 logn(LOGERR, "%s: mkdir: %m", dpath);
                 nerr++;
@@ -348,65 +346,54 @@ const char *poldek_util_ngettext_n_packages_fmt(int n)
 #endif
 }
 
-
-void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,
-                           struct pkgmark_set *pms, unsigned pmsflags, int simple)
+void packages_display_summary(int verbose_l, const char *prefix, tn_array *pkgs,
+                              int parseable)
 {
-    int   i, npkgs = 0;
-    
-    npkgs =  n_array_size(pkgs);
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-        DBGF("%s %d %d\n", pkg_id(pkg), flags,
-             pms ? pkgmark_isset(pms, pkg, pmsflags) : -1);
-        if (pmsflags && pms && !pkgmark_isset(pms, pkg, pmsflags))
-            npkgs--;
-    }
+    int i, npkgs = n_array_size(pkgs);
 
-    if (simple) {
+    n_assert(pkgs);
+    n_assert(n_array_size(pkgs) > 0);
+    
+    if (parseable) {
         for (i=0; i < n_array_size(pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgs, i);
-            
-            if (pmsflags && pms && !pkgmark_isset(pms, pkg, pmsflags))
-                continue;
             msgn(verbose_l, "%%%s %s", prefix, pkg_id(pkg));
         }
         
     } else {
-        int ncol = 2, term_width, hdr_printed = 0;
+        int ncol = 2, term_width, prefix_printed = 0;
         const char *p, *colon = ", ";
-
+        tn_buf *nbuf = n_buf_new(2048);
+        
         term_width = poldek_term_get_width() - 5;
         ncol = strlen(prefix) + 1;
 
         for (i=0; i < n_array_size(pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgs, i);
 
-            if (pmsflags && pms && !pkgmark_isset(pms, pkg, pmsflags))
-                continue;
-
-            if (hdr_printed == 0) {
-                msg(verbose_l, "%s ", prefix);
-                hdr_printed = 1;
+            if (prefix_printed == 0) {
+                n_buf_printf(nbuf, "%s ", prefix);
+                prefix_printed = 1;
             }
             	
             p = pkg_id(pkg);
             if (ncol + (int)strlen(p) >= term_width) {
                 ncol = 3;
-                msg(verbose_l, "_\n%s ", prefix);
+                n_buf_printf(nbuf, "\n%s ", prefix);
             }
         
             if (--npkgs == 0)
                 colon = "";
-            
-            msg(verbose_l, "_%s%s", p, colon);
+            n_buf_printf(nbuf, "%s%s", p, colon);
             ncol += strlen(p) + strlen(colon);
         }
 
-        if (hdr_printed)
-            msg(verbose_l, "_\n");
+        if (prefix_printed)
+            n_buf_printf(nbuf, "\n");
+        
+        msg(verbose_l, "%s", (char*)n_buf_ptr(nbuf));
+        n_buf_free(nbuf);
     }
-    
 }
 
 static char *get_env(char *dest, int size, const char *name) 
@@ -535,7 +522,7 @@ const char *poldek_util_expand_env_vars(char *dest, int size, const char *str)
     return poldek_util_expand_vars(dest, size, str, '$', NULL, 0);
 }
 
-char *abs_path(const char *path) 
+char *util__abs_path(const char *path) 
 {
     if (strstr(path, "./") == NULL)
         return NULL;

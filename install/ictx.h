@@ -141,6 +141,6 @@ int in_process_package(int indent, struct install_ctx *ictx,
 struct pkg *in_choose_equiv(struct poldek_ts *ts, struct capreq *cap,
                             tn_array *pkgs, struct pkg *hint);
 
-int in_is_user_askable(struct poldek_ts *ts);
+int in_is_user_choosable_equiv(struct poldek_ts *ts);
 
 #endif

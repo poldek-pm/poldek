@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <trurl/tfn_types.h>    /* for tn_fn_free */
 
 #define	LOGTTY	        (1 << 0)	/* log only to TTY output */
 #define LOGFILE         (1 << 1)	/* log only to non-TTY output */
@@ -21,24 +22,29 @@
 #define	LOGWARN	        (1 << 6)	/* warning conditions */
 #define	LOGINFO         (1 << 7)	/* informational */
 #define	LOGNOTICE       (1 << 8)	/* informational */
-#define	LOGDEBUG	(1 << 9)	/* debug-level messages */
+#define	LOGDEBUG        (1 << 9)	/* debug-level messages */
 
-#define LOGDIE          (1 << 10)
+#define LOGDIE          (1 << 10)   /* abort() */
 
-#define LOGOPT_N        (1 << 11)       /* add "\n" */
+#define LOGOPT_N        (1 << 11)   /* add "\n" */
+#define LOGOPT_CONT     (1 << 12)   /* continuation */
 
 int poldek_verbose(void);
 int poldek_set_verbose(int v);
-
 extern int poldek_VERBOSE;
 
-int poldek_log_init(const char *pathname, FILE *tty, const char *prefix);
-void poldek_log_closelog(void);
-int poldek_log_enabled_filelog(void);
+typedef void (*poldek_vlog_fn)(void *, int pri, const char *fmt, va_list args);
 
-FILE *poldek_log_stream(void);
-FILE *poldek_log_file_stream(void);
+void poldek_log_add_appender(const char *name, void *data, tn_fn_free free,
+                             unsigned flags, poldek_vlog_fn dolog);
 
+void poldek_log_set_appender(const char *name, void *data, tn_fn_free free,
+                             unsigned flags, poldek_vlog_fn dolog);
+
+#define poldek_log_set_default_appender(n, d, ffn) \
+         poldek_log_set_appender(n, d, ffn, 0, NULL)
+
+void poldek_log_reset_appenders(void);
 
 void poldek_log(int pri, const char *fmt, ...)
    __attribute__((format(printf,2,3)));
@@ -47,15 +53,6 @@ void poldek_log_i(int pri, int indent, const char *fmt, ...)
    __attribute__((format(printf,3,4)));
    
 void poldek_vlog(int pri, int indent, const char *fmt, va_list args);
-
-void poldek_log_err(const char *fmt, ...)
-  __attribute__((format(printf,1,2)));
-void poldek_log_msg(const char *fmt, ...)
-  __attribute__((format(printf,1,2))); 
-void poldek_log_msg_i(int indent, const char *fmt, ...)
-  __attribute__((format(printf,2,3)));
-void poldek_log_tty(const char *fmt, ...)  
-  __attribute__((format(printf,1,2)));
 
 #ifndef POLDEK_LOG_H_INTERNAL
 
@@ -67,19 +64,6 @@ void poldek_log_tty(const char *fmt, ...)
 
 #define log_i(pri, indent, fmt, args...) \
        poldek_log_i(pri, indent, fmt, ## args)
-
-#define vlog(pri, fmt, args...) \
-       poldek_vlog(pri, fmt, ## args)
-
-#define log_debug(fmt, args...) \
-  poldek_log(LOG_DEBUG, "%s: " fmt, __FUNCTION__ , ## args)
-
-#define logv(verbose_level, pri, indent, fmt, args...)   \
-  do {                                     \
-    if ((verbose_level) <= poldek_VERBOSE) \
-      poldek_vlog(pri, fmt, ## args);      \
-  } while(0)
-
   
 #define msg(verbose_level, fmt, args...)   \
   do {                                     \

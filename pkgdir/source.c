@@ -985,7 +985,7 @@ int do_source_make_idx(struct source *src,
         n_snprintf((char*)idxpath, len, src->path);
     }
     
-    if (is_dir(idxpath)) {
+    if (util__isdir(idxpath)) {
         char *compress = kw ? n_hash_get(kw, "compress") : src->compress;
         if (compress == NULL)
             compress = src->compress;
@@ -995,11 +995,11 @@ int do_source_make_idx(struct source *src,
     }
     
     n_assert(idxpath);
-    if (source_is_type(src, "dir") && !is_dir(src->path)) {
+    if (source_is_type(src, "dir") && !util__isdir(src->path)) {
         char *tmp, *dn;
         n_strdupap(src->path, &tmp);
         dn = n_dirname(tmp);
-        if (is_dir(dn))
+        if (util__isdir(dn))
             source_set(&src->path, dn);
     }
 
@@ -1058,7 +1058,7 @@ static const char *determine_stype(struct source *src, const char *idxpath)
     if ((src->flags & PKGSOURCE_TYPE) && (src->flags & PKGSOURCE_NAMED) == 0)
         return src->type;
     
-    if (is_dir(src->path))
+    if (util__isdir(src->path))
         return "dir";
     
     else if (src->type)  /* not a dir, an URL */

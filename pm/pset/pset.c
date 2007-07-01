@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -122,7 +122,7 @@ int setup_source(struct pkgset *ps, struct source *src)
     struct pkgdir *dir;
 
     if ((dir = pkgdir_srcopen(src, 0)) == NULL) {
-        if (!source_is_type(src, "dir") && is_dir(src->path)) {
+        if (!source_is_type(src, "dir") && util__isdir(src->path)) {
             logn(LOGNOTICE, _("trying to scan directory %s..."), src->path);
             source_set_type(src, "dir");
             dir = pkgdir_srcopen(src, 0);
@@ -282,9 +282,8 @@ static void process_output(struct p_open_st *st, int verbose_level)
             }
             
             msg_tty(verbose_level, fmt, buf);
-            if (!poldek_log_enabled_filelog())
-                continue;
-                
+
+            /* logged to file? -> prefix lines with 'rpm: ' */                
             for (i=0; i < n; i++) {
                 int c = buf[i];
                 
@@ -830,7 +829,7 @@ struct pkgdir *pm_pset_db_to_pkgdir(void *pm_pset, const char *rootdir,
     src = n_array_nth(pm->sources, 0);
 
     if ((dir = pkgdir_srcopen(src, 0)) == NULL) {
-        if (!source_is_type(src, "dir") && is_dir(src->path)) {
+        if (!source_is_type(src, "dir") && util__isdir(src->path)) {
             logn(LOGNOTICE, _("trying to scan directory %s..."), src->path);
             source_set_type(src, "dir");
             dir = pkgdir_srcopen(src, 0);

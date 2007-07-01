@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -79,46 +79,15 @@ static int valid_arch_os(struct poldek_ts *ts, tn_array *pkgs)
     return nerr == 0;
 }
 
-static void print_install_summary(struct install_ctx *ictx) 
+static void install_summary(struct install_ctx *ictx) 
 {
-    int i, n, simple;
-    long int size_download = 0, size_install = 0;
-    
-    for (i=0; i < n_array_size(ictx->install_pkgs); i++) {
-        struct pkg *pkg = n_array_nth(ictx->install_pkgs, i);
-        if (pkg->pkgdir && (vf_url_type(pkg->pkgdir->path) & VFURL_REMOTE))
-            size_download += pkg->fsize;
-        size_install += pkg->size;
-    }
-    
-    n = n_array_size(ictx->install_pkgs);
-#ifndef ENABLE_NLS    
-    msg(1, "There are %d package%s to install", n, n > 1 ? "s":"");
-    if (ictx->ndep) 
-        msg(1, _("_ (%d marked by dependencies)"), ictx->ndep);
-    
-#else
-    msg(1, ngettext("There are %d package to install",
-                    "There are %d packages to install", n), n);
+    tn_array *ipkgs = ictx->install_pkgs; /* for short */
 
-    if (ictx->ndep) 
-        msg(1, ngettext("_ (%d marked by dependencies)",
-                        "_ (%d marked by dependencies)", ictx->ndep),
-            ictx->ndep);
-#endif
-
-    if (n_array_size(ictx->uninst_set->dbpkgs))
-        msg(1, _("_, %d to uninstall"), n_array_size(ictx->uninst_set->dbpkgs));
-    msg(1, "_:\n");
+    poldek__ts_update_summary(ictx->ts, "I", ipkgs, PKGMARK_MARK, ictx->ts->pms);
+    poldek__ts_update_summary(ictx->ts, "D", ipkgs, PKGMARK_DEP, ictx->ts->pms);
+    poldek__ts_update_summary(ictx->ts, "R", ictx->uninst_set->dbpkgs, 0, NULL);
+    poldek__ts_display_summary(ictx->ts);
     
-    simple = ictx->ts->getop(ictx->ts, POLDEK_OP_PARSABLETS);
-    n_array_sort(ictx->install_pkgs);
-    packages_iinf_display(1, "I", ictx->install_pkgs, ictx->ts->pms,
-                          PKGMARK_MARK, simple);
-    packages_iinf_display(1, "D", ictx->install_pkgs, ictx->ts->pms,
-                          PKGMARK_DEP, simple);
-    packages_iinf_display(1, "R", ictx->uninst_set->dbpkgs, NULL, 0, simple);
-        
     if (ictx->ts->fetchdir == NULL)
         packages_fetch_summary(ictx->ts->pmctx, ictx->install_pkgs,
                                ictx->ts->cachedir, ictx->ts->fetchdir ? 1 : 0);
@@ -235,7 +204,7 @@ int do_install(struct install_ctx *ictx)
         return 0;
 
     n_array_sort(ictx->install_pkgs);
-    print_install_summary(ictx);
+    install_summary(ictx);
     pkgdb_close(ts->db); /* release db as soon as possible */
 
     if (ictx->nerr_dep || ictx->nerr_cnfl) {
@@ -248,7 +217,7 @@ int do_install(struct install_ctx *ictx)
     if (nerr)
         goto l_end;
 
-    pkgs = ts__packages_in_install_order(ictx->ts);
+    pkgs = poldek__ts_install_ordered_packages(ictx->ts);
     n_assert(n_array_size(pkgs) == n_array_size(ictx->install_pkgs));
 
     if (ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N, 0)) {
@@ -278,12 +247,10 @@ int do_install(struct install_ctx *ictx)
 
     } else if (!ts->getop(ts, POLDEK_OP_HOLD) || (rc = verify_holds(ictx))) {
         int is_test = ts->getop(ts, POLDEK_OP_RPMTEST);
-
-        if (!is_test && ts->getop(ts, POLDEK_OP_CONFIRM_INST) && ts->ask_fn) {
-            if (!ts->ask_fn(1, _("Proceed? [Y/n]"))) {
-                rc = 1;
-                goto l_end;
-            }
+        
+        if (!is_test && !poldek__ts_confirm(ts)) {
+            rc = 1;
+            goto l_end;
         }
         
         if (!ts->getop(ts, POLDEK_OP_NOFETCH))

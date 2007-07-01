@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -110,7 +110,7 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
 
     DBGF("[%s] req %s\n", pkg_id(pkg), capreq_snprintf_s(req));
 
-    if (in_is_user_askable(ictx->ts))
+    if (in_is_user_choosable_equiv(ictx->ts))
         candidates = pkgs_array_new(8);
     
     if (in_find_req(ictx, pkg, req, &tomark, candidates, IN_FIND_REQ_BEST)) {
@@ -246,13 +246,14 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
 /* just append sugs to reqs if user wants to */
 static tn_array *process_suggets(struct pkg *pkg, struct poldek_ts *ts) 
 {
+    char *confirmation, message[2048];
     tn_array *reqs;
     tn_buf *nbuf;
-    char message[2048], *confirmation;
+    int n;
     
     reqs = pkg->reqs;
     
-    if (pkg->sugs == NULL || !in_is_user_askable(ts))
+    if (pkg->sugs == NULL || !in_is_user_choosable_equiv(ts))
         return reqs;
     
     if (!ts->getop(ts, POLDEK_OP_SUGGESTS))
@@ -260,15 +261,16 @@ static tn_array *process_suggets(struct pkg *pkg, struct poldek_ts *ts)
     
     nbuf = capreq_arr_join(pkg->sugs, NULL, NULL);
 
-    n_snprintf(message, sizeof(message), _("%s suggests installation of: %s"),
-               pkg_id(pkg), n_buf_ptr(nbuf));
+
+    n = n_snprintf(message, sizeof(message), _("%s suggests installation of: %s"),
+                   pkg_id(pkg), n_buf_ptr(nbuf));
     n_buf_free(nbuf);
-        
-    confirmation = ngettext("Try to install it? [N/y]",
-                            "Try to install them? [N/y]",
-                            n_array_size(pkg->sugs));
-            
-    if (ts->ask_fn(0, "%s\n%s", message, confirmation)) {
+    
+    confirmation = ngettext("Try to install it?", "Try to install them?",
+                            n_array_size(pkg->sugs));    
+    n_snprintf(&message[n], sizeof(message) - n, "\n%s", confirmation);
+    
+    if (poldek__confirm(ts, 0, message)) {
         int i;
         
         reqs = capreq_arr_new(n_array_size(pkg->reqs) + n_array_size(pkg->sugs));
@@ -279,7 +281,7 @@ static tn_array *process_suggets(struct pkg *pkg, struct poldek_ts *ts)
         for (i=0; i < n_array_size(pkg->sugs); i++)
             n_array_push(reqs, n_array_nth(pkg->sugs, i));
 
-        n_array_ctl_set_freefn(reqs, NULL);
+        n_array_ctl_set_freefn(reqs, NULL); /* "weak" refs */
     }
 
     return reqs;

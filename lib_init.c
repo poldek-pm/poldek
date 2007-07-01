@@ -59,8 +59,6 @@ const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
 "Copyright (C) 2000-2007 Pawel A. Gajda <mis@pld-linux.org>\n"
 "This program may be freely redistributed under the terms of the GNU GPL v2";
 
-static const char *poldek_logprefix = "poldek";
-
 static int say_goodbye(const char *msg);
 int (*poldek_say_goodbye)(const char *msg) = say_goodbye;
 
@@ -1183,14 +1181,41 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
 
         case POLDEK_CONF_LOGFILE:
             vv = va_arg(ap, void*);
-            if (vv)
-                poldek_log_init(vv, stdout, poldek_logprefix);
+            if (vv) {
+                FILE *stream = fopen(vv, "a");
+                if (stream)
+                    poldek_log_set_default_appender("_FILE", stream, (tn_fn_free)fclose);
+            }
+            
             break;
 
         case POLDEK_CONF_LOGTTY:
-            vv = va_arg(ap, void*);
-            if (vv)
-                poldek_log_init(NULL, vv, poldek_logprefix);
+            poldek_log_set_default_appender("_TTY", NULL, NULL);
+            break;
+
+        case POLDEK_CONF_CONFIRM_CB:
+            if ((vv = va_arg(ap, void*)))
+                ctx->confirm_fn = vv;
+            
+            if ((vv = va_arg(ap, void*)))
+                ctx->data_confirm_fn = vv;
+
+            break;
+
+        case POLDEK_CONF_TSCONFIRM_CB:
+            if ((vv = va_arg(ap, void*)))
+                ctx->ts_confirm_fn = vv;
+
+            if ((vv = va_arg(ap, void*)))
+                ctx->data_ts_confirm_fn = vv;
+            break;
+
+        case POLDEK_CONF_CHOOSEEQUIV_CB:
+            if ((vv = va_arg(ap, void*)))
+                ctx->choose_equiv_fn = vv;
+            
+            if ((vv = va_arg(ap, void*)))
+                ctx->data_choose_equiv_fn = vv;
             break;
 
         case POLDEK_CONF_GOODBYE_CB:
@@ -1230,7 +1255,7 @@ static void poldek_vf_vlog_cb(int pri, const char *fmt, va_list ap)
         //fmt = logfmt;
     }
     
-    vlog(logpri, 0, fmt, ap);
+    poldek_vlog(logpri, 0, fmt, ap);
 }
 
 void poldeklib_destroy(void)
@@ -1240,7 +1265,8 @@ void poldeklib_destroy(void)
     
     n_array_free(default_op_map);
     default_op_map = NULL;
-    
+
+    poldek_log_reset_appenders();
 }
 
 int poldeklib_init(void)
@@ -1252,7 +1278,6 @@ int poldeklib_init(void)
     
     pmmodule_init();
     poldek_set_verbose(0);
-    poldek_log_init(NULL, stdout, poldek_logprefix);
     verify_setuid();
 
     default_op_map = build_default_op_map();
@@ -1299,8 +1324,7 @@ int poldeklib_init(void)
 }
 
 
-static
-int poldek_init(struct poldek_ctx *ctx, unsigned flags)
+static int poldek_init(struct poldek_ctx *ctx, unsigned flags)
 {
     struct poldek_ts *ts;
     int i;
@@ -1308,6 +1332,9 @@ int poldek_init(struct poldek_ctx *ctx, unsigned flags)
     flags = flags;
 
     memset(ctx, 0, sizeof(*ctx));
+    poldek_log_set_default_appender("_TTY", NULL, NULL);
+    poldek__setup_default_ask_callbacks(ctx);
+    
     ctx->sources = n_array_new(4, (tn_fn_free)source_free,
                                (tn_fn_cmp)source_cmp);
 
@@ -1402,7 +1429,7 @@ int do_poldek_setup_cachedir(struct poldek_ctx *ctx)
 {
     char *path;
 
-    path = setup_cachedir(ctx->ts->cachedir);
+    path = util__setup_cachedir(ctx->ts->cachedir);
     
     if (poldek_VERBOSE > 0 && getenv("POLDEK_TESTING")) {
         if (ctx->ts->cachedir && path && n_str_eq(ctx->ts->cachedir, path))

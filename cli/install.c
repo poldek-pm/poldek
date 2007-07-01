@@ -569,7 +569,7 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
     DBGF("%p->%p, %p->%p\n", rt->ts, rt->ts->hold_patterns,
          rt->ts->ctx->ts, rt->ts->ctx->ts->hold_patterns);
     
-    if (poldek_ts_type(rt->ts) != POLDEK_TS_INSTALL)
+    if (poldek_ts_get_type(rt->ts) != POLDEK_TS_INSTALL)
         return OPGROUP_RC_NIL;
 
     if (!poldek_ts_issetf_all(rt->ts, POLDEK_TS_UPGRADEDIST)) {

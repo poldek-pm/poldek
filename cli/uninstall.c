@@ -278,7 +278,7 @@ static int cmdl_run(struct poclidek_opgroup_rt *rt)
 {
     int rc;
     
-    if (poldek_ts_type(rt->ts) != POLDEK_TS_UNINSTALL)
+    if (poldek_ts_get_type(rt->ts) != POLDEK_TS_UNINSTALL)
         return OPGROUP_RC_NIL;
 
     rc = poldek_ts_run(rt->ts, 0);

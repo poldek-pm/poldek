@@ -3,6 +3,7 @@
 #define  POLDEK_LIB_TX_H
 
 #include <trurl/narray.h>
+#include <trurl/nhash.h>
 
 enum poldek_ts_flag {
     POLDEK_TS_INSTALL      = (1 << 0), 
@@ -122,12 +123,10 @@ struct poldek_ts {
     tn_array           *ign_patterns; 
     tn_array           *exclude_path;
 
-    tn_array            *pkgs_installed; /* packages installed by transaction */
-    tn_array            *pkgs_removed;   /* packages removed by transaction */
+    tn_hash            *ts_summary;     /* There are to I|R|D                */
+    tn_array           *pkgs_installed; /* packages installed by transaction */
+    tn_array           *pkgs_removed;   /* packages removed by transaction   */
     
-    int  (*askpkg_fn)(const char *, struct pkg **pkgs, struct pkg *deflt);
-    int  (*ask_fn)(int default_a, const char *, ...);
-
     tn_alloc           *_na;
     uint32_t           _flags;      /* POLDEK_TS_* */
     uint32_t           _iflags;     /* internal flags */
@@ -141,12 +140,13 @@ struct poldek_ts {
     int   uninstall_greedy_deep; /* greediness of uninstall, is set
                                     by ts->setop(POLDEK_OP_GREEDY, v)
                                   */
+
 };
 #endif
 struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx, unsigned flags);
 void poldek_ts_free(struct poldek_ts *ts);
 
-int poldek_ts_type(struct poldek_ts *ts);
+int poldek_ts_get_type(struct poldek_ts *ts);
 int poldek_ts_set_type(struct poldek_ts *ts, enum poldek_ts_type type,
                        const char *typenam);
 
@@ -178,5 +178,8 @@ tn_array* poldek_ts_get_args_asmasks(struct poldek_ts *ts, int hashed);
 int poldek_ts_get_arg_count(struct poldek_ts *ts);
 
 int poldek_ts_run(struct poldek_ts *ts, unsigned flags);
+
+/* mark = {I|D|R} */
+tn_array *poldek_ts_get_summary(const struct poldek_ts *ts, const char *mark);
 
 #endif

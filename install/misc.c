@@ -605,8 +605,7 @@ int in_pkgdb_match_req(struct install_ctx *ictx, struct capreq *req)
 struct pkg *in_choose_equiv(struct poldek_ts *ts, struct capreq *cap,
                             tn_array *pkgs, struct pkg *hint) 
 {
-    struct pkg **candidates;
-    int i, n;
+    int n;
     
     n_assert(pkgs);
     n_assert(n_array_size(pkgs) > 0);
@@ -614,7 +613,7 @@ struct pkg *in_choose_equiv(struct poldek_ts *ts, struct capreq *cap,
     if (hint == NULL)
         hint = n_array_nth(pkgs, 0);
     
-    if (!ts->getop(ts, POLDEK_OP_EQPKG_ASKUSER) || ts->askpkg_fn == NULL)
+    if (!ts->getop(ts, POLDEK_OP_EQPKG_ASKUSER))
         return hint;
 
     n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
@@ -633,19 +632,14 @@ struct pkg *in_choose_equiv(struct poldek_ts *ts, struct capreq *cap,
         }
     }
     
-    candidates = alloca(sizeof(struct pkg *) * (n_array_size(pkgs) + 1));
-    for (i=0; i < n_array_size(pkgs); i++)
-        candidates[i] = n_array_nth(pkgs, i);
-    candidates[i] = NULL;
-
-    n = ts->askpkg_fn(capreq_snprintf_s(cap), candidates, hint);
+    n = poldek__choose_equiv(ts, capreq_snprintf_s(cap), pkgs, hint);
     if (n == -1)
         return NULL;
-    
-    return candidates[n];
+
+    return n_array_nth(pkgs, n);
 }
 
-int in_is_user_askable(struct poldek_ts *ts) 
+int in_is_user_choosable_equiv(struct poldek_ts *ts) 
 {
-    return ts->getop(ts, POLDEK_OP_EQPKG_ASKUSER) && ts->askpkg_fn;
+    return ts->getop(ts, POLDEK_OP_EQPKG_ASKUSER);
 }

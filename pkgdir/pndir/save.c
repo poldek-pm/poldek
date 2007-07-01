@@ -553,7 +553,7 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
         snprintf(temp, sizeof(temp), "%s", path);
         
         n_basedirnam(temp, &dn, &bn);
-        if (!mk_dir(dn, pndir_packages_incdir))
+        if (!util__mksubdir(dn, pndir_packages_incdir))
             return 0;
 		
 

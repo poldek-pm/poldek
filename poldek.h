@@ -1,3 +1,15 @@
+/*
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$ */
 #ifndef  POLDEK_LIB_H
 #define  POLDEK_LIB_H
@@ -35,11 +47,13 @@ struct poldek_ctx *poldek_link(struct poldek_ctx *ctx);
 #define POLDEK_CONF_PM              13
 #define POLDEK_CONF_DESTINATION     14
 #define POLDEK_CONF_DEPGRAPHFILE    15
-
 #define POLDEK_CONF_LOGFILE         20
 #define POLDEK_CONF_LOGTTY          21
 
 #define POLDEK_CONF_GOODBYE_CB      22
+#define POLDEK_CONF_CONFIRM_CB      23
+#define POLDEK_CONF_TSCONFIRM_CB    24
+#define POLDEK_CONF_CHOOSEEQUIV_CB  25
 
 int poldek_configure(struct poldek_ctx *ctx, int param, ...);
 

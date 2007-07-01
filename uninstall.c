@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2006 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -36,6 +36,7 @@
 #include "pkgmisc.h"
 #include "dbpkgset.h"
 #include "poldek_ts.h"
+#include "poldek_intern.h"
 #include "capreq.h"
 #include "pm/pm.h"
 #include "pkgfl.h"
@@ -48,9 +49,7 @@
 
 #define uninst_LDFLAGS (PKG_LDNEVR | PKG_LDCAPS | PKG_LDREQS | PKG_LDFL_DEPDIRS)
 
-
-static void print_summary(tn_array *pkgs, struct pkgmark_set *pms, int ndep,
-                          int simple);
+static void uninstall_summary(struct poldek_ts *ts, tn_array *pkgs, int ndep);
 
 static void update_iinf(struct poldek_ts *ts, tn_array *pkgs,
                                struct pkgdb *db, int vrfy);
@@ -275,7 +274,9 @@ int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
                     }
                 }
             }
-            if (bypkg == NULL)  /* unsatisfied requirement */
+            
+            /* installed with unsatisfied requirement - ignored */
+            if (bypkg == NULL)  
                 continue;
             
             msgn_i(1, bypkg->pri, _("%s marks %s (req %s)"), pkg_id(bypkg),
@@ -638,8 +639,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts)
         goto l_end;
     
     ordered_pkgs = reorder_packages(pkgs);
-    print_summary(pkgs, ts->pms, uctx->ndep,
-                  ts->getop(ts, POLDEK_OP_PARSABLETS));
+    uninstall_summary(ts, pkgs, uctx->ndep);
 
     if (uctx->nerr_dep) {
         char errmsg[256];
@@ -667,8 +667,7 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts)
     
     run_uninstall = 1;
     if (!ts->getop(ts, POLDEK_OP_RPMTEST)) {
-        if (ts->getop(ts, POLDEK_OP_CONFIRM_UNINST) && ts->ask_fn)
-            run_uninstall = ts->ask_fn(0, _("Proceed? [y/N]"));
+        run_uninstall = poldek__ts_confirm(ts);
     }
     
     if (run_uninstall) {
@@ -693,27 +692,12 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts)
 
 
 static
-void print_summary(tn_array *pkgs, struct pkgmark_set *pms, int ndep, int simple)
+void uninstall_summary(struct poldek_ts *ts, tn_array *pkgs, int ndep)
 {
-    int n = n_array_size(pkgs);
-    
-#ifndef ENABLE_NLS    
-    msg(0, "There are %d package%s to remove", n, n > 1 ? "s":"");
-    if (ndep) 
-        msg(0, _("_ (%d marked by dependencies)"), ndep);
-    
-#else
-    msg(0, ngettext("There are %d package to remove",
-                    "There are %d packages to remove", n), n);
-
-    if (ndep) 
-        msg(0, ngettext("_ (%d marked by dependencies)",
-                        "_ (%d marked by dependencies)", ndep), ndep);
-#endif    
-    msg(0, "_:\n");
-    
-    packages_iinf_display(0, "R", pkgs, pms, PKGMARK_MARK, simple);
-    packages_iinf_display(0, "D", pkgs, pms, PKGMARK_DEP, simple);
+    poldek__ts_update_summary(ts, "R", pkgs, PKGMARK_MARK, ts->pms);
+    if (ndep)
+        poldek__ts_update_summary(ts, "D", pkgs, PKGMARK_DEP, ts->pms);
+    poldek__ts_display_summary(ts);
 }
 
 

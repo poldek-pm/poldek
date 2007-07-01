@@ -6,8 +6,9 @@ import re
 import string
 from types import *
 import poldekmod
-from poldekmod import tn_array, poldek_ctx, poldek_ts, pkg, capreq, pkguinf, \
-    pkgflist_it, source, pkgdir, poclidek_ctx, poclidek_rcmd
+from poldekmod import tn_array, poldek_ctx, poldek_ts, \
+     pkg, capreq, pkguinf, pkgflist_it, \
+     source, pkgdir, poclidek_ctx, poclidek_rcmd
 
 def lib_init():
     poldekmod.poldeklib_init()
@@ -35,6 +36,9 @@ class n_array_proxy:
         return 0
         
     def __getitem__(self, i):
+        if self._arr is None:
+            raise StopIteration
+        
         r = self._arr[i]
         if r: r = self._itemClass(r)
         return r
@@ -145,7 +149,7 @@ def _complete_class(aclass, prefix, strip_prefix = None, with_methods = True,
 
 _complete_class(tn_array, 'n_array_')
 setattr(tn_array, '__getitem__', tn_array.nth)
-
+_complete_class(tn_array, 'n_hash_')
 
 ## Package
 for name, elem in capreq.__dict__.items():
@@ -195,18 +199,43 @@ _complete_class(poldek_ts, 'poldek_ts_')
 _complete_class(poldek_ts, 'poldek_op_', strip_prefix = 'poldek_',
                 with_methods = False, verbose = 0)
 
+setattr(poldek_ts, 'summary', n_array_proxy_func('poldek_ts_', 'get_summary', 'pkg'))
+setattr(poldek_ts, 'type', property(lambda self: self.get_type()))
 
-
-#_complete_class(poclidek_rcmd, 'poclidek_rcmd_')
 setattr(poclidek_rcmd, 'packages',
         property(n_array_proxy_func('poclidek_rcmd_', 'get_packages', 'pkg')))
 
+setattr(poclidek_rcmd, 'output', property(lambda self: self.to_s()))
+
 _complete_class(poclidek_ctx, 'poclidek_', verbose = 0, exclude = 'poclidek_rcmd_')
 
-setattr(poclidek_ctx, 'rcmd', lambda self: poldekmod.poclidek_rcmd_new(self, None));
+setattr(poclidek_ctx, 'rcmd', lambda self, ts = None: poldekmod.poclidek_rcmd_new(self, ts));
 #print poclidek_ctx.rcmd_new
 #setattr(poclidek_rcmd, 'rcmd'
 
 
 #_complete_class(pkguinf, 'pkguinf_', exclude = 'pkguinf_get', verbose = 1, with_methods = False)
 #setattr(pkguinf, 'get', eval('lambda self, tag: poldekmod.pkguinf_get(self, ord(tag[0]))'))
+
+
+class callbacks:
+    def log(self, pri, message):
+        print "## log: Implement me"
+
+    def confirm(self, ts, hint, message):
+        print "## confirm: Implement me"
+        return hint
+    
+    def confirm_transaction(self, ts):
+        print "## confirm_transaction: Implement me"
+        return False
+
+    # n_array_proxy() applied to tn_array*
+    def raw__choose_equiv(self, ts, capability_name, raw_packages, hint):
+        packages = n_array_proxy(raw_packages, pkg)
+        return self.choose_equiv(ts, capability_name, packages, hint)
+
+    def choose_equiv(self, ts, capability_name, packages, hint):
+        print "## choose_equiv: Implement me"
+        return hint
+    

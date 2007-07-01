@@ -97,9 +97,7 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
             
             buf[n] = '\0';
             msg_tty(verbose_level, "_%s", buf);
-            if (!poldek_log_enabled_filelog())
-                continue;
-                
+            /* logged to file? -> prefix lines with 'rpm: ' */
             for (i=0; i < n; i++) {
                 int c = buf[i];
                 
@@ -433,20 +431,20 @@ int pm_rpm_packages_install(struct pkgdb *db,
 
     
     if (!ts->getop(ts, POLDEK_OP_RPMTEST) && (nsignerr || ncolorerr)) {
-        int can_ask = (poldek_ts_is_interactive_on(ts) && ts->ask_fn);
+        int can_ask = poldek_ts_is_interactive_on(ts);
 
         if (nsignerr) {
-            if (!can_ask || !ts->ask_fn(0,
-                                        _("There were signature verification errors. "
-                                          "Proceed? [y/N]")))
+            if (!can_ask || poldek__confirm(ts, 0,
+                                            _("There were signature verification errors. "
+                                              "Proceed?")))
                 goto l_err_end;
         }
         
 
         if (ncolorerr) {
-            if (!can_ask || !ts->ask_fn(0,
-                                        _("There were package coloring mismatches. "
-                                          "Proceed? [y/N]")))
+            if (!can_ask || !poldek__confirm(ts, 0,
+                                             _("There were package coloring mismatches. "
+                                               "Proceed?")))
                 goto l_err_end;
         }
     }

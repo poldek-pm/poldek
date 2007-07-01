@@ -30,20 +30,20 @@ int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size, int type);
 
 */
 
-char *setup_cachedir(const char *path);
+char *util__setup_cachedir(const char *path);
 
 char *trimslash(char *path);
 char *next_token(char **str, char delim, int *toklen);
 
-int is_dir(const char *path);
-int mk_dir(const char *path, const char *dn);
-int mk_dir_parents(const char *path, const char *dn);
 
-char *abs_path(const char *path);
+int util__isdir(const char *path);
+int util__mksubdir(const char *path, const char *dn);
+int util__mkdir_p(const char *path, const char *dn);
 
-struct pkgmark_set;
-void packages_iinf_display(int verbose_l, const char *prefix, tn_array *pkgs,
-                           struct pkgmark_set *pms, unsigned pmsflags, int simple);
+char *util__abs_path(const char *path);
+
+void packages_display_summary(int verbose_l, const char *prefix, tn_array *pkgs,
+                              int parseable);
 
 int snprintf_size(char *buf, int bufsize, unsigned long nbytes,
                   int ndigits, int longunit);

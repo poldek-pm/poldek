@@ -40,7 +40,7 @@ unsigned pkg_get_verify_signflags(struct pkg *pkg);
 
 
 
-int poldek_util_parse_evr(char *evrstr, int32_t *epoch,
+int poldek_util_parse_evr(char *evrstr, uint32_t *epoch,
                           const char **ver, const char **rel);
 int poldek_util_parse_nevr(char *nevrstr, const char **name,
                            int32_t *epoch, const char **ver, const char **rel);

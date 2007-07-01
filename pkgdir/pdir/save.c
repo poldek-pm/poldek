@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -294,12 +294,11 @@ int pdir_create(struct pkgdir *pkgdir, const char *pathname,
 
         memcpy(tmp, pathname, sizeof(tmp));
         n_basedirnam(tmp, &dn, &bn);
-        if (!mk_dir(dn, pdir_packages_incdir)) {
+        if (!util__mksubdir(dn, pdir_packages_incdir)) {
 			nerr++;
             goto l_end;
-		}
-		
-
+        }
+        
         snprintf(path, sizeof(path), "%s/%s/%s", dn, pdir_packages_incdir, bn);
         memcpy(tmp, path, sizeof(tmp));
         pathname = tmp;

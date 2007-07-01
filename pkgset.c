@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -46,10 +46,6 @@
 #endif
 
 #define _PKGSET_INDEXES_INIT      (1 << 20) /* internal flag  */
-
-/* prototypes from ask.c */
-int ask_yn(int default_a, const char *fmt, ...);
-int ask_pkg(const char *capname, struct pkg **pkgs, struct pkg *deflt);
 
 static
 int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt);

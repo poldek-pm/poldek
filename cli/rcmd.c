@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld.org.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -103,7 +103,7 @@ tn_buf *poclidek_rcmd_get_buf(struct poclidek_rcmd *rcmd)
     return n_ref(rcmd->rbuf);
 }
 
-const char *poclidek_rcmd_get_str(struct poclidek_rcmd *rcmd) 
+const char *poclidek_rcmd_get_output(struct poclidek_rcmd *rcmd) 
 {
     n_assert(rcmd->_flags & POCLIDEK_RCMD_EXECUTED);
     return n_buf_ptr(rcmd->rbuf);

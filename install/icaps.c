@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -32,7 +32,7 @@ int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
         if (ts->getop(ts, POLDEK_OP_FRESHEN))
             return 0;
 
-        if (in_is_user_askable(ts) && n_array_size(pkgs) > 1) {
+        if (in_is_user_choosable_equiv(ts) && n_array_size(pkgs) > 1) {
             pkg = in_choose_equiv(ts, cap, pkgs, NULL);
             if (pkg == NULL) { /* user aborts */
                 found = -1;

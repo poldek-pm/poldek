@@ -4,6 +4,7 @@
 #include "local_stdint.h"
 #include "poldek.h"
 #include "trurl/narray.h"
+#include "trurl/nhash.h"
 #include "capreq.h"    
 #include "pkg.h"
 #include "pkgu.h"
@@ -12,8 +13,17 @@
 #include "pkgdir/source.h"
 #include "pkgdir/pkgdir.h"
 #include "cli/poclidek.h"
-//#include "cli/dent.h" disabled, not useful in fact
+#include "log.h"
+
+static void PythonDoLog(void *data, int pri, const char *fmt, va_list vargs);
+static int PythonConfirm(void *data, const struct poldek_ts *ts, 
+                         int hint, const char *message);
+static int PythonTsConfirm(void *data, const struct poldek_ts *ts);
+static int PythonChooseEquiv(void *data, const struct poldek_ts *ts, 
+                             const char *cap, tn_array *pkgs, int hint);
+
 %}
+
 %include exception.i
 %include "local_stdint.h"
 %include "trurl/narray.h"
@@ -27,7 +37,6 @@
 %include "cli/poclidek.h"
 //%include "cli/dent.h"
 
-
 struct poldek_ctx {};
 struct poldek_ts {};
 struct pkguinf {};
@@ -35,6 +44,155 @@ struct pkgflist_it {};
 
 struct poclidek_ctx {};
 struct poclidek_rcmd {};
+
+%{
+static void PythonDoLogOLD(void *data, int pri, const char *fmt, va_list vargs)
+{
+   PyObject *log, *args;
+   const char *spri = "info";
+   char message[2048];
+
+   if (pri & LOGERR)
+       spri = "error";
+
+   else if (pri & LOGWARN)
+       spri = "warning";
+
+   else if (pri & LOGNOTICE)
+       spri = "notice";
+
+   else if (pri & LOGOPT_CONT)
+       spri = "cont";
+     
+   log = (PyObject *) data;                        // pyfunction
+   n_vsnprintf(message, sizeof(message), fmt, vargs);
+     
+   args = Py_BuildValue("(ss)", spri, message);
+   PyEval_CallObject(log, args);
+   Py_DECREF(args);                          
+}
+
+static void PythonDoLog(void *data, int pri, const char *fmt, va_list vargs)
+{
+   PyObject *obj, *method, *pypri, *pymessage, *r;
+   const char *spri = "info";
+   char message[2048];
+
+   if (pri & LOGERR)
+       spri = "error";
+
+   else if (pri & LOGWARN)
+       spri = "warning";
+
+   else if (pri & LOGNOTICE)
+       spri = "notice";
+
+   else if (pri & LOGOPT_CONT)
+       spri = "cont";
+     
+   obj = (PyObject *) data;                        
+   method = Py_BuildValue("s", "log");
+   
+   pypri = Py_BuildValue("s", spri);       
+   n_vsnprintf(message, sizeof(message), fmt, vargs);
+   pymessage = Py_BuildValue("s", message);
+
+   r = PyObject_CallMethodObjArgs(obj, method, pypri, pymessage, NULL);
+   if (r)
+      Py_DECREF(r);
+   Py_DECREF(method);
+   Py_DECREF(pypri);
+   Py_DECREF(pymessage);
+}
+
+static int PythonConfirm(void *data, const struct poldek_ts *ts, 
+                         int hint, const char *message)
+{
+   PyObject *obj, *method, *pyts, *pyhint, *pymessage, *r; 
+   int answer;
+     
+   obj = (PyObject *) data;
+   method = Py_BuildValue("s", "confirm");
+
+   pyts = SWIG_NewPointerObj(SWIG_as_voidptr(ts), SWIGTYPE_p_poldek_ts, 0 | 0);
+   Py_INCREF(pyts);            // XXX - SWIG_NewPointerObj do incref?
+
+   pyhint = Py_BuildValue("i", hint);     
+   pymessage = Py_BuildValue("s", message);
+
+   r = PyObject_CallMethodObjArgs(obj, method, pyts, pyhint, pymessage, NULL);
+
+   Py_DECREF(method);
+   Py_DECREF(pyts);
+   Py_DECREF(pyhint);
+   Py_DECREF(pymessage); 
+     
+   if (r == NULL)
+      return hint;
+
+   answer = PyObject_IsTrue(r);
+   Py_DECREF(r);
+   return answer;     
+}
+
+static int PythonTsConfirm(void *data, const struct poldek_ts *ts)
+{
+   PyObject *obj, *method, *pyts, *r; 
+   int answer;
+     
+   obj = (PyObject *) data;
+   method = Py_BuildValue("s", "confirm_transaction");
+   pyts = SWIG_NewPointerObj(SWIG_as_voidptr(ts), SWIGTYPE_p_poldek_ts, 0 | 0);
+   Py_INCREF(pyts); // XXX - SWIG_NewPointerObj do incref?     
+
+   r = PyObject_CallMethodObjArgs(obj, method, pyts, NULL);
+   Py_DECREF(pyts);
+   Py_DECREF(method);
+     
+   if (r == NULL)
+      return 0;
+
+   answer = PyObject_IsTrue(r);
+   Py_DECREF(r);
+   return answer;     
+}
+
+static int PythonChooseEquiv(void *data, const struct poldek_ts *ts, 
+                             const char *cap, tn_array *pkgs, int hint)
+{
+   PyObject *obj, *method, *pyts, *pycap, *pypkgs, *pyhint, *r; 
+   tn_array *packages = n_ref(pkgs);  // XXX
+   int answer;
+     
+   obj = (PyObject *) data;
+   method = Py_BuildValue("s", "raw__choose_equiv"); // XXX - see poldek.py
+
+   pyts = SWIG_NewPointerObj(SWIG_as_voidptr(ts), SWIGTYPE_p_poldek_ts, 0 | 0);
+   Py_INCREF(pyts);            // XXX - SWIG_NewPointerObj do incref?
+
+   pycap = Py_BuildValue("s", cap);     
+   pypkgs = SWIG_NewPointerObj(SWIG_as_voidptr(pkgs), SWIGTYPE_p_trurl_array_private, 0 | 0);
+   Py_INCREF(pypkgs);
+
+   pyhint = Py_BuildValue("i", hint);     
+
+   r = PyObject_CallMethodObjArgs(obj, method, pyts, pycap, pypkgs, pyhint, NULL);
+
+   Py_DECREF(method);
+   Py_DECREF(pyts);
+   Py_DECREF(pycap);
+   Py_DECREF(pypkgs);
+   Py_DECREF(pyhint);
+     
+   if (r == NULL)
+      return hint;
+
+   answer = (int)PyLong_AsLong(r);
+   Py_DECREF(r);
+   return answer;     
+}
+
+%}
 
 %extend capreq {
     capreq(void *ptr) { return ptr; } /* conv constructor */
@@ -95,7 +253,7 @@ struct poclidek_rcmd {};
     }
 
     char *to_s() {
-        const char *s = poclidek_rcmd_get_str(self);
+        const char *s = poclidek_rcmd_get_output(self);
         if (s) 
            return n_strdup(s);
         return NULL;
@@ -107,6 +265,17 @@ struct poclidek_rcmd {};
 %extend poclidek_ctx {
     poclidek_ctx(struct poldek_ctx *ctx) {
         return poclidek_new(ctx);
+    }
+    
+    char *pwd() { 
+        char path[1024]; 
+        if (poclidek_pwd(self, path, sizeof(path)))
+            return n_strdup(path);
+        return NULL;
+    }
+
+    int chdir(const char *dir) { 
+        return poclidek_chdir(self, dir);
     }
 
     ~poclidek_ctx() { poclidek_free(self); }
@@ -124,20 +293,16 @@ struct poclidek_rcmd {};
 %extend tn_array {
     tn_array(int size) { return n_array_new_ex(size, NULL, NULL, NULL); };
     tn_array(void *arr) { return n_ref(arr); };
+    ~tn_array() { printf("free %p %d\n", self); n_array_free(self); }
     int __len__() { return n_array_size(self); }
+        
     void *nth(int i) {
         if (i < n_array_size(self))
             return n_array_nth(self, i);
         return NULL;
     }
-
-/* this doesn't raise exception, hgw why
-    void *__getitem__(int i) {
-        return tn_array_nth(self, i);
-    }
-*/
-        
 }
+
 %extend source {
     source(const char *name, const char *type,
            const char *path, const char *pkg_prefix) {
@@ -182,7 +347,29 @@ struct poclidek_rcmd {};
     pkgdir(struct source *src, unsigned flags) {
         return pkgdir_srcopen(src, flags);
     }
+    pkgdir(void *pkgdir) { return pkgdir; };        
     tn_array *get_packages() { return self->pkgs; }    
+
+    char *__str__() { // TODO: move it to C codebase
+        char *id = NULL;
+        if (self->flags & PKGDIR_NAMED)
+           id = self->name;
+        else {  
+           char path[PATH_MAX], *p;
+           p = self->idxpath;     
+           if (p == NULL)
+               p = self->path;   
+           if (p) {
+              vf_url_slim(path, sizeof(path), p, 0);
+              p = path;  
+           } else {
+              p = "anon";
+           }
+       
+           id = p;
+        }
+        return n_strdup(id);
+    }
 
     ~pkgdir() { pkgdir_free(self); }
 }
@@ -231,27 +418,45 @@ struct poclidek_rcmd {};
     poldek_ts(struct poldek_ctx *ctx, unsigned flags) {
         return poldek_ts_new(ctx, flags);
     }
-    
-    ~poldek_ts() { poldek_ts_free(self); }
+    poldek_ts(struct poldek_ts *ts) {  return ts; }
+
+    ~poldek_ts() {  poldek_ts_free(self); }
 }
+
 
 %extend poldek_ctx {
     poldek_ctx() {
          struct poldek_ctx *ctx = poldek_new(0);
+         poldek_configure(ctx, POLDEK_CONF_LOGFILE, NULL);
+         poldek_configure(ctx, POLDEK_CONF_LOGTTY, NULL);
          return ctx;
     }
     
     ~poldek_ctx() { poldek_free(self); }
     int load_config(const char *path = NULL) { poldek_load_config(self, path, 0, 0); }
+
     int configure(int param, void *val) {
         if (param == POLDEK_CONF_SOURCE)
             val = source_link(val);
         poldek_configure(self, param, val);
     }
+
     int configure(int param, unsigned val) { poldek_configure(self, param, val); }
     int configure(int param, char *val) { poldek_configure(self, param, val); }
+
     struct poldek_ts *ts_new(unsigned flags) { return poldek_ts_new(self, flags); }
+    struct poldek_ts *ts_new() { return poldek_ts_new(self, 0); }
+    int set_verbose(int v) { return poldek_set_verbose(v); }    
+    void set_callbacks(PyObject *obj) {
+        void *v = (void*)obj;
+        poldek_log_set_appender("pyldek", v, NULL, 0, PythonDoLog);
+        poldek_configure(self, POLDEK_CONF_CONFIRM_CB, (void*)PythonConfirm, v);
+        poldek_configure(self, POLDEK_CONF_TSCONFIRM_CB, (void*)PythonTsConfirm, v);
+        poldek_configure(self, POLDEK_CONF_CHOOSEEQUIV_CB, (void*)PythonChooseEquiv, v); 
+        Py_INCREF(obj);
+    }
 }
+
 
 %immutable poldek_ts;
 

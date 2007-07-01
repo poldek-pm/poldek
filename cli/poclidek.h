@@ -38,7 +38,7 @@ int poclidek_rcmd_execline(struct poclidek_rcmd *rcmd, const char *cmdline);
 
 tn_array *poclidek_rcmd_get_packages(struct poclidek_rcmd *rcmd);
 tn_buf *poclidek_rcmd_get_buf(struct poclidek_rcmd *rcmd);
-const char *poclidek_rcmd_get_str(struct poclidek_rcmd *rcmd);
+const char *poclidek_rcmd_get_output(struct poclidek_rcmd *rcmd);
 
 /* library internals */
 #include "dent.h"

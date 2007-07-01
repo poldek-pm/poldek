@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -412,7 +412,7 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
             break;
 
         if (pkg_dent_isdir(ent)) {
-            cmdctx_printf_c(cmdctx, PRCOLOR_GREEN, "!%s/\n", ent->name);
+            cmdctx_printf_c(cmdctx, PRCOLOR_GREEN, "%s/\n", ent->name);
             i += incstep;
             continue;
         }
@@ -426,8 +426,6 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
         
         if (npkgs == 0)
             cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, "!%s", hdr);
-
-        
 
         if (flags & OPT_LS_GROUP) {
             const char *group = pkg_group(pkg);

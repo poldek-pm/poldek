@@ -373,7 +373,7 @@ void rpmlog(int prii, const char *fmt, ...)
         return;
     
     if ((logpri & (LOGERR | LOGWARN)) == 0)
-        vlog(logpri, 0, fmt, args);
+        poldek_vlog(logpri, 0, fmt, args);
         
     else {                  /* basename(path) */
         char m[1024], *p, *q;

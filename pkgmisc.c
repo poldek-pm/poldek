@@ -2,7 +2,7 @@
   $Id$
 */
 /*
-  Copyright (C) 2000 - 2004 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld.org.pl>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -18,11 +18,12 @@
 */
 
 #include <ctype.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 
-int poldek_util_parse_evr(char *evrstr, int32_t *epoch, const char **version,
+int poldek_util_parse_evr(char *evrstr, uint32_t *epoch, const char **version,
                           const char **release)
 {
     char *p;
@@ -43,8 +44,12 @@ int poldek_util_parse_evr(char *evrstr, int32_t *epoch, const char **version,
             *epoch = 0;
             
         } else {
-            *epoch = (int32_t)strtol(evrstr, (char **)NULL, 10);
+            errno = 0;
+            *epoch = (uint32_t)strtol(evrstr, (char **)NULL, 10);
             if (*epoch == 0 && (*evrstr != '0' || *(evrstr + 1) != '\0'))
+                return 0;
+
+            if (errno == EINVAL || errno == ERANGE)
                 return 0;
         }
 

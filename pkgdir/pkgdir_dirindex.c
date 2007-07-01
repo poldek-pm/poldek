@@ -343,7 +343,7 @@ static int dirindex_path(char *path, int size, const struct pkgdir *pkgdir)
     if (ofpath[n - 1] == '/') {    /* directory */
         ofpath[n - 1] = '\0';
         
-    } else if (!is_dir(ofpath)) { /* not directory? */
+    } else if (!util__isdir(ofpath)) { /* not directory? */
         char *dn = n_dirname(ofpath);
         ofpath = dn;
     }

@@ -91,7 +91,7 @@ int in_resolve_conflict(int indent, struct install_ctx *ictx,
     capreq_revrel(req);
     DBGF("find_req %s %s\n", pkg_id(pkg), capreq_snprintf_s(req));
 
-    if (in_is_user_askable(ictx->ts))
+    if (in_is_user_choosable_equiv(ictx->ts))
         candidates = pkgs_array_new(8);
 
     found = in_find_req(ictx, pkg, req, &tomark, candidates, IN_FIND_REQ_BEST);
