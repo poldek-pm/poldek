@@ -24,7 +24,7 @@ class PyldekCallbacks(poldek.callbacks):
             pri = 'info'
             
         if pri == 'cont':
-            print message,
+            sys.stdout.write(message)
         else:
             lines = string.split(message, '\n')
             if len(lines[-1]) == 0:
@@ -245,8 +245,8 @@ def get_options():
 (options, args) = get_options()
 
 poldek.lib_init()
-if not options.v == 0:
-    options.v = 1
+#if not options.v == 0:
+#    options.v = 1
     
 pyl = Pyldek(options.n, verbose = options.v)
 
