@@ -47,6 +47,8 @@
 #include "i18n.h"
 #include "sigint/sigint.h"
 
+extern char *vfff_uri_escape(const char *path);
+
 #ifndef VERSION
 # define VERSION "3.1415926535897931"
 #endif
@@ -119,17 +121,17 @@ struct http_resp {
 
 extern int vhttp_misc_base64(char *b64, int size, const char *bin);
 
-static char *make_req_line(char *buf, int size, char *fmt, ...) 
+static char *make_req_line(char *buf, int size, const char *method, const char *uri) 
 {
-    va_list  args;
-    int n = 0;
+    char *escaped = NULL;
     
+    if ((escaped = vfff_uri_escape(uri)))
+        uri = escaped;
     
-    va_start(args, fmt);
-    n = n_vsnprintf(buf, size, fmt, args);
-    va_end(args);
-    
-    n += n_snprintf(&buf[n], size - n, " HTTP/1.1\r\n");
+    n_snprintf(buf, size, "%s %s HTTP/1.1\r\n", method, uri);
+
+    if (escaped)
+        free(escaped);
     
     return buf;
 }
@@ -802,7 +804,7 @@ int vhttp_vcn_is_alive(struct vcn *cn)
     if (cn->state != VCN_ALIVE)
         return 0;
     
-    make_req_line(req_line, sizeof(req_line), "HEAD /");
+    make_req_line(req_line, sizeof(req_line), "HEAD", "/");
     
     if (!httpcn_req(cn, req_line, NULL))
         return 0;
@@ -883,7 +885,7 @@ int vhttp_vcn_stat(struct vcn *cn, struct vfff_req *rreq)
     vfff_errno = 0;
     *rreq->redirected_to = '\0';
     
-    make_req_line(req_line, sizeof(req_line), "HEAD %s", rreq->uri);
+    make_req_line(req_line, sizeof(req_line), "HEAD", rreq->uri);
     if (!httpcn_req(cn, req_line, NULL))
         return 0;
     
@@ -948,7 +950,7 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
     if (rreq->out_fdoff < 0)
         rreq->out_fdoff = 0;
     
-    make_req_line(req_line, sizeof(req_line), "GET %s", rreq->uri);
+    make_req_line(req_line, sizeof(req_line), "GET", rreq->uri);
 
     if (rreq->out_fdoff > 0) 
         httpcn_req(cn, req_line, "Range: bytes=%ld-\r\n", rreq->out_fdoff);
