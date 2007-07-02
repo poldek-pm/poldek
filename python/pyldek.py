@@ -264,7 +264,7 @@ else:
     if command in [ 'ls', 'search', 'llu' ]:
         pyl.execute_pkg_command(a_command)
 
-    if command in [ 'install' ]:
+    elif command in [ 'install' ]:
         pyl.install(masks = args[1:])
         
     elif command == 'desc':
