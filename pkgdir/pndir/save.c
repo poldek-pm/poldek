@@ -390,7 +390,7 @@ int pndir_difftoc_vaccum(const struct pndir_paths *paths)
     int          lineno, i, len;
     off_t        diffs_size;
 
-    if (getenv("POLDEK_TESTING"))
+    if (poldek__is_in_testing_mode())
         return 1;
     
     if (stat(paths->path_main, &st_idx) != 0) {

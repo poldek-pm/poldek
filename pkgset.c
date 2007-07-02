@@ -515,7 +515,7 @@ tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
         if (pkgdir->dirindex == NULL)
             continue;
 
-        pkgdir_dirindex_get(pkgdir->dirindex, tmp, dir);
+        pkgdir_dirindex_get(pkgdir, tmp, dir);
     }
 
     if (pkgs == NULL) {

@@ -554,7 +554,7 @@ void pkgdir_free(struct pkgdir *pkgdir)
         pkgdir_free(pkgdir->prev_pkgdir);
 
     if (pkgdir->dirindex)
-        pkgdir_dirindex_close(pkgdir->dirindex);
+        pkgdir__dirindex_close(pkgdir->dirindex);
     
     memset(pkgdir, 0, sizeof(*pkgdir));
     free(pkgdir);
@@ -576,7 +576,7 @@ static void do_open_dirindex(struct pkgdir *pkgdir)
     if (n_array_size(pkgdir->pkgs) == 0)
         return;
     
-    pkgdir->dirindex = pkgdir_dirindex_open(pkgdir);
+    pkgdir->dirindex = pkgdir__dirindex_open(pkgdir);
 }
 
 

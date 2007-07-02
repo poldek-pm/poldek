@@ -739,7 +739,7 @@ static int pkg_has_path_dirindex(const struct pkg *pkg,
     n_snprintf(path, sizeof(path), "%s%s/%s", *dirname != '/' ? "/" : "",
                dirname, basename);
     
-    return pkgdir_dirindex_pkg_has_path(pkg->pkgdir->dirindex, pkg, path);
+    return pkgdir_dirindex_pkg_has_path(pkg->pkgdir, pkg, path);
 }
     
 int pkg_has_path(const struct pkg *pkg,
@@ -965,7 +965,7 @@ struct pkguinf *pkg_uinf(const struct pkg *pkg)
 tn_array *pkg_required_dirs(const struct pkg *pkg) 
 {
     if (pkg->pkgdir && pkg->pkgdir->dirindex)
-        return pkgdir_dirindex_get_reqdirs(pkg->pkgdir->dirindex, pkg);
+        return pkgdir_dirindex_get_reqdirs(pkg->pkgdir, pkg);
     return NULL;
 }
 

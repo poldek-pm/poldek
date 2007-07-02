@@ -137,7 +137,7 @@ static char *setup_default_cachedir(void)
 
     if ((pw = getpwuid(getuid()))) { /* use $HOME/.poldek-cache if exists */
         char *d = pw->pw_dir;
-        if (getenv("POLDEK_TESTING"))
+        if (poldek__is_in_testing_mode())
             d = getenv("HOME");
         
         if (d) {
@@ -175,7 +175,7 @@ static char *setup_default_cachedir(void)
     
     if (pw) {                     /* try $HOME */
         char *d = pw->pw_dir;
-        if (getenv("POLDEK_TESTING"))
+        if (poldek__is_in_testing_mode())
             d = getenv("HOME");
             
         if (d && poldek_util_is_rwxdir(d) && util__mksubdir(d, cachedn)) {
@@ -720,3 +720,9 @@ char *strtime_(time_t t)
     buf[sizeof(buf)-1] = '\0';
     return n_strdup(buf);
 }
+
+int poldek__is_in_testing_mode(void) 
+{
+    return getenv("POLDEK_TESTING") != NULL;
+}
+

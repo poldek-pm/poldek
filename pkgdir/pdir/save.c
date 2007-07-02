@@ -456,7 +456,7 @@ int pdir_difftoc_vacuum(const char *idxpath, const char *diffpath,
     int          lineno, i, len;
     off_t        diffs_size;
 
-    if (getenv("POLDEK_TESTING"))
+    if (poldek__is_in_testing_mode())
         return 1;
     
     if (stat(idxpath, &st_idx) != 0) {

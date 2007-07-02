@@ -1294,7 +1294,7 @@ int poldeklib_init(void)
     vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
     vfile_configure(VFILE_CONF_LOGCB, poldek_vf_vlog_cb);
 
-    if (getenv("POLDEK_TESTING")) {
+    if (poldek__is_in_testing_mode()) {
         const char *path = getenv("POLDEK_TESTING_PRELOAD_CONF");
         if (path && !preload_conf(path))
             n_die("%s: not preloaded", path);
@@ -1431,7 +1431,7 @@ int do_poldek_setup_cachedir(struct poldek_ctx *ctx)
 
     path = util__setup_cachedir(ctx->ts->cachedir);
     
-    if (poldek_VERBOSE > 0 && getenv("POLDEK_TESTING")) {
+    if (poldek_VERBOSE > 0 && poldek__is_in_testing_mode()) {
         if (ctx->ts->cachedir && path && n_str_eq(ctx->ts->cachedir, path))
             msgn(1, "cachedir: %s", path);
         else

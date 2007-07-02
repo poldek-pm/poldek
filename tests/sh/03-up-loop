@@ -12,6 +12,11 @@ up() {
    $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up
 }
 
+load() {
+   $POLDEK_UP --skip-installed -Osource="test,type=pndir $REPOURL" -n test --cmd "ls * | !grep -q qqqq"
+}
+
+
 testUpLoop() 
 {
     rm -rf $REPO/*.rpm
@@ -42,8 +47,17 @@ testUpLoop()
            fail "up #${nloop} failed"
            nloop=$maxloop
         fi
+        
+        msgn "  load"
+        load        
+        if [ $? -ne 0 ]; then 
+           fail "load #${nloop} failed"
+           nloop=$maxloop
+        fi
+
         nloop=$(expr $nloop + 1)
     done
 }
 
 . ./sh/lib/shunit2
+

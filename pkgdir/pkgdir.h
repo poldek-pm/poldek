@@ -24,23 +24,6 @@
 
 #define PKGDIR_VRFYSIGN            (PKGDIR_VRFY_GPG | PKGDIR_VRFY_PGP)
 
-struct pkgdir_dirindex;
-struct pkg;
-
-/* prototypes from pkgdir_dirindex.h */
-#ifndef SWIG
-extern tn_array *pkgdir_dirindex_get(const struct pkgdir_dirindex *dirindex,
-                                     tn_array *pkgs, const char *path);
-
-extern tn_array *pkgdir_dirindex_get_reqdirs(
-    const struct pkgdir_dirindex *dirindex,
-    const struct pkg *pkg);
-
-extern int pkgdir_dirindex_pkg_has_path(const struct pkgdir_dirindex *dirindex,
-                                        const struct pkg *pkg,
-                                        const char *path);
-#endif
-
 struct pkgdir_module;
 struct pm_ctx;
                                               
@@ -188,5 +171,21 @@ tn_array *pkgdir_typelist(void);
 struct pkg;
 int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg);
 int pkgdir_remove_package(struct pkgdir *pkgdir, struct pkg *pkg);
+
+
+/* prototypes of pkgdir_dirindex.c */
+#ifndef SWIG
+
+/* returns packages having path */
+tn_array *pkgdir_dirindex_get(const struct pkgdir *pkgdir,
+                              tn_array *pkgs, const char *path);
+/* path belongs to pkg? */
+int pkgdir_dirindex_pkg_has_path(const struct pkgdir *pkgdir,
+                                 const struct pkg *pkg, const char *path);
+
+/* directories required by package */
+tn_array *pkgdir_dirindex_get_reqdirs(const struct pkgdir *pkgdir,
+                                      const struct pkg *pkg);
+#endif
 
 #endif /* POLDEK_PKGDIR_H*/

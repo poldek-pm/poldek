@@ -53,6 +53,8 @@ tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang);
 
 char *poldek__conf_path(char *s, char *v);
 
+int poldek__is_in_testing_mode(void);
+
 #include "poldek_util.h"
 const char *lc_messages_lang(void);
 
