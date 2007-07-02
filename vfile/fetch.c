@@ -326,8 +326,12 @@ static void process_output(struct p_open_st *st, const char *prefix)
                     vf_loginfo("%s: ", prefix);
                     endl = 0;
                 }
-
-                vf_loginfo("_%c", c);
+                
+                if (c == '\n')
+                    vf_loginfo("_\n"); /* is_endlined in log.c */
+                else
+                    vf_loginfo("_%c", c);
+                
                 if (c == '\n' && cnt > 0)
                     endl = 1;
                 
@@ -336,8 +340,6 @@ static void process_output(struct p_open_st *st, const char *prefix)
         }
     }
 }
-
-
 
 static
 int ffetch_file(struct ffetcher *fftch, const char *destdir,

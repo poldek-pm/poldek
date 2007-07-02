@@ -94,7 +94,11 @@ static void process_output(struct p_open_st *st, const char *prefix)
                     endl = 0;
                 }
 
-                vf_loginfo("_%c", c);
+                if (c == '\n')
+                    vf_loginfo("_\n");
+                else
+                    vf_loginfo("_%c", c);
+                
                 if (c == '\n' && cnt > 0)
                     endl = 1;
                 

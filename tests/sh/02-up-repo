@@ -86,6 +86,21 @@ testUpdate()
     POLDEK_TESTING_DENIED_FILES=".gz" # should be up to date
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --upa || fail "up failed"
+
+
+    # autoupa on missing diff
+    msg "\n## Changing repo #5 (missing diff file and autoupa)"
+    sleep 1
+    add_package_to_repo
+    mkidx
+    msg "\n## up"
+
+    POLDEK_TESTING_DENIED_FILES="" 
+    lastdiff=$(ls -tr $REPO/packages.i/packages.ndir.*.*.*-*.*.*.gz | tail -1)
+    [ -z "$lastdiff" ] && fail "no last diff?"
+    msg "lastdiff $lastdiff"
+    rm -f "$lastdiff"
+    $POLDEK_UP -Oautoupa=y -Osource="test,type=pndir $REPOURL" --up || fail "up"
 }
 
 . ./sh/lib/shunit2

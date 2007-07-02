@@ -161,9 +161,7 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
         fmt_len = strlen(fmt);
         is_endlined = (fmt[fmt_len - 1] == '\n');
         
-        if ((pri & LOGOPT_N) && is_endlined == 0 &&
-            (int)sizeof(tmp_fmt) > fmt_len + 2) {
-            
+        if ((pri & LOGOPT_N) && !is_endlined && (int)sizeof(tmp_fmt) > fmt_len + 2) {
             memcpy(tmp_fmt, fmt, fmt_len);
             tmp_fmt[fmt_len++] = '\n';
             tmp_fmt[fmt_len] = '\0';
@@ -173,8 +171,11 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
     }
 
     /* auto line break for errors and warnings */
-    if (!last_endlined && !is_continuation && (pri & (LOGERR|LOGWARN)))
-        buf[buf_len++] = '\n';  
+    if (!last_endlined && !is_continuation && (pri & (LOGERR|LOGWARN))) {
+        buf[buf_len++] = '\n';
+        n_assert(0);
+    }
+    
     last_endlined = is_endlined;
 
     
