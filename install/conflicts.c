@@ -99,7 +99,9 @@ int in_resolve_conflict(int indent, struct install_ctx *ictx,
     
     if (found) {
         struct pkg *real_tomark = tomark;
-        if (candidates && n_array_size(candidates) > 1) {
+
+        /* tomark == NULL ? req satsfied by already installed set */
+        if (tomark && candidates && n_array_size(candidates) > 1) {
             real_tomark = in_choose_equiv(ictx->ts, req, candidates, tomark);
             n_array_cfree(&candidates);
             if (real_tomark == NULL) { /* user aborts */
