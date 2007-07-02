@@ -9,11 +9,12 @@ requires=
 provides=
 suggests=
 files=
+arch="noarch"
 
 COMMAND="$0 $@"
 
 usage_and_exit() {
-    echo "Usage $0 -n NAME -v [EPOCH:]VERSION-[RELEASE] [-p PROVIDES] [-r REQUIRES] [-s SUGGESTS] [-f file] "
+    echo "Usage $0 -n NAME -v [EPOCH:]VERSION-[RELEASE] [-a ARCH] [-p PROVIDES] [-r REQUIRES] [-s SUGGESTS] [-f file] "
     exit 1
 }
 
@@ -36,6 +37,9 @@ while test $# -gt 0 ; do
 
         -f)
             shift; files="$files ${1} "; shift ;;
+
+	-a) 
+	    shift; arch="${1}"; shift;;    
 
         *)
             echo "unknown option ${1}"; exit 1;
@@ -70,7 +74,7 @@ echo "Summary(pl): pl $name" >> $SPEC
 echo "Summary(de): de $name" >> $SPEC
 echo "Group: System" >> $SPEC
 echo "License: foo" >> $SPEC
-echo "BuildArch: noarch" >> $SPEC
+echo "BuildArch: $arch" >> $SPEC
 echo "BuildRoot: /tmp/%{name}-%{version}-root-%(id -u -n)" >> $SPEC
 [ -n "$provides" ] &&  echo "Provides: $provides" >> $SPEC
 [ -n "$requires" ] && echo "Requires: $requires" >> $SPEC
