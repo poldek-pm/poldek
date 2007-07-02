@@ -1017,7 +1017,7 @@ static int ts_run_uninstall(struct poldek_ts *ts)
 
 static int ts_run_verify(struct poldek_ts *ts) 
 {
-    tn_array *pkgs = NULL;
+    tn_array *pkgs = NULL, *pkgs_unordered = NULL;
     int nerr = 0, rc = 1;
 
     DBGF("%p\n", ts);
@@ -1037,10 +1037,14 @@ static int ts_run_verify(struct poldek_ts *ts)
                                   TS_MARK_CAPSINLINE);
     }
 
-    if (poldek_ts_get_arg_count(ts) > 0)
+    if (poldek_ts_get_arg_count(ts) > 0) {
         pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
-    else
+        pkgs_unordered = n_ref(pkgs);
+        
+    } else {
         pkgs = n_ref(ts->ctx->ps->ordered_pkgs);
+        pkgs_unordered = n_ref(ts->ctx->ps->pkgs);
+    }
 
     if (pkgs == NULL)
         return 0;
@@ -1059,7 +1063,7 @@ static int ts_run_verify(struct poldek_ts *ts)
 
     if (ts->getop(ts, POLDEK_OP_VRFY_ORDER)) {
         tn_array *ordered = NULL;
-        if (!packages_order_and_verify(pkgs, &ordered, PKGORDER_INSTALL, 1))
+        if (!packages_order_and_verify(pkgs_unordered, &ordered, PKGORDER_INSTALL, 1))
             nerr++;
     }
 
@@ -1098,6 +1102,7 @@ static int ts_run_verify(struct poldek_ts *ts)
     }
 
     n_array_free(pkgs);
+    n_array_free(pkgs_unordered);
     return nerr == 0;
 }
 
