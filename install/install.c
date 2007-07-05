@@ -327,6 +327,12 @@ int unmark_name_duplicates(struct pkgmark_set *pms, tn_array *pkgs)
     return nmarked;
 }
 
+static void ts_reset(struct poldek_ts *ts) 
+{
+    pkgmark_massset(ts->pms, 0, PKGMARK_MARK | PKGMARK_DEP);
+    n_hash_clean(ts->ts_summary);
+}
+
 int in_do_poldek_ts_install(struct poldek_ts *ts)
 {
     int i, nmarked = 0, nerr = 0, n, is_particle;
@@ -422,7 +428,7 @@ int in_do_poldek_ts_install(struct poldek_ts *ts)
             if (!do_install(&ictx))
                 nerr++;
 
-            pkgmark_massset(ts->pms, 0, PKGMARK_MARK | PKGMARK_DEP);
+            ts_reset(ictx.ts);
             install_ctx_reset(&ictx);
         }
     }
