@@ -89,14 +89,21 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
                 break;
 
         } else if (rc > 0) {
-            char  buf[4096];
+            char  buf[4096], *fmt = "_%s";
             int   n, i;
 
             if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0)
                 break;
             
             buf[n] = '\0';
-            msg_tty(verbose_level, "_%s", buf);
+            if (buf[n - 1] == '\n') {
+                n--;
+                buf[n] = '\0';
+                fmt = "_%s\n";
+            }
+            
+            msg_tty(verbose_level, fmt, buf);
+
             /* logged to file? -> prefix lines with 'rpm: ' */
             for (i=0; i < n; i++) {
                 int c = buf[i];
