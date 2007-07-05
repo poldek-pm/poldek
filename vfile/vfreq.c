@@ -230,17 +230,17 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
     struct vf_request  *req, rreq, preq;
     int                len;
 
-    memset(&r, 0, sizeof(r));
+    memset(&rreq, 0, sizeof(rreq));
 
     //printf("**request new %s\n", url);
     snprintf(buf, sizeof(buf), "%s", url);
     
-    if (!vf_parse_url(buf, &req) || rreq.uri == NULL) {
+    if (!vf_parse_url(buf, &rreq) || rreq.uri == NULL) {
         vf_logerr(err_msg, CL_URL(url));
         return NULL;
     }
     
-    if ((proxy = get_proxy(&r))) {
+    if ((proxy = get_proxy(&rreq))) {
         char pbuf[PATH_MAX];
 
         snprintf(pbuf, sizeof(pbuf), "%s", proxy);
@@ -254,7 +254,7 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
     
     if (destpath) {
         rreq.destpath = (char*)destpath;
-        if (!vf_request_open_destpath(&r))
+        if (!vf_request_open_destpath(&rreq))
             return NULL;
     }
     
