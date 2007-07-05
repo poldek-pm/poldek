@@ -173,7 +173,6 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
     /* auto line break for errors and warnings */
     if (!last_endlined && !is_continuation && (pri & (LOGERR|LOGWARN))) {
         buf[buf_len++] = '\n';
-        n_assert(0);
     }
     
     last_endlined = is_endlined;
@@ -273,9 +272,18 @@ static void vlog_file(void *stream, int pri, const char *fmt, va_list args)
 
 static void do_log(unsigned flags, int pri, const char *fmt, va_list args) 
 {
+    char *endl = NULL;
     int i;
+
+    if (*fmt == '\n' && (pri & (LOGERR|LOGWARN|LOGNOTICE))) {
+        fmt++;
+        endl = "\n";
+    }
     
     if (log_appenders == NULL || n_array_size(log_appenders) == 0) {
+        if (endl)
+            vlog_tty(NULL, LOGOPT_CONT, endl, NULL);
+            
         vlog_tty(NULL, pri, fmt, args);
         return;
     }
@@ -285,8 +293,10 @@ static void do_log(unsigned flags, int pri, const char *fmt, va_list args)
 
         if ((ape->flags & flags) == 0)
             continue;
-
+        
         if (ape->dolog) {
+            if (endl)
+                ape->dolog(ape->_data, LOGOPT_CONT, endl, NULL);
             ape->dolog(ape->_data, pri, fmt, args);
         
         } else {
