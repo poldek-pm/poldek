@@ -1148,6 +1148,7 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
 {
     va_list ap;
     void    *vv;
+    char    *vs;
     int rc = 1;
     
     va_start(ap, param);
@@ -1179,12 +1180,21 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
                 n_hash_replace(ctx->_cnf, "pm", n_strdup(vv));
             break;
 
-        case POLDEK_CONF_LOGFILE:
-            vv = va_arg(ap, void*);
-            if (vv) {
-                FILE *stream = fopen(vv, "a");
-                if (stream)
-                    poldek_log_set_default_appender("_FILE", stream, (tn_fn_free)fclose);
+        /*
+          XXX: log appenders are incomplete: a) there is no way to remove
+               particular one; b) poldek_log_set_appender()
+               removes all appenders added before.
+         */
+        case POLDEK_CONF_LOGFILE: 
+            if ((vs = va_arg(ap, char*))) {
+                FILE *stream = fopen(vs, "a");
+                if (stream == NULL) {
+                    log(LOGERR, "%s: open failed: %m", vs);
+                    rc = 0;
+                } else {
+                    poldek_log_add_appender("_FILE", stream, (tn_fn_free)fclose,
+                                            0,  NULL);
+                }
             }
             
             break;
