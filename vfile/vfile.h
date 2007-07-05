@@ -45,9 +45,8 @@
 #define VFILE_CONF_NOPROXY                (1 << 5) /*const char *hostmask    */
 #define VFILE_CONF_ANONFTP_PASSWD         (1 << 6) /*const char *passwd      */
 #define VFILE_CONF_LOGCB                  (1 << 7) /*vf_vlog() like fn       */
-#define VFILE_CONF_PROGRESSCB             (1 << 8)
-#define VFILE_CONF_PROGRESSDATA           (1 << 9)
-#define VFILE_CONF_STUBBORN_RETR          (1 << 10)
+#define VFILE_CONF_PROGRESS               (1 << 8) /* vf_progress struct     */
+#define VFILE_CONF_STUBBORN_RETR          (1 << 10) /* retry fetch on error */
 #define VFILE_CONF_STUBBORN_NRETRIES      (1 << 11) /* how many retries */
 #define VFILE_CONF_EXTCOMPR               (1 << 12) /* use external script to
                                                        file (de)compression */
@@ -218,6 +217,18 @@ void vf_lock_release(struct vflock *vflock);
 
 /* create directory and lock it */
 struct vflock *vf_lock_mkdir(const char *path);
+
+
+struct vf_progress {
+    void *data;
+    void *(*new)(void *data, const char *label);
+    void (*progress)(void *bar, long total, long amount);
+    void (*reset)(void *bar);
+    void (*free)(void *bar);
+};
+
+    
+    
 
 #endif /* POLDEK_VFILE_H */
 

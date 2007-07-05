@@ -14,6 +14,25 @@ except ImportError, e:
     raise ImportError, "run me via $ ./run.sh %s" % sys.argv[0]
     
 
+class vfileProgress(poldek.vfile_progress):
+    def __init__(self):
+        self.label = None
+
+    def initializex(self, label):
+        print "[py] downloading %s..." % label
+        self.label = label
+
+    def reset(self):
+        pass
+    
+    def progress(self, total, amount):
+        if amount == 0:
+            print " start downloading"
+        elif amount == -1:
+            print "\n end downloading"
+        else:
+            print "\r  - got %d of total %d" % (amount, total),
+
 
 class PyldekCallbacks(poldek.callbacks):
     def __init__(self, prefix = 'py'):
@@ -84,8 +103,10 @@ class Pyldek:
     def __init__(self, source_name = None, verbose = 1, config = None):
         ctx = poldek.poldek_ctx()
         self._cb = PyldekCallbacks()
+        self._progress = vfileProgress()
         
         ctx.set_callbacks(self._cb)
+        ctx.set_vfile_progress(self._progress)
         ctx.set_verbose(verbose)
 
         src = None

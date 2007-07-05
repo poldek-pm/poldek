@@ -46,13 +46,14 @@ static int          verbose = 0;
 int                 *vfile_verbose = &verbose;
 
 static const char   default_anon_passwd[] = "poldek@znienacka.net";
+extern struct vf_progress vf_tty_progress;
 
 struct vfile_configuration vfile_conf = {
     NULL, VFILE_CONF_STUBBORN_RETR, 1000 /* nretries */,
     NULL, NULL, NULL,
     &verbose, 
     (char*)default_anon_passwd,
-    NULL, NULL
+    NULL, NULL, &vf_tty_progress
 };
 
 static inline const char *vfile_cachedir(void)
@@ -85,7 +86,8 @@ int vfile_configure(int param, ...)
     va_list  ap;
     int      v, *vp, rc;
     char     *vs;
-
+    void     *vv;
+    
     if (vfile_conf.default_clients_ht == NULL) {
         vfile_conf.default_clients_ht = n_hash_new(7, free);
         vfile_conf.proxies_ht = n_hash_new(7, free);
@@ -100,6 +102,11 @@ int vfile_configure(int param, ...)
     switch (param) {
         case VFILE_CONF_LOGCB:
             vfile_conf.log = va_arg(ap, void*);
+            break;
+
+        case VFILE_CONF_PROGRESS:
+            if ((vv = va_arg(ap, void*)))
+                vfile_conf.bar = vv;
             break;
             
         case VFILE_CONF_VERBOSE:

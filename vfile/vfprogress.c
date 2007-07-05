@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2001 - 2004 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2001 - 2007 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -29,10 +29,51 @@
 
 #define PROGRESSBAR_WIDTH 30
 
-void vf_progress_init(struct vf_progress_bar *bar)
-{
-    memset(bar, 0, sizeof(*bar));
+/* state */
+#define VF_PROGRESS_VIRGIN    0
+#define VF_PROGRESS_DISABLED  1
+#define VF_PROGRESS_RUNNING   2
 
+struct tty_progress_bar {
+    int        width;
+    int        state;
+    int        is_tty;
+    int        prev_n;
+    int        prev_perc;
+    time_t     time_base;
+    time_t     time_last;
+    float      transfer_rate;
+    float      eta; /* estimated time of arrival */
+    int        maxlen;
+    int        freq;
+};
+
+static void *tty_progress_new(void *data, const char *label);
+static void tty_progress(void *data, long total, long amount);
+static void tty_progress_reset(void *data);
+
+struct vf_progress vf_tty_progress = {
+    NULL, tty_progress_new, tty_progress, tty_progress_reset, free
+};
+
+static void *tty_progress_new(void *data, const char *label)
+{
+    struct tty_progress_bar *bar;
+    
+    label = label;
+    data = data;
+
+    bar = n_malloc(sizeof(*bar));
+    memset(bar, 0, sizeof(*bar));
+    
+    bar->width = PROGRESSBAR_WIDTH;
+    bar->is_tty = isatty(fileno(stdout));
+    return bar;
+}
+
+static void tty_progress_reset(void *data)
+{
+    struct tty_progress_bar *bar = data;
     bar->width = PROGRESSBAR_WIDTH;
     bar->is_tty = isatty(fileno(stdout));
 }
@@ -58,7 +99,7 @@ static int nbytes2str(char *buf, int bufsize, unsigned long nbytes)
     return snprintf(buf, bufsize, "%.1f%c", nb, unit);
 }
 
-static int eta2str(char *buf, int bufsize, struct vf_progress_bar *bar) 
+static int eta2str(char *buf, int bufsize, struct tty_progress_bar *bar) 
 {
     int hh, mm, ss, n = 0;
     float eta = bar->eta + 0.5;
@@ -74,13 +115,13 @@ static int eta2str(char *buf, int bufsize, struct vf_progress_bar *bar)
 }
 
 
-static void calculate_tt(long total, long amount, struct vf_progress_bar *bar)
+static void calculate_tt(long total, long amount, struct tty_progress_bar *bar)
 {
     time_t current_time;
 
     current_time = time(NULL);
     if (current_time == bar->time_last) {
-	bar->freq++;    
+        bar->freq++;    
         return;
     }
     
@@ -91,16 +132,13 @@ static void calculate_tt(long total, long amount, struct vf_progress_bar *bar)
         bar->eta = (total - amount) / bar->transfer_rate;
 }
 
-
-void vf_progress(long total, long amount, void *data)
+static void tty_progress(void *data, long total, long amount)
 {
-    struct vf_progress_bar  *bar = data;
+    struct tty_progress_bar *bar = data;
     char                    line[256], outline[256], fmt[40];
     float                   frac, percent;
     long                    n;
 
-    
-    
     if (bar->state == VF_PROGRESS_DISABLED)
         return;
 
@@ -226,3 +264,28 @@ void vf_progress(long total, long amount, void *data)
     bar->prev_perc = 10 * percent;
 }
 
+
+void *vf_progress_new(const char *label)
+{
+    struct vf_progress *p = vfile_conf.bar;
+    return p->new(p->data, label);
+}
+
+void vf_progress_reset(void *bar)
+{
+    struct vf_progress *p = vfile_conf.bar;
+    p->reset(bar);
+}
+
+void vf_progress(void *bar, long total, long amount)
+{
+    struct vf_progress *p = vfile_conf.bar;
+    p->progress(bar, total, amount);
+}
+
+void vf_progress_free(void *bar)
+{
+    struct vf_progress *p = vfile_conf.bar;
+    if (p->free)
+        p->free(bar);
+}

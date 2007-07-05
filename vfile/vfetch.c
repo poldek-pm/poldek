@@ -127,12 +127,13 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
     struct stat             st;
     int                     rc = 0, vf_errno = 0;
     int                     end = 1, ntry = 0;
-    struct vf_progress_bar  bar;
 
     n_assert(reqtype == REQTYPE_FETCH || reqtype == REQTYPE_STAT);
     
-    if (reqtype == REQTYPE_FETCH)
-        req->bar = &bar;
+    if (reqtype == REQTYPE_FETCH) {
+        n_assert(req->bar == NULL);
+        req->bar = vf_progress_new(req->url);
+    }
     
     if (vfile_conf.flags & VFILE_CONF_STUBBORN_RETR)
         end = vfile_conf.nretries;
@@ -153,7 +154,7 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
 
         switch (reqtype) {
             case REQTYPE_FETCH:
-                vf_progress_init(&bar);
+                vf_progress_reset(req->bar);
                 rc = mod->fetch(req);
                 break;
                 
@@ -198,7 +199,12 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
     req->bar = NULL;
     if (!rc && req->destpath)
         vf_unlink(req->destpath);
-    
+
+    if (req->bar) {
+        vf_progress_free(req->bar);
+        req->bar = NULL;
+    }
+
     return rc;
 }
 

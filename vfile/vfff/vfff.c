@@ -355,9 +355,9 @@ int vfff_transfer_file(struct vfff_req *vreq, int in_fd, long total_size)
     amount = vreq->out_fdoff;
     
     if (vreq->progress_fn) {
-        vreq->progress_fn(total_size, 0, vreq->progress_fn_data);
+        vreq->progress_fn(vreq->progress_fn_data, total_size, 0);
         if (amount) 
-            vreq->progress_fn(total_size, amount, vreq->progress_fn_data);
+            vreq->progress_fn(vreq->progress_fn_data, total_size, amount);
     }
 
     while (1) {
@@ -407,7 +407,7 @@ int vfff_transfer_file(struct vfff_req *vreq, int in_fd, long total_size)
                 }
                 amount += nw;
                 if (vreq->progress_fn)
-                    vreq->progress_fn(total_size, amount, vreq->progress_fn_data);
+                    vreq->progress_fn(vreq->progress_fn_data, total_size, amount);
                 
             } else {
                 is_err = 1;
@@ -425,7 +425,7 @@ int vfff_transfer_file(struct vfff_req *vreq, int in_fd, long total_size)
     }
 
     if (vreq->progress_fn)
-        vreq->progress_fn(total_size, -1, vreq->progress_fn_data);
+        vreq->progress_fn(vreq->progress_fn_data, total_size, -1);
     
     return is_err == 0;
 }

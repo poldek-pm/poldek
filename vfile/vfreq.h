@@ -3,26 +3,11 @@
 
 #include <time.h>
 
-#define VF_PROGRESS_VIRGIN    0
-#define VF_PROGRESS_DISABLED  1
-#define VF_PROGRESS_RUNNING   2
+void *vf_progress_new(const char *label);
+void vf_progress_reset(void *bar);
+void vf_progress(void *bar, long total, long amount);
+void vf_progress_free(void *bar);
 
-struct vf_progress_bar {
-    int     width;
-    int     state;
-    int     is_tty;
-    int     prev_n;
-    int     prev_perc;
-    time_t     time_base;
-    time_t     time_last;
-    float      transfer_rate;
-    float      eta; /* estimatet time of arrival */
-    int        maxlen;
-    int        freq;
-};
-
-void vf_progress_init(struct vf_progress_bar *bar);
-void vf_progress(long total, long amount, void *data);
 
 #define VF_REQ_INT_REDIRECTED         (1 << 0)
 
@@ -49,10 +34,7 @@ struct vf_request {
     int       dest_fd;
     int       dest_fdoff;
     
-    //FILE      *stream;
-    //long      stream_offset;
-    
-    struct vf_progress_bar *bar;
+    void      *bar;             /* progress bar */
 
     /* filled by module's stat()s */
     time_t    st_remote_mtime;

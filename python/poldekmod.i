@@ -14,6 +14,7 @@
 #include "pkgdir/pkgdir.h"
 #include "cli/poclidek.h"
 #include "log.h"
+#include "vfile/vfile.h" /* for vf_progress */
 
 static void PythonDoLog(void *data, int pri, const char *fmt, va_list vargs);
 static int PythonConfirm(void *data, const struct poldek_ts *ts, 
@@ -22,6 +23,7 @@ static int PythonTsConfirm(void *data, const struct poldek_ts *ts);
 static int PythonChooseEquiv(void *data, const struct poldek_ts *ts, 
                              const char *cap, tn_array *pkgs, int hint);
 
+static struct vf_progress vfPyProgress;
 %}
 
 %include exception.i
@@ -35,7 +37,6 @@ static int PythonChooseEquiv(void *data, const struct poldek_ts *ts,
 %include "pkgdir/source.h"
 %include "pkgdir/pkgdir.h"
 %include "cli/poclidek.h"
-//%include "cli/dent.h"
 
 struct poldek_ctx {};
 struct poldek_ts {};
@@ -45,32 +46,58 @@ struct pkgflist_it {};
 struct poclidek_ctx {};
 struct poclidek_rcmd {};
 
+
 %{
-static void PythonDoLogOLD(void *data, int pri, const char *fmt, va_list vargs)
+static void *py_progress_new(void *data, const char *label)
 {
-   PyObject *log, *args;
-   const char *spri = "info";
-   char message[2048];
-
-   if (pri & LOGERR)
-       spri = "error";
-
-   else if (pri & LOGWARN)
-       spri = "warning";
-
-   else if (pri & LOGNOTICE)
-       spri = "notice";
-
-   else if (pri & LOGOPT_CONT)
-       spri = "cont";
+   PyObject *obj, *method, *pylabel, *r;
      
-   log = (PyObject *) data;                        // pyfunction
-   n_vsnprintf(message, sizeof(message), fmt, vargs);
+   obj = (PyObject *) data;                        
+   method = Py_BuildValue("s", "initialize");
+   pylabel = Py_BuildValue("s", label);
      
-   args = Py_BuildValue("(ss)", spri, message);
-   PyEval_CallObject(log, args);
-   Py_DECREF(args);                          
+   r = PyObject_CallMethodObjArgs(obj, method, pylabel, NULL);
+   if (r)
+      Py_DECREF(r);
+
+   Py_DECREF(method);
+   Py_DECREF(pylabel);     
+   return obj;
 }
+
+static void py_progress_reset(void *bar) {
+   PyObject *obj, *method, *r;
+     
+   obj = (PyObject *) bar;                        
+   method = Py_BuildValue("s", "reset");
+
+   r = PyObject_CallMethodObjArgs(obj, method, NULL);
+   if (r)
+      Py_DECREF(r);
+
+   Py_DECREF(method);
+}
+
+static void py_progress(void *bar, long total, long amount) {
+   PyObject *obj, *method, *pytotal, *pyamount, *r;
+     
+   obj = (PyObject *) bar;                        
+   method = Py_BuildValue("s", "progress");
+   pytotal = Py_BuildValue("i", total);
+   pyamount = Py_BuildValue("i", amount);
+
+   r = PyObject_CallMethodObjArgs(obj, method, pytotal, pyamount, NULL);
+   if (r)
+      Py_DECREF(r);
+
+   Py_DECREF(method);
+   Py_DECREF(pytotal);
+   Py_DECREF(pyamount);
+}
+
+static struct vf_progress vfPyProgress = {
+    NULL, py_progress_new, py_progress, py_progress_reset, NULL
+};
 
 static void PythonDoLog(void *data, int pri, const char *fmt, va_list vargs)
 {
@@ -453,6 +480,16 @@ static int PythonChooseEquiv(void *data, const struct poldek_ts *ts,
         poldek_configure(self, POLDEK_CONF_CONFIRM_CB, (void*)PythonConfirm, v);
         poldek_configure(self, POLDEK_CONF_TSCONFIRM_CB, (void*)PythonTsConfirm, v);
         poldek_configure(self, POLDEK_CONF_CHOOSEEQUIV_CB, (void*)PythonChooseEquiv, v); 
+        Py_INCREF(obj);
+    }
+
+    void set_vfile_progress(PyObject *obj) {
+        struct vf_progress *progress;
+        progress = n_malloc(sizeof(*progress));
+        *progress = vfPyProgress;
+        progress->data = obj;
+        progress->free = free;
+        poldek_configure(self, POLDEK_CONF_VFILEPROGRESS, progress);
         Py_INCREF(obj);
     }
 }

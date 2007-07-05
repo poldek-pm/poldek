@@ -100,7 +100,7 @@ struct vfff_req {
     int          out_fd;
     off_t        out_fdoff;
 
-    void         (*progress_fn)(long total, long amount, void *data);
+    void         (*progress_fn)(void *data, long total, long amount);
     void         *progress_fn_data;
     
     char         redirected_to[PATH_MAX];

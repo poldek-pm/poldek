@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # $Id$
 
+import sys
 import os
 import re
 import string
@@ -217,17 +218,21 @@ setattr(poclidek_ctx, 'rcmd', lambda self, ts = None: poldekmod.poclidek_rcmd_ne
 #_complete_class(pkguinf, 'pkguinf_', exclude = 'pkguinf_get', verbose = 1, with_methods = False)
 #setattr(pkguinf, 'get', eval('lambda self, tag: poldekmod.pkguinf_get(self, ord(tag[0]))'))
 
+class py_poldek_util:
+    def _implement__me(self):
+        print "## %s.%s: Implement me!" % (self.__class__.__name__,
+                                           sys._getframe(1).f_code.co_name)
 
-class callbacks:
+class callbacks(py_poldek_util):
     def log(self, pri, message):
-        print "## log: Implement me"
+        self._implement__me()
 
     def confirm(self, ts, hint, message):
-        print "## confirm: Implement me"
+        self._implement__me()
         return hint
     
     def confirm_transaction(self, ts):
-        print "## confirm_transaction: Implement me"
+        self._implement__me()
         return False
 
     # n_array_proxy() applied to tn_array*
@@ -236,6 +241,15 @@ class callbacks:
         return self.choose_equiv(ts, capability_name, packages, hint)
 
     def choose_equiv(self, ts, capability_name, packages, hint):
-        print "## choose_equiv: Implement me"
+        print "## confirm_transaction: Implement me"
         return hint
     
+class vfile_progress(py_poldek_util):
+    def initialize(self, label):
+        self._implement__me()
+
+    def reset(self):
+        self._implement__me()
+        
+    def progress(self, total, amount):
+        self._implement__me()

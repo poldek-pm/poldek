@@ -143,7 +143,7 @@ static struct vcn *vcn_pool_do_connect(struct vf_request *req)
                 
                 len = strlen(login) + 1 + strlen(req->host) + 1;
                 s = alloca(len);
-                snprintf(s, len, "%s@%s", login, req->host);
+                n_snprintf(s, len, "%s@%s", login, req->host);
                 
                 login = s;
                 host = req->proxy_host;
@@ -231,9 +231,8 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
     struct vcn        *cn;
     struct vfff_req   vreq;
     int                rc;
-
-    vfff_verbose = vfile_verbose;
     
+    vfff_verbose = vfile_verbose;
     req->req_errno = 0;
 
     if (recursion_deep > 32) {

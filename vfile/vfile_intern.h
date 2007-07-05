@@ -36,6 +36,8 @@ void vf_vlog(int pri, const char *fmt, va_list ap);
 #include <trurl/nhash.h>
 
 extern int *vfile_verbose;
+struct vf_progress;
+
 struct vfile_configuration {
     char       *_cachedir;
     unsigned   flags;
@@ -47,6 +49,7 @@ struct vfile_configuration {
     char       *anon_passwd;
     void       (*log)(unsigned flags, const char *fmt, ...);
     int        (*sigint_reached)(int reset);
+    struct vf_progress *bar;
 };
 
 extern struct vfile_configuration vfile_conf;
