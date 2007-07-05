@@ -121,18 +121,10 @@ struct http_resp {
 
 extern int vhttp_misc_base64(char *b64, int size, const char *bin);
 
-static char *make_req_line(char *buf, int size, const char *method, const char *uri) 
+static
+char *make_req_line(char *buf, int size, const char *method, const char *uri)
 {
-    char *escaped = NULL;
-    
-    if ((escaped = vfff_uri_escape(uri)))
-        uri = escaped;
-    
     n_snprintf(buf, size, "%s %s HTTP/1.1\r\n", method, uri);
-
-    if (escaped)
-        free(escaped);
-    
     return buf;
 }
 
@@ -970,8 +962,7 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
         goto l_end;
     }
 
-    /* poor HTTP client doesn't supports Trasfer-Encodings */
-
+    /* poor HTTP client doesn't support Trasfer-Encodings */
     if (!status_code_ok(resp->code, resp->msg, rreq->uri) &&
         resp->code != HTTP_STATUS_BAD_RANGE)
         goto l_err_end;

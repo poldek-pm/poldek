@@ -41,7 +41,7 @@
 #include "vfile.h"
 #include "vfile_intern.h"
 
-
+char *vfff_uri_escape(const char *path);
 
 static int extr_port(char *host) 
 {
@@ -222,27 +222,25 @@ int vf_request_open_destpath(struct vf_request *req)
     return 1;
 }
 
-
-
 struct vf_request *vf_request_new(const char *url, const char *destpath)
 {
-    char               buf[PATH_MAX], tmp[PATH_MAX];
+    char               buf[PATH_MAX], tmp[PATH_MAX], *escaped_uri;
     const char         *proxy = NULL;
     char               *err_msg = _("%s: URL parse error\n");
     struct vf_request  *req, rreq, preq;
     int                len;
 
-    memset(&rreq, 0, sizeof(rreq));
+    memset(&r, 0, sizeof(r));
 
     //printf("**request new %s\n", url);
     snprintf(buf, sizeof(buf), "%s", url);
     
-    if (!vf_parse_url(buf, &rreq) || rreq.uri == NULL) {
+    if (!vf_parse_url(buf, &req) || rreq.uri == NULL) {
         vf_logerr(err_msg, CL_URL(url));
         return NULL;
     }
     
-    if ((proxy = get_proxy(&rreq))) {
+    if ((proxy = get_proxy(&r))) {
         char pbuf[PATH_MAX];
 
         snprintf(pbuf, sizeof(pbuf), "%s", proxy);
@@ -256,7 +254,7 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
     
     if (destpath) {
         rreq.destpath = (char*)destpath;
-        if (!vf_request_open_destpath(&rreq))
+        if (!vf_request_open_destpath(&r))
             return NULL;
     }
     
@@ -273,16 +271,23 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
     req->st_local_size = rreq.st_local_size;
     req->st_local_mtime = rreq.st_local_mtime;
     
-    len = n_snprintf(tmp, sizeof(tmp), "%s://%s/%s", rreq.proto, rreq.host,
-                     rreq.uri);
-    req->url = n_strdupl(tmp, len);
     req->proto = n_strdup(rreq.proto);
     req->host = n_strdup(rreq.host);
 
     len = n_snprintf(tmp, sizeof(tmp), "/%s", rreq.uri);
-    req->uri = n_strdupl(tmp, len);
 
+    /* escape URI if HTTP */
+    if (n_str_eq(req->proto, "http") && (escaped_uri = vfff_uri_escape(tmp)))
+        req->uri = escaped_uri;
+    else 
+        req->uri = n_strdupl(tmp, len);
+
+    len = n_snprintf(tmp, sizeof(tmp), "%s://%s/%s", rreq.proto, rreq.host,
+                     req->uri);
+    req->url = n_strdupl(tmp, len);
     req->port = rreq.port;
+
+    
     if (rreq.login)
         req->login = n_strdup(rreq.login);
 
@@ -356,7 +361,6 @@ void vf_request_free(struct vf_request *req)
     free(req);
 }
 
-
 #define xx_replace(p, q) n_cfree(&p); p = q; q = NULL; 
 
 struct vf_request *vf_request_redirto(struct vf_request *req, const char *url)
@@ -366,7 +370,6 @@ struct vf_request *vf_request_redirto(struct vf_request *req, const char *url)
     tmpreq = vf_request_new(url, NULL);
     if (tmpreq == NULL)
         return NULL;
-
     
     if (*vfile_verbose > 1)
         vf_loginfo("Redirected to %s\n", PR_URL(tmpreq->url));
