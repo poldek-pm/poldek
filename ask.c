@@ -34,6 +34,8 @@
 #include "poldek_intern.h"
 #include "pkg.h"
 
+#define msg_ask(fmt, args...) poldek_log(LOGTTY|LOGINFO, fmt, ## args)
+
 static int term_confirm(void *foo, const struct poldek_ts *ts, int hint,
                         const char *question) 
 {
@@ -49,7 +51,7 @@ static int term_confirm(void *foo, const struct poldek_ts *ts, int hint,
     if (hint == 0)    /* no */
         yn = "[N/y]";
 
-    poldek_log(LOGINFO, "%s %s", question, yn);
+    msg_ask("%s %s", question, yn);
     
     a = poldek_term_ask(STDIN_FILENO, "YyNn\n", NULL);
     a = toupper(a);
@@ -61,7 +63,7 @@ static int term_confirm(void *foo, const struct poldek_ts *ts, int hint,
             n_assert(0);
     }
     
-    msg(-1, "_\n");
+    msg_ask("_\n");
     return a;
 }
 
@@ -99,7 +101,7 @@ static int term_choose_pkg(void *foo, const struct poldek_ts *ts,
     if (!isatty(STDIN_FILENO))
         return hint;
     
-    msgn(-1, _("There are more than one package which provide \"%s\":"), capname);
+    msg_ask(_("There are more than one package which provide \"%s\":"), capname);
     validchrs = alloca(64);
     p = validchrs;
     *p++ = '\n';
@@ -114,10 +116,10 @@ static int term_choose_pkg(void *foo, const struct poldek_ts *ts,
     }
     *p++ = 'Q';
     
-    msg(-1, _("Which one do you want to install ('Q' to abort)? [%c]"), 'a' + hint);
+    msg_ask(_("Which one do you want to install ('Q' to abort)? [%c]"), 'a' + hint);
     
     a = poldek_term_ask(STDIN_FILENO, validchrs, NULL);
-    msg(-1, "_\n");
+    msg_ask("_\n");
     
     if (a == '\n')
         return hint;
