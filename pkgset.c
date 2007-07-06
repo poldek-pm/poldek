@@ -502,13 +502,12 @@ tn_array *find_capreq(struct pkgset *ps, tn_array *pkgs,
     return pkgs;
 }
 
-tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
-                               const char *dir)
+static
+tn_array *do_search_reqdir(struct pkgset *ps, tn_array *pkgs, const char *dir)
 {
     tn_array *tmp = pkgs_array_new(32);
     int i, pkgs_passsed = 1;
     
-        
     for (i=0; i < n_array_size(ps->pkgdirs); i++) {
         struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
         
@@ -535,7 +534,7 @@ tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
     }
     n_array_free(tmp);
 
-    if (pkgs_passsed && n_array_size(pkgs) == 0)
+    if (!pkgs_passsed && n_array_size(pkgs) == 0)
         n_array_cfree(&pkgs);
     
 #if ENABLE_TRACE
@@ -547,12 +546,15 @@ tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
     return pkgs;
 }
 
+tn_array *pkgset_search_reqdir(struct pkgset *ps, const char *dir)
+{
+    return do_search_reqdir(ps, NULL, dir);
+}
 
 tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
                         const char *value)
 {
     tn_array *pkgs;
-
     
     n_array_sort(ps->pkgs);
     pkgs = pkgs_array_new_ex(4, pkg_cmp_name_evr_rev);
@@ -591,7 +593,8 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
                 break;
             else {
                 struct pkg *buf[1024];
-                int i, n;
+                int i, n = 0;
+                
                 n = file_index_lookup(ps->file_idx, value, 0, buf, 1024);
                 n_assert(n >= 0);
                 
@@ -600,7 +603,7 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
                         n_array_push(pkgs, pkg_link(buf[i]));
 
                 } else {
-                    pkgset_search_reqdir(ps, pkgs, value);
+                    do_search_reqdir(ps, pkgs, value);
                 }
             }
             break;
@@ -611,7 +614,7 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
             break;
             
     }
-    
+
     if (n_array_size(pkgs) == 0) {
         n_array_free(pkgs);
         pkgs = NULL;

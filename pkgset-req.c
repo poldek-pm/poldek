@@ -32,8 +32,7 @@
 #include "fileindex.h"
 
 extern int poldek_conf_MULTILIB;
-extern tn_array *pkgset_search_reqdir(struct pkgset *ps, tn_array *pkgs,
-                                      const char *dir);
+extern tn_array *pkgset_search_reqdir(struct pkgset *ps, const char *dir);
 
 void *pkg_na_malloc(struct pkg *pkg, size_t size);
 
@@ -331,7 +330,7 @@ int psreq_lookup(struct pkgset *ps, struct capreq *req,
             
         } else {                /* n is 0 */
             tn_array *pkgs;
-            if ((pkgs = pkgset_search_reqdir(ps, NULL, reqname))) {
+            if ((pkgs = pkgset_search_reqdir(ps, reqname))) {
                 int i;
                 n = 0;
 
