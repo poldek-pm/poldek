@@ -157,11 +157,11 @@ int find_db_conflicts_cnfl_with_db(int indent, struct install_ctx *ictx,
 {
     int i, ncnfl = 0;
     tn_hash *ht = NULL;
-    tn_array *dbpkgs;
+    tn_array *dbpkgs = NULL;
 
-    dbpkgs = pkgdb_get_provides_dbpkgs(ictx->ts->db, cnfl,
-                                       ictx->uninst_set->dbpkgs,
-                                       PKG_LDWHOLE_FLDEPDIRS);
+    pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_CAP, capreq_name(cnfl),
+                 ictx->uninst_set->dbpkgs, PKG_LDWHOLE_FLDEPDIRS);
+
     if (dbpkgs == NULL)
         return 0;
                 
@@ -216,17 +216,19 @@ int find_db_conflicts_cnfl_with_db(int indent, struct install_ctx *ictx,
     return ncnfl;
 }
 
+
+
 /* check if db cnfl conflicts with cap */
 static
 int find_db_conflicts_dbcnfl_with_cap(int indent, struct install_ctx *ictx,
                                       struct pkg *pkg, const struct capreq *cap)
 {
     int i, j, ncnfl = 0;
-    tn_array *dbpkgs;
+    tn_array *dbpkgs = NULL;
 
-    dbpkgs = pkgdb_get_conflicted_dbpkgs(ictx->ts->db, cap,
-                                         ictx->uninst_set->dbpkgs,
-                                         PKG_LDWHOLE_FLDEPDIRS);
+    pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_CNFL, capreq_name(cap),
+                 ictx->uninst_set->dbpkgs, PKG_LDWHOLE_FLDEPDIRS);
+    
     if (dbpkgs == NULL)
         return 0;
 

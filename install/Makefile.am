@@ -9,7 +9,9 @@ libinstall_la_SOURCES = install.h install.c  \
                         ictx.c ictx.h mark.c misc.c \
                         conflicts.c icaps.c  \
 	  	        obsoletes.c requirements.c \
-                        process.c
+                        process.c \
+			dbpkgset.c dbpkgset.h \
+			dbdep.c dbdep.h
 
 dist-hook:
 	rm -rf $(distdir)/.deps

@@ -44,6 +44,14 @@ int is_iset_provides_capn(struct install_ctx *ictx,
     return is_iset_provides(ictx, pkg, cap);
 }
 
+static
+int get_pkgs_requires_capn(struct pkgdb *db, tn_array *dbpkgs,
+                           const char *capname,
+                           const tn_array *exclude, unsigned ldflags)
+{
+    return pkgdb_search(db, &dbpkgs, PMTAG_REQ, capname, exclude, ldflags);
+}
+
 
 /* add to ictx->orphan_dbpkgs packages required by pkg */
 static int process_pkg_orphans(struct install_ctx *ictx, struct pkg *pkg)
@@ -59,9 +67,9 @@ static int process_pkg_orphans(struct install_ctx *ictx, struct pkg *pkg)
     DBGF("%s\n", pkg_id(pkg));
     MEMINF("process_pkg_orphans:");
 
-    if (!is_iset_provides_capn(ictx, pkg, pkg->name)) 
-        n += pkgdb_get_pkgs_requires_capn(db, ictx->orphan_dbpkgs, pkg->name,
-                                          ictx->uninst_set->dbpkgs, ldflags);
+    if (!is_iset_provides_capn(ictx, pkg, pkg->name))
+        n += get_pkgs_requires_capn(db, ictx->orphan_dbpkgs, pkg->name,
+                                    ictx->uninst_set->dbpkgs, ldflags);
         
     if (pkg->caps)
         for (i=0; i < n_array_size(pkg->caps); i++) {
@@ -87,9 +95,9 @@ static int process_pkg_orphans(struct install_ctx *ictx, struct pkg *pkg)
         pkgfl_it_init(&it, pkg->fl);
         while ((path = pkgfl_it_get(&it, NULL))) {
             if (!is_iset_provides_capn(ictx, pkg, path)) 
-                n += pkgdb_get_pkgs_requires_capn(db, ictx->orphan_dbpkgs, path,
-                                                  ictx->uninst_set->dbpkgs,
-                                                  ldflags);
+                n += get_pkgs_requires_capn(db, ictx->orphan_dbpkgs, path,
+                                            ictx->uninst_set->dbpkgs,
+                                            ldflags);
         }
     }
     
@@ -257,18 +265,26 @@ static int obs_filter(struct pkgdb *db, const struct pm_dbrec *dbrec,
 }
 
 static
-int get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs, struct pkg *pkg,
+int get_obsoletedby_pkg(struct pkgdb *db, tn_array *unpkgs, struct pkg *pkg,
                         unsigned getflags, unsigned ldflags) 
 {
+    tn_array *dbpkgs;
     int n;
     
     if (poldek_conf_MULTILIB)
         pkgdb_set_filter(db, obs_filter, pkg);
     
-    n = pkgdb_get_obsoletedby_pkg(db, dbpkgs, pkg, getflags, ldflags);
+    dbpkgs = pkgs_array_new_ex(16, pkg_cmp_recno);    
+    n = pkgdb_q_obsoletedby_pkg(db, dbpkgs, pkg, getflags, unpkgs, ldflags);
     
     if (poldek_conf_MULTILIB)
         pkgdb_set_filter(db, NULL, NULL);
+
+    while (n_array_size(dbpkgs)) {
+        struct pkg *p = n_array_shift(dbpkgs);
+        n_array_push(unpkgs, p);
+    }
+    n_array_free(dbpkgs);
     
     return n;
 }

@@ -20,12 +20,12 @@ static
 int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
 {
     int i, found = 0;
-    tn_array *dbpkgs;
+    tn_array *dbpkgs = NULL;
     struct capreq *cap;
 
     capreq_new_name_a(capname, cap);
-    dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cap, NULL, 0);
-
+    pkgdb_search(ts->db, &dbpkgs, PMTAG_CAP, capname, NULL, 0);
+    
     if (dbpkgs == NULL) {
         struct pkg *pkg = NULL;
         

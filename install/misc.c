@@ -16,6 +16,12 @@
 
 #include "ictx.h"
 
+/* from pkgset-req.c */
+extern int psreq_find_match_packages(struct pkgset *ps,
+                                     const struct pkg *pkg, struct capreq *req,
+                                     struct pkg ***packages, int *npackages,
+                                     int strict);
+
 int in_is_pkg_installed(struct install_ctx *ictx, struct pkg *pkg, int *cmprc) 
 {
     tn_array *dbpkgs = NULL;
