@@ -102,6 +102,7 @@ static int term_choose_pkg(void *foo, const struct poldek_ts *ts,
         return hint;
     
     msg_ask(_("There are more than one package which provide \"%s\":"), capname);
+    msg_ask("_\n");
     validchrs = alloca(64);
     p = validchrs;
     *p++ = '\n';
