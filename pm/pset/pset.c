@@ -625,8 +625,8 @@ static int is_immutable(unsigned immutable, const char *oplabel)
     return 1;
 }
 
-int pm_pset_packages_install(struct pkgdb *pdb,
-                             tn_array *pkgs, tn_array *pkgs_toremove,
+int pm_pset_packages_install(struct pkgdb *pdb, const tn_array *pkgs,
+                             const tn_array *pkgs_toremove,
                              struct poldek_ts *ts) 
 {
     struct pm_psetdb *db = pdb->dbh;
@@ -704,8 +704,8 @@ int pm_pset_packages_install(struct pkgdb *pdb,
 }
 
 
-int pm_pset_packages_uninstall(struct pkgdb *pdb,
-                               tn_array *pkgs, struct poldek_ts *ts)
+int pm_pset_packages_uninstall(struct pkgdb *pdb, const tn_array *pkgs,
+                               struct poldek_ts *ts)
 {
     struct pm_psetdb *db = pdb->dbh;
     struct pkgdir *pkgdir;

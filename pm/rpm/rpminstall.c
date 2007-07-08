@@ -295,8 +295,8 @@ static int colors_eq(const struct pkg *pkg, const char *path)
 }
 
 
-int pm_rpm_packages_install(struct pkgdb *db,
-                            tn_array *pkgs, tn_array *pkgs_toremove,
+int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
+                            const tn_array *pkgs_toremove,
                             struct poldek_ts *ts) 
 {
     struct pm_rpm *pm = db->_ctx->modh;
@@ -405,8 +405,6 @@ int pm_rpm_packages_install(struct pkgdb *db,
         pkg = n_array_nth(pkgs, i);
         pkgpath = pkg->pkgdir->path;
         
-        n_assert(pkg_is_marked(ts->pms, pkg));
-            
         pkg_filename(pkg, name, sizeof(name));
         if (vf_url_type(pkgpath) == VFURL_PATH) {
             len = n_snprintf(path, sizeof(path), "%s/%s", pkgpath, name);
@@ -482,8 +480,8 @@ int pm_rpm_packages_install(struct pkgdb *db,
     return 0;
 }
 
-int pm_rpm_packages_uninstall(struct pkgdb *db, 
-                              tn_array *pkgs, struct poldek_ts *ts)
+int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
+                              struct poldek_ts *ts)
 {
     struct pm_rpm *pm = db->_ctx->modh;
     char **argv;

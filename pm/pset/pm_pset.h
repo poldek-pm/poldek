@@ -13,12 +13,12 @@ void pm_pset_destroy(void *pm_pset);
 
 int pm_pset_configure(void *pm_pset, const char *key, void *val);
 
-int pm_pset_packages_install(struct pkgdb *db,
-                             tn_array *pkgs, tn_array *pkgs_toremove,
+int pm_pset_packages_install(struct pkgdb *db, const tn_array *pkgs,
+                             const tn_array *pkgs_toremove,
                              struct poldek_ts *ts);
 
-int pm_pset_packages_uninstall(struct pkgdb *db,
-                               tn_array *pkgs, struct poldek_ts *ts);
+int pm_pset_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
+                               struct poldek_ts *ts);
 
 void *pm_pset_opendb(void *pm_pset, void *dbh,
                      const char *dbpath, const char *rootdir, mode_t mode,

@@ -59,8 +59,8 @@ const char *pm_get_name(struct pm_ctx *ctx)
 }
 
 
-int pm_pminstall(struct pkgdb *db, tn_array *pkgs, tn_array *pkgs_toremove,
-                 struct poldek_ts *ts)
+int pm_pminstall(struct pkgdb *db, const tn_array *pkgs,
+                 const tn_array *pkgs_toremove, struct poldek_ts *ts)
 {
     int i, rc;
     char path[PATH_MAX];
@@ -89,7 +89,7 @@ int pm_pminstall(struct pkgdb *db, tn_array *pkgs, tn_array *pkgs_toremove,
     return rc;
 }
 
-int pm_pmuninstall(struct pkgdb *db, tn_array *pkgs, struct poldek_ts *ts)
+int pm_pmuninstall(struct pkgdb *db, const tn_array *pkgs, struct poldek_ts *ts)
 {
     return db->_ctx->mod->pm_uninstall(db, pkgs, ts);
 }

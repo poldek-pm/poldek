@@ -56,11 +56,11 @@ time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbfull_path);
 int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath, 
                      tn_array *depdirs);
 
-int pm_rpm_packages_install(struct pkgdb *db,
-                            tn_array *pkgs, tn_array *pkgs_toremove,
-                            struct poldek_ts *ts);
-int pm_rpm_packages_uninstall(struct pkgdb *db,
-                              tn_array *pkgs, struct poldek_ts *ts);
+int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
+                            const tn_array *pkgs_toremove, struct poldek_ts *ts);
+
+int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
+                              struct poldek_ts *ts);
 
 #ifdef HAVE_RPM_4_1
 # include <rpm/rpmcli.h>

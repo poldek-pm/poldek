@@ -49,10 +49,12 @@ struct pm_module {
     
     int (*pkg_vercmp)(const char *one, const char *two);
 
-    int (*pm_install)(struct pkgdb *db, tn_array *pkgs, tn_array *pkgs_toremove,
-                      struct poldek_ts *ts);
+    int (*pm_install)(struct pkgdb *db, const tn_array *pkgs,
+                      const tn_array *pkgs_toremove, struct poldek_ts *ts);
     
-    int (*pm_uninstall)(struct pkgdb *db, tn_array *pkgs, struct poldek_ts *ts);
+    int (*pm_uninstall)(struct pkgdb *db, const tn_array *pkgs,
+                        struct poldek_ts *ts);
+    
     int (*pkg_verify_sign)(void *modh, const char *path, unsigned flags);
     
 

@@ -29,10 +29,10 @@ const char *pm_get_name(struct pm_ctx *ctx);
 char *pm_dbpath(struct pm_ctx *ctx, char *path, size_t size);
 time_t pm_dbmtime(struct pm_ctx *ctx, const char *path);
 
-int pm_pminstall(struct pkgdb *db, tn_array *pkgs, tn_array *pkgs_toremove,
-                 struct poldek_ts *ts);
+int pm_pminstall(struct pkgdb *db, const tn_array *pkgs,
+                 const tn_array *pkgs_toremove, struct poldek_ts *ts);
 
-int pm_pmuninstall(struct pkgdb *db, tn_array *pkgs, struct poldek_ts *ts);
+int pm_pmuninstall(struct pkgdb *db, const tn_array *pkgs, struct poldek_ts *ts);
 
 int pm_verify_signature(struct pm_ctx *ctx, const char *path, unsigned flags);
 
@@ -79,7 +79,7 @@ int pkgdb_install(struct pkgdb *db, const char *path,
                   const struct poldek_ts *ts);
 
 int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, int strict,
-                    tn_array *excloffs);
+                    const tn_array *exclude);
 
 struct pm_dbrec {
     unsigned  recno;
@@ -142,48 +142,31 @@ int pkgdb_it_get_count(struct pkgdb_it *it);
 
 
 /* Search database for value of a tag ignoring packages
-   in dbpkgs_skiplist. Found packages are added to dbpkgs
+   from 'exclude' array. Found packages are added to dbpkgs
    array (created if NULL), returns number of packages found */
 int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
                  enum pkgdb_it_tag tag, const char *value,
-                 tn_array *dbpkgs_skiplist, unsigned ldflags);
+                 const tn_array *exclude, unsigned ldflags);
 
 
 int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                           const struct capreq *cap,
-                          tn_array *skiplist, unsigned ldflags, int strict);
+                          const tn_array *exclude, unsigned ldflags, int strict);
 
 int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
-                        tn_array *skiplist);
-
-
-int pkgdb_get_pkgs_requires_capn(struct pkgdb *db,
-                                 tn_array *dbpkgs, const char *capname,
-                                 tn_array *unistdbpkgs, unsigned ldflags);
+                        const tn_array *exclude);
 
 
 #define PKGDB_GETF_OBSOLETEDBY_NEVR (1 << 0)  /* by NEVR only  */
 #define PKGDB_GETF_OBSOLETEDBY_OBSL (1 << 1)  /* by Obsoletes  */
 #define PKGDB_GETF_OBSOLETEDBY_REV  (1 << 10) /* reverse match */
+
 /*
   adds to dbpkgs packages obsoleted by pkg
 */
-int pkgdb_get_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
-                              const struct pkg *pkg, unsigned getflags,
-                              unsigned ldflags);
-
-tn_array *pkgdb_get_conflicted_dbpkgs(struct pkgdb *db,
-                                      const struct capreq *cap,
-                                      tn_array *unistdbpkgs, unsigned ldflags);
-
-tn_array *pkgdb_get_provides_dbpkgs(struct pkgdb *db, const struct capreq *cap,
-                                    tn_array *unistdbpkgs, unsigned ldflags);
-
-/* returns installed packages which conflicts with given path */
-tn_array *pkgdb_get_file_conflicted_dbpkgs(struct pkgdb *db, const char *path,
-                                           tn_array *cnfldbpkgs, 
-                                           tn_array *unistdbpkgs,
-                                           unsigned ldflags);
+int pkgdb_q_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
+                            const struct pkg *pkg, unsigned flags,
+                            const tn_array *exclude, unsigned ldflags);
 
 
 enum pm_machine_score_tag {
