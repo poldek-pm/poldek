@@ -89,7 +89,7 @@ pkg_path_s
 pkg_pkgdirpath
 pkg_printf
 pkg_required_dirs
-pkg_requires_versioned_cap
+pkg_requires_cap
 pkg_satisfies_req
 pkg_set_arch
 pkg_set_os
@@ -107,12 +107,6 @@ pkg_xmatch_req
 pkg_xuinf
 pkgdb_close
 pkgdb_free
-pkgdb_get_conflicted_dbpkgs
-pkgdb_get_file_conflicted_dbpkgs
-pkgdb_get_obsoletedby_pkg
-pkgdb_get_obsoletedby_pkg_nevr
-pkgdb_get_pkgs_requires_capn
-pkgdb_get_provides_dbpkgs
 pkgdb_install
 pkgdb_is_pkg_installed
 pkgdb_it_destroy
