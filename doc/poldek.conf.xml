@@ -411,7 +411,7 @@ _distro  = pld
  Subtle dependency processing options, they should not be changed 
  unless you know what you are doing
 </description>
-  <option name="dependency engine version" type="integer" default="2" hidden="yes">
+  <option name="dependency solver" type="integer" default="2" hidden="yes">
   </option>
  
   <option name="auto directory dependencies" type="boolean3" default="auto" op="AUTODIRDEP">

@@ -1609,9 +1609,24 @@ static int setup_pm(struct poldek_ctx *ctx)
         tn_hash *htcnf;
 
         htcnf = poldek_conf_get_section(ctx->htconf, "global");
-        if ((op = poldek_conf_get(htcnf, "pm command", NULL)))
-            pm_configure(ctx->pmctx, "pmcmd", (void*)op);
-
+        if ((op = poldek_conf_get(htcnf, "pm command", NULL))) {
+            if (strchr(op, ' ') == NULL) { /* with options? */
+                pm_configure(ctx->pmctx, "pmcmd", (void*)op);
+                
+            } else {
+                const char **tl, **tl_save;
+                tl = tl_save = n_str_tokl(op, " \t");
+                pm_configure(ctx->pmctx, "pmcmd", (void*)*tl);
+                tl++;
+                while (*tl) {
+                    poldek_ts_configure(ctx->ts, POLDEK_CONF_RPMOPTS, *tl);
+                    DBGF("%d (%s) -> (%s)\n", tag, *tl, name);
+                    tl++;
+                }
+                n_str_tokl_free(tl_save);
+            }
+        }
+        
         if ((op = poldek_conf_get(htcnf, "sudo command", NULL)))
             pm_configure(ctx->pmctx, "sudocmd", (void*)op);
     }
@@ -1640,7 +1655,7 @@ int poldek_setup(struct poldek_ctx *ctx)
     ctx->_depengine = 2; /* XXX: should be extracted from conf_sections.c */
     if (ctx->htconf) {
         tn_hash *htcnf = poldek_conf_get_section(ctx->htconf, "global");
-        ctx->_depengine = poldek_conf_get_int(htcnf, "dependency engine version",
+        ctx->_depengine = poldek_conf_get_int(htcnf, "dependency solver",
                                               ctx->_depengine);
     }
 
