@@ -60,8 +60,8 @@ unsigned pkg_get_verify_signflags(struct pkg *pkg)
     return verify_flags;
 }
 
-void packages_fetch_summary(struct pm_ctx *pmctx,
-                            tn_array *pkgs, const char *destdir, int nosubdirs)
+void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
+                            const char *destdir, int nosubdirs)
 {
     long bytesget = 0, bytesdownload = 0, bytesused = 0;
     int i;

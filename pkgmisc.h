@@ -23,8 +23,8 @@ int packages_dump(tn_array *pkgs, const char *path, int fqfn);
 
 struct pm_ctx;
 /* pmctx is needed to call pm_verify_signature() */
-void packages_fetch_summary(struct pm_ctx *pmctx,
-                            tn_array *pkgs, const char *destdir, int nosubdirs);
+void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
+                            const char *destdir, int nosubdirs);
 
 int packages_fetch(struct pm_ctx *pmctx,
                    tn_array *pkgs, const char *destdir, int nosubdirs);
@@ -56,7 +56,8 @@ void pkgmark_set_free(struct pkgmark_set *pms);
 int pkgmark_set(struct pkgmark_set *pms, struct pkg *pkg, int set,
                 uint32_t flag);
 
-int pkgmark_isset(struct pkgmark_set *pms, struct pkg *pkg, uint32_t flag);
+int pkgmark_isset(const struct pkgmark_set *pms, const struct pkg *pkg,
+                  uint32_t flag);
 
 tn_array *pkgmark_get_packages(struct pkgmark_set *pmark, uint32_t flag);
 

@@ -44,8 +44,8 @@ struct pkg_mark {
 };
 
 static inline
-const char *package_id(char *buf, int size, struct pkgmark_set *pmark,
-                       struct pkg *pkg)
+const char *package_id(char *buf, int size, const struct pkgmark_set *pmark,
+                       const struct pkg *pkg)
 {
     if (pmark->flags & PKGMARK_SET_IDNEVR)
         return pkg_id(pkg);
@@ -138,7 +138,8 @@ int pkgmark_set(struct pkgmark_set *pmark, struct pkg *pkg,
     return 1;
 }
 
-int pkgmark_isset(struct pkgmark_set *pmark, struct pkg *pkg, uint32_t flag)
+int pkgmark_isset(const struct pkgmark_set *pmark, const struct pkg *pkg,
+                  uint32_t flag)
 {
     struct pkg_mark *pkg_mark;
     char idbuf[512];
