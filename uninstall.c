@@ -34,7 +34,6 @@
 #include "misc.h"
 #include "pkg.h"
 #include "pkgmisc.h"
-#include "dbpkgset.h"
 #include "poldek_ts.h"
 #include "poldek_intern.h"
 #include "capreq.h"
@@ -60,7 +59,7 @@ static int process_package(int indent, struct uninstall_ctx *uctx,
 struct uninstall_ctx {
     struct pkgdb       *db;
     struct poldek_ts   *ts;
-    struct dbpkg_set   *uninst_set;
+    tn_array           *unpkgs;
     struct pkgmark_set *pms;
     int                strict;
     int                rev_orphans_deep;
@@ -86,13 +85,13 @@ tn_array *get_orphanedby_pkg(struct uninstall_ctx *uctx, struct pkg *pkg)
 
     capreq_new_name_a(pkg->name, selfcap);
     n += pkgdb_q_what_requires(uctx->db, orphans, selfcap,
-                               uctx->uninst_set->dbpkgs, ldflags, 0);
+                               uctx->unpkgs, ldflags, 0);
 
     if (pkg->caps)
         for (i=0; i < n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
             n += pkgdb_q_what_requires(uctx->db, orphans, cap,
-                                       uctx->uninst_set->dbpkgs, ldflags, 0);
+                                       uctx->unpkgs, ldflags, 0);
         }
     
     if (pkg->fl) {
@@ -104,7 +103,7 @@ tn_array *get_orphanedby_pkg(struct uninstall_ctx *uctx, struct pkg *pkg)
             struct capreq *cap;
             capreq_new_name_a(path, cap);
             n += pkgdb_q_what_requires(uctx->db, orphans, cap, 
-                                       uctx->uninst_set->dbpkgs, ldflags, 0);
+                                       uctx->unpkgs, ldflags, 0);
         }
     }
     
@@ -125,13 +124,13 @@ int pkg_leave_orphans(struct uninstall_ctx *uctx, struct pkg *pkg)
     int i;
     
     capreq_new_name_a(pkg->name, selfcap);
-    if (pkgdb_q_is_required(uctx->db, selfcap, uctx->uninst_set->dbpkgs))
+    if (pkgdb_q_is_required(uctx->db, selfcap, uctx->unpkgs))
         return 1;
 
     if (pkg->caps)
         for (i=0; i < n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
-            if (pkgdb_q_is_required(uctx->db, cap, uctx->uninst_set->dbpkgs))
+            if (pkgdb_q_is_required(uctx->db, cap, uctx->unpkgs))
                 return 1;
         }
     
@@ -143,7 +142,7 @@ int pkg_leave_orphans(struct uninstall_ctx *uctx, struct pkg *pkg)
         while ((path = pkgfl_it_get(&it, NULL))) {
             struct capreq *cap;
             capreq_new_name_a(path, cap);
-            if (pkgdb_q_is_required(uctx->db, cap, uctx->uninst_set->dbpkgs))
+            if (pkgdb_q_is_required(uctx->db, cap, uctx->unpkgs))
                 return 1;
         }
     }
@@ -153,7 +152,7 @@ int pkg_leave_orphans(struct uninstall_ctx *uctx, struct pkg *pkg)
 
 
 /*
-  adds to uninst_set packages required by pkg and which
+  adds to unpkgs packages required by pkg and which
   is not required by any other packages -> could be removed so. 
 */
 static
@@ -169,10 +168,10 @@ int process_pkg_rev_orphans(int indent, struct uninstall_ctx *uctx,
     for (i=0; i < n_array_size(pkg->reqs); i++) {
         struct capreq *req = n_array_nth(pkg->reqs, i);
         pkgdb_search(uctx->db, &dbpkgs, PMTAG_NAME, capreq_name(req),
-                     uctx->uninst_set->dbpkgs, uninst_LDFLAGS);
+                     uctx->unpkgs, uninst_LDFLAGS);
 
         pkgdb_search(uctx->db, &dbpkgs, PMTAG_CAP, capreq_name(req),
-                     uctx->uninst_set->dbpkgs, uninst_LDFLAGS);
+                     uctx->unpkgs, uninst_LDFLAGS);
 
         if (dbpkgs == NULL)
             continue;
@@ -193,7 +192,7 @@ int process_pkg_rev_orphans(int indent, struct uninstall_ctx *uctx,
 
             pkg_set_mf(uctx->pms, dbpkg, DBPKG_REV_ORPHANED);
             pkg_dep_mark(uctx->ts->pms, dbpkg);
-            dbpkg_set_add(uctx->uninst_set, pkg_link(dbpkg));
+            n_array_push(uctx->unpkgs, pkg_link(dbpkg));
             if (uctx->rev_orphans_deep > deep)
                 process_pkg_rev_orphans(indent + 2, uctx, dbpkg, deep + 1);
         }
@@ -240,10 +239,8 @@ int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
         if (pkg_satisfies_req(pkg, req, 1)) { /* XXX: self match, should be handled
                                                  at lower level; TOFIX */
             DBGF("%s: satisfied by itself\n", capreq_snprintf_s(req));
-
-        } else if (pkgdb_match_req(uctx->db, req, uctx->strict,
-                                   uctx->uninst_set->dbpkgs)) {
-
+            
+        } else if (pkgdb_match_req(uctx->db, req, uctx->strict, uctx->unpkgs)) {
             DBGF("%s: satisfied by db\n", capreq_snprintf_s(req));
             msg_i(3, indent, "  %s: satisfied by db\n", capreq_snprintf_s(req));
             
@@ -263,8 +260,8 @@ int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
                 int j;
                 
                 bypkg = NULL;
-                for (j=0; j < n_array_size(uctx->uninst_set->dbpkgs); j++) {
-                    struct pkg *dbpkg = n_array_nth(uctx->uninst_set->dbpkgs, j);
+                for (j=0; j < n_array_size(uctx->unpkgs); j++) {
+                    struct pkg *dbpkg = n_array_nth(uctx->unpkgs, j);
                     DBGF("%s MARKS %s (req %s)?\n", pkg_id(dbpkg), pkg_id(pkg),
                          capreq_snprintf_s(req));
                     
@@ -284,7 +281,7 @@ int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
 
             uctx->ndep++;
             pkg_dep_mark(uctx->ts->pms, pkg);
-            dbpkg_set_add(uctx->uninst_set, pkg_link(pkg));
+            n_array_push(uctx->unpkgs, pkg_link(pkg));
             process_package(indent + 2, uctx, pkg);
         }
     }
@@ -352,7 +349,7 @@ struct uninstall_ctx *uninstall_ctx_new(struct poldek_ts *ts)
 
     uctx->db = ts->db;
     uctx->ts = ts;
-    uctx->uninst_set = dbpkg_set_new();
+    uctx->unpkgs = pkgs_array_new_ex(128, pkg_cmp_recno);
     uctx->pms = pkgmark_set_new(0, 0);
     uctx->strict = 1;
     /* how deeply cause removes too much packages */
@@ -364,13 +361,12 @@ static void uninstall_ctx_free(struct uninstall_ctx *uctx)
 {
 #if ENABLE_TRACE
     int i;
-    for (i=0; i < n_array_size(uctx->uninst_set->dbpkgs); i++) {
-        struct pkg *dbpkg = n_array_nth(uctx->uninst_set->dbpkgs, i);
+    for (i=0; i < n_array_size(uctx->unpkgs); i++) {
+        struct pkg *dbpkg = n_array_nth(uctx->unpkgs, i);
         msgn(1, "freedbset %d %s", dbpkg->_refcnt, pkg_id(dbpkg));
     }
 #endif    
-    dbpkg_set_free(uctx->uninst_set);
-    
+    n_array_free(uctx->unpkgs);
     pkgmark_set_free(uctx->pms);
     free(uctx);
 };
@@ -380,8 +376,8 @@ static int do_process(struct uninstall_ctx *uctx)
     int i, n = 0;
     tn_array *tmp;
 
-    for (i=0; i < n_array_size(uctx->uninst_set->dbpkgs); i++) {
-        struct pkg *dbpkg = n_array_nth(uctx->uninst_set->dbpkgs, i);
+    for (i=0; i < n_array_size(uctx->unpkgs); i++) {
+        struct pkg *dbpkg = n_array_nth(uctx->unpkgs, i);
         msgn(1, "mark %s", pkg_id(dbpkg));
         pkg_hand_mark(uctx->ts->pms, dbpkg);
         n++;
@@ -393,7 +389,7 @@ static int do_process(struct uninstall_ctx *uctx)
     MEMINF("startdeps");
     msgn(1, _("Processing dependencies..."));
     
-    tmp = n_array_dup(uctx->uninst_set->dbpkgs, (tn_fn_dup)pkg_link);
+    tmp = n_array_dup(uctx->unpkgs, (tn_fn_dup)pkg_link);
     for (i=0; i < n_array_size(tmp); i++) {
         struct pkg *dbpkg = n_array_nth(tmp, i);
         process_package(0, uctx, dbpkg);
@@ -409,13 +405,14 @@ int do_resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
                        const char *mask, const struct capreq *cr,
                        const char *arch)
 {
-    tn_array *dbpkgs;
+    tn_array *dbpkgs = NULL;
     int i, nmatches = 0;
 
     n_assert(cr);
     DBGF("get_provides %s\n", capreq_snprintf_s(cr));
-    dbpkgs = pkgdb_get_provides_dbpkgs(ts->db, cr, NULL, uninst_LDFLAGS);
-
+    
+    pkgdb_search(ts->db, &dbpkgs, PMTAG_CAP, capreq_name(cr), NULL, uninst_LDFLAGS);
+    
     mask = mask;
     DBGF("mask %s (%s) -> %d package(s)\n", mask, capreq_snprintf_s(cr), 
          dbpkgs ? n_array_size(dbpkgs) : 0);
@@ -461,7 +458,7 @@ int do_resolve_package(struct uninstall_ctx *uctx, struct poldek_ts *ts,
 
         if (matched) {
             nmatches++;
-            dbpkg_set_add(uctx->uninst_set, pkg_link(dbpkg));
+            n_array_push(uctx->unpkgs, pkg_link(dbpkg));
         }
     }
     
@@ -628,10 +625,10 @@ int do_poldek_ts_uninstall(struct poldek_ts *ts)
         goto l_end;
     }
     
-    n_array_uniq(uctx->uninst_set->dbpkgs);
-    if (nerr == 0 && n_array_size(uctx->uninst_set->dbpkgs)) {
+    n_array_uniq(uctx->unpkgs);
+    if (nerr == 0 && n_array_size(uctx->unpkgs)) {
         do_process(uctx);
-        pkgs = uctx->uninst_set->dbpkgs;
+        pkgs = uctx->unpkgs;
     }
     pkgdb_close(ts->db); /* release db as soon as possible */
     
