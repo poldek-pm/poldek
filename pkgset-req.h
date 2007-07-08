@@ -17,8 +17,7 @@
 #define REQPKG_PREREQ_UN  (1 << 1)
 #define REQPKG_CONFLICT   (1 << 2)
 #define REQPKG_OBSOLETE   (1 << 3)
-
-#define REQPKG_MULTI      (1 << 7) /* has adds */
+#define REQPKG_MULTI      (1 << 7) /* with alternatives */
 
 struct reqpkg {
     struct pkg    *pkg;
@@ -30,22 +29,11 @@ struct reqpkg {
 struct pkgset;
 /*
   Find requirement looking into capabilities and file list.
-  ARGS: pkgsbuf to store suspects (used if finded in file list *only*)
-  RET: bool, suspkgs and npkgs is set to suspect packages table
+  RET: bool && matched packages in *packages
  */
-int psreq_lookup(struct pkgset *ps, struct capreq *req,
-                 struct pkg ***suspkgs, struct pkg **pkgsbuf, int *npkgs);
-
-/* match suspkgs to req, store matches in matchedpkgs */
-int psreq_match_pkgs(const struct pkg *pkg, struct capreq *req, int strict, 
-                     struct pkg *suspkgs[], int npkgs,
-                     struct pkg **matches, int *nmatched);
-
-/* conjunction of _lookup() and _match_pkgs() */
-int psreq_find_match_packages(struct pkgset *ps,
-                              const struct pkg *pkg, struct capreq *req,
-                              struct pkg ***packages, int *npackages,
-                              int strict);
+int pkgset_find_match_packages(struct pkgset *ps,
+                               const struct pkg *pkg, const struct capreq *req,
+                               tn_array **packages, int strict);
 
 int pkgset_verify_deps(struct pkgset *ps, int strict);
 int pkgset_verify_conflicts(struct pkgset *ps, int strict);
