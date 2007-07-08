@@ -185,7 +185,8 @@ int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
 int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg);
 int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg);
 
-int pkg_requires_versioned_cap(const struct pkg *pkg, const struct capreq *cap);
+const struct capreq *pkg_requires_cap(const struct pkg *pkg,
+                                      const struct capreq *cap);
 
 int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard);
 int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg);
@@ -268,6 +269,13 @@ tn_array *pkgs_array_new_ex(int size,
 void pkgs_array_dump(tn_array *pkgs, const char *prefix); /* for debugging */
 
 tn_buf *pkgs_array_join(tn_array *pkgs, tn_buf *nbuf, const char *sep);
+
+
+struct pkg_cap_iter *pkg_cap_iter_new(struct pkg *pkg);
+void pkg_cap_iter_free(struct pkg_cap_iter *it);
+const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it);
+
+
 #endif
 
 #endif /* POLDEK_PKG_H */

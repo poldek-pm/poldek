@@ -819,38 +819,53 @@ int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
     return 1;
 }
 
-int pkg_requires_versioned_cap(const struct pkg *pkg, const struct capreq *cap)
+const struct capreq *pkg_requires_cap(const struct pkg *pkg,
+                                      const struct capreq *cap)
 {
-    int i, rc = 0;
-
-    DBGF("%s requires %s (reqs=%p, size=%d)?\n", pkg_id(pkg), capreq_snprintf_s(cap), pkg->reqs,
-           pkg->reqs ? n_array_size(pkg->reqs) : 0);
+    struct capreq *rreq = NULL;
+    int i;
+    
+    
+    DBGF("%s requires %s (reqs=%p, size=%d)?\n", pkg_id(pkg),
+         capreq_snprintf_s(cap), pkg->reqs,
+         pkg->reqs ? n_array_size(pkg->reqs) : 0);
     
     if (pkg->reqs == NULL)
-        return 0;
-
+        return NULL;
+    
     n_array_sort(pkg->reqs);
     i = n_array_bsearch_idx_ex(pkg->reqs, cap, (tn_fn_cmp)capreq_cmp_name);
     if (i == -1)
-        return 0;
+        return NULL;
     
     while (i < n_array_size(pkg->reqs)) {
         struct capreq *req = n_array_nth(pkg->reqs, i);
+        int matched = 0;
+        
         i++;
 
         if (strcmp(capreq_name(req), capreq_name(cap)) != 0)
             break;
         
+        if (!capreq_versioned(cap)) {
+            rreq = req;
+            break;
+        }
+        
         if (!capreq_versioned(req))
             continue;
 
-        rc = cap_match_req(cap, req, 1);
-        DBGF("  cap_match_req %s %s => %d\n", capreq_snprintf_s(cap), capreq_snprintf_s0(req), rc);
-        if (rc)
+        matched = cap_match_req(cap, req, 1);
+        DBGF("  cap_match_req %s %s => %d\n", capreq_snprintf_s(cap),
+             capreq_snprintf_s0(req), matched);
+        
+        if (matched) {
+            rreq = req;
             break;
+        }
     }
     
-    return rc;
+    return rreq;
 }
 
 
@@ -1429,4 +1444,61 @@ int pkg_idevr_snprintf(char *str, size_t size, const struct pkg *pkg)
     
     return n_snprintf(str, size, "%s-%s.%s", pkg->ver, pkg->rel,
                       pkg_arch(pkg));
+}
+
+
+struct pkg_cap_iter {
+    struct pkg       *pkg;
+    struct capreq    *cap;
+    int              ncap;
+    struct pkgfl_it  fit;
+    int              fit_initialized;
+};
+
+const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it)
+{
+    struct capreq *cap;
+    const char *path;
+    
+    if (it->pkg->caps && it->ncap < n_array_size(it->pkg->caps)) {
+        cap = n_array_nth(it->pkg->caps, it->ncap);
+        it->ncap++;
+        return cap;
+    }
+
+    if (it->cap) {
+        capreq_free(it->cap);
+        it->cap = NULL;
+    }
+    
+    if (it->pkg->fl == NULL)
+        return NULL;
+
+    if (!it->fit_initialized) {
+        pkgfl_it_init(&it->fit, it->pkg->fl);
+        it->fit_initialized = 1;
+    }
+    
+    path = pkgfl_it_get(&it->fit, NULL);
+    if (path)
+        it->cap = capreq_new(NULL, path, 0, NULL, NULL, 0, 0);
+    
+    return it->cap;
+}
+
+struct pkg_cap_iter *pkg_cap_iter_new(struct pkg *pkg) 
+{
+    struct pkg_cap_iter *it = n_calloc(sizeof(*it), 1);
+    it->pkg = pkg;
+    it->ncap = 0;
+    it->cap = NULL;
+    it->fit_initialized = 0;
+    return it;
+}
+
+void pkg_cap_iter_free(struct pkg_cap_iter *it) 
+{
+    if (it->cap)
+        capreq_free(it->cap);
+    memset(it, 0, sizeof(*it));
 }
