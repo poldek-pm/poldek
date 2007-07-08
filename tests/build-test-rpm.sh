@@ -10,6 +10,7 @@ provides=
 suggests=
 files=
 arch="noarch"
+rpmdir="repo"
 
 COMMAND="$0 $@"
 
@@ -41,6 +42,9 @@ while test $# -gt 0 ; do
 	-a) 
 	    shift; arch="${1}"; shift;;    
 
+        -d)  
+            shift; rpmdir="${1}"; shift;;    
+
         *)
             echo "unknown option ${1}"; exit 1;
     esac
@@ -60,10 +64,10 @@ if echo $version | grep -q ':'; then
     [ -n "$version" -a -n "$epoch" ] || exit 1;
 fi
 
+TMPDIR="${TMPDIR:-/tmp}"
 
-
-SPEC="/tmp/$name.spec"
-> $SPEC
+SPEC="$TMPDIR/$name.$$.spec" 
+echo > $SPEC
 echo "Building $name $version-$release"
 echo "Name: $name" >> $SPEC
 echo "Version: $version" >> $SPEC
@@ -107,4 +111,5 @@ if [ -n "$files" ]; then
 fi
 
 echo -e "%clean\nrm -rf \$RPM_BUILD_ROOT" >> $SPEC
-rpmbuild -bb $SPEC
+[ ! -d "$rpmdir" ] && rpmdir="$TMPDIR" 
+rpmbuild --define "_rpmdir $rpmdir"  -bb $SPEC
