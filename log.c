@@ -31,6 +31,7 @@
 #include "log.h"
 
 int  poldek_VERBOSE = 0;
+int poldek_TRACE = -1;
 
 static int default_say_goodbye(const char *msg);
 int (*poldek_log_say_goodbye)(const char *msg) = default_say_goodbye;
@@ -116,8 +117,14 @@ int poldek_verbose(void)
 
 int poldek_set_verbose(int v)
 {
+    const char *p;
+    
     int vv = poldek_VERBOSE;
     poldek_VERBOSE = v;
+
+    if ((p = getenv("POLDEK_TRACE")) && *p && *p != '0')
+        poldek_TRACE = 1;
+        
     return vv;
 }
 
@@ -171,20 +178,29 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
     }
 
     /* auto line break for errors and warnings */
-    if (!last_endlined && !is_continuation && (pri & (LOGERR|LOGWARN))) {
-        buf[buf_len++] = '\n';
+        
+    if (pri & LOGTTY) {
+        if (!last_endlined && !is_continuation && (pri & (LOGERR|LOGWARN))) {
+            buf[buf_len++] = '\n';
+        }
+        last_endlined = is_endlined;
     }
-    
-    last_endlined = is_endlined;
 
     
     if (indent > 0 && (unsigned)indent < sizeof(buf) - buf_len - 2) {
         memset(&buf[buf_len], ' ', indent);
         buf_len += indent;
     }
+    
     buf[buf_len] = '\0';
 
-
+#if 0                           /* debug */
+    if (pri & LOGTTY) {
+        char s[256];
+        n_snprintf(s, sizeof(s), "l [%s] [%s]", buf, fmt);
+        vfprintf(stderr, s, args);
+    }
+#endif    
     if (*fmt == '\0') {
         fmt = buf;
         

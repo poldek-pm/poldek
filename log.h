@@ -32,6 +32,7 @@
 int poldek_verbose(void);
 int poldek_set_verbose(int v);
 extern int poldek_VERBOSE;
+extern int poldek_TRACE;
 
 typedef void (*poldek_vlog_fn)(void *, int pri, const char *fmt, va_list args);
 
@@ -130,6 +131,19 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args);
   ((void) ((expr) ? 0 : poldek_log(LOGERR | LOGOPT_N | LOGDIE, fmt, ## args)))
 
 void poldek_meminf(int vlevel, const char *fmt, ...);
+
+# define tracef(indent, fmt, args...)                                   \
+    do {                                                                \
+        if (poldek_TRACE > 0)                                           \
+            log_i(LOGINFO|LOGOPT_N, indent, "%s() " fmt, __FUNCTION__, ## args); \
+    } while(0)
+                
+# define trace(indent, fmt, args...)                                    \
+    do {                                                                \
+        if (poldek_TRACE > 0)                                           \
+            log_i(LOGINFO|LOGOPT_N, indent, fmt, ## args);              \
+    } while(0)
+    
 
 #if ENABLE_TRACE
 # define DBGF(fmt, args...)  fprintf(stdout, "dbg:%-18s: " fmt, __FUNCTION__ , ## args)
