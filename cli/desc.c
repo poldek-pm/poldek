@@ -455,49 +455,48 @@ static void show_reqdirs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 
 static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 {
-    int i;
+    char *colon = ", ";
+    int i, ncol = IDENT;
+    
+    if (pkg->reqpkgs == NULL || n_array_size(pkg->reqpkgs) == 0)
+        return;
+    
+    cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Required(pkgs):");
 
-    if (pkg->reqpkgs && n_array_size(pkg->reqpkgs)) {
-        int ncol = IDENT;
-        
-        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Reqpkgs:");
+    for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
+        struct reqpkg *rp = n_array_nth(pkg->reqpkgs, i);
+        char *p;
 
-        for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
-            struct reqpkg *rp;	
-            char *p;
-
+        p = rp->pkg->name;
             
-            rp = n_array_nth(pkg->reqpkgs, i);
-
-            p = rp->pkg->name;
-            if (ncol + (int)strlen(p) >= term_width) {
-                ncol = SUBIDENT;
-                nlident(cmdctx, ncol);
-            }
-            ncol += cmdctx_printf(cmdctx, "%s", p);
+        if (ncol + (int)strlen(p) >= term_width) {
+            ncol = SUBIDENT;
+            nlident(cmdctx, ncol);
+        }
+        ncol += cmdctx_printf(cmdctx, "%s", p);
             
-            if (rp->flags & REQPKG_MULTI) {
-                int n = 0;
+        if (rp->flags & REQPKG_MULTI) {
+            int n = 0;
 
-                ncol += cmdctx_printf(cmdctx, " | ");
+            ncol += cmdctx_printf(cmdctx, " | ");
                 
-                while (rp->adds[n]) {
-                    char *p = rp->adds[n++]->pkg->name;
-                    if (ncol + (int)strlen(p) >= term_width) {
-                        ncol = SUBIDENT;
-                        nlident(cmdctx, ncol);
-                    }
-                    ncol += cmdctx_printf(cmdctx, "%s", p);
-                    if (rp->adds[n] != NULL) {
-                        ncol += cmdctx_printf(cmdctx, " | ");
-                    }
+            while (rp->adds[n]) {
+                char *p = rp->adds[n++]->pkg->name;
+                if (ncol + (int)strlen(p) >= term_width) {
+                    ncol = SUBIDENT;
+                    nlident(cmdctx, ncol);
+                }
+                ncol += cmdctx_printf(cmdctx, "%s", p);
+                if (rp->adds[n] != NULL) {
+                    ncol += cmdctx_printf(cmdctx, " | ");
                 }
             }
-            if (i + 1 < n_array_size(pkg->reqpkgs))
-                ncol += cmdctx_printf(cmdctx, " ");
         }
-        cmdctx_printf(cmdctx, "\n");
+            
+        if (i + 1 < n_array_size(pkg->reqpkgs))
+            ncol += cmdctx_printf(cmdctx, colon);
     }
+    cmdctx_printf(cmdctx, "\n");
 }
 
 static
@@ -508,7 +507,7 @@ void show_revreqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
     if (pkg->revreqpkgs && n_array_size(pkg->revreqpkgs)) {
         int ncol = IDENT;
         
-        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "RequiredBy:");
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Required(by):");
 
         for (i=0; i<n_array_size(pkg->revreqpkgs); i++) {
             struct pkg *tmpkg;	
