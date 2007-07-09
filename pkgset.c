@@ -284,10 +284,10 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     MEMINF("before index");
     pkgset_index(ps);
     MEMINF("after index");
-    v = poldek_VERBOSE;
-    poldek_VERBOSE = -1;
+    
+    v = poldek_set_verbose(-1);
     file_index_find_conflicts(ps->file_idx, strict);
-    poldek_VERBOSE = v;
+    poldek_set_verbose(v);
  
     pkgset_verify_deps(ps, strict);
     MEMINF("after verify deps");

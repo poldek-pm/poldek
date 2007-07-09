@@ -31,8 +31,13 @@
 
 int poldek_verbose(void);
 int poldek_set_verbose(int v);
+#ifdef POLDEK_LOG_H_INTERNAL
 extern int poldek_VERBOSE;
 extern int poldek_TRACE;
+#else
+extern const int poldek_VERBOSE;
+extern const int poldek_TRACE;
+#endif
 
 typedef void (*poldek_vlog_fn)(void *, int pri, const char *fmt, va_list args);
 

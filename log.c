@@ -30,7 +30,7 @@
 #define POLDEK_LOG_H_INTERNAL
 #include "log.h"
 
-int  poldek_VERBOSE = 0;
+int poldek_VERBOSE = 0;
 int poldek_TRACE = -1;
 
 static int default_say_goodbye(const char *msg);
@@ -124,7 +124,7 @@ int poldek_set_verbose(int v)
 
     if ((p = getenv("POLDEK_TRACE")) && *p && *p != '0')
         poldek_TRACE = 1;
-        
+
     return vv;
 }
 

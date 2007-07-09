@@ -802,9 +802,6 @@ void poldek__ts_apply_config(struct poldek_ctx *ctx, struct poldek_ts *ts)
         }
     }
     
-    if (ts->getop(ts, POLDEK_OP_CONFIRM_INST) && poldek_VERBOSE < 1)
-        poldek_VERBOSE = 1;
-    
     if (ts->getop(ts, POLDEK_OP_GREEDY)) {
         int v = poldek_conf_get_bool(htcnf, "aggressive greedy", 1);
         poldek_ts_xsetop(ts, POLDEK_OP_AGGREEDY, v, 0);
@@ -863,7 +860,7 @@ void poldek__ts_apply_poldek_settings(struct poldek_ctx *ctx,
     }
     
     if (ts->getop(ts, POLDEK_OP_CONFIRM_INST) && poldek_VERBOSE < 1)
-        poldek_VERBOSE = 1;
+        poldek_set_verbose(1);
     
     if (ts->getop(ts, POLDEK_OP_GREEDY))
         ts->setop(ts, POLDEK_OP_FOLLOW, 1);
