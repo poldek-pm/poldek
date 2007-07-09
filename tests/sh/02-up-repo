@@ -100,7 +100,13 @@ testUpdate()
     [ -z "$lastdiff" ] && fail "no last diff?"
     msg "lastdiff $lastdiff"
     rm -f "$lastdiff"
-    $POLDEK_UP -Oautoupa=y -Osource="test,type=pndir $REPOURL" --up || fail "up"
+    $POLDEK_UP -Oautoupa=y -Osource="test,type=pndir $REPOURL" --up
+    if [ $? -eq 0 ]; then
+        echo "THE ERROR ABOVE is EXPECTED"
+    else    
+        fail "up"
+    fi    
+    
 }
 
 . ./sh/lib/shunit2
