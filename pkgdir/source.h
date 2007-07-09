@@ -54,8 +54,10 @@ struct source *source_new_htcnf(const tn_hash *htcnf);
 #ifndef SWIG
 /* sets type to v0.18.x default */
 struct source *source_new_v0_18(const char *pathspec, const char *pkg_prefix);
+struct source *source_clone(const struct source *src);
 #endif
 void source_free(struct source *src);
+
 struct source *source_link(struct source *src);
 struct source *source_set_pkg_prefix(struct source *src, const char *prefix);
 struct source *source_set_type(struct source *src, const char *type);
@@ -100,6 +102,11 @@ int sources_clean(tn_array *sources, unsigned flags);
 int source_make_idx(struct source *src, const char *stype, 
                     const char *dtype, const char *idxpath,
                     unsigned flags, tn_hash *kw);
+
+int source_make_merged_idx(tn_array *sources,
+                           const char *dtype, const char *idxpath,
+                           unsigned flags, tn_hash *kw);
+
 
 int sources_add(tn_array *sources, struct source *src);
 void sources_score(tn_array *sources);

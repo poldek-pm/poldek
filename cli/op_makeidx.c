@@ -343,6 +343,8 @@ static int make_idx(struct arg_s *arg_s)
     struct source   *src;
     const char      *path = NULL;
     tn_array        *sources, *types = NULL;
+    tn_hash         *opts;
+    unsigned        crflags;
     int i, j, nerr = 0;
 
     sources = poldek_get_sources(arg_s->ctx);
@@ -351,13 +353,9 @@ static int make_idx(struct arg_s *arg_s)
         nerr++;
         goto l_end;
     }
-    
-    if (n_array_size(sources) > 1 && arg_s->src_mkidx) {
-        logn(LOGERR,
-             _("multiple sources not allowed if index path is specified"));
-        nerr++;
-        goto l_end;
-    }
+
+    opts = arg_s->opts;
+    crflags = arg_s->crflags;
 
     if (arg_s->src_mkidx)
         path = arg_s->src_mkidx->path;
@@ -365,7 +363,25 @@ static int make_idx(struct arg_s *arg_s)
     if (arg_s->idx_type)
         types = parse_types(arg_s->idx_type);
 
-    arg_s->crflags |= PKGDIR_CREAT_IFORIGCHANGED;
+    
+    if (n_array_size(sources) > 1 && arg_s->src_mkidx) {
+        logn(LOGNOTICE, "Creating index from multiple sources");
+        
+        if (types == NULL) {     /* no types  */
+            if (!source_make_merged_idx(sources, NULL, path, crflags, opts))
+                nerr++;
+            
+        } else {
+            for (j = 0; j < n_array_size(types); j++) {
+                const char *dtype = n_array_nth(types, j);
+                if (!source_make_merged_idx(sources, dtype, path, crflags, opts))
+                    nerr++;
+            }
+        }
+        goto l_end;
+    } 
+
+    crflags |= PKGDIR_CREAT_IFORIGCHANGED;
     for (i=0; i < n_array_size(sources); i++) {
         src = n_array_nth(sources, i);
         DBGF("src %s type=%s\n", src->path, src->type);
@@ -374,8 +390,7 @@ static int make_idx(struct arg_s *arg_s)
         if (types == NULL) {     /* no types  */
             msgn(3, "Making index of %s (type=%s)...", source_idstr(src),
                  src->type);
-            if (!source_make_idx(src, NULL, NULL, path, arg_s->crflags,
-                                 arg_s->opts))
+            if (!source_make_idx(src, NULL, NULL, path, crflags, opts))
                 nerr++;
             
         } else
@@ -384,25 +399,20 @@ static int make_idx(struct arg_s *arg_s)
                 msgn(3, "Making '%s' index of %s (type=%s)...", dtype,
                      source_idstr(src), src->type);
                 MEMINF("before");
-                if (!source_make_idx(src, NULL, dtype, path, arg_s->crflags,
-                                     arg_s->opts))
+                if (!source_make_idx(src, NULL, dtype, path, crflags, opts))
                     nerr++;
                 MEMINF("after");
             }
     }
-
+    
+l_end:
     if (arg_s->src_mkidx) {
         source_free(arg_s->src_mkidx);
         arg_s->src_mkidx = NULL;
     }
 
- l_end:
-
-    if (sources)
-        n_array_free(sources);
-    
-    if (types)
-        n_array_free(types);
+    n_array_cfree(&sources);
+    n_array_cfree(&types);
     n_cfree(&arg_s->idx_type);
     
     return nerr == 0;

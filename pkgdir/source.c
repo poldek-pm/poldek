@@ -39,6 +39,7 @@
 #include "poldek_term.h"
 #include "i18n.h"
 #include "conf.h"
+#include "source.h"
 
 extern const char *pkgdir_dirindex_basename;
 
@@ -185,7 +186,7 @@ static void cp_str_ifnotnull(char **dst, const char *src)
         *dst = n_strdup(src);
 }
 
-static struct source *source_dup(const struct source *src) 
+struct source *source_clone(const struct source *src) 
 {
     struct source *nsrc;
     
@@ -966,177 +967,4 @@ void sources_score(tn_array *sources)
         }
     }
 }
-
-static 
-int do_source_make_idx(struct source *src,
-                       const char *type, const char *idxpath,
-                       unsigned cr_flags, tn_hash *kw) 
-{
-    struct pkgdir   *pkgdir;
-    char            path[PATH_MAX];
-    int             rc = 0;
-    unsigned        ldflags = 0;
-    
-    n_assert(type);
-
-    if (idxpath == NULL) {
-        int len = strlen(src->path) + 1;
-        idxpath = alloca(len);
-        n_snprintf((char*)idxpath, len, src->path);
-    }
-    
-    if (util__isdir(idxpath)) {
-        char *compress = kw ? n_hash_get(kw, "compress") : src->compress;
-        if (compress == NULL)
-            compress = src->compress;
-        
-        idxpath = pkgdir__make_idxpath(path, sizeof(path), idxpath, type,
-                                       compress);
-    }
-    
-    n_assert(idxpath);
-    if (source_is_type(src, "dir") && !util__isdir(src->path)) {
-        char *tmp, *dn;
-        n_strdupap(src->path, &tmp);
-        dn = n_dirname(tmp);
-        if (util__isdir(dn))
-            source_set(&src->path, dn);
-    }
-
-    msgn(1, "Creating %s index of %s (type=%s)...", type, src->path, src->type);
-    DBGF("mkidx[%s => %s] %s %d\n", src->type, type, src->path, cr_flags);
-    pkgdir = pkgdir_srcopen(src, 0);
-    if (pkgdir == NULL)
-        return 0;
-
-    /* load previous index if it exists */
-    if (source_is_type(src, "dir") && access(idxpath, R_OK) == 0) {
-        struct pkgdir *pdir;
-        char orig_name[64];
-
-        n_snprintf(orig_name, sizeof(orig_name), "previous %s",
-                   vf_url_slim_s(idxpath, 0));
-
-        pdir = pkgdir_open_ext(idxpath,
-                               src->pkg_prefix, type,
-                               orig_name, NULL, PKGDIR_OPEN_ALLDESC,
-                               src->lc_lang);
-        if (pdir && !pkgdir_load(pdir, NULL, ldflags)) {
-            pkgdir_free(pdir);
-            pdir = NULL;
-        }
-        if (pdir) {
-            n_assert((pdir->_ldflags & PKGDIR_LD_DOIGNORE) == 0);
-        }
-        pkgdir->prev_pkgdir = pdir;
-    }
-
-    rc = 0;
-    if (pkgdir_load(pkgdir, NULL, ldflags)) {
-        n_assert((pkgdir->_ldflags & PKGDIR_LD_DOIGNORE) == 0);
-        
-        if (kw && n_hash_exists(kw, "v018x"))
-            cr_flags |= PKGDIR_CREAT_v018x;
-        
-        rc = pkgdir_save_as(pkgdir, type, idxpath, cr_flags);
-    }
-    
-    if (pkgdir)
-        pkgdir_free(pkgdir);
-    
-    return rc;
-}
-
-static const char *determine_stype(struct source *src, const char *idxpath)
-{
-    if (src->original_type)
-        return src->original_type;
-
-    idxpath = idxpath;
-    
-    /* with type and not named i.e --st TYPE -s PATH */
-    if ((src->flags & PKGSOURCE_TYPE) && (src->flags & PKGSOURCE_NAMED) == 0)
-        return src->type;
-    
-    if (util__isdir(src->path))
-        return "dir";
-    
-    else if (src->type)  /* not a dir, an URL */
-        return src->type;
-
-    return poldek_conf_PKGDIR_DEFAULT_TYPE;
-}
-
-int source_make_idx(struct source *src, const char *stype, 
-                    const char *dtype, const char *idxpath,
-                    unsigned flags, tn_hash *kw)
-{
-    struct source *ssrc;
-    int typcaps;
-    int rc = 0;
-
-    DBGF("%s(src=%s) => %s\n", stype, src->type ? src->type : "null", dtype);
-    if (stype == NULL)
-        stype = determine_stype(src, idxpath);
-    
-    if (src->type == NULL)
-        source_set_default_type(src);
-    n_assert(src->type);
-    
-    if (dtype == NULL) {
-           /* if not from config */
-        if ((src->flags & PKGSOURCE_NAMED) == 0) {
-            if (n_str_eq(src->type, "dir"))
-                dtype = poldek_conf_PKGDIR_DEFAULT_TYPE;
-            /* stype not default one, so guess destination type is default */
-            else if (n_str_ne(stype, poldek_conf_PKGDIR_DEFAULT_TYPE))
-                dtype = poldek_conf_PKGDIR_DEFAULT_TYPE;
-        }
-        
-        if (dtype == NULL)
-            dtype = src->type;
-    }
-    
-    ssrc = source_dup(src);
-    /* swap types */
-    source_set(&ssrc->type, stype);
-    ssrc->flags &= ~(PKGSOURCE_NAMED);
-    
-    rc = 1;
-    if ((typcaps = pkgdir_type_info(dtype)) < 0)
-        rc = 0;
-    
-    else if ((typcaps & PKGDIR_CAP_SAVEABLE) == 0) {
-        logn(LOGERR, _("%s: repository could not be created (missing "
-                       "feature)"), dtype);
-        rc = 0;
-
-    } else if (idxpath == NULL) {
-        if (source_is_remote(src)) { 
-            logn(LOGERR, _("%s: unable to write remote index"),
-                 source_idstr(src));
-            rc = 0;
-            
-        } else if (source_is_type(ssrc, dtype)) { /* same type */
-            struct stat st;
-
-            if (stat(ssrc->path, &st) == 0) {
-                logn(LOGERR, _("%s: refusing to overwrite index"),
-                     source_idstr(ssrc));
-                rc = 0;
-            }
-            /* if not exists, let do_source_make_idx() to shout */
-        }
-    }
-
-    if (rc) {
-        DBGF("do %s(%s) => %s\n", stype, src->type ? src->type : "null", dtype);
-        rc = do_source_make_idx(ssrc, dtype, idxpath, flags, kw);
-    }
-    
-    source_free(ssrc);
-    return rc;
-}
-
-
 
