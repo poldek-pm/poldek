@@ -219,7 +219,7 @@ int do_select_best_pkg(struct install_ctx *ictx, const struct pkg *marker,
                 scores[i] += 1;
         }
         
-        if (poldek_conf_MULTILIB) {
+        if (marker && poldek_conf_MULTILIB) {
             if (pkg_is_colored_like(pkg, marker))
                 scores[i] += 2;
             else if (pkg_cmp_arch(pkg, marker) == 0)
