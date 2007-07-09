@@ -1041,10 +1041,12 @@ static void n_malloc_fault(void)
 static void n_assert_hook(const char *expr, const char *file, int line) 
 {
     char msg[1024];
-    n_snprintf(msg, sizeof(msg), "Something wrong, something not quite right.\n"
+    n_snprintf(msg, sizeof(msg), "Something wrong, something not quite right"
+               " with %s\n"
                "Assertion '%s' failed, %s:%d\n"
                "Please report this bug to %s.\n\n",
-               expr, file, line, poldek_BUG_MAILADDR);
+               VERSION " (" VERSION_STATUS ")", 
+               expr, file, line,  poldek_BUG_MAILADDR);
     if (poldek_say_goodbye(msg))
         abort();
 }
@@ -1053,7 +1055,8 @@ static void n_die_hook(const char *msg)
 {
     char buf[1024];
     n_snprintf(buf, sizeof(buf),
-               "Something wrong, something not quite right.\ndie: %s\n", msg);
+               "Something wrong, something not quite right.\n%s; die: %s\n",
+               poldek_VERSION_BANNER, msg);
     
     if (poldek_say_goodbye(buf))
         abort();
