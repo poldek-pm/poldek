@@ -648,13 +648,15 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                      "%d packages loaded", n_array_size(pkgdir->pkgs)),
          n_array_size(pkgdir->pkgs));
 
-    n_assert(pkgdir->ts > 0);       /* ts must be set by backend */
+    if (rc) {
+        n_assert(pkgdir->ts > 0);       /* ts must be set by backend */
     
-    pkgdir->_ldflags = ldflags;
+        pkgdir->_ldflags = ldflags;
+        
+        if (ldflags & PKGDIR_LD_DIRINDEX)
+            do_open_dirindex(pkgdir);
+    }
     
-    if (ldflags & PKGDIR_LD_DIRINDEX)
-        do_open_dirindex(pkgdir);
-
     return rc;
 }
 
@@ -951,15 +953,18 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
         
     } else {
         int create = 1;
-
-        if (orig->ts >= pkgdir->ts) {
-            if (orig->ts == pkgdir->ts)
+        int norig = n_array_size(orig->pkgs), n = n_array_size(pkgdir->pkgs);
+        
+        if (orig->ts == pkgdir->ts) {
+            if (norig != n) 
                 logn(LOGNOTICE, "slow down, unable to handle so "
                      "frequent index changes");
-            else
-                logn(LOGWARN, _("clock skew detected; create index with fake "
-                                "timestamp %lu >= %lu"), (unsigned long)orig->ts,
-                     (unsigned long)pkgdir->ts);
+            pkgdir->ts = orig->ts + 1;
+            
+        } else if (orig->ts > pkgdir->ts) {
+            logn(LOGWARN, _("clock skew detected; create index with fake "
+                            "timestamp (orig %lu > %lu)"), (unsigned long)orig->ts,
+                 (unsigned long)pkgdir->ts);
             pkgdir->ts = orig->ts + 1;
         }
 
@@ -1009,6 +1014,36 @@ int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg)
 
     pkg->recno = 0;             /* local to pkgdir */
     n_array_push(pkgdir->pkgs, pkg_link(pkg));
+    n_array_isort(pkgdir->pkgs);
+    pkgdir->flags |= PKGDIR_CHANGED;
+    return 1;
+}
+
+int pkgdir_add_packages(struct pkgdir *pkgdir, tn_array *pkgs)
+{
+    int i, n = 0;
+    uint8_t *to_add;
+
+    to_add = alloca(n_array_size(pkgs));
+    memset(to_add, 0, n_array_size(pkgs));
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        
+        if (!n_array_bsearch(pkgdir->pkgs, pkg))
+            to_add[i] = 1;
+    }
+
+    for (i=0; i < n_array_size(pkgs); i++) {
+        if (to_add[i]) {
+            struct pkg *pkg = n_array_nth(pkgs, i);
+            
+            pkg->recno = 0;             /* local to pkgdir */
+            n_array_push(pkgdir->pkgs, pkg_link(pkg));
+            n++;
+        }
+    }
+
     pkgdir->flags |= PKGDIR_CHANGED;
     return 1;
 }

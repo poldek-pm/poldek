@@ -170,6 +170,7 @@ tn_array *pkgdir_typelist(void);
 
 struct pkg;
 int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg);
+int pkgdir_add_packages(struct pkgdir *pkgdir, tn_array *pkgs);
 int pkgdir_remove_package(struct pkgdir *pkgdir, struct pkg *pkg);
 
 
