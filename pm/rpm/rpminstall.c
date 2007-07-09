@@ -131,7 +131,7 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
 int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_level)
 {
     struct p_open_st pst;
-    int n, ec;
+    int vsaved = -999, ec;
     unsigned p_open_flags = P_OPEN_KEEPSTDIN;
 
     
@@ -158,21 +158,19 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
             return 0;
         }
     }
-    
-    n = 0;
-    if (poldek_VERBOSE == 0) {
-        poldek_VERBOSE = 1;
-        n = 1;
-    }
 
+    vsaved = -999;
+    if (poldek_VERBOSE == 0)
+        vsaved = poldek_set_verbose(1);
+    
     rpmr_process_output(&pst, verbose_level);
     if ((ec = p_close(&pst) != 0) && pst.errmsg != NULL)
         logn(LOGERR, "%s", pst.errmsg);
 
     p_st_destroy(&pst);
-    
-    if (n)
-        poldek_VERBOSE--;
+
+    if (vsaved != -999)
+        poldek_set_verbose(vsaved);
     
     return ec;
 }

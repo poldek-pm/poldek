@@ -245,8 +245,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->mode = RUNMODE_APT;
             break;
             
-        case 'v': 
-            poldek_VERBOSE++;
+        case 'v':
+            poldek_set_verbose(poldek_VERBOSE + 1);
             break;
 
         case OPT_NOCONF:

@@ -373,11 +373,14 @@ int do_pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags)
 extern int pm_rpm_verbose;
 int pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags) 
 {
-    int rv = pm_rpm_verbose, v = poldek_VERBOSE, rc;
-        
-    poldek_VERBOSE = pm_rpm_verbose = 1;
+    int v, rv = pm_rpm_verbose, rc;
+    
+    pm_rpm_verbose = 1;
+    v = poldek_set_verbose(pm_rpm_verbose);
+    
     rc = do_pm_rpm_verify_signature(pm_rpm, path, flags);
+    
     pm_rpm_verbose = rv;
-    poldek_VERBOSE = v;
+    poldek_set_verbose(v);
     return rc;
 }

@@ -93,14 +93,14 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
                 cmdctx->rtflags |= CMDCTX_ERR;
                 
             } else {
-                poldek_VERBOSE++;
+                poldek_set_verbose(poldek_VERBOSE + 1);
             }
         }
         break;
 
         case 'q': 
             cmdctx->rtflags |= CMDCTX_NOCTRLMSGS;
-            poldek_VERBOSE = -1;
+            poldek_set_verbose(-1);
             break;
         
             
