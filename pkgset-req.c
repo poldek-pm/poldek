@@ -71,7 +71,7 @@ static struct reqpkg *reqpkg_new(struct pkg *pkg, struct capreq *req,
 
 static int reqpkg_cmp(struct reqpkg *p1, struct reqpkg *p2)
 {
-    return (size_t)p1->pkg - (size_t)p2->pkg;
+    return pkg_cmp_id(p1->pkg, p2->pkg);
 }
 
 static struct pkg_unreq *pkg_unreq_new(struct capreq *req, int mismatch)
@@ -169,7 +169,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
         n_assert(n_array_size(pkg->reqs));
         pkg->reqpkgs = n_array_new(n_array_size(pkg->reqs)/2+2, NULL,
                                    (tn_fn_cmp)reqpkg_cmp);
-
+        
         msgn(4, "%d. %s", i+1, pkg_id(pkg));
         for (j=0; j < n_array_size(pkg->reqs); j++) {
             struct pkg *pkgsbuf[1024], **suspkgs;
@@ -234,7 +234,7 @@ static int add_reqpkg(struct pkg *pkg, struct capreq *req, struct pkg *dpkg)
         n_array_push(pkg->reqpkgs, rpkg);
         n_array_sort(pkg->reqpkgs);
         if (dpkg->revreqpkgs == NULL)
-            dpkg->revreqpkgs = n_array_new(2, NULL, NULL);
+            dpkg->revreqpkgs = n_array_new(2, NULL, (tn_fn_cmp)pkg_cmp_id);
         n_array_push(dpkg->revreqpkgs, pkg);
     }
     
@@ -617,7 +617,7 @@ static int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict,
                 
                 rpkg->adds[i - 1] = reqpkg_new(dpkg, req, flags, 0);
                 if (dpkg->revreqpkgs == NULL)
-                    dpkg->revreqpkgs = n_array_new(2, NULL, NULL);
+                    dpkg->revreqpkgs = n_array_new(2, NULL, (tn_fn_cmp)pkg_nvr_strcmp);
                 n_array_push(dpkg->revreqpkgs, pkg);
             }
         }
