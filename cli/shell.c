@@ -71,14 +71,18 @@ struct sh_ctx {
 static struct sh_ctx sh_ctx = { COMPLETITION_CTX_NONE, NULL };
 
 static
-int is_pkg_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg)
+int is_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg, int reverse)
 {
     struct pkg *ipkg = NULL;
     tn_array *dents;
     char name[256];
     int n, name_len;
 
-    dents = poclidek_get_dent_ents(cctx, POCLIDEK_INSTALLEDDIR);
+    if (reverse)
+        dents = poclidek_get_dent_ents(cctx, POCLIDEK_AVAILDIR);
+    else
+        dents = poclidek_get_dent_ents(cctx, POCLIDEK_INSTALLEDDIR);
+    
     if (dents == NULL)
         return 1;
     
@@ -90,7 +94,8 @@ int is_pkg_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg)
 
     while (n < n_array_size(dents)) {
         struct pkg_dent *ent = n_array_nth(dents, n++);
-
+        int cmprc;
+        
         if (pkg_dent_isdir(ent))
             continue;
 
@@ -98,18 +103,24 @@ int is_pkg_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg)
             break;
         
         ipkg = ent->pkg_dent_pkg;
-        if (pkg_is_kind_of(ipkg, pkg) && pkg_cmp_evr(pkg, ipkg) > 0)
-            return 1;
-        
+        if (!pkg_is_kind_of(ipkg, pkg))
+            continue;
+
+        if ((cmprc = pkg_cmp_evr(pkg, ipkg)) != 0) {
+            //DBGF_F("%s %s %d (%d)\n", pkg_id(pkg), pkg_id(ipkg), cmprc, reverse);
+            
+            if (!reverse && cmprc > 0)
+                return 1;
+
+            if (reverse && cmprc < 0)
+                return 1;
+        }
     }
 
     return 0;
 }
 
-
-
-static
-char *command_generator(const char *text, int state)
+static char *command_generator(const char *text, int state)
 {
     static int i, len;
     char *name = NULL;
@@ -138,10 +149,22 @@ char *command_generator(const char *text, int state)
 static
 char *arg_generator(const char *text, int state, int genpackages)
 {
+    int                  uprev = 0, upgradeable_mode = 0;
     static int           i, len;
     const char           *name = NULL;
     tn_array             *ents;
 
+    if (sh_ctx.completion_ctx == COMPLETITION_CTX_UPGRADEABLE) {
+        char pwd[256];
+
+        upgradeable_mode = 1;
+        poclidek_pwd(sh_ctx.cctx, pwd, sizeof(pwd));
+#if 0   /* for "installed> upgrade foo-X with foo-X"; disabled - NFY */
+        if (n_str_eq(pwd, POCLIDEK_INSTALLEDDIR))
+            uprev = 1;
+#endif        
+    }
+    
     if (genpackages) {
         if (sh_ctx.completion_ctx == COMPLETITION_CTX_INSTALLED)
             ents = poclidek_get_dent_ents(sh_ctx.cctx, POCLIDEK_INSTALLEDDIR);
@@ -171,20 +194,21 @@ char *arg_generator(const char *text, int state, int genpackages)
                                        (tn_fn_cmp)pkg_dent_strncmp);
     }
 
-
+    
+    
     while (i > -1 && i < n_array_size(ents)) {
         struct pkg_dent *ent = n_array_nth(ents, i++);
         char ent_path[PATH_MAX];
         const char *path;
         
         if (genpackages) {
+            struct pkg *pkg = ent->pkg_dent_pkg;
             if (pkg_dent_isdir(ent))
                 continue;
             
-            if (sh_ctx.completion_ctx == COMPLETITION_CTX_UPGRADEABLE &&
-                !is_pkg_upgradeable(sh_ctx.cctx, ent->pkg_dent_pkg))
+            if (upgradeable_mode && !is_upgradeable(sh_ctx.cctx, pkg, uprev))
                 continue;
-            
+
             path = ent->name;
             
         } else {
