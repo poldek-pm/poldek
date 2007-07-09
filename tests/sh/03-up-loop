@@ -13,7 +13,15 @@ up() {
 }
 
 load() {
-   $POLDEK_UP --skip-installed -Osource="test,type=pndir $REPOURL" -n test --cmd "ls * | !grep -q qqqq"
+  $POLDEK_UP --skip-installed -Osource="test,type=pndir $REPOURL" -n test \
+           --cmd 'desc -al *' | egrep -v '^Path:' > $TMPDIR/local-dump
+
+  $POLDEK_NOCONF --st pndir -s $REPO \
+           --cmd 'desc -al *' | egrep -v '^Path:' > $TMPDIR/remote-dump
+
+  #less         $TMPDIR/remote-dump
+  #ls -l $TMPDIR/remote-dump $TMPDIR/local-dump        
+  diff -u $TMPDIR/remote-dump $TMPDIR/local-dump
 }
 
 
