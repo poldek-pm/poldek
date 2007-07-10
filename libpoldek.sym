@@ -286,6 +286,7 @@ source_cmp_uniq
 source_free
 source_link
 source_make_idx
+source_make_merged_idx
 source_malloc
 source_new
 source_new_htcnf
