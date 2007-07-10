@@ -8,6 +8,7 @@ release="1"
 requires=
 provides=
 suggests=
+conflicts=
 files=
 arch="noarch"
 rpmdir="repo"
@@ -35,6 +36,9 @@ while test $# -gt 0 ; do
 
         -s)
             shift; suggests="$suggests ${1},"; shift ;;
+
+        -c)     
+            shift; conflicts="$conflicts ${1},"; shift ;;
 
         -f)
             shift; files="$files ${1} "; shift ;;
@@ -83,6 +87,7 @@ echo "BuildRoot: /tmp/%{name}-%{version}-root-%(id -u -n)" >> $SPEC
 [ -n "$provides" ] &&  echo "Provides: $provides" >> $SPEC
 [ -n "$requires" ] && echo "Requires: $requires" >> $SPEC
 [ -n "$suggests" ] && echo "Suggests: $suggests" >> $SPEC
+[ -n "$conflicts" ] && echo "Conflicts: $conflicts" >> $SPEC
 
 echo -e "%description\nPackage build by $COMMAND\n" >> $SPEC
 
