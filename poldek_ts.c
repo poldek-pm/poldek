@@ -262,7 +262,7 @@ static int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         cp_str(&ts->cachedir, ctx->ts->cachedir);
         cp_str(&ts->dumpfile, ctx->ts->dumpfile);
         cp_str(&ts->prifile, ctx->ts->prifile);
-        cp_str(&ts->depgraphfile, ctx->ts->depgraphfile);
+        cp_str(&ts->depgraph, ctx->ts->depgraph);
         
         ts->rpmacros = n_array_dup(ctx->ts->rpmacros, (tn_fn_dup)strdup);
         ts->rpmopts = n_array_dup(ctx->ts->rpmopts, (tn_fn_dup)strdup);
@@ -489,13 +489,10 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
             }
             break;
 
-        case POLDEK_CONF_DEPGRAPHFILE:
-            if ((vs = va_arg(ap, char*))) {
-                DBGF("dotfile %s\n", vs);
-                ts->depgraphfile = poldek__conf_path(ts->depgraphfile, vs);
-            }
+        case POLDEK_CONF_DEPGRAPH:
+            if ((vs = va_arg(ap, char*)))
+                ts->depgraph = n_strdup(vs);
             break;
-
 
         case POLDEK_CONF_RPMMACROS:
             if ((vs = va_arg(ap, char*)))
@@ -773,8 +770,8 @@ static int ts_prerun(struct poldek_ts *ts)
         ts->rootdir = n_strdup("/");
     
     if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
-        if (poldek_VERBOSE < 1)
-            poldek_VERBOSE++;
+        //if (poldek_VERBOSE < 1)
+        //    poldek_set_verbose(poldek_VERBOSE + 1);
         
     } else if (ts->getop_v(ts, POLDEK_OP_JUSTFETCH, POLDEK_OP_JUSTPRINT, 0)) {
         if (!poldek_util_is_rwxdir(ts->rootdir)) {
@@ -806,8 +803,8 @@ tn_array *poldek__ts_install_ordered_packages(const struct poldek_ts *ts)
 
 /* install summary saved to ts to propagate it to high level api  */
 void poldek__ts_update_summary(struct poldek_ts *ts,
-                               const char *prefix, tn_array *pkgs,
-                               unsigned pmsflags, struct pkgmark_set *pms)
+                               const char *prefix, const tn_array *pkgs,
+                               unsigned pmsflags, const struct pkgmark_set *pms)
 {
     tn_array *supkgs;
     int i;
@@ -946,7 +943,8 @@ static int ts_run_upgrade_dist(struct poldek_ts *ts)
     return rc;
 }
 
-extern int in_do_ts_install(struct poldek_ts *ts);
+extern int in_do_poldek_ts_instal(struct poldek_ts *ts);
+//extern int i3_do_poldek_ts_install(struct poldek_ts *ts);
 
 static int ts_run_install(struct poldek_ts *ts) 
 {
@@ -976,8 +974,8 @@ static int ts_run_install(struct poldek_ts *ts)
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
 
     if (ts->ctx->_depengine == 3) { /* hope, soon */
-        msgn(5, "Running poldek3 dependency engine...");
-        n_die("Not implemented yet");
+        msgn(5, "Running #3 dependency engine...");
+        //rc = i3_do_poldek_ts_install(ts);
 
     } else {
         rc = in_do_poldek_ts_install(ts);
@@ -1056,8 +1054,8 @@ static int ts_run_verify(struct poldek_ts *ts)
     }
 
     if (ts->getop(ts, POLDEK_OP_DEPGRAPH)) {
-        msgn(0, _("Dotting dependency graph..."));
-        if (!packages_dot_dependency_graph(pkgs, ts->ctx->ps, ts->depgraphfile))
+        msgn(0, _("Generating dependency graph %s..."), ts->depgraph);
+        if (!packages_generate_depgraph(pkgs, ts->ctx->ps, ts->depgraph))
             nerr++;
     }
 

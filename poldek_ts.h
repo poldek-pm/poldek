@@ -116,7 +116,7 @@ struct poldek_ts {
     char               *cachedir;      /* cache directory        */
     char               *dumpfile;      /* file to dump fqpns     */
     char               *prifile;       /* file with package priorities (split*) */
-    char               *depgraphfile;  /* dot file path for graphviz depgraph */
+    char               *depgraph    ;  /* graph type[:path] graphviz and others graphs */
     tn_array           *rpmopts;       /* rpm cmdline opts (char *opts[]) */
     tn_array           *rpmacros;      /* rpm macros to pass to cmdline (char *opts[]) */
     tn_array           *hold_patterns;

@@ -655,8 +655,8 @@ int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps)
     return nerr == 0;
 }
 
-int packages_dot_dependency_graph(tn_array *pkgs, struct pkgset *ps,
-                                  const char *dotfile)
+/* GraphViz */
+static int dot_graph(tn_array *pkgs, struct pkgset *ps, const char *outfile)
 {
     int i, j, n_unmet = 0;
     tn_buf *nbuf;
@@ -701,12 +701,15 @@ int packages_dot_dependency_graph(tn_array *pkgs, struct pkgset *ps,
         
         
     }
-
-    if ((stream = fopen(dotfile, "w")) == NULL) {
-        logn(LOGERR, _("%s: open failed: %m"), dotfile);
-        n_buf_free(nbuf);
-        return 0;
-    }
+    
+    stream = stdout;
+    
+    if (outfile != NULL)
+        if ((stream = fopen(outfile, "w")) == NULL) {
+            logn(LOGERR, _("%s: open failed: %m"), outfile);
+            n_buf_free(nbuf);
+            return 0;
+        }
 
     fprintf(stream, "digraph repo {\n"
             "rankdir=LR;\n"
@@ -723,10 +726,102 @@ int packages_dot_dependency_graph(tn_array *pkgs, struct pkgset *ps,
 
     fprintf(stream, "%s", (char*)n_buf_ptr(nbuf));
     fprintf(stream, "\n}\n");
-    fclose(stream);
+    if (stream != stdout)
+        fclose(stream);
     n_buf_free(nbuf);
-    msgn(0, "Graph saved as %s\n", dotfile);
+
+    if (outfile)
+        msgn(0, "Graph saved as %s", outfile);
+    
     return 1;
 }
 
 
+/* See http://xavier.informatics.indiana.edu/lanet-vi/ */
+static int lanvi_graph(tn_array *pkgs, struct pkgset *ps, const char *outfile)
+{
+    int i, j;
+    tn_buf *nbuf;
+    FILE *stream;
+
+    ps = ps;                    /* unused */
+    nbuf = n_buf_new(1024 * 8);
+
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        pkg->recno = i + 1;
+    }
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        
+        if (pkg->reqpkgs == NULL || n_array_size(pkg->reqpkgs) == 0)
+            continue;
+
+        for (j=0; j < n_array_size(pkg->reqpkgs); j++) {
+            struct reqpkg *rp = n_array_nth(pkg->reqpkgs, j);
+
+            n_buf_printf(nbuf, "%d %d\n", pkg->recno, rp->pkg->recno);
+            
+            if (rp->flags & REQPKG_MULTI) {
+                int n = 0;
+                while (rp->adds[n]) {
+                    n_buf_printf(nbuf, "%d %d\n", pkg->recno, rp->adds[n]->pkg->recno);
+                    n++;
+                }
+            }
+        }
+    }
+    
+    stream = stdout;
+    if (outfile != NULL)
+        if ((stream = fopen(outfile, "w")) == NULL) {
+            logn(LOGERR, _("%s: open failed: %m"), outfile);
+            n_buf_free(nbuf);
+            return 0;
+        }
+    
+    
+    fprintf(stream, "%s", (char*)n_buf_ptr(nbuf));
+    if (stream != stdout)
+        fclose(stream);
+    n_buf_free(nbuf);
+
+    if (outfile)
+        msgn(0, "LanVi graph saved as %s", outfile);
+    
+    return 1;
+}
+
+
+int packages_generate_depgraph(tn_array *pkgs, struct pkgset *ps,
+                               const char *graphspec)
+{
+
+    const char **tl = NULL, *type, *path = NULL;
+
+    if (strchr(graphspec, ':') == NULL)
+        type = graphspec;
+    else {
+        tl = n_str_tokl(graphspec, ":");
+        type = *tl;
+        path = *(tl + 1);
+    }
+    DBGF_F("g %s\n", path);
+    
+    if (n_str_eq(type, "lanvi"))
+        lanvi_graph(pkgs, ps, path);
+    
+    else if (n_str_eq(type, "dot"))
+        dot_graph(pkgs, ps, path);
+
+    else
+        logn(LOGERR, "%s: unknown graph type", type);
+
+    if (tl)
+        n_str_tokl_free(tl);
+    
+    return 1;
+}
+
+            

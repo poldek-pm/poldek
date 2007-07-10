@@ -61,7 +61,8 @@ static struct argp_option options[] = {
 {"verify-all",  OPT_ALL, 0, OPTION_HIDDEN,
 N_("Verify dependencies, conflicts, file conflicts and orphaned directories"),
         OPT_GID },
-{"dependency-graph", OPT_DEPGRAPH, "FILE", 0, N_("Print dot dependency graph into FILE"), OPT_GID },
+{"depgraph", OPT_DEPGRAPH, "TYPE[:FILE]", 0,
+        N_("Generate dependency graph, types are dot,lanvi"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -215,7 +216,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             arg_s->verify = 1;
             ts->setop(ts, POLDEK_OP_DEPGRAPH, 1);
             rt->set_major_mode(rt, mode, "depgraph");
-            poldek_ts_configure(ts, POLDEK_CONF_DEPGRAPHFILE, arg);
+            poldek_ts_configure(ts, POLDEK_CONF_DEPGRAPH, arg);
             break;
 
         default:
