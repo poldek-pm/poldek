@@ -89,7 +89,7 @@ static struct pkgdir *load_pkgdir(const struct source *src,
         n_assert(idxpath);
     
     /* load previous index if it exists */
-    if (with_prev && 0 && source_is_type(src, "dir") && access(idxpath, R_OK) == 0) {
+    if (with_prev && source_is_type(src, "dir") && access(idxpath, R_OK) == 0) {
         struct pkgdir *pdir;
         char orig_name[64];
 
