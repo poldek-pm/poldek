@@ -41,15 +41,15 @@
 struct capreq {
     uint8_t  cr_flags;
     uint8_t  cr_relflags;
-/*  uint8_t cr_name_ofs = 1, always */
+    const char *name;
     uint8_t  cr_ep_ofs;
     uint8_t  cr_ver_ofs;         /* 0 if capreq hasn't version */
     uint8_t  cr_rel_ofs;         /* 0 if capreq hasn't release */
-    char    _buf[0];             /* alias cr_name, first byte is always '\0' */
+    char    _buff[0];            /* for evr, first byte is always '\0' */
 };
 
 /* CAUTION: side effects! */
-#define capreq_name(cr)     &(cr)->_buf[1]
+#define capreq_name(cr)     (cr)->name
 
 #ifdef SWIG
 # define extern__inline
@@ -62,8 +62,8 @@ extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_epoch(cr) \
     ((cr)->cr_ep_ofs ? capreq_epoch_(cr) : 0)
 
-#define capreq_ver(cr)  (&(cr)->_buf[(cr)->cr_ver_ofs])
-#define capreq_rel(cr)  (&(cr)->_buf[(cr)->cr_rel_ofs])
+#define capreq_ver(cr)  (&(cr)->_buff[(cr)->cr_ver_ofs])
+#define capreq_rel(cr)  (&(cr)->_buff[(cr)->cr_rel_ofs])
 
 #define capreq_has_epoch(cr)    (cr)->cr_ep_ofs   
 #define capreq_has_ver(cr)      (cr)->cr_ver_ofs
@@ -75,8 +75,10 @@ extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_is_prereq(cr)    ((cr)->cr_flags & CAPREQ_PREREQ)
 #define capreq_is_prereq_un(cr) ((cr)->cr_flags & CAPREQ_PREREQ_UN)
 #define capreq_is_obsl(cr)        capreq_is_prereq((cr))
-#define capreq_is_file(cr)      ((cr)->_buf[1] == '/')
-#define capreq_isnot_file(cr)   ((cr)->_buf[1] != '/')
+
+#define capreq_is_file(cr)        (*(cr)->name == '/')
+#define capreq_isnot_file(cr)     (*(cr)->name != '/')
+
 
 #define capreq_is_bastard(cr)     ((cr)->cr_flags & CAPREQ_BASTARD)
 #define capreq_is_autodirreq(cr)  (capreq_is_bastard(cr) && capreq_is_file(cr))
@@ -95,17 +97,20 @@ struct capreq *capreq_new_evr(tn_alloc *na, const char *name, char *evr,
 struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t relflags, int32_t flags);
+#ifndef SWIG
+const char *capreq__alloc_name(const char *name);
+#endif
 
-#define capreq_new_name_a(name, crptr)	     \
-    {                                        \
-        struct capreq *__cr;                   \
-        int len = strlen((name));            \
-        __cr = alloca(sizeof(*__cr) + len + 2);  \
-        __cr->cr_flags = __cr->cr_relflags = 0;  \
+#define capreq_new_name_a(nam, crptr)                              \
+    {                                                              \
+        struct capreq *__cr;                                       \
+        const char *name = capreq__alloc_name(nam);                \
+        __cr = alloca(sizeof(*__cr) + 2);                          \
+        __cr->cr_flags = __cr->cr_relflags = 0;                    \
         __cr->cr_ep_ofs = __cr->cr_ver_ofs = __cr->cr_rel_ofs = 0; \
-        __cr->_buf[0] = '\0';                  \
-        memcpy(&__cr->_buf[1], (name), len + 1);  \
-        crptr = __cr;                            \
+        __cr->_buff[0] = '\0';                                     \
+        __cr->name = name;                                         \
+        crptr = __cr;                                              \
     }
 
 void capreq_free_na(tn_alloc *na, struct capreq *cr);

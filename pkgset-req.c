@@ -232,7 +232,7 @@ static int add_reqpkg(struct pkg *pkg, struct capreq *req, struct pkg *dpkg)
         rpkg = reqpkg_new(dpkg, req, 0, 0);
         
         n_array_push(pkg->reqpkgs, rpkg);
-        n_array_sort(pkg->reqpkgs);
+        n_array_isort(pkg->reqpkgs);
         if (dpkg->revreqpkgs == NULL)
             dpkg->revreqpkgs = n_array_new(2, NULL, (tn_fn_cmp)pkg_cmp_id);
         n_array_push(dpkg->revreqpkgs, pkg);
@@ -643,7 +643,7 @@ int pkgset_verify_conflicts(struct pkgset *ps, int strict)
         for (j=0; j < n_array_size(pkg->cnfls); j++) {
             const struct capreq_idx_ent *ent;
             struct capreq *cnfl;
-            char *cnflname;
+            const char *cnflname;
 
             cnfl = n_array_nth(pkg->cnfls, j);
             cnflname = capreq_name(cnfl);
@@ -717,7 +717,7 @@ static int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
             //msg("add conflict between %s and %s based on %s\n", pkg_id(pkg),
             //       pkg_id(spkg), capreq_snprintf_s(cnfl));
             
-            n_array_sort(pkg->cnflpkgs);
+            n_array_isort(pkg->cnflpkgs);
         }
         nmatch++;
     }

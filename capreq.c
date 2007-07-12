@@ -39,6 +39,44 @@
 static void capreq_store(struct capreq *cr, tn_buf *nbuf);
 static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi);
 
+static tn_hash *capreqname_h = NULL;
+static tn_alloc *capreqname_na = NULL;
+static const char *capreqname_last_name = NULL; /* semi-cache */
+
+static void capreqname_init(void)
+{
+    capreqname_na = n_alloc_new(256, TN_ALLOC_OBSTACK);
+    capreqname_h = n_hash_new_na(capreqname_na, 1024 * 128, NULL);
+    n_hash_ctl(capreqname_h, TN_HASH_NOCPKEY);
+}
+
+const char *capreq__alloc_name(const char *name)
+{
+    unsigned khash = 0;
+    int klen = 0;
+    char *naname;
+    
+    if (!capreqname_h)
+        capreqname_init();
+    
+    if (capreqname_last_name && strcmp(capreqname_last_name, name) == 0)
+        return capreqname_last_name;
+
+    //if (n_hash_size(capreqname_h) % 5000 == 0)
+    //    n_hash_stats(capreqname_h);
+
+    if ((naname = n_hash_get_ex(capreqname_h, name, &klen, &khash))) {
+        capreqname_last_name = naname;
+        return naname;
+    }
+    
+    naname = capreqname_na->na_malloc(capreqname_na, klen + 1);
+    memcpy(naname, name, klen + 1);
+    capreqname_last_name = naname;
+    n_hash_insert_ex(capreqname_h, naname, klen, khash, naname);
+    
+    return naname;
+}
 
 void capreq_free_na(tn_alloc *na, struct capreq *cr) 
 {
@@ -92,7 +130,7 @@ __inline__
 int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2) 
 {
     register int rc;
-    
+
     if ((rc = strcmp(capreq_name(cr1), capreq_name(cr2))))
         return rc;
 
@@ -207,7 +245,7 @@ int capreq_snprintf(char *str, size_t size, const struct capreq *cr)
     return do_capreq_snprintf(str, size, cr, 0);
 }
 
-uint8_t capreq_bufsize(const struct capreq *cr) 
+static uint8_t capreq_bufsize(const struct capreq *cr) 
 {
     register int max_ofs = 0;
 
@@ -222,8 +260,9 @@ uint8_t capreq_bufsize(const struct capreq *cr)
 
     if (max_ofs == 0)
         max_ofs = 1;
+    else 
+        max_ofs += strlen(&cr->_buff[max_ofs]) + 1;
     
-    max_ofs += strlen(&cr->_buf[max_ofs]) + 1;
     //printf("sizeof %s = %d (5 + %d + (%s) + %d)\n", capreq_snprintf_s(cr),
     //       size, max_ofs, &cr->_buf[max_ofs], strlen(&cr->_buf[max_ofs]));
 
@@ -233,8 +272,7 @@ uint8_t capreq_bufsize(const struct capreq *cr)
     return max_ofs;
 }
 
-static
-uint8_t capreq_sizeof(const struct capreq *cr) 
+static uint8_t capreq_sizeof(const struct capreq *cr) 
 {
     size_t size;
 
@@ -294,7 +332,7 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
         name_len = strlen(name);
     }
     
-    len = 1 + name_len + 1;
+    len = 1; // + name_len + 1;
 
     if (epoch) {
         if (version == NULL)
@@ -327,29 +365,31 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
 
     cr->cr_flags = cr->cr_relflags = 0;
     cr->cr_ep_ofs = cr->cr_ver_ofs = cr->cr_rel_ofs = 0;
+
+    cr->name = capreq__alloc_name(name);
         
-    buf = cr->_buf;
+    buf = cr->_buff;
     *buf++ = '\0';          /* set buf[0] to '\0' */
     
-    memcpy(buf, name, name_len);
-    buf += name_len;
-    *buf++ = '\0';
+    //memcpy(buf, name, name_len);
+    //buf += name_len;
+    //*buf++ = '\0';
     
     if (epoch) {
-        cr->cr_ep_ofs = buf - cr->_buf;
+        cr->cr_ep_ofs = buf - cr->_buff;
         memcpy(buf, &epoch, sizeof(epoch));
         buf += sizeof(epoch);
     }
 
     if (version != NULL) {
-        cr->cr_ver_ofs = buf - cr->_buf;
+        cr->cr_ver_ofs = buf - cr->_buff;
         memcpy(buf, version, version_len);
         buf += version_len ;
         *buf++ = '\0';
     }
     
     if (release != NULL) {
-        cr->cr_rel_ofs = buf - cr->_buf;
+        cr->cr_rel_ofs = buf - cr->_buff;
         memcpy(buf, release, release_len);
         buf += release_len ;
         *buf++ = '\0';
@@ -404,7 +444,7 @@ int32_t capreq_epoch_(const struct capreq *cr)
 {
     int32_t epoch;
 
-    memcpy(&epoch, &cr->_buf[cr->cr_ep_ofs], sizeof(epoch));
+    memcpy(&epoch, &cr->_buff[cr->cr_ep_ofs], sizeof(epoch));
     return epoch;
 }
 
@@ -463,12 +503,26 @@ tn_buf *capreq_arr_join(tn_array *capreqs, tn_buf *nbuf, const char *sep)
     return nbuf;
 }
 
+/* store format:
+  
+  0. size          uint8_t
+  1. flags&offsets uint8_t[5]
+  2. '\0'          char         // legacy, needless in fact
+  3. name          char[]
 
-static
-void capreq_store(struct capreq *cr, tn_buf *nbuf) 
+  -- if versioned --
+  4. '\0'
+  5. epoch         uint32_t in network byte order
+  6. '\0'          
+  7. version       char[]
+  8. '\0'
+  9. release       char[]
+*/
+static void capreq_store(struct capreq *cr, tn_buf *nbuf) 
 {
+    register int i;
     int32_t epoch, nepoch;
-    uint8_t size, bufsize;
+    uint8_t size, bufsize, name_len;
     uint8_t cr_buf[5];
     uint8_t cr_flags = 0, cr_relflags = 0;
 
@@ -487,23 +541,35 @@ void capreq_store(struct capreq *cr, tn_buf *nbuf)
     cr_buf[2] = cr->cr_ep_ofs;
     cr_buf[3] = cr->cr_ver_ofs;
     cr_buf[4] = cr->cr_rel_ofs;
-	
-    bufsize = capreq_bufsize(cr) - 1; /* without '\0' */
+
+
+    bufsize = capreq_bufsize(cr) - 1; /* without last '\0' */
     size = sizeof(cr_buf) + bufsize;
-	
+    name_len = strlen(cr->name);
+    size += name_len + 1;       /* +1 for leading '\0' */
+
+    for (i=2; i < 5; i++)
+        if (cr_buf[i])
+            cr_buf[i] += name_len + 1;
+
     n_buf_add_int8(nbuf, size);
     n_buf_add(nbuf, cr_buf, sizeof(cr_buf));
 
-    if (cr->cr_ep_ofs) {
-        epoch = capreq_epoch(cr);
-        nepoch = n_hton32(epoch);
-        memcpy(&cr->_buf[cr->cr_ep_ofs], &nepoch, sizeof(nepoch));
-    }
+    n_buf_add_int8(nbuf, '\0');
+    n_buf_add(nbuf, cr->name, name_len);
 
-    n_buf_add(nbuf, cr->_buf, bufsize);
+    if (bufsize) {          /* versioned? */
+        if (cr->cr_ep_ofs) {
+            epoch = capreq_epoch(cr);
+            nepoch = n_hton32(epoch);
+            memcpy(&cr->_buff[cr->cr_ep_ofs], &nepoch, sizeof(nepoch));
+        }
     
-    if (cr->cr_ep_ofs) 
-        memcpy(&cr->_buf[cr->cr_ep_ofs], &epoch, sizeof(epoch)); /* restore epoch */
+        n_buf_add(nbuf, cr->_buff, bufsize);
+
+        if (cr->cr_ep_ofs)
+            memcpy(&cr->_buff[cr->cr_ep_ofs], &epoch, sizeof(epoch));
+    }
 
     if (cr_flags)
 		cr->cr_flags = cr_flags;
@@ -512,48 +578,75 @@ void capreq_store(struct capreq *cr, tn_buf *nbuf)
 		cr->cr_relflags = cr_relflags;
 }
 
-static
-struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi) 
+static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi) 
 {
     struct capreq *cr;
-    uint8_t size = 0, *cr_bufp;
-    uint8_t cr_buf[5];          /* placeholder,  for sizeof */
-    
-    
+    register int i;
+    uint8_t size = 0, *cr_buf, *buff;
+    uint8_t phcr_buf[5];          /* placeholder,  for sizeof */
+    char  *p, *name = NULL;
+    size_t name_len = 0;
+
     n_buf_it_get_int8(nbufi, &size);
-    cr_bufp = n_buf_it_get(nbufi, sizeof(cr_buf));
-    if (cr_bufp == NULL)
+    
+    cr_buf = n_buf_it_get(nbufi, sizeof(phcr_buf));
+    if (cr_buf == NULL)
         return NULL;
 
-    size -= sizeof(cr_buf);
-#if XXX_IGNORE_RPMLIB_DEPS
-    if (cr_bufp[1] & CAPREQ_RPMLIB) {
-        n_buf_it_get(nbufi, size);
-        return NULL;
+    size -= sizeof(phcr_buf);
+    buff = n_buf_it_get(nbufi, size);
+    
+    buff++;                     /* skip '\0' */
+    size--;
+    
+    if ((p = memchr(buff, '\0', size))) { /* versioned? */
+        name = buff;
+        name_len = p - (char*)buff;
+        size -= name_len;
+        buff = p + 1;
+
+    } else {
+        char *n = alloca(size + 1);
+        memcpy(n, buff, size);
+        n[size] = '\0';
+        name = n;
+        name_len = size;
+        size = 0;
     }
-#endif
+    
     if (na)
         cr = na->na_malloc(na, sizeof(*cr) + size + 1);
     else
         cr = n_malloc(sizeof(*cr) + size + 1);
     
-    cr->cr_relflags = cr_bufp[0];
-    cr->cr_flags    = cr_bufp[1];
-    cr->cr_ep_ofs   = cr_bufp[2];
-    cr->cr_ver_ofs  = cr_bufp[3];
-    cr->cr_rel_ofs  = cr_bufp[4];
+    cr->cr_relflags = cr_buf[0];
+    cr->cr_flags    = cr_buf[1];
+
+    for (i=2; i < 5; i++)
+        if (cr_buf[i])
+            cr_buf[i] -= name_len + 1;
+
+    cr->cr_ep_ofs   = cr_buf[2];
+    cr->cr_ver_ofs  = cr_buf[3];
+    cr->cr_rel_ofs  = cr_buf[4];
+
+    cr->name = capreq__alloc_name(name);
 
     if (na)
         cr->cr_relflags |= __NAALLOC;
-
-    cr->_buf[size] = '\0';
-    cr_bufp = n_buf_it_get(nbufi, size);
-    memcpy(cr->_buf, cr_bufp, size);
+    
+    cr->_buff[0] = '\0';
+    if (size) {
+        memcpy(&cr->_buff[1], buff, size);
+        cr->_buff[size] = '\0';
+    }
 
     if (cr->cr_ep_ofs) {
         int32_t epoch = n_ntoh32(capreq_epoch(cr));
-        memcpy(&cr->_buf[cr->cr_ep_ofs], &epoch, sizeof(epoch));
+        memcpy(&cr->_buff[cr->cr_ep_ofs], &epoch, sizeof(epoch));
     }
+    DBGF("cr %s\n", capreq_snprintf_s(cr));
+    
 	//printf("cr %s: %d, %d, %d, %d, %d\n", capreq_snprintf_s(cr), 
 	//cr_bufp[0], cr_bufp[1], cr_bufp[2], cr_bufp[3], cr_bufp[4]);
     //printf("REST* %s %d -> %d\n", capreq_snprintf_s(cr),
@@ -738,4 +831,3 @@ tn_array *capreq_arr_remove_redundant(tn_array *arr)
     n_array_uniq_ex(arr, (tn_fn_cmp)cmp_uniq);
     return arr;
 }
-

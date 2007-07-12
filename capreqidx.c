@@ -23,6 +23,7 @@
 #include "i18n.h"
 #include "pkg.h"
 #include "capreqidx.h"
+#include "capreq.h"
 #include "log.h"
 
 static void capreq_ent_free(struct capreq_idx_ent *ent) 
@@ -39,6 +40,7 @@ int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem)
     MEMINF("START");
     idx->na = n_alloc_new(4, TN_ALLOC_OBSTACK);
     idx->ht = n_hash_new_na(idx->na, nelem, (tn_fn_free)capreq_ent_free);
+    n_hash_ctl(idx->ht, TN_HASH_NOCPKEY);
     MEMINF("END");
     return 1;
 }
@@ -69,13 +71,18 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
                    struct pkg *pkg)
 {
     struct capreq_idx_ent *ent;
-            
-    if ((ent = n_hash_get(idx->ht, capname)) == NULL) {
+    unsigned khash = 0;
+    int klen = 0;
+    
+    if ((ent = n_hash_get_ex(idx->ht, capname, &klen, &khash)) == NULL) {
+        const char *hcapname = capreq__alloc_name(capname);
+        
         ent = idx->na->na_malloc(idx->na, sizeof(*ent));
         ent->_size = 1;
         ent->items = 1;
         ent->crent_pkg = pkg;
-        n_hash_insert(idx->ht, capname, ent);
+        
+        n_hash_insert_ex(idx->ht, hcapname, klen, khash, ent);
 #if ENABLE_TRACE        
         if ((n_hash_size(idx->ht) % 1000) == 0)
             n_hash_stats(idx->ht);
@@ -86,13 +93,15 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
 
         if (ent->_size == 1)    /* crent_pkgs is NOT allocated */
             capreq_idx_ent_transform_to_array(ent);
-        
+
+#if 0                           /* not happens in fact */
         if (idx->flags & CAPREQ_IDX_CAP) { /* check for duplicates */
             for (i=0; i < ent->items; i++) { 
                 if (pkg == ent->crent_pkgs[i])
                     return 1;
             }
         }
+#endif
         
         if (ent->items == ent->_size) {
             ent->_size *= 2;

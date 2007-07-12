@@ -1,6 +1,6 @@
 /* $Id$ */
-#ifndef POLDEK_PROVREQIDX_H
-#define POLDEK_PROVREQIDX_H
+#ifndef POLDEK_CAPREQ_IDX_H
+#define POLDEK_CAPREQ_IDX_H
 
 #include <stdint.h>
 #include <trurl/nhash.h>
@@ -8,8 +8,6 @@
 
 #define CAPREQ_IDX_CAP (1 << 0)
 #define CAPREQ_IDX_REQ (1 << 1)
-
-
 
 struct capreq_idx {
     unsigned flags;
@@ -23,7 +21,6 @@ struct capreq_idx_ent {
     int32_t _size;
     union {
         struct pkg *pkg;
-//    struct pkg *pkgs[0];       /* pkgs list */
         struct pkg **pkgs;       /* pkgs list */
     } capreq_idx_ent_pkg;
 };

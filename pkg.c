@@ -406,9 +406,9 @@ void pkg_free(struct pkg *pkg)
 
 int pkg_add_selfcap(struct pkg *pkg) 
 {
-    int i, has = 0;
     struct capreq *selfcap;
-    
+    int i, has = 0;
+
     if (pkg->flags & PKG_HAS_SELFCAP)
         return 1;
 
@@ -416,16 +416,13 @@ int pkg_add_selfcap(struct pkg *pkg)
         pkg->caps = capreq_arr_new(0);
         
     } else if ((i = capreq_arr_find(pkg->caps, pkg->name)) != -1) {
-        for (; i<n_array_size(pkg->caps); i++) {
+        for (; i < n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
             
-            if (strcmp(capreq_name(cap), pkg->name) != 0)
+            if (n_str_ne(capreq_name(cap), pkg->name))
                 break;
 
-            if (capreq_epoch(cap) == pkg->epoch &&
-                strcmp(capreq_ver(cap), pkg->ver) == 0 &&
-                strcmp(capreq_rel(cap), pkg->rel) == 0) {
-                
+            if (pkg_eq_capreq(pkg, cap)) {
                 has = 1;
                 break;
             }
@@ -441,18 +438,12 @@ int pkg_add_selfcap(struct pkg *pkg)
 
     selfcap = capreq_new(pkg->na, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
                          REL_EQ, 0);
-    n_array_push(pkg->caps, selfcap);
-    if (n_array_size(pkg->caps)) {
-        n_array_sort(pkg->caps);
-        n_array_uniq(pkg->caps);
-        
-    } else {
-        n_array_free(pkg->caps);
-        pkg->caps = NULL;
-        n_assert(0);
-    }
     
-    return pkg->caps != NULL;
+    n_array_push(pkg->caps, selfcap);
+    n_array_isort(pkg->caps);
+    n_array_uniq(pkg->caps);
+
+    return 1;
 }
 
 /* RET: bool, true if cmprc matches relation */
@@ -1446,7 +1437,7 @@ int pkg_idevr_snprintf(char *str, size_t size, const struct pkg *pkg)
                       pkg_arch(pkg));
 }
 
-
+/* caps, mean caps + files iterator */
 struct pkg_cap_iter {
     struct pkg       *pkg;
     struct capreq    *cap;

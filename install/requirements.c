@@ -100,12 +100,12 @@ int process_pkg_req(int indent, struct install_ctx *ictx,
 {
     struct pkg    *tomark = NULL;
     tn_array      *candidates = NULL;
-    char          *reqname;
+    const char    *reqname;
         
     reqname = capreq_name(req);
     if (capreq_has_ver(req)) {
         reqname = alloca(256);
-        capreq_snprintf(reqname, 256, req);
+        capreq_snprintf((char*)reqname, 256, req);
     }
 
     DBGF("[%s] req %s\n", pkg_id(pkg), capreq_snprintf_s(req));

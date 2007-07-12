@@ -74,7 +74,7 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
         logn(LOGWARN, _("no packages loaded"));
     
     MEMINF("after load");
-
+    
     if (ps == NULL)
         return 0;
     
@@ -95,6 +95,8 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
         packages_set_priorities(ps->pkgs, ctx->ts->prifile);
 
     ctx->ps = ps;
+    MEMINF("after ps setup");
+    
     return 1;
 }
 

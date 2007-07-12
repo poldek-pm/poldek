@@ -350,17 +350,10 @@ int in_process_pkg_obsoletes(int indent, struct install_ctx *ictx,
             struct pkgfl_it it;
             const char *path;
             
-            cap = alloca(sizeof(cap) + PATH_MAX);
-            memset(cap, 0, sizeof(*cap));
-            cap->_buf[0] = '\0';
-
             pkgfl_it_init(&it, dbpkg->fl);
             while ((path = pkgfl_it_get(&it, NULL))) {
-                int len = strlen(path);
-                if (len < PATH_MAX - 2) {
-                    memcpy(&cap->_buf[1], path, len + 1); /* XXX: hacky */
-                    verify_unistalled_cap(indent, ictx, cap, dbpkg);
-                }
+                capreq_new_name_a(path, cap);
+                verify_unistalled_cap(indent, ictx, cap, dbpkg);
             }
         }
         n += process_pkg_orphans(ictx, dbpkg);

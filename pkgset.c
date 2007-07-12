@@ -202,7 +202,7 @@ static int pkgset_index(struct pkgset *ps)
     
     /* build indexes */
     capreq_idx_init(&ps->cap_idx,  CAPREQ_IDX_CAP, 4 * n_array_size(ps->pkgs));
-    capreq_idx_init(&ps->req_idx,  CAPREQ_IDX_REQ, 4 * n_array_size(ps->pkgs));
+    capreq_idx_init(&ps->req_idx,  CAPREQ_IDX_REQ, 8 * n_array_size(ps->pkgs));
     capreq_idx_init(&ps->obs_idx,  CAPREQ_IDX_REQ, n_array_size(ps->pkgs)/5 + 4);
     capreq_idx_init(&ps->cnfl_idx, CAPREQ_IDX_REQ, n_array_size(ps->pkgs)/5 + 4);
     ps->file_idx = file_index_new(512);
@@ -273,14 +273,14 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
         n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
         n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)do_pkg_cmp_uniq_nevr);
     }
-        
+    
     if (n != n_array_size(ps->pkgs)) {
         n -= n_array_size(ps->pkgs);
         msgn(1, ngettext(
                  "Removed %d duplicate package from available set",
                  "Removed %d duplicate packages from available set", n), n);
     }
-
+    
     MEMINF("before index");
     pkgset_index(ps);
     MEMINF("after index");
@@ -288,7 +288,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     v = poldek_set_verbose(-1);
     file_index_find_conflicts(ps->file_idx, strict);
     poldek_set_verbose(v);
- 
+    
     pkgset_verify_deps(ps, strict);
     MEMINF("after verify deps");
 
@@ -299,18 +299,10 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
         pkgset_order(ps, flags & PSET_VERIFY_ORDER);
     MEMINF("after setup[END]");
 
-    if (n_array_size(ps->pkgs) > 10) { /* sanity check */
-        int i = n_array_size(ps->pkgs) / 2;
-        struct pkg *pkg = n_array_nth(ps->pkgs, i);
-        n = n_array_bsearch_idx_ex(ps->pkgs, pkg, (tn_fn_cmp)pkg_cmp_name);
-        n_assert(n >= 0);
-    }
-
     return ps->nerrors == 0;
 }
 
-static
-int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt)
+static int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt)
 {
     int j;
 

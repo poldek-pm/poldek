@@ -136,11 +136,8 @@ struct file_index *file_index_new(int nelem)
     
     fi->cnflh = NULL;
     fi->na = na;
-    fi->_last_files = NULL;
-    fi->_last_dirname = NULL;
     return fi;
 }
-
 
 void file_index_free(struct file_index *fi) 
 {
@@ -151,34 +148,25 @@ void file_index_free(struct file_index *fi)
     n_alloc_free(fi->na);
 }
 
-
 void *file_index_add_dirname(struct file_index *fi, const char *dirname)
 {
     tn_array *files;
-    DBGF("%s\n", dirname);
-    if (fi->_last_files != NULL && strcmp(dirname, fi->_last_dirname) == 0) {
-        DBGF("HIT dirname = %s %s\n", dirname, fi->last_dirname);
-        files = fi->_last_files;
-        
-    } else {
-        /* find directory */
-        if ((files = n_hash_get(fi->dirs, dirname)) == NULL) {
-            files = n_array_new(4, NULL, fent_cmp);
-            n_hash_insert(fi->dirs, dirname, files);
-        }
-#if ENABLE_TRACE        
-        if ((n_hash_size(fi->dirs) % 10) == 0) {
-            DBGF("stats\n");
-            n_hash_stats(fi->dirs);
-        }
-#endif
-#if 0                           /* XXX - cache */
-        fi->_last_files = files;
-        n_cfree(&fi->_last_dirname);
-        fi->_last_dirname = n_strdup(dirname);
-#endif        
-    }
+    int klen = 0;
+    unsigned khash = 0;
     
+    DBGF("%s\n", dirname);
+
+    if ((files = n_hash_get_ex(fi->dirs, dirname, &klen, &khash)) == NULL) {
+        files = n_array_new(4, NULL, fent_cmp);
+        n_hash_insert_ex(fi->dirs, dirname, klen, khash, files);
+    }
+#if ENABLE_TRACE        
+    if ((n_hash_size(fi->dirs) % 10) == 0) {
+        DBGF("stats\n");
+        n_hash_stats(fi->dirs);
+    }
+#endif
+
     return files;
 }
 
@@ -186,7 +174,6 @@ void file_index_setup_idxdir(void *files)
 {
     n_array_sort(files);
 }
-
 
 int file_index_add_basename(struct file_index *fi, void *fidx_dir,
                             struct flfile *flfile,
