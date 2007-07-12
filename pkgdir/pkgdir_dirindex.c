@@ -542,32 +542,35 @@ static int update_pkdir_pkg(struct pkg *pkg, struct tndb *db,
 {
     const char **tl, **tl_save;
     char val[16 * 1024];
-    int  vlen, n = 0, nadded = 0, created_here = 0;
+    int  vlen, ndirs = 0;
 
     n_assert(key[1] == PREFIX_PKGKEY_REQDIR);
     vlen = sizeof(val);
-    tl = tl_save = get_package_directories(db, key, klen, val, &vlen, &n);
+    tl = tl_save = get_package_directories(db, key, klen, val, &vlen, &ndirs);
     if (tl == NULL)
         return 0;
     
-    if (!pkg->reqs) {
-        pkg->reqs = capreq_arr_new(n);
-        created_here = 1;
-    }
+    if (pkg->reqs == NULL)
+        pkg->reqs = capreq_arr_new(ndirs);
     
     while (*tl) {
         const char *dir = *tl;
         
-        if (*dir && (created_here || !capreq_arr_contains(pkg->reqs, dir))) {
+        if (*dir) {
             struct capreq *req = capreq_new(pkg->na, dir, 0, NULL, NULL, 0,
                                             CAPREQ_BASTARD);
             n_array_push(pkg->reqs, req);
-            nadded++;
         }
         tl++;
     }
+    
+    if (ndirs > 10)
+        n_array_sort(pkg->reqs);
+    else
+        n_array_isort(pkg->reqs);
+    
     n_str_tokl_free(tl_save);
-    return nadded;
+    return ndirs;
 }
     
 
