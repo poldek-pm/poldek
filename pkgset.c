@@ -68,10 +68,9 @@ struct pkgset *pkgset_new(struct pm_ctx *pmctx)
     ps->pkgdirs = n_array_new(4, (tn_fn_free)pkgdir_free, NULL);
     ps->flags = 0;
     
-    if (pmctx) {
-        ps->pmcaps = pm_get_pmcaps(pmctx);
+    if (pmctx)
         ps->pmctx = pmctx;
-    }
+
     return ps;
 }
 
@@ -93,28 +92,17 @@ void pkgset_free(struct pkgset *ps)
         file_index_free(ps->file_idx);
         ps->flags &= (unsigned)~_PKGSET_INDEXES_INIT;
     }
-    
-    if (ps->_vrfy_unreqs) {
-        n_hash_free(ps->_vrfy_unreqs);
-        ps->_vrfy_unreqs = NULL;
-    }
 
-    if (ps->_vrfy_file_conflicts)
-        n_array_cfree(&ps->_vrfy_file_conflicts);
+    if (ps->_vrfy_unreqs)
+        n_hash_free(ps->_vrfy_unreqs);
+    
+    n_array_cfree(&ps->_vrfy_file_conflicts);
     
     n_array_cfree(&ps->pkgs);
+    n_array_cfree(&ps->ordered_pkgs);
+    n_array_cfree(&ps->depdirs);
+    n_array_cfree(&ps->pkgdirs);
 
-    if (ps->ordered_pkgs)
-        n_array_cfree(&ps->ordered_pkgs);
-    
-    if (ps->depdirs)
-        n_array_cfree(&ps->depdirs);
-    
-    if (ps->pkgdirs)
-        n_array_cfree(&ps->pkgdirs);
-
-    if (ps->pmcaps)
-        n_array_cfree(&ps->pmcaps);
     
     memset(ps, 0, sizeof(*ps));
     free(ps);
@@ -123,21 +111,6 @@ void pkgset_free(struct pkgset *ps)
 
 int pkgset_pm_satisfies(const struct pkgset *ps, const struct capreq *req)
 {
-    struct capreq *cap;
-
-    if (ps->pmcaps == NULL)
-        return 0;               /* no caps -> assume NO */
-
-    /* internal caps have names like name(feature) */
-    if (!capreq_is_rpmlib(req) && strstr(capreq_name(req), "(") == NULL)
-        return 0;
-
-    cap = n_array_bsearch_ex(ps->pmcaps, req,
-                             (tn_fn_cmp)capreq_cmp_name);
-    
-    if (cap && cap_match_req(cap, req, 1))
-        return 1;
-
     if (ps->pmctx)
         return pm_satisfies(ps->pmctx, req);
     

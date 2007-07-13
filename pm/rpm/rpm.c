@@ -62,6 +62,7 @@ void pm_rpm_destroy(void *pm_rpm)
     n_cfree(&pm->rpm);
     n_cfree(&pm->sudo);
     n_cfree(&pm->default_dbpath);
+    n_array_cfree(&pm->caps);
     free(pm);
 }
 
@@ -90,7 +91,8 @@ void *pm_rpm_init(void)
         p = RPM_DEFAULT_DBPATH;
     
     pm_rpm->default_dbpath = n_strdup(p);
-    
+
+    pm_rpm->caps = NULL;
     return pm_rpm;
 }
 

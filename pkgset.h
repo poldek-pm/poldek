@@ -23,7 +23,6 @@ struct pkgset {
     tn_array           *depdirs;        /*  char* []   */
     int                nerrors;
     
-    tn_array           *pmcaps;        /*  capreq* [] */
     struct pm_ctx      *pmctx;
     
     tn_hash            *_vrfy_unreqs;

@@ -116,6 +116,14 @@ int pm_pset_configure(void *pm_pset, const char *key, void *val)
     return 1;
 }
 
+int pm_pset_satisfies(void *pm_pset, const struct capreq *req)
+{
+    if (capreq_is_rpmlib(req))
+        return 1;
+
+    return 0;
+}
+
 static
 int setup_source(struct pkgset *ps, struct source *src)
 {
@@ -131,8 +139,9 @@ int setup_source(struct pkgset *ps, struct source *src)
     
     if (dir == NULL)
         return 0;
-    
-    if (!pkgdir_load(dir, 0, 0)) {
+
+    /* full file list is required to resolve auto-dir deps */
+    if (!pkgdir_load(dir, NULL, PKGDIR_LD_FULLFLIST)) {
         pkgdir_free(dir);
         return 0;
     }

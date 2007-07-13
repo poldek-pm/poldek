@@ -25,7 +25,6 @@ struct pm_module {
     int  (*configure)(void *modh, const char *key, void *val);
     int  (*conf_get)(void *modh, const char *key, char *value, int vsize);
     
-    tn_array *(*pm_caps)(void *modh);
     int (*pm_satisfies)(void *modh, const struct capreq *req);
     
     char *(*dbpath)(void *modh, char *path, size_t size);

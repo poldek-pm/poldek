@@ -124,14 +124,6 @@ int pm_machine_score(struct pm_ctx *ctx,
     return ctx->mod->machine_score(ctx->modh, tag, val);
 }
 
-
-tn_array *pm_get_pmcaps(struct pm_ctx *ctx)
-{
-    if (ctx->mod->pm_caps)
-        return ctx->mod->pm_caps(ctx->modh);
-    return NULL;
-}
-
 int pm_satisfies(struct pm_ctx *ctx, const struct capreq *req)
 {
     if (ctx->mod->pm_satisfies)

@@ -41,6 +41,7 @@ struct pm_rpm {
     char *rpm;
     char *sudo;
     char *default_dbpath;
+    tn_array *caps;             /* rpmlib() and friends */
 };
 
 void *pm_rpm_init(void);

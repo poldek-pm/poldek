@@ -6,10 +6,8 @@ struct pm_module pm_module_pset = {
     0, "pset",
     pm_pset_init, pm_pset_destroy,
     pm_pset_configure, 
-    NULL, 
     NULL,
-    NULL,
-
+    pm_pset_satisfies,
 //    pm_pset_dbpath, 
 //    pm_pset_dbmtime,
 //    pm_pset_dbdepdirs,

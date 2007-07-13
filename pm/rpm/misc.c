@@ -99,7 +99,7 @@ static int pm_rpmdsSysinfo(rpmds * dsp, const char * fn) {
 }
 #endif
 
-static int get_rpmlib_caps(tn_array *caps)
+static int get_rpm_internal_caps(tn_array *caps)
 {
     rpmds     ds = NULL;
     int       i;
@@ -132,7 +132,7 @@ static int get_rpmlib_caps(tn_array *caps)
 
 
 #if HAVE_RPMGETRPMLIBPROVIDES   /* rpmGetRpmlibProvides() => rpm < 4.4.3 */
-static int get_rpmlib_caps_rpm_lt_4_4_3(tn_array *caps) 
+static int get_rpm_internal_caps_rpm_lt_4_4_3(tn_array *caps) 
 {
     char **names = NULL, **versions = NULL, *evr;
     int *flags = NULL, n = 0, i;
@@ -163,7 +163,7 @@ static int get_rpmlib_caps_rpm_lt_4_4_3(tn_array *caps)
 }
 #endif
 
-tn_array *pm_rpm_rpmlib_caps(void *pm_rpm) 
+static tn_array *load_internal_caps(void *pm_rpm) 
 {
     tn_array *caps;
     int rc = 0;
@@ -172,10 +172,10 @@ tn_array *pm_rpm_rpmlib_caps(void *pm_rpm)
     caps = capreq_arr_new(0);
     
 #if HAVE_RPMDSRPMLIB            /* rpm >= 4.4.3 */
-    rc = get_rpmlib_caps(caps);
+    rc = get_rpm_internal_caps(caps);
 #else
 # if HAVE_RPMGETRPMLIBPROVIDES
-    rc = get_rpmlib_caps_rpm_lt_4_4_3(caps);
+    rc = get_rpm_internal_caps_rpm_lt_4_4_3(caps);
 # endif
 #endif
     
@@ -187,6 +187,62 @@ tn_array *pm_rpm_rpmlib_caps(void *pm_rpm)
         caps = NULL;
     }
     return caps;
+}
+
+static int rpmioaccess_satisfies(const struct capreq *req)
+{
+    int rc = 0;
+    
+#if HAVE_RPMIOACCESS
+    const char *name = NULL;
+    int n = 0;
+    
+    if (capreq_versioned(req))
+        return 0;
+
+    name = capreq_name(req);
+    n = strlen(name);
+    
+    /* code copied from lib/depends.c:563 */
+    if (n > 5 && name[n - 1] == ')' &&
+        ((strchr("Rr_", name[0]) != NULL && 
+          strchr("Ww_", name[1]) != NULL && 
+          strchr("Xx_", name[2]) != NULL &&
+          name[3] == '(') ||	!strncmp(name, "exists(", sizeof("exists(")-1)
+         ||	!strncmp(name, "executable(", sizeof("executable(")-1)
+         ||	!strncmp(name, "readable(", sizeof("readable(")-1)
+         ||	!strncmp(name, "writable(", sizeof("writable(")-1)
+         )) {
+        
+        rc = (rpmioAccess(name, NULL, X_OK) == 0);
+    }
+#endif  /* HAVE_RPMIOACCESS */
+    return rc;
+}
+
+int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
+{
+    struct pm_rpm *pm = pm_rpm;
+    struct capreq *cap = NULL;
+    
+    /* internal caps have names like name(feature) */
+    if (!capreq_is_rpmlib(req) && strstr(capreq_name(req), "(") == NULL)
+        return 0;
+
+    if (rpmioaccess_satisfies(req))
+        return 1;
+
+    if (pm->caps == NULL)
+        if ((pm->caps = load_internal_caps(pm_rpm)) == NULL)
+            return 0;
+    
+    cap = n_array_bsearch_ex(pm->caps, req,
+                             (tn_fn_cmp)capreq_cmp_name);
+    
+    if (cap && cap_match_req(cap, req, 1))
+        return 1;
+
+    return 0;
 }
 
 static void get_host_cpu_vendor_os(const char **acpu, const char **avendor,
@@ -330,33 +386,3 @@ int pm_rpm_arch_score(const char *arch)
     return machine_score(PMMSTAG_ARCH, arch);
 }
 
-int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
-{
-    int n = 0, rc = 0;
-    const char *name = NULL;
-
-    pm_rpm = pm_rpm;
-
-#if HAVE_RPMIOACCESS
-    if (capreq_versioned(req))
-        return 0;
-
-    name = capreq_name(req);
-    n = strlen(name);
-    
-    /* code copied from lib/depends.c:563 */
-    if (n > 5 && name[n - 1] == ')' &&
-        ((strchr("Rr_", name[0]) != NULL && 
-          strchr("Ww_", name[1]) != NULL && 
-          strchr("Xx_", name[2]) != NULL &&
-          name[3] == '(') ||	!strncmp(name, "exists(", sizeof("exists(")-1)
-         ||	!strncmp(name, "executable(", sizeof("executable(")-1)
-         ||	!strncmp(name, "readable(", sizeof("readable(")-1)
-         ||	!strncmp(name, "writable(", sizeof("writable(")-1)
-         )) {
-        
-        rc = (rpmioAccess(name, NULL, X_OK) == 0);
-    }
-#endif  /* HAVE_RPMIOACCESS */
-    return rc;
-}

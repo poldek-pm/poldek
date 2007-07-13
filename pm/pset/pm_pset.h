@@ -13,6 +13,8 @@ void pm_pset_destroy(void *pm_pset);
 
 int pm_pset_configure(void *pm_pset, const char *key, void *val);
 
+int pm_pset_satisfies(void *pm_pset, const struct capreq *req);
+
 int pm_pset_packages_install(struct pkgdb *db, const tn_array *pkgs,
                              const tn_array *pkgs_toremove,
                              struct poldek_ts *ts);
