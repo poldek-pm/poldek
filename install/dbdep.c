@@ -78,7 +78,7 @@ tn_hash *db_deps_new(void)
 void db_deps_add(tn_hash *db_deph, struct capreq *req, struct pkg *pkg,
                  struct pkg *spkg, unsigned flags) 
 {
-    char           *key;
+    const char     *key;
     int            found = 0;
     tn_list        *l = NULL;
 
