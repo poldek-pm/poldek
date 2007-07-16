@@ -232,6 +232,8 @@ int do_poldek_ts_install_dist(struct poldek_ts *ts)
 
     rc = 1;
 
+    pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
+
     ignorer = ts->getop(ts, POLDEK_OP_NODEPS);
     if (!packages_verify_dependecies(pkgs, ts->ctx->ps) && !ignorer)
         nerr++;
