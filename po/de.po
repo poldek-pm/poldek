@@ -1078,7 +1078,7 @@ msgstr ""
 "automatisch installiert"
 
 #: cli/uninstall.c:53
-msgid "pass option OPTION to PM binary (ex. --pm noscripts)"
+msgid "pass option OPTION to PM binary (ex. --pmop noscripts)"
 msgstr ""
 
 #: cli/uninstall.c:61

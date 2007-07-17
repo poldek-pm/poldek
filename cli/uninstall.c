@@ -50,7 +50,7 @@ static struct argp_option options[] = {
      N_("Remove packages required by selected ones if possible."), OPT_GID },
 
 {"pmop", OPT_PM, "OPTION", 0, 
- N_("pass option OPTION to PM binary (ex. --pm noscripts)"), OPT_GID },
+ N_("pass option OPTION to PM binary (ex. --pmop noscripts)"), OPT_GID },
 {"rpm", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
 {"pmopt", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },                                           
                                            

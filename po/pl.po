@@ -1041,7 +1041,7 @@ msgstr "Usuñ pakiety wymagane przez usuniête pakiety, je¿eli jest to mo¿liwe"
 
 #: cli/uninstall.c:53
 #, fuzzy
-msgid "pass option OPTION to PM binary (ex. --pm noscripts)"
+msgid "pass option OPTION to PM binary (ex. --pmop noscripts)"
 msgstr "przeka¿ opcjê OPCJA do binarki zarz±dcy pakietów"
 
 #: cli/uninstall.c:61
