@@ -96,8 +96,12 @@ int load_header_list(const char *slabel, const char *path, tn_array *pkgs,
         vfile_close(vf);
         return -1;
     }
-    
+   
+#ifdef HEADER_MAGIC_YES 
     while ((h = headerRead(fdt, HEADER_MAGIC_YES))) {
+#else
+    while ((h = headerRead(fdt))) {
+#endif
         if (headerIsEntry(h, RPMTAG_SOURCEPACKAGE)) { /* omit src.rpms */
             headerFree(h);
             continue;
