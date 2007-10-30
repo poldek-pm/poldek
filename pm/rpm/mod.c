@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include "pm/mod.h"
 #include "pm_rpm.h"
