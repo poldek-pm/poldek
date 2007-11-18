@@ -174,6 +174,9 @@ static struct argp_option cmdl_options[] = {
 {"hold", OPT_INST_HOLD, "PACKAGE[,PACKAGE]...", 0,
  N_("Prevent packages listed from being upgraded if they are already installed."),
      OPT_GID },
+
+{"nohold", OPT_INST_NOHOLD, 0, 0,
+ N_("Do not hold any packages. Disables --hold settings."), OPT_GID },
                                                 
 {"ignore", OPT_INST_IGNORE, "PACKAGE[,PACKAGE]...", 0,
  N_("Make packages listed invisible."), OPT_GID },
@@ -323,17 +326,21 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
             poldek_configure(ts->ctx, POLDEK_CONF_ROOTDIR, arg);
             break;
 
-
         case OPT_INST_HOLD:
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_HOLD, 1);
             poldek_configure(ts->ctx, POLDEK_CONF_HOLD, arg);
             break;
-            
+        
+        case OPT_INST_NOHOLD:
+            ts->setop(ts, POLDEK_OP_HOLD, 0);
+            poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_HOLD, 0);
+            break;
+        
         case OPT_INST_IGNORE:
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_IGNORE, 1);
             poldek_configure(ts->ctx, POLDEK_CONF_IGNORE, arg);
             break;
-
+	
         case OPT_INST_NOIGNORE:
             ts->setop(ts, POLDEK_OP_IGNORE, 0);
             poldek_configure(ts->ctx, POLDEK_CONF_OPT, POLDEK_OP_IGNORE, 0);
