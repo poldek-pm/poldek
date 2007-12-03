@@ -363,7 +363,7 @@ _distro  = pld
     <description>
     Prevent package listed from being upgraded if they are already installed.
     [screen]
- hold = kernel* dev
+ hold = kernel*
     [/screen]
     </description>
     <alias name="a hold alias for testing purposes" obsoleted="yes" />
@@ -373,7 +373,8 @@ _distro  = pld
     <description>
     Ignore package list - packages fits given mask will be invisible.
     [screen]
- ignore   = *-smp-* foo*
+ ignore = *-smp-* foo*
+ ignore = vserver-packages
     [/screen]
     </description>
   </option>
@@ -400,6 +401,10 @@ _distro  = pld
     [screen]
  rpmdef  = _netsharedpath /usr/share/info:/usr/share/man
  rpmdef  = _excludedocs 1
+    [/screen]
+	If non-zero, all erasures will be automagically repackaged.
+    [screen]
+ rpmdef  = _repackage_all_erasures 1
     [/screen]
     </description>
   </option>
