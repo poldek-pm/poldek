@@ -274,7 +274,7 @@ int in_process_pkg_conflicts(int indent, struct install_ctx *ictx,
                 continue;
             
             if (pkg_is_marked(ictx->ts->pms, cpkg->pkg)) {
-                logn(LOGERR, _("%s conflicts withx %s"), pkg_id(pkg),
+                logn(LOGERR, _("%s conflicts with %s"), pkg_id(pkg),
                      pkg_id(cpkg->pkg));
                 ictx->nerr_cnfl++;
                 ncnfl++;

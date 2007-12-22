@@ -1228,7 +1228,7 @@ msgstr "'%s' (Fähigkeit '%s') kollidiert mit installiertem '%s' (%s)"
 
 #: install/conflicts.c:273
 #, fuzzy, c-format
-msgid "%s conflicts withx %s"
+msgid "%s conflicts with %s"
 msgstr "'%s' kollidiert mit '%s'"
 
 #: install/icaps.c:82
