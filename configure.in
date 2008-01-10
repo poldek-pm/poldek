@@ -5,7 +5,7 @@ dnl $Id$
 AC_INIT(poldek,0.21)
 AC_CONFIG_SRCDIR([capreq.c])
 
-PACKAGE_BUGREPORT="mis@pld-linux.pl"
+PACKAGE_BUGREPORT="mis@pld-linux.org"
 VERSION_STATUS="beta"
 VERSION=0.21
 VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
