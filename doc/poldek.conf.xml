@@ -420,7 +420,9 @@ _distro  = pld
   </option>
  
   <option name="auto directory dependencies" type="boolean3" default="auto" op="AUTODIRDEP">
+    <description>
   RPM 4.4.6 introduces auto dependencies based on package directories. Option controls this feature.
+    </description>
   </option>
   
   <option name="follow" type="boolean" default="yes" op="FOLLOW">
