@@ -36,6 +36,7 @@ manual.xml.texi.tmp: manual.xml m_index.xml m_config.xml manual.xsl
 	m4 -DPOLDEK_VERSION=@VERSION@ manual.xml | xmlif output=texi > $@
 
 poldek.info: manual.xml.texi.tmp
+# NOTE: this "docbook2texi" cames from "docbook2X" package
 	docbook2texi --xinclude $< || true
 	perl -pi -e 's|\@emph\{|\@samp\{|g' poldek.texi
 	makeinfo --no-split --force poldek.texi -o $@
