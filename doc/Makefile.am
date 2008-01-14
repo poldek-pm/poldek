@@ -8,7 +8,7 @@ SUBDIRS = pl homepage
 
 # xml configuration description & co.
 CONFXMLS  = poldek.conf.xml conf-xml2.sh \
-			conf-xml2conf.xsl conf-xml2refentry.xsl conf-xml2docb.xsl
+			conf-xml2c.xsl conf-xml2conf.xsl conf-xml2refentry.xsl conf-xml2docb.xsl
 
 # manual sources 
 MANUALS   = manual.xml manual.css manual.xsl
