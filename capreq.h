@@ -41,6 +41,7 @@
 struct capreq {
     uint8_t  cr_flags;
     uint8_t  cr_relflags;
+	/* XXX: capreq.h:44: Warning(451): Setting a const char * variable may leak memory. */
     const char *name;
     uint8_t  cr_ep_ofs;
     uint8_t  cr_ver_ofs;         /* 0 if capreq hasn't version */
