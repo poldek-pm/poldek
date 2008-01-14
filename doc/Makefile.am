@@ -10,10 +10,10 @@ SUBDIRS = pl homepage
 CONFXMLS  = poldek.conf.xml conf-xml2.sh \
 			conf-xml2c.xsl conf-xml2conf.xsl conf-xml2refentry.xsl conf-xml2docb.xsl
 
-# manual sources 
+# manual sources
 MANUALS   = manual.xml manual.css manual.xsl
 
-# generated files 
+# generated files
 man_MANS  = poldek.1 poldek.conf.1
 GEN       = $(man_MANS) manual.html m_index.xml m_config.xml poldek.info
 
@@ -36,7 +36,7 @@ manual.xml.texi.tmp: manual.xml m_index.xml m_config.xml manual.xsl
 	m4 -DPOLDEK_VERSION=@VERSION@ manual.xml | xmlif output=texi > $@
 
 poldek.info: manual.xml.texi.tmp
-	docbook2texi --xinclude $< || true 
+	docbook2texi --xinclude $< || true
 	perl -pi -e 's|\@emph\{|\@samp\{|g' poldek.texi
 	makeinfo --no-split --force poldek.texi -o $@
 	perl -pi -e 's/^\* poldek manual: \(poldek\)(.+)$$/* poldek: (poldek)$$1/' $@
@@ -83,7 +83,7 @@ manual-web: manual.xml.xhtml.tmp
 	cp manual.css manual-web
 
 
-reference: 
+reference:
 	touch ../cli/main.c
 	../make.sh  CFLAGS+="-DGENDOCBOOK=1"
 	../cli/poldek --docb
