@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     int i = 0, nerr = 0;
     
     if (argc > 1 && n_str_eq(argv[1], "-v"))
-        poldek_VERBOSE = 1;
+        poldek_set_verbose(1);
 
     if (misc_cases[0]) {
         Suite *s = make_themisc_suite();
