@@ -23,6 +23,7 @@ export POLDEK_TESTING_DENIED_FILES
 
 MAXLOOP=60
 VERBOSE=""
+RUNTEST_ONLY=
 
 while test $# -gt 0 ; do
     case "${1}" in
@@ -34,13 +35,15 @@ while test $# -gt 0 ; do
             
         -n) shift; MAXLOOP="${1}"; shift ;;
 
+        --runtest)
+            shift; RUNTEST_ONLY="${1}"; shift ;;
         -h)
             echo "Usage: $(basename $0) [--source-repo REPO] [-v] [-n NUM]"
             echo '    --source-repo  - source (read-only) repository for *-repo tests'
             echo "    -v             - be verbose"
             echo '    -n NUM         - do NUM iteration in *-loop tests'
+            echo '    --runtest NAME - run NAME test only'
             exit 0; shift ;;
-
         *)
             echo "unknown option ${1}; try -h"; exit 1;
     esac

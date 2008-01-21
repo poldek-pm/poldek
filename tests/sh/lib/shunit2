@@ -702,8 +702,12 @@ _shunit_execSuite()
   for _su_func in ${__shunit_suite}; do
     # disable skipping
     endSkipping
-
+    if [ -n "$RUNTEST_ONLY" ]; then
+       [ "$RUNTEST_ONLY" != "${_su_func}" ] && continue;
+    fi    
     # execute the per-test setup function
+    SU_FUNC="${_su_func}"    
+    export SU_FUNC    
     setUp
 
     # execute the test
