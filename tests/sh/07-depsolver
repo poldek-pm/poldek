@@ -1,0 +1,132 @@
+#!/bin/sh
+# $Id$
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+
+ORIGREPO=
+
+tearDown() {
+    #[ -n "$REPO" ] && rm -f $REPO/*.*
+}
+
+setUp() {
+    [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
+    [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
+    REPO="$ORIGREPO/$SU_FUNC"
+    rm -rf $REPO
+    mkdir -p $REPO || fail "mkdir $REPO failed"
+}
+
+
+PACKAGE_DIR="$REPO"
+DEFAULT_VER="1-1"
+
+build() {
+  name=$1; shift
+  version=""
+
+
+  [ $# -gt 0 ] && version="$1";
+  #echo "v $version"
+  if [ -n "$version" ]; then 
+      if echo "$version" | egrep -qv -- '^-'; then
+          shift
+      else
+          version="1-1"
+      fi    
+  fi
+  [ -n "$version" ] || version="1-1"
+  
+  params=""
+  [ $# -gt 0 ] && params="$@";  
+  #eval ./build-test-rpm.sh -d $REPO -n $name -v $version $params
+  eval ./build-test-rpm.sh -d $REPO -n $name -v $version $params >/dev/null 2>&1 || fail "build package $name failed"
+} 
+
+# install "a" package, check result against expected arg
+try_install_a() {
+  expected="$1"
+
+  regexp=$(echo $expected | sed 's/,/|/g')
+  n_expected=$(echo $expected | sed 's|,|\n|g' | wc -l)
+
+  cmd="$POLDEK_NOCONF -Odependency_solver=3 --st dir -s $REPO -uvt a"
+  if is_verbose_mode; then
+      $cmd || fail "'poldek -uvt a' failed"
+  else
+      $cmd >/dev/null 2>&1 || fail "'poldek -uvt a' failed"
+  fi
+  
+  out=$($cmd --parsable-tr-summary | egrep "^%[ID]")
+  n_all=$(echo $out | sed 's|%|\n%|g' | grep '%' | wc -l)
+  n=$(echo $out | sed 's|%|\n%|g' | egrep "^%[ID] ($regexp)" | wc -l)
+  assertEquals "unexpected ($n_all) number of packages (expected $n)" "$n_all" "$n"
+  assertEquals "not all or non expected packages installed (expected $expected)" "$n" "$n_expected"
+}
+
+# 'c' has unmet requirement
+testChooseTheRightAlternative_1() 
+{
+  build a -r "CAP"
+  build c -p "CAP" -r "unmetreq"
+  build d -p "CAP"      
+  try_install_a "a,d"  
+}
+
+# 'd' should be choosen instead of non-resolvable 'c'
+testChooseTheRightAlternative_2() 
+{
+  build a -r "b"
+  build b -r "CAP"
+  build c -p "CAP" -r "unmetreq"
+  build d -p "CAP"      
+  try_install_a "a,b,d"  
+}
+
+# first, but wrong resolved set is: a,b,c,e,g   
+testChooseTheRightAlternative_3() {
+  build a  -r "b"  
+  build b  -r "CAP"
+
+  build c  2-1 -r "e" -p "CAP"
+  build d  -r "f" -p "CAP"
+
+  build e  -r "g"
+  build f  2-1 -r "h"
+
+  build g  2-1 -r "unmetreq"
+  build h 
+
+  try_install_a "a,b,d,f,h"
+}
+
+# package 'x' provides all 'a' requirements
+testChooseMoreAccuratePackage() {
+  build a -r "b" -r "c" -r "d" -r "x"
+  build b -p "AA" -p "BB"
+  build c  
+  build d  
+  build x -p "b" -p "c" -p "d"
+
+  try_install_a "a,x"  
+}
+
+# package 'c' conflicts with 'a'
+testSkipConflictedAlternative() {
+  build a -r "BB" -r "CC"
+  build b -p "BB" -p "CC" -c "a"
+  build c -p "BB" -p "CC"
+
+  try_install_a "a,c"  
+}
+
+# b-1-1 meets all 'a' requirements
+testRedundantRequirement() {
+  build a -r "b" -r "'b = 1'"
+  build b 2-1
+  build b 1-1      
+  try_install_a "a,b\-1"
+}
+
+. ./sh/lib/shunit2
