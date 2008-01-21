@@ -20,6 +20,7 @@ clean-local:
 
 check: poldek_test_conf.conf
 	$(MAKE) check-am
+	-rm -f poldek_test_conf.*
 
 sheck:
 	@echo; echo "Running *.sh tests";  \
