@@ -22,7 +22,7 @@ oneTimeSetUp() {
     TMPDIR=${TMPDIR:-""}
     [ -z "$TMP" ] && TMP="${TMPDIR}"
     [ -z "$TMP" ] && TMP="/tmp"
-    TMP="${TMP}/poldekTests.$$"
+    TMP="${TMP}/poldek-tests"
     TMPDIR="$TMP"
 
     rm -rf $TMPDIR
