@@ -46,7 +46,7 @@
 #define DBPKG_REV_ORPHANED        (1 << 19)
 
 
-#define uninst_LDFLAGS (PKG_LDNEVR | PKG_LDCAPS | PKG_LDREQS | PKG_LDFL_DEPDIRS)
+#define uninst_LDFLAGS (PKG_LDNEVR | PKG_LDCAPS | PKG_LDREQS | PKG_LDFL_WHOLE)
 
 static void uninstall_summary(struct poldek_ts *ts, tn_array *pkgs, int ndep);
 
@@ -102,6 +102,8 @@ tn_array *get_orphanedby_pkg(struct uninstall_ctx *uctx, struct pkg *pkg)
         while ((path = pkgfl_it_get(&it, NULL))) {
             struct capreq *cap;
             capreq_new_name_a(path, cap);
+            tracef(0, "%s of %s", pkg_id(pkg), path);
+            
             n += pkgdb_q_what_requires(uctx->db, orphans, cap, 
                                        uctx->unpkgs, ldflags, 0);
         }
@@ -117,8 +119,7 @@ tn_array *get_orphanedby_pkg(struct uninstall_ctx *uctx, struct pkg *pkg)
     return orphans;
 }
 
-static
-int pkg_leave_orphans(struct uninstall_ctx *uctx, struct pkg *pkg)
+static int pkg_leave_orphans(struct uninstall_ctx *uctx, struct pkg *pkg)
 {
     struct capreq *selfcap;
     int i;
@@ -207,16 +208,12 @@ static
 int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
                      struct pkg *requirer) 
 {
-    int i;
+    struct pkg_req_iter *it;
+    const struct capreq *req;
+    unsigned itflags = PKG_ITER_REQIN;
     
-    if (sigint_reached())
+    if (sigint_reached() || uctx->nerr_fatal)
         return 0;
-
-    if (uctx->nerr_fatal)
-        return 0;
-
-    if (pkg->reqs == NULL)
-        return 1;
 
     if (pkg_is_marked(uctx->ts->pms, pkg)) {
         DBGF("%s: obsoleted, return\n", pkg_id(pkg)); 
@@ -225,23 +222,28 @@ int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
         return 1;
     }
     MEMINF("START");
-    DBGF("%s\n", pkg_id(pkg));
+    tracef(indent, "%s (requirer=%s)", pkg_id(pkg), pkg_id(requirer));
 
     msg_i(3, indent, "%s\n", pkg_id(pkg));
-    for (i=0; i < n_array_size(pkg->reqs); i++) {
-        struct capreq *req = n_array_nth(pkg->reqs, i);
+
+    if (uctx->ts->getop(uctx->ts, POLDEK_OP_AUTODIRDEP))
+        itflags |= PKG_ITER_REQDIR;
+    
+
+    it = pkg_req_iter_new(pkg, itflags);
+    while ((req = pkg_req_iter_get(it))) {
         
         if (capreq_is_rpmlib(req)) 
             continue;
 
-        DBGF("req %s\n", capreq_snprintf_s(req));
+        trace(indent + 1, "req %s", capreq_snprintf_s(req));
 
         if (pkg_satisfies_req(pkg, req, 1)) { /* XXX: self match, should be handled
                                                  at lower level; TOFIX */
-            DBGF("%s: satisfied by itself\n", capreq_snprintf_s(req));
+            trace(indent + 2, "- satisfied by itself");
             
         } else if (pkgdb_match_req(uctx->db, req, uctx->strict, uctx->unpkgs)) {
-            DBGF("%s: satisfied by db\n", capreq_snprintf_s(req));
+            trace(indent + 2, "- satisfied by db");
             msg_i(3, indent, "  %s: satisfied by db\n", capreq_snprintf_s(req));
             
         } else if (!uctx->ts->getop(uctx->ts, POLDEK_OP_FOLLOW)) {
@@ -285,6 +287,7 @@ int process_pkg_reqs(int indent, struct uninstall_ctx *uctx, struct pkg *pkg,
             process_package(indent + 2, uctx, pkg);
         }
     }
+    tracef(indent, "END %s (requirer=%s)", pkg_id(pkg), pkg_id(requirer));
     MEMINF("END");
     return 1;
 }
@@ -299,7 +302,7 @@ int process_package(int indent, struct uninstall_ctx *uctx, struct pkg *pkg)
         return 0;
 
     MEMINF("START");
-    DBGF("PROCESSING [%d] %s\n", indent, pkg_id(pkg));
+    tracef(indent, "%s", pkg_id(pkg));
 
     pkg_set_mf(uctx->pms, pkg, PKGMARK_GRAY); /* is there */
     
