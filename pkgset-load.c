@@ -126,7 +126,6 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     return n_array_size(ps->pkgs);
 }
 
-
 int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir)
 {
     int i;
@@ -146,5 +145,6 @@ int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir)
         n_array_push(ps->pkgs, pkg_link(pkg));
     }
     n_array_push(ps->pkgdirs, pkgdir);
-    return n_array_size(ps->pkgs);
+
+    return 1;
 }
