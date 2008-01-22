@@ -39,7 +39,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         struct source *src = n_array_nth(sources, i);
         struct pkgdir *pkgdir = NULL;
         
-
+        
         if (src->flags & PKGSOURCE_NOAUTO)
             continue;
 
@@ -68,8 +68,11 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 
         
         n_array_push(ps->pkgdirs, pkgdir);
+        MEMINF("after open %s", pkgdir_idstr(pkgdir));
     }
 
+    
+    
 
     /* merge pkgdis depdirs into ps->depdirs */
     for (i=0; i < n_array_size(ps->pkgdirs); i++) {
@@ -84,7 +87,6 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
     n_array_sort(ps->depdirs);
     n_array_uniq(ps->depdirs);
 
-    
     for (i=0; i < n_array_size(ps->pkgdirs); i++) {
         struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
         
@@ -94,6 +96,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
                 iserr = 1;
             }
         }
+        MEMINF("after load %s", pkgdir_idstr(pkgdir));
     }
     
     if (!iserr) {
