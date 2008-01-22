@@ -54,6 +54,7 @@ static
 int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
 {
     int rpmtag = 0, argsize = 0;
+    char path[PATH_MAX];
     
     switch (tag) {
         case PMTAG_RECNO:
@@ -71,6 +72,12 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
             rpmtag = RPMTAG_BASENAMES;
             break;
 
+        case PMTAG_DIRNAME:
+            rpmtag = RPMTAG_DIRNAMES;
+            n_snprintf(path, sizeof(path), "%s/", arg);
+            arg = path;
+            break;
+            
         case PMTAG_CAP:
             rpmtag = RPMTAG_PROVIDENAME;
             break;
@@ -130,6 +137,7 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
             break;
             
         case PMTAG_FILE:
+        case PMTAG_DIRNAME:
             rc = rpmdbFindByFile(db, arg, &it->matches);
             break;
 
