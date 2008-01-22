@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -41,7 +41,7 @@
 #include "pm/pm.h"
 #include "split.h"
 
-int poldek_load_sources__internal(struct poldek_ctx *ctx)
+int poldek__load_sources_internal(struct poldek_ctx *ctx)
 {
     struct pkgset *ps;
     struct poldek_ts *ts;
@@ -54,7 +54,7 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
     
     if ((ps = pkgset_new(ctx->pmctx)) == NULL)
         return 0;
-        
+    
     if (pm_get_dbdepdirs(ctx->pmctx, ctx->ts->rootdir, NULL, ps->depdirs) >= 0)
         ps->flags |= PSET_DBDIRS_LOADED;
     
@@ -64,8 +64,10 @@ int poldek_load_sources__internal(struct poldek_ctx *ctx)
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_LDFULLFILELIST))
         ldflags |= PKGDIR_LD_FULLFLIST;
 
+#if 0 /* XXX now files are loaded on demand */
     if (strcmp(pm_get_name(ctx->pmctx), "pset") == 0)
         ldflags |= PKGDIR_LD_FULLFLIST;
+#endif    
 
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_AUTODIRDEP))
         ldflags |= PKGDIR_LD_DIRINDEX;

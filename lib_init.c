@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -87,8 +87,6 @@ int get_conf_opt_list(const tn_hash *htcnf, const char *name, tn_array *tolist);
 static
 int do_poldek_setup_cachedir(struct poldek_ctx *ctx);
 
-extern
-int poldek_load_sources__internal(struct poldek_ctx *ctx, int load_dbdepdirs);
 
 struct default_op_map_ent {
     int config;                 /* configuration var? */
@@ -1587,6 +1585,10 @@ static int setup_pm(struct poldek_ctx *ctx)
                 }
                 pm_configure(ctx->pmctx, "source", dest);
             }
+
+            if (ctx->ts->getop(ctx->ts, POLDEK_OP_AUTODIRDEP))
+                pm_configure(ctx->pmctx, "autodirdep", NULL);
+            
         }
 
         if (ctx->pmctx) {
@@ -1679,7 +1681,7 @@ int poldek_load_sources(struct poldek_ctx *ctx)
     if (ctx->_iflags & SOURCES_LOADED)
         return 1;
     
-    rc = poldek_load_sources__internal(ctx, 1);
+    rc = poldek__load_sources_internal(ctx);
     ctx->_iflags |= SOURCES_LOADED;
     return rc;
 }

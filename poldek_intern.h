@@ -78,5 +78,6 @@ int poldek__choose_equiv(const struct poldek_ts *ts,
                          const char *capname, tn_array *pkgs, struct pkg *hint);
 
 void poldek__setup_default_ask_callbacks(struct poldek_ctx *ctx);
+int poldek__load_sources_internal(struct poldek_ctx *ctx);
 
 #endif
