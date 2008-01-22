@@ -8,7 +8,7 @@ TNDB_DIR = @TNDB_DIR@
 
 CLI=cli
 SUBDIRS   = po doc $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir \
-            pm install . $(CLI) 
+            pm install3 install . $(CLI)
 DIST_SUBDIRS = $(SUBDIRS) python tests
 
 INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@
@@ -29,7 +29,7 @@ libpoldek_la_SOURCES = \
 	  misc.c misc.h			\
 	  pkgmisc.c pkgmisc.h			\
 	  depdirs.c depdirs.h   \
-	  pkg.c pkg.h			\
+	  pkg.c pkgiter.c pkg.h			\
 	  pkgcmp.c pkgcmp.h		\
 	  pkgu.c pkgu.h        	\
 	  pkgfl.c pkgfl.h		\
@@ -71,6 +71,7 @@ libpoldek_la_LIBADD = \
 			sigint/libsigint.la  \
 			pkgdir/libpkgdir.la  \
 			install/libinstall.la \
+			install3/libinstall3.la \
 			pm/libpm.la    \
 			vfile/libvfile.la
 
