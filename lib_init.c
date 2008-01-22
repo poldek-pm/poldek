@@ -1276,6 +1276,7 @@ void poldeklib_destroy(void)
 {
     if (poldeklib_init_called == 0)
         return;
+    poldeklib_init_called = 0;
     
     n_array_free(default_op_map);
     default_op_map = NULL;
