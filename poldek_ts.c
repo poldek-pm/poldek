@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -944,7 +944,7 @@ static int ts_run_upgrade_dist(struct poldek_ts *ts)
 }
 
 extern int in_do_poldek_ts_instal(struct poldek_ts *ts);
-//extern int i3_do_poldek_ts_install(struct poldek_ts *ts);
+extern int i3_do_poldek_ts_install(struct poldek_ts *ts);
 
 static int ts_run_install(struct poldek_ts *ts) 
 {
@@ -975,7 +975,7 @@ static int ts_run_install(struct poldek_ts *ts)
 
     if (ts->ctx->_depengine == 3) { /* hope, soon */
         msgn(5, "Running #3 dependency engine...");
-        //rc = i3_do_poldek_ts_install(ts);
+        rc = i3_do_poldek_ts_install(ts);
 
     } else {
         rc = in_do_poldek_ts_install(ts);
@@ -1037,11 +1037,13 @@ static int ts_run_verify(struct poldek_ts *ts)
 
     if (poldek_ts_get_arg_count(ts) > 0) {
         pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
-        pkgs_unordered = n_ref(pkgs);
+        if (pkgs)
+            pkgs_unordered = n_ref(pkgs);
         
     } else {
         pkgs = n_ref(ts->ctx->ps->ordered_pkgs);
-        pkgs_unordered = n_ref(ts->ctx->ps->pkgs);
+        if (pkgs)
+            pkgs_unordered = n_ref(ts->ctx->ps->pkgs);
     }
 
     if (pkgs == NULL)
