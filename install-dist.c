@@ -129,6 +129,7 @@ static int do_install_dist(struct poldek_ts *ts)
     tn_array          *pkgs = NULL;
     
     n_assert(ts->db->rootdir);
+    
     if (!poldek_util_is_rwxdir(ts->db->rootdir)) {
         logn(LOGERR, "access %s: %m", ts->db->rootdir);
         return 0;
@@ -208,17 +209,19 @@ static void install_dist_summary(struct poldek_ts *ts)
     tn_array *pkgs, *depkgs;
     
     pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK);
+    n_assert(pkgs); /* function should not be called if no marked packages */
+    
     n = n_array_size(pkgs);
     
     depkgs = pkgmark_get_packages(ts->pms, PKGMARK_DEP);
     if (depkgs)
         ndep = n_array_size(depkgs);
 
-    poldek__ts_update_summary(ts, "I", pkgs, PKGMARK_MARK, ts->pms);
+    poldek__ts_update_summary(ts, "I", pkgs, 0, NULL);
     n_array_free(pkgs);
     
     if (depkgs) {
-        poldek__ts_update_summary(ts, "D", depkgs, PKGMARK_MARK, ts->pms);
+        poldek__ts_update_summary(ts, "D", depkgs, 0, NULL);
         n_array_free(depkgs);
     }
 
