@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -431,9 +431,8 @@ int pkgfl_store(tn_tuple *fl, tn_buf *nbuf,
     return bsize;
 }
 
-
-int pkgfl_restore(tn_alloc *na, tn_tuple **fl,
-                  tn_buf_it *nbufi, tn_array *dirs, int include)
+static int pkgfl_restore(tn_alloc *na, tn_tuple **fl,
+                         tn_buf_it *nbufi, tn_array *dirs, int include)
 {
     struct pkgfl_ent **ents;
     int32_t ndirs = 0, n;

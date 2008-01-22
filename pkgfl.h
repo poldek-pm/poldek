@@ -55,9 +55,6 @@ tn_tuple *pkgfl_array_pdir_sort(tn_tuple *fl);
 int pkgfl_store(tn_tuple *fl, tn_buf *nbuf, tn_array *exclpath,
                 tn_array *depdirs, int which);
 
-int pkgfl_restore(tn_alloc *na, tn_tuple **fl, 
-                  tn_buf_it *nbufi, tn_array *dirs, int include);
-
 int pkgfl_restore_st(tn_alloc *na, tn_tuple **fl, 
                      tn_stream *st, tn_array *dirs, int include);
 
