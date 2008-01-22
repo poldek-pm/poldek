@@ -19,6 +19,7 @@ AH_TEMPLATE([HAVE_RPM_EXTDEPS],[])
 AH_TEMPLATE([HAVE_RPM_HGETCOLOR],[])
 AH_TEMPLATE([HAVE_TM_GMTOFF],[])
 AH_TEMPLATE([HAVE_TM___GMTOFF],[])
+AH_TEMPLATE([HAVE_RPM_HEADER_MAGIC_YES],[])
 
 AM_INIT_AUTOMAKE([dist-bzip2])
 AC_DEFINE_UNQUOTED([VERSION_STATUS], "$VERSION_STATUS", [version status])
@@ -332,6 +333,13 @@ AC_CHECK_FUNCS(_rpmvercmp)
 dnl rpm 4.4.9
 AC_CHECK_HEADERS([rpm/rpmevr.h])
 
+dnl rpm 5.x
+dnl  - removed enum (not macro) HEADER_MAGIC_YES
+if test "${is_rpm4}." = "yes." ; then
+   AC_EGREP_CPP(HEADER_MAGIC_YES,
+               [ #include <rpm/header.h>
+               ], AC_DEFINE([HAVE_RPM_HEADER_MAGIC_YES], 1, []))
+fi
 
 dnl metadata & xml2
 AC_ARG_WITH(xml-metadata,
@@ -514,10 +522,10 @@ AC_CONFIG_FILES([
         doc/Makefile
         doc/homepage/Makefile
         doc/pl/Makefile
-	install/Makefile
+        install/Makefile
+        install3/Makefile
         Makefile
         poldek.spec
-        poldek-suse.spec
         tests/Makefile
         cli/Makefile
 	])

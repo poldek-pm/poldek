@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2002 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -97,7 +97,7 @@ int load_header_list(const char *slabel, const char *path, tn_array *pkgs,
         return -1;
     }
    
-#ifdef HEADER_MAGIC_YES 
+#if HAVE_RPM_HEADER_MAGIC_YES 
     while ((h = headerRead(fdt, HEADER_MAGIC_YES))) {
 #else
     while ((h = headerRead(fdt))) {
