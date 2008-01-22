@@ -22,6 +22,7 @@
 
 #include "i18n.h"
 #include "log.h"
+#define POLDEK_PKG_DAG_COLOURS 1  /* for pkg_*color */
 #include "pkg.h"
 #include "pkgset.h"
 #include "misc.h"

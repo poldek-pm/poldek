@@ -16,28 +16,32 @@ struct pkguinf;                 /* defined in pkgu.h   */
 struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 
 
-#define PKG_HAS_PKGUINF     (1 << 5)
-#define PKG_HAS_SELFCAP     (1 << 6)
+#define PKG_HAS_PKGUINF     (1 << 5) /* user-level info (pkgu.c) */
+#define PKG_HAS_SELFCAP     (1 << 6) /* name = e:v-r cap */
 
 #define PKG_HELD            (1 << 12) /* non upgradable */
 #define PKG_IGNORED         (1 << 13) /* invisible      */
 #define PKG_IGNORED_UNIQ    (1 << 14) /* uniqued        */
 
 #define PKG_ORDER_PREREQ    (1 << 15) /* see pkgset-order.c */
-#define PKG_DBPKG           (1 << 16) /* loaded from database, i.e. installed */
 
-/* DAG node colours */
-#define PKG_COLOR_WHITE    (1 << 20)
-#define PKG_COLOR_GRAY     (1 << 21)
-#define PKG_COLOR_BLACK    (1 << 22)
-#define PKG_ALL_COLORS     PKG_COLOR_WHITE | PKG_COLOR_GRAY | PKG_COLOR_BLACK
+#define PKG_DBPKG           (1 << 16) /* loaded from database, i.e. installed */
+#define PKG_INCLUDED_DIRREQS (1 << 17) /* auto-dir-reqs added directly to reqs */
+
+#ifdef POLDEK_PKG_DAG_COLOURS
+/* DAG node colours (pkgset-order.c, split.c) */
+# define PKG_COLOR_WHITE    (1 << 20)
+# define PKG_COLOR_GRAY     (1 << 21)
+# define PKG_COLOR_BLACK    (1 << 22)
+# define PKG_ALL_COLORS     PKG_COLOR_WHITE | PKG_COLOR_GRAY | PKG_COLOR_BLACK
 
 /* colours */
-#define pkg_set_color(pkg, color) \
+# define pkg_set_color(pkg, color) \
    ((pkg)->flags &= ~(PKG_ALL_COLORS), (pkg)->flags |= (color))
 
-#define pkg_is_color(pkg, color) \
+# define pkg_is_color(pkg, color) \
    ((pkg)->flags & color)
+#endif  /* POLDEK_PKG_DAG_COLOURS */
 
 #define pkg_set_prereqed(pkg) ((pkg)->flags |= PKG_ORDER_PREREQ)
 #define pkg_clr_prereqed(pkg)  ((pkg)->flags &= ~PKG_ORDER_PREREQ) 
@@ -270,10 +274,21 @@ void pkgs_array_dump(tn_array *pkgs, const char *prefix); /* for debugging */
 
 tn_buf *pkgs_array_join(tn_array *pkgs, tn_buf *nbuf, const char *sep);
 
+/* caps & reqs iterators */
 
 struct pkg_cap_iter *pkg_cap_iter_new(struct pkg *pkg);
 void pkg_cap_iter_free(struct pkg_cap_iter *it);
 const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it);
+
+
+#define PKG_ITER_REQIN  (1 << 0) /* Requires + Requires(pre) */
+#define PKG_ITER_REQUN  (1 << 1) /* Requires(un) */
+#define PKG_ITER_REQDIR (1 << 2) /* Requires(dir) */
+#define PKG_ITER_REQSUG (1 << 3) /* Suggests  */
+
+struct pkg_req_iter *pkg_req_iter_new(const struct pkg *pkg, unsigned flags);
+void pkg_req_iter_free(struct pkg_req_iter *it);
+const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it);
 
 
 #endif

@@ -230,7 +230,6 @@ struct pkg *pkg_new_ext(tn_alloc *na,
         DBGF("+%p %p %d\n", na, &na->_refcnt, na->_refcnt);
     }
     
-    pkg->flags |= PKG_COLOR_WHITE;
     pkg->epoch = epoch;
     pkg->size = size;
     pkg->fsize = fsize;
@@ -309,7 +308,7 @@ struct pkg *pkg_new_ext(tn_alloc *na,
     return pkg;
 }
 
-#if 0                           /* nfy */
+#if 0                           /* XXX: NFY */
 static tn_array *clone_array(tn_array *arr, unsigned flags)
 {
     flags = flags;
@@ -566,72 +565,6 @@ int cap_match_req(const struct capreq *cap, const struct capreq *req,
     return cap_xmatch_req(cap, req, strict ? 0 : POLDEK_MA_PROMOTE_VERSION);
 }
 
-#if 0
-static inline 
-int OLDdo_pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req,
-                         int promote_epoch)
-{
-    register int cmprc = 0, evr = 0;
-
-
-    n_assert(strcmp(pkg->name, capreq_name(req)) == 0);
-
-    if (!capreq_versioned(req))
-        return 1;
-
-    if (promote_epoch == -1)
-        promote_epoch = poldek_conf_PROMOTE_EPOCH;
-
-    if (pkg->epoch || capreq_has_epoch(req)) {
-        int promote = 0;
-        if (!capreq_has_epoch(req) && promote_epoch) {
-            promote_epoch_warn(1, "req", capreq_snprintf_s(req),
-                               pkg_evr_snprintf_s(pkg));
-            promote = 1;
-        } 
-
-        if (!pkg->epoch && capreq_epoch(req) > 0 && promote_epoch) {
-            promote_epoch_warn(1, "package", pkg_evr_snprintf_s(pkg),
-                               capreq_snprintf_s(req));
-            promote = 1;
-        }
-
-        if (promote) {
-            cmprc = 0;
-            
-        } else {
-            cmprc = pkg->epoch - capreq_epoch(req);
-            if (cmprc != 0)
-                return rel_match(cmprc, req);
-        }
-        evr = 1;
-        
-    }
-#if 0    /* disabled autopromotion */
-    else if (capreq_epoch(req) > 0) { /* always promote package's epoch */
-        cmprc = 0;
-        evr = 1;
-    }
-#endif    
-    
-    if (capreq_has_ver(req)) {
-        cmprc = pkg_version_compare(pkg->ver, capreq_ver(req));
-        if (cmprc != 0)
-            return rel_match(cmprc, req);
-        evr = 1;
-    }
-        
-    if (capreq_has_rel(req)) {
-        n_assert(capreq_has_ver(req));
-        cmprc = pkg_version_compare(pkg->rel, capreq_rel(req));
-        if (cmprc != 0)
-            return rel_match(cmprc, req);
-        evr = 1;
-    }
-
-    return evr ? rel_match(cmprc, req) : 1;
-}
-#endif
 
 static inline 
 int do_pkg_evr_match_req(const struct capreq *pkgcap, const struct capreq *req,
@@ -766,6 +699,7 @@ int pkg_has_path(const struct pkg *pkg,
     return rc;
 }
 
+
 int pkg_xmatch_req(const struct pkg *pkg, const struct capreq *req, unsigned flags)
 {
     if (n_str_eq(pkg->name, capreq_name(req))) {
@@ -797,9 +731,14 @@ int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
         char *dirname, *basename, path[PATH_MAX];
         
         strncpy(path, capreq_name(req), sizeof(path));
+
         path[PATH_MAX - 1] = '\0';
         n_basedirnam(path, &dirname, &basename);
         n_assert(dirname);
+
+        if (*dirname == '\0')   /* path = "/foo" */
+            dirname = "/";
+        
         n_assert(*dirname);
         if (*dirname == '/' && *(dirname + 1) != '\0')
             dirname++;
@@ -971,12 +910,33 @@ struct pkguinf *pkg_uinf(const struct pkg *pkg)
 tn_array *pkg_required_dirs(const struct pkg *pkg) 
 {
     if (pkg->pkgdir && pkg->pkgdir->dirindex)
-        return pkgdir_dirindex_get_reqdirs(pkg->pkgdir, pkg);
+        return pkgdir_dirindex_get_required(pkg->pkgdir, pkg);
+
+    if (pkg->fl) {
+        tn_array *owned = NULL, *required = NULL;
+        pkgfl_owned_and_required_dirs(pkg->fl, &owned, &required);
+        n_array_cfree(&owned);
+        return required;
+    }
+
     return NULL;
 }
 
-static
-tn_tuple *do_pkg_other_fl(tn_alloc *na, const struct pkg *pkg) 
+tn_array *pkg_owned_dirs(const struct pkg *pkg) 
+{
+    if (pkg->pkgdir && pkg->pkgdir->dirindex)
+        return pkgdir_dirindex_get_provided(pkg->pkgdir, pkg);
+
+    if (pkg->fl) {
+        tn_array *owned = NULL, *required = NULL;
+        pkgfl_owned_and_required_dirs(pkg->fl, &owned, &required);
+        n_array_cfree(&required);
+        return owned;
+    }
+    return NULL;
+}
+
+static tn_tuple *do_pkg_other_fl(tn_alloc *na, const struct pkg *pkg) 
 {
     tn_tuple *fl = NULL;
     
@@ -1327,9 +1287,10 @@ void pkgs_array_dump(tn_array *pkgs, const char *prefix)
     if (prefix == NULL)
         prefix = "array";
     
-    msg(0, "%s = [", prefix);
+    msg(0, "%s = [ ", prefix);
     for (i=0; i<n_array_size(pkgs); i++)
-        msg(0, "%s, ", pkg_id(n_array_nth(pkgs, i)));
+        msg(0, "%s%s", pkg_id(n_array_nth(pkgs, i)),
+            i + 1 == n_array_size(pkgs) ? " ":", ");
     msgn(0, "]");
 }
 
@@ -1437,59 +1398,3 @@ int pkg_idevr_snprintf(char *str, size_t size, const struct pkg *pkg)
                       pkg_arch(pkg));
 }
 
-/* caps, mean caps + files iterator */
-struct pkg_cap_iter {
-    struct pkg       *pkg;
-    struct capreq    *cap;
-    int              ncap;
-    struct pkgfl_it  fit;
-    int              fit_initialized;
-};
-
-const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it)
-{
-    struct capreq *cap;
-    const char *path;
-    
-    if (it->pkg->caps && it->ncap < n_array_size(it->pkg->caps)) {
-        cap = n_array_nth(it->pkg->caps, it->ncap);
-        it->ncap++;
-        return cap;
-    }
-
-    if (it->cap) {
-        capreq_free(it->cap);
-        it->cap = NULL;
-    }
-    
-    if (it->pkg->fl == NULL)
-        return NULL;
-
-    if (!it->fit_initialized) {
-        pkgfl_it_init(&it->fit, it->pkg->fl);
-        it->fit_initialized = 1;
-    }
-    
-    path = pkgfl_it_get(&it->fit, NULL);
-    if (path)
-        it->cap = capreq_new(NULL, path, 0, NULL, NULL, 0, 0);
-    
-    return it->cap;
-}
-
-struct pkg_cap_iter *pkg_cap_iter_new(struct pkg *pkg) 
-{
-    struct pkg_cap_iter *it = n_calloc(sizeof(*it), 1);
-    it->pkg = pkg;
-    it->ncap = 0;
-    it->cap = NULL;
-    it->fit_initialized = 0;
-    return it;
-}
-
-void pkg_cap_iter_free(struct pkg_cap_iter *it) 
-{
-    if (it->cap)
-        capreq_free(it->cap);
-    memset(it, 0, sizeof(*it));
-}
