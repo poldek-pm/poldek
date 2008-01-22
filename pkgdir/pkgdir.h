@@ -185,8 +185,12 @@ int pkgdir_dirindex_pkg_has_path(const struct pkgdir *pkgdir,
                                  const struct pkg *pkg, const char *path);
 
 /* directories required by package */
-tn_array *pkgdir_dirindex_get_reqdirs(const struct pkgdir *pkgdir,
-                                      const struct pkg *pkg);
+tn_array *pkgdir_dirindex_get_required(const struct pkgdir *pkgdir,
+                                       const struct pkg *pkg);
+
+tn_array *pkgdir_dirindex_get_provided(const struct pkgdir *pkgdir,
+                                       const struct pkg *pkg);
+
 #endif
 
 #endif /* POLDEK_PKGDIR_H*/
