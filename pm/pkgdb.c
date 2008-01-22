@@ -390,9 +390,8 @@ static int header_evr_match_req(struct pm_ctx *ctx, void *hdr,
     return 0;
 }
 
-
 static int header_cap_match_req(struct pm_ctx *ctx, void *hdr,
-                                const struct capreq *req, int strict)
+                                const struct capreq *req, unsigned ma_flags)
 {
     struct pkg  pkg;
     int         rc;
@@ -405,7 +404,7 @@ static int header_cap_match_req(struct pm_ctx *ctx, void *hdr,
     
     if (n_array_size(pkg.caps) > 0) {
         n_array_sort(pkg.caps);
-        rc = pkg_caps_match_req(&pkg, req, strict ? 0 : POLDEK_MA_PROMOTE_VERSION);
+        rc = pkg_caps_match_req(&pkg, req, ma_flags);
     }
 
     n_array_free(pkg.caps);
@@ -414,7 +413,7 @@ static int header_cap_match_req(struct pm_ctx *ctx, void *hdr,
 
 static int db_match(struct pkgdb *db, enum pkgdb_it_tag tag,
                     const struct capreq *cap, const tn_array *exclude,
-                    int strict)
+                    unsigned ma_flags)
 {
     struct pkgdb_it        it;
     const struct pm_dbrec  *dbrec;
@@ -427,7 +426,7 @@ static int db_match(struct pkgdb *db, enum pkgdb_it_tag tag,
         if (exclude && dbpkg_array_has(exclude, dbrec->recno))
             continue;
 
-        if (is_file || header_cap_match_req(db->_ctx, dbrec->hdr, cap, strict)){
+        if (is_file || header_cap_match_req(db->_ctx, dbrec->hdr, cap, ma_flags)) {
             match = 1;
             break;
         }
@@ -438,7 +437,7 @@ static int db_match(struct pkgdb *db, enum pkgdb_it_tag tag,
 }
 
 
-int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, int strict,
+int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, unsigned ma_flags,
                     const tn_array *exclude) 
 {
     int is_file;
@@ -446,13 +445,13 @@ int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, int strict,
     is_file = (*capreq_name(req) == '/' ? 1 : 0);
     //tracef(0, "%s %d", capreq_snprintf_s(req), n_array_size(exclude));
     
-    if (!is_file && db_match(db, PMTAG_NAME, req, exclude, strict))
+    if (!is_file && db_match(db, PMTAG_NAME, req, exclude, ma_flags))
         return 1;
     
-    if (db_match(db, PMTAG_CAP, req, exclude, strict))
+    if (db_match(db, PMTAG_CAP, req, exclude, ma_flags))
         return 1;
 
-    if (is_file && db_match(db, PMTAG_FILE, req, exclude, strict))
+    if (is_file && db_match(db, PMTAG_FILE, req, exclude, ma_flags))
         return 1;
     
     return 0;
@@ -578,17 +577,19 @@ struct pkgdir *pkgdb_to_pkgdir(struct pm_ctx *ctx, const char *rootdir,
     return pkgdir;
 }
 
-
-
-int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
-                          const struct capreq *cap,
-                          const tn_array *exclude, unsigned ldflags, int strict)
+static int q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
+                           enum pkgdb_it_tag tag, const struct capreq *cap,
+                           const tn_array *exclude, unsigned ldflags,
+                           unsigned ma_flags)
 {
     struct pkgdb_it it;
     const struct pm_dbrec *dbrec;
+    const char *value = capreq_name(cap);
     int n = 0;
+
+    DBGF_F("%s\n", value);
     
-    pkgdb_it_init(db, &it, PMTAG_REQ, capreq_name(cap));
+    pkgdb_it_init(db, &it, tag, value);
     while ((dbrec = pkgdb_it_get(&it)) != NULL) {
         struct pkg *pkg;
         
@@ -597,29 +598,30 @@ int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
         
 #if ENABLE_TRACE        
         pkg = load_pkg(NULL, db, dbrec, ldflags);
-        DBGF("%s <- %s ????\n", capreq_name(cap), pkg_snprintf_s(pkg));
+        DBGF_F("%s <- %s ????\n", capreq_name(cap), pkg_snprintf_s(pkg));
 #endif        
         if (dbpkg_array_has(dbpkgs, dbrec->recno))
             continue;
-
-        DBGF("%s <- %s ??\n", capreq_name(cap), pkg_snprintf_s(pkg));
-
+        
+        //DBGF("%s <- %s ??\n", capreq_name(cap), pkg_snprintf_s(pkg));
+        
         if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
-            DBGF("%s <- %s ? %d\n", capreq_name(cap), pkg_snprintf_s(pkg),
-                 pkg_satisfies_req(pkg, cap, 1));
+            DBGF_F("%s required by %s ? %s\n", capreq_name(cap), pkg_id(pkg),
+                   pkg_satisfies_req(pkg, cap, 1) ? "no" : "yes");
             
             if (pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
                 pkg_free(pkg);
                 
-            } else if (strict && capreq_versioned(cap) &&
+            } else if (capreq_versioned(cap) && /* old !strict */
                        !pkg_requires_cap(pkg, cap)) {
-                DBGF("skip %s (%s)\n", pkg_snprintf_s(pkg), capreq_snprintf_s(cap));
+                DBGF_F("skipped %s (%s is not really required)\n", pkg_id(pkg),
+                       capreq_snprintf_s(cap));
                 pkg_free(pkg);
                 
             } else {
-                DBGF("%s <- %s\n", capreq_snprintf_s(cap), pkg_id(pkg));
+                DBGF_F("%s <- %s\n", capreq_snprintf_s(cap), pkg_id(pkg));
                 n_array_push(dbpkgs, pkg);
-                n_array_sort(dbpkgs);
+                n_array_isort(dbpkgs);
                 n++; 
 #if ENABLE_TRACE
                 {
@@ -636,13 +638,27 @@ int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
             }
         }
     }
+    
     pkgdb_it_destroy(&it);
     return n;
 }
 
+int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
+                          const struct capreq *cap,
+                          const tn_array *exclude, unsigned ldflags,
+                          unsigned ma_flags)
+{   int n;
+    
+    n = q_what_requires(db, dbpkgs, PMTAG_REQ, cap, exclude, ldflags, ma_flags);
+    if (n == 0 && capreq_isdir(cap))
+        n = q_what_requires(db, dbpkgs, PMTAG_DIRNAME, cap, exclude,
+                            ldflags, ma_flags);
+    
+    return n;
+}
 
-int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
-                        const tn_array *exclude)
+static int q_is_required(struct pkgdb *db, int tag, const struct capreq *cap,
+                         const tn_array *exclude)
 {
     struct pkgdb_it it;
     const struct pm_dbrec *dbrec;
@@ -651,16 +667,17 @@ int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
 
     if (*capreq_name(cap) == '/')
         ldflags |= PKG_LDFL_DEPDIRS;
-    
-    pkgdb_it_init(db, &it, PMTAG_REQ, capreq_name(cap));
+
+    pkgdb_it_init(db, &it, tag, capreq_name(cap));
     while ((dbrec = pkgdb_it_get(&it)) != NULL) {
         struct pkg *pkg;
         
         if (exclude && dbpkg_array_has(exclude, dbrec->recno))
             continue;
-
+        DBGF_F("%s yes\n", capreq_snprintf_s(cap));
+        
         if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
-            if (pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
+            if (0 && pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
                 pkg_free(pkg);
                 
             } else {
@@ -671,4 +688,17 @@ int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
     }
     pkgdb_it_destroy(&it);
     return n;
+}
+
+
+int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
+                        const tn_array *exclude)
+{
+    if (q_is_required(db, PMTAG_REQ, cap, exclude))
+        return 1;
+
+    if (q_is_required(db, PMTAG_DIRNAME, cap, exclude))
+        return 1;
+
+    return 0;
 }

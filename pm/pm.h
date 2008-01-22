@@ -78,7 +78,8 @@ struct poldek_ts;
 int pkgdb_install(struct pkgdb *db, const char *path,
                   const struct poldek_ts *ts);
 
-int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, int strict,
+int pkgdb_match_req(struct pkgdb *db,
+                    const struct capreq *req, unsigned ma_flags,
                     const tn_array *exclude);
 
 struct pm_dbrec {
@@ -112,7 +113,8 @@ enum pkgdb_it_tag {
     PMTAG_REQ   = 3,
     PMTAG_CNFL  = 4,
     PMTAG_OBSL  = 5,
-    PMTAG_FILE  = 6
+    PMTAG_FILE  = 6,
+    PMTAG_DIRNAME  = 7
 };
 
 struct pkgdb_it {
@@ -151,7 +153,8 @@ int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
 
 int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                           const struct capreq *cap,
-                          const tn_array *exclude, unsigned ldflags, int strict);
+                          const tn_array *exclude, unsigned ldflags,
+                          unsigned ma_flags);
 
 int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
                         const tn_array *exclude);
