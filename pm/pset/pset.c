@@ -47,14 +47,16 @@
 #include "pm_pset.h"
 #include "pkgset.h"
 
+
 #define IMMUTABLE_REMOTESRC (1 << 0)
 #define IMMUTABLE_MULTISRC  (1 << 1)
+#define AUTODIRDEP          (1 << 2)
 
 struct pm_pset {
     char      *installer_path;
     tn_hash   *cnf;
     tn_array  *sources;
-    unsigned  immutable;
+    unsigned  flags;
 };
 
 
@@ -107,10 +109,13 @@ int pm_pset_configure(void *pm_pset, const char *key, void *val)
         struct source *src = val;
         n_array_push(pm->sources, val);
         if (n_array_size(pm->sources) > 1)
-            pm->immutable |= IMMUTABLE_MULTISRC;
+            pm->flags |= IMMUTABLE_MULTISRC;
         
         if (source_is_remote(src))
-            pm->immutable |= IMMUTABLE_REMOTESRC;
+            pm->flags |= IMMUTABLE_REMOTESRC;
+        
+    } else if (n_str_eq(key, "autodirdep")) {
+        pm->flags |= AUTODIRDEP;
     }
     
     return 1;
@@ -118,17 +123,19 @@ int pm_pset_configure(void *pm_pset, const char *key, void *val)
 
 int pm_pset_satisfies(void *pm_pset, const struct capreq *req)
 {
+    pm_pset = pm_pset;
     if (capreq_is_rpmlib(req))
         return 1;
 
     return 0;
 }
 
-static
-int setup_source(struct pkgset *ps, struct source *src)
+static int setup_source(const struct pm_pset *pm,
+                        struct pkgset *ps, struct source *src)
 {
     struct pkgdir *dir;
-
+    unsigned ldflags = 0;
+    
     if ((dir = pkgdir_srcopen(src, 0)) == NULL) {
         if (!source_is_type(src, "dir") && util__isdir(src->path)) {
             logn(LOGNOTICE, _("trying to scan directory %s..."), src->path);
@@ -140,8 +147,10 @@ int setup_source(struct pkgset *ps, struct source *src)
     if (dir == NULL)
         return 0;
 
-    /* full file list is required to resolve auto-dir deps */
-    if (!pkgdir_load(dir, NULL, PKGDIR_LD_FULLFLIST)) {
+    if (pm->flags & AUTODIRDEP)
+        ldflags = PKGDIR_LD_DIRINDEX;
+
+    if (!pkgdir_load(dir, NULL, ldflags)) {
         pkgdir_free(dir);
         return 0;
     }
@@ -182,7 +191,7 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
 
     for (i=0; i < n_array_size(pm->sources); i++) {
         struct source *src = n_array_nth(pm->sources, i);
-        if (!setup_source(ps, src))
+        if (!setup_source(pm, ps, src))
             iserr = 1;
     }
     
@@ -194,7 +203,7 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
 
     /*  */
     recno = 1;
-    for (i=0; i<n_array_size(ps->pkgs); i++) {
+    for (i=0; i < n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         pkg->recno = recno++;
     }
@@ -375,6 +384,7 @@ int psetdb_it_init(struct pm_psetdb *db, struct psetdb_it *it,
             break;
             
         case PMTAG_FILE:
+        case PMTAG_DIRNAME:
             pstag = PS_SEARCH_FILE;
             break;
 
@@ -614,24 +624,21 @@ static void dumpdir(struct pkgdir *pkgdir)
 }
 #endif
 
-static int is_immutable(unsigned immutable, const char *oplabel) 
+static int is_immutable(struct pm_pset *pm, const char *oplabel) 
 {
     char reason[64];
     int n = 0;
     
-    if (immutable == 0)
-        return 0;
-
-    if (immutable & IMMUTABLE_REMOTESRC)
+    if (pm->flags & IMMUTABLE_REMOTESRC)
         n += n_snprintf(&reason[n], sizeof(reason) - n, "remote source");
 
-    if (immutable & IMMUTABLE_MULTISRC)
+    if (pm->flags & IMMUTABLE_MULTISRC)
         n += n_snprintf(&reason[n], sizeof(reason) - n, "%smultiple sources",
                         n > 0 ? ", " : "");
-    
-    logn(LOGERR, "'pset' database is immutable (%s), %s refused",
-         reason, oplabel);
-    return 1;
+    if (n > 0)
+        logn(LOGERR, "'pset' database is immutable (%s), %s refused",
+             reason, oplabel);
+    return n;
 }
 
 int pm_pset_packages_install(struct pkgdb *pdb, const tn_array *pkgs,
@@ -647,7 +654,7 @@ int pm_pset_packages_install(struct pkgdb *pdb, const tn_array *pkgs,
         return 1;
 
     n_assert(ts->getop(ts, POLDEK_OP_TEST) == 0);
-    if (is_immutable(db->pm->immutable, "installation"))
+    if (is_immutable(db->pm, "installation"))
         return 0;
     
 #if 0   /* playing with recno -- a mess... */
@@ -725,7 +732,7 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb, const tn_array *pkgs,
         return 1;
 
     n_assert(ts->getop(ts, POLDEK_OP_TEST) == 0);
-    if (is_immutable(db->pm->immutable, "removal"))
+    if (is_immutable(db->pm, "removal"))
         return 0;
     
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
