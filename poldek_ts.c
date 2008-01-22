@@ -52,12 +52,6 @@ extern int poldek_conf_MULTILIB;
 #define bitvect_clr(a, b)   ((a)[bitvect_slot(b)] &= ~(bitvect_mask(b)))
 #define bitvect_isset(a, b) ((a)[bitvect_slot(b)] & bitvect_mask(b))
 
-extern int poldek_term_confirm(int default_answer, const char *msg);
-extern int poldek_term_ts_confirm(const struct poldek_ts *ts);
-extern int poldek_term_choose_pkg(const char *capname, tn_array *pkgs,
-                                  struct pkg *hint);
-
-
 extern int do_poldek_ts_install_dist(struct poldek_ts *ts);
 extern int do_poldek_ts_upgrade_dist(struct poldek_ts *ts);
 extern int do_poldek_ts_uninstall(struct poldek_ts *ts);
