@@ -1,5 +1,5 @@
 /* 
-  Copyright (C) 2000 Pawel A. Gajda (mis@k2.net.pl)
+  Copyright (C) 2000 - 2008 Pawel A. Gajda (mis@pld-linux.org)
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
@@ -89,13 +89,12 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
 #endif        
         
     } else {
-        register int i;
-
         if (ent->_size == 1)    /* crent_pkgs is NOT allocated */
             capreq_idx_ent_transform_to_array(ent);
 
 #if 0                           /* not happens in fact */
         if (idx->flags & CAPREQ_IDX_CAP) { /* check for duplicates */
+            register int i;
             for (i=0; i < ent->items; i++) { 
                 if (pkg == ent->crent_pkgs[i])
                     return 1;
