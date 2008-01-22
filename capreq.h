@@ -14,7 +14,6 @@
 #define REL_EQ	    (1 << 0)
 #define REL_GT	    (1 << 1)
 #define REL_LT	    (1 << 2)
-
 #define REL_ALL     (REL_EQ | REL_GT | REL_LT)
 
 #if 0  /* unused */
@@ -25,18 +24,17 @@
 #define CAPREQ_CNFL     (1 << 2)
 
 /* sub types */
-#define CAPREQ_PREREQ      (1 << 3)        /* '*' prefix */
-#define CAPREQ_PREREQ_UN   (1 << 4)        /* '^' prefix */
+#define CAPREQ_PREREQ      (1 << 3)        /* Requires(pre) */
+#define CAPREQ_PREREQ_UN   (1 << 4)        /* Requires(un)  */
+#define CAPREQ_OBCNFL      CAPREQ_PREREQ   /* Obsoletes     */
 
-#define CAPREQ_OBCNFL      CAPREQ_PREREQ   /* alias, for obsolences */
+#define CAPREQ_RPMLIB      (1 << 5)  /* rpmlib(...) */
 
-#define CAPREQ_RPMLIB            (1 << 5)  /* rpmlib(...) */
-
-#define CAPREQ_RPMLIB_SATISFIED  (1 << 6)  /* is rpmlib provides rpmlib(...)? */
-#define CAPREQ_BASTARD           (1 << 7)  /* capreq added by poldek */
+#define CAPREQ_ISDIR       (1 << 6)  /* */
+#define CAPREQ_BASTARD     (1 << 7)  /* capreq added by poldek */
 
 /* 'runtime' i.e. not storable flags  */
-#define CAPREQ_RT_FLAGS    (CAPREQ_RPMLIB_SATISFIED | CAPREQ_BASTARD)
+#define CAPREQ_RT_FLAGS    (CAPREQ_ISDIR | CAPREQ_BASTARD)
 
 struct capreq {
     uint8_t  cr_flags;
@@ -71,7 +69,6 @@ extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_has_rel(cr)      (cr)->cr_rel_ofs
 #define capreq_versioned(cr)    ((cr)->cr_relflags & (REL_ALL))
 
-
 #define capreq_is_cnfl(cr)      ((cr)->cr_flags & CAPREQ_CNFL)
 #define capreq_is_prereq(cr)    ((cr)->cr_flags & CAPREQ_PREREQ)
 #define capreq_is_prereq_un(cr) ((cr)->cr_flags & CAPREQ_PREREQ_UN)
@@ -80,14 +77,13 @@ extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_is_file(cr)        (*(cr)->name == '/')
 #define capreq_isnot_file(cr)     (*(cr)->name != '/')
 
+#define capreq_isdir(cr)        ((cr)->cr_flags & CAPREQ_ISDIR)
+#define capreq_set_isdir(cr)    ((cr)->cr_flags |= CAPREQ_ISDIR)
 
 #define capreq_is_bastard(cr)     ((cr)->cr_flags & CAPREQ_BASTARD)
 #define capreq_is_autodirreq(cr)  (capreq_is_bastard(cr) && capreq_is_file(cr))
 
 #define capreq_is_rpmlib(cr)     ((cr)->cr_flags & CAPREQ_RPMLIB)
-#define capreq_set_satisfied(cr)  ((cr)->cr_flags |= CAPREQ_RPMLIB_SATISFIED)
-#define capreq_clr_satisfied(cr)  ((cr)->cr_flags &= (~CAPREQ_RPMLIB_SATISFIED))
-#define capreq_is_satisfied(cr)  ((cr)->cr_flags & CAPREQ_RPMLIB_SATISFIED)
 
 #define capreq_revrel(cr) ((cr)->cr_relflags = (cr)->cr_relflags ? \
                           (((uint8_t)~cnfl->cr_relflags) & REL_ALL) : (cr)->cr_relflags)
