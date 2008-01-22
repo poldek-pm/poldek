@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -536,7 +536,7 @@ int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs)
             nconflicts++;
         }
     }
-    
+    n_array_free(paths);
     msgn(0, "%d file conflicts found", nconflicts);
     return nconflicts;
 }
