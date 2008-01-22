@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -468,7 +468,7 @@ tn_array *find_capreq(struct pkgset *ps, tn_array *pkgs,
 }
 
 static
-tn_array *do_search_reqdir(struct pkgset *ps, tn_array *pkgs, const char *dir)
+tn_array *do_search_provdir(struct pkgset *ps, tn_array *pkgs, const char *dir)
 {
     tn_array *tmp = pkgs_array_new(32);
     int i, pkgs_passsed = 1;
@@ -511,9 +511,9 @@ tn_array *do_search_reqdir(struct pkgset *ps, tn_array *pkgs, const char *dir)
     return pkgs;
 }
 
-tn_array *pkgset_search_reqdir(struct pkgset *ps, const char *dir)
+tn_array *pkgset_search_provdir(struct pkgset *ps, const char *dir)
 {
-    return do_search_reqdir(ps, NULL, dir);
+    return do_search_provdir(ps, NULL, dir);
 }
 
 tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
@@ -568,7 +568,8 @@ tn_array *pkgset_search(struct pkgset *ps, enum pkgset_search_tag tag,
                         n_array_push(pkgs, pkg_link(buf[i]));
 
                 } else {
-                    do_search_reqdir(ps, pkgs, value);
+                    DBGF("s %s\n", value);
+                    do_search_provdir(ps, pkgs, value);
                 }
             }
             break;

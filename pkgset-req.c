@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld.org.pl>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -32,7 +32,7 @@
 #include "fileindex.h"
 
 extern int poldek_conf_MULTILIB;
-extern tn_array *pkgset_search_reqdir(struct pkgset *ps, const char *dir);
+extern tn_array *pkgset_search_provdir(struct pkgset *ps, const char *dir);
 
 void *pkg_na_malloc(struct pkg *pkg, size_t size);
 
@@ -324,7 +324,7 @@ static int psreq_lookup(struct pkgset *ps, const struct capreq *req,
             
         } else {                /* n is 0 */
             tn_array *pkgs;
-            if ((pkgs = pkgset_search_reqdir(ps, reqname))) {
+            if ((pkgs = pkgset_search_provdir(ps, reqname))) {
                 int i;
                 n = 0;
 
@@ -375,7 +375,6 @@ static int psreq_lookup(struct pkgset *ps, const struct capreq *req,
 
     if (!matched && pkgset_pm_satisfies(ps, req)) {
         matched = 1;
-        capreq_set_satisfied((struct capreq*)req); /* XXX */
         msgn(4, " req %-35s --> PM_CAP", capreq_snprintf_s(req));
         
         *suspkgs = NULL;
