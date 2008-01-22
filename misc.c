@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -524,7 +524,7 @@ const char *poldek_util_expand_env_vars(char *dest, int size, const char *str)
 
 char *util__abs_path(const char *path) 
 {
-    if (strstr(path, "./") == NULL)
+    if (n_str_ne(path, ".") && strstr(path, "./") == NULL)
         return NULL;
     
 #ifdef HAVE_CANONICALIZE_FILE_NAME /* have safe GNU ext? */
@@ -708,7 +708,6 @@ int poldek_util_parse_bool3(const char *v)
     return rv;
 }
 
-    
 char *strtime_(time_t t) 
 {
     char buf[128];
