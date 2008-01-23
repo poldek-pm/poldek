@@ -5,6 +5,8 @@
 . ./sh/lib/repo-setup
 
 ORIGREPO=
+DESTINATION_REPO=
+DEPENDENCY_SOLVER=3
 
 tearDown() {
     #[ -n "$REPO" ] && rm -f $REPO/*.*
@@ -13,16 +15,25 @@ tearDown() {
 setUp() {
     [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
     [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
-    REPO="$ORIGREPO/$SU_FUNC"
-    rm -rf $REPO
+    rm -rf $ORIGREPO/*
+
+    REPO="$ORIGREPO/src"
+    DESTINATION_REPO="$ORIGREPO/dest";
+
+    rm -rf $REPO $DESTINATION_REPO
+    
     mkdir -p $REPO || fail "mkdir $REPO failed"
+    mkdir -p $DESTINATION_REPO || fail "mkdir $DESTINATION_REPO failed"
+    # provide /bin/sh auto requirement
+    build_installed sh -p /bin/sh
 }
 
 
 PACKAGE_DIR="$REPO"
 DEFAULT_VER="1-1"
 
-build() {
+do_build_package() {
+  destdir=$1; shift
   name=$1; shift
   version=""
 
@@ -40,19 +51,33 @@ build() {
   
   params=""
   [ $# -gt 0 ] && params="$@";  
-  #eval ./build-test-rpm.sh -d $REPO -n $name -v $version $params
-  eval ./build-test-rpm.sh -d $REPO -n $name -v $version $params >/dev/null 2>&1 || fail "build package $name failed"
+  #eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params
+  eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >/dev/null 2>&1 || fail "build package $name failed"
+} 
+
+build() {
+   do_build_package $REPO $@
+}
+
+build_installed() {
+   do_build_package $DESTINATION_REPO $@
 } 
 
 # install "a" package, check result against expected arg
-try_install_a() {
-  expected="$1"
-
+try_install() {
+  package="$1"; shift  
+  expected="$1"; shift
+  poldek_options=""
+  [ $# -gt 0 ] && poldek_options="$@";  
   regexp=$(echo $expected | sed 's/,/|/g')
   n_expected=$(echo $expected | sed 's|,|\n|g' | wc -l)
 
-  cmd="$POLDEK_NOCONF -Odependency_solver=3 --st dir -s $REPO -uvt a"
+  cmd="$POLDEK_NOCONF -Odependency_solver=3 --noask $poldek_options"
+  cmd="$cmd --st dir -s $REPO --dt dir --destination $DESTINATION_REPO"
+  cmd="$cmd -uvt $package"
+
   if is_verbose_mode; then
+      echo $cmd  
       $cmd || fail "'poldek -uvt a' failed"
   else
       $cmd >/dev/null 2>&1 || fail "'poldek -uvt a' failed"
@@ -65,9 +90,12 @@ try_install_a() {
   assertEquals "not all or non expected packages installed (expected $expected)" "$n" "$n_expected"
 }
 
+try_install_a() {
+    try_install "a" $@
+}
+
 # 'c' has unmet requirement
-testChooseTheRightAlternative_1() 
-{
+testChooseTheRightAlternative_1() {
   build a -r "CAP"
   build c -p "CAP" -r "unmetreq"
   build d -p "CAP"      
@@ -75,8 +103,7 @@ testChooseTheRightAlternative_1()
 }
 
 # 'd' should be choosen instead of non-resolvable 'c'
-testChooseTheRightAlternative_2() 
-{
+testChooseTheRightAlternative_2() {
   build a -r "b"
   build b -r "CAP"
   build c -p "CAP" -r "unmetreq"
@@ -84,8 +111,20 @@ testChooseTheRightAlternative_2()
   try_install_a "a,b,d"  
 }
 
-# first, but wrong resolved set is: a,b,c,e,g   
+# as above, but 'c' has more (solvable) requirements    
 testChooseTheRightAlternative_3() {
+  build a -r "b"
+  build b -r "CAP" 
+  build c -p "CAP" -r "foo" -r "bar" -r "unmetreq" -r "zfoo"
+  build d -p "CAP"      
+  build foo
+  build bar  
+  build zfoo
+  try_install_a "a,b,d"  
+}
+
+# first, but wrong resolved set is: a,b,c,e,g   
+testChooseTheRightAlternative_4() {
   build a  -r "b"  
   build b  -r "CAP"
 
@@ -100,6 +139,7 @@ testChooseTheRightAlternative_3() {
 
   try_install_a "a,b,d,f,h"
 }
+
 
 # package 'x' provides all 'a' requirements
 testChooseMoreAccuratePackage() {
@@ -127,6 +167,68 @@ testRedundantRequirement() {
   build b 2-1
   build b 1-1      
   try_install_a "a,b\-1"
+}
+
+testSuggests() {
+    build_installed suggested
+    build a -s "suggested" -s "b" -s "c"
+    build b
+    build c
+    POLDEK_TESTING_WITH_SUGGESTS="all" # choose all suggested packages
+    export POLDEK_TESTING_WITH_SUGGESTS
+    try_install_a "a,b,c" 
+
+    POLDEK_TESTING_WITH_SUGGESTS="2" # choose b only (1st installable suggested package)
+    try_install_a "a,b" 
+    POLDEK_TESTING_WITH_SUGGESTS=
+}
+
+testUpgradeSet() {
+    prev_i=
+    for i in b c d e f a; do 
+        build_installed $i 1-1
+        if [ -z "$prev_i" ]; then
+           build_installed $i 1-1
+           build $i 2-2
+        else
+           build_installed $i 1-1 -r "'$prev_i = 1-1'"
+           build $i 2-2 -r "'$prev_i = 2-2'"
+        fi
+        prev_i=$i
+    done    
+        
+    try_install_a "a,b,c,d,e,f" 
+}
+
+# all 'a*' must be upgraded at once
+testUpgradeGreedy() {
+    for i in "1-1" "2-2"; do
+        build a $i
+        build a-devel $i -r "'a = $i'"
+        build a-static $i -r "'a-devel = $i'"
+    done    
+    mv $REPO/a*1-1*.rpm $DESTINATION_REPO || fail "mv failed"
+    try_install a "a,a-devel,a-static"
+    try_install a-devel "a,a-devel,a-static"
+    try_install a-static "a,a-devel,a-static"
+}
+
+# bar obsoletes foo
+testUpgradeObsolete() {
+    build_installed a 1-1
+    build_installed a-devel 1-1 -r "'a = 1-1'"
+    build_installed a-static 1-1 -r "'a-devel = 1-1'"
+    build_installed foo 1-1 -r "'a = 1-1'" -p "FOO" -o "FOO"
+
+    build a 2-2
+    build a-devel 2-2 -r "'a = 2-2'"
+    build a-static 2-2 -r "'a-devel = 2-2'"
+    build afoo 1-1 -p "FOO" -o "FOO" -o foo
+    build bar 1-1 -o "foo"
+
+    try_install a "a,a-devel,a-static,bar"
+
+    #try_install bar "a,a-devel,a-static,bar"
 }
 
 . ./sh/lib/shunit2

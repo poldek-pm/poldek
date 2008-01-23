@@ -1,0 +1,18 @@
+poldek test suite
+
+To run all tests:
+
+$ make check  # runs all tests made with check library
+$ make sheck  # runs all tests written in shell (sh/ subdir)
+
+
+sh/ test scripts may be executed separately:
+
+$ ./sh/07-depsolver -h
+
+Particular tests may be choosen:
+
+$ ./sh/07-depsolver -v --runtest testSuggests
+
+
+
