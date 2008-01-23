@@ -122,7 +122,7 @@ const struct vf_module *select_vf_module(const char *path)
 
 static
 int do_vfile_req(int reqtype, const struct vf_module *mod,
-                 struct vf_request *req)
+                 struct vf_request *req, unsigned vf_flags)
 {
     struct stat             st;
     int                     rc = 0, vf_errno = 0;
@@ -132,7 +132,8 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
     
     if (reqtype == REQTYPE_FETCH) {
         n_assert(req->bar == NULL);
-        req->bar = vf_progress_new(req->url);
+        if ((vf_flags & VF_FETCH_NOPROGRESS) == 0)
+            req->bar = vf_progress_new(req->url);
     }
     
     if (vfile_conf.flags & VFILE_CONF_STUBBORN_RETR)
@@ -154,7 +155,8 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
 
         switch (reqtype) {
             case REQTYPE_FETCH:
-                vf_progress_reset(req->bar);
+                if (req->bar)
+                    vf_progress_reset(req->bar);
                 rc = mod->fetch(req);
                 break;
                 
@@ -218,6 +220,10 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
     struct vf_request       *req = NULL;
     char                    destpath[PATH_MAX];
     int                     rc = 0;
+
+    
+    if (*vfile_verbose <= 0)
+        flags |= VF_FETCH_NOLABEL|VF_FETCH_NOPROGRESS;
     
     *ftrc = VF_FETCHRC_NIL;
     if (dest_dir)
@@ -232,7 +238,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
     n_assert(destdir);
     
     if ((mod = select_vf_module(url)) == NULL) { /* no internal module found */
-        if (*vfile_verbose >= 0 && (flags & VF_FETCH_NOLABEL) == 0) {
+        if ((flags & VF_FETCH_NOLABEL) == 0) {
             if (urlabel)
                 vf_loginfo(_("Retrieving %s::%s...\n"), urlabel,
                            n_basenam(url));
@@ -291,7 +297,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
         }
     }
 
-    if (*vfile_verbose >= 0 && (flags & VF_FETCH_NOLABEL) == 0) {
+    if ((flags & VF_FETCH_NOLABEL) == 0) {
         if (urlabel)
             vf_loginfo(_("Retrieving %s::%s...\n"), urlabel,
                        n_basenam(req->url));
@@ -299,7 +305,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
             vf_loginfo(_("Retrieving %s...\n"), PR_URL(req->url));
     }
             
-    if ((rc = do_vfile_req(REQTYPE_FETCH, mod, req)) == 0) {
+    if ((rc = do_vfile_req(REQTYPE_FETCH, mod, req, flags)) == 0) {
         if ((req->flags & VF_REQ_INT_REDIRECTED) == 0) {
             vfile_set_errno(mod->vfmod_name, req->req_errno);
                 
@@ -337,8 +343,11 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
 {
     const struct vf_module *mod = NULL;
     struct vf_request *req = NULL;
-    unsigned urltype = 0;
+    unsigned urltype = 0, flags = 0;
     int rc = 0;
+
+    if (*vfile_verbose <= 0)
+        flags |= VF_FETCH_NOLABEL|VF_FETCH_NOPROGRESS;
     
     if ((req = vf_request_new(url, NULL)) == NULL)
         return 0;
@@ -354,9 +363,11 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
         vf_logerr("%s: could not find \"stat\" handler", req->proto);
     
     else {
-        vf_loginfo(_("Retrieving status of %s...\n"),
-                   urlabel ? urlabel : PR_URL(req->url));
-        if ((rc = do_vfile_req(REQTYPE_STAT, mod, req))) {
+        if ((flags & VF_FETCH_NOLABEL) == 0)
+            vf_loginfo(_("Retrieving status of %s...\n"),
+                       urlabel ? urlabel : PR_URL(req->url));
+        
+        if ((rc = do_vfile_req(REQTYPE_STAT, mod, req, flags))) {
             vfstat->vf_size = req->st_remote_size > 0 ? req->st_remote_size : 0;
             vfstat->vf_mtime = req->st_remote_mtime > 0 ? req->st_remote_mtime : 0;
             

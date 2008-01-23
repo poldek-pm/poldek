@@ -250,8 +250,10 @@ int do_vfn(const struct do_fn *dofn, struct vf_request *req,
         vreq.out_path = req->destpath;
         vreq.out_fd = req->dest_fd;
         vreq.out_fdoff = req->dest_fdoff;
-        vreq.progress_fn_data = req->bar;
-        vreq.progress_fn = vf_progress;
+        if (req->bar) {
+            vreq.progress_fn_data = req->bar;
+            vreq.progress_fn = vf_progress;
+        }
     }
     
     *vreq.redirected_to = '\0';
