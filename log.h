@@ -140,13 +140,13 @@ void poldek_meminf(int vlevel, const char *fmt, ...);
 # define tracef(indent, fmt, args...)                                   \
     do {                                                                \
         if (poldek_TRACE > 0)                                           \
-            log_i(LOGINFO|LOGOPT_N, indent, "%s() " fmt, __FUNCTION__, ## args); \
+            log_i(LOGDEBUG|LOGOPT_N, indent, "%s() " fmt, __FUNCTION__, ## args); \
     } while(0)
                 
 # define trace(indent, fmt, args...)                                    \
     do {                                                                \
         if (poldek_TRACE > 0)                                           \
-            log_i(LOGINFO|LOGOPT_N, indent, fmt, ## args);              \
+            log_i(LOGDEBUG|LOGOPT_N, indent, fmt, ## args);              \
     } while(0)
     
 

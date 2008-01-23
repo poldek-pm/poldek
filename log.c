@@ -256,7 +256,10 @@ static void vlog_tty(void *foo, int pri, const char *fmt, va_list args)
         n = poldek_term_snprintf_c(PRCOLOR_YELLOW | PRAT_BOLD, buf, sizeof(buf),
                                    _("notice: "));
 
+    else if (pri & LOGDEBUG)
+        n = n_snprintf(buf, sizeof(buf), ":");
     
+            
     if (n > 0)
         fprintf(stdout, "%s", buf);
 
