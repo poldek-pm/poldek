@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -587,7 +587,7 @@ static int q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
     const char *value = capreq_name(cap);
     int n = 0;
 
-    DBGF_F("%s\n", value);
+    DBGF("%s\n", value);
     
     pkgdb_it_init(db, &it, tag, value);
     while ((dbrec = pkgdb_it_get(&it)) != NULL) {
@@ -598,7 +598,7 @@ static int q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
         
 #if ENABLE_TRACE        
         pkg = load_pkg(NULL, db, dbrec, ldflags);
-        DBGF_F("%s <- %s ????\n", capreq_name(cap), pkg_snprintf_s(pkg));
+        DBGF("%s <- %s ????\n", capreq_name(cap), pkg_snprintf_s(pkg));
 #endif        
         if (dbpkg_array_has(dbpkgs, dbrec->recno))
             continue;
@@ -606,7 +606,7 @@ static int q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
         //DBGF("%s <- %s ??\n", capreq_name(cap), pkg_snprintf_s(pkg));
         
         if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
-            DBGF_F("%s required by %s ? %s\n", capreq_name(cap), pkg_id(pkg),
+            DBGF("%s required by %s? => %s\n", capreq_name(cap), pkg_id(pkg),
                    pkg_satisfies_req(pkg, cap, 1) ? "no" : "yes");
             
             if (pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
@@ -614,12 +614,12 @@ static int q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                 
             } else if (capreq_versioned(cap) && /* old !strict */
                        !pkg_requires_cap(pkg, cap)) {
-                DBGF_F("skipped %s (%s is not really required)\n", pkg_id(pkg),
-                       capreq_snprintf_s(cap));
+                DBGF("skipped %s (%s is not really required)\n", pkg_id(pkg),
+                     capreq_snprintf_s(cap));
                 pkg_free(pkg);
                 
             } else {
-                DBGF_F("%s <- %s\n", capreq_snprintf_s(cap), pkg_id(pkg));
+                DBGF("%s <- %s\n", capreq_snprintf_s(cap), pkg_id(pkg));
                 n_array_push(dbpkgs, pkg);
                 n_array_isort(dbpkgs);
                 n++; 
@@ -674,7 +674,7 @@ static int q_is_required(struct pkgdb *db, int tag, const struct capreq *cap,
         
         if (exclude && dbpkg_array_has(exclude, dbrec->recno))
             continue;
-        DBGF_F("%s yes\n", capreq_snprintf_s(cap));
+        DBGF("%s yes\n", capreq_snprintf_s(cap));
         
         if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
             if (0 && pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
