@@ -115,11 +115,11 @@ void capreq_free(struct capreq *cr);
 
 struct capreq *capreq_clone(tn_alloc *na, const struct capreq *cr);
 
-int capreq_strcmp_evr(struct capreq *pr1, struct capreq *pr2);
-int capreq_strcmp_name_evr(struct capreq *pr1, struct capreq *pr2);
+int capreq_strcmp_evr(const struct capreq *pr1, const struct capreq *pr2);
+int capreq_strcmp_name_evr(const struct capreq *pr1, const struct capreq *pr2);
 
-int capreq_cmp_name(struct capreq *cr1, struct capreq *cr2);
-int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2);
+int capreq_cmp_name(const struct capreq *cr1, const struct capreq *cr2);
+int capreq_cmp_name_evr(const struct capreq *cr1, const struct capreq *cr2);
 
 #ifndef SWIG
 tn_array *capreq_arr_new(int size);

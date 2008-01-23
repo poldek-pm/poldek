@@ -92,19 +92,19 @@ void capreq_free(struct capreq *cr)
 
 
 __inline__
-int capreq_cmp_name(struct capreq *cr1, struct capreq *cr2) 
+int capreq_cmp_name(const struct capreq *cr1, const struct capreq *cr2) 
 {
     return strcmp(capreq_name(cr1), capreq_name(cr2));
 }
 
 __inline__ static
-int capreq_cmp2name(struct capreq *cr1, const char *name)
+int capreq_cmp2name(const struct capreq *cr1, const char *name)
 {
     return strcmp(capreq_name(cr1), name);
 }
 
 __inline__ static
-int capreq_cmp_evr(struct capreq *cr1, struct capreq *cr2) 
+int capreq_cmp_evr(const struct capreq *cr1, const struct capreq *cr2) 
 {
     register int rc;
     
@@ -127,7 +127,7 @@ int capreq_cmp_evr(struct capreq *cr1, struct capreq *cr2)
 }
 
 __inline__
-int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2) 
+int capreq_cmp_name_evr(const struct capreq *cr1, const struct capreq *cr2) 
 {
     register int rc;
 
@@ -138,7 +138,7 @@ int capreq_cmp_name_evr(struct capreq *cr1, struct capreq *cr2)
 }
 
 __inline__
-int capreq_strcmp_evr(struct capreq *cr1, struct capreq *cr2) 
+int capreq_strcmp_evr(const struct capreq *cr1, const struct capreq *cr2) 
 {
     register int rc;
 
@@ -156,7 +156,7 @@ int capreq_strcmp_evr(struct capreq *cr1, struct capreq *cr2)
 }
 
 __inline__
-int capreq_strcmp_name_evr(struct capreq *cr1, struct capreq *cr2) 
+int capreq_strcmp_name_evr(const struct capreq *cr1, const struct capreq *cr2) 
 {
     register int rc;
 
