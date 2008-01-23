@@ -288,7 +288,12 @@ const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it);
 
 struct pkg_req_iter *pkg_req_iter_new(const struct pkg *pkg, unsigned flags);
 void pkg_req_iter_free(struct pkg_req_iter *it);
+
+/* get next requirement */
 const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it);
+
+/* and its type PKG_ITER_* */
+unsigned pkg_req_iter_current_req_type(const struct pkg_req_iter *it);
 
 
 #endif

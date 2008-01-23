@@ -101,8 +101,9 @@ const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it)
 
 /* requirements iterator */
 struct pkg_req_iter {
-    const struct pkg       *pkg;
+    const struct pkg *pkg;
     unsigned         flags;
+    unsigned         current_req_type;
 
     int              nreq;
     int              nsug;
@@ -119,6 +120,7 @@ struct pkg_req_iter *pkg_req_iter_new(const struct pkg *pkg, unsigned flags)
 
     if (flags == 0)
         flags = PKG_ITER_REQIN;
+    it->current_req_type = 0;
 
     it->flags = flags;
     it->req = NULL;
@@ -138,6 +140,8 @@ const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it)
 {
     struct capreq *req;
     
+    it->current_req_type = 0;   /* reset type */
+    
     if (it->pkg->reqs && it->nreq < n_array_size(it->pkg->reqs)) {
         req = n_array_nth(it->pkg->reqs, it->nreq);
         it->nreq++;
@@ -147,6 +151,12 @@ const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it)
 
         else if ((it->flags & PKG_ITER_REQUN) == 0 && capreq_is_prereq_un(req))
             return pkg_req_iter_get(it);
+
+        /* set type of returned (current) req */
+        if (capreq_is_prereq_un(req))
+            it->current_req_type = PKG_ITER_REQUN;
+        else
+            it->current_req_type = PKG_ITER_REQIN;
         
         return req;
     }
@@ -154,6 +164,7 @@ const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it)
     if ((it->flags & PKG_ITER_REQSUG)) {
         if (it->pkg->sugs && it->nsug < n_array_size(it->pkg->sugs)) {
             req = n_array_nth(it->pkg->sugs, it->nsug);
+            it->current_req_type = PKG_ITER_REQSUG;
             it->nsug++;
 
             return req;
@@ -188,9 +199,16 @@ const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it)
         it->ndir++;
         it->req = capreq_new(NULL, tmp, 0, NULL, NULL, 0,
                              CAPREQ_BASTARD | CAPREQ_ISDIR);
+        it->current_req_type = PKG_ITER_REQIN;/* autodirdeps are always REQIN */
         return it->req;
     }
     
     return NULL;
+}
+
+unsigned pkg_req_iter_current_req_type(const struct pkg_req_iter *it)
+{
+    n_assert(it->current_req_type > 0);
+    return it->current_req_type;
 }
 
