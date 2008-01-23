@@ -1,0 +1,13 @@
+/** @mainpage 
+This is a sort of poor C programmer's Log4J. It lacks many features. But, in
+true C-hacker spirit, it is even more efficient. This is critical, since I plan
+to use it in some real-time, embedded software.
+
+All the documentation is in log4c.h.
+
+Take a look at test_log4c.c for a short usage example.
+
+The Sovereign
+Bit Farm, Inc.
+mgm@bitfarminc.com
+*/
