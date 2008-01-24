@@ -74,11 +74,8 @@ static struct argp_option source_options[] = {
        N_("Set the type of index specified by --destination option"),
        OPT_GID },                                                  
                                                   
-{"destination", OPT_DEST, "PATH", OPTION_HIDDEN, /* NFY */
+{"destination", OPT_DEST, "PATH", 0,
     N_("Install to specified destination"), OPT_GID },
-
-{"install-dest", 0, 0, OPTION_HIDDEN | OPTION_ALIAS, 
-    N_("Install to specified destination"), OPT_GID },                                                  
 
 
 {"dn", OPT_DEST_NAME, "SOURCE-NAME", 0,
