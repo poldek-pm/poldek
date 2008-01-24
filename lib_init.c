@@ -1593,8 +1593,9 @@ static int setup_pm(struct poldek_ctx *ctx)
         }
 
         if (ctx->pmctx) {
-            ctx->ts->setop(ctx->ts, POLDEK_OP_CONFLICTS, 0);
-            ctx->ts->setop(ctx->ts, POLDEK_OP_OBSOLETES, 0);
+            if (poldek_VERBOSE > 1)
+                logn(LOGNOTICE, "Depends on your destination repository you may need "
+                     "to disable conflicts and/or obsoletes processing");
         }
         
     } else {
