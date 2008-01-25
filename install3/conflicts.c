@@ -184,7 +184,7 @@ int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
         if (ht && n_hash_exists(ht, dbpkg->name))
             continue;
 
-        if (poldek_conf_MULTILIB && !pkg_is_colored_like(pkg, dbpkg))
+        if (!pkg_is_colored_like(pkg, dbpkg))
             continue;
                 
         if (pkg_match_req(dbpkg, cnfl, 1)) {
