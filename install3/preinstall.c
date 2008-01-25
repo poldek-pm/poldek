@@ -182,6 +182,7 @@ int i3_pre_ts_install(struct poldek_ts *ts, tn_array **pkgs)
 {
     int i;
 
+    tracef(0, "start");
     n_assert(*pkgs == NULL);
     n_assert(ts->type == POLDEK_TS_INSTALL);
 
@@ -213,6 +214,7 @@ int i3_pre_ts_install(struct poldek_ts *ts, tn_array **pkgs)
             pkg_mark_i(ts->pms, pkg);
             n_array_push(*pkgs, pkg_link(pkg));
         }
+        trace(2, "- %s %s\n", installable ? "added  " : "omitted", pkg_id(pkg));
     }
     
     if (n_array_size(*pkgs) == 0) {
