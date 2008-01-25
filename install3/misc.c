@@ -29,23 +29,22 @@ int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc)
         return 0;
     }
     
-    //pkgs_array_dump(dbpkgs, "before_multilib");
-    if (poldek_conf_MULTILIB) {
+    if (poldek_conf_MULTILIB) { /* filter out different architectures */
         int i;
         tn_array *arr = n_array_clone(dbpkgs);
 
-        DBGF("pkg = %s\n", pkg_id(pkg));
+        //DBGF("pkg = %s\n", pkg_id(pkg));
+        //pkgs_array_dump(dbpkgs, "before_multilib");
         for (i=0; i < n_array_size(dbpkgs); i++) {
             struct pkg *dbpkg = n_array_nth(dbpkgs, i);
-            
-            if (pkg_is_kind_of(pkg, dbpkg))
+            if (pkg_is_kind_of(dbpkg, pkg))
                 n_array_push(arr, pkg_link(dbpkg));
         }
-
+        
         n_array_cfree(&dbpkgs);
         dbpkgs = arr;
         n = n_array_size(arr);
-        //pkgs_array_dump(arr, "after_multilib");
+        //pkgs_array_dump(dbpkgs, "after_multilib");
     }
 
     if (n) {
@@ -292,7 +291,7 @@ int i3_select_best_pkg(int indent, struct i3ctx *ictx,
 }
 
 struct pkg *i3_select_successor(int indent, struct i3ctx *ictx,
-                                 const struct pkg *pkg)
+                                const struct pkg *pkg)
 {
     const struct pkg *selected_pkg = NULL;
     tn_array *pkgs;
