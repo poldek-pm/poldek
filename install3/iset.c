@@ -122,7 +122,7 @@ int iset_remove(struct iset *iset, struct pkg *pkg)
             if (!poldek_conf_MULTILIB)
                 break;
             
-            if (pkg_is_colored_like(p, pkg))
+            if (pkg_cmp_arch(p, pkg) == 0)
                 break;
         }
     }
@@ -151,7 +151,7 @@ int iset_has_pkg(struct iset *iset, const struct pkg *pkg)
         struct pkg *p = n_array_nth(iset->pkgs, i);
         if (pkg_cmp_name_evr(p, pkg) == 0) {
             if (poldek_conf_MULTILIB)
-                return pkg_is_colored_like(p, pkg);
+                return pkg_cmp_arch(p, pkg) == 0;
             else
                 return 1;
         }
