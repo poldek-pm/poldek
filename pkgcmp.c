@@ -38,6 +38,7 @@
 
 extern int poldek_conf_MULTILIB;
 
+/* same name && arch? */
 int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg)
 {
     register int rc = strcmp(pkg->name, candidate->name);
@@ -51,6 +52,7 @@ int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg)
     return rc == 0;
 }
 
+#if 0 /* XXX: disabled, rpm relies on colors only */
 int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
 {
     int rc = -1;
@@ -63,10 +65,8 @@ int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
 
     if (rc == -1 && pkg_cmp_arch(pkg, candidate) == 0) { /* no color? use arch */
         rc = 1;
-#if ENABLE_TRACE        
         DBGF("%s(c=%d), %s(c=%d) => YES\n", pkg_id(candidate),
              candidate->color, pkg_id(pkg), pkg->color);
-#endif
     }
 
     if (rc == -1)
@@ -74,7 +74,22 @@ int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
     
     return rc;
 }
+#endif
 
+int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
+{
+    if (!poldek_conf_MULTILIB)
+        return 1;
+    
+    if (pkg->color && candidate->color)
+        return pkg->color & candidate->color;
+
+    /* same name and candidate without color -> promote candidate */
+    if (pkg->color && pkg_is_kind_of(candidate, pkg)) 
+        return 1;
+
+    return 0;
+}
 
 int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr) 
 {
