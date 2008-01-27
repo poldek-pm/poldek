@@ -28,7 +28,7 @@ struct poldek_ctx {
     struct pkgset    *ps;
     struct pm_ctx    *pmctx;       /* package manager context */
     int              _rpm_tscolor; /* rpm transaction color */
-    int              _depengine;
+    int              _depsolver;
 
     /* callbacks, don't call them directly */
     void *data_confirm_fn;

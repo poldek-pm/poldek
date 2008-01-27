@@ -1656,11 +1656,11 @@ int poldek_setup(struct poldek_ctx *ctx)
 
     vfile_setup();
 
-    ctx->_depengine = 2; /* XXX: should be extracted from conf_sections.c */
+    ctx->_depsolver = 2; /* XXX: should be extracted from conf_sections.c */
     if (ctx->htconf) {
         tn_hash *htcnf = poldek_conf_get_section(ctx->htconf, "global");
-        ctx->_depengine = poldek_conf_get_int(htcnf, "dependency solver",
-                                              ctx->_depengine);
+        ctx->_depsolver = poldek_conf_get_int(htcnf, "dependency solver",
+                                              ctx->_depsolver);
     }
 
     ctx->_iflags |= SETUP_DONE;

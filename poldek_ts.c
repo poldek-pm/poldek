@@ -967,7 +967,7 @@ static int ts_run_install(struct poldek_ts *ts)
     pkgdb_tx_begin(ts->db);
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
 
-    if (ts->ctx->_depengine == 3) { /* hope, soon */
+    if (ts->ctx->_depsolver == 3) { /* hope, soon */
         msgn(5, "Running #3 dependency engine...");
         rc = i3_do_poldek_ts_install(ts);
 
