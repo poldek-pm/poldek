@@ -181,14 +181,15 @@ static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
 
     if ((p = find_successor(indent, ictx, pkg, &succ)) == NULL)
         return 0;
-
-    if (pkg_is_marked_i(ictx->ts->pms, p)) /* internally marked */
+    
+    /* already in inset or will be there soon  */
+    if (i3_is_marked(ictx, p) || pkg_is_marked_i(ictx->ts->pms, p))
         install = 1;
     
     else if (succ.by_obsoletes && !i3_is_marked(ictx, p))
         install = 1;
     
-    else if (ictx->ts->getop(ictx->ts, POLDEK_OP_GREEDY)) {
+    else if (ictx->ts->getop(ictx->ts, POLDEK_OP_GREEDY)) { 
         n_assert(!i3_is_marked(ictx, p));
         install = 1;
     }

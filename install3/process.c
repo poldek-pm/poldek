@@ -158,13 +158,18 @@ int i3_process_package(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg)
     trace(indent, "PROCESS %s as NEW", pkg_id(pkg));
     n_assert(!pkg_isset_mf(ictx->processed, pkg, PKGMARK_GRAY));
     
-    // package marked by hand but triggered by dependencies earlier
-    if (!i3_is_marked(ictx, pkg) && pkg_is_marked_i(ictx->ts->pms, pkg)) {
+    // packages marked by hand but triggered by dependencies earlier
+    if (i3_is_marked(ictx, pkg)) {
+        markflag = 0;
+        indent = -1;
+        
+    } else if (pkg_is_marked_i(ictx->ts->pms, pkg)) {
         markflag = PKGMARK_MARK;
         indent = -1;
     }
     
-    mark_message(indent, i3pkg);
+    if (markflag == PKGMARK_DEP)
+        mark_message(indent, i3pkg);
 
     rc = do_process_package(indent, ictx, i3pkg, markflag);
     if (rc == -1) {
