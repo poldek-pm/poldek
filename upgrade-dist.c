@@ -45,6 +45,7 @@
 #include "poldek_intern.h"
 #include "pm/pm.h"
 #include "install/install.h"
+#include "install3/install.h"
 
 int process_pkg(const struct pkg *dbpkg, struct poldek_ts *ts,
                 tn_hash *marked_h, int *nmarked)
@@ -163,8 +164,14 @@ int do_poldek_ts_upgrade_dist(struct poldek_ts *ts)
     pkgdb_it_destroy(&it);
     n_hash_free(marked_h);
 
-    if (nmarked == 0)
+    if (nmarked == 0) {
         msgn(1, _("Nothing to do"));
-
-    return in_do_poldek_ts_install(ts);
+        return 1;
+    }
+    
+    if (ts->ctx->_depsolver != 3)
+        return in_do_poldek_ts_install(ts);
+    
+    msgn(5, "Running #3 dependency engine...");
+    return i3_do_poldek_ts_install(ts);
 }
