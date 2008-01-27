@@ -132,8 +132,11 @@ int i3_mark_namegroup(struct i3ctx *ictx,
         if (pkg->pkgdir != p->pkgdir)
             continue;
 
-        if (!i3_is_marked(ictx, p) && i3_mark_package(ictx, p, PKGMARK_MARK))
+        if (!i3_is_marked(ictx, p)) {
+            DBGF("mark %s\n", pkg_id(p));
+            i3_mark_package(ictx, p, PKGMARK_MARK);
             nmarked++;
+        }
     }
     
     return nmarked;
