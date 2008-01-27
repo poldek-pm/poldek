@@ -26,6 +26,9 @@ setUp() {
     mkdir -p $DESTINATION_REPO || fail "mkdir $DESTINATION_REPO failed"
     # provide /bin/sh auto requirement
     build_installed sh -p /bin/sh
+
+    POLDEK_INSTALL="$POLDEK_NOCONF -Odependency_solver=$DEPENDENCY_SOLVER --noask"
+    POLDEK_INSTALL="$POLDEK_INSTALL --st dir -s $REPO --dt dir --destination $DESTINATION_REPO"
 }
 
 
@@ -61,33 +64,49 @@ build() {
 
 build_installed() {
    do_build_package $DESTINATION_REPO $@
-} 
+}
 
-# install "a" package, check result against expected arg
+runpoldek() {
+  typeset cmd="$POLDEK_INSTALL $@"
+  if is_verbose_mode; then
+      echo "Executing $cmd"
+      $cmd || fail "'poldek $@' failed"
+  else
+      $cmd >/dev/null 2>&1 || fail "'poldek $@' failed"
+  fi
+}
+ 
+# try to install package and check result
+# usage: try_install <package> <expected installed> [<expected removed>]
 try_install() {
   package="$1"; shift  
   expected="$1"; shift
-  poldek_options=""
-  [ $# -gt 0 ] && poldek_options="$@";  
+  rm_expected=""
+  [ $# -gt 0 ] && rm_expected="$1"
+
   regexp=$(echo $expected | sed 's/,/|/g')
   n_expected=$(echo $expected | sed 's|,|\n|g' | wc -l)
-
-  cmd="$POLDEK_NOCONF -Odependency_solver=3 --noask $poldek_options"
-  cmd="$cmd --st dir -s $REPO --dt dir --destination $DESTINATION_REPO"
-  cmd="$cmd -uvt $package"
-
-  if is_verbose_mode; then
-      echo $cmd  
-      $cmd || fail "'poldek -uvt a' failed"
-  else
-      $cmd >/dev/null 2>&1 || fail "'poldek -uvt a' failed"
+  if [ -n "$rm_expected" ]; then
+     rm_regexp=$(echo $rm_expected | sed 's/,/|/g')
+     rm_n_expected=$(echo $rm_expected | sed 's|,|\n|g' | wc -l)
   fi
-  
-  out=$($cmd --parsable-tr-summary | egrep "^%[ID]")
-  n_all=$(echo $out | sed 's|%|\n%|g' | grep '%' | wc -l)
+
+  cmd="-uvt $package"
+  runpoldek $cmd  
+
+  out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | egrep "^%[IDR]")
+
+  n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%[ID]' | wc -l)
   n=$(echo $out | sed 's|%|\n%|g' | egrep "^%[ID] ($regexp)" | wc -l)
   assertEquals "unexpected ($n_all) number of packages (expected $n)" "$n_all" "$n"
   assertEquals "not all or non expected packages installed (expected $expected)" "$n" "$n_expected"
+
+  if [ -n "$rm_expected" ]; then   
+     n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%R' | wc -l)
+     n=$(echo $out | sed 's|%|\n%|g' | egrep "^%R ($rm_regexp)" | wc -l)
+     assertEquals "unexpected ($n_all) number of packages removed (expected $n)" "$n_all" "$n"
+     assertEquals "not all or non expected packages removed (expected $rm_expected)" "$n" "$rm_n_expected"
+  fi
 }
 
 try_install_a() {
@@ -184,6 +203,7 @@ testSuggests() {
 }
 
 testUpgradeSet() {
+    msgn "Preparing repositories..."
     prev_i=
     for i in b c d e f a; do 
         build_installed $i 1-1
@@ -202,6 +222,7 @@ testUpgradeSet() {
 
 # all 'a*' must be upgraded at once
 testUpgradeGreedy() {
+    msgn "Preparing repositories..."
     for i in "1-1" "2-2"; do
         build a $i
         build a-devel $i -r "'a = $i'"
@@ -215,6 +236,7 @@ testUpgradeGreedy() {
 
 # bar obsoletes foo
 testUpgradeObsolete() {
+    msgn "Preparing repositories..."
     build_installed a 1-1
     build_installed a-devel 1-1 -r "'a = 1-1'"
     build_installed a-static 1-1 -r "'a-devel = 1-1'"
@@ -226,9 +248,46 @@ testUpgradeObsolete() {
     build afoo 1-1 -p "FOO" -o "FOO" -o foo
     build bar 1-1 -o "foo"
 
-    try_install a "a,a-devel,a-static,bar"
-
-    #try_install bar "a,a-devel,a-static,bar"
+    try_install a "a,a-devel,a-static,bar" "a,a-devel,a-static,foo"
 }
+
+
+testUpgradeMultilib() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    for i in i686 x86-64; do 
+        build_installed a 1-1 -a $i -f "/hello.$i"
+        build_installed a-devel 1-1 -r "'a = 1'" -a $i # -f "/usr/include/foo.h"
+        build_installed a-static 1-1 -r "'a = 1'" -a $i -f "/sbin/hello.$i"
+
+        build a 2-2 -a $i -f "/hello.$i"
+        build a-devel 2-2 -r "'a = 2-2'" -a $i # -f "/usr/include/foo.h"
+        build a-static 2-2 -r "'a = 2-2'" -a $i -f "/sbin/hello.$i"
+    done    
+    rm $DESTINATION_REPO/a-devel*i686* # remove duplicated uncolored package
+
+    msgn "Multilib upgrades"
+    try_install a-2-2.x86-64 "a-2-2.x86-64" "a-1-1.x86-64"
+
+    try_install a-devel-2-2.x86-64 "a-2-2.x86-64,a-devel-2-2.x86-64" \
+                                   "a-1-1.x86-64,a-devel-1-1.x86-64"
+
+    try_install a-devel-2-2.i686 "a-2-2.i686,a-devel-2-2.i686" \
+                                 "a-1-1.i686,a-devel-1-1.x86-64"
+    return                              
+    msgn "Testing multilib upgrade-dist"                             
+    runpoldek --upgrade-dist
+    n=$(ls $DESTINATION_REPO/a* | grep 1-1 | wc -l)
+    assertEquals "not all packages were upgraded by upgrade-dist" "$n" "0"
+
+    # Multilib upgrade uncolored package (arch flip-flop regardless of arch) 
+    try_install a-devel-2-2.i686 "a-devel-2-2.i686" "a-devel-2-2.x86-64"
+                                 
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
+
 
 . ./sh/lib/shunit2

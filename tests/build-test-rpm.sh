@@ -75,8 +75,10 @@ fi
 TMPDIR="${TMPDIR:-/tmp}"
 
 SPEC="$TMPDIR/$name.$$.spec" 
-echo > $SPEC
 echo "Building $name $version-$release"
+
+echo > $SPEC
+echo "%define _noautoreq libc.so.6 rtld" >> $SPEC
 echo "Name: $name" >> $SPEC
 echo "Version: $version" >> $SPEC
 echo "Release: $release" >> $SPEC
@@ -107,7 +109,12 @@ if [ -n "$files" ]; then
     for f in $files; do
         dn=$(dirname $f)
         echo "mkdir -p \$RPM_BUILD_ROOT/$dn" >> $SPEC
-        echo "touch \$RPM_BUILD_ROOT/$f" >> $SPEC
+        bn=$(basename $f)
+        if [ -f $bn ]; then
+            echo "cp $(pwd)/$bn \$RPM_BUILD_ROOT$dn" >> $SPEC
+        else    
+            echo "touch \$RPM_BUILD_ROOT/$f" >> $SPEC
+        fi    
     done
 fi
 
