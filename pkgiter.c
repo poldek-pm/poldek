@@ -193,11 +193,18 @@ const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it)
     if (it->ndir < n_array_size(it->requiredirs)) {
         const char *path = n_array_nth(it->requiredirs, it->ndir);
         char tmp[PATH_MAX];
-
-        n_snprintf(tmp, sizeof(tmp), "/%s", path);
+        const char *rname = tmp;
+        
+        if (*path == '/')
+            rname = path;
+        else
+            n_snprintf(tmp, sizeof(tmp), "/%s", path);
+        
         
         it->ndir++;
-        it->req = capreq_new(NULL, tmp, 0, NULL, NULL, 0,
+        DBGF("%s %s\n", pkg_id(it->pkg), rname);
+        
+        it->req = capreq_new(NULL, rname, 0, NULL, NULL, 0,
                              CAPREQ_BASTARD | CAPREQ_ISDIR);
         it->current_req_type = PKG_ITER_REQIN;/* autodirdeps are always REQIN */
         return it->req;
