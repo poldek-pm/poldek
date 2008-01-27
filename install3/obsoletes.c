@@ -95,6 +95,7 @@ static int get_orphaned(int indent, struct i3ctx *ictx,
     return norphaned;
 }
 
+/* filter out obsoletes packages not coloured like new one  */
 static
 int obs_filter(struct pkgdb *db, const struct pm_dbrec *dbrec, void *apkg)
 {
@@ -111,12 +112,20 @@ int obs_filter(struct pkgdb *db, const struct pm_dbrec *dbrec, void *apkg)
 
     if (arch) 
         pkg_set_arch(&dbpkg, arch);
-    
-    DBGF("%s.%s:%d colored like %s:%d => %d\n", pkg_evr_snprintf_s(&dbpkg),
-         arch, dbpkg.color,
-         pkg_id(pkg), pkg->color, pkg_is_colored_like(&dbpkg, pkg));
-        
+
+    if (!poldek_conf_MULTILIB)
+        return 1;
+
+    tracef(4, "%s.%s (c=%d) colored like %s (c=%d) => %s\n",
+           pkg_evr_snprintf_s(&dbpkg), arch, dbpkg.color,
+           pkg_id(pkg), pkg->color,
+           pkg_is_colored_like(&dbpkg, pkg) ? "yes" : "no");
+
     if (pkg_is_colored_like(&dbpkg, pkg))
+        return 1;
+
+    /* both uncolored -> rpm will replace one with another  */
+    if (dbpkg.color == 0 && pkg->color == 0)
         return 1;
     
     return 0;
@@ -227,7 +236,7 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
         msgn_i(1, indent, _("%s obsoleted by %s"), pkg_id(dbpkg), pkg_id(pkg));
         iset_add(unset, dbpkg, PKGMARK_DEP);
         
-        trace(indent + 1, "verify uninstalled %s's caps", pkg_id(dbpkg));
+        trace(indent + 1, "verifying uninstalled %s's caps", pkg_id(dbpkg));
 
         it = pkg_cap_iter_new(dbpkg);
         while ((cap = pkg_cap_iter_get(it))) {
