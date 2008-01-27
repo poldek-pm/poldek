@@ -1146,8 +1146,13 @@ char *pkg_path(const struct pkg *pkg, char *buf, size_t size)
 {
     int n = 0;
     
-    if (pkg->pkgdir->path) 
-        n = n_snprintf(buf, size, "%s/", pkg->pkgdir->path);
+    if (pkg->pkgdir->path) {
+        n = n_snprintf(buf, size, "%s", pkg->pkgdir->path);
+        if (n > 0 && buf[n - 1] != '/' && (size_t)n < size - 1) {
+            buf[n++] = '/';
+            buf[n] = '\0';
+        }
+    }
 
     if (pkg_filename(pkg, buf + n, size - n) == NULL)
         buf = NULL;
@@ -1177,27 +1182,20 @@ unsigned pkg_file_url_type(const struct pkg *pkg)
 char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
                     const char *cachedir)
 {
+    char buf[1024], namebuf[1024], *fn;
     int n = 0;
-    char namebuf[1024], *fn;
-    char *pkgpath;
-
+    
     n_assert(pkg->pkgdir);
-    pkgpath = pkg->pkgdir->path;
 
+    if (vf_url_type(pkg->pkgdir->path) == VFURL_PATH)
+        return pkg_path(pkg, path, size);
+    
     fn = pkg_filename(pkg, namebuf, sizeof(namebuf));
-    if (vf_url_type(pkgpath) == VFURL_PATH) {
-        n = n_snprintf(path, size, "%s/%s", pkgpath, fn);
-        
-    } else {
-        char buf[1024];
-        //DBGF("pkgpath = %s\n", pkgpath);
-        vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
-        //DBGF("pkgpath_dir = %s\n", buf);
-        
-        n = n_snprintf(path, size, "%s%s%s/%s", cachedir ? cachedir : "",
-                       cachedir ? "/" : "", buf, n_basenam(fn));
-    }
-
+    
+    vf_url_as_dirpath(buf, sizeof(buf), pkg->pkgdir->path);
+    n = n_snprintf(path, size, "%s%s%s/%s", cachedir ? cachedir : "",
+                   cachedir ? "/" : "", buf, n_basenam(fn));
+    
     DBGF("RET %s\n", path);
     if (size - n > 2)
         return path;

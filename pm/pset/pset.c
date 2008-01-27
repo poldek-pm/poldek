@@ -799,7 +799,7 @@ int pm_pset_commitdb(void *dbh)
     if (rc) {
         for (i=0; i < n_array_size(db->paths_added); i++) {
             const char *path = n_array_nth(db->paths_added, i);
-            n_snprintf(dstpath, sizeof(dstpath), "%s/%s", pkgdir->path,
+            n_snprintf(dstpath, sizeof(dstpath), "%s%s", pkgdir->path,
                        n_basenam(path));
             msgn_f(0, "%%cp %s %s\n", path, dstpath);
             msgn_tty(1, "cp %s %s\n", n_basenam(path), dstpath);
