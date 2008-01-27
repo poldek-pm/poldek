@@ -349,7 +349,7 @@ int in_process_pkg_requirements(int indent, struct install_ctx *ictx,
     
     for (i=0; i < n_array_size(reqs); i++) {
         struct capreq *req = n_array_nth(reqs, i);
-
+#if 0                           /* XXX capreq_is_satisfied() disappeared */
         if (capreq_is_rpmlib(req)) {
             if (process_as == PROCESS_AS_NEW && !capreq_is_satisfied(req)) {
                 logn(LOGERR, _("%s: rpmcap %s not found, upgrade rpm."),
@@ -359,7 +359,7 @@ int in_process_pkg_requirements(int indent, struct install_ctx *ictx,
             }
             continue;
         }
-
+#endif
         /* obsoleted by greedy mark */
         if (process_as == PROCESS_AS_ORPHAN &&
             in_is_marked_for_removal(ictx, pkg)) {
