@@ -168,15 +168,14 @@ struct pkgdir_type_uinf {
 
 tn_array *pkgdir_typelist(void);
 
+#ifndef SWIG
 struct pkg;
 int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg);
 int pkgdir_add_packages(struct pkgdir *pkgdir, tn_array *pkgs);
 int pkgdir_remove_package(struct pkgdir *pkgdir, struct pkg *pkg);
 
 
-/* prototypes of pkgdir_dirindex.c */
-#ifndef SWIG
-
+/* Prototypes of pkgdir_dirindex.c */
 /* returns packages having path */
 tn_array *pkgdir_dirindex_get(const struct pkgdir *pkgdir,
                               tn_array *pkgs, const char *path);
@@ -191,6 +190,6 @@ tn_array *pkgdir_dirindex_get_required(const struct pkgdir *pkgdir,
 tn_array *pkgdir_dirindex_get_provided(const struct pkgdir *pkgdir,
                                        const struct pkg *pkg);
 
-#endif
+#endif  /* SWIG */
 
 #endif /* POLDEK_PKGDIR_H*/
