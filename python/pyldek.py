@@ -183,6 +183,15 @@ class Pyldek:
            for src in self.ctx.sources:
                print "%-12s %-8s  %s" % (src, src.type, src.path)
 
+    def update_sources(self, upa = False):
+        flag = poldek.source.UP
+        if upa:
+            flag = poldek.source.UPA
+        for src in self.ctx.sources:
+            print "Updating %s" % src
+            src.update(flag)
+
+
     def execute_and_return_packages(self, command, args = ''):
         cmd = self.cctx.rcmd()
         print "## Executing %s %s" % (command, args)
@@ -257,6 +266,8 @@ def get_options():
     parser.add_option("-l", action='count', help="List sources")
     parser.add_option("-v",  action='count', help="Be verbose")
     parser.add_option("-n", metavar="source", help="Select repository")
+    parser.add_option("--up", action="count", help="Update repository/ies")
+    parser.add_option("--upa", action="count", help="Update repository/ies")
     (options, args) = parser.parse_args()
     if not options.l and not options.n and len(args) < 1:
         parser.print_help()
@@ -273,6 +284,12 @@ pyl = Pyldek(options.n, verbose = options.v)
 
 if options.l:
     pyl.list_sources()
+    
+elif options.up:
+    pyl.update_sources()
+    
+elif options.upa:
+    pyl.update_sources(True)
     
 else:
     #pyl.repository_list()

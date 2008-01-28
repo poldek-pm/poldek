@@ -184,6 +184,7 @@ for k, v in tags.iteritems():
 
 ## pkgdir
 _complete_class(source, 'source_')
+_complete_class(source, 'PKGSOURCE_')
 setattr(source, 'enabled', property(lambda self: self.get_enabled(),
                                     lambda self, val: self.set_enabled(val)))
 _complete_class(pkgdir, 'pkgdir_')
