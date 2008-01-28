@@ -154,14 +154,11 @@ int load_package(unsigned int recno, void *header, struct pkgdir *pkgdir)
     pkg->recno = recno;
     pkg->load_pkguinf = load_pkguinf;
     pkg->load_nodep_fl = load_nodep_fl;
+    pkg->groupid = pkgroup_idx_update_rpmhdr(pkgdir->pkgroups, header);
     
     if (poldek_VERBOSE > 3)
         msgn(4, "rpmdb: ld %s", pkg_id(pkg));
     
-#if 0                           /* hope outdated  */
-    if (strcmp(pkg->name, "quake2") != 0) /* broken rpmdb... */
-        pkg->groupid = pkgroup_idx_update_rpmhdr(pkgdir->pkgroups, header);
-#endif
     n_array_push(pkgdir->pkgs, pkg);
 
     if ((langs = pm_rpmhdr_langs(header))) {
