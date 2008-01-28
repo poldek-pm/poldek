@@ -253,6 +253,7 @@ static int PythonChooseEquiv(void *data, const struct poldek_ts *ts,
     int _is_bastard() { return capreq_is_bastard(self); }
     int _is_autodirreq() { return capreq_is_autodirreq(self); }
     int _is_obsl() { return capreq_is_obsl(self); }
+    int _is_rpmlib() { return capreq_is_rpmlib(self); }    
     ~capreq() { capreq_free(self); }
 }
 
