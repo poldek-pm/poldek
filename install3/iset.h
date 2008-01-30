@@ -22,6 +22,9 @@ int iset_ismarkedf(struct iset *iset, const struct pkg *pkg, unsigned mflag);
 
 const struct pkgmark_set *iset_pms(struct iset *iset);
 const tn_array *iset_packages(struct iset *iset);
+
+/* return array sorted by package recno */
+const tn_array *iset_packages_by_recno(struct iset *iset);
 tn_array *iset_packages_in_install_order(struct iset *iset);
 
 
@@ -30,5 +33,6 @@ int  iset_remove(struct iset *iset, struct pkg *pkg);
 
 int iset_provides(struct iset *iset, const struct capreq *cap);
 int iset_has_pkg(struct iset *iset, const struct pkg *pkg);
+struct pkg *iset_has_kind_of_pkg(struct iset *iset, const struct pkg *pkg);
 
 #endif    

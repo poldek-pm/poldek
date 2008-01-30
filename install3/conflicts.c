@@ -148,7 +148,7 @@ int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
     tn_array *dbpkgs = NULL;
 
     pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_CAP, capreq_name(cnfl),
-                 iset_packages(ictx->unset), PKG_LDWHOLE_FLDEPDIRS);
+                 iset_packages_by_recno(ictx->unset), PKG_LDWHOLE_FLDEPDIRS);
 
     if (dbpkgs == NULL)
         return 0;
@@ -217,7 +217,7 @@ int find_db_conflicts_dbcnfl_with_cap(int indent, struct i3ctx *ictx,
     tn_array *dbpkgs = NULL;
 
     pkgdb_search(ictx->ts->db, &dbpkgs, PMTAG_CNFL, capreq_name(cap),
-                 iset_packages(ictx->unset), PKG_LDWHOLE_FLDEPDIRS);
+                 iset_packages_by_recno(ictx->unset), PKG_LDWHOLE_FLDEPDIRS);
 
     if (dbpkgs == NULL)
         return 0;

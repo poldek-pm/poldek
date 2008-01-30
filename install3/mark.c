@@ -69,7 +69,7 @@ int i3_mark_package(struct i3ctx *ictx, struct pkg *pkg, unsigned mark)
     rc = i3_is_pkg_installable(ictx->ts, pkg,
                                pkg_is_marked_i(ictx->ts->pms, pkg));
     if (rc <= 0) {
-        ictx->abort = 1;
+        i3_stop_processing(ictx, 1);
         return 0;
     }
     

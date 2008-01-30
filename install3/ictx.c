@@ -227,3 +227,10 @@ void i3ctx_reset(struct i3ctx *ictx)
     
     ictx->abort = 0;
 }
+
+int i3_stop_processing(struct i3ctx *ictx, int stop) 
+{
+    ictx->abort = stop;
+    return ictx->abort;
+}
+

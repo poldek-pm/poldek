@@ -144,10 +144,10 @@ static struct pkg *find_successor(int indent, struct i3ctx *ictx,
         if (ictx->ts->getop(ictx->ts, POLDEK_OP_OBSOLETES)) {
             /* anybody provides, or obsoletes me? */
             p = find_successor_by(indent, ictx, pkg, PS_SEARCH_CAP);
-            if (p == NULL)
+            if (p == NULL) {
                 p = find_successor_by(indent, ictx, pkg, PS_SEARCH_OBSL);
-            
-            by_obsoletes = 1;
+                by_obsoletes = 1;
+            }
         }
     }
     
@@ -171,31 +171,56 @@ static struct pkg *find_successor(int indent, struct i3ctx *ictx,
 
 
 static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
-                                 struct pkg *pkg, struct capreq *req)
+                                 struct pkg *pkg, struct capreq *req,
+                                 const struct pkg *req_satisfier)
 {
     struct successor succ;
-    struct pkg *p;
+    struct pkg *sucpkg;
+    char *message = NULL;
     int install = 0;
-
-    tracef(indent, "%s req: %s\n", pkg_id(pkg), capreq_snprintf_s(req));
-
-    if ((p = find_successor(indent, ictx, pkg, &succ)) == NULL)
+    
+    tracef(indent, "%s req: %s (satisfied=%s)", pkg_id(pkg),
+           capreq_stra(req), req_satisfier ? "yes": "no");
+    
+    if ((sucpkg = find_successor(indent + 2, ictx, pkg, &succ)) == NULL) {
+        if (!req_satisfier) {
+            /* no successor and unmet req => pkg is candidate to be removed */
+            ;
+        }
         return 0;
-    
-    /* already in inset or will be there soon  */
-    if (i3_is_marked(ictx, p) || pkg_is_marked_i(ictx->ts->pms, p))
+    }
+
+    /* already in inset or will be there soon */
+    if (i3_is_marked(ictx, sucpkg) || pkg_is_marked_i(ictx->ts->pms, sucpkg)) {
+        message = "already marked";
         install = 1;
-    
-    else if (succ.by_obsoletes && !i3_is_marked(ictx, p))
-        install = 1;
-    
-    else if (ictx->ts->getop(ictx->ts, POLDEK_OP_GREEDY)) { 
-        n_assert(!i3_is_marked(ictx, p));
+        goto l_end;
+    }
+
+    if (pkg_requires_cap(sucpkg, req)) {
+        message = "successor requires req too";
+        install = 0;
+        
+    } else {
+        if (succ.by_obsoletes)
+            message = "by Obsoletes tag";
+
+        else if (ictx->ts->getop(ictx->ts, POLDEK_OP_GREEDY)) 
+            message = "upgrade resolves req";
+
         install = 1;
     }
     
-    if (install) {
-        struct i3pkg *i3tomark = i3pkg_new(p, 0, pkg, req, I3PKGBY_GREEDY);
+l_end:
+    if (!install) {
+        tracef(indent, "- %s: do not upgrading orphan%s%s%s", pkg_id(sucpkg),
+               message ? " (":"", message ? message:"", message ? ")":"");
+        
+    } else {
+        struct i3pkg *i3tomark = i3pkg_new(sucpkg, 0, pkg, req, I3PKGBY_GREEDY);
+
+        n_assert(message);
+        tracef(indent, "- %s: upgrading orphan (%s)", pkg_id(sucpkg), message);
         i3_process_package(indent, ictx, i3tomark);
     }
 
@@ -204,16 +229,17 @@ static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
 
 
 static int process_orphan_req(int indent, struct i3ctx *ictx,
-                               struct pkg *pkg, struct capreq *req)
+                              struct pkg *pkg, struct capreq *req)
+
 {
     struct poldek_ts *ts = ictx->ts; /* just for short */
-    struct pkg       *tomark = NULL;
+    struct pkg       *tomark = NULL, *toremove = NULL;
     tn_array         *candidates = NULL;
-    char             *strreq;
-    int              rc = 1, indentt = indent + 1;
+    const char       *strreq;
+    int              rc = 1, giveup = 0, indentt = indent + 1;
 
-    capreq_stra(req, &strreq);
-    tracef(indent, "%s, req: %s", pkg_id(pkg), strreq);
+    strreq = capreq_stra(req);
+    tracef(indent, "%s, req: %s (%s)", pkg_id(pkg), capreq_snprintf_s(req), strreq);
 
     /* skip foreign (not provided by uninstalled) dependencies */
     if (!iset_provides(ictx->unset, req)) {
@@ -239,23 +265,31 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
         msgn_i(3, indent, "%s: satisfied by db", strreq);
         goto l_end;
     }
-
+    
     /* try upgrade orphan */
     if (ts->getop(ts, POLDEK_OP_GREEDY)) {
-        if (try_to_upgrade_orphan(indentt, ictx, pkg, req))
+        if (try_to_upgrade_orphan(indentt + 1, ictx, pkg, req, tomark))
             goto l_end;
     }
+
+    if (tomark && (toremove = iset_has_kind_of_pkg(ictx->unset, tomark))) {
+        tracef(indent, "%s is marked for removal (%s)", pkg_id(tomark),
+               pkg_id(toremove));
+        giveup = 1;
+        i3_stop_processing(ictx, 1); /* loop, stop processing */
+    }  
 
     if (n_array_size(candidates) == 0)
         n_array_cfree(&candidates);
     else /* if they exists, must be more than one */
         n_assert(n_array_size(candidates) > 1);
     
-    trace(indentt, "- %s: %s candidate is %s", pkg_id(pkg), strreq,
-          tomark ? pkg_id(tomark) : "(null)");
+    trace(indentt, "- %s: %s candidate is %s (installable=%s)", pkg_id(pkg),
+          strreq, tomark ? pkg_id(tomark) : "none",
+          toremove ? "no" : tomark ? "yes" : "-");
     
     /* to-mark candidates */
-    if (tomark && ts->getop(ts, POLDEK_OP_FOLLOW)) {
+    if (tomark && toremove == NULL && ts->getop(ts, POLDEK_OP_FOLLOW)) {
         struct pkg *real_tomark = tomark;
         struct i3pkg *i3tomark;
         
@@ -263,7 +297,7 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
             real_tomark = i3_choose_equiv(ts, req, candidates, tomark);
             
             if (real_tomark == NULL) { /* user abort */
-                ictx->abort = 1;
+                i3_stop_processing(ictx, 1);
                 rc = 0;
                 goto l_end;
             }
@@ -273,10 +307,14 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
         i3_process_package(indent, ictx, i3tomark);
         goto l_end;
     }
-            
+    
     /* unresolved req */
-    i3_error(ictx, pkg, I3ERR_REQUIREDBY,
-             _("%s is required by %s"), strreq, pkg_id(pkg));
+    if (giveup)
+        i3_error(ictx, pkg, I3ERR_REQUIREDBY,
+                 _("%s is required by %s, give up"), strreq, pkg_id(pkg));
+    else
+        i3_error(ictx, pkg, I3ERR_REQUIREDBY, _("%s is required by %s"),
+                 strreq, pkg_id(pkg));
     
  l_end:
     n_array_cfree(&candidates);
@@ -315,6 +353,7 @@ int i3_process_orphan_requirements(int indent, struct i3ctx *ictx,
         }
         
         process_orphan_req(indent, ictx, pkg, req);
+        i3_return_zero_if_stoppped(ictx);
     }
 
     return 1;
@@ -340,11 +379,11 @@ static int process_req(int indent, struct i3ctx *ictx,
     struct poldek_ts *ts = ictx->ts; /* just for short */
     struct pkg       *pkg, *tomark = NULL;
     tn_array         *candidates = NULL;
-    char             *strreq, *errfmt;
+    const char       *strreq, *errfmt;
     int              rc = 1, indentt = indent + 1;
     
     pkg = i3pkg->pkg;
-    capreq_stra(req, &strreq);
+    strreq = capreq_stra(req);
     
     tracef(indent, "%s, req: %s", pkg_id(pkg), strreq);
     

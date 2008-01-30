@@ -28,19 +28,6 @@
 #include "pkgfl.h"
 #include "iset.h"
 
-#define capreq_stra(c, dp)                             \
-    do {                                               \
-        const struct capreq *cc = (c);                 \
-        char  **dptr = (dp);                           \
-        if (!capreq_versioned(cc))                     \
-            *dptr = (char*)capreq_name(cc);            \
-        else {                                         \
-            *dptr = alloca(256);                       \
-            capreq_snprintf(*dptr, 256, cc);           \
-        }                                              \
-    } while (0)
-
-
 struct poldek_ts;
 struct pkgmark_set;
 struct poldek_iinf;
@@ -116,6 +103,14 @@ void i3ctx_reset(struct i3ctx *ictx);
 void i3ctx_destroy(struct i3ctx *ictx);
 
 extern int poldek_conf_MULTILIB;
+
+/* set stop flag */
+int i3_stop_processing(struct i3ctx *ictx, int stop);
+
+#define i3_return_zero_if_stoppped(i3ctx)        \
+    do { if (sigint_reached() || i3ctx->abort)   \
+            return 0;                            \
+    } while(0)
 
 /* mark.c */
 int i3_mark_package(struct i3ctx *ictx, struct pkg *pkg, uint32_t mark);

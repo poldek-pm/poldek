@@ -88,7 +88,7 @@ static int do_process_package(int indent, struct i3ctx *ictx,
 {
     int rc = 1;
     
-    trace(indent, "PROCESS %s as NEW", pkg_id(i3pkg->pkg));
+    trace(indent, "DOPROCESS %s as NEW", pkg_id(i3pkg->pkg));
     
     n_assert(!pkg_isset_mf(ictx->processed, i3pkg->pkg, PKGMARK_GRAY));
     pkg_set_mf(ictx->processed, i3pkg->pkg, PKGMARK_GRAY);
@@ -131,8 +131,7 @@ int i3_install_package(struct i3ctx *ictx, struct pkg *pkg)
 {
     struct i3pkg *i3pkg = i3pkg_new(pkg, 0, NULL, NULL, I3PKGBY_HAND);
 
-    if (ictx->abort || sigint_reached())
-        return 0;
+    i3_return_zero_if_stoppped(ictx);
 
     if (pkg_isset_mf(ictx->processed, pkg, PKGMARK_GRAY))
         return 1;
@@ -148,13 +147,14 @@ int i3_process_package(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg)
     unsigned   markflag = PKGMARK_DEP;
     struct pkg *pkg = i3pkg->pkg;
     int rc;
-    
-    if (ictx->abort || sigint_reached())
-        return 0;
 
-    if (pkg_isset_mf(ictx->processed, pkg, PKGMARK_GRAY))
+    i3_return_zero_if_stoppped(ictx);
+
+    if (pkg_isset_mf(ictx->processed, pkg, PKGMARK_GRAY)) {
+        tracef(indent, "DONOT PROCESSING %s as NEW", pkg_id(pkg));
         return 1;
-
+    }
+    
     trace(indent, "PROCESS %s as NEW", pkg_id(pkg));
     n_assert(!pkg_isset_mf(ictx->processed, pkg, PKGMARK_GRAY));
     
@@ -184,8 +184,7 @@ int i3_process_package(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg)
 
 int i3_process_orphan(int indent, struct i3ctx *ictx, struct orphan *o) 
 {
-    if (ictx->abort || sigint_reached())
-        return 0;
+    i3_return_zero_if_stoppped(ictx);
 
     indent += 2;
     trace(indent, "PROCESS %s as ORPHAN", pkg_id(o->pkg));

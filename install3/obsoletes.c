@@ -87,7 +87,7 @@ static int get_orphaned(int indent, struct i3ctx *ictx,
         }
 #endif
         n = pkgdb_q_what_requires(db, orphaned, cap,
-                                  iset_packages(ictx->unset),
+                                  iset_packages_by_recno(ictx->unset),
                                   ldflags, ma_flags);
         norphaned += n;
         trace(indent + 1, "%s: %d package(s) orphaned", capreq_snprintf_s(cap), n);
@@ -217,7 +217,7 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
         getflags |= PKGDB_GETF_OBSOLETEDBY_REV;
 
     
-    obsoleted = get_obsoletedby_pkg(db, iset_packages(unset), pkg,
+    obsoleted = get_obsoletedby_pkg(db, iset_packages_by_recno(unset), pkg,
                                     getflags, PKG_LDWHOLE_FLDEPDIRS);
     
     n = obsoleted ? n_array_size(obsoleted) : 0;
@@ -306,7 +306,7 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
     
         for (i=0; i < n_array_size(orphans); i++) {
             struct orphan *o = n_array_nth(orphans, i);
-            i3_process_orphan(indent, ictx, o);
+            i3_process_orphan(indent + 2, ictx, o);
         }
     }
     

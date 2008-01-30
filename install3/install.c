@@ -196,9 +196,8 @@ static int do_install(struct i3ctx *ictx)
             break;
     }
     n_array_free(toinstall);
-        
-    if (ictx->abort || sigint_reached())
-        return 0;
+
+    i3_return_zero_if_stoppped(ictx);
 
     install_summary(ictx);
     pkgdb_close(ts->db); /* release db as soon as possible */

@@ -36,7 +36,8 @@ extern int poldek_conf_MULTILIB;
 #define PKGMARK_ISET (1 << 20)
 
 struct iset {
-    tn_array             *pkgs;         
+    tn_array             *pkgs;
+    tn_array             *pkgs_by_recno;
     tn_hash              *capcache; /* cache of resolved packages caps */
     struct pkgmark_set   *pms;
 };
@@ -58,18 +59,18 @@ const tn_array *iset_packages(struct iset *iset)
     return iset->pkgs;
 }
 
+const tn_array *iset_packages_by_recno(struct iset *iset)
+{
+    return iset->pkgs_by_recno;
+}
+
 tn_array *iset_packages_in_install_order(struct iset *iset)
 {
     tn_array *pkgs = NULL;
-    void *cmpfn;
-    
-    cmpfn = n_array_ctl_set_cmpfn(iset->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
     
     packages_order(iset->pkgs, &pkgs, PKGORDER_INSTALL);
     n_assert(pkgs);
     n_assert(n_array_size(pkgs) == n_array_size(iset->pkgs));
-
-    n_array_ctl_set_cmpfn(iset->pkgs, cmpfn);
     return pkgs;
 }
 
@@ -83,7 +84,8 @@ struct iset *iset_new(void)
     struct iset *iset; 
 
     iset = n_malloc(sizeof(*iset));
-    iset->pkgs = pkgs_array_new_ex(128, pkg_cmp_recno);
+    iset->pkgs = pkgs_array_new(128);
+    iset->pkgs_by_recno = pkgs_array_new_ex(128, pkg_cmp_recno);
     iset->capcache = n_hash_new(128, NULL);
     iset->pms = pkgmark_set_new(0, 0);
     return iset;
@@ -92,6 +94,7 @@ struct iset *iset_new(void)
 void iset_free(struct iset *iset) 
 {
     n_array_free(iset->pkgs);
+    n_array_free(iset->pkgs_by_recno);
     n_hash_free(iset->capcache);
     pkgmark_set_free(iset->pms);
     free(iset);
@@ -101,7 +104,7 @@ void iset_add(struct iset *iset, struct pkg *pkg, unsigned mflag)
 {
     DBGF("add %s\n", pkg_id(pkg));
     n_array_push(iset->pkgs, pkg_link(pkg));
-    
+    n_array_push(iset->pkgs_by_recno, pkg_link(pkg));
     mflag |= PKGMARK_ISET;
     iset_markf(iset, pkg, mflag);
 }
@@ -115,49 +118,52 @@ int iset_remove(struct iset *iset, struct pkg *pkg)
     
     n_hash_clean(iset->capcache); /* flush all, TODO: remove pkg caps only */
     pkg_clr_mf(iset->pms, pkg, PKGMARK_ISET);
-    
-    for (i=0; i < n_array_size(iset->pkgs); i++) {
-        struct pkg *p = n_array_nth(iset->pkgs, i);
-        if (pkg_cmp_name_evr(p, pkg) == 0) {
-            if (!poldek_conf_MULTILIB)
-                break;
-            
-            if (pkg_cmp_arch(p, pkg) == 0)
-                break;
-        }
-    }
 
-    if (i < n_array_size(iset->pkgs)) /* found */
+    i = n_array_bsearch_idx(iset->pkgs, pkg);
+    if (i >= 0) {
+        struct pkg *p = n_array_nth(iset->pkgs, i);
+        
+        n_assert(pkg_cmp_name_evr(p, pkg) == 0);
+        
+        if (poldek_conf_MULTILIB)
+            n_assert(pkg_cmp_arch(p, pkg) == 0);
+
         n_array_remove_nth(iset->pkgs, i);
+    
+        /* recreate pkgs_by_recno (cheaper than manually find item to remove) */
+        n_array_free(iset->pkgs_by_recno);
+        iset->pkgs_by_recno = n_array_dup(iset->pkgs, (tn_fn_dup)pkg_link);
+        n_array_ctl_set_cmpfn(iset->pkgs_by_recno, (tn_fn_cmp)pkg_cmp_recno);
+    }
     
     n_assert(!iset_has_pkg(iset, pkg));
     return 1;
 }
 
-int iset_has_pkg_recno(struct iset *iset, int recno) 
-{
-    struct pkg tmpkg;
-    tmpkg.recno = recno;
-    return n_array_bsearch(iset->pkgs, &tmpkg) != NULL;
-}
-
 int iset_has_pkg(struct iset *iset, const struct pkg *pkg)
 {
-    int i;
-    
     return iset_ismarkedf(iset, pkg, PKGMARK_ISET);
+}
+
+struct pkg *iset_has_kind_of_pkg(struct iset *iset, const struct pkg *pkg)
+{
+    int i;
+
+    i = n_array_bsearch_idx_ex(iset->pkgs, pkg, (tn_fn_cmp)pkg_cmp_name);
+    if (i < 0)
+        return NULL;
     
-    for (i=0; i<n_array_size(iset->pkgs); i++) {
+    for (; i < n_array_size(iset->pkgs); i++) {
         struct pkg *p = n_array_nth(iset->pkgs, i);
-        if (pkg_cmp_name_evr(p, pkg) == 0) {
-            if (poldek_conf_MULTILIB)
-                return pkg_cmp_arch(p, pkg) == 0;
-            else
-                return 1;
-        }
+        
+        if (pkg_is_kind_of(p, pkg))
+            return p;
+        
+        if (n_str_ne(p->name, pkg->name))
+            return NULL;
     }
     
-    return 0;
+    return NULL;
 }
 
 int iset_provides(struct iset *iset, const struct capreq *cap)
@@ -237,7 +243,6 @@ void iset_dump(struct iset *iset)
     int i;
 
     printf("iset dump %p: ",  iset);
-    
         
     for (i=0; i<n_array_size(iset->pkgs); i++) {
         struct pkg *pkg = n_array_nth(iset->pkgs, i);
