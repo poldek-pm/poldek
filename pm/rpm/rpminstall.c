@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -437,7 +437,7 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         int can_ask = poldek_ts_is_interactive_on(ts);
 
         if (nsignerr) {
-            if (!can_ask || poldek__confirm(ts, 0,
+            if (!can_ask || !poldek__confirm(ts, 0,
                                             _("There were signature verification errors. "
                                               "Proceed?")))
                 goto l_err_end;
