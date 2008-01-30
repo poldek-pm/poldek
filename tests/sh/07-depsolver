@@ -276,7 +276,7 @@ testUpgradeMultilib() {
 
     try_install a-devel-2-2.i686 "a-2-2.i686,a-devel-2-2.i686" \
                                  "a-1-1.i686,a-devel-1-1.x86-64"
-    return                              
+
     msgn "Testing multilib upgrade-dist"                             
     runpoldek --upgrade-dist
     n=$(ls $DESTINATION_REPO/a* | grep 1-1 | wc -l)
@@ -286,6 +286,53 @@ testUpgradeMultilib() {
     try_install a-devel-2-2.i686 "a-devel-2-2.i686" "a-devel-2-2.x86-64"
                                  
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
+buildUpgradeOrphanRepos() {
+    build_installed a-foo -r "'a-lib = 1'" -p "FOO"
+    build_installed a-lib
+    build_installed b -r "FOO"
+
+    build a-foo 2-2 -r "'a-lib = 2'" -o "a-bar" -p "FOO"
+    build a-bar 2-2 -r "'a-lib = 2'" -o "a-foo"
+    build a-lib 2-2
+}
+
+# orphaned b should be upgraded as b-2-2 resolves missed FOO
+testUpgradeOrphanIfItResolvesReq() {
+    msgn "Preparing repositories..."
+    buildUpgradeOrphanRepos
+    build b 2-2
+
+    msgn "Upgrade"
+    try_install a-bar "a-bar-2,a-lib-2,b-2" "a-foo-1,a-lib-1,b-1"
+}
+
+# orphaned b should not be upgraded as b-2-2 do not resolve missed FOO
+testUpgradeOrphanNotIfItNotResolvesReq() {
+    msgn "Preparing repositories..."
+    buildUpgradeOrphanRepos
+    build b 2-2 -r "FOO"
+    build c 2-2 -p "FOO"
+
+    msgn "Upgrade"
+    try_install a-bar "a-bar-2,a-lib-2,c-2" "a-foo-1,a-lib-1"
+}
+
+# orphaned b should not be upgraded as b-2-2 do not resolve missed FOO
+testUpgradeOrphanGiveUp() {
+    msgn "Preparing repositories..."
+    buildUpgradeOrphanRepos
+    build b 2-2 -r "FOO"
+
+    msgn "Upgrade"
+    if is_verbose_mode; then
+       $POLDEK_INSTALL -uvt a-bar
+       echo "THE ERROR ABOVE (give up) is EXPECTED"
+    fi
+    $POLDEK_INSTALL -uvt a-bar | grep -q "error: FOO is required by b-1-1, give up"
+    assertEquals "poldek should give up" "$?" "0"
+
 }
 
 
