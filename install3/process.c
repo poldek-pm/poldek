@@ -23,13 +23,13 @@ static void mark_message(int indent, const struct i3pkg *i3pkg)
         if (pkg_cmp_name(i3pkg->pkg, i3pkg->bypkg) != 0) {
             msgn_i(1, indent, _("greedy upgrade %s to %s (unresolved %s)"),
                    pkg_id(i3pkg->bypkg), pkg_id(i3pkg->pkg),
-                   capreq_snprintf_s(i3pkg->byreq));
+                   capreq_stra(i3pkg->byreq));
         } else {
             msgn_i(1, indent, _("greedy upgrade %s to %s-%s%s%s (unresolved %s)"),
                    pkg_id(i3pkg->bypkg), i3pkg->pkg->ver, i3pkg->pkg->rel,
                    poldek_conf_MULTILIB ? "." : "",
                    poldek_conf_MULTILIB ? pkg_arch(i3pkg->pkg) : "",
-                   capreq_snprintf_s(i3pkg->byreq));
+                   capreq_stra(i3pkg->byreq));
         }
         
     } else {
@@ -42,8 +42,8 @@ static void mark_message(int indent, const struct i3pkg *i3pkg)
             prefix = _("orphaned ");
             
         msgn_i(1, indent, _("%s%s marks %s (%s %s)"), prefix,
-               pkg_id(i3pkg->bypkg), pkg_id(i3pkg->pkg),
-               r, capreq_snprintf_s(i3pkg->byreq));
+               pkg_id(i3pkg->bypkg), pkg_id(i3pkg->pkg), r,
+               capreq_stra(i3pkg->byreq));
     }
 }
 

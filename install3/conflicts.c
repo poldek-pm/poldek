@@ -80,16 +80,16 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
     req = capreq_clone(NULL, cnfl);
     
 #if 0                           /* debug */
-    printf("B %s -> ", capreq_snprintf_s(req));
+    printf("B %s -> ", capreq_stra(req));
     capreq_revrel(req);
-    printf("%s -> ", capreq_snprintf_s(req));
+    printf("%s -> ", capreq_stra(req));
     capreq_revrel(req);
-    printf("%s\n", capreq_snprintf_s(req));
+    printf("%s\n", capreq_stra(req));
 #endif
 
-    DBGF("find_req %s %s\n", pkg_id(pkg), capreq_snprintf_s(req));
+    DBGF("find_req %s %s\n", pkg_id(pkg), capreq_stra(req));
     capreq_revrel(req);
-    DBGF("find_req %s %s\n", pkg_id(pkg), capreq_snprintf_s(req));
+    DBGF("find_req %s %s\n", pkg_id(pkg), capreq_stra(req));
 
     if (i3_is_user_choosable_equiv(ictx->ts))
         candidates = pkgs_array_new(8);
@@ -154,7 +154,7 @@ int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
         return 0;
                 
     msgn_i(4, indent, "Processing conflict %s:%s...", pkg_id(pkg),
-           capreq_snprintf_s(cnfl));
+           capreq_stra(cnfl));
     
     if (ictx->ts->getop(ictx->ts, POLDEK_OP_ALLOWDUPS) &&
         n_array_size(dbpkgs) > 1) {
@@ -169,7 +169,7 @@ int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
             
             if (!pkg_match_req(dbpkg, cnfl, 1)) {
                 msgn_i(5, indent, "%s: conflict disarmed by %s",
-                       capreq_snprintf_s(cnfl), pkg_id(dbpkg));
+                       capreq_stra(cnfl), pkg_id(dbpkg));
                 n_hash_insert(ht, dbpkg->name, pkg);
             }
         }
@@ -179,7 +179,7 @@ int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
         struct pkg *dbpkg = n_array_nth(dbpkgs, i);
         
         msg_i(6, indent, "%d. %s (%s) <-> %s ?\n", i, pkg_id(pkg),
-            capreq_snprintf_s(cnfl), pkg_id(dbpkg));
+              capreq_stra(cnfl), pkg_id(dbpkg));
         
         if (ht && n_hash_exists(ht, dbpkg->name))
             continue;
@@ -191,10 +191,10 @@ int find_db_conflicts_cnfl_with_db(int indent, struct i3ctx *ictx,
             if (!resolve_conflict(indent, ictx, pkg, cnfl, dbpkg)) {
                 i3_error(ictx, pkg, I3ERR_DBCONFLICT,
                          _("%s (cnfl %s) conflicts with installed %s"),
-                         pkg_id(pkg), capreq_snprintf_s(cnfl), pkg_id(dbpkg));
+                         pkg_id(pkg), capreq_stra(cnfl), pkg_id(dbpkg));
                 
                 logn(LOGERR, _("%s (cnfl %s) conflicts with installed %s"),
-                     pkg_id(pkg), capreq_snprintf_s(cnfl), pkg_id(dbpkg));
+                     pkg_id(pkg), capreq_stra(cnfl), pkg_id(dbpkg));
                 ncnfl++;
             }
         }
@@ -226,7 +226,7 @@ int find_db_conflicts_dbcnfl_with_cap(int indent, struct i3ctx *ictx,
         struct pkg *dbpkg = n_array_nth(dbpkgs, i);
         
         msg(6, "%s (%s) <-> %s ?\n", pkg_id(pkg),
-            capreq_snprintf_s(cap), pkg_id(dbpkg));
+            capreq_stra(cap), pkg_id(dbpkg));
         
         for (j = 0; j < n_array_size(dbpkg->cnfls); j++) {
             struct capreq *cnfl = n_array_nth(dbpkg->cnfls, j);
@@ -236,8 +236,8 @@ int find_db_conflicts_dbcnfl_with_cap(int indent, struct i3ctx *ictx,
                 
                 i3_error(ictx, pkg, I3ERR_DBCONFLICT,
                          _("%s (cap %s) conflicts with installed %s (%s)"),
-                         pkg_id(pkg), capreq_snprintf_s(cap), 
-                         pkg_id(dbpkg), capreq_snprintf_s0(cnfl));
+                         pkg_id(pkg), capreq_stra(cap), 
+                         pkg_id(dbpkg), capreq_stra(cnfl));
                 ncnfl++;
             }
         }
@@ -282,7 +282,7 @@ int i3_process_pkg_conflicts(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
         if ((ictx->ps->flags & PSET_VRFY_MERCY) && capreq_is_bastard(cap))
             continue;
         
-        msg_i(3, indent, "cap %s\n", capreq_snprintf_s(cap));
+        msg_i(3, indent, "cap %s\n", capreq_stra(cap));
         n = find_db_conflicts_dbcnfl_with_cap(indent, ictx, pkg, cap);
         ncnfl += n;
     }
@@ -295,7 +295,7 @@ int i3_process_pkg_conflicts(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
             if (capreq_is_obsl(cnfl))
                 continue;
 
-            msg_i(3, indent, "cnfl %s\n", capreq_snprintf_s(cnfl));
+            msg_i(3, indent, "cnfl %s\n", capreq_stra(cnfl));
                 
             n = find_db_conflicts_cnfl_with_db(indent, ictx, pkg, cnfl);
             ncnfl += n;

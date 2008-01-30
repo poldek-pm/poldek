@@ -170,8 +170,7 @@ void i3pkg_free(struct i3pkg *i3pkg)
 void i3pkg_register_candidates(struct i3pkg *i3pkg, const struct capreq *req,
                                tn_array *candidates)
 {
-    char *strreq = NULL;
-    capreq_stra(req, &strreq);
+    char *strreq = capreq_stra(req);
 
     if (i3pkg->candidates == NULL)
         i3pkg->candidates = n_hash_new(8, (tn_fn_free)n_array_free);

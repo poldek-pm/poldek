@@ -416,11 +416,11 @@ l_end:
         return found;             /* do not trace rpmlib() caps */
     
     if (candidates == NULL) {
-        tracef(indent, "%s %s (best=%s)", capreq_snprintf_s(req),
+        tracef(indent, "%s %s (best=%s)", capreq_stra(req),
                found ? "found" : "not found", 
                *best_pkg ? pkg_id(*best_pkg): "none");
     } else {
-        tracef(indent, "%s %s (%d candidate(s), best=%s)", capreq_snprintf_s(req),
+        tracef(indent, "%s %s (%d candidate(s), best=%s)", capreq_stra(req),
                found ? "found" : "not found",
                n_array_size(candidates),
                *best_pkg ? pkg_id(*best_pkg): "none");
@@ -468,7 +468,7 @@ struct pkg *i3_choose_equiv(struct poldek_ts *ts, const struct capreq *cap,
         }
     }
     
-    n = poldek__choose_equiv(ts, capreq_snprintf_s(cap), pkgs, hint);
+    n = poldek__choose_equiv(ts, capreq_stra(cap), pkgs, hint);
     if (n == -1)
         return NULL;
 

@@ -28,7 +28,7 @@ int i3_is_other_version_marked(struct i3ctx *ictx, struct pkg *pkg,
     if (i < 0)
         return 0;
 
-    DBGF("%s, found (req is %s)\n", pkg_id(pkg), req ? capreq_snprintf_s(req) : "null");
+    DBGF("%s, found (req is %s)\n", pkg_id(pkg), req ? capreq_stra(req):"null");
     for (; i < n_array_size(avpkgs); i++) {
         struct pkg *p = n_array_nth(avpkgs, i);
 
@@ -39,7 +39,7 @@ int i3_is_other_version_marked(struct i3ctx *ictx, struct pkg *pkg,
             if (req == NULL || pkg_satisfies_req(p, req, 0)) {
                 DBGF("%s -> YES, %s%s%s\n", pkg_id(pkg), pkg_id(p),
                      req ? " and satisfies " : "",
-                     req ? capreq_snprintf_s(req) : "null");
+                     req ? capreq_stra(req) : "null");
                 return 1;
             }
         }
