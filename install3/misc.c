@@ -210,15 +210,19 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                  pkg_cmp_name_evr(pkg, prev), same_packages_different_arch);
         }
         
-        if (i3_is_pkg_installed(ictx->ts, pkg, &cmprc) && cmprc > 0) 
-            scores[i] += 5; /* already installed and upgradeable - sweet */
-        
+        if (i3_is_pkg_installed(ictx->ts, pkg, &cmprc) && cmprc > 0) {
+            if (!iset_has_kind_of_pkg(ictx->unset, pkg))
+                scores[i] += 5; /* already installed and upgradeable - sweet */
+        }
+
+        DBGF("  %d %d %d\n", i, scores[i], conflicts[i]);
         if (pkg->cnflpkgs != NULL)
             for (j = 0; j < n_array_size(pkg->cnflpkgs); j++) {
                 struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
                 if (i3_is_marked(ictx, cpkg->pkg)) {
-                    conflicts[i]++;
+                    conflicts[i] += 1;
                     scores[i] -= 5;
+                    DBGF_F("  %d %d %d\n", i, scores[i], conflicts[i]);
                 }
             }
         
@@ -233,6 +237,7 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                   pkg_id(pkg));
             scores[i] -= 10;
         }
+        DBGF("%d %d %d\n", i, scores[i], conflicts[i]);
     }
     
     max_score = scores[0];
@@ -430,7 +435,7 @@ int i3_pkgdb_match_req(struct i3ctx *ictx, const struct capreq *req)
     unsigned ma_flags = ictx->ma_flags | POLDEK_MA_PROMOTE_CAPEPOCH; 
     
     return pkgdb_match_req(ictx->ts->db, req, ma_flags, 
-                           iset_packages(ictx->unset));
+                           iset_packages_by_recno(ictx->unset));
 }
 
 struct pkg *i3_choose_equiv(struct poldek_ts *ts, const struct capreq *cap,
