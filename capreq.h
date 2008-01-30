@@ -138,4 +138,11 @@ int capreq_snprintf(char *str, size_t size, const struct capreq *cr);
 char *capreq_snprintf_s(const struct capreq *cr);
 char *capreq_snprintf_s0(const struct capreq *cr);
 
+char *capreq_str(char *str, size_t size, const struct capreq *cr);
+
+/* const char *capreq_stra(struct capreq) */
+#define capreq_stra(c) \
+    (capreq_versioned((c))? capreq_name((c)):capreq_str(alloca(256), 256, (c)))
+
+
 #endif /* POLDEK_CAPREQ_H */

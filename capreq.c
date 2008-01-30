@@ -283,6 +283,12 @@ static uint8_t capreq_sizeof(const struct capreq *cr)
     return size;
 }
 
+char *capreq_str(char *str, size_t size, const struct capreq *cr) 
+{
+    if (capreq_snprintf(str, size, cr) > 0)
+        return str;
+    return NULL;
+}
 
 char *capreq_snprintf_s(const struct capreq *cr) 
 {
