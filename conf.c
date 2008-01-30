@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2007 Pawel A. Gajda <mis@pld-linux.org>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <fnmatch.h>
 #include <sys/param.h>          /* for PATH_MAX */
+#include <sys/types.h>
+#include <dirent.h>
 
 #include <trurl/nhash.h>
 #include <trurl/narray.h>
@@ -44,6 +46,7 @@
  
 static const char *global_tag = "global";
 static const char *include_tag = "%include";
+static const char *includedir_tag = "%includedir";
 
 static struct poldek_conf_tag unknown_tag = {
     NULL, CONF_TYPE_STRING | CONF_TYPE_F_ENV | CONF_TYPE_F_MULTI_EXCL,
@@ -719,14 +722,19 @@ static struct afile *afile_open(const char *path, const char *parent_path,
   %include path|url
   %include_<section_name> path|url -> load only <section_name>
 */
-static char *include_path(char *path, size_t size, char *line, char **sectnam,
-                          tn_hash *ht, tn_hash *ht_global)
+static char *prepare_include_path(const char *tag, char *path, size_t size,
+                                  char *line, char **sectnam,
+                                  tn_hash *ht, tn_hash *ht_global)
 {
     char expenval[PATH_MAX], expval[PATH_MAX], *p;
+
+    if (n_str_eq(tag, include_tag))
+        *sectnam = NULL;
+    else                        
+        n_assert(sectnam == NULL); /* irrelevant for non %include */
     
-    *sectnam = NULL;
-    p = line + strlen(include_tag);
-    if (*p == '_') {            
+    p = line + strlen(tag);
+    if (n_str_eq(tag, include_tag) && *p == '_') {            
         p++;
         *sectnam = p;
         while (!isspace(*p))
@@ -756,7 +764,6 @@ static tn_hash *open_section_ht(tn_hash *htconf,
     tn_array *arr_sect;
     tn_hash  *ht_sect = NULL;
     
-
     arr_sect = n_hash_get(htconf, sectnam);
     DBGF("[%s] sect=%p, is_multi=%d\n", sectnam, sect,
          sect ? sect->is_multi : -1);
@@ -927,8 +934,54 @@ void read_continuation(struct afile *af, char *buf, int size, int *nline)
     }
 }
 
-static
-tn_hash *do_ldconf(tn_hash *af_htconf,
+static tn_array *includedir_files(const char *dirpath, const char *ppath) 
+{
+    tn_array       *configs = NULL;
+    struct dirent  *ent;
+    DIR            *dir;
+    char           *sep = "/", tmpath[PATH_MAX];
+
+    
+    if (*dirpath != '/' && strrchr(ppath, '/') != NULL) {
+        char *s;
+        int n;
+
+        n = n_snprintf(tmpath, sizeof(tmpath), "%s", ppath);
+        s = strrchr(tmpath, '/');
+        n_assert(s);
+        
+        n_snprintf(s + 1, sizeof(tmpath) - n, "%s", dirpath);
+        dirpath = tmpath;
+    }
+    
+    if ((dir = opendir(dirpath)) == NULL) {
+        logn(LOGERR, "%%includedir %s: %m", dirpath);
+        return NULL;
+    }
+
+    configs = n_array_new(32, free, (tn_fn_cmp)strcmp);
+
+    while ((ent = readdir(dir))) {
+        char path[PATH_MAX];
+        int n;
+        
+        if (fnmatch("*.conf", ent->d_name, 0) != 0) 
+            continue;
+
+        n = n_snprintf(path, sizeof(path), "%s%s%s", dirpath, sep, ent->d_name);
+        n_array_push(configs, n_strdupl(path, n));
+    }
+    closedir(dir);
+    
+    n_array_sort(configs);
+    if (n_array_size(configs) == 0)
+        n_array_cfree(&configs);
+    
+    return configs;
+}
+        
+
+static tn_hash *do_ldconf(tn_hash *af_htconf,
                    const char *path, const char *parent_path,
                    const char *section_to_load, unsigned flags)
 {
@@ -974,32 +1027,67 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
     n_hash_insert(af_htconf, af->path, NULL);
 
     while (n_stream_gets(af->vf->vf_tnstream, buf, sizeof(buf) - 1)) {
-        char *name, *value, *p;
+        char *name, *value, *line;
         
         nline++;
-        p = eat_wws(buf);
-        if (*p == '#' || *p == '\0')
+        line = eat_wws(buf);
+        if (*line == '#' || *line == '\0')
             continue;
-        
-        if (strncmp(p, include_tag, strlen(include_tag)) == 0) {
-            char    *section_to_load = NULL, ipath[PATH_MAX];
-            tn_hash *inc_ht;
+
+        /* %includedir <directory> */
+        if (strncmp(line, includedir_tag, strlen(includedir_tag)) == 0) {
+            char ipath[PATH_MAX];
+            tn_array *configs;
+            int i;
+            
+
+            if (flags & POLDEK_LDCONF_NOINCLUDE) 
+                continue;
+            
+            line = prepare_include_path(includedir_tag, ipath, sizeof(ipath), line,
+                                        NULL, ht_sect, ht);
+            
+            if (line == NULL) {
+                logn(LOGERR, _("%s:%d: wrong %%includedir"), af->path, nline);
+                is_err = 1;
+                goto l_end;
+            }
+            DBGF("includedir %s\n", line);
+            
+            if ((configs = includedir_files(line, af->path)) == NULL)
+                continue;
+
+            for (i=0; i < n_array_size(configs); i++) {
+                char *path = n_array_nth(configs, i);
+                
+                if (!do_ldconf(af_htconf, path, af->path, NULL, flags)) {
+                    n_array_free(configs);
+                    is_err = 1;
+                    goto l_end;
+                }
+            }
+            n_array_free(configs);
+            continue;
+        }
+
+        /* %include <file> */
+        if (strncmp(line, include_tag, strlen(include_tag)) == 0) {
+            char *section_to_load = NULL, ipath[PATH_MAX];
             
             if (flags & POLDEK_LDCONF_NOINCLUDE) 
                 continue;
             
-            p = include_path(ipath, sizeof(ipath), p, &section_to_load,
-                             ht_sect, ht);
+            line = prepare_include_path(include_tag, ipath, sizeof(ipath),
+                                        line, &section_to_load, ht_sect, ht);
             
-            if (p == NULL) {
+            if (line == NULL) {
                 logn(LOGERR, _("%s:%d: wrong %%include"), af->path, nline);
                 is_err = 1;
                 goto l_end;
             }
-
-            DBGF("open %s %s, i %s\n", p, sectnam, inc_sectnam);
-            inc_ht = do_ldconf(af_htconf, p, af->path, section_to_load, flags);
-            if (inc_ht == NULL) {
+            
+            DBGF("open %s %s, i %s\n", line, sectnam, inc_sectnam);
+            if (!do_ldconf(af_htconf, line, af->path, section_to_load, flags)) {
                 is_err = 1;
                 goto l_end;
             }
@@ -1008,18 +1096,18 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
         
         read_continuation(af, buf, sizeof(buf), &nline);
 
-        if (*p == '%')          /* unknown directive */
+        if (*line == '%')          /* unknown directive */
             continue;
 
-        if (*p == '[') {        /* section */
+        if (*line == '[') {        /* section */
             const struct poldek_conf_section *sect = NULL;
             
-            p++;
-            name = p;
+            line++;
+            name = line;
             
-            while (isalnum(*p) || *p == '-')
-                p++;
-            *p = '\0';
+            while (isalnum(*line) || *line == '-')
+                line++;
+            *line = '\0';
 
             if (validate && (sect = find_section(name)) == NULL) {
                 logn(LOGERR, _("%s:%d: '%s': invalid section name"),
@@ -1036,7 +1124,7 @@ tn_hash *do_ldconf(tn_hash *af_htconf,
             continue;
         }
 
-        if (!split_option_line(p, &name, &value, af->path, nline))
+        if (!split_option_line(line, &name, &value, af->path, nline))
             goto l_end;
         
         if (ht_sect) {
