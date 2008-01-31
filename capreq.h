@@ -142,7 +142,7 @@ char *capreq_str(char *str, size_t size, const struct capreq *cr);
 
 /* const char *capreq_stra(struct capreq) */
 #define capreq_stra(c) \
-    (capreq_versioned((c))? capreq_name((c)):capreq_str(alloca(256), 256, (c)))
+    (capreq_versioned((c))? capreq_str(alloca(256), 256, (c)): capreq_name((c)))
 
 
 #endif /* POLDEK_CAPREQ_H */
