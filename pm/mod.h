@@ -36,7 +36,7 @@ struct pm_module {
                     const char *path, mode_t mode, tn_hash *kw);
     void (*dbclose)(void *dbh);
 
-    void (*dbtxbegin)(void *dbh);
+    void (*dbtxbegin)(void *dbh, struct poldek_ts *ts);
     int  (*dbtxcommit)(void *dbh);
 
     void (*dbfree)(void *dbh);

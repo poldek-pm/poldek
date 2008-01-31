@@ -28,7 +28,8 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
 void pm_pset_closedb(void *dbh);
 void pm_pset_freedb(void *dbh);
 
-int pm_pset_commitdb(void *dbh);
+void pm_pset_tx_begin(void *dbh, struct poldek_ts *ts);
+int pm_pset_tx_commit(void *dbh);
 
 int pm_pset_db_it_init(struct pkgdb_it *it, int tag, const char *arg);
 

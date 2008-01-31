@@ -140,11 +140,12 @@ void pkgdb_free(struct pkgdb *db)
     free(db);
 }
 
-int pkgdb_tx_begin(struct pkgdb *db)
+int pkgdb_tx_begin(struct pkgdb *db, struct poldek_ts *ts)
 {
+    if (db->_txcnt == 0 && db->_ctx->mod->dbtxbegin)
+        db->_ctx->mod->dbtxbegin(db->dbh, ts);
+    
     db->_txcnt++;
-    if (db->_ctx->mod->dbtxbegin)
-        db->_ctx->mod->dbtxbegin(db->dbh);
     return db->_txcnt;
 }
 

@@ -928,7 +928,7 @@ static int ts_run_upgrade_dist(struct poldek_ts *ts)
     if (ts->db == NULL)
         return 0;
 
-    pkgdb_tx_begin(ts->db);
+    pkgdb_tx_begin(ts->db, ts);
     rc = do_poldek_ts_upgrade_dist(ts);
     if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
         pkgdb_tx_commit(ts->db);
@@ -964,7 +964,7 @@ static int ts_run_install(struct poldek_ts *ts)
     if (ts->db == NULL)
         return 0;
     
-    pkgdb_tx_begin(ts->db);
+    pkgdb_tx_begin(ts->db, ts);
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
 
     if (ts->ctx->_depsolver == 3) { /* hope, soon */

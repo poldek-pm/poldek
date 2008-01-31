@@ -61,13 +61,14 @@ struct pm_pset {
 
 
 struct pm_psetdb {
-    struct pkgset  *ps;
-    char           *tsdir;       /* transaction temp directory */
-    tn_array       *pkgs_added;
-    tn_array       *paths_added;
-    tn_array       *paths_removed;
-    int            _recno;
-    struct pm_pset *pm;
+    struct poldek_ts *ts;
+    struct pkgset    *ps;
+    char             *tsdir;       /* transaction temp directory */
+    tn_array         *pkgs_added;
+    tn_array         *paths_added;
+    tn_array         *paths_removed;
+    int              _recno;
+    struct pm_pset   *pm;
 };
 
 void *pm_pset_init(void) 
@@ -210,6 +211,7 @@ void *pm_pset_opendb(void *pm_pset, void *dbh,
 
     pkgset_setup(ps, PSET_VRFY_MERCY);
     db = n_malloc(sizeof(*db));
+    db->ts = NULL;
     db->ps = ps;
     db->pkgs_added = pkgs_array_new(32);
     db->paths_added = n_array_new(32, free, NULL);
@@ -359,7 +361,7 @@ static int do_cp(const char *src, const char *dst)
     return ec == 0;
 }
 
-/* remeber! don't touch any member */
+/* remember! don't touch any member */
 struct psetdb_it {
     int                  tag;
     int                  i;
@@ -574,31 +576,37 @@ tn_array *pm_pset_ldhdr_capreqs(tn_array *arr, void *hdr, int crtype)
     return arr;
 }
 
+static char *mktsdir(const char *cachedir)
+{
+    char tsdir[PATH_MAX];
+    n_snprintf(tsdir, sizeof(tsdir), "%s/tsXXXXXX", cachedir);
+    
+#ifdef HAVE_MKDTEMP
+    if (mkdtemp(tsdir) == NULL) {
+        logn(LOGERR, "mkdtemp %s: %m", tsdir);
+        return NULL;
+    }
+#else
+#error "mkdtemp is needed"        
+#endif        
+
+    return n_strdup(tsdir);
+}
+
 static int do_pkgtslink(struct pm_psetdb *db, const char *cachedir,
                          struct pkg *pkg, const char *pkgpath)
 {
     char tspath[PATH_MAX];
     
     if (db->tsdir == NULL) {
-        char tsdir[PATH_MAX];
-        n_snprintf(tsdir, sizeof(tsdir), "%s/tsXXXXXX", cachedir);
-#ifdef HAVE_MKDTEMP
-        if (mkdtemp(tsdir) == NULL) {
-            logn(LOGERR, "mkdtemp %s: %m", tsdir);
+        if ((db->tsdir = mktsdir(cachedir)) == NULL)
             return 0;
-        }
-#else
-#error "mkdtemp is needed"        
-#endif        
-        db->tsdir = n_strdup(tsdir);
     }
-    
     n_snprintf(tspath, sizeof(tspath), "%s/%s", db->tsdir, n_basenam(pkgpath));
-
 
     if (pkg_file_url_type(pkg) == VFURL_PATH) {
         if (symlink(pkgpath, tspath) != 0) {
-            logn(LOGERR, "%s: symlink failed: %m\n", pkgpath);
+            logn(LOGERR, "%s: symlink failed: %m", pkgpath);
             return 0;
         }
     } else {
@@ -607,6 +615,7 @@ static int do_pkgtslink(struct pm_psetdb *db, const char *cachedir,
                 return 0;
         }
     }
+
     n_array_push(db->paths_added, n_strdup(tspath));
     return 1;
 }
@@ -707,9 +716,6 @@ int pm_pset_packages_install(struct pkgdb *pdb, const tn_array *pkgs,
         tmp = n_array_bsearch(pkgdir->pkgs, pkg);
         DBGF("after in %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
             
-        if (ts->getop(ts, POLDEK_OP_JUSTDB))
-            continue;
-        
         if (!do_pkgtslink(db, ts->cachedir, pkg, path))
             return 0;
         
@@ -756,24 +762,35 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb, const tn_array *pkgs,
             pkgdir_remove_package(pkgdir, tmp);
 
             DBGF("un %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
-            if (ts->getop(ts, POLDEK_OP_JUSTDB))
-                continue;
-            n_array_push(db->paths_removed, n_strdup(path));
             
+            n_array_push(db->paths_removed, n_strdup(path));
             msgn(2, "Removing %s", path);
         }
     }
     return 1;
 }
 
-/* TODO: transaction like behaviour */
-int pm_pset_commitdb(void *dbh) 
+void pm_pset_tx_begin(void *dbh, struct poldek_ts *ts) 
 {
     struct pm_psetdb *db = dbh;
+
+    n_assert(db->ts == NULL);
+    db->ts = ts;
+}
+
+
+/* TODO: transaction like behaviour */
+int pm_pset_tx_commit(void *dbh) 
+{
+    struct pm_psetdb *db = dbh;
+    struct poldek_ts *ts = db->ts;
     struct pkgdir *pkgdir;
     char dstpath[PATH_MAX];
     int i, rc = 1, nchanges;
 
+    n_assert(db->ts);
+    db->ts = NULL;
+    
     nchanges = n_array_size(db->paths_removed) + n_array_size(db->paths_added);
     if (nchanges == 0)
         return 1;
@@ -782,38 +799,56 @@ int pm_pset_commitdb(void *dbh)
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
     pkgdir = n_array_nth(db->ps->pkgdirs, 0);
     msgn(0, "Operating on %s", pkgdir->path);
+
     for (i=0; i < n_array_size(db->paths_removed); i++) {
         const char *path = n_array_nth(db->paths_removed, i);
+        
+        msgn_f(0, "%%add %s", n_basenam(path));
         msgn_f(0, "%%rm %s\n", path);
         msgn_tty(1, "rm %s\n", path);
-        if (unlink(path) == 0) {
-            nchanges++;
-            
-        } else {
-            logn(LOGERR, "%s: unlink failed: %m", path);
-            rc = 0;
-            break;
+        
+        if (!ts->getop(ts, POLDEK_OP_JUSTDB)) {
+            if (unlink(path) != 0) {
+                logn(LOGERR, "%s: unlink failed: %m", path);
+                rc = 0;
+                break;
+            }
         }
+        nchanges++;
     }
 
     if (rc) {
         for (i=0; i < n_array_size(db->paths_added); i++) {
             const char *path = n_array_nth(db->paths_added, i);
-            n_snprintf(dstpath, sizeof(dstpath), "%s%s", pkgdir->path,
-                       n_basenam(path));
+            int n;
+            
+            n = n_snprintf(dstpath, sizeof(dstpath), "%s", pkgdir->path);
+            n_snprintf(&dstpath[n], sizeof(dstpath) - n, "%s%s",
+                       dstpath[n-1] == '/' ? "":"/", n_basenam(path));
+
+            msgn_f(0, "%%del %s", n_basenam(path));
             msgn_f(0, "%%cp %s %s\n", path, dstpath);
             msgn_tty(1, "cp %s %s\n", n_basenam(path), dstpath);
-            if (!do_cp(path, dstpath)) {
-                rc = 0;
-                break;
+            
+            if (!ts->getop(ts, POLDEK_OP_JUSTDB)) {
+                if (!do_cp(path, dstpath)) {
+                    rc = 0;
+                    break;
+                }
+                unlink(path);
             }
-            unlink(path);
             nchanges++;
         }
     }
     
-    if (nchanges && rc && pkgdir_type_info(pkgdir->type) & PKGDIR_CAP_SAVEABLE)
+    if (nchanges == 0 || !rc)
+        return rc;
+    
+    if (pkgdir_type_info(pkgdir->type) & PKGDIR_CAP_SAVEABLE)
         rc = pkgdir_save(pkgdir, 0);
+    
+    else if (ts->getop(ts, POLDEK_OP_JUSTDB))
+        logn(LOGWARN, "--justdb makes no sense for non-db repository");
     
     return rc;
 }

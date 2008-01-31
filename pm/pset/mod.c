@@ -18,10 +18,10 @@ struct pm_module pm_module_pset = {
     
     pm_pset_opendb,
     pm_pset_closedb,
-    NULL,
-    pm_pset_commitdb,
+    pm_pset_tx_begin,
+    pm_pset_tx_commit,
     pm_pset_freedb,
-
+    
     pm_pset_db_it_init,
     
     NULL,

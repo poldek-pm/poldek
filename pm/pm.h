@@ -71,7 +71,7 @@ pkgdb_filter_fn pkgdb_set_filter(struct pkgdb *db,
 void pkgdb_close(struct pkgdb *db);
 void pkgdb_free(struct pkgdb *db);
 
-int pkgdb_tx_begin(struct pkgdb *db);
+int pkgdb_tx_begin(struct pkgdb *db, struct poldek_ts *ts);
 int pkgdb_tx_commit(struct pkgdb *db);
 
 struct poldek_ts;
