@@ -594,7 +594,7 @@ static char *mktsdir(const char *cachedir)
 }
 
 static int do_pkgtslink(struct pm_psetdb *db, const char *cachedir,
-                         struct pkg *pkg, const char *pkgpath)
+                        struct pkg *pkg, const char *pkgpath)
 {
     char tspath[PATH_MAX];
     
@@ -666,34 +666,10 @@ int pm_pset_packages_install(struct pkgdb *pdb, const tn_array *pkgs,
     if (is_immutable(db->pm, "installation"))
         return 0;
     
-#if 0   /* playing with recno -- a mess... */
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-        if (pkg->recno == 0) {
-            pkg->recno = db->_recno++;
-            
-        } else {
-            struct pkg *tmp = n_array_bsearch(pkgdir->pkgs, pkg);
-            if (tmp == NULL || tmp != pkg) { /* not the same one? */
-                logn(LOGERR, "%s: recno is set, should not happen",
-                     pkg_snprintf_s(pkg));
-                pkg->recno = db->_recno++;
-            }
-        }
-    }
-#endif
-    //debug
-    //pkgdir = n_array_nth(db->ps->pkgdirs, 0);
-    //dumpdir(pkgdir);
-    
     pm_pset_packages_uninstall(pdb, pkgs_toremove, ts);
 
-    //debug
-    //pkgdir = n_array_nth(db->ps->pkgdirs, 0);
-    //dumpdir(pkgdir);
     n_assert(n_array_size(db->ps->pkgdirs) == 1);
     pkgdir = n_array_nth(db->ps->pkgdirs, 0);
-    //dumpdir(pkgdir);
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *tmp, *pkg = n_array_nth(pkgs, i);
@@ -703,10 +679,9 @@ int pm_pset_packages_install(struct pkgdb *pdb, const tn_array *pkgs,
         
         tmp = n_array_bsearch(pkgdir->pkgs, pkg);
             
-        DBGF("in %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
+        DBGF("in %p(%p) %s\n", pkg, tmp, pkg_id(pkg));
         if (pkg->recno > 0)
-            logn(LOGERR, "%s: recno is set, should not happen",
-                 pkg_snprintf_s(pkg));
+            logn(LOGERR, "%s: recno is set, should not happen", pkg_id(pkg));
         
         pkgset_add_package(db->ps, pkg);
         pkgdir_add_package(pkgdir, pkg);    
@@ -714,9 +689,12 @@ int pm_pset_packages_install(struct pkgdb *pdb, const tn_array *pkgs,
         n_array_push(db->pkgs_added, pkg_link(pkg));
 
         tmp = n_array_bsearch(pkgdir->pkgs, pkg);
-        DBGF("after in %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
-            
-        if (!do_pkgtslink(db, ts->cachedir, pkg, path))
+        DBGF("after in %p(%p) %s\n", pkg, tmp, pkg_id(pkg));
+
+        if (ts->getop(ts, POLDEK_OP_JUSTDB))
+            n_array_push(db->paths_added, n_strdup(path));
+        
+        else if (!do_pkgtslink(db, ts->cachedir, pkg, path))
             return 0;
         
         msgn(2, "Copying %s to %s", path, pkgdir->path);
@@ -752,8 +730,7 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb, const tn_array *pkgs,
             struct pkg *tmp = n_array_bsearch(pkgdir->pkgs, pkg);
 
             if (tmp == NULL) {
-                logn(LOGERR, "%s: not found, should not happen",
-                     pkg_snprintf_s(pkg));
+                logn(LOGERR, "%s: not found, should not happen", pkg_id(pkg));
                 n_assert(0);
             }
                 
@@ -761,8 +738,7 @@ int pm_pset_packages_uninstall(struct pkgdb *pdb, const tn_array *pkgs,
             pkgset_remove_package(db->ps, tmp);
             pkgdir_remove_package(pkgdir, tmp);
 
-            DBGF("un %p(%p) %s\n", pkg, tmp, pkg_snprintf_s(pkg));
-            
+            DBGF("un %p(%p) %s\n", pkg, tmp, pkg_id(pkg));
             n_array_push(db->paths_removed, n_strdup(path));
             msgn(2, "Removing %s", path);
         }
