@@ -99,11 +99,10 @@ static struct vf_progress vfPyProgress = {
     NULL, py_progress_new, py_progress, py_progress_reset, NULL
 };
 
-static void PythonDoLog(void *data, int pri, const char *fmt, va_list vargs)
+static void PythonDoLog(void *data, int pri, const char *message)
 {
    PyObject *obj, *method, *pypri, *pymessage, *r;
    const char *spri = "info";
-   char message[2048];
 
    if (pri & LOGERR)
        spri = "error";
@@ -121,7 +120,6 @@ static void PythonDoLog(void *data, int pri, const char *fmt, va_list vargs)
    method = Py_BuildValue("s", "log");
    
    pypri = Py_BuildValue("s", spri);       
-   n_vsnprintf(message, sizeof(message), fmt, vargs);
    pymessage = Py_BuildValue("s", message);
 
    r = PyObject_CallMethodObjArgs(obj, method, pypri, pymessage, NULL);
@@ -321,7 +319,7 @@ static int PythonChooseEquiv(void *data, const struct poldek_ts *ts,
 %extend tn_array {
     tn_array(int size) { return n_array_new_ex(size, NULL, NULL, NULL); };
     tn_array(void *arr) { return n_ref(arr); };
-    ~tn_array() { printf("free %p %d\n", self); n_array_free(self); }
+    ~tn_array() { n_array_free(self); }
     int __len__() { return n_array_size(self); }
         
     void *nth(int i) {

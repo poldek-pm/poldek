@@ -39,7 +39,7 @@ extern const int poldek_VERBOSE;
 extern const int poldek_TRACE;
 #endif
 
-typedef void (*poldek_vlog_fn)(void *, int pri, const char *fmt, va_list args);
+typedef void (*poldek_vlog_fn)(void *, int pri, const char *message);
 
 void poldek_log_add_appender(const char *name, void *data, tn_fn_free free,
                              unsigned flags, poldek_vlog_fn dolog);

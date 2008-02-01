@@ -37,14 +37,14 @@ static int default_say_goodbye(const char *msg);
 int (*poldek_log_say_goodbye)(const char *msg) = default_say_goodbye;
 
 static void do_log(unsigned flags, int pri, const char *fmt, va_list args);
-static void vlog_file(void *stream, int pri, const char *fmt, va_list args);
-static void vlog_tty(void *foo, int pri, const char *fmt, va_list args);
+static void vlog_file(void *stream, int pri, const char *message);
+static void vlog_tty(void *foo, int pri, const char *message);
 
 
 struct poldek_log_appender {
     int flags;                  /* LOGTTY for TTY-output */
     void *_data;
-    void (*dolog)(void *, int pri, const char *fmt, va_list args);
+    void (*dolog)(void *, int pri, const char *message);
     void (*free)(void *);
     char name[0];
 };
@@ -238,7 +238,7 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
 }
 
 
-static void vlog_tty(void *foo, int pri, const char *fmt, va_list args)
+static void vlog_tty(void *foo, int pri, const char *message)
 {
     char buf[44];
     int n = 0;
@@ -263,11 +263,11 @@ static void vlog_tty(void *foo, int pri, const char *fmt, va_list args)
     if (n > 0)
         fprintf(stdout, "%s", buf);
 
-    vfprintf(stdout, fmt, args);
+    fprintf(stdout, "%s", message);
     fflush(stdout);
 }
 
-static void vlog_file(void *stream, int pri, const char *fmt, va_list args)
+static void vlog_file(void *stream, int pri, const char *message)
 {
     
     if ((pri & LOGOPT_CONT) == 0) {
@@ -285,25 +285,27 @@ static void vlog_file(void *stream, int pri, const char *fmt, va_list args)
     else if (pri & LOGWARN)
         fprintf(stream, "%s", _("warn: "));
             
-    vfprintf(stream, fmt, args);
+    fprintf(stream, "%s", message);
     fflush(stream);
 }
 
 static void do_log(unsigned flags, int pri, const char *fmt, va_list args) 
 {
-    char *endl = NULL;
+    char message[1024], *endl = NULL;
     int i;
 
     if (*fmt == '\n' && (pri & (LOGERR|LOGWARN|LOGNOTICE))) {
         fmt++;
         endl = "\n";
     }
+
+    n_vsnprintf(message, sizeof(message), fmt, args);
     
     if (log_appenders == NULL || n_array_size(log_appenders) == 0) {
         if (endl)
-            vlog_tty(NULL, LOGOPT_CONT, endl, NULL);
+            vlog_tty(NULL, LOGOPT_CONT, endl);
             
-        vlog_tty(NULL, pri, fmt, args);
+        vlog_tty(NULL, pri, message);
         return;
     }
 
@@ -315,8 +317,8 @@ static void do_log(unsigned flags, int pri, const char *fmt, va_list args)
         
         if (ape->dolog) {
             if (endl)
-                ape->dolog(ape->_data, LOGOPT_CONT, endl, NULL);
-            ape->dolog(ape->_data, pri, fmt, args);
+                ape->dolog(ape->_data, LOGOPT_CONT, endl);
+            ape->dolog(ape->_data, pri, message);
         
         } else {
             fprintf(stderr, "appender without dolog()?\n");
