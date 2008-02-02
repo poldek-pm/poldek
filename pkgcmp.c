@@ -261,6 +261,9 @@ int pkg_strcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
     if ((rc = strcmp(p2->ver, p1->ver)) == 0)
         rc = strcmp(p2->rel, p1->rel);
 
+    if (rc == 0 && poldek_conf_MULTILIB)
+        return pkg_cmp_arch(p1, p2);
+
     return rc;
 }
 
