@@ -98,9 +98,19 @@ class PyldekCallbacks(poldek.callbacks):
         print "*****************************************************\n"
         return hint
 
+    def choose_suggests(self, ts, package, caps, choices, hint):
+        print "\n************** choose suggests *********************"
+        print "* Package <%s> suggests:" % package
+        for cap in caps:
+            print "*   - %s" % cap
+        print "* Choosing the first one: %s" % caps[0] 
+        print "*****************************************************\n"
+
+        choices.append(caps[0])
+        return 1
 
 class Pyldek:
-    def __init__(self, source_name = None, verbose = 1, config = None):
+    def __init__(self, source_name = None, source_path = None, verbose = 1, config = None):
         ctx = poldek.poldek_ctx()
         self._cb = PyldekCallbacks()
         self._progress = vfileProgress()
@@ -114,6 +124,12 @@ class Pyldek:
             print "## Configured %s" % source_name
             src = poldek.source(source_name)
             ctx.configure(ctx.CONF_SOURCE, src)
+
+        if source_path: # -s source_name ?
+            print "## Configured %s" % source_path
+            src = poldek.source(None, None, source_path, None)
+            ctx.configure(ctx.CONF_SOURCE, src)
+
 
         ctx.load_config()
     
@@ -266,10 +282,11 @@ def get_options():
     parser.add_option("-l", action='count', help="List sources")
     parser.add_option("-v",  action='count', help="Be verbose")
     parser.add_option("-n", metavar="source", help="Select repository")
+    parser.add_option("-s", metavar="sourcepath", help="Select repository")
     parser.add_option("--up", action="count", help="Update repository/ies")
     parser.add_option("--upa", action="count", help="Update repository/ies")
     (options, args) = parser.parse_args()
-    if not options.l and not options.n and len(args) < 1:
+    if not options.l and not options.n and not options.s and len(args) < 1:
         parser.print_help()
         sys.exit(0)
     return (options, args)
@@ -280,7 +297,7 @@ poldek.lib_init()
 if not options.v :
     options.v = 0
     
-pyl = Pyldek(options.n, verbose = options.v)
+pyl = Pyldek(options.n, options.s, verbose = options.v)
 
 if options.l:
     pyl.list_sources()

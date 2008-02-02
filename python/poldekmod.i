@@ -16,12 +16,18 @@
 #include "log.h"
 #include "vfile/vfile.h" /* for vf_progress */
 
-static void PythonDoLog(void *data, int pri, const char *fmt, va_list vargs);
+static void PythonDoLog(void *data, int pri, const char *message);
 static int PythonConfirm(void *data, const struct poldek_ts *ts, 
                          int hint, const char *message);
 static int PythonTsConfirm(void *data, const struct poldek_ts *ts);
-static int PythonChooseEquiv(void *data, const struct poldek_ts *ts, 
-                             const char *cap, tn_array *pkgs, int hint);
+
+static int PythonChooseEquiv(void *data, const struct poldek_ts *ts,
+                             const struct pkg *pkg, const char *cap,
+                             tn_array *pkgs, int hint);
+
+static int PythonChooseSuggests(void *data, const struct poldek_ts *ts, 
+                                const struct pkg *pkg, tn_array *caps, 
+                                tn_array *choices, int hint);
 
 static struct vf_progress vfPyProgress;
 %}
@@ -183,9 +189,10 @@ static int PythonTsConfirm(void *data, const struct poldek_ts *ts)
 }
 
 static int PythonChooseEquiv(void *data, const struct poldek_ts *ts, 
-                             const char *cap, tn_array *pkgs, int hint)
+                             const struct pkg *pkg, const char *cap, 
+                             tn_array *pkgs, int hint)
 {
-   PyObject *obj, *method, *pyts, *pycap, *pypkgs, *pyhint, *r; 
+   PyObject *obj, *method, *pyts, *pypkg, *pycap, *pypkgs, *pyhint, *r; 
    tn_array *packages = n_ref(pkgs);  // XXX
    int answer;
      
@@ -195,18 +202,64 @@ static int PythonChooseEquiv(void *data, const struct poldek_ts *ts,
    pyts = SWIG_NewPointerObj(SWIG_as_voidptr(ts), SWIGTYPE_p_poldek_ts, 0 | 0);
    Py_INCREF(pyts);            // XXX - SWIG_NewPointerObj do incref?
 
+   pypkg = SWIG_NewPointerObj(SWIG_as_voidptr(pkg), SWIGTYPE_p_pkg, 0 | 0);
+   Py_INCREF(pypkg);            // XXX - SWIG_NewPointerObj do incref?
+
    pycap = Py_BuildValue("s", cap);     
    pypkgs = SWIG_NewPointerObj(SWIG_as_voidptr(pkgs), SWIGTYPE_p_trurl_array_private, 0 | 0);
    Py_INCREF(pypkgs);
 
    pyhint = Py_BuildValue("i", hint);     
 
-   r = PyObject_CallMethodObjArgs(obj, method, pyts, pycap, pypkgs, pyhint, NULL);
+   r = PyObject_CallMethodObjArgs(obj, method, pyts, pypkg, pycap, pypkgs, pyhint, NULL);
 
    Py_DECREF(method);
    Py_DECREF(pyts);
+   Py_DECREF(pypkg);
    Py_DECREF(pycap);
    Py_DECREF(pypkgs);
+   Py_DECREF(pyhint);
+     
+   if (r == NULL)
+      return hint;
+
+   answer = (int)PyLong_AsLong(r);
+   Py_DECREF(r);
+   return answer;     
+}
+
+static int PythonChooseSuggests(void *data, const struct poldek_ts *ts, 
+                                const struct pkg *pkg, tn_array *caps, 
+                                tn_array *choices, int hint)
+{
+   PyObject *obj, *method, *pyts, *pypkg, *pycaps, *pychoices, *pyhint, *r; 
+   int answer;
+     
+   obj = (PyObject *) data;
+   method = Py_BuildValue("s", "raw__choose_suggests"); // XXX - see poldek.py
+
+   pyts = SWIG_NewPointerObj(SWIG_as_voidptr(ts), SWIGTYPE_p_poldek_ts, 0 | 0);
+   Py_INCREF(pyts);            // XXX - SWIG_NewPointerObj do incref?
+
+   pypkg = SWIG_NewPointerObj(SWIG_as_voidptr(pkg), SWIGTYPE_p_pkg, 0 | 0);
+   Py_INCREF(pypkg);            // XXX - SWIG_NewPointerObj do incref?
+
+   pycaps = SWIG_NewPointerObj(SWIG_as_voidptr(caps), SWIGTYPE_p_trurl_array_private, 0 | 0);
+   Py_INCREF(pycaps);
+
+   pychoices = SWIG_NewPointerObj(SWIG_as_voidptr(choices), SWIGTYPE_p_trurl_array_private, 0 | 0);
+   Py_INCREF(pychoices);
+
+
+   pyhint = Py_BuildValue("i", hint);     
+
+   r = PyObject_CallMethodObjArgs(obj, method, pyts, pypkg, pycaps, pychoices, pyhint, NULL);
+
+   Py_DECREF(method);
+   Py_DECREF(pyts);
+   Py_DECREF(pypkg);
+   Py_DECREF(pycaps);
+   Py_DECREF(pychoices);
    Py_DECREF(pyhint);
      
    if (r == NULL)
@@ -479,6 +532,7 @@ static int PythonChooseEquiv(void *data, const struct poldek_ts *ts,
         poldek_configure(self, POLDEK_CONF_CONFIRM_CB, (void*)PythonConfirm, v);
         poldek_configure(self, POLDEK_CONF_TSCONFIRM_CB, (void*)PythonTsConfirm, v);
         poldek_configure(self, POLDEK_CONF_CHOOSEEQUIV_CB, (void*)PythonChooseEquiv, v); 
+        poldek_configure(self, POLDEK_CONF_CHOOSESUGGESTS_CB, (void*)PythonChooseSuggests, v); 
         Py_INCREF(obj);
     }
 

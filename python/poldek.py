@@ -237,13 +237,28 @@ class callbacks(py_poldek_util):
         return False
 
     # n_array_proxy() applied to tn_array*
-    def raw__choose_equiv(self, ts, capability_name, raw_packages, hint):
+    def raw__choose_equiv(self, ts, pkg, capability_name, raw_packages, hint):
         packages = n_array_proxy(raw_packages, pkg)
-        return self.choose_equiv(ts, capability_name, packages, hint)
+        return self.choose_equiv(ts, package, capability_name, packages, hint)
 
-    def choose_equiv(self, ts, capability_name, packages, hint):
-        print "## confirm_transaction: Implement me"
+    def choose_equiv(self, ts, package, capability_name, packages, hint):
+        print "## choose_equiv: Implement me"
         return hint
+
+    # n_array_proxy() applied to tn_array*
+    def raw__choose_suggests(self, ts, package, raw_caps, raw_choices, hint):
+        caps = n_array_proxy(raw_caps, capreq)
+
+        choices = []
+        rv = self.choose_suggests(ts, package, caps, choices, hint)
+        for c in choices:
+            raw_choices.push(c)
+        return rv
+    
+    def choose_suggests(self, ts, package, caps, choices, hint):
+        print "## choose_suggests: Implement me"
+        return hint
+    
     
 class vfile_progress(py_poldek_util):
     def initialize(self, label):
