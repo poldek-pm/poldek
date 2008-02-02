@@ -23,7 +23,9 @@
 #define OPT_GID_OP_SPLIT      (1400 + OPT_GID_BASE)
 #define OPT_GID_OP_OTHER      (1600 + OPT_GID_BASE)
 
-int poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path);
+int poclidek__load_aliases(struct poclidek_ctx *cctx);
+int poclidek__add_aliases(struct poclidek_ctx *cctx, tn_hash *htcnf);
+
 
 void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts);
 

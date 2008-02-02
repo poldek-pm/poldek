@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2000 - 2005 Pawel A. Gajda <mis@k2.net.pl>
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -37,6 +37,7 @@
 #include "pkgdir/pkgdir.h"
 #include "i18n.h"
 #include "log.h"
+#include "conf.h"
 #include "cli.h"
 #include "cmd_chain.h"
 #include "cmd_pipe.h"
@@ -233,8 +234,7 @@ static struct argp_option common_options[] = {
 };
 
 
-static
-int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv) 
+static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv) 
 {
     int                  rc = 1;
     unsigned             parse_flags;
@@ -324,9 +324,8 @@ static int cmdctx_isctrlmsg(const char *fmt)
     return *fmt == '!';
 }
 
-static
-int do_cmdctx_printf(struct cmdctx *cmdctx, int color, const char *fmt,
-                     va_list args)
+static int do_cmdctx_printf(struct cmdctx *cmdctx, int color, const char *fmt,
+                            va_list args)
 {
     int is_ctrl, n = 0;
     
@@ -378,8 +377,7 @@ int cmdctx_addtoresult(struct cmdctx *cmdctx, struct pkg *pkg)
     return 1;
 }
 
-static
-int command_cmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2) 
+static int command_cmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2) 
 {
     return strcmp(c1->name, c2->name);
 }
@@ -427,9 +425,9 @@ int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
 }
 
 
-static void init_commands(struct poclidek_ctx *cctx) 
+static void init_commands(struct poclidek_ctx *cctx, tn_hash *global_aliases,
+                          tn_hash *local_aliases) 
 {
-    char *homedir, *sysconfdir = "/etc", path[PATH_MAX];
     int n = 0;
     
     cctx->commands = n_array_new(16, (tn_fn_free)command_free,
@@ -441,22 +439,16 @@ static void init_commands(struct poclidek_ctx *cctx)
     }
 	n_array_sort(cctx->commands);
 
-#ifdef SYSCONFDIR
-    if (access(SYSCONFDIR, R_OK) == 0)
-        sysconfdir = SYSCONFDIR;
-#endif
-
-    n_snprintf(path, sizeof(path), "%s/poldek/aliases.conf", sysconfdir);
-    poclidek_load_aliases(cctx, path);
-
-    if ((homedir = getenv("HOME")) != NULL) {
-		char path[PATH_MAX];
-		snprintf(path, sizeof(path), "%s/.poldek-aliases.conf", homedir);	
-		if (!poclidek_load_aliases(cctx, path)) {
-            snprintf(path, sizeof(path), "%s/.poldek.alias", homedir);
-            poclidek_load_aliases(cctx, path);
-        }
-	}
+    n = 0;
+    if (global_aliases)
+        n += poclidek__add_aliases(cctx, global_aliases);
+    
+    if (local_aliases)
+        n += poclidek__add_aliases(cctx, local_aliases);
+    
+    if (n == 0)
+        poclidek__load_aliases(cctx); /* load legacy config(s) */
+    
     n_array_sort(cctx->commands);
 }
 
@@ -465,10 +457,75 @@ static void *dent_alloc(struct poclidek_ctx *cctx, size_t size)
     return cctx->_dent_na->na_malloc(cctx->_dent_na, size);
 }
 
-static
-int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
+static int config_path(char *globalpath, char *localpath, int size)
 {
-    n_assert (cctx->ctx == NULL);
+    char *homedir, *sysconfdir = "/etc";
+    
+#ifdef SYSCONFDIR
+    if (n_str_ne(sysconfdir, SYSCONFDIR) && access(SYSCONFDIR, R_OK) == 0)
+        sysconfdir = SYSCONFDIR;
+#endif
+    *localpath = *globalpath = '\0';
+    
+    n_snprintf(globalpath, size, "%s/poldek/cli.conf", sysconfdir);
+    if (access(globalpath, R_OK) != 0)
+        *globalpath = '\0';
+    
+    
+    if ((homedir = getenv("HOME")) != NULL) {
+        int n;
+
+        n = n_snprintf(localpath, size, "%s/.poclidekrc", homedir);
+        if (access(localpath, R_OK) != 0) {
+            n = n_snprintf(localpath, size, "%s/.poldekclirc", homedir);
+            if (access(localpath, R_OK) != 0)
+                *localpath = '\0';
+        }
+    }
+    
+    DBGF("%s\n", sysconfdir);
+    
+    return *localpath != '\0' || *globalpath != '\0';
+}
+
+static tn_hash *loadconf(void) 
+{
+    char path[PATH_MAX], localpath[PATH_MAX];
+    tn_hash *htcnf = NULL, *local_htcnf = NULL;
+    
+    if (!config_path(path, localpath, sizeof(path)))
+        return NULL;
+    
+    if (*path)
+        htcnf = poldek_conf_load(path, POLDEK_LDCONF_FOREIGN);
+
+    if (*localpath)
+        local_htcnf = poldek_conf_load(localpath, POLDEK_LDCONF_FOREIGN);
+
+    if (htcnf == NULL) {
+        htcnf = local_htcnf;
+        local_htcnf = NULL;
+    }
+
+    if (htcnf && local_htcnf) {
+        tn_array *aliases = poldek_conf_get_sections(htcnf, "aliases");
+        if (aliases) /* XXX: yep, hacky a bit; sections should be movable
+                        via conf API */
+            n_hash_insert(local_htcnf, "global_aliases", n_ref(aliases));
+        
+        n_hash_free(htcnf);
+        htcnf = local_htcnf;
+        local_htcnf = NULL;
+    }
+    
+    return htcnf;
+}
+
+static int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
+{
+    tn_hash *htcnf;
+    
+    n_assert(cctx->ctx == NULL);
 
     cctx->_flags = 0;
     cctx->ctx = poldek_link(ctx);
@@ -479,7 +536,12 @@ int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
     cctx->rootdir = pkg_dent_add_dir(cctx, NULL, "/");
     cctx->currdir = cctx->rootdir;
     cctx->homedir = NULL;
-    init_commands(cctx);
+    cctx->htcnf = htcnf = loadconf();
+    
+    init_commands(cctx,
+                  htcnf? poldek_conf_get_section(htcnf, "global_aliases"):NULL,
+                  htcnf? poldek_conf_get_section(htcnf, "aliases"):NULL);
+    
     return 1;
 }
 
@@ -495,6 +557,11 @@ struct poclidek_ctx *poclidek_new(struct poldek_ctx *ctx)
 static
 void poclidek_destroy(struct poclidek_ctx *cctx) 
 {
+    if (cctx->htcnf) {
+        n_hash_free(cctx->htcnf);
+        cctx->htcnf = NULL;
+    }
+    
     cctx->pkgs_available = NULL;
     cctx->pkgs_installed = NULL;
 
@@ -739,7 +806,7 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts)
             pkg_dent_remove_pkg(ent, pkg);
         
         n++;
-        DBGF("- %s\n", pkg_id(pkg));
+        DBGF_F("- %s\n", pkg_id(pkg));
     }
 
     for (i=0; i < n_array_size(ts->pkgs_installed); i++) {
@@ -757,7 +824,7 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts)
         pkgdir_add_package(cctx->dbpkgdir, pkg);
         if (ent)
             pkg_dent_add_pkg(cctx, ent, pkg);
-        DBGF("+ %s\n", pkg_id(pkg));
+        DBGF_F("+ %s\n", pkg_id(pkg));
         n++;
     }
         

@@ -110,6 +110,7 @@ struct poclidek_ctx {
     unsigned            flags;
     struct poldek_ctx   *ctx;
     tn_array            *commands;
+    tn_hash             *htcnf;
     const tn_array      *pkgs_available;   /* array of available pkgs  */
     const tn_array      *pkgs_installed;   /* array of installed pkgs  */
 

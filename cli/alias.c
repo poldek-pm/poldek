@@ -1,14 +1,22 @@
-/* 
-  Copyright (C) 2000 - 2003 Pawel A. Gajda (mis@k2.net.pl)
- 
+/*
+  Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
+
   This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License published by
-  the Free Software Foundation (see file COPYING for details).
+  it under the terms of the GNU General Public License, version 2 as
+  published by the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 /*
   $Id$
 */
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <errno.h>
 #include <limits.h>
@@ -16,10 +24,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <trurl/nassert.h>
-#include <trurl/narray.h>
-#include <trurl/nmalloc.h>
-#include <trurl/nstr.h>
+#include <trurl/trurl.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -158,21 +163,52 @@ static void find_aliased_commands(struct poclidek_ctx *cctx)
     }
 }
 
-int poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path) 
+int poclidek__load_aliases(struct poclidek_ctx *cctx)
 {
-    tn_hash *aliases_htcnf, *ht;
+    char *homedir, *sysconfdir = "/etc", path[PATH_MAX];
+
+#ifdef SYSCONFDIR
+    if (n_str_ne(sysconfdir, SYSCONFDIR) && access(SYSCONFDIR, R_OK) == 0)
+        sysconfdir = SYSCONFDIR;
+#endif
+
+    n_snprintf(path, sizeof(path), "%s/poldek/aliases.conf", sysconfdir);
+    if (access(path, R_OK) == 0) {
+        tn_hash *htcnf = poldek_conf_load(path, POLDEK_LDCONF_FOREIGN);
+        if (htcnf) {
+            tn_hash *aliases = poldek_conf_get_section(htcnf, "global");
+            poclidek__add_aliases(cctx, aliases);
+            n_hash_free(htcnf);
+        }
+    }
+    
+    if ((homedir = getenv("HOME")) != NULL) {
+        tn_hash *htcnf;
+        int load = 1;
+        
+		snprintf(path, sizeof(path), "%s/.poldek-aliases.conf", homedir);
+
+        if (access(path, R_OK) != 0) {
+            snprintf(path, sizeof(path), "%s/.poldek.alias", homedir);
+            if (access(path, R_OK) != 0)
+                load = 0;
+        }
+        if (load && (htcnf = poldek_conf_load(path, POLDEK_LDCONF_FOREIGN))) {
+            tn_hash *aliases = poldek_conf_get_section(htcnf, "global");
+            poclidek__add_aliases(cctx, aliases);
+            n_hash_free(htcnf);
+        }
+    }
+    
+    return 1;
+}
+
+int poclidek__add_aliases(struct poclidek_ctx *cctx, tn_hash *htcnf)
+{
     tn_array *keys;
     int i, n = 0;
-    
-    if (access(path, R_OK) != 0)
-        return 0;
-    
-    aliases_htcnf = poldek_conf_load(path, POLDEK_LDCONF_FOREIGN);
-    if (aliases_htcnf == NULL)
-        return 0;
-    
-    ht = poldek_conf_get_section(aliases_htcnf, "global");
-    keys = n_hash_keys(ht);
+
+    keys = n_hash_keys(htcnf);
 
     for (i=0; i < n_array_size(keys); i++) {
         const char *name, *cmdline;
@@ -181,18 +217,17 @@ int poclidek_load_aliases(struct poclidek_ctx *cctx, const char *path)
         if (*name == '_')       /* config macro */
             continue;
         
-        if ((cmdline = poldek_conf_get(ht, name, NULL)))
+        if ((cmdline = poldek_conf_get(htcnf, name, NULL)))
             if (add_alias(cctx, name, cmdline))
                 n++;
     }
     
     n_array_free(keys);
-    n_hash_free(aliases_htcnf);
-    
+
     if (n)
         find_aliased_commands(cctx);
         
-    return 1;
+    return n;
 }
 
 

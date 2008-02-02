@@ -39,6 +39,7 @@
 #include <sigint/sigint.h>
 #include "i18n.h"
 #include "log.h"
+#include "conf.h"
 #include "pkg.h"
 #include "poldek_term.h"
 #include "cmd.h"
@@ -342,8 +343,18 @@ static int init_shell(struct poclidek_ctx *cctx)
 
 int poclidek_shell(struct poclidek_ctx *cctx)
 {
+    const char *prompt_prefix = "poldek";
     char *line, *s, *home;
-    
+
+    if (cctx->htcnf) {
+        tn_hash *global = poldek_conf_get_section(cctx->htcnf, "global");
+        const char *s = global ? poldek_conf_get(global, "prompt", NULL) : NULL;
+        if (s) {
+            prompt_prefix = s;
+            DBGF_F("prompt_prefix %s\n", s);
+        }
+        
+    }
     
     if (!isatty(fileno(stdout))) {
         logn(LOGERR, _("not a tty"));
@@ -377,9 +388,9 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         char prompt[255];
         
         sigint_reset();
-        snprintf(prompt, sizeof(prompt), "poldek:%s%s> ",
-                 currdir == NULL ? "/" : *currdir->name == '/' ? "" : "/",
-                 currdir == NULL ? "" : currdir->name);
+        n_snprintf(prompt, sizeof(prompt), "%s:%s%s> ", prompt_prefix,
+                   currdir == NULL ? "/" : *currdir->name == '/' ? "" : "/",
+                   currdir == NULL ? "" : currdir->name);
 
         if ((line = readline(prompt)) == NULL)
             break;
