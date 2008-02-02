@@ -30,7 +30,7 @@ static struct orphan *orphan_new(struct pkg *pkg, tn_array *caps)
         const struct capreq *req;
         struct capreq *cap = n_array_nth(caps, i);
 
-        //tracef(0, "%s requires %s?", pkg_id(pkg), capreq_snprintf_s(cap));
+        //tracef(0, "%s requires %s?", pkg_id(pkg), capreq_stra(cap));
         if ((req = pkg_requires_cap(pkg, cap)))
             n_array_push(o->reqs, (struct capreq *)req);
     }
@@ -90,7 +90,7 @@ static int get_orphaned(int indent, struct i3ctx *ictx,
                                   iset_packages_by_recno(ictx->unset),
                                   ldflags, ma_flags);
         norphaned += n;
-        trace(indent + 1, "%s: %d package(s) orphaned", capreq_snprintf_s(cap), n);
+        trace(indent + 1, "%s: %d package(s) orphaned", capreq_stra(cap), n);
     }
     return norphaned;
 }
@@ -243,7 +243,7 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
             int is_satisfied = 0;
 
             if (capreq_is_file(cap) && !is_requireable_path(capreq_name(cap))) {
-                trace(indent + 2, "- %s (skipped)", capreq_snprintf_s(cap));
+                trace(indent + 2, "- %s (skipped)", capreq_stra(cap));
                 continue;
             }
             
@@ -254,14 +254,14 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
                 is_satisfied = 2;
             
             if (is_satisfied) {
-                trace(indent + 2, "- %s (satisfied %s)", capreq_snprintf_s(cap),
+                trace(indent + 2, "- %s (satisfied %s)", capreq_stra(cap),
                       is_satisfied == 1 ? "by successor" : "by inset");
                 
             } else {
                 if (unsatisfied_caps == NULL)
                     unsatisfied_caps = capreq_arr_new(24);
                 
-                trace(indent + 2, "- %s (to verify)", capreq_snprintf_s(cap));
+                trace(indent + 2, "- %s (to verify)", capreq_stra(cap));
                 n_array_push(unsatisfied_caps, capreq_clone(NULL, cap));
             }
         }

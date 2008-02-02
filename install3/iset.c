@@ -183,7 +183,7 @@ int iset_provides(struct iset *iset, const struct capreq *cap)
     }
     
     if ((pkg = n_hash_get(iset->capcache, capname))) {
-        DBGF("cache hit %s\n", capreq_snprintf_s(cap));
+        DBGF("cache hit %s\n", capreq_stra(cap));
         return 1;
     }
     
@@ -216,7 +216,7 @@ int iset_provides(struct iset *iset, const struct capreq *cap)
             pkg = p;
 
         DBGF("  - %s provides %s -> %s\n", pkg_id(p),
-             capreq_snprintf_s(cap), pkg ? "YES" : "NO");
+             capreq_stra(cap), pkg ? "YES" : "NO");
         
         if (pkg)
             break;
@@ -234,7 +234,7 @@ int iset_provides(struct iset *iset, const struct capreq *cap)
         }
     }
     
-    DBGF("%s -> %s\n", capreq_snprintf_s(cap), pkg ? pkg_id(pkg) : "NO");
+    DBGF("%s -> %s\n", capreq_stra(cap), pkg ? pkg_id(pkg) : "NO");
     return pkg != NULL;
 }
 
