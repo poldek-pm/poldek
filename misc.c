@@ -18,6 +18,10 @@
 # include "config.h"
 #endif
 
+#ifndef HAVE_CANONICALIZE_FILE_NAME /* have safe GNU ext? */
+# error "missing safe realpath()"
+#endif
+
 #ifdef HAVE_STRSIGNAL
 # define _GNU_SOURCE 1  /* for strsignal */
 #endif
@@ -524,15 +528,24 @@ const char *poldek_util_expand_env_vars(char *dest, int size, const char *str)
 
 char *util__abs_path(const char *path) 
 {
-    if (n_str_ne(path, ".") && strstr(path, "./") == NULL)
-        return NULL;
-    
-#ifdef HAVE_CANONICALIZE_FILE_NAME /* have safe GNU ext? */
-    return realpath(path, NULL);
-#else
-# error "missing safe realpath()"
-#endif
-    return NULL;
+    char *endslash, *rpath = NULL;
+
+    endslash = strrchr(path, '/');
+    if (endslash && *(endslash + 1) != '\0')
+        endslash = NULL;
+
+    rpath = realpath(path, NULL);
+
+    if (endslash) {
+        int n = strlen(rpath);
+        
+        rpath = n_realloc(rpath, n + 2);
+        rpath[n++] = '/';
+        rpath[n] = '\0';
+    }
+
+    DBGF("%s -> %s\n", path, rpath);
+    return rpath;
 }
 
 
