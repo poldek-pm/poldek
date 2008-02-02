@@ -3,7 +3,7 @@
 # generated configs
 GENCONFIGS = fetch.conf source.conf poldek.conf
 
-CONFIGS   = $(GENCONFIGS) aliases.conf \
+CONFIGS   = $(GENCONFIGS) cli.conf \
             pld-source.conf rh-source.conf \
 	    fedora-source.conf centos-source.conf
 
