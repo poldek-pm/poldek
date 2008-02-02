@@ -239,7 +239,7 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
     int              rc = 1, giveup = 0, indentt = indent + 1;
 
     strreq = capreq_stra(req);
-    tracef(indent, "%s, req: %s (%s)", pkg_id(pkg), capreq_snprintf_s(req), strreq);
+    tracef(indent, "%s, req: %s (%s)", pkg_id(pkg), capreq_stra(req), strreq);
 
     /* skip foreign (not provided by uninstalled) dependencies */
     if (!iset_provides(ictx->unset, req)) {
@@ -294,7 +294,7 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
         struct i3pkg *i3tomark;
         
         if (i3_is_user_choosable_equiv(ts) && candidates) {
-            real_tomark = i3_choose_equiv(ts, req, candidates, tomark);
+            real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
             
             if (real_tomark == NULL) { /* user abort */
                 i3_stop_processing(ictx, 1);
@@ -419,7 +419,7 @@ static int process_req(int indent, struct i3ctx *ictx,
         int             i3pkg_flag = 0;
         
         if (i3_is_user_choosable_equiv(ts) && candidates) {
-            real_tomark = i3_choose_equiv(ts, req, candidates, tomark);
+            real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
             
             if (real_tomark == NULL) { /* user abort */
                 ictx->abort = 1;
@@ -469,12 +469,11 @@ static int process_req(int indent, struct i3ctx *ictx,
     return rc;
 }
 
-static tn_array *with_suggests(struct i3ctx *ictx, struct pkg *pkg) 
+
+static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg) 
 {
-    char *confirmation, message[2048];
-    tn_array *suggests = capreq_arr_new(4);
-    tn_buf *nbuf;
-    int n, i, autochoice = 0;
+    tn_array *suggests = NULL, *choices = NULL;
+    int i, autochoice = 0;
 
     if (pkg->sugs == NULL)
         return NULL;
@@ -495,15 +494,38 @@ static tn_array *with_suggests(struct i3ctx *ictx, struct pkg *pkg)
     if (!autochoice && !i3_is_user_choosable_equiv(ictx->ts))
         return NULL;
 
+    tracef(indent, "%s", pkg_id(pkg));
+
+    suggests = capreq_arr_new(4);
     n_array_ctl_set_freefn(suggests, NULL); /* 'weak' ref */
     for (i=0; i < n_array_size(pkg->sugs); i++) {
         struct capreq *req = n_array_nth(pkg->sugs, i);
+        struct pkg *tomark = NULL;
         
-        if (i3_pkgdb_match_req(ictx, req) || iset_provides(ictx->inset, req))
+        if (iset_provides(ictx->inset, req)) {
+            trace(indent, "- %s: already marked", capreq_stra(req));
             continue;
-
+        }
+        
+        if (i3_pkgdb_match_req(ictx, req)) {
+            trace(indent, "- %s: satisfied by db", capreq_stra(req));
+            continue;
+        }
+        
+        if (!i3_find_req(indent, ictx, pkg, req, &tomark, NULL)) {
+            logn(LOGWARN, _("%s: suggested %s not found, skipped"), pkg_id(pkg),
+                 capreq_stra(req));
+            continue;
+            
+        } else if (tomark == NULL) {
+            trace(indent, "- %s: satisfied by being installed set",
+                  capreq_stra(req));
+            continue;
+        }
+        
         if (autochoice > 0 && i != autochoice - 1)
             continue;
+        
         n_array_push(suggests, req);
     }
     
@@ -514,22 +536,25 @@ static tn_array *with_suggests(struct i3ctx *ictx, struct pkg *pkg)
 
     if (autochoice)
         return suggests;
-    
 
-    nbuf = capreq_arr_join(suggests, NULL, NULL);
-    n = n_snprintf(message, sizeof(message), _("%s suggests installation of: %s"),
-                   pkg_id(pkg), n_buf_ptr(nbuf));
-    n_buf_free(nbuf);
+    choices = n_array_clone(suggests);
+    n_array_ctl_set_freefn(choices, NULL); /* 'weak' ref */
     
-    confirmation = ngettext("Try to install it?", "Try to install them?",
-                            n_array_size(suggests));    
-    n_snprintf(&message[n], sizeof(message) - n, "\n%s", confirmation);
+    if (!poldek__choose_suggests(ictx->ts, pkg, suggests, choices, 0)) {
+        n_array_free(choices);
+        n_array_cfree(&suggests);
+        
+    } else {
+        if (!n_array_size(choices))
+            n_array_free(choices);
+        
+        else {
+            n_array_free(suggests);
+            suggests = choices;
+        }
+    }
     
-    if (poldek__confirm(ictx->ts, 0, message)) 
-        return suggests;
-    
-    n_array_free(suggests);
-    return NULL;
+    return suggests;
 }
 
 static int suggests_contains(tn_array *suggests, const struct capreq *req) 
@@ -565,7 +590,7 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
     tracef(indent, "%s as NEW", pkg_id(pkg));
 
     if (ts->getop(ts, POLDEK_OP_SUGGESTS)) {
-        suggests = with_suggests(ictx, pkg);
+        suggests = with_suggests(indent + 2, ictx, pkg);
         if (suggests)
             itflags |= PKG_ITER_REQSUG;
     }

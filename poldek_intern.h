@@ -40,8 +40,13 @@ struct poldek_ctx {
 
     void *data_choose_equiv_fn;
     int  (*choose_equiv_fn)(void *data, const struct poldek_ts *ts,
-                            const char *cap, tn_array *pkgs, int hint);
+                            const struct pkg *pkg, const char *cap,
+                            tn_array *candidates, int hint);
 
+    void *data_choose_suggests_fn;
+    int  (*choose_suggests_fn)(void *data, const struct poldek_ts *ts,
+                               const struct pkg *pkg, tn_array *caps,
+                               tn_array *choices, int hint);
     
     tn_hash        *_cnf;       /* runtime config */
     unsigned       _iflags;     /* internal flags */
@@ -75,7 +80,12 @@ int poldek__confirm(const struct poldek_ts *ts,
 int poldek__ts_confirm(const struct poldek_ts *ts);
 
 int poldek__choose_equiv(const struct poldek_ts *ts,
-                         const char *capname, tn_array *pkgs, struct pkg *hint);
+                         const struct pkg *pkg, const char *capname,
+                         tn_array *pkgs, struct pkg *hint);
+
+int poldek__choose_suggests(const struct poldek_ts *ts,
+                            const struct pkg *pkg, tn_array *caps,
+                            tn_array *choices, int hint);
 
 void poldek__setup_default_ask_callbacks(struct poldek_ctx *ctx);
 int poldek__load_sources_internal(struct poldek_ctx *ctx);

@@ -50,11 +50,12 @@ struct poldek_ctx *poldek_link(struct poldek_ctx *ctx);
 #define POLDEK_CONF_LOGFILE         20
 #define POLDEK_CONF_LOGTTY          21
 
-#define POLDEK_CONF_GOODBYE_CB      22
-#define POLDEK_CONF_CONFIRM_CB      23
-#define POLDEK_CONF_TSCONFIRM_CB    24
-#define POLDEK_CONF_CHOOSEEQUIV_CB  25
-#define POLDEK_CONF_VFILEPROGRESS   26
+#define POLDEK_CONF_GOODBYE_CB         22
+#define POLDEK_CONF_CONFIRM_CB         23
+#define POLDEK_CONF_TSCONFIRM_CB       24
+#define POLDEK_CONF_CHOOSEEQUIV_CB     25
+#define POLDEK_CONF_CHOOSESUGGESTS_CB  26
+#define POLDEK_CONF_VFILEPROGRESS      27
 
 int poldek_configure(struct poldek_ctx *ctx, int param, ...);
 

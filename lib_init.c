@@ -675,7 +675,7 @@ static tn_array *build_default_op_map(void)
     struct default_op_map_ent *ent;
     struct default_op_map_ent addon[] = {
         { 0, "(!no)hold", POLDEK_OP_HOLD,   1,  1, CONF_TYPE_BOOLEAN  },
-        { 0, "(!no)ingore", POLDEK_OP_IGNORE, 1, 1, CONF_TYPE_BOOLEAN  }, 
+        { 0, "(!no)ingore", POLDEK_OP_IGNORE, 1, 1, CONF_TYPE_BOOLEAN  },
         { 0, NULL, 0, 0, 0, 0 }
     };
     
@@ -1231,6 +1231,15 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
             if ((vv = va_arg(ap, void*)))
                 ctx->data_choose_equiv_fn = vv;
             break;
+
+        case POLDEK_CONF_CHOOSESUGGESTS_CB:
+            if ((vv = va_arg(ap, void*)))
+                ctx->choose_suggests_fn = vv;
+            
+            if ((vv = va_arg(ap, void*)))
+                ctx->data_choose_suggests_fn = vv;
+            break;
+
 
         case POLDEK_CONF_GOODBYE_CB:
             vv = va_arg(ap, void*);

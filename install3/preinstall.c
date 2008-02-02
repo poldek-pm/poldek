@@ -83,7 +83,7 @@ int prepare_icap(struct poldek_ts *ts, const char *capname, tn_array *pkgs)
             return 0;
 
         if (i3_is_user_choosable_equiv(ts) && n_array_size(pkgs) > 1) {
-            pkg = i3_choose_equiv(ts, cap, pkgs, NULL);
+            pkg = i3_choose_equiv(ts, NULL, cap, pkgs, NULL);
             if (pkg == NULL) { /* user aborts */
                 found = -1;
                 goto l_end;

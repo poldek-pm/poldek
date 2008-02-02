@@ -438,7 +438,8 @@ int i3_pkgdb_match_req(struct i3ctx *ictx, const struct capreq *req)
                            iset_packages_by_recno(ictx->unset));
 }
 
-struct pkg *i3_choose_equiv(struct poldek_ts *ts, const struct capreq *cap,
+struct pkg *i3_choose_equiv(struct poldek_ts *ts,
+                            const struct pkg *pkg, const struct capreq *cap,
                             tn_array *pkgs, struct pkg *hint) 
 {
     int n;
@@ -468,7 +469,7 @@ struct pkg *i3_choose_equiv(struct poldek_ts *ts, const struct capreq *cap,
         }
     }
     
-    n = poldek__choose_equiv(ts, capreq_stra(cap), pkgs, hint);
+    n = poldek__choose_equiv(ts, pkg, capreq_stra(cap), pkgs, hint);
     if (n == -1)
         return NULL;
 

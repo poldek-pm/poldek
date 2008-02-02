@@ -638,7 +638,7 @@ struct pkg *in_choose_equiv(struct poldek_ts *ts, struct capreq *cap,
         }
     }
     
-    n = poldek__choose_equiv(ts, capreq_snprintf_s(cap), pkgs, hint);
+    n = poldek__choose_equiv(ts, NULL, capreq_snprintf_s(cap), pkgs, hint);
     if (n == -1)
         return NULL;
 

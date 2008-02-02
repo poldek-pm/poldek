@@ -106,7 +106,7 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
 
         /* tomark == NULL ? req satsfied by already installed set */
         if (tomark && candidates && n_array_size(candidates) > 1) {
-            real_tomark = i3_choose_equiv(ictx->ts, req, candidates, tomark);
+            real_tomark = i3_choose_equiv(ictx->ts, pkg, req, candidates, tomark);
             n_array_cfree(&candidates);
             if (real_tomark == NULL) { /* user aborts */
                 ictx->abort = 1;

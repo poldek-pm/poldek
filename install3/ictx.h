@@ -179,7 +179,9 @@ int i3_process_orphan(int indent, struct i3ctx *ictx, struct orphan *o);
 
 
 int i3_is_user_choosable_equiv(struct poldek_ts *ts);
-struct pkg *i3_choose_equiv(struct poldek_ts *ts, const struct capreq *cap,
+
+struct pkg *i3_choose_equiv(struct poldek_ts *ts,
+                            const struct pkg *pkg, const struct capreq *cap,
                             tn_array *pkgs, struct pkg *hint);
 
 #endif
