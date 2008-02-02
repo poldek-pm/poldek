@@ -16,14 +16,14 @@ void fetch(const char *url)
 int main(int argc, char *argv[])
 {
     int verbose = 1;
-//    const char *up  =  "/a/b/c/d/e/f/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/kernel-video-nvidia-1.0.2880-1@2.2.20_18.i686.rpm";
+//    const char *up  =  "/a/b/c/d/e/f/ftp.pld-linux.org/PLD-1.0/i686/PLD/RPMS/kernel-video-nvidia-1.0.2880-1@2.2.20_18.i686.rpm";
 
-    const char *up  =  "ftp://mis:dupa@smok/a/b/c/d/e/f/ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/kernel-video-nvidia-1.0.2880-1kldd4443.i686.rpm";
+    const char *up  =  "ftp://mis:dupa@smok/a/b/c/d/e/f/ftp.pld-linux.org/PLD-1.0/i686/PLD/RPMS/kernel-video-nvidia-1.0.2880-1kldd4443.i686.rpm";
 
     
-    const char *u  =  "ftp://ftp.pld.org.pl/PLD-1.0/i686/PLD/RPMS/kernel-video-nvidia-1.0.2880-1@2.2.20_18.i686.rpm";
+    const char *u  =  "ftp://ftp.pld-linux.org/PLD-1.0/i686/PLD/RPMS/kernel-video-nvidia-1.0.2880-1@2.2.20_18.i686.rpm";
 
-    const char *uu  =  "/a/v/b/ftp:,,ftp.pld.org.pl,PLD-1.0,i686,PLD,RPMS,kernel-video-nvidia-1.0.2880-1@2.2.20_18.i686.rpm";
+    const char *uu  =  "/a/v/b/ftp:,,ftp.pld-linux.org,PLD-1.0,i686,PLD,RPMS,kernel-video-nvidia-1.0.2880-1@2.2.20_18.i686.rpm";
     
     vfile_configure(VFILE_CONF_CACHEDIR, ",tmp");
     vfile_verbose = &verbose;
