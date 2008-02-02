@@ -662,14 +662,15 @@ int pndir_m_create(struct pkgdir *pkgdir, const char *pathname, unsigned flags)
     n_assert(pathname);
     mk_paths(&paths, pathname, pkgdir);
     
-    DBGF("flags %d\n", flags);
+    DBGF("path %s, flags %d\n", paths.path, flags);
     msgn_tty(1, _("Writing %s..."), vf_url_slim_s(paths.path, 0));
     msgn_f(1, _("Writing %s..."), vf_url_slim_s(paths.path, 0));
+    
     do_unlink(paths.path);
     db = tndb_creat(paths.path, PNDIR_COMPRLEVEL,
                     TNDB_NOHASH | TNDB_SIGN_DIGEST);
     if (db == NULL) {
-        logn(LOGERR, "%s: %m\n", paths.path);
+        logn(LOGERR, "%s: %m", paths.path);
 		nerr++;
 		goto l_end;
     }
