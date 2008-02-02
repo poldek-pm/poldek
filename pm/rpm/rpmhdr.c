@@ -193,8 +193,9 @@ int pm_rpmhdr_ent_cp(struct rpmhdr_ent *ent, Header h, int32_t tag, Header toh)
     return rc;
 }
 
-int pm_rpmhdr_issource(Header h) {
-    return headerIsEntry((h), RPMTAG_SOURCEPACKAGE);
+int pm_rpmhdr_issource(Header h)
+{
+    return !headerIsEntry(h, RPMTAG_SOURCERPM);
 }
 
 
