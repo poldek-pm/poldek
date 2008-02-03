@@ -806,7 +806,7 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts)
             pkg_dent_remove_pkg(ent, pkg);
         
         n++;
-        DBGF_F("- %s\n", pkg_id(pkg));
+        DBGF("- %s\n", pkg_id(pkg));
     }
 
     for (i=0; i < n_array_size(ts->pkgs_installed); i++) {
@@ -824,7 +824,7 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts)
         pkgdir_add_package(cctx->dbpkgdir, pkg);
         if (ent)
             pkg_dent_add_pkg(cctx, ent, pkg);
-        DBGF_F("+ %s\n", pkg_id(pkg));
+        DBGF("+ %s\n", pkg_id(pkg));
         n++;
     }
         

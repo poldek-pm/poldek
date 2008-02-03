@@ -108,7 +108,7 @@ int is_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg, int reverse)
             continue;
 
         if ((cmprc = pkg_cmp_evr(pkg, ipkg)) != 0) {
-            //DBGF_F("%s %s %d (%d)\n", pkg_id(pkg), pkg_id(ipkg), cmprc, reverse);
+            DBGF("%s %s %d (%d)\n", pkg_id(pkg), pkg_id(ipkg), cmprc, reverse);
             
             if (!reverse && cmprc > 0)
                 return 1;
@@ -351,7 +351,7 @@ int poclidek_shell(struct poclidek_ctx *cctx)
         const char *s = global ? poldek_conf_get(global, "prompt", NULL) : NULL;
         if (s) {
             prompt_prefix = s;
-            DBGF_F("prompt_prefix %s\n", s);
+            DBGF("prompt_prefix %s\n", s);
         }
         
     }
