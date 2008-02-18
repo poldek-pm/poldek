@@ -34,7 +34,7 @@ copyfile() {
         return 1
     else
         echo "Copying $HOME/$file to $dir/..."
-        cp -a $HOME/$file $dir && chown -R $USER.$USER $dir/$file
+        cp -a $HOME/$file $dir && chown -R $USER:$USER $dir/$file
     fi
 }
 
@@ -80,7 +80,7 @@ if [ -z "$(id -u $USER 2>/dev/null)" ]; then
     useradd -r -d $homedir $USER -g $USER -s /bin/sh -c "poldek user" || exit 1
 fi
 
-chown -R $USER.$USER $homedir
+chown -R $USER:$USER $homedir
 
 if ! grep -q "^poldek" $SUDOERS; then
     rpm=$(which --skip-alias --skip-dot --skip-tilde --skip-functions rpm 2>/dev/null)
