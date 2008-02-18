@@ -273,6 +273,15 @@ const struct pkgdir_module *find_module(const char *type)
     return mod;
 }
 
+/* TODO: prepare pkg_prefix like pkgdir_open_ext() does */
+static void env_source(const struct source *src, const char *idxpath)
+{
+    setenv("POLDEK_SOURCE_PATH", idxpath, 1);
+    setenv("POLDEK_SOURCE_PREFIX", src->pkg_prefix, 1);
+    setenv("POLDEK_SOURCE_TYPE", src->type, 1);
+    if (src->name)
+        setenv("POLDEK_SOURCE_NAME", src->name, 1);
+}
 
 int pkgdir_update_a(const struct source *src)
 {
@@ -280,7 +289,7 @@ int pkgdir_update_a(const struct source *src)
     enum pkgdir_uprc            uprc = PKGDIR_UPRC_NIL;
     char idxpath[PATH_MAX];
     int  rc;
-    
+
     n_assert(src->path);
 	if ((mod = find_module(src->type)) == NULL)
 		return 0;
@@ -292,6 +301,7 @@ int pkgdir_update_a(const struct source *src)
 
     pkgdir__make_idxpath(idxpath, sizeof(idxpath), src->path, src->type,
                          src->compress);
+    env_source(src, idxpath);
     rc = mod->update_a(src, idxpath, &uprc);
     
     if (rc && uprc == PKGDIR_UPRC_UPTODATE) 
@@ -299,6 +309,14 @@ int pkgdir_update_a(const struct source *src)
     return rc;
 }
 
+static void env_pkgdir(const struct pkgdir *pkgdir)
+{
+    setenv("POLDEK_SOURCE_PATH", pkgdir->idxpath, 1);
+    setenv("POLDEK_SOURCE_PREFIX", pkgdir->path, 1);
+    setenv("POLDEK_SOURCE_TYPE", pkgdir->type, 1);
+    if (pkgdir->name)
+        setenv("POLDEK_SOURCE_NAME", pkgdir->name, 1);
+}
 
 int pkgdir_update(struct pkgdir *pkgdir)
 {
@@ -307,6 +325,8 @@ int pkgdir_update(struct pkgdir *pkgdir)
     
 	if (pkgdir->mod->update == NULL)
 		return 0;
+
+    env_pkgdir(pkgdir);
 
 	rc = pkgdir->mod->update(pkgdir, &uprc);
     if (rc) {
@@ -366,8 +386,6 @@ const char *pkgdir_type_default_compr(const char *type)
     return mod->default_compr;
 }
 
-
-
 struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags)
 {
     struct pkgdir *pkgdir;
@@ -398,7 +416,6 @@ struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
 {
     return pkgdir_open_ext(path, pkg_prefix, type, name, NULL, 0, NULL);
 }
-
 
 struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
                                const char *type, const char *name,
@@ -444,7 +461,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
 
     else
         pkgdir->path = n_strdup(idxpath);
-    
+
     pkgdir->idxpath = n_strdup(idxpath);
     pkgdir->compress = compress ? n_strdup(compress) : NULL;
     pkgdir->pkgs = pkgs = pkgs_array_new_ex(2048, pkg_strcmp_name_evr_rev);
@@ -458,6 +475,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     pkgdir->avlangs_h = pkgdir__avlangs_new();
     rc = 1;
 
+    env_pkgdir(pkgdir);
     saved_flags = pkgdir->flags;
     if (mod->open) {
         if (!mod->open(pkgdir, flags)) {
