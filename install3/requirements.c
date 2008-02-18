@@ -607,8 +607,11 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
         
         if ((rc = process_req(indent, ictx, i3pkg, req)) <= 0) {
             nerrors++;
-            if (rc < 0)
+            if (rc < 0) {
                 backtrack = 1;
+                if (i3pkg->flags & I3PKG_BACKTRACKABLE)
+                    break;
+            }
         }
     }
 
