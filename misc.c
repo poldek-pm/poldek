@@ -541,7 +541,7 @@ char *util__abs_path(const char *path)
 
     rpath = realpath(path, NULL);
 
-    if (endslash) {
+    if (rpath && endslash) {
         int n = strlen(rpath);
         
         rpath = n_realloc(rpath, n + 2);
@@ -550,7 +550,7 @@ char *util__abs_path(const char *path)
     }
 
     DBGF("%s -> %s\n", path, rpath);
-    return rpath;
+    return rpath ? rpath : path;
 }
 
 
