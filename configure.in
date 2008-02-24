@@ -21,6 +21,7 @@ AH_TEMPLATE([HAVE_TM_GMTOFF],[])
 AH_TEMPLATE([HAVE_TM___GMTOFF],[])
 AH_TEMPLATE([HAVE_RPM_HEADER_MAGIC_YES],[])
 AH_TEMPLATE([HAVE_RPM_INT32_TYPE],[])
+AH_TEMPLATE([HAVE_RPM_5],[])
 
 AM_INIT_AUTOMAKE([dist-bzip2])
 AC_DEFINE_UNQUOTED([VERSION_STATUS], "$VERSION_STATUS", [version status])
@@ -339,6 +340,13 @@ dnl rpm 5.x
 dnl fnpyKey provider
 AC_CHECK_HEADERS([rpm/rpmcb.h])
 AC_CHECK_FUNCS(rpmpkgRead)
+AC_MSG_CHECKING([for rpm 5.x])
+if test "$ac_cv_func_rpmpkgRead." != "yes."; then
+     AC_MSG_RESULT(no)   
+else
+     AC_DEFINE([HAVE_RPM_5], [1], [])
+     AC_MSG_RESULT(yes)
+fi
 AC_CHECK_FUNCS(headerNVR)     # removed since 5.0
 AC_CHECK_FUNCS(headerNEVRA)  
 AC_CHECK_FUNCS(rpmErrorString)

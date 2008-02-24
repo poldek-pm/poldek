@@ -44,10 +44,6 @@
 #include <rpm/rpmurl.h>
 #include <rpm/rpmmacro.h>
 
-#ifdef HAVE_RPMPKGREAD
-# define HAVE_RPM_5 1
-#endif
-
 #ifdef RPM_MAJOR_VERSION
 # define PM_RPMVER(a,b,c) ((a)*65536+(b)*256+(c))
 # if PM_RPMVER(RPM_FORMAT_VERSION,RPM_MAJOR_VERSION,RPM_MINOR_VERSION) >= PM_RPMVER(4,4,8)
