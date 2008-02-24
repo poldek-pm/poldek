@@ -107,6 +107,10 @@ __inline__ static
 int capreq_cmp_evr(const struct capreq *cr1, const struct capreq *cr2) 
 {
     register int rc;
+    const char *r1, *r2;
+    
+    if (!capreq_versioned(cr1) && !capreq_versioned(cr2))
+        return 0;
     
     if (capreq_versioned(cr1) && !capreq_versioned(cr2))
         return 1;
@@ -119,8 +123,13 @@ int capreq_cmp_evr(const struct capreq *cr1, const struct capreq *cr2)
 
     if ((rc = pkg_version_compare(capreq_ver(cr1), capreq_ver(cr2))))
         return rc;
+
+    r1 = capreq_rel(cr1);
+    r2 = capreq_rel(cr2);
+    if (*r1 == '\0' && *r2 == '\0')
+        return 0;
     
-    if ((rc = pkg_version_compare(capreq_rel(cr1), capreq_rel(cr2))))
+    if ((rc = pkg_version_compare(r1, r2)))
         return rc;
     
     return cr1->cr_relflags - cr2->cr_relflags;
