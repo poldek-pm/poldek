@@ -588,7 +588,7 @@ static int q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
     const char *value = capreq_name(cap);
     int n = 0;
 
-    DBGF("%s\n", value);
+    tracef(0, "%s", value);
     
     pkgdb_it_init(db, &it, tag, value);
     while ((dbrec = pkgdb_it_get(&it)) != NULL) {
@@ -604,39 +604,41 @@ static int q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
         if (dbpkg_array_has(dbpkgs, dbrec->recno))
             continue;
         
-        //DBGF("%s <- %s ??\n", capreq_name(cap), pkg_snprintf_s(pkg));
+        if ((pkg = load_pkg(NULL, db, dbrec, ldflags)) == NULL)
+            continue;
         
-        if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
-            DBGF("%s required by %s? => %s\n", capreq_name(cap), pkg_id(pkg),
-                   pkg_satisfies_req(pkg, cap, 1) ? "no" : "yes");
+        DBGF("%s required by %s? => %s\n", capreq_name(cap), pkg_id(pkg),
+             pkg_satisfies_req(pkg, cap, 1) ? "no" : "yes");
             
-            if (pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
-                pkg_free(pkg);
-                
-            } else if (capreq_versioned(cap) && /* old !strict */
-                       !pkg_requires_cap(pkg, cap)) {
-                DBGF("skipped %s (%s is not really required)\n", pkg_id(pkg),
-                     capreq_snprintf_s(cap));
-                pkg_free(pkg);
-                
-            } else {
-                DBGF("%s <- %s\n", capreq_snprintf_s(cap), pkg_id(pkg));
-                n_array_push(dbpkgs, pkg);
-                n_array_isort(dbpkgs);
-                n++; 
+        if (pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
+            trace(2, "- required %s: self matched", pkg_id(pkg));
+            pkg_free(pkg);
+
+         /* XXX wrong assumption; disabled */
+        } else if (0 && capreq_versioned(cap) && /* old !strict */ 
+                   !pkg_requires_cap(pkg, cap)) {
+            DBGF("skipped %s (%s is not really required)\n", pkg_id(pkg),
+                 capreq_snprintf_s(cap));
+            pkg_free(pkg);
+            
+        } else {
+            trace(2, "- required %s", pkg_id(pkg));
+            DBGF("%s <- %s\n", capreq_snprintf_s(cap), pkg_id(pkg));
+            n_array_push(dbpkgs, pkg);
+            n_array_isort(dbpkgs);
+            n++; 
 #if ENABLE_TRACE
-                {
-                    int i;
-                    DBGF("%s <- %s\n", capreq_name(cap), pkg_snprintf_s(pkg));
-                    if (pkg->caps)
-                        for (i=0; i<n_array_size(pkg->caps); i++) 
-                            DBGF("- %s\n",
-                                 capreq_snprintf_s0(n_array_nth(pkg->caps, i)));
+            {
+                int i;
+                DBGF("%s <- %s\n", capreq_name(cap), pkg_snprintf_s(pkg));
+                if (pkg->caps)
+                    for (i=0; i<n_array_size(pkg->caps); i++) 
+                        DBGF("- %s\n",
+                             capreq_snprintf_s0(n_array_nth(pkg->caps, i)));
                 
-                    
-                }
-#endif                
+                
             }
+#endif                
         }
     }
     
