@@ -42,7 +42,7 @@ tasks like installation, upgrading or removal.
 </para>
 
 <para>
-This manual page contains only command line option reference, the full documentation 
+This manual page covers command line option reference, the full documentation 
 for poldek is available as a Texinfo manual. Do <command>info poldek</command> to get it.
 </para>
   </refsect1>

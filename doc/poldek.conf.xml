@@ -47,7 +47,7 @@ either a comment, a section name or a parameter. Any line beginning with a
 hash (``#'') character is ignored, as are lines containing only whitespace.
 [/para][para]
 
-In most string paramameters values environment variables are expanded:
+In most string paramameters environment variables are expanded:
 [screen]
 path = $HOME/foo
 [/screen]
@@ -55,23 +55,38 @@ path = $HOME/foo
 </description>
 </section>
 
-<section id="macros" target="manual">
-<title>Special directives and macros</title>
+<section id="directives" target="manual">
+<title>Special directives</title>
 <description>
 [para]
 File can be combined from multiple configuration files with [option]%include[/option]
-directive. This directive can include either local and remote HTTP/FTP
-files, examples:
+directive. Either local and remote HTTP/FTP files can be included, examples:
 [screen]
 %include /etc/foo.conf            # simply include /etc/foo.conf
 %include foo.conf                 # include foo.conf from directory of includer
 %include http://bar.org/foo.conf  # include foo.conf from remote location
 [/screen]
+[/para]
+[para]
 Any "[ global ]" sections from included files are simply ignored.
-Files taken from remote locations can be updated using [option]--upconf[/option]
+Remote files are cached, they can be updated using [option]--upconf[/option]
 switch.
 [/para]
 
+[para]
+Second directive, [option]%includedir[/option] includes all *.conf files from given directory, 
+examples:
+[screen]
+%include repos.d                  # include all *.conf files from repos.d subdirectory
+%include /etc/repos.d             # include all *.conf files from /etc/repos.d
+[/screen]
+[/para]
+</description>
+</section>
+
+<section id="macros" target="manual">
+<title>Macros</title>
+<description>
 [para]
 Simple macros are supported. Macros are declared as paramameter with
 underscore ('_') at beginning:
@@ -83,7 +98,7 @@ and can be expanded in any following value in %{NAME} form:
 path = %{_foo}/dir    # path will be '/bar/dir'
 [/screen]
 Macros are local to file beeing declared, they are not visible in 
-included files as are not visible to includer.
+included files as they are not visible to includer.
 [/para]
 </description>
 </section>
@@ -141,6 +156,9 @@ _distro  = pld
 
 # local sources
 %include source.conf
+
+# /etc/poldek/repos.d/*.conf
+#%includedir repos.d
 
 # External downloaders configuration, not necessary in most cases, cause
 # to internal HTTP and FTP client.
@@ -416,12 +434,13 @@ _distro  = pld
  Subtle dependency processing options, they should not be changed 
  unless you know what you are doing
 </description>
-  <option name="dependency solver" type="integer" default="2" hidden="yes">
+  <option name="dependency solver" type="integer" default="3" hidden="yes">
   </option>
  
   <option name="auto directory dependencies" type="boolean3" default="auto" op="AUTODIRDEP">
     <description>
-  RPM 4.4.6 introduces auto dependencies based on package directories. Option controls this feature.
+    RPM 4.4.6 introduces auto dependencies based on package directories. 
+    Option controls this feature.
     </description>
   </option>
   

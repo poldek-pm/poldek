@@ -2,29 +2,51 @@
 <news>
 <cvsid>$Id$</cvsid>
 
-<release version="0.20.1" date="not released yet" focus="bugfix release">
+<release version="0.40" date="not released yet" focus="walking on">
   <entry><para>
-  improved a lot multilib support
+  Support for conf.d style %include (https://bugs.pld-linux.org/show_bug.cgi?id=79)
+  </para></entry>
+
+
+  <entry><para>
+  dependency solver big cleanup: faster, simplified, improved a lot multilib, backtracking, fixes.
   </para></entry>
 
   <entry><para>
-   RPM up to 4.4.9 is supported
+  cli.conf with interactive shell configuration, aliases.conf has been removed
+  </para></entry>
+
+  <entry><para>
+  improved package repositories management mode: instalation to multiple repos, 
+  working --destination and --jutstdb
+  </para></entry>
+
+  <entry><para>
+  cli: --nohold command line option not longer ignored (#68) 
   </para>
-  <author id="arekm" email="arekm att pld-linux org">Arkadiusz Miskiewicz</author>
+  <author id="megabajt" email="megabajt att pld-linux org">Marcin Banasiak</author>     
   </entry>
 
   <entry><para>
-   UTF-8 encoded package summaries and descriptions are supprted
+   supported RPM up to 5.0.2
+  </para>
+  <author part="yes" id="arekm" email="arekm att pld-linux org">Arkadiusz Miskiewicz</author>
+  </entry>
+
+  <entry><para>
+   support fo UTF-8 encoded package summaries and descriptions
   </para>
   <author id="witekfl" email="witekfl att pld-linux org">Witold Filipczyk</author>
   </entry>
 
   <entry><para>
-  basic support for package Suggests capabilities
-  </para></entry>
+  package Suggests supported 
+  </para>
+  <author part="yes" id="megabajt" email="megabajt att pld-linux org">Marcin Banasiak</author>
+  </entry>
 
   <entry><para>
-  pythonized Python module
+  pythonized Python module, new pyldek.py as general example of module usage.
   </para></entry>
 
   <entry><para>
@@ -365,7 +387,7 @@ Significant changes and differences from 0.18.x series
   </entry>
   <entry>
     <para>'ls' output fixes to be parsable by external scripts</para>
-    <author id="patrys" email="patrys att pld-dc org">Patryk Zawadzki</author>
+    <author id="patrys" email="patrys att pld-linux org">Patryk Zawadzki</author>
   </entry>
   <entry>
     <para>removed usage of superfluous n_free()</para>
@@ -394,7 +416,7 @@ Significant changes and differences from 0.18.x series
   </entry>
   <entry>
     <para>vfile's progress bar improvements</para>
-    <author id="patrys" email="p zawadzki att vegaballs com">Patryk Zawadzki</author>
+    <author id="patrys" email="patrys att pld-linux org">Patryk Zawadzki</author>
   </entry>
   <entry>
     <para>fix: disabled package Epoch's autopromotion while checking if it matches requirement</para>
@@ -452,7 +474,7 @@ package provides "foo" (if any). </para>
   </entry>
   <entry>
     <para>vfile: progress bar shows remaining time and transfer rate</para>
-    <author id="patrys" email="p zawadzki att vegaballs com">Patryk Zawadzki</author>
+    <author id="patrys" email="patrys att pld-linux org">Patryk Zawadzki</author>
   </entry>
   <entry>
     <para>fixed setting cache directory bug</para>
@@ -778,7 +800,7 @@ configuration.
   </entry>
   <entry>
     <para>URLs with user and password (ftp://user:passwd at host:port/path/ syntax) are supported</para>
-    <author id="a.piesk" email="a.piesk att gmx.net">Andreas Piesk</author>
+    <author id="a.piesk" email="a.piesk att gmx net">Andreas Piesk</author>
   </entry>
   <entry>
     <para>new "ftp_sysuser_as_anon_passwd" option causes sending login at 
@@ -795,12 +817,12 @@ configuration.
   </entry>
   <entry>
     <para>fixed rpm 3.x support</para>
-    <author part="yes" id="rl" email="rl att hellgate.ch">Roger Luethi</author>
+    <author part="yes" id="rl" email="rl att hellgate ch">Roger Luethi</author>
   </entry>
   <entry>
     <para>fixed and improved handling of bool configuration options, added on/off and enable/disable 
       to the list of valid choices</para>
-    <author id="a.piesk" email="a.piesk att gmx.net">Andreas Piesk</author>
+    <author id="a.piesk" email="a.piesk att gmx net">Andreas Piesk</author>
   </entry>
   <entry>
     <para>fixed detection of file based conflicts between available packages. </para>
@@ -811,7 +833,7 @@ configuration.
   </entry>
   <entry>
     <para>misc fixes to compile and work with glibc2.1</para>
-    <author part="yes" id="a.piesk" email="a.piesk att gmx.net">Andreas Piesk</author>
+    <author part="yes" id="a.piesk" email="a.piesk att gmx net">Andreas Piesk</author>
   </entry>
   <entry>
     <para>installation of multiple instances of package is allowed (by poldek -i)</para>
@@ -826,7 +848,7 @@ configuration.
   </entry>
   <entry>
     <para>German translation</para>
-    <author id="a.piesk" email="a.piesk att gmx.net">Andreas Piesk</author>
+    <author id="a.piesk" email="a.piesk att gmx net">Andreas Piesk</author>
   </entry>
   <entry>
     <para>various bugs are fixed</para>

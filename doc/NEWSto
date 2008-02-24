@@ -69,9 +69,11 @@ sub to_CREDITS_docb {
            };
 
     foreach (@$credits) {
+        $_->{email} =~ s/\s/&#160;/g;
+        $_->{name} =~ s/\s/&#160;/g;
         print qq{
   <listitem id="$_->{id}"><para>
-     $_->{name} &lt;<emphasis>$_->{email}</emphasis>&gt;
+     $_->{name}&#160;<emphasis>&lt;$_->{email}&gt;</emphasis>
    </para></listitem>
                 };
     }
