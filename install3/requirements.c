@@ -438,7 +438,7 @@ static int process_req(int indent, struct i3ctx *ictx,
                 trace(indentt, "%s is a crossroad", pkg_id(pkg));
             }
 #if ENABLE_TRACE            
-            DBGF_F("number_of_non_blacks %d\n", number_of_non_blacks(ictx, candidates));
+            DBGF("number_of_non_blacks %d\n", number_of_non_blacks(ictx, candidates));
             pkgs_array_dump(candidates, "candidates");
 #endif            
         }

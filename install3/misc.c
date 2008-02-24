@@ -222,7 +222,7 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                 if (i3_is_marked(ictx, cpkg->pkg)) {
                     conflicts[i] += 1;
                     scores[i] -= 5;
-                    DBGF_F("  %d %d %d\n", i, scores[i], conflicts[i]);
+                    DBGF("  %d %d %d\n", i, scores[i], conflicts[i]);
                 }
             }
         
