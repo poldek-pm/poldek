@@ -2,12 +2,12 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl $Id$
 
-AC_INIT(poldek,0.21)
+AC_INIT(poldek,0.30)
 AC_CONFIG_SRCDIR([capreq.c])
 
 PACKAGE_BUGREPORT="mis@pld-linux.org"
 VERSION_STATUS="beta"
-VERSION=0.21
+VERSION=0.30
 VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
 VERSION_CVSTAG="v$VERSION_TAG"
 PACKAGE_VERSION_SERIES="2"
@@ -20,6 +20,7 @@ AH_TEMPLATE([HAVE_RPM_HGETCOLOR],[])
 AH_TEMPLATE([HAVE_TM_GMTOFF],[])
 AH_TEMPLATE([HAVE_TM___GMTOFF],[])
 AH_TEMPLATE([HAVE_RPM_HEADER_MAGIC_YES],[])
+AH_TEMPLATE([HAVE_RPM_INT32_TYPE],[])
 
 AM_INIT_AUTOMAKE([dist-bzip2])
 AC_DEFINE_UNQUOTED([VERSION_STATUS], "$VERSION_STATUS", [version status])
@@ -333,12 +334,24 @@ AC_CHECK_FUNCS(_rpmvercmp)
 dnl rpm 4.4.9
 AC_CHECK_HEADERS([rpm/rpmevr.h])
 
+dnl
 dnl rpm 5.x
+dnl fnpyKey provider
+AC_CHECK_HEADERS([rpm/rpmcb.h])
+AC_CHECK_FUNCS(rpmpkgRead)
+AC_CHECK_FUNCS(headerNVR)     # removed since 5.0
+AC_CHECK_FUNCS(headerNEVRA)  
+AC_CHECK_FUNCS(rpmErrorString)
+
 dnl  - removed enum (not macro) HEADER_MAGIC_YES
 if test "${is_rpm4}." = "yes." ; then
    AC_EGREP_CPP(HEADER_MAGIC_YES,
                [ #include <rpm/header.h>
                ], AC_DEFINE([HAVE_RPM_HEADER_MAGIC_YES], 1, []))
+   dnl and renamed RPM_INT32_TYPE to RPM_UIINT32_TYPE    
+   AC_EGREP_CPP(RPM_INT32_TYPE,
+               [ #include <rpm/header.h>
+               ], AC_DEFINE([HAVE_RPM_INT32_TYPE], 1, []))
 fi
 
 dnl metadata & xml2

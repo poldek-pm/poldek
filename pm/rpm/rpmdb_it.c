@@ -18,11 +18,6 @@
 # include "config.h"
 #endif
 
-#include <rpm/rpmlib.h>
-#ifdef HAVE_RPM_4_1
-# include <rpm/rpmdb.h>
-#endif
-
 #define ENABLE_TRACE 0
 #include "i18n.h"
 #include "misc.h"

@@ -26,23 +26,16 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <rpm/rpmlib.h>
-#include <rpm/rpmio.h>
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
 
-#ifdef HAVE_RPM_4_1
-# include <rpm/rpmts.h>
-# include <rpm/rpmps.h>
-# include <rpm/rpmdb.h>
-# include <rpm/rpmcli.h>
-#endif
+#include <sys/time.h>           /* rpm5 needs timeval */
+#include <stdio.h>              /* rpm5 headers needs FILE* */
 
 #include <vfile/vfile.h>
 
 #include "i18n.h"
-
 #include "misc.h"
 #include "log.h"
 #include "pkg.h"

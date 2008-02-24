@@ -40,7 +40,6 @@
 #include <sys/ioctl.h>
 #include <fnmatch.h>
 
-#include <rpm/rpmlib.h>
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
@@ -61,6 +60,8 @@
 #include "pm_rpm.h"
 
 #ifdef HAVE_OPENPTY
+
+
 
 static void rpmr_process_output(struct p_open_st *st, int verbose_level) 
 {
@@ -89,19 +90,12 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
                 break;
 
         } else if (rc > 0) {
-            char  buf[4096], *fmt = "_%s";
+            char  buf[4096], *fmt = "%s";
             int   n, i;
 
             if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0)
                 break;
-            
             buf[n] = '\0';
-            if (buf[n - 1] == '\n') {
-                n--;
-                buf[n] = '\0';
-                fmt = "_%s\n";
-            }
-            
             msg_tty(verbose_level, fmt, buf);
 
             /* logged to file? -> prefix lines with 'rpm: ' */

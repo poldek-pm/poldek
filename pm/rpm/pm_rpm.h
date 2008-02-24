@@ -1,7 +1,30 @@
 #ifndef POLDEK_PM_RPM_MODULE_H
 #define POLDEK_PM_RPM_MODULE_H
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#ifndef HAVE_RPM_INT32_TYPE
+# define RPM_INT32_TYPE RPM_UINT32_TYPE
+#endif
+
+/* XXX: rpm5's headers needs: */
+#include <stdio.h>              /* FILE* */
+#include <unistd.h>             /* size_t */
+#include <stdint.h>             /* uint32_t */
+#include <sys/time.h>           /* timeval */
+
+#define _RPMPRCO_INTERNAL 1 /* see pm_rpmdsSysinfo */
 #include <rpm/rpmlib.h>
+
+#ifdef HAVE_RPM_RPMCB_H
+# include <rpm/rpmcb.h>
+#endif
+
+#if HAVE_RPMDSRPMLIB
+# include <rpm/rpmds.h>
+#endif
 
 #ifdef HAVE_RPM_RPMEVR_H
 # include <rpm/rpmevr.h>
@@ -12,7 +35,17 @@
 #endif
 
 #ifdef HAVE_RPM_4_1
+# include <rpm/rpmio.h>
 # include <rpm/rpmts.h>
+# include <rpm/rpmps.h>
+# include <rpm/rpmdb.h>
+#endif
+
+#include <rpm/rpmurl.h>
+#include <rpm/rpmmacro.h>
+
+#ifdef HAVE_RPMPKGREAD
+# define HAVE_RPM_5 1
 #endif
 
 #ifdef RPM_MAJOR_VERSION
@@ -20,7 +53,11 @@
 # if PM_RPMVER(RPM_FORMAT_VERSION,RPM_MAJOR_VERSION,RPM_MINOR_VERSION) >= PM_RPMVER(4,4,8)
 #  define HAVE_RPM_VERSION_GE_4_4_8 1
 # endif
+# if PM_RPMVER(RPM_FORMAT_VERSION,RPM_MAJOR_VERSION,RPM_MINOR_VERSION) >= PM_RPMVER(5,0,0)
+#  define HAVE_RPM_VERSION_GE_5 1
+# endif
 #endif 
+
 
 
 /* RPMTAG_COPYRIGHT disappears in 4.4.3 but don't know from
@@ -95,13 +132,20 @@ int pm_rpm_vercmp(const char *one, const char *two);
 /*  rpmhdr  */
 int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path);
 int pm_rpmhdr_loadfile(const char *path, Header *hdr);
-int pm_rpmhdr_nevr(void *h, char **name,
-                   int32_t *epoch, char **version, char **release,
-                   char **arch, int *color);
+Header pm_rpmhdr_readfdt(void *fdt); /* headerRead */
+
+int pm_rpmhdr_nevr(void *h, const char **name, int32_t *epoch,
+                   const char **version, const char **release,
+                   const char **arch, int *color);
 
 char **pm_rpmhdr_langs(Header h);
+
+int pm_rpmhdr_get_entry(Header h, int32_t tag, void *buf, int32_t *type, int32_t *cnt);
 int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt);
 void pm_rpmhdr_free_entry(void *e, int type);
+
+int pm_rpmhdr_get_string(Header h, int32_t tag, char *value, int size);
+int pm_rpmhdr_get_int(Header h, int32_t tag, uint32_t *value);
 
 int pm_rpmhdr_issource(Header h);
 
@@ -121,6 +165,7 @@ struct rpmhdr_ent {
 #define pm_rpmhdr_ent_as_int16(ent) (*(int16_t*)(ent)->val)
 #define pm_rpmhdr_ent_as_str(ent) (char*)(ent)->val
 #define pm_rpmhdr_ent_as_strarr(ent) (char**)(ent)->val
+#define pm_rpmhdr_ent_as_intarr(ent) (uint32_t*)(ent)->val
 
 int pm_rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag);
 void pm_rpmhdr_ent_free(struct rpmhdr_ent *ent);

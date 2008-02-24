@@ -14,6 +14,10 @@
   $Id$
 */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -666,6 +670,21 @@ int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
  * pkguinf store/restore as rpm header; functions used by old-poor pdir index
  * format
  */
+
+static unsigned hacked_headerSizeof(Header hdr)
+{
+    unsigned hdr_size;
+    
+#ifdef HAVE_RPM_HEADER_MAGIC_YES    
+    hdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
+#else  /* rpm >= 5  */
+# define HEADER_MAGIC_SIZE 8
+    hdr_size = headerSizeof(hdr);
+    hdr_size = hdr_size - HEADER_MAGIC_SIZE; /* XXX: hack */
+#endif    
+    return hdr_size;
+}
+
 static Header make_pkguinf_hdr(struct pkguinf *pkgu, int *langs_cnt) 
 {
     int                i, nlangs = 0;
@@ -685,7 +704,7 @@ static Header make_pkguinf_hdr(struct pkguinf *pkgu, int *langs_cnt)
         headerAddI18NString(hdr, RPMTAG_SUMMARY, inf->summary, lang);
         headerAddI18NString(hdr, RPMTAG_DESCRIPTION, inf->description, lang);
     }
-
+#if 0
     if (pkgu->vendor)
         headerAddEntry(hdr, RPMTAG_VENDOR, RPM_STRING_TYPE, pkgu->vendor, 1);
     
@@ -700,8 +719,8 @@ static Header make_pkguinf_hdr(struct pkguinf *pkgu, int *langs_cnt)
     
     if (pkgu->buildhost)
         headerAddEntry(hdr, RPMTAG_BUILDHOST, RPM_STRING_TYPE, pkgu->buildhost, 1);
-
-    hdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
+#endif    
+    hdr_size = hacked_headerSizeof(hdr);
     
     if (hdr_size > UINT16_MAX) {
         logn(LOGERR, "internal: header size too large: %d", hdr_size);
@@ -725,11 +744,16 @@ int pkguinf_store_rpmhdr(struct pkguinf *pkgu, tn_buf *nbuf)
 
 
     hdr = make_pkguinf_hdr(pkgu, NULL);
-    rawhdr_size = headerSizeof(hdr, HEADER_MAGIC_NO);
+    
+#ifdef HAVE_RPM_VERSION_GE_5
+    rawhdr = headerUnload(hdr, &rawhdr_size);
+#else
+    rawhdr_size = hacked_headerSizeof(hdr);
     rawhdr = headerUnload(hdr);
+#endif
 
 #if 0    
-    printf("> %ld\t%d\n", ftell(stream), headerSizeof(pkgu->_hdr, HEADER_MAGIC_NO));
+    printf("> %ld\t%d\n", ftell(stream), hacked_headerSizeof(pkgu->_hdr));
     headerDump(pkgu->_hdr, stdout, HEADER_DUMP_INLINE, rpmTagTable);
 #endif     
 

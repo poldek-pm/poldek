@@ -14,6 +14,7 @@ libpm_rpm_la_SOURCES  = mod.c rpmdb_it.c \
 			rpminstall.c    \
 			rpm_pkg_ld.c 
 
+EXTRA_DIST      = signature4.c signature5.c 
 bin_PROGRAMS    = rpmvercmp
 
 rpmvercmp_SOURCES   = rpmvercmp.c

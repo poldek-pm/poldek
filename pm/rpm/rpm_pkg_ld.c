@@ -99,9 +99,9 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h, struct pkg *
 {
     struct rpm_cap_tagset *tgs = NULL;
     struct capreq *cr;
-    int t1, t2, t3, c1 = 0, c2 = 0, c3 = 0;
+    struct rpmhdr_ent e_name, e_version, e_flag;
     char **names = NULL, **versions = NULL;
-    int  *flags = NULL;
+    uint32_t *flags = NULL;
     int  i, rc = 0, ownedarr = 0;
 
     if (arr == NULL) {
@@ -126,35 +126,33 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h, struct pkg *
     }
 
     
-    if (!headerGetEntry(h, tgs->name_tag, (void*)&t1, (void*)&names, &c1))
+    if (!pm_rpmhdr_ent_get(&e_name, h, tgs->name_tag))
         return NULL;
-    n_assert(names);
 
-    if (headerGetEntry(h, tgs->version_tag, (void*)&t2, (void*)&versions, &c2)) {
-        n_assert(t2 == RPM_STRING_ARRAY_TYPE);
-        n_assert(versions);
-        n_assert(c2);
+    if (pm_rpmhdr_ent_get(&e_version, h, tgs->version_tag)) {
+        //n_assert(t2 == RPM_STRING_ARRAY_TYPE);
+        //n_assert(versions);
+        //n_assert(c2);
         
     } else if (pmcap_tag == PMCAP_REQ) { /* reqs should have version tag */
-        pm_rpmhdr_free_entry(names, t1);
+        pm_rpmhdr_ent_free(&e_name);
         return 0;
     }
-    
 
-    if (headerGetEntry(h, tgs->flags_tag, (void*)&t3, (void*)&flags, &c3)) {
-        n_assert(t3 == RPM_INT32_TYPE);
-        n_assert(flags);
-        n_assert(c3);
+    if (pm_rpmhdr_ent_get(&e_flag, h, tgs->flags_tag)) {
+        //n_assert(t3 == RPM_INT32_TYPE);
+        //n_assert(flags);
+        //n_assert(c3);
         
     } else if (pmcap_tag == PMCAP_REQ) {  /* reqs should have version too */
-        pm_rpmhdr_free_entry(names, t1);
-        pm_rpmhdr_free_entry(versions, t2);
+        pm_rpmhdr_ent_free(&e_name);
+        pm_rpmhdr_ent_free(&e_version);
         return 0;
     }
 
-    if (c2 && (c1 != c2)) {
+    if (e_flag.cnt && (e_name.cnt != e_version.cnt)) {
         logn(LOGERR, "read %s: nnames (%d) != nversions (%d), broken rpm",
-             tgs->label, c1, c2);
+             tgs->label, e_name.cnt, e_version.cnt);
 #if 0
         for (i=0; i<c1; i++) 
             printf("n %s\n", names[i]);
@@ -164,22 +162,25 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h, struct pkg *
         goto l_end;
     }
         
-    if (c2 != c3) {
+    if (e_version.cnt != e_flag.cnt) {
         logn(LOGERR, "read %s: nversions %d != nflags %d, broken rpm",
-             tgs->label, c2, c3);
+             tgs->label, e_version.cnt, e_flag.cnt);
         goto l_end;
     }
 
-
-    for (i=0; i < c1; i++) {
+    names = pm_rpmhdr_ent_as_strarr(&e_name);
+    versions = pm_rpmhdr_ent_as_strarr(&e_version);
+    flags = pm_rpmhdr_ent_as_intarr(&e_flag);
+    
+    for (i=0; i < e_name.cnt; i++) {
         char *name, *evr = NULL;
         unsigned cr_relflags = 0, cr_flags = 0;
             
         name = names[i];
-        if (c2 && *versions[i])
+        if (e_version.cnt && *versions[i])
             evr = versions[i];
         
-        if (c3) {               /* translate flags to poldek one */
+        if (e_flag.cnt) {               /* translate flags to poldek one */
             register uint32_t flag = flags[i];
 
             if (flag & RPMSENSE_LESS) 
@@ -230,10 +231,10 @@ l_end:
     } else if (ownedarr) {      /* error */
         n_array_cfree(&arr);
     }
-    
-    pm_rpmhdr_free_entry(names, t1);
-    pm_rpmhdr_free_entry(versions, t2);
-    pm_rpmhdr_free_entry(flags, t3);
+
+    pm_rpmhdr_ent_free(&e_name);
+    pm_rpmhdr_ent_free(&e_version);
+    pm_rpmhdr_ent_free(&e_flag);
 
     return arr;
 }
@@ -270,7 +271,7 @@ static int valid_fname(const char *fname, mode_t mode, const char *pkgname)
 int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
                     Header h, int which, const char *pkgname)
 {
-    int t1, t2, t3, t4, c1, c2, c3, c4;
+    int t1, t2, t3, t4, t5, t6, c1, c2, c3, c4, c5, c6;
     char **names = NULL, **dirs = NULL, **symlinks = NULL, **skipdirs;
     int32_t   *diridxs;
     uint32_t  *sizes;
@@ -282,22 +283,23 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     const char *errmsg_notag = _("%s: no %s tag");
 
     n_assert(na);
-    if (!headerGetEntry(h, RPMTAG_BASENAMES, (void*)&t1, (void*)&names, &c1))
+    
+    if (!pm_rpmhdr_get_entry(h, RPMTAG_BASENAMES, (void*)&names, &t1, &c1))
         return 0;
 
     n_assert(t1 == RPM_STRING_ARRAY_TYPE);
-    if (!headerGetEntry(h, RPMTAG_DIRNAMES, (void*)&t2, (void*)&dirs, &c2))
+    if (!pm_rpmhdr_get_entry(h, RPMTAG_DIRNAMES, (void*)&dirs, &t2, &c2))
         goto l_endfunc;
     
     n_assert(t2 == RPM_STRING_ARRAY_TYPE);
-    if (!headerGetEntry(h, RPMTAG_DIRINDEXES, (void*)&t3,(void*)&diridxs, &c3))
+    if (!pm_rpmhdr_get_entry(h, RPMTAG_DIRINDEXES, (void*)&diridxs, &t3, &c3))
     {
         logn(LOGERR, errmsg_notag, pkgname, "DIRINDEXES");
         nerr++;
         goto l_endfunc;
     }
 
-    n_assert(t3 == RPM_INT32_TYPE);
+    //n_assert(t3 == RPM_INT32_TYPE);
     
     if (c1 != c3) {
         logn(LOGERR, "%s: size of DIRINDEXES (%d) != size of BASENAMES (%d)",
@@ -306,22 +308,21 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
         goto l_endfunc;
     }
     
-    if (!headerGetEntry(h, RPMTAG_FILEMODES, (void*)&t4, (void*)&modes, &c4)) {
+    if (!pm_rpmhdr_get_entry(h, RPMTAG_FILEMODES, (void*)&modes, &t4, &c4)) {
         if (poldek_VERBOSE > 1)
             logn(LOGWARN, errmsg_notag, pkgname, "FILEMODES");
         missing_file_hdrs_err = 1;
         modes = NULL;
     }
     
-    if (!headerGetEntry(h, RPMTAG_FILESIZES, (void*)&t4, (void*)&sizes, &c4)) {
+    if (!pm_rpmhdr_get_entry(h, RPMTAG_FILESIZES, (void*)&sizes, &t5, &c5)) {
         if (poldek_VERBOSE > 1)
             logn(LOGWARN, errmsg_notag, pkgname, "FILESIZES");
         missing_file_hdrs_err = 2;
         sizes = NULL;
     }
     
-    if (!headerGetEntry(h, RPMTAG_FILELINKTOS, (void*)&t4, (void*)&symlinks,
-                        &c4)) {
+    if (!pm_rpmhdr_get_entry(h, RPMTAG_FILELINKTOS, (void*)&symlinks, &t6, &c6)) {
         symlinks = NULL;
     }
     
@@ -410,8 +411,17 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     if (c2 && dirs)
         pm_rpmhdr_free_entry(dirs, t2);
 
-    if (c4 && symlinks)
-        pm_rpmhdr_free_entry(symlinks, t4);
+    if (c3 && diridxs)
+        pm_rpmhdr_free_entry(diridxs, t3);
+
+    if (c4 && modes)
+        pm_rpmhdr_free_entry(modes, t4);
+
+    if (c5 && sizes)
+        pm_rpmhdr_free_entry(sizes, t5);
+
+    if (c6 && symlinks)
+        pm_rpmhdr_free_entry(symlinks, t6);
     
     if (nerr) {
         logn(LOGERR, _("%s: skipped file list"), pkgname);
@@ -456,7 +466,7 @@ static int is_pubkey(Header h)
     void *pubkeys;
     int type;
 
-    if (headerGetEntry(h, RPMTAG_PUBKEYS, &type, &pubkeys, NULL)) {
+    if (pm_rpmhdr_get_entry(h, RPMTAG_PUBKEYS, &pubkeys, &type, NULL)) {
         pm_rpmhdr_free_entry(pubkeys, type);
         return 1;
     }
@@ -469,58 +479,44 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
                          unsigned ldflags)
 {
     struct pkg *pkg;
-    uint32_t   *epoch, *size, *btime, *itime;
-    char       *name, *version, *release, *arch = NULL, *os = NULL;
-    int        type;
+    uint32_t   epoch, size, btime, itime;
+    uint32_t   *psize = NULL, *pbtime = NULL, *pitime = NULL;
+    const char *name, *version, *release, *arch = NULL;
+    char       osbuf[128], *os = osbuf;
+
+    pm_rpmhdr_nevr(h, &name, &epoch, &version, &release, &arch, NULL);
     
-    headerNVR(h, (void*)&name, (void*)&version, (void*)&release);
     if (name == NULL || version == NULL || release == NULL) {
         logn(LOGERR, _("%s: read name/version/release failed"), fname);
         return NULL;
     }
     
-    if (!headerGetEntry(h, RPMTAG_EPOCH, &type, (void *)&epoch, NULL)) 
-        epoch = NULL;
-
-    if (pm_rpmhdr_issource(h)) {
+    if (pm_rpmhdr_issource(h))
         arch = "src";
-        
-    } else {
-        if (!headerGetEntry(h, RPMTAG_ARCH, &type, (void *)&arch, NULL)) {
-            if (!is_pubkey(h))
-                logn(LOGERR, _("%s: read architecture tag failed"), fname);
-            return NULL;
-        }
 
-        if (type != RPM_STRING_TYPE)
-            arch = NULL;
-    }
-    
-    if (!headerGetEntry(h, RPMTAG_OS, &type, (void *)&os, NULL)) {
+    if (!pm_rpmhdr_get_string(h, RPMTAG_OS, osbuf, sizeof(osbuf))) {
+        os = NULL;
         if (poldek_VERBOSE > 1)
             logn(LOGWARN, _("%s: missing OS tag"), fname);
-        os = NULL;
-            
-    } else if (type != RPM_STRING_TYPE)
-        os = NULL;
+    }
 
-    if (!headerGetEntry(h, RPMTAG_SIZE, &type, (void *)&size, NULL)) 
-        size = NULL;
+    if (pm_rpmhdr_get_int(h, RPMTAG_SIZE, &size)) 
+        psize = &size;
 
-    if (!headerGetEntry(h, RPMTAG_BUILDTIME, &type, (void *)&btime, NULL)) 
-        btime = NULL;
+    if (pm_rpmhdr_get_int(h, RPMTAG_BUILDTIME, &btime)) 
+        pbtime = &btime;
 
-    if (!headerGetEntry(h, RPMTAG_INSTALLTIME, &type, (void *)&itime, NULL)) 
-        itime = NULL;
+    if (pm_rpmhdr_get_int(h, RPMTAG_INSTALLTIME, &itime)) 
+        pitime = &itime;
     
-    pkg = pkg_new_ext(na, name, epoch ? *epoch : 0, version, release, arch, os,
-                      fname, size ? *size : 0, fsize, btime ? *btime : 0);
+    pkg = pkg_new_ext(na, name, epoch ? epoch : 0, version, release, arch, os,
+                      fname, psize ? *psize : 0, fsize, pbtime ? *pbtime : 0);
     
     if (pkg == NULL)
         return NULL;
     
-    if (itime) 
-        pkg->itime = *itime;
+    if (pitime) 
+        pkg->itime = *pitime;
 
 #ifdef HAVE_RPM_HGETCOLOR
     pkg->color = hGetColor(h);

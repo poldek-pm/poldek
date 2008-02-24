@@ -24,15 +24,6 @@
 #include <string.h>
 #include <sys/param.h>          /* for PATH_MAX */
 
-#include <rpm/rpmlib.h>
-#include <rpm/rpmio.h>
-#include <rpm/rpmurl.h>
-#include <rpm/rpmmacro.h>
-
-#ifdef HAVE_RPM_4_1
-# include <rpm/rpmdb.h>
-#endif
-
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
@@ -409,5 +400,6 @@ void rpmlog(int prii, const char *fmt, ...)
 
 int pm_rpm_vercmp(const char *one, const char *two)
 {
+    DBGF("(%s) (%s) %d\n", one, two, rpmvercmp(one, two));
     return rpmvercmp(one, two);
 }

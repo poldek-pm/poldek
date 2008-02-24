@@ -22,12 +22,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#define _RPMPRCO_INTERNAL 1 /* see pm_rpmdsSysinfo */
-#include <rpm/rpmlib.h>
-#if HAVE_RPMDSRPMLIB
-# include <rpm/rpmds.h>
-#endif
-
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 

@@ -6,12 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <rpm/rpmlib.h>
-
-#ifdef HAVE_RPM_RPMEVR_H
-# include <rpm/rpmevr.h>
-#endif
-
+#include "pm_rpm.h"
 #include "i18n.h"
 
 int main(int argc, char *argv[])

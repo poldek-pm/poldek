@@ -31,11 +31,6 @@
 # include <db_185.h>
 #endif
 
-#include <rpm/rpmlib.h>
-#include <rpm/rpmio.h>
-#include <rpm/rpmurl.h>
-#include <rpm/rpmmacro.h>
-
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
 #include <trurl/nstr.h>
@@ -50,7 +45,6 @@
 #include "log.h"
 #include "pkg.h"
 #include "capreq.h"
-#include "pm_rpm.h"
 
 
 /*
@@ -65,7 +59,9 @@ int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath,
     return -1;
 }
 
-#else 
+#else
+extern char *pm_rpm_dbpath(void *pm_rpm, char *path, size_t size);
+
 int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath, 
                      tn_array *depdirs) 
 {
@@ -74,7 +70,7 @@ int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath,
     char      buf[PATH_MAX], path[PATH_MAX], *depdir;
     char      *index, *p, dbpath_buf[PATH_MAX];
     tn_array  *tmp_depdirs;
-    int       len;
+    int       len, dbtype = DB_HASH;
     
 #ifndef HAVE___DB185_OPEN
     return -1;
@@ -84,7 +80,10 @@ int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath,
 #ifdef HAVE_RPM_4_0
     index = "Requirename";
 #endif
-    
+
+#ifdef HAVE_RPM_5
+    dbtype = DB_BTREE; /* XXX: should be detected at runtime */
+#endif
     if (rootdir == NULL)
         rootdir = "/";
     
@@ -95,7 +94,7 @@ int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath,
              "%s%s/%s", *(rootdir + 1) == '\0' ? "" : rootdir,
              dbpath != NULL ? dbpath : "", index);
     
-    if ((db = __db185_open(path, O_RDONLY, 0, DB_HASH, NULL)) == NULL)
+    if ((db = __db185_open(path, O_RDONLY, 0, dbtype, NULL)) == NULL)
         return -1;
     
     if (db->seq(db, &dbt_k, &dbt_d, R_FIRST) != 0) {
