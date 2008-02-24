@@ -18,7 +18,7 @@
 
 static
 int find_replacement(struct i3ctx *ictx, struct pkg *pkg,
-                     struct pkg **rpkg)
+                     const struct capreq *cnfl, struct pkg **rpkg)
 {
     tn_array *pkgs;
     struct pkgset *ps;
@@ -33,6 +33,10 @@ int find_replacement(struct i3ctx *ictx, struct pkg *pkg,
             struct pkg *p = n_array_nth(pkgs, i);
             if (!pkg_is_kind_of(p, pkg))
                 continue;
+
+            /* still conflicted */
+            if (p->cnfls && n_array_bsearch(p->cnfls, cnfl))
+                continue;
             
             if (pkg_cmp_evr(p, pkg) > 0) {
                 *rpkg = p;
@@ -44,6 +48,14 @@ int find_replacement(struct i3ctx *ictx, struct pkg *pkg,
     if (*rpkg == NULL && (pkgs = pkgset_search(ps, PS_SEARCH_OBSL, pkg->name))) {
         for (i=0; i < n_array_size(pkgs); i++) {
             struct pkg *p = n_array_nth(pkgs, i);
+
+            if (!pkg_is_kind_of(p, pkg))
+                continue;
+
+            /* still conflicted */
+            if (p->cnfls && n_array_bsearch(p->cnfls, cnfl))
+                continue;
+            
             if (pkg_caps_obsoletes_pkg_caps(p, pkg) &&
                 pkg_cmp_name_evr(p, pkg) > 0) { /* XXX bug propably, testit */
                 *rpkg = p;
@@ -98,7 +110,7 @@ static int resolve_conflict(int indent, struct i3ctx *ictx,
     capreq_revrel(req);
     
     if (!found) {
-        found = find_replacement(ictx, dbpkg, &tomark);
+        found = find_replacement(ictx, dbpkg, cnfl, &tomark);
         by_replacement = 1;
         
     } else {
