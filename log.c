@@ -291,7 +291,7 @@ static void vlog_file(void *stream, int pri, const char *message)
 
 static void do_log(unsigned flags, int pri, const char *fmt, va_list args) 
 {
-    char message[1024], *endl = NULL;
+    char message[16 * 1024], *endl = NULL;
     int i;
 
     if (*fmt == '\n' && (pri & (LOGERR|LOGWARN|LOGNOTICE))) {
