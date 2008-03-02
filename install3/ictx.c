@@ -208,6 +208,7 @@ void i3ctx_destroy(struct i3ctx *ictx)
     ictx->ts = NULL;
     ictx->ps = NULL;
     pkgmark_set_free(ictx->processed);
+    n_hash_free(ictx->errors);
     memset(ictx, 0, sizeof(*ictx));
 }
 
@@ -223,7 +224,8 @@ void i3ctx_reset(struct i3ctx *ictx)
     
     pkgmark_set_free(ictx->processed);
     ictx->processed = pkgmark_set_new(0, PKGMARK_SET_IDPTR);
-    
+
+    n_hash_clean(ictx->errors);
     ictx->abort = 0;
 }
 
