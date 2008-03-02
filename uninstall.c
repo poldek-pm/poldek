@@ -122,17 +122,22 @@ tn_array *get_orphanedby_pkg(struct uninstall_ctx *uctx, struct pkg *pkg)
 static int pkg_leave_orphans(struct uninstall_ctx *uctx, struct pkg *pkg)
 {
     struct capreq *selfcap;
+    tn_array *exclude;
     int i;
     
+    exclude = n_array_dup(uctx->unpkgs, (tn_fn_dup)pkg_link);
+    /* yep, there are packages which requires themselves */
+    n_array_push(exclude, pkg_link(pkg)); 
+    
     capreq_new_name_a(pkg->name, selfcap);
-    if (pkgdb_q_is_required(uctx->db, selfcap, uctx->unpkgs))
-        return 1;
+    if (pkgdb_q_is_required(uctx->db, selfcap, exclude))
+        goto l_yes;
 
     if (pkg->caps)
         for (i=0; i < n_array_size(pkg->caps); i++) {
             struct capreq *cap = n_array_nth(pkg->caps, i);
-            if (pkgdb_q_is_required(uctx->db, cap, uctx->unpkgs))
-                return 1;
+            if (pkgdb_q_is_required(uctx->db, cap, exclude))
+                goto l_yes;
         }
     
     if (pkg->fl) {
@@ -143,13 +148,20 @@ static int pkg_leave_orphans(struct uninstall_ctx *uctx, struct pkg *pkg)
         while ((path = pkgfl_it_get(&it, NULL))) {
             struct capreq *cap;
             capreq_new_name_a(path, cap);
-            if (pkgdb_q_is_required(uctx->db, cap, uctx->unpkgs))
-                return 1;
+            if (pkgdb_q_is_required(uctx->db, cap, exclude))
+                goto l_yes;
         }
     }
+
     
+    n_array_free(exclude);
     return 0;
+    
+l_yes:
+    n_array_free(exclude);
+    return 1;
 }
+        
 
 
 /*
@@ -194,6 +206,8 @@ int process_pkg_rev_orphans(int indent, struct uninstall_ctx *uctx,
             pkg_set_mf(uctx->pms, dbpkg, DBPKG_REV_ORPHANED);
             pkg_dep_mark(uctx->ts->pms, dbpkg);
             n_array_push(uctx->unpkgs, pkg_link(dbpkg));
+            uctx->ndep++;
+            
             if (uctx->rev_orphans_deep > deep)
                 process_pkg_rev_orphans(indent + 2, uctx, dbpkg, deep + 1);
         }
