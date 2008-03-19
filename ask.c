@@ -103,10 +103,10 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
         return hint;
 
     if (pkg) {
-        msg_ask(_("%s: required \"%s\" is provided by folowing packages:"),
+        msg_ask(_("%s: required \"%s\" is provided by following packages:"),
                 pkg_id(pkg), capname);
     } else {
-        msg_ask(_("Required \"%s\" is provided by folowing packages:"),
+        msg_ask(_("Required \"%s\" is provided by following packages:"),
                 capname);
     }
     
