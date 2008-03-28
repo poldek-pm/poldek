@@ -147,18 +147,15 @@ and [filename]*-source.conf[/filename], file getters are declared in
 # Some macros. Macros are local, they are not visible in included files
 # and macros declared in them are not visible to includer.
 # Macros names starts with underscore '_'.
-#
-_distro  = pld
 
 # Both local and remote files may be included. Included files may not contain
 # [ global ] section, it will be ignored anyway.
-%include %{_distro}-source.conf
 
 # local sources
 %include source.conf
 
 # /etc/poldek/repos.d/*.conf
-#%includedir repos.d
+%includedir repos.d
 
 # External downloaders configuration, not necessary in most cases, cause
 # to internal HTTP and FTP client.
