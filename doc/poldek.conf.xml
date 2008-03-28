@@ -1,16 +1,16 @@
 <?xml version='1.0'?>
 
-<!--  
+<!--
 option syntax
-<option name="NAME" type="{string,boolean,boolean3,integer}" 
-  default="DEFAULT VALUE" 
+<option name="NAME" type="{string,boolean,boolean3,integer}"
+  default="DEFAULT VALUE"
   list="yes"      # if an option is a list of values
   path="yes"      # if path list (':' separator) in conjunction with list,
-  multiple="yes"  # if an option may be set multiple times 
+  multiple="yes"  # if an option may be set multiple times
   env="yes"       # if an option value may contain environment variables
   obsoleted="yes" # if an option is obsoleted
   hidden="yes"    # not to show it to the user. XXX need to be implemented
-                  # in *conf-xml2*.xsls, currently just length of the 
+                  # in *conf-xml2*.xsls, currently just length of the
                   # description is tested.
 >
 <description> OPTION DESCRIPTION </description>
@@ -25,7 +25,7 @@ option syntax
 <description>
 [para]
 poldek.conf contains runtime configuration information for poldek
-package management tool. The complete description of the file format and 
+package management tool. The complete description of the file format and
 possible parameters held within are here for reference purposes.
 [/para]
 </description>
@@ -35,15 +35,15 @@ possible parameters held within are here for reference purposes.
 <title>File format</title>
 <description>
 [para]
-The file consists of directives, sections and parameters. A section begins 
-with thename of the section in square brackets and continues until the next 
+The file consists of directives, sections and parameters. A section begins
+with thename of the section in square brackets and continues until the next
 section begins ('ini'-like format). Sections contain parameters of the form:
 [screen]
 name = value
 [/screen]
 [/para][para]
-The  file  is line-based - that is, each newline-terminated line represents 
-either a comment, a section name or a parameter. Any line beginning with a 
+The  file  is line-based - that is, each newline-terminated line represents
+either a comment, a section name or a parameter. Any line beginning with a
 hash (``#'') character is ignored, as are lines containing only whitespace.
 [/para][para]
 
@@ -74,7 +74,7 @@ switch.
 [/para]
 
 [para]
-Second directive, [option]%includedir[/option] includes all *.conf files from given directory, 
+Second directive, [option]%includedir[/option] includes all *.conf files from given directory,
 examples:
 [screen]
 %include repos.d                  # include all *.conf files from repos.d subdirectory
@@ -91,13 +91,13 @@ examples:
 Simple macros are supported. Macros are declared as paramameter with
 underscore ('_') at beginning:
 [screen]
-_foo = /bar 
+_foo = /bar
 [/screen]
 and can be expanded in any following value in %{NAME} form:
 [screen]
 path = %{_foo}/dir    # path will be '/bar/dir'
 [/screen]
-Macros are local to file beeing declared, they are not visible in 
+Macros are local to file beeing declared, they are not visible in
 included files as they are not visible to includer.
 [/para]
 </description>
@@ -118,24 +118,24 @@ There are three section types: [ global ], [ source ] and [ fetcher ].
   [varlistentry][term][option][ source ][/option][/term]
     [listitem][para]
     This section contains poldek's repository configuration. Each section
-    describes one repository. 
+    describes one repository.
     [/para][/listitem]
-  [/varlistentry]  
+  [/varlistentry]
 
   [varlistentry][term][option][ fetcher ][/option][/term]
     [listitem][para]
     Configuration of external file getters. Each section declares one
-    external downloader. 
+    external downloader.
     [/para][/listitem]
-  [/varlistentry]  
+  [/varlistentry]
 [/variablelist]
 [/para]
 [para]
 To make things simpler default configuration consists of several files.
-Repositories are declared in separate [filename]source.conf[/filename] 
-and [filename]*-source.conf[/filename], file getters are declared in 
-[filename]fetch.conf[/filename]. All of them are included by 
-[filename]poldek.conf[/filename]. 
+Repositories are declared in separate [filename]source.conf[/filename]
+and [filename]*-source.conf[/filename], file getters are declared in
+[filename]fetch.conf[/filename]. All of them are included by
+[filename]poldek.conf[/filename].
 [/para]
 </description>
 </section>
@@ -151,7 +151,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
 _distro  = pld
 
 # Both local and remote files may be included. Included files may not contain
-# [ global ] section, it will be ignored anyway. 
+# [ global ] section, it will be ignored anyway.
 %include %{_distro}-source.conf
 
 # local sources
@@ -204,21 +204,21 @@ _distro  = pld
 
   <option name="use sudo" type="boolean3" default="auto" op="USESUDO">
     <description>
-    Permits using root privileges for installation only. If set to "auto" then 
+    Permits using root privileges for installation only. If set to "auto" then
     automatically turned on when poldek executed as ordinary user.
     </description>
   </option>
 
   <option name="load apt sources list" type="boolean" default="no">
     <description>
-    Load [filename]/etc/apt/sources.list[/filename]. 
+    Load [filename]/etc/apt/sources.list[/filename].
     </description>
   </option>
 
   <option name="vfile external compress" type="boolean" default="no">
     <description>
     Handle gzipped indexes externally (needed on RedHat 9 and Fedora Core 1 and 2).
-    This option is a workaround for broken zlib linked into librpm; with enabled 
+    This option is a workaround for broken zlib linked into librpm; with enabled
     'auto zlib in rpm' poldek tries to detect such case and then enables external
      *.gz handling automatically.
     </description>
@@ -226,7 +226,7 @@ _distro  = pld
 
   <option name="auto zlib in rpm" type="boolean" default="yes">
     <description>
-    Auto detection of zlib linked into librpm. See 'vfile external compress' 
+    Auto detection of zlib linked into librpm. See 'vfile external compress'
     description.
     </description>
   </option>
@@ -249,14 +249,14 @@ _distro  = pld
 
   <option name="pm command" type="string" default="/bin/rpm" multiple="no">
     <description>
-    Full path name to a PM (rpm for now) binary. 
+    Full path name to a PM (rpm for now) binary.
     </description>
     <alias name="rpm command" obsoleted="yes" />
   </option>
 
   <option name="sudo command" type="string" default="/usr/bin/sudo" multiple="no">
     <description>
-    Full path name to sudo binary. 
+    Full path name to sudo binary.
     </description>
   </option>
 </optiongroup>
@@ -265,8 +265,8 @@ _distro  = pld
 <optiongroup id="ogroup.fetcher"><title>File downloaders configuration</title>
   <option name="vfile ftp sysuser as anon passwd" type="boolean" default="no">
     <description>
-    Send ${USER}@${HOSTNAME} as anonymous FTP password (by default 
-    [literal]'poldek@znienacka.net'[/literal] is sent) 
+    Send ${USER}@${HOSTNAME} as anonymous FTP password (by default
+    [literal]'poldek@znienacka.net'[/literal] is sent)
     </description>
     <alias name="ftp sysuser as anon passwd" obsoleted="yes" /> <!-- legacy -->
   </option>
@@ -274,8 +274,8 @@ _distro  = pld
   <option name="default fetcher" type="string" default="http,ftp: internal" multiple="yes">
     <description>
      File getters configuration parameter. By this option URL handlers may be configured.
-     To get file from HTTP and FTP servers poldek uses its internal client (what is 
-     recommended), although it can be changedby this option. Others protocols handled 
+     To get file from HTTP and FTP servers poldek uses its internal client (what is
+     recommended), although it can be changedby this option. Others protocols handled
      by external utilities can be configured also. The syntax is:
      [screen]
  default fetcher = PROTOCOL[,PROTOCOL...]:FETCHER_NAME
@@ -322,7 +322,7 @@ _distro  = pld
 
   <option name="vfile retries" type="integer" default="128">
     <description>
-    Internal HTTP and FTP client is stubborn, it retries to retrive 
+    Internal HTTP and FTP client is stubborn, it retries to retrive
     file if connection breaks. This option tells it how many times
     it should try.
     </description>
@@ -332,7 +332,7 @@ _distro  = pld
 <optiongroup id="ogroup.installation"><title>Installation options</title>
   <option name="particle install" type="boolean" default="yes" op="PARTICLE">
     <description>
-     Install packages in small groups instead of doing all-or-nothing 
+     Install packages in small groups instead of doing all-or-nothing
      installations.
     </description>
   </option>
@@ -362,7 +362,7 @@ _distro  = pld
     <description>
     Confirm packages installation.
     </description>
-    <alias name="confirm installs" obsoleted="yes"/> 
+    <alias name="confirm installs" obsoleted="yes"/>
   </option>
 
   <option name="confirm removal" type="boolean" default="yes" op="CONFIRM_UNINST">
@@ -399,8 +399,8 @@ _distro  = pld
 
   <option name="allow duplicates" type="boolean" default="yes" op="ALLOWDUPS">
     <description>
-    Conflicts with already installed packages are treated as resolved 
-    if at least one of multiple-installed package satisfies conflict. 
+    Conflicts with already installed packages are treated as resolved
+    if at least one of multiple-installed package satisfies conflict.
     rpm doesn't support such cases, so [option]--pm-nodeps[/option] is needed (use with
     care).
     </description>
@@ -431,19 +431,19 @@ _distro  = pld
 <optiongroup id="ogroup.depprocsettings">
 <title>Dependency processing settings</title>
 <description>
- Subtle dependency processing options, they should not be changed 
+ Subtle dependency processing options, they should not be changed
  unless you know what you are doing
 </description>
   <option name="dependency solver" type="integer" default="3" hidden="yes">
   </option>
- 
+
   <option name="auto directory dependencies" type="boolean3" default="auto" op="AUTODIRDEP">
     <description>
-    RPM 4.4.6 introduces auto dependencies based on package directories. 
+    RPM 4.4.6 introduces auto dependencies based on package directories.
     Option controls this feature.
     </description>
   </option>
-  
+
   <option name="follow" type="boolean" default="yes" op="FOLLOW">
     <description>
     Automatically install packages required by installed ones.
@@ -459,7 +459,7 @@ _distro  = pld
 
   <option name="aggressive greedy" type="boolean" default="yes" op="AGGREEDY">
     <description>
-    Be yet more greedy; if successor of orphaned package found, and this 
+    Be yet more greedy; if successor of orphaned package found, and this
     successor drags no packages then upgrade the package instead of process
     its dependencies. Option value is implied by 'greedy' one by defalut.
     </description>
@@ -508,14 +508,14 @@ _distro  = pld
 # Sample poldek sources configuration
 # Every source is configured in his own [ source ] section.
 # Possible parameters are:
-# 
+#
 #[ source ]
 </description>
 </section>
 
 <confsection name="source" id="section.source" config="source.conf" multiple="yes">
 <description>
-This section contains poldek's repository configuration. 
+This section contains poldek's repository configuration.
 Every repository is configured in its own [ source ] section.
 </description>
 
@@ -523,13 +523,13 @@ Every repository is configured in its own [ source ] section.
 
   <option name="name" type="string" value="foo">
     <description>
-    Unique name of the repository. 
+    Unique name of the repository.
     </description>
-  </option>  
+  </option>
 
   <option name="type" type="string" required="yes" value="pndir">
     <description>
-    Type of repository index. Permitted values are 'pndir', 'pdir', 'apt', 'yum' 
+    Type of repository index. Permitted values are 'pndir', 'pdir', 'apt', 'yum'
     and 'dir' as listed by [option]--stl[/option] switch.
     </description>
   </option>
@@ -538,7 +538,7 @@ Every repository is configured in its own [ source ] section.
     <description>
     This parameter sets index original type i.e type of repository
     from what this repository is created. Default is 'dir' - means
-    that directory of packages is scanned. 
+    that directory of packages is scanned.
     </description>
   </option>
 
@@ -547,45 +547,45 @@ Every repository is configured in its own [ source ] section.
     Unique name of the repository. May be either path or URL.
     </description>
     <alias name="url" />
-  </option>  
+  </option>
 
   <option name="prefix" type="string" env="yes" value="/some/url/or/dir">
     <description>
-    If package index and packages are stored in different locations then 
+    If package index and packages are stored in different locations then
     prefix stands for packages path.
     </description>
-  </option>  
+  </option>
 
   <option name="douniq" type="boolean" default="no">
     <description>
     Controls visibility of multiple package instances with different EVR.
     If on, only one, highest version will be visible.
     </description>
-    <alias name="unique package names" /> 
+    <alias name="unique package names" />
   </option>
 
   <option name="pri" type="integer" default="0">
     <description>
     Repository priority. If the same packages (equal names and EVR)
-    are available in more than one source then package from highest 
+    are available in more than one source then package from highest
     prioritized source are taken. Priority is numeric value. Lower number
-    means higher priority, and negative priorities are allowed. 
+    means higher priority, and negative priorities are allowed.
     Priority is numeric value.
     </description>
-  </option>  
+  </option>
 
   <option name="auto" type="boolean" default="yes">
     <description>
-    Controling if repository index will be implicit loaded. Set it off if 
-    the index should be loaded on demand only, i.e. if specified directly 
+    Controling if repository index will be implicit loaded. Set it off if
+    the index should be loaded on demand only, i.e. if specified directly
     by [option]--sn[/option] option.
     </description>
   </option>
 
   <option name="autoup" type="boolean" default="yes">
     <description>
-    Controls if repository index will be implicit updated. Set it off if 
-    the index should be updated on demand only, i.e. if specified directly 
+    Controls if repository index will be implicit updated. Set it off if
+    the index should be updated on demand only, i.e. if specified directly
     by [option]--sn[/option] option.
     </description>
   </option>
@@ -595,7 +595,7 @@ Every repository is configured in its own [ source ] section.
 
   <option name="signed" type="boolean" default="no">
     <description>
-    Packages PGP/GPG signatures (if any) will be verified before their 
+    Packages PGP/GPG signatures (if any) will be verified before their
     installation.
     </description>
   </option>
@@ -629,7 +629,7 @@ Every repository is configured in its own [ source ] section.
 
   <option name="lang" type="string" env="yes" value="">
     <description>
-    Preferred language of package descriptions. If not set, taken from locale 
+    Preferred language of package descriptions. If not set, taken from locale
     settings. Example:
     [screen]
  lang = pl_PL:lt_LT
@@ -639,9 +639,9 @@ Every repository is configured in its own [ source ] section.
   </option>
 
   <option name="sources" type="string" list="yes" value="foo foo-updates">
-    <description>  
+    <description>
     Make sense for 'group' source type only. A list of names of sources.
-    </description> 
+    </description>
   </option>
   <footer target="config">
 
@@ -649,27 +649,27 @@ Every repository is configured in its own [ source ] section.
 name   = home
 type   = dir
 path   = $HOME/rpm/RPMS
-auto   = no 
+auto   = no
 autoup = no
 
 #[ source ]
 #type   = pndir
 #name   = foo
 #path   = ftp://ftp.foo.bar.org/RPMS/
-#pri    =  -10  
-#auto   = no 
+#pri    =  -10
+#auto   = no
 #autoup = no
 #signed = yes
 #hold   = kernel*
 #ignore = kernel*-smp-*
 #dscr   = pl_PL
-  </footer> 
+  </footer>
  </optiongroup>
 </confsection>
 
 <section target="config" config="fetch.conf">
 <description>
-# Configuration of poldek external file getters. Each [ fetcher ] section 
+# Configuration of poldek external file getters. Each [ fetcher ] section
 # declares one external downloader. The syntax is:
 # [ fetcher ]
 # name  = NAME
@@ -683,25 +683,25 @@ autoup = no
 
 <confsection name="fetcher" id="section.fetcher" config="fetch.conf" multiple="yes">
 <description>
-This section contains external downloaders configuration. 
+This section contains external downloaders configuration.
 Each section describes one fetcher.
 </description>
 
   <optiongroup id="ogroup.fetcher">
   <option name="name" type="string" value="foo">
     <description>
-    Unique name of the fetcher. This is an optional parameter, if not set then 
-    name is taken from the "cmd" parameter value as "$(basename $cmd)". 
+    Unique name of the fetcher. This is an optional parameter, if not set then
+    name is taken from the "cmd" parameter value as "$(basename $cmd)".
     </description>
-  </option>  
+  </option>
 
   <option name="proto" type="string" value="foo,bar" required="yes">
     <description>
-    Protocol or protocols supported by fetcher. Name of the protocol can be 
+    Protocol or protocols supported by fetcher. Name of the protocol can be
     completely arbitrary, i.e. if you can handle protocol "foo" by writing
-    a script which takes URLs in form 'foo://'. 
+    a script which takes URLs in form 'foo://'.
     </description>
-  </option>  
+  </option>
 
   <option name="cmd" type="string" env="yes" required="yes" value="foogetter.sh -N %D %Pn">
     <description>
@@ -710,10 +710,10 @@ Each section describes one fetcher.
     [screen]
  cmd = COMMAND [ OPTION... ] {%d,%D}  {%p,%P}[ n ]
     [/screen]
-    Where COMMAND is the name or full path of command, OPTION is command specific 
-    options. Macro '%d' is replaced with cache directory, '%D' is replaced with 
-    'cache directory/file basename', and '%p' with file basename, %P with file full 
-    path (URL).  Optional suffix 'n' with %p and %P means that command can be 
+    Where COMMAND is the name or full path of command, OPTION is command specific
+    options. Macro '%d' is replaced with cache directory, '%D' is replaced with
+    'cache directory/file basename', and '%p' with file basename, %P with file full
+    path (URL).  Optional suffix 'n' with %p and %P means that command can be
     invoked with multiple files at once.
     </description>
   </option>
@@ -721,7 +721,7 @@ Each section describes one fetcher.
 
 ##Configured fetchers
 [ fetcher ]
-proto = cdrom 
+proto = cdrom
 cmd   = vfjuggle %d %Pn
 
 [ fetcher ]
@@ -729,11 +729,11 @@ proto = http,ftp,https
 cmd   = wget -N --dot-style=binary -P %d %Pn
 
 [ fetcher ]
-proto = http,ftp 
+proto = http,ftp
 cmd   = snarf %P %D
 
 [ fetcher ]
-proto = https 
+proto = https
 cmd   = curl %P -o %D
 
 [ fetcher ]
@@ -745,14 +745,14 @@ proto = smb
 cmd   = vfsmb -v %P %d
 
 #[ fetcher ]
-#proto = ssh 
+#proto = ssh
 #cmd   = vfssh.sh %d %Pn
 
 #[ fetcher ]
-#proto = foo 
+#proto = foo
 #cmd   = foo.sh %d %Pn
- 
-  </footer> 
+
+  </footer>
   </optiongroup>
 </confsection>
 </config>
