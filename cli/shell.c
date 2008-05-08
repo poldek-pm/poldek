@@ -405,8 +405,6 @@ int poclidek_shell(struct poclidek_ctx *cctx)
                 
         s = n_str_strip_ws(line);
         if (*s) {
-            int _verbose = poldek_verbose();
-            
             shInCmd = 1;
             DBGF("(%s)\n", s);
 
@@ -417,8 +415,6 @@ int poclidek_shell(struct poclidek_ctx *cctx)
             sigint_reset();
             shDone = 0;
             shInCmd = 0;
-
-            poldek_set_verbose(_verbose);
         }
         free(line);
         

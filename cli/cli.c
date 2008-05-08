@@ -731,9 +731,12 @@ int do_poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
                          const char *cmdline, struct cmd_pipe *cmd_pipe) 
 {
     tn_array              *cmd_chain;
-    int                   rc = 0, i;
+    int                   rc = 0, i, verbose;
 
     DBGF("%s\n", cmdline);
+
+    /* keep verbose setting as it changes when '-q' option is used */
+    verbose = poldek_verbose();
     
     cmd_chain = poclidek_prepare_cmdline(cctx, cmdline);
     if (cmd_chain == NULL)
@@ -753,7 +756,10 @@ int do_poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
         else
             rc = poclidek_exec_cmd_ent(cctx, ts, ent, NULL);
     }
-    
+
+    /* restore verbose setting */
+    poldek_set_verbose(verbose);
+
     n_array_free(cmd_chain);
     return rc;
 }
