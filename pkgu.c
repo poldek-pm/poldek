@@ -39,7 +39,7 @@
 #define NA_OWNED             (1 << 0)
 #define RECODE_SUMMMARY      (1 << 1) /* needs to be recoded */
 #define RECODE_DESCRIPTION   (1 << 2)
-#define SUMMARY_RECODED     (1 << 3) /* already recoded     */
+#define SUMMARY_RECODED      (1 << 3) /* already recoded     */
 #define DESCRITPION_RECODED  (1 << 4)
 
 struct pkguinf {
@@ -51,6 +51,7 @@ struct pkguinf {
     char              *vendor;
     char              *buildhost;
     char              *distro;
+    char              *sourcerpm;
     
     tn_hash           *_ht;
     tn_array          *_langs;
@@ -113,6 +114,7 @@ struct pkguinf *pkguinf_new(tn_alloc *na)
     pkgu->_description = NULL;
     pkgu->vendor = NULL;
     pkgu->buildhost = NULL;
+    pkgu->sourcerpm = NULL;
 
     pkgu->_ht = NULL;
     pkgu->_langs = NULL;
@@ -347,6 +349,7 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
     pkgu->url = cp_tag(pkgu->_na, h, RPMTAG_URL);
     pkgu->distro = cp_tag(pkgu->_na, h, RPMTAG_DISTRIBUTION);
     pkgu->buildhost = cp_tag(pkgu->_na, h, RPMTAG_BUILDHOST);
+    pkgu->sourcerpm = cp_tag(pkgu->_na, h, RPMTAG_SOURCERPM);
 
     return pkgu;
 }
@@ -404,7 +407,15 @@ tn_buf *pkguinf_store(const struct pkguinf *pkgu, tn_buf *nbuf,
             n_buf_puts(nbuf, pkgu->distro);
             n_buf_putc(nbuf, '\0');
         }
-        
+
+        if (pkgu->sourcerpm) {
+            
+    	    n_buf_putc(nbuf, PKGUINF_SOURCERPM);
+    	    n_buf_putc(nbuf, '\0');
+    	    n_buf_puts(nbuf, pkgu->sourcerpm);
+    	    n_buf_putc(nbuf, '\0');
+        }
+
         n_buf_putc(nbuf, PKGUINF_TAG_ENDCMN);
         n_buf_putc(nbuf, '\0');
     }
@@ -494,8 +505,13 @@ struct pkguinf *pkguinf_restore(tn_alloc *na, tn_buf_it *it, const char *lang)
                     set_member(pkgu, &pkgu->distro, val, len);
                     break;
 
+                case PKGUINF_SOURCERPM:
+                    set_member(pkgu, &pkgu->sourcerpm, val, len);
+                    break;
+
                 default:
-                    n_assert(0);
+                    /* skip unknown tag */
+                    ;
             }
         }
     }
@@ -559,6 +575,9 @@ const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
 
         case PKGUINF_DISTRO:
             return pkgu->distro;
+
+        case PKGUINF_SOURCERPM:
+    	    return pkgu->sourcerpm;
             
         case PKGUINF_SUMMARY:
             val = (char**)&pkgu->_summary;
@@ -626,6 +645,10 @@ int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
 
         case PKGUINF_DISTRO:
             set_member(pkgu, &pkgu->distro, val, len);
+            break;
+
+        case PKGUINF_SOURCERPM:
+            set_member(pkgu, &pkgu->sourcerpm, val, len);
             break;
 
         case PKGUINF_SUMMARY:

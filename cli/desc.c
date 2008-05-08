@@ -882,6 +882,11 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg,
         cmdctx_printf(cmdctx, "%s\n", pkg_pkgdirpath(pkg));
     }
 
+    if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_SOURCERPM))) {
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Source RPM:");
+        cmdctx_printf(cmdctx, "%s\n", s);
+    }
+
     if ((fn = pkg_filename(pkg, fnbuf, sizeof(fnbuf)))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "File:");
         cmdctx_printf(cmdctx, "%s\n", fn);
