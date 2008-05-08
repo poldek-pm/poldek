@@ -48,6 +48,20 @@ static void sigint_handler(int sig)
         orig_sighandler(sig);
 }
 
+void sigint_emit(void)
+{
+    int i;
+
+    if (enabled == 0)
+        return;
+
+    interrupted = 1;
+
+    for (i = 0; i < n_array_size(cb_stack); i++) {
+        void (*cb)(void) = n_array_nth(cb_stack, i);
+        cb();
+    }
+}
 
 void sigint_enable(int v) 
 {

@@ -6,7 +6,12 @@ void sigint_init(void);
 void sigint_destroy(void);
 void sigint_reset(void);
 
-void sigint_reset(void);
+/* 
+ * emit sigint. Can be used in some external applications 
+ * using libpoldek to interrupt given action (eg. searching,
+ * processing dependencies and others)
+ */
+void sigint_emit(void);
 
 void sigint_push(void (*cb)(void));
 void *sigint_pop(void);

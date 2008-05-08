@@ -258,6 +258,7 @@ poldeklib_destroy
 poldeklib_init
 rpmlog
 sigint_destroy
+sigint_emit
 sigint_init
 sigint_pop
 sigint_push
