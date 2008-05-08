@@ -66,11 +66,7 @@ struct pkgdir_module pkgdir_module_hdrl = {
     NULL,
 };
 
-
-static
-int load_header_list(const char *slabel, const char *path, tn_array *pkgs,
-                     struct pkgroup_idx *pkgroups, unsigned ldflags,
-                     tn_alloc *na)
+static int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     struct vfile         *vf;
     struct pkg           *pkg;
@@ -79,9 +75,14 @@ int load_header_list(const char *slabel, const char *path, tn_array *pkgs,
     int                  n = 0;
     unsigned             vfmode = VFM_RO | VFM_CACHE | VFM_UNCOMPR | VFM_NOEMPTY;
 
+    if (pkgdir->pkgroups == NULL)
+        pkgdir->pkgroups = pkgroup_idx_new();
 
-    if ((vf = vfile_open_ul(path, VFT_IO, vfmode, slabel)) == NULL)
+    vf = vfile_open_ul(pkgdir->idxpath, VFT_IO, vfmode, pkgdir_idstr(pkgdir));
+    if (vf == NULL)
         return -1;
+
+    
 
     fdt = fdDup(vf->vf_fd);
     if (fdt == NULL || Ferror(fdt)) {
@@ -103,14 +104,14 @@ int load_header_list(const char *slabel, const char *path, tn_array *pkgs,
             continue;
         }
         
-        if ((pkg = pm_rpm_ldhdr(na, h, NULL, 0, PKG_LDWHOLE))) {
+        if ((pkg = pm_rpm_ldhdr(pkgdir->na, h, NULL, 0, PKG_LDWHOLE))) {
             if (ldflags & PKGDIR_LD_DESC) {
-                pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
+                pkg->pkg_pkguinf = pkguinf_ldrpmhdr(pkgdir->na, h);
                 pkg_set_ldpkguinf(pkg);
             }
 
-            n_array_push(pkgs, pkg);
-            pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
+            n_array_push(pkgdir->pkgs, pkg);
+            pkg->groupid = pkgroup_idx_update_rpmhdr(pkgdir->pkgroups, h);
             n++;
         }
         	
@@ -119,26 +120,16 @@ int load_header_list(const char *slabel, const char *path, tn_array *pkgs,
     
     if (fdt)
         Fclose(fdt);
+
+    pkgdir->ts = poldek_util_mtime(vfile_localpath(vf));
     vfile_close(vf);
     
     if (n == 0)
-        logn(LOGWARN, "%s: empty or invalid 'hdrl' file", n_basenam(path));
+        logn(LOGWARN, "%s: empty or invalid 'hdrl' file",
+             n_basenam(pkgdir->idxpath));
     
     return n;
 }
-
-
-static
-int do_load(struct pkgdir *pkgdir, unsigned ldflags)
-{
-    int n;
-    if (pkgdir->pkgroups == NULL)
-        pkgdir->pkgroups = pkgroup_idx_new();
-    n = load_header_list(pkgdir_idstr(pkgdir), pkgdir->idxpath, pkgdir->pkgs,
-                         pkgdir->pkgroups, ldflags, pkgdir->na);
-    return n;
-}
-
 
 static
 int hdrl_update(const char *path, int vfmode, const char *sl,
