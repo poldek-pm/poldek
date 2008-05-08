@@ -176,6 +176,7 @@ pkguinf_new
 pkguinf_set
 pm_dbmtime
 pm_dbpath
+pm_verify_signature
 poldek_BANNER
 poldek_BUG_MAILADDR
 poldek_VERBOSE
@@ -260,6 +261,7 @@ rpmlog
 sigint_destroy
 sigint_emit
 sigint_init
+sigint_enable
 sigint_pop
 sigint_push
 sigint_reached
