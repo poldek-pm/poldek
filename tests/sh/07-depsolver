@@ -18,17 +18,19 @@ setUp() {
     rm -rf $ORIGREPO/*
 
     REPO="$ORIGREPO/src"
+    REPO2="$ORIGREPO/src2"
     DESTINATION_REPO="$ORIGREPO/dest";
 
     rm -rf $REPO $DESTINATION_REPO
     
     mkdir -p $REPO || fail "mkdir $REPO failed"
+    mkdir -p $REPO2 || fail "mkdir $REPO2 failed"
     mkdir -p $DESTINATION_REPO || fail "mkdir $DESTINATION_REPO failed"
     # provide /bin/sh auto requirement
     build_installed sh -p /bin/sh
 
     POLDEK_INSTALL="$POLDEK_NOCONF -Odependency_solver=$DEPENDENCY_SOLVER --noask"
-    POLDEK_INSTALL="$POLDEK_INSTALL --st dir -s $REPO --dt dir --destination $DESTINATION_REPO"
+    POLDEK_INSTALL="$POLDEK_INSTALL --st dir -s $REPO --st dir -s $REPO2 --dt dir --destination $DESTINATION_REPO"
 }
 
 
@@ -60,6 +62,10 @@ do_build_package() {
 
 build() {
    do_build_package $REPO $@
+}
+
+build2() {
+   do_build_package $REPO2 $@
 }
 
 build_installed() {
@@ -251,7 +257,6 @@ testUpgradeObsolete() {
     try_install a "a,a-devel,a-static,bar" "a,a-devel,a-static,foo"
 }
 
-
 testUpgradeMultilib() {
     ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
     POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
@@ -287,6 +292,26 @@ testUpgradeMultilib() {
                                  
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }
+
+# https://bugs.pld-linux.org/show_bug.cgi?id=83
+testUpgradeMultilibOneTransactionForSamePackagesDifferentSource() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    for i in i686 x86-64; do 
+        build_installed FooBar 1-1 -a $i -f "/hello.$i" -f "/README"
+    done    
+    build  FooBar 2-2 -a i686 -f "/hello.i686" -f "/README"
+    build2 FooBar 2-2 -a x86-64 -f "/hello.x86-64" -f "/README"
+
+    msgn "Up"
+    try_install FooBar "FooBar-2-2.i686,FooBar-2-2.x86-64" "FooBar-1-1.i686,FooBar-1-1.x86-64" 
+    
+    #"a-2-2.x86-64" "a-1-1.x86-64"
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
 
 buildUpgradeOrphanRepos() {
     build_installed a-foo -r "'a-lib = 1'" -p "FOO"

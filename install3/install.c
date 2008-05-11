@@ -314,6 +314,9 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
     /* so JUSTPRINTs */
     else if (ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N, 0))
         ts->setop(ts, POLDEK_OP_PARTICLE, 0);
+
+    if (poldek__is_in_testing_mode())
+        ts->setop(ts, POLDEK_OP_PARTICLE, 1);
     
     i3ctx_init(&ictx, ts);
     
