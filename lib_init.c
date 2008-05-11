@@ -1577,6 +1577,9 @@ static int setup_pm(struct poldek_ctx *ctx)
         __setup_multilib(ctx);
         
     } else if (strcmp(pm, "pset") == 0) {
+        if (poldek__is_in_testing_mode()) /* need rpm_machine_score for testing */
+            pm_new("rpm");
+        
         n_array_sort_ex(ctx->dest_sources, (tn_fn_cmp)source_cmp_no);
         if (n_array_size(ctx->dest_sources) == 0) {
             logn(LOGERR, "%s: missing destination source", pm);

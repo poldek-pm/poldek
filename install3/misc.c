@@ -145,11 +145,34 @@ int satisfiability_score(const struct pkg *marker, const struct pkg *pkg)
     return 0;
 }
 
+static void prepare_arch_scores(int *scores, const tn_array *pkgs)
+{
+    int i, min_score = INT_MAX;
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgs, i);
+        
+        scores[i] = pkg_arch_score(pkg);
+        if (min_score > scores[i])
+            min_score = scores[i];
+    }
+
+    for (i=0; i < n_array_size(pkgs); i++) {
+        if (scores[i] == min_score)
+            scores[i] = 1;      /* 1 point for best fit */
+        else
+            scores[i] = 0;
+        DBGF("%s %d\n", pkg_id(n_array_nth(pkgs, i)), scores[i]);
+    }
+}
+
+    
+
 static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                               const struct pkg *marker, tn_array *candidates)
 {
-    int *conflicts, min_nconflicts, j, i_best, *scores, max_score, i;
-    int npkgs, same_packages_different_arch = 0;
+    int *conflicts, min_nconflicts, j, i_best, *scores, *arch_scores = NULL;
+    int i, max_score, npkgs, same_packages_different_arch = 0;
 
     npkgs = n_array_size(candidates);
     tracef(indent, "marker is %s, ncandidates=%d",
@@ -162,8 +185,14 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
     scores = alloca(npkgs * sizeof(*scores));
     conflicts = alloca(npkgs * sizeof(*conflicts));
     min_nconflicts = 0;
-    i_best = -1;
-    
+
+    /* marker noarch -> suggests architecture not */
+    if (poldek_conf_MULTILIB && marker && n_str_eq(pkg_arch(marker), "noarch")) {
+        arch_scores = alloca(npkgs * sizeof(*arch_scores));
+        prepare_arch_scores(arch_scores, candidates);
+    }
+
+    i_best = -1;    
     for (i=0; i < n_array_size(candidates); i++) {
         struct pkg *pkg = n_array_nth(candidates, i);
         int cmprc = 0;
@@ -174,7 +203,6 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
         trace(indent, "- %d. %s (marked=%d)", i, pkg_id(pkg),
               i3_is_marked(ictx, pkg));
 
-        
         if (pkg_isset_mf(ictx->processed, pkg, PKGMARK_BLACK))
             scores[i] = -999;
 
@@ -195,8 +223,11 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                 scores[i] += 2;
             else if (pkg_cmp_arch(pkg, marker) == 0)
                 scores[i] += 1;
+            else if (arch_scores)
+                scores[i] += arch_scores[i];
         }
 
+        //DBGF_F("xxx %s %d %d\n", pkg_id(pkg), pkg_arch_score(pkg), arch_scores[i]);
         scores[i] += satisfiability_score(marker, pkg);
         
         if (i > 0) {

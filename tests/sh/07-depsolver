@@ -335,6 +335,22 @@ testUpgradeOrphanGiveUp() {
 
 }
 
+# alternatives suggested by noarch packages should be scored by rpmArchScore
+# https://bugs.pld-linux.org/show_bug.cgi?id=127
+testMultilibSuggestedByNoarchShouldUseArchScore() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
 
+    msgn "Preparing repositories..."
+    build n 1-1 -a "noarch" -s "a"
+    for i in i686 x86-64; do 
+        build a 1-1 -a $i -f "/hello.$i"
+    done    
+    POLDEK_TESTING_WITH_SUGGESTS="all" # choose all suggested packages
+    export POLDEK_TESTING_WITH_SUGGESTS
+    try_install n "n-1-1.noarch,a-1-1.i686"
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+    POLDEK_TESTING_WITH_SUGGESTS=""
+}
 
 . ./sh/lib/shunit2
