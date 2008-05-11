@@ -87,8 +87,7 @@ int i3_mark_package(struct i3ctx *ictx, struct pkg *pkg, unsigned mark)
 }
 
 
-int i3_mark_namegroup(struct i3ctx *ictx,
-                      struct pkg *pkg, tn_array *pkgs)
+int i3_mark_namegroup(struct i3ctx *ictx, struct pkg *pkg, tn_array *pkgs)
 {
     struct pkg tmpkg;
     int n, i, len, nmarked = 0;
@@ -103,14 +102,7 @@ int i3_mark_namegroup(struct i3ctx *ictx,
     
     tmpkg.name = prefix;
 
-    //*p = '-';
     n = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_ncmp_name);
-    
-    
-    //if (n < 0 && p) {
-    //    n = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_cmp_name);
-    // }
-
     if (n < 0)
         return 0;
     
@@ -129,9 +121,6 @@ int i3_mark_namegroup(struct i3ctx *ictx,
         if (!pkg_is_marked_i(ictx->ts->pms, p)) 
             continue;
         
-        if (pkg->pkgdir != p->pkgdir)
-            continue;
-
         if (!i3_is_marked(ictx, p)) {
             DBGF("mark %s\n", pkg_id(p));
             i3_mark_package(ictx, p, PKGMARK_MARK);

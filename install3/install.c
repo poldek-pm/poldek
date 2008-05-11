@@ -344,7 +344,7 @@ int i3_do_poldek_ts_install(struct poldek_ts *ts)
         i3_mark_package(&ictx, pkg, PKGMARK_MARK);
         
         if (ts->getop(ts, POLDEK_OP_PARTICLE)) {
-            i3_mark_namegroup(&ictx, pkg, pkg->pkgdir->pkgs);
+            i3_mark_namegroup(&ictx, pkg, ts->ctx->ps->pkgs);
             
             if (!do_install(&ictx))
                 nerr++;
