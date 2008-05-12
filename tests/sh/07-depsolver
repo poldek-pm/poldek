@@ -56,7 +56,7 @@ do_build_package() {
   
   params=""
   [ $# -gt 0 ] && params="$@";  
-  if [ -z "$VERBOSE" ]; then
+  if [ "$VERBOSE" != "-v -v" ]; then
       eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >/dev/null 2>&1 || fail "build package $name failed"
   else    
       eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params
@@ -382,5 +382,40 @@ testMultilibSuggestedByNoarchShouldUseArchScore() {
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
     POLDEK_TESTING_WITH_SUGGESTS=""
 }
+
+# https://bugs.pld-linux.org/show_bug.cgi?id=117
+testMultilibCandidatesAssertion() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    i=i686
+    build a 2-2 -a $i -r "'a-misc = 2-2'" -f "/hello.$i"
+    build a-misc 2-2 -a $i -r "'a = 2-2'" -f "/sbin/hello.$i"
+
+    i=x86-64
+    build2 a 2-2 -a $i -r "'a-misc = 2-2'" -f "/hello.$i"
+    build2 a-misc 2-2 -a $i -r "'a = 2-2'" -f "/sbin/hello.$i"
+
+    for i in i686 x86-64; do 
+        build_installed a 1-1 -a $i -f "/hello.$i"
+        build_installed a-misc 1-1 -a $i -r "'a = 1-1'" -f "/sbin/hello.$i"
+    done    
+    try_install a-2-2.x86-64 "a-2-2.x86-64,a-misc-2-2.x86-64" "a-1-1.x86-64,a-misc-1-1.x86-64"
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
+# NFY
+testMultilibArchToNoarchUpgrade() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    build_installed a 1-1 -a x86-64 -f "/hello.x86-64"
+    build a 2-2 -a noarch -f "/hello.sh"
+    try_install a-2-2.noarch "a-2-2.noarch" "a-1-1.x86-64"
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
 
 . ./sh/lib/shunit2
