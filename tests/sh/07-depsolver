@@ -56,8 +56,13 @@ do_build_package() {
   
   params=""
   [ $# -gt 0 ] && params="$@";  
-  #eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params
-  eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >/dev/null 2>&1 || fail "build package $name failed"
+  if [ -z "$VERBOSE" ]; then
+      eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >/dev/null 2>&1 || fail "build package $name failed"
+  else    
+      eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params
+      [ $? -eq 0 ] || fail "build package $name failed"
+  fi
+
 } 
 
 build() {

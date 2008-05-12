@@ -129,4 +129,4 @@ fi
 
 echo -e "%clean\nrm -rf \$RPM_BUILD_ROOT" >> $SPEC
 [ ! -d "$rpmdir" ] && rpmdir="$TMPDIR" 
-rpmbuild --define "_rpmdir $rpmdir"  -bb $SPEC
+rpmbuild --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir"  -bb $SPEC
