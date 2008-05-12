@@ -38,7 +38,6 @@
 #include "misc.h"
 #include "log.h"
 #include "i18n.h"
-#include "install/install.h"
 #include "fileindex.h"
 
 extern int poldek_conf_PROMOTE_EPOCH;
@@ -937,7 +936,6 @@ static int ts_run_upgrade_dist(struct poldek_ts *ts)
     return rc;
 }
 
-extern int in_do_poldek_ts_instal(struct poldek_ts *ts);
 extern int i3_do_poldek_ts_install(struct poldek_ts *ts);
 
 static int ts_run_install(struct poldek_ts *ts) 
@@ -967,14 +965,7 @@ static int ts_run_install(struct poldek_ts *ts)
     pkgdb_tx_begin(ts->db, ts);
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
 
-    if (ts->ctx->_depsolver == 3) { /* hope, soon */
-        msgn(5, "Running #3 dependency engine...");
-        rc = i3_do_poldek_ts_install(ts);
-
-    } else {
-        rc = in_do_poldek_ts_install(ts);
-    }
-
+    rc = i3_do_poldek_ts_install(ts);
     if (rc && !ts->getop(ts, POLDEK_OP_RPMTEST))
         pkgdb_tx_commit(ts->db);
 

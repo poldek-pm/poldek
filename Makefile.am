@@ -8,7 +8,7 @@ TNDB_DIR = @TNDB_DIR@
 
 CLI=cli
 SUBDIRS   = po doc $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir \
-            pm install3 install . $(CLI)
+            pm install3 . $(CLI)
 DIST_SUBDIRS = $(SUBDIRS) python tests
 
 INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@
@@ -70,7 +70,6 @@ nobase_pkginclude_HEADERS = $(libHEADERS)
 libpoldek_la_LIBADD = \
 			sigint/libsigint.la  \
 			pkgdir/libpkgdir.la  \
-			install/libinstall.la \
 			install3/libinstall3.la \
 			pm/libpm.la    \
 			vfile/libvfile.la

@@ -543,7 +543,6 @@ AC_CONFIG_FILES([
         doc/Makefile
         doc/homepage/Makefile
         doc/pl/Makefile
-        install/Makefile
         install3/Makefile
         Makefile
         poldek.spec
