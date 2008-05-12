@@ -61,8 +61,6 @@
 
 #ifdef HAVE_OPENPTY
 
-
-
 static void rpmr_process_output(struct p_open_st *st, int verbose_level) 
 {
     int endl = 1;
@@ -373,7 +371,9 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         argv[nargs++] = (char*)ts->rootdir;
     }
 
+#if 0				    /* commented out because of rpm errors */
     argv[nargs++] = "--noorder";    /* packages always ordered by me */
+#endif
 
     if (ts->rpmacros) 
         for (i=0; i<n_array_size(ts->rpmacros); i++) {
