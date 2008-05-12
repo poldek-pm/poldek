@@ -101,7 +101,7 @@ struct pkg *find_successor_by(int indent, struct i3ctx *ictx,
 
     trace(indent, "testing %d package(s)", n_array_size(pkgs));
     if ((best_i = i3_select_best_pkg(indent + 2, ictx, pkg, pkgs)) == -1) {
-       /* can be in multilib mode */
+        /* can be in multilib mode */
         n_array_free(pkgs);
         return NULL;
     }
@@ -311,9 +311,9 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
     /* unresolved req */
     if (giveup)
         i3_error(ictx, pkg, I3ERR_REQUIREDBY,
-                 _("%s is required by %s, give up"), strreq, pkg_id(pkg));
+                 _("%s is required by installed %s, give up"), strreq, pkg_id(pkg));
     else
-        i3_error(ictx, pkg, I3ERR_REQUIREDBY, _("%s is required by %s"),
+        i3_error(ictx, pkg, I3ERR_REQUIREDBY, _("%s is required by installed %s"),
                  strreq, pkg_id(pkg));
     
  l_end:
@@ -430,7 +430,11 @@ static int process_req(int indent, struct i3ctx *ictx,
         
         i3pkg->flags &= ~I3PKG_CROSSROAD;
         if (candidates) {
-            n_assert(n_array_size(candidates) > 1);
+            if (n_array_size(candidates) < 2) {
+                logn(LOGWARN, "Assertion failed! Please rerun poldek with env POLDEK_TRACE=1"
+                     " and send log to %s", poldek_BUG_MAILADDR);
+            }
+            
             if (number_of_non_blacks(ictx, candidates) > 1) {
                 /* mark current package as crossroad and propagate mark down */
                 i3pkg->flags |= I3PKG_CROSSROAD; 
