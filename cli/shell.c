@@ -40,6 +40,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "conf.h"
+#include "capreq.h"
 #include "pkg.h"
 #include "poldek_term.h"
 #include "cmd.h"
@@ -59,10 +60,13 @@ static volatile sig_atomic_t shInCmd  = 0;
 static int shQuit = 0;          /* cmd_quit */
 static char *histfile;
 
+
 #define COMPLETITION_CTX_NONE            0 /* current directory */
 #define COMPLETITION_CTX_AVAILABLE       1 /* /all-avail */
 #define COMPLETITION_CTX_UPGRADEABLE     2 
 #define COMPLETITION_CTX_INSTALLED       3
+#define COMPLETITION_CTX_WHAT_PROVIDES   4
+#define COMPLETITION_CTX_WHAT_REQUIRES   5
 
 struct sh_ctx {
     int completion_ctx;
@@ -147,8 +151,7 @@ static char *command_generator(const char *text, int state)
 }
 
 
-static
-char *arg_generator(const char *text, int state, int genpackages)
+static char *arg_generator(const char *text, int state, int genpackages)
 {
     int                  uprev = 0, upgradeable_mode = 0;
     static int           i, len;
@@ -194,8 +197,6 @@ char *arg_generator(const char *text, int state, int genpackages)
             i = n_array_bsearch_idx_ex(ents, n_basenam(text),
                                        (tn_fn_cmp)pkg_dent_strncmp);
     }
-
-    
     
     while (i > -1 && i < n_array_size(ents)) {
         struct pkg_dent *ent = n_array_nth(ents, i++);
@@ -239,25 +240,86 @@ char *arg_generator(const char *text, int state, int genpackages)
     return NULL;
 }
 
-static
-char *pkgname_generator(const char *text, int state)
+static char *deps_generator(const char *text, int state)
+{
+    static tn_array *deps_table = NULL; /* XXX static variable */
+    
+	if (state == 0) {
+		tn_array *ents;
+		int i, j, len;
+
+		ents = sh_ctx.cctx->currdir->pkg_dent_ents;
+
+		if (ents == NULL)
+			return NULL;
+
+		len = strlen(text);
+
+        n_assert(deps_table == NULL);
+		/* create deps_table */
+		deps_table = n_array_new(n_array_size(ents) * 4, NULL, (tn_fn_cmp)strcmp);
+		
+		/* fill deps_table with data */
+		for (i = 0; i < n_array_size(ents); i++) {
+			struct pkg_dent *ent = n_array_nth(ents, i);
+			struct pkg *pkg = ent->pkg_dent_pkg;
+
+			if (pkg_dent_isdir(ent))
+				continue;
+
+			if (sh_ctx.completion_ctx == COMPLETITION_CTX_WHAT_PROVIDES) {
+				/* provides */
+				if (pkg->caps == NULL)
+                    continue;
+                
+                for (j = 0; j < n_array_size(pkg->caps); j++) {
+                    struct capreq *cr = n_array_nth(pkg->caps, j);
+                    const char *name = capreq_name(cr);
+                    
+                    if (len == 0 || strncmp(name, text, len) == 0)
+                        n_array_push(deps_table, name);
+                }
+			}
+
+			if (sh_ctx.completion_ctx == COMPLETITION_CTX_WHAT_REQUIRES) {
+				/* requires */
+				if (pkg->reqs == NULL)
+                    continue;
+                
+                for (j = 0; j < n_array_size(pkg->reqs); j++) {
+                    struct capreq *cr = n_array_nth(pkg->reqs, j);
+                    const char *name = capreq_name(cr);
+                    
+                    if (len == 0 || strncmp(name, text, len) == 0)
+                        n_array_push(deps_table, name);
+                }
+			}
+		}
+	}
+
+	if (state >= n_array_size(deps_table)) {
+		n_array_cfree(&deps_table);
+		return NULL;
+	}
+
+	return n_strdup(n_array_nth(deps_table, state));
+}
+
+static char *pkgname_generator(const char *text, int state)
 {
     return arg_generator(text, state, 1);
 }
 
-static
-char *dirname_generator(const char *text, int state)
+static char *dirname_generator(const char *text, int state)
 {
     return arg_generator(text, state, 0);
 }
-
 
 #ifndef HAVE_READLINE_4_2
 # define rl_completion_matches(a, b) completion_matches(a, b)
 #endif
 
-static
-char **poldek_completion(const char *text, int start, int end)
+static char **poldek_completion(const char *text, int start, int end)
 {
     char **matches = NULL;
     char *p;
@@ -282,6 +344,12 @@ char **poldek_completion(const char *text, int start, int end)
         else if (strncmp(p, "gree", 4) == 0) /* greedy-upgrade cmd */
             sh_ctx.completion_ctx = COMPLETITION_CTX_UPGRADEABLE;
         
+        else if (strncmp(p, "what-prov", 9) == 0) /* what-provides cmd */
+            sh_ctx.completion_ctx = COMPLETITION_CTX_WHAT_PROVIDES;
+
+        else if (strncmp(p, "what-req", 8) == 0) /* what-requires cmd */
+            sh_ctx.completion_ctx = COMPLETITION_CTX_WHAT_REQUIRES;
+        
         else 
             sh_ctx.completion_ctx = COMPLETITION_CTX_NONE;
     }
@@ -292,7 +360,12 @@ char **poldek_completion(const char *text, int start, int end)
     } else {
         if (strncmp(p, "cd ", 3) == 0)
             matches = rl_completion_matches(text, dirname_generator);
-        else 
+        
+        else if (sh_ctx.completion_ctx == COMPLETITION_CTX_WHAT_PROVIDES ||
+                 sh_ctx.completion_ctx == COMPLETITION_CTX_WHAT_REQUIRES)
+            matches = rl_completion_matches(text, deps_generator);
+        
+        else
             matches = rl_completion_matches(text, pkgname_generator);
     }
     
@@ -300,16 +373,14 @@ char **poldek_completion(const char *text, int start, int end)
 }
 
 
-static
-void initialize_readline(void)
+static void initialize_readline(void)
 {
     rl_readline_name = "poldek";
     rl_attempted_completion_function = poldek_completion;
     rl_completion_entry_function = command_generator;
 }
 
-static
-int cmd_quit(struct cmdctx *cmdctx)
+static int cmd_quit(struct cmdctx *cmdctx)
 {
     cmdctx = cmdctx;
     shQuit = 1;
