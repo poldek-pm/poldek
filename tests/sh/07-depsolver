@@ -349,6 +349,17 @@ testUpgradeOrphanNotIfItNotResolvesReq() {
     try_install a-bar "a-bar-2,a-lib-2,c-2" "a-foo-1,a-lib-1"
 }
 
+# b should not be upgraded as in fact it is not an orphan
+testUpgradeNotFakeOrphan() {
+    msgn "Preparing repositories..."
+    build_installed a 1-1
+    build_installed b 1-1 -r "'a = 1.1'" # notice 1.1 not 1-1
+    
+    build a 2-2
+    build b 2-2
+    try_install a "a-2-2" "a-1-1"
+}
+
 # orphaned b should not be upgraded as b-2-2 do not resolve missed FOO
 testUpgradeOrphanGiveUp() {
     msgn "Preparing repositories..."
@@ -360,7 +371,7 @@ testUpgradeOrphanGiveUp() {
        $POLDEK_INSTALL -uvt a-bar
        echo "THE ERROR ABOVE (give up) is EXPECTED"
     fi
-    $POLDEK_INSTALL -uvt a-bar | grep -q "error: FOO is required by b-1-1, give up"
+    $POLDEK_INSTALL -uvt a-bar | grep -q "error: FOO is required by installed b-1-1, give up"
     assertEquals "poldek should give up" "$?" "0"
 
 }
@@ -405,8 +416,27 @@ testMultilibCandidatesAssertion() {
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }
 
+# https://bugs.pld-linux.org/show_bug.cgi?id=143
+testMultilibDifferentArchSameColor() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    arch=amd64
+    build_installed a 1-1 -a $arch -f "/hello.x86-64"
+    build_installed a-misc 1-1 -a $arch -r "'a = 1-1'" -f "/bin/hello.x86-64"
+
+    arch=x86-64
+    build a 2-2 -a $arch -f "/hello.x86-64"
+    build a-misc 2-2 -a $arch -f "/sbin/hello.x86-64"
+
+    try_install a-2-2.$arch "a-2-2.x86-64,a-misc-2-2.x86-64" "a-1-1.amd64,a-misc-1-1.amd64"
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
+
 # NFY
-testMultilibArchToNoarchUpgrade() {
+_MultilibArchToNoarchUpgrade() {
     ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
     POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
 
