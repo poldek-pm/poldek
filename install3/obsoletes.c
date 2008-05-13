@@ -17,7 +17,14 @@
 #include <fnmatch.h>
 #include "ictx.h"
 
-static struct orphan *orphan_new(struct pkg *pkg, tn_array *caps) 
+static void orphan_free(struct orphan *o)
+{
+    pkg_free(o->pkg);
+    n_array_free(o->reqs);
+    free(o);
+}
+
+static struct orphan *orphan_new(int indent, struct pkg *pkg, tn_array *caps) 
 {
     struct orphan *o;
 
@@ -30,20 +37,18 @@ static struct orphan *orphan_new(struct pkg *pkg, tn_array *caps)
         const struct capreq *req;
         struct capreq *cap = n_array_nth(caps, i);
 
-        //tracef(0, "%s requires %s?", pkg_id(pkg), capreq_stra(cap));
-        if ((req = pkg_requires_cap(pkg, cap)))
+        req = pkg_requires_cap(pkg, cap);
+        tracef(indent, "%s requires %s? %s", pkg_id(pkg), capreq_stra(cap), req ? "yes" : "no");
+        if (req)
             n_array_push(o->reqs, (struct capreq *)req);
     }
     
-    //n_assert(n_array_size(o->reqs) > 0);
+    if (n_array_size(o->reqs) == 0) { /* not an orphan */
+        orphan_free(o);
+        o = NULL;
+    }
+    
     return o;
-}
-
-static void orphan_free(struct orphan *o)
-{
-    pkg_free(o->pkg);
-    n_array_free(o->reqs);
-    free(o);
 }
 
 /* is to-install set provides cap? */
@@ -60,7 +65,7 @@ static int toin_provides(int indent, struct i3ctx *ictx,
 
 /* get packages required by pkg */
 static int get_orphaned(int indent, struct i3ctx *ictx,
-                        tn_array *orphaned, tn_array *unsatisfied_caps)
+                        tn_array *orphaned, const tn_array *unsatisfied_caps)
 {
     struct pkgdb *db = ictx->ts->db;
     unsigned ldflags = PKG_LDNEVR | PKG_LDREQS;
@@ -215,7 +220,7 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
 
     if (poldek_ts_issetf(ictx->ts, POLDEK_TS_DOWNGRADE))
         getflags |= PKGDB_GETF_OBSOLETEDBY_REV;
-
+    
     
     obsoleted = get_obsoletedby_pkg(db, iset_packages_by_recno(unset), pkg,
                                     getflags, PKG_LDWHOLE_FLDEPDIRS);
@@ -230,7 +235,10 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
         struct pkg_cap_iter *it;
         const struct capreq *cap;
         
-        n_assert(!iset_has_pkg(unset, dbpkg));
+        if (iset_has_pkg(unset, dbpkg)) { /* rpmdb with duplicate? */
+            logn(LOGERR | LOGDIE, "%s: installed twice? Give up.", pkg_id(dbpkg));
+        }
+            
         n_array_push(i3pkg->obsoletedby, pkg_link(dbpkg));
 
         msgn_i(1, indent, _("%s obsoleted by %s"), pkg_id(dbpkg), pkg_id(pkg));
@@ -271,10 +279,11 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
     
     if (unsatisfied_caps == NULL)
         return 0;
+    n_assert(n_array_size(unsatisfied_caps));
 
     n_array_uniq(unsatisfied_caps);
     orphaned = pkgs_array_new_ex(16, pkg_cmp_recno);
-
+    
     /*
       determine what exactly requirements are missed, i.e no more
       "foreign" dependencies skipping needed
@@ -284,14 +293,19 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
         
     } else {
         n_assert(n_array_size(orphaned));
-                     
+        n_assert(n_array_size(unsatisfied_caps));
+
         orphans = n_array_new(16, (tn_fn_free)orphan_free, NULL);
         
         for (i=0; i < n_array_size(orphaned); i++) {
-            struct orphan *o = orphan_new(n_array_nth(orphaned, i),
+            struct orphan *o = orphan_new(indent + 3, n_array_nth(orphaned, i),
                                           unsatisfied_caps);
-            n_array_push(orphans, o);
+            if (o)
+		n_array_push(orphans, o);
         }
+
+	if (n_array_size(orphans) == 0)
+	    n_array_cfree(&orphans);
     }
     n_array_free(orphaned);
 
@@ -301,7 +315,7 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
     } else {
         for (i=0; i < n_array_size(orphans); i++) {
             struct orphan *o = n_array_nth(orphans, i);
-            trace(indent + 2, "- %s", pkg_id(o->pkg));
+            trace(indent + 2, "- %s (nreqs=%d)", pkg_id(o->pkg), n_array_size(o->reqs));
         }
     
         for (i=0; i < n_array_size(orphans); i++) {

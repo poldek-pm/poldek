@@ -333,16 +333,25 @@ struct pkg *i3_select_successor(int indent, struct i3ctx *ictx,
     tn_array *pkgs;
     int i;
 
-    if ((pkgs = pkgset_search(ictx->ps, PS_SEARCH_NAME, pkg->name)) == NULL)
+
+    if ((pkgs = pkgset_search(ictx->ps, PS_SEARCH_NAME, pkg->name)) == NULL) {
+        tracef(indent + 2, "%s not found, return", pkg_id(pkg));
         return NULL;
+    }
 
     selected_pkg = pkg;
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
         int cmprc;
-        
-        if (!pkg_is_kind_of(p, pkg)) {
-            DBGF("%s is not kind of %s\n", pkg_id(p), pkg_id(pkg));
+
+        if (pkg->color == 0) {  /* no color -> use arch */
+            if (!pkg_is_kind_of(p, pkg)) {
+                tracef(indent + 2, "%s is not like %s, skipped", pkg_id(p), pkg_id(pkg));
+                continue;
+            }
+
+        } else if (!pkg_is_colored_like(p, pkg)) {
+            tracef(indent + 2, "%s is not colored like %s, skipped", pkg_id(p), pkg_id(pkg));
             continue;
         }
         
@@ -359,7 +368,7 @@ struct pkg *i3_select_successor(int indent, struct i3ctx *ictx,
     if (selected_pkg == pkg)
         selected_pkg = NULL;
 
-    tracef(indent, "RET %s (for %s)\n",
+    tracef(indent, "RET %s (for %s)",
            selected_pkg ? pkg_id(selected_pkg) : "NULL", pkg_id(pkg));
     
     return (struct pkg*)selected_pkg;

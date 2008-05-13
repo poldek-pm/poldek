@@ -335,8 +335,7 @@ int i3_process_orphan_requirements(int indent, struct i3ctx *ictx,
     n_assert(reqs);
     n_assert(pkg->reqs);
     
-    tracef(indent, "%s as ORPHAN", pkg_id(pkg));
-
+    tracef(indent, "%s as ORPHAN (nreqs=%d)", pkg_id(pkg), n_array_size(reqs));
     for (i=0; i < n_array_size(reqs); i++) {
         struct capreq *req = n_array_nth(reqs, i);
 
