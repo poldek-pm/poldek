@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/param.h>          /* for PATH_MAX */
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <pwd.h>
@@ -78,11 +79,11 @@ int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size)
 }
 
 static
-int mdigest(FILE *stream, unsigned char *md, int *md_size, int digest_type)
+int mdigest(FILE *stream, unsigned char *md, unsigned *md_size, int digest_type)
 {
     unsigned char buf[8*1024];
     EVP_MD_CTX ctx;
-    int n, nn = 0;
+    unsigned n, nn = 0;
 
 
     n_assert(md_size && *md_size);
@@ -743,3 +744,99 @@ int poldek__is_in_testing_mode(void)
     return getenv("POLDEK_TESTING") != NULL;
 }
 
+static void process_output(struct p_open_st *st, int verbose_level) 
+{
+    int endl = 1, nlines = 0;
+    
+    while (1) {
+        struct timeval to = { 0, 200000 };
+        fd_set fdset;
+        int rc;
+        
+        if (p_wait(st)) {
+            int yes = 1;
+            ioctl(st->fd, FIONBIO, &yes);
+        }
+        
+        FD_ZERO(&fdset);
+        FD_SET(st->fd, &fdset);
+        if ((rc = select(st->fd + 1, &fdset, NULL, NULL, &to)) < 0) {
+            if (errno == EAGAIN || errno == EINTR)
+                continue;
+            break;
+            
+        } else if (rc == 0) {
+            if (p_wait(st))
+                break;
+
+        } else if (rc > 0) {
+            char  buf[4096], *fmt = "_%s";
+            int   n, i;
+
+            if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0)
+                break;
+            
+            buf[n] = '\0';
+            if (buf[n - 1] == '\n') {
+                buf[n - 1] = '\0'; /* deal with last_endlined -> move '\n' to fmt */
+                fmt = "_%s\n";
+            }
+            
+            msg_tty(verbose_level, fmt, buf);
+
+            /* logged to file? -> prefix lines with 'rpm: ' */                
+            for (i=0; i < n; i++) {
+                int c = buf[i];
+                
+                if (c == '\r')
+                    continue;
+                
+                if (c == '\n')
+                    endl = 1;
+                    
+                if (endl) {
+                    endl = 0;
+                    //if (nlines) 
+                    //    msg_f(0, "_\n");
+                    nlines++;
+                    msg_f(0, "cp: %c", c);
+                    continue;
+                }
+                msg_f(0, "_%c", c);
+            }
+        }
+    }
+    
+    return;
+}
+
+int poldek_util_copy_file(const char *src, const char *dst)
+{
+    struct p_open_st pst;
+    unsigned p_open_flags = P_OPEN_KEEPSTDIN;
+    char *argv[5];
+    int n, ec;
+    
+    p_st_init(&pst);
+
+    n = 0;
+    argv[n++] = "cp";
+//    argv[n++] = "-v";
+    argv[n++] = (char*)src;
+    argv[n++] = (char*)dst;
+    argv[n++] = NULL;
+
+    if (p_open(&pst, p_open_flags, "/bin/cp", argv) == NULL) {
+        if (pst.errmsg) {
+            logn(LOGERR, "%s", pst.errmsg);
+            p_st_destroy(&pst);
+        }
+    }
+
+    process_output(&pst, 1);
+    if ((ec = p_close(&pst) != 0))
+        logn(LOGERR, "cp %s: %s", src, pst.errmsg ? pst.errmsg : "copying failed");
+
+    p_st_destroy(&pst);
+    return ec == 0;
+}

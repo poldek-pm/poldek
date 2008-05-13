@@ -61,12 +61,12 @@ unsigned pkg_get_verify_signflags(struct pkg *pkg)
 }
 
 void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
-                            const char *destdir, int nosubdirs)
+                            const char *destdir, int is_destdir_custom)
 {
     long bytesget = 0, bytesdownload = 0, bytesused = 0;
     int i;
 
-    n_assert(nosubdirs == 0); /* not implemented */
+    n_assert(is_destdir_custom == 0); /* not implemented */
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg  *pkg = n_array_nth(pkgs, i);
         char        path[PATH_MAX];
@@ -116,7 +116,7 @@ void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
 }
 
 int packages_fetch(struct pm_ctx *pmctx,
-                   tn_array *pkgs, const char *destdir, int nosubdirs)
+                   tn_array *pkgs, const char *destdir, int is_destdir_custom)
 {
     int       i, nerr, urltype, ncdroms;
     tn_array  *urls = NULL, *packages = NULL;
@@ -165,11 +165,13 @@ int packages_fetch(struct pm_ctx *pmctx,
                     nerr++;
                 }
             }
+            if (is_destdir_custom)
+                poldek_util_copy_file(path, destdir);
             continue;
         }
         
         
-        if (nosubdirs) {
+        if (is_destdir_custom) {
             snprintf(path, sizeof(path), "%s/%s", destdir, pkg_basename);
             
         } else {
@@ -236,7 +238,7 @@ int packages_fetch(struct pm_ctx *pmctx,
         urls = n_hash_get(urls_h, pkgpath);
         packages = n_hash_get(pkgs_h, pkgpath);
         real_destdir = destdir;
-        if (nosubdirs == 0) {
+        if (is_destdir_custom == 0) {
             char buf[1024];
             
             vf_url_as_dirpath(buf, sizeof(buf), pkgpath);

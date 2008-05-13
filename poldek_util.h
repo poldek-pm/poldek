@@ -26,4 +26,6 @@ const char *poldek_util_expand_vars(char *dest, int size, const char *src,
 
 const char *poldek_util_expand_env_vars(char *dest, int size, const char *str);
 
+int poldek_util_copy_file(const char *src, const char *dst);
+
 #endif
