@@ -320,7 +320,7 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
     
         for (i=0; i < n_array_size(orphans); i++) {
             struct orphan *o = n_array_nth(orphans, i);
-            i3_process_orphan(indent + 2, ictx, o);
+            i3_process_orphan(indent, ictx, o);
         }
     }
     

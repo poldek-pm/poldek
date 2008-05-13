@@ -268,7 +268,7 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
     
     /* try upgrade orphan */
     if (ts->getop(ts, POLDEK_OP_GREEDY)) {
-        if (try_to_upgrade_orphan(indentt + 1, ictx, pkg, req, tomark))
+        if (try_to_upgrade_orphan(indent, ictx, pkg, req, tomark))
             goto l_end;
     }
 

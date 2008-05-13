@@ -52,7 +52,7 @@ static int inc_indent(int indent)
     if (indent < 0)
         indent = 0;
     else
-        indent += 2;
+        indent++;
     return indent;
 }
 
