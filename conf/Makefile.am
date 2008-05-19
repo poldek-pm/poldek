@@ -10,6 +10,7 @@ CONFIGS   = $(GENCONFIGS) cli.conf \
 REPO_CONFIGS = pld-source.conf
 
 EXTRA_DIST = $(CONFIGS) \
+	     $(REPO_CONFIGS) \
 	     sample-source-remoteconf.conf \
              sample-cdrom-source.conf \
              poldek-pri-sample.conf
