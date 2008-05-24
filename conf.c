@@ -969,7 +969,8 @@ static tn_array *includedir_files(const char *dirpath, const char *ppath)
             continue;
 
         n = n_snprintf(path, sizeof(path), "%s%s%s", dirpath, sep, ent->d_name);
-        n_array_push(configs, n_strdupl(path, n));
+        if (access(path, R_OK) == 0)
+            n_array_push(configs, n_strdupl(path, n));
     }
     closedir(dir);
     
