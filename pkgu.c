@@ -317,7 +317,7 @@ static time_t parse_datetime(const char *str)
 
 /* remove header; add '*'s; replace "Revision REV" with "rREV" */
 static
-char *prepare_pld_changelog(tn_alloc *na, const char *changelog, time_t since)
+char *prepare_pld_changelog(tn_alloc *na, const char *changelog)
 {
     struct changelog_ent  *ent = NULL;
     char                  *entmark = "Revision", *prepared_log;
@@ -371,9 +371,6 @@ char *prepare_pld_changelog(tn_alloc *na, const char *changelog, time_t since)
                 ts = parse_datetime(tstr);
                 if (ts == 0)
                     continue;
-
-                if (ts < since)
-                    break;
             }
 
             n = n_snprintf(info, sizeof(info), "* r%s %s", rev, tstr);
@@ -551,10 +548,7 @@ static char *do_load_changelog_from_rpmhdr(tn_alloc *na, void *hdr)
     char                 **names = NULL, **texts = NULL, *changelog = NULL;
     uint32_t             *times = NULL;
     tn_buf               *nbuf = NULL;
-    time_t               since;
     int                  i;
-
-    since = time(NULL) - 3600 * 24 * 356; /* skip entries older than year */
     
     if (!pm_rpmhdr_ent_get(&e_name, hdr, RPMTAG_CHANGELOGNAME))
         return NULL;
@@ -575,7 +569,7 @@ static char *do_load_changelog_from_rpmhdr(tn_alloc *na, void *hdr)
     texts = pm_rpmhdr_ent_as_strarr(&e_text);
     
     if (e_name.cnt == 1 && strstr(names[0], "PLD")) {
-        changelog = prepare_pld_changelog(na, texts[0], since);
+        changelog = prepare_pld_changelog(na, texts[0]);
         goto l_end;
     }
             
@@ -583,9 +577,6 @@ static char *do_load_changelog_from_rpmhdr(tn_alloc *na, void *hdr)
     for (i=0; i < e_name.cnt; i++) {
         char ts[32];
 
-        if ((time_t)times[i] < since)
-            break;
-        
         strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", gmtime((time_t*)&times[i]));
 
         n_buf_printf(nbuf, "* %s %s\n", ts, names[i]);
@@ -747,16 +738,25 @@ tn_buf *pkguinf_store(const struct pkguinf *pkgu, tn_buf *nbuf,
 
     n_assert(lang);
     if (n_str_eq(lang, "C")) {
-        
+        /* skip entries older than year */
+        time_t since = time(NULL) - 3600 * 24 * 356; 
         int i = 0;
+        
         while (members[i].tag) {
-            struct member m = members[i++]; 
-            if (m.value == NULL)
+            struct member m = members[i++];
+            const char *value = m.value;
+
+            if (m.tag == PKGUINF_CHANGELOG) {
+                if (pkgu->changelog && strlen(pkgu->changelog) > 512)
+                    value = pkguinf_get_changelog((struct pkguinf*)pkgu, since);
+            }
+            
+            if (value == NULL)
                 continue;
             
             n_buf_putc(nbuf, m.tag);
             n_buf_putc(nbuf, '\0');
-            n_buf_puts(nbuf, m.value);
+            n_buf_puts(nbuf, value);
             n_buf_putc(nbuf, '\0');
         }
         
