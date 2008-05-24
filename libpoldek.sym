@@ -170,6 +170,8 @@ pkgscore_match
 pkgscore_match_init
 pkguinf_free
 pkguinf_get
+pkguinf_get_changelog
+pkguinf_changelog_with_security_fixes
 pkguinf_langs
 pkguinf_link
 pkguinf_new

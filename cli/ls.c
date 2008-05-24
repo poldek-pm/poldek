@@ -32,17 +32,19 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 static
 int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs, int compare_ver,
-                   int *cmprc, char *evr, size_t size);
+                   int *cmprc, struct pkg **rpkg);
+
 
 
 /* cmd_state->flags */
 #define OPT_LS_LONG            (1 << 0)
 #define OPT_LS_UPGRADEABLE     (1 << 1) 
 #define OPT_LS_UPGRADEABLE_VER (1 << 2)
-#define OPT_LS_INSTALLED       (1 << 3)
-#define OPT_LS_SORTBUILDTIME   (1 << 4)
-#define OPT_LS_SORTBUILDAY     (1 << 5)
-#define OPT_LS_SORTREV         (1 << 6)
+#define OPT_LS_UPGRADEABLE_SEC (1 << 3) 
+#define OPT_LS_INSTALLED       (1 << 4)
+#define OPT_LS_SORTBUILDTIME   (1 << 5)
+#define OPT_LS_SORTBUILDAY     (1 << 6)
+#define OPT_LS_SORTREV         (1 << 7)
 
 #define OPT_LS_GROUP           (1 << 9)
 #define OPT_LS_SUMMARY         (1 << 10)
@@ -56,6 +58,8 @@ static struct argp_option options[] = {
  { "upgradeable", 'u', 0, 0, N_("Show upgrade-able packages only"), 1},
  { "upgradeablev", 'U', 0, 0,
    N_("Likewise but omit packages with different releases only"), 1},
+ { "upgradeable-sec", 'S', 0, 0,
+   N_("Show upgrade-able packages with potential security fixes"), 1},
  { "installed", 'I', 0, 0, N_("List installed packages"), 1},
  { NULL, 't', 0, 0, N_("Sort by build time"), 1},
  { NULL, 'T', 0, 0, N_("Sort by build day"), 1},
@@ -117,12 +121,17 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'r':
             cmdctx->_flags |= OPT_LS_SORTREV;
             break;
-            
-        case 'U':
-            cmdctx->_flags |= OPT_LS_UPGRADEABLE_VER;
-                                /* no break */
+
         case 'u':
             cmdctx->_flags |= OPT_LS_UPGRADEABLE;
+            break;
+
+        case 'U':
+            cmdctx->_flags |= OPT_LS_UPGRADEABLE | OPT_LS_UPGRADEABLE_VER;
+            break;
+            
+        case 'S':
+            cmdctx->_flags |= OPT_LS_UPGRADEABLE | OPT_LS_UPGRADEABLE_SEC;
             break;
             
         case 'I':
@@ -157,7 +166,7 @@ static tn_fn_cmp select_cmpf(unsigned flags)
 static
 int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
                    int compare_ver, int *cmprc,
-                   char *evr, size_t size) 
+                   struct pkg **rpkg)
 {
     struct pkg *pkg = NULL;
     int n, found = 0;
@@ -187,7 +196,8 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
     else 
         *cmprc = pkg_cmp_ver(lpkg, pkg);
 
-    pkg_idevr_snprintf(evr, size, pkg);
+    *rpkg = pkg;
+    
     return found;
 }
 
@@ -218,9 +228,10 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
     ls_ents2 = n_array_clone(ls_ents);
     
     for (i=0; i < n_array_size(ls_ents); i++) {
-        struct pkg_dent *ent;
-        char             evr[128], *p;
-        int              cmprc = 0, n;
+        struct pkg_dent  *ent;
+        struct pkg       *rpkg = NULL;
+        char             evr[128];
+        int              cmprc = 0;
         
         ent = n_array_nth(ls_ents, i);
 
@@ -228,7 +239,7 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
             continue;
             
         found = pkg_cmp_lookup(ent->pkg_dent_pkg, cmpto_pkgs, compare_ver,
-                               &cmprc, evr, sizeof(evr));
+                               &cmprc, &rpkg);
         
         if ((cmdctx->_flags & OPT_LS_INSTALLED) == 0)
             cmprc = -cmprc;
@@ -236,10 +247,32 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
         if (!found || cmprc >= 0)
             continue;
 
-        n = strlen(evr) + 1;
-        p = n_malloc(n + 1);
-        memcpy(p, evr, n);
-        n_array_push(evrs, p);
+        if (cmdctx->_flags & OPT_LS_UPGRADEABLE_SEC) {
+            struct pkg *ipkg, *upkg;
+            struct pkguinf *inf;
+
+            ipkg = rpkg;
+            upkg = ent->pkg_dent_pkg;
+            if (cmdctx->_flags & OPT_LS_INSTALLED) {
+                upkg = rpkg;
+                ipkg = ent->pkg_dent_pkg;
+            }
+
+            found = 0;
+            if ((inf = pkg_uinf(upkg)) == NULL)
+                continue;
+            
+            if (pkguinf_changelog_with_security_fixes(inf, ipkg->btime))
+                found = 1;
+            
+            pkguinf_free(inf);
+        }
+        
+        if (!found)
+            continue;
+                                                         
+        pkg_idevr_snprintf(evr, sizeof(evr), rpkg);
+        n_array_push(evrs, n_strdup(evr));
         n_array_push(ls_ents2, pkg_dent_link(ent));
         
         if (sigint_reached())

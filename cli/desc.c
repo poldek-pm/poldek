@@ -56,6 +56,7 @@ static int desc(struct cmdctx *cmdctx);
 #define OPT_DESC_DESCR        (1 << 6)
 #define OPT_DESC_FL           (1 << 7)
 #define OPT_DESC_FL_LONGFMT   (1 << 8)
+#define OPT_DESC_CHANGELOG    (1 << 9)
 #define OPT_DESC_ALL          (OPT_DESC_CAPS | OPT_DESC_REQS | \
                                OPT_DESC_REQDIRS |                       \
                                OPT_DESC_REQPKGS | OPT_DESC_REVREQPKGS | \
@@ -67,7 +68,7 @@ static int desc(struct cmdctx *cmdctx);
 
 static struct argp_option options[] = {
     { "all",  'a', 0, 0,
-      N_("Show all described below fields"), 1},
+      N_("Show all fields described below"), 1},
     
     { "capreqs",  'C', 0, 0,
       N_("Show capabilities, requirements, conflicts and obsolences"),
@@ -92,6 +93,8 @@ static struct argp_option options[] = {
     { "files", 'f', 0, 0,
       N_("Show package files (doubled gives long listing format)"), 1},
     { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},
+
+    { "log", 'L', 0, 0, N_("Show package changelog"), 1 },
     { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -148,6 +151,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 cmdctx->_flags |= OPT_DESC_FL_LONGFMT;
             else
                 cmdctx->_flags |= OPT_DESC_FL;
+            break;
+
+        case 'L':
+            cmdctx->_flags |= OPT_DESC_CHANGELOG;
             break;
             
         case 'd':
@@ -742,6 +749,62 @@ static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt, int 
     pkgflist_free(flist);
 }
 
+static
+int is_upgradeable(struct pkg *pkg, tn_array *installed_pkgs, time_t *built)
+{
+    struct pkg *p = NULL;
+    int n;
+
+    n = n_array_bsearch_idx_ex(installed_pkgs, pkg, (tn_fn_cmp)pkg_ncmp_name);
+    if (n == -1)
+        return 0;
+
+    while (n < n_array_size(installed_pkgs)) {
+        p = n_array_nth(installed_pkgs, n++);
+
+        if (pkg_is_kind_of(p, pkg) && pkg_cmp_evr(pkg, p) > 0) {
+            *built = p->btime;
+            return 0;
+        }
+
+        if (*p->name != *pkg->name)
+            break;
+    }
+
+    return 0;
+}
+
+
+static void show_changelog(struct cmdctx *cmdctx, struct pkg *pkg, struct pkguinf *pkgu)
+{
+    const char *log = NULL;
+
+    if ((pkg->flags & PKG_DBPKG) == 0) { /* not installed */
+        tn_array *installed;
+        time_t btime;
+
+        installed = poclidek_get_dent_packages(cmdctx->cctx, POCLIDEK_INSTALLEDDIR);
+        if (installed == NULL)
+            goto l_end;
+        
+        if (is_upgradeable(pkg, installed, &btime))
+            log = pkguinf_get_changelog(pkgu, btime);
+            
+        n_array_cfree(&installed);
+    }
+
+l_end:
+    if (log == NULL)
+        log = pkguinf_get(pkgu, PKGUINF_CHANGELOG);
+    
+    if (log) {
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s\n", "Changelog:");
+        cmdctx_printf(cmdctx, "%s", log);
+    }
+}
+        
+        
+
 static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags, int term_width)
 {
     if (flags & OPT_DESC_CAPS)
@@ -767,20 +830,14 @@ static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags, int
 
 
 
-static void show_description(struct cmdctx *cmdctx, struct pkg *pkg,
+static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkguinf *pkgu,
                              unsigned flags, int term_width) 
 {
-    struct pkguinf  *pkgu;
     char            fnbuf[PATH_MAX], *fn;
     char            unit = 'K';
     const char      *group, *s;
     double          pkgsize;
-    
-    if ((pkgu = pkg_uinf(pkg)) == NULL && poldek_verbose() > 1) {
-        log(LOGWARN, _("%s: full description unavailable (index without "
-                       "packages info loaded?)\n"), pkg_snprintf_s(pkg));
-    }
-    
+
     if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_SUMMARY))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Summary:");
         cmdctx_printf(cmdctx, "%s\n", s);
@@ -903,12 +960,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg,
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "Description:\n");
         cmdctx_printf(cmdctx, "%s\n", s);
     }
-
-    if (pkgu)
-        pkguinf_free(pkgu);
 }
-
-
 
 static int desc(struct cmdctx *cmdctx)
 {
@@ -934,33 +986,46 @@ static int desc(struct cmdctx *cmdctx)
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg;
+        struct pkguinf *pkgu = NULL;
 
         pkg = n_array_nth(pkgs, i);
-
+        
+        if (cmdctx->_flags & (OPT_DESC_DESCR | OPT_DESC_CHANGELOG))  {
+            if ((pkgu = pkg_uinf(pkg)) == NULL && poldek_verbose() > 1)
+                log(LOGWARN, _("%s: full description unavailable (index without "
+                               "packages info loaded?)\n"), pkg_id(pkg));
+        }
+        
         cmdctx_printf(cmdctx, "\n");
         cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, "%-16s", "Package:");
         cmdctx_printf(cmdctx, "%s\n", pkg_id(pkg));
         
         if (cmdctx->_flags & OPT_DESC_DESCR) 
-            show_description(cmdctx, pkg, cmdctx->_flags, term_width);
-        
+            show_description(cmdctx, pkg, pkgu, cmdctx->_flags, term_width);
         else 
             show_pkg(cmdctx, pkg, cmdctx->_flags, term_width);
+
+        if (cmdctx->_flags & OPT_DESC_CHANGELOG)
+            show_changelog(cmdctx, pkg, pkgu);
 
         if (cmdctx->_flags & OPT_DESC_FL) {
             if (n_array_size(pkgs) > 1)
                 cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "Content:\n");
             show_files(cmdctx, pkg, cmdctx->_flags & OPT_DESC_FL_LONGFMT, term_width);
         }
+
+        if (pkgu) {
+            pkguinf_free(pkgu);
+            pkgu = NULL;
+        }
         
-        if (sigint_reached()) 
+        if (sigint_reached())
             goto l_end;
     }
     
  l_end:
     
-    if (pkgs)
-        n_array_free(pkgs);
+    n_array_cfree(&pkgs);
 
     return err == 0;
 }

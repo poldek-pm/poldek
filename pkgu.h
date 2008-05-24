@@ -15,6 +15,7 @@
 #define PKGUINF_BUILDHOST    'b'
 #define PKGUINF_DISTRO       'D'
 #define PKGUINF_SOURCERPM    'S'
+#define PKGUINF_CHANGELOG    'C'
 
 struct pkguinf;
 
@@ -27,6 +28,8 @@ const char *pkguinf_get(const struct pkguinf *pkgu, int tag);
 int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
                 const char *lang);
 
+const char *pkguinf_get_changelog(struct pkguinf *inf, time_t since);
+int pkguinf_changelog_with_security_fixes(struct pkguinf *inf, time_t since);
 
 tn_array *pkguinf_langs(struct pkguinf *pkgu);
 

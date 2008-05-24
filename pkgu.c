@@ -52,6 +52,7 @@ struct pkguinf {
     char              *buildhost;
     char              *distro;
     char              *sourcerpm;
+    char              *changelog;
     
     tn_hash           *_ht;
     tn_array          *_langs;
@@ -281,6 +282,365 @@ static char *cp_tag(tn_alloc *na, Header h, int rpmtag)
     return t;
 }
 
+
+struct changelog_ent {
+    time_t   ts;
+    char     *info;             /* rev,  author */
+    char     message[0];
+};
+
+int changelog_ent_cmp(struct changelog_ent *e1, struct changelog_ent *e2) 
+{
+    return e1->ts - e2->ts;
+}
+
+static time_t parse_datetime(const char *str)
+{
+    struct tm tm;
+    time_t ts = 0;
+    int n;
+    char c;
+
+    n = sscanf(str, "%d%c%d%c%d %d:%d:%d", &tm.tm_year, &c, &tm.tm_mon, &c,
+               &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
+    if (n != 8)
+        return 0;
+
+    tm.tm_mon -= 1;
+    tm.tm_year -= 1900;
+
+    if ((ts = mktime(&tm)) == -1)
+        ts = 0;
+    
+    return ts;
+}
+
+/* remove header; add '*'s; replace "Revision REV" with "rREV" */
+static
+char *prepare_pld_changelog(tn_alloc *na, const char *changelog, time_t since)
+{
+    struct changelog_ent  *ent = NULL;
+    char                  *entmark = "Revision", *prepared_log;
+    int                   i, started, max_MESSAGE = 1024, len;
+    tn_array              *entries, *lines;
+    tn_buf                *logmsg;
+
+    lines = n_str_etokl_ext(changelog, "\n", "", "", '\\');
+
+
+    len = strlen(entmark);
+    entries = n_array_new(8, NULL, (tn_fn_cmp)changelog_ent_cmp);
+    logmsg = n_buf_new(1024);
+    started = 0;
+    
+    for (i = 0; i < n_array_size(lines); i++) {
+        char *line = n_array_nth(lines, i);
+        
+        if (strncmp(line, entmark, len) == 0)
+             started = 1;
+        
+        if (!started)
+            continue;
+        
+        if (strncmp(line, entmark, len) == 0) {
+            char *tstr, *rev, info[80];
+            time_t ts;
+            int n;
+            
+            if (ent != NULL) {
+                n_snprintf(ent->message, max_MESSAGE, "%s", n_buf_ptr(logmsg));
+                n_buf_clean(logmsg);
+                n_array_push(entries, ent);
+                ent = NULL;
+            }
+
+            //Revision REV YYYY-MM-DD HH:MM:SS rest
+            rev = line + len + 1;       /* skip Revision */
+            while (*rev && isspace(*rev))
+                rev++;
+            
+            tstr = strchr(rev, ' ');
+            if (tstr) {
+                *tstr = '\0';
+                tstr++;
+                while (*tstr && isspace(*tstr))
+                    tstr++;
+            }
+            
+            if (rev && tstr) {
+                ts = parse_datetime(tstr);
+                if (ts == 0)
+                    continue;
+
+                if (ts < since)
+                    break;
+            }
+
+            n = n_snprintf(info, sizeof(info), "* r%s %s", rev, tstr);
+            
+            ent = n_malloc(sizeof(*ent) + max_MESSAGE);
+            memset(ent, 0, sizeof(*ent));
+            ent->info = n_strdupl(info, n);
+            ent->message[0] = '\0';
+            continue;
+        }
+        
+        if (ent)
+            n_buf_printf(logmsg, "%s\n", line);
+    } 
+    
+    if (ent != NULL) {
+        n_snprintf(ent->message, max_MESSAGE, "%s", n_buf_ptr(logmsg));
+        n_array_push(entries, ent);
+    }
+    
+    n_array_free(lines);
+    n_buf_clean(logmsg);
+
+    /* shift && free entries cause ents are simply malloc()ed here */
+    while (n_array_size(entries)) {
+        ent = n_array_shift(entries);
+        n_buf_printf(logmsg, "%s\n", ent->info);
+        n_buf_printf(logmsg, "%s\n", ent->message);
+    }
+    n_array_free(entries);
+
+    prepared_log = na_strdup(na, n_buf_ptr(logmsg), n_buf_size(logmsg));
+    n_buf_free(logmsg);
+
+    return prepared_log;
+}
+
+static tn_array *parse_changelog(tn_alloc *na, tn_array *lines)
+{
+    struct changelog_ent  *ent = NULL;
+    int                   i, max_MESSAGE = 1024;
+    tn_array              *entries;
+    tn_buf                *logmsg;
+
+    entries = n_array_new(8, NULL, (tn_fn_cmp)changelog_ent_cmp);
+    logmsg = n_buf_new(1024);
+    
+    for (i = 0; i < n_array_size(lines); i++) {
+        char *line = n_array_nth(lines, i);
+
+        if (*line == '*') {
+            char *ts;
+            
+            if (ent != NULL) {
+                n_snprintf(ent->message, max_MESSAGE, "%s", n_buf_ptr(logmsg));
+                n_buf_clean(logmsg);
+                n_array_push(entries, ent);
+                ent = NULL;
+            }
+            
+            ent = na->na_malloc(na, sizeof(*ent) + max_MESSAGE);
+            memset(ent, 0, sizeof(*ent));
+            ent->info = na_strdup(na, line, strlen(line));
+            ent->message[0] = '\0';
+
+            //* [rREV] YYYY-MM-DD HH:MM:SS rest
+            ts = strchr(line, ' ');
+            while (*ts && isspace(*ts))
+                ts++;
+            
+            if (ts && *ts == 'r')
+                ts = strchr(ts, ' ');
+            
+            if (ts) {
+                while (*ts && isspace(*ts))
+                    ts++;
+                
+                if (ts)
+                    ent->ts = parse_datetime(ts);
+            }
+            continue;
+        }
+        if (ent)
+            n_buf_printf(logmsg, "%s\n", line);
+    }
+    
+    if (ent != NULL) {
+        n_snprintf(ent->message, max_MESSAGE, "%s", n_buf_ptr(logmsg));
+        n_array_push(entries, ent);
+    }
+    n_buf_free(logmsg);
+    
+    return entries;
+}
+
+static tn_array *get_parsed_changelog(struct pkguinf *inf, time_t since)
+{
+    tn_array *lines, *entries;
+    const char *changelog;
+
+    if ((changelog = pkguinf_get(inf, PKGUINF_CHANGELOG)) == NULL)
+        return NULL;
+    
+    lines = n_str_etokl_ext(changelog, "\n", "", "", '\\');
+    entries = parse_changelog(inf->_na, lines);
+    n_array_free(lines);
+
+    if (since) {
+        tn_array *tmp = n_array_clone(entries);
+        int i;
+        
+        for (i=0; i<n_array_size(entries); i++) {
+            struct changelog_ent *ent = n_array_nth(entries, i);
+            if (ent->ts > since)
+                n_array_push(tmp, ent);
+        }
+        n_array_free(entries);
+        entries = tmp;
+    }
+
+    return entries;
+}
+
+int pkguinf_changelog_with_security_fixes(struct pkguinf *inf, time_t since)
+{
+    tn_array *entries;
+    int yes = 0, i;
+    
+    n_assert(since);
+    if ((entries = get_parsed_changelog(inf, since)) == NULL)
+        return 0;
+
+    for (i=0; i < n_array_size(entries); i++) {
+        struct changelog_ent *ent = n_array_nth(entries, i);
+        const char *m = ent->message;
+        
+        if (strstr(m, "CVE-2") || strstr(m, "CVE-19") || strstr(m, "ecurity")) {
+            yes = 1;
+            break;
+        }
+    }
+    n_array_free(entries);
+    return yes;
+}
+
+const char *pkguinf_get_changelog(struct pkguinf *inf, time_t since)
+{
+    tn_array *entries;
+    tn_buf   *nbuf;
+    char     *changelog = NULL;
+    int      i;
+
+    if (!since)
+        return pkguinf_get(inf, PKGUINF_CHANGELOG);
+    
+    if ((entries = get_parsed_changelog(inf, since)) == NULL)
+        return pkguinf_get(inf, PKGUINF_CHANGELOG);
+    
+    nbuf = n_buf_new(1024 * 4);
+    for (i=0; i < n_array_size(entries); i++) {
+        struct changelog_ent *ent = n_array_nth(entries, i);
+        n_buf_printf(nbuf, "%s\n", ent->info);
+        n_buf_printf(nbuf, "%s\n", ent->message);
+    }
+    n_array_free(entries);
+
+    changelog = na_strdup(inf->_na, n_buf_ptr(nbuf), n_buf_size(nbuf));
+    n_buf_free(nbuf);
+    return changelog;
+}
+
+static char *do_load_changelog_from_rpmhdr(tn_alloc *na, void *hdr) 
+{
+    struct rpmhdr_ent    e_name, e_time, e_text;
+    char                 **names = NULL, **texts = NULL, *changelog = NULL;
+    uint32_t             *times = NULL;
+    tn_buf               *nbuf = NULL;
+    time_t               since;
+    int                  i;
+
+    since = time(NULL) - 3600 * 24 * 356; /* skip entries older than year */
+    
+    if (!pm_rpmhdr_ent_get(&e_name, hdr, RPMTAG_CHANGELOGNAME))
+        return NULL;
+
+    if (!pm_rpmhdr_ent_get(&e_time, hdr, RPMTAG_CHANGELOGTIME)) {
+        pm_rpmhdr_ent_free(&e_name);
+        return NULL;
+    }
+
+    if (!pm_rpmhdr_ent_get(&e_text, hdr, RPMTAG_CHANGELOGTEXT)) {
+        pm_rpmhdr_ent_free(&e_name);
+        pm_rpmhdr_ent_free(&e_time);
+        return NULL;
+    }
+
+    names = pm_rpmhdr_ent_as_strarr(&e_name);
+    times = pm_rpmhdr_ent_as_intarr(&e_time);
+    texts = pm_rpmhdr_ent_as_strarr(&e_text);
+    
+    if (e_name.cnt == 1 && strstr(names[0], "PLD")) {
+        changelog = prepare_pld_changelog(na, texts[0], since);
+        goto l_end;
+    }
+            
+    nbuf = n_buf_new(1024);
+    for (i=0; i < e_name.cnt; i++) {
+        char ts[32];
+
+        if ((time_t)times[i] < since)
+            break;
+        
+        strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", gmtime((time_t*)&times[i]));
+
+        n_buf_printf(nbuf, "* %s %s\n", ts, names[i]);
+        n_buf_printf(nbuf, "%s\n\n", texts[i]);
+    }
+    
+    changelog = na_strdup(na, n_buf_ptr(nbuf), n_buf_size(nbuf));
+    n_buf_free(nbuf);
+    
+ l_end:
+    pm_rpmhdr_ent_free(&e_name);
+    pm_rpmhdr_ent_free(&e_time);
+    pm_rpmhdr_ent_free(&e_text);
+
+    return changelog;
+}
+
+static
+char *load_changelog_from_rpmhdr(tn_alloc *na, void *hdr, const char *sourcerpm)
+{
+    const char *name, *version, *release;
+    char nvr[512], *changelog = NULL;
+    uint32_t   epoch, n;
+    
+    pm_rpmhdr_nevr(hdr, &name, &epoch, &version, &release, NULL, NULL);
+    if (name == NULL || version == NULL || release == NULL)
+        return NULL;
+
+    n = n_snprintf(nvr, sizeof(nvr), "%s-%s-%s.", name, version, release);
+
+    /* "main" package */
+    if (sourcerpm == NULL || strncmp(sourcerpm, nvr, n) == 0) { 
+        changelog = do_load_changelog_from_rpmhdr(na, hdr);
+        
+    } else { /* subpackage */
+        char ts[32], *mainame, *p;
+        time_t now = time(NULL);
+
+        strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", gmtime(&now));
+        n_strdupap(sourcerpm, &mainame);
+        
+        if ((p = strrchr(mainame, '.'))) { /* cut off .src.rpm */
+            *p = '\0';
+            if ((p = strrchr(mainame, '.'))) 
+                *p = '\0';
+        }
+
+        changelog = na->na_malloc(na, 512);
+        n_snprintf(changelog, 512,
+                   "* %s poldek@pld-linux.org\n- see %s's log\n", ts, mainame);
+    }
+    
+    return changelog;
+}
+
 struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
 {
     char               **langs, **summs, **descrs;
@@ -350,7 +710,8 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
     pkgu->distro = cp_tag(pkgu->_na, h, RPMTAG_DISTRIBUTION);
     pkgu->buildhost = cp_tag(pkgu->_na, h, RPMTAG_BUILDHOST);
     pkgu->sourcerpm = cp_tag(pkgu->_na, h, RPMTAG_SOURCERPM);
-
+    pkgu->changelog = load_changelog_from_rpmhdr(pkgu->_na, h, pkgu->sourcerpm);
+    
     return pkgu;
 }
 
@@ -364,104 +725,57 @@ tn_array *pkguinf_langs(struct pkguinf *pkgu)
     return pkgu->_langs;
 }
 
-#define PKGUINF_TAG_LANG     'L'
 #define PKGUINF_TAG_ENDCMN   'E'
 
 tn_buf *pkguinf_store(const struct pkguinf *pkgu, tn_buf *nbuf,
                       const char *lang)
 {
     struct pkguinf_i18n *inf;
+    struct member {
+        char tag;
+        char *value;
+    } members[] = {
+        { PKGUINF_LICENSE, pkgu->license },
+        { PKGUINF_URL, pkgu->url },
+        { PKGUINF_VENDOR, pkgu->vendor },
+        { PKGUINF_BUILDHOST, pkgu->buildhost },
+        { PKGUINF_DISTRO, pkgu->distro },
+        { PKGUINF_SOURCERPM, pkgu->sourcerpm },
+        { PKGUINF_CHANGELOG, pkgu->changelog },
+        { 0, NULL }
+    };
 
-    if (lang && strcmp(lang, "C") == 0) {
-        if (pkgu->license) {
-            n_buf_putc(nbuf, PKGUINF_LICENSE);
-            n_buf_putc(nbuf, '\0');
-            n_buf_puts(nbuf, pkgu->license);
-            n_buf_putc(nbuf, '\0');
-        }
-    
-        if (pkgu->url) {
-            n_buf_putc(nbuf, PKGUINF_URL);
-            n_buf_putc(nbuf, '\0');
-            n_buf_puts(nbuf, pkgu->url);
-            n_buf_putc(nbuf, '\0');
-        }
-    
-        if (pkgu->vendor) {
-            n_buf_putc(nbuf, PKGUINF_VENDOR);
-            n_buf_putc(nbuf, '\0');
-            n_buf_puts(nbuf, pkgu->vendor);
-            n_buf_putc(nbuf, '\0');
-        }
-    
-        if (pkgu->buildhost) {
-            n_buf_putc(nbuf, PKGUINF_BUILDHOST);
-            n_buf_putc(nbuf, '\0');
-            n_buf_puts(nbuf, pkgu->buildhost);
-            n_buf_putc(nbuf, '\0');
-        }
-    
-        if (pkgu->distro) {
-            n_buf_putc(nbuf, PKGUINF_DISTRO);
-            n_buf_putc(nbuf, '\0');
-            n_buf_puts(nbuf, pkgu->distro);
-            n_buf_putc(nbuf, '\0');
-        }
-
-        if (pkgu->sourcerpm) {
+    n_assert(lang);
+    if (n_str_eq(lang, "C")) {
+        
+        int i = 0;
+        while (members[i].tag) {
+            struct member m = members[i++]; 
+            if (m.value == NULL)
+                continue;
             
-    	    n_buf_putc(nbuf, PKGUINF_SOURCERPM);
-    	    n_buf_putc(nbuf, '\0');
-    	    n_buf_puts(nbuf, pkgu->sourcerpm);
-    	    n_buf_putc(nbuf, '\0');
+            n_buf_putc(nbuf, m.tag);
+            n_buf_putc(nbuf, '\0');
+            n_buf_puts(nbuf, m.value);
+            n_buf_putc(nbuf, '\0');
         }
-
+        
         n_buf_putc(nbuf, PKGUINF_TAG_ENDCMN);
         n_buf_putc(nbuf, '\0');
     }
-    
-    
-    n_assert(lang);
-    if (lang != NULL) {
-        if ((inf = n_hash_get(pkgu->_ht, lang))) {
-            n_buf_putc(nbuf, PKGUINF_SUMMARY);
-            n_buf_putc(nbuf, '\0');
-            n_buf_puts(nbuf, inf->summary);
-            n_buf_putc(nbuf, '\0');
+
+    if ((inf = n_hash_get(pkgu->_ht, lang))) {
+        n_buf_putc(nbuf, PKGUINF_SUMMARY);
+        n_buf_putc(nbuf, '\0');
+        n_buf_puts(nbuf, inf->summary);
+        n_buf_putc(nbuf, '\0');
             
-            n_buf_putc(nbuf, PKGUINF_DESCRIPTION);
-            n_buf_putc(nbuf, '\0');
-            n_buf_puts(nbuf, inf->description);
-            n_buf_putc(nbuf, '\0');
-        }
-        
-    } else {
-        int i;
-        tn_array *langs = n_hash_keys(pkgu->_ht);
-        
-        n_assert(0);
-        
-        for (i=0; i < n_array_size(langs); i++) {
-            char *lang = n_array_nth(langs, i);
-            n_buf_putc(nbuf, PKGUINF_TAG_LANG);
-            n_buf_putc(nbuf, '\0');
-            n_buf_puts(nbuf, lang);
-            n_buf_putc(nbuf, '\0');
-            
-            if ((inf = n_hash_get(pkgu->_ht, lang))) {
-                n_buf_putc(nbuf, PKGUINF_SUMMARY);
-                n_buf_putc(nbuf, '\0');
-                n_buf_puts(nbuf, inf->summary);
-                n_buf_putc(nbuf, '\0');
-                
-                n_buf_putc(nbuf, PKGUINF_DESCRIPTION);
-                n_buf_putc(nbuf, '\0');
-                n_buf_puts(nbuf, inf->description);
-                n_buf_putc(nbuf, '\0');
-            }
-        }
+        n_buf_putc(nbuf, PKGUINF_DESCRIPTION);
+        n_buf_putc(nbuf, '\0');
+        n_buf_puts(nbuf, inf->description);
+        n_buf_putc(nbuf, '\0');
     }
-    
+
     return nbuf;
 }
 
@@ -507,6 +821,10 @@ struct pkguinf *pkguinf_restore(tn_alloc *na, tn_buf_it *it, const char *lang)
 
                 case PKGUINF_SOURCERPM:
                     set_member(pkgu, &pkgu->sourcerpm, val, len);
+                    break;
+
+                case PKGUINF_CHANGELOG:
+                    set_member(pkgu, &pkgu->changelog, val, len);
                     break;
 
                 default:
@@ -578,6 +896,9 @@ const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
 
         case PKGUINF_SOURCERPM:
     	    return pkgu->sourcerpm;
+
+        case PKGUINF_CHANGELOG:
+    	    return pkgu->changelog;
             
         case PKGUINF_SUMMARY:
             val = (char**)&pkgu->_summary;
