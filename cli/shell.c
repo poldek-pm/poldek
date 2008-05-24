@@ -67,6 +67,7 @@ static char *histfile;
 #define COMPLETITION_CTX_INSTALLED       3
 #define COMPLETITION_CTX_WHAT_PROVIDES   4
 #define COMPLETITION_CTX_WHAT_REQUIRES   5
+#define COMPLETITION_CTX_DIRNAME         6
 
 struct sh_ctx {
     int completion_ctx;
@@ -263,35 +264,28 @@ static char *deps_generator(const char *text, int state)
 		for (i = 0; i < n_array_size(ents); i++) {
 			struct pkg_dent *ent = n_array_nth(ents, i);
 			struct pkg *pkg = ent->pkg_dent_pkg;
-
+            tn_array *caps = NULL;
+            
 			if (pkg_dent_isdir(ent))
 				continue;
 
-			if (sh_ctx.completion_ctx == COMPLETITION_CTX_WHAT_PROVIDES) {
-				/* provides */
-				if (pkg->caps == NULL)
-                    continue;
-                
-                for (j = 0; j < n_array_size(pkg->caps); j++) {
-                    struct capreq *cr = n_array_nth(pkg->caps, j);
+            switch (sh_ctx.completion_ctx) {
+                case COMPLETITION_CTX_WHAT_PROVIDES:
+                    caps = pkg->caps;
+                    break;
+                    
+                case COMPLETITION_CTX_WHAT_REQUIRES:
+                    caps = pkg->reqs;
+                    break;
+            }
+            
+            if (caps) {
+                for (j = 0; j < n_array_size(caps); j++) {
+                    struct capreq *cr = n_array_nth(caps, j);
                     const char *name = capreq_name(cr);
                     
                     if (len == 0 || strncmp(name, text, len) == 0)
-                        n_array_push(deps_table, name);
-                }
-			}
-
-			if (sh_ctx.completion_ctx == COMPLETITION_CTX_WHAT_REQUIRES) {
-				/* requires */
-				if (pkg->reqs == NULL)
-                    continue;
-                
-                for (j = 0; j < n_array_size(pkg->reqs); j++) {
-                    struct capreq *cr = n_array_nth(pkg->reqs, j);
-                    const char *name = capreq_name(cr);
-                    
-                    if (len == 0 || strncmp(name, text, len) == 0)
-                        n_array_push(deps_table, name);
+                        n_array_push(deps_table, (void*)name);
                 }
 			}
 		}
@@ -324,7 +318,6 @@ static char **poldek_completion(const char *text, int start, int end)
     char **matches = NULL;
     char *p;
     
-    
     start = start;
     end = end;
     matches = NULL;
@@ -349,7 +342,10 @@ static char **poldek_completion(const char *text, int start, int end)
 
         else if (strncmp(p, "what-req", 8) == 0) /* what-requires cmd */
             sh_ctx.completion_ctx = COMPLETITION_CTX_WHAT_REQUIRES;
-        
+
+        else if (strncmp(p, "cd ", 3) == 0)
+            sh_ctx.completion_ctx = COMPLETITION_CTX_DIRNAME;
+
         else 
             sh_ctx.completion_ctx = COMPLETITION_CTX_NONE;
     }
@@ -358,15 +354,22 @@ static char **poldek_completion(const char *text, int start, int end)
         matches = rl_completion_matches(text, command_generator);
         
     } else {
-        if (strncmp(p, "cd ", 3) == 0)
-            matches = rl_completion_matches(text, dirname_generator);
+        rl_completer_word_break_characters = " \t\n\"\\'`@$><=;|&{(";
         
-        else if (sh_ctx.completion_ctx == COMPLETITION_CTX_WHAT_PROVIDES ||
-                 sh_ctx.completion_ctx == COMPLETITION_CTX_WHAT_REQUIRES)
-            matches = rl_completion_matches(text, deps_generator);
-        
-        else
-            matches = rl_completion_matches(text, pkgname_generator);
+        switch (sh_ctx.completion_ctx) {
+            case COMPLETITION_CTX_DIRNAME:
+                matches = rl_completion_matches(text, dirname_generator);
+                break;
+                
+            case COMPLETITION_CTX_WHAT_PROVIDES:
+            case COMPLETITION_CTX_WHAT_REQUIRES:
+                rl_completer_word_break_characters = " \t\n\"\\'`@$><=;|&{";
+                matches = rl_completion_matches(text, deps_generator);
+                break;
+                
+            default:
+                matches = rl_completion_matches(text, pkgname_generator);
+        }
     }
     
     return matches;
