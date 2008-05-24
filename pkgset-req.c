@@ -37,9 +37,8 @@ extern tn_array *pkgset_search_provdir(struct pkgset *ps, const char *dir);
 void *pkg_na_malloc(struct pkg *pkg, size_t size);
 
 
-static
-int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict, 
-                  struct pkg *suspkgs[], int npkgs);
+static 
+int setup_required_pkgs(struct pkg *pkg, struct capreq *req, tn_array *matches);
 
 static
 int setup_cnfl_pkgs(struct pkg *pkg, struct capreq *cnfl, int strict,
@@ -152,7 +151,10 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
 {
     int i, j, nerrors = 0;
     struct pkgmark_set *pms;
-    
+    tn_hash *cache;
+
+    cache = n_hash_new(n_array_size(ps->pkgs), (tn_fn_free)n_array_free);
+
     n_assert(ps->_vrfy_unreqs == NULL);
     ps->_vrfy_unreqs = n_hash_new(127, (tn_fn_free)n_array_free);
     pms = pkgmark_set_new(n_array_size(ps->pkgs) / 10, 0);
@@ -172,24 +174,43 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
         
         msgn(4, "%d. %s", i+1, pkg_id(pkg));
         for (j=0; j < n_array_size(pkg->reqs); j++) {
-            struct pkg *pkgsbuf[1024], **suspkgs;
-            int nsuspkgs = 1024;
-            struct capreq *req;
+            struct capreq *req = n_array_nth(pkg->reqs, j);
+            const char *streq = capreq_snprintf_s(req);
+            tn_array *matches = NULL;
 
-            req = n_array_nth(pkg->reqs, j);
-            
-            if (psreq_lookup(ps, req, &suspkgs, (struct pkg **)pkgsbuf,
-                             &nsuspkgs)) {
-                
-                if (nsuspkgs == 0) /* self match */
-                    continue;
-                
-                if (setup_req_pkgs(pkg, req, strict, suspkgs, nsuspkgs)) 
-                    continue;
-                else 
-                    goto l_err_match;
+            if (n_hash_exists(cache, streq)) {
+                int ii;
+
+                matches = n_hash_get(cache, streq);
+
+                if (!matches) 
+                    msgn(4, " req %-35s --> NOT FOUND", streq);
+                else if (n_array_size(matches) > 0) {
+                    msg(4, " req %-35s --> ", streq);
+                    for (ii=0; ii < n_array_size(matches); ii++) 
+                        msg(4, "_%s, ", pkg_id(n_array_nth(matches, ii)));
+                    msg(4, "_\n");
+                }
+
+            } else {
+                int found = pkgset_find_match_packages(ps, pkg, req, &matches, strict);
+                if (found && matches == NULL)
+                    matches = pkgs_array_new(2);
+                n_hash_insert(cache, streq, matches);
             }
+
+            if (matches == NULL) /* not found / unmatched */
+                goto l_err_notfound;
+
+            if (n_array_size(matches) == 0) /* selfmatches */
+                continue;
             
+            if (setup_required_pkgs(pkg, req, matches))
+                continue;
+            
+            goto l_err_match;   /* found but not fit */
+
+        l_err_notfound:
             nerrors++;
             if (poldek_VERBOSE > 3)
                 msgn(4, " req %-35s --> NOT FOUND", capreq_snprintf_s(req));
@@ -214,6 +235,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
         msgn(4, _("%d unsatisfied dependencies, %d packages cannot be installed"),
             nerrors, ps->nerrors);
     
+    n_hash_free(cache);
     pkgmark_set_free(pms);
     return nerrors == 0;
 }
@@ -440,7 +462,7 @@ int pkgset_find_match_packages(struct pkgset *ps,
     if (!found)
         return found;
 
-    if (nsuspkgs == 0)          /* rpmlib() or other internal caps */
+    if (nsuspkgs == 0)          /* self match or rpmlib() or other internal caps */
         return found;
 
 #if ENABLE_TRACE
@@ -473,158 +495,72 @@ int pkgset_find_match_packages(struct pkgset *ps,
     return found;
 }
 
-
-/* find packages satisfies req and (optionally) best fitted to pkg */
-/* DEPRECIATED, used by install/ only */
-int psreq_find_match_packages(struct pkgset *ps,
-                              const struct pkg *pkg, struct capreq *req,
-                              struct pkg ***packages, int *npackages,
-                              int strict)
+static 
+int setup_required_pkgs(struct pkg *pkg, struct capreq *req, tn_array *matches)
 {
-    struct pkg **suspkgs, pkgsbuf[1024], **matches;
-    int nsuspkgs = 0, nmatches = 0, found = 0;
+    int i,  isneq;
+    uint8_t flags;
+    struct reqpkg *rpkg;
+    struct reqpkg tmp_rpkg = {NULL, NULL, 0};
+
+    n_assert(matches);
     
-    
-    if (packages)
-        *packages = NULL;
-
-    nsuspkgs = 1024;            /* size of pkgsbuf */
-    found = psreq_lookup(ps, req, &suspkgs, (struct pkg **)pkgsbuf, &nsuspkgs);
-
-    if (!found)
-        return found;
-
-    if (nsuspkgs == 0)          /* rpmlib() or other internal caps */
-        return found;
-
-#if ENABLE_TRACE
-    do {
-        int i;
-        DBGF("%s: found %d suspected packages: ", capreq_snprintf_s(req), nsuspkgs);
-        for (i=0; i < nsuspkgs; i++)
-            msg(0, "%s, ", pkg_id(suspkgs[i]));
-        msg("\n");
-    } while(0);
-#endif
-    
-    found = 0;
-    
-#if 0 /* XXX - disabled, color-selection has to be done later  */
-    if (poldek_conf_MULTILIB && pkg) {
-        struct pkg **tmp = alloca(sizeof(*tmp) * nsuspkgs);
-        int i, j = 0;
-
-        for (i=0; i < nsuspkgs; i++) {
-            if (pkg_is_colored_like(suspkgs[i], pkg))
-                tmp[j++] = suspkgs[i];
-        }
-
-        if (j != nsuspkgs) {
-            suspkgs = tmp;
-            nsuspkgs = j;
-        }
-
-        if (nsuspkgs == 0)
-            return 0;
-    }
-#endif
-    
-    matches = alloca(sizeof(*matches) * nsuspkgs);
-    if (psreq_match_pkgs(pkg, req, strict, suspkgs, nsuspkgs, matches, &nmatches)) {
-        found = 1;
-            
-        if (nmatches && packages) {
-            struct pkg **pkgs;
-            int i;
-            
-            pkgs = n_malloc(sizeof(*pkgs) * (nmatches + 1));
-            for (i=0; i < nmatches; i++)
-                pkgs[i] = matches[i];
-            
-            pkgs[nmatches] = NULL;
-            *packages = pkgs;
-            *npackages = nmatches;
-        }
-    }
-    
-    return found;
-}
-
-static int setup_req_pkgs(struct pkg *pkg, struct capreq *req, int strict, 
-                          struct pkg *suspkgs[], int npkgs)
-{
-    int i, nmatched;
-    struct pkg **matches;
-
-    matches = alloca(sizeof(*matches) * npkgs);
-    
-    if (!psreq_match_pkgs(pkg, req, strict, suspkgs, npkgs,
-                          matches, &nmatched))
-        return 0;
-    
-    if (nmatched == 0)          /* selfmatched */
+    if (n_array_size(matches) == 0)          /* selfmatched */
         return 1;
     
-    if (nmatched == 1) {
-        return add_reqpkg(pkg, req, matches[0]);
+    if (n_array_size(matches) == 1)
+        return add_reqpkg(pkg, req, n_array_nth(matches, 0));
         
-    } else {
-        int isneq;
-        uint8_t flags;
-        struct reqpkg *rpkg;
-        struct reqpkg tmp_rpkg = {NULL, NULL, 0};
-
-        flags = 0;
-        flags |= capreq_is_prereq(req) ? REQPKG_PREREQ : 0;
-        flags |= capreq_is_prereq_un(req) ? REQPKG_PREREQ_UN : 0;
+    flags = 0;
+    flags |= capreq_is_prereq(req) ? REQPKG_PREREQ : 0;
+    flags |= capreq_is_prereq_un(req) ? REQPKG_PREREQ_UN : 0;
         
-        tmp_rpkg.pkg = matches[0];
-        rpkg = n_array_bsearch(pkg->reqpkgs, &tmp_rpkg);
+    tmp_rpkg.pkg = n_array_nth(matches, 0);
+    rpkg = n_array_bsearch(pkg->reqpkgs, &tmp_rpkg);
 
-        isneq = 1;
-        /* compare the list */
-        if (rpkg != NULL && rpkg->flags & REQPKG_MULTI) { 
-            i = 0;
-            isneq = 0;
-            while (rpkg->adds[i] != NULL) {
-                if (i+1 >= nmatched) {   /* different length */
-                    isneq = 1;
-                    break;
-                }
-                
-                if (rpkg->adds[i]->pkg != matches[i+1]) {
-                    isneq = 1;
-                    break;
-                }
-                i++;
+    isneq = 1;
+    /* compare the list */
+    if (rpkg != NULL && rpkg->flags & REQPKG_MULTI) { 
+        i = 0;
+        isneq = 0;
+        while (rpkg->adds[i] != NULL) {
+            if (i+1 >= n_array_size(matches)) {   /* different length */
+                isneq = 1;
+                break;
             }
+                
+            if (rpkg->adds[i]->pkg != n_array_nth(matches, i + 1)) {
+                isneq = 1;
+                break;
+            }
+            i++;
         }
+    }
         
-        if (isneq) {
-            struct pkg *dpkg;
+    if (isneq) {
+        struct pkg *dpkg;
+        
+        dpkg = n_array_nth(matches, 0);
+        rpkg = reqpkg_new(dpkg, req, flags | REQPKG_MULTI, n_array_size(matches) - 1);
+        n_array_push(pkg->reqpkgs, rpkg);
+        n_array_sort(pkg->reqpkgs);
 
-            dpkg = matches[0];
-            rpkg = reqpkg_new(dpkg, req, flags | REQPKG_MULTI, nmatched - 1);
-            n_array_push(pkg->reqpkgs, rpkg);
-            n_array_sort(pkg->reqpkgs);
+        if (dpkg->revreqpkgs == NULL)
+            dpkg->revreqpkgs = n_array_new(2, NULL, (tn_fn_cmp)pkg_nvr_strcmp);
+        n_array_push(dpkg->revreqpkgs, pkg);
+
+        for (i=1; i < n_array_size(matches); i++) {
+            dpkg = n_array_nth(matches, i);
+            rpkg->adds[i - 1] = reqpkg_new(dpkg, req, flags, 0);
+
             if (dpkg->revreqpkgs == NULL)
                 dpkg->revreqpkgs = n_array_new(2, NULL, (tn_fn_cmp)pkg_nvr_strcmp);
             n_array_push(dpkg->revreqpkgs, pkg);
-
-            for (i=1; i<nmatched; i++) {
-                dpkg = matches[i];
-                
-                rpkg->adds[i - 1] = reqpkg_new(dpkg, req, flags, 0);
-                if (dpkg->revreqpkgs == NULL)
-                    dpkg->revreqpkgs = n_array_new(2, NULL, (tn_fn_cmp)pkg_nvr_strcmp);
-                n_array_push(dpkg->revreqpkgs, pkg);
-            }
         }
     }
     
     return 1;
 }
-
 
 int pkgset_verify_conflicts(struct pkgset *ps, int strict) 
 {
