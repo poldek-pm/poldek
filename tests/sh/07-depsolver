@@ -267,7 +267,7 @@ testUpgradeMultilib() {
     POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
 
     msgn "Preparing repositories..."
-    for i in i686 x86-64; do 
+    for i in i686 x86_64; do 
         build_installed a 1-1 -a $i -f "/hello.$i"
         build_installed a-devel 1-1 -r "'a = 1'" -a $i # -f "/usr/include/foo.h"
         build_installed a-static 1-1 -r "'a = 1'" -a $i -f "/sbin/hello.$i"
@@ -279,13 +279,13 @@ testUpgradeMultilib() {
     rm $DESTINATION_REPO/a-devel*i686* # remove duplicated uncolored package
 
     msgn "Multilib upgrades"
-    try_install a-2-2.x86-64 "a-2-2.x86-64" "a-1-1.x86-64"
+    try_install a-2-2.x86_64 "a-2-2.x86_64" "a-1-1.x86_64"
 
-    try_install a-devel-2-2.x86-64 "a-2-2.x86-64,a-devel-2-2.x86-64" \
-                                   "a-1-1.x86-64,a-devel-1-1.x86-64"
+    try_install a-devel-2-2.x86_64 "a-2-2.x86_64,a-devel-2-2.x86_64" \
+                                   "a-1-1.x86_64,a-devel-1-1.x86_64"
 
     try_install a-devel-2-2.i686 "a-2-2.i686,a-devel-2-2.i686" \
-                                 "a-1-1.i686,a-devel-1-1.x86-64"
+                                 "a-1-1.i686,a-devel-1-1.x86_64"
 
     msgn "Testing multilib upgrade-dist"                             
     runpoldek --upgrade-dist
@@ -293,7 +293,7 @@ testUpgradeMultilib() {
     assertEquals "not all packages were upgraded by upgrade-dist" "$n" "0"
 
     # Multilib upgrade uncolored package (arch flip-flop regardless of arch) 
-    try_install a-devel-2-2.i686 "a-devel-2-2.i686" "a-devel-2-2.x86-64"
+    try_install a-devel-2-2.i686 "a-devel-2-2.i686" "a-devel-2-2.x86_64"
                                  
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }
@@ -304,16 +304,16 @@ testUpgradeMultilibOneTransactionForSamePackagesDifferentSource() {
     POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
 
     msgn "Preparing repositories..."
-    for i in i686 x86-64; do 
+    for i in i686 x86_64; do 
         build_installed FooBar 1-1 -a $i -f "/hello.$i" -f "/README"
     done    
     build  FooBar 2-2 -a i686 -f "/hello.i686" -f "/README"
-    build2 FooBar 2-2 -a x86-64 -f "/hello.x86-64" -f "/README"
+    build2 FooBar 2-2 -a x86_64 -f "/hello.x86_64" -f "/README"
 
     msgn "Up"
-    try_install FooBar "FooBar-2-2.i686,FooBar-2-2.x86-64" "FooBar-1-1.i686,FooBar-1-1.x86-64" 
+    try_install FooBar "FooBar-2-2.i686,FooBar-2-2.x86_64" "FooBar-1-1.i686,FooBar-1-1.x86_64" 
     
-    #"a-2-2.x86-64" "a-1-1.x86-64"
+    #"a-2-2.x86_64" "a-1-1.x86_64"
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }
 
@@ -384,7 +384,7 @@ testMultilibSuggestedByNoarchShouldUseArchScore() {
 
     msgn "Preparing repositories..."
     build n 1-1 -a "noarch" -s "a"
-    for i in i686 x86-64; do 
+    for i in i686 x86_64; do 
         build a 1-1 -a $i -f "/hello.$i"
     done    
     POLDEK_TESTING_WITH_SUGGESTS="all" # choose all suggested packages
@@ -404,15 +404,15 @@ testMultilibCandidatesAssertion() {
     build a 2-2 -a $i -r "'a-misc = 2-2'" -f "/hello.$i"
     build a-misc 2-2 -a $i -r "'a = 2-2'" -f "/sbin/hello.$i"
 
-    i=x86-64
+    i=x86_64
     build2 a 2-2 -a $i -r "'a-misc = 2-2'" -f "/hello.$i"
     build2 a-misc 2-2 -a $i -r "'a = 2-2'" -f "/sbin/hello.$i"
 
-    for i in i686 x86-64; do 
+    for i in i686 x86_64; do 
         build_installed a 1-1 -a $i -f "/hello.$i"
         build_installed a-misc 1-1 -a $i -r "'a = 1-1'" -f "/sbin/hello.$i"
     done    
-    try_install a-2-2.x86-64 "a-2-2.x86-64,a-misc-2-2.x86-64" "a-1-1.x86-64,a-misc-1-1.x86-64"
+    try_install a-2-2.x86_64 "a-2-2.x86_64,a-misc-2-2.x86_64" "a-1-1.x86_64,a-misc-1-1.x86_64"
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }
 
@@ -423,14 +423,63 @@ testMultilibDifferentArchSameColor() {
 
     msgn "Preparing repositories..."
     arch=amd64
-    build_installed a 1-1 -a $arch -f "/hello.x86-64"
-    build_installed a-misc 1-1 -a $arch -r "'a = 1-1'" -f "/bin/hello.x86-64"
+    build_installed a 1-1 -a $arch -f "/hello.x86_64"
+    build_installed a-misc 1-1 -a $arch -r "'a = 1-1'" -f "/bin/hello.x86_64"
 
-    arch=x86-64
-    build a 2-2 -a $arch -f "/hello.x86-64"
-    build a-misc 2-2 -a $arch -f "/sbin/hello.x86-64"
+    arch=x86_64
+    build a 2-2 -a $arch -f "/hello.x86_64"
+    build a-misc 2-2 -a $arch -f "/sbin/hello.x86_64"
 
-    try_install a-2-2.$arch "a-2-2.x86-64,a-misc-2-2.x86-64" "a-1-1.amd64,a-misc-1-1.amd64"
+    try_install a-2-2.$arch "a-2-2.x86_64,a-misc-2-2.x86_64" "a-1-1.amd64,a-misc-1-1.amd64"
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
+#https://bugs.pld-linux.org/show_bug.cgi?id=143#c7
+testMultilibDifferentArchNoColor() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    arch=amd64
+    build_installed a 1-1 -a $arch -f "/hello.x86_64"
+    build_installed a-misc 1-1 -a $arch -r "'a = 1-1'" -f "/bin/hello.x86_64"
+    build_installed a-devel 1-1 -a $arch -r "'a = 1-1'" -f "/bin/a.h"
+
+    arch=x86_64
+    build a 2-2 -a $arch -f "/hello.x86_64"
+    build a-misc 2-2 -a $arch -f "/sbin/hello.x86_64"
+    build a-devel 2-2 -a $arch -r "'a = 2-2'" -f "/bin/aa.h"
+    build a-devel 2-2 -a athlon -r "'a = 2-2'" -f "/bin/aaa.h"
+
+    # arch choice of a-devel dependends on environment (rpm/platform) 
+    try_install a-2-2.$arch "a-2-2.x86_64,a-misc-2-2.x86_64,a-devel-2-2" "a-1-1.amd64,a-misc-1-1.amd64,a-devel-1-1.amd64"
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
+testMultilibNoSuccesor() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    arch=x86_64
+    build_installed a 1-1 -a $arch -f "/hello.$arch"
+    build_installed a-misc 1-1 -a $arch -r "'a = 1-1'" -f "/bin/hello.$arch"
+    build_installed a-devel 1-1 -a $arch -r "'a = 1-1'" -f "/sbin/hello.$arch"
+
+    build a 2-2 -a $arch -f "/hello.$arch"
+    build a-misc 2-2 -a $arch -f "/sbin/hello.$arch"
+    build a-devel 2-2 -a $arch -r "'a = 2-2'" -f "/bin/hello.i686"
+    build a-devel 2-2 -a i686 -r "'a = 2-2'" -f "/bin/hello.i686"
+
+    if is_verbose_mode; then
+       $POLDEK_INSTALL -uvt a-2-2.$arch
+       echo "THE ERROR ABOVE (a = 1-1 is required by installed) is EXPECTED"
+    fi
+    $POLDEK_INSTALL -uvt a-2-2.$arch | grep -q "error: a = 1-1 is required by installed a-devel-1-1.x86_64"
+    assertEquals "poldek should fail" "$?" "0"
+
+    nerrors=$($POLDEK_INSTALL -uvt a-2-2.$arch | grep "^error: " | wc -l)
+    assertEquals "poldek should fail with 2 error:'s" "$nerrors" "2"
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }
 
@@ -441,9 +490,9 @@ _MultilibArchToNoarchUpgrade() {
     POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
 
     msgn "Preparing repositories..."
-    build_installed a 1-1 -a x86-64 -f "/hello.x86-64"
+    build_installed a 1-1 -a x86_64 -f "/hello.x86_64"
     build a 2-2 -a noarch -f "/hello.sh"
-    try_install a-2-2.noarch "a-2-2.noarch" "a-1-1.x86-64"
+    try_install a-2-2.noarch "a-2-2.noarch" "a-1-1.x86_64"
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }
 
