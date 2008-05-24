@@ -145,24 +145,25 @@ int satisfiability_score(const struct pkg *marker, const struct pkg *pkg)
     return 0;
 }
 
-static void prepare_arch_scores(int *scores, const tn_array *pkgs)
+/* scores must be the same size of n_array_size(pkgs) */
+static void add_arch_scores(int *scores, const tn_array *pkgs)
 {
-    int i, min_score = INT_MAX;
-    
+    int i, min_score = INT_MAX, nscore;
+    int *arch_scores;
+
+    arch_scores = alloca(n_array_size(pkgs) * sizeof(*arch_scores));
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
         
-        scores[i] = pkg_arch_score(pkg);
-        if (min_score > scores[i])
-            min_score = scores[i];
+        arch_scores[i] = pkg_arch_score(pkg);
+        if (min_score > arch_scores[i])
+            min_score = arch_scores[i];
     }
-
+    
     for (i=0; i < n_array_size(pkgs); i++) {
-        if (scores[i] == min_score)
-            scores[i] = 1;      /* 1 point for best fit */
-        else
-            scores[i] = 0;
-        DBGF("%s %d\n", pkg_id(n_array_nth(pkgs, i)), scores[i]);
+        if (arch_scores[i] == min_score)
+            scores[i] += 1;      /* 1 point for best fit */
+        DBGF("%s %d\n", pkg_id(n_array_nth(pkgs, i)), arch_scores[i]);
     }
 }
 
@@ -171,7 +172,7 @@ static void prepare_arch_scores(int *scores, const tn_array *pkgs)
 static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                               const struct pkg *marker, tn_array *candidates)
 {
-    int *conflicts, min_nconflicts, j, i_best, *scores, *arch_scores = NULL;
+    int *conflicts, min_nconflicts, j, i_best, *scores;
     int i, max_score, npkgs, same_packages_different_arch = 0;
 
     npkgs = n_array_size(candidates);
@@ -186,11 +187,6 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
     conflicts = alloca(npkgs * sizeof(*conflicts));
     min_nconflicts = 0;
 
-    /* marker noarch -> suggests architecture not */
-    if (poldek_conf_MULTILIB && marker && n_str_eq(pkg_arch(marker), "noarch")) {
-        arch_scores = alloca(npkgs * sizeof(*arch_scores));
-        prepare_arch_scores(arch_scores, candidates);
-    }
 
     i_best = -1;    
     for (i=0; i < n_array_size(candidates); i++) {
@@ -223,8 +219,6 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                 scores[i] += 2;
             else if (pkg_cmp_arch(pkg, marker) == 0)
                 scores[i] += 1;
-            else if (arch_scores)
-                scores[i] += arch_scores[i];
         }
 
         //DBGF_F("xxx %s %d %d\n", pkg_id(pkg), pkg_arch_score(pkg), arch_scores[i]);
@@ -270,6 +264,10 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
         }
         DBGF("%d %d %d\n", i, scores[i], conflicts[i]);
     }
+
+    /* marker noarch -> suggests architecture not */
+    if (poldek_conf_MULTILIB && marker && n_str_eq(pkg_arch(marker), "noarch"))
+        add_arch_scores(scores, candidates);
     
     max_score = scores[0];
     i_best = 0;
@@ -326,53 +324,6 @@ int i3_select_best_pkg(int indent, struct i3ctx *ictx,
     return i;
 }
 
-struct pkg *i3_select_successor(int indent, struct i3ctx *ictx,
-                                const struct pkg *pkg)
-{
-    const struct pkg *selected_pkg = NULL;
-    tn_array *pkgs;
-    int i;
-
-
-    if ((pkgs = pkgset_search(ictx->ps, PS_SEARCH_NAME, pkg->name)) == NULL) {
-        tracef(indent + 2, "%s not found, return", pkg_id(pkg));
-        return NULL;
-    }
-
-    selected_pkg = pkg;
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *p = n_array_nth(pkgs, i);
-        int cmprc;
-
-        if (pkg->color == 0) {  /* no color -> use arch */
-            if (!pkg_is_kind_of(p, pkg)) {
-                tracef(indent + 2, "%s is not like %s, skipped", pkg_id(p), pkg_id(pkg));
-                continue;
-            }
-
-        } else if (!pkg_is_colored_like(p, pkg)) {
-            tracef(indent + 2, "%s is not colored like %s, skipped", pkg_id(p), pkg_id(pkg));
-            continue;
-        }
-        
-        if (selected_pkg == NULL)
-            selected_pkg = pkg;
-
-        cmprc = pkg_cmp_evr(p, selected_pkg);
-        if (cmprc < 0 && poldek_ts_issetf(ictx->ts, POLDEK_TS_DOWNGRADE))
-            selected_pkg = p;
-        else if (cmprc > 0)
-            selected_pkg = p;
-    }
-
-    if (selected_pkg == pkg)
-        selected_pkg = NULL;
-
-    tracef(indent, "RET %s (for %s)",
-           selected_pkg ? pkg_id(selected_pkg) : "NULL", pkg_id(pkg));
-    
-    return (struct pkg*)selected_pkg;
-}
 
 static inline int any_is_marked(struct i3ctx *ictx, tn_array *pkgs)
 {

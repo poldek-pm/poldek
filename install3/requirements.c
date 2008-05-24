@@ -16,6 +16,137 @@
 
 #include "ictx.h"
 
+static
+tn_array *filter_out_olders(struct i3ctx *ictx, tn_array *pkgs,
+                            const struct pkg *pkg)
+{
+    tn_array *tmp = n_array_clone(pkgs);
+    int i;
+    
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *p = n_array_nth(pkgs, i);
+        int cmprc;
+        
+        if ((cmprc = pkg_cmp_evr(p, pkg)) == 0)
+            continue;
+        
+        if (cmprc > 0 && poldek_ts_issetf(ictx->ts, POLDEK_TS_DOWNGRADE))
+            continue;
+            
+        if (cmprc < 0)
+            continue;
+        
+        n_array_push(tmp, pkg_link(p));
+    }
+    if (n_array_size(tmp) == 0)
+        n_array_cfree(&tmp);
+    
+    return tmp;
+}
+
+static struct pkg *select_successor(int indent, struct i3ctx *ictx,
+                                    const struct pkg *pkg)
+{
+    const struct pkg *selected_pkg = NULL;
+    tn_array *pkgs, *tmp;
+    int i, max_score = 0, *scores;
+    int nconsidered = 0, nuncolored = 0;
+
+    tracef(indent, "%s (c=%d)", pkg_id(pkg), pkg->color);
+    indent += 2;
+    
+    if ((pkgs = pkgset_search(ictx->ps, PS_SEARCH_NAME, pkg->name)) == NULL) {
+        tracef(indent, "%s not found, return", pkg->name);
+        return NULL;
+    }
+    
+    if ((tmp = filter_out_olders(ictx, pkgs, pkg)) == NULL) {
+        n_array_free(pkgs);
+        tracef(indent, "%s not found, return", pkg->name);
+        return NULL;
+    }
+
+    n_array_free(pkgs);
+    pkgs = tmp;
+
+    if (!poldek_conf_MULTILIB) {
+        selected_pkg = n_array_nth(pkgs, 0);
+        goto l_end;
+    }
+    
+    /* multilib mode */
+    scores = alloca(sizeof(*scores) * n_array_size(pkgs));
+    for (i=0; i < n_array_size(pkgs); i++) {
+        struct pkg *p = n_array_nth(pkgs, i);
+        scores[i] = 0;
+        
+        if (pkg->color == 0 && p->color == 0) { /* both uncolored  */
+            scores[i] += 1;
+            if (pkg_is_kind_of(p, pkg))
+                scores[i] += 2;
+            nuncolored++;
+            
+        } else if (pkg->color == 0) {  /* no color -> use arch */
+            if (pkg_is_kind_of(p, pkg))
+                scores[i] += 1;
+            
+        } else if (pkg_is_colored_like(p, pkg)) {
+            scores[i] += 2;
+        }
+        
+        trace(indent, "- %d. %s -> color %d, score %d", i, pkg_id(p),
+              p->color, scores[i]);
+        
+        if (max_score < scores[i]) {
+            max_score = scores[i];
+            selected_pkg = p;
+        }
+        
+        nconsidered++;
+    }
+    
+    if (max_score == 0)         /* noone fits */
+        selected_pkg = NULL;
+
+    /* if all candidates are pair-uncolored and scored the same
+       then use arch score */
+    if (nuncolored == nconsidered) {
+        int all_scores_equal = 1;
+        int v = scores[0], best_arch_score = INT_MAX;
+
+        n_assert(max_score > 0);
+        for (i=1; i < n_array_size(pkgs); i++) {
+            if (v != scores[i]) {
+                all_scores_equal = 0;
+                break;
+            }
+        }
+
+        if (!all_scores_equal)
+            goto l_end;
+
+        /* add arch_score */
+        for (i=0; i < n_array_size(pkgs); i++) {
+            struct pkg *p = n_array_nth(pkgs, i);
+            int v = pkg_arch_score(p);
+            
+            if (v < best_arch_score) {
+                best_arch_score = v;
+                selected_pkg = p;
+            }
+
+            trace(indent + 2, "-- %d. %s -> archscore %d", i, pkg_id(p), v);
+        }
+    }
+    
+l_end:
+    n_array_cfree(&pkgs);
+    tracef(indent, "RET %s (for %s)",
+           selected_pkg ? pkg_id(selected_pkg) : "NULL", pkg_id(pkg));
+    
+    return (struct pkg*)selected_pkg;
+}
+
 /* detect which package capability has "replaces" meaning, if any */
 static const char *get_replacemeant_capname(const struct pkg *pkg) 
 {
@@ -106,19 +237,7 @@ struct pkg *find_successor_by(int indent, struct i3ctx *ictx,
         return NULL;
     }
 
-    for (i=best_i; i < n_array_size(pkgs); i++) {
-        struct pkg *p = n_array_nth(pkgs, i);
-            
-        if (strcmp(pkg->name, p->name) == 0) /* same packages */
-            continue;
-#if 0                           /* needless here */
-        if (poldek_conf_MULTILIB) {
-            if (!pkg_is_colored_like(p, pkg))
-                continue;
-        }
-#endif            
-        bypkg = p;
-    }
+    bypkg = n_array_nth(pkgs, best_i);
     n_array_free(pkgs);
     
     DBGF("%s -> %s\n", pkg_id(pkg), bypkg ? pkg_id(bypkg) : "NONE");
@@ -140,7 +259,7 @@ static struct pkg *find_successor(int indent, struct i3ctx *ictx,
     
     memset(succ, 0, sizeof(*succ));
 
-    if ((p = i3_select_successor(indent, ictx, pkg)) == NULL) {
+    if ((p = select_successor(indent, ictx, pkg)) == NULL) {
         if (ictx->ts->getop(ictx->ts, POLDEK_OP_OBSOLETES)) {
             /* anybody provides, or obsoletes me? */
             p = find_successor_by(indent, ictx, pkg, PS_SEARCH_CAP);
