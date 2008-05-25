@@ -874,8 +874,8 @@ int pkguinf_restore_i18n(struct pkguinf *pkgu, tn_buf_it *it, const char *lang)
     inf = pkguinf_i18n_new(pkgu->_na, summary, description);
     n_hash_insert(pkgu->_ht, lang, inf);
 
-    pkgu_set_recodable(pkgu, PKGUINF_SUMMARY, summary, lang);
-    pkgu_set_recodable(pkgu, PKGUINF_DESCRIPTION, description, lang);
+    pkgu_set_recodable(pkgu, PKGUINF_SUMMARY, inf->summary, lang);
+    pkgu_set_recodable(pkgu, PKGUINF_DESCRIPTION, inf->description, lang);
     return 1;
 }
 
