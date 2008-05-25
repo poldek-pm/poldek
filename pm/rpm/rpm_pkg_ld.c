@@ -483,6 +483,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
     uint32_t   *psize = NULL, *pbtime = NULL, *pitime = NULL;
     const char *name, *version, *release, *arch = NULL;
     char       osbuf[128], *os = osbuf;
+    char       srcrpmbuf[128], *srcrpm = srcrpmbuf;
 
     pm_rpmhdr_nevr(h, &name, &epoch, &version, &release, &arch, NULL);
     
@@ -508,9 +509,14 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
 
     if (pm_rpmhdr_get_int(h, RPMTAG_INSTALLTIME, &itime)) 
         pitime = &itime;
+
+    if (!pm_rpmhdr_get_string(h, RPMTAG_SOURCERPM, srcrpm, sizeof(srcrpmbuf)))
+        srcrpm = NULL;
+    
     
     pkg = pkg_new_ext(na, name, epoch ? epoch : 0, version, release, arch, os,
-                      fname, psize ? *psize : 0, fsize, pbtime ? *pbtime : 0);
+                      fname, srcrpm, psize ? *psize : 0, fsize,
+                      pbtime ? *pbtime : 0);
     
     if (pkg == NULL)
         return NULL;

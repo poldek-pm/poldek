@@ -51,7 +51,7 @@ struct pkguinf {
     char              *vendor;
     char              *buildhost;
     char              *distro;
-    char              *sourcerpm;
+    char              *legacy_sourcerpm;
     char              *changelog;
     
     tn_hash           *_ht;
@@ -115,7 +115,7 @@ struct pkguinf *pkguinf_new(tn_alloc *na)
     pkgu->_description = NULL;
     pkgu->vendor = NULL;
     pkgu->buildhost = NULL;
-    pkgu->sourcerpm = NULL;
+    pkgu->legacy_sourcerpm = NULL;
 
     pkgu->_ht = NULL;
     pkgu->_langs = NULL;
@@ -595,11 +595,12 @@ static char *do_load_changelog_from_rpmhdr(tn_alloc *na, void *hdr)
 }
 
 static
-char *load_changelog_from_rpmhdr(tn_alloc *na, void *hdr, const char *sourcerpm)
+char *load_changelog_from_rpmhdr(tn_alloc *na, void *hdr)
 {
     const char *name, *version, *release;
-    char nvr[512], *changelog = NULL;
-    uint32_t   epoch, n;
+    char nvr[512], *changelog = NULL, *sourcerpm = NULL;
+    struct rpmhdr_ent srcrpm_ent;
+    uint32_t epoch, n;
     
     pm_rpmhdr_nevr(hdr, &name, &epoch, &version, &release, NULL, NULL);
     if (name == NULL || version == NULL || release == NULL)
@@ -607,6 +608,9 @@ char *load_changelog_from_rpmhdr(tn_alloc *na, void *hdr, const char *sourcerpm)
 
     n = n_snprintf(nvr, sizeof(nvr), "%s-%s-%s.", name, version, release);
 
+    if (pm_rpmhdr_ent_get(&srcrpm_ent, hdr, RPMTAG_SOURCERPM))
+        sourcerpm = pm_rpmhdr_ent_as_str(&srcrpm_ent);
+    
     /* "main" package */
     if (sourcerpm == NULL || strncmp(sourcerpm, nvr, n) == 0) { 
         changelog = do_load_changelog_from_rpmhdr(na, hdr);
@@ -628,6 +632,9 @@ char *load_changelog_from_rpmhdr(tn_alloc *na, void *hdr, const char *sourcerpm)
         n_snprintf(changelog, 512,
                    "* %s poldek@pld-linux.org\n- see %s's log\n", ts, mainame);
     }
+    
+    if (sourcerpm)
+        pm_rpmhdr_ent_free(&srcrpm_ent);
     
     return changelog;
 }
@@ -700,8 +707,8 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
     pkgu->url = cp_tag(pkgu->_na, h, RPMTAG_URL);
     pkgu->distro = cp_tag(pkgu->_na, h, RPMTAG_DISTRIBUTION);
     pkgu->buildhost = cp_tag(pkgu->_na, h, RPMTAG_BUILDHOST);
-    pkgu->sourcerpm = cp_tag(pkgu->_na, h, RPMTAG_SOURCERPM);
-    pkgu->changelog = load_changelog_from_rpmhdr(pkgu->_na, h, pkgu->sourcerpm);
+    pkgu->legacy_sourcerpm = NULL;
+    pkgu->changelog = load_changelog_from_rpmhdr(pkgu->_na, h);
     
     return pkgu;
 }
@@ -731,7 +738,6 @@ tn_buf *pkguinf_store(const struct pkguinf *pkgu, tn_buf *nbuf,
         { PKGUINF_VENDOR, pkgu->vendor },
         { PKGUINF_BUILDHOST, pkgu->buildhost },
         { PKGUINF_DISTRO, pkgu->distro },
-        { PKGUINF_SOURCERPM, pkgu->sourcerpm },
         { PKGUINF_CHANGELOG, pkgu->changelog },
         { 0, NULL }
     };
@@ -819,8 +825,8 @@ struct pkguinf *pkguinf_restore(tn_alloc *na, tn_buf_it *it, const char *lang)
                     set_member(pkgu, &pkgu->distro, val, len);
                     break;
 
-                case PKGUINF_SOURCERPM:
-                    set_member(pkgu, &pkgu->sourcerpm, val, len);
+                case PKGUINF_LEGACY_SOURCERPM:
+                    set_member(pkgu, &pkgu->legacy_sourcerpm, val, len);
                     break;
 
                 case PKGUINF_CHANGELOG:
@@ -894,8 +900,8 @@ const char *pkguinf_get(const struct pkguinf *pkgu, int tag)
         case PKGUINF_DISTRO:
             return pkgu->distro;
 
-        case PKGUINF_SOURCERPM:
-    	    return pkgu->sourcerpm;
+        case PKGUINF_LEGACY_SOURCERPM:
+    	    return pkgu->legacy_sourcerpm;
 
         case PKGUINF_CHANGELOG:
     	    return pkgu->changelog;
@@ -968,8 +974,8 @@ int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
             set_member(pkgu, &pkgu->distro, val, len);
             break;
 
-        case PKGUINF_SOURCERPM:
-            set_member(pkgu, &pkgu->sourcerpm, val, len);
+        case PKGUINF_LEGACY_SOURCERPM:
+            n_die("SOURCERPM");
             break;
 
         case PKGUINF_SUMMARY:

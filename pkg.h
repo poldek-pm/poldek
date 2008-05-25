@@ -15,7 +15,7 @@ struct capreq;                  /* defined in capreq.h */
 struct pkguinf;                 /* defined in pkgu.h   */
 struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 
-
+#define PKG_HAS_SRCFN       (1 << 4) /* set source package filename? */
 #define PKG_HAS_PKGUINF     (1 << 5) /* user-level info (pkgu.c) */
 #define PKG_HAS_SELFCAP     (1 << 6) /* name = e:v-r cap */
 
@@ -68,6 +68,8 @@ struct pkg {
     char         *rel;
 
     char         *fn;         /* package filename */
+    char         *srcfn;      /* package filename */
+    
     uint32_t     fmtime;      /* package file mtime */
     char         *_nvr;       /* NAME-VERSION-RELEASE */
 
@@ -115,12 +117,12 @@ struct pkg *pkg_new_ext(tn_alloc *na,
                         const char *name, int32_t epoch,
                         const char *version, const char *release,
                         const char *arch, const char *os,
-                        const char *fn,
+                        const char *fn, const char *srcfn,
                         uint32_t size, uint32_t fsize,
                         uint32_t btime);
 
 #define pkg_new(n, e, v, r, a, o) \
-    pkg_new_ext(NULL, n, e, v, r, a, o, NULL, 0, 0, 0)
+    pkg_new_ext(NULL, n, e, v, r, a, o, NULL, NULL, 0, 0, 0)
 
 
 #define PKG_LDNEVR       0
@@ -195,6 +197,9 @@ const struct capreq *pkg_requires_cap(const struct pkg *pkg,
 int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard);
 int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg);
 
+/* src.rpm */
+char *pkg_srcfilename(const struct pkg *pkg, char *buf, size_t size);
+char *pkg_srcfilename_s(const struct pkg *pkg);
 
 /* RET %path/%name-%version-%release.%arch.rpm  */
 char *pkg_filename(const struct pkg *pkg, char *buf, size_t size);

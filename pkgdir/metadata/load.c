@@ -309,7 +309,7 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
     }
     
     rpkg = pkg_new_ext(na, pkg.name, pkg.epoch, pkg.ver, pkg.rel, arch, NULL, 
-                       pkg.fn, pkg.size, pkg.fsize, pkg.btime);
+                       pkg.fn, NULL, pkg.size, pkg.fsize, pkg.btime);
 
 l_skip_end:
     

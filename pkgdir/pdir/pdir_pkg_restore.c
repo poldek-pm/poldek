@@ -540,6 +540,7 @@ struct pkg *pkg_ldtags(tn_alloc *na, struct pkg *pkg,
     if (pkg == NULL) {
         pkg = pkg_new_ext(na, pkgt->name, epoch, ver, rel, arch, os, 
                           (pkgt->flags & PKGT_HAS_FN) ? pkgt->fn : NULL,
+                          NULL, /* srcfn */
                           pkgt->size, pkgt->fsize, pkgt->btime);
 
         if (pkg == NULL) {

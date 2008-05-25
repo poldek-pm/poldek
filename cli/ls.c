@@ -205,7 +205,7 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
                                 tn_array *evrs)
 {
     int        found, compare_ver = 0, i;
-    tn_array   *ls_ents2, *cmpto_pkgs;
+    tn_array   *ls_ents2, *cmpto_pkgs = NULL, *srcpkgs = NULL;
     char       *cmpto_path;
 
     n_assert(cmdctx->_flags & OPT_LS_UPGRADEABLE);
@@ -227,10 +227,13 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
 
     ls_ents2 = n_array_clone(ls_ents);
     
+    if (cmdctx->_flags & OPT_LS_UPGRADEABLE_SEC)
+        srcpkgs = n_array_new(64, free, (tn_fn_cmp)strcmp);
+    
     for (i=0; i < n_array_size(ls_ents); i++) {
         struct pkg_dent  *ent;
         struct pkg       *rpkg = NULL;
-        char             evr[128];
+        char             evr[128], *spkg;
         int              cmprc = 0;
         
         ent = n_array_nth(ls_ents, i);
@@ -247,10 +250,14 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
         if (!found || cmprc >= 0)
             continue;
 
-        if (cmdctx->_flags & OPT_LS_UPGRADEABLE_SEC) {
+        if ((spkg = pkg_srcfilename_s(rpkg))) { 
+            if (n_array_bsearch(srcpkgs, spkg)) /* parent included, so me too */
+                found = 1;
+            
+        } else if (cmdctx->_flags & OPT_LS_UPGRADEABLE_SEC) {
             struct pkg *ipkg, *upkg;
             struct pkguinf *inf;
-
+            
             ipkg = rpkg;
             upkg = ent->pkg_dent_pkg;
             if (cmdctx->_flags & OPT_LS_INSTALLED) {
@@ -262,8 +269,15 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
             if ((inf = pkg_uinf(upkg)) == NULL)
                 continue;
             
-            if (pkguinf_changelog_with_security_fixes(inf, ipkg->btime))
+            if (pkguinf_changelog_with_security_fixes(inf, ipkg->btime)) {
+                char *sp;
+                if ((sp = pkg_srcfilename_s(rpkg))) {
+                    n_array_push(srcpkgs, n_strdup(sp));
+                    n_array_sort(srcpkgs);
+                    DBGF_F("%s\n", sp);
+                }
                 found = 1;
+            }
             
             pkguinf_free(inf);
         }
@@ -279,8 +293,8 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
             break;
     }
 
-    if (cmpto_pkgs)
-        n_array_free(cmpto_pkgs);
+    n_array_cfree(&cmpto_pkgs);
+    n_array_cfree(&srcpkgs);
     
     return ls_ents2;
 }

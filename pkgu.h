@@ -14,7 +14,7 @@
 #define PKGUINF_VENDOR       'v'
 #define PKGUINF_BUILDHOST    'b'
 #define PKGUINF_DISTRO       'D'
-#define PKGUINF_SOURCERPM    'S'
+#define PKGUINF_LEGACY_SOURCERPM    'S'
 #define PKGUINF_CHANGELOG    'C'
 
 struct pkguinf;

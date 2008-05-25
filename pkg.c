@@ -175,13 +175,16 @@ int pkg_set_os(struct pkg *pkg, const char *os)
 struct pkg *pkg_new_ext(tn_alloc *na, 
                         const char *name, int32_t epoch,
                         const char *version, const char *release,
-                        const char *arch, const char *os, const char *fn,
+                        const char *arch, const char *os,
+                        const char *fn, const char *srcfn, 
                         uint32_t size, uint32_t fsize,
                         uint32_t btime)
 {
     struct pkg *pkg;
-    int name_len = 0, version_len = 0, release_len = 0, fn_len = 0,arch_len = 0;
-    char *buf, pkg_fn[PATH_MAX];
+    int name_len = 0, version_len = 0, release_len = 0, fn_len = 0,
+        srcfn_len = 0, arch_len = 0;
+    char *buf, pkg_fn[PATH_MAX], pkg_srcfn[PATH_MAX];
+    uint32_t flags = 0;
     int len;
 
     n_assert(name);
@@ -213,6 +216,29 @@ struct pkg *pkg_new_ext(tn_alloc *na,
         }
     }
 
+    if (srcfn) {   /* compare source filename with "standard" name */
+        flags |= PKG_HAS_SRCFN;
+        if (strcmp(srcfn, "-") == 0) /* "default" */
+            srcfn = NULL;
+        
+        else {
+            n_snprintf(pkg_srcfn, sizeof(pkg_srcfn), "%s-%s-%s.src.rpm", name,
+                       version, release);
+        
+            if (strcmp(pkg_srcfn, srcfn) == 0)
+                srcfn = NULL;
+        }
+        
+        if (srcfn) { /* non default name, it's child package */
+            char *p = strstr(srcfn, ".src.rpm");
+            if (p)
+                *p = '\0';
+            
+            srcfn_len = strlen(srcfn);
+            len += srcfn_len + 1;
+        }
+    }
+    
     len += len + 1;             /* for id (nvr) */
     
     if (poldek_conf_MULTILIB && arch) {
@@ -229,7 +255,7 @@ struct pkg *pkg_new_ext(tn_alloc *na,
         pkg->na = n_ref(na);
         DBGF("+%p %p %d\n", na, &na->_refcnt, na->_refcnt);
     }
-    
+    pkg->flags = flags;
     pkg->epoch = epoch;
     pkg->size = size;
     pkg->fsize = fsize;
@@ -257,6 +283,14 @@ struct pkg *pkg_new_ext(tn_alloc *na,
         pkg->fn = buf;
         memcpy(buf, fn, fn_len);
         buf += fn_len;
+        *buf++ = '\0';
+    }
+
+    pkg->srcfn = NULL;
+    if (srcfn) {
+        pkg->srcfn = buf;
+        memcpy(buf, srcfn, srcfn_len);
+        buf += srcfn_len;
         *buf++ = '\0';
     }
 
@@ -322,7 +356,7 @@ struct pkg *pkg_clone(tn_alloc *na, struct pkg *pkg, unsigned flags)
     struct pkg *new;
 
     new = pkg_new_ext(na, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
-                      pkg_arch(pkg), pkg_os(pkg), pkg->fn,
+                      pkg_arch(pkg), pkg_os(pkg), pkg->fn, pkg->srcfn,
                       pkg->size, pkg->fsize, pkg->btime);
     
     new->fmtime = pkg->fmtime;
@@ -1076,6 +1110,60 @@ const char *pkg_group(const struct pkg *pkg)
     if (pkg->pkgdir && pkg->pkgdir->pkgroups)
         return pkgroup(pkg->pkgdir->pkgroups, pkg->groupid);
     return NULL;
+}
+
+char *pkg_srcfilename(const struct pkg *pkg, char *buf, size_t size) 
+{
+    int n_len, v_len, r_len;
+    unsigned len = 0;
+    char *s;
+    
+    if (pkg->srcfn) {
+        n_snprintf(buf, size, "%s.src.rpm", pkg->srcfn);
+        return buf;
+    }
+
+    if ((pkg->flags & PKG_HAS_SRCFN) == 0)
+        return NULL;
+    
+    n_len = pkg->ver - pkg->name - 1;
+    v_len = pkg->rel - pkg->ver - 1;
+    r_len = strlen(pkg->rel);
+
+    len = n_len + 1 + v_len + 1 +
+        r_len + 1 + 3/* src */ + 1/* '.' */ + 3/* "rpm" */ + 1;
+
+    if (len >= size)
+        return NULL;
+    
+    s = buf;
+    /* all pkg members are stored in _buf */
+    memcpy(s, pkg->name, len - 4 - 3); 
+    
+    s += n_len;
+    n_assert(*s == '\0');
+    *s++ = '-';
+
+    s += v_len;
+    n_assert(*s == '\0');
+    *s++ = '-';
+
+    s += r_len;
+    n_assert(*s == '\0');	
+    *s++ = '.';
+
+    memcpy(s, "src", 3);
+    s += 3;
+    *s++ = '.';
+    
+    memcpy(s, "rpm\0", 4);
+    return buf;
+}
+
+char *pkg_srcfilename_s(const struct pkg *pkg) 
+{
+    static char buf[256];
+    return pkg_srcfilename(pkg, buf, sizeof(buf));
 }
 
 char *pkg_filename(const struct pkg *pkg, char *buf, size_t size) 

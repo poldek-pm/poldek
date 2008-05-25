@@ -779,7 +779,7 @@ static void show_changelog(struct cmdctx *cmdctx, struct pkg *pkg, struct pkguin
 {
     const char *log = NULL;
 
-    if ((pkg->flags & PKG_DBPKG) == 0) { /* not installed */
+    if (pkg->itime == 0) { /* install time zero? -> not installed */
         tn_array *installed;
         time_t btime;
 
@@ -833,9 +833,9 @@ static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags, int
 static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkguinf *pkgu,
                              unsigned flags, int term_width) 
 {
-    char            fnbuf[PATH_MAX], *fn;
+    char            fnbuf[PATH_MAX];
     char            unit = 'K';
-    const char      *group, *s;
+    const char      *group, *s, *fn;
     double          pkgsize;
 
     if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_SUMMARY))) {
@@ -939,9 +939,13 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkgu
         cmdctx_printf(cmdctx, "%s\n", pkg_pkgdirpath(pkg));
     }
 
-    if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_SOURCERPM))) {
-        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Source RPM:");
-        cmdctx_printf(cmdctx, "%s\n", s);
+    fn = pkg_srcfilename(pkg, fnbuf, sizeof(fnbuf));
+    if (fn == NULL && pkgu)
+        fn = pkguinf_get(pkgu, PKGUINF_LEGACY_SOURCERPM);
+    
+    if (fn) {
+        cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Source package:");
+        cmdctx_printf(cmdctx, "%s\n", fn);
     }
 
     if ((fn = pkg_filename(pkg, fnbuf, sizeof(fnbuf)))) {

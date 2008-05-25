@@ -45,6 +45,7 @@ static struct pkg_store_tag pkg_store_tag_table[] = {
     { PKG_STORETAG_ARCH,  PKG_STORETAG_SIZENIL, "arch" },
     { PKG_STORETAG_OS,    PKG_STORETAG_SIZENIL, "os"   },
     { PKG_STORETAG_FN,    PKG_STORETAG_SIZENIL, "filename" },
+    { PKG_STORETAG_SRCFN, PKG_STORETAG_SIZENIL, "source package filename" },
     /* groupid, btime, etc */
     { PKG_STORETAG_BINF,  PKG_STORETAG_SIZE8,  "pkg's int32 fields" }, 
     { PKG_STORETAG_CAPS,  PKG_STORETAG_SIZE16, "caps"  },
@@ -91,7 +92,9 @@ const struct pkg_store_tag *pkg_store_lookup_tag(int tag)
 
 int pkg_store_skiptag(int tag, int tag_binsize, tn_stream *st)
 {
-    printf("skiptag %c %c\n", tag, tag_binsize ? tag_binsize:'-');
+    DBGF("skiptag %c %c\n", tag, tag_binsize ? tag_binsize:'-');
+    tag = tag;
+    
     switch (tag_binsize) {
         case PKG_STORETAG_SIZENIL:
             return 1;
@@ -373,6 +376,11 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
 
     if (pkg->fn)
         n_buf_printf(nbuf, "%c: %s\n", PKG_STORETAG_FN, pkg->fn);
+    
+    if (pkg->srcfn)
+        n_buf_printf(nbuf, "%c: %s\n", PKG_STORETAG_SRCFN, pkg->srcfn);
+    else                        /* must store something, PKG_HAS_SRCFN */
+        n_buf_printf(nbuf, "%c: -\n", PKG_STORETAG_SRCFN);
     
     pkg_store_bintag(PKG_STORETAG_BINF, nbuf);
     pkg_store_fields(nbuf, pkg, flags);

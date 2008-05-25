@@ -63,6 +63,7 @@
 #define PKGT_HAS_BTIME    (1 << 11)
 #define PKGT_HAS_GROUPID  (1 << 12)
 #define PKGT_HAS_FN       (1 << 13)
+#define PKGT_HAS_SRCFN    (1 << 14)
 
 struct pkgtags_s {
     unsigned   flags;
@@ -71,6 +72,7 @@ struct pkgtags_s {
     char       arch[64];
     char       os[64];
     char       fn[PATH_MAX];
+    char       srcfn[PATH_MAX];
     uint32_t   size;
     uint32_t   fsize;
     uint32_t   btime;
@@ -226,6 +228,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
             case PKG_STORETAG_ARCH:
             case PKG_STORETAG_OS:
             case PKG_STORETAG_FN:
+            case PKG_STORETAG_SRCFN:
                 if (tag_binsize != PKG_STORETAG_SIZENIL) {
                     logn(LOGERR, errmg_ldtag, fn, ul_offs, tag);
                     nerr++;
@@ -458,6 +461,12 @@ int add2pkgtags(struct pkgtags_s *pkgt, char tag, char *value,
                 pkgt->flags |= PKGT_HAS_FN;
             }
             break;
+
+        case PKG_STORETAG_SRCFN:
+            n_assert((pkgt->flags & PKGT_HAS_SRCFN) == 0);
+            memcpy(pkgt->srcfn, value, sizeof(pkgt->srcfn)-1);
+            pkgt->flags |= PKGT_HAS_SRCFN;
+            break;
             
         default:
             logn(LOGERR, "%s:%lu: unknown tag '%c'", pathname, ul_offs, tag);
@@ -501,6 +510,7 @@ struct pkg *pkg_ldtags(tn_alloc *na, struct pkg *pkg,
     if (pkg == NULL) {
         pkg = pkg_new_ext(na, pkgt->name, epoch, ver, rel, arch, os, 
                           (pkgt->flags & PKGT_HAS_FN) ? pkgt->fn : NULL,
+                          (pkgt->flags & PKGT_HAS_SRCFN) ? pkgt->srcfn : NULL,
                           pkgt->size, pkgt->fsize, pkgt->btime);
     } else {
         /* os && arch should be included in given pkg */
@@ -510,6 +520,7 @@ struct pkg *pkg_ldtags(tn_alloc *na, struct pkg *pkg,
         pkg = pkg_new_ext(na, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
                           pkg_arch(pkg), pkg_os(pkg), 
                           (pkgt->flags & PKGT_HAS_FN) ? pkgt->fn : NULL,
+                          (pkgt->flags & PKGT_HAS_SRCFN) ? pkgt->srcfn : NULL,
                           pkgt->size, pkgt->fsize, pkgt->btime);
         
     }

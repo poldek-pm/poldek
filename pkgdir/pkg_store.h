@@ -11,6 +11,7 @@
 #define PKG_STORETAG_ARCH  'A'
 #define PKG_STORETAG_OS    'O'
 #define PKG_STORETAG_FN    'n'
+#define PKG_STORETAG_SRCFN 's'
 #define PKG_STORETAG_BINF  'f'
 #define PKG_STORETAG_CAPS  'P'
 #define PKG_STORETAG_REQS  'R'

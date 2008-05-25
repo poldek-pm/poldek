@@ -99,6 +99,8 @@ pkg_snprintf_epoch_s
 pkg_snprintf_s
 pkg_snprintf_s0
 pkg_snprintf_s1
+pkg_srcfilename
+pkg_srcfilename_s
 pkg_strbtime
 pkg_strcmp_name_evr
 pkg_stritime
