@@ -80,15 +80,9 @@ int i3_is_pkg_installable(struct poldek_ts *ts, struct pkg *pkg,
         installable = -1;
         
     } else {
-            /* upgrade flag is set for downgrade and reinstall too */
-        if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE) && 
-            pkg_is_scored(pkg, PKG_HELD) && ts->getop(ts, POLDEK_OP_HOLD)) {
-            logn(LOGERR, _("%s: refusing to upgrade held package"),
-                 pkg_id(pkg));
-            installable = 0;
-            
-        } else if (cmprc <= 0 && force == 0 &&
-                   (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE) || cmprc == 0)) {
+        /* upgrade flag is set for downgrade and reinstall too */
+        if (cmprc <= 0 && force == 0 &&
+            (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE) || cmprc == 0)) {
             char *msg = "%s: %s version installed, %s";
             char *eqs = cmprc == 0 ? "equal" : "newer";
             char *skiped =  "skipped";
@@ -109,6 +103,13 @@ int i3_is_pkg_installable(struct poldek_ts *ts, struct pkg *pkg,
             } else if (is_hand_marked && !freshen) { /* msg without "freshen" */
                 msgn(0, msg, pkg_id(pkg), eqs, skiped);
             }
+        }
+        
+        if (installable > 0 && poldek_ts_issetf(ts, POLDEK_TS_UPGRADE) && 
+            ts->getop(ts, POLDEK_OP_HOLD) && pkg_is_scored(pkg, PKG_HELD)) {
+            logn(LOGERR, _("%s: refusing to upgrade held package"),
+                 pkg_id(pkg));
+            installable = 0;
         }
     }
 
