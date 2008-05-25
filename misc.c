@@ -42,6 +42,7 @@
 #include <pwd.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <argp.h>
@@ -839,4 +840,30 @@ int poldek_util_copy_file(const char *src, const char *dst)
 
     p_st_destroy(&pst);
     return ec == 0;
+}
+
+void *timethis_begin(void)
+{
+    struct timeval *tv;
+
+    tv = n_malloc(sizeof(*tv));
+    gettimeofday(tv, NULL);
+    return tv;
+}
+
+void timethis_end(void *tvp, const char *prefix)
+{
+    struct timeval tv, *tv0 = (struct timeval *)tvp;
+
+    gettimeofday(&tv, NULL);
+
+    tv.tv_sec -= tv0->tv_sec;
+    tv.tv_usec -= tv0->tv_usec;
+    if (tv.tv_usec < 0) {
+        tv.tv_sec--;
+        tv.tv_usec = 1000000 + tv.tv_usec;
+    }
+
+    msgn(2, "time [%s] %ld.%ld\n", prefix, tv.tv_sec, tv.tv_usec);
+    free(tvp);
 }
