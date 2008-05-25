@@ -194,13 +194,13 @@ int pdir_digest_read(struct pdir_digest *pdg, struct vfile *vfmd)
 
 
 static
-int hdr_digest(tn_stream *st, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
+int hdr_digest(tn_stream *st, unsigned char *md, unsigned *md_size, EVP_MD_CTX *_ctx)
 {
     int             nread, len, endvhdr_found = 0;
     unsigned char   buf[256];
     char            line[4096];
     EVP_MD_CTX      ctx;
-    int             n;
+    unsigned        n;
 
     
     n_assert(md_size && *md_size);
