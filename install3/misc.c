@@ -148,7 +148,7 @@ int satisfiability_score(const struct pkg *marker, const struct pkg *pkg)
 /* scores must be the same size of n_array_size(pkgs) */
 static void add_arch_scores(int *scores, const tn_array *pkgs)
 {
-    int i, min_score = INT_MAX, nscore;
+    int i, min_score = INT_MAX;
     int *arch_scores;
 
     arch_scores = alloca(n_array_size(pkgs) * sizeof(*arch_scores));
