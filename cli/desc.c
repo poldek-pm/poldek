@@ -752,7 +752,6 @@ static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt, int 
 static
 int is_upgradeable(struct pkg *pkg, tn_array *installed_pkgs, time_t *built)
 {
-    struct pkg *p = NULL;
     int n;
 
     n = n_array_bsearch_idx_ex(installed_pkgs, pkg, (tn_fn_cmp)pkg_ncmp_name);
@@ -760,11 +759,11 @@ int is_upgradeable(struct pkg *pkg, tn_array *installed_pkgs, time_t *built)
         return 0;
 
     while (n < n_array_size(installed_pkgs)) {
-        p = n_array_nth(installed_pkgs, n++);
+        struct pkg *p = n_array_nth(installed_pkgs, n++);
 
         if (pkg_is_kind_of(p, pkg) && pkg_cmp_evr(pkg, p) > 0) {
             *built = p->btime;
-            return 0;
+            return 1;
         }
 
         if (*p->name != *pkg->name)
