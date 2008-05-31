@@ -450,8 +450,9 @@ struct pkgroup_idx *pkgroup_idx_restore(tn_buf_it *it, unsigned flags)
 
 int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr) 
 {
-    char               **langs, **groups;
-    int                i, ngroups = 0, nlangs = 0;
+    tn_array           *langs;
+    char               **groups;
+    int                i, ngroups = 0;
     struct pkgroup     *gr = NULL;
     Header             h;
 
@@ -460,26 +461,18 @@ int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr)
         return 0;
 
     if (!pm_rpmhdr_get_raw_entry(h, RPMTAG_GROUP, (void*)&groups, &ngroups)) {
-        free(langs);
+        n_array_free(langs);
         return 0;
     }
-            
 
-    i = 0;
-    while (langs[i++] != NULL)
-        ;
-    
-    nlangs = i;
+    n_assert(n_array_size(langs) >= ngroups);
 
-    n_assert(nlangs >= ngroups);
-
-    DBGF("ngroups %d, %d, %d\n", ngroups, nlangs, rc);
+    DBGF("ngroups %d, %d, %d\n", ngroups, n_array_size(langs), rc);
     for (i=0; i < ngroups; i++) {
+        const char *lang = n_array_nth(langs, i);
         DBGF("   gr[%d of %d] %s\n", i, ngroups, groups[i]);
-        if (langs[i] == NULL)
-            break;
         
-        if (strcmp(langs[i], "C") == 0) {
+        if (n_str_eq(lang, "C")) {
             if ((gr = n_hash_get(idx->ht, groups[i])) == NULL) {
                 gr = pkgroup_new(n_array_size(idx->arr) + 1, groups[i]);
                 n_array_push(idx->arr, gr);
@@ -491,18 +484,17 @@ int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr)
 
     if (gr != NULL) {
         for (i=0; i < ngroups; i++) {
-            if (langs[i] == NULL) 
-                break;
+            const char *lang = n_array_nth(langs, i);
             
-            if (strcmp(langs[i], "C") == 0 || *groups[i] == '\0')
+            if (n_str_eq(lang, "C") || *groups[i] == '\0')
                 continue;
             
-            pkgroup_add(gr, langs[i], groups[i]);
+            pkgroup_add(gr, lang, groups[i]);
         }
     }
 
     free(groups);
-    free(langs);
+    n_array_free(langs);
 
     if (gr)
         DBGF("gr_add %d %s\n", gr->id, gr->name);

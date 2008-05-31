@@ -134,7 +134,7 @@ int pm_rpmhdr_nevr(void *h, const char **name, int32_t *epoch,
                    const char **version, const char **release,
                    const char **arch, int *color);
 
-char **pm_rpmhdr_langs(Header h);
+tn_array *pm_rpmhdr_langs(Header h);
 
 int pm_rpmhdr_get_entry(Header h, int32_t tag, void *buf, int32_t *type, int32_t *cnt);
 int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt);

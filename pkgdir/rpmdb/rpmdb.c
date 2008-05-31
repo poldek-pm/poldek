@@ -144,7 +144,7 @@ static
 int load_package(unsigned int recno, void *header, struct pkgdir *pkgdir) 
 {
     struct pkg  *pkg;
-    char        **langs;
+    tn_array    *langs;
         
     pkg = pm_rpm_ldhdr(pkgdir->na, header, NULL, 0, PKG_LDCAPREQS);
     
@@ -162,10 +162,10 @@ int load_package(unsigned int recno, void *header, struct pkgdir *pkgdir)
     n_array_push(pkgdir->pkgs, pkg);
 
     if ((langs = pm_rpmhdr_langs(header))) {
-        int i = 0;
-        while (langs[i])
-            pkgdir__update_avlangs(pkgdir, langs[i++], 1);
-        free(langs);
+        int i;
+        for (i=0; i < n_array_size(langs); i++)
+            pkgdir__update_avlangs(pkgdir, n_array_nth(langs, i), 1);
+        n_array_free(langs);
     }
     
     return 1;

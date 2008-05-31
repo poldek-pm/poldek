@@ -204,28 +204,28 @@ Header pm_rpmhdr_readfdt(void *fdt)
     return h;
 }
 
-char **pm_rpmhdr_langs(Header h)
+tn_array *pm_rpmhdr_langs(Header h)
 {
+    tn_array *alangs;
     char **langs;
-    
+    int t, n = 0, i;
+
 #ifndef HAVE_RPMPKGREAD         /* rpm < 5 */
     langs = headerGetLangs(h);
+    while (langs[n])
+        n++;
+    t = t;
+    
 #else
-    int cnt, type, i = 0;
-    char **tmp;
-    
-    pm_rpmhdr_get_entry(h, RPMTAG_HEADERI18NTABLE, &langs, &type, &cnt);
-    
-    /* terminate list by NULL */
-    tmp = n_malloc(sizeof(*tmp) * (cnt + 1));
-    for (i=0; i < cnt ; i++)
-        tmp[i] = n_strdup(langs[i]); /* XXX, memleak, TOFIX */
-    tmp[i] = NULL;
-    free(langs);
-    langs = tmp;
-    
+    pm_rpmhdr_get_entry(h, RPMTAG_HEADERI18NTABLE, &langs, &t, &n);
 #endif
-    return langs;
+
+    alangs = n_array_new(n, free, (tn_fn_cmp)strcmp);
+    for (i=0; i < n ; i++)
+        n_array_push(alangs, n_strdup(langs[i]));
+    
+    free(langs);
+    return alangs;
 }
 
 

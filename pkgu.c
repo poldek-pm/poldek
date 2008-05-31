@@ -641,9 +641,10 @@ char *load_changelog_from_rpmhdr(tn_alloc *na, void *hdr)
 
 struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
 {
-    char               **langs, **summs, **descrs;
+    tn_array           *langs;
+    char               **summs, **descrs;
     int                nsumms, ndescrs;
-    int                i, n, nlangs = 0;
+    int                i, n;
     struct pkguinf     *pkgu;
     Header             h = hdr;
     
@@ -651,7 +652,7 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
     pkgu->_ht = n_hash_new(3, NULL);
     
     if ((langs = pm_rpmhdr_langs(h))) {
-        tn_array *avlangs, *sl_langs;
+        tn_array *sl_langs = NULL;
         char *sl_lang;
 
         pm_rpmhdr_get_raw_entry(h, RPMTAG_SUMMARY, (void*)&summs, &nsumms);
@@ -661,24 +662,22 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
         if (n > ndescrs)
             n = ndescrs;
 
-        avlangs = n_array_new(4, free, (tn_fn_cmp)strcmp);
         pkgu->_langs_rpmhdr = n_array_new(4, free, NULL);
-        
         for (i=0; i < n; i++) {
             struct pkguinf_i18n *inf;
+            const char *lang;
             
-            if (langs[i] == NULL)
+            if (n_array_size(langs) < i)
                 break;
             
-            n_array_push(avlangs, n_strdup(langs[i]));
-            n_array_push(pkgu->_langs_rpmhdr, n_strdup(langs[i]));
+            lang = n_array_nth(langs, i);
+            n_array_push(pkgu->_langs_rpmhdr, n_strdup(lang));
             
             inf = pkguinf_i18n_new(pkgu->_na, summs[i], descrs[i]);
-            n_hash_insert(pkgu->_ht, langs[i], inf);
+            n_hash_insert(pkgu->_ht, lang, inf);
         }
-        nlangs = n;
-
-        sl_langs = lc_lang_select(avlangs, lc_messages_lang());
+        
+        sl_langs = lc_lang_select(langs, lc_messages_lang());
         if (sl_langs == NULL)
             sl_lang = "C";
         else
@@ -693,11 +692,9 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
             pkgu_set_recodable(pkgu, PKGUINF_DESCRIPTION, inf->description, sl_lang);
         }
 
-        n_array_free(avlangs);
-        if (sl_langs)
-            n_array_free(sl_langs);
+        n_array_free(langs);
+        n_array_cfree(&sl_langs);
         
-        free(langs);
         free(summs);
         free(descrs);
     }

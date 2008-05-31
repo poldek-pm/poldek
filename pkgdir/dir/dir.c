@@ -250,7 +250,7 @@ int load_dir(struct pkgdir *pkgdir,
         }
 
         if (pkg == NULL) {  /* not exists in previous index */
-            char **langs;
+            tn_array *langs;
             
             nnew++;
             n_assert(h);        /* loaded in previous if block */
@@ -261,10 +261,10 @@ int load_dir(struct pkgdir *pkgdir,
             pkg->load_pkguinf = load_pkguinf;
 
             if ((langs = pm_rpmhdr_langs(h))) {
-                int i = 0;
-                while (langs[i])
-                    pkgdir__update_avlangs(pkgdir, langs[i++], 1);
-                free(langs);
+                int i;
+                for (i=0; i < n_array_size(langs); i++)
+                    pkgdir__update_avlangs(pkgdir, n_array_nth(langs, i), 1);
+                n_array_free(langs);
             }
             pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
             
