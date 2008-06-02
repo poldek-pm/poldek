@@ -676,6 +676,14 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
             inf = pkguinf_i18n_new(pkgu->_na, summs[i], descrs[i]);
             n_hash_insert(pkgu->_ht, lang, inf);
         }
+
+        /* langs which weren't added to the pkgu->_ht have to be removed,
+           otherwise lc_lang_select() may return value which doesn't exist
+           in the hash table */
+        if (n < n_array_size (langs)) {
+    	    for (i = n_array_size(langs); i > n; i--)
+                langs = n_array_remove_nth(langs, i - 1);
+        }
         
         sl_langs = lc_lang_select(langs, lc_messages_lang());
         if (sl_langs == NULL)
