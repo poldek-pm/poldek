@@ -211,7 +211,9 @@ tn_array *pm_rpmhdr_langs(Header h)
     int t, n = 0, i;
 
 #ifndef HAVE_RPMPKGREAD         /* rpm < 5 */
-    langs = headerGetLangs(h);
+    if ((langs = headerGetLangs(h)) == NULL)
+	return NULL;
+
     while (langs[n])
         n++;
     t = t;
