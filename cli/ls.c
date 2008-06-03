@@ -204,13 +204,12 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
 static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
                                 tn_array *evrs)
 {
-    int        found, compare_ver = 0, i, lls_mode;
+    int        found, compare_ver = 0, i;
     tn_array   *ls_ents2, *cmpto_pkgs = NULL, *srcpkgs = NULL;
     char       *cmpto_path;
 
     n_assert(cmdctx->_flags & OPT_LS_UPGRADEABLE);
-    
-    lls_mode = cmdctx->_flags & OPT_LS_UPGRADEABLE_SEC;
+
     compare_ver = cmdctx->_flags & OPT_LS_UPGRADEABLE_VER;
     
     cmpto_path = POCLIDEK_INSTALLEDDIR;
@@ -251,36 +250,38 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
         if (!found || cmprc >= 0)
             continue;
 
-        if (lls_mode && (spkg = pkg_srcfilename_s(rpkg))) { 
-            if (n_array_bsearch(srcpkgs, spkg)) /* parent included, so me too */
-                found = 1;
-            
-        } else if (lls_mode) {
-            struct pkg *ipkg, *upkg;
-            struct pkguinf *inf;
-            
-            ipkg = rpkg;
-            upkg = ent->pkg_dent_pkg;
-            if (cmdctx->_flags & OPT_LS_INSTALLED) {
-                upkg = rpkg;
-                ipkg = ent->pkg_dent_pkg;
-            }
+        if (cmdctx->_flags & OPT_LS_UPGRADEABLE_SEC) {
+            spkg = pkg_srcfilename_s(rpkg);
 
-            found = 0;
-            if ((inf = pkg_uinf(upkg)) == NULL)
-                continue;
-            
-            if (pkguinf_changelog_with_security_fixes(inf, ipkg->btime)) {
-                char *sp;
-                if ((sp = pkg_srcfilename_s(rpkg))) {
-                    n_array_push(srcpkgs, n_strdup(sp));
-                    n_array_sort(srcpkgs);
-                    DBGF_F("%s\n", sp);
-                }
+            if (spkg && n_array_bsearch(srcpkgs, spkg)) { /* parent included, so me too */
                 found = 1;
-            }
+            } else {
+                struct pkg *ipkg, *upkg;
+                struct pkguinf *inf;
+
+                ipkg = rpkg;
+                upkg = ent->pkg_dent_pkg;
+                if (cmdctx->_flags & OPT_LS_INSTALLED) {
+                    upkg = rpkg;
+                    ipkg = ent->pkg_dent_pkg;
+                }
+
+                found = 0;
+                if ((inf = pkg_uinf(upkg)) == NULL)
+                    continue;
             
-            pkguinf_free(inf);
+                if (pkguinf_changelog_with_security_fixes(inf, ipkg->btime)) {
+                    char *sp;
+                    if ((sp = pkg_srcfilename_s(rpkg))) {
+                        n_array_push(srcpkgs, n_strdup(sp));
+                        n_array_sort(srcpkgs);
+                        DBGF_F("%s\n", sp);
+                    }
+                    found = 1;
+                }
+            
+                pkguinf_free(inf);
+            }
         }
         
         if (!found)
