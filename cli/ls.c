@@ -233,7 +233,7 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
     for (i=0; i < n_array_size(ls_ents); i++) {
         struct pkg_dent  *ent;
         struct pkg       *rpkg = NULL;
-        char             evr[128], *spkg;
+        char             evr[128];
         int              cmprc = 0;
         
         ent = n_array_nth(ls_ents, i);
@@ -251,10 +251,11 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
             continue;
 
         if (cmdctx->_flags & OPT_LS_UPGRADEABLE_SEC) {
-            spkg = pkg_srcfilename_s(rpkg);
+            const char *spkg = pkg_srcfilename_s(rpkg);
 
             if (spkg && n_array_bsearch(srcpkgs, spkg)) { /* parent included, so me too */
                 found = 1;
+
             } else {
                 struct pkg *ipkg, *upkg;
                 struct pkguinf *inf;
@@ -275,7 +276,7 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
                     if ((sp = pkg_srcfilename_s(rpkg))) {
                         n_array_push(srcpkgs, n_strdup(sp));
                         n_array_sort(srcpkgs);
-                        DBGF_F("%s\n", sp);
+                        DBGF("%s\n", sp);
                     }
                     found = 1;
                 }
