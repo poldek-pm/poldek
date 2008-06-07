@@ -179,6 +179,6 @@ int i3_is_user_choosable_equiv(struct poldek_ts *ts);
 
 struct pkg *i3_choose_equiv(struct poldek_ts *ts,
                             const struct pkg *pkg, const struct capreq *cap,
-                            const tn_array *pkgs, struct pkg *hint);
+                            tn_array *pkgs, struct pkg *hint);
 
 #endif
