@@ -61,6 +61,9 @@ static void rollback_package(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
 {
     int i;
 
+    if (i3_is_hand_marked(ictx, i3pkg->pkg))
+        return;
+
     tracef(indent, "- rollbacking %s", pkg_id(i3pkg->pkg));
     iset_remove(ictx->inset, i3pkg->pkg);
     i3_forget_error(ictx, i3pkg->pkg);
