@@ -15,9 +15,10 @@ def lib_init():
     poldekmod.poldeklib_init()
 
 class n_array_proxy:
-    def __init__(self, arr, itemClass):
+    def __init__(self, arr, itemClass, link_fn = None):
         self._arr = arr
         self._itemClass = itemClass
+        self._link_fn = link_fn
 
     def __nonzero__(self):
         if self._arr: return True
@@ -42,7 +43,11 @@ class n_array_proxy:
         
         r = self._arr[i]
         if r: r = self._itemClass(r)
-        return r
+        
+        if self._link_fn:
+            return self._link_fn(r)
+        else:
+            return r
 
     def __str__(self):
         return '[' + self.join(', ') + ']'
@@ -54,9 +59,9 @@ class n_array_proxy:
         if self._arr is None: return ''
         return string.join(map(str, map(self._itemClass, self._arr)), sep)
 
-def n_array_proxy_func(prefix, func, classnam):
-    return eval('lambda self, *args: n_array_proxy(poldekmod.%s%s(self, *args), %s)' %
-                (prefix, func, classnam));
+def n_array_proxy_func(prefix, func, classnam, link_fn = None):
+    return eval('lambda self, *args: n_array_proxy(poldekmod.%s%s(self, *args), %s, %s)' %
+                (prefix, func, classnam, link_fn));
 
 def n_array_proxy_method(prefix, func, classnam):
     return eval('lambda self, *args: n_array_proxy(poldekmod.%s%s(self, *args), %s)' %
@@ -205,7 +210,7 @@ setattr(poldek_ts, 'summary', n_array_proxy_func('poldek_ts_', 'get_summary', 'p
 setattr(poldek_ts, 'type', property(lambda self: self.get_type()))
 
 setattr(poclidek_rcmd, 'packages',
-        property(n_array_proxy_func('poclidek_rcmd_', 'get_packages', 'pkg')))
+        property(n_array_proxy_func('poclidek_rcmd_', 'get_packages', 'pkg', 'pkg.link')))
 
 setattr(poclidek_rcmd, 'output', property(lambda self: self.to_s()))
 
