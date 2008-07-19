@@ -610,6 +610,71 @@ const char *lc_messages_lang(void)
     return poldek_util_lc_lang("LC_MESSAGES");
 }
 
+/*
+ * cut_country_code:
+ *
+ * Usually lang looks like:
+ *   ll[_CC][.EEEE][@dddd]
+ * where:
+ *   ll      ISO language code
+ *   CC      (optional) ISO country code
+ *   EE      (optional) encoding
+ *   dd      (optional) dialect
+ *
+ * Returns: lang without country code (ll[.EEEE][@dddd]) or NULL when it's not
+ *          present in lang string. Returned value must be released.
+ */
+static char *cut_country_code (const char *lang)
+{
+    char *p, *q, *newlang;
+
+    if ((q = strchr(lang, '_')) == NULL)
+	return NULL;
+
+    /* newlang is always shorter than lang */
+    newlang = malloc(strlen(lang));
+    
+    p = n_strncpy(newlang, lang, q - lang + 1);
+    
+    if ((q = strchr(lang, '.')))
+	n_strncpy(p, q, strlen(q) + 1);
+    else if ((q = strchr(lang, '@')))
+	n_strncpy(p, q, strlen(q) + 1);
+    
+    return newlang;
+}
+
+/*
+ * lang_match_avlangs:
+ *
+ * Checks whether lang (or lang without country code) matches value from avlangs.
+ * If so, it will be added to the r_langs and if it's equal to "C", has_C will
+ * be set to 1. 
+ */
+static inline void lang_match_avlangs(tn_array *avlangs, tn_array *r_langs,
+                                      const char *lang, int *has_C)
+{
+    char *cut = NULL;
+    
+    /* first try */
+    if (n_array_bsearch(avlangs, lang)) {
+	if (strcmp(lang, "C") == 0)
+	    *has_C = 1;
+	
+	n_array_push(r_langs, n_strdup(lang));
+    }
+    
+    /* second try, without country code */
+    if ((cut = cut_country_code(lang))) {
+	if (n_array_bsearch(avlangs, cut)) {
+	    if (strcmp(cut, "C") == 0)
+		*has_C = 1;
+	    
+	    n_array_push(r_langs, cut);
+	}
+    }
+}
+
 tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
 {
     tn_array    *r_langs;
@@ -626,16 +691,11 @@ tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
     p = langs;
     
     while (*p) {
-        char   *l, *q, *sep = "@._";
+        char   *l, *q, *sep = "@.";
         int    len;
 
-        if (n_array_bsearch(avlangs, *p)) {
-            if (strcmp(*p, "C") == 0)
-                has_C = 1;
-            n_array_push(r_langs, n_strdup(*p));
-            p++;
-            continue;
-        }
+	/* try a complete match */
+	lang_match_avlangs(avlangs, r_langs, *p, &has_C);
         
         len = strlen(*p) + 1;
         l = alloca(len + 1);
@@ -644,13 +704,8 @@ tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
         while (*sep) {
             if ((q = strchr(l, *sep))) {
                 *q = '\0';
-                
-                if (n_array_bsearch(avlangs, l)) {
-                    if (strcmp(*p, "C") == 0)
-                        has_C = 1;
-                    n_array_push(r_langs, n_strdup(l));
-                    continue;
-                }
+            
+                lang_match_avlangs(avlangs, r_langs, l, &has_C);
             }
             sep++;
         }
