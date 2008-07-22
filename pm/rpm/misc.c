@@ -21,9 +21,15 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <string.h>
+#include <time.h> /* rpmts.h with defined _RPMTS_INTERNAL needs ctime() */
 
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
+
+#include <rpm/rpmlib.h>
+#include <rpm/rpmte.h>
+#define _RPMTS_INTERNAL
+#include <rpm/rpmts.h>
 
 #include "capreq.h"
 #include "i18n.h"
@@ -214,6 +220,90 @@ static int rpmioaccess_satisfies(const struct capreq *req)
     return rc;
 }
 
+static int rpmdiskspace_satisfies(const struct capreq *req)
+{
+    const char *name = NULL;
+    char *s, *e;
+    int rc = 0;
+    
+    name = capreq_name(req);
+        
+    if (strncmp(name, "diskspace(", sizeof("diskspace(")-1) == 0 &&
+	(e = strchr(name, ')')) != NULL) {
+	const char **fs = NULL;
+	char path[PATH_MAX];
+	rpmts ts;
+	rpmDiskSpaceInfo dsi = NULL;
+	int nfs = 0, pathlen, longest = 0;
+	
+	/* extract path */
+	s = strchr(name, '(');
+	n_strncpy(path, s+1, e-s);
+	pathlen = strlen(path);
+	
+	ts = rpmtsCreate();
+	
+	/* code copied from lib/depends.c */
+	rpmtsInitDSI(ts);
+	fs = ts->filesystems;
+	nfs = ts->filesystemCount;
+	
+	if (fs) {
+	    int i;
+	    
+	    for (i = 0; i < nfs; i++) {
+		int fslen = strlen(fs[i]);
+		
+		if (fslen > pathlen)
+		    continue;
+		
+		if (strncmp(fs[i], path, fslen))
+		    continue;
+		
+		if (fslen > 1 && path[fslen] != '/' && path[fslen] != '\0')
+		    continue;
+		
+		if (fslen < longest)
+		    continue;
+		
+		longest = fslen;
+		dsi = ts->dsi + i;
+	    }
+	    
+	    if (dsi) {
+		char *end = NULL;
+		long long needed = strtoll(capreq_ver(req), &end, 0);		
+		int x;
+		
+		if (end && *end) {
+		    if (strchr("Gg", end[0]) && strchr("Bb", end[1]) && !end[2])
+			needed *= 1024 * 1024 * 1024;
+		    if (strchr("Mm", end[0]) && strchr("Bb", end[1]) && !end[2])
+			needed *= 1024 * 1024;
+		    if (strchr("Kk", end[0]) && strchr("Bb", end[1]) && !end[2])
+			needed *= 1024;
+		} else {
+		    /* assume Mb if no units given */
+		    needed *= 1024 * 1024;
+		}
+
+		needed = BLOCK_ROUND(needed, dsi->f_bsize);
+		x = (dsi->f_bavail - needed);
+
+		if ((req->cr_relflags & REL_LT) && x < 0)
+		    rc = 1;
+		else if ((req->cr_relflags & REL_GT) && x > 0)
+		    rc = 1;
+		else if ((req->cr_relflags & REL_EQ) && x == 0)
+		    rc = 1;
+	    }
+	}	
+	rpmtsFree(ts);
+    }
+    
+    return rc;
+}
+
 int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
 {
     struct pm_rpm *pm = pm_rpm;
@@ -225,6 +315,9 @@ int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
 
     if (rpmioaccess_satisfies(req))
         return 1;
+
+    if (rpmdiskspace_satisfies(req))
+	return 1;
 
     if (pm->caps == NULL)
         if ((pm->caps = load_internal_caps(pm_rpm)) == NULL)
