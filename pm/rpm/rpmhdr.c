@@ -204,9 +204,14 @@ Header pm_rpmhdr_readfdt(void *fdt)
     return h;
 }
 
+/*
+ * pm_rpmhdr_langs:
+ *
+ * Returns NULL when no langs found.
+ */
 tn_array *pm_rpmhdr_langs(Header h)
 {
-    tn_array *alangs;
+    tn_array *alangs = NULL;
     char **langs;
     int t, n = 0, i;
 
@@ -222,9 +227,12 @@ tn_array *pm_rpmhdr_langs(Header h)
     pm_rpmhdr_get_entry(h, RPMTAG_HEADERI18NTABLE, &langs, &t, &n);
 #endif
 
-    alangs = n_array_new(n, free, (tn_fn_cmp)strcmp);
-    for (i=0; i < n ; i++)
-        n_array_push(alangs, n_strdup(langs[i]));
+    /* do it when langs are available */
+    if (n > 0) {
+	alangs = n_array_new(n, free, (tn_fn_cmp)strcmp);
+	for (i=0; i < n ; i++)
+    	    n_array_push(alangs, n_strdup(langs[i]));
+    }
     
     free(langs);
     return alangs;
