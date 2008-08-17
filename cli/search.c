@@ -69,25 +69,27 @@ struct pattern {
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int search(struct cmdctx *cmdctx);
 
-#define OPT_PATTERN_PCRE   (1 << 10)
+#define OPT_PATTERN_PCRE     (1 << 10)
 
-#define OPT_SEARCH_CAP     (1 << 0)
-#define OPT_SEARCH_REQ     (1 << 1)
-#define OPT_SEARCH_CNFL    (1 << 2)
-#define OPT_SEARCH_OBSL    (1 << 3)
-#define OPT_SEARCH_SUMM    (1 << 4)
-#define OPT_SEARCH_DESC    (1 << 5)
-#define OPT_SEARCH_FL      (1 << 6)
-#define OPT_SEARCH_GROUP   (1 << 7)
+#define OPT_SEARCH_CAP       (1 << 0)
+#define OPT_SEARCH_REQ       (1 << 1)
+#define OPT_SEARCH_CNFL      (1 << 2)
+#define OPT_SEARCH_OBSL      (1 << 3)
+#define OPT_SEARCH_SUMM      (1 << 4)
+#define OPT_SEARCH_DESC      (1 << 5)
+#define OPT_SEARCH_FL        (1 << 6)
+#define OPT_SEARCH_GROUP     (1 << 7)
+#define OPT_SEARCH_CHANGELOG (1 << 8)
 
 #define OPT_SEARCH_ALL     (OPT_SEARCH_CAP  | OPT_SEARCH_REQ | OPT_SEARCH_CNFL |  \
                             OPT_SEARCH_OBSL | OPT_SEARCH_SUMM | OPT_SEARCH_DESC | \
-                            OPT_SEARCH_FL | OPT_SEARCH_GROUP)
+                            OPT_SEARCH_FL | OPT_SEARCH_GROUP | OPT_SEARCH_CHANGELOG)
 
 #define OPT_SEARCH_DEFAULT (OPT_SEARCH_CAP | OPT_SEARCH_SUMM | OPT_SEARCH_DESC)
 
 /* options which requires packages.dir processing */
-#define OPT_SEARCH_HDD     (OPT_SEARCH_SUMM | OPT_SEARCH_DESC | OPT_SEARCH_FL)
+#define OPT_SEARCH_HDD     (OPT_SEARCH_SUMM | OPT_SEARCH_DESC | OPT_SEARCH_FL | \
+			    OPT_SEARCH_CHANGELOG)
 
 
 #define OPT_NO_SEARCHSW    OPT_PATTERN_PCRE
@@ -102,6 +104,7 @@ static struct argp_option options[] = {
     { "group",     'g', 0, 0, N_("Search groups"), 1 }, 
     { "files",     'f', 0, 0, N_("Search file list"), 1},
     { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},
+    { "changelog", 'L', 0, 0, N_("Search changelogs"), 1},
     { "all",       'a', 0, 0,
       N_("Search all described fields, the defaults are: -sd"), 1
     },
@@ -248,6 +251,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'd':
             cmdctx->_flags |= OPT_SEARCH_DESC;
             break;
+        
+        case 'L':
+    	    cmdctx->_flags |= OPT_SEARCH_CHANGELOG;
+    	    break;
 
         case OPT_PATTERN_PCRE:
             cmdctx->_flags |= OPT_PATTERN_PCRE;
@@ -507,7 +514,7 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
         if ((match = search_pkg_files(pkg, pt)))
             goto l_end;
 
-    if (flags & (OPT_SEARCH_SUMM | OPT_SEARCH_DESC)) {
+    if (flags & (OPT_SEARCH_SUMM | OPT_SEARCH_DESC | OPT_SEARCH_CHANGELOG)) {
         struct pkguinf *pkgu;
         const char *s;
         
@@ -531,6 +538,12 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
                 if (s)
                     match = pattern_match(pt, s, strlen(s));
             }
+
+	    if (!match && ((flags & OPT_SEARCH_CHANGELOG))) {
+		s = pkguinf_get(pkgu, PKGUINF_CHANGELOG);
+		if (s)
+		    match = pattern_match(pt, s, strlen(s));
+	    }
 
             pkguinf_free(pkgu);
         }
