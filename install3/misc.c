@@ -341,7 +341,7 @@ int i3_find_req(int indent, struct i3ctx *ictx,
                 const struct pkg *pkg, const struct capreq *req,
                 struct pkg **best_pkg, tn_array *candidates)
 {
-    tn_array *suspkgs = NULL, *tmpkgs;;
+    tn_array *suspkgs = NULL, *tmpkgs;
     int found = 0;
 
     *best_pkg = NULL;
@@ -355,23 +355,27 @@ int i3_find_req(int indent, struct i3ctx *ictx,
 
     n_assert(n_array_size(suspkgs) > 0);
     
-    /* remove marked for removal items from suspected packages */
-    tmpkgs = n_array_clone(suspkgs);
-    while (n_array_size(suspkgs)) {
-        struct pkg *suspkg = n_array_shift(suspkgs);
+    /* remove marked for removal items from suspected packages, but do it only
+       when POLDEK_TS_REINSTALL is not set, otherwise removing and installing
+       the same package is possible */
+    if (!poldek_ts_issetf(ictx->ts, POLDEK_TS_REINSTALL)) {
+        tmpkgs = n_array_clone(suspkgs);
+        while (n_array_size(suspkgs)) {
+            struct pkg *suspkg = n_array_shift(suspkgs);
 
-        /* possible when the same package exists in both available
-           and already installed set */
-        if (i3_is_marked_for_removal(ictx, suspkg)) {
-            pkg_free(suspkg);
-            continue;
-        }
+            /* possible when the same package exists in both available
+               and already installed set */
+            if (i3_is_marked_for_removal(ictx, suspkg)) {
+                pkg_free(suspkg);
+                continue;
+            }
         
-        n_array_push(tmpkgs, suspkg);
-    }
+            n_array_push(tmpkgs, suspkg);
+        }
     
-    n_array_free(suspkgs);
-    suspkgs = tmpkgs;
+        n_array_free(suspkgs);
+        suspkgs = tmpkgs;
+    }
 
     //trace(indent, "after removed rmmarked -> %d package(s)",
     //      n_array_size(suspkgs));
