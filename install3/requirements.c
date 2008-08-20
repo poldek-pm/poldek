@@ -33,7 +33,7 @@ tn_array *filter_out_olders(struct i3ctx *ictx, tn_array *pkgs,
         if (cmprc > 0 && poldek_ts_issetf(ictx->ts, POLDEK_TS_DOWNGRADE))
             continue;
             
-        if (cmprc < 0)
+        if (cmprc < 0 && !poldek_ts_issetf(ictx->ts, POLDEK_TS_DOWNGRADE))
             continue;
         
         n_array_push(tmp, pkg_link(p));
