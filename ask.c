@@ -163,7 +163,7 @@ static int term_choose_suggests(void *foo, const struct poldek_ts *ts,
     }
 
     n_snprintf(message, sizeof(message),
-               "Package %s suggests installation of:", pkg_id(pkg));
+               _("Package %s suggests installation of:"), pkg_id(pkg));
 
     question = ngettext("Try to install it?", "Try to install them?",
                         n_array_size(caps));    
