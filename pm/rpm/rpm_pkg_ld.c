@@ -481,7 +481,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
     struct pkg *pkg;
     uint32_t   epoch, size, btime, itime;
     uint32_t   *psize = NULL, *pbtime = NULL, *pitime = NULL;
-    const char *name, *version, *release, *arch = NULL;
+    const char *name = NULL, *version = NULL, *release = NULL, *arch = NULL;
     char       osbuf[128], *os = osbuf;
     char       srcrpmbuf[128], *srcrpm = srcrpmbuf;
 
