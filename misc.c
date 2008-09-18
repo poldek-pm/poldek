@@ -671,6 +671,8 @@ static inline void lang_match_avlangs(tn_array *avlangs, tn_array *r_langs,
 		*has_C = 1;
 	    
 	    n_array_push(r_langs, cut);
+	} else {
+	    free(cut);
 	}
     }
 }
