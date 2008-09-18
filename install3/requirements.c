@@ -662,18 +662,30 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
     choices = n_array_clone(suggests);
     n_array_ctl_set_freefn(choices, NULL); /* 'weak' ref */
     
-    if (!poldek__choose_suggests(ictx->ts, pkg, suggests, choices, 0)) {
-        n_array_free(choices);
-        n_array_cfree(&suggests);
-        
-    } else {
-        if (!n_array_size(choices))
-            n_array_free(choices);
-        
-        else {
-            n_array_free(suggests);
-            suggests = choices;
-        }
+    switch (poldek__choose_suggests(ictx->ts, pkg, suggests, choices, 0)) {
+	/* do not install any of suggested packages */
+	case 0:
+	    n_array_free(choices);
+	    n_array_cfree(&suggests);
+	    break;
+	/* TOFIX: why 'Q' means install all? */
+	case -1:
+	/* install all suggested packages */
+	case 1:
+	    n_array_free(choices);
+	    break;
+	/* select some of */
+	case 2:
+	    if (n_array_size(choices) == 0) {
+		n_array_free(choices);
+		n_array_cfree(&suggests);
+	    } else {
+		n_array_free(suggests);
+		suggests = choices;
+	    }
+	    break;
+	default:
+	    n_assert(0);
     }
     
     return suggests;
