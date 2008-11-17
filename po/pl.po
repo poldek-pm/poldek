@@ -435,7 +435,7 @@ msgstr "Uczyñ znikniête pakiety widocznymi. Wy³±cza ustawienia --ignore."
 
 #: cli/install.c:188
 msgid "Remove package duplicates from available package list"
-msgstr "Usiñ duplikaty pakietów z listy dostêpnych pakietów"
+msgstr "Usuñ duplikaty pakietów z listy dostêpnych pakietów"
 
 #: cli/install.c:194
 msgid "Print installation summary in parseable form"
