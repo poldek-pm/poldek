@@ -626,7 +626,7 @@ const char *lc_messages_lang(void)
  */
 static char *cut_country_code (const char *lang)
 {
-    char *p, *q, *newlang;
+    char *c, *p, *q, *newlang;
 
     if ((q = strchr(lang, '_')) == NULL)
 	return NULL;
@@ -636,10 +636,12 @@ static char *cut_country_code (const char *lang)
     
     p = n_strncpy(newlang, lang, q - lang + 1);
     
-    if ((q = strchr(lang, '.')))
-	n_strncpy(p, q, strlen(q) + 1);
-    else if ((q = strchr(lang, '@')))
-	n_strncpy(p, q, strlen(q) + 1);
+    if ((c = strchr(q, '.')))
+	n_strncpy(p, c, strlen(c) + 1);
+    else if ((c = strchr(q, '@')))
+	n_strncpy(p, c, strlen(c) + 1);
+
+    n_assert(strlen(lang) > strlen(newlang));
     
     return newlang;
 }
