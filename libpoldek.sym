@@ -180,6 +180,7 @@ pkguinf_new
 pkguinf_set
 pm_dbmtime
 pm_dbpath
+pm_dbrec_nevr
 pm_verify_signature
 poldek_BANNER
 poldek_BUG_MAILADDR
