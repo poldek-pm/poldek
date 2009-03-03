@@ -51,7 +51,7 @@ arch : mclean backup
 
 POTFILES_in:
 	-rm -f poldek-cvs*
-	-find . -type f -name \*.c | egrep -v '(Cellar/|intl/|trurlib/|tndb/|python/|tests/)'  | sed 's|^\./||' | sort > po/POTFILES.in
+	-find . -type f -name \*.c | egrep -v '(Cellar/|intl/|trurlib/|tndb/|python/|tests/)'  | sed 's|^\./||' | LC_ALL=C sort > po/POTFILES.in
 
 misarch: mclean
 	$(MAKE) -C . backup cparch=1 backupdir=/z
@@ -96,5 +96,5 @@ oncarmei686:
 
 
 scpsnap: 
-	@snap=`ls poldek-*-cvs20* | sort | tail -1`; \
+	@snap=`ls poldek-*-cvs20* | LC_ALL=C sort | tail -1`; \
 	[ -n "$$snap" ] && chmod 644 $$snap && scp $$snap ep09.pld-linux.org:www/poldek/download/snapshots/
