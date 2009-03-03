@@ -391,7 +391,7 @@ int pkgset_order(struct pkgset *ps, int verb)
     if (verb && poldek_VERBOSE > 2) {
         int i;
             
-        msg(2, "Installation order:\n");
+        msg(2, _("Installation order:\n"));
         for (i=0; i < n_array_size(ps->ordered_pkgs); i++) {
             struct pkg *pkg = n_array_nth(ps->ordered_pkgs, i);
             msg(2, "%d. %s\n", i, pkg->name);
@@ -697,7 +697,7 @@ static int dot_graph(tn_array *pkgs, struct pkgset *ps, const char *outfile)
     n_buf_free(nbuf);
 
     if (outfile)
-        msgn(0, "Graph saved as %s", outfile);
+        msgn(0, _("Graph saved as %s"), outfile);
     
     return 1;
 }
@@ -754,7 +754,7 @@ static int lanvi_graph(tn_array *pkgs, struct pkgset *ps, const char *outfile)
     n_buf_free(nbuf);
 
     if (outfile)
-        msgn(0, "LanVi graph saved as %s", outfile);
+        msgn(0, _("LanVi graph saved as %s"), outfile);
     
     return 1;
 }

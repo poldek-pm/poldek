@@ -118,7 +118,7 @@ static int mark_badreqs(struct pkgmark_set *pms)
     pkgs = pkgmark_get_packages(pms, PKGMARK_UNMETDEPS);
     if (pkgs) {
         n_assert(n_array_size(pkgs));
-        msgn(4, "Packages with unsatisfied dependencies:");
+        msgn(4, _("Packages with unsatisfied dependencies:"));
     
         for (i=0; i < n_array_size(pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgs, i);
@@ -184,7 +184,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
                 matches = n_hash_get(cache, streq);
 
                 if (!matches) 
-                    msgn(4, " req %-35s --> NOT FOUND", streq);
+                    msgn(4, _(" req %-35s --> NOT FOUND"), streq);
                 else if (n_array_size(matches) > 0) {
                     msg(4, " req %-35s --> ", streq);
                     for (ii=0; ii < n_array_size(matches); ii++) 
@@ -213,7 +213,7 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
         l_err_notfound:
             nerrors++;
             if (poldek_VERBOSE > 3)
-                msgn(4, " req %-35s --> NOT FOUND", capreq_snprintf_s(req));
+                msgn(4, _(" req %-35s --> NOT FOUND"), capreq_snprintf_s(req));
 
             pkgset_add_unreq(ps, pkg, req, 0);
             pkg_set_unmetdeps(pms, pkg);
@@ -397,7 +397,7 @@ static int psreq_lookup(struct pkgset *ps, const struct capreq *req,
 
     if (!matched && pkgset_pm_satisfies(ps, req)) {
         matched = 1;
-        msgn(4, " req %-35s --> PM_CAP", capreq_snprintf_s(req));
+        msgn(4, _(" req %-35s --> PM_CAP"), capreq_snprintf_s(req));
         
         *suspkgs = NULL;
         *npkgs = 0;
@@ -591,7 +591,7 @@ int pkgset_verify_conflicts(struct pkgset *ps, int strict)
                 }
                 
             } else {
-                msgn(4, " cnfl %-35s --> NOT FOUND",capreq_snprintf_s(cnfl));
+                msgn(4, _(" cnfl %-35s --> NOT FOUND"), capreq_snprintf_s(cnfl));
             }
         }
     }

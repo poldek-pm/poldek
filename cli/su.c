@@ -115,7 +115,7 @@ int poldek_su(const char *user)
         return 0;
     }
 
-    msgn(2, "Running as user '%s'\n", user); 
+    msgn(2, _("Running as user '%s'\n"), user); 
     return 1;
 }
 

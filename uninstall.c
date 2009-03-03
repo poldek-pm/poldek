@@ -195,12 +195,12 @@ int process_pkg_rev_orphans(int indent, struct uninstall_ctx *uctx,
             if (pkg_isset_mf(uctx->pms, dbpkg, DBPKG_REV_ORPHANED))
                 continue;       /* was there */
 
-            msgn_i(3, indent, "  %s requires %s", pkg_id(pkg), pkg_id(dbpkg));
+            msgn_i(3, indent, _("  %s requires %s"), pkg_id(pkg), pkg_id(dbpkg));
             
             if (pkg_leave_orphans(uctx, dbpkg))
                 continue;
             
-            msgn_i(1, indent, "%s marks orphaned %s (req %s)",
+            msgn_i(1, indent, _("%s marks orphaned %s (req %s)"),
                    pkg_id(pkg), pkg_id(dbpkg), capreq_snprintf_s(req));
 
             pkg_set_mf(uctx->pms, dbpkg, DBPKG_REV_ORPHANED);
@@ -380,7 +380,7 @@ static void uninstall_ctx_free(struct uninstall_ctx *uctx)
     int i;
     for (i=0; i < n_array_size(uctx->unpkgs); i++) {
         struct pkg *dbpkg = n_array_nth(uctx->unpkgs, i);
-        msgn(1, "freedbset %d %s", dbpkg->_refcnt, pkg_id(dbpkg));
+        msgn(1, _("freedbset %d %s"), dbpkg->_refcnt, pkg_id(dbpkg));
     }
 #endif    
     n_array_free(uctx->unpkgs);
@@ -395,7 +395,7 @@ static int do_process(struct uninstall_ctx *uctx)
 
     for (i=0; i < n_array_size(uctx->unpkgs); i++) {
         struct pkg *dbpkg = n_array_nth(uctx->unpkgs, i);
-        msgn(1, "mark %s", pkg_id(dbpkg));
+        msgn(1, _("mark %s"), pkg_id(dbpkg));
         pkg_hand_mark(uctx->ts->pms, dbpkg);
         n++;
     }
@@ -534,7 +534,7 @@ static int resolve_mask(struct uninstall_ctx *uctx, struct poldek_ts *ts,
     int32_t e = 0;
     int matched = 0;
     
-    msgn(2, "Trying %s\n", mask);
+    msgn(2, _("Trying %s\n"), mask);
     if (resolve_package(uctx, ts, mask, NULL))
         return 1;
             
@@ -546,7 +546,7 @@ static int resolve_mask(struct uninstall_ctx *uctx, struct poldek_ts *ts,
     p = strrchr(tmp, '-');
     *p = '#';
         
-    msgn(2, "  Trying %s\n", tmp);
+    msgn(2, _("  Trying %s\n"), tmp);
                 
     if (resolve_package(uctx, ts, tmp, NULL))
         return 1;
@@ -558,7 +558,7 @@ static int resolve_mask(struct uninstall_ctx *uctx, struct poldek_ts *ts,
         else
             n_snprintf(nmask, sizeof(nmask), "%s#%s-%s", n, v, r);
 
-        msgn(2, "    Trying %s\n", nmask);
+        msgn(2, _("    Trying %s\n"), nmask);
         DBGF("try %s => %s (%s, %s, %s)\n", mask, nmask, n, v, r);
         matched = resolve_package(uctx, ts, nmask, NULL);
         
@@ -570,7 +570,7 @@ static int resolve_mask(struct uninstall_ctx *uctx, struct poldek_ts *ts,
                 n_snprintf(nmask, sizeof(nmask), "%s#%d:%s-%s", n, e, v, r);
             else
                 n_snprintf(nmask, sizeof(nmask), "%s#%s-%s", n, v, r);
-            msgn(2, "      Trying %s (arch=%s)\n", nmask, p);
+            msgn(2, _("      Trying %s (arch=%s)\n"), nmask, p);
             matched = resolve_package(uctx, ts, nmask, p);
         }
     }

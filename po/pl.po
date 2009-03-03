@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2009-03-03 23:57+0200\n"
+"POT-Creation-Date: 2009-03-04 00:17+0200\n"
 "PO-Revision-Date: 2002-02-10 13:05+0100\n"
 "Last-Translator: mis@pld.org.pl\n"
 "Language-Team: Polish <translation-team-pl@lists.sourceforge.net>\n"
@@ -30,6 +30,11 @@ msgstr "b³±d sk³adniowy w specyfikacji pakietu"
 msgid "Removed %d duplicates from given packages"
 msgstr "Usuniêto %d zduplikowanych pakietów z listy dostêpnych"
 
+#: arg_packages.c:431
+#, fuzzy, c-format
+msgid "%s: %d package(s) found:"
+msgstr "%s: nie znaleziono pakietów"
+
 #: arg_packages.c:501 arg_packages.c:530 arg_packages.c:556 uninstall.c:592
 #, c-format
 msgid "%s: no such package"
@@ -39,6 +44,11 @@ msgstr "%s: nie ma takiego pakietu"
 #, c-format
 msgid "%s: ambiguous name"
 msgstr "niejednoznaczna nazwa %s"
+
+#: arg_packages.c:632
+#, fuzzy, c-format
+msgid "%s: choosen %s among %d packages"
+msgstr "%s: brak '%s' w niektórych pakietach"
 
 #: ask.c:79 ask.c:83
 #, fuzzy
@@ -106,6 +116,11 @@ msgstr "%s (%s) nadpisuje %s"
 #, c-format
 msgid "%s: could not determine aliased command"
 msgstr "%s: nie mo¿na okre¶liæ zaliasowanego polecenia"
+
+#: cli/alias.c:162
+#, c-format
+msgid "%s => aliased %s"
+msgstr ""
 
 #: cli/cd.c:31
 msgid "[PATH]"
@@ -1067,6 +1082,11 @@ msgstr "setuid %s: %m"
 msgid "chdir %s: %m"
 msgstr "chdir %s: %m"
 
+#: cli/su.c:118
+#, fuzzy, c-format
+msgid "Running as user '%s'\n"
+msgstr "Uruchamianie %s\n"
+
 #: cli/uninstall.c:43
 msgid "Do not remove, but tell if it would work or not"
 msgstr "Nie usuwaj, ale powiedz czy by siê uda³o, czy nie"
@@ -1172,6 +1192,16 @@ msgstr "%s:%d: '%s': nieprawid³owy parametr"
 msgid "%s:%d: '%s': invalid section name"
 msgstr "%s:%d %s: nieprawid³owa nazwa pakietu"
 
+#: conf.c:1136
+#, fuzzy, c-format
+msgid "%s: skipped %s::%s"
+msgstr "%s: pominiêto listê plików"
+
+#: conf.c:1140
+#, c-format
+msgid "-- %s EOF --"
+msgstr ""
+
 #: conf.c:1157
 #, fuzzy, c-format
 msgid "%s: load configuration failed"
@@ -1196,6 +1226,53 @@ msgstr "niedozwolona warto¶æ ('%s') dla opcji '%s'"
 #, fuzzy, c-format
 msgid "invalid value ('%s') of option '%s'"
 msgstr "niedozwolona warto¶æ ('%s') dla opcji '%s'"
+
+#: fileindex.c:338
+#, c-format
+msgid "add cnfl: %s %c-%c %s"
+msgstr ""
+
+#: fileindex.c:530
+#, c-format
+msgid ""
+"\n"
+"Path: %s%s"
+msgstr ""
+
+#: fileindex.c:540
+#, fuzzy, c-format
+msgid "%d file conflicts found"
+msgstr "%d konfliktów znaleziono"
+
+#: fileindex.c:646
+#, fuzzy, c-format
+msgid "[%d packages left]"
+msgstr "Przeczytano %d pakiet"
+
+#: fileindex.c:647
+#, fuzzy, c-format
+msgid "%s: orphaned directory from %s"
+msgstr "Znajd¼ osierocone katalogi"
+
+#: fileindex.c:650
+#, fuzzy, c-format
+msgid "%d orphaned directories found"
+msgstr "Znajd¼ osierocone katalogi"
+
+#: fileindex.c:724
+#, c-format
+msgid "Looking for path %s -> %s (%s)"
+msgstr ""
+
+#: fileindex.c:846
+#, c-format
+msgid "%s: %s: directory not in required packages (missing Requires: %s?)"
+msgstr ""
+
+#: fileindex.c:851
+#, fuzzy, c-format
+msgid "%d semi-orphaned directories found"
+msgstr "Znajd¼ osierocone katalogi"
 
 #: install-dist.c:101
 #, c-format
@@ -1412,6 +1489,26 @@ msgstr "zdublowana nazwa %s"
 #, c-format
 msgid "%s%s%s: removed duplicate package"
 msgstr "%s%s%s: usuniêto zdublowany pakiet"
+
+#: pkgdir/dir/dir.c:225
+#, c-format
+msgid "%s: file seems untouched, loaded from previous index"
+msgstr ""
+
+#: pkgdir/dir/dir.c:234
+#, fuzzy, c-format
+msgid "%s: read header failed, skipped"
+msgstr "%s: odczyt nag³ówka siê nie powiód³"
+
+#: pkgdir/dir/dir.c:244
+#, c-format
+msgid "%s: seems untouched, loaded from previous index"
+msgstr ""
+
+#: pkgdir/dir/dir.c:257
+#, fuzzy, c-format
+msgid "%s: loading header..."
+msgstr "%s: odczyt siê nie powiód³"
 
 #: pkgdir/pdir/digest.c:175 pkgdir/pndir/digest.c:137
 #, c-format
@@ -1665,6 +1762,11 @@ msgstr "Usuwanie przedawnionego %s"
 msgid " Writing '%s' descriptions %s..."
 msgstr "Zapisywanie sumy kontrolnej %s..."
 
+#: pkgdir/pndir/update.c:307
+#, c-format
+msgid "Check diff (ts = %ld, %ld) %s (searching %s)\n"
+msgstr ""
+
 #: pkgdir/pndir/update.c:315
 #, fuzzy, c-format
 msgid "%s: no patches available(fake)"
@@ -1794,6 +1896,11 @@ msgstr[2] "Wykryto %d zapêtleñ zale¿no¶ci"
 msgid "No loops -- OK"
 msgstr "Brak zapêtleñ -- To dobrze"
 
+#: pkgset-req.c:121
+#, fuzzy
+msgid "Packages with unsatisfied dependencies:"
+msgstr "%d niespe³nionych zale¿no¶ci znaleziono"
+
 #: pkgset-req.c:162
 msgid ""
 "\n"
@@ -1801,6 +1908,11 @@ msgid ""
 msgstr ""
 "\n"
 "Sprawdzanie zale¿no¶ci..."
+
+#: pkgset-req.c:187 pkgset-req.c:216
+#, c-format
+msgid " req %-35s --> NOT FOUND"
+msgstr ""
 
 #: pkgset-req.c:232
 msgid "No unsatisfied dependencies detected -- OK"
@@ -1815,6 +1927,16 @@ msgstr "%d niespe³nionych zale¿no¶ci, %d pakiet(ów)"
 #, c-format
 msgid "%s: provides rpmlib cap \"%s\""
 msgstr "%s zawiera rpmlib()ow± w³asno¶æ \"%s\""
+
+#: pkgset-req.c:400
+#, c-format
+msgid " req %-35s --> PM_CAP"
+msgstr ""
+
+#: pkgset-req.c:594
+#, c-format
+msgid " cnfl %-35s --> NOT FOUND"
+msgstr ""
 
 #: pkgset.c:253
 #, c-format
@@ -1831,6 +1953,11 @@ msgid ""
 msgstr ""
 "\n"
 "Sprawdzanie \"pre\" wymagañ..."
+
+#: pkgset.c:394
+#, fuzzy
+msgid "Installation order:\n"
+msgstr "Opcje instalacji:"
 
 #: pkgset.c:609
 #, c-format
@@ -1859,6 +1986,16 @@ msgstr "Nie znaleziono niespe³nionych zale¿no¶ci"
 msgid "%s: open failed: %m"
 msgstr "%s: odczyt siê nie powiód³"
 
+#: pkgset.c:700
+#, c-format
+msgid "Graph saved as %s"
+msgstr ""
+
+#: pkgset.c:757
+#, c-format
+msgid "LanVi graph saved as %s"
+msgstr ""
+
 #: pm/pset/pset.c:160
 #, fuzzy, c-format
 msgid "%s: failed to add to pkgset..."
@@ -1867,6 +2004,31 @@ msgstr "%s: interpertacja siê nie powiod³a"
 #: pm/pset/pset.c:186
 msgid "Could not open 'pset' database: missing source parameter"
 msgstr ""
+
+#: pm/pset/pset.c:587
+#, c-format
+msgid "%s: recno is set, should not happen"
+msgstr ""
+
+#: pm/pset/pset.c:603
+#, c-format
+msgid "Copying %s to %s"
+msgstr ""
+
+#: pm/pset/pset.c:646
+#, fuzzy, c-format
+msgid "Removing %s"
+msgstr " Usuwanie %s"
+
+#: pm/pset/pset.c:680
+#, fuzzy, c-format
+msgid "Operating on %s"
+msgstr "Otwieranie %s..."
+
+#: pm/pset/pset.c:691
+#, fuzzy, c-format
+msgid "%s: unlink failed: %m"
+msgstr "%s: odczyt siê nie powiód³"
 
 #: pm/pset/pset.c:750
 msgid "Could not open 'pset' database: missing source"
@@ -1906,6 +2068,11 @@ msgstr "%s: instalacja siê nie powiod³a:"
 #, fuzzy, c-format
 msgid "%s: installation failed (retcode=%d)"
 msgstr "%s: instalacja siê nie powiod³a:"
+
+#: pm/rpm/misc.c:124
+#, fuzzy
+msgid "Loading internal capabilities"
+msgstr "Przeszukuj w³asno¶ci (capablities)"
 
 #: pm/rpm/rpm.c:123
 #, c-format
@@ -2045,7 +2212,7 @@ msgstr "niezdefiniowana zmienna $TERM"
 msgid "%s: unknown terminal"
 msgstr "%s: nieznana nazwa terminala"
 
-#: poldek_ts.c:644
+#: poldek_ts.c:644 uninstall.c:398
 #, c-format
 msgid "mark %s"
 msgstr "zazn. %s"
@@ -2118,6 +2285,11 @@ msgstr "%s:%d: b³±d sk³adniowy w okolicach %s"
 msgid "%s: give up at %d"
 msgstr "%s: wymiêk³em przy linii %d"
 
+#: split.c:316
+#, c-format
+msgid "%s: rollback"
+msgstr ""
+
 #: split.c:384
 msgid "split failed: packages size is greater than chunk size"
 msgstr ""
@@ -2134,6 +2306,11 @@ msgstr "Zapisywanie %s (%4d pakiety, % 10d bajtów, pri min, max = %d, %d)"
 msgid "%s: no priorities loaded"
 msgstr "%s: nie odnaleziono ³at"
 
+#: split.c:467
+#, c-format
+msgid "split: assign %d pri to %s (mask %s)"
+msgstr ""
+
 #: split.c:479
 msgid "no maching priorities"
 msgstr ""
@@ -2142,6 +2319,16 @@ msgstr ""
 #, fuzzy
 msgid "no available packages found"
 msgstr "mark: %s: nie znaleziono takiego pakietu"
+
+#: uninstall.c:198
+#, fuzzy, c-format
+msgid "  %s requires %s"
+msgstr "%s: req %s %s"
+
+#: uninstall.c:203
+#, fuzzy, c-format
+msgid "%s marks orphaned %s (req %s)"
+msgstr "%s%s zaznaczy³ %s (%s %s)"
 
 #: uninstall.c:264
 #, c-format
@@ -2152,6 +2339,31 @@ msgstr "%s (w³. %s) jest wymagany przez %s"
 #, fuzzy, c-format
 msgid "%s marks %s (req %s)"
 msgstr "%s%s zaznaczy³ %s (%s %s)"
+
+#: uninstall.c:383
+#, c-format
+msgid "freedbset %d %s"
+msgstr ""
+
+#: uninstall.c:537
+#, fuzzy, c-format
+msgid "Trying %s\n"
+msgstr "Uruchamianie %s\n"
+
+#: uninstall.c:549
+#, fuzzy, c-format
+msgid "  Trying %s\n"
+msgstr "Zapisywanie %s..."
+
+#: uninstall.c:561
+#, fuzzy, c-format
+msgid "    Trying %s\n"
+msgstr "Zapisywanie %s..."
+
+#: uninstall.c:573
+#, c-format
+msgid "      Trying %s (arch=%s)\n"
+msgstr ""
 
 #: upgrade-dist.c:100
 #, c-format
@@ -2517,9 +2729,6 @@ msgstr "%s usieczon za spraw± sygna³u %d (%s)"
 #~ msgid "duplicated %s"
 #~ msgstr "zdublowany %s"
 
-#~ msgid "%s: read header failed"
-#~ msgstr "%s: odczyt nag³ówka siê nie powiód³"
-
 #, fuzzy
 #~ msgid "%s: no such packageXX"
 #~ msgstr "%s: nie ma takiego pakietu"
@@ -2562,9 +2771,6 @@ msgstr "%s usieczon za spraw± sygna³u %d (%s)"
 
 #~ msgid "Packages spec:"
 #~ msgstr "Specyfikowanie pakietów:"
-
-#~ msgid "Installation:"
-#~ msgstr "Opcje instalacji:"
 
 #~ msgid "Downgrade given packages"
 #~ msgstr "Deaktualizuj podane pakiety"
@@ -2663,10 +2869,6 @@ msgstr "%s usieczon za spraw± sygna³u %d (%s)"
 
 #~ msgid "Applying patch %s..."
 #~ msgstr "Nak³adanie ³aty %s..."
-
-#, fuzzy
-#~ msgid "  Writing %s..."
-#~ msgstr "Zapisywanie %s..."
 
 #, fuzzy
 #~ msgid "greedy and follow options are inclusive"

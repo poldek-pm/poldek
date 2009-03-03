@@ -222,7 +222,7 @@ int load_dir(struct pkgdir *pkgdir,
         if (mtime_index) {
             pkg = search_in_mtime_index(mtime_index, ent->d_name, &st);
             if (pkg) {
-                msgn(3, "%s: file seems untouched, loaded from previous index",
+                msgn(3, _("%s: file seems untouched, loaded from previous index"),
                      pkg_filename_s(pkg));
                 pkg = pkg_link(pkg);
                 remap_groupid(pkg, pkgroups, prev_pkgdir);
@@ -231,7 +231,7 @@ int load_dir(struct pkgdir *pkgdir,
 
         if (pkg == NULL) {  /* mtime changed, but try compare content */
             if (!pm_rpmhdr_loadfile(path, &h)) {
-                logn(LOGWARN, "%s: read header failed, skipped", path);
+                logn(LOGWARN, _("%s: read header failed, skipped"), path);
                 continue;
             }
             
@@ -241,7 +241,7 @@ int load_dir(struct pkgdir *pkgdir,
             if (prev_pkgdir) {
                 pkg = search_in_prev(prev_pkgdir, h, ent->d_name, &st);
                 if (pkg) {
-                    msgn(3, "%s: seems untouched, loaded from previous index",
+                    msgn(3, _("%s: seems untouched, loaded from previous index"),
                          pkg_snprintf_s(pkg));
                     pkg = pkg_link(pkg);
                     remap_groupid(pkg, pkgroups, prev_pkgdir);
@@ -254,7 +254,7 @@ int load_dir(struct pkgdir *pkgdir,
             
             nnew++;
             n_assert(h);        /* loaded in previous if block */
-            msgn(3, "%s: loading header...", n_basenam(path));
+            msgn(3, _("%s: loading header..."), n_basenam(path));
             pkg = pm_rpm_ldhdr(na, h, n_basenam(path), st.st_size, PKG_LDWHOLE);
             n_assert(pkg);
             

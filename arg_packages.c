@@ -428,7 +428,7 @@ tn_array *resolve_bycap(struct arg_packages *aps, struct pkgset *ps,
     if (poldek_VERBOSE > 1) {
         int i;
         
-        msgn(2, "%s: %d package(s) found:", mask, n_array_size(pkgs));
+        msgn(2, _("%s: %d package(s) found:"), mask, n_array_size(pkgs));
         for (i=0; i < n_array_size(pkgs); i++)
             msgn(2, " - %s", pkg_snprintf_s(n_array_nth(pkgs, i)));
     }
@@ -628,10 +628,10 @@ tn_array *resolve_resolved_caps(tn_array *topkgs, struct arg_packages *aps)
             }
         }
         
-        if (poldek_VERBOSE > 2) 
-            msgn(1, "%s: choosen %s among %d packages", key,
+        if (poldek_VERBOSE > 2)
+            msgn(1, _("%s: choosen %s among %d packages"), key,
                  pkg_snprintf_s(pkg), n_array_size(pkgs));
-        
+
         n_array_push(topkgs, pkg_link(pkg));
     }
     

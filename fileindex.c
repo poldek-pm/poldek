@@ -335,7 +335,7 @@ static int register_file_conflict(struct pkg *pkg1, struct pkg *pkg2,
     if ((c1 || c2) && verbose > 0) {
         char buf[256];
         pkg_snprintf(buf, sizeof(buf), pkg1);
-        msgn(1, "add cnfl: %s %c-%c %s", buf, c2 ? :' ', c1 ? :' ', 
+        msgn(1, _("add cnfl: %s %c-%c %s"), buf, c2 ? :' ', c1 ? :' ', 
             pkg_snprintf_s(pkg2));
     }
 #endif
@@ -527,7 +527,7 @@ int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs)
                     continue;
             }
             if (pathprinted == 0) {
-                msgn(0, "\nPath: %s%s", *cnfl->path == '/' ? "" : "/",
+                msgn(0, _("\nPath: %s%s"), *cnfl->path == '/' ? "" : "/",
                      cnfl->path);
                 pathprinted = 1;
             }
@@ -537,7 +537,7 @@ int file_index_report_conflicts(const struct file_index *fi, tn_array *pkgs)
         }
     }
     n_array_free(paths);
-    msgn(0, "%d file conflicts found", nconflicts);
+    msgn(0, _("%d file conflicts found"), nconflicts);
     return nconflicts;
 }
 
@@ -643,11 +643,11 @@ int file_index_report_orphans(const struct file_index *fi, tn_array *pkgs)
         
         if (n_array_size(opkgs) > 5)
             n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n,
-                            "[%d packages left]", n_array_size(opkgs) - 5);
-        logn(LOGERR, "%s: orphaned directory from %s", path, pkgstr);
+                            _("[%d packages left]"), n_array_size(opkgs) - 5);
+        logn(LOGERR, _("%s: orphaned directory from %s"), path, pkgstr);
     }
     norphans = n_array_size(paths);
-    msgn(0, "%d orphaned directories found", norphans);
+    msgn(0, _("%d orphaned directories found"), norphans);
     n_array_free(paths);
     n_hash_free(orphanh);
 
@@ -721,7 +721,7 @@ static int is_required(tn_hash *is_path_to_cache,
     for (i=0; i < size; i++) {
         char key[PATH_MAX];
         
-        msgn(2, "Looking for path %s -> %s (%s)", pkg_id(pkg), pkg_id(ptab[i]),
+        msgn(2, _("Looking for path %s -> %s (%s)"), pkg_id(pkg), pkg_id(ptab[i]),
              path);
 
         n_snprintf(key, sizeof(key), "%s -> %s", pkg_id(pkg), pkg_id(ptab[i]));
@@ -843,12 +843,12 @@ int file_index_report_semiorphans(const struct file_index *fi, tn_array *pkgs)
                 n += n_snprintf(&pkgstr[n], sizeof(pkgstr) - n,
                                 "...", mreq->ncandidates - 3);
         
-            logn(LOGERR, "%s: %s: directory not in required packages "
-                 "(missing Requires: %s?)", id, mreq->path, pkgstr);
+            logn(LOGERR, _("%s: %s: directory not in required packages "
+                 "(missing Requires: %s?)"), id, mreq->path, pkgstr);
             norphans++;
         }
     }
-    msgn(0, "%d semi-orphaned directories found", norphans);
+    msgn(0, _("%d semi-orphaned directories found"), norphans);
     n_array_free(pkgids);
     n_hash_free(missreqh);
     return norphans;

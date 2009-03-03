@@ -313,7 +313,7 @@ int chunk_add(struct chunk *chunk, struct pkg *pkg)
         for (i=0; i<n_array_size(stack); i++) {
             struct pkg *pkg = n_array_nth(stack, i);
             pkg_set_color(pkg, PKG_COLOR_WHITE);
-            msgn(3, "%s: rollback", pkg_snprintf_s(pkg));
+            msgn(3, _("%s: rollback"), pkg_snprintf_s(pkg));
         }
         rc = 0;
     }
@@ -464,7 +464,7 @@ int packages_set_priorities(tn_array *pkgs, const char *priconf_path)
             
             if (fnmatch(pd->mask, pkg->name, 0) == 0) {
                 pri = pd->pri;
-                msgn(2, "split: assign %d pri to %s (mask %s)", pri,
+                msgn(2, _("split: assign %d pri to %s (mask %s)"), pri,
                      pkg_id(pkg), pd->mask);
                 nmached++;
                 break;

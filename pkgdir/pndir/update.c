@@ -304,7 +304,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
             if (memcmp(md, current_md, TNIDX_DIGEST_SIZE) == 0)
                 first_patch_found = 1;
             else {
-                msgn(2, "Check diff (ts = %ld, %ld) %s (searching %s)\n",
+                msgn(2, _("Check diff (ts = %ld, %ld) %s (searching %s)\n"),
                      (long)pkgdir->ts, (long)ts, md, current_md);
 
                 if (poldek_verbose() > 3) {

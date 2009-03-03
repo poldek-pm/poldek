@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2009-03-03 23:57+0200\n"
+"POT-Creation-Date: 2009-03-04 00:17+0200\n"
 "PO-Revision-Date: 2002-04-14 13:05+0100\n"
 "Last-Translator: Andreas Piesk <a.piesk@gmx.net>\n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -30,6 +30,11 @@ msgstr "Syntaxfehler in Paketdefinition"
 msgid "Removed %d duplicates from given packages"
 msgstr "%d doppelte Pakete aus der Liste der angegebenen Pakete entfernt"
 
+#: arg_packages.c:431
+#, fuzzy, c-format
+msgid "%s: %d package(s) found:"
+msgstr "mark: %s: Pæket nicht gefunden"
+
 #: arg_packages.c:501 arg_packages.c:530 arg_packages.c:556 uninstall.c:592
 #, c-format
 msgid "%s: no such package"
@@ -39,6 +44,11 @@ msgstr "%s: dieses Paket gibt es nicht"
 #, fuzzy, c-format
 msgid "%s: ambiguous name"
 msgstr "%s: mehrdeutiger Name"
+
+#: arg_packages.c:632
+#, fuzzy, c-format
+msgid "%s: choosen %s among %d packages"
+msgstr "%s: '%s' fehlt in einigen Paketen"
 
 #: ask.c:79 ask.c:83
 #, fuzzy
@@ -107,6 +117,11 @@ msgstr ""
 #, fuzzy, c-format
 msgid "%s: could not determine aliased command"
 msgstr "%s: dieses Kommando gibt es nicht"
+
+#: cli/alias.c:162
+#, c-format
+msgid "%s => aliased %s"
+msgstr ""
 
 #: cli/cd.c:31
 msgid "[PATH]"
@@ -1100,6 +1115,11 @@ msgstr "%s %m"
 msgid "chdir %s: %m"
 msgstr "%s %m"
 
+#: cli/su.c:118
+#, fuzzy, c-format
+msgid "Running as user '%s'\n"
+msgstr "Führe '%s' aus\n"
+
 #: cli/uninstall.c:43
 #, fuzzy
 msgid "Do not remove, but tell if it would work or not"
@@ -1211,6 +1231,16 @@ msgstr "%s:%d: '%s': ungültiger Parameter"
 msgid "%s:%d: '%s': invalid section name"
 msgstr "%s:%d %s: ungültiger Paketname"
 
+#: conf.c:1136
+#, fuzzy, c-format
+msgid "%s: skipped %s::%s"
+msgstr "%s: Dateiliste übersprungen"
+
+#: conf.c:1140
+#, c-format
+msgid "-- %s EOF --"
+msgstr ""
+
 #: conf.c:1157
 #, fuzzy, c-format
 msgid "%s: load configuration failed"
@@ -1235,6 +1265,53 @@ msgstr "ungültiger Wert ('%s') für Option '%s'"
 #, fuzzy, c-format
 msgid "invalid value ('%s') of option '%s'"
 msgstr "ungültiger Wert ('%s') für Option '%s'"
+
+#: fileindex.c:338
+#, c-format
+msgid "add cnfl: %s %c-%c %s"
+msgstr ""
+
+#: fileindex.c:530
+#, c-format
+msgid ""
+"\n"
+"Path: %s%s"
+msgstr ""
+
+#: fileindex.c:540
+#, fuzzy, c-format
+msgid "%d file conflicts found"
+msgstr "'%s' kollidiert mit '%s'"
+
+#: fileindex.c:646
+#, fuzzy, c-format
+msgid "[%d packages left]"
+msgstr "%d Pakete gelesen"
+
+#: fileindex.c:647
+#, fuzzy, c-format
+msgid "%s: orphaned directory from %s"
+msgstr "%s: beschädigte Übersichtsdatei (%d)"
+
+#: fileindex.c:650
+#, fuzzy, c-format
+msgid "%d orphaned directories found"
+msgstr "'%s' kollidiert mit '%s'"
+
+#: fileindex.c:724
+#, c-format
+msgid "Looking for path %s -> %s (%s)"
+msgstr ""
+
+#: fileindex.c:846
+#, c-format
+msgid "%s: %s: directory not in required packages (missing Requires: %s?)"
+msgstr ""
+
+#: fileindex.c:851
+#, fuzzy, c-format
+msgid "%d semi-orphaned directories found"
+msgstr "Zeige benötigte Pakete"
 
 #: install-dist.c:101
 #, c-format
@@ -1451,6 +1528,26 @@ msgstr "%s ist doppelt"
 #, fuzzy, c-format
 msgid "%s%s%s: removed duplicate package"
 msgstr "%d doppelte Pakete entfernt"
+
+#: pkgdir/dir/dir.c:225
+#, c-format
+msgid "%s: file seems untouched, loaded from previous index"
+msgstr ""
+
+#: pkgdir/dir/dir.c:234
+#, fuzzy, c-format
+msgid "%s: read header failed, skipped"
+msgstr "%s: Lesen des Kennsatzes fehlgeschlagen"
+
+#: pkgdir/dir/dir.c:244
+#, c-format
+msgid "%s: seems untouched, loaded from previous index"
+msgstr ""
+
+#: pkgdir/dir/dir.c:257
+#, fuzzy, c-format
+msgid "%s: loading header..."
+msgstr "%s: Lesen fehlgeschlagen"
 
 #: pkgdir/pdir/digest.c:175 pkgdir/pndir/digest.c:137
 #, c-format
@@ -1703,6 +1800,11 @@ msgstr "Lösche veraltete '%s'"
 msgid " Writing '%s' descriptions %s..."
 msgstr "Speichere Übersicht '%s'..."
 
+#: pkgdir/pndir/update.c:307
+#, c-format
+msgid "Check diff (ts = %ld, %ld) %s (searching %s)\n"
+msgstr ""
+
 #: pkgdir/pndir/update.c:315
 #, fuzzy, c-format
 msgid "%s: no patches available(fake)"
@@ -1830,6 +1932,11 @@ msgstr[2] "%d Schleife%s bei den Vorvorraussetzungen entdeckt"
 msgid "No loops -- OK"
 msgstr "Keine Schleifen entdeckt -- in Ordnung"
 
+#: pkgset-req.c:121
+#, fuzzy
+msgid "Packages with unsatisfied dependencies:"
+msgstr "%s: nicht erfüllte Abhängigkeiten:"
+
 #: pkgset-req.c:162
 msgid ""
 "\n"
@@ -1837,6 +1944,11 @@ msgid ""
 msgstr ""
 "\n"
 "Überprüfe Abhängigkeiten..."
+
+#: pkgset-req.c:187 pkgset-req.c:216
+#, c-format
+msgid " req %-35s --> NOT FOUND"
+msgstr ""
 
 #: pkgset-req.c:232
 msgid "No unsatisfied dependencies detected -- OK"
@@ -1853,6 +1965,16 @@ msgstr ""
 msgid "%s: provides rpmlib cap \"%s\""
 msgstr "'%s' stellt RPMLIB Fähigkeit '%s' zur Verfügung"
 
+#: pkgset-req.c:400
+#, c-format
+msgid " req %-35s --> PM_CAP"
+msgstr ""
+
+#: pkgset-req.c:594
+#, c-format
+msgid " cnfl %-35s --> NOT FOUND"
+msgstr ""
+
 #: pkgset.c:253
 #, c-format
 msgid "Removed %d duplicate package from available set"
@@ -1868,6 +1990,11 @@ msgid ""
 msgstr ""
 "\n"
 "Überprüfe (Vor)Vorraussetzungen..."
+
+#: pkgset.c:394
+#, fuzzy
+msgid "Installation order:\n"
+msgstr "Installation:"
 
 #: pkgset.c:609
 #, fuzzy, c-format
@@ -1898,6 +2025,16 @@ msgstr "%s: nicht erfüllte Abhängigkeiten:"
 msgid "%s: open failed: %m"
 msgstr "%s: Lesen fehlgeschlagen"
 
+#: pkgset.c:700
+#, c-format
+msgid "Graph saved as %s"
+msgstr ""
+
+#: pkgset.c:757
+#, c-format
+msgid "LanVi graph saved as %s"
+msgstr ""
+
 #: pm/pset/pset.c:160
 #, fuzzy, c-format
 msgid "%s: failed to add to pkgset..."
@@ -1906,6 +2043,31 @@ msgstr "%s: fehlerhafte Interpretation der EVR-Zeichenkette"
 #: pm/pset/pset.c:186
 msgid "Could not open 'pset' database: missing source parameter"
 msgstr ""
+
+#: pm/pset/pset.c:587
+#, c-format
+msgid "%s: recno is set, should not happen"
+msgstr ""
+
+#: pm/pset/pset.c:603
+#, c-format
+msgid "Copying %s to %s"
+msgstr ""
+
+#: pm/pset/pset.c:646
+#, fuzzy, c-format
+msgid "Removing %s"
+msgstr "Lösche '%s'"
+
+#: pm/pset/pset.c:680
+#, fuzzy, c-format
+msgid "Operating on %s"
+msgstr "Bereinige '%s'..."
+
+#: pm/pset/pset.c:691
+#, fuzzy, c-format
+msgid "%s: unlink failed: %m"
+msgstr "%s: Lesen fehlgeschlagen"
 
 #: pm/pset/pset.c:750
 msgid "Could not open 'pset' database: missing source"
@@ -1945,6 +2107,11 @@ msgstr "%s: Installation fehlgeschlagen:"
 #, fuzzy, c-format
 msgid "%s: installation failed (retcode=%d)"
 msgstr "%s: Installation fehlgeschlagen:"
+
+#: pm/rpm/misc.c:124
+#, fuzzy
+msgid "Loading internal capabilities"
+msgstr "Suche nach Fähigkeiten"
 
 #: pm/rpm/rpm.c:123
 #, c-format
@@ -2084,7 +2251,7 @@ msgstr "$TERM nicht definiert"
 msgid "%s: unknown terminal"
 msgstr "%s: unbekanntes Terminal"
 
-#: poldek_ts.c:644
+#: poldek_ts.c:644 uninstall.c:398
 #, c-format
 msgid "mark %s"
 msgstr "markiert '%s'"
@@ -2169,6 +2336,11 @@ msgstr "%s:%d: Syntaxfehler bei '%s'"
 msgid "%s: give up at %d"
 msgstr "%s: gebe auf bei %d"
 
+#: split.c:316
+#, c-format
+msgid "%s: rollback"
+msgstr ""
+
 #: split.c:384
 msgid "split failed: packages size is greater than chunk size"
 msgstr ""
@@ -2183,6 +2355,11 @@ msgstr "Speichere '%s' (%4d Pakete, % 10d Bytes)"
 msgid "%s: no priorities loaded"
 msgstr "%s: keine Patches verfügbar"
 
+#: split.c:467
+#, c-format
+msgid "split: assign %d pri to %s (mask %s)"
+msgstr ""
+
 #: split.c:479
 msgid "no maching priorities"
 msgstr ""
@@ -2191,6 +2368,16 @@ msgstr ""
 #, fuzzy
 msgid "no available packages found"
 msgstr "mark: %s: Pæket nicht gefunden"
+
+#: uninstall.c:198
+#, fuzzy, c-format
+msgid "  %s requires %s"
+msgstr "%s: %m (%s)"
+
+#: uninstall.c:203
+#, fuzzy, c-format
+msgid "%s marks orphaned %s (req %s)"
+msgstr "%s%s markiert '%s' (%s %s)"
 
 #: uninstall.c:264
 #, c-format
@@ -2201,6 +2388,31 @@ msgstr "'%s' (Fähigkeit '%s') wird von '%s' benötigt"
 #, fuzzy, c-format
 msgid "%s marks %s (req %s)"
 msgstr "%s%s markiert '%s' (%s %s)"
+
+#: uninstall.c:383
+#, c-format
+msgid "freedbset %d %s"
+msgstr ""
+
+#: uninstall.c:537
+#, fuzzy, c-format
+msgid "Trying %s\n"
+msgstr "Führe '%s' aus\n"
+
+#: uninstall.c:549
+#, fuzzy, c-format
+msgid "  Trying %s\n"
+msgstr "Speichere '%s'..."
+
+#: uninstall.c:561
+#, fuzzy, c-format
+msgid "    Trying %s\n"
+msgstr "Speichere '%s'..."
+
+#: uninstall.c:573
+#, c-format
+msgid "      Trying %s (arch=%s)\n"
+msgstr ""
 
 #: upgrade-dist.c:100
 #, c-format
@@ -2456,10 +2668,6 @@ msgstr "'%s' beendet durch Signal %d"
 #~ msgstr "%s: Installation fehlgeschlagen"
 
 #, fuzzy
-#~ msgid "Show required directories"
-#~ msgstr "Zeige benötigte Pakete"
-
-#, fuzzy
 #~ msgid "%s: invalid destination specified"
 #~ msgstr "%s: ungültige Versionszeichenkette '%s'"
 
@@ -2572,9 +2780,6 @@ msgstr "'%s' beendet durch Signal %d"
 #~ msgid "duplicated %s"
 #~ msgstr "%s ist doppelt"
 
-#~ msgid "%s: read header failed"
-#~ msgstr "%s: Lesen des Kennsatzes fehlgeschlagen"
-
 #, fuzzy
 #~ msgid "%s: no such packageXX"
 #~ msgstr "%s: dieses Paket gibt es nicht"
@@ -2618,9 +2823,6 @@ msgstr "'%s' beendet durch Signal %d"
 
 #~ msgid "Packages spec:"
 #~ msgstr "Paketangaben:"
-
-#~ msgid "Installation:"
-#~ msgstr "Installation:"
 
 #, fuzzy
 #~ msgid "Downgrade given packages"
@@ -2741,10 +2943,6 @@ msgstr "'%s' beendet durch Signal %d"
 
 #~ msgid "Applying patch %s..."
 #~ msgstr "Anwenden des Patches '%s'..."
-
-#, fuzzy
-#~ msgid "  Writing %s..."
-#~ msgstr "Speichere '%s'..."
 
 #, fuzzy
 #~ msgid "greedy and follow options are inclusive"

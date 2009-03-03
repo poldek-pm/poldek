@@ -1133,11 +1133,11 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
             add_param(ht_sect, sectnam, name, value, addparam_flags,
                       af->path, nline);
         } else 
-            msgn(1, "%s: skipped %s::%s", af->path, sectnam, name);
+            msgn(1, _("%s: skipped %s::%s"), af->path, sectnam, name);
     }
     
 
-    msgn(3, "-- %s EOF --", af->path);
+    msgn(3, _("-- %s EOF --"), af->path);
     
 
     if (ht) {

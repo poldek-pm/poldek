@@ -159,7 +159,7 @@ static void find_aliased_commands(struct poclidek_ctx *cctx)
             logn(LOGWARN, _("%s: could not determine aliased command"),
                  cmd->name);
         else
-            msgn(3, "%s => aliased %s", cmd->name, cmd->aliasto);
+            msgn(3, _("%s => aliased %s"), cmd->name, cmd->aliasto);
     }
 }
 
