@@ -48,8 +48,6 @@ install3/requirements.c
 lib_init.c
 lib_pkgset.c
 log.c
-log4c/defaultAppender.c
-log4c/log4c.c
 minfo.c
 misc.c
 pkg.c
