@@ -58,12 +58,12 @@ msgstr "Kontynuowaæ? [Y/n]"
 #: ask.c:106
 #, c-format
 msgid "%s: required \"%s\" is provided by following packages:"
-msgstr ""
+msgstr "%s: Wymagany \"%s\" jest dostarczany przez nastêpuj±ce pakiety:"
 
 #: ask.c:109
 #, c-format
 msgid "Required \"%s\" is provided by following packages:"
-msgstr ""
+msgstr "Wymagany \"%s\" jest dostarczany przez nastêpuj±ce pakiety:"
 
 #: ask.c:128
 #, c-format
@@ -1287,7 +1287,7 @@ msgstr " Po rozpakowaniu oko³o %s bêdzie u¿yte."
 #: install-dist.c:119
 #, c-format
 msgid "Installing #%d package of total %d (%s left to get)\n"
-msgstr ""
+msgstr "Instalacja #%d pakietu z %d (%s pozosta³o do pobrania)\n"
 
 #: install-dist.c:172
 msgid "Interrupted"
@@ -1966,7 +1966,7 @@ msgstr "%s: req %s %s"
 
 #: pkgset.c:611
 msgid "version mismatch"
-msgstr ""
+msgstr "niezgodno¶æ wersji"
 
 #: pkgset.c:611
 msgid "not found"
@@ -2013,7 +2013,7 @@ msgstr ""
 #: pm/pset/pset.c:603
 #, c-format
 msgid "Copying %s to %s"
-msgstr ""
+msgstr "Kopiowanie %s do %s"
 
 #: pm/pset/pset.c:646
 #, fuzzy, c-format
@@ -2224,7 +2224,7 @@ msgstr "Reinstaluj"
 
 #: poldek_ts.c:855
 msgid "to remove"
-msgstr ""
+msgstr "aby usun±æ"
 
 #: poldek_ts.c:873
 #, fuzzy, c-format
@@ -2245,7 +2245,7 @@ msgstr[2] "_ (%d zaznaczonych po¶rednio)"
 #: poldek_ts.c:882
 #, c-format
 msgid ", %d to remove"
-msgstr ""
+msgstr ", %d aby usun±æ"
 
 #: poldek_ts.c:1038
 msgid "Verifying dependencies..."
