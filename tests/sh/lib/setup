@@ -27,22 +27,26 @@ RUNTEST_ONLY=
 
 while test $# -gt 0 ; do
     case "${1}" in
+        -l) 
+           egrep -B 1 ^test $0 | sed 's|()||g;s|{||g'; exit; shift ;;  
+
         --source-repo)
             shift; SOURCE_REPO="${1}"; shift ;;
 
         -v)
             shift; VERBOSE="$VERBOSE -v";;
+
             
         -n) shift; MAXLOOP="${1}"; shift ;;
 
-        --runtest)
+        -t)
             shift; RUNTEST_ONLY="${1}"; shift ;;
         -h)
             echo "Usage: $(basename $0) [--source-repo REPO] [-v] [-n NUM]"
             echo '    --source-repo  - source (read-only) repository for *-repo tests'
             echo "    -v             - be verbose"
             echo '    -n NUM         - do NUM iteration in *-loop tests'
-            echo '    --runtest NAME - run NAME test only'
+            echo '    -t NAME        - run NAME test only'
             exit 0; shift ;;
         *)
             echo "unknown option ${1}; try -h"; exit 1;
