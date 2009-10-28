@@ -28,6 +28,10 @@
 
 #include <rpm/rpmlib.h>
 #include <rpm/rpmte.h>
+#if HAVE_RPM_4_1
+# define _RPMPRCO_INTERNAL
+# include <rpm/rpmds.h>
+#endif
 #define _RPMTS_INTERNAL
 #include <rpm/rpmts.h>
 
