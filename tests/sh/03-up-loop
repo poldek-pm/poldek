@@ -23,7 +23,7 @@ load() {
   #ls -l $TMPDIR/remote-dump $TMPDIR/local-dump        
   diff -q $TMPDIR/remote-dump $TMPDIR/local-dump
   ec=$?
-  [ $ec -ne 0 ] && ls -l $TMPDIR/remote-dump $TMPDIR/local-dump
+  [ $ec -ne 0 ] && echo "repo=$REPO" && ls -l $TMPDIR/remote-dump $TMPDIR/local-dump
   return $ec
 }
 
