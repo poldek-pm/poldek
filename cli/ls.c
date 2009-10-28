@@ -428,7 +428,7 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
         } else {
             snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds %%-%ds%%%ds\n",
                      (term_width/2) - 1, (term_width/6) - 1,
-                     (term_width/6) - 1, (term_width/5) - 1);
+                     (term_width/6) - 1, (term_width/6) - 1);
 
             snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%-%ds %%-%ds %%%ds\n",
                      (term_width/2) - 1, (term_width/6) - 1,
