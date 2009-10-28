@@ -484,8 +484,9 @@ testMultilibNoSuccesor() {
 }
 
 
-# NFY
-_MultilibArchToNoarchUpgrade() {
+# https://bugs.launchpad.net/poldek/+bug/299685
+# poldek should allow any color -> no-color and no-color -> color upgrades 
+testMultilibNoColorDiffrentArchUpgrade() {
     ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
     POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
 
@@ -493,6 +494,18 @@ _MultilibArchToNoarchUpgrade() {
     build_installed a 1-1 -a x86_64 -f "/hello.x86_64"
     build a 2-2 -a noarch -f "/hello.sh"
     try_install a-2-2.noarch "a-2-2.noarch" "a-1-1.x86_64"
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+}
+
+# same https://bugs.launchpad.net/poldek/+bug/299685
+testMultilibNoColorToColorUpgrade() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    build_installed a 1-1 -a x86_64 -f "/hello.sh"
+    build a 2-2 -a amd64 -f "/hello.x86_64"
+    try_install a-2-2.amd64 "a-2-2.amd64" "a-1-1.x86_64"
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }
 
