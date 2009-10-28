@@ -438,6 +438,7 @@ struct pkg *i3_choose_equiv(struct poldek_ts *ts,
                             const struct pkg *pkg, const struct capreq *cap,
                             tn_array *pkgs, struct pkg *hint) 
 {
+    tn_array *tmp = NULL;
     int n;
     
     n_assert(pkgs);
@@ -449,27 +450,33 @@ struct pkg *i3_choose_equiv(struct poldek_ts *ts,
     if (!ts->getop(ts, POLDEK_OP_EQPKG_ASKUSER))
         return hint;
 
-    n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    tmp = n_array_dup(pkgs, (tn_fn_dup)pkg_link);
+    n_array_ctl_set_cmpfn(tmp, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    n_array_sort(tmp);
 
     if (ts->getop(ts, POLDEK_OP_MULTILIB)) {
-        int size = n_array_size(pkgs);
+        int size = n_array_size(tmp);
 
         //pkgs_array_dump(pkgs, "BEFORE");
-        n_array_uniq_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_evr);
+        n_array_uniq_ex(tmp, (tn_fn_cmp)pkg_cmp_name_evr);
         
         /* ops, same packages, different arch -> no choice */
-        if (n_array_size(pkgs) != size) {
+        if (n_array_size(tmp) != size) {
+            n_array_free(tmp);
             //DBGF("no choice ");
             //pkgs_array_dump(pkgs, "AFTER");
             return hint;
         }
     }
-    
-    n = poldek__choose_equiv(ts, pkg, capreq_stra(cap), pkgs, hint);
-    if (n == -1)
-        return NULL;
 
-    return n_array_nth(pkgs, n);
+    n = poldek__choose_equiv(ts, pkg, capreq_stra(cap), tmp, hint);
+    if (n == -1) 
+        hint = NULL;
+    else 
+        hint = n_array_nth(tmp, n);
+    
+    n_array_free(tmp);
+    return hint;
 }
 
 int i3_is_user_choosable_equiv(struct poldek_ts *ts) 
