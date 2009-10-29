@@ -147,7 +147,7 @@ static int xargs_packages(struct cmd_pipe *p, tn_array *args)
     int i;
     for (i=0; i < n_array_size(p->pkgs); i++) {
         struct pkg *pkg = n_array_nth(p->pkgs, i);
-        n_array_push(args, n_strdup(pkg_snprintf_s(pkg)));
+        n_array_push(args, n_strdup(pkg_id(pkg)));
     }
     return n_array_size(p->pkgs);
 }
