@@ -370,8 +370,8 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
     
     //if (i3_is_user_choosable_equiv(ts))
     candidates = pkgs_array_new(8);
-    if (i3_find_req(indent, ictx, pkg, req, &tomark, candidates)) {
-        if (tomark == NULL) {
+    if (i3_find_req(indent, ictx, pkg, req, &tomark, candidates)) { /* found? */
+        if (tomark == NULL) {   /* found but nothing to install */
             trace(indentt, "- satisfied by being installed set");
             msgn_i(3, indent, "%s: satisfied by already installed set", strreq);
             goto l_end;
@@ -385,8 +385,8 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
         goto l_end;
     }
     
-    /* try upgrade orphan */
-    if (ts->getop(ts, POLDEK_OP_GREEDY)) {
+    /* try upgrade orphan if requirement not found or greedy mode */
+    if (tomark == NULL || ts->getop(ts, POLDEK_OP_GREEDY)) {
         if (try_to_upgrade_orphan(indent, ictx, pkg, req, tomark))
             goto l_end;
     }

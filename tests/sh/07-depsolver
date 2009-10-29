@@ -90,33 +90,40 @@ runpoldek() {
 # try to install package and check result
 # usage: try_install <package> <expected installed> [<expected removed>]
 try_install() {
-  package="$1"; shift  
-  expected="$1"; shift
-  rm_expected=""
-  [ $# -gt 0 ] && rm_expected="$1"
-
-  regexp=$(echo $expected | sed 's/,/|/g')
-  n_expected=$(echo $expected | sed 's|,|\n|g' | wc -l)
-  if [ -n "$rm_expected" ]; then
-     rm_regexp=$(echo $rm_expected | sed 's/,/|/g')
-     rm_n_expected=$(echo $rm_expected | sed 's|,|\n|g' | wc -l)
+  typeset package="$1"; shift  
+  typeset expected="$1"; shift
+  typeset rm_expected=""
+  if [ $# -gt 0 ]; then
+      rm_expected="$1"
+      shift
   fi
 
-  cmd="-uvt $package"
+  typeset regexp=$(echo $expected | sed 's/,/|/g')
+  typeset n_expected=$(echo $expected | sed 's|,|\n|g' | wc -l)
+  if [ -n "$rm_expected" ]; then
+      typeset rm_regexp=$(echo $rm_expected | sed 's/,/|/g')
+      typeset rm_n_expected=$(echo $rm_expected | sed 's|,|\n|g' | wc -l)
+  fi
+
+  typeset cmd="-uvt $package"
+  if [ $# -gt 0 ]; then
+      cmd="$1 $cmd"
+      shift
+  fi
   runpoldek $cmd  
 
-  out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | egrep "^%[IDR]")
+  typeset out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | egrep "^%[IDR]")
 
-  n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%[ID]' | wc -l)
-  n=$(echo $out | sed 's|%|\n%|g' | egrep "^%[ID] ($regexp)" | wc -l)
+  typeset n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%[ID]' | wc -l)
+  typeset n=$(echo $out | sed 's|%|\n%|g' | egrep "^%[ID] ($regexp)" | wc -l)
   assertEquals "unexpected ($n_all) number of packages (expected $n)" "$n_all" "$n"
   assertEquals "not all or non expected packages installed (expected $expected)" "$n" "$n_expected"
 
   if [ -n "$rm_expected" ]; then   
-     n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%R' | wc -l)
-     n=$(echo $out | sed 's|%|\n%|g' | egrep "^%R ($rm_regexp)" | wc -l)
-     assertEquals "unexpected ($n_all) number of packages removed (expected $n)" "$n_all" "$n"
-     assertEquals "not all or non expected packages removed (expected $rm_expected)" "$n" "$rm_n_expected"
+      typeset n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%R' | wc -l)
+      typeset n=$(echo  $out | sed 's|%|\n%|g' | egrep "^%R ($rm_regexp)" | wc -l)
+      assertEquals "unexpected ($n_all) number of packages removed (expected $n)" "$n_all" "$n"
+      assertEquals "not all or non expected packages removed (expected $rm_expected)" "$n" "$rm_n_expected"
   fi
 }
 
@@ -245,6 +252,39 @@ testUpgradeGreedy() {
     try_install a-devel "a,a-devel,a-static"
     try_install a-static "a,a-devel,a-static"
 }
+
+# should honour --greedy option
+testGreedyOnOff() {       
+    msgn "Preparing repositories..."
+    v=1-1
+    build_installed foo $v -p "CAP"
+    build_installed bar $v -r "CAP"
+
+    v=2-2
+    build foo $v
+    build bar $v 
+    build baz 1-1 -p "CAP"
+
+    msgn "Greedy..."
+    try_install foo "foo,bar" "foo,bar" --greedy=yes
+    msgn "Not so greedy..."
+    try_install foo "foo,baz" "foo" --greedy=no
+}
+
+# should be greedy on unmet dependecies
+testBeGreedyOnUnmetDeps() {       
+    msgn "Preparing repositories..."
+    v=1-1
+    build_installed foo $v -p "CAP"
+    build_installed bar $v -r "CAP"
+
+    v=2-2
+    build foo $v
+    build bar $v 
+
+    try_install foo "foo,bar" "foo,bar" --greedy=yes
+}
+
 
 # bar obsoletes foo
 testUpgradeObsolete() {
@@ -511,7 +551,7 @@ testMultilibNoColorToColorUpgrade() {
 }
 
 
-#
+# NFY should score orphan successors
 testOrhpanSuccessorScore() {
     #ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
     #POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
