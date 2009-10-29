@@ -660,22 +660,22 @@ static inline void lang_match_avlangs(tn_array *avlangs, tn_array *r_langs,
     
     /* first try */
     if (n_array_bsearch(avlangs, lang)) {
-	if (strcmp(lang, "C") == 0)
-	    *has_C = 1;
-	
-	n_array_push(r_langs, n_strdup(lang));
+        if (strcmp(lang, "C") == 0)
+            *has_C = 1;
+        
+        n_array_push(r_langs, n_strdup(lang));
     }
     
     /* second try, without country code */
     if ((cut = cut_country_code(lang))) {
-	if (n_array_bsearch(avlangs, cut)) {
-	    if (strcmp(cut, "C") == 0)
-		*has_C = 1;
-	    
-	    n_array_push(r_langs, cut);
-	} else {
-	    free(cut);
-	}
+        if (n_array_bsearch(avlangs, cut)) {
+            if (strcmp(cut, "C") == 0)
+                *has_C = 1;
+            
+            n_array_push(r_langs, cut);
+        } else {
+            free(cut);
+        }
     }
 }
 
@@ -698,8 +698,8 @@ tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
         char   *l, *q, *sep = "@.";
         int    len;
 
-	/* try a complete match */
-	lang_match_avlangs(avlangs, r_langs, *p, &has_C);
+        /* try a complete match */
+        lang_match_avlangs(avlangs, r_langs, *p, &has_C);
         
         len = strlen(*p) + 1;
         l = alloca(len + 1);
@@ -910,7 +910,7 @@ void *timethis_begin(void)
     return tv;
 }
 
-void timethis_end(void *tvp, const char *prefix)
+void timethis_end(int verbose_level, void *tvp, const char *prefix)
 {
     struct timeval tv, *tv0 = (struct timeval *)tvp;
 
@@ -923,6 +923,6 @@ void timethis_end(void *tvp, const char *prefix)
         tv.tv_usec = 1000000 + tv.tv_usec;
     }
 
-    msgn(2, "time [%s] %ld.%ld\n", prefix, tv.tv_sec, tv.tv_usec);
+    msgn(verbose_level, "time [%s] %ld.%ld\n", prefix, tv.tv_sec, tv.tv_usec);
     free(tvp);
 }

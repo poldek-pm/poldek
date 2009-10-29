@@ -59,6 +59,6 @@ int poldek__is_in_testing_mode(void);
 const char *lc_messages_lang(void);
 
 void *timethis_begin(void);
-void timethis_end(void *tvp, const char *prefix);
+void timethis_end(int verbose_level, void *tvp, const char *prefix);
 
 #endif /* POLDEK_MISC_H */

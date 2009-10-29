@@ -168,7 +168,6 @@ static int pkgset_index(struct pkgset *ps)
     if (ps->flags & _PKGSET_INDEXES_INIT)
         return 1;
     
-    msg(2, "Indexing...\n");
     add_self_cap(ps);
     n_array_map(ps->pkgs, (tn_fn_map1)sort_pkg_caps);
     MEMINF("after index[selfcap]");
@@ -184,8 +183,8 @@ static int pkgset_index(struct pkgset *ps)
     for (i=0; i < n_array_size(ps->pkgs); i++) {
         struct pkg *pkg = n_array_nth(ps->pkgs, i);
         
-        if (i % 200 == 0) 
-            msg(3, " %d..\n", i);
+        if (i % 1000 == 0) 
+            msg(3, " indexed %d..\n", i);
 
         do_pkgset_add_package(ps, pkg, 0);
     }
@@ -197,7 +196,7 @@ static int pkgset_index(struct pkgset *ps)
     capreq_idx_stats("obs", &ps->obs_idx);
 #endif    
     file_index_setup(ps->file_idx);
-    msg(3, " ..%d done\n", i);
+    msg(3, " indexed %d. Done\n", i);
     
     return 0;
 }
@@ -228,7 +227,10 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     int n;
     int strict;
     int v = poldek_VERBOSE;
+    void *t;
 
+    t = timethis_begin();
+    msgn(2, "Preparing package set...");
     MEMINF("before setup");
     ps->flags |= flags;
     strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
@@ -255,23 +257,28 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
     }
     
     MEMINF("before index");
+    msgn(3, " a). indexing...");
     pkgset_index(ps);
     MEMINF("after index");
     
+    msgn(3, " b). detecting file conflicts...");
     v = poldek_set_verbose(-1);
     file_index_find_conflicts(ps->file_idx, strict);
     poldek_set_verbose(v);
     
+    msgn(3, " c). dependencies...");
     pkgset_verify_deps(ps, strict);
     MEMINF("after verify deps");
-
+    
     pkgset_verify_conflicts(ps, strict);
     
     MEMINF("MEM before order");
-    if ((flags & PSET_NOORDER) == 0)
+    if ((flags & PSET_NOORDER) == 0) {
+        msgn(3, " d). ordering...");
         pkgset_order(ps, flags & PSET_VERIFY_ORDER);
+    }
     MEMINF("after setup[END]");
-
+    timethis_end(3, t, "setup");
     return ps->nerrors == 0;
 }
 
@@ -282,7 +289,7 @@ static int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt)
     if (rt) {
         if (n_array_bsearch(ps->pkgs, pkg))
             return 0;
-
+        
         n_array_push(ps->pkgs, pkg_link(pkg));
     }
     
