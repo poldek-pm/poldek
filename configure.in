@@ -235,6 +235,8 @@ dnl Checks for libraries.
 AC_CHECK_LIB(bz2, BZ2_bzCompress)
 AC_CHECK_LIB(z, gzopen)
 
+AC_CHECK_FUNCS(gzungetc)
+
 DBLIB=""
 if test "${is_rpm4_0_4}." = "no." ; then
 	dnl tocheck: -ldb-3.1 causes link with static lib from /usr/lib
