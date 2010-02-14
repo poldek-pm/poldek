@@ -149,7 +149,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
     struct pkg           tmpkg;
     off_t                offs;
     unsigned long        ul_offs;
-    char                 linebuf[4096];
+    char                 linebuf[PATH_MAX];
     int                  nerr = 0, nread, pkg_loaded = 0;
     int                  tag, tag_binsize = PKG_STORETAG_SIZENIL;
     const  char          *errmg_double_tag = "%s:%lu: double '%c' tag";

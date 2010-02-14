@@ -135,7 +135,7 @@ struct pkg *pdir_pkg_restore(tn_alloc *na, tn_stream *st, struct pkg *pkg,
 {
     struct pkgtags_s   pkgt;
     off_t              offs;
-    char               linebuf[4096];
+    char               linebuf[PATH_MAX];
     int                nerr = 0, nread, with_pkg = 0;
 
     const  char        *errmg_double_tag = "%s:%ld: double '%c' tag";

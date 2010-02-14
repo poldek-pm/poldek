@@ -577,7 +577,7 @@ static
 int do_open(struct pkgdir *pkgdir, unsigned flags)
 {
     struct vfile         *vf;
-    char                 linebuf[1024 * 256];
+    char                 linebuf[PATH_MAX];
     int                  nline;
     int                  nerr = 0, nread;
     struct pkgroup_idx   *pkgroups = NULL;
