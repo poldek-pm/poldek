@@ -708,10 +708,8 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
     struct pkg          *pkg = i3pkg->pkg;
     struct pkg_req_iter *it = NULL;
     const struct capreq *req = NULL;
-    tn_array            *suggests = NULL;
     unsigned            itflags = PKG_ITER_REQIN;
     int                 nerrors = 0, backtrack = 0;
-    
     
     pkg = i3pkg->pkg;
     n_assert(pkg);
@@ -722,22 +720,10 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
         return 0;
     
     tracef(indent, "%s as NEW", pkg_id(pkg));
-
-    if (ts->getop(ts, POLDEK_OP_SUGGESTS)) {
-        suggests = with_suggests(indent + 2, ictx, pkg);
-        if (suggests)
-            itflags |= PKG_ITER_REQSUG;
-    }
     
     it = pkg_req_iter_new(pkg, itflags);
     while ((req = pkg_req_iter_get(it))) {
-        unsigned t;
         int rc;
-
-        /* install only reasonable/choosen suggests */
-        t = pkg_req_iter_current_req_type(it);
-        if (t == PKG_ITER_REQSUG && !suggests_contains(suggests, req))
-            continue;
         
         if ((rc = process_req(indent, ictx, i3pkg, req)) <= 0) {
             nerrors++;
@@ -750,7 +736,33 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
     }
 
     pkg_req_iter_free(it);
-    n_array_cfree(&suggests);
+    
+    /* check for Suggests after processing Requires. Prevent cases where poldek
+       asks for suggested package, even though it is required. */
+    if (ts->getop(ts, POLDEK_OP_SUGGESTS) && nerrors == 0) {
+        tn_array *suggests = NULL;
+	int      i;
+	
+	suggests = with_suggests(indent + 2, ictx, pkg);
+	
+	if (suggests) {
+	    for (i = 0; i < n_array_size(suggests); i++) {
+		int rc;
+		
+		req = n_array_nth(suggests, i);
+		
+		if ((rc = process_req(indent, ictx, i3pkg, req)) <= 0) {
+        	    nerrors++;
+        	    if (rc < 0) {
+            		backtrack = 1;
+            		if (i3pkg->flags & I3PKG_BACKTRACKABLE)
+                	    break;
+        	    }
+    		}
+	    }
+	}
+	n_array_cfree(&suggests);
+    }
     
     if (backtrack && (i3pkg->flags & I3PKG_CROSSROAD)) {
         logn(LOGNOTICE, "Retrying to process %s", pkg_id(i3pkg->pkg));
