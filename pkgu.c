@@ -576,8 +576,9 @@ static char *do_load_changelog_from_rpmhdr(tn_alloc *na, void *hdr)
     nbuf = n_buf_new(1024);
     for (i=0; i < e_name.cnt; i++) {
         char ts[32];
+        time_t t = times[i];
 
-        strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", gmtime((time_t*)&times[i]));
+        strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", gmtime((time_t*)&t));
 
         n_buf_printf(nbuf, "* %s %s\n", ts, names[i]);
         n_buf_printf(nbuf, "%s\n\n", texts[i]);
