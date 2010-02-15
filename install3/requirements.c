@@ -595,6 +595,7 @@ static int process_req(int indent, struct i3ctx *ictx,
 static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg) 
 {
     tn_array *suggests = NULL, *choices = NULL;
+    struct pkg *oldpkg = NULL;
     int i, autochoice = 0;
 
     if (pkg->sugs == NULL)
@@ -618,12 +619,15 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 
     tracef(indent, "%s", pkg_id(pkg));
 
+    /* gets old version of pkg (from marked for removal) */
+    oldpkg = iset_has_kind_of_pkg(ictx->unset, pkg);
+
     suggests = capreq_arr_new(4);
     n_array_ctl_set_freefn(suggests, NULL); /* 'weak' ref */
     for (i=0; i < n_array_size(pkg->sugs); i++) {
         struct capreq *req = n_array_nth(pkg->sugs, i);
         struct pkg *tomark = NULL;
-        
+                
         if (iset_provides(ictx->inset, req)) {
             trace(indent, "- %s: already marked", capreq_stra(req));
             continue;
@@ -632,6 +636,13 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
         if (i3_pkgdb_match_req(ictx, req)) {
             trace(indent, "- %s: satisfied by db", capreq_stra(req));
             continue;
+        }
+
+	/* on upgrade don't suggest package skipped during installation */
+        if (oldpkg && oldpkg->sugs && capreq_arr_contains(oldpkg->sugs, capreq_name(req))) {
+    	    trace(indent, "- %s: skipped on install -> don't suggest on upgrade",
+    		 capreq_stra(req));
+    	    continue;
         }
         
         if (!i3_find_req(indent, ictx, pkg, req, &tomark, NULL)) {
