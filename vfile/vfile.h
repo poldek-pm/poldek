@@ -182,6 +182,7 @@ const char *vf_url_hidepasswd_s(const char *url);
 const char *vf_url_slim(char *buf, int size, const char *url, int maxl);
 const char *vf_url_slim_s(const char *url, int maxl);
 
+char *vf_url_unescape(const char *url);
 
 int vf_valid_path(const char *path);
 int vf_mkdir(const char *path);

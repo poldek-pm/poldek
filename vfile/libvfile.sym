@@ -41,6 +41,7 @@ vf_url_proto
 vf_url_slim
 vf_url_slim_s
 vf_url_type
+vf_url_unescape
 vf_userathost
 vf_valid_path
 vf_vlog

@@ -219,8 +219,8 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
     struct vflock           *vflock = NULL;
     struct vf_request       *req = NULL;
     char                    destpath[PATH_MAX];
+    char                    *url_unescaped = NULL;
     int                     rc = 0;
-
     
     if (*vfile_verbose <= 0)
         flags |= VF_FETCH_NOLABEL|VF_FETCH_NOPROGRESS;
@@ -239,11 +239,15 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
     
     if ((mod = select_vf_module(url)) == NULL) { /* no internal module found */
         if ((flags & VF_FETCH_NOLABEL) == 0) {
+            url_unescaped = vf_url_unescape(url);
+            
             if (urlabel)
                 vf_loginfo(_("Retrieving %s::%s...\n"), urlabel,
-                           n_basenam(url));
+                           n_basenam(url_unescaped));
             else
-                vf_loginfo(_("Retrieving %s...\n"), PR_URL(url));
+                vf_loginfo(_("Retrieving %s...\n"), PR_URL(url_unescaped));
+        
+    	    free(url_unescaped);
         }
 
         rc = vf_fetch_ext(url, destdir);
@@ -298,11 +302,15 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
     }
 
     if ((flags & VF_FETCH_NOLABEL) == 0) {
+        url_unescaped = vf_url_unescape(req->url);
+        
         if (urlabel)
             vf_loginfo(_("Retrieving %s::%s...\n"), urlabel,
-                       n_basenam(req->url));
+                       n_basenam(url_unescaped));
         else
-            vf_loginfo(_("Retrieving %s...\n"), PR_URL(req->url));
+            vf_loginfo(_("Retrieving %s...\n"), PR_URL(url_unescaped));
+
+	free(url_unescaped);
     }
             
     if ((rc = do_vfile_req(REQTYPE_FETCH, mod, req, flags)) == 0) {

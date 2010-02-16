@@ -828,6 +828,39 @@ const char *vf_url_slim_s(const char *url, int maxl)
     return vf_url_slim(buf, sizeof(buf), url, maxl > 50 ? maxl : 60);
 }
 
+char *vf_url_unescape(const char *url)
+{
+    char *unescaped = NULL;
+    int unesclen = 0;
+
+    if (!url)
+	return NULL;
+
+    unescaped = n_malloc(strlen(url) + 1);
+
+    while (*url) {
+        char ch = *url;
+
+        if (*url == '%' && isxdigit(url[1]) && isxdigit(url[2])) {
+            char str[3];
+            
+            str[0] = url[1];
+            str[1] = url[2];
+            str[2] = '\0';
+
+            ch = (char)strtol(str, NULL, 16);
+
+            url += 2;
+        }
+
+        unescaped[unesclen++] = ch;
+        url++;
+    }
+
+    unescaped[unesclen] = '\0';
+
+    return unescaped;
+}
 
 int vf_find_external_command(char *cmdpath, int size, const char *cmd,
                              const char *PATH)
