@@ -49,6 +49,7 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs, int compare_ver,
 #define OPT_LS_GROUP           (1 << 9)
 #define OPT_LS_SUMMARY         (1 << 10)
 #define OPT_LS_NAMES_ONLY      (1 << 11)
+#define OPT_LS_SOURCERPM       (1 << 12)
 
 
 #define OPT_LS_ERR             (1 << 16);
@@ -67,7 +68,8 @@ static struct argp_option options[] = {
  { NULL, 'n', 0, 0, N_("Print only package names"), 1},
  { NULL, 'G', 0, 0, N_("Print package groups"), 1},
  { NULL, 'O', 0, 0, N_("Print package summaries"), 1},
-// { NULL, 'i', 0, OPTION_ALIAS, 0, 1 }, 
+ { "source-rpm", 's', 0, 0,N_("Print package source rpm"), 1},
+// { NULL, 'i', 0, OPTION_ALIAS, 0, 1 },
  { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -84,7 +86,7 @@ static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct cmdctx *cmdctx = state->input;
-    const char *errmsg_excl = _("ls: -l and -G are exclusive");
+    const char *errmsg_excl = _("ls: -l, -s and -G are exclusive");
     arg = arg;
     
     switch (key) {
@@ -102,14 +104,23 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'G':
-            if (cmdctx->_flags & OPT_LS_LONG) {
+            if (cmdctx->_flags & OPT_LS_LONG || cmdctx->_flags & OPT_LS_SOURCERPM) {
                 logn(LOGERR, errmsg_excl);
                 return EINVAL;
             }
 
             cmdctx->_flags |= OPT_LS_GROUP;
             break;
-            
+
+        case 's':
+            if (cmdctx->_flags & OPT_LS_LONG || cmdctx->_flags & OPT_LS_GROUP) {
+                logn(LOGERR, errmsg_excl);
+                return EINVAL;
+            }
+
+            cmdctx->_flags |= OPT_LS_SOURCERPM;
+            break;
+
         case 't':
             cmdctx->_flags |= OPT_LS_SORTBUILDTIME;
             break;
@@ -403,15 +414,17 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 
     *hdr = '\0';
 
-    if (flags & OPT_LS_GROUP) {
+    if (flags & OPT_LS_GROUP || flags & OPT_LS_SOURCERPM) {
         snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds\n",
                  term_width_div2 + term_width_div2/10, (term_width/7));
 
         snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%-%ds\n",
                  term_width_div2 + term_width_div2/10, (term_width/7));
-        
-        snprintf(hdr, sizeof(hdr), fmt_hdr, _("package"), _("group"));
 
+	if (flags & OPT_LS_GROUP)
+	    snprintf(hdr, sizeof(hdr), fmt_hdr, _("package"), _("group"));
+        else
+	    snprintf(hdr, sizeof(hdr), fmt_hdr, _("package"), _("source rpm"));
     } else if (flags & OPT_LS_LONG) {
         if ((flags & OPT_LS_UPGRADEABLE) == 0) {
             snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds %%-%ds%%%ds\n",
@@ -480,7 +493,10 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
         if (flags & OPT_LS_GROUP) {
             const char *group = pkg_group(pkg);
             cmdctx_printf(cmdctx, fmt_pkg, pkg_name, group ? group : "(unset)");
-            
+	}
+        else if (flags & OPT_LS_SOURCERPM) {
+            const char *srcrpm = pkg_srcfilename_s(pkg);
+            cmdctx_printf(cmdctx, fmt_pkg, pkg_name, srcrpm ? srcrpm : "(unset)");
         } else if ((flags & OPT_LS_LONG) == 0) {
             cmdctx_printf(cmdctx, "%s\n", pkg_name);
             
