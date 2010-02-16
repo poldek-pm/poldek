@@ -28,6 +28,7 @@ libpoclidek_la_SOURCES  =  \
 			op_split.c      \
 			op_verify.c     \
 		        ls.c            \
+		        ls_queryfmt.c ls_queryfmt.h \
 		        install.c       \
 			uninstall.c     \
 	        	desc.c          \

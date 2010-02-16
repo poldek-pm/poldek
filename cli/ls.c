@@ -24,6 +24,7 @@
 #include "pkgu.h"
 #include "cli.h"
 #include "log.h"
+#include "ls_queryfmt.h"
 
 static int ls(struct cmdctx *cmdctx);
 static
@@ -51,6 +52,8 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs, int compare_ver,
 #define OPT_LS_NAMES_ONLY      (1 << 11)
 #define OPT_LS_SOURCERPM       (1 << 12)
 
+#define OPT_LS_QUERYFMT        (1 << 13)
+#define OPT_LS_QUERYTAGS       (1 << 14)
 
 #define OPT_LS_ERR             (1 << 16);
 
@@ -68,8 +71,10 @@ static struct argp_option options[] = {
  { NULL, 'n', 0, 0, N_("Print only package names"), 1},
  { NULL, 'G', 0, 0, N_("Print package groups"), 1},
  { NULL, 'O', 0, 0, N_("Print package summaries"), 1},
- { "source-rpm", 's', 0, 0,N_("Print package source rpm"), 1},
-// { NULL, 'i', 0, OPTION_ALIAS, 0, 1 },
+ { "source-rpm", 's', 0, 0, N_("Print package source rpm"), 1},
+ { 0, 0, 0, 0, N_("Query format options:"), 2},
+ { "qf", OPT_LS_QUERYFMT, "QUERYFMT", 0, N_("Use the following query format"), 2},
+ { "querytags", OPT_LS_QUERYTAGS, 0, 0, N_("Show supported tags"), 2},
  { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -152,7 +157,25 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'n':
             cmdctx->_flags |= OPT_LS_NAMES_ONLY;
             break;
-            
+
+	case OPT_LS_QUERYFMT:
+	    cmdctx->_flags |= OPT_LS_QUERYFMT;
+
+	    if (arg) {
+		struct lsqf_ent_array *array = NULL;
+
+		if ((array = lsqf_parse(arg)) == NULL)
+		    return EINVAL;
+
+		cmdctx->_data = array;
+	    }
+
+	    break;
+
+	case OPT_LS_QUERYTAGS:
+	    lsqf_show_querytags(cmdctx);
+	    return EINVAL;
+
         default:
             return ARGP_ERR_UNKNOWN;
     }
@@ -368,6 +391,10 @@ static int ls(struct cmdctx *cmdctx)
     
 
  l_end:
+    if (cmdctx->_flags & OPT_LS_QUERYFMT) {
+	lsqf_ent_array_free(cmdctx->_data);
+	cmdctx->_data = NULL;
+    }
 
     if (ls_ents)
         n_array_free(ls_ents);
@@ -497,6 +524,16 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
         else if (flags & OPT_LS_SOURCERPM) {
             const char *srcrpm = pkg_srcfilename_s(pkg);
             cmdctx_printf(cmdctx, fmt_pkg, pkg_name, srcrpm ? srcrpm : "(unset)");
+        
+        } else if (flags & OPT_LS_QUERYFMT) {
+	    char *queryfmt = NULL;
+
+	    if ((queryfmt = lsqf_to_string(cmdctx->_data, pkg))) {
+		cmdctx_printf(cmdctx, "%s", queryfmt);
+
+                n_free(queryfmt);
+	    }
+
         } else if ((flags & OPT_LS_LONG) == 0) {
             cmdctx_printf(cmdctx, "%s\n", pkg_name);
             
