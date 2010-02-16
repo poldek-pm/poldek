@@ -92,7 +92,11 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
         if (ent->_size == 1)    /* crent_pkgs is NOT allocated */
             capreq_idx_ent_transform_to_array(ent);
 
-#if 0                           /* not happens in fact */
+        /*
+         * Sometimes, there are duplicates, especially in dotnet-* packages
+         * which provides multiple versions of one cap. For example dotnet-mono-zeroconf
+         * provides: mono(Mono.Zeroconf) = 1.0.0.0, mono(Mono.Zeroconf) = 2.0.0.0, etc.
+         */
         if (idx->flags & CAPREQ_IDX_CAP) { /* check for duplicates */
             register int i;
             for (i=0; i < ent->items; i++) { 
@@ -100,7 +104,6 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
                     return 1;
             }
         }
-#endif
         
         if (ent->items == ent->_size) {
             ent->_size *= 2;
