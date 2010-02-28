@@ -288,7 +288,7 @@ static int openvf(struct vfile *vf, const char *path, int vfmode)
             char *mode = NULL;
             
             if ((vfmode & VFM_APPEND) == VFM_APPEND)
-				mode = "a+";
+				mode = "a";
             else if (vfmode & VFM_RW)
                 mode = "w";
 			else
