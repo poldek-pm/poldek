@@ -276,7 +276,7 @@ static int do_make_merged_idx(tn_array *sources,
     struct source   *src;
     struct pkgdir   *pkgdir;
     char            path[PATH_MAX], sstr[256];
-    int             rc = 1, n = 0;
+    int             rc = 1, n = 0, i;
     
     n_assert(type);
     n_assert(idxpath);
@@ -285,7 +285,7 @@ static int do_make_merged_idx(tn_array *sources,
     n_assert(idxpath);
     
     n = 0;
-    for (int i=0; i < n_array_size(sources); i++) {
+    for (i=0; i < n_array_size(sources); i++) {
         struct source *s = n_array_nth(sources, i);
         n += n_snprintf(&sstr[n], sizeof(sstr) - n, "  - %s (type=%s)\n",
                         source_idstr(s), s->type);
@@ -333,14 +333,14 @@ int source_make_merged_idx(tn_array *sources,
     tn_array *ssources;
     const char *stype = NULL;
     int typcaps;
-    int rc = 0;
+    int rc = 0, i;
 
     DBGF("%s(src=%s) => %s\n", stype, src->type ? src->type : "null", dtype);
 
     n_assert(idxpath);
 
 
-    for (int i=0; i<n_array_size(sources); i++) {
+    for (i=0; i<n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
 
         if (stype == NULL)
@@ -355,7 +355,7 @@ int source_make_merged_idx(tn_array *sources,
     
 
     if (dtype == NULL) {
-        for (int i=0; i<n_array_size(sources); i++) {
+        for (i=0; i<n_array_size(sources); i++) {
             struct source *src = n_array_nth(sources, i);
 
             /* if not from config */
@@ -377,7 +377,7 @@ int source_make_merged_idx(tn_array *sources,
     }
     
     ssources = n_array_clone(sources);
-    for (int i=0; i<n_array_size(sources); i++) {
+    for (i=0; i<n_array_size(sources); i++) {
         struct source *ssrc, *src = n_array_nth(sources, i);
         ssrc = source_clone(src);
         n_array_push(ssources, ssrc);

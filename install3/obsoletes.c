@@ -27,13 +27,14 @@ static void orphan_free(struct orphan *o)
 static struct orphan *orphan_new(int indent, struct pkg *pkg, tn_array *caps) 
 {
     struct orphan *o;
+    int i;
 
     o = n_malloc(sizeof(*o));
     o->pkg = pkg_link(pkg);
     o->reqs = capreq_arr_new(4);
     n_array_ctl_set_freefn(o->reqs, NULL); /* weak ref */
     
-    for (int i=0; i < n_array_size(caps); i++) {
+    for (i=0; i < n_array_size(caps); i++) {
         const struct capreq *req;
         struct capreq *cap = n_array_nth(caps, i);
 
