@@ -1087,7 +1087,6 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
                 goto l_end;
             }
             
-            DBGF("open %s %s, i %s\n", line, sectnam, inc_sectnam);
             if (!do_ldconf(af_htconf, line, af->path, section_to_load, flags)) {
                 is_err = 1;
                 goto l_end;

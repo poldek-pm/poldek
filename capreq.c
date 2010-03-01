@@ -794,9 +794,6 @@ tn_array *capreq_arr_restore_st(tn_alloc *na, tn_stream *st)
     n_buf_restore_ex(st, NULL, TN_BUF_STORE_16B, 
                      (int (*)(tn_buf *, void*))capreq_arr_restore_fn, &rs);
 
-    DBGF("AFTER capreq_arr_restore_f %lu, %lu\n", off,
-         n_stream_tell(st));
-    
     return rs.arr;
 }
 

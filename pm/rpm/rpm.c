@@ -271,7 +271,7 @@ time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath)
 
 void pm_rpm_closedb(rpmdb db) 
 {
-    DBGF("DB %p close %d\n", db, db->nrefs);
+    DBGF("DB %p\n", db);
     
     rpmdbClose(db);
     

@@ -1636,7 +1636,6 @@ static int setup_pm(struct poldek_ctx *ctx)
                 tl++;
                 while (*tl) {
                     poldek_ts_configure(ctx->ts, POLDEK_CONF_RPMOPTS, *tl);
-                    DBGF("%d (%s) -> (%s)\n", tag, *tl, name);
                     tl++;
                 }
                 n_str_tokl_free(tl_save);

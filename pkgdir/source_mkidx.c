@@ -335,8 +335,6 @@ int source_make_merged_idx(tn_array *sources,
     int typcaps;
     int rc = 0, i;
 
-    DBGF("%s(src=%s) => %s\n", stype, src->type ? src->type : "null", dtype);
-
     n_assert(idxpath);
 
 

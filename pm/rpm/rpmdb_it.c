@@ -95,7 +95,7 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
     }
     
     
-    DBGF("%p, %p (%d)\n", it, db, db->nrefs);
+    DBGF("%p, %p\n", it, db);
     it->tag = tag;
     it->db = db;
     it->mi = rpmdbInitIterator(db, rpmtag, arg, argsize);
@@ -179,7 +179,7 @@ void rpmdb_it_destroy(struct rpmdb_it *it)
     rpmdbFreeIterator(it->mi);
     it->mi = NULL;
     it->dbrec.hdr = NULL;
-    DBGF("%p, %p (%d)\n", it, it->db, it->db->nrefs);
+    DBGF("%p, %p\n", it, it->db);
 #else
     if (it->dbrec.hdr != NULL) {
         headerFree(it->dbrec.hdr);
@@ -200,7 +200,7 @@ const struct pm_dbrec *rpmdb_it_get(struct rpmdb_it *it)
 {
 #ifdef HAVE_RPM_4_0
     it->dbrec.hdr = rpmdbNextIterator(it->mi);
-    DBGF("%p, %p (%d)\n", it, it->db, it->db->nrefs);
+    DBGF("%p, %p\n", it, it->db);
     
     if (it->dbrec.hdr == NULL)
         return NULL;

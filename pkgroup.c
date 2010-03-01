@@ -467,7 +467,7 @@ int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr)
 
     n_assert(n_array_size(langs) >= ngroups);
 
-    DBGF("ngroups %d, %d, %d\n", ngroups, n_array_size(langs), rc);
+    DBGF("ngroups %d, %d\n", ngroups, n_array_size(langs));
     for (i=0; i < ngroups; i++) {
         const char *lang = n_array_nth(langs, i);
         DBGF("   gr[%d of %d] %s\n", i, ngroups, groups[i]);
