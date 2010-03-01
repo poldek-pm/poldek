@@ -156,10 +156,20 @@ void poldek_meminf(int vlevel, const char *fmt, ...);
 # define MEMINF(fmt, args...) poldek_meminf(-5, "%-18s: " fmt, __FUNCTION__ , ## args)
 # define DBGFIF(cond, fmt, args...) do { if (cond) { fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args); } } while (0)
 #else 
-# define DBGF(fmt, args...)  ((void) 0)
-# define DBG(fmt, args...)    ((void) 0)
-# define MEMINF(fmt, args...) ((void) 0)
-# define DBGFIF(cond, fmt, args...)  ((void) 0)
+
+static inline int dbgf_noop( const char *fmt, ... )
+        __attribute__ ((always_inline))
+        __attribute__ ((__format__ (__printf__, 1, 2)));
+ 
+static inline int dbgf_noop( __attribute__((unused)) const char *fmt, ... )
+{
+        return 0;
+}
+
+# define DBGF(args...)		do { dbgf_noop(args); } while (0)
+# define DBG(args...)		do { dbgf_noop(args); } while (0)
+# define MEMINF(args...)		do { dbgf_noop(args); } while (0)
+# define DBGFIF(cond, args...)	do { if (cond) dbgf_noop(args); } while (0)
 #endif
 
 #define DBGF_NULL(fmt, args...) ((void) 0)
