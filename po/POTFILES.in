@@ -15,6 +15,7 @@ cli/get.c
 cli/help.c
 cli/install.c
 cli/ls.c
+cli/ls_queryfmt.c
 cli/main.c
 cli/op.c
 cli/op_makeidx.c
