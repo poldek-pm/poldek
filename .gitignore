@@ -37,6 +37,7 @@ autom4te.cache
 *~
 *.spec
 libtool
+ltmain.sh
 config.guess
 config.sub
 py-compile
