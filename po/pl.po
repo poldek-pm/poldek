@@ -596,7 +596,7 @@ msgstr "dostêpny"
 
 #: cli/main.c:84
 msgid "Miscellaneous options:"
-msgstr "Ró¿norodne opcjie"
+msgstr "Ró¿norodne opcje"
 
 #: cli/main.c:86
 msgid "Use FILE as PM(rpm) binary"
@@ -618,7 +618,7 @@ msgstr "Uruchom w trybie poleceñ (tak jak ipoldek robi domy¶lnie)"
 msgid ""
 "Confirm packages installation and let user choose among equivalent packages"
 msgstr ""
-"Potwierdzaj installacje oraz pozwól u¿ytkownikowi wybieraæ po¶ród "
+"Potwierdzaj instalacjê oraz pozwól u¿ytkownikowi wybieraæ po¶ród "
 "równowa¿nych pakietów"
 
 #: cli/main.c:98
@@ -1852,7 +1852,7 @@ msgstr "%s: jest w konflicie z %s"
 #: pkgmark.c:358
 #, c-format
 msgid "%d conflicts found"
-msgstr "%d konfliktów znaleziono"
+msgstr "znaleziono %d konfliktów"
 
 #: pkgset-load.c:56 pm/pset/pset.c:142 pm/pset/pset.c:763
 #, fuzzy, c-format
@@ -1862,7 +1862,7 @@ msgstr "Zapisywanie sumy kontrolnej %s..."
 #: pkgset-load.c:64
 #, c-format
 msgid "%s: load failed, skipped"
-msgstr "%s: ³adunek siê nie powiód³, pominiêto to"
+msgstr "%s: za³adunek siê nie powiód³, pominiêto"
 
 #: pkgset-load.c:122
 #, c-format
@@ -1899,7 +1899,7 @@ msgstr "Brak zapêtleñ -- To dobrze"
 #: pkgset-req.c:121
 #, fuzzy
 msgid "Packages with unsatisfied dependencies:"
-msgstr "%d niespe³nionych zale¿no¶ci znaleziono"
+msgstr "Pakiety z niespe³nionymi zale¿no¶ciami:"
 
 #: pkgset-req.c:162
 msgid ""
@@ -1975,7 +1975,7 @@ msgstr "nie znaleziono"
 #: pkgset.c:618
 #, c-format
 msgid "%d unsatisfied dependencies found"
-msgstr "%d niespe³nionych zale¿no¶ci znaleziono"
+msgstr "Znaleziono %d niespe³nionych zale¿no¶ci"
 
 #: pkgset.c:620
 msgid "No unsatisfied dependencies found"
@@ -2003,7 +2003,7 @@ msgstr "%s: interpertacja siê nie powiod³a"
 
 #: pm/pset/pset.c:186
 msgid "Could not open 'pset' database: missing source parameter"
-msgstr ""
+msgstr "Nie mo¿na otworzyæ bazy 'pset': brak parametru ¼ród³a"
 
 #: pm/pset/pset.c:587
 #, c-format
@@ -2032,7 +2032,7 @@ msgstr "%s: odczyt siê nie powiód³"
 
 #: pm/pset/pset.c:750
 msgid "Could not open 'pset' database: missing source"
-msgstr ""
+msgstr "Nie mo¿na otworzyæ bazy 'pset': brak ¼ród³a"
 
 #: pm/rpm/install.c:226
 #, fuzzy, c-format
@@ -2067,7 +2067,7 @@ msgstr "%s: instalacja siê nie powiod³a:"
 #: pm/rpm/install.c:327
 #, fuzzy, c-format
 msgid "%s: installation failed (retcode=%d)"
-msgstr "%s: instalacja siê nie powiod³a:"
+msgstr "%s: instalacja siê nie powiod³a (kod b³êdu = %d)"
 
 #: pm/rpm/misc.c:124
 #, fuzzy
@@ -2171,7 +2171,7 @@ msgstr "%s zgin±³ w podejrzanych okoliczno¶ciach"
 #: pm/rpm/rpminstall.c:501
 #, c-format
 msgid "%s: command not found"
-msgstr "%s: polecenie nie znalezione"
+msgstr "%s: nie znaleziono polecenia"
 
 #: pm/rpm/rpminstall.c:414
 #, c-format
@@ -2220,19 +2220,19 @@ msgstr "zazn. %s"
 #: poldek_ts.c:849
 #, fuzzy
 msgid "to install"
-msgstr "Reinstaluj"
+msgstr "do instalacji"
 
 #: poldek_ts.c:855
 msgid "to remove"
-msgstr "aby usun±æ"
+msgstr "do usuniêcia"
 
 #: poldek_ts.c:873
 #, fuzzy, c-format
 msgid "There are %d package %s"
 msgid_plural "There are %d packages %s"
-msgstr[0] "Zaznaczono %d pakiet do instalacji"
-msgstr[1] "Zaznaczono %d pakiety do instalacji"
-msgstr[2] "Zaznaczono %d pakietów do instalacji"
+msgstr[0] "Zaznaczono %d pakiet %s"
+msgstr[1] "Zaznaczono %d pakiety %s"
+msgstr[2] "Zaznaczono %d pakietów %s"
 
 #: poldek_ts.c:878
 #, fuzzy, c-format
@@ -2245,7 +2245,7 @@ msgstr[2] "_ (%d zaznaczonych po¶rednio)"
 #: poldek_ts.c:882
 #, c-format
 msgid ", %d to remove"
-msgstr ", %d aby usun±æ"
+msgstr ", %d do usuniêcia"
 
 #: poldek_ts.c:1038
 msgid "Verifying dependencies..."
@@ -2368,7 +2368,7 @@ msgstr ""
 #: upgrade-dist.c:100
 #, c-format
 msgid "%s: multiple instances installed, skipped"
-msgstr "%s: wielokrotnie zainstalowany, zosta³ pominiêty"
+msgstr "%s: wielokrotnie zainstalowany, pominiêto"
 
 #: upgrade-dist.c:110
 #, c-format
@@ -2441,7 +2441,7 @@ msgstr "%s: b³±d interpretacji odpowiedzi"
 
 #: vfile/vfff/ftp.c:335 vfile/vfff/http.c:515
 msgid "response line too long"
-msgstr "zybt d³uga linia w odpowiedzi"
+msgstr "zbyt d³uga linia w odpowiedzi"
 
 #: vfile/vfff/ftp.c:348 vfile/vfff/http.c:528
 msgid "unexpected EOF"
