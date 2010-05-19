@@ -214,6 +214,7 @@ rpmdb pm_rpm_opendb(void *pm_rpm, void *dbh,
         logn(LOGERR, _("%s%s: open rpm database failed"),
              rootdir ? rootdir:"", dbpath ? dbpath : pm->default_dbpath);
         rc = 0;
+		abort(); // XXX maybe re-exec ourselves after poldek binary upgrade?
     }
     
 #if ENABLE_TRACE    
