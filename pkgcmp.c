@@ -44,7 +44,7 @@ int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg)
     register int rc = strcmp(pkg->name, candidate->name);
     
     if (rc == 0 && poldek_conf_MULTILIB) {
-        rc = pkg_cmp_arch(pkg, candidate);
+        rc = 1 - pkg_is_colored_like(candidate, pkg);
         //if (rc == 0)
         //    DBGF("%s, %s => YES\n", pkg_id(candidate), pkg_id(pkg));
     }

@@ -73,7 +73,7 @@ int process_pkg(const struct pkg *dbpkg, struct poldek_ts *ts,
     }
     
     if (pkg == NULL) {
-        msgn(3, "%-32s not found in repository", pkg_id(dbpkg));
+        msgn(3, "%-32s match not found in repository", pkg_id(dbpkg));
         return 1;
     }
     
