@@ -82,13 +82,10 @@ int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
         return 1;
     
     if (pkg->color && candidate->color)
-        return pkg->color & candidate->color;
+        return (pkg->color & candidate->color) > 0;
 
-    /* same name and candidate without color -> promote candidate */
-    if (pkg->color && pkg_is_kind_of(candidate, pkg)) 
-        return 1;
-
-    return 0;
+    /* either new or old package contains no binary files, let it happen */
+    return 1;
 }
 
 int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr) 
