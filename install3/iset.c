@@ -47,7 +47,7 @@ inline void iset_markf(struct iset *iset, struct pkg *pkg, unsigned mflag)
     pkg_set_mf(iset->pms, pkg, mflag);
 }
 
-inline int iset_ismarkedf(struct iset *iset, const struct pkg *pkg,
+int iset_ismarkedf(struct iset *iset, const struct pkg *pkg,
                           unsigned mflag)
 {
     return pkg_isset_mf(iset->pms, pkg, mflag);
