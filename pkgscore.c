@@ -113,23 +113,28 @@ void pkgscore_match_init(struct pkgscore_s *psc, struct pkg *pkg)
         n += n_snprintf(psc->pkgbuf, sizeof(psc->pkgbuf),
                         "%s:", pkg->pkgdir->name);
 
+    // pkgname_off - size of pkgdir_name
     psc->pkgname_off = n;
+    // pkgbuf - "repo_name:name-ver-rel.arch"
     
-    pkg_snprintf(&psc->pkgbuf[n], sizeof(psc->pkgbuf) - n, pkg);
+    n_snprintf(&psc->pkgbuf[n], sizeof(psc->pkgbuf) - n, "%s-%s-%s.%s", pkg->name, pkg->ver, pkg->rel, pkg_arch(pkg));
     psc->pkg = pkg;
 }
 
     
-
+// return 0 if not match
 int pkgscore_match(struct pkgscore_s *psc, const char *mask)
 {
+    // match name
     if (fnmatch(mask, psc->pkg->name, 0) == 0)
         return 1;
 
+    // match name-ver-rel.arch as string
     if (psc->pkgname_off &&
         fnmatch(mask, &psc->pkgbuf[psc->pkgname_off], 0) == 0)
         return 1;
     
+    // match "repo_name:name-ver-rel.arch" as string
     return fnmatch(mask, psc->pkgbuf, 0) == 0;
 }
 
