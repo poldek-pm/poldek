@@ -21,7 +21,7 @@ int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg);
 extern__inline int pkg_ncmp_name(const struct pkg *p1, const struct pkg *p2);
 
 /* strcmp(p1->name, p2->name) */
-extern__inline int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
+int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
 
 /* strcmp(pkg_id(p1), pkg_id(p2) */
 extern__inline int pkg_cmp_id(const struct pkg *p1, const struct pkg *p2);

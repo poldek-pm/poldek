@@ -144,7 +144,7 @@ void pkg_free(struct pkg *pkg);
 # define extern__inline extern inline
 #endif
 
-extern__inline struct pkg *pkg_link(struct pkg *pkg);
+struct pkg *pkg_link(struct pkg *pkg);
 
 int pkg_set_arch(struct pkg *pkg, const char *arch);
 const char *pkg_arch(const struct pkg *pkg);
