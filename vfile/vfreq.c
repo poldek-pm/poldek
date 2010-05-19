@@ -282,7 +282,7 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
     else 
         req->uri = n_strdupl(tmp, len);
 
-    len = n_snprintf(tmp, sizeof(tmp), "%s://%s/%s", rreq.proto, rreq.host,
+    len = n_snprintf(tmp, sizeof(tmp), "%s://%s%s", rreq.proto, rreq.host,
                      req->uri);
     req->url = n_strdupl(tmp, len);
     req->port = rreq.port;
