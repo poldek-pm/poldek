@@ -21,9 +21,8 @@ tn_array *filter_out_olders(struct i3ctx *ictx, tn_array *pkgs,
                             const struct pkg *pkg)
 {
     tn_array *tmp = n_array_clone(pkgs);
-    int i;
-    
-    for (i=0; i < n_array_size(pkgs); i++) {
+
+    for (unsigned int i=0; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
         int cmprc;
         
@@ -49,7 +48,8 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
 {
     const struct pkg *selected_pkg = NULL;
     tn_array *pkgs, *tmp;
-    int i, max_score = 0, *scores;
+    int max_score = 0, *scores;
+    unsigned int i;
     int nconsidered = 0, nuncolored = 0;
 
     tracef(indent, "%s (c=%d)", pkg_id(pkg), pkg->color);
@@ -73,13 +73,21 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
         selected_pkg = n_array_nth(pkgs, 0);
         goto l_end;
     }
-    
+
     /* multilib mode */
     scores = alloca(sizeof(*scores) * n_array_size(pkgs));
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
         scores[i] = 0;
-        
+
+	// extra 100 points for arch compatible
+	if (pkg_is_kind_of(p, pkg) && pkg_is_arch_compat(p, pkg)) {
+	    scores[i] += 100;
+	}
+
+	// extra points for reqs marked to install
+	scores[i] += iset_reqs_score(ictx->inset, p);
+
         if (pkg->color == 0 && p->color == 0) { /* both uncolored  */
             scores[i] += 1;
             if (pkg_is_kind_of(p, pkg))
@@ -93,14 +101,14 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
         } else if (pkg_is_colored_like(p, pkg)) {
             scores[i] += 2;
         }
-        
+
         trace(indent, "- %d. %s -> color %d, score %d", i, pkg_id(p),
-              p->color, scores[i]);
-        
-        if (max_score < scores[i]) {
-            max_score = scores[i];
-            selected_pkg = p;
-        }
+            p->color, scores[i]);
+
+	if (max_score < scores[i]) {
+	    max_score = scores[i];
+	    selected_pkg = p;
+	}
         
         nconsidered++;
     }
@@ -150,9 +158,7 @@ l_end:
 /* detect which package capability has "replaces" meaning, if any */
 static const char *get_replacemeant_capname(const struct pkg *pkg) 
 {
-    int i;
-    
-    for (i=0; i < n_array_size(pkg->cnfls); i++) {
+    for (unsigned int i=0; i < n_array_size(pkg->cnfls); i++) {
         struct capreq *cnfl = n_array_nth(pkg->cnfls, i);
 
         if (capreq_versioned(cnfl) || !capreq_is_obsl(cnfl))
@@ -194,7 +200,7 @@ struct pkg *find_successor_by(int indent, struct i3ctx *ictx,
 {
     struct pkg *bypkg = NULL;
     tn_array *pkgs, *tmp;
-    int i, best_i;
+    unsigned int i, best_i;
 
     n_assert(tag == PS_SEARCH_OBSL || tag == PS_SEARCH_CAP);
     if ((pkgs = pkgset_search(ictx->ps, tag, pkg->name)) == NULL) {
@@ -753,7 +759,7 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
        asks for suggested package, even though it is required. */
     if (ts->getop(ts, POLDEK_OP_SUGGESTS) && nerrors == 0) {
         tn_array *suggests = NULL;
-	int      i;
+	unsigned int i;
 	
 	suggests = with_suggests(indent + 2, ictx, pkg);
 	

@@ -238,6 +238,29 @@ int iset_provides(struct iset *iset, const struct capreq *cap)
     return pkg != NULL;
 }
 
+// returns how many pkg reqs are in iset
+int iset_reqs_score(struct iset *iset, const struct pkg *pkg)
+{
+    struct pkg_req_iter  *it = NULL;
+    const struct capreq  *req = NULL;
+    unsigned itflags = PKG_ITER_REQIN | PKG_ITER_REQDIR; // | PKG_ITER_REQDIR | PKG_ITER_REQSUG
+    int score = 0;
+
+    n_assert(pkg->reqs);
+
+    it = pkg_req_iter_new(pkg, itflags);
+    while ((req = pkg_req_iter_get(it))) {
+        if (iset_provides(iset, req)){
+            score++;
+	    if (capreq_versioned(req))
+		score +=2;
+	}
+    }
+    pkg_req_iter_free(it);
+
+    return score;
+}
+
 void iset_dump(struct iset *iset)
 {
     int i;

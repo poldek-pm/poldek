@@ -32,7 +32,11 @@ void iset_add(struct iset *iset, struct pkg *pkg, unsigned mflag);
 int  iset_remove(struct iset *iset, struct pkg *pkg);
 
 int iset_provides(struct iset *iset, const struct capreq *cap);
+// returns how many pkg reqs are in iset
+int iset_reqs_score(struct iset *iset, const struct pkg *pkg);
+
 int iset_has_pkg(struct iset *iset, const struct pkg *pkg);
+// return 1st found pkg_is_kind_of from iset or null
 struct pkg *iset_has_kind_of_pkg(struct iset *iset, const struct pkg *pkg);
 
 #endif    
