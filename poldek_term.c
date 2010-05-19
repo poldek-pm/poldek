@@ -287,6 +287,10 @@ int poldek_term_ask(int fd, const char *validchrs, const char *msg)
         if ((read(fd, &c, sizeof(c)) == 1) && strchr(validchrs, c))
             break;
 
+        // terminal lost - so prevent loop
+        if (!isatty(fd))
+            return 0;
+
         if (msg)
             printf("%s\n", msg);
     }
