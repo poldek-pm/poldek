@@ -572,5 +572,5 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
         msgn(1, _("Running%s..."), buf);
     }
 
-    return pm_rpm_execrpm(cmd, argv, 0, 0) == 0;
+    return pm_rpm_execrpm(cmd, argv, 1, 0) == 0;
 }
