@@ -614,7 +614,8 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
         }
     }
     
-    if (!autochoice && !i3_is_user_choosable_equiv(ictx->ts))
+    /* if we have errors already, don't bug the user with more questions */
+    if ((!autochoice && !i3_is_user_choosable_equiv(ictx->ts)) || i3_get_nerrors(ictx, I3ERR_CLASS_DEP|I3ERR_CLASS_CNFL))
         return NULL;
 
     tracef(indent, "%s", pkg_id(pkg));
