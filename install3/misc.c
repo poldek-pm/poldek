@@ -365,7 +365,7 @@ int i3_find_req(int indent, struct i3ctx *ictx,
 
             /* possible when the same package exists in both available
                and already installed set */
-            if (i3_is_marked_for_removal(ictx, suspkg)) {
+            if (i3_is_marked_for_removal(ictx, suspkg) && !i3_is_marked(ictx, suspkg)) {
                 pkg_free(suspkg);
                 continue;
             }
