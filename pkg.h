@@ -106,7 +106,7 @@ struct pkg {
     int32_t      itime;        /* date of installation  */
 
     /* private, don't touch */
-    int16_t      _refcnt;
+    uint16_t      _refcnt;
     tn_alloc     *na;
     int16_t      _buf_size;
     char         _buf[0];  /* private, store all string members */
