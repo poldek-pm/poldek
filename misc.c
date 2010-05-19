@@ -646,6 +646,15 @@ static char *cut_country_code (const char *lang)
     return newlang;
 }
 
+static inline void n_array_push_check_dup(tn_array *langs, char *value)
+{
+    int i;
+
+    for (i = 0; i < n_array_size(langs); i++)
+	if (strcmp(n_array_nth(langs, i), value) == 0) return;
+    n_array_push(langs, n_strdup(value));
+}
+
 /*
  * lang_match_avlangs:
  *
@@ -656,6 +665,7 @@ static char *cut_country_code (const char *lang)
 static inline void lang_match_avlangs(tn_array *avlangs, tn_array *r_langs,
                                       const char *lang, int *has_C)
 {
+    char lang_utf8[32];
     char *cut = NULL;
     
     /* first try */
@@ -663,19 +673,27 @@ static inline void lang_match_avlangs(tn_array *avlangs, tn_array *r_langs,
         if (strcmp(lang, "C") == 0)
             *has_C = 1;
         
-        n_array_push(r_langs, n_strdup(lang));
+	n_array_push_check_dup(r_langs, lang);
     }
     
+    n_snprintf(lang_utf8, sizeof(lang_utf8), "%s.UTF-8", lang);
+    if (n_array_bsearch(avlangs, lang_utf8))
+	n_array_push_check_dup(r_langs, lang_utf8);
+
     /* second try, without country code */
     if ((cut = cut_country_code(lang))) {
         if (n_array_bsearch(avlangs, cut)) {
             if (strcmp(cut, "C") == 0)
                 *has_C = 1;
             
-            n_array_push(r_langs, cut);
-        } else {
-            free(cut);
+	    n_array_push_check_dup(r_langs, cut);
         }
+
+        n_snprintf(lang_utf8, sizeof(lang_utf8), "%s.UTF-8", cut);
+	if (n_array_bsearch(avlangs, lang_utf8))
+	    n_array_push_check_dup(r_langs, lang_utf8);
+
+	free(cut);
     }
 }
 
