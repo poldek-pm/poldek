@@ -16,11 +16,15 @@
 
 #include "ictx.h"
 
-int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc) 
+int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc)
 {
     tn_array *dbpkgs = NULL;
-    int n;
-    
+    int n = 0, freshen = 0;
+    freshen = ts->getop(ts, POLDEK_OP_FRESHEN)
+	    || poldek_ts_issetf(ts, POLDEK_TS_UPGRADE)
+	    || poldek_ts_issetf(ts, POLDEK_TS_DOWNGRADE)
+	    || poldek_ts_issetf(ts, POLDEK_TS_UPGRADEDIST);
+
     n = pkgdb_search(ts->db, &dbpkgs, PMTAG_NAME, pkg->name, NULL, PKG_LDNEVR);
     n_assert(n >= 0);
     
@@ -30,17 +34,25 @@ int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc)
     }
     
     if (poldek_conf_MULTILIB) { /* filter out different architectures */
-        int i;
         tn_array *arr = n_array_clone(dbpkgs);
 
         //DBGF("pkg = %s\n", pkg_id(pkg));
         //pkgs_array_dump(dbpkgs, "before_multilib");
-        for (i=0; i < n_array_size(dbpkgs); i++) {
+        for (unsigned int i=0; i < n_array_size(dbpkgs); i++) {
             struct pkg *dbpkg = n_array_nth(dbpkgs, i);
-            if (pkg_is_kind_of(dbpkg, pkg))
-                n_array_push(arr, pkg_link(dbpkg));
+
+	    msgn(4, "from pkg %s.%s => to pkg %s-%s-%s.%s freshen:%d kind:%d up_arch:%d",
+	    pkg_snprintf_s(dbpkg), pkg_arch(dbpkg), pkg->name, pkg->ver, pkg->rel, pkg_arch(pkg),
+	    freshen, pkg_is_kind_of(dbpkg, pkg), pkg_is_arch_compat(dbpkg, pkg));
+
+	    // if freshen (upgrade) preffer same arch but
+	    // change from/to noarch depends on which pkg is noarch
+	    // add package if pkg_is_kind_of (have same name and color)
+            if (pkg_is_kind_of(dbpkg, pkg)
+		&& !(freshen && !pkg_is_arch_compat(dbpkg, pkg)))
+			n_array_push(arr, pkg_link(dbpkg));
         }
-        
+
         n_array_cfree(&dbpkgs);
         dbpkgs = arr;
         n = n_array_size(arr);

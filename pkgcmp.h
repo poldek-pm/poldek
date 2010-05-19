@@ -17,6 +17,9 @@ int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg);
 /* same name && arch */
 int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg);
 
+/* ret : 0 if pkg is cappable to upgrade arch<=>arch, arch<=>noarch */
+int pkg_is_arch_compat(const struct pkg *candidate, const struct pkg *pkg);
+
 /* strncmp(p1->name, p2->name, strlen(p2->name)) */
 extern__inline int pkg_ncmp_name(const struct pkg *p1, const struct pkg *p2);
 
@@ -27,7 +30,7 @@ int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
 extern__inline int pkg_cmp_id(const struct pkg *p1, const struct pkg *p2);
 
 
-/* versions only */
+/* versions only (+epoch) */
 int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2);
 /* EVR only */
 int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2);

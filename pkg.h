@@ -43,6 +43,8 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
    ((pkg)->flags & color)
 #endif  /* POLDEK_PKG_DAG_COLOURS */
 
+#define pkg_is_noarch(pkg)  (0 == strcmp(pkg_arch((pkg)), "noarch"))
+
 #define pkg_set_prereqed(pkg) ((pkg)->flags |= PKG_ORDER_PREREQ)
 #define pkg_clr_prereqed(pkg)  ((pkg)->flags &= ~PKG_ORDER_PREREQ) 
 #define pkg_is_prereqed(pkg)  ((pkg)->flags & PKG_ORDER_PREREQ)

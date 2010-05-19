@@ -71,6 +71,7 @@ pkg_id_snprintf
 pkg_idevr_snprintf
 pkg_is_colored_like
 pkg_is_kind_of
+pkg_is_arch_compat
 pkg_link
 pkg_localpath
 pkg_match_req

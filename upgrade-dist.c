@@ -64,8 +64,18 @@ int process_pkg(const struct pkg *dbpkg, struct poldek_ts *ts,
         
         if (!ts->getop(ts, POLDEK_OP_MULTILIB))
             break;
-            
-        if (pkg_is_kind_of(pkg, dbpkg))
+
+	if (0 != strcmp(dbpkg->name, pkg->name))
+	{
+	    pkg = NULL;
+	    break;
+	}
+	
+	msgn(4, "UPGRADE-DIST from pkg %s.%s => to pkg %s-%s-%s.%s kind:%d up_arch:%d",
+		pkg_snprintf_s(dbpkg), pkg_arch(dbpkg), pkg->name, pkg->ver, pkg->rel, pkg_arch(pkg),
+		pkg_is_kind_of(dbpkg, pkg), pkg_is_arch_compat(dbpkg, pkg));
+
+        if (pkg_cmp_evr(pkg, dbpkg) > 0 && pkg_is_kind_of(pkg, dbpkg) && pkg_is_arch_compat(pkg, dbpkg))
             break;
 
         i++;

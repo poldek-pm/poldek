@@ -88,7 +88,19 @@ int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
     return 1;
 }
 
-int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr) 
+/* ret : 1 if pkg is cappable to upgrade arch<=>arch, arch<=>noarch */
+int pkg_is_arch_compat(const struct pkg *candidate, const struct pkg *pkg)
+{
+    // if upgrade preffer same arch but
+    // change from/to noarch depends on which pkg is noarch
+
+    int cmp_arch = pkg_cmp_arch(candidate, pkg);
+    return (	cmp_arch == 0
+	    || (cmp_arch > 0 && pkg_is_noarch(candidate))
+	    || (cmp_arch < 0 && pkg_is_noarch(pkg)));
+}
+
+int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr)
 {
     return strcmp(pkg->name, capreq_name(cr)) == 0 &&
         strcmp(pkg->ver, capreq_ver(cr)) == 0 &&
