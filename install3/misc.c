@@ -319,7 +319,7 @@ int i3_select_best_pkg(int indent, struct i3ctx *ictx,
     for (i=0; i < n_array_size(candidates); i++) {
         struct pkg *cand = n_array_nth(candidates, i);
 
-        if (pkg_is_colored_like(cand, marker)) {
+        if (!pkg_isset_mf(ictx->processed, cand, PKGMARK_BLACK) && pkg_is_colored_like(cand, marker)) {
             if (tmp == NULL)
                 tmp = n_array_clone(candidates);
             
@@ -354,7 +354,7 @@ int i3_find_req(int indent, struct i3ctx *ictx,
                 struct pkg **best_pkg, tn_array *candidates)
 {
     tn_array *suspkgs = NULL, *tmpkgs;
-    int found = 0;
+    int found = 0, i;
 
     *best_pkg = NULL;
     found = pkgset_find_match_packages(ictx->ps, pkg, req, &suspkgs, 1);//ictx->strict);
@@ -391,6 +391,16 @@ int i3_find_req(int indent, struct i3ctx *ictx,
 
     //trace(indent, "after removed rmmarked -> %d package(s)",
     //      n_array_size(suspkgs));
+
+    /* remove marked as BLACK from suspected packages, they have broken deps */
+    for (i = 0; i < n_array_size(suspkgs); i++) {
+	struct pkg *suspkg = n_array_nth(suspkgs, i);
+	
+	if (pkg_isset_mf(ictx->processed, suspkg, PKGMARK_BLACK)) {
+	    trace(indent, "- marked as BLACK %s", pkg_id(suspkg));
+	    n_array_remove_nth(suspkgs, i--);
+	}
+    }
         
     if (n_array_size(suspkgs) == 0) {
         found = 0;

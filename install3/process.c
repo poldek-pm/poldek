@@ -77,6 +77,11 @@ static void rollback_package(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg
             i3_forget_error(ictx, pkg);
         }
     }
+
+    /* this package may be used again and we have to process it (do not
+     * stop on the first condition in i3_process_package()) to generate
+     * new ->obsoletedby as we removed them here. */    
+    pkg_clr_mf(ictx->processed, i3pkg->pkg, PKGMARK_GRAY);
     
     if (i3pkg->markedby) {
         indent = inc_indent(indent);
