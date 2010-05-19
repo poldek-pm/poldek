@@ -496,7 +496,6 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
         n_array_sort(pkgdir->depdirs);
     }
 
-    pkgdir->flags |= flags;
     return pkgdir;
 }
 

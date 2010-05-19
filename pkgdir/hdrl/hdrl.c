@@ -106,7 +106,7 @@ static int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         
         if ((pkg = pm_rpm_ldhdr(pkgdir->na, h, NULL, 0, PKG_LDWHOLE))) {
             if (ldflags & PKGDIR_LD_DESC) {
-                pkg->pkg_pkguinf = pkguinf_ldrpmhdr(pkgdir->na, h);
+                pkg->pkg_pkguinf = pkguinf_ldrpmhdr(pkgdir->na, h, NULL);
                 pkg_set_ldpkguinf(pkg);
             }
 

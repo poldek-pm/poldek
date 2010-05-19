@@ -41,6 +41,7 @@ enum poldek_ts_opt {
     POLDEK_OP_VRFY_FILEMISSDEPS, /* --verify=file-missing-deps */
     POLDEK_OP_DEPGRAPH,          /* --dependency-graph */
 
+    POLDEK_OP_LDALLDESC,         /* internal, load all i18n descriptions */
     POLDEK_OP_LDFULLFILELIST,    /* internal, load whole file database */
     
     POLDEK_OP_VRFYMERCY,   /* --mercy */

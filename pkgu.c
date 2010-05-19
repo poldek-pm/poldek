@@ -640,7 +640,7 @@ char *load_changelog_from_rpmhdr(tn_alloc *na, void *hdr)
     return changelog;
 }
 
-struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
+struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr, tn_array *loadlangs)
 {
     tn_array           *langs;
     char               **summs, **descrs;
@@ -654,7 +654,7 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
     
     if ((langs = pm_rpmhdr_langs(h))) {
         tn_array *sl_langs = NULL;
-        char *sl_lang;
+        char *lc_lang = NULL, *sl_lang = NULL;
 
         pm_rpmhdr_get_raw_entry(h, RPMTAG_SUMMARY, (void*)&summs, &nsumms);
         pm_rpmhdr_get_raw_entry(h, RPMTAG_DESCRIPTION, (void*)&descrs, &ndescrs);
@@ -686,7 +686,23 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
                 langs = n_array_remove_nth(langs, i - 1);
         }
         
-        sl_langs = lc_lang_select(langs, lc_messages_lang());
+        if (loadlangs) {
+    	    for (i = 0; i < n_array_size(loadlangs); i++) {
+    		const char *loadlang = n_array_nth(loadlangs, i);
+
+		if (loadlang == NULL)
+		    continue;
+
+		if (lc_lang == NULL)
+		    lc_lang = n_strdup(loadlang);
+		else {
+		    lc_lang = n_str_concat(lc_lang, ":", loadlang, NULL);
+		}
+    	    }
+        } else
+    	    lc_lang = n_strdup(lc_messages_lang());
+        
+        sl_langs = lc_lang_select(langs, lc_lang);
         if (sl_langs == NULL)
             sl_lang = "C";
         else
@@ -704,6 +720,7 @@ struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr)
         n_array_free(langs);
         n_array_cfree(&sl_langs);
         
+        free(lc_lang);
         free(summs);
         free(descrs);
     }
@@ -1161,7 +1178,7 @@ struct pkguinf *pkguinf_restore_rpmhdr_st(tn_alloc *na,
     }
     
     if ((hdr = headerLoad(rawhdr)) != NULL) {
-        pkgu = pkguinf_ldrpmhdr(na, hdr);
+        pkgu = pkguinf_ldrpmhdr(na, hdr, NULL);
         headerFree(hdr); //rpm's memleak
     }
 

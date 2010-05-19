@@ -32,8 +32,12 @@
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 {
     int i, j, iserr = 0;
+    unsigned openflags = 0;
 
     n_array_isort_ex(sources, (tn_fn_cmp)source_cmp_pri);
+    
+    if (ldflags & PKGDIR_LD_ALLDESC)
+	openflags |= PKGDIR_OPEN_ALLDESC;
     
     for (i=0; i < n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
@@ -47,7 +51,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
             source_set_type(src, poldek_conf_PKGDIR_DEFAULT_TYPE);
 
         
-        pkgdir = pkgdir_srcopen(src, 0);
+        pkgdir = pkgdir_srcopen(src, openflags);
 
         /* trying dir */
         if (pkgdir == NULL && !source_is_type(src, "dir") &&
@@ -56,7 +60,7 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
             logn(LOGNOTICE, _("trying to scan directory %s..."), src->path);
             
             source_set_type(src, "dir");
-            pkgdir = pkgdir_srcopen(src, 0);
+            pkgdir = pkgdir_srcopen(src, openflags);
         }
             
         if (pkgdir == NULL) {

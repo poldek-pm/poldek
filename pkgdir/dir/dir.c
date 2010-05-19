@@ -159,7 +159,6 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
     Header h;
 
     ptr = ptr;     /* unused pkgdir_data */
-    langs = langs; /* ignored, selective retrieving no supported */
 
     snprintf(path, sizeof(path), "%s/%s", pkg->pkgdir->idxpath,
              pkg_filename_s(pkg));
@@ -172,7 +171,7 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
         return NULL;
     }
     
-    pkgu = pkguinf_ldrpmhdr(na, h);
+    pkgu = pkguinf_ldrpmhdr(na, h, langs);
     
     pm_rpmhdr_free(h);
     return pkgu;
@@ -269,7 +268,7 @@ int load_dir(struct pkgdir *pkgdir,
             pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
             
             if (ldflags & PKGDIR_LD_DESC) {
-                pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
+                pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h, NULL);
                 pkg_set_ldpkguinf(pkg);
             }
         }

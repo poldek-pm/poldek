@@ -63,6 +63,9 @@ int poldek__load_sources_internal(struct poldek_ctx *ctx)
 
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_LDFULLFILELIST))
         ldflags |= PKGDIR_LD_FULLFLIST;
+    
+    if (ctx->ts->getop(ctx->ts, POLDEK_OP_LDALLDESC))
+	ldflags |= PKGDIR_LD_ALLDESC;
 
 #if 0 /* XXX now files are loaded on demand */
     if (strcmp(pm_get_name(ctx->pmctx), "pset") == 0)

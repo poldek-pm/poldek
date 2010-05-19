@@ -269,7 +269,7 @@ struct pkg *do_loadpkg(tn_alloc *na, Header h, int ldflags, const char *pkgfn)
     struct pkg *pkg;
     if ((pkg = pm_rpm_ldhdr(na, h, pkgfn, 0, PKG_LDWHOLE))) {
         if (ldflags & PKGDIR_LD_DESC) {
-            pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h);
+            pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h, NULL);
             pkg_set_ldpkguinf(pkg);
         }
     }
@@ -287,7 +287,6 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
     char            path[PATH_MAX], *hdrpath;
     Header          h;
     
-    langs = langs;               /* ignored, no support */
     if (!pkg->pkgdir)
         return NULL;
 
@@ -297,7 +296,7 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
     
     pkg = pkg;
     if ((h = do_loadrpmhdr(path, vfmode, n_basenam(path)))) {
-        pkgu = pkguinf_ldrpmhdr(na, h);
+        pkgu = pkguinf_ldrpmhdr(na, h, langs);
         headerFree(h);
     }
 

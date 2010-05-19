@@ -134,11 +134,9 @@ struct pkguinf *dbcache_load_pkguinf(tn_alloc *na, const struct pkg *pkg,
 {
     struct pkguinf      *pkgu = NULL;
     Header               h;
-
-    langs = langs;               /* ignored, no support */
     
     if ((h = ldhdr(pkg, ptr))) {
-        pkgu = pkguinf_ldrpmhdr(na, h);
+        pkgu = pkguinf_ldrpmhdr(na, h, langs);
         pm_rpmhdr_free(h);
     }
     

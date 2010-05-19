@@ -108,6 +108,9 @@ struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
 #define PKGDIR_LD_NOUNIQ      (1 << 3) /* don't perform pkgdir_uniq() */
 #define PKGDIR_LD_DOIGNORE    (1 << 4) /* honour src->ign_patterns */
 #define PKGDIR_LD_DIRINDEX    (1 << 5) /* handle rpm 4.4.6 auto deps */
+#define PKGDIR_LD_ALLDESC     (1 << 6) /* load all i18n descriptions
+				          (see PKGDIR_OPEN_ALLDESC)
+				        */
 
 int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 

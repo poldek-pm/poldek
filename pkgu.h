@@ -41,7 +41,7 @@ int pkguinf_skip_rpmhdr(tn_stream *st);
 struct pkguinf *pkguinf_restore_rpmhdr_st(tn_alloc *na,
                                           tn_stream *st, off_t offset);
 
-struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr);
+struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr, tn_array *loadlangs);
 
 tn_buf *pkguinf_store(const struct pkguinf *pkgu, tn_buf *nbuf,
                       const char *lang);
