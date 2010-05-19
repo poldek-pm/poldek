@@ -834,9 +834,10 @@ void poldek__ts_update_summary(struct poldek_ts *ts,
 void poldek__ts_display_summary(struct poldek_ts *ts)
 {
     int ninst = 0, ndep = 0, nrm = 0, npkgs = 0, parseable = 0;
+    long int sinsts = 0, sdeps = 0, srems = 0, sdiff = 0;
     tn_array *ipkgs, *idepkgs, *rmpkgs, *pkgs;
     char ms[1024], *to, *prefix;
-    int n;
+    int i, n;
     
     ipkgs = n_hash_get(ts->ts_summary, "I");
     idepkgs = n_hash_get(ts->ts_summary, "D");
@@ -846,16 +847,34 @@ void poldek__ts_display_summary(struct poldek_ts *ts)
     ndep  = idepkgs ? n_array_size(idepkgs) : 0;
     nrm   = rmpkgs ? n_array_size(rmpkgs) : 0;
 
-    to = _("to install");
-    prefix = "I";
-    pkgs = ipkgs;
-    npkgs = ninst + ndep;
-    
-    if (ts->type == POLDEK_TS_UNINSTALL) {
+    if (ipkgs)
+	for (i=0; i < ninst; i++) {
+	    struct pkg *pkg = n_array_nth(ipkgs, i);
+	    sinsts += pkg->size;
+	}
+    if (idepkgs)
+	for (i=0; i < ndep; i++) {
+	    struct pkg *pkg = n_array_nth(idepkgs, i);
+	    sdeps += pkg->size;
+	}
+    if (rmpkgs)
+	for (i=0; i < nrm; i++) {
+	    struct pkg *pkg = n_array_nth(rmpkgs, i);
+	    srems += pkg->size;
+	}
+
+    if (ts->type != POLDEK_TS_UNINSTALL) {
+        to = _("to install");
+        prefix = "I";
+        pkgs = ipkgs;
+        npkgs = ninst + ndep;
+        sdiff = sinsts + sdeps - srems;
+    } else {
         to = _("to remove");
         prefix = "R";
         pkgs = rmpkgs;
         npkgs = nrm + ndep;
+        sdiff = - srems - sdeps;
         nrm = 0;
     }
     n_assert(pkgs);
@@ -895,6 +914,16 @@ void poldek__ts_display_summary(struct poldek_ts *ts)
     if (ts->type != POLDEK_TS_UNINSTALL) {
         if (rmpkgs)
             packages_display_summary(1, "R", rmpkgs, parseable);
+    }
+
+    if (sdiff != 0) {
+        char size[64];
+        snprintf_size(size, sizeof(size), labs(sdiff), 1, 1);
+
+        if (sdiff > 0)
+           msgn(1, _("This operation will use %s of disk space."), size);
+        else
+           msgn(1, _("This operation will free %s of disk space."), size);
     }
 }
 

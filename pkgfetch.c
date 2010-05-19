@@ -105,11 +105,6 @@ void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
             msgn(1, _("_ (%s to download)."), buf);
         }
         
-        if (bytesused) {
-            char buf[64];
-            snprintf_size(buf, sizeof(buf), bytesused, 1, 1);
-            msg(1, _("After unpacking %s will be used."), buf);
-        }
     }
     
     msg(1, "_\n");
