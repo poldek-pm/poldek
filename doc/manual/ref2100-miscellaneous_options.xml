@@ -97,7 +97,7 @@
    </para>
   </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.O">-O=OPTION=VALUE </option></term>
+<varlistentry><term><option id="ref.cmdl.O">-O OPTION=VALUE </option></term>
   <listitem>
 <xi:include  href="manual/ref.cmdl.O.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
 </varlistentry>
