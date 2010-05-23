@@ -135,7 +135,8 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args);
 #define poldek_die_ifnot(expr, fmt, args...)   \
   ((void) ((expr) ? 0 : poldek_log(LOGERR | LOGOPT_N | LOGDIE, fmt, ## args)))
 
-void poldek_meminf(int vlevel, const char *fmt, ...);
+void poldek_meminf(int vlevel, const char *fmt, ...)
+        __attribute__((__format__ (__printf__, 2, 3)));
 
 # define tracef(indent, fmt, args...)                                   \
     do {                                                                \
@@ -161,15 +162,15 @@ static inline int dbgf_noop( const char *fmt, ... )
         __attribute__ ((always_inline))
         __attribute__ ((__format__ (__printf__, 1, 2)));
  
-static inline int dbgf_noop( __attribute__((unused)) const char *fmt, ... )
+static inline int dbgf_noop( const char *fmt, ... )
 {
         return 0;
 }
 
-# define DBGF(args...)		do { dbgf_noop(args); } while (0)
-# define DBG(args...)		do { dbgf_noop(args); } while (0)
-# define MEMINF(args...)		do { dbgf_noop(args); } while (0)
-# define DBGFIF(cond, args...)	do { if (cond) dbgf_noop(args); } while (0)
+# define DBGF(fmt, args...)	dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args)
+# define DBG(fmt, args...)	dbgf_noop( "" fmt, ## args)
+# define MEMINF(fmt, args...)	do { dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args); } while (0)
+# define DBGFIF(cond, fmt, args...)	do { if (cond) dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args); } while (0)
 #endif
 
 #define DBGF_NULL(fmt, args...) ((void) 0)
