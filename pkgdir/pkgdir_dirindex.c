@@ -10,10 +10,6 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*
-  $Id$
-*/
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -86,11 +82,21 @@ static int package_no_key(char *buf, int size, uint32_t package_no, int prefixed
 /* package as db key */
 static int package_key(char *key, int size, const struct pkg *pkg, int prefix)
 {
+    int n;
+
     n_assert(size >= UINT8_MAX);
 
     key[0] = '_';
     key[1] = prefix;
-    return pndir_make_pkgkey(&key[PREFIXLEN], size - PREFIXLEN, pkg) + PREFIXLEN;
+    
+    /*
+     * add buildtime to pkgkey - enforces dirindex update when package was rebuilt
+     * without release change
+     */
+    n = pndir_make_pkgkey(&key[PREFIXLEN], size - PREFIXLEN, pkg) + PREFIXLEN;
+    n += n_snprintf(&key[n], size - PREFIXLEN - n, ":%u", pkg->btime);
+    
+    return n;
 }
 
 static tn_buf *dirarray_join(tn_buf *nbuf, tn_array *arr, char *sep)
