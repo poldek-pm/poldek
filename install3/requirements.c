@@ -20,9 +20,10 @@ static
 tn_array *filter_out_olders(struct i3ctx *ictx, tn_array *pkgs,
                             const struct pkg *pkg)
 {
+    unsigned int i;
     tn_array *tmp = n_array_clone(pkgs);
 
-    for (unsigned int i=0; i < n_array_size(pkgs); i++) {
+    for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
         int cmprc;
         
@@ -158,7 +159,8 @@ l_end:
 /* detect which package capability has "replaces" meaning, if any */
 static const char *get_replacemeant_capname(const struct pkg *pkg) 
 {
-    for (unsigned int i=0; i < n_array_size(pkg->cnfls); i++) {
+    unsigned int i;
+    for (i=0; i < n_array_size(pkg->cnfls); i++) {
         struct capreq *cnfl = n_array_nth(pkg->cnfls, i);
 
         if (capreq_versioned(cnfl) || !capreq_is_obsl(cnfl))

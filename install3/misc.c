@@ -38,7 +38,8 @@ int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc)
 
         //DBGF("pkg = %s\n", pkg_id(pkg));
         //pkgs_array_dump(dbpkgs, "before_multilib");
-        for (unsigned int i=0; i < n_array_size(dbpkgs); i++) {
+        unsigned int i;
+        for (i=0; i < n_array_size(dbpkgs); i++) {
             struct pkg *dbpkg = n_array_nth(dbpkgs, i);
 
 	    msgn(4, "from pkg %s.%s => to pkg %s-%s-%s.%s freshen:%d kind:%d up_arch:%d",
