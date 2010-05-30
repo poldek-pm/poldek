@@ -210,7 +210,7 @@ void store_package(uint32_t package_no, struct pkg *pkg, struct tndb *db,
          required ? n_array_size(required): -1);
     
     if (owned) {
-        int i;
+        unsigned int i;
         
         for (i=0; i < n_array_size(owned); i++) {
             const char *dir = n_array_nth(owned, i);
@@ -263,7 +263,7 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     tn_array      *directories;
     tn_alloc      *na;
     struct vflock *lock;
-    int           i;
+    unsigned int  i;
     char          *tmp, *dir;
 
     if (n_array_size(pkgdir->pkgs) == 0)
@@ -464,7 +464,7 @@ static
 void verify_dirindex(struct pkgdir *pkgdir, struct pkgdir_dirindex *dirindex)
 {
     const char **tl, **tl_save;
-    int i;
+    unsigned int i;
     
     n_assert(dirindex);
 
@@ -591,7 +591,8 @@ struct pkgdir_dirindex *load_dirindex(const struct pkgdir *pkgdir,
     struct tndb     *db;
     tn_alloc        *na = NULL;
     tn_hash         *idmap = NULL, *keymap = NULL;
-    int             i, rc = 0, index_outdated = 0;
+    int             rc = 0, index_outdated = 0;
+    unsigned int    i;
     struct pkgdir_dirindex *dirindex = NULL;
 
     msgn_i(2, 2, "Loading directory index of %s...", pkgdir_idstr(pkgdir));
@@ -677,7 +678,7 @@ l_end:
 static void update_pkgdir_packages(const struct pkgdir *pkgdir,
                                    struct pkgdir_dirindex *dirindex)
 {
-    int i;
+    unsigned int i;
     
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg   *pkg = n_array_nth(pkgdir->pkgs, i);

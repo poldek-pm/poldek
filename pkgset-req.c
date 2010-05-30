@@ -149,7 +149,8 @@ static int pkgset_add_unreq(struct pkgset *ps, struct pkg *pkg,
 
 int pkgset_verify_deps(struct pkgset *ps, int strict)
 {
-    int i, j, nerrors = 0;
+    unsigned int i,j;
+    int nerrors = 0;
     struct pkgmark_set *pms;
     tn_hash *cache;
 
