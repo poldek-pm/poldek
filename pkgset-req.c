@@ -176,8 +176,10 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
         msgn(4, "%d. %s", i+1, pkg_id(pkg));
         for (j=0; j < n_array_size(pkg->reqs); j++) {
             struct capreq *req = n_array_nth(pkg->reqs, j);
-            const char *streq = capreq_snprintf_s(req);
+            char streq[256];
             tn_array *matches = NULL;
+
+	    capreq_snprintf(streq, sizeof(streq), req);
 
             if (n_hash_exists(cache, streq)) {
                 int ii;
