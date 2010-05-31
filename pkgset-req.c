@@ -91,8 +91,6 @@ static struct pkg_unreq *pkg_unreq_new(struct capreq *req, int mismatch)
 
 static void visit_badreqs(struct pkgmark_set *pms, struct pkg *pkg, int deep)
 {
-    int i;
-    
     if (pkg_has_unmetdeps(pms, pkg)) 
         return;
 
@@ -101,6 +99,8 @@ static void visit_badreqs(struct pkgmark_set *pms, struct pkg *pkg, int deep)
     deep += 2;
     
     if (pkg->revreqpkgs) {
+	unsigned int i;
+
         for (i=0; i<n_array_size(pkg->revreqpkgs); i++) {
             struct pkg *revpkg;
             revpkg = n_array_nth(pkg->revreqpkgs, i);
@@ -112,11 +112,13 @@ static void visit_badreqs(struct pkgmark_set *pms, struct pkg *pkg, int deep)
 
 static int mark_badreqs(struct pkgmark_set *pms) 
 {
-    int i, deep = 1, nerrors = 0;
+    int deep = 1, nerrors = 0;
     tn_array *pkgs;
     
     pkgs = pkgmark_get_packages(pms, PKGMARK_UNMETDEPS);
     if (pkgs) {
+	unsigned int i;
+
         n_assert(n_array_size(pkgs));
         msgn(4, _("Packages with unsatisfied dependencies:"));
     
@@ -182,13 +184,12 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
 	    capreq_snprintf(streq, sizeof(streq), req);
 
             if (n_hash_exists(cache, streq)) {
-                int ii;
-
                 matches = n_hash_get(cache, streq);
 
                 if (!matches) 
                     msgn(4, _(" req %-35s --> NOT FOUND"), streq);
                 else if (n_array_size(matches) > 0) {
+            	    unsigned int ii;
                     msg(4, " req %-35s --> ", streq);
                     for (ii=0; ii < n_array_size(matches); ii++) 
                         msg(4, "_%s, ", pkg_id(n_array_nth(matches, ii)));
