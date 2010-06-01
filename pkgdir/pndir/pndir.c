@@ -702,7 +702,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         
         if (ign_patterns) {
             char buf[512];
-            int i;
+            unsigned int i;
             pkg_snprintf(buf, sizeof(buf), &kpkg);
             for (i=0; i < n_array_size(ign_patterns); i++) {
                 char *p = n_array_nth(ign_patterns, i);

@@ -164,7 +164,7 @@ static int pkgfl2fidx(const struct pkg *pkg, struct file_index *fidx, int setup)
 
 static int pkgset_index(struct pkgset *ps) 
 {
-    int i;
+    unsigned int i;
     if (ps->flags & _PKGSET_INDEXES_INIT)
         return 1;
     
@@ -224,7 +224,7 @@ int do_pkg_cmp_uniq_n(const struct pkg *p1, struct pkg *p2)
 
 int pkgset_setup(struct pkgset *ps, unsigned flags) 
 {
-    int n;
+    unsigned int n;
     int strict;
     int v = poldek_VERBOSE;
     void *t;
@@ -284,7 +284,7 @@ int pkgset_setup(struct pkgset *ps, unsigned flags)
 
 static int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt)
 {
-    int j;
+    unsigned int j;
 
     if (rt) {
         if (n_array_bsearch(ps->pkgs, pkg))
@@ -396,7 +396,7 @@ int pkgset_order(struct pkgset *ps, int verb)
         	
     
     if (verb && poldek_VERBOSE > 2) {
-        int i;
+        unsigned int i;
             
         msg(2, _("Installation order:\n"));
         for (i=0; i < n_array_size(ps->ordered_pkgs); i++) {
@@ -478,7 +478,7 @@ static
 tn_array *do_search_provdir(struct pkgset *ps, tn_array *pkgs, const char *dir)
 {
     tn_array *tmp = pkgs_array_new(32);
-    int i, pkgs_passsed = 1;
+    unsigned int i, pkgs_passsed = 1;
     
     for (i=0; i < n_array_size(ps->pkgdirs); i++) {
         struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
@@ -604,7 +604,7 @@ void pkgset_report_fileconflicts(struct pkgset *ps, tn_array *pkgs)
 
 int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps)
 {
-    int i, j, nerr = 0;
+    unsigned int i, j, nerr = 0;
     
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
@@ -631,7 +631,7 @@ int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps)
 /* GraphViz */
 static int dot_graph(tn_array *pkgs, struct pkgset *ps, const char *outfile)
 {
-    int i, j, n_unmet = 0;
+    unsigned int i, j, n_unmet = 0;
     tn_buf *nbuf;
     tn_array *errs;
     FILE *stream;
@@ -713,7 +713,7 @@ static int dot_graph(tn_array *pkgs, struct pkgset *ps, const char *outfile)
 /* See http://xavier.informatics.indiana.edu/lanet-vi/ */
 static int lanvi_graph(tn_array *pkgs, struct pkgset *ps, const char *outfile)
 {
-    int i, j;
+    unsigned int i, j;
     tn_buf *nbuf;
     FILE *stream;
 

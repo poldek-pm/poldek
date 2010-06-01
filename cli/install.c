@@ -513,7 +513,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_PM: {
             tn_array *tl = NULL;
-            int i;
+            unsigned int i;
             
             if ((tl = n_str_etokl_ext(arg, "\t ", "", "\"'", '\\')) == NULL) {
                 logn(LOGERR, _("%s: parse error"), arg);
