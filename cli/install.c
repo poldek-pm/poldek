@@ -69,6 +69,7 @@ static int install(struct cmdctx *cmdctx);
 #define OPT_INST_NOFETCH          (OPT_GID + 36)
 #define OPT_INST_PARSABLETS       (OPT_GID + 37)
 #define OPT_INST_MKDIR            (OPT_GID + 38)
+#define OPT_INST_CAPLOOKUP        (OPT_GID + 39)
 
 static struct argp_option options[] = {
 {0, 'I', 0, 0, N_("Install, not upgrade packages"), OPT_GID },
@@ -138,7 +139,10 @@ N_("Same as --force but applied to PM (rpm) only)"), OPT_GID },
 
 /* hidden, for debugging/testing purposes */
 {"nofetch", OPT_INST_NOFETCH, 0, OPTION_HIDDEN, 
-     N_("Do not download packages"), OPT_GID },    
+     N_("Do not download packages"), OPT_GID },
+    
+{"caplookup", OPT_INST_CAPLOOKUP, 0, 0,
+N_("Look into package capabilities and files to resolve packages"), OPT_GID },
 
 { 0, 0, 0, 0, 0, 0 },
 };
@@ -490,6 +494,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             ts->setop(ts, POLDEK_OP_NOFETCH, 1);
             break;
  
+        case OPT_INST_CAPLOOKUP:
+            ts->setop(ts, POLDEK_OP_CAPLOOKUP, 1);
+            break;
+
         case OPT_INST_FETCH:
             if (arg) {
                 if (!poldek_util_is_rwxdir(arg)) {
