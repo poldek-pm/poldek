@@ -17,9 +17,6 @@
 /* for asprintf() from stdio.h */
 #define _GNU_SOURCE 
 
-/* FIXME: nbuf.h should include stdint.h */
-#include <stdint.h>
-
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
