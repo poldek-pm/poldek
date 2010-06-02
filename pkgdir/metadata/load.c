@@ -18,9 +18,8 @@
 #include "load.h"
 
 
-#define x_node_eq(node, node_name) (strcmp(node->name, node_name) == 0)
-#define x_xmlFree(v) do { if (v) { xmlFree(v); } } while (0)
-    
+#define x_node_eq(node, node_name) (strcmp((char *) node->name, node_name) == 0)
+#define x_xmlFree(v) do { if (v) { xmlFree(v); } } while (0)    
 
 static void repomd_ent_free(struct repomd_ent *ent)
 {
@@ -39,19 +38,18 @@ static struct repomd_ent *load_repomd_ent(xmlNode *node)
     time_t ts = 0;
     int len;
 
-
-    type = xmlGetProp(node, "type");
+    type = (char *) xmlGetProp(node, (const xmlChar *) "type");
     
     for (node = node->children; node; node = node->next) {
         if (x_node_eq(node, "location")) {
-            location = xmlGetProp(node, "href");
+            location = (char *) xmlGetProp(node, (const xmlChar *) "href");
             
         } else if (x_node_eq(node, "checksum")) {
-            checksum_type = xmlGetProp(node, "type");
-            checksum = xmlNodeGetContent(node);
+            checksum_type = (char *) xmlGetProp(node, (const xmlChar *) "type");
+            checksum = (char *) xmlNodeGetContent(node);
                 
         } else if (x_node_eq(node, "timestamp")) {
-            char *s = xmlNodeGetContent(node);
+            char *s = (char *) xmlNodeGetContent(node);
             unsigned int t;
             if (sscanf(s, "%ul", &t) == 1)
                 ts = t;
@@ -94,7 +92,7 @@ static tn_hash *do_load_repomd(xmlNode *node)
     for (; node; node = node->next) {
         struct repomd_ent *ent;
         
-        if (node->type != XML_ELEMENT_NODE || strcmp(node->name, "data") != 0)
+        if (node->type != XML_ELEMENT_NODE || strcmp((char *) node->name, "data") != 0)
             continue;
         
         if ((ent = load_repomd_ent(node))) {
@@ -148,18 +146,18 @@ static tn_array *load_caps(tn_alloc *na, tn_array *arr, xmlNode *node,
         if (!x_node_eq(node, "entry"))
             continue;
 
-        if ((n = xmlGetProp(node, "name")) == NULL)
+        if ((n = (char *) xmlGetProp(node, (const xmlChar *) "name")) == NULL)
             continue;
 
-        if ((pre = xmlGetProp(node, "pre")) && *pre == '1')
+        if ((pre = (char *) xmlGetProp(node, (const xmlChar *) "pre")) && *pre == '1')
             cr_flags |= CAPREQ_PREREQ;
         else 
             cr_flags &= ~CAPREQ_PREREQ;
         
-        if ((flags = xmlGetProp(node, "flags"))) {
-            e = xmlGetProp(node, "epoch");
-            v = xmlGetProp(node, "ver");
-            r = xmlGetProp(node, "rel");
+        if ((flags = (char *) xmlGetProp(node, (const xmlChar *) "flags"))) {
+            e = (char *) xmlGetProp(node, (const xmlChar *) "epoch");
+            v = (char *) xmlGetProp(node, (const xmlChar *) "ver");
+            r = (char *) xmlGetProp(node, (const xmlChar *) "rel");
 
             if (e && sscanf(e, "%d", &epoch) != 1)
                 //logn(LOGERR, "%s: invalid epoch", e);
@@ -213,23 +211,23 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
     
     for (node = node->children; node; node = node->next) {
         if (x_node_eq(node, "name")) {
-            pkg.name = xmlNodeGetContent(node);
+            pkg.name = (char *) xmlNodeGetContent(node);
         
         } else if (x_node_eq(node, "arch")) {
-            arch = xmlNodeGetContent(node);
+            arch = (char *) xmlNodeGetContent(node);
             
             if (n_str_eq(arch, "src")) 
                 goto l_skip_end;
             
         } else if (x_node_eq(node, "location")) {
-            pkg.fn = xmlGetProp(node, "href");
+            pkg.fn = (char *) xmlGetProp(node, (const xmlChar *) "href");
         
         } else if (x_node_eq(node, "version")) { 
             char *e;
             
-            pkg.ver = xmlGetProp(node, "ver");
-            pkg.rel = xmlGetProp(node, "rel");
-            e = xmlGetProp(node, "epoch");
+            pkg.ver = (char *) xmlGetProp(node, (const xmlChar *) "ver");
+            pkg.rel = (char *) xmlGetProp(node, (const xmlChar *) "rel");
+            e = (char *) xmlGetProp(node, (const xmlChar *) "epoch");
             if (e)
                 sscanf(e, "%d", &pkg.epoch);
             x_xmlFree(e);
@@ -237,12 +235,12 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
         } else if (x_node_eq(node, "size")) {
             char *v;
             
-            if ((v = xmlGetProp(node, "package"))) {
+            if ((v = (char *) xmlGetProp(node, (const xmlChar *) "package"))) {
                 sscanf(v, "%d", &pkg.fsize);
                 xmlFree(v);
             }
             
-            if ((v = xmlGetProp(node, "installed"))) {
+            if ((v = (char *) xmlGetProp(node, (const xmlChar *) "installed"))) {
                 sscanf(v, "%d", &pkg.size);
                 xmlFree(v);
             }
@@ -250,7 +248,7 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
         } else if (x_node_eq(node, "time")) {
             char *v;
             
-            if ((v = xmlGetProp(node, "build"))) {
+            if ((v = (char *) xmlGetProp(node, (const xmlChar *) "build"))) {
                 sscanf(v, "%d", &pkg.btime);
                 xmlFree(v);
             }
@@ -271,7 +269,7 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
                     pkg.cnfls = load_caps(na, pkg.cnfls, n, CAPREQ_OBCNFL);
                 
                 else if (x_node_eq(n, "file")) {
-                    char *path = xmlNodeGetContent(n);
+                    char *path = (char *) xmlNodeGetContent(n);
                     struct capreq *cr = capreq_new(na, path, 0, NULL,
                                                    NULL, 0, 0);
                     if (pkg.caps == NULL)
@@ -280,17 +278,17 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
                     x_xmlFree(path);
                     
                 } else if (x_node_eq(n, "license")) {
-                    inf.license = xmlNodeGetContent(n);
+                    inf.license = (char *) xmlNodeGetContent(n);
                     
                 } else if (x_node_eq(n, "vendor")) {
-                    inf.vendor = xmlNodeGetContent(n);
+                    inf.vendor = (char *) xmlNodeGetContent(n);
                     
                 } else if (x_node_eq(n, "buildhost")) {
-                    inf.buildhost = xmlNodeGetContent(n);
+                    inf.buildhost = (char *) xmlNodeGetContent(n);
                     
                 } else if (x_node_eq(n, "group")) {
                     char *g;
-                    if ((g = xmlNodeGetContent(n))) {
+                    if ((g = (char *) xmlNodeGetContent(n))) {
                         pkg.groupid = pkgroup_idx_add(pkgroups, g);
                         xmlFree(g);
                     }
@@ -298,13 +296,13 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
             }
             
         } else if (x_node_eq(node, "summary")) {
-            inf.summary = xmlNodeGetContent(node);
+            inf.summary = (char *) xmlNodeGetContent(node);
             
         } else if (x_node_eq(node, "description")) {
-            inf.description = xmlNodeGetContent(node);
+            inf.description = (char *) xmlNodeGetContent(node);
             
         } else if (x_node_eq(node, "url")) {
-            inf.url = xmlNodeGetContent(node);
+            inf.url = (char *) xmlNodeGetContent(node);
         }
     }
     
@@ -391,10 +389,10 @@ tn_array *metadata_load_primary(struct pkgdir *pkgdir, const char *path)
     for (node = root->children; node; node = node->next) {
         char *type;
         
-        if (node->type != XML_ELEMENT_NODE || strcmp(node->name, "package") != 0)
+        if (node->type != XML_ELEMENT_NODE || strcmp((char *) node->name, "package") != 0)
             continue;
 
-        if ((type = xmlGetProp(node, "type")) && strcmp(type, "rpm") == 0) {
+        if ((type = (char *) xmlGetProp(node, (const xmlChar *) "type")) && strcmp(type, "rpm") == 0) {
             struct pkg *pkg;
             if ((pkg = load_package(pkgdir->na, pkgdir->pkgroups, node)))
                 n_array_push(pkgs, pkg);
