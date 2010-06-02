@@ -245,58 +245,58 @@ static char *deps_generator(const char *text, int state)
 {
     static tn_array *deps_table = NULL; /* XXX static variable */
     
-	if (state == 0) {
-		tn_array *ents;
-		int i, j, len;
+    if (state == 0) {
+        tn_array *ents;
+        int i, j, len;
 
-		ents = sh_ctx.cctx->currdir->pkg_dent_ents;
+        ents = sh_ctx.cctx->currdir->pkg_dent_ents;
 
-		if (ents == NULL)
-			return NULL;
+        if (ents == NULL)
+            return NULL;
 
-		len = strlen(text);
+        len = strlen(text);
 
         n_assert(deps_table == NULL);
-		/* create deps_table */
-		deps_table = n_array_new(n_array_size(ents) * 4, NULL, (tn_fn_cmp)strcmp);
-		
-		/* fill deps_table with data */
-		for (i = 0; i < n_array_size(ents); i++) {
-			struct pkg_dent *ent = n_array_nth(ents, i);
-			struct pkg *pkg = ent->pkg_dent_pkg;
+        /* create deps_table */
+        deps_table = n_array_new(n_array_size(ents) * 4, NULL, (tn_fn_cmp)strcmp);
+
+        /* fill deps_table with data */
+        for (i = 0; i < n_array_size(ents); i++) {
+            struct pkg_dent *ent = n_array_nth(ents, i);
+            struct pkg *pkg = ent->pkg_dent_pkg;
             tn_array *caps = NULL;
-            
-			if (pkg_dent_isdir(ent))
-				continue;
+
+            if (pkg_dent_isdir(ent))
+                continue;
 
             switch (sh_ctx.completion_ctx) {
                 case COMPLETITION_CTX_WHAT_PROVIDES:
                     caps = pkg->caps;
                     break;
-                    
+
                 case COMPLETITION_CTX_WHAT_REQUIRES:
                     caps = pkg->reqs;
                     break;
             }
-            
+
             if (caps) {
                 for (j = 0; j < n_array_size(caps); j++) {
                     struct capreq *cr = n_array_nth(caps, j);
                     const char *name = capreq_name(cr);
-                    
+
                     if (len == 0 || strncmp(name, text, len) == 0)
                         n_array_push(deps_table, (void*)name);
                 }
-			}
-		}
-	}
+            }
+        }
+    }
 
-	if (state >= n_array_size(deps_table)) {
-		n_array_cfree(&deps_table);
-		return NULL;
-	}
+    if (state >= n_array_size(deps_table)) {
+        n_array_cfree(&deps_table);
+        return NULL;
+    }
 
-	return n_strdup(n_array_nth(deps_table, state));
+    return n_strdup(n_array_nth(deps_table, state));
 }
 
 static char *pkgname_generator(const char *text, int state)
