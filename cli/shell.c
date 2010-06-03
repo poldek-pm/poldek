@@ -151,6 +151,71 @@ static char *command_generator(const char *text, int state)
     return name;
 }
 
+static char *command_options_generator(const char *text, int state)
+{
+    static tn_array *opts_table = NULL;
+    
+    if (state == 0) {
+        struct poclidek_cmd *command = NULL;
+        char *p, *e = NULL, line[64];
+        int i, len;
+        
+        p = rl_line_buffer;
+
+        if ((e = strchr(p, ' ')) == NULL)
+            return NULL;
+        
+        n_assert(e - p + 1 <= 64);
+        
+        n_strncpy(line, p, e - p + 1);
+    
+        for (i = 0; i < n_array_size(sh_ctx.cctx->commands); i++) {
+            struct poclidek_cmd *cmd = n_array_nth(sh_ctx.cctx->commands, i);
+        
+            if (n_str_eq(cmd->name, line)) {
+                if (cmd->aliasto) {
+                    struct poclidek_cmd tmpcmd;
+                
+                    tmpcmd.name = cmd->aliasto;
+                    command = n_array_bsearch(sh_ctx.cctx->commands, &tmpcmd);
+
+                } else {
+                    command = cmd;
+                }
+            
+                break;
+            }
+        }
+        
+        if (command == NULL)
+            return NULL;
+    
+        opts_table = n_array_new(4, NULL, (tn_fn_cmp)strcmp);
+    
+        len = strlen(&text[2]);
+    
+        for (i = 0; !_option_is_end(&command->argp_opts[i]); i++) {
+            const struct argp_option *argp_opt = &command->argp_opts[i];
+        
+            /* skip hidden options */
+            if (argp_opt->flags & OPTION_HIDDEN)
+                continue;
+        
+            if (argp_opt->name && strncmp(argp_opt->name, &text[2], len) == 0) {
+                n_array_push(opts_table, (void *) argp_opt->name);
+            }
+        }
+    
+        n_array_sort(opts_table);
+    }
+    
+    if (state >= n_array_size(opts_table)) {
+        n_array_cfree(&opts_table);
+        return NULL;
+    }
+    
+    return n_str_concat("--", n_array_nth(opts_table, state), NULL);
+}
 
 static char *arg_generator(const char *text, int state, int genpackages)
 {
@@ -352,7 +417,10 @@ static char **poldek_completion(const char *text, int start, int end)
     
     if (start == 0 || strchr(p, ' ') == NULL) {
         matches = rl_completion_matches(text, command_generator);
-        
+
+    } else if (strncmp(text, "--", 2) == 0) {
+        matches = rl_completion_matches(text, command_options_generator);
+
     } else {
         rl_completer_word_break_characters = " \t\n\"\\'`@$><=;|&{(";
         
