@@ -114,7 +114,7 @@ static struct argp_option options[] = {
 
 
 struct poclidek_cmd command_search = {
-    COMMAND_SELFARGS | COMMAND_PIPEABLE |
+    COMMAND_HASVERBOSE | COMMAND_SELFARGS | COMMAND_PIPEABLE |
     COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES,
     "search", N_("PATTERN [PACKAGE...]"), N_("Search packages"), 
     options, parse_opt,
