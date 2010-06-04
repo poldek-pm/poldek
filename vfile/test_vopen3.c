@@ -17,7 +17,7 @@
 int proc(void *dummy) 
 {
     char line[1024];
-    int n;
+    int n = 1024;
 
     
     char *fgets(char *s, int size, FILE *stream);
