@@ -51,8 +51,7 @@ arch : mclean backup
 
 POTFILES_in:
 	-rm -f poldek-cvs*
-	-echo conf_sections.c > po/POTFILES.in
-	-find . -type f -name \*.c | egrep -v '(Cellar/|intl/|trurlib/|tndb/|python/|tests/|conf_sections.c)'  | sed 's|^\./||' | LC_ALL=C sort >> po/POTFILES.in
+	-find . -type f -name \*.c | egrep -v '(Cellar/|intl/|trurlib/|tndb/|python/|tests/|conf_sections.c)'  | sed 's|^\./||' | LC_ALL=C sort > po/POTFILES.in
 
 misarch: mclean
 	$(MAKE) -C . backup cparch=1 backupdir=/z
