@@ -1,0 +1,6 @@
+[submodule "trurlib"]
+	path = trurlib
+	url = git://gitorious.org/poldek/trurlib.git
+[submodule "tndb"]
+	path = tndb
+	url = git://gitorious.org/poldek/tndb.git
