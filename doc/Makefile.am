@@ -44,7 +44,7 @@ poldek.info: manual.xml.texi.tmp
 	rm -f *.texi
 
 manual.html: manual.xml.xhtml.tmp
-	xmlto -m manual.xsl xhtml-nochunks $< && mv manual.xml.xhtml.html $@
+	xmlto --skip-validation -m manual.xsl xhtml-nochunks $< && mv manual.xml.xhtml.html $@
 # remove empty indexterm's (I'm docbook novice)
 	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $@
 
@@ -52,7 +52,7 @@ CREDITS.docb.tmp: NEWS.xml NEWSto
 	./NEWSto CREDITS.docb > $@
 
 CREDITS: CREDITS.docb.tmp
-	 xmlto -m NEWS.xsl txt CREDITS.docb.tmp && mv CREDITS.docb.txt $@
+	 xmlto --skip-validation -m NEWS.xsl txt CREDITS.docb.tmp && mv CREDITS.docb.txt $@
 
 CREDITS-body.html: NEWS.xml NEWSto
 	 ./NEWSto CREDITS.html_body > $@
@@ -61,15 +61,15 @@ NEWS.docb.tmp: NEWS.xml NEWSdocb.xsl NEWSto
 	./NEWSto NEWS.docb > $@
 
 NEWS: NEWS.docb.tmp NEWS.xsl
-	xmlto -m NEWS.xsl txt NEWS.docb.tmp && mv NEWS.docb.txt NEWS
+	xmlto --skip-validation -m NEWS.xsl txt NEWS.docb.tmp && mv NEWS.docb.txt NEWS
 
 NEWS.html: NEWS.docb.tmp NEWS.xsl
-	xmlto -m NEWS.xsl -m manual-web.xsl xhtml-nochunks NEWS.docb.tmp && mv NEWS.docb.html NEWS.html
+	xmlto --skip-validation -m NEWS.xsl -m manual-web.xsl xhtml-nochunks NEWS.docb.tmp && mv NEWS.docb.html NEWS.html
 
 $(MANUAL_XHTMLDIR): manual.xml.xhtml.tmp
 	$(mkdir_p) $(MANUAL_XHTMLDIR)
 	rm -f $(MANUAL_XHTMLDIR)/*.*
-	xmlto -m manual.xsl -o $(MANUAL_XHTMLDIR) xhtml $<
+	xmlto --skip-validation -m manual.xsl -o $(MANUAL_XHTMLDIR) xhtml $<
 # remove empty indexterm's (I'm docbook novice)
 	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $(MANUAL_XHTMLDIR)/manualindex.html || true
 	cp manual.css $(MANUAL_XHTMLDIR)
@@ -78,7 +78,7 @@ $(MANUAL_XHTMLDIR): manual.xml.xhtml.tmp
 manual-web: manual.xml.xhtml.tmp
 	$(mkdir_p) manual-web
 	rm -f manual-web/*.*
-	xmlto -m manual.xsl -m manual-web.xsl -o manual-web xhtml $<
+	xmlto --skip-validation -m manual.xsl -m manual-web.xsl -o manual-web xhtml $<
 # remove empty indexterm's (I'm docbook novice)
 	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' manual-web/manualindex.html || true
 	cp manual.css manual-web
@@ -96,11 +96,11 @@ poldek.1: poldek.1.xml
 	for i in manual/ref[0-9]???-*.xml; do                 \
         perl -pe 's/sect2/refsect2/g' < $$i > $$i.tmpman; \
     done;                                                 \
-    xmlto man $<;                                         \
+    xmlto --skip-validation man $<;                                         \
     rm -f manual/*.tmpman
 
 %.1: %.1.xml
-	xmlto man $<
+	xmlto --skip-validation man $<
 
 install-exec-hook:
 	$(mkdir_p) "$(DESTDIR)$(infodir)"
