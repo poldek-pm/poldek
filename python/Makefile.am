@@ -32,10 +32,10 @@ local_stdint.h:
 	$(CPP) local_stdint.c > local_stdint.h
 
 #wrap_poldekmod.c: poldekmod.i
-#	$(SWIG) $(SWIG_PYTHON_OPT) $(INCLUDES) -o $@ $<
+#	$(SWIG) $(SWIG_PYTHON_OPT) $(INCLUDES) -I/usr/include -o $@ $<
 
 wrap_%.c: %.i
-	$(SWIG) $(SWIG_PYTHON_OPT) $(INCLUDES) -o $@ $<
+	$(SWIG) $(SWIG_PYTHON_OPT) $(INCLUDES) -I/usr/include -o $@ $<
 
 clean-local:
 	-rm -f core *.o *.bak *~ *.pyc *.pyo
