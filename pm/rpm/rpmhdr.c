@@ -28,7 +28,7 @@
 #include "log.h"
 #include "pm_rpm.h"
 
-#ifdef HAVE_RPM_4_0_4           /* missing prototypes in public headers */
+#if defined(HAVE_RPM_4_0_4) || defined(HAVE_RPM_VERSION_GE_4_4_8)           /* missing prototypes in public headers */
 int headerGetRawEntry(Header h, int_32 tag,
                       /*@null@*/ /*@out@*/ hTYP_t type,
                       /*@null@*/ /*@out@*/ hPTR_t * p, 
