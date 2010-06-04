@@ -369,7 +369,7 @@ AC_ARG_WITH(xml-metadata,
 [  --without-xml-metadata   build without XML metadata repository support],
 METADATA=$withval, METADATA=yes)
 LIBXML2_INCLUDE=
-if test "${METADATA}." == "yes."; then
+if test "${METADATA}." = "yes."; then
  	AC_CHECK_LIB(xml2, xmlReadFile,, [ AC_MSG_ERROR(["libxml2 not found"]) ])
 
     AC_CHECK_FILE([/usr/include/libxml2/libxml/xmlversion.h],
@@ -410,7 +410,7 @@ fi
 dnl use local ../trurlib copy if it exists
 CONF_IN_LDFLAGS=
 
-if test "${ENABLE_SYS_TRURL}." == "no."; then
+if test "${ENABLE_SYS_TRURL}." = "no."; then
 	if test -f "${srcdir}/trurlib/n_array_new.c"; then
 		TRURL_DIR="trurlib"
 	fi
@@ -462,7 +462,7 @@ fi
 dnl use local tndb copy if it exists
 ENABLE_SYS_TNDB="no"
 TNDB_DIR=
-if test "${ENABLE_SYS_TNDB}." == "no."; then
+if test "${ENABLE_SYS_TNDB}." = "no."; then
 	if test -f "${srcdir}/tndb/tndb.c"; then
 		TNDB_DIR="tndb"
 	fi

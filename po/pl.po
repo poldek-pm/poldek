@@ -1049,7 +1049,7 @@ msgstr "Zamknij poldka"
 
 #: cli/shell.c:434
 msgid "not a tty"
-msgstr "to nie je terminal"
+msgstr "to nie jest terminal"
 
 #: cli/shell.c:456
 #, c-format
