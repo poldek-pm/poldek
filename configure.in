@@ -2,7 +2,7 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl $Id$
 
-AC_INIT(poldek,0.30)
+AC_INIT([poldek],[0.30])
 AC_CONFIG_SRCDIR([capreq.c])
 
 PACKAGE_BUGREPORT="mis@pld-linux.org"
@@ -37,8 +37,7 @@ if test "X${VERSION_STATUS}" = "Xdevel"; then
 fi
 
 AC_SUBST(VERSION_CVSTAG)
-#AC_CONFIG_HEADERS([config.h])
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 ALL_LINGUAS="pl de"
 
@@ -48,7 +47,7 @@ dnl AC_DEFINE([ENABLE_VFILE_TRURLIO],1,[defined if trurlio is used for vfile ope
 AC_DISABLE_STATIC
 
 dnl Checks for programs.
-AC_PROG_LIBTOOL
+LT_INIT
 AC_PROG_CC()
 #AC_PROG_CXX()
 AC_C_INLINE

@@ -32,7 +32,6 @@ cli/su.c
 cli/test_cli.c
 cli/uninstall.c
 conf.c
-conf_sections.c
 depdirs.c
 fileindex.c
 install-dist.c
