@@ -5,7 +5,7 @@ noinst_PROGRAMS = test_poldek
 test_poldek_SOURCES = test_poldek.c test_match.c test_env.c \
 	   	              test_pmdb.c test_op.c test_config.c test.h 	
 
-EXTRA_DIST = poldek_test_conf.conf sh repo
+EXTRA_DIST = poldek_test_conf.conf sh
 
 
 test_poldek_INCLUDES= @CHECK_CFLAGS@
