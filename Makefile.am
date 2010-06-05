@@ -20,8 +20,9 @@ libVERINFO         = 2:0:0
 lib_LTLIBRARIES    = libpoldek.la
 noinst_LTLIBRARIES = libpoldek_allsym.la
 
+libpoldek_la_DEPENDENCIES = $(top_builddir)/libpoldek.sym
 libpoldek_la_LDFLAGS = -version-info $(libVERINFO) \
-					   -export-symbols libpoldek.sym
+		       -export-symbols $(top_builddir)/libpoldek.sym
 libpoldek_la_SOURCES = \
 	  log.c log.h	   \
 	  poldek_term.c poldek_term.h	\
@@ -81,10 +82,9 @@ LDADD_              = @INTLLIBS@
 pkglib_SCRIPTS      = zlib-in-rpm.sh vfjuggle vfcompr vfsmb poldekuser-setup.sh
 
 EXTRA_DIST = \
-		 libpoldek.sym \
-		 $(pkglib_SCRIPTS) \
+	     $(pkglib_SCRIPTS) \
 	     Makefile.extra \
-		 libpoldek.sym \
+	     gensym.sh \
 	     poldek.spec \
 	     package-set.sample vfjugglerc.sample \
 	     m4/codeset.m4 m4/gettext.m4 m4/glibc21.m4 m4/iconv.m4 \
@@ -103,7 +103,7 @@ NEWS:
 	$(MAKE) -C doc NEWS
 	cp doc/NEWS .
 
-conf_sections.c: doc/poldek.conf.xml doc/*.xsl
+conf_sections.c: $(top_srcdir)/doc/poldek.conf.xml $(top_srcdir)/doc/*.xsl
 	         	 doc/conf-xml2.sh c doc/poldek.conf.xml > $@
 
 vfjuggle: 
@@ -127,8 +127,8 @@ install-exec-hook:
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* conf/*~
 
-libpoldek.sym: 
-	./gensym.sh poldek
+libpoldek.sym: $(top_builddir)/libpoldek_allsym.la
+	$(SHELL) $(top_srcdir)/gensym.sh poldek $(srcdir) $(builddir) $(top_srcdir)
 
 poldek.pc: 
         @ ( echo 'prefix=$(prefix)'; \

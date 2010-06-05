@@ -10,7 +10,7 @@ AM_CFLAGS = @AM_CFLAGS@
 
 LIBVERSION = 0:0:0
 lib_LTLIBRARIES     = libvfile.la 
-libvfile_la_LDFLAGS = -version-info $(LIBVERSION) -export-symbols libvfile.sym
+libvfile_la_LDFLAGS = -version-info $(LIBVERSION) -export-symbols $(srcdir)/libvfile.sym
 
 libvfile_la_SOURCES = vfile.c fetch.c vfetch.c vfprogress.c misc.c \
 		      p_open.c extcompr.c vfreq.c vfreq.h \
@@ -31,7 +31,7 @@ vfget_LDADD    = $(TEST_LDADDS)
 test_vopen3_SOURCES  = test_vopen3.c 
 test_vopen3_LDADD    = $(TEST_LDADDS)
 
-EXTRA_DIST     = libvfile.sym testcookie.c test_progress.c
+EXTRA_DIST     = libvfile.sym testcookie.c test_progress.c sample.c ttest.c
 
 dist-hook:
 	rm -rf $(distdir)/.deps

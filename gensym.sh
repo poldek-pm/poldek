@@ -1,25 +1,44 @@
 #!/bin/sh
 
-libNAME=libpoldek
-if [ -n "$1" ]; then libNAME="lib$1"; fi
+set -e
 
-LIB=.libs/${libNAME}_allsyms.a
+# $0 libpoldek sourcedir targetdir
+libNAME=libpoldek
+if [ -n "$1" ]; then
+	libNAME="lib$1"
+fi
+if [ -n "$2" ]; then
+	sourcedir="$2"
+else
+	sourcedir="."
+fi
+if [ -n "$3" ]; then
+	targetdir="$3"
+else
+	targetdir="."
+fi
+if [ -n "$4" ]; then
+	topsourcedir="$4"
+else
+	topsourcedir="."
+fi
+
+LIB="$targetdir/.libs/${libNAME}_allsym.a"
+out="$targetdir/${libNAME}.sym"
+
 if [ ! -f $LIB ]; then echo "$LIB: no such file"; exit 1; fi
 
-INCLUDES=$(grep ^libHEADERS Makefile.am | perl -ne 's|^libHEADERS\s*=\s*||; print')
+INCLUDES=$(grep "^libHEADERS" $sourcedir/Makefile.am | perl -ne 's|^libHEADERS\s*=\s*||; print')
 
-HH="/tmp/hh";
-> /tmp/hh
+HH="$(mktemp gensym.XXXXXXXXXX)"
+> $HH
 for i in $INCLUDES; do 
-    gcc -E $i 2>/dev/null >>$HH;
+    gcc -E -I$topsourcedir $sourcedir/$i 2>/dev/null >>$HH || :
 done
 
 
 symlist=$(nm --defined-only $LIB | pcregrep '^\w+\s+[tT]' | awk '{print $3}' | sort -u)
 
-#out=$(basename $LIB .so)
-#out="$out.sym"
-out="${libNAME}.sym"
 > $out
 for s in $symlist; do
     if pcregrep -s "\b$s\(" $HH; then
@@ -35,9 +54,13 @@ if [ "$libNAME" = "libpoldek" ]; then
 # provide rpmlog to cover rpmlib's one -- haaack 
     nm --defined-only $LIB | pcregrep '\brpmlog\b' | awk '{print $3}' >> $out
 
+# hack, this is not found automaticly
+    echo source_TYPE_GROUP >> $out
 fi
 
 
 if [ "$libNAME" = "libpoclidek" ]; then
     nm --defined-only $LIB | pcregrep '^\w+\s+[D]' | awk '{print $3}' | grep poclidek_ | sort -u >> $out
 fi
+
+rm $HH

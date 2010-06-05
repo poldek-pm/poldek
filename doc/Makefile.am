@@ -17,17 +17,17 @@ MANUALS   = manual.xml manual.css manual.xsl
 man_MANS  = poldek.1 poldek.conf.1
 GEN       = $(man_MANS) manual.html m_index.xml m_config.xml poldek.info
 
-EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN) manual CREDITS
+EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN) manual CREDITS NEWS.xml NEWS.xsl NEWSdocb.xsl NEWSto mkindex.pl
 
 MANUAL_XHTMLDIR = manual-xhtml
 
 doc: $(GEN) $(MANUAL_XHTMLDIR) CREDITS
 
-m_index.xml: manual.xml m_config.xml manual/ref*.xml mkindex.pl
-	./mkindex.pl manual.xml m_config.xml manual/ref*.xml > $@
+m_index.xml: manual.xml m_config.xml $(srcdir)/manual/ref*.xml mkindex.pl
+	$(PERL) $(srcdir)/mkindex.pl manual.xml m_config.xml manual/ref*.xml > $@
 
 m_config.xml: $(CONFXMLS)
-	./conf-xml2.sh docb poldek.conf.xml > $@
+	$(SHELL) $(srcdir)/conf-xml2.sh docb poldek.conf.xml > $@
 
 manual.xml.xhtml.tmp: manual.xml m_config.xml manual.xsl m_index.xml
 	m4 -DPOLDEK_VERSION=@VERSION@ manual.xml | xmlif output=xhtml > $@
@@ -49,16 +49,16 @@ manual.html: manual.xml.xhtml.tmp
 	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $@
 
 CREDITS.docb.tmp: NEWS.xml NEWSto
-	./NEWSto CREDITS.docb > $@
+	$(PERL) $(srcdir)/NEWSto CREDITS.docb > $@
 
 CREDITS: CREDITS.docb.tmp
-	 xmlto --skip-validation -m NEWS.xsl txt CREDITS.docb.tmp && mv CREDITS.docb.txt $@
+	xmlto --skip-validation -m NEWS.xsl txt CREDITS.docb.tmp && mv CREDITS.docb.txt $@
 
 CREDITS-body.html: NEWS.xml NEWSto
-	 ./NEWSto CREDITS.html_body > $@
+	$(PERL) $(srcdir)/NEWSto CREDITS.html_body > $@
 
 NEWS.docb.tmp: NEWS.xml NEWSdocb.xsl NEWSto
-	./NEWSto NEWS.docb > $@
+	$(PERL) $(srcdir)/NEWSto NEWS.docb > $@
 
 NEWS: NEWS.docb.tmp NEWS.xsl
 	xmlto --skip-validation -m NEWS.xsl txt NEWS.docb.tmp && mv NEWS.docb.txt NEWS
@@ -102,12 +102,15 @@ poldek.1: poldek.1.xml
 %.1: %.1.xml
 	xmlto --skip-validation man $<
 
-install-exec-hook:
-	$(mkdir_p) "$(DESTDIR)$(infodir)"
-	$(INSTALL_DATA) poldek.info $(DESTDIR)$(infodir)
-
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#* *\# poldek.html *.tmp
+
+install-exec-hook:
+	$(mkdir_p) "$(DESTDIR)$(infodir)"
+	$(INSTALL_DATA) $(srcdir)/poldek.info $(DESTDIR)$(infodir)
+
+uninstall-hook:
+	-$(RM) $(DESTDIR)$(infodir)/poldek.info
 
 distclean-local:
 	-rm -r $(MANUAL_XHTMLDIR)

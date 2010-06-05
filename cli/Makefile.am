@@ -9,10 +9,11 @@ SHELL_MOD = shell.c
 
 libVERINFO         = 0:0:0
 lib_LTLIBRARIES    = libpoclidek.la
-#noinst_LTLIBRARIES = libpoclidek_allsyms.la
+noinst_LTLIBRARIES = libpoclidek_allsym.la
 
+libpoclidek_la_DEPENDENCIES = $(builddir)/libpoclidek.sym
 libpoclidek_la_LDFLAGS = -version-info $(libVERINFO) \
-			 -export-symbols libpoclidek.sym
+			 -export-symbols $(builddir)/libpoclidek.sym
 
 libpoclidek_la_SOURCES  =  \
 			cli.c cli.h     \
@@ -42,10 +43,10 @@ libpoclidek_la_SOURCES  =  \
 			rcmd.c
 
 libpoclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
-#libpoclidek_allsyms_la_SOURCES = $(libpoclidek_la_SOURCES)
-#libpoclidek_allsyms_la_LIBADD = $(libpoclidek_la_LIBADD)
+libpoclidek_allsym_la_SOURCES = $(libpoclidek_la_SOURCES)
+libpoclidek_allsym_la_LIBADD = $(libpoclidek_la_LIBADD)
 
-libHEADERS = poclidek.h cmd.h dent.h op.h
+libHEADERS = poclidek.h cmd.h dent.h op.h cli.h
 pkginclude_HEADERS = $(libHEADERS)
 
 if ENABLE_INTERACTIVE_MODE
@@ -66,16 +67,14 @@ test_cli_LDADD    = libpoclidek.la
 poclidek_demo_SOURCES = poclidek_demo.c
 poclidek_demo_LDADD = libpoclidek.la
 
-EXTRA_DIST = libpoclidek.sym
-
 dist-hook:
 	rm -rf $(distdir)/.deps
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#* *\#
 
-libpoclidek.sym: 
-	../gensym.sh poclidek
+libpoclidek.sym: libpoclidek_allsym.la
+	$(SHELL) $(top_srcdir)/gensym.sh poclidek $(srcdir) $(builddir) $(top_srcdir)
 
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
