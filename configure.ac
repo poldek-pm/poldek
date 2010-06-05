@@ -416,11 +416,13 @@ fi
 
 AC_SUBST(TRURL_DIR)
 
+TRURL_INCLUDE_LOCAL=
 if test -n "$TRURL_DIR"; then
 	AC_MSG_CHECKING(for local trurlib copy in $TRURL_DIR)
 	AC_MSG_RESULT([yes])
-	TRURL_INCLUDE="-I\$(top_srcdir)/$TRURL_DIR/include -I./$TRURL_DIR/include"
-	TRURL_LDFLAG="-L\$(top_srcdir)/$TRURL_DIR/"
+	TRURL_INCLUDE_LOCAL="-I${srcdir}/$TRURL_DIR/include"
+	TRURL_INCLUDE="-I\$(top_srcdir)/$TRURL_DIR/include"
+	TRURL_LDFLAG="-L\$(top_builddir)/$TRURL_DIR/"
 	LDFLAGS="$LDFLAGS $TRURL_LDFLAG"
 	CPPFLAGS="$CPPFLAGS $TRURL_INCLUDE"
 	LIBS="-ltrurl $LIBS"
@@ -443,12 +445,15 @@ else
 fi
 
 AC_MSG_CHECKING([for trullib >= 0.44.0])
+SAVE_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS -I${srcdir}/$TRURL_DIR/include"
 AC_EGREP_CPP(yes,
        [#include $TN_TEST_INCLUDE
         #ifdef TN_STREAM_STDIO
           yes
         #endif
        ], is_valid_trurlib_ver=yes, is_valid_trurlib_ver=no)
+CPPFLAGS="$SAVE_CPPFLAGS"
 
 if test "${is_valid_trurlib_ver}." = "no." ; then
 	AC_MSG_RESULT(no)		
