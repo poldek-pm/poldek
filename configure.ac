@@ -419,7 +419,7 @@ AC_SUBST(TRURL_DIR)
 if test -n "$TRURL_DIR"; then
 	AC_MSG_CHECKING(for local trurlib copy in $TRURL_DIR)
 	AC_MSG_RESULT([yes])
-	TRURL_INCLUDE="-I\$(top_srcdir)/$TRURL_DIR/include"
+	TRURL_INCLUDE="-I\$(top_srcdir)/$TRURL_DIR/include -I./$TRURL_DIR/include"
 	TRURL_LDFLAG="-L\$(top_srcdir)/$TRURL_DIR/"
 	LDFLAGS="$LDFLAGS $TRURL_LDFLAG"
 	CPPFLAGS="$CPPFLAGS $TRURL_INCLUDE"
