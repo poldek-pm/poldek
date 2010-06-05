@@ -23,6 +23,8 @@ else
 	topsourcedir="."
 fi
 
+pcregrep --help > /dev/null || echo "error: pcregrep not found, failing!" && exit 1
+
 LIB="$targetdir/.libs/${libNAME}_allsym.a"
 out="$targetdir/${libNAME}.sym"
 
