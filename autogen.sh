@@ -10,8 +10,12 @@ if [ ! -f capreq.h ]; then
 fi
 
 runcmd () {
-    echo "$@"
+    echo "Executing: $@"
     $@
+    if [ $? -ne 0 ]; then
+	echo "failed"
+	exit 1
+    fi
 }
 
 CONFOPTS="--enable-maintainer-mode --enable-compile-warnings"
@@ -20,7 +24,7 @@ getlib_mode="link"
 if [ -n "$1" -a "$1" = "makedist" ]; then
     rm -f trurlib tndb
     getlib_mode="cp"
-    shift;
+    shift
 fi
 CONFOPTS="$CONFOPTS $@"
 runcmd ./getlib.sh trurlib $getlib_mode
