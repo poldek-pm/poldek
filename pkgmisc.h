@@ -2,6 +2,9 @@
 #ifndef POLDEK_PKGMISC_H
 #define POLDEK_PKGMISC_H
 
+#include <stdint.h>
+#include <trurl/narray.h>
+
 #ifndef EXPORT
 # define EXPORT extern
 #endif
