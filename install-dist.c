@@ -24,6 +24,7 @@
 #include <trurl/nmalloc.h>
 #include <trurl/nstr.h>
 
+#include "compiler.h"
 #include "sigint/sigint.h"
 #include "vfile/vfile.h"
 #include "pkgdir/source.h"

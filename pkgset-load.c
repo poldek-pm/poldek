@@ -21,6 +21,7 @@
 #include <trurl/nassert.h>
 #include <vfile/vfile.h>
 
+#include "compiler.h"
 #include "pkgset.h"
 #include "pkgdir/pkgdir.h"
 #include "pkgdir/pkgdir_intern.h"

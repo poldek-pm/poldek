@@ -24,6 +24,8 @@
 
 #include <trurl/nmalloc.h>
 #include <trurl/nstr.h>
+
+#include "compiler.h"
 #include "vfile/vfile.h"
 #include "pkgdir/source.h"
 #include "pm/pm.h"

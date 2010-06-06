@@ -39,6 +39,7 @@
 #include <trurl/nmalloc.h>
 
 #include "i18n.h"
+#include "compiler.h"
 
 #include "vfile.h"
 #include "vfile_intern.h"

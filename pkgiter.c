@@ -29,6 +29,7 @@
 #include <trurl/nassert.h>
 
 #define ENABLE_TRACE 0
+#include "compiler.h"
 #include "i18n.h"
 #include "log.h"
 #include "capreq.h"

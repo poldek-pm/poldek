@@ -31,6 +31,7 @@
 #include <trurl/nhash.h>
 #include <trurl/nstr.h>
 
+#include "compiler.h"
 #include "i18n.h"
 #include "vfile.h"
 #include "vfile_intern.h"

@@ -30,6 +30,7 @@
 #include <trurl/trurl.h>
 #include <sigint/sigint.h>
 
+#include "compiler.h"
 #include "i18n.h"
 #include "poldek_util.h"
 #define ENABLE_TRACE 0

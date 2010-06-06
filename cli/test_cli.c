@@ -21,6 +21,7 @@
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
 
+#include "compiler.h"
 #include "poldek.h"
 #define POCLIDEK_ITSELF
 #include "poclidek.h"

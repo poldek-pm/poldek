@@ -30,6 +30,7 @@
 #include <vfile/vfile.h>
 
 #define POLDEK_PKG_DAG_COLOURS 1 /* for pkg_*color */
+#include "compiler.h"
 #include "i18n.h"
 #include "pkgset.h"
 #include "pkgset-req.h"

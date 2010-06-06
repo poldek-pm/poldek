@@ -19,7 +19,7 @@
 
 #include <trurl/trurl.h>
 
-
+#include "compiler.h"
 #include "vfile/vopen3.h"
 #include "vfile/vfile.h"
 #include "sigint/sigint.h"

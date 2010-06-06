@@ -30,8 +30,9 @@
 #include <trurl/trurl.h>
 
 #include <vfile/vfile.h>
-#include <sigint/sigint.h>
 
+#include "compiler.h"
+#include "sigint/sigint.h"
 #include "i18n.h"
 #include "log.h"
 #include "pkgdir/source.h"

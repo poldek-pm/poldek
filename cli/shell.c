@@ -36,7 +36,8 @@
 #include <readline/history.h>
 #include <trurl/trurl.h>
 
-#include <sigint/sigint.h>
+#include "compiler.h"
+#include "sigint/sigint.h"
 #include "i18n.h"
 #include "log.h"
 #include "conf.h"

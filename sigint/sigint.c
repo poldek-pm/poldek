@@ -17,6 +17,7 @@
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
  
+#include "compiler.h"
 #include "sigint.h"
 
 static volatile sig_atomic_t interrupted = 0;

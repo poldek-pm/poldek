@@ -31,6 +31,7 @@
 
 #define ENABLE_TRACE 0
 
+#include "compiler.h"
 #include "pkgdir.h"
 #include "pkgdir_intern.h"
 #include "source.h"

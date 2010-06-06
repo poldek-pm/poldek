@@ -25,6 +25,8 @@
 
 #include <trurl/nstr.h>
 #include <trurl/n_snprintf.h>
+
+#include "compiler.h"
 #include "i18n.h"
 #include "poldek_term.h"
 #define POLDEK_LOG_H_INTERNAL

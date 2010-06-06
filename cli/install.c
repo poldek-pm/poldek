@@ -20,6 +20,8 @@
 #include <errno.h>
 
 #include <trurl/trurl.h>
+
+#include "compiler.h"
 #include "sigint/sigint.h"
 
 #include "i18n.h"

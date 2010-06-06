@@ -24,7 +24,7 @@
 #include <trurl/nmalloc.h>
 #include <trurl/nassert.h>
 
-
+#include "compiler.h"
 #include "vfile/vfile.h"
 #include "sigint/sigint.h"
 

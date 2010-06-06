@@ -17,6 +17,7 @@
 #include <sys/param.h>          /* for PATH_MAX */
 #include <trurl/trurl.h>
 
+#include "compiler.h"
 #include "sigint/sigint.h"
 #include "i18n.h"
 #include "cli.h"

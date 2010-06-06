@@ -23,6 +23,7 @@
 #include <trurl/trurl.h>
 #include <trurl/nmalloc.h>
 
+#include "compiler.h"
 #include "capreq.h"
 #include "pkg.h"
 #include "pkgset-req.h"         /* for struct reqpkg */

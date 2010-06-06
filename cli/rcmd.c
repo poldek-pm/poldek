@@ -20,6 +20,7 @@
 
 #include <trurl/trurl.h>
 
+#include "compiler.h"
 #include "log.h"
 #include "cli.h"
 #include "cmd_pipe.h"

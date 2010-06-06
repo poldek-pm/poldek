@@ -33,6 +33,7 @@
 
 #include <trurl/trurl.h>
 
+#include "compiler.h"
 #include <sigint/sigint.h>
 #include "pkgdir/pkgdir.h"
 #include "i18n.h"

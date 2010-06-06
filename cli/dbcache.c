@@ -34,6 +34,7 @@
 #include <trurl/trurl.h>
 #include <sigint/sigint.h>
 
+#include "compiler.h"
 #include "pkgdir/pkgdir.h"
 #include "i18n.h"
 #include "log.h"

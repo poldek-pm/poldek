@@ -34,6 +34,7 @@
 #include <trurl/n_snprintf.h>
 #include <vfile/vfile.h>
 
+#include "compiler.h"
 #include "i18n.h"
 #include "log.h"
 #include "arg_packages.h"

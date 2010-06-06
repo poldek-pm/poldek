@@ -20,6 +20,7 @@
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
 
+#include "compiler.h"
 #include "i18n.h"
 #include "pkg.h"
 #include "capreqidx.h"

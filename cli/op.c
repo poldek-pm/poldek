@@ -17,6 +17,7 @@
 #include <trurl/nmalloc.h>
 #include <trurl/n_snprintf.h>
 
+#include "compiler.h"
 #include "cli.h"
 #include "op.h"
 

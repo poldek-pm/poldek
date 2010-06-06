@@ -28,6 +28,7 @@
 
 #include <vfile/vfile.h>
 
+#include "compiler.h"
 #include "i18n.h"
 #include "log.h"
 #include "pkgdir.h"

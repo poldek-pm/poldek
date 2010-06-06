@@ -27,6 +27,7 @@
 #include <trurl/narray.h>
 #include <trurl/n_snprintf.h>
 
+#include "compiler.h"
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"

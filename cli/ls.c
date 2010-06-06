@@ -17,6 +17,7 @@
 #include <string.h>
 #include <sys/param.h>
 
+#include "compiler.h"
 #include "sigint/sigint.h"
 #include "poldek_util.h"
 #include "pkgcmp.h"

@@ -26,6 +26,7 @@
 
 #include <trurl/trurl.h>
 
+#include "compiler.h"
 #include "i18n.h"
 #include "capreq.h"
 #include "log.h"

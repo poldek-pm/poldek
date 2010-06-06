@@ -31,6 +31,7 @@
 
 #include <trurl/nstr.h>
 
+#include "compiler.h"
 #include "vfile.h"
 #include "vfile_intern.h"
 

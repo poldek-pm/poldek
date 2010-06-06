@@ -34,6 +34,7 @@
 #include <trurl/narray.h>
 #include <trurl/nmalloc.h>
 
+#include "compiler.h"
 #include "i18n.h"
 
 #include "vfile.h"

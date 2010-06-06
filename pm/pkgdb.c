@@ -23,6 +23,7 @@
 #include <trurl/nmalloc.h>
 #include <trurl/narray.h>
 
+#include "compiler.h"
 #include "sigint/sigint.h"
 #include "i18n.h"
 #include "capreq.h"

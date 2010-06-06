@@ -37,6 +37,7 @@
 
 #include <sigint/sigint.h>
 
+#include "compiler.h"
 #include "i18n.h"
 #include "log.h"
 #include "pkg.h"

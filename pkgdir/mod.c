@@ -28,6 +28,7 @@
 #include <trurl/n_snprintf.h>
 #include <trurl/nmalloc.h>
 
+#include "compiler.h"
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
