@@ -9,11 +9,8 @@ SHELL_MOD = shell.c
 
 libVERINFO         = 0:0:0
 lib_LTLIBRARIES    = libpoclidek.la
-noinst_LTLIBRARIES = libpoclidek_allsym.la
 
-libpoclidek_la_DEPENDENCIES = $(builddir)/libpoclidek.sym
-libpoclidek_la_LDFLAGS = -version-info $(libVERINFO) \
-			 -export-symbols $(builddir)/libpoclidek.sym
+libpoclidek_la_LDFLAGS = -version-info $(libVERINFO)
 
 libpoclidek_la_SOURCES  =  \
 			cli.c cli.h     \
@@ -43,8 +40,6 @@ libpoclidek_la_SOURCES  =  \
 			rcmd.c
 
 libpoclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
-libpoclidek_allsym_la_SOURCES = $(libpoclidek_la_SOURCES)
-libpoclidek_allsym_la_LIBADD = $(libpoclidek_la_LIBADD)
 
 libHEADERS = poclidek.h cmd.h dent.h op.h cli.h
 pkginclude_HEADERS = $(libHEADERS)
@@ -72,9 +67,6 @@ dist-hook:
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#* *\#
-
-libpoclidek.sym: libpoclidek_allsym.la
-	$(SHELL) $(top_srcdir)/gensym.sh poclidek $(srcdir) $(builddir) $(top_srcdir)
 
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \

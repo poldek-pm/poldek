@@ -18,12 +18,10 @@ POD2MAN   = @POD2MAN@
 
 libVERINFO         = 2:0:0
 lib_LTLIBRARIES    = libpoldek.la
-noinst_LTLIBRARIES = libpoldek_allsym.la
 
-libpoldek_la_DEPENDENCIES = $(top_builddir)/libpoldek.sym
-libpoldek_la_LDFLAGS = -version-info $(libVERINFO) \
-		       -export-symbols $(top_builddir)/libpoldek.sym
+libpoldek_la_LDFLAGS = -version-info $(libVERINFO)
 libpoldek_la_SOURCES = \
+	  compiler.h	\	
 	  log.c log.h	   \
 	  poldek_term.c poldek_term.h	\
 	  minfo.c			    \
@@ -59,7 +57,6 @@ libpoldek_la_SOURCES = \
 	  poldek_intern.h \
 	  pkg_ver_cmp.h 
 
-libpoldek_allsym_la_SOURCES = $(libpoldek_la_SOURCES)
 pkgincludedir = $(includedir)/poldek
 
 # one line to easy get them by external script 
@@ -75,8 +72,6 @@ libpoldek_la_LIBADD = \
 			pm/libpm.la    \
 			vfile/libvfile.la
 
-libpoldek_allsym_la_LIBADD = $(libpoldek_la_LIBADD)
-
 LDADD_              = @INTLLIBS@
 
 pkglib_SCRIPTS      = zlib-in-rpm.sh vfjuggle vfcompr vfsmb poldekuser-setup.sh
@@ -84,7 +79,6 @@ pkglib_SCRIPTS      = zlib-in-rpm.sh vfjuggle vfcompr vfsmb poldekuser-setup.sh
 EXTRA_DIST = \
 	     $(pkglib_SCRIPTS) \
 	     Makefile.extra \
-	     gensym.sh \
 	     poldek.spec \
 	     package-set.sample vfjugglerc.sample \
 	     m4/codeset.m4 m4/gettext.m4 m4/glibc21.m4 m4/iconv.m4 \
@@ -126,9 +120,6 @@ install-exec-hook:
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* conf/*~
-
-libpoldek.sym: $(top_builddir)/libpoldek_allsym.la
-	$(SHELL) $(top_srcdir)/gensym.sh poldek $(srcdir) $(builddir) $(top_srcdir)
 
 poldek.pc: 
         @ ( echo 'prefix=$(prefix)'; \
