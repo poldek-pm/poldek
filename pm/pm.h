@@ -7,7 +7,11 @@
 #include <trurl/trurl.h>
 #include "poldek.h"
 
-int pmmodule_init(void);
+#ifndef EXPORT
+#  define EXPORT extern
+#endif
+
+EXPORT int pmmodule_init(void);
 
 struct pm_module;
 struct pkgdb;
@@ -17,24 +21,24 @@ struct pm_ctx {
     void                    *modh;
 };
 
-struct pm_ctx *pm_new(const char *name);
-void pm_free(struct pm_ctx *ctx);
+EXPORT struct pm_ctx *pm_new(const char *name);
+EXPORT void pm_free(struct pm_ctx *ctx);
 
-int pm_configure(struct pm_ctx *ctx, const char *key, void *val);
-int pm_conf_get(struct pm_ctx *ctx, const char *key, char *value, int vsize);
+EXPORT int pm_configure(struct pm_ctx *ctx, const char *key, void *val);
+EXPORT int pm_conf_get(struct pm_ctx *ctx, const char *key, char *value, int vsize);
 
-const char *pm_get_name(struct pm_ctx *ctx);
+EXPORT const char *pm_get_name(struct pm_ctx *ctx);
 
 
-char *pm_dbpath(struct pm_ctx *ctx, char *path, size_t size);
-time_t pm_dbmtime(struct pm_ctx *ctx, const char *path);
+EXPORT char *pm_dbpath(struct pm_ctx *ctx, char *path, size_t size);
+EXPORT time_t pm_dbmtime(struct pm_ctx *ctx, const char *path);
 
-int pm_pminstall(struct pkgdb *db, const tn_array *pkgs,
+EXPORT int pm_pminstall(struct pkgdb *db, const tn_array *pkgs,
                  const tn_array *pkgs_toremove, struct poldek_ts *ts);
 
-int pm_pmuninstall(struct pkgdb *db, const tn_array *pkgs, struct poldek_ts *ts);
+EXPORT int pm_pmuninstall(struct pkgdb *db, const tn_array *pkgs, struct poldek_ts *ts);
 
-int pm_verify_signature(struct pm_ctx *ctx, const char *path, unsigned flags);
+EXPORT int pm_verify_signature(struct pm_ctx *ctx, const char *path, unsigned flags);
 
 struct pm_dbrec *dbrec;
 typedef int (*pkgdb_filter_fn) (struct pkgdb *db,
@@ -56,29 +60,29 @@ struct pkgdb {
     struct pm_ctx *_ctx;
 };
 
-struct pkgdb *pkgdb_open(struct pm_ctx *ctx, const char *rootdir,
+EXPORT struct pkgdb *pkgdb_open(struct pm_ctx *ctx, const char *rootdir,
                          const char *path, mode_t mode,
                          const char *key, ...);
 #define pkgdb_creat(ctx, rootdir, path, key, args...) \
     pkgdb_open(ctx, rootdir, path, O_RDWR | O_CREAT | O_EXCL, key, ##args)
 
-int pkgdb_reopen(struct pkgdb *db, mode_t mode);
+EXPORT int pkgdb_reopen(struct pkgdb *db, mode_t mode);
 
-pkgdb_filter_fn pkgdb_set_filter(struct pkgdb *db,
+EXPORT pkgdb_filter_fn pkgdb_set_filter(struct pkgdb *db,
                                  pkgdb_filter_fn filter,
                                  void *filter_arg);
 
-void pkgdb_close(struct pkgdb *db);
-void pkgdb_free(struct pkgdb *db);
+EXPORT void pkgdb_close(struct pkgdb *db);
+EXPORT void pkgdb_free(struct pkgdb *db);
 
-int pkgdb_tx_begin(struct pkgdb *db, struct poldek_ts *ts);
-int pkgdb_tx_commit(struct pkgdb *db);
+EXPORT int pkgdb_tx_begin(struct pkgdb *db, struct poldek_ts *ts);
+EXPORT int pkgdb_tx_commit(struct pkgdb *db);
 
 struct poldek_ts;
-int pkgdb_install(struct pkgdb *db, const char *path,
+EXPORT int pkgdb_install(struct pkgdb *db, const char *path,
                   const struct poldek_ts *ts);
 
-int pkgdb_match_req(struct pkgdb *db,
+EXPORT int pkgdb_match_req(struct pkgdb *db,
                     const struct capreq *req, unsigned ma_flags,
                     const tn_array *exclude);
 
@@ -88,12 +92,12 @@ struct pm_dbrec {
     struct pm_ctx *_ctx;
 };
 
-int pm_dbrec_nevr(const struct pm_dbrec *dbrec, char **name, int32_t *epoch,
+EXPORT int pm_dbrec_nevr(const struct pm_dbrec *dbrec, char **name, int32_t *epoch,
                   char **ver, char **rel, char **arch, int *color);
 
                   
-int pkgdb_is_pkg_installed(struct pkgdb *db, const struct pkg *pkg, int *cmprc);
-int pkgdb_get_package_hdr(struct pkgdb *db, const struct pkg *pkg,
+EXPORT int pkgdb_is_pkg_installed(struct pkgdb *db, const struct pkg *pkg, int *cmprc);
+EXPORT int pkgdb_get_package_hdr(struct pkgdb *db, const struct pkg *pkg,
                           struct pm_dbrec *dbrec);
 
 
@@ -131,32 +135,32 @@ struct pkgdb_it {
     void          (*_destroy)(struct pkgdb_it *it);
 };
 
-int pkgdb_it_init(struct pkgdb *db, struct pkgdb_it *it,
+EXPORT int pkgdb_it_init(struct pkgdb *db, struct pkgdb_it *it,
                   int tag, const char *arg);
 
-pkgdb_filter_fn pkgdb_it_set_filter(struct pkgdb_it *it,
+EXPORT pkgdb_filter_fn pkgdb_it_set_filter(struct pkgdb_it *it,
                                     pkgdb_filter_fn filter,
                                     void *filter_arg);
 
-void pkgdb_it_destroy(struct pkgdb_it *it);
-const struct pm_dbrec *pkgdb_it_get(struct pkgdb_it *it);
-int pkgdb_it_get_count(struct pkgdb_it *it);
+EXPORT void pkgdb_it_destroy(struct pkgdb_it *it);
+EXPORT const struct pm_dbrec *pkgdb_it_get(struct pkgdb_it *it);
+EXPORT int pkgdb_it_get_count(struct pkgdb_it *it);
 
 
 /* Search database for value of a tag ignoring packages
    from 'exclude' array. Found packages are added to dbpkgs
    array (created if NULL), returns number of packages found */
-int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
+EXPORT int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
                  enum pkgdb_it_tag tag, const char *value,
                  const tn_array *exclude, unsigned ldflags);
 
 
-int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
+EXPORT int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                           const struct capreq *cap,
                           const tn_array *exclude, unsigned ldflags,
                           unsigned ma_flags);
 
-int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
+EXPORT int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
                         const tn_array *exclude);
 
 
@@ -167,7 +171,7 @@ int pkgdb_q_is_required(struct pkgdb *db, const struct capreq *cap,
 /*
   adds to dbpkgs packages obsoleted by pkg
 */
-int pkgdb_q_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
+EXPORT int pkgdb_q_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
                             const struct pkg *pkg, unsigned flags,
                             const tn_array *exclude, unsigned ldflags);
 
@@ -177,19 +181,19 @@ enum pm_machine_score_tag {
     PMMSTAG_OS = 2
 };
 /* RET 0 - different arch/os */
-int pm_machine_score(struct pm_ctx *ctx,
+EXPORT int pm_machine_score(struct pm_ctx *ctx,
                      enum pm_machine_score_tag tag, const char *val);
 
-int pm_satisfies(struct pm_ctx *ctx, const struct capreq *req);
+EXPORT int pm_satisfies(struct pm_ctx *ctx, const struct capreq *req);
 
-int pm_get_dbdepdirs(struct pm_ctx *ctx,
+EXPORT int pm_get_dbdepdirs(struct pm_ctx *ctx,
                      const char *rootdir, const char *dbpath,
                      tn_array *depdirs);
 
-struct pkg *pm_load_package(struct pm_ctx *ctx,
+EXPORT struct pkg *pm_load_package(struct pm_ctx *ctx,
                             tn_alloc *na, const char *path, unsigned ldflags);
-struct pkgdir;
-struct pkgdir *pkgdb_to_pkgdir(struct pm_ctx *ctx, const char *rootdir,
+EXPORT struct pkgdir;
+EXPORT struct pkgdir *pkgdb_to_pkgdir(struct pm_ctx *ctx, const char *rootdir,
                                const char *path, unsigned pkgdir_ldflags,
                                const char *key, ...);
 

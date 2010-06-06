@@ -5,6 +5,10 @@
 #include <trurl/narray.h>
 #include <trurl/nhash.h>
 
+#ifndef EXPORT
+# define EXPORT extern
+#endif
+
 enum poldek_ts_flag {
     POLDEK_TS_INSTALL      = (1 << 0), 
     POLDEK_TS_UNINSTALL    = (1 << 1), 
@@ -144,43 +148,43 @@ struct poldek_ts {
 
 };
 #endif
-struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx, unsigned flags);
-void poldek_ts_free(struct poldek_ts *ts);
+EXPORT struct poldek_ts *poldek_ts_new(struct poldek_ctx *ctx, unsigned flags);
+EXPORT void poldek_ts_free(struct poldek_ts *ts);
 
-int poldek_ts_get_type(struct poldek_ts *ts);
-int poldek_ts_set_type(struct poldek_ts *ts, enum poldek_ts_type type,
+EXPORT int poldek_ts_get_type(struct poldek_ts *ts);
+EXPORT int poldek_ts_set_type(struct poldek_ts *ts, enum poldek_ts_type type,
                        const char *typenam);
 
-void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag);
-void poldek_ts_clrf(struct poldek_ts *ts, uint32_t flag);
-uint32_t poldek_ts_issetf(struct poldek_ts *ts, uint32_t flag);
-int poldek_ts_issetf_all(struct poldek_ts *ts, uint32_t flag);
+EXPORT void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag);
+EXPORT void poldek_ts_clrf(struct poldek_ts *ts, uint32_t flag);
+EXPORT uint32_t poldek_ts_issetf(struct poldek_ts *ts, uint32_t flag);
+EXPORT int poldek_ts_issetf_all(struct poldek_ts *ts, uint32_t flag);
 
-void poldek_ts_setop(struct poldek_ts *ts, int optv, int on);
-int poldek_ts_getop(const struct poldek_ts *ts, int optv);
-int poldek_ts_op_touched(const struct poldek_ts *ts, int optv);
-int poldek_ts_is_interactive_on(const struct poldek_ts *ts);
+EXPORT void poldek_ts_setop(struct poldek_ts *ts, int optv, int on);
+EXPORT int poldek_ts_getop(const struct poldek_ts *ts, int optv);
+EXPORT int poldek_ts_op_touched(const struct poldek_ts *ts, int optv);
+EXPORT int poldek_ts_is_interactive_on(const struct poldek_ts *ts);
 
 #include <stdarg.h>
 #ifndef SWIG
-int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap);
+EXPORT int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap);
 #endif
-int poldek_ts_configure(struct poldek_ts *ts, int param, ...);
+EXPORT int poldek_ts_configure(struct poldek_ts *ts, int param, ...);
 
 
 /* add package arguments */
-int poldek_ts_add_pkg(struct poldek_ts *ts, struct pkg *pkg);
-int poldek_ts_add_pkgmask(struct poldek_ts *ts, const char *mask);
-int poldek_ts_add_pkgfile(struct poldek_ts *ts, const char *pathname);
-int poldek_ts_add_pkglist(struct poldek_ts *ts, const char *path);
+EXPORT int poldek_ts_add_pkg(struct poldek_ts *ts, struct pkg *pkg);
+EXPORT int poldek_ts_add_pkgmask(struct poldek_ts *ts, const char *mask);
+EXPORT int poldek_ts_add_pkgfile(struct poldek_ts *ts, const char *pathname);
+EXPORT int poldek_ts_add_pkglist(struct poldek_ts *ts, const char *path);
 
-void poldek_ts_clean_args(struct poldek_ts *ts);
-tn_array* poldek_ts_get_args_asmasks(struct poldek_ts *ts, int hashed);
-int poldek_ts_get_arg_count(struct poldek_ts *ts);
+EXPORT void poldek_ts_clean_args(struct poldek_ts *ts);
+EXPORT tn_array* poldek_ts_get_args_asmasks(struct poldek_ts *ts, int hashed);
+EXPORT int poldek_ts_get_arg_count(struct poldek_ts *ts);
 
-int poldek_ts_run(struct poldek_ts *ts, unsigned flags);
+EXPORT int poldek_ts_run(struct poldek_ts *ts, unsigned flags);
 
 /* mark = {I|D|R} */
-tn_array *poldek_ts_get_summary(const struct poldek_ts *ts, const char *mark);
+EXPORT tn_array *poldek_ts_get_summary(const struct poldek_ts *ts, const char *mark);
 
 #endif

@@ -7,27 +7,31 @@
 #include <sys/param.h>          /* for PATH_MAX */
 #include <trurl/trurl.h>
 
+#ifndef EXPORT
+#  define EXPORT extern
+#endif
+
 struct flfile {
     uint32_t  size;
     uint16_t  mode;
     char      basename[0];
 };
 
-struct flfile *flfile_new(tn_alloc *na, uint32_t size, uint16_t mode, 
-                          const char *basename, int blen, 
+EXPORT struct flfile *flfile_new(tn_alloc *na, uint32_t size, uint16_t mode,
+                          const char *basename, int blen,
                           const char *slinkto, int slen);
 
-struct flfile *flfile_clone(struct flfile *flfile);
+EXPORT struct flfile *flfile_clone(struct flfile *flfile);
 
-int flfile_cmp(const struct flfile *f1, const struct flfile *f2);
-int flfile_cmp_qsort(const struct flfile **f1, const struct flfile **f2);
+EXPORT int flfile_cmp(const struct flfile *f1, const struct flfile *f2);
+EXPORT int flfile_cmp_qsort(const struct flfile **f1, const struct flfile **f2);
 
 /*
   both functions returns true(non-zero) if given files are conflicted
   WARN: basenames aren't compared! 
  */
-int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict);
-int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,
+EXPORT int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict);
+EXPORT int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,
                  const char *slinkto, int strict);
 
 struct pkgfl_ent {
@@ -36,33 +40,33 @@ struct pkgfl_ent {
     struct flfile *files[0];
 };
 
-struct pkgfl_ent *pkgfl_ent_new(tn_alloc *na,
+EXPORT struct pkgfl_ent *pkgfl_ent_new(tn_alloc *na,
                                 char *dirname, int dirname_len, int nfiles);
 
-int pkgfl_ent_cmp(const void *a, const void *b);
+EXPORT int pkgfl_ent_cmp(const void *a, const void *b);
 
 #define PKGFL_ALL         0
 #define PKGFL_DEPDIRS     1
 #define PKGFL_NOTDEPDIRS  2
 
-tn_tuple *pkgfl_array_store_order(tn_tuple *fl);
+EXPORT tn_tuple *pkgfl_array_store_order(tn_tuple *fl);
 
 struct pkg;
 
 /* legacy */
-tn_tuple *pkgfl_array_pdir_sort(tn_tuple *fl);
+EXPORT tn_tuple *pkgfl_array_pdir_sort(tn_tuple *fl);
 
-int pkgfl_store(tn_tuple *fl, tn_buf *nbuf, tn_array *exclpath,
+EXPORT int pkgfl_store(tn_tuple *fl, tn_buf *nbuf, tn_array *exclpath,
                 tn_array *depdirs, int which);
 
-int pkgfl_restore_st(tn_alloc *na, tn_tuple **fl, 
+EXPORT int pkgfl_restore_st(tn_alloc *na, tn_tuple **fl, 
                      tn_stream *st, tn_array *dirs, int include);
 
-int pkgfl_skip_st(tn_stream *st);
+EXPORT int pkgfl_skip_st(tn_stream *st);
 
-tn_array *pkgfl_array_new(int size);
+EXPORT tn_array *pkgfl_array_new(int size);
 
-void pkgfl_dump(tn_tuple *fl);
+EXPORT void pkgfl_dump(tn_tuple *fl);
 
 /* iterator */
 struct pkgfl_it {
@@ -72,16 +76,16 @@ struct pkgfl_it {
     char path[PATH_MAX], *endp;
 };
 
-struct pkgfl_it *pkgfl_it_new(tn_tuple *fl);
-void pkgfl_it_init(struct pkgfl_it *it, tn_tuple *fl);
-const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile);
+EXPORT struct pkgfl_it *pkgfl_it_new(tn_tuple *fl);
+EXPORT void pkgfl_it_init(struct pkgfl_it *it, tn_tuple *fl);
+EXPORT const char *pkgfl_it_get(struct pkgfl_it *it, struct flfile **flfile);
 
 /* to simplify python wrapper */
-const char *pkgfl_it_get_rawargs(struct pkgfl_it *it, uint32_t *size, uint16_t *mode,
+EXPORT const char *pkgfl_it_get_rawargs(struct pkgfl_it *it, uint32_t *size, uint16_t *mode,
                                  const char **basename);
 
 /* extract owned and required directories */
-int pkgfl_owned_and_required_dirs(tn_tuple *fl, tn_array **owned,
+EXPORT int pkgfl_owned_and_required_dirs(tn_tuple *fl, tn_array **owned,
                                   tn_array **required);
 
 #endif /* POLDEK_PKGFL_H */

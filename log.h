@@ -11,6 +11,10 @@
 #  define __attribute__(x) /*nothing*/                                      
 #endif   
 
+#ifndef EXPORT
+# define EXPORT extern
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <trurl/tfn_types.h>    /* for tn_fn_free */
@@ -29,36 +33,36 @@
 #define LOGOPT_N        (1 << 11)   /* add "\n" */
 #define LOGOPT_CONT     (1 << 12)   /* continuation */
 
-int poldek_verbose(void);
-int poldek_set_verbose(int v);
+EXPORT int poldek_verbose(void);
+EXPORT int poldek_set_verbose(int v);
 #ifdef POLDEK_LOG_H_INTERNAL
-extern int poldek_VERBOSE;
-extern int poldek_TRACE;
+EXPORT int poldek_VERBOSE;
+EXPORT int poldek_TRACE;
 #else
-extern const int poldek_VERBOSE;
-extern const int poldek_TRACE;
+EXPORT const int poldek_VERBOSE;
+EXPORT const int poldek_TRACE;
 #endif
 
 typedef void (*poldek_vlog_fn)(void *, int pri, const char *message);
 
-void poldek_log_add_appender(const char *name, void *data, tn_fn_free free,
+EXPORT void poldek_log_add_appender(const char *name, void *data, tn_fn_free free,
                              unsigned flags, poldek_vlog_fn dolog);
 
-void poldek_log_set_appender(const char *name, void *data, tn_fn_free free,
+EXPORT void poldek_log_set_appender(const char *name, void *data, tn_fn_free free,
                              unsigned flags, poldek_vlog_fn dolog);
 
 #define poldek_log_set_default_appender(n, d, ffn) \
          poldek_log_set_appender(n, d, ffn, 0, NULL)
 
-void poldek_log_reset_appenders(void);
+EXPORT void poldek_log_reset_appenders(void);
 
-void poldek_log(int pri, const char *fmt, ...)
+EXPORT void poldek_log(int pri, const char *fmt, ...)
    __attribute__((format(printf,2,3)));
    
-void poldek_log_i(int pri, int indent, const char *fmt, ...)
+EXPORT void poldek_log_i(int pri, int indent, const char *fmt, ...)
    __attribute__((format(printf,3,4)));
    
-void poldek_vlog(int pri, int indent, const char *fmt, va_list args);
+EXPORT void poldek_vlog(int pri, int indent, const char *fmt, va_list args);
 
 #ifndef POLDEK_LOG_H_INTERNAL
 
@@ -135,7 +139,7 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args);
 #define poldek_die_ifnot(expr, fmt, args...)   \
   ((void) ((expr) ? 0 : poldek_log(LOGERR | LOGOPT_N | LOGDIE, fmt, ## args)))
 
-void poldek_meminf(int vlevel, const char *fmt, ...)
+EXPORT void poldek_meminf(int vlevel, const char *fmt, ...)
         __attribute__((__format__ (__printf__, 2, 3)));
 
 # define tracef(indent, fmt, args...)                                   \

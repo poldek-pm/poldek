@@ -7,6 +7,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifndef EXPORT
+# define EXPORT extern
+#endif
+
 /* custom popen(..., "r") */
 
 struct p_open_st {
@@ -18,16 +22,16 @@ struct p_open_st {
     char    *errmsg;
 };
 
-void p_st_init(struct p_open_st *pst);
-void p_st_destroy(struct p_open_st *pst);
+EXPORT void p_st_init(struct p_open_st *pst);
+EXPORT void p_st_destroy(struct p_open_st *pst);
 
 #define P_OPEN_KEEPSTDIN (1 << 0) /* don't close stdin */
 #define P_OPEN_OUTPTYS   (1 << 1) /* pass output through pseudo-tty */
 
-FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
+EXPORT FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
              char *const argv[]);
 
-int p_close(struct p_open_st *pst);
-int p_wait(struct p_open_st *pst);
+EXPORT int p_close(struct p_open_st *pst);
+EXPORT int p_wait(struct p_open_st *pst);
 
 #endif /* POLDEK_POPEN_H */

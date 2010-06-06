@@ -7,6 +7,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifndef EXPORT
+# define EXPORT extern
+#endif
+
 /* custom popen(..., "r") */
 
 #define VOPEN3_NOSTDIN      (1 << 0); /* use /dev/null as stdin */
@@ -42,23 +46,23 @@ struct vopen3_st {
     int     nread;
     struct  vopen3_st *next;
 };
-void vopen3_init(struct vopen3_st *st, const char *cmd, char *const argv[]);
-void vopen3_init_fn(struct vopen3_st *st, int (*pfunc)(void*), void *pfunc_arg);
-void vopen3_set_grabfn(struct vopen3_st *st, int (*func)(const char *, void*),
+EXPORT void vopen3_init(struct vopen3_st *st, const char *cmd, char *const argv[]);
+EXPORT void vopen3_init_fn(struct vopen3_st *st, int (*pfunc)(void*), void *pfunc_arg);
+EXPORT void vopen3_set_grabfn(struct vopen3_st *st, int (*func)(const char *, void*),
                        void *arg);
-void vopen3_destroy(struct vopen3_st *st);
+EXPORT void vopen3_destroy(struct vopen3_st *st);
 
-int vopen3_st_infd(struct vopen3_st *st);
-int vopen3_st_outfd(struct vopen3_st *st);
+EXPORT int vopen3_st_infd(struct vopen3_st *st);
+EXPORT int vopen3_st_outfd(struct vopen3_st *st);
 
 
-int vopen3_exec(struct vopen3_st *st, unsigned flags);
+EXPORT int vopen3_exec(struct vopen3_st *st, unsigned flags);
 
-int vopen3_close(struct vopen3_st *st);
-int vopen3_wait(struct vopen3_st *st);
+EXPORT int vopen3_close(struct vopen3_st *st);
+EXPORT int vopen3_wait(struct vopen3_st *st);
 
 /* st1->out -> st2->in */
-int vopen3_chain(struct vopen3_st *st1, struct vopen3_st *st2);
-void vopen3_process(struct vopen3_st *st, int verbose_level);
+EXPORT int vopen3_chain(struct vopen3_st *st1, struct vopen3_st *st2);
+EXPORT void vopen3_process(struct vopen3_st *st, int verbose_level);
 
 #endif /* POLDEK_V3OPEN_H */

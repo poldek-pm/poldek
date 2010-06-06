@@ -9,6 +9,10 @@
 
 #include "source.h"
 
+#ifndef EXPORT
+#  define EXPORT extern
+#endif
+
 #define PKGDIR_NAMED              (1 << 0)
 #define PKGDIR_LOADED             (1 << 1)  /* for idx */
 #define PKGDIR_VERIFIED           (1 << 2)  /* to avoid double verification
@@ -74,8 +78,8 @@ struct pkgdir {
  (((p)->flags & PKGDIR_NAMED) ? (p)->name : vf_url_slim_s((p)->idxpath ? \
  (p)->idxpath : (p)->path ? (p)->path : "anon", 0))
 
-struct pkgdir *pkgdir_malloc(void);
-void pkgdir_free(struct pkgdir *pkgdir);
+EXPORT struct pkgdir *pkgdir_malloc(void);
+EXPORT void pkgdir_free(struct pkgdir *pkgdir);
 
 
 
@@ -92,14 +96,14 @@ void pkgdir_free(struct pkgdir *pkgdir);
                                           separated i18ns (pndir)
                                         */
 
-struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags);
+EXPORT struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags);
 
-struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
+EXPORT struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
                                const char *type, const char *name,
                                const char *compress,
                                unsigned flags, const char *lc_lang);
 
-struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
+EXPORT struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
                            const char *type, const char *name);
 
 /* ldflags */
@@ -112,7 +116,7 @@ struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
 				          (see PKGDIR_OPEN_ALLDESC)
 				        */
 
-int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
+EXPORT int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
 
 #define PKGDIR_CREAT_NODESC   (1 << 0) /* don't save pkg's user level info */
 #define PKGDIR_CREAT_NOFL     (1 << 1) /* don't save pkg's file list       */
@@ -129,16 +133,16 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags);
                                           cause it brokes inremental updates
                                           by 0.18.x */
 
-int pkgdir_save(struct pkgdir *pkgdir, unsigned flags);
+EXPORT int pkgdir_save(struct pkgdir *pkgdir, unsigned flags);
 
-int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
+EXPORT int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
                    const char *path, unsigned flags);
 
-struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2);
-struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *pkgdir2);
+EXPORT struct pkgdir *pkgdir_diff(struct pkgdir *pkgdir, struct pkgdir *pkgdir2);
+EXPORT struct pkgdir *pkgdir_patch(struct pkgdir *pkgdir, struct pkgdir *pkgdir2);
 
-int pkgdir_update(struct pkgdir *pkgdir);
-int pkgdir_update_a(const struct source *src);
+EXPORT int pkgdir_update(struct pkgdir *pkgdir);
+EXPORT int pkgdir_update_a(const struct source *src);
 
 
 #define PKGDIR_CAP_NOPREFIX       (1 << 0)
@@ -150,16 +154,16 @@ int pkgdir_update_a(const struct source *src);
 
 #define pkgdir_is_type(p, t) (strcmp((p)->type, t) == 0)
 
-int pkgdir_type_info(const char *type);
-const char *pkgdir_type_default_idxfn(const char *type);
-const char *pkgdir_type_default_compr(const char *type);
+EXPORT int pkgdir_type_info(const char *type);
+EXPORT const char *pkgdir_type_default_idxfn(const char *type);
+EXPORT const char *pkgdir_type_default_compr(const char *type);
 
-int pkgdir_isremote(struct pkgdir *pkgdir);
+EXPORT int pkgdir_isremote(struct pkgdir *pkgdir);
 
 #if 0   /* not implemented, use source_clean() instead */
 #define PKGDIR_CLEAN_IDX    (1 << 0)
 #define PKGDIR_CLEAN_CACHE  (1 << 1)
-int pkgdir_clean_cache(const char *type, const char *path, unsigned flags);
+EXPORT int pkgdir_clean_cache(const char *type, const char *path, unsigned flags);
 #endif
 
 struct pkgdir_type_uinf {
@@ -169,28 +173,28 @@ struct pkgdir_type_uinf {
     char mode[8];
 };
 
-tn_array *pkgdir_typelist(void);
+EXPORT tn_array *pkgdir_typelist(void);
 
 #ifndef SWIG
 struct pkg;
-int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg);
-int pkgdir_add_packages(struct pkgdir *pkgdir, tn_array *pkgs);
-int pkgdir_remove_package(struct pkgdir *pkgdir, struct pkg *pkg);
+EXPORT int pkgdir_add_package(struct pkgdir *pkgdir, struct pkg *pkg);
+EXPORT int pkgdir_add_packages(struct pkgdir *pkgdir, tn_array *pkgs);
+EXPORT int pkgdir_remove_package(struct pkgdir *pkgdir, struct pkg *pkg);
 
 
 /* Prototypes of pkgdir_dirindex.c */
 /* returns packages having path */
-tn_array *pkgdir_dirindex_get(const struct pkgdir *pkgdir,
+EXPORT tn_array *pkgdir_dirindex_get(const struct pkgdir *pkgdir,
                               tn_array *pkgs, const char *path);
 /* path belongs to pkg? */
-int pkgdir_dirindex_pkg_has_path(const struct pkgdir *pkgdir,
+EXPORT int pkgdir_dirindex_pkg_has_path(const struct pkgdir *pkgdir,
                                  const struct pkg *pkg, const char *path);
 
 /* directories required by package */
-tn_array *pkgdir_dirindex_get_required(const struct pkgdir *pkgdir,
+EXPORT tn_array *pkgdir_dirindex_get_required(const struct pkgdir *pkgdir,
                                        const struct pkg *pkg);
 
-tn_array *pkgdir_dirindex_get_provided(const struct pkgdir *pkgdir,
+EXPORT tn_array *pkgdir_dirindex_get_provided(const struct pkgdir *pkgdir,
                                        const struct pkg *pkg);
 
 #endif  /* SWIG */

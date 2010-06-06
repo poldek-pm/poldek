@@ -13,6 +13,10 @@
 #include "dent.h"
 #include "cmd.h"
 
+#ifndef EXPORT
+# define EXPORT extern
+#endif
+
 #define OPT_GID_BASE 500
 #define OPT_GID_OP_MAKEIDX    (200  + OPT_GID_BASE)
 #define OPT_GID_OP_SOURCE     (400  + OPT_GID_BASE)
@@ -23,17 +27,17 @@
 #define OPT_GID_OP_SPLIT      (1400 + OPT_GID_BASE)
 #define OPT_GID_OP_OTHER      (1600 + OPT_GID_BASE)
 
-int poclidek__load_aliases(struct poclidek_ctx *cctx);
-int poclidek__add_aliases(struct poclidek_ctx *cctx, tn_hash *htcnf);
+EXPORT int poclidek__load_aliases(struct poclidek_ctx *cctx);
+EXPORT int poclidek__add_aliases(struct poclidek_ctx *cctx, tn_hash *htcnf);
 
 
-void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts);
+EXPORT void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts);
 
-int poclidek_save_installedcache(struct poclidek_ctx *cctx,
+EXPORT int poclidek_save_installedcache(struct poclidek_ctx *cctx,
                                  struct pkgdir *pkgdir);
-int poclidek_load_installed(struct poclidek_ctx *cctx, int reload);
+EXPORT int poclidek_load_installed(struct poclidek_ctx *cctx, int reload);
 
 
-int poclidek_argv_is_help(int argc, const char **argv);
+EXPORT int poclidek_argv_is_help(int argc, const char **argv);
 
 #endif 

@@ -31,6 +31,10 @@
 # include <trurl/nstream.h>
 #endif
 
+#ifndef EXPORT
+# define EXPORT extern
+#endif
+
 #define VFILE_LOG_INFO  (1 << 0)
 #define VFILE_LOG_WARN  (1 << 1)
 #define VFILE_LOG_ERR   (1 << 2)
@@ -51,10 +55,10 @@
 #define VFILE_CONF_EXTCOMPR               (1 << 12) /* use external script to
                                                        file (de)compression */
 #define VFILE_CONF_SIGINT_REACHED         (1 << 15)
-int vfile_configure(int param, ...);
+EXPORT int vfile_configure(int param, ...);
 
 /* run it after configuration is done */
-void vfile_setup(void);
+EXPORT void vfile_setup(void);
 
 
 /* vf_type */
@@ -110,17 +114,17 @@ struct vfile {
 
 #define vfile_localpath(vf)  ((vf)->vf_tmpath ? (vf)->vf_tmpath : (vf)->vf_path)
 
-struct vfile *vfile_open_ul(const char *path, int vftype, unsigned vfmode,
+EXPORT struct vfile *vfile_open_ul(const char *path, int vftype, unsigned vfmode,
                             const char *urlabel);
 
 #define vfile_open(path, vftype, vfmode) \
     vfile_open_ul(path, vftype, vfmode, NULL)
     
 
-void vfile_close(struct vfile *vf);
-struct vfile *vfile_incref(struct vfile *vf);
+EXPORT void vfile_close(struct vfile *vf);
+EXPORT struct vfile *vfile_incref(struct vfile *vf);
 
-int vfile_unlink(struct vfile *vf);
+EXPORT int vfile_unlink(struct vfile *vf);
 
 
 #define VFURL_UNKNOWN (1 << 0)
@@ -138,9 +142,9 @@ int vfile_unlink(struct vfile *vf);
 #define vfile_is_remote(vf) ((vf)->vf_urltype & VFURL_REMOTE)
 
 /* external fetchers */
-int vfile_register_ext_handler(const char *name, tn_array *protocols,
+EXPORT int vfile_register_ext_handler(const char *name, tn_array *protocols,
                                const char *cmd);
-int vfile_is_configured_ext_handler(const char *url);
+EXPORT int vfile_is_configured_ext_handler(const char *url);
 
 #include <unistd.h>             /* for off_t */
 struct vf_stat {
@@ -151,7 +155,7 @@ struct vf_stat {
     time_t  vf_local_mtime;
 };
 
-int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
+EXPORT int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
             const char *urlabel);
 
 #if 0                           /* NFY */
@@ -163,48 +167,48 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
 #define VF_FETCH_NOLABEL     (1 << 3)
 #define VF_FETCH_NOPROGRESS  (1 << 4)
 
-int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
+EXPORT int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
              const char *urlabel);
 
-int vf_fetcha(tn_array *urls, const char *destdir, unsigned flags,
+EXPORT int vf_fetcha(tn_array *urls, const char *destdir, unsigned flags,
               const char *urlabel);
 
-int vf_url_type(const char *url);
-char *vf_url_proto(char *proto, int size, const char *url);
-int vf_url_as_dirpath(char *buf, size_t size, const char *url);
-int vf_url_as_path(char *buf, size_t size, const char *url);
+EXPORT int vf_url_type(const char *url);
+EXPORT char *vf_url_proto(char *proto, int size, const char *url);
+EXPORT int vf_url_as_dirpath(char *buf, size_t size, const char *url);
+EXPORT int vf_url_as_path(char *buf, size_t size, const char *url);
 
 /* replace password with "x" * len(password) */
-const char *vf_url_hidepasswd(char *buf, int size, const char *url);
-const char *vf_url_hidepasswd_s(const char *url);
+EXPORT const char *vf_url_hidepasswd(char *buf, int size, const char *url);
+EXPORT const char *vf_url_hidepasswd_s(const char *url);
 
 /* applies vf_url_hidepasswd() + slim down url string to maxl */
-const char *vf_url_slim(char *buf, int size, const char *url, int maxl);
-const char *vf_url_slim_s(const char *url, int maxl);
+EXPORT const char *vf_url_slim(char *buf, int size, const char *url, int maxl);
+EXPORT const char *vf_url_slim_s(const char *url, int maxl);
 
-char *vf_url_unescape(const char *url);
+EXPORT char *vf_url_unescape(const char *url);
 
-int vf_valid_path(const char *path);
-int vf_mkdir(const char *path);
-int vf_unlink(const char *path);
+EXPORT int vf_valid_path(const char *path);
+EXPORT int vf_mkdir(const char *path);
+EXPORT int vf_unlink(const char *path);
 
 /* mkdir under cache dirctory */
-int vf_mksubdir(char *path, int size, const char *dirpath);
+EXPORT int vf_mksubdir(char *path, int size, const char *dirpath);
 
 /* url to local path */
-int vf_localpath(char *path, size_t size, const char *url);
-int vf_localdirpath(char *path, size_t size, const char *url);
+EXPORT int vf_localpath(char *path, size_t size, const char *url);
+EXPORT int vf_localdirpath(char *path, size_t size, const char *url);
 
 /* ofdirpath to path under cache dirctory  */
-int vf_cachepath(char *path, size_t size, const char *ofdirpath);
+EXPORT int vf_cachepath(char *path, size_t size, const char *ofdirpath);
 
 /* unlink local copy */
-int vf_localunlink(const char *path);
+EXPORT int vf_localunlink(const char *path);
 
-int vf_userathost(char *buf, int size);
-int vf_cleanpath(char *buf, int size, const char *path);
+EXPORT int vf_userathost(char *buf, int size);
+EXPORT int vf_cleanpath(char *buf, int size, const char *path);
 
-int vf_find_external_command(char *cmdpath, int size, const char *cmd,
+EXPORT int vf_find_external_command(char *cmdpath, int size, const char *cmd,
                              const char *PATH);
 
 /* dirctory locking */
@@ -213,11 +217,11 @@ struct vflock {
     char path[0];
 };
 
-struct vflock *vf_lockdir(const char *path);
-void vf_lock_release(struct vflock *vflock);
+EXPORT struct vflock *vf_lockdir(const char *path);
+EXPORT void vf_lock_release(struct vflock *vflock);
 
 /* create directory and lock it */
-struct vflock *vf_lock_mkdir(const char *path);
+EXPORT struct vflock *vf_lock_mkdir(const char *path);
 
 
 struct vf_progress {

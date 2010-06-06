@@ -11,6 +11,10 @@
 
 #include "pkgcmp.h"             /* compares functions */
 
+#ifndef EXPORT
+# define EXPORT extern
+#endif
+
 struct capreq;                  /* defined in capreq.h */
 struct pkguinf;                 /* defined in pkgu.h   */
 struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
@@ -115,7 +119,7 @@ struct pkg {
 };
 
 
-struct pkg *pkg_new_ext(tn_alloc *na,
+EXPORT struct pkg *pkg_new_ext(tn_alloc *na,
                         const char *name, int32_t epoch,
                         const char *version, const char *release,
                         const char *arch, const char *os,
@@ -138,22 +142,22 @@ struct pkg *pkg_new_ext(tn_alloc *na,
 #define PKG_LDWHOLE   PKG_LDCAPREQS | PKG_LDFL_WHOLE
 #define PKG_LDWHOLE_FLDEPDIRS PKG_LDCAPREQS | PKG_LDFL_DEPDIRS
 
-void pkg_free(struct pkg *pkg);
+EXPORT void pkg_free(struct pkg *pkg);
 
 #ifdef SWIG
 # define extern__inline
 #else
-# define extern__inline extern inline
+# define extern__inline inline
 #endif
 
-struct pkg *pkg_link(struct pkg *pkg);
+EXPORT struct pkg *pkg_link(struct pkg *pkg);
 
-int pkg_set_arch(struct pkg *pkg, const char *arch);
-const char *pkg_arch(const struct pkg *pkg);
-int pkg_arch_score(const struct pkg *pkg);
+EXPORT int pkg_set_arch(struct pkg *pkg, const char *arch);
+EXPORT const char *pkg_arch(const struct pkg *pkg);
+EXPORT int pkg_arch_score(const struct pkg *pkg);
 
-const char *pkg_os(const struct pkg *pkg);
-int pkg_set_os(struct pkg *pkg, const char *os);
+EXPORT const char *pkg_os(const struct pkg *pkg);
+EXPORT int pkg_set_os(struct pkg *pkg, const char *os);
 
 #define POLDEK_MA_PROMOTE_VERSION    (1 << 0) /* old strict = 0 */
 #define POLDEK_MA_PROMOTE_REQEPOCH   (1 << 2)
@@ -161,81 +165,81 @@ int pkg_set_os(struct pkg *pkg, const char *os);
 #define POLDEK_MA_PROMOTE_EPOCH      ((1 << 2) | (1 << 3))
 
 /* look up into package caps only */
-int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
+EXPORT int pkg_caps_match_req(const struct pkg *pkg, const struct capreq *req,
                        unsigned flags);
 
-int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req,
+EXPORT int pkg_evr_match_req(const struct pkg *pkg, const struct capreq *req,
                       unsigned flags);
 
 
-int cap_xmatch_req(const struct capreq *cap, const struct capreq *req,
+EXPORT int cap_xmatch_req(const struct capreq *cap, const struct capreq *req,
                    unsigned ma_flags);
 
 /* obsoleted */
-int cap_match_req(const struct capreq *cap, const struct capreq *req,
+EXPORT int cap_match_req(const struct capreq *cap, const struct capreq *req,
                   int strict);
 
 
 /* CAUTION: looks into NEVR and caps only */
-int pkg_xmatch_req(const struct pkg *pkg, const struct capreq *req,
+EXPORT int pkg_xmatch_req(const struct pkg *pkg, const struct capreq *req,
                    unsigned flags);
 
 /* obsoleted */
-int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict);
+EXPORT int pkg_match_req(const struct pkg *pkg, const struct capreq *req, int strict);
 
-int pkg_has_path(const struct pkg *pkg,
+EXPORT int pkg_has_path(const struct pkg *pkg,
                  const char *dirname, const char *basename);
 
 /* match with caps && files */
-int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
+EXPORT int pkg_satisfies_req(const struct pkg *pkg, const struct capreq *req,
                        int strict);
 
-int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg);
-int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg);
+EXPORT int pkg_obsoletes_pkg(const struct pkg *pkg, const struct pkg *opkg);
+EXPORT int pkg_caps_obsoletes_pkg_caps(const struct pkg *pkg, const struct pkg *opkg);
 
-const struct capreq *pkg_requires_cap(const struct pkg *pkg,
+EXPORT const struct capreq *pkg_requires_cap(const struct pkg *pkg,
                                       const struct capreq *cap);
 
-int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard);
-int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg);
+EXPORT int pkg_add_pkgcnfl(struct pkg *pkg, struct pkg *cpkg, int isbastard);
+EXPORT int pkg_has_pkgcnfl(struct pkg *pkg, struct pkg *cpkg);
 
 /* src.rpm */
-char *pkg_srcfilename(const struct pkg *pkg, char *buf, size_t size);
-char *pkg_srcfilename_s(const struct pkg *pkg);
+EXPORT char *pkg_srcfilename(const struct pkg *pkg, char *buf, size_t size);
+EXPORT char *pkg_srcfilename_s(const struct pkg *pkg);
 
 /* RET %path/%name-%version-%release.%arch.rpm  */
-char *pkg_filename(const struct pkg *pkg, char *buf, size_t size);
-char *pkg_filename_s(const struct pkg *pkg);
+EXPORT char *pkg_filename(const struct pkg *pkg, char *buf, size_t size);
+EXPORT char *pkg_filename_s(const struct pkg *pkg);
 
-char *pkg_path(const struct pkg *pkg, char *buf, size_t size);
-char *pkg_path_s(const struct pkg *pkg);
+EXPORT char *pkg_path(const struct pkg *pkg, char *buf, size_t size);
+EXPORT char *pkg_path_s(const struct pkg *pkg);
 
-char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
+EXPORT char *pkg_localpath(const struct pkg *pkg, char *path, size_t size,
                     const char *cachedir);
-const char *pkg_pkgdirpath(const struct pkg *pkg);
-unsigned pkg_file_url_type(const struct pkg *pkg);
+EXPORT const char *pkg_pkgdirpath(const struct pkg *pkg);
+EXPORT unsigned pkg_file_url_type(const struct pkg *pkg);
 
 
-extern__inline const char *pkg_id(const struct pkg *p);
-int pkg_id_snprintf(char *str, size_t size, const struct pkg *pkg);
-int pkg_idevr_snprintf(char *str, size_t size, const struct pkg *pkg);
+EXPORT extern__inline const char *pkg_id(const struct pkg *p);
+EXPORT int pkg_id_snprintf(char *str, size_t size, const struct pkg *pkg);
+EXPORT int pkg_idevr_snprintf(char *str, size_t size, const struct pkg *pkg);
 
 
-int pkg_printf(const struct pkg *pkg, const char *str);
-int pkg_snprintf(char *str, size_t size, const struct pkg *pkg);
-char *pkg_snprintf_s(const struct pkg *pkg);
-char *pkg_snprintf_s0(const struct pkg *pkg);
-char *pkg_snprintf_s1(const struct pkg *pkg);
-int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg);
-char *pkg_evr_snprintf_s(const struct pkg *pkg);
+EXPORT int pkg_printf(const struct pkg *pkg, const char *str);
+EXPORT int pkg_snprintf(char *str, size_t size, const struct pkg *pkg);
+EXPORT char *pkg_snprintf_s(const struct pkg *pkg);
+EXPORT char *pkg_snprintf_s0(const struct pkg *pkg);
+EXPORT char *pkg_snprintf_s1(const struct pkg *pkg);
+EXPORT int pkg_evr_snprintf(char *str, size_t size, const struct pkg *pkg);
+EXPORT char *pkg_evr_snprintf_s(const struct pkg *pkg);
 
 
 /* must be free()d by pkguinf_free(); see pkgu.h */
-struct pkguinf *pkg_uinf(const struct pkg *pkg);
-struct pkguinf *pkg_xuinf(const struct pkg *pkg, tn_array *langs);
+EXPORT struct pkguinf *pkg_uinf(const struct pkg *pkg);
+EXPORT struct pkguinf *pkg_xuinf(const struct pkg *pkg, tn_array *langs);
 
 /* directories required by package */
-tn_array *pkg_required_dirs(const struct pkg *pkg);
+EXPORT tn_array *pkg_required_dirs(const struct pkg *pkg);
 
 struct pkgflist {
     tn_tuple *fl;
@@ -243,49 +247,49 @@ struct pkgflist {
 };
 
 /* load and returns not loaded file list (l: tag in package index) */
-struct pkgflist *pkg_get_nodep_flist(const struct pkg *pkg);
+EXPORT struct pkgflist *pkg_get_nodep_flist(const struct pkg *pkg);
 
 /* returns whole file list, (L: + l:) */
-struct pkgflist *pkg_get_flist(const struct pkg *pkg);
+EXPORT struct pkgflist *pkg_get_flist(const struct pkg *pkg);
 
-void pkgflist_free(struct pkgflist *flist);
+EXPORT void pkgflist_free(struct pkgflist *flist);
 
 
 /* whole file list as iterator */
 struct pkgflist_it;
-struct pkgflist_it *pkg_get_flist_it(const struct pkg *pkg);
+EXPORT struct pkgflist_it *pkg_get_flist_it(const struct pkg *pkg);
 
 struct flfile;
-const char *pkgflist_it_get(struct pkgflist_it *it, struct flfile **flfile);
+EXPORT const char *pkgflist_it_get(struct pkgflist_it *it, struct flfile **flfile);
   /* to simplify python wrapper */
-const char *pkgflist_it_get_rawargs(struct pkgflist_it *it, uint32_t *size,
+EXPORT const char *pkgflist_it_get_rawargs(struct pkgflist_it *it, uint32_t *size,
                                     uint16_t *mode, const char **basename);
-void pkgflist_it_free(struct pkgflist_it *it);
+EXPORT void pkgflist_it_free(struct pkgflist_it *it);
 
 
-const char *pkg_group(const struct pkg *pkg);
+EXPORT const char *pkg_group(const struct pkg *pkg);
 
 
-char *pkg_strsize(char *buf, int size, const struct pkg *pkg);
-char *pkg_strbtime(char *buf, int size, const struct pkg *pkg);
-char *pkg_stritime(char *buf, int size, const struct pkg *pkg);
+EXPORT char *pkg_strsize(char *buf, int size, const struct pkg *pkg);
+EXPORT char *pkg_strbtime(char *buf, int size, const struct pkg *pkg);
+EXPORT char *pkg_stritime(char *buf, int size, const struct pkg *pkg);
 /* add self name-evr to caps */
-int pkg_add_selfcap(struct pkg *pkg);
+EXPORT int pkg_add_selfcap(struct pkg *pkg);
 
 #ifndef SWIG
-tn_array *pkgs_array_new(int size);
-tn_array *pkgs_array_new_ex(int size,
+EXPORT tn_array *pkgs_array_new(int size);
+EXPORT tn_array *pkgs_array_new_ex(int size,
                             int (*cmpfn)(const struct pkg *p1,
                                          const struct pkg *p2));
-void pkgs_array_dump(tn_array *pkgs, const char *prefix); /* for debugging */
+EXPORT void pkgs_array_dump(tn_array *pkgs, const char *prefix); /* for debugging */
 
-tn_buf *pkgs_array_join(tn_array *pkgs, tn_buf *nbuf, const char *sep);
+EXPORT tn_buf *pkgs_array_join(tn_array *pkgs, tn_buf *nbuf, const char *sep);
 
 /* caps & reqs iterators */
 
-struct pkg_cap_iter *pkg_cap_iter_new(struct pkg *pkg);
-void pkg_cap_iter_free(struct pkg_cap_iter *it);
-const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it);
+EXPORT struct pkg_cap_iter *pkg_cap_iter_new(struct pkg *pkg);
+EXPORT void pkg_cap_iter_free(struct pkg_cap_iter *it);
+EXPORT const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it);
 
 
 #define PKG_ITER_REQIN  (1 << 0) /* Requires + Requires(pre) */
@@ -293,14 +297,14 @@ const struct capreq *pkg_cap_iter_get(struct pkg_cap_iter *it);
 #define PKG_ITER_REQDIR (1 << 2) /* Requires(dir) */
 #define PKG_ITER_REQSUG (1 << 3) /* Suggests  */
 
-struct pkg_req_iter *pkg_req_iter_new(const struct pkg *pkg, unsigned flags);
-void pkg_req_iter_free(struct pkg_req_iter *it);
+EXPORT struct pkg_req_iter *pkg_req_iter_new(const struct pkg *pkg, unsigned flags);
+EXPORT void pkg_req_iter_free(struct pkg_req_iter *it);
 
 /* get next requirement */
-const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it);
+EXPORT const struct capreq *pkg_req_iter_get(struct pkg_req_iter *it);
 
 /* and its type PKG_ITER_* */
-unsigned pkg_req_iter_current_req_type(const struct pkg_req_iter *it);
+EXPORT unsigned pkg_req_iter_current_req_type(const struct pkg_req_iter *it);
 
 
 #endif

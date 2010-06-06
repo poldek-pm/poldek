@@ -11,6 +11,10 @@
 #include <trurl/narray.h>
 #include <trurl/nbuf.h>
 
+#ifndef EXPORT
+# define EXPORT extern
+#endif
+
 #define REL_EQ	    (1 << 0)
 #define REL_GT	    (1 << 1)
 #define REL_LT	    (1 << 2)
@@ -53,10 +57,10 @@ struct capreq {
 #ifdef SWIG
 # define extern__inline
 #else
-# define extern__inline extern inline
+# define extern__inline inline
 #endif
 
-extern__inline int32_t capreq_epoch_(const struct capreq *cr);
+EXPORT extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 
 #define capreq_epoch(cr) \
     ((cr)->cr_ep_ofs ? capreq_epoch_(cr) : 0)
@@ -88,14 +92,14 @@ extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_revrel(cr) ((cr)->cr_relflags = (cr)->cr_relflags ? \
                           (((uint8_t)~cnfl->cr_relflags) & REL_ALL) : (cr)->cr_relflags)
 
-struct capreq *capreq_new_evr(tn_alloc *na, const char *name, char *evr,
+EXPORT struct capreq *capreq_new_evr(tn_alloc *na, const char *name, char *evr,
                               int32_t relflags, int32_t flags);
 
-struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
+EXPORT struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t relflags, int32_t flags);
 #ifndef SWIG
-const char *capreq__alloc_name(const char *name);
+EXPORT const char *capreq__alloc_name(const char *name);
 #endif
 
 #define capreq_new_name_a(nam, crptr)                              \
@@ -110,35 +114,35 @@ const char *capreq__alloc_name(const char *name);
         crptr = __cr;                                              \
     }
 
-void capreq_free_na(tn_alloc *na, struct capreq *cr);
-void capreq_free(struct capreq *cr);
+EXPORT void capreq_free_na(tn_alloc *na, struct capreq *cr);
+EXPORT void capreq_free(struct capreq *cr);
 
-struct capreq *capreq_clone(tn_alloc *na, const struct capreq *cr);
+EXPORT struct capreq *capreq_clone(tn_alloc *na, const struct capreq *cr);
 
-int capreq_strcmp_evr(const struct capreq *pr1, const struct capreq *pr2);
-int capreq_strcmp_name_evr(const struct capreq *pr1, const struct capreq *pr2);
+EXPORT int capreq_strcmp_evr(const struct capreq *pr1, const struct capreq *pr2);
+EXPORT int capreq_strcmp_name_evr(const struct capreq *pr1, const struct capreq *pr2);
 
-int capreq_cmp_name(const struct capreq *cr1, const struct capreq *cr2);
-int capreq_cmp_name_evr(const struct capreq *cr1, const struct capreq *cr2);
+EXPORT int capreq_cmp_name(const struct capreq *cr1, const struct capreq *cr2);
+EXPORT int capreq_cmp_name_evr(const struct capreq *cr1, const struct capreq *cr2);
 
 #ifndef SWIG
-tn_array *capreq_arr_new(int size);
-int capreq_arr_find(tn_array *capreqs, const char *name); /* returns index */
-int capreq_arr_contains(tn_array *capreqs, const char *name); /* returns bool */
-tn_buf *capreq_arr_join(tn_array *capreqs, tn_buf *nbuf, const char *sep);
+EXPORT tn_array *capreq_arr_new(int size);
+EXPORT int capreq_arr_find(tn_array *capreqs, const char *name); /* returns index */
+EXPORT int capreq_arr_contains(tn_array *capreqs, const char *name); /* returns bool */
+EXPORT tn_buf *capreq_arr_join(tn_array *capreqs, tn_buf *nbuf, const char *sep);
 
-int capreq_arr_store_n(tn_array *arr);
-tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n);
+EXPORT int capreq_arr_store_n(tn_array *arr);
+EXPORT tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n);
 
-tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf);
-tn_array *capreq_arr_restore_st(tn_alloc *na, tn_stream *st);
+EXPORT tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf);
+EXPORT tn_array *capreq_arr_restore_st(tn_alloc *na, tn_stream *st);
 #endif
 
-int capreq_snprintf(char *str, size_t size, const struct capreq *cr);
-char *capreq_snprintf_s(const struct capreq *cr);
-char *capreq_snprintf_s0(const struct capreq *cr);
+EXPORT int capreq_snprintf(char *str, size_t size, const struct capreq *cr);
+EXPORT char *capreq_snprintf_s(const struct capreq *cr);
+EXPORT char *capreq_snprintf_s0(const struct capreq *cr);
 
-char *capreq_str(char *str, size_t size, const struct capreq *cr);
+EXPORT char *capreq_str(char *str, size_t size, const struct capreq *cr);
 
 /* const char *capreq_stra(struct capreq) */
 #define capreq_stra(c) \

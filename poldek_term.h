@@ -22,24 +22,28 @@
 #  define __attribute__(x) /*nothing*/                                      
 #endif   
 
-int poldek_term_init(void);
-int poldek_term_get_width(void);
-int poldek_term_get_height(void);
+#ifndef EXPORT
+#  define EXPORT extern
+#endif
 
-int poldek_term_vprintf_c(int color, const char *fmt, va_list args);
+EXPORT int poldek_term_init(void);
+EXPORT int poldek_term_get_width(void);
+EXPORT int poldek_term_get_height(void);
 
-int poldek_term_printf_c(int color, const char *fmt, ...)
+EXPORT int poldek_term_vprintf_c(int color, const char *fmt, va_list args);
+
+EXPORT int poldek_term_printf_c(int color, const char *fmt, ...)
     __attribute__((format(printf,2,3)));
    
-int poldek_term_snprintf_c(int color, char *str, size_t size,
+EXPORT int poldek_term_snprintf_c(int color, char *str, size_t size,
                            const char *fmt, ...)
    __attribute__((format(printf,4,5)));
 
-int poldek_term_vsnprintf_c(int color, char *str, size_t size,
+EXPORT int poldek_term_vsnprintf_c(int color, char *str, size_t size,
                             const char *fmt, va_list args);
 
-int poldek_term_puts_c(int color, const char *s);
+EXPORT int poldek_term_puts_c(int color, const char *s);
 
-int poldek_term_ask(int fd, const char *validchrs, const char *msg);
+EXPORT int poldek_term_ask(int fd, const char *validchrs, const char *msg);
 
 #endif

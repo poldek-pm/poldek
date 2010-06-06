@@ -8,6 +8,10 @@
 #include <trurl/narray.h>
 #include <trurl/nbuf.h>
 
+#ifndef EXPORT
+# define EXPORT extern
+#endif
+
 struct poldek_ctx;
 struct poldek_ts;
 struct pkg;
@@ -33,9 +37,9 @@ struct cmdctx {
 };
 
 
-int cmdctx_addtoresult(struct cmdctx *cmdctx, struct pkg *pkg);
-int cmdctx_printf(struct cmdctx *cmdctx, const char *fmt, ...);
-int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ...);
+EXPORT int cmdctx_addtoresult(struct cmdctx *cmdctx, struct pkg *pkg);
+EXPORT int cmdctx_printf(struct cmdctx *cmdctx, const char *fmt, ...);
+EXPORT int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ...);
 
 /* poclidek_cmd */
 #define COMMAND_NOARGS       (1 << 0) /* cmd don't accept arguments */
@@ -85,8 +89,8 @@ struct poclidek_cmd {
     void                 (*_free)(struct poclidek_cmd *);
 };
 
-int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd);
-int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
+EXPORT int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd);
+EXPORT int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
 
 
 #define POCLIDEK_INSTALLEDDIR     "/installed"
