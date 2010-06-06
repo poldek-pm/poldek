@@ -23,6 +23,11 @@
 #include <string.h>
 #include <stdint.h>
 
+/* broken
+#include "compiler.h"
+#include "pkgmisc.h"
+*/
+
 int poldek_util_parse_evr(char *evrstr, uint32_t *epoch, const char **version,
                           const char **release)
 {
