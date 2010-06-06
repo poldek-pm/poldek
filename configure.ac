@@ -60,9 +60,10 @@ AM_GNU_GETTEXT_VERSION(0.11.5)
 AM_CFLAGS="-Wall -W"
 AC_SUBST(AM_CFLAGS)
 
-CFLAGS="$CFLAGS -fvisibility=hidden"
-AC_MSG_CHECKING([whether gcc supports visibility])
-AC_TRY_COMPILE(
+if test -n "$GCC"; then
+  CFLAGS="$CFLAGS -fvisibility=hidden"
+  AC_MSG_CHECKING([whether gcc supports visibility])
+  AC_TRY_COMPILE(
 	[extern __attribute__((__visibility__("hidden"))) int hiddenvar;
 	 extern __attribute__((__visibility__("default"))) int exportedvar;
 	 extern __attribute__((__visibility__("hidden"))) int hiddenfunc (void);
@@ -70,6 +71,7 @@ AC_TRY_COMPILE(
 	[],
 	AC_MSG_RESULT(yes),
 	AC_MSG_ERROR(["compiler does not support visibility"]))
+fi
 
 
 PKG_CHECK_MODULES(CHECK, check >= 0.9.4, have_check=yes, have_check=no)
