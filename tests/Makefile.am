@@ -11,8 +11,8 @@ EXTRA_DIST = poldek_test_conf.conf sh
 test_poldek_INCLUDES= @CHECK_CFLAGS@
 test_poldek_LDADD = @CHECK_LIBS@ ../libpoldek_allsym.la ../vfile/libvfile.la  
 
-poldek_test_conf.conf: ../doc/conf-xml2testconf.xsl ../doc/poldek.conf.xml
-	 xsltproc ../doc/conf-xml2testconf.xsl ../doc/poldek.conf.xml > poldek_test_conf.conf
+poldek_test_conf.conf: $(top_srcdir)/doc/conf-xml2testconf.xsl $(top_srcdir)/doc/poldek.conf.xml
+	xsltproc $(top_srcdir)/doc/conf-xml2testconf.xsl $(top_srcdir)/doc/poldek.conf.xml > poldek_test_conf.conf
 
 clean-local:
 	-rm -f *.tmp core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* 

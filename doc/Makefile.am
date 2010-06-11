@@ -24,64 +24,66 @@ MANUAL_XHTMLDIR = manual-xhtml
 doc: $(GEN) $(MANUAL_XHTMLDIR) CREDITS
 
 m_index.xml: manual.xml m_config.xml $(srcdir)/manual/ref*.xml mkindex.pl
-	$(PERL) $(srcdir)/mkindex.pl manual.xml m_config.xml manual/ref*.xml > $@
+	$(PERL) $(srcdir)/mkindex.pl $(srcdir)/manual.xml m_config.xml $(srcdir)/manual/ref*.xml > $@
 
-m_config.xml: $(CONFXMLS)
-	$(SHELL) $(srcdir)/conf-xml2.sh docb poldek.conf.xml > $@
+$(abs_builddir)/m_config.xml: $(CONFXMLS)
+	cd $(srcdir) && $(SHELL) conf-xml2.sh docb poldek.conf.xml > $@ && cd $(@D)
 
-manual.xml.xhtml.tmp: manual.xml m_config.xml manual.xsl m_index.xml
-	m4 -DPOLDEK_VERSION=@VERSION@ manual.xml | xmlif output=xhtml > $@
+$(abs_builddir)/manual.xml.xhtml.tmp: manual.xml m_config.xml manual.xsl m_index.xml
+	cd $(srcdir) && m4 -DPOLDEK_VERSION=@VERSION@ manual.xml | xmlif output=xhtml > $@ && cd $(@D)
 
-manual.xml.texi.tmp: manual.xml m_index.xml m_config.xml manual.xsl
-	m4 -DPOLDEK_VERSION=@VERSION@ manual.xml | xmlif output=texi > $@
+$(abs_builddir)/manual.xml.texi.tmp: manual.xml m_index.xml m_config.xml manual.xsl
+	cd $(srcdir) && m4 -DPOLDEK_VERSION=@VERSION@ manual.xml | xmlif output=texi > $@ && cd $(@D)
 
-poldek.info: manual.xml.texi.tmp
+$(abs_builddir)/poldek.info: $(abs_builddir)/manual.xml.texi.tmp
 # NOTE: this "docbook2X2texi" cames from PLD "docbook2X" package
-	docbook2X2texi --xinclude $< || docbook2texi --xinclude $< || true
+	cd $(srcdir) && docbook2X2texi --xinclude $< -o $(@D) || docbook2texi --xinclude $< || true && cd $(@D)
 	perl -pi -e 's|\@emph\{|\@samp\{|g' poldek.texi
 	makeinfo --no-split --force poldek.texi -o $@
 	perl -pi -e 's/^\* poldek manual: \(poldek\)(.+)$$/* poldek: (poldek)$$1/' $@
 	rm -f *.texi
 
-manual.html: manual.xml.xhtml.tmp
-	xmlto --skip-validation -m manual.xsl xhtml-nochunks $< && mv manual.xml.xhtml.html $@
+$(abs_builddir)/manual.html: $(abs_builddir)/manual.xml.xhtml.tmp
+	cd $(srcdir) && xmlto --skip-validation -m manual.xsl -o $(@D) xhtml-nochunks $< && mv manual.xml.xhtml.html $@ && cd $(@D)
 # remove empty indexterm's (I'm docbook novice)
 	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $@
 
-CREDITS.docb.tmp: NEWS.xml NEWSto
-	$(PERL) $(srcdir)/NEWSto CREDITS.docb > $@
+$(abs_builddir)/CREDITS.docb.tmp: NEWS.xml NEWSto
+	cd $(srcdir) && $(PERL) ./NEWSto CREDITS.docb > $@ && cd $(@D)
 
-CREDITS: CREDITS.docb.tmp
-	xmlto --skip-validation -m NEWS.xsl txt CREDITS.docb.tmp && mv CREDITS.docb.txt $@
+CREDITS: NEWS.xml NEWS.xsl NEWSto
+	$(MAKE) $(AM_MAKEFLAGS) $(abs_builddir)/CREDITS.docb.tmp
+	xmlto --skip-validation -m $(srcdir)/NEWS.xsl txt CREDITS.docb.tmp && mv CREDITS.docb.txt $@
 
-CREDITS-body.html: NEWS.xml NEWSto
-	$(PERL) $(srcdir)/NEWSto CREDITS.html_body > $@
+$(abs_builddir)/CREDITS-body.html: NEWS.xml NEWSto
+	cd $(srcdir) && $(PERL) ./NEWSto CREDITS.html_body > $@ && cd $(@D)
 
-NEWS.docb.tmp: NEWS.xml NEWSdocb.xsl NEWSto
-	$(PERL) $(srcdir)/NEWSto NEWS.docb > $@
+$(abs_builddir)/NEWS.docb.tmp: NEWS.xml NEWSdocb.xsl NEWSto
+	cd $(srcdir) && $(PERL) ./NEWSto NEWS.docb > $@ && cd $(@D)
 
-NEWS: NEWS.docb.tmp NEWS.xsl
-	xmlto --skip-validation -m NEWS.xsl txt NEWS.docb.tmp && mv NEWS.docb.txt NEWS
+NEWS: NEWS.xml NEWS.xsl NEWSdocb.xsl NEWSto
+	$(MAKE) $(AM_MAKEFLAGS) $(abs_builddir)/NEWS.docb.tmp
+	xmlto --skip-validation -m $(srcdir)/NEWS.xsl txt NEWS.docb.tmp && mv NEWS.docb.txt $@
 
-NEWS.html: NEWS.docb.tmp NEWS.xsl
-	xmlto --skip-validation -m NEWS.xsl -m manual-web.xsl xhtml-nochunks NEWS.docb.tmp && mv NEWS.docb.html NEWS.html
+NEWS.html: $(abs_builddir)/NEWS.docb.tmp NEWS.xsl
+	xmlto --skip-validation -m $(srcdir)/NEWS.xsl -m $(srcdir)/manual-web.xsl xhtml-nochunks NEWS.docb.tmp && mv NEWS.docb.html $@
 
-$(MANUAL_XHTMLDIR): manual.xml.xhtml.tmp
+$(MANUAL_XHTMLDIR): $(abs_builddir)/manual.xml.xhtml.tmp
 	$(mkdir_p) $(MANUAL_XHTMLDIR)
 	rm -f $(MANUAL_XHTMLDIR)/*.*
-	xmlto --skip-validation -m manual.xsl -o $(MANUAL_XHTMLDIR) xhtml $<
+	xmlto --skip-validation -m $(srcdir)/manual.xsl -o $(MANUAL_XHTMLDIR) xhtml $<
 # remove empty indexterm's (I'm docbook novice)
 	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' $(MANUAL_XHTMLDIR)/manualindex.html || true
-	cp manual.css $(MANUAL_XHTMLDIR)
+	cp $(srcdir)/manual.css $(MANUAL_XHTMLDIR)
 
 # as above but with manual-web.xsl
-manual-web: manual.xml.xhtml.tmp
+manual-web: $(abs_builddir)/manual.xml.xhtml.tmp
 	$(mkdir_p) manual-web
 	rm -f manual-web/*.*
-	xmlto --skip-validation -m manual.xsl -m manual-web.xsl -o manual-web xhtml $<
+	xmlto --skip-validation -m $(srcdir)/manual.xsl -m $(srcdir)/manual-web.xsl -o manual-web xhtml $<
 # remove empty indexterm's (I'm docbook novice)
 	perl -pi -e 's|<dt>[,\s\w\-\=]+<a\shref=""></a></dt>||g' manual-web/manualindex.html || true
-	cp manual.css manual-web
+	cp $(srcdir)/manual.css manual-web
 
 
 reference:

@@ -28,8 +28,8 @@ poldekmod.i: local_stdint.h
 
 poldekmod.py: wrap_poldekmod.c
 
-local_stdint.h: 
-	$(CPP) local_stdint.c > local_stdint.h
+local_stdint.h: local_stdint.c
+	$(CPP) $< > $@
 
 #wrap_poldekmod.c: poldekmod.i
 #	$(SWIG) $(SWIG_PYTHON_OPT) $(INCLUDES) -I/usr/include -o $@ $<
