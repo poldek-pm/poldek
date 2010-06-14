@@ -171,7 +171,7 @@ EXPORT int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
              const char *urlabel);
 
 EXPORT int vf_fetcha(tn_array *urls, const char *destdir, unsigned flags,
-              const char *urlabel);
+              const char *urlabel, int begin, int max);
 
 EXPORT int vf_url_type(const char *url);
 EXPORT char *vf_url_proto(char *proto, int size, const char *url);

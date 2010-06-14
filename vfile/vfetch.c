@@ -418,9 +418,10 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
 }
 
 int vf_fetcha(tn_array *urls, const char *destdir, unsigned flags,
-              const char *urlabel)
+              const char *urlabel, int begin, int max)
 {
     const struct vf_module *mod = NULL;
+    char counter[PATH_MAX];
     int rc = 1;
 
     if ((mod = select_vf_module(n_array_nth(urls, 0))) == NULL) {
@@ -431,7 +432,8 @@ int vf_fetcha(tn_array *urls, const char *destdir, unsigned flags,
         
         for (i=0; i < n_array_size(urls); i++) {
             const char *url = n_array_nth(urls, i);
-            if (!vf_fetch(url, destdir, flags, urlabel)) {
+            snprintf(counter, 100, "[%d/%d] %s", begin + i + 1 , max, urlabel);
+            if (!vf_fetch(url, destdir, flags, max > 1 ? counter : urlabel)) {
                 rc = 0;
                 break;
             }

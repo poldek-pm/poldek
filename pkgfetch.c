@@ -126,8 +126,9 @@ int packages_fetch(struct pm_ctx *pmctx,
     pkgdir_labels_h = n_hash_new(21, NULL);
     n_hash_ctl(urls_h, TN_HASH_NOCPKEY);
     n_hash_ctl(pkgs_h, TN_HASH_NOCPKEY);
-    urls_arr = n_array_new(n_array_size(pkgs), NULL, (tn_fn_cmp)strcmp);
-    
+    int pkgs_count = n_array_size(pkgs);
+    urls_arr = n_array_new(pkgs_count, NULL, (tn_fn_cmp)strcmp);
+
     // group by URL
     ncdroms = 0;
     nerr = 0;
@@ -163,6 +164,8 @@ int packages_fetch(struct pm_ctx *pmctx,
             }
             if (is_destdir_custom)
                 poldek_util_copy_file(path, destdir);
+
+	    pkgs_count--;
             continue;
         }
         
@@ -182,8 +185,10 @@ int packages_fetch(struct pm_ctx *pmctx,
             int pkg_ok;
             
             pkg_ok = pm_verify_signature(pmctx, path, PKGVERIFY_MD);
-            if (pkg_ok)         /* we got it  */
+            if (pkg_ok) {         /* we got it  */
+		pkgs_count--;
                 continue;
+	    }
             else 
                 vf_unlink(path);
         }
@@ -222,7 +227,7 @@ int packages_fetch(struct pm_ctx *pmctx,
     else if (ncdroms == 1) 
         putenv("POLDEK_VFJUGGLE_CPMODE=link");
 
-    
+    int counter = 0;
     for (i=0; i < n_array_size(urls_arr); i++) {
         char path[PATH_MAX];
         const char *real_destdir, *pkgdir_name;
@@ -243,7 +248,7 @@ int packages_fetch(struct pm_ctx *pmctx,
         }
 
         pkgdir_name = n_hash_get(pkgdir_labels_h, pkgpath);
-        if (!vf_fetcha(urls, real_destdir, 0, pkgdir_name))
+        if (!vf_fetcha(urls, real_destdir, 0, pkgdir_name, counter, pkgs_count))
             nerr++;
         
         else {
@@ -259,6 +264,8 @@ int packages_fetch(struct pm_ctx *pmctx,
                          n_basenam(localpath));
                     nerr++;
                 }
+
+		counter++;
             }
         }
     }
