@@ -411,7 +411,7 @@ fi
 
 AC_CHECK_FUNCS(EVP_DigestInit,,
 	[AC_CHECK_LIB(crypto, EVP_DigestInit,,
-	 [AC_MSG_ERROR(["libcryto is needed by $PACKAGE"])]
+	 [AC_MSG_ERROR(["libcrypto is needed by $PACKAGE"])]
 	)], 
 	[$CONF_IN_LDFLAGS])
 
