@@ -369,7 +369,7 @@ void packages_display_summary(int verbose_l, const char *prefix, tn_array *pkgs,
         
     } else {
         int ncol = 2, term_width, prefix_printed = 0;
-        const char *p, *colon = ", ";
+        const char *p, *colon = "  ";
         tn_buf *nbuf = n_buf_new(512);
         
         term_width = poldek_term_get_width() - 5;
