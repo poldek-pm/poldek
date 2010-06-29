@@ -378,7 +378,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
     <description>
     Prevent package listed from being upgraded if they are already installed.
     [screen]
- hold = kernel*
+ hold = kernel* foo*.i686 th-test:* *-smp-* th-ready:bar*.x86_64
     [/screen]
     </description>
     <alias name="a hold alias for testing purposes" obsoleted="yes" />
