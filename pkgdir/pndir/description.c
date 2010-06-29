@@ -165,9 +165,8 @@ struct pkguinf *pndir_load_pkguinf(tn_alloc *na, tn_hash *db_dscr_h,
         /* start from the end => the last loaded one will be set as
            pkguinf default (see pkguinf_restore_i18n()) */
         for (i = n_array_size(langs) - 1; i >= 0; i--) {
-            const char *lang, *loaded_lang = NULL;
+            const char *lang;
             struct tndb *db;
-            char lang_utf8[32];
             char dkey[512];
             int  dklen;
 
@@ -178,26 +177,17 @@ struct pkguinf *pndir_load_pkguinf(tn_alloc *na, tn_hash *db_dscr_h,
             if ((db = pndir_db_dscr_h_get(db_dscr_h, lang)) == NULL)
                 continue;
 
-            n_snprintf(lang_utf8, sizeof(lang_utf8), "%s.UTF-8", lang);
-            loaded_lang = lang_utf8;
-
-            dklen = n_snprintf(dkey, sizeof(dkey), "%s%s", key, lang_utf8);
+            dklen = n_snprintf(dkey, sizeof(dkey), "%s%s", key, lang);
             vlen = tndb_get(db, dkey, dklen, val, sizeof(val));
-            
-            if (vlen == 0) {     /* not exists */
-                dklen = n_snprintf(dkey, sizeof(dkey), "%s%s", key, lang);
-                vlen = tndb_get(db, dkey, dklen, val, sizeof(val));
-                loaded_lang = lang;
-            }
-                
-            DBGF("ld %s: %s (%d)\n", pkg_id(pkg), loaded_lang ? loaded_lang : lang, vlen);
+
+            DBGF("ld %s: %s (%d)\n", pkg_id(pkg), lang, vlen);
             
             if (vlen > 0) {
                 tn_buf_it it;
                 n_buf_clean(nbuf);
                 n_buf_init(nbuf, val, vlen);
                 n_buf_it_init(&it, nbuf);
-                pkguinf_restore_i18n(pkgu, &it, loaded_lang);
+                pkguinf_restore_i18n(pkgu, &it, lang);
             }
         }
     }
