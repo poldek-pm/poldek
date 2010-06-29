@@ -42,6 +42,7 @@ py-compile
 conf_sections.c
 NEWS
 core
+poldek-*.tar.*
 cli/poldek
 cli/poclidek_demo
 cli/test_cli
