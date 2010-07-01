@@ -166,7 +166,7 @@ static inline int dbgf_noop( const char *fmt, ... )
         __attribute__ ((always_inline))
         __attribute__ ((__format__ (__printf__, 1, 2)));
  
-static inline int dbgf_noop( const char *fmt, ... )
+static inline int dbgf_noop( const char *fmt __attribute__ ((unused)), ... )
 {
         return 0;
 }
