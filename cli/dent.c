@@ -632,24 +632,32 @@ tn_array *do_resolve(struct arg_packages *aps,
                     skip = 1;       /* optional package */
                     break;
                     
-                case  '@':
+                case '@':
                     mask++;
                     break;
             }
 
+            /* ls poldek */
             if (pkg && strcmp(mask, pkg->name) == 0) {
                 n_array_push(ments, pkg_dent_link(ent));
                 matches_bycmp[j]++;
                 matches[j]++;
                 continue;
-                
             } /* else */
-            
+
+            /* ls poldek* */
             if (fnmatch(mask, ent->name, 0) == 0) {
                 DBGF("fnmatch %s %s\n", mask, ent->name);
                 n_array_push(ments, pkg_dent_link(ent));
                 matches[j]++;
-            } 
+                continue;
+            } /* else */
+
+            /* ls poldek*devel */
+            if (pkg && fnmatch(mask, pkg->name, 0) == 0) {
+                n_array_push(ments, pkg_dent_link(ent));
+                matches[j]++;
+            }
         }
     }
     
