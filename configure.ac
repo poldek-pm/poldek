@@ -61,6 +61,7 @@ AM_CFLAGS="-Wall -W"
 AC_SUBST(AM_CFLAGS)
 
 if test -n "$GCC"; then
+  cflags_save="$CFLAGS"
   CFLAGS="$CFLAGS -fvisibility=hidden"
   AC_MSG_CHECKING([whether gcc supports visibility])
   AC_TRY_COMPILE(
@@ -70,7 +71,11 @@ if test -n "$GCC"; then
 	 extern __attribute__((__visibility__("default"))) int exportedfunc (void);],
 	[],
 	AC_MSG_RESULT(yes),
-	AC_MSG_ERROR(["compiler does not support visibility"]))
+	[
+	  AC_MSG_WARN([compiler does not support visibility])
+	  CFLAGS="$cflags_save"
+	]
+  )
 fi
 
 
