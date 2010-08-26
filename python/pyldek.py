@@ -75,9 +75,9 @@ class PyldekCallbacks(poldek.callbacks):
         print "\n************** transaction confirmation *********************"
         
         if ts.type == ts.UNINSTALL:
-            print "* I'm going to remove following packages:"
+            print "* I'm going to remove the following packages:"
         else:
-            print "* Following changes will be made:"
+            print "* The following changes will be made:"
         
         for m in [ 'I', 'D', 'R' ]:
             self.print_summary("* %s" % m, ts.summary(m))
@@ -89,7 +89,7 @@ class PyldekCallbacks(poldek.callbacks):
     
     def choose_equiv(self, ts, capability_name, packages, hint):
         print "\n************** choose package *********************"
-        print "* Following packages provide <%s>" % capability_name
+        print "* The following packages provide <%s>" % capability_name
         print "* Choose one (hint is %s):" % hint
         n = 0
         for p in packages:
