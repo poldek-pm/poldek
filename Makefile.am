@@ -131,17 +131,17 @@ clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* conf/*~
 
 poldek.pc: 
-        @ ( echo 'prefix=$(prefix)'; \
-            echo 'exec_prefix=$${exec_prefix}'; \
-            echo 'libdir=$${exec_prefix}/lib'; \
-            echo 'includedir=$${includedir}'; \
-            echo ''; \
-            echo 'Name: poldek'; \
-            echo 'Description: poldek libraries'; \
-            echo 'Version: '$(VERSION); \
-            echo 'Requires: '; \
-            echo 'Libs: -L$${libdir} -lpoldek -lvfile -ltrurl -ltndb'; \
-            echo 'Cflags: -I$${includedir}' ) > poldek.pc
+	@ ( echo 'prefix=$(prefix)'; \
+		echo 'exec_prefix=$${exec_prefix}'; \
+		echo 'libdir=$${exec_prefix}/lib'; \
+		echo 'includedir=$${includedir}'; \
+		echo ''; \
+		echo 'Name: poldek'; \
+		echo 'Description: poldek libraries'; \
+		echo 'Version: $(VERSION)'; \
+		echo 'Requires: '; \
+		echo 'Libs: -L$${libdir} -lpoldek -lvfile -ltrurl -ltndb'; \
+		echo 'Cflags: -I$${includedir}' ) > poldek.pc
 
 
 include Makefile.extra
