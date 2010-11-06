@@ -149,6 +149,8 @@ struct pkg *iset_has_kind_of_pkg(struct iset *iset, const struct pkg *pkg)
 {
     int i;
 
+    n_array_sort(iset->pkgs);
+
     i = n_array_bsearch_idx_ex(iset->pkgs, pkg, (tn_fn_cmp)pkg_cmp_name);
     if (i < 0)
         return NULL;
