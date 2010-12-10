@@ -327,6 +327,8 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
 
 #if defined HAVE_RPMLOG && !defined ENABLE_STATIC
 /* XXX hack: rpmlib dumps messges to stdout only... (AFAIK)  */
+void rpmlog(int prii, const char *fmt, ...) __attribute__ ((visibility("default")));
+
 void rpmlog(int prii, const char *fmt, ...) 
 {
     va_list args;
