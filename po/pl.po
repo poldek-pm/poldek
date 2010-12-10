@@ -61,7 +61,7 @@ msgstr "Kontynuowaæ? [Y/n]"
 #: ask.c:106
 #, c-format
 msgid "%s: required \"%s\" is provided by the following packages:"
-msgstr "%s: Wymagany \"%s\" jest dostarczany przez nastêpuj±ce pakiety:"
+msgstr "%s: wymagany \"%s\" jest dostarczany przez nastêpuj±ce pakiety:"
 
 #: ask.c:109
 #, c-format
