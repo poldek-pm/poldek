@@ -346,8 +346,8 @@ l_end:
     } else {
         struct i3pkg *i3tomark = i3pkg_new(sucpkg, 0, pkg, req, I3PKGBY_GREEDY);
 
-        n_assert(message);
-        tracef(indent, "- %s: upgrading orphan (%s)", pkg_id(sucpkg), message);
+        tracef(indent, "- %s: upgrading orphan%s%s%s", pkg_id(sucpkg),
+	       message ? " (":"", message ? message:"", message ? ")":"");
         i3_process_package(indent, ictx, i3tomark);
     }
 
