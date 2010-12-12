@@ -759,7 +759,8 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
     
     /* check for Suggests after processing Requires. Prevent cases where poldek
        asks for suggested package, even though it is required. */
-    if (ts->getop(ts, POLDEK_OP_SUGGESTS) && nerrors == 0) {
+    if (ts->getop(ts, POLDEK_OP_SUGGESTS) &&
+        ts->getop(ts, POLDEK_OP_FOLLOW) && nerrors == 0) {
         tn_array *suggests = NULL;
 	unsigned int i;
 	
