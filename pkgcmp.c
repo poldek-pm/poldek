@@ -96,9 +96,9 @@ int pkg_is_arch_compat(const struct pkg *candidate, const struct pkg *pkg)
     // change from/to noarch depends on which pkg is noarch
 
     int cmp_arch = pkg_cmp_arch(candidate, pkg);
-    return (	cmp_arch == 0
-	    || (cmp_arch > 0 && pkg_is_noarch(candidate))
-	    || (cmp_arch < 0 && pkg_is_noarch(pkg)));
+    return ( cmp_arch == 0
+	    || pkg_is_noarch(candidate)
+	    || pkg_is_noarch(pkg));
 }
 
 int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr)
