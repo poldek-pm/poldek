@@ -181,7 +181,7 @@ static int term_choose_suggests(void *foo, const struct poldek_ts *ts,
         msg_ask(_("(y - all, n - nothing, s - select some of)? [%s]"),
                 yns);
     } else {
-        msg_ask("%s? [%s]", question, yn);
+        msg_ask("%s [%s]", question, yn);
     }
         
     a = poldek_term_ask(STDIN_FILENO, "QqYyNnSs\n", NULL);
