@@ -77,8 +77,8 @@ switch.
 Second directive, [option]%includedir[/option] includes all *.conf files from given directory,
 examples:
 [screen]
-%include repos.d                  # include all *.conf files from repos.d subdirectory
-%include /etc/repos.d             # include all *.conf files from /etc/repos.d
+%includedir repos.d                  # include all *.conf files from repos.d subdirectory
+%includedir /etc/repos.d             # include all *.conf files from /etc/repos.d
 [/screen]
 [/para]
 </description>
