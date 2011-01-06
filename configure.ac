@@ -6,7 +6,7 @@ AC_INIT([poldek],[0.30])
 AC_CONFIG_SRCDIR([capreq.c])
 
 PACKAGE_BUGREPORT="mis@pld-linux.org"
-VERSION_STATUS="beta"
+VERSION_STATUS="rc"
 VERSION=0.30
 VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
 VERSION_CVSTAG="v$VERSION_TAG"
