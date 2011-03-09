@@ -2263,9 +2263,9 @@ msgstr[2] "Jest %d pakietów %s"
 #, c-format
 msgid " (%d marked by dependencies)"
 msgid_plural " (%d marked by dependencies)"
-msgstr[0] "(%d zaznaczony po¶rednio)"
-msgstr[1] "(%d zaznaczone po¶rednio)"
-msgstr[2] "(%d zaznaczonych po¶rednio)"
+msgstr[0] " (%d zaznaczony po¶rednio)"
+msgstr[1] " (%d zaznaczone po¶rednio)"
+msgstr[2] " (%d zaznaczonych po¶rednio)"
 
 #: poldek_ts.c:882
 #, c-format
