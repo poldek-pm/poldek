@@ -461,7 +461,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
     vf_url_as_dirpath(&buf[len], sizeof(buf) - len, tmpath);
     tmpdir = buf;
 
-    if (vfile__vf_fetch(path, tmpdir, 0, urlabel, &ftrc)) {
+    if (vfile__vf_fetch(path, tmpdir, 0, NULL, urlabel, &ftrc)) {
         char tmpath[PATH_MAX], upath[PATH_MAX];;
 
         snprintf(tmpath, sizeof(tmpath), "%s/%s", tmpdir,

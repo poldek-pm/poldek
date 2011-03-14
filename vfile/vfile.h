@@ -168,7 +168,7 @@ EXPORT int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
 #define VF_FETCH_NOPROGRESS  (1 << 4)
 
 EXPORT int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
-             const char *urlabel);
+             const char *counter, const char *urlabel);
 
 EXPORT int vf_fetcha(tn_array *urls, const char *destdir, unsigned flags,
               const char *urlabel, int begin, int max);

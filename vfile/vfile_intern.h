@@ -10,7 +10,8 @@ enum vf_fetchrc {
 
 
 int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
-                    const char *urlabel, enum vf_fetchrc *ftrc);
+                    const char *counter, const char *urlabel,
+                    enum vf_fetchrc *ftrc);
 
 /* only external handlers are used */
 int vf_fetch_ext(const char *url, const char *destdir);

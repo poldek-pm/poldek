@@ -213,7 +213,8 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
 
 
 int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
-                    const char *urlabel, enum vf_fetchrc *ftrc)
+                    const char *counter, const char *urlabel,
+                    enum vf_fetchrc *ftrc)
 {
     const struct vf_module  *mod = NULL;
     const char              *destdir = NULL;
@@ -243,10 +244,11 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
             url_unescaped = vf_url_unescape(url);
             
             if (urlabel)
-                vf_loginfo(_("Retrieving %s::%s...\n"), urlabel,
+                vf_loginfo(_("Retrieving %s%s::%s...\n"), counter ? counter : "", urlabel,
                            n_basenam(url_unescaped));
             else
-                vf_loginfo(_("Retrieving %s...\n"), PR_URL(url_unescaped));
+                vf_loginfo(_("Retrieving %s%s...\n"), counter ? counter : "",
+            	           PR_URL(url_unescaped));
         
     	    free(url_unescaped);
         }
@@ -306,10 +308,10 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
         url_unescaped = vf_url_unescape(req->url);
         
         if (urlabel)
-            vf_loginfo(_("Retrieving %s::%s...\n"), urlabel,
+            vf_loginfo(_("Retrieving %s%s::%s...\n"), counter ? counter : "", urlabel,
                        n_basenam(url_unescaped));
         else
-            vf_loginfo(_("Retrieving %s...\n"), PR_URL(url_unescaped));
+            vf_loginfo(_("Retrieving %s%s...\n"), counter ? counter : "", PR_URL(url_unescaped));
 
 	free(url_unescaped);
     }
@@ -324,7 +326,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
             snprintf(url, sizeof(url), req->url);
             vf_request_free(req);
             req = NULL;
-            rc = vf_fetch(url, destdir, flags, NULL);
+            rc = vf_fetch(url, destdir, flags, NULL, NULL);
         }
     }
     if (req)
@@ -341,10 +343,10 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
 }
 
 int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
-             const char *urlabel) 
+             const char *counter, const char *urlabel) 
 {
     enum vf_fetchrc ftrc;
-    return vfile__vf_fetch(url, dest_dir, flags, urlabel, &ftrc);
+    return vfile__vf_fetch(url, dest_dir, flags, counter, urlabel, &ftrc);
 }
 
 int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
@@ -421,7 +423,7 @@ int vf_fetcha(tn_array *urls, const char *destdir, unsigned flags,
               const char *urlabel, int begin, int max)
 {
     const struct vf_module *mod = NULL;
-    char counter[PATH_MAX];
+    char counter[32];
     int rc = 1;
 
     if ((mod = select_vf_module(n_array_nth(urls, 0))) == NULL) {
@@ -432,8 +434,8 @@ int vf_fetcha(tn_array *urls, const char *destdir, unsigned flags,
         
         for (i=0; i < n_array_size(urls); i++) {
             const char *url = n_array_nth(urls, i);
-            snprintf(counter, 100, "[%d/%d] %s", begin + i + 1 , max, urlabel);
-            if (!vf_fetch(url, destdir, flags, max > 1 ? counter : urlabel)) {
+            snprintf(counter, sizeof(counter), "[%d/%d] ", begin + i + 1 , max);
+            if (!vf_fetch(url, destdir, flags, max > 1 ? counter : NULL, urlabel)) {
                 rc = 0;
                 break;
             }

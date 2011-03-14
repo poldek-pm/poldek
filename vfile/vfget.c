@@ -20,6 +20,6 @@ int main(int argc, char *argv[])
     }
     url = argv[1];
     destdir = argc > 2 ? argv[2] : "/tmp";
-    vf_fetch(url, destdir, 0, 0);
+    vf_fetch(url, destdir, 0, 0, 0);
     return 0;
 }
