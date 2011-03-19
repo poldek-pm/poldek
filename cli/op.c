@@ -79,6 +79,7 @@ int poclidek_op_ctx_verify_major_mode(struct poclidek_op_ctx *opctx)
     }
     
     logn(LOGERR, _("%s options are exclusive"), tmp);
+    n_array_free(majormodes);
     return 0;
 }
 
