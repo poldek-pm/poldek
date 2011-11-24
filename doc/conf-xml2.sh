@@ -1,9 +1,14 @@
 #!/bin/sh
 
 DN=$(dirname $0)
+tmp=$(mktemp)
+
+if [ ! -f "$tmp" ]; then
+	echo "Temporary file creation failed!" >&2
+	exit 1
+fi
 
 to_man() {
-    tmp=$FILE.tmp
     # - replace [screen] to [programlisting], docbook2man do better rendering for it
     # - replace [foo] and [/foo] with &lt;foo&gt;
     # - replace [ foo ] with [foo]
@@ -13,7 +18,6 @@ to_man() {
 }
 
 to_docb() {
-    tmp=$FILE.tmp
     # - replace [foo] and [/foo] with &lt;foo&gt;
     # - replace [ foo ] with [foo]
     perl -pe 's/\[(\w)/&lt;$1/g; s|\[/|&lt;/|g; s/(\w)\]/$1&gt;/g; s/\[\s(\w+)\s\]/[$1]/g;' $FILE > $tmp
@@ -27,7 +31,6 @@ to_c() {
 }
 
 to_conf() {
-    tmp=$FILE.tmp
     # - replace [screen] to '=remove' (removed at end)
     # - replace [foo] and [/foo] with ''
     # - replace [ foo ] with [foo]
@@ -71,4 +74,4 @@ else
     exit 1
 fi
 
-[ $? -eq 0 ] && rm -f *.tmp $DN/*.tmp
+[ $? -eq 0 ] && rm -f $tmp $DN/*.tmp
