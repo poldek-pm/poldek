@@ -32,7 +32,7 @@
 
 int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
 {
-    int i, j, iserr = 0;
+    int i, j;
     unsigned openflags = 0;
 
     n_array_isort_ex(sources, (tn_fn_cmp)source_cmp_pri);
@@ -76,9 +76,6 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         MEMINF("after open %s", pkgdir_idstr(pkgdir));
     }
 
-    
-    
-
     /* merge pkgdis depdirs into ps->depdirs */
     for (i=0; i < n_array_size(ps->pkgdirs); i++) {
         struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
@@ -98,30 +95,27 @@ int pkgset_load(struct pkgset *ps, int ldflags, tn_array *sources)
         if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
             if (!pkgdir_load(pkgdir, ps->depdirs, ldflags)) {
                 logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
-                iserr = 1;
             }
         }
         MEMINF("after load %s", pkgdir_idstr(pkgdir));
     }
     
-    if (!iserr) {
-        /* merge pkgdirs packages into ps->pkgs */
-        for (i=0; i < n_array_size(ps->pkgdirs); i++) {
-            struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
+    /* merge pkgdirs packages into ps->pkgs */
+    for (i=0; i < n_array_size(ps->pkgdirs); i++) {
+	struct pkgdir *pkgdir = n_array_nth(ps->pkgdirs, i);
             
-            for (j=0; j < n_array_size(pkgdir->pkgs); j++) {
-                struct pkg *pkg = n_array_nth(pkgdir->pkgs, j);
-                
-                //pkg->recno = ps->_recno++; TOFIX another field is needed
-                if (pkg_is_scored(pkg, PKG_IGNORED))
-                    continue;
-                n_array_push(ps->pkgs, pkg_link(pkg));
-            }
-        }
+        for (j=0; j < n_array_size(pkgdir->pkgs); j++) {
+            struct pkg *pkg = n_array_nth(pkgdir->pkgs, j);
 
-        init_depdirs(ps->depdirs);
+            //pkg->recno = ps->_recno++; TOFIX another field is needed
+            if (pkg_is_scored(pkg, PKG_IGNORED))
+                continue;
+            n_array_push(ps->pkgs, pkg_link(pkg));
+        }
     }
-    
+
+    init_depdirs(ps->depdirs);
+
     if (n_array_size(ps->pkgs)) {
         int n = n_array_size(ps->pkgs);
         msgn(1, ngettext("%d package read",
