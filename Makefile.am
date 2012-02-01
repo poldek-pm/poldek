@@ -21,7 +21,7 @@ lib_LTLIBRARIES    = libpoldek.la
 
 libpoldek_la_LDFLAGS = -version-info $(libVERINFO)
 libpoldek_la_SOURCES = \
-	  compiler.h	\	
+	  compiler.h	\
 	  log.c log.h	   \
 	  poldek_term.c poldek_term.h	\
 	  minfo.c			    \
@@ -74,10 +74,11 @@ libpoldek_la_LIBADD = \
 
 LDADD_              = @INTLLIBS@
 
-pkglib_SCRIPTS      = zlib-in-rpm.sh vfjuggle vfcompr vfsmb poldekuser-setup.sh
+vfscriptsdir = $(libdir)/$(PACKAGE_NAME)
+vfscripts_SCRIPTS = zlib-in-rpm.sh vfjuggle vfcompr vfsmb poldekuser-setup.sh
 
 EXTRA_DIST = \
-	     $(pkglib_SCRIPTS) \
+	     $(vfscripts_SCRIPTS) \
 	     Makefile.extra \
 	     poldek.spec \
 	     package-set.sample vfjugglerc.sample \
