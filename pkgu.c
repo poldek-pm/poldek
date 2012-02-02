@@ -508,7 +508,7 @@ int pkguinf_changelog_with_security_fixes(struct pkguinf *inf, time_t since)
         struct changelog_ent *ent = n_array_nth(entries, i);
         const char *m = ent->message;
         
-        if (strstr(m, "CVE-2") || strstr(m, "CVE-19") || strstr(m, "ecurity")) {
+        if (strstr(m, "CVE-20") || strstr(m, "CVE-19") || strcasestr(m, "security")) {
             yes = 1;
             break;
         }
