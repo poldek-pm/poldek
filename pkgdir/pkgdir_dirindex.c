@@ -66,8 +66,8 @@ struct pkgdir_dirindex {
 };
 
 static
-const char **get_package_directories(struct tndb *db, const char *key, int klen,
-                                     char *val, int *vsize, int *ndirs);
+const char **get_package_directories(struct tndb *db, const char *key, size_t klen,
+                                     char **val, size_t *bytes_read, int *ndirs);
 
 static tn_array *do_dirindex_get(const struct pkgdir_dirindex *dirindex,
                                  tn_array *pkgs, const char *path);
@@ -147,8 +147,9 @@ static int store_from_previous(uint32_t package_no, struct pkg *pkg, struct tndb
                                tn_hash *path_index, struct pkgdir_dirindex *dirindex)
 {
     const char **tl, **tl_save;
-    char key[512], val[32 * 1024];
-    int klen, vlen, found = 0, ndirs;
+    char       key[512], *val = NULL;
+    size_t     klen, vlen;
+    int        found = 0, ndirs;
 
     n_assert(dirindex);
 
@@ -160,18 +161,20 @@ static int store_from_previous(uint32_t package_no, struct pkg *pkg, struct tndb
     }
   
     /* requires any directories? */
-    if ((vlen = tndb_get(dirindex->db, key, klen, val, sizeof(val))) > 0)
+    if ((vlen = tndb_get_all(dirindex->db, key, klen, (void**)&val)) > 0) {
         tndb_put(db, key, klen, val, vlen);
+	n_cfree(&val);
+    }
 
     key[1] = PREFIX_PKGKEY_OWNDIR;
-    vlen = sizeof(val);
-    tl = tl_save = get_package_directories(dirindex->db, key, klen, val, &vlen, 
+
+    tl = tl_save = get_package_directories(dirindex->db, key, klen, &val, &vlen, 
                                            &ndirs);
 
     if (tl == NULL) /* without owned directories */
         return found;
 
-    n_assert(vlen > 0); 
+    n_assert(vlen > 0);
     tndb_put(db, key, klen, val, vlen);
 
     while (*tl) {
@@ -182,6 +185,8 @@ static int store_from_previous(uint32_t package_no, struct pkg *pkg, struct tndb
     }
     
     n_str_tokl_free(tl_save);
+    n_free(val);
+    
     return found;
 }
 
@@ -438,26 +443,32 @@ l_end:
 }
 
 static
-const char **get_package_directories(struct tndb *db, const char *key, int klen,
-                                      char *val, int *vsize, int *ndirs)
+const char **get_package_directories(struct tndb *db, const char *key, size_t klen,
+                                     char **val, size_t *bytes_read, int *ndirs)
 {
     const char **tl;
-    int vlen;
+    char       *buf = NULL;
+    size_t     vlen;
     
-    if ((vlen = tndb_get(db, key, klen, val, *vsize)) == 0)
+    if ((vlen = tndb_get_all(db, key, klen, (void**)&buf)) == 0)
         return NULL;
 
-    n_assert(vlen < *vsize);
-    val[vlen] = '\0';
-    *vsize = vlen;
+    buf[vlen] = '\0';
+    *bytes_read = vlen;
 
     *ndirs = 0;
-    tl = n_str_tokl_n(val, ":", ndirs);
+    tl = n_str_tokl_n(buf, ":", ndirs);
 
     if (tl && *ndirs == 0) {
         n_str_tokl_free(tl);
         tl = NULL;
+    
+	*bytes_read = 0;
+        n_cfree(&buf);
     }
+
+    *val = buf;
+
     return tl;
 }
 
@@ -470,15 +481,16 @@ void verify_dirindex(struct pkgdir *pkgdir, struct pkgdir_dirindex *dirindex)
     n_assert(dirindex);
 
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
-        char key[512], val[32 * 1024];
-        int klen, vlen, ndirs;
+        char key[512], *val = NULL;
+        int ndirs;
+        size_t klen, vlen;
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
         
         klen = package_key(key, sizeof(key), pkg, PREFIX_PKGKEY_OWNDIR);
         n_assert (n_hash_exists(dirindex->keymap, &key[2]));
-        vlen = sizeof(val);
+
         tl = tl_save = get_package_directories(dirindex->db, key, klen,
-                                               val, &vlen, &ndirs);
+                                               &val, &vlen, &ndirs);
 
         if (tl == NULL) /* without owned directories */
             continue;
@@ -494,6 +506,7 @@ void verify_dirindex(struct pkgdir *pkgdir, struct pkgdir_dirindex *dirindex)
         }
         
         n_str_tokl_free(tl_save);
+        n_free(val);
     }
 }
 
@@ -503,13 +516,11 @@ struct tndb *open_index_database(const struct pkgdir *pkgdir, const char *path,
 {
     struct tndb     *db;
     tn_hash         *kmap = NULL;
-    int             rc = 0;
 
     n_assert(n_array_size(pkgdir->pkgs)); /* XXX: tndb w/o */
 
     MEMINF("start");
     
-    rc = 0;
     if ((db = tndb_open(path)) == NULL) {
         logn(LOGERR, "%s: open failed", path);
         goto l_error_end;
@@ -546,15 +557,16 @@ l_error_end:
 
 /* load package dir-based requirements and add them to pkg */
 static int update_pkdir_pkg(struct pkg *pkg, struct tndb *db,
-                            const char *key, int klen)
+                            const char *key, size_t klen)
 {
     const char **tl, **tl_save;
-    char val[16 * 1024];
-    int  vlen, ndirs = 0;
+    char       *val = NULL;
+    size_t     vlen;
+    int        ndirs = 0;
 
     n_assert(key[1] == PREFIX_PKGKEY_REQDIR);
-    vlen = sizeof(val);
-    tl = tl_save = get_package_directories(db, key, klen, val, &vlen, &ndirs);
+
+    tl = tl_save = get_package_directories(db, key, klen, &val, &vlen, &ndirs);
     if (tl == NULL)
         return 0;
     
@@ -572,6 +584,7 @@ static int update_pkdir_pkg(struct pkg *pkg, struct tndb *db,
         tl++;
     }
     n_str_tokl_free(tl_save);
+    n_free(val);
     
     if (ndirs > 10)
         n_array_sort(pkg->reqs);
@@ -610,9 +623,8 @@ struct pkgdir_dirindex *load_dirindex(const struct pkgdir *pkgdir,
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg   *pkg = n_array_nth(pkgdir->pkgs, i);
         char         key[512], *pkg_no;
-        int          klen;
 
-        klen = package_key(key, sizeof(key), pkg, PREFIX_PKGKEY_REQDIR);
+        package_key(key, sizeof(key), pkg, PREFIX_PKGKEY_REQDIR);
         pkg_no = n_hash_get(keymap, &key[PREFIXLEN]);
 
         DBGF("%s %s\n", pkg_no, &key[PREFIXLEN]);
@@ -746,17 +758,17 @@ tn_array *get_package_directories_as_array(const struct pkgdir *pkgdir,
 {
     const struct pkgdir_dirindex *dirindex = pkgdir->dirindex;
     const char  **tl, **tl_save;
-    char        key[512], val[1024 * 4];
-    int         klen, vlen, n = 0;
+    char        key[512], *val = NULL;
+    size_t      klen, vlen;
+    int         n = 0;
     tn_array    *dirs;
 
     if (dirindex == NULL)
         return NULL;
     
-    vlen = sizeof(val);
     klen = package_key(key, sizeof(key), pkg, prefix);
     tl = tl_save = get_package_directories(dirindex->db, key, klen,
-                                           val, &vlen, &n);
+                                           &val, &vlen, &n);
     if (tl == NULL)
         return NULL;
         
@@ -768,6 +780,7 @@ tn_array *get_package_directories_as_array(const struct pkgdir *pkgdir,
     }
 
     n_str_tokl_free(tl_save);
+    n_free(val);
 
     if (n_array_size(dirs) == 0)
         n_array_cfree(&dirs);
