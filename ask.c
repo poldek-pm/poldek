@@ -123,6 +123,7 @@ onemoretime:
     if (j > 0) {
 	msgn(-1, "-) page up");
 	*p++ = '-';
+	*p++ = 0x7f; // backspace
     } 
     for (i = 0; i+j < n_array_size(candidates); i++) {
         msgn(-1, "%c) %s", 'a' + i, pkg_id(n_array_nth(candidates, i+j)));
@@ -134,6 +135,8 @@ onemoretime:
     if (i+j < n_array_size(candidates)) {
 	msgn(-1, "+) page down"); 
 	*p++ = '+';
+	*p++ = ' ';  // space
+	*p++ = '\t'; // tab
     }
 
     *p++ = 'Q';
@@ -143,12 +146,12 @@ onemoretime:
     a = poldek_term_ask(STDIN_FILENO, validchrs, NULL);
     msg_ask("_\n");
 
-    if (a == '-') {
+    if (a == '-' || a == 0x7f) {
 	if (j >= 24) j -= 24;
         goto onemoretime;
     }
 
-    if (a == '+') {
+    if (a == '+' || a == ' ' || a == '\t' ) {
 	if (j + 24 < n_array_size(candidates)) j += 24;
         goto onemoretime;
     }
