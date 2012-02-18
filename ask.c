@@ -93,12 +93,13 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
                              tn_array *candidates, int hint)
 {
     char *validchrs, *p;
-    int i, a;
-    
+    int i, j, a;
+
     foo = foo; ts = ts;
+    j = 0;
     
     if (hint > 24)     /* over ascii */
-        hint = 0;
+        j = hint - 12; // middle to show hint
     
     if (!isatty(STDIN_FILENO))
         return hint;
@@ -112,35 +113,55 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
     }
     
     msg_ask("_\n");
+
     validchrs = alloca(64);
+onemoretime:
     p = validchrs;
     *p++ = '\n';
 
-    i = 0;
-    for (i=0; i < n_array_size(candidates); i++) {
-        msgn(-1, "%c) %s", 'a' + i, pkg_id(n_array_nth(candidates, i)));
+    if (j > 0) {
+	msgn(-1, "-) page up");
+	*p++ = '-';
+    } 
+    for (i = 0; i+j < n_array_size(candidates); i++) {
+        msgn(-1, "%c) %s", 'a' + i, pkg_id(n_array_nth(candidates, i+j)));
         *p++ = 'a' + i;
 
         if (i > 24)
             break;
     }
+    if (i+j < n_array_size(candidates)) {
+	msgn(-1, "+) page down"); 
+	*p++ = '+';
+    }
+
     *p++ = 'Q';
-    
-    msg_ask(_("Which one do you want to install ('Q' to abort)? [%c]"), 'a' + hint);
+
+    msg_ask(_("Which one do you want to install ('Q' to abort)? [%s]"), pkg_id(n_array_nth(candidates, hint)));
     
     a = poldek_term_ask(STDIN_FILENO, validchrs, NULL);
     msg_ask("_\n");
-    
+
+    if (a == '-') {
+	if (j >= 24) j -= 24;
+        goto onemoretime;
+    }
+
+    if (a == '+') {
+	if (j + 24 < n_array_size(candidates)) j += 24;
+        goto onemoretime;
+    }
+
     if (a == '\n')
         return hint;
-    
+
     if (a == 'Q')
         return -1;
     
     a -= 'a';
     //printf("Selected %d\n", a);
     if (a >= 0 && a < i)
-        return a;
+        return a + j;
     
     return hint;
 }
