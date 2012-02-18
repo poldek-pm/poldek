@@ -116,6 +116,7 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
 
     validchrs = alloca(64);
 onemoretime:
+    memset(&validchrs[0], 0, sizeof(validchrs));
     p = validchrs;
     *p++ = '\n';
 
