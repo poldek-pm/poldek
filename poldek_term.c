@@ -289,6 +289,22 @@ int poldek_term_ask(int fd, const char *validchrs, const char *msg)
         if ((read(fd, &c, sizeof(c)) == 1) && strchr(validchrs, c))
             break;
 
+	// map pgup/pgdown to backspace/tab
+	if (c == 0x1b && (read(fd, &c, sizeof(c)) == 1) && 
+	    c == 0x5b && (read(fd, &c, sizeof(c)) == 1)) { 
+	    if (c == 0x35 && (read(fd, &c, sizeof(c)) == 1) && 
+		c == 0x7e) {
+		    c = 0x7f;
+		    break;
+	    }
+	    if (c == 0x36 && (read(fd, &c, sizeof(c)) == 1) && 
+		c == 0x7e) {
+		    c = '\t';
+		    break;
+	    }
+	}
+
+
         // terminal lost - so prevent loop
         if (!isatty(fd))
             return 0;
