@@ -94,7 +94,7 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
 {
     char *validchrs, *p, *lines_env;
     int i, j, a, lines;
-    char choice[] = "1234567890abcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    char choice[] = "1234567890abcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPRSTUVWXYZ";
 
     foo = foo; ts = ts;
     j = 0, lines = 0;
