@@ -98,8 +98,8 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
     foo = foo; ts = ts;
     j = 0;
     
-    if (hint > 24)     /* over ascii */
-        j = hint - 12; // middle to show hint
+    if (hint >= 26)     /* over ascii */
+        j = (hint/26)*26; // first show page with hint
     
     if (!isatty(STDIN_FILENO))
         return hint;
@@ -147,12 +147,12 @@ onemoretime:
     msg_ask("_\n");
 
     if (a == '-' || a == 0x7f) {
-	if (j >= 24) j -= 24;
+	if (j >= 26) j -= 26;
         goto onemoretime;
     }
 
     if (a == '+' || a == ' ' || a == '\t' ) {
-	if (j + 24 < n_array_size(candidates)) j += 24;
+	if (j + 26 < n_array_size(candidates)) j += 26;
         goto onemoretime;
     }
 
