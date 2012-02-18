@@ -92,14 +92,22 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
                              const struct pkg *pkg, const char *capname,
                              tn_array *candidates, int hint)
 {
-    char *validchrs, *p;
-    int i, j, a;
+    char *validchrs, *p, *lines_env;
+    int i, j, a, lines;
+    char choice[] = "1234567890abcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     foo = foo; ts = ts;
-    j = 0;
+    j = 0, lines = 0;
     
-    if (hint >= 26)     /* over ascii */
-        j = (hint/26)*26; // first show page with hint
+    lines_env = getenv("LINES");
+    if (lines_env) lines = atoi(lines_env);
+    if (lines <= 0) lines = 30;
+    lines -= 6; // to show some info above
+    if (lines < 6) lines = 6;
+    if (lines > sizeof(choice)) lines = sizeof(choice);
+
+    if (hint >= lines)     /* over ascii */
+        j = (hint/lines)*lines; // first show page with hint
     
     if (!isatty(STDIN_FILENO))
         return hint;
@@ -114,22 +122,22 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
     
     msg_ask("_\n");
 
-    validchrs = alloca(64);
+    validchrs = alloca(100);
 onemoretime:
     memset(&validchrs[0], 0, sizeof(validchrs));
     p = validchrs;
     *p++ = '\n';
 
     if (j > 0) {
-	msgn(-1,_("-/backspace/pgup) page up"));
+	msgn(-1, _("-/backspace/pgup) page up"));
 	*p++ = '-';
 	*p++ = 0x7f; // backspace
     } 
     for (i = 0; i+j < n_array_size(candidates); i++) {
-        msgn(-1, "%c) %s", 'a' + i, pkg_id(n_array_nth(candidates, i+j)));
-        *p++ = 'a' + i;
+        msgn(-1, "%c) %s", choice[i], pkg_id(n_array_nth(candidates, i+j)));
+        *p++ = choice[i];
 
-        if (i > 24)
+        if (i > lines - 1)
             break;
     }
     if (i+j < n_array_size(candidates)) {
@@ -147,12 +155,12 @@ onemoretime:
     msg_ask("_\n");
 
     if (a == '-' || a == 0x7f) {
-	if (j >= 26) j -= 26;
+	if (j >= lines) j -= lines;
         goto onemoretime;
     }
 
     if (a == '+' || a == ' ' || a == '\t' ) {
-	if (j + 26 < n_array_size(candidates)) j += 26;
+	if (j + lines < n_array_size(candidates)) j += lines;
         goto onemoretime;
     }
 
@@ -161,10 +169,9 @@ onemoretime:
 
     if (a == 'Q')
         return -1;
-    
-    a -= 'a';
-    //printf("Selected %d\n", a);
-    if (a >= 0 && a < i)
+
+    a = strchr(choice, a) - choice;
+    if (a >= 0 && a <= i)
         return a + j;
     
     return hint;
