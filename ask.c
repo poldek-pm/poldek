@@ -121,7 +121,7 @@ onemoretime:
     *p++ = '\n';
 
     if (j > 0) {
-	msgn(-1, "-) page up");
+	msgn(-1, "-/backspace/pgup) page up");
 	*p++ = '-';
 	*p++ = 0x7f; // backspace
     } 
@@ -133,7 +133,7 @@ onemoretime:
             break;
     }
     if (i+j < n_array_size(candidates)) {
-	msgn(-1, "+) page down"); 
+	msgn(-1, "+/space/tab/pgdown) page down"); 
 	*p++ = '+';
 	*p++ = ' ';  // space
 	*p++ = '\t'; // tab
