@@ -92,15 +92,14 @@ static int term_choose_equiv(void *foo, const struct poldek_ts *ts,
                              const struct pkg *pkg, const char *capname,
                              tn_array *candidates, int hint)
 {
-    char *validchrs, *p, *lines_env;
+    char *validchrs, *p;
     int i, j, a, lines;
     char choice[] = "abcdefghijklmnopqrtsuvwxyz1234567890ABCDEFGHIJKLMNOPRSTUVWXYZ";
 
     foo = foo; ts = ts;
     j = 0, lines = 0;
     
-    lines_env = getenv("LINES");
-    if (lines_env) lines = atoi(lines_env);
+    lines = poldek_term_get_height();
     if (lines <= 0) lines = 30;
     lines -= 6; // to show some info above
     if (lines < 6) lines = 6;
