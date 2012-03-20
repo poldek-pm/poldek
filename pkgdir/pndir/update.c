@@ -232,7 +232,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     struct vfile        *vf;
     struct pndir_digest dg_remote;
     struct pndir        *idx;
-    char                line[1024], *dn, *bn;
+    char                line[1024], *dn, *bn, *pidxpath;
     int                 nread, nerr = 0, rc, npatch, first_patch_found;
     const char          *errmsg_broken_difftoc = _("%s: broken patch list");
     char                current_md[TNIDX_DIGEST_SIZE + 1];
@@ -281,6 +281,100 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     n_assert(strlen(idx->dg->md) == TNIDX_DIGEST_SIZE);
     memcpy(current_md, idx->dg->md, TNIDX_DIGEST_SIZE + 1);
 
+    off_t mdsize = 0, mdpatchsize = 0;
+    struct vf_stat stats;
+
+    pidxpath = strstr(pkgdir->idxpath, ".ndir.");
+    *pidxpath = '\0';
+    pidxpath += 6;
+
+    // to keep quiet vf_stat
+    if (poldek_VERBOSE < 2)
+        vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
+    
+    snprintf(path, sizeof(path), "%s.ndir.%s",
+	     pkgdir->idxpath, pidxpath);
+    if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
+      mdsize += stats.vf_size;
+      msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+    }
+    snprintf(path, sizeof(path), "%s.ndir.dscr.%s",
+	     pkgdir->idxpath, pidxpath);
+    if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
+      mdsize += stats.vf_size;
+      msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+    }
+    snprintf(path, sizeof(path), "%s.ndir.dscr.i18n.%s",
+	     pkgdir->idxpath, pidxpath);
+    if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
+      mdsize += stats.vf_size;
+      msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+    }
+    
+    msgn(2, "pndir_m_update idxsize: %ld\n", mdsize);
+
+    pidxpath -= 6;
+    *pidxpath ='.';
+
+    while ((nread = n_stream_gets(vf->vf_tnstream, line, sizeof(line))) > 0) {
+        struct pkgdir *diff;
+        char *md, *pdate;
+        time_t ts;
+
+        if (!parse_toc_line(line, &ts, &md))
+            break;
+
+        if (md == NULL) /* i.e comment */
+            continue;
+
+        if (ts <= pkgdir->ts)   /* skip diffs created before me */
+            continue;
+        
+        if (!first_patch_found) { /* skip first patch - it is already applied */
+            if (memcmp(md, current_md, TNIDX_DIGEST_SIZE) == 0)
+                first_patch_found = 1;
+	    else
+		continue;
+        }
+        
+        pdate = strstr(line, ".ndir.");
+	*pdate = '\0';
+	pdate += 6;
+
+        snprintf(path, sizeof(path), "%s/%s/%s.ndir.%s",
+		 dn, pndir_packages_incdir, line, pdate);
+	if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
+	  mdpatchsize += stats.vf_size;
+	  msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+	}
+        snprintf(path, sizeof(path), "%s/%s/%s.ndir.dscr.%s",
+		 dn, pndir_packages_incdir, line, pdate);
+	if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
+	  mdpatchsize += stats.vf_size;
+	  msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+	}
+        snprintf(path, sizeof(path), "%s/%s/%s.ndir.dscr.i18n.%s",
+		 dn, pndir_packages_incdir, line, pdate);
+	if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
+	  mdpatchsize += stats.vf_size;
+	  msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+	}
+	
+	msgn(2, "pndir_m_update idxpatches/idxsize: %ld/%ld bytes\n", mdpatchsize, mdsize);
+
+	if (mdpatchsize > mdsize) {
+	    vfile_close(vf);
+	    msgn(1, _("Index patches size too bug\nRetreving index ...\n"));
+	    rc = update_whole_idx(pkgdir->src);
+	    if (rc)
+	      *uprc = PKGDIR_UPRC_UPTODATE;
+	    return rc;
+	}
+    }
+    
+    vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
+    n_stream_seek(vf->vf_tnstream, 0L, SEEK_SET); // to the begining
+
     first_patch_found = 0;
     npatch = 0;
     while ((nread = n_stream_gets(vf->vf_tnstream, line, sizeof(line))) > 0) {
@@ -300,7 +394,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
         if (ts <= pkgdir->ts)   /* skip diffs created before me */
             continue;
         
-        if (!first_patch_found) {
+        if (!first_patch_found) { /* skip first patch - it is already applied */
             if (memcmp(md, current_md, TNIDX_DIGEST_SIZE) == 0)
                 first_patch_found = 1;
             else {
