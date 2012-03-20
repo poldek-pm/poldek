@@ -319,6 +319,12 @@ static void process_output(struct p_open_st *st, const char *prefix)
             if (*vfile_verbose == 0)
                 continue;
             
+            // fix for aria - print in one line speed
+            if (buf[0] == '\n' && (buf[1] == '[' || endl == 1))
+                buf[0] = '\r';
+            if ( n >= 2 && buf[n-1] == '\n' && buf[n-2] == ']')
+                buf[n-1] = '\r';
+    
             buf[n] = '\0';
             for (i=0; i < n; i++) {
                 int c = buf[i];
@@ -333,7 +339,7 @@ static void process_output(struct p_open_st *st, const char *prefix)
                 else
                     vf_loginfo("_%c", c);
                 
-                if (c == '\n' && cnt > 0)
+                if (c == '\n' || c == '\r')
                     endl = 1;
                 
                 cnt++;
