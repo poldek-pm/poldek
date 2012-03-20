@@ -240,7 +240,7 @@ static void update_term_width(void)
     if (winch_reached) {
         char tmp[256];
         if (ioctl(1, TIOCGWINSZ, &ws) == 0) {
-            term_width = ws.ws_col;
+            term_width  = ws.ws_col;
             term_height = ws.ws_row;
 
         } else {

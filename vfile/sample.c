@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
         unlink("/tmp/bigg");
     }
     
-//dump_file("ftp://ftp.pld-linux.org/PLD-1.0/i686/PLD/RPMS/tocfile.lst");
+    //dump_file("ftp://ftp.pld-linux.org/PLD-1.0/i686/PLD/RPMS/tocfile.lst");
     //fetch_ext("http://sunsite.icm.edu.pl/index.html");
     //dump_file("/tmp/index.html");
     return 0;

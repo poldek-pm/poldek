@@ -1,8 +1,8 @@
-#! /bin/sh
+#!/bin/sh
 
 md5() {
 	typeset fn=$1
-    md5sum $1 | awk '{print $1}'
+	md5sum $1 | awk '{print $1}'
 }
 
 files_eq() {
