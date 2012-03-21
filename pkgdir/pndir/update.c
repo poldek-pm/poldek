@@ -289,8 +289,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     pidxpath += 6;
 
     // to keep quiet vf_stat
-    if (poldek_VERBOSE < 2)
-        vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
+    vfile_configure(VFILE_CONF_VERBOSE, 0);
     
     snprintf(path, sizeof(path), "%s.ndir.%s",
 	     pkgdir->idxpath, pidxpath);
