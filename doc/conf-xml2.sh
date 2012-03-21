@@ -37,10 +37,10 @@ to_conf() {
     perl -pe 's/\[(.?)screen\]/=remove/g; s/\[(.?)\w+\]//g; s/\[\s(\w+)\s\]/[$1]/g;' $FILE > $tmp.tmp
 
     xsl=$DN/conf-xml2conf.xsl
-    perl -pe "s|%\{name\}|$NAME.conf|g" $xsl > $xsl.tmp
+    perl -pe "s|%\{name\}|$NAME.conf|g" $xsl > $xsl.$NAME.tmp
 
     echo "Writing $NAME.conf"
-    xsltproc $xsl.tmp $tmp.tmp |
+    xsltproc $xsl.$NAME.tmp $tmp.tmp |
     # hash text between =xxxstart and =xxxend
     perl -ne 's/^\s+(=xxx\w+)/$1/; $in = 1 if /^=xxxstart/; $in = 0 if /^=xxxend/; if ($in) { s/^\s+([^#])/# $1/; }; print if $_ !~ /^=/' |
     # remove unneeded leading lines and lines with =remove tag
