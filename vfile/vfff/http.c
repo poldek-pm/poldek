@@ -44,6 +44,7 @@
 #include <sigint/sigint.h>
 
 #include "vfff.h"
+#include "../vfile_intern.h" // for verbose level
 #include "i18n.h"
 #include "sigint/sigint.h"
 
@@ -674,8 +675,11 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
             is_err = 0;
             break;
             
-        case HTTP_STATUS_NOT_FOUND: 
-            vfff_set_err(ENOENT, _("%s: no such file"), path);
+        case HTTP_STATUS_NOT_FOUND:
+            if (*vfile_conf.verbose > 0) // kill error if verbose = 0
+                vfff_set_err(ENOENT, _("%s: no such file"), path);
+            else
+                is_err = 0;
             break;
             
         case HTTP_STATUS_FORBIDDEN:
