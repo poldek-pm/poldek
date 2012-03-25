@@ -424,8 +424,8 @@ l_end:
     
     if (candidates && suspkgs && n_array_size(suspkgs) > 1) {
         while (n_array_size(suspkgs)) {
-            struct pkg *pkg = n_array_shift(suspkgs);
-            n_array_push(candidates, pkg);
+            struct pkg *tmp_pkg = n_array_shift(suspkgs);
+            n_array_push(candidates, tmp_pkg);
         }
     }
 
