@@ -66,9 +66,15 @@ int poclidek_op_ctx_verify_major_mode(struct poclidek_op_ctx *opctx)
     
     n = 0;
     sp = ", ";
-    if (n_array_size(majormodes) == 2)
+    if (n_array_size(majormodes) == 2) {
         sp = _(" and ");
-    
+        // it is ok if both modes are same eg. --install and --upgrade are install mode
+        if (strcmp(n_hash_get(opctx->modeh, n_array_nth(majormodes, 0)), n_hash_get(opctx->modeh, n_array_nth(majormodes, 1)))) {
+            n_array_free(majormodes);
+            return 1;
+        }
+    }
+
     for (i=0; i < n_array_size(majormodes); i++) {
         if (n_array_size(majormodes) > 2 && i == n_array_size(majormodes) - 2)
             sp = _(" and ");
