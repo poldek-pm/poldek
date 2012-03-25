@@ -35,6 +35,9 @@ int i3_is_other_version_marked(struct i3ctx *ictx, struct pkg *pkg,
         if (pkg_cmp_name(p, pkg) != 0)
             break;
         
+        if (pkg_cmp_arch(p, pkg) != 0)
+            break;
+
         if (p != pkg && i3_is_marked(ictx, p)) {
             if (req == NULL || pkg_satisfies_req(p, req, 0)) {
                 DBGF("%s -> YES, %s%s%s\n", pkg_id(pkg), pkg_id(p),
