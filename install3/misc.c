@@ -213,18 +213,22 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
         trace(indent, "- %d. %s (marked=%d)", i, pkg_id(pkg),
               i3_is_marked(ictx, pkg));
 
+        //not needed any more?
         if (pkg_isset_mf(ictx->processed, pkg, PKGMARK_BLACK))
             scores[i] = -999;
+
+        trace(indent, "- %d. %s (pts=%d), marker: %d, multilib %d", i, pkg_id(pkg),scores[i], marker ? -1 : 0, poldek_conf_MULTILIB ? -1:0);
 
         /* same prefix  */
         if (marker && pkg_eq_name_prefix(marker, pkg)) {
             scores[i] += 1;
-            
+            trace(indent, "- %d. %s (pts=%d)", i, pkg_id(pkg),scores[i]);
             if (pkg_cmp_evr(marker, pkg) == 0) /* same prefix && evr */
                 scores[i] += 2;
             
             else if (pkg_cmp_ver(marker, pkg) == 0) /* same prefix && ver */
                 scores[i] += 1;
+            trace(indent, "- %d. %s (pts=%d)", i, pkg_id(pkg),scores[i]);
         }
 
         /* same color or arch */
@@ -233,10 +237,16 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                 scores[i] += 2;
             else if (pkg_cmp_arch(pkg, marker) == 0)
                 scores[i] += 1;
+
+            // extra 100 points for arch compatible
+            if (/*pkg_is_kind_of(pkg, marker) && */pkg_is_arch_compat(pkg, marker))
+                        scores[i] += 100;
+            trace(indent, "- %d. %s (pts=%d)", i, pkg_id(pkg),scores[i]);
         }
 
         //DBGF_F("xxx %s %d %d\n", pkg_id(pkg), pkg_arch_score(pkg), arch_scores[i]);
         scores[i] += satisfiability_score(marker, pkg);
+        trace(indent, "- %d. %s (pts=%d)", i, pkg_id(pkg),scores[i]);
         
         if (i > 0) {
             struct pkg *prev = n_array_nth(candidates, i - 1);
@@ -245,7 +255,7 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
             else
                 same_packages_different_arch--;
             
-            DBGF("cmp %s %s -> %d, %d\n", pkg_id(pkg), pkg_id(prev),
+            trace(indent, "cmp %s %s -> %d, %d", pkg_id(pkg), pkg_id(prev),
                  pkg_cmp_name_evr(pkg, prev), same_packages_different_arch);
         }
         
@@ -254,14 +264,14 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                 scores[i] += 5; /* already installed and upgradeable - sweet */
         }
 
-        DBGF("  %d %d %d\n", i, scores[i], conflicts[i]);
+        trace(indent, "  %d %d %d\n", i, scores[i], conflicts[i]);
         if (pkg->cnflpkgs != NULL)
             for (j = 0; j < n_array_size(pkg->cnflpkgs); j++) {
                 struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
                 if (i3_is_marked(ictx, cpkg->pkg)) {
                     conflicts[i] += 1;
                     scores[i] -= 5;
-                    DBGF("  %d %d %d\n", i, scores[i], conflicts[i]);
+                    trace(indent, "conflicts:  %d %d %d %d\n", i, scores[i], conflicts[i], pkg_id(cpkg->pkg));
                 }
             }
         
@@ -276,7 +286,7 @@ static int do_select_best_pkg(int indent, struct i3ctx *ictx,
                   pkg_id(pkg));
             scores[i] -= 10;
         }
-        DBGF("%d %d %d\n", i, scores[i], conflicts[i]);
+        trace(indent, "%d %d %d\n", i, scores[i], conflicts[i]);
     }
 
     /* marker noarch -> suggests architecture not */
@@ -360,6 +370,8 @@ int i3_find_req(int indent, struct i3ctx *ictx,
     *best_pkg = NULL;
     found = pkgset_find_match_packages(ictx->ps, pkg, req, &suspkgs, 1);//ictx->strict);
     
+    //trace(indent, "PROMOTE pkg test satisfied %d", pkg_satisfies_req(pkg,req,1));
+
     if (!found)
         return 0;
 
