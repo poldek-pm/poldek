@@ -643,7 +643,7 @@ char *load_changelog_from_rpmhdr(tn_alloc *na, void *hdr)
 
 struct pkguinf *pkguinf_ldrpmhdr(tn_alloc *na, void *hdr, tn_array *loadlangs)
 {
-    tn_array           *langs;
+    tn_array           *langs = NULL;
     char               **summs, **descrs;
     int                nsumms, ndescrs;
     int                i, n;
