@@ -163,7 +163,7 @@ void pndir_init(struct pndir *idx)
     idx->db_dscr_h = NULL;
 }
 
-
+// TODO: close fd! https://bugs.launchpad.net/poldek/+bug/307183
 static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf,
                               const char *srcnam)
 {
