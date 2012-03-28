@@ -728,7 +728,7 @@ cmd   = vfjuggle %d %Pn
 proto = http,ftp,https
 cmd   = wget -N --dot-style=binary -P %d %Pn
 
-[fetcher]
+[ fetcher ]
 name  = aria
 proto = http,ftp,https
 cmd   = aria2c --log-level=info --summary-interval=0 --truncate-console-readout=true -c -k1M -j5 -s5 -x5 -Z -P -d %d %Pn
