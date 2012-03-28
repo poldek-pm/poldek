@@ -337,7 +337,6 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
     return ls_ents2;
 }
 
-    
 
 static int ls(struct cmdctx *cmdctx) 
 {
@@ -346,6 +345,7 @@ static int ls(struct cmdctx *cmdctx)
     int                  rc = 1;
     char                 *path = NULL, pwdpath[PATH_MAX], *pwd;
     unsigned             ldflags = 0;
+    tn_fn_cmp            cmpf;
 
     if (cmdctx->_flags & OPT_LS_INSTALLED)
         ldflags = POCLIDEK_LOAD_INSTALLED;
@@ -364,6 +364,9 @@ static int ls(struct cmdctx *cmdctx)
         goto l_end;
     }
 
+    if ((cmpf = select_cmpf(cmdctx->_flags)))
+         n_array_sort_ex(ls_ents, cmpf);
+
     if (cmdctx->_flags & OPT_LS_UPGRADEABLE) {
         tn_array *tmp;
 
@@ -379,10 +382,6 @@ static int ls(struct cmdctx *cmdctx)
     }
     
     if (n_array_size(ls_ents)) {
-        tn_fn_cmp cmpf;
-        if ((cmpf = select_cmpf(cmdctx->_flags)))
-            n_array_sort_ex(ls_ents, cmpf);
-        
         rc = do_ls(ls_ents, cmdctx, evrs);
         
         if (cmpf)
@@ -419,6 +418,7 @@ static void ls_summary(struct cmdctx *cmdctx, struct pkg *pkg)
     
     if ((s = pkguinf_get(pkgu, PKGUINF_SUMMARY)))
         cmdctx_printf(cmdctx, "    %s\n", s);
+
     pkguinf_free(pkgu);
 }
 
