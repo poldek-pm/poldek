@@ -125,6 +125,7 @@ int i3_unmark_package(struct i3ctx *ictx, struct pkg *pkg);
 int i3_is_other_version_marked(struct i3ctx *ictx, struct pkg *pkg,
                                struct capreq *req);
 
+/* marks with PKGMARK_MARK all pkgs with same name prefix */
 int i3_mark_namegroup(struct i3ctx *ictx,
                       struct pkg *pkg, tn_array *pkgs);
 
