@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.17\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2009-03-04 00:17+0200\n"
+"POT-Creation-Date: 2012-04-01 19:50+0200\n"
 "PO-Revision-Date: 2002-04-14 13:05+0100\n"
 "Last-Translator: Andreas Piesk <a.piesk@gmx.net>\n"
 "Language-Team: Polish <pl@li.org>\n"
@@ -15,67 +15,75 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=n==0 ? 0 : n==1 ? 1 : 2\n"
 
-#: arg_packages.c:123
+#: arg_packages.c:124
 #, c-format
 msgid "%s:%d: syntax error"
 msgstr "%s:%d: Syntaxfehler"
 
-#: arg_packages.c:125
+#: arg_packages.c:126
 #, fuzzy
 msgid "syntax error in package specification"
 msgstr "Syntaxfehler in Paketdefinition"
 
-#: arg_packages.c:393
+#: arg_packages.c:394
 #, fuzzy, c-format
 msgid "Removed %d duplicates from given packages"
 msgstr "%d doppelte Pakete aus der Liste der angegebenen Pakete entfernt"
 
-#: arg_packages.c:431
+#: arg_packages.c:432
 #, fuzzy, c-format
 msgid "%s: %d package(s) found:"
 msgstr "mark: %s: Pæket nicht gefunden"
 
-#: arg_packages.c:501 arg_packages.c:530 arg_packages.c:556 uninstall.c:592
+#: arg_packages.c:502 arg_packages.c:531 arg_packages.c:557 uninstall.c:593
 #, c-format
 msgid "%s: no such package"
 msgstr "%s: dieses Paket gibt es nicht"
 
-#: arg_packages.c:507 cli/dent.c:666
+#: arg_packages.c:508 cli/dent.c:675
 #, fuzzy, c-format
 msgid "%s: ambiguous name"
 msgstr "%s: mehrdeutiger Name"
 
-#: arg_packages.c:632
+#: arg_packages.c:633
 #, fuzzy, c-format
 msgid "%s: choosen %s among %d packages"
 msgstr "%s: '%s' fehlt in einigen Paketen"
 
-#: ask.c:79 ask.c:83
+#: ask.c:80 ask.c:84
 #, fuzzy
 msgid "Proceed?"
 msgstr "Fortfahren? [Y/n]"
 
-#: ask.c:106
+#: ask.c:115
 #, c-format
 msgid "%s: required \"%s\" is provided by the following packages:"
 msgstr ""
 
-#: ask.c:109
+#: ask.c:118
 #, c-format
 msgid "Required \"%s\" is provided by the following packages:"
 msgstr ""
 
-#: ask.c:128
+#: ask.c:131
+msgid "-/backspace/pgup) page up"
+msgstr ""
+
+#: ask.c:143
+msgid "+/space/tab/pgdown) page down"
+msgstr ""
+
+#: ask.c:151
 #, fuzzy, c-format
-msgid "Which one do you want to install ('Q' to abort)? [%c]"
+msgid "Which one do you want to install ('Q' to abort)? [%s]"
 msgstr "Welches willst du installieren? [a]"
 
-#: ask.c:166
+#: ask.c:198
 #, fuzzy, c-format
 msgid "Package %s suggests installation of:"
 msgstr "%s: Installation fehlgeschlagen:"
 
-#: ask.c:168
+#: ask.c:200
 #, fuzzy
 msgid "Try to install it?"
 msgid_plural "Try to install them?"
@@ -83,124 +91,124 @@ msgstr[0] "_, %d noch zu entfernen"
 msgstr[1] "_, %d noch zu entfernen"
 msgstr[2] "_, %d noch zu entfernen"
 
-#: ask.c:180
+#: ask.c:212
 #, c-format
 msgid "(y - all, n - nothing, s - select some of)? [%s]"
 msgstr ""
 
-#: ask.c:203
+#: ask.c:235
 #, fuzzy, c-format
 msgid "Try to install %s?"
 msgstr "_, %d noch zu entfernen"
 
-#: capreq.c:343
+#: capreq.c:344
 #, c-format
 msgid "%s: invalid rpmlib capreq"
 msgstr "%s: ungültige rpmlib capreq"
 
-#: cli/alias.c:40
+#: cli/alias.c:41
 #, fuzzy
 msgid "Print defined command aliases"
 msgstr "  definierte Pseudonyme:\n"
 
-#: cli/alias.c:100
+#: cli/alias.c:101
 #, fuzzy, c-format
 msgid "%s: alias could not shadow a command"
 msgstr "%s: dieses Kommando gibt es nicht"
 
-#: cli/alias.c:105
+#: cli/alias.c:106
 #, c-format
 msgid "%s (%s) overwrites %s"
 msgstr ""
 
-#: cli/alias.c:159
+#: cli/alias.c:160
 #, fuzzy, c-format
 msgid "%s: could not determine aliased command"
 msgstr "%s: dieses Kommando gibt es nicht"
 
-#: cli/alias.c:162
+#: cli/alias.c:163
 #, c-format
 msgid "%s => aliased %s"
 msgstr ""
 
-#: cli/cd.c:31
+#: cli/cd.c:32
 msgid "[PATH]"
 msgstr ""
 
-#: cli/cd.c:31
+#: cli/cd.c:32
 msgid "Change current package directory"
 msgstr ""
 
-#: cli/cd.c:38
+#: cli/cd.c:39
 msgid "Print name of current directory"
 msgstr ""
 
-#: cli/cli.c:211
+#: cli/cli.c:212
 msgid "  Defined aliases:\n"
 msgstr "  definierte Pseudonyme:\n"
 
-#: cli/cli.c:230 cli/main.c:127
+#: cli/cli.c:231 cli/main.c:128
 msgid "Be verbose."
 msgstr "Sei ausführlich"
 
-#: cli/cli.c:231
+#: cli/cli.c:232
 msgid "Be quiet"
 msgstr ""
 
-#: cli/cli.c:232
+#: cli/cli.c:233
 msgid "Help"
 msgstr ""
 
-#: cli/cli.c:419
+#: cli/cli.c:420
 #, c-format
 msgid "ambiguous command %s"
 msgstr "mehrdeutiger Befehl '%s'"
 
-#: cli/cmd_chain.c:194
+#: cli/cmd_chain.c:195
 #, c-format
 msgid "%s: no such command"
 msgstr "%s: dieses Kommando gibt es nicht"
 
-#: cli/cmd_chain.c:211
+#: cli/cmd_chain.c:212
 #, fuzzy, c-format
 msgid "%s: ambiguous command"
 msgstr "mehrdeutiger Befehl '%s'"
 
-#: cli/cmd_chain.c:303
+#: cli/cmd_chain.c:304
 #, fuzzy, c-format
 msgid "%s: alias needs an arguments"
 msgstr "die Option benötigt ein Argument -- %s"
 
-#: cli/cmd_chain.c:309
+#: cli/cmd_chain.c:310
 #, c-format
 msgid "%s: apply arguments failed (not enough arguments?)"
 msgstr ""
 
-#: cli/cmd_chain.c:351 cli/install.c:519 cli/uninstall.c:198
+#: cli/cmd_chain.c:352 cli/install.c:529 cli/uninstall.c:199
 #, fuzzy, c-format
 msgid "%s: parse error"
 msgstr "%s: Fehler bei der Analyse der URL"
 
-#: cli/cmd_chain.c:435
+#: cli/cmd_chain.c:436
 #, fuzzy, c-format
 msgid "%s: not a right pipe-able command"
 msgstr "%s: dieses Kommando gibt es nicht"
 
-#: cli/cmd_chain.c:446
+#: cli/cmd_chain.c:447
 #, c-format
 msgid "%s: where is the pipe going?"
 msgstr ""
 
-#: cli/cmd_chain.c:454
+#: cli/cmd_chain.c:455
 #, c-format
 msgid "%s: not a left pipe-able command"
 msgstr ""
 
-#: cli/dbcache.c:191
+#: cli/dbcache.c:192
 msgid "Load installed packages failed"
 msgstr "Lesen der Liste der installierten Pakete fehlgeschlagen"
 
-#: cli/dbcache.c:195 pkgdir/pkgdir.c:665
+#: cli/dbcache.c:196 pkgdir/pkgdir.c:665
 #, c-format
 msgid "%d package loaded"
 msgid_plural "%d packages loaded"
@@ -208,75 +216,75 @@ msgstr[0] "%d Pakete gelesen"
 msgstr[1] "%d Paket gelesen"
 msgstr[2] "%d Pakete gelesen"
 
-#: cli/dent.c:660
+#: cli/dent.c:669
 #, fuzzy, c-format
 msgid "%s: no such package or directory"
 msgstr "%s: Verzeichnis existiert nicht"
 
-#: cli/desc.c:71
+#: cli/desc.c:72
 #, fuzzy
 msgid "Show all fields described below"
 msgstr "Zeige alle unten aufgeführten Felder"
 
-#: cli/desc.c:74
+#: cli/desc.c:75
 msgid "Show capabilities, requirements, conflicts and obsolences"
 msgstr "Zeige Fahigkeiten, Vorraussetzungen, Konflikte und Veraltetes"
 
-#: cli/desc.c:77
+#: cli/desc.c:78
 msgid "Show package's capablities"
 msgstr "Zeige die Fähigkeiten des Paketes"
 
-#: cli/desc.c:80
+#: cli/desc.c:81
 msgid "Show requirements"
 msgstr "Zeige Vorraussetzungen"
 
-#: cli/desc.c:83
+#: cli/desc.c:84
 msgid "Show required packages"
 msgstr "Zeige benötigte Pakete"
 
-#: cli/desc.c:86
+#: cli/desc.c:87
 msgid "Show packages which requires given package"
 msgstr "Zeige Pakete, die das angegebene Paket benötigen"
 
-#: cli/desc.c:89
+#: cli/desc.c:90
 msgid "Show conflicts and obsolences"
 msgstr "Zeige Konflikte und Veraltetes"
 
-#: cli/desc.c:91
+#: cli/desc.c:92
 msgid "Show description (the default)"
 msgstr "Zeige Beschreibung (der Standard)"
 
-#: cli/desc.c:94
+#: cli/desc.c:95
 msgid "Show package files (doubled gives long listing format)"
 msgstr "Zeige Paketdateien (doppelt angeben für detailliertes Format)"
 
-#: cli/desc.c:97
+#: cli/desc.c:98
 #, fuzzy
 msgid "Show package changelog"
 msgstr "Zeige Paketdateien"
 
-#: cli/desc.c:104 cli/get.c:47 cli/install.c:206 cli/uninstall.c:71
+#: cli/desc.c:105 cli/get.c:48 cli/install.c:212 cli/uninstall.c:72
 msgid "PACKAGE..."
 msgstr "PAKET..."
 
-#: cli/desc.c:104
+#: cli/desc.c:105
 msgid "Display packages info"
 msgstr "Zeige Paketinformationen"
 
-#: cli/desc.c:635
+#: cli/desc.c:636
 msgid "mode"
 msgstr "Modus"
 
-#: cli/desc.c:635 cli/ls.c:425 cli/ls.c:439 cli/ls.c:442
+#: cli/desc.c:636 cli/ls.c:466 cli/ls.c:480 cli/ls.c:483
 msgid "size"
 msgstr "Größe"
 
-#: cli/desc.c:635
+#: cli/desc.c:636
 #, fuzzy
 msgid "name"
 msgstr "Name"
 
-#: cli/desc.c:998
+#: cli/desc.c:999
 #, fuzzy, c-format
 msgid ""
 "%s: full description unavailable (index without packages info loaded?)\n"
@@ -296,29 +304,29 @@ msgstr ""
 msgid "%s: external command not found"
 msgstr "%s: Vorraussetzung '%s' nicht gefunden"
 
-#: cli/get.c:41
+#: cli/get.c:42
 msgid "Download to directory DIR instead to current one"
 msgstr "Speichere im Verzeichnis DIR anstelle im aktuellen Verzeichnis"
 
-#: cli/get.c:47
+#: cli/get.c:48
 msgid "Download packages"
 msgstr "Übertrage Pakete"
 
-#: cli/get.c:62 cli/install.c:496 misc.c:296
+#: cli/get.c:63 cli/install.c:506 misc.c:297
 #, c-format
 msgid "%s: no such directory"
 msgstr "%s: Verzeichnis existiert nicht"
 
-#: cli/help.c:28
+#: cli/help.c:29
 msgid "Display this help"
 msgstr "Zeige diese Hilfe an"
 
-#: cli/help.c:56
+#: cli/help.c:57
 #, c-format
 msgid "[OPTION...] %s"
 msgstr "[OPTION...] %s"
 
-#: cli/help.c:61
+#: cli/help.c:62
 #, c-format
 msgid ""
 "\n"
@@ -327,47 +335,47 @@ msgstr ""
 "\n"
 "Gib BEFEHL -? für eine detaillierte Hilfe ein.\n"
 
-#: cli/install.c:74
+#: cli/install.c:77
 msgid "Install, not upgrade packages"
 msgstr "Pakete werden nur installiert, nicht aktualisiert"
 
-#: cli/install.c:75
+#: cli/install.c:78
 #, fuzzy
 msgid "Reinstall"
 msgstr "installiert"
 
-#: cli/install.c:76 cli/install.c:155
+#: cli/install.c:79 cli/install.c:161
 msgid "Downgrade"
 msgstr ""
 
-#: cli/install.c:78
+#: cli/install.c:81
 #, fuzzy
 msgid "Install packages ignoring broken dependencies, conflicts, etc"
 msgstr "Installiere Pakete ohne Rücksicht auf die Abhängigkeiten"
 
-#: cli/install.c:79
+#: cli/install.c:82
 msgid "Don't install, but tell if it would work or not"
 msgstr "Simuliere die Installation"
 
-#: cli/install.c:81
+#: cli/install.c:84
 msgid "Upgrade packages, but only if an earlier version currently exists"
 msgstr "Aktualisiere nur bereits installierte Pakete"
 
-#: cli/install.c:83
+#: cli/install.c:86
 #, fuzzy
 msgid "Don't install packages required by selected ones"
 msgstr ""
 "Pakete, die von den ausgewählten Paketen benötigt werden, werden nicht "
 "automatisch installiert"
 
-#: cli/install.c:87
+#: cli/install.c:90
 #, fuzzy
 msgid "Install packages required by selected ones"
 msgstr ""
 "Pakete, die von den ausgewählten Paketen benötigt werden, werden nicht "
 "automatisch installiert"
 
-#: cli/install.c:90 cli/install.c:95
+#: cli/install.c:93 cli/install.c:98
 msgid ""
 "Automatically upgrade packages which dependencies are broken by unistalled "
 "ones"
@@ -375,29 +383,29 @@ msgstr ""
 "Aktualisiere automatisch alle Pakete, deren Abhängigkeiten durch entfernte "
 "Pakete verletzt wurden"
 
-#: cli/install.c:99
+#: cli/install.c:102
 msgid ""
 "Download packages to DIR (poldek's cache directory by default)instead of "
 "install them"
 msgstr ""
 
-#: cli/install.c:103
+#: cli/install.c:106
 msgid "Install packages with broken dependencies"
 msgstr "Installiere Pakete ohne Rücksicht auf die Abhängigkeiten"
 
-#: cli/install.c:105
+#: cli/install.c:108
 msgid ""
 "Treat requirements with EVR as satisfied by unversioned capabilities (old "
 "RPM behaviour)"
 msgstr ""
 
-#: cli/install.c:109
+#: cli/install.c:112
 msgid ""
 "Promote non-existent requirement's epoch to package's one (rpm prior to "
 "4.2.1 behaviour)"
 msgstr ""
 
-#: cli/install.c:114
+#: cli/install.c:117
 #, fuzzy
 msgid ""
 "Print packages file names to FILE (stdout by default) instead of install them"
@@ -405,506 +413,575 @@ msgstr ""
 "Schreibe die Dateinamen aller zum Installieren markierten Pakete in die "
 "Datei FILE (Standard ist die Standardausgabe)"
 
-#: cli/install.c:118
+#: cli/install.c:121
 msgid ""
 "Print packages names to FILE (stdout by default) instead of install them"
 msgstr ""
 
-#: cli/install.c:120
+#: cli/install.c:123
 msgid "Modify only the database"
 msgstr ""
 "Installation wird nur in der Datenbank durchgeführt. Es werden keine Dateien "
 "kopiert oder Skripte ausgeführt."
 
-#: cli/install.c:123
+#: cli/install.c:126
 msgid "Same as --nodeps but applied to PM (rpm) only"
 msgstr ""
 
-#: cli/install.c:128
+#: cli/install.c:131
 msgid "Same as --force but applied to PM (rpm) only)"
 msgstr ""
 
-#: cli/install.c:132
+#: cli/install.c:135
 msgid "pass option OPTION to PM binary"
 msgstr ""
 
-#: cli/install.c:137 cli/install.c:179
+#: cli/install.c:140 cli/install.c:185
 #, fuzzy
 msgid "Do not hold any packages. Disables --hold settings."
 msgstr "Übertrage Pakete"
 
-#: cli/install.c:141
+#: cli/install.c:144
 #, fuzzy
 msgid "Do not download packages"
 msgstr "Übertrage Pakete"
 
-#: cli/install.c:148
+#: cli/install.c:147 cli/op_packages.c:47
+msgid "Look into package capabilities and files to resolve packages"
+msgstr ""
+
+#: cli/install.c:154
 #, fuzzy
 msgid "Package installation:"
 msgstr "Installation:"
 
-#: cli/install.c:149
+#: cli/install.c:155
 msgid "Install given packages"
 msgstr "Installiere die angegebenen Pakete"
 
-#: cli/install.c:153
+#: cli/install.c:159
 #, fuzzy
 msgid "Reinstall given packages"
 msgstr "Installiere die angegebenen Pakete"
 
-#: cli/install.c:156
+#: cli/install.c:162
 msgid "Upgrade given packages"
 msgstr "Aktualisiere die angegebenen Pakete"
 
-#: cli/install.c:161
+#: cli/install.c:167
 msgid "Distribution installation/upgrade:"
 msgstr ""
 
-#: cli/install.c:163
+#: cli/install.c:169
 msgid "Install package set under DIR as root directory"
 msgstr "Installiere Paketsatz mit DIR als Wurzelverzeichnis"
 
-#: cli/install.c:166
+#: cli/install.c:172
 msgid "Upgrade all packages needs upgrade"
 msgstr "Aktualisiere alle Pakete, für die Updates verfügbar sind"
 
-#: cli/install.c:169
+#: cli/install.c:175
 #, fuzzy
 msgid "Reinstall all packages under DIR as root directory"
 msgstr "Installiere Paketsatz mit DIR als Wurzelverzeichnis"
 
-#: cli/install.c:171
+#: cli/install.c:177
 msgid "Set top directory to DIR"
 msgstr "Verwende DIR als Wurzelverzeichnis"
 
-#: cli/install.c:173
+#: cli/install.c:179
 msgid "Installation switches:"
 msgstr "Installationsparameter:"
 
-#: cli/install.c:175
+#: cli/install.c:181
 msgid ""
 "Prevent packages listed from being upgraded if they are already installed."
 msgstr "Aktualisiere die angegebene Pakete nicht, falls sie installiert sind"
 
-#: cli/install.c:182
+#: cli/install.c:188
 #, fuzzy
 msgid "Make packages listed invisible."
 msgstr "keine Pakete zum Installieren vorhanden"
 
-#: cli/install.c:185
+#: cli/install.c:191
 #, fuzzy
 msgid "Make invisibled packages visible. Disables --ignore settings."
 msgstr "Lesen der Liste der installierten Pakete fehlgeschlagen"
 
-#: cli/install.c:188
+#: cli/install.c:194
 #, fuzzy
 msgid "Remove package duplicates from available package list"
 msgstr "%d doppelte Pakete aus der Liste der angegebenen Pakete entfernt"
 
-#: cli/install.c:194
+#: cli/install.c:200
 msgid "Print installation summary in parseable form"
 msgstr ""
 
-#: cli/install.c:206
+#: cli/install.c:212
 msgid "Install packages"
 msgstr "Installiere Pakete"
 
-#: cli/install.c:423
+#: cli/install.c:429
 #, fuzzy, c-format
 msgid "invalid value ('%s') of option 'follow'"
 msgstr "ungültiger Wert ('%s') für Option '%s'"
 
-#: cli/install.c:446 cli/uninstall.c:173
+#: cli/install.c:452 cli/uninstall.c:174
 #, fuzzy, c-format
 msgid "invalid value ('%s') of option 'greedy'"
 msgstr "ungültiger Wert ('%s') für Option '%s'"
 
-#: cli/install.c:564
+#: cli/install.c:574
 msgid "There were errors"
 msgstr "Es sind Fehler aufgetreten"
 
-#: cli/install.c:584
+#: cli/install.c:594
 msgid "no packages specified"
 msgstr "keine Pakete angegeben"
 
-#: cli/ls.c:57
+#: cli/ls.c:62
 msgid "Use a long listing format"
 msgstr "Verwende detailliertes Ausgabeformat"
 
-#: cli/ls.c:58
+#: cli/ls.c:63
 msgid "Show upgrade-able packages only"
 msgstr "Zeige für aktualisierbare Pakete"
 
-#: cli/ls.c:60
+#: cli/ls.c:65
 msgid "Likewise but omit packages with different releases only"
 msgstr ""
 "wie zuvor, aber lasse Pakete, bei denen sich nur das Release ändert, aus"
 
-#: cli/ls.c:62
+#: cli/ls.c:67
 #, fuzzy
 msgid "Show upgrade-able packages with potential security fixes"
 msgstr "Zeige für aktualisierbare Pakete"
 
-#: cli/ls.c:63
+#: cli/ls.c:68
 msgid "List installed packages"
 msgstr "Zeige installierte Pakete"
 
-#: cli/ls.c:64
+#: cli/ls.c:69
 msgid "Sort by build time"
 msgstr "Ordne nach Erstellungszeit"
 
-#: cli/ls.c:65
+#: cli/ls.c:70
 msgid "Sort by build day"
 msgstr "Ordne nach Erstellungstag"
 
-#: cli/ls.c:66
+#: cli/ls.c:71
 msgid "Reverse order while sorting"
 msgstr "Kehre die Reihenfolge beim Sortieren um"
 
-#: cli/ls.c:67
+#: cli/ls.c:72
 msgid "Print only package names"
 msgstr "Zeige nur die Paketnamen"
 
-#: cli/ls.c:68
+#: cli/ls.c:73
 msgid "Print package groups"
 msgstr "Zeige Paketgruppen"
 
-#: cli/ls.c:69
+#: cli/ls.c:74
 msgid "Print package summaries"
 msgstr "Zeige Paketzusammenfassungen"
 
-#: cli/ls.c:77 cli/main.c:52
+#: cli/ls.c:75
+#, fuzzy
+msgid "Print package source rpm"
+msgstr "Zeige Paketgruppen"
+
+#: cli/ls.c:76
+#, fuzzy
+msgid "Query format options:"
+msgstr "Optionen für 'Überprüfen':"
+
+#: cli/ls.c:77
+#, fuzzy
+msgid "Use the following query format"
+msgstr "Verwende detailliertes Ausgabeformat"
+
+#: cli/ls.c:78
+#, fuzzy
+msgid "Show supported tags"
+msgstr "Zeige benötigte Pakete"
+
+#: cli/ls.c:85 cli/main.c:53
 msgid "[PACKAGE...]"
 msgstr "[PAKET...]"
 
-#: cli/ls.c:77
+#: cli/ls.c:85
 msgid "List packages"
 msgstr "Zeige Pakete"
 
-#: cli/ls.c:87
-msgid "ls: -l and -G are exclusive"
+#: cli/ls.c:95
+#, fuzzy
+msgid "ls: -l, -s and -G are exclusive"
 msgstr "ls: Optionen '-l' und '-G' schliessen sich aus"
 
-#: cli/ls.c:221
+#: cli/ls.c:256
 #, fuzzy, c-format
 msgid "%s: no packages found"
 msgstr "mark: %s: Pæket nicht gefunden"
 
-#: cli/ls.c:413 cli/ls.c:425
+#: cli/ls.c:453 cli/ls.c:455 cli/ls.c:466
 msgid "package"
 msgstr "Paket"
 
-#: cli/ls.c:413
+#: cli/ls.c:453
 msgid "group"
 msgstr "Gruppe"
 
-#: cli/ls.c:425 cli/ls.c:439 cli/ls.c:442
+#: cli/ls.c:455
+msgid "source rpm"
+msgstr ""
+
+#: cli/ls.c:466 cli/ls.c:480 cli/ls.c:483
 msgid "build date"
 msgstr "Erstellungsdatum"
 
-#: cli/ls.c:438 cli/ls.c:442
+#: cli/ls.c:479 cli/ls.c:483
 msgid "installed"
 msgstr "installiert"
 
-#: cli/ls.c:439 cli/ls.c:441
+#: cli/ls.c:480 cli/ls.c:482
 msgid "available"
 msgstr "verfügbar"
 
-#: cli/main.c:84
+#: cli/ls_queryfmt.c:38
+msgid "invalid format:"
+msgstr ""
+
+#: cli/ls_queryfmt.c:718
+#, fuzzy, c-format
+msgid "%s missing { after %%"
+msgstr "%s: Betriebssystemkennzeichnung fehlt"
+
+#: cli/ls_queryfmt.c:734
+#, fuzzy, c-format
+msgid "%s missing } after %%{"
+msgstr "%s: Betriebssystemkennzeichnung fehlt"
+
+#: cli/ls_queryfmt.c:742
+#, c-format
+msgid "%s empty tag name"
+msgstr ""
+
+#: cli/ls_queryfmt.c:754
+#, fuzzy, c-format
+msgid "%s unknown tag: '%s'"
+msgstr "%s:%d unbekannte Option '%s'"
+
+#: cli/ls_queryfmt.c:789
+#, fuzzy, c-format
+msgid "%s missing ] at end of array"
+msgstr "%s: '%s' fehlt in einigen Paketen"
+
+#: cli/ls_queryfmt.c:800
+#, fuzzy, c-format
+msgid "%s unexpected ]"
+msgstr "unerwartetes EOF"
+
+#: cli/ls_queryfmt.c:814
+#, fuzzy, c-format
+msgid "%s unexpected }"
+msgstr "unerwartetes EOF"
+
+#: cli/ls_queryfmt.c:1038
+#, c-format
+msgid "%s array iterator used with different sized arrays"
+msgstr ""
+
+#: cli/main.c:85
 msgid "Miscellaneous options:"
 msgstr ""
 
-#: cli/main.c:86
+#: cli/main.c:87
 msgid "Use FILE as PM(rpm) binary"
 msgstr ""
 
-#: cli/main.c:88
+#: cli/main.c:89
 msgid "Use FILE as sudo binary"
 msgstr ""
 
-#: cli/main.c:91
+#: cli/main.c:92
 #, fuzzy
 msgid "Store downloaded files and co. under DIR"
 msgstr "Speichere die übertragenen Dateien im Verzeichnis DIR"
 
-#: cli/main.c:94
+#: cli/main.c:95
 msgid "Run in command mode (like ipoldek does by default)"
 msgstr ""
 
-#: cli/main.c:96
+#: cli/main.c:97
 msgid ""
 "Confirm packages installation and let user choose among equivalent packages"
 msgstr ""
 "Bestätige Paketinstallationen und lasse den Benutzer aus gleichwertigen "
 "Paketen auswählen"
 
-#: cli/main.c:98
+#: cli/main.c:99
 msgid "Don't ask about anything"
 msgstr ""
 
-#: cli/main.c:100
+#: cli/main.c:101
 #, fuzzy
 msgid "Run in interactive mode (default)"
 msgstr "Starte im interaktiven Modus"
 
-#: cli/main.c:103
+#: cli/main.c:104
 msgid "Run poldek shell COMMAND and exit"
 msgstr "Führe das Poldek-Shellkommando COMMAND aus und beende danach"
 
-#: cli/main.c:106
+#: cli/main.c:107
 msgid "Don't load installed packages at startup"
 msgstr "Die Liste der installierten Pakete wird beim Starten nicht gelesen"
 
-#: cli/main.c:110 cli/main.c:112
+#: cli/main.c:111 cli/main.c:113
 msgid "Read configuration from FILE"
 msgstr "Lese Konfiguration aus Datei FILE"
 
-#: cli/main.c:114
+#: cli/main.c:115
 msgid "Do not read configuration"
 msgstr "Lese keine Konfigurationsdateien"
 
-#: cli/main.c:115
+#: cli/main.c:116
 msgid "Update remote configuration files (if any)"
 msgstr ""
 
-#: cli/main.c:119
+#: cli/main.c:120
 msgid "Display program version information and exit"
 msgstr "Zeige die Programmversion und beende danach"
 
-#: cli/main.c:121
+#: cli/main.c:122
 msgid "Log program messages to FILE"
 msgstr "Protokolliere Programmmeldungen in Datei FILE"
 
-#: cli/main.c:122
+#: cli/main.c:123
 msgid "Run program as user USER"
 msgstr ""
 
-#: cli/main.c:123
+#: cli/main.c:124
 #, fuzzy
 msgid "Set configuration option"
 msgstr "Lese Konfiguration aus Datei FILE"
 
-#: cli/main.c:125
+#: cli/main.c:126
 msgid "Dump options in docbook format"
 msgstr ""
 
-#: cli/main.c:128
+#: cli/main.c:129
 msgid "Do not produce any output."
 msgstr "Gib keinerlei Meldungen aus"
 
-#: cli/main.c:229
+#: cli/main.c:230
 msgid "-c is depreciated, use --conf instead"
 msgstr ""
 
-#: cli/main.c:577
+#: cli/main.c:578
 #, fuzzy, c-format
 msgid "%s: option '%s' requires an argument\n"
 msgstr "die Option benötigt ein Argument -- %s"
 
-#: cli/main.c:581
+#: cli/main.c:582
 #, c-format
 msgid "%s: option '%s' gives no effect if program executed by ordinary user"
 msgstr ""
 
-#: cli/op.c:69 cli/op.c:73
+#: cli/op.c:70 cli/op.c:80
 msgid " and "
 msgstr ""
 
-#: cli/op.c:80
+#: cli/op.c:87
 #, fuzzy, c-format
 msgid "%s options are exclusive"
 msgstr "ls: Optionen '-l' und '-G' schliessen sich aus"
 
-#: cli/op_makeidx.c:51 cli/op_split.c:81
+#: cli/op_makeidx.c:52 cli/op_split.c:82
 #, fuzzy
 msgid "Repository index creation:"
 msgstr "Indexerstellung:"
 
-#: cli/op_makeidx.c:54
+#: cli/op_makeidx.c:55
 #, fuzzy
 msgid "Create package index (under SOURCE-PATH by default)"
 msgstr "Erstelle Paketindex; Standarddatei ist 'SOURCE/packages.dir'"
 
-#: cli/op_makeidx.c:59
+#: cli/op_makeidx.c:60
 msgid "Set created index type (use --stl to list available values)"
 msgstr ""
 
-#: cli/op_makeidx.c:65
+#: cli/op_makeidx.c:66
 msgid "Likewise, but gzipped file is created"
 msgstr "wie zuvor, nur wird die Indexdatei komprimiert"
 
-#: cli/op_makeidx.c:72
+#: cli/op_makeidx.c:73
 msgid "Create options (type --mo=help for help)"
 msgstr ""
 
-#: cli/op_makeidx.c:85
+#: cli/op_makeidx.c:86
 #, fuzzy
 msgid "Omit package user-level information (like Summary or Description)"
 msgstr ""
 "Speichere keine Benutzerangaben wie 'Summary' oder 'Description' im Index"
 
-#: cli/op_makeidx.c:88
+#: cli/op_makeidx.c:89
 msgid "Don't create index delta files"
 msgstr ""
 
-#: cli/op_makeidx.c:91
+#: cli/op_makeidx.c:92
 msgid "Create pdir compatibile with versions prior 0.18.9"
 msgstr ""
 
-#: cli/op_makeidx.c:93
+#: cli/op_makeidx.c:94
 msgid "Create uncompressed index"
 msgstr ""
 
-#: cli/op_makeidx.c:151
+#: cli/op_makeidx.c:152
 #, c-format
 msgid "--%s is deprecated, use --mo=%s"
 msgstr ""
 
-#: cli/op_makeidx.c:258
+#: cli/op_makeidx.c:259
 #, fuzzy, c-format
 msgid "%s: unknown option"
 msgstr "%s: unbekannte Option '%s'"
 
-#: cli/op_makeidx.c:298
+#: cli/op_makeidx.c:299
 #, fuzzy, c-format
 msgid "Index create options are:\n"
 msgstr "Indexerstellung:"
 
-#: cli/op_makeidx.c:352
+#: cli/op_makeidx.c:353
 #, fuzzy
 msgid "no sources specified"
 msgstr "keine Quelle angegeben"
 
-#: cli/op_packages.c:36
+#: cli/op_packages.c:37
 msgid "Package related options:"
 msgstr ""
 
-#: cli/op_packages.c:37
+#: cli/op_packages.c:38
 msgid "Take package set definition from FILE"
 msgstr "Lese Paketzusammenstellungen aus Datei FILE"
 
-#: cli/op_packages.c:46
-msgid "Look into package capabilities and files to resolve packages"
-msgstr ""
-
-#: cli/op_packages.c:117
+#: cli/op_packages.c:118
 #, c-format
 msgid "'%s' option should be set by --%s"
 msgstr "Option '%s' sollte von '--%s' gesetzt werden"
 
-#: cli/op_source.c:66
+#: cli/op_source.c:67
 #, fuzzy
 msgid "Repository selection:"
 msgstr "Optionen für Quellen:"
 
-#: cli/op_source.c:67
+#: cli/op_source.c:68
 #, fuzzy
 msgid "Get packages info from repository under PATH"
 msgstr "Lese Paketinformationen von Quelle SOURCE-NAME"
 
-#: cli/op_source.c:70
+#: cli/op_source.c:71
 #, fuzzy
 msgid "Get packages info from repository named SOURCE-NAME"
 msgstr "Lese Paketinformationen von Quelle SOURCE-NAME"
 
-#: cli/op_source.c:74
+#: cli/op_source.c:75
 msgid "Set the type of index specified by --destination option"
 msgstr ""
 
-#: cli/op_source.c:78
+#: cli/op_source.c:79
 msgid "Install to specified destination"
 msgstr ""
 
-#: cli/op_source.c:82
+#: cli/op_source.c:83
 msgid "Install to source SOURCE-NAME instead to the system"
 msgstr ""
 
-#: cli/op_source.c:85
+#: cli/op_source.c:86
 msgid "Get packages info from package index file FILE"
 msgstr "Lese Paketinformationen von Indexdatei FILE"
 
-#: cli/op_source.c:88
+#: cli/op_source.c:89
 #, fuzzy
 msgid "Get packages info from directory DIR by scanning it"
 msgstr "Lese Paketinformationen von Paketdateien im Verzeichnis DIR"
 
-#: cli/op_source.c:91
+#: cli/op_source.c:92
 #, fuzzy
 msgid "Get packages info from package header list file (aka hdlist)"
 msgstr "Lese Paketinformationen von Paketverzeichnisdatei FILE"
 
-#: cli/op_source.c:95
+#: cli/op_source.c:96
 msgid "Set the source type (use --stl to list available values)"
 msgstr ""
 
-#: cli/op_source.c:99
+#: cli/op_source.c:100
 msgid "Get packages from PREFIX instead of SOURCE"
 msgstr "Lese Pakete von PREFIX anstelle von SOURCE"
 
-#: cli/op_source.c:101
+#: cli/op_source.c:102
 #, fuzzy
 msgid "Repository related actions:"
 msgstr "Optionen für Quellen:"
 
-#: cli/op_source.c:102
+#: cli/op_source.c:103
 #, fuzzy
 msgid "List available source types"
 msgstr "Zeige konfigurierte Quellen"
 
-#: cli/op_source.c:105
+#: cli/op_source.c:106
 msgid "List configured sources"
 msgstr "Zeige konfigurierte Quellen"
 
-#: cli/op_source.c:108
+#: cli/op_source.c:109
 #, fuzzy
 msgid "Update the source and verify it"
 msgstr "Aktualisiere und prüfe Index der Quelle"
 
-#: cli/op_source.c:113
+#: cli/op_source.c:114
 msgid "Update whole index of source"
 msgstr "Aktualisiere den gesamten Index der Quelle"
 
-#: cli/op_source.c:118
+#: cli/op_source.c:119
 msgid "Remove source index files from cache directory"
 msgstr "Lösche Indexdateien der Quelle aus dem Pufferverzeichnis"
 
-#: cli/op_source.c:121
+#: cli/op_source.c:122
 #, fuzzy
 msgid "Remove cached packages of the source"
 msgstr "Es sind %d Pakete zu installieren"
 
-#: cli/op_source.c:124
+#: cli/op_source.c:125
 #, fuzzy
 msgid "Remove all files belongs to source from cache directory"
 msgstr "Lösche alle Quelldateien aus dem Pufferverzeichnis"
 
-#: cli/op_source.c:264
+#: cli/op_source.c:265
 msgid "--dt: destination is already set, use me before --destination"
 msgstr ""
 
-#: cli/op_source.c:273
+#: cli/op_source.c:274
 msgid "--destination: destination is already set"
 msgstr ""
 
-#: cli/op_source.c:284
+#: cli/op_source.c:285
 #, fuzzy
 msgid "prefix option should be preceded by source one"
 msgstr "auf die Option ´prefix' muss Option 'source' folgen"
 
-#: cli/op_source.c:288
+#: cli/op_source.c:289
 msgid "prefix for directory source makes no sense"
 msgstr "Option 'prefix' ist für Quelltyp 'Verzeichnis' nicht sinnvoll"
 
-#: cli/op_source.c:293
+#: cli/op_source.c:294
 msgid "poldek's panic"
 msgstr ""
 
-#: cli/op_split.c:41
+#: cli/op_split.c:42
 #, fuzzy
 msgid "Splitting:"
 msgstr "Aufteilen:"
 
-#: cli/op_split.c:43
+#: cli/op_split.c:44
 #, fuzzy
 msgid ""
 "Split package set to SIZE MB size chunks, the first chunk will be "
@@ -913,123 +990,123 @@ msgstr ""
 "Teile Pakete in SIZE MB grosse Stücke auf. Das erste Stück ist "
 "FIRST_FREE_SPACE MB kleiner."
 
-#: cli/op_split.c:47 cli/op_split.c:50
+#: cli/op_split.c:48 cli/op_split.c:51
 msgid "Take package priorities from FILE"
 msgstr "Lese Paketprioritäten aus Datei FILE"
 
-#: cli/op_split.c:53
+#: cli/op_split.c:54
 #, fuzzy
 msgid "Write chunks to PREFIX.XX, default PREFIX is 'packages.chunk'"
 msgstr ""
 "Speichere die einzelnen Stücke unter PREFIX.XX. Der Standard für PREFIX ist "
 "packages.chunk."
 
-#: cli/op_split.c:136
+#: cli/op_split.c:137
 msgid "split: bad option argument"
 msgstr "split: falsches Argument für die Option"
 
-#: cli/op_split.c:162
+#: cli/op_split.c:163
 msgid "split size too small"
 msgstr "Teilungsgröße ist zu klein"
 
-#: cli/op_split.c:167
+#: cli/op_split.c:168
 msgid "first free space bigger than chunk size"
 msgstr ""
 
-#: cli/op_verify.c:49
+#: cli/op_verify.c:50
 #, fuzzy
 msgid "Package set verification:"
 msgstr "Installation:"
 
-#: cli/op_verify.c:51
+#: cli/op_verify.c:52
 msgid ""
 "Verify package set, available reports are: 'deps', 'order', 'conflicts', "
 "'file-conflicts', 'file-orphans' and 'file-missing-deps'. Default is 'deps'."
 msgstr ""
 
-#: cli/op_verify.c:54
+#: cli/op_verify.c:55
 #, fuzzy
 msgid "Verify conflicts"
 msgstr "Überprüfe Paketkonflikte"
 
-#: cli/op_verify.c:56
+#: cli/op_verify.c:57
 #, fuzzy
 msgid "Verify file conflicts"
 msgstr ""
 "\n"
 "Überprüfe Dateikonflikte..."
 
-#: cli/op_verify.c:59
+#: cli/op_verify.c:60
 msgid "Find orphaned directories"
 msgstr ""
 
-#: cli/op_verify.c:62
+#: cli/op_verify.c:63
 #, fuzzy
 msgid "Verify dependencies, conflicts, file conflicts and orphaned directories"
 msgstr "Überprüfe Paketabhängigkeiten und -konflikte sowie Dateikonflikte"
 
-#: cli/op_verify.c:65
+#: cli/op_verify.c:66
 msgid "Generate dependency graph, types are dot,lanvi"
 msgstr ""
 
-#: cli/reload.c:33
+#: cli/reload.c:34
 msgid "Reload installed packages"
 msgstr "Lade Liste mit installierten Paketen neu"
 
-#: cli/search.c:98
+#: cli/search.c:100
 msgid "Search capabilities"
 msgstr "Suche nach Fähigkeiten"
 
-#: cli/search.c:99
+#: cli/search.c:101
 msgid "Search requirements"
 msgstr "Suche nach Vorraussetzungen"
 
-#: cli/search.c:100
+#: cli/search.c:102
 msgid "Search conflicts"
 msgstr "Suche nach Konflikten"
 
-#: cli/search.c:101
+#: cli/search.c:103
 msgid "Search obsolences"
 msgstr "Suche nach Veraltetem"
 
-#: cli/search.c:102
+#: cli/search.c:104
 msgid "Search summaries, urls and license"
 msgstr "Suche nach Zusammenfassungen, URLs und Lizensen"
 
-#: cli/search.c:103
+#: cli/search.c:105
 msgid "Search descriptions"
 msgstr "Suche nach Beschreibungen"
 
-#: cli/search.c:104
+#: cli/search.c:106
 msgid "Search groups"
 msgstr "Suche nach Gruppen"
 
-#: cli/search.c:105
+#: cli/search.c:107
 msgid "Search file list"
 msgstr "Suche in Dateilisten"
 
-#: cli/search.c:107
+#: cli/search.c:109
 #, fuzzy
 msgid "Search changelogs"
 msgstr "Suche Pakete"
 
-#: cli/search.c:109
+#: cli/search.c:111
 msgid "Search all described fields, the defaults are: -sd"
 msgstr "Suche in allen angegebenen Feldern, Standard ist '-sd'"
 
-#: cli/search.c:111
+#: cli/search.c:113
 msgid "Threat PATTERN as Perl regular expression"
 msgstr ""
 
-#: cli/search.c:119
+#: cli/search.c:121
 msgid "PATTERN [PACKAGE...]"
 msgstr "MUSTER [PAKET...]"
 
-#: cli/search.c:119
+#: cli/search.c:121
 msgid "Search packages"
 msgstr "Suche Pakete"
 
-#: cli/search.c:123
+#: cli/search.c:125
 msgid ""
 "With --perlre pattern must be supplied as:\n"
 "     <delimiter>perl-regexp<delimiter>[imsx]\n"
@@ -1038,52 +1115,52 @@ msgid ""
 "  See perlre(1) for more details.\n"
 msgstr ""
 
-#: cli/search.c:184
+#: cli/search.c:186
 #, c-format
 msgid "search: unknown regexp option -- %c"
 msgstr "search: unbekannte Option für regulären Ausdruck -- '%c'"
 
-#: cli/search.c:326
+#: cli/search.c:328
 #, c-format
 msgid "search: pattern: %s:%d: %s"
 msgstr "search: Muster: %s:%d: %s"
 
-#: cli/search.c:335
+#: cli/search.c:337
 #, fuzzy, c-format
 msgid "search: pattern study: %s: %s"
 msgstr "search: Muster: %s: %s"
 
-#: cli/search.c:522
+#: cli/search.c:524
 #, c-format
 msgid "%s: load package info failed"
 msgstr "%s: Lesen der Paketinformation fehlgeschlagen"
 
-#: cli/search.c:570
+#: cli/search.c:572
 msgid "search: no pattern given"
 msgstr "search: kein Muster angegeben"
 
-#: cli/search.c:604
+#: cli/search.c:606
 msgid "Searching packages..."
 msgstr "Suche Pakete..."
 
-#: cli/search.c:624
+#: cli/search.c:636
 msgid "_interrupted."
 msgstr ""
 
-#: cli/search.c:630
+#: cli/search.c:641
 msgid "_done."
 msgstr "fertig."
 
-#: cli/shell.c:53
+#: cli/shell.c:54
 #, fuzzy
 msgid "Exit poldek"
 msgstr "Beende Poldek"
 
-#: cli/shell.c:434
+#: cli/shell.c:503
 msgid "not a tty"
 msgstr "kein Terminalgerät"
 
-#: cli/shell.c:456
+#: cli/shell.c:525
 #, c-format
 msgid ""
 "\n"
@@ -1095,254 +1172,254 @@ msgstr ""
 "Befehle ein.\n"
 "\n"
 
-#: cli/su.c:91
+#: cli/su.c:92
 #, fuzzy, c-format
 msgid "%s: could not retrieve account (%m)"
 msgstr "%s: dieser Quelltyp ist nicht aktualsierbar"
 
-#: cli/su.c:104
+#: cli/su.c:105
 #, fuzzy, c-format
 msgid "setgid %s: %m"
 msgstr "%s %m"
 
-#: cli/su.c:109
+#: cli/su.c:110
 #, fuzzy, c-format
 msgid "setuid %s: %m"
 msgstr "%s %m"
 
-#: cli/su.c:114
+#: cli/su.c:115
 #, fuzzy, c-format
 msgid "chdir %s: %m"
 msgstr "%s %m"
 
-#: cli/su.c:118
+#: cli/su.c:119
 #, fuzzy, c-format
 msgid "Running as user '%s'\n"
 msgstr "Führe '%s' aus\n"
 
-#: cli/uninstall.c:43
+#: cli/uninstall.c:44
 #, fuzzy
 msgid "Do not remove, but tell if it would work or not"
 msgstr "Simuliere die Installation"
 
-#: cli/uninstall.c:45
+#: cli/uninstall.c:46
 #, fuzzy
 msgid "Remove only selected packages"
 msgstr "%d doppelte Pakete entfernt"
 
-#: cli/uninstall.c:47
+#: cli/uninstall.c:48
 msgid "Ignore broken dependencies"
 msgstr "Ignoriere nicht erfüllte Abhängigkeiten"
 
-#: cli/uninstall.c:50
+#: cli/uninstall.c:51
 #, fuzzy
 msgid "Remove packages required by selected ones if possible."
 msgstr ""
 "Pakete, die von den ausgewählten Paketen benötigt werden, werden nicht "
 "automatisch installiert"
 
-#: cli/uninstall.c:53
+#: cli/uninstall.c:54
 msgid "pass option OPTION to PM binary (ex. --pmop noscripts)"
 msgstr ""
 
-#: cli/uninstall.c:61
+#: cli/uninstall.c:62
 #, fuzzy
 msgid "Package deinstallation:"
 msgstr "Installation:"
 
-#: cli/uninstall.c:62
+#: cli/uninstall.c:63
 #, fuzzy
 msgid "Uninstall given packages"
 msgstr "Installiere die angegebenen Pakete"
 
-#: cli/uninstall.c:71
+#: cli/uninstall.c:72
 msgid "Uninstall packages"
 msgstr "Entferne Pakete"
 
-#: cli/uninstall.c:239
+#: cli/uninstall.c:240
 #, fuzzy, c-format
 msgid "%s: installed packages are not loaded, type \"reload\" to load them"
 msgstr ""
 "ls: Liste mit installierten Paketen nicht gelesen, gib 'reload' ein, um sie "
 "zu lesen\n"
 
-#: cli/uninstall.c:242
+#: cli/uninstall.c:243
 #, fuzzy, c-format
 msgid "%s: installed packages are not loaded"
 msgstr "%s: Quelltextpakete werden nicht unterstützt"
 
-#: conf.c:194
+#: conf.c:195
 #, c-format
 msgid "%s:%d: missing '\"'"
 msgstr "%s:%d: fehlender '\"'"
 
-#: conf.c:481
+#: conf.c:482
 #, fuzzy, c-format
 msgid "%s %s::%s redefined"
 msgstr "%s:%ld:%s  ':' erwartet"
 
-#: conf.c:485
+#: conf.c:486
 #, fuzzy, c-format
 msgid "%s: multiple '%s' not allowed"
 msgstr "%s:%d mehrere '%s' sind nicht erlaubt"
 
-#: conf.c:530
+#: conf.c:531
 #, fuzzy, c-format
 msgid "%s unknown option '%s::%s'"
 msgstr "%s:%d unbekannte Option '%s'"
 
-#: conf.c:574
+#: conf.c:575
 #, fuzzy, c-format
 msgid "%s invalid value of '%s::%s'"
 msgstr "%s:%d ungültiger Wert '%s' für Option '%s'"
 
-#: conf.c:588
+#: conf.c:589
 #, fuzzy, c-format
 msgid "%s invalid value '%s' of '%s::%s'"
 msgstr "%s:%d ungültiger Wert '%s' für Option '%s'"
 
-#: conf.c:816
+#: conf.c:817
 #, fuzzy, c-format
 msgid "'%s': invalid section name"
 msgstr "%s:%d %s: ungültiger Paketname"
 
-#: conf.c:883
+#: conf.c:884
 #, c-format
 msgid "%s:%d: missing '='"
 msgstr "%s:%d: fehlendes '='"
 
-#: conf.c:885
+#: conf.c:886
 #, fuzzy, c-format
 msgid "%s: missing '='"
 msgstr "%s:%d: fehlendes '='"
 
-#: conf.c:1052
+#: conf.c:1056
 #, fuzzy, c-format
 msgid "%s:%d: wrong %%includedir"
 msgstr "%s:%d: '%s': ungültiger Parameter"
 
-#: conf.c:1085
+#: conf.c:1089
 #, fuzzy, c-format
 msgid "%s:%d: wrong %%include"
 msgstr "%s:%d: '%s': ungültiger Parameter"
 
-#: conf.c:1114
+#: conf.c:1117
 #, fuzzy, c-format
 msgid "%s:%d: '%s': invalid section name"
 msgstr "%s:%d %s: ungültiger Paketname"
 
-#: conf.c:1136
+#: conf.c:1139
 #, fuzzy, c-format
 msgid "%s: skipped %s::%s"
 msgstr "%s: Dateiliste übersprungen"
 
-#: conf.c:1140
+#: conf.c:1143
 #, c-format
 msgid "-- %s EOF --"
 msgstr ""
 
-#: conf.c:1157
+#: conf.c:1160
 #, fuzzy, c-format
 msgid "%s: load configuration failed"
 msgstr "%s: Lesen der Paketinformation fehlgeschlagen"
 
-#: conf.c:1256
+#: conf.c:1259
 #, fuzzy, c-format
 msgid "%s: legacy configuration detected but ignored"
 msgstr "%s: Lesen der Paketinformation fehlgeschlagen"
 
-#: conf.c:1411
+#: conf.c:1414
 #, fuzzy, c-format
 msgid "invalid value ('%s') of integer option '%s'"
 msgstr "ungültiger Wert ('%s') für Option '%s'"
 
-#: conf.c:1428
+#: conf.c:1431
 #, fuzzy, c-format
 msgid "invalid value ('%s') of boolean option '%s'"
 msgstr "ungültiger Wert ('%s') für Option '%s'"
 
-#: conf.c:1444
+#: conf.c:1447
 #, fuzzy, c-format
 msgid "invalid value ('%s') of option '%s'"
 msgstr "ungültiger Wert ('%s') für Option '%s'"
 
-#: fileindex.c:338
+#: fileindex.c:339
 #, c-format
 msgid "add cnfl: %s %c-%c %s"
 msgstr ""
 
-#: fileindex.c:530
+#: fileindex.c:531
 #, c-format
 msgid ""
 "\n"
 "Path: %s%s"
 msgstr ""
 
-#: fileindex.c:540
+#: fileindex.c:541
 #, fuzzy, c-format
 msgid "%d file conflicts found"
 msgstr "'%s' kollidiert mit '%s'"
 
-#: fileindex.c:646
+#: fileindex.c:647
 #, fuzzy, c-format
 msgid "[%d packages left]"
 msgstr "%d Pakete gelesen"
 
-#: fileindex.c:647
+#: fileindex.c:648
 #, fuzzy, c-format
 msgid "%s: orphaned directory from %s"
 msgstr "%s: beschädigte Übersichtsdatei (%d)"
 
-#: fileindex.c:650
+#: fileindex.c:651
 #, fuzzy, c-format
 msgid "%d orphaned directories found"
 msgstr "'%s' kollidiert mit '%s'"
 
-#: fileindex.c:724
+#: fileindex.c:725
 #, c-format
 msgid "Looking for path %s -> %s (%s)"
 msgstr ""
 
-#: fileindex.c:846
+#: fileindex.c:847
 #, c-format
 msgid "%s: %s: directory not in required packages (missing Requires: %s?)"
 msgstr ""
 
-#: fileindex.c:851
+#: fileindex.c:852
 #, fuzzy, c-format
 msgid "%d semi-orphaned directories found"
 msgstr "Zeige benötigte Pakete"
 
-#: install-dist.c:101
+#: install-dist.c:102
 #, c-format
 msgid "Need to get about %s of archives."
 msgstr ""
 
-#: install-dist.c:105
+#: install-dist.c:106
 #, c-format
 msgid " After unpacking about %s will be used."
 msgstr ""
 
-#: install-dist.c:119
+#: install-dist.c:120
 #, c-format
 msgid "Installing #%d package of total %d (%s left to get)\n"
 msgstr ""
 
-#: install-dist.c:172
+#: install-dist.c:173
 msgid "Interrupted"
 msgstr ""
 
-#: install-dist.c:197
+#: install-dist.c:198
 #, fuzzy, c-format
 msgid "Done, %d packages were installed.\n"
 msgstr "keine Pakete zum Installieren vorhanden"
 
-#: install-dist.c:200
+#: install-dist.c:201
 #, fuzzy
 msgid "There were errors during install"
 msgstr "bei der Installation sind Fehler aufgetreten"
 
-#: install-dist.c:252
+#: install-dist.c:253
 #, fuzzy
 msgid "Buggy package set"
 msgstr "fehlerhafte Paketzusammenstellung"
@@ -1377,43 +1454,43 @@ msgstr "%s: Paket ist für eine andere Architektur (%s)"
 msgid "%s: package is for a different operating system (%s)"
 msgstr "%s: Paket ist für ein anderes Betriebssystem (%s)"
 
-#: install3/install.c:162 uninstall.c:667
+#: install3/install.c:162 uninstall.c:668
 #, fuzzy, c-format
 msgid "%d unresolved dependency"
 msgid_plural "%d unresolved dependencies"
 msgstr[0] "%s: nicht erfüllte Abhängigkeiten"
 
-#: install3/install.c:185 poldek_ts.c:649 uninstall.c:407
+#: install3/install.c:185 poldek_ts.c:651 uninstall.c:408
 msgid "Processing dependencies..."
 msgstr "Verarbeite Abhängigkeiten..."
 
-#: install3/misc.c:79
+#: install3/misc.c:92
 #, c-format
 msgid "%s: multiple instances installed, give up"
 msgstr "%s: mehrfach installiert, Abbruch"
 
-#: install3/misc.c:110
+#: install3/misc.c:123
 #, c-format
 msgid "%s: refusing to upgrade held package"
 msgstr "%s: gesperrte (hold) Pakete werden nicht aktualisiert"
 
-#: install3/obsoletes.c:244
+#: install3/obsoletes.c:245
 #, c-format
 msgid "%s obsoleted by %s"
 msgstr "'%s' ist abgelöst durch '%s'"
 
-#: install3/preinstall.c:132
+#: install3/preinstall.c:134
 #, c-format
 msgid "%s: marked as %s's provider"
 msgstr ""
 
-#: install3/preinstall.c:140
+#: install3/preinstall.c:142
 #, fuzzy, c-format
 msgid "%s: %s version of %s is installed (%s), skipped"
 msgstr "%s: mehrfach installiert, übersprungen"
 
-#: install3/preinstall.c:193 install3/preinstall.c:221 poldek_ts.c:624
-#: upgrade-dist.c:167
+#: install3/preinstall.c:195 install3/preinstall.c:223 poldek_ts.c:626
+#: upgrade-dist.c:178
 msgid "Nothing to do"
 msgstr "nichts zu tun"
 
@@ -1444,74 +1521,74 @@ msgstr "verwaist"
 msgid "%s%s marks %s (%s %s)"
 msgstr "%s%s markiert '%s' (%s %s)"
 
-#: install3/requirements.c:433
+#: install3/requirements.c:441
 #, fuzzy, c-format
 msgid "%s is required by installed %s, give up"
 msgstr "'%s' wird von '%s' benötgt"
 
-#: install3/requirements.c:435
+#: install3/requirements.c:443
 #, fuzzy, c-format
 msgid "%s is required by installed %s"
 msgstr "'%s' wird von '%s' benötgt"
 
-#: install3/requirements.c:581
+#: install3/requirements.c:589
 #, fuzzy, c-format
 msgid "%s: req %s not found, upgrade rpm"
 msgstr "%s: Standardpaket %s nicht gefunden, verwende '%s'"
 
-#: install3/requirements.c:583
+#: install3/requirements.c:591
 #, c-format
 msgid "%s: req %s not found"
 msgstr "%s: Vorraussetzung '%s' nicht gefunden"
 
-#: install3/requirements.c:638
+#: install3/requirements.c:658
 #, fuzzy, c-format
 msgid "%s: suggested %s not found, skipped"
 msgstr "%s: Vorraussetzung '%s' nicht gefunden"
 
-#: lib_init.c:195 lib_init.c:449
+#: lib_init.c:196 lib_init.c:450
 #, c-format
 msgid "%s: no such source"
 msgstr "%s: Quelle existiert nicht"
 
-#: lib_init.c:1069
+#: lib_init.c:1070
 msgid "I'm set*id'ed, give up"
 msgstr "Das SUID/SGID-Bit ist gesetzt, Abbruch."
 
-#: lib_init.c:1074
+#: lib_init.c:1075
 msgid "Running me as root is not a good habit"
 msgstr "Mich als Superuser zu starten ist kein guter Gedanke."
 
-#: lib_init.c:1539
+#: lib_init.c:1540
 msgid "RPM works in multilib mode, while poldek not"
 msgstr ""
 
-#: lib_init.c:1543
+#: lib_init.c:1544
 msgid "poldek works in multilib mode, while rpm not"
 msgstr ""
 
-#: lib_pkgset.c:76 pm/pset/pset.c:200
+#: lib_pkgset.c:79 pm/pset/pset.c:200
 msgid "no packages loaded"
 msgstr "Paketliste nicht gelesen"
 
-#: log.c:249 log.c:283
+#: log.c:251 log.c:285
 msgid "error: "
 msgstr "Fehler: "
 
-#: log.c:253 log.c:286
+#: log.c:255 log.c:288
 msgid "warn: "
 msgstr "Warnung: "
 
-#: log.c:257
+#: log.c:259
 msgid "notice: "
 msgstr ""
 
-#: misc.c:301
+#: misc.c:302
 #, c-format
 msgid "%s: mkdir: permission denied"
 msgstr "%s: mkdir: keine Berechtigung"
 
-#: misc.c:348
+#: misc.c:349
 #, c-format
 msgid "%d package"
 msgid_plural "%d packages"
@@ -1519,32 +1596,32 @@ msgstr[0] "%d Pakete"
 msgstr[1] "%d Paket"
 msgstr[2] "%d Pakete"
 
-#: pkgcmp.c:345
+#: pkgcmp.c:355
 #, fuzzy, c-format
 msgid "duplicated name %s"
 msgstr "%s ist doppelt"
 
-#: pkgcmp.c:372 pkgcmp.c:392
+#: pkgcmp.c:382 pkgcmp.c:402
 #, fuzzy, c-format
 msgid "%s%s%s: removed duplicate package"
 msgstr "%d doppelte Pakete entfernt"
 
-#: pkgdir/dir/dir.c:225
+#: pkgdir/dir/dir.c:224
 #, c-format
 msgid "%s: file seems untouched, loaded from previous index"
 msgstr ""
 
-#: pkgdir/dir/dir.c:234
+#: pkgdir/dir/dir.c:233
 #, fuzzy, c-format
 msgid "%s: read header failed, skipped"
 msgstr "%s: Lesen des Kennsatzes fehlgeschlagen"
 
-#: pkgdir/dir/dir.c:244
+#: pkgdir/dir/dir.c:243
 #, c-format
 msgid "%s: seems untouched, loaded from previous index"
 msgstr ""
 
-#: pkgdir/dir/dir.c:257
+#: pkgdir/dir/dir.c:256
 #, fuzzy, c-format
 msgid "%s: loading header..."
 msgstr "%s: Lesen fehlgeschlagen"
@@ -1572,7 +1649,7 @@ msgstr "BESCHÄDIGT"
 msgid "Writing digest %s..."
 msgstr "Speichere Übersicht '%s'..."
 
-#: pkgdir/pdir/digest.c:501 pkgdir/pkgdir.c:349 pkgdir/pndir/update.c:366
+#: pkgdir/pdir/digest.c:501 pkgdir/pkgdir.c:350 pkgdir/pndir/update.c:460
 #, fuzzy, c-format
 msgid "%s: desynchronized index, try --upa"
 msgstr "%s: Index nicht synchron, versuche --update-whole"
@@ -1600,12 +1677,12 @@ msgstr "%s: beschädigte Patchliste"
 msgid "%s: no patches available"
 msgstr "%s: keine Patches verfügbar"
 
-#: pkgdir/pdir/pdir.c:456 pkgdir/pndir/update.c:333 pkgset-load.c:95
+#: pkgdir/pdir/pdir.c:456 pkgdir/pndir/update.c:427 pkgset-load.c:101
 #, c-format
 msgid "%s: load failed"
 msgstr "%s: Lesen fehlgeschlagen"
 
-#: pkgdir/pdir/pdir.c:461 pkgdir/pndir/update.c:338
+#: pkgdir/pdir/pdir.c:461 pkgdir/pndir/update.c:432
 #, fuzzy, c-format
 msgid "Applying %s..."
 msgstr "Anwenden des Patches '%s'..."
@@ -1650,12 +1727,12 @@ msgstr "%s:%ld: Syntaxfehler"
 msgid "%s:%ld:%s ':' expected"
 msgstr "%s:%ld:%s  ':' erwartet"
 
-#: pkgdir/pdir/pdir_pkg_restore.c:529 pkgdir/pkg_restore.c:499
+#: pkgdir/pdir/pdir_pkg_restore.c:529 pkgdir/pkg_restore.c:500
 #, c-format
 msgid "%s: failed to parse evr string"
 msgstr "%s: fehlerhafte Interpretation der EVR-Zeichenkette"
 
-#: pkgdir/pdir/pdir_pkg_restore.c:547 pkgdir/pkg_restore.c:529
+#: pkgdir/pdir/pdir_pkg_restore.c:547 pkgdir/pkg_restore.c:530
 #, c-format
 msgid "error reading %s's data"
 msgstr "Fehler beim Lesen der Daten von '%s'"
@@ -1689,27 +1766,27 @@ msgstr "%s: Formatfehler"
 msgid "Removing outdated diff %s"
 msgstr "Lösche veraltete '%s'"
 
-#: pkgdir/pkg_restore.c:198 pkgdir/pkg_restore.c:246
+#: pkgdir/pkg_restore.c:199 pkgdir/pkg_restore.c:247
 #, fuzzy, c-format
 msgid "%s:%lu: syntax error"
 msgstr "%s:%ld: Syntaxfehler"
 
-#: pkgdir/pkgdir.c:269
+#: pkgdir/pkgdir.c:270
 #, fuzzy, c-format
 msgid "%s: unknown index type"
 msgstr "%s: unbekannte Option"
 
-#: pkgdir/pkgdir.c:298
+#: pkgdir/pkgdir.c:299
 #, c-format
 msgid "%s: this type of source is not updateable"
 msgstr "%s: dieser Quelltyp ist nicht aktualsierbar"
 
-#: pkgdir/pkgdir.c:308 pkgdir/pkgdir.c:334
+#: pkgdir/pkgdir.c:309 pkgdir/pkgdir.c:335
 #, fuzzy, c-format
 msgid "%s is up to date"
 msgstr "%s: gebe auf bei %d"
 
-#: pkgdir/pkgdir.c:345
+#: pkgdir/pkgdir.c:346
 #, fuzzy, c-format
 msgid "%s: desynchronized index, trying to update whole index..."
 msgstr "%s: Index nicht synchron, versuche --update-whole"
@@ -1719,7 +1796,7 @@ msgstr "%s: Index nicht synchron, versuche --update-whole"
 msgid "Loading [%s]%s..."
 msgstr "Lese '%s'..."
 
-#: pkgdir/pkgdir.c:853 pkgdir/source_mkidx.c:240 pkgdir/source_mkidx.c:391
+#: pkgdir/pkgdir.c:853 pkgdir/source_mkidx.c:241 pkgdir/source_mkidx.c:390
 #, fuzzy, c-format
 msgid "%s: repository could not be created (missing feature)"
 msgstr "%s: dieser Quelltyp ist nicht aktualsierbar"
@@ -1735,27 +1812,27 @@ msgstr ""
 msgid "%s: index not changed, not saved"
 msgstr ""
 
-#: pkgdir/pkgdir_clean.c:49
+#: pkgdir/pkgdir_clean.c:50
 #, fuzzy, c-format
 msgid " Removing %s"
 msgstr "Lösche '%s'"
 
-#: pkgdir/pkgdir_clean.c:85 pkgdir/pkgdir_clean.c:123
+#: pkgdir/pkgdir_clean.c:86 pkgdir/pkgdir_clean.c:124
 #, fuzzy, c-format
 msgid "Cleaning up %s..."
 msgstr "Bereinige '%s'..."
 
-#: pkgdir/pkgdir_dirindex.c:390
+#: pkgdir/pkgdir_dirindex.c:402
 #, fuzzy, c-format
 msgid "%s: invalid directory index"
 msgstr "%s:%d %s: ungültiger Paketname"
 
-#: pkgdir/pkgdir_dirindex.c:512
+#: pkgdir/pkgdir_dirindex.c:530
 #, fuzzy, c-format
 msgid "%s: broken directory index"
 msgstr "%s: beschädigte Übersichtsdatei (%d)"
 
-#: pkgdir/pkgdir_dirindex.c:621
+#: pkgdir/pkgdir_dirindex.c:641
 #, fuzzy, c-format
 msgid "%s: outdated directory index"
 msgstr "%s: beschädigte Übersichtsdatei (%d)"
@@ -1800,52 +1877,61 @@ msgstr "Lösche veraltete '%s'"
 msgid " Writing '%s' descriptions %s..."
 msgstr "Speichere Übersicht '%s'..."
 
-#: pkgdir/pndir/update.c:307
+#: pkgdir/pndir/update.c:366
+msgid "Index patches size too big\n"
+msgstr ""
+
+#: pkgdir/pndir/update.c:367
+#, fuzzy
+msgid "Retrieving whole index ...\n"
+msgstr "Frage '%s' ab...\n"
+
+#: pkgdir/pndir/update.c:401
 #, c-format
 msgid "Check diff (ts = %ld, %ld) %s (searching %s)\n"
 msgstr ""
 
-#: pkgdir/pndir/update.c:315
+#: pkgdir/pndir/update.c:409
 #, fuzzy, c-format
 msgid "%s: no patches available(fake)"
 msgstr "%s: keine Patches verfügbar"
 
-#: pkgdir/rpmdb/rpmdb.c:192
+#: pkgdir/rpmdb/rpmdb.c:191
 #, fuzzy, c-format
 msgid "Loading db packages%s%s%s..."
 msgstr "Lese Datenbank Pakete%s%s%s"
 
-#: pkgdir/source.c:113 pkgdir/source.c:507
+#: pkgdir/source.c:116 pkgdir/source.c:516
 #, c-format
 msgid "%s: %s unknown option"
 msgstr "%s: unbekannte Option '%s'"
 
-#: pkgdir/source.c:140
+#: pkgdir/source.c:147
 #, fuzzy, c-format
 msgid "%s%sinvalid value ('%s') for option '%s'"
 msgstr "ungültiger Wert '%s' für Option '%s'"
 
-#: pkgdir/source.c:660
+#: pkgdir/source.c:672
 #, fuzzy, c-format
 msgid "removed duplicated source %s%s%s"
 msgstr "%d doppelte Pakete entfernt"
 
-#: pkgdir/source.c:720
+#: pkgdir/source.c:732
 #, fuzzy, c-format
 msgid "%s: this type (%s) of source is not updateable"
 msgstr "%s: dieser Quelltyp ist nicht aktualsierbar"
 
-#: pkgdir/source.c:727
+#: pkgdir/source.c:739
 #, fuzzy, c-format
 msgid "%s: this type (%s) of source is not updateable; use --upa to refresh it"
 msgstr "%s: dieser Quelltyp ist nicht aktualsierbar"
 
-#: pkgdir/source_mkidx.c:246
+#: pkgdir/source_mkidx.c:247
 #, fuzzy, c-format
 msgid "%s: unable to write remote index"
 msgstr "%s: dieser Quelltyp ist nicht aktualsierbar"
 
-#: pkgdir/source_mkidx.c:254
+#: pkgdir/source_mkidx.c:255
 #, fuzzy, c-format
 msgid "%s: refusing to overwrite index"
 msgstr "%s: gesperrte (hold) Pakete werden nicht aktualisiert"
@@ -1855,52 +1941,47 @@ msgstr "%s: gesperrte (hold) Pakete werden nicht aktualisiert"
 msgid "%s:%d syntax error"
 msgstr "%s:%d: Syntaxfehler"
 
-#: pkgfetch.c:98
+#: pkgfetch.c:99
 #, c-format
 msgid "Need to get %s of archives"
 msgstr ""
 
-#: pkgfetch.c:105
+#: pkgfetch.c:106
 #, fuzzy, c-format
 msgid "_ (%s to download)."
 msgstr "; %.2f MB zu übertragen"
 
-#: pkgfetch.c:111
-#, c-format
-msgid "After unpacking %s will be used."
-msgstr ""
-
-#: pkgfetch.c:163 pkgfetch.c:262
+#: pkgfetch.c:160 pkgfetch.c:263
 #, fuzzy, c-format
 msgid "%s: MD5 signature verification failed"
 msgstr "%s: Überprüfung der MD5-Signatur fehlgeschlagen"
 
-#: pkgmark.c:212
+#: pkgmark.c:213
 #, fuzzy, c-format
 msgid "%s marks %s (cap %s)"
 msgstr "%s%s markiert '%s' (%s %s)"
 
-#: pkgmark.c:350
+#: pkgmark.c:351
 #, fuzzy, c-format
 msgid "%s: conflicts with %s"
 msgstr "'%s' kollidiert mit '%s'"
 
-#: pkgmark.c:358
+#: pkgmark.c:359
 #, fuzzy, c-format
 msgid "%d conflicts found"
 msgstr "'%s' kollidiert mit '%s'"
 
-#: pkgset-load.c:56 pm/pset/pset.c:142 pm/pset/pset.c:763
+#: pkgset-load.c:62 pm/pset/pset.c:142 pm/pset/pset.c:763
 #, fuzzy, c-format
 msgid "trying to scan directory %s..."
 msgstr "Speichere Übersicht '%s'..."
 
-#: pkgset-load.c:64
+#: pkgset-load.c:70
 #, c-format
 msgid "%s: load failed, skipped"
 msgstr "%s: Lesen schlug fehl, übersprungen"
 
-#: pkgset-load.c:122
+#: pkgset-load.c:131
 #, c-format
 msgid "%d package read"
 msgid_plural "%d packages read"
@@ -1908,19 +1989,19 @@ msgstr[0] "%d Pakete gelesen"
 msgstr[1] "%d Paket gelesen"
 msgstr[2] "%d Pakete gelesen"
 
-#: pkgset-order.c:142
+#: pkgset-order.c:143
 #, fuzzy
 msgid "Requires(pre) loop: "
 msgstr "Schleife bei Kennzeichnung 'PreReq': "
 
-#: pkgset-order.c:278
+#: pkgset-order.c:279
 #, fuzzy
 msgid "Verifying packages ordering..."
 msgstr ""
 "\n"
 "Überprüfe Paketkonflikte..."
 
-#: pkgset-order.c:283 pkgset.c:382
+#: pkgset-order.c:284 pkgset.c:390
 #, fuzzy, c-format
 msgid "%d prerequirement loop detected"
 msgid_plural "%d prerequirement loops detected"
@@ -1928,16 +2009,16 @@ msgstr[0] "%d Schleife%s bei den Vorvorraussetzungen entdeckt"
 msgstr[1] "%d Schleife%s bei den Vorvorraussetzungen entdeckt"
 msgstr[2] "%d Schleife%s bei den Vorvorraussetzungen entdeckt"
 
-#: pkgset-order.c:288 pkgset.c:387
+#: pkgset-order.c:289 pkgset.c:395
 msgid "No loops -- OK"
 msgstr "Keine Schleifen entdeckt -- in Ordnung"
 
-#: pkgset-req.c:121
+#: pkgset-req.c:124
 #, fuzzy
 msgid "Packages with unsatisfied dependencies:"
 msgstr "%s: nicht erfüllte Abhängigkeiten:"
 
-#: pkgset-req.c:162
+#: pkgset-req.c:166
 msgid ""
 "\n"
 "Verifying dependencies..."
@@ -1945,37 +2026,37 @@ msgstr ""
 "\n"
 "Überprüfe Abhängigkeiten..."
 
-#: pkgset-req.c:187 pkgset-req.c:216
+#: pkgset-req.c:191 pkgset-req.c:221
 #, c-format
 msgid " req %-35s --> NOT FOUND"
 msgstr ""
 
-#: pkgset-req.c:232
+#: pkgset-req.c:237
 msgid "No unsatisfied dependencies detected -- OK"
 msgstr "Alle Abhängigkeiten erfüllt -- in Ordnung"
 
-#: pkgset-req.c:235
+#: pkgset-req.c:240
 #, c-format
 msgid "%d unsatisfied dependencies, %d packages cannot be installed"
 msgstr ""
 "%d nicht erfüllte Abhängigkeiten, %d Pakete können nicht installiert werden"
 
-#: pkgset-req.c:388
+#: pkgset-req.c:393
 #, c-format
 msgid "%s: provides rpmlib cap \"%s\""
 msgstr "'%s' stellt RPMLIB Fähigkeit '%s' zur Verfügung"
 
-#: pkgset-req.c:400
+#: pkgset-req.c:405
 #, c-format
 msgid " req %-35s --> PM_CAP"
 msgstr ""
 
-#: pkgset-req.c:594
+#: pkgset-req.c:599
 #, c-format
 msgid " cnfl %-35s --> NOT FOUND"
 msgstr ""
 
-#: pkgset.c:253
+#: pkgset.c:256
 #, c-format
 msgid "Removed %d duplicate package from available set"
 msgid_plural "Removed %d duplicate packages from available set"
@@ -1983,7 +2064,7 @@ msgstr[0] "%d doppelte Pakete in der Liste der verfügbaren Pakete"
 msgstr[1] "%d doppeltes Paket aus der Liste der verfügbaren Pakete entfernt"
 msgstr[2] "%d doppelte Pakete aus der Liste der verfügbaren Pakete entfernt"
 
-#: pkgset.c:372
+#: pkgset.c:380
 msgid ""
 "\n"
 "Verifying (pre)requirements..."
@@ -1991,46 +2072,46 @@ msgstr ""
 "\n"
 "Überprüfe (Vor)Vorraussetzungen..."
 
-#: pkgset.c:394
+#: pkgset.c:402
 #, fuzzy
 msgid "Installation order:\n"
 msgstr "Installation:"
 
-#: pkgset.c:609
+#: pkgset.c:617
 #, fuzzy, c-format
 msgid "%s: req %s %s"
 msgstr "%s: %m (%s)"
 
-#: pkgset.c:611
+#: pkgset.c:619
 msgid "version mismatch"
 msgstr ""
 
-#: pkgset.c:611
+#: pkgset.c:619
 #, fuzzy
 msgid "not found"
 msgstr "mark: '%s' nicht gefunden"
 
-#: pkgset.c:618
+#: pkgset.c:626
 #, fuzzy, c-format
 msgid "%d unsatisfied dependencies found"
 msgstr "%s: nicht erfüllte Abhängigkeiten:"
 
-#: pkgset.c:620
+#: pkgset.c:628
 #, fuzzy
 msgid "No unsatisfied dependencies found"
 msgstr "%s: nicht erfüllte Abhängigkeiten:"
 
-#: pkgset.c:675 pkgset.c:745
+#: pkgset.c:683 pkgset.c:753
 #, fuzzy, c-format
 msgid "%s: open failed: %m"
 msgstr "%s: Lesen fehlgeschlagen"
 
-#: pkgset.c:700
+#: pkgset.c:708
 #, c-format
 msgid "Graph saved as %s"
 msgstr ""
 
-#: pkgset.c:757
+#: pkgset.c:765
 #, c-format
 msgid "LanVi graph saved as %s"
 msgstr ""
@@ -2108,7 +2189,7 @@ msgstr "%s: Installation fehlgeschlagen:"
 msgid "%s: installation failed (retcode=%d)"
 msgstr "%s: Installation fehlgeschlagen:"
 
-#: pm/rpm/misc.c:124
+#: pm/rpm/misc.c:128
 #, fuzzy
 msgid "Loading internal capabilities"
 msgstr "Suche nach Fähigkeiten"
@@ -2179,9 +2260,9 @@ msgstr "%s: Betriebssystemkennzeichnung fehlt"
 msgid "Executing %s "
 msgstr "Führe '%s' aus "
 
-#: pm/rpm/rpminstall.c:184 pm/rpm/rpminstall.c:195 vfile/p_open.c:135
-#: vfile/p_open.c:292 vfile/vfff/http.c:678 vfile/vopen3.c:177
-#: vfile/vopen3.c:587
+#: pm/rpm/rpminstall.c:184 pm/rpm/rpminstall.c:195 vfile/p_open.c:136
+#: vfile/p_open.c:293 vfile/vfff/http.c:680 vfile/vopen3.c:178
+#: vfile/vopen3.c:588
 #, c-format
 msgid "%s: no such file"
 msgstr "%s: Datei nicht gefunden"
@@ -2191,12 +2272,12 @@ msgstr "%s: Datei nicht gefunden"
 msgid "%s exited with %d"
 msgstr "'%s' wurde beendet mit %d"
 
-#: pm/rpm/rpminstall.c:211 vfile/p_open.c:205
+#: pm/rpm/rpminstall.c:211 vfile/p_open.c:206
 #, c-format
 msgid "%s terminated by signal %s"
 msgstr "'%s' beendet durch Signal '%s'"
 
-#: pm/rpm/rpminstall.c:214 vfile/p_open.c:208 vfile/vopen3.c:352
+#: pm/rpm/rpminstall.c:214 vfile/p_open.c:209 vfile/vopen3.c:353
 #, c-format
 msgid "%s terminated by signal %d"
 msgstr "'%s' beendet durch Signal %d"
@@ -2242,30 +2323,30 @@ msgstr "Starte '%s'..."
 msgid "%s: %s signature not found"
 msgstr "%s: %s-Signatur nicht gefunden"
 
-#: poldek_term.c:193
+#: poldek_term.c:195
 msgid "$TERM undefined"
 msgstr "$TERM nicht definiert"
 
-#: poldek_term.c:198
+#: poldek_term.c:200
 #, c-format
 msgid "%s: unknown terminal"
 msgstr "%s: unbekanntes Terminal"
 
-#: poldek_ts.c:644 uninstall.c:398
+#: poldek_ts.c:646 uninstall.c:399
 #, c-format
 msgid "mark %s"
 msgstr "markiert '%s'"
 
-#: poldek_ts.c:849
+#: poldek_ts.c:869
 #, fuzzy
 msgid "to install"
 msgstr "installiert"
 
-#: poldek_ts.c:855
+#: poldek_ts.c:875
 msgid "to remove"
 msgstr ""
 
-#: poldek_ts.c:873
+#: poldek_ts.c:894
 #, fuzzy, c-format
 msgid "There are %d package %s"
 msgid_plural "There are %d packages %s"
@@ -2273,7 +2354,7 @@ msgstr[0] "Es sind %d Pakete zu installieren"
 msgstr[1] "Es ist %d Paket zu installieren"
 msgstr[2] "Es sind %d Pakete zu installieren"
 
-#: poldek_ts.c:878
+#: poldek_ts.c:899
 #, fuzzy, c-format
 msgid " (%d marked by dependencies)"
 msgid_plural " (%d marked by dependencies)"
@@ -2281,154 +2362,164 @@ msgstr[0] "_ (%d markiert durch Abhängigkeiten)"
 msgstr[1] "_ (%d markiert durch Abhängigkeiten)"
 msgstr[2] "_ (%d markiert durch Abhängigkeiten)"
 
-#: poldek_ts.c:882
+#: poldek_ts.c:903
 #, c-format
 msgid ", %d to remove"
 msgstr ""
 
-#: poldek_ts.c:1038
+#: poldek_ts.c:926
+#, c-format
+msgid "This operation will use %s of disk space."
+msgstr ""
+
+#: poldek_ts.c:928
+#, c-format
+msgid "This operation will free %s of disk space."
+msgstr ""
+
+#: poldek_ts.c:1069
 #, fuzzy
 msgid "Verifying dependencies..."
 msgstr ""
 "\n"
 "Überprüfe Abhängigkeiten..."
 
-#: poldek_ts.c:1044
+#: poldek_ts.c:1075
 #, fuzzy, c-format
 msgid "Generating dependency graph %s..."
 msgstr "Verarbeite Abhängigkeiten..."
 
-#: poldek_ts.c:1057
+#: poldek_ts.c:1088
 #, fuzzy
 msgid "Verifying conflicts..."
 msgstr ""
 "\n"
 "Überprüfe Dateikonflikte..."
 
-#: poldek_ts.c:1075
+#: poldek_ts.c:1106
 #, fuzzy
 msgid "Verifying file conflicts..."
 msgstr ""
 "\n"
 "Überprüfe Dateikonflikte..."
 
-#: poldek_ts.c:1080
+#: poldek_ts.c:1111
 #, fuzzy
 msgid "Verifying file orphans..."
 msgstr ""
 "\n"
 "Überprüfe Dateikonflikte..."
 
-#: poldek_ts.c:1085
+#: poldek_ts.c:1116
 #, fuzzy
 msgid "Verifying file semi-orphans (missing dependencies)..."
 msgstr ""
 "\n"
 "Überprüfe Abhängigkeiten..."
 
-#: split.c:137
+#: split.c:138
 #, c-format
 msgid "%s:%d: syntax error near %s"
 msgstr "%s:%d: Syntaxfehler bei '%s'"
 
-#: split.c:173
+#: split.c:174
 #, c-format
 msgid "%s: give up at %d"
 msgstr "%s: gebe auf bei %d"
 
-#: split.c:316
+#: split.c:317
 #, c-format
 msgid "%s: rollback"
 msgstr ""
 
-#: split.c:384
+#: split.c:385
 msgid "split failed: packages size is greater than chunk size"
 msgstr ""
 
-#: split.c:416
+#: split.c:417
 #, fuzzy, c-format
 msgid "Writing %s (%4d packages, %s (%lldb), pri min, max = %d, %d)"
 msgstr "Speichere '%s' (%4d Pakete, % 10d Bytes)"
 
-#: split.c:447
+#: split.c:448
 #, fuzzy, c-format
 msgid "%s: no priorities loaded"
 msgstr "%s: keine Patches verfügbar"
 
-#: split.c:467
+#: split.c:468
 #, c-format
 msgid "split: assign %d pri to %s (mask %s)"
 msgstr ""
 
-#: split.c:479
+#: split.c:480
 msgid "no maching priorities"
 msgstr ""
 
-#: split.c:537
+#: split.c:538
 #, fuzzy
 msgid "no available packages found"
 msgstr "mark: %s: Pæket nicht gefunden"
 
-#: uninstall.c:198
+#: uninstall.c:199
 #, fuzzy, c-format
 msgid "  %s requires %s"
 msgstr "%s: %m (%s)"
 
-#: uninstall.c:203
+#: uninstall.c:204
 #, fuzzy, c-format
 msgid "%s marks orphaned %s (req %s)"
 msgstr "%s%s markiert '%s' (%s %s)"
 
-#: uninstall.c:264
+#: uninstall.c:265
 #, c-format
 msgid "%s (cap %s) is required by %s"
 msgstr "'%s' (Fähigkeit '%s') wird von '%s' benötigt"
 
-#: uninstall.c:295
+#: uninstall.c:296
 #, fuzzy, c-format
 msgid "%s marks %s (req %s)"
 msgstr "%s%s markiert '%s' (%s %s)"
 
-#: uninstall.c:383
+#: uninstall.c:384
 #, c-format
 msgid "freedbset %d %s"
 msgstr ""
 
-#: uninstall.c:537
+#: uninstall.c:538
 #, fuzzy, c-format
 msgid "Trying %s\n"
 msgstr "Führe '%s' aus\n"
 
-#: uninstall.c:549
+#: uninstall.c:550
 #, fuzzy, c-format
 msgid "  Trying %s\n"
 msgstr "Speichere '%s'..."
 
-#: uninstall.c:561
+#: uninstall.c:562
 #, fuzzy, c-format
 msgid "    Trying %s\n"
 msgstr "Speichere '%s'..."
 
-#: uninstall.c:573
+#: uninstall.c:574
 #, c-format
 msgid "      Trying %s (arch=%s)\n"
 msgstr ""
 
-#: upgrade-dist.c:100
+#: upgrade-dist.c:111
 #, c-format
 msgid "%s: multiple instances installed, skipped"
 msgstr "%s: mehrfach installiert, übersprungen"
 
-#: upgrade-dist.c:110
+#: upgrade-dist.c:121
 #, c-format
 msgid "%s: skip held package"
 msgstr "%s: überspringe gesperrtes (hold) Paket"
 
-#: upgrade-dist.c:132
+#: upgrade-dist.c:143
 msgid "Looking up packages for upgrade..."
 msgstr "Suche zu aktualisierende Pakete ..."
 
-#: vfile/extcompr.c:143 vfile/fetch.c:464
+#: vfile/extcompr.c:143 vfile/fetch.c:471
 msgid "program exited with non-zero value"
 msgstr "Programm wurde mit einem Rückkehrwert ungleich 0 beendet"
 
@@ -2442,37 +2533,37 @@ msgstr "Frage '%s' ab...\n"
 msgid "Compressing %s...\n"
 msgstr "Frage '%s' ab...\n"
 
-#: vfile/fetch.c:442
+#: vfile/fetch.c:449
 #, c-format
 msgid "Running %s\n"
 msgstr "Führe '%s' aus\n"
 
-#: vfile/p_open.c:215 vfile/vopen3.c:357
+#: vfile/p_open.c:216 vfile/vopen3.c:358
 #, c-format
 msgid "%s (%d) died under inscrutable circumstances"
 msgstr "'%s' (%d) wurde unter rätselhaften Umständen beendet"
 
-#: vfile/vfetch.c:149
+#: vfile/vfetch.c:150
 #, c-format
 msgid "Retrying...(#%d)\n"
 msgstr "Versuche erneut...(#%d)\n"
 
-#: vfile/vfetch.c:243 vfile/vfetch.c:302
+#: vfile/vfetch.c:247 vfile/vfetch.c:311
 #, fuzzy, c-format
-msgid "Retrieving %s::%s...\n"
+msgid "Retrieving %s%s::%s...\n"
 msgstr "Frage '%s' ab...\n"
 
-#: vfile/vfetch.c:246 vfile/vfetch.c:305
-#, c-format
-msgid "Retrieving %s...\n"
+#: vfile/vfetch.c:250 vfile/vfetch.c:314
+#, fuzzy, c-format
+msgid "Retrieving %s%s...\n"
 msgstr "Frage '%s' ab...\n"
 
-#: vfile/vfetch.c:367
+#: vfile/vfetch.c:378
 #, fuzzy, c-format
 msgid "Retrieving status of %s...\n"
 msgstr "Frage '%s' ab...\n"
 
-#: vfile/vfff/ftp.c:90 vfile/vfff/http.c:215
+#: vfile/vfff/ftp.c:90 vfile/vfff/http.c:216
 #, c-format
 msgid "write to socket %s: %m"
 msgstr "Schreibe in Socket '%s': %m"
@@ -2482,17 +2573,17 @@ msgstr "Schreibe in Socket '%s': %m"
 msgid "response parse error: %s"
 msgstr "Fehler bei der Analyse der Antwort: %s"
 
-#: vfile/vfff/ftp.c:226 vfile/vfff/ftp.c:237 vfile/vfff/http.c:414
-#: vfile/vfff/http.c:650
+#: vfile/vfff/ftp.c:226 vfile/vfff/ftp.c:237 vfile/vfff/http.c:415
+#: vfile/vfff/http.c:651
 #, c-format
 msgid "%s: response parse error"
 msgstr "%s: Fehler bei der Analyse der Antwort"
 
-#: vfile/vfff/ftp.c:335 vfile/vfff/http.c:515
+#: vfile/vfff/ftp.c:335 vfile/vfff/http.c:516
 msgid "response line too long"
 msgstr "Antwortzeile ist zu lang"
 
-#: vfile/vfff/ftp.c:348 vfile/vfff/http.c:528
+#: vfile/vfff/ftp.c:348 vfile/vfff/http.c:529
 msgid "unexpected EOF"
 msgstr "unerwartetes EOF"
 
@@ -2520,62 +2611,62 @@ msgstr "%s: Adresse ist zu lang"
 msgid "%s: no such file (serv said: %s)"
 msgstr "%s: Datei nicht vorhanden (Server sagt: %s)"
 
-#: vfile/vfff/http.c:682
+#: vfile/vfff/http.c:686
 #, fuzzy, c-format
 msgid "%s: permission denied"
 msgstr "%s: keine Berechtigung"
 
-#: vfile/vfff/http.c:686
+#: vfile/vfff/http.c:690
 #, fuzzy, c-format
 msgid "%s: invalid range requested"
 msgstr "%s: ungültigen Bereich angefordert"
 
-#: vfile/vfff/http.c:861
+#: vfile/vfff/http.c:865
 #, fuzzy, c-format
 msgid "Content-Length parse error (%s)"
 msgstr "%s: Fehler bei der Analyse von 'Content-Length' (%s)"
 
-#: vfile/vfff/http.c:990
+#: vfile/vfff/http.c:994
 #, fuzzy, c-format
 msgid "%s: Content-Range parse error (%s)"
 msgstr "%s: Fehler bei den Analyse von 'Content-Range' (%s)"
 
-#: vfile/vfff/http.c:998
+#: vfile/vfff/http.c:1002
 #, fuzzy, c-format
 msgid "%s: invalid Content-Range, truncate %s\n"
 msgstr "%s: ungültige 'Content-Range' erreicht"
 
-#: vfile/vfff/http.c:1008
+#: vfile/vfff/http.c:1012
 #, fuzzy, c-format
 msgid "%s: already downloaded; mtime %s\n"
 msgstr "%s: bereits übertragen\n"
 
-#: vfile/vfff/http.c:1015
+#: vfile/vfff/http.c:1019
 #, fuzzy, c-format
 msgid "%s: invalid Content-Range reached"
 msgstr "%s: ungültige 'Content-Range' erreicht"
 
-#: vfile/vfff/vfff.c:76
+#: vfile/vfff/vfff.c:86
 #, fuzzy
 msgid "connection cancelled"
 msgstr "Verbindung abgebrochen"
 
-#: vfile/vfff/vfff.c:140
+#: vfile/vfff/vfff.c:150
 #, c-format
 msgid "unable to connect to %s:%s: %s"
 msgstr "keine Verbindung zu %s:%s: %s"
 
-#: vfile/vfff/vfff.c:170
+#: vfile/vfff/vfff.c:180
 #, c-format
 msgid "unable to connect to %s:%s: %m"
 msgstr "keine Verbindung zu %s:%s: %m"
 
-#: vfile/vflock.c:116
+#: vfile/vflock.c:117
 #, fuzzy, c-format
 msgid "Waiting for lock %s...\n"
 msgstr "Speichere '%s'..."
 
-#: vfile/vflock.c:147
+#: vfile/vflock.c:148
 #, fuzzy, c-format
 msgid "%s: unable to obtain lock\n"
 msgstr "%s: dieser Quelltyp ist nicht aktualsierbar"
@@ -2590,7 +2681,7 @@ msgstr " fertig"
 msgid "%s: URL parse error\n"
 msgstr "%s: Fehler bei der Analyse der URL"
 
-#: vfile/vopen3.c:349
+#: vfile/vopen3.c:350
 #, fuzzy, c-format
 msgid "%s terminated by signal %d (%s)"
 msgstr "'%s' beendet durch Signal %d"
@@ -2802,9 +2893,6 @@ msgstr "'%s' beendet durch Signal %d"
 
 #~ msgid "Remove all source files from cache directory"
 #~ msgstr "Lösche alle Quelldateien aus dem Pufferverzeichnis"
-
-#~ msgid "Verify options:"
-#~ msgstr "Optionen für 'Überprüfen':"
 
 #~ msgid "Verify package dependencies"
 #~ msgstr "Überprüfe Paketabhängigkeiten"
