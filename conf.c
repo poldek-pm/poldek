@@ -1026,7 +1026,10 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
         goto l_end;
     }
 
-    n_hash_insert(af_htconf, af->path, NULL);
+    if (n_hash_exists(af_htconf, af->path))
+        logn(LOGERR, "%s: included twice", af->path);
+    else
+        n_hash_insert(af_htconf, af->path, NULL);
 
     while (n_stream_gets(af->vf->vf_tnstream, buf, sizeof(buf) - 1)) {
         char *name, *value, *line;
