@@ -363,7 +363,8 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 
 	if (mdpatchsize * 9 / 10 > mdsize) {
 	    vfile_close(vf);
-	    msgn(1, _("Index patches size too bug\nRetreving index ...\n"));
+	    msgn(1, _("Index patches size too big\n"));
+	    msgn(1, _("Retrieving whole index ...\n"));
 	    rc = update_whole_idx(pkgdir->src);
 	    if (rc)
 	      *uprc = PKGDIR_UPRC_UPTODATE;
