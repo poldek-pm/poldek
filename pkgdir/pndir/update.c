@@ -361,7 +361,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 	
 	msgn(2, "pndir_m_update idxpatches/idxsize: %ld/%ld bytes\n", mdpatchsize, mdsize);
 
-	if (mdpatchsize > mdsize) {
+	if (mdpatchsize * 9 / 10 > mdsize) {
 	    vfile_close(vf);
 	    msgn(1, _("Index patches size too bug\nRetreving index ...\n"));
 	    rc = update_whole_idx(pkgdir->src);
