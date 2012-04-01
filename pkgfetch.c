@@ -252,7 +252,7 @@ int packages_fetch(struct pm_ctx *pmctx,
             nerr++;
         
         else {
-            int j;
+            unsigned int j;
                 
             for (j=0; j < n_array_size(urls); j++) {
                 char localpath[PATH_MAX];
