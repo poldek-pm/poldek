@@ -69,7 +69,7 @@ NEWS.html: $(abs_builddir)/NEWS.docb.tmp NEWS.xsl
 	xmlto --skip-validation -m $(srcdir)/NEWS.xsl -m $(srcdir)/manual-web.xsl xhtml-nochunks NEWS.docb.tmp && mv NEWS.docb.html $@
 
 $(MANUAL_XHTMLDIR): $(abs_builddir)/manual.xml.xhtml.tmp
-	$(mkdir_p) $(MANUAL_XHTMLDIR)
+	$(MKDIR_P) $(MANUAL_XHTMLDIR)
 	rm -f $(MANUAL_XHTMLDIR)/*.*
 	xmlto --skip-validation -m $(srcdir)/manual.xsl -o $(MANUAL_XHTMLDIR) xhtml $<
 # remove empty indexterm's (I'm docbook novice)
@@ -78,7 +78,7 @@ $(MANUAL_XHTMLDIR): $(abs_builddir)/manual.xml.xhtml.tmp
 
 # as above but with manual-web.xsl
 manual-web: $(abs_builddir)/manual.xml.xhtml.tmp
-	$(mkdir_p) manual-web
+	$(MKDIR_P) manual-web
 	rm -f manual-web/*.*
 	xmlto --skip-validation -m $(srcdir)/manual.xsl -m $(srcdir)/manual-web.xsl -o manual-web xhtml $<
 # remove empty indexterm's (I'm docbook novice)
@@ -108,7 +108,7 @@ clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#* *\# poldek.html *.tmp
 
 install-exec-hook:
-	$(mkdir_p) "$(DESTDIR)$(infodir)"
+	$(MKDIR_P) "$(DESTDIR)$(infodir)"
 	$(INSTALL_DATA) $(srcdir)/poldek.info $(DESTDIR)$(infodir)
 
 uninstall-hook:

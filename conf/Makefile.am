@@ -25,7 +25,7 @@ poldek.conf: $(top_srcdir)/doc/poldek.conf.xml $(top_srcdir)/doc/*.xsl
 	$(SHELL) $(top_srcdir)/doc/conf-xml2.sh conf $(top_srcdir)/doc/poldek.conf.xml poldek
 
 install-data-local: $(GENCONFIGS)
-	 $(mkdir_p) $(DESTDIR)$(sysconfdir)/$(PACKAGE)/repos.d
+	 $(MKDIR_P) $(DESTDIR)$(sysconfdir)/$(PACKAGE)/repos.d
 	 for a in $(CONFIGS); do \
 	 	$(INSTALL_DATA) $(srcdir)/$$a $(DESTDIR)$(sysconfdir)/$(PACKAGE); \
 	 done
