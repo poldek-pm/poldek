@@ -446,8 +446,8 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
         snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds\n",
                  term_width_div2 + term_width_div2/10, (term_width/7));
 
-        snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%-%ds\n",
-                 term_width_div2 + term_width_div2/10, (term_width/7));
+        snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds %%-%ds\n",
+                 term_width_div2 + term_width_div2/10 - 1, (term_width/7));
 
 	if (flags & OPT_LS_GROUP)
 	    snprintf(hdr, sizeof(hdr), fmt_hdr, _("package"), _("group"));
