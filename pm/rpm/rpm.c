@@ -253,14 +253,11 @@ char *pm_rpm_dbpath(void *pm_rpm, char *path, size_t size)
 
 time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath) 
 {
-    const char *file = "packages.rpm";
+    const char *file = "Packages";
     char path[PATH_MAX];
     struct stat st;
 
     pm_rpm = pm_rpm;
-#ifdef HAVE_RPM_4_0
-    file = "Packages";
-#endif
     
     snprintf(path, sizeof(path), "%s/%s", dbpath, file);
      

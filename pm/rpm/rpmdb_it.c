@@ -10,10 +10,6 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*
-  $Id$
-*/
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -30,21 +26,16 @@
 /* remeber! don't touch any member */
 struct rpmdb_it {
     int                  tag;
-#ifdef HAVE_RPM_4_0
-    rpmdbMatchIterator   mi;
+#ifdef HAVE_RPMMI
+    rpmmi                mi;
 #else
-    dbiIndexSet          matches;
-    int                  i;
-    int                  recno;
-#endif
+    rpmdbMatchIterator   mi;
+#endif /* HAVE_RPMMI */
     
     struct pm_dbrec      dbrec;
     rpmdb                db; 
 };
 
-
-
-#ifdef HAVE_RPM_4_0
 static
 int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
 {
@@ -94,154 +85,50 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
             break;
     }
     
-    
     DBGF("%p, %p\n", it, db);
     it->tag = tag;
     it->db = db;
+#ifdef HAVE_RPMMI
+    it->mi = rpmmiInit(db, rpmtag, arg, argsize);
+    return rpmmiCount(it->mi);
+#else
     it->mi = rpmdbInitIterator(db, rpmtag, arg, argsize);
     return rpmdbGetIteratorCount(it->mi);
+#endif /* HAVE_RPMMI */
 }
-
-#else  /* HAVE_RPM_4_0 */
-/* Ancient rpm3 */
-static
-int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg) 
-{
-    int rc, n;
-    
-    it->matches.count = 0;
-    it->matches.recs = NULL;
-    it->i = 0;
-    it->recno = 0;
-    it->db = db;
-    it->dbrec.hdr = NULL;
-    it->dbrec.recno = 0;
-    it->tag = tag;
-    
-    switch (tag) {
-        case PMTAG_RECNO:
-            it->recno = rpmdbFirstRecNum(db);
-            if (recno == 0)
-                return 0;
-            if (recno < 0)
-                n_die("%d: invalid recno", recno);
-            break;
-            
-        case PMTAG_NAME:
-            rc = rpmdbFindPackage(db, arg, &it->matches);
-            break;
-            
-        case PMTAG_FILE:
-        case PMTAG_DIRNAME:
-            rc = rpmdbFindByFile(db, arg, &it->matches);
-            break;
-
-        case PMTAG_CAP:
-            rc = rpmdbFindByProvides(db, arg, &it->matches);
-            break;
-            
-        case PMTAG_REQ:
-            rc = rpmdbFindByRequiredBy(db, arg, &it->matches);
-            break;
-            
-        case PMTAG_CNFL:
-            rc = rpmdbFindByConflicts(db, arg, &it->matches);
-            break;
-            
-        case PMTAG_OBSL:
-            n_die("missing feature"); /* don't remember in fact */
-            rc = rpmdbFindByConflicts(db, arg, &it->matches);
-            break;
-            
-        default:
-            n_assert(0);
-    }
-    if (rc < 0)
-        n_die("rpm database error");
-    
-    else if (rc != 0) {
-        n = 0;
-        it->matches.count = 0;
-        
-    } else if (rc == 0)
-        n = it->matches.count;
-
-    return n;
-}
-#endif /* HAVE_RPM_4_0 */
-
 
 static
 void rpmdb_it_destroy(struct rpmdb_it *it) 
 {
-
-#ifdef HAVE_RPM_4_0
+#ifdef HAVE_RPMMI
     rpmdbFreeIterator(it->mi);
+#else
+    rpmmiFree(it->mi);
+#endif /* HAVE_RPMMI */
     it->mi = NULL;
     it->dbrec.hdr = NULL;
     DBGF("%p, %p\n", it, it->db);
-#else
-    if (it->dbrec.hdr != NULL) {
-        headerFree(it->dbrec.hdr);
-        it->dbrec.hdr = NULL;
-    }
-    
-    it->db = NULL;
-    if (it->tag != PMTAG_RECNO)
-        dbiFreeIndexRecord(it->matches);
-    it->matches.count = 0;
-    it->matches.recs = NULL;
-#endif    
 }
 
 
 static
 const struct pm_dbrec *rpmdb_it_get(struct rpmdb_it *it)
 {
-#ifdef HAVE_RPM_4_0
+#ifdef HAVE_RPMMI
+    it->dbrec.hdr = rpmmiNext(it->mi);
+    
+    if (it->dbrec.hdr == NULL)
+        return NULL;
+
+    it->dbrec.recno = rpmmiInstance(it->mi);
+#else
     it->dbrec.hdr = rpmdbNextIterator(it->mi);
-    DBGF("%p, %p\n", it, it->db);
     
     if (it->dbrec.hdr == NULL)
         return NULL;
 
     it->dbrec.recno = rpmdbGetIteratorOffset(it->mi);
-#else
-    
-    if (it->tag == PMTAG_RECNO) {
-        if (it->recno <= 0)
-            return NULL;
-        
-        n_assert(it->recno);
-        it->dbrec.recno = it->recno;
-        it->dbrec.hdr = rpmdbGetRecord(it->db, it->recno);
-        it->recno = rpmdbNextRecNum(db, it->recno);
-        it->i++;
-        return &it->dbrec;
-    }
-
-    if (it->i == it->matches.count) {
-        if (it->dbrec.hdr != NULL) 
-            headerFree(it->dbrec.hdr);
-        it->dbrec.hdr = NULL;
-        it->i++;
-        return NULL;
-    }
-
-    if (it->i > it->matches.count)
-        n_die("rpm database error?");
-
-    if (it->dbrec.hdr != NULL)
-        headerFree(it->dbrec.hdr);
-    
-    it->dbrec.recno = it->matches.recs[it->i].recOffset;
-    it->dbrec.hdr = rpmdbGetRecord(it->db, it->dbrec.recno);
-    it->i++;
-    
-    if (it->dbrec.hdr == NULL)
-        n_die("rpm database error?");
-    
-#endif /* HAVE_RPM_4_0 */
+#endif /* HAVE_RPMMI */
 
     return &it->dbrec;
 }
@@ -249,14 +136,11 @@ const struct pm_dbrec *rpmdb_it_get(struct rpmdb_it *it)
 static
 int rpmdb_it_get_count(struct rpmdb_it *it)
 {
-#ifdef HAVE_RPM_4_0
-    return rpmdbGetIteratorCount(it->mi);
+#ifdef HAVE_RPMMI
+    return rpmmiCount(it->mi);
 #else
-    if (it->tag == PMTAG_RECNO)
-        return it->recno > 0 ? 1000:0; /* TODO howto do dbcount() with rpm3 */
-        
-    return it->matches.count;
-#endif /* HAVE_RPM_4_0 */
+    return rpmdbGetIteratorCount(it->mi);
+#endif /* HAVE_RPMMI */
 }
 
 static 

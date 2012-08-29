@@ -22,6 +22,10 @@
 # include <rpm/rpmcb.h>
 #endif
 
+#ifdef HAVE_RPMMI
+# include <rpm/rpmtypes.h>
+#endif
+
 #if HAVE_RPMDSRPMLIB
 # include <rpm/rpmds.h>
 #endif

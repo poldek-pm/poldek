@@ -79,6 +79,7 @@ if test -n "$GCC"; then
   )
 fi
 
+PKG_PROG_PKG_CONFIG()
 
 PKG_CHECK_MODULES(CHECK, check >= 0.9.4, have_check=yes, have_check=no)
  
@@ -196,7 +197,12 @@ AC_CHECK_HEADERS([sys/filio.h])
 
 dnl RH rpm needs this
 CPPFLAGS="-I/usr/include/rpm $CPPFLAGS"
-AC_CHECK_HEADER([rpm/rpmlib.h],,AC_MSG_ERROR(["missing required rpmlib.h"]))
+AC_CHECK_HEADER([rpm/rpmdb.h],,AC_MSG_ERROR(["missing required rpmlib.h"]))
+
+AC_CHECK_TYPE([rpmmi],
+	      [AC_DEFINE([HAVE_RPMMI], 1, [rpm with database iterator])],
+	      [],
+	      [[#include <rpm/rpmtypes.h>]])
 
 AC_MSG_CHECKING([for rpm 4.x])
 #RPMDBI_PACKAGES

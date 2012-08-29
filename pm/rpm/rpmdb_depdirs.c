@@ -76,10 +76,7 @@ int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath,
     return -1;
 #endif    
     
-    index = "requirename.rpm";
-#ifdef HAVE_RPM_4_0
     index = "Requirename";
-#endif
 
 #ifdef HAVE_RPM_5
     dbtype = DB_BTREE; /* XXX: should be detected at runtime */

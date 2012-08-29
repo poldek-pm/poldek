@@ -10,10 +10,6 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*
-  $Id$
-*/
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -66,17 +62,6 @@ static int rpm_read_signature(FD_t fd, Header *sighp, int sig_type)
     return 0;
 }
     
-/* rpmlib's rpmCheckSig reports success when GPG signature is missing,
-   so it is useless for real sig verification */
-#if !defined HAVE_RPM_4_0
-static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
-{
-    *signature_flags = VRFYSIG_DGST;
-    path = path;
-    return 1;
-}
-
-#else  /* 4.x series  */
 static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd) 
 {
     unsigned        flags;
@@ -161,7 +146,6 @@ static int rpm_signatures(const char *path, unsigned *signature_flags, FD_t *fd)
     *signature_flags = flags;
     return 1;
 }
-#endif 
 
 
 
@@ -279,7 +263,6 @@ int do_verify_signature(const char *path, unsigned flags)
 #endif
 
 
-#ifdef HAVE_RPM_4_0
 static
 int do_pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags) 
 {
@@ -302,61 +285,6 @@ int do_pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags)
 
     return do_verify_signature(path, rpmflags);
 }
-
-#else  /* HAVE_RPMCHECKSIG */
-extern int pm_rpm_execrpm(const char *cmd, char *const argv[],
-                          int ontty, int verbose_level);
-static
-int do_pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags) 
-{
-    struct pm_rpm *pm = pm_rpm;
-    char **argv;
-    char *cmd;
-    int i, n, nopts = 0;
-
-    pm_rpm_setup_commands(pm);
-    
-    n = 32;
-    argv = alloca((n + 1) * sizeof(*argv));
-    argv[n] = NULL;
-    n = 0;
-    
-    cmd = pm->rpm;
-    argv[n++] = n_basenam(pm->rpm);
-    argv[n++] = "-K";
-
-    nopts = n;
-    
-    if ((flags & PKGVERIFY_GPG) == 0)
-        argv[n++] = "--nogpg";
-
-    if ((flags & PKGVERIFY_PGP) == 0)
-        argv[n++] = "--nopgp";
-    
-    
-    if ((flags & PKGVERIFY_MD) == 0) {
-        argv[n++] = "--nomd5";
-    }
-    n_assert(n > nopts);        /* any PKGVERIFY_* given? */
-    
-    argv[n++] = (char*)path;
-    nopts = n;
-    argv[n++] = NULL;
-    
-    if (verbose > 1) {
-        char buf[1024], *p;
-        p = buf;
-        
-        for (i=0; i < nopts; i++) 
-            p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
-        *p = '\0';
-        msgn(1, _("Executing%s..."), buf);
-    }
-
-    return pm_rpm_execrpm(cmd, argv, 0, 4) == 0;
-}
-
-#endif /* HAVE_RPMCHECKSIG */
 
 extern int pm_rpm_verbose;
 int pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags) 
