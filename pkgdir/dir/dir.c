@@ -18,6 +18,7 @@
 # include "config.h"
 #endif
 
+#include <dirent.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>

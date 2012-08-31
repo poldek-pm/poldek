@@ -6,9 +6,6 @@
   the Free Software Foundation (see file COPYING for details).
 */
 
-/*
-  $Id$
-*/
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -19,7 +16,6 @@
 #include <string.h>
 
 #include <trurl/trurl.h>
-#include <rpm/rpmlib.h>
 
 #define ENABLE_TRACE 0
 

@@ -21,18 +21,25 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 #include <time.h> /* rpmts.h with defined _RPMTS_INTERNAL needs ctime() */
 
 #include <trurl/nassert.h>
 #include <trurl/nstr.h>
 
-#include <rpm/rpmlib.h>
+#ifdef HAVE_RPM_5
+# include <rpm/rpmtypes.h>
+# include <rpm/rpmtag.h>
+# include <rpm/rpmio.h>
+#else
+# include <rpm/rpmlib.h>
+#endif
 #include <rpm/rpmte.h>
 #if HAVE_RPM_4_1
 # define _RPMPRCO_INTERNAL
 # include <rpm/rpmds.h>
 #endif
-#define _RPMTS_INTERNAL
+//#define _RPMTS_INTERNAL
 #include <rpm/rpmts.h>
 
 #include "capreq.h"
@@ -224,6 +231,8 @@ static int rpmioaccess_satisfies(const struct capreq *req)
     return rc;
 }
 
+
+#if 0
 static int rpmdiskspace_satisfies(const struct capreq *req)
 {
     const char *name = NULL;
@@ -307,6 +316,8 @@ static int rpmdiskspace_satisfies(const struct capreq *req)
     
     return rc;
 }
+#endif
+
 
 int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
 {
@@ -320,8 +331,10 @@ int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
     if (rpmioaccess_satisfies(req))
         return 1;
 
+#if 0
     if (rpmdiskspace_satisfies(req))
 	return 1;
+#endif
 
     if (pm->caps == NULL)
         if ((pm->caps = load_internal_caps(pm_rpm)) == NULL)

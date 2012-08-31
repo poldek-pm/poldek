@@ -18,7 +18,7 @@
 # include "config.h"
 #endif
 
-#ifndef HAVE_RPMPKGREAD          /* rpm 5.x */
+#ifndef HAVE_RPM_5          /* rpm 5.x */
 # error "not rpm 5.x"
 #endif
 
@@ -31,10 +31,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <rpm/rpmtypes.h>
+#include <rpm/rpmtag.h>
 #include <rpm/rpmcb.h>
-#include <rpm/rpmlib.h>
 #include <rpm/rpmio.h>
-#include <rpm/rpmurl.h>
 #include <rpm/rpmmacro.h>
 
 #include <rpm/rpmts.h>

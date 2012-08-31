@@ -29,11 +29,13 @@
 #include "pm_rpm.h"
 
 #if defined(HAVE_RPM_4_0_4) || defined(HAVE_RPM_VERSION_GE_4_4_8)           /* missing prototypes in public headers */
+#ifndef HAVE_RPM_5
 int headerGetRawEntry(Header h, int_32 tag,
                       /*@null@*/ /*@out@*/ hTYP_t type,
                       /*@null@*/ /*@out@*/ hPTR_t * p, 
                       /*@null@*/ /*@out@*/ hCNT_t c);
 char ** headerGetLangs(Header h);
+#endif
 #endif
 
 
@@ -122,8 +124,9 @@ int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
         return 0;
     }
 #endif
-    
-    if (tag == RPMTAG_GROUP && type == RPM_STRING_TYPE) { /* build by old rpm */
+
+#ifndef HAVE_RPM_5
+    if (tag == RPMTAG_GROUP && type == RPM_STRING_TYPE) { // build by old rpm
         char **g;
 	
         n_assert(*cnt == 1);
@@ -133,7 +136,8 @@ int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
         g[1] = NULL;
         *(char ***)buf = g;
     }
-    
+#endif
+
     DBGF("%d type=%d, cnt=%d\n", tag, type, *cnt);
     return 1;
 }
@@ -147,7 +151,10 @@ int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
 #else 
     rpmRC rpmrc;
     rpmts ts = rpmtsCreate();
-    rpmtsSetVSFlags(ts, _RPMVSF_NODIGESTS | _RPMVSF_NOSIGNATURES);
+    rpmtsSetVSFlags(ts, RPMVSF_NOSHA1HEADER | RPMVSF_NOMD5HEADER |
+                        RPMVSF_NOSHA1 | RPMVSF_NOMD5 |
+                        RPMVSF_NODSAHEADER | RPMVSF_NORSAHEADER |
+                        RPMVSF_NODSA | RPMVSF_NODSA);
     rpmrc = rpmReadPackageFile(ts, fdt, path, hdr);
     switch (rpmrc) {
         case RPMRC_NOTTRUSTED:

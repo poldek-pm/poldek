@@ -101,9 +101,9 @@ static
 void rpmdb_it_destroy(struct rpmdb_it *it) 
 {
 #ifdef HAVE_RPMMI
-    rpmdbFreeIterator(it->mi);
-#else
     rpmmiFree(it->mi);
+#else
+    rpmdbFreeIterator(it->mi);
 #endif /* HAVE_RPMMI */
     it->mi = NULL;
     it->dbrec.hdr = NULL;

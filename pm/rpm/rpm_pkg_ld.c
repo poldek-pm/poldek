@@ -21,7 +21,6 @@
 
 #ifdef HAVE_RPM_RPMEVR_H
 # define _RPMEVR_INTERNAL 1
-# include <rpm/rpmevr.h>
 #endif
 
 #include "i18n.h"

@@ -16,14 +16,19 @@
 #include <sys/time.h>           /* timeval */
 
 #define _RPMPRCO_INTERNAL 1 /* see pm_rpmdsSysinfo */
-#include <rpm/rpmlib.h>
+
+#ifdef HAVE_RPM_5
+# include <rpm/rpmtypes.h>
+# include <rpm/rpmiotypes.h>
+# include <rpm/rpmtag.h>
+# include <rpm/pkgio.h>
+#else
+# include <rpm/rpmlib.h>
+# include <rpm/rpmurl.h>
+#endif /* HAVE_RPM_5 */
 
 #ifdef HAVE_RPM_RPMCB_H
 # include <rpm/rpmcb.h>
-#endif
-
-#ifdef HAVE_RPMMI
-# include <rpm/rpmtypes.h>
 #endif
 
 #if HAVE_RPMDSRPMLIB
@@ -45,7 +50,6 @@
 # include <rpm/rpmdb.h>
 #endif
 
-#include <rpm/rpmurl.h>
 #include <rpm/rpmmacro.h>
 
 #ifdef RPM_MAJOR_VERSION
@@ -54,6 +58,12 @@
 #  define HAVE_RPM_VERSION_GE_4_4_8 1
 # endif
 # if PM_RPMVER(RPM_FORMAT_VERSION,RPM_MAJOR_VERSION,RPM_MINOR_VERSION) >= PM_RPMVER(5,0,0)
+#  define HAVE_RPM_VERSION_GE_5 1
+# endif
+#else
+# include <rpm/rpmversion.h>
+# if defined(RPMLIB_VERSION) && RPMLIB_VERSION >= RPMLIB_VERSION_ENCODE(5,0,r,0,0,_)
+#  define HAVE_RPM_VERSION_GE_4_4_8 1
 #  define HAVE_RPM_VERSION_GE_5 1
 # endif
 #endif 
