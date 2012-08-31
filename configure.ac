@@ -197,21 +197,15 @@ AC_CHECK_HEADERS([sys/filio.h])
 
 dnl RH rpm needs this
 CPPFLAGS="-I/usr/include/rpm $CPPFLAGS"
-AC_CHECK_HEADER([rpm/rpmdb.h],,AC_MSG_ERROR(["missing required rpmlib.h"]))
-
-AC_CHECK_TYPE([rpmmi],
-	      [AC_DEFINE([HAVE_RPMMI], 1, [rpm with database iterator])],
-	      [],
-	      [[#include <rpm/rpmtypes.h>]])
+AC_CHECK_HEADER([rpm/rpmdb.h], [], AC_MSG_ERROR(["missing required rpmdb.h"]))
 
 AC_MSG_CHECKING([for rpm 4.x])
-#RPMDBI_PACKAGES
 AC_EGREP_CPP(yes,
-     [#include <rpm/rpmlib.h>
-      #ifdef RPMDBI_PACKAGES
-       yes
-      #endif
-     ], is_rpm4=yes, is_rpm4=no)
+    [#include <rpm/rpmlib.h>
+     #ifdef RPMDBI_PACKAGES
+	yes
+     #endif
+    ], is_rpm4=yes, is_rpm4=no)
 
 if test "${is_rpm4}." = "no." ; then
 	AC_MSG_RESULT(no)
@@ -242,17 +236,36 @@ else
 		[ #include <rpm/rpmlib.h>
 		], have_tag_pubkeys=yes, have_tag_pubkeys=no)
 
-	if test "${have_tag_pubkeys}." = "yes." ; then
-		AC_DEFINE([HAVE_RPMTAG_PUBKEYS],1,["rpm with RPMTAG_PUBKEYS"])
-	fi
-
         AC_EGREP_CPP(RPMTAG_SUGGESTS,
 		[ #include <rpm/rpmlib.h>
 		], have_tag_suggests=yes, have_tag_suggests=no)
+fi
 
-	if test "${have_tag_suggests}." = "yes." ; then
-		AC_DEFINE([HAVE_RPMTAG_SUGGESTS],1,["rpm with RPMTAG_SUGGESTS support"])
-	fi
+AC_MSG_CHECKING([for rpm 5.x])
+
+PKG_CHECK_EXISTS([rpm >= 5.0], [is_rpm5=yes], [is_rpm5=no])
+
+if test "${is_rpm5}." = "yes."; then
+    AC_MSG_RESULT(yes)
+    AC_EGREP_CPP(RPMTAG_PUBKEYS,
+    		 [ #include <rpm/rpmtag.h>
+    		 ], have_tag_pubkeys=yes, have_tag_pubkeys=no)
+
+    AC_EGREP_CPP(RPMTAG_SUGGESTS,
+		 [ #include <rpm/rpmtag.h>
+		 ], have_tag_suggests=yes, have_tag_suggests=no)
+
+    AC_DEFINE([HAVE_RPM_5], [1], [])
+else
+    AC_MSG_RESULT(no)
+fi
+
+if test "${have_tag_pubkeys}." = "yes." ; then
+    AC_DEFINE([HAVE_RPMTAG_PUBKEYS], 1, [rpm with RPMTAG_PUBKEYS])
+fi
+
+if test "${have_tag_suggests}." = "yes." ; then
+    AC_DEFINE([HAVE_RPMTAG_SUGGESTS], 1, [rpm with RPMTAG_SUGGESTS support])
 fi
 
 dnl Checks for libraries.
@@ -361,21 +374,19 @@ AC_CHECK_FUNCS(_rpmvercmp)
 dnl rpm 4.4.9
 AC_CHECK_HEADERS([rpm/rpmevr.h])
 
-dnl
 dnl rpm 5.x
 dnl fnpyKey provider
 AC_CHECK_HEADERS([rpm/rpmcb.h])
 AC_CHECK_FUNCS(rpmpkgRead)
-AC_MSG_CHECKING([for rpm 5.x])
-if test "$ac_cv_func_rpmpkgRead." != "yes."; then
-     AC_MSG_RESULT(no)   
-else
-     AC_DEFINE([HAVE_RPM_5], [1], [])
-     AC_MSG_RESULT(yes)
-fi
+
 AC_CHECK_FUNCS(headerNVR)     # removed since 5.0
 AC_CHECK_FUNCS(headerNEVRA)  
 AC_CHECK_FUNCS(rpmErrorString)
+
+AC_CHECK_TYPE([rpmmi],
+	      [AC_DEFINE([HAVE_RPMMI], 1, [rpm with database iterator])],
+	      [],
+	      [[#include <rpm/rpmtypes.h>]])
 
 dnl  - removed enum (not macro) HEADER_MAGIC_YES
 if test "${is_rpm4}." = "yes." ; then
