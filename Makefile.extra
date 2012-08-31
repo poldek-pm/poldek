@@ -1,17 +1,11 @@
-# $Id$
-
 PROJ_DIR=$(shell pwd)
 
 copylibs:
-	./getlib.sh trurlib copy
-	./getlib.sh tndb copy
+	git submodule init
+	git submodule update
 
-removelibs:
-	./getlib.sh trurlib link
-	./getlib.sh tndb link
-
-tarball: copylibs dist removelibs
-tarball-bz2: copylibs dist-bzip2 removelibs
+tarball: copylibs dist
+tarball-bz2: copylibs dist-bzip2
 
 rpm-package: tarball-bz2
 	rpmbuild -tb $(distdir).tar.bz2
@@ -50,21 +44,21 @@ backup:
 arch : mclean backup 
 
 POTFILES_in:
-	-rm -f poldek-cvs*
+	-rm -f poldek-git*
 	-find . -type f -name \*.c | egrep -v '(poldek-.*/|Cellar/|intl/|trurlib/|tndb/|python/|tests/|conf_sections.c)'  | sed 's|^\./||' | LC_ALL=C sort > po/POTFILES.in
 
 misarch: mclean
 	$(MAKE) -C . backup cparch=1 backupdir=/z
 
 snap: tarball-bz2
-	@dts=`date +%Y%m%d.%H` && rm -rf $(PACKAGE)-cvs$$dts* && \
+	@dts=`date +%Y%m%d.%H` && rm -rf $(PACKAGE)-git$$dts* && \
 	tar xpjf $(distdir).tar.bz2 && \
 	echo "$$dts" > $(distdir)/0_THIS_IS_SNAPSHOT && \
         perl -pi -e "s/VERSION_STATUS=.+$$/VERSION_STATUS=\"snap$$dts\"/" $(distdir)/configure $(distdir)/configure.in; \
-	mv -f $(distdir) $(PACKAGE)-$(VERSION)-cvs$$dts && \
-	tar cpjf $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2 $(PACKAGE)-$(VERSION)-cvs$$dts && \
-	rm -rf $(PACKAGE)-$(VERSION)-cvs$$dts && \
-	echo "$(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2"
+	mv -f $(distdir) $(PACKAGE)-$(VERSION)-git$$dts && \
+	tar cpjf $(PACKAGE)-$(VERSION)-git$$dts.tar.bz2 $(PACKAGE)-$(VERSION)-git$$dts && \
+	rm -rf $(PACKAGE)-$(VERSION)-git$$dts && \
+	echo "$(PACKAGE)-$(VERSION)-git$$dts.tar.bz2"
 
 snap-rpm-package: snap
 		dts=`date +%Y%m%d.%H` && echo $$dts && ls -l $(PACKAGE)-$(VERSION)-cvs$$dts.tar.bz2 &&\
