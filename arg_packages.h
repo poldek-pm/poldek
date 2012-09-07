@@ -36,9 +36,10 @@ EXPORT int arg_packages_setup(struct arg_packages *aps, struct pm_ctx *ctx);
 #define ARG_PACKAGES_RESOLV_UNAMBIGUOUS (1 << 2)/* don't match duplicates */
 #define ARG_PACKAGES_RESOLV_CAPS        (1 << 3)/* search in package caps too */
 #define ARG_PACKAGES_RESOLV_CAPSINLINE  (1 << 4)/* add packages found by caps
-                                                   to resolved packages
-                                                 */
+                                                   to resolved packages */
+#define ARG_PACKAGES_RESOLV_WARN_ONLY   (1 << 5)/* warn only*/
 
+                                                   
 EXPORT int arg_packages_resolve(struct arg_packages *aps,
                          tn_array *avpkgs,
                          struct pkgset *ps,/* =NULL, needed by RESOLV_CAPS only */

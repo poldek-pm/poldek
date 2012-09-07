@@ -666,13 +666,13 @@ tn_array *do_resolve(struct arg_packages *aps,
         
         if (matches[j] == 0 && (flags & ARG_PACKAGES_RESOLV_MISSINGOK) == 0) {
             logn(LOGERR, _("%s: no such package or directory"), mask);
-            n_array_clean(ments);
+            if (!(flags & ARG_PACKAGES_RESOLV_WARN_ONLY)) n_array_clean(ments);
         }
         
         if ((flags & ARG_PACKAGES_RESOLV_UNAMBIGUOUS) == 0) {
             if (matches_bycmp[j] > 1 && flags & ARG_PACKAGES_RESOLV_EXACT) {
                 logn(LOGERR, _("%s: ambiguous name"), mask);
-                n_array_clean(ments);
+                if (!(flags & ARG_PACKAGES_RESOLV_WARN_ONLY)) n_array_clean(ments);
             }
         }
     }

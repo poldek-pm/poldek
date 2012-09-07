@@ -26,6 +26,7 @@
 #include "cli.h"
 #include "log.h"
 #include "ls_queryfmt.h"
+#include "arg_packages.h"
 
 static int ls(struct cmdctx *cmdctx);
 static
@@ -358,7 +359,7 @@ static int ls(struct cmdctx *cmdctx)
     if (cmdctx->_flags & OPT_LS_INSTALLED)
         path = POCLIDEK_INSTALLEDDIR;
 
-    ls_ents = poclidek_resolve_dents(path, cmdctx->cctx, cmdctx->ts, 0);
+    ls_ents = poclidek_resolve_dents(path, cmdctx->cctx, cmdctx->ts, ARG_PACKAGES_RESOLV_WARN_ONLY);
     if (ls_ents == NULL || n_array_size(ls_ents) == 0) {
         rc = 0;
         goto l_end;
