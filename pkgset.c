@@ -614,8 +614,8 @@ int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps)
         if ((errs = pkgset_get_unsatisfied_reqs(ps, pkg))) {
             for (j=0; j < n_array_size(errs); j++) {
                 struct pkg_unreq *unreq = n_array_nth(errs, j);
-                logn(LOGERR, _("%s: req %s %s"),
-                     pkg_snprintf_s(pkg), unreq->req,
+                logn(LOGERR, _("%s.%s: req %s %s"),
+                     pkg_snprintf_s(pkg),pkg_arch(pkg), unreq->req,
                      unreq->mismatch ? _("version mismatch") : _("not found"));
                 nerr++;
             }
