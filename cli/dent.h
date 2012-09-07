@@ -68,10 +68,10 @@ EXPORT struct pkg_dent *poclidek_dent_find(struct poclidek_ctx *cctx, const char
 EXPORT struct pkg_dent *poclidek_dent_ldfind(struct poclidek_ctx *cctx, const char *path);
 
 EXPORT tn_array *poclidek_resolve_dents(const char *path, struct poclidek_ctx *cctx,
-                                 struct poldek_ts *ts, int exact);
+                                 struct poldek_ts *ts, int flags);
 
 EXPORT tn_array *poclidek_resolve_packages(const char *path, struct poclidek_ctx *cctx,
-                                    struct poldek_ts *ts, int exact);
+                                    struct poldek_ts *ts, int flags);
 
 EXPORT char *poclidek_pwd(struct poclidek_ctx *cctx, char *path, int size);
 

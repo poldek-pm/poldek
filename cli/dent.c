@@ -571,7 +571,7 @@ tn_array *do_resolve(struct arg_packages *aps, tn_array *ents,
 tn_array *poclidek_resolve_dents(const char *path,
                                  struct poclidek_ctx *cctx,
                                  struct poldek_ts *ts,
-                                 int exact)
+                                 int flags)
 {
     tn_array *ents;
 
@@ -581,8 +581,7 @@ tn_array *poclidek_resolve_dents(const char *path,
     if (poldek_ts_get_arg_count(ts) == 0)
         return n_ref(ents);
     
-    return do_resolve(ts->aps, ents,
-                      exact ? ARG_PACKAGES_RESOLV_EXACT : 0);
+    return do_resolve(ts->aps, ents, flags);
 }
 
 
@@ -696,15 +695,14 @@ tn_array *do_resolve(struct arg_packages *aps,
 
 
 tn_array *poclidek_resolve_packages(const char *path, struct poclidek_ctx *cctx,
-                                    struct poldek_ts *ts, int exact)
+                                    struct poldek_ts *ts, int flags)
 {
     tn_array *pkgs;
 
     if ((pkgs = poclidek_get_dent_packages(cctx, path)) == NULL)
         return NULL;
 
-    if (arg_packages_resolve(ts->aps, pkgs, NULL,
-                             exact ? ARG_PACKAGES_RESOLV_EXACT : 0)) {
+    if (arg_packages_resolve(ts->aps, pkgs, NULL, flags)) {
         pkgs = arg_packages_get_resolved(ts->aps);
         if (n_array_size(pkgs))
             return pkgs;

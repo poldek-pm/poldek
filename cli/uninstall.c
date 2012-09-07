@@ -28,7 +28,7 @@
 #include "cli.h"
 #include "poldek_util.h"
 #include "op.h"
-
+#include "arg_packages.h"
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 static int uninstall(struct cmdctx *cmdctx);
@@ -247,7 +247,7 @@ static int uninstall(struct cmdctx *cmdctx)
     }
 
     /* must be resolved here to allow globbing, RPM doesn't support globs AFAIK */
-    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, ts, 1);
+    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, ts, ARG_PACKAGES_RESOLV_EXACT);
     if (pkgs == NULL) {
         err++;
         goto l_end;
