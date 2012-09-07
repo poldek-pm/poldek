@@ -108,7 +108,7 @@ struct pkg {
     int groupid;              /* package group id (see pkgroups.c) */
 
     /* for installed packages */
-    int32_t      recno;        /* db's ID of the header */
+    uint32_t      recno;        /* db's ID of the header */
     int32_t      itime;        /* date of installation  */
 
     /* private, don't touch */
