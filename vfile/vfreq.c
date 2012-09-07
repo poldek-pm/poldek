@@ -224,7 +224,7 @@ int vf_request_open_destpath(struct vf_request *req)
 
 struct vf_request *vf_request_new(const char *url, const char *destpath)
 {
-    char               buf[PATH_MAX], tmp[PATH_MAX], *escaped_uri;
+    char               buf[PATH_MAX], pbuf[PATH_MAX], tmp[PATH_MAX], *escaped_uri;
     const char         *proxy = NULL;
     char               *err_msg = _("%s: URL parse error\n");
     struct vf_request  *req, rreq, preq;
@@ -241,7 +241,6 @@ struct vf_request *vf_request_new(const char *url, const char *destpath)
     }
     
     if ((proxy = get_proxy(&rreq))) {
-        char pbuf[PATH_MAX];
 
         snprintf(pbuf, sizeof(pbuf), "%s", proxy);
         memset(&preq, 0, sizeof(preq));
