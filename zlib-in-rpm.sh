@@ -1,6 +1,7 @@
 #! /bin/sh
-# $Id$
+#
 # Check if librpmio contains zlib linked in 
+#
 
 PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 rpmio=$(ldd /usr/bin/poldek | grep librpmio | awk '{print $3}')

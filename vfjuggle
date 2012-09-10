@@ -1,5 +1,4 @@
 #!/bin/sh
-# $Id$
 # Enviroment:
 # VF_MNTDEV	- the default is empty
 #			VF_MNTDEV=/dev/hdd

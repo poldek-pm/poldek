@@ -1,9 +1,13 @@
 /* 
-  Copyright (C) 2001 Pawel A. Gajda (mis@pld-linux.org)
+  Copyright (C) 2001 Pawel A. Gajda <mis@pld-linux.org>
  
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
   the Free Software Foundation (see file COPYING for details).
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
 #ifdef HAVE_CONFIG_H

@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id$
+#
 # Put this script on the first disk of dist set
 # 
 

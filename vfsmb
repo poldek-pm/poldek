@@ -1,6 +1,5 @@
 #! /bin/sh
-# $Id$
-
+#
 # support smb://[login[:passwd]@]host/service/[path/]file
 # requires: basename, grep, sed, smbclient
 
