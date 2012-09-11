@@ -37,7 +37,7 @@ struct rpmdb_it {
 };
 
 static
-int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
+void rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
 {
     int rpmtag = 0, argsize = 0;
     char path[PATH_MAX];
@@ -90,10 +90,8 @@ int rpmdb_it_init(rpmdb db, struct rpmdb_it *it, int tag, const char *arg)
     it->db = db;
 #ifdef HAVE_RPMMI
     it->mi = rpmmiInit(db, rpmtag, arg, argsize);
-    return rpmmiCount(it->mi);
 #else
     it->mi = rpmdbInitIterator(db, rpmtag, arg, argsize);
-    return rpmdbGetIteratorCount(it->mi);
 #endif /* HAVE_RPMMI */
 }
 
