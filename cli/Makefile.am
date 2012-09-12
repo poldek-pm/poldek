@@ -1,4 +1,4 @@
-# $Id$
+NULL =
 
 pkgincludedir = $(includedir)/poldek/poclidek
 
@@ -41,6 +41,10 @@ libpoclidek_la_SOURCES  =  \
 
 libpoclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
 
+libpoclidek_la_CFLAGS = 					\
+	$(WARNINGFLAGS_C)					\
+	$(NULL)
+
 libHEADERS = poclidek.h cmd.h dent.h op.h cli.h
 pkginclude_HEADERS = $(libHEADERS)
 
@@ -53,7 +57,8 @@ endif
 
 bin_PROGRAMS      = poldek
 poldek_SOURCES    = $(SHELL_MOD_) main.c su.c
-poldek_LDADD      = libpoclidek.la   
+poldek_LDADD      = libpoclidek.la
+poldek_CFLAGS     = $(WARNINGFLAGS_C)
 
 noinst_PROGRAMS   = test_cli poclidek_demo
 test_cli_SOURCES  = test_cli.c

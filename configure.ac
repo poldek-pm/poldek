@@ -1,6 +1,4 @@
-
 dnl Process this file with autoconf to produce a configure script.
-dnl $Id$
 
 AC_INIT([poldek],[0.30])
 AC_CONFIG_SRCDIR([capreq.c])
@@ -61,22 +59,41 @@ AM_GNU_GETTEXT_VERSION(0.11.5)
 AM_CFLAGS="-Wall -W"
 AC_SUBST(AM_CFLAGS)
 
+AC_ARG_ENABLE(strict, AS_HELP_STRING([--enable-strict], [Enable strict compilation options]), enable_strict=$enableval,
+                                                         enable_strict=no)
+
+if test x$enable_strict != xno; then
+    if test -n "$GCC"; then
+        WARNINGFLAGS_C="$WARNINGFLAGS_C -Werror"
+    fi
+fi
+
 if test -n "$GCC"; then
-  cflags_save="$CFLAGS"
-  CFLAGS="$CFLAGS -fvisibility=hidden"
-  AC_MSG_CHECKING([whether gcc supports visibility])
-  AC_TRY_COMPILE(
-	[extern __attribute__((__visibility__("hidden"))) int hiddenvar;
-	 extern __attribute__((__visibility__("default"))) int exportedvar;
-	 extern __attribute__((__visibility__("hidden"))) int hiddenfunc (void);
-	 extern __attribute__((__visibility__("default"))) int exportedfunc (void);],
-	[],
-	AC_MSG_RESULT(yes),
-	[
-	  AC_MSG_WARN([compiler does not support visibility])
-	  CFLAGS="$cflags_save"
-	]
-  )
+    WARNINGFLAGS_C="$WARNINGFLAGS_C -Wall"
+    WARNINGFLAGS_C="$WARNINGFLAGS_C -Wextra"
+    WARNINGFLAGS_C="$WARNINGFLAGS_C -Wformat-security"
+    WARNINGFLAGS_C="$WARNINGFLAGS_C -Wshadow"
+else
+    WARNINGFLAGS_C=""
+fi
+AC_SUBST(WARNINGFLAGS_C)
+
+if test -n "$GCC"; then
+    cflags_save="$CFLAGS"
+    CFLAGS="$CFLAGS -fvisibility=hidden"
+    AC_MSG_CHECKING([whether gcc supports visibility])
+    AC_TRY_COMPILE(
+        [extern __attribute__((__visibility__("hidden"))) int hiddenvar;
+    	 extern __attribute__((__visibility__("default"))) int exportedvar;
+    	 extern __attribute__((__visibility__("hidden"))) int hiddenfunc (void);
+    	 extern __attribute__((__visibility__("default"))) int exportedfunc (void);],
+    	[],
+    	AC_MSG_RESULT(yes),
+    	[
+    	    AC_MSG_WARN([compiler does not support visibility])
+    	    CFLAGS="$cflags_save"
+	    ]
+    )
 fi
 
 PKG_PROG_PKG_CONFIG()

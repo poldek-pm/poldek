@@ -1,8 +1,9 @@
-# $Id$
+NULL =
 
 SUBDIRS = dir pdir hdrl rpmdb pndir yum 
+
 if WITH_METADATA_REPOSITORY
- SUBDIRS += metadata
+SUBDIRS += metadata
 endif
 
 INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir)
@@ -32,6 +33,10 @@ pkgdir_modules += metadata/libpkgdir_metadata.la
 endif
 
 libpkgdir_la_LIBADD  = $(pkgdir_modules)
+
+libpkgdir_la_CFLAGS =				\
+	$(WARNINGFLAGS_C)			\
+	$(NULL)
 
 dist-hook:
 	rm -rf $(distdir)/.deps

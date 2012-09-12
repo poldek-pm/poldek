@@ -1,10 +1,16 @@
-# $Id$
+NULL =
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
 
 LIBS=
 noinst_LTLIBRARIES = libpkgdir_yum.la
-libpkgdir_yum_la_SOURCES = yum.c
+libpkgdir_yum_la_SOURCES = 			\
+	yum.c					\
+	$(NULL)
+
+libpkgdir_yum_la_CFLAGS =			\
+	$(WARNINGFLAGS_C)			\
+	$(NULL)
 
 dist-hook:
 	rm -rf $(distdir)/.deps

@@ -1,14 +1,23 @@
-# $Id$
+NULL =
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
 AM_CFLAGS = @AM_CFLAGS@
 
 LIBS=
 noinst_LTLIBRARIES = libpkgdir_pdir.la
-libpkgdir_pdir_la_SOURCES = pdir.c pdir.h digest.c save.c tags.c \
-                            pdir_pkg_store.c pdir_pkg_restore.c
+libpkgdir_pdir_la_SOURCES = 		\
+	pdir.c				\
+	pdir.h				\
+	digest.c			\
+	save.c				\
+	tags.c				\
+	pdir_pkg_store.c		\
+	pdir_pkg_restore.c		\
+	$(NULL)
 
-noinst_PROGRAMS    = 
+libpkgdir_pdir_la_CFLAGS =		\
+	$(WARNINGFLAGS_C)		\
+	$(NULL)
 
 dist-hook:
 	rm -rf $(distdir)/.deps

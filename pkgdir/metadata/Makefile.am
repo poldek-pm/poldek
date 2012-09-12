@@ -1,10 +1,18 @@
-# $Id$
+NULL =
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir \
            @LIBXML2_INCLUDE@
 LIBS =
 noinst_LTLIBRARIES = libpkgdir_metadata.la
-libpkgdir_metadata_la_SOURCES = metadata.c load.c load.h
+libpkgdir_metadata_la_SOURCES = 		\
+	metadata.c				\
+	load.c					\
+	load.h					\
+	$(NULL)
+
+libpkgdir_metadata_la_CFLAGS =			\
+	$(WARNINGFLAGS_C)			\
+	$(NULL)
 
 dist-hook:
 	rm -rf $(distdir)/.deps

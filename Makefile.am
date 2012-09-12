@@ -1,4 +1,4 @@
-# $Id$
+NULL =
 
 AUTOMAKE_OPTIONS = 
 ACLOCAL_AMFLAGS = -I m4
@@ -56,6 +56,10 @@ libpoldek_la_SOURCES = \
 	  poldek_ts.c poldek_ts.h \
 	  poldek_intern.h \
 	  pkg_ver_cmp.h 
+
+libpoldek_la_CFLAGS =		\
+	$(WARNINGFLAGS_C)	\
+	$(NULL)
 
 pkgincludedir = $(includedir)/poldek
 

@@ -1,11 +1,18 @@
-# $Id$
+NULL =
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
 AM_CFLAGS = @AM_CFLAGS@
 
 LIBS=
 noinst_LTLIBRARIES = libpkgdir_rpmdb.la
-libpkgdir_rpmdb_la_SOURCES = rpmdb.c rpmdbcache.c
+libpkgdir_rpmdb_la_SOURCES = 			\
+	rpmdb.c					\
+	rpmdbcache.c				\
+	$(NULL)
+
+libpkgdir_rpmdb_la_CFLAGS = 			\
+	$(WARNINGFLAGS_C)			\
+	$(NULL)
 
 dist-hook:
 	rm -rf $(distdir)/.deps

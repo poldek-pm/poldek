@@ -1,4 +1,4 @@
-# $Id$
+NULL =
 
 SUBDIRS = rpm pset
 INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir)
@@ -13,6 +13,10 @@ libpm_la_SOURCES  = \
 pm_modules = rpm/libpm_rpm.la pset/libpm_pset.la
 
 libpm_la_LIBADD  = $(pm_modules)
+
+libpm_la_CFLAGS =			\
+	$(WARNINGFLAGS_C)		\
+	$(NULL)
 
 dist-hook:
 	rm -rf $(distdir)/.deps

@@ -1,10 +1,15 @@
-# $Id$
+NULL =
 
 INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
 
 LIBS=
 noinst_LTLIBRARIES = libpkgdir_hdrl.la
 libpkgdir_hdrl_la_SOURCES = hdrl.c
+
+libpkgdir_hdrl_la_CFLAGS =	\
+	$(WARNINGFLAGS_C)	\
+	$(NULL)
+
 
 dist-hook:
 	rm -rf $(distdir)/.deps
