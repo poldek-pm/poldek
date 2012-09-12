@@ -417,7 +417,7 @@ static char *get_env(char *dest, int size, const char *name)
     }
     
     if (strcmp(name, "HOME") == 0 && (pw = getpwuid(getuid()))) {
-        snprintf(dest, size, pw->pw_dir);
+        snprintf(dest, size, "%s", pw->pw_dir);
         val = dest;
     }
 

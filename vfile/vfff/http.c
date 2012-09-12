@@ -844,7 +844,7 @@ int is_redirected_connection(struct http_resp *resp, struct vfff_req *rreq)
     if (HTTP_STATUS_IS_REDIR(resp->code)) {
         const char *redirto = http_resp_get_hdr(resp, "location");
         if (redirto && *redirto != '\0') 
-            snprintf(rreq->redirected_to, sizeof(rreq->redirected_to), redirto);
+            snprintf(rreq->redirected_to, sizeof(rreq->redirected_to), "%s", redirto);
         else 
             vfff_set_err(ENOENT, "wrong or empty redirect location");
         

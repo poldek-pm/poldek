@@ -558,7 +558,7 @@ void vfile_close(struct vfile *vf)
         n_assert(vf_url_type(vf->vf_path) & VFURL_LOCAL);
         if (vf_decompressable(vf->vf_path, NULL, 0)) {
             char src[PATH_MAX], *p;
-            snprintf(src, sizeof(src), vf->vf_path);
+            snprintf(src, sizeof(src), "%s", vf->vf_path);
             p = strrchr(src, '.');
             n_assert(p);
             *p = '\0';

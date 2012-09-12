@@ -320,7 +320,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
         } else {            /* redirected */
             char url[PATH_MAX];
                 
-            snprintf(url, sizeof(url), req->url);
+            snprintf(url, sizeof(url), "%s", req->url);
             vf_request_free(req);
             req = NULL;
             rc = vf_fetch(url, destdir, flags, NULL, NULL);

@@ -95,7 +95,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     switch (key) {
         case 'l':
             if (cmdctx->_flags & OPT_LS_GROUP) {
-                logn(LOGERR, errmsg_excl);
+                logn(LOGERR, "%s", errmsg_excl);
                 return EINVAL;
             }
             
@@ -108,7 +108,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 'G':
             if (cmdctx->_flags & OPT_LS_LONG || cmdctx->_flags & OPT_LS_SOURCERPM) {
-                logn(LOGERR, errmsg_excl);
+                logn(LOGERR, "%s", errmsg_excl);
                 return EINVAL;
             }
 
@@ -117,7 +117,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 's':
             if (cmdctx->_flags & OPT_LS_LONG || cmdctx->_flags & OPT_LS_GROUP) {
-                logn(LOGERR, errmsg_excl);
+                logn(LOGERR, "%s", errmsg_excl);
                 return EINVAL;
             }
 
@@ -423,7 +423,7 @@ static void ls_summary(struct cmdctx *cmdctx, struct pkg *pkg)
 static
 int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 {
-    char                 hdr[256], fmt_hdr[256], fmt_pkg[256];
+    char                 hdr[256];
     int                  i, size, err = 0, npkgs = 0;
     register int         incstep = 0;
     int                  term_width, term_width_div2;
@@ -440,44 +440,32 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
     *hdr = '\0';
 
     if (flags & OPT_LS_GROUP || flags & OPT_LS_SOURCERPM) {
-        snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds\n",
-                 term_width_div2 + term_width_div2/10, (term_width/7));
-
-        snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds %%-%ds\n",
-                 term_width_div2 + term_width_div2/10 - 1, (term_width/7));
-
 	if (flags & OPT_LS_GROUP)
-	    snprintf(hdr, sizeof(hdr), fmt_hdr, _("package"), _("group"));
+	    snprintf(hdr, sizeof(hdr), "%-*s%-*s\n",
+		term_width_div2 + term_width_div2/10, _("package"), (term_width/7), _("group"));
         else
-	    snprintf(hdr, sizeof(hdr), fmt_hdr, _("package"), _("source rpm"));
+	    snprintf(hdr, sizeof(hdr), "%-*s%-*s\n",
+		term_width_div2 + term_width_div2/10, _("package"), (term_width/7), _("source rpm"));
     } else if (flags & OPT_LS_LONG) {
         if ((flags & OPT_LS_UPGRADEABLE) == 0) {
-            snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds %%-%ds%%%ds\n",
-                     term_width_div2 + term_width_div2/10, (term_width/7),
-                     (term_width/8) + 2);
-            
-            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds %%%ds %%%ds\n",
-                     term_width_div2 + term_width_div2/10, (term_width/7),
-                     (term_width/8));
-            snprintf(hdr, sizeof(hdr), fmt_hdr,
-                     _("package"), _("build date"), _("size"));
-
+            snprintf(hdr, sizeof(hdr), "%-*s %-*s%*s\n",
+		     term_width_div2 + term_width_div2/10, _("package"),
+		     (term_width/7), _("build date"),
+		     (term_width/8) + 2, _("size"));
             
         } else {
-            snprintf(fmt_hdr, sizeof(fmt_hdr), "%%-%ds%%-%ds %%-%ds%%%ds\n",
-                     (term_width/2) - 1, (term_width/6) - 1,
-                     (term_width/6) - 1, (term_width/6) - 1);
-
-            snprintf(fmt_pkg, sizeof(fmt_pkg), "%%-%ds%%-%ds %%-%ds %%%ds\n",
-                     (term_width/2) - 1, (term_width/6) - 1,
-                     (term_width/6) - 1, (term_width/6) - 1);
-            
             if (flags & OPT_LS_INSTALLED) 
-                snprintf(hdr, sizeof(hdr), fmt_hdr, _("installed"),
-                         _("available"), _("build date"), _("size"));
+                snprintf(hdr, sizeof(hdr), "%-*s%-*s %-*s%*s\n",
+			 (term_width/2) - 1, _("installed"),
+                         (term_width/6) - 1, _("available"),
+			 (term_width/6) - 1, _("build date"),
+			 (term_width/6) - 1, _("size"));
             else
-                snprintf(hdr, sizeof(hdr), fmt_hdr, _("available"),
-                         _("installed"), _("build date"), _("size"));
+                snprintf(hdr, sizeof(hdr), "%-*s%-*s %-*s%*s\n",
+			 (term_width/2) - 1, _("available"),
+                         (term_width/6) - 1, _("installed"),
+			 (term_width/6) - 1, _("build date"),
+			 (term_width/6) - 1, _("size"));
         }
     }
     
@@ -517,11 +505,15 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 
         if (flags & OPT_LS_GROUP) {
             const char *group = pkg_group(pkg);
-            cmdctx_printf(cmdctx, fmt_pkg, pkg_name, group ? group : "(unset)");
+            cmdctx_printf(cmdctx, "%-*s %-*s\n",
+			  term_width_div2 + term_width_div2/10 - 1, pkg_name,
+			  (term_width/7), group ? group : "(unset)");
 	}
         else if (flags & OPT_LS_SOURCERPM) {
             const char *srcrpm = pkg_srcfilename_s(pkg);
-            cmdctx_printf(cmdctx, fmt_pkg, pkg_name, srcrpm ? srcrpm : "(unset)");
+            cmdctx_printf(cmdctx, "%-*s %-*s\n",
+			  term_width_div2 + term_width_div2/10 - 1, pkg_name,
+			  (term_width/7), srcrpm ? srcrpm : "(unset)");
         
         } else if (flags & OPT_LS_QUERYFMT) {
 	    char *queryfmt = NULL;
@@ -550,11 +542,19 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
                 *timbuf = '\0';
             
             if ((flags & OPT_LS_UPGRADEABLE) == 0) {
-                cmdctx_printf(cmdctx, fmt_pkg, pkg_name, timbuf, sizbuf);
+                cmdctx_printf(cmdctx, "%-*s %*s %*s\n",
+			      term_width_div2 + term_width_div2/10, pkg_name,
+			      (term_width/7), timbuf,
+			      (term_width/8), sizbuf);
                 
             } else if (evrs) {
                 const char *evr = n_array_nth(evrs, i);
-                cmdctx_printf(cmdctx, fmt_pkg, pkg_name, evr, timbuf, sizbuf);
+                cmdctx_printf(cmdctx, "%-*s%-*s %-*s %*s\n",
+			      (term_width/2) - 1, pkg_name,
+			      (term_width/6) - 1, evr,
+			      (term_width/6) - 1, timbuf,
+			      (term_width/6) - 1, sizbuf);
+            
             }
             size += pkg->size/1024;
             
