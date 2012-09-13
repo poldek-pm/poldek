@@ -23,6 +23,10 @@ CONFOPTS="$CONFOPTS $@"
 runcmd git submodule init
 runcmd git submodule update
 
+# run autogen in submodules
+(cd trurlib && ./autogen.sh)
+(cd tndb && ./autogen.sh)
+
 # generate po/POTFILES.in
 make -f Makefile.extra POTFILES_in
 # replaces gettextize
