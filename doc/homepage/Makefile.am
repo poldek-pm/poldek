@@ -31,8 +31,9 @@ credits-body.html: ../NEWS.xml ../NEWSto
 
 
 clean-local:
-	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#* *\#
 	-rm -rf site
+
+CLEANFILES = credits-body.html
 
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
