@@ -436,9 +436,12 @@ static int oprun(struct poclidek_opgroup_rt *rt)
         if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN_PKG)
             flags |= PKGSOURCE_CLEANPKG;
 
+        if ((arg_s->cnflags & POLDEKCLI_SRC_SPECIFIED) == 0)
+            flags |= PKGSOURCE_CLEAN_WHOLE_CACHEDIR;
+
         if (rt->ts->getop(rt->ts, POLDEK_OP_TEST))
             flags |= PKGSOURCE_CLEAN_TEST;
-            
+
         sources_clean(sources, flags);
         rc = OPGROUP_RC_OK;
     }

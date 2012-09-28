@@ -124,6 +124,7 @@ EXPORT struct vfile *vfile_incref(struct vfile *vf);
 
 EXPORT int vfile_unlink(struct vfile *vf);
 
+EXPORT int vfile_cachedir_clean(void);
 
 #define VFURL_UNKNOWN (1 << 0)
 #define VFURL_PATH    (1 << 1)

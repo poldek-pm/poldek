@@ -105,10 +105,11 @@ EXPORT void source_printf(const struct source *src);
 
 EXPORT int sources_update(tn_array *sources, unsigned flags);
 
-#define PKGSOURCE_CLEAN      (1 << 0)
-#define PKGSOURCE_CLEANPKG   (1 << 1)
-#define PKGSOURCE_CLEANA     (PKGSOURCE_CLEAN | PKGSOURCE_CLEANPKG)
-#define PKGSOURCE_CLEAN_TEST (1 << 3)
+#define PKGSOURCE_CLEAN                (1 << 0)
+#define PKGSOURCE_CLEANPKG             (1 << 1)
+#define PKGSOURCE_CLEANA               (PKGSOURCE_CLEAN | PKGSOURCE_CLEANPKG)
+#define PKGSOURCE_CLEAN_TEST           (1 << 3)
+#define PKGSOURCE_CLEAN_WHOLE_CACHEDIR (1 << 4)
 EXPORT int source_clean(struct source *src, unsigned flags);
 
 EXPORT int sources_clean(tn_array *sources, unsigned flags);

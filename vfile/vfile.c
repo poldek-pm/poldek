@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,6 +62,79 @@ static inline const char *vfile_cachedir(void)
     n_assert(vfile_conf._cachedir);
     n_assert(*vfile_conf._cachedir);
     return vfile_conf._cachedir;
+}
+
+static int do_cachedir_clean(const char *dirpath)
+{
+    struct dirent *ent;
+    struct stat st;
+    struct vflock *vflock = NULL;
+    DIR *dir;
+    char *sepchar = "/";
+    int nerr = 0;
+    
+    if (stat(dirpath, &st) != 0)
+	return 0;
+    
+    if (!S_ISDIR(st.st_mode))
+	return 1;
+    
+    if ((vflock = vf_lockdir(dirpath)) == NULL)
+	return 2;
+    
+    if ((dir = opendir(dirpath)) == NULL) {
+	vf_logerr("opendir %s: failed", dirpath);
+	return 3;
+    }
+    
+    if (dirpath[strlen(dirpath) - 1] == '/')
+	sepchar = "";
+    
+    while ((ent = readdir(dir)) != NULL) {
+	char path[PATH_MAX];
+	
+	if (*ent->d_name == '.') {
+	    if (ent->d_name[1] == '\0')
+		continue;
+	
+	    if (ent->d_name[1] == '.' && ent->d_name[2] == '\0')
+		continue;
+	}
+	
+	// don't remove locks
+	if (n_str_eq(ent->d_name, n_basenam(vflock->path)))
+	    continue;
+	
+	snprintf(path, sizeof(path), "%s%s%s", dirpath, sepchar, ent->d_name);
+	
+	if (stat(path, &st) == 0) {
+	    if (S_ISREG(st.st_mode)) {
+		nerr += unlink(path);
+	    }
+	    else if (S_ISDIR(st.st_mode)) {
+		do_cachedir_clean(path);
+	    }
+	}
+    }
+    
+    closedir(dir);
+    
+    if (vflock)
+	vf_lock_release(vflock);
+    
+    // do not remove cache directory, only its subdirs
+    if (n_str_ne(dirpath, vfile_cachedir())) {
+	nerr += rmdir(dirpath);	
+    }
+    
+    return nerr;
+}
+
+int vfile_cachedir_clean(void)
+{
+    const char *cachedir = vfile_cachedir();
+
+    return do_cachedir_clean(cachedir);
 }
 
 static void set_anonpasswd(void)

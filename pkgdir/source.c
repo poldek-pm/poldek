@@ -923,6 +923,14 @@ int sources_clean(tn_array *sources, unsigned flags)
 {
     int i,  nerr = 0;
     
+    if (flags & PKGSOURCE_CLEAN_WHOLE_CACHEDIR) {
+	// test mode is not supported
+	if (flags & PKGSOURCE_CLEAN_TEST)
+	    return 1;
+    
+	return vfile_cachedir_clean() == 0;
+    }
+    
     for (i=0; i < n_array_size(sources); i++) {
         struct source *src = n_array_nth(sources, i);
         if (!source_clean(src, flags))
