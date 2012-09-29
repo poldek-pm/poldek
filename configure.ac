@@ -329,10 +329,7 @@ if test "${is_rpm4_0_4}." = "yes." ; then
 	have_beecrypt=yes, have_beecrypt=no)
 fi
 
-if test "${is_rpm4}." = "yes." ; then
-	AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR(["rpmio not found"]))
-fi
-
+AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR(["rpmio not found"]))
 
 AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="-lrpm $DBLIB $LIBS"],
 	AC_CHECK_LIB(rpm, rpmReadPackageHeader,
