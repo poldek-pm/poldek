@@ -346,7 +346,7 @@ AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="-lrpm $DBLIB $LIBS"],
 		[$DBLIB -lrpmdb]),
 	    [$DBLIB])
 
-AC_CHECK_FUNCS(rpmlog rpmCheckSig rpmVerifySignature)
+AC_CHECK_FUNCS(rpmlog vrpmlog rpmCheckSig rpmVerifySignature)
 
 dnl rpm 4.2?
 AC_CHECK_FUNCS(rpmtsColor, [LIBS="$LIBS -lpthread"

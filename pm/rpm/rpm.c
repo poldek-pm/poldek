@@ -317,14 +317,20 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
     return dir;
 }
 
-
-#if defined HAVE_RPMLOG && !defined ENABLE_STATIC
+#if !defined ENABLE_STATIC && (defined HAVE_RPMLOG || defined HAVE_VRPMLOG)
 /* XXX hack: rpmlib dumps messges to stdout only... (AFAIK)  */
+#if defined HAVE_RPMLOG
 void rpmlog(int prii, const char *fmt, ...) __attribute__ ((visibility("default")));
 
-void rpmlog(int prii, const char *fmt, ...) 
+void rpmlog(int prii, const char *fmt, ...)
 {
     va_list args;
+#elif defined HAVE_VRPMLOG
+void vrpmlog(unsigned prii, const char *fmt, va_list args) __attribute__ ((visibility("default")));
+
+void vrpmlog(unsigned prii, const char *fmt, va_list args)
+{
+#endif
     int pri, mask;
     int rpmlogMask, logpri = LOGERR, verbose_level = -1;
 
@@ -350,7 +356,9 @@ void rpmlog(int prii, const char *fmt, ...)
         verbose_level = 2;
     }
 
+#if defined HAVE_RPMLOG
     va_start(args, fmt);
+#endif
 
 #if 0
     printf("%d, v = %d, verbose = %d, pm_rpm_verbose = %d\n", pri,
@@ -389,9 +397,10 @@ void rpmlog(int prii, const char *fmt, ...)
         log(logpri | LOGWARN, "%s\n", p);
     }
         
+#if defined HAVE_RPMLOG
     va_end(args);
+#endif
 }
-
 #endif /* HAVE_RPMLOG */
 
 int pm_rpm_vercmp(const char *one, const char *two)
