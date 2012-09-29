@@ -58,6 +58,7 @@ EXPORT int vfile_configure(int param, ...);
 /* run it after configuration is done */
 EXPORT void vfile_setup(void);
 
+EXPORT void vfile_destroy(void);
 
 /* vf_type */
 #define VFT_IO       1             /* open(2)                   */

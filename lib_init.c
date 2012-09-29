@@ -1106,6 +1106,9 @@ static
 void poldek_destroy(struct poldek_ctx *ctx) 
 {
     ctx = ctx;
+    
+    vfile_destroy();
+    
     if (ctx->htconf)
         n_hash_free(ctx->htconf);
     sigint_destroy();

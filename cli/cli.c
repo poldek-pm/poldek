@@ -558,8 +558,12 @@ void poclidek_destroy(struct poclidek_ctx *cctx)
         n_hash_free(cctx->htcnf);
         cctx->htcnf = NULL;
     }
+
+    if (cctx->pkgs_available) {
+	n_array_free(cctx->pkgs_available);
+	cctx->pkgs_available = NULL;
+    }
     
-    cctx->pkgs_available = NULL;
     cctx->pkgs_installed = NULL;
 
     if (cctx->rootdir)

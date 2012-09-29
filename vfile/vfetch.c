@@ -67,6 +67,14 @@ void vfile_setup(void)
         vfmod_tab[n++]->init();
 }
 
+void vfile_destroy()
+{
+    int n = 0;
+    
+    while (vfmod_tab[n] != NULL)
+	vfmod_tab[n++]->destroy();
+}
+
 static
 const struct vf_module *find_vf_module(int reqtype, int urltype) 
 {

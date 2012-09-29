@@ -702,10 +702,10 @@ int main(int argc, char **argv)
 
     if ((args.cnflags & OPT_AS_FLAG(OPT_SHELL)) == 0) { /*no explicit --shell*/
         if (rrc & OPGROUP_RC_OK) /* something minor cmd was executed  */
-            exit(EXIT_SUCCESS);
+            goto out;
 
         if (args.cnflags & OPT_AS_FLAG(OPT_UPCONF)) /*UPCONF is major mode*/
-            exit(EXIT_SUCCESS);
+            goto out;
     }
     
     if (args.mode == RUNMODE_POLDEK)
@@ -714,6 +714,7 @@ int main(int argc, char **argv)
     else if (args.mode == RUNMODE_APT)
         rc = run_ipoldek(cctx);
 
+out:
     poldek_ts_free(ts);
     poclidek_free(cctx);
     poldek_free(ctx);
