@@ -16,7 +16,7 @@ MANUALS   = manual.xml manual.css manual.xsl
 # generated files
 man_MANS   = poldek.1 poldek.conf.1
 GEN        = $(man_MANS) manual.html poldek.info
-GEN_NODIST = m_index.xml m_config.xml
+GEN_NODIST = m_index.xml m_config.xml manual.xml.xhtml.tmp manual.xml.texi.tmp CREDITS.docb.tmp NEWS.docb.tmp
 
 EXTRA_DIST = $(CONFXMLS) $(MANUALS) poldek.1.xml $(GEN) manual CREDITS NEWS.xml NEWS.xsl NEWSdocb.xsl NEWSto mkindex.pl
 
@@ -151,9 +151,9 @@ clean-local:
 	
 	if test $(abs_srcdir) != $(abs_builddir); then \
 	    for file in $(MANUAL_DATAFILES); do \
-		-rm -f $(abs_builddir)/$$file; \
+		rm -f $(abs_builddir)/$$file; \
 	    done; \
-	    -rm -f $(abs_builddir)/poldek.1.xml; \
+	    rm -f $(abs_builddir)/poldek.1.xml; \
 	fi
 
 install-exec-hook:

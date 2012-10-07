@@ -1,7 +1,15 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([poldek],[0.30])
+m4_define([poldek_major_version], [0])
+m4_define([poldek_minor_version], [30])
+m4_define([poldek_micro_version], [0])
+m4_define([poldek_version],
+	  [poldek_major_version.poldek_minor_version.poldek_micro_version])
+
+AC_PREREQ([2.63])
+AC_INIT([poldek], [poldek_version], [http://bugs.launchpad.net/poldek])
 AC_CONFIG_SRCDIR([capreq.c])
+AC_CONFIG_HEADERS([config.h])
 
 PACKAGE_BUGREPORT="mis@pld-linux.org"
 VERSION_STATUS="rc"
@@ -21,7 +29,7 @@ AH_TEMPLATE([HAVE_RPM_HEADER_MAGIC_YES],[])
 AH_TEMPLATE([HAVE_RPM_INT32_TYPE],[])
 AH_TEMPLATE([HAVE_RPM_5],[])
 
-AM_INIT_AUTOMAKE([dist-bzip2])
+AM_INIT_AUTOMAKE([1.11 foreign no-dist-gzip dist-xz])
 AC_DEFINE_UNQUOTED([VERSION_STATUS], "$VERSION_STATUS", [version status])
 AC_DEFINE_UNQUOTED([PACKAGE_VERSION_FUNCNAME],
                    ${PACKAGE}_version_${VERSION_TAG},  [ version function name ])
@@ -35,7 +43,6 @@ if test "X${VERSION_STATUS}" = "Xdevel"; then
 fi
 
 AC_SUBST(VERSION_CVSTAG)
-AC_CONFIG_HEADERS([config.h])
 
 ALL_LINGUAS="pl de"
 
