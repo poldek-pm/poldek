@@ -204,7 +204,7 @@ EXPORT int pm_get_dbdepdirs(struct pm_ctx *ctx,
 
 EXPORT struct pkg *pm_load_package(struct pm_ctx *ctx,
                             tn_alloc *na, const char *path, unsigned ldflags);
-EXPORT struct pkgdir;
+struct pkgdir;
 EXPORT struct pkgdir *pkgdb_to_pkgdir(struct pm_ctx *ctx, const char *rootdir,
                                const char *path, unsigned pkgdir_ldflags,
                                const char *key, ...);
