@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id$
+
 use strict;
 require XML::Simple;
 #use Data::Dumper;
@@ -48,7 +48,13 @@ sub to_CREDITS_html_body {
 
     foreach (@$credits) {
         #print STDERR "$_->{name}\n";
-        print qq{<li>$_->{name} &lt;<em>$_->{email}</em>&gt;</li>\n};
+        my $email = "";
+        
+        if ($_->{email}) {
+    	    $email = " &lt;<em>$_->{email}</em>&gt;";
+        }
+        
+        print qq{<li>$_->{name}$email</li>\n};
     }
     print q{</ul>};
 }
@@ -119,7 +125,12 @@ sub process_entry {
 
         foreach my $au (@{$e->{author}}) {
             next if $au->{part};
-            next if exists $credits->{$au->{id}};
+            if (exists $credits->{$au->{id}}) {
+        	if ( !($credits->{$au->{id}}->{email}) ) {
+        	    $credits->{$au->{id}}->{email} = $au->{email};
+        	}        	
+        	next;
+            }
             my $name = $au->{content};
             $name =~ s/^\s+//;
             $name =~ s/\s+$//;

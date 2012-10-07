@@ -1,16 +1,139 @@
 <?xml version="1.0"?>
 <news>
-<cvsid>$Id$</cvsid>
 
-<release version="0.40" date="not released yet" focus="walking on">
+<release version="0.30.0" date="not released yet" focus="walking on">
+ <section><title>New features:</title>
   <entry><para>
-  Support for conf.d style %include (https://bugs.pld-linux.org/show_bug.cgi?id=79)
+   change behaviour of --cleana to clean the whole cache dir
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   support RPM 5.4 (lp#1042200)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   drop support for ancient RPM versions
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   conf: only warn if path included twice
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   if --up needs to download more data than --upa, switch to --upa (lp#705452)
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   add aria2 to fetch.conf, it is configured as multifile downloader for speedup
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   support more than 24 packages in choose equiv
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   rpmvercmp: rewritten to use rpmEVRcompare()
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   add counter of packages to download
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   add autocompletion of command options in interactive mode
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   add --caplookup to install command in interactive mode
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   do not show information about amount of transaction space required but relative to already installed
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   support for query format in ls command
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   add --source-rpm (-s) option to ls command (lp#392984)
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   allow to search changelogs
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   package changelogs are stored in repo index
   </para></entry>
 
+  <entry><para>
+   add what-{provides,requires} autocompletion
+  </para>
+  <author id="megabajt" email="megabajt att pld-linux org">Marcin Banasiak</author>
+  </entry>
+  
+  <entry><para>
+   add source rpm filename to pndir index
+  </para>
+  <author part="yes" id="megabajt" email="megabajt att pld-linux org">Marcin Banasiak</author>
+  </entry>
 
   <entry><para>
-  dependency solver big cleanup: faster, simplified, improved a lot multilib, backtracking, fixes.
+   support for conf.d style %include (https://bugs.pld-linux.org/show_bug.cgi?id=79)
   </para></entry>
+  
+  <entry><para>
+   dependency solver big cleanup: faster, simplified, improved a lot multilib, backtracking, fixes.
+  </para></entry>
+  
+  <entry><para>
+   supported RPM up to 5.0.2
+  </para>
+  <author part="yes" id="arekm" email="arekm att pld-linux org">Arkadiusz Miskiewicz</author>
+  </entry>
+  
+  <entry><para>
+   support fo UTF-8 encoded package summaries and descriptions
+  </para>
+  <author id="witekfl" email="witekfl att pld-linux org">Witold Filipczyk</author>
+  </entry>
+  
+  <entry><para>
+   package Suggests supported 
+  </para>
+  <author part="yes" id="megabajt" email="megabajt att pld-linux org">Marcin Banasiak</author>
+  </entry>
 
   <entry><para>
   cli.conf with interactive shell configuration, aliases.conf has been removed
@@ -20,30 +143,6 @@
   improved package repositories management mode: instalation to multiple repos, 
   working --destination and --jutstdb
   </para></entry>
-
-  <entry><para>
-  cli: --nohold command line option not longer ignored (#68) 
-  </para>
-  <author id="megabajt" email="megabajt att pld-linux org">Marcin Banasiak</author>     
-  </entry>
-
-  <entry><para>
-   supported RPM up to 5.0.2
-  </para>
-  <author part="yes" id="arekm" email="arekm att pld-linux org">Arkadiusz Miskiewicz</author>
-  </entry>
-
-  <entry><para>
-   support fo UTF-8 encoded package summaries and descriptions
-  </para>
-  <author id="witekfl" email="witekfl att pld-linux org">Witold Filipczyk</author>
-  </entry>
-
-  <entry><para>
-  package Suggests supported 
-  </para>
-  <author part="yes" id="megabajt" email="megabajt att pld-linux org">Marcin Banasiak</author>
-  </entry>
 
   <entry><para>
   pythonized Python module, new pyldek.py as general example of module usage.
@@ -63,39 +162,190 @@
   </para></entry>
 
   <entry><para>
-    new --mo=OPTION[,OPTION...] replaces --no{compress,desc,diff} index creation 
-    options,
+   new --mo=OPTION[,OPTION...] replaces --no{compress,desc,diff} index creation 
+   options,
   </para></entry>
 
   <entry><para>        
-    with --mo=v018x created 'pdir' index is compatibile with versions prior 0.18.9
-    (without package files mtime included)    
+   with --mo=v018x created 'pdir' index is compatibile with versions prior 0.18.9
+   (without package files mtime included)    
   </para></entry> 
-
-  <entry><para>
-    fixed path validation ("/foo../" is not a relative path)
+  
+  <entry><para> 
+   vfcompr: temporary *vfcompr.md5 files moved from source to destination 
+   (cache) directory
   </para></entry>
 
   <entry><para> 
-    vfcompr: temporary *vfcompr.md5 files moved from source to destination 
-    (cache) directory
-  </para></entry> 
-
-  <entry><para> 
-    orphaned package are upgraded if its successor drags more new packages 
-    than orphaned one
-  </para></entry>
- 
-  <entry><para> 
-    "use sudo" default value is explicit set to "auto" (new 3var boolean-like 
-     type is added).
+   "use sudo" default value is explicit set to "auto" (new 3var boolean-like 
+   type is added).
   </para></entry>
 
   <entry><para> 
-     configuration for CentOS has been added.
+   configuration for CentOS has been added.
   </para>
   <author id="areq" email="areq att areq eu org">Arkadiusz Patyk</author>
   </entry>
+ </section>
+ 
+ <section><title>Bugfixes:</title>
+  <entry><para>
+   fix leaking fds (lp#307183)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+  
+  <entry><para>
+   fix insecure format string usage
+  </para>
+  <author id="baggins">Jan Rękorajski</author>
+  </entry>
+  
+  <entry><para>
+   don't get number of elements in database iterator in rpmdb_it_init() (lp#1042200)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+  
+  <entry><para>
+   don't clean list if not found one or more entries, warn instread (lp#1024970)
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   show pkg arch in verify deps mode (lp#1031762)
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   don't lose directories during dirindex update
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   improve matching security updates from changelogs
+  </para>
+  <author id="glen">Elan Ruusamäe</author>
+  </entry>
+
+  <entry><para>
+   fix repo loading, broken repo is non fatal now (lp#813213)
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   kill (null) when using source url (lp#699907)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   don't process suggests when --follow is set to no. (lp#689237)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   enforce dirindex update when package was rebuilt without release change
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   break endless loop when poldek loses connected terminal (lp#499504) 
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   fix url prepare (lp#506568)
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   add multiarch upgrade(-dist) support and pkgs migration from/to noarch (lp#408034) 
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   add arch match to hold/ignore (lp#408036)
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+
+  <entry><para>
+   don't ask for Suggests if the transaction is already broken
+  </para>
+  <author id="patrys" email="patrys att pld-linux org">Patryk Zawadzki</author>
+  </entry>
+
+  <entry><para>
+   color bugfix for not picking pkg updates for c=2 pkg if new is c=0 (lp#299685)
+  </para>
+  <author id="glen" email="glen att pld-linux.org">Elan Ruusamäe</author>
+  </entry>
+
+  <entry><para>
+   abort if db version changed between installs
+  </para>
+  <author id="glen" email="glen att pld-linux.org">Elan Ruusamäe</author>
+  </entry>
+
+  <entry><para>
+   decode strings that may be urlencoded before displaying (lp#381548)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   on upgrade don't suggest packages skipped during installation
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   don't suggest required packages (lp#305588)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+
+  <entry><para>
+   multilib: fixed choose equiv
+  </para></entry>
+
+  <entry><para>
+   never rollback directly marked packages (#158)
+  </para></entry>
+
+  <entry><para>
+   check ability to install before hold (#153)
+  </para></entry>
+
+  <entry><para>
+   copy packages from local repos too if --fetch to custom dir requested (#101)
+  </para></entry>
+
+  <entry><para>
+   cli: --nohold command line option not longer ignored (#68) 
+  </para>
+  <author id="megabajt" email="megabajt att pld-linux org">Marcin Banasiak</author>
+  </entry>
+  
+  <entry><para>
+   fixed path validation ("/foo../" is not a relative path)
+  </para></entry>
+  
+  <entry><para>
+   orphaned package are upgraded if its successor drags more new packages 
+   than orphaned one
+  </para></entry>
+ </section>
 </release>
 
 <release version="0.20" date="2005/10/28" focus="major enhancements release">

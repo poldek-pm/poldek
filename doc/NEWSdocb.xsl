@@ -5,7 +5,7 @@
 <xsl:output method="xml"
     doctype-public="-//OASIS//DTD DocBook XML V4.1.2//EN"
     doctype-system="http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd"
-    encoding="ISO-8859-1"
+    encoding="UTF-8"
     indent="yes"/>
 <xsl:strip-space elements="*"/>
 
