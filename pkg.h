@@ -231,7 +231,11 @@ EXPORT const char *pkg_pkgdirpath(const struct pkg *pkg);
 EXPORT unsigned pkg_file_url_type(const struct pkg *pkg);
 
 
-EXPORT extern__inline const char *pkg_id(const struct pkg *p);
+static inline const char *pkg_id(const struct pkg *p)
+{
+    return p->_nvr;
+}
+
 EXPORT int pkg_id_snprintf(char *str, size_t size, const struct pkg *pkg);
 EXPORT int pkg_idevr_snprintf(char *str, size_t size, const struct pkg *pkg);
 

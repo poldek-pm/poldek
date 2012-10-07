@@ -1463,11 +1463,6 @@ struct pkg *pkg_link(struct pkg *pkg)
     return pkg;
 }
 
-const char *pkg_id(const struct pkg *p) 
-{
-    return p->_nvr;
-}
-
 int pkg_id_snprintf(char *str, size_t size, const struct pkg *pkg)
 {
     return n_snprintf(str, size, "%s", pkg_id(pkg));
