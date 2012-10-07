@@ -76,9 +76,7 @@ static struct pkg_unreq *pkg_unreq_new(struct capreq *req, int mismatch)
     char s[512];
     int n;
 
-
     n = capreq_snprintf(s, sizeof(s), req);
-    n_assert(n > 0);
     
     unreq = n_malloc(sizeof(*unreq) + n + 1);
     unreq->mismatch = mismatch;
