@@ -87,7 +87,7 @@
 
 
 <xsl:template match="author">
-  <emphasis><xsl:if test="@part">with help of </xsl:if><xsl:value-of select="."/></emphasis> &lt;<emphasis><xsl:value-of select="@email"/></emphasis>&gt;<xsl:if test="not(position()=last())">, </xsl:if>
+  <emphasis><xsl:if test="@part">with help of </xsl:if><xsl:value-of select="."/></emphasis> <xsl:if test="@email">&lt;<emphasis><xsl:value-of select="@email"/></emphasis>&gt;</xsl:if><xsl:if test="not(position()=last())">, </xsl:if>
 </xsl:template>
 
 <xsl:template match="para">
