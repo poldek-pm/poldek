@@ -57,7 +57,7 @@ sub to_CREDITS_docb {
     my $ref = shift;
     my $credits = get_credits($ref);
 
-    print q{<?xml version="1.0" encoding="ISO-8859-1"?>
+    print q{<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
 <article lang="en"><articleinfo><title>Credits</title></articleinfo>
 <sect1 id="credits"><title></title>};
