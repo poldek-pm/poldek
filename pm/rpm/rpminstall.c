@@ -371,6 +371,12 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
     argv[nargs++] = "--noorder";    /* packages always ordered by me */
 #endif
 
+    argv[nargs++] = "--define";
+    if (ts->getop(ts, POLDEK_OP_AUTODIRDEP))
+        argv[nargs++] = "_check_dirname_deps 1";
+    else
+        argv[nargs++] = "_check_dirname_deps 0";
+
     if (ts->rpmacros) 
         for (i=0; i<n_array_size(ts->rpmacros); i++) {
             argv[nargs++] = "--define";
