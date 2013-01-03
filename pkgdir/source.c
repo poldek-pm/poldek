@@ -73,6 +73,8 @@ static struct src_option source_options[] = {
                      PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
     { "lang",     0, PKGSOURCE_DSCR |
                      PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
+    { "group",    0, PKGSOURCE_GROUP |
+                     PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
     { "pri",      0, PKGSOURCE_PRI | PKGSRC_OPTION_SUBOPT, NULL},
     { "compress", 0, PKGSOURCE_COMPRESS |
                      PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
@@ -121,6 +123,10 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
         src->dscr = n_strdup(str);
         v = 1;
 
+    } else if (opt->flag & PKGSOURCE_GROUP) {
+        src->group = n_strdup(str);
+        v = 1;
+
     } else if (opt->flag & PKGSOURCE_COMPRESS) {
         src->compress = n_strdup(str);
         v = 1;
@@ -131,7 +137,6 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
             v = 1;
         }
     }
-    
 
     if (v == 0)
         logn(LOGWARN, _("%s%sinvalid value ('%s') for option '%s'"),
@@ -162,7 +167,7 @@ struct source *source_malloc(void)
     src->no = 0;
     //src->flags |= PKGSOURCE_PRI;
     src->name = src->path = src->pkg_prefix = NULL;
-    src->dscr = src->type = NULL;
+    src->group = src->dscr = src->type = NULL;
     src->lc_lang = NULL;
     src->_refcnt = 0;
     src->exclude_path = n_array_new(4, free, (tn_fn_cmp)strcmp);
@@ -197,6 +202,7 @@ struct source *source_clone(const struct source *src)
     cp_str_ifnotnull(&nsrc->compress, src->compress);
 
     cp_str_ifnotnull(&nsrc->dscr, src->dscr);
+    cp_str_ifnotnull(&nsrc->group, src->group);
     cp_str_ifnotnull(&nsrc->lc_lang, src->lc_lang);
     cp_str_ifnotnull(&nsrc->original_type, src->original_type);
 
@@ -224,6 +230,7 @@ void source_free(struct source *src)
 
     n_cfree(&src->compress);
     n_cfree(&src->dscr);
+    n_cfree(&src->group);
     n_cfree(&src->lc_lang);
     n_cfree(&src->original_type);
 
@@ -585,6 +592,9 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
     if ((vs = poldek_conf_get(htcnf, "lang", NULL)))
         n += n_snprintf(&spec[n], sizeof(spec) - n, ",lang=%s", vs);
 
+    if ((vs = poldek_conf_get(htcnf, "group", NULL)))
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",group=%s", vs);
+
     vs = poldek_conf_get(htcnf, "path", NULL);
     if (vs == NULL)
         vs = poldek_conf_get(htcnf, "url", NULL);
@@ -781,13 +791,19 @@ int source_snprintf_flags(char *str, int size, const struct source *src)
                 n += n_snprintf(&str[n], size - n, "=%s,", src->type);
             }
 
+        } else if ((opt->flag & PKGSOURCE_GROUP)) {
+            if (src->type) {
+                n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
+                                            "%s", opt->name);
+                n += n_snprintf(&str[n], size - n, "=%s,", src->group);
+            }
+
         } else if ((opt->flag & PKGSOURCE_DSCR)) {
             if (src->dscr) {
                 n += poldek_term_snprintf_c(PRCOLOR_GREEN, &str[n], size - n,
                                             "%s", opt->name);
                 n += n_snprintf(&str[n], size - n, "=%s,", src->dscr);
             }
-
 
         } else {
             int j = 0;

@@ -525,6 +525,12 @@ Every repository is configured in its own [ source ] section.
     </description>
   </option>
 
+  <option name="group" type="string" value="">
+    <description>
+    Group name of the repositories group.
+    </description>
+  </option>
+
   <option name="type" type="string" required="yes" value="pndir">
     <description>
     Type of repository index. Permitted values are 'pndir', 'pdir', 'apt', 'yum'

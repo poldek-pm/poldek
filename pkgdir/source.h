@@ -31,6 +31,7 @@ EXPORT const char source_TYPE_GROUP[]; /* "group" */
 #define PKGSOURCE_TYPE       (1 << 5)
 #define PKGSOURCE_PRI        (1 << 6)
 #define PKGSOURCE_DSCR       (1 << 7)
+#define PKGSOURCE_GROUP      (1 << 9)
 #define PKGSOURCE_NAMED      (1 << 10)
 #define PKGSOURCE_COMPRESS   (1 << 11)
 #define PKGSOURCE_NODESC     (1 << 12)
@@ -56,6 +57,7 @@ struct source {
     char      *original_type;   /* type of source repo for this source  */
     unsigned  subopt_flags;
     int       _refcnt;
+    char      *group;
 };
 
 EXPORT struct source *source_malloc(void);

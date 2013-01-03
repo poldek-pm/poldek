@@ -269,7 +269,7 @@ tn_array *expand_sources_group(tn_array *srcs_named, tn_array *htcnf_sources,
         struct source *s = n_array_nth(srcs_named, i);
 
         for (j=0; j < n_array_size(htcnf_sources); j++) {
-            const char *name, *type;
+            const char *name, *type, *grp;
             tn_hash *ht;
 
             ht = n_array_nth(htcnf_sources, j);
@@ -278,8 +278,9 @@ tn_array *expand_sources_group(tn_array *srcs_named, tn_array *htcnf_sources,
                 continue;
             
             type = poldek_conf_get(ht, "type", NULL);
+            grp = poldek_conf_get(ht, "group", NULL);
             /* skip not "group" */
-            if (type == NULL || n_str_ne(type, source_TYPE_GROUP)) { 
+            if ((type == NULL || n_str_ne(type, source_TYPE_GROUP)) && !grp) {
                 isgroup_matches[j] = 1;
                 continue;
             }
@@ -287,26 +288,35 @@ tn_array *expand_sources_group(tn_array *srcs_named, tn_array *htcnf_sources,
             name = poldek_conf_get(ht, "name", NULL);
             n_assert(name);
 
-            if (htcnf_matches[j] == 0 && fnmatch(s->name, name, 0) == 0) {
-                tn_array *names;
-                int ii;
-                
-                names = poldek_conf_get_multi(ht, "sources");
-                n_assert(names);
-                
-                for (ii=0; ii < n_array_size(names); ii++) {
-                    struct source *src = source_new(n_array_nth(names, ii), NULL, NULL, NULL);
-                    DBGF("%s -> %s\n", s->name, n_array_nth(names, ii));
-                    src->no = s->no + 1 + ii; /* XXX: hope we fit (see sources_add()) */
-                    n_array_push(sources, src);
+            if (!grp) { // old groups
+                if (htcnf_matches[j] == 0 && fnmatch(s->name, name, 0) == 0) {
+                    tn_array *names;
+                    int ii;
+
+                    names = poldek_conf_get_multi(ht, "sources");
+                    n_assert(names);
+
+                    for (ii=0; ii < n_array_size(names); ii++) {
+                        struct source *src = source_new(n_array_nth(names, ii), NULL, NULL, NULL);
+                        DBGF("%s -> %s\n", s->name, n_array_nth(names, ii));
+                        printf("%s -> %s\n", s->name, n_array_nth(names, ii));
+                        src->no = s->no + 1 + ii; /* XXX: hope we fit (see sources_add()) */
+                        n_array_push(sources, src);
+                    }
+                    n_hash_replace(expanded_h, s->name, NULL);
+                    htcnf_matches[j] = 1;
                 }
+            } else if (fnmatch(s->name, grp, 0) == 0) { // new groups
+                struct source *src = source_new(name, NULL, NULL, NULL);
+                src->no = s->no + 1;
+                n_array_push(sources, src);
                 n_hash_replace(expanded_h, s->name, NULL);
-                htcnf_matches[j] = 1;
             }
         }
         
         n_array_push(sources, source_link(s));
     }
+
 #if ENABLE_TRACE
     for (i=0; i < n_array_size(sources); i++) {
         struct source *s = n_array_nth(sources, i);
@@ -349,6 +359,9 @@ static int source_to_htconf(struct source *src, int no, tn_hash *htcnf)
     
     if (src->flags & PKGSOURCE_NOAUTO)
         poldek_conf_add_to_section(sect, "auto", "no");
+
+    if (src->flags & PKGSOURCE_GROUP && src->group)
+        poldek_conf_add_to_section(sect, "group", src->group);
     
     if (src->flags & PKGSOURCE_NOAUTOUP)
         poldek_conf_add_to_section(sect, "autoup", "no");
@@ -438,7 +451,7 @@ static int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
                 source_free(src);
         }
     }
-    
+
     for (i=0; i < n_array_size(srcs_named); i++) {
         struct source *src = n_array_nth(srcs_named, i);
         if (matches == NULL ||
