@@ -470,17 +470,21 @@ int pkgroup_idx_update_rpmhdr(struct pkgroup_idx *idx, void *rpmhdr)
 
     DBGF("ngroups %d, %d\n", ngroups, n_array_size(langs));
     for (i=0; i < ngroups; i++) {
-        const char *lang = n_array_nth(langs, i);
-        DBGF("   gr[%d of %d] %s\n", i, ngroups, groups[i]);
-        
-        if (n_str_eq(lang, "C")) {
-            if ((gr = n_hash_get(idx->ht, groups[i])) == NULL) {
-                gr = pkgroup_new(n_array_size(idx->arr) + 1, groups[i]);
-                n_array_push(idx->arr, gr);
-                n_hash_insert(idx->ht, gr->name, gr);
-            }
-            break;
+      const char *lang = n_array_nth(langs, i);
+      
+      const char *grp = groups;
+      if (ngroups > 1) grp = groups[i];
+      
+      DBGF("   gr[%d of %d] %s\n", i, ngroups, grp);
+      
+      if (n_str_eq(lang, "C")) {
+        if ((gr = n_hash_get(idx->ht, grp)) == NULL) {
+          gr = pkgroup_new(n_array_size(idx->arr) + 1, grp);
+          n_array_push(idx->arr, gr);
+          n_hash_insert(idx->ht, gr->name, gr);
         }
+        break;
+      }
     }
 
     if (gr != NULL) {
