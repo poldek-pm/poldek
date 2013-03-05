@@ -1,7 +1,7 @@
 NULL =
 
-INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir \
-           @LIBXML2_INCLUDE@
+AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir \
+	@LIBXML2_INCLUDE@
 LIBS =
 noinst_LTLIBRARIES = libpkgdir_metadata.la
 libpkgdir_metadata_la_SOURCES = 		\

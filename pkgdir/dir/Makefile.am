@@ -1,6 +1,6 @@
 NULL =
 
-INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
+AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir) -I$(top_srcdir)/pkgdir
 AM_CFLAGS = @AM_CFLAGS@
 
 LIBS=

@@ -11,7 +11,7 @@ SUBDIRS   = po doc $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir \
             pm install3 . $(CLI)
 DIST_SUBDIRS = $(SUBDIRS) python tests
 
-INCLUDES  = @TRURL_INCLUDE@ @TNDB_INCLUDE@
+AM_CPPFLAGS = @TRURL_INCLUDE@ @TNDB_INCLUDE@
 AM_CFLAGS = @AM_CFLAGS@
 
 POD2MAN   = @POD2MAN@

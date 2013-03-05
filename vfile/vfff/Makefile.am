@@ -2,7 +2,7 @@
 
 NULL =
 
-INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
+AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
 LIBS = 

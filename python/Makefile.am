@@ -6,7 +6,7 @@ py_incdir  = $(py_prefix)/include/python$(py_ver)
 EXTRA_DIST = poldekmod.i local_stdint.c pyldek.py run.sh
 CLEANFILES = wrap_* poldekmod.py local_stdint.h
 
-INCLUDES = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir) -I$(py_incdir) -I.
+AM_CPPFLAGS = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir) -I$(py_incdir) -I.
 
 #pythondir = $(prefix)$(libdir)/python
 python_PYTHON = poldek.py

@@ -5,7 +5,7 @@ DIST_SUBDIRS = $(SUBDIRS) tests
 
 #LIBS = -ltrurl -lz @LIBS@ @INTLLIBS@
 
-INCLUDES = @TRURL_INCLUDE@ -I$(top_srcdir)
+AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
 LIBVERSION = 0:0:0
