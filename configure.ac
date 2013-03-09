@@ -315,17 +315,17 @@ if test "${is_rpm4_0_4}." = "no." ; then
 	#	DBLIB="$DBLIB -ldb1"
 	#fi
 else
-    AC_CHECK_LIB(db4, db_create, [DBLIB="-ldb4"],
-        [AC_CHECK_LIB(db-4.1, db_create, [DBLIB="-ldb-4.1"],
-             [AC_CHECK_LIB(db-4.0, db_create, [DBLIB="-ldb-4.0"],
-                     [AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"],,[$LIBS])],
+    AC_CHECK_LIB(db4, db_create, [DBLIB="-ldb4" DBINCLUDE="-I/usr/include/db4"],
+        [AC_CHECK_LIB(db-4.1, db_create, [DBLIB="-ldb-4.1" DBINCLUDE="-I/usr/include/db4.1"],
+             [AC_CHECK_LIB(db-4.0, db_create, [DBLIB="-ldb-4.0" DBINCLUDE="-I/usr/include/db4.0"],
+                     [AC_CHECK_LIB(db-5.2, db_create, [DBLIB="-ldb-5.2" DBINCLUDE="-I/usr/include/db5.2"],,[$LIBS])],
                      [$LIBS])],, [$LIBS])],, [$LIBS])
 
 	if test "${ENABLE_STATIC}." = "yes."; then 
 		DBLIB="$DBLIB"
 	fi
 
-	CPPFLAGS="-I/usr/include/db4 $CPPFLAGS"
+	CPPFLAGS="$DBINCLUDE $CPPFLAGS"
 fi
 
 
