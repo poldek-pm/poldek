@@ -1,6 +1,6 @@
 /*
   Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
-  Copyright (C) 2010 - 2012 Marcin Banasiak <marcin.banasiak@gmail.com>
+  Copyright (C) 2010 - 2013 Marcin Banasiak <marcin.banasiak@gmail.com>
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License, version 2 as
@@ -20,7 +20,10 @@
 #include <stdlib.h>
 
 #ifdef HAVE_RPM_5
+# include <rpm/rpmrc.h>
 # include <rpm/rpmtag.h>
+#else
+# include <rpm/rpmlib.h>
 #endif
 
 #define _RPMEVR_INTERNAL
@@ -59,6 +62,11 @@ int main(int argc, char *argv[])
     } else {
         printf("Usage: rpmvercmp VERSION1 VERSION2\n");
         exit(1);
+    }
+
+    if (rpmReadConfigFiles(NULL, NULL) < 0) {
+	fprintf(stderr, "Failed to read configuration files\n");
+	exit(2);
     }
 
     evr1 = malloc(sizeof(struct EVR_s));
