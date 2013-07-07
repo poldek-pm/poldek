@@ -78,7 +78,7 @@ libpoldek_la_LIBADD = \
 
 LDADD_              = @INTLLIBS@
 
-vfscriptsdir = $(libdir)/$(PACKAGE_NAME)
+vfscriptsdir = $(PKGLIBDIR)
 vfscripts_SCRIPTS = zlib-in-rpm.sh vfjuggle vfcompr vfsmb poldekuser-setup.sh
 
 EXTRA_DIST = \

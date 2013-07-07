@@ -574,7 +574,10 @@ AC_DEFINE_UNQUOTED(SYSCONFDIR, "$SYSCONFDIR",
 AC_SUBST(SYSCONFDIR)
 
 
-PKGLIBDIR="`echo $libdir/$PACKAGE`"
+AC_ARG_WITH(pkglibdir,
+[  --with-pkglibdir	program executables],
+PKGLIBDIR=$withval, PKGLIBDIR="`echo $libdir/$PACKAGE`")
+
 while echo ${PKGLIBDIR} | grep '\$' >/dev/null; do
         PKGLIBDIR=$(eval echo ${PKGLIBDIR});
 done
