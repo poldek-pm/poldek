@@ -385,7 +385,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
     <alias name="a hold alias for testing purposes" obsoleted="yes" />
   </option>
 
-  <option name="ignore" type="string" list="yes" default="" multiple="yes">
+  <option name="ignore" type="string" list="yes" default="vserver-packages" multiple="yes">
     <description>
     Ignore package list - packages fits given mask will be invisible.
     [screen]
