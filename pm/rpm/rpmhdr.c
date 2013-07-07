@@ -121,7 +121,6 @@ int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
     }
 #endif
 
-#ifndef HAVE_RPM_5
     if (tag == RPMTAG_GROUP && type == RPM_STRING_TYPE) { // build by old rpm
         char **g;
 	
@@ -132,7 +131,6 @@ int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
         g[1] = NULL;
         *(char ***)buf = g;
     }
-#endif
 
     DBGF("%d type=%d, cnt=%d\n", tag, type, *cnt);
     return 1;
