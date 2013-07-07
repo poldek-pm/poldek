@@ -1,8 +1,14 @@
 <?xml version="1.0"?>
 <news>
 
-<release version="0.30.0" date="not released yet" focus="walking on">
+<release version="0.30.0" date="2013/07/07" focus="walking on">
  <section><title>New features:</title>
+  <entry><para>
+   adding repo to group from repo config (lp#966972)
+  </para>
+  <author id="cactus">Bartlomiej Zimon</author>
+  </entry>
+  
   <entry><para>
    change behaviour of --cleana to clean the whole cache dir
   </para>
@@ -189,6 +195,12 @@
  </section>
  
  <section><title>Bugfixes:</title>
+  <entry><para>
+   fix for crashes on subpackages with inherited group
+  </para>
+  <author id="draenog" email="draenog att pld-linux org">Kacper Kornet</author>
+  </entry>
+  
   <entry><para>
    fix leaking fds (lp#307183)
   </para>
