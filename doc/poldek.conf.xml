@@ -369,7 +369,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
     </description>
   </option>
 
-  <option name="choose equivalents manually" type="boolean" default="no" op="EQPKG_ASKUSER">
+  <option name="choose equivalents manually" type="boolean" default="yes" op="EQPKG_ASKUSER">
     <description>
     Let the user select package among equivalents.
     </description>
@@ -604,7 +604,7 @@ Every repository is configured in its own [ source ] section.
     </description>
   </option>
 
-  <option name="hold" type="string" list="yes" default="" multiple="yes">
+  <option name="hold" type="string" list="yes" default="kernel*" multiple="yes">
     <description>
     Have the same meaning as [ global ] parameter. Example:
     [screen]
