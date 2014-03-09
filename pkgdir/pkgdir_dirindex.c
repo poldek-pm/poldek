@@ -136,6 +136,9 @@ void add_to_path_index(tn_hash *path_index, const char *path, uint32_t package_n
     unsigned khash = 0;
     tn_array *keys;
     
+    if (strlen(path) > 255)
+	return;
+    
     if ((keys = n_hash_get_ex(path_index, path, &klen, &khash)) == NULL) {
         keys = n_array_new(16, free, (tn_fn_cmp)strcmp);
         n_hash_insert_ex(path_index, path, klen, khash, keys);

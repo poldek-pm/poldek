@@ -259,8 +259,9 @@ static int valid_fname(const char *fname, mode_t mode, const char *pkgname)
 #endif     
 
     if (strlen(fname) > 255) {
-        logn(LOGERR, _("%s: %s \"%s\" longer than 255 bytes"),
-            pkgname, S_ISDIR(mode) ? _("dirname") : _("filename"), fname);
+	if (poldek_VERBOSE > 1)
+    	    logn(LOGWARN, _("%s: skipped %s \"%s\" longer than 255 bytes"),
+        	pkgname, S_ISDIR(mode) ? _("dirname") : _("filename"), fname);
         return 0;
     }
     
@@ -335,8 +336,11 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
         struct pkgfl_ent *flent;
 
         fentdirs_items[i] = 0;
-        if (!valid_fname(dirs[i], 0, pkgname))
-            nerr++;
+        if (!valid_fname(dirs[i], 0, pkgname)) {
+    	    skipdirs[i] = NULL;
+    	    fentdirs[i] = NULL;
+            continue;
+        }
 
         if (which != PKGFL_ALL) {
             int is_depdir;
@@ -374,7 +378,7 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
         int len;
 
         if (!valid_fname(names[i], modes ? modes[i] : 0, pkgname))
-            nerr++;
+            continue;
         
         msg(5, "  %d: %s %s/%s \n", i, skipdirs[j] ? "add " : "skip",
             dirs[j], names[i]);
