@@ -419,7 +419,7 @@ static char **poldek_completion(const char *text, int start, int end)
         matches = rl_completion_matches(text, command_options_generator);
 
     } else {
-        rl_completer_word_break_characters = " \t\n\"\\'`@$><=;|&{(";
+        rl_completer_word_break_characters = " \t\n\"\\'`$><=;|&{(";
         
         switch (sh_ctx.completion_ctx) {
             case COMPLETITION_CTX_DIRNAME:
@@ -428,7 +428,7 @@ static char **poldek_completion(const char *text, int start, int end)
                 
             case COMPLETITION_CTX_WHAT_PROVIDES:
             case COMPLETITION_CTX_WHAT_REQUIRES:
-                rl_completer_word_break_characters = " \t\n\"\\'`@$><=;|&{";
+                rl_completer_word_break_characters = " \t\n\"\\'`$><=;|&{";
                 matches = rl_completion_matches(text, deps_generator);
                 break;
                 
