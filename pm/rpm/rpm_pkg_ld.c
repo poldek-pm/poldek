@@ -277,6 +277,7 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     int32_t   *diridxs;
     uint32_t  *sizes;
     uint16_t  *modes;
+    size_t    *dirslen = NULL;
     struct    flfile *flfile;
     struct    pkgfl_ent **fentdirs = NULL;
     int       *fentdirs_items;
@@ -329,11 +330,14 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     
     skipdirs = alloca(sizeof(*skipdirs) * c2);
     fentdirs = alloca(sizeof(*fentdirs) * c2);
+    dirslen = alloca(sizeof(size_t) * c2);
     fentdirs_items = alloca(sizeof(*fentdirs_items) * c2);
 
     /* skip unneded dirnames */
     for (i=0; i<c2; i++) {
         struct pkgfl_ent *flent;
+        
+        dirslen[i] = strlen(dirs[i]);
 
         fentdirs_items[i] = 0;
         if (!valid_fname(dirs[i], 0, pkgname)) {
@@ -366,7 +370,7 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
             if (diridxs[j] == i)
                 fentdirs_items[i]++;
         
-        flent = pkgfl_ent_new(na, dirs[i], strlen(dirs[i]), fentdirs_items[i]);
+        flent = pkgfl_ent_new(na, dirs[i], dirslen[i], fentdirs_items[i]);
         fentdirs[i] = flent;
         ndirs++;
     }
@@ -388,6 +392,15 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
         
         flent = fentdirs[j];
         len = strlen(names[i]);
+        
+        /* FIXME: ignore dirpaths longer then 255 characters lp#1288989 */
+        if (S_ISDIR(modes ? modes[i] : 0) && dirslen[j] + len > 254) {
+    	    if (poldek_VERBOSE > 1)
+    		logn(LOGWARN, _("%s: skipped dirname \"%s/%s\": longer than 255 bytes"),
+        	    pkgname, flent->dirname, names[i]);
+    	    continue;
+    	}
+        
         if (symlinks) { 
             flfile = flfile_new(na, sizes ? sizes[i] : 0,
                                 modes ? modes[i] : 0,
