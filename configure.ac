@@ -11,9 +11,9 @@ AC_INIT([poldek], [poldek_version], [http://bugs.launchpad.net/poldek])
 AC_CONFIG_SRCDIR([capreq.c])
 AC_CONFIG_HEADERS([config.h])
 
-PACKAGE_BUGREPORT="mis@pld-linux.org"
-VERSION_STATUS="rc"
-VERSION=0.30
+PACKAGE_BUGREPORT="http://bugs.launchpad.net/poldek"
+VERSION_STATUS="stable"
+VERSION=0.30.1
 VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
 VERSION_CVSTAG="v$VERSION_TAG"
 PACKAGE_VERSION_SERIES="2"

@@ -50,7 +50,7 @@ static int poldeklib_init_called = 0;
 #define SOURCES_LOADED      (1 << 3)
 #define SETUP_DONE          (1 << 4)  
 
-const char poldek_BUG_MAILADDR[] = "<mis@pld-linux.org>";
+const char poldek_BUG_MAILADDR[] = "http://bugs.launchpad.net/poldek";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
 const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
 "Copyright (C) 2000-2007 Pawel A. Gajda <mis@pld-linux.org>\n"
@@ -1051,7 +1051,7 @@ static void n_assert_hook(const char *expr, const char *file, int line)
     n_snprintf(msg, sizeof(msg), "Something wrong, something not quite right"
                " with %s\n"
                "Assertion '%s' failed, %s:%d\n"
-               "Please report this bug to %s.\n\n",
+               "Please report this bug to: %s\n\n",
                VERSION " (" VERSION_STATUS ")", 
                expr, file, line,  poldek_BUG_MAILADDR);
     if (poldek_say_goodbye(msg))
