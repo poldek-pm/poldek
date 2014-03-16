@@ -227,7 +227,7 @@ static int rpmioaccess_satisfies(const struct capreq *req)
 int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
 {
     struct pm_rpm *pm = pm_rpm;
-    struct capreq *cap = NULL;
+    int i;
     
     /* internal caps have names like name(feature) */
     if (!capreq_is_rpmlib(req) && strstr(capreq_name(req), "(") == NULL)
@@ -240,11 +240,19 @@ int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
         if ((pm->caps = load_internal_caps(pm_rpm)) == NULL)
             return 0;
     
-    cap = n_array_bsearch_ex(pm->caps, req,
-                             (tn_fn_cmp)capreq_cmp_name);
+    i = n_array_bsearch_idx_ex(pm->caps, req, (tn_fn_cmp)capreq_cmp_name);
     
-    if (cap && cap_match_req(cap, req, 1))
-        return 1;
+    if (i >= 0) {
+	while (i < n_array_size(pm->caps)) {
+	    struct capreq *cap = n_array_nth(pm->caps, i++);
+	    
+	    if (capreq_cmp_name(cap, req) != 0)
+		break;
+	
+	    if (cap_match_req(cap, req, 1))
+		return 1;
+	}
+    }
 
     return 0;
 }
