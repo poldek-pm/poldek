@@ -534,7 +534,9 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
         argv[nargs++] = (char*)ts->rootdir;
     }
     
+#ifndef HAVE_RPM_VERSION_GE_5
     argv[nargs++] = "--noorder";
+#endif
     
     if (ts->rpmopts) 
         for (i=0; i<n_array_size(ts->rpmopts); i++)
