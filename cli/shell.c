@@ -73,6 +73,11 @@ struct sh_ctx {
 
 static struct sh_ctx sh_ctx = { COMPLETITION_CTX_NONE, NULL };
 
+inline static int option_is_end (const struct argp_option *__opt)
+{
+    return !__opt->key && !__opt->name && !__opt->doc && !__opt->group;
+}
+
 static
 int is_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg, int reverse)
 {
@@ -191,7 +196,7 @@ static char *command_options_generator(const char *text, int state)
     
         len = strlen(&text[2]);
     
-        for (i = 0; !_option_is_end(&command->argp_opts[i]); i++) {
+        for (i = 0; !option_is_end(&command->argp_opts[i]); i++) {
             const struct argp_option *argp_opt = &command->argp_opts[i];
         
             /* skip hidden options */
