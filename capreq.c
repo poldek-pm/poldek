@@ -218,14 +218,12 @@ int do_capreq_snprintf(char *str, size_t size, const struct capreq *cr,
     }
 
     if (p == relstr) {          /* no relflags */
-        n_assert(*capreq_ver(cr) == '\0');
         if (capreq_is_rpmlib(cr))
             n += n_snprintf(&s[n], size - n, "rpmlib(%s)", capreq_name(cr));
         else
             n += n_snprintf(&s[n], size - n, "%s", capreq_name(cr));
         
     } else {
-        n_assert(*capreq_ver(cr));
         if (capreq_is_rpmlib(cr))
             n += n_snprintf(&s[n], size - n, "rpmlib(%s) %s ", capreq_name(cr), relstr);
         else
