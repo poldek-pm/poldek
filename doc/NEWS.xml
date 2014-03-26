@@ -1,6 +1,45 @@
 <?xml version="1.0"?>
 <news>
-
+<release version="0.30.1" date="2014/03/26">
+ <section><title>Bugfixes:</title>
+  
+  <entry><para>
+   fix building without optimization
+  </para>
+  <author id="draenog">Kacper Kornet</author>
+  </entry>
+  
+  <entry><para>
+   fix order of packages during removal
+  </para>
+  <author id="draenog">Kacper Kornet</author>
+  </entry>
+  
+  <entry><para>
+   fix crash on invalid capreqs
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+  
+  <entry><para>
+   fix sysinfo data usage (lp#1216250)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+  
+  <entry><para>
+   fix tab completion for kernel modules
+  </para>
+  <author id="witekfl">Witold Filipczyk</author>
+  </entry>
+  
+  <entry><para>
+   support packages with path length over 255 bytes (lp#1288989)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+ </section>
+</release>
 <release version="0.30.0" date="2013/07/07" focus="walking on">
  <section><title>New features:</title>
   <entry><para>
