@@ -72,15 +72,17 @@ static int search(struct cmdctx *cmdctx);
 #define OPT_SEARCH_REQ       (1 << 1)
 #define OPT_SEARCH_CNFL      (1 << 2)
 #define OPT_SEARCH_OBSL      (1 << 3)
-#define OPT_SEARCH_SUMM      (1 << 4)
-#define OPT_SEARCH_DESC      (1 << 5)
-#define OPT_SEARCH_FL        (1 << 6)
-#define OPT_SEARCH_GROUP     (1 << 7)
-#define OPT_SEARCH_CHANGELOG (1 << 8)
+#define OPT_SEARCH_SUGS      (1 << 4)
+#define OPT_SEARCH_SUMM      (1 << 5)
+#define OPT_SEARCH_DESC      (1 << 6)
+#define OPT_SEARCH_FL        (1 << 7)
+#define OPT_SEARCH_GROUP     (1 << 8)
+#define OPT_SEARCH_CHANGELOG (1 << 9)
 
 #define OPT_SEARCH_ALL     (OPT_SEARCH_CAP  | OPT_SEARCH_REQ | OPT_SEARCH_CNFL |  \
-                            OPT_SEARCH_OBSL | OPT_SEARCH_SUMM | OPT_SEARCH_DESC | \
-                            OPT_SEARCH_FL | OPT_SEARCH_GROUP | OPT_SEARCH_CHANGELOG)
+                            OPT_SEARCH_OBSL | OPT_SEARCH_SUGS | OPT_SEARCH_SUMM | \
+                            OPT_SEARCH_DESC | OPT_SEARCH_FL | OPT_SEARCH_GROUP | \
+                            OPT_SEARCH_CHANGELOG)
 
 #define OPT_SEARCH_DEFAULT (OPT_SEARCH_CAP | OPT_SEARCH_SUMM | OPT_SEARCH_DESC)
 
@@ -92,17 +94,18 @@ static int search(struct cmdctx *cmdctx);
 #define OPT_NO_SEARCHSW    OPT_PATTERN_PCRE
 
 static struct argp_option options[] = {
-    { "provides",  'p', 0, 0, N_("Search capabilities"), 1},
-    { "requires",  'r', 0, 0, N_("Search requirements"), 1},
-    { "conflicts", 'c', 0, 0, N_("Search conflicts"), 1},
-    { "obsoletes", 'o', 0, 0, N_("Search obsolences"), 1},
-    { "summary",   's', 0, 0, N_("Search summaries, urls and license"), 1},
+    { "provides",    'p', 0, 0, N_("Search capabilities"), 1},
+    { "requires",    'r', 0, 0, N_("Search requirements"), 1},
+    { "conflicts",   'c', 0, 0, N_("Search conflicts"), 1},
+    { "obsoletes",   'o', 0, 0, N_("Search obsolences"), 1},
+    { "suggests",    'S', 0, 0, N_("Search suggests"), 1},
+    { "summary",     's', 0, 0, N_("Search summaries, urls and license"), 1},
     { "description", 'd', 0, 0, N_("Search descriptions"), 1},
-    { "group",     'g', 0, 0, N_("Search groups"), 1 }, 
-    { "files",     'f', 0, 0, N_("Search file list"), 1},
-    { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},
-    { "changelog", 'L', 0, 0, N_("Search changelogs"), 1},
-    { "all",       'a', 0, 0,
+    { "group",       'g', 0, 0, N_("Search groups"), 1 }, 
+    { "files",       'f', 0, 0, N_("Search file list"), 1},
+    { NULL,          'l', 0,  OPTION_ALIAS, 0, 1},
+    { "changelog",   'L', 0, 0, N_("Search changelogs"), 1},
+    { "all",         'a', 0, 0,
       N_("Search all described fields, the defaults are: -sd"), 1
     },
     { "perlre",    OPT_PATTERN_PCRE, 0, 0, N_("Threat PATTERN as Perl regular expression"), 1},
@@ -240,7 +243,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'r':
             cmdctx->_flags |= OPT_SEARCH_REQ;
             break;
-            
+
+	case 'S':
+	    cmdctx->_flags |= OPT_SEARCH_SUGS;
+	    break;
+
         case 's':
             cmdctx->_flags |= OPT_SEARCH_SUMM;
             break;
@@ -501,6 +508,17 @@ static int pkg_match(struct pkg *pkg, struct pattern *pt, unsigned flags)
             if (matchit && (match = pattern_match(pt, p, strlen(p))))
                 goto l_end;
         }
+
+    if ((flags & OPT_SEARCH_SUGS) && pkg->sugs) {
+	for (i = 0; i < n_array_size(pkg->sugs); i++) {
+	    cr = n_array_nth(pkg->sugs, i);
+	    p = capreq_name(cr);
+	    
+	    if ((match = pattern_match(pt, p, strlen(p)))) {
+		goto l_end;
+	    }
+	}
+    }
 
     if ((flags & OPT_SEARCH_GROUP) && (p = (char*)pkg_group(pkg))) {
         if ((match = pattern_match(pt, p, strlen(p))))
