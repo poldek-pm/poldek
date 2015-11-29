@@ -300,7 +300,7 @@ static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
     struct successor succ;
     struct pkg *sucpkg;
     char *message = NULL;
-    int install = 0;
+    struct i3pkg *i3tomark = NULL;
     
     tracef(indent, "%s req: %s (satisfied=%s)", pkg_id(pkg),
            capreq_stra(req), req_satisfier ? "yes": "no");
@@ -314,40 +314,21 @@ static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
     }
 
     /* already in inset or will be there soon */
-    if (i3_is_marked(ictx, sucpkg) || pkg_is_marked_i(ictx->ts->pms, sucpkg)) {
+    if (i3_is_marked(ictx, sucpkg) || pkg_is_marked_i(ictx->ts->pms, sucpkg))
         message = "already marked";
-        install = 1;
-        goto l_end;
-    }
+    else if (succ.by_obsoletes)
+        message = "by Obsoletes tag";
+    else if (ictx->ts->getop(ictx->ts, POLDEK_OP_GREEDY))
+        message = "upgrade resolves req";
 
-    if (pkg_requires_cap(sucpkg, req)) {
-        message = "successor requires req too";
-        install = 0;
-        
-    } else {
-        if (succ.by_obsoletes)
-            message = "by Obsoletes tag";
+    i3tomark = i3pkg_new(sucpkg, 0, pkg, req, I3PKGBY_GREEDY);
 
-        else if (ictx->ts->getop(ictx->ts, POLDEK_OP_GREEDY)) 
-            message = "upgrade resolves req";
-
-        install = 1;
-    }
+    tracef(indent, "- %s: upgrading orphan%s%s%s", pkg_id(sucpkg),
+           message ? " (":"", message ? message:"", message ? ")":"");
     
-l_end:
-    if (!install) {
-        tracef(indent, "- %s: do not upgrading orphan%s%s%s", pkg_id(sucpkg),
-               message ? " (":"", message ? message:"", message ? ")":"");
-        
-    } else {
-        struct i3pkg *i3tomark = i3pkg_new(sucpkg, 0, pkg, req, I3PKGBY_GREEDY);
+    i3_process_package(indent, ictx, i3tomark);
 
-        tracef(indent, "- %s: upgrading orphan%s%s%s", pkg_id(sucpkg),
-	       message ? " (":"", message ? message:"", message ? ")":"");
-        i3_process_package(indent, ictx, i3tomark);
-    }
-
-    return install;
+    return 1;
 }
 
 
