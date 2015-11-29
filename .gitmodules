@@ -1,6 +1,6 @@
 [submodule "trurlib"]
 	path = trurlib
-	url = git://gitorious.org/poldek/trurlib.git
+	url = git@github.com:megabajt/trurlib.git
 [submodule "tndb"]
 	path = tndb
-	url = git://gitorious.org/poldek/tndb.git
+	url = git@github.com:megabajt/tndb.git
