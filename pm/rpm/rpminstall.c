@@ -338,9 +338,13 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
     if (poldek_ts_issetf(ts, POLDEK_TS_DOWNGRADE)) {
         argv[nargs++] = "--oldpackage";
     }
-        
+
     if (nverbose > 0) {
-        argv[nargs++] = "-vh";
+	if (ts->getop(ts, POLDEK_OP_PROGRESS_NONE))
+    	    argv[nargs++] = "-v";
+    	else
+    	    argv[nargs++] = "-vh";
+
         nverbose--;
     }
 

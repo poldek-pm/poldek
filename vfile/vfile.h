@@ -52,6 +52,7 @@
 #define VFILE_CONF_STUBBORN_NRETRIES      (1 << 11) /* how many retries */
 #define VFILE_CONF_EXTCOMPR               (1 << 12) /* use external script to
                                                        file (de)compression */
+#define VFILE_CONF_PROGRESS_NONE          (1 << 13)
 #define VFILE_CONF_SIGINT_REACHED         (1 << 15)
 EXPORT int vfile_configure(int param, ...);
 

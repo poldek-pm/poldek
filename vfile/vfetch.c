@@ -138,7 +138,7 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
     
     if (reqtype == REQTYPE_FETCH) {
         n_assert(req->bar == NULL);
-        if ((vf_flags & VF_FETCH_NOPROGRESS) == 0)
+        if ((vf_flags & VF_FETCH_NOPROGRESS) == 0 && (vfile_conf.flags & VFILE_CONF_PROGRESS_NONE) == 0)
             req->bar = vf_progress_new(req->url);
     }
     

@@ -72,6 +72,7 @@ static void argp_as_docbook(struct argp *argp);
 #define OPT_RUNAS             (OPT_GID + 18)
 #define OPT_OPTION 'O'
 #define OPT_SHCMD             (OPT_GID + 19)
+#define OPT_NOPROGRESS          (OPT_GID + 20)
 #define OPT_DOCB              (OPT_GID + 24)
 
 #define OPT_AS_FLAG(OPT)       (1 << (OPT - OPT_GID))
@@ -120,6 +121,7 @@ static struct argp_option common_options[] = {
 {NULL, OPT_OPTION, "OPTION=VALUE", 0, N_("Set configuration option"), OPT_GID },
 {"docbook", OPT_DOCB, 0, OPTION_HIDDEN,
         N_("Dump options in docbook format"), OPT_GID },
+{"noprogress", OPT_NOPROGRESS, 0, 0, N_("Do not show progress bar"), OPT_GID }, 
 //{"v016", OPT_V016, 0, 0, N_("Read indexes created by versions < 0.17"), 500 },
 {0,  'v', 0, 0, N_("Be verbose."), OPT_GID },
 {0,  'q', 0, 0, N_("Do not produce any output."), OPT_GID },
@@ -318,6 +320,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             ts->setop(ts, POLDEK_OP_GREEDY, 1);
             break;
 
+        case OPT_NOPROGRESS:
+    	    ts->setop(ts, POLDEK_OP_PROGRESS_NONE, 1);
+    	    poldek_configure(ctx, POLDEK_CONF_PROGRESS, arg);
+    	    break;
 
         case ARGP_KEY_ARG:
             DBGF("main.arg %s, mode = %d\n", arg, argsp->mode);

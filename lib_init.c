@@ -1212,6 +1212,11 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
         case POLDEK_CONF_LOGTTY:
             poldek_log_set_default_appender("_TTY", NULL, NULL);
             break;
+        
+        case POLDEK_CONF_PROGRESS:
+            ctx->ts->setop(ctx->ts, POLDEK_OP_PROGRESS_NONE, 1);
+            vfile_configure(VFILE_CONF_PROGRESS_NONE, 1);
+            break;
 
         case POLDEK_CONF_VFILEPROGRESS:
             if ((vv = va_arg(ap, void*)))
@@ -1259,7 +1264,7 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
                 poldek_say_goodbye = vv;
                 poldek_log_say_goodbye = vv;
             }
-                
+        
         default:
             rc = poldek_ts_vconfigure(ctx->ts, param, ap);
             break;

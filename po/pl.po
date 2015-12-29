@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: poldek 0.30\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-03 14:57+0100\n"
+"POT-Creation-Date: 2015-12-17 20:31+0100\n"
 "PO-Revision-Date: 2010-12-15 21:34+0100\n"
 "Last-Translator: Bartlomiej Zimon <uzi18@o2.pl>\n"
 "Language-Team: Polish <translation-team-pl@lists.sourceforge.net>\n"
@@ -145,7 +145,7 @@ msgstr "Podaj nazwê aktualnego katalogu"
 msgid "  Defined aliases:\n"
 msgstr "  Zdefiniowane aliasy:\n"
 
-#: cli/cli.c:227 cli/main.c:124
+#: cli/cli.c:227 cli/main.c:126
 msgid "Be verbose."
 msgstr "B±d¼ gadatliwy"
 
@@ -670,95 +670,99 @@ msgstr "%s niespodziewany }"
 msgid "%s array iterator used with different sized arrays"
 msgstr ""
 
-#: cli/main.c:81
+#: cli/main.c:82
 msgid "Miscellaneous options:"
 msgstr "Ró¿norodne opcje"
 
-#: cli/main.c:83
+#: cli/main.c:84
 msgid "Use FILE as PM(rpm) binary"
 msgstr "U¿yj PLIKU jako binarki zarz±dcy pakietów (rpm-a)"
 
-#: cli/main.c:85
+#: cli/main.c:86
 msgid "Use FILE as sudo binary"
 msgstr "U¿yj PLIKU jako binarki sudo"
 
-#: cli/main.c:88
+#: cli/main.c:89
 msgid "Store downloaded files and co. under DIR"
 msgstr "Umieszczaj ¶ci±gniête pliki itp. w katalogu DIR"
 
-#: cli/main.c:91
+#: cli/main.c:92
 msgid "Run in command mode (like ipoldek does by default)"
 msgstr "Uruchom w trybie poleceñ (tak jak ipoldek robi domy¶lnie)"
 
-#: cli/main.c:93
+#: cli/main.c:94
 msgid ""
 "Confirm packages installation and let user choose among equivalent packages"
 msgstr ""
 "Potwierdzaj instalacjê oraz pozwól u¿ytkownikowi wybieraæ po¶ród "
 "równowa¿nych pakietów"
 
-#: cli/main.c:95
+#: cli/main.c:96
 msgid "Don't ask about anything"
 msgstr "O nic nie pytaj"
 
-#: cli/main.c:97
+#: cli/main.c:98
 msgid "Run in interactive mode (default)"
 msgstr "Uruchom w trybie interaktywnym (domy¶lne)"
 
-#: cli/main.c:100
+#: cli/main.c:101
 msgid "Run poldek shell COMMAND and exit"
 msgstr "Uruchom komendê COMMAND i wyjd¼"
 
-#: cli/main.c:103
+#: cli/main.c:104
 msgid "Don't load installed packages at startup"
 msgstr "Nie ³aduj bazy zainstalowanych pakietów przy starcie"
 
-#: cli/main.c:107 cli/main.c:109
+#: cli/main.c:108 cli/main.c:110
 msgid "Read configuration from FILE"
 msgstr "Czytaj konfiguracjê z pliku FILE"
 
-#: cli/main.c:111
+#: cli/main.c:112
 msgid "Do not read configuration"
 msgstr "Nie czytaj ¿adnej konfiguracji"
 
-#: cli/main.c:112
+#: cli/main.c:113
 msgid "Update remote configuration files (if any)"
 msgstr "Uaktualnij zdalne pliki konfiguracyjne (je¿eli s±)"
 
-#: cli/main.c:116
+#: cli/main.c:117
 msgid "Display program version information and exit"
 msgstr "Wypisz informacjê o wersji programu i wyjd¼"
 
-#: cli/main.c:118
+#: cli/main.c:119
 msgid "Log program messages to FILE"
 msgstr "Rejestruj wszystkie komunikaty w pliku FILE"
 
-#: cli/main.c:119
+#: cli/main.c:120
 msgid "Run program as user USER"
 msgstr "Uruchom program jako u¿ytkownik USER"
 
-#: cli/main.c:120
+#: cli/main.c:121
 msgid "Set configuration option"
 msgstr "Ustaw opcjê konfiguracji"
 
-#: cli/main.c:122
+#: cli/main.c:123
 msgid "Dump options in docbook format"
 msgstr "Zrzuæ opcje w formacje docbooka"
 
-#: cli/main.c:125
+#: cli/main.c:124
+msgid "Select progress bar TYPE"
+msgstr ""
+
+#: cli/main.c:127
 msgid "Do not produce any output."
 msgstr "Nie wypisuj ¿anych komunikatów"
 
-#: cli/main.c:226
+#: cli/main.c:228
 msgid "-c is depreciated, use --conf instead"
 msgstr "-c jest przestarza³e, u¿ywaj --conf w zamian"
 
-#: cli/main.c:574
+#: cli/main.c:580
 #, c-format
 msgid "%s: option '%s' requires an argument\n"
 msgstr "%s: opcja '%s' wymaga argumentu\n"
 
-#: cli/main.c:578
+#: cli/main.c:584
 #, c-format
 msgid "%s: option '%s' gives no effect if program executed by ordinary user"
 msgstr ""
@@ -1473,27 +1477,27 @@ msgstr "'osierocony' "
 msgid "%s%s marks %s (%s %s)"
 msgstr "%s%s zaznaczy³ %s (%s %s)"
 
-#: install3/requirements.c:437
+#: install3/requirements.c:418
 #, c-format
 msgid "%s is required by installed %s, give up"
 msgstr "%s jest wymagany przez zainstalowany pakiet %s, poddajê siê"
 
-#: install3/requirements.c:439
+#: install3/requirements.c:420
 #, c-format
 msgid "%s is required by installed %s"
 msgstr "%s jest wymagany przez zainstalowany pakiet %s"
 
-#: install3/requirements.c:585
+#: install3/requirements.c:566
 #, c-format
 msgid "%s: req %s not found, upgrade rpm"
 msgstr "%s: nie znaleziono wymaganej w³a¶no¶ci rpm (%s), aktualizuj rpm"
 
-#: install3/requirements.c:587
+#: install3/requirements.c:568
 #, c-format
 msgid "%s: req %s not found"
 msgstr "%s: nie znaleziono wymaganego %s"
 
-#: install3/requirements.c:654
+#: install3/requirements.c:635
 #, c-format
 msgid "%s: suggested %s not found, skipped"
 msgstr "%s: nie znaleziono sugerowanego %s, pominiêto"
@@ -2242,31 +2246,31 @@ msgstr "%s zamkniêty za spraw± sygna³u %d"
 msgid "%s died under inscrutable circumstances"
 msgstr "%s zgin±³ w podejrzanych okoliczno¶ciach"
 
-#: pm/rpm/rpminstall.c:298 pm/rpm/rpminstall.c:314 pm/rpm/rpminstall.c:487
-#: pm/rpm/rpminstall.c:503
+#: pm/rpm/rpminstall.c:298 pm/rpm/rpminstall.c:314 pm/rpm/rpminstall.c:491
+#: pm/rpm/rpminstall.c:507
 #, c-format
 msgid "%s: command not found"
 msgstr "%s: nie znaleziono polecenia"
 
-#: pm/rpm/rpminstall.c:416
+#: pm/rpm/rpminstall.c:420
 #, c-format
 msgid "%s: signature verification failed"
 msgstr "%s: weryfikacja podpisu nie powiod³a siê"
 
-#: pm/rpm/rpminstall.c:437
+#: pm/rpm/rpminstall.c:441
 msgid "There were signature verification errors. Proceed?"
 msgstr "Wyst±pi³y b³êdy weryfikacji podpisu. Kontynuowaæ? [y/N]"
 
-#: pm/rpm/rpminstall.c:445
+#: pm/rpm/rpminstall.c:449
 msgid "There were package coloring mismatches. Proceed?"
 msgstr "Wyst±pi³y b³êdy kolorów pakietów. Kontynuowaæ? [y/N]"
 
-#: pm/rpm/rpminstall.c:467
+#: pm/rpm/rpminstall.c:471
 #, c-format
 msgid "Executing%s..."
 msgstr "Uruchamianie%s..."
 
-#: pm/rpm/rpminstall.c:576
+#: pm/rpm/rpminstall.c:580
 #, c-format
 msgid "Running%s..."
 msgstr "Uruchamianie%s..."
