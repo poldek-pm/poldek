@@ -199,8 +199,10 @@ int i3_pre_ts_install(struct poldek_ts *ts, tn_array **pkgs)
         if (!pkg_is_marked(ts->pms, pkg))
             continue;
 
-        if (sigint_reached())
+        if (sigint_reached()) {
+    	    n_array_cfree(pkgs);
             return -1;
+        }
         
         installable = i3_is_pkg_installable(ts, pkg, 1);
         
