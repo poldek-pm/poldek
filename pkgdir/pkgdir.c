@@ -274,7 +274,8 @@ const struct pkgdir_module *find_module(const char *type)
 static void env_source(const struct source *src, const char *idxpath)
 {
     setenv("POLDEK_SOURCE_PATH", idxpath, 1);
-    setenv("POLDEK_SOURCE_PREFIX", src->pkg_prefix, 1);
+    if (src->pkg_prefix)
+        setenv("POLDEK_SOURCE_PREFIX", src->pkg_prefix, 1);
     setenv("POLDEK_SOURCE_TYPE", src->type, 1);
     if (src->name)
         setenv("POLDEK_SOURCE_NAME", src->name, 1);
