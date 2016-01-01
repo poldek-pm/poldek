@@ -51,6 +51,8 @@ dnl AC_DEFINE([ENABLE_VFILE_TRURLIO],1,[defined if trurlio is used for vfile ope
 
 AC_DISABLE_STATIC
 
+AC_SYS_LARGEFILE
+
 dnl Checks for programs.
 m4_ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
 AC_PROG_CC()
