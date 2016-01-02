@@ -14,10 +14,6 @@
 #ifndef POLDEK_VFILE_H
 #define POLDEK_VFILE_H
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include <stdio.h>
 #include <stdint.h>
 #include <zlib.h>

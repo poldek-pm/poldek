@@ -13,10 +13,6 @@
 #ifndef POLDEK_CAPREQ_H
 #define POLDEK_CAPREQ_H
 
-#ifdef HAVE_CONFIG_H            /* for inline */
-# include "config.h"
-#endif
-
 #include <stdint.h>
 
 #include <trurl/narray.h>

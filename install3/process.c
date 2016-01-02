@@ -10,6 +10,10 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include "ictx.h"
 
 static void mark_message(int indent, const struct i3pkg *i3pkg)

@@ -13,10 +13,6 @@
 #ifndef  POLDEK_i18h_H
 #define  POLDEK_i18h_H
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #if HAVE_LOCALE_H
 # include <locale.h>
 #endif

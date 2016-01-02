@@ -10,6 +10,10 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include "ictx.h"
 
 int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc)

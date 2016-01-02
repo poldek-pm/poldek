@@ -15,6 +15,9 @@
 
 /* written by lauri alanko */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <string.h>
 #include <trurl/nassert.h>

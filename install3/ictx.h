@@ -13,10 +13,6 @@
 #ifndef POLDEK_INSTALL3_ICTX_H
 #define POLDEK_INSTALL3_ICTX_H
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include <sys/param.h>          /* for PATH_MAX */
 #include <trurl/trurl.h>
 #include <sigint/sigint.h>

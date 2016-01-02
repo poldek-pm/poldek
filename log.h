@@ -13,10 +13,6 @@
 #ifndef POLDEK_LOG_H
 #define POLDEK_LOG_H
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #ifndef __GNUC__
 #  undef __attribute__
 #  define __attribute__(x) /*nothing*/                                      

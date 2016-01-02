@@ -10,6 +10,10 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>
