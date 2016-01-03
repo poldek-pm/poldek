@@ -1,6 +1,8 @@
 [submodule "trurlib"]
 	path = trurlib
 	url = git@github.com:megabajt/trurlib.git
+	branch = master
 [submodule "tndb"]
 	path = tndb
 	url = git@github.com:megabajt/tndb.git
+	branch = master
