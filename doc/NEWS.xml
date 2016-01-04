@@ -1,5 +1,45 @@
 <?xml version="1.0"?>
 <news>
+<release version="0.32.0" date="2016/01/04">
+ <section><title>New features:</title>
+  <entry><para>
+   search by suggests support (lp#1332039)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+  
+  <entry><para>
+   add --noprogress option that lets you hide progress bar
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+  
+  <entry><para>
+   enable largefile for 64bit inodes
+  </para>
+  <author id="arekm">Arkadiusz Miskiewicz</author>
+  </entry>
+ </section>
+ <section><title>Bugfixes:</title>
+  <entry><para>
+   fix: always try to update orphaned package if successor is available
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+  
+  <entry><para>
+   fix: assertion failed due to lack of free()
+  </para>
+  <author id="adwol" email="adwol att pld-linux org">Adam Osuchowski</author>
+  </entry>
+  
+  <entry><para>
+   fix segfault in glibc >= 2.22
+  </para>
+  <author id="arekm">Arkadiusz Miskiewicz</author>
+  </entry>
+ </section>
+</release>
 <release version="0.30.1" date="2014/03/26">
  <section><title>Bugfixes:</title>
   
