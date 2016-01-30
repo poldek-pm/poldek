@@ -1,4 +1,6 @@
 test-driver
+/po/POTFILES.in
+/compile
 Cellar
 aclocal.m4
 Makefile.in
