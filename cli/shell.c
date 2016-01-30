@@ -64,7 +64,8 @@ static char *histfile;
 #define COMPLETITION_CTX_INSTALLED       3
 #define COMPLETITION_CTX_WHAT_PROVIDES   4
 #define COMPLETITION_CTX_WHAT_REQUIRES   5
-#define COMPLETITION_CTX_DIRNAME         6
+#define COMPLETITION_CTX_WHAT_SUGGESTS   6
+#define COMPLETITION_CTX_DIRNAME         7
 
 struct sh_ctx {
     int completion_ctx;
@@ -344,6 +345,10 @@ static char *deps_generator(const char *text, int state)
                 case COMPLETITION_CTX_WHAT_REQUIRES:
                     caps = pkg->reqs;
                     break;
+
+		case COMPLETITION_CTX_WHAT_SUGGESTS:
+		    caps = pkg->sugs;
+		    break;
             }
 
             if (caps) {
@@ -410,6 +415,9 @@ static char **poldek_completion(const char *text, int start, int end)
         else if (strncmp(p, "what-req", 8) == 0) /* what-requires cmd */
             sh_ctx.completion_ctx = COMPLETITION_CTX_WHAT_REQUIRES;
 
+	else if (strncmp(p, "what-sug", 8) == 0) /* what-suggests cmd */
+	    sh_ctx.completion_ctx = COMPLETITION_CTX_WHAT_SUGGESTS;
+
         else if (strncmp(p, "cd ", 3) == 0)
             sh_ctx.completion_ctx = COMPLETITION_CTX_DIRNAME;
 
@@ -433,6 +441,7 @@ static char **poldek_completion(const char *text, int start, int end)
                 
             case COMPLETITION_CTX_WHAT_PROVIDES:
             case COMPLETITION_CTX_WHAT_REQUIRES:
+            case COMPLETITION_CTX_WHAT_SUGGESTS:
                 rl_completer_word_break_characters = " \t\n\"\\'`$><=;|&{";
                 matches = rl_completion_matches(text, deps_generator);
                 break;
