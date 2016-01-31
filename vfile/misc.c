@@ -76,7 +76,7 @@ int vf_valid_path(const char *path)
             default:
                 ndots = -1;
                 
-                if (!isalnum(*p) && strchr("-+/._@!~%{}[]()", *p) == NULL) {
+                if (!isalnum(*p) && strchr("-+/._@!~%{}[]()=", *p) == NULL) {
                     vf_logerr("%s:%c non alphanumeric characters not allowed\n",
                                  path, *p);
                     n_assert(0);
