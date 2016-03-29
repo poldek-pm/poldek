@@ -185,11 +185,12 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
     if ((rc = pkg_cmp_name(p1, p2)))
         return rc;
 
+    if ((rc = -pkg_cmp_evr(p1, p2)))
+	return rc;
+
     /* if multilib sort by name, arch, evr */
     if (poldek_conf_MULTILIB && (rc = -pkg_cmp_arch(p1, p2)) != 0) 
         return rc;
-    
-    rc = -pkg_cmp_evr(p1, p2);
 
     //printf("cmp %s %s -> %d\n", pkg_snprintf_s(p1), pkg_snprintf_s0(p2), rc);
     return rc;
