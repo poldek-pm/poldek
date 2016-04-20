@@ -160,6 +160,26 @@ static tn_array *get_obsoletedby_pkg(struct pkgdb *db, const tn_array *unpkgs,
     return obsoleted;
 }
 
+/* caps not required by anyone; XXX - should be configurable */
+static int is_requireable_cap(const char *cap)
+{
+    const char *nonreq[] = {
+        "elf(buildid)*",
+        NULL
+    };
+
+    int i = 0;
+
+    while (nonreq[i]) {
+        if (fnmatch(nonreq[i], cap, 0) == 0)
+            return 0;
+
+        i++;
+    }
+
+    return 1;
+}
+
 /* files surely not required by anyone; XXX - should be configurable */
 int is_requireable_path(const char *path) 
 {
@@ -250,6 +270,11 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
         it = pkg_cap_iter_new(dbpkg);
         while ((cap = pkg_cap_iter_get(it))) {
             int is_satisfied = 0;
+
+            if (!is_requireable_cap(capreq_name(cap))) {
+                trace(indent + 2, "- %s (skipped)", capreq_stra(cap));
+                continue;
+            }
 
             if (capreq_is_file(cap) && !is_requireable_path(capreq_name(cap))) {
                 trace(indent + 2, "- %s (skipped)", capreq_stra(cap));
