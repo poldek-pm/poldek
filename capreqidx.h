@@ -28,8 +28,10 @@ struct capreq_idx {
 
 struct pkg;
 struct capreq_idx_ent {
-    int16_t items;
-    int32_t _size;
+
+    unsigned int items;		/* number of elements stored in this entry */
+    unsigned int _size;		/* number of elements for which memory is already allocated */
+
     union {
         struct pkg *pkg;
         struct pkg **pkgs;       /* pkgs list */
