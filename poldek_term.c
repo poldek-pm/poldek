@@ -182,7 +182,7 @@ static void sig_winch(int signo)
 
 int poldek_term_init(void) 
 {
-    int i, rc, n;
+    int i, rc;
     char *term, *s;
 
     n_assert(orig_sigwinch_handler == NULL);
@@ -210,7 +210,7 @@ int poldek_term_init(void)
 
     s = tigetstr("bold");
     if (s != NULL && s != (char*)-1) 
-        n = n_snprintf(at_bold, sizeof(at_bold), "%s", s);
+        n_snprintf(at_bold, sizeof(at_bold), "%s", s);
 
     /*s = tigetstr("dim");
       if (s != NULL && s != (char*)-1)
@@ -293,12 +293,12 @@ int poldek_term_ask(int fd, const char *validchrs, const char *msg)
 	if (c == 0x1b && (read(fd, &c, sizeof(c)) == 1) && 
 	    c == 0x5b && (read(fd, &c, sizeof(c)) == 1)) { 
 	    if (c == 0x35 && (read(fd, &c, sizeof(c)) == 1) && 
-		c == 0x7e) {
+		c == 0x7e && strchr(validchrs, 0x7f)) {
 		    c = 0x7f;
 		    break;
 	    }
 	    if (c == 0x36 && (read(fd, &c, sizeof(c)) == 1) && 
-		c == 0x7e) {
+		c == 0x7e && strchr(validchrs, '\t')) {
 		    c = '\t';
 		    break;
 	    }
