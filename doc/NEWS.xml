@@ -1,5 +1,29 @@
 <?xml version="1.0"?>
 <news>
+<release version="0.32.2" date="2016/07/18">
+ <section><title>Bug fixes:</title>
+  <entry><para>
+   map characters only when they are available in validchars (lp#1599021)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+  <entry><para>
+   ignore elf(buildid) while verifying uninstalled caps
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+  <entry><para>
+   fix crash when loading more than 64k packages (lp#1571324)
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+  <entry><para>
+   in comparison EVR should be preferred over arch
+  </para>
+  <author id="megabajt">Marcin Banasiak</author>
+  </entry>
+ </section>
+</release>
 <release version="0.32.1" date="2016/02/04">
  <section><title>New features:</title>
   <entry><para>
