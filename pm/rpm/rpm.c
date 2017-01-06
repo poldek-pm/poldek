@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/param.h>          /* for PATH_MAX */
+#include <sys/stat.h>
 
 #include <trurl/nassert.h>
 #include <trurl/narray.h>
@@ -61,11 +62,16 @@ void *pm_rpm_init(void)
     char *p;
     
     if (initialized == 0) {
+	/* lp#1644315: save original umask and restore it after rpmReadConfigFiles() call */
+	mode_t mask = umask(0);
+
         if (rpmReadConfigFiles(NULL, NULL) != 0) {
             logn(LOGERR, "failed to read rpmlib configs");
             return 0;
         }
         initialized = 1;
+
+        umask(mask);
     }
 
     pm_rpm = n_malloc(sizeof(*pm_rpm));
