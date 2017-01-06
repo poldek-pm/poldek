@@ -347,7 +347,7 @@ int do_waitpid(struct vopen3_st *st, int woptions)
     } else if (WIFSIGNALED(status)) {
 #ifdef HAVE_STRSIGNAL
         st_seterr(st, _("%s terminated by signal %d (%s)"),
-                   st->cmd, WTERMSIG(status), strsignal(WTERMSIG(st)));
+                   st->cmd, WTERMSIG(status), strsignal(WTERMSIG(status)));
 #else
         st_seterr(st, _("%s terminated by signal %d"),
                    st->cmd, WTERMSIG(status));
