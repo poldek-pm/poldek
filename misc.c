@@ -80,23 +80,25 @@ static
 int mdigest(FILE *stream, unsigned char *md, unsigned *md_size, int digest_type)
 {
     unsigned char buf[8*1024];
-    EVP_MD_CTX ctx;
+    EVP_MD_CTX *ctx;
     unsigned n, nn = 0;
 
 
     n_assert(md_size && *md_size);
 
+    ctx = EVP_MD_CTX_create();
     if (digest_type == DIGEST_MD5) 
-        EVP_DigestInit(&ctx, EVP_md5());
+        EVP_DigestInit(ctx, EVP_md5());
     else
-        EVP_DigestInit(&ctx, EVP_sha1());
+        EVP_DigestInit(ctx, EVP_sha1());
 
     while ((n = fread(buf, 1, sizeof(buf), stream)) > 0) {
-        EVP_DigestUpdate(&ctx, buf, n);
+        EVP_DigestUpdate(ctx, buf, n);
         nn += n; 
     }
     
-    EVP_DigestFinal(&ctx, buf, &n);
+    EVP_DigestFinal(ctx, buf, &n);
+    EVP_MD_CTX_destroy(ctx);
 
     if (n > *md_size) {
         *md = '\0';

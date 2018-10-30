@@ -241,12 +241,13 @@ int pndir_digest_calc_pkgs(struct pndir_digest *pdg, tn_array *pkgs)
 int pndir_digest_calc(struct pndir_digest *pdg, tn_array *keys)
 {
     unsigned char md[256];
-    EVP_MD_CTX ctx;
+    EVP_MD_CTX *ctx;
     int i, n, nn = 0;
 
 
-    EVP_DigestInit(&ctx, EVP_sha1());
-    EVP_DigestUpdate(&ctx, "md", strlen("md"));
+    ctx = EVP_MD_CTX_create();
+    EVP_DigestInit(ctx, EVP_sha1());
+    EVP_DigestUpdate(ctx, "md", strlen("md"));
     
     if (keys && n_array_size(keys)) {
         n_array_sort(keys);
@@ -254,11 +255,12 @@ int pndir_digest_calc(struct pndir_digest *pdg, tn_array *keys)
         for (i=0; i < n_array_size(keys); i++) {
             char *key = n_array_nth(keys, i);
             DBGF("key = %s\n", key);
-            EVP_DigestUpdate(&ctx, key, strlen(key));
+            EVP_DigestUpdate(ctx, key, strlen(key));
         }
     }
     
-    EVP_DigestFinal(&ctx, md, &n);
+    EVP_DigestFinal(ctx, md, &n);
+    EVP_MD_CTX_destroy(ctx);
 
     if (n > (int)sizeof(pdg->md))
         return 0;

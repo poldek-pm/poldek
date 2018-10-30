@@ -195,12 +195,13 @@ int hdr_digest(tn_stream *st, unsigned char *md, unsigned *md_size, EVP_MD_CTX *
     int             nread, len, endvhdr_found = 0;
     unsigned char   buf[256];
     char            line[4096];
-    EVP_MD_CTX      ctx;
+    EVP_MD_CTX      *ctx;
     unsigned        n;
 
     
     n_assert(md_size && *md_size);
-    EVP_DigestInit(&ctx, EVP_sha1());
+    ctx = EVP_MD_CTX_create();
+    EVP_DigestInit(ctx, EVP_sha1());
 
     len = strlen(pdir_tag_endvarhdr);
     n = 0;
@@ -208,7 +209,7 @@ int hdr_digest(tn_stream *st, unsigned char *md, unsigned *md_size, EVP_MD_CTX *
     while ((nread = n_stream_gets(st, line, sizeof(line))) > 0) {
         char *p = line;
 
-        EVP_DigestUpdate(&ctx, line, nread);
+        EVP_DigestUpdate(ctx, line, nread);
         if (_ctx)
             EVP_DigestUpdate(_ctx, line, nread);
         n++;
@@ -228,7 +229,8 @@ int hdr_digest(tn_stream *st, unsigned char *md, unsigned *md_size, EVP_MD_CTX *
             break;
     }
 
-    EVP_DigestFinal(&ctx, buf, &n);
+    EVP_DigestFinal(ctx, buf, &n);
+    EVP_MD_CTX_destroy(ctx);
     
     if (!endvhdr_found) {
         logn(LOGERR, _("broken index"));
@@ -251,22 +253,24 @@ static
 int digest(tn_stream *st, unsigned char *md, int *md_size, EVP_MD_CTX *_ctx)
 {
     unsigned char buf[16*1024];
-    EVP_MD_CTX ctx;
+    EVP_MD_CTX *ctx;
     int n, nn = 0;
 
 
     n_assert(md_size && *md_size);
 
-    EVP_DigestInit(&ctx, EVP_sha1());
+    ctx = EVP_MD_CTX_create();
+    EVP_DigestInit(ctx, EVP_sha1());
 
     while ((n = n_stream_read(st, buf, sizeof(buf))) > 0) {
-        EVP_DigestUpdate(&ctx, buf, n);
+        EVP_DigestUpdate(ctx, buf, n);
         if (_ctx)
             EVP_DigestUpdate(_ctx, buf, n);
         nn += n; 
     }
     
-    EVP_DigestFinal(&ctx, buf, &n);
+    EVP_DigestFinal(ctx, buf, &n);
+    EVP_MD_CTX_destroy(ctx);
 
     if (n > *md_size) {
         *md = '\0';
@@ -288,7 +292,7 @@ int pdir_digest_calc(struct pdir_digest *pdg, tn_stream *st, unsigned flags)
     unsigned char   mdh[64], mdd[64], md[64], mdhex[64];
     int             mdh_size = sizeof(mdh), mdd_size = sizeof(mdd),
                     md_size = sizeof(md);
-    EVP_MD_CTX      ctx, *ctxp;
+    EVP_MD_CTX      *ctx = NULL;
     int             is_err = 0, n;
 
     
@@ -298,29 +302,34 @@ int pdir_digest_calc(struct pdir_digest *pdg, tn_stream *st, unsigned flags)
     
     n_assert(flags & (CALC_MD | CALC_MDD));
     
-    ctxp = NULL;
     if (flags & CALC_MD) {
-        EVP_DigestInit(&ctx, EVP_sha1());
-        ctxp = &ctx;
+        ctx = EVP_MD_CTX_create();
+        EVP_DigestInit(ctx, EVP_sha1());
     }
     
     if ((flags & CALC_MDD) == 0) { /* no separate header && body digests */
-        if (!digest(st, mdd, &mdd_size, ctxp)) {
-            if (ctxp)
-                EVP_DigestFinal(&ctx, md, &md_size);
+        if (!digest(st, mdd, &mdd_size, ctx)) {
+            if (ctx) {
+                EVP_DigestFinal(ctx, md, &md_size);
+                EVP_MD_CTX_destroy(ctx);
+            }
             return 0;
         }
         
     } else {
-        if (!hdr_digest(st, mdh, &mdh_size, ctxp)) {
-            if (ctxp)
-                EVP_DigestFinal(&ctx, md, &md_size);
+        if (!hdr_digest(st, mdh, &mdh_size, ctx)) {
+            if (ctx) {
+                EVP_DigestFinal(ctx, md, &md_size);
+                EVP_MD_CTX_destroy(ctx);
+            }
             return 0;
         }
         
-        if (!digest(st, mdd, &mdd_size, ctxp)) {
-            if (ctxp)
-                EVP_DigestFinal(&ctx, md, &md_size);
+        if (!digest(st, mdd, &mdd_size, ctx)) {
+            if (ctx) {
+                EVP_DigestFinal(ctx, md, &md_size);
+                EVP_MD_CTX_destroy(ctx);
+            }
             return 0;
         }
     }
@@ -335,8 +344,9 @@ int pdir_digest_calc(struct pdir_digest *pdg, tn_stream *st, unsigned flags)
             is_err = 1;
     }
     
-    if (ctxp) {
-        EVP_DigestFinal(&ctx, md, &md_size);
+    if (ctx) {
+        EVP_DigestFinal(ctx, md, &md_size);
+        EVP_MD_CTX_destroy(ctx);
         n = bin2hex(mdhex, sizeof(mdhex), md, md_size);
         if (n != PDIR_DIGEST_SIZE)
             is_err = 1;
