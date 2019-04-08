@@ -1,6 +1,6 @@
 NULL =
 
-SUBDIRS = dir pdir hdrl rpmdb pndir yum 
+SUBDIRS = dir rpmdb pndir
 
 if WITH_METADATA_REPOSITORY
 SUBDIRS += metadata
@@ -22,11 +22,8 @@ libpkgdir_la_SOURCES  = \
 			pkg_store.c pkg_restore.c pkg_store.h
 
 pkgdir_modules = dir/libpkgdir_dir.la  \
-		 hdrl/libpkgdir_hdrl.la    \
 		 rpmdb/libpkgdir_rpmdb.la  \
-		 pdir/libpkgdir_pdir.la    \
-		 pndir/libpkgdir_pndir.la  \
-		 yum/libpkgdir_yum.la
+		 pndir/libpkgdir_pndir.la
 
 if WITH_METADATA_REPOSITORY
 pkgdir_modules += metadata/libpkgdir_metadata.la
@@ -48,4 +45,4 @@ clean-local:
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1
