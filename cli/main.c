@@ -20,14 +20,14 @@
 
 #include <argp.h>
 #include <sys/types.h>
-#include <sys/stat.h> 
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <trurl/trurl.h>
 
+#include "compiler.h"
 #include <vfile/vfile.h>
 
-#include "compiler.h"
 #include "sigint/sigint.h"
 #include "i18n.h"
 #include "log.h"
@@ -87,10 +87,10 @@ static struct argp_option common_options[] = {
 
 {"cachedir", OPT_CACHEDIR, "DIR", 0,
      N_("Store downloaded files and co. under DIR"), OPT_GID },
-    
+
 {"cmd", OPT_SHCMD, 0, 0,
      N_("Run in command mode (like ipoldek does by default)"), OPT_GID },
-    
+
 {"ask", OPT_ASK, 0, 0, N_("Confirm packages installation and "
                           "let user choose among equivalent packages"), OPT_GID },
 {"noask", OPT_NOASK, 0, 0, N_("Don't ask about anything"), OPT_GID },
@@ -98,7 +98,7 @@ static struct argp_option common_options[] = {
 {"shell", OPT_SHELL, 0, 0, N_("Run in interactive mode (default)"), OPT_GID },
 
 {"shcmd", OPT_SHELL_CMD, "COMMAND", OPTION_HIDDEN,
-                 N_("Run poldek shell COMMAND and exit"), OPT_GID },    
+                 N_("Run poldek shell COMMAND and exit"), OPT_GID },
 
 {"skip-installed", OPT_SKIPINSTALLED, 0, 0,
      N_("Don't load installed packages at startup"), OPT_GID },
@@ -108,20 +108,20 @@ static struct argp_option common_options[] = {
 {"conf", OPT_CONF, "FILE", 0, N_("Read configuration from FILE"), OPT_GID },
 {"_conf", 'c', "FILE", OPTION_HIDDEN,
      N_("Read configuration from FILE"), OPT_GID }, /* legacy */
-    
+
 {"noconf", OPT_NOCONF, 0, 0, N_("Do not read configuration"), OPT_GID },
 {"upconf", OPT_UPCONF, 0, 0, N_("Update remote configuration files (if any)"),
      OPT_GID },
 
 {"version", OPT_BANNER, 0, OPTION_HIDDEN,
      N_("Display program version information and exit"), OPT_GID },
-    
+
 {"log", OPT_LOG, "FILE", 0, N_("Log program messages to FILE"), OPT_GID },
 {"runas", OPT_RUNAS, "USER", 0, N_("Run program as user USER"), OPT_GID },
 {NULL, OPT_OPTION, "OPTION=VALUE", 0, N_("Set configuration option"), OPT_GID },
 {"docbook", OPT_DOCB, 0, OPTION_HIDDEN,
         N_("Dump options in docbook format"), OPT_GID },
-{"noprogress", OPT_NOPROGRESS, 0, 0, N_("Do not show progress bar"), OPT_GID }, 
+{"noprogress", OPT_NOPROGRESS, 0, 0, N_("Do not show progress bar"), OPT_GID },
 //{"v016", OPT_V016, 0, 0, N_("Read indexes created by versions < 0.17"), 500 },
 {0,  'v', 0, 0, N_("Be verbose."), OPT_GID },
 {0,  'q', 0, 0, N_("Do not produce any output."), OPT_GID },
@@ -140,7 +140,7 @@ static struct argp_option common_options[] = {
 #define MODE_UNINSTALL    6
 #define MODE_SPLIT        7
 #define MODE_SRCLIST      8
-#define MODE_SHELL        9 
+#define MODE_SHELL        9
 
 #define MODE_F_LDSOURCES  (1 << 0)
 
@@ -152,7 +152,7 @@ static struct poclidek_opgroup *poclidek_opgroup_tab[] = {
     &poclidek_opgroup_uninstall,
     &poclidek_opgroup_makeidx,
     &poclidek_opgroup_split,
-    &poclidek_opgroup_verify, 
+    &poclidek_opgroup_verify,
     NULL
 };
 
@@ -173,7 +173,7 @@ struct args {
     tn_array    *addon_cnflines;
     char        *path_conf;
     char        *path_log;
-    
+
     char        *shcmd;
 
     tn_array    *opgroup_rts;
@@ -187,10 +187,10 @@ static
 void set_config_option(struct args *argsp, const char *op, const char *val)
 {
     char tmp[1024];
-    
+
     if (argsp->addon_cnflines == NULL)
         argsp->addon_cnflines = n_array_new(8, free, NULL);
-    
+
     n_snprintf(tmp, sizeof(tmp), "%s = %s", op, val);
     n_array_push(argsp->addon_cnflines, n_strdup(tmp));
 }
@@ -209,7 +209,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case ARGP_KEY_INIT:
             {
                 int i = 0;
-                for (i=0; i < n_array_size(argsp->opgroup_rts); i++) 
+                for (i=0; i < n_array_size(argsp->opgroup_rts); i++)
                     state->child_inputs[i] = n_array_nth(argsp->opgroup_rts, i);
             }
             break;
@@ -226,7 +226,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 'c':
             logn(LOGNOTICE, _("-c is depreciated, use --conf instead"));
-                                /* no break */
+            /* fallthru */
+
         case OPT_CONF:
             args.path_conf = n_strdup(arg);
             break;
@@ -234,7 +235,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_UPCONF:
             argsp->cnflags |= OPT_AS_FLAG(OPT_UPCONF);
             break;
-            
+
         case 'q':
             poldek_set_verbose(-1);
             break;
@@ -243,7 +244,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             DBGF("cmd\n");
             argsp->mode = RUNMODE_APT;
             break;
-            
+
         case 'v':
             poldek_set_verbose(poldek_VERBOSE + 1);
             break;
@@ -251,7 +252,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_NOCONF:
             argsp->cnflags |= OPT_AS_FLAG(OPT_NOCONF);
             break;
-            
+
         case OPT_ASK:
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_INST, 1);
             poldek_configure(ctx, POLDEK_CONF_OPT, POLDEK_OP_CONFIRM_UNINST, 1);
@@ -272,7 +273,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             argsp->mjrmode = MODE_SHELL;
             argsp->cnflags |= OPT_AS_FLAG(OPT_SHELL);
             break;
-            
+
         case OPT_SHELL_CMD:
             argsp->shcmd = arg;
             argsp->mjrmode = MODE_SHELL;
@@ -281,7 +282,8 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case 'f':
             logn(LOGWARN, "-f is obsoleted, use --skip-installed instead");
-                                /* no break */
+            /* fallthru */
+
         case OPT_SKIPINSTALLED:
             argsp->cnflags |= OPT_AS_FLAG(OPT_SKIPINSTALLED);
             argsp->cctx->flags |= POCLIDEK_SKIP_INSTALLED;
@@ -289,7 +291,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
         case OPT_PM:
             poldek_configure(ctx, POLDEK_CONF_PM, arg);
-            break;            
+            break;
 
         case OPT_PMCMD_ALIAS:
         case OPT_PMCMD:
@@ -314,7 +316,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_DOCB:
             argsp->cnflags |= OPT_AS_FLAG(OPT_DOCB);
             break;
-            
+
         case 'G':               /* XXX have no idea why this case from install.c
                                    does not work */
             ts->setop(ts, POLDEK_OP_GREEDY, 1);
@@ -331,64 +333,64 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 argsp->argv[argsp->argc++] = arg;
 
                 while (state->next < state->argc) {
-                    char *arg = state->argv[state->next++];
-                    argsp->argv[argsp->argc++] = arg;
-                    DBGF("eatarg (%s)\n", arg);
+                    char *a = state->argv[state->next++];
+                    argsp->argv[argsp->argc++] = a;
+                    DBGF("eatarg (%s)\n", a);
                 }
                 argsp->argv[argsp->argc] = NULL;
                 n_assert(state->next = state->argc);
                 break;
             }
-            /* apt => no break */
-            
+            /* fallthru */
+
         default:
             return ARGP_ERR_UNKNOWN;
             break;
     }
-    
+
     return 0;
 }
 
 /* hides duplicate options as interactive and cmdl opt set may contain
    same options TODO: !O(n^2) */
 static
-void hide_child_options(const struct argp *parent, const struct argp *child) 
+void hide_child_options(const struct argp *parent, const struct argp *child)
 {
     int i = 0;
-    
+
     while (1) {
         int j, key;
         const struct argp_option *opt = &parent->options[i++];
         if (opt->name == NULL && opt->key == 0 && opt->doc == NULL)
             break;
         DBGF("%d) %d %s\n", i + 1, opt->key, opt->name);
-        
+
         if (opt->key == 0)
             continue;
-        
+
         key = opt->key;
         j = 0;
         while (1) {
-            struct argp_option *opt = (struct argp_option *)&child->options[j++];
-            if (opt->name == NULL && opt->key == 0 && opt->doc == NULL)
+            struct argp_option *copt = (struct argp_option *)&child->options[j++];
+            if (copt->name == NULL && copt->key == 0 && copt->doc == NULL)
                 break;
 
-            DBGF("  %d. %d %s\n", j + 1, opt->key, opt->name);
-            if (key && key == opt->key) {
-                DBGF("Hide %d %s (%s)\n", opt->key, opt->name, opt->doc);
-                opt->flags |= OPTION_HIDDEN;
+            DBGF("  %d. %d %s\n", j + 1, copt->key, copt->name);
+            if (key && key == copt->key) {
+                DBGF("Hide %d %s (%s)\n", copt->key, copt->name, copt->doc);
+                copt->flags |= OPTION_HIDDEN;
             }
-            
+
         }
     }
 }
 
 static
-void argp_prepare_child_options(const struct argp *argp, int hide_child_opts) 
+void argp_prepare_child_options(const struct argp *argp, int hide_child_opts)
 {
     int i;
     const struct argp *child;
-        
+
     if (argp->children == NULL)
         return;
 
@@ -401,7 +403,7 @@ void argp_prepare_child_options(const struct argp *argp, int hide_child_opts)
 }
 
 
-static int load_conf(struct args *argsp) 
+static int load_conf(struct args *argsp)
 {
     unsigned flags = 0;
 
@@ -413,19 +415,19 @@ static int load_conf(struct args *argsp)
 
     if ((flags & POLDEK_LOADCONF_NOCONF) && argsp->addon_cnflines == NULL)
         return 1;
-    
+
     return poldek_load_config(argsp->ctx, argsp->path_conf,
                               argsp->addon_cnflines, flags);
 }
 
 static void args_init(struct poclidek_ctx *cctx, struct poldek_ts *ts,
-                      int argc, char **argv, int mode) 
+                      int argc, char **argv, int mode)
 {
     memset(&args, 0, sizeof(args));
-        
+
     args.ctx = cctx->ctx;
     args.cctx = cctx;
-    
+
     args.argc = 0;
     args.argv = n_malloc(sizeof(*argv) * argc);
     args.argv[0] = NULL;
@@ -438,7 +440,7 @@ static void args_init(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 
 static
 void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
-                   int argc, char **argv, int mode) 
+                   int argc, char **argv, int mode)
 {
     struct argp argp = { common_options, parse_opt,
                          args_doc, poldek_BANNER, 0, 0, 0};
@@ -453,7 +455,7 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 
     child = alloca((n + 2) * sizeof(*child));
     args.opgroup_rts = n_array_new(n, NULL, NULL);
-    
+
     for (i=0; i < n; i++) {
         struct poclidek_opgroup_rt *rt;
         child[i] = *(poclidek_opgroup_tab[i]->argp_child);
@@ -463,28 +465,28 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     }
     child[i].argp = NULL;
     argp.children = child;
-    
+
     if (poclidek_argv_is_help(argc, (const char **)argv))
         hide_child_opts = 1;
-    
 
-#if GENDOCBOOK    
+
+#if GENDOCBOOK
         hide_child_opts = 1;
-#endif        
-    
+#endif
+
     argp_prepare_child_options(&argp, hide_child_opts);
-    
+
     poldek_set_verbose(0);
 
     index = 0;
     argp_parse(&argp, argc, argv, ARGP_IN_ORDER, &index, &args);
-    
+
     if (!poclidek_op_ctx_verify_major_mode(args.opctx))
         exit(EXIT_FAILURE);
-    
+
     if (!load_conf(&args))
         exit(EXIT_FAILURE);
-    
+
 #if GENDOCBOOK
     if (args.cnflags & OPT_AS_FLAG(OPT_DOCB)) {
         argp_as_docbook(&argp);
@@ -495,35 +497,35 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 }
 
 
-int do_run(void) 
+int do_run(void)
 {
     int i, all_rc = OPGROUP_RC_NIL;
-    
+
     n_assert(args.opgroup_rts);
-    
+
     for (i=0; i < n_array_size(args.opgroup_rts); i++) {
         struct poclidek_opgroup_rt *rt = n_array_nth(args.opgroup_rts, i);
         int rc;
 
         if (rt->run == NULL)
             continue;
-        
+
         rc = rt->run(rt);
         all_rc |= rc;
-        
+
         if (rc & OPGROUP_RC_ERROR)
             break;
     }
 
     n_array_free(args.opgroup_rts);
     args.opgroup_rts = NULL;
-    
+
     return all_rc;
 }
 
 extern int poldek_su(const char *user);
 
-static int do_su(int argc, char **argv) 
+static int do_su(int argc, char **argv)
 {
     const char *oprunas = "--runas";
     char *user = NULL;
@@ -536,8 +538,7 @@ static int do_su(int argc, char **argv)
         nosu_opts_len[n] = strlen(nosu_opts[n]);
         n++;
     }
-    
-    
+
     oprunas_len = strlen(oprunas);
     for (i=1; i < argc; i++) {
         n = 0;
@@ -546,7 +547,7 @@ static int do_su(int argc, char **argv)
                 noautosu = 1;
             n++;
         }
-        
+
         if (strncmp(argv[i], "-v", 2) == 0) {
             char *p = argv[i] + 1;
             while (*p) {
@@ -558,14 +559,14 @@ static int do_su(int argc, char **argv)
                 }
                 p++;
             }
-        } 
-            
+        }
+
         if (!is_runas && strncmp(argv[i], oprunas, oprunas_len) == 0) {
             char *p = argv[i] + oprunas_len;
             if (*p == '=') {
                 p++;
                 user = n_strdup(p);
-                
+
             } else {            /* next arg? */
                 if (i < argc - 1)
                     user = n_strdup(argv[i + 1]);
@@ -573,8 +574,8 @@ static int do_su(int argc, char **argv)
             is_runas = 1;
         }
     }
-    
-    
+
+
     if (is_runas) {
         if (user == NULL) {
             logn(LOGERR, _("%s: option '%s' requires an argument\n"),
@@ -586,16 +587,16 @@ static int do_su(int argc, char **argv)
                  n_basenam(argv[0]), oprunas);
             return 0;
         }
-            
+
     } else if (noautosu == 0 && getuid() == 0) {  /* check config's runas */
         tn_hash *cnf;
-        
+
         cnf = poldek_conf_load_default(POLDEK_LDCONF_GLOBALONLY |
                                        POLDEK_LDCONF_NOVALIDATE);
         if (cnf) {
             tn_hash *global;
             const char *u;
-            
+
             global = poldek_conf_get_section(cnf, "global");
             if (global && (u = poldek_conf_get(global, "run_as", NULL))) {
                 user = n_strdup(u);
@@ -604,14 +605,14 @@ static int do_su(int argc, char **argv)
             n_hash_free(cnf);
         }
     }
-    
+
     if (!is_runas)
         return 1;
-    
+
     n_assert(user);
     if (*user == '\0' || strcmp(user, "none") == 0) /* empty or 'none' => ret */
         return 1;
-    
+
     verbose = poldek_set_verbose(verbose);
     rc = poldek_su(user);
     free(user);
@@ -622,10 +623,10 @@ static int do_su(int argc, char **argv)
 static int load_packages(struct poclidek_ctx *cctx, unsigned cnflags)
 {
     unsigned ldflags = POCLIDEK_LOAD_AVAILABLE;
-    
+
     if ((cnflags & OPT_AS_FLAG(OPT_SKIPINSTALLED)) == 0)
         ldflags |= POCLIDEK_LOAD_INSTALLED;
-        
+
     if (!poclidek_load_packages(cctx, ldflags))
         return 0;
     return 1;
@@ -637,12 +638,12 @@ static int run_poldek(struct poclidek_ctx *cctx)
 
     if (!load_packages(cctx, args.cnflags))
         return 0;
-            
-    if (args.shcmd) 
+
+    if (args.shcmd)
         rc = poclidek_execline(cctx, args.ts, args.shcmd);
     else
         rc = poclidek_shell(cctx);
-    
+
     return rc;
 }
 
@@ -650,19 +651,19 @@ static int run_ipoldek(struct poclidek_ctx *cctx)
 {
     int rc = 1;
 #if ENABLE_TRACE
-    i = 0;
-    DBGF("verbose %d, argc = %d\n", verbose, args.argc);
+    int i = 0;
+    DBGF("argc = %d\n", args.argc);
     while (args.argv[i])
         printf(" %s", args.argv[i++]);
     printf("\n");
 #endif
-        
+
     if (args.argc > 0)
         rc = poclidek_exec(cctx, args.ts, args.argc,
                            (const char **)args.argv);
     else /* lonely ipoldek -> run shell as poldek does */
         rc = run_poldek(cctx);
-    
+
     return rc;
 }
 
@@ -680,20 +681,20 @@ int main(int argc, char **argv)
 
     if (!do_su(argc, argv))
         return 1;
-    
+
     setlocale(LC_MESSAGES, "");
     setlocale(LC_CTYPE, "");
 
     bn = n_basenam(argv[0]);
     if (strcmp(bn, "apoldek") == 0 || strcmp(bn, "ipoldek") == 0)
         mode = RUNMODE_APT;
-    
+
     DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
 
     ctx = poldek_new(0);
     ts = poldek_ts_new(ctx, 0);
     cctx = poclidek_new(ctx);
-    
+
     parse_options(cctx, ts, argc, argv, mode);
 
     if (!poldek_setup(ctx))
@@ -713,7 +714,7 @@ int main(int argc, char **argv)
         if (args.cnflags & OPT_AS_FLAG(OPT_UPCONF)) /*UPCONF is major mode*/
             goto out;
     }
-    
+
     if (args.mode == RUNMODE_POLDEK)
         rc = run_poldek(cctx);
 
@@ -725,7 +726,7 @@ out:
     poclidek_free(cctx);
     poldek_free(ctx);
     poldeklib_destroy();
-    
+
     return rc ? 0 : -1;
 }
 
@@ -738,20 +739,20 @@ static void docbook_opt(tn_hash *idh, FILE **st,
     FILE *stream = *st;
     char *id = NULL, docfile[PATH_MAX], *doc;
     int c;
-    
+
     if (opt->doc && opt->name == NULL && opt->key == 0) { /* group */
         char *name, *p, path[PATH_MAX], doc[PATH_MAX], idsect[256];
         int n;
-        
+
         if (stream) {
             fprintf(stream, "</variablelist>\n");
 #if GENDOCBOOK_SECT
             fprintf(stream, "</sect2>\n");
-#endif    
+#endif
             //printf("->CLOSE\n");
             fclose(stream);
         }
-        
+
         n_strdupap(opt->doc, &name);
         p = name;
         while (*p) {
@@ -760,7 +761,7 @@ static void docbook_opt(tn_hash *idh, FILE **st,
             if (*p == '/')   *p = '-';
             *p = tolower(*p);
             p++;
-            
+
         }
         n_snprintf(idsect, sizeof(idsect), "ref.cmdl.%s", name);
         n_snprintf(path, sizeof(path), "manual/ref%.4d-%s.xml", opt->group, name);
@@ -778,10 +779,10 @@ static void docbook_opt(tn_hash *idh, FILE **st,
 #if GENDOCBOOK_SECT
         fprintf(stream, "<sect2 id=\"%s\"><title>%s</title>\n", idsect, doc);
         fprintf(stream, "<variablelist><title></title>\n", doc);
-#else        
+#else
         fprintf(stream, "<variablelist><title>%s</title>\n", doc);
-#endif        
-        
+#endif
+
         return;
     }
     n_assert(stream);
@@ -802,7 +803,7 @@ static void docbook_opt(tn_hash *idh, FILE **st,
         n_snprintf(&id[strlen(id)], 200, "%d", opt->group);
         n_hash_insert(idh, id, NULL);
     }
-    
+
     fprintf(stream, " id=\"ref.cmdl.%s\"", id);
     fprintf(stream, ">");
     c = opt->key;
@@ -818,48 +819,48 @@ static void docbook_opt(tn_hash *idh, FILE **st,
             (opt->flags & OPTION_ARG_OPTIONAL) ? "[" : "",
             opt->arg ? "=" : "", opt->arg ? opt->arg : "",
             (opt->flags & OPTION_ARG_OPTIONAL) ? "]" : "");
-    
+
     fprintf(stream, " </option></term>\n");
     fprintf(stream, "  <listitem>\n");
     n_snprintf(docfile, sizeof(docfile), "manual/ref.cmdl.%s.xml", id);
     doc = opt->doc ? (char*)opt->doc : "-";
-    
+
     if (access(docfile, R_OK) != 0) {
         fprintf(stream, "   <para>\n      %s\n", doc);
         fprintf(stream, "   </para>\n");
-        
+
     } else {
         fprintf(stream, "<xi:include  href=\"%s\" "
                 "xmlns:xi=\"http://www.w3.org/2001/XInclude\" />", docfile);
     }
-    
+
 
     fprintf(stream, "  </listitem>\n");
     fprintf(stream, "</varlistentry>\n");
 }
 
 static
-void do_argp_as_docbook(struct argp *argp, FILE **stream, tn_hash *idh) 
+void do_argp_as_docbook(struct argp *argp, FILE **stream, tn_hash *idh)
 {
     struct argp *child;
     tn_array *aliases = n_array_new(16, NULL, NULL);
     int i;
-    
+
     i = 0;
     while (1) {
         struct argp_option *next, *opt;
-        
+
         n_array_clean(aliases);
         opt = &argp->options[i++];
         if (opt->name == NULL && opt->key == 0 && opt->doc == NULL)
             break;
-        
+
         if (opt->flags & OPTION_HIDDEN) {
             printf(" skip %s\n", opt->name);
             continue;
         }
         //printf("do %d) %d %s %s\n", i + 1, opt->key, opt->name, opt->doc);
-        
+
         next = &argp->options[i];
         while (next->flags & OPTION_ALIAS) {
             //printf("  %d) %d %s\n", i + 1, next->key, next->name);
@@ -871,12 +872,12 @@ void do_argp_as_docbook(struct argp *argp, FILE **stream, tn_hash *idh)
         }
         //printf("stream %p\n", stream);
         docbook_opt(idh, stream, opt, aliases);
-        
+
     }
 
     if (argp->children == NULL)
         return;
-    
+
     i = 0;
     while ((child = argp->children[i++].argp))
         do_argp_as_docbook(child, stream, idh);
@@ -885,7 +886,7 @@ void do_argp_as_docbook(struct argp *argp, FILE **stream, tn_hash *idh)
 }
 
 /* we must be in doc/ subdir */
-static void argp_as_docbook(struct argp *argp) 
+static void argp_as_docbook(struct argp *argp)
 {
     FILE *stream = NULL;
     tn_hash *idh = n_hash_new(256, free);
@@ -894,7 +895,7 @@ static void argp_as_docbook(struct argp *argp)
         fprintf(stream, "</variablelist>\n");
 #if GENDOCBOOK_SECT
         fprintf(stream, "</sect2>\n");
-#endif    
+#endif
         fclose(stream);
     }
 }
