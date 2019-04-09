@@ -28,6 +28,7 @@ AH_TEMPLATE([HAVE_TM___GMTOFF],[])
 AH_TEMPLATE([HAVE_RPM_HEADER_MAGIC_YES],[])
 AH_TEMPLATE([HAVE_RPM_INT32_TYPE],[])
 AH_TEMPLATE([HAVE_RPM_5],[])
+AH_TEMPLATE([HAVE_RPMORG],[])
 
 AM_INIT_AUTOMAKE([1.11 foreign no-dist-gzip dist-xz])
 AC_DEFINE_UNQUOTED([VERSION_STATUS], "$VERSION_STATUS", [version status])
@@ -267,12 +268,24 @@ else
 		], have_tag_suggests=yes, have_tag_suggests=no)
 fi
 
-AC_MSG_CHECKING([for rpm 5.x])
 
+AC_MSG_CHECKING([for rpmorg (>= 4.14)])
+PKG_CHECK_EXISTS([rpm >= 4.14 rpm < 5.0], [is_rpmorg=yes], [is_rpmorg=no])
+if test "${is_rpmorg}." = "yes."; then
+    AC_MSG_RESULT(yes)
+    AM_CONDITIONAL(WITH_RPMORG, true)
+    AC_DEFINE([HAVE_RPMORG], [1], [])
+else
+    AC_MSG_RESULT(no)
+    AM_CONDITIONAL(WITH_RPMORG, false)
+fi
+
+AC_MSG_CHECKING([for rpm5])
 PKG_CHECK_EXISTS([rpm >= 5.0], [is_rpm5=yes], [is_rpm5=no])
 
 if test "${is_rpm5}." = "yes."; then
     AC_MSG_RESULT(yes)
+    LIBS="$LIBS -lrpmdb"
     AC_EGREP_CPP(RPMTAG_PUBKEYS,
     		 [ #include <rpm/rpmtag.h>
     		 ], have_tag_pubkeys=yes, have_tag_pubkeys=no)
@@ -342,14 +355,14 @@ AC_CHECK_LIB(rpmio, rpmCleanPath,,AC_MSG_ERROR(["rpmio not found"]))
 
 AC_CHECK_LIB(rpm, rpmReadPackageInfo,[LIBS="-lrpm $DBLIB $LIBS"],
 	AC_CHECK_LIB(rpm, rpmReadPackageHeader,
-		[LIBS="-lrpm -lrpmdb $DBLIB $LIBS"],
+		[LIBS="-lrpm $DBLIB $LIBS"],
 		AC_CHECK_LIB(rpm, rpmReadPackageFile,
 			[AC_CHECK_LIB(elf, elf_begin)
-			 LIBS="-lrpm -lrpmdb $DBLIB $LIBS"
+			 LIBS="-lrpm $DBLIB $LIBS"
 			 AC_DEFINE([HAVE_RPM_4_1],1,[])],
 			AC_MSG_ERROR(["rpmlib not found"]),
-			[$DBLIB -lrpmdb]),
-		[$DBLIB -lrpmdb]),
+			[$DBLIB]),
+		[$DBLIB]),
 	    [$DBLIB])
 
 AC_CHECK_FUNCS(rpmlog vrpmlog rpmCheckSig rpmVerifySignature)
@@ -593,14 +606,12 @@ AC_CONFIG_FILES([
         po/Makefile.in
         pkgdir/Makefile
         pkgdir/dir/Makefile
-        pkgdir/hdrl/Makefile
-        pkgdir/pdir/Makefile
         pkgdir/pndir/Makefile
         pkgdir/rpmdb/Makefile
-        pkgdir/yum/Makefile
         pkgdir/metadata/Makefile
         pm/Makefile
         pm/rpm/Makefile
+        pm/rpmorg/Makefile
         pm/pset/Makefile
         sigint/Makefile
         vfile/Makefile
