@@ -66,11 +66,11 @@ static struct argp_option source_options[] = {
 {"sn", 'n', "SOURCE-NAME", 0,
      N_("Get packages info from repository named SOURCE-NAME"), OPT_GID },
 
-                                                  
+
 {"dt", OPT_DEST_TYPE, "SOURCE-TYPE", 0,
        N_("Set the type of index specified by --destination option"),
-       OPT_GID },                                                  
-                                                  
+       OPT_GID },
+
 {"destination", OPT_DEST, "PATH", 0,
     N_("Install to specified destination"), OPT_GID },
 
@@ -81,12 +81,8 @@ static struct argp_option source_options[] = {
 {"sidx", OPT_SRC, "FILE", OPTION_HIDDEN, /* legacy */
  N_("Get packages info from package index file FILE"), OPT_GID },
 
-{"sdir", OPT_SRCDIR, "DIR", OPTION_HIDDEN, 
+{"sdir", OPT_SRCDIR, "DIR", OPTION_HIDDEN,
  N_("Get packages info from directory DIR by scanning it"), OPT_GID },
-
-{"shdrl", OPT_SRCHDL, "FILE", OPTION_HIDDEN, 
-     N_("Get packages info from package header list file (aka hdlist)"),
-     OPT_GID },
 
 {"st", OPT_SRCTYPE, "SOURCE-TYPE", 0,
        N_("Set the source type (use --stl to list available values)"),
@@ -99,25 +95,25 @@ static struct argp_option source_options[] = {
 {"stl", OPT_SRCTYPE_LS, 0, 0, N_("List available source types"),
      OPT_GID + 1},
 
-{"sl", 'l', 0, 0, N_("List configured sources"), OPT_GID + 1 },            
+{"sl", 'l', 0, 0, N_("List configured sources"), OPT_GID + 1 },
 
-{"update", OPT_SRCUPDATE, 0, 0, 
+{"update", OPT_SRCUPDATE, 0, 0,
  N_("Update the source and verify it"), OPT_GID + 1 },
 
-{"up", OPT_SRCUPDATE, 0, OPTION_ALIAS, 0, OPT_GID + 1 }, 
+{"up", OPT_SRCUPDATE, 0, OPTION_ALIAS, 0, OPT_GID + 1 },
 
-{"update-whole", OPT_SRCUPDATE_A, 0, 0, 
+{"update-whole", OPT_SRCUPDATE_A, 0, 0,
  N_("Update whole index of source"), OPT_GID + 1 },
 
 {"upa", OPT_SRCUPDATE_A, 0, OPTION_ALIAS, 0, OPT_GID + 1 },
 
-{"clean", OPT_SRCCLEAN, 0, 0, 
+{"clean", OPT_SRCCLEAN, 0, 0,
  N_("Remove source index files from cache directory"), OPT_GID + 1 },
 
-{"clean-pkg", OPT_SRCCLEAN_PKG, 0, 0, 
+{"clean-pkg", OPT_SRCCLEAN_PKG, 0, 0,
  N_("Remove cached packages of the source"), OPT_GID + 1 },
 
-{"clean-whole", OPT_SRCCLEAN_ALL, 0, 0, 
+{"clean-whole", OPT_SRCCLEAN_ALL, 0, 0,
  N_("Remove all files belongs to source from cache directory"), OPT_GID + 1 },
 
 {"cleana", OPT_SRCCLEAN_ALL, 0, OPTION_ALIAS, 0, OPT_GID + 1 },
@@ -140,12 +136,12 @@ struct arg_s {
     unsigned            cnflags;
     struct poldek_ctx   *ctx;
     struct source       *src;
-    
+
     struct source       *srcdst; /* temporary --dn arg */
 
     struct source       *destination; /* --destination */
     char                *dt;          /* --dt */
-    
+
     char                *curr_src_path;
     char                *curr_src_type;
 };
@@ -157,7 +153,7 @@ static struct argp poclidek_source_argp = {
     source_options, parse_opt, 0, 0, 0, 0, 0
 };
 
-static 
+static
 struct argp_child poclidek_source_argp_child = {
     &poclidek_source_argp, 0, NULL, OPT_GID,
 };
@@ -165,8 +161,8 @@ struct argp_child poclidek_source_argp_child = {
 static int oprun(struct poclidek_opgroup_rt *);
 
 struct poclidek_opgroup poclidek_opgroup_source = {
-    "Source selection", 
-    &poclidek_source_argp, 
+    "Source selection",
+    &poclidek_source_argp,
     &poclidek_source_argp_child,
     oprun,
 };
@@ -183,11 +179,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     rt = state->input;
     if (rt->_opdata) {
         arg_s = rt->_opdata;
-        
+
     } else {
         arg_s = n_malloc(sizeof(*arg_s));
         memset(arg_s, 0, sizeof(*arg_s));
-        
+
         arg_s->cnflags = 0;
         arg_s->src = NULL;
         arg_s->srcdst = NULL;
@@ -228,21 +224,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_SRCTYPE:
             arg_s->curr_src_type = arg;
             break;
-            
+
         case OPT_SRCTXT:     /* no break */
             source_type = NULL; /* guess */
             source_type_isset = 1;
-            
+
         case OPT_SRCDIR:     /* no break */
             if (source_type_isset == 0) {
                 source_type = n_strdup("dir");
-                source_type_isset = 1;
-            }
-            
-            
-        case OPT_SRCHDL:     /* no break */
-            if (source_type_isset == 0) {
-                source_type = n_strdup("hdrl");
                 source_type_isset = 1;
             }
 
@@ -250,7 +239,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             arg_s->curr_src_path = arg;
             if (arg_s->curr_src_type == NULL)
                 arg_s->curr_src_type = source_type;
-            
+
             arg_s->src = source_new_pathspec(arg_s->curr_src_type, arg, NULL);
 			poldek_configure(arg_s->ctx, POLDEK_CONF_SOURCE, arg_s->src);
             arg_s->cnflags |= POLDEKCLI_SRC_SPECIFIED;
@@ -264,40 +253,40 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             }
             arg_s->dt = arg;
             break;
-            
+
         case OPT_DEST:
             if (arg_s->destination) {
                 logn(LOGERR, _("--destination: destination is already set"));
                 exit(EXIT_FAILURE);
             }
-            
+
             arg_s->destination = source_new_pathspec(arg_s->dt, arg, NULL);
             poldek_configure(arg_s->ctx, POLDEK_CONF_DESTINATION, arg_s->destination);
             poldek_configure(arg_s->ctx, POLDEK_CONF_PM, "pset");
             break;
-            
+
         case 'P':
             if (arg_s->curr_src_path == NULL) {
                 logn(LOGERR, _("prefix option should be preceded by source one"));
                 exit(EXIT_FAILURE);
-                
+
             } else if (strcmp(arg_s->curr_src_type, "dir") == 0) {
                 logn(LOGERR, _("prefix for directory source makes no sense"));
                 exit(EXIT_FAILURE);
-                
+
             } else {
                 if (arg_s->src->flags & PKGSOURCE_NAMED)
                     logn(LOGERR | LOGDIE, _("poldek's panic"));
-                
+
                 if (!source_set_pkg_prefix(arg_s->src, arg))
                     exit(EXIT_FAILURE);
-                
+
                 arg_s->curr_src_path = NULL;
                 arg_s->curr_src_type = NULL;
             }
             break;
 
-            
+
         case OPT_SRCUPDATE:
             arg_s->cnflags |= POLDEKCLI_SRC_UPDATE;
             break;
@@ -325,11 +314,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case ARGP_KEY_END:
             //argp_usage (state);
             break;
-           
+
         default:
             return ARGP_ERR_UNKNOWN;
     }
-    
+
     return 0;
 }
 
@@ -340,25 +329,25 @@ void print_source_list(struct poldek_ctx *ctx, tn_array *sources,
     int i;
     tn_hash *htcnf;
     tn_array *htcnf_sources;
-    
+
     n_array_sort_ex(sources, (tn_fn_cmp)source_cmp_name);
     for (i=0; i < n_array_size(sources); i++)
         source_printf(n_array_nth(sources, i));
     n_array_sort(sources);
-    
+
     if (print_groups == 0)
         return;
-    
+
     if ((htcnf = poldek_get_config(ctx)) == NULL)
         return;
-        
+
     if ((htcnf_sources = poldek_conf_get_sections(htcnf, "source")) == NULL)
         return;
-    
+
     for (i=0; i < n_array_size(htcnf_sources); i++) {
         tn_hash *ht = n_array_nth(htcnf_sources, i);
         const char *type;
-        
+
         type = poldek_conf_get(ht, "type", NULL);
         if (type && n_str_eq(type, source_TYPE_GROUP)) {
             struct source *src = source_new_htcnf(ht);
@@ -371,7 +360,7 @@ void print_source_list(struct poldek_ctx *ctx, tn_array *sources,
 }
 
 
-static void print_source_type_list(void) 
+static void print_source_type_list(void)
 {
     int i;
     tn_array *list;
@@ -381,12 +370,12 @@ static void print_source_type_list(void)
         for (i=0; i < n_array_size(list); i++) {
             char ns[32], ms[32];
             struct pkgdir_type_uinf *inf = n_array_nth(list, i);
-            
+
             poldek_term_snprintf_c(PRCOLOR_GREEN, ns, sizeof(ns),
                                    "%s", inf->name);
             poldek_term_snprintf_c(PRCOLOR_CYAN, ms, sizeof(ms),
                                    "%s", inf->mode);
-            
+
             printf("%-22s%s", ns, ms);
             printf("  %s\n", inf->description);
             if (*inf->aliases) {
@@ -412,7 +401,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
     struct arg_s *arg_s;
     tn_array *sources;
     int rc = OPGROUP_RC_NIL;
-    
+
     arg_s = rt->_opdata;
     n_assert(arg_s);
 
@@ -426,13 +415,13 @@ static int oprun(struct poclidek_opgroup_rt *rt)
         }
     }
     poclidek_op_source_nodesc = 0;
-    
+
     if (arg_s->cnflags & (POLDEKCLI_SRC_CLEAN | POLDEKCLI_SRC_CLEAN_PKG)) {
         unsigned flags = 0;
 
         if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN)
             flags |= PKGSOURCE_CLEAN;
-        
+
         if (arg_s->cnflags & POLDEKCLI_SRC_CLEAN_PKG)
             flags |= PKGSOURCE_CLEANPKG;
 
@@ -460,7 +449,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
 
     if (arg_s->cnflags & POLDEKCLI_SRC_UPDATE) {
         unsigned flags = PKGSOURCE_UP;
-        
+
         if (arg_s->cnflags & POLDEKCLI_SRC_UPDATEA)
             flags |= PKGSOURCE_UPA;
 
@@ -475,9 +464,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
 
     if (sources)
         n_array_free(sources);
-    
+
     DBGF("op_source %d\n", rc);
     return rc;
 }
-    
-
