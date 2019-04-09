@@ -31,7 +31,13 @@
 #include "i18n.h"
 #include "log.h"
 #include "misc.h"
-#include "pm/rpm/pm_rpm.h"
+
+#ifdef HAVE_RPMORG
+# include "pm/rpmorg/pm_rpm.h"
+#else
+# include "pm/rpm/pm_rpm.h"
+#endif
+
 #include "pkgdir.h"
 #include "pkgdir_intern.h"
 #include "pkg.h"
@@ -44,8 +50,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 static char *aliases[] = { "rpmdir", NULL };
 
 struct pkgdir_module pkgdir_module_dir = {
-    NULL, 
-    PKGDIR_CAP_NOPREFIX, 
+    NULL,
+    PKGDIR_CAP_NOPREFIX,
     "dir",
     (char **)aliases,
     "Dynamic index built by scanning directory for packages",
@@ -62,11 +68,11 @@ struct pkgdir_module pkgdir_module_dir = {
     NULL
 };
 
-static tn_hash *build_mtime_index(tn_array *pkgs) 
+static tn_hash *build_mtime_index(tn_array *pkgs)
 {
     tn_hash *ht;
     int i;
-    
+
     ht = n_hash_new(n_array_size(pkgs), NULL);
 
     for (i=0; i < n_array_size(pkgs); i++) {
@@ -79,12 +85,12 @@ static tn_hash *build_mtime_index(tn_array *pkgs)
             n_hash_insert(ht, key, pkg);
         }
     }
-    
+
     if (n_hash_size(ht) == 0) {
         n_hash_free(ht);
         return NULL;
     }
-    
+
     return ht;
 }
 
@@ -101,13 +107,13 @@ struct pkg *search_in_prev(struct pkgdir *prev_pkgdir, Header h, const char *fn,
                            struct stat *st)
 {
     struct pkg *tmp = NULL, *pkg;
-    
+
     pkg = pm_rpm_ldhdr(NULL, h, fn, st->st_size, PKG_LDNEVR);
     if (pkg && (tmp = n_array_bsearch(prev_pkgdir->pkgs, pkg))) {
         if (pkg_deepstrcmp_name_evr(pkg, tmp) != 0)
             tmp = NULL;
     }
-    
+
     if (pkg)
         pkg_free(pkg);
 
@@ -126,10 +132,10 @@ void remap_groupid(struct pkg *pkg, struct pkgroup_idx *pkgroups,
     }
 }
 
-static int is_rpmfile(const char *path, struct stat *fst) 
+static int is_rpmfile(const char *path, struct stat *fst)
 {
     struct stat st;
-    
+
     if (stat(path, &st) != 0) {
         logn(LOGERR, "stat %s: %m", path);
         return 0;
@@ -147,7 +153,7 @@ static int is_rpmfile(const char *path, struct stat *fst)
 }
 
 
-static 
+static
 struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
                              void *ptr, tn_array *langs)
 {
@@ -162,14 +168,14 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
 
     if (!is_rpmfile(path, NULL))
         return NULL;
-    
+
     if (!pm_rpmhdr_loadfile(path, &h)) {
         logn(LOGWARN, "%s: read header failed", n_basenam(path));
         return NULL;
     }
-    
+
     pkgu = pkguinf_ldrpmhdr(na, h, langs);
-    
+
     pm_rpmhdr_free(h);
     return pkgu;
 }
@@ -180,13 +186,13 @@ int load_dir(struct pkgdir *pkgdir,
              unsigned ldflags, struct pkgdir *prev_pkgdir,
              tn_alloc *na)
 {
-    tn_hash        *mtime_index = NULL;  
+    tn_hash        *mtime_index = NULL;
     struct dirent  *ent;
     struct stat    st;
     DIR            *dir;
     int            n, nnew = 0;
     char           *sepchr = "/";
-    
+
     if ((dir = opendir(dirpath)) == NULL) {
         logn(LOGERR, "opendir %s: %m", dirpath);
         return -1;
@@ -203,13 +209,13 @@ int load_dir(struct pkgdir *pkgdir,
         char path[PATH_MAX];
         struct pkg *pkg = NULL;
         Header h = NULL;
-        
-        if (fnmatch("*.rpm", ent->d_name, 0) != 0) 
+
+        if (fnmatch("*.rpm", ent->d_name, 0) != 0)
             continue;
 
-        //if (fnmatch("*.src.rpm", ent->d_name, 0) == 0) 
+        //if (fnmatch("*.src.rpm", ent->d_name, 0) == 0)
         //    continue;
-        
+
         snprintf(path, sizeof(path), "%s%s%s", dirpath, sepchr, ent->d_name);
 
         if (!is_rpmfile(path, &st))
@@ -230,10 +236,10 @@ int load_dir(struct pkgdir *pkgdir,
                 logn(LOGWARN, _("%s: read header failed, skipped"), path);
                 continue;
             }
-            
+
             //if (rpmhdr_issource(h)) /* omit src.rpms */
             //    continue;
-            
+
             if (prev_pkgdir) {
                 pkg = search_in_prev(prev_pkgdir, h, ent->d_name, &st);
                 if (pkg) {
@@ -247,13 +253,13 @@ int load_dir(struct pkgdir *pkgdir,
 
         if (pkg == NULL) {  /* not exists in previous index */
             tn_array *langs;
-            
+
             nnew++;
             n_assert(h);        /* loaded in previous if block */
             msgn(3, _("%s: loading header..."), n_basenam(path));
             pkg = pm_rpm_ldhdr(na, h, n_basenam(path), st.st_size, PKG_LDWHOLE);
             n_assert(pkg);
-            
+
             pkg->load_pkguinf = load_pkguinf;
 
             if ((langs = pm_rpmhdr_langs(h))) {
@@ -263,7 +269,7 @@ int load_dir(struct pkgdir *pkgdir,
                 n_array_free(langs);
             }
             pkg->groupid = pkgroup_idx_update_rpmhdr(pkgroups, h);
-            
+
             if (ldflags & PKGDIR_LD_DESC) {
                 pkg->pkg_pkguinf = pkguinf_ldrpmhdr(na, h, NULL);
                 pkg_set_ldpkguinf(pkg);
@@ -272,21 +278,21 @@ int load_dir(struct pkgdir *pkgdir,
 
         if (h)
             pm_rpmhdr_free(h);
-            
+
         if (pkg) {
             pkg->fmtime = st.st_mtime;
             n_array_push(pkgs, pkg);
             n++;
         }
-        
-        if (n && n % 200 == 0) 
+
+        if (n && n % 200 == 0)
             msg(1, "_%d..", n);
     }
 
     /* if there are packages from prev_pkgdir then assume that
        they provide all avlangs */
-    
-    if (prev_pkgdir && n_array_size(pkgs) - nnew > 0) { 
+
+    if (prev_pkgdir && n_array_size(pkgs) - nnew > 0) {
         tn_array *langs = n_hash_keys(prev_pkgdir->avlangs_h);
         int i, nprev;
 
@@ -298,7 +304,7 @@ int load_dir(struct pkgdir *pkgdir,
 
     if (n && n > 200)
         msg(1, "_%d\n", n);
-    
+
     closedir(dir);
     if (mtime_index)
         n_hash_free(mtime_index);
@@ -311,18 +317,17 @@ static
 int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 {
     int n;
-    
+
     if (pkgdir->pkgroups == NULL)
         pkgdir->pkgroups = pkgroup_idx_new();
 
     if (pkgdir->prev_pkgdir) /* make sense for mkidx only */
         ldflags |= PKGDIR_LD_DESC; /* load descriptions now, it's faster
                                       although consumes about 15% more memory */
-    
+
     n = load_dir(pkgdir,
                  pkgdir->path, pkgdir->pkgs, pkgdir->pkgroups,
                  ldflags, pkgdir->prev_pkgdir, pkgdir->na);
-    
+
     return n;
 }
-

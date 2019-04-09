@@ -33,7 +33,11 @@
 #include "pkgfl.h"
 #include "pkgdir.h"
 #include "pkgdir_intern.h"
-#include "pm/rpm/pm_rpm.h"
+#ifdef HAVE_RPMORG
+# include "pm/rpmorg/pm_rpm.h"
+#else
+# include "pm/rpm/pm_rpm.h"
+#endif
 #include "pm/pm.h"
 #include "pkgroup.h"
 
@@ -48,19 +52,19 @@ struct pkgdir_module pkgdir_module_rpmdb = {
     NULL,
     "RPM package database",
     NULL,
-    NULL, 
+    NULL,
     do_open,
     do_load,
     NULL,
     NULL,
     NULL,
-    NULL, 
+    NULL,
     do_free,
     NULL,
     NULL,
 };
 
-static Header ldhdr(const struct pkg *pkg, void *foo) 
+static Header ldhdr(const struct pkg *pkg, void *foo)
 {
     struct pm_ctx    *pmctx;
     struct pkgdb     *db;
@@ -70,23 +74,23 @@ static Header ldhdr(const struct pkg *pkg, void *foo)
 
     foo = foo;
     n_assert(pkg->recno > 0);
-    
+
     if (pkg->pkgdir == NULL)
         return NULL;
 
     pmctx = pkg->pkgdir->mod_data;
     if (pkg->pkgdir->mod_data == NULL) /* pkgdir are saved now  */
         pmctx = pm_new("rpm");
-    
+
     db = pkgdb_open(pmctx, "/", pkg->pkgdir->idxpath,
                     O_RDONLY, NULL);
     if (db == NULL)
         return NULL;
-    
+
     pkgdb_it_init(db, &it, PMTAG_RECNO, (const char*)&pkg->recno);
     dbrec = pkgdb_it_get(&it);
-    
-    // rpm's error: rpmdb_it_get_count(&it) with RECNO is always 0 
+
+    // rpm's error: rpmdb_it_get_count(&it) with RECNO is always 0
     if (dbrec && dbrec->hdr)
         h = pm_rpmhdr_link(dbrec->hdr);
 
@@ -97,9 +101,9 @@ static Header ldhdr(const struct pkg *pkg, void *foo)
     return h;
 }
 
-    
 
-static 
+
+static
 struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
                              void *ptr, tn_array *langs)
 {
@@ -110,11 +114,11 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
         pkgu = pkguinf_ldrpmhdr(na, h, langs);
         pm_rpmhdr_free(h);
     }
-    
+
     return pkgu;
 }
 
-static 
+static
 tn_tuple *load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
                         tn_array *foreign_depdirs)
 {
@@ -130,30 +134,30 @@ tn_tuple *load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
         }
         pm_rpmhdr_free(h);
     }
-    
+
     return fl;
 }
 
 /* load package from header and add it to pkgdir */
 static
-int load_package(unsigned int recno, void *header, struct pkgdir *pkgdir) 
+int load_package(unsigned int recno, void *header, struct pkgdir *pkgdir)
 {
     struct pkg  *pkg;
     tn_array    *langs;
-        
+
     pkg = pm_rpm_ldhdr(pkgdir->na, header, NULL, 0, PKG_LDCAPREQS);
-    
+
     if (pkg == NULL)
         return 0;
-    
+
     pkg->recno = recno;
     pkg->load_pkguinf = load_pkguinf;
     pkg->load_nodep_fl = load_nodep_fl;
     pkg->groupid = pkgroup_idx_update_rpmhdr(pkgdir->pkgroups, header);
-    
+
     if (poldek_VERBOSE > 3)
         msgn(4, "rpmdb: ld %s", pkg_id(pkg));
-    
+
     n_array_push(pkgdir->pkgs, pkg);
 
     if ((langs = pm_rpmhdr_langs(header))) {
@@ -162,20 +166,20 @@ int load_package(unsigned int recno, void *header, struct pkgdir *pkgdir)
             pkgdir__update_avlangs(pkgdir, n_array_nth(langs, i), 1);
         n_array_free(langs);
     }
-    
+
     return 1;
 }
 
 static
 int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
-                     const char *rootdir) 
+                     const char *rootdir)
 {
     struct pkgdb       *db;
     struct pkgdb_it    it;
     const struct pm_dbrec *dbrec;
-    char               dbfull_path[PATH_MAX];    
+    char               dbfull_path[PATH_MAX];
     int                n;
-    
+
     snprintf(dbfull_path, sizeof(dbfull_path), "%s%s",
              *(rootdir + 1) == '\0' ? "" : rootdir,
              pkgdir->idxpath != NULL ? pkgdir->idxpath : "");
@@ -198,20 +202,20 @@ int load_db_packages(struct pm_ctx *pmctx, struct pkgdir *pkgdir,
 
         if (n % 100 == 0)
             msg(3, "_.");
-        
+
         if (sigint_reached()) {
             n = 0;
             break;
         }
     }
     msgn(3, "_done");
-    
+
     pkgdb_it_destroy(&it);
     pkgdb_free(db);
 
     if (n == 0)
         n_array_clean(pkgdir->pkgs);
-    
+
     return n_array_size(pkgdir->pkgs);
 }
 
@@ -224,10 +228,10 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
 
 
     flags = flags;          /* unused */
-    
+
     n_assert(pkgdir->mod_data == NULL);
     pkgdir->mod_data = pmctx = pm_new("rpm");
-    
+
     if ((db = pkgdb_open(pmctx, "/", pkgdir->idxpath, O_RDONLY, NULL)) == NULL)
         return 0;
 
@@ -251,10 +255,10 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     pkgdir->ts = pm_dbmtime(pmctx, pkgdir->idxpath);
 
     DBGF("prev_dir %p\n", pkgdir->prev_pkgdir);
-    
+
     if (!load_db_packages(pkgdir->mod_data, pkgdir, "/"))
         return 0;
-    
+
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
         pkg->pkgdir = pkgdir;
@@ -268,4 +272,3 @@ static void do_free(struct pkgdir *pkgdir)
     if (pkgdir->mod_data)
         pm_free(pkgdir->mod_data);
 }
-

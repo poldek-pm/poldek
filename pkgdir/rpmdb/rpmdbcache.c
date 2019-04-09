@@ -32,7 +32,11 @@
 #include "pkgfl.h"
 #include "pkgdir.h"
 #include "pkgdir_intern.h"
-#include "pm/rpm/pm_rpm.h"
+#ifdef HAVE_RPMORG
+# include "pm/rpmorg/pm_rpm.h"
+#else
+# include "pm/rpm/pm_rpm.h"
+#endif
 #include "pm/pm.h"
 
 extern struct pkgdir_module pkgdir_module_pndir;
@@ -45,19 +49,19 @@ struct pkgdir_module pkgdir_module_rpmdbcache = {
     NULL,
     "RPM package database cache",
     NULL,
-    NULL, 
     NULL,
     NULL,
     NULL,
     NULL,
     NULL,
-    NULL, 
+    NULL,
+    NULL,
     NULL,
     NULL,
     NULL,
 };
 
-static Header ldhdr_byrecno(const struct pkg *pkg, void *foo) 
+static Header ldhdr_byrecno(const struct pkg *pkg, void *foo)
 {
     struct pm_ctx    *pmctx;
     struct pkgdb     *db;
@@ -70,48 +74,48 @@ static Header ldhdr_byrecno(const struct pkg *pkg, void *foo)
 
     pmctx = pm_new("rpm");
     db = pkgdb_open(pmctx, "/", NULL, O_RDONLY, NULL);
-    if (db == NULL) 
+    if (db == NULL)
         goto l_end;
-    
+
     pkgdb_it_init(db, &it, PMTAG_RECNO, (const char*)&pkg->recno);
-    
+
     if ((dbrec = pkgdb_it_get(&it)) == NULL)
         goto l_end;
 
-    // rpm's error: rpmdb_it_get_count(&it) with RECNO is always 0 
+    // rpm's error: rpmdb_it_get_count(&it) with RECNO is always 0
     if (dbrec->hdr)
         h = pm_rpmhdr_link(dbrec->hdr);
-        
+
     pkgdb_it_destroy(&it);
     pkgdb_free(db);
-    
+
  l_end:
     pm_free(pmctx);
     return h;
 }
 
-static Header ldhdr_bynevr(const struct pkg *pkg, void *foo) 
+static Header ldhdr_bynevr(const struct pkg *pkg, void *foo)
 {
     struct pm_ctx    *pmctx;
     struct pkgdb     *db;
     struct pm_dbrec  dbrec;
     Header           h = NULL;
-    
+
     DBGF("%s\n", pkg_snprintf_s(pkg));
     foo = foo;
     pmctx = pm_new("rpm");
-    
+
     db = pkgdb_open(pmctx, "/", NULL, O_RDONLY, NULL);
-    if (db == NULL) 
+    if (db == NULL)
         goto l_end;
-    
+
     if (pkgdb_get_package_hdr(db, pkg, &dbrec)) {
         n_assert(dbrec.hdr);
         h = pm_rpmhdr_link(dbrec.hdr);
     }
-    
+
     pkgdb_free(db);
-    
+
  l_end:
     pm_free(pmctx);
     return h;
@@ -124,22 +128,22 @@ static Header ldhdr(const struct pkg *pkg, void *foo)
     return ldhdr_bynevr(pkg, foo);
 }
 
-static 
+static
 struct pkguinf *dbcache_load_pkguinf(tn_alloc *na, const struct pkg *pkg,
                                      void *ptr, tn_array *langs)
 {
     struct pkguinf      *pkgu = NULL;
     Header               h;
-    
+
     if ((h = ldhdr(pkg, ptr))) {
         pkgu = pkguinf_ldrpmhdr(na, h, langs);
         pm_rpmhdr_free(h);
     }
-    
+
     return pkgu;
 }
 
-static 
+static
 tn_tuple *dbcache_load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
                                 tn_array *foreign_depdirs)
 {
@@ -155,7 +159,7 @@ tn_tuple *dbcache_load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
         }
         pm_rpmhdr_free(h);
     }
-    
+
     return fl;
 }
 
@@ -166,7 +170,7 @@ int dbcache_load(struct pkgdir *pkgdir, unsigned ldflags)
 
     if ((rc = pkgdir_module_pndir.load(pkgdir, ldflags))) {
         int i;
-            
+
         for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
             //if (!pkg->recno) {
@@ -177,7 +181,7 @@ int dbcache_load(struct pkgdir *pkgdir, unsigned ldflags)
 
             pkg->load_nodep_fl = dbcache_load_nodep_fl;
             pkg->load_pkguinf = dbcache_load_pkguinf;
-            
+
         }
     }
 
@@ -202,7 +206,7 @@ struct pkgdir_module *init_rpmdbcache(struct pkgdir_module *mod)
     mod->name = "rpmdbcache";
     mod->aliases = NULL;
     mod->description = "RPM package database cache";
-    
+
     mod->update = NULL;
     mod->update_a = NULL;
     mod->unlink = NULL;
