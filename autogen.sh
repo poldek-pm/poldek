@@ -5,7 +5,7 @@ if [ ! -f capreq.h ]; then
     if [ ! -f capreq.h ]; then
         echo "`pwd`: not a poldek directory"
         exit 1
-    fi 
+    fi
 fi
 
 runcmd () {
@@ -24,8 +24,8 @@ runcmd git submodule init
 runcmd git submodule update
 
 # run autogen in submodules
-(cd trurlib && ./autogen.sh)
-(cd tndb && ./autogen.sh)
+(cd trurlib && ./autogen.sh --no-configure)
+(cd tndb && ./autogen.sh --no-configure)
 
 # generate po/POTFILES.in
 make -f Makefile.extra POTFILES_in
@@ -38,7 +38,7 @@ runcmd autoconf
 runcmd automake --add-missing -a -c -f --foreign
 
 # w/o
-if [ ! -f depcomp ]; then 
+if [ ! -f depcomp ]; then
     runcmd automake --add-missing Makefile
     (cd vfile && ln -sf ../depcomp .)
     (cd shell && ln -sf ../depcomp .)
