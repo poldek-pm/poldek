@@ -1,8 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
 
 m4_define([poldek_major_version], [0])
-m4_define([poldek_minor_version], [32])
-m4_define([poldek_micro_version], [2])
+m4_define([poldek_minor_version], [4])
+m4_define([poldek_micro_version], [0])
 m4_define([poldek_version],
 	  [poldek_major_version.poldek_minor_version.poldek_micro_version])
 
@@ -13,7 +13,7 @@ AC_CONFIG_HEADERS([config.h])
 
 PACKAGE_BUGREPORT="http://bugs.launchpad.net/poldek"
 VERSION_STATUS="stable"
-VERSION=0.32.2
+VERSION=0.4.0
 VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
 VERSION_CVSTAG="v$VERSION_TAG"
 PACKAGE_VERSION_SERIES="2"
@@ -36,10 +36,10 @@ AC_DEFINE_UNQUOTED([PACKAGE_VERSION_FUNCNAME],
                    ${PACKAGE}_version_${VERSION_TAG},  [ version function name ])
 
 AC_DEFINE_UNQUOTED([PACKAGE_SERIES_FUNCNAME],
-                   ${PACKAGE}_version_series_${PACKAGE_VERSION_SERIES},  
+                   ${PACKAGE}_version_series_${PACKAGE_VERSION_SERIES},
                     [ series function name ])
 
-if test "X${VERSION_STATUS}" = "Xdevel"; then  
+if test "X${VERSION_STATUS}" = "Xdevel"; then
     AC_DEFINE([DEVEL], 1, [ am I development release?  ])
 fi
 
@@ -47,7 +47,7 @@ AC_SUBST(VERSION_CVSTAG)
 
 ALL_LINGUAS="pl de"
 
-dnl cond. building NFY 
+dnl cond. building NFY
 dnl AC_DEFINE([ENABLE_VFILE_TRURLIO],1,[defined if trurlio is used for vfile operations])
 
 AC_DISABLE_STATIC
@@ -109,10 +109,10 @@ fi
 PKG_PROG_PKG_CONFIG()
 
 PKG_CHECK_MODULES(CHECK, check >= 0.9.4, have_check=yes, have_check=no)
- 
+
 dnl Process features.
 AC_CHECK_LIB(tinfo, tigetstr,,[
-	AC_CHECK_LIB(ncurses, tigetstr, ,[ 
+	AC_CHECK_LIB(ncurses, tigetstr, ,[
 		AC_MSG_ERROR(["tinfo nor ncurses not found"]) ]) ])
 
 AC_CHECK_HEADERS([ncurses/curses.h],
@@ -128,8 +128,8 @@ if test "${INTERACTIVE_MODE}." != "yes."; then
 else
 	AC_CHECK_LIB(readline, readline,,[ AC_MSG_ERROR(["readline not found"])])
 	AC_CHECK_LIB(pcre, pcre_compile,,[ AC_MSG_ERROR(["pcre not found"])])
-	AC_CHECK_HEADERS([pcre.h],,[ 
-		AC_CHECK_HEADERS([pcre/pcre.h], 
+	AC_CHECK_HEADERS([pcre.h],,[
+		AC_CHECK_HEADERS([pcre/pcre.h],
 			         [CPPFLAGS="-I/usr/include/pcre $CPPFLAGS"], )], )
 
 	AM_CONDITIONAL(ENABLE_INTERACTIVE_MODE, true)
@@ -210,8 +210,8 @@ AC_CHECK_HEADERS([sys/file.h sys/time.h syslog.h unistd.h])
 AC_CHECK_HEADER([stdint.h],,AC_MSG_ERROR(["C9X compiler is needed by $PACKAGE"]))
 AC_CHECK_HEADER([argp.h],,AC_MSG_ERROR(["missing required argp.h"]))
 
-AC_CHECK_FUNCS(argp_usage, , 
-        [AC_CHECK_LIB(argp, argp_usage, [LIBS="$LIBS -largp"], 
+AC_CHECK_FUNCS(argp_usage, ,
+        [AC_CHECK_LIB(argp, argp_usage, [LIBS="$LIBS -largp"],
                       [AC_MSG_ERROR(["argp is required"])])
         ])
 
@@ -219,7 +219,7 @@ AC_CHECK_FUNCS(argp_usage, ,
 #dnl FreeBSD (bug?) - netinet/in.h depends on in_systm.h
 #AC_CHECK_HEADERS(netinet/in_systm.h)
 
-dnl FreeBSD; FIONBIO definition 
+dnl FreeBSD; FIONBIO definition
 AC_CHECK_HEADERS([sys/filio.h])
 
 dnl RH rpm needs this
@@ -255,7 +255,7 @@ else
 		AC_DEFINE([HAVE_RPM_4_0_4],1,[])
 		CFLAGS="$CFLAGS -D_REENTRANT"
 		AC_MSG_RESULT(yes)
-	else 
+	else
 	        AC_MSG_RESULT(no)
 	fi
 
@@ -323,10 +323,10 @@ if test "${is_rpm4_0_4}." = "no." ; then
 	#  )
 	#)
 	CPPFLAGS="-I/usr/include/db3 $CPPFLAGS"
-	
+
 	AC_CHECK_LIB(db, db_create, [DBLIB="-ldb"],,[$LIBS])
 	# assume that librpm complied with --enable-db1
-	#if test "${ENABLE_STATIC}." = "yes."; then 
+	#if test "${ENABLE_STATIC}." = "yes."; then
 	#	DBLIB="$DBLIB -ldb1"
 	#fi
 else
@@ -336,7 +336,7 @@ else
                      [AC_CHECK_LIB(db-5.2, db_create, [DBLIB="-ldb-5.2" DBINCLUDE="-I/usr/include/db5.2"],,[$LIBS])],
                      [$LIBS])],, [$LIBS])],, [$LIBS])
 
-	if test "${ENABLE_STATIC}." = "yes."; then 
+	if test "${ENABLE_STATIC}." = "yes."; then
 		DBLIB="$DBLIB"
 	fi
 
@@ -346,8 +346,8 @@ fi
 
 AC_CHECK_LIB(popt, poptReadConfigFile)
 
-if test "${is_rpm4_0_4}." = "yes." ; then	
-	AC_CHECK_LIB(beecrypt, dhaes_pContextInitEncrypt, 
+if test "${is_rpm4_0_4}." = "yes." ; then
+	AC_CHECK_LIB(beecrypt, dhaes_pContextInitEncrypt,
 	have_beecrypt=yes, have_beecrypt=no)
 fi
 
@@ -372,7 +372,7 @@ AC_CHECK_FUNCS(rpmtsColor, [LIBS="$LIBS -lpthread"
                             AC_DEFINE([HAVE_RPM_4_2],1,[])])
 AC_CHECK_FUNCS(hGetColor, AC_DEFINE([HAVE_RPM_HGETCOLOR],1,[]))
 
-AC_CHECK_HEADERS([db_185.h],,[ 
+AC_CHECK_HEADERS([db_185.h],,[
 	AC_MSG_WARN(["disabled synchronization with db file-dependencies"]) ])
 AC_CHECK_FUNCS(__db185_open)
 
@@ -416,7 +416,7 @@ AC_CHECK_HEADERS([rpm/rpmcb.h])
 AC_CHECK_FUNCS(rpmpkgRead)
 
 AC_CHECK_FUNCS(headerNVR)     # removed since 5.0
-AC_CHECK_FUNCS(headerNEVRA)  
+AC_CHECK_FUNCS(headerNEVRA)
 AC_CHECK_FUNCS(rpmErrorString)
 
 AC_CHECK_TYPE([rpmmi],
@@ -429,7 +429,7 @@ if test "${is_rpm4}." = "yes." ; then
    AC_EGREP_CPP(HEADER_MAGIC_YES,
                [ #include <rpm/header.h>
                ], AC_DEFINE([HAVE_RPM_HEADER_MAGIC_YES], 1, []))
-   dnl and renamed RPM_INT32_TYPE to RPM_UIINT32_TYPE    
+   dnl and renamed RPM_INT32_TYPE to RPM_UIINT32_TYPE
    AC_EGREP_CPP(RPM_INT32_TYPE,
                [ #include <rpm/header.h>
                ], AC_DEFINE([HAVE_RPM_INT32_TYPE], 1, []))
@@ -471,11 +471,11 @@ fi
 AC_CHECK_FUNCS(EVP_DigestInit,,
 	[AC_CHECK_LIB(crypto, EVP_DigestInit,,
 	 [AC_MSG_ERROR(["libcrypto is needed by $PACKAGE"])]
-	)], 
+	)],
 	[$CONF_IN_LDFLAGS])
 
 if test -f /etc/redhat-release; then
-        LIBS="$LIBS -ldl" # rh's crypto needs this 
+        LIBS="$LIBS -ldl" # rh's crypto needs this
 fi
 
 dnl use local ../trurlib copy if it exists
@@ -529,10 +529,10 @@ AC_EGREP_CPP(yes,
 CPPFLAGS="$SAVE_CPPFLAGS"
 
 if test "${is_valid_trurlib_ver}." = "no." ; then
-	AC_MSG_RESULT(no)		
+	AC_MSG_RESULT(no)
    	AC_MSG_ERROR(["trurlib >= 0.44.0 not found"])
 else
-	AC_MSG_RESULT(yes)	
+	AC_MSG_RESULT(yes)
 fi
 
 dnl use local tndb copy if it exists
@@ -602,7 +602,7 @@ AC_SUBST(PKGLIBDIR)
 
 prefix="$saved_prefix"; exec_prefix="$saved_exec_prefix"
 
-AC_CONFIG_FILES([  
+AC_CONFIG_FILES([
         po/Makefile.in
         pkgdir/Makefile
         pkgdir/dir/Makefile
