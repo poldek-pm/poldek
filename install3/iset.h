@@ -26,9 +26,9 @@ struct iset;
 struct iset *iset_new(void);
 void iset_free(struct iset *iset);
 
-inline
+//inline FIXME - is inline function can be defined outside header?
 void iset_markf(struct iset *iset, struct pkg *pkg, unsigned mflag);
-inline
+//inline
 int iset_ismarkedf(struct iset *iset, const struct pkg *pkg, unsigned mflag);
 
 const struct pkgmark_set *iset_pms(struct iset *iset);
@@ -50,4 +50,4 @@ int iset_has_pkg(struct iset *iset, const struct pkg *pkg);
 // return 1st found pkg_is_kind_of from iset or null
 struct pkg *iset_has_kind_of_pkg(struct iset *iset, const struct pkg *pkg);
 
-#endif    
+#endif

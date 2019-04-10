@@ -20,27 +20,28 @@ static
 tn_array *filter_out_olders(struct i3ctx *ictx, tn_array *pkgs,
                             const struct pkg *pkg)
 {
-    unsigned int i;
+    int i;
     tn_array *tmp = n_array_clone(pkgs);
 
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
         int cmprc;
-        
+
         if ((cmprc = pkg_cmp_evr(p, pkg)) == 0)
             continue;
-        
+
         if (cmprc > 0 && poldek_ts_issetf(ictx->ts, POLDEK_TS_DOWNGRADE))
             continue;
-            
+
         if (cmprc < 0 && !poldek_ts_issetf(ictx->ts, POLDEK_TS_DOWNGRADE))
             continue;
-        
+
         n_array_push(tmp, pkg_link(p));
     }
+
     if (n_array_size(tmp) == 0)
         n_array_cfree(&tmp);
-    
+
     return tmp;
 }
 
@@ -50,17 +51,17 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
     const struct pkg *selected_pkg = NULL;
     tn_array *pkgs, *tmp;
     int max_score = 0, *scores;
-    unsigned int i;
+    int i;
     int nconsidered = 0, nuncolored = 0;
 
     tracef(indent, "%s (c=%d)", pkg_id(pkg), pkg->color);
     indent += 2;
-    
+
     if ((pkgs = pkgset_search(ictx->ps, PS_SEARCH_NAME, pkg->name)) == NULL) {
         tracef(indent, "%s not found, return", pkg->name);
         return NULL;
     }
-    
+
     if ((tmp = filter_out_olders(ictx, pkgs, pkg)) == NULL) {
         n_array_free(pkgs);
         tracef(indent, "%s not found, return", pkg->name);
@@ -94,11 +95,11 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
             if (pkg_is_kind_of(p, pkg))
                 scores[i] += 2;
             nuncolored++;
-            
+
         } else if (pkg->color == 0) {  /* no color -> use arch */
             if (pkg_is_kind_of(p, pkg))
                 scores[i] += 1;
-            
+
         } else if (pkg_is_colored_like(p, pkg)) {
             scores[i] += 2;
         }
@@ -110,10 +111,10 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
 	    max_score = scores[i];
 	    selected_pkg = p;
 	}
-        
+
         nconsidered++;
     }
-    
+
     if (max_score == 0)         /* noone fits */
         selected_pkg = NULL;
 
@@ -137,8 +138,8 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
         /* add arch_score */
         for (i=0; i < n_array_size(pkgs); i++) {
             struct pkg *p = n_array_nth(pkgs, i);
-            int v = pkg_arch_score(p);
-            
+            v = pkg_arch_score(p);
+
             if (v < best_arch_score) {
                 best_arch_score = v;
                 selected_pkg = p;
@@ -147,29 +148,29 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
             trace(indent + 2, "-- %d. %s -> archscore %d", i, pkg_id(p), v);
         }
     }
-    
+
 l_end:
     n_array_cfree(&pkgs);
     tracef(indent, "RET %s (for %s)",
            selected_pkg ? pkg_id(selected_pkg) : "NULL", pkg_id(pkg));
-    
+
     return (struct pkg*)selected_pkg;
 }
 
 /* detect which package capability has "replaces" meaning, if any */
-static const char *get_replacemeant_capname(const struct pkg *pkg) 
+static const char *get_replacemeant_capname(const struct pkg *pkg)
 {
-    unsigned int i;
+    int i;
     for (i=0; i < n_array_size(pkg->cnfls); i++) {
         struct capreq *cnfl = n_array_nth(pkg->cnfls, i);
 
         if (capreq_versioned(cnfl) || !capreq_is_obsl(cnfl))
             continue;
-        
+
         if (pkg_caps_match_req(pkg, cnfl, 0)) /* self satisfied? */
             return capreq_name(cnfl);
     }
-    
+
     return NULL;
 }
 
@@ -177,7 +178,7 @@ static const char *get_replacemeant_capname(const struct pkg *pkg)
 static const char *are_equivalents(const struct pkg *p1, const struct pkg *p2)
 {
     const char *cap1, *cap2 = NULL;
-    
+
     /* no Obsoletes? */
     if (p1->cnfls == NULL || p2->cnfls == NULL)
         return NULL;
@@ -192,7 +193,7 @@ static const char *are_equivalents(const struct pkg *p1, const struct pkg *p2)
 
     if (n_str_ne(cap1, cap2))
         return NULL;
-    
+
     return cap1;
 }
 
@@ -202,7 +203,7 @@ struct pkg *find_successor_by(int indent, struct i3ctx *ictx,
 {
     struct pkg *bypkg = NULL;
     tn_array *pkgs, *tmp;
-    unsigned int i, best_i;
+    int i, best_i;
 
     n_assert(tag == PS_SEARCH_OBSL || tag == PS_SEARCH_CAP);
     if ((pkgs = pkgset_search(ictx->ps, tag, pkg->name)) == NULL) {
@@ -212,15 +213,15 @@ struct pkg *find_successor_by(int indent, struct i3ctx *ictx,
 
     tracef(indent, "%s: found %d package(s)", pkg_id(pkg), n_array_size(pkgs));
     indent += 1;
-    
+
     /* filter out equivalents */
     tmp = n_array_clone(pkgs);
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *p = n_array_nth(pkgs, i);
-        
+
         if (pkg_cmp_name(pkg, p) == 0) /* same packages */
             continue;
-        
+
         if (are_equivalents(pkg, p)) {
             trace(indent, "- skipped equivalent %s", pkg_id(p));
             continue;
@@ -247,7 +248,7 @@ struct pkg *find_successor_by(int indent, struct i3ctx *ictx,
 
     bypkg = n_array_nth(pkgs, best_i);
     n_array_free(pkgs);
-    
+
     DBGF("%s -> %s\n", pkg_id(pkg), bypkg ? pkg_id(bypkg) : "NONE");
     return bypkg;
 }
@@ -259,12 +260,12 @@ struct successor {
 };
 
 static struct pkg *find_successor(int indent, struct i3ctx *ictx,
-                                  const struct pkg *pkg, struct successor *succ) 
+                                  const struct pkg *pkg, struct successor *succ)
 {
-    
+
     struct pkg *p;
     int is_marked = 0, by_obsoletes = 0;
-    
+
     memset(succ, 0, sizeof(*succ));
 
     if ((p = select_successor(indent, ictx, pkg)) == NULL) {
@@ -277,17 +278,17 @@ static struct pkg *find_successor(int indent, struct i3ctx *ictx,
             }
         }
     }
-    
+
     if (p == NULL)
         return NULL;
-    
+
     if (i3_is_marked(ictx, p) || pkg_is_marked_i(ictx->ts->pms, p))
         is_marked = 1;
 
     succ->realpkg = p;
     succ->by_obsoletes = by_obsoletes;
     succ->pkg = p;
-    
+
     tracef(indent, "successor of %s is %s, marked=%s",
            pkg_id(pkg),
            succ->realpkg != NULL ? pkg_id(succ->realpkg) : "(null)",
@@ -305,10 +306,10 @@ static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
     struct pkg *sucpkg;
     char *message = NULL;
     struct i3pkg *i3tomark = NULL;
-    
+
     tracef(indent, "%s req: %s (satisfied=%s)", pkg_id(pkg),
            capreq_stra(req), req_satisfier ? "yes": "no");
-    
+
     if ((sucpkg = find_successor(indent + 2, ictx, pkg, &succ)) == NULL) {
         if (!req_satisfier) {
             /* no successor and unmet req => pkg is candidate to be removed */
@@ -329,7 +330,7 @@ static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
 
     tracef(indent, "- %s: upgrading orphan%s%s%s", pkg_id(sucpkg),
            message ? " (":"", message ? message:"", message ? ")":"");
-    
+
     i3_process_package(indent, ictx, i3tomark);
 
     return 1;
@@ -344,7 +345,7 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
     struct pkg       *tomark = NULL, *toremove = NULL;
     tn_array         *candidates = NULL;
     const char       *strreq;
-    int              rc = 1, giveup = 0, indentt = indent + 1;
+    int              giveup = 0, indentt = indent + 1;
 
     strreq = capreq_stra(req);
     tracef(indent, "%s, req: %s (%s)", pkg_id(pkg), capreq_stra(req), strreq);
@@ -356,7 +357,7 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
              pkg_id(pkg), strreq);
         goto l_end;
     }
-    
+
     //if (i3_is_user_choosable_equiv(ts))
     candidates = pkgs_array_new(8);
     if (i3_find_req(indent, ictx, pkg, req, &tomark, candidates)) { /* found? */
@@ -373,7 +374,7 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
         msgn_i(3, indent, "%s: satisfied by db", strreq);
         goto l_end;
     }
-    
+
     /* try upgrade orphan if requirement not found or greedy mode */
     if (tomark == NULL || ts->getop(ts, POLDEK_OP_GREEDY)) {
         if (try_to_upgrade_orphan(indent, ictx, pkg, req, tomark))
@@ -385,28 +386,27 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
                pkg_id(toremove));
         giveup = 1;
         i3_stop_processing(ictx, 1); /* loop, stop processing */
-    }  
+    }
 
     if (n_array_size(candidates) == 0)
         n_array_cfree(&candidates);
     else /* if they exists, must be more than one */
         n_assert(n_array_size(candidates) > 1);
-    
+
     trace(indentt, "- %s: %s candidate is %s (installable=%s)", pkg_id(pkg),
           strreq, tomark ? pkg_id(tomark) : "none",
           toremove ? "no" : tomark ? "yes" : "-");
-    
+
     /* to-mark candidates */
     if (tomark && toremove == NULL && ts->getop(ts, POLDEK_OP_FOLLOW)) {
         struct pkg *real_tomark = tomark;
         struct i3pkg *i3tomark;
-        
+
         if (i3_is_user_choosable_equiv(ts) && candidates) {
             real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
-            
+
             if (real_tomark == NULL) { /* user abort */
                 i3_stop_processing(ictx, 1);
-                rc = 0;
                 goto l_end;
             }
         }
@@ -415,7 +415,7 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
         i3_process_package(indent, ictx, i3tomark);
         goto l_end;
     }
-    
+
     /* unresolved req */
     if (giveup)
         i3_error(ictx, pkg, I3ERR_REQUIREDBY,
@@ -423,7 +423,7 @@ static int process_orphan_req(int indent, struct i3ctx *ictx,
     else
         i3_error(ictx, pkg, I3ERR_REQUIREDBY, _("%s is required by installed %s"),
                  strreq, pkg_id(pkg));
-    
+
  l_end:
     n_array_cfree(&candidates);
 
@@ -438,11 +438,11 @@ int i3_process_orphan_requirements(int indent, struct i3ctx *ictx,
 
     if (sigint_reached() || ictx->abort)
         return 0;
-    
+
     n_assert(pkg);
     n_assert(reqs);
     n_assert(pkg->reqs);
-    
+
     tracef(indent, "%s as ORPHAN (nreqs=%d)", pkg_id(pkg), n_array_size(reqs));
     for (i=0; i < n_array_size(reqs); i++) {
         struct capreq *req = n_array_nth(reqs, i);
@@ -452,13 +452,13 @@ int i3_process_orphan_requirements(int indent, struct i3ctx *ictx,
 
         if (capreq_is_rpmlib(req))
             continue;
-        
+
         /* obsoleted by greedy mark */
         if (i3_is_marked_for_removal(ictx, pkg)) {
             trace(indent, "%s: obsoleted, return", pkg_id(pkg));
             return 1;  /* no n_array_free(reqs) needed -> ORPHAN */
         }
-        
+
         process_orphan_req(indent, ictx, pkg, req);
         i3_return_zero_if_stoppped(ictx);
     }
@@ -466,18 +466,18 @@ int i3_process_orphan_requirements(int indent, struct i3ctx *ictx,
     return 1;
 }
 
-static int number_of_non_blacks(struct i3ctx *ictx, tn_array *pkgs) 
+static int number_of_non_blacks(struct i3ctx *ictx, tn_array *pkgs)
 {
     int i, n = 0;
-    
+
     for (i=0; i < n_array_size(pkgs); i++) {
         if (!pkg_isset_mf(ictx->processed, n_array_nth(pkgs, i),
                           PKGMARK_BLACK))
             n++;
     }
-    
+
     return n;
-    
+
 }
 
 static int process_req(int indent, struct i3ctx *ictx,
@@ -488,18 +488,18 @@ static int process_req(int indent, struct i3ctx *ictx,
     tn_array         *candidates = NULL;
     const char       *strreq, *errfmt;
     int              rc = 1, indentt = indent + 1;
-    
+
     pkg = i3pkg->pkg;
     strreq = capreq_stra(req);
-    
+
     tracef(indent, "%s, req: %s", pkg_id(pkg), strreq);
-    
+
     if (i3_pkgdb_match_req(ictx, req)) {
         trace(indentt, "- satisfied by db");
         msgn_i(3, indent, "%s: satisfied by db", strreq);
         goto l_end;
     }
-    
+
     //if (i3_is_user_choosable_equiv(ts))
     candidates = pkgs_array_new(8);
     if (i3_find_req(indent, ictx, pkg, req, &tomark, candidates)) {
@@ -514,66 +514,66 @@ static int process_req(int indent, struct i3ctx *ictx,
         n_array_cfree(&candidates);
     else /* if they exists, must be more than one */
         n_assert(n_array_size(candidates) > 1);
-    
+
     trace(indentt, "- %s: %s candidate is %s", pkg_id(pkg), strreq,
           tomark ? pkg_id(tomark) : "(null)");
-    
+
     /* to-mark candidates */
     if (tomark && ts->getop(ts, POLDEK_OP_FOLLOW)) {
         struct pkg      *real_tomark = tomark;
         struct i3pkg    *i3tomark = NULL;
         enum i3_byflag  byflag = I3PKGBY_REQ;
         int             i3pkg_flag = 0;
-        
+
         if (i3_is_user_choosable_equiv(ts) && candidates) {
             real_tomark = i3_choose_equiv(ts, pkg, req, candidates, tomark);
-            
+
             if (real_tomark == NULL) { /* user abort */
                 ictx->abort = 1;
                 rc = 0;
                 goto l_end;
             }
         }
-        
+
         i3pkg->flags &= ~I3PKG_CROSSROAD;
         if (candidates) {
             if (n_array_size(candidates) < 2) {
                 logn(LOGWARN, "Assertion failed! Please rerun poldek with env POLDEK_TRACE=1"
                      " and send log to %s", poldek_BUG_MAILADDR);
             }
-            
+
             if (number_of_non_blacks(ictx, candidates) > 1) {
                 /* mark current package as crossroad and propagate mark down */
-                i3pkg->flags |= I3PKG_CROSSROAD; 
+                i3pkg->flags |= I3PKG_CROSSROAD;
                 //i3pkg_flag |= I3PKG_CROSSROAD_INDIR;
                 trace(indentt, "%s is a crossroad", pkg_id(pkg));
             }
-#if ENABLE_TRACE            
+#if ENABLE_TRACE
             DBGF("number_of_non_blacks %d\n", number_of_non_blacks(ictx, candidates));
             pkgs_array_dump(candidates, "candidates");
-#endif            
+#endif
         }
-        
+
         if (i3pkg->flags & I3PKG_BACKTRACKABLE) {
             DBGF("%s INDIRECT\n", pkg_id(pkg));
             i3pkg_flag |= I3PKG_CROSSROAD_INDIR;
         }
 
-        
+
         i3tomark = i3pkg_new(real_tomark, i3pkg_flag, pkg, req, byflag);
         rc = i3_process_package(indent, ictx, i3tomark);
         goto l_end;
     }
-    
+
     /* unresolved req */
     if (capreq_is_rpmlib(req))
         errfmt = _("%s: req %s not found, upgrade rpm");
     else
         errfmt = _("%s: req %s not found");
-    
+
     i3_error(ictx, pkg, I3ERR_NOTFOUND, errfmt, pkg_id(pkg), strreq);
     rc = 0;
-    
+
  l_end:
     n_array_cfree(&candidates);
 
@@ -581,7 +581,7 @@ static int process_req(int indent, struct i3ctx *ictx,
 }
 
 
-static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg) 
+static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 {
     tn_array *suggests = NULL, *choices = NULL;
     struct pkg *oldpkg = NULL;
@@ -596,13 +596,13 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
         if (choice) {
             if (n_str_eq(choice, "all"))
                 autochoice = -1;
-            
+
             else if (sscanf(choice, "%d", &autochoice) != 1)
                 autochoice = 0;
             DBGF("autochoice = %d\n", autochoice);
         }
     }
-    
+
     /* if we have errors already, don't bug the user with more questions */
     if ((!autochoice && !i3_is_user_choosable_equiv(ictx->ts)) || i3_get_nerrors(ictx, I3ERR_CLASS_DEP|I3ERR_CLASS_CNFL))
         return NULL;
@@ -617,12 +617,12 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
     for (i=0; i < n_array_size(pkg->sugs); i++) {
         struct capreq *req = n_array_nth(pkg->sugs, i);
         struct pkg *tomark = NULL;
-                
+
         if (iset_provides(ictx->inset, req)) {
             trace(indent, "- %s: already marked", capreq_stra(req));
             continue;
         }
-        
+
         if (i3_pkgdb_match_req(ictx, req)) {
             trace(indent, "- %s: satisfied by db", capreq_stra(req));
             continue;
@@ -634,24 +634,24 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
     		 capreq_stra(req));
     	    continue;
         }
-        
+
         if (!i3_find_req(indent, ictx, pkg, req, &tomark, NULL)) {
             logn(LOGWARN, _("%s: suggested %s not found, skipped"), pkg_id(pkg),
                  capreq_stra(req));
             continue;
-            
+
         } else if (tomark == NULL) {
             trace(indent, "- %s: satisfied by being installed set",
                   capreq_stra(req));
             continue;
         }
-        
+
         if (autochoice > 0 && i != autochoice - 1)
             continue;
-        
+
         n_array_push(suggests, req);
     }
-    
+
     if (n_array_size(suggests) == 0) {
         n_array_free(suggests);
         return NULL;
@@ -662,7 +662,7 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 
     choices = n_array_clone(suggests);
     n_array_ctl_set_freefn(choices, NULL); /* 'weak' ref */
-    
+
     switch (poldek__choose_suggests(ictx->ts, pkg, suggests, choices, 0)) {
 	/* do not install any of suggested packages */
 	case 0:
@@ -688,19 +688,21 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 	default:
 	    n_assert(0);
     }
-    
+
     return suggests;
 }
 
-static int suggests_contains(tn_array *suggests, const struct capreq *req) 
+#if UNUSED_FUNCTION__
+static int suggests_contains(tn_array *suggests, const struct capreq *req)
 {
     int i;
-    
+
     i = capreq_arr_find(suggests, capreq_name(req));
     if (i >= 0 && capreq_cmp_name_evr(n_array_nth(suggests, i), req) == 0)
         return 1;
     return 0;
 }
+#endif
 
 int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
                                 struct i3pkg *i3pkg)
@@ -711,7 +713,7 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
     const struct capreq *req = NULL;
     unsigned            itflags = PKG_ITER_REQIN;
     int                 nerrors = 0, backtrack = 0;
-    
+
     pkg = i3pkg->pkg;
     n_assert(pkg);
     n_assert(pkg->reqs);
@@ -719,13 +721,13 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
 
     if (sigint_reached() || ictx->abort)
         return 0;
-    
+
     tracef(indent, "%s as NEW", pkg_id(pkg));
-    
+
     it = pkg_req_iter_new(pkg, itflags);
     while ((req = pkg_req_iter_get(it))) {
         int rc;
-        
+
         if ((rc = process_req(indent, ictx, i3pkg, req)) <= 0) {
             nerrors++;
             if (rc < 0) {
@@ -737,22 +739,22 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
     }
 
     pkg_req_iter_free(it);
-    
+
     /* check for Suggests after processing Requires. Prevent cases where poldek
        asks for suggested package, even though it is required. */
     if (ts->getop(ts, POLDEK_OP_SUGGESTS) &&
         ts->getop(ts, POLDEK_OP_FOLLOW) && nerrors == 0) {
         tn_array *suggests = NULL;
-	unsigned int i;
-	
+	int i;
+
 	suggests = with_suggests(indent + 2, ictx, pkg);
-	
+
 	if (suggests) {
 	    for (i = 0; i < n_array_size(suggests); i++) {
 		int rc;
-		
+
 		req = n_array_nth(suggests, i);
-		
+
 		if ((rc = process_req(indent, ictx, i3pkg, req)) <= 0) {
         	    nerrors++;
         	    if (rc < 0) {
@@ -765,12 +767,12 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
 	}
 	n_array_cfree(&suggests);
     }
-    
+
     if (backtrack && (i3pkg->flags & I3PKG_CROSSROAD)) {
         logn(LOGNOTICE, "Retrying to process %s", pkg_id(i3pkg->pkg));
-        
+
         return i3_process_pkg_requirements(indent, ictx, i3pkg);
     }
-    
+
     return nerrors == 0;
 }

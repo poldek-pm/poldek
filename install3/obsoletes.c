@@ -24,7 +24,7 @@ static void orphan_free(struct orphan *o)
     free(o);
 }
 
-static struct orphan *orphan_new(int indent, struct pkg *pkg, tn_array *caps) 
+static struct orphan *orphan_new(int indent, struct pkg *pkg, tn_array *caps)
 {
     struct orphan *o;
     int i;
@@ -33,7 +33,7 @@ static struct orphan *orphan_new(int indent, struct pkg *pkg, tn_array *caps)
     o->pkg = pkg_link(pkg);
     o->reqs = capreq_arr_new(4);
     n_array_ctl_set_freefn(o->reqs, NULL); /* weak ref */
-    
+
     for (i=0; i < n_array_size(caps); i++) {
         const struct capreq *req;
         struct capreq *cap = n_array_nth(caps, i);
@@ -43,12 +43,12 @@ static struct orphan *orphan_new(int indent, struct pkg *pkg, tn_array *caps)
         if (req)
             n_array_push(o->reqs, (struct capreq *)req);
     }
-    
+
     if (n_array_size(o->reqs) == 0) { /* not an orphan */
         orphan_free(o);
         o = NULL;
     }
-    
+
     return o;
 }
 
@@ -57,7 +57,7 @@ static int toin_provides(int indent, struct i3ctx *ictx,
                          const struct pkg *pkg, const struct capreq *cap)
 {
     struct pkg *tomark = NULL;
-    
+
     if (i3_find_req(indent, ictx, pkg, cap, &tomark, NULL) && tomark == NULL)
         return 1;
 
@@ -71,12 +71,12 @@ static int get_orphaned(int indent, struct i3ctx *ictx,
     struct pkgdb *db = ictx->ts->db;
     unsigned ldflags = PKG_LDNEVR | PKG_LDREQS;
     int i, norphaned = 0;
-    
+
     if (sigint_reached())
         return 0;
-    
+
     MEMINF("process_pkg_orphans:");
-    
+
     for (i=0; i < n_array_size(unsatisfied_caps); i++) {
         struct capreq *cap = n_array_nth(unsatisfied_caps, i);
         unsigned ma_flags = POLDEK_MA_PROMOTE_CAPEPOCH;
@@ -84,9 +84,9 @@ static int get_orphaned(int indent, struct i3ctx *ictx,
 
 #if 0                           /* XXX - disabled, needs testing */
         /* skip orphaned by cap name only if cap name is provided by inset */
-        if (capreq_versioned(cap)) { 
+        if (capreq_versioned(cap)) {
             struct capreq *c;
-            
+
             capreq_new_name_a(capreq_name(cap), c);
             if (toin_provides(indent, ictx, NULL, c))
                 ma_flags = 0;
@@ -106,17 +106,18 @@ static
 int obs_filter(struct pkgdb *db, const struct pm_dbrec *dbrec, void *apkg)
 {
     struct pkg dbpkg, *pkg = apkg;
-    char *arch;
+    const char *arch;
 
     db = db;
     if (dbrec->hdr == NULL)
         return 0;
-    
-    if (!pm_dbrec_nevr(dbrec, &dbpkg.name, &dbpkg.epoch,
-                       &dbpkg.ver, &dbpkg.rel, &arch, &dbpkg.color))
+
+    if (!pm_dbrec_nevr(dbrec, (const char **)&dbpkg.name, &dbpkg.epoch,
+                       (const char **)&dbpkg.ver, (const char **)&dbpkg.rel,
+                       &arch, &dbpkg.color))
         return 0;
 
-    if (arch) 
+    if (arch)
         pkg_set_arch(&dbpkg, arch);
 
     if (!poldek_conf_MULTILIB)
@@ -133,7 +134,7 @@ int obs_filter(struct pkgdb *db, const struct pm_dbrec *dbrec, void *apkg)
     /* any uncolored -> rpm allows upgrade */
     if (dbpkg.color == 0 || pkg->color == 0)
         return 1;
-    
+
     return 0;
 }
 
@@ -142,15 +143,13 @@ static tn_array *get_obsoletedby_pkg(struct pkgdb *db, const tn_array *unpkgs,
                                      unsigned ldflags)
 {
     tn_array *obsoleted;
-    int n;
-    
+
     if (poldek_conf_MULTILIB)
         pkgdb_set_filter(db, obs_filter, pkg);
 
     obsoleted = pkgs_array_new_ex(16, pkg_cmp_recno);
-    n = pkgdb_q_obsoletedby_pkg(db, obsoleted, pkg, getflags,
-                                unpkgs, ldflags);
-    
+    pkgdb_q_obsoletedby_pkg(db, obsoleted, pkg, getflags, unpkgs, ldflags);
+
     if (poldek_conf_MULTILIB)
         pkgdb_set_filter(db, NULL, NULL);
 
@@ -181,7 +180,7 @@ static int is_requireable_cap(const char *cap)
 }
 
 /* files surely not required by anyone; XXX - should be configurable */
-int is_requireable_path(const char *path) 
+int is_requireable_path(const char *path)
 {
     const char *nonreq[] = {
         "/usr/share/doc/*/*",
@@ -192,7 +191,7 @@ int is_requireable_path(const char *path)
         "*.mo",
         "*.gz",
         "*.bz2",
-        "*.pdf", 
+        "*.pdf",
         "*.txt",
         "*.png",
         "*.gif",
@@ -208,7 +207,7 @@ int is_requireable_path(const char *path)
     };
 
     int i = 0;
-    
+
     while (nonreq[i]) {
         if (fnmatch(nonreq[i], path, 0) == 0)
             return 0;
@@ -227,25 +226,25 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
     tn_array         *obsoleted = NULL, *orphaned = NULL, *orphans = NULL;
     tn_array         *unsatisfied_caps = NULL;
     int              n, i;
-    
+
     if (!poldek_ts_issetf(ictx->ts, POLDEK_TS_UPGRADE))
         return 1;
 
     if (sigint_reached())
         return 0;
-    
+
     tracef(indent, "%s", pkg_id(pkg));
-    
+
     if (ictx->ts->getop(ictx->ts, POLDEK_OP_OBSOLETES))
         getflags |= PKGDB_GETF_OBSOLETEDBY_OBSL;
 
     if (poldek_ts_issetf(ictx->ts, POLDEK_TS_DOWNGRADE))
         getflags |= PKGDB_GETF_OBSOLETEDBY_REV;
-    
-    
+
+
     obsoleted = get_obsoletedby_pkg(db, iset_packages_by_recno(unset), pkg,
                                     getflags, PKG_LDWHOLE_FLDEPDIRS);
-    
+
     n = obsoleted ? n_array_size(obsoleted) : 0;
     trace(indent + 1, "%s removes %d package(s)", pkg_id(pkg), n);
     if (n == 0)
@@ -255,16 +254,16 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
         struct pkg *dbpkg = n_array_nth(obsoleted, i);
         struct pkg_cap_iter *it;
         const struct capreq *cap;
-        
+
         if (iset_has_pkg(unset, dbpkg)) { /* rpmdb with duplicate? */
             logn(LOGERR | LOGDIE, "%s: installed twice? Give up.", pkg_id(dbpkg));
         }
-            
+
         n_array_push(i3pkg->obsoletedby, pkg_link(dbpkg));
 
         msgn_i(1, indent, _("%s obsoleted by %s"), pkg_id(dbpkg), pkg_id(pkg));
         iset_add(unset, dbpkg, PKGMARK_DEP);
-        
+
         trace(indent + 1, "verifying uninstalled %s's caps", pkg_id(dbpkg));
 
         it = pkg_cap_iter_new(dbpkg);
@@ -280,49 +279,49 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
                 trace(indent + 2, "- %s (skipped)", capreq_stra(cap));
                 continue;
             }
-            
+
             if (pkg_satisfies_req(pkg, cap, 1))
                 is_satisfied = 1;
-            
-            else if (toin_provides(indent + 4, ictx, pkg, cap)) 
+
+            else if (toin_provides(indent + 4, ictx, pkg, cap))
                 is_satisfied = 2;
-            
+
             if (is_satisfied) {
                 trace(indent + 2, "- %s (satisfied %s)", capreq_stra(cap),
                       is_satisfied == 1 ? "by successor" : "by inset");
-                
+
             } else {
                 if (unsatisfied_caps == NULL)
                     unsatisfied_caps = capreq_arr_new(24);
-                
+
                 trace(indent + 2, "- %s (to verify)", capreq_stra(cap));
                 n_array_push(unsatisfied_caps, capreq_clone(NULL, cap));
             }
         }
-        
+
         pkg_cap_iter_free(it);
     }
-    
+
     if (unsatisfied_caps == NULL)
         return 0;
     n_assert(n_array_size(unsatisfied_caps));
 
     n_array_uniq(unsatisfied_caps);
     orphaned = pkgs_array_new_ex(16, pkg_cmp_recno);
-    
+
     /*
       determine what exactly requirements are missed, i.e no more
       "foreign" dependencies skipping needed
     */
     if (!get_orphaned(indent + 1, ictx, orphaned, unsatisfied_caps)) {
         n_assert(n_array_size(orphaned) == 0);
-        
+
     } else {
         n_assert(n_array_size(orphaned));
         n_assert(n_array_size(unsatisfied_caps));
 
         orphans = n_array_new(16, (tn_fn_free)orphan_free, NULL);
-        
+
         for (i=0; i < n_array_size(orphaned); i++) {
             struct orphan *o = orphan_new(indent + 3, n_array_nth(orphaned, i),
                                           unsatisfied_caps);
@@ -337,19 +336,19 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
 
     if (orphans == NULL) {
         trace(indent + 2, "- no orphaned packages");
-        
+
     } else {
         for (i=0; i < n_array_size(orphans); i++) {
             struct orphan *o = n_array_nth(orphans, i);
             trace(indent + 2, "- %s (nreqs=%d)", pkg_id(o->pkg), n_array_size(o->reqs));
         }
-    
+
         for (i=0; i < n_array_size(orphans); i++) {
             struct orphan *o = n_array_nth(orphans, i);
             i3_process_orphan(indent, ictx, o);
         }
     }
-    
+
     n_array_cfree(&orphans);
     n_array_free(unsatisfied_caps); /* XXX: must free()d after orphans array,
                                        caps in array are "weak"-referenced */

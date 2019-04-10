@@ -24,7 +24,7 @@ int i3_is_other_version_marked(struct i3ctx *ictx, struct pkg *pkg,
     tn_array *avpkgs = ictx->ps->pkgs;
 
     n_array_sort(avpkgs);
-    i = n_array_bsearch_idx_ex(avpkgs, pkg, (tn_fn_cmp)pkg_cmp_name); 
+    i = n_array_bsearch_idx_ex(avpkgs, pkg, (tn_fn_cmp)pkg_cmp_name);
     if (i < 0)
         return 0;
 
@@ -34,7 +34,7 @@ int i3_is_other_version_marked(struct i3ctx *ictx, struct pkg *pkg,
 
         if (pkg_cmp_name(p, pkg) != 0)
             break;
-        
+
         if (pkg_cmp_arch(p, pkg) != 0)
             break;
 
@@ -52,14 +52,14 @@ int i3_is_other_version_marked(struct i3ctx *ictx, struct pkg *pkg,
 }
 
 
-int i3_unmark_package(struct i3ctx *ictx, struct pkg *pkg) 
+int i3_unmark_package(struct i3ctx *ictx, struct pkg *pkg)
 {
     if (iset_ismarkedf(ictx->inset, pkg, PKGMARK_INTERNAL))
         pkg_mark_i(ictx->ts->pms, pkg);
-    
+
     if (!iset_remove(ictx->inset, pkg))
         n_assert(0);
-    
+
     return 1;
 }
 
@@ -68,23 +68,23 @@ int i3_mark_package(struct i3ctx *ictx, struct pkg *pkg, unsigned mark)
     int rc;
 
     n_assert(!i3_is_marked(ictx, pkg));
-    
+
     rc = i3_is_pkg_installable(ictx->ts, pkg,
                                pkg_is_marked_i(ictx->ts->pms, pkg));
     if (rc <= 0) {
         i3_stop_processing(ictx, 1);
         return 0;
     }
-    
+
     DBGF("%s, is_installable = %d\n", pkg_id(pkg), rc);
 
     n_assert(rc > 0);
-    
+
     if (pkg_is_marked_i(ictx->ts->pms, pkg)) {
         pkg_unmark_i(ictx->ts->pms, pkg);
         mark |= PKGMARK_INTERNAL; /* keep INTERNAL in inset */
     }
-    
+
     iset_add(ictx->inset, pkg, mark);
     return 1;
 }
@@ -98,40 +98,38 @@ int i3_mark_namegroup(struct i3ctx *ictx, struct pkg *pkg, tn_array *pkgs)
 
 
     n_array_sort(pkgs);
-    
+
     len = n_snprintf(prefix, sizeof(prefix), "%s", pkg->name);
     if ((p = strchr(prefix, '-')))
         *p = '\0';
-    
+
     tmpkg.name = prefix;
 
     n = n_array_bsearch_idx_ex(pkgs, &tmpkg, (tn_fn_cmp)pkg_ncmp_name);
     if (n < 0)
         return 0;
-    
+
     len = strlen(prefix);
-    
+
     for (i = n; i < n_array_size(pkgs); i++) {
-        struct pkg *p = n_array_nth(pkgs, i);
+        struct pkg *pp = n_array_nth(pkgs, i);
         int pkg_name_len;
 
         if ((pkg_name_len = strlen(pkg->name)) < len)
             break;
-        
-        if (strncmp(p->name, prefix, len) != 0) 
+
+        if (strncmp(pp->name, prefix, len) != 0)
             break;
 
-        if (!pkg_is_marked_i(ictx->ts->pms, p)) 
+        if (!pkg_is_marked_i(ictx->ts->pms, pp))
             continue;
-        
-        if (!i3_is_marked(ictx, p)) {
-            DBGF("mark %s\n", pkg_id(p));
-            i3_mark_package(ictx, p, PKGMARK_MARK);
+
+        if (!i3_is_marked(ictx, pp)) {
+            DBGF("mark %s\n", pkg_id(pp));
+            i3_mark_package(ictx, pp, PKGMARK_MARK);
             nmarked++;
         }
     }
-    
+
     return nmarked;
 }
-
-
