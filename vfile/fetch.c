@@ -40,7 +40,7 @@
 #include "p_open.h"
 
 
-/* 
+/*
    %p[n] - package basename
    %d - cache dir
    %D - cache dir/package basename
@@ -91,24 +91,24 @@ int vfile_is_configured_ext_handler(const char *url)
     return find_fetcher(proto, 0) != NULL;
 }
 
-static 
-char *next_token(char **str, char delim, int *toklen) 
+static
+char *next_token(char **str, char delim, int *toklen)
 {
     char *p, *token;
 
     if (*str == NULL)
         return NULL;
-    
-    
+
+
     if ((p = strchr(*str, delim)) == NULL) {
         token = *str;
         if (toklen)
             *toklen = strlen(*str);
         *str = NULL;
-        
+
     } else {
         *p = '\0';
-        
+
         if (toklen)
             *toklen = p - *str;
         p++;
@@ -117,11 +117,11 @@ char *next_token(char **str, char delim, int *toklen)
         token = *str;
         *str = p;
     }
-    
+
     return token;
 }
 
-static unsigned protocols_to_urltypes(const tn_array *protocols) 
+static unsigned protocols_to_urltypes(const tn_array *protocols)
 {
     char proto[64];
     int i;
@@ -132,9 +132,9 @@ static unsigned protocols_to_urltypes(const tn_array *protocols)
         n_snprintf(proto, sizeof(proto), "%s://", p);
         if ((type = vf_url_type(proto)) != VFURL_UNKNOWN)
             urltypes |= type;
-        
+
     }
-    
+
     return urltypes;
 }
 
@@ -150,16 +150,16 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
     int               has_p_arg = 0, has_d_arg = 0, is_multi = 0;
     int               len;
     const char        *invalid_fmt_msg = "%s: invalid format\n";
-    
+
     len = strlen(cmd) + 1;
     fmt = alloca(len);
     memcpy(fmt, cmd, len);
 
-    if ((path = next_token(&fmt, ' ', NULL)) == NULL) 
+    if ((path = next_token(&fmt, ' ', NULL)) == NULL)
         return NULL;
-    
+
     if (*path != '/') {
-        char *p = alloca(PATH_MAX); 
+        char *p = alloca(PATH_MAX);
         if (vf_find_external_command(p, PATH_MAX, path, NULL))
             path = p;
         else {
@@ -170,12 +170,12 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
 
     args = n_array_new(8, free, NULL);
     bn = n_basenam(path);
-    
+
     arg = n_malloc(sizeof(*arg) + strlen(bn) + 1);
     arg->type = FETCHFMT_ARG;
     strcpy(arg->arg, bn);
     n_array_push(args, arg);
-    
+
     while ((token = next_token(&fmt, ' ', NULL))) {
         if (*token != '%') {
             arg = n_malloc(sizeof(*arg) + strlen(token) + 1);
@@ -183,11 +183,11 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
             arg->flags = 0;
             strcpy(arg->arg, token);
             n_array_push(args, arg);
-            
+
         } else if (strlen(token) > 3) {
             vf_logerr(invalid_fmt_msg, cmd);
             goto l_err_end;
-            
+
         } else {
             char c;
             arg = n_malloc(sizeof(*arg));
@@ -206,7 +206,7 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
                         goto l_err_end;
                     }
                     break;
-                    
+
                 case 'P':
                     arg->type = FETCHFMT_FN;
                     arg->flags = 0;
@@ -217,10 +217,10 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
                     } else if (c != '\0') {
                         vf_logerr(invalid_fmt_msg, cmd);
                         goto l_err_end;
-                    } 
-                        
+                    }
+
                     break;
-                    
+
                 case 'd':
                     arg->type = FETCHFMT_DIR;
                     has_d_arg++;
@@ -234,15 +234,15 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
                     arg->type = FETCHFMT_DIRBN;
                     arg->flags = 0;
                     has_d_arg++;
-                    
-                    
+
+
                     if (c == 'n') {
                         arg->flags = FETCHFMT_MULTI;
                     } else if (c != '\0') {
                         vf_logerr(invalid_fmt_msg, cmd);
                         goto l_err_end;
                     }
-                    
+
                     break;
 
                 default:
@@ -252,17 +252,17 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
             n_array_push(args, arg);
         }
     }
-    
-    
+
+
     if (n_array_size(args) > 2 && has_d_arg && has_p_arg) {
         int path_len, name_len;
 
         path_len = strlen(path) + 1;
         name_len = strlen(name) + 1;
-        
+
         ftch = n_malloc(sizeof(*ftch) + path_len + name_len);
         memset(ftch, 0, sizeof(*ftch));
-        
+
         ftch->protocols = n_array_dup(protocols, (tn_fn_dup)n_strdup);
         ftch->args     = args;
         ftch->is_multi = is_multi;
@@ -270,14 +270,14 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
         memcpy(ftch->path, path, path_len);
         memcpy(&ftch->path[path_len], name, name_len);
         ftch->name = &ftch->path[path_len];
-        
+
     } else
         goto l_err_end;
-    
+
     return ftch;
 
  l_err_end:
-    if (args) 
+    if (args)
         n_array_free(args);
     return NULL;
 }
@@ -290,60 +290,60 @@ static void ffetcher_free(struct ffetcher *ftch)
 }
 
 
-static void process_output(struct p_open_st *st, const char *prefix) 
+static void process_output(struct p_open_st *st, const char *prefix)
 {
     int endl = 1, cnt = 0;
 
-    
+
     if (prefix == NULL)
         prefix = st->cmd;
-    
+
     while (1) {
         struct timeval to = { 1, 0 };
         fd_set fdset;
         int rc;
-        
+
         FD_ZERO(&fdset);
         FD_SET(st->fd, &fdset);
         if ((rc = select(st->fd + 1, &fdset, NULL, NULL, &to)) < 0) {
             if (errno == EAGAIN || errno == EINTR)
                 continue;
-            
+
             break;
-            
+
         } else if (rc > 0) {
             char  buf[2048];
             int   n, i;
-            
+
             if ((n = read(st->fd, buf, sizeof(buf) - 1)) <= 0)
                 break;
 
             if (*vfile_verbose == 0)
                 continue;
-            
+
             // fix for aria - print in one line speed
             if (buf[0] == '\n' && (buf[1] == '[' || endl == 1))
                 buf[0] = '\r';
             if ( n >= 2 && buf[n-1] == '\n' && buf[n-2] == ']')
                 buf[n-1] = '\r';
-    
+
             buf[n] = '\0';
             for (i=0; i < n; i++) {
                 int c = buf[i];
-        
+
                 if (endl) {
                     vf_loginfo("%s: ", prefix);
                     endl = 0;
                 }
-                
+
                 if (c == '\n')
                     vf_loginfo("_\n"); /* is_endlined in log.c */
                 else
                     vf_loginfo("_%c", c);
-                
+
                 if (c == '\n' || c == '\r')
                     endl = 1;
-                
+
                 cnt++;
             }
         }
@@ -366,7 +366,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
 
     if (url)
         n_assert(urls == NULL);
-    
+
     if (urls)
         n_assert(url == NULL && fftch->is_multi);
 
@@ -374,12 +374,12 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
         bn = n_basenam(url);
 
     n = n_array_size(fftch->args) + 1;
-    
-    if (urls) 
+
+    if (urls)
         n += n_array_size(urls);
     else
         n += 1;
-    
+
     argv = alloca(sizeof(*argv) * n);
 
     n = 0;
@@ -389,7 +389,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
             case FETCHFMT_ARG:
                 argv[n++] = arg->arg;
                 break;
-                
+
             case FETCHFMT_DIRBN: {
                 int len = strlen(destdir) + strlen(bn) + 2;
                 argv[n] = alloca(len);
@@ -397,7 +397,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 n++;
                 break;
             }
-            	
+
             case FETCHFMT_DIR:
                 argv[n++] = (char*)destdir;
                 break;
@@ -406,9 +406,8 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 if (url) {
                     argv[n++] = bn;
                 } else {
-                    int i;
-                    for (i=0; i<n_array_size(urls); i++) 
-                        argv[n++] = n_basenam(n_array_nth(urls, i));
+                    for (int ii = 0; ii < n_array_size(urls); ii++)
+                        argv[n++] = n_basenam(n_array_nth(urls, ii));
                 }
                 break;
 
@@ -416,9 +415,8 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
                 if (url) {
                     argv[n++] = (char*)url;
                 } else {
-                    int i;
-                    for (i=0; i<n_array_size(urls); i++) 
-                        argv[n++] = n_array_nth(urls, i);
+                    for (int ii = 0; ii < n_array_size(urls); ii++)
+                        argv[n++] = n_array_nth(urls, ii);
                 }
                 break;
 
@@ -431,17 +429,17 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     argv[n++] = NULL;
 
     if (*vfile_verbose > 1) {
-        int i, len = 0;
+        int len = 0;
         char *s, *p;
 
 
-        for (i=0; i < n-1; i++)
-            len += strlen(argv[i]) + 1;
+        for (int ii=0; ii < n-1; ii++)
+            len += strlen(argv[ii]) + 1;
         len++;
-        
+
         p = s = alloca(len);
         *s = '\0';
-        
+
         for (i=0; i < n-1; i++) {
             p = n_strncpy(p, CL_URL(argv[i]), len);
             len -= strlen(argv[i]);
@@ -454,7 +452,7 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     verbose = *vfile_verbose;
     if (fftch->urltypes & VFURL_CDROM) {
         p_open_flags |= P_OPEN_KEEPSTDIN;
-        if (*vfile_verbose < 1) 
+        if (*vfile_verbose < 1)
             *vfile_verbose = 1;
     }
 
@@ -463,18 +461,18 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
     if (p_open(&pst, p_open_flags, fftch->path, argv) == NULL) {
         vf_logerr("p_open: %s\n", pst.errmsg);
         ec = -1;
-        
+
     } else {
         process_output(&pst,
                        ((struct fetcharg*) n_array_nth(fftch->args, 0))->arg);
-        
+
         if ((ec = p_close(&pst)) != 0)
             vf_logerr("%s\n", pst.errmsg ? pst.errmsg :
                       _("program exited with non-zero value"));
-    
+
         p_st_destroy(&pst);
     }
-    
+
     *vfile_verbose = verbose;
     if (vflock)
         vf_lock_release(vflock);
@@ -483,19 +481,19 @@ int ffetch_file(struct ffetcher *fftch, const char *destdir,
 
 
 int vfile_register_ext_handler(const char *name, tn_array *protocols,
-                               const char *cmd) 
+                               const char *cmd)
 {
     struct ffetcher *ftch;
     int i;
-    
+
     if (ffetchers && n_hash_exists(ffetchers, name)) {
         vf_log(VFILE_LOG_WARN, "%s: fetcher already exists, not overwritten\n", name);
         return 0;
     }
-    
+
     if ((ftch = ffetcher_new(name, protocols, cmd)) == NULL) {
         vf_logerr("External downloader '%s': registration failed\n", cmd);
-        
+
     } else {
         if (ffetchers == NULL) {
             ffetchers = n_hash_new(21, (tn_fn_free)ffetcher_free);
@@ -503,7 +501,7 @@ int vfile_register_ext_handler(const char *name, tn_array *protocols,
         }
 
         n_hash_insert(ffetchers, name, ftch);
-        
+
         for (i=0; i < n_array_size(protocols); i++) {
             const char *proto = n_array_nth(protocols, i);
             tn_array *arr = NULL;
@@ -514,7 +512,7 @@ int vfile_register_ext_handler(const char *name, tn_array *protocols,
             }
             n_array_push(arr, ftch);
         }
-        
+
         return 1;
     }
     return 0;
@@ -522,19 +520,19 @@ int vfile_register_ext_handler(const char *name, tn_array *protocols,
 
 
 static
-struct ffetcher *find_fetcher(const char *proto, int multi) 
+struct ffetcher *find_fetcher(const char *proto, int multi)
 {
     struct ffetcher  *ftch = NULL;
     tn_array         *arr;
     int              i;
     const char       *clname;
-    
+
     n_assert(vfile_conf.default_clients_ht);
 
-    
+
 
     if ((clname = n_hash_get(vfile_conf.default_clients_ht, proto))) {
-        
+
         if (ffetchers)
             ftch = n_hash_get(ffetchers, clname);
 
@@ -542,38 +540,38 @@ struct ffetcher *find_fetcher(const char *proto, int multi)
             vf_logerr("vfile: %s: no such external fetcher found\n", clname);
             return NULL;
         }
-        
+
         if (multi && !ftch->is_multi)
             return NULL;
-        else 
+        else
             return ftch;
     }
 
     if (ffetchers == NULL)
         return NULL;
-    
-    if ((arr = n_hash_get(ffetchers_proto_idx, proto)) == NULL) 
+
+    if ((arr = n_hash_get(ffetchers_proto_idx, proto)) == NULL)
         return NULL;
-    
+
     for (i=0; i < n_array_size(arr); i++) {
         ftch = n_array_nth(arr, i);
-        
+
         if (!multi || ftch->is_multi)
             return ftch;
     }
-    
+
     return NULL;
 }
 
 
-int vf_fetch_ext(const char *url, const char *destdir) 
+int vf_fetch_ext(const char *url, const char *destdir)
 {
     struct ffetcher *ftch;
     char proto[64];
 
-    
+
     vf_url_proto(proto, sizeof(proto), url);
-    
+
     if ((ftch = find_fetcher(proto, 0)) == NULL) {
         vf_logerr("vfile: %s://...: no external fetcher for this type "
                    "of url found\n", proto);
@@ -584,26 +582,26 @@ int vf_fetch_ext(const char *url, const char *destdir)
 }
 
 
-int vf_fetcha_ext(tn_array *urls, const char *destdir) 
+int vf_fetcha_ext(tn_array *urls, const char *destdir)
 {
     struct ffetcher *ftch;
     char proto[64];
     int rc = 1;
 
     vf_url_proto(proto, sizeof(proto), n_array_nth(urls, 0));
-    
+
     if ((ftch = find_fetcher(proto, 1))) {
         rc = ffetch_file(ftch, destdir, NULL, urls);
-        
+
     } else if ((ftch = find_fetcher(proto, 0))) {
         int i;
         int nerrs = 0;
-        
-        for (i=0; i < n_array_size(urls); i++) 
+
+        for (i=0; i < n_array_size(urls); i++)
             if (!ffetch_file(ftch, destdir, n_array_nth(urls, i), NULL))
                 nerrs++;
         rc = nerrs == 0;
-        
+
     } else {
         vf_logerr("vfile: %s://...: no external fetcher "
                    "for this type of url found\n", proto);
@@ -614,32 +612,32 @@ int vf_fetcha_ext(tn_array *urls, const char *destdir)
 }
 
 
-static 
-int url_to_path(char *buf, int size, const char *url, int isdir) 
+static
+int url_to_path(char *buf, int size, const char *url, int isdir)
 {
-    char *sl, *p, c, *bufp, url_buf[PATH_MAX];
+    char *sl, *p, *bufp, url_buf[PATH_MAX];
     int n;
 
     *buf = '\0';
     n = 0;
 
     url = vf_url_hidepasswd(url_buf, sizeof(url_buf), url);
-    
+
     if ((p = strstr(url, "://")) == NULL) {
         n = 0;
         p = (char*)url;
-        
+
     } else {
         int nn = p - url;
-        
+
         if (size <= nn)
             return 0;
-        
+
         strncpy(buf, url, nn)[nn] = '\0';
         n = strlen(buf);
         n += n_snprintf(&buf[n], size - n, "_");
         p += 3;
-    } 
+    }
 
     bufp = &buf[n];
     n += n_snprintf(&buf[n], size - n, p);
@@ -650,29 +648,28 @@ int url_to_path(char *buf, int size, const char *url, int isdir)
         sl = strrchr(buf, '/');
 
     p = bufp;
-    c = '\0';
+
     if (*p == '/')
         *p++ = '_';
-    while (*p && p != sl) {
-        c = *p;
 
+    while (*p && p != sl) {
         if (!isalnum(*p) && strchr("-+", *p) == NULL)
             *p = '.';
         p++;
     }
-    
+
     //printf("%s[%d] => %s(%s)\n", url, isdir, buf, sl);
     return n;
 }
 
 
-int vf_url_as_dirpath(char *buf, size_t size, const char *url) 
+int vf_url_as_dirpath(char *buf, size_t size, const char *url)
 {
     return url_to_path(buf, size, url, 1);
 }
 
 
-int vf_url_as_path(char *buf, size_t size, const char *url) 
+int vf_url_as_path(char *buf, size_t size, const char *url)
 {
     return url_to_path(buf, size, url, 0);
 }
@@ -683,34 +680,34 @@ char *vf_url_proto(char *proto, int size, const char *url)
 
     n_assert(size > 2);
     *proto = '\0';
-    
+
     if (*url == '/')
         n_snprintf(proto, size, "file");
-    
+
     else if ((p = strstr(url, "://"))) {
         int len = p - url;
 
         if (len > size - 1)
             len = size - 1;
-        
+
         memcpy(proto, url, len);
         proto[len] = '\0';
     }
-    
+
     return *proto ? proto : NULL;
 }
 
 
-int vf_url_type(const char *url)  
+int vf_url_type(const char *url)
 {
     char *p;
-    
+
     if (*url == '/')
         return VFURL_PATH;
 
-    if (strncmp(url, "ftp://", 6) == 0) 
+    if (strncmp(url, "ftp://", 6) == 0)
         return VFURL_FTP;
-    
+
     if (strncmp(url, "http://", 7) == 0)
         return VFURL_HTTP;
 
@@ -725,7 +722,7 @@ int vf_url_type(const char *url)
 
     if ((p = strstr(url, "://"))) {
         int is_url = 1;
-        
+
         while (url != p) {
             if (!isalpha(*url)) {
                 is_url = 1;
@@ -733,29 +730,29 @@ int vf_url_type(const char *url)
             }
             url++;
         }
-        
+
         if (is_url)
             return VFURL_UNKNOWN;
     }
-    
+
 
     return VFURL_PATH;
 }
 
 
-const char *vf_url_hidepasswd(char *buf, int size, const char *url)  
+const char *vf_url_hidepasswd(char *buf, int size, const char *url)
 {
     char *p, *u, *q = NULL;
     int i;
 
-    
+
     *buf = '\0';
-    
+
     if (*url == '/' || (u = strstr(url, "://")) == NULL)
         return url;
-    
+
     u += 3;
-    
+
     if ((p = strrchr(u, '@')) != NULL && (q = strchr(u, ':')) != NULL && q < p) {
         i = q - url;
         strncpy(buf, url, size)[size - 1] = '\0';
@@ -763,7 +760,7 @@ const char *vf_url_hidepasswd(char *buf, int size, const char *url)
         p = &buf[i + 1];
         while (*p && *p != '@')
             *p++ = 'x';
-        
+
         url = buf;
     }
 
@@ -771,7 +768,7 @@ const char *vf_url_hidepasswd(char *buf, int size, const char *url)
 }
 
 
-const char *vf_url_hidepasswd_s(const char *url) 
+const char *vf_url_hidepasswd_s(const char *url)
 {
     static char buf[PATH_MAX];
     return vf_url_hidepasswd(buf, sizeof(buf), url);
@@ -786,13 +783,13 @@ const char *vf_url_slim(char *buf, int size, const char *url, int maxl)
 
     *buf = '\0';
     url = vf_url_hidepasswd(buf, size, url);
-    
+
     if ((len = strlen(url)) < maxl + 8) /* +8 => +sizeof("/[...]/    */
         return url;
 
     if (len > size - 1)
         return url;
-    
+
     //printf("URL %s\n", url);
     if (*buf == '\0') {         /* vf_url_hidepasswd doesn't fill it */
         strncpy(buf, url, size)[size - 1] = '\0';
@@ -807,12 +804,12 @@ const char *vf_url_slim(char *buf, int size, const char *url, int maxl)
     //printf("bn = %s, %d, %d\n", bn, strlen(bn), maxl);
     if ((p = strchr(buf, '/')) == NULL || p - buf >= maxl) {
         url = bn;
-        
+
     } else {
         p = bn - 1;
         n_assert(*p == '/');
         *p = '\0';
-            
+
         while (p && p > buf && p - buf > maxl) {
             //printf("p = %s, %s\n", p, buf);
             if ((p = strrchr(buf, '/'))) {
@@ -827,11 +824,11 @@ const char *vf_url_slim(char *buf, int size, const char *url, int maxl)
         memmove(p + len, bn, bn_len + 1);
         //printf("buf[%d] = %s\n", len, buf);
     }
-    
+
     return url;
 }
 
-const char *vf_url_slim_s(const char *url, int maxl) 
+const char *vf_url_slim_s(const char *url, int maxl)
 {
     static char buf[PATH_MAX];
     return vf_url_slim(buf, sizeof(buf), url, maxl > 50 ? maxl : 60);
@@ -852,7 +849,7 @@ char *vf_url_unescape(const char *url)
 
         if (*url == '%' && isxdigit(url[1]) && isxdigit(url[2])) {
             char str[3];
-            
+
             str[0] = url[1];
             str[1] = url[2];
             str[2] = '\0';

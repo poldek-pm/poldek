@@ -1,4 +1,4 @@
-/* 
+/*
   Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
@@ -80,7 +80,7 @@ extern char *vfff_uri_escape(const char *path);
 #define HTTP_STATUS_UNAUTHORIZED	401
 #define HTTP_STATUS_FORBIDDEN		403
 #define HTTP_STATUS_NOT_FOUND		404
-#define HTTP_STATUS_BAD_RANGE       416 
+#define HTTP_STATUS_BAD_RANGE       416
 
 #define HTTP_STATUS_IS_CLIENT_ERROR(code) (code >= 400 && code % 400 < 100)
 
@@ -107,8 +107,8 @@ extern char *vfff_uri_escape(const char *path);
 #define ST_RESP_PROTO_SPACE      3 /* blanks after HTTP/1.x  */
 #define ST_RESP_STATUS_CODE      4 /* status code */
 #define ST_RESP_STATUS_MSG       5 /* reason */
-#define ST_RESP_LINE             6 
-#define ST_RESP_EOR              10 
+#define ST_RESP_LINE             6
+#define ST_RESP_EOR              10
 
 struct http_resp {
     tn_buf   *buf;
@@ -141,12 +141,12 @@ int mk_auth(char *auth, int size, const char *login, const char *passwd)
 }
 
 static
-int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...) 
+int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
 {
     char     req[4096];
     va_list  args;
     int      rc = 1, n = 0, nn = 0;
-    
+
     if (cn->state != VCN_ALIVE)
         return 0;
 
@@ -166,7 +166,7 @@ int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
     if (cn->auth_basic_str)
         n += n_snprintf(&req[n], sizeof(req) - n,
                         "Authorization: Basic %s\r\n", cn->auth_basic_str);
-    
+
     if (cn->proxy_login && cn->proxy_passwd &&
         cn->proxy_auth_basic_str == NULL) {
         char auth[512];
@@ -189,42 +189,42 @@ int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
     if (*vfff_verbose > 1)
         vfff_log("<   %s", &req[n]);
     n += nn;
-    
-#if 0    
+
+#if 0
     nn = n_snprintf(&req[n], sizeof(req) - n, "Pragma: no-cache\r\n");
     if (*vfff_verbose > 1)
         vfff_log("<   %s", &req[n]);
     n += nn;
-    
+
     nn = n_snprintf(&req[n], sizeof(req) - n, "Cache-Control: no-cache\r\n");
     if (*vfff_verbose > 1)
         vfff_log("<   %s", &req[n]);
     n += nn;
 #endif
-    
+
     if (fmt) {
         va_start(args, fmt);
         nn = n_vsnprintf(&req[n], sizeof(req) - n, fmt, args);
         va_end(args);
-        
+
         if (*vfff_verbose > 1)
             vfff_log("<   %s", &req[n]);
         n += nn;
     }
-    
+
     n += n_snprintf(&req[n], sizeof(req) - n, "\r\n");
-    
+
     if (write(cn->sockfd, req, n) != n) {
         vfff_set_err(errno, _("write to socket %s: %m"), req);
         cn->state = VCN_DEAD;
         rc = 0;
     }
-    
+
     return rc;
 }
 
 
-static struct http_resp *http_resp_new(void) 
+static struct http_resp *http_resp_new(void)
 {
     struct http_resp *resp;
 
@@ -241,7 +241,7 @@ static struct http_resp *http_resp_new(void)
 }
 
 
-static void http_resp_free(struct http_resp *resp) 
+static void http_resp_free(struct http_resp *resp)
 {
     if (resp->buf)
         n_buf_free(resp->buf);
@@ -251,7 +251,7 @@ static void http_resp_free(struct http_resp *resp)
 
     if (resp->msg)
         free(resp->msg);
-    
+
     free(resp);
 }
 
@@ -295,19 +295,19 @@ int http_resp_get_range(struct http_resp *resp,
 
     if ((s = n_hash_get(resp->hdr, "content-range")) == NULL)
         return 0;
-    
+
     if ((p = strstr(s, "bytes")) == NULL)
         return 0;
-    
+
     p += 5;
     while (isspace(*p))
         p++;
 
     if (resp->code != HTTP_STATUS_BAD_RANGE)
         rc = (sscanf(p, "%ld-%ld/%ld", from, to, total) == 3);
-    else 
+    else
         rc = (sscanf(p, "*/%ld", total) == 1);
-    
+
     return rc;
 }
 
@@ -317,7 +317,7 @@ int response_complete(struct http_resp *resp)
     const char *buf;
     char c;
 
-    
+
     buf = n_buf_ptr(resp->buf);
     buf += resp->last_i;
 //    printf("last_i = %d + %d\n", resp->last_i, n_buf_size(resp->buf));
@@ -326,7 +326,7 @@ int response_complete(struct http_resp *resp)
         c = *buf++;
         //printf("c(%c) = %s\n", c, &c);
         resp->last_i++;
-        
+
         switch (resp->state) {
             case ST_RESP_BAD:
                 goto l_end;
@@ -335,7 +335,7 @@ int response_complete(struct http_resp *resp)
             case ST_RESP_EOR:
                 goto l_end;
                 break;
-                
+
             case ST_RESP_EMPTY:
                 resp->state = ST_RESP_PROTO;
                 break;
@@ -343,7 +343,7 @@ int response_complete(struct http_resp *resp)
             case ST_RESP_PROTO:
                 if (is_endl(c)) {
                     resp->state = ST_RESP_BAD;
-                    
+
                 } else if (isblank(c)) {
                     resp->state = ST_RESP_PROTO_SPACE;
                 }
@@ -353,26 +353,26 @@ int response_complete(struct http_resp *resp)
                 if (isdigit(c)) {
                     resp->code_len = 1;
                     resp->state = ST_RESP_STATUS_CODE;
-                    
+
                 } else if (!isblank(c)) {
 //                    printf("BAD %c\n", c);
                     resp->state = ST_RESP_BAD;
                 }
                 break;
-                
+
             case ST_RESP_STATUS_CODE:
                 if (isdigit(c)) {
                     resp->code_len++;
-                    
+
                 } else if (isblank(c)) {
                     if (resp->code_len != 3 ||
                         sscanf(buf - 4, "%d", &resp->code) != 1) {
                         resp->state = ST_RESP_BAD;
-                        
+
                     } else {
                         resp->state = ST_RESP_STATUS_MSG;
                     }
-                    
+
                 } else {        /* no digit && no space */
                     resp->code_len = 0;
                     resp->state = ST_RESP_BAD;
@@ -384,21 +384,21 @@ int response_complete(struct http_resp *resp)
                 if (c == '\n')
                     resp->state = ST_RESP_NEWL;
                 break;
-                
+
             case ST_RESP_NEWL:
 //                printf("st = ST_RESP_NEWL [%c] %d\n", c, c);
-                if (c == '\n') 
+                if (c == '\n')
                     resp->state = ST_RESP_EOR;
-                else if (c != '\r') 
+                else if (c != '\r')
                     resp->state = ST_RESP_LINE;
                 break;
-                
-                
+
+
             case ST_RESP_LINE:
 //                printf("st = ST_RESP_LINE\n");
                 if (c == '\n')
                     resp->state = ST_RESP_NEWL;
-                
+
                 break;
 
             default:
@@ -408,25 +408,25 @@ int response_complete(struct http_resp *resp)
     }
 
  l_end:
-    
+
     switch (resp->state) {
         case ST_RESP_EOR:
             return 1;
-            
+
         case ST_RESP_BAD:
             vfff_set_err(EIO, _("%s: response parse error"),
                          (char*)n_buf_ptr(resp->buf));
             return -1;
-            
+
         default:
             return 0;
     }
-    
+
     return 0;
 }
 
 
-static int readresp(int sockfd, struct http_resp *resp, int readln) 
+static int readresp(int sockfd, struct http_resp *resp, int readln)
 {
     int is_err = 0, buf_pos = 0, ttl = VFFF_TIMEOUT;
     char buf[4096];
@@ -435,12 +435,12 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
 
     n_assert(readln);            /* todo: support for chunk-read */
 
-    
+
     while (1) {
         struct timeval to = { 1, 0 };
         fd_set fdset;
         int rc;
-        
+
         FD_ZERO(&fdset);
         FD_SET(sockfd, &fdset);
         errno = 0;
@@ -453,43 +453,43 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
 
             if (errno == EINTR)
                 continue;
-            
+
             is_err = 1;
             break;
-            
+
         } else if (rc == 0 && ttl-- == 0) {
             errno = ETIMEDOUT;
             is_err = 1;
             break;
-            
+
         } else if (rc > 0) {
             char c;
             int n;
 
             ttl = VFFF_TIMEOUT;
-            
-            if (readln) 
+
+            if (readln)
                 n = read(sockfd, &c, 1);
-            else 
+            else
                 n = read(sockfd, buf, sizeof(buf));
 
             if (n < 0 && errno == EINTR)
                 continue;
-            
+
             else if (n <= 0) {
                 is_err = 1;
                 if (n == 0 || errno == 0)
                     errno = ECONNRESET;
                 break;
-                
+
             } else if (n >= 1) {
                 if (!readln) {
                     n_buf_addz(resp->buf, buf, n);
                     break;
-                    
+
                 } else {
                     buf[buf_pos++] = c;
-                
+
                     if (buf_pos == sizeof(buf)) {
                         is_err = 1;
                         vfff_errno = EMSGSIZE;
@@ -506,39 +506,39 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
             }
         }
     }
-    
+
     if (is_err) {
         if (errno)
             vfff_errno = errno;
         else
             vfff_errno = EIO;
-        
+
         switch (vfff_errno) {
             case EMSGSIZE:
                 vfff_set_err(vfff_errno, _("response line too long"));
                 break;
-                
+
             case ETIMEDOUT:
             case ECONNRESET:
                 vfff_set_err(vfff_errno, "%m");
                 break;
-                
-            case EINTR:
-                if (vfff_sigint_reached()) 
-                    break;
 
+            case EINTR:
+                if (vfff_sigint_reached())
+                    break;
+                /* fallthru */
             default:
                 vfff_set_err(vfff_errno, "%s: %m", _("unexpected EOF"));
-                
+
         }
-        
+
     }
-    
+
     return is_err ? 0 : 1;
 }
 
 
-static int http_resp_parse(struct http_resp *resp) 
+static int http_resp_parse(struct http_resp *resp)
 {
     const char **tl, **tl_save, **status_tl, **status_tl_save;
     int is_err = 0, http_ver, i;
@@ -566,21 +566,21 @@ static int http_resp_parse(struct http_resp *resp)
             const char *p = strstr(*tl, *status_tl);
             if (p == NULL)      /* should not happen */
                 p = *status_tl;
-            
+
             resp->msg = n_strdup(p);
             break;
         }
         i++;
         status_tl++;
     }
-    
+
     n_str_tokl_free(status_tl_save);
-    
+
     tl++;                       /* skip status line */
-    
+
     while (is_err == 0 && *tl) {
         char *p, *q, *nam, *val;
-        
+
         if (*tl && **tl == '\0') {
             tl++;
             continue;
@@ -595,7 +595,7 @@ static int http_resp_parse(struct http_resp *resp)
         }
 
         *p++ = '\0';
-        
+
         nam = q = (char*)*tl;
         while (*q) {
             *q = tolower(*q);
@@ -604,21 +604,21 @@ static int http_resp_parse(struct http_resp *resp)
 
         while (*p && isspace(*p))
             p++;
-        
+
         if (*p == '\0') {
             is_err = 1;
             break;
         }
-        
+
         val = q = p;
-        
+
         if (!n_hash_exists(resp->hdr, nam))
             n_hash_insert(resp->hdr, nam, n_strdup(val));
         tl++;
     }
-    
+
     n_str_tokl_free(tl_save);
-    
+
     return is_err == 0;
 }
 
@@ -638,7 +638,7 @@ struct http_resp *do_http_read_resp(int sock)
             is_err = 1;
             break;
         }
-        
+
         if ((n = readresp(sock, resp, 1)) > 0) {
             if (response_complete(resp))
                 break;
@@ -647,7 +647,7 @@ struct http_resp *do_http_read_resp(int sock)
             break;
         }
     }
-    
+
     if (is_err == 0) {
         if (!http_resp_parse(resp)) {
             vfff_set_err(EIO, _("%s: response parse error"),
@@ -655,12 +655,12 @@ struct http_resp *do_http_read_resp(int sock)
             is_err = 1;
         }
     }
-    
+
     if (is_err && resp) {
         http_resp_free(resp);
         resp = NULL;
     }
-    
+
     return resp;
 }
 
@@ -670,20 +670,20 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
 
     if (path == NULL)
         path = "?";
-    
+
     switch (status_code) {
         case HTTP_STATUS_OK:
         case HTTP_STATUS_PARTIAL_CONTENT:
             is_err = 0;
             break;
-            
+
         case HTTP_STATUS_NOT_FOUND:
             if (*vfile_conf.verbose > 0) // kill error if verbose = 0
                 vfff_set_err(ENOENT, _("%s: no such file"), path);
             else
                 is_err = 0;
             break;
-            
+
         case HTTP_STATUS_FORBIDDEN:
             vfff_set_err(EPERM, _("%s: permission denied"), path);
             break;
@@ -706,21 +706,21 @@ static int status_code_ok(int status_code, const char *msg, const char *path)
     return is_err == 0;
 }
 
-int httpcn_get_resp(struct vcn *cn) 
+int httpcn_get_resp(struct vcn *cn)
 {
     int rc = 1;
 
     if (cn->state != VCN_ALIVE)
         return 0;
-    
-    if (cn->resp) 
+
+    if (cn->resp)
         http_resp_free(cn->resp);
 
     if ((cn->resp = do_http_read_resp(cn->sockfd)) == NULL) {
         cn->state = VCN_DEAD;
         rc = 0;
     }
-    
+
     return rc;
 }
 
@@ -766,14 +766,14 @@ static time_t parse_date(const char *dt)
     if (sscanf(dt, "%16[a-zA-Z], %d %16[a-zA-Z] %d %d:%d:%d GMT",
                weekday, &tm.tm_mday, month, &tm.tm_year,
                &tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 7) {
-        
+
         /* Sunday, 06-Nov-94 08:49:37 GMT (RFC 850, obsoleted by RFC 1036) */
         if (sscanf(dt, "%16[a-zA-Z], %2d-%16[a-zA-Z]-%2d %d:%d:%d GMT",
                    weekday, &tm.tm_mday, month, &tm.tm_year,
                    &tm.tm_hour, &tm.tm_min, &tm.tm_sec) == 7) {
-            
+
             tm.tm_year += 2000;
-            
+
         /* Sun Nov  6 08:49:37 1994  (ANSI C's asctime() format)  */
         } else if (sscanf(dt, "%16[a-zA-Z] %16[a-zA-Z] %2d %d:%d:%d %d",
                           weekday, month, &tm.tm_mday, &tm.tm_hour, &tm.tm_min,
@@ -781,7 +781,7 @@ static time_t parse_date(const char *dt)
             is_ok = 0;
         }
     }
-    
+
     if (is_ok) {
         tm.tm_wday = decode_wday(weekday);
         tm.tm_mon = decode_month(month);
@@ -790,23 +790,23 @@ static time_t parse_date(const char *dt)
             ts = mktime(&tm);
         }
     }
-    
+
     return ts;
 }
 
 static
-int vhttp_vcn_is_alive(struct vcn *cn) 
+int vhttp_vcn_is_alive(struct vcn *cn)
 {
     char req_line[256];
 
     if (cn->state != VCN_ALIVE)
         return 0;
-    
+
     make_req_line(req_line, sizeof(req_line), "HEAD", "/");
-    
+
     if (!httpcn_req(cn, req_line, NULL))
         return 0;
-    
+
     if (!httpcn_get_resp(cn)) {
         cn->state = VCN_DEAD;
         return 0;
@@ -823,7 +823,7 @@ static int is_closing_connection_status(struct http_resp *resp)
         case -1:                /* no Connection header */
             if (resp->http_ver > 0) /* HTTP > 1.0 */
                 break;
-                                 /* no break */
+            /* fallthru */
         case 0:                  /* Connection: close    */
             close_cn = 1;
             break;
@@ -836,7 +836,7 @@ static int is_closing_connection_status(struct http_resp *resp)
             n_assert(0);
             break;
     }
-    
+
     return close_cn;
 }
 
@@ -844,25 +844,25 @@ static
 int is_redirected_connection(struct http_resp *resp, struct vfff_req *rreq)
 {
     int is_redirected = 0;
-    
+
     if (HTTP_STATUS_IS_REDIR(resp->code)) {
         const char *redirto = http_resp_get_hdr(resp, "location");
-        if (redirto && *redirto != '\0') 
+        if (redirto && *redirto != '\0')
             snprintf(rreq->redirected_to, sizeof(rreq->redirected_to), "%s", redirto);
-        else 
+        else
             vfff_set_err(ENOENT, "wrong or empty redirect location");
-        
+
         is_redirected = 1;
     }
-    
+
     return is_redirected;
 }
 
 static
-off_t http_resp_get_content_length(struct http_resp *resp) 
+off_t http_resp_get_content_length(struct http_resp *resp)
 {
     long int size;
-    
+
     if (!http_resp_get_hdr_long(resp, "content-length", &size)) {
         vfff_set_err(EINVAL, _("Content-Length parse error (%s)"),
                       http_resp_get_hdr(resp, "content-length"));
@@ -873,23 +873,23 @@ off_t http_resp_get_content_length(struct http_resp *resp)
 }
 
 static
-int vhttp_vcn_stat(struct vcn *cn, struct vfff_req *rreq) 
-{ 
+int vhttp_vcn_stat(struct vcn *cn, struct vfff_req *rreq)
+{
     char req_line[PATH_MAX];
     const char *s;
     int close_cn = 0, rc = 1;
     struct http_resp *resp;
-    
+
     vfff_errno = 0;
     *rreq->redirected_to = '\0';
-    
+
     make_req_line(req_line, sizeof(req_line), "HEAD", rreq->uri);
     if (!httpcn_req(cn, req_line, NULL))
         return 0;
-    
+
     if (!httpcn_get_resp(cn))
         return 0;
-    
+
     resp = cn->resp;
     close_cn = is_closing_connection_status(resp);
 
@@ -897,7 +897,7 @@ int vhttp_vcn_stat(struct vcn *cn, struct vfff_req *rreq)
         rc = 0;                 /* see the comment in httpcn_retr() */
         goto l_end;
     }
-    
+
     if (!status_code_ok(resp->code, resp->msg, rreq->uri)) {
         rc = 0;
         goto l_end;
@@ -914,7 +914,7 @@ int vhttp_vcn_stat(struct vcn *cn, struct vfff_req *rreq)
  l_end:
     if (close_cn)
         vcn_close(cn);
-    
+
     return rc;
 }
 
@@ -927,12 +927,12 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
     char   req_line[PATH_MAX];
     const  char *trenc;
     struct http_resp *resp;
-    struct stat st;  
-    
+    struct stat st;
+
     vfff_errno = 0;
     *rreq->redirected_to = '\0';
     n_assert(rreq->out_fd > 0);
-    
+
     if ((lseek(rreq->out_fd, rreq->out_fdoff, SEEK_SET)) == (off_t)-1) {
         vfff_set_err(errno, "%s[%d]: lseek %ld: %m", n_basenam(rreq->uri),
                      rreq->out_fd, rreq->out_fdoff);
@@ -943,23 +943,23 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
         vfff_set_err(errno, "%s: stat: %m", rreq->out_path);
         goto l_err_end;
     }
-    
+
 
     if (rreq->out_fdoff < 0)
         rreq->out_fdoff = 0;
-    
+
     make_req_line(req_line, sizeof(req_line), "GET", rreq->uri);
 
-    if (rreq->out_fdoff > 0) 
+    if (rreq->out_fdoff > 0)
         httpcn_req(cn, req_line, "Range: bytes=%ld-\r\n", rreq->out_fdoff);
-    else 
+    else
         httpcn_req(cn, req_line, NULL);
 
     if (!httpcn_get_resp(cn))
         goto l_err_end;
-    
+
     resp = cn->resp;
-    
+
     close_cn = is_closing_connection_status(resp);
 
     if (is_redirected_connection(resp, rreq)) {
@@ -981,16 +981,16 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
         close_cn = 1;
         goto l_err_end;
     }
-    
+
     if ((amount = http_resp_get_content_length(resp)) < 0)
         goto l_err_end;
 
     if ((trenc = http_resp_get_hdr(resp, "last-modified")) != NULL)
         rreq->st_remote_mtime = parse_date(trenc);
-    
+
     if (rreq->out_fdoff == 0)
         total = amount;
-    
+
     else {
         if (!http_resp_get_range(resp, &from, &to, &total)) {
             vfff_set_err(EINVAL, _("%s: Content-Range parse error (%s)"),
@@ -1003,20 +1003,20 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
                 if (*vfff_verbose > 1)
                     vfff_log(_("%s: invalid Content-Range, truncate %s\n"),
                              rreq->uri, rreq->out_path);
-                
+
                 if ((ftruncate(rreq->out_fd, 0) == 0))
                     rreq->out_fdoff = 0;
-                
+
                 goto l_err_end;
-                
+
             } else {
                 if (*vfff_verbose > 1)
                     vfff_log(_("%s: already downloaded; mtime %s\n"),
                              rreq->uri, ctime(&rreq->st_remote_mtime));
                 goto l_end;         /* downloaded */
-            } 
+            }
         }
-        
+
         if (from != rreq->out_fdoff) {
             vfff_set_err(EINVAL, _("%s: invalid Content-Range reached"),
                          rreq->uri);
@@ -1025,30 +1025,30 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
     }
 
     rreq->st_remote_size = total;
-    
-    
+
+
     if (*vfff_verbose > 1) {
         long a = from ? total - from : total;
         vfff_log("Total file size %ld, %ld to download, mtime %s\n",
                  total, a, ctime(&rreq->st_remote_mtime));
     }
-    
+
     errno = 0;
     if (!vfff_transfer_file(rreq, cn->sockfd, total))
         goto l_err_end;
 
-    
+
  l_end:
     if (close_cn)
         vcn_close(cn);
-    
-    
+
+
     return rc;
-    
+
  l_err_end:
     rc = 0;
     close_cn = 1;
-    
+
     if (vfff_errno == 0)
         vfff_errno = EIO;
 
@@ -1065,5 +1065,3 @@ void vhttp_vcn_init(struct vcn *cn)
     cn->m_retr = vhttp_vcn_retr;
     cn->m_stat = vhttp_vcn_stat;
 }
-
-

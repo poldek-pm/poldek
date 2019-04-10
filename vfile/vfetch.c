@@ -49,7 +49,7 @@ extern struct vf_module vf_mod_vfff;
 
 struct vf_module *vfmod_tab[] = {
     &vf_mod_vfff,
-#ifdef ENABLE_VFILE_CURL    
+#ifdef ENABLE_VFILE_CURL
     &vf_mod_curl,
 #endif
     NULL
@@ -58,7 +58,7 @@ struct vf_module *vfmod_tab[] = {
 #define REQTYPE_FETCH 0
 #define REQTYPE_STAT  1
 
-void vfile_setup(void) 
+void vfile_setup(void)
 {
     int n;
 
@@ -70,21 +70,21 @@ void vfile_setup(void)
 void vfile_destroy()
 {
     int n = 0;
-    
+
     while (vfmod_tab[n] != NULL)
 	vfmod_tab[n++]->destroy();
 }
 
 static
-const struct vf_module *find_vf_module(int reqtype, int urltype) 
+const struct vf_module *find_vf_module(int reqtype, int urltype)
 {
     int n = 0;
-    
+
     n = 0;
     while (vfmod_tab[n] != NULL) {
         if (vfmod_tab[n]->vf_protocols & urltype) {
             int rc = 0;
-            
+
             switch (reqtype) {
                 case REQTYPE_FETCH:
                     rc = (vfmod_tab[n]->fetch != NULL);
@@ -93,7 +93,7 @@ const struct vf_module *find_vf_module(int reqtype, int urltype)
                 case REQTYPE_STAT:
                     rc = (vfmod_tab[n]->stat != NULL);
                     break;
-                    
+
                 default:
                     rc = 0;
                     n_assert(0);
@@ -110,7 +110,7 @@ const struct vf_module *find_vf_module(int reqtype, int urltype)
 }
 
 static
-const struct vf_module *select_vf_module(const char *path) 
+const struct vf_module *select_vf_module(const char *path)
 {
     const struct vf_module *mod = NULL;
     char proto[64];
@@ -122,7 +122,7 @@ const struct vf_module *select_vf_module(const char *path)
         unsigned urltype = vf_url_type(path);
         mod = find_vf_module(REQTYPE_FETCH, urltype);
     }
-    
+
     return mod;
 }
 
@@ -131,31 +131,31 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
                  struct vf_request *req, unsigned vf_flags)
 {
     struct stat             st;
-    int                     rc = 0, vf_errno = 0;
+    int                     rc = 0;
     int                     end = 1, ntry = 0;
 
     n_assert(reqtype == REQTYPE_FETCH || reqtype == REQTYPE_STAT);
-    
+
     if (reqtype == REQTYPE_FETCH) {
         n_assert(req->bar == NULL);
         if ((vf_flags & VF_FETCH_NOPROGRESS) == 0 && (vfile_conf.flags & VFILE_CONF_PROGRESS_NONE) == 0)
             req->bar = vf_progress_new(req->url);
     }
-    
+
     if (vfile_conf.flags & VFILE_CONF_STUBBORN_RETR)
         end = vfile_conf.nretries;
-    
+
     while (end-- > 0) {
         if (vfile_sigint_reached(0)) {
-            vf_errno = EINTR;
+            //vfile_set_errno(mod->vfmod_name, EINTR); /* FIXME */
             break;
         }
-        
+
         if (ntry++ && (vfile_conf.flags & VFILE_CONF_STUBBORN_RETR)) {
             vf_loginfo(_("Retrying...(#%d)\n"), ntry);
             sleep(1);
         }
-        
+
         req->req_errno = 0;
         vf_request_resetflags(req);
 
@@ -165,20 +165,20 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
                     vf_progress_reset(req->bar);
                 rc = mod->fetch(req);
                 break;
-                
+
             case REQTYPE_STAT:
                 rc = mod->stat(req);
                 break;
-                
+
             default:
                 rc = 0;
                 n_assert(0);
                 break;
         }
-        
+
         if (rc)
             break;
-        
+
         switch (req->req_errno) {
             case ENOENT:
             case EINTR:
@@ -189,7 +189,7 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
 
         if (reqtype == REQTYPE_FETCH) {
             fsync(req->dest_fd);
-            
+
             if (fstat(req->dest_fd, &st) != 0) {
                 vf_logerr("fstat %s: %m\n", req->destpath);
                 break;
@@ -228,47 +228,47 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
     char                    destpath[PATH_MAX];
     char                    *url_unescaped = NULL;
     int                     rc = 0;
-    
+
     if (*vfile_verbose <= 0)
         flags |= VF_FETCH_NOLABEL|VF_FETCH_NOPROGRESS;
-    
+
     *ftrc = VF_FETCHRC_NIL;
     if (dest_dir)
         destdir = dest_dir;
-    
+
     else {
         char *p = alloca(PATH_MAX + 1);
         vf_localdirpath(p, PATH_MAX, url);
         destdir = p;
     }
-    
+
     n_assert(destdir);
-    
+
     if ((mod = select_vf_module(url)) == NULL) { /* no internal module found */
         if ((flags & VF_FETCH_NOLABEL) == 0) {
             url_unescaped = vf_url_unescape(url);
-            
+
             if (urlabel)
                 vf_loginfo(_("Retrieving %s%s::%s...\n"), counter ? counter : "", urlabel,
                            n_basenam(url_unescaped));
             else
                 vf_loginfo(_("Retrieving %s%s...\n"), counter ? counter : "",
             	           PR_URL(url_unescaped));
-        
+
     	    free(url_unescaped);
         }
 
         rc = vf_fetch_ext(url, destdir);
         goto l_end;
     }
-    
+
     if ((vflock = vf_lock_mkdir(destdir)) == NULL)
         return 0;
-        
+
     snprintf(destpath, sizeof(destpath), "%s/%s", destdir, n_basenam(url));
     if ((req = vf_request_new(url, destpath)) == NULL)
         goto l_end;
-    
+
     if (req->proxy_url) {
         if ((mod = select_vf_module(req->proxy_url)) == NULL) {
             rc = vf_fetch_ext(url, destdir);
@@ -277,20 +277,20 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
             goto l_end;
         }
     }
-        
+
     if (req->dest_fdoff > 0) { /* non-empty local file  */
         struct vf_stat vfst;
 
-        if ((rc = vf_stat(req->url, destdir, &vfst, urlabel)) && 
+        if ((rc = vf_stat(req->url, destdir, &vfst, urlabel)) &&
             vfst.vf_size > 0 && vfst.vf_mtime > 0 &&
             vfst.vf_size  == vfst.vf_local_size &&
             vfst.vf_mtime == vfst.vf_local_mtime) {
-                
+
             vf_request_free(req);
             req = NULL;
             *ftrc = VF_FETCHRC_UPTODATE;
             goto l_end;
-                
+
         } else {
             if (*vfile_verbose > 1) {
                 if (!rc || vfst.vf_size <= 0 || vfst.vf_mtime <= 0) {
@@ -302,7 +302,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
                                "local copy\n", n_basenam(req->url));
                 }
             }
-                
+
             vf_unlink(req->destpath);
             vf_request_close_destpath(req);
             vf_request_open_destpath(req);
@@ -311,7 +311,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
 
     if ((flags & VF_FETCH_NOLABEL) == 0) {
         url_unescaped = vf_url_unescape(req->url);
-        
+
         if (urlabel)
             vf_loginfo(_("Retrieving %s%s::%s...\n"), counter ? counter : "", urlabel,
                        n_basenam(url_unescaped));
@@ -320,27 +320,27 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
 
 	free(url_unescaped);
     }
-            
+
     if ((rc = do_vfile_req(REQTYPE_FETCH, mod, req, flags)) == 0) {
         if ((req->flags & VF_REQ_INT_REDIRECTED) == 0) {
             vfile_set_errno(mod->vfmod_name, req->req_errno);
-                
+
         } else {            /* redirected */
-            char url[PATH_MAX];
-                
-            snprintf(url, sizeof(url), "%s", req->url);
+            char redir_url[PATH_MAX];
+
+            snprintf(redir_url, sizeof(redir_url), "%s", req->url);
             vf_request_free(req);
             req = NULL;
-            rc = vf_fetch(url, destdir, flags, NULL, NULL);
+            rc = vf_fetch(redir_url, destdir, flags, NULL, NULL);
         }
     }
     if (req)
         vf_request_free(req);
-    
+
  l_end:
     if (vflock)
         vf_lock_release(vflock);
-    
+
     if (rc && *ftrc == VF_FETCHRC_NIL)
         *ftrc = VF_FETCHRC_FETCHED;
 
@@ -348,14 +348,14 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
 }
 
 int vf_fetch(const char *url, const char *dest_dir, unsigned flags,
-             const char *counter, const char *urlabel) 
+             const char *counter, const char *urlabel)
 {
     enum vf_fetchrc ftrc;
     return vfile__vf_fetch(url, dest_dir, flags, counter, urlabel, &ftrc);
 }
 
 int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
-            const char *urlabel) 
+            const char *urlabel)
 {
     const struct vf_module *mod = NULL;
     struct vf_request *req = NULL;
@@ -364,12 +364,12 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
 
     if (*vfile_verbose <= 0)
         flags |= VF_FETCH_NOLABEL|VF_FETCH_NOPROGRESS;
-    
+
     if ((req = vf_request_new(url, NULL)) == NULL)
         return 0;
 
     memset(vfstat, 0, sizeof(*vfstat));
-    
+
     if (req->proxy_url)
         urltype = vf_url_type(req->proxy_url);
     else
@@ -377,33 +377,33 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
 
     if ((mod = find_vf_module(REQTYPE_STAT, urltype)) == NULL)
         vf_logerr("%s: could not find \"stat\" handler", req->proto);
-    
+
     else {
         if ((flags & VF_FETCH_NOLABEL) == 0)
             vf_loginfo(_("Retrieving status of %s...\n"),
                        urlabel ? urlabel : PR_URL(req->url));
-        
+
         if ((rc = do_vfile_req(REQTYPE_STAT, mod, req, flags))) {
             vfstat->vf_size = req->st_remote_size > 0 ? req->st_remote_size : 0;
             vfstat->vf_mtime = req->st_remote_mtime > 0 ? req->st_remote_mtime : 0;
-            
+
         } else if (req->flags & VF_REQ_INT_REDIRECTED) {
             vf_request_free(req);
             req = NULL;
             rc = vf_stat(destdir, req->url, vfstat, NULL);
-            
+
         } else {
             vfile_set_errno(mod->vfmod_name, req->req_errno);
         }
     }
-    
+
     if (req)
         vf_request_free(req);
-    
+
     if (rc) {
         char path[PATH_MAX];
         struct stat st;
-        
+
         if (destdir)
             snprintf(path, sizeof(path), "%s/%s", destdir, n_basenam(url));
         else
@@ -420,7 +420,7 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
            vfstat->vf_local_size, vfstat->vf_local_mtime);
     printf("%s\n", ctime(&vfstat->vf_mtime));
     printf("%s\n", ctime(&vfstat->vf_local_mtime));
-#endif           
+#endif
     return rc;
 }
 
@@ -433,10 +433,10 @@ int vf_fetcha(tn_array *urls, const char *destdir, unsigned flags,
 
     if ((mod = select_vf_module(n_array_nth(urls, 0))) == NULL) {
         rc = vf_fetcha_ext(urls, destdir);
-        
+
     } else {
         int i;
-        
+
         for (i=0; i < n_array_size(urls); i++) {
             const char *url = n_array_nth(urls, i);
             snprintf(counter, sizeof(counter), "[%d/%d] ", begin + i + 1 , max);
@@ -446,6 +446,6 @@ int vf_fetcha(tn_array *urls, const char *destdir, unsigned flags,
             }
         }
     }
-    
+
     return rc;
 }

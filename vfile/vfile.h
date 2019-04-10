@@ -1,11 +1,11 @@
 /*
-  Not so transparent IO layer. 
+  Not so transparent IO layer.
   Copyright (C) 2000 - 2007 Pawel A. Gajda (mis@pld-linux.org)
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License version 2 as published
   by the Free Software Foundation;
- 
+
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
@@ -60,7 +60,7 @@ EXPORT void vfile_destroy(void);
 /* vf_type */
 #define VFT_IO       1             /* open(2)                   */
 #define VFT_STDIO    2             /* fopen(3)                  */
-#define VFT_GZIO     3             /* zlib: gzopen()            */ 
+#define VFT_GZIO     3             /* zlib: gzopen()            */
 #define VFT_TRURLIO  5             /* trurlib's tn_stream       */
 
 /* vf_mode */
@@ -87,14 +87,14 @@ struct vfile {
     int       vf_type;                /* VFT_*   */
     unsigned  vf_urltype;             /* VFURL_* */
     unsigned  vf_mode;                /* VFM_*   */
-    unsigned  vf_flags;               /* VF_*    */ 
+    unsigned  vf_flags;               /* VF_*    */
     union {
         int        vfile_fd;
         FILE       *vfile_stream;
-        gzFile     *vfile_gzstream;
-#ifdef ENABLE_VFILE_TRURLIO        
+        gzFile     vfile_gzstream;
+#ifdef ENABLE_VFILE_TRURLIO
         tn_stream  *vfile_tnstream;
-#endif        
+#endif
     } vfile_fdescriptor;
     char          *vf_path;
     char          *vf_tmpath;
@@ -115,7 +115,7 @@ EXPORT struct vfile *vfile_open_ul(const char *path, int vftype, unsigned vfmode
 
 #define vfile_open(path, vftype, vfmode) \
     vfile_open_ul(path, vftype, vfmode, NULL)
-    
+
 
 EXPORT void vfile_close(struct vfile *vf);
 EXPORT struct vfile *vfile_incref(struct vfile *vf);
@@ -229,8 +229,7 @@ struct vf_progress {
     void (*free)(void *bar);
 };
 
-    
-    
+
+
 
 #endif /* POLDEK_VFILE_H */
-
