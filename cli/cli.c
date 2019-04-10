@@ -61,7 +61,7 @@ static struct poclidek_cmd *commands_tab[] = {
     &command_search,
     &command_get,
     &command_desc,
-    &command_install, 
+    &command_install,
     &command_uninstall,
     &command_cd,
     &command_pwd,
@@ -84,31 +84,31 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
             state->child_inputs[0] = cmdctx;
             state->child_inputs[1] = NULL;
             break;
-        
+
         case 'v': {
             if ((cmdctx->cmd->flags & COMMAND_HASVERBOSE) == 0) {
                 argp_usage (state);
                 cmdctx->rtflags |= CMDCTX_ERR;
-                
+
             } else {
                 poldek_set_verbose(poldek_VERBOSE + 1);
             }
         }
         break;
 
-        case 'q': 
+        case 'q':
             cmdctx->rtflags |= CMDCTX_NOCTRLMSGS;
             poldek_set_verbose(-1);
             break;
-        
-            
+
+
         case ARGP_KEY_ARG:
             DBGF("cli.arg %s, %d\n", arg,
                  cmdctx->cmd->flags & COMMAND_SELFARGS);
             if (cmdctx->cmd->flags & COMMAND_SELFARGS)
                 return ARGP_ERR_UNKNOWN;
-            
-            
+
+
             if (cmdctx->cmd->flags & COMMAND_NOARGS) {
                 argp_usage (state);
                 cmdctx->rtflags |= CMDCTX_ERR;
@@ -116,47 +116,47 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
             }
             poldek_ts_add_pkgmask(cmdctx->ts, arg);
             break;
-            
+
         case 'h':
             argp_state_help(state, stdout, ARGP_HELP_LONG | ARGP_HELP_DOC |
                             ARGP_HELP_USAGE);
             return EINVAL;
             break;
-            
+
         case ARGP_KEY_NO_ARGS:
             DBGF("NOARGS %d\n",
                  cmdctx->rtflags & (CMDCTX_ISHELP|CMDCTX_GOTARGS));
             if (cmdctx->rtflags & (CMDCTX_ISHELP | CMDCTX_GOTARGS))
                 break;
-            
+
             if ((cmdctx->cmd->flags & (COMMAND_NOARGS|COMMAND_EMPTYARGS)) == 0) {
                 argp_usage (state);
                 cmdctx->rtflags |= CMDCTX_ERR;
                 return EINVAL;
             }
             break;
-            
-            
+
+
         case ARGP_KEY_ERROR:
             cmdctx->rtflags |= CMDCTX_ERR;
             return EINVAL;
             break;
-            
+
         default:
             return ARGP_ERR_UNKNOWN;
     }
-    
+
     //printf("key = %d, rc = %d\n", key, rc);
     return rc;
 }
 
 static tn_array *find_command_aliases(struct poclidek_cmd *cmd,
-                                      struct poclidek_ctx  *cctx) 
+                                      struct poclidek_ctx  *cctx)
 {
     char nam[PATH_MAX];
     tn_array *aliases = NULL;
     int i, n;
-    
+
     if (cmd->flags & COMMAND_IS_ALIAS)
         return NULL;
 
@@ -164,13 +164,13 @@ static tn_array *find_command_aliases(struct poclidek_cmd *cmd,
     for (i=0; i < n_array_size(cctx->commands); i++) {
         struct poclidek_cmd *cm = n_array_nth(cctx->commands, i);
         int found = 0;
-        
+
         if ((cm->flags & COMMAND_IS_ALIAS) == 0)
             continue;
-        
+
         if (cm->aliasto && n_str_eq(cmd->name, cm->aliasto))
             found = 1;
-        
+
         else if (strncmp(nam, cm->cmdline, n) == 0)
             found = 1;
 
@@ -180,30 +180,30 @@ static tn_array *find_command_aliases(struct poclidek_cmd *cmd,
             n_array_push(aliases, cm);
         }
     }
-    
+
     if (aliases)
         n_array_sort(aliases);
     return aliases;
 }
 
-static char *help_filter(int key, const char *text, void *input) 
+static char *help_filter(int key, const char *text, void *input)
 {
     struct cmdctx *cmdctx = input;
     char *p, buf[4096];
     tn_array *aliases;
     int n = 0;
-    
+
     if (key != ARGP_KEY_HELP_EXTRA)
         return (char*)text;
-        
-    if (cmdctx->cmd->extra_help) 
+
+    if (cmdctx->cmd->extra_help)
         n += n_snprintf(&buf[n], sizeof(buf) - n, "  %s\n",
                         cmdctx->cmd->extra_help);
 
     aliases = find_command_aliases(cmdctx->cmd, cmdctx->cctx);
     if (aliases) {
         int i = 0;
-            
+
         n += n_snprintf(&buf[n], sizeof(buf) - n, "%s",
                         _("  Defined aliases:\n"));
 
@@ -219,7 +219,7 @@ static char *help_filter(int key, const char *text, void *input)
         p = n_malloc(n + 1);
         return memcpy(p, buf, n + 1);
     }
-    
+
     return (char*)text;
 }
 
@@ -231,7 +231,7 @@ static struct argp_option common_options[] = {
 };
 
 
-static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv) 
+static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
 {
     int                  rc = 1;
     unsigned             parse_flags;
@@ -239,14 +239,14 @@ static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
     struct argp          cmd_argp = { cmd->argp_opts, cmd->parse_opt_fn,
                                       cmd->arg,
                                       cmd->doc, 0, 0, 0};
-    
+
     struct argp_child cmd_argp_child[2] = { { &cmd_argp, 0, NULL, 0 },
                                             { NULL, 0, NULL, 0 },   };
-    
+
     struct argp argp = { common_options, parse_opt, 0, 0,
                          cmd_argp_child, 0, 0 };
 
-    
+
     if (argv == NULL)
         return 0;
 
@@ -255,10 +255,10 @@ static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
         cmdctx->rtflags |= CMDCTX_ISHELP;
         DBGF("is_help!\n");
     }
-    
+
     if (poldek_verbose() < 0)
         cmdctx->rtflags |= CMDCTX_NOCTRLMSGS;
-    
+
     cmdctx->_data = NULL;
     if (cmd->init_cmd_arg_d)
         cmdctx->_data = cmd->init_cmd_arg_d();
@@ -268,8 +268,8 @@ static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
         rc = cmd->cmd_fn(cmdctx, argc, (const char**)argv, &argp);
         goto l_end;
     }
-    
-    
+
+
     if ((cmd->flags & COMMAND_NOHELP) && (cmd->flags & COMMAND_NOARGS) &&
         (cmd->flags & COMMAND_NOOPTS)) {
         rc = cmd->do_cmd_fn(cmdctx);
@@ -284,12 +284,12 @@ static int do_exec_cmd_ent(struct cmdctx *cmdctx, int argc, char **argv)
         rc = 0;
         goto l_end;
     }
-    
+
     if (cmdctx->rtflags & CMDCTX_ISHELP) {
         rc = 1;
         goto l_end;
     }
-    
+
     rc = cmd->do_cmd_fn(cmdctx);
 
  l_end:
@@ -307,7 +307,7 @@ int poclidek_argv_is_help(int argc, const char **argv)
     for (i=0; i < argc; i++) {
         if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-?") == 0 ||
             strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--usage") == 0) {
-            
+
             is_help = 1;
             break;
         }
@@ -316,7 +316,7 @@ int poclidek_argv_is_help(int argc, const char **argv)
 }
 
 
-static int cmdctx_isctrlmsg(const char *fmt) 
+static int cmdctx_isctrlmsg(const char *fmt)
 {
     return *fmt == '!';
 }
@@ -325,7 +325,7 @@ static int do_cmdctx_printf(struct cmdctx *cmdctx, int color, const char *fmt,
                             va_list args)
 {
     int is_ctrl, n = 0;
-    
+
     if ((is_ctrl = cmdctx_isctrlmsg(fmt))) {
         if (cmdctx->rtflags & CMDCTX_NOCTRLMSGS)
             return 1;
@@ -335,7 +335,7 @@ static int do_cmdctx_printf(struct cmdctx *cmdctx, int color, const char *fmt,
     if (cmdctx->pipe_right == NULL || is_ctrl) {
         n = color ? poldek_term_vprintf_c(color, fmt, args) :
             vfprintf(stdout, fmt, args);
-        
+
     } else {
         n = cmd_pipe_vprintf(cmdctx->pipe_right, fmt, args);
     }
@@ -347,11 +347,11 @@ int cmdctx_printf(struct cmdctx *cmdctx, const char *fmt, ...)
 {
     va_list args;
     int n;
-    
+
     va_start(args, fmt);
     n = do_cmdctx_printf(cmdctx, 0, fmt, args);
     va_end(args);
-    
+
     return n;
 }
 
@@ -359,22 +359,22 @@ int cmdctx_printf_c(struct cmdctx *cmdctx, int color, const char *fmt, ...)
 {
     va_list args;
     int n;
-    
+
     va_start(args, fmt);
     n = do_cmdctx_printf(cmdctx, color, fmt, args);
     va_end(args);
-    
+
     return n;
 }
 
-int cmdctx_addtoresult(struct cmdctx *cmdctx, struct pkg *pkg) 
+int cmdctx_addtoresult(struct cmdctx *cmdctx, struct pkg *pkg)
 {
     if (cmdctx->pipe_right)
         return cmd_pipe_writepkg(cmdctx->pipe_right, pkg);
     return 1;
 }
 
-static int command_cmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2) 
+static int command_cmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2)
 {
     return strcmp(c1->name, c2->name);
 }
@@ -386,11 +386,11 @@ int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2)
 
 static void command_free(struct poclidek_cmd *cmd)
 {
-    if (cmd->_free) 
+    if (cmd->_free)
         cmd->_free(cmd);
 }
 
-static void translate_argp_options(struct argp_option *arr) 
+static void translate_argp_options(struct argp_option *arr)
 {
     int i = 0;
 
@@ -407,11 +407,11 @@ int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
     cmd->_seqno = n_array_size(cctx->commands);
     if (cmd->argp_opts)
         translate_argp_options(cmd->argp_opts);
-    
+
     cmd->arg = _(cmd->arg);
     cmd->doc = _(cmd->doc);
-    
-    
+
+
     if (n_array_bsearch(cctx->commands, cmd)) {
         logn(LOGERR, _("ambiguous command %s"), cmd->name);
         return 0;
@@ -423,10 +423,10 @@ int poclidek_add_command(struct poclidek_ctx *cctx, struct poclidek_cmd *cmd)
 
 
 static void init_commands(struct poclidek_ctx *cctx, tn_hash *global_aliases,
-                          tn_hash *local_aliases) 
+                          tn_hash *local_aliases)
 {
     int n = 0;
-    
+
     cctx->commands = n_array_new(16, (tn_fn_free)command_free,
                                  (tn_fn_cmp)command_cmp);
     n_array_ctl(cctx->commands, TN_ARRAY_AUTOSORTED);
@@ -439,13 +439,13 @@ static void init_commands(struct poclidek_ctx *cctx, tn_hash *global_aliases,
     n = 0;
     if (global_aliases)
         n += poclidek__add_aliases(cctx, global_aliases);
-    
+
     if (local_aliases)
         n += poclidek__add_aliases(cctx, local_aliases);
-    
+
     if (n == 0)
         poclidek__load_aliases(cctx); /* load legacy config(s) */
-    
+
     n_array_sort(cctx->commands);
 }
 
@@ -457,42 +457,40 @@ static void *dent_alloc(struct poclidek_ctx *cctx, size_t size)
 static int config_path(char *globalpath, char *localpath, int size)
 {
     char *homedir, *sysconfdir = "/etc";
-    
+
 #ifdef SYSCONFDIR
     if (n_str_ne(sysconfdir, SYSCONFDIR) && access(SYSCONFDIR, R_OK) == 0)
         sysconfdir = SYSCONFDIR;
 #endif
     *localpath = *globalpath = '\0';
-    
+
     n_snprintf(globalpath, size, "%s/poldek/cli.conf", sysconfdir);
     if (access(globalpath, R_OK) != 0)
         *globalpath = '\0';
-    
-    
-    if ((homedir = getenv("HOME")) != NULL) {
-        int n;
 
-        n = n_snprintf(localpath, size, "%s/.poclidekrc", homedir);
+
+    if ((homedir = getenv("HOME")) != NULL) {
+        n_snprintf(localpath, size, "%s/.poclidekrc", homedir);
         if (access(localpath, R_OK) != 0) {
-            n = n_snprintf(localpath, size, "%s/.poldekclirc", homedir);
+            n_snprintf(localpath, size, "%s/.poldekclirc", homedir);
             if (access(localpath, R_OK) != 0)
                 *localpath = '\0';
         }
     }
-    
+
     DBGF("%s\n", sysconfdir);
-    
+
     return *localpath != '\0' || *globalpath != '\0';
 }
 
-static tn_hash *loadconf(void) 
+static tn_hash *loadconf(void)
 {
     char path[PATH_MAX], localpath[PATH_MAX];
     tn_hash *htcnf = NULL, *local_htcnf = NULL;
-    
+
     if (!config_path(path, localpath, sizeof(path)))
         return NULL;
-    
+
     if (*path)
         htcnf = poldek_conf_load(path, POLDEK_LDCONF_FOREIGN);
 
@@ -509,19 +507,19 @@ static tn_hash *loadconf(void)
         if (aliases) /* XXX: yep, hacky a bit; sections should be movable
                         via conf API */
             n_hash_insert(local_htcnf, "global_aliases", n_ref(aliases));
-        
+
         n_hash_free(htcnf);
         htcnf = local_htcnf;
         local_htcnf = NULL;
     }
-    
+
     return htcnf;
 }
 
 static int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
 {
     tn_hash *htcnf;
-    
+
     n_assert(cctx->ctx == NULL);
 
     cctx->_flags = 0;
@@ -534,15 +532,15 @@ static int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
     cctx->currdir = cctx->rootdir;
     cctx->homedir = NULL;
     cctx->htcnf = htcnf = loadconf();
-    
+
     init_commands(cctx,
                   htcnf? poldek_conf_get_section(htcnf, "global_aliases"):NULL,
                   htcnf? poldek_conf_get_section(htcnf, "aliases"):NULL);
-    
+
     return 1;
 }
 
-struct poclidek_ctx *poclidek_new(struct poldek_ctx *ctx) 
+struct poclidek_ctx *poclidek_new(struct poldek_ctx *ctx)
 {
     struct poclidek_ctx *cctx = n_calloc(1, sizeof(*cctx));
     if (poclidek_init(cctx, ctx))
@@ -552,7 +550,7 @@ struct poclidek_ctx *poclidek_new(struct poldek_ctx *ctx)
 }
 
 static
-void poclidek_destroy(struct poclidek_ctx *cctx) 
+void poclidek_destroy(struct poclidek_ctx *cctx)
 {
     if (cctx->htcnf) {
         n_hash_free(cctx->htcnf);
@@ -560,10 +558,10 @@ void poclidek_destroy(struct poclidek_ctx *cctx)
     }
 
     if (cctx->pkgs_available) {
-	n_array_free(cctx->pkgs_available);
+	n_array_free((tn_array*)cctx->pkgs_available);
 	cctx->pkgs_available = NULL;
     }
-    
+
     cctx->pkgs_installed = NULL;
 
     if (cctx->rootdir)
@@ -582,25 +580,25 @@ void poclidek_destroy(struct poclidek_ctx *cctx)
     memset(cctx, 0, sizeof(*cctx));
 }
 
-void poclidek_free(struct poclidek_ctx *cctx) 
+void poclidek_free(struct poclidek_ctx *cctx)
 {
     poclidek_destroy(cctx);
     free(cctx);
 }
 
 
-int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags) 
+int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags)
 {
     int nerr = 0;
-    
+
 
     DBGF("%d\n", flags);
-    
+
     if (flags & POCLIDEK_LOAD_AVAILABLE) {
         if ((cctx->_flags & POLDEKCLI_LOADED_AVAILABLE) == 0) {
             cctx->_flags |= POLDEKCLI_LOADED_AVAILABLE;
-            
-            if (!poldek_load_sources(cctx->ctx)) 
+
+            if (!poldek_load_sources(cctx->ctx))
                 nerr++;
             else {
                 tn_array *pkgs = poldek_get_avail_packages(cctx->ctx);
@@ -623,13 +621,13 @@ int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags)
         (flags & POCLIDEK_LOAD_RELOAD) == 0) {     /* ...and not reload  */
         return nerr == 0;
     }
-    
+
     if (flags & POCLIDEK_LOAD_INSTALLED) {
         int reload = (flags & POCLIDEK_LOAD_RELOAD);
-        
+
         if (reload)
             cctx->_flags &= ~POLDEKCLI_LOADED_INSTALLED;
-        
+
         if ((cctx->_flags & POLDEKCLI_LOADED_INSTALLED) == 0) {
             cctx->_flags |= POLDEKCLI_LOADED_INSTALLED;
             if (!poclidek_load_installed(cctx, reload))
@@ -640,11 +638,11 @@ int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags)
             }
         }
     }
-    
+
     return nerr == 0;
 }
 
-static char **a_argv_to_argv(tn_array *a_argv, char **argv) 
+static char **a_argv_to_argv(tn_array *a_argv, char **argv)
 {
     int i;
     for (i=0; i < n_array_size(a_argv); i++) {
@@ -663,10 +661,10 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     struct cmdctx  cmdctx;
     char **argv;
     int rc = 0, runit = 1;
-    
+
     DBGF("ent %s, %d, %p\n", ent->cmd->name, n_array_size(ent->a_argv),
          ent->next_piped);
-    
+
     memset(&cmdctx, 0, sizeof(cmdctx));
     cmdctx.cmd = ent->cmd;
     cmdctx.cctx = cctx;
@@ -677,7 +675,7 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     if (ent->next_piped) {
         ent->pipe_right = cmd_pipe_new();
         cmdctx.pipe_right = ent->pipe_right;
-        
+
     } else if (cmd_pipe) {
         DBGF("piped %s\n", ent->cmd->name);
         ent->pipe_right = cmd_pipe_link(cmd_pipe);
@@ -690,20 +688,20 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 
         pipe = ent->prev_piped->pipe_right;
         ent->prev_piped->pipe_right = NULL;
-        
+
         cmdctx.pipe_left = pipe;
-        
+
         if (ent->cmd->flags & COMMAND_PIPE_XARGS) {
             if (ent->cmd->flags & COMMAND_PIPE_PACKAGES)
                 pipe_args = cmd_pipe_xargs(pipe, CMD_PIPE_CTX_PACKAGES);
             else
                 pipe_args = cmd_pipe_xargs(pipe, CMD_PIPE_CTX_ASCII);
-            
+
             if (pipe_args == NULL) {
                 runit = 0;      /* do not execute command if pipe is empty */
                 rc = 0;
                 goto l_end;
-                
+
             } else {
                 while (n_array_size(pipe_args))
                     n_array_push(ent->a_argv, n_array_shift(pipe_args));
@@ -711,7 +709,7 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
             }
         }
     }
-    
+
 
     argv = alloca((n_array_size(ent->a_argv) + 1) * sizeof(*argv));
     a_argv_to_argv(ent->a_argv, argv);
@@ -719,17 +717,17 @@ int poclidek_exec_cmd_ent(struct poclidek_ctx *cctx, struct poldek_ts *ts,
     rc = do_exec_cmd_ent(&cmdctx, n_array_size(ent->a_argv), argv);
 
  l_end:
-    if (ts == NULL) 
+    if (ts == NULL)
         poldek_ts_free(cmdctx.ts);
 
     if (runit && ent->next_piped)
         return poclidek_exec_cmd_ent(cctx, ts, ent->next_piped, cmd_pipe);
-    
+
     return rc;
 }
 
 int do_poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
-                         const char *cmdline, struct cmd_pipe *cmd_pipe) 
+                         const char *cmdline, struct cmd_pipe *cmd_pipe)
 {
     tn_array              *cmd_chain;
     int                   rc = 0, i, verbose;
@@ -738,20 +736,20 @@ int do_poclidek_execline(struct poclidek_ctx *cctx, struct poldek_ts *ts,
 
     /* keep verbose setting as it changes when '-q' option is used */
     verbose = poldek_verbose();
-    
+
     cmd_chain = poclidek_prepare_cmdline(cctx, cmdline);
     if (cmd_chain == NULL)
         return 0;
-    
+
     for (i=0; i < n_array_size(cmd_chain); i++) {
         struct cmd_chain_ent  *ent;
-        
+
         ent = n_array_nth(cmd_chain, i);
         if (ent->flags & (CMD_CHAIN_ENT_SEMICOLON | CMD_CHAIN_ENT_PIPE)) {
             n_assert(0);
             continue;
         }
-        
+
         if (cmd_pipe && i == n_array_size(cmd_chain) - 1)
             rc = poclidek_exec_cmd_ent(cctx, ts, ent, cmd_pipe);
         else
@@ -784,10 +782,10 @@ int do_poclidek_exec(struct poclidek_ctx *cctx, struct poldek_ts *ts, int argc,
 
     cmdline = alloca(len + 1);
     n = 0;
-    
+
     for (i=0; i < argc; i++)
         n += n_snprintf(&cmdline[n], len - n, "%s ", argv[i]);
-    
+
     return do_poclidek_execline(cctx, ts, cmdline, pipe);
 }
 
@@ -801,7 +799,7 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts)
 {
     int i, n = 0;
     struct pkg_dent *ent = NULL;
-    
+
     if (cctx->rootdir)
         ent = poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR);
 
@@ -811,7 +809,7 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts)
         pkgdir_remove_package(cctx->dbpkgdir, pkg);
         if (ent)
             pkg_dent_remove_pkg(ent, pkg);
-        
+
         n++;
         DBGF("- %s\n", pkg_id(pkg));
     }
@@ -821,20 +819,20 @@ void poclidek_apply_iinf(struct poclidek_ctx *cctx, struct poldek_ts *ts)
 
         /*
           assure new packages haven't recno and clean it if they have;
-          playing with recno is messy and should be fixed. 
+          playing with recno is messy and should be fixed.
         */
         if (pkg->recno) {
             logn(LOGERR, "%s: recno is set, should not happen", pkg_id(pkg));
             pkg->recno = 0;
-        } 
-        
+        }
+
         pkgdir_add_package(cctx->dbpkgdir, pkg);
         if (ent)
             pkg_dent_add_pkg(cctx, ent, pkg);
         DBGF("+ %s\n", pkg_id(pkg));
         n++;
     }
-        
+
     if (n)
         cctx->ts_dbpkgdir = time(0);
 }

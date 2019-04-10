@@ -1,10 +1,10 @@
-/* 
+/*
   Copyright (C) 2000 Pawel A. Gajda <mis@pld-linux.org>
- 
+
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
   the Free Software Foundation (see file COPYING for details).
-  
+
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
@@ -30,7 +30,7 @@
 struct poldek_ctx     *ctx;
 struct poclidek_ctx  *cctx;
 
-int init(void) 
+int init(void)
 {
     ctx = poldek_new(0);
     poldek_load_config(ctx, "test_cli.rc", NULL, 0);
@@ -52,16 +52,14 @@ int test_02(void)
 {
     struct poclidek_rcmd  *cmd;
     init();
-    
+
     cmd = poclidek_rcmd_new(cctx, NULL);
     if (poclidek_rcmd_execline(cmd, "ls xmms*")) {
-        tn_array *pkgs;
         tn_buf  *buf;
         tn_buf_it it;
         char *p, line[1024];
-        int len, n = 0;
+        unsigned len, n = 0;
 
-        pkgs = poclidek_rcmd_get_packages(cmd);
         buf = poclidek_rcmd_get_buf(cmd);
         n_buf_it_init(&it, buf);
         n = 0;
@@ -73,18 +71,18 @@ int test_02(void)
             line[len] = '\0';
             printf("%d: %s\n", n++, line);
         }
-        
+
     }
     poclidek_rcmd_free(cmd);
-    
-    
+
+
     poclidek_free(cctx);
     poldek_free(ctx);
     return 1;
 }
 
 
-int main(int argc, char *argv[]) 
+int main(void)
 {
     setlocale(LC_MESSAGES, "");
     setlocale(LC_CTYPE, "");

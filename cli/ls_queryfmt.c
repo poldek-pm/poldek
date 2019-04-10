@@ -15,7 +15,7 @@
 #endif
 
 /* for asprintf() from stdio.h */
-#define _GNU_SOURCE 
+#define _GNU_SOURCE
 
 #include <sys/stat.h>
 #include <stdio.h>
@@ -45,7 +45,7 @@ enum LsqfParseMode {
 /* Tags have to be in alphabetical order. */
 enum {
     LSQF_TAG_UNKNOWN = -1,
-    
+
     LSQF_TAG_ARCH = 0,
     LSQF_TAG_BASENAMES,
     LSQF_TAG_BUILDHOST,
@@ -84,13 +84,13 @@ enum {
     LSQF_TAG_URL,
     LSQF_TAG_VENDOR,
     LSQF_TAG_VERSION,
-    
+
     LSQF_N_TAGS
 };
 
 enum {
     LSQF_TAG_OUTFMTFN_NONE = 0,
-    
+
     LSQF_TAG_OUTFMTFN_DATE,
     LSQF_TAG_OUTFMTFN_DAY,
     LSQF_TAG_OUTFMTFN_DEPFLAGS
@@ -159,15 +159,15 @@ struct lsqf_pkgdata {
 static struct lsqf_pkgdata *lsqf_pkgdata_new(const struct pkg *pkg)
 {
     struct lsqf_pkgdata *pkgdata = NULL;
-    
+
     pkgdata = n_malloc(sizeof(struct lsqf_pkgdata));
-    
+
     if (pkgdata) {
 	pkgdata->pkg = pkg;
 	pkgdata->flist = NULL;
 	pkgdata->uinf = NULL;
     }
-    
+
     return pkgdata;
 }
 
@@ -195,7 +195,7 @@ static void lsqf_pkgdata_free(struct lsqf_pkgdata *pkgdata)
 
 	if (pkgdata->uinf)
 	    pkguinf_free(pkgdata->uinf);
-    
+
 	n_free(pkgdata);
     }
 }
@@ -204,8 +204,8 @@ static int get_tagid_by_name(char *tag)
 {
     if (tag) {
 	unsigned int i, j;
-	
-	for (i = 0; i < LSQF_N_TAGS; i++) {    
+
+	for (i = 0; i < LSQF_N_TAGS; i++) {
 	    for (j = 0; lsqf_tags[i].tagname[j]; j++) {
 		if (n_strcase_eq(tag, lsqf_tags[i].tagname[j])) {
 		    return lsqf_tags[i].tagid;
@@ -227,7 +227,7 @@ static int get_outfmtfnid_by_name(char *outfmtfn)
 	if (n_str_eq(outfmtfn, "depflags"))
 	    return LSQF_TAG_OUTFMTFN_DEPFLAGS;
     }
-    
+
     return LSQF_TAG_OUTFMTFN_NONE;
 }
 
@@ -235,13 +235,13 @@ static int get_outfmtfnid_by_name(char *outfmtfn)
 static int capreq_snprintf_evr(char *str, size_t size, const struct capreq *cr)
 {
     int n = 0;
-    
+
     n_assert(size > 0);
-    
+
     if (capreq_has_epoch(cr))
 	n += n_snprintf(&str[n], size - n, "%d:", capreq_epoch(cr));
 
-    if (capreq_has_ver(cr)) 
+    if (capreq_has_ver(cr))
 	n += n_snprintf(&str[n], size - n, "%s", capreq_ver(cr));
 
     if (capreq_has_rel(cr)) {
@@ -249,14 +249,14 @@ static int capreq_snprintf_evr(char *str, size_t size, const struct capreq *cr)
 
         n += n_snprintf(&str[n], size - n, "-%s", capreq_rel(cr));
     }
-    
+
     return n;
 }
 
 static char *format_date(int outfmtfnid, uint32_t time)
 {
     char *buf = NULL, datestr[32];;
-    
+
     if (outfmtfnid == LSQF_TAG_OUTFMTFN_DATE) {
 	strftime(datestr, sizeof(datestr), "%c", gmtime((time_t *)&time));
 	asprintf(&buf, "%s", datestr);
@@ -266,7 +266,7 @@ static char *format_date(int outfmtfnid, uint32_t time)
     } else {
 	asprintf(&buf, "%u", time);
     }
-    
+
     return buf;
 }
 
@@ -279,74 +279,75 @@ static char *format_flags(int outfmtfnid, struct capreq *cr)
 
 	p = relstr;
 	*p = '\0';
-	
+
 	if (cr->cr_relflags & REL_LT)
 	    *p++ = '<';
 	else if (cr->cr_relflags & REL_GT)
 	    *p++ = '>';
-	
+
 	if (cr->cr_relflags & REL_EQ)
 	    *p++ = '=';
-	
+
 	*p = '\0';
-	
+
 	asprintf(&buf, " %s ", relstr);
     } else {
 	asprintf(&buf, "%u", cr->cr_relflags);
     }
-    
+
     return buf;
 }
 
-static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *pkgdata, unsigned int num)
+static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *pkgdata,
+                              int num)
 {
     const struct pkg *pkg = pkgdata->pkg;
     struct capreq *c = NULL;
     char *buf = NULL, evr[32];
-    unsigned int i;
+    int i;
 
     if (lsqf_tags[ent->tag.id].need_uinf) {
 	struct pkguinf *pkgu = lsqf_pkgdata_uinf(pkgdata);
 	const char *str = NULL;
-    
+
 	switch (ent->tag.id) {
 	    case LSQF_TAG_BUILDHOST:
 		str = pkguinf_get(pkgu, PKGUINF_BUILDHOST);
 		break;
-	    
+
 	    case LSQF_TAG_DESCRIPTION:
 		str = pkguinf_get(pkgu, PKGUINF_DESCRIPTION);
 		break;
-	    
+
 	    case LSQF_TAG_LICENSE:
 		str = pkguinf_get(pkgu, PKGUINF_LICENSE);
 		break;
-	    
+
 	    case LSQF_TAG_SUMMARY:
 		str = pkguinf_get(pkgu, PKGUINF_SUMMARY);
 		break;
-		
+
 	    case LSQF_TAG_URL:
 		str = pkguinf_get(pkgu, PKGUINF_URL);
 		break;
-	
+
 	    case LSQF_TAG_VENDOR:
 		str = pkguinf_get(pkgu, PKGUINF_VENDOR);
 		break;
-	    
+
 	    default:
 		n_assert(0);
 	}
-	
+
 	if (str)
 	    buf = n_strdup(str);
 	else
 	    buf = n_strdup("(none)");
-    
+
     } else if (lsqf_tags[ent->tag.id].need_flist) {
 	struct pkgflist *flist = lsqf_pkgdata_flist(pkgdata);
 	struct pkgfl_ent *flent;
-	
+
 	if (flist) {
 	    switch (ent->tag.id) {
 		case LSQF_TAG_BASENAMES:
@@ -356,13 +357,13 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		case LSQF_TAG_FILESIZES:
 		    for (i = 0; i < n_tuple_size(flist->fl); i++) {
 			flent = n_tuple_nth(flist->fl, i);
-			
+
 			if (flent->items <= num)
 			    num -= flent->items;
 			else
 			    break;
 		    }
-		    
+
 		    if (ent->tag.id == LSQF_TAG_BASENAMES)
 			buf = n_strdup(flent->files[num]->basename);
 		    else if (ent->tag.id == LSQF_TAG_FILEMODES)
@@ -379,12 +380,12 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		    else
 			if (S_ISLNK(flent->files[num]->mode))
 			    buf = n_strdup(flent->files[num]->basename + strlen(flent->files[num]->basename) + 1);
-		
+
 		    break;
-		
+
 		case LSQF_TAG_DIRNAMES:
 		    flent = n_tuple_nth(flist->fl, num);
-		    
+
 		    asprintf(&buf, "%s%s", *flent->dirname == '/' ? "" : "/",
 					   flent->dirname);
 		    break;
@@ -402,7 +403,7 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 	    case LSQF_TAG_BUILDTIME:
 		buf = format_date(ent->tag.outfmtfnid, pkg->btime);
 		break;
-	    
+
 	    case LSQF_TAG_CONFLICTFLAGS:
 	    case LSQF_TAG_CONFLICTS:
 	    case LSQF_TAG_CONFLICTVERSION:
@@ -410,18 +411,18 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 	    case LSQF_TAG_OBSOLETES:
 	    case LSQF_TAG_OBSOLETEVERSION:
 	    {
-		unsigned int n = 0;
-				
+		int n = 0;
+
 		for (i = 0; i < n_array_size(pkg->cnfls); i++) {
 		    struct capreq *cr = n_array_nth(pkg->cnfls, i);
-		    
+
 		    if (ent->tag.id == LSQF_TAG_CONFLICTS || ent->tag.id == LSQF_TAG_CONFLICTFLAGS) {
 			if (!capreq_is_obsl(cr)) {
 			    if (n == num) {
 				c = cr;
 				break;
 			    }
-			
+
 			    n++;
 			}
 		    } else {
@@ -430,12 +431,12 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 				c = cr;
 				break;
 			    }
-			    
+
 			    n++;
 			}
 		    }
 		}
-	    
+
 		if (c) {
 		    if (ent->tag.id == LSQF_TAG_CONFLICTS || ent->tag.id == LSQF_TAG_OBSOLETES)
 			buf = n_strdup(capreq_name(c));
@@ -444,7 +445,7 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		    else if (ent->tag.id == LSQF_TAG_CONFLICTVERSION || ent->tag.id == LSQF_TAG_OBSOLETEVERSION)
 			if (capreq_snprintf_evr(evr, sizeof(evr), c) > 0)
 			    buf = n_strdup(evr);
-		
+
 		}
 		break;
 	    }
@@ -452,19 +453,19 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 	    case LSQF_TAG_EPOCH:
 		asprintf(&buf, "%d", pkg->epoch);
 		break;
-	
+
 	    case LSQF_TAG_GROUP:
 		buf = n_strdup(pkg_group(pkg));
 		break;
-	
+
 	    case LSQF_TAG_NAME:
 		buf = n_strdup(pkg->name);
 		break;
-	
+
 	    case LSQF_TAG_NVRA:
 		buf = n_strdup(pkg_id(pkg));
 		break;
-	
+
 	    case LSQF_TAG_PACKAGECOLOR:
 		asprintf(&buf, "%d", pkg->color);
 		break;
@@ -477,13 +478,13 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		c = n_array_nth(pkg->caps, num);
 		buf = n_strdup(capreq_name(c));
 		break;
-	
+
 	    case LSQF_TAG_PROVIDEVERSION:
 		c = n_array_nth(pkg->caps, num);
-		
+
 		if (capreq_snprintf_evr(evr, sizeof(evr), c) > 0)
 		    buf = n_strdup(evr);
-		
+
 		break;
 
 	    case LSQF_TAG_RELEASE:
@@ -496,26 +497,26 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 
 	    case LSQF_TAG_REQUIRES:
 		c = n_array_nth(pkg->reqs, num);
-	    
+
 		if (capreq_is_rpmlib(c))
 		    asprintf(&buf, "rpmlib(%s)", capreq_name(c));
 		else
 		    buf = n_strdup(capreq_name(c));
-	
+
 		break;
 
 	    case LSQF_TAG_REQUIREVERSION:
 		c = n_array_nth(pkg->reqs, num);
-		
+
 		if (capreq_snprintf_evr(evr, sizeof(evr), c) > 0)
 		    buf = n_strdup(evr);
-		
+
 		break;
 
 	    case LSQF_TAG_VERSION:
 		buf = n_strdup(pkg->ver);
 		break;
-	
+
 	    case LSQF_TAG_SIZE:
 		asprintf(&buf, "%u", pkg->size);
 		break;
@@ -535,17 +536,17 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 
 	    case LSQF_TAG_SUGGESTSVERSION:
 		c = n_array_nth(pkg->sugs, num);
-		
+
 		if (capreq_snprintf_evr(evr, sizeof(evr), c) > 0)
 		    buf = n_strdup(evr);
-		
+
 		break;
 
 	    default:
 		n_assert(0);
 	}
     }
-    
+
     return buf;
 }
 
@@ -568,10 +569,10 @@ static struct lsqf_ent *lsqf_ent_new(int type)
     struct lsqf_ent *ent = NULL;
 
     ent = n_malloc(sizeof(struct lsqf_ent));
-    
+
     if (ent) {
 	ent->type = type;
-    
+
 	switch (type) {
 	    case LSQF_ENT_TYPE_TAG:
 		ent->tag.id = 0;
@@ -579,7 +580,7 @@ static struct lsqf_ent *lsqf_ent_new(int type)
 		ent->tag.countArray = 0;
 		ent->tag.pad = 0;
 		break;
-	
+
 	    case LSQF_ENT_TYPE_STRING:
 		ent->string = NULL;
 		break;
@@ -592,7 +593,7 @@ static struct lsqf_ent *lsqf_ent_new(int type)
 		n_assert(0);
 	}
     }
-    
+
     return ent;
 }
 
@@ -606,14 +607,14 @@ static void lsqf_ent_free(struct lsqf_ent *ent)
 	    case LSQF_ENT_TYPE_STRING:
 		if (ent->string)
 		    n_free(ent->string);
-		
+
 		break;
-		
+
 	    case LSQF_ENT_TYPE_ARRAY:
 		lsqf_ent_array_free(ent->array);
 		break;
 	}
-	
+
 	n_free(ent);
     }
 }
@@ -621,14 +622,14 @@ static void lsqf_ent_free(struct lsqf_ent *ent)
 struct lsqf_ent_array *lsqf_ent_array_new(void)
 {
     struct lsqf_ent_array *array = NULL;
-    
+
     array = n_malloc(sizeof(struct lsqf_ent_array));
-    
+
     if (array) {
 	array->ents = NULL;
 	array->items = 0;
     }
-    
+
     return array;
 }
 
@@ -639,10 +640,10 @@ void lsqf_ent_array_free(struct lsqf_ent_array *array)
     if (array) {
 	for (i = 0; i < array->items; i++) {
 	    struct lsqf_ent *ent = array->ents[i];
-	
+
 	    lsqf_ent_free(ent);
 	}
-    
+
 	if (array->ents)
 	    n_free(array->ents);
 
@@ -653,10 +654,10 @@ void lsqf_ent_array_free(struct lsqf_ent_array *array)
 static void lsqf_ent_array_add_ent(struct lsqf_ent_array *array, struct lsqf_ent *ent)
 {
     array->ents = n_realloc(array->ents, (array->items + 1) * sizeof(struct lsqf_ent *));
-    
+
     if (array->ents) {
 	array->ents[array->items] = ent;
-    
+
 	array->items++;
     }
 }
@@ -667,12 +668,12 @@ static void lsqf_ent_array_add_ent_string(struct lsqf_ent_array *array, tn_buf *
 
     if (n_buf_size(nbuf) > 0) {
 	n_buf_putc(nbuf, '\0');
-	
+
 	if ((ent = lsqf_ent_new(LSQF_ENT_TYPE_STRING))) {
 	    ent->string = n_strdup(n_buf_ptr(nbuf));
 
 	    lsqf_ent_array_add_ent(array, ent);
-		    
+
 	    n_buf_clean(nbuf);
 	}
     }
@@ -701,25 +702,25 @@ static int do_parse(struct lsqf_ent_array *array, char *fmt, char **endfmt, enum
 	    {
 		char *p, *outfmtfn;
 		int tagid, pad, countArray = 0, iterate = 0;
-		
+
 		fmt++;
-		
+
 		/* catch %% */
 		if (*fmt == '%') {
 		    n_buf_putc(nbuf, '%');
 		    break;
 		}
-		
+
 		pad = strtoul(fmt, &p, 10);
-		
+
 		fmt = p;
-		
+
 		if (*fmt != '{') {
 		    logn(LOGERR, _("%s missing { after %%"), invalid_format);
 		    error = 1;
 		    break;
 		}
-		
+
 		fmt++;
 
 		if (*fmt == '#') {
@@ -729,36 +730,36 @@ static int do_parse(struct lsqf_ent_array *array, char *fmt, char **endfmt, enum
 		    iterate = 1;
 		    fmt++;
 		}
-		
+
 		if ((p = strchr(fmt, '}')) == NULL) {
-		    logn(LOGERR, _("%s missing } after %%{"), invalid_format);		    
+		    logn(LOGERR, _("%s missing } after %%{"), invalid_format);
 		    error = 1;
 		    break;
 		}
-		
+
 		*p = '\0';
-		
+
 		if (*fmt == '\0') {
 		    logn(LOGERR, _("%s empty tag name"), invalid_format);
 		    error = 1;
 		    break;
 		}
-		
+
 		/* check if another output format is requested */
 		if ((outfmtfn = strchr(fmt, ':')) != NULL) {
 		    *outfmtfn = '\0';
 		    outfmtfn++;
 		}
-		
+
 		if ((tagid = get_tagid_by_name(fmt)) == LSQF_TAG_UNKNOWN) {
 		    logn(LOGERR, _("%s unknown tag: \'%s\'"), invalid_format, fmt);
 		    error = 1;
 		    break;
 		}
-		
+
 		/* create new ent with a string that is currently stored in nbuf */
 		lsqf_ent_array_add_ent_string(array, nbuf);
-		
+
 		ent = lsqf_ent_new(LSQF_ENT_TYPE_TAG);
 		ent->tag.id = tagid;
 		ent->tag.pad = pad;
@@ -767,32 +768,32 @@ static int do_parse(struct lsqf_ent_array *array, char *fmt, char **endfmt, enum
 		ent->tag.outfmtfnid = get_outfmtfnid_by_name(outfmtfn);
 
 		lsqf_ent_array_add_ent(array, ent);
-		
+
 		fmt = p;
-		
+
 		break;
 	    }
 	    case '[':
 		fmt++;
-		
+
 		lsqf_ent_array_add_ent_string(array, nbuf);
-		
-		ent = lsqf_ent_new(LSQF_ENT_TYPE_ARRAY);		
+
+		ent = lsqf_ent_new(LSQF_ENT_TYPE_ARRAY);
 		lsqf_ent_array_add_ent(array, ent);
-		
+
 		if (do_parse(ent->array, fmt, &end, LSQF_PARSE_ARRAY)) {
 		    error = 1;
 		    break;
 		}
-		
+
 		if (*end == '\0') {
 		    logn(LOGERR, _("%s missing ] at end of array"), invalid_format);
 		    error = 1;
 		    break;
 		}
-		
+
 		fmt = end;
-		
+
 		break;
 
 	    case ']':
@@ -804,28 +805,28 @@ static int do_parse(struct lsqf_ent_array *array, char *fmt, char **endfmt, enum
 
 		/* found end of array -> stop parsing */
 		done = 1;
-		
+
 		/* save address of the last character we parsed */
 		*endfmt = fmt;
-		
+
 		break;
 
 	    case '}':
 		logn(LOGERR, _("%s unexpected }"), invalid_format);
 		error = 1;
 		break;
-	
+
 	    default:
 		if (fmt[0] == '\\' && fmt[1] != '\0') {
 		    fmt++;
 
 		    n_buf_putc(nbuf, get_escaped_char(*fmt));
-		
+
 		} else {
 		    n_buf_putc(nbuf, *fmt);
-		}	
+		}
 	}
-		
+
 	fmt++;
     }
 
@@ -833,7 +834,7 @@ static int do_parse(struct lsqf_ent_array *array, char *fmt, char **endfmt, enum
 	n_buf_free(nbuf);
 	return 1;
     }
-    
+
     lsqf_ent_array_add_ent_string(array, nbuf);
 
     if (!done && endfmt)
@@ -859,24 +860,24 @@ struct lsqf_ent_array *lsqf_parse(char *fmt)
 	    array = NULL;
 	}
     }
-    
+
     return array;
 }
 
 static int get_tag_array_size(const struct lsqf_ent *ent, struct lsqf_pkgdata *pkgdata)
 {
     const struct pkg *pkg = pkgdata->pkg;
-    unsigned int i;
+    int i;
     int size = 1;
 
     n_assert(ent->type == LSQF_ENT_TYPE_TAG);
 
     if (lsqf_tags[ent->tag.id].is_array) {
 	size = 0;
-	
+
 	if (lsqf_tags[ent->tag.id].need_flist) {
 	    struct pkgflist *flist = lsqf_pkgdata_flist(pkgdata);
-	    
+
 	    if (flist) {
 		switch (ent->tag.id) {
 		    case LSQF_TAG_BASENAMES:
@@ -886,16 +887,16 @@ static int get_tag_array_size(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		    case LSQF_TAG_FILESIZES:
 			for (i = 0; i < n_tuple_size(flist->fl); i++) {
 			    struct pkgfl_ent *flent = n_tuple_nth(flist->fl, i);
-		    
+
 			    size += flent->items;
 			}
-		
+
 			break;
 
 	    	    case LSQF_TAG_DIRNAMES:
 		        size = n_tuple_size(flist->fl);
 			break;
-		
+
 		    default:
 			n_assert(0);
 		}
@@ -910,16 +911,16 @@ static int get_tag_array_size(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		case LSQF_TAG_OBSOLETEVERSION:
 		    if (pkg->cnfls) {
 			int nobsl = 0, ncnfls = 0;
-		
+
 			for (i = 0; i < n_array_size(pkg->cnfls); i++) {
 			    struct capreq *cr = n_array_nth(pkg->cnfls, i);
-			
+
 			    if (capreq_is_obsl(cr))
 				nobsl++;
 			    else
 				ncnfls++;
 			}
-		    
+
 			if (ent->tag.id == LSQF_TAG_CONFLICTFLAGS || ent->tag.id == LSQF_TAG_CONFLICTS
 			 || ent->tag.id == LSQF_TAG_CONFLICTVERSION)
 			    size = ncnfls;
@@ -928,14 +929,14 @@ static int get_tag_array_size(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		    }
 
 		    break;
-	
+
 		case LSQF_TAG_PROVIDEFLAGS:
 		case LSQF_TAG_PROVIDES:
 		case LSQF_TAG_PROVIDEVERSION:
 		    if (pkg->caps)
 			size = n_array_size(pkg->caps);
 		    break;
-	
+
 		case LSQF_TAG_REQUIREFLAGS:
 		case LSQF_TAG_REQUIRES:
 		case LSQF_TAG_REQUIREVERSION:
@@ -955,7 +956,7 @@ static int get_tag_array_size(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 	    }
 	}
     }
-    
+
     return size;
 }
 
@@ -969,7 +970,7 @@ static int check_size(const struct lsqf_ent_array *array, struct lsqf_pkgdata *p
 
     for (i = 0; i < array->items; i++) {
 	struct lsqf_ent *ent = array->ents[i];
-	
+
 	if (ent->type == LSQF_ENT_TYPE_TAG) {
 	    if (lsqf_tags[ent->tag.id].is_array) {
 		size = get_tag_array_size(ent, pkgdata);
@@ -988,9 +989,9 @@ static int check_size(const struct lsqf_ent_array *array, struct lsqf_pkgdata *p
 		return 1;
 	}
     }
-    
+
     *s = size;
-    
+
     return 0;
 }
 
@@ -1017,13 +1018,13 @@ static int ent_array_to_string(const struct lsqf_ent_array *array,
 				 struct lsqf_pkgdata *pkgdata,
 				 tn_buf *nbuf, int tags_size)
 {
-    unsigned int i, j, size = 0;
-    
+    int i, j, size = 0;
+
     for (j = 0; j < tags_size; j++) {
 	for (i = 0; i < array->items; i++) {
 	    struct lsqf_ent *ent = array->ents[i];
 	    int ret = 1;
-	
+
 	    switch (ent->type) {
 		case LSQF_ENT_TYPE_TAG:
 		    add_tagstr_to_nbuf(nbuf, ent, pkgdata, j);
@@ -1040,19 +1041,19 @@ static int ent_array_to_string(const struct lsqf_ent_array *array,
 		    } else {
 			ret = ent_array_to_string(ent->array, pkgdata, nbuf, size);
 		    }
-		    
+
 		    break;
 
 		default:
 		    n_assert(0);
 	    }
-	    
+
 	    /* break on error */
 	    if (ret == 0)
 		return 0;
 	}
     }
-    
+
     return 1;
 }
 
@@ -1061,7 +1062,7 @@ char *lsqf_to_string(const struct lsqf_ent_array *array, const struct pkg *pkg)
     struct lsqf_pkgdata *pkgdata = NULL;
     tn_buf		*nbuf = NULL;
     char		*buf = NULL;
-    
+
     pkgdata = lsqf_pkgdata_new(pkg);
     nbuf = n_buf_new(64);
 
@@ -1073,7 +1074,7 @@ char *lsqf_to_string(const struct lsqf_ent_array *array, const struct pkg *pkg)
 
     n_buf_free(nbuf);
     lsqf_pkgdata_free(pkgdata);
-    
+
     return buf;
 }
 
@@ -1085,7 +1086,7 @@ char *lsqf_to_string(const struct lsqf_ent_array *array, const struct pkg *pkg)
 void lsqf_show_querytags(struct cmdctx *cmdctx)
 {
     int i, j;
-    
+
     for (i = 0; i < LSQF_N_TAGS; i++) {
 	for (j = 0; lsqf_tags[i].tagname[j]; j++) {
 	    cmdctx_printf(cmdctx, "%s\n", lsqf_tags[i].tagname[j]);

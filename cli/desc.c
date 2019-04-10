@@ -70,7 +70,7 @@ static int desc(struct cmdctx *cmdctx);
 static struct argp_option options[] = {
     { "all",  'a', 0, 0,
       N_("Show all fields described below"), 1},
-    
+
     { "capreqs",  'C', 0, 0,
       N_("Show capabilities, requirements, conflicts and obsolences"),
       1},
@@ -88,9 +88,9 @@ static struct argp_option options[] = {
 
     { "conflicts",  'c', 0, 0,
       N_("Show conflicts and obsolences"), 1},
-    
+
     { "descr", 'd', 0, 0, N_("Show description (the default)"), 1},
-    
+
     { "files", 'f', 0, 0,
       N_("Show package files (doubled gives long listing format)"), 1},
     { NULL,        'l', 0,  OPTION_ALIAS, 0, 1},
@@ -101,8 +101,8 @@ static struct argp_option options[] = {
 
 
 struct poclidek_cmd command_desc = {
-    COMMAND_PIPE_DEFAULTS, 
-    "desc", N_("PACKAGE..."), N_("Display packages info"), 
+    COMMAND_PIPE_DEFAULTS,
+    "desc", N_("PACKAGE..."), N_("Display packages info"),
     options, parse_opt,
     NULL, desc,
     NULL, NULL, NULL, NULL, NULL, 0, 0
@@ -114,16 +114,16 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     struct cmdctx *cmdctx = state->input;
 
     arg = arg;
-    
+
     switch (key) {
         case 'a':
             cmdctx->_flags |= OPT_DESC_ALL;
             break;
-            
+
         case 'C':
             cmdctx->_flags |= OPT_DESC_CAPS | OPT_DESC_REQS | OPT_DESC_CNFLS;
             break;
-            
+
 
         case 'c':
             cmdctx->_flags |= OPT_DESC_CNFLS;
@@ -137,7 +137,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             cmdctx->_flags |= OPT_DESC_REQS;
             cmdctx->_flags |= OPT_DESC_REQDIRS;
             break;
-            
+
         case 'R':
             cmdctx->_flags |= OPT_DESC_REQPKGS;
             break;
@@ -157,20 +157,20 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'L':
             cmdctx->_flags |= OPT_DESC_CHANGELOG;
             break;
-            
+
         case 'd':
             cmdctx->_flags |= OPT_DESC_DESCR;
             break;
-            
+
         default:
             return ARGP_ERR_UNKNOWN;
     }
-    
+
     return 0;
 }
 
 
-static int nlident(struct cmdctx *cmdctx, int width) 
+static int nlident(struct cmdctx *cmdctx, int width)
 {
     char fmt[64];
 
@@ -183,43 +183,43 @@ static void show_caps(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 {
     int i, ncol = IDENT;
     char *p, *colon = ", ";
-    
+
     if (pkg->caps && n_array_size(pkg->caps)) {
         int ncaps, hdr_printed = 0;
-        
+
         ncol = IDENT;
         ncaps = n_array_size(pkg->caps);
-        
+
         for (i=0; i < n_array_size(pkg->caps); i++) {
             struct capreq *cr = n_array_nth(pkg->caps, i);
 
             if (pkg_eq_capreq(pkg, cr))
                 ncaps--;
         }
-        
+
         for (i=0; i < n_array_size(pkg->caps); i++) {
             struct capreq *cr = n_array_nth(pkg->caps, i);
 
             if (pkg_eq_capreq(pkg, cr))
                 continue;
-            
+
             if (hdr_printed == 0) {
                 cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Provides:");
                 hdr_printed = 1;
             }
-            	
+
             p = capreq_snprintf_s(cr);
             if (ncol + (int)strlen(p) >= term_width) {
                 ncol = SUBIDENT;
                 nlident(cmdctx, ncol);
             }
-            
+
             if (--ncaps == 0)
                 colon = "";
-            
+
             ncol += cmdctx_printf(cmdctx, "%s%s", p, colon);
         }
-        
+
         if (hdr_printed)
             cmdctx_printf(cmdctx, "\n");
     }
@@ -233,33 +233,33 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 
     if (pkg->reqs == NULL || n_array_size(pkg->reqs) == 0)
         return;
-    
+
     for (i=0; i<n_array_size(pkg->reqs); i++) {
         struct capreq *cr = n_array_nth(pkg->reqs, i);
         int is_prereq = 0;
-        
+
         if (pkg_eq_capreq(pkg, cr))
             continue;
 
         if (capreq_is_bastard(cr))
             continue;
-        
+
         if (capreq_is_rpmlib(cr)) {
             nrpmreqs++;
             continue;
         }
-        
+
         if (capreq_is_prereq_un(cr)) {
             nprereqs_un++;
             is_prereq = 1;
         }
-        
-        
+
+
         if (capreq_is_prereq(cr)) {
             is_prereq = 1;
             nprereqs++;
         }
-        
+
         if (is_prereq == 0)
             nreqs++;
     }
@@ -273,22 +273,22 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Requires(pre):");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
-                
+
             if (pkg_eq_capreq(pkg, cr))
                 continue;
 
             if (capreq_is_bastard(cr))
                 continue;
-            
+
             if (capreq_is_rpmlib(cr))
                 continue;
 
             if (!capreq_is_prereq(cr))
                 continue;
-            
+
             if (++n == nprereqs)
                 colon = "";
-                
+
             p = capreq_snprintf_s(cr);
             if (ncol + (int)strlen(p) >= term_width) {
                 ncol = SUBIDENT;
@@ -299,7 +299,7 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
         cmdctx_printf(cmdctx, "\n");
     }
 
-        
+
     if (nreqs) {
         char *p, *colon = ", ";
         int n = 0;
@@ -308,10 +308,10 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Requires:");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
-                
+
             if (pkg_eq_capreq(pkg, cr))
                 continue;
-                
+
             if (capreq_is_rpmlib(cr))
                 continue;
 
@@ -323,10 +323,10 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 
             if (capreq_is_prereq_un(cr))
                 continue;
-            
+
             if (++n == nreqs)
                 colon = "";
-                
+
             p = capreq_snprintf_s(cr);
             if (ncol + (int)strlen(p) >= term_width) {
                 ncol = SUBIDENT;
@@ -345,16 +345,16 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Requires(un):");
         for (i=0; i<n_array_size(pkg->reqs); i++) {
             struct capreq *cr = n_array_nth(pkg->reqs, i);
-                
+
             if (pkg_eq_capreq(pkg, cr))
                 continue;
 
             if (!capreq_is_prereq_un(cr))
                 continue;
-            
+
             if (++n == nprereqs_un)
                 colon = "";
-                
+
             p = capreq_snprintf_s(cr);
             if (ncol + (int)strlen(p) >= term_width) {
                 ncol = SUBIDENT;
@@ -365,7 +365,7 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
         cmdctx_printf(cmdctx, "\n");
     }
 
-                
+
 
     if (nrpmreqs) {
         char *p, *colon = ", ";
@@ -378,10 +378,10 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 
             if (!capreq_is_rpmlib(cr))
                 continue;
-                
+
             if (++n == nrpmreqs)
                 colon = "";
-                
+
             p = capreq_snprintf_s(cr);
             if (ncol + (int)strlen(p) >= term_width) {
                 ncol = SUBIDENT;
@@ -398,7 +398,7 @@ static void show_suggests(struct cmdctx *cmdctx, struct pkg *pkg, int term_width
 {
     char *p, *colon = ", ";
     int i, ncol;
-    
+
     if (pkg->sugs == NULL)
         return;
 
@@ -406,10 +406,10 @@ static void show_suggests(struct cmdctx *cmdctx, struct pkg *pkg, int term_width
     cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Suggests:");
     for (i=0; i<n_array_size(pkg->sugs); i++) {
         struct capreq *cr = n_array_nth(pkg->sugs, i);
-                
+
         if (i == (n_array_size(pkg->sugs) - 1))
             colon = "";
-                
+
         p = capreq_snprintf_s(cr);
         if (ncol + (int)strlen(p) >= term_width) {
             ncol = SUBIDENT;
@@ -426,35 +426,35 @@ static void show_reqdirs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
     int i, ncol = IDENT;
     char *colon = ", ";
     tn_array *dirs;
-    
-    
+
+
     dirs = pkg_required_dirs(pkg);
-    
+
     if (dirs && n_array_size(dirs)) {
         int n, hdr_printed = 0;
-        
+
         ncol = IDENT;
         n = n_array_size(dirs);
-        
+
         for (i=0; i < n_array_size(dirs); i++) {
             const char *dir = n_array_nth(dirs, i);
-            
+
             if (hdr_printed == 0) {
                 cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Requires(dir):");
                 hdr_printed = 1;
             }
-            	
+
             if (ncol + (int)strlen(dir) >= term_width) {
                 ncol = SUBIDENT;
                 nlident(cmdctx, ncol);
             }
-            
+
             if (--n == 0)
                 colon = "";
-            
+
             ncol += cmdctx_printf(cmdctx, "%s%s", dir, colon);
         }
-        
+
         if (hdr_printed)
             cmdctx_printf(cmdctx, "\n");
     }
@@ -465,42 +465,42 @@ static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 {
     char *colon = ", ";
     int i, ncol = IDENT;
-    
+
     if (pkg->reqpkgs == NULL || n_array_size(pkg->reqpkgs) == 0)
         return;
-    
+
     cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Required(pkgs):");
 
     for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
         struct reqpkg *rp = n_array_nth(pkg->reqpkgs, i);
-        char *p;
+        char *pname;
 
-        p = rp->pkg->name;
-            
-        if (ncol + (int)strlen(p) >= term_width) {
+        pname = rp->pkg->name;
+
+        if (ncol + (int)strlen(pname) >= term_width) {
             ncol = SUBIDENT;
             nlident(cmdctx, ncol);
         }
-        ncol += cmdctx_printf(cmdctx, "%s", p);
-            
+        ncol += cmdctx_printf(cmdctx, "%s", pname);
+
         if (rp->flags & REQPKG_MULTI) {
             int n = 0;
 
             ncol += cmdctx_printf(cmdctx, " | ");
-                
+
             while (rp->adds[n]) {
-                char *p = rp->adds[n++]->pkg->name;
-                if (ncol + (int)strlen(p) >= term_width) {
+                pname = rp->adds[n++]->pkg->name;
+                if (ncol + (int)strlen(pname) >= term_width) {
                     ncol = SUBIDENT;
                     nlident(cmdctx, ncol);
                 }
-                ncol += cmdctx_printf(cmdctx, "%s", p);
+                ncol += cmdctx_printf(cmdctx, "%s", pname);
                 if (rp->adds[n] != NULL) {
                     ncol += cmdctx_printf(cmdctx, " | ");
                 }
             }
         }
-            
+
         if (i + 1 < n_array_size(pkg->reqpkgs))
             ncol += cmdctx_printf(cmdctx, colon);
     }
@@ -511,19 +511,19 @@ static
 void show_revreqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 {
     int i;
-    
+
     if (pkg->revreqpkgs && n_array_size(pkg->revreqpkgs)) {
         int ncol = IDENT;
-        
+
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Required(by):");
 
         for (i=0; i<n_array_size(pkg->revreqpkgs); i++) {
-            struct pkg *tmpkg;	
+            struct pkg *tmpkg;
             char *p, *colon = ", ";
 
-            
+
             tmpkg = n_array_nth(pkg->revreqpkgs, i);
-            
+
             p = tmpkg->name;
             if (ncol + (int)strlen(p) + 2 >= term_width) {
                 ncol = SUBIDENT;
@@ -531,7 +531,7 @@ void show_revreqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
             }
             if (i + 1 == n_array_size(pkg->revreqpkgs))
                 colon = "";
-                    
+
             ncol += cmdctx_printf(cmdctx, "%s%s", p, colon);
         }
         cmdctx_printf(cmdctx, "\n");
@@ -545,20 +545,20 @@ static void show_cnfls(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 
     if (pkg->cnfls && n_array_size(pkg->cnfls)) {
         int nobsls = 0;
-        
+
         for (i=0; i<n_array_size(pkg->cnfls); i++) {
             struct capreq *cr = n_array_nth(pkg->cnfls, i);
             if (capreq_is_obsl(cr))
                 nobsls++;
         }
-        
+
         if (nobsls != n_array_size(pkg->cnfls)) {
             int n = 0;
-            
+
             ncol = cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Conflicts:");
             for (i=0; i<n_array_size(pkg->cnfls); i++) {
                 struct capreq *cr = n_array_nth(pkg->cnfls, i);
-                
+
                 if (capreq_is_obsl(cr))
                     continue;
                 n++;
@@ -573,15 +573,15 @@ static void show_cnfls(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
             }
             cmdctx_printf(cmdctx, "\n");
         }
-        
+
         if (nobsls) {
             int n = 0;
-            
+
             ncol = cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Obsoletes:");
             for (i=0; i<n_array_size(pkg->cnfls); i++) {
                 struct capreq *cr = n_array_nth(pkg->cnfls, i);
                 char s[255], slen;
-                
+
                 if (!capreq_is_obsl(cr))
                     continue;
                 n++;
@@ -608,8 +608,8 @@ static void mode_t_to_str(char *str, int size, mode_t mode)
                                     (S_ISCHR(mode) ? 'c'  :
                                      (S_ISBLK(mode) ? 'b' :
                                       (S_ISBLK(mode) ? 'b' :
-                                       (S_ISFIFO(mode) ? 'f' : '-'))))), 
-             
+                                       (S_ISFIFO(mode) ? 'f' : '-'))))),
+
              (mode & S_IRUSR) != 0 ? 'r': '-',
              (mode & S_IWUSR) != 0 ? 'w' : '-',
              (mode & S_ISUID) != 0 ? 's' : (mode & S_IXUSR) != 0 ? 'x': '-',
@@ -623,53 +623,54 @@ static void mode_t_to_str(char *str, int size, mode_t mode)
 
 
 
-    
+
 static void list_files_long(struct cmdctx *cmdctx, tn_tuple *fl, int mode_octal)
 {
     int i, j;
     const char *fmt = "!%-10s%10s\t%s\n";
 
 
-    if (mode_octal) 
+    if (mode_octal)
         fmt = "!%-6s%10s\t%s\n";
-        
+
     cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, fmt, _("mode"), _("size"), _("name"));
-    
+
     for (i=0; i < n_tuple_size(fl); i++) {
         struct pkgfl_ent    *flent = n_tuple_nth(fl, i);
         char                tmpbuf[PATH_MAX];
-        
+
         for (j=0; j < flent->items; j++) {
             struct flfile *f = flent->files[j];
             char buf[1024], *slash = "";
             int n;
-            
-                
+
+
             if (S_ISDIR(f->mode)) {
-                struct pkgfl_ent tmpent;
+                //struct pkgfl_ent tmpent;
 
                 if (*flent->dirname != '/')
                     slash = "/";
                 snprintf(tmpbuf, sizeof(tmpbuf),
                                 "%s/%s", flent->dirname, f->basename);
-                tmpent.dirname = tmpbuf;
+
+                //tmpent.dirname = tmpbuf;
                 //if (n_array_bsearch(fl, &tmpent))
                 //    continue;
             }
-            
+
             n = n_snprintf(buf, sizeof(buf), "%s%s%s%s%s",
                          *flent->dirname == '/' ? "":"/",
                          flent->dirname,
                          *flent->dirname == '/' ? "":"/",
                          f->basename, slash);
-            
-            if (S_ISLNK(f->mode)) 
+
+            if (S_ISLNK(f->mode))
                 n += n_snprintf(&buf[n], sizeof(buf) - n, " -> %s",
                               f->basename + strlen(f->basename) + 1);
-            
+
             if (mode_octal) {
                 cmdctx_printf(cmdctx, "%6o%10d\t%s\n", f->mode, f->size, buf);
-                
+
             } else {
                 char s[12];
                 mode_t_to_str(s, sizeof(s), f->mode);
@@ -680,7 +681,7 @@ static void list_files_long(struct cmdctx *cmdctx, tn_tuple *fl, int mode_octal)
 }
 
 
-static void list_files(struct cmdctx *cmdctx, tn_tuple *fl, int term_width) 
+static void list_files(struct cmdctx *cmdctx, tn_tuple *fl, int term_width)
 {
     int i, j, ncol = 0;
 
@@ -688,13 +689,13 @@ static void list_files(struct cmdctx *cmdctx, tn_tuple *fl, int term_width)
         struct pkgfl_ent    *flent = n_tuple_nth(fl, i);
         char                tmpbuf[PATH_MAX];
         int                 dn_printed = 0;
-        
+
         for (j=0; j<flent->items; j++) {
             struct flfile *f = flent->files[j];
             char buf[1024], *slash = "";
             int n;
-            
-                
+
+
             if (S_ISDIR(f->mode)) {
                 struct pkgfl_ent tmpent;
 
@@ -705,7 +706,7 @@ static void list_files(struct cmdctx *cmdctx, tn_tuple *fl, int term_width)
                 if (n_tuple_bsearch_ex(fl, &tmpent, (tn_fn_cmp)pkgfl_ent_cmp))
                     continue;
             }
-            
+
             if (!dn_printed) {
                 ncol = cmdctx_printf_c(cmdctx, PRCOLOR_BLUE | PRAT_BOLD,
                                        "%s%s:  ",
@@ -713,35 +714,35 @@ static void list_files(struct cmdctx *cmdctx, tn_tuple *fl, int term_width)
                                        flent->dirname);
                 dn_printed = 1;
             }
-            
+
 
             n = n_snprintf(buf, sizeof(buf), "%s%s", f->basename, slash);
-            
-            if (S_ISLNK(f->mode)) 
+
+            if (S_ISLNK(f->mode))
                 n += n_snprintf(&buf[n], sizeof(buf) - n, " -> %s",
                               f->basename + strlen(f->basename) + 1);
-            
+
             if (ncol + n >= term_width) {
                 ncol = SUBIDENT;
                 nlident(cmdctx, ncol);
             }
-            
+
             ncol += cmdctx_printf(cmdctx, "%s%s", buf, j + 1 < flent->items ? ", " : "");
         }
-        
+
         if (dn_printed)
             cmdctx_printf(cmdctx, "\n");
     }
 }
 
 
-static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt, int term_width) 
+static void show_files(struct cmdctx *cmdctx, struct pkg *pkg, int longfmt, int term_width)
 {
     struct pkgflist *flist;
-    
+
     if ((flist = pkg_get_flist(pkg)) == NULL)
         return;
-    
+
     if (longfmt)
         list_files_long(cmdctx, flist->fl, 0);
     else
@@ -786,24 +787,24 @@ static void show_changelog(struct cmdctx *cmdctx, struct pkg *pkg, struct pkguin
         installed = poclidek_get_dent_packages(cmdctx->cctx, POCLIDEK_INSTALLEDDIR);
         if (installed == NULL)
             goto l_end;
-        
+
         if (is_upgradeable(pkg, installed, &btime))
             log = pkguinf_get_changelog(pkgu, btime);
-            
+
         n_array_cfree(&installed);
     }
 
 l_end:
     if (log == NULL)
         log = pkguinf_get(pkgu, PKGUINF_CHANGELOG);
-    
+
     if (log) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s\n", "Changelog:");
         cmdctx_printf(cmdctx, "%s", log);
     }
 }
-        
-        
+
+
 
 static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags, int term_width)
 {
@@ -817,13 +818,13 @@ static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags, int
 
     if (flags & OPT_DESC_REQDIRS)
         show_reqdirs(cmdctx, pkg, term_width);
-    
-    if (flags & OPT_DESC_REQPKGS) 
+
+    if (flags & OPT_DESC_REQPKGS)
         show_reqpkgs(cmdctx, pkg, term_width);
 
-    if (flags & OPT_DESC_REVREQPKGS) 
+    if (flags & OPT_DESC_REVREQPKGS)
         show_revreqpkgs(cmdctx, pkg, term_width);
-            
+
     if (flags & OPT_DESC_CNFLS)
         show_cnfls(cmdctx, pkg, term_width);
 }
@@ -831,7 +832,7 @@ static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags, int
 
 
 static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkguinf *pkgu,
-                             unsigned flags, int term_width) 
+                             unsigned flags, int term_width)
 {
     char            fnbuf[PATH_MAX];
     char            unit = 'K';
@@ -861,12 +862,12 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkgu
     if (pkg->_arch) {
         char label[256];
         int n;
-        
+
         n = n_snprintf(label, sizeof(label), "Arch");
-            
+
         if (pkg->_os)
             n += n_snprintf(&label[n], sizeof(label) - n, "/OS");
-                
+
         if (pkg->color)
             n += n_snprintf(&label[n], sizeof(label) - n, "/Color");
 
@@ -874,29 +875,29 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkgu
 
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", label);
         cmdctx_printf(cmdctx, "%s", pkg_arch(pkg));
-            
-        if (pkg->_os) 
+
+        if (pkg->_os)
             cmdctx_printf(cmdctx, "/%s", pkg_os(pkg));
 
         if (pkg->color)
             cmdctx_printf(cmdctx, "/%d", pkg->color);
         cmdctx_printf(cmdctx, "\n");
     }
-        
+
     if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_URL))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "URL:");
         cmdctx_printf(cmdctx, "%s\n", s);
     }
-        	
+
     if (pkg->btime) {
         char timbuf[30];
-        
+
         pkg_strbtime(timbuf, sizeof(timbuf), pkg);
-        
+
         if (*timbuf) {
             cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Built:");
             cmdctx_printf(cmdctx, "%s", timbuf);
-            if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_BUILDHOST))) 
+            if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_BUILDHOST)))
                 cmdctx_printf(cmdctx, " at %s", s);
             cmdctx_printf(cmdctx, "\n");
         }
@@ -904,15 +905,15 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkgu
 
     if (pkg->itime) {
         char timbuf[30];
-        
+
         pkg_stritime(timbuf, sizeof(timbuf), pkg);
-        
+
         if (*timbuf) {
             cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Installed:");
             cmdctx_printf(cmdctx, "%s\n", timbuf);
         }
     }
-    
+
 
     pkgsize = pkg->size/1024;
     if (pkgsize >= 1024) {
@@ -933,7 +934,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkgu
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Package size:");
         cmdctx_printf(cmdctx, "%.1f %cB (%d B)\n", pkgsize, unit, pkg->fsize);
     }
-    
+
     if (pkg_pkgdirpath(pkg)) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Path:");
         cmdctx_printf(cmdctx, "%s\n", pkg_pkgdirpath(pkg));
@@ -942,7 +943,7 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkgu
     fn = pkg_srcfilename(pkg, fnbuf, sizeof(fnbuf));
     if (fn == NULL && pkgu)
         fn = pkguinf_get(pkgu, PKGUINF_LEGACY_SOURCERPM);
-    
+
     if (fn) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Source package:");
         cmdctx_printf(cmdctx, "%s\n", fn);
@@ -952,14 +953,14 @@ static void show_description(struct cmdctx *cmdctx, struct pkg *pkg, struct pkgu
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "File:");
         cmdctx_printf(cmdctx, "%s\n", fn);
     }
-        
+
     if (pkg->epoch) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Epoch:");
         cmdctx_printf(cmdctx, "%d\n", pkg->epoch);
     }
 
     show_pkg(cmdctx, pkg, flags, term_width);
-        
+
     if (pkgu && (s = pkguinf_get(pkgu, PKGUINF_DESCRIPTION))) {
         cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "Description:\n");
         cmdctx_printf(cmdctx, "%s\n", s);
@@ -978,7 +979,7 @@ static int desc(struct cmdctx *cmdctx)
         goto l_end;
     }
 
-    if (cmdctx->_flags == 0) 
+    if (cmdctx->_flags == 0)
         cmdctx->_flags = OPT_DESC_DESCR;
 
     term_width = poldek_term_get_width() - RMARGIN;
@@ -987,26 +988,26 @@ static int desc(struct cmdctx *cmdctx)
 
     if (term_width < 50)
         term_width = 79 - RMARGIN;
-    
+
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg;
         struct pkguinf *pkgu = NULL;
 
         pkg = n_array_nth(pkgs, i);
-        
+
         if (cmdctx->_flags & (OPT_DESC_DESCR | OPT_DESC_CHANGELOG))  {
             if ((pkgu = pkg_uinf(pkg)) == NULL && poldek_verbose() > 1)
                 log(LOGWARN, _("%s: full description unavailable (index without "
                                "packages info loaded?)\n"), pkg_id(pkg));
         }
-        
+
         cmdctx_printf(cmdctx, "\n");
         cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, "%-16s", "Package:");
         cmdctx_printf(cmdctx, "%s\n", pkg_id(pkg));
-        
-        if (cmdctx->_flags & OPT_DESC_DESCR) 
+
+        if (cmdctx->_flags & OPT_DESC_DESCR)
             show_description(cmdctx, pkg, pkgu, cmdctx->_flags, term_width);
-        else 
+        else
             show_pkg(cmdctx, pkg, cmdctx->_flags, term_width);
 
         if (cmdctx->_flags & OPT_DESC_CHANGELOG)
@@ -1022,16 +1023,14 @@ static int desc(struct cmdctx *cmdctx)
             pkguinf_free(pkgu);
             pkgu = NULL;
         }
-        
+
         if (sigint_reached())
             goto l_end;
     }
-    
+
  l_end:
-    
+
     n_array_cfree(&pkgs);
 
     return err == 0;
 }
-
-

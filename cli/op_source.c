@@ -228,13 +228,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_SRCTXT:     /* no break */
             source_type = NULL; /* guess */
             source_type_isset = 1;
+            /* fallthru */
 
         case OPT_SRCDIR:     /* no break */
             if (source_type_isset == 0) {
                 source_type = n_strdup("dir");
                 source_type_isset = 1;
             }
-
+            /* fallthru */
         case 's':
             arg_s->curr_src_path = arg;
             if (arg_s->curr_src_type == NULL)
