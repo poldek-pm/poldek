@@ -20,8 +20,9 @@ runcmd () {
 CONFOPTS="--enable-maintainer-mode --enable-compile-warnings"
 CONFOPTS="$CONFOPTS $@"
 
-runcmd git submodule init
-runcmd git submodule update
+#runcmd git submodule init
+#runcmd git submodule update
+runcmd git submodule update --init --remote
 
 # run autogen in submodules
 (cd trurlib && ./autogen.sh --no-configure)

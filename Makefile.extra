@@ -2,7 +2,7 @@ PROJ_DIR=$(shell pwd)
 
 copylibs:
 	git submodule init
-	git submodule update
+	git submodule update --remote
 
 tarball: copylibs dist
 tarball-bz2: copylibs dist-bzip2
@@ -54,7 +54,7 @@ snap: tarball-bz2
 	@dts=`date +%Y%m%d.%H` && rm -rf $(PACKAGE)-git$$dts* && \
 	tar xpjf $(distdir).tar.bz2 && \
 	echo "$$dts" > $(distdir)/0_THIS_IS_SNAPSHOT && \
-        perl -pi -e "s/VERSION_STATUS=.+$$/VERSION_STATUS=\"snap$$dts\"/" $(distdir)/configure $(distdir)/configure.in; \
+        perl -pi -e "s/VERSION_STATUS=.+$$/VERSION_STATUS=\"snap$$dts\"/" $(distdir)/configure $(distdir)/configure.ac; \
 	mv -f $(distdir) $(PACKAGE)-$(VERSION)-git$$dts && \
 	tar cpjf $(PACKAGE)-$(VERSION)-git$$dts.tar.bz2 $(PACKAGE)-$(VERSION)-git$$dts && \
 	rm -rf $(PACKAGE)-$(VERSION)-git$$dts && \
