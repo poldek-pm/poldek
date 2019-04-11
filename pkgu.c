@@ -17,6 +17,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#define __USE_GNU /* for strcasestr */
 #include <string.h>
 
 #include <trurl/trurl.h>
@@ -602,7 +603,7 @@ char *load_changelog_from_rpmhdr(tn_alloc *na, void *hdr)
     const char *name, *version, *release;
     char nvr[512], *changelog = NULL, *sourcerpm = NULL;
     struct rpmhdr_ent srcrpm_ent;
-    uint32_t epoch, n;
+    int32_t epoch, n;
 
     pm_rpmhdr_nevr(hdr, &name, &epoch, &version, &release, NULL, NULL);
     if (name == NULL || version == NULL || release == NULL)
@@ -1003,6 +1004,7 @@ int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
             break;
 
         case PKGUINF_SUMMARY:
+            /* fallthru */
         case PKGUINF_DESCRIPTION:
         {
             struct pkguinf_i18n *inf;
@@ -1027,6 +1029,7 @@ int pkguinf_set(struct pkguinf *pkgu, int tag, const char *val,
                 pkgu_set_recodable(pkgu, PKGUINF_DESCRIPTION, inf->description,
                                    lang);
             }
+            break;              /* FIXME was break missing?? */
         }
 
         default:

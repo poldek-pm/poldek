@@ -43,13 +43,13 @@
 #include "pm/pm.h"
 
 
-unsigned pkg_get_verify_signflags(struct pkg *pkg) 
+unsigned pkg_get_verify_signflags(struct pkg *pkg)
 {
     unsigned verify_flags = 0;
     if (pkg->pkgdir && (pkg->pkgdir->flags & PKGDIR_VRFYSIGN)) {
         if (pkg->pkgdir->flags & PKGDIR_VRFY_GPG)
             verify_flags |= PKGVERIFY_GPG;
-        
+
         if (pkg->pkgdir->flags & PKGDIR_VRFY_PGP)
             verify_flags |= PKGVERIFY_PGP;
     }
@@ -66,18 +66,18 @@ void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
     n_assert(is_destdir_custom == 0); /* not implemented */
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg  *pkg = n_array_nth(pkgs, i);
-        char        path[PATH_MAX];
-        
+        char        path[PATH_MAX + 512]; /* -Wformat-truncation */
+
         if (sigint_reached())
             break;
-        
+
         bytesget += pkg->fsize;
         bytesused += pkg->size;
         if (pkg->pkgdir && (vf_url_type(pkg->pkgdir->path) & VFURL_REMOTE)) {
             if (pkg_localpath(pkg, path, sizeof(path), destdir)) {
                 if (access(path, R_OK) != 0) {
                     bytesdownload += pkg->fsize;
-                    
+
                 } else {
                     if (!pm_verify_signature(pmctx, path, PKGVERIFY_MD)) {
                         vf_unlink(path);
@@ -90,20 +90,20 @@ void packages_fetch_summary(struct pm_ctx *pmctx, const tn_array *pkgs,
     if (bytesget) {
         char buf[64];
         n_assert(bytesget);
-        
+
         snprintf_size(buf, sizeof(buf), bytesget, 1, 1);
         msg(1, _("Need to get %s of archives"), buf);
-        
+
         if (bytesdownload == 0)
             msg(1, "_. ");
-        
+
         else {
             snprintf_size(buf, sizeof(buf), bytesdownload, 1, 1);
             msgn(1, _("_ (%s to download)."), buf);
         }
-        
+
     }
-    
+
     msg(1, "_\n");
 }
 
@@ -131,15 +131,15 @@ int packages_fetch(struct pm_ctx *pmctx,
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg  *pkg = n_array_nth(pkgs, i);
         char        *pkgpath = pkg->pkgdir->path;
-        char        path[PATH_MAX], *s;
+        char        path[PATH_MAX + 128], *s;
         const char  *pkg_basename;
         int         len;
 
         if (sigint_reached())
             break;
-        
+
         urltype = vf_url_type(pkgpath);
-        
+
         if (urltype == VFURL_CDROM)
             ncdroms++;
 
@@ -150,7 +150,7 @@ int packages_fetch(struct pm_ctx *pmctx,
             if (access(path, R_OK) != 0) {
                 logn(LOGERR, "%s: %m", path);
                 nerr++;
-                
+
             } else {
                 if (!pm_verify_signature(pmctx, path, PKGVERIFY_MD)) {
                     logn(LOGERR, _("%s: MD5 signature verification failed"),
@@ -164,14 +164,14 @@ int packages_fetch(struct pm_ctx *pmctx,
 	    pkgs_count--;
             continue;
         }
-        
-        
+
+
         if (is_destdir_custom) {
             snprintf(path, sizeof(path), "%s/%s", destdir, pkg_basename);
-            
+
         } else {
             char buf[PATH_MAX];
-            
+
             vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
             snprintf(path, sizeof(path), "%s/%s/%s", destdir, buf,
                      pkg_basename);
@@ -179,48 +179,48 @@ int packages_fetch(struct pm_ctx *pmctx,
 
         if (access(path, R_OK) == 0) {
             int pkg_ok;
-            
+
             pkg_ok = pm_verify_signature(pmctx, path, PKGVERIFY_MD);
             if (pkg_ok) {         /* we got it  */
 		pkgs_count--;
                 continue;
 	    }
-            else 
+            else
                 vf_unlink(path);
         }
-        
+
         if ((urls = n_hash_get(urls_h, pkgpath)) == NULL) {
             urls = n_array_new(n_array_size(pkgs), NULL, NULL);
             n_hash_insert(urls_h, pkgpath, urls);
 
             packages = n_array_new(n_array_size(pkgs), NULL, NULL);
             n_hash_insert(pkgs_h, pkgpath, packages);
-            
+
             n_array_push(urls_arr, pkgpath);
             n_hash_insert(pkgdir_labels_h, pkgpath, pkg->pkgdir->name);
         }
-        
+
         len = n_snprintf(path, sizeof(path), "%s/%s", pkgpath, pkg_basename);
-        
+
         s = alloca(len + 1);
         memcpy(s, path, len);
         s[len] = '\0';
         n_array_push(urls, s);
         n_array_push(packages, pkg);
     }
-    
+
     if (sigint_reached())
         goto l_end;
-    
+
     /* files must be copied if they are taken from more than
        one removable media;
-       
+
        Not so nice, but it works
     */
-    if (ncdroms > 1) 
+    if (ncdroms > 1)
         putenv("POLDEK_VFJUGGLE_CPMODE=copy");
-    
-    else if (ncdroms == 1) 
+
+    else if (ncdroms == 1)
         putenv("POLDEK_VFJUGGLE_CPMODE=link");
 
     int counter = 0;
@@ -237,24 +237,21 @@ int packages_fetch(struct pm_ctx *pmctx,
         real_destdir = destdir;
         if (is_destdir_custom == 0) {
             char buf[1024];
-            
+
             vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
             snprintf(path, sizeof(path), "%s/%s", destdir, buf);
             real_destdir = path;
         }
 
         pkgdir_name = n_hash_get(pkgdir_labels_h, pkgpath);
-        if (!vf_fetcha(urls, real_destdir, 0, pkgdir_name, counter, pkgs_count))
+        if (!vf_fetcha(urls, real_destdir, 0, pkgdir_name, counter, pkgs_count)) {
             nerr++;
-        
-        else {
-            unsigned int j;
-                
-            for (j=0; j < n_array_size(urls); j++) {
+        } else {
+            for (int j=0; j < n_array_size(urls); j++) {
                 char localpath[PATH_MAX];
                 snprintf(localpath, sizeof(localpath), "%s/%s", real_destdir,
                          n_basenam(n_array_nth(urls, j)));
-                
+
                 if (!pm_verify_signature(pmctx, localpath, PKGVERIFY_MD)) {
                     logn(LOGERR, _("%s: MD5 signature verification failed"),
                          n_basenam(localpath));
@@ -282,12 +279,12 @@ int packages_fetch_remove(tn_array *pkgs, const char *destdir)
 {
     int i;
     char path[PATH_MAX];
-    
+
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
         if (pkg->pkgdir && (vf_url_type(pkg->pkgdir->path) != VFURL_PATH))
             if (pkg_localpath(pkg, path, sizeof(path), destdir)) {
-                DBGF("unlink %s\n", path); 
+                DBGF("unlink %s\n", path);
                 unlink(path);
             }
     }
@@ -307,7 +304,7 @@ int packages_dump(tn_array *pkgs, const char *path, int fqfn)
         }
         fprintf(stream, "# Packages to install (in the right order)\n");
     }
-    
+
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
         if (fqfn)
@@ -315,9 +312,9 @@ int packages_dump(tn_array *pkgs, const char *path, int fqfn)
         else
             fprintf(stream, "%s\n", pkg->name);
     }
-    
+
     if (stream != stdout)
         fclose(stream);
-    
+
     return 1;
 }

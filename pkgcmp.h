@@ -20,6 +20,7 @@
 struct pkg;
 struct capreq;
 
+#undef extern__inline
 #ifdef SWIG
 # define extern__inline
 #else
@@ -36,13 +37,13 @@ EXPORT int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg);
 EXPORT int pkg_is_arch_compat(const struct pkg *candidate, const struct pkg *pkg);
 
 /* strncmp(p1->name, p2->name, strlen(p2->name)) */
-EXPORT extern__inline int pkg_ncmp_name(const struct pkg *p1, const struct pkg *p2);
+EXPORT int pkg_ncmp_name(const struct pkg *p1, const struct pkg *p2);
 
 /* strcmp(p1->name, p2->name) */
 EXPORT int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2);
 
 /* strcmp(pkg_id(p1), pkg_id(p2) */
-EXPORT extern__inline int pkg_cmp_id(const struct pkg *p1, const struct pkg *p2);
+EXPORT int pkg_cmp_id(const struct pkg *p1, const struct pkg *p2);
 
 
 /* versions only (+epoch) */
@@ -99,4 +100,4 @@ EXPORT int pkg_nvr_strcmp_btime_rev(struct pkg *p1, struct pkg *p2);
 EXPORT int pkg_nvr_strcmp_bday(struct pkg *p1, struct pkg *p2);
 EXPORT int pkg_nvr_strcmp_bday_rev(struct pkg *p1, struct pkg *p2);
 
-#endif 
+#endif

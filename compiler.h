@@ -15,10 +15,13 @@
 #define POLDEK_COMPILER_H
 
 #ifdef __GNUC__
+#  undef EXPORT
 #  define EXPORT extern __attribute__((visibility("default")))
 #else
+#  undef EXPORT
 #  define EXPORT extern
 #  undef __attribute__
+#  undef extern__inline
 #  define __attribute__(x) /* noop */
 #endif
 

@@ -61,7 +61,7 @@ struct pkgdir;                  /* defined in pkgdir/pkgdir.h */
 #define pkg_is_noarch(pkg)  (0 == strcmp(pkg_arch((pkg)), "noarch"))
 
 #define pkg_set_prereqed(pkg) ((pkg)->flags |= PKG_ORDER_PREREQ)
-#define pkg_clr_prereqed(pkg)  ((pkg)->flags &= ~PKG_ORDER_PREREQ) 
+#define pkg_clr_prereqed(pkg)  ((pkg)->flags &= ~PKG_ORDER_PREREQ)
 #define pkg_is_prereqed(pkg)  ((pkg)->flags & PKG_ORDER_PREREQ)
 
 #define pkg_score(pkg, v) ((pkg)->flags |= v)
@@ -78,7 +78,7 @@ struct pkg {
     uint32_t     fsize;       /* package file size */
     uint32_t     btime;       /* build time        */
     uint32_t     color;       /* rpm's pkg color   */
-    
+
     char         *name;
     int32_t      epoch;
     char         *ver;
@@ -86,20 +86,20 @@ struct pkg {
 
     char         *fn;         /* package filename */
     char         *srcfn;      /* package filename */
-    
+
     uint32_t     fmtime;      /* package file mtime */
     char         *_nvr;       /* NAME-VERSION-RELEASE */
 
     uint16_t      _arch;
     uint16_t      _os;
-    
+
     tn_array     *caps;       /* capabilities     */
     tn_array     *reqs;       /* requirements     */
     tn_array     *cnfls;      /* conflicts (with obsoletes)  */
     tn_array     *sugs;       /* suggests */
-    
+
     tn_tuple     *fl;         /* file list, see pkgfl.h  */
-    
+
     tn_array     *reqpkgs;    /* required packages  */
     tn_array     *revreqpkgs; /* packages which requires me */
     tn_array     *cnflpkgs;   /* conflicted packages */
@@ -107,13 +107,13 @@ struct pkg {
     struct pkgdir    *pkgdir;    /* reference to its own pkgdir */
     void             *pkgdir_data;
     void             (*pkgdir_data_free)(tn_alloc *na, void*);
-    
+
     struct pkguinf   *(*load_pkguinf)(tn_alloc *na, const struct pkg *pkg,
                                       void *pkgdir_data, tn_array *langs);
     tn_tuple         *(*load_nodep_fl)(tn_alloc *na, const struct pkg *pkg,
                                        void *pkgdir_data, tn_array*);
 
-    struct pkguinf *pkg_pkguinf; 
+    struct pkguinf *pkg_pkguinf;
 
     int pri;                  /* used for split */
     int groupid;              /* package group id (see pkgroups.c) */
@@ -156,8 +156,10 @@ EXPORT struct pkg *pkg_new_ext(tn_alloc *na,
 EXPORT void pkg_free(struct pkg *pkg);
 
 #ifdef SWIG
+# undef extern__inline
 # define extern__inline
 #else
+# undef extern__inline
 # define extern__inline inline
 #endif
 

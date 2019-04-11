@@ -40,7 +40,7 @@ EXPORT int flfile_cmp_qsort(const struct flfile **f1, const struct flfile **f2);
 
 /*
   both functions returns true(non-zero) if given files are conflicted
-  WARN: basenames aren't compared! 
+  WARN: basenames aren't compared!
  */
 EXPORT int flfile_cnfl(const struct flfile *f1, const struct flfile *f2, int strict);
 EXPORT int flfile_cnfl2(const struct flfile *f1, uint32_t size, uint16_t mode,
@@ -53,7 +53,7 @@ struct pkgfl_ent {
 };
 
 EXPORT struct pkgfl_ent *pkgfl_ent_new(tn_alloc *na,
-                                char *dirname, int dirname_len, int nfiles);
+                                       char *dirname, int dirname_len, int nfiles);
 
 EXPORT int pkgfl_ent_cmp(const void *a, const void *b);
 
@@ -71,7 +71,7 @@ EXPORT tn_tuple *pkgfl_array_pdir_sort(tn_tuple *fl);
 EXPORT int pkgfl_store(tn_tuple *fl, tn_buf *nbuf, tn_array *exclpath,
                 tn_array *depdirs, int which);
 
-EXPORT int pkgfl_restore_st(tn_alloc *na, tn_tuple **fl, 
+EXPORT int pkgfl_restore_st(tn_alloc *na, tn_tuple **fl,
                      tn_stream *st, tn_array *dirs, int include);
 
 EXPORT int pkgfl_skip_st(tn_stream *st);
@@ -101,6 +101,3 @@ EXPORT int pkgfl_owned_and_required_dirs(tn_tuple *fl, tn_array **owned,
                                   tn_array **required);
 
 #endif /* POLDEK_PKGFL_H */
-
-
-

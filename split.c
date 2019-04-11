@@ -73,7 +73,7 @@ static void chunk_free(struct chunk *chunk)
 }
 
 
-static void chunk_dump(struct chunk *chunk, FILE *stream) 
+static void chunk_dump(struct chunk *chunk, FILE *stream)
 {
     int i;
 
@@ -93,43 +93,43 @@ static void chunk_dump(struct chunk *chunk, FILE *stream)
     }
 }
 
-static 
+static
 int pridef_cmp_pri(struct pridef *pridef1, struct pridef *pridef2)
 {
     return pridef1->pri - pridef2->pri;
 }
 
-static 
+static
 int read_pridef(char *buf, int buflen, struct pridef **pridef,
                 const char *fpath, int nline)
 {
     char           *p;
     char           *mask = NULL;
     int            n, pri = -1; /* default priority */
-    
+
 
     n_assert(*pridef == NULL);
     n = buflen;
-    
+
     while (n && isspace(buf[n - 1]))
         buf[--n] = '\0';
-    
+
     p = buf;
     while(isspace(*p))
         p++;
-        
+
     if (*p == '\0' || *p == '#')
         return 0;
 
     mask = p;
-    
-    while (*p && !isspace(*p)) 
+
+    while (*p && !isspace(*p))
         p++;
 
     if (*p) {
         *p = '\0';
         p++;
-        
+
         while(isspace(*p))
             p++;
 
@@ -140,7 +140,7 @@ int read_pridef(char *buf, int buflen, struct pridef **pridef,
             }
         }
     }
-    
+
     if (mask) {
         n = strlen(mask) + 1;
         *pridef = n_malloc(sizeof(**pridef) + n);
@@ -148,19 +148,19 @@ int read_pridef(char *buf, int buflen, struct pridef **pridef,
         (*pridef)->pri = pri;
         DBGF("mask = %s, pri = %d\n", mask, pri);
     }
-    
+
     return 1;
 }
 
-static 
+static
 tn_array *load_pri_conf(const char *fpath)
 {
     char              buf[1024];
     struct vfile      *vf;
     int               nline, rc = 1;
     tn_array          *defs;
-    
-    if ((vf = vfile_open(fpath, VFT_TRURLIO, VFM_RO)) == NULL) 
+
+    if ((vf = vfile_open(fpath, VFT_TRURLIO, VFM_RO)) == NULL)
         return 0;
 
     nline = 0;
@@ -174,27 +174,27 @@ tn_array *load_pri_conf(const char *fpath)
             logn(LOGERR, _("%s: give up at %d"), fpath, nline);
             rc = 0;
             break;
-        } 
+        }
 
         if (pd)
             n_array_push(defs, pd);
     }
-    
+
     vfile_close(vf);
 
-    if (rc) 
+    if (rc)
         n_array_sort(defs);
-    
+
     else {
         n_array_free(defs);
         defs = NULL;
     }
-    
+
     return defs;
 }
 
 static
-void set_pri(int deep, struct pkg *pkg, int pri) 
+void set_pri(int deep, struct pkg *pkg, int pri)
 {
     int i;
 
@@ -214,19 +214,19 @@ void set_pri(int deep, struct pkg *pkg, int pri)
             return;
         }
     }
-    
-    
+
+
     pkg->pri = pri;
-    
+
     msg_i(3, deep, "pri %d %s\n", pri, pkg_snprintf_s(pkg));
     deep += 2;
-    
+
     if (pri > 0 && pkg->revreqpkgs) {
         for (i=0; i<n_array_size(pkg->revreqpkgs); i++) {
             struct pkg *revpkg = n_array_nth(pkg->revreqpkgs, i);
             set_pri(deep, revpkg, pri);
         }
-        
+
     } else if (pri < 0 && pkg->reqpkgs) {
         for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
             struct reqpkg *reqpkg = n_array_nth(pkg->reqpkgs, i);
@@ -237,7 +237,7 @@ void set_pri(int deep, struct pkg *pkg, int pri)
 }
 
 
-static void mapfn_clean_pkg_color(struct pkg *pkg) 
+static void mapfn_clean_pkg_color(struct pkg *pkg)
 {
     pkg_set_color(pkg, PKG_COLOR_WHITE);
 }
@@ -245,29 +245,29 @@ static void mapfn_clean_pkg_color(struct pkg *pkg)
 
 static
 int try_package(int deep, uint64_t *chunk_size, uint64_t maxsize,
-                struct pkg *pkg, tn_array *stack) 
+                struct pkg *pkg, tn_array *stack)
 {
     int i, rc = 1;
 
     if (!pkg_is_color(pkg, PKG_COLOR_WHITE))
         return 1;
-    
+
     n_assert(stack != NULL);
 
     pkg_set_color(pkg, PKG_COLOR_BLACK); /* visited */
 
     n_array_push(stack, pkg_link(pkg));
     *chunk_size += pkg->fsize;
-    
+
     DBGF("trying %s: %lld (%d) > %lld\n", pkg_snprintf_s(pkg), *chunk_size,
          pkg->fsize, maxsize);
-    
+
     if (*chunk_size > maxsize)
         return 0;
-    
+
     if (pkg->reqpkgs == NULL)
         return 1;
-    
+
     for (i=0; i<n_array_size(pkg->reqpkgs); i++) {
         struct reqpkg *reqpkg = n_array_nth(pkg->reqpkgs, i);
         if (!try_package(deep + 2, chunk_size, maxsize, reqpkg->pkg, stack)) {
@@ -275,46 +275,46 @@ int try_package(int deep, uint64_t *chunk_size, uint64_t maxsize,
             break;
         }
     }
-    
+
     return rc;
 }
 
 
 static
-int chunk_add(struct chunk *chunk, struct pkg *pkg) 
+int chunk_add(struct chunk *chunk, struct pkg *pkg)
 {
     int i, rc = 0;
     uint64_t chunk_size = 0;
     tn_array *stack = NULL;
 
-    
+
     if (!pkg_is_color(pkg, PKG_COLOR_WHITE))
         return 1;
 
     DBGF("to #%d %s\n", chunk->no, pkg_snprintf_s(pkg));
-    
-    
+
+
     stack = n_array_new(16, (tn_fn_free)pkg_free, NULL);
-    
+
     if (chunk->size + pkg->fsize > chunk->maxsize)
         return 0;
 
     chunk_size = chunk->size;
-    
+
     if (try_package(0, &chunk_size, chunk->maxsize, pkg, stack)) {
         chunk->items += n_array_size(stack);
         chunk->size = chunk_size;
 
         while (n_array_size(stack) > 0)
             n_array_push(chunk->pkgs, n_array_pop(stack));
-        
+
         rc = 1;
-        
+
     } else {
         for (i=0; i<n_array_size(stack); i++) {
-            struct pkg *pkg = n_array_nth(stack, i);
-            pkg_set_color(pkg, PKG_COLOR_WHITE);
-            msgn(3, _("%s: rollback"), pkg_snprintf_s(pkg));
+            struct pkg *pp = n_array_nth(stack, i);
+            pkg_set_color(pp, PKG_COLOR_WHITE);
+            msgn(3, _("%s: rollback"), pkg_snprintf_s(pp));
         }
         rc = 0;
     }
@@ -325,22 +325,22 @@ int chunk_add(struct chunk *chunk, struct pkg *pkg)
 
 static
 int snprintf_size64(char *buf, int bufsize, uint64_t nbytes,
-                    int ndigits, int longunit) 
+                    int ndigits, int longunit)
 {
     char unit[3], fmt[32];
     double nb;
-    
+
 
     nb = nbytes;
     unit[0] = 'B';
     unit[1] = unit[2] = '\0';
-    
+
     if (nb > 1024) {
         nb /= 1024.0;
-        
+
         unit[0] = 'K';
         unit[1] = 'B';
-        
+
         if (nb > 1024) {
             nb /= 1024;
             unit[0] = 'M';
@@ -351,11 +351,11 @@ int snprintf_size64(char *buf, int bufsize, uint64_t nbytes,
             unit[0] = 'G';
         }
     }
-    
+
     n_snprintf(fmt, sizeof(fmt), "%%.%df%%s", ndigits);
     if (!longunit)
         unit[1] = '\0';
-        
+
     return n_snprintf(buf, bufsize, fmt, nb, unit);
 }
 
@@ -379,7 +379,7 @@ int make_chunks(tn_array *pkgs, uint64_t split_size, uint64_t first_free_space,
 
         if (!pkg_is_color(pkg, PKG_COLOR_WHITE))
             continue;
-        
+
         if (!chunk_add(chunk, pkg)) {
             if (n_array_size(chunk->pkgs) == 0) {
                 logn(LOGERR, _("split failed: packages size is "
@@ -387,22 +387,21 @@ int make_chunks(tn_array *pkgs, uint64_t split_size, uint64_t first_free_space,
                 rc = 0;
                 goto l_end;
             }
-            
+
             chunk_no++;
             chunk = chunk_new(chunk_no, split_size);
             n_array_push(chunks, chunk);
             i = 0;
         }
     }
-    
+
     for (i=0; i < n_array_size(chunks); i++) {
         FILE           *stream;
         char           path[PATH_MAX], strsize[128];
-        struct chunk   *chunk;
         struct pkg     *pkg;
         int            pri_max, pri_min;
-        
-        
+
+
         chunk = n_array_nth(chunks, i);
         n_array_sort_ex(chunk->pkgs, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
 
@@ -411,18 +410,18 @@ int make_chunks(tn_array *pkgs, uint64_t split_size, uint64_t first_free_space,
 
         pkg = n_array_nth(chunk->pkgs, n_array_size(chunk->pkgs) - 1);
         pri_max = pkg->pri;
-        
+
         snprintf(path, sizeof(path), "%s.%.2d", outprefix, chunk->no);
         snprintf_size64(strsize, sizeof(strsize), chunk->size, 2, 0);
         msgn(0, _("Writing %s (%4d packages, %s (%lldb), "
                   "pri min, max = %d, %d)"),
              path, chunk->items, strsize, chunk->size, pri_min, pri_max);
-        
-        
+
+
         if ((stream = fopen(path, "w")) == NULL)
             return 0;
 
-#if 0        
+#if 0
         fprintf(vf->vf_stream, "# chunk #%d: %d packages, %lld bytes\n",
                 i, chunk->items, chunk->size);
 #endif
@@ -431,7 +430,7 @@ int make_chunks(tn_array *pkgs, uint64_t split_size, uint64_t first_free_space,
     }
 
  l_end:
-    
+
     return rc;
 }
 
@@ -454,7 +453,7 @@ int packages_set_priorities(tn_array *pkgs, const char *priconf_path)
         struct pkg *pkg = n_array_nth(pkgs, i);
         pkg->pri = 0;
     }
-    
+
     n_array_sort(pkgs);
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
@@ -462,7 +461,7 @@ int packages_set_priorities(tn_array *pkgs, const char *priconf_path)
 
         for (j=0; j<n_array_size(defs); j++) {
             struct pridef *pd = n_array_nth(defs, j);
-            
+
             if (fnmatch(pd->mask, pkg->name, 0) == 0) {
                 pri = pd->pri;
                 msgn(2, _("split: assign %d pri to %s (mask %s)"), pri,
@@ -471,14 +470,14 @@ int packages_set_priorities(tn_array *pkgs, const char *priconf_path)
                 break;
             }
         }
-        
+
         if (pri != 0)
             set_pri(0, pkg, pri);
     }
-    
+
     if (nmached == 0)
         logn(LOGNOTICE, "split: %s",  _("no maching priorities"));
-    
+
     n_array_free(defs);
     return 1;
 }
@@ -496,7 +495,7 @@ int packages_split(const tn_array *pkgs, unsigned split_size_mb,
 
     DBGF("%dM (%lld), %dM %lld\n", split_size_mb, split_size,
          first_free_space_mb, first_free_space);
-    
+
     packages = n_array_dup(pkgs, (tn_fn_dup)pkg_link);
     // pre-sort packages with pkg_cmp_pri_name_evr_rev()
     n_array_sort_ex(packages, (tn_fn_cmp)pkg_cmp_pri_name_evr_rev);
@@ -510,7 +509,7 @@ int packages_split(const tn_array *pkgs, unsigned split_size_mb,
 
     ordered_pkgs = NULL;
     packages_order(packages, &ordered_pkgs, PKGORDER_INSTALL);
-    
+
     msg(2, "\nPackages ordered:\n");
     for (i=0; i < n_array_size(ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ordered_pkgs, i);
@@ -518,13 +517,13 @@ int packages_split(const tn_array *pkgs, unsigned split_size_mb,
     }
 
     rc = make_chunks(ordered_pkgs, split_size, first_free_space, outprefix);
-    
-    if (ordered_pkgs) 
+
+    if (ordered_pkgs)
         n_array_free(ordered_pkgs);
-    
+
     if (packages)
         n_array_free(packages);
-    
+
     return rc;
 }
 
@@ -533,12 +532,12 @@ int poldek_split(const struct poldek_ctx *ctx, unsigned size_mb,
 {
     if (outprefix == NULL)
         outprefix = "packages.chunk";
-    
+
     if (n_array_size(ctx->ps->pkgs) == 0) {
         logn(LOGERR, "split: %s", _("no available packages found"));
         return 0;
     }
-    
+
     return packages_split(ctx->ps->pkgs, size_mb, first_free_space_mb,
                           outprefix);
 }

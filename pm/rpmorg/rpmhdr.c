@@ -181,9 +181,9 @@ tn_array *pm_rpmhdr_langs(Header h)
     return langs;
 }
 
-
-int pm_rpmhdr_nevr(void *h, const char **name, int32_t *epoch, const char **version,
-                   const char **release, const char **arch, int *color)
+int pm_rpmhdr_nevr(void *h, const char **name, int32_t *epoch,
+                   const char **version, const char **release,
+                   const char **arch, uint32_t *color)
 {
     *name = headerGetString(h, RPMTAG_NAME);
     *epoch = headerGetNumber(h, RPMTAG_EPOCH);

@@ -41,7 +41,7 @@
 #include "pkgdir.h"
 #include "pkgdir_intern.h"
 
-static int do_unlink(const char *path, int test) 
+static int do_unlink(const char *path, int test)
 {
     msgn(2, _(" Removing %s"), n_basenam(path));
     if (!test)
@@ -50,7 +50,7 @@ static int do_unlink(const char *path, int test)
 }
 
 
-int pkgdir__rmf(const char *dirpath, const char *mask, int test) 
+int pkgdir__rmf(const char *dirpath, const char *mask, int test)
 {
     struct dirent  *ent;
     DIR            *dir;
@@ -63,21 +63,21 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
 
     if (mask && n_str_eq(mask, "*"))
         mask = NULL;
-    
+
     if (stat(dirpath, &st) != 0)
         return 0;
 
-    if ((vflock = vf_lockdir(dirpath)) == NULL) 
+    if ((vflock = vf_lockdir(dirpath)) == NULL)
         return 0;
-    
+
     if (S_ISREG(st.st_mode) && mask == NULL) {
         char *tmp, *dn;
         struct vflock *tmp_vflock;
-            
+
         n_strdupap(dirpath, &tmp);
         dn = n_dirname(tmp);
         rc = 0;
-        
+
         if ((tmp_vflock = vf_lockdir(dn))) {
             msgn(2, _("Cleaning up %s..."), dn);
             rc = do_unlink(dirpath, test);
@@ -85,24 +85,23 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
         }
         return rc;
     }
-    
+
     if ((dir = opendir(dirpath)) == NULL) {
         if (poldek_VERBOSE > 2)
             logn(LOGWARN, "opendir %s: %m", dirpath);
         return 1;
     }
-    
+
     if (dirpath[strlen(dirpath) - 1] == '/')
         sepchr = "";
-    
+
     while ((ent = readdir(dir))) {
         char path[PATH_MAX];
-        struct stat st;
-    
+
         if (*ent->d_name == '.') {
             if (ent->d_name[1] == '\0')
                 continue;
-            
+
             if (ent->d_name[1] == '.' && ent->d_name[2] == '\0')
                 continue;
         }
@@ -125,12 +124,12 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test)
         if (stat(path, &st) == 0) {
             if (S_ISREG(st.st_mode))
                 do_unlink(path, test);
-            
+
             else if (S_ISDIR(st.st_mode))
                 pkgdir__rmf(path, mask, test);
         }
     }
-    
+
     if (vflock)
         vf_lock_release(vflock);
     closedir(dir);
@@ -148,6 +147,6 @@ int pkgdir__cache_clean(const char *path, const char *mask, int test)
     n_snprintf(path_i, sizeof(path_i), "%s/%s", path, "packages.i");
     if (vf_localdirpath(tmpath, sizeof(tmpath), path_i) < (int)sizeof(tmpath))
         pkgdir__rmf(tmpath, mask, test);
-    
+
     return 1;
 }

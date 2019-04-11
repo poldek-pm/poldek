@@ -121,7 +121,7 @@ const char *pndir_localidxpath(const struct pkgdir *pkgdir);
 
 
 /* description.c */
-extern inline
+extern
 const char *pndir_db_dscr_idstr(const char *lang,
                                 const char **idstr, const char **langstr);
 

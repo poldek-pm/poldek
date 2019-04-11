@@ -43,14 +43,18 @@
 
 #include "pndir.h"
 
+static void close_db_dscr(void *db)
+{
+    tndb_close(db);
+}
 
 tn_hash *pndir_db_dscr_h_new(void)
 {
-    return n_hash_new(16, (tn_fn_free)tndb_close);
+    return n_hash_new(16, close_db_dscr);
 }
 
 static
-struct tndb *do_db_dscr_open(const char *path) 
+struct tndb *do_db_dscr_open(const char *path)
 {
     struct tndb *db;
 
@@ -63,39 +67,39 @@ struct tndb *do_db_dscr_open(const char *path)
 }
 
 const char *pndir_db_dscr_idstr(const char *lang,
-                                const char **idstr, const char **langstr) 
+                                const char **idstr, const char **langstr)
 {
     const char *id = "i18n";
 
     *langstr = id;
     *idstr = id;
-    
+
     if (lang == NULL || strcmp(lang, "C") == 0) {
         *langstr = "";
         *idstr = "C";
     }
-    
+
     return *idstr;
 }
 
 
 static
 struct tndb *do_db_dscr_get(tn_hash *db_dscr_h, const char *pathtmpl,
-                            const char *lang, int open) 
+                            const char *lang, int open)
 {
     char path[PATH_MAX], *dot = ".";
     const char *idstr, *langstr;
     struct tndb *db;
 
     DBGF("lang %s\n", lang);
-    
-    pndir_db_dscr_idstr(lang, &idstr, &langstr);    
+
+    pndir_db_dscr_idstr(lang, &idstr, &langstr);
     if (*langstr == '\0')
         dot = "";
-    
+
     if ((db = n_hash_get(db_dscr_h, idstr)) != NULL)
         return db;
-    
+
     if (open == 0)
         return NULL;
 
@@ -104,7 +108,7 @@ struct tndb *do_db_dscr_get(tn_hash *db_dscr_h, const char *pathtmpl,
     db = do_db_dscr_open(path);
     if (db == NULL)
         return NULL;
-    
+
     n_hash_insert(db_dscr_h, idstr, db);
     return db;
 }
@@ -125,7 +129,7 @@ int pndir_db_dscr_h_insert(tn_hash *db_dscr_h,
 }
 
 
-struct tndb *pndir_db_dscr_h_get(tn_hash *db_dscr_h, const char *lang) 
+struct tndb *pndir_db_dscr_h_get(tn_hash *db_dscr_h, const char *lang)
 {
     return do_db_dscr_get(db_dscr_h, NULL, lang, 0);
 }
@@ -139,8 +143,8 @@ struct pkguinf *pndir_load_pkguinf(tn_alloc *na, tn_hash *db_dscr_h,
     tn_buf           *nbuf = NULL;
     char             key[TNDB_KEY_MAX], val[8192];
     int              klen, vlen;
-    
-    if ((dbC = pndir_db_dscr_h_get(db_dscr_h, "C")) == NULL) 
+
+    if ((dbC = pndir_db_dscr_h_get(db_dscr_h, "C")) == NULL)
         return NULL;
 
     klen = pndir_make_pkgkey(key, sizeof(key), pkg);
@@ -177,7 +181,7 @@ struct pkguinf *pndir_load_pkguinf(tn_alloc *na, tn_hash *db_dscr_h,
             vlen = tndb_get(db, dkey, dklen, val, sizeof(val));
 
             DBGF("ld %s: %s (%d)\n", pkg_id(pkg), lang, vlen);
-            
+
             if (vlen > 0) {
                 tn_buf_it it;
                 n_buf_clean(nbuf);
@@ -187,7 +191,7 @@ struct pkguinf *pndir_load_pkguinf(tn_alloc *na, tn_hash *db_dscr_h,
             }
         }
     }
-    
+
     if (nbuf)
         n_buf_free(nbuf);
     return pkgu;

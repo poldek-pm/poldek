@@ -33,6 +33,8 @@
 #include "pkgfl.h"
 #include "pkgdir.h"
 #include "pkgdir_intern.h"
+
+#include "pm/pm.h"
 #ifdef HAVE_RPMORG
 # include "pm/rpmorg/pm_rpm.h"
 #else

@@ -42,11 +42,11 @@
 #include "pkg.h"
 #include "pndir.h"
 
-static char *eat_zlib_ext(char *path) 
+static char *eat_zlib_ext(char *path)
 {
     char *p;
-    
-    if ((p = strrchr(n_basenam(path), '.')) != NULL) 
+
+    if ((p = strrchr(n_basenam(path), '.')) != NULL)
         if (strcmp(p, ".gz") == 0)
             *p = '\0';
 
@@ -66,61 +66,61 @@ int is_uptodate(const char *path, const struct pndir_digest *dg_local,
     struct pndir_digest    dg_remote;
     int                    fd = 0, n, rc = 0;
     const char             *ext = pndir_digest_ext;
-    
+
     if (dg)              /* caller wants digest */
         pndir_digest_init(dg);
-    
+
     pndir_digest_init(&dg_remote);
-    
+
     if (vf_url_type(path) & VFURL_LOCAL)
         return 1;
 
     rc = -1;
     if (!(n = vf_mksubdir(mdtmpath, sizeof(mdtmpath), "tmpmd")))
         goto l_end;
-    
+
     pndir_mkdigest_path(mdpath, sizeof(mdpath), path, ext);
-    
+
     snprintf(&mdtmpath[n], sizeof(mdtmpath) - n, "/%s", n_basenam(mdpath));
     unlink(mdtmpath);
     mdtmpath[n] = '\0';
 
     if (!vf_fetch(mdpath, mdtmpath, 0, NULL, pdir_name))
         goto l_end;
-    
+
     mdtmpath[n] = '/';
     if ((fd = open(mdtmpath, O_RDONLY)) < 0)
         goto l_end;
-        
+
     if (!pndir_digest_readfd(&dg_remote, fd, mdtmpath))
         goto l_end;
 
     close(fd);
     fd = 0;
-    
+
     rc = (memcmp(dg_local->md, &dg_remote.md, sizeof(dg_remote.md)) == 0);
-    
+
     if (rc == 0 && dg)
         memcpy(dg, &dg_remote, sizeof(dg_remote));
-    
+
  l_end:
     pndir_digest_destroy(&dg_remote);
     if (fd > 0)
         close(fd);
-    
+
     return rc;
 }
 
-static int update_whole_idx(const struct source *src) 
+static int update_whole_idx(const struct source *src)
 {
     struct pkgdir *pkgdir;
     int rc = 0;
-    
+
     if ((pkgdir = pkgdir_srcopen(src, PKGDIR_OPEN_REFRESH))) {
         pkgdir_free(pkgdir);
         rc = 1;
     }
-    
+
     return rc;
 }
 
@@ -144,26 +144,26 @@ int pndir_m_update_a(const struct source *src, const char *idxpath,
     }
 
     idx = pkgdir->mod_data;
-    
+
     if (idx->_vf->vf_flags & VF_FETCHED) {
         pkgdir_free(pkgdir);
         *uprc = PKGDIR_UPRC_UPDATED;
         return 1;
     }
-    
+
     switch (is_uptodate(idx->idxpath, idx->dg, NULL, idx->srcnam)) {
         case 1:
             rc = 1;
             *uprc = PKGDIR_UPRC_UPTODATE;
             break;
-            
+
         case -1:
         case 0:
             rc = update_whole_idx(src);
             if (rc)
                 *uprc = PKGDIR_UPRC_UPTODATE;
             break;
-                
+
         default:
             n_assert(0);
     }
@@ -174,29 +174,29 @@ int pndir_m_update_a(const struct source *src, const char *idxpath,
     return rc;
 }
 
-static int parse_toc_line(char *line, time_t *tsp, char **mdp) 
+static int parse_toc_line(char *line, time_t *tsp, char **mdp)
 {
     char *p, *md;
     unsigned long ts;
-    
+
     p = line;
 
     *tsp = 0;
     *mdp = NULL;
-    
+
     while (*p && isspace(*p))
         p++;
-        
+
     if (*p == '#')
         return 1;
-    
+
 
     if ((p = strchr(p, ' ')) == NULL)
         return 0;
-    
+
     while (*p && isspace(*p))
         *p++ = '\0';
-        
+
     if (sscanf(p, "%lu", &ts) != 1) /* read ts */
         return 0;
 
@@ -205,11 +205,11 @@ static int parse_toc_line(char *line, time_t *tsp, char **mdp)
 
     while (*p && isspace(*p))
         *p++ = '\0';
-        
+
     md = p;                 /* read orig md */
     if ((p = strchr(p, ' ')) == NULL)
         return 0;
-    
+
     *p = '\0';
 
     if (p - md != TNIDX_DIGEST_SIZE)
@@ -217,12 +217,12 @@ static int parse_toc_line(char *line, time_t *tsp, char **mdp)
 
     *tsp = ts;
     *mdp = md;
-    
+
     return 1;
 }
 
 
-int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc) 
+int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 {
     char                idxpath[PATH_MAX], tmpath[PATH_MAX], path[PATH_MAX];
     struct vfile        *vf;
@@ -236,7 +236,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     idx = pkgdir->mod_data;
     if (idx->_vf->vf_flags & VF_FETCHED)
         return 1;
-    
+
     switch (is_uptodate(pkgdir->idxpath, idx->dg, &dg_remote, idx->srcnam)) {
         case 1:
             *uprc = PKGDIR_UPRC_UPTODATE;
@@ -245,11 +245,11 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
             //    rc = pndir_digest_verify(idx->dg, idx->vf);
             return rc;
             break;
-            
+
         case -1:
             *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
             return 0;
-            
+
         case 0:                 /* diff updateable? */
             if (dg_remote.flags & PNDIGEST_BRANDNEW) { /* nope */
                 *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
@@ -269,7 +269,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     n_basedirnam(tmpath, &dn, &bn);
     snprintf(path, sizeof(path), "%s/%s/%s%s", dn,
              pndir_packages_incdir, bn, pndir_difftoc_suffix);
-    
+
     vf = vfile_open_ul(path, VFT_TRURLIO, VFM_RO, pkgdir->name);
     if (vf == NULL)
         return 0;
@@ -286,33 +286,33 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 
     // to keep quiet vf_stat
     vfile_configure(VFILE_CONF_VERBOSE, 0);
-    
+
     snprintf(path, sizeof(path), "%s.ndir.%s",
 	     pkgdir->idxpath, pidxpath);
+
     if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
       mdsize += stats.vf_size;
-      msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+      msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
     }
     snprintf(path, sizeof(path), "%s.ndir.dscr.%s",
 	     pkgdir->idxpath, pidxpath);
     if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
       mdsize += stats.vf_size;
-      msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+      msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
     }
     snprintf(path, sizeof(path), "%s.ndir.dscr.i18n.%s",
 	     pkgdir->idxpath, pidxpath);
     if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
       mdsize += stats.vf_size;
-      msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+      msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
     }
-    
-    msgn(2, "pndir_m_update idxsize: %ld\n", mdsize);
+
+    msgn(2, "pndir_m_update idxsize: %lld\n", (long long)mdsize);
 
     pidxpath -= 6;
     *pidxpath ='.';
 
     while ((nread = n_stream_gets(vf->vf_tnstream, line, sizeof(line))) > 0) {
-        struct pkgdir *diff;
         char *md, *pdate;
         time_t ts;
 
@@ -324,14 +324,14 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 
         if (ts <= pkgdir->ts)   /* skip diffs created before me */
             continue;
-        
+
         if (!first_patch_found) { /* skip first patch - it is already applied */
             if (memcmp(md, current_md, TNIDX_DIGEST_SIZE) == 0)
                 first_patch_found = 1;
 	    else
 		continue;
         }
-        
+
         pdate = strstr(line, ".ndir.");
 	*pdate = '\0';
 	pdate += 6;
@@ -340,22 +340,23 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 		 dn, pndir_packages_incdir, line, pdate);
 	if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
 	  mdpatchsize += stats.vf_size;
-	  msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+	  msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
 	}
         snprintf(path, sizeof(path), "%s/%s/%s.ndir.dscr.%s",
 		 dn, pndir_packages_incdir, line, pdate);
 	if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
 	  mdpatchsize += stats.vf_size;
-	  msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+	  msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
 	}
         snprintf(path, sizeof(path), "%s/%s/%s.ndir.dscr.i18n.%s",
 		 dn, pndir_packages_incdir, line, pdate);
 	if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
 	  mdpatchsize += stats.vf_size;
-	  msgn(3, "_\n%ld bytes %s\n", stats.vf_size, path);
+	  msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
 	}
-	
-	msgn(2, "pndir_m_update idxpatches/idxsize: %ld/%ld bytes\n", mdpatchsize, mdsize);
+
+	msgn(2, "pndir_m_update idxpatches/idxsize: %lld/%lld bytes\n",
+             (long long)mdpatchsize, (long long)mdsize);
 
 	if (mdpatchsize * 9 / 10 > mdsize) {
 	    vfile_close(vf);
@@ -367,7 +368,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 	    return rc;
 	}
     }
-    
+
     vfile_configure(VFILE_CONF_VERBOSE, &poldek_VERBOSE);
     n_stream_seek(vf->vf_tnstream, 0L, SEEK_SET); // to the begining
 
@@ -389,7 +390,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 
         if (ts <= pkgdir->ts)   /* skip diffs created before me */
             continue;
-        
+
         if (!first_patch_found) { /* skip first patch - it is already applied */
             if (memcmp(md, current_md, TNIDX_DIGEST_SIZE) == 0)
                 first_patch_found = 1;
@@ -408,7 +409,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
                 continue;
             }
         }
-        
+
         msg(1, "_\n");
         snprintf(path, sizeof(path), "%s/%s/%s", dn, pndir_packages_incdir, line);
         diff = pkgdir_open_ext(path, NULL, pkgdir->type, "diff", NULL,
@@ -417,7 +418,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
             nerr++;
             break;
         }
-        
+
         if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
             if (!pkgdir_load(pkgdir, NULL, 0)) {
                 logn(LOGERR, _("%s: load failed"), pkgdir->idxpath);
@@ -432,7 +433,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 
         npatch++;
     }
-    
+
     vfile_close(vf);
     if (npatch == 0) {        /* outdated and no patches */
         *uprc = PKGDIR_UPRC_ERR_DESYNCHRONIZED;
@@ -445,10 +446,10 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
             nerr++;
         }
 
-    
+
     if (nerr == 0) {
         struct pndir_digest dg;
-        
+
         *uprc = PKGDIR_UPRC_UPDATED;
         pndir_digest_calc_pkgs(&dg, pkgdir->pkgs);
         DBGF("md.remote  %s\nmd.local  %s\n", dg_remote.md, dg.md);
@@ -459,8 +460,8 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
             nerr++;
         }
     }
-    
-    
+
+
     if (nerr == 0) {
         snprintf(path, sizeof(path), "%s/%s", dn, pndir_packages_incdir);
         if (vf_localdirpath(tmpath, sizeof(tmpath), path) < (int)sizeof(tmpath)) {
@@ -470,6 +471,6 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
         }
         msg(1, "_\n");
     }
-    
+
     return nerr == 0;
 }

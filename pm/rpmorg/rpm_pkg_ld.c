@@ -88,7 +88,8 @@ static int is_suggestion(unsigned flag)
 
 
 static
-tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h, struct pkg *pkg, int pmcap_tag)
+tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
+                       struct pkg *pkg, int pmcap_tag)
 {
     struct rpm_cap_tagset *tgs = NULL;
     struct capreq *cr;
@@ -283,7 +284,7 @@ static uint32_t *uint32_at(rpmtd td, int index)
     return rpmtdGetUint32(td);
 }
 
-static char *str_at(rpmtd td, int index)
+static const char *str_at(rpmtd td, int index)
 {
     int i = rpmtdSetIndex(td, index);
     //printf("str_at %d is %d", index, i);
@@ -295,20 +296,21 @@ static char *str_at(rpmtd td, int index)
 int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
                     Header h, int which, const char *pkgname)
 {
-    char      **skipdirs;
-    size_t    *dirslen = NULL;
-    struct    flfile *flfile;
-    struct    pkgfl_ent **fentdirs = NULL;
-    int       *fentdirs_items;
-    unsigned  i;
-    int       j, ndirs = 0, nerr = 0, missing_file_hdrs_err = 0;
+    const char **skipdirs;
+    size_t     *dirslen = NULL;
+    struct     flfile *flfile;
+    struct     pkgfl_ent **fentdirs = NULL;
+    int        *fentdirs_items;
+    unsigned   i, j;
+    int        ndirs = 0, nerr = 0, missing_file_hdrs_err = 0;
     const char *errmsg_notag = _("%s: no %s tag");
-    struct rpmtd_s  names, dirs, diridxs, modes, sizes, symlinks;
+    struct rpmtd_s names, dirs, diridxs, modes, sizes, symlinks;
 
+    (void)missing_file_hdrs_err; /* disable -Wunused-but-set-variable */
     n_assert(na);
 
     if (!hget(&names, h, RPMTAG_BASENAMES))
-        return NULL;
+        return 0;
 
     if (!hget(&dirs, h, RPMTAG_DIRNAMES))
         goto l_endfunc;
@@ -348,7 +350,7 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     /* skip unneded dirnames */
     for (i=0; i < rpmtdCount(&dirs); i++) {
         struct pkgfl_ent *flent;
-        char *dir = str_at(&dirs, i);
+        const char *dir = str_at(&dirs, i);
 
         dirslen[i] = strlen(dir);
 
@@ -383,7 +385,8 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
             if (*uint32_at(&diridxs, j) == i)
                 fentdirs_items[i]++;
 
-        flent = pkgfl_ent_new(na, dir, dirslen[i], fentdirs_items[i]);
+        /* XXX dangerous cast to char* */
+        flent = pkgfl_ent_new(na, (char *)dir, dirslen[i], fentdirs_items[i]);
         fentdirs[i] = flent;
         ndirs++;
     }
@@ -392,10 +395,11 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     for (i=0; i < rpmtdCount(&names); i++) {
         struct pkgfl_ent *flent;
         uint32_t *jp = uint32_at(&diridxs, i);
-        char *name = str_at(&names, i);
+        const char *name = str_at(&names, i);
         uint16_t *mode = uint16_at(&modes, i);
+
         n_assert(jp != NULL);
-        int j = *jp;
+        j = *jp;
 
         if (!valid_fname(name, mode ? *mode : 0, pkgname))
             continue;
@@ -416,7 +420,7 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     	    continue;
     	}
 
-        char *symlink = str_at(&symlinks, i);
+        const char *symlink = str_at(&symlinks, i);
         uint32_t *size = uint32_at(&sizes, i);
 
         flfile = flfile_new(na, size ? *size : 0,
@@ -442,7 +446,7 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
 
         if (n > 0) {
             tn_tuple *t;
-            int j = 0;
+            j = 0;
 
             t = n_tuple_new(na, n, NULL);
             for (i=0; i < rpmtdCount(&dirs); i++) {
@@ -487,7 +491,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
     char       osbuf[128], *os = osbuf;
     char       srcrpmbuf[128], *srcrpm = srcrpmbuf;
 
-    pm_rpmhdr_nevr(h, &name, &epoch, &version, &release, &arch, NULL);
+    pm_rpmhdr_nevr(h, &name, (int32_t*)&epoch, &version, &release, &arch, NULL);
 
     if (name == NULL || version == NULL || release == NULL) {
         logn(LOGERR, _("%s: read name/version/release failed"), fname);

@@ -107,9 +107,9 @@ void poldek_ts_free(struct poldek_ts *ts)
 void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
 {
     n_assert(bitvect_slot(optv) < sizeof(ts->_opvect)/sizeof(bitvect_slot_itype));
-    
+
     //n_assert(optv != POLDEK_OP_VRFY_DEPS);
-    
+
     switch (optv) {
         case POLDEK_OP_PROMOTEPOCH:
             poldek_conf_PROMOTE_EPOCH = on;
@@ -118,7 +118,7 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
             if (ts->ctx)
                 poldek_configure(ts->ctx, POLDEK_CONF_OPT, optv, on);
             break;
-            
+
         case POLDEK_OP_MULTILIB:
             poldek_conf_MULTILIB = on;
             DBGF("set %p (%p) %d %d\n", ts, ts->ctx, optv, on);
@@ -137,7 +137,7 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
                 poldek_configure(ts->ctx, POLDEK_CONF_OPT,
                                  POLDEK_OP_LDFULLFILELIST, on);
             }
-            
+
             break;
 
         case POLDEK_OP_GREEDY:
@@ -148,15 +148,15 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
 
             ts->uninstall_greedy_deep = on;
             break;
-            
+
         case POLDEK_OP_CONFLICTS:
             DBGF("%p set conflicts %d (t=%d)\n", ts, on, touch);
             break;
-            
+
         case POLDEK_OP_OBSOLETES:
             DBGF("%p set obsoletes %d (t=%d)\n", ts, on, touch);
             break;
-            
+
         case POLDEK_OP_FOLLOW:
             if (!on)
                 poldek_ts_xsetop(ts, POLDEK_OP_GREEDY, 0, touch);
@@ -165,16 +165,16 @@ void poldek_ts_xsetop(struct poldek_ts *ts, int optv, int on, int touch)
         case POLDEK_OP_USESUDO:
             DBGF("%p set use_sudo %d\n", ts, on);
             break;
-            
+
         default:
             break;
     }
-    
+
     if (on)
         bitvect_set(ts->_opvect, optv);
     else
         bitvect_clr(ts->_opvect, optv);
-    
+
     if (touch)
         bitvect_set(ts->_opvect_touched, optv); /* touched */
 }
@@ -235,16 +235,16 @@ static int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
     ts->setop = poldek_ts_setop;
     ts->getop = poldek_ts_getop;
     ts->getop_v = poldek_ts_getop_v;
-    
+
     if (ctx == NULL) {
         ts->aps = NULL;
-        
+
     } else {
         ts->ctx = ctx;
         memcpy(ts->_opvect, ctx->ts->_opvect, sizeof(ts->_opvect));
         if (!poldek__is_setup_done(ctx))
             ts->_iflags |= TS_CONFIG_LATER;
-        
+
         ts->aps = arg_packages_new();
         ts->pmctx = ctx->pmctx;
     }
@@ -258,14 +258,14 @@ static int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         cp_str(&ts->dumpfile, ctx->ts->dumpfile);
         cp_str(&ts->prifile, ctx->ts->prifile);
         cp_str(&ts->depgraph, ctx->ts->depgraph);
-        
+
         ts->rpmacros = n_array_dup(ctx->ts->rpmacros, (tn_fn_dup)strdup);
         ts->rpmopts = n_array_dup(ctx->ts->rpmopts, (tn_fn_dup)strdup);
         ts->hold_patterns = n_array_dup(ctx->ts->hold_patterns,
                                         (tn_fn_dup)strdup);
         ts->ign_patterns = n_array_dup(ctx->ts->ign_patterns,
                                        (tn_fn_dup)strdup);
-        
+
         ts->exclude_path = n_array_dup(ctx->ts->exclude_path,
                                        (tn_fn_dup)strdup);
     } else {                    /* no ctx? -> it's ctx internal ts */
@@ -280,11 +280,11 @@ static int poldek_ts_init(struct poldek_ts *ts, struct poldek_ctx *ctx)
         ts->hold_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
         ts->ign_patterns = n_array_new(4, free, (tn_fn_cmp)strcmp);
         ts->exclude_path = n_array_new(4, free, (tn_fn_cmp)strcmp);
-        
+
     }
     DBGF("%p->%p, %p\n", ts, ts->hold_patterns, ctx);
-    
-    
+
+
     ts->pms = pkgmark_set_new(1024, 0);
 
     ts->ts_summary = n_hash_new(4, (tn_fn_free)n_array_free);
@@ -297,10 +297,10 @@ static void poldek_ts_destroy(struct poldek_ts *ts)
 {
     ts->_flags = 0;
     ts->ctx = NULL;
-    
+
     if (ts->db)
         pkgdb_free(ts->db);
-    
+
     ts->db = NULL;
 
     if (ts->aps)
@@ -311,7 +311,7 @@ static void poldek_ts_destroy(struct poldek_ts *ts)
     n_cfree(&ts->cachedir);
     n_cfree(&ts->dumpfile);
     n_cfree(&ts->prifile);
-    
+
     n_array_cfree(&ts->rpmopts);
     n_array_cfree(&ts->rpmacros);
     n_array_cfree(&ts->hold_patterns);
@@ -334,7 +334,7 @@ static void poldek_ts_destroy(struct poldek_ts *ts)
 void poldek_ts_setf(struct poldek_ts *ts, uint32_t flag)
 {
     int type = 0;
-    
+
     if (flag & POLDEK_TS_INSTALL)
         type = POLDEK_TS_INSTALL;
 
@@ -372,18 +372,18 @@ int poldek_ts_issetf_all(struct poldek_ts *ts, uint32_t flag)
     return (ts->_flags & flag) == flag;
 }
 
-static char *prepare_path(char *pathname) 
+static char *prepare_path(char *pathname)
 {
     if (pathname == NULL)
         return pathname;
 
     if (vf_url_type(pathname) & VFURL_LOCAL) {
         char *ppath;
-        
+
         if ((ppath = util__abs_path(pathname)))
             return ppath;       /* malloced by abs_path */
     }
-    
+
     return pathname;
 }
 
@@ -397,21 +397,21 @@ char *poldek__conf_path(char *s, char *v)
             free(s);
         s = n_strdup(v);
     }
-    
+
     ss = prepare_path(s);
     if (ss != s) {
         free(s);
         s = ss;
     }
-    
+
     return s;
 }
 
-int poldek_ts_configure(struct poldek_ts *ts, int param, ...) 
+int poldek_ts_configure(struct poldek_ts *ts, int param, ...)
 {
     va_list ap;
     int rc;
-    
+
     va_start(ap, param);
     rc = poldek_ts_vconfigure(ts, param, ap);
     va_end(ap);
@@ -419,13 +419,13 @@ int poldek_ts_configure(struct poldek_ts *ts, int param, ...)
 }
 
 
-int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap) 
+int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
 {
     int      rc;
     char     *vs;
     unsigned uv, uv_val;
 
-    
+
     rc = 1;
     switch (param) {
         case POLDEK_CONF_OPT:
@@ -442,7 +442,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
                 DBGF("cachedirX %s\n", ts->cachedir);
             }
             break;
-            
+
         case POLDEK_CONF_FETCHDIR:
             if ((vs = va_arg(ap, char*))) {
                 ts->fetchdir = poldek__conf_path(ts->fetchdir, vs);
@@ -468,7 +468,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
                     src->path = poldek__conf_path(src->path, NULL);
                 ts->pm_pdirsrc = src;
             }
-#endif            
+#endif
 
         case POLDEK_CONF_DUMPFILE:
             if ((vs = va_arg(ap, char*))) {
@@ -500,7 +500,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
                     ts->setop(ts, POLDEK_OP_IGNOREARCH, 1);
                 else if (n_str_eq(vs, "--ignoreos"))
                     ts->setop(ts, POLDEK_OP_IGNOREOS, 1);
-                
+
                 n_array_push(ts->rpmopts, n_strdup(vs));
             }
             break;
@@ -508,7 +508,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
         case POLDEK_CONF_HOLD:
         case POLDEK_CONF_IGNORE: {
             tn_array *patterns = NULL;
-            
+
             if (param == POLDEK_CONF_HOLD)
                 patterns = ts->hold_patterns;
             else if (param == POLDEK_CONF_IGNORE)
@@ -516,14 +516,14 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
 
             if ((vs = va_arg(ap, char*)) == NULL) { /* reset */
                 n_array_clean(patterns);
-                
+
             } else {
                 if (strchr(vs, ',') == NULL) {
                     n_array_push(patterns, n_strdup(vs));
-                
+
                 } else {
                     const char **tl_save, **tl;
-                    
+
                     tl = tl_save = n_str_tokl(vs, ",");
                     while (*tl) {
                         if (**tl)
@@ -533,7 +533,7 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
                     n_str_tokl_free(tl_save);
                 }
             }
-#if ENABLE_TRACE            
+#if ENABLE_TRACE
             {
                 int i;
                 for (i=0; i < n_array_size(ts->hold_patterns); i++) {
@@ -541,24 +541,24 @@ int poldek_ts_vconfigure(struct poldek_ts *ts, int param, va_list ap)
                     DBGF("hold %s\n", mask);
                 }
             }
-#endif            
-            
+#endif
+
             break;
         }
-            
+
         default:
             n_assert(0);
     }
-    
+
     va_end(ap);
     return rc;
 }
 
-struct pkgdb *poldek_ts_dbopen(struct poldek_ts *ts, mode_t mode) 
+struct pkgdb *poldek_ts_dbopen(struct poldek_ts *ts, mode_t mode)
 {
     if (mode == 0)
         mode = O_RDONLY;
-    
+
     return pkgdb_open(ts->pmctx, ts->rootdir, NULL, mode,
                       ts->pm_pdirsrc ? "source" : NULL,
                       ts->pm_pdirsrc ? ts->pm_pdirsrc : NULL, NULL);
@@ -572,10 +572,10 @@ int poldek_ts_add_pkg(struct poldek_ts *ts, struct pkg *pkg)
 int poldek_ts_add_pkgs(struct poldek_ts *ts, tn_array *pkgs)
 {
     int i;
-    
+
     for (i=0; i < n_array_size(pkgs); i++)
         arg_packages_add_pkg(ts->aps, n_array_nth(pkgs, i));
-    
+
     return i;
 }
 
@@ -607,7 +607,7 @@ tn_array* poldek_ts_get_args_asmasks(struct poldek_ts *ts, int hashed)
     return arg_packages_get_masks(ts->aps, hashed);
 }
 
-int poldek_ts_get_arg_count(struct poldek_ts *ts) 
+int poldek_ts_get_arg_count(struct poldek_ts *ts)
 {
     return arg_packages_size(ts->aps);
 }
@@ -616,11 +616,11 @@ int poldek_ts_get_arg_count(struct poldek_ts *ts)
 #define TS_MARK_VERBOSE     (1 << 1)
 #define TS_MARK_CAPSINLINE  (1 << 2)
 static
-int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags) 
+int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags)
 {
     int rc = 0;
     unsigned apsflags = 0;
-    
+
     arg_packages_setup(ts->aps, ts->pmctx);
     if (arg_packages_size(ts->aps) == 0) {
         logn(LOGERR, _("Nothing to do"));
@@ -632,7 +632,7 @@ int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags)
 
     if (flags & TS_MARK_CAPSINLINE)
         apsflags |= ARG_PACKAGES_RESOLV_CAPSINLINE;
-    
+
     if (arg_packages_resolve(ts->aps, ts->ctx->ps->pkgs,
                              ts->ctx->ps, apsflags)) {
         tn_array *pkgs;
@@ -646,7 +646,7 @@ int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags)
                 msgn(1, _("mark %s"), pkg_id(pkg));
             }
         }
-        
+
         if (flags & TS_MARK_DEPS)
             msgn(1, _("Processing dependencies..."));
 
@@ -657,7 +657,7 @@ int ts_mark_arg_packages(struct poldek_ts *ts, unsigned flags)
         }
         n_array_free(pkgs);
     }
-    
+
     return rc;
 }
 
@@ -684,7 +684,7 @@ int poldek_ts_set_type(struct poldek_ts *ts, uint32_t type, const char *typenam)
 {
     if (ts->type)
         return 0;
-    
+
     switch (type) {
         case POLDEK_TS_INSTALL:
         case POLDEK_TS_VERIFY:
@@ -699,12 +699,12 @@ int poldek_ts_set_type(struct poldek_ts *ts, uint32_t type, const char *typenam)
             }
             ts->type = type;
             break;
-            
+
         default:
             n_die("%d: unknown ts type", type);
             n_assert(0);
     }
-    
+
     ts->type = type;
     if (typenam)
         ts->typenam = n_strdup(typenam);
@@ -716,7 +716,7 @@ int poldek_ts_get_type(struct poldek_ts *ts)
     return ts->type;
 }
 
-static int ts_prerun0(struct poldek_ts *ts) 
+static int ts_prerun0(struct poldek_ts *ts)
 {
     n_assert(ts->ctx);
     n_assert(poldek__is_setup_done(ts->ctx));
@@ -733,7 +733,7 @@ static int ts_prerun0(struct poldek_ts *ts)
     return 1;
 }
 
-static int ts_prerun(struct poldek_ts *ts) 
+static int ts_prerun(struct poldek_ts *ts)
 {
     int rc = 1;
 
@@ -753,7 +753,7 @@ static int ts_prerun(struct poldek_ts *ts)
 #if 0
     {
         int i;
-        
+
         for (i=0; i < n_array_size(ts->hold_patterns); i++) {
             char *mask = n_array_nth(ts->hold_patterns, i);
             DBGF("hold %s\n", mask);
@@ -763,18 +763,18 @@ static int ts_prerun(struct poldek_ts *ts)
 
     if (ts->rootdir == NULL)
         ts->rootdir = n_strdup("/");
-    
+
     if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
         //if (poldek_VERBOSE < 1)
         //    poldek_set_verbose(poldek_VERBOSE + 1);
-        
+
     } else if (ts->getop_v(ts, POLDEK_OP_JUSTFETCH, POLDEK_OP_JUSTPRINT, 0)) {
         if (!poldek_util_is_rwxdir(ts->rootdir)) {
             logn(LOGERR, "%s: %m", ts->rootdir);
             rc = 0;
         }
     }
-    
+
     if (rc)
         rc = arg_packages_setup(ts->aps, ts->pmctx);
 
@@ -785,7 +785,7 @@ tn_array *poldek__ts_install_ordered_packages(const struct poldek_ts *ts)
 {
     tn_array *pkgs = n_array_new(512, (tn_fn_free)pkg_free, NULL);
     int i;
-    
+
     for (i=0; i < n_array_size(ts->ctx->ps->ordered_pkgs); i++) {
         struct pkg *pkg = n_array_nth(ts->ctx->ps->ordered_pkgs, i);
 
@@ -810,27 +810,27 @@ void poldek__ts_update_summary(struct poldek_ts *ts,
 
     if (pms == NULL)
         n_assert(pmsflags == 0);
-    
+
     if ((supkgs = n_hash_get(ts->ts_summary, prefix)) == NULL)
         supkgs = pkgs_array_new(n_array_size(pkgs));
-    
+
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
-        
+
         if (pmsflags && pms && !pkgmark_isset(pms, pkg, pmsflags))
             continue;
-        
+
         n_array_push(supkgs, pkg_link(pkg));
     }
-    
+
     if (n_array_size(supkgs) == 0) {
         n_array_free(supkgs);
-        
+
     } else {
         n_hash_insert(ts->ts_summary, prefix, supkgs);
         n_array_sort(supkgs);
     }
-    
+
 }
 
 void poldek__ts_display_summary(struct poldek_ts *ts)
@@ -840,7 +840,7 @@ void poldek__ts_display_summary(struct poldek_ts *ts)
     tn_array *ipkgs, *idepkgs, *rmpkgs, *pkgs;
     char ms[1024], *to, *prefix;
     int i, n;
-    
+
     ipkgs = n_hash_get(ts->ts_summary, "I");
     idepkgs = n_hash_get(ts->ts_summary, "D");
     rmpkgs = n_hash_get(ts->ts_summary, "R");
@@ -881,16 +881,16 @@ void poldek__ts_display_summary(struct poldek_ts *ts)
     }
     n_assert(pkgs);
     n_assert(npkgs);
-    
+
 #ifndef ENABLE_NLS
     n = n_snprintf(ms, sizeof(ms),
                    "There are %d package%s %s", npkgs, npkgs > 1 ? "s":"", to);
-    if (ndep) 
+    if (ndep)
         n += n_snprintf(&ms[n], sizeof(ms) - n,
                         " (%d marked by dependencies)", ndep);
 
 #else
-    n = n_snprintf(ms, sizeof(ms), 
+    n = n_snprintf(ms, sizeof(ms),
                    ngettext("There are %d package %s",
                             "There are %d packages %s", npkgs), npkgs, to);
 
@@ -909,7 +909,7 @@ void poldek__ts_display_summary(struct poldek_ts *ts)
 
     if (npkgs)
         packages_display_summary(1, prefix, pkgs, parseable);
-    
+
     if (idepkgs && ndep)
         packages_display_summary(1, "D", idepkgs, parseable);
 
@@ -948,12 +948,12 @@ static int ts_run_install_dist(struct poldek_ts *ts)
     return do_poldek_ts_install_dist(ts);
 }
 
-static int ts_run_upgrade_dist(struct poldek_ts *ts) 
+static int ts_run_upgrade_dist(struct poldek_ts *ts)
 {
     int rc;
 
     n_assert(poldek_ts_issetf(ts, POLDEK_TS_UPGRADEDIST));
-    
+
     ts->db = poldek_ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)
         return 0;
@@ -969,16 +969,16 @@ static int ts_run_upgrade_dist(struct poldek_ts *ts)
 
 extern int i3_do_poldek_ts_install(struct poldek_ts *ts);
 
-static int ts_run_install(struct poldek_ts *ts) 
+static int ts_run_install(struct poldek_ts *ts)
 {
     int rc = 0;
-    
+
     DBGF("%d %s\n", ts->type, ts->typenam);
     n_assert(ts->type = POLDEK_TS_INSTALL);
 
     if (poldek_ts_issetf_all(ts, POLDEK_TS_UPGRADEDIST))
         return ts_run_upgrade_dist(ts);
-    
+
     if (poldek_ts_issetf_all(ts, POLDEK_TS_INSTALLDIST))
         return ts_run_install_dist(ts);
 
@@ -987,12 +987,12 @@ static int ts_run_install(struct poldek_ts *ts)
         DBGF("ts_mark_arg_packages failed\n");
         return 0;
     }
-    
+
 
     ts->db = poldek_ts_dbopen(ts, O_RDONLY);
     if (ts->db == NULL)
         return 0;
-    
+
     pkgdb_tx_begin(ts->db, ts);
     DBGF("0 arg_packages_size=%d\n", arg_packages_size(ts->aps));
 
@@ -1005,7 +1005,7 @@ static int ts_run_install(struct poldek_ts *ts)
     return rc;
 }
 
-static int ts_run_uninstall(struct poldek_ts *ts) 
+static int ts_run_uninstall(struct poldek_ts *ts)
 {
     int rc;
 
@@ -1015,12 +1015,12 @@ static int ts_run_uninstall(struct poldek_ts *ts)
     if (ts->db == NULL)
         return 0;
     pkgdb_tx_commit(ts->db);
-    
+
     rc = do_poldek_ts_uninstall(ts);
-    
+
     if (rc && !ts->getop(ts, POLDEK_OP_TEST))
         pkgdb_tx_commit(ts->db);
-    
+
     MEMINF("before dbfree");
     pkgdb_free(ts->db);
     ts->db = NULL;
@@ -1029,7 +1029,7 @@ static int ts_run_uninstall(struct poldek_ts *ts)
     return rc;
 }
 
-static int ts_run_verify(struct poldek_ts *ts) 
+static int ts_run_verify(struct poldek_ts *ts)
 {
     tn_array *pkgs = NULL, *pkgs_unordered = NULL;
     int nerr = 0, rc = 1;
@@ -1039,23 +1039,24 @@ static int ts_run_verify(struct poldek_ts *ts)
 
     if (poldek_ts_get_arg_count(ts) == 0) {
         poldek_load_sources(ts->ctx);
-        
+
     } else {
         if (!ts_prerun(ts))
             return 0;
-    
+
         if (!poldek_load_sources(ts->ctx))
             return 0;
-        
+
         rc = ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_VERBOSE |
                                   TS_MARK_CAPSINLINE);
+        (void)rc;               /* XXX unused for now */
     }
 
     if (poldek_ts_get_arg_count(ts) > 0) {
         pkgs = pkgmark_get_packages(ts->pms, PKGMARK_MARK | PKGMARK_DEP);
         if (pkgs)
             pkgs_unordered = n_ref(pkgs);
-        
+
     } else {
         pkgs = n_ref(ts->ctx->ps->ordered_pkgs);
         if (pkgs)
@@ -1091,11 +1092,11 @@ static int ts_run_verify(struct poldek_ts *ts)
             struct pkg *pkg = n_array_nth(pkgs, i);
             if (pkg->cnflpkgs == NULL)
                 continue;
-                
-            msg(0, "%s -> ", pkg_id(pkg)); 
+
+            msg(0, "%s -> ", pkg_id(pkg));
             for (j=0; j < n_array_size(pkg->cnflpkgs); j++) {
                 struct reqpkg *cpkg = n_array_nth(pkg->cnflpkgs, j);
-                msg(0, "_%s%s, ", cpkg->flags & REQPKG_OBSOLETE ? "*":"", 
+                msg(0, "_%s%s, ", cpkg->flags & REQPKG_OBSOLETE ? "*":"",
                     pkg_id(cpkg->pkg));
             }
             msg(0, "_\n");
@@ -1130,7 +1131,7 @@ int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
     poldek_ts_setf(ts, flags);
     n_assert(ts->type);
 
-    
+
     DBGF("%d(%s)\n", ts->type, ts->typenam);
     while (ts_run_tbl[i].type) {
         if (ts_run_tbl[i].type == ts->type) {
@@ -1150,7 +1151,6 @@ int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
     if ((ts_run->flags & TS_RUN_NOPRERUN) == 0)
         if (!ts_prerun(ts))
             return 0;
-        
+
     return ts_run->run(ts);
 }
-

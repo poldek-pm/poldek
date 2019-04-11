@@ -57,7 +57,7 @@ EXPORT unsigned pkg_get_verify_signflags(struct pkg *pkg);
 
 
 
-EXPORT int poldek_util_parse_evr(char *evrstr, uint32_t *epoch,
+EXPORT int poldek_util_parse_evr(char *evrstr, int32_t *epoch,
                           const char **ver, const char **rel);
 EXPORT int poldek_util_parse_nevr(char *nevrstr, const char **name,
                            int32_t *epoch, const char **ver, const char **rel);
@@ -91,7 +91,7 @@ EXPORT tn_array *pkgmark_get_packages(struct pkgmark_set *pmark, uint32_t flag);
 
 #define pkg_is_dep_marked(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_DEP)
 #define pkg_is_hand_marked(pms, pkg)  pkgmark_isset(pms, pkg, PKGMARK_MARK)
-#define pkg_is_marked(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_MARK|PKGMARK_DEP) 
+#define pkg_is_marked(pms, pkg) pkgmark_isset(pms, pkg, PKGMARK_MARK|PKGMARK_DEP)
 #define pkg_isnot_marked(pms, pkg) (!pkgmark_isset(pms, pkg, PKGMARK_MARK|PKGMARK_DEP))
 
 
@@ -140,4 +140,3 @@ EXPORT int packages_verify_dependecies(tn_array *pkgs, struct pkgset *ps);
 EXPORT int packages_generate_depgraph(tn_array *pkgs, struct pkgset *ps,
                                const char *graphspec);
 #endif
-

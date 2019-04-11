@@ -60,18 +60,18 @@ static const char *metadata_repodir = "repodata";
 static const char *metadata_indexfile = "repomd.xml";
 
 struct pkgdir_module pkgdir_module_metadata = {
-    NULL, 
+    NULL,
     PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE | PKGDIR_CAP_NOSAVAFTUP,
     "metadata", NULL,
     "XML Package Metadata format",
-    NULL, 
+    NULL,
     NULL,      /* metadata location is predefined as repodata/repomd.xml */
     do_open,
     do_load,
     NULL,
-    do_update, 
+    do_update,
     do_update_a,
-    NULL, 
+    NULL,
     do_free,
     NULL,
     NULL
@@ -85,20 +85,20 @@ struct idx {
 static int prepare_path(char *buf, int size, const char *path, ...)
 {
     int n;
-    
+
     n = vf_cleanpath(buf, size, path);
     n_assert(n >= 0);
-    
+
     if (n) {
         va_list args;
         char *s;
-        
+
         va_start(args, path);
         while ((s = va_arg(args, char*)))
             n += n_snprintf(&buf[n], size - n, "/%s", s);
         va_end(args);
     }
-    
+
     return n;
 }
 
@@ -117,14 +117,14 @@ int open_repomd(struct idx *idx, const char *path, int vfmode,
     idx->repomd_vf = vfile_open_ul(apath, VFT_IO, vfmode, pdir_name);
     if (idx->repomd_vf == NULL)
         return 0;
-    
+
     idx->repomd = metadata_load_repomd(vfile_localpath(idx->repomd_vf));
     if (idx->repomd == NULL) {
         vfile_close(idx->repomd_vf);
         idx->repomd_vf = NULL;
         return 0;
     }
-    
+
     return 1;
 }
 
@@ -134,7 +134,7 @@ int verify_digest(struct repomd_ent *ent, const char *path)
     char digest[256];
     FILE *stream;
     int type, len;
-    
+
 
     if (n_str_eq(ent->checksum_type, "sha"))
         type = DIGEST_SHA1;
@@ -147,7 +147,7 @@ int verify_digest(struct repomd_ent *ent, const char *path)
              ent->checksum_type);
         return 0;
     }
-                         
+
     if ((stream = fopen(path, "r")) == NULL) {
         logn(LOGERR, "%s: open %m\n", path);
         return 0;
@@ -156,10 +156,10 @@ int verify_digest(struct repomd_ent *ent, const char *path)
     len = sizeof(digest);
     mhexdigest(stream, digest, &len, type);
     n_assert(len >= 0);
-    
+
     if (len == 0)
         return 0;
-    
+
     n_assert(len > 0);
     n_assert(digest[len] == '\0');
     return n_str_eq(ent->checksum, digest);
@@ -185,7 +185,7 @@ struct vfile *open_metadata_file(tn_hash *repomd,
     }
     if (quiet)
         vfmode |= VFM_QUITERR;
-    
+
     if ((vf = vfile_open_ul(path, VFT_IO, vfmode, pdir_name)) == NULL)
         return NULL;
 
@@ -195,41 +195,41 @@ struct vfile *open_metadata_file(tn_hash *repomd,
         vfile_close(vf);
         vf = NULL;
     }
-    
+
     return vf;
 }
 
-    
+
 static
 int idx_open(struct idx *idx, struct pkgdir *pkgdir, int vfmode)
 {
     struct vfile *vf;
     const char *pdir_name = pkgdir->name;
-    
+
     if (!open_repomd(idx, pkgdir->path, vfmode, pdir_name))
         return 0;
-   
+
     vf = open_metadata_file(idx->repomd, pkgdir->path, "primary", vfmode,
                             pdir_name, 0);
-    
+
     if (vf) {
         vfile_close(vf); /* just download primary.xml */
-        
+
     } else {
         n_hash_free(idx->repomd);
         idx->repomd = NULL;
     }
-    
+
     return idx->repomd != NULL;
 }
 
 static
-void idx_close(struct idx *idx) 
+void idx_close(struct idx *idx)
 {
     if (idx->repomd)
         n_hash_free(idx->repomd);
     idx->repomd = NULL;
-    
+
     if (idx->repomd_vf)
         vfile_close(idx->repomd_vf);
     idx->repomd_vf = NULL;
@@ -243,12 +243,12 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     struct idx           idx;
     unsigned             vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
 
-    if ((flags & PKGDIR_OPEN_REFRESH) == 0) 
+    if ((flags & PKGDIR_OPEN_REFRESH) == 0)
         vfmode |= VFM_CACHE;
-    
+
     if (!idx_open(&idx, pkgdir, vfmode))
         return 0;
-    
+
     pkgdir->ts = poldek_util_mtime(vfile_localpath(idx.repomd_vf));
     pkgdir->mod_data = n_malloc(sizeof(idx));
     memcpy(pkgdir->mod_data, &idx, sizeof(idx));
@@ -257,7 +257,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
 }
 
 static
-void do_free(struct pkgdir *pkgdir) 
+void do_free(struct pkgdir *pkgdir)
 {
     if (pkgdir->mod_data) {
         struct idx *idx = pkgdir->mod_data;
@@ -268,14 +268,14 @@ void do_free(struct pkgdir *pkgdir)
 }
 
 #if 0                           /* XXX TODO */
-static 
+static
 struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
                              void *ptr, tn_array *langs)
 {
     unsigned        vfmode = VFM_RO | VFM_CACHE | VFM_NOEMPTY;
     struct pkguinf  *pkgu = NULL;
     char            path[PATH_MAX], *hdrpath;
-    
+
     langs = langs;               /* ignored, no support */
     if (!pkg->pkgdir)
         return NULL;
@@ -284,7 +284,7 @@ struct pkguinf *load_pkguinf(tn_alloc *na, const struct pkg *pkg,
 }
 
 static
-void pkg_data_free(tn_alloc *na, void *ptr) 
+void pkg_data_free(tn_alloc *na, void *ptr)
 {
     na->na_free(na, ptr);
 }
@@ -321,18 +321,18 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             pkg->pkgdir = pkgdir;
 #if 0 /* XXX TODO */
             pkg->pkgdir_data = pkgdir->na->na_malloc(pkgdir->na,
-                                                     strlen(en->nvr) + 1); 
+                                                     strlen(en->nvr) + 1);
             memcpy(pkg->pkgdir_data, en->nvr, strlen(en->nvr) + 1);
             pkg->pkgdir_data_free = pkg_data_free;
             pkg->load_pkguinf = load_pkguinf;
-#endif            
+#endif
             n_array_push(pkgdir->pkgs, pkg);
         }
         n_array_free(pkgs);
     }
 
     metadata_loadmod_destroy();
-    
+
     return n_array_size(pkgdir->pkgs);
 }
 
@@ -354,30 +354,30 @@ int metadata_update(const struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
     /* if (!force) - force not implemented yet */
     vfmode |= VFM_CACHE_NODEL;
-    
+
     if (!open_repomd(&idx, pkgdir->path, vfmode, pkgdir->name)) {
         *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
         return 0;
     }
-    
+
     *uprc = PKGDIR_UPRC_UPTODATE;
-    
+
     if ((idx.repomd_vf->vf_flags & VF_FETCHED)) {
         struct pkgdir *tmp;
         *uprc = PKGDIR_UPRC_UPDATED;
-    
+
         if ((tmp = pkgdir_srcopen(pkgdir->src, PKGDIR_OPEN_REFRESH)))
             pkgdir_free(tmp);
         else
             *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
     }
-    
+
     return 1;
 }
 
 
-static 
-int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc) 
+static
+int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 {
     return metadata_update(pkgdir, uprc);
 }
@@ -392,7 +392,7 @@ int do_update_a(const struct source *src, const char *path,
 
     path = path;          /* unused */
     *uprc = PKGDIR_UPRC_NIL;
-    
+
     pkgdir = pkgdir_srcopen(src, 0);
 
     if (pkgdir == NULL) {
@@ -415,31 +415,31 @@ int do_update_a(const struct source *src, const char *path,
     vfmode = VFM_RO | VFM_NOEMPTY | VFM_NODEL;
     /* if (!force) - force not implemented yet */
     vfmode |= VFM_CACHE_NODEL;
-    
+
     if (!open_repomd(&idx, pkgdir->path, vfmode, pkgdir->name)) {
         *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
         return 0;
     }
-    
+
     *uprc = PKGDIR_UPRC_UPTODATE;
-    
+
     if ((idx.repomd_vf->vf_flags & VF_FETCHED)) {
         struct pkgdir *tmp;
         *uprc = PKGDIR_UPRC_UPDATED;
-    
+
         if ((tmp = pkgdir_srcopen(src, PKGDIR_OPEN_REFRESH)))
             pkgdir_free(tmp);
         else
             *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
     }
-    
+
     return 1;
 }
 
 
 /*
-static 
- int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc) 
+static
+ int do_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
  {
      int vfmode;
      DBGF("metadata_update\n");
@@ -449,8 +449,8 @@ static
 +    if (idx->_vf->vf_flags & VF_FETCHED)
 +        return 1;
 +
-+    
++
      return metadata_update(pkgdir->idxpath, vfmode, pkgdir->name, uprc);
  }
- 
+
 */

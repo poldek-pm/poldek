@@ -50,7 +50,7 @@ static void parse(const char *evrstr, EVR_t evr)
 #endif
 
 #ifdef HAVE_RPMORG
-int main(int argc, char *argv[])
+int main(void)
 {
     printf("not implemented");
     exit(EXIT_SUCCESS);

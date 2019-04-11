@@ -600,13 +600,13 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
 
     if (type && n_str_eq(type, source_TYPE_GROUP)) {
         char tmp[PATH_MAX], *p;
-        int i, n = 0;
+        int i, nt = 0;
 
         tn_array *arr = poldek_conf_get_multi(htcnf, "sources");
         n_array_sort(arr);
         for (i=0; i<n_array_size(arr); i++)
-            n += n_snprintf(&tmp[n], sizeof(tmp) - n, "%s%s", n_array_nth(arr, i),
-                            i < n_array_size(arr) - 1 ? ", " : "");
+            nt += n_snprintf(&tmp[nt], sizeof(tmp) - nt, "%s%s", n_array_nth(arr, i),
+                             i < n_array_size(arr) - 1 ? ", " : "");
         n_array_free(arr);
         n_strdupap((char*)tmp, &p);
         vs = p;
@@ -715,7 +715,7 @@ int source_update(struct source *src, unsigned flags)
     if (src->type == NULL)
         source_set_type(src, poldek_conf_PKGDIR_DEFAULT_TYPE);
 
-	pcaps = pkgdir_type_info(src->type);
+    pcaps = pkgdir_type_info(src->type);
 
     if ((pcaps & (PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE)) == 0) {
         logn(LOGWARN, _("%s: this type (%s) of source is not updateable"),

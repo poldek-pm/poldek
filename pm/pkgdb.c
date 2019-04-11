@@ -39,11 +39,11 @@ struct pkgdb *pkgdb_malloc(struct pm_ctx *ctx, const char *rootdir,
                            const char *path, const char *key, va_list ap)
 {
     struct pkgdb *db;
-    
+
     db = n_calloc(sizeof(*db), 1);
     if (path)
         db->path = n_strdup(path);
-    
+
     if (rootdir)
         db->rootdir = n_strdup(rootdir);
 
@@ -51,7 +51,7 @@ struct pkgdb *pkgdb_malloc(struct pm_ctx *ctx, const char *rootdir,
     while (key != NULL) {
         void *val = va_arg(ap, void*);
         DBGF("%s %p\n", key, val);
-        
+
         if (val)
             n_hash_insert(db->kw, key, val); /* pm module should free() val */
         key = va_arg(ap, const char*);
@@ -76,9 +76,12 @@ struct pkgdb *pkgdb_open(struct pm_ctx *ctx, const char *rootdir,
     db = pkgdb_malloc(ctx, rootdir, path, key, ap);
     va_end(ap);
 
-    if (pkgdb_reopen(db, mode))
+    if (pkgdb_reopen(db, mode)) {
         return db;
+    }
+
     pkgdb_free(db);
+
     return NULL;
 }
 
@@ -93,10 +96,13 @@ int pkgdb_reopen(struct pkgdb *db, mode_t mode)
     n_assert(db->_ctx->mod->dbopen);
     db->dbh = db->_ctx->mod->dbopen(db->_ctx->modh, db->dbh, db->rootdir,
                                     db->path, mode, db->kw);
+
     if (db->dbh == NULL)
         return 0;
+
     db->_opened = 1;
     db->mode = mode;
+
     return 1;
 }
 
@@ -111,7 +117,7 @@ pkgdb_filter_fn pkgdb_set_filter(struct pkgdb *db,
 }
 
 
-void pkgdb_close(struct pkgdb *db) 
+void pkgdb_close(struct pkgdb *db)
 {
     if (db->_opened) {
         n_assert(db->_ctx->mod->dbclose);
@@ -120,7 +126,7 @@ void pkgdb_close(struct pkgdb *db)
     }
 }
 
-void pkgdb_free(struct pkgdb *db) 
+void pkgdb_free(struct pkgdb *db)
 {
     pkgdb_close(db);
 
@@ -145,7 +151,7 @@ int pkgdb_tx_begin(struct pkgdb *db, struct poldek_ts *ts)
 {
     if (db->_txcnt == 0 && db->_ctx->mod->dbtxbegin)
         db->_ctx->mod->dbtxbegin(db->dbh, ts);
-    
+
     db->_txcnt++;
     return db->_txcnt;
 }
@@ -154,7 +160,7 @@ int pkgdb_tx_commit(struct pkgdb *db)
 {
     if (db->_txcnt > 0)
         db->_txcnt--;
-    
+
     if (db->_txcnt == 0 && db->_ctx->mod->dbtxcommit)
         db->_ctx->mod->dbtxcommit(db->dbh);
     return db->_txcnt;
@@ -162,10 +168,10 @@ int pkgdb_tx_commit(struct pkgdb *db)
 
 
 int pkgdb_it_init(struct pkgdb *db, struct pkgdb_it *it,
-                  int tag, const char *arg) 
+                  int tag, const char *arg)
 {
     memset(it, 0, sizeof(*it));
-    
+
     it->_db = db;
     if (db->_filter)
         pkgdb_it_set_filter(it, db->_filter, db->_filter_arg);
@@ -200,14 +206,14 @@ const struct pm_dbrec *pkgdb_it_get(struct pkgdb_it *it)
             dbrec->_ctx = it->_db->_ctx;
             if (it->_filter(it->_db, dbrec, it->_filter_arg))
                 break;
-            
+
             dbrec = (struct pm_dbrec *)it->_get(it);
         }
     }
-    
+
     if (dbrec)
         dbrec->_ctx = it->_db->_ctx;
-    
+
     return dbrec;
 }
 
@@ -216,8 +222,10 @@ int pkgdb_it_get_count(struct pkgdb_it *it)
     return it->_get_count(it);
 }
 
-int pm_dbrec_nevr(const struct pm_dbrec *dbrec, char **name, int32_t *epoch,
-                  char **ver, char **rel, char **arch, int *color)
+int pm_dbrec_nevr(const struct pm_dbrec *dbrec,
+                  const char **name, int32_t *epoch,
+                  const char **ver, const char **rel,
+                  const char **arch, uint32_t *color)
 {
     n_assert(dbrec->_ctx->mod->hdr_nevr);
     return dbrec->_ctx->mod->hdr_nevr(dbrec->hdr, name, epoch, ver, rel,
@@ -226,17 +234,18 @@ int pm_dbrec_nevr(const struct pm_dbrec *dbrec, char **name, int32_t *epoch,
 
 
 /* NOTICE: function doing pkg cmp hdr */
-static 
+static
 int pkg_hdr_cmp_evr(struct pm_ctx *ctx, void *hdr, const struct pkg *pkg,
                     int *cmprc)
 {
     struct pkg tmpkg;
-    char *arch;
-    
-    if (!ctx->mod->hdr_nevr(hdr, &tmpkg.name, &tmpkg.epoch,
-                            &tmpkg.ver, &tmpkg.rel, &arch, NULL))
+    const char *arch;
+
+    if (!ctx->mod->hdr_nevr(hdr, (const char **)&tmpkg.name, &tmpkg.epoch,
+                            (const char **)&tmpkg.ver, (const char **)&tmpkg.rel,
+                            &arch, NULL))
         return 0;
-    
+
     *cmprc = pkg_cmp_evr(pkg, &tmpkg);
     return 1;
 }
@@ -250,9 +259,9 @@ int do_search_package(struct pkgdb *db, const struct pkg *pkg, int *cmprcptr,
 
     pkgdb_it_init(db, &it, PMTAG_NAME, pkg->name);
     while ((dbrec = pkgdb_it_get(&it)) != NULL) {
-        if (!pkg_hdr_cmp_evr(db->_ctx, dbrec->hdr, pkg, &cmprc)) 
+        if (!pkg_hdr_cmp_evr(db->_ctx, dbrec->hdr, pkg, &cmprc))
             continue; /* fail */
-        
+
         if (cmprc == 0) {
             n++;
             if (todbrec) {
@@ -280,21 +289,21 @@ int pkgdb_get_package_hdr(struct pkgdb *db, const struct pkg *pkg,
 {
     n_assert(dbrec);
     dbrec->hdr = NULL;
-    
+
     if (!do_search_package(db, pkg, NULL, dbrec))
         return 0;
-    
+
     n_assert(dbrec->hdr);
     return 1;
 }
 
 
 static struct pkg *load_pkg(tn_alloc *na, struct pkgdb *db,
-                            const struct pm_dbrec *dbrec, unsigned ldflags) 
+                            const struct pm_dbrec *dbrec, unsigned ldflags)
 {
     struct pkg *pkg;
     int ownedna = 0;
-    
+
     if (na == NULL) {
         na = n_alloc_new(2, TN_ALLOC_OBSTACK);
         ownedna = 1;
@@ -313,7 +322,7 @@ static struct pkg *load_pkg(tn_alloc *na, struct pkgdb *db,
 }
 
 int pkgdb_install(struct pkgdb *db, const char *path,
-                  const struct poldek_ts *ts) 
+                  const struct poldek_ts *ts)
 {
     n_assert(db->dbh);
     if (db->_ctx->mod->dbinstall)
@@ -343,7 +352,7 @@ int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
     pkgdb_it_init(db, &it, tag, value);
     while ((dbrec = pkgdb_it_get(&it))) {
         struct pkg *pkg;
-        
+
         if (exclude && dbpkg_array_has(exclude, dbrec->recno))
             continue;
 
@@ -351,12 +360,12 @@ int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
             nfound++;
             continue;
         }
-        
+
         if (*dbpkgs == NULL) {
             *dbpkgs = pkgs_array_new_ex(16, pkg_cmp_recno);
             dbpkgs_was_null = 1;
         }
-        
+
         if (!dbpkgs_was_null && dbpkg_array_has(*dbpkgs, dbrec->recno))
             continue;
 
@@ -365,7 +374,7 @@ int pkgdb_search(struct pkgdb *db, tn_array **dbpkgs,
             n_array_push(*dbpkgs, pkg);
         }
     }
-    
+
     pkgdb_it_destroy(&it);
     return nfound;
 }
@@ -376,15 +385,17 @@ static int header_evr_match_req(struct pm_ctx *ctx, void *hdr,
 {
     struct pkg pkg;
 
-    if (!ctx->mod->hdr_nevr(hdr, &pkg.name, &pkg.epoch, &pkg.ver, &pkg.rel,
-                            NULL, NULL))
+    if (!ctx->mod->hdr_nevr(hdr, (const char**)&pkg.name, &pkg.epoch,
+                            (const char **)&pkg.ver, (const char **)&pkg.rel,
+                            NULL, NULL)) {
         return -1;
+    }
 
-    DBGF("%s match %s?\n", pkg_evr_snprintf_s(&pkg), 
+    DBGF("%s match %s?\n", pkg_evr_snprintf_s(&pkg),
          capreq_snprintf_s0(req));
-    
+
     if (pkg_evr_match_req(&pkg, req, POLDEK_MA_PROMOTE_VERSION)) {
-        DBGF("%s match %s!\n", pkg_evr_snprintf_s(&pkg), 
+        DBGF("%s match %s!\n", pkg_evr_snprintf_s(&pkg),
              capreq_snprintf_s0(req));
         return 1;
     }
@@ -403,7 +414,7 @@ static int header_cap_match_req(struct pm_ctx *ctx, void *hdr,
     pkg.caps = capreq_arr_new(0);
     if (!ctx->mod->hdr_ld_capreqs(pkg.caps, hdr, PMCAP_CAP))
         return -1;
-    
+
     if (n_array_size(pkg.caps) > 0) {
         n_array_sort(pkg.caps);
         rc = pkg_caps_match_req(&pkg, req, ma_flags);
@@ -420,9 +431,9 @@ static int db_match(struct pkgdb *db, enum pkgdb_it_tag tag,
     struct pkgdb_it        it;
     const struct pm_dbrec  *dbrec;
     int                    match = 0, is_file;
-    
+
     is_file = (*capreq_name(cap) == '/' ? 1 : 0);
-    
+
     pkgdb_it_init(db, &it, tag, capreq_name(cap));
     while ((dbrec = pkgdb_it_get(&it))) {
         if (exclude && dbpkg_array_has(exclude, dbrec->recno))
@@ -433,29 +444,29 @@ static int db_match(struct pkgdb *db, enum pkgdb_it_tag tag,
             break;
         }
     }
-    
+
     pkgdb_it_destroy(&it);
     return match;
 }
 
 
 int pkgdb_match_req(struct pkgdb *db, const struct capreq *req, unsigned ma_flags,
-                    const tn_array *exclude) 
+                    const tn_array *exclude)
 {
     int is_file;
 
     is_file = (*capreq_name(req) == '/' ? 1 : 0);
     //tracef(0, "%s %d", capreq_snprintf_s(req), n_array_size(exclude));
-    
+
     if (!is_file && db_match(db, PMTAG_NAME, req, exclude, ma_flags))
         return 1;
-    
+
     if (db_match(db, PMTAG_CAP, req, exclude, ma_flags))
         return 1;
 
     if (is_file && db_match(db, PMTAG_FILE, req, exclude, ma_flags))
         return 1;
-    
+
     return 0;
 }
 
@@ -467,11 +478,11 @@ static int get_obsoletedby_cap(struct pkgdb *db, int tag, tn_array *dbpkgs,
     struct pkgdb_it it;
     const struct pm_dbrec *dbrec;
     int n = 0;
-    
+
     pkgdb_it_init(db, &it, tag, capreq_name(cap));
     while ((dbrec = pkgdb_it_get(&it)) != NULL) {
         int add = 0;
-        
+
         if (exclude && dbpkg_array_has(exclude, dbrec->recno))
             continue;
 
@@ -491,7 +502,7 @@ static int get_obsoletedby_cap(struct pkgdb *db, int tag, tn_array *dbpkgs,
                 n_assert(0);
                 break;
         }
-        
+
         if (add) {
             struct pkg *pkg;
             if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
@@ -516,7 +527,7 @@ static int get_obsoletedby_pkg_nevr(struct pkgdb *db, tn_array *dbpkgs,
 
     if (rev)
         relflags = REL_EQ | REL_GT;
-    
+
     self_cap = capreq_new(NULL, pkg->name, pkg->epoch, pkg->ver, pkg->rel,
                           relflags, 0);
     n = get_obsoletedby_cap(db, PMTAG_NAME, dbpkgs, self_cap, exclude, ldflags);
@@ -531,13 +542,13 @@ int pkgdb_q_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
     int i, n;
 
     n_assert(flags & PKGDB_GETF_OBSOLETEDBY_NEVR);
-    
+
     n = get_obsoletedby_pkg_nevr(db, dbpkgs, pkg, exclude, ldflags,
                                  flags & PKGDB_GETF_OBSOLETEDBY_REV);
 
     if ((flags & PKGDB_GETF_OBSOLETEDBY_OBSL) == 0)
         return n;
-    
+
     if (pkg->cnfls == NULL)
         return n;
 
@@ -547,14 +558,14 @@ int pkgdb_q_obsoletedby_pkg(struct pkgdb *db, tn_array *dbpkgs,
 
         if (!capreq_is_obsl(cnfl))
             continue;
-        
+
 /* FIXME: is reverse match should be performed there too? */
         n += get_obsoletedby_cap(db, PMTAG_NAME, dbpkgs, cnfl, exclude, ldflags);
 #ifdef HAVE_RPM_4_1             /* TODO -- code this in pm's module */
         n += get_obsoletedby_cap(db, PMTAG_CAP, dbpkgs, cnfl, exclude, ldflags);
-#endif 
+#endif
     }
-    
+
     return n;
 }
 
@@ -590,59 +601,61 @@ static int q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
     int n = 0;
 
     tracef(0, "%s", value);
-    
+
+    (void)ma_flags;  /* unused */
+
     pkgdb_it_init(db, &it, tag, value);
     while ((dbrec = pkgdb_it_get(&it)) != NULL) {
         struct pkg *pkg;
-        
+
         if (exclude && dbpkg_array_has(exclude, dbrec->recno))
             continue;
-        
-#if ENABLE_TRACE        
+
+#if ENABLE_TRACE
         pkg = load_pkg(NULL, db, dbrec, ldflags);
         DBGF("%s <- %s ????\n", capreq_name(cap), pkg_snprintf_s(pkg));
-#endif        
+#endif
         if (dbpkg_array_has(dbpkgs, dbrec->recno))
             continue;
-        
+
         if ((pkg = load_pkg(NULL, db, dbrec, ldflags)) == NULL)
             continue;
-        
+
         DBGF("%s required by %s? => %s\n", capreq_name(cap), pkg_id(pkg),
              pkg_satisfies_req(pkg, cap, 1) ? "no" : "yes");
-            
+
         if (pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
             trace(2, "- required %s: self matched", pkg_id(pkg));
             pkg_free(pkg);
 
          /* XXX wrong assumption; disabled */
-        } else if (0 && capreq_versioned(cap) && /* old !strict */ 
+        } else if (0 && capreq_versioned(cap) && /* old !strict */
                    !pkg_requires_cap(pkg, cap)) {
             DBGF("skipped %s (%s is not really required)\n", pkg_id(pkg),
                  capreq_snprintf_s(cap));
             pkg_free(pkg);
-            
+
         } else {
             trace(2, "- required %s", pkg_id(pkg));
             DBGF("%s <- %s\n", capreq_snprintf_s(cap), pkg_id(pkg));
             n_array_push(dbpkgs, pkg);
             n_array_isort(dbpkgs);
-            n++; 
+            n++;
 #if ENABLE_TRACE
             {
                 int i;
                 DBGF("%s <- %s\n", capreq_name(cap), pkg_snprintf_s(pkg));
                 if (pkg->caps)
-                    for (i=0; i<n_array_size(pkg->caps); i++) 
+                    for (i=0; i<n_array_size(pkg->caps); i++)
                         DBGF("- %s\n",
                              capreq_snprintf_s0(n_array_nth(pkg->caps, i)));
-                
-                
+
+
             }
-#endif                
+#endif
         }
     }
-    
+
     pkgdb_it_destroy(&it);
     return n;
 }
@@ -652,12 +665,12 @@ int pkgdb_q_what_requires(struct pkgdb *db, tn_array *dbpkgs,
                           const tn_array *exclude, unsigned ldflags,
                           unsigned ma_flags)
 {   int n;
-    
+
     n = q_what_requires(db, dbpkgs, PMTAG_REQ, cap, exclude, ldflags, ma_flags);
     if (n == 0 && capreq_isdir(cap))
         n = q_what_requires(db, dbpkgs, PMTAG_DIRNAME, cap, exclude,
                             ldflags, ma_flags);
-    
+
     return n;
 }
 
@@ -675,15 +688,15 @@ static int q_is_required(struct pkgdb *db, int tag, const struct capreq *cap,
     pkgdb_it_init(db, &it, tag, capreq_name(cap));
     while ((dbrec = pkgdb_it_get(&it)) != NULL) {
         struct pkg *pkg;
-        
+
         if (exclude && dbpkg_array_has(exclude, dbrec->recno))
             continue;
         DBGF("%s yes\n", capreq_snprintf_s(cap));
-        
+
         if ((pkg = load_pkg(NULL, db, dbrec, ldflags))) {
             if (0 && pkg_satisfies_req(pkg, cap, 1)) { /* self matched? */
                 pkg_free(pkg);
-                
+
             } else {
                 n++;
                 break;

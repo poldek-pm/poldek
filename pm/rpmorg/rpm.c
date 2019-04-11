@@ -307,8 +307,6 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
     if (!dbpath)
         dbpath = pm_rpm_dbpath(pm_rpm, tmpdbpath, sizeof(tmpdbpath));
 
-    printf("dbpath %s\n",  dbpath);
-
     if (!dbpath)
         return NULL;
 
@@ -322,7 +320,7 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
 
     lc_lang = lc_messages_lang();
     dir = pkgdir_open_ext(rpmdb_path, NULL, "rpmdb", dbpath, NULL, 0, lc_lang);
-    printf("dbpath %s %p\n",  dbpath,  dir);
+
     if (dir != NULL) {
         struct pkgdir *prev_pkgdir = NULL;
         if (kw && (prev_pkgdir = n_hash_get(kw, "prev_pkgdir")))
@@ -382,7 +380,7 @@ void rpmlog(int prii, const char *fmt, ...)
     va_start(args, fmt);
 
 #if 0
-    printf("pri %d, verbose=%d, poldek_verbose=%d, pm_rpm_verbose=%d\n",
+    DBGF("pri %d, verbose=%d, poldek_verbose=%d, pm_rpm_verbose=%d\n",
            pri, verbose_level, poldek_VERBOSE, pm_rpm_verbose);
     vprintf(fmt, args);
 #endif
@@ -396,7 +394,6 @@ void rpmlog(int prii, const char *fmt, ...)
     else {                  /* basename(path) */
         char m[1024], *p, *q;
         int n;
-
 
         n = n_vsnprintf(m, sizeof(m), fmt, args);
 

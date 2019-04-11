@@ -95,11 +95,11 @@ tn_array *pkgdir_typelist(void)
 
         inf->aliases[0] = '\0';
         if (mod->aliases) {
-            int ii = 0, n = 0;
+            int ii = 0, nn = 0;
             while (mod->aliases[ii] != NULL) {
-                n += n_snprintf(&inf->aliases[n], sizeof(inf->aliases) - n, "%s%s",
-                                mod->aliases[ii],
-                                mod->aliases[ii + 1] ? ", ": "");
+                nn += n_snprintf(&inf->aliases[nn], sizeof(inf->aliases) - nn, "%s%s",
+                                 mod->aliases[ii],
+                                 mod->aliases[ii + 1] ? ", ": "");
                 ii++;
             }
         }

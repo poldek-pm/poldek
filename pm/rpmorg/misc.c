@@ -68,7 +68,7 @@ static int extract_rpmds(tn_array *caps, rpmds ds)
     return n_array_size(caps);
 }
 
-typedef int (*rpmcap_fn)(rpmds *ds, void *);
+typedef int (*rpmcap_fn)(rpmds *ds, const void *);
 
 static int get_rpm_internal_caps(tn_array *caps)
 {
@@ -108,12 +108,6 @@ static tn_array *load_internal_caps(void *pm_rpm)
     return caps;
 }
 
-static int rpmioaccess_satisfies(const struct capreq *req)
-{
-    int rc = 0;
-    return rc;
-}
-
 int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
 {
     struct pm_rpm *pm = pm_rpm;
@@ -122,9 +116,6 @@ int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
     /* internal caps have names like name(feature) */
     if (!capreq_is_rpmlib(req) && strstr(capreq_name(req), "(") == NULL)
         return 0;
-
-    //if (rpmioaccess_satisfies(req)) // n/a in rpmorg
-    //    return 1;
 
     if (pm->caps == NULL)
         if ((pm->caps = load_internal_caps(pm_rpm)) == NULL)
@@ -145,27 +136,6 @@ int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
     }
 
     return 0;
-}
-
-static
-void get_host_cpu_vendor_os(const char **cpu, const char **vendor, const char **os)
-{
-    static char *acpu = NULL, *avendor = NULL, *aos = NULL; /* XXX static variable */
-
-    if (acpu == NULL) {
-        acpu = rpmExpand("%{_host_cpu}", NULL);
-        avendor = rpmExpand("%{_host_vendor}", NULL);
-        aos = rpmExpand("%{_host_os}", NULL);
-    }
-
-    if (cpu)
-        *cpu = acpu;
-
-    if (vendor)
-        *vendor = avendor;
-
-    if (os)
-        *os = aos;
 }
 
 static int machine_score(int tag, const char *val)

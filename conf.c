@@ -986,7 +986,7 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
 {
     struct    afile *af;
     int       nline = 0, is_err = 0;
-    tn_hash   *ht, *ht_sect, *ht_global_sect;
+    tn_hash   *ht, *ht_sect; /*, *ht_global_sect;*/
     char      buf[PATH_MAX], *sectnam, *dn;
     int       validate = 1, update = 0;
     unsigned  addparam_flags = 0;
@@ -1009,7 +1009,7 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
 
     sectnam = (char*)global_tag;
     ht = new_htconf(global_tag, &ht_sect);
-    ht_global_sect = ht_sect;
+    //ht_global_sect = ht_sect; // unused
 
     // set __dirname macro
     n_snprintf(buf, sizeof(buf), "%s", path);
@@ -1060,9 +1060,9 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
                 continue;
 
             for (i=0; i < n_array_size(configs); i++) {
-                char *path = n_array_nth(configs, i);
+                char *cpath = n_array_nth(configs, i);
 
-                if (!do_ldconf(af_htconf, path, af->path, NULL, flags)) {
+                if (!do_ldconf(af_htconf, cpath, af->path, NULL, flags)) {
                     n_array_free(configs);
                     is_err = 1;
                     goto l_end;
@@ -1074,13 +1074,13 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
 
         /* %include <file> */
         if (strncmp(line, include_tag, strlen(include_tag)) == 0) {
-            char *section_to_load = NULL, ipath[PATH_MAX];
+            char *section = NULL, ipath[PATH_MAX];
 
             if (flags & POLDEK_LDCONF_NOINCLUDE)
                 continue;
 
             line = prepare_include_path(include_tag, ipath, sizeof(ipath),
-                                        line, &section_to_load, ht_sect, ht);
+                                        line, &section, ht_sect, ht);
 
             if (line == NULL) {
                 logn(LOGERR, _("%s:%d: wrong %%include"), af->path, nline);
@@ -1088,7 +1088,7 @@ static tn_hash *do_ldconf(tn_hash *af_htconf,
                 goto l_end;
             }
 
-            if (!do_ldconf(af_htconf, line, af->path, section_to_load, flags)) {
+            if (!do_ldconf(af_htconf, line, af->path, section, flags)) {
                 is_err = 1;
                 goto l_end;
             }
@@ -1263,7 +1263,7 @@ static int default_config_path(char *path, int size)
 tn_hash *poldek_conf_load(const char *path, unsigned flags)
 {
     tn_hash   *af_htconf, *htconf = NULL;
-    const char *section_to_load = NULL;
+    //const char *section_to_load = NULL;
     char confpath[PATH_MAX];
 
     if (path == NULL && (flags & POLDEK_LDCONF_FOREIGN) == 0) {
@@ -1282,7 +1282,7 @@ tn_hash *poldek_conf_load(const char *path, unsigned flags)
     n_assert(path);
 
     if (flags & POLDEK_LDCONF_GLOBALONLY) {
-        section_to_load = global_tag;
+        //section_to_load = global_tag;
         flags |= POLDEK_LDCONF_NOINCLUDE;
     }
 

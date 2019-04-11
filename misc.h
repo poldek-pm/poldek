@@ -32,7 +32,7 @@ int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size);
 #define DIGEST_SIZE_MD5  32
 #define DIGEST_SIZE_SHA1 40
 
-int mhexdigest(FILE *stream, unsigned char *mdhex, int *mdhex_size, int type);
+int mhexdigest(FILE *stream, char *mdhex, int *mdhex_size, int type);
 
 /*
   Returns $TMPDIR or "/tmp" if $TMPDIR isn't set.
@@ -50,7 +50,7 @@ int util__isdir(const char *path);
 int util__mksubdir(const char *path, const char *dn);
 int util__mkdir_p(const char *path, const char *dn);
 
-char *util__abs_path(const char *path);
+char *util__abs_path(/*const */char *path);
 
 void packages_display_summary(int verbose_l, const char *prefix, tn_array *pkgs,
                               int parseable);
@@ -70,5 +70,7 @@ const char *lc_messages_lang(void);
 
 void *timethis_begin(void);
 void timethis_end(int verbose_level, void *tvp, const char *prefix);
+
+char *strtime_(time_t t);
 
 #endif /* POLDEK_MISC_H */

@@ -52,7 +52,7 @@ EXPORT int pm_pmuninstall(struct pkgdb *db, const tn_array *pkgs, struct poldek_
 
 EXPORT int pm_verify_signature(struct pm_ctx *ctx, const char *path, unsigned flags);
 
-struct pm_dbrec *dbrec;
+struct pm_dbrec;
 typedef int (*pkgdb_filter_fn) (struct pkgdb *db,
                                 const struct pm_dbrec *dbrec, void *arg);
 
@@ -104,8 +104,10 @@ struct pm_dbrec {
     struct pm_ctx *_ctx;
 };
 
-EXPORT int pm_dbrec_nevr(const struct pm_dbrec *dbrec, char **name, int32_t *epoch,
-                  char **ver, char **rel, char **arch, int *color);
+EXPORT int pm_dbrec_nevr(const struct pm_dbrec *dbrec, const char **name,
+                         int32_t *epoch,
+                         const char **ver, const char **rel,
+                         const char **arch, uint32_t *color);
 
 
 EXPORT int pkgdb_is_pkg_installed(struct pkgdb *db, const struct pkg *pkg, int *cmprc);

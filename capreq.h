@@ -61,10 +61,12 @@ struct capreq {
 /* CAUTION: side effects! */
 #define capreq_name(cr)     (cr)->name
 
+#undef extern__inline
 #ifdef SWIG
 # define extern__inline
 #else
-# define extern__inline inline
+# define extern__inline
+//inline
 #endif
 
 EXPORT extern__inline int32_t capreq_epoch_(const struct capreq *cr);
@@ -75,7 +77,7 @@ EXPORT extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_ver(cr)  (&(cr)->_buff[(cr)->cr_ver_ofs])
 #define capreq_rel(cr)  (&(cr)->_buff[(cr)->cr_rel_ofs])
 
-#define capreq_has_epoch(cr)    (cr)->cr_ep_ofs   
+#define capreq_has_epoch(cr)    (cr)->cr_ep_ofs
 #define capreq_has_ver(cr)      (cr)->cr_ver_ofs
 #define capreq_has_rel(cr)      (cr)->cr_rel_ofs
 #define capreq_versioned(cr)    ((cr)->cr_relflags & (REL_ALL))

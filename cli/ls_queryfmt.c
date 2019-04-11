@@ -1015,10 +1015,11 @@ static void add_tagstr_to_nbuf(tn_buf *nbuf, const struct lsqf_ent *ent, struct 
  * tags_size - number of items in tags. It's mostly used by tag-arrays (for example REQUIRES)
  */
 static int ent_array_to_string(const struct lsqf_ent_array *array,
-				 struct lsqf_pkgdata *pkgdata,
-				 tn_buf *nbuf, int tags_size)
+                               struct lsqf_pkgdata *pkgdata,
+                               tn_buf *nbuf, int tags_size)
 {
-    int i, j, size = 0;
+    unsigned i, size = 0;
+    int j;
 
     for (j = 0; j < tags_size; j++) {
 	for (i = 0; i < array->items; i++) {

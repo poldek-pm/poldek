@@ -89,14 +89,14 @@ static int package_key(char *key, int size, const struct pkg *pkg, int prefix)
 
     key[0] = '_';
     key[1] = prefix;
-    
+
     /*
      * add buildtime to pkgkey - enforces dirindex update when package was rebuilt
      * without release change
      */
     n = pndir_make_pkgkey(&key[PREFIXLEN], size - PREFIXLEN, pkg) + PREFIXLEN;
     n += n_snprintf(&key[n], size - PREFIXLEN - n, ":%u", pkg->btime);
-    
+
     return n;
 }
 
@@ -106,7 +106,7 @@ static tn_buf *dirarray_join(tn_buf *nbuf, tn_array *arr, char *sep)
 
     for (i=0; i < size; i++) {
         const char *dirname = n_array_nth(arr, i);
-    
+
         n_buf_printf(nbuf, "%s%s%s", *dirname != '/' ? "/" : "",
     		     dirname, i < size - 1 ? sep : "");
     }
@@ -123,7 +123,7 @@ void store_package_no(uint32_t package_no, struct tndb *db, const struct pkg *pk
 
     klen = package_no_key(key, sizeof(key), package_no, 1);
     vlen = package_key(val, sizeof(val), pkg, PREFIX_PKGKEY_REQDIR);
-    
+
     tndb_put(db, key, klen, val + PREFIXLEN, vlen - PREFIXLEN); /* without prefix */
 }
 
@@ -135,15 +135,15 @@ void add_to_path_index(tn_hash *path_index, const char *path, uint32_t package_n
     int vlen, klen = 0;
     unsigned khash = 0;
     tn_array *keys;
-    
+
     if (strlen(path) > 255)
 	return;
-    
+
     if ((keys = n_hash_get_ex(path_index, path, &klen, &khash)) == NULL) {
         keys = n_array_new(16, free, (tn_fn_cmp)strcmp);
         n_hash_insert_ex(path_index, path, klen, khash, keys);
     }
-    
+
     vlen = package_no_key(val, sizeof(val), package_no, 0);
     //printf("add %s: %s\n", path, val);
     n_array_push(keys, n_strdupl(val, vlen));
@@ -166,7 +166,7 @@ static int store_from_previous(uint32_t package_no, struct pkg *pkg, struct tndb
         DBGF("HIT %s %s\n", pkg_id(pkg), key);
         found = 1;
     }
-  
+
     /* requires any directories? */
     if ((vlen = tndb_get_all(dirindex->db, key, klen, (void**)&val)) > 0) {
         tndb_put(db, key, klen, val, vlen);
@@ -175,7 +175,7 @@ static int store_from_previous(uint32_t package_no, struct pkg *pkg, struct tndb
 
     key[1] = PREFIX_PKGKEY_OWNDIR;
 
-    tl = tl_save = get_package_directories(dirindex->db, key, klen, &val, &vlen, 
+    tl = tl_save = get_package_directories(dirindex->db, key, klen, &val, &vlen,
                                            &ndirs);
 
     if (tl == NULL) /* without owned directories */
@@ -191,10 +191,10 @@ static int store_from_previous(uint32_t package_no, struct pkg *pkg, struct tndb
         add_to_path_index(path_index, dir, package_no);
         tl++;
     }
-    
+
     n_str_tokl_free(tl_save);
     n_free(val);
-    
+
     return found;
 }
 
@@ -211,7 +211,7 @@ void store_package(uint32_t package_no, struct pkg *pkg, struct tndb *db,
 
     if ((flist = pkg_get_flist(pkg)) == NULL)
         return;
-    
+
     if (pkgfl_owned_and_required_dirs(flist->fl, &owned, &required) == 0) {
         DBGF("%s: NULL\n", pkg_id(pkg));
         pkgflist_free(flist);
@@ -222,25 +222,25 @@ void store_package(uint32_t package_no, struct pkg *pkg, struct tndb *db,
 
     DBGF("%s: %d %d\n", pkg_id(pkg), owned ? n_array_size(owned): -1,
          required ? n_array_size(required): -1);
-    
+
     if (owned) {
-        unsigned int i;
-        
+        int i;
+
         for (i=0; i < n_array_size(owned); i++) {
             const char *dir = n_array_nth(owned, i);
             add_to_path_index(path_index, dir, package_no);
         }
     }
-    
+
     if (required || owned) { /* write { package_key => package.{r,o}dirs.join(':') } */
         char key[512];
         int klen;
-        
+
         klen = package_key(key, sizeof(key), pkg, PREFIX_PKGKEY_REQDIR);
 
         if (owned)
             n_assert(n_array_size(owned) > 0);
-        
+
         if (required)
             n_assert(n_array_size(required) > 0);
 
@@ -255,11 +255,11 @@ void store_package(uint32_t package_no, struct pkg *pkg, struct tndb *db,
             nbuf = dirarray_join(nbuf, owned, ":");
 
             /* ugly, but what for another package_key() call */
-            key[1] = PREFIX_PKGKEY_OWNDIR; 
+            key[1] = PREFIX_PKGKEY_OWNDIR;
             tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
         }
     }
-    
+
     n_array_cfree(&owned);
     n_array_cfree(&required);
     pkgflist_free(flist);
@@ -275,12 +275,12 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     tn_array      *directories;
     tn_alloc      *na;
     struct vflock *lock;
-    unsigned int  i;
+    int           i;
     char          *tmp, *dir;
 
     if (n_array_size(pkgdir->pkgs) == 0)
         return 1;
-    
+
     MEMINF("START");
 
     msgn_i(2, 2, "%s directory index of %s...",
@@ -290,10 +290,10 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     dir = n_dirname(tmp);
 
     DBGF("mkdir %s %s\n", path, dir);
-    
+
     if ((lock = vf_lock_mkdir(dir)) == NULL)
         return 0;
-    
+
     db = tndb_creat(path, 0, TNDB_SIGN_DIGEST);
 
     if (db == NULL) {
@@ -311,12 +311,12 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
         store_package_no(i, db, pkg);
         DBGF(" pkgno %d %s\n", i, pkg_id(pkg));
     }
-    
+
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
 
         store_package(i, pkg, db, path_index, nbuf, prev_dirindex);
-        
+
         if (i % 1000 == 0) {
             MEMINF("%d packages", i);
         }
@@ -325,10 +325,10 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     /* store { path => packages_no[] } pairs */
     directories = n_hash_keys(path_index);
     msgn_i(3, 3, "Saving %d directories\n", n_array_size(directories));
-     
+
     for (i=0; i < n_array_size(directories); i++) {
-        const char *path = n_array_nth(directories, i);
-        tn_array *ids = n_hash_get(path_index, path);
+        const char *dir_path = n_array_nth(directories, i);
+        tn_array *ids = n_hash_get(path_index, dir_path);
         int j;
 
         n_buf_clean(nbuf);
@@ -336,10 +336,10 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     	    n_buf_printf(nbuf, "%s%s", (char *)n_array_nth(ids, j),
     				       j < n_array_size(ids) - 1 ? ":" : "");
         }
-        
-        DBGF("  dir %s %s\n", path, (char*)n_buf_ptr(nbuf));
-        
-        tndb_put(db, path, strlen(path), n_buf_ptr(nbuf), n_buf_size(nbuf));
+
+        DBGF("  dir %s %s\n", dir_path, (char*)n_buf_ptr(nbuf));
+
+        tndb_put(db, dir_path, strlen(dir_path), n_buf_ptr(nbuf), n_buf_size(nbuf));
     }
 
     n_array_free(directories);
@@ -348,7 +348,7 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     n_alloc_free(na);
     tndb_close(db);
     vf_lock_release(lock);
-    
+
     MEMINF("END");
     return 1;
 }
@@ -360,14 +360,14 @@ static int dirindex_path(char *path, int size, const struct pkgdir *pkgdir)
     char tmp[PATH_MAX], tmp2[PATH_MAX];
     char *ofpath;
     int n;
-    
+
     n = n_snprintf(tmp, sizeof(tmp), "%s", pkgdir_localidxpath(pkgdir));
     n_assert(n > 0);
 
     ofpath = tmp;
     if (ofpath[n - 1] == '/') {    /* directory */
         ofpath[n - 1] = '\0';
-        
+
     } else if (!util__isdir(ofpath)) { /* not directory? */
         char *dn = n_dirname(ofpath);
         ofpath = dn;
@@ -385,12 +385,12 @@ static int dirindex_path(char *path, int size, const struct pkgdir *pkgdir)
                     pkgdir->type);
     DBGF("result = %s\n", path);
     n_assert(n > 0);
-    
+
     return n;
 }
 
 /* load { packages_key => package_no } into hash */
-static tn_hash *load_keymap(struct tndb *db, int npackages) 
+static tn_hash *load_keymap(struct tndb *db, int npackages)
 {
     struct tndb_it  it;
     char            key[TNDB_KEY_MAX + 1], *val = NULL;
@@ -401,10 +401,10 @@ static tn_hash *load_keymap(struct tndb *db, int npackages)
 
     if (!tndb_it_start(db, &it))
         return NULL;
-    
+
     na = n_alloc_new(4, TN_ALLOC_OBSTACK);
     keymap = n_hash_new_na(na, 2 * npackages, NULL);
-    
+
     vlen = vlen_max = 256;
     val = n_malloc(vlen);
 
@@ -417,29 +417,29 @@ static tn_hash *load_keymap(struct tndb *db, int npackages)
 
     while (*key == '_' && *(key + 1) == PREFIX_PKGKEY_NO) {
         char *id;
-        
+
         val[vlen] = '\0';
         DBGF("key = %s\n", key);
-        
+
         id = na->na_malloc(na, klen - PREFIXLEN + 1);
         memcpy(id, key + PREFIXLEN, klen - PREFIXLEN); /* skipping prefix */
         id[klen - PREFIXLEN] = '\0';
-        
+
         DBGF("%s => %s\n", val, id);
-        
+
         n_hash_replace(keymap, val, id);
 
         if (vlen < vlen_max)   /* to avoid needless tndb_it_rget()'s reallocs */
             vlen = vlen_max;
         else
             vlen_max = vlen;
-        
+
         if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
             /* EOF is possible - packages without files */
             goto l_end;
         }
     }
-    
+
 l_end:
     free(val);
     n_alloc_free(na);
@@ -448,7 +448,7 @@ l_end:
         n_hash_free(keymap);
         keymap = NULL;
     }
-    
+
     return keymap;
 }
 
@@ -459,7 +459,7 @@ const char **get_package_directories(struct tndb *db, const char *key, size_t kl
     const char **tl;
     char       *buf = NULL;
     size_t     vlen;
-    
+
     if ((vlen = tndb_get_all(db, key, klen, (void**)&buf)) == 0)
         return NULL;
 
@@ -472,7 +472,7 @@ const char **get_package_directories(struct tndb *db, const char *key, size_t kl
     if (tl && *ndirs == 0) {
         n_str_tokl_free(tl);
         tl = NULL;
-    
+
 	*bytes_read = 0;
         n_cfree(&buf);
     }
@@ -486,8 +486,8 @@ static
 void verify_dirindex(struct pkgdir *pkgdir, struct pkgdir_dirindex *dirindex)
 {
     const char **tl, **tl_save;
-    unsigned int i;
-    
+    int i;
+
     n_assert(dirindex);
 
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
@@ -495,7 +495,7 @@ void verify_dirindex(struct pkgdir *pkgdir, struct pkgdir_dirindex *dirindex)
         int ndirs;
         size_t klen, vlen;
         struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
-        
+
         klen = package_key(key, sizeof(key), pkg, PREFIX_PKGKEY_OWNDIR);
         n_assert (n_hash_exists(dirindex->keymap, &key[2]));
 
@@ -505,7 +505,7 @@ void verify_dirindex(struct pkgdir *pkgdir, struct pkgdir_dirindex *dirindex)
         if (tl == NULL) /* without owned directories */
             continue;
 
-        n_assert(vlen > 0); 
+        n_assert(vlen > 0);
 
         while (*tl) {
             const char *dir = *tl;
@@ -514,7 +514,7 @@ void verify_dirindex(struct pkgdir *pkgdir, struct pkgdir_dirindex *dirindex)
             n_assert(pkgs);
             tl++;
         }
-        
+
         n_str_tokl_free(tl_save);
         n_free(val);
     }
@@ -530,7 +530,7 @@ struct tndb *open_index_database(const struct pkgdir *pkgdir, const char *path,
     n_assert(n_array_size(pkgdir->pkgs)); /* XXX: tndb w/o */
 
     MEMINF("start");
-    
+
     if ((db = tndb_open(path)) == NULL) {
         logn(LOGERR, "%s: open failed", path);
         goto l_error_end;
@@ -554,7 +554,7 @@ struct tndb *open_index_database(const struct pkgdir *pkgdir, const char *path,
 l_error_end:
     if (kmap)
         n_hash_free(kmap);
-        
+
     if (db == NULL) {
         vf_unlink(path);
 
@@ -579,13 +579,13 @@ static int update_pkdir_pkg(struct pkg *pkg, struct tndb *db,
     tl = tl_save = get_package_directories(db, key, klen, &val, &vlen, &ndirs);
     if (tl == NULL)
         return 0;
-    
+
     if (pkg->reqs == NULL)
         pkg->reqs = capreq_arr_new(ndirs);
-    
+
     while (*tl) {
         const char *dir = *tl;
-        
+
         if (*dir) {
             struct capreq *req = capreq_new(pkg->na, dir, 0, NULL, NULL, 0,
                                             CAPREQ_BASTARD | CAPREQ_ISDIR);
@@ -595,7 +595,7 @@ static int update_pkdir_pkg(struct pkg *pkg, struct tndb *db,
     }
     n_str_tokl_free(tl_save);
     n_free(val);
-    
+
     if (ndirs > 10)
         n_array_sort(pkg->reqs);
     else
@@ -604,7 +604,7 @@ static int update_pkdir_pkg(struct pkg *pkg, struct tndb *db,
     pkg->flags |= PKG_INCLUDED_DIRREQS;
     return ndirs;
 }
-    
+
 
 #define UPDATE_IFNEEDED (1 << 0)
 
@@ -616,7 +616,7 @@ struct pkgdir_dirindex *load_dirindex(const struct pkgdir *pkgdir,
     tn_alloc        *na = NULL;
     tn_hash         *idmap = NULL, *keymap = NULL;
     int             rc = 0, index_outdated = 0;
-    unsigned int    i;
+    int             i;
     struct pkgdir_dirindex *dirindex = NULL;
 
     msgn_i(2, 2, "Loading directory index of %s...", pkgdir_idstr(pkgdir));
@@ -624,12 +624,12 @@ struct pkgdir_dirindex *load_dirindex(const struct pkgdir *pkgdir,
 
     if ((db = open_index_database(pkgdir, path, &keymap)) == NULL)
         return NULL;
-    
+
     rc = 0;
-    
+
     na = n_alloc_new(4, TN_ALLOC_OBSTACK);
     idmap = n_hash_new_na(na, n_array_size(pkgdir->pkgs), (tn_fn_free)pkg_free);
-    
+
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg   *pkg = n_array_nth(pkgdir->pkgs, i);
         char         key[512], *pkg_no;
@@ -642,21 +642,21 @@ struct pkgdir_dirindex *load_dirindex(const struct pkgdir *pkgdir,
         /* { package_no => package } map */
         if (pkg_no) {
             n_hash_replace(idmap, pkg_no, pkg_link(pkg));
-            
+
         } else if (flags & UPDATE_IFNEEDED) {
             msgn_i(3, 4, "%s: missing package", pkg_id(pkg));
             index_outdated = 1;
-            
+
         } else {
             logn(LOGWARN, _("%s: outdated directory index"), tndb_path(db));
             goto l_end;
         }
-        
+
         DBGF("%s %s\n", pkg_no, pkg_id(pkg));
     }
-    
+
     rc = 1;                     /* success */
-    
+
 l_end:
     if (rc) {                   /* OK */
         dirindex = na->na_malloc(na, sizeof(*dirindex));
@@ -669,17 +669,17 @@ l_end:
             dirindex->keymap = keymap;
         else
             n_hash_free(keymap);
-        
+
     } else {                    /* ERR */
         if (keymap)
             n_hash_free(keymap);
-        
+
         tndb_unlink(db);
         tndb_close(db);
-        
+
         if (idmap)
             n_hash_free(idmap);
-        
+
         if (na)
             n_alloc_free(na);
     }
@@ -690,7 +690,7 @@ l_end:
 
         pkgdir__dirindex_close(dirindex);
         dirindex = NULL;
-        
+
         if (created)
             dirindex = load_dirindex(pkgdir, path, 0);
     }
@@ -701,8 +701,8 @@ l_end:
 static void update_pkgdir_packages(const struct pkgdir *pkgdir,
                                    struct pkgdir_dirindex *dirindex)
 {
-    unsigned int i;
-    
+    int i;
+
     for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
         struct pkg   *pkg = n_array_nth(pkgdir->pkgs, i);
         char         key[512];
@@ -719,21 +719,21 @@ struct pkgdir_dirindex *pkgdir__dirindex_open(struct pkgdir *pkgdir)
     struct pkgdir_dirindex *dirindex;
     char path[1024];
     time_t mtime;
-    
+
     dirindex_path(path, sizeof(path), pkgdir);
-    
+
     mtime = poldek_util_mtime(path);
     n_assert(pkgdir->ts > 0);
-    
+
     if (mtime == 0)             /* not exists */
         if (dirindex_create(pkgdir, path, NULL)) {
             struct utimbuf ut;
             ut.actime = ut.modtime = pkgdir->ts;
             utime(path, &ut);
-        } 
-    
+        }
+
     dirindex = load_dirindex(pkgdir, path, UPDATE_IFNEEDED);
-    
+
     if (dirindex == NULL) {     /* broken? */
         if (dirindex_create(pkgdir, path, NULL))
             dirindex = load_dirindex(pkgdir, path, 0);
@@ -742,12 +742,12 @@ struct pkgdir_dirindex *pkgdir__dirindex_open(struct pkgdir *pkgdir)
     if (dirindex)
         update_pkgdir_packages(pkgdir, dirindex);
 
-    
+
     if (dirindex && poldek__is_in_testing_mode()) {
         msgn(1, "Verifying dirindex....");
         verify_dirindex(pkgdir, dirindex);
     }
-    
+
     return dirindex;
 }
 
@@ -757,7 +757,7 @@ void pkgdir__dirindex_close(struct pkgdir_dirindex *dirindex)
     n_hash_free(dirindex->idmap);
     if (dirindex->keymap)
         n_hash_free(dirindex->keymap);
-    
+
     n_alloc_free(dirindex->na);
     /* no free(dirindex), it is allocated by na */
 }
@@ -775,26 +775,26 @@ tn_array *get_package_directories_as_array(const struct pkgdir *pkgdir,
 
     if (dirindex == NULL)
         return NULL;
-    
+
     klen = package_key(key, sizeof(key), pkg, prefix);
     tl = tl_save = get_package_directories(dirindex->db, key, klen,
                                            &val, &vlen, &n);
     if (tl == NULL)
         return NULL;
-        
+
     dirs = n_array_new(n, free, (tn_fn_cmp)strcmp);
     while (*tl) {
         if (**tl)
             n_array_push(dirs, n_strdup(*tl));
         tl++;
     }
-    
+
     n_str_tokl_free(tl_save);
     n_free(val);
 
     if (n_array_size(dirs) == 0)
         n_array_cfree(&dirs);
-    
+
     return dirs;
 }
 
@@ -816,18 +816,18 @@ static tn_array *do_dirindex_get(const struct pkgdir_dirindex *dirindex,
                                  tn_array *pkgs, const char *path)
 {
     const char    **tl, **tl_save;
-    unsigned char val[8192];
+    char          val[8192];
     int           n, found, pkgs_passsed = 1;
 
     if (*path == '/' && path[1] != '\0')
         path++;
-    
-    if (!tndb_get_str(dirindex->db, path, val, sizeof(val)))
+
+    if (!tndb_get_str(dirindex->db, path, (unsigned char *)val, sizeof(val)))
         return 0;
 
     tl = tl_save = n_str_tokl_n(val, ":", &n);
     DBGF("%s: FOUND %d (pkgs=%p)\n", path, n, pkgs ? pkgs : NULL);
-    
+
     if (n) {
         if (pkgs == NULL) {
             pkgs = pkgs_array_new(4);
@@ -837,31 +837,31 @@ static tn_array *do_dirindex_get(const struct pkgdir_dirindex *dirindex,
         while (*tl) {
             const char *no = *tl;
             struct pkg *p;
-        
+
             tl++;
 
             if (*no == '\0')
                 continue;
 
             DBGF("no %s\n", no);
-            
+
             if ((p = n_hash_get(dirindex->idmap, no)) == NULL)
                 continue;
-            
+
             n_array_push(pkgs, pkg_link(p));
         }
         n_str_tokl_free(tl_save);
         tl_save = NULL;
     }
     n_assert(tl_save == NULL);
-    
+
     found = n_array_size(pkgs);
-    
+
     if (found == 0) { /* patched pkgdir by diff without new packages */
         if (!pkgs_passsed)
             n_array_cfree(&pkgs);
     }
-    
+
     return pkgs;
 }
 
@@ -870,47 +870,47 @@ tn_array *pkgdir_dirindex_get(const struct pkgdir *pkgdir,
 {
     if (pkgdir->dirindex == NULL)
         return NULL;
-    
+
     return do_dirindex_get(pkgdir->dirindex, pkgs, path);
 }
 
-int pkgdir_dirindex_pkg_has_path(const struct pkgdir *pkgdir, 
+int pkgdir_dirindex_pkg_has_path(const struct pkgdir *pkgdir,
                                  const struct pkg *pkg, const char *path)
 {
     const struct pkgdir_dirindex *dirindex = pkgdir->dirindex;
     const char    **tl, **tl_save;
-    unsigned char val[8192];
+    char          val[8192];
     int           n, found;
 
     if (dirindex == NULL)
         return 0;
-    
+
     DBGF("%s %s\n", pkg_id(pkg), path);
-    
+
     if (*path == '/' && path[1] != '\0')
         path++;
 
-    if (!tndb_get_str(dirindex->db, path, val, sizeof(val)))
+    if (!tndb_get_str(dirindex->db, path, (unsigned char *)val, sizeof(val)))
         return 0;
-    
+
     tl = tl_save = n_str_tokl_n(val, ":", &n);
     DBGF("%s: FOUND %d\n", path, n);
-    
+
     if (n) {
         while (*tl) {
             const char *no = *tl;
             struct pkg *p;
-        
+
             tl++;
 
             if (*no == '\0')
                 continue;
 
             DBGF("no %s\n", no);
-            
+
             if ((p = n_hash_get(dirindex->idmap, no)) == NULL)
                 continue;
-            
+
             if (p == pkg) {
                 found = 1;
                 break;
@@ -923,4 +923,3 @@ int pkgdir_dirindex_pkg_has_path(const struct pkgdir *pkgdir,
 
     return found;
 }
-

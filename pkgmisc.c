@@ -23,26 +23,26 @@
 #include "compiler.h"
 #include "pkgmisc.h"
 
-int poldek_util_parse_evr(char *evrstr, uint32_t *epoch, const char **version,
+int poldek_util_parse_evr(char *evrstr, int32_t *epoch, const char **version,
                           const char **release)
 {
     char *p;
 
     while (isspace(*evrstr))
         evrstr++;
-    
+
     if (*evrstr == '\0')
         return 0;
-    
+
     if ((p = strchr(evrstr, ':')) == NULL) {
         *epoch = 0;
-        
+
     } else {
         *p = '\0';
-        
+
         if (*evrstr == '\0') {
             *epoch = 0;
-            
+
         } else {
             errno = 0;
             *epoch = (uint32_t)strtol(evrstr, (char **)NULL, 10);
@@ -61,7 +61,7 @@ int poldek_util_parse_evr(char *evrstr, uint32_t *epoch, const char **version,
     if ((p = strchr(evrstr, '-')) == NULL) {
         *version = evrstr;
         *release = NULL;
-        
+
     } else {
         *p = '\0';
         *version = evrstr;
@@ -70,7 +70,7 @@ int poldek_util_parse_evr(char *evrstr, uint32_t *epoch, const char **version,
         if (**version == '\0' || **release == '\0')
             return 0;
     }
-    
+
     return 1;
 }
 
@@ -82,24 +82,23 @@ int poldek_util_parse_nevr(char *nevrstr, const char **name, int32_t *epoch,
 
     while (isspace(*nevrstr))
         nevrstr++;
-    
+
     if (*nevrstr == '\0')
         return 0;
-    
-    if ((p = strrchr(nevrstr, '-')) == NULL) 
+
+    if ((p = strrchr(nevrstr, '-')) == NULL)
         return 0;
-    
+
     q = p;
     *q = '\0';
-    
-    if ((p = strrchr(nevrstr, '-')) == NULL) 
+
+    if ((p = strrchr(nevrstr, '-')) == NULL)
         return 0;
-    
+
     *q = '-';
     *p = '\0';
     p++;
     *name = nevrstr;
-    
+
     return poldek_util_parse_evr(p, epoch, version, release);
 }
-

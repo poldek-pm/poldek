@@ -425,7 +425,6 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     const char                  *fn;
     struct pkgdir               *pkgdir;
     const struct pkgdir_module  *mod;
-    int                         rc;
     unsigned                    saved_flags;
     tn_array                    *pkgs;
 
@@ -441,7 +440,7 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
         pkgdir->flags |= PKGDIR_NAMED;
 
     DBGF("pkgdir_open_ext[%s] %s, %s%s\n", type, path,
-         pkg_prefix ? "prefix = ":"", pkg_prefix ? pkg_prefix : "", pkgdir);
+         pkg_prefix ? "prefix = ":"", pkg_prefix ? pkg_prefix : "");
 
     fn = NULL;
     do_pkgdir__make_idxpath(idxpath, sizeof(idxpath), path, type,
@@ -471,7 +470,6 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
         pkgdir->lc_lang = n_strdup(lc_lang);
 
     pkgdir->avlangs_h = pkgdir__avlangs_new();
-    rc = 1;
 
     env_pkgdir(pkgdir);
     saved_flags = pkgdir->flags;

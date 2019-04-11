@@ -68,9 +68,9 @@ static
 int posthook_diff(struct pkgdir *pd1, struct pkgdir* pd2, struct pkgdir *diff);
 
 struct pkgdir_module pkgdir_module_pndir = {
-    NULL, 
+    NULL,
     PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE |
-    PKGDIR_CAP_HANDLEIGNORE, 
+    PKGDIR_CAP_HANDLEIGNORE,
     "pndir",
     NULL,
     "Native poldek's index format",
@@ -79,20 +79,20 @@ struct pkgdir_module pkgdir_module_pndir = {
     do_open,
     do_load,
     pndir_m_create,
-    pndir_m_update, 
+    pndir_m_update,
     pndir_m_update_a,
-    NULL, 
+    NULL,
     do_free,
     pndir_localidxpath,
-    posthook_diff, 
+    posthook_diff,
 };
 
 
 const char *pndir_localidxpath(const struct pkgdir *pkgdir)
 {
     struct pndir *idx = pkgdir->mod_data;
-    
-    if (idx && idx->_vf) 
+
+    if (idx && idx->_vf)
         return vfile_localpath(idx->_vf);
     return pkgdir->idxpath;
 }
@@ -105,21 +105,21 @@ int posthook_diff(struct pkgdir *pd1, struct pkgdir* pd2, struct pkgdir *diff)
     pd2 = pd2;                  /* unused */
 	if ((idx2 = pd1->mod_data) == NULL)
 		return 0;
-	
+
 	idx = diff->mod_data;
-	
+
 	if (idx == NULL) {
         idx = n_malloc(sizeof(*idx));
         pndir_init(idx);
         diff->mod_data = idx;
 	}
-	
+
 	idx->md_orig = n_strdup(idx2->dg->md);
 	return 1;
 }
 
 
-inline static char *eatws(char *str) 
+inline static char *eatws(char *str)
 {
     while (isspace(*str))
         str++;
@@ -127,16 +127,16 @@ inline static char *eatws(char *str)
 }
 
 
-inline static char *next_tokn(char **str, char delim, int *toklen) 
+inline static char *next_tokn(char **str, char delim, int *toklen)
 {
     char *p, *token;
 
-    
-    if ((p = strchr(*str, delim)) == NULL) 
+
+    if ((p = strchr(*str, delim)) == NULL)
         token = NULL;
     else {
         *p = '\0';
-        
+
         if (toklen)
             *toklen = p - *str;
         p++;
@@ -145,11 +145,11 @@ inline static char *next_tokn(char **str, char delim, int *toklen)
         token = *str;
         *str = p;
     }
-    
+
     return token;
 }
 
-void pndir_init(struct pndir *idx) 
+void pndir_init(struct pndir *idx)
 {
     memset(idx, 0, sizeof(*idx));
 	idx->db = NULL;
@@ -165,10 +165,10 @@ static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf,
     struct vfile *vf_;
     struct tndb  *db;
     int fd;
-    
+
     if (vf)
         *vf = NULL;
-    
+
     if ((vf_ = vfile_open_ul(path, VFT_IO, vfmode, srcnam)) == NULL)
         return NULL;
 
@@ -177,7 +177,7 @@ static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf,
         vfile_close(vf_);
         return NULL;
     }
-      
+
     if ((db = tndb_dopen(fd, vfile_localpath(vf_))) == NULL) {
         vfile_close(vf_);
 
@@ -187,7 +187,7 @@ static struct tndb *do_dbopen(const char *path, int vfmode, struct vfile **vf,
         else
             vfile_close(vf_);
     }
-    
+
     return db;
 }
 
@@ -200,38 +200,38 @@ struct tndb *do_open_dscr(struct pndir *idx, int vfmode, struct vfile **vf,
     const char  *suffix;
     char        *idxpath;
     const char  *dbid, *langid;
-    
+
     pndir_db_dscr_idstr(lang, &dbid, &langid);
-    
+
     idxpath = idx->idxpath;
     *tss = '\0';
-    
+
     if (ts) {
         int len, tss_len;
         char *p;
-        
+
         tss_len = pndir_tsstr(tss, sizeof(tss), ts);
         len = strlen(idx->idxpath) + 1;
         idxpath = alloca(len);
         memcpy(idxpath, idx->idxpath, len);
-        
+
         if ((p = strstr(idxpath, tss)) && p != idxpath && *(p - 1) == '.') {
             //*(p - 1) = '\0';
             strcpy(p - 1, p + tss_len);
         } else {
             *tss = '\0';
         }
-        
+
     }
-    
+
     suffix = pndir_desc_suffix;
     if (*langid == '\0') {
         if (*tss) {
             snprintf(buf, sizeof(buf), "%s.%s", pndir_desc_suffix, tss);
             suffix = buf;
         }
-        
-        
+
+
     } else {
         snprintf(buf, sizeof(buf), "%s.%s%s%s", pndir_desc_suffix, langid,
                  *tss ? "." : "", *tss ? tss : "");
@@ -240,7 +240,7 @@ struct tndb *do_open_dscr(struct pndir *idx, int vfmode, struct vfile **vf,
 
     DBGF("mk %s, %s\n", idxpath, suffix);
     pndir_mkidx_pathname(tmpath, sizeof(tmpath), idxpath, suffix);
-        
+
     msgn(3, _("Opening %s..."), vf_url_slim_s(tmpath, 0));
     return do_dbopen(tmpath, vfmode, vf, idx->srcnam);
 }
@@ -257,13 +257,13 @@ int open_dscr(struct pndir *idx, int vfmode, time_t ts, const char *lang)
 
     if (pndir_db_dscr_h_get(idx->db_dscr_h, lang))
         return 1;
-    
+
     if ((db = do_open_dscr(idx, vfmode, &vf, ts, lang)) == NULL)
         return 0;
 
     if (tndb_verify(db)) {
         pndir_db_dscr_h_insert(idx->db_dscr_h, lang, db);
-        
+
     } else {
         logn(LOGERR, "%s: broken file", vf_url_slim_s(tndb_path(db), 0));
 
@@ -271,15 +271,15 @@ int open_dscr(struct pndir *idx, int vfmode, time_t ts, const char *lang)
             n_assert(vfmode & VFM_CACHE);
             vfmode &= ~VFM_CACHE;
             vfmode |= VFM_NODEL;
-            
+
             tndb_close(db);
             vfile_close(vf);
-            
+
             return open_dscr(idx, vfmode, ts, lang);
         }
         tndb_close(db);
     }
-    
+
     if (vf)
         vfile_close(vf);
     return pndir_db_dscr_h_get(idx->db_dscr_h, lang) != NULL;
@@ -293,14 +293,14 @@ int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags,
     if ((flags & PKGDIR_OPEN_DIFF) == 0)
         if ((idx->dg = pndir_digest_new(path, vfmode, srcnam)) == NULL)
             return 0;
-    
+
     if (srcnam)
         idx->srcnam = n_strdup(srcnam);
-    
+
     idx->db = do_dbopen(path, vfmode, &idx->_vf, srcnam);
     if (idx->db == NULL)
         goto l_err;
-        
+
     snprintf(idx->idxpath, sizeof(idx->idxpath), "%s", path);
     return 1;
 
@@ -315,16 +315,16 @@ int pndir_open_verify(struct pndir *idx, const char *path, int vfmode,
                       unsigned flags, const char *srcnam)
 {
     int rc;
-    
-    DBGF("%s [%s]\n", path);
+
+    DBGF("%s\n", path);
     if (!pndir_open(idx, path, vfmode, flags, srcnam))
         return 0;
-    
+
     rc = 1;
     if (!tndb_verify(idx->db)) {
         logn(LOGERR, "%s: broken file", vf_url_slim_s(idx->_vf->vf_path, 0));
         rc = 0;
-        
+
         if (idx->_vf->vf_flags & VF_FRMCACHE) { /* not fully downloaded? */
             n_assert(vfmode & VFM_CACHE);
             vfmode &= ~VFM_CACHE;
@@ -332,20 +332,20 @@ int pndir_open_verify(struct pndir *idx, const char *path, int vfmode,
             pndir_close(idx);
             return pndir_open_verify(idx, path, vfmode, flags, srcnam);
         }
-        
+
         pndir_close(idx);
     }
     return rc;
 }
 
-void pndir_close(struct pndir *idx) 
+void pndir_close(struct pndir *idx)
 {
     if (idx->db)
         tndb_close(idx->db);
-    
+
     if (idx->db_dscr_h)
 	n_hash_free(idx->db_dscr_h);
-    
+
     if (idx->_vf)
         vfile_close(idx->_vf);
 
@@ -370,17 +370,17 @@ TODO
 static int valid_version(const char *ver, const char *path)
 {
     int major, minor;
-    
+
     if (sscanf(ver, "%u.%u", &major, &minor) != 2) {
         logn(LOGERR, _("%s: invalid version string %s"), path, ver);
         return 0;
     }
-    
-    if (major != FILEFMT_MAJOR) 
+
+    if (major != FILEFMT_MAJOR)
         logn(LOGERR, _("%s: unsupported version %s (%d.x is required)"),
             path, ver, FILEFMT_MAJOR);
-    
-    else if (minor > FILEFMT_MINOR) 
+
+    else if (minor > FILEFMT_MINOR)
         logn(LOGERR, _("%s: unsupported version %s (upgrade the poldek)"),
             path, ver);
 
@@ -399,15 +399,16 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     unsigned             pkgdir_flags = 0;
     char                 *path = pkgdir->path;
     char                 key[TNDB_KEY_MAX + 1], *val = NULL;
-    int                  nerr = 0, klen, vlen, vlen_max;
-    
-    if ((flags & PKGDIR_OPEN_REFRESH) == 0) 
+    unsigned             klen, vlen, vlen_max;
+    int                  nerr = 0;
+
+    if ((flags & PKGDIR_OPEN_REFRESH) == 0)
         vfmode |= VFM_CACHE;
 
     DBGF("do_open %s [%s]\n", pkgdir->idxpath, pkgdir->name);
     if (!pndir_open_verify(&idx, pkgdir->idxpath, vfmode, flags, pkgdir->name))
         return 0;
-    
+
     nerr = 0;
 
     if (!tndb_verify(idx.db)) {
@@ -420,7 +421,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         nerr++;
         goto l_end;
     }
-    
+
     vlen = 8192;
     vlen = 256;
     vlen_max = vlen;
@@ -437,24 +438,24 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
         nerr++;
         goto l_end;
     }
-    
-    
+
+
     while (strcmp(key, pndir_tag_endhdr) != 0) {
         if (vlen < vlen_max)   /* to avoid needless tndb_it_rget()'s reallocs */
             vlen = vlen_max;
         else
             vlen_max = vlen;
-        
+
         if (!tndb_it_rget(&it, key, &klen, (void**)&val, &vlen)) {
             logn(LOGERR, _("%s: not a poldek index file"), pkgdir->idxpath);
             nerr++;
             goto l_end;
         }
-        
+
         if (strcmp(key, pndir_tag_opt) == 0) {
             tn_array *opts = parse_depdirs(val);
             int i;
-            
+
             for (i=0; i<n_array_size(opts); i++) {
                 char *opt = n_array_nth(opts, i);
                 if (strcmp(opt, "nodesc") == 0)
@@ -463,25 +464,25 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
                     idx.crflags |= PKGDIR_CREAT_NOFL;
                 else if (strcmp(opt, "nouniq") == 0)
                     idx.crflags |= PKGDIR_CREAT_NOUNIQ;
-                else if (poldek_VERBOSE > 2) 
+                else if (poldek_VERBOSE > 2)
                     logn(LOGWARN, _("%s:%s: unknown index opt"), pkgdir->idxpath, opt);
             }
             n_array_free(opts);
-            
+
         } else if (strcmp(key, pndir_tag_ts) == 0) {
             if (sscanf(val, "%lu", &ts) != 1) {
                 logn(LOGERR, errmsg_brokenidx, path, pndir_tag_ts);
                 nerr++;
                 goto l_end;
             }
-            
+
         } else if (strcmp(key, pndir_tag_ts_orig) == 0) {
             if (sscanf(val, "%lu", &ts_orig) != 1) {
                 logn(LOGERR, errmsg_brokenidx, path, pndir_tag_ts_orig);
                 nerr++;
                 goto l_end;
             }
-            
+
         } else if (strcmp(key, pndir_tag_removed) == 0) {
             n_assert(pkgdir->removed_pkgs == NULL);
             pkgdir->removed_pkgs = parse_removed(val);
@@ -491,26 +492,26 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
 
         } else if (strcmp(key, pndir_tag_pkgroups) == 0) {
             tn_buf *nbuf;
-            tn_buf_it it;
+            tn_buf_it group_it;
 
             nbuf = n_buf_new(0);
             n_buf_init(nbuf, val, vlen);
-            n_buf_it_init(&it, nbuf);
-            pkgdir->pkgroups = pkgroup_idx_restore(&it, 0);
+            n_buf_it_init(&group_it, nbuf);
+            pkgdir->pkgroups = pkgroup_idx_restore(&group_it, 0);
             n_buf_free(nbuf);
-            
+
         } else if (strcmp(key, pndir_tag_depdirs) == 0) {
             n_assert(pkgdir->depdirs == NULL);
             pkgdir->depdirs = parse_depdirs(val);
         }
     }
-    
+
     pkgdir->flags |= pkgdir_flags;
     pkgdir->ts = ts;
     pkgdir->orig_ts = ts_orig;
     if (ts_orig)
         pkgdir->flags |= PKGDIR_DIFF;
-    
+
     if ((idx.crflags & PKGDIR_CREAT_NODESC) == 0 &&
         (flags & PKGDIR_OPEN_NODESC) == 0)
     {
@@ -519,7 +520,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             int i, loadC = 0, loadi18n = 0;
             tn_array *langs;
 
-            
+
             if (flags & PKGDIR_OPEN_ALLDESC)
                 langs = n_hash_keys(pkgdir->avlangs_h);
             else
@@ -535,7 +536,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
             }
             n_array_free(langs);
             n_assert(loadC);
-            
+
             if (loadC)
                 if (!open_dscr(&idx, vfmode, pkgdir->orig_ts, "C"))
                     nerr++;
@@ -546,7 +547,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
                     nerr++;
             }
         }
-        
+
 #if 0                           /* separate LANG files; obsoleted */
         if (pkgdir->langs) {
             for (i=0; i < n_array_size(pkgdir->langs); i++) {
@@ -557,28 +558,28 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
                 }
             }
         }
-        
-#endif        
+
+#endif
     }
-    
+
 
  l_end:
     if (nerr == 0) {
         pkgdir->mod_data = n_malloc(sizeof(idx));
         memcpy(pkgdir->mod_data, &idx, sizeof(idx));
-        
+
     } else {
         pndir_close(&idx);
     }
 
     if (val)
         free(val);
-    
+
     return nerr == 0;
 }
 
 
-static void do_free(struct pkgdir *pkgdir) 
+static void do_free(struct pkgdir *pkgdir)
 {
     if (pkgdir->mod_data) {
         struct pndir *idx = pkgdir->mod_data;
@@ -591,10 +592,10 @@ static void do_free(struct pkgdir *pkgdir)
 }
 
 static
-struct pkg_data *pkg_data_malloc(tn_alloc *na)  
+struct pkg_data *pkg_data_malloc(tn_alloc *na)
 {
     struct pkg_data *pd;
-    
+
     pd = na->na_malloc(na, sizeof(*pd));
     pd->off_nodep_files = 0; //pd->off_pkguinf = 0;
     pd->db = NULL;
@@ -605,7 +606,7 @@ struct pkg_data *pkg_data_malloc(tn_alloc *na)
 
 
 static
-void pkg_data_free(tn_alloc *na, void *ptr) 
+void pkg_data_free(tn_alloc *na, void *ptr)
 {
     struct pkg_data *pd = ptr;
 
@@ -627,7 +628,7 @@ void pkg_data_free(tn_alloc *na, void *ptr)
 }
 
 
-static 
+static
 struct pkguinf *pndir_m_load_pkguinf(tn_alloc *na, const struct pkg *pkg,
                                      void *ptr, tn_array *langs)
 {
@@ -639,7 +640,7 @@ struct pkguinf *pndir_m_load_pkguinf(tn_alloc *na, const struct pkg *pkg,
     return pndir_load_pkguinf(na, pd->db_dscr_h, pkg, langs ? langs : pd->langs);
 }
 
-static 
+static
 tn_tuple *pndir_load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
                               tn_array *foreign_depdirs)
 {
@@ -653,7 +654,7 @@ tn_tuple *pndir_load_nodep_fl(tn_alloc *na, const struct pkg *pkg, void *ptr,
         n_stream_seek(st, pd->off_nodep_files, SEEK_SET);
         pkgfl_restore_st(na, &fl, st, foreign_depdirs, 0);
     }
-    
+
     return fl;
 }
 
@@ -667,7 +668,8 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     struct tndb_it     it;
     tn_stream          *st;
     tn_array           *ign_patterns = NULL;
-    int                rc, klen, vlen, nerr = 0;
+    unsigned           klen, vlen;
+    int                rc, nerr = 0;
     char               key[TNDB_KEY_MAX + 1], path[PATH_MAX];
 
     idx = pkgdir->mod_data;
@@ -675,32 +677,33 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         return 0;
 
     vf_url_slim(path, sizeof(path), pkgdir->idxpath, 0);
-    
+
     if ((ldflags & PKGDIR_LD_DOIGNORE) && pkgdir->src &&
         n_array_size(pkgdir->src->ign_patterns)) {
         ign_patterns = pkgdir->src->ign_patterns;
     }
 
     DBGF("ign_patterns %p\n", ign_patterns);
-    
+
     st = tndb_it_stream(&it);
     while ((rc = tndb_it_get_begin(&it, key, &klen, &vlen)) > 0) {
         struct pkg kpkg;
-        
+
         n_assert(klen > 0);
-            
+
         if (*key == '%' && strncmp(key, "%__h_", 5) == 0)
             goto l_continue_loop;
-        
+
         if (pndir_parse_pkgkey(key, klen, &kpkg) == NULL) {
             logn(LOGERR, "%s: parse error", key);
             nerr++;
             goto l_continue_loop;
         }
-        
+
         if (ign_patterns) {
             char buf[512];
-            unsigned int i;
+            int i;
+
             pkg_snprintf(buf, sizeof(buf), &kpkg);
             for (i=0; i < n_array_size(ign_patterns); i++) {
                 char *p = n_array_nth(ign_patterns, i);
@@ -719,20 +722,20 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             nerr++;
             goto l_continue_loop;
         }
-        
+
         pkg->pkgdir = pkgdir;
 
         pkgd = pkg_data_malloc(pkgdir->na);
         pkgd->off_nodep_files = pkgo.nodep_files_offs;
         //pkgd->off_pkguinf = pkgo.pkguinf_offs;
         pkgd->db = tndb_ref(idx->db);
-            
+
         if (idx->db_dscr_h)
             pkgd->db_dscr_h = n_ref(idx->db_dscr_h);
-        
+
         if (pkgdir->langs)
             pkgd->langs = n_ref(pkgdir->langs);
-        
+
         pkg->pkgdir_data = pkgd;
         pkg->pkgdir_data_free = pkg_data_free;
         pkg->load_pkguinf = pndir_m_load_pkguinf;
@@ -746,15 +749,15 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
             break;
         }
     }
-    
+
     if (nerr)
         n_array_clean(pkgdir->pkgs);
-        
+
     return n_array_size(pkgdir->pkgs);
 }
 
 
-static tn_array *parse_removed(char *str) 
+static tn_array *parse_removed(char *str)
 {
     char *p, *q;
     tn_array *pkgs;
@@ -768,26 +771,26 @@ static tn_array *parse_removed(char *str)
 
         if (*p == '\0')
             continue;
-        
+
         if ((pkg = pndir_parse_pkgkey(p, strlen(p), NULL)) == NULL) {
             if (poldek_util_parse_nevr(p, &name, &epoch, &ver, &rel)) {
                 pkg = pkg_new(name, epoch, ver, rel, NULL, NULL);
             }
         }
-        
+
         if (pkg)
             n_array_push(pkgs, pkg);
     }
-    
+
     if (n_array_size(pkgs) == 0) {
         n_array_free(pkgs);
         pkgs = NULL;
     }
-    
+
     return pkgs;
 }
 
-static tn_array *parse_depdirs(char *str) 
+static tn_array *parse_depdirs(char *str)
 {
     char *p, *token;
     tn_array *arr;
@@ -799,10 +802,10 @@ static tn_array *parse_depdirs(char *str)
     while ((token = next_tokn(&p, ':', NULL)) != NULL) {
         n_array_push(arr, n_strdup(token));
     }
-                
+
     n_array_push(arr, n_strdup(p));
-                
-    if (n_array_size(arr)) 
+
+    if (n_array_size(arr))
         n_array_sort(arr);
 
     return arr;
@@ -812,16 +815,16 @@ static inline int up_avlangs(char *s, struct pkgdir *pkgdir)
 {
     char *p;
     int count;
-        
+
     p = strchr(s, '|');
     if (!p) {                /* snap legacy... */
         pkgdir__update_avlangs(pkgdir, s, 10000);
         return 1;
-    } 
-            
+    }
+
     *p = '\0';
     p++;
-        
+
     if (sscanf(p, "%d", &count) != 1)
         n_die("%s|%s: bad langs format!", s, p);
     pkgdir__update_avlangs(pkgdir, s, count);
@@ -829,7 +832,7 @@ static inline int up_avlangs(char *s, struct pkgdir *pkgdir)
 }
 
 
-static int parse_avlangs(char *str, struct pkgdir *pkgdir) 
+static int parse_avlangs(char *str, struct pkgdir *pkgdir)
 {
     char *p, *token;
 
@@ -844,12 +847,7 @@ static int parse_avlangs(char *str, struct pkgdir *pkgdir)
 }
 
 
-int pndir_tsstr(char *tss, int size, time_t ts) 
+int pndir_tsstr(char *tss, int size, time_t ts)
 {
     return strftime(tss, size, "%Y.%m.%d-%H.%M.%S", gmtime(&ts));
 }
-
-
-
-
-

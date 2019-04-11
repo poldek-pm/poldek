@@ -1,6 +1,6 @@
-/* 
+/*
   Copyright (C) 2000 - 2008 Pawel A. Gajda <mis@pld-linux.org>
- 
+
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License published by
   the Free Software Foundation (see file COPYING for details).
@@ -48,7 +48,7 @@ static struct pkg_store_tag pkg_store_tag_table[] = {
     { PKG_STORETAG_FN,    PKG_STORETAG_SIZENIL, "filename" },
     { PKG_STORETAG_SRCFN, PKG_STORETAG_SIZENIL, "source package filename" },
     /* groupid, btime, etc */
-    { PKG_STORETAG_BINF,  PKG_STORETAG_SIZE8,  "pkg's int32 fields" }, 
+    { PKG_STORETAG_BINF,  PKG_STORETAG_SIZE8,  "pkg's int32 fields" },
     { PKG_STORETAG_CAPS,  PKG_STORETAG_SIZE16, "caps"  },
     { PKG_STORETAG_REQS,  PKG_STORETAG_SIZE16, "reqs"  },
     { PKG_STORETAG_SUGS,  PKG_STORETAG_SIZE16, "sugs"  },
@@ -57,7 +57,7 @@ static struct pkg_store_tag pkg_store_tag_table[] = {
     { PKG_STORETAG_DEPFL, PKG_STORETAG_SIZE32, "depdirs file list" },
 //    { '6', PKG_STORETAG_SIZE16, "fake16" }, // for testing
 //    { '2', PKG_STORETAG_SIZE32, "fake32" },
-    { 0, 0, 0 }, 
+    { 0, 0, 0 },
 };
 
 static int pkg_store_tag_table_size = sizeof(pkg_store_tag_table) / sizeof(pkg_store_tag_table[0]);
@@ -83,7 +83,7 @@ const struct pkg_store_tag *pkg_store_lookup_tag(int tag)
 
     if (tag_lookup_tab[0] == 0)
         init_tag_lookup_tab();
-    
+
     i = tag_lookup_tab[tag];
     if (i == 0)
         return NULL;
@@ -95,11 +95,11 @@ int pkg_store_skiptag(int tag, int tag_binsize, tn_stream *st)
 {
     DBGF("skiptag %c %c\n", tag, tag_binsize ? tag_binsize:'-');
     tag = tag;
-    
+
     switch (tag_binsize) {
         case PKG_STORETAG_SIZENIL:
             return 1;
-            
+
         case PKG_STORETAG_SIZE8:
             n_buf_restore_skip(st, TN_BUF_STORE_8B);
             break;
@@ -125,15 +125,15 @@ static int pkg_store_bintag(int tag, tn_buf *nbuf)
 {
     const struct pkg_store_tag *tg;
     char s[4] = {0};
-    
-    
+
+
     s[0] = tag;
     s[1] = ':';
 
     tg = pkg_store_lookup_tag(tag);
     n_assert(tg);
     n_assert(tg->binsize);
-    
+
     s[2] = tg->binsize;
     s[3] = '\n';
     return n_buf_write(nbuf, s, 4) == 4;
@@ -141,13 +141,13 @@ static int pkg_store_bintag(int tag, tn_buf *nbuf)
 
 
 static
-int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf) 
+int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
 {
     tn_array *arr;
     int i;
 
     arr = n_array_new(n_array_size(pkg->caps), NULL, NULL);
-    
+
     for (i=0; i < n_array_size(pkg->caps); i++) {
         struct capreq *cr = n_array_nth(pkg->caps, i);
         if (pkg_eq_capreq(pkg, cr))
@@ -155,7 +155,7 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
 
         if (capreq_is_bastard(cr))
             continue;
-        
+
         n_array_push(arr, cr);
     }
 
@@ -163,7 +163,7 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
         pkg_store_bintag(PKG_STORETAG_CAPS, nbuf);
         capreq_arr_store(arr, nbuf, n_array_size(arr));
     }
-    
+
     n_array_free(arr);
     return 1;
 }
@@ -179,42 +179,42 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
 #define PKGFIELD_TAG_COLOR   'C'
 
 static
-void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg, unsigned flags) 
+void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg, unsigned flags)
 {
     uint8_t n = 0, size8t;
     int size = 0;
-    
-    if (pkg->size) 
+
+    if (pkg->size)
         n++;
 
-    if (pkg->fsize) 
+    if (pkg->fsize)
         n++;
 
-    if (pkg->btime) 
+    if (pkg->btime)
         n++;
 
-    if (pkg->itime) 
+    if (pkg->itime)
         n++;
 
-    if (pkg->groupid) 
+    if (pkg->groupid)
         n++;
 
-    if ((flags & PKGSTORE_RECNO) && pkg->recno) 
+    if ((flags & PKGSTORE_RECNO) && pkg->recno)
         n++;
 
-    if (pkg->fmtime) 
+    if (pkg->fmtime)
         n++;
 
-    if (pkg->color) 
+    if (pkg->color)
         n++;
 
     size = (sizeof(int32_t) + 1) * n;
     n_assert(size < UINT8_MAX);
     size8t = size;
-    
+
     n_buf_write_uint8(nbuf, size8t);
     n_buf_write_uint8(nbuf, n);
-    
+
     if (pkg->size) {
         n_buf_add_int8(nbuf, PKGFIELD_TAG_SIZE);
         n_buf_add_int32(nbuf, pkg->size);
@@ -224,7 +224,7 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg, unsigned flags)
         n_buf_add_int8(nbuf, PKGFIELD_TAG_FSIZE);
         n_buf_add_int32(nbuf, pkg->fsize);
     }
-    
+
     if (pkg->btime) {
         n_buf_add_int8(nbuf, PKGFIELD_TAG_BTIME);
         n_buf_add_int32(nbuf, pkg->btime);
@@ -255,42 +255,42 @@ void pkg_store_fields(tn_buf *nbuf, const struct pkg *pkg, unsigned flags)
         n_buf_add_int8(nbuf, PKGFIELD_TAG_COLOR);
         n_buf_add_int32(nbuf, pkg->color);
     }
-    
+
     n_buf_printf(nbuf, "\n");
 }
 
 
-int pkg_restore_fields(tn_stream *st, struct pkg *pkg) 
+int pkg_restore_fields(tn_stream *st, struct pkg *pkg)
 {
     uint8_t n = 0, nsize, tag = 0;
     uint32_t tmp;
-    
+
     n_stream_read_uint8(st, &nsize);
     n_stream_read_uint8(st, &n);
-        
+
     while (n) {
         n_stream_read_uint8(st, &tag);
         switch (tag) {
             case PKGFIELD_TAG_SIZE:
                 n_stream_read_uint32(st, &pkg->size);
                 break;
-                
+
             case PKGFIELD_TAG_FSIZE:
                 n_stream_read_uint32(st, &pkg->fsize);
                 break;
-                
+
             case PKGFIELD_TAG_BTIME:
                 n_stream_read_uint32(st, &pkg->btime);
                 break;
 
             case PKGFIELD_TAG_ITIME:
-                n_stream_read_uint32(st, &pkg->itime);
+                n_stream_read_uint32(st, (uint32_t*)&pkg->itime);
                 break;
 
             case PKGFIELD_TAG_GID:
-                n_stream_read_uint32(st, &pkg->groupid);
+                n_stream_read_uint32(st, (uint32_t*)&pkg->groupid);
                 break;
-                
+
             case PKGFIELD_TAG_RECNO:
                 n_stream_read_uint32(st, &pkg->recno);
                 break;
@@ -318,33 +318,33 @@ int pkg_restore_fields(tn_stream *st, struct pkg *pkg)
 static
 void pkg_store_fl(const struct pkg *pkg, tn_buf *nbuf,
                   tn_array *exclpath, tn_array *depdirs,
-                  unsigned flags) 
+                  unsigned flags)
 {
     struct pkgflist *flist;
 
-    
+
     if ((flags & PKGSTORE_NOANYFL) == PKGSTORE_NOANYFL)
         return;
 
     DBGF("%s\n", pkg_snprintf_s(pkg));
-    
+
     flist = pkg_get_flist(pkg);
     DBGF("flist = %p\n", flist);
     if (flist == NULL)
         return;
-        
+
     if (depdirs == NULL) {
         if ((flags & PKGSTORE_NOFL) == 0) {
             pkg_store_bintag(PKG_STORETAG_FL, nbuf);
             pkgfl_store(flist->fl, nbuf, exclpath, depdirs, PKGFL_ALL);
         }
-        
+
     } else {
         if ((flags & PKGSTORE_NODEPFL) == 0) {
             pkg_store_bintag(PKG_STORETAG_DEPFL, nbuf);
             pkgfl_store(flist->fl, nbuf, exclpath, depdirs, PKGFL_DEPDIRS);
         }
-        
+
 
         if ((flags & PKGSTORE_NOFL) == 0) {
             pkg_store_bintag(PKG_STORETAG_FL, nbuf);
@@ -360,51 +360,51 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
               tn_array *exclpath, unsigned flags)
 {
     int ncaps;
-    
+
     if ((flags & PKGSTORE_NOEVR) == 0) {
         n_buf_printf(nbuf, "N: %s\n", pkg->name);
         if (pkg->epoch)
             n_buf_printf(nbuf, "V: %d:%s-%s\n", pkg->epoch, pkg->ver, pkg->rel);
-        else 
+        else
             n_buf_printf(nbuf, "V: %s-%s\n", pkg->ver, pkg->rel);
     }
-    
+
     if ((flags & PKGSTORE_NOARCH) == 0 && pkg->_arch)
         n_buf_printf(nbuf, "A: %s\n", pkg_arch(pkg));
-    
+
     if ((flags & PKGSTORE_NOOS) == 0 && pkg->_os)
         n_buf_printf(nbuf, "O: %s\n", pkg_os(pkg));
 
     if (pkg->fn)
         n_buf_printf(nbuf, "%c: %s\n", PKG_STORETAG_FN, pkg->fn);
-    
+
     if (pkg->srcfn)
         n_buf_printf(nbuf, "%c: %s\n", PKG_STORETAG_SRCFN, pkg->srcfn);
     else                        /* must store something, PKG_HAS_SRCFN */
         n_buf_printf(nbuf, "%c: -\n", PKG_STORETAG_SRCFN);
-    
+
     pkg_store_bintag(PKG_STORETAG_BINF, nbuf);
     pkg_store_fields(nbuf, pkg, flags);
-    
+
     if (pkg->caps && n_array_size(pkg->caps))
         pkg_store_caps(pkg, nbuf);
-    
+
     if (pkg->reqs && (ncaps = capreq_arr_store_n(pkg->reqs))) {
-        pkg_store_bintag(PKG_STORETAG_REQS, nbuf); 
+        pkg_store_bintag(PKG_STORETAG_REQS, nbuf);
         capreq_arr_store(pkg->reqs, nbuf, ncaps);
     }
 
     if (pkg->sugs && (ncaps = capreq_arr_store_n(pkg->sugs))) {
-        pkg_store_bintag(PKG_STORETAG_SUGS, nbuf); 
+        pkg_store_bintag(PKG_STORETAG_SUGS, nbuf);
         capreq_arr_store(pkg->sugs, nbuf, ncaps);
     }
 
-    
+
     if (pkg->cnfls && (ncaps = capreq_arr_store_n(pkg->cnfls))) {
         pkg_store_bintag(PKG_STORETAG_CNFLS, nbuf);
         capreq_arr_store(pkg->cnfls, nbuf, ncaps);
     }
-    
+
     //mem_info(-10, "before fl");
     pkg_store_fl(pkg, nbuf, depdirs, exclpath, flags);
     //mem_info(-10, "after fl");
@@ -412,9 +412,9 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     /* removed support for uinfo in main index,
        assert nobody try this */
     n_assert(flags & PKGSTORE_NODESC);
-    
+
     n_buf_printf(nbuf, "\n");
-    
+
     return n_buf_size(nbuf);
 }
 
@@ -424,7 +424,7 @@ int pkg_store_st(const struct pkg *pkg, tn_stream *st, tn_array *depdirs,
 {
     tn_buf *nbuf;
     int n = 0;
-    
+
     nbuf = n_buf_new(1024 * 8);
     if (pkg_store(pkg, nbuf, NULL, depdirs, flags) > 0)
         n = n_stream_write(st, n_buf_ptr(nbuf), n_buf_size(nbuf));
