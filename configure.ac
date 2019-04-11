@@ -275,6 +275,9 @@ if test "${is_rpmorg}." = "yes."; then
     AC_MSG_RESULT(yes)
     AM_CONDITIONAL(WITH_RPMORG, true)
     AC_DEFINE([HAVE_RPMORG], [1], [])
+    AC_EGREP_CPP(RPMTAG_SUGGESTNAME,
+         [ #include <rpm/rpmtag.h>
+	 ], have_tag_suggests=yes, have_tag_suggests=no)
 else
     AC_MSG_RESULT(no)
     AM_CONDITIONAL(WITH_RPMORG, false)
@@ -284,27 +287,27 @@ AC_MSG_CHECKING([for rpm5])
 PKG_CHECK_EXISTS([rpm >= 5.0], [is_rpm5=yes], [is_rpm5=no])
 
 if test "${is_rpm5}." = "yes."; then
-    AC_MSG_RESULT(yes)
-    LIBS="$LIBS -lrpmdb"
-    AC_EGREP_CPP(RPMTAG_PUBKEYS,
-    		 [ #include <rpm/rpmtag.h>
-    		 ], have_tag_pubkeys=yes, have_tag_pubkeys=no)
-
-    AC_EGREP_CPP(RPMTAG_SUGGESTS,
-		 [ #include <rpm/rpmtag.h>
-		 ], have_tag_suggests=yes, have_tag_suggests=no)
-
     AC_DEFINE([HAVE_RPM_5], [1], [])
+    LIBS="$LIBS -lrpmdb"
+    AC_MSG_RESULT(yes)
+    AC_EGREP_CPP(RPMTAG_SUGGESTSNAME,
+         [ #include <rpm/rpmtag.h>
+	 ], have_tag_suggests=yes, have_tag_suggests=no)
+
 else
     AC_MSG_RESULT(no)
 fi
 
-if test "${have_tag_pubkeys}." = "yes." ; then
-    AC_DEFINE([HAVE_RPMTAG_PUBKEYS], 1, [rpm with RPMTAG_PUBKEYS])
-fi
-
 if test "${have_tag_suggests}." = "yes." ; then
     AC_DEFINE([HAVE_RPMTAG_SUGGESTS], 1, [rpm with RPMTAG_SUGGESTS support])
+fi
+
+AC_EGREP_CPP(RPMTAG_PUBKEYS,
+	 [ #include <rpm/rpmtag.h>
+         ], have_tag_pubkeys=yes, have_tag_pubkeys=no)
+
+if test "${have_tag_pubkeys}." = "yes." ; then
+    AC_DEFINE([HAVE_RPMTAG_PUBKEYS], 1, [rpm with RPMTAG_PUBKEYS])
 fi
 
 dnl Checks for libraries.
