@@ -375,10 +375,11 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
     else
         urltype = vf_url_type(req->url);
 
-    if ((mod = find_vf_module(REQTYPE_STAT, urltype)) == NULL)
-        vf_logerr("%s: could not find \"stat\" handler", req->proto);
-
-    else {
+    if ((mod = find_vf_module(REQTYPE_STAT, urltype)) == NULL) {
+        if (*vfile_verbose > 0)
+            vf_log(VFILE_LOG_WARN, "%s could not find \"stat\" handler\n",
+                   req->proto);
+    } else {
         if ((flags & VF_FETCH_NOLABEL) == 0)
             vf_loginfo(_("Retrieving status of %s...\n"),
                        urlabel ? urlabel : PR_URL(req->url));
