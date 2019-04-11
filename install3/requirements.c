@@ -45,41 +45,42 @@ tn_array *filter_out_olders(struct i3ctx *ictx, tn_array *pkgs,
     return tmp;
 }
 
-static struct pkg *select_successor(int indent, struct i3ctx *ictx,
-                                    const struct pkg *pkg)
+static
+struct pkg *choose_successor(int indent, struct i3ctx *ictx,
+                             const struct pkg *pkg, tn_array *candidates)
 {
-    const struct pkg *selected_pkg = NULL;
-    tn_array *pkgs, *tmp;
+    struct pkg *selected_pkg;
+    int i, max_score = 0;
+
+    selected_pkg = n_array_nth(candidates, 0); /* first default */
+
+    for (i=0; i < n_array_size(candidates); i++) {
+        struct pkg *p = n_array_nth(candidates, i);
+        int score = iset_reqs_score(ictx->inset, p);
+        trace(indent, "- %d. %s -> score %d", i, pkg_id(p), score);
+        if (max_score < score) {
+            max_score = score;
+            selected_pkg = p;
+	}
+    }
+    tracef(indent, "RET %s (for %s)",
+           selected_pkg ? pkg_id(selected_pkg) : "NULL", pkg_id(pkg));
+
+    return selected_pkg;
+}
+
+static
+struct pkg *choose_successor_MULTILIB(int indent, struct i3ctx *ictx,
+                                      const struct pkg *pkg, tn_array *candidates)
+{
+    struct pkg *selected_pkg = NULL;
+    int nconsidered = 0, nuncolored = 0;
     int max_score = 0, *scores;
     int i;
-    int nconsidered = 0, nuncolored = 0;
 
-    tracef(indent, "%s (c=%d)", pkg_id(pkg), pkg->color);
-    indent += 2;
-
-    if ((pkgs = pkgset_search(ictx->ps, PS_SEARCH_NAME, pkg->name)) == NULL) {
-        tracef(indent, "%s not found, return", pkg->name);
-        return NULL;
-    }
-
-    if ((tmp = filter_out_olders(ictx, pkgs, pkg)) == NULL) {
-        n_array_free(pkgs);
-        tracef(indent, "%s not found, return", pkg->name);
-        return NULL;
-    }
-
-    n_array_free(pkgs);
-    pkgs = tmp;
-
-    if (!poldek_conf_MULTILIB) {
-        selected_pkg = n_array_nth(pkgs, 0);
-        goto l_end;
-    }
-
-    /* multilib mode */
-    scores = alloca(sizeof(*scores) * n_array_size(pkgs));
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *p = n_array_nth(pkgs, i);
+    scores = alloca(sizeof(*scores) * n_array_size(candidates));
+    for (i=0; i < n_array_size(candidates); i++) {
+        struct pkg *p = n_array_nth(candidates, i);
         scores[i] = 0;
 
 	// extra 100 points for arch compatible
@@ -105,7 +106,7 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
         }
 
         trace(indent, "- %d. %s -> color %d, score %d", i, pkg_id(p),
-            p->color, scores[i]);
+              p->color, scores[i]);
 
 	if (max_score < scores[i]) {
 	    max_score = scores[i];
@@ -125,7 +126,7 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
         int v = scores[0], best_arch_score = INT_MAX;
 
         n_assert(max_score > 0);
-        for (i=1; i < n_array_size(pkgs); i++) {
+        for (i=1; i < n_array_size(candidates); i++) {
             if (v != scores[i]) {
                 all_scores_equal = 0;
                 break;
@@ -136,8 +137,8 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
             goto l_end;
 
         /* add arch_score */
-        for (i=0; i < n_array_size(pkgs); i++) {
-            struct pkg *p = n_array_nth(pkgs, i);
+        for (i=0; i < n_array_size(candidates); i++) {
+            struct pkg *p = n_array_nth(candidates, i);
             v = pkg_arch_score(p);
 
             if (v < best_arch_score) {
@@ -150,11 +151,47 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
     }
 
 l_end:
-    n_array_cfree(&pkgs);
     tracef(indent, "RET %s (for %s)",
            selected_pkg ? pkg_id(selected_pkg) : "NULL", pkg_id(pkg));
 
-    return (struct pkg*)selected_pkg;
+    return selected_pkg;
+}
+
+
+static struct pkg *select_successor(int indent, struct i3ctx *ictx,
+                                    const struct pkg *pkg)
+{
+    struct pkg *selected_pkg = NULL;
+    tn_array *pkgs, *tmp;
+    int max_score = 0, *scores;
+    int i;
+
+    tracef(indent, "%s (c=%d)", pkg_id(pkg), pkg->color);
+    indent += 2;
+
+    if ((pkgs = pkgset_search(ictx->ps, PS_SEARCH_NAME, pkg->name)) == NULL) {
+        tracef(indent, "%s not found, return", pkg->name);
+        return NULL;
+    }
+
+    if ((tmp = filter_out_olders(ictx, pkgs, pkg)) == NULL) {
+        n_array_free(pkgs);
+        tracef(indent, "%s not found, return", pkg->name);
+        return NULL;
+    }
+
+    n_array_free(pkgs);
+    pkgs = tmp;
+
+    scores = alloca(sizeof(*scores) * n_array_size(pkgs));
+
+    if (poldek_conf_MULTILIB)
+        selected_pkg = choose_successor_MULTILIB(indent, ictx, pkg, pkgs);
+    else
+        selected_pkg = choose_successor(indent, ictx, pkg, pkgs);
+
+    n_array_cfree(&pkgs);
+    return selected_pkg;
 }
 
 /* detect which package capability has "replaces" meaning, if any */
