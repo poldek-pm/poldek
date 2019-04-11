@@ -71,6 +71,8 @@ void (*poldek_die_hook)(const char *msg) = NULL;
 static void register_vf_handlers_compat(const tn_hash *htcnf);
 static void register_vf_handlers(const tn_array *fetchers);
 
+static int setup_legacy_sources(tn_hash *htcnf);
+
 static
 int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
                      tn_array *srcs_named,
@@ -163,7 +165,7 @@ int prepare_sources(struct poldek_ctx *ctx,
 
     for (i=0; i < n_array_size(sources); i++) {
         src = n_array_nth(sources, i);
-           /* supplied by -n */
+        /* supplied by -n */
         if ((src->flags & PKGSOURCE_NAMED) && src->path == NULL)
             n_array_push(srcs_named, source_link(src));
         else if (src->path)
@@ -180,12 +182,13 @@ int prepare_sources(struct poldek_ctx *ctx,
 
         tn_array *htcnf_sources;
 
+        setup_legacy_sources(poldek_cnf);
         htcnf_sources = poldek_conf_get_sections(poldek_cnf, "source");
         rc = get_conf_sources(ctx, srcs_path, srcs_named, htcnf_sources);
 
     } else if (n_array_size(srcs_named)) {
         for (i=0; i < n_array_size(srcs_named); i++) {
-            struct source *src = n_array_nth(srcs_named, i);
+            src = n_array_nth(srcs_named, i);
             logn(LOGERR, _("%s: no such source"), src->name);
         }
 
@@ -196,7 +199,7 @@ int prepare_sources(struct poldek_ctx *ctx,
     n_array_clean(sources);
 
     for (i=0; i < n_array_size(srcs_path); i++) {
-        struct source *src = n_array_nth(srcs_path, i);
+        src = n_array_nth(srcs_path, i);
         n_array_push(sources, source_link(src));
     }
 
@@ -295,7 +298,7 @@ tn_array *expand_sources_group(tn_array *srcs_named, tn_array *htcnf_sources,
 
                     for (ii=0; ii < n_array_size(names); ii++) {
                         struct source *src = source_new(n_array_nth(names, ii), NULL, NULL, NULL);
-                        DBGF("%s -> %s\n", s->name, n_array_nth(names, ii));
+                        DBGF("%s -> %s\n", s->name, (char*)n_array_nth(names, ii));
                         src->no = s->no + 1 + ii; /* XXX: hope we fit (see sources_add()) */
                         n_array_push(sources, src);
                     }
@@ -374,6 +377,50 @@ static int source_to_htconf(struct source *src, int no, tn_hash *htcnf)
     return 1;
 }
 
+static
+struct source *new_legacy_source(const char *pathspec, const char *pkg_prefix)
+{
+    struct source *src = source_new_pathspec(NULL, pathspec, pkg_prefix);
+    if ((src->flags & PKGSOURCE_TYPE) == 0)
+        source_set_type(src, "pndir");
+    return src;
+}
+
+static int setup_legacy_sources(tn_hash *poldek_cnf)
+{
+    struct source *src;
+    tn_array *list;
+    tn_hash *htcnf;
+    int i, no = 0;
+
+    htcnf = poldek_conf_get_section(poldek_cnf, "global");
+
+    if ((list = poldek_conf_get_multi(htcnf, "source"))) {
+        for (i=0; i < n_array_size(list); i++) {
+            src = new_legacy_source(n_array_nth(list, i), NULL);
+            source_to_htconf(src, no++, poldek_cnf);
+            source_free(src);
+        }
+        n_array_free(list);
+    }
+
+    /* source\d+, prefix\d+ pairs  */
+    for (i=0; i < 100; i++) {
+        const char *src_val;
+        char opt[64];
+
+        snprintf(opt, sizeof(opt), "source%d", i);
+        if ((src_val = poldek_conf_get(htcnf, opt, NULL))) {
+            snprintf(opt, sizeof(opt), "prefix%d", i);
+            src = new_legacy_source(src_val, poldek_conf_get(htcnf, opt, NULL));
+            source_to_htconf(src, no++, poldek_cnf);
+            source_free(src);
+        }
+    }
+
+    return no;
+}
+
 static int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
                             tn_array *srcs_named, tn_array *htcnf_sources)
 {
@@ -414,7 +461,7 @@ static int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
     }
 
     for (i=0; i < n_array_size(srcs_named); i++) {
-        struct source *src = n_array_nth(srcs_named, i);
+        src = n_array_nth(srcs_named, i);
         if (matches == NULL ||
             (matches[i] == 0 && !n_hash_exists(expanded_h, src->name))) {
             logn(LOGERR, _("%s: no such source"), src->name);
@@ -424,7 +471,7 @@ static int get_conf_sources(struct poldek_ctx *ctx, tn_array *sources,
 
     if (nerr == 0 && getall)
         for (i=0; i < n_array_size(sources); i++) {
-            struct source *src = n_array_nth(sources, i);
+            src = n_array_nth(sources, i);
             src->no = i;
         }
 
@@ -1116,6 +1163,13 @@ void poldek_free(struct poldek_ctx *ctx)
 }
 
 
+static
+
+void fclose_void_callback(void *file)
+{
+    fclose(file);
+}
+
 int poldek_configure(struct poldek_ctx *ctx, int param, ...)
 {
     va_list ap;
@@ -1164,7 +1218,8 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
                     log(LOGERR, "%s: open failed: %m", vs);
                     rc = 0;
                 } else {
-                    poldek_log_add_appender("_FILE", stream, (tn_fn_free)fclose,
+                    poldek_log_add_appender("_FILE", stream,
+                                            fclose_void_callback,
                                             0,  NULL);
                 }
             }
@@ -1226,7 +1281,7 @@ int poldek_configure(struct poldek_ctx *ctx, int param, ...)
                 poldek_say_goodbye = vv;
                 poldek_log_say_goodbye = vv;
             }
-
+            /* fallthru */ /* FIXME */
         default:
             rc = poldek_ts_vconfigure(ctx->ts, param, ap);
             break;
