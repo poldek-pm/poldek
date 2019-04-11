@@ -297,7 +297,6 @@ static struct pkg *find_successor(int indent, struct i3ctx *ictx,
     return p;
 }
 
-
 static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
                                  struct pkg *pkg, struct capreq *req,
                                  const struct pkg *req_satisfier)
@@ -305,7 +304,7 @@ static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
     struct successor succ;
     struct pkg *sucpkg;
     char *message = NULL;
-    struct i3pkg *i3tomark = NULL;
+    int install = 0;
 
     tracef(indent, "%s req: %s (satisfied=%s)", pkg_id(pkg),
            capreq_stra(req), req_satisfier ? "yes": "no");
@@ -317,25 +316,42 @@ static int try_to_upgrade_orphan(int indent, struct i3ctx *ictx,
         }
         return 0;
     }
-
     /* already in inset or will be there soon */
-    if (i3_is_marked(ictx, sucpkg) || pkg_is_marked_i(ictx->ts->pms, sucpkg))
+    if (i3_is_marked(ictx, sucpkg) || pkg_is_marked_i(ictx->ts->pms, sucpkg)) {
         message = "already marked";
-    else if (succ.by_obsoletes)
-        message = "by Obsoletes tag";
-    else if (ictx->ts->getop(ictx->ts, POLDEK_OP_GREEDY))
-        message = "upgrade resolves req";
+        install = 1;
+        goto l_end;
+    }
 
-    i3tomark = i3pkg_new(sucpkg, 0, pkg, req, I3PKGBY_GREEDY);
+    if (pkg_requires_cap(sucpkg, req)) {
+        message = "successor requires req too";
+        install = 0;
 
-    tracef(indent, "- %s: upgrading orphan%s%s%s", pkg_id(sucpkg),
-           message ? " (":"", message ? message:"", message ? ")":"");
+    } else {
+        if (succ.by_obsoletes)
+            message = "by Obsoletes tag";
 
-    i3_process_package(indent, ictx, i3tomark);
+        else if (ictx->ts->getop(ictx->ts, POLDEK_OP_GREEDY))
+            message = "upgrade resolves req";
 
-    return 1;
+        install = 1;
+    }
+
+l_end:
+    if (!install) {
+        tracef(indent, "- %s: do not upgrading orphan%s%s%s", pkg_id(sucpkg),
+               message ? " (":"", message ? message:"", message ? ")":"");
+
+    } else {
+        struct i3pkg *i3tomark = i3pkg_new(sucpkg, 0, pkg, req, I3PKGBY_GREEDY);
+
+        tracef(indent, "- %s: upgrading orphan%s%s%s", pkg_id(sucpkg),
+	       message ? " (":"", message ? message:"", message ? ")":"");
+        i3_process_package(indent, ictx, i3tomark);
+    }
+
+    return install;
 }
-
 
 static int process_orphan_req(int indent, struct i3ctx *ictx,
                               struct pkg *pkg, struct capreq *req)
