@@ -49,8 +49,8 @@ static struct rpm_cap_tagset rpm_cap_tags_tab[] = {
     { PMCAP_OBSL, "obsl", RPMTAG_OBSOLETENAME, RPMTAG_OBSOLETEVERSION, RPMTAG_OBSOLETEFLAGS },
 #if HAVE_RPMTAG_SUGGESTS
     /*  RPMTAG_SUGGESTS* doesn't work */
-    /* { PMCAP_SUG,  "sugg", RPMTAG_SUGGESTSNAME, RPMTAG_SUGGESTSVERSION, RPMTAG_SUGGESTSFLAGS }, */
-    { PMCAP_SUG,  "sug",  RPMTAG_REQUIRENAME, RPMTAG_REQUIREVERSION, RPMTAG_REQUIREFLAGS },
+    { PMCAP_SUG,  "sugg", RPMTAG_SUGGESTNAME, RPMTAG_SUGGESTVERSION, RPMTAG_SUGGESTFLAGS },
+    //{ PMCAP_SUG,  "sug",  RPMTAG_REQUIRENAME, RPMTAG_REQUIREVERSION, RPMTAG_REQUIREFLAGS },
 #endif
     { 0, 0, 0, 0, 0 },
 };
@@ -113,17 +113,13 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
     }
 
     if (tgs == NULL) {
-        if (pmcap_tag == PMCAP_SUG)
-            return NULL;
-
         n_die("%d: unknown captag (internal error)", pmcap_tag);
     }
 
+    DBGF("ldcaps %s %d\n", tgs->label, tgs->name_tag);
 
     if (!pm_rpmhdr_ent_get(&e_name, h, tgs->name_tag))
         return NULL;
-
-    //printf("ldcap %s\n", e_name.val);
 
     if (pm_rpmhdr_ent_get(&e_version, h, tgs->version_tag)) {
         //n_assert(t2 == RPM_STRING_ARRAY_TYPE);
@@ -194,9 +190,6 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
                     continue;
                 cr_flags = setup_reqflags(flag, cr_flags);
             }
-
-            if (pmcap_tag == PMCAP_SUG && !is_suggestion(flag))
-                continue;
         }
 
         if (pmcap_tag == PMCAP_OBSL)
