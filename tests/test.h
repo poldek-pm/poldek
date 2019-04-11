@@ -19,7 +19,12 @@
 #include "misc.h"
 #include "capreq.h"
 #include "pm/pm.h"
-#include "pm/rpm/pm_rpm.h"
+#include "config.h"
+#ifdef HAVE_RPMORG
+# include "pm/rpmorg/pm_rpm.h"
+#else
+# include "pm/rpm/pm_rpm.h"
+#endif
 #include "pkgmisc.h"
 
 #define fail_ifnot fail_unless

@@ -5,3 +5,4 @@ Makefile
 test_poldek
 *.tmp
 poldek_test_conf.conf
+/repo

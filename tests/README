@@ -1,5 +1,8 @@
 poldek test suite
 
+BuildRequires: check-devel
+Reqires: fakeroot
+
 To run all tests:
 
 $ make check  # runs all tests made with check library
@@ -12,7 +15,4 @@ $ ./sh/07-depsolver -h
 
 Particular tests may be choosen:
 
-$ ./sh/07-depsolver -v --runtest testSuggests
-
-
-
+$ ./sh/07-depsolver -v -t testSuggests

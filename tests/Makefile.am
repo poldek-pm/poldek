@@ -3,19 +3,19 @@
 TESTS = test_poldek
 noinst_PROGRAMS = test_poldek
 test_poldek_SOURCES = test_poldek.c test_match.c test_env.c \
-	   	              test_pmdb.c test_op.c test_config.c test.h 	
+	   	              test_pmdb.c test_op.c test_config.c test.h
 
 EXTRA_DIST = poldek_test_conf.conf sh
 
 
 test_poldek_INCLUDES= @CHECK_CFLAGS@
-test_poldek_LDADD = @CHECK_LIBS@ ../libpoldek_allsym.la ../vfile/libvfile.la  
+test_poldek_LDADD = @CHECK_LIBS@ ../libpoldek.la ../vfile/libvfile.la
 
 poldek_test_conf.conf: $(top_srcdir)/doc/conf-xml2testconf.xsl $(top_srcdir)/doc/poldek.conf.xml
 	xsltproc $(top_srcdir)/doc/conf-xml2testconf.xsl $(top_srcdir)/doc/poldek.conf.xml > poldek_test_conf.conf
 
 clean-local:
-	-rm -f *.tmp core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* 
+	-rm -f *.tmp core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa*
 	-find sh -name \*~ | xargs -r rm
 
 check: poldek_test_conf.conf
@@ -40,4 +40,3 @@ sheck:
 	echo "====================================="; \
 	echo " Passed $$nok tests of total $$n";      \
 	echo "====================================="
-

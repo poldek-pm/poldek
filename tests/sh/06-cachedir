@@ -5,21 +5,16 @@
 . ./sh/lib/repo-setup
 
 create_local_conf() {
-> $TMPDIR/poldek.conf
-[ -n "$1" ] && echo "cachedir = $1" >> $TMPDIR/poldek.conf
-echo "
-
-_name_prefix = test
-
-" >> $TMPDIR/poldek.conf
+    > $TMPDIR/poldek.conf
+    [ -n "$1" ] && echo "cachedir = $1" >> $TMPDIR/poldek.conf
+    echo -e "\n_name_prefix = test\n" >> $TMPDIR/poldek.conf
 }
 
-testCacheDir() 
+testCacheDir()
 {
 
     HOME="$TMPDIR/fakehome"     # in TESTING mode $HOME is used
     mkdir $HOME || fail "mkdir"
-    export HOME
 
     default_home_cachedir="$HOME/.poldek-cache"
     [ -d $default_home_cachedir ] && fail "$default_home_cachedir should does not exists"
@@ -30,9 +25,9 @@ testCacheDir()
     [ -d $default_home_cachedir ] && fail "$default_home_cachedir should not exists"
     [ -d $REPO/foobar ] && fail "directory exist"
 
-    cmdline_cachedir="$REPO/cmdline-cachedir"        
+    cmdline_cachedir="$REPO/cmdline-cachedir"
     msgn "--noconf --cachedir"
-    $POLDEK --noconf --cachedir=$cmdline_cachedir -l 
+    $POLDEK --noconf --cachedir=$cmdline_cachedir -l
     [ -d $cmdline_cachedir ] || fail "$cmdline_cachedir does not exists"
     [ -d $default_home_cachedir ] && fail "$default_home_cachedir should not exists"
     rm -rf $cmdline_cachedir $default_home_cachedir
@@ -41,14 +36,14 @@ testCacheDir()
     create_local_conf $configured_cachedir
 
     msgn "--conf  --cachedir"
-    $POLDEK --conf $TMPDIR/poldek.conf --cachedir=$cmdline_cachedir -l 
+    $POLDEK --conf $TMPDIR/poldek.conf --cachedir=$cmdline_cachedir -l
     [ -d $cmdline_cachedir ] || fail "--cachedir'ed $cmdline_cachedir does not exist"
     [ -d $configured_cachedir ] && fail "overwritten by cmdline $configured_cachedir exists"
     [ -d $default_home_cachedir ] && fail "$default_home_cachedir should not exists"
     rm -rf $cmdline_cachedir $configured_cachedir $default_home_cachedir
 
     msgn "--conf"
-    $POLDEK --conf $TMPDIR/poldek.conf -l 
+    $POLDEK --conf $TMPDIR/poldek.conf -l
     [ ! -d $configured_cachedir ] && fail "$configured_cachedir does not exists"
     [ -d $default_home_cachedir ] && fail "$default_home_cachedir should not exists"
     rm -rf $configured_cachedir $default_home_cachedir
@@ -58,14 +53,14 @@ testCacheDir()
     create_local_conf ""
 
     msgn "--conf without cachedir"
-    $POLDEK --conf $TMPDIR/poldek.conf -l 
+    $POLDEK --conf $TMPDIR/poldek.conf -l
     [ ! -d $tmpdir_cachedir ] && fail "$tmpdir_cachedir does not exists"
     [ -d $default_home_cachedir ] && fail "$default_home_cachedir should not exists"
     rm -rf $default_home_cachedir $tmpdir_cachedir
 
     msgn "--conf without cachedir, with env.HOME/.poldek-cache"
     mkdir $default_home_cachedir
-    $POLDEK --conf $TMPDIR/poldek.conf -l 
+    $POLDEK --conf $TMPDIR/poldek.conf -l
     [ -d $tmpdir_cachedir ] && fail "$tmpdir_cachedir should not exists"
     [ ! -d $default_home_cachedir ] && fail "$default_home_cachedir not exists"
     rm -rf $default_home_cachedir $tmpdir_cachedir
@@ -76,7 +71,7 @@ testCacheDir()
     # remote conf
     POLDEK_TESTING_PRELOAD_CONF="$SHLIBDIR/vftest-fetch.conf"
     export POLDEK_TESTING_PRELOAD_CONF
-    
+
     url="test://$TMPDIR/poldek.conf"
     (TMPDIR=""; TMP=""; $POLDEK --conf $url -l)
     [ ! -d $configured_cachedir ] && fail "remotely $configured_cachedir does not exists"
@@ -93,7 +88,7 @@ testCacheDir()
 
 
     return 0
-}    
-    
+}
+
 
 . ./sh/lib/shunit2

@@ -38,20 +38,20 @@ while test $# -gt 0 ; do
         -s)
             shift; suggests="$suggests ${1},"; shift ;;
 
-        -o)    
+        -o)
             shift; obsoletes="$obsoletes ${1},"; shift ;;
 
-        -c)     
+        -c)
             shift; conflicts="$conflicts ${1},"; shift ;;
 
         -f)
             shift; files="$files ${1} "; shift ;;
 
-	-a) 
-	    shift; arch="${1}"; shift;;    
+	-a)
+	    shift; arch="${1}"; shift;;
 
-        -d)  
-            shift; rpmdir="${1}"; shift;;    
+        -d)
+            shift; rpmdir="${1}"; shift;;
 
         *)
             echo "unknown option ${1}"; exit 1;
@@ -74,11 +74,12 @@ fi
 
 TMPDIR="${TMPDIR:-/tmp}"
 
-SPEC="$TMPDIR/$name.$$.spec" 
-echo "Building $name $version-$release"
+SPEC="$TMPDIR/$name.$$.spec"
+echo "Building $name-$version-$release.$arch.rpm"
 
 echo > $SPEC
 echo "%define _noautoreq libc.so.6 rtld" >> $SPEC
+echo "AutoReqProv: no" >> $SPEC # rpmorg
 echo "Name: $name" >> $SPEC
 echo "Version: $version" >> $SPEC
 echo "Release: $release" >> $SPEC
@@ -88,7 +89,7 @@ echo "Summary(pl): pl $name" >> $SPEC
 echo "Summary(de): de $name" >> $SPEC
 echo "Group: System" >> $SPEC
 echo "License: foo" >> $SPEC
-echo "BuildArch: $arch" >> $SPEC
+#echo "BuildArch: $arch" >> $SPEC
 echo "BuildRoot: /tmp/%{name}-%{version}-root-%(id -u -n)" >> $SPEC
 [ -n "$provides" ] &&  echo "Provides: $provides" >> $SPEC
 [ -n "$requires" ] && echo "Requires: $requires" >> $SPEC
@@ -112,9 +113,9 @@ if [ -n "$files" ]; then
         bn=$(basename $f)
         if [ -f $bn ]; then
             echo "cp $(pwd)/$bn \$RPM_BUILD_ROOT$dn" >> $SPEC
-        else    
+        else
             echo "touch \$RPM_BUILD_ROOT/$f" >> $SPEC
-        fi    
+        fi
     done
 fi
 
@@ -128,5 +129,10 @@ if [ -n "$files" ]; then
 fi
 
 echo -e "%clean\nrm -rf \$RPM_BUILD_ROOT" >> $SPEC
-[ ! -d "$rpmdir" ] && rpmdir="$TMPDIR" 
-rpmbuild --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir"  -bb $SPEC
+[ ! -d "$rpmdir" ] && rpmdir="$TMPDIR"
+rpmbuild --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" --target $arch -bb $SPEC
+
+# rpmorg stores packages in $arch subdir
+if [ -d "$rpmdir/$arch" ]; then
+    mv -f $rpmdir/$arch/$name-*.rpm $rpmdir/ 2>/dev/null
+fi

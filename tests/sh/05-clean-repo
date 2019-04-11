@@ -12,7 +12,7 @@ up() {
    poldek_up -Oautoupa=n --up || fail "up failed"
 }
 
-testCleanLocalCache() 
+testCleanLocalCache()
 {
     POLDEK_TESTING_DENIED_FILES="packages.ndir.diff.toc"
 
@@ -20,33 +20,36 @@ testCleanLocalCache()
     indexfile="$REPO/packages.ndir.gz"
     mkidx
     die_if_empty_index $indexfile
-    
+
     msgn "up"
     up
 
     msgn "Fetching package"
-    package=$(poldek_up --skip-installed -q --cmd 'ls -q | !head -1')
+    package=$(poldek_quiet_up --skip-installed -q --cmd 'ls -q | !head -1')
     [ -n "$package" ] || fail "no available packages??"
 
     msg "  - $package"
-    poldek_up --skip-installed -q --cmd "get -d $CACHEDIR $package"
+    poldek_up --skip-installed --cmd "get -d $CACHEDIR $package"
     downloaded=$(find $CACHEDIR -name $package\*.rpm | wc -l)
     assertEquals "$package not downloaded?" "1" $downloaded
 
     # no simply way to fetch packages to local repo cache1
     index=$(find $CACHEDIR -name packages.ndir.gz)
-    mv -f $CACHEDIR/$package*.rpm $(dirname $index)
-    #find $CACHEDIR
+    REPO_CACHE_DIR=$(dirname $index)
+    mv -f $CACHEDIR/$package*.rpm $REPO_CACHE_DIR
 
     msgn "clean"
-    poldek_up --clean 
+    poldek_up --clean
     files=$(find $CACHEDIR -type f | grep -vE '\.rpm$')
     n=$(find $CACHEDIR -type f | grep -vE '\.rpm$' | wc -l)
     assertEquals "cachedir still contains non rpm files ($files)" "0" "$n"
-    
-    n=$(find $CACHEDIR | grep "$package" | wc -l) # no -f its 
-    assertEquals "cachedir: missing $package" "1" "$n"
-    
+
+    n=$(find $REPO_CACHE_DIR | grep "$package" | wc -l) # no -f its
+
+    assertEquals "cachedir: package $package rpm exists" "0" "$n"
+    # no longer true, see 966186e43
+    #assertEquals "cachedir: missing $package" "1" "$n"
+
     msgn "up"
     up
 
@@ -54,7 +57,7 @@ testCleanLocalCache()
     poldek_up --cleana
     n=$(find $CACHEDIR -type f | wc -l)
     assertEquals "cachedir still contains files" "0" "$n"
-    
+
     n=$(find $CACHEDIR -type l | wc -l)
     assertEquals "cachedir still contains files" "0" "$n"
 }
