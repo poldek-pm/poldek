@@ -699,7 +699,7 @@ Each section describes one fetcher.
     </description>
   </option>
 
-  <option name="proto" type="string" value="foo,bar" required="yes">
+  <option name="proto" type="string" value="foo,bar" list="yes" required="yes">
     <description>
     Protocol or protocols supported by fetcher. Name of the protocol can be
     completely arbitrary, i.e. if you can handle protocol "foo" by writing
