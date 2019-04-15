@@ -130,9 +130,11 @@ fi
 
 echo -e "%clean\nrm -rf \$RPM_BUILD_ROOT" >> $SPEC
 [ ! -d "$rpmdir" ] && rpmdir="$TMPDIR"
-rpmbuild --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" --target $arch -bb $SPEC
 
+rpmbuild --define 'debug_package nil' --define '__spec_install_post_chrpath echo' --define "_rpmdir $rpmdir" --target $arch -bb $SPEC
+ec=$?
 # rpmorg stores packages in $arch subdir
 if [ -d "$rpmdir/$arch" ]; then
     mv -f $rpmdir/$arch/$name-*.rpm $rpmdir/ 2>/dev/null
 fi
+exit $ec
