@@ -1,8 +1,7 @@
 PROJ_DIR=$(shell pwd)
 
 copylibs:
-	git submodule init
-	git submodule update --remote
+	git submodule update --init --remote
 
 tarball: copylibs dist
 tarball-bz2: copylibs dist-bzip2
@@ -10,7 +9,7 @@ tarball-bz2: copylibs dist-bzip2
 rpm-package: tarball-bz2
 	rpmbuild -tb $(distdir).tar.bz2
 
-mclean: 
+mclean:
 	@if [ -f Makefile ]; then         \
 		$(MAKE) maintainer-clean; \
 	fi
@@ -41,7 +40,7 @@ backup:
 	fi;                                                         \
 	md5sum --check $$ARCHIVE_MD5
 
-arch : mclean backup 
+arch : mclean backup
 
 POTFILES_in:
 	-rm -f poldek-git*
@@ -89,6 +88,6 @@ oncarmei686:
 	@ssh carmei686.pld-linux.org "cd poldek && CC=ccache ./make.sh -j3"
 
 
-scpsnap: 
+scpsnap:
 	@snap=`ls poldek-*-cvs20* | LC_ALL=C sort | tail -1`; \
 	[ -n "$$snap" ] && chmod 644 $$snap && scp $$snap ep09.pld-linux.org:www/poldek/download/snapshots/
