@@ -189,6 +189,21 @@ testChooseMoreAccuratePackage() {
   try_install_a "a,x"
 }
 
+# lp#1722104
+testChooseMoreAccurateOrphanReq() {
+    msgn "Preparing repositories..."
+    build_installed a 1-1 -p "liba.so"
+    build_installed b 1-1 -r "liba.so"
+
+    build a 1-1 -p "liba.so"
+    build a 2-2 -p "liba.so"
+    build b 2-2 -r "liba.so" -r "'a = 2'"
+
+    msgn "Upgrade"
+    try_install b-2-2 "a-2-2,b-2-2" "a-1-1,b-1-1"
+}
+
+
 # package 'c' conflicts with 'a'
 testSkipConflictedAlternative() {
   build a -r "BB" -r "CC"
@@ -206,16 +221,22 @@ testRedundantRequirement() {
   try_install_a "a,b\-1"
 }
 
-# Not implemented
 # if packages "bar" and "baz" have Obsoletes: foo, Provides: foo, Conflicts: foo,
 # then librpm knows that you can only have "bar" or "baz" but not both
-XXXtestRpmOrgAlternatives() {
-    build bar -o foo -p foo -c foo
+testRpmOrgMutualExclusive() {
+    build_installed bar -o foo -p foo -c foo
     build baz -o foo -p foo -c foo
 
-    try_install "bar"
-    try_install "baz" "bar"
+    try_install "baz" "baz" "bar"
 }
+
+testRpmOrgMutualExclusive_2() {
+    build_installed baz -o foo -p foo -c foo
+    build baz -v 2 -o foo -p foo -c foo
+
+    try_install "baz" "baz" "baz"
+}
+
 
 # suggested packages should be installed
 testSuggests() {
