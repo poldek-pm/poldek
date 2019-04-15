@@ -16,6 +16,15 @@
 
 #include "ictx.h"
 
+static int skip_boolean_dep(const struct capreq *cr) {
+    if (capreq_is_boolean(cr)) {
+        logn(LOGWARN, "%s: skipping boolean dependency (not supported yet)",
+             capreq_stra(cr));
+        return 1;
+    }
+    return 0;
+}
+
 static
 tn_array *filter_out_olders(struct i3ctx *ictx, tn_array *pkgs,
                             const struct pkg *pkg)
@@ -663,9 +672,13 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 
     suggests = capreq_arr_new(4);
     n_array_ctl_set_freefn(suggests, NULL); /* 'weak' ref */
+
     for (i=0; i < n_array_size(pkg->sugs); i++) {
         struct capreq *req = n_array_nth(pkg->sugs, i);
         struct pkg *tomark = NULL;
+
+        if (skip_boolean_dep(req))
+            continue;
 
         if (iset_provides(ictx->inset, req)) {
             trace(indent, "- %s: already marked", capreq_stra(req));
@@ -776,6 +789,9 @@ int i3_process_pkg_requirements(int indent, struct i3ctx *ictx,
     it = pkg_req_iter_new(pkg, itflags);
     while ((req = pkg_req_iter_get(it))) {
         int rc;
+
+        if (skip_boolean_dep(req))
+            continue;
 
         if ((rc = process_req(indent, ictx, i3pkg, req)) <= 0) {
             nerrors++;
