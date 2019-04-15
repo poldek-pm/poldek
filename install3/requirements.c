@@ -163,8 +163,6 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
 {
     struct pkg *selected_pkg = NULL;
     tn_array *pkgs, *tmp;
-    int max_score = 0, *scores;
-    int i;
 
     tracef(indent, "%s (c=%d)", pkg_id(pkg), pkg->color);
     indent += 2;
@@ -182,8 +180,6 @@ static struct pkg *select_successor(int indent, struct i3ctx *ictx,
 
     n_array_free(pkgs);
     pkgs = tmp;
-
-    scores = alloca(sizeof(*scores) * n_array_size(pkgs));
 
     if (poldek_conf_MULTILIB)
         selected_pkg = choose_successor_MULTILIB(indent, ictx, pkg, pkgs);
