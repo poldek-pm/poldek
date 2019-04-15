@@ -161,10 +161,18 @@ static int do_verify_signature(const char *path, unsigned flags)
              signam);
         return 0;
     }
+    unsigned qva_flags = RPMVSF_DEFAULT;
+
+    if ((flags & (VRFYSIG_SIGNPGP | VRFYSIG_SIGNGPG)) == 0) {
+        qva_flags |= RPMVSF_MASK_NOSIGNATURES;
+    }
+
+    // always check digests - without them rpmVerifySignature returns error
+    //if ((flags & VRFYSIG_DGST) == 0)
+    //   qva_flags |= RPMVSF_MASK_NODIGESTS;
 
     memset(&qva, '\0', sizeof(qva));
-    qva.qva_flags = flags;
-
+    qva.qva_flags = qva_flags;
 
     rc = -1;
     fdt = Fopen(path, "r.ufdio");
@@ -174,7 +182,7 @@ static int do_verify_signature(const char *path, unsigned flags)
         rc = rpmVerifySignatures(&qva, ts, fdt, n_basenam(path));
         rpmtsFree(ts);
 
-        DBGF("rpmVerifySignatures[md%d, sign%d] %s %s\n",
+        DBGF("rpmVerifySignatures[md=%d, sign=%d] %s %s\n",
              flags & VRFYSIG_DGST ? 1:0, flags & VRFYSIG_SIGN ? 1:0,
              n_basenam(path), rc == 0 ? "OK" : "BAD");
     }
