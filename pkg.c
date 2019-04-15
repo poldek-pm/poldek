@@ -322,6 +322,7 @@ struct pkg *pkg_new_ext(tn_alloc *na,
     pkg->caps = NULL;
     pkg->cnfls = NULL;
     pkg->sugs = NULL;
+    pkg->revreqs = NULL;
     pkg->fl = NULL;
     pkg->reqpkgs = NULL;
     pkg->revreqpkgs = NULL;
@@ -363,6 +364,9 @@ struct pkg *pkg_clone(tn_alloc *na, struct pkg *pkg, unsigned flags)
     new->caps  = clone_array(pkg->caps, flags);
     new->reqs  = clone_array(pkg->reqs, flags);
     new->cnfls = clone_array(pkg->cnfls, flags);
+    new->sugs = clone_array(pkg->sugs, flags);
+    new->revreqs = clone_array(pkg->revreqs, flags);
+
     if (pkg->fl)
         new->fl = n_ref(pkg->fl)
     new->reqpkgs = clone_array(pkg->reqpkgs, flags);
@@ -401,6 +405,8 @@ void pkg_free(struct pkg *pkg)
     n_array_cfree(&pkg->caps);
     n_array_cfree(&pkg->reqs);
     n_array_cfree(&pkg->cnfls);
+    n_array_cfree(&pkg->sugs);
+    n_array_cfree(&pkg->revreqs);
     n_array_cfree(&pkg->reqpkgs);
     n_array_cfree(&pkg->revreqpkgs);
     n_array_cfree(&pkg->cnflpkgs);
