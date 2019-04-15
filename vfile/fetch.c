@@ -160,10 +160,11 @@ struct ffetcher *ffetcher_new(const char *name, tn_array *protocols,
 
     if (*path != '/') {
         char *p = alloca(PATH_MAX);
-        if (vf_find_external_command(p, PATH_MAX, path, NULL))
+        if (vf_find_external_command(p, PATH_MAX, path, NULL)) {
             path = p;
-        else {
-            vf_logerr("%s: command not found\n", path);
+        } else {
+            if (*vfile_verbose > 1)
+                vf_logerr("%s: command not found\n", path);
             return NULL;
         }
     }
@@ -492,7 +493,8 @@ int vfile_register_ext_handler(const char *name, tn_array *protocols,
     }
 
     if ((ftch = ffetcher_new(name, protocols, cmd)) == NULL) {
-        vf_logerr("External downloader '%s': registration failed\n", cmd);
+        if (*vfile_verbose > 1)
+            vf_logerr("External downloader '%s': registration failed\n", cmd);
 
     } else {
         if (ffetchers == NULL) {
