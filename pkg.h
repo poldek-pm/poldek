@@ -95,8 +95,9 @@ struct pkg {
 
     tn_array     *caps;       /* capabilities     */
     tn_array     *reqs;       /* requirements     */
-    tn_array     *cnfls;      /* conflicts (with obsoletes)  */
-    tn_array     *sugs;       /* suggests */
+    tn_array     *cnfls;      /* conflicts with obsoletes (OBCNFL flag)  */
+    tn_array     *sugs;       /* recommends and suggests (VRYWEAK flag)  */
+    tn_array     *revreqs;    /* supplements and enhances (VRYWEAK flag) */
 
     tn_tuple     *fl;         /* file list, see pkgfl.h  */
 

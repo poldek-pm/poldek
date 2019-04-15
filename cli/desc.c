@@ -393,21 +393,50 @@ static void show_reqs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
     }
 }
 
+enum weak_filter {
+    WEAK_ANY      = 0,
+    WEAK_WEAK     = 1,
+    WEAK_VERYWEAK = 2
+};
 
-static void show_suggests(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
+static void show_weakreqs(struct cmdctx *cmdctx,
+                          const char *label, tn_array *reqs,
+                          enum weak_filter weakness,
+                          int term_width)
 {
     char *p, *colon = ", ";
-    int i, ncol;
+    int i, n, ncol;
+    int nitems = n_array_size(reqs);
 
-    if (pkg->sugs == NULL)
-        return;
+    if (weakness != WEAK_ANY) {
+        nitems = 0;
+        for (i=0; i<n_array_size(reqs); i++) {
+            struct capreq *cr = n_array_nth(reqs, i);
 
+            if (weakness == WEAK_WEAK && capreq_is_veryweak(cr))
+                continue;
+            else if (weakness == WEAK_VERYWEAK && !capreq_is_veryweak(cr))
+                continue;
+
+            nitems++;
+        }
+
+        if (nitems == 0)
+            return;
+    }
+
+    n = 0;
     ncol = IDENT;
-    cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", "Suggests:");
-    for (i=0; i<n_array_size(pkg->sugs); i++) {
-        struct capreq *cr = n_array_nth(pkg->sugs, i);
+    cmdctx_printf_c(cmdctx, PRCOLOR_CYAN, "%-16s", label);
+    for (i=0; i<n_array_size(reqs); i++) {
+        struct capreq *cr = n_array_nth(reqs, i);
 
-        if (i == (n_array_size(pkg->sugs) - 1))
+        if (weakness == WEAK_VERYWEAK && !capreq_is_veryweak(cr))
+            continue;
+        else if (weakness == WEAK_WEAK && capreq_is_veryweak(cr))
+            continue;
+
+        if (n == nitems - 1)
             colon = "";
 
         p = capreq_snprintf_s(cr);
@@ -416,8 +445,32 @@ static void show_suggests(struct cmdctx *cmdctx, struct pkg *pkg, int term_width
             nlident(cmdctx, ncol);
         }
         ncol += cmdctx_printf(cmdctx, "%s%s", p, colon);
+        n += 1;
     }
     cmdctx_printf(cmdctx, "\n");
+}
+
+static void show_suggests(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
+{
+    if (pkg->sugs == NULL)
+        return;
+
+#ifdef HAVE_RPMORG
+    show_weakreqs(cmdctx, "Recommends:", pkg->sugs, WEAK_WEAK, term_width);
+    show_weakreqs(cmdctx, "Suggests:", pkg->sugs, WEAK_VERYWEAK, term_width);
+#else
+    show_weakreqs(cmdctx, "Suggests:", pkg->sugs, WEAK_ANY, term_width);
+#endif
+}
+
+static void show_enhances(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
+{
+
+    if (pkg->revreqs == NULL)
+        return;
+
+    show_weakreqs(cmdctx, "Supplements:", pkg->revreqs, WEAK_WEAK, term_width);
+    show_weakreqs(cmdctx, "Enhances:", pkg->revreqs, WEAK_VERYWEAK, term_width);
 }
 
 
@@ -814,6 +867,7 @@ static void show_pkg(struct cmdctx *cmdctx, struct pkg *pkg, unsigned flags, int
     if (flags & OPT_DESC_REQS) {
         show_reqs(cmdctx, pkg, term_width);
         show_suggests(cmdctx, pkg, term_width);
+        show_enhances(cmdctx, pkg, term_width);
     }
 
     if (flags & OPT_DESC_REQDIRS)

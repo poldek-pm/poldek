@@ -38,9 +38,8 @@
 #define CAPREQ_PREREQ      (1 << 3)        /* Requires(pre) */
 #define CAPREQ_PREREQ_UN   (1 << 4)        /* Requires(un)  */
 #define CAPREQ_OBCNFL      CAPREQ_PREREQ   /* Obsoletes     */
-
+#define CAPREQ_VRYWEAK     CAPREQ_PREREQ   /* Suggests/Enhances */
 #define CAPREQ_RPMLIB      (1 << 5)  /* rpmlib(...) */
-
 #define CAPREQ_ISDIR       (1 << 6)  /* */
 #define CAPREQ_BASTARD     (1 << 7)  /* capreq added by poldek */
 
@@ -85,10 +84,14 @@ EXPORT extern__inline int32_t capreq_epoch_(const struct capreq *cr);
 #define capreq_is_cnfl(cr)      ((cr)->cr_flags & CAPREQ_CNFL)
 #define capreq_is_prereq(cr)    ((cr)->cr_flags & CAPREQ_PREREQ)
 #define capreq_is_prereq_un(cr) ((cr)->cr_flags & CAPREQ_PREREQ_UN)
+
 #define capreq_is_obsl(cr)        capreq_is_prereq((cr))
+#define capreq_is_veryweak(cr)    capreq_is_prereq((cr))
 
 #define capreq_is_file(cr)        (*(cr)->name == '/')
 #define capreq_isnot_file(cr)     (*(cr)->name != '/')
+
+#define capreq_is_boolean(cr)     (*(cr)->name == '(')
 
 #define capreq_isdir(cr)        ((cr)->cr_flags & CAPREQ_ISDIR)
 #define capreq_set_isdir(cr)    ((cr)->cr_flags |= CAPREQ_ISDIR)
@@ -153,7 +156,7 @@ EXPORT char *capreq_snprintf_s0(const struct capreq *cr);
 
 EXPORT char *capreq_str(char *str, size_t size, const struct capreq *cr);
 
-/* const char *capreq_stra(struct capreq) */
+/* const char *capreq_stra(struct capreq *) */
 #define capreq_stra(c) \
     (capreq_versioned((c))? capreq_str(alloca(256), 256, (c)): capreq_name((c)))
 

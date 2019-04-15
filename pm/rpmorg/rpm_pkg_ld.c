@@ -40,19 +40,26 @@ struct rpm_cap_tagset {
     int name_tag;
     int version_tag;
     int flags_tag;
+    unsigned set_cr_flag;
 };
 
 static struct rpm_cap_tagset rpm_cap_tags_tab[] = {
-    { PMCAP_REQ,  "req",  RPMTAG_REQUIRENAME, RPMTAG_REQUIREVERSION, RPMTAG_REQUIREFLAGS },
-    { PMCAP_CAP,  "cap",  RPMTAG_PROVIDENAME, RPMTAG_PROVIDEVERSION, RPMTAG_PROVIDEFLAGS },
-    { PMCAP_CNFL, "cnfl", RPMTAG_CONFLICTNAME, RPMTAG_CONFLICTVERSION, RPMTAG_CONFLICTFLAGS },
-    { PMCAP_OBSL, "obsl", RPMTAG_OBSOLETENAME, RPMTAG_OBSOLETEVERSION, RPMTAG_OBSOLETEFLAGS },
+    { PMCAP_REQ,  "req",  RPMTAG_REQUIRENAME, RPMTAG_REQUIREVERSION, RPMTAG_REQUIREFLAGS, 0 },
+    { PMCAP_CAP,  "cap",  RPMTAG_PROVIDENAME, RPMTAG_PROVIDEVERSION, RPMTAG_PROVIDEFLAGS, 0 },
+    { PMCAP_CNFL, "cnfl", RPMTAG_CONFLICTNAME, RPMTAG_CONFLICTVERSION, RPMTAG_CONFLICTFLAGS, 0 },
+    { PMCAP_OBSL, "obsl", RPMTAG_OBSOLETENAME, RPMTAG_OBSOLETEVERSION, RPMTAG_OBSOLETEFLAGS, CAPREQ_OBCNFL },
 #if HAVE_RPMTAG_SUGGESTS
-    /*  RPMTAG_SUGGESTS* doesn't work */
-    { PMCAP_SUG,  "sugg", RPMTAG_SUGGESTNAME, RPMTAG_SUGGESTVERSION, RPMTAG_SUGGESTFLAGS },
-    //{ PMCAP_SUG,  "sug",  RPMTAG_REQUIRENAME, RPMTAG_REQUIREVERSION, RPMTAG_REQUIREFLAGS },
+    { PMCAP_RECO, "reco", RPMTAG_RECOMMENDNAME, RPMTAG_RECOMMENDVERSION, RPMTAG_RECOMMENDFLAGS, 0 },
+    { PMCAP_SUG,  "sugg", RPMTAG_SUGGESTNAME, RPMTAG_SUGGESTVERSION, RPMTAG_SUGGESTFLAGS,  CAPREQ_VRYWEAK },
+
+    { PMCAP_SUPL,  "supl", RPMTAG_SUPPLEMENTNAME, RPMTAG_SUPPLEMENTVERSION, RPMTAG_SUPPLEMENTFLAGS,  0 },
+
+    { PMCAP_ENH,  "enh", RPMTAG_ENHANCENAME, RPMTAG_ENHANCEVERSION, RPMTAG_ENHANCEFLAGS, CAPREQ_VRYWEAK },
+
+    //{ PMCAP_SUG,  "sugg", RPMTAG_SUGGESTNAME, RPMTAG_SUGGESTVERSION, RPMTAG_SUGGESTFLAGS },
+
 #endif
-    { 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0 },
 };
 
 static unsigned setup_reqflags(unsigned rpmflags, unsigned rflags)
@@ -192,8 +199,14 @@ tn_array *load_capreqs(tn_alloc *na, tn_array *arr, const Header h,
             }
         }
 
-        if (pmcap_tag == PMCAP_OBSL)
-            cr_flags |= CAPREQ_OBCNFL;
+        /* extra capreq flag (OBCNFL, VRYWEAK) */
+        if (tgs->set_cr_flag != 0)
+            cr_flags |= tgs->set_cr_flag;
+
+        /*
+           if (pmcap_tag == PMCAP_OBSL)
+               cr_flags |= CAPREQ_OBCNFL;
+        */
 
         if ((cr = capreq_new_evr(na, name, evr, cr_relflags, cr_flags)) == NULL) {
             logn(LOGERR, "%s: '%s %s%s%s %s': invalid capability",
@@ -531,7 +544,11 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
 
     if (ldflags & PKG_LDREQS) {
         pkg->reqs = load_capreqs(na, NULL, h, pkg, PMCAP_REQ);
-        pkg->sugs = load_capreqs(na, NULL, h, pkg, PMCAP_SUG);
+        pkg->sugs = load_capreqs(na, NULL, h, pkg, PMCAP_RECO);
+        pkg->sugs = load_capreqs(na, pkg->sugs, h, pkg, PMCAP_SUG);
+
+        pkg->revreqs = load_capreqs(na, NULL, h, pkg, PMCAP_SUPL);
+        pkg->revreqs = load_capreqs(na, pkg->revreqs, h, pkg, PMCAP_ENH);
     }
 
     if (ldflags & PKG_LDCNFLS) {
