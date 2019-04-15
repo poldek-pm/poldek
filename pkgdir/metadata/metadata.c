@@ -135,9 +135,11 @@ int verify_digest(struct repomd_ent *ent, const char *path)
     FILE *stream;
     int type, len;
 
-
     if (n_str_eq(ent->checksum_type, "sha"))
         type = DIGEST_SHA1;
+
+    if (n_str_eq(ent->checksum_type, "sha256"))
+        type = DIGEST_SHA256;
 
     else if (n_str_eq(ent->checksum_type, "md5"))
         type = DIGEST_MD5;

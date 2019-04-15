@@ -20,7 +20,7 @@ struct vfile;
 
 struct repomd_ent {
     char type[32];
-    char checksum[64];
+    char checksum[128];
     char checksum_type[8];
     time_t ts;
     struct vfile *vf;

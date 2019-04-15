@@ -33,7 +33,7 @@
 
 
 #define x_node_eq(node, node_name) (strcmp((char *) node->name, node_name) == 0)
-#define x_xmlFree(v) do { if (v) { xmlFree(v); } } while (0)    
+#define x_xmlFree(v) do { if (v) { xmlFree(v); } } while (0)
 
 static void repomd_ent_free(struct repomd_ent *ent)
 {
@@ -53,15 +53,15 @@ static struct repomd_ent *load_repomd_ent(xmlNode *node)
     int len;
 
     type = (char *) xmlGetProp(node, (const xmlChar *) "type");
-    
+
     for (node = node->children; node; node = node->next) {
         if (x_node_eq(node, "location")) {
             location = (char *) xmlGetProp(node, (const xmlChar *) "href");
-            
+
         } else if (x_node_eq(node, "checksum")) {
             checksum_type = (char *) xmlGetProp(node, (const xmlChar *) "type");
             checksum = (char *) xmlNodeGetContent(node);
-                
+
         } else if (x_node_eq(node, "timestamp")) {
             char *s = (char *) xmlNodeGetContent(node);
             unsigned int t;
@@ -73,7 +73,7 @@ static struct repomd_ent *load_repomd_ent(xmlNode *node)
             x_xmlFree(s);
         }
     }
-    
+
     if (type == NULL || location == NULL || ts == 0 || checksum == NULL ||
         checksum_type == NULL)
         return NULL;
@@ -84,7 +84,7 @@ static struct repomd_ent *load_repomd_ent(xmlNode *node)
     n_snprintf(ent->checksum, sizeof(ent->checksum), "%s", checksum);
     n_snprintf(ent->checksum_type, sizeof(ent->checksum_type), "%s",
                checksum_type);
-    
+
     n_snprintf(ent->type, sizeof(ent->type), "%s", type);
     n_snprintf(ent->location, len + 1, "%s", location);
 
@@ -96,31 +96,31 @@ static struct repomd_ent *load_repomd_ent(xmlNode *node)
     return ent;
 }
 
-static tn_hash *do_load_repomd(xmlNode *node) 
+static tn_hash *do_load_repomd(xmlNode *node)
 {
     tn_hash *repomd;
 
     repomd = n_hash_new(16, (tn_fn_free)repomd_ent_free);
     n_hash_ctl(repomd, TN_HASH_NOCPKEY);
-    
+
     for (; node; node = node->next) {
         struct repomd_ent *ent;
-        
+
         if (node->type != XML_ELEMENT_NODE || strcmp((char *) node->name, "data") != 0)
             continue;
-        
+
         if ((ent = load_repomd_ent(node))) {
             n_hash_insert(repomd, ent->type, ent);
             //printf("type = %s, loc = %s, ts = %ld\n", ent->type, ent->location, ent->ts);
         }
     }
-    
+
     if (n_hash_size(repomd) == 0 || !n_hash_exists(repomd, "primary")) {
         logn(LOGERR, "repomd: empty or missing 'primary' entry");
         n_hash_free(repomd);
         repomd = NULL;
     }
-    
+
     return repomd;
 }
 
@@ -151,12 +151,12 @@ static tn_array *load_caps(tn_alloc *na, tn_array *arr, xmlNode *node,
 {
     if (arr == NULL)
         arr = capreq_arr_new(0);
-    
+
     for (node = node->children; node; node = node->next) {
         int32_t relflags = 0, epoch = 0;
         char *n, *e = NULL, *v = NULL, *r = NULL, *flags = NULL, *pre = NULL;
         struct capreq *cr;
-        
+
         if (!x_node_eq(node, "entry"))
             continue;
 
@@ -165,9 +165,9 @@ static tn_array *load_caps(tn_alloc *na, tn_array *arr, xmlNode *node,
 
         if ((pre = (char *) xmlGetProp(node, (const xmlChar *) "pre")) && *pre == '1')
             cr_flags |= CAPREQ_PREREQ;
-        else 
+        else
             cr_flags &= ~CAPREQ_PREREQ;
-        
+
         if ((flags = (char *) xmlGetProp(node, (const xmlChar *) "flags"))) {
             e = (char *) xmlGetProp(node, (const xmlChar *) "epoch");
             v = (char *) xmlGetProp(node, (const xmlChar *) "ver");
@@ -176,18 +176,18 @@ static tn_array *load_caps(tn_alloc *na, tn_array *arr, xmlNode *node,
             if (e && sscanf(e, "%d", &epoch) != 1)
                 //logn(LOGERR, "%s: invalid epoch", e);
                 goto l_continue;
-            
+
             if (n_str_eq(flags, "EQ"))      relflags = REL_EQ;
             else if (n_str_eq(flags, "GE")) relflags = REL_EQ | REL_GT;
             else if (n_str_eq(flags, "LE")) relflags = REL_EQ | REL_LT;
             else if (n_str_eq(flags, "LT")) relflags = REL_LT;
             else if (n_str_eq(flags, "GT")) relflags = REL_GT;
         }
-            
+
         cr = capreq_new(na, n, epoch, v, r, relflags, cr_flags);
         if (cr)
             n_array_push(arr, cr);
-        
+
     l_continue:
         x_xmlFree(n);
         x_xmlFree(e);
@@ -196,7 +196,7 @@ static tn_array *load_caps(tn_alloc *na, tn_array *arr, xmlNode *node,
         x_xmlFree(flags);
         x_xmlFree(pre);
     }
-    
+
     if (n_array_size(arr))
         n_array_sort(arr);
     else
@@ -210,7 +210,7 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
 {
     struct pkg pkg, *rpkg = NULL;
     char *arch = NULL;
-    
+
     struct uinfo {
         char *summary;
         char *description;
@@ -219,26 +219,27 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
         char *vendor;
         char *buildhost;
     } inf;
-    
+
     memset(&inf, 0, sizeof(inf));
     memset(&pkg, 0, sizeof(pkg));
-    
+
+
     for (node = node->children; node; node = node->next) {
         if (x_node_eq(node, "name")) {
             pkg.name = (char *) xmlNodeGetContent(node);
-        
+
         } else if (x_node_eq(node, "arch")) {
             arch = (char *) xmlNodeGetContent(node);
-            
-            if (n_str_eq(arch, "src")) 
+
+            if (n_str_eq(arch, "src"))
                 goto l_skip_end;
-            
+
         } else if (x_node_eq(node, "location")) {
             pkg.fn = (char *) xmlGetProp(node, (const xmlChar *) "href");
-        
-        } else if (x_node_eq(node, "version")) { 
+
+        } else if (x_node_eq(node, "version")) {
             char *e;
-            
+
             pkg.ver = (char *) xmlGetProp(node, (const xmlChar *) "ver");
             pkg.rel = (char *) xmlGetProp(node, (const xmlChar *) "rel");
             e = (char *) xmlGetProp(node, (const xmlChar *) "epoch");
@@ -248,31 +249,31 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
 
         } else if (x_node_eq(node, "size")) {
             char *v;
-            
+
             if ((v = (char *) xmlGetProp(node, (const xmlChar *) "package"))) {
                 sscanf(v, "%d", &pkg.fsize);
                 xmlFree(v);
             }
-            
+
             if ((v = (char *) xmlGetProp(node, (const xmlChar *) "installed"))) {
                 sscanf(v, "%d", &pkg.size);
                 xmlFree(v);
             }
-            
+
         } else if (x_node_eq(node, "time")) {
             char *v;
-            
+
             if ((v = (char *) xmlGetProp(node, (const xmlChar *) "build"))) {
                 sscanf(v, "%d", &pkg.btime);
                 xmlFree(v);
             }
-            
+
         } else if (x_node_eq(node, "format")) {
             xmlNode *n = NULL;
             for (n = node->children; n; n = n->next) {
                 if (x_node_eq(n, "provides"))
                     pkg.caps = load_caps(na, pkg.caps, n, 0);
-                
+
                 else if (x_node_eq(n, "requires"))
                     pkg.reqs = load_caps(na, NULL, n, 0);
 
@@ -281,7 +282,19 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
 
                 else if (x_node_eq(n, "obsoletes"))
                     pkg.cnfls = load_caps(na, pkg.cnfls, n, CAPREQ_OBCNFL);
-                
+
+                else if (x_node_eq(n, "recommends"))
+                    pkg.sugs = load_caps(na, pkg.sugs, n, 0);
+
+                else if (x_node_eq(n, "suggests"))
+                    pkg.sugs = load_caps(na, pkg.sugs, n, CAPREQ_VRYWEAK);
+
+                else if (x_node_eq(n, "supplements"))
+                    pkg.revreqs = load_caps(na, pkg.revreqs, n, 0);
+
+                else if (x_node_eq(n, "enhances"))
+                    pkg.revreqs = load_caps(na, pkg.revreqs, n, CAPREQ_VRYWEAK);
+
                 else if (x_node_eq(n, "file")) {
                     char *path = (char *) xmlNodeGetContent(n);
                     struct capreq *cr = capreq_new(na, path, 0, NULL,
@@ -290,16 +303,16 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
                         pkg.caps = capreq_arr_new(0);
                     n_array_push(pkg.caps, cr);
                     x_xmlFree(path);
-                    
+
                 } else if (x_node_eq(n, "license")) {
                     inf.license = (char *) xmlNodeGetContent(n);
-                    
+
                 } else if (x_node_eq(n, "vendor")) {
                     inf.vendor = (char *) xmlNodeGetContent(n);
-                    
+
                 } else if (x_node_eq(n, "buildhost")) {
                     inf.buildhost = (char *) xmlNodeGetContent(n);
-                    
+
                 } else if (x_node_eq(n, "group")) {
                     char *g;
                     if ((g = (char *) xmlNodeGetContent(n))) {
@@ -308,34 +321,36 @@ static struct pkg *load_package(tn_alloc *na, struct pkgroup_idx *pkgroups,
                     }
                 }
             }
-            
+
         } else if (x_node_eq(node, "summary")) {
             inf.summary = (char *) xmlNodeGetContent(node);
-            
+
         } else if (x_node_eq(node, "description")) {
             inf.description = (char *) xmlNodeGetContent(node);
-            
+
         } else if (x_node_eq(node, "url")) {
             inf.url = (char *) xmlNodeGetContent(node);
         }
     }
-    
-    rpkg = pkg_new_ext(na, pkg.name, pkg.epoch, pkg.ver, pkg.rel, arch, NULL, 
+
+    rpkg = pkg_new_ext(na, pkg.name, pkg.epoch, pkg.ver, pkg.rel, arch, NULL,
                        pkg.fn, NULL, pkg.size, pkg.fsize, pkg.btime);
 
 l_skip_end:
-    
+
     x_xmlFree(pkg.name);
     x_xmlFree(arch);
     x_xmlFree(pkg.fn);
     x_xmlFree(pkg.ver);
     x_xmlFree(pkg.rel);
-    
+
     if (rpkg == NULL) {
         if (pkg.caps) n_array_free(pkg.caps);
         if (pkg.reqs) n_array_free(pkg.reqs);
         if (pkg.cnfls) n_array_free(pkg.cnfls);
-        
+        if (pkg.sugs) n_array_free(pkg.sugs);
+        if (pkg.revreqs) n_array_free(pkg.revreqs);
+
     } else {
         if (pkg.caps)
             n_array_sort(pkg.caps); /* files are pushed to it too */
@@ -343,32 +358,35 @@ l_skip_end:
         rpkg->caps = pkg.caps;
         rpkg->reqs = pkg.reqs;
         rpkg->cnfls = pkg.cnfls;
+        rpkg->sugs = pkg.sugs;
+        rpkg->revreqs = pkg.revreqs;
+
         rpkg->groupid = pkg.groupid;
 
         if (inf.summary && inf.description) {
             struct pkguinf *pkgu = pkguinf_new(na);
-            
+
             if (inf.url && *inf.url)
                 pkguinf_set(pkgu, PKGUINF_URL, inf.url, NULL);
-            
+
             if (inf.license && *inf.license)
                 pkguinf_set(pkgu, PKGUINF_LICENSE, inf.license, NULL);
-            
+
             if (inf.vendor && *inf.vendor)
                 pkguinf_set(pkgu, PKGUINF_VENDOR, inf.vendor, NULL);
-            
+
             if (inf.buildhost && *inf.buildhost)
                 pkguinf_set(pkgu, PKGUINF_BUILDHOST, inf.buildhost, NULL);
-            
+
             pkguinf_set(pkgu, PKGUINF_SUMMARY, inf.summary, "C");
             pkguinf_set(pkgu, PKGUINF_DESCRIPTION, inf.description, "C");
 
             rpkg->pkg_pkguinf = pkgu;
             pkg_set_ldpkguinf(rpkg);
         }
-        
+
         msgn(3, "ld %s", pkg_snprintf_s(rpkg));
-    } 
+    }
 
     x_xmlFree(inf.summary);
     x_xmlFree(inf.description);
@@ -376,14 +394,14 @@ l_skip_end:
     x_xmlFree(inf.license);
     x_xmlFree(inf.vendor);
     x_xmlFree(inf.buildhost);
-    
+
     return rpkg;
 }
-    
+
 
 tn_array *metadata_load_primary(struct pkgdir *pkgdir, const char *path)
 {
-    xmlDocPtr doc; 
+    xmlDocPtr doc;
     xmlNode  *root = NULL, *node;
     tn_array *pkgs;
 
@@ -399,12 +417,16 @@ tn_array *metadata_load_primary(struct pkgdir *pkgdir, const char *path)
         xmlFreeDoc(doc);
         return NULL;
     }
-    
+
     for (node = root->children; node; node = node->next) {
         char *type;
-        
-        if (node->type != XML_ELEMENT_NODE || strcmp((char *) node->name, "package") != 0)
+
+        if (node->type != XML_ELEMENT_NODE || strcmp((char *) node->name, "package") != 0) {
+            DBGF("skip node %s\n", node->name);
             continue;
+        }
+
+        DBGF("pkg %s\n", node->name);
 
         if ((type = (char *) xmlGetProp(node, (const xmlChar *) "type")) && strcmp(type, "rpm") == 0) {
             struct pkg *pkg;
@@ -412,22 +434,21 @@ tn_array *metadata_load_primary(struct pkgdir *pkgdir, const char *path)
                 n_array_push(pkgs, pkg);
             MEMINF("%s", pkg ? pkg_snprintf_s(pkg) : "null");
         }
-        
+
         x_xmlFree(type);
     }
-    
+
     xmlFreeDoc(doc);
     MEMINF("XMLFREE_END");
     return pkgs;
 }
 
-void metadata_loadmod_init(void) 
+void metadata_loadmod_init(void)
 {
     LIBXML_TEST_VERSION
 }
 
-void metadata_loadmod_destroy(void) 
+void metadata_loadmod_destroy(void)
 {
     xmlCleanupParser();
 }
-
