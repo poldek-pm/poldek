@@ -17,7 +17,9 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU /* for strcasestr */
+#ifndef __USE_GNU
+# define __USE_GNU /* for strcasestr */
+#endif
 #include <string.h>
 
 #include <trurl/trurl.h>
