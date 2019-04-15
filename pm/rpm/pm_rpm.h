@@ -23,7 +23,9 @@
 #include <stdint.h>             /* uint32_t */
 #include <sys/time.h>           /* timeval */
 
-#define _RPMPRCO_INTERNAL 1 /* see pm_rpmdsSysinfo */
+#ifndef _RPMPRCO_INTERNAL
+# define _RPMPRCO_INTERNAL 1 /* see pm_rpmdsSysinfo */
+#endif
 
 #ifdef HAVE_RPM_5
 # include <rpm/rpmtypes.h>
@@ -74,13 +76,13 @@
 #  define HAVE_RPM_VERSION_GE_4_4_8 1
 #  define HAVE_RPM_VERSION_GE_5 1
 # endif
-#endif 
+#endif
 
 
 
 /* RPMTAG_COPYRIGHT disappears in 4.4.3 but don't know from
    when RPMTAG_LICENSE starts */
-#ifdef RPMTAG_COPYRIGHT         
+#ifdef RPMTAG_COPYRIGHT
 # define PM_RPMTAG_LICENSE RPMTAG_COPYRIGHT
 #else
 # define PM_RPMTAG_LICENSE RPMTAG_LICENSE
@@ -109,7 +111,7 @@ int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req);
 
 char *pm_rpm_dbpath(void *pm_rpm, char *path, size_t size);
 time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbfull_path);
-int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath, 
+int pm_rpm_dbdepdirs(void *pm_rpm, const char *rootdir, const char *dbpath,
                      tn_array *depdirs);
 
 int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
@@ -134,7 +136,7 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
 int pm_rpm_verify_signature(void *pm_rpm, const char *path, unsigned flags);
 
 
-rpmdb pm_rpm_opendb(void *pm_rpm, void *dbh, 
+rpmdb pm_rpm_opendb(void *pm_rpm, void *dbh,
                     const char *dbpath, const char *rootdir, mode_t mode,
                     tn_hash *kw);
 void pm_rpm_closedb(rpmdb db);
@@ -154,7 +156,7 @@ Header pm_rpmhdr_readfdt(void *fdt); /* headerRead */
 
 int pm_rpmhdr_nevr(void *h, const char **name, int32_t *epoch,
                    const char **version, const char **release,
-                   const char **arch, int *color);
+                   const char **arch, uint32_t *color);
 
 tn_array *pm_rpmhdr_langs(Header h);
 

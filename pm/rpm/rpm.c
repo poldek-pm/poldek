@@ -43,10 +43,10 @@
 static int initialized = 0;
 int pm_rpm_verbose = 0;
 
-void pm_rpm_destroy(void *pm_rpm) 
+void pm_rpm_destroy(void *pm_rpm)
 {
     struct pm_rpm *pm = pm_rpm;
-    
+
     n_cfree(&pm->rpm);
     n_cfree(&pm->sudo);
     n_cfree(&pm->default_dbpath);
@@ -56,11 +56,11 @@ void pm_rpm_destroy(void *pm_rpm)
 
 #define RPM_DEFAULT_DBPATH "/var/lib/rpm"
 
-void *pm_rpm_init(void) 
+void *pm_rpm_init(void)
 {
     struct pm_rpm *pm_rpm;
     char *p;
-    
+
     if (initialized == 0) {
 	/* lp#1644315: save original umask and restore it after rpmReadConfigFiles() call */
 	mode_t mask = umask(0);
@@ -82,7 +82,7 @@ void *pm_rpm_init(void)
     p = (char*)rpmGetPath("%{_dbpath}", NULL);
     if (p == NULL || *p == '%')
         p = RPM_DEFAULT_DBPATH;
-    
+
     pm_rpm->default_dbpath = n_strdup(p);
 
     pm_rpm->caps = NULL;
@@ -93,41 +93,41 @@ void *pm_rpm_init(void)
 int pm_rpm_configure(void *pm_rpm, const char *key, void *val)
 {
     struct pm_rpm *pm = pm_rpm;
-    
+
     if (*key == '%') {           /* macro */
         key++;
         msg(4, "addMacro %s %s\n", key, (char*)val);
         addMacro(NULL, key, NULL, val, RMIL_DEFAULT);
-        
+
     } else if (n_str_eq(key, "pmcmd")) {
         n_cfree(&pm->rpm);
         if (val)
             pm->rpm = n_strdup(val);
-        DBGF("%s %s\n", key, val);
+        DBGF("%s %s\n", key, (char*)val);
 
     } else if (n_str_eq(key, "sudocmd")) {
         n_cfree(&pm->sudo);
         if (val)
             pm->sudo = n_strdup(val);
-        
+
     } else if (n_str_eq(key, "macros")) {
         tn_array *macros = val;
         int i;
-        
+
         for (i=0; i<n_array_size(macros); i++) {
             char *def, *macro;
-            
+
             if ((macro = n_array_nth(macros, i)) == NULL)
                 continue;
-            
-            if ((def = strchr(macro, ' ')) == NULL && 
+
+            if ((def = strchr(macro, ' ')) == NULL &&
                 (def = strchr(macro, '\t')) == NULL) {
                 logn(LOGERR, _("%s: invalid macro definition"), macro);
                 return 0;
-                
+
             } else {
                 char *sav = def;
-                
+
                 *def = '\0';
                 def++;
                 while(isspace(*def))
@@ -146,10 +146,10 @@ int pm_rpm_conf_get(void *pm_rpm, const char *key, char *value, int vsize)
     int n = 0;
 
     pm_rpm = pm_rpm;
-    
+
     if (*key == '%') {
         char *v = rpmExpand(key, NULL);
-        
+
         if (v == NULL)
             return 0;
 
@@ -158,7 +158,7 @@ int pm_rpm_conf_get(void *pm_rpm, const char *key, char *value, int vsize)
 
         free(v);
     }
-    
+
     return n;
 }
 
@@ -167,17 +167,17 @@ static int db_exists(void *pm_rpm, const char *rootdir, const char *dbpath)
 {
     char            rpmdb_path[PATH_MAX], tmp[PATH_MAX];
 
-    if (!dbpath) 
+    if (!dbpath)
         dbpath = pm_rpm_dbpath(pm_rpm, tmp, sizeof(tmp));
-    
+
     if (!dbpath)
         return 0;
-    
+
     *rpmdb_path = '\0';
     n_snprintf(rpmdb_path, sizeof(rpmdb_path), "%s%s",
                rootdir ? (*(rootdir + 1) == '\0' ? "" : rootdir) : "",
                dbpath != NULL ? dbpath : "");
-    
+
     if (*rpmdb_path == '\0')
         return 0;
 
@@ -197,14 +197,14 @@ rpmdb pm_rpm_opendb(void *pm_rpm, void *dbh,
     struct pm_rpm *pm = pm_rpm;
     rpmdb db = NULL;
     int rc = 1;
-    
+
     dbh = dbh; kw = kw;
-    
+
     if (dbpath)
         addMacro(NULL, "_dbpath", NULL, dbpath, RMIL_DEFAULT);
-    
+
     DBGF("root %s, dir %s, mode %d\n", rootdir, dbpath, mode);
-        
+
     /* a workaround, rpmdbOpen succeeds even if database does not exists */
     if (mode == O_RDONLY && !db_exists(pm_rpm, rootdir, dbpath)) {
         logn(LOGERR, _("%s%s: rpm database does not exists"),
@@ -218,20 +218,20 @@ rpmdb pm_rpm_opendb(void *pm_rpm, void *dbh,
         rc = 0;
 		abort(); // XXX maybe re-exec ourselves after poldek binary upgrade?
     }
-    
-#if ENABLE_TRACE    
+
+#if ENABLE_TRACE
     DBGF("%p %d\n", db, db->nrefs);
     system("ls -l /proc/$(echo `ps aux | grep poldek | grep -v grep` | awk '{print $2}')/fd/ | grep rpm");
     sleep(3);
 #endif
-    
+
     if (rc == 0)
         db = NULL;
 
     /* restore non-default dbpath */
     if (dbpath && strcmp(dbpath, pm->default_dbpath) != 0)
         addMacro(NULL, "_dbpath", NULL, pm->default_dbpath, RMIL_DEFAULT);
-    
+
     return db;
 }
 
@@ -249,37 +249,37 @@ char *pm_rpm_dbpath(void *pm_rpm, char *path, size_t size)
 
     if (p)
         free(p);
-        
+
     return path;
 }
 
-time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath) 
+time_t pm_rpm_dbmtime(void *pm_rpm, const char *dbpath)
 {
     const char *file = "Packages";
     char path[PATH_MAX];
     struct stat st;
 
     pm_rpm = pm_rpm;
-    
+
     snprintf(path, sizeof(path), "%s/%s", dbpath, file);
-     
+
     if (stat(path, &st) != 0)
         return 0;
 
     return st.st_mtime;
 }
 
-void pm_rpm_closedb(rpmdb db) 
+void pm_rpm_closedb(rpmdb db)
 {
     DBGF("DB %p\n", db);
-    
+
     rpmdbClose(db);
-    
-#if ENABLE_TRACE        
+
+#if ENABLE_TRACE
     system("ls -l /proc/$(echo `ps aux | grep poldek | grep -v grep` | awk '{print $2}')/fd/ | grep rpm");
     sleep(3);
 #endif
-    
+
     db = NULL;
 }
 
@@ -293,9 +293,9 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
 
     kw = kw;
 
-    if (!dbpath) 
+    if (!dbpath)
         dbpath = pm_rpm_dbpath(pm_rpm, tmpdbpath, sizeof(tmpdbpath));
-    
+
     if (!dbpath)
         return NULL;
 
@@ -303,7 +303,7 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
     n_snprintf(rpmdb_path, sizeof(rpmdb_path), "%s%s",
                rootdir ? (*(rootdir + 1) == '\0' ? "" : rootdir) : "",
                dbpath != NULL ? dbpath : "");
-    
+
     if (*rpmdb_path == '\0')
         return NULL;
 
@@ -313,7 +313,7 @@ struct pkgdir *pm_rpm_db_to_pkgdir(void *pm_rpm, const char *rootdir,
         struct pkgdir *prev_pkgdir = NULL;
         if (kw && (prev_pkgdir = n_hash_get(kw, "prev_pkgdir")))
             dir->prev_pkgdir = prev_pkgdir;
-        
+
         if (!pkgdir_load(dir, NULL, pkgdir_ldflags | PKGDIR_LD_NOUNIQ)) {
             pkgdir_free(dir);
             dir = NULL;
@@ -343,20 +343,20 @@ void vrpmlog(unsigned prii, const char *fmt, va_list args)
     pri =  RPMLOG_PRI(prii);
     mask = RPMLOG_MASK(pri);
     rpmlogMask = rpmlogSetMask(0); /* get mask */
-        
+
     if ((mask & rpmlogMask) == 0)
 	return;
 
     if (pri <= RPMLOG_ERR)
         logpri = LOGERR;
-    
+
     else if (pri == RPMLOG_WARNING)
         logpri = LOGWARN;
-    
+
     else if (pri == RPMLOG_NOTICE) {
         logpri = LOGNOTICE;
         verbose_level = 2;
-        
+
     } else {
         logpri = LOGINFO;
         verbose_level = 2;
@@ -371,23 +371,23 @@ void vrpmlog(unsigned prii, const char *fmt, va_list args)
            verbose_level, poldek_VERBOSE, pm_rpm_verbose);
     vprintf(fmt, args);
 #endif
-    
+
     if (verbose_level > poldek_VERBOSE || verbose_level > pm_rpm_verbose)
         return;
-    
+
     if ((logpri & (LOGERR | LOGWARN)) == 0)
         poldek_vlog(logpri, 0, fmt, args);
-        
+
     else {                  /* basename(path) */
         char m[1024], *p, *q;
         int n;
 
-        
+
         n = n_vsnprintf(m, sizeof(m), fmt, args);
 
         if (n > 0 && m[n - 1] == '\n')
             m[n - 1] = '\0';
-        
+
         p = m;
         if (*p == '/' && strstr(p, ".rpm")) {
             p++;
@@ -399,10 +399,10 @@ void vrpmlog(unsigned prii, const char *fmt, va_list args)
 
         if (strstr(m, "md5 OK") || strstr(m, "gpg OK") || strstr(m, "pgp OK"))
             logpri |= LOGFILE;
-        
+
         log(logpri | LOGWARN, "%s\n", p);
     }
-        
+
 #if defined HAVE_RPMLOG
     va_end(args);
 #endif

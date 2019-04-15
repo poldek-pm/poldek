@@ -281,7 +281,7 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     struct    flfile *flfile;
     struct    pkgfl_ent **fentdirs = NULL;
     int       *fentdirs_items;
-    int       i, j, ndirs = 0, nerr = 0, missing_file_hdrs_err = 0;
+    int       i, ndirs = 0, nerr = 0;/*, missing_file_hdrs_err = 0;*/
     const char *errmsg_notag = _("%s: no %s tag");
 
     n_assert(na);
@@ -313,14 +313,14 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     if (!pm_rpmhdr_get_entry(h, RPMTAG_FILEMODES, (void*)&modes, &t4, &c4)) {
         if (poldek_VERBOSE > 1)
             logn(LOGWARN, errmsg_notag, pkgname, "FILEMODES");
-        missing_file_hdrs_err = 1;
+        //missing_file_hdrs_err = 1;
         modes = NULL;
     }
 
     if (!pm_rpmhdr_get_entry(h, RPMTAG_FILESIZES, (void*)&sizes, &t5, &c5)) {
         if (poldek_VERBOSE > 1)
             logn(LOGWARN, errmsg_notag, pkgname, "FILESIZES");
-        missing_file_hdrs_err = 2;
+        //missing_file_hdrs_err = 2;
         sizes = NULL;
     }
 
@@ -366,7 +366,7 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
         }
 
         skipdirs[i] = dirs[i];
-        for (j=0; j<c1; j++)
+        for (int j=0; j<c1; j++)
             if (diridxs[j] == i)
                 fentdirs_items[i]++;
 
@@ -451,14 +451,14 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
 
         if (n > 0) {
             tn_tuple *t;
-            int j = 0;
+            int ti = 0;
 
             t = n_tuple_new(na, n, NULL);
             for (i=0; i<c2; i++) {
                 if (fentdirs[i]  == NULL)
                     continue;
 
-                n_tuple_set_nth(t, j++, fentdirs[i]);
+                n_tuple_set_nth(t, ti++, fentdirs[i]);
                 qsort(&fentdirs[i]->files, fentdirs[i]->items,
                       sizeof(struct flfile*),
                       (int (*)(const void *, const void *))flfile_cmp_qsort);
@@ -477,6 +477,7 @@ int pm_rpm_ldhdr_fl(tn_alloc *na, tn_tuple **fl,
     return nerr ? -1 : 1;
 }
 
+#if FUNCTION_UNUSED__
 static int is_pubkey(Header h)
 {
 #if HAVE_RPMTAG_PUBKEYS
@@ -490,6 +491,7 @@ static int is_pubkey(Header h)
 #endif
     return 0;
 }
+#endif
 
 
 struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsize,
@@ -502,7 +504,7 @@ struct pkg *pm_rpm_ldhdr(tn_alloc *na, Header h, const char *fname, unsigned fsi
     char       osbuf[128], *os = osbuf;
     char       srcrpmbuf[128], *srcrpm = srcrpmbuf;
 
-    pm_rpmhdr_nevr(h, &name, &epoch, &version, &release, &arch, NULL);
+    pm_rpmhdr_nevr(h, &name, (int32_t*)&epoch, &version, &release, &arch, NULL);
 
     if (name == NULL || version == NULL || release == NULL) {
         logn(LOGERR, _("%s: read name/version/release failed"), fname);

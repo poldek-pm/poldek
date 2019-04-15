@@ -31,7 +31,9 @@
 #endif
 
 #if HAVE_RPM_4_1
-# define _RPMPRCO_INTERNAL
+# ifndef _RPMPRCO_INTERNAL
+#  define _RPMPRCO_INTERNAL
+# endif
 # include <rpm/rpmds.h>
 #endif
 
@@ -61,17 +63,17 @@ static int extract_rpmds(tn_array *caps, rpmds ds)
         flags = rpmdsFlags(ds);
 
         DBGF("%s, %s\n", name, evr);
-        
+
         if ((flags & RPMSENSE_EQUAL)) {
             n_strncpy(tmp, evr, 128);
             tmpptr = tmp;
             crflags = REL_EQ;
-            
+
         } else {                /* cap without version */
             tmpptr = NULL;
             crflags = 0;
         }
-        
+
         cr = capreq_new_evr(NULL, name, tmpptr, crflags, 0);
         if (cr) {
             msgn(3, "  - %s", capreq_snprintf_s(cr));
@@ -88,11 +90,11 @@ typedef int (*rpmcap_fn)(rpmds *ds, void *);
 #ifdef HAVE_RPMDSSYSINFO
 static int pm_rpmdsSysinfo(rpmds * dsp, const char * fn) {
 	int ret;
-    
+
 # ifndef HAVE_RPM_VERSION_GE_4_4_8
     ret = rpmdsSysinfo(dsp, fn);
-    
-# else    
+
+# else
 	rpmPRCO PRCO = rpmdsNewPRCO(NULL);
 	PRCO->Pdsp = dsp;
 	ret = rpmdsSysinfo(PRCO, fn);
@@ -117,10 +119,10 @@ static int get_rpm_internal_caps(tn_array *caps)
 #endif
 #ifdef HAVE_RPMDSSYSINFO
         (rpmcap_fn)pm_rpmdsSysinfo,
-#endif        
+#endif
 #ifdef HAVE_RPMDSUNAME
         (rpmcap_fn)rpmdsUname,
-#endif        
+#endif
         NULL,
     };
 
@@ -129,14 +131,14 @@ static int get_rpm_internal_caps(tn_array *caps)
     while (functions[i]) {
         functions[i++](&ds, NULL);
     }
-    
+
     return extract_rpmds(caps, ds);
 }
 #endif  /* HAVE_RPMDSRPMLIB */
 
 
 #if HAVE_RPMGETRPMLIBPROVIDES   /* rpmGetRpmlibProvides() => rpm < 4.4.3 */
-static int get_rpm_internal_caps_rpm_lt_4_4_3(tn_array *caps) 
+static int get_rpm_internal_caps_rpm_lt_4_4_3(tn_array *caps)
 {
     char **names = NULL, **versions = NULL, *evr;
     int *flags = NULL, n = 0, i;
@@ -167,14 +169,14 @@ static int get_rpm_internal_caps_rpm_lt_4_4_3(tn_array *caps)
 }
 #endif
 
-static tn_array *load_internal_caps(void *pm_rpm) 
+static tn_array *load_internal_caps(void *pm_rpm)
 {
     tn_array *caps;
     int rc = 0;
 
     pm_rpm = pm_rpm;
     caps = capreq_arr_new(0);
-    
+
 #if HAVE_RPMDSRPMLIB            /* rpm >= 4.4.3 */
     rc = get_rpm_internal_caps(caps);
 #else
@@ -182,10 +184,10 @@ static tn_array *load_internal_caps(void *pm_rpm)
     rc = get_rpm_internal_caps_rpm_lt_4_4_3(caps);
 # endif
 #endif
-    
+
     if (rc) {
         n_array_sort(caps);
-        
+
     } else {
         n_array_free(caps);
         caps = NULL;
@@ -196,28 +198,28 @@ static tn_array *load_internal_caps(void *pm_rpm)
 static int rpmioaccess_satisfies(const struct capreq *req)
 {
     int rc = 0;
-    
+
 #if HAVE_RPMIOACCESS
     const char *name = NULL;
     int n = 0;
-    
+
     if (capreq_versioned(req))
         return 0;
 
     name = capreq_name(req);
     n = strlen(name);
-    
+
     /* code copied from lib/depends.c:563 */
     if (n > 5 && name[n - 1] == ')' &&
-        ((strchr("Rr_", name[0]) != NULL && 
-          strchr("Ww_", name[1]) != NULL && 
+        ((strchr("Rr_", name[0]) != NULL &&
+          strchr("Ww_", name[1]) != NULL &&
           strchr("Xx_", name[2]) != NULL &&
           name[3] == '(') ||	!strncmp(name, "exists(", sizeof("exists(")-1)
          ||	!strncmp(name, "executable(", sizeof("executable(")-1)
          ||	!strncmp(name, "readable(", sizeof("readable(")-1)
          ||	!strncmp(name, "writable(", sizeof("writable(")-1)
          )) {
-        
+
         rc = (rpmioAccess(name, NULL, X_OK) == 0);
     }
 #endif  /* HAVE_RPMIOACCESS */
@@ -228,7 +230,7 @@ int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
 {
     struct pm_rpm *pm = pm_rpm;
     int i;
-    
+
     /* internal caps have names like name(feature) */
     if (!capreq_is_rpmlib(req) && strstr(capreq_name(req), "(") == NULL)
         return 0;
@@ -239,16 +241,16 @@ int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
     if (pm->caps == NULL)
         if ((pm->caps = load_internal_caps(pm_rpm)) == NULL)
             return 0;
-    
+
     i = n_array_bsearch_idx_ex(pm->caps, req, (tn_fn_cmp)capreq_cmp_name);
-    
+
     if (i >= 0) {
 	while (i < n_array_size(pm->caps)) {
 	    struct capreq *cap = n_array_nth(pm->caps, i++);
-	    
+
 	    if (capreq_cmp_name(cap, req) != 0)
 		break;
-	
+
 	    if (cap_match_req(cap, req, 1))
 		return 1;
 	}
@@ -258,16 +260,16 @@ int pm_rpm_satisfies(void *pm_rpm, const struct capreq *req)
 }
 
 static void get_host_cpu_vendor_os(const char **acpu, const char **avendor,
-                                   const char **aos) 
+                                   const char **aos)
 {
     static char *cpu = NULL, *vendor = NULL, *os = NULL; /* XXX static variable */
-    
+
     if (cpu == NULL) {
         cpu = rpmExpand("%{_host_cpu}", NULL);
         vendor = rpmExpand("%{_host_vendor}", NULL);
         os = rpmExpand("%{_host_os}", NULL);
     }
-    
+
     if (acpu)
         *acpu = cpu;
 
@@ -285,10 +287,10 @@ static int machine_score(int tag, const char *val) {
     int rc;
 
     get_host_cpu_vendor_os(&cpu, &vendor, &os);
-    
+
     if (! (cpu && vendor && os) ) {
         rc = rpmPlatformScore(val, platpat, nplatpat);
-        
+
     } else {
 	    int size = strlen(cpu) + strlen(vendor) + strlen(os) + 3;
 	    char *p = alloca(size);
@@ -297,28 +299,28 @@ static int machine_score(int tag, const char *val) {
 			    n_snprintf(p, size, "%s-%s-%s", val, vendor, os);
                 DBGF("ARCH %s\n", p);
 			    break;
-                
+
 		    case PMMSTAG_OS:
                 n_snprintf(p, size, "%s-%s-%s", cpu, vendor, val);
                 DBGF("OS %s\n", p);
 			    break;
-                
+
 		    default:
                 n_assert(0);
 			    break;
 	    }
-        
+
         rc = rpmPlatformScore(p, platpat, nplatpat);
 
         /* do not trust PlatformScore() to much and just strcmp -> OS never used
            for scoring */
         if (rc == 0 && tag == PMMSTAG_OS) {
-            rc = (strcasecmp(os, val) == 0); 
+            rc = (strcasecmp(os, val) == 0);
             DBGF("cmp %s, %s => %d\n", os, val, rc);
         }
-        
+
     }
-    
+
     return rc;
 }
 
@@ -326,12 +328,12 @@ static int machine_score(int tag, const char *val) {
 static int machine_score(int tag, const char *val)
 {
     int rpmtag = 0;
-    
+
     switch (tag) {
         case PMMSTAG_ARCH:
             rpmtag = RPM_MACHTABLE_INSTARCH;
             break;
-            
+
         case PMMSTAG_OS:
             rpmtag = RPM_MACHTABLE_INSTOS;
             break;
@@ -348,12 +350,12 @@ static int machine_score(int tag, const char *val)
 static int machine_score(int tag, const char *val)
 {
     int rc = 0;
-    
+
     switch (tag) {
         case PMMSTAG_ARCH:
             if (strcasecmp(val, "noarch") == 0) {
                 rc = 1;
-        
+
             } else {
                 const char *host_arch = NULL;
                 get_host_cpu_vendor_os(&host_arch, NULL, NULL);
@@ -363,11 +365,11 @@ static int machine_score(int tag, const char *val)
                 }
             }
             break;
-            
+
         case PMMSTAG_OS: {
             const char *host_os = NULL;
             get_host_cpu_vendor_os(NULL, NULL, &host_os);
-            
+
             rc = 9;
             if (host_os && strcasecmp(host_os, val) == 0)
                 rc = 1;                 /* exact fit */
@@ -397,4 +399,3 @@ int pm_rpm_arch_score(const char *arch)
 
     return machine_score(PMMSTAG_ARCH, arch);
 }
-

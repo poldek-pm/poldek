@@ -28,7 +28,7 @@
 #ifndef HAVE_RPM_5
 int headerGetRawEntry(Header h, int_32 tag,
                       /*@null@*/ /*@out@*/ hTYP_t type,
-                      /*@null@*/ /*@out@*/ hPTR_t * p, 
+                      /*@null@*/ /*@out@*/ hPTR_t * p,
                       /*@null@*/ /*@out@*/ hCNT_t c);
 char ** headerGetLangs(Header h);
 #endif
@@ -38,13 +38,13 @@ char ** headerGetLangs(Header h);
 int pm_rpmhdr_get_string(Header h, int32_t tag, char *value, int size)
 {
     char *v;
-    int type, n;
-    
+    int type;
+
     if (!pm_rpmhdr_get_entry(h, tag, &v, &type, NULL))
         return 0;
 
     n_assert(type == RPM_STRING_TYPE);
-    n = n_snprintf(value, size, "%s", v);
+    n_snprintf(value, size, "%s", v);
     pm_rpmhdr_free_entry(v, type);
     return 1;
 }
@@ -53,14 +53,14 @@ int pm_rpmhdr_get_int(Header h, int32_t tag, uint32_t *value)
 {
     uint32_t *v;
     int type;
-    
+
     if (!pm_rpmhdr_get_entry(h, tag, &v, &type, NULL))
         return 0;
-    
+
     n_assert(type == RPM_INT32_TYPE);
     *value = *v;
     pm_rpmhdr_free_entry(v, type);
-    
+
     return 1;
 }
 
@@ -68,7 +68,7 @@ int pm_rpmhdr_get_entry(Header h, int32_t tag, void *buf, int32_t *type,
                         int32_t *cnt)
 {
     *(char **)buf = NULL;
-    
+
 #if HAVE_RPMPKGREAD             /* rpm5 >= 5.0 */
     HE_t he = memset(alloca(sizeof(*he)), 0, sizeof(*he));
 
@@ -79,12 +79,12 @@ int pm_rpmhdr_get_entry(Header h, int32_t tag, void *buf, int32_t *type,
             *cnt = 0;
         return 0;
     }
-    
+
     *type = he->t;
     if (cnt)
         *cnt = he->c;
     *(char ***)buf = he->p.ptr;
-    
+
 #else
     if (!headerGetEntry(h, tag, type, buf, cnt)) {
         *(char **)buf = NULL;
@@ -100,7 +100,7 @@ int pm_rpmhdr_get_entry(Header h, int32_t tag, void *buf, int32_t *type,
 int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
 {
     int type;
-    
+
 #if HAVE_RPMPKGREAD             /* rpm5 >= 5.0 */
     HE_t he = memset(alloca(sizeof(*he)), 0, sizeof(*he));
 
@@ -123,7 +123,7 @@ int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
 
     if (tag == RPMTAG_GROUP && type == RPM_STRING_TYPE) { // build by old rpm
         char **g;
-	
+
         n_assert(*cnt == 1);
 
         g = n_malloc(sizeof(*g) * 2);
@@ -139,10 +139,10 @@ int pm_rpmhdr_get_raw_entry(Header h, int32_t tag, void *buf, int32_t *cnt)
 int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
 {
     int rc = 0;
-    
+
 #ifndef HAVE_RPM_4_1
     rc = rpmReadPackageHeader(fdt, hdr, NULL, NULL, NULL);
-#else 
+#else
     rpmRC rpmrc;
     rpmts ts = rpmtsCreate();
     rpmtsSetVSFlags(ts, RPMVSF_NOSHA1HEADER | RPMVSF_NOMD5HEADER |
@@ -156,7 +156,7 @@ int pm_rpmhdr_loadfdt(FD_t fdt, Header *hdr, const char *path)
         case RPMRC_OK:
             rc = 0;
             break;
-            
+
         default:
             rc = 1;
     }
@@ -170,32 +170,32 @@ int pm_rpmhdr_loadfile(const char *path, Header *hdr)
 {
     FD_t  fdt;
     int   rc = 0;
-    
+
     if ((fdt = Fopen(path, "r")) == NULL) {
-#ifdef HAVE_RPMERRORSTRING        
+#ifdef HAVE_RPMERRORSTRING
         logn(LOGERR, "open %s: %s", path, rpmErrorString());
-#else        
+#else
         logn(LOGERR, "open %s: error", path); /* XXX */
-#endif        
+#endif
     } else {
         rc = pm_rpmhdr_loadfdt(fdt, hdr, path);
         Fclose(fdt);
     }
-    
+
     return rc;
 }
 
-Header pm_rpmhdr_readfdt(void *fdt) 
+Header pm_rpmhdr_readfdt(void *fdt)
 {
     Header h;
-    
+
 #if HAVE_RPMPKGREAD             /* rpm >= 5 */
     if (rpmpkgRead("Header", fdt, &h, NULL) != RPMRC_OK)
         h = NULL;
 
 #else  /* rpm < 5 */
 
-# if HAVE_RPM_HEADER_MAGIC_YES 
+# if HAVE_RPM_HEADER_MAGIC_YES
     h = headerRead(fdt, HEADER_MAGIC_YES);
 # else
     h = headerRead(fdt);
@@ -223,7 +223,7 @@ tn_array *pm_rpmhdr_langs(Header h)
     while (langs[n])
         n++;
     t = t;
-    
+
 #else
     pm_rpmhdr_get_entry(h, RPMTAG_HEADERI18NTABLE, &langs, &t, &n);
 #endif
@@ -234,54 +234,55 @@ tn_array *pm_rpmhdr_langs(Header h)
 	for (i=0; i < n ; i++)
     	    n_array_push(alangs, n_strdup(langs[i]));
     }
-    
+
     free(langs);
     return alangs;
 }
 
 
 int pm_rpmhdr_nevr(void *h, const char **name, int32_t *epoch, const char **version,
-                   const char **release, const char **arch, int *color)
+                   const char **release, const char **arch, uint32_t *color)
 {
-    int32_t anepoch;
-    
+    uint32_t anepoch;
+
     *epoch = 0;
-    
-#if HAVE_HEADERNVR    
+
+#if HAVE_HEADERNVR
     headerNVR(h, (void*)name, (void*)version, (void*)release);
 #elif HAVE_HEADERNEVRA          /* rpm >= 5 */
     headerNEVRA(h, name, NULL, version, release, arch ? arch : NULL);
-#endif    
+#endif
 
-    if (*name == NULL || *version == NULL || *release == NULL) 
+    if (*name == NULL || *version == NULL || *release == NULL)
         return 0;
-    
+
     if (pm_rpmhdr_get_int(h, RPMTAG_EPOCH, &anepoch))
-        *epoch = anepoch;
-    
+        *epoch = (int32_t)anepoch;
+
 #ifndef HAVE_RPMPKGREAD        /* rpm < 5 */
     if (arch) {
         int32_t type;
-        
+
         *arch = NULL;
         headerGetEntry(h, RPMTAG_ARCH, &type, (void *)arch, NULL);
     }
 #endif
-    
+
     if (color) {
         *color = 0;
 #ifdef HAVE_RPM_HGETCOLOR
         *color = hGetColor(h);
 #endif
     }
-    
+
     return 1;
 }
 
 
-void pm_rpmhdr_free_entry(void *e, int type) 
+void pm_rpmhdr_free_entry(void *e, int type)
 {
 #if HAVE_RPMPKGREAD
+    (void)type;                 /* unused */
     if (e)
         free(e);
 #elif HAVE_HEADERFREEDATA
@@ -306,7 +307,7 @@ int pm_rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag)
         memset(ent, 0, sizeof(*ent));
         return 0;
     }
-    
+
     ent->type = he->t;
     ent->cnt = he->c;
     ent->val = he->p.ptr;
@@ -316,7 +317,7 @@ int pm_rpmhdr_ent_get(struct rpmhdr_ent *ent, Header h, int32_t tag)
         memset(ent, 0, sizeof(*ent));
         return 0;
     }
-#endif    
+#endif
     return 1;
 }
 
@@ -327,12 +328,12 @@ void pm_rpmhdr_ent_free(struct rpmhdr_ent *ent)
 #else
     if (ent->type == RPM_STRING_ARRAY_TYPE ||
         ent->type == RPM_I18NSTRING_TYPE) {
-        
+
         n_assert(ent->val);
         free(ent->val);
         memset(ent, 0, sizeof(*ent));
     }
-#endif    
+#endif
 }
 
 #if 0
@@ -340,10 +341,10 @@ int pm_rpmhdr_ent_cp(struct rpmhdr_ent *ent, Header h, int32_t tag, Header toh)
 {
     struct rpmhdr_ent e;
     int rc;
-    
+
     //if (!pm_rpmhdr_ent_get(&e, h, tag));
-    
-        
+
+
     if (!headerGetEntry(h, tag, &ent->type, &ent->val, &ent->cnt)) {
         memset(ent, 0, sizeof(*ent));
         return 0;
