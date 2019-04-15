@@ -83,14 +83,25 @@ int mdigest(FILE *stream, unsigned char *md, unsigned *md_size, int digest_type)
     EVP_MD_CTX *ctx;
     unsigned n, nn = 0;
 
-
     n_assert(md_size && *md_size);
-
     ctx = EVP_MD_CTX_create();
-    if (digest_type == DIGEST_MD5)
+
+    switch (digest_type) {
+    case DIGEST_MD5:
         EVP_DigestInit(ctx, EVP_md5());
-    else
+        break;
+
+    case DIGEST_SHA1:
         EVP_DigestInit(ctx, EVP_sha1());
+        break;
+
+    case DIGEST_SHA256:
+        EVP_DigestInit(ctx, EVP_sha256());
+        break;
+
+    default:
+        n_die("%d: unknown digest type", digest_type);
+    }
 
     while ((n = fread(buf, 1, sizeof(buf), stream)) > 0) {
         EVP_DigestUpdate(ctx, buf, n);

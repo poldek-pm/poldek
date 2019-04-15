@@ -26,11 +26,13 @@
 int bin2hex(char *hex, int hex_size, const unsigned char *bin, int bin_size);
 
 
-#define DIGEST_SHA1 1
-#define DIGEST_MD5  2
+#define DIGEST_SHA1    1
+#define DIGEST_MD5     2
+#define DIGEST_SHA256  3
 
-#define DIGEST_SIZE_MD5  32
-#define DIGEST_SIZE_SHA1 40
+#define DIGEST_SIZE_MD5    32
+#define DIGEST_SIZE_SHA1   40
+#define DIGEST_SIZE_SHA256 64
 
 int mhexdigest(FILE *stream, char *mdhex, int *mdhex_size, int type);
 
