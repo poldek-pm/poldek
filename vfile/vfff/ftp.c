@@ -654,6 +654,9 @@ static time_t vftpcn_mtime(struct vcn *cn, const char *path)
         tm.tm_year -= 1900;
         tm.tm_mon -=  1;
         ts = mktime(&tm);
+        /* We can't do much if time can't be represented */
+        if (ts < 0)
+            return 0;
     }
     return ts;
 }
