@@ -1,5 +1,39 @@
 <?xml version="1.0"?>
 <news>
+<release version="0.40.0" date="2019/12/31" focus="rpm.org">
+    <entry><para>
+      rpm.org support (except boolean dependencies yet; beta)
+    </para></entry>
+    <entry><para>
+      internal HTTPS support
+    </para></entry>
+    <entry><para>
+      depsolver: score orphan successors to select best fit
+    </para></entry>
+    <entry><para>
+      performance: faster package repo loading (avoiding backward fseeks)
+    </para></entry>
+    <entry><para>
+      cleanup: removed support for obsoleted package repo formats: pdir (poldek &lt;= 0.18), hdrl (old apt) and old yum
+    </para></entry>
+    <entry><para>
+      openssl >= 1.1.1 support (openssl.patch)
+      <author id="arekm">Arkadiusz Miskiewicz</author>
+    </para></entry>
+    <entry><para>
+      fix: allow to transfer file via FTP even if server does not report file mtime (poldek-notzdata.patch)
+      <author id="arekm">Arkadiusz Miskiewicz</author>
+    </para></entry>
+    <entry><para>
+      fixed incorrect WTERMSIG usage (WTERMSIG.patch)
+      <author id="baggins">Jan Rękorajski</author>
+    </para></entry>
+    <entry><para>
+      fixed python bindings build (python-fix.patch)
+      <author id="baggins">Jan Rękorajski</author>
+    </para></entry>
+</release>
+
 <release version="0.32.2" date="2016/07/18">
  <section><title>Bug fixes:</title>
   <entry><para>
@@ -52,13 +86,13 @@
   </para>
   <author id="megabajt">Marcin Banasiak</author>
   </entry>
-  
+
   <entry><para>
    add --noprogress option that lets you hide progress bar
   </para>
   <author id="megabajt">Marcin Banasiak</author>
   </entry>
-  
+
   <entry><para>
    enable largefile for 64bit inodes
   </para>
@@ -71,13 +105,13 @@
   </para>
   <author id="megabajt">Marcin Banasiak</author>
   </entry>
-  
+
   <entry><para>
    fix: assertion failed due to lack of free()
   </para>
   <author id="adwol" email="adwol att pld-linux org">Adam Osuchowski</author>
   </entry>
-  
+
   <entry><para>
    fix segfault in glibc >= 2.22
   </para>
@@ -87,37 +121,37 @@
 </release>
 <release version="0.30.1" date="2014/03/26">
  <section><title>Bugfixes:</title>
-  
+
   <entry><para>
    fix building without optimization
   </para>
   <author id="draenog">Kacper Kornet</author>
   </entry>
-  
+
   <entry><para>
    fix order of packages during removal
   </para>
   <author id="draenog">Kacper Kornet</author>
   </entry>
-  
+
   <entry><para>
    fix crash on invalid capreqs
   </para>
   <author id="megabajt">Marcin Banasiak</author>
   </entry>
-  
+
   <entry><para>
    fix sysinfo data usage (lp#1216250)
   </para>
   <author id="megabajt">Marcin Banasiak</author>
   </entry>
-  
+
   <entry><para>
    fix tab completion for kernel modules
   </para>
   <author id="witekfl">Witold Filipczyk</author>
   </entry>
-  
+
   <entry><para>
    support packages with path length over 255 bytes (lp#1288989)
   </para>
@@ -132,7 +166,7 @@
   </para>
   <author id="cactus">Bartlomiej Zimon</author>
   </entry>
-  
+
   <entry><para>
    change behaviour of --cleana to clean the whole cache dir
   </para>
@@ -232,7 +266,7 @@
   </para>
   <author id="megabajt" email="megabajt att pld-linux org">Marcin Banasiak</author>
   </entry>
-  
+
   <entry><para>
    add source rpm filename to pndir index
   </para>
@@ -242,25 +276,25 @@
   <entry><para>
    support for conf.d style %include (https://bugs.pld-linux.org/show_bug.cgi?id=79)
   </para></entry>
-  
+
   <entry><para>
    dependency solver big cleanup: faster, simplified, improved a lot multilib, backtracking, fixes.
   </para></entry>
-  
+
   <entry><para>
    supported RPM up to 5.0.2
   </para>
   <author part="yes" id="arekm" email="arekm att pld-linux org">Arkadiusz Miskiewicz</author>
   </entry>
-  
+
   <entry><para>
    support fo UTF-8 encoded package summaries and descriptions
   </para>
   <author id="witekfl" email="witekfl att pld-linux org">Witold Filipczyk</author>
   </entry>
-  
+
   <entry><para>
-   package Suggests supported 
+   package Suggests supported
   </para>
   <author part="yes" id="megabajt" email="megabajt att pld-linux org">Marcin Banasiak</author>
   </entry>
@@ -270,7 +304,7 @@
   </para></entry>
 
   <entry><para>
-  improved package repositories management mode: instalation to multiple repos, 
+  improved package repositories management mode: instalation to multiple repos,
   working --destination and --jutstdb
   </para></entry>
 
@@ -282,7 +316,7 @@
    support for RPM 4.4.6's new internal sysinfo(),getconf(),uname() and cpuinfo()
    capabilities and auto-dependecies based on package directories
   </para></entry>
-  
+
   <entry><para>
    let a user to choose equivalents selected by --caplookup option
   </para></entry>
@@ -292,57 +326,57 @@
   </para></entry>
 
   <entry><para>
-   new --mo=OPTION[,OPTION...] replaces --no{compress,desc,diff} index creation 
+   new --mo=OPTION[,OPTION...] replaces --no{compress,desc,diff} index creation
    options,
   </para></entry>
 
-  <entry><para>        
+  <entry><para>
    with --mo=v018x created 'pdir' index is compatibile with versions prior 0.18.9
-   (without package files mtime included)    
-  </para></entry> 
-  
-  <entry><para> 
-   vfcompr: temporary *vfcompr.md5 files moved from source to destination 
+   (without package files mtime included)
+  </para></entry>
+
+  <entry><para>
+   vfcompr: temporary *vfcompr.md5 files moved from source to destination
    (cache) directory
   </para></entry>
 
-  <entry><para> 
-   "use sudo" default value is explicit set to "auto" (new 3var boolean-like 
+  <entry><para>
+   "use sudo" default value is explicit set to "auto" (new 3var boolean-like
    type is added).
   </para></entry>
 
-  <entry><para> 
+  <entry><para>
    configuration for CentOS has been added.
   </para>
   <author id="areq" email="areq att areq eu org">Arkadiusz Patyk</author>
   </entry>
  </section>
- 
+
  <section><title>Bugfixes:</title>
   <entry><para>
    fix for crashes on subpackages with inherited group
   </para>
   <author id="draenog" email="draenog att pld-linux org">Kacper Kornet</author>
   </entry>
-  
+
   <entry><para>
    fix leaking fds (lp#307183)
   </para>
   <author id="megabajt">Marcin Banasiak</author>
   </entry>
-  
+
   <entry><para>
    fix insecure format string usage
   </para>
   <author id="baggins">Jan Rękorajski</author>
   </entry>
-  
+
   <entry><para>
    don't get number of elements in database iterator in rpmdb_it_init() (lp#1042200)
   </para>
   <author id="megabajt">Marcin Banasiak</author>
   </entry>
-  
+
   <entry><para>
    don't clean list if not found one or more entries, warn instread (lp#1024970)
   </para>
@@ -392,7 +426,7 @@
   </entry>
 
   <entry><para>
-   break endless loop when poldek loses connected terminal (lp#499504) 
+   break endless loop when poldek loses connected terminal (lp#499504)
   </para>
   <author id="cactus">Bartlomiej Zimon</author>
   </entry>
@@ -404,7 +438,7 @@
   </entry>
 
   <entry><para>
-   add multiarch upgrade(-dist) support and pkgs migration from/to noarch (lp#408034) 
+   add multiarch upgrade(-dist) support and pkgs migration from/to noarch (lp#408034)
   </para>
   <author id="cactus">Bartlomiej Zimon</author>
   </entry>
@@ -468,17 +502,17 @@
   </para></entry>
 
   <entry><para>
-   cli: --nohold command line option not longer ignored (#68) 
+   cli: --nohold command line option not longer ignored (#68)
   </para>
   <author id="megabajt" email="megabajt att pld-linux org">Marcin Banasiak</author>
   </entry>
-  
+
   <entry><para>
    fixed path validation ("/foo../" is not a relative path)
   </para></entry>
-  
+
   <entry><para>
-   orphaned package are upgraded if its successor drags more new packages 
+   orphaned package are upgraded if its successor drags more new packages
    than orphaned one
   </para></entry>
  </section>
@@ -486,29 +520,29 @@
 
 <release version="0.20" date="2005/10/28" focus="major enhancements release">
 <para>
-This release introduces new series of poldek. 
+This release introduces new series of poldek.
 Significant changes and differences from 0.18.x series
 </para>
 
 <section><title>Package repositories</title>
   <entry>
     <para>
-      repositories code has been redesigned and totally rewritten in the 
-      modular, plugin-like way, so is is quite easy to add support for 
+      repositories code has been redesigned and totally rewritten in the
+      modular, plugin-like way, so is is quite easy to add support for
       new formats.
     </para>
   </entry>
-  
+
   <entry>
     <para>
-  new 'pndir' is the default format now. It is based on tndb (cdb like) DBM 
-  library. To save bandwidth package descriptions (Description, Summary, etc) 
-  are stored in 2 separate files: first named packages.ndir.dscr with common 
-  (BuildHost, Distribution, etc) and "C" descriptions and second with all 
-  non-C descriptions). 
+  new 'pndir' is the default format now. It is based on tndb (cdb like) DBM
+  library. To save bandwidth package descriptions (Description, Summary, etc)
+  are stored in 2 separate files: first named packages.ndir.dscr with common
+  (BuildHost, Distribution, etc) and "C" descriptions and second with all
+  non-C descriptions).
     </para>
   </entry>
-  
+
   <entry>
     <para>'hdrl' aka 'apt' format are update-able</para>
   </entry>
@@ -522,7 +556,7 @@ Significant changes and differences from 0.18.x series
     repository indexes could be created in many formats at once
     using --mt switch, ex:
    </para>
-   <para nowrap="yes">  
+   <para nowrap="yes">
     $ poldek -s /foo/bar --mkdix --mt=pdir,pndir
    </para>
   </entry>
@@ -532,15 +566,15 @@ Significant changes and differences from 0.18.x series
     indexes may be created from any index format, i.e conversion to
     to another format is supported, ex:
    </para>
-   <para nowrap="yes">  
+   <para nowrap="yes">
     $ poldek --st apt -s /foo/bar --mkidx=/ala/ma --mt=pdir
    </para>
   </entry>
 
-  <entry> 
+  <entry>
     <para>
      (re)creation of native poldek's indexes (pdir, pndir) is much faster now
-      package headers are not loaded at all if package's file modification 
+      package headers are not loaded at all if package's file modification
       time is the same as saved one in existing index.
     </para>
  </entry>
@@ -549,8 +583,8 @@ Significant changes and differences from 0.18.x series
  <section><title>Installation related</title>
   <entry>
    <para>
-    uninstallation code has been rewritten and improved. Packages are removed 
-    with its reverse dependencies and in the right order, according to 
+    uninstallation code has been rewritten and improved. Packages are removed
+    with its reverse dependencies and in the right order, according to
     {pre,post}un requirements
    </para>
   </entry>
@@ -580,7 +614,7 @@ Significant changes and differences from 0.18.x series
 
   <entry>
    <para>
-    command aliases are defined in external configuration file 
+    command aliases are defined in external configuration file
    </para>
    <author id="mmazur" email="mmazur a kernel pl">Mariusz Mazur</author>
   </entry>
@@ -604,26 +638,26 @@ Significant changes and differences from 0.18.x series
   <entry>
    <para>
    multi word option names may be written with spaces or underscore separator, i.e:
-   both forms "this is = foo" and "this_is = foo" are valid. 
+   both forms "this is = foo" and "this_is = foo" are valid.
    </para>
   </entry>
 
   <entry>
    <para>
-   default location of configuration file has been changed to "${_sysconfdir}/poldek/poldek.conf", old /etc location is still supported. 
+   default location of configuration file has been changed to "${_sysconfdir}/poldek/poldek.conf", old /etc location is still supported.
    </para>
   </entry>
 
   <entry>
    <para>
-   configuration file format has been changed to ini-like one. Sources and 
-   external file getters should be configured in its own sections "source" and 
-  "fetcher", see sample configs. Old configuration format is still supported. 
+   configuration file format has been changed to ini-like one. Sources and
+   external file getters should be configured in its own sections "source" and
+  "fetcher", see sample configs. Old configuration format is still supported.
    </para>
   </entry>
-  
-  <entry> 
-   <para> 
+
+  <entry>
+   <para>
    environment variables in config files are expanded, for example:
    </para>
    <para nowrap="yes">
@@ -631,10 +665,10 @@ Significant changes and differences from 0.18.x series
    </para>
   </entry>
 
-  <entry> 
-   <para> 
-   support for simple macros has been added to make configuration easier to write 
-   and read, for example: 
+  <entry>
+   <para>
+   support for simple macros has been added to make configuration easier to write
+   and read, for example:
    </para>
    <para nowrap="yes">
    _arch   = i686
@@ -642,18 +676,18 @@ Significant changes and differences from 0.18.x series
 
    [source]
    type  = pdir
-   name  = pld-ra 
+   name  = pld-ra
    path  = %{_prefix}/ra/PLD/%{_arch}/PLD/RPMS/
 
    [source]
    type  = pdir
-   name  = pld-ra-updates 
+   name  = pld-ra-updates
    path  = %{_prefix}/ra/updates/general/%{_arch}/
    </para>
   </entry>
 
-  <entry> 
-   <para> 
+  <entry>
+   <para>
    %include directive has been added, it can include both local and remote files:
    </para>
    <para nowrap="yes">
@@ -661,14 +695,14 @@ Significant changes and differences from 0.18.x series
    %include ftp://ftp.pld.org.pl/dists/ra/source.conf
    </para>
    <para>
-    Remote files once downloaded are stored in cache directory. To resynchronize them 
+    Remote files once downloaded are stored in cache directory. To resynchronize them
     with it's remote copy use --upconf option.
    </para>
   </entry>
 
-  <entry> 
-   <para> 
-   support for APT sources configuration has been added - new 
+  <entry>
+   <para>
+   support for APT sources configuration has been added - new
   "load apt sources list" configuration option.
    </para>
   </entry>
@@ -676,8 +710,8 @@ Significant changes and differences from 0.18.x series
  <section><title>General</title>
   <entry>
    <para>
-   some command line switches has been changed, but all obsoleted switches are still 
-   supported *except* "-f" (not important IMO). 
+   some command line switches has been changed, but all obsoleted switches are still
+   supported *except* "-f" (not important IMO).
    Changes:
    </para>
    <para nowrap="yes">
@@ -690,24 +724,24 @@ Significant changes and differences from 0.18.x series
    --shcmd                  =>                   (use --cmd or run ipoldek)
    </para>
   </entry>
-  <entry> 
-   <para> 
+  <entry>
+   <para>
    configuration options may be set from command line by -O switch, for
    example:
    </para>
    <para nowrap="yes">
-    $ poldek -Ovfile_external_compress=yes  
+    $ poldek -Ovfile_external_compress=yes
    </para>
   </entry>
 
-  <entry> 
-   <para> 
+  <entry>
+   <para>
    PLD-FreeBSD port (ftp://beliar.pld-freebsd.org/dists/1.0/ready/i386/RPMS/)
    </para>
    <author id="trojan" email="tomek att uninet com pl">Tomasz Trojanowski</author>
   </entry>
 
-  <entry> 
+  <entry>
    <para>manual have been rewritten and enhanced</para>
   </entry>
 </section>
@@ -984,11 +1018,11 @@ now. </para>
     </ul>
   </entry>
   <entry>
-    <para>'hold' and 'ignore' package masks are matched with source name, package epoch, 
+    <para>'hold' and 'ignore' package masks are matched with source name, package epoch,
 version and release, i.e. masks apache-1.3.2* or ra:apache-1* are valid ones now. </para>
   </entry>
   <entry>
-    <para>new: with --unique-pkg-names (-Q) packages with the same name 
+    <para>new: with --unique-pkg-names (-Q) packages with the same name
            are removed from available package set</para>
   </entry>
   <entry>
@@ -1001,7 +1035,7 @@ config file. </para>
     <para>fixed available package list management in interactive mode </para>
   </entry>
   <entry>
-    <para>AM/AC stuff cleanup and adaptation to their new versions 
+    <para>AM/AC stuff cleanup and adaptation to their new versions
       (automake 1.7 and autoconf 2.54)</para>
     <author id="wiget" email="wiget att pld-linux org">Artur Frysiak</author>
   </entry>
@@ -1033,7 +1067,7 @@ config file. </para>
   <entry>
     <para>bugfix: -s URL works fine </para>
   </entry>
- 
+
   <entry>
     <para> added poldek's logo </para>
     <author id="mimooh" email="mimooh att sgsp edu pl">Karol Krenski</author>
@@ -1087,24 +1121,24 @@ config file. </para>
     <para>"hdrl" sources can be refreshed with --upa </para>
   </entry>
   <entry>
-    <para>fixed package removal: don't follow dependencies if only one of 
+    <para>fixed package removal: don't follow dependencies if only one of
 multiple-installed packages is intended to uninstall </para>
   </entry>
   <entry>
-    <para>shell: search: pattern is treated as shell wildcard (matched by fnmatch(3)) 
+    <para>shell: search: pattern is treated as shell wildcard (matched by fnmatch(3))
 by default; previous behavior (Perl regular expression matching) is available
 with --perlre or "rsearch" alias. </para>
   </entry>
   <entry>
-    <para>fixed package auto-selection among equivalents: dependencies aren't verified strictly 
+    <para>fixed package auto-selection among equivalents: dependencies aren't verified strictly
 during package scoring. </para>
   </entry>
   <entry>
-    <para>fixed bug of equivalent package selection (&lt;Enter&gt; was select first, 
+    <para>fixed bug of equivalent package selection (&lt;Enter&gt; was select first,
 notdefault package).</para>
   </entry>
   <entry>
-    <para>shell: with 'upgrade' and 'greedy-upgrade' commands only upgradeable 
+    <para>shell: with 'upgrade' and 'greedy-upgrade' commands only upgradeable
 packages are auto-completed.  </para>
   </entry>
 </release>
@@ -1130,15 +1164,15 @@ packages are auto-completed.  </para>
     <para>fixed vfjuggle: packages.dir.md* are copied to hdd too</para>
   </entry>
   <entry>
-    <para>few SIGSEVs killed on "search" command when APT's pkglist file is used as package index 
+    <para>few SIGSEVs killed on "search" command when APT's pkglist file is used as package index
 </para>
     <author part="yes" id="niemeyer" email="niemeyer att conectiva com">Gustavo Niemeyer</author>
   </entry>
 </release>
 <release version="0.17.4" date="2002/05/06" focus="bugfix/minor enhancements release">
   <entry>
-    <para>new (major) modes: --downgrade downgrade given packages; 
-           --reinstall major mode reinstalls given packages; 
+    <para>new (major) modes: --downgrade downgrade given packages;
+           --reinstall major mode reinstalls given packages;
            --erase removes packages with its reverse dependent ones</para>
   </entry>
   <entry>
@@ -1160,12 +1194,12 @@ packages are auto-completed.  </para>
 </release>
 <release version="0.17.3" date="2002/04/23" focus="major enhancements release">
   <entry>
-    <para> supported "hdlist" files (simple raw RPM package headers list) as 
-sources. These files are used by APT-RPM as they are widely supported 
-by RPM based distributions. However this format isn't optimal, now 
-poldek is useable with almost every RPM based distro without poldek's 
+    <para> supported "hdlist" files (simple raw RPM package headers list) as
+sources. These files are used by APT-RPM as they are widely supported
+by RPM based distributions. However this format isn't optimal, now
+poldek is useable with almost every RPM based distro without poldek's
 native indexes support.
-See poldekrc.sample-{rh,mdk} for examples of RedHat and Mandrake 
+See poldekrc.sample-{rh,mdk} for examples of RedHat and Mandrake
 configuration.
 </para>
   </entry>
@@ -1189,7 +1223,7 @@ configuration.
     <author id="a.piesk" email="a.piesk att gmx net">Andreas Piesk</author>
   </entry>
   <entry>
-    <para>new "ftp_sysuser_as_anon_passwd" option causes sending login at 
+    <para>new "ftp_sysuser_as_anon_passwd" option causes sending login at
            hostname as anonymous FTP password </para>
   </entry>
   <entry>
@@ -1206,7 +1240,7 @@ configuration.
     <author part="yes" id="rl" email="rl att hellgate ch">Roger Luethi</author>
   </entry>
   <entry>
-    <para>fixed and improved handling of bool configuration options, added on/off and enable/disable 
+    <para>fixed and improved handling of bool configuration options, added on/off and enable/disable
       to the list of valid choices</para>
     <author id="a.piesk" email="a.piesk att gmx net">Andreas Piesk</author>
   </entry>
@@ -1276,11 +1310,11 @@ configuration.
 </release>
 <release version="0.17" date="2002/02/21" focus="major enhancements release">
   <entry>
-    <para>added support for package.dir's "patches" (new option --update-whole updates 
+    <para>added support for package.dir's "patches" (new option --update-whole updates
            whole index; --update looking for patches first)</para>
   </entry>
   <entry>
-    <para>packages are divided into groups before install and each group is installed 
+    <para>packages are divided into groups before install and each group is installed
            separately; this ensures that broken dependencies in one of group doesn't affect
            the rest. </para>
   </entry>
@@ -1301,7 +1335,7 @@ configuration.
     <ul>
       <li>db package list is cached what speeds up program start</li>
       <li>ls: long listings are passed to $PAGER program (default is "less")</li>
-      <li>ls: new switches -n (list package names only), -G (list group) 
+      <li>ls: new switches -n (list package names only), -G (list group)
         and -O (show package summaries)</li>
     </ul>
   </entry>
@@ -1309,11 +1343,11 @@ configuration.
     <para>added log file support (--log option)</para>
   </entry>
   <entry>
-    <para>sources may be configured as name and URL pair and later selected by that name 
+    <para>sources may be configured as name and URL pair and later selected by that name
            (new --sn|-n option); with --sl|-l program lists all configured sources. </para>
   </entry>
   <entry>
-    <para>packages.dir's integrity is verified before each loadingwhat prevents program 
+    <para>packages.dir's integrity is verified before each loadingwhat prevents program
            SIGSEVs on load broken indexes</para>
   </entry>
   <entry>
@@ -1323,8 +1357,8 @@ configuration.
     <para>package MD5 sums are verified before install</para>
   </entry>
   <entry>
-    <para>with --ask program confirms each installation (confirm_install config option) 
-           and allows the user to choose among equivalent packages 
+    <para>with --ask program confirms each installation (confirm_install config option)
+           and allows the user to choose among equivalent packages
            (choose_equivalents_manually config option)</para>
   </entry>
   <entry>
@@ -1385,11 +1419,11 @@ doesn't contain package descriptions at all</para>
 </release>
 <release version="0.15.7" date="2001/10/10" focus="major enhancements release">
   <entry>
-    <para>downloaded packages are removed after successful installation by default 
+    <para>downloaded packages are removed after successful installation by default
 (keep_downloads=yes in config can change to previous behavior)</para>
   </entry>
   <entry>
-    <para>changed semantics of --test: -t causes poldek's checks only, 
+    <para>changed semantics of --test: -t causes poldek's checks only,
       -tt turns on tests performed by rpm too.</para>
   </entry>
   <entry>
@@ -1410,7 +1444,7 @@ doesn't contain package descriptions at all</para>
 </release>
 <release version="0.15.6" date="2001/08/12" focus="bugfix/major enhancements release">
   <entry>
-    <para>package priorities could be used during installation too 
+    <para>package priorities could be used during installation too
      (/etc/poldek-pkgsplit.conf or /etc/poldek-pri.conf is used by default)</para>
   </entry>
   <entry>
@@ -1442,7 +1476,7 @@ doesn't contain package descriptions at all</para>
     <para>shell: new ls options: -t, -T, -r</para>
   </entry>
   <entry>
-    <para>added --shcmd option which allows to execute poldek's shell command 
+    <para>added --shcmd option which allows to execute poldek's shell command
 without entering shell mode </para>
   </entry>
   <entry>
@@ -1484,7 +1518,7 @@ without entering shell mode </para>
 </release>
 <release version="0.15.1" date="2001/06/28" focus="major bugfix release">
   <entry>
-    <para>spliting: changed packages.chunk* format: full package filenames are printed 
+    <para>spliting: changed packages.chunk* format: full package filenames are printed
  and removed comments. </para>
   </entry>
   <entry>
@@ -1496,7 +1530,7 @@ without entering shell mode </para>
     <para>updated vfcurl progress bar handling (according to curl 7.8)</para>
   </entry>
   <entry>
-    <para>better index format version handling (minor.major ver schema), current 
+    <para>better index format version handling (minor.major ver schema), current
      version is 1.0, older versions not supported...</para>
   </entry>
   <entry>
@@ -1518,7 +1552,7 @@ without entering shell mode </para>
     <para>added "nofollow" option to cmdline and "follow" one to config	</para>
   </entry>
   <entry>
-    <para>renamed "freshen" to "fresh" and changed its semantics, now rpm's 
+    <para>renamed "freshen" to "fresh" and changed its semantics, now rpm's
 "--freshen" &lt;=&gt; "--nofollow --fresh"</para>
   </entry>
   <entry>
