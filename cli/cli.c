@@ -324,20 +324,26 @@ static int cmdctx_isctrlmsg(const char *fmt)
 static int do_cmdctx_printf(struct cmdctx *cmdctx, int color, const char *fmt,
                             va_list args)
 {
+    int is_piped = cmdctx->pipe_right != NULL;
     int is_ctrl, n = 0;
 
     if ((is_ctrl = cmdctx_isctrlmsg(fmt))) {
         if (cmdctx->rtflags & CMDCTX_NOCTRLMSGS)
-            return 1;
+            return 0;
         fmt++;
     }
 
-    if (cmdctx->pipe_right == NULL || is_ctrl) {
-        n = color ? poldek_term_vprintf_c(color, fmt, args) :
-            vfprintf(stdout, fmt, args);
+    if (is_piped && is_ctrl) {  /* skip control messages */
+        return 0;
+
+    } else if (!is_piped) {
+        n = color ? poldek_term_vprintf_c(color, fmt, args) : vfprintf(stdout, fmt, args);
+
+    } else if (is_piped) {
+        n = cmd_pipe_vprintf(cmdctx->pipe_right, fmt, args);
 
     } else {
-        n = cmd_pipe_vprintf(cmdctx->pipe_right, fmt, args);
+        n_assert(0);
     }
 
     return n;
