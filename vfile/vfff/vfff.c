@@ -1,4 +1,4 @@
-/* 
+/*
   Copyright (C) 2002 - 2005 Pawel A. Gajda <mis@pld-linux.org>
 
   This program is free software; you can redistribute it and/or modify
@@ -43,6 +43,9 @@
 
 #define  VCN_ALIVE_TTL  10
 
+extern int vfff_io_init(struct vcn *cn);
+extern void vfff_io_destroy(struct vcn *cn);
+
 extern void vhttp_vcn_init(struct vcn *cn);
 extern void vftp_vcn_init(struct vcn *cn);
 
@@ -53,7 +56,7 @@ int vfff_errno = 0;
 int *vfff_verbose = &verbose;
 void (*vfff_vlog_cb)(const char *fmt, va_list ap) = NULL;
 
-const char *vfff_errmsg(void) 
+const char *vfff_errmsg(void)
 {
     if (*errmsg == '\0')
         return "unknown error";
@@ -63,11 +66,11 @@ const char *vfff_errmsg(void)
 void vfff_set_err(int err_no, const char *fmt, ...)
 {
     va_list args;
-    
+
     va_start(args, fmt);
     vsnprintf(errmsg, sizeof(errmsg), fmt, args);
     va_end(args);
-    
+
     vfff_errno = err_no;
 }
 
@@ -83,7 +86,7 @@ int vfff_sigint_reached(void)
 void vfff_log(const char *fmt, ...)
 {
     va_list args;
-    
+
     va_start(args, fmt);
     if (vfff_vlog_cb)
         vfff_vlog_cb(fmt, args);
@@ -130,7 +133,7 @@ int vfff_to_connect(const char *host, const char *service, int *af)
 
     if (af)
         *af = 0;
-    
+
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -146,7 +149,7 @@ int vfff_to_connect(const char *host, const char *service, int *af)
     resp = res;
 
     vfff_errno = 0;
-    
+
     do {
         sockfd = socket(resp->ai_family, resp->ai_socktype, resp->ai_protocol);
         if (sockfd < 0)
@@ -165,17 +168,17 @@ int vfff_to_connect(const char *host, const char *service, int *af)
         uninstall_alarm();
         close(sockfd);
         sockfd = -1;
-        
+
     } while ((resp = resp->ai_next) != NULL);
 
     if (sockfd == -1)
         vfff_set_err(errno, _("unable to connect to %s:%s: %m"), host, service);
-    
+
     else if (af)
         *af = resp->ai_family;
 
     //DBGF("sigint reached %d, errno %m\n", vfff_sigint_reached());
-    
+
     uninstall_alarm();
     freeaddrinfo(res);
     return sockfd;
@@ -215,17 +218,17 @@ struct vcn *cn_connect(const char *host, int port,
         cn->port = port;
         cn->login = cn->passwd = cn->proxy_login = cn->proxy_passwd = NULL;
         cn->auth_basic_str = cn->proxy_auth_basic_str = NULL;
-        
+
         if (login && passwd) {
             cn->login = n_strdup(login);
             cn->passwd = n_strdup(passwd);
-        } 
+        }
 
         if (proxy_login && proxy_passwd) {
             cn->proxy_login = n_strdup(proxy_login);
             cn->proxy_passwd = n_strdup(proxy_passwd);
         }
-        
+
         cn->resp = NULL;
     }
 
@@ -240,7 +243,7 @@ struct vcn *vcn_new(int proto, const char *host, int port,
     struct vcn *cn;
     int default_port = 0;
 
-    
+
     switch (proto) {
         case VCN_PROTO_FTP:
             default_port = IPPORT_FTP;
@@ -248,6 +251,10 @@ struct vcn *vcn_new(int proto, const char *host, int port,
 
         case VCN_PROTO_HTTP:
             default_port = IPPORT_HTTP;
+            break;
+
+        case VCN_PROTO_HTTPS:
+            default_port = IPPORT_HTTPS;
             break;
 
         default:
@@ -272,10 +279,16 @@ struct vcn *vcn_new(int proto, const char *host, int port,
             vhttp_vcn_init(cn);
             break;
 
+        case VCN_PROTO_HTTPS:
+            vhttp_vcn_init(cn);
+            break;
+
         default:
             n_assert(0);
             break;
     }
+
+    vfff_io_init(cn);
 
     if (cn->m_open && !cn->m_open(cn)) {
         vcn_free(cn);
@@ -292,19 +305,20 @@ void vcn_close(struct vcn *cn)
 
     if (cn->m_close)
         cn->m_close(cn);
-    
+
     cn->state = VCN_CLOSED;
     close(cn->sockfd);
     cn->sockfd = -1;
+
+    vfff_io_destroy(cn);
 }
 
-
-void vcn_free(struct vcn *cn) 
+void vcn_free(struct vcn *cn)
 {
     vcn_close(cn);
 
     n_cfree(&cn->host);
-    
+
     n_cfree(&cn->login);
     n_cfree(&cn->passwd);
 
@@ -313,20 +327,20 @@ void vcn_free(struct vcn *cn)
 
     n_cfree(&cn->auth_basic_str);
     n_cfree(&cn->proxy_auth_basic_str);
-    
+
     if (cn->resp)
         cn->m_free(cn->resp);
-    
+
     memset(cn, 0, sizeof(*cn));
 }
 
-int vcn_is_alive(struct vcn *cn) 
+int vcn_is_alive(struct vcn *cn)
 {
     vfff_errno = 0;
-    
+
     if (cn->ts_is_alive > 0) {
         time_t ts = time(0);
-    
+
         if (ts - cn->ts_is_alive < VCN_ALIVE_TTL)
             return 1;
     }
@@ -335,46 +349,36 @@ int vcn_is_alive(struct vcn *cn)
     return cn->m_is_alive(cn);
 }
 
-int vcn_retr(struct vcn *cn, struct vfff_req *req) 
+int vcn_retr(struct vcn *cn, struct vfff_req *req)
 {
     vfff_errno = 0;
     return cn->m_retr(cn, req);
 }
 
-int vcn_stat(struct vcn *cn, struct vfff_req *req) 
+int vcn_stat(struct vcn *cn, struct vfff_req *req)
 {
     vfff_errno = 0;
     return cn->m_stat(cn, req);
 }
 
-int vfff_transfer_file(struct vfff_req *vreq, int in_fd, long total_size)
+int vfff_transfer_file(struct vcn *cn, struct vfff_req *vreq, long total_size)
 {
-    struct  timeval tv;
     int     rc, is_err = 0;
     long    amount = 0;
-    
 
     amount = vreq->out_fdoff;
-    
+
     if (vreq->progress_fn) {
         vreq->progress_fn(vreq->progress_fn_data, total_size, 0);
-        if (amount) 
+        if (amount)
             vreq->progress_fn(vreq->progress_fn_data, total_size, amount);
     }
 
     while (1) {
-        fd_set fdset;
-
         if (total_size > 0 && amount == total_size)
             break;
-        
-        FD_ZERO(&fdset);
-        FD_SET(in_fd, &fdset);
-        
-        tv.tv_sec = VFFF_TIMEOUT;
-        tv.tv_usec = 0;
-        
-        rc = select(in_fd + 1, &fdset, NULL, NULL, &tv);
+
+        rc = cn->io_select(cn, VFFF_TIMEOUT);
         if (vfff_sigint_reached()) {
             is_err = 1;
             errno = EINTR;
@@ -385,24 +389,24 @@ int vfff_transfer_file(struct vfff_req *vreq, int in_fd, long total_size)
             errno = ETIMEDOUT;
             is_err = 1;
             break;
-            
+
         } else if (rc < 0) {
             if (errno == EINTR)
                 continue;
-            
+
             is_err = 1;
             break;
-            
+
         } else if (rc > 0) {
             char buf[8192];
             int n;
-            
-            if ((n = read(in_fd, buf, sizeof(buf))) == 0) 
+
+            if ((n = cn->io_read(cn, buf, sizeof(buf))) == 0)
                 break;
-            
+
             if (n > 0) {
                 int nw;
-                
+
                 if ((nw = write(vreq->out_fd, buf, n)) != n) {
                     is_err = 1;
                     break;
@@ -410,14 +414,14 @@ int vfff_transfer_file(struct vfff_req *vreq, int in_fd, long total_size)
                 amount += nw;
                 if (vreq->progress_fn)
                     vreq->progress_fn(vreq->progress_fn_data, total_size, amount);
-                
+
             } else {
                 is_err = 1;
                 break;
-            } 
+            }
         }
     }
-    
+
     if (is_err) {
         vfff_errno = errno;
         if (vfff_errno == 0)
@@ -428,8 +432,6 @@ int vfff_transfer_file(struct vfff_req *vreq, int in_fd, long total_size)
 
     if (vreq->progress_fn)
         vreq->progress_fn(vreq->progress_fn_data, total_size, -1);
-    
+
     return is_err == 0;
 }
-
-

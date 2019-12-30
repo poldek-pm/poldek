@@ -36,6 +36,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 #include <trurl/nbuf.h>
 #include <trurl/nassert.h>
 #include <trurl/nhash.h>
@@ -214,7 +217,7 @@ int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
 
     n += n_snprintf(&req[n], sizeof(req) - n, "\r\n");
 
-    if (write(cn->sockfd, req, n) != n) {
+    if (cn->io_write(cn, req, n) != n) {
         vfff_set_err(errno, _("write to socket %s: %m"), req);
         cn->state = VCN_DEAD;
         rc = 0;
@@ -222,7 +225,6 @@ int httpcn_req(struct vcn *cn, const char *req_line, char *fmt, ...)
 
     return rc;
 }
-
 
 static struct http_resp *http_resp_new(void)
 {
@@ -425,8 +427,7 @@ int response_complete(struct http_resp *resp)
     return 0;
 }
 
-
-static int readresp(int sockfd, struct http_resp *resp, int readln)
+static int readresp(struct vcn *cn, struct http_resp *resp, int readln)
 {
     int is_err = 0, buf_pos = 0, ttl = VFFF_TIMEOUT;
     char buf[4096];
@@ -437,14 +438,9 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
 
 
     while (1) {
-        struct timeval to = { 1, 0 };
-        fd_set fdset;
         int rc;
-
-        FD_ZERO(&fdset);
-        FD_SET(sockfd, &fdset);
         errno = 0;
-        if ((rc = select(sockfd + 1, &fdset, NULL, NULL, &to)) < 0) {
+        if ((rc = cn->io_select(cn, 1)) < 0) {
             if (vfff_sigint_reached()) {
                 is_err = 1;
                 errno = EINTR;
@@ -469,9 +465,9 @@ static int readresp(int sockfd, struct http_resp *resp, int readln)
             ttl = VFFF_TIMEOUT;
 
             if (readln)
-                n = read(sockfd, &c, 1);
+                n = cn->io_read(cn, &c, 1);
             else
-                n = read(sockfd, buf, sizeof(buf));
+                n = cn->io_read(cn, buf, sizeof(buf));
 
             if (n < 0 && errno == EINTR)
                 continue;
@@ -624,7 +620,7 @@ static int http_resp_parse(struct http_resp *resp)
 
 
 static
-struct http_resp *do_http_read_resp(int sock)
+struct http_resp *do_http_read_resp(struct vcn *cn)
 {
     struct http_resp *resp;
     int is_err = 0;
@@ -639,7 +635,7 @@ struct http_resp *do_http_read_resp(int sock)
             break;
         }
 
-        if ((n = readresp(sock, resp, 1)) > 0) {
+        if ((n = readresp(cn, resp, 1)) > 0) {
             if (response_complete(resp))
                 break;
         } else {
@@ -716,7 +712,7 @@ int httpcn_get_resp(struct vcn *cn)
     if (cn->resp)
         http_resp_free(cn->resp);
 
-    if ((cn->resp = do_http_read_resp(cn->sockfd)) == NULL) {
+    if ((cn->resp = do_http_read_resp(cn)) == NULL) {
         cn->state = VCN_DEAD;
         rc = 0;
     }
@@ -1034,14 +1030,13 @@ int vhttp_vcn_retr(struct vcn *cn, struct vfff_req *rreq)
     }
 
     errno = 0;
-    if (!vfff_transfer_file(rreq, cn->sockfd, total))
+    if (!vfff_transfer_file(cn, rreq, total))
         goto l_err_end;
 
 
  l_end:
     if (close_cn)
         vcn_close(cn);
-
 
     return rc;
 

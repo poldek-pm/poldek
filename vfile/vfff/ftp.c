@@ -739,9 +739,15 @@ int vftpcn_retr(struct vcn *cn, struct vfff_req *req)
     req->st_remote_size = total_size;
 
     errno = 0;
-    if (!vfff_transfer_file(req, sockfd, total_size))
-        goto l_err;
+    int tmp_sockfd = cn->sockfd; /* XXX temporary replace sockfd to PASV socket */
+    cn->sockfd = sockfd;
 
+    if (!vfff_transfer_file(cn, req, total_size)) {
+        cn->sockfd = tmp_sockfd;
+        goto l_err;
+    }
+
+    cn->sockfd = tmp_sockfd;
     close(sockfd);
 
     if (!vftpcn_resp(cn) || resp_code(cn) != 226)

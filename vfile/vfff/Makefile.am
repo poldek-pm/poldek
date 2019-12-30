@@ -5,12 +5,12 @@ NULL =
 AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-LIBS = 
-noinst_LTLIBRARIES  = libvfff.la 
-libvfff_la_SOURCES  = \
-						vfff.c vfff.h \
-						http.c base64.c \
-						ftp.c
+LIBS =
+noinst_LTLIBRARIES  = libvfff.la
+libvfff_la_SOURCES  =   vfff.c vfff.h 	\
+			io.c 		\
+			http.c base64.c \
+			ftp.c
 
 libvfff_la_CFLAGS =			\
 	$(WARNINGFLAGS_C)		\
@@ -26,4 +26,4 @@ clean-local:
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1
