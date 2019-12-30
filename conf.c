@@ -498,7 +498,7 @@ static int add_param(tn_hash *ht_sect, const char *section,
     int tagindex, validate, overwrite;
 
     tag = NULL;
-    if ((flags & ADD_PARAM_FOREIGN) == 0) /* replace '_' and '-' with ' ' */
+    if ((flags & ADD_PARAM_FOREIGN) == 0) { /* replace '_' and '-' with ' ' */
         if (*name != '_') {          /* user defined macro */
             char *p = name + 1;
             while (*p) {                /* backward compat */
@@ -507,8 +507,8 @@ static int add_param(tn_hash *ht_sect, const char *section,
                 p++;
             }
         }
+    }
 
-    overwrite = (flags & ADD_PARAM_OVERWRITE);
     validate = (flags & ADD_PARAM_VALIDATE);
 
     if (path)
@@ -554,6 +554,12 @@ static int add_param(tn_hash *ht_sect, const char *section,
         }
 
     }
+
+    if ((tag->flags & CONF_TYPE_F_MULTI) == 0) {
+        flags |= ADD_PARAM_OVERWRITE;
+    }
+
+    overwrite = (flags & ADD_PARAM_OVERWRITE);
 
     if (!verify_param_presence(ht_sect, section, name, tag, flags, filemark))
         return 0;
@@ -1222,8 +1228,7 @@ tn_hash *poldek_conf_addlines(tn_hash *htconf, const char *sectnam,
         n_strdupap(line, &tmp);
 
         if (split_option_line(tmp, &name, &value, NULL, 0)) {
-            if (!add_param(ht_sect, sectnam, name, value,
-                           ADD_PARAM_VALIDATE | ADD_PARAM_OVERWRITE, NULL, 0))
+            if (!add_param(ht_sect, sectnam, name, value, ADD_PARAM_VALIDATE, NULL, 0))
                 nerr++;
         }
     }
