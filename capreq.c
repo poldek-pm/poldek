@@ -530,20 +530,19 @@ tn_buf *capreq_arr_join(tn_array *capreqs, tn_buf *nbuf, const char *sep)
 static void capreq_store(struct capreq *cr, tn_buf *nbuf)
 {
     register int i;
-    int32_t epoch, nepoch;
     uint8_t size, bufsize, name_len;
     uint8_t cr_buf[5];
     uint8_t cr_flags = 0, cr_relflags = 0;
 
-	if (cr->cr_flags & CAPREQ_RT_FLAGS) {
-		cr_flags = cr->cr_flags;
+    if (cr->cr_flags & CAPREQ_RT_FLAGS) {
+        cr_flags = cr->cr_flags;
         cr->cr_flags &= ~CAPREQ_RT_FLAGS;
-	}
+    }
 
     if (cr->cr_relflags & REL_RT_FLAGS) {
-		cr_relflags = cr->cr_relflags;
+        cr_relflags = cr->cr_relflags;
         cr->cr_relflags &= ~REL_RT_FLAGS;
-	}
+    }
 
     cr_buf[0] = cr->cr_relflags;
     cr_buf[1] = cr->cr_flags;
@@ -557,9 +556,10 @@ static void capreq_store(struct capreq *cr, tn_buf *nbuf)
     name_len = strlen(cr->name);
     size += name_len + 1;       /* +1 for leading '\0' */
 
-    for (i=2; i < 5; i++)
+    for (i=2; i < 5; i++) {
         if (cr_buf[i])
             cr_buf[i] += name_len + 1;
+    }
 
     n_buf_add_int8(nbuf, size);
     n_buf_add(nbuf, cr_buf, sizeof(cr_buf));
@@ -568,23 +568,25 @@ static void capreq_store(struct capreq *cr, tn_buf *nbuf)
     n_buf_add(nbuf, cr->name, name_len);
 
     if (bufsize) {          /* versioned? */
+        int32_t epoch = 0;
+
         if (cr->cr_ep_ofs) {
             epoch = capreq_epoch(cr);
-            nepoch = n_hton32(epoch);
+            int32_t nepoch = n_hton32(epoch);
             memcpy(&cr->_buff[cr->cr_ep_ofs], &nepoch, sizeof(nepoch));
         }
 
         n_buf_add(nbuf, cr->_buff, bufsize);
 
-        if (cr->cr_ep_ofs)
+        if (cr->cr_ep_ofs)      /* restore epoch */
             memcpy(&cr->_buff[cr->cr_ep_ofs], &epoch, sizeof(epoch));
     }
 
     if (cr_flags)
-		cr->cr_flags = cr_flags;
+        cr->cr_flags = cr_flags;
 
     if (cr_relflags)
-		cr->cr_relflags = cr_relflags;
+        cr->cr_relflags = cr_relflags;
 }
 
 static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi)
@@ -740,7 +742,7 @@ tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf)
     tn_array       *arr;
     struct capreq  *cr;
     tn_buf_it      nbufi;
-    uint16_t       arr_size;
+    uint16_t       arr_size = 0;
     void           **cr_buf;
     register int   i, n;
 

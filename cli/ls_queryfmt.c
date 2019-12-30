@@ -37,6 +37,9 @@
 
 #define n_strcase_eq(s, p) (strcasecmp(s, p) == 0)
 
+/* to avoid gcc warn about ignored result */
+#define do_asprintf(buf, fmt, args...)   n_assert(asprintf(buf, fmt, ## args) >= 0)
+
 static const char *invalid_format = N_("invalid format:");
 
 enum LsqfParseMode {
@@ -257,16 +260,16 @@ static int capreq_snprintf_evr(char *str, size_t size, const struct capreq *cr)
 
 static char *format_date(int outfmtfnid, uint32_t time)
 {
-    char *buf = NULL, datestr[32];;
+    char *buf = NULL, datestr[32];
 
     if (outfmtfnid == LSQF_TAG_OUTFMTFN_DATE) {
 	strftime(datestr, sizeof(datestr), "%c", gmtime((time_t *)&time));
-	asprintf(&buf, "%s", datestr);
+	do_asprintf(&buf, "%s", datestr);
     } else if (outfmtfnid == LSQF_TAG_OUTFMTFN_DAY) {
 	strftime(datestr, sizeof(datestr), "%a %b %d %Y", gmtime((time_t *)&time));
-	asprintf(&buf, "%s", datestr);
+	do_asprintf(&buf, "%s", datestr);
     } else {
-	asprintf(&buf, "%u", time);
+	do_asprintf(&buf, "%u", time);
     }
 
     return buf;
@@ -292,9 +295,9 @@ static char *format_flags(int outfmtfnid, struct capreq *cr)
 
 	*p = '\0';
 
-	asprintf(&buf, " %s ", relstr);
+	do_asprintf(&buf, " %s ", relstr);
     } else {
-	asprintf(&buf, "%u", cr->cr_relflags);
+	do_asprintf(&buf, "%u", cr->cr_relflags);
     }
 
     return buf;
@@ -348,7 +351,7 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 
     } else if (lsqf_tags[ent->tag.id].need_flist) {
 	struct pkgflist *flist = lsqf_pkgdata_flist(pkgdata);
-	struct pkgfl_ent *flent;
+	struct pkgfl_ent *flent = NULL;
 
 	if (flist) {
 	    switch (ent->tag.id) {
@@ -369,16 +372,16 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		    if (ent->tag.id == LSQF_TAG_BASENAMES)
 			buf = n_strdup(flent->files[num]->basename);
 		    else if (ent->tag.id == LSQF_TAG_FILEMODES)
-			asprintf(&buf, "%u", flent->files[num]->mode);
+			do_asprintf(&buf, "%u", flent->files[num]->mode);
 		    else if (ent->tag.id == LSQF_TAG_FILENAMES) {
 			if (*flent->dirname == '/')
-			    asprintf(&buf, "%s%s", flent->dirname, flent->files[num]->basename);
+			    do_asprintf(&buf, "%s%s", flent->dirname, flent->files[num]->basename);
 			else
-			    asprintf(&buf, "/%s%s%s", flent->dirname,
+			    do_asprintf(&buf, "/%s%s%s", flent->dirname,
 						      *flent->files[num]->basename ? "/" : "",
 						      flent->files[num]->basename);
 		    } else if (ent->tag.id == LSQF_TAG_FILESIZES)
-			asprintf(&buf, "%u", flent->files[num]->size);
+			do_asprintf(&buf, "%u", flent->files[num]->size);
 		    else
 			if (S_ISLNK(flent->files[num]->mode))
 			    buf = n_strdup(flent->files[num]->basename + strlen(flent->files[num]->basename) + 1);
@@ -388,7 +391,7 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		case LSQF_TAG_DIRNAMES:
 		    flent = n_tuple_nth(flist->fl, num);
 
-		    asprintf(&buf, "%s%s", *flent->dirname == '/' ? "" : "/",
+		    do_asprintf(&buf, "%s%s", *flent->dirname == '/' ? "" : "/",
 					   flent->dirname);
 		    break;
 
@@ -453,7 +456,7 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 	    }
 
 	    case LSQF_TAG_EPOCH:
-		asprintf(&buf, "%d", pkg->epoch);
+		do_asprintf(&buf, "%d", pkg->epoch);
 		break;
 
 	    case LSQF_TAG_GROUP:
@@ -469,7 +472,7 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		break;
 
 	    case LSQF_TAG_PACKAGECOLOR:
-		asprintf(&buf, "%d", pkg->color);
+		do_asprintf(&buf, "%d", pkg->color);
 		break;
 
 	    case LSQF_TAG_PROVIDEFLAGS:
@@ -501,7 +504,7 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		c = n_array_nth(pkg->reqs, num);
 
 		if (capreq_is_rpmlib(c))
-		    asprintf(&buf, "rpmlib(%s)", capreq_name(c));
+		    do_asprintf(&buf, "rpmlib(%s)", capreq_name(c));
 		else
 		    buf = n_strdup(capreq_name(c));
 
@@ -520,7 +523,7 @@ static char *get_str_by_tagid(const struct lsqf_ent *ent, struct lsqf_pkgdata *p
 		break;
 
 	    case LSQF_TAG_SIZE:
-		asprintf(&buf, "%u", pkg->size);
+		do_asprintf(&buf, "%u", pkg->size);
 		break;
 
 	    case LSQF_TAG_SOURCERPM:

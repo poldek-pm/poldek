@@ -38,6 +38,7 @@
 
 #include "pm_rpm.h"
 
+#if 0                           /* unused */
 static void progress(const unsigned long amount, const unsigned long total)
 {
     static int last_v = 0;
@@ -74,6 +75,7 @@ static void progress(const unsigned long amount, const unsigned long total)
         }
     }
 }
+#endif
 
 #ifdef HAVE_RPM_4_1
 # if !HAVE_RPMDSUNAME

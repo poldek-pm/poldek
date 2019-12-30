@@ -249,7 +249,7 @@ int packages_fetch(struct pm_ctx *pmctx,
         } else {
             for (int j=0; j < n_array_size(urls); j++) {
                 char localpath[PATH_MAX];
-                snprintf(localpath, sizeof(localpath), "%s/%s", real_destdir,
+                n_snprintf(localpath, sizeof(localpath), "%s/%s", real_destdir,
                          n_basenam(n_array_nth(urls, j)));
 
                 if (!pm_verify_signature(pmctx, localpath, PKGVERIFY_MD)) {

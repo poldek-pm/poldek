@@ -62,7 +62,7 @@ struct tr *tr_new(const char *lang, const char *name)
 
     len = strlen(name) + 1;
     tr = n_malloc(sizeof(*tr) + len);
-    strncpy(tr->lang, lang, sizeof(tr->lang))[sizeof(tr->lang) - 1] = '\0';
+    n_strncpy(tr->lang, lang, sizeof(tr->lang));
     memcpy(tr->name, name, len);
     return tr;
 }

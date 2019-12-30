@@ -55,14 +55,21 @@ int main(void)
     vopen3_exec(&st, 0);
     //sleep (300);
     printf("DO RUN %d\n", st.fd_in);
-    if (write(st.fd_in, "dupa\n", 5) < 0) {
+    if (write(st.fd_in, "foox\n", 5) < 0) {
         fprintf(stderr, "write %d: %m\n", st.fd_in);
     }
 
-    write(st.fd_in, "duba\n", 5);
-    write(st.fd_in, "dupa\n", 5);
+    if (write(st.fd_in, "barx\n", 5) != 5)
+        fprintf(stderr, "write %d: %m\n", st.fd_in);
+
+    if (write(st.fd_in, "bazx\n", 5) != 5)
+        fprintf(stderr, "write %d: %m\n", st.fd_in);
+
     vopen3_process(&st, 1);
-    write(st.fd_in, "dupa\n", 5);
+
+    if (write(st.fd_in, "foox\n", 5) != 5)
+        fprintf(stderr, "write %d: %m\n", st.fd_in);
+
     vopen3_close(&st);
     pst = &st;
     while (pst) {
@@ -70,10 +77,6 @@ int main(void)
         pst = pst->next;
     }
 
-
-
-
     printf("OK\n");
-    //sleep(300);
 
 }

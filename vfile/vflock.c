@@ -35,11 +35,11 @@
 #include "vfile_intern.h"
 
 static
-int vf_lockfile(const char *lockfile) 
+int vf_lockfile(const char *lockfile)
 {
     struct flock fl;
     int    fd;
-    
+
     DBGF("%s\n", lockfile);
     if ((fd = open(lockfile, O_RDWR | O_CREAT, 0644)) < 0) {
         vf_logerr("open %s: %m\n", lockfile);
@@ -50,53 +50,56 @@ int vf_lockfile(const char *lockfile)
     fl.l_whence = SEEK_SET;
     fl.l_start = 0;
     fl.l_len = 0;
-    
+
     if (fcntl(fd, F_SETLK, &fl) == -1) {
         int an_errno = errno;
         if (errno != EAGAIN || errno != EACCES)
             if (*vfile_verbose > 1)
                 vf_logerr("fcntl %s: %m\n", lockfile);
-	
+
         close(fd);
         fd = 0;
         if (an_errno == ENOLCK)
             fd = -1;
-        
+
     } else {
         char buf[64];
-        
-        ftruncate(fd, 0);
-        snprintf(buf, sizeof(buf), "%d", getpid());
-        write(fd, buf, strlen(buf));
+
+        if (ftruncate(fd, 0) != 0)
+            vf_logerr("ftruncate %s: %m\n", lockfile);
+
+        int n = snprintf(buf, sizeof(buf), "%d", getpid());
+        if (write(fd, buf, n) != n)
+            vf_logerr("write %s: %m\n", lockfile);
     }
-    
+
     return fd;
 }
 
 #if 0
 static
-pid_t vf_readlockfile(const char *lockfile) 
+pid_t vf_readlockfile(const char *lockfile)
 {
     char buf[256];
     int fd, nread;
     pid_t pid;
-    
+
     fd = open(lockfile, O_RDONLY, 0444);
-    if(fd < 0) 
+    if(fd < 0)
         return -1;
-    
+
     nread = read(fd, buf, sizeof(buf));
     close(fd);
 
     if (sscanf(buf, "%d", &pid) == 1)
         return pid;
-    
+
     return -1;
 }
 #endif
 
 static
-int vf_lock_obtain(const char *path) 
+int vf_lock_obtain(const char *path)
 {
     int fd = 0, i;
 
@@ -113,7 +116,7 @@ int vf_lock_obtain(const char *path)
             buf = n_dirname(buf);
             vf_loginfo(_("Waiting for lock %s...\n"), buf);
             sleep((int)((1 * i)/2));
-        
+
         } else if (fd < 0) {
             fd = 0;
             break;
@@ -123,7 +126,7 @@ int vf_lock_obtain(const char *path)
     return fd;
 }
 
-void vf_lock_release(struct vflock *vflock) 
+void vf_lock_release(struct vflock *vflock)
 {
     DBGF("%d %s\n", vflock->fd, vflock->path);
     if (vflock->fd > 0)
@@ -132,7 +135,7 @@ void vf_lock_release(struct vflock *vflock)
     free(vflock);
 }
 
-struct vflock *vf_lockdir(const char *path) 
+struct vflock *vf_lockdir(const char *path)
 {
     char lockpath[PATH_MAX], lockfile[PATH_MAX];
     struct vflock *vflock = NULL;
@@ -152,21 +155,21 @@ struct vflock *vf_lockdir(const char *path)
 }
 
 
-struct vflock *vf_lock_mkdir(const char *path) 
+struct vflock *vf_lock_mkdir(const char *path)
 {
     char tmp[PATH_MAX], *dn, *bn;
     struct vflock *vflock = NULL, *subdir_vflock = NULL;
     struct stat st;
-    
+
 
     if (!vf_valid_path(path))
         return NULL;
-    
+
     if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
         return vf_lockdir(path);
 
     DBGF("** vf_lock_mkdir %s\n", path);
-    
+
     n_snprintf(tmp, sizeof(tmp), "%s", path);
     n_basedirnam(tmp, &dn, &bn);
 
@@ -175,10 +178,9 @@ struct vflock *vf_lock_mkdir(const char *path)
 
     if (mkdir(path, 0750) != 0)
         vf_logerr("%s: mkdir: %m\n", path);
-    else 
+    else
         vflock = vf_lockdir(path);
-    
+
     vf_lock_release(subdir_vflock);
     return vflock;
 }
-
