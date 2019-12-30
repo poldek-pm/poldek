@@ -53,7 +53,7 @@ static int poldeklib_init_called = 0;
 const char poldek_BUG_MAILADDR[] = "http://bugs.launchpad.net/poldek";
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
 const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
-"Copyright (C) 2000-2007 Pawel A. Gajda <mis@pld-linux.org>\n"
+"Copyright (C) 2000-" VERSION_YEAR " Pawel A. Gajda <mis@pld-linux.org>\n"
 "This program may be freely redistributed under the terms of the GNU GPL v2";
 
 static int say_goodbye(const char *msg);
