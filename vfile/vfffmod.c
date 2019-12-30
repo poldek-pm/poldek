@@ -39,7 +39,7 @@ static void do_destroy(void);
 
 struct vf_module vf_mod_vfff = {
     "vfff",
-    VFURL_HTTP | VFURL_FTP,
+    VFURL_HTTP | VFURL_HTTPS | VFURL_FTP,
     do_init,
     do_destroy,
     do_retr,
@@ -108,6 +108,12 @@ static struct vcn *vcn_pool_do_connect(struct vf_request *req)
     else if (req->proxy_proto && strcmp(req->proxy_proto, "http") == 0)
         vcn_proto = VCN_PROTO_HTTP;
 
+    else if (strcmp(req->proto, "https") == 0)
+        vcn_proto = VCN_PROTO_HTTPS;
+
+    else if (req->proxy_proto && strcmp(req->proxy_proto, "https") == 0)
+        vcn_proto = VCN_PROTO_HTTPS;
+
     else if (strcmp(req->proto, "ftp") == 0)
         vcn_proto = VCN_PROTO_FTP;
 
@@ -116,12 +122,13 @@ static struct vcn *vcn_pool_do_connect(struct vf_request *req)
 
     switch (vcn_proto) {
         case VCN_PROTO_HTTP:
+        case VCN_PROTO_HTTPS:
             if (req->proxy_host) {
                 host = req->proxy_host;
                 port = req->proxy_port;
             }
             if (port <= 0)
-                port = IPPORT_HTTP;
+                port = (vcn_proto == VCN_PROTO_HTTP) ? IPPORT_HTTP : IPPORT_HTTPS;
             break;
 
         case VCN_PROTO_FTP:

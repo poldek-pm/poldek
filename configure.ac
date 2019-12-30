@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 m4_define([poldek_major_version], [0])
-m4_define([poldek_minor_version], [4])
+m4_define([poldek_minor_version], [40])
 m4_define([poldek_micro_version], [0])
 m4_define([poldek_version],
 	  [poldek_major_version.poldek_minor_version.poldek_micro_version])
@@ -13,7 +13,7 @@ AC_CONFIG_HEADERS([config.h])
 
 PACKAGE_BUGREPORT="http://bugs.launchpad.net/poldek"
 VERSION_STATUS="stable"
-VERSION=0.4.0
+VERSION=0.40.0
 VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
 VERSION_CVSTAG="v$VERSION_TAG"
 PACKAGE_VERSION_SERIES="2"
@@ -141,6 +141,8 @@ else
 		AC_DEFINE([HAVE_READLINE_4_2],1,[defined if readline 4.2 is avialiable])
 	fi
 fi
+
+AC_CHECK_LIB(ssl, SSL_CTX_new,,[ AC_MSG_ERROR(["openssl not found"])])
 
 AC_ARG_WITH(sys-trurlib,
 [  --with-sys-trurlib	compile and link with system installed trurlib],
