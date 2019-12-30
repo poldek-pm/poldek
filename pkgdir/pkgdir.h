@@ -41,19 +41,20 @@
 
 struct pkgdir_module;
 struct pm_ctx;
-                                              
+
 struct pkgdir {
     char                 *type;
     char                 *name;            /* name  */
     char                 *path;            /* path | URL        */
     char                 *idxpath;         /* path | URL        */
     char                 *compress;        /* compresion */
-    tn_array             *pkgs;           /* struct *pkg[]     */
+    tn_array             *pkgs;            /* struct *pkg[]     */
+    tn_array             *unsorted_pkgs;   /* struct *pkg[], to iterate in 'offset' order */
 
     int                  _idx_version;     /* internal, handled by particular
                                               modules */
     int                  pri;              /* pri of pkgdir source */
-    
+
     tn_array             *depdirs;         /* char *[]          */
     tn_array             *foreign_depdirs; /* depdirs not in depdirs[],
                                               but presented in other pkgdirs */

@@ -638,8 +638,9 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 
         rc = 1;
         pkgdir->flags |= PKGDIR_LOADED;
-
+        pkgdir->unsorted_pkgs = n_array_dup(pkgdir->pkgs, (tn_fn_dup)pkg_link);
         n_array_sort(pkgdir->pkgs);
+
         for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
             pkg->pkgdir = pkgdir;
@@ -663,11 +664,12 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
 
     if (rc) {
         n_assert(pkgdir->ts > 0);       /* ts must be set by backend */
-
         pkgdir->_ldflags = ldflags;
 
-        if (ldflags & PKGDIR_LD_DIRINDEX)
+        if (ldflags & PKGDIR_LD_DIRINDEX) {
             do_open_dirindex(pkgdir);
+        }
+        n_array_cfree(&pkgdir->unsorted_pkgs); /* not needed */
     }
 
     return rc;

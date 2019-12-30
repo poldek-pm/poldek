@@ -306,14 +306,14 @@ static int dirindex_create(const struct pkgdir *pkgdir, const char *path,
     path_index = n_hash_new_na(na, n_array_size(pkgdir->pkgs) * 16, (tn_fn_free)n_array_free);
     nbuf = n_buf_new(1024 * 16);
 
-    for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+    for (i=0; i < n_array_size(pkgdir->unsorted_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgdir->unsorted_pkgs, i);
         store_package_no(i, db, pkg);
         DBGF(" pkgno %d %s\n", i, pkg_id(pkg));
     }
 
-    for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
+    for (i=0; i < n_array_size(pkgdir->unsorted_pkgs); i++) {
+        struct pkg *pkg = n_array_nth(pkgdir->unsorted_pkgs, i);
 
         store_package(i, pkg, db, path_index, nbuf, prev_dirindex);
 
