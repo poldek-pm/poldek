@@ -37,6 +37,7 @@ autom4te.cache
 *.o
 *~
 *.spec
+.#*
 libtool
 ltmain.sh
 config.guess
