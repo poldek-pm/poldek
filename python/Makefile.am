@@ -3,8 +3,8 @@ py_ver     = $(shell python -c "import sys; print sys.version[:3]")
 py_prefix  = $(shell python -c "import sys; print sys.prefix")
 py_incdir  = $(py_prefix)/include/python$(py_ver)
 
-EXTRA_DIST = poldekmod.i local_stdint.c pyldek.py run.sh
-CLEANFILES = wrap_* poldekmod.py local_stdint.h
+EXTRA_DIST = poldekmod.i pyldek.py run.sh
+CLEANFILES = wrap_* poldekmod.py
 
 AM_CPPFLAGS = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir) -I$(py_incdir) -I.
 
@@ -21,15 +21,11 @@ AM_CFLAGS=
 CFLAGS=
 CPPFLAGS += -DSWIG -DPOCLIDEK_ITSELF 
 
-poldekmod.i: local_stdint.h
-
-#install-exec-hook:
-#	$(mkinstalldirs) "$(DESTDIR)$(py_sitedir)"
+install-exec-hook:
+	$(mkinstalldirs) "$(DESTDIR)$(py_sitedir)"
+	$(install_sh) .libs/_poldekmod.so "$(DESTDIR)$(py_sitedir)"
 
 poldekmod.py: wrap_poldekmod.c
-
-local_stdint.h: local_stdint.c
-	$(CPP) $< > $@
 
 #wrap_poldekmod.c: poldekmod.i
 #	$(SWIG) $(SWIG_PYTHON_OPT) $(INCLUDES) -I/usr/include -o $@ $<

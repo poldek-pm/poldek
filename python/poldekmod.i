@@ -1,7 +1,6 @@
 %module poldekmod
 
 %{
-#include "local_stdint.h"
 #include "poldek.h"
 #include "trurl/narray.h"
 #include "trurl/nhash.h"
@@ -33,7 +32,6 @@ static struct vf_progress vfPyProgress;
 %}
 
 %include exception.i
-%include "local_stdint.h"
 %include "trurl/narray.h"
 %include "capreq.h"
 %include "pkg.h"
