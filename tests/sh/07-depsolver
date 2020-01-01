@@ -56,6 +56,8 @@ do_build_package() {
 
   params=""
   [ $# -gt 0 ] && params="$@";
+
+  #echo ./build-test-rpm.sh -d $destdir -n $name -v $version $params
   if [ "$VERBOSE" != "-v -v" ]; then
       eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >/dev/null 2>&1 || fail "build package $name failed"
   else
@@ -239,7 +241,7 @@ testRpmOrgMutualExclusive_2() {
 
 
 # suggested packages should be installed
-testSuggests() {
+testSuggestsAll() {
     build_installed suggested
     build a -s "suggested" -s "b" -s "c"
     build b
@@ -249,9 +251,18 @@ testSuggests() {
     POLDEK_TESTING_WITH_SUGGESTS="all" # choose all suggested packages
     export POLDEK_TESTING_WITH_SUGGESTS
     try_install_a "a,b,c"
+}
+
+# suggested packages should be installed
+testSuggestsSome() {
+    build_installed suggested
+    build a -s "suggested" -s "b" -s "c"
+    build b
+    build c
 
     msgn "Some suggested packages"
-    POLDEK_TESTING_WITH_SUGGESTS="1" # choose b only (1st installable suggested package)
+    POLDEK_TESTING_WITH_SUGGESTS="2" # choose b only (1st installable suggested package)
+    export POLDEK_TESTING_WITH_SUGGESTS
     try_install_a "a,b"
     POLDEK_TESTING_WITH_SUGGESTS=
 }
@@ -616,6 +627,17 @@ testOrhpanSuccessorScore() {
 
 
     try_install a-1.5-1 "a-1.5-1,a-tools-1.5-1" "a-1.0-1,a-tools-1.0-1"
+}
+
+# not implemented yet
+xtestUpgradeMultipleInstalled() {
+    msgn "Preparing repositories..."
+    build_installed a 1.0.2a-1
+    build_installed a 1.1.1a-1
+
+    build a 1.1.1b-1
+
+    try_install a-1.1.1b-1 "a-1.1.1b" "a-1.1.1a-1"
 }
 
 

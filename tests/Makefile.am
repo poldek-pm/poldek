@@ -22,6 +22,22 @@ check: poldek_test_conf.conf
 	$(MAKE) check-am
 	-rm -f poldek_test_conf.*
 
+%.o32: %.S
+	nasm -f elf32 $< -o $@
+
+%.o64: %.S
+	nasm -f elf64 $< -o $@
+
+%.i686: %.o32
+	ld -e _start -o $@ $<
+	strip $@
+	rm -f $<
+
+%.x86_64: %.o64
+	ld -e _start -o $@ $<
+	strip $@
+	rm -f $<
+
 sheck:
 	@echo; echo "Running *.sh tests";  \
 	find sh -name \*~ | xargs -r rm;   \

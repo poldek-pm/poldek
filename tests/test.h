@@ -31,7 +31,7 @@
 
 struct test_case {
     const char *name;
-    void (*test_fn)(void);
+    void (*test_fn)(int);
 };
 
 struct test_suite {

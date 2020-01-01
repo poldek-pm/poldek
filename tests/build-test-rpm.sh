@@ -75,11 +75,16 @@ fi
 TMPDIR="${TMPDIR:-/tmp}"
 
 SPEC="$TMPDIR/$name.$$.spec"
-echo "Building $name-$version-$release.$arch.rpm"
-
+echo "Building $name-$version-$release.$arch.rpm (from spec $SPEC)"
 echo > $SPEC
+echo "%define _target_cpu $arch" >> $SPEC
 echo "%define _noautoreq libc.so.6 rtld" >> $SPEC
-echo "AutoReqProv: no" >> $SPEC # rpmorg
+
+# breaks coloring with rpm5 and probably with rpmorg too
+#if grep -q "HAVE_RPMORG 1" ../config.h; then
+#    echo "AutoReqProv: no" >> $SPEC # rpmorg only,
+#fi
+
 echo "Name: $name" >> $SPEC
 echo "Version: $version" >> $SPEC
 echo "Release: $release" >> $SPEC
@@ -121,9 +126,17 @@ fi
 
 echo -e "%files\n%defattr(644,root,root,755)" >> $SPEC
 if [ -n "$files" ]; then
-    for f in $files; do
+    dirs=""
+    for i in $files; do
         dn=$(dirname $f)
+        dirs="$dirs:$dn"
+    done
+    dirs=$(echo $dirs | perl -pe 's|:|\n|g' | sort -u | perl -pe 's|\n| |g')
+    for f in $dirs; do
         echo "%dir $dn" >> $SPEC
+    done
+
+    for f in $files; do
         echo "$f" >> $SPEC
     done
 fi
