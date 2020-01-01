@@ -39,15 +39,16 @@ START_TEST (test_custom_rpmdb) {
     fail_if(pmctx == NULL);
 
     system("rm -rf /tmp/poldek-tests/");
-    const char *path = "/tmp/poldek-tests/bar/baz/var/lib/rpm";
+    const char *path = "/tmp/poldek-tests/bar/baz";
+    const char *dbpath = "/tmp/poldek-tests/bar/baz" "/var/lib/rpm";
 
     db = pkgdb_open(pmctx, path, NULL, O_RDONLY, NULL);
     fail_if(db != NULL);
-    fail_if(access(path, R_OK) == 0);
+    fail_if(access(dbpath, R_OK) == 0);
 
     db = pkgdb_open(pmctx, path, NULL, O_RDWR, NULL);
     fail_if(db == NULL);
-    fail_if(access(path, R_OK) != 0);
+    fail_if(access(dbpath, R_OK) != 0);
 
     capreq_new_name_a("/bin/sh", req);
     fail_if(pkgdb_match_req(db, req, 1, NULL));
