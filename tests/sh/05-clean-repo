@@ -39,11 +39,8 @@ testCleanLocalCache()
     mv -f $CACHEDIR/$package*.rpm $REPO_CACHE_DIR
 
     msgn "clean"
-    force_msg "aaa"
-    find $CACHEDIR/
     poldek_up --clean
-    force_msg "bbb"
-    find $CACHEDIR/
+
     files=$(find $CACHEDIR -type f | grep -vE '\.rpm$')
     n=$(find $CACHEDIR -type f | grep -vE '\.rpm$' | wc -l)
     assertEquals "cachedir still contains non rpm files ($files)" "0" "$n"
