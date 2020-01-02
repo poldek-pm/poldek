@@ -69,7 +69,7 @@ AC_CHECK_PROG(POD2MAN, pod2man, pod2man)
 AM_GNU_GETTEXT([external])
 AM_GNU_GETTEXT_VERSION(0.11.5)
 
-AM_CFLAGS="-Wall -W"
+AM_CFLAGS="-Wall -W -D_GNU_SOURCE=1"
 AC_SUBST(AM_CFLAGS)
 
 AC_ARG_ENABLE(strict, AS_HELP_STRING([--enable-strict], [Enable strict compilation options]), enable_strict=$enableval,
