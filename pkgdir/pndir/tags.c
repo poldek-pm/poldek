@@ -13,7 +13,7 @@
 const char *pndir_packages_idx    = "packages.dir.tn";
 const char *pndir_extension       = "ndir";
 const char *pndir_desc_suffix     = ".dscr";
-const char *pndir_difftoc_suffix  = ".diff.toc.gz";
+const char *pndir_difftoc_suffix  = ".diff.toc";
 const char *pndir_packages_incdir = "packages.i";
 
 const char *pndir_poldeksindex = "poldeks-pndir";

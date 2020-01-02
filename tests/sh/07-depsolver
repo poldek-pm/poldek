@@ -82,7 +82,7 @@ build_installed() {
 runpoldek() {
   typeset cmd="$POLDEK_INSTALL $@"
   if is_verbose_mode; then
-      echo "Executing $cmd"
+      msg "# executing $cmd"
       $cmd || fail "'poldek $@' failed"
   else
       $cmd >/dev/null 2>&1 || fail "'poldek $@' failed"
@@ -471,7 +471,7 @@ testUpgradeOrphanGiveUp() {
     msgn "Upgrade"
     if is_verbose_mode; then
        $POLDEK_INSTALL -uvt a-bar
-       echo "THE ERROR ABOVE (give up) is EXPECTED"
+       msg "THE ERROR ABOVE (give up) is EXPECTED"
     fi
     $POLDEK_INSTALL -uvt a-bar | grep -q "error: FOO is required by installed b-1-1, give up"
     assertEquals "poldek should give up" "$?" "0"
@@ -576,7 +576,7 @@ XXXtestMultilibNoSuccesor() {
 
     if is_verbose_mode; then
        $POLDEK_INSTALL -uvt a-2-2.$arch
-       echo "THE ERROR ABOVE (a = 1-1 is required by installed) is EXPECTED"
+       msg "THE ERROR ABOVE (a = 1-1 is required by installed) is EXPECTED"
     fi
     $POLDEK_INSTALL -uvt a-2-2.$arch | grep -q "error: a = 1-1 is required by installed a-devel-1-1.x86_64"
     assertEquals "poldek should fail" "$?" "0"

@@ -3,38 +3,42 @@
 
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
+. ./sh/lib/compr-setup
 
 mkidx() {
    $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
 }
 
 up() {
-   $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
+    $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
 }
 
-testUpdate() 
+up_debug() {
+    echo $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
+}
+
+testUpdate()
 {
     POLDEK_TESTING_DENIED_FILES="packages.ndir.diff.toc"
 
     rm -rf $REPO/*.rpm
     # Create repo and generate some diffs
     msg "\n## Creating empty index"
-    indexfile="$REPO/packages.ndir.gz"
+    indexfile="$REPO/packages.ndir$COMPR_EXT"
     mkidx
     die_if_invalid_index $indexfile 0
-    
-    msg "\n## up"
+
+    msg "\n## up #0"
     up
 
-    POLDEK_TESTING_DENIED_FILES="packages.ndir.gz"
-    msg "\n## Changing repo #1"    
+    POLDEK_TESTING_DENIED_FILES="packages.ndir$COMPR_EXT"
+    msg "\n## Changing repo #1"
     sleep 1
     add_package_to_repo
     mkidx
     die_if_invalid_index $indexfile 1
-    die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc.gz" 1
-
-    msg "\n## up"
+    die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc$COMPR_EXT" 1
+    msg "\n## up #1"
     up
 
     msg "\n## Changing repo #2"
@@ -42,20 +46,20 @@ testUpdate()
     remove_package_from_repo
     mkidx
     die_if_invalid_index $indexfile 0
-    die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc.gz" 2
-    
-    msg "\n## up"
+    die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc$COMPR_EXT" 2
+
+    msg "\n## up #2"
     up
 
     msg "\n## Changing repo #3"
     sleep 1
     add_package_to_repo
     add_package_to_repo
-    mkidx 
+    mkidx
     die_if_invalid_index $indexfile 2
-    die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc.gz" 3
+    die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc$COMPR_EXT" 3
 
-    msg "\n## up"
+    msg "\n## up #3"
     up
 
     # <https://bugs.pld-linux.org/show_bug.cgi?id=28>
@@ -64,7 +68,7 @@ testUpdate()
     rm -rf $REPO/packages.*
     add_package_to_repo
     mkidx
-    msg "\n## up"
+    msg "\n## up (reset)"
 
     POLDEK_TESTING_DENIED_FILES="packages.ndir.diff.toc"
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up >/dev/null
@@ -78,12 +82,12 @@ testUpdate()
     sleep 1
     add_package_to_repo
     mkidx
-    msg "\n## up"
+    msg "\n## up #4"
 
-    POLDEK_TESTING_DENIED_FILES="packages.ndir.gz"
+    POLDEK_TESTING_DENIED_FILES="packages.ndir$COMPR_EXT"
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
 
-    POLDEK_TESTING_DENIED_FILES=".gz" # should be up to date
+    POLDEK_TESTING_DENIED_FILES="$COMPR_EXT" # should be up to date
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --upa || fail "up failed"
 
@@ -93,20 +97,20 @@ testUpdate()
     sleep 1
     add_package_to_repo
     mkidx
-    msg "\n## up"
+    msg "\n## up #5"
 
-    POLDEK_TESTING_DENIED_FILES="" 
-    lastdiff=$(ls -tr $REPO/packages.i/packages.ndir.*.*.*-*.*.*.gz | tail -1)
+    POLDEK_TESTING_DENIED_FILES=""
+    lastdiff=$(ls -tr $REPO/packages.i/packages.ndir.*.*.*-*.*.*$COMPR_EXT | tail -1)
     [ -z "$lastdiff" ] && fail "no last diff?"
     msg "lastdiff $lastdiff"
     rm -f "$lastdiff"
     $POLDEK_UP -Oautoupa=y -Osource="test,type=pndir $REPOURL" --up
     if [ $? -eq 0 ]; then
-        echo "THE ERROR ABOVE is EXPECTED"
-    else    
+        force_msg "THE ERROR ABOVE is EXPECTED"
+    else
         fail "up"
-    fi    
-    
+    fi
+
 }
 
 . ./sh/lib/shunit2

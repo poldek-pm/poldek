@@ -181,7 +181,13 @@ and [filename]*-source.conf[/filename], file getters are declared in
 
   <option name="default index type" type="string" default="pndir">
     <description>
-    This parameter allows to configure the default repository index type.
+    Default repository index type.
+    </description>
+  </option>
+
+  <option name="default index compr" type="string" default="gz">
+    <description>
+    Default repository index compression
     </description>
   </option>
 
@@ -533,8 +539,14 @@ Every repository is configured in its own [ source ] section.
 
   <option name="type" type="string" required="yes" value="pndir">
     <description>
-    Type of repository index. Permitted values are 'pndir', 'pdir', 'apt', 'yum'
+    Type of repository index. Permitted values are 'pndir', 'metadata'
     and 'dir' as listed by [option]--stl[/option] switch.
+    </description>
+  </option>
+
+  <option name="compr" type="string" required="no" value="gz">
+    <description>
+      Repository compression method ('none', 'gz' or 'zst')
     </description>
   </option>
 
@@ -644,7 +656,7 @@ Every repository is configured in its own [ source ] section.
 
   <option name="sources" type="string" list="yes" value="foo foo-updates">
     <description>
-    Make sense for 'group' source type only. A list of names of sources.
+    Makes sense for 'group' source type only. A list of names of sources.
     </description>
   </option>
   <footer target="config">

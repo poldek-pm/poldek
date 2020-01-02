@@ -48,6 +48,7 @@ extern const char *pkgdir_dirindex_basename;
 
 const char source_TYPE_GROUP[] = "group";
 const char *poldek_conf_PKGDIR_DEFAULT_TYPE = "pndir";
+const char *poldek_conf_PKGDIR_DEFAULT_COMPR = COMPR_GZ;
 
 struct subopt {
     char      *name;
@@ -80,7 +81,7 @@ static struct src_option source_options[] = {
     { "group",    0, PKGSOURCE_GROUP |
                      PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
     { "pri",      0, PKGSOURCE_PRI | PKGSRC_OPTION_SUBOPT, NULL},
-    { "compress", 0, PKGSOURCE_COMPRESS |
+    { "compr",    0, PKGSOURCE_COMPR |
                      PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
     {  NULL,      0, 0, NULL },
 };
@@ -131,8 +132,8 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
         src->group = n_strdup(str);
         v = 1;
 
-    } else if (opt->flag & PKGSOURCE_COMPRESS) {
-        src->compress = n_strdup(str);
+    } else if (opt->flag & PKGSOURCE_COMPR) {
+        src->compr = n_strdup(str);
         v = 1;
 
     } else if (opt->flag & PKGSOURCE_PRI) {
@@ -203,7 +204,7 @@ struct source *source_clone(const struct source *src)
     cp_str_ifnotnull(&nsrc->name, src->name);
     cp_str_ifnotnull(&nsrc->path, src->path);
     cp_str_ifnotnull(&nsrc->pkg_prefix, src->pkg_prefix);
-    cp_str_ifnotnull(&nsrc->compress, src->compress);
+    cp_str_ifnotnull(&nsrc->compr, src->compr);
 
     cp_str_ifnotnull(&nsrc->dscr, src->dscr);
     cp_str_ifnotnull(&nsrc->group, src->group);
@@ -232,7 +233,7 @@ void source_free(struct source *src)
     n_cfree(&src->path);
     n_cfree(&src->pkg_prefix);
 
-    n_cfree(&src->compress);
+    n_cfree(&src->compr);
     n_cfree(&src->dscr);
     n_cfree(&src->group);
     n_cfree(&src->lc_lang);
@@ -285,12 +286,23 @@ struct source *source_set_type(struct source *src, const char *type)
     return src;
 }
 
-struct source *source_set_default_type(struct source *src)
+struct source *source_set_defaults(struct source *src)
 {
     if ((src->flags & PKGSOURCE_TYPE) == 0) /* not set by config*/
         source_set(&src->type, poldek_conf_PKGDIR_DEFAULT_TYPE);
+
+    if ((src->flags & PKGSOURCE_COMPR) == 0) /* not set by config*/
+        source_set(&src->compr, poldek_conf_PKGDIR_DEFAULT_COMPR);
+
     return src;
 }
+
+struct source *source_set_compr(struct source *src, const char *compr)
+{
+    source_set(&src->compr, compr);
+    return src;
+}
+
 
 static char *parse_cmdl_pathspec(const char *pathspec, const char **path)
 {
@@ -420,6 +432,16 @@ struct source *source_new(const char *name, const char *type,
 
     if (pkg_prefix)
         src->pkg_prefix = n_strdup(clprefix);
+
+    char *p;
+    if (src->path && (p = strrchr(n_basenam(src->path), '.')) != NULL) {
+        p++;
+        if (n_str_in(p, COMPR_GZ, COMPR_ZST, NULL))
+            src->compr = n_strdup(p);
+    }
+
+    if (src->compr == NULL)
+        src->compr = n_strdup(poldek_conf_PKGDIR_DEFAULT_COMPR);
 
     return src;
 }
@@ -560,6 +582,7 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
 
     if ((vs = poldek_conf_get(htcnf, "type", NULL)))
         n += n_snprintf(&spec[n], sizeof(spec) - n, ",type=%s", vs);
+
     type = vs;
 
     if ((v = poldek_conf_get_int(htcnf, "pri", 0)))
@@ -588,6 +611,9 @@ struct source *source_new_htcnf(const tn_hash *htcnf)
 
     if ((vs = poldek_conf_get(htcnf, "group", NULL)))
         n += n_snprintf(&spec[n], sizeof(spec) - n, ",group=%s", vs);
+
+    if ((vs = poldek_conf_get(htcnf, "compr", NULL)))
+        n += n_snprintf(&spec[n], sizeof(spec) - n, ",compr=%s", vs);
 
     vs = poldek_conf_get(htcnf, "path", NULL);
     if (vs == NULL)
@@ -721,29 +747,29 @@ int source_update(struct source *src, unsigned flags)
         logn(LOGWARN, _("%s: this type (%s) of source is not updateable"),
 			 source_idstr(src), src->type);
 
-	} else if ((pcaps & PKGDIR_CAP_UPDATEABLE_INC) == 0) {
-		if (flags & (PKGSOURCE_UPA | PKGSOURCE_UPAUTOA))
-			return source_update_a(src);
+    } else if ((pcaps & PKGDIR_CAP_UPDATEABLE_INC) == 0) {
+        if (flags & (PKGSOURCE_UPA | PKGSOURCE_UPAUTOA))
+            return source_update_a(src);
 
-		logn(LOGWARN, _("%s: this type (%s) of source is not updateable; "
-						"use --upa to refresh it"),
-			 source_idstr(src), src->type);
+        logn(LOGWARN, _("%s: this type (%s) of source is not updateable; "
+                        "use --upa to refresh it"),
+             source_idstr(src), src->type);
 
-	} else {
+    } else {
         if ((flags & PKGSOURCE_UPA) && (flags & PKGSOURCE_UPAUTOA) == 0)
-			return source_update_a(src);
+            return source_update_a(src);
 
         if (flags & PKGSOURCE_UPAUTOA)
             src->flags |= PKGSOURCE_AUTOUPA;
 
-		pkgdir = pkgdir_srcopen(src, 0);
-		if (pkgdir != NULL) {
-			rc = pkgdir_update(pkgdir);
-			pkgdir_free(pkgdir);
-		}
-	}
+        pkgdir = pkgdir_srcopen(src, 0);
+        if (pkgdir != NULL) {
+            rc = pkgdir_update(pkgdir);
+            pkgdir_free(pkgdir);
+        }
+    }
 
-	return rc;
+    return rc;
 }
 
 static
@@ -913,7 +939,7 @@ int source_clean(struct source *src, unsigned flags)
 
     n_assert(src->type);
     if (pkgdir__make_idxpath(path, sizeof(path), src->path,
-                             src->type, "none") != NULL) {
+                             src->type, COMPR_NONE) != NULL) {
 
         n_basedirnam(path, &dn, &bn);
         rc = do_source_clean(src, dn, bn, flags);

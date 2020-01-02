@@ -102,9 +102,11 @@ char *mkdbcache_path(char *path, size_t size, const char *cachedir,
             *p = '.';
         p++;
     }
+    const char *ext = pkgdir_type_default_compr("rpmdbcache");
+    n_assert(ext != NULL);
 
-    n_snprintf(path, size, "%s/packages.%s.%s.gz", cachedir,
-               RPMDBCACHE_PDIRTYPE, tmp);
+    n_snprintf(path, size, "%s/packages.%s.%s.%s", cachedir,
+               RPMDBCACHE_PDIRTYPE, tmp, ext);
     return path;
 }
 

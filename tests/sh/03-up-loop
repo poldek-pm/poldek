@@ -3,6 +3,7 @@
 
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
+. ./sh/lib/compr-setup
 
 mkidx() {
    $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
@@ -20,7 +21,7 @@ load() {
            --cmd 'desc -al *' | egrep -v '^Path:' > $TMPDIR/remote-dump
 
   #less         $TMPDIR/remote-dump
-  #ls -l $TMPDIR/remote-dump $TMPDIR/local-dump        
+  #ls -l $TMPDIR/remote-dump $TMPDIR/local-dump
   diff -q $TMPDIR/remote-dump $TMPDIR/local-dump
   ec=$?
   [ $ec -ne 0 ] && echo "repo=$REPO" && ls -l $TMPDIR/remote-dump $TMPDIR/local-dump
@@ -28,40 +29,40 @@ load() {
 }
 
 
-testUpLoop() 
+testUpLoop()
 {
     rm -rf $REPO/*.rpm
     # Create repo and generate some diffs
     msg "\n## Creating empty index"
-    indexfile="$REPO/packages.ndir.gz"
+    indexfile="$REPO/packages.ndir$COMPR_EXT"
     mkidx
     die_if_invalid_index $indexfile 0
-    
+
     msg "\n## up"
     up
-    
+
     nloop=0
     maxloop=${MAXLOOP:-"60"}
-
+    force_msg "# testing in $maxloop iterations"
     while [ $nloop -lt $maxloop ]; do
-        msg "\n#### Iteration #${nloop}"    
-        sleep 1    
+        msg "\n#### Iteration #${nloop}"
+        sleep 1
         random_change_repo
 
         npackages=$(ls $REPO/*.rpm 2>/dev/null | wc -l)
-        echo "#${nloop} repository contains $npackages package(s)"
+        force_msg "#${nloop} repository contains $npackages package(s)"
         mkidx
 
         msgn "  up"
-        up 
-        if [ $? -ne 0 ]; then 
+        up
+        if [ $? -ne 0 ]; then
            fail "up #${nloop} failed"
            nloop=$maxloop
         fi
-        
+
         msgn "  load"
-        load        
-        if [ $? -ne 0 ]; then 
+        load
+        if [ $? -ne 0 ]; then
            fail "load #${nloop} failed"
            nloop=$maxloop
         fi
@@ -71,4 +72,3 @@ testUpLoop()
 }
 
 . ./sh/lib/shunit2
-

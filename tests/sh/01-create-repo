@@ -13,18 +13,18 @@ Case_f="-n foo                    =>  dir (or original type) -> foo's type"
 Case_g="-s /foo --mkidx=/tmp/bar.gz"
 Case_h="-n foo --mkidx=/tmp/bar.gz"
 
-
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
+. ./sh/lib/compr-setup
 
 testCreateDefaultType()
 {
     msgn $Case_a
     $POLDEK_NOCONF -s $REPO --mkidx || fail "mkidx #1 failed"
-    die_if_empty_index "$REPO/packages.ndir.gz"
+    die_if_empty_index "$REPO/packages.ndir$COMPR_EXT"
 
     $POLDEK_NOCONF -s $REPO --mkidx=$TMPDIR || fail "mkidx #2 failed"
-    die_if_empty_index "$TMPDIR/packages.ndir.gz"
+    die_if_empty_index "$TMPDIR/packages.ndir$COMPR_EXT"
     if ! diff -u $REPO/packages.ndir.md $TMPDIR/packages.ndir.md; then
         fail "differ md's!"
     fi
@@ -35,7 +35,7 @@ testCreateDefaultType()
 XXXtestConvertRepos()           # disabled as pdir indexes are gone since 0.4
 {
     $POLDEK_NOCONF -s $REPO --mkidx || fail "mkidx failed"
-    die_if_empty_index "$REPO/packages.ndir.gz"
+    die_if_empty_index "$REPO/packages.ndir$COMPR_EXT"
 
     rm -rf $TMPDIR/packages.*
     cp $REPO/packages.ndir.* $TMPDIR || fail "cp failed"
@@ -44,13 +44,13 @@ XXXtestConvertRepos()           # disabled as pdir indexes are gone since 0.4
     # c) --st type /foo --mt type =>  type -> dtype
     msgn "$Case_c"
     $POLDEK_NOCONF --st pndir -s $TMPDIR --mkidx --mt=pdir || fail "$Case_c failed"
-    die_if_empty_index "$TMPDIR/packages.dir.gz"
+    die_if_empty_index "$TMPDIR/packages.dir$COMPR_EXT"
 
     # b) --st type -s /foo
     msgn "$Case_b"
     rm -f $TMPDIR/packages.ndir*
     $POLDEK_NOCONF --st pdir -s $TMPDIR --mkidx || fail "$Case_b failed"
-    die_if_empty_index "$TMPDIR/packages.ndir.gz"
+    die_if_empty_index "$TMPDIR/packages.ndir$COMPR_EXT"
 }
 
 #  d) -s /foo --mt dtype        =>  dir  -> dtype
@@ -59,18 +59,18 @@ XXXtestSelectType() # disabled as pdir indexes are gone since 0.4
 {
     msgn "$Case_d"
     $POLDEK_NOCONF -s $REPO --mkidx --mt pdir || fail "mkidx failed"
-    die_if_empty_index "$REPO/packages.dir.gz"
+    die_if_empty_index "$REPO/packages.dir$COMPR_EXT"
 
     rm -rf $REPO/packages.*
     $POLDEK_NOCONF -s $REPO --st dir --mkidx --mt pdir || fail "mkidx failed"
-    die_if_empty_index "$REPO/packages.dir.gz"
+    die_if_empty_index "$REPO/packages.dir$COMPR_EXT"
 
     setUp
 
     msgn "$Case_e"
     $POLDEK_NOCONF -s $REPO --mkidx --mt pdir,pndir || fail "mkidx failed"
-    die_if_empty_index "$REPO/packages.ndir.gz"
-    die_if_empty_index "$REPO/packages.dir.gz"
+    die_if_empty_index "$REPO/packages.ndir$COMPR_EXT"
+    die_if_empty_index "$REPO/packages.dir$COMPR_EXT"
 }
 
 poldek_n() {
@@ -83,35 +83,36 @@ testCreateByName()
 {
     msgn "$Case_f"
     poldek_n -n repo-pndir --mkidx || fail "mkidx failed"
-    die_if_empty_index "$REPO/packages.ndir.gz"
+    die_if_empty_index "$REPO/packages.ndir$COMPR_EXT"
 
     # disabled as pdir indexes are gone since 0.4
 
     #poldek_n -n repo-pdir --mkidx || fail "mkidx failed"
-    #die_if_empty_index "$REPO/packages.dir.gz"
+    #die_if_empty_index "$REPO/packages.dir$COMPR_EXT"
 
     #setUp
 
     #poldek_n -n repo-pndir -n repo-pdir --mkidx || fail "-n 1 -n 2 --mkidx failed"
-    #die_if_empty_index "$REPO/packages.ndir.gz"
-    #die_if_empty_index "$REPO/packages.dir.gz"
+    #die_if_empty_index "$REPO/packages.ndir$COMPR_EXT"
+    #die_if_empty_index "$REPO/packages.dir$COMPR_EXT"
 }
 
-#  g) -s /foo --mkidx=/tmp/bar.gz
+#  g) -s /foo --mkidx=/tmp/bar$COMPR_EXT
 testNonDefaultName()
 {
     msgn "$Case_g"
     poldek="$POLDEK_NOCONF"
 
     $poldek -s $REPO --mkidx=$TMPDIR || fail "mkidx #1 failed"
-    die_if_empty_index "$TMPDIR/packages.ndir.gz"
+    die_if_empty_index "$TMPDIR/packages.ndir$COMPR_EXT"
 
-    $poldek -s $REPO --mkidx=$TMPDIR/packages.foo.ndir.gz || fail "mkidx #2 failed"
-    die_if_empty_index "$TMPDIR/packages.foo.ndir.gz"
+    $poldek -s $REPO --mkidx=$TMPDIR/packages.foo.ndir$COMPR_EXT || fail "mkidx #2 failed"
+    die_if_empty_index "$TMPDIR/packages.foo.ndir$COMPR_EXT"
 
-    $poldek --st pndir -s $TMP/packages.foo.ndir.gz \
-            --mkidx=$TMP/packages.foo2.ndir.gz --mt pndir || fail "mkidx #3 failed"
-    die_if_empty_index "$TMP/packages.foo2.ndir.gz"
+    $poldek --st pndir -s $TMP/packages.foo.ndir$COMPR_EXT \
+            --mkidx=$TMP/packages.foo2.ndir$COMPR_EXT --mt pndir || fail "mkidx #3 failed"
+
+    die_if_empty_index "$TMP/packages.foo2.ndir$COMPR_EXT"
 
     setUp
     $poldek -s $REPO --mkidx --mt pndir || fail "mkidx #4 failed"
@@ -119,25 +120,66 @@ testNonDefaultName()
 
     poldek="$POLDEK_UP -Ovfile_retries=1"
     $poldek --st pndir -s $REPOURL --mkidx=$TMPDIR fail "mkidx #5 failed"
-    die_if_empty_index "$TMPDIR/packages.ndir.gz"
+    die_if_empty_index "$TMPDIR/packages.ndir$COMPR_EXT"
 
-    $poldek --st pndir -s $REPOURL --mkidx=$TMPDIR/packages.foo.ndir.gz || fail "mkidx #6 failed"
-    die_if_empty_index "$TMPDIR/packages.foo.ndir.gz"
+    $poldek --st pndir -s $REPOURL --mkidx=$TMPDIR/packages.foo.ndir$COMPR_EXT || fail "mkidx #6 failed"
+    die_if_empty_index "$TMPDIR/packages.foo.ndir$COMPR_EXT"
 }
 
-#  h) -n foo --mkidx=/tmp/bar.gz
+#  h) -n foo --mkidx=/tmp/bar$COMPR_EXT
 testCreateFromRemoteRepos()
 {
-
     msgn "$Case_h"
-    poldek_n -n repo-pndir --mkidx=$TMPDIR/packages.foo.ndir.gz --mt pndir ||
+    poldek_n -n repo-pndir --mkidx=$TMPDIR/packages.foo.ndir$COMPR_EXT --mt pndir ||
         fail "mkidx #1 failed"
-    die_if_empty_index "$TMPDIR/packages.foo.ndir.gz"
+    die_if_empty_index "$TMPDIR/packages.foo.ndir$COMPR_EXT"
 
-    poldek_n -n repo-pndir --mkidx=$TMPDIR/packages.foo2.ndir.gz --mt pndir ||
+    poldek_n -n repo-pndir --mkidx=$TMPDIR/packages.foo2.ndir$COMPR_EXT --mt pndir ||
         fail "mkidx #2 failed"
 
-    die_if_empty_index "$TMPDIR/packages.foo2.ndir.gz"
+    die_if_empty_index "$TMPDIR/packages.foo2.ndir$COMPR_EXT"
 }
+
+testCreateConfiguredDefaultIndexCompr()
+{
+    msgn "with 'default index compr' = zst"
+    echo "
+[global]
+default index compr = zst
+" >> $TMPDIR/poldek.conf
+
+    if [ -n "$POLDEK_TESTING_INDEX_COMPR" ]; then # unset global
+        force_msg " => compression is set globally, skipped"
+        return;
+    fi
+
+    $POLDEK --conf $TMPDIR/poldek.conf -s $REPO --mkidx || fail "mkidx failed"
+    die_if_empty_index "$REPO/packages.ndir.zst"
+}
+
+testCreateWithIndexComprOption()
+{
+    compr="$POLDEK_TESTING_INDEX_COMPR"
+    if [ -n "$POLDEK_TESTING_INDEX_COMPR" ]; then # unset global
+        unset POLDEK_TESTING_INDEX_COMPR
+    fi
+
+    op=""
+    if [ "$compr" == "zst" ]; then
+        op="zstd"
+    elif [ "$compr" == "gz" ]; then
+        op="gzip"
+    elif [ "$compr" == "none" ]; then
+        op="nocompress"
+    else
+        op="gzip"
+    fi
+
+    msgn "with --mo=$op"
+
+    $POLDEK_NOCONF -s $REPO --mkidx --mo=$op || fail "mkidx failed"
+    die_if_empty_index "$REPO/packages.ndir$COMPR_EXT"
+}
+
 
 . ./sh/lib/shunit2

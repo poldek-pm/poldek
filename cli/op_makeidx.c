@@ -27,8 +27,10 @@
 
 #include "pkgdir/pkgdir.h"
 #include "pkgdir/source.h"
+#include "misc.h"
 #include "cli.h"
 #include "op.h"
+
 
 #define OPT_GID  OPT_GID_OP_MAKEIDX
 
@@ -50,22 +52,21 @@ static struct argp_option options[] = {
 {"mkidx", OPT_MKIDX, "PATH", OPTION_ARG_OPTIONAL,
  N_("Create package index (under SOURCE-PATH by default)"), OPT_GID},
 
-{"makeidx", OPT_MAKEIDX, 0, OPTION_ALIAS, 0, OPT_GID }, 
+{"index", OPT_MAKEIDX, 0, OPTION_ALIAS, 0, OPT_GID },
+{"makeidx", OPT_MAKEIDX, 0, OPTION_ALIAS | OPTION_ALIAS, 0, OPT_GID },
 
 {"mt", OPT_TYPE, "TYPE[,TYPE]", 0,
      N_("Set created index type (use --stl to list available values)"),
      OPT_GID },
 
-{"mkidx-type", OPT_TYPE_ALIAS, 0, OPTION_ALIAS, 0, 0 },
-
+{"mkidx-type", OPT_TYPE_ALIAS, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, 0 },
 {"mkidxz", OPT_MKIDXZ, "PATH", OPTION_ARG_OPTIONAL | OPTION_HIDDEN,
  N_("Likewise, but gzipped file is created"), OPT_GID},
 
 {"nodesc", OPT_NODESC, 0, OPTION_HIDDEN, "", OPT_GID },
 {"nodiff", OPT_NODIFF, 0, OPTION_HIDDEN, "", OPT_GID },
 {"nocompress", OPT_NOCOMPR, NULL, OPTION_HIDDEN, "", OPT_GID },
-
-{"mo", OPT_MOPT, "OPTION[,OPTION]", 0, 
+{"mo", OPT_MOPT, "OPTION[,OPTION]", 0,
      N_("Create options (type --mo=help for help)"), OPT_GID },
 { 0, 0, 0, 0, 0, 0 },
 };
@@ -78,17 +79,17 @@ struct mopt {
 
 static struct mopt valid_mopts[] = {
     {
-        "nodesc", PKGDIR_CREAT_NODESC, 
+        "nodesc", PKGDIR_CREAT_NODESC,
         N_("Omit package user-level information (like Summary or Description)")
     },
-    
+
     { "nodiff", PKGDIR_CREAT_NOPATCH, N_("Don't create index delta files") },
-    
-    { "v018x", PKGDIR_CREAT_v018x, /* pdir without pkg files timestamps */
-      N_("Create pdir compatibile with versions prior 0.18.9")},
-    
+    { "gzip", 0, N_("Gzip compressed index (default)") },
+    { "gz", 0, N_("Gzip compressed index (default)") },
+    { "zstd", 0, N_("ZSTD compressed index") },
+    { "zst", 0, N_("ZSTD compressed index") },
     { "nocompress", 0, N_("Create uncompressed index") },
-    { "compress", 0, NULL }, /* compress=[gz,bz2,none] - a compression type, NFY */
+    //{ "compress", 0, NULL }, /* compress=[gz,bz2,none] - a compression type, NFY */
     { "help", 0, NULL},
     { NULL, 0, 0 },
 };
@@ -113,7 +114,7 @@ static struct argp poclidek_argp = {
     options, parse_opt, 0, 0, 0, 0, 0
 };
 
-static 
+static
 struct argp_child poclidek_argp_child = {
     &poclidek_argp, 0, NULL, OPT_GID,
 };
@@ -121,16 +122,16 @@ struct argp_child poclidek_argp_child = {
 static int oprun(struct poclidek_opgroup_rt *);
 
 struct poclidek_opgroup poclidek_opgroup_makeidx = {
-    "", 
-    &poclidek_argp, 
+    "",
+    &poclidek_argp,
     &poclidek_argp_child,
     oprun,
 };
 
-static void arg_s_free(void *a) 
+static void arg_s_free(void *a)
 {
     struct arg_s *arg_s = a;
-    
+
     if (arg_s->src_mkidx) {
         source_free(arg_s->src_mkidx);
         arg_s->src_mkidx = NULL;
@@ -153,12 +154,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct poclidek_opgroup_rt   *rt;
     struct arg_s *arg_s;
-    
-    
+
+
     rt = state->input;
     if (rt->_opdata) {
         arg_s = rt->_opdata;
-        
+
     } else {
         arg_s = n_calloc(1, sizeof(*arg_s));
         arg_s->crflags = arg_s->cnflags = 0;
@@ -171,13 +172,13 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         rt->run = oprun;
     }
     DBGF("key %d\n", key);
-    
+
     switch (key) {
         case OPT_TYPE_ALIAS:
         case OPT_TYPE:
             arg_s->idx_type = n_strdup(arg);
             break;
-            
+
         case OPT_MKIDXZ:
         case OPT_MKIDX:
         case OPT_MAKEIDX:
@@ -185,7 +186,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 arg_s->src_mkidx = source_new_pathspec(NULL, arg, NULL);
             arg_s->cnflags |= DO_MAKEIDX;
             break;
-            
+
         case OPT_NODESC:
             log_modeprecated("nodesc");
             parse_mopts(arg_s, "nodesc");
@@ -197,7 +198,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             log_modeprecated("nodiff");
             parse_mopts(arg_s, "nodiff");
             break;
-            
+
         case OPT_COMPR: {
             char tmp[128];
             log_modeprecated("compress");
@@ -215,69 +216,74 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (!parse_mopts(arg_s, arg))
                 return ARGP_ERR_UNKNOWN;
             break;
-            
+
         default:
             return ARGP_ERR_UNKNOWN;
     }
-    
+
     return 0;
 }
 
 
 static int parse_mopt(struct arg_s *arg_s, const char *opstr)
 {
-    char *p, *tmp;
+    char *val, *op;
     int i, valid;
-    
-    n_strdupap(opstr, &tmp);
-    
-    if ((p = strchr(tmp, '='))) {
-        *p = 0;
-        p++;
-        p = n_str_strip_ws(p);
-        tmp = n_str_strip_ws(tmp);
+
+    n_strdupap(opstr, &op);
+
+    if ((val = strchr(op, '='))) {
+        *val = 0;
+        val++;
+        val = n_str_strip_ws(val);
+        op = n_str_strip_ws(op);
+        if (n_str_eq(op, "compress"))
+            op = "compr";
     }
-    
-    n_hash_replace(arg_s->opts, tmp, p ? n_strdup(p) : NULL);
-        
+
+    //n_hash_replace(arg_s->opts, op, val ? n_strdup(val) : NULL);
+
     i = 0;
     valid = 0;
     while (valid_mopts[i].name) {
-        if (n_str_eq(tmp, valid_mopts[i].name)) {
+        if (n_str_eq(op, valid_mopts[i].name)) {
             arg_s->crflags |= valid_mopts[i].flag;
             valid = 1;
             break;
         }
         i++;
     }
-    
+
     if (!valid) {
-        logn(LOGERR, _("%s: unknown option"), tmp);
-    
+        logn(LOGERR, _("%s: unknown option"), op);
+
     } else {
-        if (n_str_eq(tmp, "nocompress"))
-            n_hash_replace(arg_s->opts, "compress", n_strdup("none"));
-        else 
-            n_hash_replace(arg_s->opts, tmp, p ? n_strdup(p) : NULL);
+        if (n_str_eq(op, "nocompress"))
+            n_hash_replace(arg_s->opts, "compr", n_strdup("none"));
+        else if (n_str_in(op, "gzip", "gz", NULL))
+            n_hash_replace(arg_s->opts, "compr", n_strdup("gz"));
+        else if (n_str_in(op, "zstd", "zst", NULL))
+            n_hash_replace(arg_s->opts, "compr", n_strdup("zst"));
+        else
+            n_hash_replace(arg_s->opts, op, val ? n_strdup(val) : NULL);
     }
-    
+
     return valid;
 }
 
-
-static int parse_mopts(struct arg_s *arg_s, char *opstr) 
+static int parse_mopts(struct arg_s *arg_s, char *opstr)
 {
     opstr = n_str_strip_ws(opstr);
 
     if (opstr == NULL || *opstr == '\0')
         return 1;
-    
+
     if (strchr(opstr, ',') == NULL) {
         parse_mopt(arg_s, opstr);
-        
+
     } else {
         const char **tl_save, **tl;
-        
+
         tl = tl_save = n_str_tokl(opstr, ",");
         while (*tl) {
             parse_mopt(arg_s, *tl);
@@ -285,7 +291,7 @@ static int parse_mopts(struct arg_s *arg_s, char *opstr)
         }
         n_str_tokl_free(tl_save);
     }
-    
+
     return 1;
 }
 
@@ -300,8 +306,7 @@ void help_mopts(void)
     }
 }
 
-
-static tn_array *parse_types(const char *type) 
+static tn_array *parse_types(const char *type)
 {
     tn_array *types = n_array_new(4, free, (tn_fn_cmp)strcmp);
 
@@ -310,10 +315,10 @@ static tn_array *parse_types(const char *type)
 
     if (strchr(type, ',') == NULL) {
         n_array_push(types, n_strdup(type));
-            
+
     } else {
         const char **tl_save, **tl;
-        
+
         tl = tl_save = n_str_tokl(type, ",");
         while (*tl) {
             n_array_push(types, n_strdup(*tl));
@@ -326,7 +331,6 @@ static tn_array *parse_types(const char *type)
     return types;
 }
 
-
 /*
   Index creation use cases:
   a) -s /foo                  =>  dir  -> default type
@@ -335,7 +339,7 @@ static tn_array *parse_types(const char *type)
   d) --st type /foo --mt type =>  type -> dtype
   e) -n foo                   =>  dir (or original type) -> foo's type
 */
-static int make_idx(struct arg_s *arg_s) 
+static int make_idx(struct arg_s *arg_s)
 {
     struct source   *src;
     const char      *path = NULL;
@@ -352,6 +356,17 @@ static int make_idx(struct arg_s *arg_s)
     }
 
     opts = arg_s->opts;
+    if (poldek__is_in_testing_mode()) {
+        const char *compr = getenv("POLDEK_TESTING_INDEX_COMPR");
+        if (compr) {
+            if (n_str_in(compr, "gz", "zst", "none", NULL)) {
+                n_hash_replace(arg_s->opts, "compr", n_strdup(compr));
+            } else {
+                n_die("%s: invalid compr value", compr);
+            }
+        }
+    }
+
     crflags = arg_s->crflags;
 
     if (arg_s->src_mkidx)
@@ -360,14 +375,14 @@ static int make_idx(struct arg_s *arg_s)
     if (arg_s->idx_type)
         types = parse_types(arg_s->idx_type);
 
-    
+
     if (n_array_size(sources) > 1 && arg_s->src_mkidx) {
         logn(LOGNOTICE, "Creating index from multiple sources");
-        
+
         if (types == NULL) {     /* no types  */
             if (!source_make_merged_idx(sources, NULL, path, crflags, opts))
                 nerr++;
-            
+
         } else {
             for (j = 0; j < n_array_size(types); j++) {
                 const char *dtype = n_array_nth(types, j);
@@ -376,7 +391,7 @@ static int make_idx(struct arg_s *arg_s)
             }
         }
         goto l_end;
-    } 
+    }
 
     crflags |= PKGDIR_CREAT_IFORIGCHANGED;
     for (i=0; i < n_array_size(sources); i++) {
@@ -389,7 +404,7 @@ static int make_idx(struct arg_s *arg_s)
                  src->type);
             if (!source_make_idx(src, NULL, NULL, path, crflags, opts))
                 nerr++;
-            
+
         } else
             for (j = 0; j < n_array_size(types); j++) {
                 const char *dtype = n_array_nth(types, j);
@@ -401,7 +416,7 @@ static int make_idx(struct arg_s *arg_s)
                 MEMINF("after");
             }
     }
-    
+
 l_end:
     if (arg_s->src_mkidx) {
         source_free(arg_s->src_mkidx);
@@ -411,7 +426,7 @@ l_end:
     n_array_cfree(&sources);
     n_array_cfree(&types);
     n_cfree(&arg_s->idx_type);
-    
+
     return nerr == 0;
 }
 
@@ -420,7 +435,7 @@ static int oprun(struct poclidek_opgroup_rt *rt)
 {
     struct arg_s *arg_s;
     int rc = OPGROUP_RC_NIL;
-    
+
     arg_s = rt->_opdata;
     n_assert(arg_s);
 
@@ -430,10 +445,9 @@ static int oprun(struct poclidek_opgroup_rt *rt)
     }
 
     if (arg_s->cnflags & DO_MAKEIDX) {
-        rc = make_idx(arg_s); 
+        rc = make_idx(arg_s);
         rc = rc ? OPGROUP_RC_OK : OPGROUP_RC_ERROR;
     }
 
     return rc;
 }
-

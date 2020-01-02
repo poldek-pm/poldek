@@ -368,8 +368,8 @@ static int source_to_htconf(struct source *src, int no, tn_hash *htcnf)
     if (src->flags & PKGSOURCE_VRFY_SIGN)
         poldek_conf_add_to_section(sect, "signed", "yes");
 
-    if (src->flags & PKGSOURCE_COMPRESS)
-        poldek_conf_add_to_section(sect, "compress", "yes");
+    if (src->flags & PKGSOURCE_COMPR)
+        poldek_conf_add_to_section(sect, "compr", "yes");
 
     if (src->dscr)
         poldek_conf_add_to_section(sect, "lang", src->dscr);
@@ -1028,6 +1028,9 @@ int poldek_load_config(struct poldek_ctx *ctx, const char *path,
     if ((vs = poldek_conf_get(htcnf, "default_index_type", NULL)))
         poldek_conf_PKGDIR_DEFAULT_TYPE = n_strdup(vs);
 
+    if ((vs = poldek_conf_get(htcnf, "default_index_compr", NULL)))
+        poldek_conf_PKGDIR_DEFAULT_COMPR = n_strdup(vs);
+
     if (poldek_conf_get_bool(htcnf, "vfile_external_compress", 0))
         vfile_configure(VFILE_CONF_EXTCOMPR, 1);
 
@@ -1543,7 +1546,8 @@ int setup_sources(struct poldek_ctx *ctx)
         struct source *src = n_array_nth(ctx->sources, i);
         if (autoupa)
             src->flags |= PKGSOURCE_AUTOUPA;
-        source_set_default_type(src);
+
+        source_set_defaults(src);
     }
 
     ctx->_iflags |= SOURCES_SETUPDONE;

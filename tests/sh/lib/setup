@@ -1,13 +1,36 @@
 #!/bin/sh
-# 
+#
+
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
 
 msg() {
-    [ "$QUIET" != "-q" ] && echo -e $@
+    local m="$@"
+    if echo "$m" | grep -qP '##'; then
+        m="$YELLOW$m$NC"
+    else
+        m="$CYAN$m$NC"
+    fi
+
+    [ "$QUIET" != "-q" ] && echo -e "$m"
+}
+
+force_msg() {
+    local m="$@"
+    if echo "$m" | grep -qP '##'; then
+        m="$YELLOW$m$NC"
+    else
+        m="$CYAN$m$NC"
+    fi
+
+    echo -e "$m"
 }
 
 is_verbose_mode() {
    test "$QUIET" != "-q"
 }
+
 
 msgn() {
     msg "\n## $@"
@@ -21,14 +44,19 @@ export POLDEK_TESTING
 POLDEK_TESTING_DENIED_FILES=
 export POLDEK_TESTING_DENIED_FILES
 
+unset POLDEK_TESTING_INDEX_COMPR
+unset POLDEK_TESTING_PRELOAD_CONF
+unset POLDEK_TESTING_WITH_SUGGESTS
+
+
 MAXLOOP=60
 VERBOSE=""
 RUNTEST_ONLY=
 
 while test $# -gt 0 ; do
     case "${1}" in
-        -l) 
-           egrep -B 1 ^test $0 | sed 's|()||g;s|{||g'; exit; shift ;;  
+        -l)
+           egrep -B 1 ^test $0 | sed 's|()||g;s|{||g'; exit; shift ;;
 
         --source-repo)
             shift; SOURCE_REPO="${1}"; shift ;;
@@ -36,16 +64,20 @@ while test $# -gt 0 ; do
         -v)
             shift; VERBOSE="$VERBOSE -v";;
 
-            
+
         -n) shift; MAXLOOP="${1}"; shift ;;
+
+        -c) shift; COMPR="${1}"; shift ;;
 
         -t)
             shift; RUNTEST_ONLY="${1}"; shift ;;
+
         -h)
             echo "Usage: $(basename $0) [--source-repo REPO] [-v] [-n NUM]"
             echo '    --source-repo  - source (read-only) repository for *-repo tests'
             echo "    -v             - be verbose"
             echo '    -n NUM         - do NUM iteration in *-loop tests'
+            echo '    -c COMPR       - set compression method in repo tests'
             echo '    -t NAME        - run NAME test only'
             exit 0; shift ;;
         *)
@@ -53,6 +85,3 @@ while test $# -gt 0 ; do
     esac
 done
 [ -n "$VERBOSE" ] && QUIET="$VERBOSE"
-
-
-

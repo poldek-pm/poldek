@@ -18,7 +18,7 @@ clean-local:
 	-rm -f *.tmp core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa*
 	-find sh -name \*~ | xargs -r rm
 
-check: poldek_test_conf.conf
+tests: poldek_test_conf.conf
 	$(MAKE) check-am
 	-rm -f poldek_test_conf.*
 
@@ -38,21 +38,28 @@ check: poldek_test_conf.conf
 	strip $@
 	rm -f $<
 
-sheck:
+sh-tests:
 	@echo; echo "Running *.sh tests";  \
 	find sh -name \*~ | xargs -r rm;   \
-	n=0; nok=0;                        \
+	nth=0; nok=0;           	   \
 	for i in sh/[0-9][0-9]*; do        \
 	  [ -f $$i ] || continue;          \
-	  n=$$(expr $$n + 1);              \
-	  sh $$i -n 10; 		   \
-          if [ $$? -eq 0 ]; then           \
-            nok=$$(expr $$nok + 1);     \
-            echo "  ## $$i PASSED";     \
-          else                          \
-            echo "  ## $$i FAILED";     \
-          fi;                           \
-	done;                           \
+	  cmpr="gz"; suffixed=""; 	   \
+	  grep -q compr-setup $$i;	   \
+	  [ $$? -eq 0 ] && cmpr="gz zst none" && suffixed="1"; \
+	  for c in $$cmpr; do		   \
+	     COMPR="$$c"; export COMPR;    \
+	     suffix=""; [ -n "$$suffixed" ] && suffix=" ($$c)"; \
+	     nth=$$(expr $$nth + 1);       \
+	     sh $$i -n 10; 		   \
+	     if [ $$? -eq 0 ]; then        \
+	    	nok=$$(expr $$nok + 1);    \
+		echo "  ## $$i$$suffix PASSED";    \
+	     else                          \
+		echo "  ## $$i$$suffix FAILED";    \
+	     fi;                           \
+	   done;                           \
+	done;                              \
 	echo "====================================="; \
-	echo " Passed $$nok tests of total $$n";      \
+	echo " Passed $$nok tests of total $$nth";      \
 	echo "====================================="

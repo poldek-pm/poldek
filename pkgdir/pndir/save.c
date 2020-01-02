@@ -407,7 +407,7 @@ int pndir_difftoc_vaccum(const struct pndir_paths *paths)
         l = alloca(len + 1);
         memcpy(l, line, len + 1);
         n_array_push(lines, l);
-        DBGF("l = [%s]\n", l);
+        DBGF("line len=%d buf=[%s]\n", len, l);
     }
 
     if (n_array_size(lines)) {
@@ -458,7 +458,7 @@ int pndir_difftoc_vaccum(const struct pndir_paths *paths)
 
                 msgn(1, _("Removing outdated %s"), n_basenam(path));
                 unlink(path);
-                if ((q = strrchr(path, '.')) && strcmp(q, ".gz") == 0) {
+                if ((q = strrchr(path, '.')) && (n_str_eq(q+1, COMPR_GZ) || n_str_eq(q+1, COMPR_ZST))) {
                     strcpy(q, pndir_digest_ext);
                     //msgn(1, _("Removing outdated MDD %s"), n_basenam(path));
                     unlink(path);
@@ -567,7 +567,6 @@ int mk_paths(struct pndir_paths *paths, const char *path, struct pkgdir *pkgdir)
 
     pndir_mkidx_pathname(paths->path_dscr, psize, path, dscr_suffix);
     pndir_mkidx_pathname(paths->fmt_dscr, psize, path, dscr_suffix_fmt);
-
 #if ENABLE_TRACE
     printf("\nPATHS\n");
     printf("path_main  %s\n", paths->path_main);

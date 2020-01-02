@@ -207,6 +207,7 @@ struct pkgdir_module *init_rpmdbcache(struct pkgdir_module *mod)
     mod->aliases = NULL;
     mod->description = "RPM package database cache";
 
+    mod->default_compr = COMPR_ZST;
     mod->update = NULL;
     mod->update_a = NULL;
     mod->unlink = NULL;

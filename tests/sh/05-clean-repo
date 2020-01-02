@@ -39,14 +39,20 @@ testCleanLocalCache()
     mv -f $CACHEDIR/$package*.rpm $REPO_CACHE_DIR
 
     msgn "clean"
+    force_msg "aaa"
+    find $CACHEDIR/
     poldek_up --clean
+    force_msg "bbb"
+    find $CACHEDIR/
     files=$(find $CACHEDIR -type f | grep -vE '\.rpm$')
     n=$(find $CACHEDIR -type f | grep -vE '\.rpm$' | wc -l)
     assertEquals "cachedir still contains non rpm files ($files)" "0" "$n"
 
-    n=$(find $REPO_CACHE_DIR | grep "$package" | wc -l) # no -f its
-
+    n=0
+    # clean removes all repo cache since 966186e43
+    [ -d "$REPO_CACHE_DIR" ] && n=$(find $REPO_CACHE_DIR | grep "$package" | wc -l) # no -f its
     assertEquals "cachedir: package $package rpm exists" "0" "$n"
+
     # no longer true, see 966186e43
     #assertEquals "cachedir: missing $package" "1" "$n"
 

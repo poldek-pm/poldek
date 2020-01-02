@@ -89,37 +89,56 @@ die_if_invalid_index() {
     anindex=$1
     expected_packages=$2
 
-    [ -f $anindex ] || fail "$anindex not created"
-    if echo $anindex | grep -q "diff.toc"; then
-       expected_lines="$expected_packages"
+    GREP="zgrep"
+    CAT="zcat"
+    if echo $anindex | grep -qP '.(ndir|toc)$'; then
+        GREP="grep"
+        CAT="cat"
+    elif echo $anindex | grep -qP '.gz$'; then
+        GREP="zgrep"
+        CAT="zcat"
+    elif echo $anindex | grep -qP '.zst$'; then
+        GREP="zstdgrep"
+        CAT="zstdcat"
+    fi
 
-       lines=$(zcat $anindex | wc -l)
-       if [ "$lines" != "$expected_lines" ]; then
-          fail "$anindex contains $lines lines, expected $expected_lines"
-       fi
-       return
+    if [ ! -f $anindex ]; then
+        fail "$anindex not created"
+        return
+    fi
+
+    if echo $anindex | grep -q "diff.toc"; then
+        expected_lines="$expected_packages"
+
+        lines=$($CAT $anindex | wc -l)
+        if [ "$lines" != "$expected_lines" ]; then
+            fail "$anindex contains $lines lines, expected $expected_lines"
+        fi
+        return
     fi
 
     anindex_type="pdir"
     if echo $anindex | grep -q \.ndir\.; then anindex_type="pndir"; fi
+    if echo $anindex | grep -qP \.ndir$; then anindex_type="pndir"; fi
 
     anindex_real_type="pdir"
-    if zgrep -q '^tndb[0-9]\.[0-9]' $anindex; then
-       anindex_real_type="pndir"
+
+    if $GREP -q '^tndb[0-9]\.[0-9]' $anindex; then
+        anindex_real_type="pndir"
     fi
 
     if [ "$anindex_real_type" != "$anindex_type" ]; then
         fail "invalid $anindex type $anindex_type, real is $anindex_real_type"
     fi
 
-    if zgrep -q 'Contains 0 packages' $anindex; then
+    if $GREP -q 'Contains 0 packages' $anindex; then
         if [ "$expected_packages" != "0" ]; then
             fail "empty $anindex"
         fi
     fi
 
     if [ -n "$expected_packages" ]; then
-       if ! zgrep -q "Contains $expected_packages packages" $anindex; then
+       if ! $GREP -q "Contains $expected_packages packages" $anindex; then
             fail "$anindex: number of packages mismatch"
        fi
     fi

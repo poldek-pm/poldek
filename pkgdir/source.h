@@ -33,7 +33,7 @@ EXPORT const char source_TYPE_GROUP[]; /* "group" */
 #define PKGSOURCE_DSCR       (1 << 7)
 #define PKGSOURCE_GROUP      (1 << 9)
 #define PKGSOURCE_NAMED      (1 << 10)
-#define PKGSOURCE_COMPRESS   (1 << 11)
+#define PKGSOURCE_COMPR      (1 << 11)
 #define PKGSOURCE_NODESC     (1 << 12)
 #define PKGSOURCE_AUTOUPA    (1 << 13) /* do --upa if --up said "desynchronized"
                                           index */
@@ -41,13 +41,13 @@ EXPORT const char source_TYPE_GROUP[]; /* "group" */
 
 struct source {
     unsigned  flags;
-    
+
     char      *type;            /* type (as pkgdir types) */
     char      *name;            /* source name */
     char      *path;            /* path to idx */
     char      *pkg_prefix;      /* packages prefix path */
-    
-    char      *compress;        /* none, gz, bz2, etc */
+
+    char      *compr;           /* none, gz, bz2, etc */
     int       pri;
     int       no;
     char      *dscr;
@@ -78,7 +78,8 @@ EXPORT void source_free(struct source *src);
 EXPORT struct source *source_link(struct source *src);
 EXPORT struct source *source_set_pkg_prefix(struct source *src, const char *prefix);
 EXPORT struct source *source_set_type(struct source *src, const char *type);
-EXPORT struct source *source_set_default_type(struct source *src);
+EXPORT struct source *source_set_compr(struct source *src, const char *type);
+EXPORT struct source *source_set_defaults(struct source *src);
 
 EXPORT int source_cmp(const struct source *s1, const struct source *s2);
 EXPORT int source_cmp_uniq(const struct source *s1, const struct source *s2);

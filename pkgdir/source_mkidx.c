@@ -60,14 +60,15 @@ static const char *make_idxpath(char *path, int size,
         idxpath = path;
 
     } else {
-        char *compress = kw ? n_hash_get(kw, "compress") : NULL;
+        char *compr = kw ? n_hash_get(kw, "compr") : NULL;
 
-        if (compress == NULL)
-            compress = src ? src->compress : NULL;
+        if (kw && compr == NULL)
+            compr = n_hash_get(kw, "compress"); /* legacy */
 
+        if (compr == NULL)
+            compr = src ? src->compr : NULL;
 
-        idxpath = pkgdir__make_idxpath(path, size, idxpath, type,
-                                       compress);
+        idxpath = pkgdir__make_idxpath(path, size, idxpath, type, compr);
     }
 
     n_assert(idxpath);
@@ -209,8 +210,9 @@ int source_make_idx(struct source *src, const char *stype,
     if (stype == NULL)
         stype = determine_stype(src, idxpath);
 
-    if (src->type == NULL)
-        source_set_default_type(src);
+    if (src->type == NULL || src->compr == NULL)
+        source_set_defaults(src);
+
     n_assert(src->type);
 
 
@@ -345,8 +347,8 @@ int source_make_merged_idx(tn_array *sources,
             stype = determine_stype(src, idxpath);
 
         DBGF("%s %s\n", src->path, src->type);
-        if (src->type == NULL)
-            source_set_default_type(src);
+        if (src->type == NULL || src->compr == NULL)
+            source_set_defaults(src);
 
         n_assert(src->type);
     }

@@ -13,24 +13,24 @@ src=$1
 src=$(echo $src | sed 's|test:/||')
 dest=$2
 
-if [ ! -f $src ]; then 
+if [ ! -f $src ]; then
     echo "$src: no such file"
     exit 1
 fi
 
 POLDEK_TESTING_DENIED_FILES=${POLDEK_TESTING_DENIED_FILES:-""}
-for f in $POLDEK_TESTING_DENIED_FILES; do 
-    if echo $src | grep -qE "$f"; then
-       echo "DENIED FILE $f reqested"
-       exit 1 
+for f in $POLDEK_TESTING_DENIED_FILES; do
+    if echo $src | grep -qP "$f$"; then
+       echo "DENIED FILE $f reqested ($src)"
+       exit 1
     fi
 done
 
 POLDEK_TESTING_DENIED_DEST=${POLDEK_TESTING_DENIED_DEST:-""}
-for f in $POLDEK_TESTING_DENIED_DEST; do 
+for f in $POLDEK_TESTING_DENIED_DEST; do
     if echo $dest | grep -qE "$f"; then
        echo "DENIED DEST $f reqested"
-       exit 1 
+       exit 1
     fi
 done
 
@@ -43,5 +43,5 @@ else
     cp $src $dest
 fi
 
-# display toc 
+# display toc
 #if echo $src | grep -q toc; then zcat $src; fi

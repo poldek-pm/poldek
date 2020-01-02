@@ -13,8 +13,14 @@
 #ifndef POLDEK_PKGDIR_INTERNAL_H
 #define POLDEK_PKGDIR_INTERNAL_H
 
+#define COMPR_NONE "none"
+#define COMPR_GZ   "gz"
+#define COMPR_ZST  "zst"
+
 int pkgdirmodule_init(void);
+
 extern const char *poldek_conf_PKGDIR_DEFAULT_TYPE;
+extern const char *poldek_conf_PKGDIR_DEFAULT_COMPR;
 
 #include <trurl/nbuf.h>
 
@@ -29,7 +35,7 @@ void pkgdir__update_avlangs(struct pkgdir *pkgdir, const char *lang, int count);
 void pkgdir__setup_langs(struct pkgdir *pkgdir);
 void pkgdir__setup_depdirs(struct pkgdir *pkgdir);
 char *pkgdir__setup_pkgprefix(const char *path);
-
+void pkgdir__set_compr(struct pkgdir *pkgdir, const char *compr);
 int  pkgdir__uniq(struct pkgdir *pkgdir);
 
 char *pkgdir__make_idxpath(char *dpath, int dsize,
@@ -62,7 +68,7 @@ enum pkgdir_uprc {
     PKGDIR_UPRC_UPTODATE = 1,
     PKGDIR_UPRC_UPDATED  = 2,
     PKGDIR_UPRC_ERR_DESYNCHRONIZED = -1,
-    PKGDIR_UPRC_ERR_UNKNOWN = -2, 
+    PKGDIR_UPRC_ERR_UNKNOWN = -2,
 };
 
 
@@ -93,7 +99,7 @@ struct pkgdir_module {
     pkgdir_fn_update_a      update_a;
     pkgdir_fn_unlink        unlink;
     pkgdir_fn_free          free;
-    
+
     pkgdir_fn_localidxpath  localidxpath;
     int (*posthook_diff) (struct pkgdir*, struct pkgdir*, struct pkgdir*);
 };

@@ -37,6 +37,7 @@
 struct pndir_digest {
     struct vfile  *vf;
     unsigned      flags;
+    char          compr[8];
     char          type[16];     /* sha1 so far */
     char          md[TNIDX_DIGEST_SIZE + 1];
 };
@@ -53,11 +54,6 @@ struct pndir {
 };
 
 void pndir_init(struct pndir *idx);
-void pndir_destroy(struct pndir *idx);
-
-int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags,
-               const char *srcnam);
-void pndir_close(struct pndir *idx);
 
 
 char *pndir_mkidx_pathname(char *dest, size_t size, const char *pathname,

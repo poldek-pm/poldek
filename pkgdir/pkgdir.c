@@ -167,7 +167,7 @@ int make_idxpath(char *dpath, int size, const char *type,
 
         if (ext == NULL)
             ext = pkgdir_type_default_compr(type);
-        else if (strcmp(ext, "none") == 0)
+        else if (strcmp(ext, COMPR_NONE) == 0)
             ext = NULL;
 
         n = n_snprintf(dpath, size, "%s%s%s%s%s", path,
@@ -194,6 +194,7 @@ char *do_pkgdir__make_idxpath(char *dpath, int dsize, const char *path,
             *fnptr = fn;
 
         n = make_idxpath(dpath, dsize, type, path, fn, compress);
+        DBGF("dpath type %s, path %s, compr %s => %s\n", type, path, compress, dpath);
         if (n > 0)
             return dpath;
     }
@@ -283,22 +284,21 @@ static void env_source(const struct source *src, const char *idxpath)
 
 int pkgdir_update_a(const struct source *src)
 {
-	const struct pkgdir_module  *mod;
+    const struct pkgdir_module  *mod;
     enum pkgdir_uprc            uprc = PKGDIR_UPRC_NIL;
     char idxpath[PATH_MAX];
     int  rc;
 
     n_assert(src->path);
-	if ((mod = find_module(src->type)) == NULL)
-		return 0;
+    if ((mod = find_module(src->type)) == NULL)
+        return 0;
 
-	if (mod->update_a == NULL) {
-		logn(LOGERR, _("%s: this type of source is not updateable"), src->type);
-		return 0;
-	}
+    if (mod->update_a == NULL) {
+        logn(LOGERR, _("%s: this type of source is not updateable"), src->type);
+        return 0;
+    }
 
-    pkgdir__make_idxpath(idxpath, sizeof(idxpath), src->path, src->type,
-                         src->compress);
+    pkgdir__make_idxpath(idxpath, sizeof(idxpath), src->path, src->type, src->compr);
     env_source(src, idxpath);
     rc = mod->update_a(src, idxpath, &uprc);
 
@@ -316,17 +316,46 @@ static void env_pkgdir(const struct pkgdir *pkgdir)
         setenv("POLDEK_SOURCE_NAME", pkgdir->name, 1);
 }
 
+void pkgdir__set_compr(struct pkgdir *pkgdir, const char *compr)
+{
+    n_assert(pkgdir->compr != NULL);
+    DBGF("%s <= %s\n", pkgdir->compr, compr);
+
+    if (n_str_eq(pkgdir->compr, compr))
+        return;
+
+    if (pkgdir->src)
+        source_set_compr(pkgdir->src, compr);
+
+    char *p;
+    if ((p = strrchr(pkgdir->idxpath, '.')) != NULL) {
+        if (n_str_in(p + 1, COMPR_GZ, COMPR_ZST, NULL))
+            *p = '\0';
+
+        if (!n_str_eq(compr, COMPR_NONE)) {
+            char new_path[PATH_MAX];
+            n_snprintf(new_path, sizeof(new_path), "%s.%s", pkgdir->idxpath, compr);
+            n_free(pkgdir->idxpath);
+            pkgdir->idxpath = n_strdup(new_path);
+        }
+    }
+
+    if (pkgdir->compr)
+        n_free(pkgdir->compr);
+    pkgdir->compr = n_strdup(compr);
+}
+
 int pkgdir_update(struct pkgdir *pkgdir)
 {
-	int rc = 0;
+    int rc = 0;
     enum pkgdir_uprc uprc = PKGDIR_UPRC_NIL;
 
-	if (pkgdir->mod->update == NULL)
-		return 0;
+    if (pkgdir->mod->update == NULL)
+        return 0;
 
     env_pkgdir(pkgdir);
 
-	rc = pkgdir->mod->update(pkgdir, &uprc);
+    rc = pkgdir->mod->update(pkgdir, &uprc);
     if (rc) {
         if (uprc == PKGDIR_UPRC_UPTODATE)
             msgn(1, _("%s is up to date"), pkgdir_idstr(pkgdir));
@@ -393,7 +422,7 @@ struct pkgdir *pkgdir_srcopen(const struct source *src, unsigned flags)
 
     pkgdir = pkgdir_open_ext(src->path, src->pkg_prefix,
                              src->type, src->name,
-                             src->compress,
+                             src->compr,
                              flags, src->lc_lang);
     if (pkgdir == NULL)
         return NULL;
@@ -417,12 +446,11 @@ struct pkgdir *pkgdir_open(const char *path, const char *pkg_prefix,
 
 struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
                                const char *type, const char *name,
-                               const char *compress,
+                               const char *compr,
                                unsigned flags, const char *lc_lang)
 
 {
     char                        idxpath[PATH_MAX];
-    const char                  *fn;
     struct pkgdir               *pkgdir;
     const struct pkgdir_module  *mod;
     unsigned                    saved_flags;
@@ -439,13 +467,14 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     if (name && n_str_ne(name, "-"))
         pkgdir->flags |= PKGDIR_NAMED;
 
-    DBGF("pkgdir_open_ext[%s] %s, %s%s\n", type, path,
-         pkg_prefix ? "prefix = ":"", pkg_prefix ? pkg_prefix : "");
+    DBGF("pkgdir_open_ext[%s] %s, %s%s, compr %s\n", type, path,
+         pkg_prefix ? "prefix = ":"", pkg_prefix ? pkg_prefix : "", compr);
 
-    fn = NULL;
+    const char *fn = NULL;
     do_pkgdir__make_idxpath(idxpath, sizeof(idxpath), path, type,
-                            compress, &fn);
+                            compr, &fn);
 
+    DBGF("pkg_prefix %s, fn %s\n", pkg_prefix, fn);
     /* fn with subdir -> make prefix without it */
     if (fn && strchr(fn, '/') && pkg_prefix == NULL)
         pkg_prefix = path;
@@ -459,8 +488,12 @@ struct pkgdir *pkgdir_open_ext(const char *path, const char *pkg_prefix,
     else
         pkgdir->path = n_strdup(idxpath);
 
+
+
     pkgdir->idxpath = n_strdup(idxpath);
-    pkgdir->compress = compress ? n_strdup(compress) : NULL;
+    if (compr == NULL)
+        compr = pkgdir_type_default_compr(type);
+    pkgdir->compr = compr ? n_strdup(compr) : NULL;
     pkgdir->pkgs = pkgs = pkgs_array_new_ex(2048, pkg_strcmp_name_evr_rev);
 
     pkgdir->mod = mod;

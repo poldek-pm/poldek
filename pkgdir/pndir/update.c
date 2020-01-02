@@ -46,9 +46,11 @@ static char *eat_zlib_ext(char *path)
 {
     char *p;
 
-    if ((p = strrchr(n_basenam(path), '.')) != NULL)
-        if (strcmp(p, ".gz") == 0)
+    if ((p = strrchr(n_basenam(path), '.')) != NULL) {
+        const char *q = p + 1;
+        if (n_str_in(q, COMPR_GZ, COMPR_ZST, NULL))
             *p = '\0';
+    }
 
     return path;
 }
@@ -228,7 +230,7 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     struct vfile        *vf;
     struct pndir_digest dg_remote;
     struct pndir        *idx;
-    char                line[1024], *dn, *bn, *pidxpath;
+    char                line[1024], *dn, *bn;
     int                 nread, nerr = 0, rc, npatch, first_patch_found;
     const char          *errmsg_broken_difftoc = _("%s: broken patch list");
     char                current_md[TNIDX_DIGEST_SIZE + 1];
@@ -263,12 +265,18 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
 
     *uprc = PKGDIR_UPRC_ERR_UNKNOWN;
     /* open diff toc */
+
     snprintf(idxpath, sizeof(idxpath), "%s", pkgdir->idxpath);
     eat_zlib_ext(idxpath);
     snprintf(tmpath, sizeof(tmpath), "%s", idxpath);
     n_basedirnam(tmpath, &dn, &bn);
-    snprintf(path, sizeof(path), "%s/%s/%s%s", dn,
-             pndir_packages_incdir, bn, pndir_difftoc_suffix);
+
+    int none_compr = n_str_eq(dg_remote.compr, COMPR_NONE);
+
+    snprintf(path, sizeof(path), "%s/%s/%s%s%s%s", dn,
+             pndir_packages_incdir, bn, pndir_difftoc_suffix,
+             none_compr ? "" : ".",
+             none_compr ? "" : dg_remote.compr);
 
     vf = vfile_open_ul(path, VFT_TRURLIO, VFM_RO, pkgdir->name);
     if (vf == NULL)
@@ -280,37 +288,39 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
     off_t mdsize = 0, mdpatchsize = 0;
     struct vf_stat stats;
 
-    pidxpath = strstr(pkgdir->idxpath, ".ndir.");
-    *pidxpath = '\0';
-    pidxpath += 6;
+    char *idx_path, *idx_ext;
+    n_strdupap(pkgdir->idxpath, &idx_path);
+
+    idx_ext = strstr(idx_path, ".ndir.");
+    if (idx_ext != NULL) {
+        *idx_ext = '\0';
+        idx_ext += 5;           /* extension with dot */
+    } else {
+        idx_ext = "";
+    }
 
     // to keep quiet vf_stat
     vfile_configure(VFILE_CONF_VERBOSE, 0);
 
-    snprintf(path, sizeof(path), "%s.ndir.%s",
-	     pkgdir->idxpath, pidxpath);
+    snprintf(path, sizeof(path), "%s.ndir%s", idx_path, idx_ext);
+    if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
+        mdsize += stats.vf_size;
+        msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
+    }
 
+    snprintf(path, sizeof(path), "%s.ndir.dscr%s", idx_path, idx_ext);
     if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
-      mdsize += stats.vf_size;
-      msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
+        mdsize += stats.vf_size;
+        msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
     }
-    snprintf(path, sizeof(path), "%s.ndir.dscr.%s",
-	     pkgdir->idxpath, pidxpath);
+
+    snprintf(path, sizeof(path), "%s.ndir.dscr.i18n%s", idx_path, idx_ext);
     if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
-      mdsize += stats.vf_size;
-      msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
-    }
-    snprintf(path, sizeof(path), "%s.ndir.dscr.i18n.%s",
-	     pkgdir->idxpath, pidxpath);
-    if (vf_stat(path, tmpath, &stats, pkgdir->name)) {
-      mdsize += stats.vf_size;
-      msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
+        mdsize += stats.vf_size;
+        msgn(3, "_\n%lld bytes %s\n", (long long)stats.vf_size, path);
     }
 
     msgn(2, "pndir_m_update idxsize: %lld\n", (long long)mdsize);
-
-    pidxpath -= 6;
-    *pidxpath ='.';
 
     while ((nread = n_stream_gets(vf->vf_tnstream, line, sizeof(line))) > 0) {
         char *md, *pdate;

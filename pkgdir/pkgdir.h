@@ -47,7 +47,7 @@ struct pkgdir {
     char                 *name;            /* name  */
     char                 *path;            /* path | URL        */
     char                 *idxpath;         /* path | URL        */
-    char                 *compress;        /* compresion */
+    char                 *compr;           /* compresion */
     tn_array             *pkgs;            /* struct *pkg[]     */
     tn_array             *unsorted_pkgs;   /* struct *pkg[], to iterate in 'offset' order */
 

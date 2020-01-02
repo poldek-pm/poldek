@@ -38,6 +38,8 @@ autom4te.cache
 *~
 *.spec
 .#*
+*.log
+tests/*.trs
 libtool
 ltmain.sh
 config.guess

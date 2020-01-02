@@ -60,6 +60,8 @@ static tn_array *parse_removed(char *str);
 static tn_array *parse_depdirs(char *str);
 static int parse_avlangs(char *str, struct pkgdir *pkgdir);
 
+static void pndir_close(struct pndir *idx);
+
 static int do_open(struct pkgdir *pkgdir, unsigned flags);
 static int do_load(struct pkgdir *pkgdir, unsigned ldflags);
 static void do_free(struct pkgdir *pkgdir);
@@ -91,7 +93,8 @@ struct pkgdir_module pkgdir_module_pndir = {
 const char *pndir_localidxpath(const struct pkgdir *pkgdir)
 {
     struct pndir *idx = pkgdir->mod_data;
-
+    DBGF("path %s\n", pkgdir->idxpath);
+    //n_assert(0);
     if (idx && idx->_vf)
         return vfile_localpath(idx->_vf);
     return pkgdir->idxpath;
@@ -100,24 +103,24 @@ const char *pndir_localidxpath(const struct pkgdir *pkgdir)
 static
 int posthook_diff(struct pkgdir *pd1, struct pkgdir* pd2, struct pkgdir *diff)
 {
-	struct pndir *idx, *idx2;
+    struct pndir *idx, *idx2;
 
     pd2 = pd2;                  /* unused */
-	if ((idx2 = pd1->mod_data) == NULL)
-		return 0;
+    if ((idx2 = pd1->mod_data) == NULL)
+        return 0;
 
-	idx = diff->mod_data;
+    idx = diff->mod_data;
 
-	if (idx == NULL) {
+    if (idx == NULL) {
         idx = n_malloc(sizeof(*idx));
         pndir_init(idx);
         diff->mod_data = idx;
-	}
+    }
 
-	idx->md_orig = n_strdup(idx2->dg->md);
-	return 1;
+    idx->md_orig = n_strdup(idx2->dg->md);
+
+    return 1;
 }
-
 
 inline static char *eatws(char *str)
 {
@@ -125,7 +128,6 @@ inline static char *eatws(char *str)
         str++;
     return str;
 }
-
 
 inline static char *next_tokn(char **str, char delim, int *toklen)
 {
@@ -152,10 +154,10 @@ inline static char *next_tokn(char **str, char delim, int *toklen)
 void pndir_init(struct pndir *idx)
 {
     memset(idx, 0, sizeof(*idx));
-	idx->db = NULL;
+    idx->db = NULL;
     idx->dg = NULL;
     idx->idxpath[0] = '\0';
-	idx->md_orig = NULL;
+    idx->md_orig = NULL;
     idx->db_dscr_h = NULL;
 }
 
@@ -285,25 +287,31 @@ int open_dscr(struct pndir *idx, int vfmode, time_t ts, const char *lang)
     return pndir_db_dscr_h_get(idx->db_dscr_h, lang) != NULL;
 }
 
-int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags,
-               const char *srcnam)
+static
+int pndir_open(struct pndir *idx, struct pkgdir *pkgdir, int vfmode, unsigned flags)
 {
-	pndir_init(idx);
+    pndir_init(idx);
 
-    if ((flags & PKGDIR_OPEN_DIFF) == 0)
-        if ((idx->dg = pndir_digest_new(path, vfmode, srcnam)) == NULL)
+    if ((flags & PKGDIR_OPEN_DIFF) == 0) {
+        if ((idx->dg = pndir_digest_new(pkgdir->idxpath, vfmode, pkgdir->name)) == NULL)
             return 0;
 
-    if (srcnam)
-        idx->srcnam = n_strdup(srcnam);
+        if (idx->dg->compr) {
+            DBGF("md.compr %s\n", idx->dg->compr);
+            pkgdir__set_compr(pkgdir, idx->dg->compr);
+        }
+    }
 
-    idx->db = do_dbopen(path, vfmode, &idx->_vf, srcnam);
+    if (pkgdir->name)
+        idx->srcnam = n_strdup(pkgdir->name);
+
+    idx->db = do_dbopen(pkgdir->idxpath, vfmode, &idx->_vf, idx->srcnam);
     if (idx->db == NULL)
         goto l_err;
 
-    snprintf(idx->idxpath, sizeof(idx->idxpath), "%s", path);
-    return 1;
+    snprintf(idx->idxpath, sizeof(idx->idxpath), "%s", pkgdir->idxpath);
 
+    return 1;
 
  l_err:
     pndir_close(idx);
@@ -311,13 +319,12 @@ int pndir_open(struct pndir *idx, const char *path, int vfmode, unsigned flags,
 }
 
 static
-int pndir_open_verify(struct pndir *idx, const char *path, int vfmode,
-                      unsigned flags, const char *srcnam)
+int pndir_open_verify(struct pndir *idx, struct pkgdir *pkgdir,
+                      int vfmode, unsigned flags)
 {
     int rc;
 
-    DBGF("%s\n", path);
-    if (!pndir_open(idx, path, vfmode, flags, srcnam))
+    if (!pndir_open(idx, pkgdir, vfmode, flags))
         return 0;
 
     rc = 1;
@@ -330,7 +337,8 @@ int pndir_open_verify(struct pndir *idx, const char *path, int vfmode,
             vfmode &= ~VFM_CACHE;
             vfmode |= VFM_NODEL;
             pndir_close(idx);
-            return pndir_open_verify(idx, path, vfmode, flags, srcnam);
+
+            return pndir_open_verify(idx, pkgdir, vfmode, flags);
         }
 
         pndir_close(idx);
@@ -338,6 +346,7 @@ int pndir_open_verify(struct pndir *idx, const char *path, int vfmode,
     return rc;
 }
 
+static
 void pndir_close(struct pndir *idx)
 {
     if (idx->db)
@@ -360,10 +369,13 @@ void pndir_close(struct pndir *idx)
     idx->idxpath[0] = '\0';
 }
 
+#if 0
+static
 void pndir_destroy(struct pndir *idx)
 {
 	pndir_close(idx);
 }
+#endif
 
 #if 0
 TODO
@@ -402,17 +414,19 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     unsigned             klen, vlen, vlen_max;
     int                  nerr = 0;
 
+    pndir_init(&idx);
+
     if ((flags & PKGDIR_OPEN_REFRESH) == 0)
         vfmode |= VFM_CACHE;
 
-    DBGF("do_open %s [%s]\n", pkgdir->idxpath, pkgdir->name);
-    if (!pndir_open_verify(&idx, pkgdir->idxpath, vfmode, flags, pkgdir->name))
+    DBGF("%s [%s]\n", pkgdir->idxpath, pkgdir->name);
+    if (!pndir_open_verify(&idx, pkgdir, vfmode, flags))
         return 0;
 
     nerr = 0;
 
     if (!tndb_verify(idx.db)) {
-        logn(LOGERR, "%s: broken file", vf_url_slim_s(idx._vf->vf_path, 0));
+        logn(LOGERR, "%s: data digest mismatch, broken file", vf_url_slim_s(idx._vf->vf_path, 0));
         nerr++;
         goto l_end;
     }
@@ -744,7 +758,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
 
     l_continue_loop:
         if (!tndb_it_get_end(&it) || nerr > 0) {
-            logn(LOGERR, "%s: broken file", path);
+            logn(LOGERR, "%s: iteration error, broken file", path);
             nerr++;
             break;
         }

@@ -140,8 +140,19 @@ int pndir_digest_readfd(struct pndir_digest *pdg, int fd, const char *path)
     buf[nread] = '\0';
     DBGF("read %s\n", buf);
 
-    if (strstr(&buf[TNIDX_DIGEST_SIZE], option_brandnew))
+    const char *opts = &buf[TNIDX_DIGEST_SIZE];
+
+    if (strstr(opts, option_brandnew))
         pdg->flags |= PNDIGEST_BRANDNEW;
+
+    if (strstr(opts, COMPR_ZST))
+        n_strncpy(pdg->compr, COMPR_ZST, sizeof(pdg->compr));
+    else if (strstr(opts, COMPR_GZ))
+        n_strncpy(pdg->compr, COMPR_GZ, sizeof(pdg->compr));
+    else if (strstr(opts, COMPR_NONE))
+        n_strncpy(pdg->compr, COMPR_NONE, sizeof(pdg->compr));
+    else
+        n_strncpy(pdg->compr, COMPR_GZ, sizeof(pdg->compr)); /* backward compat. */
 
     return 1;
 }
@@ -159,31 +170,50 @@ int pndir_digest_read(struct pndir_digest *pdg, struct vfile *vfmd)
     return pndir_digest_readfd(pdg, vfmd->vf_fd, vfmd->vf_path);
 }
 
-int pndir_mkdigest_path(char *path, int size, const char *pathname,
-                        const char *ext)
+static int do_mkdigest_path(char *path, int size, const char *pathname,
+                        const char *ext, char **compr)
 {
-    char *p;
+    char *p, *q = NULL;
     int n;
 
     n = n_snprintf(path, size, "%s", pathname);
-    if ((p = strrchr(n_basenam(path), '.')) == NULL)
+
+    p = strrchr(n_basenam(path), '.');
+    if (p)
+        q = p + 1;
+
+    if (compr && q) {
+        if (n_str_eq(q, COMPR_GZ))
+            *compr = COMPR_GZ;
+        else if (n_str_eq(q, COMPR_ZST))
+            *compr = COMPR_ZST;
+        else
+            *compr = COMPR_NONE;
+    }
+
+    if (p == NULL) { /* no extension? */
         p = &path[n];
 
-    /* don't touch .md[d] files */
-    else if (strncmp(p, ".md", 3) == 0)
+    } else if (strncmp(p, ".md", 3) == 0) { /* already a digest path */
         return n;
 
-    else if (strcmp(p, ".gz") != 0)
+    } else if (!n_str_in(q, COMPR_GZ, COMPR_ZST, NULL)) {
         p = &path[n];
 
-    else
+    } else {
         n -= 3;
+    }
 
     n += n_snprintf(p, size - (p - path), "%s", ext);
-    DBGF("%s -> %s\n", pathname, path);
+    DBGF("%s, %s -> %s\n", pathname, ext, path);
     return n;
 }
 
+int pndir_mkdigest_path(char *path, int size, const char *pathname,
+                        const char *ext)
+{
+    return do_mkdigest_path(path, size, pathname, ext, NULL);
+}
 
 int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
                       const struct pkgdir *pkgdir)
@@ -191,13 +221,14 @@ int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
     char            path[PATH_MAX];
     struct vfile    *vf;
     int             n, brandnew = 0;
+    char            *compr = NULL;
 
     /* no patch was generated based on this pkgdir nor patch
        applied to (client side) */
     if ((pkgdir->flags & (PKGDIR_DIFFED | PKGDIR_PATCHED)) == 0)
         brandnew = 1;
 
-    n = pndir_mkdigest_path(path, sizeof(path), pathname, pndir_digest_ext);
+    n = do_mkdigest_path(path, sizeof(path), pathname, pndir_digest_ext, &compr);
     if (n <= 4) {
         logn(LOGERR, "%s: path too short", path);
         return 0;
@@ -207,11 +238,16 @@ int pndir_digest_save(struct pndir_digest *pdg, const char *pathname,
         return 0;
 
     DBGF("brandnew %s %d\n", pkgdir_idstr(pkgdir), brandnew);
+    if (!compr)
+        compr = COMPR_NONE;
 
-    fprintf(vf->vf_stream, "%s", pdg->md);
-    if (brandnew)
-       fprintf(vf->vf_stream, " %s", option_brandnew);
+    fprintf(vf->vf_stream, "%s %s%s%s", pdg->md,
+            brandnew ? option_brandnew : "",
+            compr && brandnew ? "," : "",
+            compr ? compr : "");
+
     vfile_close(vf);
+
     return 1;
 }
 
@@ -266,7 +302,7 @@ int pndir_digest_calc(struct pndir_digest *pdg, tn_array *keys)
     if (n > (int)sizeof(pdg->md))
         return 0;
 
-    DBGF("digest = %d, %d\n", n, sizeof(pdg->md));
+    DBGF("digest = %d, %d\n", n, (int)sizeof(pdg->md));
 
     bin2hex(pdg->md, sizeof(pdg->md), md, n);
     DBGF("digest = %s\n", pdg->md);
