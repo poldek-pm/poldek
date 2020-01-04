@@ -51,6 +51,8 @@ struct pndir {
     struct pndir_digest  *dg;
     char                 *md_orig;
     char                 *srcnam; /* label for  */
+    uint32_t             _tndb_first_pkg_nrec;
+    uint32_t             _tndb_first_pkg_offs;
 };
 
 void pndir_init(struct pndir *idx);

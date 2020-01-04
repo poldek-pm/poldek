@@ -579,6 +579,10 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
 
  l_end:
     if (nerr == 0) {
+        /* keep tndb iterator state to start loading packages without backward seek */
+        idx._tndb_first_pkg_nrec = it._nrec;
+        idx._tndb_first_pkg_offs = it._off;
+
         pkgdir->mod_data = n_malloc(sizeof(idx));
         memcpy(pkgdir->mod_data, &idx, sizeof(idx));
 
@@ -689,6 +693,10 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     idx = pkgdir->mod_data;
     if (!tndb_it_start(idx->db, &it))
         return 0;
+
+    /* start from first package position */
+    it._nrec = idx->_tndb_first_pkg_nrec;
+    it._off = idx->_tndb_first_pkg_offs;
 
     vf_url_slim(path, sizeof(path), pkgdir->idxpath, 0);
 
