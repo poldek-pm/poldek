@@ -175,11 +175,15 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
             struct capreq *req = n_array_nth(pkg->reqs, j);
             char streq[256];
             tn_array *matches = NULL;
+            uint32_t khash;
+            int klen;
 
-	    capreq_snprintf(streq, sizeof(streq), req);
+            klen = capreq_snprintf(streq, sizeof(streq), req);
+            //n_assert(klen == (int)strlen(streq));
+            khash = n_hash_compute_hash(cache, streq, klen);
 
-            if (n_hash_exists(cache, streq)) {
-                matches = n_hash_get(cache, streq);
+            if (n_hash_hexists(cache, streq, klen, khash)) {
+                matches = n_hash_hget(cache, streq, klen, khash);
 
                 if (!matches)
                     msgn(4, _(" req %-35s --> NOT FOUND"), streq);
@@ -194,7 +198,8 @@ int pkgset_verify_deps(struct pkgset *ps, int strict)
                 int found = pkgset_find_match_packages(ps, pkg, req, &matches, strict);
                 if (found && matches == NULL)
                     matches = pkgs_array_new(2);
-                n_hash_insert(cache, streq, matches);
+
+                n_hash_hinsert(cache, streq, klen, khash, matches);
             }
 
             if (matches == NULL) /* not found / unmatched */
@@ -327,7 +332,7 @@ static int psreq_lookup(struct pkgset *ps, const struct capreq *req,
     *npkgs = 0;
     matched = 0;
 
-    if ((ent = capreq_idx_lookup(&ps->cap_idx, reqname))) {
+    if ((ent = capreq_idx_lookup(&ps->cap_idx, reqname, capreq_name_len(req)))) {
         *suspkgs = (struct pkg **)ent->crent_pkgs;
         *npkgs = ent->items;
         matched = 1;
@@ -581,7 +586,7 @@ int pkgset_verify_conflicts(struct pkgset *ps, int strict)
             cnfl = n_array_nth(pkg->cnfls, j);
             cnflname = capreq_name(cnfl);
 
-            if ((ent = capreq_idx_lookup(&ps->cap_idx, cnflname))) {
+            if ((ent = capreq_idx_lookup(&ps->cap_idx, cnflname, capreq_name_len(cnfl)))) {
                 if (setup_cnfl_pkgs(pkg, cnfl, strict,
                                     (struct pkg **)ent->crent_pkgs,
                                     ent->items)) {

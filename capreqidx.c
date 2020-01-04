@@ -54,7 +54,7 @@ void capreq_idx_destroy(struct capreq_idx *idx)
     memset(idx, 0, sizeof(*idx));
 }
 
-static int capreq_idx_ent_transform_to_array(struct capreq_idx_ent *ent)
+static int ent_transform_to_array(struct capreq_idx_ent *ent)
 {
     struct pkg *tmp;
 
@@ -66,32 +66,153 @@ static int capreq_idx_ent_transform_to_array(struct capreq_idx_ent *ent)
     return 1;
 }
 
+static inline void idx_ent_sort(struct capreq_idx_ent *ent)
+{
+    register size_t i, j;
 
+    for (i = 1; i < ent->items; i++) {
+        register struct pkg *tmp = ent->crent_pkgs[i];
 
-int capreq_idx_add(struct capreq_idx *idx, const char *capname,
+        j = i;
+        while (j > 0 && tmp - ent->crent_pkgs[j - 1] < 0) {
+            ent->crent_pkgs[j] = ent->crent_pkgs[j - 1];
+            j--;
+        }
+        ent->crent_pkgs[j] = tmp;
+    }
+}
+
+static inline int idx_ent_contains(struct capreq_idx_ent *ent, const struct pkg *pkg)
+{
+    register size_t l, r, i;
+    register int cmp_re;
+
+    l = 0;
+    r = ent->items;
+
+    while (l < r) {
+	i = (l + r) / 2;
+
+	if ((cmp_re = ent->crent_pkgs[i] - pkg) == 0) {
+	    return 1;
+
+	} else if (cmp_re > 0) {
+	    r = i;
+
+	} else if (cmp_re < 0) {
+	    l = i + 1;
+	}
+    }
+
+    return 0;
+}
+
+/* avoid to index caps (about 150k index entries for TH) */
+/* a) path-based requirements from docs dirs */
+const char *skip_PREFIXES[] = {
+    "/usr/share/doc",
+    "/usr/share/info",
+    "/usr/share/man",
+    "/usr/share/locale",
+    "/usr/share/icons",
+    NULL
+};
+
+int skip_LENGTHS[] = {
+    0,
+    0,
+    0,
+    0,
+    0
+};
+
+/* b) well-known, FHS directories and some generic rpm specific caps */
+const char *skip_CAPS[] = {
+    "/etc", "/bin",
+    "/usr/bin", "/usr/sbin", "/usr/lib",
+    "/usr/share", "/usr/include",
+    "rtld(GNU_HASH)",
+    "elf(buildid)"
+};
+
+tn_hash *skip_CAPS_H = NULL;
+
+inline static int indexable_cap(const char *name, int len, unsigned raw_hash)
+{
+    if (!skip_CAPS_H) {
+        skip_CAPS_H = n_hash_new(128, NULL);
+        n_hash_ctl(skip_CAPS_H, TN_HASH_NOCPKEY);
+
+        int i = 0;
+        while (skip_CAPS[i] != NULL) {
+            n_hash_insert(skip_CAPS_H, skip_CAPS[i], skip_CAPS[i]);
+            i++;
+        }
+    }
+
+    uint32_t hash = n_hash_compute_index_hash(skip_CAPS_H, raw_hash);
+    if (n_hash_hexists(skip_CAPS_H, name, len, hash))
+        return 0;
+
+    if (*name ==  '/') {
+        int i = 0;
+        const char *prefix;
+
+        while ((prefix = skip_PREFIXES[i]) != NULL) {
+            if (skip_LENGTHS[i] == 0)
+                skip_LENGTHS[i] = strlen(prefix);
+
+            if (strncmp(name, prefix, skip_LENGTHS[i]) == 0)
+                return 0;
+
+            i++;
+        }
+    }
+
+    return 1;
+}
+
+int capreq_idx_add(struct capreq_idx *idx, const char *capname, int capname_len,
                    struct pkg *pkg)
 {
     struct capreq_idx_ent *ent;
-    unsigned khash = 0;
-    int klen = 0;
+    uint32_t raw_khash = n_hash_compute_raw_hash(capname, capname_len);
 
-    if ((ent = n_hash_get_ex(idx->ht, capname, &klen, &khash)) == NULL) {
-        const char *hcapname = capreq__alloc_name(capname);
+    if (!indexable_cap(capname, capname_len, raw_khash)) {
+        DBGF("skip %s\n", capname);
+        return 1;
+    }
+
+    uint32_t khash = n_hash_compute_index_hash(idx->ht, raw_khash);
+
+    if ((ent = n_hash_hget(idx->ht, capname, capname_len, khash)) == NULL) {
+        const struct capreq_name_ent *cent = capreq__alloc_name(capname, capname_len);
 
         ent = idx->na->na_malloc(idx->na, sizeof(*ent));
         ent->_size = 1;
         ent->items = 1;
         ent->crent_pkg = pkg;
 
-        n_hash_insert_ex(idx->ht, hcapname, klen, khash, ent);
+        n_hash_hinsert(idx->ht, cent->name, cent->len, khash, ent);
+
 #if ENABLE_TRACE
         if ((n_hash_size(idx->ht) % 1000) == 0)
             n_hash_stats(idx->ht);
 #endif
 
     } else {
-        if (ent->_size == 1)    /* crent_pkgs is NOT allocated */
-            capreq_idx_ent_transform_to_array(ent);
+        if (ent->_size == 1) {    /* crent_pkgs is NOT allocated */
+            ent_transform_to_array(ent);
+
+            /* save some reallocs as many needs libc/m/pthread, micro optimization, XXX */
+            if (*capname == 'l' && (strncmp(capname, "libc", 4) == 0 ||
+                                    strncmp(capname, "libm", 4) == 0 ||
+                                    strncmp(capname, "libpthread", 4) == 0)) {
+                ent->_size = 4096;
+                ent->crent_pkgs = n_realloc(ent->crent_pkgs,
+                                            ent->_size * sizeof(*ent->crent_pkgs));
+            }
+        }
 
         /*
          * Sometimes, there are duplicates, especially in dotnet-* packages
@@ -99,11 +220,8 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
          * provides: mono(Mono.Zeroconf) = 1.0.0.0, mono(Mono.Zeroconf) = 2.0.0.0, etc.
          */
         if (idx->flags & CAPREQ_IDX_CAP) { /* check for duplicates */
-            register unsigned i;
-            for (i=0; i < ent->items; i++) {
-                if (pkg == ent->crent_pkgs[i])
-                    return 1;
-            }
+            if (idx_ent_contains(ent, pkg))
+                return 1;
         }
 
         if (ent->items == ent->_size) {
@@ -113,6 +231,10 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname,
         }
 
         ent->crent_pkgs[ent->items++] = pkg;
+
+        if (idx->flags & CAPREQ_IDX_CAP) { /* sort to prevent duplicates */
+            idx_ent_sort(ent);
+        }
     }
 
     return 1;
@@ -153,11 +275,23 @@ void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
 {
     tn_array *keys = n_hash_keys(idx->ht);
     int i, stats[100000];
+    tn_hash_it it;
+    struct capreq_idx_ent *ent;
+    const char *key;
+
+    n_hash_it_init(&it, idx->ht);
+    char path[1024];
+    snprintf(path, sizeof(path), "/tmp/poldek_%s_stats.txt", prefix);
+
+    FILE *f = fopen(path, "w");
+    while ((ent = n_hash_it_get(&it, &key)) != NULL) {
+        fprintf(f, "%d %s %s\n", ent->items, key, prefix);
+    }
+    fclose(f);
 
     memset(stats, 0, sizeof(stats));
 
     for (i=0; i < n_array_size(keys); i++) {
-        struct capreq_idx_ent *ent;
         ent = n_hash_get(idx->ht, n_array_nth(keys, i));
         stats[ent->items]++;
     }
@@ -173,18 +307,19 @@ void capreq_idx_stats(const char *prefix, struct capreq_idx *idx)
 
 const
 struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
-                                         const char *capname)
+                                         const char *capname, int capname_len)
 {
     struct capreq_idx_ent *ent;
+    unsigned hash = n_hash_compute_hash(idx->ht, capname, capname_len);
 
-    if ((ent = n_hash_get(idx->ht, capname)) == NULL)
+    if ((ent = n_hash_hget(idx->ht, capname, capname_len, hash)) == NULL)
         return NULL;
 
     if (ent->items == 0)
         return NULL;
 
     if (ent->_size == 1)        /* return only transformed ents */
-        capreq_idx_ent_transform_to_array(ent);
+        ent_transform_to_array(ent);
 
     return ent;
 }

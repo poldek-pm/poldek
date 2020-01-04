@@ -35,12 +35,11 @@ struct poldek_ctx {
 
     struct poldek_ts *ts;       /* main, internal ts */
 
-    unsigned         ps_flags;
-    unsigned         ps_setup_flags;
     struct pkgset    *ps;
     struct pm_ctx    *pmctx;       /* package manager context */
     int              _rpm_tscolor; /* rpm transaction color */
     int              _depsolver;
+    unsigned         _ps_setup_flags;
 
     /* callbacks, don't call them directly */
     void *data_confirm_fn;
@@ -59,7 +58,7 @@ struct poldek_ctx {
     int  (*choose_suggests_fn)(void *data, const struct poldek_ts *ts,
                                const struct pkg *pkg, tn_array *caps,
                                tn_array *choices, int hint);
-    
+
     tn_hash        *_cnf;       /* runtime config */
     unsigned       _iflags;     /* internal flags */
     int            _refcnt;
@@ -100,6 +99,6 @@ int poldek__choose_suggests(const struct poldek_ts *ts,
                             tn_array *choices, int hint);
 
 void poldek__setup_default_ask_callbacks(struct poldek_ctx *ctx);
-int poldek__load_sources_internal(struct poldek_ctx *ctx);
+int poldek__load_sources_internal(struct poldek_ctx *ctx, unsigned ps_setup_flags);
 
 #endif

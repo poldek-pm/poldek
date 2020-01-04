@@ -65,7 +65,7 @@ static int desc(struct cmdctx *cmdctx);
                                OPT_DESC_DESCR |                         \
                                OPT_DESC_FL)
 
-
+#define OPT__NEED_DEPS  (1 << 20)
 
 static struct argp_option options[] = {
     { "all",  'a', 0, 0,
@@ -124,7 +124,6 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             cmdctx->_flags |= OPT_DESC_CAPS | OPT_DESC_REQS | OPT_DESC_CNFLS;
             break;
 
-
         case 'c':
             cmdctx->_flags |= OPT_DESC_CNFLS;
             break;
@@ -139,11 +138,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case 'R':
-            cmdctx->_flags |= OPT_DESC_REQPKGS;
+            cmdctx->_flags |= OPT_DESC_REQPKGS | OPT__NEED_DEPS;
             break;
 
         case 'B':
-            cmdctx->_flags |= OPT_DESC_REVREQPKGS;
+            cmdctx->_flags |= OPT_DESC_REVREQPKGS | OPT__NEED_DEPS;
             break;
 
         case 'f':
@@ -518,6 +517,7 @@ static void show_reqpkgs(struct cmdctx *cmdctx, struct pkg *pkg, int term_width)
 {
     char *colon = ", ";
     int i, ncol = IDENT;
+
 
     if (pkg->reqpkgs == NULL || n_array_size(pkg->reqpkgs) == 0)
         return;
@@ -1025,8 +1025,13 @@ static int desc(struct cmdctx *cmdctx)
 {
     tn_array               *pkgs = NULL;
     int                    i, err = 0, term_width;
+    unsigned               ldflags = POCLIDEK_LOAD_ALL;
 
-    poclidek_load_packages(cmdctx->cctx, POCLIDEK_LOAD_ALL);
+    if (cmdctx->_flags & OPT__NEED_DEPS) {
+        ldflags |= POCLIDEK_LOAD_SETUP_DEPS;
+    }
+
+    poclidek_load_packages(cmdctx->cctx, ldflags);
     pkgs = poclidek_resolve_packages(NULL, cmdctx->cctx, cmdctx->ts, 0);
     if (pkgs == NULL) {
         err++;
@@ -1042,6 +1047,7 @@ static int desc(struct cmdctx *cmdctx)
 
     if (term_width < 50)
         term_width = 79 - RMARGIN;
+
 
     for (i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg;

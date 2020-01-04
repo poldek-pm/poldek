@@ -44,15 +44,13 @@ struct capreq_idx_ent {
 int capreq_idx_init(struct capreq_idx *idx, unsigned type, int nelem);
 void capreq_idx_destroy(struct capreq_idx *idx);
 
-int capreq_idx_add(struct capreq_idx *idx, const char *capname,
+int capreq_idx_add(struct capreq_idx *idx, const char *capname, int capname_len,
                    struct pkg *pkg);
 
 void capreq_idx_remove(struct capreq_idx *idx, const char *capname,
                        struct pkg *pkg);
 
 const struct capreq_idx_ent *capreq_idx_lookup(struct capreq_idx *idx,
-                                               const char *capname);
+                                               const char *capname, int capname_len);
 
 #endif /* POLDEK_CAPREQIDX_H */
-    
-    

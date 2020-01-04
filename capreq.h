@@ -49,8 +49,9 @@
 struct capreq {
     uint8_t  cr_flags;
     uint8_t  cr_relflags;
-	/* XXX: Ignore warning (Setting a const char * variable may leak memory). */
-    const char *name;
+    /* XXX: Ignore warning (Setting a const char * variable may leak memory). */
+    const char *name;           /* allocated internally to deduplicate allocations */
+    uint8_t  namelen;
     uint8_t  cr_ep_ofs;
     uint8_t  cr_ver_ofs;         /* 0 if capreq hasn't version */
     uint8_t  cr_rel_ofs;         /* 0 if capreq hasn't release */
@@ -59,6 +60,7 @@ struct capreq {
 
 /* CAUTION: side effects! */
 #define capreq_name(cr)     (cr)->name
+#define capreq_name_len(cr)     (cr)->namelen
 
 #undef extern__inline
 #ifdef SWIG
@@ -111,18 +113,25 @@ EXPORT struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t relflags, int32_t flags);
 #ifndef SWIG
-EXPORT const char *capreq__alloc_name(const char *name);
+struct capreq_name_ent {
+    uint8_t len;
+    char name[0];
+};
+
+EXPORT const struct capreq_name_ent *capreq__alloc_name(const char *name, size_t len);
 #endif
 
 #define capreq_new_name_a(nam, crptr)                              \
     {                                                              \
         struct capreq *__cr;                                       \
-        const char *name = capreq__alloc_name(nam);                \
+        const struct capreq_name_ent *ent;                         \
+        ent = capreq__alloc_name(nam, strlen(nam));                \
         __cr = alloca(sizeof(*__cr) + 2);                          \
         __cr->cr_flags = __cr->cr_relflags = 0;                    \
         __cr->cr_ep_ofs = __cr->cr_ver_ofs = __cr->cr_rel_ofs = 0; \
         __cr->_buff[0] = '\0';                                     \
-        __cr->name = name;                                         \
+        __cr->name = ent->name;                                    \
+        __cr->namelen = ent->len;                                  \
         crptr = __cr;                                              \
     }
 

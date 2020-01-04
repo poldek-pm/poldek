@@ -37,7 +37,7 @@
 #include "pm/pm.h"
 #include "split.h"
 
-int poldek__load_sources_internal(struct poldek_ctx *ctx)
+int poldek__load_sources_internal(struct poldek_ctx *ctx, unsigned ps_setup_flags)
 {
     struct pkgset *ps;
     struct poldek_ts *ts;
@@ -47,57 +47,57 @@ int poldek__load_sources_internal(struct poldek_ctx *ctx)
     n_assert(ctx->ps == NULL);
 
     ts = ctx->ts;
-    
+
     if ((ps = pkgset_new(ctx->pmctx)) == NULL)
         return 0;
-    
+
     if (pm_get_dbdepdirs(ctx->pmctx, ctx->ts->rootdir, NULL, ps->depdirs) >= 0)
-        ps->flags |= PSET_DBDIRS_LOADED;
-    
+        ps->flags |= PSET_RT_DBDIRS_LOADED;
+
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE))
         ldflags |= PKGDIR_LD_DOIGNORE;
 
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_LDFULLFILELIST))
         ldflags |= PKGDIR_LD_FULLFLIST;
-    
+
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_LDALLDESC))
 	ldflags |= PKGDIR_LD_ALLDESC;
 
 #if 0 /* XXX now files are loaded on demand */
     if (strcmp(pm_get_name(ctx->pmctx), "pset") == 0)
         ldflags |= PKGDIR_LD_FULLFLIST;
-#endif    
+#endif
 
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_AUTODIRDEP))
         ldflags |= PKGDIR_LD_DIRINDEX;
-    
+
     if (!pkgset_load(ps, ldflags, ctx->sources))
         logn(LOGWARN, _("no packages loaded"));
-    
+
     MEMINF("after load");
-    
+
     if (ps == NULL)
         return 0;
-    
+
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_HOLD))
         packages_score(ps->pkgs, ctx->ts->hold_patterns, PKG_HELD);
 
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_IGNORE))
         packages_score_ignore(ps->pkgs, ctx->ts->ign_patterns, 1);
-    
+
     ctx->pkgdirs = n_ref(ps->pkgdirs);
 
     if (ts->getop(ts, POLDEK_OP_UNIQN))
         ps_flags |= PSET_UNIQ_PKGNAME;
 
-    pkgset_setup(ps, ps_flags);
-    
-    if (ctx->ts->prifile) 
+    pkgset_setup(ps, ps_setup_flags);
+
+    if (ctx->ts->prifile)
         packages_set_priorities(ps->pkgs, ctx->ts->prifile);
 
     ctx->ps = ps;
     MEMINF("after ps setup");
-    
+
     return 1;
 }
 
@@ -113,7 +113,7 @@ tn_array *poldek_search_avail_packages(struct poldek_ctx *ctx,
 {
     if (!poldek_load_sources(ctx))
         return NULL;
-    
+
     return pkgset_search(ctx->ps, tag, value);
 }
 
@@ -133,5 +133,3 @@ struct pkgdb *poldek_open_installeddb(struct poldek_ctx *ctx)
 {
     return poldek_ts_dbopen(ctx->ts, 0);
 }
-
-

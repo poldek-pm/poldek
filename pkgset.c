@@ -58,8 +58,6 @@ struct pkgset *pkgset_new(struct pm_ctx *pmctx)
     ps = n_malloc(sizeof(*ps));
     memset(ps, 0, sizeof(*ps));
     ps->pkgs = pkgs_array_new(4096);
-    ps->_pm_nevr_pkgs = NULL;
-    ps->_pm_nevr_pkgs = NULL;
     ps->ordered_pkgs = NULL;
 
     /* just merge pkgdirs->depdirs */
@@ -196,7 +194,7 @@ static int pkgset_index(struct pkgset *ps)
     }
     MEMINF("after index");
 
-#if 0
+#if ENABLE_TRACE
     capreq_idx_stats("cap", &ps->cap_idx);
     capreq_idx_stats("req", &ps->req_idx);
     capreq_idx_stats("obs", &ps->obs_idx);
@@ -227,64 +225,89 @@ int do_pkg_cmp_uniq_n(const struct pkg *p1, struct pkg *p2)
     return rc;
 }
 
+int pkgset_setup_deps(struct pkgset *ps, unsigned flags)
+{
+    int strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
+    int v = poldek_VERBOSE;
+    void *t = timethis_begin();
 
-int pkgset_setup(struct pkgset *ps, unsigned flags)
+    msgn(2, "Preparing package set dependencies...");
+
+    if ((ps->flags & PSET_RT_DEPS_PROCESSED) == 0) {
+        ps->flags |= PSET_RT_DEPS_PROCESSED;
+
+        msgn(3, " a). detecting file conflicts...");
+        v = poldek_set_verbose(-1);
+        file_index_find_conflicts(ps->file_idx, strict);
+        poldek_set_verbose(v);
+
+        msgn(3, " b). dependencies...");
+        pkgset_verify_deps(ps, strict);
+        MEMINF("after verify deps");
+
+        pkgset_verify_conflicts(ps, strict);
+    }
+
+    if ((flags & PSET_NOORDER) == 0 && (ps->flags & PSET_RT_ORDERED) == 0) {
+        ps->flags |= PSET_RT_ORDERED;
+
+        MEMINF("MEM before order");
+        msgn(3, " c). ordering...");
+        pkgset_order(ps, flags & PSET_VERIFY_ORDER);
+        MEMINF("after order");
+    }
+
+    timethis_end(3, t, "setup.deps");
+
+    return 1;
+}
+
+static int pkgset_setup_index(struct pkgset *ps, unsigned flags)
 {
     int n;
-    int strict;
-    int v = poldek_VERBOSE;
-    void *t;
+    void *t = timethis_begin();
 
-    t = timethis_begin();
     msgn(2, "Preparing package set...");
     MEMINF("before setup");
+
     ps->flags |= flags;
-    strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
 
     n = n_array_size(ps->pkgs);
     n_array_sort(ps->pkgs);
 
-    if (flags & PSET_UNIQ_PKGNAME) {
-        //n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_srcpri);
-        // <=  0.18.3 behaviour
-        n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
-        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)do_pkg_cmp_uniq_n);
+    n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
 
+    if (flags & PSET_UNIQ_PKGNAME) {
+        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)do_pkg_cmp_uniq_n);
     } else {
-        n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
         n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)do_pkg_cmp_uniq_nevr);
     }
 
     if (n != n_array_size(ps->pkgs)) {
         n -= n_array_size(ps->pkgs);
         msgn(1, ngettext(
-                 "Removed %d duplicate package from available set",
-                 "Removed %d duplicate packages from available set", n), n);
+                         "Removed %d duplicate package from available set",
+                         "Removed %d duplicate packages from available set", n), n);
     }
 
     MEMINF("before index");
-    msgn(3, " a). indexing...");
+    msgn(3, " indexing...");
     pkgset_index(ps);
     MEMINF("after index");
-
-    msgn(3, " b). detecting file conflicts...");
-    v = poldek_set_verbose(-1);
-    file_index_find_conflicts(ps->file_idx, strict);
-    poldek_set_verbose(v);
-
-    msgn(3, " c). dependencies...");
-    pkgset_verify_deps(ps, strict);
-    MEMINF("after verify deps");
-
-    pkgset_verify_conflicts(ps, strict);
-
-    MEMINF("MEM before order");
-    if ((flags & PSET_NOORDER) == 0) {
-        msgn(3, " d). ordering...");
-        pkgset_order(ps, flags & PSET_VERIFY_ORDER);
-    }
-    MEMINF("after setup[END]");
     timethis_end(3, t, "setup");
+    return ps->nerrors == 0;
+}
+
+int pkgset_setup(struct pkgset *ps, unsigned flags)
+{
+    if ((ps->flags & PSET_RT_INDEXED) == 0) {
+        ps->flags |= PSET_RT_INDEXED;
+        pkgset_setup_index(ps, flags);
+    }
+
+    if ((flags & PSET_NODEPS) == 0)
+        pkgset_setup_deps(ps, flags);
+
     return ps->nerrors == 0;
 }
 
@@ -302,7 +325,7 @@ static int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt)
     if (pkg->caps)
         for (j=0; j < n_array_size(pkg->caps); j++) {
             struct capreq *cap = n_array_nth(pkg->caps, j);
-            capreq_idx_add(&ps->cap_idx, capreq_name(cap), pkg);
+            capreq_idx_add(&ps->cap_idx, capreq_name(cap), capreq_name_len(cap), pkg);
         }
 
     if (pkg->reqs)
@@ -310,16 +333,16 @@ static int do_pkgset_add_package(struct pkgset *ps, struct pkg *pkg, int rt)
             struct capreq *req = n_array_nth(pkg->reqs, j);
             if (capreq_is_rpmlib(req)) /* rpm caps are too expensive */
                 continue;
-            capreq_idx_add(&ps->req_idx, capreq_name(req), pkg);
+            capreq_idx_add(&ps->req_idx, capreq_name(req), capreq_name_len(req), pkg);
         }
 
     if (pkg->cnfls)
         for (j=0; j < n_array_size(pkg->cnfls); j++) {
             struct capreq *cnfl = n_array_nth(pkg->cnfls, j);
             if (capreq_is_obsl(cnfl))
-                capreq_idx_add(&ps->obs_idx, capreq_name(cnfl), pkg);
+                capreq_idx_add(&ps->obs_idx, capreq_name(cnfl), capreq_name_len(cnfl), pkg);
             else
-                capreq_idx_add(&ps->cnfl_idx, capreq_name(cnfl), pkg);
+                capreq_idx_add(&ps->cnfl_idx, capreq_name(cnfl), capreq_name_len(cnfl), pkg);
         }
 
     pkgfl2fidx(pkg, ps->file_idx, rt);
@@ -376,7 +399,6 @@ int pkgset_remove_package(struct pkgset *ps, struct pkg *pkg)
     return 1;
 }
 
-
 int pkgset_order(struct pkgset *ps, int verb)
 {
     int nloops;
@@ -386,6 +408,7 @@ int pkgset_order(struct pkgset *ps, int verb)
 
     if (ps->ordered_pkgs != NULL)
         n_array_free(ps->ordered_pkgs);
+
     ps->ordered_pkgs = NULL;
 
     nloops = packages_order(ps->pkgs, &ps->ordered_pkgs, PKGORDER_INSTALL);
@@ -446,22 +469,23 @@ tn_array *find_capreq(struct pkgset *ps, tn_array *pkgs,
                       const char *name)
 {
     const struct capreq_idx_ent *ent = NULL;
+    int len = strlen(name);
 
     switch (tag) {
         case PS_SEARCH_CAP:
-            ent = capreq_idx_lookup(&ps->cap_idx, name);
+            ent = capreq_idx_lookup(&ps->cap_idx, name, len);
             break;
 
         case PS_SEARCH_REQ:
-            ent = capreq_idx_lookup(&ps->req_idx, name);
+            ent = capreq_idx_lookup(&ps->req_idx, name, len);
             break;
 
         case PS_SEARCH_OBSL:
-            ent = capreq_idx_lookup(&ps->obs_idx, name);
+            ent = capreq_idx_lookup(&ps->obs_idx, name, len);
             break;
 
         case PS_SEARCH_CNFL:
-            ent = capreq_idx_lookup(&ps->cnfl_idx, name);
+            ent = capreq_idx_lookup(&ps->cnfl_idx, name, len);
             break;
 
         default:

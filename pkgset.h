@@ -22,23 +22,21 @@ struct file_index;
 struct pkgdir;
 
 struct pkgset {
-    unsigned           flags;
-    
+    uint32_t           flags;
+
     tn_array           *pkgs;           /*  pkg* []    */
-    tn_array           *_pkgs;
-    tn_array           *_pm_nevr_pkgs;
     tn_array           *ordered_pkgs;   /* in install order pkg* []    */
-    
+
     tn_array           *pkgdirs;        /*  pkgdir* [] */
- 
+
     tn_array           *depdirs;        /*  char* []   */
     int                nerrors;
-    
+
     struct pm_ctx      *pmctx;
-    
+
     tn_hash            *_vrfy_unreqs;
     tn_array           *_vrfy_file_conflicts;
-    
+
     struct capreq_idx  cap_idx;    /* 'name'  => *pkg[]  */
     struct capreq_idx  req_idx;    /*  -"-               */
     struct capreq_idx  obs_idx;    /*  -"-               */
@@ -72,13 +70,18 @@ int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir);
 #define PSET_VRFY_MERCY          (1 << 0)
 #define PSET_VRFY_PROMOTEPOCH    (1 << 1)
 
-#define PSET_DBDIRS_LOADED       (1 << 4)
-
+#define PSET_NODEPS              (1 << 5) /* skip deps processing (lazy), implies PSET_NOORDER */
 #define PSET_NOORDER             (1 << 6)
 #define PSET_VERIFY_ORDER        (1 << 7)
 #define PSET_UNIQ_PKGNAME        (1 << 10)
 
-int pkgset_setup(struct pkgset *ps, unsigned flags);
+#define PSET_RT_DBDIRS_LOADED    (1 << 11)
+#define PSET_RT_INDEXED          (1 << 12)
+#define PSET_RT_DEPS_PROCESSED   (1 << 13)
+#define PSET_RT_ORDERED          (1 << 14)
+
+int pkgset_setup(struct pkgset *ps, unsigned flags); /* uniqness, indexing */
+int pkgset_setup_deps(struct pkgset *ps, unsigned flags); /* deps processing */
 
 #include "poldek.h"
 enum pkgset_search_tag {
@@ -86,7 +89,7 @@ enum pkgset_search_tag {
     PS_SEARCH_NAME  = POLDEK_ST_NAME,
     PS_SEARCH_CAP   = POLDEK_ST_CAP,        /* what provides cap */
     PS_SEARCH_REQ   = 4,        /* what requires */
-    PS_SEARCH_CNFL  = 5,        
+    PS_SEARCH_CNFL  = 5,
     PS_SEARCH_OBSL  = 6,
     PS_SEARCH_FILE  = 7,
     PS_SEARCH_PROVIDES = 8,     /* what provides cap or file */

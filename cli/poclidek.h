@@ -15,7 +15,7 @@
 
 #include <trurl/narray.h>
 #include <trurl/nbuf.h>
-#ifndef POCLIDEK_ITSELF 
+#ifndef POCLIDEK_ITSELF
 # include <poldek/poldek.h>
 #endif
 
@@ -34,7 +34,7 @@ EXPORT void poclidek_free(struct poclidek_ctx *cctx);
 #define POCLIDEK_LOAD_INSTALLED (1 << 1)
 #define POCLIDEK_LOAD_ALL       ((1 << 0) | (1 << 1))
 #define POCLIDEK_LOAD_RELOAD    (1  << 5)
-    
+#define POCLIDEK_LOAD_SETUP_DEPS (1 << 6)
 
 EXPORT int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags);
 

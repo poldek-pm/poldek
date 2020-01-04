@@ -1029,6 +1029,17 @@ static int ts_run_uninstall(struct poldek_ts *ts)
     return rc;
 }
 
+static int do_load_sources(struct poldek_ctx *ctx)
+{
+    int rc = poldek_load_sources(ctx);
+
+    if (rc && (ctx->_ps_setup_flags & PSET_NODEPS))
+        pkgset_setup_deps(ctx->ps, 0);
+
+    return rc;
+}
+
+/* just verify deps, conflicts, ordering, etc */
 static int ts_run_verify(struct poldek_ts *ts)
 {
     tn_array *pkgs = NULL, *pkgs_unordered = NULL;
@@ -1038,13 +1049,13 @@ static int ts_run_verify(struct poldek_ts *ts)
     //n_assert(poldek_ts_issetf(ts, POLDEK_TS_VERIFY));
 
     if (poldek_ts_get_arg_count(ts) == 0) {
-        poldek_load_sources(ts->ctx);
+        do_load_sources(ts->ctx);
 
     } else {
         if (!ts_prerun(ts))
             return 0;
 
-        if (!poldek_load_sources(ts->ctx))
+        if (!do_load_sources(ts->ctx))
             return 0;
 
         rc = ts_mark_arg_packages(ts, TS_MARK_DEPS | TS_MARK_VERBOSE |
@@ -1145,8 +1156,9 @@ int poldek_ts_run(struct poldek_ts *ts, unsigned flags)
         return 0;
 
     n_assert(ts_run);
-    if (ts_run->flags & TS_RUN_NEEDAVSET)
-        poldek_load_sources(ts->ctx);
+    if (ts_run->flags & TS_RUN_NEEDAVSET) {
+        do_load_sources(ts->ctx);
+    }
 
     if ((ts_run->flags & TS_RUN_NOPRERUN) == 0)
         if (!ts_prerun(ts))

@@ -692,6 +692,10 @@ int main(int argc, char **argv)
     DBGF("mode %d %s %s\n", mode, n_basenam(argv[0]), argv[0]);
 
     ctx = poldek_new(0);
+
+    /* enable lazy deps processing */
+    poldek_configure(ctx, POLDEK_CONF_LAZY_DEPPROCESS, "1");
+
     ts = poldek_ts_new(ctx, 0);
     cctx = poclidek_new(ctx);
 

@@ -37,9 +37,9 @@ EXPORT void poldek_free(struct poldek_ctx *ctx);
 EXPORT struct poldek_ctx *poldek_link(struct poldek_ctx *ctx);
 
 #define POLDEK_CONF_OPT             0
-#define POLDEK_CONF_CACHEDIR        3 
+#define POLDEK_CONF_CACHEDIR        3
 #define POLDEK_CONF_FETCHDIR        4
-#define POLDEK_CONF_ROOTDIR         5 
+#define POLDEK_CONF_ROOTDIR         5
 #define POLDEK_CONF_DUMPFILE        6
 #define POLDEK_CONF_PRIFILE         7
 #define POLDEK_CONF_SOURCE          8
@@ -60,6 +60,7 @@ EXPORT struct poldek_ctx *poldek_link(struct poldek_ctx *ctx);
 #define POLDEK_CONF_CHOOSEEQUIV_CB     25
 #define POLDEK_CONF_CHOOSESUGGESTS_CB  26
 #define POLDEK_CONF_VFILEPROGRESS      27
+#define POLDEK_CONF_LAZY_DEPPROCESS    28
 
 EXPORT int poldek_configure(struct poldek_ctx *ctx, int param, ...);
 
@@ -72,6 +73,9 @@ EXPORT int poldek_setup_cachedir(struct poldek_ctx *ctx);
 EXPORT int poldek_setup(struct poldek_ctx *ctx);
 
 EXPORT int poldek_load_sources(struct poldek_ctx *ctx);
+
+/* need to be call manually if POLDEK_CONF_LAZY_DEPPROCESS is set */
+EXPORT int poldek_setup_pkgset_deps(struct poldek_ctx *ctx);
 
 EXPORT int poldek_is_interactive_on(const struct poldek_ctx *ctx);
 
@@ -89,7 +93,7 @@ enum poldek_search_tag {
     POLDEK_ST_NAME  = 2,
     POLDEK_ST_CAP   = 3,        /* what provides cap */
     POLDEK_ST_REQ   = 4,        /* what requires */
-    POLDEK_ST_CNFL  = 5,        
+    POLDEK_ST_CNFL  = 5,
     POLDEK_ST_OBSL  = 6,
     POLDEK_ST_FILE  = 7,
     POLDEK_ST_PROVIDES = 8,     /* what provides cap or file */
@@ -102,10 +106,10 @@ EXPORT tn_array *poldek_search_avail_packages(struct poldek_ctx *ctx,
 EXPORT tn_array *poldek_get_avail_packages(struct poldek_ctx *ctx);
 
 
-EXPORT struct pkgdir *poldek_load_destination_pkgdir(struct poldek_ctx *ctx, 
+EXPORT struct pkgdir *poldek_load_destination_pkgdir(struct poldek_ctx *ctx,
                                               unsigned ldflags);
 
 EXPORT int poldek_split(const struct poldek_ctx *ctx, unsigned size_mb,
                  unsigned first_free_space_mb, const char *outprefix);
 
-#endif 
+#endif

@@ -38,7 +38,7 @@ static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi);
 
 static tn_hash *capreqname_h = NULL;
 static tn_alloc *capreqname_na = NULL;
-static const char *capreqname_last_name = NULL; /* semi-cache */
+static struct capreq_name_ent *capreqname_last_ent = NULL; /* semi-cache */
 
 static void capreqname_init(void)
 {
@@ -47,32 +47,39 @@ static void capreqname_init(void)
     n_hash_ctl(capreqname_h, TN_HASH_NOCPKEY);
 }
 
-const char *capreq__alloc_name(const char *name)
+const struct capreq_name_ent *capreq__alloc_name(const char *name, size_t len)
 {
-    unsigned khash = 0;
-    int klen = 0;
-    char *naname;
+    struct capreq_name_ent *ent;
+
+    n_assert(len > 0);
+    n_assert(len <= UINT8_MAX);
+
+    //n_assert(strlen(name) == len);
 
     if (!capreqname_h)
         capreqname_init();
 
-    if (capreqname_last_name && strcmp(capreqname_last_name, name) == 0)
-        return capreqname_last_name;
+    if (capreqname_last_ent && strcmp(capreqname_last_ent->name, name) == 0)
+        return capreqname_last_ent;
 
     //if (n_hash_size(capreqname_h) % 5000 == 0)
     //    n_hash_stats(capreqname_h);
 
-    if ((naname = n_hash_get_ex(capreqname_h, name, &klen, &khash))) {
-        capreqname_last_name = naname;
-        return naname;
+    uint32_t khash = n_hash_compute_hash(capreqname_h, name, len);
+
+    if ((ent = n_hash_hget(capreqname_h, name, len, khash))) {
+        capreqname_last_ent = ent;
+        return ent;
     }
 
-    naname = capreqname_na->na_malloc(capreqname_na, klen + 1);
-    memcpy(naname, name, klen + 1);
-    capreqname_last_name = naname;
-    n_hash_insert_ex(capreqname_h, naname, klen, khash, naname);
+    ent = capreqname_na->na_malloc(capreqname_na, sizeof(*ent) + len + 1);
+    ent->len = len;
+    n_strncpy(ent->name, name, len + 1);
 
-    return naname;
+    capreqname_last_ent = ent;
+    n_hash_hinsert(capreqname_h, ent->name, ent->len, khash, ent);
+
+    return ent;
 }
 
 void capreq_free_na(tn_alloc *na, struct capreq *cr)
@@ -376,7 +383,9 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
     cr->cr_flags = cr->cr_relflags = 0;
     cr->cr_ep_ofs = cr->cr_ver_ofs = cr->cr_rel_ofs = 0;
 
-    cr->name = capreq__alloc_name(name);
+    const struct capreq_name_ent *ent = capreq__alloc_name(name, name_len);
+    cr->name = ent->name;
+    cr->namelen = ent->len;
 
     buf = cr->_buff;
     *buf++ = '\0';          /* set buf[0] to '\0' */
@@ -633,15 +642,19 @@ static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi)
     cr->cr_relflags = cr_buf[0];
     cr->cr_flags    = cr_buf[1];
 
-    for (i=2; i < 5; i++)
+    for (i=2; i < 5; i++) {
         if (cr_buf[i])
             cr_buf[i] -= name_len + 1;
+    }
 
     cr->cr_ep_ofs   = cr_buf[2];
     cr->cr_ver_ofs  = cr_buf[3];
     cr->cr_rel_ofs  = cr_buf[4];
 
-    cr->name = capreq__alloc_name((const char *)name);
+    const struct capreq_name_ent *ent = capreq__alloc_name((const char *)name, name_len);
+    n_assert(name_len == ent->len);
+    cr->name = ent->name;
+    cr->namelen = ent->len;
 
     if (na)
         cr->cr_relflags |= __NAALLOC;

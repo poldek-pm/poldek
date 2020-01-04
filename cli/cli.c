@@ -598,28 +598,34 @@ int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags)
     int nerr = 0;
 
 
-    DBGF("%d\n", flags);
+    DBGF("%u %u\n", flags & POCLIDEK_LOAD_AVAILABLE, flags & POCLIDEK_LOAD_SETUP_DEPS);
 
     if (flags & POCLIDEK_LOAD_AVAILABLE) {
         if ((cctx->_flags & POLDEKCLI_LOADED_AVAILABLE) == 0) {
+            tn_array *pkgs = NULL;
+
             cctx->_flags |= POLDEKCLI_LOADED_AVAILABLE;
 
-            if (!poldek_load_sources(cctx->ctx))
+            if (!poldek_load_sources(cctx->ctx)) {
                 nerr++;
-            else {
-                tn_array *pkgs = poldek_get_avail_packages(cctx->ctx);
-                if (pkgs) {
-                    struct pkg_dent *dir;
-                    n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_nvr_strcmp);
-                    dir = poclidek_dent_setup(cctx, POCLIDEK_AVAILDIR, pkgs, 0);
-                    n_array_sort(pkgs);
-                    cctx->pkgs_available = pkgs;
-                    cctx->homedir = dir;
-                    DBGF("currdir (%s)\n", cctx->rootdir->name);
-                    if (cctx->currdir == cctx->rootdir)
-                        poclidek_chdir(cctx, dir->name);
-                }
+            } else if ((pkgs = poldek_get_avail_packages(cctx->ctx)) != NULL) {
+                struct pkg_dent *dir;
+
+                n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_nvr_strcmp);
+                dir = poclidek_dent_setup(cctx, POCLIDEK_AVAILDIR, pkgs, 0);
+
+                n_array_sort(pkgs);
+                cctx->pkgs_available = pkgs;
+                cctx->homedir = dir;
+
+                DBGF("currdir (%s)\n", cctx->rootdir->name);
+                if (cctx->currdir == cctx->rootdir)
+                    poclidek_chdir(cctx, dir->name);
             }
+        }
+
+        if (nerr == 0 && (flags & POCLIDEK_LOAD_SETUP_DEPS)) {
+            poldek_setup_pkgset_deps(cctx->ctx);
         }
     }
 

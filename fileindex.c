@@ -79,10 +79,12 @@ static void file_conflict_free(struct file_conflict *cnfl)
 static void add_file_conflict(tn_hash *cnflh, struct file_conflict *cnfl)
 {
     tn_array *cnfls;
+    int klen;
+    unsigned khash;
 
-    if ((cnfls = n_hash_get(cnflh, cnfl->path)) == NULL) {
+    if ((cnfls = n_hash_get_ex(cnflh, cnfl->path, &klen, &khash)) == NULL) {
         cnfls = n_array_new(8, (tn_fn_free)file_conflict_free, NULL);
-        n_hash_insert(cnflh, cnfl->path, cnfls);
+        n_hash_insert_ex(cnflh, cnfl->path, klen, khash, cnfls);
     }
     n_array_push(cnfls, cnfl);
 }
