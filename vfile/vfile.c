@@ -533,7 +533,7 @@ struct vfile *do_vfile_open(const char *path, int vftype, int vfmode,
     tmpdir = buf;
 
     if (vfile__vf_fetch(path, tmpdir, 0, NULL, urlabel, &ftrc)) {
-        char lpath[PATH_MAX], upath[PATH_MAX];;
+        char lpath[2*PATH_MAX], upath[PATH_MAX];
 
         snprintf(lpath, sizeof(lpath), "%s/%s", tmpdir, n_basenam(path));
 
