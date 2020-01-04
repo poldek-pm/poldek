@@ -254,7 +254,7 @@ void store_package(uint32_t package_no, struct pkg *pkg, struct tndb *db,
             n_buf_clean(nbuf);
             nbuf = dirarray_join(nbuf, owned, ":");
 
-            /* ugly, but what for another package_key() call */
+            /* ugly, but saves another package_key() call */
             key[1] = PREFIX_PKGKEY_OWNDIR;
             tndb_put(db, key, klen, n_buf_ptr(nbuf), n_buf_size(nbuf));
         }
@@ -419,15 +419,15 @@ static tn_hash *load_keymap(struct tndb *db, int npackages)
         char *id;
 
         val[vlen] = '\0';
-        DBGF("key = %s\n", key);
+        unsigned hash = n_hash_compute_hash(keymap, val, vlen);
 
         id = na->na_malloc(na, klen - PREFIXLEN + 1);
         memcpy(id, key + PREFIXLEN, klen - PREFIXLEN); /* skipping prefix */
         id[klen - PREFIXLEN] = '\0';
 
-        DBGF("%s => %s\n", val, id);
+        DBGF("%s => %s\n", key, val);
 
-        n_hash_replace(keymap, val, id);
+        n_hash_hinsert(keymap, val, vlen, hash, id);
 
         if (vlen < vlen_max)   /* to avoid needless tndb_it_rget()'s reallocs */
             vlen = vlen_max;
