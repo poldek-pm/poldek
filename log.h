@@ -15,8 +15,8 @@
 
 #ifndef __GNUC__
 #  undef __attribute__
-#  define __attribute__(x) /*nothing*/                                      
-#endif   
+#  define __attribute__(x) /*nothing*/
+#endif
 
 #ifndef EXPORT
 # define EXPORT extern
@@ -65,10 +65,10 @@ EXPORT void poldek_log_reset_appenders(void);
 
 EXPORT void poldek_log(int pri, const char *fmt, ...)
    __attribute__((format(printf,2,3)));
-   
+
 EXPORT void poldek_log_i(int pri, int indent, const char *fmt, ...)
    __attribute__((format(printf,3,4)));
-   
+
 EXPORT void poldek_vlog(int pri, int indent, const char *fmt, va_list args);
 
 #ifndef POLDEK_LOG_H_INTERNAL
@@ -81,7 +81,7 @@ EXPORT void poldek_vlog(int pri, int indent, const char *fmt, va_list args);
 
 #define log_i(pri, indent, fmt, args...) \
        poldek_log_i(pri, indent, fmt, ## args)
-  
+
 #define msg(verbose_level, fmt, args...)   \
   do {                                     \
     if ((verbose_level) <= poldek_VERBOSE) \
@@ -154,34 +154,34 @@ EXPORT void poldek_meminf(int vlevel, const char *fmt, ...)
         if (poldek_TRACE > 0)                                           \
             log_i(LOGDEBUG|LOGOPT_N, indent, "%s() " fmt, __FUNCTION__, ## args); \
     } while(0)
-                
+
 # define trace(indent, fmt, args...)                                    \
     do {                                                                \
         if (poldek_TRACE > 0)                                           \
             log_i(LOGDEBUG|LOGOPT_N, indent, fmt, ## args);              \
     } while(0)
-    
+
 
 #if ENABLE_TRACE
 # define DBGF(fmt, args...)  fprintf(stdout, "dbg:%-18s: " fmt, __FUNCTION__ , ## args)
 # define DBG(fmt, args...)   fprintf(stdout, "dbg:" fmt, ## args)
 # define MEMINF(fmt, args...) poldek_meminf(-5, "%-18s: " fmt, __FUNCTION__ , ## args)
 # define DBGFIF(cond, fmt, args...) do { if (cond) { fprintf(stdout, "%-18s: " fmt, __FUNCTION__ , ## args); } } while (0)
-#else 
+#else
 
 static inline int dbgf_noop( const char *fmt, ... )
         __attribute__ ((always_inline))
         __attribute__ ((__format__ (__printf__, 1, 2)));
- 
+
 static inline int dbgf_noop( const char *fmt __attribute__ ((unused)), ... )
 {
         return 0;
 }
 
-# define DBGF(fmt, args...)	dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args)
-# define DBG(fmt, args...)	dbgf_noop( "" fmt, ## args)
+# define DBGF(fmt, args...)	while(0) { dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args); }
+# define DBG(fmt, args...)	while(0) { dbgf_noop( "" fmt, ## args); }
 # define MEMINF(fmt, args...)	do { dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args); } while (0)
-# define DBGFIF(cond, fmt, args...)	do { if (cond) dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args); } while (0)
+# define DBGFIF(cond, fmt, args...) do { if (cond) dbgf_noop( "%-18s" fmt, __FUNCTION__, ## args); } while (0)
 #endif
 
 #define DBGF_NULL(fmt, args...) ((void) 0)
