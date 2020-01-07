@@ -480,6 +480,12 @@ and [filename]*-source.conf[/filename], file getters are declared in
   <option name="multilib" type="boolean3" default="auto" op="MULTILIB"/>
    <description>
     Multilib mode. This feature is not finished yet.
+ </description>
+
+  <option name="upgrade multiple instances" type="boolean" default="no" op="MULTIINST"/>
+   <description>
+     Handle upgrades of multiply installed packages by upgrading "best fitted" version only.
+     RPM does not support such scenario, so new package is installed first and then old one is uninstalled.
   </description>
 
   <option name="suggests" type="boolean" default="yes" op="SUGGESTS">
@@ -487,7 +493,6 @@ and [filename]*-source.conf[/filename], file getters are declared in
     Taking into account package Suggests.
     </description>
   </option>
-
 
   <option name="obsoletes" type="boolean" default="yes" op="OBSOLETES">
     <description>

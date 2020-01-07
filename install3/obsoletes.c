@@ -16,6 +16,7 @@
 
 #include <fnmatch.h>
 #include "ictx.h"
+#include "pkgcmp.h"
 
 static void orphan_free(struct orphan *o)
 {
@@ -216,8 +217,144 @@ int is_requireable_path(const char *path)
     return 1;
 }
 
-int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
-                             struct i3pkg *i3pkg)
+static int ver_distance(struct pkg *p1, struct pkg *p2)
+{
+    int n1, n2, distance = 0;
+    const char **s1 = n_str_tokl_n(p1->ver, ".", &n1);
+    const char **s2 = n_str_tokl_n(p2->ver, ".", &n2);
+
+    DBGF("%s vs %s; %d, %d\n", p1->ver, p2->ver, n1, n2);
+
+    if (n1 != n2) { /* loong distance for inconsistent versions */
+        distance = (n1 + n2) * 1000;
+        goto l_end;
+    }
+
+    // compare segments
+    for (int i = 0; i < n1; i++) {
+        const char *v1 = s1[i];
+        const char *v2 = s2[i];
+        long v1i = 0, v2i = 0;
+
+        if (v1) {
+            v1i = atoi(v1);
+        }
+
+        if (v2) {
+            v2i = atoi(v2);
+        }
+
+        DBGF("%d, %ld cmp %ld, distance += abs(%ld) * %d\n", i, v1i, v2i, v1i-v2i, n1-i);
+        distance += abs(v1i-v2i) * (n1-i);
+    }
+
+ l_end:
+    n_str_tokl_free(s1);
+    n_str_tokl_free(s2);
+
+    DBGF("re %s vs %s  ==> %d\n", p1->ver, p2->ver, distance);
+
+    return distance;
+}
+
+/* number of insalled instances */
+static int obsoleted_multiinsts(struct i3pkg *i3pkg, tn_array *obsoleted) {
+    int i, n = 0;
+
+    for (i = 0; i < n_array_size(obsoleted); i++) {
+        struct pkg *dbpkg = n_array_nth(obsoleted, i);
+
+        /* every obsoleted pkg must be actual pkg instance */
+        if (pkg_cmp_name(i3pkg->pkg, dbpkg) == 0) {
+            n += 1;
+        }
+    }
+
+    return n;
+}
+
+
+/* when multiple instances are installed, obsolete only one and keep the rest installed */
+static
+int handle_multiinsts(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg, tn_array *obsoleted)
+{
+    int min_distance = INT_MAX;
+    int i, min_i = 0, re = 1;
+    int *distances = alloca(n_array_size(obsoleted) * sizeof(int));
+
+    n_assert(n_array_size(obsoleted) > 1);
+
+    for (i = 0; i < n_array_size(obsoleted); i++) {
+        struct pkg *dbpkg = n_array_nth(obsoleted, i);
+
+        /* every obsoleted pkg must be actual pkg instance */
+        if (pkg_cmp_name(i3pkg->pkg, dbpkg) != 0) {
+            return 0;
+        }
+
+        int distance = ver_distance(i3pkg->pkg, dbpkg);
+        distances[i] = distance;
+        if (distance < min_distance) {
+            min_distance = distance;
+            min_i = i;
+        }
+
+        DBGF("%s %s => %d\n", pkg_id(i3pkg->pkg), pkg_id(dbpkg), distance);
+    }
+
+    int n = 0;
+    for (i = 0; i < n_array_size(obsoleted); i++) {
+        if (distances[i] == min_distance)
+            n++;
+    }
+    DBGF("min at %d %d, totalmin %d\n", min_i, min_distance, n);
+
+    struct pkg *dbpkg_to_uninstall = pkg_link(n_array_nth(obsoleted, min_i));
+    tracef(indent + 2, "upgrade %s only", pkg_id(dbpkg_to_uninstall));
+
+    tn_array *keeps = n_array_clone(obsoleted);
+
+    for (i = 0; i < n_array_size(obsoleted); i++) {
+        struct pkg *dbpkg = n_array_nth(obsoleted, i);
+        if (i != min_i) {
+            n_array_push(keeps, pkg_link(dbpkg));
+            tracef(indent + 2, "keep %s", pkg_id(dbpkg));
+        }
+    }
+
+    /* put to obsoleted only one package */
+    n_array_clean(obsoleted);
+    n_assert(n_array_size(obsoleted) == 0);
+    n_array_push(obsoleted, dbpkg_to_uninstall);
+
+    n_array_unshift(keeps, dbpkg_to_uninstall); /* first will be uninstalled, see install.c */
+    n_hash_insert(ictx->multi_obsoleted, pkg_id(i3pkg->pkg), keeps);
+
+    return re;
+}
+
+static
+int process_multiinsts(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg, tn_array *obsoleted)
+{
+    int ninstances = obsoleted_multiinsts(i3pkg, obsoleted);
+    if (ninstances < 2) {       /* nothing to do */
+        goto l_end;
+    }
+
+    if (ninstances != n_array_size(obsoleted)) { /* other packages are obsoleted too */
+        // give up here?
+        goto l_end;
+    }
+
+    n_assert(ninstances == n_array_size(obsoleted));
+    handle_multiinsts(indent, ictx, i3pkg, obsoleted);
+
+ l_end:
+    return n_array_size(obsoleted);
+}
+
+
+int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx, struct i3pkg *i3pkg)
 {
     struct pkg       *pkg = i3pkg->pkg;
     struct pkgdb     *db = ictx->ts->db;
@@ -246,10 +383,17 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
                                     getflags, PKG_LDWHOLE_FLDEPDIRS);
 
     n = obsoleted ? n_array_size(obsoleted) : 0;
+    if (n > 1) {
+        process_multiinsts(indent, ictx, i3pkg, obsoleted);
+        n = n_array_size(obsoleted);
+    }
+
     trace(indent + 1, "%s removes %d package(s)", pkg_id(pkg), n);
+
     if (n == 0)
         return 1;
 
+    DBGF("%s n=%d\n", pkg_id(pkg), n);
     for (i=0; i < n_array_size(obsoleted); i++) {
         struct pkg *dbpkg = n_array_nth(obsoleted, i);
         struct pkg_cap_iter *it;
@@ -350,7 +494,7 @@ int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,
     }
 
     n_array_cfree(&orphans);
-    n_array_free(unsatisfied_caps); /* XXX: must free()d after orphans array,
+    n_array_free(unsatisfied_caps); /* must be free()d after orphans array,
                                        caps in array are "weak"-referenced */
     return 1;
 }

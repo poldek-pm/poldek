@@ -45,7 +45,7 @@ struct poldek_iinf;
 #define I3ERR_REQUIREDBY     (1 << 6) | I3ERR_CLASS_DEP
 #define I3ERR_CONFLICT       (1 << 7) | I3ERR_CLASS_CNFL
 #define I3ERR_DBCONFLICT     (1 << 8) | I3ERR_CLASS_CNFL
-#define I3ERR_FATAL          (1 << 10) 
+#define I3ERR_FATAL          (1 << 10)
 struct i3ctx;
 
 void i3_error(struct i3ctx *ictx, struct pkg *pkg,
@@ -77,29 +77,33 @@ struct i3pkg {
 
     tn_array       *obsoletedby;  /* packages obsoleted by */
     tn_array       *markedby;     /* packages marked by */
-    
+
     /* unused */
     //tn_hash        *candidates; /* str(req) => pkg[] pairs */
+
+    uint32_t       _refcnt;
 };
 
 struct i3pkg *i3pkg_new(struct pkg *pkg, unsigned flags,
                         struct pkg *bypkg, const struct capreq *byreq,
                         enum i3_byflag byflag);
-
+struct i3pkg *i3pkg_link(struct i3pkg *i3pkg);
 void i3pkg_free(struct i3pkg *i3pkg);
 
 struct i3ctx {
     tn_hash           *errors;       /* pkg_id => i3_error[] pairs */
     tn_array          *i3pkg_stack;  /* i3pkg stack */
-    
+
     struct poldek_ts  *ts;
     struct pkgset     *ps;          /* available packages, ts->ps alias, for short */
-    
+
     struct iset       *inset;       /* packages to install */
     struct iset       *unset;       /* packages to remove */
-    
+
     struct pkgmark_set *processed;  /* to mark pkg processed path */
-    
+
+    tn_hash           *multi_obsoleted; /* pkg_id => real obsoleted packages (muli-instances upgrade) */
+
     unsigned           ma_flags;    /* match flags (POLDEK_MA_*) */
     int                abort;       /* abort processing? */
 };
@@ -138,13 +142,13 @@ int i3_mark_namegroup(struct i3ctx *ictx,
 
 /* misc.c */
 int i3_pkgdb_match_req(struct i3ctx *ictx, const struct capreq *req);
-    
+
 int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc);
 int i3_is_pkg_installable(struct poldek_ts *ts, struct pkg *pkg,
-                           int is_hand_marked);
+                          int is_hand_marked);
 
 int i3_select_best_pkg(int indent, struct i3ctx *ictx,
-                        const struct pkg *marker, tn_array *candidates);
+                       const struct pkg *marker, tn_array *candidates);
 
 int i3_find_req(int indent, struct i3ctx *ictx,
                  const struct pkg *pkg, const struct capreq *req,
@@ -163,7 +167,7 @@ int i3_process_pkg_conflicts(int indent, struct i3ctx *ictx,
 /* obsoletes.c */
 struct orphan {
     struct pkg *pkg;
-    tn_array   *reqs; 
+    tn_array   *reqs;
 };
 
 int i3_process_pkg_obsoletes(int indent, struct i3ctx *ictx,

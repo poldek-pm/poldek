@@ -60,6 +60,14 @@ int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc)
     }
 
     if (n) {
+        if (n > 1) {
+            /*
+               order by E-V-R, DESC to compare with newest installed version
+            */
+            n_array_isort_ex(dbpkgs, (tn_fn_cmp)pkg_cmp_evr);
+            n_array_reverse(dbpkgs);
+        }
+
         struct pkg *dbpkg = n_array_nth(dbpkgs, 0);
         *cmprc = pkg_cmp_evr(pkg, dbpkg);
     }
@@ -70,13 +78,16 @@ int i3_is_pkg_installed(struct poldek_ts *ts, struct pkg *pkg, int *cmprc)
 
 /* RET: 0 - not installable,  1 - installable,  -1 - something wrong */
 int i3_is_pkg_installable(struct poldek_ts *ts, struct pkg *pkg,
-                           int is_hand_marked)
+                          int is_hand_marked)
 {
     int cmprc = 0, npkgs, installable = 1, freshen = 0, force;
 
     freshen = ts->getop(ts, POLDEK_OP_FRESHEN);
     force = ts->getop(ts, POLDEK_OP_FORCE);
     npkgs = i3_is_pkg_installed(ts, pkg, &cmprc);
+
+    /* if (npkgs > 1 && is_multiple)
+           *is_multiple = 1;  */
 
     n_assert(npkgs >= 0);
 
@@ -86,11 +97,14 @@ int i3_is_pkg_installable(struct poldek_ts *ts, struct pkg *pkg,
         if (is_hand_marked && freshen)
             installable = 0;
 
-    } else if (is_hand_marked && npkgs > 1 &&
+    } else if (cmprc != 0 && is_hand_marked && npkgs > 1 &&
                poldek_ts_issetf(ts, POLDEK_TS_UPGRADE) && force == 0) {
-        logn(LOGERR, _("%s: multiple instances installed, give up"), pkg->name);
-        installable = -1;
-
+        if (ts->getop(ts, POLDEK_OP_MULTIINST)) {
+            installable = 1;
+        } else {
+            logn(LOGERR, _("%s: multiple instances installed, give up"), pkg->name);
+            installable = -1;
+        }
     } else {
         /* upgrade flag is set for downgrade and reinstall too */
         if (cmprc <= 0 && force == 0 &&

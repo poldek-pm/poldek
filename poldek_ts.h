@@ -21,12 +21,12 @@
 #endif
 
 enum poldek_ts_flag {
-    POLDEK_TS_INSTALL      = (1 << 0), 
-    POLDEK_TS_UNINSTALL    = (1 << 1), 
+    POLDEK_TS_INSTALL      = (1 << 0),
+    POLDEK_TS_UNINSTALL    = (1 << 1),
     POLDEK_TS_VERIFY       = (1 << 2),
-    
-    POLDEK_TS_DIST         = (1 << 5), 
-    POLDEK_TS_UPGRADE      = (1 << 6), 
+
+    POLDEK_TS_DIST         = (1 << 5),
+    POLDEK_TS_UPGRADE      = (1 << 6),
     POLDEK_TS_DOWNGRADE    = (1 << 7),
     POLDEK_TS_REINSTALL    = (1 << 8),
 
@@ -58,10 +58,10 @@ enum poldek_ts_opt {
 
     POLDEK_OP_LDALLDESC,         /* internal, load all i18n descriptions */
     POLDEK_OP_LDFULLFILELIST,    /* internal, load whole file database */
-    
+
     POLDEK_OP_VRFYMERCY,   /* --mercy */
     POLDEK_OP_PROMOTEPOCH, /* --promoteepoch */
-    
+
     POLDEK_OP_FOLLOW,      /* !--nofollow */
     POLDEK_OP_FRESHEN,     /* --freshen */
     POLDEK_OP_GREEDY,   /* --greedy */
@@ -69,31 +69,32 @@ enum poldek_ts_opt {
     POLDEK_OP_OBSOLETES,  /* honour obsoletes */
     POLDEK_OP_SUGGESTS,   /* honour suggests */
     POLDEK_OP_AGGREEDY,
-    POLDEK_OP_ALLOWDUPS, 
+    POLDEK_OP_ALLOWDUPS,
     POLDEK_OP_NODEPS,  /* rpm --nodeps */
     POLDEK_OP_AUTODIRDEP, /* auto directory deps from rpm 4.4.6 */
-    
+
     POLDEK_OP_CAPLOOKUP,
     POLDEK_OP_MULTILIB,
     POLDEK_OP_FORCE,  /* rpm --force  */
     POLDEK_OP_IGNOREARCH,  /* rpm --ignorearch */
     POLDEK_OP_IGNOREOS,    /* rpm --ignoreos   */
-    
+    POLDEK_OP_MULTIINST,   /* handle upgrade if multiple instances are installed */
+
     POLDEK_OP_TEST,        /* poldek test mode, not rpm one */
     POLDEK_OP_RPMTEST,    /* rpm --test */
     POLDEK_OP_JUSTDB,      /* rpm --justdb */
-    POLDEK_OP_JUSTFETCH,  
-    POLDEK_OP_JUSTPRINT,  
+    POLDEK_OP_JUSTFETCH,
+    POLDEK_OP_JUSTPRINT,
     POLDEK_OP_JUSTPRINT_N,  /* names, not filenames */
     POLDEK_OP_MKDBDIR,      /* --mkdir */
     POLDEK_OP_USESUDO,      /* use_sudo = yes  */
     POLDEK_OP_HOLD,         /* --nohold  */
     POLDEK_OP_IGNORE,       /* --noignore  */
     POLDEK_OP_PARTICLE,     /* particle_install = yes */
-    
+
     POLDEK_OP_KEEP_DOWNLOADS,  /* keep_downloads = yes */
     POLDEK_OP_CHECKSIG,        /* not implemented yet */
-    
+
     POLDEK_OP_CONFIRM_INST,    /* confirm_installation = yes  */
     POLDEK_OP_CONFIRM_UNINST,  /* confirm_removal = yes  */
     POLDEK_OP_EQPKG_ASKUSER,   /* choose_equivalents_manually = yes */
@@ -125,10 +126,10 @@ struct poldek_ts {
     struct pm_ctx      *pmctx;
     struct source      *pm_pdirsrc; /* for 'pset' PM, XXX unused, to rethink */
     tn_array           *pkgs;
-    
+
     struct arg_packages  *aps;
     struct pkgmark_set   *pms;
-    char               *rpm_bin;       /* /usr/bin/rpm   */ 
+    char               *rpm_bin;       /* /usr/bin/rpm   */
     char               *sudo_bin;      /* /usr/bin/sudo  */
     char               *rootdir;       /* top level dir          */
     char               *fetchdir;      /* dir to fetch files to  */
@@ -139,19 +140,19 @@ struct poldek_ts {
     tn_array           *rpmopts;       /* rpm cmdline opts (char *opts[]) */
     tn_array           *rpmacros;      /* rpm macros to pass to cmdline (char *opts[]) */
     tn_array           *hold_patterns;
-    tn_array           *ign_patterns; 
+    tn_array           *ign_patterns;
     tn_array           *exclude_path;
 
     tn_hash            *ts_summary;     /* There are to I|R|D                */
     tn_array           *pkgs_installed; /* packages installed by transaction */
     tn_array           *pkgs_removed;   /* packages removed by transaction   */
-    
+
     tn_alloc           *_na;
     uint32_t           _flags;      /* POLDEK_TS_* */
     uint32_t           _iflags;     /* internal flags */
     uint32_t           _opvect[4];  /* options POLDEK_OP* */
     uint32_t           _opvect_touched[4];
-    
+
     int   (*getop)(const struct poldek_ts *, int op);
     int   (*getop_v)(const struct poldek_ts *, int op, ...);
     void  (*setop)(struct poldek_ts *, int op, int onoff);

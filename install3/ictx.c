@@ -56,16 +56,16 @@ static void *i3err_new(unsigned errcode, struct pkg *pkg,
     e->pkg = pkg_link(pkg);
     e->code = errcode;
     e->message = NULL;
-    
+
     if (fmt) {
         memcpy(e->_message, message, n + 1);
         e->message = e->_message;
     }
-    
+
     return e;
 }
 
-static void i3err_free(struct i3err *e) 
+static void i3err_free(struct i3err *e)
 {
     pkg_free(e->pkg);
     free(e);
@@ -76,9 +76,9 @@ void i3_error(struct i3ctx *ictx, struct pkg *pkg,
 {
     struct i3err *e;
     tn_array *errors;
-    
+
     va_list args;
-    
+
     va_start(args, fmt);
     e = i3err_new(errcode, pkg, fmt, args);
     va_end(args);
@@ -98,22 +98,22 @@ void i3_forget_error(struct i3ctx *ictx, const struct pkg *pkg)
     n_hash_remove(ictx->errors, pkg_id(pkg));
 }
 
-int i3_get_nerrors(struct i3ctx *ictx, unsigned errcodeclass)  
+int i3_get_nerrors(struct i3ctx *ictx, unsigned errcodeclass)
 {
     tn_array *keys;
     int i, j, n = 0;
-    
+
     keys = n_hash_keys(ictx->errors);
     for (i=0; i < n_array_size(keys); i++) {
         tn_array *errors = n_hash_get(ictx->errors, n_array_nth(keys, i));
-        
+
         for (j=0; j < n_array_size(errors); j++) {
             struct i3err *e = n_array_nth(errors, j);
             if (e->code & errcodeclass)
                 n++;
         }
     }
-    
+
     return n;
 }
 
@@ -142,21 +142,33 @@ struct i3pkg *i3pkg_new(struct pkg *pkg, unsigned flags,
         i3pkg->byreq = byreq;
         i3pkg->byflag = byflag;
     }
-    
-    
+
+    i3pkg->_refcnt = 0;
+    return i3pkg;
+}
+
+struct i3pkg *i3pkg_link(struct i3pkg *i3pkg)
+{
+    i3pkg->_refcnt++;
     return i3pkg;
 }
 
 void i3pkg_free(struct i3pkg *i3pkg)
 {
+    if (i3pkg->_refcnt > 0) {
+        i3pkg->_refcnt--;
+        return;
+    }
+
+
     pkg_free(i3pkg->pkg);
-    
+
     n_array_cfree(&i3pkg->markedby);
     n_array_cfree(&i3pkg->obsoletedby);
 
     if (i3pkg->bypkg)
         pkg_free(i3pkg->bypkg);
-    
+
     //if (i3pkg->candidates)
     //    n_hash_free(i3pkg->candidates);
     free(i3pkg);
@@ -186,11 +198,13 @@ void i3ctx_init(struct i3ctx *ictx, struct poldek_ts *ts)
     ictx->ma_flags = 0;
     if (ts->getop(ts, POLDEK_OP_VRFYMERCY))
         ictx->ma_flags = POLDEK_MA_PROMOTE_VERSION;
-    
+
     ictx->ts = ts;
     ictx->ps = ts->ctx->ps;
 
     ictx->processed = pkgmark_set_new(0, PKGMARK_SET_IDPTR);
+
+    ictx->multi_obsoleted = n_hash_new(8, (tn_fn_free)n_array_free);
     ictx->errors = n_hash_new(8, (tn_fn_free)n_array_free);
     ictx->abort = 0;
 }
@@ -204,6 +218,8 @@ void i3ctx_destroy(struct i3ctx *ictx)
     ictx->ts = NULL;
     ictx->ps = NULL;
     pkgmark_set_free(ictx->processed);
+
+    n_hash_free(ictx->multi_obsoleted);
     n_hash_free(ictx->errors);
     memset(ictx, 0, sizeof(*ictx));
 }
@@ -211,23 +227,23 @@ void i3ctx_destroy(struct i3ctx *ictx)
 void i3ctx_reset(struct i3ctx *ictx)
 {
     n_array_clean(ictx->i3pkg_stack);
-    
+
     iset_free(ictx->inset);
     ictx->inset = iset_new();
-    
+
     iset_free(ictx->unset);
     ictx->unset = iset_new();
-    
+
     pkgmark_set_free(ictx->processed);
     ictx->processed = pkgmark_set_new(0, PKGMARK_SET_IDPTR);
 
+    n_hash_clean(ictx->multi_obsoleted);
     n_hash_clean(ictx->errors);
     ictx->abort = 0;
 }
 
-int i3_stop_processing(struct i3ctx *ictx, int stop) 
+int i3_stop_processing(struct i3ctx *ictx, int stop)
 {
     ictx->abort = stop;
     return ictx->abort;
 }
-
