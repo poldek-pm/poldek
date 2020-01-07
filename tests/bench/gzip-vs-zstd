@@ -1,0 +1,61 @@
+#!/bin/sh
+
+TMP=${TMP:-""}
+TMPDIR=${TMPDIR:-""}
+[ -z "$TMP" ] && TMP="${TMPDIR}"
+[ -z "$TMP" ] && TMP="/tmp"
+TMP="${TMP}/poldek-tests"
+TMPDIR="$TMP"
+
+SRC="ftp://ftp.th.pld-linux.org/dists/th/PLD/i686/RPMS/"
+#SRC="ftp://ftp.th.pld-linux.org/dists/th/.archive/PLD/i686/RPMS/"
+
+dir=$(pwd)
+rm -rf $TMP
+
+if [ ! -d $TMP/gzip ]; then
+    rm -rf $TMP
+    mkdir -p $TMP/gzip
+    mkdir -p $TMP/zstd
+    mkdir -p $TMP/none
+
+    cd $TMP/gzip || exit 1
+    wget $SRC/packages.ndir.gz || exit 1
+    wget $SRC/packages.ndir.dscr.gz || exit 1
+    wget $SRC/packages.ndir.md || exit 1
+
+    cd $TMP/zstd || exit 1
+    for i in $TMP/gzip/*.gz; do
+        zcat $i | zstd > $(basename $i .gz).zst
+    done
+
+    md=$(cat $TMP/gzip/packages.ndir.md | awk '{print $1}')
+    echo "$md zst" > packages.ndir.md
+
+    cd $TMP/none || exit 1
+    for i in $TMP/gzip/*.gz; do
+        zcat $i > $(basename $i .gz)
+    done
+
+    md=$(cat $TMP/gzip/packages.ndir.md | awk '{print $1}')
+    echo "$md none" > packages.ndir.md
+fi
+
+echo "size"
+ls -lh $TMP/gzip/packages.ndir.gz $TMP/zstd/packages.ndir.zst $TMP/none/packages.ndir
+
+echo "speed"
+for i in gzip zstd none; do
+    CACHEDIR="$TMP/kesz-$i"
+    rm -rf $CACHEDIR
+    mkdir -p $CACHEDIR
+    cmd="$dir/../cli/poldek --noconf -q --skip-installed --cachedir $CACHEDIR -s $TMP/$i --install foo"
+    echo $cmd
+    $cmd >/dev/null # dirindex creation + some warm up
+
+    echo 'for i in $(seq 1 10); do' > $TMP/$i.sh
+    echo "   $cmd >/dev/null" >> $TMP/$i.sh
+    echo "done; exit 0" >> $TMP/$i.sh
+    echo "$i"
+    time sh $TMP/$i.sh
+done

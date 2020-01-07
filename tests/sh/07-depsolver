@@ -3,6 +3,7 @@
 
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
+. ./sh/lib/solver-setup
 
 ORIGREPO=
 DESTINATION_REPO=
@@ -26,107 +27,30 @@ setUp() {
     mkdir -p $REPO || fail "mkdir $REPO failed"
     mkdir -p $REPO2 || fail "mkdir $REPO2 failed"
     mkdir -p $DESTINATION_REPO || fail "mkdir $DESTINATION_REPO failed"
+
     # provide /bin/sh auto requirement
     build_installed sh -p /bin/sh
 
-    POLDEK_INSTALL="$POLDEK_NOCONF -Odependency_solver=$DEPENDENCY_SOLVER --noask"
-    POLDEK_INSTALL="$POLDEK_INSTALL --st dir -s $REPO --st dir -s $REPO2 --dt dir --destination $DESTINATION_REPO"
-}
-
-
-PACKAGE_DIR="$REPO"
-DEFAULT_VER="1-1"
-
-do_build_package() {
-  destdir=$1; shift
-  name=$1; shift
-  version=""
-
-
-  [ $# -gt 0 ] && version="$1";
-  #echo "v $version"
-  if [ -n "$version" ]; then
-      if echo "$version" | egrep -qv -- '^-'; then
-          shift
-      else
-          version="1-1"
-      fi
-  fi
-  [ -n "$version" ] || version="1-1"
-
-  params=""
-  [ $# -gt 0 ] && params="$@";
-
-  #echo ./build-test-rpm.sh -d $destdir -n $name -v $version $params
-  if [ "$VERBOSE" != "-v -v" ]; then
-      eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >/dev/null 2>&1 || fail "build package $name failed"
-  else
-      eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params
-      [ $? -eq 0 ] || fail "build package $name failed"
-  fi
-
+    RAW_POLDEK="$POLDEK_NOCONF -Odependency_solver=$DEPENDENCY_SOLVER --noask"
+    POLDEK_INSTALL="$RAW_POLDEK --st dir -s $REPO --st dir -s $REPO2 --dt dir --destination $DESTINATION_REPO"
 }
 
 build() {
-   do_build_package $REPO $@
+   build_package $REPO $@
 }
 
 build2() {
-   do_build_package $REPO2 $@
+   build_package $REPO2 $@
 }
 
 build_installed() {
-   do_build_package $DESTINATION_REPO $@
-}
-
-runpoldek() {
-  typeset cmd="$POLDEK_INSTALL $@"
-  if is_verbose_mode; then
-      msg "# executing $cmd"
-      $cmd || fail "'poldek $@' failed"
-  else
-      $cmd >/dev/null 2>&1 || fail "'poldek $@' failed"
-  fi
+   build_package $DESTINATION_REPO $@
 }
 
 # try to install package and check result
-# usage: try_install <package> <expected installed> [<expected removed>]
+# usage: try_install <package> <expected installed> [<expected removed>] [<extra poldek switches>]
 try_install() {
-  typeset package="$1"; shift
-  typeset expected="$1"; shift
-  typeset rm_expected=""
-  if [ $# -gt 0 ]; then
-      rm_expected="$1"
-      shift
-  fi
-
-  typeset regexp=$(echo $expected | sed 's/,/|/g')
-  typeset n_expected=$(echo $expected | sed 's|,|\n|g' | wc -l)
-  if [ -n "$rm_expected" ]; then
-      typeset rm_regexp=$(echo $rm_expected | sed 's/,/|/g')
-      typeset rm_n_expected=$(echo $rm_expected | sed 's|,|\n|g' | wc -l)
-  fi
-
-  typeset cmd="-uvt $package"
-  if [ $# -gt 0 ]; then
-      cmd="$1 $cmd"
-      shift
-  fi
-  runpoldek $cmd
-
-  typeset out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | egrep "^%[IDR]")
-
-  typeset n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%[ID]' | wc -l)
-  typeset n=$(echo $out | sed 's|%|\n%|g' | egrep "^%[ID] ($regexp)" | wc -l)
-  assertEquals "unexpected ($n_all) number of packages (expected $n)" "$n_all" "$n"
-  assertEquals "not all or non expected packages installed (expected $expected)" "$n" "$n_expected"
-
-  if [ -n "$rm_expected" ]; then
-      typeset n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%R' | wc -l)
-      typeset n=$(echo  $out | sed 's|%|\n%|g' | egrep "^%R ($rm_regexp)" | wc -l)
-      assertEquals "unexpected ($n_all) number of packages removed (expected $n)" "$n_all" "$n"
-      assertEquals "not all or non expected packages removed (expected $rm_expected)" "$n" "$rm_n_expected"
-  fi
+  try_install_package "dir" -uvt $@
 }
 
 try_install_a() {
@@ -629,15 +553,33 @@ testOrhpanSuccessorScore() {
     try_install a-1.5-1 "a-1.5-1,a-tools-1.5-1" "a-1.0-1,a-tools-1.0-1"
 }
 
-# not implemented yet
-xtestUpgradeMultipleInstalled() {
+testUpgradeMultipleInstalledGiveUp() {
     msgn "Preparing repositories..."
-    build_installed a 1.0.2a-1
-    build_installed a 1.1.1a-1
+    build_installed a 0.9.8c-1
+    build_installed a 1.0.0o-1
+    build_installed a 1.1.1j-1
 
-    build a 1.1.1b-1
+    build a 1.1.1k-1
 
-    try_install a-1.1.1b-1 "a-1.1.1b" "a-1.1.1a-1"
+    is_verbose_mode && $POLDEK_INSTALL -uvt a
+
+    typeset out=$($POLDEK_INSTALL -uvt a)
+    #[ $? -eq 0 ] || fail "$POLDEK_INSTALL $cmd failed"
+    echo $out | grep -q 'error' || fail "unexpected success (missing 'error')"
+    echo $out | grep 'error' | grep -q 'give up' || fail "unexpected success (missing 'give up')"
+}
+
+
+testUpgradeMultipleInstalled() {
+    msgn "Preparing repositories..."
+    build_installed a 0.9.8c-1
+    build_installed a 1.0.0o-1
+    build_installed a 1.1.1j-1
+
+    build a 1.1.1k-1
+
+    POLDEK_INSTALL="$POLDEK_INSTALL -Oupgrade_multiple_instances=y"
+    try_install a "a-1.1.1k-1" "a-1.1.1j-1"
 }
 
 

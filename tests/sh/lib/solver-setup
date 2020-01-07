@@ -1,0 +1,98 @@
+#!/bin/sh
+
+build_package() {
+    destdir=$1; shift
+    name=$1; shift
+    version=""
+
+
+    [ $# -gt 0 ] && version="$1";
+    #echo "v $version"
+    if [ -n "$version" ]; then
+        if echo "$version" | egrep -qv -- '^-'; then
+            shift
+        else
+            version="1-1"
+        fi
+    fi
+    [ -n "$version" ] || version="1-1"
+
+    params=""
+    [ $# -gt 0 ] && params="$@";
+
+    #echo ./build-test-rpm.sh -d $destdir -n $name -v $version $params
+    if [ "$VERBOSE" != "-v -v" ]; then
+        eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params >/dev/null 2>&1 || fail "build package $name failed"
+    else
+        eval ./build-test-rpm.sh -d $destdir -n $name -v $version $params
+        [ $? -eq 0 ] || fail "build package $name failed"
+    fi
+
+    BUILT_PACKAGE_NVR="$name-$version"
+}
+
+runpoldek() {
+    [ -z "$POLDEK_INSTALL" ] && fail 'empty $POLDEK_INSTALL'
+    typeset cmd="$POLDEK_INSTALL $@"
+    if is_verbose_mode; then
+        msg "# executing $cmd"
+        $cmd || fail "'poldek $@' failed"
+    else
+        $cmd >/dev/null 2>&1 || fail "'poldek $@' failed"
+    fi
+}
+
+# try to install package and check result
+# usage: try_install <mode> <poldek switches> <package> <expected installed> [<expected removed>] [<extra_poldek_switches>]
+try_install_package() {
+    typeset mode="$1"; shift
+    typeset poldek_opts="$1"; shift
+    typeset package="$1"; shift
+    typeset expected="$1"; shift
+    [ $expected == "none" ] && expected=""
+
+    typeset rm_expected=""
+    if [ $# -gt 0 ]; then
+        rm_expected="$1"
+        shift
+    fi
+
+    typeset regexp=$(echo $expected | sed 's/,/|/g')
+    typeset n_expected=$(echo $expected | sed 's|,|\n|g' | wc -l)
+    if [ -n "$rm_expected" ]; then
+        typeset rm_regexp=$(echo $rm_expected | sed 's/,/|/g')
+        typeset rm_n_expected=$(echo $rm_expected | sed 's|,|\n|g' | wc -l)
+    fi
+
+    typeset cmd="$poldek_opts $package"
+    if [ $# -gt 0 ]; then
+        cmd="$1 $cmd"
+        shift
+    fi
+
+    # run to check exit code
+    [ "$mode" != "rpm" ] && runpoldek $cmd
+
+    # run again to check installation results
+    if is_verbose_mode; then
+        msg "# parsable"
+        $POLDEK_INSTALL $cmd --test
+    fi
+
+    typeset out=$($POLDEK_INSTALL $cmd --parsable-tr-summary | egrep "^%[IDR]")
+    [ $? -eq 0 ] || fail "$POLDEK_INSTALL $cmd failed"
+
+    if [ -n "$expected" ]; then
+        typeset n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%[ID]' | wc -l)
+        typeset n=$(echo $out | sed 's|%|\n%|g' | egrep "^%[ID] ($regexp)" | wc -l)
+        assertEquals "unexpected ($n_all) number of packages (expected $n)" "$n_all" "$n"
+        assertEquals "not all or non expected packages installed (expected $expected)" "$n" "$n_expected"
+    fi
+
+    if [ -n "$rm_expected" ]; then
+        typeset n_all=$(echo $out | sed 's|%|\n%|g' | egrep '^%R' | wc -l)
+        typeset n=$(echo  $out | sed 's|%|\n%|g' | egrep "^%R ($rm_regexp)" | wc -l)
+        assertEquals "unexpected ($n_all) number of packages removed (expected $n)" "$n_all" "$n"
+        assertEquals "not all or non expected packages removed (expected $rm_expected)" "$n" "$rm_n_expected"
+    fi
+}

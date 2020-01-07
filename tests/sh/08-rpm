@@ -1,0 +1,141 @@
+#!/bin/sh
+# test with rpm installations (--justdb is used)
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+. ./sh/lib/solver-setup
+
+ORIGREPO=
+DESTINATION_REPO=
+DEPENDENCY_SOLVER=3
+
+# XXX, for some reason rpm5 does not creat its database correctly if running as ordinary user
+SUDO="sudo"
+
+setUp() {
+    [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
+    [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
+    rm -rf $ORIGREPO/*
+
+    REPO="$ORIGREPO/src"
+    DESTINATION_REPO="$ORIGREPO-rpm";
+
+    $SUDO rm -rf $DESTINATION_REPO
+    rm -rf $REPO $DESTINATION_REPO
+
+    mkdir -p $REPO || fail "mkdir $REPO failed"
+    mkdir -p $DESTINATION_REPO || fail "mkdir $DESTINATION_REPO failed"
+
+    mkdir -p $DESTINATION_REPO || fail "mkdir $DESTINATION_REPO failed"
+    RPM="$SUDO rpm --root $DESTINATION_REPO"
+    $RPM --initdb
+
+    # provide /bin/sh auto requirement
+    build_installed sh -p /bin/sh
+    #$RPM -qa
+
+    RAW_POLDEK="$POLDEK_NOCONF -Odependency_solver=$DEPENDENCY_SOLVER -Oupgrade_multiple_instances=y --noask"
+    POLDEK_INSTALL="$RAW_POLDEK --st dir -s $REPO --root $DESTINATION_REPO --justdb"
+}
+
+tearDown() {
+    [ -n "$DESTINATION_REPO" ] && $SUDO rm -rf $DESTINATION_REPO
+}
+
+build() {
+    build_package $REPO $@
+}
+
+build_installed() {
+    mkdir -p $DESTINATION_REPO/RPMS/
+    rm -f $DESTINATION_REPO/RPMS/*.rpm
+    build_package $DESTINATION_REPO/RPMS/ $@
+    $RPM -iv --quiet --justdb $DESTINATION_REPO/RPMS/*.rpm
+    #echo $RPM --quiet -q $BUILT_PACKAGE_NVR
+    $RPM --quiet -q $BUILT_PACKAGE_NVR
+    [ $? -eq 0 ] || fail "$BUILT_PACKAGE_NVR: rpm installation failed"
+}
+
+try_install() {
+  typeset package="$1"
+  typeset expected="$2"
+  typeset rm_expected="$3"
+
+  [ -n "$expected" ] && expected=$(echo $expected | sed 's/,/ /g')
+
+  e_rm_expected="non-existing-package"
+  [ -n "$rm_expected" ] && e_rm_expected=$(echo $rm_expected | sed 's/,/|/g')
+  [ -n "$rm_expected" ] && rm_expected=$(echo $rm_expected | sed 's/,/ /g')
+
+  state=$($RPM -qa | sort | perl -pe "s|\n| |g")
+  new_state=$($RPM -qa | sort | grep -Pv "($e_rm_expected)" | perl -pe "s|\n| |g")
+
+  if is_verbose_mode; then
+      msg "Current state: $state"
+      msg "Expected state: $new_state"
+  fi
+
+  try_install_package "rpm" -uv $@
+
+  RPMQ="$RPM --quiet -q"
+
+  for i in $rm_expected; do
+      #msg "rm  $i"
+      $RPMQ $i && fail "$i: package expected to be removed"
+  done
+
+  for i in $expected; do
+      #msg "new $i"
+      $RPMQ $i || fail "$i: package expected to be installed"
+      #[ $? -eq 0 ] || fail "$i: package expected to be installed"
+  done
+
+  for i in $new_state; do
+      #msg "kept  $i"
+      $RPMQ $i || fail "$i: package expected to be kept"
+  done
+}
+
+# not implemented yet
+testUpgradeMultipleInstalled() {
+    msgn "Preparing repositories..."
+    build_installed a 0.9.8c-1
+    build_installed a 1.0.0o-1
+    build_installed a 1.1.1j-1
+
+    build a 1.1.1k-1
+    try_install a "a-1.1.1k-1" "a-1.1.1j-1"
+}
+
+# not implemented yet
+testUpgradeMultipleInstalledWithDeps() {
+    msgn "Preparing repositories..."
+    build_installed a 0.9.8c-1
+    build_installed a 1.0.0o-1
+    build_installed a 1.1.1j-1
+
+    for i in b10 c10 d10; do
+        build_installed $i 0.1-0.1 -r "'a = 1.0.0o'"
+    done
+
+#    for i in b11 c11; do
+#        build_installed $i 1.0-1 -r "'a = 1.1'"
+#    done
+
+    build a 1.1.1k-1
+    try_install a "a-1.1.1k-1" "a-1.1.1j-1"
+}
+
+# not implemented yet
+XXXtestUpgradeMultipleInstalledIndir() {
+    msgn "Preparing repositories..."
+    build_installed a 1.0-1
+    build_installed a 1.1-1
+
+    build a 1.2-1
+    build b 1-1 -r "'a = 1.2'"
+
+    try_install b-1-1 "a-1.2" "a-1.1-1"
+}
+
+. ./sh/lib/shunit2
