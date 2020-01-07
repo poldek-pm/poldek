@@ -58,7 +58,8 @@ int test_02(void)
         tn_buf  *buf;
         tn_buf_it it;
         char *p, line[1024];
-        unsigned len, n = 0;
+        size_t len;
+        unsigned n = 0;
 
         buf = poclidek_rcmd_get_buf(cmd);
         n_buf_it_init(&it, buf);

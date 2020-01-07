@@ -128,7 +128,7 @@ int pkg_dent_cmp(struct pkg_dent *e1, struct pkg_dent *e2)
 
 int pkg_dent_strncmp(struct pkg_dent *ent, const char *name)
 {
-    DBGF("cmp(%s, %s) %d\n", ent->name, name, strlen(name));
+    DBGF("cmp(%s, %s) %zu\n", ent->name, name, strlen(name));
     return strncmp(ent->name, name, strlen(name));
 }
 

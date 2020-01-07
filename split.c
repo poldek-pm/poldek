@@ -259,7 +259,7 @@ int try_package(int deep, uint64_t *chunk_size, uint64_t maxsize,
     n_array_push(stack, pkg_link(pkg));
     *chunk_size += pkg->fsize;
 
-    DBGF("trying %s: %lld (%d) > %lld\n", pkg_snprintf_s(pkg), *chunk_size,
+    DBGF("trying %s: %ju (%d) > %ju\n", pkg_snprintf_s(pkg), *chunk_size,
          pkg->fsize, maxsize);
 
     if (*chunk_size > maxsize)
@@ -413,7 +413,7 @@ int make_chunks(tn_array *pkgs, uint64_t split_size, uint64_t first_free_space,
 
         snprintf(path, sizeof(path), "%s.%.2d", outprefix, chunk->no);
         snprintf_size64(strsize, sizeof(strsize), chunk->size, 2, 0);
-        msgn(0, _("Writing %s (%4d packages, %s (%lldb), "
+        msgn(0, _("Writing %s (%4d packages, %s (%jub), "
                   "pri min, max = %d, %d)"),
              path, chunk->items, strsize, chunk->size, pri_min, pri_max);
 
@@ -422,7 +422,7 @@ int make_chunks(tn_array *pkgs, uint64_t split_size, uint64_t first_free_space,
             return 0;
 
 #if 0
-        fprintf(vf->vf_stream, "# chunk #%d: %d packages, %lld bytes\n",
+        fprintf(vf->vf_stream, "# chunk #%d: %d packages, %ju bytes\n",
                 i, chunk->items, chunk->size);
 #endif
         chunk_dump(chunk, stream);
@@ -493,7 +493,7 @@ int packages_split(const tn_array *pkgs, unsigned split_size_mb,
     split_size = (uint64_t)split_size_mb * 1024L * 1024L;
     first_free_space = (uint64_t)first_free_space_mb * 1024L * 1024L;
 
-    DBGF("%dM (%lld), %dM %lld\n", split_size_mb, split_size,
+    DBGF("%dM (%ju), %dM %ju\n", split_size_mb, split_size,
          first_free_space_mb, first_free_space);
 
     packages = n_array_dup(pkgs, (tn_fn_dup)pkg_link);

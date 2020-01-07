@@ -71,7 +71,8 @@ void printf_nbuf(tn_buf *nbuf)
 {
     tn_buf_it it;           /* n_buf iterator */
     char *p, line[1024];
-    unsigned n, i;
+    unsigned i;
+    size_t n;
 
     i = 0;
     n_buf_it_init(&it, nbuf);

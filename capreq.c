@@ -289,7 +289,7 @@ static uint8_t capreq_sizeof(const struct capreq *cr)
 
     size = sizeof(*cr) + capreq_bufsize(cr);
 
-    poldek_die_ifnot(size < UINT8_MAX, "%s: exceeds %db limit (%d)",
+    poldek_die_ifnot(size < UINT8_MAX, "%s: exceeds %db limit (%zu)",
                      capreq_snprintf_s(cr), UINT8_MAX, size);
     return size;
 }
@@ -728,7 +728,7 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
         struct capreq *cr = n_array_nth(arr, i);
         if (!capreq_is_bastard(cr)) {
             capreq_store(cr, nbuf);
-            DBGF("store %s (len=%d, sizeof=%d)\n", capreq_snprintf_s(cr),
+            DBGF("store %s (len=%zu, sizeof=%d)\n", capreq_snprintf_s(cr),
                  strlen(capreq_snprintf_s(cr)), capreq_sizeof(cr));
         }
     }

@@ -234,7 +234,7 @@ static int ver_distance(struct pkg *p1, struct pkg *p2)
     for (int i = 0; i < n1; i++) {
         const char *v1 = s1[i];
         const char *v2 = s2[i];
-        long v1i = 0, v2i = 0;
+        int v1i = 0, v2i = 0;
 
         if (v1) {
             v1i = atoi(v1);
@@ -244,7 +244,7 @@ static int ver_distance(struct pkg *p1, struct pkg *p2)
             v2i = atoi(v2);
         }
 
-        DBGF("%d, %ld cmp %ld, distance += abs(%ld) * %d\n", i, v1i, v2i, v1i-v2i, n1-i);
+        DBGF("%d, %d cmp %d, distance += abs(%d) * %d\n", i, v1i, v2i, v1i-v2i, n1-i);
         distance += abs(v1i-v2i) * (n1-i);
     }
 
