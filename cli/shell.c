@@ -85,7 +85,7 @@ int is_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg, int reverse)
     struct pkg *ipkg = NULL;
     tn_array *dents;
     char name[256];
-    int n, name_len;
+    int n, same_found = 0, name_len, re = 0;
 
     if (reverse)
         dents = poclidek_get_dent_ents(cctx, POCLIDEK_AVAILDIR);
@@ -115,18 +115,25 @@ int is_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg, int reverse)
         if (!pkg_is_kind_of(ipkg, pkg))
             continue;
 
-        if ((cmprc = pkg_cmp_evr(pkg, ipkg)) != 0) {
-            DBGF("%s %s %d (%d)\n", pkg_id(pkg), pkg_id(ipkg), cmprc, reverse);
+        cmprc = pkg_cmp_evr(pkg, ipkg);
+        DBGF("%s %s %d (%d)\n", pkg_id(pkg), pkg_id(ipkg), cmprc, reverse);
 
+        if (cmprc == 0) {
+            same_found = 1;     /* detect multiple installed instances */
+            re = 0;
+        } else {
             if (!reverse && cmprc > 0)
-                return 1;
+                re = 1;
 
             if (reverse && cmprc < 0)
-                return 1;
+                re = 1;
         }
     }
 
-    return 0;
+    if (same_found)
+        re = 0;
+
+    return re;
 }
 
 static char *command_generator(const char *text, int state)
