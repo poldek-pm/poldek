@@ -1,5 +1,20 @@
 <?xml version="1.0"?>
 <news>
+<release version="0.41.0" date="2020/01/" focus="performance">
+    <entry><para>
+      performance: yet faster (about 40%) repo loading: optimized capabilities indexes, zero backward fseeks, mtime based verification cache and lazy deps processing
+    </para></entry>
+    <entry><para>
+      depsolver: with "upgrade multiple instances" config option, poldek handle upgrades of multiple installed packages: most recent version is upgraded while other installed versions are kept untouch
+    </para></entry>
+    <entry><para>
+      ZSTD support: create zst repos with --mo=zst or with "compr = zst" source config option or with "default index compr = zst" global config option. ZSTD is faster than GZIP, saves about 200ms on PLD TH repo loading (~30K packages).
+    </para></entry>
+    <entry><para>
+      fix: allow multiple --rpmdef command line options
+    </para></entry>
+</release>
+
 <release version="0.40.0" date="2019/12/31" focus="rpm.org">
     <entry><para>
       rpm.org support (except boolean dependencies yet; beta)

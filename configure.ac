@@ -13,7 +13,7 @@ AC_CONFIG_HEADERS([config.h])
 
 PACKAGE_BUGREPORT="http://bugs.launchpad.net/poldek"
 VERSION_STATUS="stable"
-VERSION=0.40.0
+VERSION=0.41.0
 VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
 VERSION_CVSTAG="v$VERSION_TAG"
 VERSION_YEAR=$(date +%Y)
