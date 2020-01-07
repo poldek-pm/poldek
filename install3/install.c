@@ -279,7 +279,7 @@ static int install_packages(struct i3ctx *ictx)
     }
 
     pkgs = iset_packages_in_install_order(ictx->inset);
-    pkgs_array_dump(pkgs, "inset.ordered");
+    //pkgs_array_dump(pkgs, "inset.ordered");
 
     if (ts->getop_v(ts, POLDEK_OP_JUSTPRINT, POLDEK_OP_JUSTPRINT_N, 0)) {
         rc = packages_dump(pkgs, ts->dumpfile,
