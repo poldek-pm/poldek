@@ -74,48 +74,62 @@ tn_array *poldek_ts_get_summary(const struct poldek_ts *ts, const char *mark)
     return pkgs;
 }
 
+struct color_str {
+    char *str;                  /* string with color codes */
+    int len;                    /* length without color codes */
+    char _buf[];
+};
+
 /* for scripts */
 static
 void do_display_parseable_summary(const char *prefix, tn_array *strpkgs)
 {
     for (int i=0; i < n_array_size(strpkgs); i++) {
-        const char *s = n_array_nth(strpkgs, i);
-        msgn(summary_VERBOSE_LEVEL, "%%%s %s", prefix, s);
+        const struct color_str *s = n_array_nth(strpkgs, i);
+        msgn(summary_VERBOSE_LEVEL, "%%%s %s", prefix, s->str);
     }
 }
 
 /* pre 0.4.0 summary */
 static
-void do_display_summary(const char *prefix, tn_array *strpkgs)
+void do_display_summary(const char *prefix, int prefix_color, tn_array *strpkgs)
 {
     int npkgs = n_array_size(strpkgs);
-    int ncol = 2, term_width, prefix_printed = 0;
+    int prefix_printed = 0;
     tn_buf *nbuf = n_buf_new(512);
+    int prefix_len = strlen(prefix);
+    char cprefix[64];
     const char *colon = "  ";
 
-    term_width = poldek_term_get_width() - 5;
-    ncol = strlen(prefix) + 1;
+    int term_width = poldek_term_get_width() - 5;
+    int ncol = prefix_len + 1;
+
+    if (prefix_color) {
+        poldek_term_snprintf_c(PRCOLOR_GREEN, cprefix, sizeof(cprefix), "%s", prefix);
+        prefix = cprefix;
+    }
 
     for (int i=0; i < n_array_size(strpkgs); i++) {
-        const char *p = n_array_nth(strpkgs, i);
+        const struct color_str *s = n_array_nth(strpkgs, i);
+
         if (prefix_printed == 0) {
             n_buf_printf(nbuf, "%s ", prefix);
             prefix_printed = 1;
         }
 
-        if (ncol + (int)strlen(p) >= term_width) {
+        if (ncol + s->len >= term_width) {
             msgn(summary_VERBOSE_LEVEL, "%s", (char*)n_buf_ptr(nbuf));
 
             n_buf_clean(nbuf);
-            ncol = 3;
+            ncol = prefix_len + 1;
             n_buf_printf(nbuf, "%s ", prefix);
         }
 
         if (--npkgs == 0)
             colon = "";
 
-        n_buf_printf(nbuf, "%s%s", p, colon);
-        ncol += strlen(p) + strlen(colon);
+        n_buf_printf(nbuf, "%s%s", s->str, colon);
+        ncol += s->len + strlen(colon);
     }
 
     if (prefix_printed)
@@ -129,20 +143,23 @@ void do_display_summary(const char *prefix, tn_array *strpkgs)
 
 /* pre 0.4.0 summary */
 static
-void display_summary(const char *prefix, tn_array *pkgs, int parseable)
+void display_summary(const char *prefix, int prefix_color, tn_array *pkgs, int parseable)
 {
     n_assert(pkgs);
     n_assert(n_array_size(pkgs) > 0);
 
-    tn_array *strpkgs = n_array_new(n_array_size(pkgs), NULL, NULL);
+    tn_array *strpkgs = n_array_new(n_array_size(pkgs), free, NULL);
     for (int i=0; i < n_array_size(pkgs); i++) {
-        n_array_push(strpkgs, (char*)pkg_id(n_array_nth(pkgs, i)));
+        struct color_str *s = n_malloc(sizeof(*s));
+        s->str = (char*)pkg_id(n_array_nth(pkgs, i));
+        s->len = strlen(s->str);
+        n_array_push(strpkgs, s);
     }
 
     if (parseable) {
         do_display_parseable_summary(prefix, strpkgs);
     } else {
-        do_display_summary(prefix, strpkgs);
+        do_display_summary(prefix, prefix_color, strpkgs);
     }
 }
 
@@ -227,7 +244,12 @@ void colored_install_summary(tn_array *ipkgs, tn_array *idepkgs, tn_array *rmpkg
             char line[PATH_MAX];
             print_pair(line, sizeof(line), pkg, old_pkg);
 
-            n_array_push(upgs, strdup(line));
+            struct color_str *s = n_malloc(sizeof(*s) + strlen(line) + 1);
+            n_strncpy(s->_buf, line, strlen(line) + 1);
+            s->str = &s->_buf[0];
+            s->len = strlen(pkg_id(pkg)) + strlen(old_pkg->ver) + strlen(old_pkg->rel) + strlen(".( => )");
+
+            n_array_push(upgs, s);
             n_array_remove(rems, old_pkg);
         } else {
             n_array_push(news, pkg_link(pkg));
@@ -235,22 +257,16 @@ void colored_install_summary(tn_array *ipkgs, tn_array *idepkgs, tn_array *rmpkg
     }
 
     if (n_array_size(upgs) > 0) {
-        char prefix[32];
-        poldek_term_snprintf_c(PRCOLOR_GREEN, prefix, sizeof(prefix), "%s", "U");
-        do_display_summary(prefix, upgs);
+        do_display_summary("U", PRCOLOR_GREEN, upgs);
     }
     n_array_free(upgs);
 
     if (n_array_size(news) > 0) {
-        char prefix[32];
-        poldek_term_snprintf_c(PRCOLOR_GREEN, prefix, sizeof(prefix), "%s", "A");
-        display_summary(prefix, news, 0);
+        display_summary("A", PRCOLOR_GREEN, news, 0);
     }
 
     if (rems && n_array_size(rems) > 0) {
-        char prefix[32];
-        poldek_term_snprintf_c(PRCOLOR_RED, prefix, sizeof(prefix), "%s", "R");
-        display_summary(prefix, rems, 0);
+        display_summary("R", PRCOLOR_RED, rems, 0);
     }
 
     if (rems)
@@ -260,14 +276,10 @@ void colored_install_summary(tn_array *ipkgs, tn_array *idepkgs, tn_array *rmpkg
 static
 void colored_uninstall_summary(tn_array *ipkgs, tn_array *idepkgs)
 {
-    char prefix[32];
-
-    poldek_term_snprintf_c(PRCOLOR_RED, prefix, sizeof(prefix), "%s", "R");
-    display_summary(prefix, ipkgs, 0);
+    display_summary("R", PRCOLOR_RED, ipkgs, 0);
 
     if (idepkgs && n_array_size(idepkgs) > 0) {
-        poldek_term_snprintf_c(PRCOLOR_RED, prefix, sizeof(prefix), "%s", "D");
-        display_summary(prefix, idepkgs, 0);
+        display_summary("D", PRCOLOR_RED, idepkgs, 0);
     }
 }
 
@@ -372,14 +384,14 @@ void poldek__ts_display_summary(struct poldek_ts *ts)
         colored_summary(ts, pkgs, idepkgs, rmpkgs);
     } else {
         if (npkgs)
-            display_summary(prefix, pkgs, parseable);
+            display_summary(prefix, 0, pkgs, parseable);
 
         if (idepkgs && ndep)
-            display_summary("D", idepkgs, parseable);
+            display_summary("D", 0, idepkgs, parseable);
 
         if (ts->type != POLDEK_TS_UNINSTALL) {
             if (rmpkgs)
-                display_summary("R", rmpkgs, parseable);
+                display_summary("R", 0, rmpkgs, parseable);
         }
     }
 
