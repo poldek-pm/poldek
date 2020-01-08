@@ -128,7 +128,7 @@ const struct vf_module *select_vf_module(const char *path)
 
 static
 int do_vfile_req(int reqtype, const struct vf_module *mod,
-                 struct vf_request *req, unsigned vf_flags)
+                 struct vf_request *req, unsigned vf_flags, const char *label)
 {
     struct stat             st;
     int                     rc = 0;
@@ -139,7 +139,7 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
     if (reqtype == REQTYPE_FETCH) {
         n_assert(req->bar == NULL);
         if ((vf_flags & VF_FETCH_NOPROGRESS) == 0 && (vfile_conf.flags & VFILE_CONF_PROGRESS_NONE) == 0)
-            req->bar = vf_progress_new(req->url);
+            req->bar = vf_progress_new(label ? label : req->url);
     }
 
     if (vfile_conf.flags & VFILE_CONF_STUBBORN_RETR)
@@ -216,6 +216,20 @@ int do_vfile_req(int reqtype, const struct vf_module *mod,
     return rc;
 }
 
+static int make_url_label(char *buf, size_t size,
+                          const char *counter, const char *label, const char *url)
+{
+    char *url_unescaped = vf_url_unescape(url);
+
+    int n = n_snprintf(buf, size, "%s%s%s%s",
+                       counter ? counter : "",
+                       label ? label : "",
+                       label ? "::" : "",
+                       label ? n_basenam(url_unescaped) : PR_URL(url_unescaped));
+
+    free(url_unescaped);
+    return n;
+}
 
 int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
                     const char *counter, const char *urlabel,
@@ -226,7 +240,7 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
     struct vflock           *vflock = NULL;
     struct vf_request       *req = NULL;
     char                    destpath[PATH_MAX];
-    char                    *url_unescaped = NULL;
+    char                    url_label[PATH_MAX];
     int                     rc = 0;
 
     if (*vfile_verbose <= 0)
@@ -244,19 +258,11 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
 
     n_assert(destdir);
 
+    make_url_label(url_label, sizeof(url_label), counter, urlabel, url);
+
     if ((mod = select_vf_module(url)) == NULL) { /* no internal module found */
-        if ((flags & VF_FETCH_NOLABEL) == 0) {
-            url_unescaped = vf_url_unescape(url);
-
-            if (urlabel)
-                vf_loginfo(_("Retrieving %s%s::%s...\n"), counter ? counter : "", urlabel,
-                           n_basenam(url_unescaped));
-            else
-                vf_loginfo(_("Retrieving %s%s...\n"), counter ? counter : "",
-            	           PR_URL(url_unescaped));
-
-    	    free(url_unescaped);
-        }
+        if ((flags & VF_FETCH_NOLABEL) == 0)
+            vf_loginfo(_("Retrieving %s...\n"), url_label);
 
         rc = vf_fetch_ext(url, destdir);
         goto l_end;
@@ -309,19 +315,11 @@ int vfile__vf_fetch(const char *url, const char *dest_dir, unsigned flags,
         }
     }
 
-    if ((flags & VF_FETCH_NOLABEL) == 0) {
-        url_unescaped = vf_url_unescape(req->url);
+    /* label displaying moved to vf_progress */
+    if (*vfile_verbose > 2 && (flags & VF_FETCH_NOLABEL) == 0)
+        vf_loginfo(_("Retrieving %s...\n"), url_label);
 
-        if (urlabel)
-            vf_loginfo(_("Retrieving %s%s::%s...\n"), counter ? counter : "", urlabel,
-                       n_basenam(url_unescaped));
-        else
-            vf_loginfo(_("Retrieving %s%s...\n"), counter ? counter : "", PR_URL(url_unescaped));
-
-	free(url_unescaped);
-    }
-
-    if ((rc = do_vfile_req(REQTYPE_FETCH, mod, req, flags)) == 0) {
+    if ((rc = do_vfile_req(REQTYPE_FETCH, mod, req, flags, url_label)) == 0) {
         if ((req->flags & VF_REQ_INT_REDIRECTED) == 0) {
             vfile_set_errno(mod->vfmod_name, req->req_errno);
 
@@ -384,7 +382,7 @@ int vf_stat(const char *url, const char *destdir, struct vf_stat *vfstat,
             vf_loginfo(_("Retrieving status of %s...\n"),
                        urlabel ? urlabel : PR_URL(req->url));
 
-        if ((rc = do_vfile_req(REQTYPE_STAT, mod, req, flags))) {
+        if ((rc = do_vfile_req(REQTYPE_STAT, mod, req, flags, NULL))) {
             vfstat->vf_size = req->st_remote_size > 0 ? req->st_remote_size : 0;
             vfstat->vf_mtime = req->st_remote_mtime > 0 ? req->st_remote_mtime : 0;
 

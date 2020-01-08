@@ -21,6 +21,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <termios.h>
+#include <sys/ioctl.h>
+
+
 #include <trurl/nassert.h>
 
 #include "i18n.h"
@@ -36,16 +40,19 @@
 
 struct tty_progress_bar {
     int        width;
+    int        seq;
     int        state;
     int        is_tty;
-    int        prev_n;
+    int        term_width;
+    int        prev_barlen;
     int        prev_perc;
     time_t     time_base;
     time_t     time_last;
     float      transfer_rate;
     float      eta; /* estimated time of arrival */
-    int        maxlen;
+    int        lastlen;
     int        freq;
+    char       label[];
 };
 
 static void *tty_progress_new(void *data, const char *label);
@@ -60,14 +67,23 @@ static void *tty_progress_new(void *data, const char *label)
 {
     struct tty_progress_bar *bar;
 
-    label = label;
     data = data;
 
-    bar = n_malloc(sizeof(*bar));
+    bar = n_malloc(sizeof(*bar) + strlen(label) + 1);
     memset(bar, 0, sizeof(*bar));
 
     bar->width = PROGRESSBAR_WIDTH;
     bar->is_tty = isatty(fileno(stdout));
+    bar->term_width = 80;
+
+    if (bar->is_tty) {
+        struct winsize ws;
+        if (ioctl(1, TIOCGWINSZ, &ws) == 0) {
+            bar->term_width  = ws.ws_col;
+        }
+    }
+
+    strcpy(bar->label, label);
     return bar;
 }
 
@@ -132,12 +148,12 @@ static void calculate_tt(long total, long amount, struct tty_progress_bar *bar)
         bar->eta = (total - amount) / bar->transfer_rate;
 }
 
+const char spinner_CHARS[] = { '-', '\\' , '|', '/' };
+
 static void tty_progress(void *data, long total, long amount)
 {
     struct tty_progress_bar *bar = data;
-    char                    line[256], outline[256], fmt[40];
-    float                   frac, percent;
-    long                    n;
+
 
     if (bar->state == VF_PROGRESS_DISABLED)
         return;
@@ -160,39 +176,41 @@ static void tty_progress(void *data, long total, long amount)
         }
         bar->time_base = bar->time_last = time(NULL);
         bar->state = VF_PROGRESS_RUNNING;
-        bar->maxlen = 0;
+        bar->lastlen = 0;
 	bar->freq = 0;
     }
 
 #define HASH_SIZE 8192
 
-    if (total == 0) {
-        n = amount/HASH_SIZE;
-        while (n > bar->prev_n++)
+    if (total == 0) {           /* unknown total size, just dots... */
+        int n = amount/HASH_SIZE;
+        while (n > bar->prev_barlen++)
             vf_log(VFILE_LOG_INFO | VFILE_LOG_TTY, ".");
         return;
     }
 
-    frac = (float) amount / (float) total;
-    percent = frac * 100.0f;
+    float frac = (float) amount / (float) total;
+    float percent = frac * 100.0f;
 
-    n = (int) (((float)bar->width) * frac);
     calculate_tt(total, amount, bar);
 
     /* Skip refresh if progress less than 0.4% or
         refresh frequency is greater than 3Hz  */
     if (amount > 0 && amount != total &&
        ((10 * percent) - bar->prev_perc < 4 || bar->freq > 3)) {
-        //DBGF("v %ld, %d  %ld, %f -> %f\n", n, bar->prev_perc, bar->prev_n,
+        //DBGF("v %ld, %d  %ld, %f -> %f\n", n, bar->prev_perc, bar->prev_barlen,
         //     10 * percent, (10 * percent) - (float)bar->prev_perc);
         return;
     }
 
-    n_assert(bar->prev_n < 100);
-    if (!bar->is_tty) {
-        int k;
+    n_assert(bar->prev_barlen < 100);
+    int barlen = (int) (((float)bar->width) * frac);
 
-        k = n - bar->prev_n;
+    if (!bar->is_tty) {
+        char line[256];
+
+        int k = barlen - bar->prev_barlen;
+
         n_assert(k >= 0);
         n_assert(k < (int)sizeof(line));
         memset(line, '.', k);
@@ -206,7 +224,7 @@ static void tty_progress(void *data, long total, long amount)
         }
 
     } else {
-        char unit_line[45], amount_str[16], total_str[16], transfer_str[16];
+        char outline[256], unit_line[45], amount_str[16], total_str[16], transfer_str[16];
         int nn;
 
         nbytes2str(total_str, sizeof(total_str), total);
@@ -230,36 +248,57 @@ static void tty_progress(void *data, long total, long amount)
             nn = n_snprintf(unit_line, sizeof(unit_line),
                             "[%s of %s (%s/s)] [%s]",
                             amount_str, total_str, transfer_str,
-                            en ? eta_str : "--:--:--");
-        }
-        if (nn > bar->maxlen)
-            bar->maxlen = nn;
-
-        if (nn < bar->maxlen) {
-            int unit_n = bar->maxlen - nn;
-            //n_assert((int)sizeof(unit_line) > nn + unit_n);
-            memset(&unit_line[nn], ' ', unit_n);
+                            en ? eta_str : "--:--");
         }
 
-        unit_line[sizeof(unit_line) - 1] = '\0';
+        int nl;
+        if (total == amount) {
+            nl = n_snprintf(outline, sizeof(outline), "%s %s", bar->label, unit_line);
 
-        n_assert(n >= 0);
-        n_assert(n < (int) sizeof(line));
-        memset(line, '.', n);
-        line[n] = '\0';
+        } else {
+            int spinner = spinner_CHARS[bar->seq % 4];
+            nl = n_snprintf(outline, sizeof(outline), "%s %c%5.1f%% %s", bar->label, spinner, percent, unit_line);
 
-        snprintf(fmt, sizeof(fmt), "%%-%ds %%5.1f%%%% %%s", bar->width);
-        snprintf(outline, sizeof(outline), fmt, line, percent, unit_line);
+            if (nl > bar->term_width - 5) {
+                char *label;
+                n_strdupap(bar->label, &label);
+
+                while (nl > bar->term_width - 5) {
+                    char *p;
+
+                    if ((p = strrchr(label, '.')))
+                        *p = '\0';
+                    else if ((p = strrchr(label, '-')))
+                        *p = '\0';
+                    else
+                        *unit_line = '\0';
+
+                    nl = n_snprintf(outline, sizeof(outline), "%s... %c%5.1f%% %s", label, spinner, percent, unit_line);
+
+                    if (*unit_line == '\0')
+                        break;
+                }
+            }
+
+            bar->seq++;
+        }
+
+        if (nl < bar->lastlen) {
+            memset(&outline[nl], ' ', bar->lastlen - nl);
+            outline[bar->lastlen] = '\0';
+        }
+
+        bar->lastlen = nl;
 
         if (total == amount) {
             bar->state = VF_PROGRESS_DISABLED;
             vf_log(VFILE_LOG_INFO | VFILE_LOG_TTY, "\r%s\n", outline);
-
-        } else
+        } else {
             vf_log(VFILE_LOG_INFO | VFILE_LOG_TTY, "\r%s", outline);
+        }
     }
 
-    bar->prev_n = n;
+    bar->prev_barlen = barlen;
     bar->prev_perc = 10 * percent;
 }
 
