@@ -362,60 +362,6 @@ const char *poldek_util_ngettext_n_packages_fmt(int n)
 #endif
 }
 
-void packages_display_summary(int verbose_l, const char *prefix, tn_array *pkgs,
-                              int parseable)
-{
-    int i, npkgs = n_array_size(pkgs);
-
-    n_assert(pkgs);
-    n_assert(n_array_size(pkgs) > 0);
-
-    if (parseable) {
-        for (i=0; i < n_array_size(pkgs); i++) {
-            struct pkg *pkg = n_array_nth(pkgs, i);
-            msgn(verbose_l, "%%%s %s", prefix, pkg_id(pkg));
-        }
-
-    } else {
-        int ncol = 2, term_width, prefix_printed = 0;
-        const char *p, *colon = "  ";
-        tn_buf *nbuf = n_buf_new(512);
-
-        term_width = poldek_term_get_width() - 5;
-        ncol = strlen(prefix) + 1;
-
-        for (i=0; i < n_array_size(pkgs); i++) {
-            struct pkg *pkg = n_array_nth(pkgs, i);
-
-            if (prefix_printed == 0) {
-                n_buf_printf(nbuf, "%s ", prefix);
-                prefix_printed = 1;
-            }
-
-            p = pkg_id(pkg);
-            if (ncol + (int)strlen(p) >= term_width) {
-                msgn(verbose_l, "%s", (char*)n_buf_ptr(nbuf));
-
-                n_buf_clean(nbuf);
-                ncol = 3;
-                n_buf_printf(nbuf, "%s ", prefix);
-            }
-
-            if (--npkgs == 0)
-                colon = "";
-            n_buf_printf(nbuf, "%s%s", p, colon);
-            ncol += strlen(p) + strlen(colon);
-        }
-
-        if (prefix_printed)
-            n_buf_printf(nbuf, "\n");
-
-        if (n_buf_size(nbuf) > 0)
-            msg(verbose_l, "%s", (char*)n_buf_ptr(nbuf));
-
-        n_buf_free(nbuf);
-    }
-}
 
 static char *get_env(char *dest, int size, const char *name)
 {

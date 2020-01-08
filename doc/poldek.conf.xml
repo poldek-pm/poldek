@@ -177,7 +177,7 @@ and [filename]*-source.conf[/filename], file getters are declared in
    <option name="https get" type="string" obsoleted="yes" />
    <option name="rsync get" type="string" obsoleted="yes" />
    <option name="cdrom get" type="string" obsoleted="yes" />
-
+   <option name="load apt sources list" type="boolean" obsoleted="yes" />
 
   <option name="default index type" type="string" default="pndir">
     <description>
@@ -209,12 +209,6 @@ and [filename]*-source.conf[/filename], file getters are declared in
     <description>
     Permits using root privileges for installation only. If set to "auto" then
     automatically turned on when poldek executed as ordinary user.
-    </description>
-  </option>
-
-  <option name="load apt sources list" type="boolean" default="no">
-    <description>
-    Load [filename]/etc/apt/sources.list[/filename].
     </description>
   </option>
 
@@ -260,6 +254,12 @@ and [filename]*-source.conf[/filename], file getters are declared in
   <option name="sudo command" type="string" default="/usr/bin/sudo" multiple="no">
     <description>
     Full path name to sudo binary.
+    </description>
+  </option>
+
+  <option name="summary style" type="string" default="color" multiple="no">
+    <description>
+    Transaction summary style, can be 'old' (pre 0.4.0 version) or 'color' - coloured and compact.
     </description>
   </option>
 </optiongroup>

@@ -21,7 +21,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-
 #include <trurl/nmalloc.h>
 #include <trurl/nstr.h>
 
@@ -31,7 +30,6 @@
 #include "pm/pm.h"
 #include "poldek.h"
 #include "poldek_intern.h"
-#include "poldek_term.h"
 #include "pkgset.h"
 #include "pkgset-req.h"
 #include "pkgmisc.h"
@@ -793,150 +791,6 @@ tn_array *poldek__ts_install_ordered_packages(const struct poldek_ts *ts)
             n_array_push(pkgs, pkg_link(pkg));
     }
 
-    return pkgs;
-}
-
-/* install summary saved to ts to propagate it to high level api  */
-void poldek__ts_update_summary(struct poldek_ts *ts,
-                               const char *prefix, const tn_array *pkgs,
-                               unsigned pmsflags, const struct pkgmark_set *pms)
-{
-    tn_array *supkgs;
-    int i;
-
-    n_assert(pkgs);
-    if (n_array_size(pkgs) == 0)
-        return;
-
-    if (pms == NULL)
-        n_assert(pmsflags == 0);
-
-    if ((supkgs = n_hash_get(ts->ts_summary, prefix)) == NULL)
-        supkgs = pkgs_array_new(n_array_size(pkgs));
-
-    for (i=0; i < n_array_size(pkgs); i++) {
-        struct pkg *pkg = n_array_nth(pkgs, i);
-
-        if (pmsflags && pms && !pkgmark_isset(pms, pkg, pmsflags))
-            continue;
-
-        n_array_push(supkgs, pkg_link(pkg));
-    }
-
-    if (n_array_size(supkgs) == 0) {
-        n_array_free(supkgs);
-
-    } else {
-        n_hash_insert(ts->ts_summary, prefix, supkgs);
-        n_array_sort(supkgs);
-    }
-
-}
-
-void poldek__ts_display_summary(struct poldek_ts *ts)
-{
-    int ninst = 0, ndep = 0, nrm = 0, npkgs = 0, parseable = 0;
-    long int sinsts = 0, sdeps = 0, srems = 0, sdiff = 0;
-    tn_array *ipkgs, *idepkgs, *rmpkgs, *pkgs;
-    char ms[1024], *to, *prefix;
-    int i, n;
-
-    ipkgs = n_hash_get(ts->ts_summary, "I");
-    idepkgs = n_hash_get(ts->ts_summary, "D");
-    rmpkgs = n_hash_get(ts->ts_summary, "R");
-
-    ninst = ipkgs ? n_array_size(ipkgs) : 0;
-    ndep  = idepkgs ? n_array_size(idepkgs) : 0;
-    nrm   = rmpkgs ? n_array_size(rmpkgs) : 0;
-
-    if (ipkgs)
-	for (i=0; i < ninst; i++) {
-	    struct pkg *pkg = n_array_nth(ipkgs, i);
-	    sinsts += pkg->size;
-	}
-    if (idepkgs)
-	for (i=0; i < ndep; i++) {
-	    struct pkg *pkg = n_array_nth(idepkgs, i);
-	    sdeps += pkg->size;
-	}
-    if (rmpkgs)
-	for (i=0; i < nrm; i++) {
-	    struct pkg *pkg = n_array_nth(rmpkgs, i);
-	    srems += pkg->size;
-	}
-
-    if (ts->type != POLDEK_TS_UNINSTALL) {
-        to = _("to install");
-        prefix = "I";
-        pkgs = ipkgs;
-        npkgs = ninst + ndep;
-        sdiff = sinsts + sdeps - srems;
-    } else {
-        to = _("to remove");
-        prefix = "R";
-        pkgs = rmpkgs;
-        npkgs = nrm + ndep;
-        sdiff = - srems - sdeps;
-        nrm = 0;
-    }
-    n_assert(pkgs);
-    n_assert(npkgs);
-
-#ifndef ENABLE_NLS
-    n = n_snprintf(ms, sizeof(ms),
-                   "There are %d package%s %s", npkgs, npkgs > 1 ? "s":"", to);
-    if (ndep)
-        n += n_snprintf(&ms[n], sizeof(ms) - n,
-                        " (%d marked by dependencies)", ndep);
-
-#else
-    n = n_snprintf(ms, sizeof(ms),
-                   ngettext("There are %d package %s",
-                            "There are %d packages %s", npkgs), npkgs, to);
-
-    if (ndep)
-        n += n_snprintf(&ms[n], sizeof(ms),
-                        ngettext(" (%d marked by dependencies)",
-                                 " (%d marked by dependencies)", ndep), ndep);
-#endif
-    if (nrm)
-        n += n_snprintf(&ms[n], sizeof(ms) - n, _(", %d to remove"), nrm);
-
-    n_snprintf(&ms[n], sizeof(ms) - n,  ":");
-    msgn(1, "%s", ms);
-
-    parseable = ts->getop(ts, POLDEK_OP_PARSABLETS);
-
-    if (npkgs)
-        packages_display_summary(1, prefix, pkgs, parseable);
-
-    if (idepkgs && ndep)
-        packages_display_summary(1, "D", idepkgs, parseable);
-
-    if (ts->type != POLDEK_TS_UNINSTALL) {
-        if (rmpkgs)
-            packages_display_summary(1, "R", rmpkgs, parseable);
-    }
-
-    if (sdiff != 0) {
-        char size[64];
-        snprintf_size(size, sizeof(size), labs(sdiff), 1, 1);
-
-        if (sdiff > 0)
-           msgn(1, _("This operation will use %s of disk space."), size);
-        else
-           msgn(1, _("This operation will free %s of disk space."), size);
-    }
-}
-
-tn_array *poldek_ts_get_summary(const struct poldek_ts *ts, const char *mark)
-{
-    tn_array *pkgs;
-    n_assert(mark != NULL);
-    pkgs = n_hash_get(ts->ts_summary, mark);
-
-    if (pkgs != NULL)
-        return n_ref(pkgs);
     return pkgs;
 }
 

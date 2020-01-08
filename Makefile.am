@@ -1,6 +1,6 @@
 NULL =
 
-AUTOMAKE_OPTIONS = 
+AUTOMAKE_OPTIONS =
 ACLOCAL_AMFLAGS = -I m4
 
 TRURL_DIR = @TRURL_DIR@
@@ -54,8 +54,9 @@ libpoldek_la_SOURCES = \
 	  lib_init.c            \
 	  lib_pkgset.c          \
 	  poldek_ts.c poldek_ts.h \
+	  ts_summary.c          \
 	  poldek_intern.h \
-	  pkg_ver_cmp.h 
+	  pkg_ver_cmp.h
 
 libpoldek_la_CFLAGS =		\
 	$(WARNINGFLAGS_C)	\
@@ -63,7 +64,7 @@ libpoldek_la_CFLAGS =		\
 
 pkgincludedir = $(includedir)/poldek
 
-# one line to easy get them by external script 
+# one line to easy get them by external script
 libHEADERS = poldek.h poldek_ts.h pkg.h pkgcmp.h capreq.h pkgu.h pkgmisc.h arg_packages.h poldek_util.h poldek_term.h log.h pm/pm.h pkgdir/pkgdir.h pkgdir/source.h sigint/sigint.h conf.h pkgfl.h
 
 nobase_pkginclude_HEADERS = $(libHEADERS)
@@ -98,16 +99,16 @@ MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 *.html \
 			ABOUT-NLS po/*~ po/*.pot conf/*~ m4/*~
 
-NEWS: 
+NEWS:
 	$(MAKE) -C doc NEWS
 	cp doc/NEWS .
 
 conf_sections.c: $(top_srcdir)/doc/poldek.conf.xml $(top_srcdir)/doc/*.xsl
 	         	 doc/conf-xml2.sh c doc/poldek.conf.xml > $@
 
-vfjuggle: 
+vfjuggle:
 
-dist-hook: 
+dist-hook:
 	@if test -d "$(srcdir)/.git"; then \
 		echo "Creating ChangeLog" && \
 		( cd "$(top_srcdir)" && \
@@ -124,18 +125,18 @@ dist-hook:
 #	$(install_sh) -m 0755 -d $(DESTDIR)$(libexecdir)/$(PACKAGE)
 #	$(install_sh) -m 0755 $(vfscripts) $(DESTDIR)$(libexecdir)/$(PACKAGE)
 
-# cleanning up *.la files; who is stupid me or libtool? 
+# cleanning up *.la files; who is stupid me or libtool?
 install-exec-hook:
 	for p in poldek vfile tndb trurl; do                        \
 		laf="$(DESTDIR)$(libdir)/lib$$p.la";                    \
 		test -f $$laf && perl -pi -e 's|\s\-L[/\w\-\.]+||g;' $$laf; \
 	done; \
-	$(LN_S) $(PACKAGE) $(DESTDIR)$(bindir)/i$(PACKAGE) 
+	$(LN_S) $(PACKAGE) $(DESTDIR)$(bindir)/i$(PACKAGE)
 
 clean-local:
 	-rm -f core *.o *.bak *~ *% *\# TAGS gmon.out \#*\# dupa* conf/*~
 
-poldek.pc: 
+poldek.pc:
 	@ ( echo 'prefix=$(prefix)'; \
 		echo 'exec_prefix=$${exec_prefix}'; \
 		echo 'libdir=$${exec_prefix}/lib'; \
