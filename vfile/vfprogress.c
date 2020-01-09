@@ -225,7 +225,6 @@ static void tty_progress(void *data, long total, long amount)
 
     } else {
         char outline[256], unit_line[45], amount_str[16], total_str[16], transfer_str[16];
-        int nn;
 
         nbytes2str(total_str, sizeof(total_str), total);
         nbytes2str(amount_str, sizeof(amount_str), amount);
@@ -238,14 +237,14 @@ static void tty_progress(void *data, long total, long amount)
                            bar->transfer_rate);
             }
 
-            nn = n_snprintf(unit_line, sizeof(unit_line), "[%s (%s/s)]",
+            n_snprintf(unit_line, sizeof(unit_line), "[%s (%s/s)]",
                             total_str, transfer_str);
         } else {
             int en = 0;
             char eta_str[64];
 
             en = eta2str(eta_str, sizeof(eta_str), bar);
-            nn = n_snprintf(unit_line, sizeof(unit_line),
+            n_snprintf(unit_line, sizeof(unit_line),
                             "[%s of %s (%s/s)] [%s]",
                             amount_str, total_str, transfer_str,
                             en ? eta_str : "--:--");
