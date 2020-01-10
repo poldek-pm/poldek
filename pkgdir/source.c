@@ -85,6 +85,9 @@ static struct src_option source_options[] = {
                      PKGSRC_OPTION_STRING | PKGSRC_OPTION_SUBOPT, NULL },
     {  NULL,      0, 0, NULL },
 };
+
+static char *source_set(char **member, const char *value);
+
 #if 0
 static unsigned find_subopt(const char *optstr, struct subopt *subopts)
 {
@@ -121,19 +124,19 @@ unsigned get_subopt(struct source *src, struct src_option *opt,
     str++;
 
     if (opt->flag & PKGSOURCE_TYPE) {
-        src->type = n_strdup(str);
+        source_set(&src->type, str);
         v = 1;
 
     } else if (opt->flag & PKGSOURCE_DSCR) {
-        src->dscr = n_strdup(str);
+        source_set(&src->dscr, str);
         v = 1;
 
     } else if (opt->flag & PKGSOURCE_GROUP) {
-        src->group = n_strdup(str);
+        source_set(&src->group, str);
         v = 1;
 
     } else if (opt->flag & PKGSOURCE_COMPR) {
-        src->compr = n_strdup(str);
+        source_set(&src->compr, str);
         v = 1;
 
     } else if (opt->flag & PKGSOURCE_PRI) {
@@ -172,7 +175,7 @@ struct source *source_malloc(void)
     src->no = 0;
     //src->flags |= PKGSOURCE_PRI;
     src->name = src->path = src->pkg_prefix = NULL;
-    src->group = src->dscr = src->type = NULL;
+    src->group = src->dscr = NULL;
     src->lc_lang = NULL;
     src->_refcnt = 0;
     src->exclude_path = n_array_new(4, free, (tn_fn_cmp)strcmp);
@@ -227,7 +230,6 @@ void source_free(struct source *src)
         src->_refcnt--;
         return;
     }
-
     n_cfree(&src->type);
     n_cfree(&src->name);
     n_cfree(&src->path);
@@ -426,6 +428,7 @@ struct source *source_new(const char *name, const char *type,
     } else {
         src->type = n_strdup(poldek_conf_PKGDIR_DEFAULT_TYPE);
     }
+
 
     if (path)
         src->path = n_strdup(clpath);

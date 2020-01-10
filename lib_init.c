@@ -1138,6 +1138,7 @@ void poldek_destroy(struct poldek_ctx *ctx)
     sigint_destroy();
 
     n_array_free(ctx->sources);
+    n_array_free(ctx->dest_sources);
 
     if (ctx->pkgdirs) {
         n_array_free(ctx->pkgdirs);

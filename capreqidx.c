@@ -137,6 +137,13 @@ const char *skip_CAPS[] = {
 
 tn_hash *skip_CAPS_H = NULL;
 
+static void skip_CAPS_free(void) {
+    if (skip_CAPS_H != NULL) {
+        n_hash_free(skip_CAPS_H);
+        skip_CAPS_H = NULL;
+    }
+}
+
 inline static int indexable_cap(const char *name, int len, unsigned raw_hash)
 {
     if (!skip_CAPS_H) {
@@ -148,6 +155,8 @@ inline static int indexable_cap(const char *name, int len, unsigned raw_hash)
             n_hash_insert(skip_CAPS_H, skip_CAPS[i], skip_CAPS[i]);
             i++;
         }
+
+        atexit(skip_CAPS_free);
     }
 
     uint32_t hash = n_hash_compute_index_hash(skip_CAPS_H, raw_hash);
@@ -186,14 +195,14 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname, int capname_len,
     uint32_t khash = n_hash_compute_index_hash(idx->ht, raw_khash);
 
     if ((ent = n_hash_hget(idx->ht, capname, capname_len, khash)) == NULL) {
-        const struct capreq_name_ent *cent = capreq__alloc_name(capname, capname_len);
+        const tn_lstr8 *cent = capreq__alloc_name(capname, capname_len);
 
         ent = idx->na->na_malloc(idx->na, sizeof(*ent));
         ent->_size = 1;
         ent->items = 1;
         ent->crent_pkg = pkg;
 
-        n_hash_hinsert(idx->ht, cent->name, cent->len, khash, ent);
+        n_hash_hinsert(idx->ht, cent->str, cent->len, khash, ent);
 
 #if ENABLE_TRACE
         if ((n_hash_size(idx->ht) % 1000) == 0)

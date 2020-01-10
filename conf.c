@@ -104,10 +104,16 @@ static void copt_free(struct copt *opt)
         return;
     }
 
-    if (opt->flags & COPT_MULTIPLE)
+    if (opt->flags & COPT_MULTIPLE) {
         n_array_free(opt->vals);
-    else
+    } else {
+        if (opt->vals != NULL) {
+            DBGF_F("%s %d\n", opt->name, n_array_size(opt->vals));
+        }
+
+        n_assert(opt->vals == NULL);
         n_cfree(&opt->val);
+    }
 
     free(opt);
 }
@@ -141,8 +147,6 @@ static int parse_val_list(tn_hash *ht, char *name, char *vstr, const char *sep,
         n_hash_insert(ht, opt->name, opt);
     }
 
-    if (opt->vals == NULL)
-        opt->vals = n_array_new(2, free, (tn_fn_cmp)strcmp);
 
     while (*p) {
         if (opt->val == NULL) {
@@ -150,10 +154,14 @@ static int parse_val_list(tn_hash *ht, char *name, char *vstr, const char *sep,
             opt->val = n_strdup(*p);
 
         } else {
+            if (opt->vals == NULL)
+                opt->vals = n_array_new(2, free, (tn_fn_cmp)strcmp);
+
             if (n_array_size(opt->vals) == 0) {
                 opt->flags |= COPT_MULTIPLE;
                 n_array_push(opt->vals, n_strdup(opt->val));
             }
+
             n_array_push(opt->vals, n_strdup(*p));
             DBGF("%s[list] += %s\n", name, *p);
         }

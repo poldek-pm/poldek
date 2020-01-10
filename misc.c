@@ -665,7 +665,7 @@ tn_array *lc_lang_select(tn_array *avlangs, const char *lc_lang)
     if (lc_lang == NULL || n_array_size(avlangs) == 0)
         return NULL;
 
-    r_langs = n_array_clone(avlangs);
+    r_langs = n_array_new(n_array_size(avlangs), free, strcmp);
     n_array_sort(avlangs);
 
     langs = n_str_tokl(lc_lang, ":");

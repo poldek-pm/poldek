@@ -54,7 +54,7 @@ struct poldek_log_appender {
 static tn_array *log_appenders = NULL;
 
 
-void poldek_log_reset_appenders(void) 
+void poldek_log_reset_appenders(void)
 {
     n_array_cfree(&log_appenders);
 }
@@ -64,20 +64,22 @@ static void appender_free(struct poldek_log_appender *ape)
 {
     if (ape->free)
         ape->free(ape->_data);
+
+    free(ape);
 }
 
 void poldek_log_add_appender(const char *name, void *data, tn_fn_free free,
                              unsigned flags, poldek_vlog_fn dolog)
 {
     struct poldek_log_appender *ape;
-    
+
     if (log_appenders == NULL)
         log_appenders = n_array_new(4, (tn_fn_free)appender_free, NULL);
 
     if (n_str_eq(name, "_FILE")) {
         dolog = vlog_file;
         flags |= LOGFILE;
-        
+
     } else if (n_str_eq(name, "_TTY")) {
         dolog = vlog_tty;
         flags |= LOGTTY;
@@ -88,7 +90,7 @@ void poldek_log_add_appender(const char *name, void *data, tn_fn_free free,
 
     n_assert(dolog);
     ape = n_calloc(1, sizeof(*ape) + strlen(name) + 1);
-    
+
     memcpy(ape->name, name, strlen(name) + 1);
     ape->flags = flags;
     ape->_data = data;
@@ -120,7 +122,7 @@ int poldek_verbose(void)
 int poldek_set_verbose(int v)
 {
     const char *p;
-    
+
     int vv = poldek_VERBOSE;
     poldek_VERBOSE = v;
 
@@ -155,11 +157,11 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
     static int last_endlined = 1;
     char buf[1024], tmp_fmt[1024];
     int  buf_len = 0, fmt_len = 0, flags, is_continuation = 0, is_endlined = 0;
-    
+
     if (*fmt == '_') {
         fmt++;
         is_continuation = 1;
-        
+
     } else if (*fmt == '\n') {
         buf[buf_len++] = '\n';
         fmt++;
@@ -169,7 +171,7 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
     if (*fmt) {
         fmt_len = strlen(fmt);
         is_endlined = (fmt[fmt_len - 1] == '\n');
-        
+
         if ((pri & LOGOPT_N) && !is_endlined && (int)sizeof(tmp_fmt) > fmt_len + 2) {
             memcpy(tmp_fmt, fmt, fmt_len);
             tmp_fmt[fmt_len++] = '\n';
@@ -180,7 +182,7 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
     }
 
     /* auto line break for errors and warnings */
-        
+
     if (pri & LOGTTY) {
         if (!last_endlined && !is_continuation && (pri & (LOGERR|LOGWARN))) {
             buf[buf_len++] = '\n';
@@ -188,12 +190,12 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
         last_endlined = is_endlined;
     }
 
-    
+
     if (indent > 0 && (unsigned)indent < sizeof(buf) - buf_len - 2) {
         memset(&buf[buf_len], ' ', indent);
         buf_len += indent;
     }
-    
+
     buf[buf_len] = '\0';
 
 #if 0                           /* debug */
@@ -202,18 +204,18 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
         n_snprintf(s, sizeof(s), "l [%s] [%s]", buf, fmt);
         vfprintf(stderr, s, args);
     }
-#endif    
+#endif
     if (*fmt == '\0') {
         fmt = buf;
-        
+
     } else if (*buf != '\0') {
         int newfmt_len = buf_len + fmt_len;
         char *newfmt = alloca(newfmt_len + 1);
-        
+
         memcpy(newfmt, buf, buf_len);
         memcpy(&newfmt[buf_len], fmt, fmt_len);
         newfmt[newfmt_len] = '\0';
-        
+
         fmt = newfmt;
         fmt_len = newfmt_len;
     }
@@ -222,7 +224,7 @@ void poldek_vlog(int pri, int indent, const char *fmt, va_list args)
     flags = LOGTTY | LOGFILE;
     if (pri & LOGTTY)
         flags &= ~LOGFILE;
-    
+
     else if (pri & LOGFILE)
         flags &= ~LOGTTY;
 
@@ -249,7 +251,7 @@ static void vlog_tty(void *foo, int pri, const char *message)
     if (pri & LOGERR)
         n = poldek_term_snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf),
                                    _("error: "));
-    
+
     else if (pri & LOGWARN)
         n = poldek_term_snprintf_c(PRCOLOR_RED | PRAT_BOLD, buf, sizeof(buf),
                                    _("warn: "));
@@ -260,8 +262,8 @@ static void vlog_tty(void *foo, int pri, const char *message)
 
     else if (pri & LOGDEBUG)
         n = n_snprintf(buf, sizeof(buf), ":");
-    
-            
+
+
     if (n > 0)
         fprintf(stdout, "%s", buf);
 
@@ -271,27 +273,27 @@ static void vlog_tty(void *foo, int pri, const char *message)
 
 static void vlog_file(void *stream, int pri, const char *message)
 {
-    
+
     if ((pri & LOGOPT_CONT) == 0) {
         char timbuf[64];
         time_t t;
-            
+
         t = time(NULL);
         strftime(timbuf, sizeof(timbuf), "%Y.%m.%d %H:%M:%S ", localtime(&t));
         fprintf(stream, "%s", timbuf);
     }
-    
+
     if (pri & LOGERR)
         fprintf(stream, "%s", _("error: "));
-    
+
     else if (pri & LOGWARN)
         fprintf(stream, "%s", _("warn: "));
-            
+
     fprintf(stream, "%s", message);
     fflush(stream);
 }
 
-static void do_log(unsigned flags, int pri, const char *fmt, va_list args) 
+static void do_log(unsigned flags, int pri, const char *fmt, va_list args)
 {
     char message[16 * 1024], *endl = NULL;
     int i;
@@ -302,11 +304,11 @@ static void do_log(unsigned flags, int pri, const char *fmt, va_list args)
     }
 
     n_vsnprintf(message, sizeof(message), fmt, args);
-    
+
     if (log_appenders == NULL || n_array_size(log_appenders) == 0) {
         if (endl)
             vlog_tty(NULL, LOGOPT_CONT, endl);
-            
+
         vlog_tty(NULL, pri, message);
         return;
     }
@@ -316,17 +318,15 @@ static void do_log(unsigned flags, int pri, const char *fmt, va_list args)
 
         if ((ape->flags & flags) == 0)
             continue;
-        
+
         if (ape->dolog) {
             if (endl)
                 ape->dolog(ape->_data, LOGOPT_CONT, endl);
             ape->dolog(ape->_data, pri, message);
-        
+
         } else {
             fprintf(stderr, "appender without dolog()?\n");
             n_assert(0);
         }
     }
 }
-
-
