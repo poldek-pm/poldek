@@ -152,6 +152,21 @@ static void set_anonpasswd(void)
     }
 }
 
+static void vfile_conf_free(void)
+{
+    if (vfile_conf.default_clients_ht != NULL) {
+        n_hash_free(vfile_conf.default_clients_ht);
+        vfile_conf.default_clients_ht = NULL;
+    }
+
+    if (vfile_conf.noproxy != NULL)
+        n_array_cfree(&vfile_conf.noproxy);
+
+    if (vfile_conf._cachedir) {
+        n_cfree(&vfile_conf._cachedir);
+    }
+}
+
 
 int vfile_configure(int param, ...)
 {
@@ -159,6 +174,10 @@ int vfile_configure(int param, ...)
     int      v, *vp, rc;
     char     *vs;
     void     *vv;
+
+    if (vfile_conf.default_clients_ht == NULL) { /* first use */
+        atexit(vfile_conf_free);
+    }
 
     if (vfile_conf.default_clients_ht == NULL) {
         vfile_conf.default_clients_ht = n_hash_new(7, free);
@@ -194,6 +213,9 @@ int vfile_configure(int param, ...)
         case VFILE_CONF_CACHEDIR:
             vs = va_arg(ap, char*);
             if (vs) {
+                if (vfile_conf._cachedir)
+                    n_free(vfile_conf._cachedir);
+
                 vfile_conf._cachedir = n_strdup(vs);
                 v = strlen(vfile_conf._cachedir);
                 if (vfile_conf._cachedir[v - 1] == '/')
