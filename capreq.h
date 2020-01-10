@@ -113,27 +113,22 @@ EXPORT struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t relflags, int32_t flags);
 #ifndef SWIG
-struct capreq_name_ent {
-    uint8_t len;
-    char name[0];
-};
-
-EXPORT const struct capreq_name_ent *capreq__alloc_name(const char *name, size_t len);
-#endif
-
+EXPORT const tn_lstr8 *capreq__alloc_name(const char *name, size_t len);
 #define capreq_new_name_a(nam, crptr)                              \
     {                                                              \
         struct capreq *__cr;                                       \
-        const struct capreq_name_ent *ent;                         \
+        const tn_lstr8 *ent;                                       \
         ent = capreq__alloc_name(nam, strlen(nam));                \
         __cr = alloca(sizeof(*__cr) + 2);                          \
         __cr->cr_flags = __cr->cr_relflags = 0;                    \
         __cr->cr_ep_ofs = __cr->cr_ver_ofs = __cr->cr_rel_ofs = 0; \
         __cr->_buff[0] = '\0';                                     \
-        __cr->name = ent->name;                                    \
+        __cr->name = ent->str;                                     \
         __cr->namelen = ent->len;                                  \
         crptr = __cr;                                              \
     }
+
+#endif
 
 EXPORT void capreq_free_na(tn_alloc *na, struct capreq *cr);
 EXPORT void capreq_free(struct capreq *cr);

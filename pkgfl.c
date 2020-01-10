@@ -29,40 +29,25 @@
 #include "pkg.h"
 #include "pkgfl.h"
 #include "depdirs.h"
+#include "misc.h"
 
-struct dirname_h {
-    tn_hash *dnh;
-    tn_alloc *na;
-    int      n;
-};
+static tn_str8alloc *dirname_allocator = NULL;
 
-
-static struct dirname_h dirname_h = { 0, 0, 0 };
-
-static inline char *register_dn(char *dn)
-{
-    char *dnn;
-
-    if (dirname_h.dnh == NULL) {
-        dirname_h.na = n_alloc_new(16, TN_ALLOC_OBSTACK);
-        dirname_h.dnh = n_hash_new_na(dirname_h.na, 4096, NULL);
-        n_hash_ctl(dirname_h.dnh, TN_HASH_NOCPKEY | TN_HASH_REHASH);
-    }
-
-    if ((dnn = n_hash_get(dirname_h.dnh, dn)) == NULL) {
-        int len = strlen(dn) + 1;
-        dnn = dirname_h.na->na_malloc(dirname_h.na, len);
-        memcpy(dnn, dn, len);
-        n_hash_insert(dirname_h.dnh, dnn, dnn);
-
-    } else {
-        dirname_h.n++;
-        //printf("hhhh %d %s\n", dirname_h.n, dnn);
-    }
-
-    return dnn;
+static void dirname_allocator_free(void) {
+    if (dirname_allocator != NULL)
+        n_str8alloc_free(dirname_allocator);
 }
 
+static inline const char *register_dn(const char *name, size_t len)
+{
+    if (dirname_allocator == NULL) {
+        dirname_allocator = n_str8alloc_new(1024, 0);
+        atexit(dirname_allocator_free);
+    }
+
+    const tn_lstr8 *s8 = n_str8alloc_add(dirname_allocator, name, len);
+    return s8->str;
+}
 
 struct flfile *flfile_new(tn_alloc *na, uint32_t size, uint16_t mode,
                           const char *basename, int blen,
@@ -268,7 +253,7 @@ struct pkgfl_ent *pkgfl_ent_new(tn_alloc *na,
     flent = na->na_malloc(na, sizeof(*flent)+(nfiles * sizeof(struct flfile*)));
     dirname = prepare_dirname(dirname, &dirname_len);
 
-    flent->dirname = register_dn(dirname);
+    flent->dirname = (char *)register_dn(dirname, dirname_len);
     flent->items = 0;
     DBGF("flent_new %s %d\n", flent->dirname, nfiles);
     return flent;
