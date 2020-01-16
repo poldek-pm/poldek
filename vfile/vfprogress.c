@@ -97,7 +97,7 @@ static void tty_progress_reset(void *data)
 
 static int nbytes2str(char *buf, int bufsize, unsigned long nbytes)
 {
-    char unit = 'B';
+    char unit = 'B', *fmt = "%.0f%c";
     double nb;
 
     nb = nbytes;
@@ -105,6 +105,7 @@ static int nbytes2str(char *buf, int bufsize, unsigned long nbytes)
     if (nb > 1024) {
         nb /= 1024.0;
         unit = 'K';
+        fmt = "%.1f%c";
     }
 
     if (nb > 1024) {
@@ -112,7 +113,7 @@ static int nbytes2str(char *buf, int bufsize, unsigned long nbytes)
         unit = 'M';
     }
 
-    return snprintf(buf, bufsize, "%.1f%c", nb, unit);
+    return snprintf(buf, bufsize, fmt, nb, unit);
 }
 
 static int eta2str(char *buf, int bufsize, struct tty_progress_bar *bar)
@@ -169,7 +170,7 @@ static void tty_progress(void *data, long total, long amount)
     if (bar->state == VF_PROGRESS_VIRGIN) {
         if (total > 0) {
             if (total == amount ||   /* downloaded before progress() call */
-                total < 2048) {       /* too small to show to */
+                total < 2048) {      /* too small to show to */
                 bar->state = VF_PROGRESS_DISABLED;
                 return;
             }
@@ -252,11 +253,11 @@ static void tty_progress(void *data, long total, long amount)
 
         int nl;
         if (total == amount) {
-            nl = n_snprintf(outline, sizeof(outline), "%s %s", bar->label, unit_line);
+            nl = n_snprintf(outline, sizeof(outline), "Retrieved %s %s", bar->label, unit_line);
 
         } else {
             int spinner = spinner_CHARS[bar->seq % 4];
-            nl = n_snprintf(outline, sizeof(outline), "%s %c%5.1f%% %s", bar->label, spinner, percent, unit_line);
+            nl = n_snprintf(outline, sizeof(outline), "Retrieving %s %c%5.1f%% %s", bar->label, spinner, percent, unit_line);
 
             if (nl > bar->term_width - 5) {
                 char *label;
