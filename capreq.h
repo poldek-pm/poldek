@@ -152,6 +152,7 @@ EXPORT tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n);
 
 EXPORT tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf);
 EXPORT tn_array *capreq_arr_restore_st(tn_alloc *na, tn_stream *st);
+EXPORT int capreq_arr_restore_skip_st(tn_stream *st);
 #endif
 
 EXPORT int capreq_snprintf(char *str, size_t size, const struct capreq *cr);

@@ -775,6 +775,12 @@ tn_array *capreq_arr_restore_st(tn_alloc *na, tn_stream *st)
     return rs.arr;
 }
 
+int capreq_arr_restore_skip_st(tn_stream *st)
+{
+    n_buf_restore_skip(st, TN_BUF_STORE_16B);
+    return 1;
+}
+
 static
 int cmp_uniq(struct capreq *cr1, struct capreq *cr2)
 {
