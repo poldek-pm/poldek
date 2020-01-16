@@ -104,7 +104,8 @@ int pm_pset_configure(void *pm_pset, const char *key, void *val)
 
     if (n_str_eq(key, "source")) {
         struct source *src = val;
-        n_array_push(pm->sources, val);
+        n_array_push(pm->sources, source_link(src));
+
         if (n_array_size(pm->sources) > 1)
             pm->flags |= IMMUTABLE_MULTISRC;
 

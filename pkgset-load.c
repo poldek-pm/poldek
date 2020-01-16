@@ -129,10 +129,9 @@ int pkgset_add_pkgdir(struct pkgset *ps, struct pkgdir *pkgdir)
 {
     int i;
 
-    n_array_push(ps->depdirs, pkgdir);
     if (pkgdir->depdirs) {
         for (i=0; i < n_array_size(pkgdir->depdirs); i++)
-            n_array_push(ps->depdirs, n_array_nth(pkgdir->depdirs, i));
+            n_array_push(ps->depdirs, n_strdup(n_array_nth(pkgdir->depdirs, i)));
     }
 
     n_array_sort(ps->depdirs);
