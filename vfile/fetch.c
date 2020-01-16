@@ -629,6 +629,9 @@ int url_to_path(char *buf, int size, const char *url, int isdir)
         n = 0;
         p = (char*)url;
 
+        if (*p == '/')          /* skip leading '/' ('_' in local path) */
+            p++;
+
     } else {
         int nn = p - url;
 
@@ -660,7 +663,7 @@ int url_to_path(char *buf, int size, const char *url, int isdir)
         p++;
     }
 
-    //printf("%s[%d] => %s(%s)\n", url, isdir, buf, sl);
+    //DBGF("%s[%d] => %s(%s)\n", url, isdir, buf, sl);
     return n;
 }
 
