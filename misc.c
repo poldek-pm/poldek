@@ -166,6 +166,27 @@ static char *setup_default_cachedir(void)
     }
 
     n_assert(tmp_cachedir == NULL);
+    dir = getenv("XDG_CACHE_HOME");        /* try env XDG_CACHE_HOME */
+    if ((dir == NULL || *dir == '\0') && pw) {
+        int size = strlen(pw->pw_dir) + 1 /* '/' */ + strlen(".cache") + 1;
+        dir = alloca(size);
+        n_snprintf(dir, size, "%s/.cache", pw->pw_dir);
+    }
+
+    if (dir && *dir && poldek_util_is_rwxdir(dir)) {
+        const char *dn = PACKAGE_NAME; /* XDG_CACHE_HOME/poldek */
+        n_snprintf(path, sizeof(path), "%s/%s", dir, dn);
+
+        if (!util__isdir(path))
+            mkdir(path, 0700);
+
+        if (poldek_util_is_rwxdir(path)) {
+            tmp_cachedir = path;
+            goto l_end;
+        }
+    }
+
+    n_assert(tmp_cachedir == NULL);
     dir = getenv("TMPDIR");        /* try env $TMP* */
     if (dir == NULL || *dir == '\0')
         dir = getenv("TMP");
