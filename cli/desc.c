@@ -837,7 +837,7 @@ static void show_changelog(struct cmdctx *cmdctx, struct pkg *pkg, struct pkguin
         tn_array *installed;
         time_t btime;
 
-        installed = poclidek_get_dent_packages(cmdctx->cctx, POCLIDEK_INSTALLEDDIR);
+        installed = poclidek_get_dent_packages(cmdctx->cctx, POCLIDEK_INSTALLEDDIR, 0);
         if (installed == NULL)
             goto l_end;
 
@@ -1025,18 +1025,19 @@ static int desc(struct cmdctx *cmdctx)
 {
     tn_array               *pkgs = NULL;
     int                    i, err = 0, term_width;
-    unsigned               ldflags = POCLIDEK_LOAD_ALL;
+    const char             *pwd;
 
-    if (cmdctx->_flags & OPT__NEED_DEPS) {
-        ldflags |= POCLIDEK_LOAD_SETUP_DEPS;
-    }
+    pwd = poclidek_pwd(cmdctx->cctx);
 
-    poclidek_load_packages(cmdctx->cctx, ldflags);
-    pkgs = poclidek_resolve_packages(NULL, cmdctx->cctx, cmdctx->ts, 0);
+    pkgs = poclidek_resolve_packages(pwd, cmdctx->cctx, cmdctx->ts, 0, 0);
     if (pkgs == NULL) {
         err++;
         goto l_end;
     }
+
+    /* resolved dependencies (e.g. required packages) are needed by desc command only */
+    if (cmdctx->_flags & OPT__NEED_DEPS)
+        poldek_setup_pkgset_deps(cmdctx->cctx->ctx);
 
     if (cmdctx->_flags == 0)
         cmdctx->_flags = OPT_DESC_DESCR;

@@ -62,8 +62,8 @@ int poclidek_op_ctx_verify_major_mode(struct poclidek_op_ctx *opctx)
         n_array_free(majormodes);
         return 1;
     }
-    
-    
+
+
     n = 0;
     sp = ", ";
     if (n_array_size(majormodes) == 2) {
@@ -78,12 +78,12 @@ int poclidek_op_ctx_verify_major_mode(struct poclidek_op_ctx *opctx)
     for (i=0; i < n_array_size(majormodes); i++) {
         if (n_array_size(majormodes) > 2 && i == n_array_size(majormodes) - 2)
             sp = _(" and ");
-        
+
         n += n_snprintf(&tmp[n], sizeof(tmp) - n, "'--%s'%s",
                         n_hash_get(opctx->modeh, n_array_nth(majormodes, i)),
                         i < n_array_size(majormodes) - 1 ? sp : "");
     }
-    
+
     logn(LOGERR, _("%s options are exclusive"), tmp);
     n_array_free(majormodes);
     return 0;
@@ -116,17 +116,15 @@ struct poclidek_opgroup_rt *poclidek_opgroup_rt_new(struct poldek_ts *ts,
 
 void poclidek_opgroup_rt_free(struct poclidek_opgroup_rt *rt)
 {
-    n_assert(rt->_opdata_free);
     if (rt->_opdata) {
         if (rt->_opdata_free)
             rt->_opdata_free(rt->_opdata);
         else
             n_die("memleak, no _opdata_free\n");
-        
+
         rt->_opdata = NULL;
     }
-    
+
     rt->ctx = NULL;
+    n_free(rt);
 }
-
-

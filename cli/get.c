@@ -44,8 +44,8 @@ static struct argp_option options[] = {
 };
 
 struct poclidek_cmd command_get = {
-    0, 
-    "get", N_("PACKAGE..."), N_("Download packages"), 
+    0,
+    "get", N_("PACKAGE..."), N_("Download packages"),
     options, parse_opt,
     NULL, get, NULL, NULL, NULL, NULL, 0, 5, 0
 };
@@ -55,7 +55,7 @@ static
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct cmdctx *cmdctx = state->input;
-    
+
     switch (key) {
         case 'd':
             if (arg) {
@@ -70,7 +70,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         default:
             return ARGP_ERR_UNKNOWN;
     }
-    
+
     return 0;
 }
 
@@ -81,11 +81,10 @@ static int get(struct cmdctx *cmdctx)
     tn_array *pkgs = NULL;
     char destdir[PATH_MAX], *destdirp;
     int err = 0;
-    
+
     cctx = cmdctx->cctx;
-    
-    poclidek_load_packages(cctx, POCLIDEK_LOAD_AVAILABLE);
-    pkgs = poclidek_resolve_packages(NULL, cctx, cmdctx->ts, 0);
+
+    pkgs = poclidek_resolve_packages(NULL, cctx, cmdctx->ts, 0, 0);
     if (pkgs == NULL) {
         err++;
         goto l_end;
@@ -100,15 +99,15 @@ static int get(struct cmdctx *cmdctx)
         }
         destdirp = destdir;
     }
-    
+
     if (!packages_fetch(poldek_get_pmctx(cmdctx->ts->ctx), pkgs, destdirp, 1))
         err++;
-    
+
  l_end:
     if (pkgs)
         n_array_free(pkgs);
 
+    n_cfree(&cmdctx->_data);
+
     return err == 0;
 }
-
-

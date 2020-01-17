@@ -440,7 +440,7 @@ static void init_commands(struct poclidek_ctx *cctx, tn_hash *global_aliases,
         struct poclidek_cmd *cmd = commands_tab[n++];
         poclidek_add_command(cctx, cmd);
     }
-	n_array_sort(cctx->commands);
+    n_array_sort(cctx->commands);
 
     n = 0;
     if (global_aliases)
@@ -474,7 +474,7 @@ static int config_path(char *globalpath, char *localpath, int size)
     if (access(globalpath, R_OK) != 0)
         *globalpath = '\0';
 
-
+    /* TODO: use XDG_CONFIG_HOME */
     if ((homedir = getenv("HOME")) != NULL) {
         n_snprintf(localpath, size, "%s/.poclidekrc", homedir);
         if (access(localpath, R_OK) != 0) {
@@ -536,7 +536,7 @@ static int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
     cctx->_dent_alloc = dent_alloc;
     cctx->rootdir = pkg_dent_add_dir(cctx, NULL, "/");
     cctx->currdir = cctx->rootdir;
-    cctx->homedir = NULL;
+    cctx->homedir = cctx->rootdir;
     cctx->htcnf = htcnf = loadconf();
 
     init_commands(cctx,
@@ -549,8 +549,10 @@ static int poclidek_init(struct poclidek_ctx *cctx, struct poldek_ctx *ctx)
 struct poclidek_ctx *poclidek_new(struct poldek_ctx *ctx)
 {
     struct poclidek_ctx *cctx = n_calloc(1, sizeof(*cctx));
+
     if (poclidek_init(cctx, ctx))
         return cctx;
+
     n_free(cctx);
     return NULL;
 }
@@ -592,66 +594,128 @@ void poclidek_free(struct poclidek_ctx *cctx)
     free(cctx);
 }
 
+static int add_stub_dir(struct poclidek_ctx *cctx, const char *path, tn_array *stubpkgs)
+{
+    struct pkg_dent *dent = NULL;
+
+    if ((dent = poclidek_dent_find(cctx, path)) == NULL) {
+        dent = pkg_dent_add_dir(cctx, cctx->rootdir, path);
+        if (stubpkgs == NULL)
+            dent->flags |= PKG_DENT_STUB_EMPTY;
+    }
+
+    if (stubpkgs) {
+        pkg_dent_add_pkgs(cctx, dent, stubpkgs);
+        pkg_dent_clr_isstub(dent);
+        dent->flags |= PKG_DENT_STUB;
+    }
+
+    return dent != NULL;
+}
+
+static int load_available(struct poclidek_ctx *cctx)
+{
+    if ((cctx->_flags & POLDEKCLI_LOADED_AVAILABLE) == 0) {
+        tn_array *pkgs = NULL;
+
+        cctx->_flags |= POLDEKCLI_LOADED_AVAILABLE;
+
+        if (!poldek_load_sources(cctx->ctx))
+            return 0;
+
+        if ((pkgs = poldek_get_avail_packages(cctx->ctx)) != NULL) {
+            struct pkg_dent *dir;
+
+            n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_nvr_strcmp);
+            dir = poclidek_dent_setup(cctx, POCLIDEK_AVAILDIR, pkgs, 1);
+
+            n_array_sort(pkgs);
+            cctx->pkgs_available = pkgs;
+            cctx->homedir = dir;
+
+            if (cctx->currdir == cctx->rootdir)
+                poclidek_chdir(cctx, dir->name);
+        }
+    }
+
+    return 1;
+}
+
+static int load_installed(struct poclidek_ctx *cctx, int flags)
+{
+#if 0 /* skip-installed is default now  */
+    if ((cctx->flags & POCLIDEK_SKIP_INSTALLED) && /* --skip-installed  */
+        (flags & POCLIDEK_LOAD_RELOAD) == 0) {     /* ...and not reload  */
+
+        return 1;
+    }
+#endif
+
+    int reload = (flags & POCLIDEK_LOAD_RELOAD);
+
+    if (reload)
+        cctx->_flags &= ~POLDEKCLI_LOADED_INSTALLED;
+
+    if ((cctx->_flags & POLDEKCLI_LOADED_INSTALLED) == 0) {
+        cctx->_flags |= POLDEKCLI_LOADED_INSTALLED;
+        if (!poclidek__load_installed(cctx, reload))
+            return 0;
+
+        if (cctx->currdir == cctx->rootdir)
+            poclidek_chdir(cctx, POCLIDEK_INSTALLEDDIR);
+    }
+
+    return 1;
+}
 
 int poclidek_load_packages(struct poclidek_ctx *cctx, unsigned flags)
 {
     int nerr = 0;
 
-
-    DBGF("%u %u\n", flags & POCLIDEK_LOAD_AVAILABLE, flags & POCLIDEK_LOAD_SETUP_DEPS);
-
     if (flags & POCLIDEK_LOAD_AVAILABLE) {
-        if ((cctx->_flags & POLDEKCLI_LOADED_AVAILABLE) == 0) {
-            tn_array *pkgs = NULL;
-
-            cctx->_flags |= POLDEKCLI_LOADED_AVAILABLE;
-
-            if (!poldek_load_sources(cctx->ctx)) {
-                nerr++;
-            } else if ((pkgs = poldek_get_avail_packages(cctx->ctx)) != NULL) {
-                struct pkg_dent *dir;
-
-                n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_nvr_strcmp);
-                dir = poclidek_dent_setup(cctx, POCLIDEK_AVAILDIR, pkgs, 0);
-
-                n_array_sort(pkgs);
-                cctx->pkgs_available = pkgs;
-                cctx->homedir = dir;
-
-                DBGF("currdir (%s)\n", cctx->rootdir->name);
-                if (cctx->currdir == cctx->rootdir)
-                    poclidek_chdir(cctx, dir->name);
-            }
-        }
-
-        if (nerr == 0 && (flags & POCLIDEK_LOAD_SETUP_DEPS)) {
-            poldek_setup_pkgset_deps(cctx->ctx);
-        }
-    }
-
-    if ((cctx->flags & POCLIDEK_SKIP_INSTALLED) && /* --skip-installed  */
-        (flags & POCLIDEK_LOAD_RELOAD) == 0) {     /* ...and not reload  */
-        return nerr == 0;
+        if (!load_available(cctx))
+            nerr++;
     }
 
     if (flags & POCLIDEK_LOAD_INSTALLED) {
-        int reload = (flags & POCLIDEK_LOAD_RELOAD);
+        if (!load_installed(cctx, flags))
+            nerr++;
+    }
 
-        if (reload)
-            cctx->_flags &= ~POLDEKCLI_LOADED_INSTALLED;
+    return nerr == 0;
+}
 
-        if ((cctx->_flags & POLDEKCLI_LOADED_INSTALLED) == 0) {
-            cctx->_flags |= POLDEKCLI_LOADED_INSTALLED;
-            if (!poclidek_load_installed(cctx, reload))
-                nerr++;
-            else {
-                if (cctx->currdir == cctx->rootdir)
-                    poclidek_chdir(cctx, POCLIDEK_INSTALLEDDIR);
+int poclidek_setup(struct poclidek_ctx *cctx)
+{
+    if (!poldek_setup(cctx->ctx)) {
+        return 0;
+    }
+    /*
+       add /avail and /install stubs to allow command completion
+       even if packages are not yet loaded
+    */
+
+    if (add_stub_dir(cctx, POCLIDEK_INSTALLEDDIR, NULL))
+        poclidek_chdir(cctx, POCLIDEK_INSTALLEDDIR);
+
+
+    tn_array *sources = poldek_get_sources(cctx->ctx);
+    if (sources && n_array_size(sources) > 0) {
+        tn_array *pkgs = poldek_load_stubs(cctx->ctx);
+        if (pkgs == NULL) {
+            load_available(cctx); /* just load repos if no stubs */
+            poclidek_chdir(cctx, POCLIDEK_AVAILDIR);
+
+        } else {
+            n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_nvr_strcmp);
+            if (add_stub_dir(cctx, POCLIDEK_AVAILDIR, pkgs)) {
+                cctx->homedir = cctx->currdir;
+                poclidek_chdir(cctx, POCLIDEK_AVAILDIR);
             }
         }
     }
 
-    return nerr == 0;
+    return 1;
 }
 
 static char **a_argv_to_argv(tn_array *a_argv, char **argv)

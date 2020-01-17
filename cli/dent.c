@@ -33,10 +33,10 @@
 
 static inline
 struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
-                              struct pkg *pkg, int flags)
+                              struct pkg *pkg, int flags, const char *dirpath)
 {
     struct pkg_dent *ent;
-    int len = 0;
+    int dirpath_at = 0, dirpath_len = 0, len = 0;
 
     if (name) {
         while (*name == '/')
@@ -44,6 +44,12 @@ struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
 
         len += strlen(name) + 1;
         n_assert(flags & PKG_DENT_DIR);
+        n_assert(dirpath);
+
+        dirpath_at = len;
+        dirpath_len = strlen(dirpath);
+
+        len += dirpath_len + 1;
     }
 
     ent = cctx->_dent_alloc(cctx, sizeof(*ent) + len);
@@ -56,6 +62,11 @@ struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
 
         memcpy(ent->_buf, name, len);
         ent->name = ent->_buf;
+
+        if (dirpath) {
+            memcpy(&ent->_buf[dirpath_at], dirpath, dirpath_len + 1);
+            ent->path = &ent->_buf[dirpath_at];
+        }
 
         p = ent->_buf;
         if (strchr(p, '/'))
@@ -80,8 +91,8 @@ struct pkg_dent *pkg_dent_new(struct poclidek_ctx *cctx, const char *name,
 
     return ent;
 }
-#define pkg_dent_new_pkg(cctx, pkg) pkg_dent_new(cctx, NULL, pkg, 0)
-#define pkg_dent_new_dir(cctx, name) pkg_dent_new(cctx, name, NULL, PKG_DENT_DIR)
+#define pkg_dent_new_pkg(cctx, pkg) pkg_dent_new(cctx, NULL, pkg, 0, NULL)
+#define pkg_dent_new_dir(cctx, name, dirpath) pkg_dent_new(cctx, name, NULL, PKG_DENT_DIR, dirpath)
 
 
 struct pkg_dent *pkg_dent_link(struct pkg_dent *ent)
@@ -265,14 +276,54 @@ int pkg_dent_replace_pkgs(struct poclidek_ctx *cctx, struct pkg_dent *dent,
     return 1;
 }
 
+static
+char *dent_dirpath(char *path, int size, const struct pkg_dent *dent, const char *child)
+{
+    tn_array *stack;
+
+    stack = n_array_new(4, NULL, NULL);
+
+    if (child) {
+        if (*child == '/')
+            child++;
+
+        n_array_push(stack, (char*)child);
+    }
+
+    while (dent->parent) {
+        n_array_push(stack, (char*)dent->name);
+        dent = dent->parent;
+    }
+
+    path[0] = '/';
+    path[1] = '\0';
+
+    int n = 1;
+    while (n_array_size(stack))
+        n += n_snprintf(&path[n], size - n, "%s/", n_array_shift(stack));
+
+    if (n > 1)
+        path[n - 1] = '\0';     /* eat last '/' */
+
+    n_array_free(stack);
+    return path;
+}
+
 
 struct pkg_dent *pkg_dent_add_dir(struct poclidek_ctx *cctx,
                                   struct pkg_dent *parent, const char *name)
 {
+    char path[PATH_MAX];
     struct pkg_dent *ent;
 
-    ent = pkg_dent_new_dir(cctx, name);
-    DBGF("adddir %s\n", name);
+    if (parent)
+        dent_dirpath(path, sizeof(path), parent, name);
+    else                        /* root dir */
+        n_snprintf(path, sizeof(path), "%s", name);
+
+    ent = pkg_dent_new_dir(cctx, name, path);
+    DBGF("adddir %s, %s\n", name, path);
+
     if (parent) {
         ent->parent = parent;
         n_array_push(parent->pkg_dent_ents, ent);
@@ -287,7 +338,6 @@ char *poclidek_dent_dirpath(char *path, int size, const struct pkg_dent *dent)
     tn_array *stack;
     int n = 0;
 
-
     stack = n_array_new(4, NULL, NULL);
     while (dent->parent) {
         n_array_push(stack, (char*)dent->name);
@@ -301,7 +351,7 @@ char *poclidek_dent_dirpath(char *path, int size, const struct pkg_dent *dent)
         n += n_snprintf(&path[n], size - n, "%s/", n_array_shift(stack));
 
     if (n > 1)
-        path[n - 1] = '\0';     /* eat '/' */
+        path[n - 1] = '\0';     /* eat last '/' */
     n_array_free(stack);
     return path;
 }
@@ -327,25 +377,23 @@ struct pkg_dent *poclidek_dent_setup(struct poclidek_ctx *cctx,
 
     if (n_str_eq(path, POCLIDEK_INSTALLEDDIR))
         add = 1;
-
     else if (n_str_eq(path, POCLIDEK_AVAILDIR))
         add = add_subdirs = 1;
-
     else
         n_die("%s: unknown dir", path);
+
     n_assert(add);
 
 
     if ((dest = poclidek_dent_find(cctx, path)) == NULL)
         dest = pkg_dent_add_dir(cctx, cctx->rootdir, path);
-
     else if (force)
         replace = 1;
-
-    else
+    else if (!pkg_dent_isstub(dest))
         n_die("%s: duplicate directory", path);
 
     n_assert(dest);
+    pkg_dent_clr_isstub(dest);
     if (replace)
         pkg_dent_replace_pkgs(cctx, dest, pkgs);
     else
@@ -436,11 +484,9 @@ int poclidek_chdir(struct poclidek_ctx *cctx, const char *path)
     struct pkg_dent *ent;
     int rc = 0;
 
-    DBGF("%s\n", path ? path : "NULL");
-    if (cctx->currdir == NULL) {
-        n_assert(cctx->homedir == NULL);
-        cctx->homedir = poclidek_dent_ldfind(cctx, POCLIDEK_HOMEDIR);
-    }
+    DBGF("path %s\n", path);
+    n_assert(cctx->currdir);
+    n_assert(path);
 
     if (n_str_eq(path, "."))
         return 1;
@@ -488,24 +534,48 @@ int poclidek_chdirent(struct poclidek_ctx *cctx, const struct pkg_dent *dent)
 }
 
 
-struct pkg_dent *poclidek_dent_ldfind(struct poclidek_ctx *cctx, const char *path)
+struct pkg_dent *poclidek_dent_ldfind(struct poclidek_ctx *cctx, const char *path, unsigned flags)
 {
     struct pkg_dent *dent;
+
+    DBGF("path %s, currdir=%s\n", path, cctx->currdir ? cctx->currdir->name : NULL);
+
+    if ((dent = poclidek_dent_find(cctx, path)) != NULL) {
+        DBGF("dent %s, stub %d, ents %d\n", dent->name, pkg_dent_isstub(dent),
+             n_array_size(dent->pkg_dent_ents));
+
+        n_assert(pkg_dent_isdir(dent));
+
+        if (!pkg_dent_isstub(dent))
+            return dent;
+
+        if ((flags & PKG_DENT_LDFIND_STUBSOK) && n_array_size(dent->pkg_dent_ents) > 0) /* have package stubs */
+            return dent;
+    }
+
+    if (dent) {
+        path = dent->path;
+    } else {
+        n_assert(cctx->homedir);
+        if (path == NULL && cctx->homedir == NULL)
+            path = POCLIDEK_HOMEDIR;
+    }
+
+    DBGF("ld path %s\n", path);
+    n_assert(path);
+
     unsigned ldflags = 0;
-
-    if ((dent = poclidek_dent_find(cctx, path)) != NULL)
-        return dent;
-
-    if (path == NULL && cctx->homedir == NULL)
-        path = POCLIDEK_HOMEDIR;
-
     if (n_str_eq(path, POCLIDEK_INSTALLEDDIR))
         ldflags |= POCLIDEK_LOAD_INSTALLED;
-    else
+    else if (n_str_eq(path, POCLIDEK_AVAILDIR))
         ldflags |= POCLIDEK_LOAD_AVAILABLE;
+    else
+        n_die("load packages from %s??\n", path);
 
-    if (ldflags)
-        poclidek_load_packages(cctx, ldflags);
+    DBGF("ld path %s, flags %u\n", path, ldflags);
+    if (ldflags) {
+        poclidek_load_packages(cctx, ldflags); /* will call poclidek_dent_setup */
+    }
 
     return poclidek_dent_find(cctx, path);
 }
@@ -514,12 +584,14 @@ struct pkg_dent *poclidek_dent_ldfind(struct poclidek_ctx *cctx, const char *pat
 struct pkg_dent *poclidek_dent_find(struct poclidek_ctx *cctx, const char *path)
 {
 
-    if (path == NULL || (n_str_eq(path, ".") || n_str_eq(path, "")))
+    if (path == NULL || n_str_eq(path, ".") || n_str_eq(path, ""))
         return cctx->currdir;
+
+    if (n_str_eq(path, "/"))
+        return cctx->rootdir;
 
     return get_dir_dent(cctx, cctx->currdir, path);
 }
-
 
 struct pkg_dent *poclidek_dent_root(struct poclidek_ctx *cctx)
 {
@@ -527,22 +599,24 @@ struct pkg_dent *poclidek_dent_root(struct poclidek_ctx *cctx)
 }
 
 
-tn_array *poclidek_get_dent_ents(struct poclidek_ctx *cctx, const char *path)
+tn_array *poclidek_get_dent_ents(struct poclidek_ctx *cctx, const char *path, unsigned flags)
 {
     struct pkg_dent *ent;
 
-    if ((ent = poclidek_dent_ldfind(cctx, path)))
+    DBGF("path %s, %d\n", path, flags);
+    if ((ent = poclidek_dent_ldfind(cctx, path, flags)))
         return ent->pkg_dent_ents;
+
     return NULL;
 }
 
 
-tn_array *poclidek_get_dent_packages(struct poclidek_ctx *cctx, const char *dir)
+tn_array *poclidek_get_dent_packages(struct poclidek_ctx *cctx, const char *dir, unsigned flags)
 {
     tn_array *pkgs, *ents;
     register int i;
 
-    if ((ents = poclidek_get_dent_ents(cctx, dir)) == NULL)
+    if ((ents = poclidek_get_dent_ents(cctx, dir, flags)) == NULL)
         return NULL;
 
     pkgs = pkgs_array_new_ex(n_array_size(ents), pkg_cmp_name_evr_rev);
@@ -566,17 +640,22 @@ tn_array *do_resolve(struct arg_packages *aps, tn_array *ents,
 tn_array *poclidek_resolve_dents(const char *path,
                                  struct poclidek_ctx *cctx,
                                  struct poldek_ts *ts,
-                                 int flags)
+                                 unsigned resolve_flags,
+                                 unsigned flags)
 {
     tn_array *ents;
 
-    if ((ents = poclidek_get_dent_ents(cctx, path)) == NULL)
+    //DBGF("path %s, %d\n", path, flags);
+
+    if ((ents = poclidek_get_dent_ents(cctx, path, flags)) == NULL)
         return NULL;
+
+    //DBGF("ents %p\n", ents);
 
     if (poldek_ts_get_arg_count(ts) == 0)
         return n_ref(ents);
 
-    return do_resolve(ts->aps, ents, flags);
+    return do_resolve(ts->aps, ents, resolve_flags);
 }
 
 
@@ -690,31 +769,31 @@ tn_array *do_resolve(struct arg_packages *aps,
 
 
 tn_array *poclidek_resolve_packages(const char *path, struct poclidek_ctx *cctx,
-                                    struct poldek_ts *ts, int flags)
+                                    struct poldek_ts *ts, unsigned resolve_flags,
+                                    unsigned flags)
 {
-    tn_array *pkgs;
+    tn_array *avpkgs, *pkgs = NULL;
 
-    if ((pkgs = poclidek_get_dent_packages(cctx, path)) == NULL)
+    if ((avpkgs = poclidek_get_dent_packages(cctx, path, flags)) == NULL)
         return NULL;
 
-    if (arg_packages_resolve(ts->aps, pkgs, NULL, flags)) {
+    if (arg_packages_resolve(ts->aps, avpkgs, NULL, resolve_flags)) {
         pkgs = arg_packages_get_resolved(ts->aps);
-        if (n_array_size(pkgs))
-            return pkgs;
-        n_array_free(pkgs);
-    }
+        if (n_array_size(pkgs) == 0)
+            n_array_cfree(&pkgs);
 
-    return NULL;
+        /* just make sure its the same comparator as in dent */
+        n_array_ctl_set_cmpfn(pkgs, (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    }
+    n_array_free(avpkgs);
+
+    return pkgs;
 }
 
-char *poclidek_pwd(struct poclidek_ctx *cctx, char *path, int size)
+const char *poclidek_pwd(struct poclidek_ctx *cctx)
 {
-    //if (cctx->homedir == NULL)
-    //    cctx->homedir = poclidek_dent_ldfind(cctx,
-    //                                         POCLIDEK_HOMEDIR);
-
     if (cctx->currdir == NULL)
         return NULL;
 
-    return poclidek_dent_dirpath(path, size, cctx->currdir);
+    return cctx->currdir->path;
 }

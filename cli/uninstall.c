@@ -50,26 +50,26 @@ static struct argp_option options[] = {
 {"greedy", OPT_INST_GREEDY, "LEVEL", OPTION_ARG_OPTIONAL,
      N_("Remove packages required by selected ones if possible."), OPT_GID },
 
-{"pmop", OPT_PM, "OPTION", 0, 
+{"pmop", OPT_PM, "OPTION", 0,
  N_("pass option OPTION to PM binary (ex. --pmop noscripts)"), OPT_GID },
 {"rpm", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
-{"pmopt", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },                                           
-                                           
+{"pmopt", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, OPT_GID },
+
 { 0, 0, 0, 0, 0, 0 },
 };
 
 static struct argp_option cmdl_options[] = {
     {0,0,0,0, N_("Package deinstallation:"), OPT_GID - 10 },
     {"erase", OPT_UNINSTALL, 0, 0, N_("Uninstall given packages"), OPT_GID - 10 },
-    {"uninstall", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, 11 }, 
+    {"uninstall", 0, 0, OPTION_ALIAS | OPTION_HIDDEN, 0, 11 },
     { 0, 0, 0, 0, 0, 0 },
 };
 
 
 struct poclidek_cmd command_uninstall = {
     COMMAND_HASVERBOSE | COMMAND_MODIFIESDB |
-    COMMAND_PIPEABLE_LEFT | COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES, 
-    "uninstall", N_("PACKAGE..."), N_("Uninstall packages"), 
+    COMMAND_PIPEABLE_LEFT | COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES,
+    "uninstall", N_("PACKAGE..."), N_("Uninstall packages"),
     options, parse_opt,
     NULL, uninstall, NULL, NULL, NULL, NULL, NULL, 0, 0
 };
@@ -91,7 +91,7 @@ static struct argp poclidek_argp = {
 };
 
 
-static 
+static
 struct argp_child poclidek_argp_child = {
     &poclidek_argp, 0, NULL, OPT_GID,
 };
@@ -100,8 +100,8 @@ struct argp_child poclidek_argp_child = {
 static int cmdl_run(struct poclidek_opgroup_rt *rt);
 
 struct poclidek_opgroup poclidek_opgroup_uninstall = {
-    "Package deinstallation", 
-    &poclidek_argp, 
+    "Package deinstallation",
+    &poclidek_argp,
     &poclidek_argp_child,
     cmdl_run
 };
@@ -122,9 +122,9 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
     rt = state->input;
     ts = rt->ts;
     arg = arg;
-    
+
     cmdctx.ts = rt->ts;
-    
+
     switch (key) {
         case ARGP_KEY_INIT:
             state->child_inputs[0] = &cmdctx;
@@ -138,9 +138,9 @@ error_t cmdl_parse_opt(int key, char *arg, struct argp_state *state)
 
         default:
             return ARGP_ERR_UNKNOWN;
-            
+
     }
-    
+
     return 0;
 }
 
@@ -149,7 +149,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
     struct cmdctx     *cmdctx = state->input;
     struct poldek_ts  *ts = cmdctx->ts;
-    
+
     arg = arg;
     switch (key) {
         //case 'm':
@@ -163,23 +163,23 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_INST_GREEDY:
             if (!arg) {
                 ts->setop(ts, POLDEK_OP_GREEDY, 1);
-                
+
             } else {
                 int v, bool;
-                    
+
                 if (sscanf(arg, "%u", &v) == 1) {
                     bool = v;
-                    
+
                 } else if ((bool = poldek_util_parse_bool(arg)) == -1) {
                     logn(LOGERR, _("invalid value ('%s') of option 'greedy'"),
                          arg);
                     return EINVAL;
                 }
-                
+
                 ts->setop(ts, POLDEK_OP_GREEDY, bool);
             }
             break;
-            
+
         case 't':
             if (ts->getop(ts, POLDEK_OP_TEST))
                 ts->setop(ts, POLDEK_OP_RPMTEST, 1);
@@ -194,7 +194,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case OPT_PM: {
             tn_array *tl = NULL;
             int i;
-            
+
             if ((tl = n_str_etokl_ext(arg, "\t ", "", "\"'", '\\')) == NULL) {
                 logn(LOGERR, _("%s: parse error"), arg);
                 return ARGP_ERR_UNKNOWN;
@@ -206,7 +206,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 a = n_array_nth(tl, i);
                 if (*a == '-')
                     dash = "";
-            
+
                 n_snprintf(opt, sizeof(opt), "%s%s", dash, a);
                 poldek_ts_configure(ts, POLDEK_CONF_RPMOPTS, opt);
             }
@@ -214,52 +214,43 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             n_array_cfree(&tl);
         }
             break;
-            
-        
+
+
         default:
             return ARGP_ERR_UNKNOWN;
     }
-    
+
     return 0;
 }
 
 
-static int uninstall(struct cmdctx *cmdctx) 
+static int uninstall(struct cmdctx *cmdctx)
 {
     struct poclidek_ctx  *cctx;
     struct poldek_ts     *ts;
     tn_array             *pkgs;
     int                  i, err = 0;
     unsigned             ts_flags = 0;
-    
+
     cctx = cmdctx->cctx;
     ts = cmdctx->ts;
 
-    if (poclidek_dent_ldfind(cctx, POCLIDEK_INSTALLEDDIR) == NULL) {
-        if (cctx->_flags & POLDEKCLI_UNDERIMODE)
-            logn(LOGERR, _("%s: installed packages are not loaded, "
-                           "type \"reload\" to load them"), cmdctx->cmd->name);
-        else
-            logn(LOGERR, _("%s: installed packages are not loaded"),
-                 cmdctx->cmd->name);
-        
-        return 0;
-    }
-
     /* must be resolved here to allow globbing, RPM doesn't support globs AFAIK */
-    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, ts, ARG_PACKAGES_RESOLV_EXACT);
+    pkgs = poclidek_resolve_packages(POCLIDEK_INSTALLEDDIR, cctx, ts,
+                                     ARG_PACKAGES_RESOLV_EXACT,
+                                     PKG_DENT_LDFIND_STUBSOK);
     if (pkgs == NULL) {
         err++;
         goto l_end;
     }
-    
+
     poldek_ts_clean_args(ts);
     for (i=0; i < n_array_size(pkgs); i++) {
         DBGF("%s\n", pkg_id(n_array_nth(pkgs, i)));
         poldek_ts_add_pkg(ts, n_array_nth(pkgs, i));
     }
     n_array_free(pkgs);
-    
+
     if (!ts->getop_v(ts, POLDEK_OP_TEST, POLDEK_OP_RPMTEST, 0))
         ts_flags |= POLDEK_TS_TRACK;
 
@@ -269,7 +260,7 @@ static int uninstall(struct cmdctx *cmdctx)
 
     if (ts_flags)
         poclidek_apply_iinf(cmdctx->cctx, ts);
-    
+
 l_end:
     return err == 0;
 }
@@ -278,7 +269,7 @@ l_end:
 static int cmdl_run(struct poclidek_opgroup_rt *rt)
 {
     int rc;
-    
+
     if (poldek_ts_get_type(rt->ts) != POLDEK_TS_UNINSTALL)
         return OPGROUP_RC_NIL;
 

@@ -44,7 +44,7 @@
 static
 struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload);
 
-int poclidek_load_installed(struct poclidek_ctx *cctx, int reload)
+int poclidek__load_installed(struct poclidek_ctx *cctx, int reload)
 {
     struct pkgdir *pkgdir;
     DBGF("%d\n", reload);
@@ -55,9 +55,7 @@ int poclidek_load_installed(struct poclidek_ctx *cctx, int reload)
     if ((pkgdir = load_installed_pkgdir(cctx, reload)) == NULL)
         return 0;
 
-    if ((poclidek_dent_find(cctx, POCLIDEK_INSTALLEDDIR)) == NULL || reload)
-        poclidek_dent_setup(cctx, POCLIDEK_INSTALLEDDIR, pkgdir->pkgs, reload);
-
+    poclidek_dent_setup(cctx, POCLIDEK_INSTALLEDDIR, pkgdir->pkgs, reload);
 
     if (cctx->dbpkgdir)
         pkgdir_free(cctx->dbpkgdir);
@@ -132,7 +130,6 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     struct poldek_ts *ts = cctx->ctx->ts; /* for short */
     unsigned         ldflags = PKGDIR_LD_NOUNIQ;
 
-
     if (ts->getop(ts, POLDEK_OP_AUTODIRDEP))
         ldflags |= PKGDIR_LD_DIRINDEX;
 
@@ -143,7 +140,6 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
     /* not dbpath based pm? */
     if (!pm_dbpath(pmctx, dbpath, sizeof(dbpath)))
         return poldek_load_destination_pkgdir(cctx->ctx, ldflags);
-
 
     if (mkrpmdb_path(rpmdb_path, sizeof(rpmdb_path), ts->rootdir,
                      dbpath) == NULL)
@@ -158,6 +154,7 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
         lc_lang = "C";
 
     ldflags |= PKGDIR_LD_DIRINDEX;
+
     if (!reload) {              /* use cache */
         time_t mtime_rpmdb, mtime_dbcache;
         mtime_dbcache = mtime(dbcache_path);
@@ -174,7 +171,13 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
         }
         DBGF("%ld > %ld\n", mtime_rpmdb, mtime_dbcache);
 
-        if (0 && mtime_rpmdb > mtime_dbcache) { /* outdated cache */
+
+        /*
+           outdated cache, use it as prev_dir
+           DISABLED due to no performance gain, as we have to
+           load whole rpm headers from db
+        */
+        if (0 && mtime_rpmdb > mtime_dbcache) {
             prev_dir = dir;
             dir = NULL;
         }
@@ -186,10 +189,10 @@ struct pkgdir *load_installed_pkgdir(struct poclidek_ctx *cctx, int reload)
                               "prev_pkgdir", prev_dir, NULL);
     }
 
-    if (dir == NULL)
+    if (dir == NULL) {
         logn(LOGERR, _("Load installed packages failed"));
 
-    else {
+    } else {
         int n = n_array_size(dir->pkgs);
         msgn(1, ngettext("%d package loaded",
                          "%d packages loaded", n), n);

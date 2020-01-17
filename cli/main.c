@@ -454,7 +454,7 @@ void parse_options(struct poclidek_ctx *cctx, struct poldek_ts *ts,
         n++;
 
     child = alloca((n + 2) * sizeof(*child));
-    args.opgroup_rts = n_array_new(n, NULL, NULL);
+    args.opgroup_rts = n_array_new(n, (tn_fn_free)poclidek_opgroup_rt_free, NULL);
 
     for (i=0; i < n; i++) {
         struct poclidek_opgroup_rt *rt;
@@ -620,24 +620,9 @@ static int do_su(int argc, char **argv)
     return rc;
 }
 
-static int load_packages(struct poclidek_ctx *cctx, unsigned cnflags)
-{
-    unsigned ldflags = POCLIDEK_LOAD_AVAILABLE;
-
-    if ((cnflags & OPT_AS_FLAG(OPT_SKIPINSTALLED)) == 0)
-        ldflags |= POCLIDEK_LOAD_INSTALLED;
-
-    if (!poclidek_load_packages(cctx, ldflags))
-        return 0;
-    return 1;
-}
-
 static int run_poldek(struct poclidek_ctx *cctx)
 {
     int rc;
-
-    if (!load_packages(cctx, args.cnflags))
-        return 0;
 
     if (args.shcmd)
         rc = poclidek_execline(cctx, args.ts, args.shcmd);
@@ -718,6 +703,8 @@ int main(int argc, char **argv)
         if (args.cnflags & OPT_AS_FLAG(OPT_UPCONF)) /*UPCONF is major mode*/
             goto out;
     }
+
+    poclidek_setup(cctx);
 
     if (args.mode == RUNMODE_POLDEK)
         rc = run_poldek(cctx);

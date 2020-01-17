@@ -34,13 +34,13 @@ struct cmd_pipe;
 #define CMDCTX_NOCTRLMSGS    (1 << 1)
 #define CMDCTX_ERR           (1 << 2)
 #define CMDCTX_GOTARGS       (1 << 3) /* args have been eaten; argp w/o */
-    
+
 struct cmdctx {
     int                  rtflags;   /* CMDCTX_* */
     struct poclidek_ctx  *cctx;     /* common shell_s struct */
     struct poldek_ts     *ts;
     struct poclidek_cmd  *cmd;
-    
+
     unsigned             _flags;     /* cmd private flags */
     void                 *_data;     /* cmd private data */
     struct cmd_pipe      *pipe_left;
@@ -83,15 +83,15 @@ struct poclidek_cmd {
     char                *arg;
     char                *doc;
     struct argp_option  *argp_opts;
-     
+
     error_t (*parse_opt_fn)(int, char*, struct argp_state*);
-    
+
     int (*cmd_fn)(struct cmdctx *, int, const char **, struct argp*);
     int (*do_cmd_fn)(struct cmdctx *);
-    
+
     void* (*init_cmd_arg_d)(void);
     void  (*destroy_cmd_arg_d)(void*);
-    
+
     char                 *extra_help;
 
     char                 *cmdline;   /* alias content */
@@ -106,13 +106,13 @@ EXPORT int poclidek_cmd_ncmp(struct poclidek_cmd *c1, struct poclidek_cmd *c2);
 
 #define POCLIDEK_INSTALLEDDIR     "/installed"
 #define POCLIDEK_AVAILDIR         "/all-avail"
-#define POCLIDEK_HOMEDIR          POCLIDEK_AVAILDIR  
+#define POCLIDEK_HOMEDIR          POCLIDEK_AVAILDIR
 
 /* _flags, internal do not touch*/
-#define POLDEKCLI_UNDERIMODE       (1 << 4)
-#define POLDEKCLI_CONFIG_LOADED    (1 << 5)
-#define POLDEKCLI_LOADED_AVAILABLE (1 << 6)
-#define POLDEKCLI_LOADED_INSTALLED (1 << 7)
+#define POLDEKCLI_UNDERIMODE             (1 << 4)
+#define POLDEKCLI_CONFIG_LOADED          (1 << 5)
+#define POLDEKCLI_LOADED_AVAILABLE       (1 << 6)
+#define POLDEKCLI_LOADED_INSTALLED       (1 << 7)
 
 /* flags */
 #define POCLIDEK_SKIP_INSTALLED    (1 << 0) /* if set, POCLIDEK_LOAD_RELOAD must
@@ -129,7 +129,7 @@ struct poclidek_ctx {
     const tn_array      *pkgs_available;   /* array of available pkgs  */
     const tn_array      *pkgs_installed;   /* array of installed pkgs  */
 
-    
+
     struct pkgdir       *dbpkgdir;   /* db packages */
     time_t              ts_dbpkgdir; /* timestamp */
 
@@ -140,7 +140,7 @@ struct poclidek_ctx {
     struct pkg_dent     *rootdir;
     struct pkg_dent     *homedir;
     struct pkg_dent     *currdir;
-    
+
 };
 
 #endif

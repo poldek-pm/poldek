@@ -41,9 +41,9 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs, int compare_ver,
 
 /* cmd_state->flags */
 #define OPT_LS_LONG            (1 << 0)
-#define OPT_LS_UPGRADEABLE     (1 << 1) 
+#define OPT_LS_UPGRADEABLE     (1 << 1)
 #define OPT_LS_UPGRADEABLE_VER (1 << 2)
-#define OPT_LS_UPGRADEABLE_SEC (1 << 3) 
+#define OPT_LS_UPGRADEABLE_SEC (1 << 3)
 #define OPT_LS_INSTALLED       (1 << 4)
 #define OPT_LS_SORTBUILDTIME   (1 << 5)
 #define OPT_LS_SORTBUILDAY     (1 << 6)
@@ -57,7 +57,9 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs, int compare_ver,
 #define OPT_LS_QUERYFMT        (1 << 13)
 #define OPT_LS_QUERYTAGS       (1 << 14)
 
-#define OPT_LS_ERR             (1 << 16);
+#define OPT_LS_NOSTUBS         (1 << 15) /* need to operate on full packages */
+
+#define OPT_LS_ERR             (1 << 16)
 
 static struct argp_option options[] = {
  { "long", 'l', 0, 0, N_("Use a long listing format"), 1},
@@ -82,8 +84,8 @@ static struct argp_option options[] = {
 
 struct poclidek_cmd command_ls = {
     COMMAND_EMPTYARGS | COMMAND_PIPEABLE |
-    COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES, 
-    "ls", N_("[PACKAGE...]"), N_("List packages"), 
+    COMMAND_PIPE_XARGS | COMMAND_PIPE_PACKAGES,
+    "ls", N_("[PACKAGE...]"), N_("List packages"),
     options, parse_opt, NULL, ls,
     NULL, NULL, NULL, NULL, NULL, 0, 0
 };
@@ -95,19 +97,19 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     struct cmdctx *cmdctx = state->input;
     const char *errmsg_excl = _("ls: -l, -s and -G are exclusive");
     arg = arg;
-    
+
     switch (key) {
         case 'l':
             if (cmdctx->_flags & OPT_LS_GROUP) {
                 logn(LOGERR, "%s", errmsg_excl);
                 return EINVAL;
             }
-            
+
             cmdctx->_flags |= OPT_LS_LONG;
             break;
 
         case 'O':
-            cmdctx->_flags |= OPT_LS_SUMMARY;
+            cmdctx->_flags |= OPT_LS_SUMMARY | OPT_LS_NOSTUBS;
             break;
 
         case 'G':
@@ -116,7 +118,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 return EINVAL;
             }
 
-            cmdctx->_flags |= OPT_LS_GROUP;
+            cmdctx->_flags |= OPT_LS_GROUP | OPT_LS_NOSTUBS;
             break;
 
         case 's':
@@ -125,7 +127,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
                 return EINVAL;
             }
 
-            cmdctx->_flags |= OPT_LS_SOURCERPM;
+            cmdctx->_flags |= OPT_LS_SOURCERPM | OPT_LS_NOSTUBS;
             break;
 
         case 't':
@@ -147,11 +149,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         case 'U':
             cmdctx->_flags |= OPT_LS_UPGRADEABLE | OPT_LS_UPGRADEABLE_VER;
             break;
-            
+
         case 'S':
-            cmdctx->_flags |= OPT_LS_UPGRADEABLE | OPT_LS_UPGRADEABLE_SEC;
+            cmdctx->_flags |= OPT_LS_UPGRADEABLE | OPT_LS_UPGRADEABLE_SEC | OPT_LS_NOSTUBS;
             break;
-            
+
         case 'I':
             cmdctx->_flags |= OPT_LS_INSTALLED;
             break;
@@ -161,7 +163,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
 	case OPT_LS_QUERYFMT:
-	    cmdctx->_flags |= OPT_LS_QUERYFMT;
+	    cmdctx->_flags |= OPT_LS_QUERYFMT | OPT_LS_NOSTUBS;
 
 	    if (arg) {
 		struct lsqf_ent_array *array = NULL;
@@ -186,16 +188,16 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 
-static tn_fn_cmp select_cmpf(unsigned flags) 
+static tn_fn_cmp select_cmpf(unsigned flags)
 {
     tn_fn_cmp cmpf = NULL;
 
     if (flags & OPT_LS_SORTBUILDTIME)
         cmpf = (tn_fn_cmp)pkg_dent_cmp_btime;
-        
+
     if (flags & OPT_LS_SORTBUILDAY)
         cmpf = (tn_fn_cmp)pkg_dent_cmp_bday;
-    
+
     return cmpf;
 }
 
@@ -223,17 +225,17 @@ int pkg_cmp_lookup(struct pkg *lpkg, tn_array *pkgs,
         if (*pkg->name != *lpkg->name)
             break;
     }
-    
+
     if (!found)
         return 0;
-    
+
     if (compare_ver == 0)
         *cmprc = pkg_cmp_evr(lpkg, pkg);
-    else 
+    else
         *cmprc = pkg_cmp_ver(lpkg, pkg);
 
     *rpkg = pkg;
-    
+
     return found;
 }
 
@@ -241,48 +243,50 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
                                 tn_array *evrs)
 {
     int        found, compare_ver = 0, i;
-    tn_array   *ls_ents2, *cmpto_pkgs = NULL, *srcpkgs = NULL;
+    tn_array   *upgradeable, *cmpto_pkgs = NULL, *srcpkgs = NULL;
     char       *cmpto_path;
 
     n_assert(cmdctx->_flags & OPT_LS_UPGRADEABLE);
 
     compare_ver = cmdctx->_flags & OPT_LS_UPGRADEABLE_VER;
-    
+
     cmpto_path = POCLIDEK_INSTALLEDDIR;
     if (cmdctx->_flags & OPT_LS_INSTALLED)
         cmpto_path = POCLIDEK_AVAILDIR;
-    
-    cmpto_pkgs = poclidek_get_dent_packages(cmdctx->cctx, cmpto_path);
+
+    unsigned dent_ldflags = (cmdctx->_flags & OPT_LS_NOSTUBS) ? 0 : PKG_DENT_LDFIND_STUBSOK;
+    DBGF("ldflags %d\n", dent_ldflags);
+    cmpto_pkgs = poclidek_get_dent_packages(cmdctx->cctx, cmpto_path, dent_ldflags);
+
     if (cmpto_pkgs == NULL) {
         logn(LOGERR, _("%s: no packages found"), cmpto_path);
         return NULL;
     }
 
-    n_assert(n_array_ctl_get_cmpfn(cmpto_pkgs) ==
-             (tn_fn_cmp)pkg_cmp_name_evr_rev);
+    n_assert(n_array_ctl_get_cmpfn(cmpto_pkgs) == (tn_fn_cmp)pkg_cmp_name_evr_rev);
 
-    ls_ents2 = n_array_clone(ls_ents);
-    
+    upgradeable = n_array_clone(ls_ents);
+
     if (cmdctx->_flags & OPT_LS_UPGRADEABLE_SEC)
         srcpkgs = n_array_new(64, free, (tn_fn_cmp)strcmp);
-    
+
     for (i=0; i < n_array_size(ls_ents); i++) {
         struct pkg_dent  *ent;
         struct pkg       *rpkg = NULL;
         char             evr[128];
         int              cmprc = 0;
-        
+
         ent = n_array_nth(ls_ents, i);
 
-        if (pkg_dent_isdir(ent)) 
+        if (pkg_dent_isdir(ent))
             continue;
-            
+
         found = pkg_cmp_lookup(ent->pkg_dent_pkg, cmpto_pkgs, compare_ver,
                                &cmprc, &rpkg);
-        
+
         if ((cmdctx->_flags & OPT_LS_INSTALLED) == 0)
             cmprc = -cmprc;
-        
+
         if (!found || cmprc >= 0)
             continue;
 
@@ -306,7 +310,7 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
                 found = 0;
                 if ((inf = pkg_uinf(upkg)) == NULL)
                     continue;
-            
+
                 if (pkguinf_changelog_with_security_fixes(inf, ipkg->btime)) {
                     char *sp;
                     if ((sp = pkg_srcfilename_s(rpkg))) {
@@ -316,50 +320,47 @@ static tn_array *do_upgradeable(struct cmdctx *cmdctx, tn_array *ls_ents,
                     }
                     found = 1;
                 }
-            
+
                 pkguinf_free(inf);
             }
         }
-        
+
         if (!found)
             continue;
-                                                         
+
         pkg_idevr_snprintf(evr, sizeof(evr), rpkg);
         n_array_push(evrs, n_strdup(evr));
-        n_array_push(ls_ents2, pkg_dent_link(ent));
-        
+        n_array_push(upgradeable, pkg_dent_link(ent));
+
         if (sigint_reached())
             break;
     }
 
     n_array_cfree(&cmpto_pkgs);
     n_array_cfree(&srcpkgs);
-    
-    return ls_ents2;
+
+    return upgradeable;
 }
 
 
-static int ls(struct cmdctx *cmdctx) 
+static int ls(struct cmdctx *cmdctx)
 {
     tn_array             *ls_ents = NULL;
     tn_array             *evrs = NULL;
     int                  rc = 1;
-    char                 *path = NULL, pwdpath[PATH_MAX], *pwd;
-    unsigned             ldflags = 0;
+    const char           *path, *pwd;
+    unsigned             cmdflags = cmdctx->_flags;
+    unsigned             dent_ldflags;
     tn_fn_cmp            cmpf;
 
-    if (cmdctx->_flags & OPT_LS_INSTALLED)
-        ldflags = POCLIDEK_LOAD_INSTALLED;
-    else
-        ldflags = POCLIDEK_LOAD_ALL;
-    
-    poclidek_load_packages(cmdctx->cctx, ldflags);
-    pwd = poclidek_pwd(cmdctx->cctx, pwdpath, sizeof(pwdpath));
-    
-    if (cmdctx->_flags & OPT_LS_INSTALLED)
+    pwd = path = poclidek_pwd(cmdctx->cctx);
+    if (cmdflags & OPT_LS_INSTALLED)
         path = POCLIDEK_INSTALLEDDIR;
 
-    ls_ents = poclidek_resolve_dents(path, cmdctx->cctx, cmdctx->ts, ARG_PACKAGES_RESOLV_WARN_ONLY);
+    dent_ldflags = (cmdctx->_flags & OPT_LS_NOSTUBS) ? 0 : PKG_DENT_LDFIND_STUBSOK;
+    ls_ents = poclidek_resolve_dents(path, cmdctx->cctx, cmdctx->ts,
+                                     ARG_PACKAGES_RESOLV_WARN_ONLY, dent_ldflags);
+
     if (ls_ents == NULL || n_array_size(ls_ents) == 0) {
         rc = 0;
         goto l_end;
@@ -381,15 +382,15 @@ static int ls(struct cmdctx *cmdctx)
         n_array_free(ls_ents);
         ls_ents = tmp;
     }
-    
+
     if (n_array_size(ls_ents)) {
         rc = do_ls(ls_ents, cmdctx, evrs);
-        
+
         if (cmpf)
             n_array_sort(ls_ents);  /* sort them back, ls_ents could be reference
                                        to global packages array */
     }
-    
+
 
  l_end:
     if (cmdctx->_flags & OPT_LS_QUERYFMT) {
@@ -399,10 +400,10 @@ static int ls(struct cmdctx *cmdctx)
 
     if (ls_ents)
         n_array_free(ls_ents);
-        
-    if (evrs) 
+
+    if (evrs)
         n_array_free(evrs);
-    
+
     return rc;
 }
 
@@ -412,11 +413,11 @@ static void ls_summary(struct cmdctx *cmdctx, struct pkg *pkg)
 {
     struct pkguinf  *pkgu;
     const char *s;
-    
-    
+
+
     if ((pkgu = pkg_uinf(pkg)) == NULL)
         return;
-    
+
     if ((s = pkguinf_get(pkgu, PKGUINF_SUMMARY)))
         cmdctx_printf(cmdctx, "    %s\n", s);
 
@@ -434,7 +435,7 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
     unsigned             flags;
 
     //printf("do_ls %d\n", n_array_size(ents));
-    if (n_array_size(ents) == 0) 
+    if (n_array_size(ents) == 0)
         return 0;
 
     flags = cmdctx->_flags;
@@ -456,9 +457,9 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 		     term_width_div2 + term_width_div2/10, _("package"),
 		     (term_width/7), _("build date"),
 		     (term_width/8) + 2, _("size"));
-            
+
         } else {
-            if (flags & OPT_LS_INSTALLED) 
+            if (flags & OPT_LS_INSTALLED)
                 snprintf(hdr, sizeof(hdr), "%-*s%-*s %-*s%*s\n",
 			 (term_width/2) - 1, _("installed"),
                          (term_width/6) - 1, _("available"),
@@ -472,9 +473,9 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 			 (term_width/6) - 1, _("size"));
         }
     }
-    
+
     hdr[sizeof(hdr) - 2] = '\n';
-    
+
     size = 0;
     i = 0;
     incstep = 1;
@@ -482,7 +483,7 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
         incstep = -1;
         i = n_array_size(ents) - 1;
     }
-    
+
     while (i < n_array_size(ents) && i >= 0) {
         struct pkg_dent *ent = n_array_nth(ents, i);
         struct pkg      *pkg;
@@ -501,9 +502,9 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
         cmdctx_addtoresult(cmdctx, pkg);
 
         pkg_name = pkg_id(pkg);
-        if (flags & OPT_LS_NAMES_ONLY) 
+        if (flags & OPT_LS_NAMES_ONLY)
             pkg_name = pkg->name;
-        
+
         if (npkgs == 0)
             cmdctx_printf_c(cmdctx, PRCOLOR_YELLOW, "!%s", hdr);
 
@@ -518,7 +519,7 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
             cmdctx_printf(cmdctx, "%-*s %-*s\n",
 			  term_width_div2 + term_width_div2/10 - 1, pkg_name,
 			  (term_width/7), srcrpm ? srcrpm : "(unset)");
-        
+
         } else if (flags & OPT_LS_QUERYFMT) {
 	    char *queryfmt = NULL;
 
@@ -530,27 +531,27 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 
         } else if ((flags & OPT_LS_LONG) == 0) {
             cmdctx_printf(cmdctx, "%s\n", pkg_name);
-            
+
         } else if (flags & OPT_LS_LONG) {                /* -l */
             char timbuf[30];
             char sizbuf[30];
- 
+
             if (pkg->size)
                 pkg_strsize(sizbuf, sizeof(sizbuf), pkg);
             else
                 *sizbuf = '\0';
-            
+
             if (pkg->btime)
                 pkg_strbtime(timbuf, sizeof(timbuf), pkg);
             else
                 *timbuf = '\0';
-            
+
             if ((flags & OPT_LS_UPGRADEABLE) == 0) {
                 cmdctx_printf(cmdctx, "%-*s %*s %*s\n",
 			      term_width_div2 + term_width_div2/10, pkg_name,
 			      (term_width/7), timbuf,
 			      (term_width/8), sizbuf);
-                
+
             } else if (evrs) {
                 const char *evr = n_array_nth(evrs, i);
                 cmdctx_printf(cmdctx, "%-*s%-*s %-*s %*s\n",
@@ -558,21 +559,21 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 			      (term_width/6) - 1, evr,
 			      (term_width/6) - 1, timbuf,
 			      (term_width/6) - 1, sizbuf);
-            
+
             }
             size += pkg->size/1024;
-            
+
         } else {
             n_assert(0);
         }
-        
+
         if (flags & OPT_LS_SUMMARY)
             ls_summary(cmdctx, pkg);
-        
+
         npkgs++;
         i += incstep;
     }
-    
+
     if (npkgs) {
         char buf[1024];
         int n;
@@ -580,11 +581,11 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
         n = 0;
         n += n_snprintf(&buf[n], sizeof(buf) - n,
                         poldek_util_ngettext_n_packages_fmt(npkgs), npkgs);
-        
+
         if (flags & OPT_LS_LONG) {
             char unit = 'K';
             double val = size;
-        
+
             if (val >= 1024) {
                 val /= 1024;
                 unit = 'M';
@@ -597,5 +598,3 @@ int do_ls(const tn_array *ents, struct cmdctx *cmdctx, const tn_array *evrs)
 
     return err == 0;
 }
-
-

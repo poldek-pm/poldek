@@ -79,6 +79,20 @@ inline static int option_is_end (const struct argp_option *__opt)
     return !__opt->key && !__opt->name && !__opt->doc && !__opt->group;
 }
 
+
+static
+tn_array *silent_get_dents(struct poclidek_ctx *cctx, const char *dir, int stubsok)
+{
+    tn_array *dents;
+
+    /* silent (lazy) packages loading */
+    int verbosity = poldek_set_verbose(-1);
+    dents = poclidek_get_dent_ents(cctx, dir, stubsok ? PKG_DENT_LDFIND_STUBSOK : 0);
+    poldek_set_verbose(verbosity);
+
+    return dents;
+}
+
 static
 int is_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg, int reverse)
 {
@@ -88,18 +102,22 @@ int is_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg, int reverse)
     int n, same_found = 0, name_len, re = 0;
 
     if (reverse)
-        dents = poclidek_get_dent_ents(cctx, POCLIDEK_AVAILDIR);
+        dents = silent_get_dents(cctx, POCLIDEK_AVAILDIR, 1);
     else
-        dents = poclidek_get_dent_ents(cctx, POCLIDEK_INSTALLEDDIR);
+        dents = silent_get_dents(cctx, POCLIDEK_INSTALLEDDIR, 1);
 
-    if (dents == NULL)
-        return 1;
+    if (dents == NULL) {
+        re = 1;
+        goto l_end;
+    }
 
     name_len = snprintf(name, sizeof(name), "%s-", pkg->name);
     n = n_array_bsearch_idx_ex(dents, name, (tn_fn_cmp)pkg_dent_strncmp);
 
-    if (n == -1)
-        return 0;
+    if (n == -1) {
+        re = 0;
+        goto l_end;
+    }
 
     while (n < n_array_size(dents)) {
         struct pkg_dent *ent = n_array_nth(dents, n++);
@@ -132,6 +150,9 @@ int is_upgradeable(struct poclidek_ctx *cctx, struct pkg *pkg, int reverse)
 
     if (same_found)
         re = 0;
+
+ l_end:
+
 
     return re;
 }
@@ -233,38 +254,28 @@ static char *arg_generator(const char *text, int state, int genpackages)
     static int           i, len;
     const char           *name = NULL;
     tn_array             *ents;
+    int                  completion_ctx = sh_ctx.completion_ctx;
 
-    if (sh_ctx.completion_ctx == COMPLETITION_CTX_UPGRADEABLE) {
-        char pwd[256];
-
+    //DBGF("run %s\n", text);
+    if (completion_ctx == COMPLETITION_CTX_UPGRADEABLE) {
         upgradeable_mode = 1;
-        poclidek_pwd(sh_ctx.cctx, pwd, sizeof(pwd));
-#if 0   /* for "installed> upgrade foo-X with foo-X"; disabled - NFY */
-        if (n_str_eq(pwd, POCLIDEK_INSTALLEDDIR))
-            uprev = 1;
-#endif
     }
 
     if (genpackages) {
-        if (sh_ctx.completion_ctx == COMPLETITION_CTX_INSTALLED)
-            ents = poclidek_get_dent_ents(sh_ctx.cctx, POCLIDEK_INSTALLEDDIR);
-        else
-            ents = sh_ctx.cctx->currdir->pkg_dent_ents;
+        const char *pwd = poclidek_pwd(sh_ctx.cctx);
+
+        if (completion_ctx == COMPLETITION_CTX_INSTALLED)
+            pwd = POCLIDEK_INSTALLEDDIR;
+
+        ents = silent_get_dents(sh_ctx.cctx, pwd, 1);
 
     } else {
         ents = sh_ctx.cctx->rootdir->pkg_dent_ents;
-        // completion through directory tree, NFY
-        //const char *path = text ? n_dirname(n_strdup(text)) : n_strdup(".");
-        //ents = poclidek_get_dents(sh_ctx.cctx, path);
-        //ents = sh_ctx.cctx->rootdir->pkg_dent_ents;
-        //printf("path %s, ents = %d, %s\n", path, ents ? n_array_size(ents) : 0, text);
-        //free(path);
     }
 
     if (ents == NULL)
         return NULL;
 
-    //printf("text %s\n", text);
     if (state == 0) {
         len = strlen(text);
         if (len == 0)
@@ -316,22 +327,23 @@ static char *arg_generator(const char *text, int state, int genpackages)
     return NULL;
 }
 
+/* TODO: use internal capreqs indexes instead of iterating over packages */
 static char *deps_generator(const char *text, int state)
 {
     static tn_array *deps_table = NULL; /* XXX static variable */
 
     if (state == 0) {
-        tn_array *ents;
         int i, j, len;
 
-        ents = sh_ctx.cctx->currdir->pkg_dent_ents;
+        const char *pwd = poclidek_pwd(sh_ctx.cctx);
+        tn_array *ents = silent_get_dents(sh_ctx.cctx, pwd, 0);
 
         if (ents == NULL)
             return NULL;
 
         len = strlen(text);
-
         n_assert(deps_table == NULL);
+
         /* create deps_table */
         deps_table = n_array_new(n_array_size(ents) * 4, NULL, (tn_fn_cmp)strcmp);
 
@@ -358,14 +370,21 @@ static char *deps_generator(const char *text, int state)
 		    break;
             }
 
-            if (caps) {
-                for (j = 0; j < n_array_size(caps); j++) {
-                    struct capreq *cr = n_array_nth(caps, j);
-                    const char *name = capreq_name(cr);
+            if (caps == NULL)
+                continue;
 
-                    if (len == 0 || strncmp(name, text, len) == 0)
-                        n_array_push(deps_table, (void*)name);
+            for (j = 0; j < n_array_size(caps); j++) {
+                struct capreq *cr = n_array_nth(caps, j);
+                const char *name = capreq_name(cr);
+
+                /* skip self-caps */
+                if (sh_ctx.completion_ctx == COMPLETITION_CTX_WHAT_PROVIDES) {
+                    if (strcmp(pkg->name, name) == 0 && pkg_evr_match_req(pkg, cr, 1))
+                        continue;
                 }
+
+                if (len == 0 || strncmp(name, text, len) == 0)
+                    n_array_push(deps_table, (void*)name);
             }
         }
     }

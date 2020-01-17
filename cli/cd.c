@@ -28,15 +28,15 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state);
 
 
 struct poclidek_cmd command_cd = {
-    COMMAND_SELFARGS | COMMAND_EMPTYARGS | COMMAND_NOOPTS, 
-    "cd", N_("[PATH]"), N_("Change current package directory"), 
+    COMMAND_SELFARGS | COMMAND_EMPTYARGS | COMMAND_NOOPTS,
+    "cd", N_("[PATH]"), N_("Change current package directory"),
     NULL, parse_opt, NULL, cd,
     NULL, NULL, NULL, NULL, NULL, 0, 0
 };
 
 struct poclidek_cmd command_pwd = {
-    COMMAND_NOARGS | COMMAND_NOOPTS, 
-    "pwd", NULL, N_("Print name of current directory"), 
+    COMMAND_NOARGS | COMMAND_NOOPTS,
+    "pwd", NULL, N_("Print name of current directory"),
     NULL, NULL, NULL, pwd,
     NULL, NULL, NULL, NULL, NULL, 0, 0
 };
@@ -51,7 +51,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     if (key == ARGP_KEY_ARG) {
         if (cmdctx->_data == NULL)
             cmdctx->_data = n_strdup(arg);
-        else 
+        else
             argp_usage (state);
         cmdctx->rtflags |= CMDCTX_GOTARGS;
     }
@@ -60,7 +60,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 
-static int cd(struct cmdctx *cmdctx) 
+static int cd(struct cmdctx *cmdctx)
 {
     const char *path;
     char path_buf[PATH_MAX];
@@ -68,14 +68,11 @@ static int cd(struct cmdctx *cmdctx)
 
     path = cmdctx->_data;
 
-    poclidek_load_packages(cmdctx->cctx, POCLIDEK_LOAD_ALL);
     if (path == NULL) {
-        if (cmdctx->cctx->homedir)
-            path = cmdctx->cctx->homedir->name;
-        else
-            path = POCLIDEK_AVAILDIR;
+        n_assert(cmdctx->cctx->homedir);
+        path = cmdctx->cctx->homedir->name;
     }
-    
+
     if (!(rc = poclidek_chdir(cmdctx->cctx, path)) && path) {
         n_snprintf(path_buf, sizeof(path_buf), "/%s", path);
         rc = poclidek_chdir(cmdctx->cctx, path_buf);
@@ -83,17 +80,16 @@ static int cd(struct cmdctx *cmdctx)
 
     if (!rc)
         logn(LOGERR, "%s: no such directory", path);
-    
+
+    n_cfree(&cmdctx->_data);
+
     //printf("pwd = %s\n", cmdctx->cctx->currdir->name);
     return rc;
 }
 
 
-static int pwd(struct cmdctx *cmdctx) 
+static int pwd(struct cmdctx *cmdctx)
 {
-    char path[PATH_MAX];
-    cmdctx_printf(cmdctx, "%s\n", poclidek_pwd(cmdctx->cctx, path, sizeof(path)));
+    cmdctx_printf(cmdctx, "%s\n", poclidek_pwd(cmdctx->cctx));
     return 1;
 }
-
-
