@@ -230,6 +230,7 @@ void source_free(struct source *src)
         src->_refcnt--;
         return;
     }
+
     n_cfree(&src->type);
     n_cfree(&src->name);
     n_cfree(&src->path);

@@ -39,13 +39,13 @@ extern int poldek_conf_MULTILIB;
 int pkg_is_kind_of(const struct pkg *candidate, const struct pkg *pkg)
 {
     register int rc = strcmp(pkg->name, candidate->name);
-    
+
     if (rc == 0 && poldek_conf_MULTILIB) {
         rc = 1 - pkg_is_colored_like(candidate, pkg);
         //if (rc == 0)
         //    DBGF("%s, %s => YES\n", pkg_id(candidate), pkg_id(pkg));
     }
-    
+
     return rc == 0;
 }
 
@@ -68,7 +68,7 @@ int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
 
     if (rc == -1)
         rc = 0;
-    
+
     return rc;
 }
 #endif
@@ -77,7 +77,7 @@ int pkg_is_colored_like(const struct pkg *candidate, const struct pkg *pkg)
 {
     if (!poldek_conf_MULTILIB)
         return 1;
-    
+
     if (pkg->color && candidate->color)
         return (pkg->color & candidate->color) > 0;
 
@@ -106,11 +106,11 @@ int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr)
         cr->cr_relflags & REL_EQ;
 }
 
-int pkg_eq_name_prefix(const struct pkg *pkg1, const struct pkg *pkg2) 
+int pkg_eq_name_prefix(const struct pkg *pkg1, const struct pkg *pkg2)
 {
     char *p1, *p2;
     int n;
-    
+
     if ((p1 = strchr(pkg1->name, '-')) == NULL)
         p1 = strchr(pkg1->name, '\0');
 
@@ -124,7 +124,7 @@ n = p1 - pkg1->name;
     return strncmp(pkg1->name, pkg2->name, n) == 0;
 }
 
-int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_name(const struct pkg *p1, const struct pkg *p2)
 {
     return strcmp(p1->name, p2->name);
 }
@@ -140,7 +140,7 @@ int pkg_cmp_id(const struct pkg *p1, const struct pkg *p2)
 }
 
 
-int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc = 0;
 
@@ -150,35 +150,35 @@ int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2)
     return pkg_version_compare(p1->ver, p2->ver);
 }
 
-int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2)
 {
     int rc = 0;
 
     n_assert(p1->ver && p2->ver && p1->rel && p2->rel);
-    
+
     if ((rc = p1->epoch - p2->epoch))
         return rc;
-    
+
     rc = pkg_version_compare(p1->ver, p2->ver);
 
     if (rc == 0)
         rc = pkg_version_compare(p1->rel, p2->rel);
-    
+
     return rc;
 }
 
 
-int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
-    
+
     if ((rc = pkg_cmp_name(p1, p2)))
         return rc;
-    
+
     return pkg_cmp_evr(p1, p2);
 }
 
-int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
 
@@ -189,7 +189,7 @@ int pkg_cmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 	return rc;
 
     /* if multilib sort by name, arch, evr */
-    if (poldek_conf_MULTILIB && (rc = -pkg_cmp_arch(p1, p2)) != 0) 
+    if (poldek_conf_MULTILIB && (rc = -pkg_cmp_arch(p1, p2)) != 0)
         return rc;
 
     //printf("cmp %s %s -> %d\n", pkg_snprintf_s(p1), pkg_snprintf_s0(p2), rc);
@@ -202,7 +202,7 @@ int pkg_cmp_name_evr_arch_rev_srcpri(const struct pkg *p1, const struct pkg *p2)
 
     if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0)
         rc = -pkg_cmp_arch(p1, p2);
-    
+
     if (rc == 0 && p1->pkgdir != p2->pkgdir)
         rc = p1->pkgdir->pri - p2->pkgdir->pri;
     //rc = -pkg_cmp_arch(p1, p2);
@@ -211,18 +211,18 @@ int pkg_cmp_name_evr_arch_rev_srcpri(const struct pkg *p1, const struct pkg *p2)
 
 #if 0
 /* 0.18.x fn see pkgset.c */
-int pkg_cmp_name_srcpri(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_name_srcpri(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
 
     if ((rc = pkg_cmp_name(p1, p2)) == 0) {
         if (p1->pkgdir != p2->pkgdir)
             rc = p1->pkgdir->pri - p2->pkgdir->pri;
-        
+
         if (rc == 0)
             rc = -pkg_cmp_evr(p1, p2);
     }
-    
+
     return rc;
 }
 #endif
@@ -232,10 +232,10 @@ static __inline__
 int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2);
 
 #if 0
-int pkg_deepstrcmp_name_evr_debug(const struct pkg *p1, const struct pkg *p2) 
+int pkg_deepstrcmp_name_evr_debug(const struct pkg *p1, const struct pkg *p2)
 {
     int rc = pkg_deepstrcmp_name_evr(p1, p2);
-    
+
     if (rc && strcmp(p1->name, p2->name) == 0) {
         printf("cmp %d %s %s\n", rc, pkg_snprintf_s(p1), pkg_snprintf_s0(p2));
     }
@@ -243,7 +243,7 @@ int pkg_deepstrcmp_name_evr_debug(const struct pkg *p1, const struct pkg *p2)
 }
 #endif
 
-int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2) 
+int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc = pkg_strcmp_name_evr_rev(p1, p2);
 
@@ -253,18 +253,18 @@ int pkg_deepstrcmp_name_evr(const struct pkg *p1, const struct pkg *p2)
 }
 
 
-int pkg_strcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2) 
+int pkg_strcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
-    
+
     if ((rc = pkg_cmp_name(p1, p2)))
         return rc;
-    
+
     n_assert(p1->ver && p2->ver && p1->rel && p2->rel);
-    
+
     if ((rc = p2->epoch - p1->epoch))
         return rc;
-    
+
     if ((rc = strcmp(p2->ver, p1->ver)) == 0)
         rc = strcmp(p2->rel, p1->rel);
 
@@ -275,12 +275,12 @@ int pkg_strcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 }
 
 
-int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2)
 {
     /* just compare */
     return p1->_arch - p2->_arch; /* same as strcmp(arch1, arch2),
                                      _arch is an arch index */
-    
+
     /* XXX: never reached, machine_score() disappeared since rpm4.4.7 */
     if (p1->_arch && p2->_arch) {
         int s1, s2;
@@ -295,16 +295,16 @@ int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2)
 
 
 static __inline__
-int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2) 
+int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
-    
+
     if ((rc = pkg_cmp_arch(p1, p2)))
         return rc;
-    
+
     if ((rc = p1->color - p2->color))
         return rc;
-    
+
     if ((rc = p1->btime - p2->btime))
         return rc;
 
@@ -316,16 +316,16 @@ int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2)
 
     if (p1->_os && !p2->_os)
         return 11;
-    
+
     if (!p1->_os && p2->_os)
         return -11;
-    
+
     if ((rc = strcmp(p1->_os ? pkg_os(p1) : "" , p2->_os ? pkg_os(p2) : "")))
         return rc;
 
     if (p1->fn && p2->fn == NULL)
         return 12;
-    
+
     if (p1->fn == NULL && p2->fn)
         return -12;
 
@@ -333,10 +333,10 @@ int pkg_deepcmp_(const struct pkg *p1, const struct pkg *p2)
     return rc;
 }
 
-int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2) 
+int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
-    
+
     if ((rc = pkg_cmp_name_evr_rev(p1, p2)))
         return rc;
 
@@ -344,29 +344,29 @@ int pkg_deepcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2)
 }
 
 /* u */
-int pkg_cmp_uniq_name(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_uniq_name(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
-    
+
     if ((rc = pkg_cmp_name(p1, p2)) == 0 && poldek_VERBOSE > 1)
         logn(LOGWARN, _("duplicated name %s"), pkg_snprintf_s(p1));
-    
+
     return rc;
 }
 
 
-int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
 
-#if ENABLE_TRACE    
+#if ENABLE_TRACE
     if (pkg_cmp_name_evr_rev(p1, p2) == 0)
         logn(LOGNOTICE, "uniq %s: keep %s (score %d), removed %s (score %d)",
              pkg_snprintf_s(p1), pkg_arch(p1), pkg_arch_score(p1),
              pkg_arch(p2), pkg_archscore(p2));
-#endif    
+#endif
     rc = pkg_cmp_name_evr_rev(p1, p2);
-    
+
     if (rc == 0 && poldek_conf_MULTILIB)
         rc = p1->_arch - p2->_arch;
 
@@ -381,15 +381,15 @@ int pkg_cmp_uniq_name_evr(const struct pkg *p1, const struct pkg *p2)
                  p2->_arch ? pkg_arch(p2): "");
         }
     }
-    
+
     return rc;
 }
 
 /* used by pkgdir module */
-int pkg_cmp_uniq_name_evr_arch(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_uniq_name_evr_arch(const struct pkg *p1, const struct pkg *p2)
 {
     register int rc;
-    
+
     if ((rc = pkg_cmp_name_evr_rev(p1, p2)) == 0) {
         const char *a1, *a2;
 
@@ -401,11 +401,11 @@ int pkg_cmp_uniq_name_evr_arch(const struct pkg *p1, const struct pkg *p2)
                  p2->_arch ? pkg_arch(p2): "");
         }
     }
-    
+
     return rc;
 }
 
-int pkg_eq_name_evr(const struct pkg *p1, const struct pkg *p2) 
+int pkg_eq_name_evr(const struct pkg *p1, const struct pkg *p2)
 {
     if (p1 == p2)
         return 1;
@@ -418,27 +418,32 @@ int pkg_cmp_pri_name_evr_rev(struct pkg *p1, struct pkg *p2)
 
     if ((cmprc = p1->pri - p2->pri))
         return cmprc;
-    
+
     return pkg_cmp_name_evr_rev(p1, p2);
 }
 
 
-int pkg_cmp_recno(const struct pkg *p1, const struct pkg *p2) 
+int pkg_cmp_recno(const struct pkg *p1, const struct pkg *p2)
 {
     return p1->recno - p2->recno;
 }
 
-int pkg_nvr_strcmp(struct pkg *p1, struct pkg *p2) 
+int pkg_cmp_seqno(const struct pkg *p1, const struct pkg *p2)
+{
+    return p1->seqno - p2->seqno;
+}
+
+int pkg_nvr_strcmp(struct pkg *p1, struct pkg *p2)
 {
     return strcmp(p1->_nvr, p2->_nvr);
 }
 
-int pkg_nvr_strcmp_rev(struct pkg *p1, struct pkg *p2) 
+int pkg_nvr_strcmp_rev(struct pkg *p1, struct pkg *p2)
 {
     return -strcmp(p1->_nvr, p2->_nvr);
 }
 
-int pkg_nvr_strncmp(struct pkg *pkg, const char *name) 
+int pkg_nvr_strncmp(struct pkg *pkg, const char *name)
 {
     return strncmp(pkg->_nvr, name, strlen(name));
 }
@@ -467,14 +472,14 @@ int pkg_nvr_strcmp_bday(struct pkg *p1, struct pkg *p2)
     gmt_off = poldek_util_get_gmt_offs();
 
     cmprc = ((p1->btime + gmt_off) / 86400) - ((p2->btime + gmt_off) / 86400);
-    
+
     if (cmprc == 0)
         cmprc = pkg_nvr_strcmp(p1, p2);
-    
+
     return cmprc;
 }
 
 int pkg_nvr_strcmp_bday_rev(struct pkg *p1, struct pkg *p2)
 {
-    return -pkg_nvr_strcmp_bday(p1, p2); 
+    return -pkg_nvr_strcmp_bday(p1, p2);
 }

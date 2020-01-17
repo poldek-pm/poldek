@@ -708,6 +708,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
     DBGF("ign_patterns %p\n", ign_patterns);
 
     st = tndb_it_stream(&it);
+
     while ((rc = tndb_it_get_begin(&it, key, &klen, &vlen)) > 0) {
         struct pkg kpkg;
 
@@ -762,6 +763,7 @@ int do_load(struct pkgdir *pkgdir, unsigned ldflags)
         pkg->pkgdir_data_free = pkg_data_free;
         pkg->load_pkguinf = pndir_m_load_pkguinf;
         pkg->load_nodep_fl = pndir_load_nodep_fl;
+
         n_array_push(pkgdir->pkgs, pkg);
 
     l_continue_loop:

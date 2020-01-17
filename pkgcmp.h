@@ -71,6 +71,9 @@ EXPORT int pkg_cmp_pri_name_evr_rev(struct pkg *p1, struct pkg *p2);
 /* compares recno only */
 EXPORT int pkg_cmp_recno(const struct pkg *p1, const struct pkg *p2);
 
+/* seqno only */
+EXPORT int pkg_cmp_seqno(const struct pkg *p1, const struct pkg *p2);
+
 /* like pkg_cmp_name_evr() but VR is compared by strcmp() */
 EXPORT int pkg_strcmp_name_evr_rev(const struct pkg *p1, const struct pkg *p2);
 

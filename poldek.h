@@ -67,14 +67,16 @@ EXPORT int poldek_configure(struct poldek_ctx *ctx, int param, ...);
 #define POLDEK_LOADCONF_NOCONF (1 << 0) /* do not load configuration from file */
 #define POLDEK_LOADCONF_UPCONF (1 << 1) /* do update of remote config files    */
 EXPORT int poldek_load_config(struct poldek_ctx *ctx, const char *path,
-                       tn_array *addon_cnflines, unsigned flags);
+                              tn_array *addon_cnflines, unsigned flags);
 
 EXPORT int poldek_setup_cachedir(struct poldek_ctx *ctx);
 EXPORT int poldek_setup(struct poldek_ctx *ctx);
 
 EXPORT int poldek_load_sources(struct poldek_ctx *ctx);
 
-/* need to be call manually if POLDEK_CONF_LAZY_DEPPROCESS is set */
+EXPORT tn_array *poldek_load_stubs(struct poldek_ctx *ctx);
+
+/* need to be called manually if POLDEK_CONF_LAZY_DEPPROCESS is set */
 EXPORT int poldek_setup_pkgset_deps(struct poldek_ctx *ctx);
 
 EXPORT int poldek_is_interactive_on(const struct poldek_ctx *ctx);
@@ -100,16 +102,16 @@ enum poldek_search_tag {
 };
 
 EXPORT tn_array *poldek_search_avail_packages(struct poldek_ctx *ctx,
-                                       enum poldek_search_tag tag,
-                                       const char *value);
+                                              enum poldek_search_tag tag,
+                                              const char *value);
 
 EXPORT tn_array *poldek_get_avail_packages(struct poldek_ctx *ctx);
 
 
 EXPORT struct pkgdir *poldek_load_destination_pkgdir(struct poldek_ctx *ctx,
-                                              unsigned ldflags);
+                                                     unsigned ldflags);
 
 EXPORT int poldek_split(const struct poldek_ctx *ctx, unsigned size_mb,
-                 unsigned first_free_space_mb, const char *outprefix);
+                        unsigned first_free_space_mb, const char *outprefix);
 
 #endif

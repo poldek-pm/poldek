@@ -56,6 +56,8 @@ static int do_update_a(const struct source *src, const char *idxpath,
                        enum pkgdir_uprc *uprc);
 static void do_free(struct pkgdir *pkgdir);
 
+const char *metadata_localidxpath(const struct pkgdir *pkgdir);
+
 static const char *metadata_repodir = "repodata";
 static const char *metadata_indexfile = "repomd.xml";
 
@@ -73,7 +75,7 @@ struct pkgdir_module pkgdir_module_metadata = {
     do_update_a,
     NULL,
     do_free,
-    NULL,
+    metadata_localidxpath,
     NULL
 };
 
@@ -81,6 +83,17 @@ struct idx {
     struct vfile *repomd_vf;
     tn_hash *repomd;
 };
+
+const char *metadata_localidxpath(const struct pkgdir *pkgdir)
+{
+    struct idx *idx = pkgdir->mod_data;
+
+    if (idx && idx->repomd_vf)
+        return vfile_localpath(idx->repomd_vf);
+
+    return pkgdir->idxpath;
+}
+
 
 static int prepare_path(char *buf, int size, const char *path, ...)
 {

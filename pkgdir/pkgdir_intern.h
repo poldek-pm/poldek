@@ -46,6 +46,7 @@ int pkgdir__rmf(const char *dirpath, const char *mask, int test);
 int pkgdir__cache_clean(const char *path, const char *mask, int test);
 
 const char *pkgdir_localidxpath(const struct pkgdir *pkgdir);
+time_t pkgdir_mtime(const struct pkgdir *pkgdir);
 
 #include "pkg_store.h"
 

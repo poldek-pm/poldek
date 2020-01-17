@@ -115,6 +115,8 @@ EXPORT int sources_update(tn_array *sources, unsigned flags);
 #define PKGSOURCE_CLEAN_WHOLE_CACHEDIR (1 << 4)
 EXPORT int source_clean(struct source *src, unsigned flags);
 
+EXPORT tn_array *source_stubload(struct source *src);
+
 EXPORT int sources_clean(tn_array *sources, unsigned flags);
 
 /* flags = PKGDIR_CREAT_* */

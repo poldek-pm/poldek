@@ -13,9 +13,10 @@ LIBS=
 noinst_LTLIBRARIES = libpkgdir.la
 
 libpkgdir_la_SOURCES  = \
-			source.c source_mkidx.c source.h \
-			pkgdir.c pkgdir.h pkgdir_intern.h \
-			pkgdir_dirindex.c pkgdir_dirindex.h \
+			source.c source_mkidx.c source.h      \
+			pkgdir.c pkgdir.h pkgdir_intern.h     \
+			pkgdir_dirindex.c pkgdir_dirindex.h   \
+			pkgdir_stubindex.c pkgdir_stubindex.h \
 			pkgdir_patch.c    \
 			pkgdir_clean.c    \
 			mod.c             \

@@ -47,6 +47,7 @@
 #include "pkgroup.h"
 #include "pkgmisc.h"
 #include "pkgdir_dirindex.h"
+#include "pkgdir_stubindex.h"
 
 tn_hash *pkgdir__avlangs_new(void)
 {
@@ -304,6 +305,16 @@ int pkgdir_update_a(const struct source *src)
 
     if (rc && uprc == PKGDIR_UPRC_UPTODATE)
         msgn(1, _("%s is up to date"), source_idstr(src));
+
+    if (rc) {
+        struct pkgdir *pkgdir = pkgdir_srcopen(src, 0);
+        if (pkgdir != NULL) {
+            pkgdir__dirindex_update(pkgdir);
+            pkgdir__stubindex_update(pkgdir);
+            pkgdir_free(pkgdir);
+        }
+    }
+
     return rc;
 }
 
@@ -378,7 +389,12 @@ int pkgdir_update(struct pkgdir *pkgdir)
         }
     }
 
-	return rc;
+    if (rc) {
+        pkgdir__dirindex_update(pkgdir);
+        pkgdir__stubindex_update(pkgdir);
+    }
+
+    return rc;
 }
 
 
@@ -562,9 +578,10 @@ void pkgdir_free(struct pkgdir *pkgdir)
                 pkg->pkgdir = NULL;
         }
 
-        n_array_free(pkgdir->pkgs);
-        pkgdir->pkgs = NULL;
+        n_array_cfree(&pkgdir->pkgs);
     }
+
+    n_array_cfree(&pkgdir->_unsorted_pkgs);
 
     if (pkgdir->pkgroups) {
         pkgroup_idx_free(pkgdir->pkgroups);
@@ -632,7 +649,6 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
     tn_array *foreign_depdirs = NULL;
     int rc;
 
-
     if ((ldflags & PKGDIR_LD_FULLFLIST) == 0 && depdirs && pkgdir->depdirs) {
         int i;
         foreign_depdirs = n_array_new(16, NULL, (tn_fn_cmp)strcmp);
@@ -666,22 +682,26 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
                  vf_url_slim_s(pkgdir->idxpath, 0));
     }
 
+
     rc = 0;
+    uint32_t nth = 1;
     if (pkgdir->mod->load(pkgdir, ldflags) >= 0) {
         int i;
 
         rc = 1;
         pkgdir->flags |= PKGDIR_LOADED;
 
-        pkgdir->unsorted_pkgs = n_array_dup(pkgdir->pkgs, (tn_fn_dup)pkg_link);
-        n_array_sort(pkgdir->pkgs);
-
+        pkgdir->_unsorted_pkgs = n_array_clone(pkgdir->pkgs);
+        n_array_ctl_set_cmpfn(pkgdir->_unsorted_pkgs, NULL);
 
         for (i=0; i < n_array_size(pkgdir->pkgs); i++) {
             struct pkg *pkg = n_array_nth(pkgdir->pkgs, i);
             pkg->pkgdir = pkgdir;
+            pkg->seqno = nth++;
+            n_array_push(pkgdir->_unsorted_pkgs, pkg_link(pkg));
         }
-
+        n_array_sort(pkgdir->pkgs);
+        n_array_freeze(pkgdir->_unsorted_pkgs);
 
         if (ldflags & PKGDIR_LD_DOIGNORE)
             do_ignore(pkgdir);
@@ -703,10 +723,12 @@ int pkgdir_load(struct pkgdir *pkgdir, tn_array *depdirs, unsigned ldflags)
         n_assert(pkgdir->ts > 0);       /* ts must be set by backend */
         pkgdir->_ldflags = ldflags;
 
-        if (ldflags & PKGDIR_LD_DIRINDEX) {
+        if (ldflags & PKGDIR_LD_DIRINDEX)
             do_open_dirindex(pkgdir);
-        }
-        n_array_cfree(&pkgdir->unsorted_pkgs); /* not needed */
+
+        if (ldflags & PKGDIR_LD_UPDATE_STUBINDEX)
+            pkgdir__stubindex_update(pkgdir);
+
     }
 
     return rc;
@@ -855,6 +877,20 @@ const char *pkgdir_localidxpath(const struct pkgdir *pkgdir)
     return pkgdir->idxpath;
 }
 
+time_t pkgdir_mtime(const struct pkgdir *pkgdir)
+{
+    const char *path = pkgdir_localidxpath(pkgdir);
+
+    if (path) {   /* make sure its local path */
+        struct stat st;
+        if (stat(path, &st) == 0 && S_ISREG(st.st_mode))
+            return poldek_util_mtime(path);
+    }
+
+    n_assert(pkgdir->ts > 0);
+
+    return pkgdir->ts;
+}
 
 static
 int do_create(struct pkgdir *pkgdir, const char *type,
@@ -960,8 +996,8 @@ int pkgdir_save_as(struct pkgdir *pkgdir, const char *type,
             idxpath = pkgdir_localidxpath(pkgdir);
     }
 
-	if (mod == NULL)
-		return 0;
+    if (mod == NULL)
+        return 0;
 
     avlangs_h = avlangs_h_tmp = NULL;
 

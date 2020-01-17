@@ -37,6 +37,8 @@
 #include "pm/pm.h"
 #include "split.h"
 
+extern const char *poldek_conf_PKGDIR_DEFAULT_TYPE;
+
 int poldek__load_sources_internal(struct poldek_ctx *ctx, unsigned ps_setup_flags)
 {
     struct pkgset *ps;
@@ -71,8 +73,13 @@ int poldek__load_sources_internal(struct poldek_ctx *ctx, unsigned ps_setup_flag
     if (ctx->ts->getop(ctx->ts, POLDEK_OP_AUTODIRDEP))
         ldflags |= PKGDIR_LD_DIRINDEX;
 
-    if (!pkgset_load(ps, ldflags, ctx->sources))
-        logn(LOGWARN, _("no packages loaded"));
+    /* create/update stubindex by default */
+    ldflags |= PKGDIR_LD_UPDATE_STUBINDEX;
+
+    if (!pkgset_load(ps, ldflags, ctx->sources)) {
+        if (poldek_verbose() > 0)
+            logn(LOGWARN, _("no packages loaded"));
+    }
 
     MEMINF("after load");
 
@@ -101,6 +108,48 @@ int poldek__load_sources_internal(struct poldek_ctx *ctx, unsigned ps_setup_flag
     return 1;
 }
 
+tn_array *poldek_load_stubs(struct poldek_ctx *ctx)
+{
+    tn_array *sources = ctx->sources;
+    int i;
+
+    if (!poldek__is_setup_done(ctx)) {
+        logn(LOGERR | LOGDIE, "poldek_setup() call is a must...");
+    }
+
+    n_array_isort_ex(sources, (tn_fn_cmp)source_cmp_pri);
+    tn_array *stubpkgs = pkgs_array_new(4096);
+
+    for (i=0; i < n_array_size(sources); i++) {
+        struct source *src = n_array_nth(sources, i);
+
+        if (src->flags & PKGSOURCE_NOAUTO)
+            continue;
+
+        if (src->type == NULL)
+            source_set_type(src, poldek_conf_PKGDIR_DEFAULT_TYPE);
+
+        tn_array *pkgs = source_stubload(src);
+        if (pkgs == NULL) {     /* need all stubs or nothing */
+            n_array_cfree(&stubpkgs);
+            return 0;
+        }
+
+        while (n_array_size(pkgs) > 0) {
+            struct pkg *pkg = n_array_shift(pkgs);
+
+            if (pkg_is_scored(pkg, PKG_IGNORED))
+                pkg_free(pkg);
+            else
+                n_array_push(stubpkgs, pkg);
+        }
+    }
+
+    n_array_sort_ex(stubpkgs, (tn_fn_cmp)pkg_deepcmp_name_evr_rev);
+    n_array_uniq_ex(stubpkgs, (tn_fn_cmp)pkg_cmp_uniq_name_evr_arch);
+
+    return stubpkgs;
+}
 
 tn_array *poldek_get_avail_packages(struct poldek_ctx *ctx)
 {

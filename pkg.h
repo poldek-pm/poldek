@@ -120,11 +120,13 @@ struct pkg {
     int groupid;              /* package group id (see pkgroups.c) */
 
     /* for installed packages */
-    uint32_t      recno;        /* db's ID of the header */
+    uint32_t     recno;        /* db's ID of the header */
     int32_t      itime;        /* date of installation  */
+    uint32_t     seqno;        /* in repo sequence id   */
 
     /* private, don't touch */
-    uint16_t      _refcnt;
+
+    uint16_t     _refcnt;
     tn_alloc     *na;
     int16_t      _buf_size;
     char         _buf[0];  /* private, store all string members */
