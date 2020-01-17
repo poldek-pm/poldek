@@ -1,10 +1,10 @@
 # $Revision$, $Date$
-# 
+#
 # spec is based on PLD's poldek.spec available at <http://cvs.pld.org.pl/SPECS/>
 #
 # To build with configuration for particular distro define %{distro}:
 # $ rpmbuild -bb ... --define 'distro {pld,fedora,rh}' [--define snap SNAP]
-#  
+#
 #%define _with_poldekuser 1
 %define _unpackaged_files_terminate_build  %{nil}
 ##define snap @SNAP@
@@ -24,18 +24,20 @@ BuildRequires:	rpm-devel >= 4.0
 BuildRequires:	openssl-devel
 BuildRequires:	readline-devel
 BuildRequires:	zlib-devel
+BuildRequires:	zstd-devel
 BuildRequires:	pcre-devel
 %{!?_without_xml_metadata:BuildRequires: libxml2-devel}
 %{?_with_static:BuildRequires:	bzip2-static}
 %{?_with_static:BuildRequires:	openssl-static}
 %{?_with_static:BuildRequires:	rpm-static}
 %{?_with_static:BuildRequires:	zlib-static}
+%{?_with_static:BuildRequires:	zstd-static}
 BuildRoot:	/tmp/%{name}-%{version}-root-%(id -u -n)
 
 %description
 poldek is an RPM package management tool which allows you to easily
 perform package verification, installation (including system
-installation from scratch), upgrading, and removal. 
+installation from scratch), upgrading, and removal.
 
 Program can be used in batch (like apt-get from Debian's
 APT) or interactive mode. The interactive mode puts you into a
@@ -60,12 +62,12 @@ Requires:	%{name}-devel = %{version}-%{release}
 %description static
 poldek static libraries
 
-%prep 
+%prep
 %setup -q -n %{name}-%{version}%{?snap:-cvs%{snap}}
 
 %build
 %configure %{?_with_static:--enable-static} %{?_without_xml_metadata:--without-xml-metadata}
-%{__make} 
+%{__make}
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -93,12 +95,12 @@ rm -rf $RPM_BUILD_ROOT
 %pre
 %{?_with_poldekuser: PATH="/bin:/sbin:/usr/bin:/usr/sbin"; if [ -z "$(id -u poldek 2>/dev/null)" ]; then groupadd -r -f poldek || exit 1; useradd -r -d %{_var}/cache/poldek -g poldek -s /bin/sh -c "poldek user" poldek || exit 1; fi;}
 
-%post 
+%post
 %{?_with_poldekuser: sh %{_libdir}/%{name}/poldekuser-setup.sh --yes}
 
 /sbin/ldconfig
 
-%postun 
+%postun
 if [ "$1" = "0" ]; then
    %{?_with_poldekuser: /usr/sbin/userdel poldek}
    %{?_with_poldekuser: /usr/sbin/groupdel poldek}
@@ -112,9 +114,9 @@ fi
 %attr(755,root,root) %{_bindir}/*
 %ifos freebsd
 %attr(755,root,root) %{_libdir}/lib*.so.*
-%else # linux 
+%else # linux
 %attr(755,root,root) %{_libdir}/lib*.so.*.*
-%endif 
+%endif
 %dir %{_libdir}/%{name}
 %attr(755,root,root) %{_libdir}/%{name}/*
 %{_infodir}/%{name}*
