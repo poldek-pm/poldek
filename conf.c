@@ -107,10 +107,6 @@ static void copt_free(struct copt *opt)
     if (opt->flags & COPT_MULTIPLE) {
         n_array_free(opt->vals);
     } else {
-        if (opt->vals != NULL) {
-            DBGF_F("%s %d\n", opt->name, n_array_size(opt->vals));
-        }
-
         n_assert(opt->vals == NULL);
         n_cfree(&opt->val);
     }
