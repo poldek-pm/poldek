@@ -150,14 +150,15 @@ static char *setup_default_cachedir(void)
     char *dir, path[PATH_MAX], inhome_path[PATH_MAX], *tmp_cachedir = NULL;
     const char *cachedn = ".poldek-cache";
     struct passwd *pw = NULL;
+    const char *home = NULL;
 
     if ((pw = getpwuid(getuid()))) { /* use $HOME/.poldek-cache if exists */
-        char *d = pw->pw_dir;
+        home = pw->pw_dir;
         if (poldek__is_in_testing_mode())
-            d = getenv("HOME");
+            home = getenv("HOME");
 
-        if (d) {
-            n_snprintf(inhome_path, sizeof(inhome_path), "%s/%s", d, cachedn);
+        if (home) {
+            n_snprintf(inhome_path, sizeof(inhome_path), "%s/%s", home, cachedn);
             if (poldek_util_is_rwxdir(inhome_path)) {
                 tmp_cachedir = inhome_path;
                 goto l_end;
@@ -167,10 +168,10 @@ static char *setup_default_cachedir(void)
 
     n_assert(tmp_cachedir == NULL);
     dir = getenv("XDG_CACHE_HOME");        /* try env XDG_CACHE_HOME */
-    if ((dir == NULL || *dir == '\0') && pw) {
-        int size = strlen(pw->pw_dir) + 1 /* '/' */ + strlen(".cache") + 1;
+    if ((dir == NULL || *dir == '\0') && home && *home) {
+        int size = strlen(home) + 1 /* '/' */ + strlen(".cache") + 1;
         dir = alloca(size);
-        n_snprintf(dir, size, "%s/.cache", pw->pw_dir);
+        n_snprintf(dir, size, "%s/.cache", home);
     }
 
     if (dir && *dir && poldek_util_is_rwxdir(dir)) {
