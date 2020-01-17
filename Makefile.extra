@@ -13,9 +13,14 @@ mclean:
 	@if [ -f Makefile ]; then         \
 		$(MAKE) maintainer-clean; \
 	fi
-	-rm -rf intl trurlib tndb poldek-cvs????????*
+	-rm -rf ABOUT-NLS Makefile.in NEWS aclocal.m4 autom4te.cache/ compile conf_sections.c config.guess config.h.in config.rpath config.sub configure depcomp install-sh ltmain.sh m4/ missing mkinstalldirs po/POTFILES.in py-compile test-driver
+	-rm -rf intl
+	-rm -f *.xz
 	-find . -name .#\*[0-9]  | xargs -r rm
 
+snapbackup: clean
+	rsync -atvx . lione:rsync/poldek/
+	rsync -atvx . builder64:poldek/
 
 backup:
 	@cd $(PROJ_DIR);                                            \
