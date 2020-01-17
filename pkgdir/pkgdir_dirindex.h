@@ -22,6 +22,8 @@ struct pkgdir_dirindex;
 struct pkgdir_dirindex *pkgdir__dirindex_open(struct pkgdir *pkgdir);
 void pkgdir__dirindex_close(struct pkgdir_dirindex *dirindex);
 
+void pkgdir__dirindex_update(struct pkgdir *pkgdir);
+
 /* returns path providers */
 tn_array *pkgdir_dirindex_get(const struct pkgdir *pkgdir,
                               tn_array *pkgs, const char *path);
