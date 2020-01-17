@@ -420,7 +420,8 @@ int pndir_m_update(struct pkgdir *pkgdir, enum pkgdir_uprc *uprc)
             }
         }
 
-        msg(1, "_\n");
+        // empty line between Applying..
+        //msg(1, "_\n");
         snprintf(path, sizeof(path), "%s/%s/%s", dn, pndir_packages_incdir, line);
         diff = pkgdir_open_ext(path, NULL, pkgdir->type, "diff", NULL,
                                PKGDIR_OPEN_DIFF, pkgdir->lc_lang);
