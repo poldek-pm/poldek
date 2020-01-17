@@ -16,14 +16,21 @@ testCacheDir()
     HOME="$TMPDIR/fakehome"     # in TESTING mode $HOME is used
     mkdir $HOME || fail "mkdir"
 
-    default_home_cachedir="$HOME/.poldek-cache"
+    export XDG_CACHE_HOME="$TMPDIR/fakehome-cache"
+    mkdir $XDG_CACHE_HOME || fail "mkdir"
+
+    default_home_cachedir="$XDG_CACHE_HOME/poldek"
+    tmpdir_cachedir="$TMPDIR/poldek-cache-${USER}"
+    legacy_default_home_cachedir="$HOME/.poldek-cache"
+
     [ -d $default_home_cachedir ] && fail "$default_home_cachedir should does not exists"
 
-    msgn "#1 non existent"
+    msgn "--noconf --cachedir=<NON-EXISTING-DIR>"
     $POLDEK --noconf --cachedir=$REPO/foobar/baz | grep -q "/foobar/baz: invalid cache directory"
     [ $? -eq "0" ] || fail "non existent directory accepted"
     [ -d $default_home_cachedir ] && fail "$default_home_cachedir should not exists"
     [ -d $REPO/foobar ] && fail "directory exist"
+
 
     cmdline_cachedir="$REPO/cmdline-cachedir"
     msgn "--noconf --cachedir"
@@ -42,32 +49,32 @@ testCacheDir()
     [ -d $default_home_cachedir ] && fail "$default_home_cachedir should not exists"
     rm -rf $cmdline_cachedir $configured_cachedir $default_home_cachedir
 
-    msgn "--conf"
+    msgn "--conf with cachedir"
     $POLDEK --conf $TMPDIR/poldek.conf -l
     [ ! -d $configured_cachedir ] && fail "$configured_cachedir does not exists"
     [ -d $default_home_cachedir ] && fail "$default_home_cachedir should not exists"
-    rm -rf $configured_cachedir $default_home_cachedir
+    rm -rf $configured_cachedir $default_home_cachedir $legacy_default_home_cachedir
 
-
-    tmpdir_cachedir="$TMPDIR/poldek-cache-${USER}"
     create_local_conf ""
 
     msgn "--conf without cachedir"
     $POLDEK --conf $TMPDIR/poldek.conf -l
-    [ ! -d $tmpdir_cachedir ] && fail "$tmpdir_cachedir does not exists"
-    [ -d $default_home_cachedir ] && fail "$default_home_cachedir should not exists"
-    rm -rf $default_home_cachedir $tmpdir_cachedir
+    [ -d $tmpdir_cachedir ] && fail "$tmpdir_cachedir does not exists"
+    [ -d $default_home_cachedir ] || fail "$default_home_cachedir should exists"
+    rm -rf $default_home_cachedir $tmpdir_cachedir $legacy_default_home_cachedir
 
-    msgn "--conf without cachedir, with env.HOME/.poldek-cache"
-    mkdir $default_home_cachedir
+    legacy_default_home_cachedir="$HOME/.poldek-cache"
+    msgn "--conf without cachedir, with legacy HOME/.poldek-cache"
+    mkdir $legacy_default_home_cachedir
     $POLDEK --conf $TMPDIR/poldek.conf -l
+    [ -d $default_home_cachedir ] && fail "$default_home_cachedir should not exists"
     [ -d $tmpdir_cachedir ] && fail "$tmpdir_cachedir should not exists"
-    [ ! -d $default_home_cachedir ] && fail "$default_home_cachedir not exists"
-    rm -rf $default_home_cachedir $tmpdir_cachedir
+    [ ! -d $legacy_default_home_cachedir ] && fail "$legacy_default_home_cachedir"
+    rm -rf $default_home_cachedir $tmpdir_cachedir $legacy_default_home_cachedir
 
     rm -rf $configured_cachedir
     create_local_conf $configured_cachedir
-    msgn "--conf URL with empty env.TMPDIR and env.TMP"
+    msgn "--conf URL with empty TMPDIR / TMP"
     # remote conf
     POLDEK_TESTING_PRELOAD_CONF="$SHLIBDIR/vftest-fetch.conf"
     export POLDEK_TESTING_PRELOAD_CONF
@@ -76,15 +83,15 @@ testCacheDir()
     (TMPDIR=""; TMP=""; $POLDEK --conf $url -l)
     [ ! -d $configured_cachedir ] && fail "remotely $configured_cachedir does not exists"
     [ ! -d $default_home_cachedir ] && fail "$default_home_cachedir does not exists"
-    rm -rf $configured_cachedir $default_home_cachedir
+    rm -rf $configured_cachedir $default_home_cachedir $legacy_default_home_cachedir
 
-    msgn "--conf URL with non-empty env.TMPDIR"
+    msgn "--conf URL with non-empty TMPDIR"
     $POLDEK --conf $url -l
 
-    [ ! -d $tmpdir_cachedir ] && fail "TMPDIR's $tmpdir_cachedir does does not exists"
-    [ ! -d $configured_cachedir ] && fail "$configured_cachedir does not exists"
-    [ -d $default_home_cachedir ] && fail "$default_home_cachedir does not exists"
-    rm -rf $configured_cachedir $default_home_cachedir
+    [ -d $tmpdir_cachedir ] && fail "TMPDIR's $tmpdir_cachedir should not exists"
+    [ -d $configured_cachedir ] || fail "$configured_cachedir does not exists"
+    [ -d $default_home_cachedir ] || fail "$default_home_cachedir does not exists"
+    rm -rf $configured_cachedir $default_home_cachedir $legacy_default_home_cachedir
 
 
     return 0
