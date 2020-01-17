@@ -831,7 +831,7 @@ void pkgdir__dirindex_update(struct pkgdir *pkgdir)
         return;
     }
 
-    msgn_i(0, 2, "updating directory index of %s...", pkgdir_idstr(pkgdir));
+    msgn_i(2, 2, "updating directory index of %s...", pkgdir_idstr(pkgdir));
     int verbosity = poldek_set_verbose(0);
 
     if ((pkgdir->flags & PKGDIR_LOADED) == 0) {
