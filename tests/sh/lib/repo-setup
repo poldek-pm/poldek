@@ -57,8 +57,13 @@ oneTimeSetUp() {
     PATH="$PATH:$PWD/sh/lib/"
 
     POLDEK="$PWD/../cli/poldek $QUIET"
+    $POLDEK --version >/dev/null; # produce .libs/lt-poldek
+    POLDEK="$PWD/../cli/.libs/lt-poldek $QUIET"
     POLDEK_NOCONF="$POLDEK --noconf -Ovfile_retries=1 --cachedir $CACHEDIR"
     POLDEK_UP="$POLDEK --conf ./sh/lib/vftest-fetch.conf --cachedir $CACHEDIR"
+
+    POLDEK_RAW="$PWD/../cli/.libs/lt-poldek"
+    POLDEK_RAW_UP="$POLDEK --conf ./sh/lib/vftest-fetch.conf --cachedir $CACHEDIR"
 
     build_repo_packages
     ln -sf $SOURCE_REPO/*.rpm $REPO/ || fail
@@ -120,7 +125,6 @@ die_if_invalid_index() {
     anindex_type="pdir"
     if echo $anindex | grep -q \.ndir\.; then anindex_type="pndir"; fi
     if echo $anindex | grep -qP \.ndir$; then anindex_type="pndir"; fi
-
     anindex_real_type="pdir"
 
     if $GREP -q '^tndb[0-9]\.[0-9]' $anindex; then
@@ -148,11 +152,12 @@ die_if_invalid_index() {
 add_package_to_repo() {
     for p in $(ls $SOURCE_REPO/*.rpm); do
         [ ! -f $p ] && fail "no packages in $SOURCE_REPO?"
+        [ ! -f $p ] && break
         package=$(basename $p)
 
         if [ ! -f "$REPO/$package" ]; then
             ln -sf $p $REPO/$package
-            msg "Added $package"
+            msg "added $package"
             return 0
         fi
     done
@@ -162,7 +167,7 @@ add_package_to_repo() {
 remove_package_from_repo() {
     package=$(find $REPO -name \*.rpm | head -1)
     rm -f $package
-    msg "Removed $(basename $package)"
+    msg "removed $(basename $package)"
 }
 
 

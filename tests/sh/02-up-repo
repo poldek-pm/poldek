@@ -9,8 +9,21 @@ mkidx() {
    $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
 }
 
+ls_expect() {
+    local expected=$1
+    is_verbose_mode && $POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test --cmd ls
+    n=$($POLDEK_RAW_UP -q -Oautoupa=n -Osource="test,type=pndir $REPOURL" -n test --cmd ls | grep -P '^\w+-\d+-\d+\.\w+$' | wc -l)
+
+    assertEquals "ls: invalid number of packages found (expected $expected, got $n)" "$n" "$expected"
+    [ "$n" == "$expected" ]
+}
+
 up() {
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
+    if [ $# -eq 1 ]; then
+        local expected_packages_after=$1
+        [ -n "$expected_packages_after" ] && ls_expect $expected_packages_after
+    fi
 }
 
 up_debug() {
@@ -21,11 +34,11 @@ testUpdate()
 {
     POLDEK_TESTING_DENIED_FILES="packages.ndir.diff.toc"
 
-    rm -rf $REPO/*.rpm
+    rm -rf $REPO/*.*
     # Create repo and generate some diffs
     msg "\n## Creating empty index"
     indexfile="$REPO/packages.ndir$COMPR_EXT"
-    mkidx
+    $POLDEK_NOCONF --st dir -s $REPO --mkidx --mt pndir || fail "mkidx failed"
     die_if_invalid_index $indexfile 0
 
     msg "\n## up #0"
@@ -39,7 +52,7 @@ testUpdate()
     die_if_invalid_index $indexfile 1
     die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc$COMPR_EXT" 1
     msg "\n## up #1"
-    up
+    up 1
 
     msg "\n## Changing repo #2"
     sleep 1
@@ -49,7 +62,7 @@ testUpdate()
     die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc$COMPR_EXT" 2
 
     msg "\n## up #2"
-    up
+    up 0
 
     msg "\n## Changing repo #3"
     sleep 1
@@ -60,7 +73,7 @@ testUpdate()
     die_if_invalid_index "$REPO/packages.i/packages.ndir.diff.toc$COMPR_EXT" 3
 
     msg "\n## up #3"
-    up
+    up 2
 
     # <https://bugs.pld-linux.org/show_bug.cgi?id=28>
     msg "\n## Resetting repo"
@@ -71,8 +84,8 @@ testUpdate()
     msg "\n## up (reset)"
 
     POLDEK_TESTING_DENIED_FILES="packages.ndir.diff.toc"
-    $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up >/dev/null
-    [ $? -eq 0 ] && fail "up ok" # should fail
+    #$POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up >/dev/null
+    #[ $? -eq 0 ] && fail "up ok" # should fail
 
     $POLDEK_UP -Oautoupa=y -Osource="test,type=pndir $REPOURL" --up || fail "up(a) failed"
     POLDEK_TESTING_DENIED_FILES=""
@@ -90,7 +103,7 @@ testUpdate()
     POLDEK_TESTING_DENIED_FILES="$COMPR_EXT" # should be up to date
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --up || fail "up failed"
     $POLDEK_UP -Oautoupa=n -Osource="test,type=pndir $REPOURL" --upa || fail "up failed"
-
+    ls_expect 4
 
     # autoupa on missing diff
     msg "\n## Changing repo #5 (missing diff file and autoupa)"
@@ -109,6 +122,22 @@ testUpdate()
         force_msg "THE ERROR ABOVE is EXPECTED"
     else
         fail "up"
+    fi
+    ls_expect 5
+
+    msg "\n## stubindex"
+    index=$(find $CACHEDIR -name packages.ndir.gz)
+    REPO_CACHE_DIR=$(dirname $index)
+    stubindex="$REPO_CACHE_DIR/stubindex.pndir.zst"
+    if [ ! -f "$stubindex" ]; then
+        fail "no stubindex $stubindex!"
+    else
+        assertEquals $(zstdcat "$stubindex" | wc -l) "5"
+        rm -f $stubindex
+        if ls_expect 5; then
+            assertEquals $(zstdcat "$stubindex" | wc -l) "5" # recreated at load
+        fi
+
     fi
 
 }

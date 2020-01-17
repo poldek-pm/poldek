@@ -76,6 +76,7 @@ try_install_package() {
     # run again to check installation results
     if is_verbose_mode; then
         msg "# parsable"
+        #gdb --ex run --args
         $POLDEK_INSTALL $cmd --test
     fi
 
