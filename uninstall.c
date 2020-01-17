@@ -201,7 +201,7 @@ int process_pkg_rev_orphans(int indent, struct uninstall_ctx *uctx,
             if (pkg_leave_orphans(uctx, dbpkg))
                 continue;
 
-            msgn_i(1, indent, _("%s marks orphaned %s (req %s)"),
+            msgn_i(1, indent, _("%s greedily marks its requirement %s (req %s)"),
                    pkg_id(pkg), pkg_id(dbpkg), capreq_snprintf_s(req));
 
             pkg_set_mf(uctx->pms, dbpkg, DBPKG_REV_ORPHANED);
@@ -216,6 +216,7 @@ int process_pkg_rev_orphans(int indent, struct uninstall_ctx *uctx,
 
     if (dbpkgs)
         n_array_free(dbpkgs);
+
     return 1;
 }
 
@@ -396,7 +397,7 @@ static int do_process(struct uninstall_ctx *uctx)
 
     for (i=0; i < n_array_size(uctx->unpkgs); i++) {
         struct pkg *dbpkg = n_array_nth(uctx->unpkgs, i);
-        msgn(1, _("mark %s"), pkg_id(dbpkg));
+        msgn(2, _("mark %s"), pkg_id(dbpkg));
         pkg_hand_mark(uctx->ts->pms, dbpkg);
         n++;
     }
