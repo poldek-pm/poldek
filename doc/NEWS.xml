@@ -1,8 +1,14 @@
 <?xml version="1.0"?>
 <news>
-<release version="0.41.0" date="2020/01/" focus="performance">
+  <release version="0.42.0" date="2020/01/20" focus="performance">
     <entry><para>
-      performance: yet faster (about 40%) repo loading: optimized capabilities indexes, zero backward fseeks, mtime based verification cache and lazy deps processing
+      cli: faster shell boot time due to lazy load repos; compacted and colored install/ uninstall summary and downloading progress bar
+    </para></entry>
+    <entry><para>
+      feat: use XDG_CACHE_HOME/poldek as default cache directory
+    </para></entry>
+    <entry><para>
+      performance: faster (about 40%) repo loading: optimized capabilities indexes, zero backward fseeks (which is slow with compressed files), mtime based verification cache and lazy deps processing
     </para></entry>
     <entry><para>
       depsolver: with "upgrade multiple instances" config option, poldek handle upgrades of multiple installed packages: most recent version is upgraded while other installed versions are kept untouch
@@ -13,6 +19,10 @@
     <entry><para>
       fix: allow multiple --rpmdef command line options
     </para></entry>
+    <entry><para>
+      fix: minor memleaks fixed
+    </para></entry>
+
 </release>
 
 <release version="0.40.0" date="2019/12/31" focus="rpm.org">

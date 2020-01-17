@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 m4_define([poldek_major_version], [0])
-m4_define([poldek_minor_version], [40])
+m4_define([poldek_minor_version], [42])
 m4_define([poldek_micro_version], [0])
 m4_define([poldek_version],
 	  [poldek_major_version.poldek_minor_version.poldek_micro_version])
@@ -11,13 +11,8 @@ AC_INIT([poldek], [poldek_version], [http://bugs.launchpad.net/poldek])
 AC_CONFIG_SRCDIR([capreq.c])
 AC_CONFIG_HEADERS([config.h])
 
-PACKAGE_BUGREPORT="http://bugs.launchpad.net/poldek"
 VERSION_STATUS="stable"
-VERSION=0.41.0
-VERSION_TAG=$(echo $VERSION | sed 's/\./_/g')
-VERSION_CVSTAG="v$VERSION_TAG"
 VERSION_YEAR=$(date +%Y)
-PACKAGE_VERSION_SERIES="2"
 
 AH_TEMPLATE([ENABLE_TRACE],[])
 AH_TEMPLATE([HAVE_RPM_4_0_4],[])
