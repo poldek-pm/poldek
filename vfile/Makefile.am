@@ -8,8 +8,8 @@ DIST_SUBDIRS = $(SUBDIRS) tests
 AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-LIBVERSION = 0:0:0
-lib_LTLIBRARIES     = libvfile.la 
+LIBVERSION = 0:1:0
+lib_LTLIBRARIES     = libvfile.la
 libvfile_la_LDFLAGS = -version-info $(LIBVERSION)
 
 libvfile_la_SOURCES = vfile.c fetch.c vfetch.c vfprogress.c misc.c \
@@ -26,13 +26,13 @@ libvfile_la_CFLAGS =			\
 pkgincludedir = $(includedir)/vfile
 pkginclude_HEADERS = vfile.h p_open.h vopen3.h
 
-noinst_PROGRAMS = vfget test_vopen3 
+noinst_PROGRAMS = vfget test_vopen3
 TEST_LDADDS    = libvfile.la -lutil
 
-vfget_SOURCES  = vfget.c 
+vfget_SOURCES  = vfget.c
 vfget_LDADD    = $(TEST_LDADDS)
 
-test_vopen3_SOURCES  = test_vopen3.c 
+test_vopen3_SOURCES  = test_vopen3.c
 test_vopen3_LDADD    = $(TEST_LDADDS)
 
 EXTRA_DIST     = testcookie.c test_progress.c sample.c ttest.c
@@ -47,4 +47,4 @@ clean-local:
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1

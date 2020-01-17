@@ -7,7 +7,7 @@ AM_CFLAGS = @AM_CFLAGS@
 
 SHELL_MOD = shell.c
 
-libVERINFO         = 0:0:0
+libVERINFO         = 1:0:0
 lib_LTLIBRARIES    = libpoclidek.la
 
 libpoclidek_la_LDFLAGS = -version-info $(libVERINFO)
@@ -39,7 +39,7 @@ libpoclidek_la_SOURCES  =  \
 			cmd.h           \
 			rcmd.c
 
-libpoclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la  
+libpoclidek_la_LIBADD = ../libpoldek.la ../vfile/libvfile.la
 
 libpoclidek_la_CFLAGS = 					\
 	$(WARNINGFLAGS_C)					\
@@ -76,4 +76,4 @@ clean-local:
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1
