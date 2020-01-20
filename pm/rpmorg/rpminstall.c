@@ -128,14 +128,13 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
         p_open_flags |= P_OPEN_OUTPTYS;
 
     if (p_open(&pst, p_open_flags, cmd, argv) == NULL) {
-        if (pst.errmsg) {
-            if (ontty == 0)     /* if not try without P_OPEN_OUTPTYS */
-                logn(LOGERR, "%s", pst.errmsg);
-            p_st_destroy(&pst);
-        }
+        if (pst.errmsg && ontty == 0)
+            logn(LOGERR, "%s", pst.errmsg);
 
-        if (ontty == 0)
-            return 0;
+        p_st_destroy(&pst);
+
+        if (ontty == 0) /* if not try without P_OPEN_OUTPTYS */
+            return -1;
 
         p_open_flags &= ~P_OPEN_OUTPTYS;
         p_st_init(&pst);
@@ -143,7 +142,7 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
             if (pst.errmsg)
                 logn(LOGERR, "%s", pst.errmsg);
             p_st_destroy(&pst);
-            return 0;
+            return -1;
         }
     }
 
@@ -152,7 +151,7 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
         vsaved = poldek_set_verbose(1);
 
     rpmr_process_output(&pst, verbose_level);
-    if ((ec = p_close(&pst) != 0) && pst.errmsg != NULL)
+    if ((ec = p_close(&pst)) != 0 && pst.errmsg != NULL)
         logn(LOGERR, "%s", pst.errmsg);
 
     p_st_destroy(&pst);

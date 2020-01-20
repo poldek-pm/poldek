@@ -56,8 +56,7 @@
 #include "pm_rpm.h"
 
 #ifdef HAVE_OPENPTY
-
-static void rpmr_process_output(struct p_open_st *st, int verbose_level) 
+static void rpmr_process_output(struct p_open_st *st, int verbose_level)
 {
     int endl = 1;
 
@@ -65,20 +64,20 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
         struct timeval to = { 0, 200000 };
         fd_set fdset;
         int rc;
-        
+
         if (p_wait(st)) {
             int yes = 1;
             ioctl(st->fd, FIONBIO, &yes);
         }
-        
+
         FD_ZERO(&fdset);
         FD_SET(st->fd, &fdset);
         if ((rc = select(st->fd + 1, &fdset, NULL, NULL, &to)) < 0) {
             if (errno == EAGAIN || errno == EINTR)
                 continue;
-            
+
             break;
-            
+
         } else if (rc == 0) {
             if (p_wait(st))
                 break;
@@ -95,13 +94,13 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
             /* logged to file? -> prefix lines with 'rpm: ' */
             for (i=0; i < n; i++) {
                 int c = buf[i];
-                
+
                 if (c == '\r')
                     continue;
-                
+
                 if (c == '\n')
                     endl = 1;
-                    
+
                 if (endl) {
                     endl = 0;
                     msg_f(0, "_\n");
@@ -112,7 +111,7 @@ static void rpmr_process_output(struct p_open_st *st, int verbose_level)
             }
         }
     }
-    
+
     return;
 }
 
@@ -122,20 +121,19 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
     int vsaved = -999, ec;
     unsigned p_open_flags = P_OPEN_KEEPSTDIN;
 
-    
+
     p_st_init(&pst);
     if (ontty)
         p_open_flags |= P_OPEN_OUTPTYS;
-    
-    if (p_open(&pst, p_open_flags, cmd, argv) == NULL) {
-        if (pst.errmsg) {
-            if (ontty == 0)     /* if not try without P_OPEN_OUTPTYS */
-                logn(LOGERR, "%s", pst.errmsg);
-            p_st_destroy(&pst);
-        }
 
-        if (ontty == 0)
-            return 0;
+    if (p_open(&pst, p_open_flags, cmd, argv) == NULL) {
+        if (pst.errmsg && ontty == 0)
+            logn(LOGERR, "%s", pst.errmsg);
+
+        p_st_destroy(&pst);
+
+        if (ontty == 0) /* if not try without P_OPEN_OUTPTYS */
+            return -1;
 
         p_open_flags &= ~P_OPEN_OUTPTYS;
         p_st_init(&pst);
@@ -143,50 +141,52 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
             if (pst.errmsg)
                 logn(LOGERR, "%s", pst.errmsg);
             p_st_destroy(&pst);
-            return 0;
+            return -1;
         }
     }
 
     vsaved = -999;
     if (poldek_VERBOSE == 0)
         vsaved = poldek_set_verbose(1);
-    
+
     rpmr_process_output(&pst, verbose_level);
-    if ((ec = p_close(&pst) != 0) && pst.errmsg != NULL)
+    if ((ec = p_close(&pst)) != 0 && pst.errmsg != NULL)
         logn(LOGERR, "%s", pst.errmsg);
 
     p_st_destroy(&pst);
 
     if (vsaved != -999)
         poldek_set_verbose(vsaved);
-    
+
     return ec;
 }
 
 #else  /* HAVE_OPENPTY */
+
 int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_level)
 {
     int rc, st, n;
     pid_t pid;
 
     ontty = ontty;               /* unused */
-    
+
     msg_f(1, _("Executing %s "), cmd);
     n = 0;
     while (argv[n])
         msg_f(1, "_%s ", argv[n++]);
     msg_f(1, "\n");
+
     if (access(cmd, X_OK) != 0) {
         logn(LOGERR, _("%s: no such file"), cmd);
         return -1;
     }
-    
+
     if ((pid = fork()) == 0) {
         printf("fork\n");
-        
+
         execv(cmd, argv);
         exit(EXIT_FAILURE);
-        
+
     } else if (pid < 0) {
         logn(LOGERR, _("%s: no such file"), cmd);
         return -1;
@@ -199,9 +199,9 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
             rc = WEXITSTATUS(st);
             if (rc != 0)
                 logn(LOGERR, _(errmsg_exited), cmd, WEXITSTATUS(st));
-            else 
+            else
                 msgn_f(1, _(errmsg_exited), cmd, rc);
-            
+
         } else if (WIFSIGNALED(st)) {
 #if HAVE_STRSIGNAL
             logn(LOGERR, _("%s terminated by signal %s"), cmd,
@@ -209,27 +209,27 @@ int pm_rpm_execrpm(const char *cmd, char *const argv[], int ontty, int verbose_l
 #else
             logn(LOGERR, _("%s terminated by signal %d"), cmd,
                  WTERMSIG(st));
-#endif        
+#endif
             rc = -1;
         } else {
             logn(LOGERR, _("%s died under inscrutable circumstances"), cmd);
             rc = -1;
         }
     }
-    
+
     return rc;
 }
 
 #endif /* HAVE_FORKPTY */
 
-static void setup_command(char **cmdp, const char *defaultcmd) 
+static void setup_command(char **cmdp, const char *defaultcmd)
 {
     char path[PATH_MAX];
-    
+
     if (*cmdp == NULL) {
         if (vf_find_external_command(path, sizeof(path), defaultcmd, NULL))
             *cmdp = n_strdup(path);
-        
+
     } else if (access(*cmdp, R_OK) != 0 && **cmdp != '/') {
         if (vf_find_external_command(path, sizeof(path), *cmdp, NULL)) {
             n_cfree(cmdp);
@@ -237,13 +237,13 @@ static void setup_command(char **cmdp, const char *defaultcmd)
         } /* try to run *cmdp anyway */
     }
 }
-    
+
 
 void pm_rpm_setup_commands(struct pm_rpm *pm)
 {
     if (pm->flags & PM_RPM_CMDSETUP_DONE)
         return;
-    
+
     setup_command(&pm->rpm, "rpm");
     setup_command(&pm->sudo, "sudo");
 
@@ -255,24 +255,24 @@ static int colors_eq(const struct pkg *pkg, const char *path)
 {
     Header h;
     int color = -1;
-    
+
     if (pm_rpmhdr_loadfile(path, &h)) {
 #ifdef HAVE_RPM_HGETCOLOR
         color = hGetColor(h);
 #endif
         headerFree(h);
     }
-    
+
     if (color > 0 && (unsigned)color == pkg->color)
         return 1;
 
     if (color == 0 && pkg->color == 0)
         return 1;
-    
+
     if (color == -1 && pkg->color > 0)
         logn(LOGERR, "%s: package has color (%d), "
              "but rpm without multilib support is used", pkg_id(pkg), pkg->color);
-    
+
     else if (pkg->color != (unsigned)color)
         logn(LOGERR, "%s package color (%d) is not equal to %s's one (%d)",
              pkg_id(pkg), pkg->color, n_basenam(path), color);
@@ -283,7 +283,7 @@ static int colors_eq(const struct pkg *pkg, const char *path)
 
 int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
                             const tn_array *pkgs_toremove,
-                            struct poldek_ts *ts) 
+                            struct poldek_ts *ts)
 {
     struct pm_rpm *pm = db->_ctx->modh;
     char **argv;
@@ -298,17 +298,17 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         logn(LOGERR, _("%s: command not found"), "rpm");
         return 0;
     }
-    
+
     DBGF("rpm = %s\n", pm->rpm);
     nargs = 128 + n_array_size(pkgs);
     argv = alloca((nargs + 1) * sizeof(*argv));
     argv[nargs] = NULL;
     nargs = 0;
-    
+
     if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
         cmd = pm->rpm;
         argv[nargs++] = n_basenam(pm->rpm);
-        
+
     } else if (ts->getop(ts, POLDEK_OP_USESUDO) && getuid() != 0) {
         if (!pm->sudo) {
             logn(LOGERR, _("%s: command not found"), "sudo");
@@ -318,23 +318,23 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
         cmd = pm->sudo;
         argv[nargs++] = n_basenam(pm->sudo);
         argv[nargs++] = pm->rpm;
-        
+
     } else {
         cmd = pm->rpm;
         argv[nargs++] = n_basenam(pm->rpm);
     }
-    
+
     if (poldek_ts_issetf(ts, POLDEK_TS_UPGRADE | POLDEK_TS_REINSTALL |
                          POLDEK_TS_DOWNGRADE))
         argv[nargs++] = "--upgrade";
     else
         argv[nargs++] = "--install";
-    
+
     if (poldek_ts_issetf(ts, POLDEK_TS_REINSTALL)) {
         argv[nargs++] = "--replacefiles";
         argv[nargs++] = "--replacepkgs";
     }
-        
+
     if (poldek_ts_issetf(ts, POLDEK_TS_DOWNGRADE)) {
         argv[nargs++] = "--oldpackage";
     }
@@ -350,22 +350,22 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
 
     if (nverbose > 0)
         nverbose--;
-    
-    while (nverbose-- > 0) 
+
+    while (nverbose-- > 0)
         argv[nargs++] = "-v";
-    
+
     if (ts->getop(ts, POLDEK_OP_RPMTEST))
         argv[nargs++] = "--test";
 
     if (ts->getop(ts, POLDEK_OP_JUSTDB))
         argv[nargs++] = "--justdb";
-        
+
     if (ts->getop(ts, POLDEK_OP_FORCE))
         argv[nargs++] = "--force";
-    
+
     if (ts->getop(ts, POLDEK_OP_NODEPS))
         argv[nargs++] = "--nodeps";
-	
+
     if (ts->rootdir) {
     	argv[nargs++] = "--root";
         argv[nargs++] = (char*)ts->rootdir;
@@ -381,17 +381,17 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
     else
         argv[nargs++] = "_check_dirname_deps 0";
 
-    if (ts->rpmacros) 
+    if (ts->rpmacros)
         for (i=0; i<n_array_size(ts->rpmacros); i++) {
             argv[nargs++] = "--define";
             argv[nargs++] = n_array_nth(ts->rpmacros, i);
         }
-    
-    if (ts->rpmopts) 
+
+    if (ts->rpmopts)
         for (i=0; i < n_array_size(ts->rpmopts); i++)
             argv[nargs++] = n_array_nth(ts->rpmopts, i);
-    
-    
+
+
     nsignerr = 0;
     nopts = nargs;
     for (i=0; i < n_array_size(pkgs); i++) {
@@ -402,14 +402,14 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
 
         pkg = n_array_nth(pkgs, i);
         pkgpath = pkg->pkgdir->path;
-        
+
         pkg_filename(pkg, name, sizeof(name));
         if (vf_url_type(pkgpath) == VFURL_PATH) {
             len = n_snprintf(path, sizeof(path), "%s/%s", pkgpath, name);
-            
+
         } else {
             char buf[1024];
-                
+
             vf_url_as_dirpath(buf, sizeof(buf), pkgpath);
             len = n_snprintf(path, sizeof(path), "%s/%s/%s", ts->cachedir,
                              buf, n_basenam(name));
@@ -425,14 +425,14 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
 
         if (ts->getop(ts, POLDEK_OP_MULTILIB) && !colors_eq(pkg, path))
             ncolorerr++;
-        
+
         s = alloca(len + 1);
         memcpy(s, path, len);
         s[len] = '\0';
         argv[nargs++] = s;
     }
 
-    
+
     if (!ts->getop(ts, POLDEK_OP_RPMTEST) && (nsignerr || ncolorerr)) {
         int can_ask = poldek_ts_is_interactive_on(ts);
 
@@ -442,7 +442,7 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
                                               "Proceed?")))
                 goto l_err_end;
         }
-        
+
 
         if (ncolorerr) {
             if (!can_ask || !poldek__confirm(ts, 0,
@@ -451,29 +451,29 @@ int pm_rpm_packages_install(struct pkgdb *db, const tn_array *pkgs,
                 goto l_err_end;
         }
     }
-    
-    n_assert(nargs > nopts); 
+
+    n_assert(nargs > nopts);
     argv[nargs] = NULL;
 
     if (poldek_VERBOSE) {
         char buf[8192], *p;
         p = buf;
-        
-        for (i=0; i < nopts; i++) 
+
+        for (i=0; i < nopts; i++)
             p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
 
         if (poldek_VERBOSE > 1) {
-            for (i=nopts; i < nargs; i++) 
+            for (i=nopts; i < nargs; i++)
                 p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", n_basenam(argv[i]));
         }
 
         *p = '\0';
         msgn(1, _("Executing%s..."), buf);
     }
-    
+
     ec = pm_rpm_execrpm(cmd, argv, 1, 1);
     return ec == 0;
-    
+
  l_err_end:
     return 0;
 }
@@ -491,17 +491,17 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
         logn(LOGERR, _("%s: command not found"), "rpm");
         return 0;
     }
-    
+
     nargs = 128 + n_array_size(pkgs);
     argv = alloca((nargs + 1) * sizeof(*argv));
     argv[nargs] = NULL;
-    
+
     nargs = 0;
-    
+
     if (ts->getop(ts, POLDEK_OP_RPMTEST)) {
         cmd = pm->rpm;
         argv[nargs++] = n_basenam(pm->rpm);
-        
+
     } else if (ts->getop(ts, POLDEK_OP_USESUDO)) {
         if (!pm->sudo) {
             logn(LOGWARN, _("%s: command not found"), "sudo");
@@ -510,12 +510,12 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
         cmd = pm->sudo;
         argv[nargs++] = n_basenam(pm->sudo);
         argv[nargs++] = pm->rpm;
-        
+
     } else {
         cmd = pm->rpm;
         argv[nargs++] = n_basenam(pm->rpm);
     }
-    
+
     argv[nargs++] = "--erase";
 
     for (i=1; i < poldek_VERBOSE; i++)
@@ -526,10 +526,10 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
 
     if (ts->getop(ts, POLDEK_OP_JUSTDB))
         argv[nargs++] = "--justdb";
-    
+
     if (ts->getop(ts, POLDEK_OP_FORCE))
         argv[nargs++] = "--force";
-    
+
     if (ts->getop(ts, POLDEK_OP_NODEPS))
         argv[nargs++] = "--nodeps";
 
@@ -537,17 +537,17 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
     	argv[nargs++] = "--root";
         argv[nargs++] = (char*)ts->rootdir;
     }
-    
+
 #ifndef HAVE_RPM_VERSION_GE_5
     argv[nargs++] = "--noorder";
 #endif
-    
-    if (ts->rpmopts) 
+
+    if (ts->rpmopts)
         for (i=0; i<n_array_size(ts->rpmopts); i++)
             argv[nargs++] = n_array_nth(ts->rpmopts, i);
-    
+
     nopts = nargs;
-    
+
     /* rpm -e removes packages in reverse order  */
     for (i = n_array_size(pkgs) - 1; i >= 0; i--) {
         const char *id;
@@ -555,24 +555,24 @@ int pm_rpm_packages_uninstall(struct pkgdb *db, const tn_array *pkgs,
 
         id = pkg_id(n_array_nth(pkgs, i));
         idlen = strlen(id);
-        
+
         argv[nargs] = alloca(idlen + 1);
         memcpy(argv[nargs], id, idlen + 1);
         nargs++;
     }
-    
-    n_assert(nargs > nopts); 
+
+    n_assert(nargs > nopts);
     argv[nargs] = NULL;
-    
+
     if (poldek_VERBOSE > 0) {
         char buf[8192], *p;
         p = buf;
-        
-        for (i=0; i < nopts; i++) 
+
+        for (i=0; i < nopts; i++)
             p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
 
         if (poldek_VERBOSE > 1) {
-            for (i=nopts; i < nargs; i++) 
+            for (i=nopts; i < nargs; i++)
                 p += n_snprintf(p, &buf[sizeof(buf) - 1] - p, " %s", argv[i]);
         }
 
