@@ -35,7 +35,7 @@ vfget_LDADD    = $(TEST_LDADDS)
 test_vopen3_SOURCES  = test_vopen3.c
 test_vopen3_LDADD    = $(TEST_LDADDS)
 
-EXTRA_DIST     = testcookie.c test_progress.c sample.c ttest.c
+EXTRA_DIST     = test_progress.c sample.c ttest.c
 
 dist-hook:
 	rm -rf $(distdir)/.deps
