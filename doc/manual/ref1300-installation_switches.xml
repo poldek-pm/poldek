@@ -81,13 +81,6 @@
    </para>
   </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.root">-r, --root=DIR </option></term>
-  <listitem>
-   <para>
-      Set top directory to DIR
-   </para>
-  </listitem>
-</varlistentry>
 <varlistentry><term><option id="ref.cmdl.nodeps">--nodeps </option></term>
   <listitem>
    <para>
@@ -138,9 +131,19 @@
    </para>
   </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.pmopt">--pmopt=OPTION </option></term>
+<varlistentry><term><option id="ref.cmdl.pmop">--pmop=OPTION </option></term>
   <listitem>
-<xi:include  href="manual/ref.cmdl.pmopt.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
+   <para>
+      pass option OPTION to PM binary
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.caplookup1300">--caplookup </option></term>
+  <listitem>
+   <para>
+      Look into package capabilities and files to resolve packages
+   </para>
+  </listitem>
 </varlistentry>
 </variablelist>
 </sect2>

@@ -23,5 +23,12 @@
    </para>
   </listitem>
 </varlistentry>
+<varlistentry><term><option id="ref.cmdl.root">-r, --root=DIR </option></term>
+  <listitem>
+   <para>
+      Set top directory to DIR
+   </para>
+  </listitem>
+</varlistentry>
 </variablelist>
 </sect2>

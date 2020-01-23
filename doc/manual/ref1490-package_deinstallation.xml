@@ -30,10 +30,17 @@
    </para>
   </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.greedy1500">--greedy[=[yes|no]] </option></term>
+<varlistentry><term><option id="ref.cmdl.greedy1500">--greedy[=LEVEL] </option></term>
   <listitem>
    <para>
-      Remove packages required by selected ones if possible
+      Remove packages required by selected ones if possible.
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.pmop1500">--pmop=OPTION </option></term>
+  <listitem>
+   <para>
+      pass option OPTION to PM binary (ex. --pmop noscripts)
    </para>
   </listitem>
 </varlistentry>

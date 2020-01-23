@@ -76,13 +76,6 @@
    </para>
   </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.version">--version </option></term>
-  <listitem>
-   <para>
-      Display program version information and exit
-   </para>
-  </listitem>
-</varlistentry>
 <varlistentry><term><option id="ref.cmdl.log">--log=FILE </option></term>
   <listitem>
    <para>
@@ -97,9 +90,16 @@
    </para>
   </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.O">-O OPTION=VALUE </option></term>
+<varlistentry><term><option id="ref.cmdl.O">-O=OPTION=VALUE </option></term>
   <listitem>
 <xi:include  href="manual/ref.cmdl.O.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.noprogress">--noprogress </option></term>
+  <listitem>
+   <para>
+      Do not show progress bar
+   </para>
+  </listitem>
 </varlistentry>
 <varlistentry><term><option id="ref.cmdl.v">-v </option></term>
   <listitem>

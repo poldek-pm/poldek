@@ -16,6 +16,20 @@
    </para>
   </listitem>
 </varlistentry>
+<varlistentry><term><option id="ref.cmdl.dt">--dt=SOURCE-TYPE </option></term>
+  <listitem>
+   <para>
+      Set the type of index specified by --destination option
+   </para>
+  </listitem>
+</varlistentry>
+<varlistentry><term><option id="ref.cmdl.destination">--destination=PATH </option></term>
+  <listitem>
+   <para>
+      Install to specified destination
+   </para>
+  </listitem>
+</varlistentry>
 <varlistentry><term><option id="ref.cmdl.dn">--dn=SOURCE-NAME </option></term>
   <listitem>
    <para>

@@ -16,24 +16,10 @@
    </para>
   </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.nodesc">--nodesc </option></term>
+<varlistentry><term><option id="ref.cmdl.mo">--mo=OPTION[,OPTION] </option></term>
   <listitem>
    <para>
-      Don't put package user-level information (like Summary or Description) into created index.
-   </para>
-  </listitem>
-</varlistentry>
-<varlistentry><term><option id="ref.cmdl.nodiff">--nodiff </option></term>
-  <listitem>
-   <para>
-      Don't create index delta files
-   </para>
-  </listitem>
-</varlistentry>
-<varlistentry><term><option id="ref.cmdl.nocompress">--nocompress </option></term>
-  <listitem>
-   <para>
-      Create uncompressed index
+      Create options (type --mo=help for help)
    </para>
   </listitem>
 </varlistentry>
