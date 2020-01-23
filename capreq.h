@@ -51,7 +51,7 @@ struct capreq {
     uint8_t  cr_relflags;
     /* XXX: Ignore warning (Setting a const char * variable may leak memory). */
     const char *name;           /* allocated internally to deduplicate allocations */
-    uint8_t  namelen;
+    uint16_t namelen;
     uint8_t  cr_ep_ofs;
     uint8_t  cr_ver_ofs;         /* 0 if capreq hasn't version */
     uint8_t  cr_rel_ofs;         /* 0 if capreq hasn't release */
@@ -113,11 +113,11 @@ EXPORT struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
                           const char *version, const char *release,
                           int32_t relflags, int32_t flags);
 #ifndef SWIG
-EXPORT const tn_lstr8 *capreq__alloc_name(const char *name, size_t len);
+EXPORT const tn_lstr16 *capreq__alloc_name(const char *name, size_t len);
 #define capreq_new_name_a(nam, crptr)                              \
     {                                                              \
         struct capreq *__cr;                                       \
-        const tn_lstr8 *ent;                                       \
+        const tn_lstr16 *ent;                                      \
         ent = capreq__alloc_name(nam, strlen(nam));                \
         __cr = alloca(sizeof(*__cr) + 2);                          \
         __cr->cr_flags = __cr->cr_relflags = 0;                    \

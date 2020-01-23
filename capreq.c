@@ -30,28 +30,31 @@
 #include "pkgmisc.h"
 #include "pkg_ver_cmp.h"
 
-#define __NAALLOC   (1 << 7)
+/* utilize rel_flags as it have 5 bits unused */
+#define __SPLITTED   (1 << 7) /* same as __NAALLOC (runtime only flag) */
+#define __PART       (1 << 6)
+#define __NAALLOC    (1 << 7)
 #define REL_RT_FLAGS __NAALLOC
 
-static void capreq_store(struct capreq *cr, tn_buf *nbuf);
-static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi);
+static int capreq_store(struct capreq *cr, tn_buf *nbuf);
+static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi, int *splitted);
 
-static tn_str8alloc *capname_allocator = NULL;
+static tn_strdalloc *capname_allocator = NULL;
 
 static void capname_allocator_free(void) {
     if (capname_allocator != NULL)
-        n_str8alloc_free(capname_allocator);
+        n_strdalloc_free(capname_allocator);
 
 }
 
-const tn_lstr8 *capreq__alloc_name(const char *name, size_t len)
+const tn_lstr16 *capreq__alloc_name(const char *name, size_t len)
 {
     if (capname_allocator == NULL) {
-        capname_allocator = n_str8alloc_new(1024 * 128, 0);
+        capname_allocator = n_strdalloc_new(1024 * 128, 0);
         atexit(capname_allocator_free);
     }
 
-    return n_str8alloc_add(capname_allocator, name, len);
+    return n_strdalloc_add16(capname_allocator, name, len);
 }
 
 void capreq_free_na(tn_alloc *na, struct capreq *cr)
@@ -354,7 +357,7 @@ struct capreq *capreq_new(tn_alloc *na, const char *name, int32_t epoch,
     cr->cr_flags = cr->cr_relflags = 0;
     cr->cr_ep_ofs = cr->cr_ver_ofs = cr->cr_rel_ofs = 0;
 
-    const tn_lstr8 *ent = capreq__alloc_name(name, name_len);
+    const tn_lstr16 *ent = capreq__alloc_name(name, name_len);
     cr->name = ent->str;
     cr->namelen = ent->len;
 
@@ -492,6 +495,45 @@ tn_buf *capreq_arr_join(tn_array *capreqs, tn_buf *nbuf, const char *sep)
     return nbuf;
 }
 
+/* split capreq into UINT8_MAX (pndir limit) chunks   */
+static tn_array *split_capreq(struct capreq *cr, int actual_store_size)
+{
+    int base_size = actual_store_size - cr->namelen;
+    unsigned namelen = cr->namelen;
+    char *name;
+
+    n_strdupapl(cr->name, namelen, &name);
+    n_assert(strlen(name) == namelen);
+
+    tn_array *parts = capreq_arr_new(2);
+
+    while (*name) {
+        int pos = UINT8_MAX - base_size;
+        char *end = name;
+        while (*end && end - name < pos) {
+            end++;
+        }
+        pos = end - name;
+
+        DBGF("part%d cut_at=%d left=[%s]\n", n_array_size(parts), pos, end);
+        char c = *end;
+        *end = '\0';
+
+        struct capreq *cap = capreq_new(NULL, name,
+                                        0, NULL, NULL,
+                                        0, 0);
+        n_array_push(parts, cap);
+
+        *end = c;
+        name = end;
+        namelen -= pos;
+        n_assert(strlen(name) == namelen);
+    }
+    DBGF("splitted %d into %d parts\n", cr->namelen, n_array_size(parts));
+
+    return parts;
+}
+
 /* store format:
 
   0. size          uint8_t
@@ -507,13 +549,16 @@ tn_buf *capreq_arr_join(tn_array *capreqs, tn_buf *nbuf, const char *sep)
   8. '\0'
   9. release       char[]
 */
-static void capreq_store(struct capreq *cr, tn_buf *nbuf)
+static int capreq_store(struct capreq *cr, tn_buf *nbuf)
 {
     register int i;
-    uint8_t size, bufsize, name_len;
+    uint32_t size;
+    uint8_t bufsize;
     uint8_t cr_buf[5];
     uint8_t cr_flags = 0, cr_relflags = 0;
+    tn_array *parts = NULL;
 
+    /* do not store runtime flags */
     if (cr->cr_flags & CAPREQ_RT_FLAGS) {
         cr_flags = cr->cr_flags;
         cr->cr_flags &= ~CAPREQ_RT_FLAGS;
@@ -530,22 +575,38 @@ static void capreq_store(struct capreq *cr, tn_buf *nbuf)
     cr_buf[3] = cr->cr_ver_ofs;
     cr_buf[4] = cr->cr_rel_ofs;
 
-
     bufsize = capreq_bufsize(cr) - 1; /* without last '\0' */
     size = sizeof(cr_buf) + bufsize;
-    name_len = strlen(cr->name);
-    size += name_len + 1;       /* +1 for leading '\0' */
 
-    for (i=2; i < 5; i++) {
-        if (cr_buf[i])
-            cr_buf[i] += name_len + 1;
+    const char *cr_name = cr->name;
+    uint16_t cr_namelen = cr->namelen;
+
+    if (size + cr_namelen + 1 > UINT8_MAX) { /* over pndir UINT8_MAX limit */
+        parts = split_capreq(cr, size + cr_namelen + 1);
+        n_assert(parts);
+        n_assert(n_array_size(parts));
+
+        /* take short name from first part */
+        struct capreq *cap = n_array_shift(parts);
+        cr_name = cap->name;
+        cr_namelen = cap->namelen;
+        cr_buf[0] |= __SPLITTED; /* mark as splitted */
+        capreq_free(cap);
     }
 
-    n_buf_add_int8(nbuf, size);
-    n_buf_add(nbuf, cr_buf, sizeof(cr_buf));
+    size += cr_namelen + 1;       /* +1 for leading '\0' */
+    DBGF("store size %d\n", size);
+    n_assert(size <= UINT8_MAX);
 
+    for (i=2; i < 5; i++) {         /* move offsets by name length */
+        if (cr_buf[i])
+            cr_buf[i] += cr_namelen + 1;
+    }
+
+    n_buf_add_int8(nbuf, (uint8_t)size);
+    n_buf_add(nbuf, cr_buf, sizeof(cr_buf));
     n_buf_add_int8(nbuf, '\0');
-    n_buf_add(nbuf, cr->name, name_len);
+    n_buf_add(nbuf, cr_name, cr_namelen);
 
     if (bufsize) {          /* versioned? */
         int32_t epoch = 0;
@@ -567,9 +628,20 @@ static void capreq_store(struct capreq *cr, tn_buf *nbuf)
 
     if (cr_relflags)
         cr->cr_relflags = cr_relflags;
+
+    if (parts) {
+        for (i = 0; i < n_array_size(parts); i++) {
+            struct capreq *cap = n_array_nth(parts, i);
+            cap->cr_relflags |= __PART;
+            capreq_store(cap, nbuf);
+        }
+        n_array_free(parts);
+    }
+
+    return 1;
 }
 
-static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi)
+static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi, int *splitted)
 {
     struct capreq *cr;
     register int i;
@@ -611,7 +683,18 @@ static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi)
         cr = n_malloc(sizeof(*cr) + size + 1);
 
     cr->cr_relflags = cr_buf[0];
-    cr->cr_flags    = cr_buf[1];
+
+    if (splitted)
+        *splitted = 0;
+
+    if (cr->cr_relflags & __SPLITTED) {
+        if (splitted)
+            *splitted = 1;
+
+        cr->cr_relflags &= ~__SPLITTED;
+    }
+
+    cr->cr_flags = cr_buf[1];
 
     for (i=2; i < 5; i++) {
         if (cr_buf[i])
@@ -622,7 +705,7 @@ static struct capreq *capreq_restore(tn_alloc *na, tn_buf_it *nbufi)
     cr->cr_ver_ofs  = cr_buf[3];
     cr->cr_rel_ofs  = cr_buf[4];
 
-    const tn_lstr8 *ent = capreq__alloc_name((const char *)name, name_len);
+    const tn_lstr16 *ent = capreq__alloc_name((const char *)name, name_len);
     n_assert(name_len == ent->len);
     cr->name = ent->str;
     cr->namelen = ent->len;
@@ -687,36 +770,91 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
     n_array_isort_ex(arr, (tn_fn_cmp)capreq_strcmp_name_evr);
 
     if (nbuf == NULL)
-        nbuf = n_buf_new(16 * arr_size);
+        nbuf = n_buf_new(24 * arr_size);
 
     off = n_buf_tell(nbuf);
     n_buf_add_int16(nbuf, 0);   /* fake size */
     n_buf_add_int16(nbuf, arr_size);
 
+    int real_arr_size = 0;
     for (i=0; i < n_array_size(arr); i++) {
         struct capreq *cr = n_array_nth(arr, i);
-        if (!capreq_is_bastard(cr)) {
-            capreq_store(cr, nbuf);
-            DBGF("store %s (len=%zu, sizeof=%d)\n", capreq_snprintf_s(cr),
-                 strlen(capreq_snprintf_s(cr)), capreq_sizeof(cr));
+        if (capreq_is_bastard(cr))
+            continue;
+
+        int cr_off = n_buf_tell(nbuf);
+        if (!capreq_store(cr, nbuf)) {
+            logn(LOGWARN, "%s: store failed", capreq_snprintf_s(cr));
+            n_buf_seek(nbuf, cr_off, SEEK_SET);
+            break;
         }
+
+        size = n_buf_tell(nbuf) - off - sizeof(uint16_t);
+
+        /* 64K limit overflow => just skip the rest */
+        if (size > UINT16_MAX - 1) {
+            logn(LOGWARN, "capabilities store size overflow, %d "
+                 "entries has been stored and %d skipped", i, n_array_size(arr) - i);
+            n_buf_seek(nbuf, cr_off, SEEK_SET);
+            break;
+        }
+        real_arr_size++;
+
+        DBGF("store %s (len=%zu, sizeof=%d)\n", capreq_snprintf_s(cr),
+             strlen(capreq_snprintf_s(cr)), capreq_sizeof(cr));
     }
 
     n_buf_puts(nbuf, "\n");
-    //printf("tells %d\n", n_buf_tell(nbuf));
 
     size = n_buf_tell(nbuf) - off - sizeof(uint16_t);
 
-    poldek_die_ifnot(size < UINT16_MAX, "capabilities size exceeds 64K limit");
+    poldek_die_ifnot(size <= UINT16_MAX, "capabilities size %u exceeds 64K limit", size);
 
+    /* update size and if needed, arr_size at the beginning */
     n_buf_seek(nbuf, off, SEEK_SET);
     n_buf_add_int16(nbuf, size);
+    if (real_arr_size != arr_size)
+        n_buf_add_int16(nbuf, real_arr_size);
     n_buf_seek(nbuf, 0, SEEK_END);
 
-    DBGF("capreq_arr_store %d (at %d), arr_size = %d\n",
-         size, off, arr_size);
+    DBGF("%d (at %d), arr_size = %d, real arr size %d\n",
+         size, off, arr_size, real_arr_size);
 
     return nbuf;
+}
+
+static struct capreq *restore_parts(struct capreq *cr, tn_buf_it *nbufi, int *splitted)
+{
+    struct capreq *part = NULL;
+    tn_buf *namebuf = n_buf_new(512);
+    int nparts = 0;
+
+    n_buf_write_z(namebuf, cr->name, cr->namelen);
+
+    *splitted = 0;
+    while ((part = capreq_restore(NULL, nbufi, splitted))) {
+        if ((part->cr_relflags & __PART) == 0) { /* regular capreq restored */
+            break;
+        }
+
+        DBGF("cont%d %d + %d\n", nparts, n_buf_size(namebuf), part->namelen);
+        n_buf_write_z(namebuf, part->name, part->namelen);
+        capreq_free(part);
+        part = NULL;
+        nparts++;
+        n_assert(*splitted == 0);
+    }
+    n_assert(nparts > 0);
+
+    DBGF("restored from %d parts, size %d\n", nparts + 1, n_buf_size(namebuf));
+    const tn_lstr16 *ent = capreq__alloc_name(n_buf_ptr(namebuf), n_buf_size(namebuf));
+    cr->name = ent->str;
+    cr->namelen = ent->len;
+
+    n_buf_free(namebuf);
+
+    /* part can be regular capreq */
+    return part;
 }
 
 tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf)
@@ -731,16 +869,31 @@ tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf)
     n_buf_it_init(&nbufi, nbuf);
     n_buf_it_get_int16(&nbufi, &arr_size);
 
-    DBGF("%d, arr_size = %d\n", n_buf_size(nbuf), arr_size);
-
     //cr_buf = alloca(arr_size * sizeof(void*));
     cr_buf = n_malloc(arr_size * sizeof(void*));
     n = 0;
     for (i=0; i < arr_size; i++) {
-        if ((cr = capreq_restore(na, &nbufi))) {
-            if (capreq_is_bastard(cr))
-                continue;
-            cr_buf[n++] = cr;
+        int splitted = 0;
+        if ((cr = capreq_restore(na, &nbufi, &splitted)) == NULL)
+            continue;
+
+        if (capreq_is_bastard(cr)) /* should not happen */
+            continue;
+
+        cr_buf[n++] = cr;
+
+        /* next capreq can be splitted too */
+        while (splitted) {
+            DBGF("SPLITTED[%d of %d] %s\n", i, arr_size, cr->name);
+
+            struct capreq *part = restore_parts(cr, &nbufi, &splitted);
+            poldek_die_if(part == NULL && splitted, "%s", "null splitted occured");
+
+            if (part) {
+                cr = part;
+                cr_buf[n++] = cr;
+                i++;
+            }
         }
     }
 

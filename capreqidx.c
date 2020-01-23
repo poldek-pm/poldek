@@ -195,7 +195,7 @@ int capreq_idx_add(struct capreq_idx *idx, const char *capname, int capname_len,
     uint32_t khash = n_hash_compute_index_hash(idx->ht, raw_khash);
 
     if ((ent = n_hash_hget(idx->ht, capname, capname_len, khash)) == NULL) {
-        const tn_lstr8 *cent = capreq__alloc_name(capname, capname_len);
+        const tn_lstr16 *cent = capreq__alloc_name(capname, capname_len);
 
         ent = idx->na->na_malloc(idx->na, sizeof(*ent));
         ent->_size = 1;

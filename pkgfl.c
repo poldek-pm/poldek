@@ -31,21 +31,21 @@
 #include "depdirs.h"
 #include "misc.h"
 
-static tn_str8alloc *dirname_allocator = NULL;
+static tn_strdalloc *dirname_allocator = NULL;
 
 static void dirname_allocator_free(void) {
     if (dirname_allocator != NULL)
-        n_str8alloc_free(dirname_allocator);
+        n_strdalloc_free(dirname_allocator);
 }
 
 static inline const char *register_dn(const char *name, size_t len)
 {
     if (dirname_allocator == NULL) {
-        dirname_allocator = n_str8alloc_new(1024, 0);
+        dirname_allocator = n_strdalloc_new(1024, 0);
         atexit(dirname_allocator_free);
     }
 
-    const tn_lstr8 *s8 = n_str8alloc_add(dirname_allocator, name, len);
+    const tn_lstr8 *s8 = n_strdalloc_add8(dirname_allocator, name, len);
     return s8->str;
 }
 

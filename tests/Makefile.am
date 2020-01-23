@@ -1,14 +1,17 @@
 
 
-TESTS = test_poldek
-noinst_PROGRAMS = test_poldek
+TESTS = test_poldek test_store
+noinst_PROGRAMS = test_poldek test_store
+
 test_poldek_SOURCES = test_poldek.c test_match.c test_env.c \
 	   	              test_pmdb.c test_op.c test_config.c test.h
 
 EXTRA_DIST = poldek_test_conf.conf sh
 
+test_store_INCLUDES = @CHECK_CFLAGS@
+test_store_LDADD = @CHECK_LIBS@ ../libpoldek.la
 
-test_poldek_INCLUDES= @CHECK_CFLAGS@
+test_poldek_INCLUDES = @CHECK_CFLAGS@
 test_poldek_LDADD = @CHECK_LIBS@ ../libpoldek.la ../vfile/libvfile.la
 
 poldek_test_conf.conf: $(top_srcdir)/doc/conf-xml2testconf.xsl $(top_srcdir)/doc/poldek.conf.xml

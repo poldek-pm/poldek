@@ -11,7 +11,7 @@
 
 #include <trurl/nassert.h>
 #include <trurl/nmalloc.h>
-#include <check.h>
+#include <trurl/n_check.h>
 
 #include "i18n.h"
 #include "log.h"
