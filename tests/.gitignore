@@ -7,5 +7,5 @@ poldek_test_conf.conf
 /repo
 *.log
 *.trs
-tests/test_*
-!tests/test_*.c
+test_*
+!test_*.c
