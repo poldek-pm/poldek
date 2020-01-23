@@ -361,6 +361,8 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
 {
     int ncaps;
 
+    msgn(3, "storing %s", pkg_id(pkg));
+
     if ((flags & PKGSTORE_NOEVR) == 0) {
         n_buf_printf(nbuf, "N: %s\n", pkg->name);
         if (pkg->epoch)

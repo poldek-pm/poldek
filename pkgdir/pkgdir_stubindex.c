@@ -61,6 +61,7 @@ static int stubindex_path(char *path, int size, const struct pkgdir *pkgdir)
     n = n_snprintf(tmp, sizeof(tmp), "%s", pkgdir_localidxpath(pkgdir));
     n_assert(n > 0);
 
+    DBGF("localidx = %s\n", tmp);
     ofpath = tmp;
     if (ofpath[n - 1] == '/') {    /* directory */
         ofpath[n - 1] = '\0';
@@ -186,7 +187,7 @@ tn_array *source_stubload(struct source *src)
 
     msgn_i(2, 2, "Loading stub index of %s...", source_idstr(src));
     pkgs = load_stubindex(path);
-
+    DBGF("%s\n", path);
     if (pkgs == NULL)
         return NULL;
 
@@ -207,6 +208,7 @@ void pkgdir__stubindex_update(struct pkgdir *pkgdir)
     char path[1024];
 
     stubindex_path(path, sizeof(path), pkgdir);
+    DBGF("%s\n", path);
 
     idx_mtime = pkgdir_mtime(pkgdir);
     mtime = poldek_util_mtime(path);

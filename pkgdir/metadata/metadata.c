@@ -58,16 +58,19 @@ static void do_free(struct pkgdir *pkgdir);
 
 const char *metadata_localidxpath(const struct pkgdir *pkgdir);
 
-static const char *metadata_repodir = "repodata";
-static const char *metadata_indexfile = "repomd.xml";
+#define REPODATA "repodata"
+#define REPOMD   "repomd.xml"
+
+static const char *metadata_repodir = REPODATA;
+static const char *metadata_indexfile = REPOMD;
 
 struct pkgdir_module pkgdir_module_metadata = {
     NULL,
     PKGDIR_CAP_UPDATEABLE_INC | PKGDIR_CAP_UPDATEABLE | PKGDIR_CAP_NOSAVAFTUP,
     "metadata", NULL,
     "XML Package Metadata format",
+    REPODATA "/" REPOMD,
     NULL,
-    NULL,      /* metadata location is predefined as repodata/repomd.xml */
     do_open,
     do_load,
     NULL,
@@ -263,6 +266,8 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
 
     if (!idx_open(&idx, pkgdir, vfmode))
         return 0;
+
+    DBGF_F("%s\n", pkgdir->path);
 
     pkgdir->ts = poldek_util_mtime(vfile_localpath(idx.repomd_vf));
     pkgdir->mod_data = n_malloc(sizeof(idx));
