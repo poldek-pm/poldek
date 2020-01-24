@@ -55,6 +55,7 @@ static struct pkg_store_tag pkg_store_tag_table[] = {
     { PKG_STORETAG_CNFLS, PKG_STORETAG_SIZE16, "cnfls" },
     { PKG_STORETAG_FL,    PKG_STORETAG_SIZE32, "file list" },
     { PKG_STORETAG_DEPFL, PKG_STORETAG_SIZE32, "depdirs file list" },
+    { PKG_STORETAG_CONT,  PKG_STORETAG_SIZE16, "deps continuation" },
 //    { '6', PKG_STORETAG_SIZE16, "fake16" }, // for testing
 //    { '2', PKG_STORETAG_SIZE32, "fake32" },
     { 0, 0, 0 },
@@ -139,6 +140,56 @@ static int pkg_store_bintag(int tag, tn_buf *nbuf)
     return n_buf_write(nbuf, s, 4) == 4;
 }
 
+static void store_capreq_array(const struct pkg *pkg, tn_array *capreqs, int8_t tag, tn_buf *nbuf)
+{
+    tn_array *arr = n_array_new(n_array_size(capreqs), NULL, NULL);
+
+    for (int i=0; i < n_array_size(capreqs); i++) {
+        struct capreq *cr = n_array_nth(capreqs, i);
+        if (pkg_eq_capreq(pkg, cr))
+            continue;
+
+        if (capreq_is_bastard(cr))
+            continue;
+
+        n_array_push(arr, cr);
+    }
+
+    if (n_array_size(arr) == 0)
+        goto l_end;
+
+    int nstored = 0;
+
+    do {
+        int off = n_buf_tell(nbuf);
+        pkg_store_bintag(tag, nbuf);
+        nstored = capreq_arr_store(arr, nbuf);
+
+        n_assert(nstored <= n_array_size(arr));
+
+        if (nstored == 0) {         /* rollback */
+            n_buf_seek(nbuf, off, SEEK_SET);
+            break;
+        }
+
+        if (nstored == n_array_size(arr)) { /* all stored */
+            break;
+        }
+
+        msgn(1, "%s: capabilities will be splitted due to their size over 64KB", pkg_id(pkg));
+
+        tag = PKG_STORETAG_CONT;
+        while (nstored > 0) {   /* store the rest as CONT */
+            n_array_shift(arr);
+            nstored--;
+        }
+        DBGF("cont %s %d\n", pkg_id(pkg), n_array_size(arr));
+    } while (n_array_size(arr) > 0);
+
+ l_end:
+    n_array_free(arr);
+}
+
 
 static
 int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
@@ -161,7 +212,7 @@ int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
 
     if (n_array_size(arr)) {
         pkg_store_bintag(PKG_STORETAG_CAPS, nbuf);
-        capreq_arr_store(arr, nbuf, n_array_size(arr));
+        capreq_arr_store(arr, nbuf);
     }
 
     n_array_free(arr);
@@ -388,23 +439,20 @@ int pkg_store(const struct pkg *pkg, tn_buf *nbuf, tn_array *depdirs,
     pkg_store_bintag(PKG_STORETAG_BINF, nbuf);
     pkg_store_fields(nbuf, pkg, flags);
 
-    if (pkg->caps && n_array_size(pkg->caps))
-        pkg_store_caps(pkg, nbuf);
+    if (pkg->caps && n_array_size(pkg->caps)) {
+        store_capreq_array(pkg, pkg->caps, PKG_STORETAG_CAPS, nbuf);
+    }
 
     if (pkg->reqs && (ncaps = capreq_arr_store_n(pkg->reqs))) {
-        pkg_store_bintag(PKG_STORETAG_REQS, nbuf);
-        capreq_arr_store(pkg->reqs, nbuf, ncaps);
+        store_capreq_array(pkg, pkg->reqs, PKG_STORETAG_REQS, nbuf);
     }
 
     if (pkg->sugs && (ncaps = capreq_arr_store_n(pkg->sugs))) {
-        pkg_store_bintag(PKG_STORETAG_SUGS, nbuf);
-        capreq_arr_store(pkg->sugs, nbuf, ncaps);
+        store_capreq_array(pkg, pkg->sugs, PKG_STORETAG_SUGS, nbuf);
     }
 
-
     if (pkg->cnfls && (ncaps = capreq_arr_store_n(pkg->cnfls))) {
-        pkg_store_bintag(PKG_STORETAG_CNFLS, nbuf);
-        capreq_arr_store(pkg->cnfls, nbuf, ncaps);
+        store_capreq_array(pkg, pkg->cnfls, PKG_STORETAG_CNFLS, nbuf);
     }
 
     //mem_info(-10, "before fl");

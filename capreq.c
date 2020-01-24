@@ -746,26 +746,23 @@ int capreq_arr_store_n(tn_array *arr)
     return n;
 }
 
-tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
+int capreq_arr_store(tn_array *arr, tn_buf *nbuf)
 {
-    int32_t size;
-    int16_t arr_size;
+    uint32_t size;
+    uint16_t arr_size;
     int i, off;
 
-    poldek_die_ifnot(n_array_size(arr) < INT16_MAX,
-                     "too many capabilities per package (max=%d)", INT16_MAX);
+    poldek_die_ifnot(n_array_size(arr) < UINT16_MAX,
+                     "too many capabilities per package (max=%u)", UINT16_MAX);
 
-    arr_size = n;
-    if (n == 0) {
-        for (i=0; i < n_array_size(arr); i++) {
-            struct capreq *cr = n_array_nth(arr, i);
-            if (!capreq_is_bastard(cr))
-                arr_size++;
-        }
+    for (i=0; i < n_array_size(arr); i++) {
+        struct capreq *cr = n_array_nth(arr, i);
+        n_assert(!capreq_is_bastard(cr));
     }
-    n_assert(arr_size);
+
+    arr_size = n_array_size(arr);
     if (arr_size == 0)
-        return NULL;
+        return 0;
 
     n_array_isort_ex(arr, (tn_fn_cmp)capreq_strcmp_name_evr);
 
@@ -773,14 +770,12 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
         nbuf = n_buf_new(24 * arr_size);
 
     off = n_buf_tell(nbuf);
-    n_buf_add_int16(nbuf, 0);   /* fake size */
-    n_buf_add_int16(nbuf, arr_size);
+    n_buf_add_int16(nbuf, 0);   /* size placeholder */
+    n_buf_add_int16(nbuf, arr_size);   /* array size placeholder */
 
-    int real_arr_size = 0;
+    uint16_t real_arr_size = 0;
     for (i=0; i < n_array_size(arr); i++) {
         struct capreq *cr = n_array_nth(arr, i);
-        if (capreq_is_bastard(cr))
-            continue;
 
         int cr_off = n_buf_tell(nbuf);
         if (!capreq_store(cr, nbuf)) {
@@ -792,9 +787,7 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
         size = n_buf_tell(nbuf) - off - sizeof(uint16_t);
 
         /* 64K limit overflow => just skip the rest */
-        if (size > UINT16_MAX - 1) {
-            logn(LOGWARN, "capabilities store size overflow, %d "
-                 "entries has been stored and %d skipped", i, n_array_size(arr) - i);
+        if (size > UINT8_MAX - 1) {
             n_buf_seek(nbuf, cr_off, SEEK_SET);
             break;
         }
@@ -807,20 +800,22 @@ tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n)
     n_buf_puts(nbuf, "\n");
 
     size = n_buf_tell(nbuf) - off - sizeof(uint16_t);
-
     poldek_die_ifnot(size <= UINT16_MAX, "capabilities size %u exceeds 64K limit", size);
 
     /* update size and if needed, arr_size at the beginning */
+    int endoff = n_buf_tell(nbuf); /* remember last offset */
+
     n_buf_seek(nbuf, off, SEEK_SET);
     n_buf_add_int16(nbuf, size);
     if (real_arr_size != arr_size)
         n_buf_add_int16(nbuf, real_arr_size);
-    n_buf_seek(nbuf, 0, SEEK_END);
+
+    n_buf_seek(nbuf, endoff, SEEK_SET);
 
     DBGF("%d (at %d), arr_size = %d, real arr size %d\n",
          size, off, arr_size, real_arr_size);
 
-    return nbuf;
+    return real_arr_size;
 }
 
 static struct capreq *restore_parts(struct capreq *cr, tn_buf_it *nbufi, int *splitted)

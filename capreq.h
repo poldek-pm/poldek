@@ -148,7 +148,7 @@ EXPORT int capreq_arr_contains(tn_array *capreqs, const char *name); /* returns 
 EXPORT tn_buf *capreq_arr_join(tn_array *capreqs, tn_buf *nbuf, const char *sep);
 
 EXPORT int capreq_arr_store_n(tn_array *arr);
-EXPORT tn_buf *capreq_arr_store(tn_array *arr, tn_buf *nbuf, int n);
+EXPORT int capreq_arr_store(tn_array *arr, tn_buf *nbuf);
 
 EXPORT tn_array *capreq_arr_restore(tn_alloc *na, tn_buf *nbuf);
 EXPORT tn_array *capreq_arr_restore_st(tn_alloc *na, tn_stream *st);

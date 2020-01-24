@@ -138,6 +138,56 @@ inline static char *next_tokn(char **str, char delim, int *toklen)
     return token;
 }
 
+static int restore_cont(tn_stream *st, tn_alloc *na,
+                        int tag, int tag_binsize,
+                        int to_tag,
+                        struct pkgtags_s *pkgt,
+                        const char *fn,
+                        unsigned long ul_offs)
+{
+    tn_array *dest = NULL;
+
+    switch (to_tag) {
+    case PKG_STORETAG_CAPS:
+        dest = pkgt->caps;
+        break;
+
+    case PKG_STORETAG_REQS:
+        dest = pkgt->reqs;
+        break;
+
+    case PKG_STORETAG_SUGS:
+        dest = pkgt->sugs;
+        break;
+
+    case PKG_STORETAG_CNFLS:
+        dest = pkgt->cnfls;
+        break;
+
+    default:
+        if (poldek_VERBOSE > 1)
+            logn(LOGWARN, "%s:%lu: unknown continuation", fn, ul_offs);
+    }
+
+    if (dest) {
+        tn_array *caps = capreq_arr_restore_st(na, st);
+        if (caps) {
+            while (n_array_size(caps) > 0)
+                n_array_push(dest, n_array_shift(caps));
+            n_array_free(caps);
+        }
+    } else {
+        if (!pkg_store_skiptag(tag, tag_binsize, st)) {
+            logn(LOGERR, "%s:%lu: %c: unknown binsize of tag (%c)",
+                 fn, ul_offs, tag,
+                 tag_binsize > 0 && tag_binsize < INT8_MAX &&
+                 isascii(tag_binsize) ? tag_binsize : '-');
+            return 0;
+        }
+    }
+    return 1;
+}
+
 struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                            tn_array *depdirs, unsigned ldflags,
                            struct pkg_offs *pkgo, const char *fn)
@@ -148,7 +198,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
     unsigned long        ul_offs;
     char                 linebuf[PATH_MAX];
     int                  nerr = 0, nread, pkg_loaded = 0;
-    int                  tag, tag_binsize = PKG_STORETAG_SIZENIL;
+    int                  tag, last_tag, tag_binsize = PKG_STORETAG_SIZENIL;
     const  char          *errmg_double_tag = "%s:%lu: double '%c' tag";
     const  char          *errmg_ldtag = "%s:%lu: load '%c' tag error";
 
@@ -167,6 +217,7 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
     memset(&pkgt, 0, sizeof(pkgt));
     memset(&tmpkg, 0, sizeof(tmpkg));
 
+    last_tag = 0;
     while ((nread = n_stream_gets(st, linebuf, sizeof(linebuf))) > 0) {
         char *p, *val, *line;
 
@@ -288,7 +339,6 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                 }
                 break;
 
-
             case PKG_STORETAG_CNFLS:
                 if (pkgt.flags & PKGT_HAS_CNFL) {
                     logn(LOGERR, _(errmg_double_tag), fn, ul_offs, *line);
@@ -310,6 +360,13 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
 
                 if (pkgt.cnfls)
                     pkgt.flags |= PKGT_HAS_CNFL;
+                break;
+
+            case PKG_STORETAG_CONT:
+                if (!restore_cont(st, na, tag, tag_binsize, last_tag, &pkgt, fn, ul_offs)) {
+                    nerr++;
+                    goto l_end;
+                }
                 break;
 
             case PKG_STORETAG_DEPFL:
@@ -381,6 +438,9 @@ struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                 }
                 break;
         }
+
+        if (tag != PKG_STORETAG_CONT)
+            last_tag = tag;
     }
 
 

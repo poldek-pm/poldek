@@ -30,9 +30,8 @@
 #define PKG_STORETAG_CNFLS 'C'
 #define PKG_STORETAG_FL    'l'
 #define PKG_STORETAG_DEPFL 'L'
-
+#define PKG_STORETAG_CONT  '_'  /* continuation */
 #define PKG_STORETAG_UINF  'U'  /* depreciated */
-
 
 #define PKG_STORETAG_SIZENIL  0 /* ascii tag */
 #define PKG_STORETAG_SIZE8   '1'
@@ -69,7 +68,7 @@ struct pkg_offs {
     off_t  pkguinf_offs;
 };
 
-struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg, 
+struct pkg *pkg_restore_st(tn_stream *st, tn_alloc *na, struct pkg *pkg,
                            tn_array *depdirs, unsigned ldflags,
                            struct pkg_offs *pkgo, const char *fn);
 
