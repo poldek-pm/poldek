@@ -787,7 +787,7 @@ int capreq_arr_store(tn_array *arr, tn_buf *nbuf)
         size = n_buf_tell(nbuf) - off - sizeof(uint16_t);
 
         /* 64K limit overflow => just skip the rest */
-        if (size > UINT8_MAX - 1) {
+        if (size > UINT16_MAX - 1) {
             n_buf_seek(nbuf, cr_off, SEEK_SET);
             break;
         }
