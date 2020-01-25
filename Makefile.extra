@@ -1,6 +1,6 @@
 PROJ_DIR=$(shell pwd)
 
-copylibs:
+update-modules:
 	git submodule update --init --remote
 
 tarball: copylibs dist
@@ -18,9 +18,32 @@ mclean:
 	-rm -f *.xz
 	-find . -name .#\*[0-9]  | xargs -r rm
 
-snapbackup: clean
+rsync-backup: clean
 	rsync -atvx . lione:rsync/poldek/
 	rsync -atvx . builder64:poldek/
+
+# symlink ../trurlib repo
+symlink-mod-%:
+	@if [ ! -L $* -a -d $* -a -d ../$* ]; then \
+	    mv -f $* $*-mod && ln -s ../$* $*;     \
+	elif [ -L $* ]; then                       \
+	    echo "$* is already symlinked";        \
+	else                                       \
+            echo "$* cannot be symlinked";         \
+	fi
+
+unsymlink-mod-%:
+	@if [ -L $* -a -d $*-mod ]; then            \
+	    rm -f $*; mv $*-mod $*;                 \
+	else                                        \
+	    echo "$* is not symlinked";             \
+	fi
+
+# symlink local ../trurlib && ../tndb repo
+symlink-modules: symlink-mod-trurlib symlink-mod-tndb
+
+# back to sumbmodules
+unsymlink-modules: unsymlink-mod-trurlib unsymlink-mod-tndb
 
 backup:
 	@cd $(PROJ_DIR);                                            \
