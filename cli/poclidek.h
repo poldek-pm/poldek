@@ -29,7 +29,7 @@ struct poldek_ts;
 EXPORT struct poclidek_ctx *poclidek_new(struct poldek_ctx *ctx);
 EXPORT void poclidek_free(struct poclidek_ctx *cctx);
 
-int poclidek_setup(struct poclidek_ctx *cctx);
+EXPORT int poclidek_setup(struct poclidek_ctx *cctx);
 
 #define POCLIDEK_LOAD_AVAILABLE (1 << 0)
 #define POCLIDEK_LOAD_INSTALLED (1 << 1)
