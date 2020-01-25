@@ -123,8 +123,8 @@ static int verify_list(tn_array *list, int maxno, const char *op)
     }
 
     while (n_array_size(list) > 0) {
-        const char *op = n_array_pop(list);
-        fail_ifnot(n_hash_exists(dict, op), "missing list element %s", op);
+        const char *o = n_array_pop(list);
+        fail_ifnot(n_hash_exists(dict, o), "missing list element %s", o);
     }
     return 1;
 }
