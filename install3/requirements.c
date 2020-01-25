@@ -643,26 +643,22 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 {
     tn_array *suggests = NULL, *choices = NULL;
     struct pkg *oldpkg = NULL;
-    int i, autochoice = 0;
+    char *autochoice = NULL;    /* testing only */
+    int i;
 
     if (pkg->sugs == NULL)
         return NULL;
 
     /* tests automation */
     if (poldek__is_in_testing_mode()) {
-        const char *choice = getenv("POLDEK_TESTING_WITH_SUGGESTS");
-        if (choice) {
-            if (n_str_eq(choice, "all"))
-                autochoice = -1;
-
-            else if (sscanf(choice, "%d", &autochoice) != 1)
-                autochoice = 0;
-            DBGF("autochoice = %d\n", autochoice);
-        }
+        autochoice = getenv("POLDEK_TESTING_WITH_SUGGESTS");
     }
 
+    if (!autochoice && !i3_is_user_choosable_equiv(ictx->ts))
+        return NULL;
+
     /* if we have errors already, don't bug the user with more questions */
-    if ((!autochoice && !i3_is_user_choosable_equiv(ictx->ts)) || i3_get_nerrors(ictx, I3ERR_CLASS_DEP|I3ERR_CLASS_CNFL))
+    if (i3_get_nerrors(ictx, I3ERR_CLASS_DEP|I3ERR_CLASS_CNFL))
         return NULL;
 
     tracef(indent, "%s", pkg_id(pkg));
@@ -672,45 +668,50 @@ static tn_array *with_suggests(int indent, struct i3ctx *ictx, struct pkg *pkg)
 
     suggests = capreq_arr_new(4);
     n_array_ctl_set_freefn(suggests, NULL); /* 'weak' ref */
+    n_array_sort(pkg->sugs);                /* make sure it's sorted as
+                                               capreq_arr_contains rely on this */
 
     for (i=0; i < n_array_size(pkg->sugs); i++) {
         struct capreq *req = n_array_nth(pkg->sugs, i);
         struct pkg *tomark = NULL;
+        const char *reqstr = capreq_stra(req);
+
+        //trace(indent, "%d) suggested %s", i, reqstr);
 
         if (skip_boolean_dep(req))
             continue;
 
         if (iset_provides(ictx->inset, req)) {
-            trace(indent, "- %s: already marked", capreq_stra(req));
+            trace(indent, "- %s: already marked", reqstr);
             continue;
         }
 
         if (i3_pkgdb_match_req(ictx, req)) {
-            trace(indent, "- %s: satisfied by db", capreq_stra(req));
+            trace(indent, "- %s: satisfied by db", reqstr);
             continue;
         }
 
 	/* on upgrade don't suggest package skipped during installation */
         if (oldpkg && oldpkg->sugs && capreq_arr_contains(oldpkg->sugs, capreq_name(req))) {
-    	    trace(indent, "- %s: skipped on install -> don't suggest on upgrade",
-    		 capreq_stra(req));
+    	    trace(indent, "- %s: skipped on install -> don't suggest on upgrade", reqstr);
     	    continue;
         }
 
         if (!i3_find_req(indent, ictx, pkg, req, &tomark, NULL)) {
-            logn(LOGWARN, _("%s: suggested %s not found, skipped"), pkg_id(pkg),
-                 capreq_stra(req));
+            logn(LOGWARN, _("%s: suggested %s not found, skipped"), pkg_id(pkg), reqstr);
             continue;
 
         } else if (tomark == NULL) {
-            trace(indent, "- %s: satisfied by being installed set",
-                  capreq_stra(req));
+            trace(indent, "- %s: satisfied by being installed set", reqstr);
             continue;
         }
 
-        if (autochoice > 0 && i != autochoice - 1)
+        if (autochoice && n_str_ne(autochoice, "all") && n_str_ne(autochoice, capreq_name(req))) {
+            trace(indent, "- %s: skipped by autochoice (%s)", reqstr, autochoice);
             continue;
+        }
 
+        trace(indent, "- %s: selected to be choosen by user", reqstr);
         n_array_push(suggests, req);
     }
 
