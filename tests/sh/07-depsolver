@@ -185,7 +185,7 @@ testSuggestsSome() {
     build c
 
     msgn "Some suggested packages"
-    POLDEK_TESTING_WITH_SUGGESTS="2" # choose b only (1st installable suggested package)
+    POLDEK_TESTING_WITH_SUGGESTS="b" # choose b only
     export POLDEK_TESTING_WITH_SUGGESTS
     try_install_a "a,b"
     POLDEK_TESTING_WITH_SUGGESTS=
@@ -415,7 +415,8 @@ testMultilibSuggestedByNoarchShouldUseArchScore() {
     done
     POLDEK_TESTING_WITH_SUGGESTS="all" # choose all suggested packages
     export POLDEK_TESTING_WITH_SUGGESTS
-    try_install n "n-1-1.noarch,a-1-1.i686"
+    arch=$(uname -m)
+    try_install n "n-1-1.noarch,a-1-1.#{arch}"
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
     POLDEK_TESTING_WITH_SUGGESTS=""
 }
