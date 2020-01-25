@@ -1,97 +1,99 @@
 =pod
- $Id$
-=cut
+
+=encoding UTF-8
+
+#=cut
 
 =head1 NAZWA
 
-poldek - program pomocniczy do zarz±dzania pakietami RPM
+poldek - program pomocniczy do zarzÄ…dzania pakietami RPM
 
 =head1 STRESZCZENIE
 
-poldek [--source=¬RÓD£O ...] [OPCJA...] [PAKIET...]
+poldek [--source=Å¹RÃ“DÅO ...] [OPCJA...] [PAKIET...]
 
-poldek [--source=¬RÓD£O ...]
+poldek [--source=Å¹RÃ“DÅO ...]
 
 =head1 UWAGA
 
-Ten dokument dotyczy serii 0.18.x i jest w du¿ej czê¶ci zdezaktualizowany, 
-aczkolwiek nadal mo¿e byæ przdatny dla u¿ytkowników nie znaj±cych angielskiego. 
+Ten dokument dotyczy serii 0.18.x i jest w duÅ¼ej czÄ™Å›ci zdezaktualizowany,
+aczkolwiek nadal moÅ¼e byÄ‡ przdatny dla uÅ¼ytkownikÃ³w nie znajÄ…cych angielskiego.
 
-Aktualna dokumentacja jest dostêpna w jêzyku angielskim, w postaci stron 
-podrêcznika systemowego man ('poldek' oraz 'poldek.conf') oraz w postaci 
-podrêcznika w formacie Info oraz HTML.
+Aktualna dokumentacja jest dostÄ™pna w jÄ™zyku angielskim, w postaci stron
+podrÄ™cznika systemowego man ('poldek' oraz 'poldek.conf') oraz w postaci
+podrÄ™cznika w formacie Info oraz HTML.
 
 =head1 OPIS
 
-Poldek jest programem do zarz±dzania pakietami RPM. Jego podstawowe
-cechy s± podobne do ka¿dego wspó³czesnego programu do uaktualniania
-pakietów, jak I<apt-get> - program pobiera informacje o pakietach z
-indeksu (domy¶lnie I<packages.dir.gz>) i pozwala na ich instalacjê,
-uaktualnienie lub usuniêcie.
+Poldek jest programem do zarzÄ…dzania pakietami RPM. Jego podstawowe
+cechy sÄ… podobne do kaÅ¼dego wspÃ³Å‚czesnego programu do uaktualniania
+pakietÃ³w, jak I<apt-get> - program pobiera informacje o pakietach z
+indeksu (domyÅ›lnie I<packages.dir.gz>) i pozwala na ich instalacjÄ™,
+uaktualnienie lub usuniÄ™cie.
 
-Program pracuje w dwóch trybach: wsadowym (w u¿yciu podobny do I<apt-get>)
+Program pracuje w dwÃ³ch trybach: wsadowym (w uÅ¼yciu podobny do I<apt-get>)
 oraz interaktywnym (I<interactive>). Tryb interaktywny stanowi interfejs
-readline z autouzupe³nianiem linii poleceñ oraz ich histori±, podobny do
-trybu pow³oki modu³u CPAN perla.
+readline z autouzupeÅ‚nianiem linii poleceÅ„ oraz ich historiÄ…, podobny do
+trybu powÅ‚oki moduÅ‚u CPAN perla.
 
-Zdalne pliki s± pobierane przez samego poldka (wewnêtrzny klient FTP/HTTP)
-b±d¼ poprzez zewnêtrzne programy (domy¶lnie nieskonfigurowane, patrz
+Zdalne pliki sÄ… pobierane przez samego poldka (wewnÄ™trzny klient FTP/HTTP)
+bÄ…dÅº poprzez zewnÄ™trzne programy (domyÅ›lnie nieskonfigurowane, patrz
 L</PLIK KONFIGURACYJNY>).
 
 Podstawowe tryby pracy poldka to:
 
 =over
 
-=item * Buduj indeks pakietów
+=item * Buduj indeks pakietÃ³w
 
-=item * Uaktualniaj indeks pakietów
+=item * Uaktualniaj indeks pakietÃ³w
 
-=item * Weryfikuj zestaw pakietów
+=item * Weryfikuj zestaw pakietÃ³w
 
 =item * Instaluj system od zera
 
-=item * Uaktualniaj ca³y system
+=item * Uaktualniaj caÅ‚y system
 
 =item * Instaluj lub uaktualniaj wybrane pakiety
 
-=item * Dziel zestaw pakietów w podzestawy o ustalonym rozmiarze
+=item * Dziel zestaw pakietÃ³w w podzestawy o ustalonym rozmiarze
 
 =back
 
 =head2 Tryb Interaktywny
 
-Tryb interaktywny uzyskujemy uruchamiaj±c
+Tryb interaktywny uzyskujemy uruchamiajÄ…c
 
     poldek [OPCJA...] --shell [-f]
 
-co prze³±cza do interfejsu readline. Bêd±c w linii poleceñ wpisz
-'help', a reszta powinna wyja¶niæ siê sama.
+co przeÅ‚Ä…cza do interfejsu readline. BÄ™dÄ…c w linii poleceÅ„ wpisz
+'help', a reszta powinna wyjaÅ›niÄ‡ siÄ™ sama.
 
-[ci±g dalszy nast±pi...]
+[ciÄ…g dalszy nastÄ…pi...]
 
-=head1 ¬RÓD£A PAKIETÓW
+=head1 Å¹RÃ“DÅA PAKIETÃ“W
 
-¬ród³a pakietów mog± byæ okre¶lane w pliku konfiguracyjnym poprzez
+Å¹rÃ³dÅ‚a pakietÃ³w mogÄ… byÄ‡ okreÅ›lane w pliku konfiguracyjnym poprzez
 parametr B<source> (patrz L</PLIK KONFIGURACYJNY>), lub z linii
-poleceñ nastêpuj±cymi opcjami:
+poleceÅ„ nastÄ™pujÄ…cymi opcjami:
 
-B<-s, --source> B<¬RÓD£O>
+B<-s, --source> B<Å¹RÃ“DÅO>
 
 B<--sdir> B<KATALOG>
 
-B<--shdrl> B<¬RÓD£O>
+B<--shdrl> B<Å¹RÃ“DÅO>
 
-gdzie ¬RÓD£O jest lokaln± ¶cie¿k± b±d¼ URL-em. Z B<--source> u¿ywany
-jest natywny plik indeksu (packages.dir.gz); z B<--sdir> jest przegl±dany
-katalog docelowy, zamiast czytania pliku indeksu - wersja ta powinna byæ
-u¿ywana jedynie do katalogów lokalnych. Ostatnia B<--shdrl> mo¿e byæ u¿yta
-do pobrania informacji o pakiecie z pliku z czystymi nag³ówkami RPM
+gdzie Å¹RÃ“DÅO jest lokalnÄ… Å›cieÅ¼kÄ… bÄ…dÅº URL-em. Z B<--source> uÅ¼ywany
+jest natywny plik indeksu (packages.dir.gz); z B<--sdir> jest przeglÄ…dany
+katalog docelowy, zamiast czytania pliku indeksu - wersja ta powinna byÄ‡
+uÅ¼ywana jedynie do katalogÃ³w lokalnych. Ostatnia B<--shdrl> moÅ¼e byÄ‡ uÅ¼yta
+do pobrania informacji o pakiecie z pliku z czystymi nagÅ‚Ã³wkami RPM
 (znanym jako hdlist).
 
-Typ ¼ród³a mo¿e byæ ustawiony równie¿ przez opcjê B<type>, patrz
+Typ ÅºrÃ³dÅ‚a moÅ¼e byÄ‡ ustawiony rÃ³wnieÅ¼ przez opcjÄ™ B<type>, patrz
 L</PLIK KONFIGURACYJNY>.
 
-Przyk³ady:
+PrzykÅ‚ady:
 
 =over
 
@@ -109,21 +111,21 @@ Przyk³ady:
 
 =back
 
-Je¶li indeks pakietów i pakiety s± przechowywane w innych lokalizacjach,
-wtedy powinna byæ u¿yta opcja:
+JeÅ›li indeks pakietÃ³w i pakiety sÄ… przechowywane w innych lokalizacjach,
+wtedy powinna byÄ‡ uÅ¼yta opcja:
 
 B<-P, --prefix> B<PREFIKS>
 
-do wskazania lokalizacji pakietów, np.:
+do wskazania lokalizacji pakietÃ³w, np.:
 
 $ poldek -s /tmp/packages.dir.gz --prefix=/cdrom/RPMS/ -s ... --prefix=...
 
-Je¶li ¼ród³o jest skonfigurowane z nazw± (patrz L</PLIK KONFIGURACYJNY>),
-wtedy mo¿e byæ wybrane przez B<-n, --sn> B<NAZWA-¬RÓD£A>, np.:
+JeÅ›li ÅºrÃ³dÅ‚o jest skonfigurowane z nazwÄ… (patrz L</PLIK KONFIGURACYJNY>),
+wtedy moÅ¼e byÄ‡ wybrane przez B<-n, --sn> B<NAZWA-Å¹RÃ“DÅA>, np.:
 
 $ poldek --sn pld ...
 
-Aby uzyskaæ listê wszystkich skonfigurowanych ¼róde³ u¿yj opcji
+Aby uzyskaÄ‡ listÄ™ wszystkich skonfigurowanych ÅºrÃ³deÅ‚ uÅ¼yj opcji
 B<-l, --sl>, np.:
 
 $ poldek -l
@@ -140,93 +142,93 @@ $ poldek -l
 
 =back
 
-=head1 WYBIERANIE PAKIETÓW
+=head1 WYBIERANIE PAKIETÃ“W
 
-Pakiety mog± byæ wybierane na trzy sposoby:
+Pakiety mogÄ… byÄ‡ wybierane na trzy sposoby:
 
 =over
 
-=item * jako pliki pakietów w argumentach
+=item * jako pliki pakietÃ³w w argumentach
 
 $ poldek ...  ala-ma-kota-2.1-2.i386.rpm
 
-=item * jako maska nazw pakietów
+=item * jako maska nazw pakietÃ³w
 
-na przyk³ad:
+na przykÅ‚ad:
 
 $ poldek ...  apache
 
 $ poldek ...  'apache*'
 
-Je¿eli musi byæ ustawione EVR, wpisz je po '#', np.:
+JeÅ¼eli musi byÄ‡ ustawione EVR, wpisz je po '#', np.:
 
 $ poldek ... apache#1.3.12
 
 $ poldek ... apache#1.3.20-1
 
-=item * jako zestaw pakietów zdefiniowany w PLIKU B<--pset=PLIK>,
+=item * jako zestaw pakietÃ³w zdefiniowany w PLIKU B<--pset=PLIK>,
 (patrz README.package-sets):
 
 $ poldek ... --pset ~/.package-sets/tiny-system
 
 =back
 
-Wszystkie powy¿sze opcje mog± byæ ³±czone. Zwróæ uwagê, ¿e wybrane
-pakiety powinny byæ obecne w ¬RÓDLE.
+Wszystkie powyÅ¼sze opcje mogÄ… byÄ‡ Å‚Ä…czone. ZwrÃ³Ä‡ uwagÄ™, Å¼e wybrane
+pakiety powinny byÄ‡ obecne w Å¹RÃ“DLE.
 
 =head1 PODSTAWOWE TRYBY
 
-Jeden z nastêpuj±cych trybów podstawowych musi byæ wybrany:
+Jeden z nastÄ™pujÄ…cych trybÃ³w podstawowych musi byÄ‡ wybrany:
 
 =over 4
 
 =item B<--mkidx[z][=PLIK]>  B<[--nodiff]>
 
-Buduje indeks pakietów, domy¶lnie jest on przechowywany w SOURCE/packages.dir[.gz].
-Tworzone s± dwa inne pliki: packages.dir.mdd z obliczonym skrótem packages.dir
-oraz packages.dir.toc[.gz] z NAME-EVR pakietów po jednym w linii.
+Buduje indeks pakietÃ³w, domyÅ›lnie jest on przechowywany w SOURCE/packages.dir[.gz].
+Tworzone sÄ… dwa inne pliki: packages.dir.mdd z obliczonym skrÃ³tem packages.dir
+oraz packages.dir.toc[.gz] z NAME-EVR pakietÃ³w po jednym w linii.
 
-Dodatkowo, je¶li poprzedni indeks pakietów jest ró¿ny od aktualnie
+Dodatkowo, jeÅ›li poprzedni indeks pakietÃ³w jest rÃ³Å¼ny od aktualnie
 utworzonego, wtedy tworzony jest indeks "patch" w katalogu SOURCE/packages.i/.
-Ka¿dy patch sk³ada siê z dwóch plików: packages.dir.diff.YYYY.MM.DD-HH.mm.SS.gz
+KaÅ¼dy patch skÅ‚ada siÄ™ z dwÃ³ch plikÃ³w: packages.dir.diff.YYYY.MM.DD-HH.mm.SS.gz
 i packages.dir.diff.YYYY.MM.DD-HH.mm.SS.mdd.
 
-Przeterminowane patche s± automatycznie usuwane.
+Przeterminowane patche sÄ… automatycznie usuwane.
 
-Z B<--nodiff> patche nie s± tworzone.
+Z B<--nodiff> patche nie sÄ… tworzone.
 
-I<UWAGA>: W tym jest przyjmowana jako ¬RÓD£O tylko jedna i tylko ¶cie¿ka do katalogu.
+I<UWAGA>: W tym jest przyjmowana jako Å¹RÃ“DÅO tylko jedna i tylko Å›cieÅ¼ka do katalogu.
 
 =item B<--up, --update>; B<--upa, --update-whole>
 
-Resynchronizuj indeks pakietów z jego ¼ród³a i zweryfikuj go.
+Resynchronizuj indeks pakietÃ³w z jego ÅºrÃ³dÅ‚a i zweryfikuj go.
 
-Z B<--update> program szuka "patche'y" do istniej±cego lokalnie
-indeks pakietów, a je¶li to zawodzi, pobiera ca³y indeks.
+Z B<--update> program szuka "patche'y" do istniejÄ…cego lokalnie
+indeks pakietÃ³w, a jeÅ›li to zawodzi, pobiera caÅ‚y indeks.
 
-Z B<--update-whole> program uaktualnia ca³y indeks pakietów.
+Z B<--update-whole> program uaktualnia caÅ‚y indeks pakietÃ³w.
 
-Dla ¼róde³ lokalnych program weryfikuje integralnosæ istniej±cego
-indeksu za pomoc± jego skrótu z packages.dir.mdd.
+Dla ÅºrÃ³deÅ‚ lokalnych program weryfikuje integralnosÄ‡ istniejÄ…cego
+indeksu za pomocÄ… jego skrÃ³tu z packages.dir.mdd.
 
 =item B<-V|--verify>
 
-Opcja ta weryfikuje zale¿no¶ci zbioru pakietów.
-Je¶li nie okre¶lono pakietów sprawdza wszystkie dostêpne.
+Opcja ta weryfikuje zaleÅ¼noÅ›ci zbioru pakietÃ³w.
+JeÅ›li nie okreÅ›lono pakietÃ³w sprawdza wszystkie dostÄ™pne.
 
 =item B<--install-dist[=KATALOG]>
 
-Instaluje od zera system u¿ywaj±c KATALOGU jako katalogu g³ównego (/).
-Trzeba okre¶liæ pakiety.
+Instaluje od zera system uÅ¼ywajÄ…c KATALOGU jako katalogu gÅ‚Ã³wnego (/).
+Trzeba okreÅ›liÄ‡ pakiety.
 
 =item B<--upgrade-dist[=KATALOG]>
 
-Instaluje najnowsze wersje wszystkich ju¿ zainstalowanych pakietów
-w systemie korzystaj±c z okre¶lonego ¼ród³a (patrz L</¬RÓD£O>).
+Instaluje najnowsze wersje wszystkich juÅ¼ zainstalowanych pakietÃ³w
+w systemie korzystajÄ…c z okreÅ›lonego ÅºrÃ³dÅ‚a (patrz L</Å¹RÃ“DÅO>).
 
 =item B<-i, --install|-u, -U, --upgrade|--downgrade>
 
-Instaluje, uaktualnia b±d¼ instaluje starsz± wersjê pakietu.
+Instaluje, uaktualnia bÄ…dÅº instaluje starszÄ… wersjÄ™ pakietu.
 
 =item B<--reinstall>
 
@@ -238,19 +240,19 @@ Uruchamia w trybie interaktywnym POLECENIE i wychodzi.
 
 =item B<--shell>
 
-Uruchamia poldka w trybie interaktywnym. Wpisz "help" aby uzyskaæ listê dostêpnych poleceñ.
-Jest to domy¶lny tryb pracy poldka.
+Uruchamia poldka w trybie interaktywnym. Wpisz "help" aby uzyskaÄ‡ listÄ™ dostÄ™pnych poleceÅ„.
+Jest to domyÅ›lny tryb pracy poldka.
 
 =item B<--split=ROZMIAR[:PIERWSZY_WOLNY_OBSZAR]  [--split-conf=PLIK] [--split-out=PREFIKS]>
 
-Dzieli zestaw pakietów na czê¶ci, ka¿da o rozmiarze ROZMIAR MB.
-Pierwsza czê¶æ bêdzie o PIERWSZY_WOLNY_OBSZAR MB mniejsza.
+Dzieli zestaw pakietÃ³w na czÄ™Å›ci, kaÅ¼da o rozmiarze ROZMIAR MB.
+Pierwsza czÄ™Å›Ä‡ bÄ™dzie o PIERWSZY_WOLNY_OBSZAR MB mniejsza.
 
-Priorytety pakietów s± brane z PLIKU podanego przez --split-conf (patrz przyk³adowy
-pkgsplit.conf z dystrybucji programu). Domy¶lnie pakiety maj± priorytet 0.
+Priorytety pakietÃ³w sÄ… brane z PLIKU podanego przez --split-conf (patrz przykÅ‚adowy
+pkgsplit.conf z dystrybucji programu). DomyÅ›lnie pakiety majÄ… priorytet 0.
 
-Ka¿da czê¶æ jest zapisywana jako lista NAME-EVR.ARCH.rpm do pliku
-PREFIX.XX, domy¶lnie PREFIX stanowi "packages.chunk".
+KaÅ¼da czÄ™Å›Ä‡ jest zapisywana jako lista NAME-EVR.ARCH.rpm do pliku
+PREFIX.XX, domyÅ›lnie PREFIX stanowi "packages.chunk".
 
 =back
 
@@ -260,66 +262,66 @@ PREFIX.XX, domy¶lnie PREFIX stanowi "packages.chunk".
 
 =item B<--dump[=PLIK]>
 
-Wypisz nazwy plików pakietów do PLIKU b±d¼ na standardowe wyj¶cie, zamias instalowaæ je.
+Wypisz nazwy plikÃ³w pakietÃ³w do PLIKU bÄ…dÅº na standardowe wyjÅ›cie, zamias instalowaÄ‡ je.
 
 =item B<--dumpn[=PLIK]>
 
-Wypisz nazwy pakietów do PLIKU b±d¼ na standardowe wyj¶cie, zamiast instalowaæ je.
+Wypisz nazwy pakietÃ³w do PLIKU bÄ…dÅº na standardowe wyjÅ›cie, zamiast instalowaÄ‡ je.
 
 =item B<--fetch[=KATALOG]>
 
-Jak B<--dump>, ale pakiety s± pobierane i sk³adowane domy¶lnie
-w katalogu stanowi±cym cache poldka.
+Jak B<--dump>, ale pakiety sÄ… pobierane i skÅ‚adowane domyÅ›lnie
+w katalogu stanowiÄ…cym cache poldka.
 
 =item B<-F, --fresh>
 
-Aktualizuj pakiety, ale tylko je¶li wcze¶niejsza wersja jest aktualnie zainstalowana.
+Aktualizuj pakiety, ale tylko jeÅ›li wczeÅ›niejsza wersja jest aktualnie zainstalowana.
 I<Uwaga:> odpowiednikiem "rpm --freshen" jest "poldek -u/-i --fresh --nofollow"
 
 =item B<-G, --greedy>
 
-Automatycznie aktualizuj pakiety, których zale¿no¶ci s± ³amane poprzez
-zainstalowane pakiety, na przyk³ad je¶li pakiet foo jest aktualizowany
-z wersji 1.0 do 1.2, a pakiet foo-devel jest ju¿ zainstalowany z
-zale¿no¶ci± "foo = 1.0", wtedy poldek aktualizuje tak¿e foo-devel do
+Automatycznie aktualizuj pakiety, ktÃ³rych zaleÅ¼noÅ›ci sÄ… Å‚amane poprzez
+zainstalowane pakiety, na przykÅ‚ad jeÅ›li pakiet foo jest aktualizowany
+z wersji 1.0 do 1.2, a pakiet foo-devel jest juÅ¼ zainstalowany z
+zaleÅ¼noÅ›ciÄ… "foo = 1.0", wtedy poldek aktualizuje takÅ¼e foo-devel do
 wersji 1.2.
 
 =item B<--hold=PAKIET[,PAKIET]...>
 
-Zapobiega aktualizacji podanych pakietów, je¶li s± ju¿ zainstalowane.
-Je¶li opcja nie jest podana, wtedy lista pakietów do zatrzymania jest brana
+Zapobiega aktualizacji podanych pakietÃ³w, jeÅ›li sÄ… juÅ¼ zainstalowane.
+JeÅ›li opcja nie jest podana, wtedy lista pakietÃ³w do zatrzymania jest brana
 z opcji konfiguracyjnej B<hold> i dodatkowo z $HOME/.poldek_hold.
-Wstrzymakie pakiety nie bêd± aktualizowane za wyj±tkiem sytuacji, gdy bêd±
-bezpo¶rednio wskazane przez u¿ytkownika.
+Wstrzymakie pakiety nie bÄ™dÄ… aktualizowane za wyjÄ…tkiem sytuacji, gdy bÄ™dÄ…
+bezpoÅ›rednio wskazane przez uÅ¼ytkownika.
 
 =item B<-m, --mercy>
 
-B±d¼ tolerancyjny w stosunku do zale¿no¶ci od wersji, które toleruje RPM, np.:
-pakiet A wymaga foo >= 1.0, podczas gdy pakiet B dostarcza "foo" be¿ ¿adnej
+BÄ…dÅº tolerancyjny w stosunku do zaleÅ¼noÅ›ci od wersji, ktÃ³re toleruje RPM, np.:
+pakiet A wymaga foo >= 1.0, podczas gdy pakiet B dostarcza "foo" beÅ¼ Å¼adnej
 wersji.
 
 =item B<--nodeps>; B<--justdb>; B<--force>; B<--root>;
 
-Ma takie znaczenie jak w przypadku RPM. Patrz nastêpna sekcja.
+Ma takie znaczenie jak w przypadku RPM. Patrz nastÄ™pna sekcja.
 
 =item B<-N, --nofollow>
 
-Nie instaluj automatycznie pakietów wymaganych przez wybrane.
+Nie instaluj automatycznie pakietÃ³w wymaganych przez wybrane.
 
 =item B<--nohold>
 
-Nie bierz listy wstrzymywanych pakietów z $HOME/.poldek_hold ani parametru
+Nie bierz listy wstrzymywanych pakietÃ³w z $HOME/.poldek_hold ani parametru
 konfiguracyjnego hold.
 
-=item B<--rpmdef="NAZWA WARTO¦Æ">
+=item B<--rpmdef="NAZWA WARTOÅšÄ†">
 
 Jak opcja rpm --define.
 
 =item B<-t, --test>
 
-Ñie instaluj pakietów, ale sprawd¼, czy zadzia³a czy nie. Podane raz
-powoduje tylko test z u¿yciem poldka, ¿eby przeprowadziæ pe³ny test
-z u¿yciem rpma podaj dwukrotnie.
+Åƒie instaluj pakietÃ³w, ale sprawdÅº, czy zadziaÅ‚a czy nie. Podane raz
+powoduje tylko test z uÅ¼yciem poldka, Å¼eby przeprowadziÄ‡ peÅ‚ny test
+z uÅ¼yciem rpma podaj dwukrotnie.
 
 =back
 
@@ -329,9 +331,9 @@ z u¿yciem rpma podaj dwukrotnie.
 
 =item B<--cachedir=KATALOG>
 
-KATALOG wskazuje miejsce, gdzie pobrane pliki maj± byæ przechowywane.
-Je¶li opcja nie jest ustawiona, u¿yty jest $TMPDIR. Je¶li $TMPDIR nie
-jest ustawiony, wtedy tworzony jest $HOME/.poldek-cache i u¿ywany jako
+KATALOG wskazuje miejsce, gdzie pobrane pliki majÄ… byÄ‡ przechowywane.
+JeÅ›li opcja nie jest ustawiona, uÅ¼yty jest $TMPDIR. JeÅ›li $TMPDIR nie
+jest ustawiony, wtedy tworzony jest $HOME/.poldek-cache i uÅ¼ywany jako
 katalog cache.
 
 =item B<--log=PLIK>
@@ -340,10 +342,10 @@ Loguj wszystkie komunikaty poldka do PLIKU.
 
 =back
 
-=head1 WSPÓ£PRACA Z RPM
+=head1 WSPÃ“ÅPRACA Z RPM
 
-Obecnie wszystkie instalacje za wyj±tkiem B<install-dist> s± robione
-przez binarkê RPM, która jest uruchamiana w tle. Opcje przekazywane do rpma:
+Obecnie wszystkie instalacje za wyjÄ…tkiem B<install-dist> sÄ… robione
+przez binarkÄ™ RPM, ktÃ³ra jest uruchamiana w tle. Opcje przekazywane do rpma:
 
 =over
 
@@ -357,7 +359,7 @@ przez binarkê RPM, która jest uruchamiana w tle. Opcje przekazywane do rpma:
 
 =item * --nodeps
 
-=item * --test (musi byæ podane dwukrotnie, patrz wy¿ej opis --test)
+=item * --test (musi byÄ‡ podane dwukrotnie, patrz wyÅ¼ej opis --test)
 
 =item * --upgrade
 
@@ -367,33 +369,33 @@ przez binarkê RPM, która jest uruchamiana w tle. Opcje przekazywane do rpma:
 
 =head2
 
-Inne opcje rpma mog± byæ przekazywane jako argumenty w postaci
+Inne opcje rpma mogÄ… byÄ‡ przekazywane jako argumenty w postaci
 B<--rpm-RPM_LONG_OPTION>, np.:
 
 $ poldek ... -- --rpm-noscripts --rpm-notriggers
 
 =head1 PLIK KONFIGURACYJNY
 
-Program próbuje przeczytaæ konfiguracjê z F<$HOME/.poldekrc>; je¶li plik ten nie
-istnieje, czyta F</etc/poldek.conf>. Opcja B<-c,--conf> mo¿e wskazywaæ na inn±
-lokalizacjê pliku konfiguracyjnego. Z B<--noconf> poldek nie czyta ¿adnej konfiguracji.
+Program prÃ³buje przeczytaÄ‡ konfiguracjÄ™ z F<$HOME/.poldekrc>; jeÅ›li plik ten nie
+istnieje, czyta F</etc/poldek.conf>. Opcja B<-c,--conf> moÅ¼e wskazywaÄ‡ na innÄ…
+lokalizacjÄ™ pliku konfiguracyjnego. Z B<--noconf> poldek nie czyta Å¼adnej konfiguracji.
 
-Plik konfiguracyjny zawiera parametry w nastêpuj±cej postaci:
+Plik konfiguracyjny zawiera parametry w nastÄ™pujÄ…cej postaci:
 
-'nazwa = warto¶æ'
+'nazwa = wartoÅ›Ä‡'
 
-Plik jest oparty na liniach, czyli ka¿da linia zakoñczona
-znakiem nowej linii reprezentuje komentarz b±d¼ parametr.
+Plik jest oparty na liniach, czyli kaÅ¼da linia zakoÅ„czona
+znakiem nowej linii reprezentuje komentarz bÄ…dÅº parametr.
 
 =head2 Parametry:
 
 =over
 
-=item * B<source> = [NAZWA[,OPCJE]] ¦CIE¯KA_¬RÓD£OWA
+=item * B<source> = [NAZWA[,OPCJE]] ÅšCIEÅ»KA_Å¹RÃ“DÅOWA
 
-Opcjonalna B<NAZWA> mo¿e byæ okre¶lona pó¼niej z linii poleceñ przez
-B<-n, --sn> B<NAZWA-¬RÓD£A>; na przyk³ad je¶li masz ¼ród³a skonfigurowane
-nastêpuj±co:
+Opcjonalna B<NAZWA> moÅ¼e byÄ‡ okreÅ›lona pÃ³Åºniej z linii poleceÅ„ przez
+B<-n, --sn> B<NAZWA-Å¹RÃ“DÅA>; na przykÅ‚ad jeÅ›li masz ÅºrÃ³dÅ‚a skonfigurowane
+nastÄ™pujÄ…co:
 
 source = pld-devel     /mnt/PLD-stable/RPMS
 
@@ -401,58 +403,58 @@ source = pld-stable    ftp://zn/PLD/i686/PLD/RPMS
 
 source = misRPMS       ftp://zn/rpm/RPMS/
 
-wtedy aby u¿yæ tylko ftp://zn/PLD/i686/PLD/RPMS wykonaj:
+wtedy aby uÅ¼yÄ‡ tylko ftp://zn/PLD/i686/PLD/RPMS wykonaj:
 
 $ poldek --sn pld-stable
 
-...i aby u¿yæ wszystkich pld-*:
+...i aby uÅ¼yÄ‡ wszystkich pld-*:
 
 $ poldek --sn pld-\*
 
-B<OPCJE> okre¶laj± opcje ¼róde³; dozwolone warto¶ci to:
+B<OPCJE> okreÅ›lajÄ… opcje ÅºrÃ³deÅ‚; dozwolone wartoÅ›ci to:
 
 =over
 
-=item * B<noauto> - nie ³aduj domy¶lnie tych ¼róde³
+=item * B<noauto> - nie Å‚aduj domyÅ›lnie tych ÅºrÃ³deÅ‚
 
-=item * B<noautoup> - nie aktualizuj domy¶lnie tych ¼róde³
+=item * B<noautoup> - nie aktualizuj domyÅ›lnie tych ÅºrÃ³deÅ‚
 
 =item * B<gpg> - weryfikuj sygnatury GPG pakietu
 
 =item * B<pgp> - weryfikuj sygnatury PGP pakietu
 
-=item * B<pri=WARTO¦Æ_NUMERYCZNA>
+=item * B<pri=WARTOÅšÄ†_NUMERYCZNA>
 
-Opcj± t± mo¿na ustawiæ priorytet ¼ród³a. Je¶li te same pakiety
-(identyczna nazwa i EVR) s± dostêpne z wiêcej ni¿ jednego ¼ród³a,
-wtedy brane s± pakiety ze ¼ród³a o wy¿szym priorytecie.
+OpcjÄ… tÄ… moÅ¼na ustawiÄ‡ priorytet ÅºrÃ³dÅ‚a. JeÅ›li te same pakiety
+(identyczna nazwa i EVR) sÄ… dostÄ™pne z wiÄ™cej niÅ¼ jednego ÅºrÃ³dÅ‚a,
+wtedy brane sÄ… pakiety ze ÅºrÃ³dÅ‚a o wyÅ¼szym priorytecie.
 
-Je¶li priorytety ¼róde³ nie s± ustawione, ¼ród³a dostaj± priorytety
-zgodne z ich kolejno¶ci± w pliku konfiguracyjnym.
+JeÅ›li priorytety ÅºrÃ³deÅ‚ nie sÄ… ustawione, ÅºrÃ³dÅ‚a dostajÄ… priorytety
+zgodne z ich kolejnoÅ›ciÄ… w pliku konfiguracyjnym.
 
-=item * B<type=TYP_¬RÓD£A>
+=item * B<type=TYP_Å¹RÃ“DÅA>
 
-Opcja ta pozwala na ustawienie typu ¼ród³a. Dostêpne warto¶ci to:
+Opcja ta pozwala na ustawienie typu ÅºrÃ³dÅ‚a. DostÄ™pne wartoÅ›ci to:
 
 =over 2
 
-=item * B<pidx> - natywny plik indeksu poldka (domy¶lny)
+=item * B<pidx> - natywny plik indeksu poldka (domyÅ›lny)
 
 =item * B<pdir> - lokalne katalogi; poldek przeszuka je zamiast
-                  czytaæ plik indeksu
+                  czytaÄ‡ plik indeksu
 
-=item * B<hdrl> - plik z surowymi nag³ówkami pakietów w formacie RPM;
- dostêpny w wielu dystrybucjach opartych na RPM-ie (w RH nazywa siê hdlist),
- jednak¿e ten format nie jest optymalny dla poldka (nie jest na przyk³ad
- auktualizowalny). Patrz F<poldekrc.sample-rh> za³±czony w dystrybucji poldka.
-
-=back
+=item * B<hdrl> - plik z surowymi nagÅ‚Ã³wkami pakietÃ³w w formacie RPM;
+ dostÄ™pny w wielu dystrybucjach opartych na RPM-ie (w RH nazywa siÄ™ hdlist),
+ jednakÅ¼e ten format nie jest optymalny dla poldka (nie jest na przykÅ‚ad
+ auktualizowalny). Patrz F<poldekrc.sample-rh> zaÅ‚Ä…czony w dystrybucji poldka.
 
 =back
 
-Przyk³ady:
+=back
 
-# pakiety z 'pld' s± preferowane
+PrzykÅ‚ady:
+
+# pakiety z 'pld' sÄ… preferowane
 source = pld,gpg,noautoup,pri=-10   ftp://zn/PLD/ra/RPMS
 
 source = pld-test,noauto        /mnt/PLD-test/RPMS
@@ -465,13 +467,13 @@ source99 = rh,noauto,type=hdrl  ftp://redhat/os/i386/RedHat/base/hdlist
 
 prefix99 = ftp://redhat/os/i386/RedHat/RPMS
 
-=item * B<sourceXX> = ¬RÓD£O
+=item * B<sourceXX> = Å¹RÃ“DÅO
 
-=item * B<prefixXX> = ¬RÓD£O
+=item * B<prefixXX> = Å¹RÃ“DÅO
 
-Je¶li chcesz skonfigurowaæ ¼ród³o z prefiksem (patrz opis opcji B<-P>),
-wtedy powinno byæ okre¶lone jako zakoñczona sufiksem para ¼ród³o/prefiks,
-aby rozró¿niæ dane ¼ród³o od innych, na przyk³ad:
+JeÅ›li chcesz skonfigurowaÄ‡ ÅºrÃ³dÅ‚o z prefiksem (patrz opis opcji B<-P>),
+wtedy powinno byÄ‡ okreÅ›lone jako zakoÅ„czona sufiksem para ÅºrÃ³dÅ‚o/prefiks,
+aby rozrÃ³Å¼niÄ‡ dane ÅºrÃ³dÅ‚o od innych, na przykÅ‚ad:
 
 source1 = ~/tmp/moje-indeksy-cd/
 
@@ -483,32 +485,32 @@ prefix1 = /mnt/cdrom/RPMS/
 
 =item * B<confirm_installation = yes|no>
 
-        Je¶li ustawione na "yes" program potwierdza wszystkie instalacje
-        pakietów (domy¶lnie: no)
+        JeÅ›li ustawione na "yes" program potwierdza wszystkie instalacje
+        pakietÃ³w (domyÅ›lnie: no)
 
 =item * B<confirm_removal = yes|no>
 
-        Je¶li ustawione na "yes" program potwierdza wszystkie deinstalacje
-        pakietów (domy¶lnie: yes)
+        JeÅ›li ustawione na "yes" program potwierdza wszystkie deinstalacje
+        pakietÃ³w (domyÅ›lnie: yes)
 
 =item * B<choose_equivalents_manually = yes|no>
 
-        Je¶li ustawione na "yes" program pozwala u¿ytkownikowi na wybór
-        spo¶ród równowa¿nych pakietów (domy¶lnie: no)
+        JeÅ›li ustawione na "yes" program pozwala uÅ¼ytkownikowi na wybÃ³r
+        spoÅ›rÃ³d rÃ³wnowaÅ¼nych pakietÃ³w (domyÅ›lnie: no)
 
 =item * B<follow = yes|no>
 
-        Automatycznie instaluj|nie instaluj pakietów wymaganych przez
-        wybrane (domy¶lnie: yes)
+        Automatycznie instaluj|nie instaluj pakietÃ³w wymaganych przez
+        wybrane (domyÅ›lnie: yes)
 
 =item * B<ftp_sysuser_as_anon_passwd = yes|no>
 
-        Je¶li ustawione na "yes" jako anonimowe has³o FTP wysy³ane jest
-        login@hostname (domy¶lnie: no)
+        JeÅ›li ustawione na "yes" jako anonimowe hasÅ‚o FTP wysyÅ‚ane jest
+        login@hostname (domyÅ›lnie: no)
 
 =item * B<greedy = yes|no>
 
-        Patrz opis opcji --greedy (domy¶lnie: no)
+        Patrz opis opcji --greedy (domyÅ›lnie: no)
 
 =item * B<hold = pakiet[ pakiet...]>
 
@@ -520,34 +522,34 @@ prefix1 = /mnt/cdrom/RPMS/
 
 =item * B<keep_downloads = yes|no>
 
-        Program domy¶lnie usuwa pobrane pliki pakietów po pomy¶lnej instalacji.
-        Je¶li opcja ustawiona jest na "yes", wtedy program nie usunie pobranych
-        pakietów z katalogu cache.
+        Program domyÅ›lnie usuwa pobrane pliki pakietÃ³w po pomyÅ›lnej instalacji.
+        JeÅ›li opcja ustawiona jest na "yes", wtedy program nie usunie pobranych
+        pakietÃ³w z katalogu cache.
 
 =item * B<particle_install = yes|no>
 
-        Je¶li ustawione na "no" instalacja wielu pakietów jest przeprowadzana
-        jako jedna transakcja (domy¶lnie: yes)
+        JeÅ›li ustawione na "no" instalacja wielu pakietÃ³w jest przeprowadzana
+        jako jedna transakcja (domyÅ›lnie: yes)
 
 =item * B<use_sudo = yes|no>
 
-        Dla operacji r/w uruchom rpma u¿ywaj±c sudo.
-        Domy¶ln± warto¶ci± jest "no", ale zalecana jest zmiana na "yes"
-        i u¿ywanie poldka jako zwyk³y u¿ytkownik.
+        Dla operacji r/w uruchom rpma uÅ¼ywajÄ…c sudo.
+        DomyÅ›lnÄ… wartoÅ›ciÄ… jest "no", ale zalecana jest zmiana na "yes"
+        i uÅ¼ywanie poldka jako zwykÅ‚y uÅ¼ytkownik.
 
 =back
 
-=head3 Zewnêtrzne programy pobieraj±ce
+=head3 ZewnÄ™trzne programy pobierajÄ…ce
 
-Programy pobieraj±ce s± konfigurowane przez parametr B<PROTOCOL_get="SPEC">.
-SPEC jest poleceniem b±d¼ sformatowanym ³añcuchem, gdzie przynajmniej 2 z 4
-dostêpnych semi-makr powinny byæ u¿yte:
+Programy pobierajÄ…ce sÄ… konfigurowane przez parametr B<PROTOCOL_get="SPEC">.
+SPEC jest poleceniem bÄ…dÅº sformatowanym Å‚aÅ„cuchem, gdzie przynajmniej 2 z 4
+dostÄ™pnych semi-makr powinny byÄ‡ uÅ¼yte:
 
 =over
 
-=item B<%p[n]> - nazwa pliku pakietu, %pn znaczy, ¿e %p mo¿e wyst±piæ wiele razy
+=item B<%p[n]> - nazwa pliku pakietu, %pn znaczy, Å¼e %p moÅ¼e wystÄ…piÄ‡ wiele razy
 
-=item B<%P[n]> - pe³na ¶cie¿ka do pakietu, %Pn -"-
+=item B<%P[n]> - peÅ‚na Å›cieÅ¼ka do pakietu, %Pn -"-
 
 =item B<%d> - katalog cache
 
@@ -555,11 +557,11 @@ dostêpnych semi-makr powinny byæ u¿yte:
 
 =back
 
-Obecnie dostêpne s± cztery protoko³y: FTP, HTTP, HTTPS i RSYNC.  Specjalny
-"protokó³" B<ftp_http> mo¿e byæ u¿yty do opisu programów pobieraj±cych z obu
-protoko³ów, HTTP i FTP.
+Obecnie dostÄ™pne sÄ… cztery protokoÅ‚y: FTP, HTTP, HTTPS i RSYNC.  Specjalny
+"protokÃ³Å‚" B<ftp_http> moÅ¼e byÄ‡ uÅ¼yty do opisu programÃ³w pobierajÄ…cych z obu
+protokoÅ‚Ã³w, HTTP i FTP.
 
-Przyk³ady:
+PrzykÅ‚ady:
 
 ftp_http_get   = "/usr/bin/wget -N --dot-style=binary -P %d %Pn"
 
@@ -569,22 +571,22 @@ ftp_get        = "/usr/bin/snarf %P %D"
 
 rsync_get      = "/usr/bin/rsync -v %P %d"
 
-Patrz równie¿: za³±czone przyk³adowe pliki konfiguracyjne.
+Patrz rÃ³wnieÅ¼: zaÅ‚Ä…czone przykÅ‚adowe pliki konfiguracyjne.
 
-Dodatkowo poldek wspiera URL-e CDROM, które mog± byæ u¿ywane, gdy zestaw
-pakietów jest przechowywany na zmienialnych mediach (kilka CD, ZIP-ów, etc);
-jako CDROM "downloader" powinien byæ skonfigurowany vfjuggle, po szczegó³y
+Dodatkowo poldek wspiera URL-e CDROM, ktÃ³re mogÄ… byÄ‡ uÅ¼ywane, gdy zestaw
+pakietÃ³w jest przechowywany na zmienialnych mediach (kilka CD, ZIP-Ã³w, etc);
+jako CDROM "downloader" powinien byÄ‡ skonfigurowany vfjuggle, po szczegÃ³Å‚y
 patrz poldekrc.sample-cdrom.
 
-=head1 PRZYK£ADY
+=head1 PRZYKÅADY
 
-=head2 Tworzenie indeksu pakietów:
+=head2 Tworzenie indeksu pakietÃ³w:
 
 $ poldek -s /cdrom/PLD/RPMS --mkidxz=/tmp/packages.dir.gz
 
 $ poldek -s /ftp/pub/PLD/RPMS --mkidxz
 
-U¿ywaj±c skryptu mkpackagedir:
+UÅ¼ywajÄ…c skryptu mkpackagedir:
 
 $ mkpackagedir /ftp/pub/PLD/i686/RPMS /ftp/pub/PLD/sparc/RPMS
 
@@ -597,12 +599,12 @@ $ poldek -s /dir/with/RPMS -V apache
 =head2 Instalacja od zera:
 
 $ poldek -s ftp://ftp.trurl.net/PLD/RPMS/
-  --install-dist=/mnt/dest --pset ftp://home.net/moje-podzestawy/mójzestaw
+  --install-dist=/mnt/dest --pset ftp://home.net/moje-podzestawy/mÃ³jzestaw
 
-Powy¿sze polecenie instaluje podzestaw pakietów "mójzestaw"
+PowyÅ¼sze polecenie instaluje podzestaw pakietÃ³w "mÃ³jzestaw"
 w /mnt/dest jako root.
 
-=head2 Aktualizacja ca³ego systemu:
+=head2 Aktualizacja caÅ‚ego systemu:
 
 $ poldek -v -s ftp://ftp.tatry.pl/PLD/RPMS/ --upgrade-dist --log=~/tmp/poldek.log
 
@@ -611,7 +613,7 @@ Tylko pobierz pakiety zaznaczone do aktualizacji:
 $ poldek -s ftp://ftp.rankiem.net.pl/PLD/RPMS/
   --upgrade-dist --fetch=/tmp/PLD-up/
 
-Stwórz listê nazw pakietów zaznaczonych do aktualizacji:
+StwÃ³rz listÄ™ nazw pakietÃ³w zaznaczonych do aktualizacji:
 
 $ poldek -s ftp://ftp.pld.org.pl/PLD/RPMS/
  --upgrade-dist --dump=/tmp/PLD-up-`date +%Y.%m.%d`
@@ -621,30 +623,30 @@ Tylko testuj:
 $ poldek -s ftp://ftp.pociemku.org/PLD/RPMS/
   --upgrade-dist --test
 
-=head2 Instalacja/aktualizacja wybranych pakietów:
+=head2 Instalacja/aktualizacja wybranych pakietÃ³w:
 
 $ poldek -s ftp://ftp.znienacka.com/PLD/RPMS/
 -u apache --nevr "ala-ma-kota 1.2" smail-12-389.i386.rpm
 
 $ poldek -s ftp://ftp.dudy.net/RPMS/ -ti xteddy
 
-=head2 Dzielenie zestawu na 100 MB czê¶ci:
+=head2 Dzielenie zestawu na 100 MB czÄ™Å›ci:
 
 $ poldek --split=100 --split-conf=zip-split.conf \
    --split-out=/tmp/zipchunk
 
-=head2 Wykonanie polecenia pow³oki:
+=head2 Wykonanie polecenia powÅ‚oki:
 
 $ poldek --shcmd='ls -lt' | less
 
-=head1 ¦RODOWISKO
+=head1 ÅšRODOWISKO
 
 Plik konfiguracyjny pobierany jest z $HOME.
 
-$TMPDIR (je¶li ustawiony) jest u¿ywany jako katalog tymczasowy
-o ile nie jest okre¶lony cachedir.
+$TMPDIR (jeÅ›li ustawiony) jest uÅ¼ywany jako katalog tymczasowy
+o ile nie jest okreÅ›lony cachedir.
 
-$PAGER (je¶li ustawiony) jest u¿ywany w trybie interaktywnym.
+$PAGER (jeÅ›li ustawiony) jest uÅ¼ywany w trybie interaktywnym.
 
 =head1 PLIKI
 
@@ -656,42 +658,42 @@ $HOME/.poldek_hold
 
 $HOME/.poldek-cache/
 
-=head1 B£ÊDY
+=head1 BÅÄ˜DY
 
-=head2 Konflikty plików
+=head2 Konflikty plikÃ³w
 
-Konflikty s± wykrywane tylko przez porównanie rozmiarów plików i trybów,
-co oznacza, ¿e nie wszystkie konflikty mog± byæ wykryte, gdy¿ nie s±
-porównywane sumy kontrolne MD5 (zbyt bardzo zwiêkszy³oby to zu¿ycie pamiêci).
+Konflikty sÄ… wykrywane tylko przez porÃ³wnanie rozmiarÃ³w plikÃ³w i trybÃ³w,
+co oznacza, Å¼e nie wszystkie konflikty mogÄ… byÄ‡ wykryte, gdyÅ¼ nie sÄ…
+porÃ³wnywane sumy kontrolne MD5 (zbyt bardzo zwiÄ™kszyÅ‚oby to zuÅ¼ycie pamiÄ™ci).
 
 =head2 Uaktualnianie i tag "Obsoletes"
 
-W PLD I<http://www.pld.org.pl>, które jest podstawow± platform± rozwojow±
-dla poldka, tag "Obsoletes" jest u¿ywany w dwóch ró¿nych znaczeniach:
-pierwsze oznacza B<A> I<uniewa¿nia> B<B>, drugie za¶ B<A> I<jest równowa¿ne> B<B>.
-Oczywi¶cie jest niemo¿liwe, aby je rozró¿niæ i u¿yæ podczas aktualizacji systemu
-(w Red Hat Linux u¿yte jest jedynie pierwsze znaczenie, wiêc instalator Red Hata
-u¿ywa tego taga).
+W PLD I<http://www.pld.org.pl>, ktÃ³re jest podstawowÄ… platformÄ… rozwojowÄ…
+dla poldka, tag "Obsoletes" jest uÅ¼ywany w dwÃ³ch rÃ³Å¼nych znaczeniach:
+pierwsze oznacza B<A> I<uniewaÅ¼nia> B<B>, drugie zaÅ› B<A> I<jest rÃ³wnowaÅ¼ne> B<B>.
+OczywiÅ›cie jest niemoÅ¼liwe, aby je rozrÃ³Å¼niÄ‡ i uÅ¼yÄ‡ podczas aktualizacji systemu
+(w Red Hat Linux uÅ¼yte jest jedynie pierwsze znaczenie, wiÄ™c instalator Red Hata
+uÅ¼ywa tego taga).
 
-=head2 Aktualizacja wiêcej ni¿ jednej instancji pakietu
+=head2 Aktualizacja wiÄ™cej niÅ¼ jednej instancji pakietu
 
-rpm nie obs³uguje takiego przypadku, wiêc poldek tak¿e.
+rpm nie obsÅ‚uguje takiego przypadku, wiÄ™c poldek takÅ¼e.
 
-=head2 Przetwarzanie zale¿no¶ci
+=head2 Przetwarzanie zaleÅ¼noÅ›ci
 
-Na tyle na ile przetestowa³em poldka, zupe³nie rozwi±zuje on zale¿no¶ci
-pakietów (nie konflikty plików) podczas instalacji i uaktualnienia. Proszê
-powiadomiæ mnie, je¶li zauwa¿ysz, ¿e rpm zg³asza niespe³nione zale¿no¶ci,
+Na tyle na ile przetestowaÅ‚em poldka, zupeÅ‚nie rozwiÄ…zuje on zaleÅ¼noÅ›ci
+pakietÃ³w (nie konflikty plikÃ³w) podczas instalacji i uaktualnienia. ProszÄ™
+powiadomiÄ‡ mnie, jeÅ›li zauwaÅ¼ysz, Å¼e rpm zgÅ‚asza niespeÅ‚nione zaleÅ¼noÅ›ci,
 podczas gdy poldek nie.
 
 =head2 Dokumentacja
 
-Ten manual powinien byæ ukoñczony i przet³umaczony na jêzyk angielski.
+Ten manual powinien byÄ‡ ukoÅ„czony i przetÅ‚umaczony na jÄ™zyk angielski.
 
 =head1 UWAGA
 
-Program ten z pewno¶ci± zawiera b³êdy. Zrób kopiê bezpieczeñstwa swojej
-bazy danych RPM-a i b±d¼ uwa¿ny. Pamiêtaj, ¿e I<NIE MA ¯ADNEJ GWARANCJI>
+Program ten z pewnoÅ›ciÄ… zawiera bÅ‚Ä™dy. ZrÃ³b kopiÄ™ bezpieczeÅ„stwa swojej
+bazy danych RPM-a i bÄ…dÅº uwaÅ¼ny. PamiÄ™taj, Å¼e I<NIE MA Å»ADNEJ GWARANCJI>
 i udanej zabawy.
 
 =head1 LICENCJA
@@ -704,7 +706,7 @@ License, wersja 2.
 Pawel A. Gajda <mis@pld.org.pl>
 
 
-Autorem tego t³umaczenia jest GoTaR <gotar@pld.org.pl>
+Autorem tego tÅ‚umaczenia jest GoTaR <gotar@pld.org.pl>
 
 =head1 KONTAKT
 
@@ -712,9 +714,9 @@ Autorem tego t³umaczenia jest GoTaR <gotar@pld.org.pl>
 
 =head2 Lista mailingowa I<poldek@pld-linux.org>
 
-Proszê przesy³aæ komentarze, raporty o b³êdach itp. do autora b±d¼
-na listê mailingow±.
+ProszÄ™ przesyÅ‚aÄ‡ komentarze, raporty o bÅ‚Ä™dach itp. do autora bÄ…dÅº
+na listÄ™ mailingowÄ….
 
-=head1 PATRZ RÓWNIE¯
+=head1 PATRZ RÃ“WNIEÅ»
 
 L<apt(1)> L<apt-get(8)>, L<curl(1)>, L<rpm(1)>, L<rsync(1)>, L<snarf(1)>, L<wget(1)>
