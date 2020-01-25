@@ -7,7 +7,7 @@ jobs:
       - checkout
       - run: ./autogen.sh
       - run: make CFLAGS="-O0"
-      - run: make -C check
+      - run: make check
 
   build-centos:
     docker:
@@ -16,7 +16,7 @@ jobs:
       - checkout
       - run: ./autogen.sh
       - run: make CFLAGS="-O0"
-      - run: make -C tests check
+      - run: make check
 
 workflows:
   version: 2
