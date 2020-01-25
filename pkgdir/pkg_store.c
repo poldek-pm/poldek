@@ -190,35 +190,6 @@ static void store_capreq_array(const struct pkg *pkg, tn_array *capreqs, int8_t 
     n_array_free(arr);
 }
 
-
-static
-int pkg_store_caps(const struct pkg *pkg, tn_buf *nbuf)
-{
-    tn_array *arr;
-    int i;
-
-    arr = n_array_new(n_array_size(pkg->caps), NULL, NULL);
-
-    for (i=0; i < n_array_size(pkg->caps); i++) {
-        struct capreq *cr = n_array_nth(pkg->caps, i);
-        if (pkg_eq_capreq(pkg, cr))
-            continue;
-
-        if (capreq_is_bastard(cr))
-            continue;
-
-        n_array_push(arr, cr);
-    }
-
-    if (n_array_size(arr)) {
-        pkg_store_bintag(PKG_STORETAG_CAPS, nbuf);
-        capreq_arr_store(arr, nbuf);
-    }
-
-    n_array_free(arr);
-    return 1;
-}
-
 /* local tags of PKG_STORETAG_BINF tag */
 #define PKGFIELD_TAG_SIZE    'S'
 #define PKGFIELD_TAG_FSIZE   's'
