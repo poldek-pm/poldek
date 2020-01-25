@@ -51,7 +51,7 @@
 #include "i18n.h"
 #include "p_open.h"
 
-#define P_OPEN_EXITED   (1 << 16) 
+#define P_OPEN_EXITED   (1 << 16)
 
 static
 FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
@@ -62,7 +62,7 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
               char *const argv[]);
 
 
-void p_st_init(struct p_open_st *pst) 
+void p_st_init(struct p_open_st *pst)
 {
     memset(pst, 0,  sizeof(*pst));
     pst->stream = NULL;
@@ -70,18 +70,18 @@ void p_st_init(struct p_open_st *pst)
     pst->errmsg = NULL;
 }
 
-void p_st_destroy(struct p_open_st *pst) 
+void p_st_destroy(struct p_open_st *pst)
 {
     if (pst->stream) {
         fclose(pst->stream);
         pst->stream = NULL;
     }
-    
+
     if (pst->cmd) {
         free(pst->cmd);
         pst->cmd = NULL;
     }
-    
+
     if (pst->errmsg) {
         free(pst->errmsg);
         pst->errmsg = NULL;
@@ -92,16 +92,16 @@ void p_st_destroy(struct p_open_st *pst)
 FILE *p_open(struct p_open_st *pst, unsigned flags, const char *cmd,
              char *const argv[])
 {
-#ifdef HAVE_OPENPTY         
+#ifdef HAVE_OPENPTY
     if (flags & P_OPEN_OUTPTYS)
         return pty_open(pst, flags, cmd, argv);
 #endif
-    
+
     return pp_open(pst, flags, cmd, argv);
 }
 
 
-static void p_dupnull(int fdno, unsigned p_open_flags) 
+static void p_dupnull(int fdno, unsigned p_open_flags)
 {
     switch (fdno) {
         case STDIN_FILENO:
@@ -115,7 +115,7 @@ static void p_dupnull(int fdno, unsigned p_open_flags)
                 close(fd);
             }
             break;
-            
+
         default:
             n_assert(0);
     }
@@ -131,19 +131,19 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
     char   errmsg[1024];
 
     n_assert(pst->stream == NULL);
-    
+
     if (access(cmd, R_OK | X_OK) != 0) {
         snprintf(errmsg, sizeof(errmsg), _("%s: no such file"), cmd);
         pst->errmsg = n_strdup(errmsg);
         return NULL;
     }
-    
+
     if (pipe(pp) != 0) {
         snprintf(errmsg, sizeof(errmsg), "pipe: %m");
         pst->errmsg = n_strdup(errmsg);
         return NULL;
     }
-    
+
     if ((pid = fork()) == 0) {
         p_dupnull(STDIN_FILENO, flags);
         close(pp[0]);
@@ -154,11 +154,11 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
 
         execv(cmd, argv);
 	exit(EXIT_FAILURE);
-        
+
     } else if (pid < 0) {
         snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
         pst->errmsg = n_strdup(errmsg);
-        
+
     } else {
         close(pp[1]);
         pst->fd = pp[0];
@@ -173,13 +173,13 @@ FILE *pp_open(struct p_open_st *pst, unsigned flags, const char *cmd,
         close(pp[0]);
         close(pp[1]);
     }
-    
+
     return pst->stream;
 }
 
 
 static
-int p_waitpid(struct p_open_st *pst, int woptions) 
+int p_waitpid(struct p_open_st *pst, int woptions)
 {
     int st, rc = -1;
     char errmsg[1024];
@@ -188,19 +188,19 @@ int p_waitpid(struct p_open_st *pst, int woptions)
 
     if (pst->pid == 0)          /* exited */
         return pst->ec;
-    
+
     if (pst->errmsg)
         free(pst->errmsg);
-    
+
     pst->errmsg = NULL;
-    
-    
+
+
     if ((pid = waitpid(pst->pid, &st, woptions)) <= 0)
         return 0;
-    
+
     if (WIFEXITED(st)) {
         rc = WEXITSTATUS(st);
-        
+
     } else if (WIFSIGNALED(st)) {
 #ifdef HAVE_STRSIGNAL
         snprintf(errmsg, sizeof(errmsg), _("%s terminated by signal %s"),
@@ -208,9 +208,9 @@ int p_waitpid(struct p_open_st *pst, int woptions)
 #else
         snprintf(errmsg, sizeof(errmsg), _("%s terminated by signal %d"),
                  pst->cmd, WTERMSIG(st));
-#endif        
+#endif
         pst->errmsg = n_strdup(errmsg);
-        
+
     } else {
         snprintf(errmsg, sizeof(errmsg),
                  _("%s (%d) died under inscrutable circumstances"),
@@ -224,14 +224,14 @@ int p_waitpid(struct p_open_st *pst, int woptions)
 }
 
 
-int p_wait(struct p_open_st *pst) 
+int p_wait(struct p_open_st *pst)
 {
     p_waitpid(pst, WNOHANG);
     return pst->pid == 0;       /* finished? */
 }
 
 
-int p_close(struct p_open_st *pst) 
+int p_close(struct p_open_st *pst)
 {
     p_waitpid(pst, 0);
     return pst->ec;
@@ -240,24 +240,24 @@ int p_close(struct p_open_st *pst)
 
 #ifdef HAVE_OPENPTY
 pid_t forkptys(int *master, struct termios *tios, struct winsize *wsize,
-	       char *errmsg, int errmsg_size) 
+	       char *errmsg, int errmsg_size)
 {
     int slave;
     pid_t pid;
-    
-    
+
+
     if (openpty(master, &slave, NULL, tios, wsize) != 0) {
 	snprintf(errmsg, errmsg_size, "openpty: %m");
         return -1;
-    }	
-    
+    }
+
     if ((pid = fork()) == 0) {
         close(*master);
         dup2(slave, STDOUT_FILENO);
         dup2(slave, STDERR_FILENO);
         return 0;
     }
-    
+
     return pid;
 }
 
@@ -276,38 +276,38 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
         return pp_open(pst, flags, cmd, argv);
 
     pst->stream = NULL;
-    
+
     if (tcgetattr(STDOUT_FILENO, &termios) != 0) {
         snprintf(errmsg, sizeof(errmsg), "tcgetattr(1): %m");
         pst->errmsg = n_strdup(errmsg);
         return NULL;
     }
-    
+
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &winsize) != 0) {
         snprintf(errmsg, sizeof(errmsg), "ioctl(1, TIOCGWINSZ): %m");
         pst->errmsg = n_strdup(errmsg);
         return NULL;
     }
-    
+
     if (access(cmd, R_OK | X_OK) != 0) {
         snprintf(errmsg, sizeof(errmsg), _("%s: no such file"), cmd);
         pst->errmsg = n_strdup(errmsg);
         return NULL;
     }
-    
+
     *errmsg = '\0';
     if ((pid = forkptys(&fd, &termios, &winsize,
                         errmsg, sizeof(errmsg))) == 0) {
         p_dupnull(STDIN_FILENO, flags);
         execv(cmd, argv);
 	exit(EXIT_FAILURE);
-        
+
     } else if (pid < 0) {
-	if (*errmsg == '\0') 
-	    snprintf(errmsg, sizeof(errmsg), "fork %s: %m", cmd);
+	if (*errmsg == '\0')
+	    snprintf(errmsg, sizeof(errmsg), "forkptys %s: %m", cmd);
         pst->errmsg = n_strdup(errmsg);
-        
-        
+
+
     } else {
         pst->fd = fd;
         pst->stream = fdopen(fd, "r");
@@ -315,7 +315,7 @@ FILE *pty_open(struct p_open_st *pst, unsigned flags, const char *cmd,
         pst->pid = pid;
         pst->cmd = n_strdup(cmd);
     }
-    
+
     return pst->stream;
 }
 
