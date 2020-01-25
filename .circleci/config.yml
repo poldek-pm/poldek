@@ -1,6 +1,15 @@
 version: 2.1
 jobs:
-  build:
+  build-pld:
+    docker:
+      - image: mistoo/pld-devel:latest
+    steps:
+      - checkout
+      - run: ./autogen.sh
+      - run: make CFLAGS="-O0"
+      - run: make -C check
+
+  build-centos:
     docker:
       - image: mistoo/centos-devel:latest
     steps:
