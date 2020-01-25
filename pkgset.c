@@ -810,7 +810,7 @@ int packages_generate_depgraph(tn_array *pkgs, struct pkgset *ps,
         type = *tl;
         path = *(tl + 1);
     }
-    DBGF_F("g %s\n", path);
+    msgn(3, "g %s\n", path);
 
     if (n_str_eq(type, "lanvi"))
         lanvi_graph(pkgs, ps, path);
