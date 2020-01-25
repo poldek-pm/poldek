@@ -32,10 +32,6 @@ endif
 
 libpkgdir_la_LIBADD  = $(pkgdir_modules)
 
-libpkgdir_la_CFLAGS =				\
-	$(WARNINGFLAGS_C)			\
-	$(NULL)
-
 dist-hook:
 	rm -rf $(distdir)/.deps
 

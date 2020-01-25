@@ -3,15 +3,11 @@ NULL =
 AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
 
-LIBS = 
+LIBS =
 noinst_LTLIBRARIES   = libsigint.la
 libsigint_la_SOURCES = 			\
 	sigint.c			\
 	sigint.h			\
-	$(NULL)
-
-libsigint_la_CFLAGS =			\
-	$(WARNINGFLAGS_C)		\
 	$(NULL)
 
 dist-hook:
@@ -24,4 +20,4 @@ clean-local:
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1

@@ -10,10 +10,6 @@ libpkgdir_rpmdb_la_SOURCES = 			\
 	rpmdbcache.c				\
 	$(NULL)
 
-libpkgdir_rpmdb_la_CFLAGS = 			\
-	$(WARNINGFLAGS_C)			\
-	$(NULL)
-
 dist-hook:
 	rm -rf $(distdir)/.deps
 
@@ -24,4 +20,4 @@ clean-local:
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1

@@ -58,10 +58,6 @@ libpoldek_la_SOURCES = \
 	  poldek_intern.h \
 	  pkg_ver_cmp.h
 
-libpoldek_la_CFLAGS =		\
-	$(WARNINGFLAGS_C)	\
-	$(NULL)
-
 pkgincludedir = $(includedir)/poldek
 
 # one line to easy get them by external script

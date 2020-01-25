@@ -27,10 +27,6 @@ endif
 
 libpm_la_LIBADD  = $(pm_modules)
 
-libpm_la_CFLAGS =			\
-	$(WARNINGFLAGS_C)		\
-	$(NULL)
-
 dist-hook:
 	rm -rf $(distdir)/.deps
 

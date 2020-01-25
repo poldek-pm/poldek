@@ -64,27 +64,20 @@ AC_CHECK_PROG(POD2MAN, pod2man, pod2man)
 AM_GNU_GETTEXT([external])
 AM_GNU_GETTEXT_VERSION(0.11.5)
 
-AM_CFLAGS="-Wall -W -D_GNU_SOURCE=1"
+AM_CFLAGS="-D_GNU_SOURCE=1"
 AC_SUBST(AM_CFLAGS)
 
 AC_ARG_ENABLE(strict, AS_HELP_STRING([--enable-strict], [Enable strict compilation options]), enable_strict=$enableval,
                                                          enable_strict=no)
-
 if test x$enable_strict != xno; then
     if test -n "$GCC"; then
-        WARNINGFLAGS_C="$WARNINGFLAGS_C -Werror"
+        AM_CFLAGS="$AM_CFLAGS -Werror"
     fi
 fi
 
 if test -n "$GCC"; then
-    WARNINGFLAGS_C="$WARNINGFLAGS_C -Wall"
-    WARNINGFLAGS_C="$WARNINGFLAGS_C -Wextra"
-    WARNINGFLAGS_C="$WARNINGFLAGS_C -Wformat-security"
-    WARNINGFLAGS_C="$WARNINGFLAGS_C -Wshadow"
-else
-    WARNINGFLAGS_C=""
+    AM_CFLAGS="$AM_CFLAGS -W -Wall -Wextra -Wformat-security -Werror=format-security -Wshadow -fbounds-check -pipe"
 fi
-AC_SUBST(WARNINGFLAGS_C)
 
 if test -n "$GCC"; then
     cflags_save="$CFLAGS"

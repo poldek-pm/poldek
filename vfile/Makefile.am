@@ -1,9 +1,5 @@
-NULL =
-
 SUBDIRS   = vfff
 DIST_SUBDIRS = $(SUBDIRS) tests
-
-#LIBS = -ltrurl -lz @LIBS@ @INTLLIBS@
 
 AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir)
 AM_CFLAGS = @AM_CFLAGS@
@@ -18,10 +14,6 @@ libvfile_la_SOURCES = vfile.c fetch.c vfetch.c vfprogress.c misc.c \
 		      vopen3.c vopen3.h vfile_intern.h
 
 libvfile_la_LIBADD = vfff/libvfff.la
-
-libvfile_la_CFLAGS =			\
-	$(WARNINGFLAGS_C)		\
-	$(NULL)
 
 pkgincludedir = $(includedir)/vfile
 pkginclude_HEADERS = vfile.h p_open.h vopen3.h

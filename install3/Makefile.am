@@ -1,6 +1,4 @@
-NULL =
-
-AM_CPPFLAGS = @TRURL_INCLUDE@ @TNDB_INCLUDE@ -I$(top_srcdir)
+AM_CPPFLAGS = -I$(top_srcdir) @TRURL_INCLUDE@ @TNDB_INCLUDE@
 AM_CFLAGS = @AM_CFLAGS@
 
 LIBS=
@@ -12,10 +10,6 @@ libinstall3_la_SOURCES = install.h install.c  \
 	  	        obsoletes.c requirements.c \
                         process.c
 
-libinstall3_la_CFLAGS =						\
-	$(WARNINGFLAGS_C)					\
-	$(NULL)
-
 dist-hook:
 	rm -rf $(distdir)/.deps
 
@@ -26,4 +20,4 @@ clean-local:
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1

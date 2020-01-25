@@ -16,10 +16,6 @@ libpkgdir_pndir_la_SOURCES =			\
 	description.c				\
 	$(NULL)
 
-libpkgdir_pndir_la_CFLAGS =			\
-	$(WARNINGFLAGS_C)			\
-	$(NULL)
-
 dist-hook:
 	rm -rf $(distdir)/.deps
 
@@ -30,4 +26,4 @@ clean-local:
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1

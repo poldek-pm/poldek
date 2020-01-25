@@ -1,8 +1,6 @@
 # vfff - VFile File Fetch
 
-NULL =
-
-AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir)
+AM_CPPFLAGS = -I$(top_srcdir) @TRURL_INCLUDE@
 AM_CFLAGS = @AM_CFLAGS@
 
 LIBS =
@@ -11,10 +9,6 @@ libvfff_la_SOURCES  =   vfff.c vfff.h 	\
 			io.c 		\
 			http.c base64.c \
 			ftp.c
-
-libvfff_la_CFLAGS =			\
-	$(WARNINGFLAGS_C)		\
-	$(NULL)
 
 dist-hook:
 	rm -rf $(distdir)/.deps

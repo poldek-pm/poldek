@@ -19,10 +19,6 @@ libpm_rpm_la_SOURCES =			\
 	rpm_pkg_ld.c			\
 	$(NULL)
 
-libpm_rpm_la_CFLAGS =			\
-	$(WARNINGFLAGS_C)		\
-	$(NULL)
-
 EXTRA_DIST      =
 bin_PROGRAMS    = rpmvercmp
 
@@ -32,10 +28,6 @@ rpmvercmp_SOURCES =			\
 
 rpmvercmp_LDADD =			\
 	-lrpm				\
-	$(NULL)
-
-rpmvercmp_CFLAGS =			\
-	$(WARNINGFLAGS_C)		\
 	$(NULL)
 
 dist-hook:

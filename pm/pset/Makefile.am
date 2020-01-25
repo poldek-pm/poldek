@@ -1,6 +1,6 @@
 NULL =
 
-AM_CPPFLAGS = @TRURL_INCLUDE@ -I$(top_srcdir)
+AM_CPPFLAGS = -I$(top_srcdir) @TRURL_INCLUDE@
 AM_CFLAGS = @AM_CFLAGS@
 
 LIBS=
@@ -9,10 +9,6 @@ libpm_pset_la_SOURCES = 			\
 	mod.c					\
 	pset.c					\
 	pm_pset.h				\
-	$(NULL)
-
-libpm_pset_la_CFLAGS =				\
-	$(WARNINGFLAGS_C)			\
 	$(NULL)
 
 dist-hook:
@@ -25,4 +21,4 @@ clean-local:
 MAINTAINERCLEANFILES =	mkinstalldirs install-sh missing *.tar.gz *.spec \
 			config.h.in configure Makefile.in config.h \
 			config.sub config.guess aclocal.m4 \
-			libtool ltconfig ltmain.sh stamp-h* depcomp *.1 
+			libtool ltconfig ltmain.sh stamp-h* depcomp *.1
