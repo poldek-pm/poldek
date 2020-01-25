@@ -18,7 +18,7 @@ void do_test_capreq_store(tn_array *caps) {
     char buf1[4096], buf2[4096];
 
     tn_buf *nbuf = n_buf_new(1024);
-    capreq_arr_store(caps, nbuf, 0);
+    capreq_arr_store(caps, nbuf);
 
     /* skip data size (we have inconsistency here) */
     tn_buf *rbuf = n_buf_new(0);

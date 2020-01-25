@@ -1,19 +1,19 @@
 #include "test.h"
 
-static const char *maflags_snprintf_s(unsigned maflags) 
+static const char *maflags_snprintf_s(unsigned maflags)
 {
     static char buf[128];
     int n = 0, nsave;
 
     if (maflags == 0)
         return "";
-    
+
     n += n_snprintf(&buf[n], sizeof(buf) - n, "[promote=");
     nsave = n;
-    
+
     if (maflags & POLDEK_MA_PROMOTE_VERSION)
         n += n_snprintf(&buf[n], sizeof(buf) - n, "V,");
-    
+
     if (maflags & POLDEK_MA_PROMOTE_REQEPOCH)
         n += n_snprintf(&buf[n], sizeof(buf) - n, "reqE,");
 
@@ -22,20 +22,20 @@ static const char *maflags_snprintf_s(unsigned maflags)
 
     if (n == nsave)
         return "";
-    
+
     buf[n - 1] = ']';
     return buf;
 }
 
 #if 0                           /* unused */
-static const char *rel_snprintf_s(unsigned rel) 
+static const char *rel_snprintf_s(unsigned rel)
 {
     static char buf[128];
     int n = 0;
 
     if (rel == 0)
         return "";
-    
+
     if (rel & REL_GT)
         n += n_snprintf(&buf[n], sizeof(buf) - n, ">");
 
@@ -44,16 +44,16 @@ static const char *rel_snprintf_s(unsigned rel)
 
     if (rel & REL_LT)
         n += n_snprintf(&buf[n], sizeof(buf) - n, "<");
-    
+
     if (n == 0)
         return "";
-    
+
     return buf;
 }
 #endif
 
 static int do_test_pkgmatch(char *capevr, char *evr, int relation, unsigned maflags,
-                     int expected) 
+                     int expected)
 {
     struct pkg *pkg;
     struct capreq *req;
@@ -63,7 +63,7 @@ static int do_test_pkgmatch(char *capevr, char *evr, int relation, unsigned mafl
 
     if (!poldek_util_parse_evr(n_strdup(capevr), &epoch, &ver, &rel))
         return -1;
-    
+
     pkg = pkg_new("poo", epoch, ver, rel,  NULL, NULL);
     req = capreq_new_evr(NULL, "poo", n_strdup(evr), relation, 0);
 
@@ -80,9 +80,9 @@ static int do_test_pkgmatch(char *capevr, char *evr, int relation, unsigned mafl
     return rc;
 }
 
-static 
-int do_test_capmatch(char *capevr, char *evr, int relation, unsigned maflags, 
-                     int expected) 
+static
+int do_test_capmatch(char *capevr, char *evr, int relation, unsigned maflags,
+                     int expected)
 {
     struct capreq *cap, *req;
     int rc;
@@ -93,7 +93,7 @@ int do_test_capmatch(char *capevr, char *evr, int relation, unsigned maflags,
         cap = capreq_new(NULL, "coo", 0, NULL, NULL, 0, 0);
 
     req = capreq_new_evr(NULL, "coo", n_strdup(evr), relation, 0);
-    
+
     rc = cap_xmatch_req(cap, req, maflags) ? 1 : 0;
     msgn_i(1, 2, "%s match%s %s => %s", capreq_snprintf_s(cap),
            maflags_snprintf_s(maflags), capreq_snprintf_s0(req),
@@ -102,7 +102,7 @@ int do_test_capmatch(char *capevr, char *evr, int relation, unsigned maflags,
     fail_if(rc != expected,
             "match %s <=> %s not equal %d",
             capreq_snprintf_s0(cap), capreq_snprintf_s(req), expected);
-    
+
     capreq_free(cap);
     capreq_free(req);
     return rc;
@@ -118,7 +118,7 @@ START_TEST (test_pkg_match) {
         int rel;
         unsigned maflags;
         int expected;
-            
+
     } pairs[] = {
         {"0:1.2-1", "0:1.0",  REL_GT, 0, 1 },
         {"0:1.2-1", "1:1.1",  REL_GT, 0, 0 },
@@ -137,14 +137,14 @@ START_TEST (test_pkg_match) {
         /* promote_epoch */
         {"0:1.0-1", "1:1.0",  REL_EQ | REL_GT, 0, 0 },
         {"0:1.0-1", "1:1.0",  REL_EQ | REL_GT, POLDEK_MA_PROMOTE_EPOCH, 0 },
-        
+
         {"1:1.0-1", "1:1.0",  REL_EQ | REL_GT, POLDEK_MA_PROMOTE_EPOCH, 1 },
         {"1:1.0-1", "1.0",    REL_EQ | REL_GT, POLDEK_MA_PROMOTE_EPOCH, 1 },
 
         {"0:1.0-1", "1:1.0",  REL_EQ | REL_GT, 0, 0 },
         { 0, 0, 0, 0, 0 },
     };
-        
+
     i = 0;
     msg(1, "\n");
     while (pairs[i].evr) {
@@ -159,7 +159,7 @@ START_TEST (test_pkg_match) {
             char lt_evr_e[128], gt_evr_e[128], lt_evr_v[128], gt_evr_v[128];
             *lt_evr_e = '\0';
             *gt_evr_e = '\0';
-            
+
             if (e > 0) {
                 n_snprintf(lt_evr_e, sizeof(lt_evr_e), "%d:%d.0-0.1", e - 1, v, r);
                 n_snprintf(gt_evr_e, sizeof(gt_evr_e), "%d:%d.0-10", e - 1, v, r);
@@ -167,24 +167,24 @@ START_TEST (test_pkg_match) {
 
             n_snprintf(lt_evr_v, sizeof(lt_evr_v), "%d:%d.0-0.1", e, v, r);
             n_snprintf(gt_evr_v, sizeof(gt_evr_v), "%d:%d.2-1", e, v, r);
-            
+
             for (r=1; r < 3; r++) {
                 char evr[128];
                 n_snprintf(evr, sizeof(evr), "%d:%d.1-%d", e, v, r);
                 if (!prev_evr)
                     prev_evr = n_strdup(evr);
-                
+
                 for (i=0; reltab[i] != 0; i++) {
                     int expected, rel = reltab[i];
 
                     expected = (rel == REL_GT || rel ==  REL_LT) ? 0 : 1;
                     do_test_pkgmatch(evr, evr, rel, 0, expected);
                     do_test_capmatch(evr, evr, rel, 0, expected);
-                    
+
                     expected = (rel == REL_GT || rel == (REL_GT | REL_EQ)) ? 1 : 0;
                     do_test_pkgmatch(evr, lt_evr_v, rel, 0, expected);
                     do_test_capmatch(evr, lt_evr_v, rel, 0, expected);
-                    
+
                     expected = (rel == REL_LT || rel == (REL_LT | REL_EQ)) ? 1 : 0;
                     do_test_pkgmatch(evr, gt_evr_v, rel, 0, expected);
                     do_test_capmatch(evr, gt_evr_v, rel, 0, expected);
@@ -194,7 +194,7 @@ START_TEST (test_pkg_match) {
     }
 }
 END_TEST
-     
+
 
 
 
@@ -206,7 +206,7 @@ START_TEST (test_cap_match) {
         int rel;
         unsigned maflags;
         int expected;
-            
+
     } pairs[] = {
         {"0:1.0", "1:1.0",  REL_EQ | REL_GT, 0, 0 },
         {"0:1.0", "1:1.0",  REL_EQ | REL_GT, POLDEK_MA_PROMOTE_REQEPOCH, 0 },
@@ -226,16 +226,16 @@ START_TEST (test_cap_match) {
         {"0:1.0", "1:1.0",  REL_EQ, 0, 0 },
         {"0:1.0", "1:1.0",  REL_EQ, POLDEK_MA_PROMOTE_CAPEPOCH, 1 },
         {"0:1.0", "1:1.0",  REL_EQ, POLDEK_MA_PROMOTE_REQEPOCH, 0 },
-        {NULL, "1.0",  REL_EQ, 0, 0 }, 
+        {NULL, "1.0",  REL_EQ, 0, 0 },
         {NULL, "1.0",  REL_EQ, POLDEK_MA_PROMOTE_VERSION, 1 },
         {NULL, "1.0-1",  REL_GT, POLDEK_MA_PROMOTE_VERSION, 1 },
         {NULL, "1:1.0-3",  REL_GT, POLDEK_MA_PROMOTE_VERSION, 0 },
    {NULL, "1:1.0-3",  REL_GT, POLDEK_MA_PROMOTE_VERSION | POLDEK_MA_PROMOTE_REQEPOCH, 0 },
    {NULL, "1:1.0-3",  REL_GT, POLDEK_MA_PROMOTE_VERSION | POLDEK_MA_PROMOTE_CAPEPOCH, 1 },
-        
+
         { 0, 0, 0, 0, 0 },
     };
-    
+
     i = 0;
     msg(1, "\n");
     while (pairs[i].evr) {
@@ -243,29 +243,6 @@ START_TEST (test_cap_match) {
         do_test_capmatch(p->capevr, p->evr, p->rel, p->maflags, p->expected);
     }
 }
-END_TEST 
+END_TEST
 
-
-
- 
-struct test_suite test_suite_match = {
-    "EVR match", 
-    {
-        { "pkg", test_pkg_match },
-        { "cap", test_cap_match },
-        { NULL, NULL }
-    }
-};
-
-
- 
-    
-        
-    
-        
-    
-        
-    
-        
-    
-        
+NTEST_RUNNER("EVR match", test_pkg_match, test_cap_match);

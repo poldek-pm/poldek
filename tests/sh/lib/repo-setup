@@ -16,6 +16,7 @@ build_repo_packages() {
         for i in a b c d e f g h i j k l m n o p r s t u w x y z; do
             rpm="$i-1-1.noarch.rpm"
             [ -f "$SOURCE_REPO/$rpm" ] && continue
+            echo "BUILD $i"
             ./build-test-rpm.sh -d $SOURCE_REPO/ -n $i -v 1  >/dev/null 2>&1 || fail "build package $i failed"
         done
     fi

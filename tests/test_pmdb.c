@@ -57,12 +57,4 @@ START_TEST (test_custom_rpmdb) {
 }
 END_TEST
 
-
-struct test_suite test_suite_pmdb = {
-    "PM database",
-    {
-        { "pm_rpm system database", test_system_rpmdb },
-        { "pm_rpm custom database", test_custom_rpmdb },
-        { NULL, NULL }
-    }
-};
+NTEST_RUNNER("PM database", test_system_rpmdb, test_custom_rpmdb);

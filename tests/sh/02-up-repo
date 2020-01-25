@@ -126,7 +126,7 @@ testUpdate()
     ls_expect 5
 
     msg "\n## stubindex"
-    index=$(find $CACHEDIR -name packages.ndir.gz)
+    index=$(find $CACHEDIR -name packages.ndir$COMPR_EXT)
     REPO_CACHE_DIR=$(dirname $index)
     stubindex="$REPO_CACHE_DIR/stubindex.pndir.zst"
     if [ ! -f "$stubindex" ]; then

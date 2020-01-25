@@ -3,11 +3,13 @@
 #include "conf.h"
 #include <trurl/nhash.h>
 
+#define TEST_POLDEK_CONFIG "poldek_test_conf.conf"
+
 const char *expand_env_var(const char *v)
 {
     char tmp[PATH_MAX];
     const char *s;
-    
+
     s = poldek_util_expand_env_vars(tmp, sizeof(tmp), v);
     fail_if(s == NULL);
     return n_strdup(s);
@@ -18,13 +20,13 @@ START_TEST (test_config) {
     struct poldek_conf_tag *tags = NULL;
     tn_hash *cnf, *s;
     int i, j;
-    
-    cnf = poldek_conf_load("poldek_test_conf.conf", 0);
+
+    cnf = poldek_conf_load(TEST_POLDEK_CONFIG, 0);
     fail_if(cnf == NULL, "load config failed");
 
     s = poldek_conf_get_section(cnf, "global");
     fail_if(s == NULL, "no global section?");
-    
+
     i = 0;
     while (poldek_conf_sections[i].name) {
         const char *sname = poldek_conf_sections[i].name;
@@ -46,9 +48,9 @@ START_TEST (test_config) {
 
             v = poldek_conf_get(s, t->name, NULL);
             fail_if(v == NULL, "%s: %s: missing?", sname, t->name);
-            
+
             dv = t->defaultv;
-            
+
             if (t->defaultv == NULL) { /* the xsl sets it to op name */
                 char *p;
                 p = n_strdup(t->name);
@@ -66,12 +68,12 @@ START_TEST (test_config) {
                 else
                     dv = "yes";
             }
-            
+
             if (t->flags & CONF_TYPE_F_ENV) {
                 fail_ifnot(t->flags & CONF_TYPE_STRING);
                 dv = expand_env_var(dv);
             }
-            
+
             fail_if(n_str_ne(dv, v), "%s: %s: %s != %s",
                     sname, t->name, v, dv);
         }
@@ -82,11 +84,11 @@ END_TEST
 
 static char *values_list[] = { "foo", "bar", "baz", NULL };
 
-static char *make_conf_line(const char *opname, int no, int sep) 
+static char *make_conf_line(const char *opname, int no, int sep)
 {
     char line[1024];
     int i = 0, n = 0;
-        
+
     n = n_snprintf(line, sizeof(line), "%s = ", opname);
     while (values_list[i]) {
         char buf[64];
@@ -99,7 +101,7 @@ static char *make_conf_line(const char *opname, int no, int sep)
     return n_strdup(line);
 }
 
-static int verify_list(tn_array *list, int maxno, const char *op) 
+static int verify_list(tn_array *list, int maxno, const char *op)
 {
     tn_hash *dict = n_hash_new(64, NULL);
     int no;
@@ -107,7 +109,7 @@ static int verify_list(tn_array *list, int maxno, const char *op)
     fail_if(n_array_size(list) != 3 * maxno,
             "%s: have %d, expected %d - some values lost",
             op, n_array_size(list), 3 * maxno);
-    
+
     for (no = maxno - 1; no >= 0; no--) { /* from max to 0, to test
                                              param overwriting
                                              (test_config_lists_excl) */
@@ -127,14 +129,14 @@ static int verify_list(tn_array *list, int maxno, const char *op)
     return 1;
 }
 
-void make_conf_file(const char *name, tn_array *lines) 
+void make_conf_file(const char *name, tn_array *lines)
 {
     FILE *f;
     int i;
-    
+
     f = fopen(name, "w");
     fail_if(f == NULL, "file open failed");
-    for (i=0; i<n_array_size(lines); i++) 
+    for (i=0; i<n_array_size(lines); i++)
         fprintf(f, "%s\n", (char*) n_array_nth(lines, i));
     fclose(f);
 }
@@ -147,9 +149,9 @@ START_TEST (test_config_lists) {
     tn_hash *cnf, *s;
     tn_array *lines, *list;
     int i, maxno = 0;
-    
+
     lines = n_array_new(16, 0, 0);
-    
+
     i = 0;
     while (list_ops[i]) {
         maxno = 0;
@@ -189,7 +191,7 @@ START_TEST (test_config_lists_excl) {
     int i, maxno = 0;
 
     lines = n_array_new(16, 0, 0);
-    
+
     i = 0;
     while (list_ops[i]) {
         maxno = 3;
@@ -199,7 +201,7 @@ START_TEST (test_config_lists_excl) {
         }
         i++;
     }
-    
+
     cnf = poldek_conf_addlines(NULL, "source", lines);
     fail_if(cnf == NULL, "load config failed");
 
@@ -216,25 +218,14 @@ START_TEST (test_config_lists_excl) {
 }
 END_TEST
 
-struct test_suite test_suite_config = {
-    "config", 
-    {
-        { "raw", test_config },
-        { "lists", test_config_lists },
-        
-//        XXX: excl list not implemented yet
-        { "lists excl", test_config_lists_excl }, 
-        { NULL, NULL }
-    }
-};
+START_TEST(setup) {
+    int ec = system("make " TEST_POLDEK_CONFIG);
+    fail_if(ec != 0, "make " TEST_POLDEK_CONFIG " failed");
+}
+END_TEST
 
-    
-        
-    
-        
-    
-        
-    
-        
-    
-        
+NTEST_RUNNER("config",
+             setup,
+             test_config,
+             test_config_lists,
+             test_config_lists_excl);

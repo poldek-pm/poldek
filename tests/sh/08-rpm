@@ -9,8 +9,9 @@ ORIGREPO=
 DESTINATION_REPO=
 DEPENDENCY_SOLVER=3
 
-# XXX, for some reason rpm5 does not creat its database correctly if running as ordinary user
+#XXX for some reason rpm5 does not create its database correctly if running as ordinary user
 SUDO="sudo"
+[ $(id -u) == "0" ] && SUDO=""
 
 setUp() {
     [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
@@ -96,7 +97,6 @@ try_install() {
   done
 }
 
-# not implemented yet
 testUpgradeMultipleInstalled() {
     msgn "Preparing repositories..."
     build_installed a 0.9.8c-1
@@ -107,7 +107,6 @@ testUpgradeMultipleInstalled() {
     try_install a "a-1.1.1k-1" "a-1.1.1j-1"
 }
 
-# not implemented yet
 testUpgradeMultipleInstalledWithDeps() {
     msgn "Preparing repositories..."
     build_installed a 0.9.8c-1
@@ -118,6 +117,7 @@ testUpgradeMultipleInstalledWithDeps() {
         build_installed $i 0.1-0.1 -r "'a = 1.0.0o'"
     done
 
+# TODO
 #    for i in b11 c11; do
 #        build_installed $i 1.0-1 -r "'a = 1.1'"
 #    done
@@ -127,7 +127,7 @@ testUpgradeMultipleInstalledWithDeps() {
 }
 
 # not implemented yet
-XXXtestUpgradeMultipleInstalledIndir() {
+xtestUpgradeMultipleInstalledIndir() {
     msgn "Preparing repositories..."
     build_installed a 1.0-1
     build_installed a 1.1-1

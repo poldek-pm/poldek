@@ -5,8 +5,8 @@ Reqires: fakeroot
 
 To run all tests:
 
-$ make tests  # runs all tests made with check library
-$ make sh-tests  # runs all tests written in shell (sh/ subdir)
+$ make check        # runs all tests
+$ ./run-sh-tests.sh # runs tests written in shell only (sh/ subdir)
 
 
 sh/ test scripts may be executed separately:
