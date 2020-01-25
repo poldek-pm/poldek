@@ -356,7 +356,7 @@ static int make_idx(struct arg_s *arg_s)
     }
 
     opts = arg_s->opts;
-    if (poldek__is_in_testing_mode()) {
+    if (getenv("POLDEK_TESTING") != NULL) {
         const char *compr = getenv("POLDEK_TESTING_INDEX_COMPR");
         if (compr) {
             if (n_str_in(compr, "gz", "zst", "none", NULL)) {
