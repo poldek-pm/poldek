@@ -8,8 +8,8 @@ TNDB_DIR = @TNDB_DIR@
 
 CLI=cli
 SUBDIRS   = po doc $(TRURL_DIR) $(TNDB_DIR) sigint vfile conf pkgdir \
-            pm install3 . $(CLI)
-DIST_SUBDIRS = $(SUBDIRS) python tests
+            pm install3 . $(CLI) tests
+DIST_SUBDIRS = $(SUBDIRS) python
 
 AM_CPPFLAGS = @TRURL_INCLUDE@ @TNDB_INCLUDE@
 AM_CFLAGS = @AM_CFLAGS@
