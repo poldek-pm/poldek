@@ -10,25 +10,32 @@ setUp() {
     tearDown
 }
 
+abort() {
+    echo "$1, ABORT"
+    exit 1
+}
+
 build_repo_packages() {
     local n=$(find $SOURCE_REPO/ -name \*.rpm | wc -l)
     if [ $n -lt 20 ]; then
+
         for i in a b c d e f g h i j k l m n o p r s t u w x y z; do
             rpm="$i-1-1.noarch.rpm"
             [ -f "$SOURCE_REPO/$rpm" ] && continue
-            echo "BUILD $i"
-            ./build-test-rpm.sh -d $SOURCE_REPO/ -n $i -v 1  >/dev/null 2>&1 || fail "build package $i failed"
+            ./build-test-rpm.sh -d $SOURCE_REPO/ -n $i -v 1  >/dev/null 2>&1 || abort "build package $i failed"
         done
     fi
 }
 
+
 oneTimeSetUp() {
-    [ ! -d "$PWD/sh/lib" ] && fail "$PWD is not a tests directory (missing sh/lib)"
+    [ ! -d "$PWD/sh/lib" ] && abort "$PWD is not a tests directory (missing sh/lib)"
 
     SHLIBDIR="$PWD/sh/lib"
 
     SOURCE_REPO=${SOURCE_REPO:-"${PWD}/repo"}
-    [ ! -d "$SOURCE_REPO" ] && fail "$SOURCE_REPO: no such directory"
+    mkdir -p $SOURCE_REPO
+    [ ! -d "$SOURCE_REPO" ] && abort "$SOURCE_REPO: no such directory"
 
     TMP=${TMP:-""}
     TMPDIR=${TMPDIR:-""}
@@ -41,19 +48,19 @@ oneTimeSetUp() {
 
     rm -rf $TMPDIR
     mkdir -p $TMPDIR
-    [ ! -d $TMPDIR ] && fail "$TMPDIR: no such directory"
+    [ ! -d $TMPDIR ] && abort "$TMPDIR: no such directory"
 
 
     CACHEDIR="$TMPDIR/kesz"
     rm -rf $CACHEDIR
     mkdir -p $CACHEDIR
-    [ ! -d $CACHEDIR ] && fail "$CACHEDIR: no such directory"
+    [ ! -d $CACHEDIR ] && abort "$CACHEDIR: no such directory"
 
     REPO="$TMPDIR/repo"
     REPOURL="test://$TMPDIR/repo/"
 
     mkdir -p $REPO
-    [ ! -d $REPO ] && fail "mkdir $REPO failed?"
+    [ ! -d $REPO ] && abort "mkdir $REPO failed?"
 
     PATH="$PATH:$PWD/sh/lib/"
 
@@ -67,7 +74,7 @@ oneTimeSetUp() {
     POLDEK_RAW_UP="$POLDEK --conf ./sh/lib/vftest-fetch.conf --cachedir $CACHEDIR"
 
     build_repo_packages
-    ln -sf $SOURCE_REPO/*.rpm $REPO/ || fail
+    ln -sf $SOURCE_REPO/*.rpm $REPO/ || abort "make symlinks failed"
     tearDown
 }
 
