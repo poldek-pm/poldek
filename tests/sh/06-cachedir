@@ -12,6 +12,7 @@ create_local_conf() {
 
 testCacheDir()
 {
+    USER=${USER:-$(id -un)}
 
     HOME="$TMPDIR/fakehome"     # in TESTING mode $HOME is used
     mkdir $HOME || fail "mkdir"

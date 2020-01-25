@@ -1,13 +1,20 @@
 #!/bin/sh
 
-GREEN='\033[1;32m'
-RED='\033[0;31m'
-NC='\033[0m'
+GREEN=""
+RED=""
+NC=""
 
-[ ! -t 1 ] && {  echo "not tty"; GREEN=""; RED=""; NC=""; }
+if [ -t 1 ]; then
+    nc=$(tput colors)
+    if [ -n "$nc" -a "$nc" -ge 8 ]; then
+        GREEN="$(tput setaf 2)"
+        RED="$(tput setaf 1)"
+        NC="$(tput sgr0)"
+    fi
+fi
 
 #echo "Running *.sh tests";
-find sh -name \*~ | xargs -r rm -f
+rm -f sh/*~
 
 LOG=sh-tests.log
 > $LOG
@@ -42,3 +49,6 @@ done
 echo "====================================="
 echo " Passed $nok tests of total $nth"
 echo "====================================="
+
+[ "$nth" -eq 0 -o "$nth" != "$nok" ] && exit 1
+exit 0
