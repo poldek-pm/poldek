@@ -17,3 +17,10 @@ jobs:
       - run: ./autogen.sh
       - run: make CFLAGS="-O0"
       - run: make -C tests check
+
+workflows:
+  version: 2
+  workflow:
+    jobs:
+    - build-pld
+    - build-centos
