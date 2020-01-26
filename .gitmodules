@@ -1,8 +1,8 @@
 [submodule "trurlib"]
 	path = trurlib
-	url = git@github.com:poldek-pm/trurlib.git
+	url = https://github.com/poldek-pm/trurlib.git
 	branch = master
 [submodule "tndb"]
 	path = tndb
-	url = git@github.com:poldek-pm/tndb.git
+	url = https://github.com/poldek-pm/tndb.git
 	branch = master
