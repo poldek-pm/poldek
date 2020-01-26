@@ -82,6 +82,8 @@ void *pm_pset_init(void)
     pm->cnf = n_hash_new(16, NULL);
     pm->sources = n_array_new(4, (tn_fn_free)source_free,
                               (tn_fn_cmp)source_cmp);
+    pm->flags = 0;
+
     return pm;
 }
 
