@@ -288,9 +288,12 @@ struct vcn *vcn_new(int proto, const char *host, int port,
             break;
     }
 
-    vfff_io_init(cn);
+    if (!vfff_io_init(cn)) {
+        vcn_free(cn);
+        cn = NULL;
+    }
 
-    if (cn->m_open && !cn->m_open(cn)) {
+    if (cn && cn->m_open && !cn->m_open(cn)) {
         vcn_free(cn);
         cn = NULL;
     }

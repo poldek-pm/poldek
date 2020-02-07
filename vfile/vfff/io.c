@@ -14,6 +14,7 @@
 #endif
 
 #include <unistd.h>
+#include <string.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
@@ -78,32 +79,59 @@ static int ssl_select(struct vcn *cn, unsigned timeout)
     return raw_select(cn, timeout);
 }
 
+static void set_ssl_errors(void) {
+    unsigned long e;
+    char buf[1024];
+    int n = 0;
+
+    buf[0] = '\0';
+    while ((e = ERR_get_error())) {
+        ERR_error_string_n(e, &buf[n], sizeof(buf) - n);
+        n += strlen(buf);
+    }
+
+    if (*buf)
+        vfff_set_err(e, "openssl: %s", buf);
+}
+
+
 static struct sslmod *init_ssl(const struct vcn *cn)
 {
-    const SSL_METHOD *method;
-    SSL_CTX *ctx;
-    SSL *ssl;
+    const SSL_METHOD *method = NULL;
+    SSL_CTX *ctx = NULL;
+    SSL *ssl = NULL;
 
     OpenSSL_add_all_algorithms();
     SSL_load_error_strings();
 
     method = TLS_client_method();
     ctx = SSL_CTX_new(method);
-    if (ctx == NULL) {
-        ERR_print_errors_fp(stderr);
-        abort();
-    }
+    if (ctx == NULL)
+        goto l_err;
 
     ssl = SSL_new(ctx);
+    SSL_set_tlsext_host_name(ssl, cn->host);
     SSL_set_fd(ssl, cn->sockfd);
+
     if (SSL_connect(ssl) != 1)
-        ERR_print_errors_fp(stderr);
+        goto l_err;
 
     struct sslmod *mod = n_malloc(sizeof(*mod));
     mod->ctx = ctx;
     mod->ssl = ssl;
 
     return mod;
+
+ l_err:
+    set_ssl_errors();
+
+    if (ssl)
+        SSL_free(ssl);
+
+    if (ctx)
+        SSL_CTX_free(ctx);
+
+    return NULL;
 }
 
 int vfff_io_init(struct vcn *cn) {
@@ -118,7 +146,7 @@ int vfff_io_init(struct vcn *cn) {
         cn->io_select = raw_select;
     }
 
-    return 1;
+    return cn->iomod != NULL;
 }
 
 void vfff_io_destroy(struct vcn *cn) {
