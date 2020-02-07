@@ -267,7 +267,7 @@ int do_open(struct pkgdir *pkgdir, unsigned flags)
     if (!idx_open(&idx, pkgdir, vfmode))
         return 0;
 
-    DBGF_F("%s\n", pkgdir->path);
+    DBGF("%s\n", pkgdir->path);
 
     pkgdir->ts = poldek_util_mtime(vfile_localpath(idx.repomd_vf));
     pkgdir->mod_data = n_malloc(sizeof(idx));
