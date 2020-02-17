@@ -79,7 +79,8 @@ static int ssl_select(struct vcn *cn, unsigned timeout)
     return raw_select(cn, timeout);
 }
 
-static void set_ssl_errors(void) {
+static void set_ssl_errors(void)
+{
     unsigned long e;
     char buf[1024];
     int n = 0;
@@ -134,22 +135,29 @@ static struct sslmod *init_ssl(const struct vcn *cn)
     return NULL;
 }
 
-int vfff_io_init(struct vcn *cn) {
+int vfff_io_init(struct vcn *cn)
+{
+    int ok = 1;
+
     if (cn->proto == VCN_PROTO_HTTPS) {
         cn->iomod = init_ssl(cn);
         cn->io_read = ssl_read;
         cn->io_write = ssl_write;
         cn->io_select = ssl_select;
+        if (cn->iomod == NULL)
+            ok = 0;
+
     } else {
         cn->io_read = raw_read;
         cn->io_write = raw_write;
         cn->io_select = raw_select;
     }
 
-    return cn->iomod != NULL;
+    return ok;
 }
 
-void vfff_io_destroy(struct vcn *cn) {
+void vfff_io_destroy(struct vcn *cn)
+{
     struct sslmod *mod = cn->iomod;
     if (mod) {
         SSL_free(mod->ssl);
