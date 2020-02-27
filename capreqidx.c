@@ -126,13 +126,14 @@ int skip_LENGTHS[] = {
     0
 };
 
-/* b) well-known, FHS directories and some generic rpm specific caps */
+/* b) well-known FHS directories and some generic rpm specific caps */
 const char *skip_CAPS[] = {
     "/etc", "/bin",
     "/usr/bin", "/usr/sbin", "/usr/lib",
     "/usr/share", "/usr/include",
+    "elf(buildid)",
     "rtld(GNU_HASH)",
-    "elf(buildid)"
+    NULL
 };
 
 tn_hash *skip_CAPS_H = NULL;
@@ -181,19 +182,22 @@ inline static int indexable_cap(const char *name, int len, unsigned raw_hash)
     return 1;
 }
 
-int capreq_idx_add(struct capreq_idx *idx, const char *capname, int capname_len,
+int capreq_idx_add(struct capreq_idx *idx,
+                   const char *capname, int capname_len,
                    struct pkg *pkg)
 {
     struct capreq_idx_ent *ent;
     uint32_t raw_khash = n_hash_compute_raw_hash(capname, capname_len);
 
-    if (!indexable_cap(capname, capname_len, raw_khash)) {
-        DBGF("skip %s\n", capname);
-        return 1;
+    /* skip redundant/ needless requirements */
+    if (idx->flags & CAPREQ_IDX_REQ) {
+        if (!indexable_cap(capname, capname_len, raw_khash)) {
+            DBGF("skip %s\n", capname);
+            return 1;
+        }
     }
 
     uint32_t khash = n_hash_compute_index_hash(idx->ht, raw_khash);
-
     if ((ent = n_hash_hget(idx->ht, capname, capname_len, khash)) == NULL) {
         const tn_lstr16 *cent = capreq__alloc_name(capname, capname_len);
 
