@@ -7,7 +7,7 @@ m4_define([poldek_version],
 	  [poldek_major_version.poldek_minor_version.poldek_micro_version])
 
 AC_PREREQ([2.63])
-AC_INIT([poldek], [poldek_version], [http://bugs.launchpad.net/poldek])
+AC_INIT([poldek], [poldek_version], [https://github.com/poldek-pm/poldek/issues/new])
 AC_CONFIG_SRCDIR([capreq.c])
 AC_CONFIG_HEADERS([config.h])
 
