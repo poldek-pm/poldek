@@ -887,9 +887,6 @@ int sources_update(tn_array *sources, unsigned flags)
         if (src->flags & PKGSOURCE_NOAUTOUP)
             continue;
 
-        if (i > 0)
-            msgn(0, "\n");
-
         if (!source_update(src, flags))
             nerr++;
     }

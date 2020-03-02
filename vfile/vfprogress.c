@@ -253,7 +253,7 @@ static void tty_progress(void *data, long total, long amount)
 
         int nl;
         if (total == amount) {
-            nl = n_snprintf(outline, sizeof(outline), "Retrieved %s %s", bar->label, unit_line);
+            nl = n_snprintf(outline, sizeof(outline), "%s %s", bar->label, unit_line);
 
         } else {
             int spinner = spinner_CHARS[bar->seq % 4];
