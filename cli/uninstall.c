@@ -36,7 +36,7 @@ static int uninstall(struct cmdctx *cmdctx);
 #define OPT_GID             OPT_GID_OP_UNINSTALL
 #define OPT_UNINSTALL       'e'
 #define OPT_INST_NODEPS     (OPT_GID + 2)
-#define OPT_INST_GREEDY     (OPT_GID + 3)
+#define OPT_INST_GREEDY     'g'
 #define OPT_PM              (OPT_GID + 4)
 
 static struct argp_option options[] = {
