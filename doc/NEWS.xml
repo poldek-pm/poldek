@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <news>
-  <release version="0.42.0" date="2020/01/20" focus="performance">
+  <release version="0.42.0" date="2020/03/02" focus="performance">
     <entry><para>
       cli: faster shell boot time due to lazy load repos; compacted and colored install/ uninstall summary and downloading progress bar
     </para></entry>
@@ -14,7 +14,10 @@
       depsolver: with "upgrade multiple instances" config option, poldek handle upgrades of multiple installed packages: most recent version is upgraded while other installed versions are kept untouch
     </para></entry>
     <entry><para>
-      ZSTD support: create zst repos with --mo=zst or with "compr = zst" source config option or with "default index compr = zst" global config option. ZSTD is faster than GZIP, saves about 200ms on PLD TH repo loading (~30K packages).
+      ZSTD support: create zst repos with --mo=zst or with "compr = zst" source config option (or with global "default index compr = zst"). ZSTD is faster than GZIP, saves about 200ms on PLD TH repo loading (~30K packages).
+    </para></entry>
+    <entry><para>
+      SSL SNI support
     </para></entry>
     <entry><para>
       fix: allow multiple --rpmdef command line options
