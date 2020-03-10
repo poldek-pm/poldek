@@ -20,11 +20,11 @@ path = ${REPOURL}2
 " > $TMPDIR/poldek.conf
 }
 
-testConf() 
+testConf()
 {
     #cat $TMPDIR/poldek.conf
     create_local_conf
-    poldek_l="$POLDEK --conf $TMPDIR/poldek.conf -q  -l"    
+    poldek_l="$POLDEK --conf $TMPDIR/poldek.conf -q  -l"
 
     is_verbose_mode && $poldek_l
 
@@ -35,7 +35,7 @@ testConf()
     assertEquals "2 sources expected, but not those" "$n" "2"
 }
 
-testConfAsRoot() 
+testConfAsRoot()
 {
     create_local_conf
     msgn "--conf"
@@ -65,13 +65,49 @@ testConfAsRoot()
     assertEquals "2 sources expected, but not those" "$n" "2"
 }
 
+testConfMacros()
+{
+    echo "
+_arch   = x86_64
+_snap	= 2019
+_prefix = https://test/dists/th/%{_snap}
 
-testConfInclude() 
+[source]
+type   = pndir
+name   = th-%{_snap}
+path   = %{_prefix}/PLD/%{_arch}/RPMS/
+" > $TMPDIR/macros.conf
+
+    local source_url=$($POLDEK --conf $TMPDIR/macros.conf -l | awk '{print $2}')
+    local url="https://test/dists/th/2019/PLD/x86_64/RPMS/"
+    assertEquals "expected $url, got $source_url" "$source_url" "$url"
+}
+
+testConfMacrosNested()
+{
+    echo "
+_arch   = x86_64
+_snap	= 2019
+_zprefix = https://test/dists/th/%{_snap}
+_prefix = %{_zprefix}
+
+[source]
+type   = pndir
+name   = th-%{_snap}
+path   = %{_prefix}/PLD/%{_arch}/RPMS/
+" > $TMPDIR/macros.conf
+
+    local source_url=$($POLDEK --conf $TMPDIR/macros.conf -l | grep -P '^th-2019' | awk '{print $2}')
+    local url="https://test/dists/th/2019/PLD/x86_64/RPMS/"
+    assertEquals "expected $url, got $source_url" "$source_url" "$url"
+}
+
+testConfInclude()
 {
     #cat $TMPDIR/poldek.conf
     create_local_conf
     conf="$TMPDIR/poldek.conf"
-    poldek_l="$POLDEK --conf $conf -q -l"    
+    poldek_l="$POLDEK --conf $conf -q -l"
     cp $conf $conf.orig
 
     msgn "%include foo.conf"
@@ -104,7 +140,7 @@ testConfInclude()
 }
 
 
-testRemoteConfAndMacros() 
+testRemoteConfAndMacros()
 {
 
     create_local_conf
@@ -127,7 +163,7 @@ type = pndir
 path = ${REPOURL}4
 " >> $TMPDIR/poldek.conf
 
-    echo " 
+    echo "
 _name_prefix = xtest
 [source]
 name = %{_name_prefix}1
@@ -206,7 +242,7 @@ path = ${REPOURL}x4
 
     msgn "whole conf remote"
     $POLDEK --conf test://$TMPDIR/poldek.conf --cachedir $CACHEDIR -q -l >/dev/null
-    is_verbose_mode && $poldek_l_cdir    
+    is_verbose_mode && $poldek_l_cdir
 
     n=$($poldek_l_cdir | grep '(type=' | wc -l)
     assertEquals "8 sources exepected, got $n" "$n" "8"

@@ -373,9 +373,6 @@ const char *do_expand_value(char *expanded_val, size_t size, const char *val,
     const char *new_val;
     char expand_val[PATH_MAX], expand_val2[PATH_MAX];
 
-    if (strchr(val, '%') == NULL)
-        return val;
-
     new_val = expand_macros(expand_val, sizeof(expand_val), val, ht);
     if (ht_global && strchr(new_val, '%')) {
         new_val = expand_macros(expand_val2, sizeof(expand_val2),
@@ -384,6 +381,34 @@ const char *do_expand_value(char *expanded_val, size_t size, const char *val,
 
     if (val != new_val) {
         n_snprintf(expanded_val, size, "%s", new_val);
+        val = expanded_val;
+    }
+
+    return val;
+}
+
+static
+const char *expand_value(char *expanded_val, size_t size, const char *val,
+                         tn_hash *ht, tn_hash *ht_global)
+{
+    const char *new_val, *tmp_val, *orig_val;
+    int n = 0;
+
+    if (strchr(val, '%') == NULL)
+        return val;
+
+    orig_val = tmp_val = strdupa(val);
+
+    /* try to unroll "nested" macros */
+    do {
+        new_val = do_expand_value(expanded_val, size, tmp_val, ht, ht_global);
+        if (new_val != tmp_val)
+            tmp_val = strdupa(new_val);
+        n++;
+    } while (n < 5 && strchr(tmp_val, '%') != NULL);
+
+    if (orig_val != tmp_val) {    /* expanded? */
+        n_snprintf(expanded_val, size, "%s", tmp_val);
         val = expanded_val;
     }
 
@@ -399,6 +424,7 @@ static int expand_section_vars(tn_hash *ht, tn_hash *ht_global)
     int i, j, rc = 1;
 
     keys = n_hash_keys(ht);
+
     for (i=0; i<n_array_size(keys); i++) {
         const char *key = n_array_nth(keys, i);
         struct copt *opt;
@@ -406,8 +432,7 @@ static int expand_section_vars(tn_hash *ht, tn_hash *ht_global)
         if ((opt = n_hash_get(ht, key)) == NULL)
             continue;
 
-        val = do_expand_value(expanded_val, sizeof(expanded_val), opt->val,
-                              ht, ht_global);
+        val = expand_value(expanded_val, sizeof(expanded_val), opt->val, ht, ht_global);
         if (val != opt->val) {
             n_cfree(&opt->val);
             opt->val = n_strdup(val);
@@ -419,8 +444,7 @@ static int expand_section_vars(tn_hash *ht, tn_hash *ht_global)
         vals = n_array_clone(opt->vals);
         for (j=0; j < n_array_size(opt->vals); j++) {
             const char *v = n_array_nth(opt->vals, j);
-            val = do_expand_value(expanded_val, sizeof(expanded_val), v,
-                                  ht, ht_global);
+            val = expand_value(expanded_val, sizeof(expanded_val), v, ht, ht_global);
             n_array_push(vals, n_strdup(val));
         }
         n_array_free(opt->vals);
@@ -754,7 +778,7 @@ static char *prepare_include_path(const char *tag, char *path, size_t size,
     p = eat_wws(p);
 
     if (strchr(p, '%'))
-        p = (char*)do_expand_value(expval, sizeof(expval), p, ht, ht_global);
+        p = (char*)expand_value(expval, sizeof(expval), p, ht, ht_global);
 
     if (strchr(p, '$'))
         p = (char*)poldek_util_expand_env_vars(expenval, sizeof(expenval), p);
