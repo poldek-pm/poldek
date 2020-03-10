@@ -217,6 +217,15 @@ int print_pair(char *line, size_t size,
     return n;
 }
 
+static int pkg_cmp_name_arch(const struct pkg *p1, const struct pkg *p2)
+{
+    int rc = pkg_cmp_name(p1, p2);
+    if (rc == 0)
+        rc = pkg_cmp_arch(p1, p2);
+
+    return rc;
+}
+
 static
 void colored_install_summary(tn_array *ipkgs, tn_array *idepkgs, tn_array *rmpkgs)
 {
@@ -229,16 +238,20 @@ void colored_install_summary(tn_array *ipkgs, tn_array *idepkgs, tn_array *rmpkg
 
     tn_array *rems = NULL;
     if (rmpkgs) {
-        rems = rmpkgs ? n_array_dup(rmpkgs, (tn_fn_dup)pkg_link) : NULL;
-        n_array_sort(rems);
+        rems = n_array_dup(rmpkgs, (tn_fn_dup)pkg_link);
+        n_array_sort_ex(rems, (tn_fn_cmp)pkg_cmp_name_arch);
     }
 
     for (int i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
         struct pkg *old_pkg = NULL;
 
-        if (rems)
-            old_pkg = n_array_bsearch_ex(rems, pkg, (tn_fn_cmp)pkg_cmp_name);
+        if (rems) {
+            old_pkg = n_array_bsearch_ex(rems, pkg, (tn_fn_cmp)pkg_cmp_name_arch);
+            if (old_pkg == NULL) {
+                old_pkg = n_array_bsearch_ex(rems, pkg, (tn_fn_cmp)pkg_cmp_name);
+            }
+        }
 
         if (old_pkg) {
             char line[PATH_MAX];

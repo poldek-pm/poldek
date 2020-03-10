@@ -309,6 +309,41 @@ testUpgradeMultilib() {
     POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
 }
 
+# https://github.com/poldek-pm/poldek/issues/1
+testUpgradeMultilibSummary() {
+    ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
+    POLDEK_INSTALL="$POLDEK_INSTALL -Omultilib=1"
+
+    msgn "Preparing repositories..."
+    for i in i686 x86_64; do
+        build_installed a 1-1 -a $i -f "/hello.$i"
+        build a 2-2 -a $i -f "/hello.$i"
+    done
+
+    # be verbose to test summary shape (ugly)
+    local q=$QUIET
+    QUIET="-v"
+
+    #runpoldek --upgrade-dist --test -v
+    local summary=$(runpoldek --upgrade-dist --test -v | grep -P ^U)
+    local expected_summary="U a-(1-1 => 2-2).i686  a-(1-1 => 2-2).x86_64"
+    assertEquals "expected [$expected_summary], got [$summary]" "$summary" "$expected_summary"
+
+    # one updated and one new
+    rm -f $DESTINATION_REPO/a*.x86_64.rpm
+    summary=$(runpoldek --upgrade --test -v a-2-2.x86_64 a-2-2.i686 | grep -P ^U)
+    expected_summary="U a-(1-1 => 2-2).i686"
+    assertEquals "expected [$expected_summary], got [$summary]" "$summary" "$expected_summary"
+
+    summary=$(runpoldek --upgrade --test -v a-2-2.x86_64 a-2-2.i686 | grep -P ^A)
+    expected_summary="A a-2-2.x86_64"
+    assertEquals "expected [$expected_summary], got [$summary]" "$summary" "$expected_summary"
+
+    POLDEK_INSTALL="$ORIG_POLDEK_INSTALL"
+    QUIET=$q
+}
+
+
 # https://bugs.pld-linux.org/show_bug.cgi?id=83
 testUpgradeMultilibOneTransactionForSamePackagesDifferentSource() {
     ORIG_POLDEK_INSTALL="$POLDEK_INSTALL"
