@@ -221,7 +221,7 @@ static int pkg_cmp_name_arch(const struct pkg *p1, const struct pkg *p2)
 {
     int rc = pkg_cmp_name(p1, p2);
     if (rc == 0)
-        rc = pkg_cmp_arch(p1, p2);
+        rc = strcmp(pkg_arch(p1), pkg_arch(p2)); /* need lexical order */
 
     return rc;
 }
@@ -241,6 +241,8 @@ void colored_install_summary(tn_array *ipkgs, tn_array *idepkgs, tn_array *rmpkg
         rems = n_array_dup(rmpkgs, (tn_fn_dup)pkg_link);
         n_array_sort_ex(rems, (tn_fn_cmp)pkg_cmp_name_arch);
     }
+
+    n_array_sort_ex(pkgs, (tn_fn_cmp)pkg_cmp_name_arch);
 
     for (int i=0; i < n_array_size(pkgs); i++) {
         struct pkg *pkg = n_array_nth(pkgs, i);
