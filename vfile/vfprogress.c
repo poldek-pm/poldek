@@ -179,6 +179,10 @@ static void tty_progress(void *data, long total, long amount)
         bar->state = VF_PROGRESS_RUNNING;
         bar->lastlen = 0;
 	bar->freq = 0;
+
+        if (!bar->is_tty) {
+            vf_log(VFILE_LOG_INFO | VFILE_LOG_TTY, _("Retrieving %s"), bar->label);
+        }
     }
 
 #define HASH_SIZE 8192
@@ -257,7 +261,7 @@ static void tty_progress(void *data, long total, long amount)
 
         } else {
             int spinner = spinner_CHARS[bar->seq % 4];
-            nl = n_snprintf(outline, sizeof(outline), "Retrieving %s %c%5.1f%% %s", bar->label, spinner, percent, unit_line);
+            nl = n_snprintf(outline, sizeof(outline), _("Retrieving %s %c%5.1f%% %s"), bar->label, spinner, percent, unit_line);
 
             if (nl > bar->term_width - 5) {
                 char *label;
