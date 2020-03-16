@@ -104,7 +104,9 @@ NEWS:
 conf_sections.c: $(top_srcdir)/doc/poldek.conf.xml $(top_srcdir)/doc/*.xsl
 	         	 doc/conf-xml2.sh c doc/poldek.conf.xml > $@
 
-vfjuggle:
+.PHONY: check-sh
+check-sh:
+	$(MAKE) -C tests check-sh
 
 dist-hook:
 	@if test -d "$(srcdir)/.git"; then \

@@ -4,9 +4,13 @@ LDADD = $(top_builddir)/libpoldek.la @CHECK_LIBS@
 check_PROGRAMS = test_match test_env test_pmdb test_op test_config \
 		 test_store test_cmp
 
-TESTS = $(check_PROGRAMS) run-sh-tests.sh
+TESTS = $(check_PROGRAMS)
 
-EXTRA_DIST = test.h poldek_test_conf.conf sh
+EXTRA_DIST = test.h poldek_test_conf.conf sh run-sh-tests.sh
+
+.PHONY: check-sh
+check-sh:
+	@./run-sh-tests.sh
 
 # called by test_config
 poldek_test_conf.conf: $(top_srcdir)/doc/conf-xml2testconf.xsl $(top_srcdir)/doc/poldek.conf.xml
