@@ -4,27 +4,14 @@
 . ./sh/lib/setup
 . ./sh/lib/repo-setup
 
-mkidx() {
-   $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
-}
-
 up() {
    poldek_up -Oautoupa=n --up || fail "up failed"
 }
 
-testCleanLocalCache()
+# simulate locally cached package
+fetch_package_to_cachedir()
 {
-    POLDEK_TESTING_DENIED_FILES="packages.ndir.diff.toc"
-
-    msgn "Creating repo"
-    indexfile="$REPO/packages.ndir.gz"
-    mkidx
-    die_if_empty_index $indexfile
-
-    msgn "up"
-    up
-
-    msgn "Fetching package"
+    msgn "download package to cachedir"
     package=$(poldek_quiet_up --skip-installed -q --cmd 'ls -q | !head -1')
     [ -n "$package" ] || fail "no available packages??"
 
@@ -36,33 +23,73 @@ testCleanLocalCache()
     # no simply way to fetch packages to local repo cache1
     index=$(find $CACHEDIR -name packages.ndir.gz)
     REPO_CACHE_DIR=$(dirname $index)
-    mv -f $CACHEDIR/$package*.rpm $REPO_CACHE_DIR
+    cp -L $CACHEDIR/$package*.rpm $REPO_CACHE_DIR # symlinked by test fetcher
+    rm -f $CACHEDIR/$package*.rpm
+}
 
-    msgn "clean"
-    poldek_up --clean
+setUp()
+{
+    tearDown # from lib/repo-setup
+    POLDEK_TESTING_DENIED_FILES="packages.ndir.diff.toc"
 
-    files=$(find $CACHEDIR -type f | grep -vE '\.rpm$')
-    n=$(find $CACHEDIR -type f | grep -vE '\.rpm$' | wc -l)
-    assertEquals "cachedir still contains non rpm files ($files)" "0" "$n"
+    msgn "Creating repo"
+    indexfile="$REPO/packages.ndir.gz"
+    $POLDEK_NOCONF -s $REPO --mkidx --mt pndir || fail "mkidx failed"
+    die_if_empty_index $indexfile
+    rm -rf $CACHEDIR
+}
 
-    n=0
-    # clean removes all repo cache since 966186e43
-    [ -d "$REPO_CACHE_DIR" ] && n=$(find $REPO_CACHE_DIR | grep "$package" | wc -l) # no -f its
-    assertEquals "cachedir: package $package rpm exists" "0" "$n"
-
-    # no longer true, see 966186e43
-    #assertEquals "cachedir: missing $package" "1" "$n"
-
+testCleanCache()
+{
     msgn "up"
     up
 
-    msgn "cleana aka clean-whole"
-    poldek_up --cleana
     n=$(find $CACHEDIR -type f | wc -l)
-    assertEquals "cachedir still contains files" "0" "$n"
+    # 8 files should be present:
+    #  1. packages.ndir.md (remote)
+    #  2. packages.ndir.gz (remote)
+    #  3. packages.ndir.gz.md5 (local)
+    #  4. packages.ndir.dscr.gz (remote)
+    #  5. packages.ndir.dscr.gz.md5 (local)
+    #  6. dirindex.pndir.tndb (local)
+    #  7. dirindex.pndir.tndb.md5 (local)
+    #  8. stubindex.pndir.zst (local)
+    assertEquals "index not downloaded?" "$n" "8"
 
-    n=$(find $CACHEDIR -type l | wc -l)
-    assertEquals "cachedir still contains files" "0" "$n"
+    fetch_package_to_cachedir
+
+    #find $CACHEDIR
+    n=$(find $CACHEDIR -type f | wc -l)
+    assertEquals "index and package not downloaded?" "$n" "9"
+
+    msgn "clean"
+    touch $CACHEDIR/foo.txt     # some arbitrary file
+    poldek_up --clean
+
+    n=$(find $CACHEDIR -type f | wc -l)
+    [ "$n" != "0" ] && find $CACHEDIR/
+    assertEquals "$n files left in cache" "$n" "0"
+}
+
+testCleanRepoCache()
+{
+    msgn "up"
+    up
+
+    n=$(find $CACHEDIR -type f | wc -l)
+    assertEquals "index not downloaded?" "$n" "8"
+
+    fetch_package_to_cachedir
+
+    n=$(find $CACHEDIR -type f | wc -l)
+    assertEquals "index and package not downloaded?" "$n" "9"
+
+    msgn "clean"
+    poldek_up -n $REPONAME --clean
+
+    n=$(find $CACHEDIR -type f | wc -l)
+    [ "$n" != "0" ] && find $CACHEDIR/
+    assertEquals "$n files left in cache" "$n" "0"
 }
 
 . ./sh/lib/shunit2

@@ -58,6 +58,7 @@ oneTimeSetUp() {
 
     REPO="$TMPDIR/repo"
     REPOURL="test://$TMPDIR/repo/"
+    REPONAME="testrepo"
 
     mkdir -p $REPO
     [ ! -d $REPO ] && abort "mkdir $REPO failed?"
@@ -79,12 +80,12 @@ oneTimeSetUp() {
 }
 
 poldek_up() {
-    $POLDEK_UP -Osource="test,type=pndir $REPOURL" $@
+    $POLDEK_UP -Osource="$REPONAME,type=pndir $REPOURL" $@
 }
 
 poldek_quiet_up() {
     local cmd=$(echo $POLDEK_UP | sed 's|\-v|-q|g');
-    $cmd -Osource="test,type=pndir $REPOURL" $@
+    $cmd -Osource="$REPONAME,type=pndir $REPOURL" $@
 }
 
 oneTimeTearDown() {

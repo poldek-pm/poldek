@@ -108,15 +108,15 @@ static struct argp_option source_options[] = {
 {"upa", OPT_SRCUPDATE_A, 0, OPTION_ALIAS, 0, OPT_GID + 1 },
 
 {"clean", OPT_SRCCLEAN, 0, 0,
- N_("Remove source index files from cache directory"), OPT_GID + 1 },
+ N_("Remove source local cache"), OPT_GID + 1 },
 
-{"clean-pkg", OPT_SRCCLEAN_PKG, 0, 0,
+{"clean-pkg", OPT_SRCCLEAN_PKG, 0, OPTION_HIDDEN,
  N_("Remove cached packages of the source"), OPT_GID + 1 },
 
-{"clean-whole", OPT_SRCCLEAN_ALL, 0, 0,
+{"clean-whole", OPT_SRCCLEAN_ALL, 0, OPTION_HIDDEN,
  N_("Remove all files belongs to source from cache directory"), OPT_GID + 1 },
 
-{"cleana", OPT_SRCCLEAN_ALL, 0, OPTION_ALIAS, 0, OPT_GID + 1 },
+{"cleana", OPT_SRCCLEAN_ALL, 0, OPTION_ALIAS|OPTION_HIDDEN, 0, OPT_GID + 1 },
 { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -301,7 +301,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
             break;
 
         case OPT_SRCCLEAN:
-            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN;
+            arg_s->cnflags |= POLDEKCLI_SRC_CLEAN | POLDEKCLI_SRC_CLEAN_PKG;
             break;
 
         case OPT_SRCCLEAN_PKG:
