@@ -50,7 +50,7 @@ static int poldeklib_init_called = 0;
 #define SOURCES_LOADED      (1 << 3)
 #define SETUP_DONE          (1 << 4)
 
-const char poldek_BUG_MAILADDR[] = "http://bugs.launchpad.net/poldek";
+const char poldek_BUG_MAILADDR[] = PACKAGE_BUGREPORT;
 const char poldek_VERSION_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")";
 const char poldek_BANNER[] = PACKAGE " " VERSION " (" VERSION_STATUS ")\n"
 "Copyright (C) 2000-" VERSION_YEAR " Pawel A. Gajda <mis@pld-linux.org>\n"
