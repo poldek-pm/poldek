@@ -43,6 +43,7 @@
 #include "source.h"
 
 extern const char *pkgdir_dirindex_basename;
+extern const char *pkgdir_stubindex_basename;
 
 #define SOURCE_DEFAULT_PRI 0
 
@@ -944,15 +945,15 @@ int source_clean(struct source *src, unsigned flags)
 
         n_basedirnam(path, &dn, &bn);
         rc = do_source_clean(src, dn, bn, flags);
-        /* should be able to pass multiple masks at once, TODO */
-        rc = do_source_clean(src, dn, pkgdir_dirindex_basename, flags);
 
+        /* we don't really care about the result */
+        do_source_clean(src, dn, pkgdir_dirindex_basename, flags);
+        do_source_clean(src, dn, pkgdir_stubindex_basename, flags);
     }
 
     if (src->pkg_prefix && (flags & PKGSOURCE_CLEANPKG))
         rc = do_source_clean(src, src->pkg_prefix, NULL, flags);
 
-    /* we don't really care about the result */
     return rc;
 }
 
