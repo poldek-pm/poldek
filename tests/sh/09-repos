@@ -22,7 +22,6 @@ setUp() {
     mkdir -p $REPO || fail "mkdir $REPO failed"
     mkdir -p $REPO2 || fail "mkdir $REPO2 failed"
 
-    mkidx $REPO
     mkidx $REPO2
 
     RAW_POLDEK="$POLDEK_NOCONF"
@@ -129,6 +128,23 @@ testUniquePackagesDifferentRepos()
     expect_package "a-2-2" -Ounique_package_names=y
     expect_package "b-2-2" -Ounique_package_names=y
     expect_package "c-1-1" -Ounique_package_names=y
+}
+
+
+testInvalidateStubindexForLocalRepo()
+{
+    msgn "Preparing repository..."
+
+    build a 1-1
+    mkidx $REPO
+
+    msgn "Testing..."
+    expect_count 1
+
+    build a 2-2
+    sleep 0.8 # avoid repo change in less than 1s
+    mkidx $REPO
+    expect_count 2
 }
 
 

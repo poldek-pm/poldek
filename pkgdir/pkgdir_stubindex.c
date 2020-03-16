@@ -173,24 +173,36 @@ tn_array *load_stubindex(const char *path)
 
 tn_array *source_stubload(struct source *src)
 {
-    char path[PATH_MAX], tmp[PATH_MAX];
+    char path[PATH_MAX], ipath[PATH_MAX];
+    time_t idx_mtime = 0;
     tn_array *pkgs;
     int n;
 
+    pkgdir__make_idxpath(ipath, sizeof(ipath), src->path, src->type, src->compr);
 
+    /* check mtimes for local repos, for remote ones stubindex
+       is automatically updated after --up */
+    if (source_is_local(src))
+        idx_mtime = poldek_util_mtime(ipath);
 
-    pkgdir__make_idxpath(tmp, sizeof(tmp), src->path, src->type, src->compr);
-    n = vf_cachepath(path, sizeof(path), n_dirname(tmp));
+    char *dn = n_dirname(ipath);
+    if (dn == NULL)
+        return NULL;
 
+    n = vf_cachepath(path, sizeof(path), dn);
     n += n_snprintf(&path[n], sizeof(path) - n, "/%s.%s.zst",
                     pkgdir_stubindex_basename, src->type);
 
+    if (idx_mtime > 0) {
+        time_t mtime = poldek_util_mtime(path);
+        if (mtime > 0 && mtime < idx_mtime) /* outdated */
+            return NULL;
+    }
+
     msgn_i(2, 2, "Loading stub index of %s...", source_idstr(src));
     pkgs = load_stubindex(path);
-    DBGF("%s\n", path);
     if (pkgs == NULL)
         return NULL;
-
 
     if (src->ign_patterns) {
         const struct pkgdir_module *mod = pkgdir_mod_find(src->type);
