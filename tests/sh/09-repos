@@ -100,6 +100,11 @@ testUniquePackagesDifferentArch()
     expect_count 8
     expect_count 3 -Ounique_package_names=y
     expect_package "a-2-2" -Ounique_package_names=y
+
+    local arch=$(uname -m)
+    if [ -n "$arch" ]; then
+        expect_package "a-2-2.$arch" -Ounique_package_names=y
+    fi
 }
 
 testUniquePackagesDifferentRepos()

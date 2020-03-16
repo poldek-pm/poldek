@@ -17,6 +17,7 @@
 #include "log.h"
 #include "pkg.h"
 #include "misc.h"
+#include "pkg.h"
 #include "capreq.h"
 #include "pm/pm.h"
 #include "config.h"

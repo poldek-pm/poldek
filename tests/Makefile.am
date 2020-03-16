@@ -2,7 +2,7 @@ CPPFLAGS = @CPPFLAGS@ @CHECK_CFLAGS@
 LDADD = $(top_builddir)/libpoldek.la @CHECK_LIBS@
 
 check_PROGRAMS = test_match test_env test_pmdb test_op test_config \
-		 test_store
+		 test_store test_cmp
 
 TESTS = $(check_PROGRAMS) run-sh-tests.sh
 

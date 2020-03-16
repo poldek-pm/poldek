@@ -52,7 +52,9 @@ EXPORT int pkg_cmp_ver(const struct pkg *p1, const struct pkg *p2);
 EXPORT int pkg_cmp_evr(const struct pkg *p1, const struct pkg *p2);
 /* ARCH only */
 EXPORT int pkg_cmp_arch(const struct pkg *p1, const struct pkg *p2);
-
+#ifndef SWIG
+# define pkg_cmp_same_arch(p1, p2) pkg_cmp_arch(p1, p2) == 0
+#endif
 
 /* Name-EVR */
 EXPORT int pkg_cmp_name_evr(const struct pkg *p1, const struct pkg *p2);
@@ -93,14 +95,5 @@ EXPORT int pkg_eq_capreq(const struct pkg *pkg, const struct capreq *cr);
 
 /* compares nvr using strcmp() */
 EXPORT int pkg_nvr_strcmp(struct pkg *p1, struct pkg *p2);
-EXPORT int pkg_nvr_strcmp_rev(struct pkg *p1, struct pkg *p2);
-
-EXPORT int pkg_nvr_strncmp(struct pkg *pkg, const char *name);
-
-EXPORT int pkg_nvr_strcmp_btime(struct pkg *p1, struct pkg *p2);
-EXPORT int pkg_nvr_strcmp_btime_rev(struct pkg *p1, struct pkg *p2);
-
-EXPORT int pkg_nvr_strcmp_bday(struct pkg *p1, struct pkg *p2);
-EXPORT int pkg_nvr_strcmp_bday_rev(struct pkg *p1, struct pkg *p2);
 
 #endif
