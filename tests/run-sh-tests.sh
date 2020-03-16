@@ -5,8 +5,9 @@ RED=""
 NC=""
 
 if [ -t 1 ]; then
+    [ -z "$TERM" ] && export TERM=xterm
     nc=$(tput colors)
-    if [ -n "$nc" -a "$nc" -ge 8 ]; then
+    if [ -n "$nc" ] && [ "$nc" -ge 8 ]; then
         GREEN="$(tput setaf 2)"
         RED="$(tput setaf 1)"
         NC="$(tput sgr0)"
