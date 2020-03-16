@@ -43,7 +43,7 @@ int poldek__load_sources_internal(struct poldek_ctx *ctx, unsigned ps_setup_flag
 {
     struct pkgset *ps;
     struct poldek_ts *ts;
-    unsigned ps_flags = 0, ldflags = 0;
+    unsigned ldflags = 0;
 
     n_assert(ctx->pmctx);
     n_assert(ctx->ps == NULL);
@@ -95,7 +95,7 @@ int poldek__load_sources_internal(struct poldek_ctx *ctx, unsigned ps_setup_flag
     ctx->pkgdirs = n_ref(ps->pkgdirs);
 
     if (ts->getop(ts, POLDEK_OP_UNIQN))
-        ps_flags |= PSET_UNIQ_PKGNAME;
+        ps_setup_flags |= PSET_UNIQ_PKGNAME;
 
     pkgset_setup(ps, ps_setup_flags);
 
@@ -144,9 +144,11 @@ tn_array *poldek_load_stubs(struct poldek_ctx *ctx)
                 n_array_push(stubpkgs, pkg);
         }
     }
+    n_array_sort(stubpkgs);
+    n_array_isort_ex(stubpkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
 
-    n_array_sort_ex(stubpkgs, (tn_fn_cmp)pkg_deepcmp_name_evr_rev);
-    n_array_uniq_ex(stubpkgs, (tn_fn_cmp)pkg_cmp_uniq_name_evr_arch);
+    struct poldek_ts *ts = ctx->ts;
+    packages_uniq(stubpkgs, ts->getop(ts, POLDEK_OP_UNIQN) ? true : false);
 
     return stubpkgs;
 }

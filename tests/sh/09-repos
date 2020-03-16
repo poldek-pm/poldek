@@ -1,0 +1,130 @@
+#!/bin/sh
+# $Id$
+
+. ./sh/lib/setup
+. ./sh/lib/repo-setup
+. ./sh/lib/solver-setup         # for build_package
+
+ORIGREPO=
+DESTINATION_REPO=
+DEPENDENCY_SOLVER=3
+
+setUp() {
+    [ -z "$ORIGREPO" ] && ORIGREPO=$REPO
+    [ -z "$ORIGREPO" ] && fail "empty REPO env variable"
+    rm -rf $ORIGREPO/*
+
+    REPO="$ORIGREPO/repo1"
+    REPO2="$ORIGREPO/repo2"
+
+    rm -rf $REPO $REPO2
+
+    mkdir -p $REPO || fail "mkdir $REPO failed"
+    mkdir -p $REPO2 || fail "mkdir $REPO2 failed"
+
+    mkidx $REPO
+    mkidx $REPO2
+
+    RAW_POLDEK="$POLDEK_NOCONF"
+    rm -rf $CACHEDIR
+}
+
+build() {
+   build_package $REPO $@
+}
+
+build2() {
+   build_package $REPO2 $@
+}
+
+mkidx() {
+    local repo=$1
+    $POLDEK_NOCONF -s $repo --mkidx --mt pndir || fail "mkidx $repo failed"
+}
+
+expect_count() {
+    local expected=$1
+    shift
+
+    is_verbose_mode && echo "$RAW_POLDEK -v -s $REPO -s $REPO2 $@ --cmd ls"
+    is_verbose_mode && $RAW_POLDEK -v -s $REPO -s $REPO2 $@ --cmd ls
+    n=$($RAW_POLDEK -q -s $REPO -s $REPO2 $@ --cmd ls | grep -P '^\w+-\d+-\d+\.\w+$' | wc -l)
+
+    assertEquals "invalid number of packages found (expected $expected, got $n)" "$n" "$expected"
+    [ "$n" == "$expected" ]
+}
+
+expect_package() {
+    local expected=$1
+    shift
+
+    is_verbose_mode && echo "$RAW_POLDEK -v -s $REPO -s $REPO2 --cmd ls"
+    is_verbose_mode && $RAW_POLDEK -v -s $REPO -s $REPO2 --cmd ls
+    n=$($RAW_POLDEK -q -s $REPO -s $REPO2 $@ --cmd ls | grep "^$expected" | wc -l)
+
+    assertEquals "$expected package not found" "$n" "1"
+    [ "$n" == "1" ]
+}
+
+testUniquePackages()
+{
+    msgn "Preparing repository..."
+    build a -v 1
+    build a -v 2
+    build b
+    build c
+    mkidx $REPO
+
+    msgn "Testing..."
+    expect_count 4
+    expect_count 3 -Ounique_package_names=y
+    expect_package "a-2-1.noarch" -Ounique_package_names=y
+}
+
+testUniquePackagesDifferentArch()
+{
+    msgn "Preparing repository..."
+
+    for i in i686 x86_64; do
+        build a 1-1 -a $i -f "/hello.$i"
+        build a 2-2 -a $i -f "/hello.$i"
+    done
+
+    for i in i686 x86_64; do
+        build b -a $i -f "/hello.$i"
+        build c -a $i -f "/hello.$i"
+    done
+
+    mkidx $REPO
+    msgn "Testing..."
+    expect_count 8
+    expect_count 3 -Ounique_package_names=y
+    expect_package "a-2-2" -Ounique_package_names=y
+}
+
+testUniquePackagesDifferentRepos()
+{
+    msgn "Preparing repositories..."
+
+    build a 1-1
+    build2 a 2-2
+
+    build b 2-2
+    build2 b 1-1
+
+    build c 1-1
+    build2 c 1-1
+
+    mkidx $REPO
+    mkidx $REPO2
+
+    msgn "Testing..."
+    expect_count 5
+    expect_count 3 -Ounique_package_names=y
+    expect_package "a-2-2" -Ounique_package_names=y
+    expect_package "b-2-2" -Ounique_package_names=y
+    expect_package "c-1-1" -Ounique_package_names=y
+}
+
+
+. ./sh/lib/shunit2

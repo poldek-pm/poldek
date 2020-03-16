@@ -33,6 +33,7 @@
 #include "log.h"
 #include "capreq.h"
 #include "pkg.h"
+#include "pkgmisc.h"
 #include "pkgset.h"
 #include "misc.h"
 #include "pkgset-req.h"
@@ -205,26 +206,6 @@ static int pkgset_index(struct pkgset *ps)
     return 0;
 }
 
-static
-int do_pkg_cmp_uniq_nevr(const struct pkg *p1, struct pkg *p2)
-{
-    register int rc;
-
-    if ((rc = pkg_cmp_uniq_name_evr(p1, p2)) == 0)
-        pkg_score(p2, PKG_IGNORED_UNIQ);
-    return rc;
-}
-
-static
-int do_pkg_cmp_uniq_n(const struct pkg *p1, struct pkg *p2)
-{
-    register int rc;
-
-    if ((rc = pkg_cmp_uniq_name(p1, p2)) == 0)
-        pkg_score(p2, PKG_IGNORED_UNIQ);
-    return rc;
-}
-
 int pkgset_setup_deps(struct pkgset *ps, unsigned flags)
 {
     int strict = ps->flags & PSET_VRFY_MERCY ? 0 : 1;
@@ -262,29 +243,20 @@ int pkgset_setup_deps(struct pkgset *ps, unsigned flags)
     return 1;
 }
 
+
 static int pkgset_setup_index(struct pkgset *ps, unsigned flags)
 {
-    int n;
     void *t = timethis_begin();
 
     msgn(2, "Preparing package set...");
     MEMINF("before setup");
-
     ps->flags |= flags;
 
-    n = n_array_size(ps->pkgs);
     n_array_sort(ps->pkgs);
-
     n_array_isort_ex(ps->pkgs, (tn_fn_cmp)pkg_cmp_name_evr_arch_rev_srcpri);
+    int n = packages_uniq(ps->pkgs, (flags & PSET_UNIQ_PKGNAME) ? true : false);
 
-    if (flags & PSET_UNIQ_PKGNAME) {
-        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)do_pkg_cmp_uniq_n);
-    } else {
-        n_array_uniq_ex(ps->pkgs, (tn_fn_cmp)do_pkg_cmp_uniq_nevr);
-    }
-
-    if (n != n_array_size(ps->pkgs)) {
-        n -= n_array_size(ps->pkgs);
+    if (n != 0) {
         msgn(1, ngettext(
                          "Removed %d duplicate package from available set",
                          "Removed %d duplicate packages from available set", n), n);

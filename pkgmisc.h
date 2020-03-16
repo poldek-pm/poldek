@@ -15,7 +15,7 @@
 
 #include <stdint.h>
 #include <trurl/narray.h>
-
+#include <stdbool.h>
 #ifndef EXPORT
 # define EXPORT extern
 #endif
@@ -36,6 +36,7 @@ EXPORT int packages_score_ignore(tn_array *pkgs, tn_array *patterns, int remove)
 
 /*  === utils ===  */
 EXPORT int packages_dump(tn_array *pkgs, const char *path, int fqfn);
+EXPORT int packages_uniq(tn_array *pkgs, bool by_name);
 
 
 struct pm_ctx;

@@ -24,13 +24,13 @@ libpoldek_la_SOURCES = \
 	  compiler.h	\
 	  log.c log.h	   \
 	  poldek_term.c poldek_term.h	\
-	  minfo.c			    \
+	  minfo.c			\
 	  misc.c misc.h			\
-	  pkgmisc.c pkgmisc.h			\
-	  depdirs.c depdirs.h   \
-	  pkg.c pkgiter.c pkg.h			\
+	  pkgmisc.c pkgmisc.h		\
+	  depdirs.c depdirs.h   	\
+	  pkg.c pkgiter.c pkg.h		\
 	  pkgcmp.c pkgcmp.h		\
-	  pkgu.c pkgu.h        	\
+	  pkgu.c pkgu.h        		\
 	  pkgfl.c pkgfl.h		\
 	  fileindex.c fileindex.h	\
 	  capreqidx.c capreqidx.h	\
@@ -38,10 +38,12 @@ libpoldek_la_SOURCES = \
 	  pkgset-load.c    	        \
 	  pkgset.c pkgset.h 		\
 	  pkgset-req.c pkgset-req.h	\
-	  pkgset-order.c    	\
-	  arg_packages.c arg_packages.h		\
-	  conf.c conf.h	conf_intern.h conf_sections.c \
-	  split.c split.h		\
+	  pkgset-order.c    		\
+	  pkguniq.c			\
+	  arg_packages.c arg_packages.h	\
+	  conf.c conf.h			\
+	  conf_intern.h conf_sections.c \
+	  split.c split.h	\
 	  pkgroup.c pkgroup.h	\
 	  pkgscore.c		\
 	  pkgfetch.c            \
