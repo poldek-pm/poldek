@@ -66,15 +66,16 @@ struct vf_progress vf_tty_progress = {
 static void *tty_progress_new(void *data, const char *label)
 {
     struct tty_progress_bar *bar;
+    int llen = strlen(label);
 
     data = data;
 
-    bar = n_malloc(sizeof(*bar) + strlen(label) + 1);
+    bar = n_malloc(sizeof(*bar) + llen + 1);
     memset(bar, 0, sizeof(*bar));
 
-    bar->width = PROGRESSBAR_WIDTH;
     bar->is_tty = isatty(fileno(stdout));
     bar->term_width = 80;
+    bar->width = PROGRESSBAR_WIDTH + (llen < 50 ? 50 : llen); /* used by non-tty progress only */
 
     if (bar->is_tty) {
         struct winsize ws;
@@ -90,7 +91,6 @@ static void *tty_progress_new(void *data, const char *label)
 static void tty_progress_reset(void *data)
 {
     struct tty_progress_bar *bar = data;
-    bar->width = PROGRESSBAR_WIDTH;
     bar->is_tty = isatty(fileno(stdout));
 }
 
@@ -209,7 +209,8 @@ static void tty_progress(void *data, long total, long amount)
     }
 
     n_assert(bar->prev_barlen < 100);
-    int barlen = (int) (((float)bar->width) * frac);
+    /* used by non-tty progress only */
+    int barlen = (int) (((float)(bar->width - strlen(bar->label))) * frac);
 
     if (!bar->is_tty) {
         char line[256];
