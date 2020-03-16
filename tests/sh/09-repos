@@ -38,6 +38,7 @@ build2() {
 
 mkidx() {
     local repo=$1
+    sleep 0.9
     $POLDEK_NOCONF -s $repo --mkidx --mt pndir || fail "mkidx $repo failed"
 }
 
@@ -142,7 +143,6 @@ testInvalidateStubindexForLocalRepo()
     expect_count 1
 
     build a 2-2
-    sleep 0.8 # avoid repo change in less than 1s
     mkidx $REPO
     expect_count 2
 }
