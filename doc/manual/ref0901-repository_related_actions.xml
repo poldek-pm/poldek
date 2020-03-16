@@ -33,21 +33,7 @@
 <varlistentry><term><option id="ref.cmdl.clean">--clean </option></term>
   <listitem>
    <para>
-      Remove source index files from cache directory
-   </para>
-  </listitem>
-</varlistentry>
-<varlistentry><term><option id="ref.cmdl.clean-pkg">--clean-pkg </option></term>
-  <listitem>
-   <para>
-      Remove cached packages of the source
-   </para>
-  </listitem>
-</varlistentry>
-<varlistentry><term><option id="ref.cmdl.clean-whole">--clean-whole </option></term>
-  <listitem>
-   <para>
-      Remove all files belongs to source from cache directory
+      Remove source local cache
    </para>
   </listitem>
 </varlistentry>

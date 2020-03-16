@@ -30,7 +30,7 @@
    </para>
   </listitem>
 </varlistentry>
-<varlistentry><term><option id="ref.cmdl.greedy1500">--greedy[=LEVEL] </option></term>
+<varlistentry><term><option id="ref.cmdl.greedy1500">-g, --greedy[=LEVEL] </option></term>
   <listitem>
    <para>
       Remove packages required by selected ones if possible.
